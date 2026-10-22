@@ -2148,7 +2148,8 @@ function renderSelect(){
       <span style="min-width:0"><span class="name">${esc(t.name)}</span><br><span class="stars">${starStr(Math.round(clamp(1+(t.base-76)/3.5,1,5)))}</span></span>
       <span class="ovr"><small>OVR</small>${t.base}</span>
     </button>`).join("")}</div>`).join("")}
-  <p class="muted" style="font-size:13px">Ratings and players are made up for the game and reshuffle every new dynasty. Notre Dame plays in the ACC here. Hampton and Tennessee State play in the MEAC. FCS teams (Ivy, SWAC, MEAC) can't make the playoff or regular bowls, but the SWAC and MEAC champions meet in the Celebration Bowl. Stars show program prestige, which helps recruiting.</p>`;
+  <p class="muted" style="font-size:13px">Ratings and players are made up for the game and reshuffle every new dynasty. Notre Dame plays in the ACC here. Hampton and Tennessee State play in the MEAC. FCS teams (Ivy, SWAC, MEAC) can't make the playoff or regular bowls, but the SWAC and MEAC champions meet in the Celebration Bowl. Stars show program prestige, which helps recruiting.</p>
+  <p style="margin:4px 0 0;text-align:center;font-size:11px;letter-spacing:.06em;color:var(--muted);opacity:.45">Created by Sammy Eyde III</p>`;
 }
 function unitBars(t){const u=units(t);return `<div class="units">${UNITS.map(k=>`<span>${k}</span><div class="bar"><i style="width:${clamp((u[k]-40)/59*100,0,100)}%"></i></div><span style="text-align:right">${u[k]}</span>`).join("")}</div>`}
 function recStr(id){const r=record(id);return `${r.w}-${r.l}`}
