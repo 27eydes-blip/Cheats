@@ -174,6 +174,39 @@ details summary{cursor:pointer;color:var(--amber);font-family:var(--num);font-we
 .sched{display:flex;flex-direction:column;gap:8px}
 .srow{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center}
 .srow select{min-width:0;width:100%}
+.wboard{display:grid;grid-template-columns:1fr auto 1fr;background:#050806;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.ws{display:flex;align-items:center;gap:10px;padding:12px 14px;min-width:0}
+.ws.home{flex-direction:row-reverse;text-align:right}
+.wn{font-family:var(--num);font-weight:700;letter-spacing:.06em;min-width:0}
+.wsc{font-family:var(--num);font-weight:700;font-size:clamp(36px,9vw,56px);line-height:1;color:var(--amber);font-variant-numeric:tabular-nums;margin-inline:auto}
+.wpos{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--amber);vertical-align:middle}
+.wmid{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 12px;border-inline:1px solid var(--line);font-family:var(--num);text-align:center}
+.wclk{font-size:22px;font-weight:700} .wdd{font-size:13px;color:var(--amber);font-weight:600}
+.drive{position:relative;height:46px;border-radius:8px;background:repeating-linear-gradient(90deg,var(--turf) 0 8.4%,var(--turf-dark) 8.4% 16.8%);border:2px solid #dfe8df;overflow:hidden}
+.dz{position:absolute;top:0;bottom:0;width:8%;display:grid;place-items:center;font-family:var(--num);font-weight:700;font-size:12px}
+.dl{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.45)}
+.dfd{position:absolute;top:0;bottom:0;width:3px;background:#ffe14d;transform:translateX(-1px)}
+.dball{position:absolute;top:50%;width:20px;height:12px;border-radius:50%;background:#7a3f1d;border:1.5px solid #f3e6d6;transform:translate(-50%,-50%);transition:left .35s ease}
+@media (prefers-reduced-motion:reduce){.dball{transition:none}}
+.wpbar{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;font-family:var(--num);font-size:14px}
+.wpt{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--panel-2)}
+.wpt i{display:block;height:100%}
+.wbanner{background:var(--amber);color:#1a1300;font-family:var(--num);font-weight:700;font-size:17px;letter-spacing:.02em;padding:12px 16px;border-radius:8px}
+.gotw{border-color:color-mix(in srgb,var(--amber) 35%,var(--line))}
+.cer{text-align:center;padding:28px 18px;border-radius:12px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.cer.drum h1{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.cer.drum h1{animation:none}}
+.cer.reveal{border:1px solid rgba(255,255,255,.2)}
+.finalists{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px}
+.fin{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
+.fin.mine{border-color:var(--amber)}
+.hype{border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px;color:#fff;background:linear-gradient(120deg,var(--c1) 0 49%,var(--c2) 51% 100%);border:1px solid rgba(255,255,255,.2);text-shadow:0 1px 2px rgba(0,0,0,.55)}
+.hype-t{font-family:var(--display);font-size:clamp(26px,6vw,44px);line-height:1}
+.hype-s{font-family:var(--num);font-size:14.5px;letter-spacing:.03em}
+.hype ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:14.5px}
+.event{border-color:color-mix(in srgb,var(--amber) 55%,var(--line))}
+.me-t{color:var(--amber)}
 .slot{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
 .slot.done{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
 .cand{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px 12px;align-items:center}
@@ -805,8 +838,9 @@ function newGame(gm,live,qlen){
   const edge=id=>{const mv=clamp((S.mo&&S.mo[id])||0,-3,3)*.08;
     return (mv<0?mv*cult(id):mv)+schemeArchFit(id,plan(id).scheme)*.3-(c.trap[id]?.35*cult(id):0)
       -(c.travel&&c.travel.id===id?c.travel.y*(me(id)?1-.33*fac("travel"):1):0)
-      +(me(id)?fac("film")*.15+(bad?fac("indoor")*.12:0)+dif().edge:0)};
+      +(me(id)?fac("film")*.15+(bad?fac("indoor")*.12:0)+dif().edge+(S.nextEdge?S.nextEdge.y:0):0)};
   g.edge={[home]:edge(home),[away]:edge(away)};
+  if(!gm.neutral&&rivalryOf(home,away))g.hfa+=.8;
   g.altV=c.alt?c.alt.id:null;g.altF=c.alt&&c.alt.id===S.user?1-.33*fac("travel"):1;
   addLog(g,`${gm.label}: ${T(away).name} ${g.neutral?"vs":"at"} ${T(home).name}.`,true);
   return g;
@@ -1141,6 +1175,7 @@ function finalizeGame(g){
   const res={h:g.home,a:g.away,hs:g.score[g.home],as:g.score[g.away]};
   if(g.home===S.user||g.away===S.user){
     const tally=id=>{let pa=0,ra=0,py=0,ry=0;for(const p of T(id).roster){const b=g.box[p.id];if(!b)continue;pa+=b.pa||0;ra+=b.ra||0;py+=b.py||0;ry+=b.ry||0}return {pa,ra,py,ry}};
+    S.nextEdge=null;
     S.lastGame={home:g.home,away:g.away,neutral:g.neutral,label:g.label,score:g.score,stats:g.stats,box:g.box,ot:g.ot?g.ot.round:0,
       plays:g.log.filter(l=>l.hl).map(l=>l.txt).reverse(),cond:g.cond,pen:g.pen,split:{[g.home]:tally(g.home),[g.away]:tally(g.away)}};
     const sp=S.lastGame.split[S.user];S.tend=S.tend||{pa:0,ra:0,py:0,ry:0};for(const k in sp)S.tend[k]+=sp[k];
@@ -1166,7 +1201,8 @@ function finalizeGame(g){
   const riv=rivalryOf(g.home,g.away);
   if(riv){const w=res.hs>res.as?g.home:g.away;const prev=S.trophies[riv];S.trophies[riv]=w;
     if(prev!==undefined&&prev!==w)L.trophy.push({riv,w,l:prev});
-    if(g.home===S.user||g.away===S.user){const R=S.rivRec[riv]||(S.rivRec[riv]={w:0,l:0});w===S.user?R.w++:R.l++}
+    if(g.home===S.user||g.away===S.user){const R=S.rivRec[riv]||(S.rivRec[riv]={w:0,l:0});w===S.user?R.w++:R.l++;S.job.sec=clamp(S.job.sec+(w===S.user?6:-4),0,100)}
+    S.rivLast=S.rivLast||{};S.rivLast[riv]={season:S.season,w,hs:res.hs,as:res.as,h:g.home,a:g.away};
     if(g.home===S.user||g.away===S.user)news(w===S.user?(prev===S.user?`You kept the ${riv}.`:`You won the ${riv}!`):`${T(w).name} took the ${riv}.`)}
   return res;
 }
@@ -1197,24 +1233,27 @@ function playRound(userRes){
   const before=rankIds().slice(),games=currentGames(),label=roundName(),phase=S.phase;
   const exp=games.map(gm=>winProb(gm.h,gm.a,gm.neutral?null:gm.h));
   const heisBefore=S.results.length?heismanWatch(1)[0]:null;
+  if(S.event)resolveEvent(S.event.choices?S.event.choices[S.event.choices.length-1].k:null);
   playRoundCore(userRes,games);
   buildWeekly({before,games,exp,label,phase,heisBefore});
-  S.roundLog=null;
+  S.roundLog=null;S.preRes={};
+  if(S.phase==="regular")rollEvents();
   if(S.phase!=="offseason")S.tab="weekly";
 }
 function playRoundCore(userRes,games){
   for(const gm of games){
     const isUser=userRes&&userRes.h===gm.h&&userRes.a===gm.a;
-    const r=isUser?userRes:simGame(gm);
+    const pre=S.preRes&&S.preRes[gameKey(gm)];
+    const r=isUser?userRes:pre||simGame(gm);
     gm.hs=r.hs;gm.as=r.as;gm.winner=r.hs>r.as?r.h:r.a;
     S.results.push({h:gm.h,a:gm.a,hs:r.hs,as:r.as,type:gm.type,label:gm.label,wk:S.phase==="regular"?S.week:null});
     S.mo=S.mo||{};const w=gm.winner,l=w===gm.h?gm.a:gm.h,up=ovr(T(w))<ovr(T(l))-4;
     S.mo[w]=clamp((S.mo[w]||0)*.5+1+(up?1:0),-3,3);S.mo[l]=clamp((S.mo[l]||0)*.5-1,-3,3);
   }
-  for(const t of S.teams)for(const p of t.roster)if(p.inj>0){p.inj--;if(p.inj===0&&t.id===S.user)news(`${p.pos} ${p.n} is back from injury.`)}
+  for(const t of S.teams)for(const p of t.roster)if(p.inj>0){p.inj--;if(!p.inj)p.susp=false;if(p.inj===0&&t.id===S.user)news(`${p.pos} ${p.n} is back from injury.`)}
   RK.key=null;voteAP();
   if(S.phase==="regular"){S.week++;if(S.week>=12)setupCCG();return}
-  if(S.phase==="ccg"){awardHeisman();setupPost();return}
+  if(S.phase==="ccg"){awardHeisman();setupPost();S.ceremony={season:S.season,step:0};return}
   const P=S.post;
   if(P.round==="r1"){P.qf=P.r1.map((g,i)=>({h:P.seeds[i],a:P.r1[3-i].winner,neutral:true,type:"cfp",label:`${QF_BOWLS[i]} (CFP quarterfinal)`}));P.round="qf"}
   else if(P.round==="qf"){P.sf=[[0,3],[1,2]].map(([a,b],i)=>({h:P.qf[a].winner,a:P.qf[b].winner,neutral:true,type:"cfp",label:`${SF_BOWLS[i]} (CFP semifinal)`}));P.round="sf"}
@@ -1380,9 +1419,11 @@ function beginOffseason(){
   for(const d of departed){const p=PL[d.pid];if(p)S.alumni.push({id:p.id,n:p.n,pos:p.pos,no:p.no,st:p.st,ovr:p.ovr,car:p.car||[],aw:p.aw||[],left:d.why,draft:p.draft||null,until:S.season})}
   const myDraft=draft.map((d,i)=>({...d,pick:i+1})).filter(d=>d.t.id===u).map(d=>({name:d.p.n,pos:d.p.pos,round:d.p.draft.round,pick:d.pick}));
   const me=T(u);
-  const pts=Math.round((25+rec.w*2.5+(inPO?8:0)+(champ?8:0)+me.pres*3+4*fac("rec"))*(1+.2*S.coach.rec)*dif().pts);
+  const pts=Math.max(5,Math.round((25+rec.w*2.5+(inPO?8:0)+(champ?8:0)+me.pres*3+4*fac("rec"))*(1+.2*S.coach.rec)*dif().pts)+(S.bank||0));S.bank=0;
+  const hs=S.headStart;S.headStart=false;
   S.off={boost:true,step:"recap",aa,draft:myDraft,departed,points:pts,portal:buildPortal(),portalSigned:0,pf:"All",
     board:me.openSlots.map(i=>({i,pos:me.roster[i].pos,signed:null,cands:[5,4,3,2].map(st=>makeProspect(me.roster[i].pos,st))}))};
+  if(hs&&S.off.board.length){const c=S.off.board[0].cands[0];c.chance=Math.min(.98,c.chance+.3);c.visited=true}
   S.off.car=runCarousel();
   S.phase="offseason";
 }
@@ -1499,7 +1540,9 @@ let pickQlen=15,jumpTo=null;
 const app=document.getElementById("app");
 function render(){
   if(!S)return renderSelect();
+  if(WATCH)return renderWatch();
   if(S.pv!=null)return renderPlayer();
+  if(S.ceremony&&S.ceremony.season===S.season&&S.ceremony.step<3&&S.heisman)return renderCeremony();
   if(S.phase==="offseason")return renderOff();
   renderHub();
 }
@@ -1554,7 +1597,7 @@ function nextCard(){
         const fit=schemeArchFit(S.user,plan(S.user).scheme);if(fit>=1)notes.push(`<span class="tag good">Scheme fit</span> Your ${esc(archName(starter(T(S.user),"QB")))} QB fits your ${esc(SCHEMES[plan(S.user).scheme].name)}`);else if(fit<0)notes.push(`<span class="tag bad">Bad fit</span> Your ${esc(archName(starter(T(S.user),"QB")))} QB doesn't suit the ${esc(SCHEMES[plan(S.user).scheme].name)}`);
         return `<p class="cond">${esc(condText(c))}${c.sky==="Snow"||c.sky==="Rain"||c.sky==="Wind"?` · ${c.sky==="Wind"?"tough day for deep balls and kickers":"slippery ball, more fumbles, harder passing"}`:""}</p>${notes.length?`<div class="notes">${notes.map(n=>`<div>${n}</div>`).join("")}</div>`:""}`})()}
       <p class="muted" style="text-align:center;font-size:13.5px">${t2(a)}<br>${t2(h)}</p>
-      <div class="row" style="justify-content:center"><button class="btn" data-act="sim">Sim game</button><button class="btn ghost" data-act="tab" data-t="plan">Adjust game plan</button>
+      <div class="row" style="justify-content:center"><button class="btn" data-act="watch">Watch live</button><button class="btn ghost" data-act="sim">Sim game</button><button class="btn ghost" data-act="tab" data-t="plan">Adjust game plan</button>
       ${S.phase==="regular"&&S.week<11?`<button class="btn ghost" data-act="simSeason">Sim to end of regular season</button>`:""}</div>
     </div>`;
   }
@@ -1583,7 +1626,10 @@ function renderHub(){
     <p class="num muted">${recStr(S.user)} (${cr.w}-${cr.l} ${esc(CONFS[me.conf])}) · Ranked #${rankOf(S.user)} · SOS #${sosRankOf(S.user)} · OVR ${ovr(me)} · Job: <span class="${S.job.sec<45?"sec-bad":""}">${secLabel(S.job.sec)} (${Math.round(S.job.sec)})</span> · <span class="stars">${starStr(presStars(me))}</span>${S.coach.pts?` · <span style="color:var(--amber)">${S.coach.pts} skill pt${S.coach.pts>1?"s":""}</span>`:""}</p></div>
   </div>
   <div id="saveWarn" class="panel warn" ${saveErr?"":"hidden"}><b>Your progress isn't saving.</b><p>This browser's storage is full or turned off. Free up space or leave private browsing mode, then keep playing to save again.</p></div>
+  ${eventCard()}
+  ${(()=>{const ug=userGame();return ug?hypeHTML(ug):""})()}
   ${nextCard()}
+  ${gotwCard()}
   ${lastGameHTML()}
   ${S.news.length?`<div class="panel"><h3>Program news</h3><div class="news">${S.news.slice(0,5).map(n=>`<div>${esc(n)}</div>`).join("")}</div></div>`:""}
   <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" role="tab" aria-selected="${S.tab===k}" data-act="tab" data-t="${k}">${l}</button>`).join("")}</div>
@@ -1657,7 +1703,7 @@ function tabRoster(){
   const me=T(S.user);
   return `<div class="panel"><h3>${esc(me.name)} starters</h3><div class="tw"><table class="tbl">
     <thead><tr><th>Pos</th><th>Player</th><th class="n">Yr</th><th class="n">OVR</th><th>${S.season} stats</th></tr></thead><tbody>
-    ${me.roster.map(p=>`<tr><td class="num">${p.pos}</td><td>${S.editing===p.id?`<span class="row" style="gap:6px;flex-wrap:nowrap"><input id="nm-${p.id}" class="nm" value="${esc(p.n)}" maxlength="28" aria-label="New name for ${esc(p.n)}"><button class="small-btn" data-act="saveName" data-id="${p.id}">Save</button><button class="small-btn" data-act="cancelName">Cancel</button></span>`:`<span class="sub num">#${p.no}</span> ${plink(p.id,p.n)} <span class="sub">${esc(archName(p))}</span> <button class="edit" data-act="editName" data-id="${p.id}" aria-label="Edit ${esc(p.n)}'s name" title="Edit name">✎</button> <span class="stars" style="font-size:12px">${"★".repeat(p.st)}</span>${p.inj>0?` <span class="tag bad">Out ${p.inj}w</span>`:""}`}</td><td class="n">${YRS[p.yr]}</td><td class="n"><b>${p.ovr}</b></td><td class="sub">${esc(statLine(p))}</td></tr>`).join("")}
+    ${me.roster.map(p=>`<tr><td class="num">${p.pos}</td><td>${S.editing===p.id?`<span class="row" style="gap:6px;flex-wrap:nowrap"><input id="nm-${p.id}" class="nm" value="${esc(p.n)}" maxlength="28" aria-label="New name for ${esc(p.n)}"><button class="small-btn" data-act="saveName" data-id="${p.id}">Save</button><button class="small-btn" data-act="cancelName">Cancel</button></span>`:`<span class="sub num">#${p.no}</span> ${plink(p.id,p.n)} <span class="sub">${esc(archName(p))}</span> <button class="edit" data-act="editName" data-id="${p.id}" aria-label="Edit ${esc(p.n)}'s name" title="Edit name">✎</button> <span class="stars" style="font-size:12px">${"★".repeat(p.st)}</span>${p.inj>0?` <span class="tag bad">${p.susp?"Suspended":`Out ${p.inj}w`}</span>`:""}`}</td><td class="n">${YRS[p.yr]}</td><td class="n"><b>${p.ovr}</b></td><td class="sub">${esc(statLine(p))}</td></tr>`).join("")}
     </tbody></table></div><p class="muted" style="font-size:13px">Tap a name for his career page, or ✎ to rename him. Players improve every offseason. Seniors graduate, and juniors rated 90+ may leave early for the NFL.</p></div>`;
 }
 function skillsHTML(){
@@ -1989,6 +2035,7 @@ function buildWeekly(ctx){
     upset,headlines:H.slice(0,8),big,
     top25:after.slice(0,25).map(id=>({id,prev:before.indexOf(id)<25?before.indexOf(id)+1:null})),
     mine:mine&&mine.winner!==undefined?{opp:mine.h===S.user?mine.a:mine.h,won:mine.winner===S.user,ms:mine.h===S.user?mine.hs:mine.as,ts:mine.h===S.user?mine.as:mine.hs,label:mine.label}:null,
+    rivs:next.filter(gm=>rivalryOf(gm.h,gm.a)).map(gm=>({h:gm.h,a:gm.a,r:rivalryOf(gm.h,gm.a)})),
     next:nx?{opp:nx.h===S.user?nx.a:nx.h,home:nx.h===S.user,neutral:nx.neutral,label:nx.label,line:lineFor(nx.h,nx.a,nx.neutral)}:null};
 }
 function tabWeekly(){
@@ -1997,6 +2044,7 @@ function tabWeekly(){
   const move=(x,i)=>{if(x.prev===null)return '<span class="mv up">NEW</span>';const d=x.prev-(i+1);return d>0?`<span class="mv up">▲${d}</span>`:d<0?`<span class="mv dn">▼${-d}</span>`:'<span class="mv">–</span>'};
   return `
   <div class="weekly-mast"><div><div class="eyebrow">Gridiron Weekly · Issue ${W.edition}</div><h2>${W.preview?esc(W.preview):"Season finale"}</h2></div><span class="muted num">${esc(W.recap)} in review</span></div>
+  ${W.rivs&&W.rivs.length>=6?`<div class="panel"><h3>It's rivalry week</h3><div class="news">${W.rivs.slice(0,12).map(r=>`<div class="${r.h===S.user||r.a===S.user?"me-t":""}"><b>${esc(r.r)}</b> · ${esc(T(r.a).name)} at ${esc(T(r.h).name)}</div>`).join("")}</div></div>`:""}
   ${up?`<div class="upset" style="background:${T(up.w).c1};color:${T(up.w).c2}">
     <span class="upset-k">Upset of the week · ${Math.round(up.pw*100)}% chance to win</span>
     <span class="upset-h">${up.wr<=25?`#${up.wr} `:""}${esc(T(up.w).name)} stun ${up.lr<=25?`#${up.lr} `:""}${esc(T(up.l).name)}, ${up.ws}-${up.ls}</span>
@@ -2019,6 +2067,170 @@ function tabWeekly(){
       ${W.top25.map((x,i)=>`<tr class="${x.id===S.user?"me":""}"><td class="n">${i+1}</td><td>${esc(T(x.id).name)}</td><td class="n">${recStr(x.id)}</td><td class="n">${sosTag(x.id)}</td><td class="n">${move(x,i)}</td></tr>`).join("")}
     </tbody></table></div></div>
   </div>`;
+}
+
+
+// ===================== LIVE GAMES =====================
+const gameKey=gm=>`${gm.h}-${gm.a}-${gm.label}`;
+let WATCH=null,wTimer=null;
+const SPEED={1:900,3:320,10:110};
+function startWatch(gm,kind){
+  const g=newGame(gm,false,15);g.auto=true;
+  WATCH={g,gm,kind,key:gameKey(gm),speed:3,paused:false,banner:null,exp:winProb(gm.h,gm.a,gm.neutral?null:gm.h)};
+  clearTimeout(wTimer);wTimer=setTimeout(wLoop,600);
+}
+function wStep(n){
+  const W=WATCH,g=W.g;
+  for(let i=0;i<n&&!g.over;i++){
+    stepAI(g);
+    const top=g.log[0];
+    if(top&&top.hl&&/TOUCHDOWN|INTERCEPTED|FUMBLE|BLOCKED|SAFETY|MISSES|ONSIDE|MUFFED|game on the line|SACKED|Overtime/.test(top.txt))W.banner={txt:top.txt,at:g.log.length+":"+g.qtr+":"+g.clock};
+  }
+}
+function wLoop(){
+  if(!WATCH)return;
+  if(!WATCH.paused&&!WATCH.g.over){wStep(WATCH.speed>=10?4:1);render()}
+  if(WATCH&&!WATCH.g.over)wTimer=setTimeout(wLoop,SPEED[WATCH.speed]);
+}
+function liveWP(W){
+  const g=W.g,left=g.over?0:g.ot?.01:clamp(((4-g.qtr)*15*60+g.clock)/3600,0,1);
+  if(g.over)return g.score[g.home]>g.score[g.away]?1:0;
+  const pre=Math.log(W.exp/(1-W.exp))*6.5;
+  const diff=g.score[g.home]-g.score[g.away]+pre*left+(g.poss===g.home?1.5:-1.5)*(1-left);
+  return 1/(1+Math.exp(-1.7*diff/(13*Math.sqrt(Math.max(left,.01))+1.5)));
+}
+function finishWatch(){
+  const W=WATCH;if(!W||!W.g.over)return;
+  WATCH=null;clearTimeout(wTimer);
+  const res=finalizeGame(W.g);
+  if(W.kind==="user"){playRound(res);scrollTo(0,0)}
+  else{S.preRes=S.preRes||{};S.preRes[W.key]=res;news(`Game of the Week: ${T(res.hs>res.as?res.h:res.a).name} beat ${T(res.hs>res.as?res.a:res.h).name} ${Math.max(res.hs,res.as)}-${Math.min(res.hs,res.as)}.`)}
+}
+function renderWatch(){
+  const W=WATCH,g=W.g,h=T(g.home),a=T(g.away),wp=liveWP(W);
+  const mm=Math.floor(g.clock/60),ss=String(g.clock%60).padStart(2,"0");
+  const clk=g.over?"FINAL"+(g.ot?` (${g.ot.round>1?g.ot.round:""}OT)`:""):g.ot?`OT${g.ot.round>1?g.ot.round:""}`:`${ordinal(g.qtr)} · ${mm}:${ss}`;
+  const two=g.ot&&g.ot.round>=3,dd=g.over||g.pending?"":two?"2-pt play":`${ordinal(g.down)} & ${g.pos+g.togo>=100?"Goal":g.togo} · ${spotText(g,g.pos)}`;
+  const x=g.poss===g.home?g.pos:100-g.pos,fd=g.poss===g.home?Math.min(100,g.pos+g.togo):Math.max(0,100-g.pos-g.togo);
+  const side=(t,cls)=>`<div class="ws ${cls}">${badge(t)}<span class="wn">${rankTag(t.id)}${esc(t.abbr)}${g.poss===t.id&&!g.over?' <i class="wpos" title="Has the ball"></i>':""}</span><span class="wsc">${g.score[t.id]}</span></div>`;
+  const bn=W.banner;
+  app.innerHTML=`
+  <div class="row" style="justify-content:space-between"><span class="eyebrow">${W.kind==="gotw"?"Game of the Week · ":""}${esc(g.label)} · Live</span><span class="muted num">${esc(condText(g.cond))}</span></div>
+  <div class="wboard">${side(a,"away")}<div class="wmid"><span class="wclk">${clk}</span><span class="wdd">${esc(dd)}</span></div>${side(h,"home")}</div>
+  <div class="drive" role="img" aria-label="Ball on the ${esc(spotText(g,g.pos))}">
+    <span class="dz" style="left:0;background:${h.c1};color:${h.c2}">${esc(h.abbr)}</span><span class="dz" style="right:0;background:${a.c1};color:${a.c2}">${esc(a.abbr)}</span>
+    ${[10,20,30,40,50,60,70,80,90].map(y=>`<i class="dl" style="left:${8+y*.84}%"></i>`).join("")}
+    ${g.over?"":`<i class="dfd" style="left:${8+fd*.84}%"></i><b class="dball" style="left:${8+x*.84}%"></b>`}
+  </div>
+  <div class="wpbar"><span>${esc(a.abbr)} ${Math.round((1-wp)*100)}%</span><div class="wpt"><i style="width:${(1-wp)*100}%;background:${a.c1}"></i><i style="width:${wp*100}%;background:${h.c1}"></i></div><span>${Math.round(wp*100)}% ${esc(h.abbr)}</span></div>
+  ${bn?`<div class="wbanner">${esc(bn.txt)}</div>`:""}
+  <div class="row">${g.over?`<button class="btn" data-act="wDone">${W.kind==="user"?"Continue":"Back to the hub"}</button>`:
+    `<button class="btn ghost" data-act="wPause">${W.paused?"Resume":"Pause"}</button>${[1,3,10].map(v=>`<button class="tab ${W.speed===v?"on":""}" data-act="wSpeed" data-v="${v}">${v}x</button>`).join("")}<button class="btn ghost" data-act="wSkip">Skip to the end</button>${W.kind==="gotw"?'<button class="btn ghost" data-act="wLeave">Stop watching</button>':""}`}</div>
+  <div class="panel"><h3>Play by play</h3><div class="log" style="max-height:340px">${g.log.slice(0,18).map(l=>`<div class="${l.hl?"hl":""}">${esc(l.txt)}</div>`).join("")}</div></div>
+  ${g.over?`<div class="grid2">${boxScore(g,g.away)}${boxScore(g,g.home)}</div>`:""}`;
+}
+function gotwGame(){
+  const u=S.user,games=currentGames().filter(gm=>gm.h!==u&&gm.a!==u);if(!games.length)return null;
+  const r=id=>Math.min(60,rankOf(id));
+  return games.map(gm=>({gm,v:(60-r(gm.h))+(60-r(gm.a))-Math.abs(r(gm.h)-r(gm.a))*.3+(rivalryOf(gm.h,gm.a)?14:0)+(gm.type==="cfp"?20:0)})).sort((a,b)=>b.v-a.v)[0].gm;
+}
+function gotwCard(){
+  const gm=gotwGame();if(!gm)return "";
+  const k=gameKey(gm),done=S.preRes&&S.preRes[k],h=T(gm.h),a=T(gm.a),riv=rivalryOf(gm.h,gm.a);
+  return `<div class="panel gotw"><div class="row" style="justify-content:space-between"><h3>Game of the Week</h3>${riv?`<span class="tag amber">${esc(riv)}</span>`:""}</div>
+    <div class="row" style="justify-content:space-between;flex-wrap:nowrap"><span class="row" style="gap:8px;flex-wrap:nowrap">${badge(a)}<b>${rankTag(a.id)}${esc(a.name)}</b></span><span class="muted">${gm.neutral?"vs":"at"}</span><span class="row" style="gap:8px;flex-wrap:nowrap"><b>${rankTag(h.id)}${esc(h.name)}</b>${badge(h)}</span></div>
+    <p class="muted" style="font-size:13.5px">${esc(gm.label)} · ${esc(condText(condFor(gm)))} · ${esc(lineFor(gm.h,gm.a,gm.neutral))}</p>
+    ${done?`<p class="num" style="font-size:18px"><b>Final: ${esc(T(done.h).abbr)} ${done.hs}, ${esc(T(done.a).abbr)} ${done.as}</b></p>`:`<div class="row"><button class="btn ghost" data-act="watchGotw">Watch it live</button></div>`}</div>`;
+}
+
+// ===================== HEISMAN CEREMONY =====================
+function heisVotes(){
+  const H=S.heisman,sc=H.map((x,i)=>Math.exp(-i*.9)),z=sc.reduce((a,b)=>a+b,0);
+  let left=870;return H.map((x,i)=>{const f=i===H.length-1?left:Math.round(870*sc[i]/z);left-=f;return {...x,first:f,pts:f*3+Math.round((870-f)*(.9-i*.15))}});
+}
+function renderCeremony(){
+  const C=S.ceremony,H=S.heisman,alpha=H.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  if(C.step===0){
+    app.innerHTML=`<div class="cer"><div class="eyebrow">New York City · ${S.season}</div><h1>The Heisman Trophy</h1><p class="muted">The most outstanding player in college football. Here are this year's finalists.</p></div>
+    <div class="finalists">${alpha.map(x=>{const t=T(x.team);return `<div class="fin ${x.team===S.user?"mine":""}">${badge(t)}<b>${esc(x.name)}</b><span class="sub">${x.pos} · ${esc(t.name)}</span><span class="sub" style="color:var(--chalk)">${esc(x.line)}</span></div>`}).join("")}</div>
+    <div class="row" style="justify-content:center"><button class="btn" data-act="cerNext">Open the envelope</button></div>`;
+    return;
+  }
+  if(C.step===1){
+    app.innerHTML=`<div class="cer drum"><div class="eyebrow">The envelope, please</div><h1>And the ${S.season} Heisman Trophy goes to…</h1></div>`;
+    setTimeout(()=>{if(S&&S.ceremony===C&&C.step===1){C.step=2;save();render()}},1800);
+    return;
+  }
+  const V=heisVotes(),w=V[0],t=T(w.team);
+  app.innerHTML=`<div class="cer reveal" style="background:${t.c1};color:${t.c2}"><div class="eyebrow" style="color:inherit;opacity:.85">${S.season} Heisman Trophy winner</div>
+    <h1 style="font-size:clamp(34px,8vw,64px)">${esc(w.name)}</h1><p class="num" style="font-size:18px">${w.pos} · ${esc(t.name)}</p><p>${esc(w.line)}</p>
+    ${w.team===S.user?`<p><b>Your player won the Heisman!</b> His number will be retired when he leaves.</p>`:""}</div>
+  <div class="panel"><h3>Final voting</h3><div class="tw"><table class="tbl"><thead><tr><th>Player</th><th class="n">1st-place votes</th><th class="n">Points</th></tr></thead><tbody>
+    ${V.map((x,i)=>`<tr class="${x.team===S.user?"me":""}"><td>${i+1}. ${x.pid&&PL[x.pid]?plink(x.pid,x.name):esc(x.name)} <span class="sub">${x.pos} · ${esc(T(x.team).abbr)}</span></td><td class="n">${x.first}</td><td class="n">${x.pts.toLocaleString("en-US")}</td></tr>`).join("")}</tbody></table></div></div>
+  <div class="row" style="justify-content:center"><button class="btn" data-act="cerDone">On to the postseason</button></div>`;
+}
+
+// ===================== RIVALRY WEEK =====================
+const HYPE=["{O} players have been talking all week. {U} printed every quote on the locker room wall.","Students camped outside {S} for three nights to get front-row seats.","{U}'s seniors have never lost this game, and they say they won't start now.","The {R} has been in the trophy case too long, says {O}'s head coach. {U} hears it.",
+  "Sold out in eleven minutes. Scalpers want four figures for a seat at {S}.","{U} ran scout-team plays against {O}'s scheme for two straight weeks.","{O}'s star called it \"just another game.\" Nobody in {U}'s building believes that."];
+function hypeHTML(ug){
+  const riv=rivalryOf(ug.h,ug.a);if(!riv)return "";
+  const u=S.user,o=ug.h===u?ug.a:ug.h,U=T(u),O=T(o),R=S.rivRec[riv]||{w:0,l:0},last=(S.rivLast||{})[riv],hold=S.trophies[riv];
+  const pick=k=>HYPE[(S.season*7+S.week*3+k*5+o)%HYPE.length].replace(/\{U\}/g,U.name).replace(/\{O\}/g,O.name).replace(/\{R\}/g,riv).replace(/\{S\}/g,T(ug.h).stadium);
+  return `<div class="hype" style="--c1:${U.c1};--c2:${O.c1}">
+    <div class="eyebrow" style="color:#fff">Rivalry week</div><div class="hype-t">${esc(riv)}</div>
+    <div class="hype-s">${esc(U.abbr)} vs ${esc(O.abbr)} · ${hold===undefined?"First meeting in your tenure":hold===u?"You hold the trophy":`${esc(O.abbr)} hold the trophy`} · Your record: ${R.w}-${R.l}${last?` · Last year: ${esc(T(last.w).abbr)} won ${Math.max(last.hs,last.as)}-${Math.min(last.hs,last.as)}`:""}</div>
+    <ul>${[0,1].map(k=>`<li>${esc(pick(k))}</li>`).join("")}</ul>
+    <div class="hype-s">The crowd is louder for this one. A win boosts your job security, and a loss hurts it.</div></div>`;
+}
+
+// ===================== RANDOM EVENTS =====================
+function nextUserGame(){return userGame()}
+function healthyStarter(f){const c=T(S.user).roster.filter(p=>!p.inj&&p.pos!=="K"&&(!f||f(p)));return c[Math.floor(rnd()*c.length)]}
+const EVENTS=[
+  {w:3,run(){S.bank=(S.bank||0)+6;return {t:"Boosters step up",x:"A group of boosters made a big donation. You get +6 recruiting points next offseason."}}},
+  {w:2,run(){const ug=nextUserGame();if(!ug||rankOf(ug.h)>25&&rankOf(ug.a)>25)return null;S.nextEdge={y:.2,txt:"GameDay"};T(S.user).pres=Math.min(5,T(S.user).pres+.05);
+    return {t:"College GameDay is coming",x:`ESPN's College GameDay is broadcasting from your game against ${T(ug.h===S.user?ug.a:ug.h).name}. The atmosphere gives your team a boost.`}}},
+  {w:2,run(){const p=healthyStarter(p=>p.ovr>=75);if(!p)return null;p.inj=Math.max(p.inj,2);p.susp=true;return {t:"Player suspended",x:`${p.pos} ${p.n} is suspended for the next game for violating team rules.`}}},
+  {w:2,run(){const p=healthyStarter(p=>p.yr<=1);if(!p)return null;p.ovr=Math.min(99,p.ovr+3);return {t:"Breakout in practice",x:`${YRS[p.yr]} ${p.pos} ${p.n} has been the best player at practice. +3 overall (now ${p.ovr}).`}}},
+  {w:2,run(){S.mo=S.mo||{};S.mo[S.user]=clamp((S.mo[S.user]||0)+1.5,-3,3);return {t:"Players-only meeting",x:"Your captains held a players-only meeting. The locker room has never been tighter. Momentum up."}}},
+  {w:1,run(){S.nextEdge={y:-.25,txt:"flu"};return {t:"Flu hits the locker room",x:"A flu bug is going around the team. Expect a sluggish performance in your next game."}}},
+  {w:2,choice:true,run(){const me=T(S.user),low=me.roster.filter(p=>p.pos!=="K").sort((a,b)=>a.ovr-b.ovr)[0];if(!low)return null;
+    return {t:"Hidden gem walk-on",x:`A walk-on ${low.pos} is turning heads in practice and looks better than your starter ${low.n} (${low.ovr}). Put him on scholarship? It costs 4 recruiting points next offseason.`,
+      data:{slot:me.roster.indexOf(low),pos:low.pos,ovr:low.ovr+5},choices:[{l:"Give him a scholarship",k:"walkon"},{l:"Stick with the starter",k:"no"}]}}},
+  {w:2,choice:true,run(){const sch=S.teams.filter(t=>act(t)&&CONF_TIER[t.conf]===1);const t=sch[Math.floor(rnd()*sch.length)];
+    return {t:"Coordinator wanted",x:`${t.name} want to hire your offensive coordinator as their head coach. Keep him with a raise, or let him go?`,choices:[{l:"Give him a raise (−5 points next offseason)",k:"raise"},{l:"Let him go",k:"go"}]}}},
+  {w:2,choice:true,run(){return {t:"5★ recruit wants to visit",x:"A top 5★ recruit wants to visit for your next game. Rolling out the red carpet costs 3 points now, but he'll be much more interested in you on signing day.",choices:[{l:"Roll out the red carpet",k:"visit"},{l:"Not this year",k:"no"}]}}},
+];
+function rollEvents(){
+  if(!userGame())return;
+  if(rnd()<.3){const list=EVENTS.slice();for(let i=0;i<4;i++){const e=wpickP(list.map(e=>[e,e.w]));const r=e.run();if(r){r.choices=r.choices||null;S.event={...r,choice:!!e.choice,season:S.season,week:S.week};if(!e.choice){news(`${r.t}: ${r.x}`)}break}}}
+  if(rnd()<.35){
+    const top=rankIds().slice(0,10).filter(id=>id!==S.user),id=top[Math.floor(rnd()*top.length)],t=T(id),k=Math.floor(rnd()*3);let txt;
+    if(k===0){const q=starter(t,"QB");if(q&&!q.inj){q.inj=2;q.susp=true;txt=`${t.name} QB ${q.n} is suspended for this week's game.`}}
+    else if(k===1&&t.coach){t.coach.sec=clamp(t.coach.sec-30,0,100);txt=`Scandal at ${t.name}: an NCAA investigation puts coach ${t.coach.n} on the hot seat.`}
+    else{const h=heismanWatch(3).map(x=>x.p).find(p=>p.inj===0&&!T(S.user).roster.includes(p));if(h){h.inj=3;txt=`Heisman contender ${h.n} is out two weeks with an injury.`}}
+    if(txt){news(`Breaking: ${txt}`);if(S.weekly)S.weekly.headlines.unshift({tag:"Breaking",text:txt})}
+  }
+}
+function resolveEvent(k){
+  const E=S.event;if(!E)return;
+  if(E.choice&&k){
+    let res="";
+    if(k==="walkon"){const me=T(S.user),old=me.roster[E.data.slot];const np=newPlayer(E.data.pos,E.data.ovr,1,2);me.roster[E.data.slot]=np;buildPL();S.bank=(S.bank||0)-4;res=`Walk-on ${np.n} is your new starting ${np.pos} (${np.ovr}). ${old.n} moves to the bench.`}
+    else if(k==="raise"){S.bank=(S.bank||0)-5;S.mo[S.user]=clamp((S.mo[S.user]||0)+.5,-3,3);res="Your coordinator stays. The staff is fired up."}
+    else if(k==="go"){S.mo[S.user]=clamp((S.mo[S.user]||0)-1,-3,3);S.nextEdge={y:-.15,txt:"new OC"};res="Your coordinator leaves. The offense will need a week to adjust."}
+    else if(k==="visit"){S.bank=(S.bank||0)-3;S.headStart=true;res="The visit went great. That 5★ recruit will be much more interested on signing day."}
+    else res="You passed.";
+    news(`${E.t}: ${res}`);
+  }
+  S.event=null;
+}
+function eventCard(){
+  const E=S.event;if(!E||!E.choice)return "";
+  return `<div class="panel event"><div class="row" style="justify-content:space-between"><h3>Breaking news</h3><span class="tag amber">Decision</span></div>
+    <b style="font-size:17px">${esc(E.t)}</b><p>${esc(E.x)}</p>
+    <div class="row">${E.choices.map((c,i)=>`<button class="${i===0?"btn":"btn ghost"}" data-act="event" data-k="${c.k}">${esc(c.l)}</button>`).join("")}</div></div>`;
 }
 
 // ---------- Game view ----------
@@ -2136,7 +2348,7 @@ function renderOff(){
     body=`<div class="panel"><p>Offer scholarships to high school prospects to fill your open spots. Higher-star recruits start better and develop faster, but they may sign somewhere else. If a recruit says no, you get half the points back. Any spot left empty goes to a 3★ walk-on.</p>
       <p class="eyebrow num" style="font-size:18px">${O.points} recruiting points</p></div>
       ${open.length?open.map(slot=>{const si=O.board.indexOf(slot);return `<div class="slot ${slot.signed?"done":""}"><div class="row" style="justify-content:space-between"><b>Open spot: ${slot.pos}</b>${slot.signed?`<span class="tag good">Signed ${esc(slot.signed.n)}</span>`:""}</div>
-        ${slot.cands.map((c,ci)=>`<div class="cand"><span class="stars">${starStr(c.st)}</span><span>${esc(c.n)} <span class="sub">${c.ar!=null?esc(ARCH[c.pos][c.ar][0])+" · ":""}${c.ovr} OVR</span></span><span class="sub hide-sm">${Math.round(c.chance*100)}% interest</span>
+        ${slot.cands.map((c,ci)=>`<div class="cand"><span class="stars">${starStr(c.st)}</span><span>${esc(c.n)} <span class="sub">${c.ar!=null?esc(ARCH[c.pos][c.ar][0])+" · ":""}${c.ovr} OVR</span></span><span class="sub hide-sm">${Math.round(c.chance*100)}% interest${c.visited?" · visited":""}</span>
           ${c.status==="signed"?'<span class="tag good">Signed</span>':c.status==="lost"?'<span class="tag bad">Went elsewhere</span>':`<button class="small-btn" data-act="offer" data-s="${si}" data-c="${ci}" ${slot.signed||O.points<c.cost?"disabled":""}>Offer · ${c.cost?c.cost+" pts":"free"}</button>`}</div>`).join("")}
       </div>`}).join(""):`<div class="panel"><p class="muted">All your open spots were filled from the transfer portal.</p></div>`}
       ${(()=>{const empty=O.board.filter(b=>!b.signed).length;
@@ -2180,6 +2392,16 @@ const ACT={
   diff(d){S.diff=+d.d},
   autoSched(d){autoSchedule(d.m)},
   homeAway(d){toggleHome(+d.w)},
+  watch(){const gm=userGame();if(gm){S.event&&resolveEvent(S.event.choices?S.event.choices[S.event.choices.length-1].k:null);startWatch(gm,"user");scrollTo(0,0)}},
+  watchGotw(){const gm=gotwGame();if(gm){startWatch(gm,"gotw");scrollTo(0,0)}},
+  wPause(){if(WATCH)WATCH.paused=!WATCH.paused},
+  wSpeed(d){if(WATCH)WATCH.speed=+d.v},
+  wSkip(){if(WATCH){let n=0;while(!WATCH.g.over&&n++<6000)wStep(1)}},
+  wLeave(){WATCH=null;clearTimeout(wTimer)},
+  wDone(){finishWatch()},
+  cerNext(){S.ceremony.step=1},
+  cerDone(){S.ceremony.step=3},
+  event(d){resolveEvent(d.k)},
   stadium(){const me=T(S.user),c=stadiumCost(me);if(me.hfa<5&&S.off.points>=c){S.off.points-=c;me.hfa++;me.cap+=8000;news(`${me.stadium} expanded. Crowd level is now ${me.hfa}/5.`)}},
   reset(){if(S.confirmReset){try{localStorage.removeItem(KEY)}catch(e){}S=null;SAVED=null}else S.confirmReset=true},
 };
