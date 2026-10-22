@@ -240,6 +240,16 @@ details summary{cursor:pointer;color:var(--amber);font-family:var(--num);font-we
 .pfeed .badge{min-width:34px;height:20px;font-size:11px}
 .pfeed .pfinal{font-weight:700;color:var(--amber)}
 .party-card{border-color:color-mix(in srgb,var(--amber) 55%,var(--line))}
+.sels{display:flex;flex-direction:column;gap:8px}
+.sel{display:grid;grid-template-columns:52px auto 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-radius:10px;background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--tc,var(--line))}
+.sel.new{animation:selIn .45s ease}
+.sel.bye{background:color-mix(in srgb,var(--amber) 7%,var(--panel))}
+.sel.mine{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+.sel.ph{grid-template-columns:52px 1fr;opacity:.6;animation:none;border-left-style:dashed}
+.sel-seed{font-family:var(--display);font-size:34px;line-height:1;color:var(--amber);text-align:center}
+.sel-name{font-size:18px}
+@keyframes selIn{from{opacity:0;transform:translateY(-8px)}}
+@media (prefers-reduced-motion:reduce){.sel{animation:none}}
 .slot{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
 .slot.done{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
 .cand{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px 12px;align-items:center}
@@ -1325,7 +1335,7 @@ function playRoundCore(userRes,games){
   for(const t of S.teams)for(const p of t.roster)if(p.inj>0){p.inj--;if(!p.inj)p.susp=false;if(p.inj===0&&t.id===S.user)news(`${p.pos} ${p.n} is back from injury.`)}
   RK.key=null;voteAP();
   if(S.phase==="regular"){S.week++;if(S.week>=12)setupCCG();return}
-  if(S.phase==="ccg"){awardHeisman();setupPost();S.ceremony={season:S.season,step:0};return}
+  if(S.phase==="ccg"){awardHeisman();setupPost();S.selection={season:S.season,step:0};S.ceremony={season:S.season,step:0};return}
   const P=S.post;
   if(P.round==="r1"){P.qf=P.r1.map((g,i)=>({h:P.seeds[i],a:P.r1[3-i].winner,neutral:true,type:"cfp",label:`${QF_BOWLS[i]} (CFP quarterfinal)`}));P.round="qf"}
   else if(P.round==="qf"){P.sf=[[0,3],[1,2]].map(([a,b],i)=>({h:P.qf[a].winner,a:P.qf[b].winner,neutral:true,type:"cfp",label:`${SF_BOWLS[i]} (CFP semifinal)`}));P.round="sf"}
@@ -1347,7 +1357,7 @@ function setupPost(){
   for(let i=0;i+1<rest.length&&bowls.length<BOWLS.length;i+=2)bowls.push({h:rest[i],a:rest[i+1],neutral:true,type:"bowl",label:BOWLS[bowls.length]});
   const swac=S.ccg.find(g=>g.conf===11),meac=S.ccg.find(g=>g.conf===12);
   if(swac&&meac)bowls.unshift({h:meac.winner,a:swac.winner,neutral:true,type:"bowl",label:"Celebration Bowl"});
-  S.post={seeds,round:"r1",r1,bowls,qf:null,sf:null,final:null,champ:null};
+  S.post={seeds,auto:champs,cfpOrder:order.slice(0,16),round:"r1",r1,bowls,qf:null,sf:null,final:null,champ:null};
   S.phase="post";
   const sd=seeds.indexOf(S.user);
   news(sd>=0?`You're in the College Football Playoff as the #${sd+1} seed${sd<4?" with a first-round bye":""}!`:bowls.find(b=>b.h===S.user||b.a===S.user)?`You're headed to the ${bowls.find(b=>b.h===S.user||b.a===S.user).label}.`:`No bowl game this year. Season over.`);
@@ -1676,6 +1686,7 @@ function render(){
   if(WATCH)return renderWatch();
   if(PARTY)return renderParty();
   if(S.pv!=null)return renderPlayer();
+  if(S.selection&&S.selection.season===S.season&&!S.selection.done&&S.post)return renderSelection();
   if(S.ceremony&&S.ceremony.season===S.season&&S.ceremony.step<3&&S.heisman)return renderCeremony();
   if(S.phase==="offseason")return renderOff();
   renderHub();
@@ -2496,6 +2507,42 @@ function partyCard(){
     <div class="row"><button class="btn" data-act="party">Start the watch party</button></div></div>`;
 }
 
+
+// ===================== SELECTION DAY =====================
+let selTimer=null;
+function selCard(i){
+  const P=S.post,id=P.seeds[i],t=T(id),champ=(P.auto||[]).includes(id),cg=S.ccg.find(g=>g.winner===id);
+  const opp=i>=4?P.seeds[15-i]:null,oppShown=opp!=null&&S.selection.step>=12-Math.min(i,15-i);
+  return `<div class="sel ${id===S.user?"mine":""} ${i<4?"bye":""}" style="--tc:${t.c1}">
+    <span class="sel-seed">${i+1}</span>${badge(t)}
+    <div style="min-width:0"><b class="sel-name">${esc(t.name)}</b><div class="sub">${recStr(id)} · ${esc(CONFS[t.conf])} · ${champ?`Auto bid${cg?` (${esc(cg.label.replace(" Championship",""))} champion)`:""}`:"At-large"}</div>
+    <div class="sub" style="color:var(--chalk)">${i<4?"First-round bye":oppShown?`${i<8?"Hosts":"At"} #${16-i} ${esc(T(opp).name)}`:"First-round game at home"}</div></div>
+    ${id===S.user?'<span class="tag good">You\'re in!</span>':""}</div>`;
+}
+function renderSelection(){
+  const P=S.post,SEL=S.selection,n=SEL.step,u=S.user,inField=P.seeds.includes(u);
+  const revealed=[];for(let k=0;k<n;k++)revealed.push(11-k);
+  const order=(P.cfpOrder||[]).filter(id=>!P.seeds.includes(id)),out4=order.slice(0,4);
+  const atl=P.seeds.map((id,i)=>[id,i]).filter(([id])=>!(P.auto||[]).includes(id)).slice(-4);
+  const myBowl=P.bowls.find(b=>b.h===u||b.a===u);
+  app.innerHTML=`
+  <div class="cer"><div class="eyebrow">${S.season} Selection Day</div><h1>The Playoff field</h1>
+    <p class="muted">The committee reveals all 12 teams, from the last seed in to the No. 1 overall. The top 4 get a first-round bye.</p></div>
+  <div class="row" style="justify-content:center">${n<12?`<button class="btn" data-act="selNext">${n===0?"Reveal the first team":n===11?"Reveal the No. 1 seed":"Reveal next team"}</button>
+    <button class="btn ghost" data-act="selAuto">${SEL.auto?"Revealing…":"Auto reveal"}</button><button class="btn ghost" data-act="selAll">Show all</button>`:
+    `<button class="btn" data-act="selDone">${S.ceremony&&S.ceremony.step<3?"On to the Heisman ceremony":"On to the postseason"}</button>`}</div>
+  ${n===12?`<div class="panel ${inField?"":"warn"}" style="text-align:center">${inField?`<b style="font-size:20px">${esc(T(u).name)} are in as the No. ${P.seeds.indexOf(u)+1} seed${P.seeds.indexOf(u)<4?" with a first-round bye":""}!</b>`:
+    `<b style="font-size:20px">${esc(T(u).name)} didn't make the field.</b><p>${myBowl?`You're headed to the ${esc(myBowl.label)} against ${esc(T(myBowl.h===u?myBowl.a:myBowl.h).name)}.`:"No bowl game this year."}</p>`}</div>`:""}
+  <div class="sels">${n<12?`<div class="sel ph"><span class="sel-seed">${12-n}</span><span class="muted">Next team on the screen…</span></div>`:""}${revealed.slice().reverse().map((i,k)=>selCard(i).replace('class="sel ',k===0&&n<=12?'class="sel new ':'class="sel ')).join("")}</div>
+  ${n===12?`<div class="grid2">
+    <div class="panel"><h3>Last four in</h3><div class="news">${atl.map(([id,i])=>`<div>#${i+1} ${esc(T(id).name)} (${recStr(id)})</div>`).join("")}</div></div>
+    <div class="panel"><h3>First four out</h3><div class="news">${out4.map(id=>`<div class="${id===u?"me-t":""}">${esc(T(id).name)} (${recStr(id)})</div>`).join("")}</div></div>
+  </div>
+  <div class="panel"><h3>First-round matchups</h3><div class="news">${P.r1.map(g=>`<div>#${P.seeds.indexOf(g.a)+1} ${esc(T(g.a).name)} at #${P.seeds.indexOf(g.h)+1} ${esc(T(g.h).name)}</div>`).join("")}</div></div>
+  <div class="panel"><h3>Bowl selections</h3><div class="news">${P.bowls.map(b=>`<div class="${b.h===u||b.a===u?"me-t":""}"><b>${esc(b.label)}</b> · ${esc(T(b.a).name)} vs ${esc(T(b.h).name)}</div>`).join("")||'<div class="muted">No bowl games.</div>'}</div></div>`:""}`;
+}
+function selAutoLoop(){if(!S||!S.selection||!S.selection.auto||S.selection.step>=12){if(S&&S.selection)S.selection.auto=false;return}S.selection.step++;save();render();selTimer=setTimeout(selAutoLoop,1300)}
+
 // ---------- Game view ----------
 function boxScore(g,tid){
   const t=T(tid),rows=[];
@@ -2687,6 +2734,10 @@ const ACT={
   pSpeed(d){if(PARTY)PARTY.speed=+d.v},
   pSkip(){if(PARTY&&PARTY.stage==="live"){let n=0;while(PARTY.stage==="live"&&n++<3000)pStep(1)}},
   pDone(){endParty()},
+  selNext(){if(S.selection.step<12)S.selection.step++},
+  selAll(){S.selection.step=12;S.selection.auto=false},
+  selAuto(){if(!S.selection.auto){S.selection.auto=true;clearTimeout(selTimer);selTimer=setTimeout(selAutoLoop,500)}},
+  selDone(){S.selection.done=true;S.selection.auto=false;scrollTo(0,0)},
   stadium(){const me=T(S.user),c=stadiumCost(me);if(me.hfa<5&&S.off.points>=c){S.off.points-=c;me.hfa++;me.cap+=8000;news(`${me.stadium} expanded. Crowd level is now ${me.hfa}/5.`)}},
   reset(){if(S.confirmReset){try{localStorage.removeItem(KEY)}catch(e){}S=null;SAVED=null}else S.confirmReset=true},
 };
