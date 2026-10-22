@@ -1074,6 +1074,15 @@ body{background:
 .seg button{font-family:var(--num);font-weight:700;font-size:15px;padding:8px 14px;border-radius:9px;color:var(--muted);background:none;border:0;cursor:pointer}
 .seg button.on{background:linear-gradient(180deg,#ffd987,#f5b83d);color:#1d1400}
 @media (max-width:420px){.sb-t{padding:10px 10px}.sb-logo{width:34px;height:34px;font-size:11px}.sb-name{font-size:15px}.sb-mid{min-width:80px;padding:8px}.sb-clk{font-size:15px}.lg-ctl .btn{padding:10px 12px;font-size:14px}}
+/* Softer weather: short falling drops and drifting flakes that fade out before the buttons. */
+.scene .sky-line{height:14%;opacity:.8}
+.scene .drops{position:absolute;inset:0;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 0,#000 40%,transparent 78%);mask-image:linear-gradient(180deg,#000 0,#000 40%,transparent 78%)}
+.scene.rain .drops i{position:absolute;top:-30px;width:1.5px;border-radius:1px;background:linear-gradient(180deg,rgba(200,220,255,0),rgba(210,228,255,.9));transform:rotate(10deg);animation:drop linear infinite}
+@keyframes drop{to{transform:translate(-90px,620px) rotate(10deg)}}
+.scene.snow .drops i{position:absolute;top:-10px;border-radius:50%;background:#fff;box-shadow:0 0 4px rgba(255,255,255,.8);animation:flake linear infinite}
+@keyframes flake{0%{transform:translate(0,0)}50%{transform:translate(14px,300px)}100%{transform:translate(-6px,620px)}}
+.scene.rain::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(120,150,200,.10),transparent 60%)}
+@media (prefers-reduced-motion:reduce){.scene .drops{display:none}}
 </style>
 
 <div id="busy" class="busy" hidden><span>Simming…</span></div>
@@ -4347,9 +4356,8 @@ function sceneHTML(c,riv){
   const night=/night|PM/.test(c.kick)&&!/3:30|Noon/.test(c.kick)||/night/i.test(c.kick),sky=c.sky;
   return `<div class="scene ${night?"night":""} ${sky==="Rain"?"rain":sky==="Snow"?"snow":sky==="Wind"?"wind":""} ${riv?"riv":""}" aria-hidden="true">
     ${night?'<i class="lt l1"></i><i class="lt l2"></i>':""}
-    <svg class="sky-line" viewBox="0 0 400 60" preserveAspectRatio="none"><path d="M0 60 V38 L20 36 V24 L28 22 V36 L60 34 L80 20 L120 14 L200 10 L280 14 L320 20 L340 34 L372 36 V22 L380 24 V36 L400 38 V60Z" fill="rgba(0,0,0,.35)"/>
-      <path d="M80 20 L120 14 L200 10 L280 14 L320 20" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/></svg>
-    ${sky==="Rain"||sky==="Snow"?'<i class="precip"></i><i class="precip p2"></i>':""}</div>`;
+    <svg class="sky-line" viewBox="0 0 400 60" preserveAspectRatio="none"><path d="M0 60 V38 L20 36 V24 L28 22 V36 L60 34 L80 20 L120 14 L200 10 L280 14 L320 20 L340 34 L372 36 V22 L380 24 V36 L400 38 V60Z" fill="rgba(0,0,0,.18)"/></svg>
+    ${sky==="Rain"||sky==="Snow"?`<div class="drops">${Array.from({length:sky==="Rain"?46:34},(_,i)=>`<i style="left:${(i*37+11)%100}%;animation-delay:-${((i*53)%100)/100*(sky==="Rain"?1.1:7)}s;animation-duration:${sky==="Rain"?(.75+(i%5)*.09):(5+(i%6)*.8)}s;${sky==="Rain"?`height:${10+(i%4)*4}px;opacity:${.25+(i%3)*.12}`:`width:${2+(i%3)}px;height:${2+(i%3)}px;opacity:${.45+(i%3)*.15}`}"></i>`).join("")}</div>`:""}</div>`;
 }
 // ESPN-style bottom line.
 function tickerItems(){
