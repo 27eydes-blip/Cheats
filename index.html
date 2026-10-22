@@ -1371,6 +1371,59 @@ function takeJob(id){
   news(`You're the new head coach at ${nw.name}!`);
 }
 
+
+// ===================== RECRUITING CLASS RANKINGS =====================
+const STAR_PTS={5:100,4:60,3:30,2:12};
+function classOf(t){return t.roster.filter(p=>p.yr===0)}
+function classScore(list){return list.reduce((s,p)=>s+STAR_PTS[p.st]*(1+(p.ovr-STAR_BASE[p.st])/25),0)}
+// Every program's incoming freshman class, best first. Pass mine to swap in your class while signing day is still going.
+function classRankings(mine){
+  return S.teams.filter(act).map(t=>{
+    const c=t.id===S.user&&mine?mine:classOf(t),st={5:0,4:0,3:0,2:0};c.forEach(p=>st[p.st]++);
+    return {tid:t.id,n:c.length,st,score:Math.round(classScore(c))};
+  }).sort((a,b)=>b.score-a.score);
+}
+function myLiveClass(){return S.off.board.filter(b=>b.signed&&!b.signed.transfer).map(b=>({st:b.signed.st,ovr:b.signed.ovr}))}
+function classTable(list,limit){
+  const mineAt=list.findIndex(x=>x.tid===S.user),rows=list.slice(0,limit);
+  if(mineAt>=limit)rows.push(list[mineAt]);
+  return `<div class="tw"><table class="tbl"><thead><tr><th class="n">#</th><th>Program</th><th class="n">Signees</th><th>Stars</th><th class="n">Score</th></tr></thead><tbody>${rows.map(x=>{const i=list.indexOf(x);
+    return `<tr class="${x.tid===S.user?"me":""}"><td class="n">${i+1}</td><td>${teamCell(x.tid)}</td><td class="n">${x.n}</td><td class="sub">${[5,4,3].map(k=>x.st[k]?`${x.st[k]}× ${k}★`:"").filter(Boolean).join(", ")||"—"}</td><td class="n">${x.score}</td></tr>`}).join("")}</tbody></table></div>`;
+}
+
+// ===================== CONFERENCE REALIGNMENT =====================
+// Winning small-conference programs get invited up. Conferences swap members so every league keeps its size.
+const clout=t=>t.pres+ovr(t)/40;
+const baseOf=t=>(TEAMS0.find(x=>x[1]===t.abbr)||[])[4]||70;
+const movedRecently=id=>(S.realign||[]).some(m=>(m.tid===id||m.swap===id)&&S.season-m.season<3);
+function realignTargets(t,toTier){
+  // Only a struggling, low-prestige member can be swapped out, and traditional powers never are.
+  return shuffle(CONFS.map((_,i)=>i).filter(i=>CONF_TIER[i]===toTier&&i!==t.conf)).map(c=>{
+    const weak=S.teams.filter(x=>act(x)&&x.conf===c&&x.id!==S.user&&!movedRecently(x.id)&&record(x.id).w<=5&&baseOf(x)<(toTier===0?82:74)&&x.pres<=2.2)
+      .sort((a,b)=>clout(a)-clout(b))[0];
+    return weak&&clout(weak)+.5<clout(t)?{c,weak:weak.id}:null}).filter(Boolean);
+}
+function swapConf(a,b){const ta=T(a),tb=T(b),c=ta.conf;ta.conf=tb.conf;tb.conf=c}
+function runRealignment(){
+  const moves=[],u=S.user,ap=rankIds();let invite=null;
+  const rising=(tier,fn)=>S.teams.filter(t=>act(t)&&CONF_TIER[t.conf]===tier&&fn(t)).sort((a,b)=>ap.indexOf(a.id)-ap.indexOf(b.id));
+  const go=(list,toTier,max,prob,why)=>{
+    let n=0;
+    for(const t of list){
+      if(n>=max)break;
+      const opts=realignTargets(t,toTier);if(!opts.length)continue;
+      if(t.id===u){invite={...opts[0],why};continue}
+      if(rnd()>prob)continue;
+      const from=t.conf,{c,weak}=opts[0];swapConf(t.id,weak);n++;
+      moves.push({tid:t.id,from,to:c,swap:weak,txt:`${t.name} leave the ${CONFS[from]} for the ${CONFS[c]}. ${T(weak).name} move to the ${CONFS[from]} in the swap.`});
+    }
+  };
+  go(rising(1,t=>{const r=record(t.id);return !movedRecently(t.id)&&r.w>=10&&ap.indexOf(t.id)<15&&t.pres>=1.8}),0,1,.6,"after a huge season");
+  go(rising(2,t=>!movedRecently(t.id)&&record(t.id).w>=11&&ovr(t)>=66),1,1,.35,"after dominating the FCS");
+  S.realign=(S.realign||[]).concat(moves.map(m=>({season:S.season,...m}))).slice(-30);
+  return {moves,invite};
+}
+
 // ===================== OFFSEASON =====================
 function beginOffseason(){
   const u=S.user,rec=record(u),P=S.post,inPO=P.seeds.includes(u),champ=P.champ===u;
@@ -1425,6 +1478,7 @@ function beginOffseason(){
     board:me.openSlots.map(i=>({i,pos:me.roster[i].pos,signed:null,cands:[5,4,3,2].map(st=>makeProspect(me.roster[i].pos,st))}))};
   if(hs&&S.off.board.length){const c=S.off.board[0].cands[0];c.chance=Math.min(.98,c.chance+.3);c.visited=true}
   S.off.car=runCarousel();
+  const RA=runRealignment();S.off.realign=RA.moves;S.off.invite=RA.invite;
   S.phase="offseason";
 }
 function stadiumCost(t){return 8+t.hfa*4}
@@ -1493,11 +1547,16 @@ function finishSigning(){
     const np=newPlayer(slot.pos,c.ovr,0,c.st,c.ar);np.n=c.n;me.roster[slot.i]=np;
   }
   me.openSlots=[];
+  const ra=S.off.realign||[],cr=classRankings(),myRank=cr.findIndex(x=>x.tid===S.user)+1;
+  S.classRank={season:S.season+1,list:cr.slice(0,25),mine:cr[myRank-1],myRank};
+  S.classHist=(S.classHist||[]).concat({season:S.season+1,rank:myRank,team:S.user});
   S.season++;S.week=0;S.phase="regular";S.results=[];S.ccg=null;S.post=null;S.heisman=null;S.off=null;S.news=[];S.weekly=null;S.lastGame=null;S.tend=null;S.tendD=null;S.pv=null;S.tab="preseason";
   for(const t of S.teams){t.active=true;for(const p of t.roster){p.s=blank();p.inj=0}}
   S.schedule=makeSchedule();buildPL();RK.key=null;S.wx={};S.mo={};voteAP();
   S.pre=buildPreseason();
   news(`Welcome to the ${S.season} season. ${T(S.user).name} open at #${rankOf(S.user)}. The preseason magazine is out.`);
+  news(`Your ${S.season} recruiting class ranks #${S.classRank.myRank} in the country. ${T(S.classRank.list[0].tid).name} signed the top class.`);
+  ra.forEach(m=>news(`Realignment: ${m.txt}`));
 }
 
 function newDynasty(userId,qlen){
@@ -1862,6 +1921,10 @@ function tabHistory(){
   <div class="panel"><h3>Season by season</h3>${H.length?`<div class="tw"><table class="tbl"><tbody>${H.slice().reverse().map(h=>`<tr><td class="n">${h.season}</td><td class="n">${h.w}-${h.l}</td><td>${h.champ===u?"🏆 ":""}${esc(h.result)}${h.confChamp?' <span class="tag amber">Conf champ</span>':""}</td><td class="n">#${h.rank}</td></tr>`).join("")}</tbody></table></div>`:'<p class="muted">Finish a season to start your history.</p>'}</div>
   <div class="panel"><h3>National champs & Heisman winners</h3>${H.length?`<div class="tw"><table class="tbl"><tbody>${H.slice().reverse().map(h=>`<tr><td class="n">${h.season}</td><td>${esc(T(h.champ).name)}</td><td class="sub">${h.heisman?`${esc(h.heisman.name)} (${esc(T(h.heisman.team).abbr)})`:""}</td></tr>`).join("")}</tbody></table></div>`:'<p class="muted">None yet.</p>'}</div>
   </div>
+  <div class="grid2">
+    <div class="panel"><h3>Your recruiting classes</h3>${(S.classHist||[]).filter(c=>c.team===u).length?`<div class="tw"><table class="tbl"><tbody>${S.classHist.filter(c=>c.team===u).slice().reverse().map(c=>`<tr><td class="n">${c.season}</td><td>Class rank</td><td class="n"><b>#${c.rank}</b></td></tr>`).join("")}</tbody></table></div>`:'<p class="muted">Your first class will be ranked after signing day.</p>'}</div>
+    <div class="panel"><h3>Conference realignment history</h3>${(S.realign||[]).length?`<div class="news">${S.realign.slice().reverse().slice(0,12).map(m=>`<div><b class="num">${m.season}</b> · ${esc(m.txt)}</div>`).join("")}</div>`:'<p class="muted">No teams have changed conferences yet. Small-conference teams that win big get invited up.</p>'}</div>
+  </div>
   <div class="panel"><h3>Rivalry trophies around the country</h3>${trophies.length?`<div class="tw"><table class="tbl"><tbody>${trophies.map(r=>`<tr class="${S.trophies[r[2]]===u?"me":""}"><td>${esc(r[2])}</td><td class="sub">${r[0]} vs ${r[1]}</td><td>${esc(T(S.trophies[r[2]]).name)}</td></tr>`).join("")}</tbody></table></div>`:'<p class="muted">Rivalry games will show up here once they are played.</p>'}</div>`;
 }
 
@@ -1915,7 +1978,7 @@ function blurb(id){
   const star=T(id).roster.slice().sort((a,b)=>b.ovr-a.ovr)[0];
   return `Strength: ${UNIT_NAME[best].toLowerCase()} (${u[best]}). Question mark: ${UNIT_NAME[worst].toLowerCase()} (${u[worst]}). Star: ${star.pos} ${star.n} (${star.ovr}).`;
 }
-const MAG_SECTIONS=[["mag-top25","Top 25"],["mag-heis","Heisman odds"],["mag-players","Top players"],["mag-aa","All-America"],["mag-off","Best offenses"],["mag-def","Best defenses"],["mag-venues","Toughest places to play"],["mag-confs","Conference picks"],["mag-goty","Games of the year"],["mag-breakout","Breakout players"],["mag-coach","Hot seat"],["mag-you","Your team"]];
+const MAG_SECTIONS=[["mag-top25","Top 25"],["mag-heis","Heisman odds"],["mag-players","Top players"],["mag-aa","All-America"],["mag-off","Best offenses"],["mag-def","Best defenses"],["mag-venues","Toughest places to play"],["mag-confs","Conference picks"],["mag-goty","Games of the year"],["mag-breakout","Breakout players"],["mag-coach","Hot seat"],["mag-classes","Recruiting classes"],["mag-you","Your team"]];
 function tabPreseason(){
   const P=S.pre,top=T(P.top25[0]),cover=P.heis[0],me=T(S.user),ME=P.me;
   const ptr=(x,i,extra)=>`<tr class="${x.tid===S.user?"me":""}"><td class="n">${i+1}</td><td>${PL[x.pid]?plink(x.pid,pName(x.pid)):esc(pName(x.pid))} <span class="sub">${pPos(x.pid)} · ${esc(T(x.tid).abbr)}${PL[x.pid]?` · ${YRS[PL[x.pid].yr]}`:""}</span></td>${extra}</tr>`;
@@ -1978,7 +2041,10 @@ function tabPreseason(){
   </div>
   ${(()=>{const ts=S.teams.filter(t=>act(t)&&t.id!==S.user&&t.coach&&!isFCS(t.id));
     const hot=ts.filter(t=>t.pres>=2.5).sort((a,b)=>a.coach.sec-b.coach.sec).slice(0,6),fresh=ts.filter(t=>t.coach.yrs===0).sort((a,b)=>b.pres-a.pres).slice(0,6);
-    return `<div class="grid2" id="mag-coach"><div class="panel"><h3>Coaches on the hot seat</h3><div class="tw"><table class="tbl"><tbody>${hot.map(t=>`<tr><td>${esc(t.coach.n)}<div class="sub">${esc(t.name)} · year ${t.coach.yrs+1}</div></td><td class="n"><span class="sec-bad">${secLabel(t.coach.sec)}</span></td></tr>`).join("")}</tbody></table></div>
+    const CR=S.classRank&&S.classRank.season===S.season?S.classRank:null,RA=(S.realign||[]).filter(m=>m.season===S.season-1);
+    return `${CR||RA.length?`<div class="grid2" id="mag-classes">${CR?`<div class="panel"><h3>Top recruiting classes</h3>${classTable(CR.mine&&!CR.list.includes(CR.mine)?[...CR.list,CR.mine]:CR.list,10)}</div>`:""}
+      ${RA.length?`<div class="panel"><h3>Conference realignment</h3><div class="news">${RA.map(m=>`<div>${esc(m.txt)}</div>`).join("")}</div></div>`:""}</div>`:""}
+    <div class="grid2" id="mag-coach"><div class="panel"><h3>Coaches on the hot seat</h3><div class="tw"><table class="tbl"><tbody>${hot.map(t=>`<tr><td>${esc(t.coach.n)}<div class="sub">${esc(t.name)} · year ${t.coach.yrs+1}</div></td><td class="n"><span class="sec-bad">${secLabel(t.coach.sec)}</span></td></tr>`).join("")}</tbody></table></div>
       <p class="muted" style="font-size:13px">Your job: ${secLabel(S.job.sec)} (${Math.round(S.job.sec)}/100). Expected wins this year: about ${expW(S.user)}.</p></div>
       <div class="panel"><h3>New head coaches</h3>${fresh.length?`<div class="tw"><table class="tbl"><tbody>${fresh.map(t=>`<tr><td>${esc(t.coach.n)}<div class="sub">${esc(t.name)}</div></td><td class="sub">${esc(SCHEMES[plan(t.id).scheme].name)} · ${esc(DSCHEMES[dplan(t.id).scheme].name)}</td></tr>`).join("")}</tbody></table></div>`:'<p class="muted">No new coaches at big programs this year.</p>'}</div></div>`})()}`;
 }
@@ -2318,6 +2384,10 @@ function renderOff(){
         ${C.taken!==undefined?`<p><span class="tag good">New job</span> You're now the head coach at <b>${esc(T(C.taken).name)}</b>. Their recruiting class is already set.</p>`:
           C.offers.length?`<p>${C.fired?"Schools willing to give you another shot:":"Other schools want to hire you. Take a job or stay put."}</p><div class="offers">${C.offers.map(id=>{const t=T(id);return `<div class="offer">${badge(t)}<div style="min-width:0"><b>${esc(t.name)}</b><div class="sub">${esc(CONFS[t.conf])} · ${starStr(presStars(t))} · OVR ${ovr(t)} · ${recStr(id)} last season</div></div><button class="small-btn" data-act="takeJob" data-id="${id}">Take job</button></div>`}).join("")}</div>`:
           '<p class="muted">No other schools came calling this year.</p>'}</div>
+      ${O.invite?`<div class="panel event"><div class="row" style="justify-content:space-between"><h3>Conference invitation</h3><span class="tag amber">Decision</span></div>
+        <p>The <b>${esc(CONFS[O.invite.c])}</b> wants ${esc(me.name)} to join ${esc(O.invite.why)}. You'd leave the ${esc(CONFS[me.conf])}, and ${esc(T(O.invite.weak).name)} would take your spot. Bigger conference: tougher schedule, more prestige, better recruiting and a clearer path to the playoff.</p>
+        <div class="row"><button class="btn" data-act="joinConf">Join the ${esc(CONFS[O.invite.c])}</button><button class="btn ghost" data-act="stayConf">Stay put</button></div></div>`:""}
+      ${(O.realign||[]).length?`<div class="panel"><h3>Conference realignment</h3><div class="news">${O.realign.map(m=>`<div>${esc(m.txt)}</div>`).join("")}</div></div>`:""}
       ${big.length?`<div class="panel"><h3>Coaching carousel</h3><div class="news">${big.map(m=>`<div>${esc(m.txt)}</div>`).join("")}</div></div>`:""}`})()}
     <div class="row"><button class="btn" data-act="offStep" data-s="coach" ${O.car&&O.car.fired&&O.car.taken===undefined?"disabled":""}>Next: coach & facilities</button></div>`;
   } else if(step==="coach"){
@@ -2347,6 +2417,9 @@ function renderOff(){
     const open=O.board.filter(b=>!(b.signed&&b.signed.transfer));
     body=`<div class="panel"><p>Offer scholarships to high school prospects to fill your open spots. Higher-star recruits start better and develop faster, but they may sign somewhere else. If a recruit says no, you get half the points back. Any spot left empty goes to a 3★ walk-on.</p>
       <p class="eyebrow num" style="font-size:18px">${O.points} recruiting points</p></div>
+      ${(()=>{const L=classRankings(myLiveClass()),me=L.findIndex(x=>x.tid===S.user)+1;
+        return `<div class="panel"><div class="row" style="justify-content:space-between"><h3>Recruiting class rankings</h3><span class="tag amber">You: #${me} of ${L.length}</span></div>
+        <p class="muted" style="font-size:13.5px">Your class updates as you sign players. Five-stars count the most.</p>${classTable(L,5)}</div>`})()}
       ${open.length?open.map(slot=>{const si=O.board.indexOf(slot);return `<div class="slot ${slot.signed?"done":""}"><div class="row" style="justify-content:space-between"><b>Open spot: ${slot.pos}</b>${slot.signed?`<span class="tag good">Signed ${esc(slot.signed.n)}</span>`:""}</div>
         ${slot.cands.map((c,ci)=>`<div class="cand"><span class="stars">${starStr(c.st)}</span><span>${esc(c.n)} <span class="sub">${c.ar!=null?esc(ARCH[c.pos][c.ar][0])+" · ":""}${c.ovr} OVR</span></span><span class="sub hide-sm">${Math.round(c.chance*100)}% interest${c.visited?" · visited":""}</span>
           ${c.status==="signed"?'<span class="tag good">Signed</span>':c.status==="lost"?'<span class="tag bad">Went elsewhere</span>':`<button class="small-btn" data-act="offer" data-s="${si}" data-c="${ci}" ${slot.signed||O.points<c.cost?"disabled":""}>Offer · ${c.cost?c.cost+" pts":"free"}</button>`}</div>`).join("")}
@@ -2402,6 +2475,10 @@ const ACT={
   cerNext(){S.ceremony.step=1},
   cerDone(){S.ceremony.step=3},
   event(d){resolveEvent(d.k)},
+  joinConf(){const I=S.off.invite;if(!I)return;const me=T(S.user),from=me.conf;swapConf(S.user,I.weak);
+    const m={tid:S.user,from,to:I.c,swap:I.weak,txt:`${me.name} leave the ${CONFS[from]} for the ${CONFS[I.c]}. ${T(I.weak).name} move to the ${CONFS[from]} in the swap.`};
+    S.off.realign=(S.off.realign||[]).concat(m);S.realign=(S.realign||[]).concat({season:S.season,...m});me.pres=Math.min(5,me.pres+.3);S.off.invite=null},
+  stayConf(){S.off.invite=null},
   stadium(){const me=T(S.user),c=stadiumCost(me);if(me.hfa<5&&S.off.points>=c){S.off.points-=c;me.hfa++;me.cap+=8000;news(`${me.stadium} expanded. Crowd level is now ${me.hfa}/5.`)}},
   reset(){if(S.confirmReset){try{localStorage.removeItem(KEY)}catch(e){}S=null;SAVED=null}else S.confirmReset=true},
 };
