@@ -865,6 +865,46 @@ body{background:
   radial-gradient(1100px 520px at 50% -220px,color-mix(in srgb,var(--tc1) 38%,transparent),transparent 72%),
   radial-gradient(900px 500px at 50% 120%,color-mix(in srgb,var(--tc1) 14%,transparent),transparent 70%),
   repeating-linear-gradient(90deg,rgba(255,255,255,.014) 0 1px,transparent 1px 96px),var(--night)}
+/* ===== Progression ===== */
+.xpb{display:flex;align-items:center;gap:8px;margin-top:8px;max-width:420px;font-family:var(--num)}
+.xpl{font-weight:700;font-size:13px;padding:2px 8px;border-radius:999px;background:linear-gradient(180deg,#ffd987,#f5b83d);color:#1d1400;flex:none}
+.xpt{flex:1;height:8px;border-radius:4px;background:rgba(0,0,0,.35);overflow:hidden;min-width:60px}
+.xpt i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#f5b83d,#ffe08f);box-shadow:0 0 10px rgba(245,184,61,.6)}
+.xpn{font-size:12.5px;letter-spacing:.04em;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.streak{color:#ffb35c;font-weight:700}
+.wgoals{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center}
+.wg-h{width:100%;text-align:center;font-family:var(--num);font-weight:700;font-size:12px;letter-spacing:.16em;text-transform:uppercase;opacity:.85}
+.wg{font-family:var(--num);font-weight:600;font-size:13.5px;padding:5px 11px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.22)}
+.wg.ok{border-color:var(--good);color:var(--good)}.wg.no{opacity:.6}
+.sgs{display:flex;flex-direction:column;gap:6px}
+.sg{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:9px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--hair)}
+.sg span{color:var(--muted)}.sg em{font-style:normal;font-family:var(--num);font-weight:700;color:var(--gold-soft)}
+.sg.ok{border-color:color-mix(in srgb,var(--good) 55%,transparent)}.sg.ok span,.sg.ok em{color:var(--good)}
+.sg.no{opacity:.55}.sg.no span{color:var(--bad)}
+.pg{box-sizing:border-box;display:flex;flex-direction:column;gap:16px;align-items:stretch;max-width:560px;width:100%;margin:0 auto;padding:22px 18px;border-radius:28px;border:1px solid rgba(255,255,255,.14);
+  background:radial-gradient(500px 240px at 50% 0%,color-mix(in srgb,var(--c1) 60%,transparent),transparent 75%),var(--panel);box-shadow:0 30px 70px rgba(0,0,0,.55)}
+.pg-top{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.pg-res{font-family:var(--display);font-size:clamp(44px,13vw,72px);line-height:1;letter-spacing:.04em;animation:pgPop .55s cubic-bezier(.2,1.4,.4,1) both}
+.pg.won .pg-res{background:linear-gradient(180deg,#fff3c4,#ffd34d 50%,#c8901a);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 14px rgba(245,184,61,.45))}
+.pg.lost .pg-res{color:#c7cee3}
+@keyframes pgPop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+.pg-score{display:flex;align-items:center;gap:14px;font-family:var(--num);font-size:40px;font-variant-numeric:tabular-nums}
+.pg-score span{display:flex;align-items:center;gap:8px}.pg-score i{font-style:normal;font-size:16px;color:var(--muted)}
+.pg-streak{font-family:var(--num);font-weight:700;font-size:16px;letter-spacing:.06em;color:#ffb35c;padding:4px 12px;border-radius:999px;background:rgba(255,140,40,.12);border:1px solid rgba(255,140,40,.35)}
+.pg-sec{display:flex;flex-direction:column;gap:6px}
+.pg-sec h4{margin:0;font-family:var(--num);font-weight:700;font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-soft)}
+.pg-goal,.pg-xps div{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--hair);animation:pgIn .4s ease both}
+.pg-goal span{font-weight:700}.pg-goal.ok{border-color:color-mix(in srgb,var(--good) 55%,transparent)}.pg-goal.ok span{color:var(--good)}.pg-goal.no{opacity:.6}.pg-goal.no span{color:var(--bad)}
+.pg-goal em{margin-left:auto;font-style:normal;font-family:var(--num);font-weight:700;color:var(--gold-soft)}
+.pg-xps{display:flex;flex-direction:column;gap:4px}.pg-xps div{padding:6px 12px;font-size:14px}.pg-xps b{margin-left:auto;font-family:var(--num);color:var(--gold-soft)}
+@keyframes pgIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.pg-bar{display:flex;align-items:center;gap:10px;font-family:var(--num);font-weight:700;margin-top:6px}
+.pg-bar .xpt{height:12px}.pg-bar .xpt i{width:var(--to);animation:xpFill 1.2s .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes xpFill{from{width:var(--from)}to{width:var(--to)}}
+.pg-up{padding:12px;border-radius:14px;text-align:center;font-family:var(--num);font-weight:700;font-size:19px;color:#1d1400;background:linear-gradient(180deg,#ffe08f,#f5b83d);box-shadow:0 0 30px rgba(245,184,61,.5);animation:pgPop .6s 1.4s cubic-bezier(.2,1.4,.4,1) both}
+.pg-up em{display:block;font-style:normal;font-size:14px;font-weight:600}
+.pg-next{margin:0;text-align:center;color:var(--muted);font-family:var(--num);font-size:16px;letter-spacing:.04em}
+@media (prefers-reduced-motion:reduce){.pg-res,.pg-goal,.pg-xps div,.pg-up,.pg-bar .xpt i{animation:none}}
 </style>
 
 <div id="busy" class="busy" hidden><span>Simming…</span></div>
@@ -1178,7 +1218,7 @@ const FAC_COST=[10,16,24];
 const fac=k=>(S.fac&&S.fac[k])||0;
 // Difficulty: your in-game edge, recruiting budget, and how hard the AI programs recruit and develop.
 // Playoff pressure on your team, by difficulty, and the target on the defending champ's back.
-const CFP_PRESS=[.15,.32,.4,.48];
+const CFP_PRESS=[.18,.38,.46,.54];
 function defendingChamp(){const h=(S.history||[]).at(-1);return !!h&&h.season===S.season-1&&h.champ===S.user}
 const DIFF=[
   {n:"Rookie",d:"The original balance. Easiest to build a dynasty.",edge:0,pts:1,ai:0},
@@ -1954,7 +1994,8 @@ function playRoundCore(userRes,games){
     S.results.push({h:gm.h,a:gm.a,hs:r.hs,as:r.as,type:gm.type,label:gm.label,wk:S.phase==="regular"?S.week:null});
     S.mo=S.mo||{};const w=gm.winner,l=w===gm.h?gm.a:gm.h,up=ovr(T(w))<ovr(T(l))-4;
     S.mo[w]=clamp((S.mo[w]||0)*.5+1+(up?1:0),-3,3);S.mo[l]=clamp((S.mo[l]||0)*.5-1,-3,3);
-    gameAch(gm);uniResult(gm);relAfterGame(gm);pracAfterGame(gm);
+    if(gm.h===S.user||gm.a===S.user){S.xpLog=[];S.lvlUps=[];S.pgBefore={lvl:xpS().lvl,xp:xpS().xp}}
+    gameAch(gm);uniResult(gm);relAfterGame(gm);pracAfterGame(gm);progressAfterGame(gm);
   }
   for(const t of S.teams)for(const p of t.roster)if(p.inj>0){p.inj--;if(!p.inj)p.susp=false;if(p.inj===0&&t.id===S.user)news(`${p.pos} ${p.n} is back from injury.`)}
   // Sammy Eyde never misses a game in the opening season of a dynasty.
@@ -2150,6 +2191,7 @@ function beginOffseason(){
   S.history.push({team:u,pw,pl:post.length-pw,season:S.season,w:rec.w,l:rec.l,rank:rankOf(u),result:champ?"National champions":inPO?`CFP #${P.seeds.indexOf(u)+1} seed`:(P.bowls.find(b=>b.h===u||b.a===u)?.label||"No bowl"),
     champ:P.champ,heisman:S.heisman[0]?{name:S.heisman[0].name,team:S.heisman[0].team}:null,
     confChamp:S.ccg.some(g=>g.winner===u)});
+  paySeasonGoals();S.pgShow=false;
   const yb=buildYearbook();
   S.coach.pts+=1+Math.floor(rec.w/4)+(inPO?1:0)+(champ?1:0);
   for(const t of S.teams.filter(act)){const r=record(t.id);t.pres=clamp(t.pres+(r.w-7)*.12+(P.seeds.includes(t.id)?.3:0)+(P.champ===t.id?.4:0),presFloor(t),5)}
@@ -2331,6 +2373,7 @@ function renderCore(){
   if(WATCH)return renderWatch();
   if(PARTY)return renderParty();
   if(S.ybView!=null)return renderYearbook();
+  if(S.pgShow&&S.pg)return renderPostgame();
   if(S.pv!=null)return renderPlayer();
   if(S.selection&&S.selection.season===S.season&&!S.selection.done&&S.post)return renderSelection();
   if(S.ceremony&&S.ceremony.season===S.season&&S.ceremony.step<3&&S.heisman)return renderCeremony();
@@ -2413,6 +2456,7 @@ function nextCard(){
       </div>
       <div class="gd-venue">${ug.neutral?"Neutral site":`${esc(h.stadium)} · ${h.cap.toLocaleString("en-US")} fans · Crowd ${h.hfa}/5${ug.h===u?" · Home field is yours":""}`}</div>
       ${chips.length?`<div class="gd-chips">${chips.join("")}</div>`:""}
+      ${goalsCard()}
       ${uniPicker(ug)}
       <div class="gd-actions"><button class="btn big" data-act="watch">Watch live</button><button class="btn ghost big" data-act="sim">Sim game</button></div>
       <div class="gd-links"><button class="linkbtn" data-act="tab" data-t="practice">Practice: ${INTENSITY[prac().int].n}${prac().drills.length?` · ${prac().drills.slice(0,INTENSITY[prac().int].max).map(k=>DRILLS[k].n).join(", ")}`:""}</button><button class="linkbtn" data-act="tab" data-t="plan">Game plan</button>${S.phase==="regular"&&S.week<11?`<button class="linkbtn" data-act="simSeason">Sim to end of regular season</button>`:""}</div>
@@ -2438,12 +2482,12 @@ function renderHub(){
   const jc=S.job.sec>=70?"good":S.job.sec>=45?"amber":"bad";
   const chip=(c,l,v)=>`<div class="chip" data-c="${c}"><span>${l}</span><b>${v}</b></div>`;
   const groups=[["Season","blue",["home","news","weekly","preseason","schedule","standings","top25","post"]],["Team","green",["roster","practice","locker","plan","coach","uniforms"]],["Records","purple",["leaders","history","trophies"]]];
-  const side=S.tab==="home"?[partyCard(),gotwCard(),lastGameHTML()].filter(Boolean):[];
+  const side=S.tab==="home"?[partyCard(),S.phase==="regular"||S.phase==="ccg"?seasonGoalsCard():"",gotwCard(),lastGameHTML()].filter(Boolean):[];
   app.innerHTML=`
   <div class="teamband" style="--t1:${me.c1};--t2:${me.c2}" data-wm="${esc(me.abbr)}">
     <span class="tb-logo" style="--b1:${me.c1};--b2:${me.c2}">${esc(me.abbr)}</span>
     <div style="min-width:0"><div class="eyebrow tb-eyebrow">CFB Dynasty 2 · ${S.season} season · ${esc(roundName())}</div>
-    <h1 class="tb-name">${esc(me.name)}</h1><div class="tb-sub">${esc(CONFS[me.conf])} · <span class="stars">${starStr(presStars(me))}</span> program</div></div>
+    <h1 class="tb-name">${esc(me.name)}</h1><div class="tb-sub">${esc(CONFS[me.conf])} · <span class="stars">${starStr(presStars(me))}</span> program${winStreak()>=2?` · <span class="streak">🔥 ${winStreak()} straight</span>`:""}</div>${xpBar()}</div>
   </div>
   <div class="chips">
     ${chip("green","Record",`${recStr(S.user)} <small>(${cr.w}-${cr.l} conf)</small>`)}
@@ -3110,7 +3154,7 @@ function finishWatch(){
   const W=WATCH;if(!W||!W.g.over)return;
   WATCH=null;clearTimeout(wTimer);
   const res=finalizeGame(W.g);
-  if(W.kind==="user"){playRound(res);scrollTo(0,0)}
+  if(W.kind==="user"){weekGoals();playRound(res);S.pgShow=true;scrollTo(0,0)}
   else{S.preRes=S.preRes||{};S.preRes[W.key]=res;news(`Game of the Week: ${T(res.hs>res.as?res.h:res.a).name} beat ${T(res.hs>res.as?res.a:res.h).name} ${Math.max(res.hs,res.as)}-${Math.min(res.hs,res.as)}.`)}
 }
 function renderWatch(){
@@ -3543,8 +3587,9 @@ const ACT={
   pick(d){newDynasty(+d.id,pickQlen)},
   tab(d){S.tab=d.t},
   jump(d){jumpTo=d.id},
-  sim(){S.schedLocked=true;const gm=userGame();applyUni(gm);playRound(simGame(gm))},
-  simSeason(){S.schedLocked=true;while(S.phase==="regular")playRound(null)},
+  sim(){S.schedLocked=true;const gm=userGame();weekGoals();applyUni(gm);playRound(simGame(gm));S.pgShow=true;scrollTo(0,0)},
+  pgDone(){S.pgShow=false;scrollTo(0,0)},
+  simSeason(){S.schedLocked=true;while(S.phase==="regular"){weekGoals();playRound(null)}S.pgShow=false},
   simRound(){playRound(null)},
   offseason(){beginOffseason();scrollTo(0,0)},
   offStep(d){if(!["yearbook","recap","jobs"].includes(d.s)){if(S.off.car&&S.off.car.fired&&S.off.car.taken===undefined)return;settleOffers()}S.off.step=d.s;scrollTo(0,0)},
@@ -3799,6 +3844,118 @@ function tabPractice(){
     ${P.log.length?`<div class="panel" data-c="purple"><h3>Practice reports</h3><div class="plog">${P.log.map(l=>`<div><b>${esc(l.h)}</b>${l.notes.map(n=>`<p>${esc(n)}</p>`).join("")}</div>`).join("")}</div></div>`:""}`;
 }
 
+
+// ===================== PROGRESSION: XP, GOALS, STREAKS =====================
+const RANKS=[[1,"Position coach"],[5,"Coordinator"],[10,"Head coach"],[15,"Program builder"],[20,"Elite"],[30,"Legend"]];
+function xpNeed(l){return 600+250*(l-1)}
+function coachRank(l){return RANKS.filter(r=>l>=r[0]).pop()[1]}
+function xpS(){if(!S.xp)S.xp={xp:0,lvl:1,tot:0};return S.xp}
+// Every source of XP funnels through here; the post-game screen shows the list.
+function addXP(n,why){
+  const X=xpS();n=Math.round(n);if(n<=0)return;X.xp+=n;X.tot+=n;(S.xpLog=S.xpLog||[]).push({t:why,n});
+  while(X.xp>=xpNeed(X.lvl)){X.xp-=xpNeed(X.lvl);X.lvl++;
+    const sp=X.lvl%4===0,rw=sp?"+1 coach skill point":"+2 recruiting points";
+    if(sp)S.coach.pts++;else S.bank=(S.bank||0)+2;
+    (S.lvlUps=S.lvlUps||[]).push({l:X.lvl,rw});news(`Coach level ${X.lvl} (${coachRank(X.lvl)}). Reward: ${rw}.`);
+    toast(`<span class="ti" style="--tc:#f5b83d">⬆️</span><span><small>Level up · ${esc(coachRank(X.lvl))}</small><b>Level ${X.lvl} · ${rw}</b></span>`)}
+}
+function xpBar(){const X=xpS(),pc=Math.round(100*X.xp/xpNeed(X.lvl));
+  return `<div class="xpb"><span class="xpl">Lv ${X.lvl}</span><div class="xpt"><i style="width:${pc}%"></i></div><span class="xpn">${esc(coachRank(X.lvl))} · ${X.xp}/${xpNeed(X.lvl)} XP</span></div>`}
+function winStreak(){let n=0;for(let i=S.results.length-1;i>=0;i--){const g=S.results[i];if(g.h!==S.user&&g.a!==S.user)continue;const us=g.h===S.user?g.hs:g.as,th=g.h===S.user?g.as:g.hs;if(us>th)n++;else break}return n}
+// Three goals for this week's game, scaled to how big a favorite you are.
+const GOALS={
+  win:{t:()=>"Win the game",ok:c=>c.won},
+  close:{t:()=>"Keep it within 7",ok:c=>c.us+7>=c.th},
+  margin:{t:n=>`Win by ${n}+`,ok:(c,n)=>c.us-c.th>=n},
+  hold:{t:n=>`Hold them to ${n} or fewer`,ok:(c,n)=>c.th<=n},
+  score:{t:n=>`Score ${n}+ points`,ok:(c,n)=>c.us>=n},
+  rush:{t:n=>`Rush for ${n}+ yards`,ok:(c,n)=>c.sp.ry>=n},
+  pass:{t:n=>`Throw for ${n}+ yards`,ok:(c,n)=>c.sp.py>=n},
+  noto:{t:()=>"No turnovers",ok:c=>c.to===0},
+  qbtd:{t:n=>`Your QB throws ${n}+ TDs`,ok:(c,n)=>c.qbtd>=n},
+  rb100:{t:()=>"Have a 100-yard rusher",ok:c=>c.best.ry>=100},
+  sacks:{t:n=>`Record ${n}+ sacks`,ok:(c,n)=>c.sk>=n}};
+function weekGoals(){
+  const ug=userGame();if(!ug)return null;const key=talkKey();
+  if(S.goals&&S.goals.key===key)return S.goals;
+  const o=ug.h===S.user?ug.a:ug.h,p=winProb(S.user,o,ug.neutral?null:ug.h);
+  let h=[...key].reduce((a,c)=>(a*31+c.charCodeAt(0))%100003,S.user+7);const pick=a=>{h=(h*9301+49297)%233280;return a[h%a.length]};
+  const stat=()=>pick([["rush",p>.6?200:150],["pass",p>.6?300:250],["noto"],["qbtd",p>.6?3:2],["rb100"],["sacks",3]]);
+  let L;
+  if(p>=.75)L=[["margin",p>.9?28:21],["hold",p>.9?10:14],stat()];
+  else if(p>=.45)L=[["win"],stat(),pick([["hold",21],["score",31],stat()])];
+  else L=[pick([["win"],["close"]]),["hold",24],stat()];
+  const seen=new Set();L=L.filter(([k])=>!seen.has(k)&&seen.add(k));while(L.length<3){const s=stat();if(!seen.has(s[0])){seen.add(s[0]);L.push(s)}}
+  return S.goals={key,list:L.map(([k,n])=>({k,n,t:GOALS[k].t(n),done:null}))};
+}
+function goalsCard(compact){const G=weekGoals();if(!G)return "";
+  return `<div class="wgoals ${compact?"c":""}"><span class="wg-h">This week's goals · +60 XP each</span>${G.list.map(g=>`<span class="wg ${g.done===true?"ok":g.done===false?"no":""}">${g.done===true?"✓":g.done===false?"✗":"○"} ${esc(g.t)}</span>`).join("")}</div>`}
+// Season goals from your athletic director.
+function seasonGoals(){
+  if(S.sobj&&S.sobj.season===S.season)return S.sobj;
+  const u=S.user,rk=(S.pre&&S.pre.me&&S.pre.me.rank)||rankOf(u),X=clamp(Math.round(expW(u))+1,4,12);
+  const riv=S.schedule.map(wk=>wk.find(g=>g.includes(u))).filter(Boolean).map(g=>rivalryOf(g[0],g[1])).find(Boolean);
+  const L=[{k:"wins",n:X,t:`Win ${X} games`},riv?{k:"riv",r:riv,t:`Win ${/^The /.test(riv)?"":"the "}${riv}`}:{k:"ranked",t:"Beat a ranked team"},
+    isFCS(u)?{k:"winning",t:"Finish with a winning record"}:rk<=12?{k:"cfp",t:"Make the College Football Playoff"}:rk<=40?{k:"top25",t:"Finish in the AP Top 25"}:{k:"bowl",t:"Reach a bowl game"}];
+  return S.sobj={season:S.season,list:L,paid:false};
+}
+function sgProgress(g){
+  const u=S.user,mine=S.results.filter(r=>r.h===u||r.a===u),w=mine.filter(r=>(r.h===u?r.hs>r.as:r.as>r.hs));
+  if(g.k==="wins")return {v:`${w.length}/${g.n}`,ok:w.length>=g.n};
+  if(g.k==="riv"){const r=mine.find(r=>rivalryOf(r.h,r.a)===g.r);return {v:r?(w.includes(r)?"Won":"Lost"):"Not yet",ok:!!r&&w.includes(r),fail:!!r&&!w.includes(r)}}
+  if(g.k==="ranked"){const ok=w.some(r=>(r.ranked));return {v:ok?"Done":"Not yet",ok}}
+  if(g.k==="winning"){const l=mine.length-w.length;return {v:`${w.length}-${l}`,ok:w.length>l&&S.phase!=="regular"}}
+  if(g.k==="cfp")return {v:S.post?(S.post.seeds.includes(u)?"In":"Out"):"TBD",ok:!!S.post&&S.post.seeds.includes(u),fail:!!S.post&&!S.post.seeds.includes(u)};
+  if(g.k==="top25"){const r=rankOf(u);return {v:r<=25?`#${r}`:"NR",ok:r<=25&&!!S.post&&S.post.round==="done"}}
+  if(g.k==="bowl")return {v:S.post?((S.post.bowls||[]).some(b=>b.h===u||b.a===u)||S.post.seeds.includes(u)?"In":"Out"):"TBD",ok:!!S.post&&((S.post.bowls||[]).some(b=>b.h===u||b.a===u)||S.post.seeds.includes(u))};
+  return {v:"",ok:false};
+}
+function seasonGoalsCard(){const G=seasonGoals();
+  return `<div class="panel" data-c="amber"><h3>Season goals · from your AD</h3><div class="sgs">${G.list.map(g=>{const p=sgProgress(g);return `<div class="sg ${p.ok?"ok":p.fail?"no":""}"><span>${p.ok?"✓":p.fail?"✗":"○"}</span><b>${esc(g.t)}</b><em>${esc(p.v)}</em></div>`}).join("")}</div>
+    <p class="muted" style="font-size:13px;margin:0">+250 XP each. Hit all three for a bonus skill point.</p></div>`}
+function paySeasonGoals(){const G=seasonGoals();if(G.paid)return;G.paid=true;let n=0;
+  for(const g of G.list){if(sgProgress(g).ok){n++;addXP(250,`Season goal: ${g.t}`)}}
+  if(n===G.list.length){S.coach.pts++;news("You hit every season goal. Bonus coach skill point!")}}
+// Called for your game inside playRoundCore.
+function progressAfterGame(gm){
+  const u=S.user;if(gm.h!==u&&gm.a!==u)return;
+  const X=xpS(),before=S.pgBefore||{lvl:X.lvl,xp:X.xp};
+  const home=gm.h===u,o=home?gm.a:gm.h,us=home?gm.hs:gm.as,th=home?gm.as:gm.hs,won=us>th,rk=rankOf(o),riv=rivalryOf(gm.h,gm.a);
+  if(won&&rk<=25){const last=S.results[S.results.length-1];if(last)last.ranked=true}
+  addXP(won?100:30,won?"Win":"Played the game");
+  if(won&&rk<=25)addXP(rk<=10?120:60,`Beat #${rk} ${T(o).abbr}`);
+  if(won&&!home&&!gm.neutral)addXP(30,"Road win");
+  if(won&&riv)addXP(60,`Won ${/^The /.test(riv)?"":"the "}${riv}`);
+  if(won&&gm.type&&gm.type!=="reg")addXP(gm.type==="cfp"?150:100,gm.type==="cfp"?"Playoff win":"Postseason win");
+  const st=winStreak();if(won&&st>=3)addXP(10*Math.min(st,10),`${st}-game win streak`);
+  // Weekly goals
+  const G=S.goals,L=S.lastGame;let gdone=null;
+  if(G&&G.key===talkKey()&&L&&(L.home===u||L.away===u)){
+    const best={ry:0},bx=L.box||{};let qbtd=0,sk=0;for(const p of T(u).roster){const b=bx[p.id];if(!b)continue;if((b.ry||0)>best.ry)best.ry=b.ry;if(b.pa)qbtd=Math.max(qbtd,b.ptd||0);sk+=b.sk||0}
+    const c={won,us,th,sp:L.split[u],to:(L.stats&&L.stats[u]&&L.stats[u].to)||0,best,qbtd,sk};
+    for(const g of G.list){g.done=!!GOALS[g.k].ok(c,g.n);if(g.done)addXP(60,`Goal: ${g.t}`)}
+    if(G.list.every(g=>g.done)){addXP(100,"Perfect week: all 3 goals");S.bank=(S.bank||0)+1}
+    gdone=G.list.map(g=>({t:g.t,done:g.done}));
+  }
+  if(gm.type==="cfp"&&gm.label==="National Championship"&&won)addXP(500,"National champions!");
+  S.pg={label:gm.label,o,home,neutral:!!gm.neutral,us,th,won,xp:S.xpLog.slice(),goals:gdone,ups:S.lvlUps.slice(),before,after:{lvl:X.lvl,xp:X.xp},streak:won?st:0};
+}
+function renderPostgame(){
+  const P=S.pg,me=T(S.user),o=T(P.o),X=xpS(),tot=P.xp.reduce((a,x)=>a+x.n,0);
+  const fromPc=P.ups.length?0:Math.round(100*P.before.xp/xpNeed(P.before.lvl)),toPc=Math.round(100*X.xp/xpNeed(X.lvl));
+  const nx=userGame();
+  app.innerHTML=`<div class="pg ${P.won?"won":"lost"}" style="--c1:${me.c1};--c2:${me.c2}">
+    <div class="pg-top"><span class="eyebrow">${esc(P.label||"Final")}</span><div class="pg-res">${P.won?"VICTORY":"DEFEAT"}</div>
+      <div class="pg-score"><span>${badge(me)} <b>${P.us}</b></span><i>${P.home||P.neutral?"vs":"at"}</i><span><b>${P.th}</b> ${badge(o)}</span></div>
+      ${P.streak>=2?`<div class="pg-streak">🔥 ${P.streak}-game win streak</div>`:""}</div>
+    ${P.goals?`<div class="pg-sec"><h4>This week's goals</h4>${P.goals.map((g,i)=>`<div class="pg-goal ${g.done?"ok":"no"}" style="animation-delay:${.15+i*.15}s"><span>${g.done?"✓":"✗"}</span>${esc(g.t)}${g.done?"<em>+60 XP</em>":""}</div>`).join("")}</div>`:""}
+    <div class="pg-sec"><h4>XP earned · +${tot}</h4><div class="pg-xps">${P.xp.map((x,i)=>`<div style="animation-delay:${.3+i*.08}s"><span>${esc(x.t)}</span><b>+${x.n}</b></div>`).join("")}</div>
+      <div class="pg-bar"><span>Lv ${X.lvl}</span><div class="xpt"><i style="--from:${fromPc}%;--to:${toPc}%"></i></div><span>${X.xp}/${xpNeed(X.lvl)}</span></div>
+      ${P.ups.map(u=>`<div class="pg-up">⬆️ Level ${u.l} · ${esc(coachRank(u.l))} <em>${esc(u.rw)}</em></div>`).join("")}</div>
+    ${nx?`<p class="pg-next">Next up: ${nx.h===S.user?"vs":"at"} ${rankOf(nx.h===S.user?nx.a:nx.h)<=25?`#${rankOf(nx.h===S.user?nx.a:nx.h)} `:""}${esc(T(nx.h===S.user?nx.a:nx.h).name)}${rivalryOf(nx.h,nx.a)?` · ${esc(rivalryOf(nx.h,nx.a))}`:""}</p>`:""}
+    <button class="btn big" data-act="pgDone">Continue</button></div>`;
+}
+
 // ===================== ACHIEVEMENTS =====================
 const ACH=[
   ["firstwin","b","🏈","First of many","Win your first game"],
@@ -3840,7 +3997,7 @@ function toast(html){
 }
 function unlock(id){
   S.ach=S.ach||{};if(S.ach[id])return;const a=ACH.find(x=>x[0]===id);if(!a)return;
-  S.ach[id]=S.season;news(`Achievement unlocked: ${a[3]}. ${a[4]}.`);
+  S.ach[id]=S.season;news(`Achievement unlocked: ${a[3]}. ${a[4]}.`);addXP({b:100,s:200,g:350,p:600}[a[1]],`Achievement: ${a[3]}`);
   toast(`<span class="ti" style="--tc:${TIER[a[1]][1]}">${a[2]}</span><span><small>Achievement unlocked · ${TIER[a[1]][0]}</small><b>${esc(a[3])}</b></span>`);
 }
 function gameAch(gm){
