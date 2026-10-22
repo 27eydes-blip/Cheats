@@ -328,6 +328,50 @@ h3{color:color-mix(in srgb,var(--acc,var(--muted)) 55%,var(--muted))}
 .gd-links{display:flex;justify-content:center;gap:18px;flex-wrap:wrap}
 .linkbtn{font-family:var(--num);font-weight:600;font-size:14px;letter-spacing:.05em;color:#fff;opacity:.85;text-decoration:underline;text-underline-offset:3px}
 .linkbtn:hover{opacity:1}
+/* ---- Remodel: depth, logos, tables ---- */
+:root{--r:16px;--shadow:0 10px 28px rgba(0,0,0,.35)}
+body{background:radial-gradient(900px 420px at 15% -120px,#1f2f6b55,transparent 70%),radial-gradient(900px 420px at 95% -80px,#5b1f6b40,transparent 70%),var(--night);background-attachment:fixed}
+.badge{background:linear-gradient(180deg,color-mix(in srgb,var(--b1,#333) 82%,#fff 18%),var(--b1,#333) 55%,color-mix(in srgb,var(--b1,#333) 80%,#000 20%));color:var(--b2,#fff);
+  border:1px solid color-mix(in srgb,var(--b2,#fff) 35%,transparent);border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.25)}
+.panel{border-radius:var(--r);box-shadow:var(--shadow);border-color:color-mix(in srgb,var(--line) 80%,#fff 6%)}
+.panel>h3,.panel>.row>h3,.panel h3:first-child{display:flex;align-items:center;gap:8px}
+.panel h3::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--acc,var(--blue));box-shadow:0 0 10px var(--acc,var(--blue));flex:none}
+.cer h3::before,.party-head h3::before{display:none}
+.btn{background:linear-gradient(180deg,#ffd06a,var(--amber) 60%,#e89a00);box-shadow:0 3px 0 #9a6400,0 8px 18px rgba(255,182,39,.25);border-radius:12px}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #9a6400}
+.btn.ghost{border-radius:12px}
+.tbl th{background:color-mix(in srgb,var(--panel-2) 70%,transparent);border-bottom:1px solid var(--line)}
+.tbl tr:nth-child(even) td{background:color-mix(in srgb,var(--panel-2) 35%,transparent)}
+.tbl tbody tr:hover td{background:color-mix(in srgb,var(--blue) 10%,transparent)}
+.tbl tr.me td{color:var(--chalk);background:color-mix(in srgb,var(--amber) 13%,transparent)}
+.tbl tr.me td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+.tbl td.n:first-child{color:var(--muted);font-weight:700}
+.tag{border-radius:999px}
+/* team select */
+.brand{padding:30px 24px;box-shadow:var(--shadow)}
+.brand h1{letter-spacing:.01em;text-shadow:0 3px 18px rgba(0,0,0,.5)}
+.teams{grid-template-columns:repeat(auto-fill,minmax(min(100%,205px),1fr))}
+@media (max-width:520px){.team-card{gap:8px;padding:10px}.tc-logo{width:40px;height:40px;font-size:12px}.team-card .name{font-size:14px}.team-card .stars{font-size:11px}}
+.team-card{position:relative;overflow:hidden;border-radius:14px;padding:12px 14px;background:linear-gradient(110deg,color-mix(in srgb,var(--tc) 30%,var(--panel)) 0%,var(--panel) 55%);box-shadow:0 6px 16px rgba(0,0,0,.3);transition:transform .15s ease,border-color .15s ease}
+.team-card:hover{transform:translateY(-2px);border-color:var(--tc)}
+@media (prefers-reduced-motion:reduce){.team-card{transition:none}.team-card:hover{transform:none}}
+.tc-logo{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;flex:none;font-family:var(--num);font-weight:700;font-size:14px;color:var(--b2);
+  background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--b1) 70%,#fff 30%),var(--b1) 60%);border:2px solid color-mix(in srgb,var(--b2) 60%,transparent);box-shadow:0 3px 8px rgba(0,0,0,.4)}
+.team-card .ovr{display:flex;flex-direction:column;align-items:flex-end;line-height:1}
+.team-card .ovr small{font-size:10px;letter-spacing:.14em;color:var(--muted)}
+#app>h3[id^="conf-"]{font-size:15px;color:var(--chalk);padding-top:6px;border-top:1px solid var(--line)}
+/* header */
+.teamband{position:relative;overflow:hidden;padding:22px 22px;box-shadow:var(--shadow)}
+.teamband::after{content:attr(data-wm);position:absolute;right:-10px;bottom:-34px;font-family:var(--display);font-size:clamp(90px,24vw,170px);line-height:1;color:#fff;opacity:.08;pointer-events:none;letter-spacing:-.02em}
+.tb-logo{display:grid;place-items:center;width:clamp(64px,16vw,84px);height:clamp(64px,16vw,84px);border-radius:50%;flex:none;font-family:var(--num);font-weight:700;font-size:clamp(18px,4.6vw,24px);color:var(--b2);
+  background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--b1) 65%,#fff 35%),var(--b1) 62%);border:3px solid rgba(255,255,255,.85);box-shadow:0 6px 18px rgba(0,0,0,.45);text-shadow:none}
+.chip{border-radius:14px;box-shadow:0 6px 16px rgba(0,0,0,.28);background:linear-gradient(160deg,color-mix(in srgb,var(--acc) 14%,var(--panel)),var(--panel) 70%)}
+.chip b{font-size:24px}
+.navgroups{border-radius:16px}
+/* weekly + misc */
+.weekly-mast{border-bottom-width:4px;border-image:linear-gradient(90deg,var(--amber),var(--pink),var(--blue)) 1}
+.upset,.cover,.hype,.cer.reveal{box-shadow:var(--shadow)}
+.statgrid div{border-radius:12px;background:linear-gradient(160deg,color-mix(in srgb,var(--amber) 10%,var(--panel-2)),var(--panel-2))}
 .slot{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
 .slot.done{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
 .cand{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px 12px;align-items:center}
@@ -728,7 +772,7 @@ function units(t){
 const offR=u=>(u.QB*1.4+u.RB*.8+u.WR+u.OL)/4.2;
 const defR=u=>(u.DL+u.LB+u.DB)/3;
 function ovr(t){const u=units(t);return Math.round((offR(u)+defR(u))/2*.95+u.K*.05)}
-function badge(t){return `<span class="badge" style="background:${t.c1};color:${t.c2}">${esc(t.abbr)}</span>`}
+function badge(t){return `<span class="badge" style="--b1:${t.c1};--b2:${t.c2}">${esc(t.abbr)}</span>`}
 function presStars(t){return Math.round(clamp(t.pres,1,5))}
 function rivalryOf(a,b){const A=T(a).abbr,B=T(b).abbr;const r=RIVALS.find(r=>(r[0]===A&&r[1]===B)||(r[0]===B&&r[1]===A));return r?r[2]:null}
 function news(txt){S.news.unshift(txt);if(S.news.length>8)S.news.pop()}
@@ -1784,10 +1828,10 @@ function renderSelect(){
   </div>
   <div class="tabs">${CONFS.map((c,ci)=>`<button class="tab" data-act="jump" data-id="conf-${ci}">${c}</button>`).join("")}</div>
   ${CONFS.map((c,ci)=>`<h3 id="conf-${ci}" style="scroll-margin-top:12px">${c} <span class="tag">${TIER_NAME[CONF_TIER[ci]]}</span></h3><div class="teams">${pv.teams.filter(t=>t.conf===ci).map(t=>`
-    <button class="team-card" data-act="pick" data-id="${t.id}">
-      ${badge(t)}
+    <button class="team-card" data-act="pick" data-id="${t.id}" style="--tc:${t.c1}">
+      <span class="tc-logo" style="--b1:${t.c1};--b2:${t.c2}">${esc(t.abbr)}</span>
       <span style="min-width:0"><span class="name">${esc(t.name)}</span><br><span class="stars">${starStr(Math.round(clamp(1+(t.base-76)/3.5,1,5)))}</span></span>
-      <span class="ovr">${t.base}</span>
+      <span class="ovr"><small>OVR</small>${t.base}</span>
     </button>`).join("")}</div>`).join("")}
   <p class="muted" style="font-size:13px">Ratings and players are made up for the game and reshuffle every new dynasty. Notre Dame plays in the ACC here. Hampton and Tennessee State play in the MEAC. FCS teams (Ivy, SWAC, MEAC) can't make the playoff or regular bowls, but the SWAC and MEAC champions meet in the Celebration Bowl. Stars show program prestige, which helps recruiting.</p>`;
 }
@@ -1858,8 +1902,8 @@ function renderHub(){
   const groups=[["Season","blue",["weekly","preseason","schedule","standings","top25","post"]],["Team","green",["roster","plan","coach"]],["Records","purple",["leaders","history"]]];
   const side=[partyCard(),gotwCard(),lastGameHTML(),S.news.length?`<div class="panel" data-c="purple"><h3>Program news</h3><div class="news">${S.news.slice(0,5).map(n=>`<div>${esc(n)}</div>`).join("")}</div></div>`:""].filter(Boolean);
   app.innerHTML=`
-  <div class="teamband" style="--t1:${me.c1};--t2:${me.c2}">
-    ${badge(me)}
+  <div class="teamband" style="--t1:${me.c1};--t2:${me.c2}" data-wm="${esc(me.abbr)}">
+    <span class="tb-logo" style="--b1:${me.c1};--b2:${me.c2}">${esc(me.abbr)}</span>
     <div style="min-width:0"><div class="eyebrow tb-eyebrow">CFB Dynasty 1 · ${S.season} season · ${esc(roundName())}</div>
     <h1 class="tb-name">${esc(me.name)}</h1><div class="tb-sub">${esc(CONFS[me.conf])} · <span class="stars">${starStr(presStars(me))}</span> program</div></div>
   </div>
