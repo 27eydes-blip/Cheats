@@ -696,6 +696,122 @@ body{background:radial-gradient(900px 420px at 15% -120px,#1f2f6b55,transparent 
   .cand{grid-template-columns:1fr auto}
   .cand .hide-sm{display:none}
 }
+/* =====================================================================
+   CFB Dynasty 2 remodel: team-colored theme, stadium header, dock nav,
+   glass cards. The user's team colors flow in as --tc1/--tc2.
+   ===================================================================== */
+:root{--night:#060914;--panel:#0d1429;--panel-2:#141d39;--line:#202d55;--r:20px;--tc1:#1e3a8a;--tc2:#ffffff;
+  --glass:rgba(13,20,41,.72);--hair:rgba(255,255,255,.08)}
+html,body{background:var(--night)}
+body{background:
+  radial-gradient(1100px 520px at 50% -220px,color-mix(in srgb,var(--tc1) 42%,transparent),transparent 72%),
+  radial-gradient(600px 400px at 100% 0%,rgba(255,255,255,.04),transparent 70%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.016) 0 1px,transparent 1px 96px),
+  var(--night);background-attachment:scroll}
+::selection{background:color-mix(in srgb,var(--tc1) 60%,#fff 10%)}
+#app{gap:20px}
+h2{font-family:var(--display);font-weight:400;letter-spacing:.02em}
+
+/* ---------- Hero header ---------- */
+.teamband{padding:26px 24px 64px;border-radius:26px;border:1px solid rgba(255,255,255,.14);
+  background:
+    linear-gradient(112deg,transparent 0 57%,rgba(255,255,255,.07) 57% 59.5%,transparent 59.5% 62%,rgba(255,255,255,.045) 62% 63.5%,transparent 63.5%),
+    radial-gradient(700px 320px at 12% -20%,color-mix(in srgb,var(--t2) 26%,transparent),transparent 70%),
+    radial-gradient(500px 260px at 100% 120%,rgba(0,0,0,.55),transparent 70%),
+    linear-gradient(135deg,var(--t1) 0%,color-mix(in srgb,var(--t1) 60%,#000) 62%,color-mix(in srgb,var(--t1) 38%,#000) 100%);
+  box-shadow:0 24px 60px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.2)}
+.teamband::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.10) 45%,transparent 60%);transform:translateX(-120%);animation:sheen 7s ease-in-out infinite}
+@keyframes sheen{55%,100%{transform:translateX(120%)}}
+.teamband::after{opacity:.1;font-size:clamp(110px,26vw,200px);bottom:-30px}
+.tb-logo{width:clamp(78px,18vw,104px);height:clamp(86px,20vw,116px);border-radius:24px 24px 50% 50%/24px 24px 44% 44%;font-size:clamp(20px,5vw,28px);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--t2) 80%,transparent),0 0 0 7px rgba(0,0,0,.25),0 14px 30px rgba(0,0,0,.5)!important}
+.tb-name{font-size:clamp(30px,7vw,54px);line-height:.98;text-shadow:0 4px 18px rgba(0,0,0,.45)}
+.tb-eyebrow{letter-spacing:.24em}
+.teamband+.chips{margin:-50px 14px 0;position:relative;z-index:2}
+.chips{gap:10px}
+.chip{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--hair);border-left:0;border-radius:16px;
+  box-shadow:inset 0 3px 0 color-mix(in srgb,var(--acc) 85%,transparent),0 12px 28px rgba(0,0,0,.4);padding:12px 14px}
+.chip span{font-size:11px;letter-spacing:.18em}
+.chip b{font-size:26px}
+
+/* ---------- Dock navigation ---------- */
+.navgroups{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--hair);border-radius:22px;padding:12px 14px;gap:12px 22px;box-shadow:0 14px 34px rgba(0,0,0,.4)}
+.navl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:10.5px;letter-spacing:.24em;opacity:.9}
+.navg{gap:10px}
+.navg .tabs{gap:6px}
+.navg .tab{flex-direction:column;justify-content:center;gap:5px;min-width:76px;padding:9px 8px 8px;border-radius:14px;font-size:11.5px;letter-spacing:.08em;
+  background:rgba(255,255,255,.03);border:1px solid var(--hair);color:#b9c2e3}
+.navg .tab .ti2{font-size:20px}
+.navg .tab:hover{background:rgba(255,255,255,.07);color:#fff}
+.navg .tab.on{color:#fff;border-color:transparent;text-shadow:0 1px 2px rgba(0,0,0,.5);
+  background:linear-gradient(160deg,color-mix(in srgb,var(--tc1) 78%,#fff 14%),var(--tc1) 60%,color-mix(in srgb,var(--tc1) 70%,#000));
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--tc2) 55%,transparent),0 8px 22px color-mix(in srgb,var(--tc1) 55%,transparent),inset 0 1px 0 rgba(255,255,255,.3)}
+@media (max-width:600px){.navl{writing-mode:horizontal-tb;transform:none}.navg{flex-direction:column;align-items:flex-start}.navg .tab{min-width:70px}}
+
+/* ---------- Cards ---------- */
+.panel{--pb:color-mix(in srgb,var(--acc,var(--blue)) 45%,transparent);border:1px solid transparent;border-radius:22px;padding:18px;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 120px) padding-box,linear-gradient(var(--panel),var(--panel)) padding-box,
+    linear-gradient(160deg,rgba(255,255,255,.17),rgba(255,255,255,.04) 38%,var(--pb)) border-box;
+  box-shadow:0 16px 40px rgba(0,0,0,.38)}
+.panel[data-c]{border-top:1px solid transparent;box-shadow:inset 0 3px 0 color-mix(in srgb,var(--acc) 85%,transparent),0 16px 40px rgba(0,0,0,.38)}
+.panel.event{--pb:var(--amber)}.panel.warn{--pb:var(--bad)}
+.panel>h3,.panel>.row>h3,.panel h3:first-child{font-size:12.5px;letter-spacing:.2em}
+.panel>h3::after{content:"";flex:1;height:1px;margin-left:6px;background:linear-gradient(90deg,var(--line),transparent)}
+.panel h3::before{width:10px;height:10px;border-radius:3px}
+details.panel summary{padding:2px 0}
+
+/* ---------- Tables ---------- */
+.tbl th{font-size:11px;letter-spacing:.16em;background:rgba(255,255,255,.025)}
+.tbl td{border-color:var(--hair)}
+.tbl tbody tr{transition:background-color .15s ease}
+.tbl tbody tr:hover td{background:rgba(255,255,255,.035)}
+.tbl tr.me td{background:linear-gradient(90deg,color-mix(in srgb,var(--tc1) 34%,transparent),transparent 85%)!important;color:#fff}
+.tbl tr.me td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+
+/* ---------- Badges & buttons ---------- */
+.badge{border-radius:8px;border-color:rgba(255,255,255,.22);
+  background:linear-gradient(160deg,rgba(255,255,255,.3),rgba(255,255,255,0) 48%),linear-gradient(105deg,var(--b1,#333) 0 82%,color-mix(in srgb,var(--b2,#fff) 85%,var(--b1,#333)) 82% 88%,var(--b1,#333) 88%)}
+.btn{border-radius:14px;letter-spacing:.08em;box-shadow:0 3px 0 #9a6400,0 10px 26px rgba(255,182,39,.28),inset 0 1px 0 rgba(255,255,255,.45)}
+.btn.ghost{border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.btn.ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.3)}
+.small-btn{border-radius:10px}
+.tab{border-radius:999px}
+
+/* ---------- Game day ---------- */
+.gameday{border-radius:26px;box-shadow:0 26px 60px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.2)}
+.gameday::after{content:"";position:absolute;inset:-40% -10% auto;height:70%;pointer-events:none;
+  background:radial-gradient(closest-side at 20% 50%,rgba(255,255,255,.14),transparent),radial-gradient(closest-side at 80% 50%,rgba(255,255,255,.14),transparent);mix-blend-mode:screen}
+.gd-logo{box-shadow:0 0 0 4px rgba(255,255,255,.12),0 12px 28px rgba(0,0,0,.5)!important}
+
+/* ---------- Title screen ---------- */
+.brand.sel-hero{min-height:380px;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:34px 28px 30px;border-radius:28px;border:1px solid rgba(255,255,255,.14);
+  background:
+    linear-gradient(180deg,rgba(6,9,20,0) 35%,rgba(6,9,20,.75) 100%),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.10) 0 2px,transparent 2px 10%),
+    linear-gradient(180deg,#0b1430 0%,#13235a 38%,#1d5a33 62%,#123f22 100%);
+  box-shadow:0 30px 70px rgba(0,0,0,.55)}
+.brand.sel-hero::after{display:none}
+.sel-hero .lights{position:absolute;inset:0;pointer-events:none}
+.sel-hero .lights i{position:absolute;top:-60px;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(255,250,220,.55),rgba(255,240,200,.12) 35%,transparent 65%);animation:flicker 5s ease-in-out infinite}
+.sel-hero .lights i:first-child{left:-90px}.sel-hero .lights i:last-child{right:-90px;animation-delay:-2.5s}
+@keyframes flicker{50%{opacity:.75}}
+.sel-hero>*:not(.lights){position:relative}
+.sel-hero h1{font-size:clamp(46px,11vw,96px);line-height:.95;background:linear-gradient(180deg,#ffffff 0%,#dfe6ff 45%,#9aa8d6 55%,#ffffff 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 6px 18px rgba(0,0,0,.6))}
+.sel-hero h1 .one{-webkit-text-fill-color:#1a1300;background:linear-gradient(180deg,#ffe28a,#ffb627);box-shadow:0 0 30px rgba(255,182,39,.6)}
+.sel-hero .eyebrow{color:#ffd34d;letter-spacing:.3em}
+.sel-hero p{color:#d5dcf5!important;font-size:16px}
+.sel-feats{display:flex;flex-wrap:wrap;gap:8px}
+.sel-feats span{font-family:var(--num);font-weight:600;font-size:13.5px;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(6px)}
+.team-card{border-radius:18px;border:1px solid var(--hair);background:linear-gradient(115deg,color-mix(in srgb,var(--tc) 38%,var(--panel)) 0%,var(--panel) 58%);box-shadow:0 10px 24px rgba(0,0,0,.35)}
+.team-card:hover{transform:translateY(-3px) scale(1.01);box-shadow:0 16px 34px rgba(0,0,0,.45),0 0 0 1px var(--tc)}
+.tc-logo{border-radius:14px 14px 50% 50%/14px 14px 42% 42%}
+.sel-conf{display:flex;align-items:center;gap:10px;margin-top:6px;font-family:var(--display);font-weight:400;font-size:24px;letter-spacing:.02em;text-transform:none}
+.sel-conf::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
+
+.hub-head{position:relative;overflow:hidden;padding:20px 22px;border-radius:24px;border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(112deg,transparent 0 62%,rgba(255,255,255,.06) 62% 64%,transparent 64%),linear-gradient(135deg,color-mix(in srgb,var(--tc1) 70%,#000),color-mix(in srgb,var(--tc1) 30%,var(--panel)) 70%);box-shadow:0 18px 44px rgba(0,0,0,.45)}
+.hub-head .eyebrow{color:#ffd34d}
+@media (prefers-reduced-motion:reduce){.teamband::before,.sel-hero .lights i{animation:none}}
 </style>
 
 <div id="busy" class="busy" hidden><span>Simming…</span></div>
@@ -1008,6 +1124,9 @@ const FAC={
 const FAC_COST=[10,16,24];
 const fac=k=>(S.fac&&S.fac[k])||0;
 // Difficulty: your in-game edge, recruiting budget, and how hard the AI programs recruit and develop.
+// Playoff pressure on your team, by difficulty, and the target on the defending champ's back.
+const CFP_PRESS=[.15,.32,.4,.48];
+function defendingChamp(){const h=(S.history||[]).at(-1);return !!h&&h.season===S.season-1&&h.champ===S.user}
 const DIFF=[
   {n:"Rookie",d:"The original balance. Easiest to build a dynasty.",edge:0,pts:1,ai:0},
   {n:"Varsity",d:"A little harder. AI programs recruit and develop better.",edge:-.12,pts:.92,ai:.35},
@@ -1366,7 +1485,8 @@ function newGame(gm,live,qlen){
   const edge=id=>{const mv=clamp((S.mo&&S.mo[id])||0,-3,3)*.08;
     return (mv<0?mv*cult(id):mv)+schemeArchFit(id,plan(id).scheme)*.3-(c.trap[id]?.35*cult(id):0)
       -(c.travel&&c.travel.id===id?c.travel.y*(me(id)?1-.33*fac("travel"):1):0)
-      +(me(id)?fac("film")*.15+(bad?fac("indoor")*.12:0)+dif().edge+(S.nextEdge?S.nextEdge.y:0)+relEdgeNow():0)};
+      +(me(id)?fac("film")*.15+(bad?fac("indoor")*.12:0)+dif().edge+(S.nextEdge?S.nextEdge.y:0)+relEdgeNow()-(g.type==="cfp"?CFP_PRESS[S.diff??1]:0):0)
+      +(!me(id)&&(home===S.user||away===S.user)&&defendingChamp()?.2:0)};
   g.edge={[home]:edge(home),[away]:edge(away)};
   if(!gm.neutral&&rivalryOf(home,away))g.hfa+=.8;
   g.altV=c.alt?c.alt.id:null;g.altF=c.alt&&c.alt.id===S.user?1-.33*fac("travel"):1;
@@ -2148,6 +2268,7 @@ const TAB_ICON={home:"🏠",news:"📰",weekly:"🗞️",preseason:"📖",schedu
 let lastView="";
 function viewKey(){return S?[S.tab,S.phase,S.off&&S.off.step,S.pv,S.ybView,!!WATCH,!!PARTY,S.magIntro,S.selection&&S.selection.done,S.ceremony&&S.ceremony.step].join("|"):"select"}
 function render(){
+  try{if(S){const t=T(S.user);document.body.style.setProperty("--tc1",t.c1);document.body.style.setProperty("--tc2",t.c2)}else{document.body.style.removeProperty("--tc1");document.body.style.removeProperty("--tc2")}}catch(e){}
   OVRC=new Map();try{renderCore()}finally{OVRC=null}
   try{const k=viewKey();if(k!==lastView){lastView=k;app.classList.remove("enter");void app.offsetWidth;app.classList.add("enter")}}catch(e){}
 }
@@ -2167,9 +2288,10 @@ function renderSelect(){
   const saved=SAVED;
   const pv={teams:TEAMS0.map((r,i)=>({id:i,name:r[0],abbr:r[1],c1:r[2],c2:r[3],base:r[4],conf:r[5]}))};
   app.innerHTML=`
-  <div class="hero brand">
+  <div class="hero brand sel-hero"><div class="lights" aria-hidden="true"><i></i><i></i></div>
     <div class="eyebrow">College football dynasty</div>
     <h1>CFB Dynasty <span class="one">2</span></h1>
+    <div class="sel-feats"><span>🏆 12-team playoff</span><span>🏅 Heisman race</span><span>✍️ Recruiting & portal</span><span>🤝 Locker room</span><span>📖 Preseason magazine</span></div>
     <p class="muted" style="max-width:62ch">Take over a program. Pick your offense and game plan, sim the games, win your conference, and make the 12-team playoff. Your players put up real stats and chase the Heisman. In the offseason, recruit high schoolers, raid the transfer portal and level up your coaching skills.</p>
   </div>
   ${saved?`<div class="panel"><div class="row" style="justify-content:space-between"><div><h3>${saved.fromD1?"Bring over your Dynasty 1 save":"Saved dynasty"}</h3><p>${esc(saved.teams[saved.user].name)}, ${saved.season} season</p></div><button class="btn" data-act="resume">Continue dynasty</button></div></div>`:""}
@@ -2177,7 +2299,7 @@ function renderSelect(){
     <h2>Choose your program</h2>
   </div>
   <div class="tabs">${CONFS.map((c,ci)=>`<button class="tab" data-act="jump" data-id="conf-${ci}">${c}</button>`).join("")}</div>
-  ${CONFS.map((c,ci)=>`<h3 id="conf-${ci}" style="scroll-margin-top:12px">${c} <span class="tag">${TIER_NAME[CONF_TIER[ci]]}</span></h3><div class="teams">${pv.teams.filter(t=>t.conf===ci).map(t=>`
+  ${CONFS.map((c,ci)=>`<h3 id="conf-${ci}" class="sel-conf" style="scroll-margin-top:12px">${c} <span class="tag">${TIER_NAME[CONF_TIER[ci]]}</span></h3><div class="teams">${pv.teams.filter(t=>t.conf===ci).map(t=>`
     <button class="team-card" data-act="pick" data-id="${t.id}" style="--tc:${t.c1}">
       <span class="tc-logo" style="--b1:${t.c1};--b2:${t.c2}">${esc(t.abbr)}</span>
       <span style="min-width:0"><span class="name">${esc(t.name)}</span><br><span class="stars">${starStr(Math.round(clamp(1+(t.base-76)/3.5,1,5)))}</span></span>
