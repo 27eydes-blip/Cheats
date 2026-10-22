@@ -952,6 +952,81 @@ body{background:
 .nsd-c.new{animation:pgPop .6s cubic-bezier(.2,1.4,.4,1) both}
 .nsd-hat{margin-top:4px;padding:8px 12px;border-radius:12px;font-family:var(--num);font-weight:700;font-size:15px;color:#fff;background:linear-gradient(135deg,var(--h1),color-mix(in srgb,var(--h1) 50%,#000));border:2px solid var(--h2);text-shadow:0 1px 2px rgba(0,0,0,.6)}
 .nsd-hat.q{background:var(--panel);border:2px dashed var(--line);color:var(--muted)}
+/* ===== Broadcast live game ===== */
+.wboard.bcast{border-radius:16px;overflow:hidden;padding:0;gap:0;background:#05070d;border:1px solid rgba(255,255,255,.14);box-shadow:0 14px 36px rgba(0,0,0,.5)}
+.wboard.bcast .ws{padding:12px 14px}
+.wboard.bcast .ws.away{background:linear-gradient(90deg,color-mix(in srgb,var(--ta,#333) 0%,transparent),transparent)}
+.wboard.bcast .wsc{font-size:clamp(34px,9vw,52px)}
+.wboard.bcast .wmid{background:linear-gradient(180deg,#ffd987,#f5b83d);color:#1d1400;padding:8px 12px;align-self:stretch;justify-content:center}
+.wboard.bcast .wmid .wclk{font-family:var(--num);font-size:20px}.wboard.bcast .wmid .wdd{color:#3a2800;font-weight:700}
+.drive{position:relative}
+.dch{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.dsum{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-family:var(--num);font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:rgba(0,0,0,.45);padding:2px 8px;border-radius:999px;white-space:nowrap}
+.wpg{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:stretch;height:84px;padding:8px 10px;border-radius:14px;background:var(--panel);border:1px solid var(--hair)}
+.wpg-l{display:flex;flex-direction:column;justify-content:space-between;font-family:var(--num);font-weight:700;font-size:12px}
+.wpg svg{width:100%;height:100%}
+.ovl{position:fixed;inset:0;z-index:70;display:grid;place-items:center;pointer-events:auto}
+.ovl.flash{pointer-events:none;background:transparent}
+.fl{display:flex;flex-direction:column;align-items:center;padding:14px 28px;border-radius:18px;transform:skewX(-8deg);background:linear-gradient(135deg,var(--c1),color-mix(in srgb,var(--c1) 45%,#000));border:3px solid var(--c2);box-shadow:0 20px 60px rgba(0,0,0,.6);animation:flIn 1.7s cubic-bezier(.2,1.3,.4,1) both}
+.fl span{font-family:var(--display);font-size:clamp(36px,10vw,72px);color:#fff;text-shadow:0 4px 0 rgba(0,0,0,.4);letter-spacing:.04em}
+.fl small{font-family:var(--num);font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#fff;opacity:.9}
+@keyframes flIn{0%{opacity:0;transform:skewX(-8deg) scale(.4)}15%{opacity:1;transform:skewX(-8deg) scale(1.08)}25%{transform:skewX(-8deg) scale(1)}80%{opacity:1}100%{opacity:0;transform:skewX(-8deg) scale(1.05) translateY(-20px)}}
+/* ===== Game-day scenes ===== */
+.gameday{isolation:isolate}
+.scene{position:absolute;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.gameday>*:not(.scene){position:relative}
+.scene .sky-line{position:absolute;left:0;right:0;bottom:0;width:100%;height:28%}
+.scene.night{background:linear-gradient(180deg,rgba(2,4,14,.75),rgba(2,4,14,.2) 55%,transparent)}
+.scene .lt{position:absolute;top:-80px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(255,250,225,.5),rgba(255,245,210,.12) 35%,transparent 65%);animation:flicker 4s ease-in-out infinite}
+.scene .lt.l1{left:-110px}.scene .lt.l2{right:-110px;animation-delay:-2s}
+.scene .precip{position:absolute;inset:-50% 0 0;background-image:repeating-linear-gradient(105deg,transparent 0 14px,rgba(200,220,255,.35) 14px 15px,transparent 15px 34px);animation:rainFall .6s linear infinite}
+.scene .precip.p2{opacity:.5;animation-duration:.9s;background-size:120% 100%}
+.scene.snow .precip{background-image:radial-gradient(circle,rgba(255,255,255,.9) 0 1.6px,transparent 2.2px),radial-gradient(circle,rgba(255,255,255,.7) 0 1.2px,transparent 1.8px);background-size:46px 46px,29px 29px;background-position:0 0,13px 21px;animation:snowFall 6s linear infinite}
+.scene.snow .precip.p2{animation-duration:9s;background-size:61px 61px,37px 37px}
+@keyframes rainFall{to{transform:translateY(34px)}}
+@keyframes snowFall{to{transform:translateY(200px)}}
+.scene.wind::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 40px,rgba(255,255,255,.06) 40px 41px);animation:windBlow 3s linear infinite}
+@keyframes windBlow{to{transform:translateX(60px)}}
+.gameday.rivgame{box-shadow:0 0 0 2px rgba(255,211,77,.55),0 0 40px rgba(255,170,40,.35),0 26px 60px rgba(0,0,0,.55);animation:rivPulse 2.4s ease-in-out infinite}
+@keyframes rivPulse{50%{box-shadow:0 0 0 2px rgba(255,211,77,.8),0 0 60px rgba(255,170,40,.55),0 26px 60px rgba(0,0,0,.55)}}
+/* ===== Ticker ===== */
+.ticker{display:flex;align-items:stretch;height:34px;border-radius:10px;overflow:hidden;background:#05070d;border:1px solid rgba(255,255,255,.1);font-family:var(--num);font-size:14px}
+.tk-tag{display:grid;place-items:center;padding:0 12px;font-weight:700;letter-spacing:.1em;color:#1d1400;background:linear-gradient(180deg,#ffd987,#f5b83d);flex:none}
+.tk-win{flex:1;overflow:hidden;position:relative;-webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)}
+.tk-run{display:inline-flex;align-items:center;gap:14px;height:100%;white-space:nowrap;padding-left:14px;animation:tick var(--dur) linear infinite}
+.tk-run span{color:#dfe5f5}.tk-run b{color:var(--gold-soft);margin-right:4px}.tk-run b.up{color:var(--good)}.tk-run b.dn{color:var(--bad)}.tk-run i{font-style:normal;color:#55607e}
+@keyframes tick{to{transform:translateX(-50%)}}
+.ticker:hover .tk-run{animation-play-state:paused}
+/* ===== VS intro ===== */
+.ovl.vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:20px;overflow:hidden;animation:vsOut .4s 2.2s ease both}
+.vs-bg{position:absolute;inset:0;background:linear-gradient(115deg,var(--a) 0 49.6%,#000 49.6% 50.4%,var(--h) 50.4%);filter:brightness(.7)}
+.vs-bg::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.25),transparent 45%),linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,.55))}
+.vs-s{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;color:#fff;text-shadow:0 3px 8px rgba(0,0,0,.6)}
+.vs-s .gd-logo{width:clamp(90px,24vw,170px);height:clamp(90px,24vw,170px);font-size:clamp(24px,6vw,44px);box-shadow:0 0 0 5px rgba(255,255,255,.85),0 20px 50px rgba(0,0,0,.6)}
+.vs-s b{font-family:var(--display);font-weight:400;font-size:clamp(20px,5vw,40px);line-height:1.05}.vs-s small{font-family:var(--num);font-size:16px;letter-spacing:.06em}
+.vs-s.l{animation:vsL .55s cubic-bezier(.2,1.2,.4,1) both}.vs-s.r{animation:vsR .55s cubic-bezier(.2,1.2,.4,1) both}
+.vs-mid{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff;text-align:center}
+.vs-word{font-family:var(--display);font-size:clamp(56px,16vw,120px);line-height:1;color:#ffd34d;text-shadow:0 0 30px rgba(255,211,77,.7),0 6px 0 rgba(0,0,0,.5);animation:vsPop .5s .45s cubic-bezier(.2,1.6,.4,1) both}
+.vs-mid small{font-family:var(--num);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:14px;max-width:160px}
+.vs-mid em{font-style:normal;font-family:var(--num);font-weight:700;padding:3px 10px;border-radius:999px;background:rgba(0,0,0,.5)}
+@keyframes vsL{from{transform:translateX(-120%)}to{transform:none}}@keyframes vsR{from{transform:translateX(120%)}to{transform:none}}
+@keyframes vsPop{from{transform:scale(3);opacity:0}to{transform:none;opacity:1}}
+@keyframes vsOut{to{opacity:0;visibility:hidden}}
+@media (max-width:560px){.ovl.vs{grid-template-columns:1fr;grid-template-rows:1fr auto 1fr}.vs-bg{background:linear-gradient(170deg,var(--a) 0 49.6%,#000 49.6% 50.4%,var(--h) 50.4%)}}
+/* ===== Celebrations ===== */
+.pg{position:relative;overflow:hidden}
+.pg>*:not(.celeb){position:relative}
+.celeb{position:absolute;inset:0;pointer-events:none;z-index:0}
+.celeb .confetti{position:absolute;inset:0;overflow:hidden}
+.celeb .confetti i{position:absolute;top:-14px;width:8px;height:14px;border-radius:2px;background:var(--c1);animation:cfall linear infinite;opacity:.95}
+.celeb .confetti i:nth-child(2n){background:var(--c2)}.celeb .confetti i:nth-child(5n){background:#ffd34d}
+.celeb .fw b{position:absolute;width:6px;height:6px;border-radius:50%;box-shadow:0 0 0 0 var(--c1);animation:fwBurst 1.6s ease-out infinite}
+.celeb .fw b:nth-child(2n){animation-name:fwBurst2}
+@keyframes fwBurst{0%{box-shadow:0 0 0 0 #ffd34d,0 0 0 0 #ffd34d;opacity:1;transform:scale(.2)}70%{opacity:1}100%{box-shadow:-40px -30px 0 2px #ffd34d,40px -30px 0 2px #fff,-50px 20px 0 2px #ffd34d,50px 20px 0 2px #fff,0 -55px 0 2px #ffd34d,0 50px 0 2px #fff;opacity:0;transform:scale(1)}}
+@keyframes fwBurst2{0%{opacity:1;transform:scale(.2)}100%{box-shadow:-40px -30px 0 2px var(--c1),40px -30px 0 2px var(--c2),-50px 20px 0 2px var(--c1),50px 20px 0 2px var(--c2),0 -55px 0 2px var(--c1),0 50px 0 2px var(--c2);opacity:0;transform:scale(1)}}
+.celeb-word{align-self:center;text-align:center;font-family:var(--display);font-size:clamp(22px,6vw,34px);letter-spacing:.06em;padding:8px 16px;border-radius:14px;color:#fff;background:linear-gradient(135deg,var(--c1),color-mix(in srgb,var(--c1) 45%,#000));border:2px solid var(--c2);box-shadow:0 0 30px color-mix(in srgb,var(--c1) 60%,transparent);animation:pgPop .6s .2s cubic-bezier(.2,1.4,.4,1) both}
+.celeb-word small{display:block;font-family:var(--num);font-weight:700;font-size:14px;letter-spacing:.14em;text-transform:uppercase;opacity:.9}
+@media (prefers-reduced-motion:reduce){.fl,.vs-s,.vs-word,.ovl.vs,.tk-run,.scene .precip,.scene .lt,.gameday.rivgame,.celeb .confetti i,.celeb .fw b,.celeb-word{animation:none!important}.ovl.vs{display:none}.ovl.flash{display:none}}
 </style>
 
 <div id="busy" class="busy" hidden><span>Simming…</span></div>
@@ -2493,7 +2568,7 @@ function nextCard(){
       <span class="gd-rank">${rankOf(t.id)<=25?"#"+rankOf(t.id):"&nbsp;"}</span>
       <span class="gd-logo" style="background:${t.c1};color:${t.c2}">${esc(t.abbr)}</span>
       <b class="gd-name">${esc(t.name)}</b><span class="gd-rec">${recStr(t.id)} · OVR ${ovr(t)}</span>${t.id===u?'<span class="gd-you">Your team</span>':""}</div>`;
-    return `<div class="gameday" style="--ta:${a.c1};--th:${h.c1}">
+    return `<div class="gameday ${riv?"rivgame":""}" style="--ta:${a.c1};--th:${h.c1}">${sceneHTML(c,riv)}
       <div class="gd-top"><span class="gd-label">${esc(ug.label)}${ug.neutral?" · Neutral site":""}</span>${tag?`<span class="gd-tag">${esc(tag)}</span>`:""}</div>
       <div class="gd-match">${half(a,"away")}
         <div class="gd-mid"><span class="gd-at">${ug.neutral?"VS":"AT"}</span><span class="gd-kick">${esc(c.kick)}</span><span class="gd-wx">${c.sky==="Dome"?"Indoors":`${esc(c.sky)} · ${c.temp}°F`}</span></div>
@@ -2533,6 +2608,7 @@ function renderHub(){
   const groups=[["Season","blue",["home","news","weekly","preseason","schedule","standings","top25","post"]],["Team","green",["roster","recruiting","practice","locker","plan","coach","uniforms"]],["Records","purple",["leaders","history","trophies"]]];
   const side=S.tab==="home"?[partyCard(),S.phase==="regular"||S.phase==="ccg"?seasonGoalsCard():"",gotwCard(),lastGameHTML()].filter(Boolean):[];
   app.innerHTML=`
+  ${tickerHTML()}
   <div class="teamband" style="--t1:${me.c1};--t2:${me.c2}" data-wm="${esc(me.abbr)}">
     <span class="tb-logo" style="--b1:${me.c1};--b2:${me.c2}">${esc(me.abbr)}</span>
     <div style="min-width:0"><div class="eyebrow tb-eyebrow">CFB Dynasty 2 · ${S.season} season · ${esc(roundName())}</div>
@@ -3182,7 +3258,7 @@ function startWatch(gm,kind){
 function wStep(n){
   const W=WATCH,g=W.g;
   for(let i=0;i<n&&!g.over;i++){
-    stepAI(g);
+    const prev=g.log[0];stepAI(g);wTrack(W,prev);
     const top=g.log[0];
     if(top&&top.hl&&/TOUCHDOWN|INTERCEPTED|FUMBLE|BLOCKED|SAFETY|MISSES|ONSIDE|MUFFED|game on the line|SACKED|Overtime/.test(top.txt))W.banner={txt:top.txt,at:g.log.length+":"+g.qtr+":"+g.clock};
   }
@@ -3216,12 +3292,14 @@ function renderWatch(){
   const bn=W.banner;
   app.innerHTML=`
   <div class="row" style="justify-content:space-between"><span class="eyebrow">${W.kind==="gotw"?"Game of the Week · ":""}${esc(g.label)} · Live</span><span class="muted num">${esc(condText(g.cond))}</span></div>
-  <div class="wboard">${side(a,"away")}<div class="wmid"><span class="wclk">${clk}</span><span class="wdd">${esc(dd)}</span></div>${side(h,"home")}</div>
+  <div class="wboard bcast">${side(a,"away")}<div class="wmid"><span class="wclk">${clk}</span><span class="wdd">${esc(dd)}</span></div>${side(h,"home")}</div>
   <div class="drive" role="img" aria-label="Ball on the ${esc(spotText(g,g.pos))}">
     <span class="dz" style="left:0;background:${h.c1};color:${h.c2}">${esc(h.abbr)}</span><span class="dz" style="right:0;background:${a.c1};color:${a.c2}">${esc(a.abbr)}</span>
     ${[10,20,30,40,50,60,70,80,90].map(y=>`<i class="dl" style="left:${8+y*.84}%"></i>`).join("")}
+    ${driveChart(W)}
     ${g.over?"":`<i class="dfd" style="left:${8+fd*.84}%"></i><b class="dball" style="left:${8+x*.84}%"></b>`}
   </div>
+  ${wpGraph(W)}
   <div class="wpbar"><span>${esc(a.abbr)} ${Math.round((1-wp)*100)}%</span><div class="wpt"><i style="width:${(1-wp)*100}%;background:${a.c1}"></i><i style="width:${wp*100}%;background:${h.c1}"></i></div><span>${Math.round(wp*100)}% ${esc(h.abbr)}</span></div>
   ${bn?`<div class="wbanner">${esc(bn.txt)}</div>`:""}
   <div class="row">${g.over?`<button class="btn" data-act="wDone">${W.kind==="user"?"Continue":"Back to the hub"}</button>`:
@@ -3638,7 +3716,7 @@ const ACT={
   pick(d){newDynasty(+d.id,pickQlen)},
   tab(d){S.tab=d.t},
   jump(d){jumpTo=d.id},
-  sim(){S.schedLocked=true;const gm=userGame();weekGoals();applyUni(gm);playRound(simGame(gm));S.pgShow=true;scrollTo(0,0)},
+  sim(){S.schedLocked=true;const gm=userGame();if(isBigGame(gm))vsIntro(gm);weekGoals();applyUni(gm);playRound(simGame(gm));S.pgShow=true;scrollTo(0,0)},
   pgDone(){S.pgShow=false;scrollTo(0,0)},
   simSeason(){S.schedLocked=true;while(S.phase==="regular"){weekGoals();playRound(null)}S.pgShow=false},
   simRound(){playRound(null)},
@@ -3669,7 +3747,7 @@ const ACT={
   homeAway(d){toggleHome(+d.w)},
   magDone(){S.magIntro=null;S.tab="home";scrollTo(0,0)},
   lockSched(){S.schedLocked=true;scrollTo(0,0)},
-  watch(){S.schedLocked=true;const gm=userGame();if(gm){applyUni(gm);S.event&&resolveEvent(S.event.choices?S.event.choices[S.event.choices.length-1].k:null);startWatch(gm,"user");scrollTo(0,0)}},
+  watch(){S.schedLocked=true;const gm=userGame();if(gm){if(isBigGame(gm))vsIntro(gm);applyUni(gm);S.event&&resolveEvent(S.event.choices?S.event.choices[S.event.choices.length-1].k:null);startWatch(gm,"user");scrollTo(0,0)}},
   watchGotw(){const gm=gotwGame();if(gm){startWatch(gm,"gotw");scrollTo(0,0)}},
   wPause(){if(WATCH)WATCH.paused=!WATCH.paused},
   wSpeed(d){if(WATCH)WATCH.speed=+d.v},
@@ -3999,13 +4077,13 @@ function progressAfterGame(gm){
     gdone=G.list.map(g=>({t:g.t,done:g.done}));
   }
   if(gm.type==="cfp"&&gm.label==="National Championship"&&won)addXP(500,"National champions!");
-  S.pg={label:gm.label,o,home,neutral:!!gm.neutral,us,th,won,xp:S.xpLog.slice(),goals:gdone,ups:S.lvlUps.slice(),before,after:{lvl:X.lvl,xp:X.xp},streak:won?st:0};
+  S.pg={type:gm.type,riv,label:gm.label,o,home,neutral:!!gm.neutral,us,th,won,xp:S.xpLog.slice(),goals:gdone,ups:S.lvlUps.slice(),before,after:{lvl:X.lvl,xp:X.xp},streak:won?st:0};
 }
 function renderPostgame(){
   const P=S.pg,me=T(S.user),o=T(P.o),X=xpS(),tot=P.xp.reduce((a,x)=>a+x.n,0);
   const fromPc=P.ups.length?0:Math.round(100*P.before.xp/xpNeed(P.before.lvl)),toPc=Math.round(100*X.xp/xpNeed(X.lvl));
   const nx=userGame();
-  app.innerHTML=`<div class="pg ${P.won?"won":"lost"}" style="--c1:${me.c1};--c2:${me.c2}">
+  app.innerHTML=`<div class="pg ${P.won?"won":"lost"}" style="--c1:${me.c1};--c2:${me.c2}">${celebrate(P)}
     <div class="pg-top"><span class="eyebrow">${esc(P.label||"Final")}</span><div class="pg-res">${P.won?"VICTORY":"DEFEAT"}</div>
       <div class="pg-score"><span>${badge(me)} <b>${P.us}</b></span><i>${P.home||P.neutral?"vs":"at"}</i><span><b>${P.th}</b> ${badge(o)}</span></div>
       ${P.streak>=2?`<div class="pg-streak">🔥 ${P.streak}-game win streak</div>`:""}</div>
@@ -4177,6 +4255,79 @@ function nsdHTML(){
       <div class="nsd-score">Signed: <b>${won}</b> of ${N.list.filter(x=>x.shown).length} announced</div></div>
     <div class="nsd-grid">${N.list.map(card).reverse().join("")}</div>
     ${N.i<N.list.length?`<div class="row" style="justify-content:center"><button class="btn big" data-act="nsdNext">Next announcement</button><button class="btn ghost" data-act="nsdAll">Reveal all</button></div>`:""}</div>`;
+}
+
+
+// ===================== PRESENTATION: BROADCAST, SCENES, TICKER, VS INTRO, CELEBRATIONS =====================
+// Full-screen moments live outside #app so re-renders don't restart their animations.
+function overlay(cls,html,ms){
+  try{const d=document.createElement("div");d.className="ovl "+cls;d.innerHTML=html;d.addEventListener("click",()=>d.remove());document.body.appendChild(d);setTimeout(()=>d.remove(),ms)}catch(e){}
+}
+const FLASH=[[/TOUCHDOWN/,"TOUCHDOWN"],[/INTERCEPTED/,"INTERCEPTED"],[/FUMBLE/,"FUMBLE"],[/SAFETY/,"SAFETY"],[/BLOCKED/,"BLOCKED"],[/MISSES/,"NO GOOD"],[/SACKED/,"SACK"],[/Overtime/,"OVERTIME"]];
+function flashPlay(txt,t){const f=FLASH.find(([r])=>r.test(txt));if(!f||(f[1]==="SACK"&&rnd()<.5))return;
+  overlay("flash",`<div class="fl" style="--c1:${t.c1};--c2:${t.c2}"><span>${f[1]}</span><small>${esc(t.name)}</small></div>`,1700)}
+function wpGraph(W){
+  const P=W.wph||[],g=W.g,h=T(g.home),a=T(g.away);if(P.length<2)return "";
+  const n=P.length,pts=P.map((v,i)=>`${(i/(n-1)*100).toFixed(2)},${((1-v)*100).toFixed(2)}`).join(" ");
+  return `<div class="wpg"><div class="wpg-l"><span style="color:${h.c1==="#000000"?"#ccc":h.c1}">${esc(h.abbr)}</span><span style="color:${a.c1==="#000000"?"#ccc":a.c1}">${esc(a.abbr)}</span></div>
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Win probability over the game"><defs><clipPath id="wpTop"><rect x="0" y="0" width="100" height="50"/></clipPath><clipPath id="wpBot"><rect x="0" y="50" width="100" height="50"/></clipPath></defs>
+    <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,255,255,.25)" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"/>
+    <polygon points="0,50 ${pts} 100,50" fill="${h.c1}" opacity=".35" clip-path="url(#wpTop)"/><polygon points="0,50 ${pts} 100,50" fill="${a.c1}" opacity=".35" clip-path="url(#wpBot)"/>
+    <polyline points="${pts}" fill="none" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>`;
+}
+function driveChart(W){
+  const g=W.g,D=W.drive;if(!D||g.over||!D.pts.length)return "";
+  const X=v=>8+v*.84,pts=D.pts,last=pts[pts.length-1],t=T(D.team);
+  return `<svg class="dch" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">${pts.map((p,i)=>i?`<line x1="${X(pts[i-1])}" y1="${8+((i-1)%4)*7}" x2="${X(p)}" y2="${8+(i%4)*7}" stroke="${t.c1}" stroke-width="3" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`:"").join("")}
+    ${pts.map((p,i)=>`<circle cx="${X(p)}" cy="${8+(i%4)*7}" r="1.4" fill="#fff"/>`).join("")}</svg>
+    <div class="dsum">Drive: ${pts.length-1} play${pts.length===2?"":"s"} · ${Math.round((last-pts[0])*(D.team===g.home?1:-1))} yds</div>`;
+}
+// Called after every live play: win-probability history, current drive, and big-play flashes.
+function wTrack(W,prevLog){
+  const g=W.g;(W.wph=W.wph||[]).push(liveWP(W));if(W.wph.length>600)W.wph.splice(0,W.wph.length-600);
+  const x=g.poss===g.home?g.pos:100-g.pos;
+  if(!W.drive||W.drive.team!==g.poss)W.drive={team:g.poss,pts:[x]};else W.drive.pts.push(x);
+  const top=g.log[0];if(top&&top!==prevLog&&top.hl)flashPlay(top.txt,T(/INTERCEPTED|FUMBLE/.test(top.txt)?(g.poss):g.poss));
+}
+// Game-day scene: weather, night lights, stadium skyline, rivalry glow.
+function sceneHTML(c,riv){
+  const night=/night|PM/.test(c.kick)&&!/3:30|Noon/.test(c.kick)||/night/i.test(c.kick),sky=c.sky;
+  return `<div class="scene ${night?"night":""} ${sky==="Rain"?"rain":sky==="Snow"?"snow":sky==="Wind"?"wind":""} ${riv?"riv":""}" aria-hidden="true">
+    ${night?'<i class="lt l1"></i><i class="lt l2"></i>':""}
+    <svg class="sky-line" viewBox="0 0 400 60" preserveAspectRatio="none"><path d="M0 60 V38 L20 36 V24 L28 22 V36 L60 34 L80 20 L120 14 L200 10 L280 14 L320 20 L340 34 L372 36 V22 L380 24 V36 L400 38 V60Z" fill="rgba(0,0,0,.35)"/>
+      <path d="M80 20 L120 14 L200 10 L280 14 L320 20" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/></svg>
+    ${sky==="Rain"||sky==="Snow"?'<i class="precip"></i><i class="precip p2"></i>':""}</div>`;
+}
+// ESPN-style bottom line.
+function tickerItems(){
+  const out=[],rk=id=>{const r=rankOf(id);return r<=25?`#${r} `:""};
+  const recent=S.results.slice(-60).filter(g=>rankOf(g.h)<=25||rankOf(g.a)<=25||g.h===S.user||g.a===S.user).slice(-14).reverse();
+  for(const g of recent){const w=g.hs>g.as?g.h:g.a,l=w===g.h?g.a:g.h,ws=Math.max(g.hs,g.as),ls=Math.min(g.hs,g.as);out.push(`<b>FINAL</b> ${rk(w)}${esc(T(w).abbr)} ${ws}, ${rk(l)}${esc(T(l).abbr)} ${ls}`)}
+  const A=S.ap;if(A&&A.prev&&S.results.length){rankIds().slice(0,25).forEach((id,i)=>{const p=A.prev[id];if(p&&p<=30&&p-(i+1)>=3)out.push(`<b class="up">▲${p-(i+1)}</b> ${esc(T(id).name)} up to #${i+1}`);else if(p&&p<=25&&(i+1)-p>=4)out.push(`<b class="dn">▼${(i+1)-p}</b> ${esc(T(id).name)} falls to #${i+1}`)})}
+  const hz=S.results.length?heismanWatch(1)[0]:null;if(hz)out.push(`<b>HEISMAN</b> ${esc(hz.p.n)} (${esc(hz.t.abbr)}) leads the race`);
+  if(!S.results.length){rankIds().slice(0,5).forEach((id,i)=>out.push(`<b>PRESEASON #${i+1}</b> ${esc(T(id).name)}`));if(S.pre&&S.pre.heis[0])out.push(`<b>HEISMAN FAVORITE</b> ${esc(pName(S.pre.heis[0].pid))} ${S.pre.heis[0].odds}`)}
+  try{recS().feed.slice(0,5).forEach(f=>out.push(`<b>RECRUITING</b> ${esc(f.txt.replace(/^[^\w#]+/,""))}`))}catch(e){}
+  const gw=gotwGame();if(gw)out.push(`<b>GAME OF THE WEEK</b> ${rk(gw.a)}${esc(T(gw.a).abbr)} at ${rk(gw.h)}${esc(T(gw.h).abbr)}`);
+  return out;
+}
+function tickerHTML(){
+  const it=tickerItems();if(!it.length)return "";const row=it.map(x=>`<span>${x}</span>`).join('<i>•</i>');
+  return `<div class="ticker" aria-label="Scores and news"><div class="tk-tag">CFB</div><div class="tk-win"><div class="tk-run" style="--dur:${Math.max(30,it.length*5)}s">${row}<i>•</i>${row}<i>•</i></div></div></div>`;
+}
+// VS intro before big games.
+function vsIntro(gm){
+  const u=S.user,h=T(gm.h),a=T(gm.a),riv=rivalryOf(gm.h,gm.a),r=id=>rankOf(id)<=25?`#${rankOf(id)}`:"";
+  const side=(t,cls)=>`<div class="vs-s ${cls}" style="--c1:${t.c1};--c2:${t.c2}"><span class="gd-logo" style="background:${t.c1};color:${t.c2}">${esc(t.abbr)}</span><b>${r(t.id)} ${esc(t.name)}</b><small>${recStr(t.id)}${t.id===u?" · Your team":""}</small></div>`;
+  overlay("vs",`<div class="vs-bg" style="--a:${a.c1};--h:${h.c1}"></div>${side(a,"l")}<div class="vs-mid"><span class="vs-word">VS</span><small>${esc(riv||gm.label)}</small><em>${esc(lineFor(gm.h,gm.a,gm.neutral))}</em></div>${side(h,"r")}`,2600);
+}
+function isBigGame(gm){if(!gm)return false;const o=gm.h===S.user?gm.a:gm.h;return !!rivalryOf(gm.h,gm.a)||rankOf(o)<=25||(gm.type&&gm.type!=="reg")}
+function celebrate(P){
+  if(!P.won)return "";
+  const word=P.type==="cfp"?(P.label==="National Championship"?"":"PLAYOFF WIN"):P.type==="ccg"?"CONFERENCE CHAMPIONS":P.type==="bowl"?"BOWL CHAMPIONS":P.riv?"RIVALRY WIN":"";
+  if(!word)return "";
+  const me=T(S.user),conf=Array.from({length:40},(_,i)=>`<i style="left:${(i*29)%100}%;animation-duration:${2.6+(i*7)%4*.5}s;animation-delay:-${(i*11)%5*.5}s"></i>`).join("");
+  const fw=Array.from({length:6},(_,i)=>`<b style="left:${10+i*15}%;top:${12+(i*37)%40}%;animation-delay:${i*.35}s"></b>`).join("");
+  return `<div class="celeb" aria-hidden="true"><div class="confetti">${conf}</div><div class="fw">${fw}</div></div><div class="celeb-word">${word}${P.riv&&P.type==="reg"?`<small>${esc(P.riv)}</small>`:""}</div>`;
 }
 
 // ===================== ACHIEVEMENTS =====================
