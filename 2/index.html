@@ -211,6 +211,26 @@ details summary{cursor:pointer;color:var(--amber);font-family:var(--num);font-we
 .finalists{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px}
 .fin{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
 .fin.mine{border-color:var(--amber)}
+/* ===== Locker room ===== */
+.lr-head{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;padding:18px;border-radius:16px;background:linear-gradient(135deg,color-mix(in srgb,var(--c1) 30%,var(--panel)),var(--panel) 70%);border:1px solid var(--line);box-shadow:var(--shadow)}
+@media (max-width:560px){.lr-head{grid-template-columns:1fr}}
+.lr-chem{display:flex;flex-direction:column;align-items:center;justify-content:center;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(0,0,0,.35),rgba(0,0,0,.15));border:3px solid rgba(255,255,255,.15);margin:auto;text-align:center}
+.lr-chem b{font-family:var(--num);font-size:56px;line-height:1}.lr-chem span:last-child{font-family:var(--num);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:14px}
+.lr-info p{margin:0 0 8px}
+.lr-talks{display:flex;align-items:center;gap:6px;font-family:var(--num);font-size:14px;color:var(--muted)}
+.lr-talks i{width:14px;height:14px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line)}.lr-talks i.on{background:var(--amber);border-color:var(--amber);box-shadow:0 0 8px rgba(255,182,39,.6)}
+.lr-talks span{margin-left:4px}
+.lr-row{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.2fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.lr-row:first-of-type{border-top:0}
+@media (max-width:760px){.lr-row{grid-template-columns:1fr}.lr-row .lr-btns{justify-content:flex-start}}
+.lr-row.risk .lr-who b{color:var(--bad)}
+.lr-who{display:flex;gap:10px;align-items:center}.lr-who b{display:block}.lr-who small{color:var(--muted);font-size:13px}
+.lr-ic{font-size:22px;line-height:1}
+.lr-meter{display:flex;flex-direction:column;gap:4px}.lr-meter small{font-size:12.5px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.lr-bar{height:8px;border-radius:4px;background:var(--panel-2);overflow:hidden}.lr-bar i{display:block;height:100%;border-radius:4px;transition:width .4s ease}
+.lr-btns{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.caps{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr));gap:8px}
+.caps div{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:10px;background:var(--panel-2);border:1px solid color-mix(in srgb,var(--amber) 40%,var(--line))}.caps small{color:var(--muted)}
 /* ===== Polish & motion ===== */
 button,a,[data-act]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .btn,.tab,.small-btn,.linkbtn,.uchip,.swc,.book,.uni-set,.mag-toc button{transition:transform .12s ease,filter .15s ease,box-shadow .15s ease,border-color .15s ease,background-color .15s ease,color .15s ease}
@@ -1346,7 +1366,7 @@ function newGame(gm,live,qlen){
   const edge=id=>{const mv=clamp((S.mo&&S.mo[id])||0,-3,3)*.08;
     return (mv<0?mv*cult(id):mv)+schemeArchFit(id,plan(id).scheme)*.3-(c.trap[id]?.35*cult(id):0)
       -(c.travel&&c.travel.id===id?c.travel.y*(me(id)?1-.33*fac("travel"):1):0)
-      +(me(id)?fac("film")*.15+(bad?fac("indoor")*.12:0)+dif().edge+(S.nextEdge?S.nextEdge.y:0):0)};
+      +(me(id)?fac("film")*.15+(bad?fac("indoor")*.12:0)+dif().edge+(S.nextEdge?S.nextEdge.y:0)+relEdgeNow():0)};
   g.edge={[home]:edge(home),[away]:edge(away)};
   if(!gm.neutral&&rivalryOf(home,away))g.hfa+=.8;
   g.altV=c.alt?c.alt.id:null;g.altF=c.alt&&c.alt.id===S.user?1-.33*fac("travel"):1;
@@ -1760,9 +1780,11 @@ function playRoundCore(userRes,games){
     S.results.push({h:gm.h,a:gm.a,hs:r.hs,as:r.as,type:gm.type,label:gm.label,wk:S.phase==="regular"?S.week:null});
     S.mo=S.mo||{};const w=gm.winner,l=w===gm.h?gm.a:gm.h,up=ovr(T(w))<ovr(T(l))-4;
     S.mo[w]=clamp((S.mo[w]||0)*.5+1+(up?1:0),-3,3);S.mo[l]=clamp((S.mo[l]||0)*.5-1,-3,3);
-    gameAch(gm);uniResult(gm);
+    gameAch(gm);uniResult(gm);relAfterGame(gm);
   }
   for(const t of S.teams)for(const p of t.roster)if(p.inj>0){p.inj--;if(!p.inj)p.susp=false;if(p.inj===0&&t.id===S.user)news(`${p.pos} ${p.n} is back from injury.`)}
+  // Sammy Eyde never misses a game in the opening season of a dynasty.
+  if(!(S.history||[]).length)for(const t of S.teams)for(const p of t.roster)if(p.star){p.inj=0;p.susp=false}
   RK.key=null;voteAP();
   if(S.phase==="regular"){S.week++;if(S.week>=12)setupCCG();return}
   if(S.phase==="ccg"){awardHeisman();setupPost();S.selection={season:S.season,step:0};S.ceremony={season:S.season,step:0};return}
@@ -1801,7 +1823,9 @@ function heisScore(p,tid){
   else if(p.pos==="WR"||p.pos==="TE")v=s.rey/8+s.retd*6;
   else if(["DL","LB","CB","S"].includes(p.pos))v=s.sk*9+s.dint*14+s.tk*.9;
   else return -1;
-  return v*.75+w*14;
+  // Sammy Eyde is the face of the sport in a dynasty's first season, and voters know it.
+  const hype=p.star&&!(S.history||[]).length?1.3:1;
+  return (v*.75+w*14)*hype+(hype>1?40:0);
 }
 function statLine(p){
   const s=p.s;
@@ -1961,14 +1985,16 @@ function beginOffseason(){
     const leave=[];
     for(const p of t.roster){
       if(p.yr===3)leave.push([p,"Graduated"]);
-      else if(p.yr===2&&p.ovr>=90&&rnd()<.55*(t.id===u?1-.25*fac("acad"):1))leave.push([p,"Declared for the NFL draft"]);
+      else if(p.yr===2&&p.ovr>=90&&rnd()<.55*(t.id===u?(1-.25*fac("acad"))*((p.rel||60)>=85?.6:1):1))leave.push([p,"Declared for the NFL draft"]);
     }
     if(t.id===u){
+      relOffseason();
+      for(const p of t.roster)if(p.yr<3&&!leave.some(x=>x[0]===p)&&p.rel<40&&rnd()<(p.rel<25?.7:.3))leave.push([p,"Entered the transfer portal (unhappy)"]);
       const k=Math.max(0,(rec.l>=6?2:rnd()<.4?1:0)-(rnd()<.33*fac("acad")?1:0));
-      shuffle(t.roster.filter(p=>p.yr<2&&!leave.some(x=>x[0]===p))).slice(0,k).forEach(p=>leave.push([p,"Entered the transfer portal"]));
+      shuffle(t.roster.filter(p=>p.yr<2&&(p.rel??60)<75&&!leave.some(x=>x[0]===p))).slice(0,k).forEach(p=>leave.push([p,"Entered the transfer portal"]));
     }
     for(const [p,why] of leave){
-      if(why!=="Entered the transfer portal"&&p.ovr>=84)draft.push({p,t,why});
+      if(!why.startsWith("Entered the transfer portal")&&p.ovr>=84)draft.push({p,t,why});
       if(t.id===u)departed.push({name:p.n,pos:p.pos,ovr:p.ovr,why,slot:t.roster.indexOf(p),pid:p.id});
     }
     const gone=new Set(leave.map(x=>x[0]));
@@ -2082,7 +2108,7 @@ function finishSigning(){
 function newDynasty(userId,qlen){
   S={v:8,nextPid:1,view:"hub",tab:"schedule",user:userId,qlen,season:2026,week:0,phase:"regular",results:[],ccg:null,post:null,heisman:null,
      history:[],trophies:{},ach:{},news:[],alumni:[],rivRec:{},job:{sec:70,yrs:0},firstTeam:userId,fac:{},diff:1,coach:{pts:2,off:0,def:0,rec:0,dev:0,sec:0,st:0},off:null,game:null,confirmReset:false};
-  S.teams=TEAMS0.map(makeTeam);
+  S.teams=TEAMS0.map(makeTeam);addSammy();
   S.schedule=makeSchedule();buildPL();RK.key=null;S.wx={};S.mo={};voteAP();
   S.pre=buildPreseason();S.tab="home";
   news(`You took the job at ${T(userId).name}. You have 2 coach skill points to spend.`);
@@ -2118,7 +2144,7 @@ let pickQlen=15,jumpTo=null;
 
 // ===================== VIEWS =====================
 const app=document.getElementById("app");
-const TAB_ICON={home:"🏠",news:"📰",weekly:"🗞️",preseason:"📖",schedule:"📅",standings:"📊",top25:"🏅",post:"🎟️",roster:"👥",plan:"📋",coach:"🧢",uniforms:"👕",leaders:"⭐",history:"🏛️",trophies:"🏆"};
+const TAB_ICON={home:"🏠",news:"📰",weekly:"🗞️",preseason:"📖",schedule:"📅",standings:"📊",top25:"🏅",post:"🎟️",roster:"👥",plan:"📋",coach:"🧢",uniforms:"👕",locker:"🤝",leaders:"⭐",history:"🏛️",trophies:"🏆"};
 let lastView="";
 function viewKey(){return S?[S.tab,S.phase,S.off&&S.off.step,S.pv,S.ybView,!!WATCH,!!PARTY,S.magIntro,S.selection&&S.selection.done,S.ceremony&&S.ceremony.step].join("|"):"select"}
 function render(){
@@ -2226,7 +2252,7 @@ function nextCard(){
   }
   return `<div class="panel"><h3>${esc(roundName())}</h3><p>${why}</p><div class="row"><button class="btn" data-act="simRound">Sim ${esc(roundName().toLowerCase())}</button></div></div>`;
 }
-const TABS=[["home","Home"],["news","News"],["weekly","This Week"],["preseason","Preseason Mag"],["schedule","Schedule"],["standings","Standings"],["top25","Top 25"],["leaders","Heisman & stats"],["roster","Roster"],["plan","Game plan"],["coach","Coach"],["uniforms","Uniforms"],["trophies","Trophy room"],["post","Postseason"],["history","Program"]];
+const TABS=[["home","Home"],["news","News"],["weekly","This Week"],["preseason","Preseason Mag"],["schedule","Schedule"],["standings","Standings"],["top25","Top 25"],["leaders","Heisman & stats"],["roster","Roster"],["plan","Game plan"],["coach","Coach"],["uniforms","Uniforms"],["locker","Locker room"],["trophies","Trophy room"],["post","Postseason"],["history","Program"]];
 function renderHub(){
   if(!S.pre||S.pre.season!==S.season)S.pre=buildPreseason();
   const me=T(S.user),cr=confRec(S.user);
@@ -2235,7 +2261,7 @@ function renderHub(){
   if(!tabs.some(([k])=>k===S.tab))S.tab="home";
   const jc=S.job.sec>=70?"good":S.job.sec>=45?"amber":"bad";
   const chip=(c,l,v)=>`<div class="chip" data-c="${c}"><span>${l}</span><b>${v}</b></div>`;
-  const groups=[["Season","blue",["home","news","weekly","preseason","schedule","standings","top25","post"]],["Team","green",["roster","plan","coach","uniforms"]],["Records","purple",["leaders","history","trophies"]]];
+  const groups=[["Season","blue",["home","news","weekly","preseason","schedule","standings","top25","post"]],["Team","green",["roster","locker","plan","coach","uniforms"]],["Records","purple",["leaders","history","trophies"]]];
   const side=S.tab==="home"?[partyCard(),gotwCard(),lastGameHTML()].filter(Boolean):[];
   app.innerHTML=`
   <div class="teamband" style="--t1:${me.c1};--t2:${me.c2}" data-wm="${esc(me.abbr)}">
@@ -2256,7 +2282,7 @@ function renderHub(){
   ${S.tab==="home"?`<div class="hubgrid ${side.length?"":"solo"}">
     <div class="hubmain">${canEditSched()&&!S.schedLocked?preSchedStep():`${eventCard()}${(()=>{const ug=userGame();return ug?hypeHTML(ug):""})()}${nextCard()}`}</div>
     ${side.length?`<div class="hubside">${side.join("")}</div>`:""}
-  </div>`:`<section class="tabbody">${({news:tabNews,trophies:tabTrophies,uniforms:tabUniforms,plan:tabPlan,weekly:tabWeekly,preseason:tabPreseason,schedule:tabSchedule,standings:tabStandings,top25:tabTop25,leaders:tabLeaders,roster:tabRoster,coach:tabCoach,post:tabPost,history:tabHistory})[S.tab]()}</section>`}
+  </div>`:`<section class="tabbody">${({news:tabNews,locker:lockerTab,trophies:tabTrophies,uniforms:tabUniforms,plan:tabPlan,weekly:tabWeekly,preseason:tabPreseason,schedule:tabSchedule,standings:tabStandings,top25:tabTop25,leaders:tabLeaders,roster:tabRoster,coach:tabCoach,post:tabPost,history:tabHistory})[S.tab]()}</section>`}
   <div class="row"><button class="btn ${S.confirmReset?"danger":"ghost"}" data-act="reset">${S.confirmReset?"Tap again to erase this dynasty":"New dynasty"}</button></div>`;
 }
 function resultCell(g,id){
@@ -2340,7 +2366,7 @@ function tabRoster(){
   const row=(p,i,pos,list)=>{const st=isStarter(me,p);
     return `<tr class="${st?"starter":""}"><td class="n">${p.inj?"":st?'<span class="tag good">Start</span>':`<span class="sub">${i+1}</span>`}</td>
     <td>${S.editing===p.id?`<span class="row" style="gap:6px;flex-wrap:nowrap"><input id="nm-${p.id}" class="nm" value="${esc(p.n)}" maxlength="28" aria-label="New name for ${esc(p.n)}"><button class="small-btn" data-act="saveName" data-id="${p.id}">Save</button><button class="small-btn" data-act="cancelName">Cancel</button></span>`:
-      `<span class="sub num">#${p.no}</span> ${plink(p.id,p.n)} <button class="edit" data-act="editName" data-id="${p.id}" aria-label="Edit ${esc(p.n)}'s name" title="Edit name">✎</button>
+      `<span class="sub num">#${p.no}</span> <span title="${relLabel(relInit(p).rel)}">${relIcon(p.rel)}</span> ${plink(p.id,p.n)} <button class="edit" data-act="editName" data-id="${p.id}" aria-label="Edit ${esc(p.n)}'s name" title="Edit name">✎</button>
       <div class="sub">${esc(archName(p))} · <span class="stars" style="font-size:12px">${"★".repeat(p.st)}</span>${p.inj>0?` <span class="tag bad">${p.susp?"Suspended":`Out ${p.inj}w`}</span>`:""}${p.rs&&!p.rsu?' <span class="tag">Redshirt</span>':""}</div>`}</td>
     <td class="n">${yrLabel(p)}</td><td class="n"><b>${p.ovr}</b></td><td class="sub">${esc(statLine(p))}</td>
     <td class="n dc"><button class="small-btn" data-act="depth" data-id="${p.id}" data-d="-1" ${i===0?"disabled":""} aria-label="Move ${esc(p.n)} up">▲</button><button class="small-btn" data-act="depth" data-id="${p.id}" data-d="1" ${i===list.length-1?"disabled":""} aria-label="Move ${esc(p.n)} down">▼</button>
@@ -2537,7 +2563,7 @@ function buildPreseason(){
   const byOvr=teams.map(t=>t.id).sort((a,b)=>O[b]-O[a]);
   const players=[];for(const t of teams)for(const p of t.roster)players.push([p,t]);
   // Heisman odds
-  const cands=players.filter(([p])=>HEIS_POS[p.pos]!==undefined).map(([p,t])=>({pid:p.id,tid:t.id,v:p.ovr+(O[t.id]-80)*.6+HEIS_POS[p.pos]}));
+  const cands=players.filter(([p])=>HEIS_POS[p.pos]!==undefined).map(([p,t])=>({pid:p.id,tid:t.id,v:p.ovr+(O[t.id]-80)*.6+HEIS_POS[p.pos]+(p.star&&!(S.history||[]).length?8:0)}));
   const z=cands.reduce((s,c)=>s+Math.exp(c.v/2.2),0);
   const heis=cands.sort((a,b)=>b.v-a.v).slice(0,10).map(c=>({pid:c.pid,tid:c.tid,odds:american(Math.exp(c.v/2.2)/z)}));
   // Top players and All-America
@@ -2994,6 +3020,14 @@ function hypeHTML(ug){
 function nextUserGame(){return userGame()}
 function healthyStarter(f){const c=T(S.user).roster.filter(p=>!p.inj&&p.pos!=="K"&&(!f||f(p)));return c[Math.floor(rnd()*c.length)]}
 const EVENTS=[
+  {w:3,choice:true,run(){const me=T(S.user),p=shuffle(myStarters().filter(p=>["WR","RB","TE"].includes(p.pos)&&!p.inj))[0];if(!p)return null;relInit(p);
+    return {t:"He wants the ball",x:`${p.pos} ${p.n} (${PERS[p.per][0].toLowerCase()}) says he isn't getting enough touches and wants to talk.`,data:{pid:p.id},choices:[{l:"Promise him more touches",k:"rTouch"},{l:"Tell him to earn it",k:"rEarn"}]}}},
+  {w:2,choice:true,run(){const st=shuffle(T(S.user).roster.filter(p=>!p.inj));if(st.length<2)return null;const [a,b]=st;
+    return {t:"Fight at practice",x:`${a.pos} ${a.n} and ${b.pos} ${b.n} got into a fight at practice. The whole team is watching how you handle it.`,data:{a:a.id,b:b.id},choices:[{l:"Suspend both for a day",k:"rSusp"},{l:"Handle it in-house",k:"rHouse"}]}}},
+  {w:2,choice:true,run(){const p=shuffle(T(S.user).roster.filter(p=>p.yr===0))[0];if(!p)return null;
+    return {t:"Homesick freshman",x:`Freshman ${p.pos} ${p.n} is homesick and thinking about leaving. His family called the office.`,data:{pid:p.id},choices:[{l:"Have him over for dinner",k:"rDinner"},{l:"He'll toughen up",k:"rTough"}]}}},
+  {w:2,choice:true,run(){const p=myStarters().filter(p=>p.yr===3).sort((a,b)=>(b.rel||0)-(a.rel||0))[0];if(!p)return null;
+    return {t:"A senior wants the floor",x:`Senior ${p.pos} ${p.n} asked to speak to the whole team before this week's game.`,data:{pid:p.id},choices:[{l:"Give him the floor",k:"rFloor"},{l:"Coaches only this week",k:"rNo"}]}}},
   {w:3,run(){S.bank=(S.bank||0)+6;return {t:"Boosters step up",x:"A group of boosters made a big donation. You get +6 recruiting points next offseason."}}},
   {w:2,run(){const ug=nextUserGame();if(!ug||rankOf(ug.h)>25&&rankOf(ug.a)>25)return null;S.nextEdge={y:.2,txt:"GameDay"};T(S.user).pres=Math.min(5,T(S.user).pres+.05);
     return {t:"College GameDay is coming",x:`ESPN's College GameDay is broadcasting from your game against ${T(ug.h===S.user?ug.a:ug.h).name}. The atmosphere gives your team a boost.`}}},
@@ -3015,7 +3049,7 @@ function rollEvents(){
     const top=rankIds().slice(0,10).filter(id=>id!==S.user),id=top[Math.floor(rnd()*top.length)],t=T(id),k=Math.floor(rnd()*3);let txt;
     if(k===0){const q=starter(t,"QB");if(q&&!q.inj){q.inj=2;q.susp=true;txt=`${t.name} QB ${q.n} is suspended for this week's game.`}}
     else if(k===1&&t.coach){t.coach.sec=clamp(t.coach.sec-30,0,100);txt=`Scandal at ${t.name}: an NCAA investigation puts coach ${t.coach.n} on the hot seat.`}
-    else{const h=heismanWatch(3).map(x=>x.p).find(p=>p.inj===0&&!T(S.user).roster.includes(p));if(h){h.inj=3;txt=`Heisman contender ${h.n} is out two weeks with an injury.`}}
+    else{const h=heismanWatch(3).map(x=>x.p).find(p=>p.inj===0&&!p.star&&!T(S.user).roster.includes(p));if(h){h.inj=3;txt=`Heisman contender ${h.n} is out two weeks with an injury.`}}
     if(txt){news(`Breaking: ${txt}`);if(S.weekly)S.weekly.headlines.unshift({tag:"Breaking",text:txt})}
   }
 }
@@ -3026,6 +3060,16 @@ function resolveEvent(k){
     if(k==="walkon"){const me=T(S.user),old=me.roster[E.data.slot];const np=newPlayer(E.data.pos,E.data.ovr,1,2);me.roster[E.data.slot]=np;buildPL();S.bank=(S.bank||0)-4;res=`Walk-on ${np.n} is your new starting ${np.pos} (${np.ovr}). ${old.n} moves to the bench.`}
     else if(k==="raise"){S.bank=(S.bank||0)-5;S.mo[S.user]=clamp((S.mo[S.user]||0)+.5,-3,3);res="Your coordinator stays. The staff is fired up."}
     else if(k==="go"){S.mo[S.user]=clamp((S.mo[S.user]||0)-1,-3,3);S.nextEdge={y:-.15,txt:"new OC"};res="Your coordinator leaves. The offense will need a week to adjust."}
+    else if(k[0]==="r"&&k!=="raise"){const P=id=>PL[id],D=E.data||{},p=P(D.pid);
+      if(k==="rTouch"&&p){relAdj(p,10);p.promise=S.season;res=`${p.n} is happy, for now. He'll expect to keep starting.`}
+      else if(k==="rEarn"&&p){relInit(p);const ok=p.per==="grinder"||p.per==="leader";relAdj(p,ok?6:-8);if(ok)p.fire=true;res=ok?`${p.n} respected that. He's going to go earn it.`:`${p.n} didn't like hearing that.`}
+      else if(k==="rSusp"){[P(D.a),P(D.b)].forEach(x=>x&&relAdj(x,-6));myStarters().forEach(x=>relAdj(x,2));res="The team respects the line you drew. The two of them are sore about it."}
+      else if(k==="rHouse"){[P(D.a),P(D.b)].forEach(x=>x&&relAdj(x,4));if(rnd()<.3){S.nextEdge={y:-.1,txt:"distraction"};res="They hugged it out, but the drama is still a distraction."}else res="They hugged it out. Locker room's fine."}
+      else if(k==="rDinner"&&p){relAdj(p,15);res=`${p.n} felt at home for the first time. He's staying.`}
+      else if(k==="rTough"&&p){relAdj(p,-12);res=`${p.n} is quieter than ever. Keep an eye on him.`}
+      else if(k==="rFloor"&&p){relAdj(p,6);myStarters().forEach(x=>{relAdj(x,2);x.fire=x.fire||rnd()<.25});S.mo[S.user]=clamp((S.mo[S.user]||0)+.5,-3,3);res=`${p.n} gave a speech nobody will forget. The team is fired up.`}
+      else if(k==="rNo"&&p){relAdj(p,-6);res=`${p.n} understood, but he's a little hurt.`}
+      for(const l of [res])relLog(l)}
     else if(k==="visit"){S.bank=(S.bank||0)-3;S.headStart=true;res="The visit went great. That 5★ recruit will be much more interested on signing day."}
     else res="You passed.";
     news(`${E.t}: ${res}`);
@@ -3367,9 +3411,10 @@ const ACT={
     const m={tid:S.user,from,to:I.c,swap:I.weak,txt:`${me.name} leave the ${CONFS[from]} for the ${CONFS[I.c]}. ${T(I.weak).name} move to the ${CONFS[from]} in the swap.`};
     S.off.realign=(S.off.realign||[]).concat(m);S.realign=(S.realign||[]).concat({season:S.season,...m});me.pres=Math.min(5,me.pres+.3);S.off.invite=null},
   stayConf(){S.off.invite=null},
-  depth(d){const me=T(S.user),p=PL[+d.id];if(!p)return;const list=depthOf(me,p.pos).map(x=>x.id),i=list.indexOf(p.id),j=i+(+d.d);if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]];me.depth=me.depth||{};me.depth[p.pos]=list;autoRedshirtKeep(me)},
+  depth(d){const me=T(S.user),p=PL[+d.id];if(!p)return;const before=startersOf(me,p.pos).slice(),list=depthOf(me,p.pos).map(x=>x.id),i=list.indexOf(p.id),j=i+(+d.d);if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]];me.depth=me.depth||{};me.depth[p.pos]=list;autoRedshirtKeep(me);relDepthChange(before,startersOf(me,p.pos))},
+  talk(d){const p=PL[+d.id];if(!p||talksLeft()<1||S.phase==="offseason"||!T(S.user).roster.includes(p))return;S.talk.left--;doTalk(p,d.k)},
   depthAuto(){const me=T(S.user);me.depth={};autoRedshirtKeep(me)},
-  rs(d){const p=PL[+d.id];if(p&&p.yr===0&&!p.rsu){p.rs=!p.rs;T(S.user).manualRS=true}},
+  rs(d){const p=PL[+d.id];if(p&&p.yr===0&&!p.rsu){p.rs=!p.rs;T(S.user).manualRS=true;if(p.rs){relInit(p);if(p.per!=="team"){relAdj(p,p.per==="diva"?-8:-4);relLog(`${p.pos} ${p.n} isn't thrilled about the redshirt.`)}}}},
   party(){startParty();scrollTo(0,0)},
   pPick(d){if(PARTY&&PARTY.stage==="picks")PARTY.picks[d.k]=+d.id},
   pKick(){if(PARTY&&PARTY.stage==="picks")kickoffParty()},
@@ -3420,6 +3465,96 @@ document.addEventListener("keydown",e=>{
   else if(e.key==="Escape"){S.editing=null;render()}
 });
 
+
+
+// ===================== PLAYER–COACH RELATIONSHIPS =====================
+const PERS={leader:["Leader","Lifts everyone around him. Loves being challenged."],grinder:["Grinder","Just wants to work. Challenges fire him up; praise barely registers."],
+  diva:["Diva","Needs the spotlight. Loves praise, hates the bench."],quiet:["Quiet","Keeps to himself. Takes criticism hard."],
+  hothead:["Hothead","Plays with fire. Challenge him and it could go either way."],team:["Team-first","Easy to coach. Happy as long as the team wins."]};
+const PERS_K=Object.keys(PERS);
+function relInit(p){if(p.rel==null){p.rel=50+Math.floor(rnd()*25);p.per=PERS_K[Math.floor(rnd()*PERS_K.length)]}return p}
+function relLabel(v){return v>=85?"Would run through a wall":v>=70?"Bought in":v>=50?"Solid":v>=30?"Frustrated":"Wants out"}
+function relIcon(v){return v>=85?"💚":v>=70?"🙂":v>=50?"😐":v>=30?"😠":"💔"}
+function relColor(v){return v>=70?"var(--good)":v>=50?"var(--amber)":"var(--bad)"}
+function relAdj(p,d){relInit(p);p.rel=clamp(Math.round(p.rel+d),0,100)}
+function relLog(txt){S.lrlog=[{s:S.season,w:S.week,txt},...(S.lrlog||[])].slice(0,14)}
+function myStarters(){const t=T(S.user);return POS_ORDER.flatMap(pos=>startersOf(t,pos)).filter(Boolean)}
+function chemistry(){const st=myStarters();return st.length?Math.round(st.reduce((a,p)=>a+relInit(p).rel,0)/st.length):60}
+function chemLabel(v){return v>=80?"Brotherhood":v>=68?"Tight-knit":v>=55?"Steady":v>=42?"Fractured":"Toxic"}
+// Game-day edge from the locker room: chemistry plus players you fired up this week.
+function relEdgeNow(){const st=myStarters(),fire=st.filter(p=>p.fire).length;return (chemistry()-60)*.012+Math.min(4,fire)*.06}
+function talkKey(){return `${S.season}-${S.phase}-${S.week}-${S.post?S.post.round:""}`}
+function talksLeft(){if(!S.talk||S.talk.key!==talkKey())S.talk={key:talkKey(),left:3};return S.talk.left}
+const TALK={praise:"Praise",challenge:"Challenge",film:"1-on-1 film",promise:"Promise snaps"};
+function doTalk(p,k){
+  relInit(p);const per=p.per,nm=`${p.pos} ${p.n}`,coin=rnd()<.5;let d=0,txt="";
+  if(k==="praise"){d={diva:12,quiet:8,team:6,leader:6,hothead:6,grinder:3}[per];txt=per==="diva"?`${nm} lit up. He's telling everyone what you said.`:per==="grinder"?`${nm} nodded and went back to work. Praise isn't really his thing.`:`${nm} appreciated it. You can see him standing a little taller.`}
+  else if(k==="challenge"){
+    if(per==="leader"||per==="grinder"){d=per==="grinder"?12:10;p.fire=true;txt=`${nm} took it personally, in the best way. He's fired up for Saturday.`}
+    else if(per==="hothead"){if(coin){d=12;p.fire=true;txt=`${nm} heard you loud and clear. He's on a mission this week.`}else{d=-12;txt=`${nm} blew up at practice. That one backfired.`}}
+    else if(per==="diva"){if(coin){d=6;p.fire=true;txt=`${nm} wants to prove you wrong. Good.`}else{d=-8;txt=`${nm} is sulking. He thinks you're picking on him.`}}
+    else if(per==="quiet"){d=-6;txt=`${nm} went quiet. He took the criticism harder than you meant it.`}
+    else{d=4;p.fire=true;txt=`${nm} said "yes, coach" and meant it.`}}
+  else if(k==="film"){d=5;txt=`You broke down film with ${nm} for an hour.`;if(p.filmS!==S.season&&rnd()<.3){p.filmS=S.season;p.ovr=Math.min(99,p.ovr+1);txt+=` Something clicked: +1 overall (now ${p.ovr}).`}}
+  else if(k==="promise"){d=15;p.promise=S.season;txt=`You promised ${nm} more snaps. He's thrilled, but he'll remember if you don't follow through.`}
+  relAdj(p,d);relLog(`${txt} (${d>=0?"+":""}${d})`);
+  return txt;
+}
+// After each of your games: winning heals, losing stings, and players stuck on the bench get restless.
+function relAfterGame(gm){
+  const u=S.user;if(gm.h!==u&&gm.a!==u)return;
+  const t=T(u),won=gm.winner===u,riv=rivalryOf(gm.h,gm.a),st=new Set(myStarters());
+  for(const p of t.roster){relInit(p);
+    let d=won?(p.per==="team"?3:2):-2;if(riv&&won)d+=2;
+    if(st.has(p))d+=1;
+    else if(p.yr>=2&&!p.inj){const best=startersOf(t,p.pos).slice(-1)[0];if(best&&p.ovr>=best.ovr-3)d-=p.per==="diva"?4:2}
+    if(p.rs&&p.per==="diva")d-=1;
+    relAdj(p,d);p.fire=false;
+  }
+}
+// Depth chart moves are felt: losing a starting job hurts, earning one helps.
+function relDepthChange(before,after){
+  for(const p of before)if(!after.includes(p)){const d=p.per==="diva"?-16:p.per==="team"?-5:-10;relAdj(p,d);relLog(`${p.pos} ${p.n} lost his starting job. He's not happy. (${d})`)}
+  for(const p of after)if(!before.includes(p)){relAdj(p,8);relLog(`${p.pos} ${p.n} earned a starting job. (+8)`)}
+}
+// Offseason: broken promises and unhappy players walk; loyal stars stick around.
+function relOffseason(){
+  const t=T(S.user),st=new Set(myStarters()),out=[];
+  for(const p of t.roster){relInit(p);
+    if(p.promise===S.season&&!st.has(p)){relAdj(p,-25);out.push(`You promised ${p.n} more snaps and didn't deliver. (-25)`)}
+    p.promise=null;
+    p.rel=Math.round(p.rel+(60-p.rel)*.1); // time heals a little
+  }
+  out.forEach(relLog);
+}
+function lockerTab(){
+  const t=T(S.user),chem=chemistry(),left=talksLeft(),st=new Set(myStarters());
+  t.roster.forEach(relInit);
+  const caps=t.roster.filter(p=>p.yr>=2&&st.has(p)).sort((a,b)=>b.rel-a.rel||b.ovr-a.ovr).slice(0,3);
+  const risk=t.roster.filter(p=>p.rel<45&&p.yr<3).sort((a,b)=>a.rel-b.rel).slice(0,6);
+  const edge=relEdgeNow(),canTalk=S.phase!=="offseason"&&left>0;
+  const btns=p=>Object.entries(TALK).filter(([k])=>k!=="promise"||(!st.has(p)&&p.promise!==S.season)).map(([k,l])=>`<button class="small-btn" data-act="talk" data-id="${p.id}" data-k="${k}" ${canTalk?"":"disabled"}>${l}</button>`).join("");
+  const row=p=>`<div class="lr-row ${p.rel<45?"risk":""}"><div class="lr-who"><span class="lr-ic" title="${relLabel(p.rel)}">${relIcon(p.rel)}</span><div style="min-width:0"><b>${plink(p.id,p.n)}</b><small>${p.pos} · ${YRS[p.yr]} · ${p.ovr} OVR${st.has(p)?" · Starter":""}</small></div></div>
+    <div class="lr-meter"><div class="lr-bar"><i style="width:${p.rel}%;background:${relColor(p.rel)}"></i></div><small><span class="tag" title="${esc(PERS[p.per][1])}">${PERS[p.per][0]}</span> ${relLabel(p.rel)}${p.promise===S.season?' · <span style="color:var(--amber)">Promised snaps</span>':""}${p.fire?' · 🔥 Fired up':""}</small></div>
+    <div class="lr-btns">${btns(p)}</div></div>`;
+  const groups=[["Offense",["QB","RB","WR","TE","OL"]],["Defense",["DL","LB","CB","S"]],["Special teams",["K"]]];
+  return `<div class="lr-head" style="--c1:${t.c1}">
+      <div class="lr-chem"><span class="pk">Team chemistry</span><b style="color:${relColor(chem)}">${chem}</b><span>${chemLabel(chem)}</span></div>
+      <div class="lr-info"><p>Chemistry is the average relationship with your starters. It's worth <b style="color:${edge>=0?"var(--good)":"var(--bad)"}">${edge>=0?"+":""}${(edge*10).toFixed(1)}</b> on game day right now.</p>
+        <p class="muted" style="margin:0">Each week you get 3 talks. Praise, challenge, sit down for film, or promise a backup more snaps. Every player has a personality, so the same words land differently. Unhappy players can transfer in the offseason, and a broken promise is never forgotten.</p>
+        <div class="lr-talks">${[0,1,2].map(i=>`<i class="${i<left?"on":""}"></i>`).join("")}<span>${S.phase==="offseason"?"Talks resume next season":`${left} talk${left===1?"":"s"} left this week`}</span></div></div></div>
+    ${caps.length?`<div class="panel" data-c="amber"><h3>Captains</h3><div class="caps">${caps.map(p=>`<div><span class="lr-ic">©️</span><b>${plink(p.id,p.n)}</b><small>${p.pos} · ${YRS[p.yr]} · ${relLabel(p.rel)}</small></div>`).join("")}</div></div>`:""}
+    ${risk.length?`<div class="panel" data-c="bad"><h3>Needs your attention</h3>${risk.map(row).join("")}<p class="muted" style="font-size:13px;margin:0">Below 40 there's a real chance they enter the transfer portal after the season.</p></div>`:""}
+    ${(S.lrlog||[]).length?`<div class="panel" data-c="purple"><h3>Locker room log</h3><div class="news">${S.lrlog.slice(0,8).map(l=>`<div>${esc(l.txt)}</div>`).join("")}</div></div>`:""}
+    ${groups.map(([g,ps])=>`<div class="panel" data-c="green"><h3>${g}</h3>${t.roster.filter(p=>ps.includes(p.pos)).sort((a,b)=>ps.indexOf(a.pos)-ps.indexOf(b.pos)||(st.has(b)?1:0)-(st.has(a)?1:0)||b.ovr-a.ovr).map(row).join("")}</div>`).join("")}`;
+}
+// The face of the sport: every new dynasty opens with Sammy Eyde under center at Alabama.
+function addSammy(){
+  const t=S.teams.find(x=>x.abbr==="BAMA");if(!t)return;
+  const q=t.roster.filter(p=>p.pos==="QB").sort((a,b)=>b.ovr-a.ovr)[0];if(!q)return;
+  q.n="Sammy Eyde";q.ovr=98;q.yr=3;q.st=5;q.rs=false;q.rsu=false;q.no=1;q.star=true;q.rel=null;
+  giveArch(q,1);for(const k in q.at)q.at[k]+=4; // dual-threat: voters love the highlight runs
+}
 
 // ===================== ACHIEVEMENTS =====================
 const ACH=[
