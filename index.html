@@ -207,6 +207,9 @@ details summary{cursor:pointer;color:var(--amber);font-family:var(--num);font-we
 .hype ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:14.5px}
 .event{border-color:color-mix(in srgb,var(--amber) 55%,var(--line))}
 .me-t{color:var(--amber)}
+.dctab tr.poshead td{font-family:var(--num);font-weight:700;letter-spacing:.08em;color:var(--amber);background:var(--panel-2);border-top:1px solid var(--line)}
+.dctab tr.starter td{background:color-mix(in srgb,var(--good) 6%,transparent)}
+.dc{white-space:nowrap}.dc .small-btn{padding:4px 7px;margin-left:3px}
 .slot{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
 .slot.done{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
 .cand{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px 12px;align-items:center}
@@ -352,7 +355,28 @@ const LAST=["Williams","Johnson","Carter","Brooks","Mitchell","Harris","Jackson"
 
 const UNITS=["QB","RB","WR","OL","DL","LB","DB","K"];
 const UNIT_NAME={QB:"Quarterback",RB:"Running back",WR:"Receivers",OL:"Offensive line",DL:"Defensive line",LB:"Linebackers",DB:"Secondary",K:"Kicker"};
-const SLOTS=["QB","RB","RB","WR","WR","TE","OL","OL","DL","DL","LB","LB","CB","CB","S","K"];
+// 30-player rosters: how many at each position, and how many of them start.
+const ROSTER={QB:3,RB:3,WR:4,TE:2,OL:4,DL:4,LB:3,CB:3,S:3,K:1};
+const START={QB:1,RB:2,WR:2,TE:1,OL:2,DL:2,LB:2,CB:2,S:1,K:1};
+const POS_ORDER=Object.keys(ROSTER);
+const SLOTS=POS_ORDER.flatMap(p=>Array(ROSTER[p]).fill(p));
+const yrLabel=p=>`${p.rsu?"RS ":""}${YRS[p.yr]}`;
+// Depth chart: your custom order if you set one, otherwise best rating first.
+function depthOf(t,pos){
+  const ps=t.roster.filter(p=>p.pos===pos),ord=t.depth&&t.depth[pos];
+  if(ord&&ord.length){const m=new Map(ord.map((id,i)=>[id,i]));return ps.sort((a,b)=>(m.has(a.id)?m.get(a.id):99)-(m.has(b.id)?m.get(b.id):99)||b.ovr-a.ovr)}
+  return ps.sort((a,b)=>b.ovr-a.ovr);
+}
+// Rosters can't change mid-game, so each game works out every depth chart once (DCC) instead of on every play.
+let DCC=null;
+function depthSplit(t,pos){
+  const k=t.id+pos;if(DCC&&DCC.has(k))return DCC.get(k);
+  const h=depthOf(t,pos).filter(p=>!p.inj),v={st:h.slice(0,START[pos]),bk:h.slice(START[pos])};
+  if(DCC)DCC.set(k,v);return v;
+}
+function startersOf(t,pos){return depthSplit(t,pos).st}
+function backupsOf(t,pos){return depthSplit(t,pos).bk}
+const isStarter=(t,p)=>startersOf(t,p.pos).includes(p);
 const UNIT_OF={QB:"QB",RB:"RB",WR:"WR",TE:"WR",OL:"OL",DL:"DL",LB:"LB",CB:"DB",S:"DB",K:"K"};
 const YRS=["FR","SO","JR","SR"];
 const STAR_BASE={2:58,3:64,4:70,5:76};
@@ -475,7 +499,7 @@ const atOf=(p,k)=>p&&p.at?(p.at[k]||0):0;
 const attrVal=(p,k)=>clamp(p.ovr+atOf(p,k),35,99);
 function schemeArchFit(id,scheme){const t=T(id),m=SCHEME_ARCH[scheme]||{};return (m[archName(starter(t,"QB"))]||0)+(m[archName(starter(t,"RB"))]||0)}
 function teamAx(t){
-  const h=t.roster.filter(p=>!p.inj),av=(ps,k)=>{const c=h.filter(p=>ps.includes(p.pos));return c.length?c.reduce((s,p)=>s+atOf(p,k),0)/c.length:0};
+  const h=POS_ORDER.flatMap(pos=>startersOf(t,pos)),av=(ps,k)=>{const c=h.filter(p=>ps.includes(p.pos));return c.length?c.reduce((s,p)=>s+atOf(p,k),0)/c.length:0};
   return {pbk:av(["OL"],"pbk")+av(["TE"],"blk")*.3,rbk:av(["OL"],"rbk")+av(["TE"],"blk")*.3,rsh:av(["DL"],"rsh")+av(["LB"],"rsh")*.4,
     run:av(["DL","LB"],"run")+av(["S"],"run")*.3,cov:av(["CB","S"],"cov")+av(["LB"],"cov")*.3,ball:av(["CB","S"],"ball")};
 }
@@ -545,6 +569,17 @@ function finishLive(){
   const g=S.game;g.live=false;let n=0;while(!g.over&&n++<6000)stepAI(g);
   const res=finalizeGame(g);S.game=null;S.view="hub";playRound(res);
 }
+function ensureV8(){
+  if(S.v>=8)return;
+  for(const t of S.teams){
+    for(const pos of POS_ORDER){
+      const have=t.roster.filter(p=>p.pos===pos),top=have.length?have.reduce((s,p)=>s+p.ovr,0)/have.length:65;
+      for(let i=have.length;i<ROSTER[pos];i++){const yr=Math.floor(rnd()*3);t.roster.push(newPlayer(pos,top-8+[-3,0,2][yr]+normal()*3,yr,starsFor(t.pres)))}
+    }
+    autoRedshirt(t);
+  }
+  S.v=8;
+}
 function ensureV7(){
   if(S.v>=7)return;
   for(const t of S.teams){if(!t.coach){t.coach=newCoach(t);t.coach.yrs=Math.floor(rnd()*8);t.coach.sec=45+Math.floor(rnd()*40)}for(const p of t.roster)if(!p.at)giveArch(p)}
@@ -567,10 +602,9 @@ function migrate(){
 }
 function buildPL(){PL={};for(const t of S.teams)for(const p of t.roster)PL[p.id]=p}
 function blank(){return {pa:0,pc:0,py:0,ptd:0,pint:0,ra:0,ry:0,rtd:0,rec:0,rey:0,retd:0,tk:0,sk:0,dint:0,fgm:0,fga:0}}
-function effOvr(p){return p.inj>0?Math.max(50,p.ovr-14):p.ovr}
 function units(t){
   const a={},c={};for(const k of UNITS){a[k]=0;c[k]=0}
-  for(const p of t.roster){const u=UNIT_OF[p.pos];a[u]+=effOvr(p);c[u]++}
+  for(const pos of POS_ORDER){const st=startersOf(t,pos),u=UNIT_OF[pos];for(let i=0;i<START[pos];i++){a[u]+=st[i]?st[i].ovr:50;c[u]++}}
   const o={};for(const k of UNITS)o[k]=c[k]?Math.round(a[k]/c[k]):60;return o;
 }
 const offR=u=>(u.QB*1.4+u.RB*.8+u.WR+u.OL)/4.2;
@@ -591,11 +625,15 @@ function starsFor(pres){
 }
 function recruitOvr(st,t){return STAR_BASE[st]+Math.floor(rnd()*6)-(t?[0,2,7][CONF_TIER[t.conf]]:0)}
 function presFloor(t){const r=TEAMS0.find(x=>x[1]===t.abbr);return r?clamp(1+(r[4]-76)/3.5-1,CONF_TIER[t.conf]===0?1.5:1,3.5):1}
+// Freshmen who aren't starting sit out the year and keep their eligibility.
+function autoRedshirtKeep(t){if(!t.manualRS)autoRedshirt(t)}
+function autoRedshirt(t){for(const p of t.roster)if(p.yr===0&&!p.rsu)p.rs=!isStarter(t,p)}
 function newCoach(t){return {n:FIRST[Math.floor(rnd()*FIRST.length)]+" "+LAST[Math.floor(rnd()*LAST.length)],sk:clamp(Math.round(1.5+t.pres*.6+normal()*.8),1,5),yrs:0,sec:62}}
 function makeTeam(r,i){
   const [name,abbr,c1,c2,base,conf,stadium,cap,hfa]=r,pres=clamp(1+(base-76)/3.5,1,5);
   const t={id:i,name,abbr,c1,c2,conf,pres,stadium,cap,hfa,roster:[]};
-  t.roster=SLOTS.map(pos=>{const yr=Math.floor(rnd()*4);return newPlayer(pos,base+[-7,-3,2,5][yr]+normal()*3,yr,starsFor(pres))});
+  t.roster=POS_ORDER.flatMap(pos=>[...Array(ROSTER[pos])].map((_,i)=>{const yr=Math.floor(rnd()*4);return newPlayer(pos,base+[-7,-3,2,5][yr]+normal()*3-(i>=START[pos]?7:0),yr,starsFor(pres))}));
+  autoRedshirt(t);
   t.plan=aiPlan(t);
   t.coach=newCoach(t);t.coach.yrs=Math.floor(rnd()*8);t.coach.sec=45+Math.floor(rnd()*40);
   return t;
@@ -826,6 +864,7 @@ function condFor(gm){
 }
 function condText(c){return `${c.kick} · ${c.sky==="Dome"?"Indoors":`${c.sky}, ${c.temp}°F`}`}
 function newGame(gm,live,qlen){
+  DCC=new Map();
   const {h:home,a:away}=gm;
   const g={home,away,neutral:!!gm.neutral,label:gm.label,type:gm.type,live,qlen,auto:false,
     u:{[home]:units(T(home)),[away]:units(T(away))},ax:{[home]:teamAx(T(home)),[away]:teamAx(T(away))},
@@ -851,20 +890,22 @@ function add(g,p,k,v=1){if(!p)return;const b=g.box[p.id]||(g.box[p.id]={});b[k]=
 function setPoss(g,id,pos){g.poss=id;g.pos=pos;g.down=1;g.togo=Math.min(10,100-pos)}
 function tick(g,s){if(g.ot)return;g.clock-=s;if(g.clock<=0){g.clock=0;g.qEnd=true}}
 function spotText(g,pos){if(pos===50)return "50";return pos<50?`${T(g.poss).abbr} ${pos}`:`${T(opp(g,g.poss)).abbr} ${100-pos}`}
-function starter(t,pos){const c=t.roster.filter(p=>p.pos===pos).sort((a,b)=>b.ovr-a.ovr);return c.find(p=>!p.inj)||c[0]}
-function pickRB(t){const c=t.roster.filter(p=>p.pos==="RB"&&!p.inj).sort((a,b)=>b.ovr-a.ovr);if(!c.length)return starter(t,"RB");return c.length>1&&rnd()<.38?c[1]:c[0]}
+function starter(t,pos){return startersOf(t,pos)[0]||depthOf(t,pos)[0]}
+function pickRB(t){const c=startersOf(t,"RB");if(!c.length)return starter(t,"RB");if(rnd()<.07){const b=backupsOf(t,"RB")[0];if(b)return b}return c.length>1&&rnd()<.38?c[1]:c[0]}
 function pickTarget(t,eff,named){
   // About one pass in five goes to a backup who isn't on the starters list.
-  if(!named&&rnd()<(eff==="screen"?.12:.22))return null;
+  if(!named&&rnd()<(eff==="screen"?.05:.08))return null;
   const W={short:{WR:3,TE:2,RB:1},mesh:{WR:3,TE:3,RB:1},deep:{WR:5,TE:1},pa:{WR:3,TE:3,RB:.5},screen:{RB:1},flea:{WR:1}}[eff];
-  const c=t.roster.filter(p=>W[p.pos]&&!p.inj);if(!c.length)return starter(t,"RB")||t.roster[0];
-  return wpickP(c.map(p=>[p,W[p.pos]*Math.max(1,p.ovr-55)]));
+  const c=[];for(const pos in W){startersOf(t,pos).forEach(p=>c.push([p,W[pos]*Math.max(1,p.ovr-55)]));if(!named)backupsOf(t,pos).forEach(p=>c.push([p,W[pos]*Math.max(1,p.ovr-55)*.18]))}
+  if(!c.length)return starter(t,"RB")||t.roster[0];
+  return wpickP(c);
 }
 function pickDef(t,kind,dc){
   const W=kind==="run"?{LB:5,DL:2.5,S:2,CB:1}:kind==="pass"?{CB:4,S:3,LB:3,DL:.5}:kind==="int"?{CB:5,S:4,LB:1.5}:
     (dc==="blitz"||dc==="zblitz")?{DL:4,LB:4,S:1.5,CB:.5}:{DL:6,LB:3};
-  const c=t.roster.filter(p=>W[p.pos]&&!p.inj);if(!c.length)return t.roster[0];
-  return wpickP(c.map(p=>[p,W[p.pos]*Math.max(1,p.ovr-55)]));
+  const c=[];for(const pos in W){startersOf(t,pos).forEach(p=>c.push([p,W[pos]*Math.max(1,p.ovr-55)]));backupsOf(t,pos).forEach(p=>c.push([p,W[pos]*Math.max(1,p.ovr-55)*.2]))}
+  if(!c.length)return t.roster[0];
+  return wpickP(c);
 }
 function coachEdge(offId,defId){const c=S.coach;let v=0;if(offId===S.user)v+=c.off*.6;if(defId===S.user)v-=c.def*.6;return v}
 function toMult(offId){return offId===S.user?1-.15*S.coach.sec:1}
@@ -875,7 +916,7 @@ function twoProb(g,id){return clamp(.45+(offR(g.u[id])-defR(g.u[opp(g,id)]))/100
 
 // Garbage time: in a blowout the winning team's starters sit and backups (not on the starters list) take the snaps.
 function garbage(g,id){if(g.ot)return false;const lead=g.score[id]-g.score[opp(g,id)];return (g.qtr===4&&lead>=24)||(g.qtr>=3&&lead>=35)}
-function bk(t,pos){return {id:-(t.id*20+["QB","RB","WR","DL","LB","DB"].indexOf(pos)+1),n:`${t.abbr}'s backup ${pos}`,pos}}
+function bk(t,pos){const real=backupsOf(t,pos==="DB"?"CB":pos)[0];return real||{id:-(t.id*20+["QB","RB","WR","DL","LB","DB"].indexOf(pos)+1),n:`${t.abbr}'s backup ${pos}`,pos}}
 function resolve(g,oc,dc){
   const r=resolveCore(g,oc,dc),o=T(g.poss),d=T(opp(g,g.poss));
   if(garbage(g,g.poss)){if(r.qb)r.qb=bk(o,"QB");if(r.runner)r.runner=bk(o,r.runner.pos==="QB"?"QB":r.runner.pos==="RB"?"RB":"WR");if(r.target)r.target=bk(o,"WR")}
@@ -1162,11 +1203,12 @@ function stepAI(g){
 
 // ---------- Finishing a game ----------
 function finalizeGame(g){
+  DCC=null;
   const f=15/g.qlen;
   for(const pid in g.box){const p=PL[pid];if(!p)continue;for(const k in g.box[pid])p.s[k]+=Math.round(g.box[pid][k]*f)}
   for(const id of [g.home,g.away]){
     if(rnd()<.13*(id===S.user?1-.2*fac("med"):1)){
-      const c=T(id).roster.filter(p=>!p.inj&&p.pos!=="K");if(!c.length)continue;const p=c[Math.floor(rnd()*c.length)];
+      const tm=T(id),c=tm.roster.filter(p=>!p.inj&&p.pos!=="K");if(!c.length)continue;const p=wpickP(c.map(p=>[p,isStarter(tm,p)?4:1]));
       p.inj=2+Math.floor(rnd()*(id===S.user?4-fac("med"):4));
       if(p.ovr>=86)roundLog().inj.push({pid:p.id,tid:id,w:p.inj-1});
       if(id===S.user)news(`Injury: ${p.pos} ${p.n} is out ${p.inj-1} week${p.inj-1>1?"s":""}.`);
@@ -1374,7 +1416,7 @@ function takeJob(id){
 
 // ===================== RECRUITING CLASS RANKINGS =====================
 const STAR_PTS={5:100,4:60,3:30,2:12};
-function classOf(t){return t.roster.filter(p=>p.yr===0)}
+function classOf(t){return t.roster.filter(p=>p.yr===0&&!p.rsu)}
 function classScore(list){return list.reduce((s,p)=>s+STAR_PTS[p.st]*(1+(p.ovr-STAR_BASE[p.st])/25),0)}
 // Every program's incoming freshman class, best first. Pass mine to swap in your class while signing day is still going.
 function classRankings(mine){
@@ -1461,7 +1503,9 @@ function beginOffseason(){
     for(const p of t.roster){
       if(gone.has(p))continue;
       const gr=[5,4,3][p.yr]+(p.st-3)+(t.id===u?S.coach.dev+.6*fac("train"):((t.coach?t.coach.sk:3)-3)*.5+dif().ai*.5)+normal()*1.5;
-      p.ovr=clamp(Math.round(p.ovr+gr),45,99);p.yr++;p.inj=0;
+      p.ovr=clamp(Math.round(p.ovr+gr),45,99);p.inj=0;
+      if(p.rs&&!p.rsu){p.rsu=true}else p.yr++;
+      p.rs=false;
     }
     if(t.id===u)t.openSlots=slots;
     else for(const i of slots){const st=starsFor(t.pres+((t.coach?t.coach.sk:3)-3)*.3+dif().ai*.4);t.roster[i]=newPlayer(t.roster[i].pos,recruitOvr(st,t),0,st)}
@@ -1472,7 +1516,7 @@ function beginOffseason(){
   for(const d of departed){const p=PL[d.pid];if(p)S.alumni.push({id:p.id,n:p.n,pos:p.pos,no:p.no,st:p.st,ovr:p.ovr,car:p.car||[],aw:p.aw||[],left:d.why,draft:p.draft||null,until:S.season})}
   const myDraft=draft.map((d,i)=>({...d,pick:i+1})).filter(d=>d.t.id===u).map(d=>({name:d.p.n,pos:d.p.pos,round:d.p.draft.round,pick:d.pick}));
   const me=T(u);
-  const pts=Math.max(5,Math.round((25+rec.w*2.5+(inPO?8:0)+(champ?8:0)+me.pres*3+4*fac("rec"))*(1+.2*S.coach.rec)*dif().pts)+(S.bank||0));S.bank=0;
+  const pts=Math.max(5,Math.round((37+rec.w*2.5+(inPO?8:0)+(champ?8:0)+me.pres*3+4*fac("rec"))*(1+.2*S.coach.rec)*dif().pts)+(S.bank||0));S.bank=0;
   const hs=S.headStart;S.headStart=false;
   S.off={boost:true,step:"recap",aa,draft:myDraft,departed,points:pts,portal:buildPortal(),portalSigned:0,pf:"All",
     board:me.openSlots.map(i=>({i,pos:me.roster[i].pos,signed:null,cands:[5,4,3,2].map(st=>makeProspect(me.roster[i].pos,st))}))};
@@ -1551,7 +1595,7 @@ function finishSigning(){
   S.classRank={season:S.season+1,list:cr.slice(0,25),mine:cr[myRank-1],myRank};
   S.classHist=(S.classHist||[]).concat({season:S.season+1,rank:myRank,team:S.user});
   S.season++;S.week=0;S.phase="regular";S.results=[];S.ccg=null;S.post=null;S.heisman=null;S.off=null;S.news=[];S.weekly=null;S.lastGame=null;S.tend=null;S.tendD=null;S.pv=null;S.tab="preseason";
-  for(const t of S.teams){t.active=true;for(const p of t.roster){p.s=blank();p.inj=0}}
+  for(const t of S.teams){t.active=true;for(const p of t.roster){p.s=blank();p.inj=0}if(t.id!==S.user||!t.manualRS)autoRedshirt(t)}
   S.schedule=makeSchedule();buildPL();RK.key=null;S.wx={};S.mo={};voteAP();
   S.pre=buildPreseason();
   news(`Welcome to the ${S.season} season. ${T(S.user).name} open at #${rankOf(S.user)}. The preseason magazine is out.`);
@@ -1560,7 +1604,7 @@ function finishSigning(){
 }
 
 function newDynasty(userId,qlen){
-  S={v:7,nextPid:1,view:"hub",tab:"schedule",user:userId,qlen,season:2026,week:0,phase:"regular",results:[],ccg:null,post:null,heisman:null,
+  S={v:8,nextPid:1,view:"hub",tab:"schedule",user:userId,qlen,season:2026,week:0,phase:"regular",results:[],ccg:null,post:null,heisman:null,
      history:[],trophies:{},news:[],alumni:[],rivRec:{},job:{sec:70,yrs:0},firstTeam:userId,fac:{},diff:1,coach:{pts:2,off:0,def:0,rec:0,dev:0,sec:0,st:0},off:null,game:null,confirmReset:false};
   S.teams=TEAMS0.map(makeTeam);
   S.schedule=makeSchedule();buildPL();RK.key=null;S.wx={};S.mo={};voteAP();
@@ -1710,7 +1754,7 @@ function tabSchedule(){
   const post=S.results.filter(g=>g.type!=="reg"&&(g.h===u||g.a===u)).map(g=>`<tr><td></td><td>${esc(g.label)}: vs ${esc(T(g.h===u?g.a:g.h).name)}</td><td class="n">${resultCell(g,u)}</td></tr>`).join("");
   return `${schedEditor()}<div class="grid2">
     <div class="panel"><h3>${S.season} schedule</h3><div class="tw"><table class="tbl"><tbody>${rows}${post}</tbody></table></div></div>
-    <div class="panel"><h3>Unit ratings</h3>${unitBars(T(u))}<p class="muted" style="font-size:13px">Injured starters are replaced by a backup about 14 points worse.</p>
+    <div class="panel"><h3>Unit ratings</h3>${unitBars(T(u))}<p class="muted" style="font-size:13px">Injured starters are replaced by the next player on your depth chart.</p>
       <h3>Home field</h3><p>${crowdStr(T(u))}</p><p class="muted" style="font-size:13px">At home, a louder crowd gives your team more yards per play and makes visitors jump offside and miss more kicks. Upgrade your stadium in the offseason.</p></div>
   </div>`;
 }
@@ -1759,12 +1803,22 @@ function tabLeaders(){
   </div>`:""}`;
 }
 function tabRoster(){
-  const me=T(S.user);
-  return `<div class="panel"><h3>${esc(me.name)} starters</h3><div class="tw"><table class="tbl">
-    <thead><tr><th>Pos</th><th>Player</th><th class="n">Yr</th><th class="n">OVR</th><th>${S.season} stats</th></tr></thead><tbody>
-    ${me.roster.map(p=>`<tr><td class="num">${p.pos}</td><td>${S.editing===p.id?`<span class="row" style="gap:6px;flex-wrap:nowrap"><input id="nm-${p.id}" class="nm" value="${esc(p.n)}" maxlength="28" aria-label="New name for ${esc(p.n)}"><button class="small-btn" data-act="saveName" data-id="${p.id}">Save</button><button class="small-btn" data-act="cancelName">Cancel</button></span>`:`<span class="sub num">#${p.no}</span> ${plink(p.id,p.n)} <span class="sub">${esc(archName(p))}</span> <button class="edit" data-act="editName" data-id="${p.id}" aria-label="Edit ${esc(p.n)}'s name" title="Edit name">✎</button> <span class="stars" style="font-size:12px">${"★".repeat(p.st)}</span>${p.inj>0?` <span class="tag bad">${p.susp?"Suspended":`Out ${p.inj}w`}</span>`:""}`}</td><td class="n">${YRS[p.yr]}</td><td class="n"><b>${p.ovr}</b></td><td class="sub">${esc(statLine(p))}</td></tr>`).join("")}
-    </tbody></table></div><p class="muted" style="font-size:13px">Tap a name for his career page, or ✎ to rename him. Players improve every offseason. Seniors graduate, and juniors rated 90+ may leave early for the NFL.</p></div>`;
+  const me=T(S.user),u=units(me);
+  const row=(p,i,pos,list)=>{const st=isStarter(me,p);
+    return `<tr class="${st?"starter":""}"><td class="n">${p.inj?"":st?'<span class="tag good">Start</span>':`<span class="sub">${i+1}</span>`}</td>
+    <td>${S.editing===p.id?`<span class="row" style="gap:6px;flex-wrap:nowrap"><input id="nm-${p.id}" class="nm" value="${esc(p.n)}" maxlength="28" aria-label="New name for ${esc(p.n)}"><button class="small-btn" data-act="saveName" data-id="${p.id}">Save</button><button class="small-btn" data-act="cancelName">Cancel</button></span>`:
+      `<span class="sub num">#${p.no}</span> ${plink(p.id,p.n)} <button class="edit" data-act="editName" data-id="${p.id}" aria-label="Edit ${esc(p.n)}'s name" title="Edit name">✎</button>
+      <div class="sub">${esc(archName(p))} · <span class="stars" style="font-size:12px">${"★".repeat(p.st)}</span>${p.inj>0?` <span class="tag bad">${p.susp?"Suspended":`Out ${p.inj}w`}</span>`:""}${p.rs&&!p.rsu?' <span class="tag">Redshirt</span>':""}</div>`}</td>
+    <td class="n">${yrLabel(p)}</td><td class="n"><b>${p.ovr}</b></td><td class="sub">${esc(statLine(p))}</td>
+    <td class="n dc"><button class="small-btn" data-act="depth" data-id="${p.id}" data-d="-1" ${i===0?"disabled":""} aria-label="Move ${esc(p.n)} up">▲</button><button class="small-btn" data-act="depth" data-id="${p.id}" data-d="1" ${i===list.length-1?"disabled":""} aria-label="Move ${esc(p.n)} down">▼</button>
+      ${p.yr===0&&!p.rsu&&!st?`<button class="small-btn" data-act="rs" data-id="${p.id}">${p.rs?"Play him":"Redshirt"}</button>`:""}</td></tr>`};
+  return `<div class="panel"><div class="row" style="justify-content:space-between"><h3>${esc(me.name)} depth chart · ${me.roster.length} players</h3><button class="small-btn" data-act="depthAuto">Auto-sort by rating</button></div>
+    <div class="tw"><table class="tbl dctab"><tbody>
+    ${POS_ORDER.map(pos=>{const list=depthOf(me,pos);return `<tr class="poshead"><td colspan="6">${pos} <span class="sub">· ${START[pos]} start · unit ${u[UNIT_OF[pos]]}</span></td></tr>${list.map((p,i)=>row(p,i,pos,list)).join("")}`}).join("")}
+    </tbody></table></div>
+    <p class="muted" style="font-size:13px">Starters play most snaps. Backups rotate in, take over in blowouts, and step up when a starter is hurt. Use ▲▼ to set your depth chart. Freshmen who don't start are redshirted automatically, so they sit the year, keep developing, and keep four years to play. Tap a name for his career page, or ✎ to rename him.</p></div>`;
 }
+
 function skillsHTML(){
   return `<p>You have <b style="color:var(--amber)">${S.coach.pts}</b> skill point${S.coach.pts===1?"":"s"}. You earn more each season from wins, playoff trips and titles.</p>
   <div class="skills">${Object.entries(SKILLS).map(([k,[n,d]])=>`<div class="skill"><b>${n}</b><span class="muted" style="font-size:13.5px">${d}</span>
@@ -2337,7 +2391,7 @@ function renderPlayer(){
   if(f.active&&S.phase!=="offseason"&&!rows.some(r=>r.y===S.season))rows.push({y:S.season,tid:t.id,yr:p.yr,o:p.ovr,s:p.s,now:true});
   const tot=Object.fromEntries(STATK.map(k=>[k,rows.reduce((a,r)=>a+(r.s[k]||0),0)]));
   const team=t||(rows.length?T(rows[rows.length-1].tid):T(S.user));
-  const status=f.active?`${YRS[p.yr]} · ${esc(t.name)}`:f.alum?`${esc(p.left)}${p.draft?` · Drafted round ${p.draft.round}, pick ${p.draft.pick} (${p.draft.y})`:""}`:"In the transfer portal";
+  const status=f.active?`${yrLabel(p)} · ${esc(t.name)}`:f.alum?`${esc(p.left)}${p.draft?` · Drafted round ${p.draft.round}, pick ${p.draft.pick} (${p.draft.y})`:""}`:"In the transfer portal";
   const fmt=v=>typeof v==="number"?v.toLocaleString("en-US"):v;
   app.innerHTML=`
   <div class="row"><button class="btn ghost" data-act="closePlayer">← Back</button></div>
@@ -2434,7 +2488,7 @@ function renderOff(){
 
 // ===================== ACTIONS =====================
 const ACT={
-  resume(){S=SAVED;SAVED=null;if(S){S.confirmReset=false;buildPL();migrate();ensureV6();buildPL();ensureV7();boostOffseason();RK.key=null}},
+  resume(){S=SAVED;SAVED=null;if(S){S.confirmReset=false;buildPL();migrate();ensureV6();buildPL();ensureV7();ensureV8();buildPL();boostOffseason();RK.key=null}},
   scheme(d){const P=plan(S.user);P.scheme=d.k;P.pass=SCHEMES[d.k].pass},
   aggr(d){plan(S.user).aggr=+d.a},
   dscheme(d){dplan(S.user).scheme=d.k},
@@ -2470,7 +2524,7 @@ const ACT={
   wPause(){if(WATCH)WATCH.paused=!WATCH.paused},
   wSpeed(d){if(WATCH)WATCH.speed=+d.v},
   wSkip(){if(WATCH){let n=0;while(!WATCH.g.over&&n++<6000)wStep(1)}},
-  wLeave(){WATCH=null;clearTimeout(wTimer)},
+  wLeave(){WATCH=null;DCC=null;clearTimeout(wTimer)},
   wDone(){finishWatch()},
   cerNext(){S.ceremony.step=1},
   cerDone(){S.ceremony.step=3},
@@ -2479,6 +2533,9 @@ const ACT={
     const m={tid:S.user,from,to:I.c,swap:I.weak,txt:`${me.name} leave the ${CONFS[from]} for the ${CONFS[I.c]}. ${T(I.weak).name} move to the ${CONFS[from]} in the swap.`};
     S.off.realign=(S.off.realign||[]).concat(m);S.realign=(S.realign||[]).concat({season:S.season,...m});me.pres=Math.min(5,me.pres+.3);S.off.invite=null},
   stayConf(){S.off.invite=null},
+  depth(d){const me=T(S.user),p=PL[+d.id];if(!p)return;const list=depthOf(me,p.pos).map(x=>x.id),i=list.indexOf(p.id),j=i+(+d.d);if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]];me.depth=me.depth||{};me.depth[p.pos]=list;autoRedshirtKeep(me)},
+  depthAuto(){const me=T(S.user);me.depth={};autoRedshirtKeep(me)},
+  rs(d){const p=PL[+d.id];if(p&&p.yr===0&&!p.rsu){p.rs=!p.rs;T(S.user).manualRS=true}},
   stadium(){const me=T(S.user),c=stadiumCost(me);if(me.hfa<5&&S.off.points>=c){S.off.points-=c;me.hfa++;me.cap+=8000;news(`${me.stadium} expanded. Crowd level is now ${me.hfa}/5.`)}},
   reset(){if(S.confirmReset){try{localStorage.removeItem(KEY)}catch(e){}S=null;SAVED=null}else S.confirmReset=true},
 };
@@ -2519,7 +2576,7 @@ document.addEventListener("keydown",e=>{
 // ===================== BOOT =====================
 window.claude?.hot?.snapshot?.(()=>({S}));
 function start(data){
-  S=(data&&data.S)||null;if(S){buildPL();migrate();ensureV6();buildPL();ensureV7();boostOffseason();RK.key=null}
+  S=(data&&data.S)||null;if(S){buildPL();migrate();ensureV6();buildPL();ensureV7();ensureV8();buildPL();boostOffseason();RK.key=null}
   render();
   if(!S)loadSaved().then(s=>{SAVED=s;if(!S&&s)render()});
 }
