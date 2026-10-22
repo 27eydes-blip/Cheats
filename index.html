@@ -210,6 +210,36 @@ details summary{cursor:pointer;color:var(--amber);font-family:var(--num);font-we
 .dctab tr.poshead td{font-family:var(--num);font-weight:700;letter-spacing:.08em;color:var(--amber);background:var(--panel-2);border-top:1px solid var(--line)}
 .dctab tr.starter td{background:color-mix(in srgb,var(--good) 6%,transparent)}
 .dc{white-space:nowrap}.dc .small-btn{padding:4px 7px;margin-left:3px}
+.bracket{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:12px;min-width:780px;align-items:stretch}
+.bcol{display:flex;flex-direction:column;gap:8px}
+.bgs{flex:1;display:flex;flex-direction:column;gap:10px;justify-content:space-around}
+.bcol h3{margin-bottom:2px}
+.bg{border:1px solid var(--line);border-radius:8px;background:var(--panel-2);padding:6px 8px;display:flex;flex-direction:column;gap:4px}
+.bg.live{border-color:var(--amber)}
+.bt{display:grid;grid-template-columns:18px auto 1fr auto;gap:6px;align-items:center;font-size:13.5px;color:var(--muted)}
+.bt .badge{min-width:34px;height:20px;font-size:11px}
+.bt.win{color:var(--chalk);font-weight:700}
+.bt.ph{grid-template-columns:1fr}
+.bl{font-size:11.5px}
+.bcol.champ .bt.win{font-size:15px}
+.livedot{color:var(--bad);font-weight:700}
+.party-head{display:flex;flex-direction:column;gap:6px}
+.ptiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:10px}
+.ptile{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
+.ptile.mine{border-color:var(--amber)}
+.ptile.over{opacity:.92}
+.pt{display:grid;grid-template-columns:18px auto 1fr auto;gap:8px;align-items:center}
+.pt.win .pn{color:var(--good);font-weight:700}
+.pn{font-weight:600;min-width:0}
+.psc{font-family:var(--num);font-size:24px;color:var(--amber);font-variant-numeric:tabular-nums}
+.wpt.sm{height:6px}
+.plast{min-height:2.6em}
+.small-btn.picked{background:var(--amber);color:#1a1300;border-color:var(--amber)}
+.pfeed{display:flex;flex-direction:column;gap:8px;font-size:14px}
+.pfeed div{display:flex;gap:10px;align-items:center}
+.pfeed .badge{min-width:34px;height:20px;font-size:11px}
+.pfeed .pfinal{font-weight:700;color:var(--amber)}
+.party-card{border-color:color-mix(in srgb,var(--amber) 55%,var(--line))}
 .slot{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
 .slot.done{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
 .cand{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px 12px;align-items:center}
@@ -1644,6 +1674,7 @@ const app=document.getElementById("app");
 function render(){
   if(!S)return renderSelect();
   if(WATCH)return renderWatch();
+  if(PARTY)return renderParty();
   if(S.pv!=null)return renderPlayer();
   if(S.ceremony&&S.ceremony.season===S.season&&S.ceremony.step<3&&S.heisman)return renderCeremony();
   if(S.phase==="offseason")return renderOff();
@@ -1732,6 +1763,7 @@ function renderHub(){
   ${eventCard()}
   ${(()=>{const ug=userGame();return ug?hypeHTML(ug):""})()}
   ${nextCard()}
+  ${partyCard()}
   ${gotwCard()}
   ${lastGameHTML()}
   ${S.news.length?`<div class="panel"><h3>Program news</h3><div class="news">${S.news.slice(0,5).map(n=>`<div>${esc(n)}</div>`).join("")}</div></div>`:""}
@@ -1885,7 +1917,8 @@ function gameRow(g){
 }
 function tabPost(){
   const P=S.post;if(!P)return "";
-  return `<div class="grid2">
+  return `<div class="panel"><h3>Playoff bracket</h3>${bracketHTML()}</div>
+  <div class="grid2">
     <div class="panel"><h3>College Football Playoff</h3>
       <div class="tw"><table class="tbl"><tbody>${P.seeds.map((id,i)=>`<tr class="${id===S.user?"me":""}"><td class="n">${i+1}</td><td>${esc(T(id).name)} ${i<4?'<span class="tag">Bye</span>':""}${S.ccg.some(g=>g.winner===id)?' <span class="tag amber">Conf champ</span>':""}</td><td class="n">${recStr(id)}</td></tr>`).join("")}</tbody></table></div>
       <div class="tw"><table class="tbl"><tbody>${[...P.r1,...(P.qf||[]),...(P.sf||[]),...(P.final?[P.final]:[])].map(gameRow).join("")}</tbody></table></div>
@@ -2353,6 +2386,116 @@ function eventCard(){
     <div class="row">${E.choices.map((c,i)=>`<button class="${i===0?"btn":"btn ghost"}" data-act="event" data-k="${c.k}">${esc(c.l)}</button>`).join("")}</div></div>`;
 }
 
+
+// ===================== PLAYOFF BRACKET =====================
+function bracketGames(live){
+  const P=S.post;if(!P)return null;
+  const sd=id=>P.seeds.indexOf(id)+1;
+  const box=(gm,ph)=>{
+    if(!gm)return {ph};
+    const L=live&&live[gameKey(gm)],done=gm.winner!==undefined;
+    const sc=id=>done?(id===gm.h?gm.hs:gm.as):L?L.score[id]:null;
+    return {gm,label:gm.label,t:[gm.a,gm.h].map(id=>({id,seed:sd(id),sc:sc(id),win:done&&gm.winner===id})),live:!!L&&!L.over,done};
+  };
+  const r1=P.r1.map(g=>box(g));
+  const qf=[0,1,2,3].map(i=>P.qf?box(P.qf[i]):{ph:[`#${i+1} ${T(P.seeds[i]).abbr}`,`Winner ${T(P.r1[3-i].a).abbr}/${T(P.r1[3-i].h).abbr}`]});
+  const sf=[0,1].map(i=>P.sf?box(P.sf[i]):{ph:["Quarterfinal winner","Quarterfinal winner"]});
+  const fin=[P.final?box(P.final):{ph:["Semifinal winner","Semifinal winner"]}];
+  return [["First round",r1],["Quarterfinals",qf],["Semifinals",sf],["Championship",fin]];
+}
+function bracketHTML(live){
+  const B=bracketGames(live);if(!B)return "";
+  const line=x=>`<div class="bt ${x.win?"win":""} ${x.id===S.user?"me-t":""}"><span class="sub num">${x.seed||""}</span>${badge(T(x.id))}<span class="bn">${esc(T(x.id).abbr)}</span><b class="num">${x.sc??""}</b></div>`;
+  return `<div class="tw"><div class="bracket">${B.map(([name,games])=>`<div class="bcol"><h3>${name}</h3><div class="bgs">${games.map(b=>`<div class="bg ${b.live?"live":""}">
+    ${b.ph?b.ph.map(t=>`<div class="bt ph"><span class="sub">${esc(t)}</span></div>`).join(""):`<div class="sub bl">${esc(b.label.replace(/ \(CFP.*\)/,""))}${b.live?' · <span class="livedot">LIVE</span>':""}</div>${b.t.map(line).join("")}`}</div>`).join("")}</div></div>`).join("")}
+    <div class="bcol champ"><h3>Champion</h3><div class="bgs"><div class="bg">${S.post.champ!==undefined&&S.post.champ!==null?`<div class="bt win">${badge(T(S.post.champ))}<span class="bn">${esc(T(S.post.champ).name)}</span></div>`:'<div class="bt ph"><span class="sub">TBD</span></div>'}</div></div></div>
+  </div></div>`;
+}
+
+// ===================== PLAYOFF WATCH PARTY =====================
+let PARTY=null,pTimer=null;
+const ROUND_NAME={r1:"First Round",qf:"Quarterfinals",sf:"Semifinals",final:"National Championship"};
+function partyGames(){return S.phase==="post"?currentGames().filter(g=>g.type==="cfp"&&!(S.preRes&&S.preRes[gameKey(g)])):[]}
+function startParty(){
+  const gs=partyGames();if(!gs.length)return;
+  PARTY={stage:"picks",round:S.post.round,games:gs.map(gm=>({gm,key:gameKey(gm),exp:winProb(gm.h,gm.a,gm.neutral?null:gm.h),g:null,done:false})),picks:{},feed:[],speed:3,paused:false};
+}
+function kickoffParty(){
+  for(const x of PARTY.games){x.g=newGame(x.gm,false,15);x.g.auto=true}
+  PARTY.stage="live";clearTimeout(pTimer);pTimer=setTimeout(pLoop,600);
+}
+function pStep(n){
+  for(const x of PARTY.games){
+    if(x.done)continue;
+    for(let i=0;i<n&&!x.g.over;i++){
+      stepAI(x.g);const top=x.g.log[0];
+      if(top&&top.hl&&/TOUCHDOWN|INTERCEPTED|FUMBLE|BLOCKED|SAFETY|MISSES|ONSIDE|MUFFED|game on the line|Overtime/.test(top.txt))
+        PARTY.feed.unshift({k:x.key,a:x.gm.a,h:x.gm.h,txt:top.txt});
+    }
+    if(x.g.over){
+      x.done=true;const res=finalizeGame(x.g);S.preRes=S.preRes||{};S.preRes[x.key]=res;
+      const w=res.hs>res.as?res.h:res.a,l=w===res.h?res.a:res.h,ws=Math.max(res.hs,res.as),ls=Math.min(res.hs,res.as);
+      const upset=S.post.seeds.indexOf(w)>S.post.seeds.indexOf(l);
+      PARTY.feed.unshift({k:x.key,a:x.gm.a,h:x.gm.h,final:true,txt:`FINAL: ${T(w).name} ${upset?"upset":"beat"} ${T(l).name} ${ws}-${ls}${x.g.ot?" in overtime":""}.`});
+      x.gm.liveRes=res;
+    }
+  }
+  PARTY.feed=PARTY.feed.slice(0,40);
+  if(PARTY.games.every(x=>x.done))PARTY.stage="done";
+}
+function pLoop(){
+  if(!PARTY||PARTY.stage!=="live")return;
+  if(!PARTY.paused){pStep(PARTY.speed>=10?4:1);render()}
+  if(PARTY&&PARTY.stage==="live")pTimer=setTimeout(pLoop,SPEED[PARTY.speed]);
+}
+function endParty(){
+  if(!PARTY||PARTY.stage!=="done")return;
+  PARTY=null;clearTimeout(pTimer);DCC=null;
+  playRound(null);S.tab="post";scrollTo(0,0);
+}
+function partyTile(x){
+  const g=x.g,gm=x.gm,u=S.user,sd=id=>S.post.seeds.indexOf(id)+1,mine=gm.h===u||gm.a===u;
+  let clk="Pregame",wp=x.exp;
+  if(g){
+    const mm=Math.floor(g.clock/60),ss=String(g.clock%60).padStart(2,"0");
+    clk=g.over?"FINAL"+(g.ot?" (OT)":""):g.ot?`OT${g.ot.round>1?g.ot.round:""}`:g.qEnd&&g.qtr===2?"Halftime":`${ordinal(g.qtr)} · ${mm}:${ss}`;
+    wp=liveWP({g,exp:x.exp});
+  }
+  const fav=x.exp>=.5?gm.h:gm.a,dog=fav===gm.h?gm.a:gm.h,dogWp=dog===gm.h?wp:1-wp;
+  const alert=g&&!g.over&&g.qtr>=3&&dogWp>.6;
+  const row=id=>{const sc=g?g.score[id]:"",lead=g&&g.score[id]>g.score[opp(g,id)];
+    return `<div class="pt ${g&&g.over&&lead?"win":""}"><span class="sub num">${sd(id)}</span>${badge(T(id))}<span class="pn">${esc(T(id).name)}${g&&!g.over&&g.poss===id?' <i class="wpos"></i>':""}</span><b class="psc">${sc}</b></div>`};
+  const pick=PARTY.picks[x.key];
+  return `<div class="ptile ${mine?"mine":""} ${g&&g.over?"over":""}">
+    <div class="row" style="justify-content:space-between"><span class="sub">${esc(gm.label.replace(/ \(CFP.*\)/,""))}</span><span class="num ${g&&!g.over?"livedot":""}">${clk}</span></div>
+    ${row(gm.a)}${row(gm.h)}
+    <div class="wpt sm"><i style="width:${(1-wp)*100}%;background:${T(gm.a).c1}"></i><i style="width:${wp*100}%;background:${T(gm.h).c1}"></i></div>
+    <div class="sub plast">${alert?'<span class="tag bad">Upset alert</span> ':""}${g?esc((g.log[0]||{}).txt||""):esc(lineFor(gm.h,gm.a,gm.neutral))+" · "+esc(condText(condFor(gm)))}</div>
+    ${PARTY.stage==="picks"?`<div class="row">${[gm.a,gm.h].map(id=>`<button class="small-btn ${pick===id?"picked":""}" data-act="pPick" data-k="${x.key}" data-id="${id}">Pick ${esc(T(id).abbr)}</button>`).join("")}</div>`:
+      pick!==undefined?`<div class="sub">Your pick: <b>${esc(T(pick).abbr)}</b>${g&&g.over?(g.score[pick]>g.score[opp(g,pick)]?' <span class="tag good">Correct</span>':' <span class="tag bad">Wrong</span>'):""}</div>`:""}
+  </div>`;
+}
+function renderParty(){
+  const Pt=PARTY,live={};Pt.games.forEach(x=>{if(x.g)live[x.key]=x.g});
+  const picked=Object.keys(Pt.picks).length,right=Pt.games.filter(x=>x.done&&Pt.picks[x.key]!==undefined&&x.g.score[Pt.picks[x.key]]>x.g.score[opp(x.g,Pt.picks[x.key])]).length;
+  app.innerHTML=`
+  <div class="party-head"><div class="eyebrow">College Football Playoff · Watch party</div><h1>${ROUND_NAME[Pt.round]}</h1>
+    <p class="muted">${Pt.games.length} game${Pt.games.length>1?"s":""} ${Pt.stage==="picks"?"kick off together. Make your picks, then start the party.":Pt.stage==="live"?"live right now.":"are in the books."}</p></div>
+  <div class="row">${Pt.stage==="picks"?`<button class="btn" data-act="pKick">Kick off</button><button class="btn ghost" data-act="pLeave">Back</button>`:
+    Pt.stage==="live"?`<button class="btn ghost" data-act="pPause">${Pt.paused?"Resume":"Pause"}</button>${[1,3,10].map(v=>`<button class="tab ${Pt.speed===v?"on":""}" data-act="pSpeed" data-v="${v}">${v}x</button>`).join("")}<button class="btn ghost" data-act="pSkip">Skip to finals</button>`:
+    `<button class="btn" data-act="pDone">Continue</button>${picked?`<span class="tag amber">Your picks: ${right}-${picked-right}</span>`:""}`}</div>
+  <div class="ptiles">${Pt.games.map(partyTile).join("")}</div>
+  ${Pt.feed.length?`<div class="panel"><h3>Around the playoff</h3><div class="pfeed">${Pt.feed.slice(0,12).map(f=>`<div class="${f.final?"pfinal":""}"><span class="row" style="gap:4px;flex-wrap:nowrap">${badge(T(f.a))}${badge(T(f.h))}</span><span>${esc(f.txt)}</span></div>`).join("")}</div></div>`:""}
+  <div class="panel"><h3>Bracket</h3>${bracketHTML(live)}</div>`;
+}
+function partyCard(){
+  const gs=partyGames();if(!gs.length)return "";
+  const mine=gs.some(g=>g.h===S.user||g.a===S.user);
+  return `<div class="panel party-card"><div class="row" style="justify-content:space-between"><h3>Playoff watch party</h3><span class="tag amber">${ROUND_NAME[S.post.round]}</span></div>
+    <p>Watch all ${gs.length} playoff game${gs.length>1?"s":""} live at once${mine?", including yours":""}, with a live bracket and big-play ticker. Make your picks before kickoff.</p>
+    <div class="row"><button class="btn" data-act="party">Start the watch party</button></div></div>`;
+}
+
 // ---------- Game view ----------
 function boxScore(g,tid){
   const t=T(tid),rows=[];
@@ -2536,6 +2679,14 @@ const ACT={
   depth(d){const me=T(S.user),p=PL[+d.id];if(!p)return;const list=depthOf(me,p.pos).map(x=>x.id),i=list.indexOf(p.id),j=i+(+d.d);if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]];me.depth=me.depth||{};me.depth[p.pos]=list;autoRedshirtKeep(me)},
   depthAuto(){const me=T(S.user);me.depth={};autoRedshirtKeep(me)},
   rs(d){const p=PL[+d.id];if(p&&p.yr===0&&!p.rsu){p.rs=!p.rs;T(S.user).manualRS=true}},
+  party(){startParty();scrollTo(0,0)},
+  pPick(d){if(PARTY&&PARTY.stage==="picks")PARTY.picks[d.k]=+d.id},
+  pKick(){if(PARTY&&PARTY.stage==="picks")kickoffParty()},
+  pLeave(){PARTY=null},
+  pPause(){if(PARTY)PARTY.paused=!PARTY.paused},
+  pSpeed(d){if(PARTY)PARTY.speed=+d.v},
+  pSkip(){if(PARTY&&PARTY.stage==="live"){let n=0;while(PARTY.stage==="live"&&n++<3000)pStep(1)}},
+  pDone(){endParty()},
   stadium(){const me=T(S.user),c=stadiumCost(me);if(me.hfa<5&&S.off.points>=c){S.off.points-=c;me.hfa++;me.cap+=8000;news(`${me.stadium} expanded. Crowd level is now ${me.hfa}/5.`)}},
   reset(){if(S.confirmReset){try{localStorage.removeItem(KEY)}catch(e){}S=null;SAVED=null}else S.confirmReset=true},
 };
