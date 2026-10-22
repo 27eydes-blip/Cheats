@@ -723,8 +723,6 @@ h2{font-family:var(--display);font-weight:400;letter-spacing:.02em}
 .teamband::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.10) 45%,transparent 60%);transform:translateX(-120%);animation:sheen 7s ease-in-out infinite}
 @keyframes sheen{55%,100%{transform:translateX(120%)}}
 .teamband::after{opacity:.1;font-size:clamp(110px,26vw,200px);bottom:-30px}
-.tb-logo{width:clamp(78px,18vw,104px);height:clamp(86px,20vw,116px);border-radius:24px 24px 50% 50%/24px 24px 44% 44%;font-size:clamp(20px,5vw,28px);
-  box-shadow:0 0 0 3px color-mix(in srgb,var(--t2) 80%,transparent),0 0 0 7px rgba(0,0,0,.25),0 14px 30px rgba(0,0,0,.5)!important}
 .tb-name{font-size:clamp(30px,7vw,54px);line-height:.98;text-shadow:0 4px 18px rgba(0,0,0,.45)}
 .tb-eyebrow{letter-spacing:.24em}
 .teamband+.chips{margin:-50px 14px 0;position:relative;z-index:2}
@@ -769,8 +767,6 @@ details.panel summary{padding:2px 0}
 .tbl tr.me td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
 
 /* ---------- Badges & buttons ---------- */
-.badge{border-radius:8px;border-color:rgba(255,255,255,.22);
-  background:linear-gradient(160deg,rgba(255,255,255,.3),rgba(255,255,255,0) 48%),linear-gradient(105deg,var(--b1,#333) 0 82%,color-mix(in srgb,var(--b2,#fff) 85%,var(--b1,#333)) 82% 88%,var(--b1,#333) 88%)}
 .btn{border-radius:14px;letter-spacing:.08em;box-shadow:0 3px 0 #9a6400,0 10px 26px rgba(255,182,39,.28),inset 0 1px 0 rgba(255,255,255,.45)}
 .btn.ghost{border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 .btn.ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.3)}
@@ -781,7 +777,6 @@ details.panel summary{padding:2px 0}
 .gameday{border-radius:26px;box-shadow:0 26px 60px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.2)}
 .gameday::after{content:"";position:absolute;inset:-40% -10% auto;height:70%;pointer-events:none;
   background:radial-gradient(closest-side at 20% 50%,rgba(255,255,255,.14),transparent),radial-gradient(closest-side at 80% 50%,rgba(255,255,255,.14),transparent);mix-blend-mode:screen}
-.gd-logo{box-shadow:0 0 0 4px rgba(255,255,255,.12),0 12px 28px rgba(0,0,0,.5)!important}
 
 /* ---------- Title screen ---------- */
 .brand.sel-hero{min-height:380px;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;padding:34px 28px 30px;border-radius:28px;border:1px solid rgba(255,255,255,.14);
@@ -804,7 +799,6 @@ details.panel summary{padding:2px 0}
 .sel-feats span{font-family:var(--num);font-weight:600;font-size:13.5px;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border-radius:999px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(6px)}
 .team-card{border-radius:18px;border:1px solid var(--hair);background:linear-gradient(115deg,color-mix(in srgb,var(--tc) 38%,var(--panel)) 0%,var(--panel) 58%);box-shadow:0 10px 24px rgba(0,0,0,.35)}
 .team-card:hover{transform:translateY(-3px) scale(1.01);box-shadow:0 16px 34px rgba(0,0,0,.45),0 0 0 1px var(--tc)}
-.tc-logo{border-radius:14px 14px 50% 50%/14px 14px 42% 42%}
 .sel-conf{display:flex;align-items:center;gap:10px;margin-top:6px;font-family:var(--display);font-weight:400;font-size:24px;letter-spacing:.02em;text-transform:none}
 .sel-conf::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent)}
 
@@ -825,20 +819,52 @@ html,body{overflow-x:hidden}
 .tw{max-width:100%}
 .gd-uni,.gd-chips,.row{min-width:0}
 img,svg{max-width:100%}
-/* ---------- Crests ---------- */
-.crest{background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:0!important;filter:drop-shadow(0 8px 14px rgba(0,0,0,.5))}
-.crest svg{width:100%;height:100%;display:block;overflow:visible}
-.tb-logo.crest{width:clamp(76px,18vw,104px);height:clamp(88px,21vw,120px)}
-.tc-logo.crest{width:48px;height:56px}
-.gd-logo.crest{width:clamp(80px,22vw,108px);height:clamp(92px,25vw,124px)}
-.of-top .gd-logo.crest,.yb-team .gd-logo.crest{width:60px;height:70px}
-.newjob .gd-logo.crest{width:96px;height:110px}
-.champ-team .gd-logo.crest{width:clamp(66px,16vw,86px);height:clamp(76px,18vw,100px)}
-.ft-hero .gd-logo.crest{width:84px;height:96px}
 .badge{text-shadow:none}
 @media (max-width:600px){.tbl th,.tbl td{padding-left:6px;padding-right:6px}.tbl .hm{display:none}}
 @media (max-width:600px){.navg{align-items:stretch!important;width:100%}.navg .tabs{width:100%}}
-.hub-head .tc-logo.crest{width:52px;height:60px}
+/* ===== Practice ===== */
+.prac-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:18px;align-items:center;padding:20px;border-radius:24px;border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(112deg,transparent 0 60%,rgba(255,255,255,.05) 60% 62%,transparent 62%),linear-gradient(135deg,color-mix(in srgb,var(--tc1) 55%,#000),var(--panel) 75%);box-shadow:0 18px 44px rgba(0,0,0,.45)}
+@media (max-width:700px){.prac-head{grid-template-columns:1fr}}
+.prac-head h2{font-size:clamp(24px,6vw,34px);line-height:1.05}
+.pms{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:420px){.pms{grid-template-columns:1fr}}
+.pm{display:flex;flex-direction:column;gap:5px;padding:12px;border-radius:14px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08)}
+.pm-top{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--num);font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.pm-top b{font-size:30px;letter-spacing:0;line-height:1}
+.pm-bar{height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}.pm-bar i{display:block;height:100%;border-radius:4px;transition:width .4s ease}
+.pm small{font-size:12px;color:var(--muted)}
+.ints{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px}
+.int,.drill{display:flex;flex-direction:column;gap:4px;text-align:left;padding:14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid var(--hair);color:var(--chalk);cursor:pointer;transition:border-color .15s,background-color .15s,transform .12s}
+.int b,.drill b{font-family:var(--num);font-size:19px;letter-spacing:.03em}
+.int small,.drill small{font-size:13px;color:var(--muted);line-height:1.35}
+.int em,.drill em{font-style:normal;font-family:var(--num);font-weight:700;font-size:12.5px;letter-spacing:.06em;color:var(--amber);margin-top:2px}
+.int.on,.drill.on{border-color:var(--amber);background:linear-gradient(160deg,rgba(245,184,61,.16),rgba(245,184,61,.03));box-shadow:0 0 0 1px var(--amber) inset,0 8px 22px rgba(245,184,61,.15)}
+.int:disabled,.drill:disabled{opacity:.45;cursor:not-allowed}
+.int.on:disabled,.drill.on:disabled{opacity:1}
+.drills{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr));gap:10px}
+.drill .di{font-size:26px;line-height:1}
+.plog{display:flex;flex-direction:column;gap:10px}.plog div{padding:10px 12px;border-radius:12px;background:var(--panel-2)}.plog p{margin:4px 0 0;font-size:14px;color:#d3d9ec}
+/* ===== Color pass: one gold + steel-blue palette, team colors for identity, green/red only for good/bad ===== */
+:root{--night:#070a13;--panel:#0f1628;--panel-2:#151e35;--line:#1e2944;--chalk:#f2f5fc;--muted:#97a3c2;
+  --amber:#f5b83d;--gold-soft:#f8d27e;--steel:#8fb4ff;--good:#34d399;--bad:#fb7185;--glass:rgba(15,22,40,.74)}
+[data-c="blue"],[data-c="purple"],[data-c="pink"],[data-c="teal"],[data-c="green"]{--acc:var(--steel)}
+[data-c="amber"]{--acc:var(--amber)}[data-c="good"]{--acc:var(--good)}[data-c="bad"]{--acc:var(--bad)}
+.chip{--acc:var(--amber)}.chip[data-c="bad"]{--acc:var(--bad)}.chip[data-c="good"]{--acc:var(--good)}
+.chip span{color:var(--gold-soft)}
+.navl{color:var(--muted)!important}
+.eyebrow{color:var(--gold-soft)}
+.btn{background:linear-gradient(180deg,#ffd987,var(--amber) 58%,#dc9b1c);color:#1d1400;box-shadow:0 3px 0 #94600a,0 10px 26px rgba(245,184,61,.25),inset 0 1px 0 rgba(255,255,255,.5)}
+.tag{border-color:rgba(255,255,255,.14);color:#cdd5ea}
+.tag.amber{color:var(--gold-soft);border-color:rgba(245,184,61,.45)}
+.tbl th{color:#8e9aba}
+.tbl tr.me td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+.panel h3{color:#c9d3ee}
+.panel h3::before{background:var(--acc,var(--steel));box-shadow:0 0 10px color-mix(in srgb,var(--acc,var(--steel)) 70%,transparent)}
+body{background:
+  radial-gradient(1100px 520px at 50% -220px,color-mix(in srgb,var(--tc1) 38%,transparent),transparent 72%),
+  radial-gradient(900px 500px at 50% 120%,color-mix(in srgb,var(--tc1) 14%,transparent),transparent 70%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.014) 0 1px,transparent 1px 96px),var(--night)}
 </style>
 
 <div id="busy" class="busy" hidden><span>Simming…</span></div>
@@ -1235,7 +1261,7 @@ const defR=u=>(u.DL+u.LB+u.DB)/3;
 // Ratings don't change while a screen is drawn, so render() caches them for speed.
 let OVRC=null;
 function ovr(t){if(OVRC){const v=OVRC.get(t);if(v!==undefined)return v}const u=units(t),r=Math.round((offR(u)+defR(u))/2*.95+u.K*.05);if(OVRC)OVRC.set(t,r);return r}
-function badge(t){return `<span class="badge" style="--b1:${t.c1};--b2:${t.c2};color:${inkOn(t.c1,t.c2)}">${esc(t.abbr)}</span>`}
+function badge(t){return `<span class="badge" style="--b1:${t.c1};--b2:${t.c2}">${esc(t.abbr)}</span>`}
 function presStars(t){return Math.round(clamp(t.pres,1,5))}
 function rivalryOf(a,b){const A=T(a).abbr,B=T(b).abbr;const r=RIVALS.find(r=>(r[0]===A&&r[1]===B)||(r[0]===B&&r[1]===A));return r?r[2]:null}
 function news(txt){S.news.unshift(txt);if(S.news.length>30)S.news.pop()}
@@ -1502,7 +1528,7 @@ function newGame(gm,live,qlen){
   DCC=new Map();
   const {h:home,a:away}=gm;
   const g={home,away,neutral:!!gm.neutral,label:gm.label,type:gm.type,live,qlen,auto:false,
-    u:{[home]:units(T(home)),[away]:units(T(away))},ax:{[home]:teamAx(T(home)),[away]:teamAx(T(away))},
+    u:{[home]:home===S.user?pracBoost(units(T(home))):units(T(home)),[away]:away===S.user?pracBoost(units(T(away))):units(T(away))},ax:{[home]:teamAx(T(home)),[away]:teamAx(T(away))},
     cond:gm.cond||condFor(gm),pen:{[home]:{n:0,y:0},[away]:{n:0,y:0}},
     score:{[home]:0,[away]:0},poss:away,pos:25,down:1,togo:10,qtr:1,clock:qlen*60,ot:null,otEnd:false,over:false,qEnd:false,
     log:[],last:null,stats:{[home]:{yds:0,plays:0,to:0},[away]:{yds:0,plays:0,to:0}},box:{},pending:{type:"kickoff",team:home}};
@@ -1512,7 +1538,7 @@ function newGame(gm,live,qlen){
   const edge=id=>{const mv=clamp((S.mo&&S.mo[id])||0,-3,3)*.08;
     return (mv<0?mv*cult(id):mv)+schemeArchFit(id,plan(id).scheme)*.3-(c.trap[id]?.35*cult(id):0)
       -(c.travel&&c.travel.id===id?c.travel.y*(me(id)?1-.33*fac("travel"):1):0)
-      +(me(id)?fac("film")*.15+(bad?fac("indoor")*.12:0)+dif().edge+(S.nextEdge?S.nextEdge.y:0)+relEdgeNow()-(g.type==="cfp"?CFP_PRESS[S.diff??1]:0):0)
+      +(me(id)?fac("film")*.15+(bad?fac("indoor")*.12:0)+dif().edge+(S.nextEdge?S.nextEdge.y:0)+relEdgeNow()+pracEdge()-(g.type==="cfp"?CFP_PRESS[S.diff??1]:0):0)
       +(!me(id)&&(home===S.user||away===S.user)&&defendingChamp()?.2:0)};
   g.edge={[home]:edge(home),[away]:edge(away)};
   if(!gm.neutral&&rivalryOf(home,away))g.hfa+=.8;
@@ -1908,6 +1934,7 @@ function roundName(){
 }
 function userGame(){return currentGames().find(g=>g.h===S.user||g.a===S.user)||null}
 function playRound(userRes){
+  if(!userRes&&userGame())runPractice();
   const before=rankIds().slice(),games=currentGames(),label=roundName(),phase=S.phase;
   const exp=games.map(gm=>winProb(gm.h,gm.a,gm.neutral?null:gm.h));
   const heisBefore=S.results.length?heismanWatch(1)[0]:null;
@@ -1927,7 +1954,7 @@ function playRoundCore(userRes,games){
     S.results.push({h:gm.h,a:gm.a,hs:r.hs,as:r.as,type:gm.type,label:gm.label,wk:S.phase==="regular"?S.week:null});
     S.mo=S.mo||{};const w=gm.winner,l=w===gm.h?gm.a:gm.h,up=ovr(T(w))<ovr(T(l))-4;
     S.mo[w]=clamp((S.mo[w]||0)*.5+1+(up?1:0),-3,3);S.mo[l]=clamp((S.mo[l]||0)*.5-1,-3,3);
-    gameAch(gm);uniResult(gm);relAfterGame(gm);
+    gameAch(gm);uniResult(gm);relAfterGame(gm);pracAfterGame(gm);
   }
   for(const t of S.teams)for(const p of t.roster)if(p.inj>0){p.inj--;if(!p.inj)p.susp=false;if(p.inj===0&&t.id===S.user)news(`${p.pos} ${p.n} is back from injury.`)}
   // Sammy Eyde never misses a game in the opening season of a dynasty.
@@ -2135,7 +2162,7 @@ function beginOffseason(){
       else if(p.yr===2&&p.ovr>=90&&rnd()<.55*(t.id===u?(1-.25*fac("acad"))*((p.rel||60)>=85?.6:1):1))leave.push([p,"Declared for the NFL draft"]);
     }
     if(t.id===u){
-      relOffseason();
+      relOffseason();pracOffseason();
       for(const p of t.roster)if(p.yr<3&&!leave.some(x=>x[0]===p)&&p.rel<40&&rnd()<(p.rel<25?.7:.3))leave.push([p,"Entered the transfer portal (unhappy)"]);
       const k=Math.max(0,(rec.l>=6?2:rnd()<.4?1:0)-(rnd()<.33*fac("acad")?1:0));
       shuffle(t.roster.filter(p=>p.yr<2&&(p.rel??60)<75&&!leave.some(x=>x[0]===p))).slice(0,k).forEach(p=>leave.push([p,"Entered the transfer portal"]));
@@ -2291,7 +2318,7 @@ let pickQlen=15,jumpTo=null;
 
 // ===================== VIEWS =====================
 const app=document.getElementById("app");
-const TAB_ICON={home:"🏠",news:"📰",weekly:"🗞️",preseason:"📖",schedule:"📅",standings:"📊",top25:"🏅",post:"🎟️",roster:"👥",plan:"📋",coach:"🧢",uniforms:"👕",locker:"🤝",leaders:"⭐",history:"🏛️",trophies:"🏆"};
+const TAB_ICON={home:"🏠",news:"📰",weekly:"🗞️",preseason:"📖",schedule:"📅",standings:"📊",top25:"🏅",post:"🎟️",roster:"👥",plan:"📋",coach:"🧢",uniforms:"👕",locker:"🤝",practice:"🏋️",leaders:"⭐",history:"🏛️",trophies:"🏆"};
 let lastView="";
 function viewKey(){return S?[S.tab,S.phase,S.off&&S.off.step,S.pv,S.ybView,!!WATCH,!!PARTY,S.magIntro,S.selection&&S.selection.done,S.ceremony&&S.ceremony.step].join("|"):"select"}
 function render(){
@@ -2328,7 +2355,7 @@ function renderSelect(){
   <div class="tabs">${CONFS.map((c,ci)=>`<button class="tab" data-act="jump" data-id="conf-${ci}">${c}</button>`).join("")}</div>
   ${CONFS.map((c,ci)=>`<h3 id="conf-${ci}" class="sel-conf" style="scroll-margin-top:12px">${c} <span class="tag">${TIER_NAME[CONF_TIER[ci]]}</span></h3><div class="teams">${pv.teams.filter(t=>t.conf===ci).map(t=>`
     <button class="team-card" data-act="pick" data-id="${t.id}" style="--tc:${t.c1}">
-      <span class="tc-logo crest">${crest(t)}</span>
+      <span class="tc-logo" style="--b1:${t.c1};--b2:${t.c2}">${esc(t.abbr)}</span>
       <span style="min-width:0"><span class="name">${esc(t.name)}</span><br><span class="stars">${starStr(Math.round(clamp(1+(t.base-76)/3.5,1,5)))}</span></span>
       <span class="ovr"><small>OVR</small>${t.base}</span>
     </button>`).join("")}</div>`).join("")}
@@ -2347,7 +2374,7 @@ function champHero(withBtn){
     <div class="heis-trophy" aria-hidden="true">🏆</div>
     <div class="champ-kicker">${S.season} College Football Playoff</div>
     <div class="champ-title gold">National Champions</div>
-    <div class="champ-team"><span class="gd-logo crest">${crest(ch)}</span>${esc(ch.name)}</div>
+    <div class="champ-team"><span class="gd-logo" style="background:linear-gradient(145deg,${ch.c1},${ch.c2});color:#fff">${esc(ch.abbr)}</span>${esc(ch.name)}</div>
     <div class="champ-score"><span class="w">${esc(ch.abbr)} ${ws}</span><small>FINAL</small><span class="l">${ls} ${esc(lo.abbr)}</span></div>
     <div class="champ-facts">${facts.map(x=>`<span>${esc(x)}</span>`).join("")}</div>
     ${ch.id===S.user?`<div class="champ-me">You won the national title!</div>`:""}
@@ -2372,7 +2399,7 @@ function nextCard(){
     const fit=schemeArchFit(u,plan(u).scheme);if(fit>=1)chips.push(`<span class="gd-chip good">Scheme fit</span>`);else if(fit<0)chips.push(`<span class="gd-chip bad">QB doesn't fit your scheme</span>`);
     const half=(t,side)=>`<div class="gd-team ${side}">
       <span class="gd-rank">${rankOf(t.id)<=25?"#"+rankOf(t.id):"&nbsp;"}</span>
-      <span class="gd-logo crest">${crest(t)}</span>
+      <span class="gd-logo" style="background:${t.c1};color:${t.c2}">${esc(t.abbr)}</span>
       <b class="gd-name">${esc(t.name)}</b><span class="gd-rec">${recStr(t.id)} · OVR ${ovr(t)}</span>${t.id===u?'<span class="gd-you">Your team</span>':""}</div>`;
     return `<div class="gameday" style="--ta:${a.c1};--th:${h.c1}">
       <div class="gd-top"><span class="gd-label">${esc(ug.label)}${ug.neutral?" · Neutral site":""}</span>${tag?`<span class="gd-tag">${esc(tag)}</span>`:""}</div>
@@ -2388,7 +2415,7 @@ function nextCard(){
       ${chips.length?`<div class="gd-chips">${chips.join("")}</div>`:""}
       ${uniPicker(ug)}
       <div class="gd-actions"><button class="btn big" data-act="watch">Watch live</button><button class="btn ghost big" data-act="sim">Sim game</button></div>
-      <div class="gd-links"><button class="linkbtn" data-act="tab" data-t="plan">Game plan</button>${S.phase==="regular"&&S.week<11?`<button class="linkbtn" data-act="simSeason">Sim to end of regular season</button>`:""}</div>
+      <div class="gd-links"><button class="linkbtn" data-act="tab" data-t="practice">Practice: ${INTENSITY[prac().int].n}${prac().drills.length?` · ${prac().drills.slice(0,INTENSITY[prac().int].max).map(k=>DRILLS[k].n).join(", ")}`:""}</button><button class="linkbtn" data-act="tab" data-t="plan">Game plan</button>${S.phase==="regular"&&S.week<11?`<button class="linkbtn" data-act="simSeason">Sim to end of regular season</button>`:""}</div>
     </div>`;
   }
   let why="";
@@ -2401,7 +2428,7 @@ function nextCard(){
   }
   return `<div class="panel"><h3>${esc(roundName())}</h3><p>${why}</p><div class="row"><button class="btn" data-act="simRound">Sim ${esc(roundName().toLowerCase())}</button></div></div>`;
 }
-const TABS=[["home","Home"],["news","News"],["weekly","This Week"],["preseason","Preseason Mag"],["schedule","Schedule"],["standings","Standings"],["top25","Top 25"],["leaders","Heisman & stats"],["roster","Roster"],["plan","Game plan"],["coach","Coach"],["uniforms","Uniforms"],["locker","Locker room"],["trophies","Trophy room"],["post","Postseason"],["history","Program"]];
+const TABS=[["home","Home"],["news","News"],["weekly","This Week"],["preseason","Preseason Mag"],["schedule","Schedule"],["standings","Standings"],["top25","Top 25"],["leaders","Heisman & stats"],["roster","Roster"],["plan","Game plan"],["coach","Coach"],["uniforms","Uniforms"],["locker","Locker room"],["practice","Practice"],["trophies","Trophy room"],["post","Postseason"],["history","Program"]];
 function renderHub(){
   if(!S.pre||S.pre.season!==S.season)S.pre=buildPreseason();
   const me=T(S.user),cr=confRec(S.user);
@@ -2410,11 +2437,11 @@ function renderHub(){
   if(!tabs.some(([k])=>k===S.tab))S.tab="home";
   const jc=S.job.sec>=70?"good":S.job.sec>=45?"amber":"bad";
   const chip=(c,l,v)=>`<div class="chip" data-c="${c}"><span>${l}</span><b>${v}</b></div>`;
-  const groups=[["Season","blue",["home","news","weekly","preseason","schedule","standings","top25","post"]],["Team","green",["roster","locker","plan","coach","uniforms"]],["Records","purple",["leaders","history","trophies"]]];
+  const groups=[["Season","blue",["home","news","weekly","preseason","schedule","standings","top25","post"]],["Team","green",["roster","practice","locker","plan","coach","uniforms"]],["Records","purple",["leaders","history","trophies"]]];
   const side=S.tab==="home"?[partyCard(),gotwCard(),lastGameHTML()].filter(Boolean):[];
   app.innerHTML=`
   <div class="teamband" style="--t1:${me.c1};--t2:${me.c2}" data-wm="${esc(me.abbr)}">
-    <span class="tb-logo crest">${crest(me)}</span>
+    <span class="tb-logo" style="--b1:${me.c1};--b2:${me.c2}">${esc(me.abbr)}</span>
     <div style="min-width:0"><div class="eyebrow tb-eyebrow">CFB Dynasty 2 · ${S.season} season · ${esc(roundName())}</div>
     <h1 class="tb-name">${esc(me.name)}</h1><div class="tb-sub">${esc(CONFS[me.conf])} · <span class="stars">${starStr(presStars(me))}</span> program</div></div>
   </div>
@@ -2431,7 +2458,7 @@ function renderHub(){
   ${S.tab==="home"?`<div class="hubgrid ${side.length?"":"solo"}">
     <div class="hubmain">${canEditSched()&&!S.schedLocked?preSchedStep():`${eventCard()}${(()=>{const ug=userGame();return ug?hypeHTML(ug):""})()}${nextCard()}`}</div>
     ${side.length?`<div class="hubside">${side.join("")}</div>`:""}
-  </div>`:`<section class="tabbody">${({news:tabNews,locker:lockerTab,trophies:tabTrophies,uniforms:tabUniforms,plan:tabPlan,weekly:tabWeekly,preseason:tabPreseason,schedule:tabSchedule,standings:tabStandings,top25:tabTop25,leaders:tabLeaders,roster:tabRoster,coach:tabCoach,post:tabPost,history:tabHistory})[S.tab]()}</section>`}
+  </div>`:`<section class="tabbody">${({news:tabNews,practice:tabPractice,locker:lockerTab,trophies:tabTrophies,uniforms:tabUniforms,plan:tabPlan,weekly:tabWeekly,preseason:tabPreseason,schedule:tabSchedule,standings:tabStandings,top25:tabTop25,leaders:tabLeaders,roster:tabRoster,coach:tabCoach,post:tabPost,history:tabHistory})[S.tab]()}</section>`}
   <div class="row"><button class="btn ${S.confirmReset?"danger":"ghost"}" data-act="reset">${S.confirmReset?"Tap again to erase this dynasty":"New dynasty"}</button></div>`;
 }
 function resultCell(g,id){
@@ -2831,7 +2858,7 @@ function tabPreseason(){
   const st=D.star(u),tg=D.toughest,sw=D.swing;
   const you=`${magHead("mag-you","Cover story","Inside "+esc(me.name),me.c1)}
   <div class="feature" style="--c1:${me.c1};--c2:${me.c2}">
-    <div class="ft-hero"><span class="gd-logo crest">${crest(me)}</span>
+    <div class="ft-hero"><span class="gd-logo" style="background:linear-gradient(145deg,${me.c1},${me.c2});color:#fff">${esc(me.abbr)}</span>
       <div><span class="pk">${esc(D.tier[0])}</span><h3>${esc(me.name)}</h3><p>${esc(D.tier[1])}</p></div></div>
     <div class="statgrid">
       <div><span class="big">#${ME.rank}</span><span>Preseason rank</span></div>
@@ -3440,7 +3467,7 @@ function renderPlayer(){
 function renderOff(){
   const me=T(S.user),O=S.off,step=O.step;
   const steps=[["yearbook","Yearbook"],["recap","Season recap"],["jobs","Job offers"],["coach","Coach & facilities"],["portal","Transfer portal"],["recruit","Signing day"]];
-  const head=`<div class="hub-head"><span class="tc-logo crest">${crest(me)}</span><div><div class="eyebrow">${S.season} offseason</div><h1 style="font-size:clamp(24px,5vw,36px)">${esc(steps.find(s=>s[0]===step)[1])}</h1></div></div>
+  const head=`<div class="hub-head">${badge(me)}<div><div class="eyebrow">${S.season} offseason</div><h1 style="font-size:clamp(24px,5vw,36px)">${esc(steps.find(s=>s[0]===step)[1])}</h1></div></div>
     <div class="tabs">${steps.map(([k,l],i)=>`<span class="tab ${k===step?"on":""}">${i+1}. ${l}</span>`).join("")}</div>`;
   let body="";
   if(step==="yearbook"){
@@ -3561,6 +3588,8 @@ const ACT={
     S.off.realign=(S.off.realign||[]).concat(m);S.realign=(S.realign||[]).concat({season:S.season,...m});me.pres=Math.min(5,me.pres+.3);S.off.invite=null},
   stayConf(){S.off.invite=null},
   depth(d){const me=T(S.user),p=PL[+d.id];if(!p)return;const before=startersOf(me,p.pos).slice(),list=depthOf(me,p.pos).map(x=>x.id),i=list.indexOf(p.id),j=i+(+d.d);if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]];me.depth=me.depth||{};me.depth[p.pos]=list;autoRedshirtKeep(me);relDepthChange(before,startersOf(me,p.pos))},
+  pracInt(d){const P=prac();if(P.wk===pracKey())return;P.int=d.k;P.drills=P.drills.slice(0,INTENSITY[d.k].max)},
+  pracDrill(d){const P=prac();if(P.wk===pracKey())return;const i=P.drills.indexOf(d.k);if(i>=0)P.drills.splice(i,1);else if(P.drills.length<INTENSITY[P.int].max)P.drills.push(d.k)},
   talk(d){const p=PL[+d.id];if(!p||talksLeft()<1||S.phase==="offseason"||!T(S.user).roster.includes(p))return;S.talk.left--;doTalk(p,d.k)},
   depthAuto(){const me=T(S.user);me.depth={};autoRedshirtKeep(me)},
   rs(d){const p=PL[+d.id];if(p&&p.yr===0&&!p.rsu){p.rs=!p.rs;T(S.user).manualRS=true;if(p.rs){relInit(p);if(p.per!=="team"){relAdj(p,p.per==="diva"?-8:-4);relLog(`${p.pos} ${p.n} isn't thrilled about the redshirt.`)}}}},
@@ -3705,31 +3734,69 @@ function addSammy(){
   giveArch(q,1);for(const k in q.at)q.at[k]+=4; // dual-threat: voters love the highlight runs
 }
 
-// ===================== TEAM CRESTS =====================
-const LUMC={};
-function lum(hex){if(LUMC[hex]!=null)return LUMC[hex];let h=String(hex).replace("#","");if(h.length===3)h=[...h].map(c=>c+c).join("");
-  const v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255).map(c=>c<=.03928?c/12.92:((c+.055)/1.055)**2.4);return LUMC[hex]=.2126*v[0]+.7152*v[1]+.0722*v[2]}
-function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
-// Readable text on a team color: their second color when it stands out, otherwise black or white.
-function inkOn(bg,pref){return pref&&contrast(bg,pref)>=2.4?pref:(lum(bg)>.4?"#111111":"#ffffff")}
-let crestN=0;
-function crest(t){
-  const id="cr"+(crestN++),c1=t.c1,trim=inkOn(c1,t.c2),ab=esc(t.abbr),n=t.abbr.length;
-  const k=[...t.abbr].reduce((a,ch)=>(a*31+ch.charCodeAt(0))%9973,7)%5;
-  const pat=["",
-    `<rect x="41" y="0" width="18" height="120" fill="${trim}" opacity=".85"/>`,
-    `<path d="M0 26 L50 58 L100 26 V44 L50 76 L0 44Z" fill="${trim}" opacity=".85"/>`,
-    `<path d="M-10 30 L22 -6 L112 92 L80 126Z" fill="${trim}" opacity=".8"/>`,
-    `<rect x="0" y="0" width="100" height="36" fill="${trim}" opacity=".85"/>`][k];
-  const fs={1:64,2:54,3:44,4:35,5:29}[n]||26,ty=k===4?84:74;
-  const shield="M50 4 L93 15 V52 C93 82 74 101 50 112 C26 101 7 82 7 52 V15 Z";
-  return `<svg viewBox="0 0 100 116" role="img" aria-label="${ab} logo"><defs><clipPath id="${id}c"><path d="${shield}"/></clipPath>
-    <linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".42"/><stop offset=".5" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient></defs>
-    <path d="${shield}" fill="${c1}"/>
-    <g clip-path="url(#${id}c)">${pat}<rect width="100" height="116" fill="url(#${id}g)"/></g>
-    <path d="${shield}" fill="none" stroke="${trim}" stroke-width="6"/>
-    <path d="${shield}" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1.5" transform="translate(8.5 9.5) scale(.83)"/>
-    <text x="50" y="${ty}" text-anchor="middle" font-family="'Barlow Condensed',Arial Narrow,sans-serif" font-weight="700" font-size="${fs}" fill="${k?inkOn(c1,"#ffffff"):trim}" stroke="${lum(c1)>.4?"#ffffff":"#000000"}" stroke-opacity=".55" stroke-width="4" paint-order="stroke"${n>=4?` textLength="70" lengthAdjust="spacingAndGlyphs"`:""}>${ab}</text></svg>`;
+
+// ===================== PRACTICE =====================
+// Each week you pick an intensity and up to three drills. Conditioning builds over the season, fatigue piles up
+// from hard weeks and games, and drills sharpen units for Saturday and develop young players.
+const INTENSITY={light:{n:"Light",d:"Walkthroughs and recovery. Fresh legs, less sharpness.",cond:-1,fat:-14,mult:.5,inj:.005,edge:-.03,max:2},
+  normal:{n:"Normal",d:"A standard game week.",cond:1,fat:0,mult:1,inj:.02,edge:0,max:3},
+  hard:{n:"Hard",d:"Full pads, live reps. Builds toughness, wears bodies down.",cond:3,fat:12,mult:1.5,inj:.06,edge:.05,max:3}};
+const DRILLS={
+  cond:{i:"🏃",n:"Conditioning",d:"Gassers and sprints. Builds conditioning for the fourth quarter.",b:{}},
+  pass:{i:"🎯",n:"Passing game",d:"7-on-7 and route timing.",b:{QB:2,WR:2}},
+  run:{i:"🐂",n:"Run game",d:"Inside zone, double teams, ball security.",b:{RB:2,OL:2}},
+  rush:{i:"💥",n:"Pass rush",d:"Get-off, hands and stunts up front.",b:{DL:2,LB:1}},
+  cover:{i:"🛡️",n:"Coverage",d:"Press, zone drops and ball skills.",b:{DB:2,LB:1}},
+  st:{i:"🦶",n:"Special teams",d:"Kicks, coverage units and returns.",b:{K:4}},
+  film:{i:"🎬",n:"Opponent film",d:"Study this week's opponent. Small game-day edge.",b:{}},
+  recover:{i:"🧊",n:"Recovery",d:"Ice baths, stretching, sleep. Cuts fatigue.",b:{}}};
+const DRILL_POS={pass:["QB","WR","TE"],run:["RB","OL"],rush:["DL","LB"],cover:["CB","S","LB"],st:["K"]};
+function prac(){if(!S.prac)S.prac={cond:60,fat:20,int:"normal",drills:["film"],log:[],wk:null,pw:null};return S.prac}
+function pracKey(){return talkKey()}
+// Runs once per week, right before your game.
+function runPractice(){
+  const P=prac(),key=pracKey();if(P.wk===key||!userGame())return;P.wk=key;
+  const I=INTENSITY[P.int]||INTENSITY.normal,dr=P.drills.slice(0,I.max),t=T(S.user),notes=[];
+  let cond=I.cond,fat=I.fat;
+  if(dr.includes("cond")){cond+=4;fat+=3}
+  if(dr.includes("recover")){fat-=10}
+  // Gains get harder near the top; losses don't.
+  P.cond=clamp(Math.round(P.cond+(cond>0?cond*clamp(1-(P.cond-50)/60,.15,1):cond)),20,99);P.fat=clamp(P.fat+fat-8,0,100);
+  const boosts={};for(const k of dr)for(const [u,v] of Object.entries(DRILLS[k].b))boosts[u]=(boosts[u]||0)+Math.round(v*I.mult);
+  P.pw={key,boosts,edge:I.edge+(dr.includes("film")?.1:0)};
+  // Young players in focused groups can make real gains.
+  for(const k of dr){const ps=DRILL_POS[k];if(!ps)continue;
+    const cand=shuffle(t.roster.filter(p=>ps.includes(p.pos)&&p.yr<=2&&!p.inj&&(p.prS!==S.season||(p.prN||0)<3)))[0];
+    if(cand&&rnd()<.3*I.mult){cand.ovr=Math.min(99,cand.ovr+1);if(cand.prS!==S.season){cand.prS=S.season;cand.prN=0}cand.prN++;notes.push(`${cand.pos} ${cand.n} stood out in ${DRILLS[k].n.toLowerCase()} drills: +1 overall (${cand.ovr}).`)}}
+  // Practice injuries: hard weeks and tired legs are risky, good conditioning protects.
+  const risk=(I.inj+Math.max(0,P.fat-60)*.006)*(1.3-P.cond/200);
+  if(rnd()<risk){const p=shuffle(t.roster.filter(p=>!p.inj&&p.pos!=="K"))[0];if(p){p.inj=1+(rnd()<.3?1:0);notes.push(`${p.pos} ${p.n} got hurt in practice and is out ${p.inj} week${p.inj>1?"s":""}.`);news(`Practice injury: ${p.pos} ${p.n} is out ${p.inj} week${p.inj>1?"s":""}.`)}}
+  // The locker room feels the week.
+  for(const p of t.roster){relInit(p);if(P.int==="hard"&&(p.per==="diva"||p.per==="hothead"))relAdj(p,-2);else if(P.int==="hard"&&p.per==="grinder")relAdj(p,1);else if(P.int==="light")relAdj(p,1)}
+  const head=`${S.week<12&&S.phase==="regular"?`Week ${S.week+1}`:roundName()}: ${I.n} practice${dr.length?` · ${dr.map(k=>DRILLS[k].n).join(", ")}`:""}. Conditioning ${P.cond}, fatigue ${P.fat}.`;
+  P.log=[{h:head,notes},...P.log].slice(0,8);
+}
+function pracEdge(){const P=prac();return (P.cond-60)*.006-Math.max(0,P.fat-50)*.008+(P.pw&&P.pw.key===pracKey()?P.pw.edge:0)}
+function pracBoost(u){const P=S.prac;if(!P||!P.pw||P.pw.key!==pracKey())return u;const o={...u};for(const [k,v] of Object.entries(P.pw.boosts))o[k]=Math.min(99,(o[k]||0)+v);return o}
+function pracAfterGame(gm){const P=S.prac;if(!P||(gm.h!==S.user&&gm.a!==S.user))return;P.fat=clamp(P.fat+5,0,100)}
+function pracOffseason(){const P=prac();P.cond=Math.round(P.cond+(60-P.cond)*.5);P.fat=0;P.wk=null;P.pw=null}
+function meter(label,v,good,hint){const c=good?(v>=70?"var(--good)":v>=45?"var(--amber)":"var(--bad)"):(v<=35?"var(--good)":v<=60?"var(--amber)":"var(--bad)");
+  return `<div class="pm"><div class="pm-top"><span>${label}</span><b style="color:${c}">${v}</b></div><div class="pm-bar"><i style="width:${v}%;background:${c}"></i></div><small>${hint}</small></div>`}
+function tabPractice(){
+  const P=prac(),I=INTENSITY[P.int],ug=userGame(),locked=P.wk===pracKey(),ready=Math.round(clamp(50+pracEdge()*120,0,100));
+  const o=ug?T(ug.h===S.user?ug.a:ug.h):null,sel=P.drills.slice(0,I.max);
+  const boosts={};for(const k of sel)for(const [u,v] of Object.entries(DRILLS[k].b))boosts[u]=(boosts[u]||0)+Math.round(v*I.mult);
+  const fx=[...Object.entries(boosts).map(([u,v])=>`${u} +${v}`),sel.includes("film")?"Film edge":"",sel.includes("cond")?"Conditioning +4":"",sel.includes("recover")?"Fatigue −10":""].filter(Boolean);
+  return `<div class="prac-head">
+      <div><div class="eyebrow">Practice facility</div><h2>${ug?`Game week vs ${esc(o.name)}`:"No game this week"}</h2>
+        <p class="muted" style="margin:4px 0 0">${locked?"This week's practices are done. Your plan applies again next week.":"Set the plan before kickoff. It runs automatically when you play or sim the game."}</p></div>
+      <div class="pms">${meter("Conditioning",P.cond,true,"Late-game legs. Builds slowly.")}${meter("Fatigue",P.fat,false,"Hard weeks and games add up.")}${meter("Readiness",ready,true,"Game-day effect of all of this.")}</div></div>
+    <div class="panel" data-c="amber"><h3>Intensity</h3><div class="ints">${Object.entries(INTENSITY).map(([k,x])=>`<button class="int ${P.int===k?"on":""}" data-act="pracInt" data-k="${k}" ${locked?"disabled":""}><b>${x.n}</b><small>${x.d}</small><em>Conditioning ${x.cond>=0?"+":""}${x.cond} · Fatigue ${x.fat>=0?"+":""}${x.fat} · ${x.max} drills</em></button>`).join("")}</div></div>
+    <div class="panel" data-c="blue"><h3>Drills · ${sel.length} of ${I.max}</h3>
+      <div class="drills">${Object.entries(DRILLS).map(([k,d])=>{const on=sel.includes(k),full=!on&&sel.length>=I.max;return `<button class="drill ${on?"on":""}" data-act="pracDrill" data-k="${k}" ${locked||full?"disabled":""}><span class="di">${d.i}</span><b>${d.n}</b><small>${d.d}</small>${Object.keys(d.b).length?`<em>${Object.entries(d.b).map(([u,v])=>`${u} +${Math.round(v*I.mult)}`).join(" · ")}</em>`:""}</button>`}).join("")}</div>
+      <p class="num" style="margin:0">This week: <b style="color:var(--amber)">${fx.join(" · ")||"No focus"}</b></p>
+      <p class="muted" style="font-size:13px;margin:0">Unit boosts last for this week's game. Young players in drilled position groups can gain +1 overall (up to 3 times a season). Hard weeks can cause practice injuries, especially when the team is tired. Good conditioning lowers that risk.</p></div>
+    ${P.log.length?`<div class="panel" data-c="purple"><h3>Practice reports</h3><div class="plog">${P.log.map(l=>`<div><b>${esc(l.h)}</b>${l.notes.map(n=>`<p>${esc(n)}</p>`).join("")}</div>`).join("")}</div></div>`:""}`;
 }
 
 // ===================== ACHIEVEMENTS =====================
@@ -3865,7 +3932,7 @@ function ybHTML(y){
   const moment=(lab,x)=>x?`<div class="ybm"><span class="pk">${lab}</span><b>${x.w?"W":"L"} ${x.us}-${x.th}</b><span>${x.home?"vs":x.neutral?"vs":"at"} ${x.rk<=25?`#${x.rk} `:""}${esc(T(x.o).name)}</span><small>${esc(x.label||"")}</small></div>`:"";
   return `<div class="yb" style="--c1:${t.c1};--c2:${t.c2}">
     <div class="yb-cover"><div class="yb-mast">The ${y.season} Yearbook</div>
-      <div class="yb-team"><span class="gd-logo crest">${crest(t)}</span><div><b>${esc(t.name)}</b><span>${esc(y.result)}${y.confChamp?` · ${esc(CONFS[t.conf])} champions`:""}</span></div></div>
+      <div class="yb-team"><span class="gd-logo" style="background:linear-gradient(145deg,${t.c1},${t.c2});color:#fff">${esc(t.abbr)}</span><div><b>${esc(t.name)}</b><span>${esc(y.result)}${y.confChamp?` · ${esc(CONFS[t.conf])} champions`:""}</span></div></div>
       <div class="yb-rec"><b>${y.w}-${y.l}</b><span>Final rank #${y.rank}</span></div>
       <div class="yb-grade" aria-label="Season grade ${y.grade}"><small>Grade</small>${y.grade}</div></div>
     <div class="yb-page">
@@ -3948,7 +4015,7 @@ function uniSVG(s,size){
 }
 function bigGame(gm){const o=gm.h===S.user?gm.a:gm.h;return !!rivalryOf(gm.h,gm.a)||rankOf(o)<=25||(gm.type&&gm.type!=="reg")}
 function applyUni(gm){
-  if(!gm)return;const U=uni(),home=gm.h===S.user&&!gm.neutral,k=U.pick||(home?"home":"away");U.cur=k;
+  if(!gm)return;runPractice();const U=uni(),home=gm.h===S.user&&!gm.neutral,k=U.pick||(home?"home":"away");U.cur=k;
   const s=U.sets.find(x=>x.k===k);
   if(k!=="home"&&k!=="away"&&bigGame(gm)&&!U.used[S.season+k]){
     U.used[S.season+k]=1;S.bank=(S.bank||0)+1;S.mo=S.mo||{};S.mo[S.user]=clamp((S.mo[S.user]||0)+.4,-3,3);
@@ -3997,17 +4064,17 @@ function jobsStep(O){
     <p>Expected about ${C.exp} wins, you won ${C.w}. Job security ${Math.round(C.before)} → <b>${Math.round(C.after)}</b> (${secLabel(C.after)}).</p>
     ${C.fired&&!C.taken?"<p><b>You've been fired.</b> Pick your next job to keep coaching.</p>":""}${C.stay?`<p><span class="tag good">Raise</span> You turned down the offers. The AD gave you an extension, +10 job security and +3 recruiting points.</p>`:""}</div>`;
   let main;
-  if(C.taken!==undefined){const t=T(C.taken);main=`<div class="newjob" style="--c1:${t.c1};--c2:${t.c2}"><span class="pk" style="color:#ffd34d">It's official</span><span class="gd-logo crest">${crest(t)}</span><h2>Welcome to ${esc(t.name)}</h2><p>Their roster and recruiting class are already set. Your game plan comes with you.</p></div>`}
+  if(C.taken!==undefined){const t=T(C.taken);main=`<div class="newjob" style="--c1:${t.c1};--c2:${t.c2}"><span class="pk" style="color:#ffd34d">It's official</span><span class="gd-logo" style="background:linear-gradient(145deg,${t.c1},${t.c2});color:#fff">${esc(t.abbr)}</span><h2>Welcome to ${esc(t.name)}</h2><p>Their roster and recruiting class are already set. Your game plan comes with you.</p></div>`}
   else if(C.stay)main="";
   else if(C.offers.length){
     main=`<div class="phone"><div class="ring" aria-hidden="true">📞</div><div><div class="eyebrow">${C.fired?"Your agent has news":"The phone is ringing"}</div><h2>${C.fired?"Schools willing to give you another shot":`${C.offers.length} school${C.offers.length>1?"s want":" wants"} you`}</h2></div></div>
     <div class="offers2">${C.offers.map(id=>{const t=T(id),f=offerInfo(id),conf=O.jobConfirm===id;return `<div class="offer2" style="--c1:${t.c1};--c2:${t.c2}">
-      <div class="of-top"><span class="gd-logo crest">${crest(t)}</span><div><b>${esc(t.name)}</b><span>${esc(CONFS[t.conf])} · <span class="stars">${starStr(presStars(t))}</span></span></div></div>
+      <div class="of-top"><span class="gd-logo" style="background:linear-gradient(145deg,${t.c1},${t.c2});color:#fff">${esc(t.abbr)}</span><div><b>${esc(t.name)}</b><span>${esc(CONFS[t.conf])} · <span class="stars">${starStr(presStars(t))}</span></span></div></div>
       <div class="of-facts"><div><b>${ovr(t)}</b><span>Roster OVR</span></div><div><b>${recStr(id)}</b><span>Last season</span></div><div><b>${f.yrs} yrs</b><span>Contract</span></div><div><b>$${f.sal}M</b><span>Per year</span></div></div>
       <p class="of-pitch">${esc(f.pitch)} <small>— Athletic director</small></p>
       <div class="of-pc"><div><span class="pk" style="color:var(--good)">Why go</span>${f.go.map(x=>`<p>+ ${esc(x)}</p>`).join("")||"<p>+ A fresh start</p>"}</div><div><span class="pk" style="color:var(--bad)">Why stay</span>${f.stay.map(x=>`<p>− ${esc(x)}</p>`).join("")}</div></div>
       <button class="btn ${conf?"":"ghost"}" data-act="takeJob" data-id="${id}">${conf?`Tap again to sign with ${esc(t.abbr)}`:"Take the job"}</button></div>`}).join("")}
-      ${C.fired?"":`<div class="offer2 stay" style="--c1:${me.c1};--c2:${me.c2}"><div class="of-top"><span class="gd-logo crest">${crest(me)}</span><div><b>Stay at ${esc(me.name)}</b><span>Use the offers as leverage</span></div></div>
+      ${C.fired?"":`<div class="offer2 stay" style="--c1:${me.c1};--c2:${me.c2}"><div class="of-top"><span class="gd-logo" style="background:linear-gradient(145deg,${me.c1},${me.c2});color:#fff">${esc(me.abbr)}</span><div><b>Stay at ${esc(me.name)}</b><span>Use the offers as leverage</span></div></div>
         <p class="of-pitch">Your AD matches the interest with an extension: +10 job security and +3 recruiting points.</p>${C.stay?'<span class="tag good">Done</span>':`<button class="btn" data-act="stayPut">Stay and get a raise</button>`}</div>`}</div>`;
   } else main=`<div class="phone quiet"><div class="ring" aria-hidden="true">📵</div><div><div class="eyebrow">Quiet phone</div><h2>No schools came calling this year</h2><p class="muted" style="margin:0">Win more than people expect and the bigger programs will notice.</p></div></div>`;
   return `${main}${sec}
