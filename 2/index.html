@@ -812,6 +812,33 @@ details.panel summary{padding:2px 0}
   background:linear-gradient(112deg,transparent 0 62%,rgba(255,255,255,.06) 62% 64%,transparent 64%),linear-gradient(135deg,color-mix(in srgb,var(--tc1) 70%,#000),color-mix(in srgb,var(--tc1) 30%,var(--panel)) 70%);box-shadow:0 18px 44px rgba(0,0,0,.45)}
 .hub-head .eyebrow{color:#ffd34d}
 @media (prefers-reduced-motion:reduce){.teamband::before,.sel-hero .lights i{animation:none}}
+
+/* ---------- Cleanup: nothing wider than the screen ---------- */
+html,body{overflow-x:hidden}
+.tabs{flex-wrap:wrap;overflow:visible}
+.navg .tabs{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));flex:1;min-width:0;overflow:visible}
+.navg{flex:1 1 auto;min-width:0}
+.navg .tab{min-width:0;width:100%}
+.navgroups{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:900px){.navgroups{grid-template-columns:auto;}.navg .tabs{grid-template-columns:repeat(auto-fill,minmax(88px,1fr))}}
+@media (max-width:600px){.navg .tabs{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:5px}.navg .tab{font-size:10.5px;padding:8px 4px 7px;letter-spacing:.04em}.navg .tab .ti2{font-size:18px}}
+.tw{max-width:100%}
+.gd-uni,.gd-chips,.row{min-width:0}
+img,svg{max-width:100%}
+/* ---------- Crests ---------- */
+.crest{background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:0!important;filter:drop-shadow(0 8px 14px rgba(0,0,0,.5))}
+.crest svg{width:100%;height:100%;display:block;overflow:visible}
+.tb-logo.crest{width:clamp(76px,18vw,104px);height:clamp(88px,21vw,120px)}
+.tc-logo.crest{width:48px;height:56px}
+.gd-logo.crest{width:clamp(80px,22vw,108px);height:clamp(92px,25vw,124px)}
+.of-top .gd-logo.crest,.yb-team .gd-logo.crest{width:60px;height:70px}
+.newjob .gd-logo.crest{width:96px;height:110px}
+.champ-team .gd-logo.crest{width:clamp(66px,16vw,86px);height:clamp(76px,18vw,100px)}
+.ft-hero .gd-logo.crest{width:84px;height:96px}
+.badge{text-shadow:none}
+@media (max-width:600px){.tbl th,.tbl td{padding-left:6px;padding-right:6px}.tbl .hm{display:none}}
+@media (max-width:600px){.navg{align-items:stretch!important;width:100%}.navg .tabs{width:100%}}
+.hub-head .tc-logo.crest{width:52px;height:60px}
 </style>
 
 <div id="busy" class="busy" hidden><span>Simming…</span></div>
@@ -1208,7 +1235,7 @@ const defR=u=>(u.DL+u.LB+u.DB)/3;
 // Ratings don't change while a screen is drawn, so render() caches them for speed.
 let OVRC=null;
 function ovr(t){if(OVRC){const v=OVRC.get(t);if(v!==undefined)return v}const u=units(t),r=Math.round((offR(u)+defR(u))/2*.95+u.K*.05);if(OVRC)OVRC.set(t,r);return r}
-function badge(t){return `<span class="badge" style="--b1:${t.c1};--b2:${t.c2}">${esc(t.abbr)}</span>`}
+function badge(t){return `<span class="badge" style="--b1:${t.c1};--b2:${t.c2};color:${inkOn(t.c1,t.c2)}">${esc(t.abbr)}</span>`}
 function presStars(t){return Math.round(clamp(t.pres,1,5))}
 function rivalryOf(a,b){const A=T(a).abbr,B=T(b).abbr;const r=RIVALS.find(r=>(r[0]===A&&r[1]===B)||(r[0]===B&&r[1]===A));return r?r[2]:null}
 function news(txt){S.news.unshift(txt);if(S.news.length>30)S.news.pop()}
@@ -2301,7 +2328,7 @@ function renderSelect(){
   <div class="tabs">${CONFS.map((c,ci)=>`<button class="tab" data-act="jump" data-id="conf-${ci}">${c}</button>`).join("")}</div>
   ${CONFS.map((c,ci)=>`<h3 id="conf-${ci}" class="sel-conf" style="scroll-margin-top:12px">${c} <span class="tag">${TIER_NAME[CONF_TIER[ci]]}</span></h3><div class="teams">${pv.teams.filter(t=>t.conf===ci).map(t=>`
     <button class="team-card" data-act="pick" data-id="${t.id}" style="--tc:${t.c1}">
-      <span class="tc-logo" style="--b1:${t.c1};--b2:${t.c2}">${esc(t.abbr)}</span>
+      <span class="tc-logo crest">${crest(t)}</span>
       <span style="min-width:0"><span class="name">${esc(t.name)}</span><br><span class="stars">${starStr(Math.round(clamp(1+(t.base-76)/3.5,1,5)))}</span></span>
       <span class="ovr"><small>OVR</small>${t.base}</span>
     </button>`).join("")}</div>`).join("")}
@@ -2320,7 +2347,7 @@ function champHero(withBtn){
     <div class="heis-trophy" aria-hidden="true">🏆</div>
     <div class="champ-kicker">${S.season} College Football Playoff</div>
     <div class="champ-title gold">National Champions</div>
-    <div class="champ-team"><span class="gd-logo" style="background:linear-gradient(145deg,${ch.c1},${ch.c2});color:#fff">${esc(ch.abbr)}</span>${esc(ch.name)}</div>
+    <div class="champ-team"><span class="gd-logo crest">${crest(ch)}</span>${esc(ch.name)}</div>
     <div class="champ-score"><span class="w">${esc(ch.abbr)} ${ws}</span><small>FINAL</small><span class="l">${ls} ${esc(lo.abbr)}</span></div>
     <div class="champ-facts">${facts.map(x=>`<span>${esc(x)}</span>`).join("")}</div>
     ${ch.id===S.user?`<div class="champ-me">You won the national title!</div>`:""}
@@ -2345,7 +2372,7 @@ function nextCard(){
     const fit=schemeArchFit(u,plan(u).scheme);if(fit>=1)chips.push(`<span class="gd-chip good">Scheme fit</span>`);else if(fit<0)chips.push(`<span class="gd-chip bad">QB doesn't fit your scheme</span>`);
     const half=(t,side)=>`<div class="gd-team ${side}">
       <span class="gd-rank">${rankOf(t.id)<=25?"#"+rankOf(t.id):"&nbsp;"}</span>
-      <span class="gd-logo" style="background:${t.c1};color:${t.c2}">${esc(t.abbr)}</span>
+      <span class="gd-logo crest">${crest(t)}</span>
       <b class="gd-name">${esc(t.name)}</b><span class="gd-rec">${recStr(t.id)} · OVR ${ovr(t)}</span>${t.id===u?'<span class="gd-you">Your team</span>':""}</div>`;
     return `<div class="gameday" style="--ta:${a.c1};--th:${h.c1}">
       <div class="gd-top"><span class="gd-label">${esc(ug.label)}${ug.neutral?" · Neutral site":""}</span>${tag?`<span class="gd-tag">${esc(tag)}</span>`:""}</div>
@@ -2387,7 +2414,7 @@ function renderHub(){
   const side=S.tab==="home"?[partyCard(),gotwCard(),lastGameHTML()].filter(Boolean):[];
   app.innerHTML=`
   <div class="teamband" style="--t1:${me.c1};--t2:${me.c2}" data-wm="${esc(me.abbr)}">
-    <span class="tb-logo" style="--b1:${me.c1};--b2:${me.c2}">${esc(me.abbr)}</span>
+    <span class="tb-logo crest">${crest(me)}</span>
     <div style="min-width:0"><div class="eyebrow tb-eyebrow">CFB Dynasty 2 · ${S.season} season · ${esc(roundName())}</div>
     <h1 class="tb-name">${esc(me.name)}</h1><div class="tb-sub">${esc(CONFS[me.conf])} · <span class="stars">${starStr(presStars(me))}</span> program</div></div>
   </div>
@@ -2438,8 +2465,8 @@ function tabTop25(){
   const toggle=`<div class="aggr"><button class="tab ${which==="ap"?"on":""}" data-act="poll" data-p="ap">AP Poll</button><button class="tab ${which==="cfp"?"on":""}" data-act="poll" data-p="cfp" ${cfpOut()?"":"disabled"}>CFP Rankings</button></div>`;
   if(which==="ap"){
     const mv=(id,i)=>{const pr=A.prev[id];if(!pr||pr>25)return S.results.length?'<span class="mv up">NEW</span>':"";const d=pr-(i+1);return d>0?`<span class="mv up">▲${d}</span>`:d<0?`<span class="mv dn">▼${-d}</span>`:'<span class="mv">–</span>'};
-    return `<div class="panel"><div class="row" style="justify-content:space-between"><h3>AP Top 25</h3>${toggle}</div><div class="tw"><table class="tbl"><thead><tr><th class="n">#</th><th>Team</th><th class="n">Record</th><th class="n">Points</th><th class="n"></th><th class="n">SOS</th><th>Conf</th></tr></thead><tbody>
-    ${rankIds().slice(0,25).map((id,i)=>`<tr class="${id===S.user?"me":""}"><td class="n">${i+1}</td><td><span class="row" style="gap:8px;flex-wrap:nowrap">${badge(T(id))}${esc(T(id).name)}${A.fpv[id]?` <span class="sub">(${A.fpv[id]})</span>`:""}</span></td><td class="n">${recStr(id)}</td><td class="n">${(A.pts[id]||0).toLocaleString("en-US")}</td><td class="n">${mv(id,i)}</td><td class="n">${sosTag(id)}</td><td class="sub">${esc(CONFS[T(id).conf])}</td></tr>`).join("")}
+    return `<div class="panel"><div class="row" style="justify-content:space-between"><h3>AP Top 25</h3>${toggle}</div><div class="tw"><table class="tbl"><thead><tr><th class="n">#</th><th>Team</th><th class="n">Record</th><th class="n hm">Points</th><th class="n"></th><th class="n">SOS</th><th class="hm">Conf</th></tr></thead><tbody>
+    ${rankIds().slice(0,25).map((id,i)=>`<tr class="${id===S.user?"me":""}"><td class="n">${i+1}</td><td><span class="row" style="gap:8px;flex-wrap:nowrap">${badge(T(id))}${esc(T(id).name)}${A.fpv[id]?` <span class="sub">(${A.fpv[id]})</span>`:""}</span></td><td class="n">${recStr(id)}</td><td class="n hm">${(A.pts[id]||0).toLocaleString("en-US")}</td><td class="n">${mv(id,i)}</td><td class="n">${sosTag(id)}</td><td class="sub hm">${esc(CONFS[T(id).conf])}</td></tr>`).join("")}
     </tbody></table></div>
     <p class="muted" style="font-size:13px">62 media voters rank their top 25. Numbers in parentheses are first-place votes. Voters are slow to drop teams they liked last week. ${cfpOut()?"The CFP committee rankings are out and pick the playoff field.":"The CFP committee releases its own rankings after week 9. Those pick the playoff."}</p></div>`;
   }
@@ -2804,7 +2831,7 @@ function tabPreseason(){
   const st=D.star(u),tg=D.toughest,sw=D.swing;
   const you=`${magHead("mag-you","Cover story","Inside "+esc(me.name),me.c1)}
   <div class="feature" style="--c1:${me.c1};--c2:${me.c2}">
-    <div class="ft-hero"><span class="gd-logo" style="background:linear-gradient(145deg,${me.c1},${me.c2});color:#fff">${esc(me.abbr)}</span>
+    <div class="ft-hero"><span class="gd-logo crest">${crest(me)}</span>
       <div><span class="pk">${esc(D.tier[0])}</span><h3>${esc(me.name)}</h3><p>${esc(D.tier[1])}</p></div></div>
     <div class="statgrid">
       <div><span class="big">#${ME.rank}</span><span>Preseason rank</span></div>
@@ -2845,7 +2872,7 @@ function tabPreseason(){
       <p><em>Why they win it all:</em> ${esc(UNIT_NAME[b].toLowerCase())} (${un[b]}). <em>Why they won't:</em> ${esc(UNIT_NAME[w].toLowerCase())} (${un[w]}).</p>
       <p class="sub">Star: ${s.pos} ${pl(s.id,s.n)} (${s.ovr})${kg?` · Big one: wk ${kg.w+1} ${kg.h===id?"vs":"at"} ${esc(T(kg.o).abbr)}`:""}</p></div>`}).join("")}</div>
   <details class="panel"><summary>11–25</summary><div class="tw"><table class="tbl"><tbody>
-    ${P.top25.slice(10).map((id,i)=>`<tr class="${id===u?"me":""}"><td class="n">${i+11}</td><td style="min-width:180px">${teamCell(id)}</td><td class="n"><b>${P.O[id]}</b></td><td class="sub" style="min-width:260px">${esc(blurb(id))}</td></tr>`).join("")}
+    ${P.top25.slice(10).map((id,i)=>`<tr class="${id===u?"me":""}"><td class="n">${i+11}</td><td>${teamCell(id)}</td><td class="n"><b>${P.O[id]}</b></td><td class="sub hm">${esc(blurb(id))}</td></tr>`).join("")}
   </tbody></table></div></details>`;
 
   // Heisman board
@@ -3413,7 +3440,7 @@ function renderPlayer(){
 function renderOff(){
   const me=T(S.user),O=S.off,step=O.step;
   const steps=[["yearbook","Yearbook"],["recap","Season recap"],["jobs","Job offers"],["coach","Coach & facilities"],["portal","Transfer portal"],["recruit","Signing day"]];
-  const head=`<div class="hub-head">${badge(me)}<div><div class="eyebrow">${S.season} offseason</div><h1 style="font-size:clamp(24px,5vw,36px)">${esc(steps.find(s=>s[0]===step)[1])}</h1></div></div>
+  const head=`<div class="hub-head"><span class="tc-logo crest">${crest(me)}</span><div><div class="eyebrow">${S.season} offseason</div><h1 style="font-size:clamp(24px,5vw,36px)">${esc(steps.find(s=>s[0]===step)[1])}</h1></div></div>
     <div class="tabs">${steps.map(([k,l],i)=>`<span class="tab ${k===step?"on":""}">${i+1}. ${l}</span>`).join("")}</div>`;
   let body="";
   if(step==="yearbook"){
@@ -3678,6 +3705,33 @@ function addSammy(){
   giveArch(q,1);for(const k in q.at)q.at[k]+=4; // dual-threat: voters love the highlight runs
 }
 
+// ===================== TEAM CRESTS =====================
+const LUMC={};
+function lum(hex){if(LUMC[hex]!=null)return LUMC[hex];let h=String(hex).replace("#","");if(h.length===3)h=[...h].map(c=>c+c).join("");
+  const v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255).map(c=>c<=.03928?c/12.92:((c+.055)/1.055)**2.4);return LUMC[hex]=.2126*v[0]+.7152*v[1]+.0722*v[2]}
+function contrast(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
+// Readable text on a team color: their second color when it stands out, otherwise black or white.
+function inkOn(bg,pref){return pref&&contrast(bg,pref)>=2.4?pref:(lum(bg)>.4?"#111111":"#ffffff")}
+let crestN=0;
+function crest(t){
+  const id="cr"+(crestN++),c1=t.c1,trim=inkOn(c1,t.c2),ab=esc(t.abbr),n=t.abbr.length;
+  const k=[...t.abbr].reduce((a,ch)=>(a*31+ch.charCodeAt(0))%9973,7)%5;
+  const pat=["",
+    `<rect x="41" y="0" width="18" height="120" fill="${trim}" opacity=".85"/>`,
+    `<path d="M0 26 L50 58 L100 26 V44 L50 76 L0 44Z" fill="${trim}" opacity=".85"/>`,
+    `<path d="M-10 30 L22 -6 L112 92 L80 126Z" fill="${trim}" opacity=".8"/>`,
+    `<rect x="0" y="0" width="100" height="36" fill="${trim}" opacity=".85"/>`][k];
+  const fs={1:64,2:54,3:44,4:35,5:29}[n]||26,ty=k===4?84:74;
+  const shield="M50 4 L93 15 V52 C93 82 74 101 50 112 C26 101 7 82 7 52 V15 Z";
+  return `<svg viewBox="0 0 100 116" role="img" aria-label="${ab} logo"><defs><clipPath id="${id}c"><path d="${shield}"/></clipPath>
+    <linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".42"/><stop offset=".5" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient></defs>
+    <path d="${shield}" fill="${c1}"/>
+    <g clip-path="url(#${id}c)">${pat}<rect width="100" height="116" fill="url(#${id}g)"/></g>
+    <path d="${shield}" fill="none" stroke="${trim}" stroke-width="6"/>
+    <path d="${shield}" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1.5" transform="translate(8.5 9.5) scale(.83)"/>
+    <text x="50" y="${ty}" text-anchor="middle" font-family="'Barlow Condensed',Arial Narrow,sans-serif" font-weight="700" font-size="${fs}" fill="${k?inkOn(c1,"#ffffff"):trim}" stroke="${lum(c1)>.4?"#ffffff":"#000000"}" stroke-opacity=".55" stroke-width="4" paint-order="stroke"${n>=4?` textLength="70" lengthAdjust="spacingAndGlyphs"`:""}>${ab}</text></svg>`;
+}
+
 // ===================== ACHIEVEMENTS =====================
 const ACH=[
   ["firstwin","b","🏈","First of many","Win your first game"],
@@ -3811,7 +3865,7 @@ function ybHTML(y){
   const moment=(lab,x)=>x?`<div class="ybm"><span class="pk">${lab}</span><b>${x.w?"W":"L"} ${x.us}-${x.th}</b><span>${x.home?"vs":x.neutral?"vs":"at"} ${x.rk<=25?`#${x.rk} `:""}${esc(T(x.o).name)}</span><small>${esc(x.label||"")}</small></div>`:"";
   return `<div class="yb" style="--c1:${t.c1};--c2:${t.c2}">
     <div class="yb-cover"><div class="yb-mast">The ${y.season} Yearbook</div>
-      <div class="yb-team"><span class="gd-logo" style="background:linear-gradient(145deg,${t.c1},${t.c2});color:#fff">${esc(t.abbr)}</span><div><b>${esc(t.name)}</b><span>${esc(y.result)}${y.confChamp?` · ${esc(CONFS[t.conf])} champions`:""}</span></div></div>
+      <div class="yb-team"><span class="gd-logo crest">${crest(t)}</span><div><b>${esc(t.name)}</b><span>${esc(y.result)}${y.confChamp?` · ${esc(CONFS[t.conf])} champions`:""}</span></div></div>
       <div class="yb-rec"><b>${y.w}-${y.l}</b><span>Final rank #${y.rank}</span></div>
       <div class="yb-grade" aria-label="Season grade ${y.grade}"><small>Grade</small>${y.grade}</div></div>
     <div class="yb-page">
@@ -3943,17 +3997,17 @@ function jobsStep(O){
     <p>Expected about ${C.exp} wins, you won ${C.w}. Job security ${Math.round(C.before)} → <b>${Math.round(C.after)}</b> (${secLabel(C.after)}).</p>
     ${C.fired&&!C.taken?"<p><b>You've been fired.</b> Pick your next job to keep coaching.</p>":""}${C.stay?`<p><span class="tag good">Raise</span> You turned down the offers. The AD gave you an extension, +10 job security and +3 recruiting points.</p>`:""}</div>`;
   let main;
-  if(C.taken!==undefined){const t=T(C.taken);main=`<div class="newjob" style="--c1:${t.c1};--c2:${t.c2}"><span class="pk" style="color:#ffd34d">It's official</span><span class="gd-logo" style="background:linear-gradient(145deg,${t.c1},${t.c2});color:#fff">${esc(t.abbr)}</span><h2>Welcome to ${esc(t.name)}</h2><p>Their roster and recruiting class are already set. Your game plan comes with you.</p></div>`}
+  if(C.taken!==undefined){const t=T(C.taken);main=`<div class="newjob" style="--c1:${t.c1};--c2:${t.c2}"><span class="pk" style="color:#ffd34d">It's official</span><span class="gd-logo crest">${crest(t)}</span><h2>Welcome to ${esc(t.name)}</h2><p>Their roster and recruiting class are already set. Your game plan comes with you.</p></div>`}
   else if(C.stay)main="";
   else if(C.offers.length){
     main=`<div class="phone"><div class="ring" aria-hidden="true">📞</div><div><div class="eyebrow">${C.fired?"Your agent has news":"The phone is ringing"}</div><h2>${C.fired?"Schools willing to give you another shot":`${C.offers.length} school${C.offers.length>1?"s want":" wants"} you`}</h2></div></div>
     <div class="offers2">${C.offers.map(id=>{const t=T(id),f=offerInfo(id),conf=O.jobConfirm===id;return `<div class="offer2" style="--c1:${t.c1};--c2:${t.c2}">
-      <div class="of-top"><span class="gd-logo" style="background:linear-gradient(145deg,${t.c1},${t.c2});color:#fff">${esc(t.abbr)}</span><div><b>${esc(t.name)}</b><span>${esc(CONFS[t.conf])} · <span class="stars">${starStr(presStars(t))}</span></span></div></div>
+      <div class="of-top"><span class="gd-logo crest">${crest(t)}</span><div><b>${esc(t.name)}</b><span>${esc(CONFS[t.conf])} · <span class="stars">${starStr(presStars(t))}</span></span></div></div>
       <div class="of-facts"><div><b>${ovr(t)}</b><span>Roster OVR</span></div><div><b>${recStr(id)}</b><span>Last season</span></div><div><b>${f.yrs} yrs</b><span>Contract</span></div><div><b>$${f.sal}M</b><span>Per year</span></div></div>
       <p class="of-pitch">${esc(f.pitch)} <small>— Athletic director</small></p>
       <div class="of-pc"><div><span class="pk" style="color:var(--good)">Why go</span>${f.go.map(x=>`<p>+ ${esc(x)}</p>`).join("")||"<p>+ A fresh start</p>"}</div><div><span class="pk" style="color:var(--bad)">Why stay</span>${f.stay.map(x=>`<p>− ${esc(x)}</p>`).join("")}</div></div>
       <button class="btn ${conf?"":"ghost"}" data-act="takeJob" data-id="${id}">${conf?`Tap again to sign with ${esc(t.abbr)}`:"Take the job"}</button></div>`}).join("")}
-      ${C.fired?"":`<div class="offer2 stay" style="--c1:${me.c1};--c2:${me.c2}"><div class="of-top"><span class="gd-logo" style="background:linear-gradient(145deg,${me.c1},${me.c2});color:#fff">${esc(me.abbr)}</span><div><b>Stay at ${esc(me.name)}</b><span>Use the offers as leverage</span></div></div>
+      ${C.fired?"":`<div class="offer2 stay" style="--c1:${me.c1};--c2:${me.c2}"><div class="of-top"><span class="gd-logo crest">${crest(me)}</span><div><b>Stay at ${esc(me.name)}</b><span>Use the offers as leverage</span></div></div>
         <p class="of-pitch">Your AD matches the interest with an extension: +10 job security and +3 recruiting points.</p>${C.stay?'<span class="tag good">Done</span>':`<button class="btn" data-act="stayPut">Stay and get a raise</button>`}</div>`}</div>`;
   } else main=`<div class="phone quiet"><div class="ring" aria-hidden="true">📵</div><div><div class="eyebrow">Quiet phone</div><h2>No schools came calling this year</h2><p class="muted" style="margin:0">Win more than people expect and the bigger programs will notice.</p></div></div>`;
   return `${main}${sec}
