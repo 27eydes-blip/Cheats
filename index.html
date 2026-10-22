@@ -203,6 +203,33 @@ details summary{cursor:pointer;color:var(--amber);font-family:var(--num);font-we
 .finalists{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px}
 .fin{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
 .fin.mine{border-color:var(--amber)}
+/* ===== National champions ===== */
+.champ{--g1:#fff3c4;--g2:#ffd34d;--g3:#c8901a;position:relative;overflow:hidden;border-radius:18px;padding:26px 18px 22px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;color:#fff;
+  background:radial-gradient(520px 260px at 50% 0%,rgba(255,211,77,.35),transparent 70%),linear-gradient(135deg,var(--c1) 0%,#0b0a05 50%,var(--c2) 100%);
+  border:2px solid var(--g3);box-shadow:0 0 0 1px rgba(255,243,196,.2) inset,0 14px 50px rgba(255,182,39,.28),0 10px 30px rgba(0,0,0,.55)}
+.champ::before{content:"";position:absolute;inset:-50%;pointer-events:none;background:repeating-conic-gradient(from 0deg,rgba(255,211,77,.10) 0 8deg,transparent 8deg 22deg);animation:rays 30s linear infinite}
+@keyframes rays{to{transform:rotate(360deg)}}
+.champ>*:not(.confetti){position:relative}
+.champ .heis-trophy{font-size:clamp(64px,16vw,104px)}
+.champ-kicker{font-family:var(--num);font-weight:700;font-size:14px;letter-spacing:.3em;text-transform:uppercase;color:var(--g1)}
+.champ-title{font-family:var(--display);font-size:clamp(34px,9vw,68px);line-height:1;letter-spacing:.03em}
+.champ-team{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;font-family:var(--display);font-size:clamp(24px,6vw,40px);line-height:1.05;text-shadow:0 3px 0 rgba(0,0,0,.5)}
+.champ-team .gd-logo{width:clamp(64px,16vw,84px);height:clamp(64px,16vw,84px);font-size:clamp(18px,4.5vw,24px)}
+.champ-score{display:flex;align-items:center;gap:14px;font-family:var(--num);font-weight:700;font-size:clamp(26px,7vw,40px);font-variant-numeric:tabular-nums;background:rgba(0,0,0,.45);border:1px solid rgba(255,211,77,.45);border-radius:12px;padding:8px 18px}
+.champ-score .w{color:var(--g2)} .champ-score .l{color:#b9b3a0} .champ-score small{font-size:15px;letter-spacing:.1em;color:#ddd}
+.champ-facts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.champ-facts span{font-family:var(--num);font-weight:600;font-size:15px;letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:999px;background:rgba(0,0,0,.4);border:1px solid rgba(255,211,77,.35);color:var(--g1)}
+.champ-me{font-family:var(--num);font-weight:700;font-size:clamp(18px,4.5vw,22px);letter-spacing:.06em;text-transform:uppercase;color:#1a1300;background:linear-gradient(180deg,var(--g1),var(--g2) 50%,var(--g3));padding:8px 18px;border-radius:10px;box-shadow:0 4px 18px rgba(255,182,39,.5);animation:hfloat 2.4s ease-in-out infinite}
+.champ .confetti i:nth-child(3n){background:var(--c1)} .champ .confetti i:nth-child(3n+1){background:var(--c2)}
+@media (prefers-reduced-motion:reduce){.champ::before,.champ-me{animation:none}}
+/* ===== Preseason schedule step ===== */
+.pre-step{border:2px solid var(--amber);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(160deg,color-mix(in srgb,var(--amber) 14%,var(--panel)),var(--panel))}
+.pre-step h2{font-family:var(--display);font-weight:400;font-size:clamp(24px,6vw,34px)}
+.fullsched{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:6px}
+.fullsched div{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);font-size:14px;min-width:0}
+.fullsched div.nc{border-color:color-mix(in srgb,var(--amber) 55%,var(--line))}
+.fullsched .wk{font-family:var(--num);color:var(--muted);min-width:34px}
+.fullsched .nm2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* ===== Heisman: gold treatment ===== */
 .heis{--g1:#fff3c4;--g2:#ffd34d;--g3:#c8901a;--g4:#7a5208;position:relative;overflow:hidden;border-radius:16px;padding:22px 18px;display:flex;flex-direction:column;gap:14px;
   background:radial-gradient(600px 220px at 50% -40px,rgba(255,211,77,.28),transparent 70%),linear-gradient(160deg,#2a1f06 0%,#120d02 55%,#21180a 100%);
@@ -947,6 +974,16 @@ function autoSchedule(mode){
     if(mode==="easy"){const p=myGame(w);if(p[0]!==u){const wk=S.schedule[w],i=wk.indexOf(p);wk[i]=[u,p[0]]}}
   }
   refreshSchedule();
+}
+function preSchedStep(){
+  const u=S.user,nc=new Set(nonConfWeeks(T(u).conf));
+  const full=[...Array(12).keys()].map(w=>{const g=myGame(w);if(!g)return `<div><span class="wk">Wk ${w+1}</span><span class="muted">Bye</span></div>`;
+    const o=g[0]===u?g[1]:g[0];return `<div class="${nc.has(w)?"nc":""}"><span class="wk">Wk ${w+1}</span>${badge(T(o))}<span class="nm2">${g[0]===u?"vs":"at"} ${esc(T(o).name)}</span></div>`}).join("");
+  return `<div class="pre-step"><div class="eyebrow">Preseason · ${S.season}</div><h2>Set your schedule</h2>
+    <p class="muted" style="margin:0">Pick your non-conference opponents before the season starts. Gold-outlined weeks are the ones you can change.</p>
+    ${schedEditor()}
+    <div class="panel"><h3>Your full ${S.season} schedule</h3><div class="fullsched">${full}</div></div>
+    <div class="row" style="justify-content:center"><button class="btn big" data-act="lockSched">Lock in schedule</button></div></div>`;
 }
 function schedEditor(){
   if(!canEditSched())return "";
@@ -1800,7 +1837,7 @@ function finishSigning(){
   const ra=S.off.realign||[],cr=classRankings(),myRank=cr.findIndex(x=>x.tid===S.user)+1;
   S.classRank={season:S.season+1,list:cr.slice(0,25),mine:cr[myRank-1],myRank};
   S.classHist=(S.classHist||[]).concat({season:S.season+1,rank:myRank,team:S.user});
-  S.season++;S.week=0;S.phase="regular";S.results=[];S.ccg=null;S.post=null;S.heisman=null;S.off=null;S.news=[];S.weekly=null;S.lastGame=null;S.tend=null;S.tendD=null;S.pv=null;S.tab="home";
+  S.season++;S.week=0;S.phase="regular";S.results=[];S.ccg=null;S.post=null;S.heisman=null;S.off=null;S.news=[];S.weekly=null;S.lastGame=null;S.tend=null;S.tendD=null;S.pv=null;S.tab="home";S.schedLocked=false;
   for(const t of S.teams){t.active=true;for(const p of t.roster){p.s=blank();p.inj=0}if(t.id!==S.user||!t.manualRS)autoRedshirt(t)}
   S.schedule=makeSchedule();buildPL();RK.key=null;S.wx={};S.mo={};voteAP();
   S.pre=buildPreseason();
@@ -1882,15 +1919,25 @@ function renderSelect(){
 function unitBars(t){const u=units(t);return `<div class="units">${UNITS.map(k=>`<span>${k}</span><div class="bar"><i style="width:${clamp((u[k]-40)/59*100,0,100)}%"></i></div><span style="text-align:right">${u[k]}</span>`).join("")}</div>`}
 function recStr(id){const r=record(id);return `${r.w}-${r.l}`}
 function teamCell(id,extra){const t=T(id);return `<span class="row" style="gap:8px;flex-wrap:nowrap">${badge(t)}<span>${rankTag(id)}${esc(t.name)}${extra||""}</span></span>`}
+function champHero(withBtn){
+  const ch=T(S.post.champ),f=S.post.final,lo=T(f.h===ch.id?f.a:f.h),ws=Math.max(f.hs,f.as),ls=Math.min(f.hs,f.as),r=record(ch.id),sd=S.post.seeds.indexOf(ch.id);
+  const conf=Array.from({length:36},(_,i)=>`<i style="left:${(i*29)%100}%;animation-duration:${3+(i*7)%5}s;animation-delay:-${(i*11)%6}s"></i>`).join("");
+  const titles=(S.history||[]).filter(h=>h.champ===ch.id).length+(S.history.some(h=>h.season===S.season)?0:1);
+  const facts=[`${r.w}-${r.l}`,sd>=0?`#${sd+1} seed`:"",ch.id===S.user||titles>1?`Title #${titles}`:"",S.heisman&&S.heisman[0].team===ch.id?`Heisman: ${S.heisman[0].name}`:""].filter(Boolean);
+  return `<div class="champ" style="--c1:${ch.c1};--c2:${ch.c2}"><div class="confetti" aria-hidden="true">${conf}</div>
+    <div class="heis-trophy" aria-hidden="true">🏆</div>
+    <div class="champ-kicker">${S.season} College Football Playoff</div>
+    <div class="champ-title gold">National Champions</div>
+    <div class="champ-team"><span class="gd-logo" style="background:linear-gradient(145deg,${ch.c1},${ch.c2});color:#fff">${esc(ch.abbr)}</span>${esc(ch.name)}</div>
+    <div class="champ-score"><span class="w">${esc(ch.abbr)} ${ws}</span><small>FINAL</small><span class="l">${ls} ${esc(lo.abbr)}</span></div>
+    <div class="champ-facts">${facts.map(x=>`<span>${esc(x)}</span>`).join("")}</div>
+    ${ch.id===S.user?`<div class="champ-me">You won the national title!</div>`:""}
+    ${withBtn?`<button class="btn big" data-act="offseason">Go to the offseason</button>`:""}</div>`;
+}
 function nextCard(){
   const ug=userGame(),me=T(S.user);
   if(S.phase==="post"&&S.post.round==="done"){
-    const ch=T(S.post.champ),f=S.post.final;
-    return `<div class="panel" style="align-items:center;text-align:center">
-      <h3>${S.season} national champions</h3>
-      <div class="final-banner">${badge(ch)} ${esc(ch.name)}</div>
-      <p class="num">${esc(T(f.h).abbr)} ${f.hs} - ${f.as} ${esc(T(f.a).abbr)}</p>
-      <button class="btn" data-act="offseason">Go to the offseason</button></div>`;
+    return champHero(true);
   }
   if(ug){
     const h=T(ug.h),a=T(ug.a),u=S.user,riv=rivalryOf(ug.h,ug.a),holder=riv&&S.trophies[riv]!==undefined?T(S.trophies[riv]).abbr:null;
@@ -1962,7 +2009,7 @@ function renderHub(){
   <nav class="navgroups" aria-label="Sections">${groups.map(([g,c,ks])=>{const items=tabs.filter(([k])=>ks.includes(k));return items.length?`<div class="navg" data-c="${c}"><span class="navl">${g}</span><div class="tabs" role="tablist">${items.map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" role="tab" aria-selected="${S.tab===k}" data-act="tab" data-t="${k}">${l}</button>`).join("")}</div></div>`:""}).join("")}</nav>
   <div id="saveWarn" class="panel warn" ${saveErr?"":"hidden"}><b>Your progress isn't saving.</b><p>This browser's storage is full or turned off. Free up space or leave private browsing mode, then keep playing to save again.</p></div>
   ${S.tab==="home"?`<div class="hubgrid ${side.length?"":"solo"}">
-    <div class="hubmain">${eventCard()}${(()=>{const ug=userGame();return ug?hypeHTML(ug):""})()}${nextCard()}</div>
+    <div class="hubmain">${canEditSched()&&!S.schedLocked?preSchedStep():`${eventCard()}${(()=>{const ug=userGame();return ug?hypeHTML(ug):""})()}${nextCard()}`}</div>
     ${side.length?`<div class="hubside">${side.join("")}</div>`:""}
   </div>`:`<section class="tabbody">${({news:tabNews,plan:tabPlan,weekly:tabWeekly,preseason:tabPreseason,schedule:tabSchedule,standings:tabStandings,top25:tabTop25,leaders:tabLeaders,roster:tabRoster,coach:tabCoach,post:tabPost,history:tabHistory})[S.tab]()}</section>`}
   <div class="row"><button class="btn ${S.confirmReset?"danger":"ghost"}" data-act="reset">${S.confirmReset?"Tap again to erase this dynasty":"New dynasty"}</button></div>`;
@@ -2132,7 +2179,7 @@ function gameRow(g){
 }
 function tabPost(){
   const P=S.post;if(!P)return "";
-  return `<div class="panel"><h3>Playoff bracket</h3>${bracketHTML()}</div>
+  return `${P.round==="done"?champHero(false):""}<div class="panel"><h3>Playoff bracket</h3>${bracketHTML()}</div>
   <div class="grid2">
     <div class="panel"><h3>College Football Playoff</h3>
       <div class="tw"><table class="tbl"><tbody>${P.seeds.map((id,i)=>`<tr class="${id===S.user?"me":""}"><td class="n">${i+1}</td><td>${esc(T(id).name)} ${i<4?'<span class="tag">Bye</span>':""}${S.ccg.some(g=>g.winner===id)?' <span class="tag amber">Conf champ</span>':""}</td><td class="n">${recStr(id)}</td></tr>`).join("")}</tbody></table></div>
@@ -2894,8 +2941,8 @@ const ACT={
   pick(d){newDynasty(+d.id,pickQlen)},
   tab(d){S.tab=d.t},
   jump(d){jumpTo=d.id},
-  sim(){const gm=userGame();playRound(simGame(gm))},
-  simSeason(){while(S.phase==="regular")playRound(null)},
+  sim(){S.schedLocked=true;const gm=userGame();playRound(simGame(gm))},
+  simSeason(){S.schedLocked=true;while(S.phase==="regular")playRound(null)},
   simRound(){playRound(null)},
   offseason(){beginOffseason();scrollTo(0,0)},
   offStep(d){if(S.off.car&&S.off.car.fired&&!S.off.car.taken)return;settleOffers();S.off.step=d.s;scrollTo(0,0)},
@@ -2914,7 +2961,8 @@ const ACT={
   diff(d){S.diff=+d.d},
   autoSched(d){autoSchedule(d.m)},
   homeAway(d){toggleHome(+d.w)},
-  watch(){const gm=userGame();if(gm){S.event&&resolveEvent(S.event.choices?S.event.choices[S.event.choices.length-1].k:null);startWatch(gm,"user");scrollTo(0,0)}},
+  lockSched(){S.schedLocked=true;scrollTo(0,0)},
+  watch(){S.schedLocked=true;const gm=userGame();if(gm){S.event&&resolveEvent(S.event.choices?S.event.choices[S.event.choices.length-1].k:null);startWatch(gm,"user");scrollTo(0,0)}},
   watchGotw(){const gm=gotwGame();if(gm){startWatch(gm,"gotw");scrollTo(0,0)}},
   wPause(){if(WATCH)WATCH.paused=!WATCH.paused},
   wSpeed(d){if(WATCH)WATCH.speed=+d.v},
