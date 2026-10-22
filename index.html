@@ -4,25 +4,27 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>[hidden]{display:none!important}body{margin:0}</style>
-<title>Gridiron Dynasty</title>
+<title>CFB Dynasty 1</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Graduate&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: one stadium-at-night look. Scoreboard on top, the field in the middle, the play-call deck below. */
+/* Layout: Saturday night under the lights. Team-colored header, a two-column "this week" board, grouped navigation below. */
 :root{
-  --night:#0c1411; --panel:#14201b; --panel-2:#1b2a23; --line:#2a3c34;
-  --chalk:#edf3ee; --muted:#93a89d; --turf:#2e6a3d; --turf-dark:#285e36;
-  --amber:#ffb627; --good:#5fd38d; --bad:#ff6b5b; --los:#6fb7ff;
+  --night:#0a0f1f; --panel:#121a31; --panel-2:#19223f; --line:#27325a;
+  --chalk:#eef2ff; --muted:#9aa5c8; --turf:#2e6a3d; --turf-dark:#285e36;
+  --amber:#ffb627; --good:#3ddc97; --bad:#ff5d6c; --los:#6fb7ff;
+  --blue:#4ea8ff; --purple:#a78bfa; --teal:#2dd4bf; --pink:#f472b6;
   --display:'Graduate','Rockwell','Courier New',serif;
   --body:'Barlow',system-ui,-apple-system,sans-serif;
   --num:'Barlow Condensed','Arial Narrow',system-ui,sans-serif;
   color-scheme:dark;
 }
 html,body{background:var(--night);color:var(--chalk)}
+body{background:radial-gradient(1200px 500px at 50% -200px,#1b2a5c 0%,transparent 70%),var(--night)}
 body{font-family:var(--body);font-size:15px;line-height:1.45;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
-#app{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+#app{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 h1,h2,h3{margin:0;text-wrap:balance}
 h1{font-family:var(--display);font-weight:400;font-size:clamp(30px,6vw,48px);letter-spacing:.02em;line-height:1.05}
 h2{font-family:var(--display);font-weight:400;font-size:20px;letter-spacing:.03em}
@@ -250,6 +252,46 @@ details summary{cursor:pointer;color:var(--amber);font-family:var(--num);font-we
 .sel-name{font-size:18px}
 @keyframes selIn{from{opacity:0;transform:translateY(-8px)}}
 @media (prefers-reduced-motion:reduce){.sel{animation:none}}
+/* ---- CFB Dynasty 1 refresh ---- */
+.panel{border-radius:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--panel) 92%,#fff 3%),var(--panel))}
+.panel[data-c]{border-top:3px solid var(--acc)}
+[data-c="blue"]{--acc:var(--blue)} [data-c="green"]{--acc:var(--good)} [data-c="purple"]{--acc:var(--purple)} [data-c="amber"]{--acc:var(--amber)}
+[data-c="bad"]{--acc:var(--bad)} [data-c="good"]{--acc:var(--good)} [data-c="pink"]{--acc:var(--pink)} [data-c="teal"]{--acc:var(--teal)}
+h3{color:color-mix(in srgb,var(--acc,var(--muted)) 55%,var(--muted))}
+.btn{border-radius:10px;box-shadow:0 2px 0 color-mix(in srgb,var(--amber) 55%,#000)}
+.btn.ghost{box-shadow:none;background:color-mix(in srgb,var(--panel-2) 70%,transparent)}
+.btn.ghost:hover{border-color:var(--blue);color:#fff}
+.tab{border-radius:999px;background:color-mix(in srgb,var(--panel-2) 60%,transparent)}
+.brand{padding:22px 20px;border-radius:16px;background:linear-gradient(120deg,#1b2a5c,#2a1b5c 45%,#5c1b2a);border:1px solid var(--line);position:relative;overflow:hidden}
+.brand::after{content:"";position:absolute;inset:auto -40px -40px auto;width:220px;height:220px;border-radius:50%;background:radial-gradient(var(--amber),transparent 65%);opacity:.18}
+.brand h1{font-size:clamp(34px,8vw,60px)}
+.one{display:inline-grid;place-items:center;width:1.25em;height:1.25em;border-radius:50%;background:var(--amber);color:#1a1300;font-size:.8em;vertical-align:.08em}
+.teamband{display:flex;gap:16px;align-items:center;padding:18px 20px;border-radius:16px;color:#fff;
+  background:linear-gradient(115deg,var(--t1) 0%,color-mix(in srgb,var(--t1) 55%,#0a0f1f) 60%,color-mix(in srgb,var(--t2) 25%,#0a0f1f) 100%);border:1px solid rgba(255,255,255,.14);text-shadow:0 1px 2px rgba(0,0,0,.45)}
+.teamband .badge{min-width:70px;height:46px;font-size:20px;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+.tb-eyebrow{color:#fff;opacity:.85}
+.tb-name{font-size:clamp(26px,6vw,42px)}
+.tb-sub{font-family:var(--num);font-size:15px;letter-spacing:.04em;opacity:.9}
+.teamband .stars{color:#ffd76a}
+.chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:8px}
+.chip{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--acc)}
+.chip span{font-family:var(--num);font-weight:600;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc)}
+.chip b{font-family:var(--num);font-size:22px;line-height:1.1;font-variant-numeric:tabular-nums}
+.chip small{font-size:13px;color:var(--muted);font-weight:500}
+.hubgrid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:18px;align-items:start}
+.hubgrid.solo{grid-template-columns:1fr}
+.hubmain,.hubside{display:flex;flex-direction:column;gap:18px;min-width:0}
+@media (max-width:860px){.hubgrid{grid-template-columns:1fr}}
+.gamecard{position:relative;overflow:hidden}
+.gamecard::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,var(--ga),var(--gh))}
+.navgroups{display:flex;flex-wrap:wrap;gap:10px 18px;padding:10px 12px;border-radius:14px;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(6px);border:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.navg{display:flex;align-items:center;gap:8px;min-width:0;max-width:100%}
+.navl{font-family:var(--num);font-weight:700;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--acc);flex:none}
+.navg .tabs{flex-wrap:nowrap;overflow-x:auto}
+.navg .tab{padding:6px 12px;font-size:14px}
+.navg .tab.on{background:var(--acc);border-color:var(--acc);color:#0a0f1f}
+.tabbody{display:flex;flex-direction:column;gap:18px;min-width:0}
+@media (max-width:600px){.navgroups{flex-direction:column;gap:8px}.navg{width:100%}}
 .slot{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
 .slot.done{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
 .cand{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px 12px;align-items:center}
@@ -1695,9 +1737,9 @@ function renderSelect(){
   const saved=SAVED;
   const pv={teams:TEAMS0.map((r,i)=>({id:i,name:r[0],abbr:r[1],c1:r[2],c2:r[3],base:r[4],conf:r[5]}))};
   app.innerHTML=`
-  <div class="hero">
-    <div class="eyebrow">College football GM</div>
-    <h1>Gridiron Dynasty</h1>
+  <div class="hero brand">
+    <div class="eyebrow">College football dynasty</div>
+    <h1>CFB Dynasty <span class="one">1</span></h1>
     <p class="muted" style="max-width:62ch">Take over a program. Pick your offense and game plan, sim the games, win your conference, and make the 12-team playoff. Your players put up real stats and chase the Heisman. In the offseason, recruit high schoolers, raid the transfer portal and level up your coaching skills.</p>
   </div>
   ${saved?`<div class="panel"><div class="row" style="justify-content:space-between"><div><h3>Saved dynasty</h3><p>${esc(saved.teams[saved.user].name)}, ${saved.season} season</p></div><button class="btn" data-act="resume">Continue dynasty</button></div></div>`:""}
@@ -1730,7 +1772,7 @@ function nextCard(){
     const h=T(ug.h),a=T(ug.a),riv=rivalryOf(ug.h,ug.a),holder=riv&&S.trophies[riv]!==undefined?T(S.trophies[riv]).abbr:null;
     const t2=t=>{const P=plan(t.id),D=dplan(t.id);return `${esc(t.abbr)} (${t.id===S.user?"you":`Coach ${esc(t.coach?t.coach.n:"TBA")}`}): ${esc(SCHEMES[P.scheme].name)} offense, ${P.pass}% pass · ${esc(DSCHEMES[D.scheme].name)} defense${D.focus?`, ${esc(FOCUS.find(f=>f[1]===D.focus)[0].toLowerCase())}`:""} · ${esc(AGGR[P.aggr-1][0])}`};
     const side=t=>`<div class="side">${badge(t)}<b>${rankTag(t.id)}${esc(t.name)}</b><span class="num muted">${recStr(t.id)} · OVR ${ovr(t)}</span></div>`;
-    return `<div class="panel">
+    return `<div class="panel gamecard" style="--ga:${a.c1};--gh:${h.c1}">
       <div class="row" style="justify-content:space-between"><h3>${esc(ug.label)}${ug.neutral?" · neutral site":""}</h3>${riv?`<span class="tag amber">${esc(riv)}${holder?` · ${esc(holder)} hold it`:""}</span>`:""}</div>
       <div class="matchup">${side(a)}<div class="vs">${ug.neutral?"VS":"AT"}</div>${side(h)}</div>
       <p class="muted" style="text-align:center;font-size:13.5px">${ug.neutral?"Neutral site. No home-field advantage.":`${crowdStr(h)}${ug.h===S.user?". Home-field edge is yours.":""}`}</p>
@@ -1763,23 +1805,31 @@ function renderHub(){
   const preOk=S.phase==="regular"&&S.results.length===0,wkOk=!!S.weekly&&S.weekly.season===S.season;
   const tabs=TABS.filter(([k])=>(k!=="post"||S.post)&&(k!=="preseason"||preOk)&&(k!=="weekly"||wkOk));
   if(!tabs.some(([k])=>k===S.tab))S.tab=wkOk?"weekly":preOk?"preseason":"schedule";
+  const jc=S.job.sec>=70?"good":S.job.sec>=45?"amber":"bad";
+  const chip=(c,l,v)=>`<div class="chip" data-c="${c}"><span>${l}</span><b>${v}</b></div>`;
+  const groups=[["Season","blue",["weekly","preseason","schedule","standings","top25","post"]],["Team","green",["roster","plan","coach"]],["Records","purple",["leaders","history"]]];
+  const side=[partyCard(),gotwCard(),lastGameHTML(),S.news.length?`<div class="panel" data-c="purple"><h3>Program news</h3><div class="news">${S.news.slice(0,5).map(n=>`<div>${esc(n)}</div>`).join("")}</div></div>`:""].filter(Boolean);
   app.innerHTML=`
-  <div class="hub-head">
+  <div class="teamband" style="--t1:${me.c1};--t2:${me.c2}">
     ${badge(me)}
-    <div style="min-width:0"><div class="eyebrow">${S.season} season · ${esc(roundName())}</div>
-    <h1 style="font-size:clamp(24px,5vw,36px)">${esc(me.name)}</h1>
-    <p class="num muted">${recStr(S.user)} (${cr.w}-${cr.l} ${esc(CONFS[me.conf])}) · Ranked #${rankOf(S.user)} · SOS #${sosRankOf(S.user)} · OVR ${ovr(me)} · Job: <span class="${S.job.sec<45?"sec-bad":""}">${secLabel(S.job.sec)} (${Math.round(S.job.sec)})</span> · <span class="stars">${starStr(presStars(me))}</span>${S.coach.pts?` · <span style="color:var(--amber)">${S.coach.pts} skill pt${S.coach.pts>1?"s":""}</span>`:""}</p></div>
+    <div style="min-width:0"><div class="eyebrow tb-eyebrow">CFB Dynasty 1 · ${S.season} season · ${esc(roundName())}</div>
+    <h1 class="tb-name">${esc(me.name)}</h1><div class="tb-sub">${esc(CONFS[me.conf])} · <span class="stars">${starStr(presStars(me))}</span> program</div></div>
   </div>
+  <div class="chips">
+    ${chip("green","Record",`${recStr(S.user)} <small>(${cr.w}-${cr.l} conf)</small>`)}
+    ${chip("amber","AP rank",rankOf(S.user)<=25?"#"+rankOf(S.user):"NR")}
+    ${chip("blue","Schedule",`#${sosRankOf(S.user)} SOS`)}
+    ${chip("purple","Team OVR",ovr(me))}
+    ${chip(jc,"Job",`${secLabel(S.job.sec)} <small>${Math.round(S.job.sec)}</small>`)}
+    ${S.coach.pts?chip("pink","Skill points",S.coach.pts):""}
+  </div>
+  <nav class="navgroups" aria-label="Sections">${groups.map(([g,c,ks])=>{const items=tabs.filter(([k])=>ks.includes(k));return items.length?`<div class="navg" data-c="${c}"><span class="navl">${g}</span><div class="tabs" role="tablist">${items.map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" role="tab" aria-selected="${S.tab===k}" data-act="tab" data-t="${k}">${l}</button>`).join("")}</div></div>`:""}).join("")}</nav>
   <div id="saveWarn" class="panel warn" ${saveErr?"":"hidden"}><b>Your progress isn't saving.</b><p>This browser's storage is full or turned off. Free up space or leave private browsing mode, then keep playing to save again.</p></div>
-  ${eventCard()}
-  ${(()=>{const ug=userGame();return ug?hypeHTML(ug):""})()}
-  ${nextCard()}
-  ${partyCard()}
-  ${gotwCard()}
-  ${lastGameHTML()}
-  ${S.news.length?`<div class="panel"><h3>Program news</h3><div class="news">${S.news.slice(0,5).map(n=>`<div>${esc(n)}</div>`).join("")}</div></div>`:""}
-  <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" role="tab" aria-selected="${S.tab===k}" data-act="tab" data-t="${k}">${l}</button>`).join("")}</div>
-  ${({plan:tabPlan,weekly:tabWeekly,preseason:tabPreseason,schedule:tabSchedule,standings:tabStandings,top25:tabTop25,leaders:tabLeaders,roster:tabRoster,coach:tabCoach,post:tabPost,history:tabHistory})[S.tab]()}
+  <div class="hubgrid ${side.length?"":"solo"}">
+    <div class="hubmain">${eventCard()}${(()=>{const ug=userGame();return ug?hypeHTML(ug):""})()}${nextCard()}</div>
+    ${side.length?`<div class="hubside">${side.join("")}</div>`:""}
+  </div>
+  <section class="tabbody">${({plan:tabPlan,weekly:tabWeekly,preseason:tabPreseason,schedule:tabSchedule,standings:tabStandings,top25:tabTop25,leaders:tabLeaders,roster:tabRoster,coach:tabCoach,post:tabPost,history:tabHistory})[S.tab]()}</section>
   <div class="row"><button class="btn ${S.confirmReset?"danger":"ghost"}" data-act="reset">${S.confirmReset?"Tap again to erase this dynasty":"New dynasty"}</button></div>`;
 }
 function resultCell(g,id){
@@ -1901,7 +1951,7 @@ function tabPlan(){
 function lastGameHTML(){
   const L=S.lastGame;if(!L)return "";
   const u=S.user,o=L.home===u?L.away:L.home,won=L.score[u]>L.score[o];
-  return `<div class="panel"><div class="row" style="justify-content:space-between"><h3>Last game · ${esc(L.label)}</h3><span class="wl ${won?"w":"l"}" style="font-size:18px">${won?"W":"L"} ${L.score[u]}-${L.score[o]}${L.ot?` (${L.ot>1?L.ot:""}OT)`:""}</span></div>
+  return `<div class="panel" data-c="blue"><div class="row" style="justify-content:space-between"><h3>Last game · ${esc(L.label)}</h3><span class="wl ${won?"w":"l"}" style="font-size:18px">${won?"W":"L"} ${L.score[u]}-${L.score[o]}${L.ot?` (${L.ot>1?L.ot:""}OT)`:""}</span></div>
     <p>${won?"Beat":"Lost to"} ${esc(T(o).name)}. ${esc(T(u).abbr)}: ${L.split[u].pa} passes for ${L.split[u].py} yds, ${L.split[u].ra} runs for ${L.split[u].ry} yds${L.pen?`, ${L.pen[u].n} penalties for ${L.pen[u].y} yds`:""}.</p>
     ${L.cond?`<p class="muted" style="font-size:13.5px">${esc(condText(L.cond))}</p>`:""}
     <details><summary>Key plays and box score</summary>
@@ -2207,7 +2257,7 @@ function tabWeekly(){
   const up=W.upset,me=T(S.user);
   const move=(x,i)=>{if(x.prev===null)return '<span class="mv up">NEW</span>';const d=x.prev-(i+1);return d>0?`<span class="mv up">▲${d}</span>`:d<0?`<span class="mv dn">▼${-d}</span>`:'<span class="mv">–</span>'};
   return `
-  <div class="weekly-mast"><div><div class="eyebrow">Gridiron Weekly · Issue ${W.edition}</div><h2>${W.preview?esc(W.preview):"Season finale"}</h2></div><span class="muted num">${esc(W.recap)} in review</span></div>
+  <div class="weekly-mast"><div><div class="eyebrow">CFB Dynasty Weekly · Issue ${W.edition}</div><h2>${W.preview?esc(W.preview):"Season finale"}</h2></div><span class="muted num">${esc(W.recap)} in review</span></div>
   ${W.rivs&&W.rivs.length>=6?`<div class="panel"><h3>It's rivalry week</h3><div class="news">${W.rivs.slice(0,12).map(r=>`<div class="${r.h===S.user||r.a===S.user?"me-t":""}"><b>${esc(r.r)}</b> · ${esc(T(r.a).name)} at ${esc(T(r.h).name)}</div>`).join("")}</div></div>`:""}
   ${up?`<div class="upset" style="background:${T(up.w).c1};color:${T(up.w).c2}">
     <span class="upset-k">Upset of the week · ${Math.round(up.pw*100)}% chance to win</span>
