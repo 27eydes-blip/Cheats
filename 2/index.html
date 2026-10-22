@@ -2373,7 +2373,7 @@ function finishSigning(){
 function newDynasty(userId,qlen){
   S={v:8,nextPid:1,view:"hub",tab:"schedule",user:userId,qlen,season:2026,week:0,phase:"regular",results:[],ccg:null,post:null,heisman:null,
      history:[],trophies:{},ach:{},news:[],alumni:[],rivRec:{},job:{sec:70,yrs:0},firstTeam:userId,fac:{},diff:1,coach:{pts:2,off:0,def:0,rec:0,dev:0,sec:0,st:0},off:null,game:null,confirmReset:false};
-  S.teams=TEAMS0.map(makeTeam);addSammy();
+  S.teams=TEAMS0.map(makeTeam);addSammy();addKramer();
   S.schedule=makeSchedule();buildPL();RK.key=null;S.wx={};S.mo={};voteAP();
   S.pre=buildPreseason();S.tab="home";
   news(`You took the job at ${T(userId).name}. You have 2 coach skill points to spend.`);
@@ -3825,6 +3825,12 @@ function lockerTab(){
     ${risk.length?`<div class="panel" data-c="bad"><h3>Needs your attention</h3>${risk.map(row).join("")}<p class="muted" style="font-size:13px;margin:0">Below 40 there's a real chance they enter the transfer portal after the season.</p></div>`:""}
     ${(S.lrlog||[]).length?`<div class="panel" data-c="purple"><h3>Locker room log</h3><div class="news">${S.lrlog.slice(0,8).map(l=>`<div>${esc(l.txt)}</div>`).join("")}</div></div>`:""}
     ${groups.map(([g,ps])=>`<div class="panel" data-c="green"><h3>${g}</h3>${t.roster.filter(p=>ps.includes(p.pos)).sort((a,b)=>ps.indexOf(a.pos)-ps.indexOf(b.pos)||(st.has(b)?1:0)-(st.has(a)?1:0)||b.ovr-a.ovr).map(row).join("")}</div>`).join("")}`;
+}
+// Army's freshman phenom starts every new dynasty under center.
+function addKramer(){
+  const t=S.teams.find(x=>x.abbr==="ARMY");if(!t)return;
+  const q=t.roster.filter(p=>p.pos==="QB").sort((a,b)=>b.ovr-a.ovr)[0];if(!q)return;
+  q.n="Josh Kramer";q.ovr=82;q.yr=0;q.rs=false;q.rsu=false;q.rel=null;giveArch(q,1);
 }
 // The face of the sport: every new dynasty opens with Sammy Eyde under center at Alabama.
 function addSammy(){
