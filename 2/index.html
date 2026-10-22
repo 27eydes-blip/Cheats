@@ -1027,6 +1027,53 @@ body{background:
 .celeb-word{align-self:center;text-align:center;font-family:var(--display);font-size:clamp(22px,6vw,34px);letter-spacing:.06em;padding:8px 16px;border-radius:14px;color:#fff;background:linear-gradient(135deg,var(--c1),color-mix(in srgb,var(--c1) 45%,#000));border:2px solid var(--c2);box-shadow:0 0 30px color-mix(in srgb,var(--c1) 60%,transparent);animation:pgPop .6s .2s cubic-bezier(.2,1.4,.4,1) both}
 .celeb-word small{display:block;font-family:var(--num);font-weight:700;font-size:14px;letter-spacing:.14em;text-transform:uppercase;opacity:.9}
 @media (prefers-reduced-motion:reduce){.fl,.vs-s,.vs-word,.ovl.vs,.tk-run,.scene .precip,.scene .lt,.gameday.rivgame,.celeb .confetti i,.celeb .fw b,.celeb-word{animation:none!important}.ovl.vs{display:none}.ovl.flash{display:none}}
+/* ===== Live game, rebuilt ===== */
+.lg{display:flex;flex-direction:column;gap:14px}
+.lg-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--num)}
+.lg-live{font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:rgba(251,113,133,.15);color:#ff8fa3;border:1px solid rgba(251,113,133,.4)}
+.lg-live.done{background:rgba(255,255,255,.06);color:var(--muted);border-color:var(--line)}
+.lg-lab{font-weight:700;font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-soft)}
+.lg-cond{margin-left:auto;font-size:14px;color:var(--muted)}
+.sb{display:grid;grid-template-columns:1fr auto 1fr;align-items:stretch;border-radius:20px;overflow:hidden;background:#070a12;border:1px solid rgba(255,255,255,.12);box-shadow:0 16px 40px rgba(0,0,0,.5)}
+.sb-t{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto 1fr;column-gap:10px;align-items:center;padding:12px 14px;min-width:0;position:relative}
+.sb-t::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--c)}
+.sb-t.home::before{inset:0 0 0 auto}
+.sb-t.home{grid-template-columns:1fr auto;text-align:right}
+.sb-t.home .sb-logo{grid-column:2;grid-row:1/3}.sb-t.home .sb-name,.sb-t.home .sb-rec{grid-column:1}.sb-t.home .sb-score{grid-column:1/3;justify-self:end}
+.sb-logo{grid-row:1/3;display:grid;place-items:center;width:42px;height:42px;border-radius:50%;font-family:var(--num);font-weight:700;font-size:13px;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+.sb-name{font-family:var(--num);font-weight:700;font-size:17px;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-ball{font-style:normal;font-size:13px;margin:0 4px}
+.sb-rec{font-family:var(--num);font-size:12.5px;color:var(--muted)}
+.sb-score{grid-column:1/3;font-family:var(--num);font-weight:700;font-size:clamp(44px,13vw,64px);line-height:1;font-variant-numeric:tabular-nums;margin-top:4px}
+.sb-t.lose .sb-score{color:#6b7591}.sb-t.win .sb-score{color:var(--gold-soft)}
+.sb-mid{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;padding:10px 12px;background:linear-gradient(180deg,#141b30,#0b1020);border-inline:1px solid rgba(255,255,255,.08);min-width:96px;text-align:center}
+.sb-clk{font-family:var(--num);font-weight:700;font-size:18px;letter-spacing:.04em;color:#fff;white-space:nowrap}
+.sb-dd{font-family:var(--num);font-weight:700;font-size:12.5px;padding:3px 8px;border-radius:8px;background:linear-gradient(180deg,#ffd987,#f5b83d);color:#1d1400;white-space:nowrap}
+.lg-final{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:16px;border-radius:18px;background:linear-gradient(160deg,color-mix(in srgb,var(--c) 22%,var(--panel)),var(--panel));border:1px solid color-mix(in srgb,var(--c) 45%,var(--line))}
+.lg-final b{font-family:var(--display);font-weight:400;font-size:clamp(22px,6vw,32px);line-height:1.1}
+.lg-final .btn{min-width:220px}
+.lg-field{position:relative;height:96px;border-radius:14px;overflow:hidden;border:2px solid rgba(255,255,255,.75);background:repeating-linear-gradient(90deg,#2f6b3e 0 8.4%,#2a613a 8.4% 16.8%);box-shadow:inset 0 0 30px rgba(0,0,0,.35)}
+.lg-ez{position:absolute;top:0;bottom:0;width:8%;display:grid;place-items:center;font-family:var(--num);font-weight:700;font-size:12px;writing-mode:vertical-rl;letter-spacing:.12em}
+.lg-ez.l{left:0;transform:rotate(180deg)}.lg-ez.r{right:0}
+.lg-yl{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.35)}
+.lg-yl em{position:absolute;bottom:4px;left:3px;font-style:normal;font-family:var(--num);font-size:10px;color:rgba(255,255,255,.6)}
+.lg-fd{position:absolute;top:0;bottom:0;width:3px;background:#ffd34d;box-shadow:0 0 8px #ffd34d;transform:translateX(-50%)}
+.lg-ball{position:absolute;top:50%;width:22px;height:13px;border-radius:50%;background:#7a3f1d;border:1.5px solid #f3e6d6;transform:translate(-50%,-50%);transition:left .35s ease;box-shadow:0 3px 6px rgba(0,0,0,.5)}
+.lg-field .dsum{bottom:auto;top:5px}
+.lg-play{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:14px;background:var(--panel);border:1px solid rgba(245,184,61,.4);border-left:4px solid var(--amber)}
+.lg-play span{font-family:var(--num);font-weight:700;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-soft)}
+.lg-play p{margin:0;font-size:15.5px;font-weight:600}
+.lg-wp{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:16px;background:var(--panel);border:1px solid var(--hair)}
+.lg-wp-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-family:var(--num);font-size:13px}
+.lg-wp-h>span:first-child{font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-size:11.5px}
+.lg-wp svg{width:100%;height:84px;display:block;border-radius:8px;background:rgba(255,255,255,.02)}
+.lg-wp-empty{height:84px;display:grid;place-items:center;color:var(--muted);font-size:13px}
+.lg-wp-ax{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:var(--num);letter-spacing:.06em}
+.lg-ctl{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+.seg{display:inline-flex;padding:3px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid var(--hair)}
+.seg button{font-family:var(--num);font-weight:700;font-size:15px;padding:8px 14px;border-radius:9px;color:var(--muted);background:none;border:0;cursor:pointer}
+.seg button.on{background:linear-gradient(180deg,#ffd987,#f5b83d);color:#1d1400}
+@media (max-width:420px){.sb-t{padding:10px 10px}.sb-logo{width:34px;height:34px;font-size:11px}.sb-name{font-size:15px}.sb-mid{min-width:80px;padding:8px}.sb-clk{font-size:15px}.lg-ctl .btn{padding:10px 12px;font-size:14px}}
 </style>
 
 <div id="busy" class="busy" hidden><span>Simming…</span></div>
@@ -3282,30 +3329,45 @@ function finishWatch(){
   if(W.kind==="user"){weekGoals();playRound(res);S.pgShow=true;scrollTo(0,0)}
   else{S.preRes=S.preRes||{};S.preRes[W.key]=res;news(`Game of the Week: ${T(res.hs>res.as?res.h:res.a).name} beat ${T(res.hs>res.as?res.a:res.h).name} ${Math.max(res.hs,res.as)}-${Math.min(res.hs,res.as)}.`)}
 }
+// Team colors that are too dark to see on the dark UI fall back to their second color (or silver).
+function lumHex(hex){let h=String(hex).replace("#","");if(h.length===3)h=[...h].map(c=>c+c).join("");const v=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255);return .2126*v[0]+.7152*v[1]+.0722*v[2]}
+function visCol(t){return lumHex(t.c1)>.15?t.c1:lumHex(t.c2)>.15?t.c2:"#9aa3ad"}
 function renderWatch(){
   const W=WATCH,g=W.g,h=T(g.home),a=T(g.away),wp=liveWP(W);
   const mm=Math.floor(g.clock/60),ss=String(g.clock%60).padStart(2,"0");
-  const clk=g.over?"FINAL"+(g.ot?` (${g.ot.round>1?g.ot.round:""}OT)`:""):g.ot?`OT${g.ot.round>1?g.ot.round:""}`:`${ordinal(g.qtr)} · ${mm}:${ss}`;
+  const clk=g.over?"FINAL"+(g.ot?` · ${g.ot.round>1?g.ot.round:""}OT`:""):g.ot?`OT${g.ot.round>1?g.ot.round:""}`:`${ordinal(g.qtr)} · ${mm}:${ss}`;
   const two=g.ot&&g.ot.round>=3,dd=g.over||g.pending?"":two?"2-pt play":`${ordinal(g.down)} & ${g.pos+g.togo>=100?"Goal":g.togo} · ${spotText(g,g.pos)}`;
   const x=g.poss===g.home?g.pos:100-g.pos,fd=g.poss===g.home?Math.min(100,g.pos+g.togo):Math.max(0,100-g.pos-g.togo);
-  const side=(t,cls)=>`<div class="ws ${cls}">${badge(t)}<span class="wn">${rankTag(t.id)}${esc(t.abbr)}${g.poss===t.id&&!g.over?' <i class="wpos" title="Has the ball"></i>':""}</span><span class="wsc">${g.score[t.id]}</span></div>`;
-  const bn=W.banner;
-  app.innerHTML=`
-  <div class="row" style="justify-content:space-between"><span class="eyebrow">${W.kind==="gotw"?"Game of the Week · ":""}${esc(g.label)} · Live</span><span class="muted num">${esc(condText(g.cond))}</span></div>
-  <div class="wboard bcast">${side(a,"away")}<div class="wmid"><span class="wclk">${clk}</span><span class="wdd">${esc(dd)}</span></div>${side(h,"home")}</div>
-  <div class="drive" role="img" aria-label="Ball on the ${esc(spotText(g,g.pos))}">
-    <span class="dz" style="left:0;background:${h.c1};color:${h.c2}">${esc(h.abbr)}</span><span class="dz" style="right:0;background:${a.c1};color:${a.c2}">${esc(a.abbr)}</span>
-    ${[10,20,30,40,50,60,70,80,90].map(y=>`<i class="dl" style="left:${8+y*.84}%"></i>`).join("")}
+  const lead=g.score[g.home]===g.score[g.away]?null:g.score[g.home]>g.score[g.away]?g.home:g.away;
+  const team=(t,side)=>`<div class="sb-t ${side} ${g.over&&lead===t.id?"win":""} ${g.over&&lead&&lead!==t.id?"lose":""}" style="--c:${visCol(t)}">
+      <span class="sb-logo" style="background:${t.c1};color:${t.c2}">${esc(t.abbr)}</span>
+      <span class="sb-name">${rankTag(t.id)}${esc(t.abbr)}${g.poss===t.id&&!g.over?'<i class="sb-ball" title="Has the ball">🏈</i>':""}</span>
+      <span class="sb-rec">${recStr(t.id)}</span>
+      <b class="sb-score">${g.score[t.id]}</b></div>`;
+  const pA=Math.round((1-wp)*100),pH=100-pA,bn=W.banner,ca=visCol(a),ch=visCol(h);
+  const P=W.wph||[],n=P.length,pts=n>1?P.map((v,i)=>`${(i/(n-1)*100).toFixed(2)},${((1-v)*100).toFixed(2)}`).join(" "):"";
+  const winner=g.over&&lead?T(lead):null;
+  app.innerHTML=`<div class="lg">
+  <div class="lg-top"><span class="lg-live ${g.over?"done":""}">${g.over?"Final":"● Live"}</span><span class="lg-lab">${W.kind==="gotw"?"Game of the Week · ":""}${esc(g.label)}</span><span class="lg-cond">${esc(condText(g.cond))}</span></div>
+  <div class="sb">${team(a,"away")}<div class="sb-mid"><span class="sb-clk">${clk}</span>${dd?`<span class="sb-dd">${esc(dd)}</span>`:""}</div>${team(h,"home")}</div>
+  ${g.over?`<div class="lg-final" style="--c:${winner?visCol(winner):"#9aa3ad"}"><span class="eyebrow">Final score</span><b>${winner?`${esc(winner.name)} win`:"It ends tied"} ${Math.max(g.score[g.home],g.score[g.away])}-${Math.min(g.score[g.home],g.score[g.away])}</b>
+      <button class="btn big" data-act="wDone">${W.kind==="user"?"Continue":"Back to the hub"}</button></div>`:""}
+  <div class="lg-field" role="img" aria-label="Ball on the ${esc(spotText(g,g.pos))}">
+    <span class="lg-ez l" style="background:${h.c1};color:${h.c2}">${esc(h.abbr)}</span><span class="lg-ez r" style="background:${a.c1};color:${a.c2}">${esc(a.abbr)}</span>
+    ${[10,20,30,40,50,60,70,80,90].map(y=>`<i class="lg-yl" style="left:${8+y*.84}%"><em>${y<=50?y:100-y}</em></i>`).join("")}
     ${driveChart(W)}
-    ${g.over?"":`<i class="dfd" style="left:${8+fd*.84}%"></i><b class="dball" style="left:${8+x*.84}%"></b>`}
+    ${g.over?"":`<i class="lg-fd" style="left:${8+fd*.84}%"></i><b class="lg-ball" style="left:${8+x*.84}%"></b>`}
   </div>
-  ${wpGraph(W)}
-  <div class="wpbar"><span>${esc(a.abbr)} ${Math.round((1-wp)*100)}%</span><div class="wpt"><i style="width:${(1-wp)*100}%;background:${a.c1}"></i><i style="width:${wp*100}%;background:${h.c1}"></i></div><span>${Math.round(wp*100)}% ${esc(h.abbr)}</span></div>
-  ${bn?`<div class="wbanner">${esc(bn.txt)}</div>`:""}
-  <div class="row">${g.over?`<button class="btn" data-act="wDone">${W.kind==="user"?"Continue":"Back to the hub"}</button>`:
-    `<button class="btn ghost" data-act="wPause">${W.paused?"Resume":"Pause"}</button>${[1,3,10].map(v=>`<button class="tab ${W.speed===v?"on":""}" data-act="wSpeed" data-v="${v}">${v}x</button>`).join("")}<button class="btn ghost" data-act="wSkip">Skip to the end</button>${W.kind==="gotw"?'<button class="btn ghost" data-act="wLeave">Stop watching</button>':""}`}</div>
-  <div class="panel"><h3>Play by play</h3><div class="log" style="max-height:340px">${g.log.slice(0,18).map(l=>`<div class="${l.hl?"hl":""}">${esc(l.txt)}</div>`).join("")}</div></div>
-  ${g.over?`<div class="grid2">${boxScore(g,g.away)}${boxScore(g,g.home)}</div>`:""}`;
+  ${bn&&!g.over?`<div class="lg-play"><span>Last big play</span><p>${esc(bn.txt)}</p></div>`:""}
+  <div class="lg-wp"><div class="lg-wp-h"><span>Win probability</span><span><b style="color:${ca}">${esc(a.abbr)} ${pA}%</b> · <b style="color:${ch}">${pH}% ${esc(h.abbr)}</b></span></div>
+    ${n>1?`<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Win probability over the game"><defs><clipPath id="wpT"><rect width="100" height="50"/></clipPath><clipPath id="wpB"><rect y="50" width="100" height="50"/></clipPath></defs>
+      <polygon points="0,50 ${pts} 100,50" fill="${ch}" opacity=".3" clip-path="url(#wpT)"/><polygon points="0,50 ${pts} 100,50" fill="${ca}" opacity=".3" clip-path="url(#wpB)"/>
+      <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,255,255,.22)" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"/>
+      <polyline points="${pts}" fill="none" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`:'<div class="lg-wp-empty">The chart fills in as the game goes.</div>'}
+    <div class="lg-wp-ax"><span>${esc(h.abbr)} favored ↑</span><span>↓ ${esc(a.abbr)} favored</span></div></div>
+  ${g.over?"":`<div class="lg-ctl"><button class="btn ghost" data-act="wPause">${W.paused?"▶ Resume":"⏸ Pause"}</button><div class="seg">${[1,3,10].map(v=>`<button class="${W.speed===v?"on":""}" data-act="wSpeed" data-v="${v}">${v}x</button>`).join("")}</div><button class="btn ghost" data-act="wSkip">⏭ Skip to end</button>${W.kind==="gotw"?'<button class="btn ghost" data-act="wLeave">Stop watching</button>':""}</div>`}
+  <div class="panel lg-pbp"><h3>Play by play</h3><div class="log" style="max-height:340px">${g.log.slice(0,18).map(l=>`<div class="${l.hl?"hl":""}">${esc(l.txt)}</div>`).join("")}</div></div>
+  ${g.over?`<div class="grid2">${boxScore(g,g.away)}${boxScore(g,g.home)}</div>`:""}</div>`;
 }
 function gotwGame(){
   const u=S.user,games=currentGames().filter(gm=>gm.h!==u&&gm.a!==u);if(!games.length)return null;
@@ -4266,19 +4328,10 @@ function overlay(cls,html,ms){
 const FLASH=[[/TOUCHDOWN/,"TOUCHDOWN"],[/INTERCEPTED/,"INTERCEPTED"],[/FUMBLE/,"FUMBLE"],[/SAFETY/,"SAFETY"],[/BLOCKED/,"BLOCKED"],[/MISSES/,"NO GOOD"],[/SACKED/,"SACK"],[/Overtime/,"OVERTIME"]];
 function flashPlay(txt,t){const f=FLASH.find(([r])=>r.test(txt));if(!f||(f[1]==="SACK"&&rnd()<.5))return;
   overlay("flash",`<div class="fl" style="--c1:${t.c1};--c2:${t.c2}"><span>${f[1]}</span><small>${esc(t.name)}</small></div>`,1700)}
-function wpGraph(W){
-  const P=W.wph||[],g=W.g,h=T(g.home),a=T(g.away);if(P.length<2)return "";
-  const n=P.length,pts=P.map((v,i)=>`${(i/(n-1)*100).toFixed(2)},${((1-v)*100).toFixed(2)}`).join(" ");
-  return `<div class="wpg"><div class="wpg-l"><span style="color:${h.c1==="#000000"?"#ccc":h.c1}">${esc(h.abbr)}</span><span style="color:${a.c1==="#000000"?"#ccc":a.c1}">${esc(a.abbr)}</span></div>
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="Win probability over the game"><defs><clipPath id="wpTop"><rect x="0" y="0" width="100" height="50"/></clipPath><clipPath id="wpBot"><rect x="0" y="50" width="100" height="50"/></clipPath></defs>
-    <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,255,255,.25)" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"/>
-    <polygon points="0,50 ${pts} 100,50" fill="${h.c1}" opacity=".35" clip-path="url(#wpTop)"/><polygon points="0,50 ${pts} 100,50" fill="${a.c1}" opacity=".35" clip-path="url(#wpBot)"/>
-    <polyline points="${pts}" fill="none" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>`;
-}
 function driveChart(W){
   const g=W.g,D=W.drive;if(!D||g.over||!D.pts.length)return "";
   const X=v=>8+v*.84,pts=D.pts,last=pts[pts.length-1],t=T(D.team);
-  return `<svg class="dch" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">${pts.map((p,i)=>i?`<line x1="${X(pts[i-1])}" y1="${8+((i-1)%4)*7}" x2="${X(p)}" y2="${8+(i%4)*7}" stroke="${t.c1}" stroke-width="3" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`:"").join("")}
+  return `<svg class="dch" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">${pts.map((p,i)=>i?`<line x1="${X(pts[i-1])}" y1="${8+((i-1)%4)*7}" x2="${X(p)}" y2="${8+(i%4)*7}" stroke="${lumHex(t.c1)>.12?t.c1:"#ffd34d"}" stroke-width="3" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`:"").join("")}
     ${pts.map((p,i)=>`<circle cx="${X(p)}" cy="${8+(i%4)*7}" r="1.4" fill="#fff"/>`).join("")}</svg>
     <div class="dsum">Drive: ${pts.length-1} play${pts.length===2?"":"s"} · ${Math.round((last-pts[0])*(D.team===g.home?1:-1))} yds</div>`;
 }
