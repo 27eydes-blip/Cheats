@@ -171,6 +171,9 @@ details summary{cursor:pointer;color:var(--amber);font-family:var(--num);font-we
 .offers{display:flex;flex-direction:column;gap:8px}
 .offer{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:10px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line)}
 .tab:disabled{opacity:.4;cursor:not-allowed}
+.sched{display:flex;flex-direction:column;gap:8px}
+.srow{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:center}
+.srow select{min-width:0;width:100%}
 .slot{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
 .slot.done{border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
 .cand{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px 12px;align-items:center}
@@ -457,6 +460,27 @@ const ALT={WYO:7220,AFA:6621,COLO:5328,CSU:5003,UNM:5100,USU:4777,UTAH:4657,BYU:
 const TEMP={cold:[70,57,42,32],west:[80,74,66,60],south:[88,79,68,58]};
 const WXMOD={Rain:{comp:-.04,deep:-2,fum:1.7},Wind:{deepComp:-.07,fg:-.1,punt:-4},Snow:{comp:-.06,run:-.3,fum:1.5,fg:-.12,deep:-2,punt:-3},Cold:{fg:-.04,fum:1.2}};
 const wxv=(g,k,d=0)=>g.wx&&g.wx[k]!=null?g.wx[k]:d;
+// Facilities you buy with recruiting points in the offseason (levels 0-3).
+const FAC={
+  train:["Strength & conditioning center","Every player gains +0.6 rating each offseason, per level"],
+  med:["Sports medicine center","20% fewer injuries per level, and players heal faster"],
+  rec:["Recruiting headquarters","+7% commit chance on recruits and +4 recruiting points every year, per level"],
+  film:["Film & analytics room","+0.15 yards per play on offense and defense, per level"],
+  culture:["Leadership council","Cuts trap-game letdowns and losing-streak slumps by a third, per level"],
+  indoor:["Indoor practice facility","Your team plays better in rain, wind and snow"],
+  travel:["Charter jet & sports science","Cuts travel and altitude fatigue by a third, per level"],
+  acad:["Academic center","Fewer players transfer out or leave early for the NFL"],
+};
+const FAC_COST=[10,16,24];
+const fac=k=>(S.fac&&S.fac[k])||0;
+// Difficulty: your in-game edge, recruiting budget, and how hard the AI programs recruit and develop.
+const DIFF=[
+  {n:"Rookie",d:"The original balance. Easiest to build a dynasty.",edge:0,pts:1,ai:0},
+  {n:"Varsity",d:"A little harder. AI programs recruit and develop better.",edge:-.12,pts:.92,ai:.35},
+  {n:"All-American",d:"Tough. Your team plays slightly worse than its ratings and gets fewer recruiting points.",edge:-.22,pts:.85,ai:.65},
+  {n:"Heisman",d:"Brutal. Winning back-to-back titles is a real achievement.",edge:-.35,pts:.78,ai:.95},
+];
+const dif=()=>DIFF[S.diff??1];
 const SKILLS={
   off:["Offensive Guru","+0.6 yards of edge on every offensive play, per level"],
   def:["Defensive Mastermind","Opponents lose 0.6 yards on every play, per level"],
@@ -496,7 +520,7 @@ function ensureV7(){
   S.v=7;
 }
 function ensureV6(){
-  S.alumni=S.alumni||[];S.rivRec=S.rivRec||{};
+  S.alumni=S.alumni||[];S.rivRec=S.rivRec||{};S.fac=S.fac||{};if(S.diff==null)S.diff=1;
   for(const t of S.teams){dplan(t.id);for(const p of t.roster){if(p.no===undefined)p.no=jersey(p.pos);p.car=p.car||[];p.aw=p.aw||[]}}
   S.v=Math.max(S.v,6);
 }
@@ -604,6 +628,64 @@ function makeSchedule(){
     if(ok)return weeks;
   }
   throw new Error("Could not build a schedule");
+}
+
+
+// ===================== SCHEDULE BUILDER =====================
+const canEditSched=()=>S.phase==="regular"&&S.results.length===0;
+function myGame(w){return S.schedule[w].find(p=>p.includes(S.user))}
+function swapOptions(w){
+  const u=S.user,cur=myGame(w),Z=cur[0]===u?cur[1]:cur[0];
+  if(T(Z).conf===T(u).conf||rivalryOf(cur[0],cur[1]))return [];
+  const played=new Set();S.schedule.forEach(wk=>wk.forEach(([h,a])=>played.add(pairKey(h,a))));
+  const out=[];
+  for(const [h,a] of S.schedule[w]){
+    if(h===u||a===u||T(h).conf===T(a).conf||rivalryOf(h,a))continue;
+    for(const [X,Y] of [[h,a],[a,h]]){
+      if(T(X).conf===T(u).conf||played.has(pairKey(u,X))||T(Z).conf===T(Y).conf||played.has(pairKey(Z,Y)))continue;
+      out.push({X,Y,h,a});
+    }
+  }
+  return out;
+}
+function refreshSchedule(){S.wx={};RK.key=null;S.pre=buildPreseason()}
+function doSwap(w,X,quiet){
+  const o=swapOptions(w).find(x=>x.X===X);if(!o)return;
+  const u=S.user,wk=S.schedule[w],ci=wk.findIndex(p=>p.includes(u)),cur=wk[ci],Z=cur[0]===u?cur[1]:cur[0];
+  const oi=wk.findIndex(p=>p[0]===o.h&&p[1]===o.a);
+  wk[ci]=cur[0]===u?[u,X]:[X,u];wk[oi]=rnd()<.5?[Z,o.Y]:[o.Y,Z];
+  if(!quiet)refreshSchedule();
+}
+function toggleHome(w){const wk=S.schedule[w],i=wk.findIndex(p=>p.includes(S.user));wk[i]=[wk[i][1],wk[i][0]];refreshSchedule()}
+function autoSchedule(mode){
+  const u=S.user,mine=ovr(T(u));
+  const targets=[mine-8,72,62];let slot=0;
+  for(const w of nonConfWeeks(T(u).conf)){
+    const cur=myGame(w),Z=cur[0]===u?cur[1]:cur[0];
+    if(T(Z).conf===T(u).conf||rivalryOf(cur[0],cur[1]))continue;
+    const all=[Z,...swapOptions(w).map(o=>o.X)],tg=targets[slot++%3];
+    const score=x=>{const o=ovr(T(x));return mode==="easy"?-o:mode==="hard"?o:-Math.abs(o-tg)};
+    const best=all.sort((a,b)=>score(b)-score(a))[0];
+    if(best!==Z)doSwap(w,best,true);
+    if(mode==="easy"){const p=myGame(w);if(p[0]!==u){const wk=S.schedule[w],i=wk.indexOf(p);wk[i]=[u,p[0]]}}
+  }
+  refreshSchedule();
+}
+function schedEditor(){
+  if(!canEditSched())return "";
+  const u=S.user,me=ovr(T(u)),P=S.pre;
+  const rows=nonConfWeeks(T(u).conf).map(w=>{
+    const cur=myGame(w),home=cur[0]===u,Z=home?cur[1]:cur[0],riv=rivalryOf(cur[0],cur[1]),opts=swapOptions(w).sort((a,b)=>ovr(T(b.X))-ovr(T(a.X)));
+    const label=x=>`${T(x).name} (${ovr(T(x))} OVR · ${CONFS[T(x).conf]})`;
+    return `<div class="srow"><span class="num muted">Wk ${w+1}</span>
+      ${riv?`<span><b>${esc(T(Z).name)}</b> <span class="tag amber">${esc(riv)} · locked</span></span>`:
+        `<select id="sw-${w}" aria-label="Week ${w+1} opponent"><option value="${Z}" selected>${esc(label(Z))}</option>${opts.map(o=>`<option value="${o.X}">${esc(label(o.X))}</option>`).join("")}</select>`}
+      <button class="small-btn" data-act="homeAway" data-w="${w}" ${riv?"disabled":""}>${home?"Home":"Away"}</button></div>`}).join("");
+  return `<div class="panel"><h3>Build your non-conference schedule</h3>
+    <p class="muted" style="font-size:13.5px">Conference games are set. Before week 1 you can pick your non-conference opponents and where you play them. A tougher schedule helps your ranking and job security but costs wins.</p>
+    <div class="row"><span class="muted">Auto-build:</span><button class="small-btn" data-act="autoSched" data-m="easy">Cupcakes</button><button class="small-btn" data-act="autoSched" data-m="balanced">Balanced</button><button class="small-btn" data-act="autoSched" data-m="hard">Gauntlet</button></div>
+    <div class="sched">${rows}</div>
+    <p class="num">Projected wins: <b style="color:var(--amber)">${P.me.proj}</b> · Schedule strength #${P.me.sosRank} of ${S.teams.filter(act).length} · Your OVR ${me}</p></div>`;
 }
 
 // ===================== RECORDS & RANKINGS =====================
@@ -719,9 +801,13 @@ function newGame(gm,live,qlen){
     log:[],last:null,stats:{[home]:{yds:0,plays:0,to:0},[away]:{yds:0,plays:0,to:0}},box:{},pending:{type:"kickoff",team:home}};
   const c=g.cond;g.wx=WXMOD[c.sky]||{};
   g.hfa=gm.neutral?0:(T(home).hfa||0)*(/night/i.test(c.kick)?1.3:1);
-  const mo=id=>clamp((S.mo&&S.mo[id])||0,-3,3)*.08,fit=id=>schemeArchFit(id,plan(id).scheme)*.3;
-  g.edge={[home]:mo(home)+fit(home)-(c.trap[home]?.35:0),[away]:mo(away)+fit(away)-(c.trap[away]?.35:0)-(c.travel?c.travel.y:0)};
-  g.altV=c.alt?c.alt.id:null;
+  const me=id=>id===S.user,cult=id=>me(id)?1-.33*fac("culture"):1,bad=["Rain","Wind","Snow"].includes(c.sky);
+  const edge=id=>{const mv=clamp((S.mo&&S.mo[id])||0,-3,3)*.08;
+    return (mv<0?mv*cult(id):mv)+schemeArchFit(id,plan(id).scheme)*.3-(c.trap[id]?.35*cult(id):0)
+      -(c.travel&&c.travel.id===id?c.travel.y*(me(id)?1-.33*fac("travel"):1):0)
+      +(me(id)?fac("film")*.15+(bad?fac("indoor")*.12:0)+dif().edge:0)};
+  g.edge={[home]:edge(home),[away]:edge(away)};
+  g.altV=c.alt?c.alt.id:null;g.altF=c.alt&&c.alt.id===S.user?1-.33*fac("travel"):1;
   addLog(g,`${gm.label}: ${T(away).name} ${g.neutral?"vs":"at"} ${T(home).name}.`,true);
   return g;
 }
@@ -773,7 +859,7 @@ function resolveCore(g,oc,dc){
   const DP=dplan(defId),runish=PLAYS[eff].kind==="run";
   m-=(DSCHEMES[DP.scheme].bonus[oc]||0)+(runish?-DP.focus:DP.focus)*.25;
   if(g.hfa)m+=offId===g.home?g.hfa*.03:-g.hfa*.03;
-  m+=(g.edge?g.edge[offId]-g.edge[defId]:0)+(g.altV!=null&&g.qtr>=3?(offId===g.altV?-.35:.25):0);
+  m+=(g.edge?g.edge[offId]-g.edge[defId]:0)+(g.altV!=null&&g.qtr>=3?(offId===g.altV?-.35:.25)*(g.altF??1):0);
   const AO=g.ax?g.ax[offId]:{},AD=g.ax?g.ax[defId]:{};
   const r={m,eff,note},tm=toMult(offId);
   if(PLAYS[eff].kind==="run"){
@@ -1045,9 +1131,9 @@ function finalizeGame(g){
   const f=15/g.qlen;
   for(const pid in g.box){const p=PL[pid];if(!p)continue;for(const k in g.box[pid])p.s[k]+=Math.round(g.box[pid][k]*f)}
   for(const id of [g.home,g.away]){
-    if(rnd()<.13){
+    if(rnd()<.13*(id===S.user?1-.2*fac("med"):1)){
       const c=T(id).roster.filter(p=>!p.inj&&p.pos!=="K");if(!c.length)continue;const p=c[Math.floor(rnd()*c.length)];
-      p.inj=2+Math.floor(rnd()*4);
+      p.inj=2+Math.floor(rnd()*(id===S.user?4-fac("med"):4));
       if(p.ovr>=86)roundLog().inj.push({pid:p.id,tid:id,w:p.inj-1});
       if(id===S.user)news(`Injury: ${p.pos} ${p.n} is out ${p.inj-1} week${p.inj-1>1?"s":""}.`);
     }
@@ -1267,10 +1353,10 @@ function beginOffseason(){
     const leave=[];
     for(const p of t.roster){
       if(p.yr===3)leave.push([p,"Graduated"]);
-      else if(p.yr===2&&p.ovr>=90&&rnd()<.55)leave.push([p,"Declared for the NFL draft"]);
+      else if(p.yr===2&&p.ovr>=90&&rnd()<.55*(t.id===u?1-.25*fac("acad"):1))leave.push([p,"Declared for the NFL draft"]);
     }
     if(t.id===u){
-      const k=rec.l>=6?2:rnd()<.4?1:0;
+      const k=Math.max(0,(rec.l>=6?2:rnd()<.4?1:0)-(rnd()<.33*fac("acad")?1:0));
       shuffle(t.roster.filter(p=>p.yr<2&&!leave.some(x=>x[0]===p))).slice(0,k).forEach(p=>leave.push([p,"Entered the transfer portal"]));
     }
     for(const [p,why] of leave){
@@ -1282,11 +1368,11 @@ function beginOffseason(){
     // Returning players develop
     for(const p of t.roster){
       if(gone.has(p))continue;
-      const gr=[5,4,3][p.yr]+(p.st-3)+(t.id===u?S.coach.dev:((t.coach?t.coach.sk:3)-3)*.5)+normal()*1.5;
+      const gr=[5,4,3][p.yr]+(p.st-3)+(t.id===u?S.coach.dev+.6*fac("train"):((t.coach?t.coach.sk:3)-3)*.5+dif().ai*.5)+normal()*1.5;
       p.ovr=clamp(Math.round(p.ovr+gr),45,99);p.yr++;p.inj=0;
     }
     if(t.id===u)t.openSlots=slots;
-    else for(const i of slots){const st=starsFor(t.pres+((t.coach?t.coach.sk:3)-3)*.3);t.roster[i]=newPlayer(t.roster[i].pos,recruitOvr(st,t),0,st)}
+    else for(const i of slots){const st=starsFor(t.pres+((t.coach?t.coach.sk:3)-3)*.3+dif().ai*.4);t.roster[i]=newPlayer(t.roster[i].pos,recruitOvr(st,t),0,st)}
   }
   draft.sort((a,b)=>b.p.ovr-a.p.ovr);
   draft.splice(257);
@@ -1294,7 +1380,7 @@ function beginOffseason(){
   for(const d of departed){const p=PL[d.pid];if(p)S.alumni.push({id:p.id,n:p.n,pos:p.pos,no:p.no,st:p.st,ovr:p.ovr,car:p.car||[],aw:p.aw||[],left:d.why,draft:p.draft||null,until:S.season})}
   const myDraft=draft.map((d,i)=>({...d,pick:i+1})).filter(d=>d.t.id===u).map(d=>({name:d.p.n,pos:d.p.pos,round:d.p.draft.round,pick:d.pick}));
   const me=T(u);
-  const pts=Math.round((25+rec.w*2.5+(inPO?8:0)+(champ?8:0)+me.pres*3)*(1+.2*S.coach.rec));
+  const pts=Math.round((25+rec.w*2.5+(inPO?8:0)+(champ?8:0)+me.pres*3+4*fac("rec"))*(1+.2*S.coach.rec)*dif().pts);
   S.off={boost:true,step:"recap",aa,draft:myDraft,departed,points:pts,portal:buildPortal(),portalSigned:0,pf:"All",
     board:me.openSlots.map(i=>({i,pos:me.roster[i].pos,signed:null,cands:[5,4,3,2].map(st=>makeProspect(me.roster[i].pos,st))}))};
   S.off.car=runCarousel();
@@ -1302,7 +1388,7 @@ function beginOffseason(){
 }
 function stadiumCost(t){return 8+t.hfa*4}
 function makeProspect(pos,st){
-  const me=T(S.user),chance=st===2?1:clamp(.35+(me.pres-(st-1))*.2+S.coach.rec*.08,.05,.98);
+  const me=T(S.user),chance=st===2?1:clamp(.35+(me.pres-(st-1))*.2+S.coach.rec*.08+fac("rec")*.07,.05,.98);
   return {pos,st,ar:Math.floor(rnd()*ARCH[pos].length),ovr:recruitOvr(st,me),n:FIRST[Math.floor(rnd()*FIRST.length)]+" "+LAST[Math.floor(rnd()*LAST.length)],chance:Math.round(chance*100)/100,cost:{5:12,4:7,3:3,2:0}[st],status:"open"};
 }
 const PORTAL_MIX={QB:4,RB:4,WR:6,TE:2,OL:4,DL:4,LB:3,CB:3,S:2,K:2};
@@ -1375,7 +1461,7 @@ function finishSigning(){
 
 function newDynasty(userId,qlen){
   S={v:7,nextPid:1,view:"hub",tab:"schedule",user:userId,qlen,season:2026,week:0,phase:"regular",results:[],ccg:null,post:null,heisman:null,
-     history:[],trophies:{},news:[],alumni:[],rivRec:{},job:{sec:70,yrs:0},firstTeam:userId,coach:{pts:2,off:0,def:0,rec:0,dev:0,sec:0,st:0},off:null,game:null,confirmReset:false};
+     history:[],trophies:{},news:[],alumni:[],rivRec:{},job:{sec:70,yrs:0},firstTeam:userId,fac:{},diff:1,coach:{pts:2,off:0,def:0,rec:0,dev:0,sec:0,st:0},off:null,game:null,confirmReset:false};
   S.teams=TEAMS0.map(makeTeam);
   S.schedule=makeSchedule();buildPL();RK.key=null;S.wx={};S.mo={};voteAP();
   S.pre=buildPreseason();S.tab="preseason";
@@ -1517,7 +1603,7 @@ function tabSchedule(){
     return `<tr class="${S.phase==="regular"&&i===S.week?"me":""}"><td class="n muted">${i+1}</td><td>${home?"vs":"at"} ${rankTag(o)}${esc(T(o).name)} ${conf?"":'<span class="tag">Non-conf</span>'} ${riv?`<span class="tag amber">${esc(riv)}</span>`:""}</td><td class="n">${res?resultCell(res,u):'<span class="muted">—</span>'}</td></tr>`;
   }).join("");
   const post=S.results.filter(g=>g.type!=="reg"&&(g.h===u||g.a===u)).map(g=>`<tr><td></td><td>${esc(g.label)}: vs ${esc(T(g.h===u?g.a:g.h).name)}</td><td class="n">${resultCell(g,u)}</td></tr>`).join("");
-  return `<div class="grid2">
+  return `${schedEditor()}<div class="grid2">
     <div class="panel"><h3>${S.season} schedule</h3><div class="tw"><table class="tbl"><tbody>${rows}${post}</tbody></table></div></div>
     <div class="panel"><h3>Unit ratings</h3>${unitBars(T(u))}<p class="muted" style="font-size:13px">Injured starters are replaced by a backup about 14 points worse.</p>
       <h3>Home field</h3><p>${crowdStr(T(u))}</p><p class="muted" style="font-size:13px">At home, a louder crowd gives your team more yards per play and makes visitors jump offside and miss more kicks. Upgrade your stadium in the offseason.</p></div>
@@ -1621,7 +1707,18 @@ function lastGameHTML(){
       <div class="grid2" style="margin-top:12px">${boxScore(L,L.away)}${boxScore(L,L.home)}</div>
     </details></div>`;
 }
-function tabCoach(){return `<div class="panel"><h3>Coaching skills</h3>${skillsHTML()}</div>`}
+function facHTML(canBuy){
+  const pts=canBuy?S.off.points:0;
+  return `<div class="skills">${Object.entries(FAC).map(([k,[n,d]])=>{const l=fac(k),c=FAC_COST[l];
+    return `<div class="skill"><b>${n}</b><span class="muted" style="font-size:13.5px">${d}</span>
+    <div class="row" style="justify-content:space-between"><span class="pips">${[0,1,2].map(i=>`<i class="${i<l?"on":""}"></i>`).join("")}</span>
+    ${canBuy?`<button class="small-btn" data-act="fac" data-k="${k}" ${l>=3||pts<c?"disabled":""}>${l>=3?"Maxed":`Build · ${c} pts`}</button>`:`<span class="sub">Level ${l}/3</span>`}</div></div>`}).join("")}</div>`;
+}
+function tabCoach(){
+  return `<div class="panel"><h3>Coaching skills</h3>${skillsHTML()}</div>
+  <div class="panel"><h3>Facilities</h3><p class="muted" style="font-size:13.5px">Build and upgrade these in the offseason with recruiting points, on the Coach & facilities step.</p>${facHTML(false)}</div>
+  <div class="panel"><h3>Difficulty</h3><div class="aggr">${DIFF.map((x,i)=>`<button class="tab ${(S.diff??1)===i?"on":""}" data-act="diff" data-d="${i}" aria-pressed="${(S.diff??1)===i}">${x.n}</button>`).join("")}</div><p>${esc(dif().d)}</p><p class="muted" style="font-size:13px">Change it anytime. It takes effect from your next game and next offseason.</p></div>`;
+}
 function gameRow(g){
   const done=g.winner!==undefined;
   const nm=id=>`<span class="${done&&g.winner===id?"":"muted"}">${rankTag(id)}${esc(T(id).abbr)}</span>`;
@@ -1985,7 +2082,7 @@ function renderPlayer(){
 // ---------- Offseason view ----------
 function renderOff(){
   const me=T(S.user),O=S.off,step=O.step;
-  const steps=[["recap","Season recap"],["coach","Coach"],["portal","Transfer portal"],["recruit","Signing day"]];
+  const steps=[["recap","Season recap"],["coach","Coach & facilities"],["portal","Transfer portal"],["recruit","Signing day"]];
   const head=`<div class="hub-head">${badge(me)}<div><div class="eyebrow">${S.season} offseason</div><h1 style="font-size:clamp(24px,5vw,36px)">${esc(steps.find(s=>s[0]===step)[1])}</h1></div></div>
     <div class="tabs">${steps.map(([k,l],i)=>`<span class="tab ${k===step?"on":""}">${i+1}. ${l}</span>`).join("")}</div>`;
   let body="";
@@ -2010,10 +2107,11 @@ function renderOff(){
           C.offers.length?`<p>${C.fired?"Schools willing to give you another shot:":"Other schools want to hire you. Take a job or stay put."}</p><div class="offers">${C.offers.map(id=>{const t=T(id);return `<div class="offer">${badge(t)}<div style="min-width:0"><b>${esc(t.name)}</b><div class="sub">${esc(CONFS[t.conf])} · ${starStr(presStars(t))} · OVR ${ovr(t)} · ${recStr(id)} last season</div></div><button class="small-btn" data-act="takeJob" data-id="${id}">Take job</button></div>`}).join("")}</div>`:
           '<p class="muted">No other schools came calling this year.</p>'}</div>
       ${big.length?`<div class="panel"><h3>Coaching carousel</h3><div class="news">${big.map(m=>`<div>${esc(m.txt)}</div>`).join("")}</div></div>`:""}`})()}
-    <div class="row"><button class="btn" data-act="offStep" data-s="coach" ${O.car&&O.car.fired&&O.car.taken===undefined?"disabled":""}>Next: coaching skills</button></div>`;
+    <div class="row"><button class="btn" data-act="offStep" data-s="coach" ${O.car&&O.car.fired&&O.car.taken===undefined?"disabled":""}>Next: coach & facilities</button></div>`;
   } else if(step==="coach"){
     const sc=stadiumCost(me);
     body=`<div class="panel">${skillsHTML()}</div>
+      <div class="panel"><h3>Facilities</h3><p>Spend recruiting points on facilities that help every season. They're permanent. <b style="color:var(--amber)">${O.points} points</b> available.</p>${facHTML(true)}</div>
       <div class="panel"><h3>Stadium</h3><p>${crowdStr(me)}</p>
       <div class="row"><button class="btn ghost" data-act="stadium" ${me.hfa>=5||O.points<sc?"disabled":""}>${me.hfa>=5?"Crowd is maxed out":`Expand and add seats · ${sc} recruiting pts`}</button><span class="muted">+1 crowd level and ${(8000).toLocaleString("en-US")} seats. ${O.points} recruiting points available.</span></div></div>
       <div class="row"><button class="btn" data-act="offStep" data-s="portal">Next: transfer portal</button></div>`;
@@ -2078,6 +2176,10 @@ const ACT={
   editName(d){S.editing=+d.id},
   cancelName(){S.editing=null},
   saveName(d){const el=document.getElementById("nm-"+d.id),v=el?el.value.replace(/\s+/g," ").trim().slice(0,28):"";if(v&&PL[d.id])PL[d.id].n=v;S.editing=null},
+  fac(d){const l=fac(d.k),c=FAC_COST[l];if(l<3&&S.off&&S.off.points>=c){S.off.points-=c;S.fac=S.fac||{};S.fac[d.k]=l+1;news(`${FAC[d.k][0]} upgraded to level ${l+1}.`)}},
+  diff(d){S.diff=+d.d},
+  autoSched(d){autoSchedule(d.m)},
+  homeAway(d){toggleHome(+d.w)},
   stadium(){const me=T(S.user),c=stadiumCost(me);if(me.hfa<5&&S.off.points>=c){S.off.points-=c;me.hfa++;me.cap+=8000;news(`${me.stadium} expanded. Crowd level is now ${me.hfa}/5.`)}},
   reset(){if(S.confirmReset){try{localStorage.removeItem(KEY)}catch(e){}S=null;SAVED=null}else S.confirmReset=true},
 };
@@ -2106,6 +2208,7 @@ document.addEventListener("input",e=>{
   const a=document.getElementById("passOut"),b=document.getElementById("runOut");if(a)a.textContent=v+"%";if(b)b.textContent=(100-v)+"%";
 });
 document.addEventListener("change",e=>{
+  if(S&&e.target.id&&e.target.id.startsWith("sw-")&&canEditSched()){doSwap(+e.target.id.slice(3),+e.target.value);save();render();return}
   if(e.target.id!=="passPct"||!S)return;plan(S.user).pass=clamp(+e.target.value,20,80);save();render();
 });
 document.addEventListener("keydown",e=>{
