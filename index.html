@@ -203,6 +203,52 @@ details summary{cursor:pointer;color:var(--amber);font-family:var(--num);font-we
 .finalists{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px}
 .fin{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
 .fin.mine{border-color:var(--amber)}
+/* ===== Heisman: gold treatment ===== */
+.heis{--g1:#fff3c4;--g2:#ffd34d;--g3:#c8901a;--g4:#7a5208;position:relative;overflow:hidden;border-radius:16px;padding:22px 18px;display:flex;flex-direction:column;gap:14px;
+  background:radial-gradient(600px 220px at 50% -40px,rgba(255,211,77,.28),transparent 70%),linear-gradient(160deg,#2a1f06 0%,#120d02 55%,#21180a 100%);
+  border:2px solid var(--g3);box-shadow:0 0 0 1px rgba(255,243,196,.15) inset,0 10px 40px rgba(255,182,39,.22),0 8px 24px rgba(0,0,0,.5)}
+.heis::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 35%,rgba(255,243,196,.16) 48%,transparent 60%);transform:translateX(-100%);animation:hshine 4.5s ease-in-out infinite}
+@keyframes hshine{60%,100%{transform:translateX(100%)}}
+.gold{background:linear-gradient(180deg,var(--g1) 0%,var(--g2) 45%,var(--g3) 75%,var(--g1) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 rgba(0,0,0,.6))}
+.heis-head{text-align:center;display:flex;flex-direction:column;gap:4px;align-items:center}
+.heis-head .eyebrow{color:var(--g2);letter-spacing:.3em}
+.heis-title{font-family:var(--display);font-size:clamp(30px,7vw,52px);line-height:1;letter-spacing:.04em}
+.heis-trophy{font-size:clamp(40px,10vw,64px);line-height:1;filter:drop-shadow(0 0 18px rgba(255,211,77,.7));animation:hfloat 3s ease-in-out infinite}
+@keyframes hfloat{50%{transform:translateY(-5px)}}
+.heis-lead{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:20px 14px;border-radius:14px;
+  background:linear-gradient(180deg,rgba(255,211,77,.16),rgba(255,211,77,.04));border:1px solid rgba(255,211,77,.55);box-shadow:0 0 30px rgba(255,211,77,.18) inset}
+.heis-lead .crown{font-family:var(--num);font-weight:700;font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:#1a1300;background:linear-gradient(180deg,var(--g1),var(--g2) 50%,var(--g3));padding:4px 12px;border-radius:999px;box-shadow:0 2px 10px rgba(255,182,39,.45)}
+.hn{font-family:var(--display);font-size:clamp(32px,8vw,60px);line-height:1.02;letter-spacing:.02em;padding:0;border:0;cursor:pointer;text-wrap:balance}
+.hn:hover{filter:drop-shadow(0 0 10px rgba(255,211,77,.7)) drop-shadow(0 2px 0 rgba(0,0,0,.6))}
+.heis-meta{font-family:var(--num);font-size:18px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--g1);display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+.heis-line{font-family:var(--num);font-size:19px;color:#fff;font-variant-numeric:tabular-nums}
+.heis-list{display:flex;flex-direction:column;gap:8px}
+.heis-row{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:center;padding:12px 14px;border-radius:12px;background:rgba(255,211,77,.06);border:1px solid rgba(255,211,77,.28)}
+.heis-row.mine,.heis-lead.mine{border-color:var(--g2);box-shadow:0 0 0 1px var(--g2) inset,0 0 22px rgba(255,211,77,.25)}
+.heis-rk{grid-row:span 2;font-family:var(--display);font-size:clamp(30px,7vw,40px);line-height:1;min-width:1.4em;text-align:center}
+.heis-row .hn{font-size:clamp(22px,5.5vw,30px);text-align:left}
+.heis-sub{display:flex;gap:6px 12px;flex-wrap:wrap;align-items:center;font-family:var(--num);font-size:15px;color:var(--g1)}
+.heis-sub .sl{color:#e9e2cc}
+.hbar{height:6px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden;width:100%}
+.heis-lead .hbar{max-width:320px}
+.hbar i{display:block;height:100%;background:linear-gradient(90deg,var(--g3),var(--g2),var(--g1))}
+.heis-note{text-align:center;font-family:var(--num);font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#c9b37a}
+.cer.heis{align-items:center;text-align:center}
+.panel.heis-vote{background:linear-gradient(180deg,#221906,#120d03);border:1px solid rgba(255,211,77,.5);--g1:#fff3c4;--g2:#ffd34d;--g3:#c8901a}
+.panel.heis-vote h3{font-family:var(--display);font-weight:400;font-size:22px;letter-spacing:.06em;text-transform:none}
+.panel.heis-vote h3::before{display:none}
+.panel.heis-vote tbody tr:first-child td{color:#ffd34d;font-weight:700;font-size:17px}
+.panel.heis-vote th{color:#c9b37a}
+.cer.heis h1{font-size:clamp(30px,7vw,52px)}
+.finalists .fin{background:linear-gradient(180deg,#2a1f06,#140f03);border:1px solid rgba(255,211,77,.45);align-items:center;text-align:center}
+.finalists .fin b{font-family:var(--display);font-weight:400;font-size:clamp(22px,5vw,28px);line-height:1.05}
+.finalists .fin.mine{border-color:var(--g2,#ffd34d);box-shadow:0 0 22px rgba(255,211,77,.3)}
+.finalists{--g1:#fff3c4;--g2:#ffd34d;--g3:#c8901a}
+.cer.reveal.heis .hn{font-size:clamp(40px,11vw,84px);cursor:default}
+.confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.confetti i{position:absolute;top:-12px;width:8px;height:14px;border-radius:2px;background:linear-gradient(var(--g1),var(--g3));animation:cfall linear infinite;opacity:.9}
+@keyframes cfall{to{transform:translateY(620px) rotate(540deg);opacity:.2}}
+@media (prefers-reduced-motion:reduce){.heis::after,.heis-trophy,.confetti i{animation:none}.confetti{display:none}}
 .hype{border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px;color:#fff;background:linear-gradient(120deg,var(--c1) 0 49%,var(--c2) 51% 100%);border:1px solid rgba(255,255,255,.2);text-shadow:0 1px 2px rgba(0,0,0,.55)}
 .hype-t{font-family:var(--display);font-size:clamp(26px,6vw,44px);line-height:1}
 .hype-s{font-family:var(--num);font-size:14.5px;letter-spacing:.03em}
@@ -1970,11 +2016,24 @@ function leaderTable(title,key,filt,fmt){
   const list=allPlayers().filter(([p])=>filt(p)).sort((a,b)=>b[0].s[key]-a[0].s[key]).slice(0,5);
   return `<div class="panel"><h3>${title}</h3><div class="tw"><table class="tbl"><tbody>${list.map(([p,t])=>`<tr class="${t.id===S.user?"me":""}"><td>${plink(p.id,p.n)} <span class="sub">${p.pos} · ${esc(t.abbr)}</span></td><td class="n">${fmt?fmt(p):p.s[key]}</td></tr>`).join("")}</tbody></table></div></div>`;
 }
+function heisBoard(watch,any){
+  const done=!!S.heisman,vals=done?heisVotes().map(x=>x.pts):heismanWatch(5).map(x=>x.v),top=vals[0]||1;
+  const hn=(h,big)=>h.pid&&PL[h.pid]?`<button class="plink hn gold" data-act="player" data-id="${h.pid}">${esc(h.n)}</button>`:`<span class="hn gold">${esc(h.n)}</span>`;
+  const bar=i=>`<div class="hbar" aria-hidden="true"><i style="width:${Math.max(6,Math.round(100*(vals[i]||0)/top))}%"></i></div>`;
+  const head=`<div class="heis-head"><div class="heis-trophy" aria-hidden="true">🏆</div><div class="eyebrow">${done?`${S.season} · New York City`:`${S.season} season · After week ${S.week}`}</div><div class="heis-title gold">${done?"Heisman Trophy":"Heisman Watch"}</div></div>`;
+  if(!any)return `<div class="heis">${head}<p class="heis-note">Play a game to start the Heisman race.</p></div>`;
+  const L=watch[0],lt=T(L.tid);
+  return `<div class="heis">${head}
+    <div class="heis-lead ${L.tid===S.user?"mine":""}"><span class="crown">${done?"Winner":"Front-runner"}</span>${hn(L)}
+      <div class="heis-meta">${badge(lt)} ${L.pos} · ${esc(lt.name)}</div><div class="heis-line">${esc(L.line)}</div>${bar(0)}</div>
+    <div class="heis-list">${watch.slice(1).map((h,j)=>{const t=T(h.tid);return `<div class="heis-row ${h.tid===S.user?"mine":""}"><div class="heis-rk gold">${j+2}</div>${hn(h)}
+      <div class="heis-sub">${badge(t)} <span>${h.pos} · ${esc(t.abbr)}</span><span class="sl">${esc(h.line)}</span>${bar(j+1)}</div></div>`}).join("")}</div>
+    <div class="heis-note">${done?"Final voting · bar shows points":"Odds bar shows each player's Heisman score vs. the leader"}</div></div>`;
+}
 function tabLeaders(){
   const watch=S.heisman?S.heisman.map(h=>({n:h.name,pos:h.pos,tid:h.team,line:h.line,pid:h.pid})):heismanWatch(5).map(x=>({n:x.p.n,pos:x.p.pos,tid:x.t.id,line:statLine(x.p),pid:x.p.id}));
   const any=S.results.length>0;
-  return `<div class="panel"><h3>${S.heisman?`${S.season} Heisman Trophy voting`:"Heisman watch"}</h3>
-    ${any?`<div class="tw"><table class="tbl"><tbody>${watch.map((h,i)=>`<tr class="${h.tid===S.user?"me":""}"><td class="n">${i+1}</td><td>${S.heisman&&i===0?"🏆 ":""}${plink(h.pid,h.n)} <span class="sub">${h.pos} · ${esc(T(h.tid).abbr)}</span></td><td class="sub">${esc(h.line)}</td></tr>`).join("")}</tbody></table></div>`:`<p class="muted">Play a game to start the Heisman race.</p>`}</div>
+  return heisBoard(watch,any)+`
   ${any?`<div class="grid2">
     ${leaderTable("Passing yards","py",p=>p.pos==="QB")}
     ${leaderTable("Rushing yards","ry",p=>true)}
@@ -2460,21 +2519,22 @@ function heisVotes(){
 function renderCeremony(){
   const C=S.ceremony,H=S.heisman,alpha=H.slice().sort((a,b)=>a.name.localeCompare(b.name));
   if(C.step===0){
-    app.innerHTML=`<div class="cer"><div class="eyebrow">New York City · ${S.season}</div><h1>The Heisman Trophy</h1><p class="muted">The most outstanding player in college football. Here are this year's finalists.</p></div>
-    <div class="finalists">${alpha.map(x=>{const t=T(x.team);return `<div class="fin ${x.team===S.user?"mine":""}">${badge(t)}<b>${esc(x.name)}</b><span class="sub">${x.pos} · ${esc(t.name)}</span><span class="sub" style="color:var(--chalk)">${esc(x.line)}</span></div>`}).join("")}</div>
+    app.innerHTML=`<div class="cer heis"><div class="heis-trophy" aria-hidden="true">🏆</div><div class="eyebrow" style="color:var(--g2)">New York City · ${S.season}</div><h1 class="gold">The Heisman Trophy</h1><p style="color:#e9e2cc">The most outstanding player in college football. Here are this year's finalists.</p></div>
+    <div class="finalists">${alpha.map(x=>{const t=T(x.team);return `<div class="fin ${x.team===S.user?"mine":""}">${badge(t)}<b class="gold">${esc(x.name)}</b><span class="sub">${x.pos} · ${esc(t.name)}</span><span class="sub" style="color:var(--chalk)">${esc(x.line)}</span></div>`}).join("")}</div>
     <div class="row" style="justify-content:center"><button class="btn" data-act="cerNext">Open the envelope</button></div>`;
     return;
   }
   if(C.step===1){
-    app.innerHTML=`<div class="cer drum"><div class="eyebrow">The envelope, please</div><h1>And the ${S.season} Heisman Trophy goes to…</h1></div>`;
+    app.innerHTML=`<div class="cer drum heis"><div class="heis-trophy" aria-hidden="true">🏆</div><div class="eyebrow" style="color:var(--g2)">The envelope, please</div><h1 class="gold">And the ${S.season} Heisman Trophy goes to…</h1></div>`;
     setTimeout(()=>{if(S&&S.ceremony===C&&C.step===1){C.step=2;save();render()}},1800);
     return;
   }
   const V=heisVotes(),w=V[0],t=T(w.team);
-  app.innerHTML=`<div class="cer reveal" style="background:${t.c1};color:${t.c2}"><div class="eyebrow" style="color:inherit;opacity:.85">${S.season} Heisman Trophy winner</div>
-    <h1 style="font-size:clamp(34px,8vw,64px)">${esc(w.name)}</h1><p class="num" style="font-size:18px">${w.pos} · ${esc(t.name)}</p><p>${esc(w.line)}</p>
-    ${w.team===S.user?`<p><b>Your player won the Heisman!</b> His number will be retired when he leaves.</p>`:""}</div>
-  <div class="panel"><h3>Final voting</h3><div class="tw"><table class="tbl"><thead><tr><th>Player</th><th class="n">1st-place votes</th><th class="n">Points</th></tr></thead><tbody>
+  const conf=Array.from({length:28},(_,i)=>`<i style="left:${(i*37)%100}%;animation-duration:${3+(i*7)%5}s;animation-delay:-${(i*13)%6}s"></i>`).join("");
+  app.innerHTML=`<div class="cer reveal heis"><div class="confetti" aria-hidden="true">${conf}</div><div class="heis-trophy" aria-hidden="true">🏆</div><span class="heis-lead" style="padding:0;background:none;border:0;box-shadow:none"><span class="crown">${S.season} Heisman Trophy winner</span></span>
+    <h1 class="hn gold">${esc(w.name)}</h1><div class="heis-meta">${badge(t)} ${w.pos} · ${esc(t.name)}</div><p class="heis-line">${esc(w.line)}</p>
+    ${w.team===S.user?`<p style="color:var(--g1);font-size:17px"><b>Your player won the Heisman!</b> His number will be retired when he leaves.</p>`:""}</div>
+  <div class="panel heis-vote"><h3 class="gold">Final voting</h3><div class="tw"><table class="tbl"><thead><tr><th>Player</th><th class="n">1st-place votes</th><th class="n">Points</th></tr></thead><tbody>
     ${V.map((x,i)=>`<tr class="${x.team===S.user?"me":""}"><td>${i+1}. ${x.pid&&PL[x.pid]?plink(x.pid,x.name):esc(x.name)} <span class="sub">${x.pos} · ${esc(T(x.team).abbr)}</span></td><td class="n">${x.first}</td><td class="n">${x.pts.toLocaleString("en-US")}</td></tr>`).join("")}</tbody></table></div></div>
   <div class="row" style="justify-content:center"><button class="btn" data-act="cerDone">On to the postseason</button></div>`;
 }
