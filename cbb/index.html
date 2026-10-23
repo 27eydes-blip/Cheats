@@ -816,12 +816,12 @@ const SKILLS={
   off:["Offensive Guru","+0.6% on every shot your team takes, per level"],
   def:["Defensive Mastermind","Opponents shoot 0.6% worse, per level"],
   rec:["Recruiter","+20% recruiting points and +8% commit chance, per level"],
-  dev:["Player Developer","+1 rating growth for every player each offseason, per level"],
+  dev:["Player Developer","+0.4 rating growth for every player each offseason, per level"],
   sec:["Ball Security","8% fewer turnovers, per level"],
   clutch:["Late-Game Manager","+3% free throws and sharper execution in the final four minutes, per level"],
 };
 const FAC={
-  train:["Practice facility & weight room","Every player gains +0.6 rating each offseason, per level"],
+  train:["Practice facility & weight room","Every player gains +0.3 rating each offseason, per level"],
   med:["Sports medicine center","25% fewer injuries per level, and players heal faster"],
   rec:["Recruiting lounge","+7% commit chance on recruits and +4 recruiting points every year, per level"],
   film:["Analytics & film room","+0.4% on shots at both ends, per level"],
@@ -1552,7 +1552,9 @@ function beginOffseason(){
     const gone=new Set(leave.map(x=>x[0])),slots=[];t.roster.forEach((p,i)=>{if(gone.has(p))slots.push(i)});
     for(const p of t.roster){
       if(gone.has(p))continue;
-      const gr=[6,4,3][p.yr]+(p.st-3)*.8+(mine?S.coach.dev+.6*fac("train")+(p.yr<=1&&S.prac?S.prac.dev:0):dif().ai*.5)+normal()*1.6;
+      let gr=[6,4,3][p.yr]+(p.st-3)*.8+(mine?S.coach.dev*.4+.3*fac("train")+(p.yr<=1&&S.prac?Math.min(1.5,S.prac.dev):0):dif().ai*.5)+normal()*1.6;
+      // Gains shrink near the top of the scale, so only rare players reach the high 90s.
+      if(gr>0)gr*=clamp((97-p.ovr)/18,.06,1);
       if(mine&&p.rel!=null)p.rel=Math.round(p.rel*.6+62*.4);
       p.ovr=clamp(Math.round(p.ovr+gr),40,99);p.inj=0;p.yr++;delete p.tr;
     }
@@ -1897,7 +1899,7 @@ function prac(){if(!S.prac)S.prac={int:"normal",drills:["shoot","defense"],cond:
 function runPractice(){
   const P=prac(),k=talkKey();if(P.done===k)return;P.done=k;
   const I=INTENSITY[P.int],m=I.mult,dr=P.drills.slice(0,I.max),pb={three:0,rim:0,def:0,orb:0,to:0,ft:0,all:0};
-  for(const d of dr){if(d==="shoot")pb.three+=.012*m;if(d==="finish")pb.rim+=.012*m;if(d==="defense")pb.def+=.008*m;if(d==="boards")pb.orb+=.025*m;if(d==="ball")pb.to+=.07*m;if(d==="ft")pb.ft+=.035*m;if(d==="film")pb.all+=.005*m;if(d==="cond")P.cond=clamp(P.cond+4*m,0,100);if(d==="youth")P.dev+=.35*m}
+  for(const d of dr){if(d==="shoot")pb.three+=.012*m;if(d==="finish")pb.rim+=.012*m;if(d==="defense")pb.def+=.008*m;if(d==="boards")pb.orb+=.025*m;if(d==="ball")pb.to+=.07*m;if(d==="ft")pb.ft+=.035*m;if(d==="film")pb.all+=.005*m;if(d==="cond")P.cond=clamp(P.cond+4*m,0,100);if(d==="youth")P.dev=Math.min(1.5,P.dev+.05*m)}
   P.cond=clamp(P.cond+I.cond,0,100);P.fat=clamp(P.fat+I.fat+6,0,100);
   pb.all-=Math.max(0,P.fat-50)*.0003;pb.late=(P.cond-50)*.00025;P.pb={k,...pb};
   let hurt=null;if(rnd()<I.inj){const c=myRotation().filter(p=>!p.inj&&!(p.star&&!(S.history||[]).length));if(c.length){hurt=pick(c);hurt.inj=1+Math.floor(rnd()*2)}}
