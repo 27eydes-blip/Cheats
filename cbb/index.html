@@ -1540,6 +1540,7 @@ function beginOffseason(){
     for(const p of t.roster){
       const early=[[86,.7],[84,.55],[82,.45]][p.yr];
       if(p.yr===3)leave.push([p,"Graduated"]);
+      else if(p.st===5&&p.yr<=1&&p.ovr>=(p.yr?83:80)&&rnd()<.5*acad)leave.push([p,"Declared for the NBA draft"]);
       else if(early&&p.ovr>=early[0]&&rnd()<early[1]*acad)leave.push([p,"Declared for the NBA draft"]);
       else if(mine&&p.yr<3&&(p.rel??60)<35&&rnd()<(p.rel<25?.7:.35)*acad)leave.push([p,"Entered the transfer portal (unhappy)"]);
       else if(p.s.min/60/gp<8&&p.yr<3&&rnd()<.3*acad)leave.push([p,"Entered the transfer portal"]);
@@ -1565,17 +1566,32 @@ function beginOffseason(){
   S.alumni=S.alumni.slice(-150);
   const myDraft=draft.map((d,i)=>({...d,pick:i+1})).filter(d=>d.t.id===u).map(d=>({name:d.p.n,pos:d.p.pos,round:d.p.draft.round,pick:d.pick}));
   const topDraft=draft.slice(0,10).map(d=>({name:d.p.n,pos:d.p.pos,tid:d.t.id,pick:draft.indexOf(d)+1,why:d.why}));
-  const pts=Math.max(5,Math.round((28+rec.w*.9+tw*2+(champ?6:0)+me.pres*3+4*fac("rec"))*(1+.2*S.coach.rec)*dif().pts));
+  const pts=Math.max(5,Math.round((24+rec.w*.6+tw*1.5+(champ?4:0)+me.pres*2+3*fac("rec"))*(1+.15*S.coach.rec)*dif().pts));
   S.off={step:"yearbook",shot:shotOfYear(),departed,draft:myDraft,topDraft,points:pts,portal:buildPortal(),portalSigned:0,pf:"All",
-    board:me.openSlots.map(i=>({i,pos:me.roster[i].pos,signed:null,cands:[5,4,3,2].map(st=>makeProspect(me.roster[i].pos,st)).concat([makeVet(me.roster[i].pos,"juco"),makeVet(me.roster[i].pos,"intl")])}))};
+    board:me.openSlots.map(i=>({i,pos:me.roster[i].pos,signed:null,cands:boardStars().map(st=>makeProspect(me.roster[i].pos,st)).concat([makeVet(me.roster[i].pos,"juco"),makeVet(me.roster[i].pos,"intl")])}))};
   S.off.car=runCarousel();
   S.phase="offseason";
 }
-function makeProspect(pos,st){
-  const me=T(S.user),chance=st===2?1:clamp(.35+(me.pres-(st-1))*.2+S.coach.rec*.08+fac("rec")*.07,.05,.98);
-  const [a,b]=HT[pos];
-  return {pos,st,ar:Math.floor(rnd()*ARCH[pos].length),ht:a+Math.floor(rnd()*(b-a+1)),ovr:recruitOvr(st,me),n:pick(FIRST)+" "+pick(LAST),chance:Math.round(chance*100)/100,cost:{5:12,4:7,3:3,2:0}[st],status:"open"};
+// Elite recruits want minutes: interest drops when you're already stacked with blue-chippers at his spot.
+function crowdPenalty(pos,st){
+  if(st<4)return 0;const me=T(S.user),open=new Set(me.openSlots||[]);let same=0,fives=0;
+  me.roster.forEach((p,i)=>{if(open.has(i)||p.yr>=3)return;if(p.pos===pos&&p.st>=4)same++;if(p.st===5)fives++});
+  if(S.off&&S.off.board)for(const b of S.off.board)if(b.signed&&!b.signed.transfer){if(b.signed.pos===pos&&b.signed.st>=4)same++;if(b.signed.st===5)fives++}
+  return same*.1+(st===5?fives*.05:0);
 }
+const REC_COST={5:18,4:10,3:4,2:0},REC_CAP={5:.72,4:.86,3:.97};
+function prospectChance(pos,st){
+  if(st===2)return 1;const me=T(S.user);
+  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
+}
+function makeProspect(pos,st){
+  const me=T(S.user),[a,b]=HT[pos];
+  return {pos,st,ar:Math.floor(rnd()*ARCH[pos].length),ht:a+Math.floor(rnd()*(b-a+1)),ovr:recruitOvr(st,me),n:pick(FIRST)+" "+pick(LAST),chance:prospectChance(pos,st),cost:REC_COST[st],status:"open"};
+}
+// Only some open spots draw a five-star at all, more often at bigger programs.
+function boardStars(){const p5=clamp(.12+(T(S.user).pres-2.5)*.14,.04,.48);return rnd()<p5?[5,4,3,2]:[4,4,3,2]}
+// Interest is re-checked after every signing, so stacking five-stars gets harder as you go.
+function refreshInterest(){for(const b of S.off.board)if(!b.signed)for(const c of b.cands)if(c.status==="open"&&!c.kind)c.chance=prospectChance(c.pos,c.st)}
 const PORTAL_MIX={PG:6,SG:6,SF:5,PF:5,C:6},PORTAL_MAX=4;
 const portalCost=o=>Math.max(2,Math.round((o-64)/2));
 const portalPres=o=>o>=86?4:o>=82?3:o>=78?2:1;
@@ -1613,7 +1629,7 @@ function offer(si,ci){
   const O=S.off,slot=O.board[si],c=slot.cands[ci];
   if(slot.signed||c.status!=="open"||O.points<c.cost)return;
   O.points-=c.cost;
-  if(rnd()<c.chance){c.status="signed";slot.signed=c}else{c.status="lost";O.points+=Math.floor(c.cost/2)}
+  if(rnd()<c.chance){c.status="signed";slot.signed=c;refreshInterest()}else{c.status="lost";O.points+=Math.floor(c.cost/2)}
 }
 function finishSigning(){
   const me=T(S.user);placeLeftovers();
@@ -2815,11 +2831,11 @@ function renderOff(){
       <div class="row"><button class="btn" data-act="offStep" data-s="recruit">Next: signing day</button></div>`;
   } else {
     const open=O.board.filter(b=>!(b.signed&&b.signed.transfer)),L=classRankings(O.board.filter(b=>b.signed&&!b.signed.transfer).map(b=>({st:b.signed.st,ovr:b.signed.ovr}))),mr=L.findIndex(x=>x.tid===S.user)+1;
-    body=`<div class="panel"><p>Offer scholarships to fill your open spots: high schoolers, JUCO transfers (ready to start, two years left) or international players (polished, three years left). Higher-star recruits start better, but they may pick another school. If one says no, you get half the points back. Any spot left empty goes to a 3★ walk-on.</p>
+    body=`<div class="panel"><p>Offer scholarships to fill your open spots: high schoolers, JUCO transfers (ready to start, two years left) or international players (polished, three years left). Higher-star recruits start better, but they may pick another school. If one says no, you get half the points back. Any spot left empty goes to a 3★ walk-on. Five-stars are rare, and they lose interest when you already have blue-chippers at their position.</p>
       <p class="eyebrow num" style="font-size:18px">${O.points} recruiting points · Class rank No. ${mr}</p></div>
       <div class="panel" data-c="amber"><div class="row" style="justify-content:space-between"><h3>Live class rankings</h3><span class="tag amber">You: No. ${mr}</span></div><p class="muted" style="font-size:13.5px">Updates as you sign players. Other programs have already signed their classes.</p>${classTable(L,10)}</div>
       ${open.length?open.map(slot=>{const si=O.board.indexOf(slot);return `<div class="slot ${slot.signed?"done":""}"><div class="row" style="justify-content:space-between"><b>Open scholarship: ${POS_NAME[slot.pos]}</b>${slot.signed?`<span class="tag good">Signed ${esc(slot.signed.n)}</span>`:""}</div>
-        ${slot.cands.map((c,ci)=>`<div class="cand"><span class="stars">${starStr(c.st)}</span><span>${esc(c.n)} <span class="sub">${esc(ARCH[c.pos][c.ar][0])} · ${htStr(c.ht)} · ${c.ovr} OVR</span> ${vetTag(c)} ${projTag(c)}</span><span class="sub hide-sm">${Math.round(c.chance*100)}% interest</span>
+        ${slot.cands.map((c,ci)=>`<div class="cand"><span class="stars">${starStr(c.st)}</span><span>${esc(c.n)} <span class="sub">${esc(ARCH[c.pos][c.ar][0])} · ${htStr(c.ht)} · ${c.ovr} OVR</span> ${vetTag(c)} ${projTag(c)}</span><span class="sub hide-sm">${Math.round(c.chance*100)}% interest${!c.kind&&c.status==="open"&&crowdPenalty(c.pos,c.st)>0?" · crowded at "+c.pos:""}</span>
           ${c.status==="signed"?'<span class="tag good">Signed</span>':c.status==="lost"?'<span class="tag bad">Went elsewhere</span>':`<button class="small-btn" data-act="offer" data-s="${si}" data-c="${ci}" ${slot.signed||O.points<c.cost?"disabled":""}>Offer · ${c.cost?c.cost+" pts":"free"}</button>`}</div>`).join("")}
       </div>`}).join(""):`<div class="panel"><p class="muted">No open scholarships this year.</p></div>`}
       ${(()=>{const empty=O.board.filter(b=>!b.signed).length;
