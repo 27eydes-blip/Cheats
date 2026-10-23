@@ -898,6 +898,69 @@ button:active:not(:disabled){transform:scale(.97)}
 @media (max-width:560px){.lookgrid{grid-template-columns:1fr}.lookprev{flex-direction:row;justify-content:center}.looks{grid-template-columns:repeat(auto-fill,minmax(74px,1fr))}}
 .coachline{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--muted)}
 .coachline svg{flex:none}
+
+/* ===== PHONE ONLY (600px and narrower). Tablets and desktop are untouched. ===== */
+@media (max-width:600px){
+  body{font-size:14.5px;padding-block:max(12px,env(safe-area-inset-top,0px)) 32px}
+  #app{gap:14px}
+  .panel{padding:14px 13px!important;border-radius:16px!important}
+  .panel h3{font-size:12px;letter-spacing:.16em}
+  /* Team header: one tidy block instead of five wrapped lines */
+  .teamband{padding:14px 14px 50px!important;gap:12px!important;border-radius:20px!important;align-items:center}
+  .teamband .logo{width:54px!important;height:54px!important;font-size:15px!important}
+  .teamband>div{min-width:0}
+  .tb-eyebrow{font-size:9.5px!important;letter-spacing:.14em!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tb-name{font-size:clamp(24px,8vw,30px)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tb-sub{font-size:12px!important;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .teamband::after{font-size:84px!important;bottom:-12px!important;opacity:.07!important}
+  /* Stat chips: a slim swipeable strip */
+  .chips{margin:-38px 8px 0!important;gap:6px!important}
+  .chips .chip{min-width:86px!important;padding:8px 10px!important;border-radius:12px!important}
+  .chip span{font-size:9px!important;letter-spacing:.12em!important}
+  .chip b{font-size:19px!important}
+  .chip b small{font-size:10px}
+  /* Menu: one swipeable row, groups split by a thin divider */
+  .navgroups{display:flex!important;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:0!important;padding:6px 4px!important;top:max(4px,env(safe-area-inset-top,0px))!important;border-radius:14px!important;-webkit-mask:linear-gradient(90deg,#000 90%,transparent);mask:linear-gradient(90deg,#000 90%,transparent)}
+  .navgroups::-webkit-scrollbar{display:none}
+  .navg{flex:none!important;padding:0!important;gap:4px!important}
+  .navg+.navg{border-left:1px solid rgba(110,210,255,.18);margin-left:6px;padding-left:6px!important}
+  .navl{width:auto!important;padding:0 2px 0 4px;font-size:8px!important}
+  .navg .tabs{overflow:visible!important;-webkit-mask:none!important;mask:none!important;padding-right:0!important}
+  .navg .tab{padding:7px 10px!important;font-size:11px!important}
+  /* Offseason steps: one swipeable row */
+  .hub-head+.tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;-webkit-mask:linear-gradient(90deg,#000 88%,transparent);mask:linear-gradient(90deg,#000 88%,transparent)}
+  .hub-head+.tabs::-webkit-scrollbar{display:none}
+  .hub-head+.tabs .tab{font-size:12px;padding:7px 12px}
+  .hub-head{padding:12px 14px!important;gap:10px!important}
+  /* Rotation: each player is one clean row */
+  .rost tr:not(.poshead){display:grid;grid-template-columns:52px minmax(0,1fr) 26px 28px auto;align-items:center;column-gap:6px;padding:6px 0;border-bottom:1px solid rgba(110,210,255,.08)}
+  .rost tr:not(.poshead) td{display:block;padding:0!important;border:0!important}
+  .rost td.hm{display:none!important}
+  .rost td:nth-child(2){min-width:0}
+  .rost td:nth-child(2) .plink{font-weight:700}
+  .rost td:nth-child(2) div.sub{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rost td:nth-child(2)>.sub.num{display:none}
+  .rost td:nth-child(2) .plink{display:inline}
+  .rost td:first-child .tag{font-size:9.5px;padding:2px 6px}
+  .rost .edit{display:none}
+  .rost td:last-child{display:flex!important;gap:4px}
+  .rost td:last-child .small-btn{padding:5px 8px;min-width:32px}
+  .rost tr.poshead td{padding-top:12px!important}
+  /* Tables: dates and numbers stay on one line */
+  .tbl td.sub:first-child{white-space:nowrap;font-size:11.5px}
+  .tbl td.n,.tbl th.n{white-space:nowrap}
+  /* Game card */
+  .gameday{border-radius:20px!important}
+  .gd-match{gap:4px!important}
+  .gd-actions .btn.big{padding:14px 10px!important;font-size:15px!important}
+  /* Live game: court runs edge to edge */
+  .courtwrap{margin:0 -8px}
+  .wbanner{font-size:15px;padding:12px 14px}
+  .log{font-size:13px}
+  /* Buttons sized for thumbs */
+  .btn{min-height:44px}
+  .small-btn{min-height:34px}
+}
 </style>
 </head>
 <body>
@@ -2998,11 +3061,11 @@ function floorLoop(){
   floorRAF=null;const W=WATCH;if(!W)return;const c=app.querySelector(".court-fl");
   if(c&&W.fl){const ctx=c.getContext("2d"),r=c.getBoundingClientRect(),d=Math.min(2,devicePixelRatio||1);
     if(c.width!==Math.round(r.width*d)){c.width=Math.round(r.width*d);c.height=Math.round(r.height*d)}
-    const sx=c.width/940,sy=c.height/500,F=W.fl,g=W.g;ctx.clearRect(0,0,c.width,c.height);
+    const sx=c.width/940,sy=c.height/500,F=W.fl,g=W.g,big=clamp(520/Math.max(1,r.width),1,1.75);ctx.clearRect(0,0,c.width,c.height);
     const all=[...(g.lu[g.away]||[]).map(p=>[p,g.away]),...(g.lu[g.home]||[]).map(p=>[p,g.home])];
     for(const [p,id] of all){const cur=F.cur[p.id],tg=F.tg[p.id];if(!cur||!tg)continue;cur[0]+=(tg[0]-cur[0])*.12;cur[1]+=(tg[1]-cur[1])*.12;
-      const t=T(id),hm=id===g.home,x=cur[0]*sx,y=cur[1]*sy,rr=15*sx;ctx.beginPath();ctx.arc(x,y,rr,0,6.28);ctx.fillStyle=hm?t.c1:"#f4f6fb";ctx.shadowColor=id===F.att?"rgba(110,210,255,.9)":"rgba(0,0,0,.6)";ctx.shadowBlur=(id===F.att?14:6)*sx;ctx.fill();
-      ctx.shadowBlur=0;ctx.lineWidth=2.5*sx;ctx.strokeStyle=hm?t.c2:t.c1;ctx.stroke();if(p.mp){ctx.beginPath();ctx.arc(x,y,rr+5*sx,0,6.28);ctx.lineWidth=3*sx;ctx.strokeStyle="#ffc350";ctx.stroke()}ctx.fillStyle=hm?t.c2:t.c1;ctx.font=`700 ${13*sx}px Chakra Petch, Barlow Condensed, sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(p.no),x,y+.5*sx)}
+      const t=T(id),hm=id===g.home,x=cur[0]*sx,y=cur[1]*sy,rr=15*sx*big;ctx.beginPath();ctx.arc(x,y,rr,0,6.28);ctx.fillStyle=hm?t.c1:"#f4f6fb";ctx.shadowColor=id===F.att?"rgba(110,210,255,.9)":"rgba(0,0,0,.6)";ctx.shadowBlur=(id===F.att?14:6)*sx;ctx.fill();
+      ctx.shadowBlur=0;ctx.lineWidth=2.5*sx;ctx.strokeStyle=hm?t.c2:t.c1;ctx.stroke();if(p.mp){ctx.beginPath();ctx.arc(x,y,rr+5*sx,0,6.28);ctx.lineWidth=3*sx;ctx.strokeStyle="#ffc350";ctx.stroke()}ctx.fillStyle=hm?t.c2:t.c1;ctx.font=`700 ${13*sx*big}px Chakra Petch, Barlow Condensed, sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(p.no),x,y+.5*sx)}
     const b=F.ball;let bx=null,by=null,bz=0;
     if(b&&b.from){const k=Math.min(1,(performance.now()-b.t0)/b.dur);bx=b.from[0]+(b.to[0]-b.from[0])*k;by=b.from[1]+(b.to[1]-b.from[1])*k;bz=Math.sin(k*Math.PI)*60;if(k>=1&&!b.made){bx+=(Math.random()-.5)*20}}
     else if(b&&b.hold&&F.cur[b.hold]){bx=F.cur[b.hold][0]+12;by=F.cur[b.hold][1]-12}
@@ -3657,7 +3720,10 @@ let lastView="",lastBase="",enterT=null,tabJump=false;
 function viewKey(){if(S&&S.phase==="h2h"&&!WATCH)return "h2h";return S?[S.tab,S.phase,S.off&&S.off.step,S.pv,!!WATCH,S.selShow&&S.selShow.done,S.selShow&&S.selShow.step,S.ybView,S.magIntro].join("|"):"select|"+TITLE.mode+"|"+H2H.tab+"|"+!!H2H.result}
 function render(){
   try{if(S){const t=T(S.user);document.body.style.setProperty("--tc1",t.c1);document.body.style.setProperty("--tc2",t.c2)}else{document.body.style.removeProperty("--tc1");document.body.style.removeProperty("--tc2")}}catch(e){}
+  // Sideways-scrolling strips (menu, stat chips, step tabs) keep their scroll position across redraws.
+  const KEEP=".navgroups,.navg .tabs,.chips,.hub-head+.tabs",kept=app.querySelectorAll?[...app.querySelectorAll(KEEP)].map(e=>e.scrollLeft):[];
   OVRC=new Map();try{renderCore()}finally{OVRC=null}
+  try{if(app.querySelectorAll)[...app.querySelectorAll(KEEP)].forEach((e,i)=>{if(kept[i])e.scrollLeft=kept[i];const on=e.querySelector(":scope>.tab.on,:scope .tab.on");if(on&&e.scrollWidth>e.clientWidth+2){const l=on.offsetLeft-e.offsetLeft,r=l+on.offsetWidth;if(l<e.scrollLeft||r>e.scrollLeft+e.clientWidth)e.scrollLeft=Math.max(0,l-24)}})}catch(e){}
   try{if(!S||S.phase==="h2h"&&!WATCH)startHero()}catch(e){}
   try{const k=viewKey(),base=k.split("|").slice(1).join("|");
     // Switching tabs only fades the content area; a new screen gets the full entrance.
@@ -3899,7 +3965,7 @@ function tabRoster(){
     <td class="n">${YRS[p.yr]}</td><td class="n"><b>${p.ovr}</b></td><td class="sub hm">${p.s.g?`${f1(p.s.min/60/p.s.g)} min · ${esc(statLine(p))}`:"—"}</td>
     <td class="n"><button class="small-btn" data-act="depth" data-id="${p.id}" data-d="-1" ${i===0?"disabled":""} aria-label="Move ${esc(p.n)} up">▲</button> <button class="small-btn" data-act="depth" data-id="${p.id}" data-d="1" ${i===list.length-1?"disabled":""} aria-label="Move ${esc(p.n)} down">▼</button></td></tr>`};
   return `<div class="panel"><div class="row" style="justify-content:space-between"><h3>${esc(me.name)} rotation · ${me.roster.length} scholarships</h3><button class="small-btn" data-act="depthAuto">Auto-sort by rating</button></div>
-    <div class="tw"><table class="tbl"><tbody>
+    <div class="tw"><table class="tbl rost"><tbody>
     ${POS.map(pos=>{const list=depthOf(me,pos);return `<tr class="poshead"><td colspan="6">${POS_NAME[pos]} <span class="sub">· starter ${u[pos]}</span></td></tr>${list.map((p,i)=>row(p,i,list)).join("")}`}).join("")}
     </tbody></table></div>
     <p class="muted" style="font-size:13px">The top player at each spot starts and plays about 30 minutes. The next one off the bench gets most of the rest, more if he's close in rating. Foul trouble and blowouts shake up the minutes. Use ▲▼ to set your depth chart. Tap a name for his player page, or ✎ to rename him.${gp?"":" "}</p></div>`;
