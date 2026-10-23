@@ -889,6 +889,15 @@ button:active:not(:disabled){transform:scale(.97)}
 .heads>div>.tag{justify-self:stretch;text-align:center;margin-top:1px}
 .heads .plink{text-align:left;text-decoration:none}
 .heads .plink:hover{text-decoration:underline}
+.lookgrid{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:start}
+.lookprev{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px;border-radius:14px;background:radial-gradient(circle at 50% 30%,rgba(110,210,255,.15),rgba(0,0,0,.25));border:1px solid rgba(110,210,255,.2);text-align:center;font-size:13px}
+.looks{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px}
+.lookbtn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;border-radius:12px;border:1px solid rgba(110,210,255,.14);background:rgba(110,210,255,.04);color:#a9c4ee;font-size:11px;line-height:1.15;text-align:center;cursor:pointer}
+.lookbtn:hover{border-color:rgba(110,210,255,.4);color:#fff}
+.lookbtn.on{border-color:var(--neon,#6ed2ff);box-shadow:0 0 16px rgba(110,210,255,.35);color:#fff}
+@media (max-width:560px){.lookgrid{grid-template-columns:1fr}.lookprev{flex-direction:row;justify-content:center}.looks{grid-template-columns:repeat(auto-fill,minmax(74px,1fr))}}
+.coachline{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--muted)}
+.coachline svg{flex:none}
 </style>
 </head>
 <body>
@@ -1415,7 +1424,7 @@ function shootingFoul(g,d,shooter){
 }
 function rebound(g,o,d,mod){
   const P=g.pl[o],Q=g.pl[d],aO=g.agg[o],aD=g.agg[d];
-  const orbP=clamp(.29+OSCH[P.o].orb+DSCH[Q.d].orb+P.boards*.035+(aO.reb-aD.reb)*.003+(mod||0)+(g.pb&&o===S.user?g.pb.orb:0),.12,.48);
+  const orbP=clamp(.29+OSCH[P.o].orb+DSCH[Q.d].orb+P.boards*.035+(aO.reb-aD.reb)*.003+(mod||0)+(g.pb&&o===S.user?g.pb.orb:0)+(o===S.user&&isDem("old")?.025:0),.12,.48);
   if(rnd()<orbP){const r=wpickP(aO.orb);add(g,r,"orb");g.tstat[o].reb++;return {off:true,p:r}}
   const r=wpickP(aD.drb);add(g,r,"drb");g.tstat[d].reb++;
   g.trans=rnd()<.14+P.boards*.05;return {off:false,p:r};
@@ -1464,14 +1473,14 @@ function possession(g){
 }
 function attempt(g,o,d,mode,buzzer){
   const P=g.pl[o],Q=g.pl[d],OS=OSCH[P.o],DS=DSCH[Q.d],me=o===S.user,A=g.A;
-  const cr=g.hfa?g.hfa*clamp(1+(g.mom||0)*.6,.4,1.6):0,hfa=o===g.home?cr:-cr,cl=clutchTime(g),edge=g.edge[o]-g.dedge[d]+hfa+(g.mom||0)*(o===g.home?.008:-.008)+(cl&&me?S.coach.clutch*.01:0)+(COUNTER[P.o][Q.d]||0)+(g.haunt&&cl&&o===g.away?-.02:0)+(cl&&me&&isDem("ice")?.006:0)+(g.fire&&g.el<g.fire.until&&g.fire.id===o?g.fire.v:0);
+  const cr=g.hfa?g.hfa*clamp(1+(g.mom||0)*.6,.4,1.6):0,hfa=o===g.home?cr:-cr,cl=clutchTime(g),edge=g.edge[o]-g.dedge[d]+hfa+(g.mom||0)*(o===g.home?.008:-.008)+(cl&&me?S.coach.clutch*.01:0)+(COUNTER[P.o][Q.d]||0)+(g.haunt&&cl&&o===g.away?-.02:0)+(cl&&me&&isDem("ice")?.006:0)+(me&&g.half>=2&&isDem("motiv")?(g.score[o]<g.score[d]?.009:g.score[o]-g.score[d]>=8?-.004:0):0)+(g.fire&&g.el<g.fire.until&&g.fire.id===o?g.fire.v:0);
   let putback=null;
   for(let k=0;k<5;k++){
     if(k>0){if(g.clock<=0)break;tick(g,2+rnd()*5)}
     const lo=g.lu[o],ld=g.lu[d],aO=g.agg[o],aD=g.agg[d];
     if(k===0&&mode!=="last"){
       // Turnover
-      const toP=clamp((.165+OS.to+DS.to+(P.tempo-2)*.004-(aO.hnd-aD.pdef)*.0013-edge*.6)*(me?1-.08*S.coach.sec:1)*(mode==="trans"?.8:1)*(g.pb&&me?1-g.pb.to:1)*(aO.gen?.95:1)*(me&&isDem("strict")?.95:1),.07,.3);
+      const toP=clamp((.165+OS.to+DS.to+(P.tempo-2)*.004-(aO.hnd-aD.pdef)*.0013-edge*.6)*(me?1-.08*S.coach.sec:1)*(mode==="trans"?.8:1)*(g.pb&&me?1-g.pb.to:1)*(aO.gen?.95:1)*(me&&isDem("strict")?.95:1)*(d===S.user&&isDem("gamble")?1.08:1),.07,.3);
       if(rnd()<toP){
         const loser=wpickP(aO.to);add(g,loser,"to");g.tstat[o].to++;
         if(rnd()<.5+(Q.d==="press"?.12:0)){const st=wpickP(aD.stl);add(g,st,"stl");g.trans=rnd()<.7;
@@ -1497,7 +1506,7 @@ function attempt(g,o,d,mode,buzzer){
     if(type==="rim")mk=.505+((Sa.ins*.7+Sa.ath*.3)-72)*.0017-(aD.idef-72)*.0013+DS.rim+(putback?.06:0)+(mode==="trans"?.1:0);
     else if(type==="mid")mk=.36+(Sa.mid-72)*.0017-(dP-72)*.0011+DS.mid;
     else mk=.32+(Sa.thr-72)*.0019-(dP-72)*.0009+DS.three-(mode==="three"&&g.clock<8?.05:0);
-    const pb=g.pb;if(pb&&me)mk+=(type==="three"?pb.three:type==="rim"?pb.rim:0)+pb.all+(g.half>=2&&g.clock<600?pb.late:0);if(pb&&d===S.user)mk-=pb.def+pb.all*.5;
+    const pb=g.pb;if(pb&&me)mk+=(type==="three"?pb.three:type==="rim"?pb.rim:0)+pb.all+(g.half>=2&&g.clock<600?pb.late:0);if(pb&&d===S.user)mk-=pb.def+pb.all*.5;if(type==="three"&&d===S.user&&isDem("gamble"))mk+=.012;
     mk+=hcMod(g,sh)+(type==="three"&&hasGB(g,sh,"range")?.015:0)+(type==="rim"&&hasGB(g,sh,"finisher")?.02:0)+(cl&&hasGB(g,sh,"clutch")?.03:0)-(hasGB(g,df,"lock")?.02:0);mk=clamp(mk+edge,.08,.88);
     const fouled=rnd()<(type==="rim"?.2:type==="mid"?.07:.016);
     // Blocks
@@ -3296,15 +3305,18 @@ const DEMEANOR={
   players:{n:"Players' Coach",i:"🤝",d:"His guys would run through a wall for him.",up:"Players stay happier and recruits like you more",down:"Players pick up a few more technicals",q:["That's all them. I just roll the balls out.","Proud of these young men. They love each other.","I told them to go have fun. They did."],lq:["That's on me, not them. I'll be better.","My guys gave everything. I love this team.","We'll stick together. That's what we do."]},
   strict:{n:"Disciplinarian",i:"📏",d:"Shirts tucked in. Phones off. On time is late.",up:"Far fewer player technicals and fewer turnovers",down:"Players get a little grumpier",q:["We took care of the ball. That's the standard.","Discipline won tonight.","Fine. Practice is still at 5 a.m."],lq:["Too many mistakes. Too many.","We'll run tomorrow. A lot.","Nobody gets a day off after that."]},
   show:{n:"Showman",i:"🎤",d:"Wears a suit that costs more than your car.",up:"Your student section gets louder and five-stars notice you",down:"Every loss gets roasted online",q:["Did y'all see that?! Best show in college hoops!","Tell the cameras: we're just getting started.","I'm buying the student section pizza. All of it."],lq:["Even Broadway has an off night.","Bad night. Great outfit, though.","We'll give 'em a better show next time."]},
+  motiv:{n:"Motivator",i:"📣",d:"Gives halftime speeches people put on YouTube.",up:"Your team fights back harder when it's trailing late",down:"Gets complacent once he has a lead",q:["I told them at the half: this is OUR building. They believed it.","Heart. You can't scout heart.","Down isn't out. Never has been, never will be."],lq:["I didn't reach them tonight. That's on me.","We'll get back up. We always get back up.","Tough night. Tomorrow is a new speech."]},
+  gamble:{n:"Gambler",i:"🎲",d:"Presses, traps and dares you to beat him.",up:"Your defense forces more turnovers",down:"Gambling defense gives up more open threes",q:["We turned them over and ran. That's the whole plan.","Chaos is a ladder. We climbed it.","You live by the trap, you live by the trap."],lq:["They made us pay from deep. We'll still gamble.","Some nights the dice don't roll your way.","We'll keep pressing. That's who we are."]},
+  old:{n:"Old School",i:"📼",d:"Still uses a VHS tape for film. Short shorts in practice.",up:"Your team wins the battle on the offensive glass",down:"Five-star recruits think you're out of touch",q:["Box out. Rebound. Win. Same as 1987.","Kids today want highlights. We want rebounds.","Fundamentals. Always fundamentals."],lq:["We didn't box out. I'll show 'em the tape. The VHS.","Soft. In my day we ran till we threw up.","Back to basics. Literally."]},
   tac:{n:"Tactician",i:"🧠",d:"Has a whiteboard in his car.",up:"Your game plan fits a little better every game",down:"Tirades fall flat, and fans call you boring",q:["The zone gave them problems. As expected.","Our ball-screen coverage was the difference.","We had a plan. They didn't adjust."],lq:["They solved our zone. I'll solve them back.","Wrong coverage on the late action. My fault.","Back to the whiteboard."]},
 };
-const LOOKS={suit:"Three-piece suit",zip:"Quarter-zip",vest:"Sweater vest",track:"Tracksuit",tux:"Tuxedo (big games only)"};
+const LOOKS={zip:"Quarter-zip",suit:"Three-piece suit",blazer:"Team blazer",tux:"Tuxedo",vest:"Sweater vest",turtle:"Black turtleneck",polo:"Team polo",track:"Tracksuit",hoodie:"Hoodie",wind:"Windbreaker + headset",towel:"Towel on the shoulder",cowboy:"Cowboy hat & bolo",hawaii:"Hawaiian shirt",ugly:"Ugly holiday sweater",jersey:"Throwback jersey",shorts:"Short shorts & whistle"};
 const dem=()=>S&&S.phase!=="h2h"&&!S.mp&&S.coach&&S.coach.dem||null;
 const isDem=k=>dem()===k;
 function coachName(){return (S.coach&&S.coach.name)||"Coach"}
 function demRage(){return isDem("fiery")?1.35:isDem("ice")?.6:1}
-function demFit(){return isDem("fiery")?.1:isDem("ice")?-.15:isDem("tac")?-.1:0}
-function demRec(st){return isDem("players")?.03:isDem("show")&&st===5?.04:0}
+function demFit(){return isDem("fiery")?.1:isDem("motiv")?.05:isDem("ice")?-.15:isDem("tac")?-.1:0}
+function demRec(st){return isDem("players")?.03:isDem("show")&&st===5?.04:isDem("old")&&st===5?-.04:0}
 // Does a technical on your team stick? Disciplinarians stop most of them; players' coaches let a few more happen.
 function demTechOK(id){if(!S||id!==S.user)return true;return isDem("strict")?Math.random()<.45:true}
 function demAfter(gm){
@@ -3321,9 +3333,46 @@ function demeanorPanel(){
   return `<div class="panel" data-c="blue"><div class="row" style="justify-content:space-between"><h3>Your coach</h3>${cur?`<span class="tag">${DEMEANOR[cur].i} ${esc(DEMEANOR[cur].n)}</span>`:'<span class="tag amber">Pick a demeanor</span>'}</div>
     <div class="row"><label for="coachName" class="sub">Name</label><input id="coachName" class="nm" maxlength="22" placeholder="Your name" value="${esc(C.name||"")}" style="width:min(100%,240px)"></div>
     <h3>Demeanor</h3><div class="schemes dem">${Object.entries(DEMEANOR).map(([k,x])=>`<button class="scheme ${cur===k?"on":""}" data-act="demPick" data-k="${k}" aria-pressed="${cur===k}"><b>${x.i} ${esc(x.n)}</b><small>${esc(x.d)}</small><small class="up">+ ${esc(x.up)}</small><small class="down">− ${esc(x.down)}</small></button>`).join("")}</div>
-    <h3>Sideline look</h3><div class="row">${Object.entries(LOOKS).map(([k,n])=>`<button class="uchip ${look===k?"on":""}" data-act="demLook" data-k="${k}">${esc(n)}</button>`).join("")}</div>
+    <h3>Sideline look</h3><div class="lookgrid"><div class="lookprev">${coachSVG(look,T(S.user),110)}<b>${esc(LOOKS[look]||"")}</b></div><div class="looks">${Object.entries(LOOKS).map(([k,n])=>`<button class="lookbtn ${look===k?"on":""}" data-act="demLook" data-k="${k}" aria-pressed="${look===k}" title="${esc(n)}">${coachSVG(k,T(S.user),58)}<span>${esc(n)}</span></button>`).join("")}</div></div>
     <p class="muted" style="font-size:13px">You can change your style any time. Your postgame quotes on Courtside match it.</p></div>`;
 }
+
+// A little sideline figure in your team colors wearing the look you picked.
+function coachSVG(look,t,w){
+  const c1=t.c1,c2=t.c2,skin="#c98d6a",dark="#1b2030",white="#f2f4f8";
+  const body={zip:[c1,c2],suit:["#2c3242",white],blazer:[c1,white],tux:["#111",white],vest:[c2,white],turtle:["#151515","#151515"],polo:[c1,c1],track:[c1,c2],hoodie:["#3a4152","#3a4152"],
+    wind:[c2,c1],towel:["#2c3242",white],cowboy:["#6b4a2b",white],hawaii:["#e85d5d","#ffd84d"],ugly:["#c23b3b","#2f8f4e"],jersey:[c1,c2],shorts:[c1,c2]}[look]||[c1,c2];
+  const [m,s2]=body;let extra="",legs=dark,shirt="";
+  if(look==="suit"||look==="blazer"||look==="towel")shirt=`<path d="M44 40 L50 56 L56 40 Z" fill="${white}"/><path d="M48.5 43 L51.5 43 L52.5 58 L50 61 L47.5 58 Z" fill="${look==="blazer"?c2:c1}"/>`;
+  if(look==="tux")shirt=`<path d="M44 40 L50 60 L56 40 Z" fill="${white}"/><path d="M45 43 L50 45 L55 43 L55 47 L50 45 L45 47 Z" fill="#111"/>`;
+  if(look==="vest")shirt=`<path d="M41 42 L50 62 L59 42 L59 66 L41 66 Z" fill="${c1}" opacity=".9"/><path d="M47 41 L50 47 L53 41 Z" fill="${white}"/>`;
+  if(look==="zip")shirt=`<path d="M45 39 L50 47 L55 39" stroke="${s2}" stroke-width="2.5" fill="none"/><line x1="50" y1="47" x2="50" y2="68" stroke="${s2}" stroke-width="1.5"/>`;
+  if(look==="polo"||look==="jersey"||look==="shorts")shirt=`<text x="50" y="62" text-anchor="middle" font-family="Chakra Petch,sans-serif" font-weight="700" font-size="${look==="polo"?7:12}" fill="${c2}">${look==="polo"?esc(t.abbr):"1"}</text>`;
+  if(look==="track")shirt=`<line x1="38" y1="44" x2="34" y2="72" stroke="${s2}" stroke-width="3"/><line x1="62" y1="44" x2="66" y2="72" stroke="${s2}" stroke-width="3"/>`,legs=m;
+  if(look==="hoodie")shirt=`<path d="M40 38 Q50 30 60 38" stroke="#2a303d" stroke-width="6" fill="none"/><rect x="43" y="58" width="14" height="8" rx="2" fill="#2a303d"/>`;
+  if(look==="hawaii")shirt=[[42,48],[56,52],[47,62],[58,64],[40,64]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3" fill="${s2}"/>`).join("");
+  if(look==="ugly")shirt=`<path d="M38 52 h24" stroke="${white}" stroke-width="3" stroke-dasharray="3 3"/><path d="M50 56 l-5 9 h10 z" fill="${s2}"/>`;
+  if(look==="cowboy")shirt=`<path d="M46 41 L50 50 L54 41" stroke="#d9b45b" stroke-width="2" fill="none"/><circle cx="50" cy="50" r="2.5" fill="#d9b45b"/>`,extra=`<ellipse cx="50" cy="17" rx="21" ry="4.5" fill="#6b4a2b"/><path d="M39 17 Q40 3 50 4 Q60 3 61 17 Z" fill="#7d5733"/>`;
+  if(look==="wind")extra=`<path d="M36 24 Q36 6 50 6 Q64 6 64 24" stroke="#111" stroke-width="3" fill="none"/><rect x="32" y="20" width="6" height="10" rx="2" fill="#111"/><path d="M34 30 Q36 36 44 35" stroke="#111" stroke-width="2" fill="none"/>`;
+  if(look==="towel")extra=`<path d="M56 38 L64 40 L62 70 L56 68 Z" fill="${white}" opacity=".95"/>`;
+  if(look==="shorts")legs=m,extra=`<line x1="50" y1="38" x2="44" y2="56" stroke="#999" stroke-width="1"/><rect x="42" y="55" width="5" height="3" rx="1" fill="#ccc"/>`;
+  if(look==="turtle")shirt=`<rect x="44" y="34" width="12" height="7" rx="3" fill="#151515"/>`;
+  const legLen=look==="shorts"?[86,92]:[86,104];
+  return `<svg class="coachfig" viewBox="0 0 100 112" width="${w}" height="${Math.round(w*1.12)}" aria-hidden="true">
+    <ellipse cx="50" cy="108" rx="22" ry="3.5" fill="rgba(0,0,0,.35)"/>
+    <rect x="41" y="84" width="7.5" height="${look==="shorts"?8:20}" rx="2" fill="${legs}"/><rect x="51.5" y="84" width="7.5" height="${look==="shorts"?8:20}" rx="2" fill="${legs}"/>
+    ${look==="shorts"?`<rect x="42" y="92" width="5.5" height="12" fill="${skin}"/><rect x="52.5" y="92" width="5.5" height="12" fill="${skin}"/><rect x="41" y="98" width="7.5" height="5" fill="${white}"/><rect x="51.5" y="98" width="7.5" height="5" fill="${white}"/>`:""}
+    <rect x="39" y="103" width="10" height="4" rx="2" fill="${look==="cowboy"?"#5a3b20":"#0d0f16"}"/><rect x="51" y="103" width="10" height="4" rx="2" fill="${look==="cowboy"?"#5a3b20":"#0d0f16"}"/>
+    <path d="M36 42 Q37 36 44 36 L56 36 Q63 36 64 42 L66 86 L34 86 Z" fill="${m}"/>
+    <path d="M36 42 L28 66 L33 68 L39 50 Z" fill="${m}"/><path d="M64 42 L72 66 L67 68 L61 50 Z" fill="${m}"/>
+    <circle cx="30.5" cy="68" r="3.5" fill="${skin}"/><circle cx="69.5" cy="68" r="3.5" fill="${skin}"/>
+    ${shirt}
+    <rect x="46" y="29" width="8" height="8" fill="${skin}"/><circle cx="50" cy="22" r="10" fill="${skin}"/><path d="M40 21 Q41 10 50 10 Q60 10 60 21 Q57 15 50 15 Q43 15 40 21 Z" fill="#3b2a1e"/>
+    <circle cx="46.5" cy="23" r="1.1" fill="#222"/><circle cx="53.5" cy="23" r="1.1" fill="#222"/><path d="M46.5 27.5 Q50 29.5 53.5 27.5" stroke="#6b3b2b" stroke-width="1.2" fill="none"/>
+    ${extra}</svg>`;
+}
+function coachLine(){if(isMP()||!S.coach)return "";const D=DEMEANOR[S.coach.dem],t=T(S.user);if(!D&&!S.coach.name)return "";
+  return `<div class="coachline">${coachSVG(S.coach.look||"zip",t,34)}<span>Coach ${esc(S.coach.name||"")}${D?` · ${D.i} ${esc(D.n)}`:""} · ${esc(LOOKS[S.coach.look||"zip"])}</span></div>`}
 
 // ===================== MY PLAYER: one player, high school to the NBA draft =====================
 // The dynasty runs as normal with the AI coaching your school. S.mp marks the save, and your player carries p.mp.
@@ -3693,7 +3742,7 @@ function nextCard(){
       <div class="gd-odds"><div class="gd-stat"><span>NET rank</span><b>#${netOf(ug.a)} · #${netOf(ug.h)}</b></div>
         <div class="gd-stat grow"><span>Your win chance</span><div class="gd-bar"><i style="width:${Math.round(myP*100)}%"></i></div></div>
         <div class="gd-stat"><span>&nbsp;</span><b>${Math.round(myP*100)}%</b></div></div>
-      <div class="gd-venue">${venue}</div>
+      <div class="gd-venue">${venue}</div>${coachLine()}
       ${chips.length?`<div class="gd-chips">${chips.join("")}</div>`:""}
       <details class="gd-more" ${S.gdOpen?"open":""}><summary>Game-day options<span>Uniform: ${esc((()=>{const U=uni(),k=U.pick;return k==="auto"?"Auto":(U.sets.find(x=>x.k===k)||{n:"Auto"}).n})())}${ug.h===S.user&&!ug.neutral?` · Theme night: ${(()=>{const X=ss(),c=X.theme[gameKey(ug)];return c?esc(THEMES.find(x=>x[0]===c)[1]):"none"})()}`:""}</span></summary>${uniPicker(ug)}${themePicker(ug)}</details>
       <div class="gd-actions"><button class="btn big" data-act="watch">Watch live</button><button class="btn ghost big" data-act="sim">Sim game</button></div>
