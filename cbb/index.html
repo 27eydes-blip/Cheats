@@ -842,6 +842,53 @@ h3,.panel h3{font-family:var(--hud);font-weight:600;color:#a9d8ff;letter-spacing
 .stamp{display:inline-block;margin-top:8px;padding:2px 10px;border:2px solid #7d6a3e;color:#7d6a3e;font-family:var(--num);font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;transform:rotate(-4deg)}
 .stamp.ok{border-color:#c21d1d;color:#c21d1d}
 .stamp.no{border-color:#2d6b3a;color:#2d6b3a}
+
+/* ===== CLEANUP: compact sticky nav, tidier hub, smoother motion ===== */
+html{scroll-behavior:smooth;-webkit-tap-highlight-color:transparent}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+button{transition:transform .12s ease,background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease}
+button:active:not(:disabled){transform:scale(.97)}
+.navgroups{position:sticky;top:8px;z-index:30;display:flex;flex-wrap:wrap;gap:6px 18px;padding:8px 12px;border-radius:16px;background:rgba(5,10,26,.86);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3)}
+.navg{flex-direction:row!important;align-items:center!important;gap:8px;min-width:0}
+.navl{writing-mode:horizontal-tb!important;transform:none!important;font-size:9.5px;letter-spacing:.2em;opacity:.8}
+.navg .tabs{display:flex!important;flex-wrap:wrap;gap:4px;grid-template-columns:none!important}
+.navg .tab{flex-direction:row!important;gap:6px!important;width:auto!important;padding:6px 11px!important;border-radius:999px!important;font-size:11.5px!important;letter-spacing:.05em!important;white-space:nowrap}
+.navg .tab .ti{font-size:14px!important}
+.navg .tab br{display:none}
+@media (max-width:720px){
+  .navgroups{display:block;padding:6px 0 6px 8px;border-radius:14px;top:4px}
+  .navg{gap:6px;padding:2px 0}
+  .navl{width:46px;flex:none;font-size:8.5px;letter-spacing:.12em}
+  .navg .tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-right:8px;-webkit-mask:linear-gradient(90deg,#000 88%,transparent);mask:linear-gradient(90deg,#000 88%,transparent)}
+  .navg .tabs::-webkit-scrollbar{display:none}
+  .navg .tab{padding:6px 10px!important;font-size:11px!important}
+  .chips{display:flex!important;overflow-x:auto;scrollbar-width:none;gap:8px!important;margin:-46px 10px 0!important;padding-bottom:4px}
+  .chips::-webkit-scrollbar{display:none}
+  .chips .chip{flex:0 0 auto;min-width:104px}
+}
+.swap{animation:swapIn .22s ease both}
+@keyframes swapIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.swap{animation:none}}
+.enter>*{animation-duration:.3s!important}
+.gd-more{margin:10px 0 4px;border:1px solid rgba(110,210,255,.18);border-radius:12px;background:rgba(0,0,0,.18)}
+.gd-more>summary{cursor:pointer;list-style:none;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;justify-content:center;padding:9px 12px;font-family:var(--hud,var(--num));font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#a9c4ee}
+.gd-more>summary::-webkit-details-marker{display:none}
+.gd-more>summary::before{content:"▸";transition:transform .2s}
+.gd-more[open]>summary::before{transform:rotate(90deg)}
+.gd-more>summary span{font-family:var(--body);font-weight:500;font-size:12.5px;letter-spacing:0;text-transform:none;color:var(--muted)}
+.gd-more>.gd-uni{padding:0 10px 10px}
+.gd-links{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px}
+.gd-links .linkbtn{font-size:13px}
+.dem .scheme small.up{color:#7fe0a6}
+.dem .scheme small.down{color:#ff9a9a}
+.panel{transition:border-color .2s ease}
+.wview{display:flex;flex-direction:column;gap:16px;min-width:0}
+.wv-top,.wv-rest{display:contents}
+.log>div{animation:none}
+.heads>div{display:grid!important;grid-template-columns:minmax(0,104px) 1fr;align-items:start!important;gap:10px}
+.heads>div>.tag{justify-self:stretch;text-align:center;margin-top:1px}
+.heads .plink{text-align:left;text-decoration:none}
+.heads .plink:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -1294,7 +1341,7 @@ function newGame(gm,txt){
   if(!gm.neutral)g.hfa+=mmCrowd(gm);
   if(!gm.neutral){g.hfa+=ssEdge(gm);if(gm.h===S.user&&S.phase!=="h2h"&&S.ss&&S.ss.team===S.user)g.ssT=S.ss.trad.slice()}
   for(const id of [home,away])g.edge[id]+=trashEdge(gm,id);
-  g.haunt=!gm.neutral&&!!haunted(T(home));g.heat=heatOf(gm);
+  g.haunt=!gm.neutral&&!!haunted(T(home));const mine=home===S.user||away===S.user;g.heat=heatOf(gm)+(mine&&isDem("fiery")?.3:0);if(mine&&isDem("tac"))g.edge[S.user]+=.004;
   for(const id of [home,away])setLineup(g,id,true);
   // Opening tip: the bigger center usually wins it.
   const ch=g.lu[home][4],ca=g.lu[away][4],pH=clamp(.5+((ch?attrVal(ch,"ath")+ch.ht:0)-(ca?attrVal(ca,"ath")+ca.ht:0))*.02,.25,.75);
@@ -1417,14 +1464,14 @@ function possession(g){
 }
 function attempt(g,o,d,mode,buzzer){
   const P=g.pl[o],Q=g.pl[d],OS=OSCH[P.o],DS=DSCH[Q.d],me=o===S.user,A=g.A;
-  const cr=g.hfa?g.hfa*clamp(1+(g.mom||0)*.6,.4,1.6):0,hfa=o===g.home?cr:-cr,cl=clutchTime(g),edge=g.edge[o]-g.dedge[d]+hfa+(g.mom||0)*(o===g.home?.008:-.008)+(cl&&me?S.coach.clutch*.01:0)+(COUNTER[P.o][Q.d]||0)+(g.haunt&&cl&&o===g.away?-.02:0)+(g.fire&&g.el<g.fire.until&&g.fire.id===o?g.fire.v:0);
+  const cr=g.hfa?g.hfa*clamp(1+(g.mom||0)*.6,.4,1.6):0,hfa=o===g.home?cr:-cr,cl=clutchTime(g),edge=g.edge[o]-g.dedge[d]+hfa+(g.mom||0)*(o===g.home?.008:-.008)+(cl&&me?S.coach.clutch*.01:0)+(COUNTER[P.o][Q.d]||0)+(g.haunt&&cl&&o===g.away?-.02:0)+(cl&&me&&isDem("ice")?.006:0)+(g.fire&&g.el<g.fire.until&&g.fire.id===o?g.fire.v:0);
   let putback=null;
   for(let k=0;k<5;k++){
     if(k>0){if(g.clock<=0)break;tick(g,2+rnd()*5)}
     const lo=g.lu[o],ld=g.lu[d],aO=g.agg[o],aD=g.agg[d];
     if(k===0&&mode!=="last"){
       // Turnover
-      const toP=clamp((.165+OS.to+DS.to+(P.tempo-2)*.004-(aO.hnd-aD.pdef)*.0013-edge*.6)*(me?1-.08*S.coach.sec:1)*(mode==="trans"?.8:1)*(g.pb&&me?1-g.pb.to:1)*(aO.gen?.95:1),.07,.3);
+      const toP=clamp((.165+OS.to+DS.to+(P.tempo-2)*.004-(aO.hnd-aD.pdef)*.0013-edge*.6)*(me?1-.08*S.coach.sec:1)*(mode==="trans"?.8:1)*(g.pb&&me?1-g.pb.to:1)*(aO.gen?.95:1)*(me&&isDem("strict")?.95:1),.07,.3);
       if(rnd()<toP){
         const loser=wpickP(aO.to);add(g,loser,"to");g.tstat[o].to++;
         if(rnd()<.5+(Q.d==="press"?.12:0)){const st=wpickP(aD.stl);add(g,st,"stl");g.trans=rnd()<.7;
@@ -1565,7 +1612,7 @@ function playRound(userRes){
     const r=isU?userRes:pre||simGame(gm);
     gm.hs=r.hs;gm.as=r.as;gm.ot=r.ot;gm.winner=r.hs>r.as?r.h:r.a;
     S.results.push({h:gm.h,a:gm.a,hs:r.hs,as:r.as,type:gm.type,label:gm.label,day:S.phase==="regular"?S.day:null,neutral:!!gm.neutral,ot:r.ot});
-    seriesNote(gm);gamedayResult(gm);if(r.bz)noteBuzzer(gm,r.bz);gameAch(gm);relAfterGame(gm);uniResult(gm);gm.bz=r.bz;ssAfter(gm);rivalAfter(gm);feedAfter(gm);mpAfter(gm);ghostAfter(gm);techAfter(gm,r.ej);csAfter(gm);
+    seriesNote(gm);gamedayResult(gm);if(r.bz)noteBuzzer(gm,r.bz);gameAch(gm);relAfterGame(gm);uniResult(gm);gm.bz=r.bz;ssAfter(gm);rivalAfter(gm);feedAfter(gm);mpAfter(gm);demAfter(gm);ghostAfter(gm);techAfter(gm,r.ej);csAfter(gm);
     if(isSeniorNight(gm)){const sn=seniorsOf(T(S.user));news(`Senior Night: ${gm.winner===S.user?"a win to send off":"a tough loss for"} ${sn.length?sn.map(p=>p.n).join(", "):"the seniors"}.`)}
     const w=gm.winner,l=w===gm.h?gm.a:gm.h,up=ovr(T(w))<ovr(T(l))-5;
     S.mo=S.mo||{};S.mo[w]=clamp((S.mo[w]||0)*.6+1+(up?.5:0),-3,3);S.mo[l]=clamp((S.mo[l]||0)*.6-1,-3,3);
@@ -1812,7 +1859,7 @@ function crowdPenalty(pos,st){
 const REC_COST={5:18,4:10,3:4,2:0},REC_CAP={5:.72,4:.86,3:.97};
 function prospectChance(pos,st){
   if(st===2)return 1;const me=T(S.user);
-  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
+  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04+demRec(st)-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
 }
 function makeProspect(pos,st){
   const me=T(S.user),[a,b]=HT[pos];
@@ -3130,7 +3177,7 @@ function heatOf(gm){if(S.phase==="h2h")return .25;if(gm.neutral&&gm.type==="ncaa
 function techFTs(g,shTeam,why){const p=g.lu[shTeam].slice().sort((a,b)=>ftPct(g,b,shTeam)-ftPct(g,a,shTeam))[0];if(!p)return;const r=freeThrows(g,shTeam,opp(g,shTeam),p,2);say(g,`${why} ${p.n} makes ${r.made} of 2.`,true)}
 function heatCheck(g){
   const ht=g.heat||0,trail=g.score[g.home]<g.score[g.away]?g.home:g.away;
-  if(rnd()>=.0022*ht*(1+Math.abs(g.mom||0)*1.5))return;
+  if(rnd()>=.0022*ht*(1+Math.abs(g.mom||0)*1.5)*(isDem("players")&&(g.home===S.user||g.away===S.user)?1.25:1))return;
   const id=rnd()<.62?trail:opp(g,trail),other=opp(g,id);
   if(rnd()<.25){ // the coach loses it
     const rc=S.phase!=="h2h"&&isRivalCoach(id)?coachOf(T(id)):null,me=id===S.user&&S.phase!=="h2h";
@@ -3138,6 +3185,7 @@ function heatCheck(g){
     techFTs(g,other,`TECHNICAL on the ${T(id).abbr} bench${rc?` · Coach ${rc.n} is livid`:me?" · that's on you, coach":""}.`);
     if(g.ctech[id]>=2){say(g,`${rc?`Coach ${rc.n}`:`The ${T(id).abbr} coach`} is EJECTED!`,true);g.ej=(g.ej||[]).concat([{coach:true,tid:id}]);if(me)coachEject(g)}
     return;}
+  if(!demTechOK(id))return;
   const p=pick(g.lu[id]);if(!p)return;g.tech=g.tech||{};g.tech[p.id]=(g.tech[p.id]||0)+1;add(g,p,"pf");g.pf[p.id]=(g.pf[p.id]||0)+1;
   techFTs(g,other,`TECHNICAL on ${p.n} (${T(id).abbr}) for ${pick(["taunting","hanging on the rim","jawing at the ref","a shove after the whistle","slamming the ball"])}.`);
   if(g.tech[p.id]>=2){g.pf[p.id]=Math.max(5,g.pf[p.id]);g.stint[id]=0;say(g,`${p.n} gets his second technical and is EJECTED!`,true);g.ej=(g.ej||[]).concat([{pid:p.id,tid:id}])}
@@ -3169,7 +3217,7 @@ function rageStep(W,before){
   const g=W.g,u=S.user;if(W.kind!=="user"||g.over)return;const o=opp(g,u);
   const dU=g.score[u]-before.u,dO=g.score[o]-before.o,fl=g.fouls[u]-before.f;
   const hot=isRivalCoach(o)&&coachOf(T(o)).p==="hot"?1.5:1;
-  W.rage=clamp((W.rage||0)*.97+Math.max(0,dO*2.1+fl*3.5+(g.run.t===o&&g.run.p>=6?2:0))*hot-dU*.5,0,100);
+  W.rage=clamp((W.rage||0)*.97+Math.max(0,dO*2.1+fl*3.5+(g.run.t===o&&g.run.p>=6?2:0))*hot*demRage()-dU*.5,0,100);
 }
 function rageBar(W){
   if(W.kind!=="user"||W.g.over)return "";const r=Math.round(W.rage||0),ready=r>=40,g=W.g,ct=(g.ctech||{})[S.user]||0;
@@ -3179,7 +3227,7 @@ function rageBar(W){
 }
 function meltdown(){
   const W=WATCH;if(!W||W.kind!=="user"||W.g.over||(W.rage||0)<40||W.g.coachOut)return;const g=W.g,u=S.user,o=opp(g,u),r=W.rage;W.rage=0;
-  if(Math.random()<.35+r/250){g.fire={id:u,until:g.el+180,v:.035};g.mom=clamp((g.mom||0)+(u===g.home?.6:-.6),-1,1);
+  if(Math.random()<.35+r/250+demFit()){g.fire={id:u,until:g.el+180,v:.035};g.mom=clamp((g.mom||0)+(u===g.home?.6:-.6),-1,1);
     W.banner=pick(["You SLAM your clipboard. The bench explodes. The crowd is on its feet!","You rip off your jacket and scream at your guys. They respond!","You stomp onto the court to protest. The refs warn you, but your team is FIRED UP."]);
     say(g,"The coach's tirade fires up the bench!",true);S.cs&&(csNow().fits++);}
   else{g.ctech=g.ctech||{};g.ctech[u]=(g.ctech[u]||0)+1;W.banner="TECHNICAL FOUL on you, coach.";techFTs(g,o,`TECHNICAL on the ${T(u).abbr} coach.`);
@@ -3239,6 +3287,43 @@ function secretReveal(){
   }
 }
 const unlockSafe=k=>{try{if(typeof ACH!=="undefined"&&ACH[k])unlock(k)}catch(e){}};
+
+// ===================== YOUR COACH'S DEMEANOR =====================
+// Who you are on the sideline. Each style has an upside and a cost.
+const DEMEANOR={
+  fiery:{n:"Fiery",i:"🔥",d:"Lives on the edge of the court.",up:"Meltdowns work more often, and the meter fills faster",down:"More technicals in heated games",q:["We got punched and we punched back. That's who we are.","I'm not apologizing for caring. Not ever.","Somebody in that building made me mad. Good."],lq:["I'm sick to my stomach. We'll fix it, or I'll fix it.","That was soft. I don't do soft.","I'll be in the film room all night. Bring coffee."]},
+  ice:{n:"Ice Water",i:"🧊",d:"Never raises his voice. Never blinks.",up:"Your team plays better in close games late",down:"Your meltdowns rarely fire anybody up",q:["We executed. That's all it ever is.","Next possession. Always the next possession.","Nice win. Back to work tomorrow at six."],lq:["We'll learn from it. It's November, or January. Whatever it is.","Credit to them. We'll be fine.","No panic. We look at the tape and get better."]},
+  players:{n:"Players' Coach",i:"🤝",d:"His guys would run through a wall for him.",up:"Players stay happier and recruits like you more",down:"Players pick up a few more technicals",q:["That's all them. I just roll the balls out.","Proud of these young men. They love each other.","I told them to go have fun. They did."],lq:["That's on me, not them. I'll be better.","My guys gave everything. I love this team.","We'll stick together. That's what we do."]},
+  strict:{n:"Disciplinarian",i:"📏",d:"Shirts tucked in. Phones off. On time is late.",up:"Far fewer player technicals and fewer turnovers",down:"Players get a little grumpier",q:["We took care of the ball. That's the standard.","Discipline won tonight.","Fine. Practice is still at 5 a.m."],lq:["Too many mistakes. Too many.","We'll run tomorrow. A lot.","Nobody gets a day off after that."]},
+  show:{n:"Showman",i:"🎤",d:"Wears a suit that costs more than your car.",up:"Your student section gets louder and five-stars notice you",down:"Every loss gets roasted online",q:["Did y'all see that?! Best show in college hoops!","Tell the cameras: we're just getting started.","I'm buying the student section pizza. All of it."],lq:["Even Broadway has an off night.","Bad night. Great outfit, though.","We'll give 'em a better show next time."]},
+  tac:{n:"Tactician",i:"🧠",d:"Has a whiteboard in his car.",up:"Your game plan fits a little better every game",down:"Tirades fall flat, and fans call you boring",q:["The zone gave them problems. As expected.","Our ball-screen coverage was the difference.","We had a plan. They didn't adjust."],lq:["They solved our zone. I'll solve them back.","Wrong coverage on the late action. My fault.","Back to the whiteboard."]},
+};
+const LOOKS={suit:"Three-piece suit",zip:"Quarter-zip",vest:"Sweater vest",track:"Tracksuit",tux:"Tuxedo (big games only)"};
+const dem=()=>S&&S.phase!=="h2h"&&!S.mp&&S.coach&&S.coach.dem||null;
+const isDem=k=>dem()===k;
+function coachName(){return (S.coach&&S.coach.name)||"Coach"}
+function demRage(){return isDem("fiery")?1.35:isDem("ice")?.6:1}
+function demFit(){return isDem("fiery")?.1:isDem("ice")?-.15:isDem("tac")?-.1:0}
+function demRec(st){return isDem("players")?.03:isDem("show")&&st===5?.04:0}
+// Does a technical on your team stick? Disciplinarians stop most of them; players' coaches let a few more happen.
+function demTechOK(id){if(!S||id!==S.user)return true;return isDem("strict")?Math.random()<.45:true}
+function demAfter(gm){
+  const D=DEMEANOR[dem()];if(!D)return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;const won=gm.winner===u,t=T(u);
+  if(isDem("players"))for(const p of t.roster)if(p.rel!=null)p.rel=Math.min(100,p.rel+.6);
+  if(isDem("strict"))for(const p of t.roster)if(p.rel!=null)p.rel=Math.max(0,p.rel-.3);
+  if(isDem("show")&&gm.h===u&&!gm.neutral&&S.ss&&S.ss.team===u)S.ss.energy=Math.min(100,S.ss.energy+1);
+  if(Math.random()<.55)post({h:`@Coach${coachName().replace(/\W/g,"")||t.abbr}`,n:`Coach ${coachName()}`,v:true,txt:pick(won?D.q:D.lq),tag:"Postgame"});
+  if(isDem("show")&&!won&&Math.random()<.6)post({h:pick(FANS),n:"",txt:pick(["Coach dressed like a disco ball and still lost 💀","Maybe spend less on suits and more on defense 🙃","The outfit won. The team didn't."])});
+  if(isDem("tac")&&won&&Math.random()<.3)post({h:pick(FANS),n:"",txt:"We won but watching that offense is like reading a tax form 😴"});
+}
+function demeanorPanel(){
+  const C=S.coach,cur=C.dem||null,look=C.look||"zip";
+  return `<div class="panel" data-c="blue"><div class="row" style="justify-content:space-between"><h3>Your coach</h3>${cur?`<span class="tag">${DEMEANOR[cur].i} ${esc(DEMEANOR[cur].n)}</span>`:'<span class="tag amber">Pick a demeanor</span>'}</div>
+    <div class="row"><label for="coachName" class="sub">Name</label><input id="coachName" class="nm" maxlength="22" placeholder="Your name" value="${esc(C.name||"")}" style="width:min(100%,240px)"></div>
+    <h3>Demeanor</h3><div class="schemes dem">${Object.entries(DEMEANOR).map(([k,x])=>`<button class="scheme ${cur===k?"on":""}" data-act="demPick" data-k="${k}" aria-pressed="${cur===k}"><b>${x.i} ${esc(x.n)}</b><small>${esc(x.d)}</small><small class="up">+ ${esc(x.up)}</small><small class="down">− ${esc(x.down)}</small></button>`).join("")}</div>
+    <h3>Sideline look</h3><div class="row">${Object.entries(LOOKS).map(([k,n])=>`<button class="uchip ${look===k?"on":""}" data-act="demLook" data-k="${k}">${esc(n)}</button>`).join("")}</div>
+    <p class="muted" style="font-size:13px">You can change your style any time. Your postgame quotes on Courtside match it.</p></div>`;
+}
 
 // ===================== MY PLAYER: one player, high school to the NBA draft =====================
 // The dynasty runs as normal with the AI coaching your school. S.mp marks the save, and your player carries p.mp.
@@ -3519,13 +3604,17 @@ function startHero(){
 const app=document.getElementById("app");
 const TAB_ICON={conspiracy:"🕵️",mp:"⛹️",arena:"🏟️",feed:"💬",weekly:"🗞️",preseason:"📖",locker:"🤝",practice:"🏋️",uniforms:"👕",trophies:"🏆",home:"🏠",news:"📰",schedule:"📅",standings:"📊",top25:"🏅",bracket:"🏀",leaders:"⭐",roster:"👥",plan:"📋",coach:"🧢",history:"🏛️"};
 const TABS=[["home","Home"],["mp","My Player"],["preseason","Preseason"],["news","News"],["weekly","This Week"],["schedule","Schedule"],["standings","Standings"],["top25","Rankings"],["bracket","Bracket"],["leaders","POY & stats"],["roster","Roster"],["practice","Practice"],["locker","Locker room"],["plan","Game plan"],["uniforms","Uniforms"],["coach","Coach"],["arena","Arena"],["feed","Courtside"],["conspiracy","Conspiracies"],["trophies","Trophy room"],["history","Program"]];
-let lastView="",enterT=null;
+let lastView="",lastBase="",enterT=null,tabJump=false;
 function viewKey(){if(S&&S.phase==="h2h"&&!WATCH)return "h2h";return S?[S.tab,S.phase,S.off&&S.off.step,S.pv,!!WATCH,S.selShow&&S.selShow.done,S.selShow&&S.selShow.step,S.ybView,S.magIntro].join("|"):"select|"+TITLE.mode+"|"+H2H.tab+"|"+!!H2H.result}
 function render(){
   try{if(S){const t=T(S.user);document.body.style.setProperty("--tc1",t.c1);document.body.style.setProperty("--tc2",t.c2)}else{document.body.style.removeProperty("--tc1");document.body.style.removeProperty("--tc2")}}catch(e){}
   OVRC=new Map();try{renderCore()}finally{OVRC=null}
   try{if(!S||S.phase==="h2h"&&!WATCH)startHero()}catch(e){}
-  try{const k=viewKey();if(k!==lastView){lastView=k;app.classList.remove("enter");void app.offsetWidth;app.classList.add("enter");clearTimeout(enterT);enterT=setTimeout(()=>app.classList.remove("enter"),700)}else app.classList.remove("enter")}catch(e){}
+  try{const k=viewKey(),base=k.split("|").slice(1).join("|");
+    // Switching tabs only fades the content area; a new screen gets the full entrance.
+    if(k!==lastView&&S&&base===lastBase&&!WATCH){lastView=k;app.classList.remove("enter");const b=app.querySelector&&app.querySelector(".tabbody,.hubgrid");if(b)b.classList.add("swap")}
+    else if(k!==lastView){lastView=k;lastBase=base;app.classList.remove("enter");void app.offsetWidth;app.classList.add("enter");clearTimeout(enterT);enterT=setTimeout(()=>app.classList.remove("enter"),700)}else app.classList.remove("enter")}catch(e){}
+  if(tabJump){tabJump=false;const n=app.querySelector&&app.querySelector(".navgroups");if(n){const y=n.getBoundingClientRect().top+scrollY-8;if(scrollY>y+4)scrollTo({top:y,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}}
 }
 function renderCore(){
   if(!S)return renderSelect();
@@ -3606,7 +3695,7 @@ function nextCard(){
         <div class="gd-stat"><span>&nbsp;</span><b>${Math.round(myP*100)}%</b></div></div>
       <div class="gd-venue">${venue}</div>
       ${chips.length?`<div class="gd-chips">${chips.join("")}</div>`:""}
-      ${uniPicker(ug)}${themePicker(ug)}
+      <details class="gd-more" ${S.gdOpen?"open":""}><summary>Game-day options<span>Uniform: ${esc((()=>{const U=uni(),k=U.pick;return k==="auto"?"Auto":(U.sets.find(x=>x.k===k)||{n:"Auto"}).n})())}${ug.h===S.user&&!ug.neutral?` · Theme night: ${(()=>{const X=ss(),c=X.theme[gameKey(ug)];return c?esc(THEMES.find(x=>x[0]===c)[1]):"none"})()}`:""}</span></summary>${uniPicker(ug)}${themePicker(ug)}</details>
       <div class="gd-actions"><button class="btn big" data-act="watch">Watch live</button><button class="btn ghost big" data-act="sim">Sim game</button></div>
       <div class="gd-links"><button class="linkbtn" data-act="tab" data-t="practice">Practice: ${esc(INTENSITY[prac().int].n)}${prac().drills.length?` · ${esc(prac().drills.slice(0,INTENSITY[prac().int].max).map(k=>DRILLS[k].n).join(", "))}`:""}</button><button class="linkbtn" data-act="tab" data-t="plan">Game plan: ${esc(OSCH[P.o].name)} · ${esc(DSCH[P.d].name)}</button>
         ${S.phase==="regular"&&S.day<NC_DAYS-1?`<button class="linkbtn" data-act="simTo" data-d="${NC_DAYS}">Sim to conference play</button>`:""}
@@ -3631,7 +3720,7 @@ function renderHub(){
   <div class="teamband" style="--t1:${me.c1};--t2:${me.c2}" data-wm="${esc(me.abbr)}">
     ${logo(me)}
     <div style="min-width:0"><div class="eyebrow tb-eyebrow">CBB Dynasty · ${seasonLabel(S.season)} · ${esc(phaseDate())}</div>
-    <h1 class="tb-name">${esc(me.name)}</h1><div class="tb-sub">${esc(CONFS[me.conf])} · <span class="stars">${starStr(presStars(me))}</span> program · ${esc(roundName())}</div></div>
+    <h1 class="tb-name">${esc(me.name)}</h1><div class="tb-sub">${!isMP()&&(S.coach.name||S.coach.dem)?`${S.coach.name?`Coach ${esc(S.coach.name)}`:"Coach"}${S.coach.dem?` ${DEMEANOR[S.coach.dem].i}`:""} · `:""}${esc(CONFS[me.conf])} · <span class="stars">${starStr(presStars(me))}</span> program · ${esc(roundName())}</div></div>
   </div>
   <div class="chips">
     ${chip("good","Record",`${recStr(u)} <small>(${cr.w}-${cr.l} conf)</small>`)}
@@ -3651,7 +3740,7 @@ function renderHub(){
 function coachTip(){
   const me=T(S.user),f=schemeFits(me)[0][0],d=defFits(me)[0][0],P=plan(S.user);
   return `<div class="panel" data-c="amber"><h3>Before the opener</h3><p>Your roster fits the <b>${esc(OSCH[f].name)}</b> offense and <b>${esc(DSCH[d].name)}</b> defense best. You're running ${esc(OSCH[P.o].name)} and ${esc(DSCH[P.d].name)}.${S.coach.pts?` You also have ${S.coach.pts} skill points to spend.`:""}</p>
-    <div class="row"><button class="small-btn" data-act="tab" data-t="plan">Set the game plan</button>${S.coach.pts?`<button class="small-btn" data-act="tab" data-t="coach">Spend skill points</button>`:""}<button class="small-btn" data-act="tab" data-t="roster">Set the rotation</button></div></div>`;
+    <div class="row"><button class="small-btn" data-act="tab" data-t="plan">Set the game plan</button>${S.coach.pts?`<button class="small-btn" data-act="tab" data-t="coach">Spend skill points</button>`:""}<button class="small-btn" data-act="tab" data-t="roster">Set the rotation</button>${S.coach.dem?"":`<button class="small-btn" data-act="tab" data-t="coach">Pick your coach's demeanor</button>`}</div></div>`;
 }
 function ctPanel(){
   if(S.phase!=="ctourn")return "";const b=S.ct.br.find(b=>b.conf===T(S.user).conf);
@@ -3803,7 +3892,7 @@ function tabPlan(){
     <div><span class="big">${f1(tt.to/gp)}</span><span>Turnovers per game</span></div><div><span class="big">${pct(tt.ftm,tt.fta)}</span><span>Free throw %</span></div></div>`:'<p class="muted">Play a game to see how your plan works.</p>'}</div>`;
 }
 function tabCoach(){
-  return `<div class="panel" data-c="amber"><h3>Coaching skills</h3>${skillsHTML()}</div>
+  return `${demeanorPanel()}<div class="panel" data-c="amber"><h3>Coaching skills</h3>${skillsHTML()}</div>
   <div class="panel"><h3>Facilities</h3><p class="muted" style="font-size:13.5px">Build and upgrade these in the offseason with recruiting points.</p>${facHTML(false)}</div>
   <div class="panel"><h3>Difficulty</h3><div class="aggr">${DIFF.map((x,i)=>`<button class="tab ${(S.diff??1)===i?"on":""}" data-act="diff" data-d="${i}" aria-pressed="${(S.diff??1)===i}">${x.n}</button>`).join("")}</div><p>${esc(dif().d)}</p><p class="muted" style="font-size:13px">Change it anytime. It takes effect from your next game and next offseason.</p></div>`;
 }
@@ -3894,11 +3983,11 @@ function renderWatch(){
   const bonus=id=>{const f=g.fouls[opp(g,id)];return f>=10?"Double bonus":f>=7?"Bonus":""};
   const side=(t,cls)=>`<div class="ws ${cls}">${badge(t)}<span class="wn">${S.ncaa&&S.ncaa.seed[t.id]!=null&&g.type==="ncaa"?`(${S.ncaa.seed[t.id]}) `:rankTag(t.id)}${esc(t.abbr)}${g.poss===t.id&&!g.over?'<i class="wpos" title="Has the ball"></i>':""}<small>Fouls ${g.fouls[t.id]}</small>${bonus(t.id)?`<small class="bonus">${bonus(t.id)}</small>`:""}</span><span class="wsc">${g.score[t.id]}</span></div>`;
   const onc=id=>`<div><b>${esc(T(id).abbr)} on the floor</b><span>${(g.lu[id]||[]).map(p=>{const b=g.box[p.id]||{pts:0};return `${p.mp?"⭐":""}${hcIcon(g,p)}${badgeIcons(p)}${esc(p.n.split(" ").pop())} ${b.pts}${(g.pf[p.id]||0)>=3?` (${g.pf[p.id]} PF)`:""}`}).join(" · ")}</span></div>`;
-  app.innerHTML=`
+  const top=`
   <div class="row" style="justify-content:space-between"><span class="eyebrow">${W.kind==="gotw"?"Game of the Day · ":W.kind==="h2h"?`${esc(T(0).abbr)} vs ${esc(T(1).abbr)} · `:""}${esc(g.label)} · Live</span><span class="muted num">${g.neutral?"Neutral site":esc(h.arena)}</span></div>
   <div class="wboard">${side(a,"away")}<div class="wmid"><span class="wclk">${clk}</span><span class="wdd">${g.run.p>=8&&!g.over?`${esc(T(g.run.t).abbr)} ${g.run.p}-0 run`:`${g.lc} lead changes`}</span></div>${side(h,"home")}</div>
   ${(()=>{const cr=crowdLevel(g),m=g.mom||0,lead=m>=0?h:a;return `<div class="momo"><span>Momentum</span><div class="mbar"><i style="left:50%;width:${Math.abs(m)*50}%;${m<0?`transform:translateX(-100%);`:""}background:${lead.c1}"></i><b></b></div><span>${Math.abs(m)<.15?"Even":esc(lead.abbr)} · Crowd: ${esc(cr.n)}${g.ssT?` · ${esc(S.ss.name)}`:""}${g.gd?" · GameDay":""}</span></div>`})()}
-  ${rageBar(W)}<div class="courtwrap">${courtSVG(g.home,g.away,g.shots)}<canvas class="court-fl" aria-hidden="true"></canvas></div>
+  ${rageBar(W)}`,rest=`
   <div class="wpbar"><span>${esc(a.abbr)} ${Math.round((1-wp)*100)}%</span><div class="wpt"><i style="width:${(1-wp)*100}%;background:${a.c1}"></i><i style="width:${wp*100}%;background:${h.c1}"></i></div><span>${Math.round(wp*100)}% ${esc(h.abbr)}</span></div>
   ${wpChart(W)}
   ${W.banner?`<div class="wbanner">${esc(W.banner)}</div>`:""}
@@ -3907,8 +3996,21 @@ function renderWatch(){
   ${g.over?"":`<div class="panel"><div class="oncourt">${onc(g.away)}${onc(g.home)}</div></div>`}
   <div class="panel"><h3>Play by play</h3><div class="log" style="max-height:360px">${g.log.slice(0,24).map(l=>`<div class="${l.hl?"hl":""}"><span class="t">${esc(l.t)}</span>${esc(l.txt)}</div>`).join("")}</div></div>
   ${g.over?`<div class="grid2">${boxScore(g,g.away)}${boxScore(g,g.home)}</div>`:""}`;
+  liveMount(W,top,rest);
   floorKick();
 }
+// Live games update in place: the court and its player canvas stay put, only changed sections are redrawn.
+function liveMount(W,top,rest){
+  const g=W.g,key=W.key+"|"+W.kind,court=()=>courtSVG(g.home,g.away,g.shots);
+  if(!app.querySelector){app.innerHTML=top+`<div class="courtwrap">${court()}</div>`+rest;return}
+  let root=app.querySelector(".wview");
+  if(!root||root.dataset.k!==key){app.innerHTML=`<div class="wview" data-k="${esc(key)}"><div class="wv-top"></div><div class="courtwrap"><div class="wv-court"></div><canvas class="court-fl" aria-hidden="true"></canvas></div><div class="wv-rest"></div></div>`;root=app.querySelector(".wview");W.cn=-1}
+  const set=(el,h)=>{if(el._h!==h){el.innerHTML=h;el._h=h}};
+  set(root.querySelector(".wv-top"),top);
+  if(W.cn!==g.shots.length){W.cn=g.shots.length;root.querySelector(".wv-court").innerHTML=court()}
+  set(root.querySelector(".wv-rest"),rest);
+}
+
 function gotwGame(){
   const u=S.user,games=currentGames().filter(gm=>gm.h!==u&&gm.a!==u);if(!games.length)return null;
   const r=id=>Math.min(60,rankOf(id));
@@ -4034,7 +4136,7 @@ const ACT={
   twPitch(d){twPitch(+d.id,d.k)},mm(){if(mmOpen())runMidnightMadness()},exh(d){if(exhOpen())playExhibition(d.kind,+d.k)},joinConf(){joinConf()},stayConf(){S.off.invite=null},
   pick(d){newDynasty(+d.id);scrollTo(0,0)},
   jump(d){jumpTo=d.id},
-  tab(d){S.tab=d.t;scrollTo(0,0)},
+  tab(d){S.tab=d.t;tabJump=true},
   player(d){S.pv=+d.id;scrollTo(0,0)},
   closePlayer(){S.pv=null},
   osch(d){plan(S.user).o=d.k},
@@ -4048,6 +4150,7 @@ const ACT={
   simRest(){let n=0;while(S.phase==="ncaa"&&S.ncaa.champ==null&&n++<10)simUserDay()},
   selAuto(){const X=selShow();X.auto=!X.auto;if(X.auto&&X.step===0)X.step=1;selLoop()},selNext(){const X=selShow();if(X.step<SEL_LAST)X.step++;scrollTo(0,0)},selAll(){const X=selShow();X.step=SEL_LAST;X.auto=false;clearTimeout(selTimer)},
   startNcaa(){clearTimeout(selTimer);startTournament();S.tab="bracket";scrollTo(0,0)},
+  demPick(d){S.coach.dem=d.k},demLook(d){S.coach.look=d.k},
   offseason(){mpPreOff();beginOffseason();if(S.mp)S.off.step="mp";else secretWalkOn();scrollTo(0,0)},meltdown(){meltdown()},
   mpPos(d){MPC.pos=d.k;MPC.ar=0;MPC.ht=Math.round((HT[d.k][0]+HT[d.k][1])/2)},mpAr(d){MPC.ar=+d.k},mpHt(d){MPC.ht=+d.k},mpSt(d){MPC.st=+d.k},mpSeeOffers(){mpSeeOffers();scrollTo(0,0)},mpBack(){MPC.step="create"},
   mpCommit(d){mpStart(+d.id);scrollTo(0,0)},mpFocus(d){if(S.mp)S.mp.focus=d.k},mpReturn(){mpAutoOff();scrollTo(0,0)},mpDeclare(){mpDeclare();scrollTo(0,0)},
@@ -4112,7 +4215,8 @@ function runAct(act,data){
   if(S&&S.editing){const el=document.getElementById("nm-"+S.editing);if(el){el.focus();el.select()}}
   if(S)showToasts();
 }
-document.addEventListener("input",e=>{if(e.target.id==="h2hCoach"){const d=h2hStore();d.coach=e.target.value.trim().slice(0,20);h2hSave(d)}if(e.target.id==="mpName")MPC.name=e.target.value.slice(0,24);if(e.target.id==="ssName"&&S){ss().name=e.target.value.trim().slice(0,28)||ss().name;save()}});
+document.addEventListener("input",e=>{if(e.target.id==="h2hCoach"){const d=h2hStore();d.coach=e.target.value.trim().slice(0,20);h2hSave(d)}if(e.target.id==="coachName"&&S){S.coach.name=e.target.value.trim().slice(0,22);save()}if(e.target.id==="mpName")MPC.name=e.target.value.slice(0,24);if(e.target.id==="ssName"&&S){ss().name=e.target.value.trim().slice(0,28)||ss().name;save()}});
+document.addEventListener("toggle",e=>{if(S&&e.target.classList&&e.target.classList.contains("gd-more"))S.gdOpen=e.target.open},true);
 document.addEventListener("change",e=>{
   const id=e.target.id||"";
   if(id.startsWith("h2hProg-")){const v=e.target.value===""?null:+e.target.value;if(id.endsWith("me"))H2H.myProg=v;else H2H.prog=v;return}
