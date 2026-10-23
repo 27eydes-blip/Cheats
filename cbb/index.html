@@ -1660,7 +1660,7 @@ function buildPreseason(){
 }
 function newDynasty(userId){
   S={v:1,nextPid:1,view:"hub",tab:"home",user:userId,season:2027,history:[],news:[],alumni:[],rivRec:{},job:{sec:70,yrs:0},firstTeam:userId,fac:{},diff:1,
-    coach:{pts:2,off:0,def:0,rec:0,dev:0,sec:0,clutch:0},off:null,confirmReset:false};
+    coach:{pts:2,off:0,def:0,rec:0,dev:0,sec:0,clutch:0},off:null,confirmReset:false,fix99:true};
   S.teams=TEAMS0.map(makeTeam);addSammy();
   startSeason(2027);S.news=[];
   news(`You took the job at ${T(userId).name}. You have 2 coach skill points to spend.`);
@@ -2872,7 +2872,7 @@ function preGame(gm){runPractice();S.uniUse={k:talkKey(),u:uniForGame(gm)}}
 function simUserDay(){const gm=userGame();if(gm)preGame(gm);playRound(gm?simGame(gm):null)}
 function bcCallout(){return `<div class="panel event"><div class="row" style="justify-content:space-between"><h3>Bracket challenge is open</h3><span class="tag amber">Locks at tip-off</span></div><p>The First Four is done. Fill out your bracket before the first round starts.</p><div class="row"><button class="btn" data-act="tab" data-t="bracket">Fill out my bracket</button></div></div>`}
 const ACT={
-  resume(){S=SAVED;SAVED=null;if(S){S.confirmReset=false;buildPL();RK.key=null}},
+  resume(){S=SAVED;SAVED=null;if(S){S.confirmReset=false;fixInflation();buildPL();RK.key=null}},
   pick(d){newDynasty(+d.id);scrollTo(0,0)},
   jump(d){jumpTo=d.id},
   tab(d){S.tab=d.t;scrollTo(0,0)},
@@ -2956,8 +2956,18 @@ document.addEventListener("keydown",e=>{
 
 // ===================== BOOT =====================
 window.claude?.hot?.snapshot?.(()=>({S}));
+// One-time repair for saves from before the development fix: a practice drill let your players climb to 99.
+// Ratings above 84 on teams you've coached are pulled back toward realistic levels; everyone keeps their rank order.
+function fixInflation(){
+  if(!S||S.fix99)return;S.fix99=true;
+  const ids=new Set([S.user,S.firstTeam,...(S.history||[]).map(h=>h.team)].filter(x=>x!=null));let n=0,top=0;
+  for(const id of ids){const t=S.teams[id];if(!t)continue;for(const p of t.roster)if(p.ovr>84){top=Math.max(top,p.ovr);p.ovr=Math.round(84+(p.ovr-84)*.45);n++}}
+  if(S.prac)S.prac.dev=Math.min(1.5,S.prac.dev||0);
+  if(n)news(`Ratings repair: ${n} of your players were brought back to realistic levels (your best was ${top} OVR before). Development now slows near the top of the scale.`);
+  try{save()}catch(e){}
+}
 function start(data){
-  S=(data&&data.S)||null;if(S){buildPL();RK.key=null}
+  S=(data&&data.S)||null;if(S){fixInflation();buildPL();RK.key=null}
   render();
   if(!S)loadSaved().then(s=>{SAVED=s;if(!S&&s)render()});
 }
