@@ -703,6 +703,109 @@ details.panel summary{font-size:15px}
 .hx-feats{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 .hx-feats span{font-family:var(--hud);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:6px 12px;border-radius:8px;color:#9fc6ff;background:rgba(110,210,255,.06);border:1px solid rgba(110,210,255,.18)}
 @media (prefers-reduced-motion:reduce){.hx-tr,.mode-ring,.hx-live i{animation:none}.hx-tr{flex-wrap:wrap;width:auto}}
+
+/* =====================================================================
+   HUD theme: the title screen's broadcast look, carried through every screen.
+   Arena navy, neon cyan accents, gold readouts, glass panels with corner brackets.
+   ===================================================================== */
+:root{--night:#040713;--panel:#0a1128;--panel-2:#0f1a38;--line:rgba(110,210,255,.16);--hair:rgba(110,210,255,.10);--chalk:#eef3ff;--muted:#8ea3cf;
+  --steel:#6ed2ff;--neon:#6ed2ff;--amber:#ffc350;--gold-soft:#ffd98a;--glass:rgba(8,14,34,.78);--num:'Chakra Petch','Barlow Condensed',system-ui,sans-serif;--hud:'Chakra Petch','Barlow Condensed',system-ui,sans-serif}
+html,body{background:var(--night)}
+body{background:
+  radial-gradient(1100px 520px at 50% -240px,color-mix(in srgb,var(--tc1) 34%,transparent),transparent 72%),
+  radial-gradient(800px 500px at 100% 100%,rgba(110,210,255,.07),transparent 70%),
+  linear-gradient(rgba(110,210,255,.035) 1px,transparent 1px) 0 0/40px 40px,
+  linear-gradient(90deg,rgba(110,210,255,.035) 1px,transparent 1px) 0 0/40px 40px,var(--night)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:40;background:repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px)}
+::selection{background:rgba(110,210,255,.35)}
+/* Headings */
+h2{font-family:var(--display);letter-spacing:.02em}
+h3,.panel h3{font-family:var(--hud);font-weight:600;color:#a9d8ff;letter-spacing:.2em}
+.panel h3::before{border-radius:2px;width:8px;height:8px;background:var(--acc,var(--neon));box-shadow:0 0 12px var(--acc,var(--neon))}
+.eyebrow{font-family:var(--hud);letter-spacing:.2em}
+/* Glass panels with HUD corner brackets */
+.panel,.slot,.skill,.scheme,.bg,.selpair,.statgrid div,.bcm{--cb:color-mix(in srgb,var(--acc,var(--neon)) 70%,transparent)}
+.panel{border:1px solid rgba(110,210,255,.14);border-radius:18px;
+  background:
+    linear-gradient(var(--cb),var(--cb)) top left/16px 2px no-repeat,linear-gradient(var(--cb),var(--cb)) top left/2px 16px no-repeat,
+    linear-gradient(var(--cb),var(--cb)) bottom right/16px 2px no-repeat,linear-gradient(var(--cb),var(--cb)) bottom right/2px 16px no-repeat,
+    linear-gradient(180deg,rgba(110,210,255,.05),rgba(110,210,255,0) 140px),linear-gradient(160deg,rgba(14,24,54,.92),rgba(7,11,26,.94));
+  box-shadow:0 18px 44px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.04)}
+.panel[data-c]{box-shadow:inset 0 2px 0 color-mix(in srgb,var(--acc) 80%,transparent),0 18px 44px rgba(0,0,0,.45)}
+.panel.event{border-color:rgba(255,195,80,.35)}.panel.warn{border-color:rgba(251,113,133,.45)}
+.slot,.skill,.scheme,.cand,.bcm{border-color:rgba(110,210,255,.14)}
+.skill,.scheme,.slot{background:linear-gradient(160deg,rgba(18,30,64,.85),rgba(10,16,36,.9))}
+.scheme.on,.int.on,.drill.on{border-color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber),0 0 22px rgba(255,195,80,.18)}
+.scheme b,.skill b{font-family:var(--hud);letter-spacing:.04em}
+/* Buttons */
+.btn{font-family:var(--hud);letter-spacing:.14em;border-radius:12px;background:linear-gradient(180deg,#ffe19a,var(--amber) 55%,#e39b1a);box-shadow:0 0 0 1px rgba(255,220,140,.35),0 8px 24px rgba(255,195,80,.28),inset 0 1px 0 rgba(255,255,255,.6)}
+.btn:hover{filter:brightness(1.08);box-shadow:0 0 0 1px rgba(255,220,140,.5),0 10px 30px rgba(255,195,80,.4)}
+.btn.ghost{color:#cfe9ff;background:rgba(110,210,255,.06);border:1px solid rgba(110,210,255,.32);box-shadow:inset 0 0 18px rgba(110,210,255,.06)}
+.btn.ghost:hover{background:rgba(110,210,255,.12);border-color:var(--neon);box-shadow:0 0 18px rgba(110,210,255,.25)}
+.small-btn{font-family:var(--hud);letter-spacing:.04em;border-color:rgba(110,210,255,.25);background:rgba(110,210,255,.06);color:#d8ecff}
+.small-btn:hover:not(:disabled){border-color:var(--neon);box-shadow:0 0 12px rgba(110,210,255,.25)}
+.tab{font-family:var(--hud);letter-spacing:.08em;border-color:rgba(110,210,255,.2);color:#a9c4ee;background:rgba(110,210,255,.04)}
+.tab.on{background:linear-gradient(180deg,#ffe19a,var(--amber));color:#1a1200;border-color:var(--amber);box-shadow:0 0 16px rgba(255,195,80,.35)}
+.linkbtn{font-family:var(--hud);letter-spacing:.06em;color:#bfe6ff;text-decoration-color:rgba(110,210,255,.5)}
+.tag{font-family:var(--hud);border-radius:6px;letter-spacing:.08em;background:rgba(110,210,255,.06);border-color:rgba(110,210,255,.22);color:#bcd7f7}
+.seed{font-family:var(--hud);border-radius:4px;background:rgba(110,210,255,.12);color:#ffd98a}
+/* Tables */
+.tbl th{font-family:var(--hud);color:#8fc9f2;letter-spacing:.14em;background:rgba(110,210,255,.05);border-bottom-color:rgba(110,210,255,.22)}
+.tbl td{border-top-color:rgba(110,210,255,.07)}
+.tbl tbody tr:hover td{background:rgba(110,210,255,.06)}
+.tbl tr.me td{background:linear-gradient(90deg,color-mix(in srgb,var(--tc1) 30%,transparent),rgba(110,210,255,.04) 85%)!important}
+.tbl tr.me td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+.tbl tr.poshead td{font-family:var(--hud);color:var(--neon);background:rgba(110,210,255,.06)}
+.wl,.mv,.sos,.num{font-family:var(--hud)}
+/* Team header: keeps the school's colors, adds the broadcast treatment */
+.teamband{border:1px solid rgba(110,210,255,.25);border-radius:24px;box-shadow:0 26px 64px rgba(0,0,0,.55),0 0 50px color-mix(in srgb,var(--t1) 30%,transparent),inset 0 1px 0 rgba(255,255,255,.18)}
+.teamband::before{content:"";position:absolute;inset:0;pointer-events:none;animation:none;transform:none;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 1px,transparent 1px 3px),linear-gradient(90deg,rgba(4,7,19,.0),rgba(4,7,19,.35))}
+.teamband>*{position:relative;z-index:1}
+.tb-eyebrow{font-family:var(--hud);font-weight:600;letter-spacing:.24em;color:#cfe9ff}
+.tb-name{background:linear-gradient(180deg,#ffffff 0%,#e6ecff 40%,#a7b4dc 54%,#ffffff 66%,#ffe1a0 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6))}
+.tb-sub{font-family:var(--hud);letter-spacing:.04em}
+/* Stat chips become scoreboard readouts */
+.chip{background:rgba(6,12,30,.82);border:1px solid rgba(110,210,255,.25);border-radius:14px;box-shadow:inset 0 2px 0 color-mix(in srgb,var(--acc) 85%,transparent),0 12px 28px rgba(0,0,0,.45)}
+.chip span{font-family:var(--hud);color:#8fc9f2;letter-spacing:.18em}
+.chip b{font-family:var(--hud);font-weight:700;color:#ffd06a;text-shadow:0 0 14px rgba(255,190,80,.45)}
+.chip[data-c="good"] b{color:#7ff0bf;text-shadow:0 0 14px rgba(52,211,153,.4)}.chip[data-c="bad"] b{color:#ffb1bd;text-shadow:0 0 14px rgba(251,113,133,.4)}.chip[data-c="blue"] b{color:#a9e3ff;text-shadow:0 0 14px rgba(110,210,255,.45)}
+.chip small{color:#9fb4dc}
+/* Dock nav */
+.navgroups{background:rgba(6,12,30,.8);border:1px solid rgba(110,210,255,.18);border-radius:20px;box-shadow:0 14px 34px rgba(0,0,0,.45),inset 0 0 30px rgba(110,210,255,.04)}
+.navl{font-family:var(--hud);color:#6fa9d6!important;letter-spacing:.26em}
+.navg .tab{font-family:var(--hud);letter-spacing:.06em;border-radius:12px;background:rgba(110,210,255,.04);border-color:rgba(110,210,255,.14);color:#a9c4ee}
+.navg .tab:hover{background:rgba(110,210,255,.1);border-color:rgba(110,210,255,.4);color:#fff}
+.navg .tab.on{box-shadow:0 0 0 1px var(--neon),0 0 22px rgba(110,210,255,.35),0 8px 22px color-mix(in srgb,var(--tc1) 50%,transparent),inset 0 1px 0 rgba(255,255,255,.3)}
+/* Game day card and live game */
+.gameday{border:1px solid rgba(110,210,255,.28);border-radius:22px;box-shadow:0 26px 60px rgba(0,0,0,.55),0 0 40px rgba(110,210,255,.08),inset 0 1px 0 rgba(255,255,255,.2)}
+.gameday::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 3px)}
+.gd-at{font-family:var(--hud);font-weight:700;letter-spacing:.2em;color:#a9e3ff;text-shadow:0 0 16px rgba(110,210,255,.7)}
+.gd-label,.gd-kick,.gd-rec,.gd-rank,.gd-stat span,.gd-stat b,.gd-chip,.gd-tag,.gd-you{font-family:var(--hud)}
+.gd-odds{background:rgba(4,8,20,.62);border-color:rgba(110,210,255,.22)}
+.gd-bar i{background:linear-gradient(90deg,#6ed2ff,#ffc350);box-shadow:0 0 12px rgba(255,195,80,.5)}
+.gd-chip{border-radius:6px}
+.wboard{background:linear-gradient(180deg,#050a1a,#02040c);border:1px solid rgba(110,210,255,.3);border-radius:16px;box-shadow:0 0 40px rgba(110,210,255,.1),0 18px 40px rgba(0,0,0,.5)}
+.wsc{font-family:var(--hud);font-weight:700;color:#ffd06a;text-shadow:0 0 22px rgba(255,190,80,.6)}
+.wclk{font-family:var(--hud);color:#a9e3ff;text-shadow:0 0 14px rgba(110,210,255,.55)}
+.wmid{border-inline-color:rgba(110,210,255,.2)}
+.court{border:1px solid rgba(110,210,255,.4);box-shadow:0 0 40px rgba(110,210,255,.15),0 14px 34px rgba(0,0,0,.45)}
+.wbanner{font-family:var(--hud);letter-spacing:.03em;border-radius:10px;background:linear-gradient(90deg,#ffe19a,var(--amber));box-shadow:0 0 26px rgba(255,195,80,.35)}
+.wpt,.mbar,.bar,.hbar,.lr-bar,.pm-bar,.gd-bar{background:rgba(110,210,255,.08)}
+.bar i{background:linear-gradient(90deg,#6ed2ff,#ffc350)}
+.log div{border-top-color:rgba(110,210,255,.08)}.log .t{color:#6fa9d6}
+/* Misc surfaces */
+.hub-head,.prac-head,.lr-head,.h2hhead{border:1px solid rgba(110,210,255,.22);box-shadow:0 18px 44px rgba(0,0,0,.5),0 0 40px rgba(110,210,255,.06)}
+.statgrid div{background:linear-gradient(160deg,rgba(110,210,255,.07),rgba(10,16,36,.9));border:1px solid rgba(110,210,255,.14)}
+.statgrid .big{font-family:var(--hud);color:#ffd06a;text-shadow:0 0 14px rgba(255,190,80,.4)}
+.poy{border-color:rgba(255,195,80,.4);box-shadow:0 0 40px rgba(255,195,80,.08),0 18px 44px rgba(0,0,0,.45)}
+.bg{border-color:rgba(110,210,255,.16);background:rgba(12,20,44,.9)}.bg.me{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber) inset,0 0 16px rgba(255,195,80,.2)}
+.selshow,.champ{border-color:rgba(110,210,255,.3)}
+.busy span{font-family:var(--hud);border-color:rgba(110,210,255,.35);box-shadow:0 0 40px rgba(110,210,255,.2),0 18px 50px rgba(0,0,0,.5)}
+.nm,select,.codebox{border-color:rgba(110,210,255,.3);background:rgba(10,18,40,.9)}
+.toast{border-color:rgba(110,210,255,.45);box-shadow:0 14px 40px rgba(0,0,0,.55),0 0 24px rgba(110,210,255,.2)}
+.badge{border-radius:6px}
+@media (prefers-reduced-motion:reduce){body::after{display:none}}
 </style>
 </head>
 <body>
