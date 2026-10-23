@@ -636,6 +636,20 @@ details.panel summary{font-size:15px}
 .slotc.on{border-color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber)}.slotc b{font-family:var(--display);font-weight:400;font-size:22px}
 .exh{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}.exh>div{display:flex;flex-direction:column;gap:6px}
 .crowdbar{display:grid;grid-template-columns:repeat(15,1fr);gap:3px}.crowdbar i{height:10px;border-radius:3px;background:var(--panel-2)}.crowdbar i.on{background:var(--amber)}
+
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.mode{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;padding:22px;border-radius:24px;border:1px solid var(--hair);background:linear-gradient(150deg,color-mix(in srgb,var(--amber) 14%,var(--panel)),var(--panel) 60%);box-shadow:0 16px 40px rgba(0,0,0,.38);transition:transform .15s ease,border-color .15s ease}
+.mode:hover{transform:translateY(-3px);border-color:var(--amber)}.mode+.mode{background:linear-gradient(150deg,color-mix(in srgb,var(--steel) 18%,var(--panel)),var(--panel) 60%)}
+.mode-i{font-size:40px;line-height:1}.mode b{font-family:var(--display);font-weight:400;font-size:clamp(26px,6vw,34px)}.mode span:not(.mode-i){color:#d5dcf5;font-size:15px}.mode em{font-style:normal;font-family:var(--num);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:13px;color:var(--gold-soft)}
+.h2hhead{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;padding:20px 22px;border-radius:24px;border:1px solid var(--hair);background:linear-gradient(135deg,#16224a,var(--panel) 70%);box-shadow:0 18px 44px rgba(0,0,0,.45)}
+.h2hrec{display:flex;flex-direction:column;align-items:flex-end;gap:4px}.h2hrec b{font-size:36px;line-height:1;color:var(--amber)}
+.codebox{width:100%;min-height:96px;resize:vertical;background:var(--panel-2);color:var(--chalk);border:1px solid var(--line);border-radius:12px;padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all}
+.h2hmatch{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1.3fr);gap:14px;align-items:center}@media (max-width:700px){.h2hmatch{grid-template-columns:1fr}.h2hmatch .gd-at{text-align:center}}
+.h2hteam{display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:20px;color:#fff;background:linear-gradient(135deg,color-mix(in srgb,var(--c1) 55%,var(--panel)),var(--panel) 80%);border:1px solid rgba(255,255,255,.15)}
+.h2hteam b{display:block;font-family:var(--display);font-weight:400;font-size:24px}
+.h2hfinal{display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px;border-radius:24px;color:#fff;text-align:center;background:radial-gradient(500px 200px at 50% 0%,rgba(255,211,77,.22),transparent 70%),linear-gradient(135deg,var(--c1),color-mix(in srgb,var(--c1) 30%,#000));border:1px solid rgba(255,255,255,.2);text-shadow:0 2px 4px rgba(0,0,0,.5)}
+.h2hscore{display:flex;align-items:center;gap:18px}.h2hscore div{display:flex;flex-direction:column;align-items:center;gap:4px}.h2hscore .logo{width:64px;height:64px;font-size:17px}.h2hscore b{font-family:var(--num);font-size:48px;line-height:1}.h2hscore .vs{font-size:30px;opacity:.7}
+.h2hwl{font-family:var(--display);font-weight:400;font-size:30px}.h2hwl.w{color:#7ff0bf}.h2hwl.l{color:#ffb1bd}
 </style>
 </head>
 <body>
@@ -837,7 +851,7 @@ const FAC={
 };
 const FAC_COST=[10,16,24];
 // ===================== HELPERS =====================
-const rnd=Math.random;
+let rnd=Math.random; // swapped for a seeded stream during head-to-head games
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 function normal(){let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
 const qnorm=()=>(rnd()+rnd()+rnd()+rnd()-2)*1.732; // fast, roughly normal
@@ -2557,12 +2571,169 @@ function slotsHTML(){
     ${L.find(x=>x.n===pickSlot&&x.s)?`<p class="sec-bad" style="font-size:13.5px">Starting a new dynasty in slot ${pickSlot} will replace the ${esc(L.find(x=>x.n===pickSlot).s.teams[L.find(x=>x.n===pickSlot).s.user].name)} save.</p>`:""}`;
 }
 
+// ===================== HEAD TO HEAD (challenge codes) =====================
+// A challenge code carries one coach's team and a game seed. The opponent pastes it, picks a team and plays;
+// the game runs on a seeded random stream so replaying the same challenge gives the same game. The result
+// code they send back carries the final, the box scores and the key plays.
+const H2H_KEY="cbb-h2h";
+let TITLE={mode:"menu"},H2H={tab:"create",src:"slot",slot:null,prog:null,site:"n",code:"",paste:"",incoming:null,result:null,err:"",busy:false,mySrc:"slot",mySlot:null,myProg:null};
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function h2hStore(){try{return JSON.parse(localStorage.getItem(H2H_KEY)||"null")||{coach:"",w:0,l:0,games:[]}}catch(e){return {coach:"",w:0,l:0,games:[]}}}
+function h2hSave(d){try{localStorage.setItem(H2H_KEY,JSON.stringify(d))}catch(e){}}
+async function encodeCode(prefix,obj){
+  const json=JSON.stringify(obj);let body;
+  if(canGz)body="Z"+(await gz(json));else body="J"+btoa(unescape(encodeURIComponent(json)));
+  return prefix+body.replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+async function decodeCode(code){
+  code=String(code||"").replace(/\s+/g,"");const m=code.match(/^CBB-(CH|RS)-([ZJ])([A-Za-z0-9_-]+)$/);if(!m)throw new Error("That doesn't look like a CBB Dynasty code. Paste the whole thing, starting with CBB-.");
+  let b=m[3].replace(/-/g,"+").replace(/_/g,"/");while(b.length%4)b+="=";
+  const json=m[2]==="Z"?await gunz(b):decodeURIComponent(escape(atob(b)));
+  return {kind:m[1],data:JSON.parse(json)};
+}
+// Team snapshots: everything the sim needs, nothing else.
+function snapTeam(t,coach){
+  return {v:1,coach:coach||"",n:t.name,ab:t.abbr,c1:t.c1,c2:t.c2,ar:t.arena,cap:t.cap,cr:crowdOf(t),pres:Math.round(t.pres*10)/10,conf:t.conf,
+    pl:{o:t.plan.o,d:t.plan.d,tempo:t.plan.tempo,boards:t.plan.boards},
+    ps:t.roster.map(p=>[p.n,p.pos,p.ht,p.ovr,p.yr,p.st,p.ar,p.no,SK.map(k=>p.at[k]||0),p.bd||[]]),
+    dp:t.depth?POS.map(pos=>(t.depth[pos]||[]).map(id=>t.roster.findIndex(p=>p.id===id)).filter(i=>i>=0)):null};
+}
+function teamFromSnap(sn,id,pidBase){
+  const t={id,name:sn.n,abbr:sn.ab,c1:sn.c1,c2:sn.c2,arena:sn.ar,cap:sn.cap,crowd:sn.cr,hfa:sn.cr/3,pres:sn.pres,conf:sn.conf,plan:{...sn.pl},roster:[]};
+  sn.ps.forEach((r,i)=>{const at={};SK.forEach((k,j)=>at[k]=r[8][j]||0);t.roster.push({id:pidBase+i,n:r[0],pos:r[1],ht:r[2],ovr:r[3],yr:r[4],st:r[5],ar:r[6],no:r[7],at,bd:r[9]||[],inj:0,s:blank(),car:[],aw:[]})});
+  if(sn.dp){t.depth={};POS.forEach((pos,k)=>{t.depth[pos]=(sn.dp[k]||[]).map(i=>t.roster[i]&&t.roster[i].id).filter(Boolean)})}
+  return t;
+}
+// A fresh roster for any program, built the same way a new dynasty builds one.
+function programSnap(idx,coach,seed){
+  const saveS=S,saveR=rnd;if(seed!=null)rnd=mulberry32(((seed>>>0)^((idx+1)*2654435761))>>>0);S={nextPid:1,teams:[],coach:{pts:0,off:0,def:0,rec:0,dev:0,sec:0,clutch:0},fac:{},diff:1,history:[],results:[],season:2027,user:-1};
+  const t=makeTeam(TEAMS0[idx],0);t.crowd=clamp(t.hfa*3,1,15);t.hfa=t.crowd/3;const sn=snapTeam(t,coach);S=saveS;rnd=saveR;return sn;
+}
+// The sandbox: two teams, no dynasty bonuses for either side.
+let H2HS=null;
+function h2hBegin(chSnap,mySnap,seed,site){
+  H2HS={prevS:S,prevRnd:rnd};
+  S={v:1,nextPid:100,teams:[teamFromSnap(chSnap,0,1),teamFromSnap(mySnap,1,40)],user:-1,season:2027,phase:"h2h",results:[],history:[],news:[],coach:{pts:0,off:0,def:0,rec:0,dev:0,sec:0,clutch:0},fac:{},diff:1,mo:{}};
+  buildPL();RK.key=null;rnd=mulberry32(seed>>>0);
+  return {h:0,a:1,neutral:site!=="h",type:"h2h",label:"Head to Head"};
+}
+function h2hEnd(){if(!H2HS)return;rnd=H2HS.prevRnd;S=H2HS.prevS;H2HS=null;RK.key=null;DCC=null;if(S)buildPL()}
+function boxRows(g,id){return T(id).roster.filter(p=>g.box[p.id]&&g.box[p.id].min>0).sort((a,b)=>g.box[b.id].min-g.box[a.id].min).map(p=>{const b=g.box[p.id];return [p.n,p.pos,Math.round(b.min/60),b.pts,b.orb+b.drb,b.ast,b.fgm,b.fga,b.tpm,b.tpa,b.ftm,b.fta,b.stl,b.blk,b.to]})}
+function h2hResult(g,ch,mine){
+  const s0=g.score[0],s1=g.score[1];
+  return {id:ch.id,seed:ch.seed,site:ch.site,a:{coach:ch.team.coach||"Challenger",n:ch.team.n,ab:ch.team.ab,c1:ch.team.c1,c2:ch.team.c2,s:s0,box:boxRows(g,0)},
+    b:{coach:mine.coach||"Opponent",n:mine.n,ab:mine.ab,c1:mine.c1,c2:mine.c2,s:s1,box:boxRows(g,1)},ot:Math.max(0,g.half-2),
+    plays:g.log.filter(l=>l.hl).map(l=>`${l.t} · ${l.txt}`).reverse().slice(-18)};
+}
+function recordH2H(R,mySide){
+  const d=h2hStore();if(d.games.some(x=>x.id===R.id&&x.side===mySide))return;
+  const me=R[mySide],op=R[mySide==="a"?"b":"a"],won=me.s>op.s;won?d.w++:d.l++;
+  d.games.unshift({id:R.id,side:mySide,won,us:me.s,them:op.s,mine:me.n,opp:op.n,oppCoach:op.coach,t:Date.now()});d.games=d.games.slice(0,30);h2hSave(d);
+}
+function teamChoices(){
+  const L=(Array.isArray(SAVED)?SAVED:[]).filter(x=>x.s);
+  return L.map(x=>({n:x.n,t:x.s.teams[x.s.user],season:x.s.season}));
+}
+function pickedSnap(which,seed){
+  const coach=h2hStore().coach,src=which==="me"?H2H.mySrc:H2H.src,slot=which==="me"?H2H.mySlot:H2H.slot,prog=which==="me"?H2H.myProg:H2H.prog;
+  if(src==="slot"){const c=teamChoices().find(x=>x.n===slot)||teamChoices()[0];return c?snapTeam(c.t,coach):null}
+  return prog!=null?programSnap(prog,coach,seed):null;
+}
+function teamPicker(which){
+  const src=which==="me"?H2H.mySrc:H2H.src,slots=teamChoices(),slot=which==="me"?H2H.mySlot:H2H.slot,prog=which==="me"?H2H.myProg:H2H.prog;
+  const progOpts=TEAMS0.map((r,i)=>`<option value="${i}" ${prog===i?"selected":""}>${esc(r[0])} (${r[4]} OVR · ${esc(CONFS[r[5]])})</option>`).join("");
+  return `<div class="aggr"><button class="tab ${src==="slot"?"on":""}" data-act="h2hSrc" data-w="${which}" data-v="slot" ${slots.length?"":"disabled"}>My dynasty team</button><button class="tab ${src==="prog"?"on":""}" data-act="h2hSrc" data-w="${which}" data-v="prog">Any program</button></div>
+    ${src==="slot"?(slots.length?`<div class="slots">${slots.map(c=>`<button class="slotc ${(slot??slots[0].n)===c.n?"on":""}" style="--c1:${c.t.c1}" data-act="h2hSlot" data-w="${which}" data-n="${c.n}"><span class="eyebrow">Slot ${c.n} · ${seasonLabel(c.season)}</span><b>${esc(c.t.name)}</b><span class="sub">${c.t.roster.length} players · best ${Math.max(...c.t.roster.map(p=>p.ovr))} OVR</span></button>`).join("")}</div>`:'<p class="muted">You have no dynasty saves yet. Pick any program instead.</p>')
+      :`<select id="h2hProg-${which}" aria-label="Program"><option value="">Choose a program…</option>${progOpts}</select><p class="sub">A program brings a fresh roster, rated like the start of a new dynasty.</p>`}`;
+}
+function snapCard(sn,label){
+  const best=sn.ps.slice().sort((a,b)=>b[3]-a[3]).slice(0,3);
+  return `<div class="h2hteam" style="--c1:${sn.c1}"><span class="eyebrow">${esc(label)}</span><div class="row" style="flex-wrap:nowrap"><span class="logo" style="--b1:${sn.c1};--b2:${sn.c2};width:56px;height:56px;font-size:15px">${esc(sn.ab)}</span><div><b>${esc(sn.n)}</b><span class="sub">${sn.coach?`Coach ${esc(sn.coach)} · `:""}${esc(OSCH[sn.pl.o].name)} · ${esc(DSCH[sn.pl.d].name)}</span></div></div>
+    <p class="sub">${best.map(r=>`${esc(r[0])} ${r[1]} ${r[3]}`).join(" · ")}</p></div>`;
+}
+function resultHTML(R,mySide){
+  const box=side=>{const t=R[side];return `<div class="panel"><h3>${esc(t.n)} · ${t.s}</h3><div class="tw"><table class="tbl"><thead><tr><th>Player</th><th class="n">Min</th><th class="n">Pts</th><th class="n">Reb</th><th class="n">Ast</th><th class="n">FG</th><th class="n">3PT</th><th class="n hm">FT</th></tr></thead><tbody>${t.box.map(r=>`<tr><td>${esc(r[0])} <span class="sub">${r[1]}</span></td><td class="n">${r[2]}</td><td class="n"><b>${r[3]}</b></td><td class="n">${r[4]}</td><td class="n">${r[5]}</td><td class="n">${r[6]}-${r[7]}</td><td class="n">${r[8]}-${r[9]}</td><td class="n hm">${r[10]}-${r[11]}</td></tr>`).join("")}</tbody></table></div></div>`};
+  const a=R.a,b=R.b,w=a.s>b.s?a:b,me=mySide?R[mySide]:null,won=me&&me===w;
+  return `<div class="h2hfinal" style="--c1:${w.c1}"><span class="eyebrow">Head to Head · Final${R.ot?` (${R.ot>1?R.ot:""}OT)`:""}</span>
+    <div class="h2hscore"><div><span class="logo" style="--b1:${a.c1};--b2:${a.c2}">${esc(a.ab)}</span><b>${a.s}</b><span>${esc(a.coach)}</span></div><span class="vs">–</span><div><span class="logo" style="--b1:${b.c1};--b2:${b.c2}">${esc(b.ab)}</span><b>${b.s}</b><span>${esc(b.coach)}</span></div></div>
+    ${me?`<b class="h2hwl ${won?"w":"l"}">${won?"You win!":"You lose."}</b>`:""}<span>${esc(w.n)} win.</span></div>
+    <div class="grid2">${box("a")}${box("b")}</div>
+    <details class="panel"><summary>Key plays</summary><div class="log" style="max-height:none;margin-top:10px">${R.plays.map(t=>`<div class="hl">${esc(t)}</div>`).join("")}</div></details>`;
+}
+function renderH2H(){
+  if(!teamChoices().length){H2H.src="prog";H2H.mySrc="prog"}
+  const d=h2hStore(),tab=H2H.tab;
+  const tabs=`<div class="aggr">${[["create","Send a challenge"],["accept","Play a challenge"],["result","Enter a result"]].map(([k,l])=>`<button class="tab ${tab===k?"on":""}" data-act="h2hTab" data-k="${k}">${l}</button>`).join("")}</div>`;
+  let body="";
+  if(H2H.result){
+    body=`${resultHTML(H2H.result.R,H2H.result.side)}
+      ${H2H.result.side==="b"?`<div class="panel" data-c="amber"><h3>Send the result back</h3><p>Text this code to ${esc(H2H.result.R.a.coach)} so they can see the final.</p><textarea id="h2hOut" class="codebox" readonly>${esc(H2H.result.code)}</textarea><div class="row"><button class="btn" data-act="h2hCopy" data-from="h2hOut">Copy result code</button><button class="btn ghost" data-act="h2hRematch">Send a rematch</button><button class="btn ghost" data-act="h2hDone">Done</button></div><p id="h2hCopyMsg" class="sub"></p></div>`
+        :`<div class="row"><button class="btn" data-act="h2hRematch">Send a rematch</button><button class="btn ghost" data-act="h2hDone">Done</button></div>`}`;
+  } else if(tab==="create"){
+    body=H2H.code?`<div class="panel" data-c="amber"><h3>Your challenge code</h3><p>Text this to a friend. They open CBB Dynasty, tap <b>Head to Head → Play a challenge</b>, and paste it.</p>
+        <textarea id="h2hOut" class="codebox" readonly>${esc(H2H.code)}</textarea><div class="row"><button class="btn" data-act="h2hCopy" data-from="h2hOut">Copy challenge code</button><button class="btn ghost" data-act="h2hNew">Make another</button></div><p id="h2hCopyMsg" class="sub"></p>
+        <p class="muted" style="font-size:13px">When they've played, they'll send you a result code. Paste it under <b>Enter a result</b>.</p></div>`
+      :`<div class="panel"><h3>Pick your team</h3>${teamPicker("ch")}
+        <h3>Court</h3><div class="aggr"><button class="tab ${H2H.site==="n"?"on":""}" data-act="h2hSite" data-v="n">Neutral floor</button><button class="tab ${H2H.site==="h"?"on":""}" data-act="h2hSite" data-v="h">My home court</button></div>
+        <div class="row"><button class="btn" data-act="h2hCreate">Create challenge code</button></div></div>`;
+  } else if(tab==="accept"){
+    const I=H2H.incoming;
+    body=I?`<div class="h2hmatch">${snapCard(I.team,`Challenger${I.site==="h"?" · their home court":" · neutral floor"}`)}<span class="gd-at">VS</span><div class="panel"><h3>Your team</h3>${teamPicker("me")}</div></div>
+        <div class="row"><button class="btn big" data-act="h2hPlay" data-live="1">Play it live</button><button class="btn ghost big" data-act="h2hPlay" data-live="0">Sim it</button><button class="btn ghost" data-act="h2hClear">Different code</button></div>
+        <p class="muted" style="font-size:13px">Each challenge has one outcome, so playing it again gives the same game. No dynasty bonuses for either side: just rosters, ratings, badges and game plans.</p>`
+      :`<div class="panel"><h3>Paste a challenge code</h3><textarea id="h2hIn" class="codebox" placeholder="CBB-CH-…">${esc(H2H.paste)}</textarea><div class="row"><button class="btn" data-act="h2hLoad" data-want="CH">Load challenge</button></div>${H2H.err?`<p class="sec-bad">${esc(H2H.err)}</p>`:""}</div>`;
+  } else {
+    body=`<div class="panel"><h3>Paste a result code</h3><p class="sub">Your opponent gets this after playing your challenge.</p><textarea id="h2hIn" class="codebox" placeholder="CBB-RS-…">${esc(H2H.paste)}</textarea><div class="row"><button class="btn" data-act="h2hLoad" data-want="RS">Show result</button></div>${H2H.err?`<p class="sec-bad">${esc(H2H.err)}</p>`:""}</div>`;
+  }
+  app.innerHTML=`<div class="row" style="justify-content:space-between"><button class="btn ghost" data-act="titleMode" data-m="menu">← Home</button><span class="eyebrow">Head to Head</span></div>
+    <div class="h2hhead"><div><span class="eyebrow">You vs a real opponent</span><h1>Head to Head</h1></div>
+      <div class="h2hrec"><label for="h2hCoach" class="sub">Your coach name</label><input id="h2hCoach" class="nm" maxlength="20" value="${esc(d.coach)}" placeholder="Coach name"><b class="num">${d.w}-${d.l}</b><span class="sub">Head-to-head record</span></div></div>
+    ${H2H.result?"":tabs}${body}
+    ${!H2H.result&&d.games.length?`<div class="panel"><h3>Recent head-to-head games</h3><div class="tw"><table class="tbl"><tbody>${d.games.slice(0,10).map(x=>`<tr><td><span class="wl ${x.won?"w":"l"}">${x.won?"W":"L"} ${x.us}-${x.them}</span></td><td>${esc(x.mine)} vs ${esc(x.opp)}</td><td class="sub">${esc(x.oppCoach||"")}</td></tr>`).join("")}</tbody></table></div></div>`:""}`;
+}
+async function h2hCreate(){
+  const sn=pickedSnap("ch");if(!sn){H2H.err="Pick a team first.";render();return}
+  const ch={v:1,id:Math.random().toString(36).slice(2,10),seed:(Math.random()*4294967296)>>>0,site:H2H.site,team:sn};
+  H2H.code=await encodeCode("CBB-CH-",ch);H2H.last=ch;render();
+}
+async function h2hLoad(want){
+  const el=document.getElementById("h2hIn"),txt=el?el.value:H2H.paste;H2H.paste=txt;H2H.err="";
+  try{const r=await decodeCode(txt);
+    if(r.kind!==want){H2H.err=want==="CH"?"That's a result code. Paste it under Enter a result.":"That's a challenge code. Paste it under Play a challenge.";render();return}
+    if(r.kind==="CH"){H2H.incoming=r.data;if(!H2H.mySrc||(H2H.mySrc==="slot"&&!teamChoices().length))H2H.mySrc="prog"}
+    else{H2H.result={R:r.data,side:"a"};recordH2H(r.data,"a")}
+    H2H.paste="";
+  }catch(e){H2H.err=e&&e.message&&e.message.startsWith("That")?e.message:"That code didn't work. Make sure you copied the whole thing."}
+  render();
+}
+function h2hPlay(live){
+  const I=H2H.incoming;if(!I)return;const mine=pickedSnap("me",I.seed);if(!mine){H2H.err="Pick your team first.";render();return}
+  H2H.mine=mine;const gm=h2hBegin(I.team,mine,I.seed,I.site);
+  if(live){startWatch(gm,"h2h");return}
+  const g=newGame(gm,true);let n=0;while(!g.over&&n++<3000)step(g);h2hFinish(g);
+}
+async function h2hFinish(g){
+  const I=H2H.incoming,R=h2hResult(g,I,H2H.mine);h2hEnd();
+  recordH2H(R,"b");H2H.result={R,side:"b",code:await encodeCode("CBB-RS-",R)};H2H.incoming=null;render();scrollTo(0,0);
+}
+function copyCode(id){
+  const el=document.getElementById(id),msg=document.getElementById("h2hCopyMsg");if(!el)return;
+  const ok=()=>{if(msg)msg.textContent="Copied. Paste it into a text to your friend."},fail=()=>{el.focus();el.select();if(msg)msg.textContent="Selected. Tap and hold to copy."};
+  try{navigator.clipboard.writeText(el.value).then(ok,fail)}catch(e){fail()}
+}
+function renderMenu(){
+  const d=h2hStore(),L=Array.isArray(SAVED)?SAVED.filter(x=>x.s):[];
+  return `<div class="modes">
+    <button class="mode" data-act="titleMode" data-m="team"><span class="mode-i" aria-hidden="true">🏀</span><b>My Team</b><span>You vs the bots. Build a dynasty: recruit, win your league, chase a title.</span><em>${L.length?`${L.length} saved dynast${L.length>1?"ies":"y"}`:"Start a dynasty"}</em></button>
+    <button class="mode" data-act="titleMode" data-m="h2h"><span class="mode-i" aria-hidden="true">⚔️</span><b>Head to Head</b><span>You vs a real opponent. Send a challenge code to a friend and play their team.</span><em>Record ${d.w}-${d.l}</em></button></div>`;
+}
+
 // ===================== VIEWS =====================
 const app=document.getElementById("app");
 const TAB_ICON={weekly:"🗞️",preseason:"📖",locker:"🤝",practice:"🏋️",uniforms:"👕",trophies:"🏆",home:"🏠",news:"📰",schedule:"📅",standings:"📊",top25:"🏅",bracket:"🏀",leaders:"⭐",roster:"👥",plan:"📋",coach:"🧢",history:"🏛️"};
 const TABS=[["home","Home"],["preseason","Preseason"],["news","News"],["weekly","This Week"],["schedule","Schedule"],["standings","Standings"],["top25","Rankings"],["bracket","Bracket"],["leaders","POY & stats"],["roster","Roster"],["practice","Practice"],["locker","Locker room"],["plan","Game plan"],["uniforms","Uniforms"],["coach","Coach"],["trophies","Trophy room"],["history","Program"]];
 let lastView="",enterT=null;
-function viewKey(){return S?[S.tab,S.phase,S.off&&S.off.step,S.pv,!!WATCH,S.selShow&&S.selShow.done,S.selShow&&S.selShow.step,S.ybView,S.magIntro].join("|"):"select"}
+function viewKey(){if(S&&S.phase==="h2h"&&!WATCH)return "h2h";return S?[S.tab,S.phase,S.off&&S.off.step,S.pv,!!WATCH,S.selShow&&S.selShow.done,S.selShow&&S.selShow.step,S.ybView,S.magIntro].join("|"):"select|"+TITLE.mode+"|"+H2H.tab+"|"+!!H2H.result}
 function render(){
   try{if(S){const t=T(S.user);document.body.style.setProperty("--tc1",t.c1);document.body.style.setProperty("--tc2",t.c2)}else{document.body.style.removeProperty("--tc1");document.body.style.removeProperty("--tc2")}}catch(e){}
   OVRC=new Map();try{renderCore()}finally{OVRC=null}
@@ -2582,7 +2753,8 @@ const plink=(id,n)=>`<button class="plink" data-act="player" data-id="${id}">${e
 function teamCell(id,extra){const t=T(id);return `<span class="row" style="gap:8px;flex-wrap:nowrap">${badge(t)}<span>${rankTag(id)}${esc(t.name)}${extra||""}</span></span>`}
 
 function renderSelect(){
-  const saved=SAVED;
+  if(TITLE.mode==="h2h")return renderH2H();
+  const menu=TITLE.mode==="menu";
   app.innerHTML=`
   <div class="sel-hero"><div class="lights" aria-hidden="true"><i></i><i></i></div>
     <div class="eyebrow">College basketball dynasty</div>
@@ -2590,6 +2762,7 @@ function renderSelect(){
     <div class="sel-feats"><span>🏀 68-team March Madness</span><span>📊 NET & Quad 1 wins</span><span>🏅 Player of the Year race</span><span>✍️ Recruiting & portal</span><span>📺 Live play-by-play</span></div>
     <p>Take over a program. Pick your offense, tempo and defense, sim the games or watch them live, win your league, survive conference tournament week and make a run on Selection Sunday. In the offseason, recruit high schoolers, work the transfer portal and level up your coaching skills.</p>
   </div>
+  ${menu?renderMenu():`<div class="row" style="justify-content:space-between"><button class="btn ghost" data-act="titleMode" data-m="menu">← Home</button><span class="eyebrow">My Team · You vs the bots</span></div>
   ${slotsHTML()}
   <h2>Choose your program</h2>
   <div class="tabs">${CONFS.map((c,ci)=>`<button class="tab" data-act="jump" data-id="conf-${ci}">${c}</button>`).join("")}</div>
@@ -2598,7 +2771,7 @@ function renderSelect(){
       <span class="logo" style="--b1:${r[2]};--b2:${r[3]}">${esc(r[1])}</span>
       <span style="min-width:0"><span class="name">${esc(r[0])}</span><br><span class="stars">${starStr(Math.round(presOf(r[4])))}</span></span>
       <span class="ovr"><small>OVR</small>${r[4]}</span>
-    </button>`).join("")}</div>`).join("")}
+    </button>`).join("")}</div>`).join("")}`}
   <p class="muted" style="font-size:13px">Ratings and players are made up for the game and reshuffle every new dynasty. Conference lineups follow the 2026-27 alignment where it's settled. Every league's tournament champion gets an automatic bid. Stars show program prestige, which helps recruiting.</p>
   <p style="margin:4px 0 0;text-align:center;font-size:11px;letter-spacing:.06em;color:var(--muted);opacity:.45">Created by Sammy Eyde III</p>`;
 }
@@ -2924,6 +3097,7 @@ function liveWP(W){
 }
 function finishWatch(){
   const W=WATCH;if(!W||!W.g.over)return;WATCH=null;clearTimeout(wTimer);
+  if(W.kind==="h2h"){h2hFinish(W.g);return}
   const res=finalizeGame(W.g);
   if(W.kind==="user"){playRound(res);scrollTo(0,0)}
   else{S.preRes=S.preRes||{};S.preRes[W.key]=res;news(`Game of the Day: ${T(res.hs>res.as?res.h:res.a).name} beat ${T(res.hs>res.as?res.a:res.h).name} ${Math.max(res.hs,res.as)}-${Math.min(res.hs,res.as)}.`)}
@@ -2935,13 +3109,13 @@ function renderWatch(){
   const side=(t,cls)=>`<div class="ws ${cls}">${badge(t)}<span class="wn">${S.ncaa&&S.ncaa.seed[t.id]!=null&&g.type==="ncaa"?`(${S.ncaa.seed[t.id]}) `:rankTag(t.id)}${esc(t.abbr)}${g.poss===t.id&&!g.over?'<i class="wpos" title="Has the ball"></i>':""}<small>Fouls ${g.fouls[t.id]}</small>${bonus(t.id)?`<small class="bonus">${bonus(t.id)}</small>`:""}</span><span class="wsc">${g.score[t.id]}</span></div>`;
   const onc=id=>`<div><b>${esc(T(id).abbr)} on the floor</b><span>${(g.lu[id]||[]).map(p=>{const b=g.box[p.id]||{pts:0};return `${hcIcon(g,p)}${badgeIcons(p)}${esc(p.n.split(" ").pop())} ${b.pts}${(g.pf[p.id]||0)>=3?` (${g.pf[p.id]} PF)`:""}`}).join(" · ")}</span></div>`;
   app.innerHTML=`
-  <div class="row" style="justify-content:space-between"><span class="eyebrow">${W.kind==="gotw"?"Game of the Day · ":""}${esc(g.label)} · Live</span><span class="muted num">${g.neutral?"Neutral site":esc(h.arena)}</span></div>
+  <div class="row" style="justify-content:space-between"><span class="eyebrow">${W.kind==="gotw"?"Game of the Day · ":W.kind==="h2h"?`${esc(T(0).abbr)} vs ${esc(T(1).abbr)} · `:""}${esc(g.label)} · Live</span><span class="muted num">${g.neutral?"Neutral site":esc(h.arena)}</span></div>
   <div class="wboard">${side(a,"away")}<div class="wmid"><span class="wclk">${clk}</span><span class="wdd">${g.run.p>=8&&!g.over?`${esc(T(g.run.t).abbr)} ${g.run.p}-0 run`:`${g.lc} lead changes`}</span></div>${side(h,"home")}</div>
   ${(()=>{const cr=crowdLevel(g),m=g.mom||0,lead=m>=0?h:a;return `<div class="momo"><span>Momentum</span><div class="mbar"><i style="left:50%;width:${Math.abs(m)*50}%;${m<0?`transform:translateX(-100%);`:""}background:${lead.c1}"></i><b></b></div><span>${Math.abs(m)<.15?"Even":esc(lead.abbr)} · Crowd: ${esc(cr.n)}${g.gd?" · GameDay":""}</span></div>`})()}
   ${courtSVG(g.home,g.away,g.shots)}
   <div class="wpbar"><span>${esc(a.abbr)} ${Math.round((1-wp)*100)}%</span><div class="wpt"><i style="width:${(1-wp)*100}%;background:${a.c1}"></i><i style="width:${wp*100}%;background:${h.c1}"></i></div><span>${Math.round(wp*100)}% ${esc(h.abbr)}</span></div>
   ${W.banner?`<div class="wbanner">${esc(W.banner)}</div>`:""}
-  <div class="row">${g.over?`<button class="btn" data-act="wDone">${W.kind==="user"?"Continue":"Back to the hub"}</button>`:
+  <div class="row">${g.over?`<button class="btn" data-act="wDone">${W.kind==="user"?"Continue":W.kind==="h2h"?"See the final":"Back to the hub"}</button>`:
     `<button class="btn ghost" data-act="wPause">${W.paused?"Resume":"Pause"}</button>${[1,3,10].map(v=>`<button class="tab ${W.speed===v?"on":""}" data-act="wSpeed" data-v="${v}">${v}x</button>`).join("")}<button class="btn ghost" data-act="wSkip">Skip to the end</button>${W.kind==="gotw"?'<button class="btn ghost" data-act="wLeave">Stop watching</button>':""}`}</div>
   ${g.over?"":`<div class="panel"><div class="oncourt">${onc(g.away)}${onc(g.home)}</div></div>`}
   <div class="panel"><h3>Play by play</h3><div class="log" style="max-height:360px">${g.log.slice(0,24).map(l=>`<div class="${l.hl?"hl":""}"><span class="t">${esc(l.t)}</span>${esc(l.txt)}</div>`).join("")}</div></div>
@@ -3122,12 +3296,17 @@ const ACT={
   wLeave(){WATCH=null;DCC=null;clearTimeout(wTimer)},
   wDone(){finishWatch()},
   reset(){ACT.menu()},
+  titleMode(d){TITLE.mode=d.m;if(d.m!=="h2h")H2H.result=null;scrollTo(0,0)},h2hTab(d){H2H.tab=d.k;H2H.err=""},
+  h2hSrc(d){if(d.w==="me")H2H.mySrc=d.v;else H2H.src=d.v},h2hSlot(d){if(d.w==="me")H2H.mySlot=+d.n;else H2H.slot=+d.n},h2hSite(d){H2H.site=d.v},
+  h2hCreate(){h2hCreate()},h2hNew(){H2H.code=""},h2hLoad(d){h2hLoad(d.want)},h2hClear(){H2H.incoming=null},h2hPlay(d){h2hPlay(d.live==="1")},
+  h2hRematch(){H2H.result=null;H2H.code="";H2H.tab="create";scrollTo(0,0)},h2hDone(){H2H.result=null;H2H.code="";H2H.tab="create";scrollTo(0,0)},
 };
 const HEAVY=new Set(["sim","simRound","simTo","simRest","offseason","finishSigning","pick","wDone"]);
 let busy=false;
 document.addEventListener("click",e=>{
   const b=e.target.closest("[data-act]");if(!b||b.disabled||busy)return;
   const act=b.dataset.act,data={...b.dataset};
+  if(act==="h2hCopy"){copyCode(data.from);return}
   if(S&&act!=="reset")S.confirmReset=false;
   if(HEAVY.has(act)){busy=true;const ov=document.getElementById("busy");ov.hidden=false;setTimeout(()=>{try{runAct(act,data)}finally{busy=false;ov.hidden=true}},40);return}
   runAct(act,data);
@@ -3140,8 +3319,11 @@ function runAct(act,data){
   if(S&&S.editing){const el=document.getElementById("nm-"+S.editing);if(el){el.focus();el.select()}}
   if(S)showToasts();
 }
+document.addEventListener("input",e=>{if(e.target.id==="h2hCoach"){const d=h2hStore();d.coach=e.target.value.trim().slice(0,20);h2hSave(d)}});
 document.addEventListener("change",e=>{
-  const id=e.target.id||"";if(!S)return;
+  const id=e.target.id||"";
+  if(id.startsWith("h2hProg-")){const v=e.target.value===""?null:+e.target.value;if(id.endsWith("me"))H2H.myProg=v;else H2H.prog=v;return}
+  if(!S)return;
   if(id.startsWith("uc-")){ACT.uniColor({p:id.slice(3),v:e.target.value});save();render();return}
   if(id.startsWith("sw-")&&canEditSched()){doSwap(+id.slice(3),+e.target.value);save();render()}
 });
