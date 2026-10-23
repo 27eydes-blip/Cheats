@@ -16,7 +16,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Graduate&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Graduate&family=Chakra+Petch:wght@500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: March under the arena lights. Team-colored hero band, glass stat chips, grouped dock nav, hardwood court for live games. */
 :root{
@@ -650,6 +650,59 @@ details.panel summary{font-size:15px}
 .h2hfinal{display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px;border-radius:24px;color:#fff;text-align:center;background:radial-gradient(500px 200px at 50% 0%,rgba(255,211,77,.22),transparent 70%),linear-gradient(135deg,var(--c1),color-mix(in srgb,var(--c1) 30%,#000));border:1px solid rgba(255,255,255,.2);text-shadow:0 2px 4px rgba(0,0,0,.5)}
 .h2hscore{display:flex;align-items:center;gap:18px}.h2hscore div{display:flex;flex-direction:column;align-items:center;gap:4px}.h2hscore .logo{width:64px;height:64px;font-size:17px}.h2hscore b{font-family:var(--num);font-size:48px;line-height:1}.h2hscore .vs{font-size:30px;opacity:.7}
 .h2hwl{font-family:var(--display);font-weight:400;font-size:30px}.h2hwl.w{color:#7ff0bf}.h2hwl.l{color:#ffb1bd}
+
+/* ===== Title screen: broadcast HUD ===== */
+:root{--hud:'Chakra Petch','Barlow Condensed',system-ui,sans-serif;--neon:#6ed2ff}
+.hx{position:relative;overflow:hidden;min-height:clamp(380px,62vh,560px);display:flex;align-items:flex-end;border-radius:28px;border:1px solid rgba(110,210,255,.22);background:#040713;
+  box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.04),0 0 60px rgba(110,210,255,.08)}
+.hx.compact{min-height:200px}
+.hx-c{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hx-scan{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px),linear-gradient(90deg,rgba(4,7,19,.85) 0%,rgba(4,7,19,.35) 55%,transparent 80%)}
+.hx-in{position:relative;z-index:1;display:flex;flex-direction:column;gap:14px;padding:clamp(22px,4vw,40px);max-width:680px}
+.hx-top{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-family:var(--hud);font-weight:600;font-size:12.5px;letter-spacing:.22em;text-transform:uppercase;color:#9fc6ff}
+.hx-sep{color:rgba(159,198,255,.4)}
+.hx-live{display:inline-flex;align-items:center;gap:7px;padding:3px 10px;border-radius:6px;background:rgba(255,70,90,.14);border:1px solid rgba(255,70,90,.5);color:#ff8a98}
+.hx-live i{width:8px;height:8px;border-radius:50%;background:#ff4d63;box-shadow:0 0 10px #ff4d63;animation:hxpulse 1.4s ease-in-out infinite}
+@keyframes hxpulse{50%{opacity:.25}}
+.hx-title{display:flex;flex-direction:column;line-height:.86;margin:0}
+.hx-cbb{font-family:var(--hud);font-weight:700;font-size:clamp(20px,4.4vw,30px);letter-spacing:.5em;color:var(--neon);text-shadow:0 0 18px rgba(110,210,255,.7)}
+.hx-dyn{font-family:var(--display);font-weight:400;font-size:clamp(58px,13vw,124px);letter-spacing:.01em;
+  background:linear-gradient(180deg,#ffffff 0%,#e6ecff 38%,#8e9dc9 52%,#f6f8ff 62%,#ffd98a 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 22px rgba(110,210,255,.35)) drop-shadow(0 6px 14px rgba(0,0,0,.7))}
+.hx.compact .hx-dyn{font-size:clamp(44px,9vw,72px)}
+.hx-sub{font-size:clamp(15px,2.2vw,18px);color:#d7e2ff;max-width:46ch;text-shadow:0 2px 8px rgba(0,0,0,.8)}
+.hx-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;max-width:560px}
+.hx-stats div{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:rgba(6,12,30,.72);border:1px solid rgba(110,210,255,.25);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.hx-stats b{font-family:var(--hud);font-weight:700;font-size:clamp(22px,4.5vw,32px);line-height:1;color:#ffd06a;text-shadow:0 0 14px rgba(255,190,80,.55);font-variant-numeric:tabular-nums}
+.hx-stats span{font-family:var(--hud);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#9fc6ff}
+@media (max-width:520px){.hx-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.hx-tick{display:flex;align-items:stretch;overflow:hidden;border-radius:14px;border:1px solid rgba(110,210,255,.2);background:#050916}
+.hx-tl{flex:none;display:grid;place-items:center;padding:0 14px;font-family:var(--hud);font-weight:700;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#05101f;background:linear-gradient(180deg,#8fe1ff,#3fb6f0)}
+.hx-tw{overflow:hidden;flex:1;min-width:0;mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.hx-tr{display:flex;width:max-content;animation:hxtick 60s linear infinite}
+@keyframes hxtick{to{transform:translateX(-50%)}}
+.hx-g{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-right:1px solid rgba(255,255,255,.07);font-family:var(--hud);font-size:14px;white-space:nowrap;color:#aeb9d8}
+.hx-g em{font-style:normal;font-size:10.5px;letter-spacing:.16em;color:#6f7fa8}.hx-g i{width:8px;height:8px;border-radius:2px}.hx-g b{font-weight:600}.hx-g b.w{color:#fff}
+.modes{gap:16px}
+.mode{position:relative;overflow:hidden;isolation:isolate;padding:26px 24px 20px;border-radius:26px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(160deg,rgba(18,28,58,.95),rgba(8,12,26,.98));gap:10px}
+.mode::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(rgba(110,210,255,.05) 1px,transparent 1px) 0 0/22px 22px,linear-gradient(90deg,rgba(110,210,255,.05) 1px,transparent 1px) 0 0/22px 22px;mask-image:linear-gradient(160deg,#000,transparent 70%);-webkit-mask-image:linear-gradient(160deg,#000,transparent 70%)}
+.mode-ring{position:absolute;inset:-1px;z-index:-2;border-radius:inherit;padding:1.5px;background:conic-gradient(from var(--ang,0deg),transparent 0 60%,var(--mc) 75%,transparent 90%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:hxspin 5s linear infinite;opacity:.9}
+@property --ang{syntax:"<angle>";initial-value:0deg;inherits:false}
+@keyframes hxspin{to{--ang:360deg}}
+.m-team{--mc:#ffc350}.m-h2h{--mc:#6ed2ff}.mode+.mode{background:linear-gradient(160deg,rgba(18,28,58,.95),rgba(8,12,26,.98))}
+.mode:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--mc) 60%,transparent);box-shadow:0 22px 50px rgba(0,0,0,.5),0 0 40px color-mix(in srgb,var(--mc) 22%,transparent)}
+.mode-i{display:grid;place-items:center;width:64px;height:64px;border-radius:18px;color:var(--mc);background:color-mix(in srgb,var(--mc) 12%,transparent);border:1px solid color-mix(in srgb,var(--mc) 40%,transparent);box-shadow:0 0 24px color-mix(in srgb,var(--mc) 25%,transparent)}
+.mode-i svg{width:38px;height:38px}
+.mode-k{font-family:var(--hud);font-weight:600;font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:color-mix(in srgb,var(--mc) 80%,#fff)}
+.mode b{font-size:clamp(30px,6vw,40px);line-height:1}
+.mode .mode-d{color:#c9d4f2;font-size:15px}
+.mode-f{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;margin-top:6px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+.mode-f em{font-style:normal;font-family:var(--hud);font-weight:600;font-size:13px;letter-spacing:.06em;color:#e7ecff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.mode-go{flex:none;display:inline-flex;align-items:center;gap:6px;font-family:var(--hud);font-weight:700;font-size:13px;letter-spacing:.18em;text-transform:uppercase;padding:7px 12px;border-radius:10px;color:#05101f;background:var(--mc);box-shadow:0 0 18px color-mix(in srgb,var(--mc) 50%,transparent)}
+.mode-go i{font-style:normal;transition:transform .15s ease}.mode:hover .mode-go i{transform:translateX(3px)}
+.hx-feats{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.hx-feats span{font-family:var(--hud);font-weight:600;font-size:12px;letter-spacing:.14em;text-transform:uppercase;padding:6px 12px;border-radius:8px;color:#9fc6ff;background:rgba(110,210,255,.06);border:1px solid rgba(110,210,255,.18)}
+@media (prefers-reduced-motion:reduce){.hx-tr,.mode-ring,.hx-live i{animation:none}.hx-tr{flex-wrap:wrap;width:auto}}
 </style>
 </head>
 <body>
@@ -2721,11 +2774,92 @@ function copyCode(id){
   const ok=()=>{if(msg)msg.textContent="Copied. Paste it into a text to your friend."},fail=()=>{el.focus();el.select();if(msg)msg.textContent="Selected. Tap and hold to copy."};
   try{navigator.clipboard.writeText(el.value).then(ok,fail)}catch(e){fail()}
 }
+
+// ===================== TITLE SCREEN =====================
+// A broadcast-style opener: a perspective court drawn in light, a spinning ball, a scoreboard readout and a ticker.
+let HERO=null;
+function heroHTML(compact){
+  return `<section class="hx ${compact?"compact":""}" aria-label="CBB Dynasty">
+    <canvas class="hx-c" aria-hidden="true"></canvas><div class="hx-scan" aria-hidden="true"></div>
+    <div class="hx-in">
+      <div class="hx-top"><span class="hx-live"><i></i>Live</span><span>${seasonLabel(2027)} season</span><span class="hx-sep">//</span><span>Sim engine v2</span></div>
+      <h1 class="hx-title"><span class="hx-cbb">CBB</span><span class="hx-dyn">Dynasty</span></h1>
+      ${compact?"":`<p class="hx-sub">College basketball, simulated one possession at a time. Build a program, survive March, or call out a friend.</p>
+      <div class="hx-stats">${[["174","Programs"],["15","Conferences"],["68","Team field"],["1","Champion"]].map(([n,l])=>`<div><b class="hx-num" data-to="${n}">${n}</b><span>${l}</span></div>`).join("")}</div>`}
+    </div></section>
+    ${compact?"":`<div class="hx-tick" aria-label="Scores from around the country (simulated)"><span class="hx-tl">Scores</span><div class="hx-tw"><div class="hx-tr">${tickerItems()}${tickerItems()}</div></div></div>`}`;
+}
+let TICK=null;
+function tickerItems(){
+  if(!TICK){const big=TEAMS0.map((r,i)=>({r,i})).filter(x=>x.r[4]>=78);TICK=[];
+    for(let k=0;k<12;k++){const a=pick(big),b=pick(big);if(a===b)continue;const sa=62+Math.floor(Math.random()*30),sb=58+Math.floor(Math.random()*30);TICK.push({a:a.r,b:b.r,sa,sb:sb===sa?sb-3:sb,tag:pick(["FINAL","FINAL","FINAL/OT","FINAL"])})}}
+  return TICK.map(x=>{const aw=x.sa>x.sb;return `<span class="hx-g"><em>${x.tag}</em><i style="background:${x.a[2]}"></i><b class="${aw?"w":""}">${esc(x.a[1])} ${x.sa}</b><i style="background:${x.b[2]}"></i><b class="${aw?"":"w"}">${esc(x.b[1])} ${x.sb}</b></span>`}).join("");
+}
+const ICON_BALL=`<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" fill="none" stroke="currentColor" stroke-width="3"/><path d="M6 32h52M32 6v52M13 14c9 8 9 28 0 36M51 14c-9 8-9 28 0 36" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>`;
+const ICON_VS=`<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M6 16l10 32 10-32" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M56 20c-3-5-15-5-16 2-1 8 17 7 16 16-1 9-15 9-18 3" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M31 8l-4 12h6l-4 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/></svg>`;
 function renderMenu(){
-  const d=h2hStore(),L=Array.isArray(SAVED)?SAVED.filter(x=>x.s):[];
+  const d=h2hStore(),L=Array.isArray(SAVED)?SAVED.filter(x=>x.s):[],last=L[0]&&L[0].s?L[0].s:null,lt=last?last.teams[last.user]:null;
   return `<div class="modes">
-    <button class="mode" data-act="titleMode" data-m="team"><span class="mode-i" aria-hidden="true">🏀</span><b>My Team</b><span>You vs the bots. Build a dynasty: recruit, win your league, chase a title.</span><em>${L.length?`${L.length} saved dynast${L.length>1?"ies":"y"}`:"Start a dynasty"}</em></button>
-    <button class="mode" data-act="titleMode" data-m="h2h"><span class="mode-i" aria-hidden="true">⚔️</span><b>Head to Head</b><span>You vs a real opponent. Send a challenge code to a friend and play their team.</span><em>Record ${d.w}-${d.l}</em></button></div>`;
+    <button class="mode m-team" data-act="titleMode" data-m="team"><span class="mode-ring" aria-hidden="true"></span>
+      <span class="mode-i">${ICON_BALL}</span><span class="mode-k">Mode 01 · Single player</span><b>My Team</b><span class="mode-d">You vs the bots. Recruit, win your league and chase a national title.</span>
+      <span class="mode-f"><em>${lt?`${esc(lt.name)} · ${seasonLabel(last.season)}${L.length>1?` · +${L.length-1} more`:""}`:"Start a dynasty"}</em><span class="mode-go">Enter <i>→</i></span></span></button>
+    <button class="mode m-h2h" data-act="titleMode" data-m="h2h"><span class="mode-ring" aria-hidden="true"></span>
+      <span class="mode-i">${ICON_VS}</span><span class="mode-k">Mode 02 · Versus</span><b>Head to Head</b><span class="mode-d">You vs a real opponent. Send a challenge code, play their team, trade results.</span>
+      <span class="mode-f"><em>Record ${d.w}-${d.l}${d.coach?` · Coach ${esc(d.coach)}`:""}</em><span class="mode-go">Enter <i>→</i></span></span></button></div>
+  <div class="hx-feats">${[["68-team March Madness","bracket"],["NET & Quad 1 wins","chart"],["Player of the Year race","star"],["Recruiting & transfer portal","pen"],["Live play-by-play","live"]].map(([l])=>`<span>${esc(l)}</span>`).join("")}</div>`;
+}
+// The animated court. One loop at a time; it stops itself when the canvas leaves the page.
+function startHero(){
+  const c=app.querySelector(".hx-c");if(!c){HERO=null;return}
+  if(HERO&&HERO.c===c)return;
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches,ctx=c.getContext("2d");if(!ctx)return;
+  const parts=[...Array(46)].map(()=>({x:Math.random(),y:Math.random(),s:.3+Math.random()*1.4,v:.02+Math.random()*.05,p:Math.random()*6.28}));
+  const H={c,t0:performance.now()};HERO=H;
+  const size=()=>{const r=c.getBoundingClientRect(),d=Math.min(2,window.devicePixelRatio||1);c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);return d};
+  let dpr=size(),lastW=c.clientWidth;
+  function frame(now){
+    if(HERO!==H||!c.isConnected){if(HERO===H)HERO=null;return}
+    if(c.clientWidth!==lastW){lastW=c.clientWidth;dpr=size()}
+    const t=(now-H.t0)/1000,W=c.width,Hh=c.height,u=dpr;ctx.clearRect(0,0,W,Hh);
+    // Arena: deep navy, two spotlight cones
+    const bg=ctx.createLinearGradient(0,0,0,Hh);bg.addColorStop(0,"#040713");bg.addColorStop(.55,"#0a1330");bg.addColorStop(1,"#03050c");ctx.fillStyle=bg;ctx.fillRect(0,0,W,Hh);
+    for(const [sx,ph] of [[.22,0],[.78,2]]){const a=.10+.04*Math.sin(t*.7+ph),g=ctx.createRadialGradient(W*sx,-Hh*.1,0,W*sx,-Hh*.1,Hh*1.1);g.addColorStop(0,`rgba(160,200,255,${a})`);g.addColorStop(1,"rgba(160,200,255,0)");ctx.fillStyle=g;ctx.fillRect(0,0,W,Hh)}
+    // Perspective court: x across (-25..25 ft), z down the floor (0..94 ft) away from the camera
+    const cx=W*.5+Math.sin(t*.18)*W*.03,hor=Hh*.30,camZ=16+Math.sin(t*.12)*3,f=Hh*1.25,camY=14;
+    const P=(x,z)=>{const d=z+camZ;return [cx+x*f/d,hor+camY*f/d]};
+    const line=(pts,col,w,glow)=>{ctx.beginPath();pts.forEach(([x,z],i)=>{const [a,b]=P(x,z);i?ctx.lineTo(a,b):ctx.moveTo(a,b)});ctx.strokeStyle=col;ctx.lineWidth=w*u;ctx.shadowColor=col;ctx.shadowBlur=glow*u;ctx.stroke()};
+    const arc=(x0,z0,r,a0,a1,n=40)=>[...Array(n+1)].map((_,i)=>{const a=a0+(a1-a0)*i/n;return [x0+Math.sin(a)*r,z0+Math.cos(a)*r]});
+    // floor glow + boards
+    ctx.shadowBlur=0;const fl=ctx.createLinearGradient(0,hor,0,Hh);fl.addColorStop(0,"rgba(245,184,61,.02)");fl.addColorStop(1,"rgba(245,184,61,.10)");
+    ctx.beginPath();[[-25,0],[25,0],[25,94],[-25,94]].forEach(([x,z],i)=>{const [a,b]=P(x,z);i?ctx.lineTo(a,b):ctx.moveTo(a,b)});ctx.closePath();ctx.fillStyle=fl;ctx.fill();
+    for(let x=-24;x<=24;x+=3)line([[x,0],[x,94]],"rgba(140,170,255,.06)",1,0);
+    const cyan="rgba(110,210,255,.85)",dim="rgba(110,210,255,.35)",gold="rgba(255,196,80,.95)";
+    line([[-25,0],[25,0],[25,94],[-25,94],[-25,0]],cyan,2,14);
+    line([[-25,47],[25,47]],dim,1.6,8);line(arc(0,47,6,0,Math.PI*2),dim,1.6,8);
+    for(const [z,dir] of [[0,1],[94,-1]]){const rz=z+dir*5.25;
+      line([[-6,z],[-6,z+dir*19],[6,z+dir*19],[6,z]],dim,1.6,8);line(arc(0,z+dir*19,6,dir>0?-Math.PI/2:Math.PI/2,dir>0?Math.PI/2:Math.PI*1.5,24),dim,1.4,6);
+      const a3=arc(0,rz,22.15,dir>0?-1.35:Math.PI-1.35,dir>0?1.35:Math.PI+1.35,48);line([[-21.65,z],...a3.map(([x,zz])=>[x,zz]).filter(([x])=>Math.abs(x)<=21.65),[21.65,z]].filter((p,i,A)=>i===0||i===A.length-1||Math.abs(p[0])<21.65),gold,2.2,18);
+      line(arc(0,rz,.75,0,Math.PI*2,16),"rgba(255,140,60,.9)",2,10)}
+    // scan sweep down the floor
+    const sz=((t*14)%110)-8;if(sz>0&&sz<94)line([[-25,sz],[25,sz]],"rgba(180,235,255,.55)",2.4,22);
+    ctx.shadowBlur=0;
+    // particles
+    for(const p of parts){if(!reduce){p.y-=p.v*.016;if(p.y<-.05){p.y=1.05;p.x=Math.random()}}const a=.25+.35*Math.sin(t*2+p.p);ctx.fillStyle=`rgba(200,225,255,${a})`;ctx.beginPath();ctx.arc(p.x*W,p.y*Hh,p.s*u,0,6.28);ctx.fill()}
+    // the ball
+    const narrow=W<620*u,br=narrow?Math.min(W*.15,Hh*.11):Math.min(W*.13,Hh*.26),bx=narrow?W*.76:W*.80,by=(narrow?Hh*.17:Hh*.42)+Math.sin(t*1.6)*br*.12,rot=t*.9;
+    const halo=ctx.createRadialGradient(bx,by,br*.6,bx,by,br*2.2);halo.addColorStop(0,"rgba(255,150,60,.30)");halo.addColorStop(1,"rgba(255,150,60,0)");ctx.fillStyle=halo;ctx.fillRect(bx-br*2.3,by-br*2.3,br*4.6,br*4.6);
+    const bg2=ctx.createRadialGradient(bx-br*.35,by-br*.4,br*.1,bx,by,br);bg2.addColorStop(0,"#ffb766");bg2.addColorStop(.6,"#e5701e");bg2.addColorStop(1,"#7a2f08");
+    ctx.save();ctx.beginPath();ctx.arc(bx,by,br,0,6.28);ctx.fillStyle=bg2;ctx.fill();ctx.clip();
+    ctx.strokeStyle="rgba(30,10,2,.85)";ctx.lineWidth=Math.max(2,br*.045);
+    ctx.beginPath();ctx.moveTo(bx-br,by+Math.sin(rot)*br*.08);ctx.bezierCurveTo(bx-br*.3,by+Math.sin(rot)*br*.25,bx+br*.3,by+Math.sin(rot)*br*.25,bx+br,by+Math.sin(rot)*br*.08);ctx.stroke();
+    for(let k=0;k<2;k++){const ph=rot+k*Math.PI,xo=Math.cos(ph)*br;ctx.beginPath();ctx.ellipse(bx+xo*.55,by,Math.abs(Math.sin(ph))*br*.55+br*.05,br,0,0,6.28);ctx.stroke()}
+    const sh=ctx.createRadialGradient(bx-br*.4,by-br*.45,0,bx-br*.4,by-br*.45,br*.9);sh.addColorStop(0,"rgba(255,255,255,.35)");sh.addColorStop(1,"rgba(255,255,255,0)");ctx.fillStyle=sh;ctx.fillRect(bx-br,by-br,br*2,br*2);
+    ctx.restore();ctx.beginPath();ctx.arc(bx,by,br,0,6.28);ctx.strokeStyle="rgba(255,210,150,.45)";ctx.lineWidth=1.5*u;ctx.stroke();
+    if(!reduce)requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  // Count the scoreboard numbers up once.
+  if(!reduce)app.querySelectorAll(".hx-num").forEach(el=>{const to=+el.dataset.to,t0=performance.now();const step=now=>{const k=Math.min(1,(now-t0)/1100);el.textContent=Math.round(to*(1-Math.pow(1-k,3)));if(k<1&&el.isConnected)requestAnimationFrame(step)};requestAnimationFrame(step)});
 }
 
 // ===================== VIEWS =====================
@@ -2737,6 +2871,7 @@ function viewKey(){if(S&&S.phase==="h2h"&&!WATCH)return "h2h";return S?[S.tab,S.
 function render(){
   try{if(S){const t=T(S.user);document.body.style.setProperty("--tc1",t.c1);document.body.style.setProperty("--tc2",t.c2)}else{document.body.style.removeProperty("--tc1");document.body.style.removeProperty("--tc2")}}catch(e){}
   OVRC=new Map();try{renderCore()}finally{OVRC=null}
+  try{if(!S||S.phase==="h2h"&&!WATCH)startHero()}catch(e){}
   try{const k=viewKey();if(k!==lastView){lastView=k;app.classList.remove("enter");void app.offsetWidth;app.classList.add("enter");clearTimeout(enterT);enterT=setTimeout(()=>app.classList.remove("enter"),700)}else app.classList.remove("enter")}catch(e){}
 }
 function renderCore(){
@@ -2756,12 +2891,7 @@ function renderSelect(){
   if(TITLE.mode==="h2h")return renderH2H();
   const menu=TITLE.mode==="menu";
   app.innerHTML=`
-  <div class="sel-hero"><div class="lights" aria-hidden="true"><i></i><i></i></div>
-    <div class="eyebrow">College basketball dynasty</div>
-    <h1>CBB Dynasty</h1>
-    <div class="sel-feats"><span>🏀 68-team March Madness</span><span>📊 NET & Quad 1 wins</span><span>🏅 Player of the Year race</span><span>✍️ Recruiting & portal</span><span>📺 Live play-by-play</span></div>
-    <p>Take over a program. Pick your offense, tempo and defense, sim the games or watch them live, win your league, survive conference tournament week and make a run on Selection Sunday. In the offseason, recruit high schoolers, work the transfer portal and level up your coaching skills.</p>
-  </div>
+  ${heroHTML(!menu)}
   ${menu?renderMenu():`<div class="row" style="justify-content:space-between"><button class="btn ghost" data-act="titleMode" data-m="menu">← Home</button><span class="eyebrow">My Team · You vs the bots</span></div>
   ${slotsHTML()}
   <h2>Choose your program</h2>
