@@ -241,8 +241,15 @@ body.playing .eq i { animation: eq .7s ease-in-out infinite; }
 canvas.board { display: block; max-width: 100%; }
 .controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .tools { display: flex; gap: 8px; flex-wrap: wrap; }
-.pad { display: grid; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(2, 44px); gap: 6px; }
-.pad button { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; font-size: 18px; font-weight: 800; box-shadow: 0 3px 0 var(--bg); transition: transform .06s; }
+.pad { display: grid; grid-template-columns: repeat(3, 68px); grid-template-rows: repeat(2, 60px); gap: 8px; }
+.pad button { border: 1px solid var(--line); background: var(--panel); border-radius: 16px; font-size: 26px; font-weight: 800; box-shadow: 0 4px 0 var(--bg); transition: transform .06s; touch-action: manipulation; }
+/* phones: the pad gets its own full-width row under the board, sized for thumbs */
+@media (max-width: 600px) {
+  .controls { flex-direction: column; align-items: stretch; gap: 14px; }
+  .tools { justify-content: center; }
+  .pad { grid-template-columns: repeat(3, minmax(0, 104px)); grid-template-rows: repeat(2, 78px); gap: 10px; justify-content: center; }
+  .pad button { font-size: 34px; border-radius: 20px; box-shadow: 0 5px 0 var(--bg); }
+}
 .pad button:active, .pad button.flash { background: var(--b1); color: #1b1100; border-color: var(--b1); transform: translateY(2px); box-shadow: 0 1px 0 var(--bg); }
 .pad .u { grid-column: 2; } .pad .l { grid-column: 1; grid-row: 2; } .pad .d { grid-column: 2; grid-row: 2; } .pad .r { grid-column: 3; grid-row: 2; }
 .keys { font-size: 12px; color: var(--muted); margin: 0; }
@@ -983,7 +990,9 @@ function show(s){screen=s;bgDrawn=false;$('home').hidden=s!=='home';$('play').hi
   music.setTrack(s==='home'?'home':mode==='blitz'?'blitz':mode==='secret'?'warp':mode==='campaign'&&L?THEMES[WORLDS[LEVELS[idx].world].id].track:'play');
   if(s==='home'){endBlitzQuiet();applyTheme();refreshHome();demoStart();window.scrollTo(0,0);}fitAll();}
 function fitAll(){
-  if(screen==='play')board.fit(Math.min($('stage').clientWidth||520,560),Math.max(220,innerHeight*.56));
+  if(screen==='play'){ // leave room below the board for the controls so the arrows never fall off screen
+    const top=$('stage').getBoundingClientRect().top+window.scrollY,ctl=document.querySelector('#play .controls').offsetHeight;
+    board.fit(Math.min($('stage').clientWidth||520,560),Math.max(200,Math.min(innerHeight*.62,innerHeight-top-ctl-28)));}
   else demo.fit(Math.min(($('home').clientWidth||480),440),Math.max(150,innerHeight*.26));}
 addEventListener('resize',fitAll);
 
