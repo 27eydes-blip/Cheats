@@ -1,5 +1,5 @@
-const CACHE='tandem-781f4e0eb1';
-const CORE=['./','manifest.json','icon-192.png','icon-512.png','apple-touch-icon.png'];
+const CACHE='tandem-d5105ffd0e';
+const CORE=['./','manifest.json','icon-192.png','icon-512.png','apple-touch-icon.png','supabase.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('tandem-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{
