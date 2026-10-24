@@ -191,6 +191,19 @@ kbd { font-family: var(--body); border: 1px solid var(--line); border-bottom-wid
 @media (max-width: 440px) { #hSound { display: none; } }
 @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
 </style>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0b0a1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tandem">
+<style>
+:root { box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+.share { -webkit-user-select: all; user-select: all; }
+</style>
 </head><body>
 
 <canvas id="bgfx"></canvas>
@@ -964,5 +977,8 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(64,Math.max(0
 show('home');requestAnimationFrame(frame);
 solver('solve',parse(LEVELS[3].rows),parse(LEVELS[3].rows).blocks,5000);
 document.fonts&&document.fonts.ready.then(()=>{sprites.clear();fitAll();});
+</script>
+<script>
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body></html>
