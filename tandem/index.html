@@ -119,7 +119,13 @@ body.playing .eq i { animation: eq .7s ease-in-out infinite; }
 .tile.board .podium i:nth-child(1) { height: 22px; background: var(--b0); }
 .tile.board .podium i:nth-child(2) { height: 34px; background: var(--b1); }
 .tile.board .podium i:nth-child(3) { height: 16px; background: var(--b2); }
-.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--bg); border-radius: 12px; padding: 4px; }
+.friends { display: flex; flex-direction: column; gap: 10px; }
+.code-card { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 12px 14px; border-radius: 14px; background: var(--bg); border: 1px dashed var(--line); }
+.code-card span { font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.code-card b { grid-row: 2; font-family: var(--display); font-weight: 400; font-size: 26px; letter-spacing: .12em; color: var(--b1); user-select: all; }
+.code-card .btn { grid-row: 1 / span 2; grid-column: 2; flex: none; padding: 10px 14px; }
+#friendCode { text-transform: uppercase; letter-spacing: .12em; }
+.tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; background: var(--bg); border-radius: 12px; padding: 4px; }
 .tabs button { border: 0; background: transparent; border-radius: 9px; padding: 9px; font-weight: 800; color: var(--muted); }
 .tabs button[aria-selected="true"] { background: var(--panel2); color: var(--fg); }
 .lb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 46vh; overflow-y: auto; overscroll-behavior: contain; }
@@ -143,6 +149,41 @@ body.playing .eq i { animation: eq .7s ease-in-out infinite; }
 .lb-status { min-height: 1.2em; font-size: 13px; color: var(--muted); margin: 0; }
 .lb-status.err { color: var(--hot); }
 .linkish { background: none; border: 0; color: var(--muted); font-weight: 700; text-decoration: underline; padding: 0; font-size: 13px; }
+.goals { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.goal { display: grid; grid-template-columns: 28px 1fr; gap: 4px 10px; align-items: center; }
+.goal .ic { grid-row: span 2; width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 14px; font-weight: 800; background: color-mix(in srgb, var(--gc) 22%, var(--bg)); color: var(--gc); }
+.goal b { font-size: 14px; font-weight: 800; color: var(--fg); }
+.goal .track { height: 8px; border-radius: 99px; background: var(--bg); overflow: hidden; }
+.goal .track i { display: block; height: 100%; width: var(--from); background: linear-gradient(90deg, var(--gc), color-mix(in srgb, var(--gc) 60%, #fff)); border-radius: inherit; transition: width .9s cubic-bezier(.2,.9,.3,1) .35s; }
+.goal.go .track i { width: var(--to); }
+.goal.done b { color: var(--gc); }
+.gift { display: flex; align-items: center; gap: 14px; border: 2px dashed color-mix(in srgb, var(--b1) 70%, transparent); background: color-mix(in srgb, var(--b1) 10%, var(--bg)); border-radius: 16px; padding: 12px 16px; text-align: left; animation: giftwiggle 1.6s ease-in-out infinite; }
+.gift-txt { display: flex; flex-direction: column; } .gift-txt b { font-family: var(--display); font-weight: 400; font-size: 20px; color: var(--b1); } .gift-txt small { color: var(--muted); font-weight: 700; }
+.box { position: relative; width: 46px; height: 46px; flex: none; }
+.box .body { position: absolute; left: 4px; right: 4px; bottom: 0; height: 30px; border-radius: 6px; background: linear-gradient(180deg, var(--b2), #c4206f); }
+.box .lid { position: absolute; left: 0; right: 0; top: 6px; height: 12px; border-radius: 5px; background: linear-gradient(180deg, #ff86c2, var(--b2)); z-index: 1; transition: transform .35s cubic-bezier(.3,1.6,.5,1); }
+.box .ribbon { position: absolute; left: 50%; top: 6px; bottom: 0; width: 8px; margin-left: -4px; background: var(--b1); z-index: 2; border-radius: 2px; }
+.gift.opening { animation: giftshake .5s linear; } .gift.opening .lid { transform: translateY(-16px) rotate(-18deg); }
+@keyframes giftwiggle { 0%, 80%, 100% { transform: rotate(0); } 85% { transform: rotate(-3deg); } 90% { transform: rotate(3deg); } 95% { transform: rotate(-2deg); } }
+@keyframes giftshake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-5px) rotate(-2deg); } 40% { transform: translateX(5px) rotate(2deg); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+.reward { display: flex; align-items: center; gap: 14px; border-radius: 16px; padding: 12px 14px; background: radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--b1) 26%, var(--panel2)), var(--bg)); border: 1px solid color-mix(in srgb, var(--b1) 50%, var(--line)); animation: pop .45s cubic-bezier(.2,1.6,.4,1); }
+.reward canvas { width: 56px; height: 56px; flex: none; }
+.reward .rw-ic { width: 56px; height: 56px; flex: none; display: grid; place-items: center; font-size: 30px; border-radius: 14px; background: var(--bg); }
+.reward .rw-txt { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.reward .rw-txt small { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--b1); }
+.reward .rw-txt b { font-family: var(--display); font-weight: 400; font-size: 18px; }
+.reward .rw-txt span { color: var(--muted); font-size: 13px; font-weight: 600; }
+.reward .btn { flex: none; padding: 10px 14px; }
+/* three-star jackpot */
+.card.jackpot { border-color: color-mix(in srgb, var(--b1) 70%, var(--line)); box-shadow: 0 30px 80px var(--shadow), 0 0 60px color-mix(in srgb, var(--b1) 35%, transparent); }
+.win-head { position: relative; isolation: isolate; }
+.card.jackpot .win-head::before { content: ""; position: absolute; left: 50%; top: 24px; width: 300px; height: 300px; margin: -150px 0 0 -150px; border-radius: 50%; pointer-events: none; z-index: -1;
+  background: repeating-conic-gradient(color-mix(in srgb, var(--b1) 55%, transparent) 0deg 9deg, transparent 9deg 22deg); mask: radial-gradient(circle, #000 20%, transparent 68%); -webkit-mask: radial-gradient(circle, #000 20%, transparent 68%); animation: rays 9s linear infinite; }
+@keyframes rays { to { transform: rotate(360deg); } }
+.card.jackpot .stars span.lit { animation: slam .5s cubic-bezier(.2,1.8,.4,1); }
+@keyframes slam { 0% { transform: scale(2.6) rotate(-20deg); opacity: 0; } 60% { transform: scale(.85); opacity: 1; } 100% { transform: scale(1); } }
+.card.jackpot #winTitle { background: linear-gradient(100deg, var(--fg) 40%, #fff6c8 50%, var(--fg) 60%) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 2.2s linear infinite; }
+@keyframes shine { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 .winboard { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 8px; }
 .wb-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .wb-head b { font-family: var(--display); font-weight: 400; font-size: 16px; }
@@ -158,7 +199,10 @@ body.playing .eq i { animation: eq .7s ease-in-out infinite; }
 .skins-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .skins-head .k { font-family: var(--display); font-size: 16px; }
 .skins-head .v { color: var(--muted); font-size: 13px; font-weight: 600; }
-.skin-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.skin-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px; }
+.skin.rare { border-color: color-mix(in srgb, var(--b1) 55%, var(--line)); }
+.skin.mystery { border-style: dashed; opacity: .75; }
+.skin .q { width: 52px; height: 52px; display: grid; place-items: center; font-family: var(--display); font-size: 26px; color: var(--b1); }
 .skin { border: 2px solid var(--line); background: color-mix(in srgb, var(--panel) 80%, transparent); border-radius: 16px; padding: 10px 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; font-weight: 800; font-size: 12px; transition: transform .12s, border-color .12s; }
 .skin canvas { width: 52px; height: 52px; }
 .skin small { color: var(--muted); font-weight: 700; font-size: 11px; }
@@ -351,6 +395,9 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
       <h3 id="winTitle">Solved</h3>
       <p id="winText"></p>
     </div>
+    <div class="goals" id="winGoals" hidden></div>
+    <button class="gift" id="giftBox" type="button" hidden><span class="box" aria-hidden="true"><i class="lid"></i><i class="body"></i><i class="ribbon"></i></span><span class="gift-txt"><b>Surprise!</b><small>Tap to open</small></span></button>
+    <div class="reward" id="reward" hidden></div>
     <div class="share" id="shareText" hidden></div>
     <section class="winboard" id="winBoard" hidden aria-live="polite">
       <div class="wb-head"><b id="wbTitle">Leaderboard</b><button class="linkish" id="wbAll" type="button">See all</button></div>
@@ -390,8 +437,13 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
   <div class="card" role="dialog" aria-labelledby="lbTitle">
     <h3 id="lbTitle">Leaderboard</h3>
     <div class="tabs" role="tablist">
-      <button type="button" role="tab" id="tabLevels" aria-selected="true">Levels</button>
+      <button type="button" role="tab" id="tabFriends" aria-selected="false">Friends</button>
+      <button type="button" role="tab" id="tabLevels" aria-selected="true">Everyone</button>
       <button type="button" role="tab" id="tabBlitz" aria-selected="false">Blitz</button>
+    </div>
+    <div class="friends" id="friendsPanel" hidden>
+      <div class="code-card"><span>Your friend code</span><b id="myCode">······</b><button class="btn" id="copyInvite" type="button">Copy invite</button></div>
+      <form class="join" id="addFriend"><div class="row"><input id="friendCode" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="Friend’s code" aria-label="Friend’s code"><button class="btn" type="submit">Add</button></div></form>
     </div>
     <form class="join" id="joinForm" hidden>
       <label for="lbName">Pick a name to join the board</label>
@@ -412,12 +464,14 @@ body { touch-action: manipulation; -webkit-user-select: none; user-select: none;
 const WORLDS = [{"id":"neon","name":"Neon Streets","blurb":"Every block moves at once. Walls hold some back.","levels":[{"name":"First Step","tip":"Swipe or use arrow keys. Get the block onto its ring.","rows":["#######","#a...A#","#######"],"par":4,"id":"first-step"},{"name":"Together","tip":"All blocks move at once.","rows":["#######","#a..A.#","#b..B.#","#######"],"par":3,"id":"together"},{"name":"Stopper","tip":"Walls hold one block still while the other keeps going.","rows":["######","#a.A##","#b..B#","######"],"par":3,"id":"stopper"},{"name":"Warm-up","tip":null,"rows":["######","#Aa.b#","#...B#","#.#..#","#.#..#","######"],"par":7,"id":"warm-up"},{"name":"Crossing","tip":null,"rows":["#######","#...a.#","#B#...#","##b..A#","#..#..#","#######"],"par":9,"id":"crossing"},{"name":"Offset","tip":null,"rows":["#######","#.B...#","#.....#","#Ab.a.#","#..#.##","#.#...#","#######"],"par":12,"id":"offset"},{"name":"Trio","tip":null,"rows":["#######","#.C...#","#.#Bc.#","#.b.a.#","#..#A.#","#.....#","#######"],"par":9,"id":"trio"},{"name":"Long Way","tip":null,"rows":["#######","#.....#","##a.B.#","#A....#","#.#.#.#","#.b#.##","#######"],"par":14,"id":"long-way"},{"name":"Shuffle","tip":null,"rows":["#######","#.....#","#.C..a#","#..#b.#","##Ac.B#","#.....#","#######"],"par":13,"id":"shuffle"},{"name":"Gridlock","tip":null,"rows":["########","#.c.#.##","#..Ab.##","##....a#","#......#","#.C.#B.#","#......#","########"],"par":17,"id":"gridlock"}]},{"id":"ice","name":"Frozen Grid","blurb":"Ice sends blocks sliding until something stops them.","levels":[{"name":"Thin Ice","tip":"New: ice. Blocks slide until something stops them.","rows":["########","#a~~~~A#","########"],"par":1,"id":"thin-ice"},{"name":"Skate & Step","tip":"Ice moves one block far while the other takes a single step.","rows":["#######","#a~~~A#","#b.B..#","#######"],"par":2,"id":"skate-step"},{"name":"Slip","tip":null,"rows":["#######","#...#~#","##.A..#","#~.b.##","#...B.#","#.#a#.#","#######"],"par":8,"id":"slip"},{"name":"Glide","tip":null,"rows":["#######","#...#a#","#~....#","#.~Bb.#","#~....#","#~...A#","#######"],"par":12,"id":"glide"},{"name":"Drift","tip":null,"rows":["########","#.A~...#","#.~...B#","##~.a..#","#.~.b~.#","#~~.~..#","########"],"par":15,"id":"drift"},{"name":"Frost Trio","tip":null,"rows":["########","#......#","#.#.A#.#","#.B##~##","#~..~a.#","#.bC...#","#c##..##","########"],"par":12,"id":"frost-trio"},{"name":"Black Ice","tip":null,"rows":["########","#Cc#~.~#","#.#.aA.#","#~~~..~#","#.~...~#","##.b...#","#~B..~.#","########"],"par":17,"id":"black-ice"},{"name":"Avalanche","tip":null,"rows":["########","#....~B#","#.~b.A.#","#....#.#","#.c~.#.#","#.C.a~.#","#..~#..#","########"],"par":19,"id":"avalanche"}]},{"id":"arrows","name":"Arrow Alley","blurb":"One-way arrows only let blocks through in the direction they point.","levels":[{"name":"One Way","tip":"New: arrows. A block can only cross an arrow in the direction it points.","rows":["#######","#a.<.A#","#.###.#","#.....#","#######"],"par":8,"id":"one-way"},{"name":"Detour Sign","tip":"To a block moving the wrong way, an arrow is a wall.","rows":["#######","#v.b.A#","#...a^#","#.....#","##.B#.#","#######"],"par":8,"id":"detour-sign"},{"name":"Oncoming","tip":null,"rows":["#######","##..B##","##....#","#.^...#","#A.a.b#","#.<^..#","#######"],"par":10,"id":"oncoming"},{"name":"Turnstile","tip":null,"rows":["########","#B<..>.#","#....>b#","#......#","#a.A...#","#....#.#","########"],"par":13,"id":"turnstile"},{"name":"Rush Hour","tip":null,"rows":["#######","#..A.b#","#a.<..#","#.....#","#..>c.#","#^.C.B#","#######"],"par":12,"id":"rush-hour"},{"name":"Spaghetti Junction","tip":null,"rows":["########","#B##C.<#","#...a..#","#>.##.##","#^bc.#.#","##..A~v#","########"],"par":16,"id":"spaghetti-junction"}]},{"id":"warp","name":"Warp Zone","blurb":"Portals teleport a block to their twin.","levels":[{"name":"Warp","tip":"New: portals. A block that enters one comes out of its twin.","rows":["#########","#a.1#1.A#","#########"],"par":4,"id":"warp"},{"name":"Shortcut","tip":"A portal only works when its twin is free.","rows":["#######","#....a#","#.B#.b#","#....A#","#.1.1.#","#######"],"par":8,"id":"shortcut"},{"name":"Blink","tip":null,"rows":["#######","#..#B.#","#.1..##","#.b...#","#A##1.#","#....a#","#######"],"par":10,"id":"blink"},{"name":"Wormhole","tip":null,"rows":["########","#AB....#","#1##.a.#","#.2....#","#b.....#","#2#.1..#","########"],"par":10,"id":"wormhole"},{"name":"Double Warp","tip":null,"rows":["#######","##..B.#","#c.a#.#","#1.1..#","#..C..#","#A..b.#","#######"],"par":11,"id":"double-warp"},{"name":"Event Horizon","tip":null,"rows":["########","#..C.~2#","#...2.##","#.1#a.B#","#.A~b..#","#.~1.c##","########"],"par":15,"id":"event-horizon"}]},{"id":"power","name":"Power Plant","blurb":"Switches open doors while a block stands on them.","levels":[{"name":"Pressure Plate","tip":"New: switches. While a block stands on a switch, every door is open.","rows":["########","#a...|A#","#b..._B#","########"],"par":6,"id":"pressure-plate"},{"name":"Hold the Door","tip":"A block already in a doorway can always walk out.","rows":["#######","#Ab.#B#","#.#.|.#","#.a_#.#","##.##.#","#######"],"par":8,"id":"hold-the-door"},{"name":"Airlock","tip":null,"rows":["#######","#.#.._#","#.|..##","#.#AB.#","#.#..b#","#a##..#","#######"],"par":11,"id":"airlock"},{"name":"Relay","tip":null,"rows":["########","###.##.#","#.b..|B#","#aA..|.#","#.#..#.#","#..._#.#","########"],"par":11,"id":"relay"},{"name":"Brownout","tip":null,"rows":["########","#.A.#c.#","#...#C.#","#._.#..#","#.#.#B.#","#ba.|..#","########"],"par":13,"id":"brownout"},{"name":"Meltdown","tip":null,"rows":["########","#_a#..C#","#..#..##","#.B#_..#","#.A|.c##","##.|b..#","########"],"par":17,"id":"meltdown"}]}];
 const LEVELS=WORLDS.flatMap((w,wi)=>w.levels.map((l,li)=>({...l,world:wi,inWorld:li})));
 const LIDX=Object.fromEntries(LEVELS.map((l,i)=>[l.id,i]));
+const SECRETS = [{"id":"hidden-spring","name":"Hidden Spring","rows":["#######","##...~#","#.b..~#","#1#~..#","#a#..A#","#B1~..#","#######"],"par":11,"tip":"Secret level. Every mechanic you know can show up here."},{"id":"mirror-maze","name":"Mirror Maze","rows":["########","#~.BA..#","###.b#.#","#v~~...#","#c~<vaC#","#.##...#","########"],"par":14,"tip":"Secret level. Every mechanic you know can show up here."},{"id":"vault-door","name":"Vault Door","rows":["########","#.a~##.#","#..#.#~#","#A..~#~#","##~_B#~#","#..~.|b#","########"],"par":10,"tip":"Secret level. Every mechanic you know can show up here."}];
 // each world has its own board colours, sky tint and soundtrack
 const THEMES={
   neon:  {board:'#100e26',floor:'#1c1945',floor2:'#19163f',wall:'#2c2766',wallTop:'#3d3788',sky:'#15123a',accent:'#b58cff',track:'play'},
   ice:   {board:'#081827',floor:'#123049',floor2:'#102b42',wall:'#22547e',wallTop:'#3477aa',sky:'#0e2c48',accent:'#7ae4ff',track:'snow'},
   arrows:{board:'#1a0920',floor:'#2c1137',floor2:'#270f31',wall:'#571d6b',wallTop:'#7b2b94',sky:'#2b0e35',accent:'#ff7ad9',track:'arrow'},
   warp:  {board:'#051819',floor:'#0e2d30',floor2:'#0c282a',wall:'#145250',wallTop:'#1d7870',sky:'#082a2b',accent:'#5cf2c2',track:'warp'},
+  vault: {board:'#0c0902',floor:'#1e1706',floor2:'#1a1405',wall:'#4a3a10',wallTop:'#6e5719',sky:'#2a2108',accent:'#ffd76a',track:'warp'},
   power: {board:'#1b1105',floor:'#32210e',floor2:'#2c1d0c',wall:'#6a4214',wallTop:'#925f1d',sky:'#2e1c07',accent:'#ffc21a',track:'power'}};
 const PORTAL_COLORS=['','#b07bff','#ff8a3d','#ffffff'];
 
@@ -537,6 +591,10 @@ const solvedCount=()=>LEVELS.filter(l=>progress.best[l.id]).length;
 const curIndex=()=>Math.min(LIDX[progress.current]??0,LEVELS.length-1);
 const unlockedMax=()=>Math.max(curIndex(),...LEVELS.map((l,i)=>progress.best[l.id]?i+1:0));
 let daily=store.get('daily',{streak:0,last:null,results:{}});
+if(daily.freezes==null)daily.freezes=1; // everyone starts with one free streak freeze
+const dayNum=k=>{const [y,m,d]=k.split('-').map(Number);return Math.round(Date.UTC(y,m-1,d)/864e5);};
+// a streak survives missed days as long as there are freezes to cover them
+const streakAlive=()=>{if(!daily.last)return false;const gap=dayNum(today().key)-dayNum(daily.last);return gap<=1+daily.freezes;};
 // 2 = music + effects, 1 = effects only, 0 = muted
 let audioMode=store.get('audio',2);
 let skin=store.get('skin','gem');
@@ -553,6 +611,7 @@ function tone(freq,dur=.12,type='sine',vol=.12,when=0,slide=0,dest=null){const a
   o.connect(g).connect(dest||a.destination);o.start(t);o.stop(t+dur+.02);}
 const NOTES=[523.25,659.25,783.99,1046.5];
 const sfx={
+  jackpot(){[0,1,2,3,4].forEach(k=>tone([523.25,659.25,783.99,1046.5,1318.5][k],.35,'triangle',.1,k*.06));[0,1,2,3,4,5].forEach(k=>tone(2093+k*180,.12,'sine',.03,.32+k*.05));},
   warp(){tone(300,.3,'sine',.07,0,4);tone(1200,.25,'triangle',.03,.05,.5);},
   door(open){tone(open?330:220,.18,'square',.04,0,open?1.5:.6);noise(0,.03,.08);},
   move(){tone(200,.08,'triangle',.08,0,.7);},
@@ -700,6 +759,9 @@ const fx=$('fx'),fctx=fx.getContext('2d');let confetti=[],flash=0,fxDirty=false;
 const FXD=()=>Math.min(1.5,window.devicePixelRatio||1);
 function sizeFx(){const d=FXD();fx.width=innerWidth*d;fx.height=innerHeight*d;bg.width=innerWidth;bg.height=innerHeight;bgDrawn=false;}
 sizeFx();addEventListener('resize',sizeFx);
+function vibrate(p){try{navigator.vibrate&&navigator.vibrate(p);}catch(e){}}
+function burstAt(x,y,n=40){if(reduce)n=Math.min(n,12);const cs=[colors.b0,colors.b1,colors.b2,colors.b3,'#fff','#fff6c8'];
+  for(let k=0;k<n;k++){const a=Math.random()*6.283,s=4+Math.random()*9;confetti.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-4,r:Math.random()*6.28,vr:(Math.random()-.5)*.5,w:5+Math.random()*6,h:4+Math.random()*4,c:cs[k%6],life:1});}}
 function confettiBurst(n=140){if(reduce)n=30;const cs=[colors.b0,colors.b1,colors.b2,colors.b3,'#fff'];
   for(let k=0;k<n;k++){const side=k%2;confetti.push({x:side?innerWidth+10:-10,y:innerHeight*(.35+Math.random()*.4),
     vx:(side?-1:1)*(4+Math.random()*9),vy:-(6+Math.random()*9),r:Math.random()*6.28,vr:(Math.random()-.5)*.4,w:6+Math.random()*7,h:4+Math.random()*5,c:cs[k%5],life:1});}}
@@ -714,7 +776,9 @@ function drawFx(k){
     fctx.setTransform(cs*d,sn*d,-sn*sy*d,cs*sy*d,p.x*d,p.y*d);fctx.fillStyle=p.c;fctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);}}
 
 /* ---------- block skins ---------- */
-const SKINS=[{id:'gem',name:'Gem',stars:0},{id:'neon',name:'Neon',stars:12},{id:'candy',name:'Candy',stars:36},{id:'galaxy',name:'Galaxy',stars:72}];
+const SKINS=[{id:'gem',name:'Gem',stars:0},{id:'neon',name:'Neon',stars:12},{id:'candy',name:'Candy',stars:36},{id:'galaxy',name:'Galaxy',stars:72},
+  {id:'gold',name:'Gold',rare:true},{id:'aurora',name:'Aurora',rare:true},{id:'glitch',name:'Glitch',rare:true}];
+const ownsSkin=s=>s.rare?progress.gifts.skins.includes(s.id):totalStars()>=s.stars;
 function rrc(c,x,y,w,h,r){c.beginPath();c.roundRect?c.roundRect(x,y,w,h,r):c.rect(x,y,w,h);}
 function glyphc(c,i,cx,cy,s,col){c.fillStyle=col;c.beginPath();
   if(i===0)c.arc(cx,cy,s*.32,0,Math.PI*2);
@@ -727,8 +791,11 @@ function drawBlock(c,i,cx,cy,s,sx,sy,alpha,full,sk){const col=colors['b'+i];
   if(!full){c.fillStyle=col;rrc(c,-s/2,-s/2,s,s,s*.26);c.fill();c.restore();return;}
   if(sk==='neon'){const lw=Math.max(2.5,s*.09);c.shadowColor=col;c.shadowBlur=s*.7;c.fillStyle='rgba(12,10,32,.92)';rrc(c,-s/2,-s/2,s,s,s*.26);c.fill();
     c.lineWidth=lw;c.strokeStyle=col;rrc(c,-s/2+lw/2,-s/2+lw/2,s-lw,s-lw,s*.22);c.stroke();c.shadowBlur=s*.4;glyphc(c,i,0,0,s*.46,col);c.restore();return;}
-  c.shadowColor=col;c.shadowBlur=s*.55;
-  if(sk==='galaxy'){const g=c.createRadialGradient(-s*.2,-s*.25,s*.05,0,0,s*.75);g.addColorStop(0,col);g.addColorStop(.55,'#2a1660');g.addColorStop(1,'#07051a');c.fillStyle=g;}
+  if(sk==='glitch'){c.globalAlpha=alpha*.7;c.fillStyle='#00f0ff';rrc(c,-s/2-s*.07,-s/2,s,s,s*.26);c.fill();c.fillStyle='#ff2bd6';rrc(c,-s/2+s*.07,-s/2,s,s,s*.26);c.fill();c.globalAlpha=alpha;}
+  c.shadowColor=sk==='gold'?'#ffd76a':col;c.shadowBlur=s*.55;
+  if(sk==='gold'){const g=c.createLinearGradient(-s/2,-s/2,s/2,s/2);g.addColorStop(0,'#fff6c8');g.addColorStop(.35,'#ffd24a');g.addColorStop(.7,'#d99a12');g.addColorStop(1,'#fff0a0');c.fillStyle=g;}
+  else if(sk==='aurora'){const nx=colors['b'+((i+1)%4)],g=c.createLinearGradient(-s/2,s/2,s/2,-s/2);g.addColorStop(0,col);g.addColorStop(.6,nx);g.addColorStop(1,'#ffffff');c.fillStyle=g;}
+  else if(sk==='galaxy'){const g=c.createRadialGradient(-s*.2,-s*.25,s*.05,0,0,s*.75);g.addColorStop(0,col);g.addColorStop(.55,'#2a1660');g.addColorStop(1,'#07051a');c.fillStyle=g;}
   else{const g=c.createLinearGradient(0,-s/2,0,s/2);g.addColorStop(0,'#ffffff');g.addColorStop(.2,col);g.addColorStop(1,col);c.fillStyle=g;}
   rrc(c,-s/2,-s/2,s,s,s*.26);c.fill();c.shadowBlur=0;
   if(sk==='candy'){c.save();rrc(c,-s/2,-s/2,s,s,s*.26);c.clip();c.strokeStyle='rgba(255,255,255,.3)';c.lineWidth=s*.11;
@@ -737,21 +804,26 @@ function drawBlock(c,i,cx,cy,s,sx,sy,alpha,full,sk){const col=colors['b'+i];
     c.globalAlpha=alpha*(.4+.6*Math.abs(Math.sin(t+k*1.7)));c.fillStyle='#fff';c.beginPath();c.arc((a-.5)*s*.75,(b-.5)*s*.75,s*(.018+.02*(k%2)),0,Math.PI*2);c.fill();}
     c.globalAlpha=alpha;c.strokeStyle=col;c.lineWidth=Math.max(1.5,s*.05);rrc(c,-s/2+1,-s/2+1,s-2,s-2,s*.25);c.stroke();}
   else{c.fillStyle='rgba(0,0,0,.22)';rrc(c,-s/2,s*.22,s,s*.28,[0,0,s*.26,s*.26]);c.fill();}
+  if(sk==='gold'){c.strokeStyle=col;c.lineWidth=Math.max(2,s*.1);rrc(c,-s/2+c.lineWidth/2,-s/2+c.lineWidth/2,s-c.lineWidth,s-c.lineWidth,s*.22);c.stroke();}
+  if(sk==='glitch'){c.fillStyle='rgba(0,0,0,.25)';for(let k=0;k<4;k++)c.fillRect(-s/2,-s*.3+k*s*.2,s,s*.04);}
   c.fillStyle='rgba(255,255,255,.55)';rrc(c,-s*.38,-s*.41,s*.42,s*.14,s*.07);c.fill();
   c.fillStyle='rgba(255,255,255,.35)';c.beginPath();c.arc(s*.3,-s*.33,s*.05,0,Math.PI*2);c.fill();
-  glyphc(c,i,0,s*.02,s*.42,colors.glyph);
+  glyphc(c,i,0,s*.02,s*.42,sk==='gold'?col:colors.glyph);
   c.restore();}
 const totalStars=()=>LEVELS.reduce((s,l)=>s+(progress.best[l.id]?progress.best[l.id].stars:0),0);
 function buildSkins(){const row=$('skinRow');row.innerHTML='';const have=totalStars();
-  if(!SKINS.some(k=>k.id===skin&&have>=k.stars))skin='gem';
-  const nextLock=SKINS.find(k=>k.stars>have);$('skinHint').textContent=nextLock?`${nextLock.stars-have} more ★ unlocks ${nextLock.name}`:'All skins unlocked';
-  SKINS.forEach((k,n)=>{const b=document.createElement('button');b.type='button';b.className='skin'+(k.id===skin?' sel':'');b.disabled=have<k.stars;
+  if(!SKINS.some(k=>k.id===skin&&ownsSkin(k)))skin='gem';
+  const nextLock=SKINS.find(k=>!k.rare&&k.stars>have);$('skinHint').textContent=nextLock?`${nextLock.stars-have} more ★ unlocks ${nextLock.name}`:'All skins unlocked';
+  const shown=SKINS.filter(k=>!k.rare||ownsSkin(k));const mystery=SKINS.some(k=>k.rare&&!ownsSkin(k));
+  shown.forEach((k,n)=>{const b=document.createElement('button');b.type='button';b.className='skin'+(k.id===skin?' sel':'')+(k.rare?' rare':'');b.disabled=!ownsSkin(k);
     const cvs=document.createElement('canvas');const d=window.devicePixelRatio||1;cvs.width=52*d;cvs.height=52*d;
     const c=cvs.getContext('2d');c.scale(d,d);drawBlock(c,n%3,26,26,34,1,1,1,true,k.id);
-    b.append(cvs);b.insertAdjacentHTML('beforeend',`<span>${k.name}</span><small>${have>=k.stars?(k.id===skin?'Equipped':'Tap to equip'):'★ '+k.stars}</small>`);
-    b.setAttribute('aria-label',`${k.name} skin${have<k.stars?`, locked, needs ${k.stars} stars`:''}`);
+    b.append(cvs);b.insertAdjacentHTML('beforeend',`<span>${k.name}</span><small>${ownsSkin(k)?(k.id===skin?'Equipped':k.rare?'Rare':'Tap to equip'):'★ '+k.stars}</small>`);
+    b.setAttribute('aria-label',`${k.name} skin${ownsSkin(k)?'':`, locked, needs ${k.stars} stars`}`);
     b.onclick=()=>{skin=k.id;store.set('skin',skin);sprites.clear();sfx.kick();buildSkins();demo.popup(demo.L.w/2-.5,demo.L.h/2-.5,k.name.toUpperCase()+'!',colors['b'+(n%4)],1.4);};
-    row.append(b);});}
+    row.append(b);});
+  if(mystery){const m=document.createElement('button');m.type='button';m.className='skin mystery';m.disabled=true;
+    m.innerHTML='<span class="q" aria-hidden="true">?</span><span>Rare</span><small>Found by surprise</small>';m.setAttribute('aria-label','Rare skins, found in surprise rewards');row.append(m);}}
 
 /* ---------- Board: renderer + animation for one canvas ---------- */
 const easeBack=v=>v<=0?0:v>=1?1:1+2.2*Math.pow(v-1,3)+1.2*Math.pow(v-1,2);
@@ -908,7 +980,7 @@ class Board{
 const board=new Board($('cv')),demo=new Board($('demoCv'));
 let screen='home';
 function show(s){screen=s;bgDrawn=false;$('home').hidden=s!=='home';$('play').hidden=s!=='play';
-  music.setTrack(s==='home'?'home':mode==='blitz'?'blitz':mode==='campaign'&&L?THEMES[WORLDS[LEVELS[idx].world].id].track:'play');
+  music.setTrack(s==='home'?'home':mode==='blitz'?'blitz':mode==='secret'?'warp':mode==='campaign'&&L?THEMES[WORLDS[LEVELS[idx].world].id].track:'play');
   if(s==='home'){endBlitzQuiet();applyTheme();refreshHome();demoStart();window.scrollTo(0,0);}fitAll();}
 function fitAll(){
   if(screen==='play')board.fit(Math.min($('stage').clientWidth||520,560),Math.max(220,innerHeight*.56));
@@ -932,8 +1004,9 @@ function demoTick(now){if(screen!=='home'||demo.anim||now<demoT)return;
 function refreshHome(){
   const stars=totalStars(),solvedN=solvedCount();
   $('hStars').textContent=`${stars} / ${LEVELS.length*3}`;
-  const t=today(),y=new Date();y.setDate(y.getDate()-1);const alive=daily.last===t.key||daily.last===dkey(y);
-  $('hStreak').textContent=`${alive?daily.streak:0} day streak`;
+  const t=today();
+  $('hStreak').textContent=`${streakAlive()?daily.streak:0} day streak${daily.freezes?` · ❄ ${daily.freezes}`:''}`;
+  $('hStreak').parentElement.title=daily.freezes?`${daily.freezes} streak freeze${daily.freezes>1?'s':''}: covers a missed day`:'';
   const cur=curIndex(),cw=WORLDS[LEVELS[cur].world];
   $('home').classList.toggle('newbie',solvedN<2);
   $('hPlaySub').textContent=solvedN===0?'Tap to start · 1 minute to learn':solvedN===LEVELS.length&&cur===LEVELS.length-1?'All worlds cleared · replay':`World ${LEVELS[cur].world+1} · ${LEVELS[cur].name}`;
@@ -946,8 +1019,12 @@ function refreshHome(){
 }
 
 /* ---------- game state ---------- */
-let mode='campaign',idx=0,L=null,hist=[],moves=0,par=0,solved=false,hintUsed=false,dailyInfo=null,queue=null;
+let secretIdx=0,mode='campaign',idx=0,L=null,hist=[],moves=0,par=0,solved=false,hintUsed=false,dailyInfo=null,queue=null;
 let loadSeq=0;
+function loadSecret(k){const s=SECRETS[k];loadSeq++;mode='secret';secretIdx=k;L=parse(s.rows);par=s.par;
+  applyTheme(THEMES.vault);$('eyebrow').textContent='Secret Vault';$('levelName').textContent=s.name;
+  const tip=$('tip');tip.textContent=s.tip;tip.className='tip new';
+  endBlitzQuiet();show('play');reset(true);board.popup(L.w/2-.5,L.h/2-.5,'SECRET',THEMES.vault.accent,1.6);}
 function applyTheme(th){document.documentElement.style.setProperty('--bg2',(th||THEMES.neon).sky);}
 // a new world opens with an intro card that shows its mechanic in action (Neon Streets skips it: the home demo covers it)
 function loadLevel(i){
@@ -968,7 +1045,7 @@ function loadDaily(){
     $('levelName').textContent='Today’s board';reset(true);
     const r=daily.results[dailyInfo.key];if(r)$('tip').textContent=`You solved today’s board in ${r.moves}. Replay it, or come back tomorrow for a new one.`;});
 }
-function reset(fresh){if(!L)return;board.load(L,mode==='campaign'?THEMES[WORLDS[LEVELS[idx].world].id]:THEMES.neon);hist=[];moves=0;solved=false;if(fresh)hintUsed=false;queue=null;fitAll();updateHud();
+function reset(fresh){if(!L)return;board.load(L,mode==='campaign'?THEMES[WORLDS[LEVELS[idx].world].id]:mode==='secret'?THEMES.vault:THEMES.neon);hist=[];moves=0;solved=false;if(fresh)hintUsed=false;queue=null;fitAll();updateHud();
   runAlive=true;paintRun(false);}
 
 /* perfect-run meter: stays lit while the current position can still finish in exactly par moves */
@@ -1000,7 +1077,7 @@ board.onSettle=(a)=>{
   if(won(L,board.pos)&&!solved){solved=true;flash=reduce?0:1;board.shake=reduce?0:12;sfx.win();confettiBurst();
     for(let i=0;i<board.pos.length;i++)board.burst(board.pos[i],i,30);
     board.popup(L.w/2-.5,L.h/2-.5,moves<=par?'PERFECT!':'SOLVED!',colors.b1,2);
-    setTimeout(onWin,700);return;}
+    setTimeout(onWin,520);return;}
   if(queue!=null){const q=queue;queue=null;tryMove(q);}
 };
 function undo(){if(board.anim||!hist.length||solved)return;board.setPos(hist.pop());moves--;board.hintDir=-1;sfx.undo();updateHud(true);
@@ -1013,6 +1090,55 @@ async function hint(){
   board.hintDir=s[0];hintUsed=true;flashPad(s[0],900);
   toast(`Try ${['up','right','down','left'][s[0]]}. ${s.length} move${s.length>1?'s':''} left at best.`);
 }
+
+/* ---------- "up next": always show the nearest rewards after a win ---------- */
+function snapGoals(){return {stars:totalStars(),solved:solvedCount(),world:mode==='campaign'?LEVELS[idx].world:-1};}
+function goalRow(icon,color,label,from,to,done){const g=document.createElement('div');g.className='goal'+(done?' done':'');g.style.setProperty('--gc',color);
+  g.style.setProperty('--from',Math.round(from*100)+'%');g.style.setProperty('--to',Math.round(to*100)+'%');
+  const ic=document.createElement('span');ic.className='ic';ic.textContent=icon;const b=document.createElement('b');b.textContent=label;
+  const tr=document.createElement('span');tr.className='track';tr.append(document.createElement('i'));g.append(ic,b,tr);return g;}
+function showGoals(before){const box=$('winGoals'),rows=[];const have=totalStars();
+  const nextSkin=SKINS.find(s=>!s.rare&&s.stars>have),prevNeed=SKINS.filter(s=>!s.rare&&s.stars<=have).reduce((m,s)=>Math.max(m,s.stars),0);
+  const justSkin=SKINS.find(s=>!s.rare&&s.stars>before.stars&&s.stars<=have);
+  if(justSkin)rows.push(goalRow('★',colors.b1,`${justSkin.name} skin unlocked!`,(before.stars-prevNeed)/Math.max(1,justSkin.stars-prevNeed),1,true));
+  else if(nextSkin){const span=nextSkin.stars-prevNeed,left=nextSkin.stars-have;
+    rows.push(goalRow('★',colors.b1,`${left} more ★ to unlock the ${nextSkin.name} skin`,(before.stars-prevNeed)/span,(have-prevNeed)/span));}
+  if(mode==='campaign'){const wi=LEVELS[idx].world,w=WORLDS[wi],th=THEMES[w.id],ids=w.levels.map(l=>l.id),done=ids.filter(id=>progress.best[id]).length;
+    const doneBefore=done-(before.solved<solvedCount()?1:0);
+    if(done===ids.length&&doneBefore<ids.length){const nw=WORLDS[wi+1];rows.push(goalRow('✓',th.accent,nw?`${w.name} complete! ${nw.name} is open`:`All ${WORLDS.length} worlds complete!`,doneBefore/ids.length,1,true));}
+    else if(done<ids.length){const left=ids.length-done;rows.push(goalRow(String(wi+1),th.accent,`${left} more level${left>1?'s':''} to finish ${w.name}`,doneBefore/ids.length,done/ids.length));}}
+  if(mode==='daily'&&daily.freezes<2){const left=7-(daily.streak%7);
+    if(left<7)rows.push(goalRow('❄','#7ae4ff',`${left} more day${left>1?'s':''} to earn a streak freeze`,((daily.streak-1)%7)/7,(daily.streak%7)/7));}
+  box.replaceChildren(...rows.slice(0,2));box.hidden=!rows.length;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>box.querySelectorAll('.goal').forEach(g=>g.classList.add('go'))));}
+
+/* ---------- surprise gifts: a rare skin, a secret level or a streak freeze, now and then ---------- */
+progress.gifts=progress.gifts||{skins:[],secrets:[],since:0,total:0};
+function rollGift(){const G=progress.gifts;G.since++;
+  const pool=[...SKINS.filter(s=>s.rare&&!G.skins.includes(s.id)).map(s=>({kind:'skin',id:s.id,w:3})),
+    ...SECRETS.filter(s=>!G.secrets.includes(s.id)).map(s=>({kind:'secret',id:s.id,w:3})),...(daily.freezes<2?[{kind:'freeze',w:2}]:[])];
+  if(!pool.length)return null;
+  const first=!G.total&&solvedCount()>=3,chance=first||G.since>=8?1:.12;
+  if(Math.random()>=chance)return null;
+  let r=Math.random()*pool.reduce((s,p)=>s+p.w,0);const pick=pool.find(p=>(r-=p.w)<0)||pool[0];
+  G.since=0;G.total++;
+  if(pick.kind==='skin')G.skins.push(pick.id);else if(pick.kind==='secret')G.secrets.push(pick.id);else{daily.freezes=Math.min(2,daily.freezes+1);store.set('daily',daily);}
+  store.set('progress',progress);return pick;}
+let pendingGift=null;
+function offerGift(g){pendingGift=g;$('reward').hidden=true;$('giftBox').hidden=!g;$('giftBox').classList.remove('opening');}
+$('giftBox').onclick=()=>{const g=pendingGift;if(!g)return;pendingGift=null;const box=$('giftBox');box.classList.add('opening');sfx.kick();
+  setTimeout(()=>{box.hidden=true;const r=$('reward');r.replaceChildren();sfx.jackpot();vibrate([20,30,40]);
+    const rc=r.getBoundingClientRect();burstAt(innerWidth/2,rc.top||innerHeight/2,70);
+    const txt=document.createElement('span');txt.className='rw-txt';const sm=document.createElement('small');const b=document.createElement('b');const sp=document.createElement('span');
+    let art,btn=null;
+    if(g.kind==='skin'){const s=SKINS.find(x=>x.id===g.id);sm.textContent='Rare skin';b.textContent=s.name;sp.textContent='Only found in surprises.';
+      art=document.createElement('canvas');const d=window.devicePixelRatio||1;art.width=art.height=56*d;const c=art.getContext('2d');c.scale(d,d);drawBlock(c,1,28,28,36,1,1,1,true,s.id);
+      btn=document.createElement('button');btn.className='btn';btn.type='button';btn.textContent='Equip';btn.onclick=()=>{skin=s.id;store.set('skin',skin);sprites.clear();btn.textContent='Equipped';btn.disabled=true;sfx.kick();};}
+    else if(g.kind==='secret'){const s=SECRETS.find(x=>x.id===g.id);sm.textContent='Secret level';b.textContent=s.name;sp.textContent='It’s waiting in the Secret Vault.';
+      art=document.createElement('span');art.className='rw-ic';art.textContent='🗝';
+      btn=document.createElement('button');btn.className='btn';btn.type='button';btn.textContent='Play it';btn.onclick=()=>{$('winSheet').hidden=true;loadSecret(SECRETS.indexOf(s));};}
+    else{sm.textContent='Bonus';b.textContent='Streak freeze';sp.textContent=`Covers a missed day. You have ${daily.freezes}.`;art=document.createElement('span');art.className='rw-ic';art.textContent='❄';}
+    txt.append(sm,b,sp);r.append(art,txt);if(btn)r.append(btn);r.hidden=false;},480);};
 
 /* ---------- blitz: 90 seconds of fresh boards ---------- */
 let blitz={active:false};
@@ -1049,6 +1175,8 @@ function endBlitz(){blitz.active=false;solved=true;music.boost=false;
   $('winTitle').textContent=best?'New high score!':'Time!';
   $('winText').textContent=`${blitz.score.toLocaleString()} points from ${blitz.solved} board${blitz.solved===1?'':'s'}. Longest perfect combo: ${blitz.bestCombo}. Best ever: ${blitzBest.toLocaleString()}.`;
   $('winRetry').textContent='Home';$('winNext').textContent='Play again';$('winSheet').hidden=false;$('winNext').focus();
+  $('winSheet').querySelector('.card').classList.toggle('jackpot',best);$('winGoals').hidden=true;offerGift(null);$('reward').hidden=true;
+  if(best){vibrate([30,40,70]);sfx.jackpot();}
   $('winBoard').hidden=true;showWinBoard('blitz');}
 function endBlitzQuiet(){blitz.active=false;$('timebar').hidden=true;$('winStars').hidden=false;music.boost=false;}
 
@@ -1056,8 +1184,10 @@ function endBlitzQuiet(){blitz.active=false;$('timebar').hidden=true;$('winStars
 function starsFor(m,p){return m<=p?3:m<=Math.ceil(p*1.5)+1?2:1;}
 function onWin(){
   const st=starsFor(moves,par);
-  const lit=[...$('winStars').children];lit.forEach(s=>s.className='');
-  lit.forEach((s,i)=>setTimeout(()=>{s.className=i<st?'lit':'dim';if(i<st)sfx.star(i);},250+i*260));
+  const lit=[...$('winStars').children];lit.forEach(s=>s.className='');const card=$('winSheet').querySelector('.card');card.classList.toggle('jackpot',st===3);
+  lit.forEach((s,i)=>setTimeout(()=>{s.className=i<st?'lit':'dim';if(i<st){sfx.star(i);
+      if(st===3){const r=s.getBoundingClientRect();burstAt(r.left+r.width/2,r.top+r.height/2,18);vibrate(i<2?15:[30,40,70]);}}
+    if(st===3&&i===2){sfx.jackpot();confettiBurst(120);flash=reduce?0:.6;}},250+i*260));
   const over=moves-par;
   let text=over<=0?`${moves} moves. That’s the shortest possible solution.`:
     over<=2?`${moves} moves, only ${over} over par. One cleaner run gets all three stars.`:
@@ -1065,25 +1195,34 @@ function onWin(){
   if(hintUsed)text+=' You used a hint on this one.';
   $('winTitle').textContent=over<=0?'Perfect!':over<=2?'So close!':'Solved!';
   const share=$('shareText');share.hidden=true;
+  const before=snapGoals();
   if(mode==='campaign'){
     const id=LEVELS[idx].id,prev=progress.best[id];if(!prev||moves<prev.moves||st>prev.stars)progress.best[id]={moves:Math.min(moves,prev?prev.moves:moves),stars:Math.max(st,prev?prev.stars:0)};
     progress.current=LEVELS[Math.min(idx+1,LEVELS.length-1)].id;store.set('progress',progress);lbSync();
     const nxt=LEVELS[idx+1];
     $('winNext').textContent=!nxt?'Play the daily':nxt.world!==LEVELS[idx].world?`On to World ${nxt.world+1}`:'Next level';
+  }else if(mode==='secret'){const s=SECRETS[secretIdx];progress.secretBest=progress.secretBest||{};const prev=progress.secretBest[s.id];
+    if(!prev||st>prev.stars)progress.secretBest[s.id]={moves,stars:st};store.set('progress',progress);
+    $('winNext').textContent='Back to Worlds';
   }else{
     const k=dailyInfo.key;
     if(!daily.results[k]){
-      const y=new Date();y.setDate(y.getDate()-1);
-      daily.streak=daily.last===dkey(y)?daily.streak+1:daily.last===k?daily.streak:1;daily.last=k;
+      const gap=daily.last?dayNum(k)-dayNum(daily.last):99;let saved=0,earned=false;
+      if(gap===0){}else if(gap===1)daily.streak++;
+      else if(gap-1<=daily.freezes){saved=gap-1;daily.freezes-=saved;daily.streak++;}
+      else daily.streak=1;
+      if(gap!==0&&daily.streak%7===0&&daily.freezes<2){daily.freezes++;earned=true;}
+      daily.last=k;daily.note=[saved?`A streak freeze covered ${saved>1?saved+' missed days':'the day you missed'}, so your streak lives on.`:'',earned?`${daily.streak} days in a row! You earned a streak freeze.`:''].filter(Boolean).join(' ');
       daily.results[k]={moves,par,stars:st,hint:hintUsed};store.set('daily',daily);lbSync();
     }
     share.textContent=shareString(daily.results[k]);share.hidden=false;
-    text+=` Streak: ${daily.streak} day${daily.streak>1?'s':''}.`;
+    text+=` Streak: ${daily.streak} day${daily.streak>1?'s':''}.`+(daily.note?' '+daily.note:'');daily.note='';
     $('winNext').textContent='Copy result';
   }
   $('winText').textContent=text;
   $('winRetry').textContent=over<=0?'Play again':'Try for par';
-  $('winBoard').hidden=true;showWinBoard('levels');
+  showGoals(before);offerGift(rollGift());
+  $('winBoard').hidden=true;if(mode!=='secret')showWinBoard('levels');
   $('winSheet').hidden=false;$('winNext').focus();
 }
 function shareString(r){
@@ -1097,6 +1236,7 @@ $('winNext').onclick=()=>{
     try{navigator.clipboard.writeText(t).then(()=>toast('Copied. Paste it anywhere.'),()=>{selectShare();toast('Select the text above to copy it.');});}catch(e){selectShare();}
     return;}
   $('winSheet').hidden=true;
+  if(mode==='secret'){openLevels();return;}
   if(idx===LEVELS.length-1)loadDaily();else loadLevel(idx+1);
 };
 function selectShare(){const r=document.createRange();r.selectNodeContents($('shareText'));const s=getSelection();s.removeAllRanges();s.addRange(r);}
@@ -1119,6 +1259,14 @@ function openLevels(){
       btn.innerHTML=`${lv.inWorld+1}<small>${best?'★'.repeat(best.stars)+'☆'.repeat(3-best.stars):'&nbsp;'}</small>`;
       btn.onclick=()=>{$('levelSheet').hidden=true;sfx.click();loadLevel(i);};grid.append(btn);});
     sec.append(grid);g.append(sec);});
+  const vault=document.createElement('section');vault.className='world vault';vault.style.setProperty('--wc',THEMES.vault.accent);
+  const found=progress.gifts.secrets;vault.innerHTML=`<div class="world-head"><div><span class="w-num">Hidden</span><b>Secret Vault</b></div><span class="w-meta">${found.length}/${SECRETS.length} found</span></div>`;
+  const vg=document.createElement('div');vg.className='grid';
+  SECRETS.forEach((s,k)=>{const btn=document.createElement('button');btn.type='button';btn.className='lv';const has=found.includes(s.id),best=progress.secretBest&&progress.secretBest[s.id];
+    btn.disabled=!has;btn.title=has?s.name:'Found in a surprise reward';btn.innerHTML=has?`🗝<small>${best?'★'.repeat(best.stars)+'☆'.repeat(3-best.stars):'&nbsp;'}</small>`:'?<small>&nbsp;</small>';
+    btn.onclick=()=>{$('levelSheet').hidden=true;sfx.click();loadSecret(k);};vg.append(btn);});
+  const note=document.createElement('p');note.className='w-meta';note.textContent=found.length?'More secrets hide in surprise rewards.':'Secret levels turn up in surprise rewards after a win.';
+  vault.append(vg,note);g.append(vault);
   $('lvSummary').textContent=`${totalStars()} of ${LEVELS.length*3} stars across ${WORLDS.length} worlds. Each level unlocks when you solve the one before it.`;
   $('levelSheet').hidden=false;
   const cur=g.querySelector('.lv.cur');if(cur)cur.scrollIntoView({block:'center'});
@@ -1162,7 +1310,7 @@ async function lbAuthed(){const c=await lbClient();let {data:{session}}=await c.
   if(!session){const r=await c.auth.signInAnonymously();if(r.error)throw r.error;session=r.data.session;}
   LB.uid=session.user.id;return c;}
 function myStats(){const solvedN=solvedCount();
-  const y=new Date();y.setDate(y.getDate()-1);const alive=daily.last===today().key||daily.last===dkey(y);
+  const alive=streakAlive();
   return {levels_solved:solvedN,current_level:Math.min(LEVELS.length,solvedN+1),stars:totalStars(),blitz_best:blitzBest,daily_streak:alive?daily.streak:0};}
 let lbPushT=0;
 function lbSync(){if(!LB.cfg||!LB.joined)return;clearTimeout(lbPushT);lbPushT=setTimeout(lbPush,400);}
@@ -1171,8 +1319,10 @@ async function lbPush(){try{const c=await lbAuthed();
     if(error)throw error;return true;}catch(e){return false;}}
 const lbErr=e=>/fetch|offline|network/i.test(String(e&&(e.message||e)))?'Can’t reach the leaderboard. Check your connection and try again.':'The leaderboard isn’t responding right now. Try again in a minute.';
 function lbStatus(msg,err){const s=$('lbStatus');s.textContent=msg||'';s.classList.toggle('err',!!err);}
-async function lbFetch(tab){const c=await lbClient();if(LB.joined&&!LB.uid)await lbAuthed().catch(()=>{});
-  let q=c.from('players').select('user_id,name,levels_solved,current_level,stars,blitz_best,daily_streak');
+LB.friends=store.get('lbFriends',[]);
+async function lbFetch(tab,friends){const c=await lbClient();if(LB.joined&&!LB.uid)await lbAuthed().catch(()=>{});
+  let q=c.from('players').select('user_id,name,levels_solved,current_level,stars,blitz_best,daily_streak,friend_code');
+  if(friends)q=q.in('user_id',[...LB.friends,LB.uid].filter(Boolean));
   q=tab==='levels'?q.order('levels_solved',{ascending:false}).order('stars',{ascending:false}).order('updated_at',{ascending:true}):
     q.gt('blitz_best',0).order('blitz_best',{ascending:false});
   const {data,error}=await q.limit(100);if(error)throw error;return data;}
@@ -1181,14 +1331,17 @@ function lbRow(r,i,tab){const li=document.createElement('li');li.className='lb-r
   const who=document.createElement('span');who.className='lb-who';const nm=document.createElement('span');nm.className='lb-name';nm.textContent=r.name;
   if(r.user_id===LB.uid){const you=document.createElement('small');you.textContent='YOU';nm.append(you);}
   who.append(nm);const sc=document.createElement('span');sc.className='lb-score';
-  if(tab==='levels'){const bar=document.createElement('span');bar.className='lb-bar';const fill=document.createElement('i');fill.style.width=(r.levels_solved/LEVELS.length*100)+'%';bar.append(fill);who.append(bar);
-    const cl=LEVELS[Math.max(0,Math.min(LEVELS.length,r.current_level)-1)];sc.textContent=r.levels_solved>=LEVELS.length?'All done':cl?`World ${cl.world+1} · ${cl.inWorld+1}`:`Level ${r.current_level}`;const sm=document.createElement('small');sm.textContent=`${r.stars} ★${r.daily_streak?` · ${r.daily_streak} day streak`:''}`;sc.append(sm);}
+  if(tab!=='blitz'){const bar=document.createElement('span');bar.className='lb-bar';const fill=document.createElement('i');fill.style.width=(r.levels_solved/LEVELS.length*100)+'%';bar.append(fill);who.append(bar);
+    const cl=LEVELS[Math.max(0,Math.min(LEVELS.length,r.current_level)-1)];sc.textContent=r.levels_solved>=LEVELS.length?'All done':cl?`World ${cl.world+1} · ${cl.inWorld+1}`:`Level ${r.current_level}`;const sm=document.createElement('small');sm.textContent=`${r.stars} ★${tab==='friends'&&r.blitz_best?` · Blitz ${r.blitz_best.toLocaleString()}`:r.daily_streak?` · ${r.daily_streak} day streak`:''}`;sc.append(sm);}
   else{sc.textContent=r.blitz_best.toLocaleString();const sm=document.createElement('small');sm.textContent='points';sc.append(sm);}
   li.style.setProperty('--rank',i);li.append(rank,who,sc);return li;}
 function lbEmpty(tab){const li=document.createElement('li');li.className='lb-empty';
-  li.textContent=tab==='levels'?'No one has joined yet. Be the first!':'No Blitz scores yet. Play a round to get on the board.';return li;}
+  li.textContent=tab==='friends'?'No friends yet.':tab==='levels'?'No one has joined yet. Be the first!':'No Blitz scores yet. Play a round to get on the board.';return li;}
 async function lbLoad(){if(!LB.cfg)return;const list=$('lbList'),tab=LB.tab;lbStatus('Loading…');
-  try{const data=await lbFetch(tab);if(LB.tab!==tab)return;list.replaceChildren(...(data.length?data.map((r,i)=>lbRow(r,i,tab)):[lbEmpty(tab)]));lbStatus('');
+  $('friendsPanel').hidden=tab!=='friends'||!LB.joined;if(tab==='friends'&&LB.joined)paintCode();
+  if(tab==='friends'&&!LB.joined){list.replaceChildren();lbStatus('Join the board first, then add friends with their code.');return;}
+  try{const data=await lbFetch(tab==='friends'?'levels':tab,tab==='friends');if(LB.tab!==tab)return;list.replaceChildren(...(data.length?data.map((r,i)=>lbRow(r,i,tab)):[lbEmpty(tab)]));
+    lbStatus(tab==='friends'&&data.length<2?'Add a friend’s code above to race each other.':'');
     if(tab==='levels'){const mine=data.findIndex(r=>r.user_id===LB.uid);$('hBoardV').textContent=mine>=0?`You’re #${mine+1} of ${data.length}`:`${data.length} player${data.length===1?'':'s'} so far`;}
   }catch(e){lbStatus(lbErr(e),true);}}
 // Joins (or renames) with a validated name; returns '' on success or a message to show.
@@ -1201,32 +1354,54 @@ async function lbJoin(raw){const name=raw.trim().replace(/\s+/g,' ');
 /* results card: after a win the board loads by itself and shows where you landed */
 let wbSeq=0;
 async function showWinBoard(tab){if(!LB.cfg)return;const seq=++wbSeq,box=$('winBoard'),msg=$('wbMsg'),list=$('wbList');
-  box.hidden=false;box.dataset.tab=tab;$('wbTitle').textContent=tab==='blitz'?'Blitz leaderboard':'Leaderboard';
+  const fr=LB.joined&&LB.friends.length>0;box.hidden=false;box.dataset.tab=tab;box.dataset.friends=fr?'1':'';
+  $('wbTitle').textContent=(fr?'Friends':'Leaderboard')+(tab==='blitz'?' · Blitz':'');
   $('wbJoin').hidden=LB.joined;msg.className='wb-msg';msg.textContent=LB.joined?'Updating your spot…':'Join to see where you rank.';
   if(!LB.joined)list.replaceChildren();
   try{if(LB.joined){clearTimeout(lbPushT);await lbPush();}
-    const data=await lbFetch(tab);if(seq!==wbSeq)return;
+    const data=await lbFetch(tab,fr);if(seq!==wbSeq)return;
     const me=data.findIndex(r=>r.user_id===LB.uid);
+    // who did you just pass, and how far is the next person up?
+    const okey='lbOrder_'+tab+(fr?'_f':''),prevOrder=store.get(okey,[]),order=data.map(r=>r.user_id);store.set(okey,order);
+    const pm=prevOrder.indexOf(LB.uid),passed=me>=0&&pm>=0?data.slice(me+1).filter(r=>{const j=prevOrder.indexOf(r.user_id);return j>=0&&j<pm;}):[];
+    const above=me>0?data[me-1]:null,mine=me>=0?data[me]:null;
+    const gap=!above||!mine?'':tab==='blitz'?`${(above.blitz_best-mine.blitz_best+1).toLocaleString()} points to beat ${above.name}`:
+      above.levels_solved>mine.levels_solved?`${above.levels_solved-mine.levels_solved} more level${above.levels_solved-mine.levels_solved>1?'s':''} to pass ${above.name}`:
+      `${above.stars-mine.stars+1} more ★ to pass ${above.name}`;
     // top three, then the players right around you
     const show=new Set([0,1,2]);if(me>=0)[me-1,me,me+1].forEach(i=>{if(i>=0&&i<data.length)show.add(i);});
     const rows=[];let last=-1;[...show].filter(i=>i<data.length).sort((a,b)=>a-b).forEach(i=>{
       if(i>last+1){const g=document.createElement('li');g.className='lb-gap';g.textContent='···';rows.push(g);}rows.push(lbRow(data[i],i,tab));last=i;});
     list.replaceChildren(...(rows.length?rows:[lbEmpty(tab)]));
-    if(me>=0){const rank=me+1,key='lbRank_'+tab,prev=store.get(key,0);store.set(key,rank);
-      if(prev&&rank<prev){msg.className='wb-msg up';msg.textContent=`You moved up to #${rank}! (+${prev-rank})`;sfx.star(2);}
-      else msg.textContent=rank===1?`You’re #1 of ${data.length}. Top of the board!`:`You’re #${rank} of ${data.length}`;
+    if(me>=0){const rank=me+1,key='lbRank_'+tab+(fr?'_f':''),prev=store.get(key,0);store.set(key,rank);
+      if(passed.length){msg.className='wb-msg up';msg.textContent=`You passed ${passed.map(r=>r.name).slice(0,2).join(' and ')}!`+(gap?` Next: ${gap}.`:'');sfx.star(2);vibrate(25);}
+      else if(prev&&rank<prev){msg.className='wb-msg up';msg.textContent=`You moved up to #${rank}! (+${prev-rank})`+(gap?` Next: ${gap}.`:'');sfx.star(2);}
+      else msg.textContent=rank===1?`You’re #1 of ${data.length}. Top of the board!`:`You’re #${rank} of ${data.length}.`+(gap?` ${gap[0].toUpperCase()+gap.slice(1)}.`:'');
       if(tab==='levels')$('hBoardV').textContent=`You’re #${rank} of ${data.length}`;}
     else if(LB.joined&&tab==='blitz')msg.textContent='Set a Blitz score to get on this board.';
     else if(LB.joined)msg.textContent='';
   }catch(e){if(seq!==wbSeq)return;msg.className='wb-msg err';msg.textContent=lbErr(e);}}
 $('wbJoin').addEventListener('submit',async e=>{e.preventDefault();const err=await lbJoin($('wbName').value);
   if(err){const m=$('wbMsg');m.className='wb-msg err';m.textContent=err;return;}showWinBoard($('winBoard').dataset.tab||'levels');});
-$('wbAll').onclick=()=>{LB.tab=$('winBoard').dataset.tab||'levels';$('tabLevels').setAttribute('aria-selected',LB.tab==='levels');$('tabBlitz').setAttribute('aria-selected',LB.tab==='blitz');openBoard();};
+$('wbAll').onclick=()=>{selTab($('winBoard').dataset.friends==='1'&&$('winBoard').dataset.tab==='levels'?'friends':$('winBoard').dataset.tab||'levels');openBoard();};
 function paintJoin(){$('joinForm').hidden=LB.joined;$('lbRename').hidden=!LB.joined;}
 function openBoard(){if(!LB.cfg)return;paintJoin();$('boardSheet').hidden=false;
   if(LB.joined)lbPush().then(lbLoad);else lbLoad();}
-function setTab(tab){LB.tab=tab;$('tabLevels').setAttribute('aria-selected',tab==='levels');$('tabBlitz').setAttribute('aria-selected',tab==='blitz');lbLoad();}
-$('tabLevels').onclick=()=>setTab('levels');$('tabBlitz').onclick=()=>setTab('blitz');
+function selTab(tab){LB.tab=tab;for(const [id,k] of [['tabFriends','friends'],['tabLevels','levels'],['tabBlitz','blitz']])$(id).setAttribute('aria-selected',tab===k);}
+function setTab(tab){selTab(tab);lbLoad();}
+$('tabLevels').onclick=()=>setTab('levels');$('tabBlitz').onclick=()=>setTab('blitz');$('tabFriends').onclick=()=>setTab('friends');
+const myCode=()=>LB.uid?LB.uid.replace(/-/g,'').slice(0,6).toUpperCase():'';
+async function paintCode(){if(!LB.uid)await lbAuthed().catch(()=>{});$('myCode').textContent=myCode()||'······';}
+$('copyInvite').onclick=()=>{const txt=`Race me on Tandem! Add my friend code ${myCode()} on the leaderboard. ${location.protocol==='https:'&&!/claude\.ai/.test(location.host)?location.href.split('#')[0]:''}`.trim();
+  try{navigator.clipboard.writeText(txt).then(()=>toast('Invite copied. Send it to a friend.'),()=>toast(`Your code is ${myCode()}`));}catch(e){toast(`Your code is ${myCode()}`);}};
+$('addFriend').addEventListener('submit',async e=>{e.preventDefault();const code=$('friendCode').value.trim().toUpperCase();
+  if(!/^[0-9A-F]{6}$/.test(code)){lbStatus('Friend codes are 6 letters and numbers, like 7F3A9C.',true);return;}
+  if(code===myCode()){lbStatus('That’s your own code. Send it to a friend instead.',true);return;}
+  lbStatus('Looking them up…');
+  try{const c=await lbClient();const {data,error}=await c.from('players').select('user_id,name').eq('friend_code',code).limit(1);if(error)throw error;
+    if(!data.length){lbStatus('No player has that code yet. Check it and try again.',true);return;}
+    const f=data[0];if(!LB.friends.includes(f.user_id)){LB.friends.push(f.user_id);store.set('lbFriends',LB.friends);}
+    $('friendCode').value='';sfx.kick();await lbLoad();lbStatus(`${f.name} is on your Friends board.`);}catch(err){lbStatus(lbErr(err),true);}});
 $('hBoard').onclick=()=>{audio();sfx.click();openBoard();};
 $('lbClose').onclick=()=>$('boardSheet').hidden=true;
 $('boardSheet').addEventListener('click',e=>{if(e.target.id==='boardSheet')$('boardSheet').hidden=true;});
@@ -1246,7 +1421,7 @@ addEventListener('keydown',e=>{
   if(!$('worldSheet').hidden){if(e.key==='Enter'){e.preventDefault();$('wGo').click();}return;}
   if(!$('levelSheet').hidden){if(e.key==='Escape')$('levelSheet').hidden=true;return;}
   if(!$('boardSheet').hidden){if(e.key==='Escape')$('boardSheet').hidden=true;return;}
-  if(!$('winSheet').hidden){if(e.key==='Enter'){e.preventDefault();$('winNext').click();}if(e.key==='Escape'&&mode==='daily')$('winSheet').hidden=true;return;}
+  if(!$('winSheet').hidden){if(e.key==='Enter'||((mode==='campaign'||mode==='secret')&&e.code in KEYS)){e.preventDefault();$('winNext').click();}if(e.key==='Escape'&&mode==='daily')$('winSheet').hidden=true;return;}
   if(screen==='home'){if(e.key==='Enter'&&document.activeElement===document.body){e.preventDefault();$('hPlay').click();}return;}
   if(e.code in KEYS){e.preventDefault();tryMove(KEYS[e.code]);}
   else if(e.code==='KeyZ'||e.key==='Backspace'){e.preventDefault();undo();}
