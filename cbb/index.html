@@ -1745,7 +1745,7 @@ function playRound(userRes){
     const r=isU?userRes:pre||simGame(gm);
     gm.hs=r.hs;gm.as=r.as;gm.ot=r.ot;gm.winner=r.hs>r.as?r.h:r.a;
     S.results.push({h:gm.h,a:gm.a,hs:r.hs,as:r.as,type:gm.type,label:gm.label,day:S.phase==="regular"?S.day:null,neutral:!!gm.neutral,ot:r.ot});
-    seriesNote(gm);gamedayResult(gm);if(r.bz)noteBuzzer(gm,r.bz);gameAch(gm);relAfterGame(gm);uniResult(gm);gm.bz=r.bz;ssAfter(gm);rivalAfter(gm);feedAfter(gm);mpAfter(gm);rivxNote(gm);handshake(gm);stormAfter(gm);mediaStorm(gm);pressAfter(gm);demAfter(gm);ghostAfter(gm);techAfter(gm,r.ej);csAfter(gm);
+    GCTX=S.phase!=="h2h"&&(gm.h===S.user||gm.a===S.user)?gameCtx(gm):null;seriesNote(gm);gamedayResult(gm);if(r.bz)noteBuzzer(gm,r.bz);gameAch(gm);relAfterGame(gm);uniResult(gm);gm.bz=r.bz;ssAfter(gm);rivalAfter(gm);feedAfter(gm);mpAfter(gm);rivxNote(gm);handshake(gm);stormAfter(gm);mediaStorm(gm);pressAfter(gm);demAfter(gm);ghostAfter(gm);techAfter(gm,r.ej);csAfter(gm);GCTX=null;
     if(isSeniorNight(gm)){const sn=seniorsOf(T(S.user));news(`Senior Night: ${gm.winner===S.user?"a win to send off":"a tough loss for"} ${sn.length?sn.map(p=>p.n).join(", "):"the seniors"}.`)}
     const w=gm.winner,l=w===gm.h?gm.a:gm.h,up=ovr(T(w))<ovr(T(l))-5;
     S.mo=S.mo||{};S.mo[w]=clamp((S.mo[w]||0)*.6+1+(up?.5:0),-3,3);S.mo[l]=clamp((S.mo[l]||0)*.6-1,-3,3);
@@ -3274,23 +3274,7 @@ function crec(t){S.crec=S.crec||{};const c=coachOf(t),k=c.n;return S.crec[k]||(S
 // ===================== COURTSIDE FEED =====================
 const FANS=["@HoopsHeadHank","@BracketBrianna","@CourtsideCass","@MidMajorMike","@BuzzerBeaterBeth","@TheBubbleBoy","@NETrankNerd","@ZoneDefenseZoe","@SixthManSam","@OneAndDoneDev"];
 const ANALYSTS=[["@MarcusValeHoops","Marcus Vale"],["@DanaPriceOnHoops","Dana Price"],["@TheBracketDoc","The Bracket Doc"]];
-function post(p){S.feed=S.feed||[];const lk=p.likes??Math.round(40+Math.random()*Math.random()*9000);S.feed.unshift({...p,likes:lk,rt:Math.round(lk*(.03+Math.random()*.08)),k:dayKey(),season:S.season});if(S.feed.length>60)S.feed.length=60}
-function feedAfter(gm){
-  if(!S||S.phase==="h2h")return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;
-  const me=T(u),o=T(gm.h===u?gm.a:gm.h),won=gm.winner===u,ms=gm.h===u?gm.hs:gm.as,ts=gm.h===u?gm.as:gm.hs,L=S.lastGame,fan=`@${me.abbr}Nation`;
-  let star=null;if(L){let bv=-1;for(const p of me.roster){const b=L.box[p.id];if(b){const v=gameScore(b);if(v>bv){bv=v;star={p,b}}}}}
-  const sl=star?`${star.p.n}: ${boxLine(star.b)}`:"";const ro=rankOf(o.id),riv=rivalryOf(gm.h,gm.a);
-  if(won){
-    post({h:fan,n:`${me.name} Nation`,txt:ro<=10?"STORM THE COURT!!! 🏃‍♂️🏃‍♀️🏀":riv?`${o.name} live in our heads rent free 😤 ${ms}-${ts}`:pick([`LET'S GOOOO ${me.abbr} 🔥 ${ms}-${ts}`,`Another W. Book it. ${ms}-${ts} ✅`,`${me.name} basketball is BACK 🗣️`])});
-    if(star&&star.b.pts>=20)post({h:pick(FANS),n:"",txt:`${star.p.n} is HIM. ${boxLine(star.b)} 🤯`});
-    if(ro<=25)post({h:pick(ANALYSTS)[0],n:"",v:true,txt:`Big résumé win for ${me.name} over No. ${ro} ${o.name}. That's a Quad 1 W the committee will remember.`});
-    if(star&&Math.random()<.7)post({h:`@${star.p.n.split(" ")[0]}${star.p.no}`,n:star.p.n,txt:pick(["W. On to the next 🙏",`${me.abbr} ALL DAY 💯`,"Locked in. 🔒","God is good. Team win."])});
-  } else {
-    post({h:pick(FANS),n:"",txt:pick([`${me.name} can't guard a parked car 😤`,`Rough one. ${ms}-${ts}. We go again.`,`Somebody tell ${me.abbr} the shot clock is 30 seconds 😭`,`Not panicking. Okay, a little panicking.`])});
-    if(rankOf(u)<=25)post({h:pick(ANALYSTS)[0],n:"",v:true,txt:`Concerning loss for No. ${rankOf(u)} ${me.name}. Shot ${L?pct(L.tstat[u].fgm,L.tstat[u].fga):"?"}% and never found a rhythm.`});
-  }
-  if(gm.bz&&won)post({h:fan,n:`${me.name} Nation`,txt:"I'M NOT OKAY. AT THE BUZZER. 😱😱😱"});
-}
+function post(p){S.feed=S.feed||[];const lk=p.likes??Math.round(40+Math.random()*Math.random()*9000);S.feed.unshift({...p,likes:lk,rt:Math.round(lk*(.03+Math.random()*.08)),k:dayKey(),season:S.season});if(S.feed.length>90)S.feed.length=90}
 function feedHTML(n){
   const F=(S.feed||[]).slice(0,n);if(!F.length)return '<p class="muted">Nothing yet. Play a game.</p>';
   return `<div class="feed">${F.map(p=>`<div class="post ${p.viral?"viral":""} ${p.mine?"mine":""}"><div class="pav" aria-hidden="true">${esc((p.n||p.h).replace("@","").slice(0,1).toUpperCase())}</div><div><div class="ph"><b>${esc(p.n||p.h.slice(1))}</b>${p.v?'<span class="pver" title="Verified">✔</span>':""}<span class="sub">${esc(p.h)}</span>${p.tag?`<span class="tag">${esc(p.tag)}</span>`:""}</div><p>${esc(p.txt)}</p><div class="pf"><span>🔁 ${fmtK(p.rt)}</span><span>♥ ${fmtK(p.likes)}</span>${p.rep&&p.rep.length?`<span>💬 ${fmtK(p.rep.length*(p.viral?1300:p.mine?40:7)+Math.round(p.likes/90))}</span>`:""}</div>
@@ -3483,7 +3467,7 @@ function demAfter(gm){
   if(isDem("rock")&&gm.h===u&&!gm.neutral&&S.ss&&S.ss.team===u)S.ss.energy=Math.min(100,S.ss.energy+1);
   if(isDem("show")&&gm.h===u&&!gm.neutral&&S.ss&&S.ss.team===u)S.ss.energy=Math.min(100,S.ss.energy+1);
   if(isDem("kiff")){if(gm.h===u&&!gm.neutral&&S.ss&&S.ss.team===u)S.ss.energy=Math.min(100,S.ss.energy+2);kiffPost(gm,won)}
-  if(Math.random()<.55)post({h:`@Coach${coachName().replace(/\W/g,"")||t.abbr}`,n:`Coach ${coachName()}`,v:true,txt:pick(won?D.q:D.lq),tag:"Postgame",mine:true,rep:reactions(won?"mine":"rivalWon",{}),likes:clout(won?2:1)});
+  if(Math.random()<.55)post({h:`@Coach${coachName().replace(/\W/g,"")||t.abbr}`,n:`Coach ${coachName()}`,v:true,txt:`${pick(won?D.q:D.lq)} ${coachCtxLine(GCTX,true)}`.trim(),tag:"Postgame",mine:true,rep:reactions(won?"mine":"rivalWon",{}),likes:clout(won?2:1)});
   if(isDem("show")&&!won&&Math.random()<.6)post({h:pick(FANS),n:"",txt:pick(["Coach dressed like a disco ball and still lost 💀","Maybe spend less on suits and more on defense 🙃","The outfit won. The team didn't."])});
   if(isDem("tac")&&won&&Math.random()<.3)post({h:pick(FANS),n:"",txt:"We won but watching that offense is like reading a tax form 😴"});
 }
@@ -3608,7 +3592,8 @@ function coachSays(t,sit,extra){
   const fill=s=>s.replace(/\{me\}/g,me.name).replace(/\{ma\}/g,me.abbr).replace(/\{mc\}/g,S.coach&&S.coach.name?`Coach ${S.coach.name}`:`their coach`)
     .replace(/\{star\}/g,(myStar()||{n:"their star"}).n).replace(/\{arena\}/g,t.arena).replace(/\{rec\}/g,sit==="lost"||sit==="won"?`${R.l}-${R.w}`:`${R.l}-${R.w}`);
   const open=pick(COPEN[c.p]||COPEN.old),body=fill(pick(CBODY[sit][tier])),close=pick(CCLOSE[c.p]||CCLOSE.old),cp=Math.random()<.22?" "+tr.catch:"";
-  return `${Math.random()<.75?open+" ":""}${body}${cp}${close?" "+close:""}`.replace(/\s+/g," ").trim();
+  const useO=Math.random()<.75,b2=useO&&/[,:]$/.test(open)&&/^(We|I|That|Not|Our|They|Nice|Good|Great|Hats|Credit|It's|Big|Tell|Somebody|See|Enjoy|Cute|Bold|Love|Recruiting|Welcome|Must|Another|Ask|Sorry|Delete|Bulletin|My|You|Screenshot|Hope|Cry|If|Imagine|Proud|Told|Simple|He|This)\b/.test(body)?body[0].toLowerCase()+body.slice(1):body;
+  return `${useO?open+" ":""}${b2}${cp}${close?" "+close:""}`.replace(/\s+/g," ").trim();
 }
 const coachHandle=t=>`@Coach${coachOf(t).n.split(" ").pop()}${t.abbr}`;
 
@@ -3625,7 +3610,7 @@ function beefMeter(b){return `<div class="beef"><span>Feud</span><div class="bba
 function rivalAfter(gm){
   if(!S||S.phase==="h2h")return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;const o=gm.h===u?gm.a:gm.h;if(!isRivalCoach(o))return;const t=T(o),R=crec(t),won=gm.winner===u;
   won?R.w++:R.l++;addBeef(t,won?8:3);
-  const p={h:coachHandle(t),n:`Coach ${coachOf(t).n}`,v:true,txt:coachSays(t,won?"lost":"won"),tag:"Rival"};
+  const p={h:coachHandle(t),n:`Coach ${coachOf(t).n}`,v:true,txt:`${coachSays(t,won?"lost":"won")} ${coachCtxLine(GCTX,false)}`.trim(),tag:"Rival"};
   p.rep=reactions(won?"rivalLost":"rivalWon",{t});p.likes=clout(won?3:2);post(p);
 }
 // Rival coaches who flip your recruits gloat about it now.
@@ -3659,6 +3644,7 @@ function reactions(kind,o){
   else if(kind==="rivalLost"){add(RX.mine,fanMe,`${me.name} Nation`);add(["Excuses, excuses 😂","Cry harder, coach","He's mad mad"],pick(RFAN));add(RX.neutral,pick(RFAN))}
   else{add(RX.mine,fanMe,`${me.name} Nation`);add(RX.them,pick(RFAN));if(isDem("kiff")){add(["Most handsome man in college basketball and it isn't close 😍","I'd run through a wall for this coach","He's so annoying. I can't stop watching.","Coach could sell sand in the desert"],pick(RFAN));add(["Most overrated coach in America","Somebody humble this man please","Classless. Again.","Unfollowing. (I will not unfollow.)"],pick(RFAN));add(["Love him or hate him, {mc} is the most talked-about coach in the sport.","Every recruit in America just saw that post. That's the point."],pick(ANALYSTS)[0],"",true)}add(RX.neutral,pick(RFAN));if(Math.random()<.7)add(RX.analyst,pick(ANALYSTS)[0],"",true);
     if(star&&Math.random()<.6)add(RX.player,`@${star.n.split(" ")[0]}${star.no}`,star.n)}
+  if(GCTX&&kind!=="steal")return ctxReplies(GCTX,kind,3).concat(out.slice(0,isDem("kiff")?4:2));
   return out.slice(0,Math.max(3,n)+(isDem("kiff")?3:0));
 }
 // Big games get a media storm instead of a single post.
@@ -3787,7 +3773,7 @@ const PA={
 function pressAfter(gm){
   if(!S||S.phase==="h2h"||isMP())return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;const won=gm.winner===u,o=gm.h===u?gm.a:gm.h,mg=Math.abs(gm.hs-gm.as);
   const kind=(gm.ej||[]).some(e=>e.coach&&e.tid===u)?"ejected":rivalryOf(gm.h,gm.a)||isRivalCoach(o)?"rival":won&&rankOf(o)<=15&&ovr(T(o))>ovr(T(u))?"upset":!won&&mg>=20?"blowL":won?"win":"loss";
-  S.presser={k:gameKey(gm)+S.season,q:pick(PQ[kind]),kind,won,o,outlet:pick(OUTLETS),done:null};
+  S.presser={k:gameKey(gm)+S.season,q:(kind!=="ejected"&&Math.random()<.75&&pressQ(GCTX))||pick(PQ[kind]),kind,won,o,outlet:pick(OUTLETS),done:null};
 }
 function pressAnswer(tone){
   const P=S.presser;if(!P||P.done)return;const A=PA[tone],o=T(P.o),oc=coachOf(o),me=T(S.user);
@@ -3865,6 +3851,100 @@ function breakingTicker(){
 function handshake(gm){if(!S||S.phase==="h2h")return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;const o=gm.h===u?gm.a:gm.h;if(!isRivalCoach(o))return;const t=T(o),b=beefOf(t),c=coachOf(t);
   if(b>=60){news(`Coach ${c.n} skipped the handshake line after the game.`);post({h:pick(ANALYSTS)[0],n:"",v:true,txt:`No handshake between Coach ${coachName()} and Coach ${c.n}. This feud is REAL.`,tag:"Feud",likes:clout(6),rep:reactions("game",{})})}
   const was=S.beefLast&&S.beefLast[c.n]||0;S.beefLast=S.beefLast||{};S.beefLast[c.n]=b;if(beefTier(b)>beefTier(was))wire("Feud alert",`Coach ${coachName()} vs Coach ${c.n} is now ${BEEF_LBL[beefTier(b)].toLowerCase()}.`);
+}
+
+// ===================== GAME-AWARE MEDIA =====================
+// After each of your games we build a short "game report" from the box score, and every fan,
+// analyst, coach, player and reporter reacts to what actually happened in it.
+let GCTX=null;
+function gameCtx(gm){
+  const L=S.lastGame,u=S.user;if(!L||L.home!==gm.h||L.away!==gm.a||(gm.h!==u&&gm.a!==u))return null;
+  const o=gm.h===u?gm.a:gm.h,me=T(u),op=T(o),won=gm.winner===u,ms=L.score[u],os=L.score[o];
+  const side=id=>T(id).roster.filter(p=>L.box[p.id]&&L.box[p.id].min>0).map(p=>({p,b:L.box[p.id]}));
+  const mine=side(u),theirs=side(o),best=a=>a.slice().sort((x,y)=>gameScore(y.b)-gameScore(x.b))[0]||null;
+  const tu=L.tstat[u],to=L.tstat[o],pc=(m,a)=>a?Math.round(m/a*100):0;
+  const R=S.results.filter(r=>r.h===u||r.a===u);let streak=0;const lw=won;for(let i=R.length-1;i>=0;i--){const r=R[i],w=(r.h===u?r.hs:r.as)>(r.h===u?r.as:r.hs);if(w===lw)streak++;else break}
+  const top=best(mine),otop=best(theirs),hot=mine.filter(x=>x.b.tpm>=5).sort((a,b)=>b.b.tpm-a.b.tpm)[0]||null,ohot=theirs.filter(x=>x.b.tpm>=5).sort((a,b)=>b.b.tpm-a.b.tpm)[0]||null;
+  const cold=mine.filter(x=>x.b.fga>=11&&x.b.fgm/x.b.fga<.32).sort((a,b)=>a.b.fgm/a.b.fga-b.b.fgm/b.b.fga)[0]||null;
+  const dd=mine.find(x=>x.b.pts>=10&&x.b.orb+x.b.drb>=10)||null,fresh=mine.filter(x=>x.p.yr===0&&x.b.pts>=15).sort((a,b)=>b.b.pts-a.b.pts)[0]||null;
+  const bzp=gm.bz&&PL[gm.bz.pid]?PL[gm.bz.pid]:null;
+  return {gm,u,o,me,op,won,ms,os,mg:Math.abs(ms-os),ot:L.ot||0,top,otop,hot,ohot,cold,dd,fresh,lc:L.lc||0,
+    fg:pc(tu.fgm,tu.fga),ofg:pc(to.fgm,to.fga),tpm:tu.tpm,tpa:tu.tpa,otpm:to.tpm,otpa:to.tpa,tov:tu.to,otov:to.to,reb:tu.reb,oreb:to.reb,ftm:tu.ftm,fta:tu.fta,ofta:to.fta,
+    used:new Set(),cb:won?L.lead[o]||0:0,blown:won?0:L.lead[u]||0,bz:gm.bz&&gm.bz.tid===u?bzp:null,bzL:gm.bz&&gm.bz.tid===o?bzp:null,streak,rec:recStr(u),
+    ro:rankOf(o),ru:rankOf(u),riv:rivalryOf(gm.h,gm.a),home:gm.h===u&&!gm.neutral,type:gm.type,label:gm.label,netO:netOf(o),netU:netOf(u)};
+}
+const nm=x=>x?x.p.n:"";const ln=x=>x?boxLine(x.b):"";const sl=x=>x?`${x.b.fgm}-${x.b.fga}`:"";
+// Weighted picks: each line has a condition and a weight. The most relevant things get said first.
+function choose(cands,n){const used=GCTX&&GCTX.used,C=cands.filter(c=>c[0]).map(c=>({w:c[1]*(.6+Math.random()*.8),t:c[2]}));C.sort((a,b)=>b.w-a.w);const out=[];for(const c of C){if(out.length>=n)break;const t=typeof c.t==="function"?c.t():c.t;if(!t||out.includes(t)||(used&&used.has(t)))continue;out.push(t);if(used)used.add(t)}return out}
+function myFanLines(c,n){const P=c.top,me=c.me,op=c.op;return choose(c.won?[
+  [c.bz,10,()=>`${c.bz.n} AT THE BUZZER!!! I'M SCREAMING 😱`],[c.ro<=10,8,`WE JUST BEAT No. ${c.ro} ${op.name.toUpperCase()}!!! 🏃‍♂️🏃‍♀️`],[c.cb>=10,8,`Down ${c.cb} and we came ALL the way back?! NEVER LEAVE EARLY 😤`],
+  [c.ot,7,`${c.ot>1?c.ot+" OVERTIMES":"OVERTIME"}. My heart can't take this team 😭❤️`],[c.riv,7,`${c.riv} belongs to US. ${op.abbr} fans, log off 🤫`],
+  [P&&P.b.pts>=25,6,()=>`${nm(P)}: ${ln(P)}. HIM. 🔥`],[c.hot,6,()=>`${nm(c.hot)} hit ${c.hot.b.tpm} threes tonight 🎯 somebody guard him (nobody can)`],
+  [c.mg>=20,5,`${c.ms}-${c.os}. That wasn't a game, that was a public service announcement 💀`],[c.ofg<=38,5,`Held ${op.abbr} to ${c.ofg}% shooting. DEFENSE TRAVELS 🔒`],
+  [c.reb-c.oreb>=10,4,`Won the glass ${c.reb}-${c.oreb}. Bully ball 💪`],[c.otov>=16,4,`Forced ${c.otov} turnovers. ${op.abbr} looked scared of the ball 😂`],
+  [c.streak>=3,5,`That's ${c.streak} straight. ${c.rec}. Don't wake me up 🔥`],[c.fresh,4,()=>`Freshman ${nm(c.fresh)} with ${c.fresh.b.pts}. Going to be a problem for YEARS 👀`],
+  [c.dd,4,()=>`${nm(c.dd)} double-double (${c.dd.b.pts} & ${c.dd.b.orb+c.dd.b.drb}). Monster.`],[c.mg<=3&&!c.ot,4,`Won by ${c.mg}. Stressful. Worth it. 😮‍💨`],
+  [true,1,`Another W. ${c.rec} and climbing 📈`],[P,2,()=>`${nm(P)} was the best player on the floor. Not close.`]]
+ :[[c.bzL,10,()=>`Lost at the buzzer. I need to lie down 🫠`],[c.blown>=10,8,`We were UP ${c.blown}. How do you blow that?!`],[c.otop&&c.otop.b.pts>=25,7,()=>`How did NOBODY guard ${nm(c.otop)}?? ${c.otop.b.pts} points?!`],
+  [c.tov>=15,7,`${c.tov} turnovers. ${c.tov}. I can't watch this 😩`],[c.tpa>=15&&c.tpm/c.tpa<.26,6,`${c.tpm}-for-${c.tpa} from three. Maybe stop shooting them 🙃`],
+  [c.fta-c.ftm>=7,6,`Missed ${c.fta-c.ftm} free throws and lost by ${c.mg}. Do the math.`],[c.cold,5,()=>`${nm(c.cold)} went ${sl(c.cold)} from the field. Rough night, big fella.`],
+  [c.oreb-c.reb>=10,5,`Outrebounded by ${c.oreb-c.reb}. Box out. I am BEGGING.`],[c.mg>=20,6,`${c.ms}-${c.os}. Turning my phone off for a week.`],
+  [c.mg<=3,5,`Lost by ${c.mg}. Pain. Actual physical pain.`],[c.riv,6,`Losing ${c.riv} is the worst feeling in sports.`],[c.streak>=3,5,`${c.streak} straight losses. Somebody do something.`],
+  [c.ot,4,`Lost in ${c.ot>1?c.ot+"OT":"OT"}. Of course we did.`],[true,1,`${c.rec}. We have to be better.`]],n)}
+function oppFanLines(c,n){const op=c.op,me=c.me;return choose(!c.won?[
+  [c.otop,7,()=>`${nm(c.otop)} ate tonight 🍽️ ${ln(c.otop)}`],[c.ru<=25,6,`${me.abbr} came in ranked and left humbled 😂`],[c.blown>=10,6,`${me.abbr} blew a ${c.blown}-point lead lmaooo`],
+  [c.tov>=15,5,`${me.abbr} turned it over ${c.tov} times. Thank you for your service 🫡`],[c.riv,7,`${c.riv} is OURS. ${me.abbr} fans real quiet 🤫`],[true,2,`Easy work vs ${me.name}.`]]
+ :[[c.top,5,()=>`${nm(c.top)} got lucky. ${sl(c.top)} shooting won't last.`],[c.fta-c.ofta>=8,7,`${me.abbr} shot ${c.fta} free throws to our ${c.ofta}. Rigged. 🦓`],[c.riv,6,`We'll see ${me.abbr} again. ${c.riv} isn't over.`],
+  [c.mg<=3,5,`Lost by ${c.mg} to ${me.name}. One stop. ONE.`],[c.cb>=10,6,`We were up ${c.cb} on ${me.name}. I'm going to be sick.`],[true,2,`Overrated team got a lucky win.`]],n)}
+function analystLines(c,n){const W=c.won?c.me:c.op,Lz=c.won?c.op:c.me,ws=Math.max(c.ms,c.os),ls=Math.min(c.ms,c.os),key=c.won?c.top:c.otop;
+  return choose([
+  [true,5,`${W.name} ${ws}, ${Lz.name} ${ls}${c.ot?` (${c.ot>1?c.ot:""}OT)`:""}. ${key?`${nm(key)}: ${ln(key)}.`:""} ${c.won?`${c.me.abbr} shot ${c.fg}%`:`${c.op.abbr} shot ${c.ofg}%`}${c.won&&c.otov>=14?` and forced ${c.otov} turnovers`:c.won&&c.tpm>=10?` with ${c.tpm} threes`:""}.`],
+  [c.won&&c.ro<=25,7,`That's a résumé-defining win for ${c.me.name}. A Quad 1 win over No. ${c.ro} will matter in March.`],
+  [!c.won&&c.netO>150,7,`Ugly loss for ${c.me.name}. ${c.op.name} are NET No. ${c.netO}. That's a Quad 4 loss and it will follow them to Selection Sunday.`],
+  [c.netU>=35&&c.netU<=60&&S.phase==="regular"&&S.day>=15,6,`Bubble watch: ${c.me.name} sit at NET No. ${c.netU}. ${c.won?"That win helps.":"They can't afford many more of those."}`],
+  [c.top&&c.top.p.s.g>=8&&c.top.p.s.pts/c.top.p.s.g>=20,5,()=>`${nm(c.top)} is now averaging ${f1(c.top.p.s.pts/c.top.p.s.g)} a game. That's an All-American pace.`],
+  [c.cb>=12,6,`${c.me.name} trailed by ${c.cb} and won. That's the biggest comeback I've seen from them this year.`],[c.lc>=10,4,`${c.lc} lead changes in ${c.me.abbr}-${c.op.abbr}. Game of the week candidate.`],
+  [c.reb-c.oreb>=12||c.oreb-c.reb>=12,4,`The glass told the story: ${c.won?c.me.abbr:c.op.abbr} won the boards ${Math.max(c.reb,c.oreb)}-${Math.min(c.reb,c.oreb)}.`],
+  [c.streak>=4,5,c.won?`${c.me.name} have won ${c.streak} straight. They're playing as well as anyone right now.`:`${c.me.name} have dropped ${c.streak} in a row. Something has to change.`]],n)}
+// What the coaches say about this game (added to their postgame quotes).
+function coachCtxLine(c,mine){
+  if(!c)return "";const me=mine;const won=mine?c.won:!c.won,topM=mine?c.top:c.otop,topT=mine?c.otop:c.top,tov=mine?c.tov:c.otov,otov=mine?c.otov:c.tov,reb=mine?c.reb:c.oreb,oreb=mine?c.oreb:c.reb,fg=mine?c.fg:c.ofg,ft=mine?[c.ftm,c.fta]:null,cb=c.cb,bl=c.blown;
+  return choose(won?[[topM&&topM.b.pts>=20,6,()=>`${nm(topM)} was special. ${topM.b.pts} points.`],[otov>=15,5,`We forced ${otov} turnovers. That's our identity.`],[me&&cb>=10||!me&&bl>=10,6,me?`Down ${cb}, my guys never blinked.`:`We were down ${bl}. Never quit.`],
+    [reb-oreb>=8,4,`We won the glass by ${reb-oreb}. That's effort.`],[fg>=52,4,`We shot ${fg}% from the field. When we share it like that, we're tough to guard.`],[true,1,"Good team win."]]
+   :[[tov>=14,6,`${tov} turnovers. You can't win like that.`],[topT&&topT.b.pts>=22,6,()=>`${nm(topT)} hurt us. ${topT.b.pts} points. Credit to him.`],[me&&bl>=10||!me&&cb>=10,6,`We had a ${me?bl:cb}-point lead. That's on me.`],
+    [oreb-reb>=8,5,`They outrebounded us by ${oreb-reb}.`],[ft&&ft[1]-ft[0]>=7,5,ft?`Free throws: ${ft[0]}-of-${ft[1]}. That's the game.`:""],[fg<=38,5,`We shot ${fg}%. We'll have to make shots.`],[true,1,"We'll learn from it."]],1)[0]||"";
+}
+function pressQ(c){
+  if(!c)return null;const q=choose([[c.top&&c.top.b.pts>=25,6,()=>`${nm(c.top)} had ${c.top.b.pts} tonight. Where does he rank in this league?`],[c.tov>=15,7,`You turned it over ${c.tov} times. What happened?`],
+    [c.cb>=10,8,`You were down ${c.cb}. What changed?`],[c.blown>=10,8,`You led by ${c.blown}. How did that get away?`],[c.otop&&c.otop.b.pts>=25,6,()=>`${nm(c.otop)} scored ${c.otop.b.pts} on you. Is there any answer for him?`],
+    [c.tpa>=15&&c.tpm/c.tpa<.26,5,`Your team went ${c.tpm}-of-${c.tpa} from three. Do you keep shooting them?`],[c.won&&c.streak>=4,5,`That's ${c.streak} straight. What's clicking right now?`],[!c.won&&c.streak>=3,6,`That's ${c.streak} losses in a row. Is this team in trouble?`],
+    [c.ot,5,`Overtime${c.ot>1?" again, twice":""}. What did you tell them before the extra period?`],[c.bz,8,`Walk us through that buzzer-beater from ${c.bz?c.bz.n:""}.`],[c.fresh,4,()=>`Your freshman ${nm(c.fresh)} had ${c.fresh.b.pts}. How good can he be?`],
+    [c.won&&c.ro<=15,6,`How big is a win over No. ${c.ro} for your résumé?`]],1);return q[0]||null;
+}
+// Context-aware replies under posts.
+function ctxReplies(c,kind,n){
+  const out=[],fan=`@${c.me.abbr}Nation`,ofan=`@${c.op.abbr}Nation`,pos=kind!=="rivalWon";
+  const mine=myFanLines(c,2),theirs=oppFanLines(c,1),an=analystLines(c,1);
+  if(pos&&mine[0])out.push({h:fan,n:`${c.me.name} Nation`,txt:mine[0]});if(theirs[0])out.push({h:ofan,n:`${c.op.name} Nation`,txt:theirs[0]});
+  if(Math.random()<.6&&an[0])out.push({h:pick(ANALYSTS)[0],n:"",v:true,txt:an[0]});if(!pos&&mine[1])out.push({h:pick(RFAN),n:"",txt:mine[1]});
+  if(c.lc>=8&&Math.random()<.5)out.push({h:pick(RFAN),n:"",txt:`${c.ms}-${c.os} with ${c.lc} lead changes. Game of the year candidate 🍿`});
+  return out.slice(0,n||3);
+}
+
+// ===== Replacements for the generic postgame posts =====
+function feedAfter(gm){
+  if(!S||S.phase==="h2h")return;const c=GCTX;if(!c)return;const me=c.me,fan=`@${me.abbr}Nation`;
+  const M=myFanLines(c,3);if(M[0])post({h:fan,n:`${me.name} Nation`,txt:M[0],likes:clout(c.won?2:1),rep:ctxReplies(c,c.won?"mine":"rivalWon",3)});
+  if(M[1])post({h:pick(RFAN),n:"",txt:M[1]});
+  const O=oppFanLines(c,1);if(O[0]&&Math.random()<.7)post({h:`@${c.op.abbr}Nation`,n:`${c.op.name} Nation`,txt:O[0]});
+  // The box-score star speaks.
+  const st=c.won?c.top:null;if(st&&gameScore(st.b)>=12&&Math.random()<.7)post({h:`@${st.p.n.split(" ")[0]}${st.p.no}`,n:st.p.n,txt:pick([`${st.b.pts} and a W. On to the next 🙏`,`Team win. ${c.me.abbr} ALL DAY 💯`,`Locked in 🔒 ${c.ms}-${c.os}`,`Couldn't do it without my brothers. ${st.b.ast>=5?`(But the ${st.b.ast} assists were me 😏)`:""}`]).trim()});
+  // Analyst recap.
+  const A=analystLines(c,2);if(A[0])post({h:pick(ANALYSTS)[0],n:"",v:true,txt:A[0],tag:"Recap",likes:clout(1.5),rep:Math.random()<.6?ctxReplies(c,"game",2):undefined});if(A[1]&&Math.random()<.6)post({h:pick(ANALYSTS)[0],n:"",v:true,txt:A[1],likes:clout(1)});
+  // The other coach talks too (rivals get their own, bigger post).
+  if(!isRivalCoach(c.o)&&Math.random()<.65){const t=c.op,oc=coachOf(t);post({h:"@"+pick(OUTLETS).replace(/\W/g,""),n:pick(OUTLETS),v:true,txt:`Coach ${oc.n} (${t.abbr}) after the ${c.won?"loss":"win"}: "${`${coachSays(t,c.won?"lost":"won")} ${coachCtxLine(c,false)}`.trim()}"`,tag:"Postgame",likes:clout(1)})}
+  if(gm.bz&&c.won)post({h:fan,n:`${me.name} Nation`,txt:`I'M NOT OKAY. ${c.bz?c.bz.n.toUpperCase():"AT THE BUZZER"}. 😱😱😱`,viral:true,likes:clout(15)});
+  if(S.feed.length>90)S.feed.length=90;
 }
 
 // ===================== MY PLAYER: one player, high school to the NBA draft =====================
