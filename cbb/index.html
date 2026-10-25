@@ -1011,6 +1011,51 @@ button:active:not(:disabled){transform:scale(.97)}
 @keyframes tick{to{transform:translateX(-50%)}}
 @media (prefers-reduced-motion: reduce){.bmove{animation:none}}
 @media (max-width:600px){.hype-n{font-size:38px}.wq{max-width:94%}.pans{grid-template-columns:1fr 1fr}.bmove{font-size:12px}}
+
+/* Courtside 2.0 */
+.cprof{position:relative;overflow:hidden;padding-top:0!important}
+.cpban{height:54px;margin:0 -16px 0;background:linear-gradient(120deg,var(--c1),color-mix(in srgb,var(--c1) 30%,#05070f));opacity:.85}
+.cprow{display:flex;gap:12px;align-items:flex-end;margin-top:-30px;position:relative}
+.cprow>svg{flex:none;background:rgba(5,9,22,.9);border-radius:50%;border:3px solid rgba(110,210,255,.5);padding:2px}
+.cpname{font-size:18px;display:block}
+.cpstats{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:4px}
+.cpstats b{color:#fff}
+.sentm{display:flex;align-items:center;gap:10px;margin-top:10px;font-family:var(--num);font-size:12px;letter-spacing:.06em}
+.sbar{flex:1;max-width:260px;height:8px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+.sbar i{display:block;height:100%;background:linear-gradient(90deg,#ff4d4d,#ffc350,#59d68a)}
+.sentm b.good{color:#7fe0a6}.sentm b.bad{color:#ff8a8a}
+.cswrap{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:16px;align-items:start}
+.trendp{position:sticky;top:90px}
+.trend{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.trend li b{display:block;color:#fff}
+.cfilt{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 8px}
+.pact{background:none;border:0;color:var(--muted);font-family:var(--num);font-size:12px;padding:4px 6px;border-radius:8px;cursor:pointer}
+.pact:hover{color:#fff;background:rgba(110,210,255,.08)}
+.pact.on{color:#ff6b8a}
+.pact[data-act="fRt"].on{color:#59d68a}
+.qrep{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.prep.mine{background:rgba(255,195,80,.08);border-radius:8px;padding:4px 6px}
+.coachav{background:rgba(5,9,22,.9)!important;display:grid;place-items:center;overflow:hidden}
+.coachav svg{margin-top:6px}
+.bscard{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin:6px 0;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.3);border:1px solid rgba(110,210,255,.18);max-width:360px}
+.bscard>div{display:flex;align-items:center;gap:8px;font-family:var(--hud,var(--num));font-size:15px}
+.bscard>div i{width:10px;height:10px;border-radius:3px}
+.bscard>div span{margin-left:auto;font-size:20px;font-weight:700;color:#ffd06a}
+.bscard em{grid-column:1/-1;font-style:normal;font-size:10.5px;letter-spacing:.16em;color:var(--muted)}
+.bscard small{grid-column:1/-1;font-size:12px;color:#cfe0f7}
+.poll{display:flex;flex-direction:column;gap:6px;margin:6px 0;max-width:380px}
+.popt{position:relative;overflow:hidden;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:10px;border:1px solid rgba(110,210,255,.25);background:rgba(110,210,255,.04);color:#e8f3ff;font-size:13.5px}
+.popt i{position:absolute;left:0;top:0;bottom:0;background:rgba(110,210,255,.18)}
+.popt span,.popt b{position:relative}
+.popt.win{border-color:#59d68a}.popt.win i{background:rgba(89,214,138,.25)}
+.popt.mine span::after{content:" · your pick";color:var(--muted);font-size:11px}
+.btn-opt{cursor:pointer;text-align:left}
+.btn-opt:hover{border-color:var(--amber,#ffc350)}
+.nbadge{display:inline-grid;place-items:center;min-width:17px;height:17px;padding:0 4px;margin-left:5px;border-radius:9px;background:#ff3b5c;color:#fff;font-size:10px;font-weight:700;line-height:1}
+.livefeed .lvp{font-size:13.5px;padding:5px 0;border-bottom:1px solid rgba(110,210,255,.08)}
+.livedot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff3b3b;margin-left:6px;animation:pulse 1.2s infinite}
+@media (max-width:860px){.cswrap{grid-template-columns:1fr}.trendp{position:static;order:-1}.trend{flex-direction:row;flex-wrap:wrap;gap:6px 14px;padding-left:0;list-style:none}}
+@media (max-width:600px){.cpban{margin:0 -13px}.cfilt{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.cfilt::-webkit-scrollbar{display:none}.cfilt .uchip{flex:none}}
 </style>
 </head>
 <body>
@@ -1745,7 +1790,7 @@ function playRound(userRes){
     const r=isU?userRes:pre||simGame(gm);
     gm.hs=r.hs;gm.as=r.as;gm.ot=r.ot;gm.winner=r.hs>r.as?r.h:r.a;
     S.results.push({h:gm.h,a:gm.a,hs:r.hs,as:r.as,type:gm.type,label:gm.label,day:S.phase==="regular"?S.day:null,neutral:!!gm.neutral,ot:r.ot});
-    GCTX=S.phase!=="h2h"&&(gm.h===S.user||gm.a===S.user)?gameCtx(gm):null;seriesNote(gm);gamedayResult(gm);if(r.bz)noteBuzzer(gm,r.bz);gameAch(gm);relAfterGame(gm);uniResult(gm);gm.bz=r.bz;ssAfter(gm);rivalAfter(gm);feedAfter(gm);mpAfter(gm);rivxNote(gm);handshake(gm);stormAfter(gm);mediaStorm(gm);pressAfter(gm);demAfter(gm);ghostAfter(gm);techAfter(gm,r.ej);csAfter(gm);GCTX=null;
+    GCTX=S.phase!=="h2h"&&(gm.h===S.user||gm.a===S.user)?gameCtx(gm):null;seriesNote(gm);gamedayResult(gm);if(r.bz)noteBuzzer(gm,r.bz);gameAch(gm);relAfterGame(gm);uniResult(gm);gm.bz=r.bz;ssAfter(gm);rivalAfter(gm);feedAfter(gm);mpAfter(gm);rivxNote(gm);handshake(gm);stormAfter(gm);mediaStorm(gm);pressAfter(gm);demAfter(gm);ghostAfter(gm);techAfter(gm,r.ej);csAfter(gm);courtAfter(gm);GCTX=null;
     if(isSeniorNight(gm)){const sn=seniorsOf(T(S.user));news(`Senior Night: ${gm.winner===S.user?"a win to send off":"a tough loss for"} ${sn.length?sn.map(p=>p.n).join(", "):"the seniors"}.`)}
     const w=gm.winner,l=w===gm.h?gm.a:gm.h,up=ovr(T(w))<ovr(T(l))-5;
     S.mo=S.mo||{};S.mo[w]=clamp((S.mo[w]||0)*.6+1+(up?.5:0),-3,3);S.mo[l]=clamp((S.mo[l]||0)*.6-1,-3,3);
@@ -1757,7 +1802,7 @@ function playRound(userRes){
   for(const t of S.teams)for(const p of t.roster)if(p.inj>0){p.inj--;if(!p.inj&&t.id===S.user)news(`${p.pos} ${p.n} is back from injury.`)}
   weekNote(games);S.roundLog=null;S.preRes={};RK.key=null;
   advancePhase(games);
-  try{studentPregame()}catch(e){}
+  try{studentPregame();pollPregame()}catch(e){}
   if(S.phase==="regular"&&S.day%2===0||S.phase!=="regular"){voteAP();if(S.phase==="regular"||S.phase==="selection")buildWeekly()}
   const now=rankIds().slice(0,25),newTop=now[0];if(before[0]!==undefined&&newTop!==before[0]&&S.phase!=="offseason")wire("No. 1",`${T(newTop).name} take over the top spot in the AP poll.`);
   S.tab="home";
@@ -1994,7 +2039,7 @@ function crowdPenalty(pos,st){
 const REC_COST={5:18,4:10,3:4,2:0},REC_CAP={5:.72,4:.86,3:.97};
 function prospectChance(pos,st){
   if(st===2)return 1;const me=T(S.user);
-  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04+demRec(st)+pitchBoost()+(ssHas("recruit")?.02:0)-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
+  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04+demRec(st)+pitchBoost()+(ssHas("recruit")?.02:0)+folBoost()-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
 }
 function makeProspect(pos,st){
   const me=T(S.user),[a,b]=HT[pos];
@@ -3274,14 +3319,7 @@ function crec(t){S.crec=S.crec||{};const c=coachOf(t),k=c.n;return S.crec[k]||(S
 // ===================== COURTSIDE FEED =====================
 const FANS=["@HoopsHeadHank","@BracketBrianna","@CourtsideCass","@MidMajorMike","@BuzzerBeaterBeth","@TheBubbleBoy","@NETrankNerd","@ZoneDefenseZoe","@SixthManSam","@OneAndDoneDev"];
 const ANALYSTS=[["@MarcusValeHoops","Marcus Vale"],["@DanaPriceOnHoops","Dana Price"],["@TheBracketDoc","The Bracket Doc"]];
-function post(p){S.feed=S.feed||[];const lk=p.likes??Math.round(40+Math.random()*Math.random()*9000);S.feed.unshift({...p,likes:lk,rt:Math.round(lk*(.03+Math.random()*.08)),k:dayKey(),season:S.season});if(S.feed.length>90)S.feed.length=90}
-function feedHTML(n){
-  const F=(S.feed||[]).slice(0,n);if(!F.length)return '<p class="muted">Nothing yet. Play a game.</p>';
-  return `<div class="feed">${F.map(p=>`<div class="post ${p.viral?"viral":""} ${p.mine?"mine":""}"><div class="pav" aria-hidden="true">${esc((p.n||p.h).replace("@","").slice(0,1).toUpperCase())}</div><div><div class="ph"><b>${esc(p.n||p.h.slice(1))}</b>${p.v?'<span class="pver" title="Verified">✔</span>':""}<span class="sub">${esc(p.h)}</span>${p.tag?`<span class="tag">${esc(p.tag)}</span>`:""}</div><p>${esc(p.txt)}</p><div class="pf"><span>🔁 ${fmtK(p.rt)}</span><span>♥ ${fmtK(p.likes)}</span>${p.rep&&p.rep.length?`<span>💬 ${fmtK(p.rep.length*(p.viral?1300:p.mine?40:7)+Math.round(p.likes/90))}</span>`:""}</div>
-    ${(p.rep||[]).length?`<div class="preps">${p.rep.slice(0,n>5?6:2).map(r=>`<div class="prep"><b>${esc(r.n||r.h.slice(1))}</b>${r.v?'<span class="pver" title="Verified">✔</span>':""}<span class="sub">${esc(r.h)}</span><p>${esc(r.txt)}</p></div>`).join("")}</div>`:""}</div></div>`).join("")}</div>`;
-}
-const tabFeed=()=>`${composerHTML()}<div class="panel" data-c="blue"><h3>Courtside</h3><p class="muted" style="font-size:13px">What fans, analysts and players are saying.</p>${feedHTML(40)}</div>`;
-const feedCard=()=>(S.feed||[]).length?`<div class="panel" data-c="blue"><div class="row" style="justify-content:space-between"><h3>Courtside</h3><button class="small-btn" data-act="tab" data-t="feed">See all</button></div>${feedHTML(3)}</div>`:"";
+function post(p){S.feed=S.feed||[];const lk=p.likes??Math.round(40+Math.random()*Math.random()*9000);S.fid=(S.fid||0)+1;if(typeof growFollowers==="function"&&S.user!=null&&S.phase!=="h2h")growFollowers({...p,likes:lk});S.feed.unshift({id:S.fid,...p,likes:lk,rt:Math.round(lk*(.03+Math.random()*.08)),k:dayKey(),season:S.season});if(S.feed.length>90)S.feed.length=90}
 // Rival coaches chase your best targets: lower odds, and a post if they flip one.
 function rivalTarget(c){
   if(c.st>=4&&S&&S.phase!=="h2h"&&Math.random()<.35){const ids=rivalCoaches();if(ids.length){const t=T(pick(ids)),k=coachOf(t);c.rv=k.n;c.rvt=t.id;c.chance=Math.max(.03,Math.round((c.chance-.12)*100)/100)}}
@@ -3947,6 +3985,110 @@ function feedAfter(gm){
   if(S.feed.length>90)S.feed.length=90;
 }
 
+// ===================== COURTSIDE 2.0 =====================
+// Your coach profile (followers, fan approval), filters, trending topics, likes/reposts/replies,
+// fan polls, box score cards, live posts during your games, and a new-posts badge.
+function prof(){if(!S.prof)S.prof={followers:Math.round(2000+T(S.user).pres*9000+Math.random()*3000),following:Math.round(120+Math.random()*300),posts:0,sent:62};return S.prof}
+const SENT=[[80,"Beloved","good"],[62,"Liked","good"],[45,"Mixed",""],[30,"Restless","bad"],[0,"Toxic","bad"]];
+const sentLbl=v=>SENT.find(x=>v>=x[0]);
+function growFollowers(p){const P=prof();if(p.mine){P.posts++;P.followers+=Math.round((p.likes||0)*(p.viral?.06:.02))}}
+// Followers help a little on the recruiting trail.
+const folBoost=()=>S&&S.prof?clamp(Math.log10(Math.max(1,S.prof.followers/20000))*.012,0,.025):0;
+function courtAfter(gm){
+  if(!S||S.phase==="h2h"||isMP())return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;const P=prof(),won=gm.winner===u,c=GCTX;
+  P.sent=clamp(P.sent+(won?3:-4)+(c&&c.riv?(won?3:-3):0)+(c&&c.ro<=10&&won?3:0)+(c&&!won&&c.netO>150?-4:0),5,98);
+  P.followers=Math.max(500,Math.round(P.followers*(won?1.006:.998)+(c&&c.ro<=10&&won?1500:0)));
+  // Resolve tonight's poll.
+  const poll=(S.feed||[]).find(p=>p.poll&&p.poll.key===gameKey(gm)+S.season&&!p.poll.final);if(poll){const right=poll.poll.opts.findIndex(o=>o.id===gm.winner);poll.poll.final=right;
+    const fav=poll.poll.opts.slice().sort((a,b)=>b.v-a.v)[0];post({h:"@CBBonCourtside",n:"Courtside Central",v:true,txt:`Poll result: ${fav.id===gm.winner?`${Math.round(fav.v)}% of you called it.`:`Only ${Math.round(poll.poll.opts[right].v)}% picked ${T(gm.winner).name}. Upset city.`} ${T(gm.winner).name} win ${Math.max(gm.hs,gm.as)}-${Math.min(gm.hs,gm.as)}.`,tag:"Poll",likes:clout(1)})}
+  // Box score card on the recap.
+  const rc=(S.feed||[]).find(p=>p.tag==="Recap"&&!p.card&&p.k===dayKey());if(rc&&c)rc.card={a:T(gm.a).abbr,as:gm.as,h:T(gm.h).abbr,hs:gm.hs,ac:T(gm.a).c1,hc:T(gm.h).c1,ot:c.ot,top:c.top?`${c.me.abbr}: ${c.top.p.n} ${c.top.b.pts} pts, ${c.top.b.orb+c.top.b.drb} reb, ${c.top.b.ast} ast`:"",otop:c.otop?`${c.op.abbr}: ${c.otop.p.n} ${c.otop.b.pts} pts, ${c.otop.b.orb+c.otop.b.drb} reb, ${c.otop.b.ast} ast`:""};
+}
+function pollPregame(){
+  const gm=userGame();if(!gm||S.phase==="h2h"||isMP())return;const key=gameKey(gm)+S.season;if((S.feed||[]).some(p=>p.poll&&p.poll.key===key))return;
+  const pH=winProb(gm.h,gm.a,gm.neutral),bias=(Math.random()-.5)*16+(gm.h===S.user?4:-4);let vh=clamp(pH*100+bias,8,92);
+  post({h:"@CBBonCourtside",n:"Courtside Central",v:true,txt:`Who wins ${T(gm.a).abbr} ${gm.neutral?"vs":"at"} ${T(gm.h).abbr}?`,tag:"Poll",likes:clout(.8),
+    poll:{key,opts:[{id:gm.a,t:T(gm.a).name,v:100-vh},{id:gm.h,t:T(gm.h).name,v:vh}],votes:Math.round(800+clout(.3)),mine:null,final:null}});
+}
+function pollVote(id,o){const p=(S.feed||[]).find(x=>x.id===id);if(!p||!p.poll||p.poll.mine!=null||p.poll.final!=null)return;const P=p.poll,n=P.votes;P.opts.forEach((x,i)=>{x.v=(x.v*n+(i===o?100:0))/(n+1)});P.votes++;P.mine=o}
+
+// ===== Live posts while you watch your game =====
+const LIVE_UP=["LET'S GOOOO 🔥","WHAT. A. PLAY. 🤯","Somebody call the fire department 🚒","He's cooking 🧑‍🍳","THE BUILDING IS SHAKING","Put that on the jumbotron 📺","I just spilled my nachos 😭"];
+const LIVE_DN=["No no no no no 😩","Timeout. PLEASE.","Somebody guard him!!!","I can't watch 🙈","Ref, you're killing us 🦓","Wake up!!!"];
+function liveStep(W,bf){
+  if(S.phase==="h2h"||W.kind!=="user")return;const g=W.g,u=S.user;W.lv=W.lv||[];
+  if(W.banner&&W.banner!==W.lb){W.lb=W.banner;const dU=g.score[u]-bf.u,dO=g.score[opp(g,u)]-bf.o,me=T(u);
+    // Who made the play? The first player named in the call.
+    const b=W.banner;let side=0,at=1e9;for(const [id,sg] of [[u,1],[opp(g,u),-1]])for(const p of T(id).roster){const k=b.indexOf(p.n);if(k>=0&&k<at){at=k;side=sg}}
+    if(!side)side=dU>dO?1:dO>dU?-1:0;const neg=/misses|makes 0|turnover|FOULED OUT|EJECTED|TECHNICAL|violation|strips|steal/i.test(b)&&!/BLOCKS/.test(b),good=side===1?!neg:side===-1?neg:false;
+    const h=good?`@${me.abbr}Nation`:pick(RFAN);W.lv.unshift({h,n:good?`${me.name} Nation`:"",txt:`${pick(side===0?["Wild sequence 👀","This game is unreal 🍿"]:good?LIVE_UP:LIVE_DN)} ${b.length<80?`(${b})`:""}`.trim(),t:`${periodName(g.half)} ${mmss(g.clock)}`})}
+  if(g.half===2&&!W.htPost){W.htPost=1;const a=T(g.away),h=T(g.home);W.lv.unshift({h:"@CBBonCourtside",n:"Courtside Central",v:true,txt:`Halftime: ${h.abbr} ${g.score[g.home]}, ${a.abbr} ${g.score[g.away]}. ${Math.abs(g.score[g.home]-g.score[g.away])<=4?"Anybody's game.":"Big second half coming."}`,t:"HALF"})}
+  if(g.over&&!W.lvDone){W.lvDone=1;const best=W.lv.slice(0,2);best.reverse().forEach(x=>post({h:x.h,n:x.n,v:x.v,txt:x.txt,tag:"Live",likes:clout(1)}))}
+  W.lv.length=Math.min(W.lv.length,6);
+}
+function liveFeedHTML(W){if(!W.lv||!W.lv.length)return "";return `<div class="panel livefeed" data-c="blue"><h3>Courtside live <span class="livedot" aria-hidden="true"></span></h3>${W.lv.map(x=>`<div class="lvp"><span class="sub">${esc(x.t)}</span> <b>${esc(x.n||x.h)}</b> ${esc(x.txt)}</div>`).join("")}</div>`}
+
+// ===== Feed rendering =====
+const CFILT=[["all","For you"],["team","Your team"],["rivals","Rivals"],["media","Media"],["viral","Viral"],["recruit","Recruiting"],["polls","Polls"]];
+function postMatch(p,f){
+  const me=T(S.user),tg=p.tag||"",h=p.h||"";
+  if(f==="all")return true;if(f==="team")return p.mine||h.includes(me.abbr)||(p.txt||"").includes(me.name);
+  if(f==="rivals")return /Rival|Feud|Rivalry/.test(tg)||(S.rc&&S.rc.ids||[]).some(id=>h.includes(T(id).abbr));
+  if(f==="media")return p.v&&!p.mine&&!/^@Coach/.test(h);if(f==="viral")return !!p.viral;if(f==="recruit")return /Recruit|Portal|Walk-on/.test(tg);if(f==="polls")return !!p.poll;return true;
+}
+function ensureIds(){S.fid=S.fid||0;for(const p of S.feed||[])if(p.id==null)p.id=++S.fid}
+function cardHTML(c){return `<div class="bscard"><div><i style="background:${c.ac}"></i><b>${esc(c.a)}</b><span>${c.as}</span></div><div><i style="background:${c.hc}"></i><b>${esc(c.h)}</b><span>${c.hs}</span></div><em>FINAL${c.ot?` · ${c.ot>1?c.ot:""}OT`:""}</em>${c.top?`<small>${esc(c.top)}</small>`:""}${c.otop?`<small>${esc(c.otop)}</small>`:""}</div>`}
+function pollHTML(p){const P=p.poll,done=P.mine!=null||P.final!=null;
+  return `<div class="poll">${P.opts.map((o,i)=>done?`<div class="popt ${P.final===i?"win":""} ${P.mine===i?"mine":""}"><i style="width:${Math.round(o.v)}%"></i><span>${esc(o.t)}${P.final===i?" ✓":""}</span><b>${Math.round(o.v)}%</b></div>`:`<button class="popt btn-opt" data-act="fVote" data-id="${p.id}" data-o="${i}">${esc(o.t)}</button>`).join("")}<span class="sub">${fmtK(P.votes)} votes${P.final!=null?" · Final":P.mine!=null?" · You voted":""}</span></div>`}
+function postHTML(p,full){
+  const av=p.mine?`<div class="pav coachav">${coachSVG((S.coach&&S.coach.look)||"zip",T(S.user),34)}</div>`:`<div class="pav" aria-hidden="true">${esc((p.n||p.h).replace("@","").slice(0,1).toUpperCase())}</div>`;
+  const rep=(p.rep||[]).slice(0,full?6:2);
+  return `<div class="post ${p.viral?"viral":""} ${p.mine?"mine":""}">${av}<div style="min-width:0"><div class="ph"><b>${esc(p.n||p.h.slice(1))}</b>${p.v?'<span class="pver" title="Verified">✔</span>':""}<span class="sub">${esc(p.h)}</span>${p.tag?`<span class="tag">${esc(p.tag)}</span>`:""}</div>
+    <p>${esc(p.txt)}</p>${p.card?cardHTML(p.card):""}${p.poll?pollHTML(p):""}
+    <div class="pf"><button class="pact ${p.liked?"on":""}" data-act="fLike" data-id="${p.id}" aria-pressed="${!!p.liked}">♥ ${fmtK(p.likes)}</button><button class="pact ${p.rted?"on":""}" data-act="fRt" data-id="${p.id}" aria-pressed="${!!p.rted}">🔁 ${fmtK(p.rt)}</button>${!p.mine&&!isMP()?`<button class="pact" data-act="fReply" data-id="${p.id}">💬 ${fmtK((p.rep||[]).length*(p.viral?1300:p.mine?40:7)+Math.round(p.likes/90))}</button>`:`<span>💬 ${fmtK((p.rep||[]).length*(p.viral?1300:40)+Math.round(p.likes/90))}</span>`}</div>
+    ${S.replyTo===p.id?`<div class="qrep">${Object.entries(QREP).map(([k,x])=>`<button class="cpk" data-act="fSend" data-id="${p.id}" data-k="${k}"><span>${x.i}</span>${esc(x.n)}</button>`).join("")}</div>`:""}
+    ${rep.length?`<div class="preps">${rep.map(r=>`<div class="prep ${r.mine?"mine":""}"><b>${esc(r.n||r.h.slice(1))}</b>${r.v?'<span class="pver" title="Verified">✔</span>':""}<span class="sub">${esc(r.h)}</span><p>${esc(r.txt)}</p></div>`).join("")}</div>`:""}</div></div>`;
+}
+function feedHTML(n,list){ensureIds();const F=(list||S.feed||[]).slice(0,n);if(!F.length)return '<p class="muted">Nothing here yet. Play a game.</p>';return `<div class="feed">${F.map(p=>postHTML(p,n>5)).join("")}</div>`}
+function trending(){
+  const F=(S.feed||[]).slice(0,50),cnt={},me=T(S.user);
+  const bump=(k,w)=>{cnt[k]=(cnt[k]||0)+w};
+  for(const p of F){const t=p.tag||"";if(/Court storm/.test(t))bump("#CourtStorm",6);if(/Viral/.test(t))bump(`#Coach${(S.coach.name||me.abbr).replace(/\W/g,"")}`,5);if(t==="Upset")bump("#BracketBusted",3);if(/Rival|Feud/.test(t))bump("#CoachBeef",3);if(t==="Rivalry")bump(`#${me.abbr}Rivalry`,4);if(/Recruit|Portal/.test(t))bump("#SigningSzn",2);if(t==="Brawl")bump("#BenchesClear",5);if(t==="Press")bump("#PresserMoments",2);
+    for(const tm of S.teams)if((p.txt||"").includes(tm.name)&&tm.pres>=3)bump(`#${tm.name.replace(/\W/g,"")}`,1)}
+  bump(`#${me.abbr}Nation`,3);return Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>[k,Math.round(v*(140+Math.random()*90))]);
+}
+function profileHTML(){
+  if(isMP())return "";const P=prof(),me=T(S.user),L=sentLbl(P.sent),D=DEMEANOR[S.coach.dem];
+  return `<div class="panel cprof" style="--c1:${me.c1}"><div class="cpban"></div><div class="cprow">${coachSVG((S.coach&&S.coach.look)||"zip",me,64)}<div style="min-width:0"><b class="cpname">Coach ${esc(S.coach.name||me.abbr)} <span class="pver">✔</span></b>
+    <span class="sub">@Coach${esc((S.coach.name||me.abbr).replace(/\W/g,""))} · Head coach, ${esc(me.name)}${D?` · ${D.i} ${esc(D.n)}`:""}</span>
+    <div class="cpstats"><span><b>${fmtK(P.followers)}</b> followers</span><span><b>${P.following}</b> following</span><span><b>${P.posts}</b> posts</span></div></div></div>
+    <div class="sentm"><span>Fan approval</span><div class="sbar"><i style="width:${P.sent}%"></i></div><b class="${L[2]}">${L[1]} · ${Math.round(P.sent)}%</b></div>
+    ${folBoost()>.004?`<p class="sub">Your following is big enough to help on the recruiting trail.</p>`:""}</div>`;
+}
+function tabFeed(){
+  ensureIds();const f=S.cfilt||"all",list=(S.feed||[]).filter(p=>postMatch(p,f));S.feedSeen=S.fid||0;const tr=trending();
+  return `${profileHTML()}${composerHTML()}<div class="cswrap"><div class="panel" data-c="blue"><div class="row" style="justify-content:space-between"><h3>Courtside</h3><span class="sub">${list.length} posts</span></div>
+    <div class="cfilt">${CFILT.map(([k,l])=>`<button class="uchip ${f===k?"on":""}" data-act="cFilt" data-k="${k}" aria-pressed="${f===k}">${esc(l)}</button>`).join("")}</div>${feedHTML(40,list)}</div>
+    <aside class="panel trendp" data-c="amber"><h3>Trending</h3><ol class="trend">${tr.map(([k,v])=>`<li><b>${esc(k)}</b><span class="sub">${fmtK(v)} posts</span></li>`).join("")}</ol></aside></div>`;
+}
+const feedCard=()=>(S.feed||[]).length?`<div class="panel" data-c="blue"><div class="row" style="justify-content:space-between"><h3>Courtside</h3><button class="small-btn" data-act="tab" data-t="feed">See all</button></div>${feedHTML(3)}</div>`:"";
+const feedUnread=()=>{if(!S||!S.feed)return 0;ensureIds();return S.feed.filter(p=>p.id>(S.feedSeen||0)&&!p.mine).length};
+
+// ===== Likes, reposts, quick replies =====
+const QREP={clap:{n:"Clap back",i:"🔥"},laugh:{n:"Laugh it off",i:"😂"},thanks:{n:"Show love",i:"🙏"}};
+function fLike(id){const p=(S.feed||[]).find(x=>x.id===id);if(!p)return;p.liked=!p.liked;p.likes+=p.liked?1:-1}
+function fRt(id){const p=(S.feed||[]).find(x=>x.id===id);if(!p||p.rted)return;p.rted=true;p.rt++;if(!p.mine){const P=prof();P.followers+=Math.round(p.likes*.004)}}
+function fSend(id,k){
+  const p=(S.feed||[]).find(x=>x.id===id);if(!p||isMP())return;S.replyTo=null;const me=T(S.user),name=p.n||p.h,rival=/^@Coach/.test(p.h)&&!p.mine?S.teams.find(t=>coachHandle(t)===p.h):null;
+  const txt=k==="clap"?pick([`Respectfully, ${name}, see you on the court.`,`Save this tweet. You'll want it later.`,`Funny. Scoreboard says otherwise.`,`Keep that same energy when we play.`,`Noted. 📝`])
+    :k==="laugh"?pick(["😂😂😂","This is my favorite post today","LOL. Okay.","Lmao I needed that","Somebody frame this 😂"])
+    :pick([`Appreciate you, ${name}! 🙏`,`This is why we do it. Thank you!`,`Love our fans. ❤️`,`Means a lot. Let's keep it rolling.`,`🙏🏀`]);
+  (p.rep=p.rep||[]).unshift({h:`@Coach${(S.coach.name||me.abbr).replace(/\W/g,"")}`,n:`Coach ${S.coach.name||me.abbr}`,v:true,mine:true,txt});
+  const P=prof();P.posts++;p.likes+=Math.round(clout(k==="clap"?.6:.25));
+  if(k==="clap"){if(rival){addBeef(rival,6);p.rep.splice(1,0,{h:coachHandle(rival),n:`Coach ${coachOf(rival).n}`,v:true,txt:coachSays(rival,"reply",1)})}P.sent=clamp(P.sent+(Math.random()<.5?2:-1),5,98);if(Math.random()<.18+(isDem("kiff")?.25:0)){p.viral=true;p.likes+=clout(15);wire("Viral",`Coach ${S.coach.name||me.abbr}'s reply to ${name} is going viral.`)}}
+  if(k==="thanks")P.sent=clamp(P.sent+1.5,5,98);
+}
+
 // ===================== MY PLAYER: one player, high school to the NBA draft =====================
 // The dynasty runs as normal with the AI coaching your school. S.mp marks the save, and your player carries p.mp.
 const MPC={name:"",pos:"SG",ar:0,ht:76,st:4,step:"create",offers:null};
@@ -4357,7 +4499,7 @@ function renderHub(){
     ${S.coach.pts&&!isMP()?chip("","Skill points",S.coach.pts):""}
   </div>
   ${breakingTicker()}
-  <nav class="navgroups" aria-label="Sections">${groups.map(([g,ks])=>{const items=tabs.filter(([k])=>ks.includes(k));return items.length?`<div class="navg"><span class="navl">${g}</span><div class="tabs" role="tablist">${items.map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" role="tab" aria-selected="${S.tab===k}" data-act="tab" data-t="${k}"><span class="ti" aria-hidden="true">${TAB_ICON[k]}</span>${l}</button>`).join("")}</div></div>`:""}).join("")}</nav>
+  <nav class="navgroups" aria-label="Sections">${groups.map(([g,ks])=>{const items=tabs.filter(([k])=>ks.includes(k));return items.length?`<div class="navg"><span class="navl">${g}</span><div class="tabs" role="tablist">${items.map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" role="tab" aria-selected="${S.tab===k}" data-act="tab" data-t="${k}"><span class="ti" aria-hidden="true">${TAB_ICON[k]}</span>${l}${k==="feed"&&S.tab!=="feed"&&feedUnread()?`<span class="nbadge">${Math.min(99,feedUnread())}</span>`:""}</button>`).join("")}</div></div>`:""}).join("")}</nav>
   <div id="saveWarn" class="panel warn" ${saveErr?"":"hidden"}><b>Your progress isn't saving.</b><p>This browser's storage is full or turned off. Free up space or leave private browsing mode, then keep playing to save again.</p></div>
   ${S.tab==="home"?`<div class="hubgrid ${side.length?"":"solo"}"><div class="hubmain">${isMP()?mpCard():""}${canEditSched()&&!isMP()?preSchedStep():`${mmCard()}${exhCard()}${bcOpen()?bcCallout():""}${(()=>{const ug=userGame();return isMP()?"":pressCard()})()}${nextCard()}${(()=>{const ug=userGame();return ug?hypeCard(ug)+rivalryCard(ug)+rivalCoachCard(ug):""})()}${S.phase==="regular"&&S.day===0?coachTip():""}${ctPanel()}`}</div>${side.length?`<div class="hubside">${side.join("")}</div>`:""}</div>`
     :`<section class="tabbody">${({conspiracy:tabConspiracy,mp:tabMP,arena:tabArena,feed:tabFeed,weekly:tabWeekly,preseason:tabPreseason,locker:lockerTab,practice:tabPractice,uniforms:tabUniforms,trophies:tabTrophies,news:tabNews,schedule:tabSchedule,standings:tabStandings,top25:tabTop25,bracket:tabBracket,leaders:tabLeaders,roster:tabRoster,plan:tabPlan,coach:tabCoach,history:tabHistory})[S.tab]()}</section>`}
@@ -4588,7 +4730,7 @@ function startWatch(gm,kind){
   WATCH={g,gm,kind,key:gameKey(gm),speed:3,paused:false,banner:null,exp:expMargin(gm.h,gm.a,gm.neutral)};
   clearTimeout(wTimer);wTimer=setTimeout(wLoop,700);
 }
-function wStep(n){const W=WATCH,g=W.g;for(let i=0;i<n&&!g.over;i++){const bf=W.kind==="user"?{u:g.score[S.user],o:g.score[opp(g,S.user)],f:g.fouls[S.user]}:null;step(g);if(bf)rageStep(W,bf);chantStep(W);wpNote(W);if(g.last&&g.last.big)W.banner=g.last.txt;g.last=null}stormBanner(W);floorUpdate(W)}
+function wStep(n){const W=WATCH,g=W.g;for(let i=0;i<n&&!g.over;i++){const bf=W.kind==="user"?{u:g.score[S.user],o:g.score[opp(g,S.user)],f:g.fouls[S.user]}:null;step(g);if(bf){rageStep(W,bf);liveStep(W,bf)}chantStep(W);wpNote(W);if(g.last&&g.last.big)W.banner=g.last.txt;g.last=null}stormBanner(W);floorUpdate(W)}
 function wLoop(){if(!WATCH)return;if(!WATCH.paused&&!WATCH.g.over){wStep(WATCH.speed>=10?3:1);render()}if(WATCH&&!WATCH.g.over)wTimer=setTimeout(wLoop,SPEED[WATCH.speed])}
 function liveWP(W){
   const g=W.g;if(g.over)return g.score[g.home]>g.score[g.away]?1:0;
@@ -4620,7 +4762,7 @@ function renderWatch(){
   <div class="row">${g.over?`<button class="btn" data-act="wDone">${W.kind==="user"?"Continue":W.kind==="h2h"?"See the final":"Back to the hub"}</button>`:
     `<button class="btn ghost" data-act="wPause">${W.paused?"Resume":"Pause"}</button>${[1,3,10].map(v=>`<button class="tab ${W.speed===v?"on":""}" data-act="wSpeed" data-v="${v}">${v}x</button>`).join("")}<button class="btn ghost" data-act="wSkip">Skip to the end</button>${W.kind==="gotw"?'<button class="btn ghost" data-act="wLeave">Stop watching</button>':""}`}</div>
   ${g.over?"":`<div class="panel"><div class="oncourt">${onc(g.away)}${onc(g.home)}</div></div>`}
-  <div class="panel"><h3>Play by play</h3><div class="log" style="max-height:360px">${g.log.slice(0,24).map(l=>`<div class="${l.hl?"hl":""}"><span class="t">${esc(l.t)}</span>${esc(l.txt)}</div>`).join("")}</div></div>
+  ${liveFeedHTML(W)}<div class="panel"><h3>Play by play</h3><div class="log" style="max-height:360px">${g.log.slice(0,24).map(l=>`<div class="${l.hl?"hl":""}"><span class="t">${esc(l.t)}</span>${esc(l.txt)}</div>`).join("")}</div></div>
   ${g.over?`<div class="grid2">${boxScore(g,g.away)}${boxScore(g,g.home)}</div>`:""}`;
   liveMount(W,top,rest);
   floorKick();
@@ -4779,6 +4921,7 @@ const ACT={
   demPick(d){S.coach.dem=d.k},demLook(d){S.coach.look=d.k},
   cpSel(d){S.cpSel=d.k;S.cpTgt=null;S.lastPostMsg=""},cpTgt(d){S.cpTgt=+d.id},cpost(d){coachPost(d.k,d.id===""||d.id==null?null:+d.id);S.tab="feed";tabJump=true},
   press(d){pressAnswer(d.k)},
+  cFilt(d){S.cfilt=d.k},fLike(d){fLike(+d.id)},fRt(d){fRt(+d.id)},fReply(d){S.replyTo=S.replyTo===+d.id?null:+d.id},fSend(d){fSend(+d.id,d.k)},fVote(d){pollVote(+d.id,+d.o)},
   offseason(){mpPreOff();beginOffseason();if(S.mp)S.off.step="mp";else secretWalkOn();scrollTo(0,0)},meltdown(){meltdown()},
   mpPos(d){MPC.pos=d.k;MPC.ar=0;MPC.ht=Math.round((HT[d.k][0]+HT[d.k][1])/2)},mpAr(d){MPC.ar=+d.k},mpHt(d){MPC.ht=+d.k},mpSt(d){MPC.st=+d.k},mpSeeOffers(){mpSeeOffers();scrollTo(0,0)},mpBack(){MPC.step="create"},
   mpCommit(d){mpStart(+d.id);scrollTo(0,0)},mpFocus(d){if(S.mp)S.mp.focus=d.k},mpReturn(){mpAutoOff();scrollTo(0,0)},mpDeclare(){mpDeclare();scrollTo(0,0)},
