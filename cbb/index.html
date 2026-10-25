@@ -982,6 +982,35 @@ button:active:not(:disabled){transform:scale(.97)}
 .cpk.on{border-color:var(--amber,#ffc350);box-shadow:0 0 14px rgba(255,195,80,.3);color:#fff}
 .cpk:disabled{opacity:.4;cursor:not-allowed}
 @media (max-width:600px){.cpkinds{grid-template-columns:1fr 1fr}}
+
+/* hype card, press conference, ticker */
+.hype{position:relative;overflow:hidden;background:linear-gradient(135deg,color-mix(in srgb,var(--c2) 35%,rgba(6,12,30,.9)),color-mix(in srgb,var(--c1) 35%,rgba(6,12,30,.9)))!important;border:1px solid rgba(255,195,80,.35)!important}
+.hype::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.03) 0 12px,transparent 12px 30px);pointer-events:none}
+.hype-top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.hype-n{font-family:var(--hud,var(--num));font-size:46px;line-height:1;color:#ffd06a;text-shadow:0 0 22px rgba(255,190,80,.6)}
+.hype-l{font-family:var(--hud,var(--num));font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:13px}
+.hbar{height:8px;border-radius:4px;background:rgba(0,0,0,.35);overflow:hidden;margin:8px 0 10px}
+.hbar i{display:block;height:100%;background:linear-gradient(90deg,#6ed2ff,#ffc350,#ff4d4d);box-shadow:0 0 14px rgba(255,120,60,.6)}
+.story{margin:0 0 8px;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px;font-size:14px}
+.wow{display:flex;flex-direction:column;gap:6px;margin:8px 0;padding:10px;border-radius:12px;background:rgba(0,0,0,.25)}
+.wq{max-width:88%;padding:7px 10px;border-radius:12px;font-size:13.5px;line-height:1.35}
+.wq b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;margin-bottom:2px}
+.wq.them{align-self:flex-start;background:color-mix(in srgb,var(--c1) 40%,rgba(10,16,36,.9))}
+.wq.me{align-self:flex-end;background:color-mix(in srgb,var(--c2) 45%,rgba(10,16,36,.9));text-align:right}
+.ssplan{margin-top:8px;padding:10px;border-radius:12px;border:1px dashed rgba(255,195,80,.4)}
+.ssplan p{margin:4px 0}
+.sign{display:inline-block;padding:2px 8px;background:#fff8d6;color:#1b1206;border-radius:3px;transform:rotate(-1.5deg);font-family:var(--hud,var(--num));letter-spacing:.04em}
+.chant{display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;border-radius:999px;background:rgba(255,195,80,.15);color:#ffd06a;font-family:var(--hud,var(--num));font-size:11px;letter-spacing:.06em}
+.press .pq{font-family:var(--display);font-size:19px;line-height:1.3;margin:6px 0 10px}
+.pans{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.bticker{display:flex;align-items:stretch;overflow:hidden;border-radius:12px;border:1px solid rgba(255,90,90,.35);background:rgba(20,6,10,.75);min-width:0}
+.blbl{flex:none;display:flex;align-items:center;padding:6px 10px;background:#d81f2a;color:#fff;font-family:var(--hud,var(--num));font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+.btrack{flex:1;overflow:hidden;min-width:0;-webkit-mask:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);mask:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent)}
+.bmove{display:inline-flex;gap:28px;white-space:nowrap;padding:7px 0;animation:tick 70s linear infinite;font-size:13px}
+.bmove b{color:#ff8a8a;margin-right:6px;font-family:var(--hud,var(--num));font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+@keyframes tick{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion: reduce){.bmove{animation:none}}
+@media (max-width:600px){.hype-n{font-size:38px}.wq{max-width:94%}.pans{grid-template-columns:1fr 1fr}.bmove{font-size:12px}}
 </style>
 </head>
 <body>
@@ -1435,6 +1464,7 @@ function newGame(gm,txt){
   if(!gm.neutral){g.hfa+=ssEdge(gm);if(gm.h===S.user&&S.phase!=="h2h"&&S.ss&&S.ss.team===S.user)g.ssT=S.ss.trad.slice()}
   for(const id of [home,away])g.edge[id]+=trashEdge(gm,id);
   g.haunt=!gm.neutral&&!!haunted(T(home));const mine=home===S.user||away===S.user;g.heat=heatOf(gm)+(mine&&isDem("fiery")?.3:0);if(mine&&isDem("tac"))g.edge[S.user]+=.004;
+  if(mine){const myS=S.user,oo=home===myS?away:home,dOv=ovr(T(oo))-ovr(T(myS));if(isDem("lion")){g.dedge[myS]+=.004;g.edge[myS]-=.002}if(isDem("mind"))g.heat+=.2;if(isDem("dog"))g.edge[myS]+=dOv>=3?.006:dOv<=-5?-.003:0;if(home===myS&&!gm.neutral&&hypeOf(gm)>=80)g.hfa+=.002}
   if(mine&&isDem("kiff")){g.kmode=Math.random()<.5?"hot":"calm";if(g.kmode==="hot")g.heat+=.4;const ko=home===S.user?away:home;if(isRivalCoach(ko)&&beefOf(T(ko))>=25)g.edge[S.user]+=.004}
   for(const id of [home,away])setLineup(g,id,true);
   // Opening tip: the bigger center usually wins it.
@@ -1479,7 +1509,7 @@ function setLineup(g,id,fresh){
 // Minutes are credited when a lineup leaves the floor (and at each period break).
 function tick(g,sec){sec=Math.min(sec,g.clock);if(sec<=0)return;g.clock-=sec;g.el+=sec;g.stint[g.home]-=sec;g.stint[g.away]-=sec}
 function creditMin(g,id){const L=g.lu[id];if(!L)return;const dt=g.el-(g.luAt[id]||0);if(dt>0)for(const p of L)bx(g,p).min+=dt;g.luAt[id]=g.el}
-function ftPct(g,p,id){const A=g.A[p.id];return clamp(.6+((A.thr+A.mid)/2-55)*.0075-(p.pos==="C"?.05:0)+(id===S.user?S.coach.clutch*.03+(g.pb?g.pb.ft:0):0)+(hasGB(g,p,"ft")?.06:0)-(g.ssT&&id===g.away&&g.ssT.includes("distract")?.02:0),.45,.95)}
+function ftPct(g,p,id){const A=g.A[p.id];return clamp(.6+((A.thr+A.mid)/2-55)*.0075-(p.pos==="C"?.05:0)+(id===S.user?S.coach.clutch*.03+(g.pb?g.pb.ft:0):0)+(hasGB(g,p,"ft")?.06:0)-(g.ssT&&id===g.away&&g.ssT.includes("distract")?.02:0)-(id!==S.user&&(g.home===S.user||g.away===S.user)&&isDem("mind")?.02:0),.45,.95)}
 function score(g,id,pts,p){
   const o=opp(g,id),before=g.score[id]-g.score[o];g.score[id]+=pts;add(g,p,"pts",pts);const after=g.score[id]-g.score[o];
   if(before<=0&&after>0)g.lc++;
@@ -1706,7 +1736,7 @@ function playRound(userRes){
     const r=isU?userRes:pre||simGame(gm);
     gm.hs=r.hs;gm.as=r.as;gm.ot=r.ot;gm.winner=r.hs>r.as?r.h:r.a;
     S.results.push({h:gm.h,a:gm.a,hs:r.hs,as:r.as,type:gm.type,label:gm.label,day:S.phase==="regular"?S.day:null,neutral:!!gm.neutral,ot:r.ot});
-    seriesNote(gm);gamedayResult(gm);if(r.bz)noteBuzzer(gm,r.bz);gameAch(gm);relAfterGame(gm);uniResult(gm);gm.bz=r.bz;ssAfter(gm);rivalAfter(gm);feedAfter(gm);mpAfter(gm);mediaStorm(gm);demAfter(gm);ghostAfter(gm);techAfter(gm,r.ej);csAfter(gm);
+    seriesNote(gm);gamedayResult(gm);if(r.bz)noteBuzzer(gm,r.bz);gameAch(gm);relAfterGame(gm);uniResult(gm);gm.bz=r.bz;ssAfter(gm);rivalAfter(gm);feedAfter(gm);mpAfter(gm);rivxNote(gm);handshake(gm);stormAfter(gm);mediaStorm(gm);pressAfter(gm);demAfter(gm);ghostAfter(gm);techAfter(gm,r.ej);csAfter(gm);
     if(isSeniorNight(gm)){const sn=seniorsOf(T(S.user));news(`Senior Night: ${gm.winner===S.user?"a win to send off":"a tough loss for"} ${sn.length?sn.map(p=>p.n).join(", "):"the seniors"}.`)}
     const w=gm.winner,l=w===gm.h?gm.a:gm.h,up=ovr(T(w))<ovr(T(l))-5;
     S.mo=S.mo||{};S.mo[w]=clamp((S.mo[w]||0)*.6+1+(up?.5:0),-3,3);S.mo[l]=clamp((S.mo[l]||0)*.6-1,-3,3);
@@ -1718,6 +1748,7 @@ function playRound(userRes){
   for(const t of S.teams)for(const p of t.roster)if(p.inj>0){p.inj--;if(!p.inj&&t.id===S.user)news(`${p.pos} ${p.n} is back from injury.`)}
   weekNote(games);S.roundLog=null;S.preRes={};RK.key=null;
   advancePhase(games);
+  try{studentPregame()}catch(e){}
   if(S.phase==="regular"&&S.day%2===0||S.phase!=="regular"){voteAP();if(S.phase==="regular"||S.phase==="selection")buildWeekly()}
   const now=rankIds().slice(0,25),newTop=now[0];if(before[0]!==undefined&&newTop!==before[0]&&S.phase!=="offseason")wire("No. 1",`${T(newTop).name} take over the top spot in the AP poll.`);
   S.tab="home";
@@ -1937,7 +1968,7 @@ function beginOffseason(){
   const myDraft=draft.map((d,i)=>({...d,pick:i+1})).filter(d=>d.t.id===u).map(d=>({name:d.p.n,pos:d.p.pos,round:d.p.draft.round,pick:d.pick}));
   const topDraft=draft.slice(0,10).map(d=>({name:d.p.n,pos:d.p.pos,tid:d.t.id,pick:draft.indexOf(d)+1,why:d.why}));
   const mmBank=S.mm&&S.mm.season===S.season?S.mm.bank:0;
-  const pts=mmBank+Math.max(5,Math.round((24+rec.w*.6+tw*1.5+(champ?4:0)+me.pres*2+3*fac("rec"))*(1+.15*S.coach.rec)*dif().pts));
+  const pts=mmBank+Math.max(5,Math.round((24+rec.w*.6+tw*1.5+(champ?4:0)+me.pres*2+3*fac("rec"))*(1+.15*S.coach.rec)*dif().pts*(isDem("ceo")?1.12:1)));
   S.off={step:"yearbook",tw:twList,realign:RA.moves,invite:RA.invite,shot:shotOfYear(),departed,draft:myDraft,topDraft,points:pts,portal:buildPortal(),portalSigned:0,pf:"All",
     board:me.openSlots.map(i=>({i,pos:me.roster[i].pos,signed:null,cands:boardStars().map(st=>makeProspect(me.roster[i].pos,st)).concat([makeVet(me.roster[i].pos,"juco"),makeVet(me.roster[i].pos,"intl")])}))};
   S.off.car=runCarousel();
@@ -2469,7 +2500,7 @@ function tabTrophies(){
 
 // ===================== MOMENTUM, CROWD & HOT HANDS =====================
 // g.mom runs from -1 (road team rolling) to +1 (home team rolling). Runs build it, every trip bleeds a little off.
-function momShift(g,id,pts){g.mom=clamp((g.mom||0)+(id===g.home?1:-1)*pts*.05*(g.ssT&&g.ssT.includes("silent")?1.3:1),-1,1)}
+function momShift(g,id,pts){g.mom=clamp((g.mom||0)+(id===g.home?1:-1)*pts*.05*(g.ssT&&g.ssT.includes("silent")?1.3:1)*(S&&(g.home===S.user||g.away===S.user)&&isDem("rock")?1.3:1),-1,1)}
 function crowdLevel(g){
   if(g.neutral)return {n:g.type==="ncaa"?"Tournament crowd":"Neutral floor",v:.4};
   const v=clamp((T(g.home).hfa/5)*.7+(g.mom||0)*.3+(g.gd?.12:0),0,1);
@@ -3402,7 +3433,8 @@ function demTechOK(id){if(!S||id!==S.user)return true;return isDem("strict")?Mat
 function demAfter(gm){
   const D=DEMEANOR[dem()];if(!D)return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;const won=gm.winner===u,t=T(u);
   if(isDem("players"))for(const p of t.roster)if(p.rel!=null)p.rel=Math.min(100,p.rel+.6);
-  if(isDem("strict"))for(const p of t.roster)if(p.rel!=null)p.rel=Math.max(0,p.rel-.3);
+  if(isDem("strict")||isDem("ceo"))for(const p of t.roster)if(p.rel!=null)p.rel=Math.max(0,p.rel-(isDem("ceo")?.2:.3));
+  if(isDem("rock")&&gm.h===u&&!gm.neutral&&S.ss&&S.ss.team===u)S.ss.energy=Math.min(100,S.ss.energy+1);
   if(isDem("show")&&gm.h===u&&!gm.neutral&&S.ss&&S.ss.team===u)S.ss.energy=Math.min(100,S.ss.energy+1);
   if(isDem("kiff")){if(gm.h===u&&!gm.neutral&&S.ss&&S.ss.team===u)S.ss.energy=Math.min(100,S.ss.energy+2);kiffPost(gm,won)}
   if(Math.random()<.55)post({h:`@Coach${coachName().replace(/\W/g,"")||t.abbr}`,n:`Coach ${coachName()}`,v:true,txt:pick(won?D.q:D.lq),tag:"Postgame",mine:true,rep:reactions(won?"mine":"rivalWon",{}),likes:clout(won?2:1)});
@@ -3638,6 +3670,155 @@ function composerHTML(){
   return `<div class="panel composer" data-c="amber"><div class="row" style="justify-content:space-between"><h3>Post as Coach ${esc(S.coach.name||me.abbr)}</h3><span class="tag ${left?"":"bad"}">${left} post${left===1?"":"s"} left today</span></div>
     <div class="cpkinds">${Object.entries(CPOST).map(([k,x])=>`<button class="cpk ${pk===k?"on":""}" data-act="cpSel" data-k="${k}" ${ok(k)?"":"disabled"} aria-pressed="${pk===k}"><span>${x.i}</span>${esc(x.n)}</button>`).join("")}</div>
     ${target}<div class="row"><button class="btn" data-act="cpost" data-k="${pk}" data-id="${S.cpTgt??""}" ${left&&ok(pk)?"":"disabled"}>Post it</button>${S.lastPostMsg?`<span class="sub">${esc(S.lastPostMsg)}</span>`:""}</div></div>`;
+}
+
+// ===================== FIVE MORE COACHING TYPES =====================
+Object.assign(DEMEANOR,{
+  lion:{n:"Lion Tamer",i:"🦁",d:"Stares down grown men for a living. Defense or the bench.",up:"Your defense is noticeably tougher every game",down:"Your offense gets a little stiff",q:["We held them under their average. That's the job.","Defense wins. It always will.","My guys guarded like their dinner depended on it.","They didn't want to drive on us. I could see it in their eyes."],lq:["We didn't guard. Simple. We will.","Soft. I'm embarrassed.","Defense travels. Tonight it got lost at the airport."]},
+  rock:{n:"Rockstar",i:"🎸",d:"Leather jacket, entrance music, jumps into the student section.",up:"Momentum swings harder in your favor and the students love you",down:"When the other team gets rolling, it snowballs too",q:["That building was ROCKING. Best crowd in America!","We fed off the energy all night. Unreal.","Encore next week. Bring a friend.","I crowd-surfed a little. Don't tell the AD."],lq:["We lost the crowd for a stretch and it cost us.","Bad gig. We'll play better next show.","The energy wasn't there. That's on me."]},
+  ceo:{n:"CEO",i:"👔",d:"Runs the program like a Fortune 500 company. Has a five-year plan.",up:"About 12% more recruiting points every offseason",down:"Players feel a little less connected to you",q:["Good execution across the organization.","We're ahead of schedule on the five-year plan.","Strong quarter for the program.","Process over outcome. Tonight we got both."],lq:["One data point. The plan doesn't change.","We'll review it in Monday's staff meeting.","Disappointing result. Long-term outlook unchanged."]},
+  mind:{n:"Mind Gamer",i:"🕵️",d:"Plays chess while everybody else plays checkers. Opponents hate him.",up:"Opponents shoot worse from the line in your games",down:"Your games get chippier and more technicals fly",q:["They were thinking about us all week. That's the win.","I told my guys something at halftime. I'll never tell you what.","Got in their heads. Kept it there.","Ask their point guard why he was so nervous."],lq:["They kept their composure. Credit to them.","My mind games didn't work tonight. They will next time.","Somebody outsmarted me. Doesn't happen often."]},
+  dog:{n:"Underdog Whisperer",i:"🐕",d:"Built for March. Loves being counted out.",up:"Your team plays much better when it's the underdog",down:"Plays down to weaker teams when you're the favorite",q:["Nobody believed in us. Good. Keep doing that.","Everybody picked against us. Again.","We LOVE being the underdog.","Bark bark. 🐕"],lq:["We played down to them. That can't happen.","Being the favorite is hard. We'll learn.","We weren't hungry enough tonight."]}});
+
+// ===================== HYPE METER & STORYLINES =====================
+const SIGNS=["{OC} STILL USES A FLIP PHONE","{STAR}'S MOM IS HERE. SHE'S ROOTING FOR US","{OA} = OVERRATED","WE DRIVE BETTER CARS THAN {OA}","{OC}, YOUR TIE IS UGLY","MY GPA > {STAR}'S FREE THROW %","{OA} HAS A GREAT ACADEMIC... JUST KIDDING","WILL YOU MARRY ME? (NOT YOU {STAR})","{STAR} CAN'T GO LEFT","I SKIPPED CLASS FOR THIS","{SS} SAYS HI","COACH {MC} FOR PRESIDENT","{OA}'S MASCOT SMELLS","THIS SIGN IS LOUDER THAN {OA}'S CROWD","{OC} {QUIRK}","WE CAMPED OUT 3 DAYS FOR THIS","SCOREBOARD > YOUR FEELINGS","{STAR}, CALL YOUR MOM. SHE MISSES YOU","HI MOM! (WE'RE WINNING)","IT'S ALL FUN AND GAMES UNTIL {OA} SHOWS UP. (THEN IT'S STILL FUN)"];
+const CHANTS=[[0,"DE-FENSE! DE-FENSE!"],[45,"AIR-BALL! AIR-BALL!"],[60,"SCORE-BOARD! SCORE-BOARD!"],[72,"O-VER-RA-TED!"],[84,"YOU CAN'T DO THAT!"],[94,"{SS}! {SS}!"]];
+function chantFor(e){const X=S.ss,nm=X?X.name.replace(/^The /,"").toUpperCase():"";return CHANTS.filter(c=>e>=c[0]).map(c=>c[1].replace(/\{SS\}/g,nm))}
+function signFor(gm){
+  const u=S.user,o=T(gm.h===u?gm.a:gm.h),oc=coachOf(o),tr=coachTraits(o),star=o.roster.slice().sort((a,b)=>b.ovr-a.ovr)[0],X=S.ss&&S.ss.team===u?S.ss:null;
+  S.signs=S.signs||{};const k=gameKey(gm)+S.season;if(S.signs[k])return S.signs[k];
+  return S.signs[k]=pick(SIGNS).replace(/\{OC\}/g,`COACH ${oc.n.split(" ").pop().toUpperCase()}`).replace(/\{QUIRK\}/g,tr.quirk.toUpperCase()).replace(/\{STAR\}/g,star?star.n.split(" ").pop().toUpperCase():"THEIR STAR")
+    .replace(/\{OA\}/g,o.abbr).replace(/\{SS\}/g,X?X.name.toUpperCase():"THE STUDENTS").replace(/\{MC\}/g,(S.coach.name||T(u).abbr).toUpperCase());
+}
+function hypeOf(gm){
+  if(!S||S.phase==="h2h"||!gm)return 0;const u=S.user;if(gm.h!==u&&gm.a!==u)return 0;const o=gm.h===u?gm.a:gm.h,ru=rankOf(u),ro=rankOf(o);
+  let h=18+(rivalryOf(gm.h,gm.a)?30:0)+(isRivalCoach(o)?12+beefOf(T(o))*.3:0)+(ru<=25&&ro<=25?16:ro<=25||ru<=25?7:0)+(ro<=5||ru<=5?8:0)+(isGameDay(gm)?12:0)+(gm.type==="ncaa"?22:gm.type==="ct"?10:0);
+  if(gm.h===u&&!gm.neutral&&S.ss&&S.ss.team===u)h+=S.ss.energy/10;if(isDem("kiff")||isDem("rock")||isDem("show"))h+=6;
+  return Math.round(clamp(h,5,100));
+}
+const hypeLbl=h=>h>=90?"MAXIMUM HYPE":h>=75?"Must-see TV":h>=55?"Big game":h>=35?"Buzzing":"Quiet night";
+function storylines(gm){
+  const u=S.user,o=gm.h===u?gm.a:gm.h,t=T(o),out=[],riv=rivalryOf(gm.h,gm.a);
+  if(riv){const s=seriesOf(u,o),R=S.rivx&&S.rivx[pairKey(u,o)],a=s[u]||0,b=s[o]||0;out.push(`🔥 ${riv}. ${a+b===0?"First meeting in this dynasty.":a===b?`Series tied ${a}-${b}.`:a>b?`You lead the series ${a}-${b}.`:`You trail the series ${a}-${b}.`}`);
+    if(R&&R.streak&&R.streak.n>=2)out.push(`📈 ${T(R.streak.id).name} have won ${R.streak.n} straight in this rivalry.`)}
+  if(isRivalCoach(o)){const b=beefOf(t),c=coachOf(t);out.push(`🥊 Coach vs coach: you vs Coach ${c.n}. Feud level: ${BEEF_LBL[beefTier(b)]}.`)}
+  const ru=rankOf(u),ro=rankOf(o);if(ru<=25&&ro<=25)out.push(`🏅 Top-25 clash: No. ${ru} vs No. ${ro}.`);else if(ro<=10)out.push(`🎯 Upset alert: a win over No. ${ro} would be the biggest of your season.`);
+  const mo=(S.mo||{})[o]||0,mu=(S.mo||{})[u]||0;if(mo>=2)out.push(`⚠️ ${t.name} are red-hot coming in.`);if(mu>=2)out.push(`💪 Your team is rolling.`);if(mu<=-2)out.push(`😬 You need this one. The slide has to stop.`);
+  if(isGameDay(gm))out.push("📺 College GameDay is in the building.");
+  const star=t.roster.slice().sort((a,b)=>b.ovr-a.ovr)[0];if(star&&star.s.g)out.push(`👀 Watch out for ${star.n}: ${f1(star.s.pts/star.s.g)} ppg.`);
+  return out.slice(0,5);
+}
+function warOfWords(gm){
+  const u=S.user,o=gm.h===u?gm.a:gm.h;if(!isRivalCoach(o)||beefOf(T(o))<25)return "";const t=T(o),c=coachOf(t);
+  S.wow=S.wow||{};const k=gameKey(gm)+S.season;const W=S.wow[k]||(S.wow[k]=[coachSays(t,"pre",1),pick(["We'll answer on the court.","Cute. See you at tip-off.","Keep talking. My guys are listening.","I don't do Twitter fights. I do scoreboards."]),coachSays(t,"reply",1)]);
+  return `<div class="wow"><span class="eyebrow">War of words</span>
+    <div class="wq them"><b>Coach ${esc(c.n)}</b>${esc(W[0])}</div><div class="wq me"><b>Coach ${esc(coachName())}</b>${esc(W[1])}</div><div class="wq them"><b>Coach ${esc(c.n)}</b>${esc(W[2])}</div></div>`;
+}
+function hypeCard(gm){
+  if(!gm||isMP())return "";const h=hypeOf(gm);if(h<45)return "";const u=S.user,o=T(gm.h===u?gm.a:gm.h),home=gm.h===u&&!gm.neutral,X=S.ss&&S.ss.team===u?S.ss:null;
+  const ch=X?chantFor(X.energy):[];
+  return `<div class="panel hype" style="--c1:${o.c1};--c2:${T(u).c1}"><div class="hype-top"><span class="eyebrow">Tonight</span><b class="hype-n">${h}</b><span class="hype-l">${esc(hypeLbl(h))}</span></div>
+    <div class="hbar"><i style="width:${h}%"></i></div>
+    <ul class="story">${storylines(gm).map(s=>`<li>${esc(s)}</li>`).join("")}</ul>
+    ${warOfWords(gm)}
+    ${home&&X?`<div class="ssplan"><span class="eyebrow">${esc(X.name)}</span><p>Sign of the night: <b class="sign">"${esc(signFor(gm))}"</b></p>${ch.length?`<p class="sub">Chants ready: ${ch.map(c=>`<span class="chant">${esc(c)}</span>`).join(" ")}</p>`:""}</div>`:""}
+    ${h>=80&&home?'<p class="sub">🔊 The hype is so big your crowd gets an extra boost tonight.</p>':""}</div>`;
+}
+
+// ===================== POSTGAME PRESS CONFERENCE =====================
+const OUTLETS=["Hardwood Herald","Bracket Daily","CBB Today","The Rim Report","Courtside Central","Hoops Insider"];
+const PQ={win:["Coach, what was the difference tonight?","Is this the best your team has played all year?","How big is this win for your program?","What did you tell the guys after the buzzer?"],
+  loss:["Coach, what went wrong out there?","Are you worried about where this team is headed?","Fans are frustrated. What do you say to them?","Was that an effort problem or a talent problem?"],
+  rival:["How much did this rivalry game mean to you?","Their coach said some things this week. Any response?","What does this one do for bragging rights?"],
+  upset:["Did you think your team could pull this off?","What does an upset like this do for your recruiting?","Nobody gave you a chance. How does that feel?"],
+  blowL:["Coach, was that embarrassing?","How do you bounce back from a beating like that?"],
+  ejected:["You got tossed tonight. Want to explain?","Was the ejection worth it?"]};
+const PA={
+  humble:{n:"Stay humble",i:"🙏",win:["Credit to our players. I just try not to mess it up.","Good win, but we have a long way to go.","We respect every opponent. Tonight we were a little better."],loss:["That's on me. I'll be better.","Credit to them. We'll learn from it.","Our fans deserve better and they'll get it."]},
+  conf:{n:"Be confident",i:"😎",win:["Get used to it.","We're the best team in this league. I said it.","That's who we are. Everybody else is finding out."],loss:["One loss doesn't change anything. We're still coming.","Mark it down: we'll be playing in March.","I'm not worried. Not even a little."]},
+  fire:{n:"Light it up",i:"🔥",win:["Tell {oc} to enjoy the bus ride home.","Their whole program talks too much. Not anymore.","{oa} wanted smoke. They got it."],loss:["The refs decided that game. Write it down.","{oa} got lucky and they know it.","Enjoy it, {oc}. We'll see you again and it won't be close."]},
+  walk:{n:"Walk out",i:"🚪",win:["(Coach drops the mic, puts on sunglasses, and leaves.)","\"No questions. Scoreboard.\" (Walks out.)"],loss:["\"I'm good.\" (Walks out 40 seconds in.)","(Coach stares at the reporter for 9 seconds, then leaves.)"]}};
+function pressAfter(gm){
+  if(!S||S.phase==="h2h"||isMP())return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;const won=gm.winner===u,o=gm.h===u?gm.a:gm.h,mg=Math.abs(gm.hs-gm.as);
+  const kind=(gm.ej||[]).some(e=>e.coach&&e.tid===u)?"ejected":rivalryOf(gm.h,gm.a)||isRivalCoach(o)?"rival":won&&rankOf(o)<=15&&ovr(T(o))>ovr(T(u))?"upset":!won&&mg>=20?"blowL":won?"win":"loss";
+  S.presser={k:gameKey(gm)+S.season,q:pick(PQ[kind]),kind,won,o,outlet:pick(OUTLETS),done:null};
+}
+function pressAnswer(tone){
+  const P=S.presser;if(!P||P.done)return;const A=PA[tone],o=T(P.o),oc=coachOf(o),me=T(S.user);
+  const q=pick(P.won?A.win:A.loss).replace(/\{oc\}/g,`Coach ${oc.n}`).replace(/\{oa\}/g,o.name);P.done={tone,q};
+  const viral=Math.random()<({humble:.04,conf:.15,fire:.32,walk:.55}[tone])+(isDem("kiff")?.25:0);
+  const head=tone==="walk"?`Coach ${coachName()} walks out of ${P.won?"a victory":"his"} press conference`:tone==="fire"?`Coach ${coachName()} goes nuclear on ${o.name}`:tone==="conf"?`Coach ${coachName()}: "${q.replace(/[.!]+$/,"")}"`:`Coach ${coachName()} keeps it classy`;
+  const p={h:"@"+P.outlet.replace(/\W/g,""),n:P.outlet,v:true,txt:`${head}${head.endsWith('"')?"":"."} Asked "${P.q}" he said: ${tone==="walk"?q:`"${q}"`}`,tag:viral?"🔥 Viral":"Press",likes:clout(viral?20+Math.random()*30:3),viral};
+  p.rep=reactions(tone==="humble"?"mine":"mine",{});
+  if((tone==="fire"||tone==="walk")&&isRivalCoach(o.id)){addBeef(o,tone==="fire"?12:6);p.rep.unshift({h:coachHandle(o),n:`Coach ${oc.n}`,v:true,txt:coachSays(o,"reply",1)})}
+  post(p);const msg=[];
+  if(tone==="humble"){S.job.sec=clamp(S.job.sec+.4,0,100);for(const x of me.roster)if(x.rel!=null)x.rel=Math.min(100,x.rel+1);msg.push("The AD and your locker room liked that.")}
+  if(tone==="conf"&&S.ss&&S.ss.team===S.user){S.ss.energy=Math.min(100,S.ss.energy+3);msg.push("Your students are fired up.")}
+  if(tone==="fire"){if(S.ss&&S.ss.team===S.user)S.ss.energy=Math.min(100,S.ss.energy+4);msg.push(isRivalCoach(o.id)?`Coach ${oc.n} is furious.`:"Bulletin-board material for the next opponent.")}
+  if(tone==="walk"){S.job.sec=clamp(S.job.sec-.6,0,100);msg.push("It's already a meme.")}
+  if(viral){wire("Viral",`${head}. The clip has ${fmtK(p.likes)} likes.`);msg.push("The clip went VIRAL.")}
+  P.msg=msg.join(" ");
+}
+function pressCard(){
+  const P=S.presser;if(!P||isMP())return "";if(P.done&&P.shown>=2)return "";if(P.done)P.shown=(P.shown||0)+1;
+  return `<div class="panel press" data-c="amber"><div class="row" style="justify-content:space-between"><h3>🎙️ Postgame press conference</h3><span class="tag">${esc(P.outlet)}</span></div>
+    <p class="pq">"${esc(P.q)}"</p>
+    ${P.done?`<p><b>You:</b> ${esc(P.done.q)}</p>${P.msg?`<p class="sub">${esc(P.msg)}</p>`:""}`:`<div class="pans">${Object.entries(PA).map(([k,x])=>`<button class="cpk" data-act="press" data-k="${k}"><span>${x.i}</span>${esc(x.n)}</button>`).join("")}</div>`}</div>`;
+}
+
+// ===================== RIVALRY HISTORY =====================
+function rivxNote(gm){
+  if(!rivalryOf(gm.h,gm.a))return;S.rivx=S.rivx||{};const k=pairKey(gm.h,gm.a),R=S.rivx[k]||(S.rivx[k]={streak:null,big:null,games:0});R.games++;
+  R.streak=R.streak&&R.streak.id===gm.winner?{id:gm.winner,n:R.streak.n+1}:{id:gm.winner,n:1};const mg=Math.abs(gm.hs-gm.as);
+  if(!R.big||mg>R.big.mg)R.big={mg,w:gm.winner,season:S.season,hs:gm.hs,as:gm.as};
+  const u=S.user;if(gm.h!==u&&gm.a!==u||S.phase==="h2h")return;const won=gm.winner===u,o=T(gm.h===u?gm.a:gm.h),me=T(u);
+  if(won){if(S.ss&&S.ss.team===u)S.ss.energy=Math.min(100,S.ss.energy+5);news(`Bragging rights: ${me.name} beat ${o.name} in ${rivalryOf(gm.h,gm.a)}. ${R.streak.n>=2?`That's ${R.streak.n} straight.`:""}`);
+    post({h:`@${me.abbr}Nation`,n:`${me.name} Nation`,txt:pick([`${rivalryOf(gm.h,gm.a).toUpperCase()} BELONGS TO US 🏆`,`${o.abbr} fans, how's the view from down there? 😂`,`BRAGGING RIGHTS SECURED. ${R.streak.n>=2?`${R.streak.n} IN A ROW.`:""}`,`The ${o.name} group chat is SILENT right now 🤫`]),tag:"Rivalry",likes:clout(5),rep:reactions("mine",{})})}
+  else post({h:`@${o.abbr}Nation`,n:`${o.name} Nation`,txt:pick([`${me.abbr} fans real quiet tonight 🤫`,`Owned. Again. ${R.streak.n>=2?`${R.streak.n} straight. `:""}🏆`,`Tell ${me.name} to try again next year 😂`]),tag:"Rivalry",likes:clout(3),rep:reactions("rivalWon",{})});
+}
+function rivalryHub(){
+  const u=S.user,me=T(u),rows=RIVALS.filter(r=>r[0]===me.abbr||r[1]===me.abbr).map(r=>{const o=idOf(r[0]===me.abbr?r[1]:r[0]);return o<0?null:{o,name:r[2]}}).filter(Boolean);
+  if(!rows.length)return "";
+  return `<div class="panel" data-c="amber"><h3>Rivalries</h3><div class="rcards">${rows.map(({o,name})=>{const s=seriesOf(u,o),R=(S.rivx||{})[pairKey(u,o)],L=s.last,t=T(o);
+    return `<div class="rcard" style="--c1:${t.c1}"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b>${esc(name)}</b>${badge(t)}</div>
+      <span class="num" style="font-size:22px">${s[u]||0}-${s[o]||0}</span><span class="sub">Series vs ${esc(t.name)}</span>
+      ${R&&R.streak?`<span class="sub">Streak: ${esc(T(R.streak.id).abbr)} ${R.streak.n}</span>`:""}${R&&R.big?`<span class="sub">Biggest win: ${esc(T(R.big.w).abbr)} by ${R.big.mg} (${seasonLabel(R.big.season)})</span>`:""}
+      ${L?`<span class="sub">Last: ${esc(T(L.w).abbr)} ${Math.max(L.hs,L.as)}-${Math.min(L.hs,L.as)}</span>`:'<span class="sub">No meetings yet</span>'}</div>`}).join("")}</div></div>`;
+}
+
+// ===================== STUDENT SECTION: COURT STORMS, CHANTS, PREGAME POSTS =====================
+function stormCheck(gm){const u=S.user;if(S.phase==="h2h"||gm.h!==u||gm.neutral||gm.winner!==u)return false;const o=gm.a,ro=rankOf(o);return ro<=12||(rivalryOf(gm.h,gm.a)&&hypeOf(gm)>=85)||(isRivalCoach(o)&&beefOf(T(o))>=60)}
+function stormAfter(gm){
+  if(!stormCheck(gm))return;const me=T(S.user),o=T(gm.a),X=S.ss&&S.ss.team===S.user?S.ss:null;S.storms=(S.storms||0)+1;
+  if(X)X.energy=Math.min(100,X.energy+10);
+  news(`🏃 COURT STORM! ${X?X.name:"The students"} poured onto the floor after the win over ${o.name}.${gm.type==="reg"&&o.conf===me.conf?` The ${CONFS[me.conf]} fined the school $25,000. Worth it.`:""}`);
+  wire("Court storm",`${me.name} fans storm the court after beating ${rankOf(o.id)<=25?`No. ${rankOf(o.id)} `:""}${o.name}.`);
+  post({h:`@${me.abbr}Students`,n:X?X.name:`${me.name} Students`,txt:pick(["WE ARE ON THE COURT RIGHT NOW 🏃‍♂️🏃‍♀️🏃","I lost a shoe. I don't care. BEST NIGHT OF MY LIFE","Somebody is crowd-surfing on the scorer's table 😭","STORM THE COURT!!! (we already did)"]),tag:"🔥 Court storm",viral:true,likes:clout(30),rep:reactions("mine",{})});
+  post({h:pick(ANALYSTS)[0],n:"",v:true,txt:`Scenes at ${me.arena}. That's what college basketball is about.`,tag:"Trending",likes:clout(8)});
+}
+// Live games only: the students chant when the moment's right.
+function chantStep(W){
+  const g=W.g;if(S.phase==="h2h"||W.kind!=="user"||g.home!==S.user||g.neutral||!S.ss||S.ss.team!==S.user||g.over)return;W.ct=(W.ct||0)+1;
+  if(W.ct%22!==0)return;const C=chantFor(S.ss.energy);if(!C.length)return;const lead=g.score[g.home]-g.score[g.away];
+  const c=lead>=12&&C.includes("SCORE-BOARD! SCORE-BOARD!")?"SCORE-BOARD! SCORE-BOARD!":pick(C);say(g,`${S.ss.name}: "${c}"`,Math.random()<.4);
+}
+function stormBanner(W){const g=W.g;if(!g.over||W.stormed||W.kind!=="user")return;const gm={h:g.home,a:g.away,neutral:g.neutral,winner:g.score[g.home]>g.score[g.away]?g.home:g.away,type:g.type};
+  if(stormCheck(gm)){W.stormed=true;W.banner=`🏃 THE STUDENTS ARE STORMING THE COURT! ${S.ss&&S.ss.team===S.user?S.ss.name:""}`.trim()}}
+function studentPregame(){
+  const gm=userGame();if(!gm||S.phase==="h2h"||isMP()||gm.h!==S.user||gm.neutral||!S.ss||S.ss.team!==S.user)return;const h=hypeOf(gm);if(h<50)return;
+  S.spre=S.spre||{};const k=gameKey(gm)+S.season;if(S.spre[k])return;S.spre[k]=1;const X=S.ss,o=T(gm.a);
+  post({h:`@${T(S.user).abbr}Students`,n:X.name,txt:`${pick(["GAME DAY.","IT'S TIME.","TONIGHT.","LINE STARTS AT NOON."])} ${o.name} comes to town. ${X.theme[gameKey(gm)]?`${THEMES.find(x=>x[0]===X.theme[gameKey(gm)])[1].toUpperCase()}. `:""}Sign of the night: "${signFor(gm)}" 📣`,tag:"Students",likes:clout(2)});
+}
+
+// ===================== BREAKING NEWS TICKER =====================
+function breakingTicker(){
+  if(!S||isMP())return "";const W=(S.wire||[]).slice(0,6).map(w=>`<span><b>${esc(w.tag)}</b> ${esc(w.text)}</span>`),V=(S.feed||[]).filter(p=>p.viral).slice(0,2).map(p=>`<span><b>Viral</b> ${esc(p.n||p.h)}: ${esc(p.txt.slice(0,90))}</span>`);
+  const items=[...V,...W];if(!items.length)return "";
+  return `<div class="bticker" aria-label="Breaking news"><span class="blbl">Breaking</span><div class="btrack"><div class="bmove">${items.join("")}${items.join("")}</div></div></div>`;
+}
+function handshake(gm){if(!S||S.phase==="h2h")return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;const o=gm.h===u?gm.a:gm.h;if(!isRivalCoach(o))return;const t=T(o),b=beefOf(t),c=coachOf(t);
+  if(b>=60){news(`Coach ${c.n} skipped the handshake line after the game.`);post({h:pick(ANALYSTS)[0],n:"",v:true,txt:`No handshake between Coach ${coachName()} and Coach ${c.n}. This feud is REAL.`,tag:"Feud",likes:clout(6),rep:reactions("game",{})})}
+  const was=S.beefLast&&S.beefLast[c.n]||0;S.beefLast=S.beefLast||{};S.beefLast[c.n]=b;if(beefTier(b)>beefTier(was))wire("Feud alert",`Coach ${coachName()} vs Coach ${c.n} is now ${BEEF_LBL[beefTier(b)].toLowerCase()}.`);
 }
 
 // ===================== MY PLAYER: one player, high school to the NBA draft =====================
@@ -4049,9 +4230,10 @@ function renderHub(){
     ${isMP()?chip("amber","My OVR",mpP()?mpP().ovr:"-"):chip(jc,"Job",`${secLabel(S.job.sec)} <small>${Math.round(S.job.sec)}</small>`)}
     ${S.coach.pts&&!isMP()?chip("","Skill points",S.coach.pts):""}
   </div>
+  ${breakingTicker()}
   <nav class="navgroups" aria-label="Sections">${groups.map(([g,ks])=>{const items=tabs.filter(([k])=>ks.includes(k));return items.length?`<div class="navg"><span class="navl">${g}</span><div class="tabs" role="tablist">${items.map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" role="tab" aria-selected="${S.tab===k}" data-act="tab" data-t="${k}"><span class="ti" aria-hidden="true">${TAB_ICON[k]}</span>${l}</button>`).join("")}</div></div>`:""}).join("")}</nav>
   <div id="saveWarn" class="panel warn" ${saveErr?"":"hidden"}><b>Your progress isn't saving.</b><p>This browser's storage is full or turned off. Free up space or leave private browsing mode, then keep playing to save again.</p></div>
-  ${S.tab==="home"?`<div class="hubgrid ${side.length?"":"solo"}"><div class="hubmain">${isMP()?mpCard():""}${canEditSched()&&!isMP()?preSchedStep():`${mmCard()}${exhCard()}${bcOpen()?bcCallout():""}${(()=>{const ug=userGame();return ug?rivalryCard(ug)+rivalCoachCard(ug):""})()}${nextCard()}${S.phase==="regular"&&S.day===0?coachTip():""}${ctPanel()}`}</div>${side.length?`<div class="hubside">${side.join("")}</div>`:""}</div>`
+  ${S.tab==="home"?`<div class="hubgrid ${side.length?"":"solo"}"><div class="hubmain">${isMP()?mpCard():""}${canEditSched()&&!isMP()?preSchedStep():`${mmCard()}${exhCard()}${bcOpen()?bcCallout():""}${(()=>{const ug=userGame();return isMP()?"":pressCard()})()}${nextCard()}${(()=>{const ug=userGame();return ug?hypeCard(ug)+rivalryCard(ug)+rivalCoachCard(ug):""})()}${S.phase==="regular"&&S.day===0?coachTip():""}${ctPanel()}`}</div>${side.length?`<div class="hubside">${side.join("")}</div>`:""}</div>`
     :`<section class="tabbody">${({conspiracy:tabConspiracy,mp:tabMP,arena:tabArena,feed:tabFeed,weekly:tabWeekly,preseason:tabPreseason,locker:lockerTab,practice:tabPractice,uniforms:tabUniforms,trophies:tabTrophies,news:tabNews,schedule:tabSchedule,standings:tabStandings,top25:tabTop25,bracket:tabBracket,leaders:tabLeaders,roster:tabRoster,plan:tabPlan,coach:tabCoach,history:tabHistory})[S.tab]()}</section>`}
   <div class="row"><button class="btn ${S.confirmReset?"danger":"ghost"}" data-act="reset">Save & main menu</button></div>`;
 }
@@ -4223,7 +4405,7 @@ function tabHistory(){
   const drafted=(S.alumni||[]).filter(a=>a.draft).slice(-12).reverse();
   return `<div class="statgrid"><div><span class="big">${H.length}</span><span>Seasons coached</span></div><div><span class="big">${H.reduce((s,h)=>s+h.w,0)}-${H.reduce((s,h)=>s+h.l,0)}</span><span>Career record</span></div>
     <div><span class="big">${bids}</span><span>NCAA bids</span></div><div><span class="big">${titles}</span><span>National titles</span></div></div>
-  ${rivalPanel()}<div class="panel"><h3>Your seasons</h3>${H.length?`<div class="tw"><table class="tbl"><thead><tr><th>Season</th><th>Team</th><th class="n">Record</th><th class="n">Conf</th><th class="n hm">NET</th><th>Postseason</th></tr></thead><tbody>${H.slice().reverse().map(h=>`<tr><td class="num">${seasonLabel(h.season)}</td><td>${badge(T(h.team))}</td><td class="n">${h.w}-${h.l}</td><td class="n">${h.cw}-${h.cl}</td><td class="n hm">${h.net}</td><td class="sub">${esc(h.result)}${h.confChamp?' <span class="tag amber">Conf tourney champ</span>':""}${h.regChamp?' <span class="tag">Reg. season champ</span>':""}</td></tr>`).join("")}</tbody></table></div>`:'<p class="muted">Finish a season to start your record book.</p>'}</div>
+  ${rivalryHub()}${rivalPanel()}<div class="panel"><h3>Your seasons</h3>${H.length?`<div class="tw"><table class="tbl"><thead><tr><th>Season</th><th>Team</th><th class="n">Record</th><th class="n">Conf</th><th class="n hm">NET</th><th>Postseason</th></tr></thead><tbody>${H.slice().reverse().map(h=>`<tr><td class="num">${seasonLabel(h.season)}</td><td>${badge(T(h.team))}</td><td class="n">${h.w}-${h.l}</td><td class="n">${h.cw}-${h.cl}</td><td class="n hm">${h.net}</td><td class="sub">${esc(h.result)}${h.confChamp?' <span class="tag amber">Conf tourney champ</span>':""}${h.regChamp?' <span class="tag">Reg. season champ</span>':""}</td></tr>`).join("")}</tbody></table></div>`:'<p class="muted">Finish a season to start your record book.</p>'}</div>
   ${H.length?`<div class="panel"><h3>National champions & Players of the Year</h3><div class="tw"><table class="tbl"><tbody>${H.slice().reverse().map(h=>`<tr><td class="num">${seasonLabel(h.season)}</td><td>${teamCell(h.champ)}</td><td class="sub">${h.poy?`POY: ${esc(h.poy.name)} (${esc(T(h.poy.team).abbr)})`:""}</td></tr>`).join("")}</tbody></table></div></div>`:""}
   ${drafted.length?`<div class="panel"><h3>Your players in the NBA draft</h3><div class="tw"><table class="tbl"><tbody>${drafted.map(a=>`<tr><td>${esc(a.n)} <span class="sub">${a.pos}</span></td><td class="n">${a.draft.y} · Round ${a.draft.round}, pick ${a.draft.pick}</td></tr>`).join("")}</tbody></table></div></div>`:""}
   ${Object.keys(S.rivRec||{}).length?`<div class="panel"><h3>Rivalry record</h3><div class="tw"><table class="tbl"><tbody>${Object.entries(S.rivRec).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="n">${v.w}-${v.l}</td></tr>`).join("")}</tbody></table></div></div>`:""}`;
@@ -4280,7 +4462,7 @@ function startWatch(gm,kind){
   WATCH={g,gm,kind,key:gameKey(gm),speed:3,paused:false,banner:null,exp:expMargin(gm.h,gm.a,gm.neutral)};
   clearTimeout(wTimer);wTimer=setTimeout(wLoop,700);
 }
-function wStep(n){const W=WATCH,g=W.g;for(let i=0;i<n&&!g.over;i++){const bf=W.kind==="user"?{u:g.score[S.user],o:g.score[opp(g,S.user)],f:g.fouls[S.user]}:null;step(g);if(bf)rageStep(W,bf);wpNote(W);if(g.last&&g.last.big)W.banner=g.last.txt;g.last=null}floorUpdate(W)}
+function wStep(n){const W=WATCH,g=W.g;for(let i=0;i<n&&!g.over;i++){const bf=W.kind==="user"?{u:g.score[S.user],o:g.score[opp(g,S.user)],f:g.fouls[S.user]}:null;step(g);if(bf)rageStep(W,bf);chantStep(W);wpNote(W);if(g.last&&g.last.big)W.banner=g.last.txt;g.last=null}stormBanner(W);floorUpdate(W)}
 function wLoop(){if(!WATCH)return;if(!WATCH.paused&&!WATCH.g.over){wStep(WATCH.speed>=10?3:1);render()}if(WATCH&&!WATCH.g.over)wTimer=setTimeout(wLoop,SPEED[WATCH.speed])}
 function liveWP(W){
   const g=W.g;if(g.over)return g.score[g.home]>g.score[g.away]?1:0;
@@ -4470,6 +4652,7 @@ const ACT={
   startNcaa(){clearTimeout(selTimer);startTournament();S.tab="bracket";scrollTo(0,0)},
   demPick(d){S.coach.dem=d.k},demLook(d){S.coach.look=d.k},
   cpSel(d){S.cpSel=d.k;S.cpTgt=null;S.lastPostMsg=""},cpTgt(d){S.cpTgt=+d.id},cpost(d){coachPost(d.k,d.id===""||d.id==null?null:+d.id);S.tab="feed";tabJump=true},
+  press(d){pressAnswer(d.k)},
   offseason(){mpPreOff();beginOffseason();if(S.mp)S.off.step="mp";else secretWalkOn();scrollTo(0,0)},meltdown(){meltdown()},
   mpPos(d){MPC.pos=d.k;MPC.ar=0;MPC.ht=Math.round((HT[d.k][0]+HT[d.k][1])/2)},mpAr(d){MPC.ar=+d.k},mpHt(d){MPC.ht=+d.k},mpSt(d){MPC.st=+d.k},mpSeeOffers(){mpSeeOffers();scrollTo(0,0)},mpBack(){MPC.step="create"},
   mpCommit(d){mpStart(+d.id);scrollTo(0,0)},mpFocus(d){if(S.mp)S.mp.focus=d.k},mpReturn(){mpAutoOff();scrollTo(0,0)},mpDeclare(){mpDeclare();scrollTo(0,0)},
