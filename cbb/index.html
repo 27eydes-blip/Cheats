@@ -1469,7 +1469,8 @@ function newGame(gm,txt){
   if(!gm.neutral&&rivalryOf(home,away))g.hfa+=.003;
   if(g.gd&&!gm.neutral)g.hfa+=.003;
   if(!gm.neutral)g.hfa+=mmCrowd(gm);
-  if(!gm.neutral){g.hfa+=ssEdge(gm);if(gm.h===S.user&&S.phase!=="h2h"&&S.ss&&S.ss.team===S.user)g.ssT=S.ss.trad.slice()}
+  if(!gm.neutral){g.hfa+=ssEdge(gm);if(gm.h===S.user&&S.phase!=="h2h"&&S.ss&&S.ss.team===S.user){g.ssT=S.ss.trad.slice();g.heckId=(T(away).roster.slice().sort((a,b)=>b.ovr-a.ovr)[0]||{}).id}}
+  if(S.phase!=="h2h"&&S.ss&&S.ss.team===S.user&&S.ss.trad.includes("road")&&(gm.a===S.user||(gm.neutral&&gm.h===S.user)))g.edge[S.user]+=gm.neutral?.003:.002;
   for(const id of [home,away])g.edge[id]+=trashEdge(gm,id);
   g.haunt=!gm.neutral&&!!haunted(T(home));const mine=home===S.user||away===S.user;g.heat=heatOf(gm)+(mine&&isDem("fiery")?.3:0);if(mine&&isDem("tac"))g.edge[S.user]+=.004;
   if(mine){const myS=S.user,oo=home===myS?away:home,dOv=ovr(T(oo))-ovr(T(myS));if(isDem("lion")){g.dedge[myS]+=.004;g.edge[myS]-=.002}if(isDem("mind"))g.heat+=.2;if(isDem("dog"))g.edge[myS]+=dOv>=3?.006:dOv<=-5?-.003:0;if(home===myS&&!gm.neutral&&hypeOf(gm)>=80)g.hfa+=.002}
@@ -1629,7 +1630,7 @@ function attempt(g,o,d,mode,buzzer){
     if(type==="rim")mk=.505+((Sa.ins*.7+Sa.ath*.3)-72)*.0017-(aD.idef-72)*.0013+DS.rim+(putback?.06:0)+(mode==="trans"?.1:0);
     else if(type==="mid")mk=.36+(Sa.mid-72)*.0017-(dP-72)*.0011+DS.mid;
     else mk=.32+(Sa.thr-72)*.0019-(dP-72)*.0009+DS.three-(mode==="three"&&g.clock<8?.05:0);
-    const pb=g.pb;if(pb&&me)mk+=(type==="three"?pb.three:type==="rim"?pb.rim:0)+pb.all+(g.half>=2&&g.clock<600?pb.late:0);if(pb&&d===S.user)mk-=pb.def+pb.all*.5;if(type==="three"&&d===S.user&&isDem("gamble"))mk+=.012;
+    const pb=g.pb;if(pb&&me)mk+=(type==="three"?pb.three:type==="rim"?pb.rim:0)+pb.all+(g.half>=2&&g.clock<600?pb.late:0);if(pb&&d===S.user)mk-=pb.def+pb.all*.5;if(type==="three"&&d===S.user&&isDem("gamble"))mk+=.012;if(g.ssT)mk+=ssLive(g,o,sh,type);
     mk+=hcMod(g,sh)+(type==="three"&&hasGB(g,sh,"range")?.015:0)+(type==="rim"&&hasGB(g,sh,"finisher")?.02:0)+(cl&&hasGB(g,sh,"clutch")?.03:0)-(hasGB(g,df,"lock")?.02:0);mk=clamp(mk+edge,.08,.88);
     const fouled=rnd()<(type==="rim"?.2:type==="mid"?.07:.016);
     // Blocks
@@ -1993,7 +1994,7 @@ function crowdPenalty(pos,st){
 const REC_COST={5:18,4:10,3:4,2:0},REC_CAP={5:.72,4:.86,3:.97};
 function prospectChance(pos,st){
   if(st===2)return 1;const me=T(S.user);
-  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04+demRec(st)+pitchBoost()-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
+  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04+demRec(st)+pitchBoost()+(ssHas("recruit")?.02:0)-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
 }
 function makeProspect(pos,st){
   const me=T(S.user),[a,b]=HT[pos];
@@ -3171,6 +3172,23 @@ function wpChart(W){
 const SS_TRAD={paper:["Paper storm","Confetti storm on the opening tip. Your home opener gets a bigger crowd boost."],distract:["Free-throw distraction","Swim-noodle chaos behind the hoop. Visitors shoot 2% worse at the line in your gym."],
   campout:["Camp-out","Students sleep outside for big games. Extra boost at home against ranked teams and rivals."],rollcall:["Roll call","Every starter gets a chant. Energy grows faster with every home win."],
   silent:["Silent till first basket","Dead quiet until you score, then the place erupts. Momentum swings harder at home."]};
+// Seven more traditions (added later). Each one changes something in your home games.
+Object.assign(SS_TRAD,{
+  news:["Newspaper intros","Students hold up newspapers and 'read' during the visitors' introductions. Visitors start cold for the first four minutes."],
+  stomp:["Final-four-minutes stomp","The whole section stomps the bleachers late. Your team gets a boost in the last four minutes at home."],
+  bigheads:["Big heads","Giant cardboard heads behind the basket. Visitors shoot worse from three in your gym."],
+  heckle:["Personal hecklers","The section studies the other team's best player all week. He shoots noticeably worse in your building."],
+  paint:["Body paint crew","Shirtless, painted, never sitting down. Energy builds faster and home losses barely dent it."],
+  road:["Road trip crew","Buses of students follow you everywhere. Your team plays better on the road and at neutral sites."],
+  recruit:["Recruit row","They chant recruits' names on visits. Every prospect is a little more interested in you."]});
+const SS_MAX=4;
+// In-game edges from the newer traditions (home games only).
+function ssLive(g,o,sh,type){
+  const T_=g.ssT;if(!T_)return 0;let e=0;
+  if(o===g.away){if(T_.includes("news")&&g.half===1&&g.clock>=960)e-=.02;if(T_.includes("bigheads")&&type==="three")e-=.015;if(T_.includes("heckle")&&sh&&sh.id===g.heckId)e-=.025}
+  else if(T_.includes("stomp")&&g.half>=2&&g.clock<=240)e+=.01;
+  return e;
+}
 const THEMES=[["white","White Out"],["black","Blackout"],["pajama","Pajama Jam"],["hawaii","Hawaiian Night"],["hero","Superhero Night"],["retro","Throwback Night"]];
 const THEME_MAX=4;
 function ss(){const t=T(S.user);if(!S.ss||S.ss.team!==S.user)S.ss={team:S.user,name:`The ${t.name.split(" ").pop()} Zoo`,energy:55,trad:[],theme:{},used:0,season:S.season};if(S.ss.season!==S.season){S.ss.season=S.season;S.ss.used=0;S.ss.theme={};S.ss.energy=Math.round(S.ss.energy*.6+55*.4)}return S.ss}
@@ -3186,7 +3204,7 @@ function ssEdge(gm){
 }
 function ssAfter(gm){
   if(!S||gm.h!==S.user||gm.neutral)return;const X=ss(),won=gm.winner===S.user;
-  X.energy=clamp(X.energy+(won?3+(ssHas("rollcall")?1:0):-2)+(X.theme[gameKey(gm)]?2:0)+(won&&rivalryOf(gm.h,gm.a)?3:0),5,100);
+  X.energy=clamp(X.energy+(won?3+(ssHas("rollcall")?1:0):ssHas("paint")?-1:-2)+(ssHas("paint")?1:0)+(X.theme[gameKey(gm)]?2:0)+(won&&rivalryOf(gm.h,gm.a)?3:0),5,100);
 }
 function themePicker(gm){
   if(!gm||gm.h!==S.user||gm.neutral)return "";const X=ss(),k=gameKey(gm),cur=X.theme[k],left=themeMax()-X.used;
@@ -3235,7 +3253,7 @@ function tabArena(){
     <div class="row"><label for="ssName" class="sub">Name</label><input id="ssName" class="nm" maxlength="28" value="${esc(X.name)}" style="width:min(100%,260px)"></div>
     <div class="lr-bar"><i style="width:${X.energy}%;background:linear-gradient(90deg,#6ed2ff,#ffc350)"></i></div>
     <p class="muted" style="font-size:13px">Energy rises with home wins and theme nights, and drops with home losses. It's worth up to about 1.5 points a game at home. Pick theme nights on the game card (${themeMax()} per season, ${themeMax()-X.used} left).</p>
-    <h3>Traditions · pick up to 3</h3><div class="schemes">${Object.entries(SS_TRAD).map(([k,[n,d]])=>`<button class="scheme ${X.trad.includes(k)?"on":""}" data-act="ssTrad" data-k="${k}" aria-pressed="${X.trad.includes(k)}"><b>${esc(n)}</b><small>${esc(d)}</small></button>`).join("")}</div></div>`;
+    <h3>Traditions · pick up to ${SS_MAX} <span class="sub">(${X.trad.length}/${SS_MAX})</span></h3><div class="schemes">${Object.entries(SS_TRAD).map(([k,[n,d]])=>`<button class="scheme ${X.trad.includes(k)?"on":""}" data-act="ssTrad" data-k="${k}" aria-pressed="${X.trad.includes(k)}"><b>${esc(n)}</b><small>${esc(d)}</small></button>`).join("")}</div></div>`;
 }
 
 // ===================== RIVAL COACHES =====================
@@ -4716,7 +4734,7 @@ const ACT={
   ybOpen(d){S.ybView=+d.s;scrollTo(0,0)},ybClose(){S.ybView=null;S.tab="trophies";scrollTo(0,0)},
   watchGotw(){const gm=gotwGame();if(gm){startWatch(gm,"gotw");scrollTo(0,0)}},
   wPause(){if(WATCH)WATCH.paused=!WATCH.paused},
-  themeNight(d){setTheme(d.k)},ssTrad(d){const X=ss(),i=X.trad.indexOf(d.k);if(i>=0)X.trad.splice(i,1);else if(X.trad.length<3)X.trad.push(d.k)},
+  themeNight(d){setTheme(d.k)},ssTrad(d){const X=ss(),i=X.trad.indexOf(d.k);if(i>=0)X.trad.splice(i,1);else if(X.trad.length<SS_MAX)X.trad.push(d.k)},
   wSpeed(d){if(WATCH)WATCH.speed=+d.v},
   wSkip(){if(WATCH){let n=0;while(!WATCH.g.over&&n++<3000)wStep(1)}},
   wLeave(){WATCH=null;DCC=null;clearTimeout(wTimer)},
