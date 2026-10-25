@@ -3183,7 +3183,9 @@ function tabArena(){
 const CPERS={old:["Old-School","Thirty years on the bench and still yells about box-outs."],hot:["Hothead","Rides the refs, takes every loss personally."],rec:["Super Recruiter","Lives on planes. Will flip your commits."],show:["Showman","Talks to the cameras more than his players."],tac:["Tactician","Out-schemes you in March. Never smiles."]};
 const CQ={old:["We'll see who's still standing in March.","Fundamentals win. Flash fades.","Tell their kids to bring a lunch pail."],hot:["They got lucky last time. Not again.","I don't respect that program. Write it down.","Their coach can't coach. There, I said it."],
   rec:["Half their roster wanted to come here.","Ask their recruits who called them first.","We'll see where the next five-star lands."],show:["Bring the cameras. We're putting on a show.","Our fans are louder, our team is better.","I already picked out my outfit for the postgame."],tac:["We have a plan for everything they do.","Their offense is predictable. We'll take it away.","Film doesn't lie."]};
-function coachOf(t){if(!t.cn){t.cn=`${pick(FIRST)} ${pick(LAST)}`;t.cp=pick(Object.keys(CPERS))}return {n:t.cn,p:t.cp}}
+// AI coaches only ever get the AI personalities. User-only styles (like Kiffen) can never land on them.
+const USER_ONLY=new Set(["kiff"]);
+function coachOf(t){if(!t.cn){t.cn=`${pick(FIRST)} ${pick(LAST)}`;t.cp=null}if(!t.cp||!CPERS[t.cp]||USER_ONLY.has(t.cp))t.cp=pick(Object.keys(CPERS).filter(k=>!USER_ONLY.has(k)));return {n:t.cn,p:t.cp}}
 function rivalCoaches(){
   if(S.rc&&S.rc.season===S.season&&S.rc.u===S.user)return S.rc.ids;
   const me=T(S.user),ids=new Set();for(const [x,y] of RIVALS){if(x===me.abbr&&idOf(y)>=0)ids.add(idOf(y));if(y===me.abbr&&idOf(x)>=0)ids.add(idOf(x))}
@@ -3411,7 +3413,7 @@ function demeanorPanel(){
   const C=S.coach,cur=C.dem||null,look=C.look||"zip";
   return `<div class="panel" data-c="blue"><div class="row" style="justify-content:space-between"><h3>Your coach</h3>${cur?`<span class="tag">${DEMEANOR[cur].i} ${esc(DEMEANOR[cur].n)}</span>`:'<span class="tag amber">Pick a demeanor</span>'}</div>
     <div class="row"><label for="coachName" class="sub">Name</label><input id="coachName" class="nm" maxlength="22" placeholder="Your name" value="${esc(C.name||"")}" style="width:min(100%,240px)"></div>
-    <h3>Demeanor</h3><div class="schemes dem">${Object.entries(DEMEANOR).map(([k,x])=>`<button class="scheme ${cur===k?"on":""}" data-act="demPick" data-k="${k}" aria-pressed="${cur===k}"><b>${x.i} ${esc(x.n)}</b><small>${esc(x.d)}</small><small class="up">+ ${esc(x.up)}</small><small class="down">− ${esc(x.down)}</small></button>`).join("")}</div>
+    <h3>Demeanor</h3><div class="schemes dem">${Object.entries(DEMEANOR).map(([k,x])=>`<button class="scheme ${cur===k?"on":""}" data-act="demPick" data-k="${k}" aria-pressed="${cur===k}"><b>${x.i} ${esc(x.n)}${USER_ONLY.has(k)?' <span class="tag amber">Only you</span>':""}</b><small>${esc(x.d)}</small><small class="up">+ ${esc(x.up)}</small><small class="down">− ${esc(x.down)}</small></button>`).join("")}</div>
     <h3>Sideline look</h3><div class="lookgrid"><div class="lookprev">${coachSVG(look,T(S.user),110)}<b>${esc(LOOKS[look]||"")}</b></div><div class="looks">${Object.entries(LOOKS).map(([k,n])=>`<button class="lookbtn ${look===k?"on":""}" data-act="demLook" data-k="${k}" aria-pressed="${look===k}" title="${esc(n)}">${coachSVG(k,T(S.user),58)}<span>${esc(n)}</span></button>`).join("")}</div></div>
     <p class="muted" style="font-size:13px">You can change your style any time. Your postgame quotes on Courtside match it.</p></div>`;
 }
