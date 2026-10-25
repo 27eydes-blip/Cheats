@@ -1,5 +1,5 @@
 // Offline support: the game page is network-first so updates arrive, with a cached copy for when there's no signal.
-const C="cbb-dynasty-v10";
+const C="cbb-dynasty-v11";
 self.addEventListener("install",e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(["./","./index.html","./manifest.json","./icon-192.png","./apple-touch-icon.png"])));self.skipWaiting()});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener("fetch",e=>{

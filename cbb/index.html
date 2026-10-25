@@ -1244,7 +1244,7 @@ function giveArch(p,ar){
   return p;
 }
 const archName=p=>p&&ARCH[p.pos]&&p.at?ARCH[p.pos][p.ar][0]:"";
-const usageOf=p=>ARCH[p.pos][p.ar][2];
+const usageOf=p=>p.usg||ARCH[p.pos][p.ar][2];
 const attrVal=(p,k)=>clamp(p.ovr+((POS_BASE[p.pos]||{})[k]||0)+(p.at?(p.at[k]||0):0),25,99);
 function freeNumber(t){const used=new Set(t.roster.map(p=>p.no));const f=NUMS.filter(n=>!used.has(n));return f.length?pick(f):pick(NUMS)}
 function newPlayer(pos,ovr,yr,st,ar,t){
@@ -1272,6 +1272,14 @@ function addSammy(){
   const g=t.roster.filter(p=>p.pos==="SG").sort((a,b)=>b.ovr-a.ovr)[0];if(!g)return;
   g.n="Sammy Eyde";g.ovr=98;g.yr=3;g.st=5;g.no=1;g.ht=77;g.star=true;
   giveArch(g,0);for(const k in g.at)g.at[k]+=3; // a sharpshooter who can do everything
+}
+// Emmett Eyde: an 86 OVR freshman scoring point guard at Wright State in every league. He transfers to St. John's after his freshman year.
+function addEmmett(){
+  if(S.teams.some(t=>t.roster.some(p=>p.emmett)))return;const t=S.teams.find(x=>x.abbr==="WRST");if(!t)return;
+  const g=t.roster.filter(p=>p.pos==="PG").sort((a,b)=>b.ovr-a.ovr)[0];if(!g)return;
+  g.n="Emmett Eyde";g.ovr=86;g.yr=0;g.st=5;g.ht=74;g.emmett=true;g.usg=1.6;g.no=t.roster.some(p=>p!==g&&p.no===3)?g.no:3;
+  giveArch(g,1);g.at.thr+=5;g.at.mid+=5;g.at.ins+=4;g.at.hnd+=3;g.at.ath+=2;
+  if(t.depth&&t.depth.PG)t.depth.PG=[g.id,...t.depth.PG.filter(id=>id!==g.id)];if(typeof buildPL==="function"&&PL)PL[g.id]=g;
 }
 // Depth chart: your custom order if you set one, otherwise best rating first.
 function depthOf(t,pos){
@@ -1932,7 +1940,7 @@ function beginOffseason(){
   for(const t of S.teams){
     const leave=[],gp=Math.max(1,gamesPlayed(t.id)),mine=t.id===u,acad=mine?1-.25*fac("acad"):1;
     for(const p of t.roster){
-      if(p.mp)continue;
+      if(p.mp||(p.emmett&&!p.emMoved))continue;
       const early=[[86,.7],[84,.55],[82,.45]][p.yr];
       if(p.yr===3)leave.push([p,"Graduated"]);
       else if((p.st===5&&p.yr<=1&&p.ovr>=(p.yr?83:80)&&rnd()<.5*acad)||(early&&p.ovr>=early[0]&&rnd()<early[1]*acad)){
@@ -1957,6 +1965,7 @@ function beginOffseason(){
     if(mine)t.openSlots=slots;
     else for(const i of slots){const st=starsFor(t.pres+dif().ai*.3);t.roster[i]=newPlayer(t.roster[i].pos,recruitOvr(st,t),0,st,null,t)}
   }
+  emmettTransfer(departed);
   if(S.prac)S.prac.dev=0;
   draft.sort((a,b)=>b.p.ovr-a.p.ovr);
   const twList=twp.map(p=>{const k=draft.findIndex(d=>d.p===p);return {pid:p.id,proj:k>=0&&k<60?k+1:99,status:"testing",pitch:null}});
@@ -2061,7 +2070,7 @@ function buildPreseason(){
 function newDynasty(userId){
   S={v:1,nextPid:1,view:"hub",tab:"home",user:userId,season:2027,history:[],news:[],alumni:[],rivRec:{},job:{sec:70,yrs:0},firstTeam:userId,fac:{},diff:1,
     coach:{pts:2,off:0,def:0,rec:0,dev:0,sec:0,clutch:0},off:null,confirmReset:false,fix99:true};
-  S.teams=TEAMS0.map(makeTeam);addSammy();crowdInit();earnBadges(true);S.bdInit=true;S.slot=pickSlot||1;
+  S.teams=TEAMS0.map(makeTeam);addSammy();addEmmett();crowdInit();earnBadges(true);S.bdInit=true;S.slot=pickSlot||1;
   startSeason(2027);S.news=[];
   news(`You took the job at ${T(userId).name}. You have 2 coach skill points to spend.`);
 }
@@ -2078,6 +2087,25 @@ function save(){
   saveChain=saveChain.then(async()=>{try{localStorage.setItem(key,canGz?"gz:"+await gz(json):json);saveErr=false}catch(e){saveErr=true}const el=document.getElementById("saveWarn");if(el)el.hidden=!saveErr});
 }
 async function loadSaved(){try{const raw=localStorage.getItem(KEY);if(!raw)return null;const s=JSON.parse(raw.startsWith("gz:")?await gunz(raw.slice(3)):raw);return s&&s.v>=1?s:null}catch(e){return null}}
+
+// After his freshman year at Wright State, Emmett Eyde moves to St. John's.
+function emmettTransfer(departed){
+  const from=S.teams.find(t=>t.abbr==="WRST"),to=S.teams.find(t=>t.abbr==="SJU");if(!from||!to)return;
+  const i=from.roster.findIndex(p=>p.emmett&&!p.emMoved);if(i<0)return;const p=from.roster[i];if(p.yr!==1)return;
+  const u=S.user;
+  if(from.id===u){(from.openSlots=from.openSlots||[]).push(i);departed.push({name:p.n,pos:p.pos,ovr:p.ovr,why:"Transferred to St. John's",pid:p.id})}
+  else from.roster[i]=newPlayer("PG",recruitOvr(starsFor(from.pres),from),0,3,null,from);
+  let j=-1;
+  if(to.id===u&&(to.openSlots||[]).length){const k=to.openSlots.findIndex(x=>to.roster[x].pos==="PG");const pick_=k>=0?k:0;j=to.openSlots[pick_];to.openSlots.splice(pick_,1)}
+  if(j<0){let lo=999;to.roster.forEach((q,k)=>{if(q.pos==="PG"&&!q.star&&!q.mp&&q.ovr<lo){lo=q.ovr;j=k}});if(j<0)j=to.roster.length-1}
+  p.emMoved=true;p.tr=true;p.no=to.roster.some(q=>q.no===3&&q!==to.roster[j])?freeNumber(to):3;to.roster[j]=p;
+  if(to.depth&&to.depth.PG)to.depth.PG=[p.id,...to.depth.PG.filter(id=>id!==p.id)];
+  if(from.id===u)from.roster[i]=newPlayer("PG",50,0,2,null,from);
+  buildPL();
+  news(`Emmett Eyde (${p.ovr} OVR PG) is transferring from Wright State to St. John's.`);
+  wire("Portal",`Emmett Eyde, Wright State's freshman scoring machine, commits to St. John's.`,p.id);
+  if(typeof post==="function")post({h:"@EmmettEyde3",n:"Emmett Eyde",v:true,txt:"Thank you Wright State for everything. New chapter. Queens, let's go. ❤️🏀 #SJU",tag:"Portal",viral:true,likes:typeof clout==="function"?clout(20):90000});
+}
 
 // ===================== SCHEDULE BUILDER =====================
 // Before the opener you can swap non-conference opponents, flip home and away, and pick your Feast Week event.
@@ -4744,7 +4772,7 @@ function fixInflation(){
   if(n)news(`Ratings repair: ${n} of your players were brought back to realistic levels (your best was ${top} OVR before). Development now slows near the top of the scale.`);
   try{save()}catch(e){}
 }
-function loadFixups(){fixInflation();crowdInit();if(!S.bdInit){earnBadges(true);S.bdInit=true}}
+function loadFixups(){fixInflation();crowdInit();if(S.phase!=="offseason"&&!S.emAdded){addEmmett();S.emAdded=true}if(!S.bdInit){earnBadges(true);S.bdInit=true}}
 function start(data){
   S=(data&&data.S)||null;if(S){loadFixups();buildPL();RK.key=null}
   render();
