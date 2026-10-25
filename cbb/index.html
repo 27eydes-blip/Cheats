@@ -961,6 +961,27 @@ button:active:not(:disabled){transform:scale(.97)}
   .btn{min-height:44px}
   .small-btn{min-height:34px}
 }
+
+/* replies, viral posts, feuds, composer */
+.preps{margin:6px 0 2px;padding-left:10px;border-left:2px solid rgba(110,210,255,.2);display:flex;flex-direction:column;gap:6px}
+.prep{font-size:13px}
+.prep p{margin:1px 0 0;font-size:13.5px}
+.prep b{font-size:13px;margin-right:4px}
+.prep .sub{font-size:11.5px;margin-left:4px}
+.post.viral{background:linear-gradient(90deg,rgba(255,120,60,.12),transparent 70%);border-radius:12px;padding-left:8px;padding-right:8px}
+.post.viral .pav{background:linear-gradient(135deg,#ff7a3c,#ffc350)}
+.post.mine .pav{background:linear-gradient(135deg,#ffc350,#fff2c4)}
+.beef{display:flex;align-items:center;gap:8px;font-family:var(--num);font-size:11.5px;letter-spacing:.06em;margin:6px 0}
+.bbar{flex:1;height:7px;border-radius:4px;background:rgba(255,80,80,.12);overflow:hidden;max-width:220px}
+.bbar i{display:block;height:100%;background:linear-gradient(90deg,#ffc350,#ff3b3b)}
+.rcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:10px}
+.rcard{display:flex;flex-direction:column;gap:3px;padding:12px;border-radius:14px;border:1px solid rgba(110,210,255,.15);border-left:4px solid var(--c1);background:rgba(0,0,0,.2)}
+.cpkinds{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin:6px 0 10px}
+.cpk{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:12px;border:1px solid rgba(110,210,255,.16);background:rgba(110,210,255,.04);color:#cfe0f7;font-size:13px;text-align:left;cursor:pointer}
+.cpk span{font-size:17px}
+.cpk.on{border-color:var(--amber,#ffc350);box-shadow:0 0 14px rgba(255,195,80,.3);color:#fff}
+.cpk:disabled{opacity:.4;cursor:not-allowed}
+@media (max-width:600px){.cpkinds{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -1684,7 +1705,7 @@ function playRound(userRes){
     const r=isU?userRes:pre||simGame(gm);
     gm.hs=r.hs;gm.as=r.as;gm.ot=r.ot;gm.winner=r.hs>r.as?r.h:r.a;
     S.results.push({h:gm.h,a:gm.a,hs:r.hs,as:r.as,type:gm.type,label:gm.label,day:S.phase==="regular"?S.day:null,neutral:!!gm.neutral,ot:r.ot});
-    seriesNote(gm);gamedayResult(gm);if(r.bz)noteBuzzer(gm,r.bz);gameAch(gm);relAfterGame(gm);uniResult(gm);gm.bz=r.bz;ssAfter(gm);rivalAfter(gm);feedAfter(gm);mpAfter(gm);demAfter(gm);ghostAfter(gm);techAfter(gm,r.ej);csAfter(gm);
+    seriesNote(gm);gamedayResult(gm);if(r.bz)noteBuzzer(gm,r.bz);gameAch(gm);relAfterGame(gm);uniResult(gm);gm.bz=r.bz;ssAfter(gm);rivalAfter(gm);feedAfter(gm);mpAfter(gm);mediaStorm(gm);demAfter(gm);ghostAfter(gm);techAfter(gm,r.ej);csAfter(gm);
     if(isSeniorNight(gm)){const sn=seniorsOf(T(S.user));news(`Senior Night: ${gm.winner===S.user?"a win to send off":"a tough loss for"} ${sn.length?sn.map(p=>p.n).join(", "):"the seniors"}.`)}
     const w=gm.winner,l=w===gm.h?gm.a:gm.h,up=ovr(T(w))<ovr(T(l))-5;
     S.mo=S.mo||{};S.mo[w]=clamp((S.mo[w]||0)*.6+1+(up?.5:0),-3,3);S.mo[l]=clamp((S.mo[l]||0)*.6-1,-3,3);
@@ -1931,7 +1952,7 @@ function crowdPenalty(pos,st){
 const REC_COST={5:18,4:10,3:4,2:0},REC_CAP={5:.72,4:.86,3:.97};
 function prospectChance(pos,st){
   if(st===2)return 1;const me=T(S.user);
-  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04+demRec(st)-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
+  return Math.round(clamp({5:.2,4:.38,3:.62}[st]+(me.pres-3)*.12+S.coach.rec*.05+fac("rec")*.04+demRec(st)+pitchBoost()-crowdPenalty(pos,st),.04,REC_CAP[st])*100)/100;
 }
 function makeProspect(pos,st){
   const me=T(S.user),[a,b]=HT[pos];
@@ -3170,24 +3191,10 @@ function rivalCoaches(){
 }
 const isRivalCoach=id=>S&&S.phase!=="h2h"&&rivalCoaches().includes(id);
 function crec(t){S.crec=S.crec||{};const c=coachOf(t),k=c.n;return S.crec[k]||(S.crec[k]={w:0,l:0,team:t.id})}
-function rivalCoachCard(gm){
-  const u=S.user,o=gm.h===u?gm.a:gm.h;if(!isRivalCoach(o))return "";const t=T(o),c=coachOf(t),R=crec(t);
-  S.cq=S.cq||{};const k=gameKey(gm)+S.season;const q=S.cq[k]||(S.cq[k]=pick(CQ[c.p]));
-  return `<div class="panel rivc" style="--c1:${t.c1}"><div class="row" style="justify-content:space-between"><h3>Rival coach · ${esc(c.n)}</h3><span class="tag ${R.w>R.l?"good":R.l>R.w?"bad":""}">You're ${R.w}-${R.l} vs him</span></div>
-    <p class="sub">${esc(t.name)} · ${esc(CPERS[c.p][0])}. ${esc(CPERS[c.p][1])}</p><blockquote class="trash"><p>"${esc(q)}"</p><cite>Coach ${esc(c.n)}, ${esc(t.abbr)}</cite></blockquote></div>`;
-}
-function rivalAfter(gm){if(!S||S.phase==="h2h")return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;const o=gm.h===u?gm.a:gm.h;if(!isRivalCoach(o))return;const R=crec(T(o));gm.winner===u?R.w++:R.l++;
-  const c=coachOf(T(o));post({h:`@Coach${c.n.split(" ").pop()}`,n:`Coach ${c.n}`,v:true,txt:gm.winner===u?pick(["Tip of the cap. We'll see them again.","Not our night. Back to work.","Refs had a great game. Congrats to them, I guess."]):pick(["Big win for our guys. Never in doubt.","Told y'all. 😤","That one felt good. Proud of this group."]),tag:"Rival"})}
-function rivalPanel(){
-  const ids=rivalCoaches();if(!ids.length)return "";
-  return `<div class="panel" data-c="bad"><h3>Rival coaches</h3><div class="tw"><table class="tbl"><tbody>${ids.map(id=>{const t=T(id),c=coachOf(t),R=crec(t);return `<tr><td>${badge(t)} <b>Coach ${esc(c.n)}</b><div class="sub">${esc(t.name)} · ${esc(CPERS[c.p][0])}</div></td><td class="n"><span class="wl ${R.w>=R.l?"w":"l"}">${R.w}-${R.l}</span></td></tr>`}).join("")}</tbody></table></div>
-    <p class="muted" style="font-size:13px">Rival coaches talk trash before your games and go after the same recruits on signing day. Super Recruiters are the most dangerous.</p></div>`;
-}
-
 // ===================== COURTSIDE FEED =====================
 const FANS=["@HoopsHeadHank","@BracketBrianna","@CourtsideCass","@MidMajorMike","@BuzzerBeaterBeth","@TheBubbleBoy","@NETrankNerd","@ZoneDefenseZoe","@SixthManSam","@OneAndDoneDev"];
 const ANALYSTS=[["@MarcusValeHoops","Marcus Vale"],["@DanaPriceOnHoops","Dana Price"],["@TheBracketDoc","The Bracket Doc"]];
-function post(p){S.feed=S.feed||[];S.feed.unshift({...p,likes:p.likes??Math.round(40+Math.random()*Math.random()*9000),rt:Math.round(Math.random()*400),k:dayKey(),season:S.season});if(S.feed.length>60)S.feed.length=60}
+function post(p){S.feed=S.feed||[];const lk=p.likes??Math.round(40+Math.random()*Math.random()*9000);S.feed.unshift({...p,likes:lk,rt:Math.round(lk*(.03+Math.random()*.08)),k:dayKey(),season:S.season});if(S.feed.length>60)S.feed.length=60}
 function feedAfter(gm){
   if(!S||S.phase==="h2h")return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;
   const me=T(u),o=T(gm.h===u?gm.a:gm.h),won=gm.winner===u,ms=gm.h===u?gm.hs:gm.as,ts=gm.h===u?gm.as:gm.hs,L=S.lastGame,fan=`@${me.abbr}Nation`;
@@ -3206,23 +3213,24 @@ function feedAfter(gm){
 }
 function feedHTML(n){
   const F=(S.feed||[]).slice(0,n);if(!F.length)return '<p class="muted">Nothing yet. Play a game.</p>';
-  return `<div class="feed">${F.map(p=>`<div class="post"><div class="pav" aria-hidden="true">${esc((p.n||p.h).replace("@","").slice(0,1).toUpperCase())}</div><div><div class="ph"><b>${esc(p.n||p.h.slice(1))}</b>${p.v?'<span class="pver" title="Verified">✔</span>':""}<span class="sub">${esc(p.h)}</span>${p.tag?`<span class="tag">${esc(p.tag)}</span>`:""}</div><p>${esc(p.txt)}</p><div class="pf"><span>🔁 ${p.rt.toLocaleString("en-US")}</span><span>♥ ${p.likes.toLocaleString("en-US")}</span></div></div></div>`).join("")}</div>`;
+  return `<div class="feed">${F.map(p=>`<div class="post ${p.viral?"viral":""} ${p.mine?"mine":""}"><div class="pav" aria-hidden="true">${esc((p.n||p.h).replace("@","").slice(0,1).toUpperCase())}</div><div><div class="ph"><b>${esc(p.n||p.h.slice(1))}</b>${p.v?'<span class="pver" title="Verified">✔</span>':""}<span class="sub">${esc(p.h)}</span>${p.tag?`<span class="tag">${esc(p.tag)}</span>`:""}</div><p>${esc(p.txt)}</p><div class="pf"><span>🔁 ${fmtK(p.rt)}</span><span>♥ ${fmtK(p.likes)}</span>${p.rep&&p.rep.length?`<span>💬 ${fmtK(p.rep.length*(p.viral?1300:p.mine?40:7)+Math.round(p.likes/90))}</span>`:""}</div>
+    ${(p.rep||[]).length?`<div class="preps">${p.rep.slice(0,n>5?6:2).map(r=>`<div class="prep"><b>${esc(r.n||r.h.slice(1))}</b>${r.v?'<span class="pver" title="Verified">✔</span>':""}<span class="sub">${esc(r.h)}</span><p>${esc(r.txt)}</p></div>`).join("")}</div>`:""}</div></div>`).join("")}</div>`;
 }
-const tabFeed=()=>`<div class="panel" data-c="blue"><h3>Courtside</h3><p class="muted" style="font-size:13px">What fans, analysts and players are saying.</p>${feedHTML(40)}</div>`;
+const tabFeed=()=>`${composerHTML()}<div class="panel" data-c="blue"><h3>Courtside</h3><p class="muted" style="font-size:13px">What fans, analysts and players are saying.</p>${feedHTML(40)}</div>`;
 const feedCard=()=>(S.feed||[]).length?`<div class="panel" data-c="blue"><div class="row" style="justify-content:space-between"><h3>Courtside</h3><button class="small-btn" data-act="tab" data-t="feed">See all</button></div>${feedHTML(3)}</div>`:"";
 // Rival coaches chase your best targets: lower odds, and a post if they flip one.
 function rivalTarget(c){
   if(c.st>=4&&S&&S.phase!=="h2h"&&Math.random()<.35){const ids=rivalCoaches();if(ids.length){const t=T(pick(ids)),k=coachOf(t);c.rv=k.n;c.rvt=t.id;c.chance=Math.max(.03,Math.round((c.chance-.12)*100)/100)}}
   return c;
 }
-function rivalPoach(c){const t=T(c.rvt);news(`${c.n} (${c.st}★ ${c.pos}) picked ${t.name} over you. Coach ${c.rv} got him.`);
-  post({h:`@${c.n.replace(/\W/g,"")}`,n:c.n,txt:`Committed!! 💍 #${t.abbr}`,tag:"Recruiting"});post({h:`@Coach${c.rv.split(" ").pop()}`,n:`Coach ${c.rv}`,v:true,txt:"Big day for our program. 😎",tag:"Rival"})}
 function feedSigning(r){const me=T(S.user);post({h:pick(ANALYSTS)[0],n:"",v:true,txt:r<=10?`${me.name} just signed a top-${r<=5?5:10} class. No. ${r} nationally. That's a statement.`:`${me.name} lands the No. ${r} recruiting class.`,tag:"Recruiting"});
   const top=S.classRank&&S.classRank.list[0];if(top&&top.tid!==S.user)post({h:pick(FANS),n:"",txt:`${T(top.tid).name} with the No. 1 class AGAIN?? Rigged 🙄`})}
 function feedWire(tag,text){if(!S||S.phase==="h2h")return;
   if(tag==="Upset")post({h:pick(FANS),n:"",txt:`${text} ${S.phase==="ncaa"?"BRACKETS ARE BUSTED 🫠":pick(["Chaos. 🫠","College basketball, baby 🍿","Somebody check on their fans 💀"])}`,tag:"Upset"});
   else if(tag==="GameDay")post({h:"@CollegeGameDayHoops",n:"College GameDay",v:true,txt:text});
   else if(Math.random()<.25)post({h:pick(ANALYSTS)[0],n:"",v:true,txt:text})}
+
+const fmtK=n=>n>=1e6?(n/1e6).toFixed(1).replace(/\.0$/,"")+"M":n>=1e4?Math.round(n/1e3)+"K":n.toLocaleString("en-US");
 
 // ===================== HAUNTED ARENAS =====================
 // Old gyms with a ghost story. Visitors shoot a little worse there late in close games.
@@ -3244,7 +3252,8 @@ function ghostAfter(gm){
 }
 
 // ===================== TECHNICALS, EJECTIONS & BRAWLS =====================
-function heatOf(gm){if(S.phase==="h2h")return .25;if(gm.neutral&&gm.type==="ncaa")return .4;let h=rivalryOf(gm.h,gm.a)?1:0;
+function heatOf(gm){if(S.phase==="h2h")return .25;const fo=gm.h===S.user?gm.a:gm.a===S.user?gm.h:null,fb=fo!=null&&isRivalCoach(fo)?beefOf(T(fo))/100:0;if(fb)return heatOfBase(gm)+fb;return heatOfBase(gm)}
+function heatOfBase(gm){if(gm.neutral&&gm.type==="ncaa")return .4;let h=rivalryOf(gm.h,gm.a)?1:0;
   if(S&&S.phase!=="h2h"&&(isRivalCoach(gm.h)||isRivalCoach(gm.a)))h+=.6;if(rankOf(gm.h)<=25&&rankOf(gm.a)<=25)h+=.4;if(gm.type==="ct"||gm.type==="ncaa")h+=.2;return h||.25}
 function techFTs(g,shTeam,why){const p=g.lu[shTeam].slice().sort((a,b)=>ftPct(g,b,shTeam)-ftPct(g,a,shTeam))[0];if(!p)return;const r=freeThrows(g,shTeam,opp(g,shTeam),p,2);say(g,`${why} ${p.n} makes ${r.made} of 2.`,true)}
 function heatCheck(g){
@@ -3387,7 +3396,7 @@ function demAfter(gm){
   if(isDem("players"))for(const p of t.roster)if(p.rel!=null)p.rel=Math.min(100,p.rel+.6);
   if(isDem("strict"))for(const p of t.roster)if(p.rel!=null)p.rel=Math.max(0,p.rel-.3);
   if(isDem("show")&&gm.h===u&&!gm.neutral&&S.ss&&S.ss.team===u)S.ss.energy=Math.min(100,S.ss.energy+1);
-  if(Math.random()<.55)post({h:`@Coach${coachName().replace(/\W/g,"")||t.abbr}`,n:`Coach ${coachName()}`,v:true,txt:pick(won?D.q:D.lq),tag:"Postgame"});
+  if(Math.random()<.55)post({h:`@Coach${coachName().replace(/\W/g,"")||t.abbr}`,n:`Coach ${coachName()}`,v:true,txt:pick(won?D.q:D.lq),tag:"Postgame",mine:true,rep:reactions(won?"mine":"rivalWon",{}),likes:clout(won?2:1)});
   if(isDem("show")&&!won&&Math.random()<.6)post({h:pick(FANS),n:"",txt:pick(["Coach dressed like a disco ball and still lost 💀","Maybe spend less on suits and more on defense 🙃","The outfit won. The team didn't."])});
   if(isDem("tac")&&won&&Math.random()<.3)post({h:pick(FANS),n:"",txt:"We won but watching that offense is like reading a tax form 😴"});
 }
@@ -3436,6 +3445,168 @@ function coachSVG(look,t,w){
 }
 function coachLine(){if(isMP()||!S.coach)return "";const D=DEMEANOR[S.coach.dem],t=T(S.user);if(!D&&!S.coach.name)return "";
   return `<div class="coachline">${coachSVG(S.coach.look||"zip",t,34)}<span>Coach ${esc(S.coach.name||"")}${D?` · ${D.i} ${esc(D.n)}`:""} · ${esc(LOOKS[S.coach.look||"zip"])}</span></div>`}
+
+// ===================== COACHES WITH REAL PERSONALITIES =====================
+// Every AI coach gets a personality, a quirk, a catchphrase and a feud level with you.
+// Their quotes are built from opener + line + closer pieces, so they rarely say the same thing twice.
+Object.assign(CPERS,{
+  zen:["Zen Master","Meditates before tip-off. Talks about 'the journey' after blowouts."],
+  grump:["Grump","Hates the media, hates the schedule, hates your mascot."],
+  folksy:["Folksy","Every answer is a story about his granddaddy's farm."],
+  petty:["Petty","Remembers every slight since 2011. Keeps receipts."],
+  young:["Young Gun","32 years old, 400k followers, still thinks he's a player."]});
+const QUIRKS=["chews a towel all game","has worn the same lucky socks since 2009","quotes Rocky in every press conference","drinks six Diet Cokes a game","never sits down, ever","keeps a rubber duck on the bench","does push-ups at midcourt after wins","refers to himself in the third person","carries a clipboard with nothing written on it","wears sunglasses indoors","has a bulldog named Defense","eats sunflower seeds nonstop","writes poems about box scores","takes a victory lap after every win","once broke a floorboard stomping","hums Sinatra during free throws","still uses a flip phone","brings his mom to every road game","has a tattoo of his own playbook","yells 'BUCKETS' at nobody in particular"];
+const CATCH=["Defense travels.","Ball don't lie.","We hoop.","Next man up.","Nobody's coming to save us.","Run it back.","Stay hungry.","Chop wood, carry water.","Bring your hard hat.","Pressure is a privilege.","Earn it.","All gas, no brakes.","Trust the process. Mine, not yours.","Rebounds win championships.","Be where your feet are.","Iron sharpens iron.","Hard work beats talent.","Win the day.","It is what it is.","Respect none, fear none."];
+const COPEN={
+  old:["Back in my day,","I've been doing this 31 years.","Listen here.","Let me tell you something.","Fundamentals, son.","I'll keep it simple.","I don't care about your highlights.","Old man here, but"],
+  hot:["I'm gonna say it.","You want honesty? Fine.","Write this down.","I don't care who hears this.","Here's the truth.","Let's be real.","I'm not biting my tongue.","Nope. Not doing the nice thing."],
+  rec:["Ask any five-star in the country.","My phone's been ringing all week.","Recruits are watching, so","Funny story from a home visit:","Talked to three of their commits today.","I just landed from a recruiting trip.","Moms love me, so","Every kid in America knows"],
+  show:["Lights, cameras, ACTION.","Ladies and gentlemen,","Bring the cameras closer.","Is this thing on?","You're welcome, America.","Showtime, baby.","Grab your popcorn.","Somebody get me a microphone."],
+  tac:["Statistically speaking,","I watched 14 hours of film.","Their pick-and-roll coverage tells me","The numbers say","From a schematic standpoint,","I drew it up last night.","Possession by possession,","Analytics don't lie:"],
+  zen:["Breathe in.","The river flows.","Basketball is a journey.","I meditated on this.","The scoreboard is an illusion, but","Peace be with them.","Namaste.","Be like water."],
+  grump:["Ugh.","Do I have to answer this?","Nobody asked, but","I hate these press conferences.","Next question. Fine.","Whatever.","Don't make me talk about it.","I'm tired and"],
+  folksy:["Well, my granddaddy used to say","Down on the farm we'd say","Bless their hearts.","Like my mama always said,","That reminds me of a mule we had.","Shoot,","Folks back home know","Y'all, I tell you what,"],
+  petty:["I remember 2014. They know what they did.","Not that I'm keeping score, but","I have the receipts.","Funny how they forget","I screenshot everything.","Interesting.","Noted.","Remember when they said we couldn't win? I do."],
+  young:["Bro.","No cap,","Lowkey,","On God,","Real talk,","Fr fr,","Let me cook.","It's giving"]};
+const CBODY={
+  pre:[["{me} are a good team. We respect them.","{mc} does a nice job. We'll have to play well.","{me} come in hot. Should be fun.","We know {star} can fill it up. We'll have a plan.","It's a big game for both programs.","I like {mc}. Good person. Tomorrow I won't."],
+       ["{me} haven't seen a crowd like {arena}.","{star} better bring his A-game, because we're bringing ours.","We've been circling {me} on the calendar.","{mc} talks a lot. We'll see on the court.","{me} are overrated, and tomorrow everybody finds out.","I'm 'not worried' about {me}. That's all I'll say."],
+       ["I can't stand {me}. Never have.","{mc} isn't a real coach. Real coaches don't do what he does.","We're going to embarrass {me}. Put it on the board.","I'd rather lose to anyone in America than {me}.","{star} is soft and we're going to prove it.","If {mc} shakes my hand tomorrow, I'm not shaking back."]],
+  won:[["Nice win for our guys. Credit to {me}.","We made more plays. Simple as that.","Good battle with {mc}. We'll see them again.","{star} was tough. We were tougher.","We're {rec} against them now. Just keep working.","Proud of this group."],
+       ["Told everybody. {me} weren't ready.","That's {rec} against {mc}. Not that I'm counting.","Somebody check on {star}. We locked him up.","{me} fans were awful quiet at the end.","Hope {mc} enjoyed the bus ride home.","We wanted that one. Bad."],
+       ["{me} got exactly what they deserved.","{mc} should be embarrassed. I would be.","Cry about it, {ma}.","Tell {star} to look at the scoreboard.","That one's going on my wall. Framed.","I'll be thinking about {mc}'s face all summer."]],
+  lost:[["{me} were better tonight. Credit to them.","Hats off to {mc}. Good game plan.","We'll be back. Lot of basketball left.","{star} hit tough shots. That happens.","Not our night. Back to the gym.","Good team over there."],
+       ["They got the whistle. I'll leave it at that.","{me} got lucky and they know it.","I'm not impressed. They won, fine.","See you in the rematch, {mc}.","{star} flopped his way to that one.","Enjoy it. It won't last."],
+       ["I'd lose to {me} a thousand times before I respect them.","{mc} didn't beat us. The refs did.","That's the last time {me} celebrate on our floor. Promise.","{star} can have his night. We'll have the season.","I'm already watching film on {me}. All night. Every night.","Hope that win keeps {mc} warm in March."]],
+  steal:[["Great kid. We're thrilled he picked us over {me}.","Recruiting is a battle. We won this one.","He felt the love here. Simple.","{mc} recruited him hard. We recruited harder.","Welcome to the family.","That's a special young man."],
+       ["Another one picks us over {me}.","Must sting over at {ma}.","He saw through {mc}'s pitch.","Recruiting isn't hard when you're us.","Ask {me} how signing day went.","Sorry, {mc}. Not sorry."],
+       ["{me} can keep their facilities. Kids want us.","I took him out of {mc}'s living room. Literally.","That's three straight they've lost to us on the trail.","Tell {mc} to keep crying on social media.","{me} recruited him for two years. I needed one dinner.","Imagine losing a recruit to me. {mc} doesn't have to imagine."]],
+  reply:[["I saw what {mc} said. Respectfully, we'll talk on the court.","Big talk from {ma}. Okay.","Love the passion, {mc}.","I don't do social media beef. Usually.","We'll answer in person.","Cute post, coach."],
+       ["{mc} wants attention. I'll give him some on game day.","Bold words from a guy who's {rec} against me.","Screenshot taken, {mc}.","Bulletin board material. Thank you.","My players read that. Big mistake.","You poked the bear, {ma}."],
+       ["{mc} can say whatever he wants from behind a phone.","Delete your account, coach.","I've been waiting for this. Let's go.","You want war? You got it.","My guys are going to make {mc} eat every word.","See you soon, {mc}. Bring a helmet."]]};
+const CCLOSE={old:["Box out.","That's basketball.","Now get off my lawn.","Practice is at six.","Same as it ever was.",""],hot:["😤","Period.","I said what I said.","Fine me.","Don't @ me.",""],rec:["See you on signing day.","Recruits, call me.","📲","Ask around.","The trail never sleeps.",""],show:["🎤⬇️","You're welcome.","Tune in.","#Showtime","Bring the cameras.",""],
+  tac:["Watch the film.","📊","Next possession.","The numbers agree.","Adjustments win.",""],zen:["🧘","Peace.","The journey continues.","Be the river.","Breathe out.",""],grump:["Next question.","I'm going home.","Ugh.","Whatever.","Can I leave now?",""],folksy:["Bless 'em.","That's all I know.","Y'all have a good night.","Pass the sweet tea.","Amen.",""],
+  petty:["🧾","Noted.","I'll remember this.","Receipts saved.","Interesting.",""],young:["💯","🔥🔥","Let's gooo","No cap.","We outside.",""]};
+function coachTraits(t){coachOf(t);if(t.cqk==null){t.cqk=Math.floor(Math.random()*QUIRKS.length);t.cph=Math.floor(Math.random()*CATCH.length);t.cyr=1+Math.floor(Math.random()*28)}return {quirk:QUIRKS[t.cqk],catch:CATCH[t.cph],yrs:t.cyr}}
+function beefOf(t){S.beef=S.beef||{};return S.beef[coachOf(t).n]||0}
+function addBeef(t,v){S.beef=S.beef||{};const k=coachOf(t).n;S.beef[k]=clamp((S.beef[k]||0)+v,0,100)}
+const beefTier=b=>b>=60?2:b>=25?1:0;
+const BEEF_LBL=["Cordial","Heated","All-out war"];
+function myStar(){const t=T(S.user);return t.roster.slice().sort((a,b)=>b.ovr-a.ovr)[0]}
+function coachSays(t,sit,extra){
+  const c=coachOf(t),tr=coachTraits(t),tier=Math.min(2,beefTier(beefOf(t))+(extra||0)),me=T(S.user),R=crec(t);
+  const fill=s=>s.replace(/\{me\}/g,me.name).replace(/\{ma\}/g,me.abbr).replace(/\{mc\}/g,S.coach&&S.coach.name?`Coach ${S.coach.name}`:`their coach`)
+    .replace(/\{star\}/g,(myStar()||{n:"their star"}).n).replace(/\{arena\}/g,t.arena).replace(/\{rec\}/g,sit==="lost"||sit==="won"?`${R.l}-${R.w}`:`${R.l}-${R.w}`);
+  const open=pick(COPEN[c.p]||COPEN.old),body=fill(pick(CBODY[sit][tier])),close=pick(CCLOSE[c.p]||CCLOSE.old),cp=Math.random()<.22?" "+tr.catch:"";
+  return `${Math.random()<.75?open+" ":""}${body}${cp}${close?" "+close:""}`.replace(/\s+/g," ").trim();
+}
+const coachHandle=t=>`@Coach${coachOf(t).n.split(" ").pop()}${t.abbr}`;
+
+// ===== Overrides of the earlier rival-coach screens, now with traits and feuds =====
+function rivalCoachCard(gm){
+  const u=S.user,o=gm.h===u?gm.a:gm.h;if(!isRivalCoach(o))return "";const t=T(o),c=coachOf(t),R=crec(t),tr=coachTraits(t),b=beefOf(t);
+  S.cq=S.cq||{};const k=gameKey(gm)+S.season;const q=S.cq[k]||(S.cq[k]=coachSays(t,"pre"));
+  return `<div class="panel rivc" style="--c1:${t.c1}"><div class="row" style="justify-content:space-between"><h3>Rival coach · ${esc(c.n)}</h3><span class="tag ${R.w>R.l?"good":R.l>R.w?"bad":""}">You're ${R.w}-${R.l} vs him</span></div>
+    <p class="sub">${esc(t.name)} · ${esc(CPERS[c.p][0])} · Year ${tr.yrs}. ${esc(CPERS[c.p][1])} He ${esc(tr.quirk)}.</p>
+    ${beefMeter(b)}<blockquote class="trash"><p>"${esc(q)}"</p><cite>Coach ${esc(c.n)}, ${esc(t.abbr)}</cite></blockquote>
+    ${isMP()?"":`<div class="row"><button class="small-btn" data-act="cpost" data-k="callout" data-id="${t.id}">Fire back on Courtside</button></div>`}</div>`;
+}
+function beefMeter(b){return `<div class="beef"><span>Feud</span><div class="bbar"><i style="width:${b}%"></i></div><b>${BEEF_LBL[beefTier(b)]}</b></div>`}
+function rivalAfter(gm){
+  if(!S||S.phase==="h2h")return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;const o=gm.h===u?gm.a:gm.h;if(!isRivalCoach(o))return;const t=T(o),R=crec(t),won=gm.winner===u;
+  won?R.w++:R.l++;addBeef(t,won?8:3);
+  const p={h:coachHandle(t),n:`Coach ${coachOf(t).n}`,v:true,txt:coachSays(t,won?"lost":"won"),tag:"Rival"};
+  p.rep=reactions(won?"rivalLost":"rivalWon",{t});p.likes=clout(won?3:2);post(p);
+}
+// Rival coaches who flip your recruits gloat about it now.
+function rivalPoach(c){const t=T(c.rvt);news(`${c.n} (${c.st}★ ${c.pos}) picked ${t.name} over you. Coach ${c.rv} got him.`);addBeef(t,10);
+  post({h:`@${c.n.replace(/\W/g,"")}`,n:c.n,txt:`Committed!! 💍 #${t.abbr}`,tag:"Recruiting"});
+  post({h:coachHandle(t),n:`Coach ${c.rv}`,v:true,txt:coachSays(t,"steal"),tag:"Rival",rep:reactions("steal",{t}),likes:clout(2)})}
+function rivalPanel(){
+  const ids=rivalCoaches();if(!ids.length)return "";
+  return `<div class="panel" data-c="bad"><h3>Rival coaches</h3><div class="rcards">${ids.map(id=>{const t=T(id),c=coachOf(t),R=crec(t),tr=coachTraits(t),b=beefOf(t);
+    return `<div class="rcard" style="--c1:${t.c1}"><div class="row" style="justify-content:space-between;flex-wrap:nowrap">${badge(t)}<span class="wl ${R.w>=R.l?"w":"l"}">${R.w}-${R.l}</span></div>
+      <b>Coach ${esc(c.n)}</b><span class="sub">${esc(CPERS[c.p][0])} · Year ${tr.yrs} at ${esc(t.name)}</span><span class="sub">Quirk: ${esc(tr.quirk)}</span><span class="sub">Catchphrase: "${esc(tr.catch)}"</span>${beefMeter(b)}</div>`}).join("")}</div>
+    <p class="muted" style="font-size:13px">Feuds heat up when you beat them, call them out, or lose recruits to them. Hotter feuds mean nastier quotes and wilder games.</p></div>`;
+}
+
+// ===================== THE MEDIA MACHINE =====================
+// How loud the internet gets for you: program size, ranking and a Showman's flair.
+function clout(mult){const t=T(S.user),r=rankOf(S.user);return Math.round((300+t.pres*500)*(r<=5?6:r<=25?3:1)*(isDem("show")?2:1)*(mult||1)*(.6+Math.random()*.9))}
+const RFAN=["@HoopsHeadHank","@BracketBrianna","@CourtsideCass","@MidMajorMike","@BuzzerBeaterBeth","@TheBubbleBoy","@NETrankNerd","@ZoneDefenseZoe","@SixthManSam","@OneAndDoneDev","@BankShotBarb","@PostUpPete","@FullCourtFiona","@DunkCityDan","@AlleyOopAva"];
+const RX={
+  mine:["THIS IS MY COACH 😤🔥","Coach is cooking","Tattooing this on my arm","Chills. Actual chills.","This man gets it","Sending this to every recruit I know","Run through a wall for this man","Frame this post","Coach said what we were all thinking","We're so back","Season tickets: purchased","I'd die for this program","Love it. LOVE IT.","Coach doesn't miss","Petition to make this the team motto"],
+  them:["Ratio + you're overrated","Big talk, small trophy case","Your coach types like he coaches: badly","Can't wait to watch you lose in round one","Someone take his phone away","Delete this","Who asked?","Bold words for a team that can't shoot","Screenshotting this for March","Cope","This is why nobody likes {ma}","Lol. Lmao, even.","Weird flex","My grandma could guard your best player"],
+  neutral:["The drama in college hoops is unmatched 🍿","Grabbing popcorn","This sport is so unserious and I love it","Somebody get these coaches in a cage match","Appointment viewing next time they play","Not the coaches beefing 😭","This is better than the games","Courtside never sleeps"],
+  analyst:["{mc} is building something at {me}. The swagger is real.","Bulletin-board material. Don't be shocked if this fires up the other locker room.","Love the confidence from {mc}. Now go back it up.","This is exactly the kind of energy recruits notice.","Media training session incoming for {mc}?","Say what you want, people are talking about {me}."],
+  player:["Coach said it 🗣️","Locked in. 🔒","We ride for coach 💯","Back the man up. Let's work.","That's our guy 😤"]};
+function fillRx(s,o){const me=T(S.user);return (Math.random()<.35?pick(["Honestly? ","Ngl ","Okay but ","Not gonna lie, ","Yo ","Lmao ","Real ones know: "]):"")+s.replace(/\{me\}/g,me.name).replace(/\{ma\}/g,me.abbr).replace(/\{mc\}/g,S.coach&&S.coach.name?`Coach ${S.coach.name}`:"the coach")+pick(["","",""," 😂"," 🔥"," 💀"," 👀"," 😤"," 🍿"," 🫡"])}
+function reactions(kind,o){
+  const me=T(S.user),out=[],n=3+Math.floor(Math.random()*3),star=myStar();
+  const add=(pool,h,nm,v)=>out.push({h,n:nm||"",v:!!v,txt:fillRx(pick(pool),o),likes:Math.round(clout(.08))});
+  const fanMe=`@${me.abbr}Nation`;
+  if(kind==="rivalWon"||kind==="steal"){add(RX.them,pick(RFAN));add(RX.neutral,pick(RFAN));add(["Not a great look for {me}","{mc} has to answer this","Oof. Tough day for {ma} fans"],pick(ANALYSTS)[0],"",true);add(["We'll remember this 😤","Circle the date","Rematch can't come soon enough"],fanMe,`${me.name} Nation`)}
+  else if(kind==="rivalLost"){add(RX.mine,fanMe,`${me.name} Nation`);add(["Excuses, excuses 😂","Cry harder, coach","He's mad mad"],pick(RFAN));add(RX.neutral,pick(RFAN))}
+  else{add(RX.mine,fanMe,`${me.name} Nation`);add(RX.them,pick(RFAN));add(RX.neutral,pick(RFAN));if(Math.random()<.7)add(RX.analyst,pick(ANALYSTS)[0],"",true);
+    if(star&&Math.random()<.6)add(RX.player,`@${star.n.split(" ")[0]}${star.no}`,star.n)}
+  return out.slice(0,Math.max(3,n));
+}
+// Big games get a media storm instead of a single post.
+function mediaStorm(gm){
+  if(!S||S.phase==="h2h"||isMP())return;const u=S.user;if(gm.h!==u&&gm.a!==u)return;const won=gm.winner===u,o=T(gm.h===u?gm.a:gm.h),ro=rankOf(o.id),riv=rivalryOf(gm.h,gm.a),big=(won&&ro<=10)||gm.bz||(gm.type==="ncaa")||(riv&&Math.random()<.6);
+  const top=(S.feed||[]).find(p=>p.k===dayKey()&&!p.rep);if(top){top.rep=reactions(won?"game":"rivalWon",{});top.likes=Math.max(top.likes,clout(big?4:1))}
+  if(!big)return;const me=T(u);
+  post({h:"@CBBonCourtside",n:"Courtside Central",v:true,txt:won?`${me.name} ${gm.type==="ncaa"?"advance":"take down"} ${ro<=25?`No. ${ro} `:""}${o.name}. Coach ${S.coach.name||me.abbr} after the game: "${pick((DEMEANOR[dem()]||DEMEANOR.ice).q)}"`:`${o.name} handle ${me.name}. Rough night for Coach ${S.coach.name||me.abbr}.`,tag:"Trending",likes:clout(6),viral:won,rep:reactions(won?"game":"rivalWon",{})});
+}
+
+// ===================== YOUR COACH POSTS =====================
+const CPOST={
+  hype:{n:"Hype the fans",i:"📣",need:null,parts:[["Big night tonight!","I need EVERY seat full.","Students, this one's on you.","Our building, our rules.","Bring the noise.","Let's make it shake."],["Wear {c1}. Get loud. Get rowdy.","Doors open early. Be there.","Let's make {arena} the loudest gym in America.","Our guys feed off you.","You are the sixth man. Act like it.","Make the other bench hate coming here."],["#{ma}Nation","See you there 🏀","LET'S GO!","Bring a friend.","Free pizza to the first 500. Don't tell the AD.","🔥🔥🔥"]]},
+  callout:{n:"Call out a rival coach",i:"🎯",need:"rival",parts:[["I'll say it:","Hey {oc},","Quick message for {oc}:","Since {oc} wants to talk,","Funny how {oc} got quiet.","Somebody tell {oc}"],["your team is soft and you know it.","we're coming to {oa} and we're bringing everything.","nice recruiting class. Shame you can't coach them.","your fans are already making excuses.","we've been waiting for this one all year.","those quotes are on our locker room wall now."],["See you soon.","Bring your A-game.","Mark the calendar.","No handshake needed.","Respectfully. 😤","Pressure's on you."]]},
+  praise:{n:"Praise a player",i:"🙌",need:"player",parts:[["Gotta give it up for {pl}.","Can we talk about {pl}?","Nobody works harder than {pl}.","Shoutout {pl}.","{pl} is special. Period.","Proud of {pl}."],["First in the gym, last to leave.","Best teammate I've ever coached.","The country is about to find out.","He's playing like an All-American.","That kid has ice in his veins.","Future pro. Mark it down."],["💯","Keep going, young man.","We ride with you.","🐐?","The sky's the limit.","Love you, kid."]]},
+  pitch:{n:"Recruiting pitch",i:"✍️",need:null,parts:[["To every recruit watching:","High schoolers, listen up.","Calling all hoopers:","If you want to win,","Want to play in March?","Looking for a home?"],["come play for {me}. Minutes are earned, not given.","we develop pros here. Ask anyone on our roster.","our crowd is crazy and our facilities are elite.","you'll play for a coach who believes in you.","we've got a spot with your name on it.","this is the place to build your legacy."],["DMs open. 📲","#Commit{ma}","Let's build something.","The door is open.","Come see it for yourself.","Your future starts here."]]},
+  refs:{n:"Rip the refs",i:"🦓",need:null,parts:[["I've been coaching a long time.","I'll probably get fined for this.","I watched the film three times.","Not gonna lie,","Somebody has to say it.","Respectfully to the officials,"],["that was the worst officiated game I've ever seen.","the free-throw numbers don't add up.","we got hosed. No other word for it.","the refs need glasses. All three of them.","my guys got hammered and nobody blew a whistle.","the conference needs to look at that crew."],["Fine me. 💸","I said what I said.","Check the tape.","Unbelievable.","I'll pay it.","Somebody explain."]]},
+  lap:{n:"Victory lap",i:"🏆",need:"win",parts:[["WHAT A WIN!","That's how we do it.","Big-time win.","Our guys showed up.","Tonight was special.","Statement made."],["Beat {lo} and never blinked.","Defense, toughness, heart. All night.","Proud of every single guy in that locker room.","The fans were incredible.","We're just getting started.","That's {ma} basketball."],["On to the next.","Enjoy it tonight. Back to work tomorrow.","🏀🔥","#{ma}Nation","Celebrate responsibly. 😎","Let's keep rolling."]]},
+  sorry:{n:"Own the loss",i:"🤝",need:"loss",parts:[["That one's on me.","Not good enough tonight.","I let our fans down.","Tough loss.","We have to be better.","I hate losing more than anything."],["Credit to {lo}. They played harder.","I didn't have us ready. I'll fix it.","We'll learn from it and grow.","My guys gave effort. I need to give them a better plan.","We'll be back in the gym first thing tomorrow.","Our fans deserve better and they'll get it."],["Thank you for sticking with us.","We'll respond.","Keep the faith.","Back to work.","Onward.","Better days coming."]]},
+  take:{n:"Drop a hot take",i:"🌶️",need:null,parts:[["Hot take:","Unpopular opinion:","I'll say what nobody will:","Here's my take, and I'm right:","Controversial, but","Unpopular, but"],["the NET rankings are a scam.","the tournament should be 128 teams.","the three-point line should move back two feet.","mid-majors are better than half the power leagues.","the dunk contest should come back to college hoops.","every arena should have a student section on all four sides.","the shot clock should be 25 seconds.","conference tournaments are better than the real tournament."],["Argue with the wall.","Fight me in the replies.","I'm not deleting this.","🌶️🌶️🌶️","You know I'm right.","Thread below. Kidding. Maybe."]]}};
+const POSTS_PER_DAY=3;
+function cpostLeft(){const k=dayKey()+S.season;if(!S.cpost||S.cpost.k!==k)S.cpost={k,n:0};return POSTS_PER_DAY-S.cpost.n}
+function lastRes(){const u=S.user,r=[...S.results].reverse().find(g=>g.h===u||g.a===u);return r?{won:(r.h===u?r.hs:r.as)>(r.h===u?r.as:r.hs),opp:r.h===u?r.a:r.h,key:`${r.h}-${r.a}-${r.label}`}:null}
+function coachPost(kind,id){
+  if(isMP()||cpostLeft()<=0)return;const D=CPOST[kind];if(!D)return;const me=T(S.user),L=lastRes();
+  if(D.need==="win"&&!(L&&L.won))return;if(D.need==="loss"&&!(L&&!L.won))return;
+  let tgt=null,pl=null;if(D.need==="rival"){tgt=T(id!=null?id:rivalCoaches()[0]);if(!tgt)return}if(D.need==="player"){pl=PL[id]||myStar()}
+  const fill=s=>s.replace(/\{oc\}/g,tgt?`Coach ${coachOf(tgt).n}`:"").replace(/\{oa\}/g,tgt?tgt.arena:"").replace(/\{pl\}/g,pl?pl.n:"").replace(/\{me\}/g,me.name).replace(/\{ma\}/g,me.abbr).replace(/\{arena\}/g,me.arena).replace(/\{c1\}/g,"the team colors").replace(/\{lo\}/g,L?T(L.opp).name:"them");
+  const txt=D.parts.map(a=>fill(pick(a))).join(" ");
+  const showB=isDem("show")?.12:0,r=rankOf(S.user),viral=Math.random()<.08+showB+(r<=10?.06:0)+(kind==="callout"||kind==="take"?.08:0)+(kind==="refs"?.05:0);
+  const p={h:`@Coach${(S.coach.name||me.abbr).replace(/\W/g,"")}`,n:`Coach ${S.coach.name||me.abbr}`,v:true,txt,tag:viral?"🔥 Viral":"You",mine:true,likes:clout(viral?15+Math.random()*30:2),viral};
+  p.rep=reactions("mine",{});
+  // The target answers.
+  if(tgt){addBeef(tgt,15);p.rep.unshift({h:coachHandle(tgt),n:`Coach ${coachOf(tgt).n}`,v:true,txt:coachSays(tgt,"reply"),likes:clout(.5)});S.calledOut={tid:tgt.id,season:S.season}}
+  S.cpost.n++;post(p);p.rt=Math.round(p.likes*(.08+Math.random()*.1));
+  // What it does
+  const msg=[];
+  if(kind==="hype"&&S.ss&&S.ss.team===S.user){S.ss.energy=Math.min(100,S.ss.energy+(viral?8:3));msg.push("Student section energy is up.")}
+  if(kind==="praise"&&pl){if(pl.rel!=null)pl.rel=Math.min(100,pl.rel+6);msg.push(`${pl.n} loved that.`)}
+  if(kind==="pitch"){S.pitch=S.pitch&&S.pitch.season===S.season?S.pitch:{season:S.season,n:0};S.pitch.n=Math.min(3,S.pitch.n+1);msg.push("Recruits noticed. Small boost on signing day.")}
+  if(kind==="refs"){if(Math.random()<.4){S.job.sec=clamp(S.job.sec-1,0,100);news(`The ${CONFS[me.conf]} fined you $10,000 for criticizing officials on Courtside.`);msg.push("The conference fined you $10,000.")}else msg.push("Your fans loved it. The conference office did not.")}
+  if(kind==="sorry"){S.job.sec=clamp(S.job.sec+.5,0,100);msg.push("The AD appreciated that.")}
+  if(kind==="lap"&&S.ss&&S.ss.team===S.user){S.ss.energy=Math.min(100,S.ss.energy+2)}
+  if(kind==="callout")msg.push(`Coach ${coachOf(tgt).n} fired back. The feud just got hotter.`);
+  if(viral){wire("Viral",`Coach ${S.coach.name||me.abbr}'s post is everywhere: ${p.likes.toLocaleString("en-US")} likes and counting.`);
+    post({h:pick(ANALYSTS)[0],n:"",v:true,txt:fillRx(pick(["Everybody in college basketball is talking about what {mc} just posted.","{mc} broke the internet tonight. {me} are the story of the week.","Whatever you think of {mc}, you can't stop watching."]),{}),tag:"Trending",likes:clout(8)});msg.push("It went VIRAL.")}
+  S.lastPostMsg=msg.join(" ");
+}
+const pitchBoost=()=>S&&S.pitch&&S.pitch.season===S.season?S.pitch.n*.01:0;
+function composerHTML(){
+  if(isMP())return "";const left=cpostLeft(),L=lastRes(),me=T(S.user),ids=rivalCoaches(),pk=S.cpSel||"hype";
+  const ok=k=>{const n=CPOST[k].need;return n==="win"?!!(L&&L.won):n==="loss"?!!(L&&!L.won):true};
+  const target=pk==="callout"?`<div class="row"><span class="sub">Who?</span>${ids.map(id=>`<button class="uchip ${(+S.cpTgt===id||(S.cpTgt==null&&id===ids[0]))?"on":""}" data-act="cpTgt" data-id="${id}">Coach ${esc(coachOf(T(id)).n)} (${esc(T(id).abbr)})</button>`).join("")}</div>`
+    :pk==="praise"?`<div class="row"><span class="sub">Who?</span>${me.roster.slice().sort((a,b)=>b.ovr-a.ovr).slice(0,6).map(p=>`<button class="uchip ${(+S.cpTgt===p.id||(S.cpTgt==null&&p===myStar()))?"on":""}" data-act="cpTgt" data-id="${p.id}">${esc(p.n)}</button>`).join("")}</div>`:"";
+  return `<div class="panel composer" data-c="amber"><div class="row" style="justify-content:space-between"><h3>Post as Coach ${esc(S.coach.name||me.abbr)}</h3><span class="tag ${left?"":"bad"}">${left} post${left===1?"":"s"} left today</span></div>
+    <div class="cpkinds">${Object.entries(CPOST).map(([k,x])=>`<button class="cpk ${pk===k?"on":""}" data-act="cpSel" data-k="${k}" ${ok(k)?"":"disabled"} aria-pressed="${pk===k}"><span>${x.i}</span>${esc(x.n)}</button>`).join("")}</div>
+    ${target}<div class="row"><button class="btn" data-act="cpost" data-k="${pk}" data-id="${S.cpTgt??""}" ${left&&ok(pk)?"":"disabled"}>Post it</button>${S.lastPostMsg?`<span class="sub">${esc(S.lastPostMsg)}</span>`:""}</div></div>`;
+}
 
 // ===================== MY PLAYER: one player, high school to the NBA draft =====================
 // The dynasty runs as normal with the AI coaching your school. S.mp marks the save, and your player carries p.mp.
@@ -4266,6 +4437,7 @@ const ACT={
   selAuto(){const X=selShow();X.auto=!X.auto;if(X.auto&&X.step===0)X.step=1;selLoop()},selNext(){const X=selShow();if(X.step<SEL_LAST)X.step++;scrollTo(0,0)},selAll(){const X=selShow();X.step=SEL_LAST;X.auto=false;clearTimeout(selTimer)},
   startNcaa(){clearTimeout(selTimer);startTournament();S.tab="bracket";scrollTo(0,0)},
   demPick(d){S.coach.dem=d.k},demLook(d){S.coach.look=d.k},
+  cpSel(d){S.cpSel=d.k;S.cpTgt=null;S.lastPostMsg=""},cpTgt(d){S.cpTgt=+d.id},cpost(d){coachPost(d.k,d.id===""||d.id==null?null:+d.id);S.tab="feed";tabJump=true},
   offseason(){mpPreOff();beginOffseason();if(S.mp)S.off.step="mp";else secretWalkOn();scrollTo(0,0)},meltdown(){meltdown()},
   mpPos(d){MPC.pos=d.k;MPC.ar=0;MPC.ht=Math.round((HT[d.k][0]+HT[d.k][1])/2)},mpAr(d){MPC.ar=+d.k},mpHt(d){MPC.ht=+d.k},mpSt(d){MPC.st=+d.k},mpSeeOffers(){mpSeeOffers();scrollTo(0,0)},mpBack(){MPC.step="create"},
   mpCommit(d){mpStart(+d.id);scrollTo(0,0)},mpFocus(d){if(S.mp)S.mp.focus=d.k},mpReturn(){mpAutoOff();scrollTo(0,0)},mpDeclare(){mpDeclare();scrollTo(0,0)},
