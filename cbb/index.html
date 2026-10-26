@@ -1056,6 +1056,17 @@ button:active:not(:disabled){transform:scale(.97)}
 .livedot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff3b3b;margin-left:6px;animation:pulse 1.2s infinite}
 @media (max-width:860px){.cswrap{grid-template-columns:1fr}.trendp{position:static;order:-1}.trend{flex-direction:row;flex-wrap:wrap;gap:6px 14px;padding-left:0;list-style:none}}
 @media (max-width:600px){.cpban{margin:0 -13px}.cfilt{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.cfilt::-webkit-scrollbar{display:none}.cfilt .uchip{flex:none}}
+
+/* student section extras */
+.noise{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0;font-family:var(--num);font-size:13px;letter-spacing:.04em}
+.nbar{flex:1;min-width:120px;height:9px;border-radius:5px;background:rgba(110,210,255,.1);overflow:hidden}
+.nbar i{display:block;height:100%;background:linear-gradient(90deg,#59d68a,#ffc350,#ff3b3b);transition:width .3s;box-shadow:0 0 12px rgba(255,120,60,.5)}
+.ssrank{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+.ssrank li.me{color:#ffd06a;font-weight:700}
+.sfname{font-family:var(--display);font-size:22px;margin:4px 0}
+.ssach{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.ssach>div{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;border:1px solid rgba(110,210,255,.14);opacity:.55}
+.ssach>div.on{opacity:1;border-color:rgba(255,195,80,.5);background:rgba(255,195,80,.07)}
 </style>
 </head>
 <body>
@@ -1790,7 +1801,7 @@ function playRound(userRes){
     const r=isU?userRes:pre||simGame(gm);
     gm.hs=r.hs;gm.as=r.as;gm.ot=r.ot;gm.winner=r.hs>r.as?r.h:r.a;
     S.results.push({h:gm.h,a:gm.a,hs:r.hs,as:r.as,type:gm.type,label:gm.label,day:S.phase==="regular"?S.day:null,neutral:!!gm.neutral,ot:r.ot});
-    GCTX=S.phase!=="h2h"&&(gm.h===S.user||gm.a===S.user)?gameCtx(gm):null;seriesNote(gm);gamedayResult(gm);if(r.bz)noteBuzzer(gm,r.bz);gameAch(gm);relAfterGame(gm);uniResult(gm);gm.bz=r.bz;ssAfter(gm);rivalAfter(gm);feedAfter(gm);mpAfter(gm);rivxNote(gm);handshake(gm);stormAfter(gm);mediaStorm(gm);pressAfter(gm);demAfter(gm);ghostAfter(gm);techAfter(gm,r.ej);csAfter(gm);courtAfter(gm);GCTX=null;
+    GCTX=S.phase!=="h2h"&&(gm.h===S.user||gm.a===S.user)?gameCtx(gm):null;seriesNote(gm);gamedayResult(gm);if(r.bz)noteBuzzer(gm,r.bz);gameAch(gm);relAfterGame(gm);uniResult(gm);gm.bz=r.bz;ssAfter(gm);rivalAfter(gm);feedAfter(gm);mpAfter(gm);rivxNote(gm);handshake(gm);stormAfter(gm);mediaStorm(gm);pressAfter(gm);demAfter(gm);ghostAfter(gm);techAfter(gm,r.ej);csAfter(gm);sportsAccounts(gm);superfanAfter(gm);courtAfter(gm);GCTX=null;
     if(isSeniorNight(gm)){const sn=seniorsOf(T(S.user));news(`Senior Night: ${gm.winner===S.user?"a win to send off":"a tough loss for"} ${sn.length?sn.map(p=>p.n).join(", "):"the seniors"}.`)}
     const w=gm.winner,l=w===gm.h?gm.a:gm.h,up=ovr(T(w))<ovr(T(l))-5;
     S.mo=S.mo||{};S.mo[w]=clamp((S.mo[w]||0)*.6+1+(up?.5:0),-3,3);S.mo[l]=clamp((S.mo[l]||0)*.6-1,-3,3);
@@ -1802,7 +1813,7 @@ function playRound(userRes){
   for(const t of S.teams)for(const p of t.roster)if(p.inj>0){p.inj--;if(!p.inj&&t.id===S.user)news(`${p.pos} ${p.n} is back from injury.`)}
   weekNote(games);S.roundLog=null;S.preRes={};RK.key=null;
   advancePhase(games);
-  try{studentPregame();pollPregame()}catch(e){}
+  try{studentPregame();pollPregame();ssRankPost();rivalCountdown()}catch(e){}
   if(S.phase==="regular"&&S.day%2===0||S.phase!=="regular"){voteAP();if(S.phase==="regular"||S.phase==="selection")buildWeekly()}
   const now=rankIds().slice(0,25),newTop=now[0];if(before[0]!==undefined&&newTop!==before[0]&&S.phase!=="offseason")wire("No. 1",`${T(newTop).name} take over the top spot in the AP poll.`);
   S.tab="home";
@@ -3328,7 +3339,8 @@ function rivalTarget(c){
 function feedSigning(r){const me=T(S.user);post({h:pick(ANALYSTS)[0],n:"",v:true,txt:r<=10?`${me.name} just signed a top-${r<=5?5:10} class. No. ${r} nationally. That's a statement.`:`${me.name} lands the No. ${r} recruiting class.`,tag:"Recruiting"});
   const top=S.classRank&&S.classRank.list[0];if(top&&top.tid!==S.user)post({h:pick(FANS),n:"",txt:`${T(top.tid).name} with the No. 1 class AGAIN?? Rigged 🙄`})}
 function feedWire(tag,text){if(!S||S.phase==="h2h")return;
-  if(tag==="Upset")post({h:pick(FANS),n:"",txt:`${text} ${S.phase==="ncaa"?"BRACKETS ARE BUSTED 🫠":pick(["Chaos. 🫠","College basketball, baby 🍿","Somebody check on their fans 💀"])}`,tag:"Upset"});
+  if(tag==="Upset")post({h:pick(FANS),n:"",txt:`${text} ${S.phase==="ncaa"?"BRACKETS ARE BUSTED 🫠":pick(["Chaos. 🫠","College basketball, baby 🍿","Somebody check on their fans 💀"])}`,tag:"Upset",rep:wireReplies("Upset"),likes:Math.round(2000+Math.random()*30000)});
+  else if(tag==="Buzzer-beater"||tag==="Court storm"||tag==="Brawl")post({h:SPORTS[tag==="Buzzer-beater"?"bucket":"hype"][0],n:SPORTS[tag==="Buzzer-beater"?"bucket":"hype"][1],v:true,txt:`${tag==="Buzzer-beater"?"😱 ":tag==="Brawl"?"😳 ":"🏃 "}${text}`,tag,rep:wireReplies(tag),likes:Math.round(5000+Math.random()*60000)});
   else if(tag==="GameDay")post({h:"@CollegeGameDayHoops",n:"College GameDay",v:true,txt:text});
   else if(Math.random()<.25)post({h:pick(ANALYSTS)[0],n:"",v:true,txt:text})}
 
@@ -3966,7 +3978,8 @@ function ctxReplies(c,kind,n){
   if(pos&&mine[0])out.push({h:fan,n:`${c.me.name} Nation`,txt:mine[0]});if(theirs[0])out.push({h:ofan,n:`${c.op.name} Nation`,txt:theirs[0]});
   if(Math.random()<.6&&an[0])out.push({h:pick(ANALYSTS)[0],n:"",v:true,txt:an[0]});if(!pos&&mine[1])out.push({h:pick(RFAN),n:"",txt:mine[1]});
   if(c.lc>=8&&Math.random()<.5)out.push({h:pick(RFAN),n:"",txt:`${c.ms}-${c.os} with ${c.lc} lead changes. Game of the year candidate 🍿`});
-  return out.slice(0,n||3);
+  out.push(...fanReplies(c,kind,2+Math.floor(Math.random()*3)));
+  return out.slice(0,(n||3)+3);
 }
 
 // ===== Replacements for the generic postgame posts =====
@@ -4017,6 +4030,7 @@ const LIVE_UP=["LET'S GOOOO 🔥","WHAT. A. PLAY. 🤯","Somebody call the fire 
 const LIVE_DN=["No no no no no 😩","Timeout. PLEASE.","Somebody guard him!!!","I can't watch 🙈","Ref, you're killing us 🦓","Wake up!!!"];
 function liveStep(W,bf){
   if(S.phase==="h2h"||W.kind!=="user")return;const g=W.g,u=S.user;W.lv=W.lv||[];
+  if(W.banner&&W.banner!==W.lb&&/Intentional foul|foul to stop|dribble out|Halftime:|End of/.test(W.banner))W.lb=W.banner;
   if(W.banner&&W.banner!==W.lb){W.lb=W.banner;const dU=g.score[u]-bf.u,dO=g.score[opp(g,u)]-bf.o,me=T(u);
     // Who made the play? The first player named in the call.
     const b=W.banner;let side=0,at=1e9;for(const [id,sg] of [[u,1],[opp(g,u),-1]])for(const p of T(id).roster){const k=b.indexOf(p.n);if(k>=0&&k<at){at=k;side=sg}}
@@ -4087,6 +4101,127 @@ function fSend(id,k){
   const P=prof();P.posts++;p.likes+=Math.round(clout(k==="clap"?.6:.25));
   if(k==="clap"){if(rival){addBeef(rival,6);p.rep.splice(1,0,{h:coachHandle(rival),n:`Coach ${coachOf(rival).n}`,v:true,txt:coachSays(rival,"reply",1)})}P.sent=clamp(P.sent+(Math.random()<.5?2:-1),5,98);if(Math.random()<.18+(isDem("kiff")?.25:0)){p.viral=true;p.likes+=clout(15);wire("Viral",`Coach ${S.coach.name||me.abbr}'s reply to ${name} is going viral.`)}}
   if(k==="thanks")P.sent=clamp(P.sent+1.5,5,98);
+}
+
+// ===================== SPORTS ACCOUNTS =====================
+// Ten big accounts, each with its own style. After every game the most relevant ones chime in.
+const SPORTS={
+  alert:["@HoopsCenterHQ","Hoops Center"],bucket:["@BucketReport","Bucket Report"],meme:["@HardwoodMemes","Hardwood Memes"],nerd:["@BoxScoreNerd","Box Score Nerd"],
+  bracket:["@BracketBotCBB","Bracket Bot"],radar:["@RecruitRadar","Recruit Radar"],odds:["@LineMoversCBB","Line Movers"],poll:["@PollWatchCBB","Poll Watch"],
+  oldhead:["@OldHeadHoops","Old Head Hoops"],hype:["@CBBHypeHouse","CBB Hype House"]};
+function sportsLines(c){
+  const me=c.me,op=c.op,W=c.won?me:op,L=c.won?op:me,ws=Math.max(c.ms,c.os),ls=Math.min(c.ms,c.os),key=c.won?c.top:c.otop,gm=c.gm,u=c.u;
+  const exp=gm.h===u?expMargin(gm.h,gm.a,gm.neutral):-expMargin(gm.h,gm.a,gm.neutral),act=c.ms-c.os,fav=exp>=0,spread=Math.abs(Math.round(exp*2)/2);
+  return [
+  ["alert",c.ro<=10||c.ru<=10||c.bz||c.ot>=2,9,`🚨 FINAL${c.ot?` (${c.ot>1?c.ot:""}OT)`:""}: ${c.ro<=25&&!c.won?`No. ${c.ro} `:c.ru<=25&&c.won?`No. ${c.ru} `:""}${W.name} ${ws}, ${L.name} ${ls}${c.bz?" ON A BUZZER-BEATER":""}.`],
+  ["alert",true,3,`FINAL: ${W.name} ${ws}, ${L.name} ${ls}.`],
+  ["bucket",key&&key.b.pts>=25,8,()=>`${nm(key)} went OFF for ${key.b.pts} 😤🔥 ${ln(key)}`],["bucket",c.hot||c.ohot,7,()=>{const h=c.hot||c.ohot;return `${nm(h)} from DEEP. ${h.b.tpm} threes 🎯🎯🎯`}],
+  ["bucket",c.bz,10,()=>`${c.bz.n}... AT THE BUZZER 😱😱😱 ${me.name} WIN IT`],
+  ["meme",c.mg>=22,8,`${L.abbr} defense tonight: 🧍🧍🧍🧍🧍`],["meme",c.tov>=17||c.otov>=17,7,`${c.tov>=17?me.abbr:op.abbr} ball security: 🧈🙌`],["meme",c.blown>=12,8,`${me.abbr} with a ${c.blown}-point lead: 😎\n${me.abbr} 20 minutes later: 💀`],
+  ["meme",c.cb>=12,8,`${op.abbr} fans at halftime: 🥳\n${op.abbr} fans now: 🧎‍♂️`],["meme",c.ot>=2,6,`Nobody:\n${me.abbr}-${op.abbr}: let's play another overtime`],
+  ["meme",c.cold,5,()=>`${nm(c.cold)} tonight (${sl(c.cold)}): "I'm open!" Everyone: 😐`],
+  ["nerd",key&&key.b.pts>=30,7,()=>`${nm(key)}: ${key.b.pts} pts on ${sl(key)} shooting. Only a handful of games like that in college hoops this season.`],
+  ["nerd",c.reb-c.oreb>=12||c.oreb-c.reb>=12,5,`Rebounding margin of ${Math.abs(c.reb-c.oreb)} in ${me.abbr}-${op.abbr}. That's not a typo.`],
+  ["nerd",c.lc>=12,5,`${c.lc} lead changes in ${me.abbr}-${op.abbr}. Absolute coin flip of a game.`],["nerd",c.tpa>=28,4,`${me.abbr} hoisted ${c.tpa} threes tonight and made ${c.tpm} (${Math.round(c.tpm/c.tpa*100)}%).`],
+  ["bracket",S.phase==="regular"&&S.day>=10,6,`Updated projection: ${me.name} ${c.won?"↑":"↓"} ${c.netU<=8?"No. 1-2 seed line":c.netU<=24?"protected seed territory":c.netU<=45?"comfortably in":c.netU<=60?"on the bubble":"outside the field"} (NET ${c.netU}).`],
+  ["radar",c.home&&c.won&&(c.ro<=25||c.riv),6,`Three top-50 recruits were in ${me.arena} tonight. That atmosphere sells itself.`],["radar",c.fresh,5,()=>`Freshman ${nm(c.fresh)} looks like the steal of his recruiting class.`],
+  ["odds",true,4,fav?(act>exp?`${me.abbr} (-${spread}) covered with room to spare.`:act>0?`${me.abbr} won but didn't cover -${spread}. Bettors are fuming.`:`${me.abbr} were ${spread}-point favorites and LOST. Brutal.`):(act>0?`${me.abbr} (+${spread}) won outright as underdogs. 💰`:act>-spread?`${me.abbr} covered +${spread} in the loss.`:`${me.abbr} (+${spread}) didn't cover.`)],
+  ["poll",c.won&&c.ro<=15,7,`Expect ${me.name} to make a big jump in Monday's poll after beating No. ${c.ro}.`],["poll",!c.won&&c.ru<=15&&c.netO>60,7,`No. ${c.ru} ${me.name} lost to an unranked ${op.name}. They're sliding Monday.`],
+  ["oldhead",c.mg>=20||c.tpa>=30,4,c.tpa>=30?`${c.tpa} threes?? In my day we passed the ball and got a layup.`:`A ${c.mg}-point game. Back in '89 we'd have called that a scrimmage.`],
+  ["oldhead",c.reb-c.oreb>=10,4,`Somebody on ${me.abbr} learned to box out. Beautiful. Brings a tear to my eye.`],
+  ["hype",c.riv,8,()=>`${c.riv.toUpperCase()} DELIVERED 🔥 ${W.abbr} take it ${ws}-${ls}`],["hype",c.home&&c.won&&S.ss&&S.ss.team===u&&S.ss.energy>=75,6,`${S.ss?S.ss.name:"The students"} were UNREAL tonight. Best atmosphere in the country? 🔊`],
+  ["hype",c.streak>=5,6,c.won?`${me.name} have won ${c.streak} in a row. Who's stopping them?? 👀`:`${me.name} have lost ${c.streak} straight. Rock bottom or nah?`]];
+}
+function sportsAccounts(gm){
+  const c=GCTX;if(!c||isMP())return;const L=sportsLines(c).filter(x=>x[1]).map(x=>({k:x[0],w:x[2]*(.6+Math.random()*.8),t:x[3]})).sort((a,b)=>b.w-a.w);
+  const seen=new Set(),out=[];for(const x of L){if(seen.has(x.k))continue;seen.add(x.k);out.push(x);if(out.length>=(c.ro<=10||c.riv||c.bz?5:3))break}
+  for(const x of out.reverse()){const [h,n]=SPORTS[x.k],txt=typeof x.t==="function"?x.t():x.t;post({h,n,v:true,txt,tag:x.k==="meme"?"Meme":x.k==="odds"?"Odds":x.k==="bracket"?"Bracketology":x.k==="alert"?"Final":"",likes:clout(x.k==="meme"?3:x.k==="alert"?2.5:1.2),rep:fanReplies(c,x.k,3+Math.floor(Math.random()*3)),viral:x.k==="meme"&&Math.random()<.2})}
+}
+
+// ===================== FAN PERSONAS =====================
+// Each fan has a type, so replies sound like real people: the superfan, the doomer, the stats guy, the bandwagoner...
+const PERSONA={
+  superfan:{w:(c)=>c.won?5:1,lines:c=>c.won?["I'd die for this team. I mean it.","BEST TEAM IN AMERICA AND IT'S NOT CLOSE",`${c.top?nm(c.top):"Our guy"} for president`,"I'm getting this score tattooed","Booking the Final Four hotel right now"]:["Still my team. Always.","We'll bounce back. Believe!!","One loss. Relax everybody."]},
+  doomer:{w:(c)=>c.won?1.5:5,lines:c=>c.won?["We'll lose by 20 next week, watch","Enjoy it. It won't last.","Won, but that defense worries me"]:["Season's over. Wake me up next year.","Fire everyone. Start over.","I've seen this movie before. It ends badly.",`${c.tov} turnovers. I'm done.`]},
+  stats:{w:()=>3,lines:c=>[`${c.me.abbr} shot ${c.fg}% vs ${c.op.abbr}'s ${c.ofg}%. That's the whole story.`,`Turnovers: ${c.me.abbr} ${c.tov}, ${c.op.abbr} ${c.otov}.`,`Rebounds ${c.reb}-${c.oreb}. ${c.reb>=c.oreb?"Won the glass.":"Lost the glass."}`,`${c.tpm}-${c.tpa} from three for ${c.me.abbr}.`]},
+  bandwagon:{w:(c)=>c.won&&c.ru<=25?4:1,lines:c=>["Been a fan since day one (last Tuesday)","Wait, we're good now?? Where do I buy a jersey","New fan here. Is it always this fun?"]},
+  alum:{w:()=>2,lines:c=>[`Class of '98 and I've never been prouder`,`Watching from the office. Pretending to work. GO ${c.me.abbr.toUpperCase()}`,"My kids are going to this school whether they like it or not"]},
+  troll:{w:(c)=>c.won?3:4,lines:c=>c.won?["Lucky","Refs","Wait till March 🥱","Who did you beat? Nobody","Overrated and everybody knows it"]:[`${c.me.abbr} is a fraud. Told y'all.`,"LMAOOOO","Not even close 😂","Pack it up"]},
+  student:{w:(c)=>c.home?4:1,lines:c=>[`I lost my voice. Worth it 🗣️`,`${S.ss&&S.ss.team===c.u?S.ss.name:"The student section"} was SHAKING tonight`,"I have an 8am and I don't care","We camped out for this and it was worth it"]},
+  ref:{w:(c)=>c.fta-c.ofta>=6||c.ofta-c.fta>=6?4:.6,lines:c=>[`Free throws ${c.fta}-${c.ofta}. Explain that.`,"The refs need to be investigated 🦓","Whistle was one-sided all night"]},
+  mom:{w:()=>.8,lines:c=>[`So proud of all you boys! ${c.top?nm(c.top):""} you were wonderful 💕`,"Everyone please be nice in the comments 😊","Great game! Don't forget to eat your vegetables!"]}};
+const PNAMES={superfan:["@BleedTeamColors","@DieHardDanny","@SuperFanSue"],doomer:["@AlwaysDoomed","@SadFanSteve","@ItsOverJoe"],stats:["@TempoFreeTom","@KenPomKid","@EffMarginEd"],bandwagon:["@NewFanNate","@HopOnHolly"],
+  alum:["@ClassOf98Carl","@AlumniAnna"],troll:["@RatioKing","@HaterHank","@CopeLord"],student:["@SeniorSectionSam","@FrontRowFreddie","@LoudLizzie"],ref:["@RefWatchRick","@WhistleWatcher"],mom:["@HoopMom4Life","@ProudMamaBear"]};
+function fanReplies(c,kind,n){
+  const out=[],used=new Set(),W=Object.entries(PERSONA).map(([k,p])=>[k,p.w(c)]);
+  for(let i=0;i<n*3&&out.length<n;i++){let r=Math.random()*W.reduce((a,b)=>a+b[1],0),k=W[0][0];for(const [kk,w] of W){r-=w;if(r<=0){k=kk;break}}
+    const t=pick(PERSONA[k].lines(c));if(!t||used.has(t)||used.has(k))continue;used.add(t);used.add(k);out.push({h:pick(PNAMES[k]),n:"",txt:t.trim()})}
+  return out;
+}
+// Replies on non-user headline posts (upsets, buzzer-beaters, court storms around the country).
+function wireReplies(tag){
+  const L={Upset:["BRACKET IMPLICATIONS 👀","This sport is beautiful","Ranked teams are scared now","I picked this. Nobody believed me."],"Buzzer-beater":["I JUMPED OFF MY COUCH","No way. NO WAY.","Shot of the year?","Run it back 10 times"],
+    "Court storm":["Rush the court!!!","Somebody's going to lose a shoe","Best tradition in sports","Fine them, they don't care 😂"],Brawl:["Not the benches clearing 😭","Suspensions incoming","This rivalry is TOXIC and I love it"]}[tag];
+  if(!L)return undefined;const used=new Set();return [...Array(3)].map(()=>{let t=pick(L);for(let i=0;i<4&&used.has(t);i++)t=pick(L);used.add(t);return {h:pick(RFAN),n:"",txt:t}});
+}
+
+// ===================== STUDENT SECTIONS, TURNED UP =====================
+const SF_NICK=["Body Paint","Megaphone","Bucket Hat","Cardboard Cutout","Shirtless","Tuba","Foam Finger","Wig"];
+function superfan(){const X=ss();if(!X.sf){X.sf={n:pick(FIRST),nick:pick(SF_NICK),followers:Math.round(800+Math.random()*2000),famous:false}}return X.sf}
+const sfHandle=sf=>`@${sf.nick.replace(/\W/g,"")}${sf.n}`;
+const sfName=sf=>`${sf.nick} ${sf.n}`;
+function superfanAfter(gm){
+  if(isMP()||S.phase==="h2h")return;const u=S.user;if(gm.h!==u||gm.neutral)return;const c=GCTX,sf=superfan(),X=ss();if(!c)return;
+  if(c.won&&Math.random()<.6){const txt=pick([`I painted my whole body ${pick(["blue","red","gold","team colors"])} and we WON. Coincidence? No. 🎨`,`They put me on the jumbotron 3 times tonight. I'm a celebrity now 📺`,`${c.top?nm(c.top):"Our star"} pointed at me after a three. I'll never wash this hand.`,`Lost my voice in the first half. Kept screaming anyway. ${c.ms}-${c.os}! 🗣️`,`Security asked me to sit down. I said no. We won. 😤`]);
+    const viral=Math.random()<.15+(c.ro<=15?.2:0);sf.followers=Math.round(sf.followers*(viral?1.8:1.06));if(viral&&!sf.famous){sf.famous=true;news(`Your student section's ${sfName(sf)} went viral. He's officially a campus celebrity.`)}
+    post({h:sfHandle(sf),n:sfName(sf),txt,tag:"Students",viral,likes:clout(viral?18:1.5),rep:fanReplies(c,"student",3)})}
+  else if(!c.won&&Math.random()<.35)post({h:sfHandle(sf),n:sfName(sf),txt:pick(["Rough one. I'll be back Saturday. Louder. 😤","Still the best fans in America. Heads up, team.","I cried in the parking lot. Back next game."]),tag:"Students",likes:clout(.8)});
+  ssAchCheck(gm);
+}
+// Live: a decibel meter, card stunts at tip-off and a halftime half-court shot.
+function noiseBar(W){
+  const g=W.g;if(S.phase==="h2h"||W.kind!=="user"||g.home!==S.user||g.neutral||!S.ss||S.ss.team!==S.user||g.over)return "";const X=S.ss,m=(g.mom||0),lead=g.score[g.home]-g.score[g.away];
+  W.spike=Math.max(0,(W.spike||0)*.9);const db=Math.round(clamp(84+X.energy*.2+Math.max(0,m)*8+(lead>=10?3:0)+(lead<0&&g.half>=2&&g.clock<300?3:0)+W.spike*.8,80,122));W.db=Math.max(W.db||0,db);
+  return `<div class="noise"><span>🔊 ${esc(X.name)}</span><div class="nbar"><i style="width:${clamp((db-80)/44*100,0,100)}%"></i></div><b class="num">${db} dB</b>${db>=115?'<span class="tag bad">DEAFENING</span>':""}</div>`;
+}
+const STUNTS=["{A} 🏀","BEAT {O}","{SS}","WE ARE {A}","OUR HOUSE","{A} 🔥 {A} 🔥","GO {A} GO"];
+function studentLive(W,bf){
+  const g=W.g;if(S.phase==="h2h"||W.kind!=="user"||g.home!==S.user||g.neutral||!S.ss||S.ss.team!==S.user)return;const X=S.ss,u=S.user;
+  if(!W.stunt){W.stunt=1;const gm={h:g.home,a:g.away,neutral:false,type:g.type,label:g.label};if(hypeOf(gm)>=55){const t=pick(STUNTS).replace(/\{A\}/g,T(u).abbr).replace(/\{O\}/g,T(g.away).abbr.toUpperCase()).replace(/\{SS\}/g,X.name.replace(/^The /,"").toUpperCase());
+    W.banner=`${X.name} unveils a card stunt: "${t}" 🎴`;W.spike=10;(W.lv=W.lv||[]).unshift({h:`@${T(u).abbr}Students`,n:X.name,txt:`CARD STUNT: "${t}" 🎴 The whole section is in on it.`,t:"Tip-off"})}}
+  if(g.score[u]-bf.u>=3)W.spike=Math.min(14,(W.spike||0)+6);
+  if(g.half===2&&!W.hcs){W.hcs=1;if(Math.random()<.3){const sf=superfan(),made=Math.random()<.22,nm2=made?sfName(sf):`a ${pick(["sophomore","junior","freshman"])} in the student section`;
+    W.lv=W.lv||[];W.lv.unshift({h:"@CBBonCourtside",n:"Courtside Central",v:true,txt:made?`🚨 ${nm2} JUST HIT THE HALF-COURT SHOT FOR FREE TUITION!!! The building EXPLODED.`:`Halftime half-court shot from ${nm2}... off the back iron. So close.`,t:"HALF"});
+    if(made){W.banner=`🎓 ${nm2} drains the half-court shot for FREE TUITION!`;W.spike=14;W.hcsMade=nm2}}}
+  if(g.over&&!W.dbSaved){W.dbSaved=1;X.maxDb=Math.max(X.maxDb||0,W.db||0)}
+  if(g.over&&W.hcsMade&&!W.hcsPosted){W.hcsPosted=1;post({h:"@CBBonCourtside",n:"Courtside Central",v:true,txt:`${W.hcsMade} hit a half-court shot at halftime of ${T(g.away).abbr}-${T(u).abbr} for free tuition. Best moment of the night. 🎓`,tag:"🔥 Viral",viral:true,likes:clout(25),rep:[{h:"@StudentDebtSucks",n:"",txt:"I've never been happier for a stranger"},{h:pick(RFAN),n:"",txt:"GIVE THAT KID A SCHOLARSHIP (oh wait)"},{h:pick(RFAN),n:"",txt:"Best thing that happened in college hoops today"}]})}
+}
+// National student section rankings.
+function ssRankings(){
+  const u=S.user;const L=S.teams.map(t=>{let v;if(t.id===u&&S.ss&&S.ss.team===u)v=S.ss.energy*.75+crowdOf(t)*1.6+(S.storms||0)*2+S.ss.trad.length*2;else{const r=mulberry32(t.id*131+S.season*7);v=crowdOf(t)*3.4+t.pres*5+r()*20+(t.pres>=4?10:0)}return {id:t.id,v}}).sort((a,b)=>b.v-a.v);
+  return L;
+}
+function ssRankPost(){
+  if(!S||S.phase!=="regular"||isMP()||!S.ss||S.ss.team!==S.user||S.day%7!==6)return;const L=ssRankings(),r=L.findIndex(x=>x.id===S.user)+1;const X=S.ss,prev=X.rank;X.rank=r;
+  if(r<=10)post({h:"@CBBHypeHouse",n:"CBB Hype House",v:true,txt:`🔊 Student section power rankings: ${L.slice(0,5).map((x,i)=>`${i+1}. ${T(x.id).abbr}`).join(" · ")}${r>5?` ... ${r}. ${T(S.user).abbr}`:""}`,tag:"Students",likes:clout(2),rep:[{h:`@${T(S.user).abbr}Students`,n:X.name,txt:r===1?"NUMBER ONE. NOBODY LOUDER. 🗣️":prev&&r<prev?`Up to No. ${r}. Coming for No. 1 😤`:`No. ${r}?? Disrespect. Watch Saturday.`}]});
+}
+const SS_ACH=[["storm","Storm the court","Storm the court after a big home win"],["max","Max volume","Hit 100 student energy"],["dB","Ear-splitting","Reach 118 dB in a live home game"],["top5","Elite section","Rank top 5 nationally"],["streak","Fortress","Win 8 straight home games"],["famous","Campus celebrity","Your superfan goes viral"]];
+function ssAchCheck(gm){
+  const X=ss();X.ach=X.ach||{};const got=k=>{if(X.ach[k])return;X.ach[k]=S.season;const a=SS_ACH.find(x=>x[0]===k);news(`🏅 Student section milestone: ${a[1]}!`);X.energy=Math.min(100,X.energy+2)};
+  if((S.storms||0)>0)got("storm");if(X.energy>=100)got("max");const rk=ssRankings().findIndex(x=>x.id===S.user)+1;if(rk&&rk<=5)got("top5");if(superfan().famous)got("famous");if((X.maxDb||0)>=118)got("dB");
+  const hs=[...S.results].reverse().filter(r=>r.h===S.user&&!r.neutral);let st=0;for(const r of hs){if(r.hs>r.as)st++;else break}if(st>=8)got("streak");
+}
+function rivalCountdown(){
+  if(!S||S.phase!=="regular"||isMP()||!S.ss||S.ss.team!==S.user)return;const u=S.user;for(let d=S.day+1;d<=S.day+3&&d<S.schedule.length;d++){const g=S.schedule[d].find(p=>p[0]===u||p[1]===u);if(!g)continue;const o=g[0]===u?g[1]:g[0];
+    if(!rivalryOf(u,o))continue;S.cdown=S.cdown||{};const k=`${S.season}-${d}`;if(S.cdown[k])return;S.cdown[k]=1;const n=d-S.day;
+    post({h:`@${T(u).abbr}Students`,n:S.ss.name,txt:`${n} DAY${n>1?"S":""} UNTIL ${T(o).name.toUpperCase()}. ${pick(["Clear your schedules.","Start practicing the chants.","Paint is on sale. Buy it all.","We're camping out. Bring blankets."])} 😤`,tag:"Students",likes:clout(2),rep:fanReplies({won:true,home:true,u,me:T(u),op:T(o),top:null,tov:0,otov:0,fg:0,ofg:0,reb:0,oreb:0,tpm:0,tpa:0,fta:0,ofta:0,ru:rankOf(u)},"student",2)});return}
+}
+function studentExtras(){
+  if(isMP()||!S.ss||S.ss.team!==S.user)return "";const X=ss(),sf=superfan(),L=ssRankings(),r=L.findIndex(x=>x.id===S.user)+1;X.ach=X.ach||{};
+  return `<div class="grid2"><div class="panel" data-c="amber"><h3>Student section rankings</h3><ol class="ssrank">${L.slice(0,10).map((x,i)=>`<li class="${x.id===S.user?"me":""}">${badge(T(x.id))} ${esc(T(x.id).name)}</li>`).join("")}</ol>${r>10?`<p class="sub">You: No. ${r}</p>`:""}</div>
+    <div class="panel" data-c="blue"><h3>Superfan</h3><p class="sfname">${esc(sfName(sf))}${sf.famous?' <span class="tag amber">Campus celebrity</span>':""}</p><p class="sub">${esc(sfHandle(sf))} · ${fmtK(sf.followers)} followers</p>
+      <p class="muted" style="font-size:13px">The face of ${esc(X.name)}. Front row, every game, posts after every home win.</p>
+      <h3>Milestones</h3><div class="ssach">${SS_ACH.map(([k,n,d])=>`<div class="${X.ach[k]?"on":""}" title="${esc(d)}"><b>${X.ach[k]?"🏅":"🔒"} ${esc(n)}</b><span class="sub">${esc(d)}</span></div>`).join("")}</div></div></div>`;
 }
 
 // ===================== MY PLAYER: one player, high school to the NBA draft =====================
@@ -4502,7 +4637,7 @@ function renderHub(){
   <nav class="navgroups" aria-label="Sections">${groups.map(([g,ks])=>{const items=tabs.filter(([k])=>ks.includes(k));return items.length?`<div class="navg"><span class="navl">${g}</span><div class="tabs" role="tablist">${items.map(([k,l])=>`<button class="tab ${S.tab===k?"on":""}" role="tab" aria-selected="${S.tab===k}" data-act="tab" data-t="${k}"><span class="ti" aria-hidden="true">${TAB_ICON[k]}</span>${l}${k==="feed"&&S.tab!=="feed"&&feedUnread()?`<span class="nbadge">${Math.min(99,feedUnread())}</span>`:""}</button>`).join("")}</div></div>`:""}).join("")}</nav>
   <div id="saveWarn" class="panel warn" ${saveErr?"":"hidden"}><b>Your progress isn't saving.</b><p>This browser's storage is full or turned off. Free up space or leave private browsing mode, then keep playing to save again.</p></div>
   ${S.tab==="home"?`<div class="hubgrid ${side.length?"":"solo"}"><div class="hubmain">${isMP()?mpCard():""}${canEditSched()&&!isMP()?preSchedStep():`${mmCard()}${exhCard()}${bcOpen()?bcCallout():""}${(()=>{const ug=userGame();return isMP()?"":pressCard()})()}${nextCard()}${(()=>{const ug=userGame();return ug?hypeCard(ug)+rivalryCard(ug)+rivalCoachCard(ug):""})()}${S.phase==="regular"&&S.day===0?coachTip():""}${ctPanel()}`}</div>${side.length?`<div class="hubside">${side.join("")}</div>`:""}</div>`
-    :`<section class="tabbody">${({conspiracy:tabConspiracy,mp:tabMP,arena:tabArena,feed:tabFeed,weekly:tabWeekly,preseason:tabPreseason,locker:lockerTab,practice:tabPractice,uniforms:tabUniforms,trophies:tabTrophies,news:tabNews,schedule:tabSchedule,standings:tabStandings,top25:tabTop25,bracket:tabBracket,leaders:tabLeaders,roster:tabRoster,plan:tabPlan,coach:tabCoach,history:tabHistory})[S.tab]()}</section>`}
+    :`<section class="tabbody">${({conspiracy:tabConspiracy,mp:tabMP,arena:()=>tabArena()+studentExtras(),feed:tabFeed,weekly:tabWeekly,preseason:tabPreseason,locker:lockerTab,practice:tabPractice,uniforms:tabUniforms,trophies:tabTrophies,news:tabNews,schedule:tabSchedule,standings:tabStandings,top25:tabTop25,bracket:tabBracket,leaders:tabLeaders,roster:tabRoster,plan:tabPlan,coach:tabCoach,history:tabHistory})[S.tab]()}</section>`}
   <div class="row"><button class="btn ${S.confirmReset?"danger":"ghost"}" data-act="reset">Save & main menu</button></div>`;
 }
 function coachTip(){
@@ -4730,7 +4865,7 @@ function startWatch(gm,kind){
   WATCH={g,gm,kind,key:gameKey(gm),speed:3,paused:false,banner:null,exp:expMargin(gm.h,gm.a,gm.neutral)};
   clearTimeout(wTimer);wTimer=setTimeout(wLoop,700);
 }
-function wStep(n){const W=WATCH,g=W.g;for(let i=0;i<n&&!g.over;i++){const bf=W.kind==="user"?{u:g.score[S.user],o:g.score[opp(g,S.user)],f:g.fouls[S.user]}:null;step(g);if(bf){rageStep(W,bf);liveStep(W,bf)}chantStep(W);wpNote(W);if(g.last&&g.last.big)W.banner=g.last.txt;g.last=null}stormBanner(W);floorUpdate(W)}
+function wStep(n){const W=WATCH,g=W.g;for(let i=0;i<n&&!g.over;i++){const bf=W.kind==="user"?{u:g.score[S.user],o:g.score[opp(g,S.user)],f:g.fouls[S.user]}:null;step(g);if(bf){rageStep(W,bf);liveStep(W,bf);studentLive(W,bf)}chantStep(W);wpNote(W);if(g.last&&g.last.big)W.banner=g.last.txt;g.last=null}stormBanner(W);floorUpdate(W)}
 function wLoop(){if(!WATCH)return;if(!WATCH.paused&&!WATCH.g.over){wStep(WATCH.speed>=10?3:1);render()}if(WATCH&&!WATCH.g.over)wTimer=setTimeout(wLoop,SPEED[WATCH.speed])}
 function liveWP(W){
   const g=W.g;if(g.over)return g.score[g.home]>g.score[g.away]?1:0;
@@ -4755,7 +4890,7 @@ function renderWatch(){
   <div class="row" style="justify-content:space-between"><span class="eyebrow">${W.kind==="gotw"?"Game of the Day · ":W.kind==="h2h"?`${esc(T(0).abbr)} vs ${esc(T(1).abbr)} · `:""}${esc(g.label)} · Live</span><span class="muted num">${g.neutral?"Neutral site":esc(h.arena)}</span></div>
   <div class="wboard">${side(a,"away")}<div class="wmid"><span class="wclk">${clk}</span><span class="wdd">${g.run.p>=8&&!g.over?`${esc(T(g.run.t).abbr)} ${g.run.p}-0 run`:`${g.lc} lead changes`}</span></div>${side(h,"home")}</div>
   ${(()=>{const cr=crowdLevel(g),m=g.mom||0,lead=m>=0?h:a;return `<div class="momo"><span>Momentum</span><div class="mbar"><i style="left:50%;width:${Math.abs(m)*50}%;${m<0?`transform:translateX(-100%);`:""}background:${lead.c1}"></i><b></b></div><span>${Math.abs(m)<.15?"Even":esc(lead.abbr)} · Crowd: ${esc(cr.n)}${g.ssT?` · ${esc(S.ss.name)}`:""}${g.gd?" · GameDay":""}</span></div>`})()}
-  ${rageBar(W)}`,rest=`
+  ${noiseBar(W)}${rageBar(W)}`,rest=`
   <div class="wpbar"><span>${esc(a.abbr)} ${Math.round((1-wp)*100)}%</span><div class="wpt"><i style="width:${(1-wp)*100}%;background:${a.c1}"></i><i style="width:${wp*100}%;background:${h.c1}"></i></div><span>${Math.round(wp*100)}% ${esc(h.abbr)}</span></div>
   ${wpChart(W)}
   ${W.banner?`<div class="wbanner">${esc(W.banner)}</div>`:""}
