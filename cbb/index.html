@@ -1113,10 +1113,12 @@ button:active:not(:disabled){transform:scale(.97)}
 <div id="toasts" aria-live="polite"></div>
 <script>
 // ===================== DATA =====================
-const CONFS=["ACC","Big Ten","Big 12","SEC","Big East","WCC","Mountain West","Atlantic 10","American","Missouri Valley","MAC","Ivy League","Horizon","MAAC","SWAC"];
-const CONF_TIER=[0,0,0,0,0,1,1,1,1,2,2,2,2,3,3];
+const CONFS=["ACC", "Big Ten", "Big 12", "SEC", "Big East", "WCC", "Mountain West", "Atlantic 10", "American", "Missouri Valley", "MAC", "Ivy League", "Horizon", "MAAC", "SWAC", "Sun Belt", "Conference USA", "CAA", "Big West", "WAC", "ASUN", "SoCon", "Summit League", "America East", "Big Sky", "Big South", "MEAC", "NEC", "Ohio Valley", "Patriot League", "Southland"];
+const CONF_TIER=[0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3];
 const TIER_NAME=["High-major","Upper mid-major","Mid-major","Low-major"];
 const CT_SIZE=c=>CONFS[c]==="Ivy League"?4:8;
+// Leagues with fewer than 8 teams (or between sizes) use the largest bracket that fits.
+const ctFit=(c,n)=>{const m=Math.min(CT_SIZE(c),n);return m>=8?8:m>=4?4:m>=2?2:m};
 // name, abbr, primary, secondary, base rating, conference, arena, capacity, crowd (1-5)
 const TEAMS0=[
   // ACC
@@ -1222,6 +1224,197 @@ const TEAMS0=[
   ["Jackson State","JKST","#002147","#FFFFFF",57,14,"Williams Assembly Center",8000,2],["Alcorn State","ALCN","#46166B","#E9A900",55,14,"Davey Whitney Complex",7000,2],
   ["Texas Southern","TXSO","#862633","#A2AAAD",57,14,"H&PE Arena",8100,2],["Prairie View A&M","PVAM","#4F2D7F","#FDB927",53,14,"William J. Nicks Building",6500,1],
   ["Alabama State","ALST","#000000","#C99700",55,14,"Dunn-Oliver Acadome",7400,1],["Alabama A&M","AAMU","#660000","#FFFFFF",54,14,"Elmore Gymnasium",6000,1],
+  // Added later: the rest of Division I (new dynasties only).
+  ["Fordham", "FOR", "#860038", "#FFFFFF", 59, 7, "Rose Hill Gym", 3200, 2],
+  ["La Salle", "LAS", "#00274C", "#FFC72C", 59, 7, "Tom Gola Arena", 3400, 1],
+  ["East Carolina", "ECU", "#592A8A", "#FDC82F", 61, 8, "Minges Coliseum", 8000, 2],
+  ["Rice", "RICE", "#00205B", "#C1C6C8", 60, 8, "Tudor Fieldhouse", 5208, 1],
+  ["UTSA", "UTSA", "#0C2340", "#F15A22", 58, 8, "Convocation Center", 4080, 1],
+  ["UIC", "UIC", "#001E62", "#D50032", 63, 9, "Credit Union 1 Arena", 6945, 1],
+  ["Bowling Green", "BGSU", "#4F2C1D", "#FE5000", 60, 10, "Stroh Center", 4700, 2],
+  ["Eastern Michigan", "EMU", "#006633", "#FFFFFF", 58, 10, "George Gervin GameAbove Center", 8824, 1],
+  ["UMass", "UMASS", "#881C1C", "#FFFFFF", 62, 10, "Mullins Center", 9493, 2],
+  ["Sacramento State", "SAC", "#043927", "#C4B581", 58, 10, "The Nest", 3000, 1],
+  ["Detroit Mercy", "DET", "#002D72", "#E4002B", 55, 12, "Calihan Hall", 7917, 1],
+  ["Green Bay", "GB", "#006F3C", "#FFFFFF", 56, 12, "Kress Events Center", 4018, 2],
+  ["IU Indy", "IUI", "#990000", "#E8C34D", 52, 12, "Corteva Coliseum", 3000, 1],
+  ["Canisius", "CAN", "#0E2240", "#FFBA00", 55, 13, "Koessler Athletic Center", 2196, 1],
+  ["Manhattan", "MAN", "#00703C", "#FFFFFF", 55, 13, "Draddy Gymnasium", 2345, 1],
+  ["Merrimack", "MRMK", "#002B5C", "#F2A900", 61, 13, "Lawler Arena", 2549, 1],
+  ["Niagara", "NIAG", "#582C83", "#FFFFFF", 54, 13, "Gallagher Center", 2400, 1],
+  ["Sacred Heart", "SHU", "#CE1141", "#A2AAAD", 58, 13, "William H. Pitt Center", 2062, 1],
+  ["Arkansas-Pine Bluff", "UAPB", "#000000", "#F7B500", 50, 14, "H.O. Clemmons Arena", 4500, 1],
+  ["Bethune-Cookman", "BCU", "#6F263D", "#F2A900", 56, 14, "Moore Gymnasium", 3000, 1],
+  ["Florida A&M", "FAMU", "#F47920", "#00843D", 55, 14, "Al Lawson Center", 9639, 2],
+  ["Mississippi Valley State", "MVSU", "#00703C", "#FFFFFF", 47, 14, "Harrison HPER Complex", 6000, 1],
+  ["Pacific", "PAC", "#F47920", "#000000", 56, 5, "Alex G. Spanos Center", 6150, 1],
+  ["Seattle U", "SEA", "#AA0000", "#FFFFFF", 63, 5, "Redhawk Center", 999, 1],
+  ["Hawai'i", "HAW", "#024731", "#FFFFFF", 63, 6, "Stan Sheriff Center", 10300, 3],
+  ["UTEP", "UTEP", "#041E42", "#FF8200", 63, 6, "Don Haskins Center", 12222, 3],
+  ["App State", "APP", "#000000", "#FFCC00", 62, 15, "Holmes Convocation Center", 8325, 3],
+  ["Arkansas State", "ARST", "#CC092F", "#FFFFFF", 67, 15, "First National Bank Arena", 10038, 2],
+  ["Coastal Carolina", "CCU", "#006F71", "#A27752", 57, 15, "HTC Center", 3212, 1],
+  ["Georgia Southern", "GASO", "#041E42", "#A3AAAE", 59, 15, "Hill Convocation Center", 4000, 2],
+  ["Georgia State", "GAST", "#0039A6", "#FFFFFF", 58, 15, "GSU Convocation Center", 8000, 1],
+  ["James Madison", "JMU", "#450084", "#CBB677", 65, 15, "Atlantic Union Bank Center", 8500, 3],
+  ["Louisiana", "ULL", "#CE181E", "#FFFFFF", 58, 15, "Cajundome", 11550, 2],
+  ["Marshall", "MRSH", "#00B140", "#FFFFFF", 62, 15, "Cam Henderson Center", 9048, 2],
+  ["Old Dominion", "ODU", "#003057", "#7C878E", 58, 15, "Chartway Arena", 8472, 2],
+  ["South Alabama", "USA", "#00205B", "#BF0D3E", 62, 15, "Mitchell Center", 10041, 1],
+  ["Southern Miss", "USM", "#000000", "#FFAB00", 56, 15, "Reed Green Coliseum", 8095, 1],
+  ["Texas State", "TXST", "#501214", "#8D734A", 60, 15, "Strahan Arena", 10000, 1],
+  ["Troy", "TROY", "#8A2432", "#B3B5B8", 64, 15, "Trojan Arena", 5200, 2],
+  ["ULM", "ULM", "#840029", "#BA9B37", 53, 15, "Fant-Ewing Coliseum", 7085, 1],
+  ["Liberty", "LIB", "#0A254E", "#C41230", 70, 16, "Liberty Arena", 4000, 2],
+  ["Middle Tennessee", "MTSU", "#0066CC", "#FFFFFF", 65, 16, "Murphy Center", 11520, 2],
+  ["Louisiana Tech", "LT", "#002F8B", "#E31B23", 64, 16, "Thomas Assembly Center", 8000, 2],
+  ["Kennesaw State", "KENN", "#000000", "#FDBB30", 63, 16, "KSU Convocation Center", 4600, 1],
+  ["Jacksonville State", "JVST", "#CC0000", "#FFFFFF", 63, 16, "Pete Mathews Coliseum", 3500, 1],
+  ["Sam Houston", "SHSU", "#F47920", "#002F6C", 62, 16, "Bernard Johnson Coliseum", 6110, 2],
+  ["Western Kentucky", "WKU", "#C60C30", "#FFFFFF", 62, 16, "E.A. Diddle Arena", 7326, 3],
+  ["New Mexico State", "NMSU", "#861F41", "#FFFFFF", 60, 16, "Pan American Center", 12515, 3],
+  ["FIU", "FIU", "#081E3F", "#B6862C", 57, 16, "Ocean Bank Convocation Center", 5000, 1],
+  ["Missouri State", "MOST", "#5E0009", "#FFFFFF", 60, 16, "Great Southern Bank Arena", 11000, 2],
+  ["Delaware", "DEL", "#00539F", "#FFD200", 56, 16, "Bob Carpenter Center", 5000, 1],
+  ["Charleston", "COFC", "#800000", "#F1E6B2", 67, 17, "TD Arena", 5100, 3],
+  ["UNC Wilmington", "UNCW", "#006666", "#FFD600", 66, 17, "Trask Coliseum", 5200, 2],
+  ["Towson", "TOW", "#000000", "#FFBB00", 63, 17, "SECU Arena", 5200, 2],
+  ["Drexel", "DREX", "#07294D", "#FFC600", 63, 17, "Daskalakis Athletic Center", 2509, 1],
+  ["Hofstra", "HOF", "#00205B", "#FFC72C", 61, 17, "Mack Sports Complex", 5023, 1],
+  ["Northeastern", "NE", "#C8102E", "#000000", 60, 17, "Matthews Arena", 6000, 2],
+  ["William & Mary", "W&M", "#115740", "#B9975B", 61, 17, "Kaplan Arena", 8600, 1],
+  ["Elon", "ELON", "#73000A", "#B59A57", 61, 17, "Schar Center", 5100, 1],
+  ["Campbell", "CAMP", "#F58025", "#000000", 59, 17, "Gore Arena", 3100, 1],
+  ["Monmouth", "MON", "#002245", "#FFFFFF", 60, 17, "OceanFirst Bank Center", 4000, 1],
+  ["Stony Brook", "STBK", "#990000", "#16243E", 55, 17, "Island Federal Arena", 4160, 1],
+  ["Hampton", "HAMP", "#0067AC", "#FFFFFF", 55, 17, "Hampton Convocation Center", 7200, 1],
+  ["North Carolina A&T", "NCAT", "#004684", "#FDB927", 55, 17, "Corbett Sports Center", 5700, 2],
+  ["UC Irvine", "UCI", "#002855", "#FFD200", 70, 18, "Bren Events Center", 5000, 2],
+  ["UC San Diego", "UCSD", "#182B49", "#C69214", 70, 18, "LionTree Arena", 4200, 1],
+  ["UC Santa Barbara", "UCSB", "#003660", "#FEBC11", 66, 18, "The Thunderdome", 5600, 2],
+  ["UC Riverside", "UCR", "#003DA5", "#FFB81C", 61, 18, "SRC Arena", 3168, 1],
+  ["Cal Poly", "CP", "#154734", "#BD8B13", 62, 18, "Mott Athletics Center", 3032, 1],
+  ["CSUN", "CSUN", "#D22030", "#000000", 62, 18, "Premier America Credit Union Arena", 1600, 1],
+  ["Long Beach State", "LBSU", "#000000", "#F6A800", 60, 18, "Walter Pyramid", 4000, 2],
+  ["UC Davis", "UCD", "#022851", "#FFBF00", 59, 18, "University Credit Union Center", 7600, 1],
+  ["Cal State Fullerton", "CSUF", "#00274C", "#FF7900", 55, 18, "Titan Gym", 4000, 1],
+  ["Cal State Bakersfield", "CSUB", "#003594", "#FFC72C", 56, 18, "Icardo Center", 3497, 1],
+  ["Utah Valley", "UVU", "#275D38", "#FFFFFF", 66, 19, "UCCU Center", 8500, 2],
+  ["California Baptist", "CBU", "#002B5C", "#A28E5C", 62, 19, "Fowler Events Center", 5050, 2],
+  ["Abilene Christian", "ACU", "#4E2683", "#FFFFFF", 61, 19, "Moody Coliseum", 3600, 1],
+  ["UT Arlington", "UTA", "#0064B1", "#F58025", 61, 19, "College Park Center", 7000, 1],
+  ["Tarleton State", "TARL", "#4F2D7F", "#FFFFFF", 58, 19, "Wisdom Gym", 2000, 2],
+  ["Southern Utah", "SUU", "#C8102E", "#FFFFFF", 57, 19, "America First Event Center", 5300, 1],
+  ["Utah Tech", "UTU", "#BA1C21", "#002D62", 55, 19, "Burns Arena", 4779, 1],
+  ["Lamar", "LAM", "#E31837", "#000000", 62, 30, "Montagne Center", 10080, 1],
+  ["Lipscomb", "LIP", "#3E2D7E", "#F4AA00", 67, 20, "Allen Arena", 5028, 2],
+  ["Florida Gulf Coast", "FGCU", "#002D72", "#00843D", 63, 20, "Alico Arena", 4633, 2],
+  ["North Alabama", "UNA", "#46166B", "#DB9F11", 62, 20, "CB&S Bank Arena", 4000, 1],
+  ["Austin Peay", "APSU", "#C41E3A", "#FFFFFF", 60, 20, "F&M Bank Arena", 5500, 1],
+  ["Eastern Kentucky", "EKU", "#861F41", "#FFFFFF", 59, 20, "Baptist Health Arena", 6500, 1],
+  ["Queens", "QU", "#002855", "#C99700", 59, 20, "Curry Arena", 3200, 1],
+  ["Jacksonville", "JAX", "#004236", "#FFFFFF", 58, 20, "Swisher Gym", 1500, 1],
+  ["North Florida", "UNF", "#00246B", "#A2AAAD", 58, 20, "UNF Arena", 5800, 1],
+  ["Stetson", "STET", "#006747", "#FFFFFF", 55, 20, "Edmunds Center", 5000, 1],
+  ["Bellarmine", "BELL", "#BE0F34", "#A7A8AA", 55, 20, "Freedom Hall", 18252, 1],
+  ["Central Arkansas", "UCA", "#4F2D7F", "#A7A9AC", 54, 20, "Farris Center", 6000, 1],
+  ["West Georgia", "UWG", "#0656A5", "#E31837", 52, 20, "The Coliseum", 6000, 1],
+  ["Samford", "SAM", "#002D72", "#C8102E", 66, 21, "Pete Hanna Center", 5000, 2],
+  ["Chattanooga", "UTC", "#00386B", "#E0AA0F", 64, 21, "McKenzie Arena", 10995, 2],
+  ["Furman", "FUR", "#582C83", "#FFFFFF", 64, 21, "Timmons Arena", 2500, 2],
+  ["East Tennessee State", "ETSU", "#041E42", "#FFC72C", 63, 21, "Freedom Hall Civic Center", 6149, 3],
+  ["UNC Greensboro", "UNCG", "#0F2044", "#FFB71B", 62, 21, "First Horizon Coliseum", 21000, 1],
+  ["Wofford", "WOF", "#000000", "#886E4C", 61, 21, "Jerry Richardson Indoor Stadium", 3400, 1],
+  ["Western Carolina", "WCU", "#592C88", "#C1A875", 57, 21, "Ramsey Center", 7826, 1],
+  ["Mercer", "MER", "#F76800", "#000000", 56, 21, "Hawkins Arena", 3500, 1],
+  ["VMI", "VMI", "#AE122A", "#FFD619", 52, 21, "Cameron Hall", 5029, 1],
+  ["The Citadel", "CIT", "#3975B7", "#FFFFFF", 52, 21, "McAlister Field House", 6000, 1],
+  ["South Dakota State", "SDST", "#0033A0", "#FFD100", 66, 22, "Frost Arena", 6500, 3],
+  ["St. Thomas", "STMN", "#510C76", "#FFFFFF", 65, 22, "Schoenecker Arena", 1800, 1],
+  ["North Dakota State", "NDSU", "#0A5640", "#FFC82E", 63, 22, "Scheels Center", 5460, 2],
+  ["Omaha", "OMA", "#000000", "#D71920", 63, 22, "Baxter Arena", 7898, 1],
+  ["South Dakota", "SDAK", "#AD0000", "#FFFFFF", 59, 22, "Sanford Coyote Sports Center", 6000, 1],
+  ["Kansas City", "UMKC", "#0055A4", "#FFD100", 58, 22, "Swinney Recreation Center", 1500, 1],
+  ["Oral Roberts", "ORU", "#002F6C", "#C5B783", 58, 22, "Mabee Center", 10154, 2],
+  ["North Dakota", "UND", "#009A44", "#000000", 57, 22, "Betty Engelstad Sioux Center", 3300, 1],
+  ["Denver", "DEN", "#8B2332", "#C8B783", 55, 22, "Hamilton Gymnasium", 2500, 1],
+  ["Vermont", "UVM", "#154734", "#FFD100", 67, 23, "Patrick Gym", 3266, 3],
+  ["Bryant", "BRY", "#000000", "#B4975A", 64, 23, "Chace Athletic Center", 2500, 1],
+  ["UMass Lowell", "UML", "#0067B1", "#C8102E", 61, 23, "Costello Athletic Center", 2100, 1],
+  ["UMBC", "UMBC", "#000000", "#FDB515", 60, 23, "Chesapeake Employers Insurance Arena", 5000, 2],
+  ["Maine", "ME", "#003263", "#B0D7FF", 59, 23, "Memorial Gym", 2500, 1],
+  ["Albany", "ALB", "#46166B", "#EEB211", 57, 23, "Broadview Center", 4538, 1],
+  ["Binghamton", "BING", "#005A43", "#FFFFFF", 55, 23, "Events Center", 5222, 1],
+  ["New Hampshire", "UNH", "#041E42", "#FFFFFF", 55, 23, "Lundholm Gym", 3500, 1],
+  ["NJIT", "NJIT", "#D22630", "#071D49", 54, 23, "Wellness and Events Center", 1500, 1],
+  ["Montana", "MONT", "#70003C", "#999999", 63, 24, "Dahlberg Arena", 7321, 2],
+  ["Northern Colorado", "UNCO", "#013C65", "#F6B000", 63, 24, "Bank of Colorado Arena", 2992, 1],
+  ["Montana State", "MTST", "#00205B", "#B9975B", 61, 24, "Worthington Arena", 7250, 2],
+  ["Portland State", "PRST", "#154734", "#FFFFFF", 60, 24, "Viking Pavilion", 3094, 1],
+  ["Weber State", "WEB", "#492365", "#FFFFFF", 60, 24, "Dee Events Center", 11500, 2],
+  ["Eastern Washington", "EWU", "#A10022", "#FFFFFF", 59, 24, "Reese Court", 6000, 1],
+  ["Idaho State", "IDST", "#F47920", "#000000", 56, 24, "Reed Gym", 3040, 1],
+  ["Northern Arizona", "NAU", "#003466", "#FFD200", 58, 24, "Rolle Activity Center", 2000, 1],
+  ["Idaho", "IDHO", "#000000", "#B3A369", 57, 24, "Idaho Central Credit Union Arena", 4200, 1],
+  ["High Point", "HPU", "#330072", "#FFFFFF", 72, 25, "Qubein Center", 4500, 3],
+  ["Winthrop", "WIN", "#872434", "#F0B323", 63, 25, "Winthrop Coliseum", 6100, 2],
+  ["UNC Asheville", "UNCA", "#003DA5", "#FFFFFF", 62, 25, "Kimmel Arena", 3200, 1],
+  ["Longwood", "LONG", "#003273", "#9EA2A2", 60, 25, "Joan Perry Brock Center", 3000, 2],
+  ["Radford", "RAD", "#C2011B", "#FFFFFF", 60, 25, "Dedmon Center", 3302, 1],
+  ["Gardner-Webb", "GWEB", "#BB0000", "#000000", 56, 25, "Paul Porter Arena", 3500, 1],
+  ["Presbyterian", "PRE", "#003366", "#9E1B32", 56, 25, "Templeton Center", 2000, 1],
+  ["Charleston Southern", "CHSO", "#002855", "#A28D5B", 55, 25, "Buccaneer Field House", 881, 1],
+  ["USC Upstate", "UPST", "#00703C", "#000000", 53, 25, "G.B. Hodge Center", 878, 1],
+  ["Norfolk State", "NSU", "#007A53", "#F2A900", 62, 26, "Echols Hall", 4500, 2],
+  ["Howard", "HOW", "#003A63", "#E51937", 58, 26, "Burr Gymnasium", 2700, 2],
+  ["North Carolina Central", "NCCU", "#862633", "#A2AAAD", 58, 26, "McDougald-McLendon Arena", 3056, 2],
+  ["South Carolina State", "SCST", "#841A2B", "#00205B", 58, 26, "SHM Memorial Center", 3200, 1],
+  ["Morgan State", "MORG", "#002F6C", "#F47920", 54, 26, "Hill Field House", 4250, 1],
+  ["Delaware State", "DSU", "#E31837", "#0067B1", 53, 26, "Memorial Hall", 3000, 1],
+  ["Coppin State", "COPP", "#2E1A47", "#FDB927", 50, 26, "Physical Education Complex", 4100, 1],
+  ["Maryland Eastern Shore", "UMES", "#7B1E3A", "#A2AAAD", 50, 26, "Hytche Athletic Center", 5500, 1],
+  ["Central Connecticut", "CCSU", "#1B49A2", "#FFFFFF", 60, 27, "Detrick Gymnasium", 2654, 1],
+  ["Fairleigh Dickinson", "FDU", "#002B5C", "#C8102E", 56, 27, "Bogota Savings Bank Center", 1852, 1],
+  ["LIU", "LIU", "#003A70", "#FFC72C", 55, 27, "Steinberg Wellness Center", 2500, 1],
+  ["Saint Francis", "SFU", "#C8102E", "#FFFFFF", 55, 27, "DeGol Arena", 3500, 1],
+  ["Le Moyne", "LEM", "#00543C", "#FFC72C", 54, 27, "Ted Grant Court", 2000, 1],
+  ["Wagner", "WAG", "#00483A", "#FFFFFF", 54, 27, "Spiro Sports Center", 2100, 1],
+  ["Stonehill", "STO", "#2F2A6F", "#FFFFFF", 53, 27, "Merkert Gymnasium", 1560, 1],
+  ["Mercyhurst", "MERC", "#004B23", "#002855", 52, 27, "Owen McCormick Court", 1800, 1],
+  ["New Haven", "NHVN", "#002855", "#FFC72C", 52, 27, "Jeffrey P. Hazell Athletics Center", 1500, 1],
+  ["Chicago State", "CHS", "#006747", "#FFFFFF", 50, 27, "Jones Convocation Center", 7000, 1],
+  ["Morehead State", "MORE", "#005EB8", "#FFC72C", 62, 28, "Ellis T. Johnson Arena", 6500, 2],
+  ["Little Rock", "UALR", "#6F263D", "#A7A8AA", 61, 28, "Jack Stephens Center", 5600, 1],
+  ["SIU Edwardsville", "SIUE", "#C8102E", "#000000", 61, 28, "First Community Arena", 4000, 1],
+  ["Southeast Missouri", "SEMO", "#C8102E", "#000000", 60, 28, "Show Me Center", 7000, 2],
+  ["UT Martin", "UTM", "#0E3C7A", "#F79428", 58, 28, "Elam Center", 4300, 1],
+  ["Tennessee State", "TNST", "#00539F", "#FFFFFF", 56, 28, "Gentry Center", 9100, 1],
+  ["Southern Indiana", "USI", "#002D72", "#C8102E", 55, 28, "Screaming Eagles Arena", 4800, 1],
+  ["Tennessee Tech", "TNTC", "#4F2984", "#FFDD00", 55, 28, "Eblen Center", 9280, 1],
+  ["Western Illinois", "WIU", "#663399", "#FFCC00", 54, 28, "Western Hall", 5139, 1],
+  ["Lindenwood", "LIN", "#000000", "#B5A36A", 53, 28, "Robert F. Hyland Arena", 3270, 1],
+  ["Eastern Illinois", "EIU", "#004B83", "#A2AAAD", 52, 28, "Lantz Arena", 5300, 1],
+  ["Colgate", "COLG", "#821019", "#FFFFFF", 64, 29, "Cotterell Court", 1750, 2],
+  ["American", "AMER", "#C4122E", "#002855", 61, 29, "Bender Arena", 4500, 1],
+  ["Lehigh", "LEH", "#653600", "#FFFFFF", 59, 29, "Stabler Arena", 5600, 1],
+  ["Bucknell", "BUCK", "#E87722", "#003865", 58, 29, "Sojka Pavilion", 4000, 2],
+  ["Boston University", "BU", "#CC0000", "#FFFFFF", 58, 29, "Case Gym", 1800, 1],
+  ["Navy", "NAVY", "#00205B", "#C5B783", 57, 29, "Alumni Hall", 5710, 2],
+  ["Loyola Maryland", "LOYMD", "#00594C", "#A2AAAD", 56, 29, "Reitz Arena", 3000, 1],
+  ["Holy Cross", "HC", "#602D89", "#FFFFFF", 55, 29, "Hart Center", 3600, 1],
+  ["Lafayette", "LAF", "#98002E", "#FFFFFF", 55, 29, "Kirby Sports Center", 3500, 1],
+  ["Army", "ARMY", "#000000", "#D3BC8D", 54, 29, "Christl Arena", 5043, 1],
+  ["McNeese", "MCN", "#00529B", "#FFD204", 72, 30, "The Legacy Center", 4200, 3],
+  ["Stephen F. Austin", "SFA", "#3D2B6E", "#FFFFFF", 63, 30, "William R. Johnson Coliseum", 7203, 2],
+  ["Nicholls", "NICH", "#C8102E", "#A2AAAD", 62, 30, "Stopher Gymnasium", 3800, 1],
+  ["SE Louisiana", "SELA", "#006A31", "#F2C300", 60, 30, "University Center", 7500, 1],
+  ["Texas A&M-Corpus Christi", "AMCC", "#0067C5", "#007F3E", 60, 30, "American Bank Center", 8000, 1],
+  ["UT Rio Grande Valley", "UTRGV", "#F05023", "#000000", 58, 30, "UTRGV Fieldhouse", 2500, 1],
+  ["Northwestern State", "NWST", "#492F92", "#F47920", 56, 30, "Prather Coliseum", 3900, 1],
+  ["Incarnate Word", "UIW", "#CB333B", "#000000", 54, 30, "McDermott Center", 2000, 1],
+  ["East Texas A&M", "ETAM", "#00386C", "#FFC333", 54, 30, "The Field House", 5000, 1],
+  ["Houston Christian", "HCU", "#002F87", "#F47920", 53, 30, "Sharp Gymnasium", 1000, 1],
+  ["New Orleans", "UNO", "#003399", "#A7A9AC", 52, 30, "Lakefront Arena", 8933, 1]
 ];
 const RIVALS=[["DUKE","UNC","Tobacco Road"],["UK","LOU","Battle for the Bluegrass"],["IND","PUR","Indiana–Purdue"],["KU","KSU","Sunflower Showdown"],
   ["MICH","MSU","Michigan–Michigan State"],["ARIZ","ASU","Duel in the Desert"],["UCLA","USC","Crosstown Rivalry"],["NOVA","SJOE","Holy War"],
@@ -1812,7 +2005,7 @@ function finalizeGame(g){
 }
 const gameKey=gm=>`${gm.h}-${gm.a}-${gm.label}`;
 function roundLog(){return S.roundLog||(S.roundLog={stars:[],ot:[]})}
-function simGame(gm){const g=newGame(gm,false);let n=0;while(!g.over&&n++<2000)step(g);return finalizeGame(g)}
+function simGame(gm){if(fastOK(gm))return finalizeGame(fastGame(gm));const g=newGame(gm,false);let n=0;while(!g.over&&n++<2000)step(g);return finalizeGame(g)}
 function defendingChamp(){const h=(S.history||[]).at(-1);return !!h&&h.season===S.season-1&&h.champ===S.user}
 
 // ===================== SEASON FLOW =====================
@@ -1830,7 +2023,9 @@ function roundName(){
   return "Offseason";
 }
 function userGame(){return currentGames().find(g=>g.h===S.user||g.a===S.user)||null}
-function playRound(userRes){
+// Team ratings are cached for the length of a simulated day (they barely change mid-round).
+function playRound(userRes){const oc=OVRC;OVRC=oc||new Map();try{return playRound0(userRes)}finally{OVRC=oc}}
+function playRound0(userRes){
   secretReveal();
   S.schedLocked=true;if(!userGame()&&S.phase!=="offseason")pracRest();
   const games=currentGames(),before=rankIds().slice(0,25);
@@ -1884,7 +2079,7 @@ function setupCT(){
   S.phase="ctourn";
   for(let c=0;c<CONFS.length;c++){const st=confStandings(c);if(!st.length)continue;S.regChamps=S.regChamps||{};S.regChamps[c]=st[0];
     if(st[0]===S.user)news(`You won the ${CONFS[c]} regular-season title!`)}
-  S.ct={round:0,br:CONFS.map((c,ci)=>{const st=confStandings(ci),n=Math.min(CT_SIZE(ci),st.length),seeds=st.slice(0,n);return {conf:ci,seeds,alive:bracketOrder(seeds),start:3-Math.log2(n)}})};
+  S.ct={round:0,br:CONFS.map((c,ci)=>{const st=confStandings(ci),n=ctFit(ci,st.length),seeds=st.slice(0,n);return {conf:ci,seeds,alive:bracketOrder(seeds),start:3-Math.log2(n)}})};
   S.ct.games=ctGames();
   const mine=S.ct.br.find(b=>b.conf===T(S.user).conf);
   news(mine.seeds.includes(S.user)?`You're the No. ${mine.seeds.indexOf(S.user)+1} seed in the ${CONFS[mine.conf]} Tournament.`:`You missed the ${CONFS[T(S.user).conf]} Tournament field.`);
@@ -1955,6 +2150,36 @@ function awardSeason(){
   awardExtras();
   for(const p of T(S.ncaa.champ).roster)award(p.id,`${S.season} National Champion`);
   const top=S.poy[0];if(top)news(top.team===S.user?`Your ${top.pos} ${top.name} is the National Player of the Year!`:`${top.name} (${T(top.team).abbr}) wins National Player of the Year.`);
+}
+// ===================== FAST SIM FOR SMALL-SCHOOL GAMES =====================
+// Games between two mid/low-major teams that don't involve you skip the possession-by-possession engine.
+// The score comes from the same rating gap the full engine uses; box scores are shared out by minutes, usage and skills.
+function fastOK(gm){
+  if(S.phase==="h2h"||gm.h===S.user||gm.a===S.user||gm.type==="ncaa"||rivalryOf(gm.h,gm.a))return false;
+  const th=CONF_TIER[T(gm.h).conf],ta=CONF_TIER[T(gm.a).conf];if(th>=2&&ta>=2)return true;
+  // A big program against a small school: fast unless the big program is ranked.
+  return gm.type==="reg"&&(th>=2||ta>=2)&&rankOf(th>=2?gm.a:gm.h)>25;
+}
+function fastGame(gm){
+  const {h:home,a:away}=gm,g={home,away,neutral:!!gm.neutral,label:gm.label,type:gm.type,score:{},box:{},half:2,tstat:{},shots:[],lc:0,lead:{[home]:0,[away]:0},log:[],flow:[],bzw:null,ej:null};
+  const mg=expMargin(home,away,gm.neutral)+qnorm()*11,tot=clamp(146+qnorm()*13,105,195);
+  const want={[home]:Math.round((tot+mg)/2),[away]:Math.round((tot-mg)/2)};
+  for(const id of [home,away]){
+    const t=T(id),st=starters(t),bench=rotation(t).bench.slice(0,4),L=[...st.map(p=>[p,1500+qnorm()*120]),...bench.map((p,i)=>[p,[540,420,300,160][i]+qnorm()*60])],m=L.reduce((a,[p])=>a+p.ovr,0)/Math.max(1,L.length);
+    const W=L.map(([p,min])=>usageOf(p)*Math.exp(clamp(p.ovr-m,-15,11)/22)*Math.max(0,min)),sw=W.reduce((a,b)=>a+b,0)||1;const T_={fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0,reb:0,to:0};let pts=0;
+    L.forEach(([p,min],i)=>{min=Math.max(0,min);const b={min,pts:0,fgm:0,fga:0,tpm:0,tpa:0,ftm:0,fta:0,orb:0,drb:0,ast:0,stl:0,blk:0,to:0,pf:0};
+      const share=want[id]*W[i]/sw*(.8+Math.random()*.4),thr=clamp(.12+atOf(p,"thr")*.03+(p.pos==="C"?-.1:0),.02,.5);
+      b.ftm=Math.round(share*.15*Math.random()*1.6);b.tpm=Math.max(0,Math.round((share-b.ftm)*thr/3));const two=Math.max(0,Math.round((share-b.ftm-3*b.tpm)/2));
+      b.fgm=two+b.tpm;b.pts=2*two+3*b.tpm+b.ftm;b.fga=Math.max(b.fgm,Math.round(b.fgm/(.40+Math.random()*.09)));b.tpa=Math.max(b.tpm,Math.round(b.tpm/(.31+Math.random()*.08)));b.fta=Math.max(b.ftm,Math.round(b.ftm/.72));
+      const mn=min/2400,rb=Math.max(1,attrVal(p,"reb")-35);b.drb=Math.round(mn*10.6*Math.pow(rb/30,.55)*(.7+Math.random()*.6));b.orb=Math.round(b.drb*.36*Math.random()*1.4);
+      b.ast=Math.round(mn*9.6*Math.max(1,attrVal(p,"pas")-45)/30*(.6+Math.random()*.8));b.stl=Math.round(mn*2.6*Math.random()*1.4);b.blk=Math.round(mn*(p.pos==="C"||p.pos==="PF"?2.3:.55)*Math.random()*1.4);
+      b.to=Math.round(mn*4.4*Math.random()*1.4);b.pf=Math.min(5,Math.round(mn*3.6*Math.random()*1.3));
+      g.box[p.id]=b;pts+=b.pts;for(const k of ["fgm","fga","tpm","tpa","ftm","fta","to"])T_[k]+=b[k];T_.reb+=b.orb+b.drb});
+    g.score[id]=pts;g.tstat[id]=T_;
+  }
+  if(g.score[home]===g.score[away]){g.half=3;const w=mg>=0?home:away,p=starters(T(w))[0];if(p&&g.box[p.id]){g.box[p.id].pts+=2;g.box[p.id].fgm++;g.box[p.id].fga++}g.score[w]+=2}
+  const w=g.score[home]>g.score[away]?home:away;g.lead[w]=Math.abs(g.score[home]-g.score[away]);g.lead[opp(g,w)]=Math.floor(Math.random()*8);g.lc=Math.floor(Math.random()*6);g.over=true;
+  return g;
 }
 
 // ===================== JOB SECURITY & CAROUSEL =====================
@@ -3057,10 +3282,11 @@ let pickSlot=null,slotConfirm=null;
 async function loadSlots(){const out=[];for(let n=1;n<=SLOTS;n++){let s=null;try{const raw=localStorage.getItem(slotKey(n));if(raw){const j=JSON.parse(raw.startsWith("gz:")?await gunz(raw.slice(3)):raw);if(j&&j.v>=1)s=j}}catch(e){}out.push({n,s})}return out}
 function slotsHTML(){
   const L=SAVED||[];if(!Array.isArray(L))return "";
-  if(pickSlot==null){const e=L.find(x=>!x.s);pickSlot=e?e.n:1}
-  return `<div class="slots">${[1,2,3].map(n=>{const x=L.find(z=>z.n===n),s=x&&x.s,t=s?s.teams[s.user]:null;return `<div class="slotc ${pickSlot===n?"on":""}" style="${t?`--c1:${t.c1}`:""}">
+  if(pickSlot==null){const e=L.find(x=>!x.s&&x.n<=2);pickSlot=e?e.n:1}
+  const shown=[1,2].concat(L.some(z=>z.n===3&&z.s)?[3]:[]);if(pickSlot===3||pickSlot==null)pickSlot=(L.find(x=>x.n<=2&&!x.s)||{n:1}).n;
+  return `<div class="slots">${shown.map(n=>{const x=L.find(z=>z.n===n),s=x&&x.s,t=s?s.teams[s.user]:null;return `<div class="slotc ${pickSlot===n?"on":""}" style="${t?`--c1:${t.c1}`:""}">
     <span class="eyebrow">Save slot ${n}</span>${s?`<b>${s.mp?`${esc(s.mp.name)} · `:""}${esc(t.name)}</b><span class="sub">${s.mp?(s.mp.done?"My Player · Career over":`My Player · ${seasonLabel(s.season)}`):`${seasonLabel(s.season)} · ${(s.history||[]).length} seasons coached`}</span>
-      <div class="row"><button class="btn" data-act="resume" data-n="${n}">Continue</button><button class="small-btn" data-act="slotPick" data-n="${n}">${pickSlot===n?"New dynasty goes here":"Start over here"}</button><button class="small-btn" data-act="slotDel" data-n="${n}">${slotConfirm===n?"Tap again to erase":"Erase"}</button></div>`
+      <div class="row"><button class="btn" data-act="resume" data-n="${n}">Continue</button>${n===3?'<span class="sub">Old slot: you can keep playing it, but new dynasties go in slots 1 and 2.</span>':`<button class="small-btn" data-act="slotPick" data-n="${n}">${pickSlot===n?"New dynasty goes here":"Start over here"}</button>`}<button class="small-btn" data-act="slotDel" data-n="${n}">${slotConfirm===n?"Tap again to erase":"Erase"}</button></div>`
       :`<b class="muted">Empty</b><span class="sub">Start a new save here</span><div class="row"><button class="small-btn" data-act="slotPick" data-n="${n}">${pickSlot===n?"New dynasty goes here":"Use this slot"}</button></div>`}</div>`}).join("")}</div>
     ${L.find(x=>x.n===pickSlot&&x.s)?`<p class="sec-bad" style="font-size:13.5px">Starting a new dynasty in slot ${pickSlot} will replace the ${esc(L.find(x=>x.n===pickSlot).s.teams[L.find(x=>x.n===pickSlot).s.user].name)} save.</p>`:""}`;
 }
@@ -4402,7 +4628,7 @@ function tourneyCentral(){
 // ===================== FAN BASE MAP =====================
 const REGS={pnw:["Pacific NW",120,95,46],west:["West Coast",95,270,62],mtn:["Mountain",270,210,52],plains:["Plains",455,215,52],tx:["Texas",440,415,58],mw:["Midwest",625,175,64],se:["Southeast",690,370,62],fl:["Florida",790,470,44],ma:["Mid-Atlantic",820,245,52],ne:["Northeast",880,120,50]};
 const NBR={pnw:["west","mtn"],west:["pnw","mtn"],mtn:["pnw","west","plains","tx"],plains:["mtn","tx","mw"],tx:["plains","mtn","se"],mw:["plains","ma","ne","se"],se:["tx","mw","ma","fl"],fl:["se"],ma:["mw","se","ne"],ne:["ma","mw"]};
-const CONF_REG=["se","mw","plains","se","ne","west","mtn","ma","se","mw","mw","ne","mw","ne","se"];
+const CONF_REG=["se","mw","plains","se","ne","west","mtn","ma","se","mw","mw","ne","mw","ne","se", "se","se","ma","west","mtn","se","se","plains", "ne","mtn","se","ma","ne","mw","ne","tx"];
 function homeReg(t){const n=t.name;
   if(/Texas|Houston|Baylor|TCU|SMU|Rice|UTEP|Prairie View|Lamar|UTSA|Stephen F/.test(n))return "tx";if(/Florida|Miami|UCF|FAU|FIU|Stetson|Jacksonville/.test(n))return "fl";
   if(/Oregon|Washington|Gonzaga|Portland|Seattle|Idaho|Montana/.test(n))return "pnw";if(/UCLA|USC|Stanford|California|San Diego|Santa Clara|Saint Mary|San Francisco|Loyola Marymount|Pepperdine|Fresno|San Jos|Long Beach|Hawai/.test(n))return "west";
@@ -5033,7 +5259,10 @@ function tabSchedule(){
 }
 function tabStandings(){
   const RD=rankData();
-  return `<div class="grid2">${CONFS.map((c,ci)=>`<div class="panel"><h3>${c}</h3><div class="tw"><table class="tbl">
+  // With 31 conferences, show one at a time (yours first), or all of them.
+  const live=CONFS.map((c,ci)=>ci).filter(ci=>S.teams.some(t=>t.conf===ci)),mine=T(S.user).conf,sel=S.stConf??mine,show=sel==="all"?[mine,...live.filter(c=>c!==mine)]:[sel];
+  return `<div class="tabs cfilt">${[["all","All"],...live.map(ci=>[ci,CONFS[ci]])].map(([k,n])=>`<button class="uchip ${String(sel)===String(k)?"on":""}" data-act="stConf" data-k="${k}">${esc(n)}</button>`).join("")}</div>
+  <div class="grid2">${show.map(ci=>[CONFS[ci],ci]).map(([c,ci])=>`<div class="panel"><h3>${c}</h3><div class="tw"><table class="tbl">
     <thead><tr><th>Team</th><th class="n">Conf</th><th class="n">All</th><th class="n">NET</th><th class="n hm">SOS</th></tr></thead><tbody>
     ${confStandings(ci).map(id=>{const cr=confRec(id);return `<tr class="${id===S.user?"me":""}"><td>${teamCell(id,S.ct&&S.ct.br[ci].champ===id?' <span class="tag amber">Champ</span>':S.regChamps&&S.regChamps[ci]===id?' <span class="tag">Reg. season</span>':"")}</td><td class="n">${cr.w}-${cr.l}</td><td class="n">${recStr(id)}</td><td class="n sub">${RD.netRank[id]}</td><td class="n hm">${sosTag(id)}</td></tr>`}).join("")}
     </tbody></table></div></div>`).join("")}</div>`;
@@ -5421,6 +5650,7 @@ const ACT={
   nilYes(d){nilAccept(+d.id)},nilNo(d){nilDecline(+d.id)},nilPay(d){nilPay(+d.id)},
   snd(){sndToggle()},crewNext(){const k=Object.keys(CREWS);S.crew=k[(k.indexOf(S.crew||"classic")+1)%k.length];if(WATCH)WATCH.bk=null},cSign(){contractAct("sign")},cDemand(){contractAct("demand")},cPass(){contractAct("pass")},
   mdDone(){mediaDay().done=true},mdAns(d){mdAnswer(d.k)},tour(d){takeTour(d.k)},cWood(d){court().wood=d.k},cPaint(d){court().paint=d.k},mpLegend(d){mpLegendStart(+d.id)},
+  stConf(d){S.stConf=d.k==="all"?"all":+d.k},
   offseason(){arcSeasonEnd();mediaDayEnd();mpPreOff();beginOffseason();contractSeason();if(S.mp)S.off.step="mp";else secretWalkOn();scrollTo(0,0)},meltdown(){meltdown()},
   mpPos(d){MPC.pos=d.k;MPC.ar=0;MPC.ht=Math.round((HT[d.k][0]+HT[d.k][1])/2)},mpAr(d){MPC.ar=+d.k},mpHt(d){MPC.ht=+d.k},mpSt(d){MPC.st=+d.k},mpSeeOffers(){mpSeeOffers();scrollTo(0,0)},mpBack(){MPC.step="create"},
   mpCommit(d){mpStart(+d.id);scrollTo(0,0)},mpFocus(d){if(S.mp)S.mp.focus=d.k},mpReturn(){mpAutoOff();scrollTo(0,0)},mpDeclare(){mpDeclare();scrollTo(0,0)},
