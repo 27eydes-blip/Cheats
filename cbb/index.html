@@ -5340,7 +5340,7 @@ function propCheck(W){
       rep:[{h:cp(RFAN),n:"",txt:hits===3?"Give this man a sportsbook 💰":hits?"Respectable":"LMAO 0-3 😭"}]})}
 }
 function propHTML(W){
-  const P=W.pp;if(!P)return "";
+  const P=W.pp;if(!P||(!P.locked&&W.g.el>0))return "";
   if(!P.locked)return `<div class="panel props" data-c="amber"><h3>🎯 Pick 3 props before tip-off</h3><p class="muted" style="font-size:13.5px">Each one you hit grows your following. Go 3 for 3 for double.</p>
     <div class="pp-grid">${P.opts.map((x,i)=>`<button class="pp-o ${P.pick.includes(i)?"on":""}" data-act="ppPick" data-i="${i}">${esc(x.t)}</button>`).join("")}</div>
     <div class="row"><button class="btn" data-act="ppLock" ${P.pick.length===3?"":"disabled"}>Lock props and tip off (${P.pick.length}/3)</button><button class="btn ghost" data-act="ppSkip">Skip</button></div></div>`;
@@ -5458,7 +5458,7 @@ function overlayHTML(W){
 
 const ACT17={
   ppPick(d){const P=WATCH&&WATCH.pp;if(!P||P.locked)return;const i=+d.i,k=P.pick.indexOf(i);if(k>=0)P.pick.splice(k,1);else if(P.pick.length<3)P.pick.push(i)},
-  ppLock(){const W=WATCH,P=W&&W.pp;if(!P||P.pick.length!==3)return;P.locked=true;W.paused=false;tick17(W,"@PropBetPaul",`Props are locked. Let's ride 🎯`)},
+  ppLock(){const W=WATCH,P=W&&W.pp;if(!P||P.pick.length!==3||W.g.el>0)return;P.locked=true;W.paused=false;tick17(W,"@PropBetPaul",`Props are locked. Let's ride 🎯`)},
   ppSkip(){const W=WATCH;if(!W)return;W.pp=null;W.paused=false},
   wHT(){const W=WATCH;if(!W||!W.ht)return;W.ht.done=1;W.paused=false},
   wHeat(){const W=WATCH;if(!W)return;W.heat=!W.heat;W.cn=-1},
@@ -5489,7 +5489,7 @@ const TOWN_ITEMS={
 function town(){if(!S.town||S.town.team!==S.user)S.town={team:S.user,pts:0,items:[],log:[]};return S.town}
 const townLvl=()=>{const X=S&&S.town&&S.town.team===S.user?S.town:null;return X?Math.min(6,Math.floor(Math.max(0,X.pts)/22)):0};
 const townBoost=()=>S&&!S.mp?townLvl()*.006:0;
-function townAdd(k){const X=town();if(X.items.some(x=>x.k===k))return;const I=TOWN_ITEMS[k],txt=I.t(X);X.items.push({k,t:txt,season:S.season});X.log.unshift(`${seasonLabel(S.season)}: ${txt}`);news(`🏙️ ${txt}`)}
+function townAdd(k){const X=town();if(X.items.some(x=>x.k===k))return;const I=TOWN_ITEMS[k],txt=I.t(X);X.items.push({k,t:txt,season:S.season});X.log.unshift(`${seasonLabel(S.season)}: ${txt}`);X.log.length=Math.min(X.log.length,30);news(`🏙️ ${txt}`)}
 function townDrop(k){const X=town();const n=X.items.length;X.items=X.items.filter(x=>x.k!==k);if(X.items.length<n&&k==="billboard")news("🏙️ The FIRE THE COACH billboard came down.")}
 function townSeason(rec,tw,champ){
   const X=town();const gain=rec.w-rec.l*.6+tw*3+(champ?15:0);X.pts=Math.max(0,X.pts+gain);
@@ -5692,7 +5692,7 @@ function epilogue(){
   return {season:S.season,w,l,titles,ff,apps,legacy,hof,alum,town:X?X.items.map(i=>i.t):[],rival:rv?{n:rv[0],w:rv[1].w,l:rv[1].l,team:rv[1].team}:null,succ,succRec:so>=80?"went 24-9 in his first season and kept the machine rolling":so>=72?"went 17-15 and spent the year hearing your name everywhere he went":"went 11-20 and the fans started a chant for you to come back",seasons:H.length};
 }
 function renderEpilogue(){
-  const E=S.retired,me=T(S.user),names=[...E.alum.map(a=>a.n),...me.roster.map(p=>p.n)].slice(0,18);
+  const E=S.coachEnd,me=T(S.user),names=[...E.alum.map(a=>a.n),...me.roster.map(p=>p.n)].slice(0,18);
   app.innerHTML=`<div class="epi" style="--c1:${me.c1};--c2:${me.c2}">
     <div class="epi-top"><span class="eyebrow">The end of an era · ${seasonLabel(E.season)}</span><h1>Coach ${esc(coachNm())} retires</h1><p class="num">${E.seasons} season${E.seasons===1?"":"s"} · ${E.w}-${E.l} · ${E.titles} national title${E.titles===1?"":"s"} · ${E.ff} Final Four${E.ff===1?"":"s"} · ${E.apps} NCAA bids</p></div>
     <div class="panel" data-c="amber"><h3>Legacy</h3><p>Legacy score <b class="num">${E.legacy}</b>. ${E.hof?`Inducted into the Hall of Fame in ${E.season+5}. The speech ends with: "I never made a shot in my life. They did. Every one of them."`:`Not a Hall of Famer, but every former player showed up to the retirement party. That counts for something.`}</p></div>
@@ -5718,7 +5718,7 @@ function round18(){if(!S||S.phase==="h2h"||S.mp)return;try{townRound()}catch(e){
 function lum(hex){const m=/^#?([0-9a-f]{6})$/i.exec(hex||"");if(!m)return .3;const n=parseInt(m[1],16),c=[n>>16&255,n>>8&255,n&255].map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*c[0]+.7152*c[1]+.0722*c[2]}
 const themeOn=()=>{try{return localStorage.getItem("cbb-tt")!=="off"}catch(e){return true}};
 function teamTheme(){
-  const b=document.body;if(!b||!b.style)return;const on=S&&themeOn()&&S.user!=null&&!WATCH;
+  const b=document.body;if(!b||!b.style)return;const on=S&&themeOn()&&S.user!=null&&S.phase!=="h2h";
   if(!on){b.style.removeProperty("--ta");b.style.removeProperty("--ta-ink");if(b.classList)b.classList.remove("tt");return}
   const t=T(S.user),ok=c=>{const L=lum(c);return L>.06&&L<.8};const a=ok(t.c1)?t.c1:ok(t.c2)?t.c2:`color-mix(in srgb,${t.c1} 50%,#ffffff)`;
   const L=/^#/.test(a)?lum(a):.35;b.style.setProperty("--ta",a);b.style.setProperty("--ta-ink",L>.36?"#0d0f14":"#ffffff");if(b.classList)b.classList.add("tt");
@@ -5754,10 +5754,12 @@ function botbarHTML(tabs){
 }
 
 // ===================== FRAME 3 · ONE BIG NEXT BUTTON =====================
-const FAB_ORDER=[["wDone","Continue"],["lockSched","Lock in schedule"],["magRead","Start the season"],["sim","Sim next game"],["simRound","Sim next round"],["startNcaa","Start the tournament"],["offseason","Go to the offseason"],["selAuto",null],["offStep",null],["finishSigning","Finish signing day"]];
+const FAB_ORDER=[["wDone","Continue"],["lockSched","Lock in schedule"],["magDone","Start the season"],["sim","Sim next game"],["simRound","Sim next round"],["startNcaa","Start the tournament"],["offseason","Go to the offseason"],["selNext","Next reveal"],["offStep",null],["finishSigning","Finish signing day"]];
 function fabFind(){
   if(!S||!app.querySelector||S.moreOpen)return null;
   for(const [a,l] of FAB_ORDER){const el=app.querySelector(`button[data-act="${a}"]:not([disabled])`);if(el)return {el,a,l:l||el.textContent.trim().replace(/\s+/g," ").slice(0,30)}}
+  // On any other hub tab, the Next button takes you home, where the next step lives.
+  if(S.tab!=="home"&&!WATCH&&S.phase!=="offseason"&&!S.pv&&S.ybView==null&&app.querySelector(".navgroups")){const el=app.querySelector('button[data-act="tab"][data-t="home"]');if(el)return {el,a:"tab",l:"Back to the next step"}}
   return null;
 }
 function fabUpdate(){
@@ -5791,7 +5793,7 @@ const ACT18={
   film(d){S.filmView=d.i===""||d.i==null?null:+d.i;scrollTo(0,0)},
   pbAdd(){pbAdd()},pbDel(d){S.pbook=pbook().filter(p=>p.id!==+d.id)},
   anaHire(){anaHire()},
-  retAsk(d){S.retAsk=d.v==="1"},retire(){S.retAsk=false;S.retired=epilogue();scrollTo(0,0)},unretire(){S.retired=null;S.tab="home";scrollTo(0,0)},
+  retAsk(d){S.retAsk=d.v==="1"},retire(){S.retAsk=false;S.coachEnd=epilogue();scrollTo(0,0)},unretire(){S.coachEnd=null;S.tab="home";scrollTo(0,0)},
   moreT(){S.moreOpen=!S.moreOpen},
   theme(){try{localStorage.setItem("cbb-tt",themeOn()?"off":"on")}catch(e){}},
 };
@@ -6098,7 +6100,7 @@ function render(){
 function renderCore(){
   if(!S)return renderSelect();
   if(WATCH)return renderWatch();
-  if(S.retired)return renderEpilogue();
+  if(S.coachEnd)return renderEpilogue();
   if(S.ybView!=null)return renderYearbook();
   if(S.pv!=null)return renderPlayer();
   if(S.phase==="selection")return renderSelection();
@@ -6649,7 +6651,7 @@ const ACT={
   posChg(d){posChange(+d.id,d.k)},debate(d){debateRespond(d.k)},nameYes(){namingAccept()},nameBack(){namingBuyBack()},dwSign(d){dwinSign(+d.id)},hhYes(d){hhAccept(+d.id)},
   balMv(d){ballotMove(+d.id,+d.d)},balDrop(d){ballotDrop(+d.id)},balAdd(d){ballotAdd(+d.id)},balSend(){ballotSend()},
   stConf(d){S.stConf=d.k==="all"?"all":+d.k},
-  offseason(){arcSeasonEnd();mediaDayEnd();mpPreOff();beginOffseason();contractSeason();namingSeason();if(S.mp)S.off.step="mp";else secretWalkOn();scrollTo(0,0)},meltdown(){meltdown()},
+  offseason(){if(S.phase!=="ncaa"||!S.ncaa||S.ncaa.champ==null)return;arcSeasonEnd();mediaDayEnd();mpPreOff();beginOffseason();contractSeason();namingSeason();if(S.mp)S.off.step="mp";else secretWalkOn();scrollTo(0,0)},meltdown(){meltdown()},
   mpPos(d){MPC.pos=d.k;MPC.ar=0;MPC.ht=Math.round((HT[d.k][0]+HT[d.k][1])/2)},mpAr(d){MPC.ar=+d.k},mpHt(d){MPC.ht=+d.k},mpSt(d){MPC.st=+d.k},mpSeeOffers(){mpSeeOffers();scrollTo(0,0)},mpBack(){MPC.step="create"},
   mpCommit(d){mpStart(+d.id);scrollTo(0,0)},mpFocus(d){if(S.mp)S.mp.focus=d.k},mpReturn(){mpAutoOff();scrollTo(0,0)},mpDeclare(){mpDeclare();scrollTo(0,0)},
   mpTOffers(){const p=mpP();S.off.mpt=mpOffers(p.ovr>=82?5:p.ovr>=74?4:3,p.ovr,p.pos,S.user)},mpTBack(){S.off.mpt=null},mpTransfer(d){mpTransfer(+d.id);scrollTo(0,0)},
@@ -6742,7 +6744,7 @@ function fixInflation(){
   if(n)news(`Ratings repair: ${n} of your players were brought back to realistic levels (your best was ${top} OVR before). Development now slows near the top of the scale.`);
   try{save()}catch(e){}
 }
-function loadFixups(){fixInflation();crowdInit();if(S.phase!=="offseason"&&!S.emAdded){addEmmett();S.emAdded=true}if(!S.bdInit){earnBadges(true);S.bdInit=true}}
+function loadFixups(){if(S.retired&&!Array.isArray(S.retired)){S.coachEnd=S.retired;S.retired=null}fixInflation();crowdInit();if(S.phase!=="offseason"&&!S.emAdded){addEmmett();S.emAdded=true}if(!S.bdInit){earnBadges(true);S.bdInit=true}}
 function start(data){
   S=(data&&data.S)||null;if(S){loadFixups();buildPL();RK.key=null}
   render();
