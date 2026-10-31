@@ -522,7 +522,7 @@ const SCARY = [
   /* bomber: living blood bomb */ { size: 1.18, pal: sp('#1e0c0c', '#c03030', '#120606', '#020000'), m: { gaster: [-7.8, 5.8, 4.8], boomPal: sp('#c0141e', '#ff8a70', '#7a0408', '#260000'), glow: .9 } },
   /* porter: amber-bellied hauler */ { size: 1.08, pal: sp('#5a3020', '#d8906a', '#3a1c12', '#100402'), gpal: sp('#c07020', '#ffd090', '#7a4010', '#2a1000'), m: { mandStyle: 'saw', mand: .85, spines: false, headSpines: false, glow: .4 } },
   /* excavator: thick, soil-caked */ { size: 1.18, pal: sp('#3a2218', '#b07858', '#24140c', '#080302'), gpal: sp('#4a3020', '#c09070', '#2a1a10', '#0a0402'), m: { mandStyle: 'saw', mand: 1.1, glow: .5 } },
-  /* gatekeeper: bloated, armoured door-warden with a massive shield skull */ { size: 1.75, pal: sp('#120606', '#c03028', '#080202', '#000000'), gpal: sp('#3a0606', '#ff4a3a', '#200202', '#050000'), m: { head: [6.4, 3.9, 3.8], gaster: [-7.0, 5.4, 4.9], meso: 1.35, thick: 1.55, legs: 1.02, mand: 1.5, eye: 1.25, glow: 1.2 } },
+  /* gatekeeper: bloated, armoured door-warden with a massive shield skull */ { size: 5.25, pal: sp('#120606', '#c03028', '#080202', '#000000'), gpal: sp('#3a0606', '#ff4a3a', '#200202', '#050000'), m: { head: [6.4, 4.1, 4.0], gaster: [-8.2, 6.6, 6.2], meso: 1.55, thick: 1.85, legs: 1.0, mand: 1.1, eye: 1.25, glow: 1.2 } },
   /* stinger: wasp-waisted, crimson-tipped */ { size: 1.1, pal: sp('#2a1010', '#e04a40', '#1a0808', '#040000'), gpal: sp('#4a0c0c', '#ff5a4a', '#2a0404', '#080000'), m: { gaster: [-7.8, 5.6, 2.8], glow: 1, legs: 3, thick: .8 } },
   /* raider: long sickle-jawed slaver */ { size: 1.28, pal: sp('#1a0a0a', '#e05040', '#100404', '#020000'), m: { mand: 1.7, legs: 1.2, glow: 1.1 } },
 ];
@@ -557,7 +557,7 @@ function morphFor(si, t, tier = 0) {
     M.scary = true; M.acc = '#ff3030'; M.mandStyle = 'hook'; M.mand *= 1.3; M.spines = true; M.headSpines = t !== 1; M.eye *= 1.15; M.glow = 1;
     const X = SCARY[t]; Object.assign(M, X.m); M.ppal = X.pal; if (X.gpal) M.gpal = X.gpal;
     if (t === 2 || t === 3) M.extraJaws = true; if (t === 2 || t === 3 || t === 9) M.extraLegs = true; if (t === 3 || t === 9) M.crystal = true;
-    M.mand *= 1.35; M.glow = Math.max(M.glow, .75); M.dorsal = M.legSpikes = M.fangs = true; M.spines = true; if (t !== 1) M.headSpines = true; if (t === 3 || t === 9 || t === 11) M.crown = M.scars = true;
+    M.mand *= 1.35; M.glow = Math.max(M.glow, .75); M.dorsal = M.legSpikes = M.fangs = true; if (t === 9) { M.fangs = false; M.bluntJaw = true; } M.spines = true; if (t !== 1) M.headSpines = true; if (t === 3 || t === 9 || t === 11) M.crown = M.scars = true;
     if (tier) { M.spines = true; M.thick *= 1 + .1 * tier; }
   }
   M.gpal = M.gpal || SPECIES[si].gaster || null;
@@ -663,6 +663,11 @@ function mandibles(g, st, dead, P, M, hx, hrx, hry) {
       capsule(g, 5.3, s * .25, 5.9, -s * .45, .42, .18, JP);
       if (M.fangs) { g.fillStyle = dead ? '#5a4a40' : '#f0dcc4'; for (const x of [1.6, 2.8, 4.0]) { g.beginPath(); g.moveTo(x - .2, -s * .1); g.lineTo(x + .2, -s * .1); g.lineTo(x, -s * .55); g.closePath(); g.fill(); } }
       g.strokeStyle = 'rgba(255,200,150,.3)'; g.lineWidth = .08; g.beginPath(); g.moveTo(.3, -s * .15); g.lineTo(5, s * .1); g.stroke();
+    } else if (M.bluntJaw) {
+      g.translate(hx + hrx * .78, s * hry * .42); g.rotate(s * open * .45); g.scale(M.mand, M.mand);
+      const bg = g.createLinearGradient(0, s * .9, 2.6, -s * .4); bg.addColorStop(0, P.mid); bg.addColorStop(1, P.dark);
+      g.fillStyle = bg; g.beginPath(); g.moveTo(0, s * .7); g.quadraticCurveTo(1.6, s * 1.3, 2.6, s * .35); g.arc(2.25, -s * .05, .6, s > 0 ? .6 : -.6, s > 0 ? -2.4 : 2.4, s < 0); g.quadraticCurveTo(1.2, -s * .3, 0, -s * .1); g.closePath(); g.fill();
+      if (!dead) { g.strokeStyle = 'rgba(255,60,40,.55)'; g.lineWidth = .14; g.beginPath(); g.moveTo(.2, s * .7); g.quadraticCurveTo(1.6, s * 1.2, 2.55, s * .4); g.stroke(); }
     } else if (style === 'hook') {
       g.translate(hx + hrx * .75, s * hry * .45); g.rotate(s * open); g.scale(M.mand, M.mand);
       const mg = g.createLinearGradient(0, s, 4, -s); mg.addColorStop(0, P.mid); mg.addColorStop(1, P.dark);
@@ -2283,7 +2288,7 @@ function fighterThink(a, col, dt) {
   const n = col.nest, T = TYPES[a.t], role = T.role;
   dt0 = dt;
   if (role === 'gate') {
-    const R = n.r + (10 + a.gp * 16) * (SPEC(col).morph.casteSz?.[9] || 1); a.orb += dt * .05;
+    const R = n.r + (10 + a.gp * 16) * Math.max(1, casteSize(col, 9) / 1.6); a.orb += dt * .05;
     const tx = n.x + Math.cos(a.orb) * R, ty = n.y + Math.sin(a.orb) * R, dx = tx - a.x, dy = ty - a.y;
     if (dx * dx + dy * dy > 36) steerTo(a, Math.atan2(dy, dx), 4 * dt); else { a.stop = true; a.a = Math.atan2(a.y - n.y, a.x - n.x); }
     return;
