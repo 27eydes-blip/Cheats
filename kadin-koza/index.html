@@ -627,7 +627,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
             <svg viewBox="0 0 200 200" aria-hidden="true">
               <path d="M62 18 Q100 36 138 18 L186 44 L171 92 L150 84 L150 188 L50 188 L50 84 L29 92 L14 44 Z" fill="url(#gCloth)" stroke="#0a0a0a" stroke-width="3" stroke-linejoin="round"/>
               <text x="100" y="74" font-family="Graduate, serif" font-size="19" fill="#0a0a0a" text-anchor="middle">SAMANO</text>
-              <text x="100" y="170" font-family="Graduate, serif" font-size="86" fill="#0a0a0a" stroke="#f3efe6" stroke-width="2" text-anchor="middle">19</text>
+              <text x="100" y="170" font-family="Graduate, serif" font-size="86" fill="#0a0a0a" stroke="#f3efe6" stroke-width="2" text-anchor="middle">14</text>
             </svg>
             <span class="cn">Noah Samano</span>
             <span class="ovr">PUNTER · OVR <b>94</b></span>
@@ -894,7 +894,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   // kickers
   const CHARS = {
     kadin: { id: "kadin", name: "Kadin Koza", back: "KOZA", num: "7", chrome: true, phone: true, power: 1.0, aimS: 0.95, zone: 1.12 },
-    noah: { id: "noah", name: "Noah Samano", back: "SAMANO", num: "19", chrome: false, plain: true, punter: true, power: 1, aimS: 1, zone: 1 },
+    noah: { id: "noah", name: "Noah Samano", back: "SAMANO", num: "14", chrome: false, plain: true, punter: true, power: 1, aimS: 1, zone: 1 },
     gavin: { id: "gavin", name: "Gavin", back: "GAVIN", num: "0", chrome: false, bad: true, slouch: true, power: 0.38, aimS: 0.4, zone: 0.6 }
   };
   try { S.char = CHARS[localStorage.getItem("kk-char")] ? localStorage.getItem("kk-char") : "kadin"; } catch (e) { S.char = "kadin"; }
@@ -967,7 +967,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         $("lab1").textContent = "Level"; $("lab2").textContent = "XP";
         $("lab3").textContent = S.mode === "town" ? "Near" : "Jersey"; $("lab4").textContent = S.mode === "town" ? "Sliders" : "Sweet spot";
         $("score").textContent = L.level; $("dist").textContent = `${L.into}/${L.need}`;
-        $("wind").textContent = S.mode === "town" ? (T.near ? (T.near.kind === "place" ? T.near.p.short : T.near.kind === "spot" ? T.near.sp.short : T.near.n.name) : T.area && T.area !== "town" ? AREAS[T.area].name.split(" ").pop() : "Town") : J().name.split(" ")[0];
+        $("wind").textContent = S.mode === "town" ? (T.near ? (T.near.kind === "place" ? T.near.p.short : T.near.kind === "spot" ? T.near.sp.short : T.near.n.name.split(" ").pop()) : T.area && T.area !== "town" ? AREAS[T.area].name.split(" ").pop() : "Town") : J().name.split(" ")[0];
         $("misses").textContent = S.mode === "town" ? T.sliders : `+${Math.round(levelPerk() * 100)}%`;
         return;
       }
@@ -3107,7 +3107,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         return SC_DESKS.some(([dx, dy]) => Math.abs(x - dx) < 46 && y > dy - 20 && y < dy + 16);
       },
       npcs: [
-        { id: "teacher", name: "Teacher", lines: "teacher", path: [[300, 222]], speed: 0, look: { skin: "#f0c9a8", shirt: "#26324a", num: "", hair: "#6b6b6b", shoes: "#2a1a10", pants: "#3a3d46", glasses: true } },
+        { id: "teacher", name: "Mr. Krysiak", lines: "teacher", path: [[300, 222]], speed: 0, look: { skin: "#f0c9a8", shirt: "#26324a", num: "", hair: "#6b6b6b", shoes: "#2a1a10", pants: "#3a3d46", glasses: true } },
         { id: "st1", name: "Classmate", lines: "student", sit: true, path: [[150, 288]], speed: 0, look: { skin: "#d9a47a", shirt: "#ff6a13", num: "", hair: "#2a1a10" } },
         { id: "st2", name: "Classmate", lines: "student", sit: true, path: [[450, 288]], speed: 0, look: { skin: "#f1c7a3", shirt: "#0a0a0a", num: "", hair: "#d8b067", longHair: true } },
         { id: "st3", name: "Classmate", lines: "student", sit: true, path: [[300, 398]], speed: 0, look: { skin: "#7a4a2e", shirt: "#f3efe6", num: "", hair: "#111" } },
@@ -3186,13 +3186,13 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         const grade = ["F", "D", "D", "C", "B", "A"][right];
         T.cool.class = 40;
         T.talk = { npc: teacher, text: right >= 4 ? "Nice work, Kadin." : "Study more, less phone.", t: 3 };
-        openSheet("Class is over", `Grade: ${grade} · ${right} of 5 correct`, [{ label: "Leave class", onClick: closeSheet }]);
+        openSheet("Mr. Krysiak's class is over", `Grade: ${grade} · ${right} of 5 correct`, [{ label: "Leave class", onClick: closeSheet }]);
         addXP(right * 8 + (right === 5 ? 10 : 0), `class grade ${grade}`);
         return;
       }
       const [q, a] = qs[i], order = a.slice().sort(() => Math.random() - 0.5);
       if (i === 2 && Math.random() < 0.7) T.talk = { npc: teacher, text: "Kadin. Phone. Away. Now.", t: 2.4 };
-      openSheet(`Class · Question ${i + 1} of 5`, q, order.map(opt => ({ label: opt, onClick: () => {
+      openSheet(`Mr. Krysiak's class · Question ${i + 1} of 5`, q, order.map(opt => ({ label: opt, onClick: () => {
         const ok = opt === a[0];
         if (ok) { right++; sfx.tick(); } else tone(200, 0.25, 0.06, "sawtooth", 0.7);
         toast(ok ? "<b>Correct!</b>" : `Nope · it's ${a[0]}`, 1100);
@@ -3298,7 +3298,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     // classroom: wall, whiteboard, wood floor
     ctx.fillStyle = "#cfd6dc"; ctx.fillRect(0, -400, A.w, 600);
     ctx.fillStyle = "#f7f9fb"; ctx.fillRect(130, 30, 340, 110); ctx.strokeStyle = "#8d9097"; ctx.lineWidth = 6; ctx.strokeRect(130, 30, 340, 110);
-    ctx.fillStyle = "#2d5aa8"; ctx.font = "22px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("POP QUIZ TODAY", 300, 66);
+    ctx.fillStyle = "#2d5aa8"; ctx.font = "22px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("MR. KRYSIAK · POP QUIZ", 300, 66);
     ctx.fillStyle = "#c8261c"; ctx.font = "600 15px 'Barlow Condensed', sans-serif"; ctx.fillText("Phones in the bin. Yes, you, Kadin.", 300, 104);
     for (const wx of [24, 520]) { ctx.fillStyle = "#9fd3ff"; ctx.fillRect(wx, 40, 56, 90); ctx.strokeStyle = "#f3efe6"; ctx.lineWidth = 4; ctx.strokeRect(wx, 40, 56, 90); }
     ctx.fillStyle = "#b07a4a"; ctx.fillRect(0, 196, A.w, 450);
