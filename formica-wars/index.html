@@ -399,7 +399,7 @@ const SPECIES = [
   { key: 'fire', name: 'Fire ant', latin: 'Solenopsis invicta', ui: '#e4573c', pal: { base: '#b8321c', light: '#ffa070', mid: '#7a1c0c', dark: '#2a0702' },
     perk: 'Venomous sting and living rafts. Every ant deals 20% more damage, and the colony floats straight across puddles.', mods: { dmg: 1.2, raft: 1 }, morph: {} },
   { key: 'leaf', name: 'Leafcutter ant', latin: 'Atta cephalotes', ui: '#f09a3a', pal: { base: '#a24e1e', light: '#eeaa78', mid: '#66300f', dark: '#200b02' },
-    perk: 'Fungus farmers. Gardens grow 70% more food and majors are spined and tougher.', mods: { garden: 1.7, majorHp: 1.25 }, morph: { spines: true, headSpines: true }, garden: 'fungus' },
+    perk: 'Fungus farmers. Gardens grow 70% more food and majors are spined and tougher.', mods: { garden: 1.7, majorHp: 1.25 }, morph: { spines: true, headSpines: true, mandLen: 2.5 }, garden: 'fungus' },
   { key: 'army', name: 'Army ant', latin: 'Eciton burchellii', ui: '#a78bfa', pal: { base: '#8e5c2a', light: '#ecbd80', mid: '#5a3814', dark: '#1a0e04' },
     perk: 'Swarm raiders that link their bodies into living bridges over puddles. 15% faster, and fighters cost 20% less.', mods: { spd: 1.15, fightCost: .8, bridge: 1 }, morph: { mand: 'hook', legs: 1.1 } },
   { key: 'bullet', name: 'Bullet ant', latin: 'Paraponera clavata', ui: '#4cc3b0', pal: { base: '#3c2618', light: '#a88060', mid: '#26170c', dark: '#080402' },
@@ -548,7 +548,7 @@ function morphFor(si, t, tier = 0) {
     M.gaster = [M.gaster[0], M.gaster[1] * (1 + .03 * tier), M.gaster[2] * (1 + .03 * tier)];
     if (tier > 1) { M.headSpines = true; M.eye *= 1.08; }
   }
-  M.metal = !!m.metal; M.silver = !!m.silver;
+  M.metal = !!m.metal; M.silver = !!m.silver; M.mandLen = m.mandLen || 1;
   const SP = SPECIES[si]; M.acc = ACCENT[SP.key] || SP.ui; M.pat = PATTERN[SP.key] ?? 'bands'; M.pcol = PAT_COL[SP.key] || M.acc; M.patA = PAT_A[t];
   if (CASTE_FX[t]) Object.assign(M, CASTE_FX[t]);
   if (t === 2 || t === 3) { M.head = [M.head[0], M.head[1] * 1.08, M.head[2] * 1.08]; M.mand *= 1.12; }
@@ -657,7 +657,7 @@ function mandibles(g, st, dead, P, M, hx, hrx, hry) {
   for (const s of [-1, 1]) {
     g.save();
     if (style === 'long') {
-      g.translate(hx + hrx * .82, s * hry * .2); g.rotate(s * open * .6); const ls = Math.min(M.mand / .75, 1.85); g.scale(ls, ls);
+      g.translate(hx + hrx * .82, s * hry * .2); g.rotate(s * open * .6); const ls = Math.min(M.mand / .75, 1.85); g.scale(ls * (M.mandLen || 1), ls);
       const JP = { light: P.mid, base: P.mid, dark: P.dark };
       capsule(g, 0, 0, 5.4, s * .25, .62, .4, JP);
       capsule(g, 5.3, s * .25, 5.9, -s * .45, .42, .18, JP);
@@ -669,7 +669,7 @@ function mandibles(g, st, dead, P, M, hx, hrx, hry) {
       g.fillStyle = bg; g.beginPath(); g.moveTo(0, s * .7); g.quadraticCurveTo(1.6, s * 1.3, 2.6, s * .35); g.arc(2.25, -s * .05, .6, s > 0 ? .6 : -.6, s > 0 ? -2.4 : 2.4, s < 0); g.quadraticCurveTo(1.2, -s * .3, 0, -s * .1); g.closePath(); g.fill();
       if (!dead) { g.strokeStyle = 'rgba(255,60,40,.55)'; g.lineWidth = .14; g.beginPath(); g.moveTo(.2, s * .7); g.quadraticCurveTo(1.6, s * 1.2, 2.55, s * .4); g.stroke(); }
     } else if (style === 'hook') {
-      g.translate(hx + hrx * .75, s * hry * .45); g.rotate(s * open); g.scale(M.mand, M.mand);
+      g.translate(hx + hrx * .75, s * hry * .45); g.rotate(s * open); g.scale(M.mand * (M.mandLen || 1), M.mand);
       const mg = g.createLinearGradient(0, s, 4, -s); mg.addColorStop(0, P.mid); mg.addColorStop(1, P.dark);
       g.fillStyle = mg; g.beginPath(); g.moveTo(0, s * .55);
       g.quadraticCurveTo(3.9, s * 2.1, 4.5, -s * .7); g.quadraticCurveTo(3.0, s * .9, .4, s * .05); g.closePath(); g.fill();
@@ -683,7 +683,7 @@ function mandibles(g, st, dead, P, M, hx, hrx, hry) {
         if (!dead) { g.strokeStyle = 'rgba(255,90,70,.6)'; g.lineWidth = .12; g.beginPath(); g.moveTo(.6, s * .45); g.quadraticCurveTo(3.6, s * 1.75, 4.4, -s * .55); g.stroke(); }
       }
     } else {
-      g.translate(hx + hrx * .78, s * hry * .45); g.rotate(s * open); g.scale(M.mand, M.mand);
+      g.translate(hx + hrx * .78, s * hry * .45); g.rotate(s * open); g.scale(M.mand * (M.mandLen || 1), M.mand);
       const mg = g.createLinearGradient(0, s, 3, -s * .8); mg.addColorStop(0, P.mid); mg.addColorStop(1, P.dark);
       g.fillStyle = mg; g.beginPath();
       g.moveTo(0, s * .55); g.quadraticCurveTo(2.5, s * 1.1, 3.1, -s * .95);
@@ -893,7 +893,7 @@ function drawAnt(g, st, dead, P0, M) {
 /* ---- per-species sprite kits, built on demand ---- */
 const WPX = 7, HU = .6, FR = 8, OX = 15, OY = 19, SWU = 36, SHU = 38;
 // scouts get a roomier canvas for their very long legs
-const LONG = t => t === 1 || t === 0 || t === 10 || t === 2, CX = t => LONG(t) ? 24 : OX, CY = t => LONG(t) ? 33 : OY, CWU = t => LONG(t) ? 56 : SWU, CHU = t => LONG(t) ? 66 : SHU;
+const LONG = t => t <= 3 || t === 10, CX = t => LONG(t) ? 24 : OX, CY = t => LONG(t) ? 33 : OY, CWU = t => LONG(t) ? 56 : SWU, CHU = t => LONG(t) ? 66 : SHU;
 const unitScale = t => HU * TYPES[t].len;
 function antSprite(si, t, f, dead, tier = 0) {
   const pxu = WPX * unitScale(t), cv = mk(CWU(t) * pxu, CHU(t) * pxu), g = cv.getContext('2d');
