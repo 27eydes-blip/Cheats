@@ -656,12 +656,12 @@ button.ghost {
 
   // the season: each game is a level
   const LEVELS = [
-    { wk: "1", name: "Home Opener",  opp: "Ridgeview",       kicks: 3, need: 2, min: 25, max: 33, wind: 3,  weather: "clear" },
-    { wk: "2", name: "Windy Night",  opp: "Lakeshore",       kicks: 4, need: 2, min: 28, max: 38, wind: 9,  weather: "clear" },
-    { wk: "3", name: "Rain Game",    opp: "Northfield",      kicks: 4, need: 3, min: 30, max: 42, wind: 7,  weather: "rain" },
-    { wk: "4", name: "Rivalry Week", opp: "Valley Prep",     kicks: 5, need: 3, min: 34, max: 46, wind: 10, weather: "clear" },
-    { wk: "PO", name: "Playoffs",    opp: "Harbor Catholic", kicks: 5, need: 4, min: 38, max: 50, wind: 12, weather: "rain" },
-    { wk: "SF", name: "State Final", opp: "Summit",          kicks: 6, need: 4, min: 40, max: 55, wind: 14, weather: "snow" }
+    { wk: "1", name: "Home Opener",  opp: "Orchard Lake",    kicks: 3, need: 2, min: 25, max: 33, wind: 3,  weather: "clear" },
+    { wk: "2", name: "Windy Night",  opp: "Country Dih",     kicks: 4, need: 2, min: 28, max: 38, wind: 9,  weather: "clear" },
+    { wk: "3", name: "Rain Game",    opp: "U of Dih",         kicks: 4, need: 3, min: 30, max: 42, wind: 7,  weather: "rain" },
+    { wk: "4", name: "Rivalry Week", opp: "Detroit Catholic Central", kicks: 5, need: 3, min: 34, max: 46, wind: 10, weather: "clear" },
+    { wk: "PO", name: "Playoffs",    opp: "Dih La Salle",     kicks: 5, need: 4, min: 38, max: 50, wind: 12, weather: "rain" },
+    { wk: "SF", name: "State Final", opp: "Detroit Catholic Central", kicks: 6, need: 4, min: 40, max: 55, wind: 14, weather: "snow" }
   ];
   let prog = { unlocked: 0, stars: [] };
   try { prog = Object.assign(prog, JSON.parse(localStorage.getItem("kk-season") || "{}")); } catch (e) {}
