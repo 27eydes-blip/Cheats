@@ -409,10 +409,21 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   padding: 6px 12px; border-radius: 4px; background: rgba(0,0,0,.6); color: var(--chalk);
   font-weight: 700; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap;
 }
+.sheet-x { padding: 6px 10px; font-size: 12px; }
+.sheet-text { margin: 0; font-size: 18px; line-height: 1.35; color: var(--chalk); }
+.sheet-opts { display: grid; gap: 8px; }
+.opt {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; cursor: pointer;
+  padding: 10px 12px; border-radius: 8px; border: 1px solid #3a3d46; background: #1a1c23; color: var(--chalk); font-family: var(--body);
+}
+.opt b { font-weight: 700; font-size: 17px; letter-spacing: .03em; }
+.opt span { font-size: 14px; color: var(--muted); }
+.opt:hover:not(:disabled), .opt:focus-visible { border-color: var(--orange); }
+.opt:disabled { opacity: .45; cursor: not-allowed; }
 /* kicker select */
 #chars { justify-content: flex-start; overflow-y: auto; padding-block: 24px; }
 #chars h1 .name { font-size: clamp(28px, 8vmin, 46px); }
-.char-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: min(100%, 400px); }
+.char-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; width: min(100%, 520px); }
 .char {
   display: flex;
   flex-direction: column;
@@ -530,6 +541,12 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         <button class="go" id="lockerDone" type="button">Done</button>
       </div>
 
+      <div class="locker-panel" id="sheet" hidden>
+        <div class="lk-head"><span class="label" id="sheetTitle"></span><button class="ghost sheet-x" id="sheetClose" type="button">Close</button></div>
+        <p class="sheet-text" id="sheetText"></p>
+        <div class="sheet-opts" id="sheetOpts"></div>
+      </div>
+
       <div class="toast" id="toast" hidden></div>
 
       <div class="overlay" id="title" hidden>
@@ -606,6 +623,21 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
             </span>
             <span class="ab">Bigger sweet spot. Goes <b>ON FIRE</b> after 2 makes in a row.</span>
           </button>
+          <button class="char" type="button" data-char="noah">
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <path d="M62 18 Q100 36 138 18 L186 44 L171 92 L150 84 L150 188 L50 188 L50 84 L29 92 L14 44 Z" fill="url(#gCloth)" stroke="#0a0a0a" stroke-width="3" stroke-linejoin="round"/>
+              <text x="100" y="74" font-family="Graduate, serif" font-size="19" fill="#0a0a0a" text-anchor="middle">SAMANO</text>
+              <text x="100" y="170" font-family="Graduate, serif" font-size="86" fill="#0a0a0a" stroke="#f3efe6" stroke-width="2" text-anchor="middle">19</text>
+            </svg>
+            <span class="cn">Noah Samano</span>
+            <span class="ovr">PUNTER · OVR <b>94</b></span>
+            <span class="bars">
+              <span>Leg</span><span class="bar"><i style="width:96%"></i></span>
+              <span>Hang</span><span class="bar"><i style="width:94%"></i></span>
+              <span>Aim</span><span class="bar"><i style="width:88%"></i></span>
+            </span>
+            <span class="ab">Punt challenge: pin it inside the 20. Coffin corner is worth the most.</span>
+          </button>
           <button class="char" type="button" data-char="gavin">
             <svg viewBox="0 0 200 200" aria-hidden="true">
               <path d="M62 18 Q100 36 138 18 L186 44 L171 92 L150 84 L150 188 L50 188 L50 84 L29 92 L14 44 Z" fill="#c98258" stroke="#0a0a0a" stroke-width="3" stroke-linejoin="round"/>
@@ -669,6 +701,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   const cam = { ...CAM0 }, camT = { ...CAM0 };
   const KICKER_SIZE = 1.35;
   const IDLE = { x: -1.5, z: -2.1 }, PLANT = { x: -0.35, z: -0.35 };
+  const P_IDLE = { x: -0.25, z: -2.4 }, P_PLANT = { x: -0.2, z: -0.5 };   // punter: two steps, drop, kick
   const INTRO_K = 45, JOG_T = 4.2, PULL_T = 1.8, JOG_FROM = { x: -5, z: -24 };
 
   const cv = document.getElementById("game");
@@ -792,7 +825,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     b.fillStyle = "#0d0f14"; b.fillRect(0, HOR - 14, BW, 18);
     b.fillStyle = "#ff6a13"; b.fillRect(0, HOR - 14, BW, 2);
     b.font = "10px Graduate, serif"; b.textAlign = "center";
-    for (const tx of [BX + 100, BX + W - 100]) b.fillText("HOME OF THE CRUSADERS", tx, HOR - 3);
+    for (const tx of [BX + 100, BX + W - 100]) b.fillText("HOME OF THE WARRIORS", tx, HOR - 3);
     b.font = "12px Graduate, serif"; b.fillStyle = "#f3efe6";
     b.fillText("KOZA FIELD", BX + W / 2, HOR - 3);
     // sponsor board hanging over the stands
@@ -856,11 +889,12 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     kpos: { ...IDLE }, kk: 0, krun: 0
   };
   const parts = [], trail = [];
-  const HIDE_ALL = ["title", "over", "levels", "chars", "introUI", "townUI", "locker"];
+  const HIDE_ALL = ["title", "over", "levels", "chars", "introUI", "townUI", "locker", "sheet"];
 
   // kickers
   const CHARS = {
     kadin: { id: "kadin", name: "Kadin Koza", back: "KOZA", num: "7", chrome: true, phone: true, power: 1.0, aimS: 0.95, zone: 1.12 },
+    noah: { id: "noah", name: "Noah Samano", back: "SAMANO", num: "19", chrome: false, plain: true, punter: true, power: 1, aimS: 1, zone: 1 },
     gavin: { id: "gavin", name: "Gavin", back: "GAVIN", num: "0", chrome: false, bad: true, slouch: true, power: 0.38, aimS: 0.4, zone: 0.6 }
   };
   try { S.char = CHARS[localStorage.getItem("kk-char")] ? localStorage.getItem("kk-char") : "kadin"; } catch (e) { S.char = "kadin"; }
@@ -896,6 +930,17 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   const setBall = () => { S.ball = { x: 0, y: 0.1, z: 0, spin: 0, mode: "set" }; trail.length = 0; };
 
   function newKick() {
+    if (S.punt) {   // distance from the ball to the goal line
+      S.puntNo++;
+      S.K = 10 + 40 + Math.round(Math.random() * 16);
+      S.wind = Math.round((Math.random() * 2 - 1) * Math.min(4 + S.puntNo, 12));
+      S.phase = "power"; S.t = 0; S.kickT = 0;
+      setBall(); S.ball.y = 0.95; S.ball.x = P_IDLE.x + 0.18; S.ball.z = P_IDLE.z + 0.4;
+      S.result = null; S.resultShown = false;
+      hideBanner(); hud();
+      setPrompt("Tap to set <b>power</b> · pin it inside the 20");
+      return;
+    }
     const L = lvl();
     S.K = L ? S.kicks[S.kickIdx] : Math.min(25 + S.makes * 3, 62);
     const maxW = L ? L.wind : Math.min(3 + S.makes * 1.4, 15);
@@ -922,7 +967,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         $("lab1").textContent = "Level"; $("lab2").textContent = "XP";
         $("lab3").textContent = S.mode === "town" ? "Near" : "Jersey"; $("lab4").textContent = S.mode === "town" ? "Sliders" : "Sweet spot";
         $("score").textContent = L.level; $("dist").textContent = `${L.into}/${L.need}`;
-        $("wind").textContent = S.mode === "town" ? (T.near ? (T.near.kind === "place" ? T.near.p.short : T.near.n.name) : "Town") : J().name.split(" ")[0];
+        $("wind").textContent = S.mode === "town" ? (T.near ? (T.near.kind === "place" ? T.near.p.short : T.near.kind === "spot" ? T.near.sp.short : T.near.n.name) : T.area && T.area !== "town" ? AREAS[T.area].name.split(" ").pop() : "Town") : J().name.split(" ")[0];
         $("misses").textContent = S.mode === "town" ? T.sliders : `+${Math.round(levelPerk() * 100)}%`;
         return;
       }
@@ -943,6 +988,11 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     $("score").textContent = S.score;
     $("dist").textContent = S.K + " yd";
     $("wind").textContent = S.wind === 0 ? "calm" : (S.wind < 0 ? "← " : "") + Math.abs(S.wind) + " mph" + (S.wind > 0 ? " →" : "");
+    if (S.mode === "game" && S.punt) {
+      $("lab1").textContent = "Score"; $("lab2").textContent = "To goal"; $("lab4").textContent = "Punt";
+      $("dist").textContent = (S.K - 10) + " yd"; $("misses").textContent = `${S.puntNo}/10`;
+      return;
+    }
     const L = S.mode === "game" ? lvl() : null;
     $("lab1").textContent = L ? "Made / need" : "Score";
     $("lab4").textContent = L ? "Kick" : "Misses";
@@ -984,7 +1034,30 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   }
 
   // ---------- flight model ----------
+  const PUNT_LAT = 30;
+  function launchPunt() {
+    const p = S.power, GL = S.K - 10;
+    const R = 25 + p * 0.48, hMax = 0.3 * R, roll = 4;
+    const lat = S.aim * PUNT_LAT + S.wind * 0.25;
+    const xAt = z => lat * (z / R), yAt = z => Math.max(0, 4 * hMax * (z / R) * (1 - z / R));
+    const spot = R + roll, x = lat, yardLine = Math.round(GL - spot), out = Math.abs(x) > 26.67;
+    let res;
+    if (spot >= GL) res = { kind: "tb", title: "TOUCHBACK", sub: `${Math.round(R)}-yard punt · into the end zone`, pts: 0 };
+    else if (out && yardLine <= 20) res = { kind: "coffin", title: "COFFIN CORNER!", sub: `Out at the ${yardLine}`, pts: 5 };
+    else if (out) res = { kind: "oob", title: "OUT OF BOUNDS", sub: `Out at the ${yardLine}`, pts: 1 };
+    else if (yardLine <= 10) res = { kind: "pin10", title: "PINNED INSIDE THE 10!", sub: `Downed at the ${yardLine}`, pts: 5 };
+    else if (yardLine <= 20) res = { kind: "pin20", title: "INSIDE THE 20", sub: `Downed at the ${yardLine}`, pts: 3 };
+    else if (R >= 40) res = { kind: "fair", title: "FAIR CATCH", sub: `${Math.round(R)}-yard punt · at the ${yardLine}`, pts: 1 };
+    else res = { kind: "shank", title: "SHANKED IT", sub: `Only ${Math.round(R)} yards`, pts: 0 };
+    res.good = res.pts >= 3; res.dist = Math.round(R);
+    S.result = res;
+    const b0 = S.ball;
+    S.ball = { x: b0.x, y: b0.y, z: b0.z, spin: 0, mode: "fly", t: 0, T: 1.6 + R / 40, R, xAt, yAt, stopZ: Math.min(R, S.K + 12) };
+    trail.length = 0;
+    sfx.thump();
+  }
   function launch() {
+    if (S.punt) return launchPunt();
     const C = char();
     let p = S.power, aim = S.aim / zoneNow();
     if (C.bad) { p *= 0.6; aim += (Math.random() - 0.5) * 0.9; }
@@ -1042,6 +1115,14 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   function finishKick() {
     const r = S.result;
     S.att++; S.kickIdx++;
+    if (S.punt) {
+      S.score += r.pts; S.long = Math.max(S.long, r.dist);
+      if (r.pts > 0) S.makes++;
+      if (r.pts >= 3) { sfx.cheer(); S.flash = 1.5; confetti(r.pts >= 5 ? 60 : 25); } else sfx.groan();
+      showBanner(r.title, r.sub + (r.pts ? ` · +${r.pts}` : ""), r.pts >= 3);
+      hud();
+      return;
+    }
     if (r.good) {
       S.makes++; S.score += 3; S.long = Math.max(S.long, S.K); S.streak++;
       if (S.score > best) { best = S.score; saveBest(); }
@@ -1083,8 +1164,8 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   }
 
   function kickPose(t) {
-    const m = ease(clamp(t / 0.5, 0, 1));
-    const pos = { x: lerp(IDLE.x, PLANT.x, m), z: lerp(IDLE.z, PLANT.z, m) };
+    const m = ease(clamp(t / 0.5, 0, 1)), a = S.punt ? P_IDLE : IDLE, b = S.punt ? P_PLANT : PLANT;
+    const pos = { x: lerp(a.x, b.x, m), z: lerp(a.z, b.z, m) };
     let k = 0, run = 0;
     if (t < 0.36) run = 0.01 + t * 26;
     else if (t < 0.5) k = (t - 0.36) / 0.14 * 0.35;
@@ -1096,7 +1177,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   // ---------- opening movie ----------
   const follow = p => ({ x: p.x * 0.7, z: p.z - 10.5, h: 2.2 });
   function startIntro() {
-    Object.assign(S, { mode: "intro", phase: "jog", introT: 0, K: INTRO_K, wind: 0, result: null,
+    Object.assign(S, { mode: "intro", phase: "jog", punt: false, introT: 0, K: INTRO_K, wind: 0, result: null,
                        resultShown: false, resultT: 0, introCheer: false, krun: 0.01, kk: 0 });
     S.kpos = { ...JOG_FROM };
     setBall();
@@ -1135,7 +1216,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     S.flash = 4; confetti(180);
   }
   function endIntro() {
-    Object.assign(S, { mode: "title", phase: "idle", K: 25, wind: 0, resultShown: false });
+    Object.assign(S, { mode: "title", phase: "idle", K: 25, wind: 0, resultShown: false, punt: false });
     setBall();
     $("introUI").hidden = true; hideBanner();
     $("title").hidden = false;
@@ -1165,7 +1246,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   });
   function startGame(level) {
     audio();
-    Object.assign(S, { mode: "game", lastMode: "kick", level, kickIdx: 0, streak: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0 });
+    Object.assign(S, { mode: "game", lastMode: "kick", level, punt: level === -2, puntNo: 0, kickIdx: 0, streak: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0 });
     const fresh = S.freshLegs && !CHARS[S.char].bad;
     if (fresh) { S.streak = 2; S.freshLegs = false; }
     const L = lvl();
@@ -1175,6 +1256,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     for (const id of HIDE_ALL) $(id).hidden = true;
     newKick();
     if (L) showBanner(L.wk.length > 1 ? L.name.toUpperCase() : `WEEK ${L.wk}`, fresh ? "Fresh legs from MVPT: ON FIRE" : `vs ${L.opp} · make ${L.need} of ${L.kicks}`, true);
+    else if (S.punt) showBanner("PUNT CHALLENGE", "Noah Samano · 10 punts", true);
     else showBanner(char().bad ? "GAVIN'S UP" : "LET'S GO, KOZA!", char().bad ? "Endless mode. Good luck." : "Endless mode", true);
     sfx.cheer(); S.flash = 2;
     setTimeout(() => { if (S.phase === "power") hideBanner(); }, 1400);
@@ -1237,12 +1319,12 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   document.querySelectorAll(".char").forEach(b => b.addEventListener("click", () => {
     S.char = b.dataset.char;
     try { localStorage.setItem("kk-char", S.char); } catch (e) {}
-    showLevels();
+    if (CHARS[S.char].punter) startGame(-2); else showLevels();
   }));
   function showTitle() {
     for (const id of HIDE_ALL) $(id).hidden = true;
     $("title").hidden = false;
-    Object.assign(S, { mode: "title", phase: "idle", fromTown: false });
+    Object.assign(S, { mode: "title", phase: "idle", fromTown: false, punt: false });
     hideBanner(); setPrompt(tag()); hud();
   }
   const backOut = () => S.fromTown ? startTown() : showTitle();
@@ -1251,6 +1333,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   $("start").addEventListener("click", showChars);
   $("menu").addEventListener("click", () => {
     if (S.lastMode === "sign" || S.lastMode === "pt") backOut();
+    else if (CHARS[S.char].punter) showChars();
     else showLevels();
   });
   $("tent").addEventListener("click", () => startSigning());
@@ -1325,10 +1408,15 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         line(8.55, z, 9.22, z, 0.06, "rgba(243,239,230,.6)");
       }
     }
-    line(-26.67, 7, 26.67, 7, 0.08, "rgba(80,160,255,.6)");
+    line(-26.67, S.punt ? 14 : 7, 26.67, S.punt ? 14 : 7, 0.08, "rgba(80,160,255,.6)");
+    if (S.punt && S.mode === "game") {   // the target: inside the 20
+      groundRect(-26.67, 26.67, GL - 20, GL, "rgba(255,210,63,.16)");
+      line(-26.67, GL - 20, 26.67, GL - 20, 0.14, "rgba(255,210,63,.9)");
+      for (const sx of [-1, 1]) groundRect(sx > 0 ? 22 : -26.67, sx > 0 ? 26.67 : -22, GL - 20, GL, "rgba(255,106,19,.35)");
+    }
     groundText("BROTHER RICE", 0, GL + 5, 10, 3.5, "#ff6a13");
     const kb = proj(0, 0, 0);
-    if (kb.d > 1) { ctx.fillStyle = "#111"; ctx.fillRect(kb.x - 0.12 * kb.s, kb.y - 0.05 * kb.s, 0.24 * kb.s, 0.05 * kb.s); }
+    if (kb.d > 1 && !S.punt) { ctx.fillStyle = "#111"; ctx.fillRect(kb.x - 0.12 * kb.s, kb.y - 0.05 * kb.s, 0.24 * kb.s, 0.05 * kb.s); }
     // haze where the field meets the stands
     const hz = ctx.createLinearGradient(0, HOR, 0, HOR + 90);
     hz.addColorStop(0, "rgba(150,170,210,.25)"); hz.addColorStop(1, "rgba(150,170,210,0)");
@@ -1571,6 +1659,9 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       const jc = J().c;
       jg.addColorStop(0, jc[0]); jg.addColorStop(0.22, jc[1]); jg.addColorStop(0.5, jc[2]);
       jg.addColorStop(0.78, jc[1]); jg.addColorStop(1, jc[0]);
+    } else if (look.plain) {   // standard home jersey
+      jg.addColorStop(0, "#b84405"); jg.addColorStop(0.22, "#ff6f1f"); jg.addColorStop(0.5, "#ff8a3d");
+      jg.addColorStop(0.78, "#ff6f1f"); jg.addColorStop(1, "#b84405");
     } else {   // Gavin's faded, grass-stained jersey
       jg.addColorStop(0, "#8f5634"); jg.addColorStop(0.5, "#c98258"); jg.addColorStop(1, "#8f5634");
     }
@@ -1624,7 +1715,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     ctx.strokeStyle = shiny ? chrome(nn[0] - 0.15 * u, nn[1] - 0.18 * u, nn[0] + 0.15 * u, nn[1] + 0.18 * u) : "#f3efe6";
     ctx.strokeText(look.num, nn[0], nn[1]);
     ctx.fillStyle = shiny ? J().num : "#0a0a0a"; ctx.fillText(look.num, nn[0], nn[1]);
-    if (!shiny) {   // grass stain
+    if (!shiny && !look.plain) {   // grass stain
       const gs = P(-0.1, hipY - 0.12);
       ctx.fillStyle = "rgba(70,100,40,.5)"; ctx.beginPath(); ctx.ellipse(gs[0], gs[1], 0.07 * u, 0.035 * u, 0.3, 0, 7); ctx.fill();
     }
@@ -1675,8 +1766,14 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     const g = ctx.createLinearGradient(0, by + bh, 0, by);
     g.addColorStop(0, "#c94a00"); g.addColorStop(1, "#ffb066");
     ctx.fillStyle = g; ctx.fillRect(bx, by + bh * (1 - p / 100), bw, bh * p / 100);
-    const mp = minPower(S.K), my = by + bh * (1 - mp / 100);
-    ctx.fillStyle = "#ffd23f"; ctx.fillRect(bx - 6, my - 1.5, bw + 12, 3);
+    if (S.punt) {   // power that lands it inside the 20
+      const GL = S.K - 10, lo = clamp((GL - 20 - 4 - 25) / 0.48, 0, 100), hi = clamp((GL - 4 - 25) / 0.48, 0, 100);
+      ctx.fillStyle = "rgba(255,210,63,.75)"; ctx.fillRect(bx - 6, by + bh * (1 - hi / 100), 5, bh * (hi - lo) / 100);
+      ctx.fillRect(bx + bw + 1, by + bh * (1 - hi / 100), 5, bh * (hi - lo) / 100);
+    } else {
+      const mp = minPower(S.K), my = by + bh * (1 - mp / 100);
+      ctx.fillStyle = "#ffd23f"; ctx.fillRect(bx - 6, my - 1.5, bw + 12, 3);
+    }
     ctx.font = "600 12px 'Barlow Condensed', sans-serif"; ctx.textAlign = "center";
     ctx.fillStyle = "#f3efe6"; ctx.fillText("POWER", bx + bw / 2, by - 10);
 
@@ -1684,8 +1781,14 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     const a = S.phase === "aim" ? Math.sin(S.t * Math.PI * 2 / aimPeriod()) : 0;
     ctx.fillStyle = "rgba(10,12,17,.75)"; ctx.fillRect(cx - aw / 2 - 10, ay - 26, aw + 20, 44);
     ctx.fillStyle = "#24262d"; ctx.fillRect(cx - aw / 2, ay - 6, aw, 12);
-    const gz = clamp(HALF_GOAL / (0.18 * S.K) * zoneNow(), 0, 1);
-    ctx.fillStyle = "rgba(255,210,63,.55)"; ctx.fillRect(cx - gz * aw / 2, ay - 6, gz * aw, 12);
+    if (S.punt) {   // red ends go out of bounds
+      const ob = clamp((26.67 - S.wind * 0.25 * Math.sign(1)) / PUNT_LAT, 0, 1);
+      ctx.fillStyle = "rgba(255,59,31,.6)"; ctx.fillRect(cx - aw / 2, ay - 6, aw * (1 - ob) / 2, 12); ctx.fillRect(cx + aw / 2 - aw * (1 - ob) / 2, ay - 6, aw * (1 - ob) / 2, 12);
+      ctx.fillStyle = "rgba(255,106,19,.6)"; ctx.fillRect(cx - aw * ob / 2, ay - 6, aw * 0.08, 12); ctx.fillRect(cx + aw * ob / 2 - aw * 0.08, ay - 6, aw * 0.08, 12);
+    } else {
+      const gz = clamp(HALF_GOAL / (0.18 * S.K) * zoneNow(), 0, 1);
+      ctx.fillStyle = "rgba(255,210,63,.55)"; ctx.fillRect(cx - gz * aw / 2, ay - 6, gz * aw, 12);
+    }
     ctx.fillStyle = "#f3efe6"; ctx.fillRect(cx - 1, ay - 9, 2, 18);
     if (S.phase === "aim") {
       const nx = cx + a * aw / 2;
@@ -1813,7 +1916,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     { item: "football", ask: "Kadin!! Can you sign my football?", thanks: "I'm never washing this!" },
     { item: "jersey", ask: "Sign my #7 jersey please!", thanks: "Best kicker in Michigan!" },
     { item: "poster", ask: "Will you sign my poster?", thanks: "This is going on my wall!" },
-    { item: "helmet", ask: "Could you sign my mini helmet?", thanks: "Let's go Crusaders!" },
+    { item: "helmet", ask: "Could you sign my mini helmet?", thanks: "Let's go Warriors!" },
     { item: "phone", ask: "Sign my phone case? Please?", thanks: "My friends won't believe this." },
     { item: "cast", ask: "Sign my cast! Broke it at practice.", thanks: "Healed already. Thanks!" },
     { item: "football", kid: true, ask: "Mr. Koza! I want to be a kicker!", thanks: "I'm going to practice every day!" },
@@ -2260,7 +2363,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     ctx.fillStyle = "#ff6a13"; ctx.fillRect(0, 650, W, H - 650 + OY + 2);
     ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0, 650, W, 8); ctx.fillRect(0, 676, W, 4);
     ctx.font = "40px Graduate, serif"; ctx.fillText("BROTHER RICE", W / 2, 728);
-    ctx.font = "600 15px 'Barlow Condensed', sans-serif"; ctx.fillText("CRUSADERS FOOTBALL · #7 KADIN KOZA", W / 2, 768);
+    ctx.font = "600 15px 'Barlow Condensed', sans-serif"; ctx.fillText("WARRIORS FOOTBALL · #7 KADIN KOZA", W / 2, 768);
     // the item on the table
     const f = front();
     if (f && f.state !== "leave" && f.state !== "line") {
@@ -2776,8 +2879,8 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   const FOUNTAIN = [800, 910, 66];
   const PLACES = [
     { id: "field", short: "Field", name: "Koza Field", act: "Enter Koza Field", x: 60, y: 120, w: 660, h: 690, door: [390, 832] },
-    { id: "school", short: "School", name: "Brother Rice", act: "Go to class", x: 880, y: 300, w: 640, h: 510, door: [1200, 832] },
-    { id: "sliders", short: "Sliders", name: "Savvy Sliders", act: "Eat a Savvy Slider", x: 120, y: 1030, w: 560, h: 400, door: [400, 1452] },
+    { id: "school", short: "School", name: "Brother Rice", act: "Enter Brother Rice", x: 880, y: 300, w: 640, h: 510, door: [1200, 832] },
+    { id: "sliders", short: "Sliders", name: "Savvy Sliders", act: "Enter Savvy Sliders", x: 120, y: 1030, w: 560, h: 400, door: [400, 1452] },
     { id: "mvpt", short: "MVPT", name: "MVPT", act: "Rehab at MVPT", x: 900, y: 1040, w: 560, h: 390, door: [1180, 1452] },
     { id: "tent", short: "Tent", name: "Autograph Tent", act: "Sign autographs", x: 200, y: 1660, w: 420, h: 260, door: [410, 1942] },
     { id: "house", short: "House", name: "Kadin's House", act: "Locker room", x: 900, y: 1660, w: 560, h: 280, door: [1180, 1962] }
@@ -2786,7 +2889,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     gavin: ["Yo Kadin... how do you kick?", "I made one in practice. Well, almost.", "Can I borrow your phone? Mine's dead.", "Teach me the ON FIRE thing."],
     dalton: ["Keep moving, Kadin! Phone down!", "Leg day tomorrow. Don't skip it.", "MVPT is open. Come get your reps in.", "Hydrate, big dog."],
     fan: ["KADIN!! Can I get a picture?", "You're my favorite kicker!", "Koza for State!", "That 45-yarder was crazy."],
-    girl: ["Hi Kadin!", "Go Crusaders!", "Sign my pom-pom later?"]
+    girl: ["Hi Kadin!", "Go Warriors!", "Sign my pom-pom later?"]
   };
   const ring = (cx, cy, r) => Array.from({ length: 8 }, (_, i) => [cx + Math.cos(i / 8 * 6.283) * r, cy + Math.sin(i / 8 * 6.283) * r]);
   const NPCS = [
@@ -2809,7 +2912,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     for (let i = 0; i < 400 && TREES.length < 46; i++) { const x = 30 + rnd() * (TW - 60), y = 40 + rnd() * (TH - 80); if (clear(x, y)) TREES.push([x, y, 26 + rnd() * 14]); }
   })();
   const GRASS = Array.from({ length: 90 }, (_, i) => [(i * 397) % TW, (i * 613) % TH, 30 + (i * 37) % 60]);
-  const T = { x: 800, y: 1030, walk: 0, moving: false, back: false, target: null, keys: new Set(), camX: 0, camY: 0,
+  const T = { area: "town", x: 800, y: 1030, walk: 0, moving: false, back: false, target: null, keys: new Set(), camX: 0, camY: 0,
               near: null, nearKey: "", talk: null, say: null, sliders: 0, hintT: 0, cool: {} };
 
   function startTown() {
@@ -2817,18 +2920,20 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     Object.assign(S, { mode: "town", phase: "idle", fromTown: true });
     for (const id of HIDE_ALL) $(id).hidden = true;
     $("townUI").hidden = false; hideBanner();
-    T.target = null; T.keys.clear(); T.hintT = 4; T.nearKey = ""; $("townAct").hidden = true;
+    T.target = null; T.keys.clear(); T.hintT = 4; T.nearKey = ""; $("townAct").hidden = true; T.sheetOpen = false;
+    if (T.area && T.area !== "town") setTimeout(() => setPrompt(`${AREAS[T.area].name} · <b>tap to walk</b>`), 0);
     $("townHint").style.opacity = 1;
     setPrompt("Kadin Town · <b>tap to walk</b>");
     hud();
   }
   function solidAt(x, y) {
+    if (T.area && T.area !== "town") return AREAS[T.area].solid(x, y);
     if (x < 14 || x > TW - 14 || y < 30 || y > TH - 8) return true;
     if (Math.hypot(x - FOUNTAIN[0], y - FOUNTAIN[1]) < FOUNTAIN[2] + 10) return true;
     return PLACES.some(p => x > p.x - 10 && x < p.x + p.w + 10 && y > p.y + 30 && y < p.y + p.h + 8);
   }
   const townPt = e => { const r = cv.getBoundingClientRect(), k = W / r.width; return [(e.clientX - r.left) * k + T.camX, (e.clientY - r.top) * k + T.camY]; };
-  cv.addEventListener("pointerdown", e => { if (S.mode !== "town") return; audio(); T.hold = true; T.target = townPt(e); T.hintT = Math.min(T.hintT, 0.4); });
+  cv.addEventListener("pointerdown", e => { if (S.mode !== "town" || T.sheetOpen || T.eat) return; audio(); T.hold = true; T.target = townPt(e); T.hintT = Math.min(T.hintT, 0.4); });
   cv.addEventListener("pointermove", e => { if (S.mode === "town" && T.hold) T.target = townPt(e); });
   const stopHold = () => { T.hold = false; };
   cv.addEventListener("pointerup", stopHold); cv.addEventListener("pointercancel", stopHold);
@@ -2842,8 +2947,13 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
 
   function townUpdate(dt) {
     let vx = 0, vy = 0;
-    for (const k of T.keys) { vx += KEYMAP[k][0]; vy += KEYMAP[k][1]; }
-    if (!vx && !vy && T.target) {
+    if (T.order && !T.order.ready && (T.order.t -= dt) <= 0) {
+      T.order.ready = true; sfx.tick(); tone(1320, 0.2, 0.08, "triangle");
+      T.talk = { npc: AREAS.sliders.npcs[0], text: `Order up! ${T.order.item.name}!`, t: 2.6 };
+    }
+    if (T.eat && (T.eat.t -= dt) <= 0) finishEating();
+    if (!T.sheetOpen && !T.eat) for (const k of T.keys) { vx += KEYMAP[k][0]; vy += KEYMAP[k][1]; }
+    if (!vx && !vy && T.target && !T.sheetOpen && !T.eat) {
       const dx = T.target[0] - T.x, dy = T.target[1] - T.y, d = Math.hypot(dx, dy);
       if (d < 6) T.target = T.hold ? T.target : null; else { vx = dx / d; vy = dy / d; }
     }
@@ -2857,8 +2967,10 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       T.walk += dt * 12;
       if (Math.abs(vy) > Math.abs(vx) * 0.6) T.back = vy < 0;
     }
-    T.camX = clamp(T.x - W / 2, 0, TW - W); T.camY = clamp(T.y - VH * 0.55, 0, Math.max(0, TH - VH));
-    for (const n of NPCS) {
+    const AW = T.area && T.area !== "town" ? AREAS[T.area].w : TW, AH = T.area && T.area !== "town" ? AREAS[T.area].h : TH;
+    T.camX = AW <= W ? (AW - W) / 2 : clamp(T.x - W / 2, 0, AW - W);
+    T.camY = AH <= VH ? (AH - VH) / 2 : clamp(T.y - VH * 0.55, 0, AH - VH);
+    for (const n of curNPCs()) {
       if (!n.speed) continue;
       const [tx, ty] = n.path[n.wp], dx = tx - n.x, dy = ty - n.y, d = Math.hypot(dx, dy);
       if (T.talk && T.talk.npc === n) { n.moving = false; continue; }
@@ -2872,8 +2984,10 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     if (T.hintT > 0) { T.hintT -= dt; if (T.hintT <= 0) $("townHint").style.opacity = 0; }
     // what's close enough to use
     let best = null, bd = 95;
-    for (const p of PLACES) { const d = Math.hypot(T.x - p.door[0], T.y - p.door[1]); if (d < bd) { bd = d; best = { kind: "place", p, label: p.act }; } }
-    for (const n of NPCS) { const d = Math.hypot(T.x - n.x, T.y - n.y); if (d < Math.min(bd, 70)) { bd = d; best = { kind: "npc", n, label: n.name === "Fan" ? "Talk to fan" : "Talk to " + n.name }; } }
+    if (!T.area || T.area === "town") { for (const p of PLACES) { const d = Math.hypot(T.x - p.door[0], T.y - p.door[1]); if (d < bd) { bd = d; best = { kind: "place", p, label: p.act }; } } }
+    else for (const sp of AREAS[T.area].spots()) { const d = Math.hypot(T.x - sp.x, T.y - sp.y); if (d < Math.min(bd, 80)) { bd = d; best = { kind: "spot", sp, label: sp.label }; } }
+    if (T.sheetOpen || T.eat) best = null;
+    for (const n of (T.sheetOpen || T.eat ? [] : curNPCs())) { const d = Math.hypot(T.x - n.x, T.y - n.y); if (d < Math.min(bd, 70)) { bd = d; best = { kind: "npc", n, label: n.name === "Fan" ? "Talk to fan" : "Talk to " + n.name }; } }
     T.near = best;
     const key = best ? best.label : "";
     if (key !== T.nearKey) { T.nearKey = key; $("townAct").hidden = !best; if (best) $("townAct").textContent = best.label; hud(); }
@@ -2881,6 +2995,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   function townAction() {
     const n = T.near; if (!n) return;
     audio();
+    if (n.kind === "spot") { n.sp.run(); T.nearKey = "refresh"; return; }
     if (n.kind === "npc") {
       const npc = n.n, lines = NPC_LINES[npc.lines];
       npc.li = ((npc.li ?? -1) + 1) % lines.length;
@@ -2893,12 +3008,13 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     else if (id === "mvpt") startPT();
     else if (id === "tent") startSigning();
     else if (id === "house") showLocker();
-    else if (id === "sliders") {
+    else if (id === "sliders" || id === "school") enterArea(id, n.p.door);
+    else if (id === "sliders-old") {
       if (T.cool.sliders > 0) { T.say = { text: "Still full. Maybe later.", t: 2.2 }; return; }
       T.cool.sliders = 20; T.sliders++; sfx.tick(); noise(0.3, 900, 0.1);
       T.say = { text: pick(["So good.", "Best slider in Michigan.", "Posting this.", "Fuel for State."]), t: 2.4 };
       addXP(15, "Savvy Slider"); hud();
-    } else if (id === "school") {
+    } else if (id === "school-old") {
       if (T.cool.school > 0) { T.say = { text: "Class is over. Back to practice.", t: 2.2 }; return; }
       T.cool.school = 30;
       T.say = { text: pick(["Kadin spent class on his phone.", "Learned nothing. Posted twice.", "Teacher said put the phone away."]), t: 2.8 };
@@ -2907,6 +3023,350 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   }
   $("townAct").addEventListener("click", townAction);
   $("townExit").addEventListener("click", () => showTitle());
+
+  // ---------- pop-up sheet (menus, class) ----------
+  function openSheet(title, text, opts, closable = true) {
+    $("sheetTitle").textContent = title; $("sheetText").textContent = text; $("sheetText").hidden = !text;
+    const box = $("sheetOpts"); box.textContent = "";
+    for (const o of opts) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "opt"; b.disabled = !!o.disabled;
+      b.innerHTML = `<b>${o.label}</b>${o.sub ? `<span>${o.sub}</span>` : ""}`;
+      b.addEventListener("click", () => { audio(); o.onClick(); });
+      box.appendChild(b);
+    }
+    $("sheetClose").hidden = !closable;
+    $("sheet").hidden = false; T.sheetOpen = true; T.target = null; T.hold = false;
+    $("townAct").hidden = true; T.nearKey = "refresh";
+  }
+  function closeSheet() { $("sheet").hidden = true; T.sheetOpen = false; }
+  $("sheetClose").addEventListener("click", closeSheet);
+
+  // ---------- inside buildings ----------
+  const SL_TABLES = [[120, 600], [300, 600], [480, 600], [120, 800], [300, 800], [480, 800]];
+  const SC_DESKS = [[150, 300], [300, 300], [450, 300], [150, 410], [300, 410], [450, 410], [150, 520], [300, 520], [450, 520]];
+  const MENU = [
+    { id: "koza", name: "The Koza Meal", sub: "3 sliders, fries and a shake. Kadin's order. +40 XP and fresh legs for your next game.", xp: 40 },
+    { id: "slider", name: "Savvy Slider", sub: "One slider, extra pickles. +12 XP", xp: 12 },
+    { id: "fries", name: "Fries", sub: "Hot and salty. +6 XP", xp: 6 },
+    { id: "shake", name: "Orange Cream Shake", sub: "Team colors. +6 XP", xp: 6 }
+  ];
+  const QUIZ = [
+    ["How many points is a field goal worth?", ["3", "2", "6"]],
+    ["How many yards do you need for a first down?", ["10", "5", "15"]],
+    ["What is 7 × 7?", ["49", "56", "42"]],
+    ["What is the capital of Michigan?", ["Lansing", "Detroit", "Grand Rapids"]],
+    ["Solve for x: 2x = 14", ["7", "12", "28"]],
+    ["What is H₂O?", ["Water", "Salt", "Oxygen"]],
+    ["Who wrote the Declaration of Independence?", ["Thomas Jefferson", "Abraham Lincoln", "George Washington"]],
+    ["How many sides does a hexagon have?", ["6", "8", "5"]],
+    ["What is 15% of 200?", ["30", "15", "45"]],
+    ["Which planet is closest to the sun?", ["Mercury", "Venus", "Mars"]],
+    ["A kick that goes wide left is...", ["No good", "Good", "Worth 1 point"]],
+    ["How long is a football field from goal line to goal line?", ["100 yards", "120 yards", "80 yards"]],
+    ["What is 3/4 as a percent?", ["75%", "34%", "60%"]],
+    ["What is the past tense of 'kick'?", ["Kicked", "Kuck", "Kickt"]],
+    ["How many minutes are in 2.5 hours?", ["150", "125", "250"]]
+  ];
+  const AREAS = {
+    sliders: {
+      name: "Savvy Sliders", w: 600, h: 1000, spawn: [300, 930],
+      solid(x, y) {
+        if (x < 22 || x > 578 || y < 432 || y > 985) return true;
+        if (x > 528 && y < 500) return true;
+        return SL_TABLES.some(([tx, ty]) => Math.abs(x - tx) < 58 && y > ty - 34 && y < ty + 22);
+      },
+      npcs: [
+        { id: "chef", name: "Chef", lines: "chef", path: [[110, 320], [300, 320], [470, 320]], speed: 60, look: { skin: "#d9a47a", shirt: "#f3efe6", num: "", hair: "#2a1a10", hat: true, shoes: "#050505", pants: "#26324a" } },
+        { id: "eat1", name: "Fan", lines: "fan", sit: true, path: [[120, 572]], speed: 0, look: { skin: "#f1c7a3", shirt: "#ff6a13", num: "7", numColor: "#0a0a0a", hair: "#7a5230" } },
+        { id: "eat2", name: "Fan", lines: "fan", sit: true, path: [[480, 772]], speed: 0, look: { skin: "#7a4a2e", shirt: "#0a0a0a", num: "7", numColor: "#ff6a13", hair: "#111" } },
+        { id: "eat3", name: "Fan", lines: "fan", sit: true, path: [[300, 772]], speed: 0, look: { skin: "#e2b08a", shirt: "#26324a", num: "", hair: "#d9b26a", longHair: true } }
+      ],
+      spots() {
+        const s = [{ x: 300, y: 965, short: "Exit", label: "Leave Savvy Sliders", run: exitArea }];
+        if (!T.order && !T.carry) s.push({ x: 220, y: 452, short: "Counter", label: "Order at the counter", run: openMenu });
+        if (T.order && T.order.ready) s.push({ x: 430, y: 452, short: "Pickup", label: "Pick up your " + T.order.item.name, run: () => { T.carry = T.order.item; T.order = null; sfx.tick(); } });
+        if (T.carry) for (const [tx, ty] of SL_TABLES) {
+          if ((tx === 120 && ty === 600) || (tx === 480 && ty === 800) || (tx === 300 && ty === 800)) continue;
+          s.push({ x: tx, y: ty + 44, short: "Table", label: "Sit down and eat", run: () => startEating(tx, ty) });
+        }
+        s.push({ x: 515, y: 520, short: "Drinks", label: "Grab a drink", run: () => {
+          if ((T.cool.drink || 0) > 0) { T.say = { text: "Already got one.", t: 1.8 }; return; }
+          T.cool.drink = 15; T.say = { text: "Orange pop. Refreshing.", t: 2 }; addXP(2, "drink"); } });
+        return s;
+      },
+      draw: drawSlidersInside
+    },
+    school: {
+      name: "Brother Rice", w: 600, h: 1360, spawn: [300, 1290],
+      solid(x, y) {
+        if (x < 22 || x > 578 || y < 236 || y > 1345) return true;
+        if (y > 630 && y < 676 && Math.abs(x - 300) > 46) return true;
+        if (y > 676 && y < 770) return true;
+        if (Math.abs(x - 300) < 90 && y < 206) return true;
+        return SC_DESKS.some(([dx, dy]) => Math.abs(x - dx) < 46 && y > dy - 20 && y < dy + 16);
+      },
+      npcs: [
+        { id: "teacher", name: "Teacher", lines: "teacher", path: [[300, 222]], speed: 0, look: { skin: "#f0c9a8", shirt: "#26324a", num: "", hair: "#6b6b6b", shoes: "#2a1a10", pants: "#3a3d46", glasses: true } },
+        { id: "st1", name: "Classmate", lines: "student", sit: true, path: [[150, 288]], speed: 0, look: { skin: "#d9a47a", shirt: "#ff6a13", num: "", hair: "#2a1a10" } },
+        { id: "st2", name: "Classmate", lines: "student", sit: true, path: [[450, 288]], speed: 0, look: { skin: "#f1c7a3", shirt: "#0a0a0a", num: "", hair: "#d8b067", longHair: true } },
+        { id: "st3", name: "Classmate", lines: "student", sit: true, path: [[300, 398]], speed: 0, look: { skin: "#7a4a2e", shirt: "#f3efe6", num: "", hair: "#111" } },
+        { id: "st4", name: "Classmate", lines: "student", sit: true, path: [[450, 508]], speed: 0, look: { skin: "#e2b08a", shirt: "#26324a", num: "", hair: "#3b2516", longHair: true } },
+        { id: "gavinH", name: "Gavin", lines: "gavin", path: [[90, 1000], [510, 1000], [510, 1120], [90, 1120]], speed: 45, look: { skin: "#c99a72", shirt: "#c98258", num: "0", numColor: "#0a0a0a", hair: "#3b2416", shoes: "#050505" } },
+        { id: "st5", name: "Classmate", lines: "student", path: [[480, 880], [120, 880]], speed: 55, look: { skin: "#f1c7a3", shirt: "#ff6a13", num: "", hair: "#7a5230", shoes: "#f3efe6" } }
+      ],
+      spots() {
+        const s = [{ x: 300, y: 1320, short: "Exit", label: "Leave school", run: exitArea }];
+        s.push({ x: 300, y: 556, short: "Desk", label: (T.cool.class || 0) > 0 ? "Class is over" : "Sit down for class", run: startClass });
+        s.push({ x: 110, y: 792, short: "Locker", label: "Open your locker", run: openLocker });
+        s.push({ x: 480, y: 792, short: "Trophies", label: "Check the trophy case", run: () => openSheet("Trophy case", "Brother Rice Warriors trophies, a signed Koza #7 game ball from the 45-yard winner, and a photo of Dalton flexing.", [{ label: "Cool", onClick: closeSheet }]) });
+        return s;
+      },
+      draw: drawSchoolInside
+    }
+  };
+  Object.values(AREAS).forEach(a => a.npcs.forEach(n => { n.x = n.path[0][0]; n.y = n.path[0][1]; n.wp = 1 % n.path.length; n.walk = 0; }));
+  Object.assign(NPC_LINES, {
+    chef: ["Koza Meal coming right up!", "Extra pickles? Say less.", "Get off the phone and eat, Kadin."],
+    teacher: ["Kadin. Phone. Away.", "Pop quiz today, Mr. Koza.", "Kickers still need to pass algebra."],
+    student: ["Can I copy your homework?", "Nice kick Friday!", "Is Dalton really that big?"]
+  });
+  const curNPCs = () => T.area && T.area !== "town" ? AREAS[T.area].npcs : NPCS;
+
+  function enterArea(id, door) {
+    T.area = id; T.townDoor = door; T.target = null; T.carry = null; T.eat = null;
+    [T.x, T.y] = AREAS[id].spawn; T.back = true; T.nearKey = "";
+    noise(0.2, 2400, 0.05);
+    setPrompt(`${AREAS[id].name} · <b>tap to walk</b>`);
+    hud();
+  }
+  function exitArea() {
+    closeSheet();
+    const d = T.townDoor || [800, 1030];
+    T.area = "town"; T.x = d[0]; T.y = d[1] + 30; T.back = false; T.target = null; T.carry = null; T.order = null; T.eat = null; T.nearKey = "";
+    setPrompt("Kadin Town · <b>tap to walk</b>");
+    hud();
+  }
+  // Savvy Sliders: order, wait for the grill, pick up, eat
+  function openMenu() {
+    openSheet("Savvy Sliders menu", "What can I get you, Kadin?", MENU.map(m => ({
+      label: m.name, sub: m.id === "koza" && (T.cool.koza || 0) > 0 ? `Grill is cooling down (${Math.ceil(T.cool.koza)}s)` : m.sub,
+      disabled: m.id === "koza" && (T.cool.koza || 0) > 0,
+      onClick: () => {
+        closeSheet();
+        T.order = { item: m, t: m.id === "koza" ? 3.2 : 2, ready: false };
+        if (m.id === "koza") T.cool.koza = 45;
+        const chef = AREAS.sliders.npcs[0];
+        T.talk = { npc: chef, text: m.id === "koza" ? "One Koza Meal! Firing it up." : "Coming right up!", t: 2.6 };
+        sfx.tick();
+      }
+    })));
+  }
+  function startEating(tx, ty) {
+    T.eat = { item: T.carry, t: 2.6 }; T.carry = null;
+    T.x = tx; T.y = ty + 30; T.back = true; T.target = null;
+    noise(0.4, 700, 0.06);
+  }
+  function finishEating() {
+    const m = T.eat.item; T.eat = null; T.sliders++;
+    T.say = { text: pick(m.id === "koza" ? ["The Koza Meal hits different.", "Fueled up for State.", "Posting this meal."] : ["So good.", "Best in Michigan."]), t: 2.6 };
+    addXP(m.xp, m.name);
+    if (m.id === "koza") { S.freshLegs = true; setTimeout(() => toast("<b>Fresh legs!</b> Kadin starts his next game ON FIRE", 2400), 1600); confetti(40); }
+    hud();
+  }
+  // Brother Rice: class with a quiz, your locker
+  function startClass() {
+    if ((T.cool.class || 0) > 0) { T.say = { text: "Class is over. Go to practice.", t: 2 }; return; }
+    T.x = 300; T.y = 540; T.back = true; T.target = null;
+    const qs = QUIZ.slice().sort(() => Math.random() - 0.5).slice(0, 5);
+    const teacher = AREAS.school.npcs[0];
+    let i = 0, right = 0;
+    const ask = () => {
+      if (i >= qs.length) {
+        const grade = ["F", "D", "D", "C", "B", "A"][right];
+        T.cool.class = 40;
+        T.talk = { npc: teacher, text: right >= 4 ? "Nice work, Kadin." : "Study more, less phone.", t: 3 };
+        openSheet("Class is over", `Grade: ${grade} · ${right} of 5 correct`, [{ label: "Leave class", onClick: closeSheet }]);
+        addXP(right * 8 + (right === 5 ? 10 : 0), `class grade ${grade}`);
+        return;
+      }
+      const [q, a] = qs[i], order = a.slice().sort(() => Math.random() - 0.5);
+      if (i === 2 && Math.random() < 0.7) T.talk = { npc: teacher, text: "Kadin. Phone. Away. Now.", t: 2.4 };
+      openSheet(`Class · Question ${i + 1} of 5`, q, order.map(opt => ({ label: opt, onClick: () => {
+        const ok = opt === a[0];
+        if (ok) { right++; sfx.tick(); } else tone(200, 0.25, 0.06, "sawtooth", 0.7);
+        toast(ok ? "<b>Correct!</b>" : `Nope · it's ${a[0]}`, 1100);
+        i++; closeSheet(); T.sheetOpen = true; setTimeout(ask, 650);
+      } })), false);
+    };
+    T.talk = { npc: teacher, text: "Pop quiz, Mr. Koza. Phone away.", t: 2.4 };
+    ask();
+  }
+  function openLocker() {
+    const first = !T.cool.lockerSeen;
+    T.cool.lockerSeen = 1e9;
+    openSheet("Kadin's locker", "Phone charger, two Savvy Sliders coupons, a chrome heart chain, cleats, and a note from Dalton: \"Ice that knee.\"", [{ label: "Close locker", onClick: closeSheet }]);
+    if (first) addXP(3, "found coupons");
+  }
+
+  function drawFood(id, x, y, s = 1) {
+    if (id === "koza" || id === "slider") {
+      const n = id === "koza" ? 3 : 1;
+      for (let i = 0; i < n; i++) {
+        const bx = x + (i - (n - 1) / 2) * 15 * s;
+        ctx.fillStyle = "#d79a52"; ctx.beginPath(); ctx.ellipse(bx, y - 4 * s, 7 * s, 5 * s, 0, Math.PI, 0); ctx.fill();
+        ctx.fillStyle = "#5a2e14"; ctx.fillRect(bx - 7 * s, y - 4 * s, 14 * s, 3 * s);
+        ctx.fillStyle = "#4cc46a"; ctx.fillRect(bx - 7 * s, y - 1.5 * s, 14 * s, 1.5 * s);
+        ctx.fillStyle = "#c98a46"; ctx.fillRect(bx - 7 * s, y, 14 * s, 3 * s);
+      }
+    }
+    if (id === "koza" || id === "fries") {
+      const fx = x + (id === "koza" ? 28 : 0) * s;
+      ctx.fillStyle = "#ffd23f"; for (let i = -2; i <= 2; i++) ctx.fillRect(fx + i * 2.6 * s - 1, y - 14 * s - Math.abs(i) * s, 2 * s, 10 * s);
+      ctx.fillStyle = "#c8261c"; ctx.beginPath(); ctx.moveTo(fx - 8 * s, y - 6 * s); ctx.lineTo(fx + 8 * s, y - 6 * s); ctx.lineTo(fx + 6 * s, y + 4 * s); ctx.lineTo(fx - 6 * s, y + 4 * s); ctx.fill();
+    }
+    if (id === "koza" || id === "shake") {
+      const cx = x - (id === "koza" ? 28 : 0) * s;
+      ctx.fillStyle = "#f3efe6"; ctx.beginPath(); ctx.ellipse(cx, y - 15 * s, 6 * s, 4 * s, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = "#ff6a13"; ctx.beginPath(); ctx.moveTo(cx - 6 * s, y - 14 * s); ctx.lineTo(cx + 6 * s, y - 14 * s); ctx.lineTo(cx + 4.5 * s, y + 4 * s); ctx.lineTo(cx - 4.5 * s, y + 4 * s); ctx.fill();
+      ctx.fillStyle = "#0a0a0a"; ctx.font = `${7 * s}px Graduate, serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("7", cx, y - 4 * s);
+      ctx.strokeStyle = "#c8261c"; ctx.lineWidth = 1.5 * s; ctx.beginPath(); ctx.moveTo(cx + 1, y - 17 * s); ctx.lineTo(cx + 5 * s, y - 25 * s); ctx.stroke();
+    }
+  }
+  function drawSlidersInside() {
+    const A = AREAS.sliders;
+    // back wall + menu boards
+    const wg = ctx.createLinearGradient(0, 0, 0, 150); wg.addColorStop(0, "#1a1a1d"); wg.addColorStop(1, "#2a2a30");
+    ctx.fillStyle = wg; ctx.fillRect(0, -400, A.w, 550);
+    ctx.fillStyle = "#ffd23f"; ctx.fillRect(0, 140, A.w, 6);
+    for (const [bx, title, rows] of [[30, "SAVVY SLIDERS", ["Est. on Koza Field", "Fresh off the grill"]], [222, "THE MENU", ["KOZA MEAL ........ #7", "SAVVY SLIDER", "FRIES · SHAKES"]], [414, "TODAY", ["Koza Meal special", "Orange cream shake"]]]) {
+      ctx.fillStyle = "#0b0b0d"; ctx.fillRect(bx, 18, 156, 104); ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 3; ctx.strokeRect(bx, 18, 156, 104);
+      ctx.fillStyle = "#ffd23f"; ctx.font = "15px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(title, bx + 78, 38);
+      ctx.fillStyle = "#f3efe6"; ctx.font = "600 13px 'Barlow Condensed', sans-serif";
+      rows.forEach((r, i) => ctx.fillText(r, bx + 78, 62 + i * 18));
+    }
+    // kitchen
+    ctx.fillStyle = "#8d9097"; ctx.fillRect(0, 146, A.w, 230);
+    ctx.strokeStyle = "rgba(0,0,0,.12)"; ctx.lineWidth = 1;
+    for (let x = 0; x < A.w; x += 30) { ctx.beginPath(); ctx.moveTo(x, 146); ctx.lineTo(x, 376); ctx.stroke(); }
+    for (let y = 146; y < 376; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(A.w, y); ctx.stroke(); }
+    // grill with sizzling sliders
+    ctx.fillStyle = "#2a2d33"; ctx.fillRect(36, 160, 220, 90); ctx.fillStyle = "#15171b"; ctx.fillRect(44, 168, 204, 74);
+    ctx.strokeStyle = "#3a3d46"; ctx.lineWidth = 2; for (let x = 52; x < 248; x += 10) { ctx.beginPath(); ctx.moveTo(x, 168); ctx.lineTo(x, 242); ctx.stroke(); }
+    const cooking = T.order && !T.order.ready;
+    for (let i = 0; i < (cooking ? 6 : 3); i++) {
+      const px = 76 + (i % 3) * 62, py = 188 + Math.floor(i / 3) * 34;
+      ctx.fillStyle = "#5a2e14"; ctx.beginPath(); ctx.ellipse(px, py, 18, 11, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = "rgba(255,170,90,.25)"; ctx.beginPath(); ctx.ellipse(px - 4, py - 3, 8, 4, 0, 0, 7); ctx.fill();
+    }
+    if (cooking) for (let i = 0; i < 6; i++) {   // steam
+      const k = (S.t * 0.8 + i / 6) % 1;
+      ctx.fillStyle = `rgba(255,255,255,${0.35 * (1 - k)})`; ctx.beginPath(); ctx.arc(70 + i * 32 + Math.sin(S.t * 3 + i) * 6, 170 - k * 60, 8 + k * 10, 0, 7); ctx.fill();
+    }
+    // fryer + prep
+    ctx.fillStyle = "#b9bdc4"; ctx.fillRect(278, 160, 100, 90); ctx.fillStyle = "#c98a1a"; ctx.fillRect(288, 170, 36, 40); ctx.fillRect(332, 170, 36, 40);
+    ctx.strokeStyle = "#3a3d46"; ctx.lineWidth = 3; ctx.strokeRect(290, 172, 32, 36); ctx.strokeRect(334, 172, 32, 36);
+    ctx.fillStyle = "#d9dde3"; ctx.fillRect(398, 160, 124, 60);
+    for (let i = 0; i < 5; i++) { ctx.fillStyle = "#d79a52"; ctx.beginPath(); ctx.ellipse(414 + i * 22, 190, 9, 6, 0, 0, 7); ctx.fill(); }
+    // counter
+    ctx.fillStyle = "#7a5638"; ctx.fillRect(0, 372, A.w, 24);
+    ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0, 396, A.w, 34); ctx.fillStyle = "#ffd23f"; ctx.fillRect(0, 404, A.w, 6);
+    ctx.fillStyle = "#111"; ctx.fillRect(196, 346, 48, 30); ctx.fillStyle = "#6fd3ff"; ctx.fillRect(202, 350, 36, 14);
+    ctx.fillStyle = "#ff3b1f"; ctx.fillRect(400, 340, 60, 6);   // heat lamp
+    ctx.fillStyle = "rgba(255,120,60,.18)"; ctx.fillRect(396, 346, 68, 28);
+    if (T.order && T.order.ready) { ctx.fillStyle = "#5a3a22"; ctx.fillRect(404, 358, 52, 14); drawFood(T.order.item.id, 430, 362, 0.8); }
+    // dining room: checkerboard floor
+    for (let y = 430; y < A.h; y += 40) for (let x = 0; x < A.w; x += 40) {
+      ctx.fillStyle = ((x + y) / 40) % 2 ? "#f3efe6" : "#1a1a1d"; ctx.fillRect(x, y, 40, 40);
+    }
+    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(0, 430, A.w, 10);
+    // soda machine
+    ctx.fillStyle = "#c8261c"; ctx.fillRect(532, 432, 52, 66); ctx.fillStyle = "#f3efe6"; ctx.fillRect(540, 444, 36, 16);
+    ctx.fillStyle = "#111"; ctx.fillRect(546, 470, 8, 12); ctx.fillRect(562, 470, 8, 12);
+    // exit mat
+    ctx.fillStyle = "#3a3d46"; ctx.fillRect(250, 960, 100, 40);
+    ctx.fillStyle = "#ffd23f"; ctx.font = "13px Graduate, serif"; ctx.textAlign = "center"; ctx.fillText("EXIT", 300, 982);
+  }
+  function drawBooth(tx, ty) {
+    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(tx + 6, ty + 10, 56, 24, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = "#ffd23f"; ctx.fillRect(tx - 60, ty - 42, 120, 16);
+    ctx.fillStyle = "#7a5638"; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(tx - 54, ty - 26, 108, 44, 10) : ctx.rect(tx - 54, ty - 26, 108, 44); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.fillRect(tx - 48, ty - 22, 96, 6);
+  }
+  function drawSchoolInside() {
+    const A = AREAS.school;
+    // classroom: wall, whiteboard, wood floor
+    ctx.fillStyle = "#cfd6dc"; ctx.fillRect(0, -400, A.w, 600);
+    ctx.fillStyle = "#f7f9fb"; ctx.fillRect(130, 30, 340, 110); ctx.strokeStyle = "#8d9097"; ctx.lineWidth = 6; ctx.strokeRect(130, 30, 340, 110);
+    ctx.fillStyle = "#2d5aa8"; ctx.font = "22px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("POP QUIZ TODAY", 300, 66);
+    ctx.fillStyle = "#c8261c"; ctx.font = "600 15px 'Barlow Condensed', sans-serif"; ctx.fillText("Phones in the bin. Yes, you, Kadin.", 300, 104);
+    for (const wx of [24, 520]) { ctx.fillStyle = "#9fd3ff"; ctx.fillRect(wx, 40, 56, 90); ctx.strokeStyle = "#f3efe6"; ctx.lineWidth = 4; ctx.strokeRect(wx, 40, 56, 90); }
+    ctx.fillStyle = "#b07a4a"; ctx.fillRect(0, 196, A.w, 450);
+    ctx.strokeStyle = "rgba(0,0,0,.12)"; ctx.lineWidth = 2;
+    for (let y = 196; y < 646; y += 22) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(A.w, y); ctx.stroke(); }
+    // teacher desk
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(218, 188, 176, 30);
+    ctx.fillStyle = "#5a3f2a"; ctx.fillRect(212, 176, 176, 34); ctx.fillStyle = "#f3efe6"; ctx.fillRect(232, 180, 30, 20); ctx.fillStyle = "#c8261c"; ctx.beginPath(); ctx.arc(352, 188, 8, 0, 7); ctx.fill();
+    // wall + doorway to the hallway
+    ctx.fillStyle = "#8d9097"; ctx.fillRect(0, 640, 254, 30); ctx.fillRect(346, 640, 254, 30);
+    // hallway
+    ctx.fillStyle = "#e3ddcf"; ctx.fillRect(0, 670, A.w, A.h - 670);
+    for (let y = 770; y < A.h; y += 48) for (let x = (y / 48) % 2 ? 0 : 24; x < A.w; x += 48) { ctx.fillStyle = "rgba(0,0,0,.05)"; ctx.fillRect(x, y, 24, 24); }
+    for (let i = 0; i < 9; i++) {   // lockers
+      const x = 24 + i * 42;
+      ctx.fillStyle = i === 2 ? "#ff6a13" : i % 2 ? "#26324a" : "#1f2a3e"; ctx.fillRect(x, 676, 40, 90);
+      ctx.fillStyle = "rgba(0,0,0,.3)"; for (let v = 0; v < 4; v++) ctx.fillRect(x + 8, 686 + v * 6, 24, 2);
+      ctx.fillStyle = "#d9dde3"; ctx.fillRect(x + 30, 718, 4, 12);
+      if (i === 2) { ctx.fillStyle = "#0a0a0a"; ctx.font = "9px Graduate, serif"; ctx.fillText("KOZA 7", x + 20, 750); }
+    }
+    ctx.fillStyle = "#3a2a1f"; ctx.fillRect(408, 676, 172, 90); ctx.fillStyle = "rgba(160,210,255,.4)"; ctx.fillRect(414, 682, 160, 78);
+    for (let i = 0; i < 4; i++) { ctx.fillStyle = "#e2b93f"; ctx.fillRect(426 + i * 38, 718, 14, 24); ctx.fillRect(422 + i * 38, 712, 22, 8); ctx.fillRect(428 + i * 38, 742, 10, 8); }
+    signBoard("BROTHER RICE WARRIORS", 300, 820, "#0a0a0a", "#ff6a13", 18);
+    ctx.fillStyle = "#3a3d46"; ctx.fillRect(250, 1320, 100, 40); ctx.fillStyle = "#ffd23f"; ctx.font = "13px Graduate, serif"; ctx.fillText("EXIT", 300, 1342);
+  }
+  function drawDesk(dx, dy, mine) {
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(dx - 40, dy - 8, 88, 28);
+    ctx.fillStyle = "#c9a26a"; ctx.fillRect(dx - 44, dy - 18, 88, 30);
+    ctx.fillStyle = "#3a3d46"; ctx.fillRect(dx - 40, dy + 12, 4, 10); ctx.fillRect(dx + 36, dy + 12, 4, 10);
+    if (mine) { ctx.fillStyle = "#ff6a13"; ctx.fillRect(dx - 16, dy - 12, 32, 14); ctx.fillStyle = "#0a0a0a"; ctx.font = "9px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("KOZA", dx, dy - 5); }
+  }
+  function renderInterior() {
+    const A = AREAS[T.area];
+    ctx.fillStyle = "#0b0c10"; ctx.fillRect(0, 0, W, VH);
+    ctx.save(); ctx.translate(-T.camX, -T.camY);
+    A.draw();
+    const items = [];
+    if (T.area === "sliders") for (const [tx, ty] of SL_TABLES) items.push([ty, () => drawBooth(tx, ty)]);
+    if (T.area === "school") for (const [dx, dy] of SC_DESKS) items.push([dy + 4, () => drawDesk(dx, dy, dx === 300 && dy === 520)]);
+    for (const n of A.npcs) items.push([n.sit ? n.y + 30 : n.y, () => {
+      if (n.sit) { ctx.save(); ctx.beginPath(); ctx.rect(n.x - 40, n.y - 120, 80, 100); ctx.clip(); }
+      drawChibi(n.x, n.y, { ...n.look, walk: n.walk, moving: n.moving, back: n.back });
+      if (n.sit) ctx.restore();
+    }]);
+    const jj = J(), sitting = !!T.eat || (T.area === "school" && T.sheetOpen && Math.abs(T.x - 300) < 4 && Math.abs(T.y - 540) < 4);
+    items.push([sitting ? T.y - 40 : T.y, () => {
+      if (sitting) { ctx.save(); ctx.beginPath(); ctx.rect(T.x - 50, T.y - 140, 100, 100); ctx.clip(); }
+      drawChibi(T.x, T.y, { skin: "#c99a72", shirt: jj.c[1], num: "7", numColor: jj.num, backName: "KOZA", hair: "#2b1d14", curls: true,
+        phone: !T.carry, chain: KZ.outfit.chain, shoes: CL().sw, walk: T.walk, moving: T.moving, back: T.back });
+      if (sitting) ctx.restore();
+      if (T.carry) { ctx.fillStyle = "#5a3a22"; ctx.fillRect(T.x - 24, T.y - 56, 48, 8); drawFood(T.carry.id, T.x, T.y - 58, 0.7); }
+    }]);
+    items.sort((a, b) => a[0] - b[0]).forEach(it => it[1]());
+    if (T.eat) {   // food on the table while Kadin eats
+      const k = T.eat.t / 2.6;
+      ctx.fillStyle = "#5a3a22"; ctx.fillRect(T.x - 26, T.y - 70, 52, 9);
+      ctx.globalAlpha = 0.4 + 0.6 * k; drawFood(T.eat.item.id, T.x, T.y - 72, 0.8); ctx.globalAlpha = 1;
+    }
+    if (T.near && T.near.kind === "spot") {
+      ctx.strokeStyle = `rgba(255,210,63,${0.6 + 0.4 * Math.sin(S.t * 6)})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(T.near.sp.x, T.near.sp.y, 26, 10, 0, 0, 7); ctx.stroke();
+    }
+    if (T.talk) bubble(T.talk.text, clamp(T.talk.npc.x - 120, T.camX + 8, T.camX + W - 248), T.talk.npc.y - 160, 240, 20);
+    if (T.say) bubble(T.say.text, clamp(T.x - 120, T.camX + 8, T.camX + W - 248), T.y - 160, 240, 20);
+    if (T.order && !T.order.ready) bubble("Cooking...", 140, 250, 120, 18);
+    drawPings(T.x, T.y - 100);
+    ctx.restore();
+  }
 
   function drawChibi(x, y, o) {
     const step = o.moving ? Math.sin(o.walk || 0) : 0, wide = o.big ? 1.5 : 1;
@@ -2926,6 +3386,8 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     // shirt
     ctx.fillStyle = o.shirt;
     ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 15 * wide, y - 54, 30 * wide, 32, 7) : ctx.rect(x - 15 * wide, y - 54, 30 * wide, 32); ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,.3)"; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.fillRect(x - 13 * wide, y - 52, 8 * wide, 28);
     if (o.num) {
       ctx.fillStyle = o.numColor; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.font = `${o.num.length > 2 ? 9 : 15}px Graduate, serif`; ctx.fillText(o.num, x, y - 36);
@@ -2941,6 +3403,12 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       for (const [dx, dy] of cs) { ctx.beginPath(); ctx.arc(x + dx, y + dy, 5.5, 0, 7); ctx.fill(); }
     } else if (o.back) { ctx.beginPath(); ctx.arc(x, y - 67, 13, 0, 7); ctx.fill(); }
     else { ctx.beginPath(); ctx.arc(x, y - 70, 13, Math.PI, 0); ctx.fill(); }
+    ctx.strokeStyle = "rgba(0,0,0,.28)"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y - 66, 13, 0, 7); ctx.stroke();
+    if (o.hat) {
+      ctx.fillStyle = "#f3efe6"; ctx.fillRect(x - 11, y - 84, 22, 10);
+      ctx.beginPath(); ctx.arc(x - 6, y - 86, 7, 0, 7); ctx.arc(x + 6, y - 86, 7, 0, 7); ctx.arc(x, y - 90, 8, 0, 7); ctx.fill();
+    }
+    if (o.glasses && !o.back) { ctx.strokeStyle = "#111"; ctx.lineWidth = 1.4; ctx.strokeRect(x - 9, y - 69, 7, 5); ctx.strokeRect(x + 2, y - 69, 7, 5); }
     if (!o.back) {
       ctx.fillStyle = "#1a0f08"; ctx.beginPath(); ctx.arc(x - 4.5, y - 66, 1.6, 0, 7); ctx.arc(x + 4.5, y - 66, 1.6, 0, 7); ctx.fill();
       ctx.strokeStyle = "#5a2a14"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y - 62, 4, 0.2, Math.PI - 0.2); ctx.stroke();
@@ -2961,16 +3429,26 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   }
   function drawBuilding(p, wall, roof, sign, sbg, sfg) {
     const face = Math.min(150, p.h * 0.38), doorBottom = p.door[1] > p.y + p.h / 2;
+    ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.fillRect(p.x + 12, p.y + 14, p.w, p.h);
+    const rg = ctx.createLinearGradient(0, p.y, 0, p.y + p.h - face);
+    rg.addColorStop(0, "rgba(255,255,255,.18)"); rg.addColorStop(1, "rgba(0,0,0,.12)");
     ctx.fillStyle = roof; ctx.fillRect(p.x, p.y, p.w, p.h - face);
+    ctx.fillStyle = rg; ctx.fillRect(p.x, p.y, p.w, p.h - face);
     ctx.fillStyle = "rgba(0,0,0,.12)"; for (let x = p.x + 20; x < p.x + p.w; x += 40) ctx.fillRect(x, p.y, 3, p.h - face);
     ctx.fillStyle = wall; ctx.fillRect(p.x, p.y + p.h - face, p.w, face);
     ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(p.x, p.y + p.h - face, p.w, 6);
     for (let x = p.x + 30; x < p.x + p.w - 40; x += 70) {
       if (Math.abs(x + 20 - p.door[0]) < 50) continue;
+      ctx.fillStyle = "rgba(255,232,163,.25)"; ctx.fillRect(x - 4, p.y + p.h - face + 26, 48, 42);
       ctx.fillStyle = "#ffe8a3"; ctx.fillRect(x, p.y + p.h - face + 30, 40, 34);
-      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(x + 19, p.y + p.h - face + 30, 2, 34);
+      ctx.strokeStyle = "#f3efe6"; ctx.lineWidth = 3; ctx.strokeRect(x, p.y + p.h - face + 30, 40, 34);
+      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(x + 19, p.y + p.h - face + 30, 2, 34); ctx.fillRect(x, p.y + p.h - face + 46, 40, 2);
     }
     if (doorBottom) {
+      for (const sx of [-1, 1]) for (let i = 0; i < 5; i++) {   // flower beds
+        ctx.fillStyle = ["#ff6a13", "#ffd23f", "#f3efe6", "#e85d9a", "#ff6a13"][i];
+        ctx.beginPath(); ctx.arc(p.door[0] + sx * (40 + i * 9), p.y + p.h + 4 + (i % 2) * 4, 4, 0, 7); ctx.fill();
+      }
       ctx.fillStyle = "#2a1a10"; ctx.fillRect(p.door[0] - 26, p.y + p.h - 72, 52, 72);
       ctx.fillStyle = "#ffd23f"; ctx.beginPath(); ctx.arc(p.door[0] + 16, p.y + p.h - 36, 3, 0, 7); ctx.fill();
     }
@@ -2978,6 +3456,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   }
   function drawStadium(p) {
     const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+    ctx.fillStyle = "rgba(0,0,0,.22)"; ctx.beginPath(); ctx.ellipse(cx + 12, cy + 14, p.w / 2, p.h / 2, 0, 0, 7); ctx.fill();
     ctx.fillStyle = "#2c2f38"; ctx.beginPath(); ctx.ellipse(cx, cy, p.w / 2, p.h / 2, 0, 0, 7); ctx.fill();
     ctx.fillStyle = "#3d2a1f"; ctx.beginPath(); ctx.ellipse(cx, cy, p.w / 2 - 22, p.h / 2 - 22, 0, 0, 7); ctx.fill();
     for (let i = 0; i < 160; i++) {   // crowd
@@ -3014,6 +3493,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     ctx.fillStyle = "#3f8547"; ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 1.5, r * 0.6, 0, 7); ctx.fill();
   }
   function renderTown() {
+    if (T.area && T.area !== "town") { renderInterior(); return; }
     ctx.save(); ctx.translate(-T.camX, -T.camY);
     ctx.fillStyle = "#4c9a50"; ctx.fillRect(T.camX, T.camY, W, VH);
     ctx.fillStyle = "#45904a";
@@ -3023,6 +3503,14 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     ctx.fillStyle = "#4a4d55"; for (const r of ROADS) ctx.fillRect(r.x, r.y, r.w, r.h);
     ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 3; ctx.setLineDash([24, 18]);
     ctx.beginPath(); ctx.moveTo(0, 910); ctx.lineTo(TW, 910); ctx.moveTo(800, 0); ctx.lineTo(800, TH); ctx.moveTo(0, 1540); ctx.lineTo(TW, 1540); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(243,239,230,.85)";   // crosswalks
+    for (let i = 0; i < 7; i++) { ctx.fillRect(764 + i * 11, 830, 7, 26); ctx.fillRect(764 + i * 11, 964, 7, 26); ctx.fillRect(764 + i * 11, 1470, 7, 26); ctx.fillRect(764 + i * 11, 1584, 7, 26); }
+    for (const [cx2, cy2, col] of [[160, 874, "#c8261c"], [420, 874, "#26324a"], [1060, 946, "#ffd23f"], [1460, 874, "#f3efe6"], [300, 1566, "#ff6a13"], [1320, 1514, "#3a3d46"]]) {   // parked cars
+      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(cx2 - 34, cy2 - 11, 74, 26);
+      ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(cx2 - 38, cy2 - 15, 76, 28, 8) : ctx.rect(cx2 - 38, cy2 - 15, 76, 28); ctx.fill();
+      ctx.fillStyle = "rgba(20,30,45,.75)"; ctx.fillRect(cx2 - 20, cy2 - 11, 14, 20); ctx.fillRect(cx2 + 10, cy2 - 11, 12, 20);
+      ctx.fillStyle = "rgba(255,255,255,.25)"; ctx.fillRect(cx2 - 34, cy2 - 13, 68, 4);
+    }
     // town square fountain with the Kadin statue
     const [fx, fy, fr] = FOUNTAIN;
     ctx.fillStyle = "#b9b4a8"; ctx.beginPath(); ctx.arc(fx, fy, fr + 14, 0, 7); ctx.fill();
@@ -3059,7 +3547,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     items.sort((a, b) => a[0] - b[0]).forEach(it => it[1]());
     // highlight what you can use
     if (T.near) {
-      const [hx, hy] = T.near.kind === "place" ? T.near.p.door : [T.near.n.x, T.near.n.y - 92];
+      const [hx, hy] = T.near.kind === "place" ? T.near.p.door : T.near.kind === "spot" ? [T.near.sp.x, T.near.sp.y] : [T.near.n.x, T.near.n.y - 92];
       ctx.strokeStyle = `rgba(255,210,63,${0.6 + 0.4 * Math.sin(S.t * 6)})`; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(hx, hy + (T.near.kind === "place" ? -10 : 0), 20, 0, 7); ctx.stroke();
     }
@@ -3100,12 +3588,20 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     }
     if (S.phase === "kick" || S.phase === "flight" || S.phase === "result") {
       const p = kickPose(S.kickT); S.kpos = p.pos; S.kk = p.k; S.krun = p.run;
+      if (S.punt && S.phase === "kick" && S.ball) {
+        const drop = clamp((S.kickT - 0.42) / 0.16, 0, 1);
+        S.ball.x = S.kpos.x + 0.18; S.ball.z = S.kpos.z + 0.4; S.ball.y = lerp(0.95, 0.35, drop); S.ball.spin = 0;
+      }
       if (S.phase !== "kick" && S.ball) {
-        const push = clamp(S.ball.z * 0.3, 0, S.mode === "intro" ? 9 : 5);
-        camT.z = CAM0.z + push; camT.h = CAM0.h + push * 0.08;
+        if (S.punt) {   // follow the punt downfield and up into the sky
+          camT.z = CAM0.z + clamp(S.ball.z * 0.62, 0, 46); camT.h = CAM0.h + S.ball.y * 0.97; camT.x = S.ball.x * 0.5;
+        } else {
+          const push = clamp(S.ball.z * 0.3, 0, S.mode === "intro" ? 9 : 5);
+          camT.z = CAM0.z + push; camT.h = CAM0.h + push * 0.08;
+        }
       }
     } else if (S.phase !== "jog") {
-      S.kpos = IDLE; S.kk = 0; S.krun = 0;
+      S.kpos = S.punt ? P_IDLE : IDLE; S.kk = 0; S.krun = 0;
     }
     const f = 1 - Math.exp(-dt * (S.phase === "jog" ? 12 : 3));
     cam.x += (camT.x - cam.x) * f; cam.z += (camT.z - cam.z) * f; cam.h += (camT.h - cam.h) * f;
@@ -3116,7 +3612,8 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       else if (S.mode === "game" && (S.phase === "result" || S.phase === "flight") && S.resultT > 2.1) {
         S.resultShown = false;
         const L = lvl();
-        if (!L) { if (S.misses >= 3) gameOver(); else newKick(); }
+        if (S.punt) { if (S.puntNo >= 10) puntOver(); else newKick(); }
+        else if (!L) { if (S.misses >= 3) gameOver(); else newKick(); }
         else if (S.kickIdx >= L.kicks || S.makes + (L.kicks - S.kickIdx) < L.need) levelOver();
         else newKick();
       }
@@ -3143,6 +3640,22 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     requestAnimationFrame(frame);
   }
 
+  let puntBest = 0;
+  try { puntBest = +localStorage.getItem("kk-puntbest") || 0; } catch (e) {}
+  function puntOver() {
+    S.mode = "over"; S.phase = "idle"; S.lastMode = "kick"; hideBanner();
+    if (S.score > puntBest) { puntBest = S.score; try { localStorage.setItem("kk-puntbest", puntBest); } catch (e) {} }
+    $("overThe").textContent = "Punt challenge · Noah Samano";
+    $("overScore").textContent = S.score + " pts";
+    $("overStars").hidden = true; $("next").hidden = true;
+    $("overMsg").hidden = false;
+    $("overMsg").textContent = S.score >= 35 ? "Special teams player of the year." : S.score >= 20 ? "Coach loves the hang time." : "Work on pinning it inside the 20.";
+    $("overLab1").textContent = "Pinned"; $("overLab2").textContent = "Long"; $("overLab3").textContent = "Best";
+    $("overMade").textContent = `${S.makes}/10`; $("overLong").textContent = S.long ? S.long + " yd" : "–"; $("overBest").textContent = puntBest;
+    $("again").textContent = "Punt again"; $("menu").textContent = "Change kicker";
+    $("over").hidden = false;
+    setPrompt(tag());
+  }
   function gameOver() {
     S.mode = "over"; S.phase = "idle"; S.lastMode = "kick"; hideBanner();
     $("overLab1").textContent = "Made"; $("overLab2").textContent = "Long"; $("menu").textContent = "Schedule"; $("next").textContent = "Next game";
