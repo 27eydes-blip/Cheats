@@ -101,12 +101,12 @@ body {
   position: relative;
   height: 100%;
   max-width: 100%;
-  aspect-ratio: 3 / 4;
+  flex: none;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 0 0 2px #1f2128, 0 20px 60px rgba(0,0,0,.6);
 }
-canvas { display: block; width: 100%; height: 100%; touch-action: manipulation; cursor: pointer; }
+canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; }
 .prompt {
   font-weight: 700;
   font-size: 18px;
@@ -609,13 +609,22 @@ button.ghost {
   const ctx = cv.getContext("2d");
   const $ = id => document.getElementById(id);
 
+  // the scene is designed at 600x800; taller screens get extra sky and ground instead of stretching
+  let VH = H, OY = 0, BASE = 1;
+  const frameEl = cv.parentElement, stageEl = frameEl.parentElement;
   function fit() {
+    const st = stageEl.getBoundingClientRect();
+    if (!st.width || !st.height) return;
+    const fw = Math.floor(Math.min(st.width, st.height * 0.75)), fh = Math.floor(st.height);
+    frameEl.style.width = fw + "px";
+    VH = Math.max(H, Math.round(W * fh / fw)); OY = (VH - H) / 2;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    cv.width = W * dpr; cv.height = H * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cv.width = Math.round(fw * dpr); cv.height = Math.round(fw * dpr * VH / W);
+    BASE = cv.width / W;
   }
   fit();
   window.addEventListener("resize", fit);
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(stageEl);
 
   const proj = (x, y, z) => {
     const d = Math.max(0.3, z - cam.z), s = F / d;
@@ -638,18 +647,21 @@ button.ghost {
     if (ac && ac.state === "suspended") ac.resume();
     return muted ? null : ac;
   }
+  let noiseBuf = null;
   function noise(dur, freq, gain, attack = 0.005) {
     const a = audio(); if (!a) return;
-    const len = Math.floor(a.sampleRate * dur);
-    const buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    const src = a.createBufferSource(); src.buffer = buf;
+    if (!noiseBuf) {
+      noiseBuf = a.createBuffer(1, a.sampleRate * 2.5, a.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const src = a.createBufferSource(); src.buffer = noiseBuf;
     const f = a.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = freq; f.Q.value = 0.7;
     const g = a.createGain(), t = a.currentTime;
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(gain, t + attack);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(f); f.connect(g); g.connect(a.destination); src.start();
+    src.connect(f); f.connect(g); g.connect(a.destination); src.start(0, Math.random() * 0.4, dur + 0.05);
   }
   function tone(freq, dur, gain, type = "sine", slide = 0) {
     const a = audio(); if (!a) return;
@@ -745,7 +757,30 @@ button.ghost {
     }
     g.putImageData(im, 0, 0);
   })();
-  const grainPat = ctx.createPattern(grain, "repeat");
+  const grainBig = document.createElement("canvas");
+  grainBig.width = W / 2; grainBig.height = H / 2;
+  (() => {
+    const g = grainBig.getContext("2d"), im = g.createImageData(grainBig.width, grainBig.height);
+    for (let i = 0; i < im.data.length; i += 4) {
+      const v = Math.random() < 0.5 ? 0 : 255;
+      im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = (Math.random() * 16) | 0;
+    }
+    g.putImageData(im, 0, 0);
+  })();
+  // vignettes never change, so draw each one once
+  const vignettes = {};
+  function drawVignette(cy, r0, r1, alpha) {
+    const key = [cy, r0, r1, alpha, VH].join();
+    if (!vignettes[key]) {
+      const c = document.createElement("canvas"); c.width = W / 2; c.height = Math.round(VH / 2);
+      const g = c.getContext("2d"); g.scale(0.5, 0.5);
+      const vg = g.createRadialGradient(W / 2, VH * cy, H * r0, W / 2, VH * cy, H * r1 + OY);
+      vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, `rgba(0,0,0,${alpha})`);
+      g.fillStyle = vg; g.fillRect(0, 0, W, VH);
+      vignettes[key] = c;
+    }
+    ctx.drawImage(vignettes[key], 0, 0, W, VH);
+  }
 
   // ---------- game state ----------
   const S = {
@@ -861,7 +896,7 @@ button.ghost {
   const CONF = ["#ff6a13", "#ff8a3d", "#f3efe6", "#ffd23f", "#0a0a0a"];
   function confetti(n) {
     for (let i = 0; i < n; i++) parts.push({
-      x: Math.random() * W, y: -20 - Math.random() * H * 0.6,
+      x: Math.random() * W, y: -20 - Math.random() * VH * 0.6,
       vx: (Math.random() - 0.5) * 80, vy: 90 + Math.random() * 140,
       r: Math.random() * 6, vr: (Math.random() - 0.5) * 12,
       w: 5 + Math.random() * 6, h: 3 + Math.random() * 4,
@@ -1154,12 +1189,13 @@ button.ghost {
   function groundRect(x0, x1, z0, z1, fill) {
     quad(proj(x0, 0, z0), proj(x1, 0, z0), proj(x1, 0, z1), proj(x0, 0, z1), fill);
   }
+  const textW = {};
   function groundText(txt, x, z, wYd, hYd, fill) {
     const near = proj(x, 0, z - hYd / 2), far = proj(x, 0, z + hYd / 2), mid = proj(x, 0, z);
     ctx.save();
     ctx.translate(mid.x, (near.y + far.y) / 2);
     ctx.font = "100px Graduate, serif";
-    const m = ctx.measureText(txt).width;
+    const m = textW[txt] || (textW[txt] = ctx.measureText(txt).width);
     ctx.scale((wYd * mid.s) / m, (near.y - far.y) / 72);
     ctx.fillStyle = fill; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(txt, 0, 4);
@@ -1168,7 +1204,7 @@ button.ghost {
 
   function drawField() {
     const K = S.K, GL = K - 10, zNear = cam.z + 1, zFar = K + 30;
-    ctx.fillStyle = "#15291a"; ctx.fillRect(0, HOR, W, H - HOR);
+    ctx.fillStyle = "#15291a"; ctx.fillRect(0, HOR, W, H - HOR + OY + 2);
     groundRect(-34, 34, zNear, zFar, "#1a2e1f");
     let i = 0;
     for (let z = GL; z > zNear; z -= 5, i++) groundRect(-26.67, 26.67, Math.max(z - 5, zNear), z, i % 2 ? "#2b6d37" : "#33803f");
@@ -1212,16 +1248,15 @@ button.ghost {
     const L = proj(-HALF_GOAL, BAR, K), R = proj(HALF_GOAL, BAR, K);
     const LT = proj(-HALF_GOAL, BAR + 3.34, K), RT = proj(HALF_GOAL, BAR + 3.34, K);
     const w = Math.max(2, 0.14 * mid.s);
-    ctx.save();
-    ctx.shadowColor = "rgba(255,210,63,.55)"; ctx.shadowBlur = 12;
-    ctx.strokeStyle = "#ffd23f"; ctx.lineCap = "round"; ctx.lineWidth = w;
+    ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(base.x, base.y); ctx.lineTo(neck.x, neck.y); ctx.lineTo(mid.x, mid.y);
     ctx.moveTo(L.x, L.y); ctx.lineTo(R.x, R.y);
     ctx.moveTo(L.x, L.y); ctx.lineTo(LT.x, LT.y);
     ctx.moveTo(R.x, R.y); ctx.lineTo(RT.x, RT.y);
-    ctx.stroke();
-    ctx.restore();
+    ctx.strokeStyle = "rgba(255,210,63,.12)"; ctx.lineWidth = w + 14; ctx.stroke();   // glow
+    ctx.strokeStyle = "rgba(255,210,63,.22)"; ctx.lineWidth = w + 6; ctx.stroke();
+    ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = w; ctx.stroke();
     ctx.strokeStyle = "rgba(255,250,220,.7)"; ctx.lineWidth = Math.max(1, w * 0.3); ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(L.x - w * 0.2, L.y); ctx.lineTo(LT.x - w * 0.2, LT.y);
@@ -1250,11 +1285,9 @@ button.ghost {
       const tw = Math.max(1.5, proj(b.x, b.y, b.z).s * 0.12);
       ctx.lineCap = "round";
       if (S.fireKick) {   // ON FIRE trail
-        ctx.save();
-        ctx.shadowColor = "rgba(255,110,20,.95)"; ctx.shadowBlur = 18;
+        ctx.strokeStyle = "rgba(255,110,20,.22)"; ctx.lineWidth = tw * 4.5; ctx.stroke();
         ctx.strokeStyle = "rgba(255,106,19,.75)"; ctx.lineWidth = tw * 2.2; ctx.stroke();
         ctx.strokeStyle = "rgba(255,220,90,.9)"; ctx.lineWidth = tw * 0.8; ctx.stroke();
-        ctx.restore();
       } else { ctx.strokeStyle = "rgba(255,240,220,.22)"; ctx.lineWidth = tw; ctx.stroke(); }
     }
     const sh = proj(b.x, 0, b.z);
@@ -1573,8 +1606,46 @@ button.ghost {
   }
 
   function render() {
-    if (S.mode === "sign" || (S.mode === "over" && S.lastMode === "sign")) { renderSign(); return; }
-    if (S.mode === "pt" || (S.mode === "over" && S.lastMode === "pt")) { renderPT(); return; }
+    const scene = S.mode === "sign" || (S.mode === "over" && S.lastMode === "sign") ? "sign"
+      : S.mode === "pt" || (S.mode === "over" && S.lastMode === "pt") ? (PT.intro > 0 ? "ptIntro" : "pt") : "field";
+    const bands = { field: ["#04050a", "#15291a"], sign: ["#0d0f15", "#ff6a13"], ptIntro: ["#e9eaec", "#c9ccd2"], pt: ["#232a39", "#5a3f2a"] }[scene];
+    ctx.setTransform(BASE, 0, 0, BASE, 0, 0);
+    ctx.fillStyle = bands[0]; ctx.fillRect(0, 0, W, OY + 1);
+    ctx.fillStyle = bands[1]; ctx.fillRect(0, OY + H - 1, W, OY + 1);
+    ctx.save(); ctx.translate(0, OY);
+    if (scene === "sign") renderSign(); else if (scene === "field") renderField(); else renderPT();
+    ctx.restore();
+    // screen-space effects
+    const L = S.mode === "game" ? lvl() : null;
+    if (L && L.weather === "rain") {
+      ctx.fillStyle = "rgba(20,30,50,.18)"; ctx.fillRect(0, 0, W, VH);
+      ctx.strokeStyle = "rgba(200,220,255,.35)"; ctx.lineWidth = 1.2; ctx.beginPath();
+      for (const d of sky) { ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + S.wind * 0.6, d.y + 16 * d.v); }
+      ctx.stroke();
+    } else if (L && L.weather === "snow") {
+      ctx.fillStyle = "rgba(220,230,255,.06)"; ctx.fillRect(0, 0, W, VH);
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      for (const d of sky) { ctx.beginPath(); ctx.arc(d.x, d.y, 1 + d.v * 1.6, 0, 7); ctx.fill(); }
+    }
+    if (scene === "field") drawVignette(0.52, 0.25, 0.75, .55);
+    else if (scene === "sign") drawVignette(0.5, 0.3, 0.8, .45);
+    else if (scene === "ptIntro") drawVignette(0.5, 0.35, 0.85, .35);
+    else drawVignette(0.5, 0.3, 0.8, .4);
+    for (const p of parts) {
+      const fl = Math.abs(Math.cos(p.r * 1.3));
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+      ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2 * fl, p.w, p.h * fl + 0.5);
+      ctx.restore();
+    }
+    if (scene === "field") ctx.drawImage(grainBig, -((Math.random() * 6) | 0), -((Math.random() * 6) | 0), W + 6, VH + 6);
+    if (S.mode === "intro") {
+      const out = S.resultShown ? clamp(1 - (S.resultT - 3.3) / 0.6, 0, 1) : 1;
+      const lb = (58 + OY * 0.5) * clamp(S.introT / 0.6, 0, 1) * out;
+      ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, lb); ctx.fillRect(0, VH - lb, W, lb);
+      if (S.introT < 0.9) { ctx.fillStyle = `rgba(0,0,0,${1 - S.introT / 0.9})`; ctx.fillRect(0, 0, W, VH); }
+    }
+  }
+  function renderField() {
     const bx = -BX - cam.x * 6;
     ctx.drawImage(back, bx, 0);
     if (S.mode === "title" || S.flash > 0) {         // camera flashes in the crowd
@@ -1624,40 +1695,7 @@ button.ghost {
       ctx.closePath(); ctx.fill();
     }
     ctx.restore();
-    const L = S.mode === "game" ? lvl() : null;
-    if (L && L.weather === "rain") {
-      ctx.fillStyle = "rgba(20,30,50,.18)"; ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = "rgba(200,220,255,.35)"; ctx.lineWidth = 1.2; ctx.beginPath();
-      for (const d of sky) { ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + S.wind * 0.6, d.y + 16 * d.v); }
-      ctx.stroke();
-    } else if (L && L.weather === "snow") {
-      ctx.fillStyle = "rgba(220,230,255,.06)"; ctx.fillRect(0, 0, W, H);
-      ctx.fillStyle = "rgba(255,255,255,.85)";
-      for (const d of sky) { ctx.beginPath(); ctx.arc(d.x, d.y, 1 + d.v * 1.6, 0, 7); ctx.fill(); }
-    }
-    // vignette
-    const vg = ctx.createRadialGradient(W / 2, H * 0.52, H * 0.25, W / 2, H * 0.52, H * 0.75);
-    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.55)");
-    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
-    // confetti
-    for (const p of parts) {
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
-      ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2 * Math.abs(Math.cos(p.r * 1.3)), p.w, p.h * Math.abs(Math.cos(p.r * 1.3)) + 0.5);
-      ctx.restore();
-    }
-    // grain
-    ctx.save();
-    ctx.globalAlpha = 0.07; ctx.globalCompositeOperation = "overlay";
-    ctx.translate((Math.random() * 96) | 0, (Math.random() * 96) | 0);
-    ctx.fillStyle = grainPat; ctx.fillRect(-96, -96, W + 96, H + 96);
-    ctx.restore();
     if (S.mode === "game") drawMeters();
-    if (S.mode === "intro") {
-      const out = S.resultShown ? clamp(1 - (S.resultT - 3.3) / 0.6, 0, 1) : 1;
-      const lb = 58 * clamp(S.introT / 0.6, 0, 1) * out;
-      ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, lb); ctx.fillRect(0, H - lb, W, lb);
-      if (S.introT < 0.9) { ctx.fillStyle = `rgba(0,0,0,${1 - S.introT / 0.9})`; ctx.fillRect(0, 0, W, H); }
-    }
   }
 
   // ---------- autograph tent ----------
@@ -1754,7 +1792,7 @@ button.ghost {
   }
 
   // drawing the signature
-  const toCanvas = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; };
+  const toCanvas = e => { const r = cv.getBoundingClientRect(), k = W / r.width; return [(e.clientX - r.left) * k, (e.clientY - r.top) * k - OY]; };
   function itemPath(c, item, cx, cy) {
     const d = ITEMS[item];
     c.beginPath();
@@ -1792,7 +1830,7 @@ button.ghost {
     if (S.mode !== "sign" || !G.drawing) return;
     G.drawing = false;
     const f = front();
-    if (f && f.state === "wait" && G.len >= 140) {
+    if (f && f.state === "wait" && G.len >= Math.min(140, ITEMS[f.item].w * 1.3)) {
       f.state = "happy"; f.t = 0; G.signed++;
       sfx.tick(); noise(0.6, 1600, 0.12, 0.05);
       if (G.signed % 10 === 0) { showBanner(G.signed + " AUTOGRAPHS!", "The line keeps growing", true); confetti(70); S.flash = 1.5; setTimeout(() => { if (S.mode === "sign") hideBanner(); }, 1300); }
@@ -1871,11 +1909,11 @@ button.ghost {
   function drawItem(item, cx, cy, sc, signed) {
     const d = ITEMS[item];
     ctx.save(); ctx.translate(cx, cy); ctx.scale(sc, sc); ctx.translate(-cx, -cy);
-    ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 6;
+    itemPath(ctx, item, cx, cy + 7);
+    ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fill();
     itemPath(ctx, item, cx, cy);
     const fills = { football: "#7a3b17", jersey: "#ff6a13", poster: "#f3efe6", helmet: "#17171b", phone: "#26324a", cast: "#f3efe6", slider: "#d79a52", paper: "#ece6d6" };
     ctx.fillStyle = fills[item]; ctx.fill();
-    ctx.shadowColor = "transparent";
     ctx.save(); itemPath(ctx, item, cx, cy); ctx.clip();
     if (item === "football") {
       ctx.fillStyle = "#f3efe6"; ctx.fillRect(cx - d.w * 0.72, cy - d.h, 10, d.h * 2); ctx.fillRect(cx + d.w * 0.72 - 10, cy - d.h, 10, d.h * 2);
@@ -2107,7 +2145,7 @@ button.ghost {
     const tg = ctx.createLinearGradient(0, 468, 0, 650);
     tg.addColorStop(0, "rgba(255,255,255,.08)"); tg.addColorStop(1, "rgba(0,0,0,.15)");
     ctx.fillStyle = tg; ctx.fill();
-    ctx.fillStyle = "#ff6a13"; ctx.fillRect(0, 650, W, H - 650);
+    ctx.fillStyle = "#ff6a13"; ctx.fillRect(0, 650, W, H - 650 + OY + 2);
     ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0, 650, W, 8); ctx.fillRect(0, 676, W, 4);
     ctx.font = "40px Graduate, serif"; ctx.fillText("BROTHER RICE", W / 2, 728);
     ctx.font = "600 15px 'Barlow Condensed', sans-serif"; ctx.fillText("CRUSADERS FOOTBALL · #7 KADIN KOZA", W / 2, 768);
@@ -2125,15 +2163,6 @@ button.ghost {
     else if (f && f.state === "happy") bubble(f.thanks, 300, 160, 280);
     else if (f && f.state === "sad") bubble("Aw, man...", 380, 180, 160);
     drawPings(220, 150);
-    // confetti + vignette
-    for (const p of parts) {
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
-      ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-      ctx.restore();
-    }
-    const vg = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.3, W / 2, H * 0.5, H * 0.8);
-    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.45)");
-    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
     if (G.time > 0 && G.time < 10) {
       ctx.fillStyle = "#ff3b1f"; ctx.font = "60px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(S.t * 4)); ctx.fillText(Math.ceil(G.time), 540, 210); ctx.globalAlpha = 1;
@@ -2415,7 +2444,7 @@ button.ghost {
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = "#cfe3d6"; ctx.fillRect(0, 300, W, 260);
     ctx.fillStyle = "#9fbfa3"; for (let x = 0; x < W; x += 150) ctx.fillRect(x, 300, 8, 260);
-    ctx.fillStyle = "#e0782a"; for (const x of [70, 120, 480, 530]) ctx.fillRect(x, 250, 18, 550);
+    ctx.fillStyle = "#e0782a"; for (const x of [70, 120, 480, 530]) ctx.fillRect(x, 250, 18, 550 + OY);
     ctx.fillStyle = "#333"; ctx.fillRect(40, 380, 120, 10); ctx.fillRect(450, 380, 120, 10);
     // close-up of Dalton
     const z = 1.9 + Math.sin(S.t * 0.6) * 0.03;
@@ -2423,9 +2452,6 @@ button.ghost {
     ctx.translate(W / 2, 440); ctx.scale(z, z); ctx.translate(-DX, -230);
     drawDalton(DX, "hips");
     ctx.restore();
-    const vg = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.35, W / 2, H * 0.5, H * 0.85);
-    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.35)");
-    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
     bubble(PT.line, 24, 60, 552, 32);
     if (PT.introT > 0.8) {
       ctx.globalAlpha = 0.6 + 0.4 * Math.sin(S.t * 4);
@@ -2486,17 +2512,11 @@ button.ghost {
     ctx.fillStyle = PT.health >= 100 ? "#4cc46a" : PT.health > 66 ? "#9be15d" : PT.health > 45 ? "#ffd23f" : "#ff6a13";
     ctx.fillRect(25, 753, 550 * PT.health / 100, 30);
     ctx.fillStyle = "#f3efe6"; ctx.font = "600 20px 'Barlow Condensed', sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
-    ctx.shadowColor = "#000"; ctx.shadowBlur = 4;
+    ctx.strokeStyle = "rgba(0,0,0,.7)"; ctx.lineWidth = 3; ctx.strokeText(`RECOVERY ${Math.round(PT.health)}%  ·  ${EXERCISES[PT.ex].toUpperCase()}`, 36, 769);
     ctx.fillText(`RECOVERY ${Math.round(PT.health)}%  ·  ${EXERCISES[PT.ex].toUpperCase()}`, 36, 769);
-    ctx.shadowBlur = 0;
     drawPings(KX, 205);
     if (PT.lineT > 0) bubble(PT.line, 20, 52, 560, 26);
-    for (const p of parts) {
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
-    }
-    const vg = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.3, W / 2, H * 0.5, H * 0.8);
-    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.4)");
-    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+
   }
 
   // ---------- loop ----------
@@ -2550,13 +2570,13 @@ button.ghost {
     if (wx !== "clear") for (const d of sky) {
       const fall = wx === "rain" ? 900 : 70;
       d.y += fall * d.v * dt; d.x += (S.wind * (wx === "rain" ? 30 : 6) + (wx === "snow" ? Math.sin(S.t + d.v * 9) * 20 : 0)) * dt;
-      if (d.y > H) { d.y -= H + 20; d.x = Math.random() * W; }
+      if (d.y > VH) { d.y -= VH + 20; d.x = Math.random() * W; }
       if (d.x > W) d.x -= W; if (d.x < 0) d.x += W;
     }
     for (let i = parts.length - 1; i >= 0; i--) {
       const p = parts[i];
       p.x += (p.vx + Math.sin(S.t * 3 + p.ph) * 30) * dt; p.y += p.vy * dt; p.r += p.vr * dt;
-      if (p.y > H + 20) parts.splice(i, 1);
+      if (p.y > VH + 20) parts.splice(i, 1);
     }
   }
 
