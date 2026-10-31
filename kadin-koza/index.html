@@ -447,8 +447,8 @@ button.ghost {
 <div class="app">
   <div class="board" aria-live="polite">
     <div class="cell"><span class="label" id="lab1">Score</span><span class="value" id="score">0</span></div>
-    <div class="cell"><span class="label">Kick</span><span class="value" id="dist">45 yd</span></div>
-    <div class="cell"><span class="label">Wind</span><span class="value small" id="wind">calm</span></div>
+    <div class="cell"><span class="label" id="lab2">Kick</span><span class="value" id="dist">45 yd</span></div>
+    <div class="cell"><span class="label" id="lab3">Wind</span><span class="value small" id="wind">calm</span></div>
     <div class="cell"><span class="label" id="lab4">Misses</span><span class="value small misses" id="misses">○○○</span></div>
   </div>
 
@@ -507,6 +507,7 @@ button.ghost {
         <div class="actions">
           <button class="go" id="start" type="button">Take the field</button>
           <button class="ghost" id="replay" type="button">Watch intro</button>
+          <button class="ghost" id="tent" type="button">Autograph tent</button>
         </div>
       </div>
 
@@ -568,7 +569,7 @@ button.ghost {
         <div class="stars" id="overStars" hidden></div>
         <p class="msg" id="overMsg" hidden></p>
         <div class="stats">
-          <span class="label">Made</span><span class="label">Long</span><span class="label" id="overLab3">Best</span>
+          <span class="label" id="overLab1">Made</span><span class="label" id="overLab2">Long</span><span class="label" id="overLab3">Best</span>
           <span class="value" id="overMade">0/0</span><span class="value" id="overLong">–</span><span class="value" id="overBest">0</span>
         </div>
         <div class="sponsor">Presented by <b>Savvy Sliders</b></div>
@@ -805,6 +806,13 @@ button.ghost {
   }
 
   function hud() {
+    if (S.mode === "sign") {
+      $("lab1").textContent = "Signed"; $("lab2").textContent = "Time"; $("lab3").textContent = "In line"; $("lab4").textContent = "Missed";
+      $("score").textContent = G.signed; $("dist").textContent = Math.ceil(G.time) + "s";
+      $("wind").textContent = Math.max(0, G.fans.length - 1); $("misses").textContent = G.missed;
+      return;
+    }
+    $("lab2").textContent = "Kick"; $("lab3").textContent = "Wind";
     $("score").textContent = S.score;
     $("dist").textContent = S.K + " yd";
     $("wind").textContent = S.wind === 0 ? "calm" : (S.wind < 0 ? "← " : "") + Math.abs(S.wind) + " mph" + (S.wind > 0 ? " →" : "");
@@ -1070,7 +1078,8 @@ button.ghost {
       saveProg();
       sfx.cheer(); setTimeout(sfx.cheer, 600); S.flash = 3; confetti(last ? 220 : 90);
     } else sfx.groan();
-    S.mode = "over"; S.phase = "idle"; hideBanner();
+    S.mode = "over"; S.phase = "idle"; S.lastMode = "kick"; hideBanner();
+    $("overLab1").textContent = "Made"; $("overLab2").textContent = "Long"; $("menu").textContent = "Schedule";
     $("overThe").textContent = L.wk.length > 1 ? L.name : `Week ${L.wk} · ${L.name}`;
     $("overScore").textContent = pass ? (last ? "State champs!" : "Win!") : "Loss";
     if (!pass && char().bad) $("overMsg").dataset.gavin = "1";
@@ -1102,10 +1111,14 @@ button.ghost {
   $("charBack").addEventListener("click", () => { $("chars").hidden = true; $("title").hidden = false; });
   $("changeKicker").addEventListener("click", showChars);
   $("start").addEventListener("click", showChars);
-  $("menu").addEventListener("click", showLevels);
+  $("menu").addEventListener("click", () => {
+    if (S.lastMode === "sign") { $("over").hidden = true; $("title").hidden = false; S.mode = "title"; hud(); }
+    else showLevels();
+  });
+  $("tent").addEventListener("click", () => startSigning());
   $("back").addEventListener("click", () => { $("levels").hidden = true; $("title").hidden = false; });
   $("endless").addEventListener("click", () => startGame(-1));
-  $("again").addEventListener("click", () => startGame(S.level));
+  $("again").addEventListener("click", () => S.lastMode === "sign" ? startSigning() : startGame(S.level));
   $("next").addEventListener("click", () => startGame(S.level + 1));
   $("replay").addEventListener("click", () => { audio(); $("soundHint").hidden = true; startIntro(); });
   $("skip").addEventListener("click", () => { audio(); endIntro(); });
@@ -1494,6 +1507,7 @@ button.ghost {
   }
 
   function render() {
+    if (S.mode === "sign" || (S.mode === "over" && S.lastMode === "sign")) { renderSign(); return; }
     const bx = -BX - cam.x * 6;
     ctx.drawImage(back, bx, 0);
     if (S.mode === "title" || S.flash > 0) {         // camera flashes in the crowd
@@ -1578,12 +1592,410 @@ button.ghost {
     }
   }
 
+  // ---------- autograph tent ----------
+  const SKIN = ["#f1c7a3", "#d9a47a", "#a86b45", "#7a4a2e", "#4f2e1c"];
+  const HAIR = ["#1a1310", "#3b2416", "#7a5230", "#d8b067", "#111"];
+  const SHIRTS = ["#ff6a13", "#0a0a0a", "#f3efe6", "#ff6a13", "#26324a", "#ff8a3d"];
+  const FANS = [
+    { item: "football", ask: "Kadin!! Can you sign my football?", thanks: "I'm never washing this!" },
+    { item: "jersey", ask: "Sign my #7 jersey please!", thanks: "Best kicker in Michigan!" },
+    { item: "poster", ask: "Will you sign my poster?", thanks: "This is going on my wall!" },
+    { item: "helmet", ask: "Could you sign my mini helmet?", thanks: "Let's go Crusaders!" },
+    { item: "phone", ask: "Sign my phone case? Please?", thanks: "My friends won't believe this." },
+    { item: "cast", ask: "Sign my cast! Broke it at practice.", thanks: "Healed already. Thanks!" },
+    { item: "football", kid: true, ask: "Mr. Koza! I want to be a kicker!", thanks: "I'm going to practice every day!" },
+    { item: "slider", ask: "Can you sign my Savvy Slider?", thanks: "Best lunch of my life." },
+    { item: "paper", gavin: true, ask: "Hey Kadin... can you sign this? It's for me. Gavin.", thanks: "Thanks. I'll keep practicing, I guess." }
+  ];
+  const ITEMS = {
+    football: { shape: "ellipse", w: 150, h: 64 },
+    jersey: { shape: "shirt", w: 150, h: 78 },
+    poster: { shape: "rect", w: 150, h: 78 },
+    helmet: { shape: "ellipse", w: 100, h: 72 },
+    phone: { shape: "rect", w: 72, h: 92 },
+    cast: { shape: "rect", w: 160, h: 44 },
+    slider: { shape: "ellipse", w: 110, h: 58 },
+    paper: { shape: "rect", w: 130, h: 80 }
+  };
+  const SIGN_TIME = 60, ITEM_X = 330, ITEM_Y = 560, SPOT_X = 495;
+  const G = { fans: [], strokes: [], cur: null, len: 0, time: 0, signed: 0, missed: 0, hand: null, drawing: false, bestSign: 0, nextId: 0 };
+  try { G.bestSign = +localStorage.getItem("kk-signbest") || 0; } catch (e) {}
+
+  function newFan(i) {
+    let t = pick(FANS);
+    if (t.gavin && G.fans.some(f => f.gavin)) t = FANS[0];
+    return { ...t, id: G.nextId++, skin: pick(SKIN), hair: pick(HAIR), shirt: pick(SHIRTS),
+             x: SPOT_X + 70 + i * 60, state: "line", t: 0, patience: 1, item: t.item, hairStyle: (Math.random() * 3) | 0 };
+  }
+  function startSigning() {
+    audio();
+    Object.assign(S, { mode: "sign", phase: "idle", lastMode: "sign" });
+    Object.assign(G, { fans: [], strokes: [], cur: null, len: 0, time: SIGN_TIME, signed: 0, missed: 0, drawing: false, hand: null });
+    for (let i = 0; i < 4; i++) G.fans.push(newFan(i));
+    for (const id of ["title", "over", "levels", "chars", "introUI"]) $(id).hidden = true;
+    showBanner("AUTOGRAPH TENT", "Draw Kadin's signature on each item", true);
+    setTimeout(() => { if (S.mode === "sign") hideBanner(); }, 1600);
+    setPrompt("Draw your <b>signature</b> on the item");
+    hud();
+  }
+  const front = () => G.fans[0];
+  function patienceSecs() { return Math.max(5, 9 - (SIGN_TIME - G.time) * 0.05); }
+
+  function signUpdate(dt) {
+    if (G.time > 0) G.time = Math.max(0, G.time - dt);
+    const f = front();
+    G.fans.forEach((fan, i) => {
+      fan.t += dt;
+      const target = i === 0 ? SPOT_X : SPOT_X + 70 + (i - 1) * 60;
+      if (fan.state === "line" || fan.state === "walk") {
+        fan.x += (target - fan.x) * (1 - Math.exp(-dt * 5));
+        if (i === 0 && fan.state === "line") { fan.state = "walk"; fan.t = 0; }
+        if (i === 0 && fan.state === "walk" && Math.abs(fan.x - target) < 3) { fan.state = "wait"; fan.t = 0; }
+      }
+    });
+    if (f && f.state === "wait") {
+      f.patience -= dt / patienceSecs();
+      if (f.patience <= 0) { f.state = "sad"; f.t = 0; G.missed++; G.strokes = []; G.len = 0; G.drawing = false; tone(200, 0.4, 0.06, "sawtooth", 0.7); hud(); }
+    }
+    if (f && (f.state === "happy" || f.state === "sad") && f.t > (f.state === "happy" ? 1.1 : 0.9)) { f.state = "leave"; f.t = 0; }
+    if (f && f.state === "leave") {
+      f.x += 420 * dt;
+      if (f.x > W + 120) {
+        G.fans.shift(); G.strokes = []; G.len = 0;
+        if (G.time > 0) G.fans.push(newFan(G.fans.length));
+        hud();
+      }
+    }
+    if (G.time <= 0 && (!front() || front().state === "wait" || front().state === "line" || front().state === "walk")) endSigning();
+    else if (Math.floor(G.time) !== G.lastSec) { G.lastSec = Math.floor(G.time); hud(); }
+  }
+  function endSigning() {
+    S.mode = "over"; S.phase = "idle"; G.drawing = false; hideBanner();
+    if (G.signed > G.bestSign) { G.bestSign = G.signed; try { localStorage.setItem("kk-signbest", G.bestSign); } catch (e) {} }
+    $("overThe").textContent = "Autograph tent";
+    $("overScore").textContent = G.signed + " signed";
+    $("overStars").hidden = true; $("next").hidden = true;
+    $("overMsg").hidden = false;
+    $("overMsg").textContent = G.signed >= 20 ? "The line wrapped around Koza Field. Legend." : G.signed >= 10 ? "The fans went home happy." : "Sign faster. The fans are waiting.";
+    $("overLab1").textContent = "Signed"; $("overLab2").textContent = "Missed"; $("overLab3").textContent = "Best";
+    $("overMade").textContent = G.signed; $("overLong").textContent = G.missed; $("overBest").textContent = G.bestSign;
+    $("again").textContent = "Sign again"; $("menu").textContent = "Main menu";
+    $("over").hidden = false;
+    if (G.signed >= 10) { sfx.cheer(); confetti(120); S.flash = 2; }
+    setPrompt(tag());
+  }
+
+  // drawing the signature
+  const toCanvas = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; };
+  function itemPath(c, item, cx, cy) {
+    const d = ITEMS[item];
+    c.beginPath();
+    if (d.shape === "ellipse") c.ellipse(cx, cy, d.w, d.h, 0, 0, 7);
+    else if (d.shape === "rect") c.roundRect ? c.roundRect(cx - d.w, cy - d.h, d.w * 2, d.h * 2, 10) : c.rect(cx - d.w, cy - d.h, d.w * 2, d.h * 2);
+    else {
+      const sx = d.w / 86, sy = d.h / 85;
+      const pts = [[-38, -82], [0, -64], [38, -82], [86, -56], [71, -8], [50, -16], [50, 85], [-50, 85], [-50, -16], [-71, -8], [-86, -56]];
+      pts.forEach(([x, y], i) => i ? c.lineTo(cx + x * sx, cy + y * sy) : c.moveTo(cx + x * sx, cy + y * sy));
+      c.closePath();
+    }
+  }
+  function inItem(x, y) {
+    const f = front(); if (!f) return false;
+    const d = ITEMS[f.item];
+    return Math.abs(x - ITEM_X) < d.w + 12 && Math.abs(y - ITEM_Y) < d.h + 12;
+  }
+  cv.addEventListener("pointerdown", e => {
+    if (S.mode !== "sign") return;
+    const f = front(); if (!f || f.state !== "wait") return;
+    const [x, y] = toCanvas(e);
+    if (!inItem(x, y)) return;
+    cv.setPointerCapture && cv.setPointerCapture(e.pointerId);
+    G.drawing = true; G.cur = [[x - ITEM_X, y - ITEM_Y]]; G.strokes.push(G.cur); G.hand = [x, y];
+  });
+  cv.addEventListener("pointermove", e => {
+    if (S.mode !== "sign" || !G.drawing) return;
+    const [x, y] = toCanvas(e), last = G.cur[G.cur.length - 1];
+    const dx = x - ITEM_X - last[0], dy = y - ITEM_Y - last[1], d = Math.hypot(dx, dy);
+    if (d < 2) return;
+    G.cur.push([x - ITEM_X, y - ITEM_Y]); G.len += d; G.hand = [x, y];
+    if (Math.random() < 0.3) noise(0.04, 3000, 0.03);
+  });
+  const endStroke = () => {
+    if (S.mode !== "sign" || !G.drawing) return;
+    G.drawing = false;
+    const f = front();
+    if (f && f.state === "wait" && G.len >= 140) {
+      f.state = "happy"; f.t = 0; G.signed++;
+      sfx.tick(); noise(0.6, 1600, 0.12, 0.05);
+      if (G.signed % 10 === 0) { showBanner(G.signed + " AUTOGRAPHS!", "The line keeps growing", true); confetti(70); S.flash = 1.5; setTimeout(() => { if (S.mode === "sign") hideBanner(); }, 1300); }
+      hud();
+    }
+  };
+  cv.addEventListener("pointerup", endStroke);
+  cv.addEventListener("pointercancel", endStroke);
+
+  // ---- drawing the tent ----
+  function bubble(text, x, y, w) {
+    ctx.font = "600 18px 'Barlow Condensed', sans-serif";
+    const words = text.split(" "), lines = [];
+    let line = "";
+    for (const wd of words) { const t = line ? line + " " + wd : wd; if (ctx.measureText(t).width > w - 24 && line) { lines.push(line); line = wd; } else line = t; }
+    lines.push(line);
+    const h = lines.length * 21 + 16;
+    ctx.fillStyle = "#f3efe6"; ctx.strokeStyle = "#0a0a0a"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, 10) : ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + w - 60, y + h - 1); ctx.lineTo(x + w - 40, y + h + 16); ctx.lineTo(x + w - 34, y + h - 1); ctx.fill();
+    ctx.fillStyle = "#111"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+    lines.forEach((l, i) => ctx.fillText(l, x + 12, y + 9 + i * 21));
+  }
+  function drawFan(f, x, base, sc, isFront) {
+    const top = base - 300 * sc * (f.kid ? 0.8 : 1);
+    const mood = f.state === "happy" ? 1 : f.state === "sad" ? -1 : 0;
+    const hop = mood > 0 ? Math.abs(Math.sin(f.t * 12)) * 10 * sc : 0;
+    const y0 = top - hop;
+    const shirt = f.gavin ? "#c98258" : f.shirt;
+    // arms (raised when happy)
+    ctx.strokeStyle = f.skin; ctx.lineCap = "round"; ctx.lineWidth = 16 * sc;
+    for (const sx of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(x + sx * 50 * sc, y0 + 115 * sc);
+      if (mood > 0) ctx.lineTo(x + sx * 78 * sc, y0 + 10 * sc);
+      else ctx.lineTo(x + sx * 70 * sc, y0 + 220 * sc);
+      ctx.stroke();
+    }
+    // body
+    ctx.fillStyle = shirt;
+    ctx.beginPath();
+    ctx.moveTo(x - 58 * sc, y0 + 100 * sc); ctx.lineTo(x + 58 * sc, y0 + 100 * sc);
+    ctx.lineTo(x + 52 * sc, base + 40); ctx.lineTo(x - 52 * sc, base + 40); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 2; ctx.stroke();
+    if (shirt === "#ff6a13" || shirt === "#ff8a3d" || f.gavin) {
+      ctx.fillStyle = "#0a0a0a"; ctx.font = `${70 * sc}px Graduate, serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(f.gavin ? "0" : "7", x, y0 + 175 * sc);
+    }
+    // head
+    ctx.fillStyle = f.skin;
+    ctx.fillRect(x - 10 * sc, y0 + 82 * sc, 20 * sc, 22 * sc);
+    ctx.beginPath(); ctx.ellipse(x, y0 + 52 * sc, 34 * sc, 40 * sc, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = f.hair;
+    ctx.beginPath();
+    if (f.hairStyle === 0) ctx.ellipse(x, y0 + 28 * sc, 36 * sc, 22 * sc, 0, Math.PI, 0);
+    else if (f.hairStyle === 1) { ctx.ellipse(x, y0 + 30 * sc, 38 * sc, 26 * sc, 0, Math.PI * 0.95, Math.PI * 2.05); ctx.rect(x - 38 * sc, y0 + 30 * sc, 10 * sc, 40 * sc); ctx.rect(x + 28 * sc, y0 + 30 * sc, 10 * sc, 40 * sc); }
+    else { ctx.fillStyle = "#0a0a0a"; ctx.ellipse(x, y0 + 26 * sc, 37 * sc, 20 * sc, 0, Math.PI, 0); ctx.rect(x - 4 * sc, y0 + 22 * sc, 52 * sc, 8 * sc); }
+    ctx.fill();
+    if (f.gavin) {   // Gavin shows up in his helmet
+      ctx.fillStyle = "#17171b"; ctx.beginPath(); ctx.ellipse(x, y0 + 40 * sc, 40 * sc, 42 * sc, 0.25, Math.PI * 1.05, Math.PI * 2.1); ctx.fill();
+    }
+    ctx.fillStyle = "#111";
+    for (const ex of [-12, 12]) { ctx.beginPath(); ctx.ellipse(x + ex * sc, y0 + 50 * sc, 3.5 * sc, mood > 0 ? 2 * sc : 4 * sc, 0, 0, 7); ctx.fill(); }
+    ctx.strokeStyle = "#3a1d10"; ctx.lineWidth = 3 * sc;
+    ctx.beginPath();
+    if (mood > 0) { ctx.arc(x, y0 + 64 * sc, 12 * sc, 0.1 * Math.PI, 0.9 * Math.PI); }
+    else if (mood < 0) { ctx.arc(x, y0 + 78 * sc, 10 * sc, 1.15 * Math.PI, 1.85 * Math.PI); }
+    else ctx.arc(x, y0 + 66 * sc, 8 * sc, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+    if (isFront && f.state === "wait") {   // patience meter
+      const pw = 80 * sc, px = x - pw / 2, py = y0 - 18 * sc;
+      ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(px - 2, py - 2, pw + 4, 10);
+      ctx.fillStyle = f.patience > 0.5 ? "#4cc46a" : f.patience > 0.25 ? "#ffd23f" : "#ff3b1f";
+      ctx.fillRect(px, py, pw * f.patience, 6);
+    }
+  }
+  function drawItem(item, cx, cy, sc, signed) {
+    const d = ITEMS[item];
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(sc, sc); ctx.translate(-cx, -cy);
+    ctx.shadowColor = "rgba(0,0,0,.45)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 6;
+    itemPath(ctx, item, cx, cy);
+    const fills = { football: "#7a3b17", jersey: "#ff6a13", poster: "#f3efe6", helmet: "#17171b", phone: "#26324a", cast: "#f3efe6", slider: "#d79a52", paper: "#ece6d6" };
+    ctx.fillStyle = fills[item]; ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.save(); itemPath(ctx, item, cx, cy); ctx.clip();
+    if (item === "football") {
+      ctx.fillStyle = "#f3efe6"; ctx.fillRect(cx - d.w * 0.72, cy - d.h, 10, d.h * 2); ctx.fillRect(cx + d.w * 0.72 - 10, cy - d.h, 10, d.h * 2);
+      ctx.strokeStyle = "#f3efe6"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(cx - 40, cy - 30); ctx.lineTo(cx + 40, cy - 30);
+      for (let k = -3; k <= 3; k++) { ctx.moveTo(cx + k * 12, cy - 38); ctx.lineTo(cx + k * 12, cy - 22); }
+      ctx.stroke();
+    } else if (item === "jersey") {
+      ctx.fillStyle = "#0a0a0a"; ctx.font = "90px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.globalAlpha = 0.85; ctx.fillText("7", cx, cy + 22); ctx.globalAlpha = 1;
+    } else if (item === "poster") {
+      ctx.strokeStyle = "#ff6a13"; ctx.lineWidth = 10; ctx.strokeRect(cx - d.w, cy - d.h, d.w * 2, d.h * 2);
+      ctx.fillStyle = "#ff6a13"; ctx.font = "28px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.globalAlpha = 0.35; ctx.fillText("KADIN KOZA #7", cx, cy - 40); ctx.fillText("KOZA FIELD", cx, cy + 46); ctx.globalAlpha = 1;
+    } else if (item === "helmet") {
+      const hg = ctx.createRadialGradient(cx - 30, cy - 30, 5, cx, cy, d.w);
+      hg.addColorStop(0, "#ffffff"); hg.addColorStop(0.35, "#cfd4db"); hg.addColorStop(1, "#4a4f56");
+      ctx.fillStyle = hg; ctx.fillRect(cx - d.w, cy - d.h, d.w * 2, d.h * 2);
+      ctx.fillStyle = "#ff6a13"; ctx.fillRect(cx - d.w, cy - 8, d.w * 2, 16);
+    } else if (item === "phone") {
+      ctx.fillStyle = "#ff6a13"; ctx.font = "50px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("7", cx, cy - 40);
+      ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(cx - 40, cy - 70, 10, 0, 7); ctx.fill();
+    } else if (item === "cast") {
+      ctx.fillStyle = "#8a8a8a"; ctx.font = "600 16px 'Barlow Condensed', sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText("get well soon!", cx - 140, cy - 20); ctx.fillText(":)", cx + 110, cy + 18);
+    } else if (item === "slider") {
+      ctx.fillStyle = "#f3e2b8"; for (let k = 0; k < 14; k++) { ctx.beginPath(); ctx.ellipse(cx + Math.sin(k * 2.3) * 80, cy + Math.cos(k * 3.1) * 36, 4, 2.2, k, 0, 7); ctx.fill(); }
+    } else if (item === "paper") {
+      ctx.strokeStyle = "rgba(0,0,0,.12)"; ctx.lineWidth = 2;
+      for (let k = -3; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(cx - d.w, cy + k * 20); ctx.lineTo(cx + d.w, cy + k * 20 + 6); ctx.stroke(); }
+      ctx.fillStyle = "#555"; ctx.font = "600 18px 'Barlow Condensed', sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillText("To: Gavin", cx - d.w + 14, cy - d.h + 10);
+    }
+    // the signature, in silver marker on dark items and black on light ones
+    const dark = ["football", "helmet", "phone", "jersey"].includes(item) && item !== "helmet";
+    ctx.strokeStyle = dark ? "#eef1f5" : "#0b0b0d"; ctx.lineWidth = 5; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (const st of G.strokes) {
+      ctx.beginPath(); st.forEach(([x, y], i) => i ? ctx.lineTo(cx + x, cy + y) : ctx.moveTo(cx + x, cy + y)); ctx.stroke();
+    }
+    ctx.restore();
+    if (!signed && front() && front().state === "wait" && G.strokes.length === 0) {
+      ctx.setLineDash([8, 8]); ctx.strokeStyle = "rgba(255,210,63,.9)"; ctx.lineWidth = 3;
+      itemPath(ctx, item, cx, cy); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+  function drawKadinFront(cx) {
+    const t = S.t;
+    // chair
+    ctx.fillStyle = "#1b1d24"; ctx.fillRect(cx - 110, 250, 220, 230);
+    // torso
+    const jg = ctx.createLinearGradient(cx - 100, 0, cx + 100, 0);
+    jg.addColorStop(0, "#b84405"); jg.addColorStop(0.3, "#ff6f1f"); jg.addColorStop(0.55, "#ff8a3d"); jg.addColorStop(1, "#b84405");
+    ctx.fillStyle = jg;
+    ctx.beginPath();
+    ctx.moveTo(cx - 104, 340); ctx.quadraticCurveTo(cx - 100, 300, cx - 40, 298); ctx.lineTo(cx + 40, 298);
+    ctx.quadraticCurveTo(cx + 100, 300, cx + 104, 340); ctx.lineTo(cx + 88, 480); ctx.lineTo(cx - 88, 480); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,.5)"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = "#6b3f25"; ctx.beginPath(); ctx.moveTo(cx - 28, 298); ctx.lineTo(cx, 330); ctx.lineTo(cx + 28, 298); ctx.fill();
+    ctx.strokeStyle = "#0a0a0a"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(cx - 30, 298); ctx.lineTo(cx, 334); ctx.lineTo(cx + 30, 298); ctx.stroke();
+    ctx.fillStyle = "#0a0a0a"; ctx.font = "15px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("BROTHER RICE", cx, 354);
+    ctx.font = "78px Graduate, serif";
+    ctx.lineWidth = 4; ctx.strokeStyle = chrome(cx - 30, 380, cx + 30, 450); ctx.strokeText("7", cx, 420); ctx.fillText("7", cx, 420);
+    // chain with a heart
+    ctx.strokeStyle = "#dfe3e8"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - 26, 300); ctx.quadraticCurveTo(cx, 352, cx + 26, 300); ctx.stroke();
+    heart(cx, 334, 9, chrome(cx - 9, 334, cx + 9, 346));
+    // neck + head
+    ctx.fillStyle = "#6b3f25"; ctx.fillRect(cx - 16, 262, 32, 40);
+    const hg = ctx.createRadialGradient(cx - 14, 210, 6, cx, 225, 56);
+    hg.addColorStop(0, "#8b5636"); hg.addColorStop(1, "#5e361f");
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.ellipse(cx - 44, 230, 8, 12, 0, 0, 7); ctx.ellipse(cx + 44, 230, 8, 12, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx, 222, 44, 52, 0, 0, 7); ctx.fill();
+    // fade haircut
+    ctx.fillStyle = "#120c09";
+    ctx.beginPath(); ctx.ellipse(cx, 192, 45, 30, 0, Math.PI, 0); ctx.lineTo(cx + 45, 200); ctx.lineTo(cx - 45, 200); ctx.fill();
+    // chrome shades pushed up
+    for (const sx of [-1, 1]) {
+      ctx.fillStyle = chrome(cx + sx * 26 - 16, 170, cx + sx * 26 + 16, 186);
+      ctx.beginPath(); ctx.ellipse(cx + sx * 22, 180, 17, 9, 0, 0, 7); ctx.fill();
+    }
+    ctx.strokeStyle = "#dfe3e8"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - 6, 180); ctx.lineTo(cx + 6, 180); ctx.stroke();
+    // face: eyes follow the marker
+    const look = G.hand ? clamp((G.hand[0] - cx) / 200, -1, 1) : 0, blink = (t % 4) < 0.12;
+    ctx.fillStyle = "#0a0a0a";
+    ctx.fillRect(cx - 30, 240, 18, 5); ctx.fillRect(cx + 12, 240, 18, 5);   // eye black
+    for (const ex of [-17, 17]) {
+      ctx.fillStyle = "#f3efe6"; ctx.beginPath(); ctx.ellipse(cx + ex, 222, 9, blink ? 1 : 6, 0, 0, 7); ctx.fill();
+      if (!blink) { ctx.fillStyle = "#1a0f08"; ctx.beginPath(); ctx.arc(cx + ex + look * 4, 224, 3.6, 0, 7); ctx.fill(); }
+    }
+    ctx.strokeStyle = "#1a0f08"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(cx - 27, 208); ctx.lineTo(cx - 9, 206); ctx.moveTo(cx + 9, 206); ctx.lineTo(cx + 27, 208); ctx.stroke();
+    ctx.strokeStyle = "#2a130a"; ctx.lineWidth = 3;
+    const f = front();
+    ctx.beginPath();
+    if (f && f.state === "happy") { ctx.fillStyle = "#f3efe6"; ctx.arc(cx, 250, 14, 0.08 * Math.PI, 0.92 * Math.PI); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else { ctx.arc(cx, 248, 13, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); }
+  }
+  function drawArms(cx) {
+    const seg = (a, b, w, col) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); };
+    // left arm resting on the table
+    seg([cx - 96, 320], [cx - 122, 420], 30, "#ff6f1f");
+    seg([cx - 122, 420], [cx - 70, 505], 22, "#6b3f25");
+    seg([cx - 70, 505], [cx - 64, 498], 16, "#9aa1aa");
+    // right arm holds the marker and follows your finger
+    const rest = [cx + 40, 520], target = G.drawing && G.hand ? G.hand : rest;
+    G.armPos = G.armPos || rest.slice();
+    G.armPos[0] += (target[0] - G.armPos[0]) * 0.5; G.armPos[1] += (target[1] - G.armPos[1]) * 0.5;
+    const hand = [G.armPos[0] - 6, G.armPos[1] + 18], sh = [cx + 96, 320];
+    const elbow = [Math.max(sh[0], hand[0]) + 40, (sh[1] + hand[1]) / 2 + 20];
+    seg(sh, [lerp(sh[0], elbow[0], 0.6), lerp(sh[1], elbow[1], 0.6)], 30, "#ff6f1f");
+    seg([lerp(sh[0], elbow[0], 0.5), lerp(sh[1], elbow[1], 0.5)], elbow, 22, "#6b3f25");
+    seg(elbow, hand, 22, "#6b3f25");
+    seg([lerp(elbow[0], hand[0], 0.8), lerp(elbow[1], hand[1], 0.8)], [lerp(elbow[0], hand[0], 0.9), lerp(elbow[1], hand[1], 0.9)], 26, "#9aa1aa");
+    // silver marker
+    seg([hand[0] + 4, hand[1] - 2], [G.armPos[0], G.armPos[1]], 8, "#111");
+    seg([hand[0] + 14, hand[1] + 10], [hand[0] + 4, hand[1] - 2], 9, "#ff6a13");
+    ctx.fillStyle = "#6b3f25"; ctx.beginPath(); ctx.arc(hand[0], hand[1], 13, 0, 7); ctx.fill();
+  }
+  function renderSign() {
+    // concourse backdrop
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#0d0f15"); bg.addColorStop(1, "#1c1f28");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#14161d"; for (let x = 0; x < W; x += 60) ctx.fillRect(x, 0, 2, 470);
+    // string lights
+    ctx.strokeStyle = "#333"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 30); ctx.quadraticCurveTo(W / 2, 80, W, 30); ctx.stroke();
+    for (let i = 0; i <= 12; i++) {
+      const x = i * W / 12, y = 30 + Math.sin(i / 12 * Math.PI) * 25 + 6;
+      const on = (Math.sin(S.t * 3 + i) > -0.6);
+      ctx.fillStyle = on ? (i % 2 ? "#ffd23f" : "#ff8a3d") : "#4a3a20";
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill();
+    }
+    // banner
+    ctx.fillStyle = "#0a0a0a"; ctx.fillRect(110, 78, 380, 62);
+    ctx.strokeStyle = "#ff6a13"; ctx.lineWidth = 3; ctx.strokeRect(110, 78, 380, 62);
+    ctx.fillStyle = "#ff6a13"; ctx.font = "26px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("KOZA #7 AUTOGRAPHS", W / 2, 102);
+    ctx.fillStyle = "#ffd23f"; ctx.font = "600 13px 'Barlow Condensed', sans-serif"; ctx.fillText("KOZA FIELD · PRESENTED BY SAVVY SLIDERS", W / 2, 127);
+    // the line of fans, back to front
+    for (let i = G.fans.length - 1; i >= 1; i--) drawFan(G.fans[i], G.fans[i].x, 470, 0.72, false);
+    if (front()) drawFan(front(), front().x, 470, 0.86, true);
+    drawKadinFront(220);
+    // table
+    ctx.fillStyle = "#c94a00";
+    ctx.beginPath(); ctx.moveTo(30, 468); ctx.lineTo(570, 468); ctx.lineTo(600, 650); ctx.lineTo(0, 650); ctx.closePath(); ctx.fill();
+    const tg = ctx.createLinearGradient(0, 468, 0, 650);
+    tg.addColorStop(0, "rgba(255,255,255,.08)"); tg.addColorStop(1, "rgba(0,0,0,.15)");
+    ctx.fillStyle = tg; ctx.fill();
+    ctx.fillStyle = "#ff6a13"; ctx.fillRect(0, 650, W, H - 650);
+    ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0, 650, W, 8); ctx.fillRect(0, 676, W, 4);
+    ctx.font = "40px Graduate, serif"; ctx.fillText("BROTHER RICE", W / 2, 728);
+    ctx.font = "600 15px 'Barlow Condensed', sans-serif"; ctx.fillText("CRUSADERS FOOTBALL · #7 KADIN KOZA", W / 2, 768);
+    // the item on the table
+    const f = front();
+    if (f && f.state !== "leave" && f.state !== "line") {
+      if (f.state === "happy") {
+        const k = clamp(f.t / 0.8, 0, 1);
+        drawItem(f.item, lerp(ITEM_X, f.x, k), lerp(ITEM_Y, 380, k), lerp(1, 0.45, k), true);
+      } else if (f.state !== "sad") drawItem(f.item, ITEM_X, ITEM_Y, 1, false);
+    }
+    drawArms(220);
+    // speech
+    if (f && (f.state === "wait" || f.state === "walk")) bubble(f.ask, 300, 160, 280);
+    else if (f && f.state === "happy") bubble(f.thanks, 300, 160, 280);
+    else if (f && f.state === "sad") bubble("Aw, man...", 380, 180, 160);
+    // confetti + vignette
+    for (const p of parts) {
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+      ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    const vg = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.3, W / 2, H * 0.5, H * 0.8);
+    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.45)");
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    if (G.time > 0 && G.time < 10) {
+      ctx.fillStyle = "#ff3b1f"; ctx.font = "60px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.globalAlpha = 0.5 + 0.5 * Math.abs(Math.sin(S.t * 4)); ctx.fillText(Math.ceil(G.time), 540, 210); ctx.globalAlpha = 1;
+    }
+  }
+
   // ---------- loop ----------
   function update(dt) {
     S.t += dt;
     S.flash = Math.max(0, S.flash - dt);
     Object.assign(camT, CAM0);
     if (S.mode === "intro") introUpdate(dt);
+    if (S.mode === "sign") signUpdate(dt);
     if (S.phase === "kick") {
       S.kickT += dt;
       if (S.kickT >= 0.58) { launch(); S.phase = "flight"; }
@@ -1638,7 +2050,8 @@ button.ghost {
   }
 
   function gameOver() {
-    S.mode = "over"; S.phase = "idle"; hideBanner();
+    S.mode = "over"; S.phase = "idle"; S.lastMode = "kick"; hideBanner();
+    $("overLab1").textContent = "Made"; $("overLab2").textContent = "Long"; $("menu").textContent = "Schedule";
     $("overThe").textContent = "Final"; $("overScore").textContent = S.score + " pts";
     $("overStars").hidden = true; $("overMsg").hidden = true; $("next").hidden = true;
     $("again").textContent = "Kick again"; $("overLab3").textContent = "Best";
