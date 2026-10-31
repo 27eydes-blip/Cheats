@@ -530,6 +530,85 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
 .stat b { font-size: 22px; font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .phone, .msg.pop, .msg.typing i { animation: none; } }
 
+/* start screen: KOZA OS game hub */
+#title.hub {
+  justify-content: flex-start; gap: 10px; overflow-y: auto; overflow-x: hidden; padding: 14px 14px 18px;
+  background:
+    radial-gradient(70% 40% at 50% 18%, rgba(255,106,19,.28), transparent 70%),
+    radial-gradient(60% 40% at 50% 100%, rgba(200,38,28,.25), transparent 70%),
+    linear-gradient(180deg, rgba(5,6,10,.62), rgba(5,6,10,.94) 55%);
+  scrollbar-width: none;
+}
+#title.hub::-webkit-scrollbar { display: none; }
+#title .hub-fx { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255,138,61,.07) 0 1px, transparent 1px 36px),
+    repeating-linear-gradient(0deg, rgba(255,138,61,.07) 0 1px, transparent 1px 36px);
+  -webkit-mask: radial-gradient(120% 80% at 50% 30%, #000 30%, transparent 85%); mask: radial-gradient(120% 80% at 50% 30%, #000 30%, transparent 85%); }
+#title .hub-fx::after { content: ""; position: absolute; left: 0; right: 0; height: 120px; top: -120px;
+  background: linear-gradient(180deg, transparent, rgba(255,138,61,.16), transparent); animation: sweepY 4.5s linear infinite; }
+@keyframes sweepY { to { transform: translateY(1100px); } }
+#title .hub-top { display: flex; align-items: center; gap: 8px; align-self: stretch; padding-right: 86px; min-height: 26px; font: 700 11px var(--body); letter-spacing: .32em; text-transform: uppercase; color: rgba(255,176,102,.85); }
+#title .hub-top .dot { width: 7px; height: 7px; border-radius: 50%; background: #34d399; box-shadow: 0 0 10px #34d399; animation: blink 1.6s infinite; }
+#title .hub-top .ln { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,138,61,.6), transparent); }
+@keyframes blink { 50% { opacity: .3; } }
+#title .hub-title { margin: 4px 0 0; text-align: center; line-height: .9; text-shadow: none; }
+#title .hub-title .the { display: block; font: 700 12px var(--body); letter-spacing: .6em; color: rgba(255,255,255,.7); margin-bottom: 6px; }
+#title .hub-title .name { position: relative; display: block; font-family: var(--display); font-size: clamp(40px, 12vmin, 66px); letter-spacing: .02em;
+  background: linear-gradient(180deg, #ffffff 0%, #ffe0c2 38%, #ff8a3d 58%, #c94a00 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 18px rgba(255,106,19,.5)) drop-shadow(0 3px 0 #000); }
+#title .hub-title .name::before, #title .hub-title .name::after { content: attr(data-text); position: absolute; inset: 0; -webkit-background-clip: text; background-clip: text; color: transparent; opacity: 0; }
+#title .hub-title .name::before { background-image: linear-gradient(#36e2ff, #36e2ff); animation: glitch 5s infinite steps(1); }
+#title .hub-title .name::after { background-image: linear-gradient(#ff2d55, #ff2d55); animation: glitch 5s .08s infinite steps(1) reverse; }
+@keyframes glitch { 0%, 91%, 100% { opacity: 0; transform: none; } 92% { opacity: .8; transform: translate(-3px, 1px); clip-path: inset(10% 0 55% 0); } 94% { opacity: .8; transform: translate(3px, -1px); clip-path: inset(55% 0 12% 0); } 96% { opacity: 0; } }
+#title .hub-sub { font: 700 12px var(--body); letter-spacing: .3em; text-transform: uppercase; color: rgba(245,245,247,.7); }
+#title .hub-card { align-self: stretch; display: grid; grid-template-columns: 86px 1fr; gap: 12px; align-items: center; padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(255,255,255,.09), rgba(255,255,255,.03)); border: 1px solid rgba(255,176,102,.35);
+  clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px); backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 30px rgba(255,106,19,.08); }
+#title .hub-card .jersey { width: 86px; filter: drop-shadow(0 6px 14px rgba(0,0,0,.6)) drop-shadow(0 0 12px rgba(255,106,19,.35)); }
+#title .hs-row { display: flex; gap: 10px; align-items: center; }
+#title .hs-ring { --p: 0; flex: none; position: relative; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center;
+  background: conic-gradient(#ffb066 calc(var(--p) * 1%), rgba(255,255,255,.1) 0); box-shadow: 0 0 16px rgba(255,138,61,.4); }
+#title .hs-ring::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: #0c0d12; }
+#title .hs-ring b, #title .hs-ring span { position: relative; line-height: 1; }
+#title .hs-ring b { font: 400 20px var(--display); color: #fff; margin-top: 6px; }
+#title .hs-ring span { position: absolute; bottom: 9px; font: 700 8px var(--body); letter-spacing: .2em; color: #ffb066; }
+#title .hs-xp { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+#title .hs-k { font: 700 12px var(--body); letter-spacing: .14em; text-transform: uppercase; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#title .hs-xp .xpbar { width: 100%; height: 6px; background: rgba(255,255,255,.1); border-radius: 3px; overflow: hidden; }
+#title .hs-xp .xpbar i { display: block; height: 100%; background: linear-gradient(90deg, #ff6a13, #ffd23f); box-shadow: 0 0 10px #ff8a3d; }
+#title .hs-v { font: 600 11px var(--body); letter-spacing: .1em; color: rgba(245,245,247,.6); }
+#title .hs-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+#title .hs-mini span { display: flex; flex-direction: column; padding: 5px 6px; border-left: 2px solid #ff8a3d; background: rgba(0,0,0,.25); font: 600 10px var(--body); letter-spacing: .14em; text-transform: uppercase; color: rgba(245,245,247,.55); }
+#title .hs-mini b { font: 400 15px var(--display); letter-spacing: 0; color: #fff; }
+#title .hub-cta { position: relative; align-self: stretch; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 10px 10px; cursor: pointer; overflow: hidden;
+  border: 0; color: #120700; background: linear-gradient(90deg, #ff8a3d, #ff4d1f 60%, #ff6a13);
+  clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+  box-shadow: 0 0 30px rgba(255,90,31,.55); animation: rise .5s 1.4s both; }
+#title .hub-cta span { font: 400 24px var(--display); letter-spacing: .04em; }
+#title .hub-cta small { font: 700 11px var(--body); letter-spacing: .24em; text-transform: uppercase; opacity: .75; }
+#title .hub-cta::after { content: ""; position: absolute; top: 0; bottom: 0; width: 60px; left: -80px; transform: skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent); animation: shine 3s 2s infinite; }
+@keyframes shine { 0% { left: -80px; } 40%, 100% { left: 110%; } }
+#title .hub-cta:active { transform: translateY(2px); }
+#title .hub-grid { align-self: stretch; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; animation: rise .5s 1.6s both; }
+#title .tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; padding: 12px 4px 10px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.12); color: #f5f5f7; text-align: center;
+  background: linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+#title .tile svg { width: 26px; height: 26px; filter: drop-shadow(0 0 6px rgba(255,138,61,.7)); }
+#title .tile b { font: 700 12px var(--body); letter-spacing: .12em; text-transform: uppercase; }
+#title .tile small { font: 600 10px var(--body); letter-spacing: .08em; color: rgba(245,245,247,.5); }
+#title .tile:hover, #title .tile:focus-visible { border-color: rgba(255,176,102,.7); background: linear-gradient(160deg, rgba(255,138,61,.22), rgba(255,255,255,.03)); }
+#title .tile .ph-badge { top: 6px; right: 10px; }
+#title .hub-card { animation: rise .5s 1.1s both; }
+#title .hub-sub { animation: rise .5s .8s both; }
+#title .hub-top { animation: rise .5s .1s both; }
+#title .sponsor { margin-top: 2px; }
+#title.hub > .hub-fx { position: absolute; }
+@media (prefers-reduced-motion: reduce) { #title .hub-fx::after, #title .hub-cta::after, #title .hub-title .name::before, #title .hub-title .name::after { animation: none; } }
 /* kicker select */
 #chars { justify-content: flex-start; overflow-y: auto; padding-block: 24px; }
 #chars h1 .name { font-size: clamp(28px, 8vmin, 46px); }
@@ -669,10 +748,13 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         <div class="ph-homebar"><button id="phHome" type="button" aria-label="Home"></button></div>
       </div>
 
-      <div class="overlay" id="title" hidden>
-        <div class="beam l"></div><div class="beam r"></div>
-        <h1><span class="the">The</span><span class="name">Kadin Koza</span></h1>
-        <svg class="jersey" viewBox="0 0 200 200" aria-label="Orange and black Brother Rice jersey, Koza number 7">
+      <div class="overlay hub" id="title" hidden>
+        <div class="hub-fx"></div>
+        <div class="hub-top"><span class="dot"></span><span>Koza OS 7.0</span><span class="ln"></span><span id="hubClock">Online</span></div>
+        <h1 class="hub-title"><span class="the">The</span><span class="name" data-text="Kadin Koza">Kadin Koza</span></h1>
+        <div class="hub-sub">Brother Rice · #7 · Koza Field</div>
+        <div class="hub-card">
+          <svg class="jersey" viewBox="0 0 200 200" aria-label="Orange and black Brother Rice jersey, Koza number 7">
           <defs>
             <clipPath id="shirt"><path d="M62 18 Q100 36 138 18 L186 44 L171 92 L150 84 L150 188 L50 188 L50 84 L29 92 L14 44 Z"/></clipPath>
             <path id="arch" d="M44 82 Q100 56 156 82"/>
@@ -704,22 +786,18 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
             <path transform="translate(40 52) rotate(-20)" d="M0 -2 C0 -6 -6 -6 -6 -1.5 C-6 2 -2 4 0 7 C2 4 6 2 6 -1.5 C6 -6 0 -6 0 -2Z"/>
           </g>
         </svg>
-        <div class="tag">Brother Rice · #7 · Koza Field</div>
-        <div class="sponsor">Presented by <b>Savvy Sliders</b></div>
-        <div class="lvlline" id="titleLevel"></div>
-        <p class="how">Tap once to set the power. Tap again to aim. Every make moves you back. Three misses and the game is over.</p>
-        <div class="actions">
-          <button class="go" id="start" type="button">Take the field</button>
-          <button class="go" id="town" type="button">Kadin Town</button>
-          <button class="ghost" id="lockerBtn" type="button">Locker room</button>
-          <button class="ghost icon-btn phone-title" id="phoneTitleBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3" fill="#0a0c11"/><rect x="8" y="5" width="8" height="12" rx="1" fill="#9fd3ff"/><circle cx="12" cy="19.5" r="1" fill="#9fd3ff"/></svg>Kadin's phone<span class="ph-badge" id="phBadge2" hidden>0</span></button>
-          <button class="ghost" id="replay" type="button">Watch intro</button>
-          <button class="ghost" id="tent" type="button">Autograph tent</button>
-          <button class="ghost icon-btn" id="pt" type="button" aria-label="PT Station">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#ff6a13"/><path d="M10 5h4v5h5v4h-5v5h-4v-5H5v-4h5z" fill="#0a0c11"/></svg>
-            PT Station
-          </button>
+          <div class="hub-stats" id="titleLevel"></div>
         </div>
+        <button class="hub-cta" id="start" type="button"><span>Take the field</span><small>Tap power · tap aim · win State</small></button>
+        <div class="hub-grid">
+          <button class="tile" id="town" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="#ffb066" stroke-width="1.8"><path d="M3 21V10l5-3 5 3v11M13 21V6l4-3 4 3v15M2 21h20"/><path d="M7 13h2M7 17h2M16 9h2M16 13h2M16 17h2"/></svg><b>Town</b><small>Walk around</small></button>
+          <button class="tile" id="lockerBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="#ffb066" stroke-width="1.8"><path d="M8 3l4 2 4-2 5 3-2 5-3-1v11H8V10l-3 1-2-5z"/></svg><b>Locker</b><small>Fits + bling</small></button>
+          <button class="tile" id="phoneTitleBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="#ffb066" stroke-width="1.8"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 5h4M11 19h2"/></svg><b>Phone</b><small>Texts</small><span class="ph-badge" id="phBadge2" hidden>0</span></button>
+          <button class="tile" id="tent" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="#ffb066" stroke-width="1.8"><path d="M4 19c3-1 4-6 7-6s2 4 5 4 3-3 4-4"/><path d="M14 5l5 5-9 9H5v-5z"/></svg><b>Autographs</b><small>Sign fast</small></button>
+          <button class="tile" id="pt" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="#ffb066" stroke-width="1.8"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg><b>PT Station</b><small>With Dalton</small></button>
+          <button class="tile" id="replay" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="#ffb066" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9l5 3-5 3z" fill="#ffb066"/></svg><b>Intro</b><small>The winner</small></button>
+        </div>
+        <div class="sponsor">Presented by <b>Savvy Sliders</b></div>
       </div>
 
       <div class="overlay" id="chars" hidden>
@@ -1110,7 +1188,11 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   function hud() {
     if (typeof levelInfo === "function") {
       const L = levelInfo();
-      $("titleLevel").innerHTML = `Kadin LV <b>${L.level}</b><span class="xpbar"><i style="width:${Math.round(L.into / L.need * 100)}%"></i></span>${L.into}/${L.need} XP`;
+      const pct = Math.round(L.into / L.need * 100);
+      let fol = "12.5K", stars = 0, mis = 0;
+      try { fol = PH.followers >= 1000 ? (PH.followers / 1000).toFixed(1) + "K" : PH.followers; stars = (prog.stars || []).reduce((a, b) => a + (b || 0), 0); mis = MISSION_ORDER.filter(k => PH.missions[k] === "done").length; } catch (e) {}
+      $("titleLevel").innerHTML = `<div class="hs-row"><div class="hs-ring" style="--p:${pct}"><b>${L.level}</b><span>LV</span></div><div class="hs-xp"><span class="hs-k">OVR 99 · Kicker</span><div class="xpbar"><i style="width:${pct}%"></i></div><span class="hs-v">${L.into}/${L.need} XP to LV ${L.level + 1}</span></div></div>`
+        + `<div class="hs-mini"><span><b>${fol}</b>Fans</span><span><b>${stars}/18</b>Stars</span><span><b>${mis}</b>Missions</span></div>`;
       if (S.mode === "town" || S.mode === "locker") {
         $("lab1").textContent = "Level"; $("lab2").textContent = "XP";
         $("lab3").textContent = S.mode === "town" ? "Near" : "Jersey"; $("lab4").textContent = S.mode === "town" ? "Sliders" : "Sweet spot";
@@ -1473,6 +1555,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     try { localStorage.setItem("kk-char", S.char); } catch (e) {}
     if (CHARS[S.char].punter) startGame(-2); else showLevels();
   }));
+  setInterval(() => { const d = new Date(), el = $("hubClock"); if (el) el.textContent = `${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, "0")} · Online`; }, 1000);
   function showTitle() {
     for (const id of HIDE_ALL) $(id).hidden = true;
     $("title").hidden = false;
@@ -3099,7 +3182,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     { id: "dalton", name: "Dalton", lines: "dalton", path: [[868, 120], [868, 1980], [732, 1980], [732, 120]], speed: 120, look: { skin: "#eec5a6", shirt: "#111", num: "MVPT", numColor: "#f3efe6", hair: "#33221a", big: true, shoes: "#f3efe6" } },
     { id: "fan1", name: "Fan", lines: "fan", path: ring(800, 910, 110), speed: 45, look: { skin: "#f1c7a3", shirt: "#ff6a13", num: "7", numColor: "#0a0a0a", hair: "#7a5230", shoes: "#f3efe6" } },
     { id: "fan2", name: "Fan", lines: "fan", path: ring(800, 910, 140).reverse(), speed: 52, look: { skin: "#7a4a2e", shirt: "#0a0a0a", num: "7", numColor: "#ff6a13", hair: "#111", shoes: "#ff6a13" } },
-    { id: "michael", name: "Michael Shaffou", lines: "michael", path: [[920, 880], [1480, 880], [1480, 950], [920, 950]], speed: 55, look: { skin: "#7fb24a", shirt: "#5a3f2a", num: "", hair: "#2f3b1a", shoes: "#2a1a10", pants: "#3a3d46", ogre: true, big: true } },
+    { id: "michael", name: "Michael Shaffou", lines: "michael", path: [[920, 880], [1480, 880], [1480, 950], [920, 950]], speed: 55, look: { skin: "#f3d9c6", shirt: "#5a3f2a", num: "", hair: "#3b2516", shoes: "#2a1a10", pants: "#3a3d46", ogre: true, big: true } },
     { id: "fan3", name: "Fan", lines: "fan", path: [[300, 1600], [700, 1600]], speed: 40, look: { skin: "#d9a47a", shirt: "#26324a", num: "", numColor: "#fff", hair: "#d8b067", shoes: "#f3efe6" } },
     { id: "girl1", name: "Fan", lines: "girl", path: [[360, 1625]], speed: 0, look: { skin: "#f0c9a8", shirt: "#ff6a13", num: "7", numColor: "#0a0a0a", hair: "#3b2516", longHair: true, shoes: "#f3efe6" } },
     { id: "girl2", name: "Fan", lines: "girl", path: [[470, 1625]], speed: 0, look: { skin: "#e2b08a", shirt: "#0a0a0a", num: "7", numColor: "#ff6a13", hair: "#d9b26a", longHair: true, shoes: "#f3efe6" } }
@@ -3330,7 +3413,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         return SC_DESKS.some(([dx, dy]) => Math.abs(x - dx) < 46 && y > dy - 20 && y < dy + 16);
       },
       npcs: [
-        { id: "michaelS", name: "Michael Shaffou", lines: "michael", fight: true, path: [[150, 248], [214, 238], [150, 248], [196, 244], [150, 248]], speed: 90, look: { skin: "#7fb24a", shirt: "#5a3f2a", num: "", hair: "#2f3b1a", shoes: "#2a1a10", pants: "#3a3d46", ogre: true, big: true } },
+        { id: "michaelS", name: "Michael Shaffou", lines: "michael", fight: true, path: [[150, 248], [214, 238], [150, 248], [196, 244], [150, 248]], speed: 90, look: { skin: "#f3d9c6", shirt: "#5a3f2a", num: "", hair: "#3b2516", shoes: "#2a1a10", pants: "#3a3d46", ogre: true, big: true } },
         { id: "teacher", name: "Mr. Krysiak", lines: "teacher", path: [[300, 222]], speed: 0, look: { skin: "#f0c9a8", shirt: "#26324a", num: "", hair: "#6b6b6b", shoes: "#2a1a10", pants: "#3a3d46", glasses: true } },
         { id: "st1", name: "Classmate", lines: "student", sit: true, path: [[150, 288]], speed: 0, look: { skin: "#d9a47a", shirt: "#ff6a13", num: "", hair: "#2a1a10" } },
         { id: "st2", name: "Classmate", lines: "student", sit: true, path: [[450, 288]], speed: 0, look: { skin: "#f1c7a3", shirt: "#0a0a0a", num: "", hair: "#d8b067", longHair: true } },
@@ -3654,7 +3737,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     noah: { name: "Noah Samano", short: "Noah", color: "#ffd23f", init: "14" },
     krysiak: { name: "Mr. Krysiak", short: "Krysiak", color: "#9fd3ff", init: "K" },
     mom: { name: "Mom", short: "Mom", color: "#e85d9a", init: "M" },
-    michael: { name: "Michael Shaffou", short: "Michael", color: "#7fb24a", init: "MS" }
+    michael: { name: "Michael Shaffou", short: "Michael", color: "#f3d9c6", init: "MS" }
   };
   const BACKLOG = [
     ["coach", "Yesterday", "Koza. Practice at 3."],
@@ -4074,7 +4157,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       ctx.fillStyle = o.skin;   // pointy ears
       for (const sx of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx * 11, -70); ctx.lineTo(sx * 21, -76); ctx.lineTo(sx * 12, -62); ctx.fill(); }
       if (!o.back) {
-        ctx.strokeStyle = "#2f3b1a"; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(-8, -71); ctx.lineTo(-1, -69); ctx.lineTo(1, -69); ctx.lineTo(8, -71); ctx.stroke();   // angry unibrow
+        ctx.strokeStyle = "#3b2516"; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(-8, -71); ctx.lineTo(-1, -69); ctx.lineTo(1, -69); ctx.lineTo(8, -71); ctx.stroke();   // angry unibrow
         ctx.fillStyle = "#f3efe6";   // tusks
         for (const sx of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx * 4.5, -60); ctx.lineTo(sx * 2.5, -65); ctx.lineTo(sx * 6.5, -61); ctx.fill(); }
         ctx.fillStyle = "rgba(120,40,30,.35)"; ctx.beginPath(); ctx.ellipse(0, -59.5, 5, 1.8, 0, 0, 7); ctx.fill();
