@@ -556,6 +556,7 @@ function morphFor(si, t, tier = 0) {
   if (m.scary) {
     M.scary = true; M.acc = '#ff3030'; M.mandStyle = 'hook'; M.mand *= 1.3; M.spines = true; M.headSpines = t !== 1; M.eye *= 1.15; M.glow = 1;
     const X = SCARY[t]; Object.assign(M, X.m); M.ppal = X.pal; if (X.gpal) M.gpal = X.gpal;
+    if (t === 2 || t === 3) M.extraJaws = true; if (t === 2 || t === 3 || t === 9) M.extraLegs = true; if (t === 3 || t === 9) M.crystal = true;
     M.mand *= 1.35; M.glow = Math.max(M.glow, .75); M.dorsal = M.legSpikes = M.fangs = true; M.spines = true; if (t !== 1) M.headSpines = true; if (t === 3 || t === 9 || t === 11) M.crown = M.scars = true;
     if (tier) { M.spines = true; M.thick *= 1 + .1 * tier; }
   }
@@ -570,6 +571,7 @@ const LEGS = [
   { ax: 2.3, ay: .75, rest: [6.6, 5.6], a: 3.8, b: 3.7, bend: -1 },
   { ax: .7, ay: 1.0, rest: [1.2, 7.2], a: 4.0, b: 4.1, bend: .3 },
   { ax: -.4, ay: .9, rest: [-5.8, 6.8], a: 4.7, b: 4.9, bend: 1 },
+  { ax: -1.3, ay: .8, rest: [-9.2, 5.2], a: 4.4, b: 4.8, bend: 1.3 },
 ];
 function capsule(g, x1, y1, x2, y2, w1, w2, P) {
   const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, an = Math.atan2(ny, nx);
@@ -691,8 +693,8 @@ function mandibles(g, st, dead, P, M, hx, hrx, hry) {
 function drawAnt(g, st, dead, P0, M) {
   P0 = M.ppal || P0;
   const P = dead ? deadPal(P0) : P0;
-  for (let li = 0; li < 3; li++) for (const s of [-1, 1]) {
-    const groupA = li === 1 ? s === 1 : s === -1;
+  for (let li = 0; li < (M.extraLegs ? 4 : 3); li++) for (const s of [-1, 1]) {
+    const groupA = li % 2 === 1 ? s === 1 : s === -1;
     antLeg(g, li, s, ((st.cyc + (groupA ? 0 : .5)) % 1 + 1) % 1, dead, P, M);
   }
   const [gx, grx, gry] = M.gaster;
@@ -744,6 +746,11 @@ function drawAnt(g, st, dead, P0, M) {
   }
   if (M.scary && !dead) {
     g.save(); g.beginPath(); g.ellipse(gx, 0, grx, gry, 0, 0, TAU); g.clip();
+    const inner = g.createRadialGradient(gx, 0, 0, gx, 0, grx); inner.addColorStop(0, 'rgba(255,90,60,.55)'); inner.addColorStop(.6, 'rgba(160,0,20,.35)'); inner.addColorStop(1, 'rgba(40,0,0,0)'); g.fillStyle = inner; g.fillRect(gx - grx, -gry, grx * 2, gry * 2);
+    g.fillStyle = 'rgba(255,60,50,.55)'; for (const [u, v, r] of [[.25, .1, .32], [-.15, -.2, .26], [-.45, .15, .22], [.05, .3, .18]]) { g.beginPath(); g.ellipse(gx + grx * u, gry * v, grx * r, gry * r * .8, u, 0, TAU); g.fill(); }
+    g.strokeStyle = 'rgba(255,200,170,.55)'; g.lineWidth = .1; g.beginPath(); g.moveTo(gx + grx * .8, 0); g.bezierCurveTo(gx + grx * .2, gry * .4, gx - grx * .2, -gry * .4, gx - grx * .85, 0); g.stroke();
+    g.restore();
+    g.save(); g.beginPath(); g.ellipse(gx, 0, grx, gry, 0, 0, TAU); g.clip();
     g.strokeStyle = 'rgba(255,40,50,.55)'; g.lineWidth = .22;
     for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(gx + grx * .9, sd * gry * .15); g.quadraticCurveTo(gx, sd * gry * .75, gx - grx * .95, sd * gry * .2); g.stroke(); }
     g.beginPath(); g.moveTo(gx + grx * .9, 0); g.lineTo(gx - grx * .9, 0); g.stroke();
@@ -785,7 +792,21 @@ function drawAnt(g, st, dead, P0, M) {
   const [hx, hrx, hry] = M.head;
   if (hx - hrx > 2.25 + 1.55 * ms - .2) capsule(g, 2.1 + 1.4 * ms, 0, hx - hrx + .3, 0, .62 * ms + .25, .55, P);
   mandibles(g, st, dead, P, M, hx, hrx, hry);
+  if (M.extraJaws) mandibles(g, { ...st, open: st.open * .6 + .25 }, dead, P, { ...M, mand: M.mand * .5, mandStyle: 'saw', fangs: true }, hx - hrx * .2, hrx * .85, hry * .45);
   if (M.headSpines) for (const s of [-1, 1]) capsule(g, hx - hrx * .55, s * hry * .72, hx - hrx * 1.08, s * hry * 1.12, .55, .12, P);
+  if (M.crystal) {
+    const shard = (bx, by, ang, L, w) => {
+      const ex = bx + Math.cos(ang) * L, ey = by + Math.sin(ang) * L, nx = -Math.sin(ang) * w, ny = Math.cos(ang) * w;
+      const cg = g.createLinearGradient(bx + nx, by + ny, bx - nx, by - ny); cg.addColorStop(0, dead ? '#5a4a46' : 'rgba(255,150,140,.95)'); cg.addColorStop(.45, dead ? '#3a2a26' : 'rgba(220,20,40,.9)'); cg.addColorStop(1, dead ? '#201814' : 'rgba(90,0,12,.95)');
+      g.fillStyle = cg; g.beginPath(); g.moveTo(bx + nx, by + ny); g.lineTo(bx + Math.cos(ang) * L * .7 + nx * .6, by + Math.sin(ang) * L * .7 + ny * .6); g.lineTo(ex, ey); g.lineTo(bx + Math.cos(ang) * L * .6 - nx * .7, by + Math.sin(ang) * L * .6 - ny * .7); g.lineTo(bx - nx, by - ny); g.closePath(); g.fill();
+      if (!dead) { g.strokeStyle = 'rgba(255,235,235,.8)'; g.lineWidth = .1; g.beginPath(); g.moveTo(bx + nx * .2, by + ny * .2); g.lineTo(ex, ey); g.stroke(); }
+    };
+    for (const s of [-1, 1]) {
+      for (const [a, L, w] of [[1.0, 3.4, .55], [1.45, 4.6, .7], [1.9, 3.9, .6], [2.35, 2.8, .5]]) shard(hx + Math.cos(a) * hrx * .8, s * Math.sin(a) * hry * .8, s * (a - .3), L, w);
+      for (const [x, L] of [[2.4, 3.2], [1.1, 3.6], [-.2, 3.0], [-1.6, 2.4]]) shard(x, s * .9 * M.meso, s * 1.9, L, .5);
+      for (const u of [.5, 0, -.5]) shard(M.gaster[0] + M.gaster[1] * u, s * M.gaster[2] * .85, s * 1.75, 2.6, .45);
+    }
+  }
   if (M.crown) {
     const HP = { light: mix(M.acc, '#ffffff', .2), base: P.base, mid: P.mid, dark: P.dark };
     for (const s of [-1, 1]) {
@@ -854,6 +875,11 @@ function drawAnt(g, st, dead, P0, M) {
       const [u, v] = HSEED.punct[(i * 3) % HSEED.punct.length], x = gx - grx + u * (hx + hrx - gx + grx), y = (v - .5) * 3.2;
       g.fillStyle = i % 3 ? 'rgba(170,130,85,.7)' : 'rgba(110,80,50,.75)'; g.beginPath(); g.arc(x, y, .12 + u * .16, 0, TAU); g.fill();
     }
+  }
+  if (M.scary && !dead) {
+    g.strokeStyle = 'rgba(255,50,40,.7)'; g.lineWidth = .14; g.lineCap = 'round';
+    const vein = (x0, y0, x1, y1, br) => { g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo((x0 + x1) / 2 + (y1 - y0) * .25, (y0 + y1) / 2 - (x1 - x0) * .2, x1, y1); g.stroke(); if (br) { g.beginPath(); g.moveTo((x0 + x1) / 2, (y0 + y1) / 2); g.lineTo((x0 + x1) / 2 + (y1 - y0) * .35, (y0 + y1) / 2 + (x1 - x0) * .3); g.stroke(); } };
+    for (const s2 of [-1, 1]) { vein(hx + hrx * .3, s2 * hry * .2, hx - hrx * .8, s2 * hry * .7, true); vein(2.6, s2 * .3, -.3, s2 * .7, true); vein(-.6, s2 * .3, gx + grx * .2, s2 * gry * .55, true); vein(gx + grx * .2, s2 * gry * .55, gx - grx * .7, s2 * gry * .3, true); }
   }
   if (M.scary && !dead) for (const [ox, oy] of [[-.22, 0], [-.42, .26], [-.42, -.26]]) { const x = hx + hrx * ox, y = hry * oy, og = g.createRadialGradient(x, y, 0, x, y, .45); og.addColorStop(0, 'rgba(255,200,150,1)'); og.addColorStop(.35, 'rgba(255,40,20,.95)'); og.addColorStop(1, 'rgba(255,0,0,0)'); g.fillStyle = og; g.beginPath(); g.arc(x, y, .45, 0, TAU); g.fill(); }
   for (const s of [-1, 1]) antAntenna(g, s, st, dead, P, M, hx + hrx * .55, s * hry * .35);
@@ -1942,7 +1968,7 @@ function newGame(sis, demo) {
         log: [], logDirty: true, foodTimer: 5, pings: [], lastWarn: -99, toastUntil: 0, toastMsg: '', toastKind: '', evap: 0, flights: [], beasts: [], beastT: 140, pits: [],
         rain: { k: 0, on: false, next: rnd(200, 300), end: 0, flashAt: -1e9 }, hist: [], histT: 0, follow: null, ftxt: [], wasps: [], wear: new Float32Array(WW * WH), wearDirty: true, lizT: rnd(420, 520), seasonI: 0, bridges: [], terrT: 0, terrDirty: true,
         herds: [], towner: new Int8Array(FBW * FBH).fill(-1), terr: cols.map(() => new Float32Array(FBW * FBH)) };
-  for (const c of cols) { c.scary = !!SPEC(c).morph.scary; c.eyeP = []; c.spdc = TYPES.map((_, t) => antStats(c, t).spd); c.dotCol = mix(c.ui, '#1a1008', .45); c.rgb = hex(c.ui); c.land = 0; c.myHerds = []; c.bp = {}; c.raft = !!SPEC(c).mods.raft; c.bridge = !!SPEC(c).mods.bridge; }
+  for (const c of cols) { c.scary = !!SPEC(c).morph.scary; c.eyeP = []; c.gasP = []; c.cracks = Array.from({ length: 7 }, (_, i) => { const a = i / 7 * TAU + rnd(-.3, .3), pts = [[Math.cos(a) * 14, Math.sin(a) * 14]]; let r = 14, aa = a; for (let k = 0; k < 4; k++) { r += rnd(10, 16); aa += rnd(-.35, .35); pts.push([Math.cos(aa) * r, Math.sin(aa) * r]); } return pts; }); c.spdc = TYPES.map((_, t) => antStats(c, t).spd); c.dotCol = mix(c.ui, '#1a1008', .45); c.rgb = hex(c.ui); c.land = 0; c.myHerds = []; c.bp = {}; c.raft = !!SPEC(c).mods.raft; c.bridge = !!SPEC(c).mods.bridge; }
   for (const [x, y] of HERD_SPOTS) {
     const f = { kind: 'dew', x, y, amt: 12, max: 30, ang: 0 }, h = { x, y, owner: -1, f, img: pick(HERD_IMGS), rot: rnd(0, TAU) };
     f.herd = h; G.foods.push(f); G.herds.push(h);
@@ -3315,7 +3341,8 @@ function drawLand() {
   for (let i = 0; i < own.length; i++) {
     const k = own[i], o = i * 4;
     if (k < 0) { landT[o + 3] = 0; continue; }
-    const c = G.cols[k]; landT[o] = c.rgb[0]; landT[o + 1] = c.rgb[1]; landT[o + 2] = c.rgb[2]; landT[o + 3] = (Math.min(1, G.terr[k][i] / 8) * 150 + 30) / 255 * .28;
+    const c = G.cols[k]; if (c.scary) { landT[o] = 70; landT[o + 1] = 4; landT[o + 2] = 10; landT[o + 3] = (Math.min(1, G.terr[k][i] / 8) * .55 + .12); continue; }
+    landT[o] = c.rgb[0]; landT[o + 1] = c.rgb[1]; landT[o + 2] = c.rgb[2]; landT[o + 3] = (Math.min(1, G.terr[k][i] / 8) * 150 + 30) / 255 * .28;
   }
   const d = wearImg.data, w = G.wear, R = FB / WC;
   for (let y = 0; y < WH; y++) {
@@ -3330,6 +3357,7 @@ function drawLand() {
         const tr = (landT[i00] * w00 + landT[i10] * w10 + landT[i01] * w01 + landT[i11] * w11) / ta, tg = (landT[i00 + 1] * w00 + landT[i10 + 1] * w10 + landT[i01 + 1] * w01 + landT[i11 + 1] * w11) / ta, tb = (landT[i00 + 2] * w00 + landT[i10 + 2] * w10 + landT[i01 + 2] * w01 + landT[i11 + 2] * w11) / ta;
         r = tr * ta + r * (1 - ta); gg = tg * ta + gg * (1 - ta); b = tb * ta + b * (1 - ta); a = ta + a * (1 - ta);
       }
+      if (ta > .1) { const vx = x * 1.7, vy = y * 1.7, vn = Math.abs(nlerp(vx * .35, vy * .35) - .5) + Math.abs(nlerp(vx * .9 + 50, vy * .9) - .5) * .5; if (vn < .05 && landT[i00] === 70) { const vk = (1 - vn / .05) * ta; r = r * (1 - vk) + 230 * vk; gg = gg * (1 - vk) + 30 * vk; b = b * (1 - vk) + 40 * vk; a = Math.min(1, a + vk * .5); } }
       if (a < .004) { d[o + 3] = 0; continue; }
       d[o] = r / a; d[o + 1] = gg / a; d[o + 2] = b / a; d[o + 3] = a * 255;
     }
@@ -3391,7 +3419,21 @@ function drawSky(t, z, x0, y0, x1, y1) {
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   }
 }
-let frame = 0; const nightEyes = [];
+let frame = 0; const nightEyes = [], pulseAnts = [];
+const heartbeat = t => Math.pow(Math.max(0, Math.sin(t * 2.6)), 10) + .65 * Math.pow(Math.max(0, Math.sin(t * 2.6 - .55)), 10);
+const PULSE = (() => { const c = mk(64, 64), g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,170,130,1)'); gr.addColorStop(.25, 'rgba(255,40,30,.8)'); gr.addColorStop(1, 'rgba(160,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })();
+function drawPulses(t, rot) {
+  if (!pulseAnts.length) return;
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < pulseAnts.length; i += 2) {
+    const a = pulseAnts[i], k = pulseAnts[i + 1], col = G.cols[a.c], gp = col.gasP[a.t] || (col.gasP[a.t] = (() => { const M = morphFor(col.si, a.t), us = unitScale(a.t); return [M.gaster[0] * us, M.gaster[1] * us, M.gaster[2] * us, (M.head[0] + M.head[1]) * us]; })());
+    const hb = heartbeat(t + a.gp * 3), wave = ((t * 1.4 + a.gp) % 1);
+    rot(a.x, a.y, a.a, k);
+    ctx.globalAlpha = .25 + .75 * hb; ctx.drawImage(PULSE, gp[0] - gp[1] * 1.1, -gp[2] * 1.3, gp[1] * 2.2, gp[2] * 2.6);
+    const wx = gp[3] + (gp[0] - gp[1] - gp[3]) * wave, wr = gp[2] * .9; ctx.globalAlpha = .55 * Math.sin(wave * Math.PI); ctx.drawImage(PULSE, wx - wr, -wr, wr * 2, wr * 2);
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; pulseAnts.length = 0;
+}
 function render(now) {
   const z = cam.z, m = z * dpr, shk = cam.shake ? cam.shake * dpr : 0, ox = (vw / 2 - cam.x * z) * dpr + (shk ? (Math.random() - .5) * shk : 0), oy = (vh / 2 - cam.y * z) * dpr + (shk ? (Math.random() - .5) * shk : 0), t = now / 1000;
   const x0 = cam.x - vw / 2 / z, y0 = cam.y - vh / 2 / z, x1 = cam.x + vw / 2 / z, y1 = cam.y + vh / 2 / z;
@@ -3471,9 +3513,16 @@ function render(now) {
         gl.addColorStop(0, big ? 'rgba(255,30,40,.42)' : c.ui + '38'); if (big) gl.addColorStop(.55, 'rgba(160,0,10,.16)'); gl.addColorStop(1, big ? 'rgba(120,0,0,0)' : c.ui + '00');
         ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(n.x, n.y, R, 0, TAU); ctx.fill();
       }
-      const sc = c.mound.w * (1 + Math.min(totalAnts(c), 500) / 1500);
+      const hbm = c.scary && c.alive ? heartbeat(t * .8) : 0, sc = c.mound.w * (1 + Math.min(totalAnts(c), 500) / 1500) * (1 + .035 * hbm);
       ctx.globalAlpha = c.alive ? 1 : .55; ctx.drawImage(mipFor(c.mound.ch || (c.mound.ch = mipChain(c.mound.img)), c.mound.img.width / sc, m), n.x - sc / 2, n.y - sc / 2, sc, sc); ctx.globalAlpha = 1;
       if (!c.alive) { ctx.fillStyle = 'rgba(15,9,5,.6)'; ctx.beginPath(); ctx.arc(n.x, n.y, 18, 0, TAU); ctx.fill(); }
+      else if (c.scary) {
+        const ks = sc / c.mound.w;
+        ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+        for (const pts of c.cracks) { for (const [lw, al] of [[5, .18], [2, .7]]) { ctx.strokeStyle = `rgba(255,${40 + 80 * hbm | 0},30,${al * (.45 + .55 * hbm)})`; ctx.lineWidth = lw; ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(n.x + x * ks, n.y + y * ks) : ctx.moveTo(n.x + x * ks, n.y + y * ks)); ctx.stroke(); } }
+        ctx.globalCompositeOperation = 'source-over';
+        if (detail) for (let i = 0; i < 9; i++) { const u = (t * .12 + i / 9) % 1, a2 = i * 2.4 + Math.sin(t * .3 + i) * .4, rr = 18 + u * 90, fx = n.x + Math.cos(a2) * rr, fy = n.y + Math.sin(a2) * rr - u * 30, fr = 16 + u * 34, fg = ctx.createRadialGradient(fx, fy, 0, fx, fy, fr); fg.addColorStop(0, `rgba(140,10,20,${.22 * Math.sin(u * Math.PI)})`); fg.addColorStop(1, 'rgba(90,0,10,0)'); ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(fx, fy, fr, 0, TAU); ctx.fill(); }
+      }
     }
     for (const op of c.outposts) if (vis(op.x, op.y, 70)) {
       const rr = op.queen ? 40 : 22;
@@ -3571,6 +3620,7 @@ function render(now) {
     const k = casteSize(col, a.t) * growOf(a) * (1 + .05 * col.lvl[a.t]) * (1 + .06 * a.rank) * (a.hero ? 1.4 : 1), img = fr.mips[f][mipLvl(m * k)];
     rot(a.x, a.y, a.a, k); ctx.drawImage(img, -CX(a.t) * us, -CY(a.t) * us, w, h);
     if (col.scary && dnS.night > .2 && z > .45 && nightEyes.length < 400) nightEyes.push(a, k);
+    if (col.scary && z > .5 && pulseAnts.length < 600) pulseAnts.push(a, k);
     if (a.flash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a.flash / .12 * .8; ctx.drawImage(img, -CX(a.t) * us, -CY(a.t) * us, w, h); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
     if (a.carry) {
       const cx = CARRY_X[a.t];
@@ -3595,6 +3645,7 @@ function render(now) {
     }
     ctx.globalCompositeOperation = 'source-over';
   }
+  drawPulses(t, rot); world(); drawArgQueens(t, vis); world();
   const fo = G.follow;
   if (fo && fo.hp > 0) {
     const r = 13 * TYPES[fo.t].len; ctx.save(); ctx.setLineDash([4, 4]); ctx.lineDashOffset = -now / 60;
@@ -4663,6 +4714,32 @@ function nestDome(col) {
   return nv.dome;
 }
 const QUEENS = [];
+let ARG_QUEEN = null;
+function argQueenSprite(si) {
+  if (ARG_QUEEN) return ARG_QUEEN;
+  const M = { ...morphFor(si, 3), head: [6.6, 3.6, 3.4], gaster: [-11, 8.4, 6.4], meso: 1.6, legs: 1.25, thick: 1.5, mand: 2.2, eye: 1.6, glow: 1.6, extraLegs: true, extraJaws: true, crystal: true, crown: true, scars: true };
+  const px = 4, c = mk(80 * px, 70 * px), g = c.getContext('2d');
+  g.translate(38 * px, 35 * px); g.scale(px, px); g.lineCap = 'round'; g.lineJoin = 'round';
+  drawAnt(g, { cyc: .15, tw: .05, tw2: 0, open: .35 }, false, SPECIES[si].pal, M);
+  return ARG_QUEEN = { img: c, px, ox: 38, oy: 35 };
+}
+function drawArgQueens(t, vis) {
+  for (const c of G.cols) {
+    if (!c.scary || !c.alive || !vis(c.nest.x, c.nest.y, 200)) continue;
+    const want = G.t - c.lastHit < 4 ? 1 : 0; c.qRise = (c.qRise || 0) + (want - (c.qRise || 0)) * .04;
+    if (c.qRise < .02) continue;
+    if (want && !c.qShown && c.qRise > .5) { c.qShown = true; if (!G.demo) banner(c.player ? 'Your queen rises' : 'The Argentine queen rises', c.player ? 'She defends her mound herself' : 'Something enormous guards that mound', '#ff3030'); shakeAt(c.nest.x, c.nest.y, 8); }
+    if (!want && c.qRise < .1) c.qShown = false;
+    const Q = argQueenSprite(c.si), k = .55 + .45 * c.qRise, hb = heartbeat(t), att = G.cols[c.lastAttacker], ang = att ? Math.atan2(att.nest.y - c.nest.y, att.nest.x - c.nest.x) : -Math.PI / 2;
+    const sz = 4.6 * k, cx = Math.cos(ang), sn = Math.sin(ang);
+    ctx.globalAlpha = c.qRise;
+    const gl = ctx.createRadialGradient(c.nest.x, c.nest.y, 0, c.nest.x, c.nest.y, 150 * k); gl.addColorStop(0, `rgba(255,40,30,${.5 + .3 * hb})`); gl.addColorStop(1, 'rgba(150,0,0,0)');
+    ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(c.nest.x, c.nest.y, 150 * k, 0, TAU); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
+    const m2 = ctx.getTransform(); ctx.transform(cx * sz, sn * sz, -sn * sz, cx * sz, c.nest.x, c.nest.y - 6 * c.qRise);
+    ctx.drawImage(Q.img, -Q.ox, -Q.oy, Q.img.width / Q.px, Q.img.height / Q.px);
+    ctx.setTransform(m2); ctx.globalAlpha = 1;
+  }
+}
 function queenSprite(si) {
   if (QUEENS[si]) return QUEENS[si];
   const M = { ...morphFor(si, 0), head: [5.4, 2.3, 2.2], gaster: [-9.6, 7.4, 5.6], meso: 1.35, legs: 1.08, thick: 1.15, mand: .8, eye: 1.2 };
