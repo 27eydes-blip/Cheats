@@ -2092,7 +2092,24 @@ button.ghost {
     hello: "What's up, I'm Dalton with MVPT. Let's get Kadin healthy again!",
     perfect: ["Perfect rep! Light weight!", "Perfect, and still on your phone. Respect.", "That's what I'm talking about!", "Textbook. Do it again.", "Clean! Feel that?"],
     good: ["Good rep. Keep it smooth.", "Nice. Control it.", "There you go."],
-    miss: ["Slow down, control the rep.", "Kadin! Phone DOWN. Focus!", "Bro, are you texting right now?", "Timing! Watch the ring."],
+    miss: ["Slow down, control the rep.", "Timing! Watch the ring.", "Breathe. Focus. Again."],
+    phone: [
+      "Kadin! Phone DOWN. Focus!",
+      "Bro, are you texting right now?",
+      "Kadin. The phone. Put it away.",
+      "Your followers can wait. Your knee can't.",
+      "I'm gonna throw that phone in the ice bath.",
+      "Eyes up, Kadin. Not on the screen.",
+      "That DM isn't going to rehab your knee.",
+      "You want to win State or win TikTok?",
+      "Phone in the bag or I add ten more reps.",
+      "Kadin, I can see you scrolling.",
+      "No posting during reps. That's the rule.",
+      "Is that Gavin texting you? Ignore him.",
+      "Savvy Sliders can wait. Lock in.",
+      "Last warning. Phone. Down.",
+      "You're on screen time, not knee time."
+    ],
     next: { "Band work": "Grab the band. Let's build that strength.", "Ice + stretch": "Ice and stretch. Almost there!", "Leg raises": "Back to leg raises. Squeeze it!" },
     done: "Kadin's cleared! Go win State, big dog."
   };
@@ -2100,10 +2117,15 @@ button.ghost {
   const KX = 168, KNEE = [KX + 40, 522], DX = 444, DROP = 56;
 
   function say(text, secs = 3.6) { PT.line = text; PT.lineT = secs; }
+  let phoneBag = [];
+  function nextPhoneLine() {   // cycle through every line before repeating
+    if (!phoneBag.length) phoneBag = DALTON.phone.slice().sort(() => Math.random() - 0.5);
+    return phoneBag.pop();
+  }
   function startPT() {
     audio();
     Object.assign(S, { mode: "pt", phase: "idle", lastMode: "pt" });
-    Object.assign(PT, { health: 35, reps: 0, perfect: 0, ex: 0, inEx: 0, ring: null, wait: 0, legT: 0, pops: [], intro: 1, introT: 0, done: false, doneT: 0, time: 0, flex: 1.2, ended: false });
+    Object.assign(PT, { health: 35, reps: 0, perfect: 0, ex: 0, inEx: 0, ring: null, wait: 0, legT: 0, pops: [], intro: 1, introT: 0, nagT: 5, done: false, doneT: 0, time: 0, flex: 1.2, ended: false });
     say(DALTON.hello, 99);
     for (const id of ["title", "over", "levels", "chars", "introUI"]) $(id).hidden = true;
     hideBanner();
@@ -2119,7 +2141,7 @@ button.ghost {
     else if (kind === "good") sfx.tick();
     else tone(180, 0.25, 0.08, "sawtooth", 0.7);
     PT.pops.push({ text: kind === "perfect" ? "PERFECT +10" : kind === "good" ? "GOOD +7" : "SLOPPY +2", t: 0, col: kind === "perfect" ? "#ffd23f" : kind === "good" ? "#4cc46a" : "#ff3b1f" });
-    say(pick(DALTON[kind]), 3.2);
+    say(kind === "miss" && Math.random() < 0.65 ? nextPhoneLine() : pick(DALTON[kind]), 3.2);
     PT.ring = null; PT.legT = 0.6; PT.wait = 0.75;
     if (PT.inEx >= 5) {
       PT.ex = (PT.ex + 1) % EXERCISES.length; PT.inEx = 0;
@@ -2159,6 +2181,8 @@ button.ghost {
       return;
     }
     if (PT.intro > 0) { PT.introT += dt; return; }
+    PT.nagT -= dt;
+    if (PT.nagT <= 0 && PT.lineT <= 0) { say(nextPhoneLine(), 3.4); PT.nagT = 6 + Math.random() * 4; }
     if (PT.ring) {
       PT.ring.r -= PT.ring.speed * dt;
       if (PT.ring.r < 8) judge("miss");
