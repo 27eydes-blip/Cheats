@@ -399,6 +399,10 @@ button.ghost {
               <stop offset="0" stop-color="#c44a06"/><stop offset=".3" stop-color="#ff7424"/>
               <stop offset=".55" stop-color="#ff8a3d"/><stop offset="1" stop-color="#c44a06"/>
             </linearGradient>
+            <linearGradient id="chrome" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#5d636b"/><stop offset=".3" stop-color="#f7f9fb"/><stop offset=".5" stop-color="#9aa1aa"/>
+              <stop offset=".75" stop-color="#ffffff"/><stop offset="1" stop-color="#4a4f56"/>
+            </linearGradient>
           </defs>
           <path d="M62 18 Q100 36 138 18 L186 44 L171 92 L150 84 L150 188 L50 188 L50 84 L29 92 L14 44 Z" fill="url(#cloth)"/>
           <g clip-path="url(#shirt)" fill="none" stroke="#0a0a0a">
@@ -413,9 +417,13 @@ button.ghost {
           <path d="M78 20 Q100 52 122 20" fill="none" stroke="#0a0a0a" stroke-width="7" stroke-linecap="round"/>
           <text font-family="Graduate, serif" font-size="12" fill="#0a0a0a" text-anchor="middle"><textPath href="#arch" startOffset="50%">BROTHER RICE</textPath></text>
           <text x="100" y="104" font-family="Graduate, serif" font-size="19" fill="#0a0a0a" text-anchor="middle" letter-spacing="1">KOZA</text>
-          <text x="100" y="172" font-family="Graduate, serif" font-size="74" fill="#0a0a0a" stroke="#f3efe6" stroke-width="2" text-anchor="middle">7</text>
+          <text x="100" y="172" font-family="Graduate, serif" font-size="74" fill="#0a0a0a" stroke="url(#chrome)" stroke-width="3" text-anchor="middle">7</text>
+          <g fill="url(#chrome)" stroke="#0a0a0a" stroke-width=".8">
+            <path transform="translate(160 52) rotate(20)" d="M0 -2 C0 -6 -6 -6 -6 -1.5 C-6 2 -2 4 0 7 C2 4 6 2 6 -1.5 C6 -6 0 -6 0 -2Z"/>
+            <path transform="translate(40 52) rotate(-20)" d="M0 -2 C0 -6 -6 -6 -6 -1.5 C-6 2 -2 4 0 7 C2 4 6 2 6 -1.5 C6 -6 0 -6 0 -2Z"/>
+          </g>
         </svg>
-        <div class="tag">Brother Rice · #7 · Kicker</div>
+        <div class="tag">Brother Rice · #7 · Koza Field</div>
         <div class="sponsor">Presented by <b>Savvy Sliders</b></div>
         <p class="how">Tap once to set the power. Tap again to aim. Every make moves you back. Three misses and the game is over.</p>
         <div class="actions">
@@ -561,7 +569,9 @@ button.ghost {
     b.fillStyle = "#0d0f14"; b.fillRect(0, HOR - 14, BW, 18);
     b.fillStyle = "#ff6a13"; b.fillRect(0, HOR - 14, BW, 2);
     b.font = "10px Graduate, serif"; b.textAlign = "center";
-    for (const tx of [BX + 100, BX + W / 2, BX + W - 100]) b.fillText("HOME OF THE CRUSADERS", tx, HOR - 3);
+    for (const tx of [BX + 100, BX + W - 100]) b.fillText("HOME OF THE CRUSADERS", tx, HOR - 3);
+    b.font = "12px Graduate, serif"; b.fillStyle = "#f3efe6";
+    b.fillText("KOZA FIELD", BX + W / 2, HOR - 3);
     // sponsor board hanging over the stands
     const sx = BX + W / 2;
     b.fillStyle = "#1c1d22"; b.fillRect(sx - 110, 116, 4, top - 116); b.fillRect(sx + 106, 116, 4, top - 116);
@@ -571,6 +581,12 @@ button.ghost {
     b.fillText("SAVVY SLIDERS", sx, 106);
     b.font = "600 10px 'Barlow Condensed', sans-serif"; b.fillStyle = "#f3efe6";
     b.fillText("KICKS SPONSORED BY", sx, 78);
+    // stadium name in lights
+    b.font = "30px Graduate, serif";
+    b.shadowColor = "rgba(255,106,19,.95)"; b.shadowBlur = 20; b.fillStyle = "#ffb27a";
+    b.fillText("KOZA FIELD", sx, 52);
+    b.shadowBlur = 0; b.fillStyle = "#fff3e6";
+    b.fillText("KOZA FIELD", sx, 52);
   }
 
   // film grain
@@ -766,7 +782,7 @@ button.ghost {
     }
     if (t > 0.3 && !S.introCheer) { S.introCheer = true; sfx.cheer(); }
     if (S.resultShown) return;
-    if (t > 0.5 && t < 2.6) caption("4th quarter · 0:03 left", "Down 23–21");
+    if (t > 0.5 && t < 2.6) caption("Koza Field · 4th qtr · 0:03", "Down 23–21");
     else if (t >= 2.6 && t < JOG_T + 0.6) caption("Brother Rice · #7", "Kadin Koza");
     else if (t >= JOG_T + 0.6) caption("For the win", INTRO_K + "-yard field goal");
   }
@@ -976,6 +992,22 @@ button.ghost {
     }
     return KEYS[KEYS.length - 1];
   }
+  const chrome = (x0, y0, x1, y1) => {
+    const g = ctx.createLinearGradient(x0, y0, x1, y1);
+    g.addColorStop(0, "#5d636b"); g.addColorStop(0.3, "#f7f9fb"); g.addColorStop(0.5, "#9aa1aa");
+    g.addColorStop(0.75, "#ffffff"); g.addColorStop(1, "#4a4f56");
+    return g;
+  };
+  function heart(x, y, r, fill) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + r * 0.35);
+    ctx.bezierCurveTo(x, y - r * 0.2, x - r, y - r * 0.2, x - r, y + r * 0.3);
+    ctx.bezierCurveTo(x - r, y + r * 0.75, x, y + r, x, y + r * 1.25);
+    ctx.bezierCurveTo(x, y + r, x + r, y + r * 0.75, x + r, y + r * 0.3);
+    ctx.bezierCurveTo(x + r, y - r * 0.2, x, y - r * 0.2, x, y + r * 0.35);
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,.5)"; ctx.lineWidth = Math.max(0.5, r * 0.12); ctx.stroke();
+  }
   function drawKicker(px, py, u, k, run) {
     const P = (x, y) => [px + x * u, py + y * u];
     const seg = (a, b, w, col) => {
@@ -1010,11 +1042,11 @@ button.ghost {
       seg(h, [kn[0], kn[1] + 0.04], 0.17, "#0b0b0d");                 // black pants
       seg([h[0] - 0.03, h[1] + 0.03], [kn[0] - 0.03, kn[1]], 0.04, "#2a2b31");
       const side = Math.sign(h[0]);
-      seg([h[0] + side * 0.075, h[1]], [kn[0] + side * 0.075, kn[1] + 0.02], 0.025, "#ff6a13");
+      seg([h[0] + side * 0.075, h[1]], [kn[0] + side * 0.075, kn[1] + 0.02], 0.025, "#d9dde3");
       const fp = P(...f);
-      ctx.fillStyle = "#050505";
+      ctx.fillStyle = chrome(fp[0] - 0.085 * u, fp[1] - 0.05 * u, fp[0] + 0.085 * u, fp[1] + 0.05 * u);   // chrome cleats
       ctx.beginPath(); ctx.ellipse(fp[0], fp[1], 0.085 * u, 0.05 * u, 0, 0, 7); ctx.fill();
-      ctx.fillStyle = "#ff6a13"; ctx.fillRect(fp[0] - 0.07 * u, fp[1] + 0.028 * u, 0.14 * u, 0.014 * u);
+      ctx.fillStyle = "#0a0a0a"; ctx.fillRect(fp[0] - 0.07 * u, fp[1] + 0.028 * u, 0.14 * u, 0.014 * u);
     }
 
     ctx.save();
@@ -1037,6 +1069,8 @@ button.ghost {
     ctx.moveTo(...P(-0.16, hipY + 0.02)); ctx.lineTo(...P(-0.08, hipY + 0.02));
     ctx.lineTo(...P(-0.085 + sway, hipY + 0.21)); ctx.lineTo(...P(-0.155 + sway, hipY + 0.2));
     ctx.closePath(); ctx.fill();
+    const th = P(-0.12 + sway, hipY + 0.09);
+    heart(th[0], th[1], 0.022 * u, chrome(th[0] - 0.02 * u, th[1], th[0] + 0.02 * u, th[1] + 0.03 * u));
     // jersey
     const jg = ctx.createLinearGradient(P(-0.3, 0)[0], 0, P(0.3, 0)[0], 0);
     jg.addColorStop(0, "#b84405"); jg.addColorStop(0.22, "#ff6f1f"); jg.addColorStop(0.5, "#ff8a3d");
@@ -1070,28 +1104,41 @@ button.ghost {
     // stadium light catching the shoulder pads
     ctx.beginPath(); shoulders();
     ctx.strokeStyle = "rgba(255,236,200,.65)"; ctx.lineWidth = 0.014 * u; ctx.stroke();
+    // chrome hearts on the sleeves
+    for (const sx of [-1, 1]) {
+      const hs = P(sx * 0.34, top + 0.045);
+      heart(hs[0], hs[1], 0.03 * u, chrome(hs[0] - 0.03 * u, hs[1], hs[0] + 0.03 * u, hs[1] + 0.04 * u));
+    }
     // name + number
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     const np = P(0, top + 0.12);
     ctx.font = `${0.13 * u}px Graduate, serif`; ctx.fillStyle = "#0a0a0a";
+    ctx.lineWidth = 0.014 * u; ctx.strokeStyle = chrome(np[0] - 0.2 * u, np[1] - 0.05 * u, np[0] + 0.2 * u, np[1] + 0.05 * u);
+    ctx.strokeText("KOZA", np[0], np[1]);
     ctx.fillText("KOZA", np[0], np[1]);
     const nn = P(0, top + 0.4);
     ctx.font = `${0.36 * u}px Graduate, serif`;
     ctx.fillStyle = "rgba(120,40,0,.45)"; ctx.fillText("7", nn[0] + 0.012 * u, nn[1] + 0.012 * u);
-    ctx.lineWidth = 0.022 * u; ctx.strokeStyle = "#f3efe6"; ctx.strokeText("7", nn[0], nn[1]);
+    ctx.lineWidth = 0.03 * u; ctx.strokeStyle = chrome(nn[0] - 0.15 * u, nn[1] - 0.18 * u, nn[0] + 0.15 * u, nn[1] + 0.18 * u);
+    ctx.strokeText("7", nn[0], nn[1]);
     ctx.fillStyle = "#0a0a0a"; ctx.fillText("7", nn[0], nn[1]);
     // neck + helmet
     seg([0, top - 0.02], [0, top - 0.06], 0.1, "#6b3f25");
+    for (let i = -5; i <= 5; i++) {   // silver chain
+      const c = P(i * 0.02, top - 0.012 + i * i * 0.0012);
+      ctx.fillStyle = i % 2 ? "#eef1f5" : "#8f96a0";
+      ctx.beginPath(); ctx.ellipse(c[0], c[1], 0.011 * u, 0.008 * u, 0, 0, 7); ctx.fill();
+    }
     const hp = P(0, top - 0.17);
     seg([-0.125, -0.1 + top], [-0.15, -0.03 + top], 0.016, "#9a9aa0");   // facemask peeking out
     seg([0.125, -0.1 + top], [0.15, -0.03 + top], 0.016, "#9a9aa0");
     const hg = ctx.createRadialGradient(hp[0] - 0.05 * u, hp[1] - 0.06 * u, 0.01 * u, hp[0], hp[1], 0.17 * u);
-    hg.addColorStop(0, "#55565e"); hg.addColorStop(0.5, "#17171b"); hg.addColorStop(1, "#050505");
+    hg.addColorStop(0, "#ffffff"); hg.addColorStop(0.3, "#cfd4db"); hg.addColorStop(0.65, "#727982"); hg.addColorStop(1, "#2a2d32");
     ctx.fillStyle = hg;
     ctx.beginPath(); ctx.ellipse(hp[0], hp[1], 0.135 * u, 0.15 * u, 0, 0, 7); ctx.fill();
     ctx.save(); ctx.clip();
     ctx.fillStyle = "#ff6a13"; ctx.fillRect(hp[0] - 0.025 * u, hp[1] - 0.2 * u, 0.05 * u, 0.4 * u);
-    ctx.fillStyle = "#f3efe6";
+    ctx.fillStyle = "#0a0a0a";
     ctx.fillRect(hp[0] - 0.045 * u, hp[1] - 0.2 * u, 0.012 * u, 0.4 * u);
     ctx.fillRect(hp[0] + 0.033 * u, hp[1] - 0.2 * u, 0.012 * u, 0.4 * u);
     ctx.restore();
