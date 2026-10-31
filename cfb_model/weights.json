@@ -17,5 +17,16 @@
   },
   "home_field_advantage": 2.5,
   "points_per_sd": 13.0,
-  "results_blend": 0.5
+  "results_blend": 0.75,
+  "margin_sd": 15.5,
+  "total_sd": 16.0,
+  "mov_cap": 28,
+  "recency": 0.93,
+  "ridge": 2.0,
+  "prior_games": 3.0,
+  "hfa_prior_games": 150,
+  "fcs_rating": -24.0,
+  "min_ev": 0.0,
+  "market_blend": 0.5,
+  "max_favorite": -400
 }

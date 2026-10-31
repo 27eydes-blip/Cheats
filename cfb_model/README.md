@@ -1,8 +1,37 @@
-# College Football Model
+# College Football Model (v2)
 
-Rates every team on **51 stats in 14 categories** and combines them into one power rating, measured in points. It also uses game results to adjust for strength of schedule. Then it predicts spreads, win probabilities, totals and projected scores, and flags picks against the Vegas line.
+Rates every team two ways and blends them:
 
-## Quick start
+- **Stat rating:** 51 stats in 14 categories. This part is optional.
+- **Results rating:** separate offense and defense ratings fit to real scores. Recent games count more, blowouts are softened, home field is learned from the data, FCS opponents are pooled, and an optional preseason rating steadies the early weeks.
+
+It then projects spreads, totals and win chances. Given sportsbook lines, it lists every bet with its chance to hit, its expected profit and a Kelly stake size.
+
+## Real data in one command
+
+```bash
+cd cfb_model
+pip install pandas numpy
+python fetch_espn.py --season 2026 --week 10        # needs access to site.api.espn.com
+python model.py bets --teams data/2026/teams.csv --games data/2026/games.csv --matchups data/2026/matchups.csv
+```
+
+`fetch_espn.py` downloads every completed FBS game and the upcoming week's spreads, totals and moneylines from ESPN's free scoreboard feed. No API key is needed.
+
+## The bets board
+
+`python model.py bets ...` prints two lists:
+
+1. **Most likely to hit:** bets where the model also beats the price, sorted by chance to hit.
+2. **Best value:** sorted by expected profit per unit staked.
+
+How the chances are calculated:
+
+- **Blended with the market:** each chance mixes the model's view with the market's, with the bookmaker's cut removed (`market_blend`, default 50/50). Sportsbook lines are sharp, and a model on its own is overconfident.
+- **Short favorites skipped:** prices shorter than `max_favorite` (default -400) are left out. Big-favorite moneylines hit often but pay almost nothing.
+- **Kelly column:** the full-Kelly stake as a share of bankroll. Most bettors use a quarter of it or less.
+
+## Try it with fake demo data
 
 ```bash
 cd cfb_model
@@ -11,6 +40,7 @@ python make_demo_data.py          # FAKE demo teams, only for trying it out
 python model.py rate     --teams data/demo_teams.csv --games data/demo_games.csv
 python model.py predict  --teams data/demo_teams.csv --games data/demo_games.csv --matchups data/demo_matchups.csv
 python model.py backtest --teams data/demo_teams.csv --games data/demo_games.csv
+python model.py bets     --teams data/demo_teams.csv --games data/demo_games.csv --matchups data/demo_matchups.csv
 ```
 
 Add `--out results.csv` to any command to save the output.
@@ -58,3 +88,19 @@ Good free sources: collegefootballdata.com (success rate, havoc, explosiveness, 
 Edit `weights.json` to change category weights, home-field advantage, or how much game results count. Re-run `backtest` after each change to see whether accuracy improves (higher straight-up %, lower Brier score).
 
 **Backtest caveat:** the backtest predicts each week using only earlier games. But the team stats you load are whatever is in `teams.csv`. If those are end-of-season stats, the backtest gets a peek at the future and will look better than reality.
+
+## v2 settings in weights.json
+
+| Setting | What it does |
+|---|---|
+| `results_blend` | Max share of the rating from game results (vs stats). |
+| `recency` | Each older week counts this much as the next (0.93). |
+| `mov_cap` | Margins past this are softened, not just cut off. |
+| `prior_games` | How many games a preseason `prior_rating` is worth. |
+| `margin_sd` / `total_sd` | Error sizes behind win, cover and over/under chances. `backtest` prints the values your data suggests. |
+| `market_blend` | Share of the final chance that comes from the model rather than the market. |
+| `max_favorite` | Bets priced shorter than this are skipped. |
+
+The backtest also grades picks against the closing line when `games.csv` has `vegas_home_spread`. It prints a calibration table showing whether 70% picks really win about 70% of the time.
+
+**Reality check:** no model guarantees wins. Beating -110 spreads needs about 52.4% correct over a large sample. Bet only what you can afford to lose.
