@@ -403,7 +403,7 @@ const SPECIES = [
   { key: 'army', name: 'Army ant', latin: 'Eciton burchellii', ui: '#a78bfa', pal: { base: '#8e5c2a', light: '#ecbd80', mid: '#5a3814', dark: '#1a0e04' },
     perk: 'Swarm raiders that link their bodies into living bridges over puddles. 15% faster, and fighters cost 20% less.', mods: { spd: 1.15, fightCost: .8, bridge: 1 }, morph: { mand: 'hook', legs: 1.1 } },
   { key: 'bullet', name: 'Bullet ant', latin: 'Paraponera clavata', ui: '#4cc3b0', pal: { base: '#3c2618', light: '#a88060', mid: '#26170c', dark: '#080402' },
-    perk: 'Giant and brutal. 40% more health and 15% more damage, but slower brood.', mods: { hp: 1.4, dmg: 1.15, egg: .8 }, morph: { size: 1.14 } },
+    perk: 'Giant and brutal, and three times longer than any normal ant. 40% more health and 15% more damage, but slower brood.', mods: { hp: 1.4, dmg: 1.15, egg: .8 }, morph: { size: 1.9, long: true } },
   { key: 'weaver', name: 'Weaver ant', latin: 'Oecophylla smaragdina', ui: '#9ccc52', pal: { base: '#c8782a', light: '#ffd9a0', mid: '#8a4a12', dark: '#2e1404' }, gaster: { base: '#86ae3e', light: '#e2f6ae', mid: '#4e781e', dark: '#162c06' },
     perk: 'Silk-woven nests. The mound and outposts have 60% more health.', mods: { nestHp: 1.6 }, morph: { legs: 1.14, slender: true } },
   { key: 'honey', name: 'Honeypot ant', latin: 'Myrmecocystus mexicanus', ui: '#f2c94c', pal: { base: '#c08a2a', light: '#ffe0a0', mid: '#7a5210', dark: '#2a1a04' }, gaster: { base: '#e8a83a', light: '#fff6cc', mid: '#b0700e', dark: '#4a2a04' },
@@ -412,8 +412,8 @@ const SPECIES = [
     perk: 'Massive majors. Majors have 50% more health and cost 25% less.', mods: { majorHp: 1.5, majorCost: .75 }, morph: { size: 1.06 } },
   { key: 'trap', name: 'Trap-jaw ant', latin: 'Odontomachus bauri', ui: '#f07aa8', pal: { base: '#7c4a22', light: '#dca878', mid: '#4c2a10', dark: '#140802' },
     perk: 'Spring-loaded jaws. The first bite of every fight deals triple damage.', mods: { firstStrike: 3 }, morph: { mand: 'long', eye: 1.25 } },
-  { key: 'bulldog', name: 'Bulldog ant', latin: 'Myrmecia gulosa', ui: '#e8e05a', pal: { base: '#b8401e', light: '#ffa070', mid: '#7a2410', dark: '#260802' }, gaster: { base: '#1e1614', light: '#7a6a62', mid: '#120c0a', dark: '#030202' },
-    perk: 'Keen-eyed hunters. They spot enemies from 40% further away and bite 15% harder.', mods: { sense: 1.4, dmg: 1.15 }, morph: { eye: 1.9, mand: 'long', size: 1.1, legs: 1.1 } },
+  { key: 'bulldog', name: 'Bulldog ant', latin: 'Myrmecia gulosa', ui: '#e8e05a', pal: { base: '#2c4a50', light: '#8ff0dc', mid: '#183036', dark: '#03090b' }, gaster: { base: '#2c1a44', light: '#c890ff', mid: '#1a0e2c', dark: '#06020c' },
+    perk: 'Keen-eyed hunters. They spot enemies from 40% further away and bite 15% harder.', mods: { sense: 1.4, dmg: 1.15 }, morph: { eye: 2.6, mand: 'long', size: 1.1, legs: 1.25, alien: true, ant: 1.3 } },
   { key: 'greenhead', name: 'Green-head ant', latin: 'Rhytidoponera metallica', ui: '#38c98a', pal: { base: '#2c5a4c', light: '#9ef0c8', mid: '#1a3a32', dark: '#06120e' }, gaster: { base: '#3a3a6a', light: '#c8a0ff', mid: '#242448', dark: '#08081a' },
     perk: 'Metallic armour. Every ant takes 25% less damage.', mods: { taken: .75 }, morph: { metal: true } },
   { key: 'argentine', name: 'Argentine ant', latin: 'Linepithema humile', ui: '#ff2d55', pal: { base: '#2c1614', light: '#c0564e', mid: '#1a0a08', dark: '#040101' }, gaster: { base: '#1c0a0a', light: '#e04848', mid: '#120505', dark: '#020000' },
@@ -531,7 +531,7 @@ const EYEGLOW = (() => { const c = mk(32, 32), g = c.getContext('2d'), gr = g.cr
 function eyePosOf(col, t) { const M = morphFor(col.si, t), us = unitScale(t); return [(M.head[0] + M.head[1] * .14) * us, M.head[2] * .75 * us, Math.max(1.4, M.eye * 1.6 * us)]; }
 const casteSize = (col, t) => SPEC(col).size * (SPEC(col).morph.scary ? SCARY[t].size : 1) * (SPEC(col).morph.casteSz?.[t] || 1);
 const PATTERN = { fire: 'veins', leaf: 'chevrons', army: 'bands', bullet: 'spots', weaver: 'bands', honey: 'bands', carp: 'chevrons', trap: 'spots', bulldog: 'bands', greenhead: 'veins', argentine: '', driver: 'chevrons', silver: '', turtle: 'spots', jumper: 'bands', matabele: 'chevrons', harvester: 'spots', marauder: 'bands', bighead: 'chevrons', crazy: 'bands', giant: 'spots', dracula: 'veins', redwood: 'chevrons', amazon: 'bands' };
-const ACCENT = { argentine: '#ff3030', silver: '#bfe6ff', greenhead: '#7dffc0', fire: '#ff7a30', dracula: '#ff9a3a' };
+const ACCENT = { bulldog: '#5affd8', argentine: '#ff3030', silver: '#bfe6ff', greenhead: '#7dffc0', fire: '#ff7a30', dracula: '#ff9a3a' };
 const PAT_COL = { fire: '#ffe14a', leaf: '#ffe28a', honey: '#6a3a0a', weaver: '#1e3a0a', harvester: '#4a1206', dracula: '#4a1404' };
 const PAT_A = [.35, .3, .7, .8, .55, .4, .5, .4, .4, .6, .75, .75];
 const CASTE_FX = { 2: { fangs: 1, dorsal: 1, legSpikes: 1, glow: .6 }, 3: { fangs: 1, crown: 1, dorsal: 1, legSpikes: 1, scars: 1, glow: .8 }, 4: { glow: .45 }, 9: { dorsal: 1, glow: .5 }, 10: { dorsal: 1, legSpikes: 1, glow: .55 }, 11: { fangs: 1, legSpikes: 1, glow: .7 } };
@@ -549,6 +549,8 @@ function morphFor(si, t, tier = 0) {
     if (tier > 1) { M.headSpines = true; M.eye *= 1.08; }
   }
   M.metal = !!m.metal; M.silver = !!m.silver; M.mandLen = m.mandLen || 1;
+  if (m.long) { M.head = [M.head[0] * 1.7 + 1, M.head[1], M.head[2] * .95]; M.gaster = [M.gaster[0] * 1.9 - 1, M.gaster[1] * 1.6, M.gaster[2] * .95]; M.legs *= 1.45; M.ant *= 1.3; M.meso *= 1.1; }
+  if (m.alien) { M.alien = true; M.head = [M.head[0] + .6, M.head[1] * 1.15, M.head[2] * 1.05]; M.glow = Math.max(M.glow || 0, .5); }
   const SP = SPECIES[si]; M.acc = ACCENT[SP.key] || SP.ui; M.pat = PATTERN[SP.key] ?? 'bands'; M.pcol = PAT_COL[SP.key] || M.acc; M.patA = PAT_A[t];
   if (CASTE_FX[t]) Object.assign(M, CASTE_FX[t]);
   if (t === 2 || t === 3) { M.head = [M.head[0], M.head[1] * 1.08, M.head[2] * 1.08]; M.mand *= 1.12; }
@@ -636,6 +638,7 @@ function antAntenna(g, s, st, dead, P, M, bx, by) {
     px = nx; py = ny;
   }
   g.fillStyle = P.dark; g.beginPath(); g.arc(ex, ey, .28, 0, TAU); g.fill();
+  if (M.alien && !dead) { const tg = g.createRadialGradient(px, py, 0, px, py, .9); tg.addColorStop(0, 'rgba(200,255,245,1)'); tg.addColorStop(.4, 'rgba(60,255,210,.8)'); tg.addColorStop(1, 'rgba(60,255,210,0)'); g.fillStyle = tg; g.beginPath(); g.arc(px, py, .9, 0, TAU); g.fill(); }
 }
 function hairs(g, cx, cy, rx, ry, n, off, dir, P) {
   g.strokeStyle = P.hair; g.lineWidth = .06;
@@ -886,6 +889,15 @@ function drawAnt(g, st, dead, P0, M) {
     const vein = (x0, y0, x1, y1, br) => { g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo((x0 + x1) / 2 + (y1 - y0) * .25, (y0 + y1) / 2 - (x1 - x0) * .2, x1, y1); g.stroke(); if (br) { g.beginPath(); g.moveTo((x0 + x1) / 2, (y0 + y1) / 2); g.lineTo((x0 + x1) / 2 + (y1 - y0) * .35, (y0 + y1) / 2 + (x1 - x0) * .3); g.stroke(); } };
     for (const s2 of [-1, 1]) { vein(hx + hrx * .3, s2 * hry * .2, hx - hrx * .8, s2 * hry * .7, true); vein(2.6, s2 * .3, -.3, s2 * .7, true); vein(-.6, s2 * .3, gx + grx * .2, s2 * gry * .55, true); vein(gx + grx * .2, s2 * gry * .55, gx - grx * .7, s2 * gry * .3, true); }
   }
+  if (M.alien && !dead) {
+    const cr = g.createRadialGradient(hx - hrx * .55, 0, 0, hx - hrx * .55, 0, hrx * .9); cr.addColorStop(0, 'rgba(160,255,230,.35)'); cr.addColorStop(1, 'rgba(160,255,230,0)'); g.fillStyle = cr; g.beginPath(); g.ellipse(hx - hrx * .5, 0, hrx * .75, hry * .7, 0, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(120,255,220,.55)'; g.lineWidth = .1; for (const k of [-.4, 0, .4]) { g.beginPath(); g.moveTo(hx + hrx * .3, k * hry); g.quadraticCurveTo(hx - hrx * .4, k * hry * 1.6, hx - hrx * .95, k * hry * .8); g.stroke(); }
+    for (const s2 of [-1, 1]) { const ex = hx + hrx * .14, ey = s2 * hry * .75, er = M.eye; const eg = g.createRadialGradient(ex, ey, 0, ex, ey, er * 1.5); eg.addColorStop(0, 'rgba(220,255,250,1)'); eg.addColorStop(.3, 'rgba(60,255,210,.95)'); eg.addColorStop(.7, 'rgba(120,60,255,.5)'); eg.addColorStop(1, 'rgba(120,60,255,0)'); g.fillStyle = eg; g.beginPath(); g.ellipse(ex, ey, er * .9, er * .7, 0, 0, TAU); g.fill();
+      g.strokeStyle = 'rgba(0,40,40,.5)'; g.lineWidth = .04; for (let i = -3; i <= 3; i++) for (let j = -2; j <= 2; j++) { g.beginPath(); g.arc(ex + i * .17 * er, ey + j * .15 * er + (i & 1) * .07 * er, .08 * er, 0, TAU); g.stroke(); }
+      g.fillStyle = '#021010'; g.beginPath(); g.ellipse(ex, ey, er * .08, er * .5, 0, 0, TAU); g.fill(); }
+    const spots = (cx, cy, rx, ry, n, seed) => { for (let i = 0; i < n; i++) { const [u, v] = HSEED.punct[(i * 7 + seed) % HSEED.punct.length], x = cx + (u - .5) * rx * 1.5, y = cy + (v - .5) * ry * 1.5, r = .25 + u * .3; if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 > .8) continue; const sg = g.createRadialGradient(x, y, 0, x, y, r * 2.2); sg.addColorStop(0, i % 3 ? 'rgba(90,255,220,1)' : 'rgba(200,140,255,1)'); sg.addColorStop(.4, i % 3 ? 'rgba(40,220,190,.6)' : 'rgba(150,80,255,.6)'); sg.addColorStop(1, 'rgba(40,220,190,0)'); g.fillStyle = sg; g.beginPath(); g.arc(x, y, r * 2.2, 0, TAU); g.fill(); } };
+    spots(gx, 0, grx, gry, 14, 3); spots(1, 0, 2.2 * M.meso, 1.3 * M.meso, 6, 11);
+  }
   if (M.scary && !dead) for (const [ox, oy] of [[-.22, 0], [-.42, .26], [-.42, -.26]]) { const x = hx + hrx * ox, y = hry * oy, og = g.createRadialGradient(x, y, 0, x, y, .45); og.addColorStop(0, 'rgba(255,200,150,1)'); og.addColorStop(.35, 'rgba(255,40,20,.95)'); og.addColorStop(1, 'rgba(255,0,0,0)'); g.fillStyle = og; g.beginPath(); g.arc(x, y, .45, 0, TAU); g.fill(); }
   for (const s of [-1, 1]) antAntenna(g, s, st, dead, P, M, hx + hrx * .55, s * hry * .35);
 }
@@ -893,19 +905,19 @@ function drawAnt(g, st, dead, P0, M) {
 /* ---- per-species sprite kits, built on demand ---- */
 const WPX = 7, HU = .6, FR = 8, OX = 15, OY = 19, SWU = 36, SHU = 38;
 // scouts get a roomier canvas for their very long legs
-const LONG = t => t <= 3 || t === 10, CX = t => LONG(t) ? 24 : OX, CY = t => LONG(t) ? 33 : OY, CWU = t => LONG(t) ? 56 : SWU, CHU = t => LONG(t) ? 66 : SHU;
+const LONG = (t, si) => t <= 3 || t === 10 || !!(si != null && SPECIES[si].morph.long), CX = (t, si) => LONG(t, si) ? 24 : OX, CY = (t, si) => LONG(t, si) ? 33 : OY, CWU = (t, si) => LONG(t, si) ? 56 : SWU, CHU = (t, si) => LONG(t, si) ? 66 : SHU;
 const unitScale = t => HU * TYPES[t].len;
 function antSprite(si, t, f, dead, tier = 0) {
-  const pxu = WPX * unitScale(t), cv = mk(CWU(t) * pxu, CHU(t) * pxu), g = cv.getContext('2d');
-  g.translate(CX(t) * pxu, CY(t) * pxu); g.scale(pxu, pxu); g.lineCap = 'round'; g.lineJoin = 'round';
+  const pxu = WPX * unitScale(t), cv = mk(CWU(t, si) * pxu, CHU(t, si) * pxu), g = cv.getContext('2d');
+  g.translate(CX(t, si) * pxu, CY(t, si) * pxu); g.scale(pxu, pxu); g.lineCap = 'round'; g.lineJoin = 'round';
   const ph = f / FR;
   drawAnt(g, { cyc: ph, tw: Math.sin(ph * TAU) * .12, tw2: Math.cos(ph * TAU) * .05, open: .12 + .06 * Math.sin(ph * TAU) }, dead, SPECIES[si].pal, morphFor(si, t, tier));
   return cv;
 }
 function shadowSprite(si, t) {
-  const M = morphFor(si, t), pxu = WPX * unitScale(t), c = mk(CWU(t) * pxu, CHU(t) * pxu), g = c.getContext('2d');
+  const M = morphFor(si, t), pxu = WPX * unitScale(t), c = mk(CWU(t, si) * pxu, CHU(t, si) * pxu), g = c.getContext('2d');
   const tail = M.gaster[0] - M.gaster[1], front = M.head[0] + M.head[1] + 1.5, cx = (tail + front) / 2, rx = (front - tail) / 2 + .6, ry = Math.max(M.gaster[2], M.head[2]) * 1.2;
-  g.translate(CX(t) * pxu, CY(t) * pxu); g.scale(pxu, pxu * ry / rx);
+  g.translate(CX(t, si) * pxu, CY(t, si) * pxu); g.scale(pxu, pxu * ry / rx);
   const gr = g.createRadialGradient(cx, 0, 0, cx, 0, rx);
   if (SPECIES[si].morph.scary) { gr.addColorStop(0, 'rgba(150,8,8,.6)'); gr.addColorStop(.55, 'rgba(110,0,0,.3)'); gr.addColorStop(1, 'rgba(90,0,0,0)'); }
   else { gr.addColorStop(0, 'rgba(28,16,6,.5)'); gr.addColorStop(.6, 'rgba(28,16,6,.24)'); gr.addColorStop(1, 'rgba(28,16,6,0)'); }
@@ -917,7 +929,7 @@ function antIcon(img, si, t) {
   const tail = M.gaster[0] - M.gaster[1], front = M.head[0] + M.head[1] + 3, cx = (tail + front) / 2, len = front - tail;
   const c = mk(80, 80), g = c.getContext('2d'), s = 70 / (len * WPX * us);
   g.translate(40, 40); g.rotate(-Math.PI / 2); g.scale(s, s);
-  g.drawImage(img, -(CX(t) + cx) * WPX * us, -CY(t) * WPX * us);
+  g.drawImage(img, -(CX(t, si) + cx) * WPX * us, -CY(t, si) * WPX * us);
   return c.toDataURL();
 }
 const KITS = [];
@@ -3489,7 +3501,7 @@ function render(now) {
       for (const sd of [-1, 1]) {
         const img = spr[(i * 3 + (sd > 0 ? 4 : 0)) % FR], tw = Math.sin(t * 3 + i) * .05;
         rot(x - Math.sin(b.ang) * sd * 3.5, y + Math.cos(b.ang) * sd * 3.5, b.ang + sd * 1.25 + (i % 2 ? .25 : -.25) + tw, casteSize(col, 0));
-        ctx.drawImage(img, -OX * us, -OY * us, img.width / WPX, img.height / WPX);
+        ctx.drawImage(img, -CX(0, col.si) * us, -CY(0, col.si) * us, img.width / WPX, img.height / WPX);
       }
     }
   }
@@ -3576,7 +3588,7 @@ function render(now) {
       if (dots) continue;
       const col = G.cols[f.c], dm = deadOf(col, f.t, f.tr || 0), us = unitScale(f.t), k = casteSize(col, f.t) * (1 + .05 * f.lv) * (1 + .06 * f.rank);
       ctx.globalAlpha = clamp(1 - (G.t - f.born - 55) / 15, 0, 1);
-      rot(f.x, f.y, f.ang, k); ctx.drawImage(dm[mipLvl(m * k)], -CX(f.t) * us, -CY(f.t) * us, dm[0].width / WPX, dm[0].height / WPX); ctx.globalAlpha = 1;
+      rot(f.x, f.y, f.ang, k); ctx.drawImage(dm[mipLvl(m * k)], -CX(f.t, col.si) * us, -CY(f.t, col.si) * us, dm[0].width / WPX, dm[0].height / WPX); ctx.globalAlpha = 1;
     } else if (f.kind === 'carcass') {
       const K = f.beast === 'spider' ? SPIDER : f.beast === 'beetle' ? BEETLE : f.beast === 'lizard' ? LIZARD : null;
       rot(f.x, f.y, f.ang); ctx.globalAlpha = .45 + .55 * f.amt / f.max;
@@ -3601,7 +3613,7 @@ function render(now) {
   if (detail && !dots && z > .65) for (const a of ants) {
     if (!vis(a.x, a.y, 20)) continue;
     const col = G.cols[a.c], sh = col.kit.shadow[a.t], us = unitScale(a.t), k = casteSize(col, a.t) * growOf(a) * (1 + .05 * col.lvl[a.t]) * (1 + .06 * a.rank) * (a.hero ? 1.4 : 1);
-    rot(a.x + shx, a.y + shy, a.a, k); ctx.globalAlpha = shA; ctx.drawImage(sh.img, -CX(a.t) * us, -CY(a.t) * us, sh.w, sh.h); ctx.globalAlpha = 1;
+    rot(a.x + shx, a.y + shy, a.a, k); ctx.globalAlpha = shA; ctx.drawImage(sh.img, -CX(a.t, col.si) * us, -CY(a.t, col.si) * us, sh.w, sh.h); ctx.globalAlpha = 1;
     if (a.rank && z > .7) { ctx.strokeStyle = a.rank > 1 ? 'rgba(242,215,162,.85)' : 'rgba(214,176,113,.55)'; ctx.lineWidth = .7; ctx.beginPath(); ctx.ellipse(-.5, -1.4, 8 * TYPES[a.t].len, 4.4 * TYPES[a.t].len, 0, 0, TAU); ctx.stroke(); }
   }
   world();
@@ -3623,10 +3635,10 @@ function render(now) {
     if (!fr) { ctx.setTransform(m, 0, 0, m, ox, oy); ctx.fillStyle = col.dotCol; ctx.fillRect(a.x - 3, a.y - 3, 6, 6); continue; }
     const f = (a.leg / (1.9 * TYPES[a.t].len) | 0) % FR, us = unitScale(a.t), w = fr[f].width / WPX, h = fr[f].height / WPX;
     const k = casteSize(col, a.t) * growOf(a) * (1 + .05 * col.lvl[a.t]) * (1 + .06 * a.rank) * (a.hero ? 1.4 : 1), img = fr.mips[f][mipLvl(m * k)];
-    rot(a.x, a.y, a.a, k); ctx.drawImage(img, -CX(a.t) * us, -CY(a.t) * us, w, h);
+    rot(a.x, a.y, a.a, k); ctx.drawImage(img, -CX(a.t, col.si) * us, -CY(a.t, col.si) * us, w, h);
     if (col.scary && dnS.night > .2 && z > .45 && nightEyes.length < 400) nightEyes.push(a, k);
     if (col.scary && z > .5 && pulseAnts.length < 600) pulseAnts.push(a, k);
-    if (a.flash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a.flash / .12 * .8; ctx.drawImage(img, -CX(a.t) * us, -CY(a.t) * us, w, h); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+    if (a.flash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a.flash / .12 * .8; ctx.drawImage(img, -CX(a.t, col.si) * us, -CY(a.t, col.si) * us, w, h); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
     if (a.carry) {
       const cx = CARRY_X[a.t];
       const cr = TYPES[a.t].haul ? 3 : 1.9;
@@ -4914,7 +4926,7 @@ function nvDraw(now) {
       else for (let j = 0; j < 4; j++) {
         const img = sprOf(col, 2)[1], us = unitScale(2);
         g.save(); g.translate(x - rx * .55 + j * rx * .37, y + ry * .35); g.rotate(j % 2 ? Math.PI : 0); g.scale(1.5, 1.5);
-        g.drawImage(img, -OX * us, -OY * us, img.width / WPX, img.height / WPX); g.restore();
+        g.drawImage(img, -CX(2, col.si) * us, -CY(2, col.si) * us, img.width / WPX, img.height / WPX); g.restore();
       }
       nvLabel(g, `${name} ${ROMAN[i + 1]}`, x, y - ry - 15);
     } else if (i === lv) {
@@ -4938,7 +4950,7 @@ function nvDraw(now) {
   for (const w of nv.walkers) {
     const [x, y, a] = posOn(w.p, w.d), ang = w.dir > 0 ? a : a + Math.PI, img = sprOf(col, w.t)[(w.leg / 2 | 0) % FR], us = unitScale(w.t), k = 1.45, c = Math.cos(ang), sn = Math.sin(ang);
     g.setTransform(s * k * c, s * k * sn, -s * k * sn, s * k * c, x * s, y * s);
-    g.drawImage(img, -CX(w.t) * us, -CY(w.t) * us, img.width / WPX, img.height / WPX);
+    g.drawImage(img, -CX(w.t, col.si) * us, -CY(w.t, col.si) * us, img.width / WPX, img.height / WPX);
     if (w.carry && w.dir > 0) { g.fillStyle = '#ead0a0'; g.beginPath(); g.arc(CARRY_X[w.t], 0, 1.9, 0, TAU); g.fill(); }
   }
   g.setTransform(s, 0, 0, s, 0, 0);
@@ -4946,7 +4958,7 @@ function nvDraw(now) {
   for (const list of [nv.def, nv.inv]) for (const w of list) {
     const isInv = list === nv.inv, owner = isInv ? G.cols[w.c] : col, [x, y, a] = posOn(QP, w.d), ang = isInv ? a : (w.dir > 0 ? a : a + Math.PI);
     const img = sprOf(owner, w.t)[(w.leg / 2 | 0) % FR], us = unitScale(w.t), k = 1.45, c = Math.cos(ang), sn = Math.sin(ang);
-    g.setTransform(s * k * c, s * k * sn, -s * k * sn, s * k * c, x * s, y * s); g.drawImage(img, -CX(w.t) * us, -CY(w.t) * us, img.width / WPX, img.height / WPX);
+    g.setTransform(s * k * c, s * k * sn, -s * k * sn, s * k * c, x * s, y * s); g.drawImage(img, -CX(w.t, owner.si) * us, -CY(w.t, owner.si) * us, img.width / WPX, img.height / WPX);
   }
   g.setTransform(s, 0, 0, s, 0, 0);
   for (const sp of nv.sparks) { g.fillStyle = `rgba(255,236,180,${1 - sp.life / .4})`; for (let i = 0; i < 4; i++) g.fillRect(sp.x + rnd(-6, 6), sp.y + rnd(-6, 6), 2, 2); }
