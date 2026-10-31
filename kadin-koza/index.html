@@ -589,6 +589,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         <div class="lk-row"><span class="label">Jersey</span><div class="chips" data-slot="jersey"></div></div>
         <div class="lk-row"><span class="label">Helmet</span><div class="chips" data-slot="helmet"></div></div>
         <div class="lk-row"><span class="label">Cleats</span><div class="chips" data-slot="cleats"></div></div>
+        <div class="lk-row"><span class="label">Celebrate</span><div class="chips" data-slot="celebrate"></div></div>
         <div class="lk-row"><span class="label">Extras</span><div class="chips" data-slot="extras"></div></div>
         <button class="go" id="lockerDone" type="button">Done</button>
       </div>
@@ -1692,26 +1693,44 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     const swing = run ? Math.sin(run) * 0.12 : 0;
     let lHand = [lerp(-0.36, -0.68, armOut), lerp(hipY + 0.02, top + 0.1, armOut) + swing];
     let rHand = [lerp(0.36, 0.42, armOut), lerp(hipY + 0.02, hipY - 0.1, armOut) - swing];
-    if (look.cheer) {   // both arms up after a make
-      const pump = Math.sin(S.t * 10) * 0.03;
-      lHand = [lerp(lHand[0], -0.36, look.cheer), lerp(lHand[1], top - 0.36 + pump, look.cheer)];
-      rHand = [lerp(rHand[0], 0.36, look.cheer), lerp(rHand[1], top - 0.36 - pump, look.cheer)];
+    let lEl = null, rEl = null, phoneHand = "r";
+    const cel = look.cheer && look.phone ? (CELEBS[KZ.outfit.celebrate] ? KZ.outfit.celebrate : "selfie") : look.cheer ? "selfie" : null;
+    if (look.cheer) {   // Kadin's celebration after a make
+      const c = look.cheer, pump = Math.sin(S.t * 10) * 0.03, g = Math.sin(S.t * 12);
+      let lt, rt;
+      if (cel === "flex") { lt = [-0.42, top - 0.2 + pump]; rt = [0.42, top - 0.2 - pump]; if (c > 0.6) { lEl = [-0.47, top + 0.07]; rEl = [0.47, top + 0.07]; } }
+      else if (cel === "call") { lt = [-0.15, top - 0.12]; rt = [0.6, top - 0.36 + pump]; phoneHand = "l"; if (c > 0.6) lEl = [-0.33, top + 0.04]; }
+      else if (cel === "griddy") { lt = [-0.3, hipY - 0.08 + g * 0.14]; rt = [0.3, hipY - 0.08 - g * 0.14]; if (c > 0.6) { lEl = [-0.4, top + 0.3 + g * 0.05]; rEl = [0.4, top + 0.3 - g * 0.05]; } }
+      else if (cel === "heart") { lt = [-0.05, top - 0.42]; rt = [0.05, top - 0.42]; if (c > 0.6) { lEl = [-0.4, top - 0.1]; rEl = [0.4, top - 0.1]; } }
+      else { lt = [-0.36, top - 0.36 + pump]; rt = [0.36, top - 0.36 - pump]; }
+      lHand = [lerp(lHand[0], lt[0], c), lerp(lHand[1], lt[1], c)];
+      rHand = [lerp(rHand[0], rt[0], c), lerp(rHand[1], rt[1], c)];
     }
     if (look.sad) {     // hands on helmet
       lHand = [lerp(lHand[0], -0.1, look.sad), lerp(lHand[1], top - 0.2, look.sad)];
       rHand = [lerp(rHand[0], 0.1, look.sad), lerp(rHand[1], top - 0.2, look.sad)];
     }
     if (look.phone && !look.cheer && k < 0.3) rHand = [0.42, top + 0.26 + (run ? Math.sin(run) * 0.04 : 0)];
-    for (const [sh, hd] of [[[-0.25, top + 0.08], lHand], [[0.25, top + 0.08], rHand]]) {
-      seg(sh, hd, 0.09, "#c99a72");
-      seg([sh[0] - 0.012, sh[1]], [hd[0] - 0.012, hd[1]], 0.035, "#ddb38c");
+    for (const [sh, hd, el] of [[[-0.25, top + 0.08], lHand, lEl], [[0.25, top + 0.08], rHand, rEl]]) {
+      const from = el || sh;
+      if (el) { seg(sh, el, 0.1, "#c99a72"); seg([sh[0] - 0.012, sh[1]], [el[0] - 0.012, el[1]], 0.04, "#ddb38c"); }
+      seg(from, hd, 0.09, "#c99a72");
+      seg([from[0] - 0.012, from[1]], [hd[0] - 0.012, hd[1]], 0.035, "#ddb38c");
+      if (el && cel === "flex") {   // bicep peak
+        const bp = P(lerp(sh[0], el[0], 0.6), lerp(sh[1], el[1], 0.6) - 0.05);
+        ctx.fillStyle = "#c99a72"; ctx.beginPath(); ctx.ellipse(bp[0], bp[1], 0.07 * u, 0.055 * u, 0, 0, 7); ctx.fill();
+      }
       if (shiny) {   // chrome wristbands
-        const w0 = [lerp(sh[0], hd[0], 0.8), lerp(sh[1], hd[1], 0.8)], w1 = [lerp(sh[0], hd[0], 0.9), lerp(sh[1], hd[1], 0.9)];
+        const w0 = [lerp(from[0], hd[0], 0.8), lerp(from[1], hd[1], 0.8)], w1 = [lerp(from[0], hd[0], 0.9), lerp(from[1], hd[1], 0.9)];
         seg(w0, w1, 0.1, "#9aa1aa");
         seg(w0, w1, 0.05, "#f7f9fb");
       }
     }
-    if (look.phone) { const ph = P(rHand[0], rHand[1] - 0.06); drawPhone(ph[0], ph[1], 0.19 * u, look.cheer ? -0.2 : 0.25, true); }
+    if (look.phone) {
+      const hand = phoneHand === "l" ? lHand : rHand, ph = P(hand[0], hand[1] - 0.06);
+      drawPhone(ph[0], ph[1], 0.19 * u, cel === "call" ? 0.5 : look.cheer ? -0.2 : 0.25, true);
+    }
+    if (cel === "heart" && look.cheer > 0.6) { const hh = P(0, top - 0.5); heart(hh[0], hh[1], 0.06 * u, chrome(hh[0] - 0.06 * u, hh[1], hh[0] + 0.06 * u, hh[1] + 0.08 * u)); }
     // towel tucked in the waistband
     const sway = Math.sin(S.t * 3 + run) * 0.02;
     ctx.fillStyle = "#f3efe6";
@@ -1958,7 +1977,8 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         ctx.fillStyle = ag; ctx.fillRect(kp.x - u, kp.y - 2 * u, 2 * u, 2 * u);
         ctx.restore();
       }
-      drawKicker(kp.x, kp.y, u, S.kk, S.krun, look);
+      const griddy = look.cheer > 0.6 && look.phone && KZ.outfit.celebrate === "griddy";
+      drawKicker(kp.x, kp.y, u, griddy ? 0 : S.kk, griddy ? 0.01 + S.t * 12 : S.krun, look);
     }
     if (S.kHead && kp.d > 1.5) drawPings(S.kHead[0], S.kHead[1]);
     // light cones from the towers
@@ -2843,7 +2863,14 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     white: { name: "White", lv: 3, fill: "#f3efe6", sw: "#f3efe6" },
     gold: { name: "Gold", lv: 4, fill: "#e2b93f", sw: "#e2b93f" }
   };
-  const KZ = { xp: 0, outfit: { jersey: "home", helmet: "chrome", cleats: "chrome", chain: true, hearts: true, shades: true,
+  const CELEBS = {
+    selfie: { name: "Selfie", lv: 1 },
+    flex: { name: "Dalton Flex", lv: 1 },
+    call: { name: "Phone Call", lv: 2 },
+    griddy: { name: "Griddy-style dance", lv: 3 },
+    heart: { name: "Heart Hands", lv: 4 }
+  };
+  const KZ = { xp: 0, outfit: { celebrate: "selfie", jersey: "home", helmet: "chrome", cleats: "chrome", chain: true, hearts: true, shades: true,
                                 rings: true, bracelets: true, earrings: true, pendant: true, cap: false, patches: true } };
   try {
     const d = JSON.parse(localStorage.getItem("kk-kadin") || "{}");
@@ -2875,7 +2902,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     if (!quiet) toast(`<b>+${n} XP</b>${why ? " · " + why : ""}`);
     if (after > before) {
       const un = [];
-      for (const [slot, list] of [["jersey", JERSEYS], ["helmet", HELMETS], ["cleats", CLEATS]])
+      for (const [slot, list] of [["jersey", JERSEYS], ["helmet", HELMETS], ["cleats", CLEATS], ["celebration", CELEBS]])
         for (const o of Object.values(list)) if (o.lv > before && o.lv <= after) un.push(`${o.name} ${slot}`);
       setTimeout(() => toast(`<b>LEVEL UP!</b> Kadin is level ${after}` + (un.length ? `<br>Unlocked: ${un.join(", ")}` : "<br>Sweet spot got bigger"), 3200), quiet ? 0 : 900);
       confetti(70); sfx.cheer();
@@ -2913,9 +2940,9 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
           add(k, (KZ.outfit[k] ? "✓ " : "") + label, null, 0, KZ.outfit[k], () => { KZ.outfit[k] = !KZ.outfit[k]; saveKZ(); buildLocker(); });
         return;
       }
-      const list = { jersey: JERSEYS, helmet: HELMETS, cleats: CLEATS }[slot];
+      const list = { jersey: JERSEYS, helmet: HELMETS, cleats: CLEATS, celebrate: CELEBS }[slot];
       for (const [k, o] of Object.entries(list)) {
-        const sw = slot === "jersey" ? o.c[1] : slot === "helmet" ? o.c[1] : o.sw;
+        const sw = slot === "celebrate" ? null : slot === "jersey" ? o.c[1] : slot === "helmet" ? o.c[1] : o.sw;
         add(k, o.name, sw, o.lv > L.level ? o.lv : 0, KZ.outfit[slot] === k, () => { KZ.outfit[slot] = k; saveKZ(); buildLocker(); sfx.tick(); });
       }
     });
