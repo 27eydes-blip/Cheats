@@ -360,6 +360,44 @@ button.ghost {
 }
 #title .actions { animation: rise .5s 1.85s both; }
 #title .go { animation: pulse 1.5s 2.4s infinite; }
+/* kicker select */
+#chars { justify-content: flex-start; overflow-y: auto; padding-block: 24px; }
+#chars h1 .name { font-size: clamp(28px, 8vmin, 46px); }
+.char-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: min(100%, 400px); }
+.char {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 8px;
+  background: rgba(20,22,29,.94);
+  border: 2px solid #2a2c33;
+  border-radius: 8px;
+  color: var(--chalk);
+  font-family: var(--body);
+  cursor: pointer;
+}
+.char:hover, .char:focus-visible, .char.sel { border-color: var(--orange); }
+.char svg { width: 78%; max-width: 120px; }
+.char .cn { font-family: var(--display); font-size: 17px; color: var(--orange); }
+.char .ovr { font-weight: 700; font-size: 13px; letter-spacing: .14em; }
+.char .ovr b { font-family: var(--display); font-weight: 400; font-size: 20px; color: var(--goal); }
+.bars {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 6px;
+  width: 100%;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.bar { height: 6px; background: #24262d; border-radius: 3px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--orange); }
+.char .ab { font-size: 13px; line-height: 1.25; text-align: center; color: var(--chalk); }
 /* season schedule */
 #levels { justify-content: flex-start; overflow-y: auto; padding-block: 24px; }
 #levels h1 .name, #over h1 .name { font-size: clamp(28px, 8vmin, 46px); }
@@ -394,6 +432,18 @@ button.ghost {
 }
 </style>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gCloth" x1="0" x2="1">
+      <stop offset="0" stop-color="#c44a06"/><stop offset=".3" stop-color="#ff7424"/>
+      <stop offset=".55" stop-color="#ff8a3d"/><stop offset="1" stop-color="#c44a06"/>
+    </linearGradient>
+    <linearGradient id="gChrome" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5d636b"/><stop offset=".3" stop-color="#f7f9fb"/><stop offset=".5" stop-color="#9aa1aa"/>
+      <stop offset=".75" stop-color="#ffffff"/><stop offset="1" stop-color="#4a4f56"/>
+    </linearGradient>
+  </defs>
+</svg>
 <div class="app">
   <div class="board" aria-live="polite">
     <div class="cell"><span class="label" id="lab1">Score</span><span class="value" id="score">0</span></div>
@@ -460,11 +510,55 @@ button.ghost {
         </div>
       </div>
 
+      <div class="overlay" id="chars" hidden>
+        <h1><span class="the">Choose your</span><span class="name">Kicker</span></h1>
+        <div class="char-list">
+          <button class="char" type="button" data-char="kadin">
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <path d="M62 18 Q100 36 138 18 L186 44 L171 92 L150 84 L150 188 L50 188 L50 84 L29 92 L14 44 Z" fill="url(#gCloth)" stroke="#0a0a0a" stroke-width="3" stroke-linejoin="round"/>
+              <g fill="url(#gChrome)" stroke="#0a0a0a" stroke-width=".8">
+                <path transform="translate(160 52) rotate(20) scale(1.3)" d="M0 -2 C0 -6 -6 -6 -6 -1.5 C-6 2 -2 4 0 7 C2 4 6 2 6 -1.5 C6 -6 0 -6 0 -2Z"/>
+                <path transform="translate(40 52) rotate(-20) scale(1.3)" d="M0 -2 C0 -6 -6 -6 -6 -1.5 C-6 2 -2 4 0 7 C2 4 6 2 6 -1.5 C6 -6 0 -6 0 -2Z"/>
+              </g>
+              <text x="100" y="74" font-family="Graduate, serif" font-size="24" fill="#0a0a0a" stroke="url(#gChrome)" stroke-width=".8" text-anchor="middle">KOZA</text>
+              <text x="100" y="170" font-family="Graduate, serif" font-size="90" fill="#0a0a0a" stroke="url(#gChrome)" stroke-width="3" text-anchor="middle">7</text>
+            </svg>
+            <span class="cn">Kadin Koza</span>
+            <span class="ovr">OVR <b>99</b></span>
+            <span class="bars">
+              <span>Leg</span><span class="bar"><i style="width:100%"></i></span>
+              <span>Aim</span><span class="bar"><i style="width:98%"></i></span>
+              <span>Clutch</span><span class="bar"><i style="width:100%"></i></span>
+            </span>
+            <span class="ab">Big sweet spot. Goes <b>ON FIRE</b> after 2 makes in a row.</span>
+          </button>
+          <button class="char" type="button" data-char="gavin">
+            <svg viewBox="0 0 200 200" aria-hidden="true">
+              <path d="M62 18 Q100 36 138 18 L186 44 L171 92 L150 84 L150 188 L50 188 L50 84 L29 92 L14 44 Z" fill="#c98258" stroke="#0a0a0a" stroke-width="3" stroke-linejoin="round"/>
+              <ellipse cx="78" cy="140" rx="18" ry="10" fill="rgba(70,100,40,.55)"/>
+              <ellipse cx="128" cy="104" rx="7" ry="5" fill="rgba(170,30,20,.5)"/>
+              <text x="100" y="74" font-family="Graduate, serif" font-size="22" fill="#0a0a0a" text-anchor="middle">GAVIN</text>
+              <text x="100" y="170" font-family="Graduate, serif" font-size="90" fill="#0a0a0a" stroke="#f3efe6" stroke-width="2" text-anchor="middle">0</text>
+            </svg>
+            <span class="cn">Gavin</span>
+            <span class="ovr">OVR <b>12</b></span>
+            <span class="bars">
+              <span>Leg</span><span class="bar"><i style="width:9%"></i></span>
+              <span>Aim</span><span class="bar"><i style="width:2%"></i></span>
+              <span>Clutch</span><span class="bar"><i style="width:0%"></i></span>
+            </span>
+            <span class="ab">No abilities. Has never made a kick. Good luck.</span>
+          </button>
+        </div>
+        <button class="ghost" id="charBack" type="button">Back</button>
+      </div>
+
       <div class="overlay" id="levels" hidden>
-        <h1><span class="the">The season</span><span class="name">Schedule</span></h1>
+        <h1><span class="the" id="levelsThe">The season</span><span class="name">Schedule</span></h1>
         <div class="level-list" id="levelList"></div>
         <div class="actions">
           <button class="ghost" id="endless" type="button">Endless mode</button>
+          <button class="ghost" id="changeKicker" type="button">Change kicker</button>
           <button class="ghost" id="back" type="button">Back</button>
         </div>
       </div>
@@ -647,12 +741,30 @@ button.ghost {
 
   // ---------- game state ----------
   const S = {
-    mode: "intro", phase: "jog", level: -1, kickIdx: 0, kicks: [], t: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0,
+    mode: "intro", phase: "jog", char: "kadin", streak: 0, fireKick: false, level: -1, kickIdx: 0, kicks: [], t: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0,
     K: INTRO_K, wind: 0, power: 0, aim: 0, kickT: 0, introT: 0, introCheer: false,
     ball: null, result: null, resultShown: false, resultT: 0, flash: 0,
     kpos: { ...IDLE }, kk: 0, krun: 0
   };
   const parts = [], trail = [];
+
+  // kickers
+  const CHARS = {
+    kadin: { id: "kadin", name: "Kadin Koza", back: "KOZA", num: "7", chrome: true, power: 1.1, aimS: 1.1, zone: 1.3 },
+    gavin: { id: "gavin", name: "Gavin", back: "GAVIN", num: "0", chrome: false, bad: true, slouch: true, power: 0.38, aimS: 0.4, zone: 0.6 }
+  };
+  try { S.char = CHARS[localStorage.getItem("kk-char")] ? localStorage.getItem("kk-char") : "kadin"; } catch (e) { S.char = "kadin"; }
+  const char = () => CHARS[S.mode === "game" || S.mode === "over" ? S.char : "kadin"];
+  const onFire = () => S.mode === "game" && char().chrome && S.streak >= 2;
+  const zoneNow = () => char().zone * (onFire() ? 1.25 : 1);
+  const tag = () => `${char().name} · <b>#${char().num}</b>`;
+  const pick = a => a[(Math.random() * a.length) | 0];
+  const GAVIN_LINES = {
+    short: ["Didn't reach the end zone", "That one rolled", "Gavin needs a bigger leg", "The holder caught it"],
+    wide: ["Into the student section", "He hit the band", "That one's in the parking lot", "The holder is ducking", "Off a ref's hat"],
+    doink: ["So close. Not really, Gavin.", "The upright said no"],
+    whiff: ["Gavin missed the ball completely", "He kicked the grass", "Gavin fell over"]
+  };
 
   // the season: each game is a level
   const LEVELS = [
@@ -682,11 +794,11 @@ button.ghost {
     setBall();
     S.result = null; S.resultShown = false;
     hideBanner(); hud();
-    setPrompt("Tap to set <b>power</b>");
+    setPrompt("Tap to set <b>power</b>" + (onFire() ? ` · <b>ON FIRE ×${S.streak}</b>` : ""));
   }
   const slick = () => { const L = lvl(); return L && L.weather !== "clear" ? 0.9 : 1; };
-  function powerPeriod() { return S.level >= 0 ? (1.25 - S.level * 0.08) * slick() : Math.max(0.7, 1.3 - S.makes * 0.04); }
-  function aimPeriod() { return S.level >= 0 ? (1.45 - S.level * 0.1) * slick() : Math.max(0.75, 1.5 - S.makes * 0.05); }
+  function powerPeriod() { return (S.level >= 0 ? (1.25 - S.level * 0.08) * slick() : Math.max(0.7, 1.3 - S.makes * 0.04)) * char().power; }
+  function aimPeriod() { return (S.level >= 0 ? (1.45 - S.level * 0.1) * slick() : Math.max(0.75, 1.5 - S.makes * 0.05)) * char().aimS; }
   function minPower(K) {
     const R = K / (1 - 5.97 / K);
     return clamp((R - 15) / 0.6, 0, 100);
@@ -738,9 +850,13 @@ button.ghost {
 
   // ---------- flight model ----------
   function launch() {
-    const p = S.power, R = 15 + p * 0.6, hMax = 0.15 * R, K = S.K;
-    const hook = p > 94 ? -(p - 94) * 0.6 : 0;
-    const xAt = z => S.aim * 0.18 * z + S.wind * 0.003 * z * z / 30 + hook * (z / K) * (z / K);
+    const C = char();
+    let p = S.power, aim = S.aim / zoneNow();
+    if (C.bad) { p *= 0.6; aim += (Math.random() - 0.5) * 0.9; }
+    const R = 15 + p * 0.6, hMax = 0.15 * R, K = S.K;
+    const hook = (S.power > 94 ? -(S.power - 94) * 0.6 : 0) + (C.bad ? (Math.random() - 0.5) * 8 : 0);
+    const xAt0 = z => aim * 0.18 * z + S.wind * 0.003 * z * z / 30 + hook * (z / K) * (z / K);
+    let xAt = xAt0;
     const yAt = z => Math.max(0, 4 * hMax * (z / R) * (1 - z / R));
     let res;
     if (R < K) res = { kind: "short", title: "SHORT", good: false };
@@ -755,7 +871,27 @@ button.ghost {
       else res = { kind: "wide", title: x < 0 ? "WIDE LEFT" : "WIDE RIGHT", good: false };
     }
     if (!res.sub) res.sub = S.K + " yards" + (hook ? " · hooked it" : "");
+    let whiff = false;
+    if (C.bad) {   // Gavin never makes one
+      if (Math.random() < 0.28) {
+        whiff = true; res = { kind: "whiff", title: "WHIFF!", good: false };
+      } else if (res.good) {
+        const side = Math.random() < 0.5 ? -1 : 1, x0 = xAt0(K);
+        xAt = z => xAt0(z) + (side * HALF_GOAL - x0) * Math.pow(z / K, 3);
+        res = { kind: "doink", title: "DOINK!", good: false, side };
+      }
+      res.sub = pick(GAVIN_LINES[res.kind] || GAVIN_LINES.wide);
+    }
+    S.fireKick = onFire();
+    if (S.fireKick && res.good) res.sub = `ON FIRE · ${S.streak + 1} in a row`;
     S.result = res;
+    if (whiff) {
+      S.ball = { x: 0.1, y: 0, z: 0, spin: 0, mode: "roll", vz: 1.6 };
+      trail.length = 0;
+      noise(0.35, 500, 0.15, 0.05);
+      crossed();
+      return;
+    }
     S.ball = { x: 0, y: 0.1, z: 0, spin: 0, mode: "fly", t: 0, T: 1.0 + R / 50, R, xAt, yAt,
                stopZ: res.kind === "doink" ? K : Math.min(R, K + 12) };
     trail.length = 0;
@@ -772,11 +908,11 @@ button.ghost {
     const r = S.result;
     S.att++; S.kickIdx++;
     if (r.good) {
-      S.makes++; S.score += 3; S.long = Math.max(S.long, S.K);
+      S.makes++; S.score += 3; S.long = Math.max(S.long, S.K); S.streak++;
       if (S.score > best) { best = S.score; saveBest(); }
       sfx.cheer(); S.flash = 2; confetti(50);
     } else {
-      S.misses++;
+      S.misses++; S.streak = 0;
       if (r.kind !== "doink") sfx.groan();
     }
     showBanner(r.title, r.sub, r.good);
@@ -833,7 +969,7 @@ button.ghost {
     $("title").hidden = true; $("over").hidden = true; $("introUI").hidden = false;
     hideBanner();
     Object.assign(cam, follow(JOG_FROM)); Object.assign(camT, follow(JOG_FROM));
-    hud(); setPrompt("Kadin Koza · <b>#7</b>");
+    hud(); setPrompt(tag());
   }
   function introUpdate(dt) {
     const t = (S.introT += dt);
@@ -882,7 +1018,7 @@ button.ghost {
     } else if (S.phase === "aim") {
       S.aim = Math.sin(S.t * Math.PI * 2 / aimPeriod());
       S.phase = "kick"; S.kickT = 0; sfx.tick();
-      setPrompt("Kadin Koza · <b>#7</b>");
+      setPrompt(tag());
     }
   }
   cv.addEventListener("pointerdown", e => { e.preventDefault(); tap(); });
@@ -893,15 +1029,15 @@ button.ghost {
   });
   function startGame(level) {
     audio();
-    Object.assign(S, { mode: "game", level, kickIdx: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0 });
+    Object.assign(S, { mode: "game", level, kickIdx: 0, streak: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0 });
     const L = lvl();
     if (L) {   // distances climb through the game
       S.kicks = Array.from({ length: L.kicks }, (_, i) => Math.round(lerp(L.min, L.max, L.kicks > 1 ? i / (L.kicks - 1) : 0)));
     }
-    for (const id of ["title", "over", "levels", "introUI"]) $(id).hidden = true;
+    for (const id of ["title", "over", "levels", "chars", "introUI"]) $(id).hidden = true;
     newKick();
     if (L) showBanner(L.wk.length > 1 ? L.name.toUpperCase() : `WEEK ${L.wk}`, `vs ${L.opp} · make ${L.need} of ${L.kicks}`, true);
-    else showBanner("LET'S GO, KOZA!", "Endless mode", true);
+    else showBanner(char().bad ? "GAVIN'S UP" : "LET'S GO, KOZA!", char().bad ? "Endless mode. Good luck." : "Endless mode", true);
     sfx.cheer(); S.flash = 2;
     setTimeout(() => { if (S.phase === "power") hideBanner(); }, 1400);
   }
@@ -919,7 +1055,8 @@ button.ghost {
       b.addEventListener("click", () => startGame(i));
       list.appendChild(b);
     });
-    for (const id of ["title", "over"]) $(id).hidden = true;
+    for (const id of ["title", "over", "chars"]) $(id).hidden = true;
+    $("levelsThe").textContent = "Kicker: " + CHARS[S.char].name;
     $("levels").hidden = false;
     S.mode = "title"; S.phase = "idle";
   }
@@ -936,20 +1073,35 @@ button.ghost {
     S.mode = "over"; S.phase = "idle"; hideBanner();
     $("overThe").textContent = L.wk.length > 1 ? L.name : `Week ${L.wk} · ${L.name}`;
     $("overScore").textContent = pass ? (last ? "State champs!" : "Win!") : "Loss";
+    if (!pass && char().bad) $("overMsg").dataset.gavin = "1";
     $("overStars").hidden = !pass; $("overStars").textContent = starText(stars);
     $("overMsg").hidden = false;
     $("overMsg").textContent = pass
       ? (last ? "Kadin Koza brings the state title home to Koza Field." : `Beat ${L.opp}. Next up: ${LEVELS[S.level + 1].name}.`)
-      : `Needed ${L.need} makes against ${L.opp}. Try it again.`;
+      : char().bad ? `Gavin went ${S.makes} for ${S.att} against ${L.opp}. Maybe let Kadin kick.` : `Needed ${L.need} makes against ${L.opp}. Try it again.`;
     $("overMade").textContent = `${S.makes}/${S.att}`;
     $("overLong").textContent = S.long ? S.long + " yd" : "–";
     $("overLab3").textContent = "Points"; $("overBest").textContent = S.score;
     $("next").hidden = !pass || last;
     $("again").textContent = pass ? "Replay" : "Try again";
     $("over").hidden = false;
-    setPrompt("Kadin Koza · <b>#7</b>");
+    setPrompt(tag());
   }
-  $("start").addEventListener("click", showLevels);
+  function showChars() {
+    audio();
+    document.querySelectorAll(".char").forEach(b => b.classList.toggle("sel", b.dataset.char === S.char));
+    for (const id of ["title", "over", "levels"]) $(id).hidden = true;
+    $("chars").hidden = false;
+    S.mode = "title"; S.phase = "idle";
+  }
+  document.querySelectorAll(".char").forEach(b => b.addEventListener("click", () => {
+    S.char = b.dataset.char;
+    try { localStorage.setItem("kk-char", S.char); } catch (e) {}
+    showLevels();
+  }));
+  $("charBack").addEventListener("click", () => { $("chars").hidden = true; $("title").hidden = false; });
+  $("changeKicker").addEventListener("click", showChars);
+  $("start").addEventListener("click", showChars);
   $("menu").addEventListener("click", showLevels);
   $("back").addEventListener("click", () => { $("levels").hidden = true; $("title").hidden = false; });
   $("endless").addEventListener("click", () => startGame(-1));
@@ -1063,8 +1215,15 @@ button.ghost {
     if (trail.length > 2) {
       ctx.beginPath();
       trail.forEach((q, i) => { const p = proj(q.x, q.y + 0.1, q.z); i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); });
-      ctx.strokeStyle = "rgba(255,240,220,.22)"; ctx.lineWidth = Math.max(1.5, proj(b.x, b.y, b.z).s * 0.12);
-      ctx.lineCap = "round"; ctx.stroke();
+      const tw = Math.max(1.5, proj(b.x, b.y, b.z).s * 0.12);
+      ctx.lineCap = "round";
+      if (S.fireKick) {   // ON FIRE trail
+        ctx.save();
+        ctx.shadowColor = "rgba(255,110,20,.95)"; ctx.shadowBlur = 18;
+        ctx.strokeStyle = "rgba(255,106,19,.75)"; ctx.lineWidth = tw * 2.2; ctx.stroke();
+        ctx.strokeStyle = "rgba(255,220,90,.9)"; ctx.lineWidth = tw * 0.8; ctx.stroke();
+        ctx.restore();
+      } else { ctx.strokeStyle = "rgba(255,240,220,.22)"; ctx.lineWidth = tw; ctx.stroke(); }
     }
     const sh = proj(b.x, 0, b.z);
     if (sh.d < 1) return;
@@ -1130,12 +1289,15 @@ button.ghost {
     ctx.fillStyle = fill; ctx.fill();
     ctx.strokeStyle = "rgba(0,0,0,.5)"; ctx.lineWidth = Math.max(0.5, r * 0.12); ctx.stroke();
   }
-  function drawKicker(px, py, u, k, run) {
+  function drawKicker(px, py, u, k, run, look) {
     const P = (x, y) => [px + x * u, py + y * u];
     const seg = (a, b, w, col) => {
       ctx.strokeStyle = col; ctx.lineWidth = w * u; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(...P(...a)); ctx.lineTo(...P(...b)); ctx.stroke();
     };
+    const shiny = look.chrome;
+    ctx.save();
+    if (look.fall) { ctx.translate(px, py); ctx.rotate(-1.35 * look.fall); ctx.translate(-px, -py); }
     const bob = run ? Math.abs(Math.sin(run)) * 0.05 : 0;
     const lean = k > 0.55 ? (k - 0.55) * 0.25 : 0;
     // soft contact shadow
@@ -1164,11 +1326,11 @@ button.ghost {
       seg(h, [kn[0], kn[1] + 0.04], 0.17, "#0b0b0d");                 // black pants
       seg([h[0] - 0.03, h[1] + 0.03], [kn[0] - 0.03, kn[1]], 0.04, "#2a2b31");
       const side = Math.sign(h[0]);
-      seg([h[0] + side * 0.075, h[1]], [kn[0] + side * 0.075, kn[1] + 0.02], 0.025, "#d9dde3");
+      seg([h[0] + side * 0.075, h[1]], [kn[0] + side * 0.075, kn[1] + 0.02], 0.025, shiny ? "#d9dde3" : "#ff6a13");
       const fp = P(...f);
-      ctx.fillStyle = chrome(fp[0] - 0.085 * u, fp[1] - 0.05 * u, fp[0] + 0.085 * u, fp[1] + 0.05 * u);   // chrome cleats
+      ctx.fillStyle = shiny ? chrome(fp[0] - 0.085 * u, fp[1] - 0.05 * u, fp[0] + 0.085 * u, fp[1] + 0.05 * u) : "#050505";
       ctx.beginPath(); ctx.ellipse(fp[0], fp[1], 0.085 * u, 0.05 * u, 0, 0, 7); ctx.fill();
-      ctx.fillStyle = "#0a0a0a"; ctx.fillRect(fp[0] - 0.07 * u, fp[1] + 0.028 * u, 0.14 * u, 0.014 * u);
+      ctx.fillStyle = shiny ? "#0a0a0a" : "#8a8a8a"; ctx.fillRect(fp[0] - 0.07 * u, fp[1] + 0.028 * u, 0.14 * u, 0.014 * u);
     }
 
     ctx.save();
@@ -1178,11 +1340,25 @@ button.ghost {
     // arms
     const armOut = k > 0.3 ? Math.min(1, (k - 0.3) / 0.4) : 0;
     const swing = run ? Math.sin(run) * 0.12 : 0;
-    const lHand = [lerp(-0.36, -0.68, armOut), lerp(hipY + 0.02, top + 0.1, armOut) + swing];
-    const rHand = [lerp(0.36, 0.42, armOut), lerp(hipY + 0.02, hipY - 0.1, armOut) - swing];
+    let lHand = [lerp(-0.36, -0.68, armOut), lerp(hipY + 0.02, top + 0.1, armOut) + swing];
+    let rHand = [lerp(0.36, 0.42, armOut), lerp(hipY + 0.02, hipY - 0.1, armOut) - swing];
+    if (look.cheer) {   // both arms up after a make
+      const pump = Math.sin(S.t * 10) * 0.03;
+      lHand = [lerp(lHand[0], -0.36, look.cheer), lerp(lHand[1], top - 0.36 + pump, look.cheer)];
+      rHand = [lerp(rHand[0], 0.36, look.cheer), lerp(rHand[1], top - 0.36 - pump, look.cheer)];
+    }
+    if (look.sad) {     // hands on helmet
+      lHand = [lerp(lHand[0], -0.1, look.sad), lerp(lHand[1], top - 0.2, look.sad)];
+      rHand = [lerp(rHand[0], 0.1, look.sad), lerp(rHand[1], top - 0.2, look.sad)];
+    }
     for (const [sh, hd] of [[[-0.25, top + 0.08], lHand], [[0.25, top + 0.08], rHand]]) {
       seg(sh, hd, 0.09, "#6b3f25");
       seg([sh[0] - 0.012, sh[1]], [hd[0] - 0.012, hd[1]], 0.035, "#8b5636");
+      if (shiny) {   // chrome wristbands
+        const w0 = [lerp(sh[0], hd[0], 0.8), lerp(sh[1], hd[1], 0.8)], w1 = [lerp(sh[0], hd[0], 0.9), lerp(sh[1], hd[1], 0.9)];
+        seg(w0, w1, 0.1, "#9aa1aa");
+        seg(w0, w1, 0.05, "#f7f9fb");
+      }
     }
     // towel tucked in the waistband
     const sway = Math.sin(S.t * 3 + run) * 0.02;
@@ -1192,11 +1368,15 @@ button.ghost {
     ctx.lineTo(...P(-0.085 + sway, hipY + 0.21)); ctx.lineTo(...P(-0.155 + sway, hipY + 0.2));
     ctx.closePath(); ctx.fill();
     const th = P(-0.12 + sway, hipY + 0.09);
-    heart(th[0], th[1], 0.022 * u, chrome(th[0] - 0.02 * u, th[1], th[0] + 0.02 * u, th[1] + 0.03 * u));
+    if (shiny) heart(th[0], th[1], 0.022 * u, chrome(th[0] - 0.02 * u, th[1], th[0] + 0.02 * u, th[1] + 0.03 * u));
     // jersey
     const jg = ctx.createLinearGradient(P(-0.3, 0)[0], 0, P(0.3, 0)[0], 0);
-    jg.addColorStop(0, "#b84405"); jg.addColorStop(0.22, "#ff6f1f"); jg.addColorStop(0.5, "#ff8a3d");
-    jg.addColorStop(0.78, "#ff6f1f"); jg.addColorStop(1, "#b84405");
+    if (shiny) {
+      jg.addColorStop(0, "#b84405"); jg.addColorStop(0.22, "#ff6f1f"); jg.addColorStop(0.5, "#ff8a3d");
+      jg.addColorStop(0.78, "#ff6f1f"); jg.addColorStop(1, "#b84405");
+    } else {   // Gavin's faded, grass-stained jersey
+      jg.addColorStop(0, "#8f5634"); jg.addColorStop(0.5, "#c98258"); jg.addColorStop(1, "#8f5634");
+    }
     for (const sx of [-1, 1]) {
       ctx.fillStyle = jg;
       ctx.beginPath();
@@ -1227,45 +1407,56 @@ button.ghost {
     ctx.beginPath(); shoulders();
     ctx.strokeStyle = "rgba(255,236,200,.65)"; ctx.lineWidth = 0.014 * u; ctx.stroke();
     // chrome hearts on the sleeves
-    for (const sx of [-1, 1]) {
+    if (shiny) for (const sx of [-1, 1]) {
       const hs = P(sx * 0.34, top + 0.045);
       heart(hs[0], hs[1], 0.03 * u, chrome(hs[0] - 0.03 * u, hs[1], hs[0] + 0.03 * u, hs[1] + 0.04 * u));
     }
     // name + number
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     const np = P(0, top + 0.12);
-    ctx.font = `${0.13 * u}px Graduate, serif`; ctx.fillStyle = "#0a0a0a";
-    ctx.lineWidth = 0.014 * u; ctx.strokeStyle = chrome(np[0] - 0.2 * u, np[1] - 0.05 * u, np[0] + 0.2 * u, np[1] + 0.05 * u);
-    ctx.strokeText("KOZA", np[0], np[1]);
-    ctx.fillText("KOZA", np[0], np[1]);
+    ctx.font = `${(look.back.length > 4 ? 0.105 : 0.13) * u}px Graduate, serif`; ctx.fillStyle = "#0a0a0a";
+    if (shiny) {
+      ctx.lineWidth = 0.014 * u; ctx.strokeStyle = chrome(np[0] - 0.2 * u, np[1] - 0.05 * u, np[0] + 0.2 * u, np[1] + 0.05 * u);
+      ctx.strokeText(look.back, np[0], np[1]);
+    }
+    ctx.fillText(look.back, np[0], np[1]);
     const nn = P(0, top + 0.4);
     ctx.font = `${0.36 * u}px Graduate, serif`;
-    ctx.fillStyle = "rgba(120,40,0,.45)"; ctx.fillText("7", nn[0] + 0.012 * u, nn[1] + 0.012 * u);
-    ctx.lineWidth = 0.03 * u; ctx.strokeStyle = chrome(nn[0] - 0.15 * u, nn[1] - 0.18 * u, nn[0] + 0.15 * u, nn[1] + 0.18 * u);
-    ctx.strokeText("7", nn[0], nn[1]);
-    ctx.fillStyle = "#0a0a0a"; ctx.fillText("7", nn[0], nn[1]);
+    ctx.fillStyle = "rgba(120,40,0,.45)"; ctx.fillText(look.num, nn[0] + 0.012 * u, nn[1] + 0.012 * u);
+    ctx.lineWidth = (shiny ? 0.03 : 0.02) * u;
+    ctx.strokeStyle = shiny ? chrome(nn[0] - 0.15 * u, nn[1] - 0.18 * u, nn[0] + 0.15 * u, nn[1] + 0.18 * u) : "#f3efe6";
+    ctx.strokeText(look.num, nn[0], nn[1]);
+    ctx.fillStyle = "#0a0a0a"; ctx.fillText(look.num, nn[0], nn[1]);
+    if (!shiny) {   // grass stain
+      const gs = P(-0.1, hipY - 0.12);
+      ctx.fillStyle = "rgba(70,100,40,.5)"; ctx.beginPath(); ctx.ellipse(gs[0], gs[1], 0.07 * u, 0.035 * u, 0.3, 0, 7); ctx.fill();
+    }
     // neck + helmet
     seg([0, top - 0.02], [0, top - 0.06], 0.1, "#6b3f25");
-    for (let i = -5; i <= 5; i++) {   // silver chain
+    if (shiny) for (let i = -5; i <= 5; i++) {   // silver chain
       const c = P(i * 0.02, top - 0.012 + i * i * 0.0012);
       ctx.fillStyle = i % 2 ? "#eef1f5" : "#8f96a0";
       ctx.beginPath(); ctx.ellipse(c[0], c[1], 0.011 * u, 0.008 * u, 0, 0, 7); ctx.fill();
     }
-    const hp = P(0, top - 0.17);
+    const hp = P(0, top - (look.slouch ? 0.14 : 0.17));
+    if (look.slouch) { ctx.save(); ctx.translate(hp[0], hp[1]); ctx.rotate(0.28); ctx.translate(-hp[0], -hp[1]); }
     seg([-0.125, -0.1 + top], [-0.15, -0.03 + top], 0.016, "#9a9aa0");   // facemask peeking out
     seg([0.125, -0.1 + top], [0.15, -0.03 + top], 0.016, "#9a9aa0");
     const hg = ctx.createRadialGradient(hp[0] - 0.05 * u, hp[1] - 0.06 * u, 0.01 * u, hp[0], hp[1], 0.17 * u);
-    hg.addColorStop(0, "#ffffff"); hg.addColorStop(0.3, "#cfd4db"); hg.addColorStop(0.65, "#727982"); hg.addColorStop(1, "#2a2d32");
+    if (shiny) { hg.addColorStop(0, "#ffffff"); hg.addColorStop(0.3, "#cfd4db"); hg.addColorStop(0.65, "#727982"); hg.addColorStop(1, "#2a2d32"); }
+    else { hg.addColorStop(0, "#55565e"); hg.addColorStop(0.5, "#17171b"); hg.addColorStop(1, "#050505"); }
     ctx.fillStyle = hg;
     ctx.beginPath(); ctx.ellipse(hp[0], hp[1], 0.135 * u, 0.15 * u, 0, 0, 7); ctx.fill();
     ctx.save(); ctx.clip();
     ctx.fillStyle = "#ff6a13"; ctx.fillRect(hp[0] - 0.025 * u, hp[1] - 0.2 * u, 0.05 * u, 0.4 * u);
-    ctx.fillStyle = "#0a0a0a";
+    ctx.fillStyle = shiny ? "#0a0a0a" : "#f3efe6";
     ctx.fillRect(hp[0] - 0.045 * u, hp[1] - 0.2 * u, 0.012 * u, 0.4 * u);
     ctx.fillRect(hp[0] + 0.033 * u, hp[1] - 0.2 * u, 0.012 * u, 0.4 * u);
     ctx.restore();
     ctx.fillStyle = "rgba(255,255,255,.3)";
     ctx.beginPath(); ctx.ellipse(hp[0] - 0.06 * u, hp[1] - 0.07 * u, 0.035 * u, 0.018 * u, -0.6, 0, 7); ctx.fill();
+    if (look.slouch) ctx.restore();
+    ctx.restore();
     ctx.restore();
   }
 
@@ -1288,7 +1479,7 @@ button.ghost {
     const a = S.phase === "aim" ? Math.sin(S.t * Math.PI * 2 / aimPeriod()) : 0;
     ctx.fillStyle = "rgba(10,12,17,.75)"; ctx.fillRect(cx - aw / 2 - 10, ay - 26, aw + 20, 44);
     ctx.fillStyle = "#24262d"; ctx.fillRect(cx - aw / 2, ay - 6, aw, 12);
-    const gz = clamp(HALF_GOAL / (0.18 * S.K), 0, 1);
+    const gz = clamp(HALF_GOAL / (0.18 * S.K) * zoneNow(), 0, 1);
     ctx.fillStyle = "rgba(255,210,63,.55)"; ctx.fillRect(cx - gz * aw / 2, ay - 6, gz * aw, 12);
     ctx.fillStyle = "#f3efe6"; ctx.fillRect(cx - 1, ay - 9, 2, 18);
     if (S.phase === "aim") {
@@ -1322,7 +1513,22 @@ button.ghost {
     drawGoal();
     if (!behind) drawBall();
     const kp = proj(S.kpos.x, 0, S.kpos.z);
-    if (kp.d > 1.5) drawKicker(kp.x, kp.y, kp.s * KICKER_SIZE, S.kk, S.krun);
+    if (kp.d > 1.5) {
+      const C = char(), r = S.resultShown ? S.result : null;
+      const look = { ...C,
+        cheer: C.chrome && r && r.good ? clamp(S.resultT / 0.3, 0, 1) : 0,
+        sad: C.bad && r && !r.good ? clamp(S.resultT / 0.4, 0, 1) : 0,
+        fall: S.result && S.result.kind === "whiff" ? clamp((S.kickT - 0.55) / 0.35, 0, 1) : 0 };
+      const u = kp.s * KICKER_SIZE;
+      if (onFire() || (S.fireKick && S.phase !== "power" && S.phase !== "aim")) {
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        const ag = ctx.createRadialGradient(kp.x, kp.y - u, 0, kp.x, kp.y - u, u * 0.95);
+        ag.addColorStop(0, `rgba(255,110,20,${0.28 + Math.sin(S.t * 6) * 0.08})`); ag.addColorStop(1, "rgba(255,110,20,0)");
+        ctx.fillStyle = ag; ctx.fillRect(kp.x - u, kp.y - 2 * u, 2 * u, 2 * u);
+        ctx.restore();
+      }
+      drawKicker(kp.x, kp.y, u, S.kk, S.krun, look);
+    }
     // light cones from the towers
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
@@ -1440,7 +1646,7 @@ button.ghost {
     $("overLong").textContent = S.long ? S.long + " yd" : "–";
     $("overBest").textContent = best;
     $("over").hidden = false;
-    setPrompt("Kadin Koza · <b>#7</b>");
+    setPrompt(tag());
   }
 
   (document.fonts ? Promise.all([document.fonts.load("20px Graduate"), document.fonts.load("600 12px 'Barlow Condensed'")]).catch(() => {}) : Promise.resolve())
