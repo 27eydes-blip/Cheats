@@ -359,10 +359,56 @@ button.ghost {
   cursor: pointer;
 }
 #title .actions { animation: rise .5s 1.85s both; }
+#title .lvlline { animation: rise .5s 1.7s both; }
 #title { overflow-y: auto; }
 .icon-btn { display: inline-flex; align-items: center; gap: 8px; border-color: var(--orange); }
 .icon-btn svg { width: 24px; height: 24px; flex: none; }
 #title .go { animation: pulse 1.5s 2.4s infinite; }
+/* level line, toast, locker, town */
+.lvlline { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; letter-spacing: .1em; color: var(--chalk); }
+.lvlline b { font-family: var(--display); font-weight: 400; color: var(--goal); font-size: 18px; }
+.xpbar { width: 110px; height: 7px; background: #24262d; border-radius: 4px; overflow: hidden; }
+.xpbar i { display: block; height: 100%; background: var(--goal); }
+.toast {
+  position: absolute; top: 56px; left: 50%; transform: translateX(-50%); z-index: 6;
+  max-width: 88%; padding: 8px 14px; border-radius: 6px; text-align: center; pointer-events: none;
+  background: rgba(10,12,17,.94); border: 1px solid var(--goal); color: var(--chalk);
+  font-weight: 700; font-size: 15px; letter-spacing: .06em; line-height: 1.3;
+}
+.toast b { color: var(--goal); }
+.locker-panel {
+  position: absolute; left: 0; right: 0; bottom: 0; max-height: 54%; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: rgba(14,16,22,.96); border-top: 2px solid var(--orange);
+}
+.lk-head { display: flex; justify-content: space-between; align-items: center; }
+.lk-head .label { font-size: 13px; color: var(--orange); }
+.lk-lvl { font-family: var(--display); color: var(--goal); font-size: 15px; }
+.lk-row { display: grid; grid-template-columns: 58px 1fr; align-items: center; gap: 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; cursor: pointer;
+  border: 1px solid #3a3d46; border-radius: 999px; background: #1a1c23; color: var(--chalk);
+  font-family: var(--body); font-weight: 600; font-size: 14px; letter-spacing: .03em;
+}
+.chip.on { border-color: var(--orange); background: #2e1c10; }
+.chip:disabled { opacity: .45; cursor: not-allowed; }
+.chip i { width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); }
+.locker-panel .go { align-self: center; }
+.town-ui { position: absolute; inset: 0; pointer-events: none; }
+.town-ui button { pointer-events: auto; }
+.mute.town-exit { left: 10px; right: auto; }
+.town-act {
+  position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%); white-space: nowrap;
+}
+button.go.town-act:active { transform: translate(-50%, 3px); }
+.town-hint {
+  position: absolute; top: 56px; left: 50%; transform: translateX(-50%); transition: opacity .6s;
+  padding: 6px 12px; border-radius: 4px; background: rgba(0,0,0,.6); color: var(--chalk);
+  font-weight: 700; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap;
+}
 /* kicker select */
 #chars { justify-content: flex-start; overflow-y: auto; padding-block: 24px; }
 #chars h1 .name { font-size: clamp(28px, 8vmin, 46px); }
@@ -469,6 +515,23 @@ button.ghost {
 
       <button class="mute" id="mute" type="button">Sound on</button>
 
+      <div class="town-ui" id="townUI" hidden>
+        <button class="mute town-exit" id="townExit" type="button">Exit town</button>
+        <div class="town-hint" id="townHint">Tap anywhere to walk</div>
+        <button class="go town-act" id="townAct" type="button" hidden>Enter</button>
+      </div>
+
+      <div class="locker-panel" id="locker" hidden>
+        <div class="lk-head"><span class="label">Locker room</span><span class="lk-lvl" id="lkLevel"></span></div>
+        <div class="lk-row"><span class="label">Jersey</span><div class="chips" data-slot="jersey"></div></div>
+        <div class="lk-row"><span class="label">Helmet</span><div class="chips" data-slot="helmet"></div></div>
+        <div class="lk-row"><span class="label">Cleats</span><div class="chips" data-slot="cleats"></div></div>
+        <div class="lk-row"><span class="label">Extras</span><div class="chips" data-slot="extras"></div></div>
+        <button class="go" id="lockerDone" type="button">Done</button>
+      </div>
+
+      <div class="toast" id="toast" hidden></div>
+
       <div class="overlay" id="title" hidden>
         <div class="beam l"></div><div class="beam r"></div>
         <h1><span class="the">The</span><span class="name">Kadin Koza</span></h1>
@@ -506,9 +569,12 @@ button.ghost {
         </svg>
         <div class="tag">Brother Rice · #7 · Koza Field</div>
         <div class="sponsor">Presented by <b>Savvy Sliders</b></div>
+        <div class="lvlline" id="titleLevel"></div>
         <p class="how">Tap once to set the power. Tap again to aim. Every make moves you back. Three misses and the game is over.</p>
         <div class="actions">
           <button class="go" id="start" type="button">Take the field</button>
+          <button class="go" id="town" type="button">Kadin Town</button>
+          <button class="ghost" id="lockerBtn" type="button">Locker room</button>
           <button class="ghost" id="replay" type="button">Watch intro</button>
           <button class="ghost" id="tent" type="button">Autograph tent</button>
           <button class="ghost icon-btn" id="pt" type="button" aria-label="PT Station">
@@ -790,6 +856,7 @@ button.ghost {
     kpos: { ...IDLE }, kk: 0, krun: 0
   };
   const parts = [], trail = [];
+  const HIDE_ALL = ["title", "over", "levels", "chars", "introUI", "townUI", "locker"];
 
   // kickers
   const CHARS = {
@@ -799,7 +866,7 @@ button.ghost {
   try { S.char = CHARS[localStorage.getItem("kk-char")] ? localStorage.getItem("kk-char") : "kadin"; } catch (e) { S.char = "kadin"; }
   const char = () => CHARS[S.mode === "game" || S.mode === "over" ? S.char : "kadin"];
   const onFire = () => S.mode === "game" && char().chrome && S.streak >= 2;
-  const zoneNow = () => char().zone * (onFire() ? 1.15 : 1);
+  const zoneNow = () => char().zone * (char().id === "kadin" ? 1 + levelPerk() : 1) * (onFire() ? 1.15 : 1);
   const tag = () => `${char().name} · <b>#${char().num}</b>`;
   const pick = a => a[(Math.random() * a.length) | 0];
   const GAVIN_LINES = {
@@ -848,6 +915,18 @@ button.ghost {
   }
 
   function hud() {
+    if (typeof levelInfo === "function") {
+      const L = levelInfo();
+      $("titleLevel").innerHTML = `Kadin LV <b>${L.level}</b><span class="xpbar"><i style="width:${Math.round(L.into / L.need * 100)}%"></i></span>${L.into}/${L.need} XP`;
+      if (S.mode === "town" || S.mode === "locker") {
+        $("lab1").textContent = "Level"; $("lab2").textContent = "XP";
+        $("lab3").textContent = S.mode === "town" ? "Near" : "Jersey"; $("lab4").textContent = S.mode === "town" ? "Sliders" : "Sweet spot";
+        $("score").textContent = L.level; $("dist").textContent = `${L.into}/${L.need}`;
+        $("wind").textContent = S.mode === "town" ? (T.near ? (T.near.kind === "place" ? T.near.p.short : T.near.n.name) : "Town") : J().name.split(" ")[0];
+        $("misses").textContent = S.mode === "town" ? T.sliders : `+${Math.round(levelPerk() * 100)}%`;
+        return;
+      }
+    }
     if (S.mode === "pt") {
       $("lab1").textContent = "Recovery"; $("lab2").textContent = "Reps"; $("lab3").textContent = "Perfect"; $("lab4").textContent = "Set";
       $("score").textContent = Math.round(PT.health) + "%"; $("dist").textContent = PT.reps;
@@ -967,6 +1046,7 @@ button.ghost {
       S.makes++; S.score += 3; S.long = Math.max(S.long, S.K); S.streak++;
       if (S.score > best) { best = S.score; saveBest(); }
       sfx.cheer(); S.flash = 2; confetti(50);
+      if (!char().bad) addXP(10 + Math.floor(Math.max(0, S.K - 30) / 2), S.K + "-yard make");
     } else {
       S.misses++; S.streak = 0;
       if (r.kind !== "doink") sfx.groan();
@@ -1092,7 +1172,7 @@ button.ghost {
     if (L) {   // distances climb through the game
       S.kicks = Array.from({ length: L.kicks }, (_, i) => Math.round(lerp(L.min, L.max, L.kicks > 1 ? i / (L.kicks - 1) : 0)));
     }
-    for (const id of ["title", "over", "levels", "chars", "introUI"]) $(id).hidden = true;
+    for (const id of HIDE_ALL) $(id).hidden = true;
     newKick();
     if (L) showBanner(L.wk.length > 1 ? L.name.toUpperCase() : `WEEK ${L.wk}`, fresh ? "Fresh legs from MVPT: ON FIRE" : `vs ${L.opp} · make ${L.need} of ${L.kicks}`, true);
     else showBanner(char().bad ? "GAVIN'S UP" : "LET'S GO, KOZA!", char().bad ? "Endless mode. Good luck." : "Endless mode", true);
@@ -1113,7 +1193,7 @@ button.ghost {
       b.addEventListener("click", () => startGame(i));
       list.appendChild(b);
     });
-    for (const id of ["title", "over", "chars"]) $(id).hidden = true;
+    for (const id of HIDE_ALL) $(id).hidden = true;
     $("levelsThe").textContent = "Kicker: " + CHARS[S.char].name;
     $("levels").hidden = false;
     S.mode = "title"; S.phase = "idle";
@@ -1124,6 +1204,7 @@ button.ghost {
     const last = S.level === LEVELS.length - 1;
     if (pass) {
       prog.stars[S.level] = Math.max(prog.stars[S.level] || 0, stars);
+      if (!char().bad) setTimeout(() => addXP(40 + stars * 10, "won vs " + L.opp), 1200);
       prog.unlocked = Math.max(prog.unlocked, Math.min(S.level + 1, LEVELS.length - 1));
       saveProg();
       sfx.cheer(); setTimeout(sfx.cheer, 600); S.flash = 3; confetti(last ? 220 : 90);
@@ -1149,7 +1230,7 @@ button.ghost {
   function showChars() {
     audio();
     document.querySelectorAll(".char").forEach(b => b.classList.toggle("sel", b.dataset.char === S.char));
-    for (const id of ["title", "over", "levels"]) $(id).hidden = true;
+    for (const id of HIDE_ALL) $(id).hidden = true;
     $("chars").hidden = false;
     S.mode = "title"; S.phase = "idle";
   }
@@ -1158,15 +1239,26 @@ button.ghost {
     try { localStorage.setItem("kk-char", S.char); } catch (e) {}
     showLevels();
   }));
-  $("charBack").addEventListener("click", () => { $("chars").hidden = true; $("title").hidden = false; });
+  function showTitle() {
+    for (const id of HIDE_ALL) $(id).hidden = true;
+    $("title").hidden = false;
+    Object.assign(S, { mode: "title", phase: "idle", fromTown: false });
+    hideBanner(); setPrompt(tag()); hud();
+  }
+  const backOut = () => S.fromTown ? startTown() : showTitle();
+  $("charBack").addEventListener("click", backOut);
   $("changeKicker").addEventListener("click", showChars);
   $("start").addEventListener("click", showChars);
   $("menu").addEventListener("click", () => {
-    if (S.lastMode === "sign" || S.lastMode === "pt") { $("over").hidden = true; $("title").hidden = false; S.mode = "title"; hud(); }
+    if (S.lastMode === "sign" || S.lastMode === "pt") backOut();
     else showLevels();
   });
   $("tent").addEventListener("click", () => startSigning());
-  $("back").addEventListener("click", () => { $("levels").hidden = true; $("title").hidden = false; });
+  $("back").addEventListener("click", backOut);
+  $("town").addEventListener("click", () => startTown());
+  $("lockerBtn").addEventListener("click", () => { S.fromTown = false; showLocker(); });
+  $("lockerDone").addEventListener("click", backOut);
+  for (const id of ["start", "tent", "pt", "replay"]) $(id).addEventListener("click", () => { S.fromTown = false; }, true);
   $("endless").addEventListener("click", () => startGame(-1));
   $("again").addEventListener("click", () => S.lastMode === "sign" ? startSigning() : S.lastMode === "pt" ? startPT() : startGame(S.level));
   $("pt").addEventListener("click", () => startPT());
@@ -1378,7 +1470,7 @@ button.ghost {
   const PINGS = ["+214 likes", "New DM", "@SavvySliders tagged you", "Story posted", "+1 follower", "Coach: get off ur phone",
     "Dalton (MVPT): ice that knee", "Gavin: how do u kick", "3 new messages", "Your post is blowing up", "+57 comments", "Mom: proud of u"];
   const pings = [];
-  const phoneOn = () => S.mode === "intro" || S.mode === "title" || S.mode === "sign" || S.mode === "pt" || (S.mode === "game" && char().phone);
+  const phoneOn = () => S.mode === "intro" || S.mode === "title" || S.mode === "sign" || S.mode === "pt" || S.mode === "town" || S.mode === "locker" || (S.mode === "game" && char().phone);
   function drawPings(x, y) {
     ctx.font = "600 17px 'Barlow Condensed', sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     for (const p of pings) {
@@ -1430,7 +1522,7 @@ button.ghost {
       const side = Math.sign(h[0]);
       seg([h[0] + side * 0.075, h[1]], [kn[0] + side * 0.075, kn[1] + 0.02], 0.025, shiny ? "#d9dde3" : "#ff6a13");
       const fp = P(...f);
-      ctx.fillStyle = shiny ? chrome(fp[0] - 0.085 * u, fp[1] - 0.05 * u, fp[0] + 0.085 * u, fp[1] + 0.05 * u) : "#050505";
+      ctx.fillStyle = shiny ? cleatFill(fp[0] - 0.085 * u, fp[1] - 0.05 * u, fp[0] + 0.085 * u, fp[1] + 0.05 * u) : "#050505";
       ctx.beginPath(); ctx.ellipse(fp[0], fp[1], 0.085 * u, 0.05 * u, 0, 0, 7); ctx.fill();
       ctx.fillStyle = shiny ? "#0a0a0a" : "#8a8a8a"; ctx.fillRect(fp[0] - 0.07 * u, fp[1] + 0.028 * u, 0.14 * u, 0.014 * u);
     }
@@ -1472,12 +1564,13 @@ button.ghost {
     ctx.lineTo(...P(-0.085 + sway, hipY + 0.21)); ctx.lineTo(...P(-0.155 + sway, hipY + 0.2));
     ctx.closePath(); ctx.fill();
     const th = P(-0.12 + sway, hipY + 0.09);
-    if (shiny) heart(th[0], th[1], 0.022 * u, chrome(th[0] - 0.02 * u, th[1], th[0] + 0.02 * u, th[1] + 0.03 * u));
+    if (shiny && KZ.outfit.hearts) heart(th[0], th[1], 0.022 * u, chrome(th[0] - 0.02 * u, th[1], th[0] + 0.02 * u, th[1] + 0.03 * u));
     // jersey
     const jg = ctx.createLinearGradient(P(-0.3, 0)[0], 0, P(0.3, 0)[0], 0);
     if (shiny) {
-      jg.addColorStop(0, "#b84405"); jg.addColorStop(0.22, "#ff6f1f"); jg.addColorStop(0.5, "#ff8a3d");
-      jg.addColorStop(0.78, "#ff6f1f"); jg.addColorStop(1, "#b84405");
+      const jc = J().c;
+      jg.addColorStop(0, jc[0]); jg.addColorStop(0.22, jc[1]); jg.addColorStop(0.5, jc[2]);
+      jg.addColorStop(0.78, jc[1]); jg.addColorStop(1, jc[0]);
     } else {   // Gavin's faded, grass-stained jersey
       jg.addColorStop(0, "#8f5634"); jg.addColorStop(0.5, "#c98258"); jg.addColorStop(1, "#8f5634");
     }
@@ -1487,8 +1580,8 @@ button.ghost {
       ctx.moveTo(...P(sx * 0.2, top)); ctx.lineTo(...P(sx * 0.37, top + 0.04));
       ctx.lineTo(...P(sx * 0.39, top + 0.21)); ctx.lineTo(...P(sx * 0.24, top + 0.23));
       ctx.closePath(); ctx.fill();
-      seg([sx * 0.36, top + 0.1], [sx * 0.25, top + 0.13], 0.04, "#0a0a0a");
-      seg([sx * 0.375, top + 0.17], [sx * 0.25, top + 0.19], 0.015, "#0a0a0a");
+      seg([sx * 0.36, top + 0.1], [sx * 0.25, top + 0.13], 0.04, shiny ? J().trim : "#0a0a0a");
+      seg([sx * 0.375, top + 0.17], [sx * 0.25, top + 0.19], 0.015, shiny ? J().trim : "#0a0a0a");
     }
     const shoulders = () => {
       ctx.moveTo(...P(-0.3, top + 0.06));
@@ -1506,19 +1599,19 @@ button.ghost {
     ctx.moveTo(...P(-0.17, hipY - 0.01)); ctx.quadraticCurveTo(...P(-0.11, hipY - 0.13), ...P(-0.05, hipY - 0.02));
     ctx.moveTo(...P(0.05, hipY - 0.02)); ctx.quadraticCurveTo(...P(0.12, hipY - 0.14), ...P(0.17, hipY - 0.01));
     ctx.stroke();
-    seg([-0.21, hipY + 0.03], [0.21, hipY + 0.03], 0.04, "#0a0a0a");
+    seg([-0.21, hipY + 0.03], [0.21, hipY + 0.03], 0.04, shiny ? J().trim : "#0a0a0a");
     // stadium light catching the shoulder pads
     ctx.beginPath(); shoulders();
     ctx.strokeStyle = "rgba(255,236,200,.65)"; ctx.lineWidth = 0.014 * u; ctx.stroke();
     // chrome hearts on the sleeves
-    if (shiny) for (const sx of [-1, 1]) {
+    if (shiny && KZ.outfit.hearts) for (const sx of [-1, 1]) {
       const hs = P(sx * 0.34, top + 0.045);
       heart(hs[0], hs[1], 0.03 * u, chrome(hs[0] - 0.03 * u, hs[1], hs[0] + 0.03 * u, hs[1] + 0.04 * u));
     }
     // name + number
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     const np = P(0, top + 0.12);
-    ctx.font = `${(look.back.length > 4 ? 0.105 : 0.13) * u}px Graduate, serif`; ctx.fillStyle = "#0a0a0a";
+    ctx.font = `${(look.back.length > 4 ? 0.105 : 0.13) * u}px Graduate, serif`; ctx.fillStyle = shiny ? J().num : "#0a0a0a";
     if (shiny) {
       ctx.lineWidth = 0.014 * u; ctx.strokeStyle = chrome(np[0] - 0.2 * u, np[1] - 0.05 * u, np[0] + 0.2 * u, np[1] + 0.05 * u);
       ctx.strokeText(look.back, np[0], np[1]);
@@ -1530,14 +1623,14 @@ button.ghost {
     ctx.lineWidth = (shiny ? 0.03 : 0.02) * u;
     ctx.strokeStyle = shiny ? chrome(nn[0] - 0.15 * u, nn[1] - 0.18 * u, nn[0] + 0.15 * u, nn[1] + 0.18 * u) : "#f3efe6";
     ctx.strokeText(look.num, nn[0], nn[1]);
-    ctx.fillStyle = "#0a0a0a"; ctx.fillText(look.num, nn[0], nn[1]);
+    ctx.fillStyle = shiny ? J().num : "#0a0a0a"; ctx.fillText(look.num, nn[0], nn[1]);
     if (!shiny) {   // grass stain
       const gs = P(-0.1, hipY - 0.12);
       ctx.fillStyle = "rgba(70,100,40,.5)"; ctx.beginPath(); ctx.ellipse(gs[0], gs[1], 0.07 * u, 0.035 * u, 0.3, 0, 7); ctx.fill();
     }
     // neck + helmet
     seg([0, top - 0.02], [0, top - 0.06], 0.1, "#c99a72");
-    if (shiny) for (let i = -5; i <= 5; i++) {   // silver chain
+    if (shiny && KZ.outfit.chain) for (let i = -5; i <= 5; i++) {   // silver chain
       const c = P(i * 0.02, top - 0.012 + i * i * 0.0012);
       ctx.fillStyle = i % 2 ? "#eef1f5" : "#8f96a0";
       ctx.beginPath(); ctx.ellipse(c[0], c[1], 0.011 * u, 0.008 * u, 0, 0, 7); ctx.fill();
@@ -1548,12 +1641,12 @@ button.ghost {
     seg([-0.125, -0.1 + top], [-0.15, -0.03 + top], 0.016, "#9a9aa0");   // facemask peeking out
     seg([0.125, -0.1 + top], [0.15, -0.03 + top], 0.016, "#9a9aa0");
     const hg = ctx.createRadialGradient(hp[0] - 0.05 * u, hp[1] - 0.06 * u, 0.01 * u, hp[0], hp[1], 0.17 * u);
-    if (shiny) { hg.addColorStop(0, "#ffffff"); hg.addColorStop(0.3, "#cfd4db"); hg.addColorStop(0.65, "#727982"); hg.addColorStop(1, "#2a2d32"); }
+    if (shiny) { const hc = HM().c; hg.addColorStop(0, hc[0]); hg.addColorStop(0.3, hc[1]); hg.addColorStop(0.65, hc[2]); hg.addColorStop(1, hc[3]); }
     else { hg.addColorStop(0, "#55565e"); hg.addColorStop(0.5, "#17171b"); hg.addColorStop(1, "#050505"); }
     ctx.fillStyle = hg;
     ctx.beginPath(); ctx.ellipse(hp[0], hp[1], 0.135 * u, 0.15 * u, 0, 0, 7); ctx.fill();
     ctx.save(); ctx.clip();
-    ctx.fillStyle = "#ff6a13"; ctx.fillRect(hp[0] - 0.025 * u, hp[1] - 0.2 * u, 0.05 * u, 0.4 * u);
+    ctx.fillStyle = shiny ? HM().stripe : "#ff6a13"; ctx.fillRect(hp[0] - 0.025 * u, hp[1] - 0.2 * u, 0.05 * u, 0.4 * u);
     ctx.fillStyle = shiny ? "#0a0a0a" : "#f3efe6";
     ctx.fillRect(hp[0] - 0.045 * u, hp[1] - 0.2 * u, 0.012 * u, 0.4 * u);
     ctx.fillRect(hp[0] + 0.033 * u, hp[1] - 0.2 * u, 0.012 * u, 0.4 * u);
@@ -1605,7 +1698,26 @@ button.ghost {
     if (S.wind) { ctx.textAlign = "right"; ctx.fillText(`AIM INTO THE WIND ${S.wind < 0 ? "→" : "←"}`, cx + aw / 2, ay - 12); }
   }
 
+  function drawConfetti() {
+    for (const p of parts) {
+      const fl = Math.abs(Math.cos(p.r * 1.3));
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+      ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2 * fl, p.w, p.h * fl + 0.5);
+      ctx.restore();
+    }
+  }
   function render() {
+    if (S.mode === "town") {
+      ctx.setTransform(BASE, 0, 0, BASE, 0, 0);
+      renderTown(); drawVignette(0.5, 0.4, 0.95, .3); drawConfetti();
+      return;
+    }
+    if (S.mode === "locker") {
+      ctx.setTransform(BASE, 0, 0, BASE, 0, 0);
+      ctx.save(); ctx.translate(0, OY); renderLocker(); ctx.restore();
+      drawVignette(0.5, 0.3, 0.8, .4); drawConfetti();
+      return;
+    }
     const scene = S.mode === "sign" || (S.mode === "over" && S.lastMode === "sign") ? "sign"
       : S.mode === "pt" || (S.mode === "over" && S.lastMode === "pt") ? (PT.intro > 0 ? "ptIntro" : "pt") : "field";
     const bands = { field: ["#04050a", "#15291a"], sign: ["#0d0f15", "#ff6a13"], ptIntro: ["#e9eaec", "#c9ccd2"], pt: ["#232a39", "#5a3f2a"] }[scene];
@@ -1631,12 +1743,7 @@ button.ghost {
     else if (scene === "sign") drawVignette(0.5, 0.3, 0.8, .45);
     else if (scene === "ptIntro") drawVignette(0.5, 0.35, 0.85, .35);
     else drawVignette(0.5, 0.3, 0.8, .4);
-    for (const p of parts) {
-      const fl = Math.abs(Math.cos(p.r * 1.3));
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
-      ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2 * fl, p.w, p.h * fl + 0.5);
-      ctx.restore();
-    }
+    drawConfetti();
     if (scene === "field") ctx.drawImage(grainBig, -((Math.random() * 6) | 0), -((Math.random() * 6) | 0), W + 6, VH + 6);
     if (S.mode === "intro") {
       const out = S.resultShown ? clamp(1 - (S.resultT - 3.3) / 0.6, 0, 1) : 1;
@@ -1738,7 +1845,7 @@ button.ghost {
     Object.assign(S, { mode: "sign", phase: "idle", lastMode: "sign" });
     Object.assign(G, { fans: [], strokes: [], cur: null, len: 0, time: SIGN_TIME, signed: 0, missed: 0, drawing: false, hand: null });
     for (let i = 0; i < 4; i++) G.fans.push(newFan(i));
-    for (const id of ["title", "over", "levels", "chars", "introUI"]) $(id).hidden = true;
+    for (const id of HIDE_ALL) $(id).hidden = true;
     showBanner("AUTOGRAPH TENT", "Draw Kadin's signature on each item", true);
     setTimeout(() => { if (S.mode === "sign") hideBanner(); }, 1600);
     setPrompt("Draw your <b>signature</b> on the item");
@@ -1785,7 +1892,8 @@ button.ghost {
     $("overMsg").textContent = G.signed >= 20 ? "The line wrapped around Koza Field. Legend." : G.signed >= 10 ? "The fans went home happy." : "Sign faster. The fans are waiting.";
     $("overLab1").textContent = "Signed"; $("overLab2").textContent = "Missed"; $("overLab3").textContent = "Best";
     $("overMade").textContent = G.signed; $("overLong").textContent = G.missed; $("overBest").textContent = G.bestSign;
-    $("again").textContent = "Sign again"; $("menu").textContent = "Main menu";
+    $("again").textContent = "Sign again"; $("menu").textContent = S.fromTown ? "Back to town" : "Main menu";
+    if (G.signed) toast(`<b>+${G.signed * 3} XP</b> · ${G.signed} autographs`, 2200);
     $("over").hidden = false;
     if (G.signed >= 10) { sfx.cheer(); confetti(120); S.flash = 2; }
     setPrompt(tag());
@@ -1831,7 +1939,7 @@ button.ghost {
     G.drawing = false;
     const f = front();
     if (f && f.state === "wait" && G.len >= Math.min(140, ITEMS[f.item].w * 1.3)) {
-      f.state = "happy"; f.t = 0; G.signed++;
+      f.state = "happy"; f.t = 0; G.signed++; addXP(3, "", true);
       sfx.tick(); noise(0.6, 1600, 0.12, 0.05);
       if (G.signed % 10 === 0) { showBanner(G.signed + " AUTOGRAPHS!", "The line keeps growing", true); confetti(70); S.flash = 1.5; setTimeout(() => { if (S.mode === "sign") hideBanner(); }, 1300); }
       hud();
@@ -2017,24 +2125,26 @@ button.ghost {
     if (opts.chair !== false) { ctx.fillStyle = "#1b1d24"; ctx.fillRect(cx - 110, 250, 220, 230); }
     // torso
     const jg = ctx.createLinearGradient(cx - 100, 0, cx + 100, 0);
-    jg.addColorStop(0, "#b84405"); jg.addColorStop(0.3, "#ff6f1f"); jg.addColorStop(0.55, "#ff8a3d"); jg.addColorStop(1, "#b84405");
+    jg.addColorStop(0, J().c[0]); jg.addColorStop(0.3, J().c[1]); jg.addColorStop(0.55, J().c[2]); jg.addColorStop(1, J().c[0]);
     ctx.fillStyle = jg;
     ctx.beginPath();
     ctx.moveTo(cx - 104, 340); ctx.quadraticCurveTo(cx - 100, 300, cx - 40, 298); ctx.lineTo(cx + 40, 298);
     ctx.quadraticCurveTo(cx + 100, 300, cx + 104, 340); ctx.lineTo(cx + 88, 480); ctx.lineTo(cx - 88, 480); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = "rgba(0,0,0,.5)"; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = "#c99a72"; ctx.beginPath(); ctx.moveTo(cx - 28, 298); ctx.lineTo(cx, 330); ctx.lineTo(cx + 28, 298); ctx.fill();
-    ctx.strokeStyle = "#0a0a0a"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(cx - 30, 298); ctx.lineTo(cx, 334); ctx.lineTo(cx + 30, 298); ctx.stroke();
-    ctx.fillStyle = "#0a0a0a"; ctx.font = "15px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.strokeStyle = J().trim; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(cx - 30, 298); ctx.lineTo(cx, 334); ctx.lineTo(cx + 30, 298); ctx.stroke();
+    ctx.fillStyle = J().num; ctx.font = "15px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText("BROTHER RICE", cx, 354);
     ctx.font = "78px Graduate, serif";
     ctx.lineWidth = 4; ctx.strokeStyle = chrome(cx - 30, 380, cx + 30, 450); ctx.strokeText("7", cx, 420); ctx.fillText("7", cx, 420);
     // silver rope chain with cross pendants
-    ctx.strokeStyle = "#dfe3e8"; ctx.lineWidth = 3.5; ctx.setLineDash([3, 2]);
-    ctx.beginPath(); ctx.moveTo(cx - 30, 300); ctx.quadraticCurveTo(cx, 360, cx + 30, 300); ctx.stroke(); ctx.setLineDash([]);
-    for (const [dx, h] of [[-5, 1], [5, 0.8]]) {
-      ctx.fillStyle = chrome(cx + dx - 6, 334, cx + dx + 6, 352);
-      ctx.fillRect(cx + dx - 1.8, 333, 3.6, 20 * h); ctx.fillRect(cx + dx - 6, 338, 12, 3.6);
+    if (KZ.outfit.chain) {
+      ctx.strokeStyle = "#dfe3e8"; ctx.lineWidth = 3.5; ctx.setLineDash([3, 2]);
+      ctx.beginPath(); ctx.moveTo(cx - 30, 300); ctx.quadraticCurveTo(cx, 360, cx + 30, 300); ctx.stroke(); ctx.setLineDash([]);
+      for (const [dx, h] of [[-5, 1], [5, 0.8]]) {
+        ctx.fillStyle = chrome(cx + dx - 6, 334, cx + dx + 6, 352);
+        ctx.fillRect(cx + dx - 1.8, 333, 3.6, 20 * h); ctx.fillRect(cx + dx - 6, 338, 12, 3.6);
+      }
     }
     // neck + head
     ctx.fillStyle = "#c99a72"; ctx.fillRect(cx - 16, 262, 32, 40);
@@ -2057,11 +2167,13 @@ button.ghost {
       ctx.beginPath(); ctx.arc(cx + dx - 2, dy - 1, r * 0.55, 3.6, 5.6); ctx.stroke();
     }
     // chrome shades pushed up
-    for (const sx of [-1, 1]) {
-      ctx.fillStyle = chrome(cx + sx * 26 - 16, 170, cx + sx * 26 + 16, 186);
-      ctx.beginPath(); ctx.ellipse(cx + sx * 22, 172, 17, 9, 0, 0, 7); ctx.fill();
+    if (KZ.outfit.shades) {
+      for (const sx of [-1, 1]) {
+        ctx.fillStyle = chrome(cx + sx * 26 - 16, 170, cx + sx * 26 + 16, 186);
+        ctx.beginPath(); ctx.ellipse(cx + sx * 22, 172, 17, 9, 0, 0, 7); ctx.fill();
+      }
+      ctx.strokeStyle = "#dfe3e8"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - 6, 172); ctx.lineTo(cx + 6, 172); ctx.stroke();
     }
-    ctx.strokeStyle = "#dfe3e8"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - 6, 172); ctx.lineTo(cx + 6, 172); ctx.stroke();
     // face: eyes follow the marker
     const look = opts.phone ? -0.6 : opts.look != null ? opts.look : G.hand ? clamp((G.hand[0] - cx) / 200, -1, 1) : 0, blink = (t % 4) < 0.12;
     ctx.fillStyle = "#0a0a0a";
@@ -2084,7 +2196,7 @@ button.ghost {
   function phoneArm(cx) {   // left hand holds the phone up in front of him
     const seg = (a, b, w, col) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); };
     const bob = Math.sin(S.t * 2) * 3;
-    seg([cx - 96, 320], [cx - 130, 412], 30, "#ff6f1f");
+    seg([cx - 96, 320], [cx - 130, 412], 30, J().c[1]);
     seg([cx - 130, 412], [cx - 62, 404 + bob], 22, "#c99a72");
     seg([cx - 104, 409], [cx - 92, 408], 24, "#0a0a0a"); seg([cx - 100, 405], [cx - 96, 412], 4, "#f3efe6");
     drawPhone(cx - 56, 372 + bob, 54, -0.25, true);
@@ -2104,7 +2216,7 @@ button.ghost {
     G.armPos[0] += (target[0] - G.armPos[0]) * 0.5; G.armPos[1] += (target[1] - G.armPos[1]) * 0.5;
     const hand = [G.armPos[0] - 6, G.armPos[1] + 18], sh = [cx + 96, 320];
     const elbow = [Math.max(sh[0], hand[0]) + 40, (sh[1] + hand[1]) / 2 + 20];
-    seg(sh, [lerp(sh[0], elbow[0], 0.6), lerp(sh[1], elbow[1], 0.6)], 30, "#ff6f1f");
+    seg(sh, [lerp(sh[0], elbow[0], 0.6), lerp(sh[1], elbow[1], 0.6)], 30, J().c[1]);
     seg([lerp(sh[0], elbow[0], 0.5), lerp(sh[1], elbow[1], 0.5)], elbow, 22, "#c99a72");
     seg(elbow, hand, 22, "#c99a72");
     seg([lerp(elbow[0], hand[0], 0.8), lerp(elbow[1], hand[1], 0.8)], [lerp(elbow[0], hand[0], 0.9), lerp(elbow[1], hand[1], 0.9)], 26, "#0a0a0a");
@@ -2210,7 +2322,7 @@ button.ghost {
     Object.assign(S, { mode: "pt", phase: "idle", lastMode: "pt" });
     Object.assign(PT, { health: 35, reps: 0, perfect: 0, ex: 0, inEx: 0, ring: null, wait: 0, legT: 0, pops: [], intro: 1, introT: 0, nagT: 5, done: false, doneT: 0, time: 0, flex: 1.2, ended: false });
     say(DALTON.hello, 99);
-    for (const id of ["title", "over", "levels", "chars", "introUI"]) $(id).hidden = true;
+    for (const id of HIDE_ALL) $(id).hidden = true;
     hideBanner();
     setPrompt("Tap to start <b>rehab</b>");
     hud();
@@ -2220,6 +2332,7 @@ button.ghost {
     const gain = kind === "perfect" ? 10 : kind === "good" ? 7 : 2;
     PT.health = Math.min(100, PT.health + gain);
     PT.reps++; PT.inEx++;
+    addXP(kind === "perfect" ? 3 : kind === "good" ? 2 : 0, "", true);
     if (kind === "perfect") { PT.perfect++; PT.flex = 0.9; tone(880, 0.12, 0.12, "triangle"); tone(1320, 0.18, 0.08, "triangle"); }
     else if (kind === "good") sfx.tick();
     else tone(180, 0.25, 0.08, "sawtooth", 0.7);
@@ -2236,6 +2349,7 @@ button.ghost {
       showBanner("CLEARED TO PLAY", "Kadin Koza is back", true);
       sfx.cheer(); setTimeout(sfx.cheer, 600); confetti(150); S.flash = 2;
       S.freshLegs = true;
+      setTimeout(() => addXP(30, "cleared by MVPT"), 900);
     }
     hud();
   }
@@ -2284,7 +2398,7 @@ button.ghost {
     $("overLab1").textContent = "Reps"; $("overLab2").textContent = "Perfect"; $("overLab3").textContent = "Time";
     $("overMade").textContent = PT.reps; $("overLong").textContent = PT.perfect; $("overBest").textContent = Math.round(PT.time) + "s";
     $("next").hidden = false; $("next").textContent = "Take the field";
-    $("again").textContent = "Rehab again"; $("menu").textContent = "Main menu";
+    $("again").textContent = "Rehab again"; $("menu").textContent = S.fromTown ? "Back to town" : "Main menu";
     $("over").hidden = false;
     setPrompt(tag());
   }
@@ -2408,12 +2522,12 @@ button.ghost {
     const seg = (a, b, w, col) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); };
     for (const sx of [-1, 1]) {
       if (PT.done && sx === -1) {   // fist up when cleared
-        seg([cx - 96, 320], [cx - 140, 270], 30, "#ff6f1f"); seg([cx - 140, 270], [cx - 146, 180], 22, "#c99a72");
+        seg([cx - 96, 320], [cx - 140, 270], 30, J().c[1]); seg([cx - 140, 270], [cx - 146, 180], 22, "#c99a72");
         ctx.fillStyle = "#c99a72"; ctx.beginPath(); ctx.arc(cx - 146, 172, 15, 0, 7); ctx.fill();
         continue;
       }
       if (sx === -1) { phoneArm(cx); continue; }
-      seg([cx + sx * 96, 320], [cx + sx * 124, 410], 30, "#ff6f1f");
+      seg([cx + sx * 96, 320], [cx + sx * 124, 410], 30, J().c[1]);
       seg([cx + sx * 124, 410], [cx + sx * 118, 486], 22, "#c99a72");
       ctx.fillStyle = "#c99a72"; ctx.beginPath(); ctx.ellipse(cx + sx * 118, 490, 16, 10, 0, 0, 7); ctx.fill();
     }
@@ -2519,6 +2633,446 @@ button.ghost {
 
   }
 
+  // ---------- leveling + outfits ----------
+  const JERSEYS = {
+    home: { name: "Home orange", lv: 1, c: ["#b84405", "#ff6f1f", "#ff8a3d"], num: "#0a0a0a", trim: "#0a0a0a" },
+    away: { name: "Away black", lv: 1, c: ["#050505", "#1b1c20", "#2c2d33"], num: "#ff6a13", trim: "#ff6a13" },
+    white: { name: "Chrome white", lv: 3, c: ["#aeb3bb", "#e9ecf0", "#ffffff"], num: "#0a0a0a", trim: "#ff6a13" },
+    gold: { name: "Gold", lv: 6, c: ["#9c7618", "#e2b93f", "#ffe08a"], num: "#0a0a0a", trim: "#0a0a0a" }
+  };
+  const HELMETS = {
+    chrome: { name: "Chrome", lv: 1, c: ["#ffffff", "#cfd4db", "#727982", "#2a2d32"], stripe: "#ff6a13" },
+    black: { name: "Black", lv: 1, c: ["#55565e", "#17171b", "#050505", "#050505"], stripe: "#ff6a13" },
+    orange: { name: "Orange", lv: 2, c: ["#ffd0a8", "#ff8a3d", "#d9560b", "#7a2c00"], stripe: "#0a0a0a" },
+    gold: { name: "Gold", lv: 5, c: ["#fff6d0", "#ffd56a", "#b8891c", "#5e4308"], stripe: "#0a0a0a" }
+  };
+  const CLEATS = {
+    chrome: { name: "Chrome", lv: 1, fill: null, sw: "#cfd4db" },
+    black: { name: "Black", lv: 1, fill: "#050505", sw: "#050505" },
+    orange: { name: "Orange", lv: 2, fill: "#ff6a13", sw: "#ff6a13" },
+    white: { name: "White", lv: 3, fill: "#f3efe6", sw: "#f3efe6" },
+    gold: { name: "Gold", lv: 4, fill: "#e2b93f", sw: "#e2b93f" }
+  };
+  const KZ = { xp: 0, outfit: { jersey: "home", helmet: "chrome", cleats: "chrome", chain: true, hearts: true, shades: true } };
+  try {
+    const d = JSON.parse(localStorage.getItem("kk-kadin") || "{}");
+    if (d.xp > 0) KZ.xp = d.xp;
+    if (d.outfit) Object.assign(KZ.outfit, d.outfit);
+  } catch (e) {}
+  const saveKZ = () => { try { localStorage.setItem("kk-kadin", JSON.stringify(KZ)); } catch (e) {} };
+  const J = () => JERSEYS[KZ.outfit.jersey] || JERSEYS.home;
+  const HM = () => HELMETS[KZ.outfit.helmet] || HELMETS.chrome;
+  const CL = () => CLEATS[KZ.outfit.cleats] || CLEATS.chrome;
+  const cleatFill = (x0, y0, x1, y1) => CL().fill || chrome(x0, y0, x1, y1);
+  const xpNeed = L => 60 + L * 40;
+  function levelInfo() {
+    let L = 1, x = KZ.xp;
+    while (x >= xpNeed(L) && L < 50) { x -= xpNeed(L); L++; }
+    return { level: L, into: x, need: xpNeed(L) };
+  }
+  const levelPerk = () => Math.min(0.12, (levelInfo().level - 1) * 0.012);   // bigger sweet spot as Kadin levels up
+  let toastTimer = 0;
+  function toast(html, ms = 1500) {
+    const el = $("toast"); el.innerHTML = html; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, ms);
+  }
+  function addXP(n, why, quiet) {
+    if (n <= 0) return;
+    const before = levelInfo().level;
+    KZ.xp += n; saveKZ();
+    const after = levelInfo().level;
+    if (!quiet) toast(`<b>+${n} XP</b>${why ? " · " + why : ""}`);
+    if (after > before) {
+      const un = [];
+      for (const [slot, list] of [["jersey", JERSEYS], ["helmet", HELMETS], ["cleats", CLEATS]])
+        for (const o of Object.values(list)) if (o.lv > before && o.lv <= after) un.push(`${o.name} ${slot}`);
+      setTimeout(() => toast(`<b>LEVEL UP!</b> Kadin is level ${after}` + (un.length ? `<br>Unlocked: ${un.join(", ")}` : "<br>Sweet spot got bigger"), 3200), quiet ? 0 : 900);
+      confetti(70); sfx.cheer();
+    }
+    hud();
+  }
+
+  // ---------- locker room ----------
+  function showLocker() {
+    audio();
+    S.mode = "locker"; S.phase = "idle";
+    for (const id of HIDE_ALL) $(id).hidden = true;
+    buildLocker();
+    $("locker").hidden = false;
+    hideBanner();
+    setPrompt("Locker room · <b>pick Kadin's fit</b>");
+    hud();
+  }
+  function buildLocker() {
+    const L = levelInfo();
+    $("lkLevel").textContent = `LV ${L.level} · ${L.into}/${L.need} XP`;
+    hud();
+    document.querySelectorAll("#locker .chips").forEach(box => {
+      const slot = box.dataset.slot; box.textContent = "";
+      const add = (key, label, sw, locked, on, onClick) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "chip" + (on ? " on" : ""); b.disabled = locked;
+        b.innerHTML = (sw ? `<i style="background:${sw}"></i>` : "") + (locked ? `${label} · LV ${locked}` : label);
+        b.addEventListener("click", onClick);
+        box.appendChild(b);
+      };
+      if (slot === "extras") {
+        for (const [k, label] of [["chain", "Chain"], ["hearts", "Chrome hearts"], ["shades", "Shades"]])
+          add(k, (KZ.outfit[k] ? "✓ " : "") + label, null, 0, KZ.outfit[k], () => { KZ.outfit[k] = !KZ.outfit[k]; saveKZ(); buildLocker(); });
+        return;
+      }
+      const list = { jersey: JERSEYS, helmet: HELMETS, cleats: CLEATS }[slot];
+      for (const [k, o] of Object.entries(list)) {
+        const sw = slot === "jersey" ? o.c[1] : slot === "helmet" ? o.c[1] : o.sw;
+        add(k, o.name, sw, o.lv > L.level ? o.lv : 0, KZ.outfit[slot] === k, () => { KZ.outfit[slot] = k; saveKZ(); buildLocker(); sfx.tick(); });
+      }
+    });
+  }
+  function drawHelmetSide(x, y, s) {
+    const H2 = HM(), g = ctx.createRadialGradient(x - 14 * s, y - 16 * s, 2, x, y, 46 * s);
+    g.addColorStop(0, H2.c[0]); g.addColorStop(0.35, H2.c[1]); g.addColorStop(0.7, H2.c[2]); g.addColorStop(1, H2.c[3]);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, 46 * s, 40 * s, 0, 0, 7); ctx.fill();
+    ctx.strokeStyle = H2.stripe; ctx.lineWidth = 9 * s; ctx.beginPath(); ctx.ellipse(x, y, 40 * s, 34 * s, 0, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+    ctx.strokeStyle = "#9a9aa0"; ctx.lineWidth = 4 * s;
+    ctx.beginPath(); ctx.moveTo(x + 30 * s, y - 4 * s); ctx.lineTo(x + 60 * s, y - 2 * s); ctx.moveTo(x + 32 * s, y + 12 * s); ctx.lineTo(x + 60 * s, y + 14 * s);
+    ctx.moveTo(x + 58 * s, y - 6 * s); ctx.lineTo(x + 58 * s, y + 22 * s); ctx.stroke();
+    ctx.fillStyle = "#0a0a0a"; ctx.beginPath(); ctx.arc(x + 6 * s, y + 8 * s, 6 * s, 0, 7); ctx.fill();
+  }
+  function renderLocker() {
+    ctx.fillStyle = "#1b1e26"; ctx.fillRect(0, -OY, W, H + OY * 2);
+    for (let i = 0; i < 8; i++) {   // lockers
+      const x = i * 76 + 4;
+      ctx.fillStyle = i === 3 ? "#ff6a13" : "#3a3f4a"; ctx.fillRect(x, -OY, 70, 470 + OY);
+      ctx.fillStyle = "rgba(0,0,0,.35)";
+      for (let v = 0; v < 5; v++) ctx.fillRect(x + 14, 30 + v * 9, 42, 4);
+      ctx.fillStyle = i === 3 ? "#0a0a0a" : "#ff6a13"; ctx.font = "16px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(i === 3 ? "KOZA 7" : String(i + 4), x + 35, 100);
+    }
+    ctx.fillStyle = "#5a3f2a"; ctx.fillRect(0, 470, W, H + OY);
+    ctx.fillStyle = "#7a5638"; ctx.fillRect(20, 300, 560, 22); ctx.fillStyle = "#2a2d36"; ctx.fillRect(60, 322, 12, 150); ctx.fillRect(528, 322, 12, 150);
+    drawHelmetSide(110, 268, 1);
+    // Kadin standing in his fit
+    ctx.save(); ctx.translate(330, -40); ctx.scale(0.62, 0.62); ctx.translate(-300, 0);
+    const seg = (a, b, w, col) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); };
+    for (const sx of [-1, 1]) {   // legs
+      seg([300 + sx * 40, 470], [300 + sx * 44, 610], 50, "#0b0b0d");
+      seg([300 + sx * 44, 610], [300 + sx * 46, 740], 34, "#ff6a13");
+      seg([300 + sx * 45, 650], [300 + sx * 45, 664], 36, "#0a0a0a");
+      ctx.fillStyle = cleatFill(300 + sx * 46 - 30, 740, 300 + sx * 46 + 30, 760);
+      ctx.beginPath(); ctx.ellipse(300 + sx * 52, 754, 32, 16, 0, 0, 7); ctx.fill();
+    }
+    drawKadinFront(300, { chair: false, mood: "happy", look: 0 });
+    for (const sx of [-1, 1]) {   // arms
+      seg([300 + sx * 96, 320], [300 + sx * 122, 410], 30, J().c[1]);
+      seg([300 + sx * 122, 410], [300 + sx * 118, 492], 22, "#c99a72");
+      ctx.fillStyle = "#c99a72"; ctx.beginPath(); ctx.arc(300 + sx * 118, 498, 13, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ---------- Kadin Town ----------
+  const TW = 1600, TH = 2100;
+  const ROADS = [{ x: 0, y: 860, w: TW, h: 100 }, { x: 760, y: 0, w: 80, h: TH }, { x: 0, y: 1500, w: TW, h: 80 }];
+  const FOUNTAIN = [800, 910, 66];
+  const PLACES = [
+    { id: "field", short: "Field", name: "Koza Field", act: "Enter Koza Field", x: 60, y: 120, w: 660, h: 690, door: [390, 832] },
+    { id: "school", short: "School", name: "Brother Rice", act: "Go to class", x: 880, y: 300, w: 640, h: 510, door: [1200, 832] },
+    { id: "sliders", short: "Sliders", name: "Savvy Sliders", act: "Eat a Savvy Slider", x: 120, y: 1030, w: 560, h: 400, door: [400, 1452] },
+    { id: "mvpt", short: "MVPT", name: "MVPT", act: "Rehab at MVPT", x: 900, y: 1040, w: 560, h: 390, door: [1180, 1452] },
+    { id: "tent", short: "Tent", name: "Autograph Tent", act: "Sign autographs", x: 200, y: 1660, w: 420, h: 260, door: [410, 1942] },
+    { id: "house", short: "House", name: "Kadin's House", act: "Locker room", x: 900, y: 1660, w: 560, h: 280, door: [1180, 1962] }
+  ];
+  const NPC_LINES = {
+    gavin: ["Yo Kadin... how do you kick?", "I made one in practice. Well, almost.", "Can I borrow your phone? Mine's dead.", "Teach me the ON FIRE thing."],
+    dalton: ["Keep moving, Kadin! Phone down!", "Leg day tomorrow. Don't skip it.", "MVPT is open. Come get your reps in.", "Hydrate, big dog."],
+    fan: ["KADIN!! Can I get a picture?", "You're my favorite kicker!", "Koza for State!", "That 45-yarder was crazy."],
+    girl: ["Hi Kadin!", "Go Crusaders!", "Sign my pom-pom later?"]
+  };
+  const ring = (cx, cy, r) => Array.from({ length: 8 }, (_, i) => [cx + Math.cos(i / 8 * 6.283) * r, cy + Math.sin(i / 8 * 6.283) * r]);
+  const NPCS = [
+    { id: "gavin", name: "Gavin", lines: "gavin", path: [[1000, 880], [1420, 880], [1420, 945], [1000, 945]], speed: 38, look: { skin: "#c99a72", shirt: "#c98258", num: "0", numColor: "#0a0a0a", hair: "#3b2416", shoes: "#050505" } },
+    { id: "dalton", name: "Dalton", lines: "dalton", path: [[868, 120], [868, 1980], [732, 1980], [732, 120]], speed: 120, look: { skin: "#eec5a6", shirt: "#111", num: "MVPT", numColor: "#f3efe6", hair: "#33221a", big: true, shoes: "#f3efe6" } },
+    { id: "fan1", name: "Fan", lines: "fan", path: ring(800, 910, 110), speed: 45, look: { skin: "#f1c7a3", shirt: "#ff6a13", num: "7", numColor: "#0a0a0a", hair: "#7a5230", shoes: "#f3efe6" } },
+    { id: "fan2", name: "Fan", lines: "fan", path: ring(800, 910, 140).reverse(), speed: 52, look: { skin: "#7a4a2e", shirt: "#0a0a0a", num: "7", numColor: "#ff6a13", hair: "#111", shoes: "#ff6a13" } },
+    { id: "fan3", name: "Fan", lines: "fan", path: [[300, 1600], [700, 1600]], speed: 40, look: { skin: "#d9a47a", shirt: "#26324a", num: "", numColor: "#fff", hair: "#d8b067", shoes: "#f3efe6" } },
+    { id: "girl1", name: "Fan", lines: "girl", path: [[360, 1625]], speed: 0, look: { skin: "#f0c9a8", shirt: "#ff6a13", num: "7", numColor: "#0a0a0a", hair: "#3b2516", longHair: true, shoes: "#f3efe6" } },
+    { id: "girl2", name: "Fan", lines: "girl", path: [[470, 1625]], speed: 0, look: { skin: "#e2b08a", shirt: "#0a0a0a", num: "7", numColor: "#ff6a13", hair: "#d9b26a", longHair: true, shoes: "#f3efe6" } }
+  ];
+  NPCS.forEach(n => { n.x = n.path[0][0]; n.y = n.path[0][1]; n.wp = 1 % n.path.length; n.walk = 0; n.talked = false; });
+  // trees placed once, away from roads and buildings
+  const TREES = [];
+  (() => {
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const clear = (x, y) => !ROADS.some(r => x > r.x - 50 && x < r.x + r.w + 50 && y > r.y - 50 && y < r.y + r.h + 70)
+      && !PLACES.some(p => x > p.x - 50 && x < p.x + p.w + 50 && y > p.y - 40 && y < p.y + p.h + 90)
+      && Math.hypot(x - FOUNTAIN[0], y - FOUNTAIN[1]) > 200;
+    for (let i = 0; i < 400 && TREES.length < 46; i++) { const x = 30 + rnd() * (TW - 60), y = 40 + rnd() * (TH - 80); if (clear(x, y)) TREES.push([x, y, 26 + rnd() * 14]); }
+  })();
+  const GRASS = Array.from({ length: 90 }, (_, i) => [(i * 397) % TW, (i * 613) % TH, 30 + (i * 37) % 60]);
+  const T = { x: 800, y: 1030, walk: 0, moving: false, back: false, target: null, keys: new Set(), camX: 0, camY: 0,
+              near: null, nearKey: "", talk: null, say: null, sliders: 0, hintT: 0, cool: {} };
+
+  function startTown() {
+    audio();
+    Object.assign(S, { mode: "town", phase: "idle", fromTown: true });
+    for (const id of HIDE_ALL) $(id).hidden = true;
+    $("townUI").hidden = false; hideBanner();
+    T.target = null; T.keys.clear(); T.hintT = 4; T.nearKey = ""; $("townAct").hidden = true;
+    $("townHint").style.opacity = 1;
+    setPrompt("Kadin Town · <b>tap to walk</b>");
+    hud();
+  }
+  function solidAt(x, y) {
+    if (x < 14 || x > TW - 14 || y < 30 || y > TH - 8) return true;
+    if (Math.hypot(x - FOUNTAIN[0], y - FOUNTAIN[1]) < FOUNTAIN[2] + 10) return true;
+    return PLACES.some(p => x > p.x - 10 && x < p.x + p.w + 10 && y > p.y + 30 && y < p.y + p.h + 8);
+  }
+  const townPt = e => { const r = cv.getBoundingClientRect(), k = W / r.width; return [(e.clientX - r.left) * k + T.camX, (e.clientY - r.top) * k + T.camY]; };
+  cv.addEventListener("pointerdown", e => { if (S.mode !== "town") return; audio(); T.hold = true; T.target = townPt(e); T.hintT = Math.min(T.hintT, 0.4); });
+  cv.addEventListener("pointermove", e => { if (S.mode === "town" && T.hold) T.target = townPt(e); });
+  const stopHold = () => { T.hold = false; };
+  cv.addEventListener("pointerup", stopHold); cv.addEventListener("pointercancel", stopHold);
+  const KEYMAP = { ArrowUp: [0, -1], KeyW: [0, -1], ArrowDown: [0, 1], KeyS: [0, 1], ArrowLeft: [-1, 0], KeyA: [-1, 0], ArrowRight: [1, 0], KeyD: [1, 0] };
+  window.addEventListener("keydown", e => {
+    if (S.mode !== "town") return;
+    if (KEYMAP[e.code]) { e.preventDefault(); T.keys.add(e.code); T.target = null; }
+    else if ((e.code === "Enter" || e.code === "Space") && T.near) { e.preventDefault(); townAction(); }
+  });
+  window.addEventListener("keyup", e => T.keys.delete(e.code));
+
+  function townUpdate(dt) {
+    let vx = 0, vy = 0;
+    for (const k of T.keys) { vx += KEYMAP[k][0]; vy += KEYMAP[k][1]; }
+    if (!vx && !vy && T.target) {
+      const dx = T.target[0] - T.x, dy = T.target[1] - T.y, d = Math.hypot(dx, dy);
+      if (d < 6) T.target = T.hold ? T.target : null; else { vx = dx / d; vy = dy / d; }
+    }
+    const m = Math.hypot(vx, vy);
+    T.moving = m > 0;
+    if (m) {
+      const sp = 240 * dt / m;
+      const nx = T.x + vx * sp, ny = T.y + vy * sp;
+      if (!solidAt(nx, T.y)) T.x = nx;
+      if (!solidAt(T.x, ny)) T.y = ny;
+      T.walk += dt * 12;
+      if (Math.abs(vy) > Math.abs(vx) * 0.6) T.back = vy < 0;
+    }
+    T.camX = clamp(T.x - W / 2, 0, TW - W); T.camY = clamp(T.y - VH * 0.55, 0, Math.max(0, TH - VH));
+    for (const n of NPCS) {
+      if (!n.speed) continue;
+      const [tx, ty] = n.path[n.wp], dx = tx - n.x, dy = ty - n.y, d = Math.hypot(dx, dy);
+      if (T.talk && T.talk.npc === n) { n.moving = false; continue; }
+      if (d < 4) { n.wp = (n.wp + 1) % n.path.length; continue; }
+      n.x += dx / d * n.speed * dt; n.y += dy / d * n.speed * dt; n.walk += dt * (n.speed > 90 ? 16 : 10); n.moving = true;
+      n.back = dy < -Math.abs(dx) * 0.6;
+    }
+    if (T.talk && (T.talk.t -= dt) <= 0) T.talk = null;
+    if (T.say && (T.say.t -= dt) <= 0) T.say = null;
+    for (const k in T.cool) T.cool[k] -= dt;
+    if (T.hintT > 0) { T.hintT -= dt; if (T.hintT <= 0) $("townHint").style.opacity = 0; }
+    // what's close enough to use
+    let best = null, bd = 95;
+    for (const p of PLACES) { const d = Math.hypot(T.x - p.door[0], T.y - p.door[1]); if (d < bd) { bd = d; best = { kind: "place", p, label: p.act }; } }
+    for (const n of NPCS) { const d = Math.hypot(T.x - n.x, T.y - n.y); if (d < Math.min(bd, 70)) { bd = d; best = { kind: "npc", n, label: n.name === "Fan" ? "Talk to fan" : "Talk to " + n.name }; } }
+    T.near = best;
+    const key = best ? best.label : "";
+    if (key !== T.nearKey) { T.nearKey = key; $("townAct").hidden = !best; if (best) $("townAct").textContent = best.label; hud(); }
+  }
+  function townAction() {
+    const n = T.near; if (!n) return;
+    audio();
+    if (n.kind === "npc") {
+      const npc = n.n, lines = NPC_LINES[npc.lines];
+      npc.li = ((npc.li ?? -1) + 1) % lines.length;
+      T.talk = { npc, text: lines[npc.li], t: 3.4 };
+      if (!npc.talked) { npc.talked = true; addXP(5, "talked to " + (npc.name === "Fan" ? "a fan" : npc.name)); }
+      return;
+    }
+    const id = n.p.id;
+    if (id === "field") { $("townUI").hidden = true; showChars(); }
+    else if (id === "mvpt") startPT();
+    else if (id === "tent") startSigning();
+    else if (id === "house") showLocker();
+    else if (id === "sliders") {
+      if (T.cool.sliders > 0) { T.say = { text: "Still full. Maybe later.", t: 2.2 }; return; }
+      T.cool.sliders = 20; T.sliders++; sfx.tick(); noise(0.3, 900, 0.1);
+      T.say = { text: pick(["So good.", "Best slider in Michigan.", "Posting this.", "Fuel for State."]), t: 2.4 };
+      addXP(15, "Savvy Slider"); hud();
+    } else if (id === "school") {
+      if (T.cool.school > 0) { T.say = { text: "Class is over. Back to practice.", t: 2.2 }; return; }
+      T.cool.school = 30;
+      T.say = { text: pick(["Kadin spent class on his phone.", "Learned nothing. Posted twice.", "Teacher said put the phone away."]), t: 2.8 };
+      addXP(5, "went to class");
+    }
+  }
+  $("townAct").addEventListener("click", townAction);
+  $("townExit").addEventListener("click", () => showTitle());
+
+  function drawChibi(x, y, o) {
+    const step = o.moving ? Math.sin(o.walk || 0) : 0, wide = o.big ? 1.5 : 1;
+    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(x, y, 17 * wide, 6, 0, 0, 7); ctx.fill();
+    ctx.lineCap = "round"; ctx.lineWidth = 8;
+    ctx.strokeStyle = o.pants || "#0b0b0d";
+    ctx.beginPath(); ctx.moveTo(x - 6, y - 24); ctx.lineTo(x - 6 + step * 4, y - 3 - Math.max(0, step) * 4);
+    ctx.moveTo(x + 6, y - 24); ctx.lineTo(x + 6 - step * 4, y - 3 - Math.max(0, -step) * 4); ctx.stroke();
+    ctx.fillStyle = o.shoes || "#050505";
+    ctx.beginPath(); ctx.ellipse(x - 6 + step * 4, y - 2 - Math.max(0, step) * 4, 6, 3.5, 0, 0, 7); ctx.ellipse(x + 6 - step * 4, y - 2 - Math.max(0, -step) * 4, 6, 3.5, 0, 0, 7); ctx.fill();
+    // arms
+    ctx.strokeStyle = o.skin; ctx.lineWidth = o.big ? 10 : 6;
+    ctx.beginPath(); ctx.moveTo(x - 14 * wide, y - 48); ctx.lineTo(x - 18 * wide, y - 30 - step * 3);
+    if (o.phone && !o.back) { ctx.moveTo(x + 14 * wide, y - 48); ctx.lineTo(x + 8, y - 40); }
+    else { ctx.moveTo(x + 14 * wide, y - 48); ctx.lineTo(x + 18 * wide, y - 30 + step * 3); }
+    ctx.stroke();
+    // shirt
+    ctx.fillStyle = o.shirt;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 15 * wide, y - 54, 30 * wide, 32, 7) : ctx.rect(x - 15 * wide, y - 54, 30 * wide, 32); ctx.fill();
+    if (o.num) {
+      ctx.fillStyle = o.numColor; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = `${o.num.length > 2 ? 9 : 15}px Graduate, serif`; ctx.fillText(o.num, x, y - 36);
+      if (o.back && o.backName) { ctx.font = "6px Graduate, serif"; ctx.fillText(o.backName, x, y - 48); }
+    }
+    if (o.chain && !o.back) { ctx.strokeStyle = "#dfe3e8"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y - 54, 7, 0.2, Math.PI - 0.2); ctx.stroke(); }
+    // head
+    if (o.longHair) { ctx.fillStyle = o.hair; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 14, y - 76, 28, 34, 10) : ctx.rect(x - 14, y - 76, 28, 34); ctx.fill(); }
+    ctx.fillStyle = o.skin; ctx.beginPath(); ctx.arc(x, y - 66, 13, 0, 7); ctx.fill();
+    ctx.fillStyle = o.hair;
+    if (o.curls) {
+      const cs = o.back ? [[-9, -70], [0, -72], [9, -70], [-11, -62], [0, -62], [11, -62], [-5, -56], [5, -56]] : [[-10, -74], [-3, -78], [5, -77], [11, -73], [-12, -67], [12, -67]];
+      for (const [dx, dy] of cs) { ctx.beginPath(); ctx.arc(x + dx, y + dy, 5.5, 0, 7); ctx.fill(); }
+    } else if (o.back) { ctx.beginPath(); ctx.arc(x, y - 67, 13, 0, 7); ctx.fill(); }
+    else { ctx.beginPath(); ctx.arc(x, y - 70, 13, Math.PI, 0); ctx.fill(); }
+    if (!o.back) {
+      ctx.fillStyle = "#1a0f08"; ctx.beginPath(); ctx.arc(x - 4.5, y - 66, 1.6, 0, 7); ctx.arc(x + 4.5, y - 66, 1.6, 0, 7); ctx.fill();
+      ctx.strokeStyle = "#5a2a14"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y - 62, 4, 0.2, Math.PI - 0.2); ctx.stroke();
+    }
+    if (o.phone) {   // always on his phone
+      const px = o.back ? x + 15 : x + 9, py = o.back ? y - 44 : y - 45;
+      ctx.fillStyle = "rgba(140,200,255,.25)"; ctx.beginPath(); ctx.arc(px, py, 10, 0, 7); ctx.fill();
+      ctx.fillStyle = "#ff6a13"; ctx.fillRect(px - 3.5, py - 6, 7, 12);
+      ctx.fillStyle = o.back ? "#111" : "#9fd3ff"; ctx.fillRect(px - 2.5, py - 5, 5, 10);
+    }
+  }
+  function signBoard(text, x, y, bg, fg, size = 22) {
+    ctx.font = `${size}px Graduate, serif`;
+    const w = ctx.measureText(text).width + 24;
+    ctx.fillStyle = bg; ctx.fillRect(x - w / 2, y - size * 0.8, w, size * 1.6);
+    ctx.strokeStyle = "rgba(0,0,0,.4)"; ctx.lineWidth = 2; ctx.strokeRect(x - w / 2, y - size * 0.8, w, size * 1.6);
+    ctx.fillStyle = fg; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(text, x, y + 1);
+  }
+  function drawBuilding(p, wall, roof, sign, sbg, sfg) {
+    const face = Math.min(150, p.h * 0.38), doorBottom = p.door[1] > p.y + p.h / 2;
+    ctx.fillStyle = roof; ctx.fillRect(p.x, p.y, p.w, p.h - face);
+    ctx.fillStyle = "rgba(0,0,0,.12)"; for (let x = p.x + 20; x < p.x + p.w; x += 40) ctx.fillRect(x, p.y, 3, p.h - face);
+    ctx.fillStyle = wall; ctx.fillRect(p.x, p.y + p.h - face, p.w, face);
+    ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(p.x, p.y + p.h - face, p.w, 6);
+    for (let x = p.x + 30; x < p.x + p.w - 40; x += 70) {
+      if (Math.abs(x + 20 - p.door[0]) < 50) continue;
+      ctx.fillStyle = "#ffe8a3"; ctx.fillRect(x, p.y + p.h - face + 30, 40, 34);
+      ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(x + 19, p.y + p.h - face + 30, 2, 34);
+    }
+    if (doorBottom) {
+      ctx.fillStyle = "#2a1a10"; ctx.fillRect(p.door[0] - 26, p.y + p.h - 72, 52, 72);
+      ctx.fillStyle = "#ffd23f"; ctx.beginPath(); ctx.arc(p.door[0] + 16, p.y + p.h - 36, 3, 0, 7); ctx.fill();
+    }
+    signBoard(sign, p.door[0], p.y + p.h - face + 6 - 26, sbg, sfg);
+  }
+  function drawStadium(p) {
+    const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+    ctx.fillStyle = "#2c2f38"; ctx.beginPath(); ctx.ellipse(cx, cy, p.w / 2, p.h / 2, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = "#3d2a1f"; ctx.beginPath(); ctx.ellipse(cx, cy, p.w / 2 - 22, p.h / 2 - 22, 0, 0, 7); ctx.fill();
+    for (let i = 0; i < 160; i++) {   // crowd
+      const a = i / 160 * 6.283, rr = 0.86 + (i % 3) * 0.04;
+      ctx.fillStyle = i % 3 ? "#ff6a13" : "#0a0a0a";
+      ctx.fillRect(cx + Math.cos(a) * (p.w / 2 - 50) * rr - 3, cy + Math.sin(a) * (p.h / 2 - 50) * rr - 3, 6, 6);
+    }
+    const fw = p.w * 0.5, fh = p.h * 0.62;
+    ctx.fillStyle = "#33803f"; ctx.fillRect(cx - fw / 2, cy - fh / 2, fw, fh);
+    ctx.fillStyle = "#101812"; ctx.fillRect(cx - fw / 2, cy - fh / 2, fw, fh * 0.1); ctx.fillRect(cx - fw / 2, cy + fh / 2 - fh * 0.1, fw, fh * 0.1);
+    ctx.strokeStyle = "rgba(243,239,230,.7)"; ctx.lineWidth = 2;
+    for (let i = 1; i < 10; i++) { const y = cy - fh / 2 + fh * 0.1 + i * fh * 0.08; ctx.beginPath(); ctx.moveTo(cx - fw / 2, y); ctx.lineTo(cx + fw / 2, y); ctx.stroke(); }
+    ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 4;
+    for (const gy of [cy - fh / 2, cy + fh / 2]) { ctx.beginPath(); ctx.moveTo(cx - 22, gy); ctx.lineTo(cx + 22, gy); ctx.stroke(); }
+    for (const [lx, ly] of [[p.x + 60, p.y + 70], [p.x + p.w - 60, p.y + 70], [p.x + 60, p.y + p.h - 70], [p.x + p.w - 60, p.y + p.h - 70]]) {
+      ctx.fillStyle = "rgba(255,248,220,.25)"; ctx.beginPath(); ctx.arc(lx, ly, 34, 0, 7); ctx.fill();
+      ctx.fillStyle = "#fffbe8"; ctx.fillRect(lx - 14, ly - 8, 28, 16);
+    }
+    ctx.fillStyle = "#14161d"; ctx.fillRect(p.door[0] - 40, p.y + p.h - 46, 80, 46);
+    signBoard("KOZA FIELD", p.door[0], p.y + p.h - 64, "#0a0a0a", "#ff6a13", 26);
+  }
+  function drawTent(p) {
+    const n = 8, sw = p.w / n;
+    for (let i = 0; i < n; i++) { ctx.fillStyle = i % 2 ? "#0a0a0a" : "#ff6a13"; ctx.fillRect(p.x + i * sw, p.y, sw, p.h - 70); }
+    ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.fillRect(p.x, p.y, p.w, 14);
+    ctx.fillStyle = "#f3efe6"; ctx.fillRect(p.x + 20, p.y + p.h - 70, p.w - 40, 70);
+    ctx.fillStyle = "#2a1a10"; ctx.fillRect(p.door[0] - 40, p.y + p.h - 64, 80, 64);
+    signBoard("AUTOGRAPHS", p.door[0], p.y + p.h - 96, "#0a0a0a", "#ffd23f", 20);
+  }
+  function drawTree(x, y, r) {
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.beginPath(); ctx.ellipse(x, y, r * 0.8, r * 0.3, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = "#5a3f2a"; ctx.fillRect(x - 4, y - r * 0.9, 8, r * 0.9);
+    ctx.fillStyle = "#2f6b37"; ctx.beginPath(); ctx.arc(x, y - r * 1.3, r, 0, 7); ctx.fill();
+    ctx.fillStyle = "#3f8547"; ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 1.5, r * 0.6, 0, 7); ctx.fill();
+  }
+  function renderTown() {
+    ctx.save(); ctx.translate(-T.camX, -T.camY);
+    ctx.fillStyle = "#4c9a50"; ctx.fillRect(T.camX, T.camY, W, VH);
+    ctx.fillStyle = "#45904a";
+    for (const [x, y, r] of GRASS) if (x > T.camX - r && x < T.camX + W + r && y > T.camY - r && y < T.camY + VH + r) { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
+    // sidewalks, roads, lane lines
+    ctx.fillStyle = "#b9b4a8"; for (const r of ROADS) ctx.fillRect(r.x - 14, r.y - 14, r.w + 28, r.h + 28);
+    ctx.fillStyle = "#4a4d55"; for (const r of ROADS) ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 3; ctx.setLineDash([24, 18]);
+    ctx.beginPath(); ctx.moveTo(0, 910); ctx.lineTo(TW, 910); ctx.moveTo(800, 0); ctx.lineTo(800, TH); ctx.moveTo(0, 1540); ctx.lineTo(TW, 1540); ctx.stroke(); ctx.setLineDash([]);
+    // town square fountain with the Kadin statue
+    const [fx, fy, fr] = FOUNTAIN;
+    ctx.fillStyle = "#b9b4a8"; ctx.beginPath(); ctx.arc(fx, fy, fr + 14, 0, 7); ctx.fill();
+    ctx.fillStyle = "#5fa8d8"; ctx.beginPath(); ctx.arc(fx, fy, fr, 0, 7); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(fx, fy, 20 + ((S.t * 18 + i * 15) % 45), 0, 7); ctx.stroke(); }
+    // everything with height, back to front
+    const items = [];
+    for (const p of PLACES) items.push([p.y + p.h, () => {
+      if (p.id === "field") drawStadium(p);
+      else if (p.id === "tent") drawTent(p);
+      else if (p.id === "school") drawBuilding(p, "#8a3b2a", "#5a2a20", "BROTHER RICE", "#0a0a0a", "#ff6a13");
+      else if (p.id === "sliders") drawBuilding(p, "#f3efe6", "#e2b93f", "SAVVY SLIDERS", "#0a0a0a", "#ffd23f");
+      else if (p.id === "mvpt") drawBuilding(p, "#eef0f3", "#3a3f4a", "MVPT", "#0a0a0a", "#f3efe6");
+      else drawBuilding(p, "#d9cbb4", "#4a3328", "KADIN'S HOUSE", "#ff6a13", "#0a0a0a");
+    }]);
+    items.push([fy + 2, () => {   // statue
+      ctx.fillStyle = "#8f96a0"; ctx.fillRect(fx - 16, fy - 26, 32, 26);
+      ctx.fillStyle = "#0a0a0a"; ctx.font = "8px Graduate, serif"; ctx.textAlign = "center"; ctx.fillText("KOZA", fx, fy - 12);
+      ctx.save(); ctx.translate(fx, fy - 26); ctx.scale(0.9, 0.9);
+      drawChibi(0, 0, { skin: "#cfd4db", shirt: "#e9ecf0", num: "7", numColor: "#727982", hair: "#9aa1aa", curls: true, shoes: "#cfd4db", pants: "#9aa1aa" });
+      ctx.restore();
+    }]);
+    for (const [x, y, r] of TREES) if (x > T.camX - 60 && x < T.camX + W + 60 && y > T.camY - 20 && y < T.camY + VH + 100) items.push([y, () => drawTree(x, y, r)]);
+    for (let x = 100; x < TW; x += 220) for (const y of [846, 976]) items.push([y, () => {
+      ctx.fillStyle = "#2a2d36"; ctx.fillRect(x - 2, y - 60, 4, 60);
+      ctx.fillStyle = "rgba(255,240,180,.35)"; ctx.beginPath(); ctx.arc(x, y - 62, 14, 0, 7); ctx.fill();
+      ctx.fillStyle = "#fff4c2"; ctx.beginPath(); ctx.arc(x, y - 62, 5, 0, 7); ctx.fill();
+    }]);
+    for (const n of NPCS) items.push([n.y, () => drawChibi(n.x, n.y, { ...n.look, walk: n.walk, moving: n.moving, back: n.back })]);
+    const jj = J();
+    items.push([T.y, () => drawChibi(T.x, T.y, { skin: "#c99a72", shirt: jj.c[1], num: "7", numColor: jj.num, backName: "KOZA", hair: "#2b1d14", curls: true,
+      phone: true, chain: KZ.outfit.chain, shoes: CL().sw, walk: T.walk, moving: T.moving, back: T.back })]);
+    items.sort((a, b) => a[0] - b[0]).forEach(it => it[1]());
+    // highlight what you can use
+    if (T.near) {
+      const [hx, hy] = T.near.kind === "place" ? T.near.p.door : [T.near.n.x, T.near.n.y - 92];
+      ctx.strokeStyle = `rgba(255,210,63,${0.6 + 0.4 * Math.sin(S.t * 6)})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(hx, hy + (T.near.kind === "place" ? -10 : 0), 20, 0, 7); ctx.stroke();
+    }
+    if (T.talk) bubble(T.talk.text, clamp(T.talk.npc.x - 120, T.camX + 8, T.camX + W - 248), T.talk.npc.y - 160, 240, 20);
+    if (T.say) bubble(T.say.text, clamp(T.x - 120, T.camX + 8, T.camX + W - 248), T.y - 160, 240, 20);
+    if (T.target && !T.keys.size) {
+      ctx.strokeStyle = "rgba(255,255,255,.6)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(T.target[0], T.target[1], 12, 5, 0, 0, 7); ctx.stroke();
+    }
+    drawPings(T.x, T.y - 100);
+    ctx.restore();
+  }
+
   // ---------- loop ----------
   function update(dt) {
     S.t += dt;
@@ -2534,6 +3088,7 @@ button.ghost {
     Object.assign(camT, CAM0);
     if (S.mode === "intro") introUpdate(dt);
     if (S.mode === "sign") signUpdate(dt);
+    if (S.mode === "town") townUpdate(dt);
     if (S.mode === "pt" || (S.mode === "over" && S.lastMode === "pt")) ptUpdate(dt);
     if (S.phase === "kick") {
       S.kickT += dt;
