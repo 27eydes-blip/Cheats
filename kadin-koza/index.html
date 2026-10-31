@@ -360,6 +360,34 @@ button.ghost {
 }
 #title .actions { animation: rise .5s 1.85s both; }
 #title .go { animation: pulse 1.5s 2.4s infinite; }
+/* season schedule */
+#levels { justify-content: flex-start; overflow-y: auto; padding-block: 24px; }
+#levels h1 .name, #over h1 .name { font-size: clamp(28px, 8vmin, 46px); }
+.level-list { display: grid; gap: 8px; width: min(100%, 380px); }
+.lvl {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 8px 12px;
+  background: rgba(20,22,29,.94);
+  border: 1px solid #2a2c33;
+  border-radius: 6px;
+  color: var(--chalk);
+  font-family: var(--body);
+  cursor: pointer;
+}
+.lvl:hover:not(:disabled), .lvl:focus-visible { border-color: var(--orange); }
+.lvl:disabled { opacity: .45; cursor: not-allowed; }
+.lvl.final { border-color: var(--goal); }
+.lvl .wk { font-family: var(--display); font-size: 11px; color: var(--orange); text-align: center; line-height: 1.1; }
+.lvl .wk b { display: block; font-size: 24px; font-weight: 400; }
+.lvl .nm { display: block; font-weight: 700; font-size: 17px; letter-spacing: .04em; text-transform: uppercase; }
+.lvl .dt { display: block; font-size: 13px; color: var(--muted); }
+.lvl .st { font-size: 17px; color: var(--goal); letter-spacing: .06em; white-space: nowrap; }
+.stars { font-size: 34px; color: var(--goal); letter-spacing: .12em; text-shadow: 0 2px 0 #000; }
+.msg { margin: 0; max-width: 30ch; font-size: 17px; color: var(--chalk); }
 @media (prefers-reduced-motion: reduce) {
   .banner, .caption { transition: none; }
   .beam, #title * { animation: none !important; }
@@ -368,10 +396,10 @@ button.ghost {
 
 <div class="app">
   <div class="board" aria-live="polite">
-    <div class="cell"><span class="label">Score</span><span class="value" id="score">0</span></div>
+    <div class="cell"><span class="label" id="lab1">Score</span><span class="value" id="score">0</span></div>
     <div class="cell"><span class="label">Kick</span><span class="value" id="dist">45 yd</span></div>
     <div class="cell"><span class="label">Wind</span><span class="value small" id="wind">calm</span></div>
-    <div class="cell"><span class="label">Misses</span><span class="value small misses" id="misses">○○○</span></div>
+    <div class="cell"><span class="label" id="lab4">Misses</span><span class="value small misses" id="misses">○○○</span></div>
   </div>
 
   <div class="stage">
@@ -432,14 +460,29 @@ button.ghost {
         </div>
       </div>
 
+      <div class="overlay" id="levels" hidden>
+        <h1><span class="the">The season</span><span class="name">Schedule</span></h1>
+        <div class="level-list" id="levelList"></div>
+        <div class="actions">
+          <button class="ghost" id="endless" type="button">Endless mode</button>
+          <button class="ghost" id="back" type="button">Back</button>
+        </div>
+      </div>
+
       <div class="overlay" id="over" hidden>
-        <h1><span class="the">Final</span><span class="name" id="overScore">0 pts</span></h1>
+        <h1><span class="the" id="overThe">Final</span><span class="name" id="overScore">0 pts</span></h1>
+        <div class="stars" id="overStars" hidden></div>
+        <p class="msg" id="overMsg" hidden></p>
         <div class="stats">
-          <span class="label">Made</span><span class="label">Long</span><span class="label">Best</span>
+          <span class="label">Made</span><span class="label">Long</span><span class="label" id="overLab3">Best</span>
           <span class="value" id="overMade">0/0</span><span class="value" id="overLong">–</span><span class="value" id="overBest">0</span>
         </div>
         <div class="sponsor">Presented by <b>Savvy Sliders</b></div>
-        <button class="go" id="again" type="button">Kick again</button>
+        <div class="actions">
+          <button class="go" id="next" type="button" hidden>Next game</button>
+          <button class="go" id="again" type="button">Kick again</button>
+          <button class="ghost" id="menu" type="button">Schedule</button>
+        </div>
       </div>
     </div>
   </div>
@@ -604,17 +647,36 @@ button.ghost {
 
   // ---------- game state ----------
   const S = {
-    mode: "intro", phase: "jog", t: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0,
+    mode: "intro", phase: "jog", level: -1, kickIdx: 0, kicks: [], t: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0,
     K: INTRO_K, wind: 0, power: 0, aim: 0, kickT: 0, introT: 0, introCheer: false,
     ball: null, result: null, resultShown: false, resultT: 0, flash: 0,
     kpos: { ...IDLE }, kk: 0, krun: 0
   };
   const parts = [], trail = [];
+
+  // the season: each game is a level
+  const LEVELS = [
+    { wk: "1", name: "Home Opener",  opp: "Ridgeview",       kicks: 3, need: 2, min: 25, max: 33, wind: 3,  weather: "clear" },
+    { wk: "2", name: "Windy Night",  opp: "Lakeshore",       kicks: 4, need: 2, min: 28, max: 38, wind: 9,  weather: "clear" },
+    { wk: "3", name: "Rain Game",    opp: "Northfield",      kicks: 4, need: 3, min: 30, max: 42, wind: 7,  weather: "rain" },
+    { wk: "4", name: "Rivalry Week", opp: "Valley Prep",     kicks: 5, need: 3, min: 34, max: 46, wind: 10, weather: "clear" },
+    { wk: "PO", name: "Playoffs",    opp: "Harbor Catholic", kicks: 5, need: 4, min: 38, max: 50, wind: 12, weather: "rain" },
+    { wk: "SF", name: "State Final", opp: "Summit",          kicks: 6, need: 4, min: 40, max: 55, wind: 14, weather: "snow" }
+  ];
+  let prog = { unlocked: 0, stars: [] };
+  try { prog = Object.assign(prog, JSON.parse(localStorage.getItem("kk-season") || "{}")); } catch (e) {}
+  const saveProg = () => { try { localStorage.setItem("kk-season", JSON.stringify(prog)); } catch (e) {} };
+  const lvl = () => S.level >= 0 ? LEVELS[S.level] : null;
+  const starText = n => "★".repeat(n) + "☆".repeat(3 - n);
+
+  // rain and snow
+  const sky = Array.from({ length: 140 }, () => ({ x: Math.random() * W, y: Math.random() * H, v: 0.6 + Math.random() * 0.8 }));
   const setBall = () => { S.ball = { x: 0, y: 0.1, z: 0, spin: 0, mode: "set" }; trail.length = 0; };
 
   function newKick() {
-    S.K = Math.min(25 + S.makes * 3, 62);
-    const maxW = Math.min(3 + S.makes * 1.4, 15);
+    const L = lvl();
+    S.K = L ? S.kicks[S.kickIdx] : Math.min(25 + S.makes * 3, 62);
+    const maxW = L ? L.wind : Math.min(3 + S.makes * 1.4, 15);
     S.wind = Math.round((Math.random() * 2 - 1) * maxW);
     S.phase = "power"; S.t = 0; S.kickT = 0;
     setBall();
@@ -622,8 +684,9 @@ button.ghost {
     hideBanner(); hud();
     setPrompt("Tap to set <b>power</b>");
   }
-  function powerPeriod() { return Math.max(0.7, 1.3 - S.makes * 0.04); }
-  function aimPeriod() { return Math.max(0.75, 1.5 - S.makes * 0.05); }
+  const slick = () => { const L = lvl(); return L && L.weather !== "clear" ? 0.9 : 1; };
+  function powerPeriod() { return S.level >= 0 ? (1.25 - S.level * 0.08) * slick() : Math.max(0.7, 1.3 - S.makes * 0.04); }
+  function aimPeriod() { return S.level >= 0 ? (1.45 - S.level * 0.1) * slick() : Math.max(0.75, 1.5 - S.makes * 0.05); }
   function minPower(K) {
     const R = K / (1 - 5.97 / K);
     return clamp((R - 15) / 0.6, 0, 100);
@@ -633,7 +696,13 @@ button.ghost {
     $("score").textContent = S.score;
     $("dist").textContent = S.K + " yd";
     $("wind").textContent = S.wind === 0 ? "calm" : (S.wind < 0 ? "← " : "") + Math.abs(S.wind) + " mph" + (S.wind > 0 ? " →" : "");
-    $("misses").textContent = "●".repeat(S.misses) + "○".repeat(3 - S.misses);
+    const L = S.mode === "game" ? lvl() : null;
+    $("lab1").textContent = L ? "Made / need" : "Score";
+    $("lab4").textContent = L ? "Kick" : "Misses";
+    if (L) {
+      $("score").textContent = `${S.makes}/${L.need}`;
+      $("misses").textContent = `${Math.min(S.kickIdx + 1, L.kicks)} of ${L.kicks}`;
+    } else $("misses").textContent = "●".repeat(S.misses) + "○".repeat(3 - S.misses);
   }
   const setPrompt = html => { $("prompt").innerHTML = html; };
   function showBanner(title, sub, good) {
@@ -701,7 +770,7 @@ button.ghost {
 
   function finishKick() {
     const r = S.result;
-    S.att++;
+    S.att++; S.kickIdx++;
     if (r.good) {
       S.makes++; S.score += 3; S.long = Math.max(S.long, S.K);
       if (S.score > best) { best = S.score; saveBest(); }
@@ -822,17 +891,70 @@ button.ghost {
       if (S.mode === "game" && (S.phase === "power" || S.phase === "aim")) { e.preventDefault(); tap(); }
     }
   });
-  function startGame() {
+  function startGame(level) {
     audio();
-    Object.assign(S, { mode: "game", score: 0, makes: 0, att: 0, misses: 0, long: 0 });
-    $("title").hidden = true; $("over").hidden = true; $("introUI").hidden = true;
+    Object.assign(S, { mode: "game", level, kickIdx: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0 });
+    const L = lvl();
+    if (L) {   // distances climb through the game
+      S.kicks = Array.from({ length: L.kicks }, (_, i) => Math.round(lerp(L.min, L.max, L.kicks > 1 ? i / (L.kicks - 1) : 0)));
+    }
+    for (const id of ["title", "over", "levels", "introUI"]) $(id).hidden = true;
     newKick();
-    showBanner("LET'S GO, KOZA!", "Brother Rice ball", true);
+    if (L) showBanner(L.wk.length > 1 ? L.name.toUpperCase() : `WEEK ${L.wk}`, `vs ${L.opp} · make ${L.need} of ${L.kicks}`, true);
+    else showBanner("LET'S GO, KOZA!", "Endless mode", true);
     sfx.cheer(); S.flash = 2;
     setTimeout(() => { if (S.phase === "power") hideBanner(); }, 1400);
   }
-  $("start").addEventListener("click", startGame);
-  $("again").addEventListener("click", startGame);
+  function showLevels() {
+    audio();
+    const list = $("levelList"); list.textContent = "";
+    LEVELS.forEach((L, i) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "lvl" + (i === LEVELS.length - 1 ? " final" : "");
+      b.disabled = i > prog.unlocked;
+      const wx = L.weather === "clear" ? "" : " · " + L.weather;
+      b.innerHTML = `<span class="wk">${L.wk.length > 1 ? "" : "WEEK"}<b>${L.wk}</b></span>
+        <span><span class="nm">${L.name}</span><span class="dt">vs ${L.opp} · ${L.min}–${L.max} yd · make ${L.need} of ${L.kicks}${wx}</span></span>
+        <span class="st">${b.disabled ? "Locked" : starText(prog.stars[i] || 0)}</span>`;
+      b.addEventListener("click", () => startGame(i));
+      list.appendChild(b);
+    });
+    for (const id of ["title", "over"]) $(id).hidden = true;
+    $("levels").hidden = false;
+    S.mode = "title"; S.phase = "idle";
+  }
+  function levelOver() {
+    const L = lvl(), pass = S.makes >= L.need;
+    const stars = pass ? (S.makes === L.kicks ? 3 : S.makes === L.kicks - 1 ? 2 : 1) : 0;
+    const last = S.level === LEVELS.length - 1;
+    if (pass) {
+      prog.stars[S.level] = Math.max(prog.stars[S.level] || 0, stars);
+      prog.unlocked = Math.max(prog.unlocked, Math.min(S.level + 1, LEVELS.length - 1));
+      saveProg();
+      sfx.cheer(); setTimeout(sfx.cheer, 600); S.flash = 3; confetti(last ? 220 : 90);
+    } else sfx.groan();
+    S.mode = "over"; S.phase = "idle"; hideBanner();
+    $("overThe").textContent = L.wk.length > 1 ? L.name : `Week ${L.wk} · ${L.name}`;
+    $("overScore").textContent = pass ? (last ? "State champs!" : "Win!") : "Loss";
+    $("overStars").hidden = !pass; $("overStars").textContent = starText(stars);
+    $("overMsg").hidden = false;
+    $("overMsg").textContent = pass
+      ? (last ? "Kadin Koza brings the state title home to Koza Field." : `Beat ${L.opp}. Next up: ${LEVELS[S.level + 1].name}.`)
+      : `Needed ${L.need} makes against ${L.opp}. Try it again.`;
+    $("overMade").textContent = `${S.makes}/${S.att}`;
+    $("overLong").textContent = S.long ? S.long + " yd" : "–";
+    $("overLab3").textContent = "Points"; $("overBest").textContent = S.score;
+    $("next").hidden = !pass || last;
+    $("again").textContent = pass ? "Replay" : "Try again";
+    $("over").hidden = false;
+    setPrompt("Kadin Koza · <b>#7</b>");
+  }
+  $("start").addEventListener("click", showLevels);
+  $("menu").addEventListener("click", showLevels);
+  $("back").addEventListener("click", () => { $("levels").hidden = true; $("title").hidden = false; });
+  $("endless").addEventListener("click", () => startGame(-1));
+  $("again").addEventListener("click", () => startGame(S.level));
+  $("next").addEventListener("click", () => startGame(S.level + 1));
   $("replay").addEventListener("click", () => { audio(); $("soundHint").hidden = true; startIntro(); });
   $("skip").addEventListener("click", () => { audio(); endIntro(); });
   $("mute").addEventListener("click", () => {
@@ -1214,6 +1336,17 @@ button.ghost {
       ctx.closePath(); ctx.fill();
     }
     ctx.restore();
+    const L = S.mode === "game" ? lvl() : null;
+    if (L && L.weather === "rain") {
+      ctx.fillStyle = "rgba(20,30,50,.18)"; ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = "rgba(200,220,255,.35)"; ctx.lineWidth = 1.2; ctx.beginPath();
+      for (const d of sky) { ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + S.wind * 0.6, d.y + 16 * d.v); }
+      ctx.stroke();
+    } else if (L && L.weather === "snow") {
+      ctx.fillStyle = "rgba(220,230,255,.06)"; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "rgba(255,255,255,.85)";
+      for (const d of sky) { ctx.beginPath(); ctx.arc(d.x, d.y, 1 + d.v * 1.6, 0, 7); ctx.fill(); }
+    }
     // vignette
     const vg = ctx.createRadialGradient(W / 2, H * 0.52, H * 0.25, W / 2, H * 0.52, H * 0.75);
     vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.55)");
@@ -1270,8 +1403,18 @@ button.ghost {
       if (S.mode === "intro" && S.resultT > 4) endIntro();
       else if (S.mode === "game" && (S.phase === "result" || S.phase === "flight") && S.resultT > 2.1) {
         S.resultShown = false;
-        if (S.misses >= 3) gameOver(); else newKick();
+        const L = lvl();
+        if (!L) { if (S.misses >= 3) gameOver(); else newKick(); }
+        else if (S.kickIdx >= L.kicks || S.makes + (L.kicks - S.kickIdx) < L.need) levelOver();
+        else newKick();
       }
+    }
+    const wx = S.mode === "game" && lvl() ? lvl().weather : "clear";
+    if (wx !== "clear") for (const d of sky) {
+      const fall = wx === "rain" ? 900 : 70;
+      d.y += fall * d.v * dt; d.x += (S.wind * (wx === "rain" ? 30 : 6) + (wx === "snow" ? Math.sin(S.t + d.v * 9) * 20 : 0)) * dt;
+      if (d.y > H) { d.y -= H + 20; d.x = Math.random() * W; }
+      if (d.x > W) d.x -= W; if (d.x < 0) d.x += W;
     }
     for (let i = parts.length - 1; i >= 0; i--) {
       const p = parts[i];
@@ -1290,7 +1433,9 @@ button.ghost {
 
   function gameOver() {
     S.mode = "over"; S.phase = "idle"; hideBanner();
-    $("overScore").textContent = S.score + " pts";
+    $("overThe").textContent = "Final"; $("overScore").textContent = S.score + " pts";
+    $("overStars").hidden = true; $("overMsg").hidden = true; $("next").hidden = true;
+    $("again").textContent = "Kick again"; $("overLab3").textContent = "Best";
     $("overMade").textContent = `${S.makes}/${S.att}`;
     $("overLong").textContent = S.long ? S.long + " yd" : "–";
     $("overBest").textContent = best;
