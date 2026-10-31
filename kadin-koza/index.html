@@ -2177,7 +2177,7 @@ button.ghost {
   }
 
   function drawDalton(cx, pose) {
-    const skin = "#d9a47a", skinL = "#f0c49c", skinD = "#a8724d", hair = "#1f140e";
+    const skin = "#eec5a6", skinL = "#f8dcc6", skinD = "#c99878", hair = "#33221a";
     const seg = (a, b, w, col) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); };
     // joggers + shoes
     ctx.fillStyle = "#3a3d46";
@@ -2203,6 +2203,12 @@ button.ghost {
         ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(bx, by, 38, 30, 0, 0, 7); ctx.fill();
       }
       ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(hd[0], hd[1], 23, 0, 7); ctx.fill();
+      if (sh[0] > cx) {   // smartwatch
+        const wx = lerp(el[0], hd[0], 0.8), wy = lerp(el[1], hd[1], 0.8);
+        seg([lerp(el[0], hd[0], 0.76), lerp(el[1], hd[1], 0.76)], [lerp(el[0], hd[0], 0.86), lerp(el[1], hd[1], 0.86)], 48, "#16181d");
+        ctx.fillStyle = "#3a3f4a"; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(wx - 11, wy - 13, 22, 26, 6) : ctx.rect(wx - 11, wy - 13, 22, 26); ctx.fill();
+        ctx.fillStyle = "#0b0c0f"; ctx.fillRect(wx - 8, wy - 10, 16, 20);
+      }
     };
     for (const sx of [-1, 1]) {
       const sh = [cx + sx * 108, 300];
@@ -2228,29 +2234,41 @@ button.ghost {
     ctx.moveTo(cx, 362); ctx.lineTo(cx, 450); ctx.stroke();
     ctx.fillStyle = "#f3efe6"; ctx.font = "30px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText("MVPT", cx, 322);
-    // head
+    // head: broad face, square jaw
     ctx.fillStyle = skin;
-    ctx.beginPath(); ctx.ellipse(cx - 40, 170, 8, 12, 0, 0, 7); ctx.ellipse(cx + 40, 170, 8, 12, 0, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(cx - 40, 150); ctx.lineTo(cx - 36, 196); ctx.quadraticCurveTo(cx, 226, cx + 36, 196); ctx.lineTo(cx + 40, 150);
-    ctx.quadraticCurveTo(cx, 96, cx - 40, 150); ctx.fill();
-    ctx.fillStyle = "rgba(40,25,15,.2)";   // stubble
-    ctx.beginPath(); ctx.moveTo(cx - 36, 186); ctx.quadraticCurveTo(cx, 232, cx + 36, 186); ctx.quadraticCurveTo(cx, 206, cx - 36, 186); ctx.fill();
-    // dark brown-black hair, short sides, swept top
+    ctx.beginPath(); ctx.ellipse(cx - 44, 168, 8, 13, 0, 0, 7); ctx.ellipse(cx + 44, 168, 8, 13, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx - 44, 142); ctx.lineTo(cx - 42, 190); ctx.quadraticCurveTo(cx - 36, 214, cx - 16, 220);
+    ctx.lineTo(cx + 16, 220); ctx.quadraticCurveTo(cx + 36, 214, cx + 42, 190); ctx.lineTo(cx + 44, 142);
+    ctx.quadraticCurveTo(cx, 100, cx - 44, 142); ctx.fill();
+    ctx.fillStyle = "rgba(220,120,100,.18)";   // a little color in the cheeks
+    ctx.beginPath(); ctx.ellipse(cx - 26, 180, 10, 7, 0, 0, 7); ctx.ellipse(cx + 26, 180, 10, 7, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = "rgba(60,40,30,.16)";   // light stubble along the jaw
+    ctx.beginPath(); ctx.moveTo(cx - 42, 188); ctx.quadraticCurveTo(cx - 36, 216, cx - 16, 222); ctx.lineTo(cx + 16, 222);
+    ctx.quadraticCurveTo(cx + 36, 216, cx + 42, 188); ctx.quadraticCurveTo(cx, 212, cx - 42, 188); ctx.fill();
+    // short dark brown hair: tight sides, textured spikes up front
+    ctx.fillStyle = "rgba(51,34,26,.55)";
+    ctx.fillRect(cx - 45, 130, 7, 30); ctx.fillRect(cx + 38, 130, 7, 30);
     ctx.fillStyle = hair;
-    ctx.beginPath(); ctx.moveTo(cx - 42, 156); ctx.quadraticCurveTo(cx - 46, 112, cx - 10, 104);
-    ctx.quadraticCurveTo(cx + 30, 92, cx + 46, 124); ctx.quadraticCurveTo(cx + 46, 140, cx + 42, 156);
-    ctx.quadraticCurveTo(cx + 30, 128, cx, 132); ctx.quadraticCurveTo(cx - 30, 130, cx - 42, 156); ctx.fill();
-    ctx.fillStyle = "rgba(31,20,14,.5)"; ctx.fillRect(cx - 42, 148, 6, 22); ctx.fillRect(cx + 36, 148, 6, 22);
+    ctx.beginPath(); ctx.moveTo(cx - 42, 140);
+    ctx.quadraticCurveTo(cx - 44, 112, cx - 26, 104);
+    ctx.lineTo(cx - 20, 92); ctx.lineTo(cx - 12, 101); ctx.lineTo(cx - 4, 86); ctx.lineTo(cx + 4, 99);
+    ctx.lineTo(cx + 12, 84); ctx.lineTo(cx + 18, 98); ctx.lineTo(cx + 28, 90); ctx.lineTo(cx + 30, 104);
+    ctx.quadraticCurveTo(cx + 44, 112, cx + 42, 140);
+    ctx.quadraticCurveTo(cx + 30, 124, cx + 6, 126); ctx.quadraticCurveTo(cx - 24, 124, cx - 42, 140); ctx.fill();
     // face
     ctx.strokeStyle = hair; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.moveTo(cx - 28, 150); ctx.lineTo(cx - 10, 148); ctx.moveTo(cx + 10, 148); ctx.lineTo(cx + 28, 150); ctx.stroke();
-    ctx.fillStyle = "#1a0f08";
-    for (const ex of [-17, 17]) { ctx.beginPath(); ctx.ellipse(cx + ex, 162, 4, 4.5, 0, 0, 7); ctx.fill(); }
+    ctx.beginPath(); ctx.moveTo(cx - 30, 148); ctx.lineTo(cx - 10, 147); ctx.moveTo(cx + 10, 147); ctx.lineTo(cx + 30, 148); ctx.stroke();
+    ctx.fillStyle = "#f3efe6";
+    for (const ex of [-19, 19]) { ctx.beginPath(); ctx.ellipse(cx + ex, 161, 7, 4.5, 0, 0, 7); ctx.fill(); }
+    ctx.fillStyle = "#3b2a1e";
+    for (const ex of [-19, 19]) { ctx.beginPath(); ctx.arc(cx + ex, 161, 3.4, 0, 7); ctx.fill(); }
+    ctx.strokeStyle = skinD; ctx.lineWidth = 2.5;   // nose
+    ctx.beginPath(); ctx.moveTo(cx - 2, 166); ctx.lineTo(cx - 5, 184); ctx.lineTo(cx + 4, 186); ctx.stroke();
     const talking = PT.lineT > 0 && Math.sin(S.t * 18) > 0;
-    ctx.fillStyle = "#f3efe6"; ctx.strokeStyle = "#5a2a14"; ctx.lineWidth = 2.5;
+    ctx.fillStyle = "#f3efe6"; ctx.strokeStyle = "#8a4a3a"; ctx.lineWidth = 2.5;
     ctx.beginPath();
-    if (talking) ctx.ellipse(cx, 194, 12, 7, 0, 0, 7);
-    else { ctx.moveTo(cx - 16, 190); ctx.quadraticCurveTo(cx, 204, cx + 16, 190); ctx.closePath(); }
+    if (talking) ctx.ellipse(cx, 200, 12, 7, 0, 0, 7);
+    else { ctx.moveTo(cx - 17, 196); ctx.quadraticCurveTo(cx, 210, cx + 17, 196); ctx.closePath(); }
     ctx.fill(); ctx.stroke();
   }
 
