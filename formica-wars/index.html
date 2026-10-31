@@ -407,13 +407,13 @@ const SPECIES = [
   { key: 'weaver', name: 'Weaver ant', latin: 'Oecophylla smaragdina', ui: '#9ccc52', pal: { base: '#c8782a', light: '#ffd9a0', mid: '#8a4a12', dark: '#2e1404' }, gaster: { base: '#86ae3e', light: '#e2f6ae', mid: '#4e781e', dark: '#162c06' },
     perk: 'Silk-woven nests. The mound and outposts have 60% more health.', mods: { nestHp: 1.6 }, morph: { legs: 1.14, slender: true } },
   { key: 'honey', name: 'Honeypot ant', latin: 'Myrmecocystus mexicanus', ui: '#f2c94c', pal: { base: '#c08a2a', light: '#ffe0a0', mid: '#7a5210', dark: '#2a1a04' }, gaster: { base: '#e8a83a', light: '#fff6cc', mid: '#b0700e', dark: '#4a2a04' },
-    perk: 'Living larders. Every delivery brings 1 extra food and granaries yield 30% more.', mods: { haul: 1, garden: 1.3 }, morph: {} },
+    perk: 'Living larders. Every delivery brings 68% more food and granaries, farms and herds yield 46% more.', mods: { haul: 1.36, garden: 1.456 }, morph: {} },
   { key: 'carp', name: 'Carpenter ant', latin: 'Camponotus pennsylvanicus', ui: '#8fb3e8', pal: { base: '#2f2825', light: '#ab9d93', mid: '#1a1412', dark: '#050303' },
     perk: 'Massive majors. Majors have 50% more health and cost 25% less.', mods: { majorHp: 1.5, majorCost: .75 }, morph: { size: 1.06 } },
   { key: 'trap', name: 'Trap-jaw ant', latin: 'Odontomachus bauri', ui: '#f07aa8', pal: { base: '#7c4a22', light: '#dca878', mid: '#4c2a10', dark: '#140802' },
     perk: 'Spring-loaded jaws. The first bite of every fight deals triple damage.', mods: { firstStrike: 3 }, morph: { mand: 'long', eye: 1.25 } },
   { key: 'bulldog', name: 'Bulldog ant', latin: 'Myrmecia gulosa', ui: '#e8e05a', pal: { base: '#2c4a50', light: '#8ff0dc', mid: '#183036', dark: '#03090b' }, gaster: { base: '#2c1a44', light: '#c890ff', mid: '#1a0e2c', dark: '#06020c' },
-    perk: 'Keen-eyed hunters. They spot enemies from 40% further away and bite 15% harder.', mods: { sense: 1.4, dmg: 1.15 }, morph: { eye: 2.6, mand: 'long', size: 1.1, legs: 1.25, alien: true, ant: 1.3 } },
+    perk: 'Alien stalkers. 55% faster and nearly invisible: enemies cannot sense them until they are close. They spot enemies 40% further away and bite 15% harder.', mods: { sense: 1.4, dmg: 1.15, spd: 1.55, stealth: 1 }, morph: { eye: 2.6, mand: 'long', size: 1.1, legs: 1.25, alien: true, ant: 1.3 } },
   { key: 'greenhead', name: 'Green-head ant', latin: 'Rhytidoponera metallica', ui: '#38c98a', pal: { base: '#2c5a4c', light: '#9ef0c8', mid: '#1a3a32', dark: '#06120e' }, gaster: { base: '#3a3a6a', light: '#c8a0ff', mid: '#242448', dark: '#08081a' },
     perk: 'Metallic armour. Every ant takes 25% less damage.', mods: { taken: .75 }, morph: { metal: true } },
   { key: 'argentine', name: 'Argentine ant', latin: 'Linepithema humile', ui: '#ff2d55', pal: { base: '#2c1614', light: '#c0564e', mid: '#1a0a08', dark: '#040101' }, gaster: { base: '#1c0a0a', light: '#e04848', mid: '#120505', dark: '#020000' },
@@ -422,8 +422,8 @@ const SPECIES = [
     perk: 'Blind hordes that bridge puddles with their bodies. The queen lays 40% faster and soldiers carry hooked jaws.', mods: { egg: 1.4, bridge: 1 }, morph: { mand: 'hook', eye: .3 } },
   { key: 'silver', name: 'Saharan silver ant', latin: 'Cataglyphis bombycina', ui: '#cfd8e3', pal: { base: '#a8a8a4', light: '#ffffff', mid: '#6e6e6a', dark: '#262624' },
     perk: 'Silver sprinters. 30% faster, and foragers find food from 50% further away.', mods: { spd: 1.3, forage: 1.5 }, morph: { legs: 1.3, silver: true } },
-  { key: 'turtle', name: 'Turtle ant', latin: 'Cephalotes atratus', ui: '#4f7cff', pal: { base: '#2a2422', light: '#8a7a70', mid: '#181212', dark: '#050303' },
-    perk: 'Living shields. Every ant takes 20% less damage and gatekeepers are 40% tougher.', mods: { taken: .8, gateHp: 1.4 }, morph: { spines: true, headSpines: true, size: 1.04 } },
+  { key: 'turtle', name: 'Turtle ant', latin: 'Cephalotes atratus', ui: '#4f7cff', pal: { base: '#4e5a30', light: '#b4c47a', mid: '#2e3a1a', dark: '#0c1206' }, gaster: { base: '#6a5428', light: '#e0c27a', mid: '#3e2e12', dark: '#140c02' },
+    perk: 'Living shields. Every ant takes 20% less damage and gatekeepers are 40% tougher.', mods: { taken: .8, gateHp: 1.4 }, morph: { size: 1.04, turtle: true, legs: .85 } },
   { key: 'jumper', name: 'Jack jumper ant', latin: 'Myrmecia pilosula', ui: '#36d6e7', pal: { base: '#2a1a14', light: '#9a7a62', mid: '#180e0a', dark: '#050202' },
     perk: 'Leaping hunters. 12% faster, and the first bite of every fight deals double damage.', mods: { spd: 1.12, firstStrike: 2 }, morph: { eye: 1.8, mand: 'long', legs: 1.15, size: 1.06 } },
   { key: 'matabele', name: 'Matabele ant', latin: 'Megaponera analis', ui: '#5ee05a', pal: { base: '#241c18', light: '#8e7a6a', mid: '#140e0a', dark: '#040202' },
@@ -550,6 +550,7 @@ function morphFor(si, t, tier = 0) {
   }
   M.metal = !!m.metal; M.silver = !!m.silver; M.mandLen = m.mandLen || 1;
   if (m.long) { M.head = [M.head[0] * 1.7 + 1, M.head[1], M.head[2] * .95]; M.gaster = [M.gaster[0] * 1.9 - 1, M.gaster[1] * 1.6, M.gaster[2] * .95]; M.legs *= 1.45; M.ant *= 1.3; M.meso *= 1.1; }
+  if (m.turtle) { M.turtle = true; M.spines = false; M.headSpines = false; M.pat = ''; M.gaster = [M.gaster[0] + .3, M.gaster[1] * 1.12, M.gaster[2] * 1.35]; M.head = [M.head[0], M.head[1] * 1.05, M.head[2] * 1.3]; M.meso *= 1.18; M.mand *= .7; }
   if (m.alien) { M.alien = true; M.head = [M.head[0] + .6, M.head[1] * 1.15, M.head[2] * 1.05]; M.glow = Math.max(M.glow || 0, .5); }
   const SP = SPECIES[si]; M.acc = ACCENT[SP.key] || SP.ui; M.pat = PATTERN[SP.key] ?? 'bands'; M.pcol = PAT_COL[SP.key] || M.acc; M.patA = PAT_A[t];
   if (CASTE_FX[t]) Object.assign(M, CASTE_FX[t]);
@@ -889,6 +890,23 @@ function drawAnt(g, st, dead, P0, M) {
     const vein = (x0, y0, x1, y1, br) => { g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo((x0 + x1) / 2 + (y1 - y0) * .25, (y0 + y1) / 2 - (x1 - x0) * .2, x1, y1); g.stroke(); if (br) { g.beginPath(); g.moveTo((x0 + x1) / 2, (y0 + y1) / 2); g.lineTo((x0 + x1) / 2 + (y1 - y0) * .35, (y0 + y1) / 2 + (x1 - x0) * .3); g.stroke(); } };
     for (const s2 of [-1, 1]) { vein(hx + hrx * .3, s2 * hry * .2, hx - hrx * .8, s2 * hry * .7, true); vein(2.6, s2 * .3, -.3, s2 * .7, true); vein(-.6, s2 * .3, gx + grx * .2, s2 * gry * .55, true); vein(gx + grx * .2, s2 * gry * .55, gx - grx * .7, s2 * gry * .3, true); }
   }
+  if (M.turtle) {
+    const shell = (cx, cy, rx, ry, cells) => {
+      g.save(); g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, TAU); g.clip();
+      const sg = g.createRadialGradient(cx - rx * .2, cy - ry * .3, .2, cx, cy, Math.max(rx, ry) * 1.1); sg.addColorStop(0, dead ? '#6a6050' : '#cfb36a'); sg.addColorStop(.5, dead ? '#4a4034' : '#7a6230'); sg.addColorStop(1, dead ? '#2a2018' : '#2e220c'); g.fillStyle = sg; g.fillRect(cx - rx, cy - ry, rx * 2, ry * 2);
+      const hs = Math.min(rx, ry) / cells; g.lineWidth = hs * .14; g.strokeStyle = dead ? 'rgba(20,14,8,.6)' : 'rgba(30,20,6,.85)';
+      for (let iy = -cells - 1; iy <= cells + 1; iy++) for (let ix = -cells - 1; ix <= cells + 1; ix++) {
+        const x = cx + ix * hs * 1.55 + (iy & 1) * hs * .78, y = cy + iy * hs * 1.35;
+        const pl = g.createRadialGradient(x - hs * .2, y - hs * .25, 0, x, y, hs * .9); pl.addColorStop(0, dead ? 'rgba(160,150,130,.25)' : 'rgba(255,230,150,.4)'); pl.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = pl;
+        g.beginPath(); for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + Math.PI / 6; g[k ? 'lineTo' : 'moveTo'](x + Math.cos(a) * hs * .82, y + Math.sin(a) * hs * .82); } g.closePath(); g.fill(); g.stroke();
+      }
+      g.restore();
+      g.strokeStyle = dead ? '#3a3028' : '#d8bc72'; g.lineWidth = .22; g.beginPath(); g.ellipse(cx, cy, rx * .97, ry * .97, 0, 0, TAU); g.stroke();
+      g.strokeStyle = 'rgba(20,12,4,.8)'; g.lineWidth = .12; g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, TAU); g.stroke();
+    };
+    shell(gx, 0, grx, gry, 2.3);
+    shell(1.2, 0, 2.3 * M.meso, 1.55 * M.meso, 1.5);
+  }
   if (M.alien && !dead) {
     const cr = g.createRadialGradient(hx - hrx * .55, 0, 0, hx - hrx * .55, 0, hrx * .9); cr.addColorStop(0, 'rgba(160,255,230,.35)'); cr.addColorStop(1, 'rgba(160,255,230,0)'); g.fillStyle = cr; g.beginPath(); g.ellipse(hx - hrx * .5, 0, hrx * .75, hry * .7, 0, 0, TAU); g.fill();
     g.strokeStyle = 'rgba(120,255,220,.55)'; g.lineWidth = .1; for (const k of [-.4, 0, .4]) { g.beginPath(); g.moveTo(hx + hrx * .3, k * hry); g.quadraticCurveTo(hx - hrx * .4, k * hry * 1.6, hx - hrx * .95, k * hry * .8); g.stroke(); }
@@ -898,6 +916,7 @@ function drawAnt(g, st, dead, P0, M) {
     const spots = (cx, cy, rx, ry, n, seed) => { for (let i = 0; i < n; i++) { const [u, v] = HSEED.punct[(i * 7 + seed) % HSEED.punct.length], x = cx + (u - .5) * rx * 1.5, y = cy + (v - .5) * ry * 1.5, r = .25 + u * .3; if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 > .8) continue; const sg = g.createRadialGradient(x, y, 0, x, y, r * 2.2); sg.addColorStop(0, i % 3 ? 'rgba(90,255,220,1)' : 'rgba(200,140,255,1)'); sg.addColorStop(.4, i % 3 ? 'rgba(40,220,190,.6)' : 'rgba(150,80,255,.6)'); sg.addColorStop(1, 'rgba(40,220,190,0)'); g.fillStyle = sg; g.beginPath(); g.arc(x, y, r * 2.2, 0, TAU); g.fill(); } };
     spots(gx, 0, grx, gry, 14, 3); spots(1, 0, 2.2 * M.meso, 1.3 * M.meso, 6, 11);
   }
+  if (M.turtle) { const sx2 = hx + hrx * .1, rx2 = hrx * 1.05, ry2 = hry * 1.12, hg2 = g.createRadialGradient(sx2 - rx2 * .2, -ry2 * .3, .2, sx2, 0, ry2 * 1.1); hg2.addColorStop(0, dead ? '#6a6050' : '#c4b06a'); hg2.addColorStop(.6, dead ? '#3a3228' : '#5e4e24'); hg2.addColorStop(1, dead ? '#1a1410' : '#1e160a'); g.fillStyle = hg2; g.beginPath(); g.ellipse(sx2, 0, rx2, ry2, 0, 0, TAU); g.fill(); g.strokeStyle = dead ? '#3a3028' : '#d8bc72'; g.lineWidth = .2; g.beginPath(); g.ellipse(sx2, 0, rx2 * .94, ry2 * .94, 0, 0, TAU); g.stroke(); g.strokeStyle = 'rgba(30,20,6,.7)'; g.lineWidth = .1; for (const k of [-.4, 0, .4]) { g.beginPath(); g.moveTo(sx2 - rx2 * .7, k * ry2); g.lineTo(sx2 + rx2 * .7, k * ry2 * .6); g.stroke(); } for (const s2 of [-1, 1]) { g.fillStyle = '#0a0604'; g.beginPath(); g.arc(sx2 + rx2 * .55, s2 * ry2 * .55, .35, 0, TAU); g.fill(); g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(sx2 + rx2 * .5, s2 * ry2 * .55 - .12, .1, 0, TAU); g.fill(); } }
   if (M.scary && !dead) for (const [ox, oy] of [[-.22, 0], [-.42, .26], [-.42, -.26]]) { const x = hx + hrx * ox, y = hry * oy, og = g.createRadialGradient(x, y, 0, x, y, .45); og.addColorStop(0, 'rgba(255,200,150,1)'); og.addColorStop(.35, 'rgba(255,40,20,.95)'); og.addColorStop(1, 'rgba(255,0,0,0)'); g.fillStyle = og; g.beginPath(); g.arc(x, y, .45, 0, TAU); g.fill(); }
   for (const s of [-1, 1]) antAntenna(g, s, st, dead, P, M, hx + hrx * .55, s * hry * .35);
 }
@@ -1985,7 +2004,7 @@ function newGame(sis, demo) {
         log: [], logDirty: true, foodTimer: 5, pings: [], lastWarn: -99, toastUntil: 0, toastMsg: '', toastKind: '', evap: 0, flights: [], beasts: [], beastT: 140, pits: [],
         rain: { k: 0, on: false, next: rnd(200, 300), end: 0, flashAt: -1e9 }, hist: [], histT: 0, follow: null, ftxt: [], wasps: [], wear: new Float32Array(WW * WH), wearDirty: true, lizT: rnd(420, 520), seasonI: 0, bridges: [], terrT: 0, terrDirty: true,
         herds: [], towner: new Int8Array(FBW * FBH).fill(-1), terr: cols.map(() => new Float32Array(FBW * FBH)) };
-  for (const c of cols) { c.scary = !!SPEC(c).morph.scary; c.eyeP = []; c.gasP = []; c.cracks = Array.from({ length: 7 }, (_, i) => { const a = i / 7 * TAU + rnd(-.3, .3), pts = [[Math.cos(a) * 14, Math.sin(a) * 14]]; let r = 14, aa = a; for (let k = 0; k < 4; k++) { r += rnd(10, 16); aa += rnd(-.35, .35); pts.push([Math.cos(aa) * r, Math.sin(aa) * r]); } return pts; }); c.spdc = TYPES.map((_, t) => antStats(c, t).spd); c.dotCol = mix(c.ui, '#1a1008', .45); c.rgb = hex(c.ui); c.land = 0; c.myHerds = []; c.bp = {}; c.raft = !!SPEC(c).mods.raft; c.bridge = !!SPEC(c).mods.bridge; }
+  for (const c of cols) { c.scary = !!SPEC(c).morph.scary; c.stealth = !!SPEC(c).mods.stealth; c.eyeP = []; c.gasP = []; c.cracks = Array.from({ length: 7 }, (_, i) => { const a = i / 7 * TAU + rnd(-.3, .3), pts = [[Math.cos(a) * 14, Math.sin(a) * 14]]; let r = 14, aa = a; for (let k = 0; k < 4; k++) { r += rnd(10, 16); aa += rnd(-.35, .35); pts.push([Math.cos(aa) * r, Math.sin(aa) * r]); } return pts; }); c.spdc = TYPES.map((_, t) => antStats(c, t).spd); c.dotCol = mix(c.ui, '#1a1008', .45); c.rgb = hex(c.ui); c.land = 0; c.myHerds = []; c.bp = {}; c.raft = !!SPEC(c).mods.raft; c.bridge = !!SPEC(c).mods.bridge; }
   for (const [x, y] of HERD_SPOTS) {
     const f = { kind: 'dew', x, y, amt: 12, max: 30, ang: 0 }, h = { x, y, owner: -1, f, img: pick(HERD_IMGS), rot: rnd(0, TAU) };
     f.herd = h; G.foods.push(f); G.herds.push(h);
@@ -2069,7 +2088,7 @@ function eachNear(x, y, r, fn) {
 }
 function nearestEnemy(a, r) {
   let best = null, bd = r * r;
-  eachNear(a.x, a.y, r, b => { if (b.c === a.c || b.hp <= 0) return; const d = (b.x - a.x) ** 2 + (b.y - a.y) ** 2; if (d < bd) { bd = d; best = b; } });
+  eachNear(a.x, a.y, r, b => { if (b.c === a.c || b.hp <= 0) return; const d = (b.x - a.x) ** 2 + (b.y - a.y) ** 2; if (d < bd && (!G.cols[b.c].stealth || d < 900 || G.t - b.lastFight < 1)) { bd = d; best = b; } });
   return best;
 }
 function nearestWounded(a, r) {
@@ -2744,7 +2763,7 @@ function stepBeast(b, dt) {
   const B = BEAST[b.kind]; b.cool -= dt; if (b.flash > 0) b.flash -= dt; if (b.snap > 0) b.snap -= dt; b.stop = false;
   if (b.kind === 'lizard') { stepLizard(b, dt, B); return; }
   let tgt = null, bd = (B.sense + B.r) ** 2;
-  eachNear(b.x, b.y, B.sense + B.r, a => { if (a.hp <= 0) return; const d = (a.x - b.x) ** 2 + (a.y - b.y) ** 2; if (d < bd) { bd = d; tgt = a; } });
+  eachNear(b.x, b.y, B.sense + B.r, a => { if (a.hp <= 0 || (G.cols[a.c].stealth && (a.x - b.x) ** 2 + (a.y - b.y) ** 2 > 1600)) return; const d = (a.x - b.x) ** 2 + (a.y - b.y) ** 2; if (d < bd) { bd = d; tgt = a; } });
   const d = Math.sqrt(bd);
   if (b.kind === 'antlion') { if (tgt && d < B.r && b.cool <= 0) { b.cool = B.cd; biteAnt(tgt, B.dmg); sfx('crunch', b.x, b.y); b.snap = .25; } return; }
   if (tgt) {
@@ -3138,7 +3157,7 @@ const WASP_ACTS = ['sting', 'sting', 'snatch', 'raid', 'bomb', 'scramble'];
 const waspCap = c => Math.min(5, 3 + Math.floor(G.t / 300));
 function enemyAntNear(w, R, pred) {
   let best = null, bd = R * R;
-  for (let k = 0; k < 400; k++) { const a = G.ants[Math.random() * G.ants.length | 0]; if (!a || a.c === w.c || a.hp <= 0 || (pred && !pred(a))) continue; const d = (a.x - w.x) ** 2 + (a.y - w.y) ** 2; if (d < bd) { bd = d; best = a; } }
+  for (let k = 0; k < 400; k++) { const a = G.ants[Math.random() * G.ants.length | 0]; if (!a || a.c === w.c || a.hp <= 0 || (pred && !pred(a)) || G.cols[a.c].stealth) continue; const d = (a.x - w.x) ** 2 + (a.y - w.y) ** 2; if (d < bd) { bd = d; best = a; } }
   return best;
 }
 function toggleWasps() {
@@ -3635,7 +3654,7 @@ function render(now) {
     if (!fr) { ctx.setTransform(m, 0, 0, m, ox, oy); ctx.fillStyle = col.dotCol; ctx.fillRect(a.x - 3, a.y - 3, 6, 6); continue; }
     const f = (a.leg / (1.9 * TYPES[a.t].len) | 0) % FR, us = unitScale(a.t), w = fr[f].width / WPX, h = fr[f].height / WPX;
     const k = casteSize(col, a.t) * growOf(a) * (1 + .05 * col.lvl[a.t]) * (1 + .06 * a.rank) * (a.hero ? 1.4 : 1), img = fr.mips[f][mipLvl(m * k)];
-    rot(a.x, a.y, a.a, k); ctx.drawImage(img, -CX(a.t, col.si) * us, -CY(a.t, col.si) * us, w, h);
+    rot(a.x, a.y, a.a, k); const cloak = col.stealth && G.t - a.lastFight > 1.2; if (cloak) ctx.globalAlpha = .32 + .1 * Math.sin(t * 3 + a.gp * 20); ctx.drawImage(img, -CX(a.t, col.si) * us, -CY(a.t, col.si) * us, w, h); if (cloak) ctx.globalAlpha = 1;
     if (col.scary && dnS.night > .2 && z > .45 && nightEyes.length < 400) nightEyes.push(a, k);
     if (col.scary && z > .5 && pulseAnts.length < 600) pulseAnts.push(a, k);
     if (a.flash > 0) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a.flash / .12 * .8; ctx.drawImage(img, -CX(a.t, col.si) * us, -CY(a.t, col.si) * us, w, h); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
@@ -3842,7 +3861,7 @@ function drawMini() {
   for (const f of G.foods) if (f.kind !== 'corpse') mctx.fillRect(f.x * sx - 1.2, f.y * sy - 1.2, 2.4, 2.4);
   for (const c of G.cols) {
     mctx.fillStyle = c.ui;
-    for (const a of G.ants) if (a.c === c.id) mctx.fillRect(a.x * sx - .7, a.y * sy - .7, 1.5, 1.5);
+    if (!c.stealth || c.player) for (const a of G.ants) if (a.c === c.id) mctx.fillRect(a.x * sx - .7, a.y * sy - .7, 1.5, 1.5);
     mctx.strokeStyle = c.ui; mctx.lineWidth = 2; mctx.globalAlpha = c.alive ? 1 : .4;
     mctx.beginPath(); mctx.arc(c.nest.x * sx, c.nest.y * sy, 4.5 * dpr, 0, TAU); mctx.stroke();
     for (const op of c.outposts) { mctx.beginPath(); mctx.arc(op.x * sx, op.y * sy, (op.queen ? 3.6 : 2.2) * dpr, 0, TAU); mctx.stroke(); }
