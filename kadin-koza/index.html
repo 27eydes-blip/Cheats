@@ -359,6 +359,9 @@ button.ghost {
   cursor: pointer;
 }
 #title .actions { animation: rise .5s 1.85s both; }
+#title { overflow-y: auto; }
+.icon-btn { display: inline-flex; align-items: center; gap: 8px; border-color: var(--orange); }
+.icon-btn svg { width: 24px; height: 24px; flex: none; }
 #title .go { animation: pulse 1.5s 2.4s infinite; }
 /* kicker select */
 #chars { justify-content: flex-start; overflow-y: auto; padding-block: 24px; }
@@ -508,6 +511,10 @@ button.ghost {
           <button class="go" id="start" type="button">Take the field</button>
           <button class="ghost" id="replay" type="button">Watch intro</button>
           <button class="ghost" id="tent" type="button">Autograph tent</button>
+          <button class="ghost icon-btn" id="pt" type="button" aria-label="PT Station">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#ff6a13"/><path d="M10 5h4v5h5v4h-5v5h-4v-5H5v-4h5z" fill="#0a0c11"/></svg>
+            PT Station
+          </button>
         </div>
       </div>
 
@@ -806,6 +813,12 @@ button.ghost {
   }
 
   function hud() {
+    if (S.mode === "pt") {
+      $("lab1").textContent = "Recovery"; $("lab2").textContent = "Reps"; $("lab3").textContent = "Perfect"; $("lab4").textContent = "Set";
+      $("score").textContent = Math.round(PT.health) + "%"; $("dist").textContent = PT.reps;
+      $("wind").textContent = PT.perfect; $("misses").textContent = `${PT.inEx + 1}/5`;
+      return;
+    }
     if (S.mode === "sign") {
       $("lab1").textContent = "Signed"; $("lab2").textContent = "Time"; $("lab3").textContent = "In line"; $("lab4").textContent = "Missed";
       $("score").textContent = G.signed; $("dist").textContent = Math.ceil(G.time) + "s";
@@ -1037,14 +1050,16 @@ button.ghost {
   });
   function startGame(level) {
     audio();
-    Object.assign(S, { mode: "game", level, kickIdx: 0, streak: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0 });
+    Object.assign(S, { mode: "game", lastMode: "kick", level, kickIdx: 0, streak: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0 });
+    const fresh = S.freshLegs && !CHARS[S.char].bad;
+    if (fresh) { S.streak = 2; S.freshLegs = false; }
     const L = lvl();
     if (L) {   // distances climb through the game
       S.kicks = Array.from({ length: L.kicks }, (_, i) => Math.round(lerp(L.min, L.max, L.kicks > 1 ? i / (L.kicks - 1) : 0)));
     }
     for (const id of ["title", "over", "levels", "chars", "introUI"]) $(id).hidden = true;
     newKick();
-    if (L) showBanner(L.wk.length > 1 ? L.name.toUpperCase() : `WEEK ${L.wk}`, `vs ${L.opp} · make ${L.need} of ${L.kicks}`, true);
+    if (L) showBanner(L.wk.length > 1 ? L.name.toUpperCase() : `WEEK ${L.wk}`, fresh ? "Fresh legs from MVPT: ON FIRE" : `vs ${L.opp} · make ${L.need} of ${L.kicks}`, true);
     else showBanner(char().bad ? "GAVIN'S UP" : "LET'S GO, KOZA!", char().bad ? "Endless mode. Good luck." : "Endless mode", true);
     sfx.cheer(); S.flash = 2;
     setTimeout(() => { if (S.phase === "power") hideBanner(); }, 1400);
@@ -1079,7 +1094,7 @@ button.ghost {
       sfx.cheer(); setTimeout(sfx.cheer, 600); S.flash = 3; confetti(last ? 220 : 90);
     } else sfx.groan();
     S.mode = "over"; S.phase = "idle"; S.lastMode = "kick"; hideBanner();
-    $("overLab1").textContent = "Made"; $("overLab2").textContent = "Long"; $("menu").textContent = "Schedule";
+    $("overLab1").textContent = "Made"; $("overLab2").textContent = "Long"; $("menu").textContent = "Schedule"; $("next").textContent = "Next game";
     $("overThe").textContent = L.wk.length > 1 ? L.name : `Week ${L.wk} · ${L.name}`;
     $("overScore").textContent = pass ? (last ? "State champs!" : "Win!") : "Loss";
     if (!pass && char().bad) $("overMsg").dataset.gavin = "1";
@@ -1112,14 +1127,18 @@ button.ghost {
   $("changeKicker").addEventListener("click", showChars);
   $("start").addEventListener("click", showChars);
   $("menu").addEventListener("click", () => {
-    if (S.lastMode === "sign") { $("over").hidden = true; $("title").hidden = false; S.mode = "title"; hud(); }
+    if (S.lastMode === "sign" || S.lastMode === "pt") { $("over").hidden = true; $("title").hidden = false; S.mode = "title"; hud(); }
     else showLevels();
   });
   $("tent").addEventListener("click", () => startSigning());
   $("back").addEventListener("click", () => { $("levels").hidden = true; $("title").hidden = false; });
   $("endless").addEventListener("click", () => startGame(-1));
-  $("again").addEventListener("click", () => S.lastMode === "sign" ? startSigning() : startGame(S.level));
-  $("next").addEventListener("click", () => startGame(S.level + 1));
+  $("again").addEventListener("click", () => S.lastMode === "sign" ? startSigning() : S.lastMode === "pt" ? startPT() : startGame(S.level));
+  $("pt").addEventListener("click", () => startPT());
+  $("next").addEventListener("click", () => {
+    if (S.lastMode === "pt") { S.char = "kadin"; try { localStorage.setItem("kk-char", "kadin"); } catch (e) {} showLevels(); }
+    else startGame(S.level + 1);
+  });
   $("replay").addEventListener("click", () => { audio(); $("soundHint").hidden = true; startIntro(); });
   $("skip").addEventListener("click", () => { audio(); endIntro(); });
   $("mute").addEventListener("click", () => {
@@ -1508,6 +1527,7 @@ button.ghost {
 
   function render() {
     if (S.mode === "sign" || (S.mode === "over" && S.lastMode === "sign")) { renderSign(); return; }
+    if (S.mode === "pt" || (S.mode === "over" && S.lastMode === "pt")) { renderPT(); return; }
     const bx = -BX - cam.x * 6;
     ctx.drawImage(back, bx, 0);
     if (S.mode === "title" || S.flash > 0) {         // camera flashes in the crowd
@@ -1735,18 +1755,18 @@ button.ghost {
   cv.addEventListener("pointercancel", endStroke);
 
   // ---- drawing the tent ----
-  function bubble(text, x, y, w) {
-    ctx.font = "600 18px 'Barlow Condensed', sans-serif";
+  function bubble(text, x, y, w, size = 18) {
+    ctx.font = `600 ${size}px 'Barlow Condensed', sans-serif`;
     const words = text.split(" "), lines = [];
     let line = "";
     for (const wd of words) { const t = line ? line + " " + wd : wd; if (ctx.measureText(t).width > w - 24 && line) { lines.push(line); line = wd; } else line = t; }
     lines.push(line);
-    const h = lines.length * 21 + 16;
+    const lh = Math.round(size * 1.17), h = lines.length * lh + 16;
     ctx.fillStyle = "#f3efe6"; ctx.strokeStyle = "#0a0a0a"; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, 10) : ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(x + w - 60, y + h - 1); ctx.lineTo(x + w - 40, y + h + 16); ctx.lineTo(x + w - 34, y + h - 1); ctx.fill();
     ctx.fillStyle = "#111"; ctx.textAlign = "left"; ctx.textBaseline = "top";
-    lines.forEach((l, i) => ctx.fillText(l, x + 12, y + 9 + i * 21));
+    lines.forEach((l, i) => ctx.fillText(l, x + 12, y + 9 + i * lh));
   }
   function drawFan(f, x, base, sc, isFront) {
     const top = base - 300 * sc * (f.kid ? 0.8 : 1);
@@ -1853,10 +1873,10 @@ button.ghost {
     }
     ctx.restore();
   }
-  function drawKadinFront(cx) {
+  function drawKadinFront(cx, opts = {}) {
     const t = S.t;
     // chair
-    ctx.fillStyle = "#1b1d24"; ctx.fillRect(cx - 110, 250, 220, 230);
+    if (opts.chair !== false) { ctx.fillStyle = "#1b1d24"; ctx.fillRect(cx - 110, 250, 220, 230); }
     // torso
     const jg = ctx.createLinearGradient(cx - 100, 0, cx + 100, 0);
     jg.addColorStop(0, "#b84405"); jg.addColorStop(0.3, "#ff6f1f"); jg.addColorStop(0.55, "#ff8a3d"); jg.addColorStop(1, "#b84405");
@@ -1891,7 +1911,7 @@ button.ghost {
     }
     ctx.strokeStyle = "#dfe3e8"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx - 6, 180); ctx.lineTo(cx + 6, 180); ctx.stroke();
     // face: eyes follow the marker
-    const look = G.hand ? clamp((G.hand[0] - cx) / 200, -1, 1) : 0, blink = (t % 4) < 0.12;
+    const look = opts.look != null ? opts.look : G.hand ? clamp((G.hand[0] - cx) / 200, -1, 1) : 0, blink = (t % 4) < 0.12;
     ctx.fillStyle = "#0a0a0a";
     ctx.fillRect(cx - 30, 240, 18, 5); ctx.fillRect(cx + 12, 240, 18, 5);   // eye black
     for (const ex of [-17, 17]) {
@@ -1902,8 +1922,10 @@ button.ghost {
     ctx.beginPath(); ctx.moveTo(cx - 27, 208); ctx.lineTo(cx - 9, 206); ctx.moveTo(cx + 9, 206); ctx.lineTo(cx + 27, 208); ctx.stroke();
     ctx.strokeStyle = "#2a130a"; ctx.lineWidth = 3;
     const f = front();
+    const happy = opts.mood !== undefined ? opts.mood === "happy" : f && f.state === "happy";
     ctx.beginPath();
-    if (f && f.state === "happy") { ctx.fillStyle = "#f3efe6"; ctx.arc(cx, 250, 14, 0.08 * Math.PI, 0.92 * Math.PI); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    if (happy) { ctx.fillStyle = "#f3efe6"; ctx.arc(cx, 250, 14, 0.08 * Math.PI, 0.92 * Math.PI); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    else if (opts.mood === "hurt") { ctx.arc(cx, 262, 12, 1.15 * Math.PI, 1.85 * Math.PI); ctx.stroke(); }
     else { ctx.arc(cx, 248, 13, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); }
   }
   function drawArms(cx) {
@@ -1989,6 +2011,271 @@ button.ghost {
     }
   }
 
+  // ---------- PT station ----------
+  const EXERCISES = ["Leg raises", "Band work", "Ice + stretch"];
+  const DALTON = {
+    hello: "What's up, I'm Dalton with MVPT. Let's get Kadin healthy again!",
+    perfect: ["Perfect rep! Light weight!", "That's what I'm talking about!", "Textbook. Do it again.", "Clean! Feel that?"],
+    good: ["Good rep. Keep it smooth.", "Nice. Control it.", "There you go."],
+    miss: ["Slow down, control the rep.", "Breathe. Focus. Again.", "Timing! Watch the ring."],
+    next: { "Band work": "Grab the band. Let's build that strength.", "Ice + stretch": "Ice and stretch. Almost there!", "Leg raises": "Back to leg raises. Squeeze it!" },
+    done: "Kadin's cleared! Go win State, big dog."
+  };
+  const PT = { health: 35, reps: 0, perfect: 0, ex: 0, inEx: 0, ring: null, wait: 0, legT: 0, pops: [], line: "", lineT: 0, intro: 0, done: false, doneT: 0, time: 0, flex: 0, ended: false };
+  const KX = 168, KNEE = [KX + 40, 522], DX = 444, DROP = 56;
+
+  function say(text, secs = 2.2) { PT.line = text; PT.lineT = secs; }
+  function startPT() {
+    audio();
+    Object.assign(S, { mode: "pt", phase: "idle", lastMode: "pt" });
+    Object.assign(PT, { health: 35, reps: 0, perfect: 0, ex: 0, inEx: 0, ring: null, wait: 0, legT: 0, pops: [], intro: 3.2, done: false, doneT: 0, time: 0, flex: 1.2, ended: false });
+    say(DALTON.hello, 3.4);
+    for (const id of ["title", "over", "levels", "chars", "introUI"]) $(id).hidden = true;
+    hideBanner();
+    setPrompt("Tap when the ring hits Kadin's <b>knee</b>");
+    hud();
+  }
+  function nextRing() { PT.ring = { r: 125, speed: Math.min(150, 85 + PT.reps * 3) }; }
+  function judge(kind) {
+    const gain = kind === "perfect" ? 10 : kind === "good" ? 7 : 2;
+    PT.health = Math.min(100, PT.health + gain);
+    PT.reps++; PT.inEx++;
+    if (kind === "perfect") { PT.perfect++; PT.flex = 0.9; tone(880, 0.12, 0.12, "triangle"); tone(1320, 0.18, 0.08, "triangle"); }
+    else if (kind === "good") sfx.tick();
+    else tone(180, 0.25, 0.08, "sawtooth", 0.7);
+    PT.pops.push({ text: kind === "perfect" ? "PERFECT +10" : kind === "good" ? "GOOD +7" : "SLOPPY +2", t: 0, col: kind === "perfect" ? "#ffd23f" : kind === "good" ? "#4cc46a" : "#ff3b1f" });
+    say(pick(DALTON[kind]), 1.6);
+    PT.ring = null; PT.legT = 0.6; PT.wait = 0.75;
+    if (PT.inEx >= 5) {
+      PT.ex = (PT.ex + 1) % EXERCISES.length; PT.inEx = 0;
+      say(DALTON.next[EXERCISES[PT.ex]], 1.8); PT.wait = 1.4;
+    }
+    if (PT.health >= 100) {
+      PT.done = true; PT.doneT = 0; PT.flex = 99;
+      say(DALTON.done, 4);
+      showBanner("CLEARED TO PLAY", "Kadin Koza is back", true);
+      sfx.cheer(); setTimeout(sfx.cheer, 600); confetti(150); S.flash = 2;
+      S.freshLegs = true;
+    }
+    hud();
+  }
+  function ptTap() {
+    if (S.mode !== "pt" || PT.done || !PT.ring) return;
+    const d = Math.abs(PT.ring.r - 30);
+    judge(d <= 7 ? "perfect" : d <= 18 ? "good" : "miss");
+  }
+  cv.addEventListener("pointerdown", e => { if (S.mode === "pt") { e.preventDefault(); audio(); ptTap(); } });
+  window.addEventListener("keydown", e => { if (S.mode === "pt" && (e.code === "Space" || e.code === "Enter")) { e.preventDefault(); ptTap(); } });
+
+  function ptUpdate(dt) {
+    PT.time += dt; PT.lineT -= dt; PT.flex = Math.max(0, PT.flex - dt);
+    if (PT.legT > 0) PT.legT = Math.max(0, PT.legT - dt);
+    for (const p of PT.pops) p.t += dt;
+    while (PT.pops.length && PT.pops[0].t > 1.1) PT.pops.shift();
+    if (PT.done) {
+      PT.doneT += dt;
+      if (PT.doneT > 3.2 && !PT.ended) { PT.ended = true; endPT(); }
+      return;
+    }
+    if (PT.intro > 0) { PT.intro -= dt; if (PT.intro <= 0) nextRing(); return; }
+    if (PT.ring) {
+      PT.ring.r -= PT.ring.speed * dt;
+      if (PT.ring.r < 8) judge("miss");
+    } else if (PT.wait > 0) {
+      PT.wait -= dt;
+      if (PT.wait <= 0) nextRing();
+    }
+  }
+  function endPT() {
+    S.mode = "over"; S.phase = "idle"; hideBanner();
+    $("overThe").textContent = "PT Station · MVPT";
+    $("overScore").textContent = "Cleared!";
+    $("overStars").hidden = true;
+    $("overMsg").hidden = false;
+    $("overMsg").textContent = "Fresh legs: Kadin starts his next game already ON FIRE.";
+    $("overLab1").textContent = "Reps"; $("overLab2").textContent = "Perfect"; $("overLab3").textContent = "Time";
+    $("overMade").textContent = PT.reps; $("overLong").textContent = PT.perfect; $("overBest").textContent = Math.round(PT.time) + "s";
+    $("next").hidden = false; $("next").textContent = "Take the field";
+    $("again").textContent = "Rehab again"; $("menu").textContent = "Main menu";
+    $("over").hidden = false;
+    setPrompt(tag());
+  }
+
+  function drawDalton(cx, pose) {
+    const skin = "#d9a47a", skinL = "#f0c49c", skinD = "#a8724d", hair = "#1f140e";
+    const seg = (a, b, w, col) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); };
+    // joggers + shoes
+    ctx.fillStyle = "#3a3d46";
+    ctx.beginPath(); ctx.moveTo(cx - 62, 466); ctx.lineTo(cx - 4, 466); ctx.lineTo(cx - 10, 762); ctx.lineTo(cx - 52, 762); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx + 4, 466); ctx.lineTo(cx + 62, 466); ctx.lineTo(cx + 52, 762); ctx.lineTo(cx + 10, 762); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#f3efe6"; ctx.fillRect(cx - 60, 752, 54, 18); ctx.fillRect(cx + 6, 752, 54, 18);
+    // traps, torso and big shoulders
+    ctx.fillStyle = skin;
+    ctx.beginPath(); ctx.moveTo(cx - 28, 226); ctx.lineTo(cx + 28, 226); ctx.lineTo(cx + 112, 276); ctx.lineTo(cx + 62, 470); ctx.lineTo(cx - 62, 470); ctx.lineTo(cx - 112, 276); ctx.closePath(); ctx.fill();
+    ctx.fillRect(cx - 25, 196, 50, 50);
+    // arms, behind the delts
+    const arm = (sh, el, hd, peak) => {
+      seg(sh, el, 58, skin); seg(el, hd, 46, skin);
+      seg([sh[0] + 5, sh[1] - 6], [el[0] + 5, el[1] - 8], 14, skinL);
+      seg([el[0], el[1]], [hd[0], hd[1]], 12, skinD);
+      ctx.strokeStyle = "rgba(120,70,40,.45)"; ctx.lineWidth = 2;   // forearm vein
+      ctx.beginPath(); ctx.moveTo(lerp(el[0], hd[0], 0.2) + 6, lerp(el[1], hd[1], 0.2));
+      ctx.quadraticCurveTo(lerp(el[0], hd[0], 0.5) - 6, lerp(el[1], hd[1], 0.5), lerp(el[0], hd[0], 0.8) + 4, lerp(el[1], hd[1], 0.8)); ctx.stroke();
+      if (peak) {   // bicep
+        const bx = lerp(sh[0], el[0], 0.55), by = lerp(sh[1], el[1], 0.55) - peak;
+        const g = ctx.createRadialGradient(bx - 6, by - 8, 2, bx, by, 30);
+        g.addColorStop(0, skinL); g.addColorStop(1, skin);
+        ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(bx, by, 38, 30, 0, 0, 7); ctx.fill();
+      }
+      ctx.fillStyle = skin; ctx.beginPath(); ctx.arc(hd[0], hd[1], 23, 0, 7); ctx.fill();
+    };
+    for (const sx of [-1, 1]) {
+      const sh = [cx + sx * 108, 300];
+      if (pose === "flex") arm(sh, [cx + sx * 166, 300], [cx + sx * 160, 202], 20);
+      else if (pose === "band" && sx === -1) arm(sh, [cx - 150, 404], [cx - 190, 468], 8);
+      else arm(sh, [cx + sx * 160, 388], [cx + sx * 74, 452], 10);
+    }
+    // delts
+    for (const sx of [-1, 1]) {
+      const g = ctx.createRadialGradient(cx + sx * 96, 280, 4, cx + sx * 104, 294, 40);
+      g.addColorStop(0, skinL); g.addColorStop(1, skin);
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx + sx * 106, 294, 44, 0, 7); ctx.fill();
+    }
+    // black MVPT tank top
+    ctx.fillStyle = "#111";
+    ctx.beginPath();
+    ctx.moveTo(cx - 36, 258); ctx.lineTo(cx - 58, 260); ctx.lineTo(cx - 70, 342); ctx.lineTo(cx - 62, 474);
+    ctx.lineTo(cx + 62, 474); ctx.lineTo(cx + 70, 342); ctx.lineTo(cx + 58, 260); ctx.lineTo(cx + 36, 258);
+    ctx.quadraticCurveTo(cx, 312, cx - 36, 258); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.1)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx - 54, 344); ctx.quadraticCurveTo(cx - 26, 360, cx - 2, 344); ctx.moveTo(cx + 2, 344); ctx.quadraticCurveTo(cx + 26, 360, cx + 54, 344);
+    for (const y of [380, 410, 440]) { ctx.moveTo(cx - 24, y); ctx.lineTo(cx + 24, y); }
+    ctx.moveTo(cx, 362); ctx.lineTo(cx, 450); ctx.stroke();
+    ctx.fillStyle = "#f3efe6"; ctx.font = "30px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("MVPT", cx, 322);
+    // head
+    ctx.fillStyle = skin;
+    ctx.beginPath(); ctx.ellipse(cx - 40, 170, 8, 12, 0, 0, 7); ctx.ellipse(cx + 40, 170, 8, 12, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx - 40, 150); ctx.lineTo(cx - 36, 196); ctx.quadraticCurveTo(cx, 226, cx + 36, 196); ctx.lineTo(cx + 40, 150);
+    ctx.quadraticCurveTo(cx, 96, cx - 40, 150); ctx.fill();
+    ctx.fillStyle = "rgba(40,25,15,.2)";   // stubble
+    ctx.beginPath(); ctx.moveTo(cx - 36, 186); ctx.quadraticCurveTo(cx, 232, cx + 36, 186); ctx.quadraticCurveTo(cx, 206, cx - 36, 186); ctx.fill();
+    // dark brown-black hair, short sides, swept top
+    ctx.fillStyle = hair;
+    ctx.beginPath(); ctx.moveTo(cx - 42, 156); ctx.quadraticCurveTo(cx - 46, 112, cx - 10, 104);
+    ctx.quadraticCurveTo(cx + 30, 92, cx + 46, 124); ctx.quadraticCurveTo(cx + 46, 140, cx + 42, 156);
+    ctx.quadraticCurveTo(cx + 30, 128, cx, 132); ctx.quadraticCurveTo(cx - 30, 130, cx - 42, 156); ctx.fill();
+    ctx.fillStyle = "rgba(31,20,14,.5)"; ctx.fillRect(cx - 42, 148, 6, 22); ctx.fillRect(cx + 36, 148, 6, 22);
+    // face
+    ctx.strokeStyle = hair; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(cx - 28, 150); ctx.lineTo(cx - 10, 148); ctx.moveTo(cx + 10, 148); ctx.lineTo(cx + 28, 150); ctx.stroke();
+    ctx.fillStyle = "#1a0f08";
+    for (const ex of [-17, 17]) { ctx.beginPath(); ctx.ellipse(cx + ex, 162, 4, 4.5, 0, 0, 7); ctx.fill(); }
+    const talking = PT.lineT > 0 && Math.sin(S.t * 18) > 0;
+    ctx.fillStyle = "#f3efe6"; ctx.strokeStyle = "#5a2a14"; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    if (talking) ctx.ellipse(cx, 194, 12, 7, 0, 0, 7);
+    else { ctx.moveTo(cx - 16, 190); ctx.quadraticCurveTo(cx, 204, cx + 16, 190); ctx.closePath(); }
+    ctx.fill(); ctx.stroke();
+  }
+
+  function drawPTKadin() {
+    const cx = KX;
+    drawKadinFront(cx, { chair: false, look: 0.6, mood: PT.done ? "happy" : PT.health < 60 && !PT.legT ? "hurt" : PT.flex > 0 ? "happy" : null });
+    // arms bracing on the table
+    const seg = (a, b, w, col) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); };
+    for (const sx of [-1, 1]) {
+      if (PT.done && sx === -1) {   // fist up when cleared
+        seg([cx - 96, 320], [cx - 140, 270], 30, "#ff6f1f"); seg([cx - 140, 270], [cx - 146, 180], 22, "#6b3f25");
+        ctx.fillStyle = "#6b3f25"; ctx.beginPath(); ctx.arc(cx - 146, 172, 15, 0, 7); ctx.fill();
+        continue;
+      }
+      seg([cx + sx * 96, 320], [cx + sx * 124, 410], 30, "#ff6f1f");
+      seg([cx + sx * 124, 410], [cx + sx * 118, 486], 22, "#6b3f25");
+      ctx.fillStyle = "#6b3f25"; ctx.beginPath(); ctx.ellipse(cx + sx * 118, 490, 16, 10, 0, 0, 7); ctx.fill();
+    }
+    // shorts + dangling legs
+    ctx.fillStyle = "#0b0b0d"; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(cx - 86, 468, 172, 50, 12) : ctx.rect(cx - 86, 468, 172, 50); ctx.fill();
+    const lift = PT.legT > 0 ? Math.sin(Math.PI * (1 - PT.legT / 0.6)) : 0;
+    const legs = [[cx - 42, 520, cx - 42, 664], [cx + 40, 520, lerp(cx + 40, cx + 46, lift), lerp(664, 548, lift)]];
+    for (const [kx, ky, fx, fy] of legs) {
+      seg([kx, ky], [fx, fy], 30, "#6b3f25");
+      seg([lerp(kx, fx, 0.5), lerp(ky, fy, 0.5)], [fx, fy], 31, "#ff6a13");
+      seg([lerp(kx, fx, 0.55), lerp(ky, fy, 0.55)], [lerp(kx, fx, 0.6), lerp(ky, fy, 0.6)], 32, "#0a0a0a");
+      ctx.fillStyle = chrome(fx - 22, fy, fx + 22, fy + 16); ctx.beginPath(); ctx.ellipse(fx, fy + 6, 22, 13, 0, 0, 7); ctx.fill();
+    }
+    // knee brace on the hurt knee
+    ctx.fillStyle = "#111"; ctx.fillRect(KNEE[0] - 19, KNEE[1] - 12, 38, 26);
+    ctx.fillStyle = chrome(KNEE[0] - 19, KNEE[1], KNEE[0] + 19, KNEE[1]); ctx.fillRect(KNEE[0] - 21, KNEE[1] - 12, 5, 26); ctx.fillRect(KNEE[0] + 16, KNEE[1] - 12, 5, 26);
+    if (EXERCISES[PT.ex] === "Ice + stretch") {
+      ctx.fillStyle = "rgba(150,210,255,.9)"; ctx.strokeStyle = "#e8f6ff"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(KNEE[0] - 26, KNEE[1] - 20, 52, 26, 8) : ctx.rect(KNEE[0] - 26, KNEE[1] - 20, 52, 26); ctx.fill(); ctx.stroke();
+    }
+    return legs[1];
+  }
+
+  function renderPT() {
+    // clinic
+    const bg = ctx.createLinearGradient(0, 0, 0, 640);
+    bg.addColorStop(0, "#232a39"); bg.addColorStop(1, "#2f3849");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.translate(0, DROP);
+    ctx.fillStyle = "#5a3f2a"; ctx.fillRect(0, 640, W, H);
+    ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.lineWidth = 2;
+    for (let y = 660; y < H; y += 28) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.fillStyle = "#1b2130"; ctx.fillRect(0, 632, W, 10);
+    // wall plaque between them
+    ctx.fillStyle = "#f3efe6"; ctx.fillRect(282, 128, 100, 60);
+    ctx.fillStyle = "#111"; ctx.font = "26px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("MVPT", 332, 150);
+    ctx.font = "600 10px 'Barlow Condensed', sans-serif"; ctx.fillStyle = "#c94a00";
+    ctx.fillText("PHYSICAL THERAPY", 332, 174);
+    // exercise ball + dumbbells
+    ctx.fillStyle = "#2f6fd6"; ctx.beginPath(); ctx.arc(60, 640, 52, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.18)"; ctx.beginPath(); ctx.ellipse(44, 610, 14, 8, -0.5, 0, 7); ctx.fill();
+    ctx.fillStyle = "#15181f"; ctx.fillRect(540, 560, 56, 76);
+    for (let i = 0; i < 3; i++) { ctx.fillStyle = "#5a606b"; ctx.fillRect(546, 570 + i * 22, 44, 8); ctx.fillStyle = "#222"; ctx.fillRect(542, 566 + i * 22, 8, 16); ctx.fillRect(586, 566 + i * 22, 8, 16); }
+    // treatment table
+    ctx.fillStyle = "#9aa1aa"; ctx.fillRect(KX - 140, 510, 10, 250); ctx.fillRect(KX + 132, 510, 10, 250);
+    ctx.fillStyle = "#1e2a44"; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(KX - 158, 476, 318, 36, 10) : ctx.rect(KX - 158, 476, 318, 36); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.08)"; ctx.fillRect(KX - 150, 480, 302, 6);
+    const foot = drawPTKadin();
+    const pose = PT.done || PT.flex > 0 ? "flex" : EXERCISES[PT.ex] === "Band work" ? "band" : "hips";
+    drawDalton(DX, pose);
+    if (pose === "band") {   // resistance band
+      ctx.strokeStyle = "#ff3b1f"; ctx.lineWidth = 6; ctx.beginPath();
+      ctx.moveTo(foot[2], foot[3] + 4); ctx.quadraticCurveTo((foot[2] + DX - 190) / 2, (foot[3] + 468) / 2 + 20 - (PT.legT ? 30 : 0), DX - 190, 468); ctx.stroke();
+    }
+    // timing ring on the knee
+    if (PT.ring) {
+      ctx.strokeStyle = "rgba(255,210,63,.6)"; ctx.lineWidth = 4; ctx.setLineDash([6, 6]);
+      ctx.beginPath(); ctx.arc(KNEE[0], KNEE[1], 30, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      const close = Math.abs(PT.ring.r - 30) <= 7;
+      ctx.strokeStyle = close ? "#4cc46a" : "#f3efe6"; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(KNEE[0], KNEE[1], Math.max(1, PT.ring.r), 0, 7); ctx.stroke();
+    }
+    for (const p of PT.pops) {
+      ctx.globalAlpha = 1 - p.t / 1.1; ctx.fillStyle = p.col; ctx.font = "26px Graduate, serif"; ctx.textAlign = "center";
+      ctx.fillText(p.text, KNEE[0], KNEE[1] - 60 - p.t * 50); ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    // recovery bar along the bottom
+    ctx.fillStyle = "rgba(0,0,0,.65)"; ctx.fillRect(20, 748, 560, 40);
+    ctx.fillStyle = PT.health >= 100 ? "#4cc46a" : PT.health > 66 ? "#9be15d" : PT.health > 45 ? "#ffd23f" : "#ff6a13";
+    ctx.fillRect(25, 753, 550 * PT.health / 100, 30);
+    ctx.fillStyle = "#f3efe6"; ctx.font = "600 20px 'Barlow Condensed', sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.shadowColor = "#000"; ctx.shadowBlur = 4;
+    ctx.fillText(`RECOVERY ${Math.round(PT.health)}%  ·  ${EXERCISES[PT.ex].toUpperCase()}`, 36, 769);
+    ctx.shadowBlur = 0;
+    if (PT.lineT > 0) bubble(PT.line, 20, 52, 560, 26);
+    for (const p of parts) {
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); ctx.restore();
+    }
+    const vg = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.3, W / 2, H * 0.5, H * 0.8);
+    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.4)");
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  }
+
   // ---------- loop ----------
   function update(dt) {
     S.t += dt;
@@ -1996,6 +2283,7 @@ button.ghost {
     Object.assign(camT, CAM0);
     if (S.mode === "intro") introUpdate(dt);
     if (S.mode === "sign") signUpdate(dt);
+    if (S.mode === "pt" || (S.mode === "over" && S.lastMode === "pt")) ptUpdate(dt);
     if (S.phase === "kick") {
       S.kickT += dt;
       if (S.kickT >= 0.58) { launch(); S.phase = "flight"; }
@@ -2051,7 +2339,7 @@ button.ghost {
 
   function gameOver() {
     S.mode = "over"; S.phase = "idle"; S.lastMode = "kick"; hideBanner();
-    $("overLab1").textContent = "Made"; $("overLab2").textContent = "Long"; $("menu").textContent = "Schedule";
+    $("overLab1").textContent = "Made"; $("overLab2").textContent = "Long"; $("menu").textContent = "Schedule"; $("next").textContent = "Next game";
     $("overThe").textContent = "Final"; $("overScore").textContent = S.score + " pts";
     $("overStars").hidden = true; $("overMsg").hidden = true; $("next").hidden = true;
     $("again").textContent = "Kick again"; $("overLab3").textContent = "Best";
