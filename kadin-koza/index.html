@@ -538,7 +538,7 @@ button.ghost {
               <span>Aim</span><span class="bar"><i style="width:98%"></i></span>
               <span>Clutch</span><span class="bar"><i style="width:100%"></i></span>
             </span>
-            <span class="ab">Big sweet spot. Goes <b>ON FIRE</b> after 2 makes in a row.</span>
+            <span class="ab">Bigger sweet spot. Goes <b>ON FIRE</b> after 2 makes in a row.</span>
           </button>
           <button class="char" type="button" data-char="gavin">
             <svg viewBox="0 0 200 200" aria-hidden="true">
@@ -758,13 +758,13 @@ button.ghost {
 
   // kickers
   const CHARS = {
-    kadin: { id: "kadin", name: "Kadin Koza", back: "KOZA", num: "7", chrome: true, phone: true, power: 1.1, aimS: 1.1, zone: 1.3 },
+    kadin: { id: "kadin", name: "Kadin Koza", back: "KOZA", num: "7", chrome: true, phone: true, power: 1.0, aimS: 0.95, zone: 1.12 },
     gavin: { id: "gavin", name: "Gavin", back: "GAVIN", num: "0", chrome: false, bad: true, slouch: true, power: 0.38, aimS: 0.4, zone: 0.6 }
   };
   try { S.char = CHARS[localStorage.getItem("kk-char")] ? localStorage.getItem("kk-char") : "kadin"; } catch (e) { S.char = "kadin"; }
   const char = () => CHARS[S.mode === "game" || S.mode === "over" ? S.char : "kadin"];
   const onFire = () => S.mode === "game" && char().chrome && S.streak >= 2;
-  const zoneNow = () => char().zone * (onFire() ? 1.25 : 1);
+  const zoneNow = () => char().zone * (onFire() ? 1.15 : 1);
   const tag = () => `${char().name} · <b>#${char().num}</b>`;
   const pick = a => a[(Math.random() * a.length) | 0];
   const GAVIN_LINES = {
@@ -1921,6 +1921,58 @@ button.ghost {
     }
     ctx.restore();
   }
+  function drawGirl(x, base, g) {
+    const f = front(), cheer = f && f.state === "happy";
+    const hop = cheer ? Math.abs(Math.sin(S.t * 10 + g.ph)) * 8 : Math.sin(S.t * 2 + g.ph) * 2;
+    const top = base - 250 - hop, sway = Math.sin(S.t * 2.2 + g.ph) * 0.05;
+    ctx.save(); ctx.translate(x, top + 230); ctx.rotate(sway); ctx.translate(-x, -(top + 230));
+    // long hair behind
+    ctx.fillStyle = g.hair;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 36, top + 20, 72, 150, 30) : ctx.rect(x - 36, top + 20, 72, 150); ctx.fill();
+    // arms: pom-poms up when a fan gets a signature
+    const up = cheer ? 1 : 0.35 + 0.15 * Math.sin(S.t * 3 + g.ph);
+    ctx.strokeStyle = g.skin; ctx.lineWidth = 13; ctx.lineCap = "round";
+    const hands = [[x - lerp(52, 62, up), top + lerp(190, 40, up)], [x + lerp(52, 62, up), top + lerp(190, 40, up)]];
+    for (const [hx, hy] of hands) { ctx.beginPath(); ctx.moveTo(x + Math.sign(hx - x) * 40, top + 110); ctx.lineTo(hx, hy); ctx.stroke(); }
+    // team top
+    ctx.fillStyle = g.top;
+    ctx.beginPath(); ctx.moveTo(x - 44, top + 98); ctx.quadraticCurveTo(x, top + 90, x + 44, top + 98);
+    ctx.lineTo(x + 40, base + 30); ctx.lineTo(x - 40, base + 30); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = g.trim; ctx.font = "15px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("KOZA", x, top + 132); ctx.font = "40px Graduate, serif"; ctx.fillText("7", x, top + 168);
+    // neck + face
+    ctx.fillStyle = g.skin; ctx.fillRect(x - 8, top + 72, 16, 26);
+    ctx.beginPath(); ctx.ellipse(x, top + 48, 27, 33, 0, 0, 7); ctx.fill();
+    // front hair with a side part
+    ctx.fillStyle = g.hair;
+    ctx.beginPath(); ctx.moveTo(x - 30, top + 60); ctx.quadraticCurveTo(x - 34, top + 10, x + 4, top + 12);
+    ctx.quadraticCurveTo(x + 34, top + 12, x + 30, top + 60); ctx.quadraticCurveTo(x + 24, top + 28, x - 6, top + 26);
+    ctx.quadraticCurveTo(x - 22, top + 32, x - 30, top + 60); ctx.fill();
+    // eyes with lashes, blush, smile, earrings
+    for (const ex of [-10, 10]) {
+      ctx.fillStyle = "#2a1a12"; ctx.beginPath(); ctx.ellipse(x + ex, top + 48, 3.4, cheer ? 2 : 4, 0, 0, 7); ctx.fill();
+      ctx.strokeStyle = "#2a1a12"; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(x + ex - 5, top + 44); ctx.quadraticCurveTo(x + ex, top + 41, x + ex + 5, top + 44); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + ex + Math.sign(ex) * 5, top + 44); ctx.lineTo(x + ex + Math.sign(ex) * 8, top + 41); ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(235,120,120,.3)";
+    ctx.beginPath(); ctx.ellipse(x - 15, top + 58, 6, 3.5, 0, 0, 7); ctx.ellipse(x + 15, top + 58, 6, 3.5, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = "#c2505e"; ctx.beginPath(); ctx.arc(x, top + 62, 7, 0.1 * Math.PI, 0.9 * Math.PI); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#ffd23f"; ctx.beginPath(); ctx.arc(x - 27, top + 56, 2.6, 0, 7); ctx.arc(x + 27, top + 56, 2.6, 0, 7); ctx.fill();
+    // pom-poms in team colors
+    for (const [hx, hy] of hands) {
+      for (let i = 0; i < 9; i++) {
+        const a = i / 9 * Math.PI * 2 + S.t * 3;
+        ctx.fillStyle = i % 3 === 0 ? "#f3efe6" : i % 2 ? "#ff6a13" : "#0a0a0a";
+        ctx.beginPath(); ctx.arc(hx + Math.cos(a) * 11, hy + Math.sin(a) * 11, 9, 0, 7); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  const GIRLS = [
+    { skin: "#f0c9a8", hair: "#3b2516", top: "#ff6a13", trim: "#0a0a0a", ph: 0 },
+    { skin: "#e2b08a", hair: "#d9b26a", top: "#0a0a0a", trim: "#ff6a13", ph: 1.7 }
+  ];
   function drawKadinFront(cx, opts = {}) {
     const t = S.t;
     // chair
@@ -2046,6 +2098,8 @@ button.ghost {
     // the line of fans, back to front
     for (let i = G.fans.length - 1; i >= 1; i--) drawFan(G.fans[i], G.fans[i].x, 470, 0.72, false);
     if (front()) drawFan(front(), front().x, 470, 0.86, true);
+    drawGirl(62, 470, GIRLS[0]);
+    drawGirl(378, 470, GIRLS[1]);
     drawKadinFront(220, { phone: !G.drawing });
     // table
     ctx.fillStyle = "#c94a00";
