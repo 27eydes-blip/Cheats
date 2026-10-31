@@ -183,11 +183,12 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: 
   letter-spacing: .18em;
   text-transform: uppercase;
   color: var(--chalk);
-  border: 1px solid var(--goal);
+  border: 1px solid #c8261c;
   border-radius: 3px;
   padding: 4px 10px;
+  background: rgba(200,38,28,.12);
 }
-.sponsor b { color: var(--goal); font-weight: 700; }
+.sponsor b { color: #ff5a4a; font-weight: 700; }
 .how {
   max-width: 30ch;
   font-size: 17px;
@@ -848,6 +849,33 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   const TOWERS = [BX + 60, BX + W - 60];
   const back = document.createElement("canvas");
   back.width = BW; back.height = HOR + 4;
+  // Savvy Sliders look: red, black and white with a slider icon
+  const SAVVY_RED = "#c8261c";
+  function drawSlider(c, x, y, s) {
+    c.save(); c.translate(x, y); c.scale(s, s);
+    c.fillStyle = SAVVY_RED;
+    c.beginPath(); c.arc(0, -6, 16, Math.PI, 0); c.closePath(); c.fill();
+    c.beginPath(); c.roundRect ? c.roundRect(-18, -3, 36, 7, 3.5) : c.rect(-18, -3, 36, 7); c.fill();
+    c.beginPath(); c.roundRect ? c.roundRect(-15, 6, 30, 6, 3) : c.rect(-15, 6, 30, 6); c.fill();
+    c.fillStyle = "#f3efe6";
+    for (const [a, b2, r] of [[-7, -15, 0.5], [-1, -11, 0.2], [5, -16, -0.3]]) { c.beginPath(); c.ellipse(a, b2, 1.6, 2.6, r, 0, 7); c.fill(); }
+    c.restore();
+  }
+  function savvySign(c, x, y, w, h, small) {
+    c.fillStyle = "#f3efe6"; c.fillRect(x - w / 2, y - h / 2, w, h);
+    c.strokeStyle = SAVVY_RED; c.lineWidth = Math.max(2, h * 0.08); c.strokeRect(x - w / 2 + 3, y - h / 2 + 3, w - 6, h - 6);
+    c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = "#0a0a0a";
+    if (h / w > 0.45) {   // tall sign: icon on top, words underneath
+      drawSlider(c, x, y - h * 0.18, h / 80);
+      c.font = `${Math.round(h * 0.24)}px Graduate, serif`; c.fillText("SAVVY", x, y + h * 0.14);
+      c.font = `700 ${Math.round(h * 0.15)}px 'Barlow Condensed', sans-serif`; c.fillText(small || "SLIDERS", x, y + h * 0.34);
+      return;
+    }
+    drawSlider(c, x - w / 2 + h * 0.55, y + h * 0.05, h / 44);
+    const tx = x + h * 0.4, fs = Math.min(h * 0.42, (w - h) * 0.22);
+    c.font = `${Math.round(fs)}px Graduate, serif`; c.fillText("SAVVY", tx, y - h * 0.12);
+    c.fillStyle = SAVVY_RED; c.font = `700 ${Math.round(h * 0.26)}px 'Barlow Condensed', sans-serif`; c.fillText(small || "SLIDERS", tx, y + h * 0.26);
+  }
   function drawBack() {
     const b = back.getContext("2d");
     const sky = b.createLinearGradient(0, 0, 0, HOR);
@@ -895,10 +923,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     // sponsor board hanging over the stands
     const sx = BX + W / 2;
     b.fillStyle = "#1c1d22"; b.fillRect(sx - 110, 116, 4, top - 116); b.fillRect(sx + 106, 116, 4, top - 116);
-    b.fillStyle = "#0a0a0a"; b.fillRect(sx - 130, 84, 260, 32);
-    b.strokeStyle = "#ffd23f"; b.lineWidth = 2; b.strokeRect(sx - 130, 84, 260, 32);
-    b.font = "18px Graduate, serif"; b.fillStyle = "#ffd23f";
-    b.fillText("SAVVY SLIDERS", sx, 106);
+    savvySign(b, sx, 98, 200, 40);
     b.font = "600 10px 'Barlow Condensed', sans-serif"; b.fillStyle = "#f3efe6";
     b.fillText("KICKS SPONSORED BY", sx, 78);
     // stadium name in lights
@@ -3397,13 +3422,14 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     // back wall + menu boards
     const wg = ctx.createLinearGradient(0, 0, 0, 150); wg.addColorStop(0, "#1a1a1d"); wg.addColorStop(1, "#2a2a30");
     ctx.fillStyle = wg; ctx.fillRect(0, -400, A.w, 550);
-    ctx.fillStyle = "#ffd23f"; ctx.fillRect(0, 140, A.w, 6);
-    for (const [bx, title, rows] of [[30, "SAVVY SLIDERS", ["Est. on Koza Field", "Fresh off the grill"]], [222, "THE MENU", ["KOZA MEAL ........ #7", "SAVVY SLIDER", "FRIES · SHAKES"]], [414, "TODAY", ["Koza Meal special", "Orange cream shake"]]]) {
-      ctx.fillStyle = "#0b0b0d"; ctx.fillRect(bx, 18, 156, 104); ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 3; ctx.strokeRect(bx, 18, 156, 104);
-      ctx.fillStyle = "#ffd23f"; ctx.font = "15px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(title, bx + 78, 38);
+    ctx.fillStyle = SAVVY_RED; ctx.fillRect(0, 140, A.w, 6);
+    for (const [bx, title, rows] of [[222, "THE MENU", ["KOZA MEAL ........ #7", "SAVVY SLIDER", "FRIES · SHAKES"]], [414, "TODAY", ["Koza Meal special", "Orange cream shake"]]]) {
+      ctx.fillStyle = "#0b0b0d"; ctx.fillRect(bx, 18, 156, 104); ctx.strokeStyle = SAVVY_RED; ctx.lineWidth = 3; ctx.strokeRect(bx, 18, 156, 104);
+      ctx.fillStyle = "#ff4d3d"; ctx.font = "15px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(title, bx + 78, 38);
       ctx.fillStyle = "#f3efe6"; ctx.font = "600 13px 'Barlow Condensed', sans-serif";
       rows.forEach((r, i) => ctx.fillText(r, bx + 78, 62 + i * 18));
     }
+    savvySign(ctx, 108, 70, 156, 104, "SLIDERS");
     // kitchen
     ctx.fillStyle = "#8d9097"; ctx.fillRect(0, 146, A.w, 230);
     ctx.strokeStyle = "rgba(0,0,0,.12)"; ctx.lineWidth = 1;
@@ -3429,7 +3455,8 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     for (let i = 0; i < 5; i++) { ctx.fillStyle = "#d79a52"; ctx.beginPath(); ctx.ellipse(414 + i * 22, 190, 9, 6, 0, 0, 7); ctx.fill(); }
     // counter
     ctx.fillStyle = "#7a5638"; ctx.fillRect(0, 372, A.w, 24);
-    ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0, 396, A.w, 34); ctx.fillStyle = "#ffd23f"; ctx.fillRect(0, 404, A.w, 6);
+    ctx.fillStyle = "#0a0a0a"; ctx.fillRect(0, 396, A.w, 34); ctx.fillStyle = SAVVY_RED; ctx.fillRect(0, 404, A.w, 6);
+    drawSlider(ctx, 300, 416, 0.55);
     ctx.fillStyle = "#111"; ctx.fillRect(196, 346, 48, 30); ctx.fillStyle = "#6fd3ff"; ctx.fillRect(202, 350, 36, 14);
     ctx.fillStyle = "#ff3b1f"; ctx.fillRect(400, 340, 60, 6);   // heat lamp
     ctx.fillStyle = "rgba(255,120,60,.18)"; ctx.fillRect(396, 346, 68, 28);
@@ -3448,7 +3475,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   }
   function drawBooth(tx, ty) {
     ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(tx + 6, ty + 10, 56, 24, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = "#ffd23f"; ctx.fillRect(tx - 60, ty - 42, 120, 16);
+    ctx.fillStyle = SAVVY_RED; ctx.fillRect(tx - 60, ty - 42, 120, 16);
     ctx.fillStyle = "#7a5638"; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(tx - 54, ty - 26, 108, 44, 10) : ctx.rect(tx - 54, ty - 26, 108, 44); ctx.fill();
     ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.fillRect(tx - 48, ty - 22, 96, 6);
   }
@@ -4017,7 +4044,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       if (p.id === "field") drawStadium(p);
       else if (p.id === "tent") drawTent(p);
       else if (p.id === "school") drawBuilding(p, "#8a3b2a", "#5a2a20", "BROTHER RICE", "#0a0a0a", "#ff6a13");
-      else if (p.id === "sliders") drawBuilding(p, "#f3efe6", "#e2b93f", "SAVVY SLIDERS", "#0a0a0a", "#ffd23f");
+      else if (p.id === "sliders") { drawBuilding(p, "#f3efe6", SAVVY_RED, "SAVVY SLIDERS", "#f3efe6", "#0a0a0a"); savvySign(ctx, p.door[0], p.y + 120, 230, 66); }
       else if (p.id === "mvpt") drawBuilding(p, "#eef0f3", "#3a3f4a", "MVPT", "#0a0a0a", "#f3efe6");
       else drawBuilding(p, "#d9cbb4", "#4a3328", "KADIN'S HOUSE", "#ff6a13", "#0a0a0a");
     }]);
