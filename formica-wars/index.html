@@ -515,7 +515,7 @@ const sp = (base, light, mid, dark, hair = 'rgba(255,90,80,.5)') => ({ base, lig
 const SCARY = [
   /* worker: small rusty drudge, smooth and spineless */ { size: 0.95, pal: sp('#6a3a2a', '#e09070', '#44221a', '#120604', 'rgba(255,200,170,.45)'), gpal: sp('#5a2e22', '#d88068', '#3a1a12', '#100402'), m: { mandStyle: 'saw', mand: .8, spines: false, headSpines: false, glow: .35, thick: .72, meso: .92, legs: 3 } },
   /* scout: pale amber stalker, spider legs, huge eyes */ { size: 0.98, pal: sp('#8a5a30', '#f6c888', '#5a3a1a', '#1a0c04', 'rgba(255,230,190,.6)'), gpal: sp('#b07a38', '#ffe0a0', '#704a1a', '#241404'), m: { mandStyle: 'saw', mand: .6, spines: false, headSpines: false, legs: 2.75, ant: 1.75, eye: 1.9, glow: .7, head: [5.9, 1.7, 1.15], gaster: [-7.6, 3.7, 1.2], meso: .62, thick: .5 } },
-  /* soldier: black-and-crimson berserker: crowned skull, serrated fangs, spiked legs, glowing battle scars */ { size: 1.38, pal: sp('#1a0808', '#e8403a', '#100404', '#000000'), gpal: sp('#200606', '#ff3a30', '#120202', '#000000'), m: { head: [6.4, 3.5, 3.3], mand: 1.85, glow: 1.6, eye: 1.35, thick: 1.22, meso: 1.08, fangs: true, crown: true, legSpikes: true, scars: true, dorsal: true } },
+  /* soldier: black-and-crimson berserker: crowned skull, serrated fangs, spiked legs, glowing battle scars */ { size: 1.38, pal: sp('#1a0808', '#e8403a', '#100404', '#000000'), gpal: sp('#200606', '#ff3a30', '#120202', '#000000'), m: { head: [7.6, 2.9, 2.6], gaster: [-10.2, 5.4, 3.0], mand: 1.7, glow: 1.6, eye: 1.35, thick: .78, meso: .82, legs: 2.5, ant: 1.5, fangs: true, crown: true, legSpikes: true, scars: true, dorsal: true } },
   /* major: obsidian juggernaut with a huge armoured skull */ { size: 1.6, pal: sp('#140a0a', '#ff4a3a', '#0a0404', '#000000'), gpal: sp('#180606', '#ff3030', '#0c0202', '#000000'), m: { head: [7.0, 4.2, 4.0], mand: 1.6, glow: 1.3, thick: 1.5, meso: 1.25, legs: 1.05 } },
   /* spitter: swollen glowing venom sac */ { size: 1.15, pal: sp('#2a1212', '#c85040', '#1a0808', '#040000'), gpal: sp('#a8201a', '#ffb070', '#6a0c08', '#200000'), m: { gaster: [-7.4, 5.4, 4.4], mand: .9, glow: .9 } },
   /* medic: pale, banded nurse */ { size: 1.08, pal: sp('#7a4a40', '#f0c0b0', '#4a2a22', '#140806'), gpal: sp('#9a6a5a', '#fff0e0', '#5a3a2e', '#1a0a06'), m: { mandStyle: 'saw', mand: .7, spines: false, headSpines: false, glow: .5 } },
@@ -888,7 +888,7 @@ function drawAnt(g, st, dead, P0, M) {
 /* ---- per-species sprite kits, built on demand ---- */
 const WPX = 7, HU = .6, FR = 8, OX = 15, OY = 19, SWU = 36, SHU = 38;
 // scouts get a roomier canvas for their very long legs
-const LONG = t => t === 1 || t === 0 || t === 10, CX = t => LONG(t) ? 24 : OX, CY = t => LONG(t) ? 33 : OY, CWU = t => LONG(t) ? 56 : SWU, CHU = t => LONG(t) ? 66 : SHU;
+const LONG = t => t === 1 || t === 0 || t === 10 || t === 2, CX = t => LONG(t) ? 24 : OX, CY = t => LONG(t) ? 33 : OY, CWU = t => LONG(t) ? 56 : SWU, CHU = t => LONG(t) ? 66 : SHU;
 const unitScale = t => HU * TYPES[t].len;
 function antSprite(si, t, f, dead, tier = 0) {
   const pxu = WPX * unitScale(t), cv = mk(CWU(t) * pxu, CHU(t) * pxu), g = cv.getContext('2d');
