@@ -2099,15 +2099,15 @@ button.ghost {
   const PT = { health: 35, reps: 0, perfect: 0, ex: 0, inEx: 0, ring: null, wait: 0, legT: 0, pops: [], line: "", lineT: 0, intro: 0, done: false, doneT: 0, time: 0, flex: 0, ended: false };
   const KX = 168, KNEE = [KX + 40, 522], DX = 444, DROP = 56;
 
-  function say(text, secs = 2.2) { PT.line = text; PT.lineT = secs; }
+  function say(text, secs = 3.6) { PT.line = text; PT.lineT = secs; }
   function startPT() {
     audio();
     Object.assign(S, { mode: "pt", phase: "idle", lastMode: "pt" });
-    Object.assign(PT, { health: 35, reps: 0, perfect: 0, ex: 0, inEx: 0, ring: null, wait: 0, legT: 0, pops: [], intro: 3.2, done: false, doneT: 0, time: 0, flex: 1.2, ended: false });
-    say(DALTON.hello, 3.4);
+    Object.assign(PT, { health: 35, reps: 0, perfect: 0, ex: 0, inEx: 0, ring: null, wait: 0, legT: 0, pops: [], intro: 1, introT: 0, done: false, doneT: 0, time: 0, flex: 1.2, ended: false });
+    say(DALTON.hello, 99);
     for (const id of ["title", "over", "levels", "chars", "introUI"]) $(id).hidden = true;
     hideBanner();
-    setPrompt("Tap when the ring hits Kadin's <b>knee</b>");
+    setPrompt("Tap to start <b>rehab</b>");
     hud();
   }
   function nextRing() { PT.ring = { r: 125, speed: Math.min(150, 85 + PT.reps * 3) }; }
@@ -2119,15 +2119,15 @@ button.ghost {
     else if (kind === "good") sfx.tick();
     else tone(180, 0.25, 0.08, "sawtooth", 0.7);
     PT.pops.push({ text: kind === "perfect" ? "PERFECT +10" : kind === "good" ? "GOOD +7" : "SLOPPY +2", t: 0, col: kind === "perfect" ? "#ffd23f" : kind === "good" ? "#4cc46a" : "#ff3b1f" });
-    say(pick(DALTON[kind]), 1.6);
+    say(pick(DALTON[kind]), 3.2);
     PT.ring = null; PT.legT = 0.6; PT.wait = 0.75;
     if (PT.inEx >= 5) {
       PT.ex = (PT.ex + 1) % EXERCISES.length; PT.inEx = 0;
-      say(DALTON.next[EXERCISES[PT.ex]], 1.8); PT.wait = 1.4;
+      say(DALTON.next[EXERCISES[PT.ex]], 3.4); PT.wait = 1.6;
     }
     if (PT.health >= 100) {
       PT.done = true; PT.doneT = 0; PT.flex = 99;
-      say(DALTON.done, 4);
+      say(DALTON.done, 6);
       showBanner("CLEARED TO PLAY", "Kadin Koza is back", true);
       sfx.cheer(); setTimeout(sfx.cheer, 600); confetti(150); S.flash = 2;
       S.freshLegs = true;
@@ -2135,6 +2135,12 @@ button.ghost {
     hud();
   }
   function ptTap() {
+    if (S.mode === "pt" && PT.intro > 0) {
+      if (PT.introT < 0.8) return;
+      PT.intro = 0; PT.wait = 0.9; PT.lineT = 0;
+      setPrompt("Tap when the ring hits Kadin's <b>knee</b>");
+      return;
+    }
     if (S.mode !== "pt" || PT.done || !PT.ring) return;
     const d = Math.abs(PT.ring.r - 30);
     judge(d <= 7 ? "perfect" : d <= 18 ? "good" : "miss");
@@ -2149,10 +2155,10 @@ button.ghost {
     while (PT.pops.length && PT.pops[0].t > 1.1) PT.pops.shift();
     if (PT.done) {
       PT.doneT += dt;
-      if (PT.doneT > 3.2 && !PT.ended) { PT.ended = true; endPT(); }
+      if (PT.doneT > 4.5 && !PT.ended) { PT.ended = true; endPT(); }
       return;
     }
-    if (PT.intro > 0) { PT.intro -= dt; if (PT.intro <= 0) nextRing(); return; }
+    if (PT.intro > 0) { PT.introT += dt; return; }
     if (PT.ring) {
       PT.ring.r -= PT.ring.speed * dt;
       if (PT.ring.r < 8) judge("miss");
@@ -2240,7 +2246,7 @@ button.ghost {
     ctx.beginPath(); ctx.moveTo(cx - 44, 142); ctx.lineTo(cx - 42, 190); ctx.quadraticCurveTo(cx - 36, 214, cx - 16, 220);
     ctx.lineTo(cx + 16, 220); ctx.quadraticCurveTo(cx + 36, 214, cx + 42, 190); ctx.lineTo(cx + 44, 142);
     ctx.quadraticCurveTo(cx, 100, cx - 44, 142); ctx.fill();
-    ctx.fillStyle = "rgba(220,120,100,.18)";   // a little color in the cheeks
+    ctx.fillStyle = "rgba(220,120,100,.08)";   // a little color in the cheeks
     ctx.beginPath(); ctx.ellipse(cx - 26, 180, 10, 7, 0, 0, 7); ctx.ellipse(cx + 26, 180, 10, 7, 0, 0, 7); ctx.fill();
     ctx.fillStyle = "rgba(60,40,30,.16)";   // light stubble along the jaw
     ctx.beginPath(); ctx.moveTo(cx - 42, 188); ctx.quadraticCurveTo(cx - 36, 216, cx - 16, 222); ctx.lineTo(cx + 16, 222);
@@ -2256,12 +2262,26 @@ button.ghost {
     ctx.quadraticCurveTo(cx + 44, 112, cx + 42, 140);
     ctx.quadraticCurveTo(cx + 30, 124, cx + 6, 126); ctx.quadraticCurveTo(cx - 24, 124, cx - 42, 140); ctx.fill();
     // face
-    ctx.strokeStyle = hair; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.moveTo(cx - 30, 148); ctx.lineTo(cx - 10, 147); ctx.moveTo(cx + 10, 147); ctx.lineTo(cx + 30, 148); ctx.stroke();
+    // hair shine
+    ctx.strokeStyle = "rgba(140,100,70,.6)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx - 14, 112); ctx.quadraticCurveTo(cx - 2, 100, cx + 10, 104); ctx.moveTo(cx + 2, 118); ctx.quadraticCurveTo(cx + 14, 108, cx + 26, 112); ctx.stroke();
+    // cheekbones + jaw definition
+    ctx.fillStyle = "rgba(255,240,225,.35)";
+    ctx.beginPath(); ctx.ellipse(cx - 28, 170, 9, 4, -0.3, 0, 7); ctx.ellipse(cx + 28, 170, 9, 4, 0.3, 0, 7); ctx.fill();
+    ctx.strokeStyle = "rgba(150,100,75,.45)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx - 40, 192); ctx.quadraticCurveTo(cx - 34, 214, cx - 16, 220); ctx.moveTo(cx + 40, 192); ctx.quadraticCurveTo(cx + 34, 214, cx + 16, 220); ctx.stroke();
+    // groomed brows
+    ctx.strokeStyle = hair; ctx.lineWidth = 5; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(cx - 31, 150); ctx.quadraticCurveTo(cx - 22, 143, cx - 9, 146); ctx.moveTo(cx + 9, 146); ctx.quadraticCurveTo(cx + 22, 143, cx + 31, 150); ctx.stroke();
+    // eyes with a sparkle
     ctx.fillStyle = "#f3efe6";
-    for (const ex of [-19, 19]) { ctx.beginPath(); ctx.ellipse(cx + ex, 161, 7, 4.5, 0, 0, 7); ctx.fill(); }
-    ctx.fillStyle = "#3b2a1e";
-    for (const ex of [-19, 19]) { ctx.beginPath(); ctx.arc(cx + ex, 161, 3.4, 0, 7); ctx.fill(); }
+    for (const ex of [-19, 19]) { ctx.beginPath(); ctx.ellipse(cx + ex, 161, 7.5, 4.5, 0, 0, 7); ctx.fill(); }
+    ctx.fillStyle = "#4a3324";
+    for (const ex of [-19, 19]) { ctx.beginPath(); ctx.arc(cx + ex, 161, 3.8, 0, 7); ctx.fill(); }
+    ctx.fillStyle = "#fff";
+    for (const ex of [-19, 19]) { ctx.beginPath(); ctx.arc(cx + ex + 1.4, 159.6, 1.2, 0, 7); ctx.fill(); }
+    ctx.strokeStyle = "rgba(51,34,26,.8)"; ctx.lineWidth = 1.8;
+    for (const ex of [-19, 19]) { ctx.beginPath(); ctx.ellipse(cx + ex, 161, 8, 5, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke(); }
     ctx.strokeStyle = skinD; ctx.lineWidth = 2.5;   // nose
     ctx.beginPath(); ctx.moveTo(cx - 2, 166); ctx.lineTo(cx - 5, 184); ctx.lineTo(cx + 4, 186); ctx.stroke();
     const talking = PT.lineT > 0 && Math.sin(S.t * 18) > 0;
@@ -2270,6 +2290,8 @@ button.ghost {
     if (talking) ctx.ellipse(cx, 200, 12, 7, 0, 0, 7);
     else { ctx.moveTo(cx - 17, 196); ctx.quadraticCurveTo(cx, 210, cx + 17, 196); ctx.closePath(); }
     ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "rgba(150,90,70,.55)"; ctx.lineWidth = 1.6;   // dimples
+    ctx.beginPath(); ctx.arc(cx - 22, 196, 4, 1.7, 3.3); ctx.moveTo(cx + 26, 196); ctx.arc(cx + 22, 196, 4, -0.2, 1.4); ctx.stroke();
   }
 
   function drawPTKadin() {
@@ -2308,7 +2330,35 @@ button.ghost {
     return legs[1];
   }
 
+  function renderDaltonIntro() {
+    // gym behind him
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#e9eaec"); bg.addColorStop(1, "#c9ccd2");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#cfe3d6"; ctx.fillRect(0, 300, W, 260);
+    ctx.fillStyle = "#9fbfa3"; for (let x = 0; x < W; x += 150) ctx.fillRect(x, 300, 8, 260);
+    ctx.fillStyle = "#e0782a"; for (const x of [70, 120, 480, 530]) ctx.fillRect(x, 250, 18, 550);
+    ctx.fillStyle = "#333"; ctx.fillRect(40, 380, 120, 10); ctx.fillRect(450, 380, 120, 10);
+    // close-up of Dalton
+    const z = 1.9 + Math.sin(S.t * 0.6) * 0.03;
+    ctx.save();
+    ctx.translate(W / 2, 440); ctx.scale(z, z); ctx.translate(-DX, -230);
+    drawDalton(DX, "hips");
+    ctx.restore();
+    const vg = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.35, W / 2, H * 0.5, H * 0.85);
+    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.35)");
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    bubble(PT.line, 24, 60, 552, 32);
+    if (PT.introT > 0.8) {
+      ctx.globalAlpha = 0.6 + 0.4 * Math.sin(S.t * 4);
+      ctx.fillStyle = "rgba(10,12,17,.8)"; ctx.fillRect(140, 724, 320, 48);
+      ctx.fillStyle = "#ff6a13"; ctx.font = "24px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("TAP TO START", W / 2, 749);
+      ctx.globalAlpha = 1;
+    }
+  }
   function renderPT() {
+    if (PT.intro > 0) { renderDaltonIntro(); return; }
     // clinic
     const bg = ctx.createLinearGradient(0, 0, 0, 640);
     bg.addColorStop(0, "#232a39"); bg.addColorStop(1, "#2f3849");
