@@ -3400,15 +3400,15 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       draw: drawSlidersInside
     },
     school: {
-      name: "Brother Rice", w: 600, h: 2300, spawn: [70, 1150],
+      name: "Brother Rice", w: 600, h: 2300, spawn: [150, 1160],
       solid(x, y) {
         if (x < 22 || x > 578 || y < 236 || y > 2290) return true;
         if (y > 1296 && y < 1334 && Math.abs(x - 300) > 46) return true;
         if (y > 1334 && y < 1408) return true;
         if (y > 1766 && y < 1804 && Math.abs(x - 300) > 46) return true;
         if (CAF_TABLES.some(([tx, ty]) => Math.abs(x - tx) < 92 && y > ty - 24 && y < ty + 16)) return true;
-        if (y > 630 && y < 676 && Math.abs(x - 300) > 46) return true;
-        if (y > 676 && y < 770) return true;
+        if (y > 630 && y < 676 && Math.abs(x - 300) > 58) return true;
+        if (y > 676 && y < 770 && Math.abs(x - 300) > 58) return true;
         if (Math.abs(x - 300) < 90 && y < 206) return true;
         return SC_DESKS.some(([dx, dy]) => Math.abs(x - dx) < 46 && y > dy - 20 && y < dy + 16);
       },
@@ -3429,7 +3429,10 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         { id: "gym1", name: "Classmate", lines: "student", path: [[120, 2150], [480, 2150]], speed: 70, look: { skin: "#f1c7a3", shirt: "#9aa1aa", num: "", hair: "#7a5230", shoes: "#f3efe6" } }
       ],
       spots() {
-        const s = [{ x: 52, y: 1150, short: "Exit", label: "Leave school", run: exitArea }];
+        const s = [{ x: 44, y: 1150, short: "Exit", label: "Leave school", run: exitArea }];
+        const toClass = () => { T.x = 300; T.y = 600; T.back = true; T.target = null; noise(0.15, 2400, 0.05); };
+        if (T.y > 770) s.push({ x: 160, y: 1140, short: "Class", label: "Go to Mr. Krysiak's class", run: toClass });
+        if (T.y > 770) s.push({ x: 300, y: 800, short: "Class", label: "Enter Mr. Krysiak's class", run: toClass });
         if (!T.carry) s.push({ x: 300, y: 1428, short: "Lunch", label: "Get lunch", run: openLunch });
         else for (const [tx, ty] of CAF_TABLES) if (!(tx === 450 && ty === 1530)) s.push({ x: tx, y: ty + 42, short: "Table", label: "Sit and eat lunch", run: () => startEating(tx, ty) });
         if (!T.drill) s.push({ x: 300, y: 2005, short: "Gym", label: (T.cool.gym || 0) > 0 ? "Gym's over" : "Gym class with Dalton", run: startGym });
@@ -3651,11 +3654,21 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(218, 188, 176, 30);
     ctx.fillStyle = "#5a3f2a"; ctx.fillRect(212, 176, 176, 34); ctx.fillStyle = "#f3efe6"; ctx.fillRect(232, 180, 30, 20); ctx.fillStyle = "#c8261c"; ctx.beginPath(); ctx.arc(352, 188, 8, 0, 7); ctx.fill();
     // wall + doorway to the hallway
-    ctx.fillStyle = "#8d9097"; ctx.fillRect(0, 640, 254, 30); ctx.fillRect(346, 640, 254, 30);
+    ctx.fillStyle = "#8d9097"; ctx.fillRect(0, 640, 242, 30); ctx.fillRect(358, 640, 242, 30);
     // hallway
     ctx.fillStyle = "#e3ddcf"; ctx.fillRect(0, 670, A.w, A.h - 670);
     for (let y = 770; y < A.h; y += 48) for (let x = (y / 48) % 2 ? 0 : 24; x < A.w; x += 48) { ctx.fillStyle = "rgba(0,0,0,.05)"; ctx.fillRect(x, y, 24, 24); }
+    // open classroom doorway with a sign and floor arrows from the front door
+    ctx.fillStyle = "#e3ddcf"; ctx.fillRect(242, 640, 116, 130);
+    ctx.fillStyle = "#5a3f2a"; ctx.fillRect(238, 640, 6, 130); ctx.fillRect(356, 640, 6, 130);
+    signBoard("MR. KRYSIAK · ROOM 7", 300, 790, "#26324a", "#f3efe6", 14);
+    ctx.fillStyle = "rgba(255,106,19,.55)";
+    for (let k = 0; k < 6; k++) {
+      const t2 = k / 5, ax = lerp(170, 300, t2), ay = lerp(1110, 830, t2), ang = Math.atan2(830 - 1110, 300 - 170);
+      ctx.save(); ctx.translate(ax, ay); ctx.rotate(ang); ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-6, -8); ctx.lineTo(-2, 0); ctx.lineTo(-6, 8); ctx.closePath(); ctx.fill(); ctx.restore();
+    }
     for (let i = 0; i < 9; i++) {   // lockers
+      if (i >= 5 && i <= 7) continue;
       const x = 24 + i * 42;
       ctx.fillStyle = i === 2 ? "#ff6a13" : i % 2 ? "#26324a" : "#1f2a3e"; ctx.fillRect(x, 676, 40, 90);
       ctx.fillStyle = "rgba(0,0,0,.3)"; for (let v = 0; v < 4; v++) ctx.fillRect(x + 8, 686 + v * 6, 24, 2);
@@ -3664,7 +3677,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     }
     ctx.fillStyle = "#3a2a1f"; ctx.fillRect(408, 676, 172, 90); ctx.fillStyle = "rgba(160,210,255,.4)"; ctx.fillRect(414, 682, 160, 78);
     for (let i = 0; i < 4; i++) { ctx.fillStyle = "#e2b93f"; ctx.fillRect(426 + i * 38, 718, 14, 24); ctx.fillRect(422 + i * 38, 712, 22, 8); ctx.fillRect(428 + i * 38, 742, 10, 8); }
-    signBoard("BROTHER RICE WARRIORS", 300, 820, "#0a0a0a", "#ff6a13", 18);
+    signBoard("BROTHER RICE WARRIORS", 300, 965, "#0a0a0a", "#ff6a13", 18);
     drawSchoolExtra();
   }
   function drawDesk(dx, dy, mine) {
