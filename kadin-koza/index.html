@@ -420,6 +420,57 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
 .opt span { font-size: 14px; color: var(--muted); }
 .opt:hover:not(:disabled), .opt:focus-visible { border-color: var(--orange); }
 .opt:disabled { opacity: .45; cursor: not-allowed; }
+/* Kadin's phone */
+.phone-btn {
+  position: absolute; top: 52px; right: 10px; width: 46px; height: 46px; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center; background: var(--orange); border: 2px solid #0a0a0a; box-shadow: 0 4px 12px rgba(0,0,0,.45);
+}
+.phone-btn svg { width: 26px; height: 26px; }
+.ph-badge {
+  position: absolute; top: -6px; right: -6px; min-width: 20px; padding: 2px 5px; border-radius: 999px;
+  background: #ff3b1f; color: #fff; font: 700 12px var(--body); text-align: center; border: 2px solid #0a0a0a;
+}
+.phone-title { position: relative; }
+.phone-title .ph-badge { top: -9px; right: -9px; }
+.phone {
+  position: absolute; inset: 10px; z-index: 8; display: flex; flex-direction: column; overflow: hidden;
+  background: #0d0e12; border: 3px solid #2a2c33; border-radius: 26px; box-shadow: 0 20px 60px rgba(0,0,0,.7);
+}
+.ph-top { display: grid; grid-template-columns: 60px 1fr 60px; align-items: center; padding: 12px 14px 10px; border-bottom: 1px solid #22242b; }
+.ph-time { font-weight: 700; font-size: 14px; color: var(--muted); }
+.ph-title { text-align: center; font-size: 17px; letter-spacing: .03em; color: var(--chalk); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ph-x { justify-self: end; background: none; border: 0; color: var(--orange); font: 700 14px var(--body); cursor: pointer; }
+.ph-body { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.thr {
+  display: grid; grid-template-columns: 42px 1fr auto; gap: 10px; align-items: center; padding: 9px 10px; cursor: pointer;
+  border: 0; border-radius: 12px; background: #16181e; color: var(--chalk); text-align: left; font-family: var(--body);
+}
+.thr:hover, .thr:focus-visible { background: #1d2028; }
+.av { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font: 700 14px var(--body); color: #111; }
+.thr-main { display: flex; flex-direction: column; min-width: 0; }
+.thr-main b { font-size: 16px; }
+.thr-main span { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.badge { min-width: 22px; padding: 2px 7px; border-radius: 999px; background: #ff3b1f; color: #fff; font: 700 12px var(--body); text-align: center; }
+.when { font-size: 12px; color: var(--muted); }
+.ph-back { align-self: flex-start; background: none; border: 0; color: var(--orange); font: 700 15px var(--body); cursor: pointer; padding: 0 0 4px; }
+.ph-day { align-self: center; font-size: 12px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; margin-top: 6px; }
+.msg { max-width: 80%; padding: 8px 12px; border-radius: 18px; font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
+.msg.them { align-self: flex-start; background: #2a2c33; color: var(--chalk); border-bottom-left-radius: 5px; }
+.msg.me { align-self: flex-end; background: var(--orange); color: #111; border-bottom-right-radius: 5px; }
+.msg.mission { border: 1px solid var(--goal); }
+.msg-tag { display: block; margin-top: 4px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--goal); }
+.ph-reply { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px; border-top: 1px solid #22242b; }
+.ph-tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid #22242b; }
+.ph-tabs button { padding: 12px 4px calc(12px + env(safe-area-inset-bottom, 0px)); background: none; border: 0; color: var(--muted); font: 700 13px var(--body); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.ph-tabs button.on { color: var(--orange); }
+.mis { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px; background: #16181e; border: 1px solid var(--goal); }
+.mis.done { border-color: #2a2c33; opacity: .6; }
+.mis b { font-size: 16px; } .mis span { font-size: 13px; color: var(--muted); }
+.ph-empty { color: var(--muted); text-align: center; }
+.kg-head { display: flex; gap: 10px; align-items: center; padding-bottom: 8px; border-bottom: 1px solid #22242b; }
+.kg-head > span:last-child { display: flex; flex-direction: column; } .kg-head span span { font-size: 13px; color: var(--muted); }
+.kg-post { display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 12px; background: #16181e; }
+.kg-post b { font-size: 16px; } .kg-post span { font-size: 13px; color: var(--muted); }
 /* kicker select */
 #chars { justify-content: flex-start; overflow-y: auto; padding-block: 24px; }
 #chars h1 .name { font-size: clamp(28px, 8vmin, 46px); }
@@ -528,6 +579,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
 
       <div class="town-ui" id="townUI" hidden>
         <button class="mute town-exit" id="townExit" type="button">Exit town</button>
+        <button class="phone-btn" id="phoneBtn" type="button" aria-label="Kadin's phone"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3" fill="#0a0c11"/><rect x="8" y="5" width="8" height="12" rx="1" fill="#9fd3ff"/><circle cx="12" cy="19.5" r="1" fill="#9fd3ff"/></svg><span class="ph-badge" id="phBadge1" hidden>0</span></button>
         <div class="town-hint" id="townHint">Tap anywhere to walk</div>
         <button class="go town-act" id="townAct" type="button" hidden>Enter</button>
       </div>
@@ -548,6 +600,13 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       </div>
 
       <div class="toast" id="toast" hidden></div>
+
+      <div class="phone" id="phone" hidden>
+        <div class="ph-top"><span class="ph-time" id="phTime">9:41</span><b class="ph-title" id="phTitle">Messages</b><button class="ph-x" id="phClose" type="button">Close</button></div>
+        <div class="ph-body" id="phBody"></div>
+        <div class="ph-reply" id="phReply" hidden></div>
+        <div class="ph-tabs"><button type="button" data-tab="msgs">Messages</button><button type="button" data-tab="missions">Missions</button><button type="button" data-tab="feed">KozaGram</button></div>
+      </div>
 
       <div class="overlay" id="title" hidden>
         <div class="beam l"></div><div class="beam r"></div>
@@ -592,6 +651,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
           <button class="go" id="start" type="button">Take the field</button>
           <button class="go" id="town" type="button">Kadin Town</button>
           <button class="ghost" id="lockerBtn" type="button">Locker room</button>
+          <button class="ghost icon-btn phone-title" id="phoneTitleBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3" fill="#0a0c11"/><rect x="8" y="5" width="8" height="12" rx="1" fill="#9fd3ff"/><circle cx="12" cy="19.5" r="1" fill="#9fd3ff"/></svg>Kadin's phone<span class="ph-badge" id="phBadge2" hidden>0</span></button>
           <button class="ghost" id="replay" type="button">Watch intro</button>
           <button class="ghost" id="tent" type="button">Autograph tent</button>
           <button class="ghost icon-btn" id="pt" type="button" aria-label="PT Station">
@@ -892,7 +952,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     kpos: { ...IDLE }, kk: 0, krun: 0
   };
   const parts = [], trail = [];
-  const HIDE_ALL = ["title", "over", "levels", "chars", "introUI", "townUI", "locker", "sheet"];
+  const HIDE_ALL = ["title", "over", "levels", "chars", "introUI", "townUI", "locker", "sheet", "phone"];
 
   // kickers
   const CHARS = {
@@ -1121,6 +1181,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     if (S.punt) {
       S.score += r.pts; S.long = Math.max(S.long, r.dist);
       if (r.pts > 0) S.makes++;
+      if (r.pts >= 3) S.pinned = (S.pinned || 0) + 1;
       if (r.pts >= 3) { sfx.cheer(); S.flash = 1.5; confetti(r.pts >= 5 ? 60 : 25); } else sfx.groan();
       showBanner(r.title, r.sub + (r.pts ? ` · +${r.pts}` : ""), r.pts >= 3);
       hud();
@@ -1131,8 +1192,10 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       if (S.score > best) { best = S.score; saveBest(); }
       sfx.cheer(); S.flash = 2; confetti(50);
       if (!char().bad) addXP(10 + Math.floor(Math.max(0, S.K - 30) / 2), S.K + "-yard make");
+      if (S.char === "kadin") onEvent("make", S.K);
     } else {
       S.misses++; S.streak = 0;
+      if (S.char === "kadin") onEvent("miss");
       if (r.kind !== "doink") sfx.groan();
     }
     showBanner(r.title, r.sub, r.good);
@@ -1249,7 +1312,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   });
   function startGame(level) {
     audio();
-    Object.assign(S, { mode: "game", lastMode: "kick", level, punt: level === -2, puntNo: 0, kickIdx: 0, streak: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0 });
+    Object.assign(S, { mode: "game", lastMode: "kick", level, punt: level === -2, puntNo: 0, pinned: 0, kickIdx: 0, streak: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0 });
     const fresh = S.freshLegs && S.char === "kadin" && level !== -2;
     if (fresh) { S.streak = 2; S.freshLegs = false; }
     const L = lvl();
@@ -1286,6 +1349,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   function levelOver() {
     const L = lvl(), pass = S.makes >= L.need;
     const stars = pass ? (S.makes === L.kicks ? 3 : S.makes === L.kicks - 1 ? 2 : 1) : 0;
+    if (S.char === "kadin") setTimeout(() => onEvent(pass ? "win" : "loss", L.opp), 2600);
     const last = S.level === LEVELS.length - 1;
     if (pass) {
       prog.stars[S.level] = Math.max(prog.stars[S.level] || 0, stars);
@@ -1612,6 +1676,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       seg([h[0] - 0.03, h[1] + 0.03], [kn[0] - 0.03, kn[1]], 0.04, "#2a2b31");
       const side = Math.sign(h[0]);
       seg([h[0] + side * 0.075, h[1]], [kn[0] + side * 0.075, kn[1] + 0.02], 0.025, shiny ? "#d9dde3" : "#ff6a13");
+      if (shiny && KZ.outfit.patches) { const hq = P(lerp(h[0], kn[0], 0.45) + side * 0.075, lerp(h[1], kn[1], 0.45)); heart(hq[0], hq[1] - 0.02 * u, 0.026 * u, chrome(hq[0] - 0.03 * u, hq[1], hq[0] + 0.03 * u, hq[1] + 0.04 * u)); }
       const fp = P(...f);
       ctx.fillStyle = shiny ? cleatFill(fp[0] - 0.085 * u, fp[1] - 0.05 * u, fp[0] + 0.085 * u, fp[1] + 0.05 * u) : "#050505";
       ctx.beginPath(); ctx.ellipse(fp[0], fp[1], 0.085 * u, 0.05 * u, 0, 0, 7); ctx.fill();
@@ -1747,6 +1812,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     ctx.restore();
     ctx.fillStyle = "rgba(255,255,255,.3)";
     ctx.beginPath(); ctx.ellipse(hp[0] - 0.06 * u, hp[1] - 0.07 * u, 0.035 * u, 0.018 * u, -0.6, 0, 7); ctx.fill();
+    if (shiny && KZ.outfit.patches) heart(hp[0] + 0.075 * u, hp[1] + 0.01 * u, 0.026 * u, chrome(hp[0] + 0.05 * u, hp[1], hp[0] + 0.1 * u, hp[1] + 0.04 * u));
     if (look.phone) {   // Kadin's curls out the back of the helmet
       for (const [dx, dy, r] of [[-0.08, 0.1, 0.028], [-0.04, 0.118, 0.032], [0, 0.125, 0.033], [0.04, 0.118, 0.032], [0.08, 0.1, 0.028]]) {
         ctx.fillStyle = "#2b1d14"; ctx.beginPath(); ctx.arc(hp[0] + dx * u, hp[1] + dy * u, r * u, 0, 7); ctx.fill();
@@ -2000,6 +2066,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     $("overMade").textContent = G.signed; $("overLong").textContent = G.missed; $("overBest").textContent = G.bestSign;
     $("again").textContent = "Sign again"; $("menu").textContent = S.fromTown ? "Back to town" : "Main menu";
     if (G.signed) toast(`<b>+${G.signed * 3} XP</b> · ${G.signed} autographs`, 2200);
+    onEvent("signed", G.signed);
     $("over").hidden = false;
     if (G.signed >= 10) { sfx.cheer(); confetti(120); S.flash = 2; }
     setPrompt(tag());
@@ -2252,6 +2319,10 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         ctx.fillRect(cx + dx - 1.8, 333, 3.6, 20 * h); ctx.fillRect(cx + dx - 6, 338, 12, 3.6);
       }
     }
+    if (KZ.outfit.pendant) {   // big chrome heart pendant
+      if (!KZ.outfit.chain) { ctx.strokeStyle = "#dfe3e8"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 26, 300); ctx.quadraticCurveTo(cx, 352, cx + 26, 300); ctx.stroke(); }
+      heart(cx + 16, 340, 11, chrome(cx + 5, 340, cx + 27, 356));
+    }
     // neck + head
     ctx.fillStyle = "#c99a72"; ctx.fillRect(cx - 16, 262, 32, 40);
     const hg = ctx.createRadialGradient(cx - 14, 210, 6, cx, 225, 56);
@@ -2259,6 +2330,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     ctx.fillStyle = hg;
     ctx.beginPath(); ctx.ellipse(cx - 44, 230, 8, 12, 0, 0, 7); ctx.ellipse(cx + 44, 230, 8, 12, 0, 0, 7); ctx.fill();
     ctx.beginPath(); ctx.ellipse(cx, 222, 44, 52, 0, 0, 7); ctx.fill();
+    if (KZ.outfit.earrings) for (const sx of [-1, 1]) { ctx.fillStyle = "#dfe3e8"; ctx.beginPath(); ctx.arc(cx + sx * 45, 240, 2.4, 0, 7); ctx.fill(); drawCross(cx + sx * 45, 242, 0.9); }
     // high fade on the sides
     ctx.fillStyle = "rgba(43,29,20,.35)";
     ctx.beginPath(); ctx.ellipse(cx - 38, 206, 9, 22, 0.15, 0, 7); ctx.ellipse(cx + 38, 206, 9, 22, -0.15, 0, 7); ctx.fill();
@@ -2272,8 +2344,16 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       ctx.strokeStyle = "rgba(120,85,55,.55)"; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(cx + dx - 2, dy - 1, r * 0.55, 3.6, 5.6); ctx.stroke();
     }
+    if (KZ.outfit.cap) {   // black cap with a chrome heart
+      ctx.fillStyle = "#0b0b0d";
+      ctx.beginPath(); ctx.ellipse(cx, 190, 50, 36, 0, Math.PI, 0); ctx.fill();
+      ctx.fillRect(cx - 50, 186, 100, 8);
+      ctx.fillStyle = "#16171b"; ctx.beginPath(); ctx.ellipse(cx, 196, 56, 11, 0, 0, Math.PI); ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, 156); ctx.lineTo(cx, 188); ctx.stroke();
+      heart(cx, 166, 10, chrome(cx - 10, 166, cx + 10, 180));
+    }
     // chrome shades pushed up
-    if (KZ.outfit.shades) {
+    if (KZ.outfit.shades && !KZ.outfit.cap) {
       for (const sx of [-1, 1]) {
         ctx.fillStyle = chrome(cx + sx * 26 - 16, 170, cx + sx * 26 + 16, 186);
         ctx.beginPath(); ctx.ellipse(cx + sx * 22, 172, 17, 9, 0, 0, 7); ctx.fill();
@@ -2307,6 +2387,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     seg([cx - 104, 409], [cx - 92, 408], 24, "#0a0a0a"); seg([cx - 100, 405], [cx - 96, 412], 4, "#f3efe6");
     drawPhone(cx - 56, 372 + bob, 54, -0.25, true);
     ctx.fillStyle = "#c99a72"; ctx.beginPath(); ctx.arc(cx - 60, 400 + bob, 13, 0, 7); ctx.fill();
+    drawHandBling(cx - 60, 400 + bob);
     ctx.save(); ctx.globalCompositeOperation = "lighter";
     const fg = ctx.createRadialGradient(cx - 10, 240, 0, cx - 10, 240, 60);
     fg.addColorStop(0, "rgba(120,180,255,.18)"); fg.addColorStop(1, "rgba(120,180,255,0)");
@@ -2330,6 +2411,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     seg([hand[0] + 4, hand[1] - 2], [G.armPos[0], G.armPos[1]], 8, "#111");
     seg([hand[0] + 14, hand[1] + 10], [hand[0] + 4, hand[1] - 2], 9, "#ff6a13");
     ctx.fillStyle = "#c99a72"; ctx.beginPath(); ctx.arc(hand[0], hand[1], 13, 0, 7); ctx.fill();
+    drawHandBling(hand[0], hand[1]);
   }
   function renderSign() {
     // concourse backdrop
@@ -2456,6 +2538,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       sfx.cheer(); setTimeout(sfx.cheer, 600); confetti(150); S.flash = 2;
       S.freshLegs = true;
       setTimeout(() => addXP(30, "cleared by MVPT"), 900);
+      setTimeout(() => onEvent("cleared"), 2000);
     }
     hud();
   }
@@ -2636,6 +2719,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       seg([cx + sx * 96, 320], [cx + sx * 124, 410], 30, J().c[1]);
       seg([cx + sx * 124, 410], [cx + sx * 118, 486], 22, "#c99a72");
       ctx.fillStyle = "#c99a72"; ctx.beginPath(); ctx.ellipse(cx + sx * 118, 490, 16, 10, 0, 0, 7); ctx.fill();
+      drawHandBling(cx + sx * 118, 488);
     }
     // shorts + dangling legs
     ctx.fillStyle = "#0b0b0d"; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(cx - 86, 468, 172, 50, 12) : ctx.rect(cx - 86, 468, 172, 50); ctx.fill();
@@ -2759,7 +2843,8 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     white: { name: "White", lv: 3, fill: "#f3efe6", sw: "#f3efe6" },
     gold: { name: "Gold", lv: 4, fill: "#e2b93f", sw: "#e2b93f" }
   };
-  const KZ = { xp: 0, outfit: { jersey: "home", helmet: "chrome", cleats: "chrome", chain: true, hearts: true, shades: true } };
+  const KZ = { xp: 0, outfit: { jersey: "home", helmet: "chrome", cleats: "chrome", chain: true, hearts: true, shades: true,
+                                rings: true, bracelets: true, earrings: true, pendant: true, cap: false, patches: true } };
   try {
     const d = JSON.parse(localStorage.getItem("kk-kadin") || "{}");
     if (d.xp > 0) KZ.xp = d.xp;
@@ -2823,7 +2908,8 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         box.appendChild(b);
       };
       if (slot === "extras") {
-        for (const [k, label] of [["chain", "Chain"], ["hearts", "Chrome hearts"], ["shades", "Shades"]])
+        for (const [k, label] of [["chain", "Chain"], ["pendant", "Heart pendant"], ["rings", "Heart rings"], ["bracelets", "Cross bracelets"],
+                                  ["earrings", "Cross earrings"], ["cap", "Heart cap"], ["hearts", "Sleeve hearts"], ["patches", "Heart patches"], ["shades", "Shades"]])
           add(k, (KZ.outfit[k] ? "✓ " : "") + label, null, 0, KZ.outfit[k], () => { KZ.outfit[k] = !KZ.outfit[k]; saveKZ(); buildLocker(); });
         return;
       }
@@ -2872,6 +2958,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       seg([300 + sx * 96, 320], [300 + sx * 122, 410], 30, J().c[1]);
       seg([300 + sx * 122, 410], [300 + sx * 118, 492], 22, "#c99a72");
       ctx.fillStyle = "#c99a72"; ctx.beginPath(); ctx.arc(300 + sx * 118, 498, 13, 0, 7); ctx.fill();
+      drawHandBling(300 + sx * 118, 498);
     }
     ctx.restore();
   }
@@ -2923,7 +3010,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     Object.assign(S, { mode: "town", phase: "idle", fromTown: true });
     for (const id of HIDE_ALL) $(id).hidden = true;
     $("townUI").hidden = false; hideBanner();
-    T.target = null; T.keys.clear(); T.hintT = 4; T.nearKey = ""; $("townAct").hidden = true; T.sheetOpen = false;
+    T.target = null; T.keys.clear(); T.hintT = 4; T.nearKey = ""; $("townAct").hidden = true; T.sheetOpen = false; T.phoneOpen = false;
     if (T.area && T.area !== "town") setTimeout(() => setPrompt(`${AREAS[T.area].name} · <b>tap to walk</b>`), 0);
     $("townHint").style.opacity = 1;
     setPrompt("Kadin Town · <b>tap to walk</b>");
@@ -2936,7 +3023,9 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     return PLACES.some(p => x > p.x - 10 && x < p.x + p.w + 10 && y > p.y + 30 && y < p.y + p.h + 8);
   }
   const townPt = e => { const r = cv.getBoundingClientRect(), k = W / r.width; return [(e.clientX - r.left) * k + T.camX, (e.clientY - r.top) * k + T.camY]; };
-  cv.addEventListener("pointerdown", e => { if (S.mode !== "town" || T.sheetOpen || T.eat) return; audio(); T.hold = true; T.target = townPt(e); T.hintT = Math.min(T.hintT, 0.4); });
+  cv.addEventListener("pointerdown", e => {
+    if (S.mode === "town" && T.drill) { audio(); drillTap(); return; }
+    if (S.mode !== "town" || T.sheetOpen || T.eat || T.phoneOpen) return; audio(); T.hold = true; T.target = townPt(e); T.hintT = Math.min(T.hintT, 0.4); });
   cv.addEventListener("pointermove", e => { if (S.mode === "town" && T.hold) T.target = townPt(e); });
   const stopHold = () => { T.hold = false; };
   cv.addEventListener("pointerup", stopHold); cv.addEventListener("pointercancel", stopHold);
@@ -2955,8 +3044,9 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       T.talk = { npc: AREAS.sliders.npcs[0], text: `Order up! ${T.order.item.name}!`, t: 2.6 };
     }
     if (T.eat && (T.eat.t -= dt) <= 0) finishEating();
-    if (!T.sheetOpen && !T.eat) for (const k of T.keys) { vx += KEYMAP[k][0]; vy += KEYMAP[k][1]; }
-    if (!vx && !vy && T.target && !T.sheetOpen && !T.eat) {
+    if (T.area === "school") { gymUpdate(dt); if (!T.sheetOpen) bellUpdate(dt); }
+    if (!T.sheetOpen && !T.eat && !T.drill && !T.phoneOpen) for (const k of T.keys) { vx += KEYMAP[k][0]; vy += KEYMAP[k][1]; }
+    if (!vx && !vy && T.target && !T.sheetOpen && !T.eat && !T.drill && !T.phoneOpen) {
       const dx = T.target[0] - T.x, dy = T.target[1] - T.y, d = Math.hypot(dx, dy);
       if (d < 6) T.target = T.hold ? T.target : null; else { vx = dx / d; vy = dy / d; }
     }
@@ -2989,8 +3079,9 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     let best = null, bd = 95;
     if (!T.area || T.area === "town") { for (const p of PLACES) { const d = Math.hypot(T.x - p.door[0], T.y - p.door[1]); if (d < bd) { bd = d; best = { kind: "place", p, label: p.act }; } } }
     else for (const sp of AREAS[T.area].spots()) { const d = Math.hypot(T.x - sp.x, T.y - sp.y); if (d < Math.min(bd, 80)) { bd = d; best = { kind: "spot", sp, label: sp.label }; } }
-    if (T.sheetOpen || T.eat) best = null;
-    for (const n of (T.sheetOpen || T.eat ? [] : curNPCs())) { const d = Math.hypot(T.x - n.x, T.y - n.y); if (d < Math.min(bd, 70)) { bd = d; best = { kind: "npc", n, label: n.name === "Fan" ? "Talk to fan" : "Talk to " + n.name }; } }
+    const busy = T.sheetOpen || T.eat || T.drill || T.phoneOpen;
+    if (busy) best = null;
+    for (const n of (busy ? [] : curNPCs())) { const d = Math.hypot(T.x - n.x, T.y - n.y); if (d < Math.min(bd, 70)) { bd = d; best = { kind: "npc", n, label: n.name === "Fan" ? "Talk to fan" : "Talk to " + n.name }; } }
     T.near = best;
     const key = best ? best.label : "";
     if (key !== T.nearKey) { T.nearKey = key; $("townAct").hidden = !best; if (best) $("townAct").textContent = best.label; hud(); }
@@ -3101,9 +3192,13 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       draw: drawSlidersInside
     },
     school: {
-      name: "Brother Rice", w: 600, h: 1360, spawn: [300, 1290],
+      name: "Brother Rice", w: 600, h: 2300, spawn: [70, 1150],
       solid(x, y) {
-        if (x < 22 || x > 578 || y < 236 || y > 1345) return true;
+        if (x < 22 || x > 578 || y < 236 || y > 2290) return true;
+        if (y > 1296 && y < 1334 && Math.abs(x - 300) > 46) return true;
+        if (y > 1334 && y < 1408) return true;
+        if (y > 1766 && y < 1804 && Math.abs(x - 300) > 46) return true;
+        if (CAF_TABLES.some(([tx, ty]) => Math.abs(x - tx) < 92 && y > ty - 24 && y < ty + 16)) return true;
         if (y > 630 && y < 676 && Math.abs(x - 300) > 46) return true;
         if (y > 676 && y < 770) return true;
         if (Math.abs(x - 300) < 90 && y < 206) return true;
@@ -3116,10 +3211,19 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         { id: "st3", name: "Classmate", lines: "student", sit: true, path: [[300, 398]], speed: 0, look: { skin: "#7a4a2e", shirt: "#f3efe6", num: "", hair: "#111" } },
         { id: "st4", name: "Classmate", lines: "student", sit: true, path: [[450, 508]], speed: 0, look: { skin: "#e2b08a", shirt: "#26324a", num: "", hair: "#3b2516", longHair: true } },
         { id: "gavinH", name: "Gavin", lines: "gavin", path: [[90, 1000], [510, 1000], [510, 1120], [90, 1120]], speed: 45, look: { skin: "#c99a72", shirt: "#c98258", num: "0", numColor: "#0a0a0a", hair: "#3b2416", shoes: "#050505" } },
-        { id: "st5", name: "Classmate", lines: "student", path: [[480, 880], [120, 880]], speed: 55, look: { skin: "#f1c7a3", shirt: "#ff6a13", num: "", hair: "#7a5230", shoes: "#f3efe6" } }
+        { id: "st5", name: "Classmate", lines: "student", path: [[480, 880], [120, 880]], speed: 55, look: { skin: "#f1c7a3", shirt: "#ff6a13", num: "", hair: "#7a5230", shoes: "#f3efe6" } },
+        { id: "lunch", name: "Lunch lady", lines: "lunch", path: [[300, 1360]], speed: 0, look: { skin: "#e2b08a", shirt: "#f3efe6", num: "", hair: "#6b6b6b", hat: true, shoes: "#111" } },
+        { id: "sammy", name: "Sammy Eyde III", lines: "sammy", sit: true, path: [[450, 1504]], speed: 0, look: { skin: "#f1c7a3", shirt: "#ff6a13", num: "3", numColor: "#0a0a0a", hair: "#3b2516" } },
+        { id: "caf1", name: "Classmate", lines: "student", sit: true, path: [[110, 1504]], speed: 0, look: { skin: "#7a4a2e", shirt: "#0a0a0a", num: "", hair: "#111" } },
+        { id: "caf2", name: "Classmate", lines: "student", sit: true, path: [[480, 1644]], speed: 0, look: { skin: "#d9a47a", shirt: "#26324a", num: "", hair: "#d8b067", longHair: true } },
+        { id: "daltonGym", name: "Dalton", lines: "dalton", path: [[300, 1960]], speed: 0, look: { skin: "#eec5a6", shirt: "#111", num: "MVPT", numColor: "#f3efe6", hair: "#33221a", big: true, shoes: "#f3efe6" } },
+        { id: "gym1", name: "Classmate", lines: "student", path: [[120, 2150], [480, 2150]], speed: 70, look: { skin: "#f1c7a3", shirt: "#9aa1aa", num: "", hair: "#7a5230", shoes: "#f3efe6" } }
       ],
       spots() {
-        const s = [{ x: 300, y: 1320, short: "Exit", label: "Leave school", run: exitArea }];
+        const s = [{ x: 52, y: 1150, short: "Exit", label: "Leave school", run: exitArea }];
+        if (!T.carry) s.push({ x: 300, y: 1428, short: "Lunch", label: "Get lunch", run: openLunch });
+        else for (const [tx, ty] of CAF_TABLES) if (!(tx === 450 && ty === 1530)) s.push({ x: tx, y: ty + 42, short: "Table", label: "Sit and eat lunch", run: () => startEating(tx, ty) });
+        if (!T.drill) s.push({ x: 300, y: 2005, short: "Gym", label: (T.cool.gym || 0) > 0 ? "Gym's over" : "Gym class with Dalton", run: startGym });
         s.push({ x: 300, y: 556, short: "Desk", label: (T.cool.class || 0) > 0 ? "Class is over" : "Sit down for class", run: startClass });
         s.push({ x: 110, y: 792, short: "Locker", label: "Open your locker", run: openLocker });
         s.push({ x: 480, y: 792, short: "Trophies", label: "Check the trophy case", run: () => openSheet("Trophy case", "Brother Rice Warriors trophies, a signed Koza #7 game ball from the 45-yard winner, and a photo of Dalton flexing.", [{ label: "Cool", onClick: closeSheet }]) });
@@ -3132,12 +3236,16 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   Object.assign(NPC_LINES, {
     chef: ["Koza Meal coming right up!", "Extra pickles? Say less.", "Get off the phone and eat, Kadin."],
     teacher: ["Kadin. Phone. Away.", "Pop quiz today, Mr. Koza.", "Kickers still need to pass algebra."],
-    student: ["Can I copy your homework?", "Nice kick Friday!", "Is Dalton really that big?"]
+    student: ["Can I copy your homework?", "Nice kick Friday!", "Is Dalton really that big?"],
+    lunch: ["Rectangle pizza today, sweetie.", "No phones in the lunch line, Kadin."],
+    sammy: ["BRO sit down, I saved you a seat", "I brought extra sliders, don't tell the lunch lady", "Dalton's subbing gym today. Pray for us.", "Check your phone, I sent you like 40 texts"]
   });
   const curNPCs = () => T.area && T.area !== "town" ? AREAS[T.area].npcs : NPCS;
 
   function enterArea(id, door) {
-    T.area = id; T.townDoor = door; T.target = null; T.carry = null; T.eat = null;
+    T.area = id; T.townDoor = door; T.target = null; T.carry = null; T.eat = null; T.drill = null;
+    T.bell = id === "school" && !((T.cool.class || 0) > 0) ? 25 : null;
+    if (T.bell) setTimeout(() => toast("<b>Late bell in 25s!</b> Get to Mr. Krysiak's class", 2400), 300);
     [T.x, T.y] = AREAS[id].spawn; T.back = true; T.nearKey = "";
     noise(0.2, 2400, 0.05);
     setPrompt(`${AREAS[id].name} · <b>tap to walk</b>`);
@@ -3146,6 +3254,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   function exitArea() {
     closeSheet();
     const d = T.townDoor || [800, 1030];
+    T.bell = null; T.drill = null;
     T.area = "town"; T.x = d[0]; T.y = d[1] + 30; T.back = false; T.target = null; T.carry = null; T.order = null; T.eat = null; T.nearKey = "";
     setPrompt("Kadin Town · <b>tap to walk</b>");
     hud();
@@ -3174,6 +3283,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     const m = T.eat.item; T.eat = null; T.sliders++;
     T.say = { text: pick(m.id === "koza" ? ["The Koza Meal hits different.", "Fueled up for State.", "Posting this meal."] : ["So good.", "Best in Michigan."]), t: 2.6 };
     addXP(m.xp, m.name);
+    onEvent("ate", m.id);
     if (m.id === "koza") { S.freshLegs = true; setTimeout(() => toast("<b>Fresh legs!</b> Kadin starts his next game ON FIRE", 2400), 1600); confetti(40); }
     hud();
   }
@@ -3181,6 +3291,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   function startClass() {
     if ((T.cool.class || 0) > 0) { T.say = { text: "Class is over. Go to practice.", t: 2 }; return; }
     T.x = 300; T.y = 540; T.back = true; T.target = null;
+    if (T.bell != null) { T.bell = null; addXP(10, "on time for class"); onEvent("ontime"); }
     const qs = QUIZ.slice().sort(() => Math.random() - 0.5).slice(0, 5);
     const teacher = AREAS.school.npcs[0];
     let i = 0, right = 0;
@@ -3192,6 +3303,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         T.talk = { npc: teacher, text: right >= 4 ? "Nice work, Kadin." : "Study more, less phone.", t: 3 };
         openSheet("Mr. Krysiak's class is over", `Grade: ${grade} · ${right} of 5 correct`, [{ label: "Leave class", onClick: closeSheet }]);
         addXP(right * 8 + (right === 5 ? 10 : 0), `class grade ${grade}`);
+        onEvent("grade", grade);
         return;
       }
       const [q, a] = qs[i], order = a.slice().sort(() => Math.random() - 0.5);
@@ -3214,6 +3326,22 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   }
 
   function drawFood(id, x, y, s = 1) {
+    if (id === "pizza") {
+      ctx.fillStyle = "#e2b93f"; ctx.fillRect(x - 12 * s, y - 10 * s, 24 * s, 16 * s);
+      ctx.fillStyle = "#c8261c"; for (const [dx, dy] of [[-6, -5], [4, -3], [-2, 2], [7, 2]]) { ctx.beginPath(); ctx.arc(x + dx * s, y + dy * s, 2.4 * s, 0, 7); ctx.fill(); }
+      return;
+    }
+    if (id === "chicken") {
+      ctx.fillStyle = "#d79a52"; ctx.beginPath(); ctx.ellipse(x, y - 6 * s, 11 * s, 6 * s, 0, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = "#c98a46"; ctx.fillRect(x - 11 * s, y - 6 * s, 22 * s, 5 * s); ctx.fillStyle = "#4cc46a"; ctx.fillRect(x - 11 * s, y - 1 * s, 22 * s, 2 * s);
+      ctx.fillStyle = "#d79a52"; ctx.fillRect(x - 11 * s, y + 1 * s, 22 * s, 4 * s);
+      return;
+    }
+    if (id === "milk") {
+      ctx.fillStyle = "#6b3f25"; ctx.fillRect(x - 6 * s, y - 14 * s, 12 * s, 18 * s);
+      ctx.fillStyle = "#f3efe6"; ctx.beginPath(); ctx.moveTo(x - 6 * s, y - 14 * s); ctx.lineTo(x, y - 20 * s); ctx.lineTo(x + 6 * s, y - 14 * s); ctx.fill();
+      return;
+    }
     if (id === "koza" || id === "slider") {
       const n = id === "koza" ? 3 : 1;
       for (let i = 0; i < n; i++) {
@@ -3326,7 +3454,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     ctx.fillStyle = "#3a2a1f"; ctx.fillRect(408, 676, 172, 90); ctx.fillStyle = "rgba(160,210,255,.4)"; ctx.fillRect(414, 682, 160, 78);
     for (let i = 0; i < 4; i++) { ctx.fillStyle = "#e2b93f"; ctx.fillRect(426 + i * 38, 718, 14, 24); ctx.fillRect(422 + i * 38, 712, 22, 8); ctx.fillRect(428 + i * 38, 742, 10, 8); }
     signBoard("BROTHER RICE WARRIORS", 300, 820, "#0a0a0a", "#ff6a13", 18);
-    ctx.fillStyle = "#3a3d46"; ctx.fillRect(250, 1320, 100, 40); ctx.fillStyle = "#ffd23f"; ctx.font = "13px Graduate, serif"; ctx.fillText("EXIT", 300, 1342);
+    drawSchoolExtra();
   }
   function drawDesk(dx, dy, mine) {
     ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(dx - 40, dy - 8, 88, 28);
@@ -3342,6 +3470,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     const items = [];
     if (T.area === "sliders") for (const [tx, ty] of SL_TABLES) items.push([ty, () => drawBooth(tx, ty)]);
     if (T.area === "school") for (const [dx, dy] of SC_DESKS) items.push([dy + 4, () => drawDesk(dx, dy, dx === 300 && dy === 520)]);
+    if (T.area === "school") for (const [tx, ty] of CAF_TABLES) items.push([ty, () => drawCafTable(tx, ty)]);
     for (const n of A.npcs) items.push([n.sit ? n.y + 30 : n.y, () => {
       if (n.sit) { ctx.save(); ctx.beginPath(); ctx.rect(n.x - 40, n.y - 120, 80, 100); ctx.clip(); }
       drawChibi(n.x, n.y, { ...n.look, walk: n.walk, moving: n.moving, back: n.back });
@@ -3350,8 +3479,11 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     const jj = J(), sitting = !!T.eat || (T.area === "school" && T.sheetOpen && Math.abs(T.x - 300) < 4 && Math.abs(T.y - 540) < 4);
     items.push([sitting ? T.y - 40 : T.y, () => {
       if (sitting) { ctx.save(); ctx.beginPath(); ctx.rect(T.x - 50, T.y - 140, 100, 100); ctx.clip(); }
+      const sq = T.drill && T.drill.squash > 0;
+      if (sq) { ctx.save(); ctx.translate(T.x, T.y); ctx.scale(1.25, 0.55); ctx.translate(-T.x, -T.y); }
       drawChibi(T.x, T.y, { skin: "#c99a72", shirt: jj.c[1], num: "7", numColor: jj.num, backName: "KOZA", hair: "#2b1d14", curls: true,
-        phone: !T.carry, chain: KZ.outfit.chain, shoes: CL().sw, walk: T.walk, moving: T.moving, back: T.back });
+        phone: !T.carry && !T.drill, chain: KZ.outfit.chain, shoes: CL().sw, walk: T.walk, moving: T.moving, back: T.back, cap: KZ.outfit.cap, pendant: KZ.outfit.pendant });
+      if (sq) ctx.restore();
       if (sitting) ctx.restore();
       if (T.carry) { ctx.fillStyle = "#5a3a22"; ctx.fillRect(T.x - 24, T.y - 56, 48, 8); drawFood(T.carry.id, T.x, T.y - 58, 0.7); }
     }]);
@@ -3368,8 +3500,333 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     if (T.talk) bubble(T.talk.text, clamp(T.talk.npc.x - 120, T.camX + 8, T.camX + W - 248), T.talk.npc.y - 160, 240, 20);
     if (T.say) bubble(T.say.text, clamp(T.x - 120, T.camX + 8, T.camX + W - 248), T.y - 160, 240, 20);
     if (T.order && !T.order.ready) bubble("Cooking...", 140, 250, 120, 18);
+    if (T.drill && T.drill.ring) {
+      ctx.strokeStyle = "rgba(255,210,63,.6)"; ctx.lineWidth = 4; ctx.setLineDash([6, 6]);
+      ctx.beginPath(); ctx.arc(T.x, T.y - 40, 26, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle = Math.abs(T.drill.ring.r - 26) <= 6 ? "#4cc46a" : "#f3efe6"; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(T.x, T.y - 40, Math.max(1, T.drill.ring.r), 0, 7); ctx.stroke();
+    }
     drawPings(T.x, T.y - 100);
     ctx.restore();
+    const banner = T.drill ? `PUSH-UPS ${T.drill.reps}/${T.drill.need} · ${Math.ceil(T.drill.time)}s` : T.bell != null ? `LATE BELL ${Math.ceil(T.bell)}s` : "";
+    if (banner) {
+      ctx.font = "24px Graduate, serif"; const bw = ctx.measureText(banner).width + 30;
+      ctx.fillStyle = T.bell != null && T.bell < 8 && !T.drill ? "rgba(200,38,28,.9)" : "rgba(10,12,17,.85)";
+      ctx.fillRect(W / 2 - bw / 2, 104, bw, 40);
+      ctx.fillStyle = "#ffd23f"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(banner, W / 2, 125);
+    }
+  }
+
+  // ---------- Kadin's phone: texts, missions, KozaGram ----------
+  const CONTACTS = {
+    dalton: { name: "Dalton (MVPT)", short: "Dalton", color: "#eec5a6", init: "D" },
+    sammy: { name: "Sammy Eyde III", short: "Sammy", color: "#ff6a13", init: "S3" },
+    gavin: { name: "Gavin", short: "Gavin", color: "#c98258", init: "G" },
+    noah: { name: "Noah Samano", short: "Noah", color: "#ffd23f", init: "14" },
+    krysiak: { name: "Mr. Krysiak", short: "Krysiak", color: "#9fd3ff", init: "K" },
+    mom: { name: "Mom", short: "Mom", color: "#e85d9a", init: "M" }
+  };
+  const BACKLOG = [
+    ["dalton", "Yesterday", "Kadin. You skipped stretching again."],
+    ["dalton", "Yesterday", "I saw your story. That was not stretching."],
+    ["dalton", "Yesterday", "Hamstrings don't stretch themselves, big dog."],
+    ["me", "Yesterday", "I stretched in the car"],
+    ["dalton", "Yesterday", "That's not a thing."],
+    ["dalton", "Yesterday", "Ice the knee tonight. 15 on, 15 off."],
+    ["dalton", "Yesterday", "And put the phone down while you ice it."],
+    ["sammy", "Yesterday", "bro that 45 yarder was CRAZY"],
+    ["sammy", "Yesterday", "the whole student section lost it"],
+    ["sammy", "Yesterday", "i was screaming so loud my voice is gone"],
+    ["me", "Yesterday", "it was light work"],
+    ["sammy", "Yesterday", "LIGHT WORK he says"],
+    ["sammy", "Yesterday", "ur literally on the news rn"],
+    ["sammy", "Yesterday", "also gavin tried to kick in the parking lot after"],
+    ["sammy", "Yesterday", "he hit a car"],
+    ["sammy", "Yesterday", "his own car"],
+    ["gavin", "Yesterday", "yo kadin how do u kick"],
+    ["gavin", "Yesterday", "like the actual leg part"],
+    ["mom", "Yesterday", "So proud of you! Dinner at 7. Phone off at the table."],
+    ["krysiak", "Mon", "Mr. Koza, the quiz is on Friday. Please study. Not your phone."],
+    ["dalton", "Today", "Morning. Did you eat breakfast?"],
+    ["dalton", "Today", "A Savvy Slider is not breakfast."],
+    ["dalton", "Today", "Ok one Koza Meal is fine. ONE."],
+    ["sammy", "Today", "pull up to savvys after school"],
+    ["sammy", "Today", "im starving"],
+    ["sammy", "Today", "u got me right?"]
+  ];
+  const AMBIENT = {
+    dalton: ["Hydrate. Now.", "Phone down. Knees up.", "Leg day is not optional.", "You stretching or scrolling? Be honest.", "MVPT is open late tonight. Come get reps.",
+      "Your hip flexors are crying, Kadin.", "I can hear you not stretching.", "Protein. Water. Sleep. In that order.", "Did you ice? Don't lie to me.",
+      "Kickers win games. Lazy kickers lose them.", "15 minutes of mobility. Then you can post.", "I'm proud of you. Now go do your band work.",
+      "Sleep 8 hours tonight. Not 8 hours of TikTok.", "Saw your form in that video. Plant foot was off.", "Who's my best patient? You. Act like it."],
+    sammy: ["yo whats good", "bro come to savvys", "gavin just asked me how to hold a football", "we gotta run it back friday", "u see the comments on ur post lmaooo",
+      "im not saying ur the best kicker in michigan but ur the best kicker in michigan", "bro dalton texted ME to tell u to stretch", "send ur schedule",
+      "catholic central fans are crying in the comments", "lunch tomorrow? im bringing sliders", "krysiak gave me a C on that quiz i hate it here",
+      "bro what if we just got a koza meal rn", "gavin made a kick in practice. into the bleachers. backwards", "ur followers jumped again whats ur secret",
+      "on god ur gonna be on ESPN", "W kadin", "who was that at the autograph table", "im running a fan page for u now", "noah said his punts are harder than ur kicks lol",
+      "we eating good tonight"],
+    gavin: ["yo can i borrow ur cleats", "i think i figured out kicking", "nvm", "do u have a charger"],
+    mom: ["Be home by 10.", "Proud of you!", "Did you eat?"],
+    noah: ["bro i just pinned one at the 2", "punter gang", "coffin corner > field goals"]
+  };
+  const REPLIES = {
+    dalton: [["On my way", "Good. Bring water."], ["Phone's down I swear", "I can see you typing, Kadin."], ["bet", "Lock in."], ["I stretched", "Show me."]],
+    sammy: [["W", "W fr"], ["say less", "bet bet"], ["lmaooo", "im actually dead"], ["pull up", "omw"]],
+    gavin: [["practice more", "how"], ["no", "ok"]],
+    mom: [["Love you", "Love you too! Phone off at dinner."], ["Ok", "Thank you!"]],
+    noah: [["field goals > punts", "we'll see"], ["W", "W"]],
+    krysiak: [["Yes sir", "Thank you, Mr. Koza."], ["I studied", "We'll see on Friday."]]
+  };
+  const MISSIONS = {
+    sammy_meal: { from: "sammy", text: "MISSION: pull up to savvys and get a koza meal. i'll venmo u (i won't)", label: "Eat a Koza Meal at Savvy Sliders", xp: 30, done: "W koza meal. u the goat" },
+    dalton_gym: { from: "dalton", text: "MISSION: I'm subbing gym at Rice today. Get 8 reps in my workout.", label: "Get 8 reps in Dalton's gym class", xp: 30, done: "That's what I'm talking about. Light weight." },
+    sammy_45: { from: "sammy", text: "MISSION: hit a 45+ yarder. the fan page needs content", label: "Make a 45-yard field goal or longer", xp: 40, done: "BRO 45+ AGAIN. posting it" },
+    krysiak_a: { from: "krysiak", text: "Mr. Koza, get an A on today's quiz and I'll stop texting you.", label: "Get an A in Mr. Krysiak's class", xp: 40, done: "An A. I'm genuinely impressed." },
+    dalton_pt: { from: "dalton", text: "MISSION: Come to MVPT and get cleared. No excuses.", label: "Get cleared at MVPT", xp: 25, done: "Cleared. Now go win State." },
+    sammy_autos: { from: "sammy", text: "MISSION: sign 10 autographs in one round. ur famous act like it", label: "Sign 10 autographs in one round", xp: 30, done: "10 autographs?? celebrity behavior" },
+    sammy_ontime: { from: "sammy", text: "MISSION: make it to krysiak's class before the late bell for once lol", label: "Beat the late bell to class", xp: 25, done: "on time?? who are u" },
+    noah_pin: { from: "noah", text: "Bet you can't pin 3 inside the 20 as me. Pick me in the kicker screen.", label: "Pin 3 punts inside the 20 as Noah", xp: 30, done: "ok ok punter gang respects u" }
+  };
+  const MISSION_ORDER = ["sammy_meal", "dalton_gym", "sammy_45", "krysiak_a", "sammy_ontime", "dalton_pt", "sammy_autos", "noah_pin"];
+  const PH = { msgs: [], unread: {}, missions: {}, followers: 12480, posts: [], ambientUsed: {} };
+  try { const d = JSON.parse(localStorage.getItem("kk-phone") || "null"); if (d && d.msgs) Object.assign(PH, d); } catch (e) {}
+  if (!PH.msgs.length) {
+    for (const [from, when, text] of BACKLOG) PH.msgs.push(from === "me" ? { th: lastThread(), me: true, text, when } : { th: from, text, when });
+    PH.unread = { dalton: 9, sammy: 11, gavin: 2, mom: 1, krysiak: 1 };
+    PH.posts = [{ text: "45-yard walk-off winner. Koza Field was LOUD.", likes: 18204 }, { text: "Koza Meal >>> everything", likes: 6311 }];
+    PH.missions = { sammy_meal: "active", dalton_gym: "active" };
+  }
+  function lastThread() { for (let i = PH.msgs.length - 1; i >= 0; i--) if (!PH.msgs[i].me) return PH.msgs[i].th; return "sammy"; }
+  const savePH = () => { try { if (PH.msgs.length > 260) PH.msgs.splice(0, PH.msgs.length - 260); localStorage.setItem("kk-phone", JSON.stringify(PH)); } catch (e) {} };
+  const unreadTotal = () => Object.values(PH.unread).reduce((a, b) => a + b, 0);
+  let phoneView = { tab: "msgs", thread: null };
+
+  function textFrom(th, text, extra = {}) {
+    PH.msgs.push({ th, text, when: "Now", ...extra });
+    const open = !$("phone").hidden && phoneView.tab === "msgs" && phoneView.thread === th;
+    if (!open) PH.unread[th] = (PH.unread[th] || 0) + 1;
+    savePH(); updateBadges();
+    if (open) renderPhone();
+    else {
+      const t = `${CONTACTS[th].short}: ${text}`;
+      pings.push({ text: t.length > 34 ? t.slice(0, 33) + "…" : t, t: 0, dx: (Math.random() - 0.5) * 40 });
+      if (pings.length > 3) pings.shift();
+      tone(1568, 0.08, 0.05, "triangle"); setTimeout(() => tone(2093, 0.1, 0.04, "triangle"), 90);
+    }
+  }
+  function textBurst(th, lines, gap = 1100) { lines.forEach((l, i) => setTimeout(() => textFrom(th, l), i * gap)); }
+  function giveMission(id) {
+    if (PH.missions[id]) return;
+    PH.missions[id] = "active"; savePH();
+    textFrom(MISSIONS[id].from, MISSIONS[id].text, { mission: id });
+  }
+  function completeMission(id) {
+    if (PH.missions[id] !== "active") return;
+    PH.missions[id] = "done"; savePH();
+    const m = MISSIONS[id];
+    setTimeout(() => { textFrom(m.from, m.done); addXP(m.xp, "mission: " + m.label); }, 900);
+    const next = MISSION_ORDER.find(k => !PH.missions[k]);
+    if (next) setTimeout(() => giveMission(next), 4500);
+  }
+  function post(text) { PH.posts.unshift({ text, likes: 500 + Math.floor(Math.random() * 4000) }); PH.followers += 40 + Math.floor(Math.random() * 300); if (PH.posts.length > 30) PH.posts.pop(); savePH(); }
+  // the world texts Kadin back
+  function onEvent(type, v) {
+    if (type === "make") {
+      if (v >= 45) completeMission("sammy_45");
+      if (Math.random() < 0.35) textFrom(pick(["sammy", "dalton"]), pick(v >= 45 ? ["BRO " + v + " YARDS", "that one was from the parking lot", "Plant foot looked perfect on that " + v] : ["W", "money", "automatic fr", "Good kick. Now stretch."]));
+      if (v >= 45) post(`${v}-yard field goal at Koza Field`);
+    } else if (type === "miss") {
+      if (Math.random() < 0.3) textFrom(pick(["sammy", "dalton", "gavin"]), pick(["bro what was that", "Plant foot. Again.", "even i coulda made that", "shake it off big dog"]));
+    } else if (type === "win") { textBurst("sammy", ["WE WON", `${v} is crying rn`, "savvys to celebrate?"]); post(`W over ${v}`); }
+    else if (type === "loss") textBurst("sammy", ["it's ok bro", "we run it back next week"]);
+    else if (type === "ate") {
+      if (v === "koza") { completeMission("sammy_meal"); textFrom("sammy", pick(["did u get me one", "u ate a koza meal without me??", "save me a fry"])); textFrom("dalton", "One Koza Meal. ONE. I'm watching."); post("Koza Meal >>>"); }
+      else if (Math.random() < 0.4) textFrom("dalton", "That better have had protein in it.");
+    } else if (type === "cleared") { completeMission("dalton_pt"); textBurst("dalton", ["Cleared. Proud of you.", "Now go kick something."]); post("Cleared by @dalton.mvpt"); }
+    else if (type === "grade") { if (v === "A") completeMission("krysiak_a"); textFrom("krysiak", v === "A" ? "Excellent work today, Mr. Koza." : `A ${v}. We need to talk about the phone.`); if (Math.random() < 0.6) textFrom("sammy", v === "A" ? "an A??? who are u" : "krysiak cooked u lol"); }
+    else if (type === "signed") { if (v >= 10) completeMission("sammy_autos"); if (v) textFrom("sammy", `${v} autographs lmao ur actually famous`); }
+    else if (type === "gym") { if (v >= 8) completeMission("dalton_gym"); textFrom("dalton", v >= 8 ? `${v} reps. Light weight, baby!` : `${v} reps? I've seen Gavin do more.`); }
+    else if (type === "ontime") completeMission("sammy_ontime");
+    else if (type === "tardy") textFrom("krysiak", "Tardy again, Mr. Koza.");
+    else if (type === "punts") { if (v >= 3) completeMission("noah_pin"); textFrom("noah", v >= 3 ? "ok that was clean" : "u need more hang time"); }
+  }
+  function phoneTick(dt) {
+    if (S.mode === "intro") return;
+    S.textT = (S.textT ?? 14) - dt;
+    if (S.textT <= 0) {
+      S.textT = 18 + Math.random() * 20;
+      const th = Math.random() < 0.45 ? "sammy" : Math.random() < 0.8 ? "dalton" : pick(["gavin", "mom", "noah"]);
+      const pool = AMBIENT[th], used = PH.ambientUsed[th] || 0;
+      textFrom(th, pool[used % pool.length]); PH.ambientUsed[th] = used + 1;
+      if (!MISSION_ORDER.some(k => PH.missions[k] === "active")) { const next = MISSION_ORDER.find(k => !PH.missions[k]); if (next) giveMission(next); }
+    }
+  }
+  function updateBadges() {
+    const n = unreadTotal();
+    for (const id of ["phBadge1", "phBadge2"]) { const el = $(id); el.textContent = n > 99 ? "99+" : n; el.hidden = !n; }
+  }
+  function openPhone() {
+    audio(); $("phone").hidden = false; T.phoneOpen = true; T.target = null; T.hold = false;
+    phoneView = { tab: "msgs", thread: null }; renderPhone();
+  }
+  function closePhone() { $("phone").hidden = true; T.phoneOpen = false; }
+  function renderPhone() {
+    const body = $("phBody"), reply = $("phReply"); body.textContent = ""; reply.textContent = ""; reply.hidden = true;
+    const now = new Date(); $("phTime").textContent = now.getHours() % 12 + 1 + ":" + String(now.getMinutes()).padStart(2, "0");
+    document.querySelectorAll(".ph-tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === phoneView.tab));
+    const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+    const esc = t => t.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    if (phoneView.tab === "msgs" && !phoneView.thread) {
+      $("phTitle").textContent = "Messages";
+      const order = Object.keys(CONTACTS).map(th => { let last = -1; for (let i = PH.msgs.length - 1; i >= 0; i--) if (PH.msgs[i].th === th) { last = i; break; } return [th, last]; })
+        .filter(x => x[1] >= 0).sort((a, b) => b[1] - a[1]);
+      for (const [th, li] of order) {
+        const c = CONTACTS[th], m = PH.msgs[li], row = el("button", "thr");
+        row.type = "button";
+        row.innerHTML = `<span class="av" style="background:${c.color}">${c.init}</span><span class="thr-main"><b>${c.name}</b><span>${m.me ? "You: " : ""}${esc(m.text)}</span></span>` + (PH.unread[th] ? `<span class="badge">${PH.unread[th]}</span>` : `<span class="when">${m.when}</span>`);
+        row.addEventListener("click", () => { phoneView.thread = th; PH.unread[th] = 0; savePH(); updateBadges(); renderPhone(); });
+        body.appendChild(row);
+      }
+    } else if (phoneView.tab === "msgs") {
+      const th = phoneView.thread, c = CONTACTS[th];
+      $("phTitle").textContent = c.name;
+      const back = el("button", "ph-back", "‹ Messages"); back.type = "button";
+      back.addEventListener("click", () => { phoneView.thread = null; renderPhone(); });
+      body.appendChild(back);
+      let lastWhen = "";
+      for (const m of PH.msgs.filter(m => m.th === th)) {
+        if (m.when !== lastWhen) { body.appendChild(el("div", "ph-day", m.when)); lastWhen = m.when; }
+        const b = el("div", "msg " + (m.me ? "me" : "them") + (m.mission ? " mission" : ""), esc(m.text));
+        if (m.mission) b.appendChild(el("span", "msg-tag", PH.missions[m.mission] === "done" ? "Mission complete" : "New mission"));
+        body.appendChild(b);
+      }
+      const last = PH.msgs.filter(m => m.th === th).pop();
+      if (last && !last.me && REPLIES[th]) {
+        reply.hidden = false;
+        for (const [say, resp] of REPLIES[th]) {
+          const chip = el("button", "chip", esc(say)); chip.type = "button";
+          chip.addEventListener("click", () => {
+            PH.msgs.push({ th, me: true, text: say, when: "Now" }); savePH(); renderPhone(); sfx.tick();
+            setTimeout(() => textFrom(th, resp), 1100 + Math.random() * 900);
+          });
+          reply.appendChild(chip);
+        }
+      }
+      requestAnimationFrame(() => { body.scrollTop = body.scrollHeight; });
+    } else if (phoneView.tab === "missions") {
+      $("phTitle").textContent = "Missions";
+      const ids = MISSION_ORDER.filter(k => PH.missions[k]);
+      if (!ids.length) body.appendChild(el("p", "ph-empty", "No missions yet. Check your texts."));
+      for (const k of ids) {
+        const m = MISSIONS[k], done = PH.missions[k] === "done";
+        body.appendChild(el("div", "mis" + (done ? " done" : ""), `<b>${done ? "✓ " : ""}${m.label}</b><span>From ${CONTACTS[m.from].short} · +${m.xp} XP</span>`));
+      }
+    } else {
+      $("phTitle").textContent = "KozaGram";
+      body.appendChild(el("div", "kg-head", `<span class="av" style="background:#ff6a13">K7</span><span><b>kadin.koza</b><span>${PH.followers.toLocaleString()} followers · ${PH.posts.length} posts</span></span>`));
+      for (const p of PH.posts) body.appendChild(el("div", "kg-post", `<b>${esc(p.text)}</b><span>♥ ${p.likes.toLocaleString()} · Dalton: "stretch." · Sammy: "W"</span>`));
+    }
+  }
+  document.querySelectorAll(".ph-tabs button").forEach(b => b.addEventListener("click", () => { phoneView = { tab: b.dataset.tab, thread: null }; renderPhone(); }));
+  $("phClose").addEventListener("click", closePhone);
+  for (const id of ["phoneBtn", "phoneTitleBtn"]) $(id).addEventListener("click", openPhone);
+  updateBadges();
+
+  // ---------- more Brother Rice: lunch, gym with Dalton, the late bell ----------
+  const CAF_TABLES = [[150, 1530], [450, 1530], [150, 1670], [450, 1670]];
+  const LUNCH = [
+    { id: "pizza", name: "Pizza slice", sub: "Rectangle pizza. A classic. +5 XP", xp: 5 },
+    { id: "chicken", name: "Chicken sandwich", sub: "Spicy. +6 XP", xp: 6 },
+    { id: "milk", name: "Chocolate milk", sub: "+3 XP", xp: 3 },
+    { id: "slider", name: "Smuggled Savvy Slider", sub: "Sammy brought extras. +10 XP", xp: 10 }
+  ];
+  function openLunch() {
+    openSheet("Lunch line", "What do you want, hon?", LUNCH.map(m => ({ label: m.name, sub: m.sub, onClick: () => { closeSheet(); T.carry = m; sfx.tick(); } })));
+  }
+  function startGym() {
+    if ((T.cool.gym || 0) > 0) { T.say = { text: "Gym's over. Dalton said rest day.", t: 2 }; return; }
+    T.x = 300; T.y = 2050; T.back = true; T.target = null;
+    T.drill = { reps: 0, perfect: 0, need: 10, time: 22, ring: null, wait: 1.2, squash: 0, said: 0 };
+    T.talk = { npc: AREAS.school.npcs.find(n => n.id === "daltonGym"), text: "I'm your sub today. Push-ups. Tap when the ring hits. PHONE DOWN.", t: 3.2 };
+    setPrompt("Tap when the ring hits <b>Kadin</b>");
+  }
+  function drillTap() {
+    const d = T.drill; if (!d || !d.ring) return;
+    const off = Math.abs(d.ring.r - 26);
+    const coach = AREAS.school.npcs.find(n => n.id === "daltonGym");
+    if (off <= 6) { d.reps++; d.perfect++; d.squash = 0.35; tone(880, 0.1, 0.1, "triangle"); }
+    else if (off <= 14) { d.reps++; d.squash = 0.35; sfx.tick(); }
+    else { tone(200, 0.2, 0.06, "sawtooth", 0.7); T.talk = { npc: coach, text: pick(["Control it!", "That's not a push-up.", "Phone DOWN, Kadin."]), t: 1.8 }; }
+    if (off <= 14 && Math.random() < 0.35) T.talk = { npc: coach, text: pick(["Light weight!", "Again!", "That's my guy!", "Chest to the floor!"]), t: 1.6 };
+    d.ring = null; d.wait = 0.45;
+    if (d.reps >= d.need) endGym();
+  }
+  function endGym() {
+    const d = T.drill; T.drill = null; T.cool.gym = 40;
+    addXP(d.reps * 4 + d.perfect * 2, `gym class · ${d.reps} reps`);
+    onEvent("gym", d.reps);
+    setPrompt(`${AREAS.school.name} · <b>tap to walk</b>`);
+  }
+  function gymUpdate(dt) {
+    const d = T.drill; if (!d) return;
+    d.time -= dt; d.squash = Math.max(0, d.squash - dt);
+    if (d.time <= 0) { endGym(); return; }
+    if (d.ring) { d.ring.r -= d.ring.speed * dt; if (d.ring.r < 6) { d.ring = null; d.wait = 0.4; } }
+    else if ((d.wait -= dt) <= 0) d.ring = { r: 90, speed: 95 + d.reps * 6 };
+  }
+  function bellUpdate(dt) {
+    if (T.bell == null) return;
+    T.bell -= dt;
+    if (T.bell <= 0) { T.bell = null; toast("<b>Tardy!</b> Mr. Krysiak saw that", 2000); onEvent("tardy"); tone(660, 0.6, 0.12, "square"); }
+  }
+  function drawSchoolExtra() {
+    const A = AREAS.school;
+    // exit on the left wall of the hallway
+    ctx.fillStyle = "#3a3d46"; ctx.fillRect(0, 1110, 26, 80); ctx.fillStyle = "#ffd23f"; ctx.font = "11px Graduate, serif"; ctx.save(); ctx.translate(14, 1150); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillText("EXIT", 0, 0); ctx.restore();
+    // wall + doorway into the cafeteria
+    ctx.fillStyle = "#8d9097"; ctx.fillRect(0, 1300, 254, 30); ctx.fillRect(346, 1300, 254, 30);
+    signBoard("CAFETERIA", 300, 1290, "#0a0a0a", "#ffd23f", 14);
+    // cafeteria
+    ctx.fillStyle = "#d8d2c2"; ctx.fillRect(0, 1330, A.w, 440);
+    for (let y = 1330; y < 1770; y += 34) for (let x = (y / 34) % 2 ? 0 : 17; x < A.w; x += 34) { ctx.fillStyle = "rgba(0,0,0,.05)"; ctx.fillRect(x, y, 17, 17); }
+    ctx.fillStyle = "#b9bdc4"; ctx.fillRect(40, 1338, 520, 60); ctx.fillStyle = "#8d9097"; ctx.fillRect(40, 1390, 520, 12);
+    for (let i = 0; i < 6; i++) {   // food trays behind the glass
+      ctx.fillStyle = "#7a8089"; ctx.fillRect(60 + i * 84, 1346, 70, 36);
+      ctx.fillStyle = ["#e2b93f", "#c98a46", "#d9a14a", "#4cc46a", "#f3efe6", "#c8261c"][i]; ctx.fillRect(66 + i * 84, 1352, 58, 24);
+    }
+    ctx.fillStyle = "rgba(180,220,255,.35)"; ctx.fillRect(40, 1338, 520, 14);
+    signBoard("LUNCH", 300, 1336, "#c8261c", "#f3efe6", 13);
+    // wall + doorway into the gym
+    ctx.fillStyle = "#8d9097"; ctx.fillRect(0, 1770, 254, 30); ctx.fillRect(346, 1770, 254, 30);
+    signBoard("GYM", 300, 1760, "#0a0a0a", "#ff6a13", 14);
+    // gym floor
+    ctx.fillStyle = "#d9a85c"; ctx.fillRect(0, 1800, A.w, 500);
+    ctx.strokeStyle = "rgba(0,0,0,.08)"; ctx.lineWidth = 2; for (let x = 0; x < A.w; x += 18) { ctx.beginPath(); ctx.moveTo(x, 1800); ctx.lineTo(x, 2300); ctx.stroke(); }
+    ctx.strokeStyle = "#f3efe6"; ctx.lineWidth = 4;
+    ctx.strokeRect(40, 1830, 520, 440); ctx.beginPath(); ctx.moveTo(40, 2050); ctx.lineTo(560, 2050); ctx.stroke();
+    ctx.beginPath(); ctx.arc(300, 2050, 60, 0, 7); ctx.stroke();
+    ctx.strokeStyle = "#ff6a13"; ctx.beginPath(); ctx.arc(300, 1830, 110, 0, Math.PI); ctx.stroke(); ctx.beginPath(); ctx.arc(300, 2270, 110, Math.PI, 0); ctx.stroke();
+    for (const hy of [1812, 2276]) { ctx.fillStyle = "#f3efe6"; ctx.fillRect(270, hy - 6, 60, 10); ctx.strokeStyle = "#ff3b1f"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(300, hy + (hy < 2000 ? 14 : -14), 12, 0, 7); ctx.stroke(); }
+    ctx.fillStyle = "#0a0a0a"; ctx.font = "26px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.globalAlpha = 0.25; ctx.fillText("WARRIORS", 300, 2050); ctx.globalAlpha = 1;
+  }
+  function drawCafTable(tx, ty) {
+    ctx.fillStyle = "rgba(0,0,0,.2)"; ctx.fillRect(tx - 84, ty - 8, 176, 26);
+    ctx.fillStyle = "#3a5a8a"; ctx.fillRect(tx - 88, ty - 20, 176, 32);
+    ctx.fillStyle = "rgba(255,255,255,.15)"; ctx.fillRect(tx - 84, ty - 16, 168, 5);
+  }
+
+  // ---------- more chrome hearts accessories ----------
+  function drawCross(x, y, s) {
+    ctx.fillStyle = chrome(x - 5 * s, y, x + 5 * s, y + 12 * s);
+    ctx.fillRect(x - 1.4 * s, y, 2.8 * s, 12 * s); ctx.fillRect(x - 4.5 * s, y + 3 * s, 9 * s, 2.6 * s);
+  }
+  function drawHandBling(x, y, s = 1) {   // cross bracelet + heart rings on a front-view hand
+    if (KZ.outfit.bracelets) {
+      ctx.strokeStyle = chrome(x - 14 * s, y, x + 14 * s, y); ctx.lineWidth = 4 * s;
+      ctx.beginPath(); ctx.ellipse(x, y - 14 * s, 12 * s, 5 * s, 0, 0, 7); ctx.stroke();
+      drawCross(x + 9 * s, y - 13 * s, 0.55 * s);
+    }
+    if (KZ.outfit.rings) for (const dx of [-6, 1, 8]) { ctx.fillStyle = chrome(x + dx * s - 3, y, x + dx * s + 3, y + 4); ctx.beginPath(); ctx.arc(x + dx * s, y + 4 * s, 2.6 * s, 0, 7); ctx.fill(); }
   }
 
   function drawChibi(x, y, o) {
@@ -3398,6 +3855,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       if (o.back && o.backName) { ctx.font = "6px Graduate, serif"; ctx.fillText(o.backName, x, y - 48); }
     }
     if (o.chain && !o.back) { ctx.strokeStyle = "#dfe3e8"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y - 54, 7, 0.2, Math.PI - 0.2); ctx.stroke(); }
+    if (o.pendant && !o.back) { ctx.fillStyle = "#eef1f5"; ctx.beginPath(); ctx.arc(x, y - 46.5, 2.6, 0, 7); ctx.fill(); }
     // head
     if (o.longHair) { ctx.fillStyle = o.hair; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 14, y - 76, 28, 34, 10) : ctx.rect(x - 14, y - 76, 28, 34); ctx.fill(); }
     ctx.fillStyle = o.skin; ctx.beginPath(); ctx.arc(x, y - 66, 13, 0, 7); ctx.fill();
@@ -3407,6 +3865,11 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       for (const [dx, dy] of cs) { ctx.beginPath(); ctx.arc(x + dx, y + dy, 5.5, 0, 7); ctx.fill(); }
     } else if (o.back) { ctx.beginPath(); ctx.arc(x, y - 67, 13, 0, 7); ctx.fill(); }
     else { ctx.beginPath(); ctx.arc(x, y - 70, 13, Math.PI, 0); ctx.fill(); }
+    if (o.cap) {
+      ctx.fillStyle = "#0b0b0d"; ctx.beginPath(); ctx.arc(x, y - 71, 14.5, Math.PI, 0); ctx.fill(); ctx.fillRect(x - 14.5, y - 73, 29, 5);
+      if (!o.back) { ctx.beginPath(); ctx.ellipse(x, y - 69, 16, 4, 0, 0, Math.PI); ctx.fill(); }
+      ctx.fillStyle = "#dfe3e8"; ctx.beginPath(); ctx.arc(x, y - 79, 2.6, 0, 7); ctx.fill();
+    }
     ctx.strokeStyle = "rgba(0,0,0,.28)"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y - 66, 13, 0, 7); ctx.stroke();
     if (o.hat) {
       ctx.fillStyle = "#f3efe6"; ctx.fillRect(x - 11, y - 84, 22, 10);
@@ -3547,7 +4010,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     for (const n of NPCS) items.push([n.y, () => drawChibi(n.x, n.y, { ...n.look, walk: n.walk, moving: n.moving, back: n.back })]);
     const jj = J();
     items.push([T.y, () => drawChibi(T.x, T.y, { skin: "#c99a72", shirt: jj.c[1], num: "7", numColor: jj.num, backName: "KOZA", hair: "#2b1d14", curls: true,
-      phone: true, chain: KZ.outfit.chain, shoes: CL().sw, walk: T.walk, moving: T.moving, back: T.back })]);
+      phone: true, chain: KZ.outfit.chain, shoes: CL().sw, walk: T.walk, moving: T.moving, back: T.back, cap: KZ.outfit.cap, pendant: KZ.outfit.pendant })]);
     items.sort((a, b) => a[0] - b[0]).forEach(it => it[1]());
     // highlight what you can use
     if (T.near) {
@@ -3571,11 +4034,12 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     S.flash = Math.max(0, S.flash - dt);
     S.pingT = (S.pingT ?? 1.5) - dt;
     if (S.pingT <= 0) {
-      S.pingT = 2.2 + Math.random() * 2;
+      S.pingT = 5 + Math.random() * 4;
       if (phoneOn() && pings.length < 3) pings.push({ text: pick(PINGS), t: 0, dx: (Math.random() - 0.5) * 60 });
     }
     for (const p of pings) p.t += dt;
     while (pings.length && pings[0].t > 2.4) pings.shift();
+    phoneTick(dt);
     if (!phoneOn()) pings.length = 0;
     Object.assign(camT, CAM0);
     if (S.mode === "intro") introUpdate(dt);
@@ -3647,6 +4111,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   let puntBest = 0;
   try { puntBest = +localStorage.getItem("kk-puntbest") || 0; } catch (e) {}
   function puntOver() {
+    onEvent("punts", S.pinned || 0);
     S.mode = "over"; S.phase = "idle"; S.lastMode = "kick"; hideBanner();
     if (S.score > puntBest) { puntBest = S.score; try { localStorage.setItem("kk-puntbest", puntBest); } catch (e) {} }
     $("overThe").textContent = "Punt challenge · Noah Samano";
