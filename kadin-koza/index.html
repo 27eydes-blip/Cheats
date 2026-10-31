@@ -715,6 +715,9 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     const st = stageEl.getBoundingClientRect();
     if (!st.width || !st.height) return;
     const fw = Math.floor(Math.min(st.width, st.height * 0.75)), fh = Math.floor(st.height);
+    const dpr0 = window.devicePixelRatio || 1;
+    if (fit.last && Math.abs(fit.last[0] - fw) < 2 && Math.abs(fit.last[1] - fh) < 2 && fit.last[2] === dpr0) return;
+    fit.last = [fw, fh, dpr0];
     frameEl.style.width = fw + "px";
     VH = Math.max(H, Math.round(W * fh / fw)); OY = (VH - H) / 2;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1247,7 +1250,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   function startGame(level) {
     audio();
     Object.assign(S, { mode: "game", lastMode: "kick", level, punt: level === -2, puntNo: 0, kickIdx: 0, streak: 0, score: 0, makes: 0, att: 0, misses: 0, long: 0 });
-    const fresh = S.freshLegs && !CHARS[S.char].bad;
+    const fresh = S.freshLegs && S.char === "kadin" && level !== -2;
     if (fresh) { S.streak = 2; S.freshLegs = false; }
     const L = lvl();
     if (L) {   // distances climb through the game
@@ -3182,6 +3185,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     const teacher = AREAS.school.npcs[0];
     let i = 0, right = 0;
     const ask = () => {
+      if (S.mode !== "town" || T.area !== "school") { T.sheetOpen = false; return; }
       if (i >= qs.length) {
         const grade = ["F", "D", "D", "C", "B", "A"][right];
         T.cool.class = 40;
