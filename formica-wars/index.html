@@ -2022,9 +2022,9 @@ function newGame(sis, demo) {
   });
   G = { t: 0, ants: [], foods: [], shots: [], parts: [], decals: [], cols, demo, over: false,
         log: [], logDirty: true, foodTimer: 5, pings: [], lastWarn: -99, toastUntil: 0, toastMsg: '', toastKind: '', evap: 0, flights: [], beasts: [], beastT: 140, pits: [],
-        rain: { k: 0, on: false, next: rnd(200, 300), end: 0, flashAt: -1e9 }, hist: [], histT: 0, follow: null, ftxt: [], wasps: [], wear: new Float32Array(WW * WH), wearDirty: true, lizT: rnd(420, 520), seasonI: 0, bridges: [], terrT: 0, terrDirty: true,
+        rain: { k: 0, on: false, next: rnd(200, 300), end: 0, flashAt: -1e9 }, hist: [], histT: 0, follow: null, ftxt: [], wasps: [], bees: [], wear: new Float32Array(WW * WH), wearDirty: true, lizT: rnd(420, 520), seasonI: 0, bridges: [], terrT: 0, terrDirty: true,
         herds: [], towner: new Int8Array(FBW * FBH).fill(-1), terr: cols.map(() => new Float32Array(FBW * FBH)) };
-  for (const c of cols) { c.scary = !!SPEC(c).morph.scary; c.stealth = !!SPEC(c).mods.stealth; c.eyeP = []; c.gasP = []; c.cracks = Array.from({ length: 7 }, (_, i) => { const a = i / 7 * TAU + rnd(-.3, .3), pts = [[Math.cos(a) * 14, Math.sin(a) * 14]]; let r = 14, aa = a; for (let k = 0; k < 4; k++) { r += rnd(10, 16); aa += rnd(-.35, .35); pts.push([Math.cos(aa) * r, Math.sin(aa) * r]); } return pts; }); c.spdc = TYPES.map((_, t) => antStats(c, t).spd); c.dotCol = mix(c.ui, '#1a1008', .45); c.rgb = hex(c.ui); c.land = 0; c.myHerds = []; c.bp = {}; c.raft = !!SPEC(c).mods.raft; c.bridge = !!SPEC(c).mods.bridge; }
+  for (const c of cols) { c.scary = !!SPEC(c).morph.scary; c.honeyBees = !!SPEC(c).morph.honey; c.stealth = !!SPEC(c).mods.stealth; c.eyeP = []; c.gasP = []; c.cracks = Array.from({ length: 7 }, (_, i) => { const a = i / 7 * TAU + rnd(-.3, .3), pts = [[Math.cos(a) * 14, Math.sin(a) * 14]]; let r = 14, aa = a; for (let k = 0; k < 4; k++) { r += rnd(10, 16); aa += rnd(-.35, .35); pts.push([Math.cos(aa) * r, Math.sin(aa) * r]); } return pts; }); c.spdc = TYPES.map((_, t) => antStats(c, t).spd); c.dotCol = mix(c.ui, '#1a1008', .45); c.rgb = hex(c.ui); c.land = 0; c.myHerds = []; c.bp = {}; c.raft = !!SPEC(c).mods.raft; c.bridge = !!SPEC(c).mods.bridge; }
   for (const [x, y] of HERD_SPOTS) {
     const f = { kind: 'dew', x, y, amt: 12, max: 30, ang: 0 }, h = { x, y, owner: -1, f, img: pick(HERD_IMGS), rot: rnd(0, TAU) };
     f.herd = h; G.foods.push(f); G.herds.push(h);
@@ -3210,8 +3210,7 @@ function stepWasps(dt) {
     if (!c.scary || !c.alive) continue;
     if ((c.waspT = (c.waspT ?? 20) - dt) > 0) continue;
     c.waspT = 35;
-    if (G.wasps.filter(w => w.c === c.id).length >= waspCap(c) || c.food < 20) continue;
-    c.food -= 20;
+    if (G.wasps.filter(w => w.c === c.id).length >= waspCap(c)) continue;
     G.wasps.push({ c: c.id, op: c.player, x: c.nest.x, y: c.nest.y, h: 0, a: rnd(0, TAU), hp: c.player ? 260 : 70, mhp: c.player ? 260 : 70, mode: 'rise', job: null, t: 0, orb: rnd(0, TAU), carry: null, flap: rnd(0, 9) });
     c.waspsBorn = (c.waspsBorn || 0) + 1;
     if (c.player && c.waspsBorn === 1) { banner('A blood wasp hatches', 'It hunts on its own. No other colony has them', '#ff3030'); log('A blood wasp crawls out of the mound and takes to the air. It will sting, snatch, rob and bomb on its own.', c.ui); }
@@ -3266,6 +3265,71 @@ function stepWasps(dt) {
   G.wasps = G.wasps.filter(w => !w.dead);
 }
 const NT_RANGE = TYPES.map((_, i) => i);
+/* ---- Honeypot honey bees: peaceful foragers ---- */
+let FLOWERS = null;
+const beeCap = () => Math.min(6, 3 + Math.floor(G.t / 240));
+function beePick(b) {
+  if (!FLOWERS) FLOWERS = TALL.filter(d => P_DAND.includes(d.img) || P_BLOOM.includes(d.img));
+  const col = G.cols[b.c];
+  if (Math.random() < .35) {
+    let best = null, bd = 2200 ** 2;
+    for (const f of G.foods) { if (f.amt <= 1 || f.kind === 'corpse' || f.kind === 'carcass' || (f.herd && f.herd.owner !== b.c && f.herd.owner >= 0)) continue; const d = (f.x - col.nest.x) ** 2 + (f.y - col.nest.y) ** 2; if (d < bd && Math.random() < .5) { bd = d; best = f; } }
+    if (best) return { food: best, x: best.x, y: best.y };
+  }
+  const near = FLOWERS.filter(d => Math.hypot(d.x - col.nest.x, d.y - col.nest.y) < 2400);
+  const fl = near.length ? pick(near) : pick(FLOWERS);
+  return fl ? { x: fl.x, y: fl.y, flower: true } : null;
+}
+function stepBees(dt) {
+  for (const c of G.cols) {
+    if (!c.honeyBees || !c.alive) continue;
+    if ((c.beeT = (c.beeT ?? 8) - dt) > 0) continue;
+    c.beeT = 30;
+    if (G.bees.filter(b => b.c === c.id).length >= beeCap()) continue;
+    c.beesBorn = (c.beesBorn || 0) + 1;
+    G.bees.push({ c: c.id, x: c.nest.x, y: c.nest.y, h: 0, a: rnd(0, TAU), hp: 40, mhp: 40, mode: 'out', job: null, t: 0, flap: rnd(0, 9), load: 0 });
+    if (c.player && c.beesBorn === 1) { banner('A honey bee hatches', 'It forages for your colony', '#ffd23a'); log('A honey bee hums out of the mound. It will gather nectar from flowers and food piles and bring it home.', c.ui); }
+  }
+  for (const b of G.bees) {
+    const col = G.cols[b.c]; b.t += dt; b.flap += dt;
+    if (!col.alive) b.hp -= 10 * dt;
+    let tx = col.nest.x, ty = col.nest.y, wantH = 1;
+    if (b.mode === 'out') {
+      if (!b.job || (b.job.food && b.job.food.amt <= 0)) b.job = beePick(b);
+      if (b.job) { tx = b.job.x + Math.sin(b.t * 2) * 6; ty = b.job.y + Math.cos(b.t * 1.7) * 6; if (Math.hypot(b.job.x - b.x, b.job.y - b.y) < 14) { wantH = .35; b.sip = (b.sip || 0) + dt; if (b.sip > 1.6) { b.sip = 0; if (b.job.food) { const take = Math.min(4, b.job.food.amt - 1); b.job.food.amt -= take; b.load = take * 2; } else b.load = 6; b.mode = 'home'; b.job = null; } } }
+    } else if (Math.hypot(tx - b.x, ty - b.y) < 22) {
+      const amt = b.load * mod(col, 'garden'); col.food += amt; col.gathered++; if (col.player) popText(col.nest.x, col.nest.y, `+${amt.toFixed(1)} nectar`, '#ffd23a'); b.load = 0; b.mode = 'out';
+    }
+    b.h += (wantH - b.h) * Math.min(1, dt * 2.5);
+    const ang = Math.atan2(ty - b.y, tx - b.x); let da = ang - b.a; da = Math.atan2(Math.sin(da), Math.cos(da)); b.a += clamp(da, -4 * dt, 4 * dt) + Math.sin(b.flap * 4) * .03;
+    const d = Math.hypot(tx - b.x, ty - b.y); if (d > 3) { const v = Math.min(d, (b.load ? 120 : 140) * dt); b.x += Math.cos(b.a) * v; b.y += Math.sin(b.a) * v; }
+    if (b.h < .5) eachNear(b.x, b.y, 14, a => { if (a.c !== b.c && a.hp > 0 && TYPES[a.t].role !== 'forage') b.hp -= 5 * dt; });
+    if (b.hp <= 0 && !b.dead) { b.dead = true; puff(b.x, b.y, 5, 'dust'); if (col.player) popText(b.x, b.y, 'Bee lost', '#ff6b4f'); }
+  }
+  G.bees = G.bees.filter(b => !b.dead);
+}
+function drawBees(t, vis) {
+  for (const b of G.bees) {
+    if (!vis(b.x, b.y, 40)) continue;
+    const k = 1.15 + b.h * .25, lift = b.h * 22;
+    ctx.save(); ctx.translate(b.x + lift * .9, b.y + lift * 1.1); ctx.fillStyle = `rgba(20,12,4,${.3 - b.h * .12})`; ctx.beginPath(); ctx.ellipse(0, 0, 8 * k, 4 * k, b.a, 0, TAU); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.translate(b.x, b.y - lift * .25 + Math.sin(t * 9 + b.flap) * .8); ctx.rotate(b.a); ctx.scale(k, k);
+    ctx.strokeStyle = '#2a1a08'; ctx.lineWidth = .6; ctx.lineCap = 'round';
+    for (const sd of [-1, 1]) for (const [x0, a0] of [[1.5, .7], [0, 1.5], [-1.5, 2.3]]) { ctx.beginPath(); ctx.moveTo(x0, sd); ctx.lineTo(x0 + Math.cos(a0) * 2.5 - 1, sd * (1 + Math.sin(a0) * 2.5)); ctx.stroke(); }
+    if (b.load) for (const sd of [-1, 1]) { ctx.fillStyle = '#ffb820'; ctx.beginPath(); ctx.arc(-2.6, sd * 3.2, 1.1, 0, TAU); ctx.fill(); }
+    const ab = ctx.createRadialGradient(-5, -1, .4, -5, 0, 5); ab.addColorStop(0, '#ffe680'); ab.addColorStop(.6, '#f2b818'); ab.addColorStop(1, '#a86c00');
+    ctx.fillStyle = ab; ctx.beginPath(); ctx.ellipse(-5, 0, 5, 3.4, 0, 0, TAU); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.ellipse(-5, 0, 5, 3.4, 0, 0, TAU); ctx.clip(); ctx.fillStyle = '#1c1206'; for (const x of [-3.4, -5.8, -8.2]) ctx.fillRect(x - .65, -4, 1.3, 8); ctx.restore();
+    ctx.fillStyle = '#1c1206'; ctx.beginPath(); ctx.moveTo(-9.8, -.4); ctx.lineTo(-11.2, 0); ctx.lineTo(-9.8, .4); ctx.fill();
+    const th = ctx.createRadialGradient(.2, -.7, .2, 0, 0, 3); th.addColorStop(0, '#d8a040'); th.addColorStop(1, '#5a3a10'); ctx.fillStyle = th; ctx.beginPath(); ctx.ellipse(0, 0, 2.8, 2.6, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,220,140,.55)'; ctx.lineWidth = .18; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 2.4, Math.sin(a) * 2.2); ctx.lineTo(Math.cos(a) * 3.3, Math.sin(a) * 3); ctx.stroke(); }
+    ctx.fillStyle = '#2a1a08'; ctx.beginPath(); ctx.arc(3.6, 0, 2, 0, TAU); ctx.fill();
+    for (const sd of [-1, 1]) { ctx.fillStyle = '#0a0604'; ctx.beginPath(); ctx.ellipse(3.9, sd * 1.25, 1, .7, 0, 0, TAU); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(3.7, sd * 1.1, .25, 0, TAU); ctx.fill(); }
+    ctx.strokeStyle = '#2a1a08'; ctx.lineWidth = .4; for (const sd of [-1, 1]) { ctx.beginPath(); ctx.moveTo(5, sd * .6); ctx.quadraticCurveTo(6.6, sd * 1.4, 7.4, sd * 2.8); ctx.stroke(); }
+    for (const ph of [0, 1]) { const fl = Math.sin(t * 80 + b.flap + ph * Math.PI) * .5; ctx.globalAlpha = .35; for (const sd of [-1, 1]) { ctx.save(); ctx.translate(.3, sd * 1.2); ctx.rotate(sd * (1.85 + fl)); ctx.fillStyle = 'rgba(235,245,255,1)'; ctx.beginPath(); ctx.ellipse(4.2, 0, 4.8, 1.8, 0, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(80,70,50,.7)'; ctx.lineWidth = .2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(8.5, 0); ctx.stroke(); ctx.restore(); } ctx.globalAlpha = 1; }
+    ctx.restore();
+  }
+}
 function drawWasps(t, vis) {
   for (const w of G.wasps) {
     if (!vis(w.x, w.y, 80)) continue;
@@ -3340,6 +3404,7 @@ function tick(dt) {
   stepHeroes(dt);
   stepStructs(dt);
   stepWasps(dt);
+  stepBees(dt);
   for (const c of G.cols) c.n.fill(0);
   let w = 0;
   for (let i = 0; i < ants.length; i++) {
@@ -3732,7 +3797,7 @@ function render(now) {
     ctx.drawImage(d.img, d.x - d.w / 2, d.y - d.h / 2, d.w, d.h);
     if (d.sw && detail) world();
   }
-  drawWasps(t, vis); world();
+  drawWasps(t, vis); drawBees(t, vis); world();
   ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = detail ? .28 : 0;
   if (detail) ctx.drawImage(lightCv, -400 + Math.sin(t * .05) * 70, -400 + Math.cos(t * .04) * 60, W + 800, H + 800);
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
@@ -3888,6 +3953,7 @@ function drawMini() {
     mctx.fillStyle = c.ui; for (const st of c.structs) if (st.k !== 'trap' || c.player) mctx.fillRect(st.x * sx - 1.5 * dpr, st.y * sy - 1.5 * dpr, 3 * dpr, 3 * dpr);
     mctx.globalAlpha = 1;
   }
+  mctx.fillStyle = '#ffd23a'; for (const b of G.bees) { mctx.beginPath(); mctx.arc(b.x * sx, b.y * sy, 1.8 * dpr, 0, TAU); mctx.fill(); }
   mctx.fillStyle = '#ff2a2a'; for (const w of G.wasps) { mctx.beginPath(); mctx.moveTo(w.x * sx, w.y * sy - 3 * dpr); mctx.lineTo(w.x * sx + 2.5 * dpr, w.y * sy + 2 * dpr); mctx.lineTo(w.x * sx - 2.5 * dpr, w.y * sy + 2 * dpr); mctx.fill(); }
   for (const c of G.cols) if (c.hero) { mctx.fillStyle = '#f6d68a'; mctx.beginPath(); mctx.arc(c.hero.x * sx, c.hero.y * sy, 2.6 * dpr, 0, TAU); mctx.fill(); }
   mctx.fillStyle = '#ff5a3c'; for (const b of G.beasts) if (!b.dead && b.kind !== 'antlion') { mctx.beginPath(); mctx.arc(b.x * sx, b.y * sy, 3 * dpr, 0, TAU); mctx.fill(); }
@@ -3923,7 +3989,8 @@ function buildLedger() {
     r.querySelector('.act').appendChild(pri); b.appendChild(r);
     ui.caste.push({ ct: r.querySelector('.ct'), cc: r.querySelector('.cc'), pri, img: r.querySelector('img') });
   });
-  if (SPEC(p).morph.scary) { ui.wasp = el('div', 'row', `<div class="glyph" style="color:#ff4a3a">W</div><div class="nm"><b>Blood wasps</b><small>Argentine only. Overpowered: a wasp hatches every 35 seconds for 20 food. At home they guard the mound. Unleash them (V) to sting, snatch, rob, bomb and scramble across the yard.</small></div><div class="act"><span class="ct" id="waspCt">0</span></div>`); const wb = el('button', 'brass', 'Unleash'); wb.type = 'button'; wb.id = 'waspBtn'; wb.addEventListener('click', toggleWasps); ui.wasp.querySelector('.act').appendChild(wb); b.appendChild(ui.wasp); }
+  if (SPEC(p).morph.honey) b.appendChild(el('div', 'row', `<div class="glyph" style="color:#ffd23a">B</div><div class="nm"><b>Honey bees</b><small>Honeypot only. A free bee hatches every 30 seconds, up to 3 (6 later). Bees just forage: they fly to flowers and food piles and bring nectar home.</small></div><div class="act"><span class="ct" id="beeCt">0</span></div>`));
+  if (SPEC(p).morph.scary) { ui.wasp = el('div', 'row', `<div class="glyph" style="color:#ff4a3a">W</div><div class="nm"><b>Blood wasps</b><small>Argentine only. Overpowered: a free wasp hatches every 35 seconds. At home they guard the mound. Unleash them (V) to sting, snatch, rob, bomb and scramble across the yard.</small></div><div class="act"><span class="ct" id="waspCt">0</span></div>`); const wb = el('button', 'brass', 'Unleash'); wb.type = 'button'; wb.id = 'waspBtn'; wb.addEventListener('click', toggleWasps); ui.wasp.querySelector('.act').appendChild(wb); b.appendChild(ui.wasp); }
   b.appendChild(el('p', 'hint', 'Dots set each caste’s share of new eggs. Ants that survive fights earn veteran ranks and grow larger.'));
   // Nest
   const n = sheets.nest; n.innerHTML = '';
@@ -4021,6 +4088,7 @@ function updateHud() {
   $('landTxt').textContent = G.demo ? '' : `You hold ${Math.round(100 * p.land / (FBW * FBH))}%`;
   const SN = seasonAt(G.t); $('clock').textContent = `${SN.name} · ${G.rain.k > .3 ? (SN.frost ? 'Snow' : 'Rain') : dayState(G.t).label} · ${fmt(G.t)}`;
   updateFollow();
+  if ($('beeCt')) $('beeCt').textContent = `${G.bees.filter(b => b.c === 0).length}/${beeCap()}`;
   if ($('waspCt')) { $('waspCt').textContent = `${G.wasps.filter(w => w.c === 0).length}/${waspCap(p)}`; $('waspBtn').textContent = p.waspsOn ? 'Recall' : 'Unleash'; $('waspBtn').classList.toggle('on', !!p.waspsOn); }
   const h = !G.demo && p.hero && p.hero.hp > 0 ? p.hero : null;
   $('heroBox').hidden = G.demo; $('heroRow').hidden = $('heroBtns').hidden = !h; $('heroNone').hidden = !!h;
