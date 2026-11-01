@@ -3170,6 +3170,8 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     { id: "house", short: "House", name: "Kadin's House", act: "Locker room", x: 900, y: 1660, w: 560, h: 280, door: [1180, 1962] }
   ];
   const NPC_LINES = {
+    jordan: ["MICHAEL! MICHAEL! MICHAEL!", "Have you met Michael Shaffou? Greatest man alive.", "I'm Michael's number one fan. Gavin is YOUR number one fan. We're different.",
+      "Michael's gonna beat Krysiak someday. In a staring contest.", "I got Michael's autograph. He just wrote 'I hate Krysiak.'", "Team Shaffou forever."],
     michael: ["I HATE MR. KRYSIAK.", "Koza. Hold me back. I'm gonna 1v1 Krysiak.", "He gave me a D. On PURPOSE.", "*ogre noises*", "Have you seen Krysiak? I have... questions for him."],
     gavin: ["Yo Kadin... how do you kick?", "I made one in practice. Well, almost.", "Can I borrow your phone? Mine's dead.", "Teach me the ON FIRE thing."],
     dalton: ["Keep moving, Kadin! Phone down!", "Leg day tomorrow. Don't skip it.", "MVPT is open. Come get your reps in.", "Hydrate, big dog."],
@@ -3182,6 +3184,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     { id: "dalton", name: "Dalton", lines: "dalton", path: [[868, 120], [868, 1980], [732, 1980], [732, 120]], speed: 120, look: { skin: "#eec5a6", shirt: "#111", num: "MVPT", numColor: "#f3efe6", hair: "#33221a", big: true, shoes: "#f3efe6" } },
     { id: "fan1", name: "Fan", lines: "fan", path: ring(800, 910, 110), speed: 45, look: { skin: "#f1c7a3", shirt: "#ff6a13", num: "7", numColor: "#0a0a0a", hair: "#7a5230", shoes: "#f3efe6" } },
     { id: "fan2", name: "Fan", lines: "fan", path: ring(800, 910, 140).reverse(), speed: 52, look: { skin: "#7a4a2e", shirt: "#0a0a0a", num: "7", numColor: "#ff6a13", hair: "#111", shoes: "#ff6a13" } },
+    { id: "jordan", name: "Jordan Kattoo", lines: "jordan", follow: "michael", path: [[880, 900]], speed: 90, look: { skin: "#e2b08a", shirt: "#f3efe6", num: "MS", numColor: "#3b2516", hair: "#1a1310", shoes: "#ff6a13", pants: "#26324a", sign: "TEAM SHAFFOU" } },
     { id: "michael", name: "Michael Shaffou", lines: "michael", path: [[920, 880], [1480, 880], [1480, 950], [920, 950]], speed: 55, look: { skin: "#f3d9c6", shirt: "#5a3f2a", num: "", hair: "#3b2516", shoes: "#2a1a10", pants: "#3a3d46", ogre: true, big: true } },
     { id: "fan3", name: "Fan", lines: "fan", path: [[300, 1600], [700, 1600]], speed: 40, look: { skin: "#d9a47a", shirt: "#26324a", num: "", numColor: "#fff", hair: "#d8b067", shoes: "#f3efe6" } },
     { id: "girl1", name: "Fan", lines: "girl", path: [[360, 1625]], speed: 0, look: { skin: "#f0c9a8", shirt: "#ff6a13", num: "7", numColor: "#0a0a0a", hair: "#3b2516", longHair: true, shoes: "#f3efe6" } },
@@ -3244,8 +3247,10 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       T.fightT = (T.fightT ?? 1.5) - dt;
       if (T.fightT <= 0 && !T.talk) {
         const npcs = AREAS.school.npcs, mike = npcs.find(n => n.id === "michaelS"), kry = npcs.find(n => n.id === "teacher");
-        T.fightTurn = !T.fightTurn;
-        T.talk = T.fightTurn
+        T.fightStep = ((T.fightStep || 0) + 1) % 3;
+        T.fightTurn = T.fightStep === 0;
+        if (T.fightStep === 2) T.talk = { npc: npcs.find(n => n.id === "jordanS"), text: pick(["GET HIM MICHAEL!", "MICHAEL! MICHAEL! MICHAEL!", "Michael for president!", "Krysiak is SCARED of you, Michael!", "That's my GOAT right there!", "I'm filming this for the fan page!"]), t: 2.2 };
+        else T.talk = T.fightTurn
           ? { npc: mike, text: pick(["KRYSIAK! SQUARE UP!", "You gave me a D on purpose!", "Hold me back, Kadin!", "1v1 me in the parking lot!", "I'm NOT doing the homework!", "Take off the sweater and fight me!"]), t: 2.4 }
           : { npc: kry, text: pick(["Sit down, Mr. Shaffou.", "That's detention.", "Put your fists down and pick up a pencil.", "I've seen scarier substitutes.", "Mr. Shaffou, your homework is still due.", "Are you done? Good. Page 47."]), t: 2.4 };
         T.fightT = 2.8;
@@ -3272,6 +3277,15 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     T.camX = AW <= W ? (AW - W) / 2 : clamp(T.x - W / 2, 0, AW - W);
     T.camY = AH <= VH ? (AH - VH) / 2 : clamp(T.y - VH * 0.55, 0, AH - VH);
     for (const n of curNPCs()) {
+      if (n.follow) {   // Jordan sticks right behind Michael
+        const tgt = curNPCs().find(m => m.id === n.follow);
+        if (tgt && !(T.talk && T.talk.npc === n)) {
+          const fx = tgt.x - 46, fy = tgt.y + 22, fdx = fx - n.x, fdy = fy - n.y, fd = Math.hypot(fdx, fdy);
+          if (fd > 8) { const sp = Math.min(fd, n.speed * dt); n.x += fdx / fd * sp; n.y += fdy / fd * sp; n.walk += dt * 12; n.moving = true; n.back = fdy < -Math.abs(fdx) * 0.6; }
+          else n.moving = false;
+        } else n.moving = false;
+        continue;
+      }
       if (!n.speed) continue;
       const [tx, ty] = n.path[n.wp], dx = tx - n.x, dy = ty - n.y, d = Math.hypot(dx, dy);
       if (T.talk && T.talk.npc === n) { n.moving = false; continue; }
@@ -3413,6 +3427,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
         return SC_DESKS.some(([dx, dy]) => Math.abs(x - dx) < 46 && y > dy - 20 && y < dy + 16);
       },
       npcs: [
+        { id: "jordanS", name: "Jordan Kattoo", lines: "jordan", follow: "michaelS", path: [[110, 300]], speed: 110, look: { skin: "#e2b08a", shirt: "#f3efe6", num: "MS", numColor: "#3b2516", hair: "#1a1310", shoes: "#ff6a13", pants: "#26324a", sign: "TEAM SHAFFOU" } },
         { id: "michaelS", name: "Michael Shaffou", lines: "michael", fight: true, path: [[150, 248], [214, 238], [150, 248], [196, 244], [150, 248]], speed: 90, look: { skin: "#f3d9c6", shirt: "#5a3f2a", num: "", hair: "#3b2516", shoes: "#2a1a10", pants: "#3a3d46", ogre: true, big: true } },
         { id: "teacher", name: "Mr. Krysiak", lines: "teacher", path: [[300, 222]], speed: 0, look: { skin: "#f0c9a8", shirt: "#26324a", num: "", hair: "#6b6b6b", shoes: "#2a1a10", pants: "#3a3d46", glasses: true } },
         { id: "st1", name: "Classmate", lines: "student", sit: true, path: [[150, 288]], speed: 0, look: { skin: "#d9a47a", shirt: "#ff6a13", num: "", hair: "#2a1a10" } },
@@ -3750,7 +3765,8 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     noah: { name: "Noah Samano", short: "Noah", color: "#ffd23f", init: "14" },
     krysiak: { name: "Mr. Krysiak", short: "Krysiak", color: "#9fd3ff", init: "K" },
     mom: { name: "Mom", short: "Mom", color: "#e85d9a", init: "M" },
-    michael: { name: "Michael Shaffou", short: "Michael", color: "#f3d9c6", init: "MS" }
+    michael: { name: "Michael Shaffou", short: "Michael", color: "#f3d9c6", init: "MS" },
+    jordan: { name: "Jordan Kattoo", short: "Jordan", color: "#7fb24a", init: "JK" }
   };
   const BACKLOG = [
     ["coach", "Yesterday", "Koza. Practice at 3."],
@@ -3818,6 +3834,10 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       "Why is Gavin wearing your jersey?", ["Koza.", "Koza.", "Answer your phone. I can see you're on it."]],
     mom: ["Be home by 10.", "Proud of you!", "Did you eat?", "Who is Gavin and why does he keep calling the house?"],
     noah: ["bro i just pinned one at the 2", "punter gang", "coffin corner > field goals", "coach said i have the best hang time on the team. ur welcome"],
+    jordan: ["yo koza have u seen michael today", "michael shaffou is my hero", "michael said hi (he didn't but i know he wanted to)", "michael for prom king",
+      ["i made michael a fan page", "it has more followers than urs", "jk it has 3", "one is michael's mom"], "do u think michael would sign my forehead",
+      "michael looked at me in the hallway today. best day of my life", ["michael vs krysiak", "who wins", "MICHAEL. obviously"], "i'm making TEAM SHAFFOU shirts. want one",
+      "michael ate a koza meal in 4 bites. legend", "if michael tells me to jump i ask how high and then i jump on krysiak's desk", "michael is the main character and we're all side quests"],
     michael: ["i hate mr krysiak", ["koza", "KOZA", "i hate mr krysiak"], "krysiak gave me detention for breathing too loud", ["he took my phone", "in front of everyone", "i want it back"],
       "i'm gonna 1v1 krysiak. in a staring contest. i will win", "why does krysiak's room smell like dry erase markers and rules", ["he said my essay was 'one sentence long'", "it was a GOOD sentence"],
       "if krysiak gives a pop quiz today i'm flipping my desk (gently, it's school property)", "krysiak wears the same sweater every day. respect but also i hate him",
@@ -3840,6 +3860,9 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
       ["Gavin wants to be my holder", ["Absolutely not.", "Over my dead body."]]],
     mom: [["Love you", ["Love you too! Phone off at dinner."]], ["Ok", ["Thank you!"]], ["Gavin is my teammate", ["He sent us a fruit basket. With your face on it."]]],
     noah: [["field goals > punts", ["we'll see", "come punt with me and say that"]], ["W", ["W"]], ["punter gang", ["PUNTER GANG"]]],
+    jordan: [["michael is wild", ["MICHAEL IS A LEGEND", "wild AND a legend"]], ["who's ur favorite kicker", ["michael. he doesn't kick. still michael"]],
+      ["calm down jordan", ["i can't. michael just walked by", "u calm down"]], ["team shaffou", ["TEAM SHAFFOU FOREVER", "welcome to the family koza"]],
+      ["michael is mid", ["take that back", "blocked. unblocked. take it back"]]],
     michael: [["calm down michael", ["I AM CALM", "i'm calm. i'm calm. i hate him"]], ["what did he do now", ["he EXISTED", "he gave me a zero for not doing it. just because i didn't do it"]],
       ["krysiak is chill tho", ["TRAITOR", "i'm blocking u. jk. but i'm thinking about it"]], ["just do the homework", ["no", "i would rather fight a bear"]],
       ["lmaooo", ["it's not funny koza", "ok it's a little funny"]], ["1v1 him", ["I TRIED", "he gave me detention for asking"]]],
@@ -3872,6 +3895,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
   let phoneView = { view: "home", thread: null };
   const typing = {};
   // Coach Marshall reaches out to anyone who hasn't heard from him yet
+  if (!PH.msgs.some(m => m.th === "jordan")) setTimeout(() => textBurst("jordan", ["yo koza it's jordan kattoo", "have u met michael shaffou", "he's literally my hero"], 1300), 34000);
   if (!PH.msgs.some(m => m.th === "michael")) setTimeout(() => textBurst("michael", ["yo koza it's michael", "i hate mr krysiak", "like HATE hate"], 1300), 20000);
   if (!PH.msgs.some(m => m.th === "coach")) setTimeout(() => textBurst("coach", ["Koza.", "I don't care if you can't walk, you need to play."], 1400), 9000);
 
@@ -3939,7 +3963,7 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     if (S.textT <= 0) {
       S.textT = 9 + Math.random() * 11;
       const r = Math.random();
-      const th = r < 0.24 ? "sammy" : r < 0.42 ? "dalton" : r < 0.62 ? "gavin" : r < 0.76 ? "michael" : r < 0.88 ? "coach" : pick(["mom", "noah", "krysiak"]);
+      const th = r < 0.24 ? "sammy" : r < 0.42 ? "dalton" : r < 0.62 ? "gavin" : r < 0.74 ? "michael" : r < 0.8 ? "jordan" : r < 0.9 ? "coach" : pick(["mom", "noah", "krysiak"]);
       const pool = AMBIENT[th], used = PH.ambientUsed[th] || 0, msg = pool[used % pool.length];
       PH.ambientUsed[th] = used + 1;
       if (Array.isArray(msg)) textBurst(th, msg, 1000 + Math.random() * 600); else textFrom(th, msg);
@@ -4229,6 +4253,13 @@ button.go.town-act:active { transform: translate(-50%, 3px); }
     if (o.hat) {
       ctx.fillStyle = "#f3efe6"; ctx.fillRect(x - 11, y - 84, 22, 10);
       ctx.beginPath(); ctx.arc(x - 6, y - 86, 7, 0, 7); ctx.arc(x + 6, y - 86, 7, 0, 7); ctx.arc(x, y - 90, 8, 0, 7); ctx.fill();
+    }
+    if (o.sign) {
+      ctx.fillStyle = "#5a3f2a"; ctx.fillRect(x + 17, y - 112, 3, 64);
+      ctx.fillStyle = "#f3efe6"; ctx.fillRect(x - 6, y - 128, 50, 22);
+      ctx.strokeStyle = "#7fb24a"; ctx.lineWidth = 2; ctx.strokeRect(x - 6, y - 128, 50, 22);
+      ctx.fillStyle = "#3b2516"; ctx.font = "7px Graduate, serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      const [w1, w2] = o.sign.split(" "); ctx.fillText(w1, x + 19, y - 121); ctx.fillText(w2 || "", x + 19, y - 112);
     }
     if (o.glasses && !o.back) { ctx.strokeStyle = "#111"; ctx.lineWidth = 1.4; ctx.strokeRect(x - 9, y - 69, 7, 5); ctx.strokeRect(x + 2, y - 69, 7, 5); }
     if (!o.back) {
