@@ -110,7 +110,7 @@ export class ObstacleManager {
       saw: 3,
       gate: 3,
       laser: meters > 60 ? 2.6 : 0,
-      crusher: meters > 120 ? 2.3 : 0,
+      crusher: 0, // crusher walls removed
       blade: meters > 200 ? 2.5 : 0,
       hlaser: meters > 340 ? 1.7 : 0,
       saw2: meters > 600 ? 1.6 : 0,
