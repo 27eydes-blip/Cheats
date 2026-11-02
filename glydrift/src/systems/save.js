@@ -12,6 +12,8 @@ function defaults() {
     selected: "volt",
     unlocked: { volt: true },
     shards: {},
+    spins: 1, // Lucky Spin tokens (everyone starts with one free spin)
+    spinPts: 0, // points banked toward the next spin
     best: 0,
     ghost: null,
     ghostChar: "volt",

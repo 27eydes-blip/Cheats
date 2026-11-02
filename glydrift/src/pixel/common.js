@@ -1,4 +1,5 @@
 // Shared pixel sprites: heroes, coins, portals, and pixel particle textures.
+import { LOTTERY_DRAW } from "./lotteryHeroes.js";
 import { addAtlas, addTexture, PixelCanvas } from "./px.js";
 
 const OUT = 0x07101e; // bold character outline
@@ -569,7 +570,19 @@ function circleTex(n, r) {
 
 export function buildCommon(scene) {
   const frames = {};
-  const heroes = { volt, ember, frost, shade, glitch, nova, bloom, tide, mecha, draco };
+  const heroes = {
+    volt,
+    ember,
+    frost,
+    shade,
+    glitch,
+    nova,
+    bloom,
+    tide,
+    mecha,
+    draco,
+    ...LOTTERY_DRAW,
+  };
   for (let f = 0; f < 3; f++)
     for (const [id, draw] of Object.entries(heroes)) frames[`${id}_${f}`] = rim(draw(f));
   for (let f = 0; f < 4; f++) frames[`coin_${f}`] = coin(f);

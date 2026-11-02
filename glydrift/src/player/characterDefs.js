@@ -219,7 +219,260 @@ export const CHARACTERS = [
     challenge: { stat: "maxBiome", value: 4, text: "Reach the Abyss" },
     desc: "Dragonfire trail. Erupts in flames.",
   },
+  {
+    id: "zephyr",
+    name: "ZEPHYR",
+    title: "Wind Wyvern",
+    rarity: "rare",
+    color: 0x4fe0c8,
+    color2: 0xffffff,
+    texture: "hero_zephyr",
+    pixel: {
+      atlas: "pxc",
+      frames: ["zephyr_0", "zephyr_1", "zephyr_2"],
+      mode: "flap",
+      trail: [0xffffff, 0xbff8ee, 0x4fe0c8, 0x24a08e],
+    },
+    fx: {
+      flap: { kind: "pixel", color: 0xbff8ee, n: 6 },
+      death: [
+        { kind: "pixel", color: 0x4fe0c8, n: 40 },
+        { kind: "shard", color: 0x4fe0c8, n: 18 },
+      ],
+    },
+    scale: 0.62,
+    lottery: true, // only from the Lucky Spin
+    desc: "Wind trail. Scatters into a gust.",
+  },
+  {
+    id: "hoot",
+    name: "HOOT",
+    title: "Arcane Owl",
+    rarity: "rare",
+    color: 0x8a5cff,
+    color2: 0xffd23f,
+    texture: "hero_hoot",
+    pixel: {
+      atlas: "pxc",
+      frames: ["hoot_0", "hoot_1", "hoot_2"],
+      mode: "flap",
+      trail: [0xffffff, 0xffd23f, 0xb090ff, 0x5f3ac8],
+    },
+    fx: {
+      flap: { kind: "star", color: 0xffd23f, n: 6 },
+      death: [
+        { kind: "star", color: 0xb090ff, n: 40 },
+        { kind: "shard", color: 0x8a5cff, n: 18 },
+      ],
+    },
+    scale: 0.62,
+    lottery: true, // only from the Lucky Spin
+    desc: "Spell-spark trail. Vanishes in a puff of magic.",
+  },
+  {
+    id: "lumen",
+    name: "LUMEN",
+    title: "Glow Moth",
+    rarity: "rare",
+    color: 0xfff1a8,
+    color2: 0x7ad8ff,
+    texture: "hero_lumen",
+    pixel: {
+      atlas: "pxc",
+      frames: ["lumen_0", "lumen_1", "lumen_2"],
+      mode: "flap",
+      trail: [0xffffff, 0xfff1a8, 0xffd23f, 0x7ad8ff],
+    },
+    fx: {
+      flap: { kind: "dot", color: 0xfff1a8, n: 6 },
+      death: [
+        { kind: "dot", color: 0x7ad8ff, n: 40 },
+        { kind: "shard", color: 0xfff1a8, n: 18 },
+      ],
+    },
+    scale: 0.62,
+    lottery: true, // only from the Lucky Spin
+    desc: "Glow-dust trail. Bursts into light.",
+  },
+  {
+    id: "buzz",
+    name: "BUZZ",
+    title: "Clockwork Bee",
+    rarity: "rare",
+    color: 0xffd23f,
+    color2: 0x2bffef,
+    texture: "hero_buzz",
+    pixel: {
+      atlas: "pxc",
+      frames: ["buzz_0", "buzz_1", "buzz_2"],
+      mode: "spin",
+      trail: [0xffffff, 0xffd23f, 0xc8a050, 0x2a2a3a],
+    },
+    fx: {
+      flap: { kind: "spark", color: 0xffd23f, n: 6 },
+      death: [
+        { kind: "spark", color: 0x2bffef, n: 40 },
+        { kind: "shard", color: 0xffd23f, n: 18 },
+      ],
+    },
+    scale: 0.62,
+    lottery: true, // only from the Lucky Spin
+    desc: "Honey-spark trail. Springs a gear.",
+  },
+  {
+    id: "cinder",
+    name: "CINDER",
+    title: "Lava Drake",
+    rarity: "epic",
+    color: 0xff6a1a,
+    color2: 0xffd23f,
+    texture: "hero_cinder",
+    pixel: {
+      atlas: "pxc",
+      frames: ["cinder_0", "cinder_1", "cinder_2"],
+      mode: "flap",
+      trail: [0xfff1a0, 0xffa21a, 0xff3d1a, 0x2a1a1e],
+    },
+    fx: {
+      flap: { kind: "fire", color: undefined, n: 6 },
+      death: [
+        { kind: "fire", color: undefined, n: 40 },
+        { kind: "shard", color: 0xff6a1a, n: 18 },
+      ],
+    },
+    scale: 0.62,
+    lottery: true, // only from the Lucky Spin
+    desc: "Ember trail. Erupts like a volcano.",
+  },
+  {
+    id: "nyx",
+    name: "NYX",
+    title: "Vampire Bat",
+    rarity: "epic",
+    color: 0xb45cff,
+    color2: 0xff2a3d,
+    texture: "hero_nyx",
+    pixel: {
+      atlas: "pxc",
+      frames: ["nyx_0", "nyx_1", "nyx_2"],
+      mode: "flap",
+      trail: [0xffd0d8, 0xff2a3d, 0x8a3ad8, 0x2a1060],
+    },
+    fx: {
+      flap: { kind: "smoke", color: 0x3a1466, n: 6 },
+      death: [
+        { kind: "dot", color: 0xff2a3d, n: 40 },
+        { kind: "shard", color: 0xb45cff, n: 18 },
+      ],
+    },
+    scale: 0.62,
+    lottery: true, // only from the Lucky Spin
+    desc: "Shadow trail. Bursts into a swarm.",
+  },
+  {
+    id: "koi",
+    name: "KOI",
+    title: "Sky Koi",
+    rarity: "epic",
+    color: 0xff7a3a,
+    color2: 0xfff4ec,
+    texture: "hero_koi",
+    pixel: {
+      atlas: "pxc",
+      frames: ["koi_0", "koi_1", "koi_2"],
+      mode: "idle",
+      trail: [0xffffff, 0xbff4ff, 0xff9a5a, 0xff7a3a],
+    },
+    fx: {
+      flap: { kind: "dot", color: 0xbff4ff, n: 6 },
+      death: [
+        { kind: "dot", color: 0xff9a5a, n: 40 },
+        { kind: "shard", color: 0xff7a3a, n: 18 },
+      ],
+    },
+    scale: 0.62,
+    lottery: true, // only from the Lucky Spin
+    desc: "Bubble trail. Splashes into foam.",
+  },
+  {
+    id: "kitsu",
+    name: "KITSU",
+    title: "Fox Spirit",
+    rarity: "legendary",
+    color: 0xff8a3a,
+    color2: 0x7ad8ff,
+    texture: "hero_kitsu",
+    pixel: {
+      atlas: "pxc",
+      frames: ["kitsu_0", "kitsu_1", "kitsu_2"],
+      mode: "idle",
+      trail: [0xffffff, 0x7ad8ff, 0xb45cff, 0xff8a3a],
+    },
+    fx: {
+      flap: { kind: "star", color: 0x7ad8ff, n: 6 },
+      death: [
+        { kind: "star", color: 0xb45cff, n: 40 },
+        { kind: "shard", color: 0xff8a3a, n: 18 },
+      ],
+    },
+    scale: 0.62,
+    lottery: true, // only from the Lucky Spin
+    desc: "Foxfire trail. Splits into spirit flames.",
+  },
+  {
+    id: "griffo",
+    name: "GRIFFO",
+    title: "Baby Griffin",
+    rarity: "legendary",
+    color: 0xe8b040,
+    color2: 0xfff4ec,
+    texture: "hero_griffo",
+    pixel: {
+      atlas: "pxc",
+      frames: ["griffo_0", "griffo_1", "griffo_2"],
+      mode: "flap",
+      trail: [0xffffff, 0xfff4ec, 0xe8b040, 0xb07a20],
+    },
+    fx: {
+      flap: { kind: "pixel", color: 0xfff4ec, n: 6 },
+      death: [
+        { kind: "pixel", color: 0xe8b040, n: 40 },
+        { kind: "shard", color: 0xe8b040, n: 18 },
+      ],
+    },
+    scale: 0.62,
+    lottery: true, // only from the Lucky Spin
+    desc: "Feather trail. Explodes in feathers.",
+  },
+  {
+    id: "aurora",
+    name: "AURORA",
+    title: "Star Whale",
+    rarity: "legendary",
+    color: 0x7ad8ff,
+    color2: 0x39ff88,
+    texture: "hero_aurora",
+    pixel: {
+      atlas: "pxc",
+      frames: ["aurora_0", "aurora_1", "aurora_2"],
+      mode: "idle",
+      trail: [0xffffff, 0x39ff88, 0x7ad8ff, 0xff7ad9, 0x2a3a8a],
+    },
+    fx: {
+      flap: { kind: "star", color: 0xfff1a8, n: 6 },
+      death: [
+        { kind: "star", color: 0x39ff88, n: 40 },
+        { kind: "shard", color: 0x7ad8ff, n: 18 },
+      ],
+    },
+    scale: 0.62,
+    lottery: true, // only from the Lucky Spin
+    desc: "Aurora trail. Dissolves into stardust.",
+  },
 ];
+
+/** Heroes that can only be won from the Lucky Spin. */
+export const LOTTERY_HEROES = CHARACTERS.filter((c) => c.lottery);
 
 export function getCharacter(id) {
   return CHARACTERS.find((c) => c.id === id) || CHARACTERS[0];

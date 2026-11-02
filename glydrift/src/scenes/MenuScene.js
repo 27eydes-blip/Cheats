@@ -178,6 +178,44 @@ export class MenuScene extends Phaser.Scene {
       onClick: () => this.go("Progress"),
     }).setDepth(100);
     popIn(this, [play, this.daily, heroes, ranks, prog], 250);
+    // ---- Lucky Spin: round wheel button beside the hero, with a spins badge
+    {
+      const sx = W - 96;
+      const sy = H * 0.31;
+      const spins = s.spins || 0;
+      const wb = this.add.container(sx, sy).setDepth(100);
+      const wg = this.add.graphics();
+      const cols = [0x3ef4ff, 0xb45cff, 0xffd23f, 0xff4fd8];
+      for (let i = 0; i < 8; i++) {
+        wg.fillStyle(cols[i % 4], 0.85);
+        wg.slice(0, 0, 54, (i / 8) * Math.PI * 2, ((i + 1) / 8) * Math.PI * 2, false).fillPath();
+      }
+      wg.fillStyle(0x0a0418, 1).fillCircle(0, 0, 18);
+      wg.lineStyle(5, 0xffd23f, 1).strokeCircle(0, 0, 54);
+      wg.fillStyle(0xffffff, 1).fillTriangle(-9, -66, 9, -66, 0, -48);
+      const lbl = neonText(this, 0, 80, "LUCKY SPIN", 17, 0xffd23f, { blur: 8 });
+      wb.add([wg, lbl]);
+      if (spins > 0) {
+        const bg = this.add.graphics();
+        bg.fillStyle(0xff2a3d, 1)
+          .fillCircle(42, -42, 20)
+          .lineStyle(3, 0xffffff, 1)
+          .strokeCircle(42, -42, 20);
+        wb.add([bg, plainText(this, 42, -43, `${spins}`, 20, "#ffffff")]);
+        this.tweens.add({ targets: wg, angle: 360, duration: 6000, repeat: -1 });
+      }
+      wb.setSize(140, 170).setInteractive(
+        new Phaser.Geom.Rectangle(0, 0, 140, 170),
+        Phaser.Geom.Rectangle.Contains,
+      );
+      wb.on("pointerdown", () => this.tweens.add({ targets: wb, scale: 0.9, duration: 70 }));
+      wb.on("pointerup", () => {
+        this.tweens.add({ targets: wb, scale: 1, duration: 200, ease: "Back.easeOut" });
+        Sfx.ui();
+        this.go("Spin");
+      });
+      popIn(this, wb, 350);
+    }
     // "Add to Home Screen" — hidden once you're already playing from the home screen
     if (Install.available) {
       const add = button(

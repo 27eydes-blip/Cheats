@@ -9,7 +9,7 @@ import { getCharacter } from "../player/characterDefs.js";
 import { Sfx } from "../systems/audio.js";
 import { Leaderboard, Levels } from "../systems/leaderboard.js";
 import { Music } from "../systems/music.js";
-import { Progression } from "../systems/progression.js";
+import { Progression, SPIN_EVERY } from "../systems/progression.js";
 import { dailyNumber } from "../systems/rng.js";
 import { closeShareModal, openShareModal } from "../systems/shareCard.js";
 import {
@@ -192,6 +192,24 @@ export class GameOverScene extends Phaser.Scene {
       const t = plainText(this, W / 2, y, `✓ ${m.text}   +${m.reward.coins}`, 19, "#39ff88");
       slideIn(this, t, 600, 15);
       y += 30;
+    }
+    // ---- Lucky Spin progress
+    {
+      const earned = R.spinsEarned || 0;
+      const txt = earned
+        ? `LUCKY SPIN +${earned}!  spin it from the menu`
+        : `Lucky Spin: ${R.spinPts ?? 0} / ${SPIN_EVERY} points`;
+      const t = plainText(
+        this,
+        W / 2,
+        y + 4,
+        txt,
+        earned ? 21 : 18,
+        earned ? "#ffd23f" : "#c8b8ff",
+      );
+      slideIn(this, t, 650, 15);
+      if (earned) this.time.delayedCall(900, () => Sfx.reward());
+      y += 34;
     }
     // unlock / achievement banners: in the free band above RETRY, sliding in from the side
     // (they used to drop from the top onto the score)

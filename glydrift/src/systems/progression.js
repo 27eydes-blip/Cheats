@@ -229,6 +229,20 @@ export const LEVEL_REWARDS = {
   20: { coins: 2500 },
 };
 
+/** Points per Lucky Spin. */
+export const SPIN_EVERY = 1000;
+/** The wheel, clockwise from the top. Weights are relative chances. */
+export const SPIN_SLICES = [
+  { type: "coins", amount: 50, weight: 22 },
+  { type: "hero", weight: 9 },
+  { type: "coins", amount: 100, weight: 18 },
+  { type: "coins", amount: 250, weight: 8 },
+  { type: "coins", amount: 75, weight: 18 },
+  { type: "hero", weight: 9 },
+  { type: "coins", amount: 500, weight: 4 },
+  { type: "coins", amount: 150, weight: 12 },
+];
+
 export const Progression = {
   xpToNext(level) {
     return Math.round(140 * level ** 1.32);
@@ -341,6 +355,7 @@ export const Progression = {
   buy(id) {
     const s = Save.data;
     const def = getCharacter(id);
+    if (def.lottery || !def.cost) return false; // Lucky Spin heroes are never for sale
     if (s.unlocked[id] || s.coins < def.cost) return false;
     s.coins -= def.cost;
     s.unlocked[id] = true;
@@ -384,7 +399,7 @@ export const Progression = {
   /** "Almost there" helper: the cheapest locked character and how far away it is. */
   nextUnlockHint() {
     const s = Save.data;
-    const locked = CHARACTERS.filter((c) => !s.unlocked[c.id]);
+    const locked = CHARACTERS.filter((c) => !s.unlocked[c.id] && !c.lottery);
     if (!locked.length) return null;
     let best = null;
     for (const c of locked) {
@@ -414,6 +429,53 @@ export const Progression = {
       text = `${Math.max(0, d.cost - s.coins)} coins to unlock ${d.name}`;
     }
     return { def: d, frac: Math.min(1, best.frac), text };
+  },
+
+  // ---------------------------------------------------------------- Lucky Spin
+  /** Lottery heroes the player doesn't own yet. */
+  lotteryLeft() {
+    return CHARACTERS.filter((c) => c.lottery && !Save.data.unlocked[c.id]);
+  },
+
+  /**
+   * Spend a spin and roll the prize (decided before the wheel animates; the wheel just lands
+   * on a matching slice). Returns { slice, prize: {type:"coins", amount} | {type:"hero", id} }.
+   */
+  spin() {
+    const s = Save.data;
+    if ((s.spins || 0) <= 0) return null;
+    s.spins -= 1;
+    const left = Progression.lotteryLeft();
+    const total = SPIN_SLICES.reduce((a, sl) => a + sl.weight, 0);
+    let r = Math.random() * total;
+    let idx = 0;
+    for (; idx < SPIN_SLICES.length - 1; idx++) {
+      r -= SPIN_SLICES[idx].weight;
+      if (r < 0) break;
+    }
+    const slice = SPIN_SLICES[idx];
+    let prize;
+    if (slice.type === "hero" && left.length) {
+      const w = (c) => ({ rare: 6, epic: 3, legendary: 1 })[c.rarity] || 3;
+      let h = Math.random() * left.reduce((a, c) => a + w(c), 0);
+      let pick = left[0];
+      for (const c of left) {
+        h -= w(c);
+        if (h < 0) {
+          pick = c;
+          break;
+        }
+      }
+      s.unlocked[pick.id] = true;
+      prize = { type: "hero", id: pick.id };
+    } else {
+      // every lottery hero owned → the hero slice pays a jackpot instead
+      const amount = slice.type === "hero" ? 1000 : slice.amount;
+      s.coins += amount;
+      prize = { type: "coins", amount };
+    }
+    Save.write();
+    return { slice: idx, prize };
   },
 
   // ---------------------------------------------------------------- achievements
@@ -525,6 +587,16 @@ export const Progression = {
       }
       res.levelUps.push(lu);
     }
+
+    // Lucky Spin: every SPIN_EVERY points scored banks a spin
+    s.spinPts = (s.spinPts || 0) + Math.max(0, Math.floor(run.score));
+    res.spinsEarned = 0;
+    while (s.spinPts >= SPIN_EVERY) {
+      s.spinPts -= SPIN_EVERY;
+      s.spins = (s.spins || 0) + 1;
+      res.spinsEarned++;
+    }
+    res.spinPts = s.spinPts;
 
     res.unlocks = Progression.checkChallengeUnlocks();
     res.achievements = Progression.checkAchievements();

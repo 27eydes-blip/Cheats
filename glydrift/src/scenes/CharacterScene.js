@@ -280,6 +280,11 @@ export class CharacterScene extends Phaser.Scene {
       this.actionBtn.setLabel(sel ? "EQUIPPED" : "SELECT");
       this.actionBtn.setColor(sel ? 0x8a80b0 : 0x39ff88);
       this.actionBtn.setEnabled(!sel);
+    } else if (def.lottery) {
+      this.actionBtn.setLabel("LUCKY SPIN");
+      this.actionBtn.setColor(0xff7ad9);
+      this.actionBtn.setEnabled(true);
+      alt = `Only from the Lucky Spin\nEarn a spin every 1000 points · you have ${s.spins || 0}`;
     } else {
       this.actionBtn.setLabel(`UNLOCK  ${def.cost}`);
       this.actionBtn.setColor(0xffc83d);
@@ -320,6 +325,11 @@ export class CharacterScene extends Phaser.Scene {
       this.rig.flap();
       this.fx.ring(this.cx, this.cy, 0x39ff88, { scale: 1.8, duration: 500 });
       this.refresh();
+      return;
+    }
+    if (def.lottery) {
+      this.cameras.main.fadeOut(200, 5, 1, 13);
+      this.time.delayedCall(200, () => this.scene.start("Spin"));
       return;
     }
     if (Progression.buy(def.id)) {
