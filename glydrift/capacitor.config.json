@@ -1,0 +1,10 @@
+{
+  "appId": "com.glydrift.game",
+  "appName": "Glydrift",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#05010d",
+    "preferredContentMode": "mobile"
+  }
+}

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#05010d" />
+    <title>Glydrift</title>
+    <style>
+      :root {
+        --sat: env(safe-area-inset-top, 0px);
+        --sab: env(safe-area-inset-bottom, 0px);
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #05010d;
+        overflow: hidden;
+        overscroll-behavior: none;
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #game {
+        position: fixed;
+        inset: 0;
+      }
+      #safe-probe {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: var(--sat);
+        width: 1px;
+        padding-bottom: var(--sab);
+        pointer-events: none;
+        visibility: hidden;
+      }
+      #share-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 16px;
+        background: rgba(3, 0, 10, 0.88);
+        z-index: 10;
+        font-family: "Orbitron", system-ui, sans-serif;
+        color: #fff;
+        padding: 16px;
+        box-sizing: border-box;
+      }
+      #share-modal.open {
+        display: flex;
+      }
+      #share-modal img {
+        max-width: min(88vw, 420px);
+        max-height: 68vh;
+        border-radius: 18px;
+        box-shadow: 0 0 40px rgba(140, 90, 255, 0.6);
+        -webkit-touch-callout: default;
+        user-select: auto;
+      }
+      #share-modal p {
+        margin: 0;
+        font-size: 12px;
+        opacity: 0.7;
+        text-align: center;
+      }
+      #share-modal .row {
+        display: flex;
+        gap: 12px;
+      }
+      #share-modal button {
+        font-family: inherit;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: #fff;
+        border: 2px solid #7ef9ff;
+        background: rgba(30, 10, 60, 0.8);
+        border-radius: 14px;
+        padding: 12px 20px;
+        box-shadow: 0 0 16px rgba(126, 249, 255, 0.5);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <div id="safe-probe"></div>
+    <div id="share-modal">
+      <img alt="Glydrift result card" />
+      <p>Long-press the card to save it, or use the buttons below.</p>
+      <div class="row">
+        <button data-act="share">SHARE</button>
+        <button data-act="save">SAVE</button>
+        <button data-act="close">CLOSE</button>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

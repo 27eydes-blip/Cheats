@@ -1,0 +1,348 @@
+// Spawns obstacle patterns from a seeded RNG, pools every instance, and resolves
+// collisions / near-misses / portal + coin pickups against the player circle.
+import Phaser from "phaser";
+import { NEAR_MISS } from "../config.js";
+import { RNG } from "../systems/rng.js";
+import { TYPES } from "./types.js";
+
+const ADD = Phaser.BlendModes.ADD;
+
+export class ObstacleManager {
+  constructor(scene, fx, { W, H, lowGfx }) {
+    this.scene = scene;
+    this.fx = fx;
+    this.W = W;
+    this.H = H;
+    this.lowGfx = lowGfx;
+    this.pools = {};
+    this.active = [];
+    this.coins = [];
+    this.g = scene.add.graphics().setDepth(1).setBlendMode(ADD);
+    this.rightEdge = W;
+    this.leftEdge = 0;
+    this.rng = new RNG(1);
+  }
+
+  reset(seed) {
+    this.rng = new RNG(seed);
+    for (const o of this.active) o.kill();
+    this.active.length = 0;
+    for (const c of this.coins) c.setActive(false).setVisible(false);
+    this.nextX = this.W + 260;
+    this.count = 0;
+    this.flipped = false;
+    this.sinceFlip = 0;
+    this.lastPortalM = 0;
+    this.g.clear();
+  }
+
+  obtain(type) {
+    const pool = (this.pools[type] ||= []);
+    let o = pool.find((p) => !p.active);
+    if (!o) {
+      o = new TYPES[type](this);
+      pool.push(o);
+    }
+    this.active.push(o);
+    return o;
+  }
+
+  coin(x, y) {
+    let c = this.coins.find((o) => !o.active);
+    if (!c) {
+      c = this.scene.add.image(0, 0, "coin").setDepth(6);
+      c.halo = this.scene.add
+        .image(0, 0, "glow")
+        .setDepth(5)
+        .setBlendMode(ADD)
+        .setTint(0xffc83d)
+        .setScale(0.7)
+        .setAlpha(0.45);
+      this.coins.push(c);
+    }
+    c.setActive(true).setVisible(true).setPosition(x, y).setScale(0.8);
+    c.halo.setVisible(true);
+    c.baseY = y;
+    c.phase = Math.random() * 6;
+    c.magnet = false;
+    return c;
+  }
+
+  coinLine(x0, x1, y, n) {
+    for (let i = 0; i < n; i++) this.coin(x0 + ((x1 - x0) * (i + 0.5)) / n, y);
+  }
+
+  // ------------------------------------------------------------------ pattern generation
+  spawnPattern(meters, biomeId) {
+    const r = this.rng;
+    const H = this.H;
+    const d = Math.min(1, meters / 2600);
+    const x = this.nextX;
+    const mid = H / 2;
+    const safeTop = 150;
+    const safeBot = H - 150;
+    const spacing = Phaser.Math.Linear(520, 360, d) + r.range(-30, 40);
+    let width = 120;
+
+    // gravity flip lasts a few obstacles, then a restore portal is guaranteed
+    if (this.flipped) {
+      this.sinceFlip++;
+      if (this.sinceFlip >= 4) {
+        const p = this.obtain("portal");
+        p.spawn(x, { y: mid, mode: "restore" });
+        this.flipped = false;
+        this.nextX = x + 60 + spacing * 0.8;
+        return;
+      }
+    }
+
+    const bias =
+      {
+        solar: { saw: 1.6, crusher: 1.5 },
+        frozen: { blade: 1.8, gate: 1.3 },
+        glitch: { laser: 1.9, hlaser: 1.6 },
+        abyss: { blade: 1.3, crusher: 1.3, saw2: 1.6 },
+      }[biomeId] || {};
+    const w = {
+      saw: 3,
+      gate: 3,
+      laser: meters > 60 ? 2.6 : 0,
+      crusher: meters > 120 ? 2.3 : 0,
+      blade: meters > 200 ? 2.5 : 0,
+      hlaser: meters > 340 ? 1.7 : 0,
+      saw2: meters > 600 ? 1.6 : 0,
+      flip: meters > 420 && !this.flipped && meters - this.lastPortalM > 220 ? 0.8 : 0,
+      mini: meters > 260 && !this.flipped && meters - this.lastPortalM > 160 ? 0.7 : 0,
+    };
+    for (const k in bias) if (w[k]) w[k] *= bias[k];
+    if (this.count < 2) {
+      w.crusher = w.blade = w.hlaser = w.saw2 = w.flip = w.mini = 0;
+    }
+    const kind = r.weighted(w);
+    this.count++;
+
+    switch (kind) {
+      case "saw": {
+        const moving = r.chance(0.3 + d * 0.5);
+        const amp = moving ? r.range(80, 160 + d * 80) : 0;
+        const y = r.range(safeTop + amp, safeBot - amp);
+        const o = this.obtain("saw");
+        o.spawn(x + 50, {
+          y,
+          amp,
+          freq: r.range(1.2, 2 + d),
+          phase: r.range(0, 6.28),
+          R: r.range(40, 52 + d * 14),
+        });
+        width = 110;
+        if (r.chance(0.55)) {
+          const cy = y < mid ? Math.min(safeBot, y + 170 + amp) : Math.max(safeTop, y - 170 - amp);
+          this.coinLine(x - 40, x + 140, cy, 4);
+        }
+        break;
+      }
+      case "saw2": {
+        const gap = Phaser.Math.Linear(330, 250, d);
+        const gc = r.range(safeTop + gap / 2, safeBot - gap / 2);
+        const R = 50;
+        const a = this.obtain("saw");
+        a.spawn(x + 50, { y: gc - gap / 2 - R, amp: 0, R });
+        const b = this.obtain("saw");
+        b.spawn(x + 50, { y: gc + gap / 2 + R, amp: 0, R });
+        this.coinLine(x, x + 100, gc, 3);
+        width = 110;
+        break;
+      }
+      case "gate": {
+        const gap = Phaser.Math.Linear(310, 230, d) + r.range(-10, 20);
+        const amp = r.chance(0.7) ? r.range(60, 120 + d * 90) : 0;
+        const gc = r.range(safeTop + gap / 2 + amp - 40, safeBot - gap / 2 - amp + 40);
+        const o = this.obtain("gate");
+        o.spawn(x + 32, { gc, gap, amp, freq: r.range(1, 1.6 + d * 0.8), phase: r.range(0, 6.28) });
+        if (amp < 70) this.coinLine(x - 10, x + 74, gc, 2);
+        width = 64;
+        break;
+      }
+      case "crusher": {
+        const gc = r.range(safeTop + 160, safeBot - 160);
+        const o = this.obtain("crusher");
+        o.spawn(x + 60, {
+          gc,
+          open: Phaser.Math.Linear(380, 330, d),
+          closed: Phaser.Math.Linear(150, 112, d),
+          period: Phaser.Math.Linear(2.4, 1.8, d),
+          phase: r.next(),
+        });
+        if (r.chance(0.6)) this.coinLine(x - 10, x + 130, gc, 3);
+        width = 120;
+        break;
+      }
+      case "blade": {
+        const top = r.chance(0.5);
+        const L = r.range(H * 0.32, H * 0.5);
+        const amp = r.range(0.45, 0.75);
+        const o = this.obtain("blade");
+        const halfW = Math.sin(amp) * L + 50;
+        o.spawn(x + halfW, {
+          top,
+          L,
+          amp,
+          freq: r.range(1.5, 2.1 + d * 0.8),
+          phase: r.range(0, 6.28),
+        });
+        width = halfW * 2;
+        if (r.chance(0.5)) {
+          const cy = top
+            ? Phaser.Math.Clamp(L + 140, safeTop, safeBot)
+            : Phaser.Math.Clamp(H - L - 140, safeTop, safeBot);
+          this.coinLine(x + halfW - 60, x + halfW + 60, cy, 3);
+        }
+        break;
+      }
+      case "laser": {
+        const gap = Phaser.Math.Linear(300, 240, d);
+        const gc = r.range(safeTop + gap / 2, safeBot - gap / 2);
+        const o = this.obtain("laser");
+        o.spawn(x + 22, {
+          orient: "v",
+          gc,
+          gap,
+          on: r.range(1.1, 1.6),
+          off: r.range(0.7, 1.1),
+          phase: r.next(),
+        });
+        this.coinLine(x - 30, x + 74, gc, 3);
+        width = 44;
+        break;
+      }
+      case "hlaser": {
+        const span = r.range(240, 320);
+        const n = r.chance(0.4 + d * 0.3) ? 2 : 1;
+        const ys = n === 2 ? [H * 0.36, H * 0.64] : [r.range(safeTop + 60, safeBot - 60)];
+        for (const y of ys) {
+          const o = this.obtain("laser");
+          o.spawn(x + span / 2 + 24, {
+            orient: "h",
+            gc: y,
+            span,
+            on: r.range(1.2, 1.7),
+            off: r.range(0.8, 1.2),
+            phase: r.next(),
+            drift: r.chance(0.5) ? r.range(30, 70) : 0,
+          });
+        }
+        width = span + 48;
+        break;
+      }
+      case "flip":
+      case "mini": {
+        const p = this.obtain("portal");
+        p.spawn(x + 30, { y: r.range(H * 0.35, H * 0.65), mode: kind });
+        this.lastPortalM = meters;
+        if (kind === "flip") {
+          this.flipped = true;
+          this.sinceFlip = 0;
+        }
+        width = 60;
+        break;
+      }
+    }
+
+    // a ribbon of free coins between patterns now and then
+    if (r.chance(0.22)) {
+      const y = r.range(safeTop + 40, safeBot - 40);
+      this.coinLine(x + width + spacing * 0.25, x + width + spacing * 0.75, y, 3);
+    }
+    this.nextX = x + width + spacing;
+  }
+
+  // ------------------------------------------------------------------ per-frame
+  /**
+   * @returns events for this frame
+   */
+  update(dt, clock, scroll, pal, ctx) {
+    const { px, py, r, alive, meters, biomeId, zoom } = ctx;
+    const ev =
+      this.events || (this.events = { hit: null, near: [], passed: [], portal: null, coins: 0 });
+    ev.hit = null;
+    ev.near.length = 0;
+    ev.passed.length = 0;
+    ev.portal = null;
+    ev.coins = 0;
+
+    this.rightEdge = this.W / 2 + this.W / 2 / zoom + 40;
+    this.leftEdge = this.W / 2 - this.W / 2 / zoom - 40;
+    this.g.clear();
+
+    const dx = scroll * dt;
+    this.nextX -= dx;
+    while (this.nextX < this.rightEdge + 160) this.spawnPattern(meters, biomeId);
+
+    for (let i = this.active.length - 1; i >= 0; i--) {
+      const o = this.active[i];
+      o.x -= dx;
+      o.t += dt;
+      // the player's light brightens nearby obstacles
+      const dist = Math.abs(o.x - px);
+      o.lit = alive ? Math.max(0, 1 - dist / 260) : 0;
+      o.update(dt, clock, pal);
+
+      if (alive) {
+        if (o.kind === "portal") {
+          if (o.touches(px, py, r)) {
+            o.used = true;
+            ev.portal = o;
+          }
+        } else if (o.right > px - r - 30 && o.left < px + r + 30) {
+          const c = o.clearance(px, py, r);
+          if (c < o.minClear) o.minClear = c;
+          if (c < 0 && !ev.hit) ev.hit = o;
+        }
+        if (!o.passed && o.right < px - r) {
+          o.passed = true;
+          if (o.kind !== "portal") {
+            ev.passed.push(o);
+            if (o.minClear > 0 && o.minClear < NEAR_MISS.threshold) ev.near.push(o);
+          }
+        }
+      }
+
+      if (o.right < this.leftEdge - 80) {
+        o.kill();
+        this.active.splice(i, 1);
+      }
+    }
+
+    // coins
+    for (const c of this.coins) {
+      if (!c.active) continue;
+      c.x -= dx;
+      const t = clock * 4 + c.phase;
+      if (alive) {
+        const ddx = px - c.x;
+        const ddy = py - c.y;
+        const d2 = ddx * ddx + ddy * ddy;
+        if (d2 < 110 * 110) c.magnet = true;
+        if (c.magnet) {
+          c.x += ddx * Math.min(1, dt * 12);
+          c.baseY += ddy * Math.min(1, dt * 12);
+        }
+        if (d2 < (r + 22) ** 2) {
+          ev.coins++;
+          this.fx.burst("star", c.x, c.y, 4, 0xffd23f, { speed: { min: 60, max: 200 } });
+          c.setActive(false).setVisible(false);
+          c.halo.setVisible(false);
+          continue;
+        }
+      }
+      c.y = c.baseY + Math.sin(t) * 5;
+      c.scaleX = 0.8 * Math.cos(t * 0.7);
+      c.halo.setPosition(c.x, c.y);
+      if (c.x < this.leftEdge - 40) {
+        c.setActive(false).setVisible(false);
+        c.halo.setVisible(false);
+      }
+    }
+    return ev;
+  }
+}
