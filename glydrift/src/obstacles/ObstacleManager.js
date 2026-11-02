@@ -298,12 +298,14 @@ export class ObstacleManager {
         break;
       }
       case "meteor": {
-        const n = local > 220 && r.chance(0.5) ? 2 : 1;
+        // pairs only late in the biome, further apart; they drop earlier (further down by
+        // the time you reach them)
+        const n = local > 280 && r.chance(0.4) ? 2 : 1;
         for (let i = 0; i < n; i++) {
           const o = this.obtain("meteor");
-          o.spawn(x + 44 + i * 280, { lead: r.range(1.25, 1.9) });
+          o.spawn(x + 44 + i * 360, { lead: r.range(1.95, 2.15) });
         }
-        width = 88 + (n - 1) * 280;
+        width = 88 + (n - 1) * 360;
         break;
       }
       case "firebar": {
@@ -322,13 +324,14 @@ export class ObstacleManager {
       }
       // ------------------------------------------------------------ frozen nebula
       case "icicle": {
-        const n = local > 120 ? 2 + (r.chance(0.4) ? 1 : 0) : 1;
+        // at most two, spaced wider
+        const n = local > 120 && r.chance(0.6) ? 2 : 1;
         for (let i = 0; i < n; i++) {
           const o = this.obtain("icicle");
-          o.spawn(x + 26 + i * 120, { lead: r.range(0.9, 1.15) });
+          o.spawn(x + 26 + i * 170, { lead: r.range(1.15, 1.4) });
         }
-        this.coinLine(x, x + 52 + (n - 1) * 120, H * 0.72, 3);
-        width = 52 + (n - 1) * 120;
+        this.coinLine(x, x + 52 + (n - 1) * 170, H * 0.72, 3);
+        width = 52 + (n - 1) * 170;
         break;
       }
       case "slider": {

@@ -14,7 +14,8 @@ import { circleClear, rectClear, segClear } from "./geometry.js";
 import { CAP_H, OFF, PxObstacle } from "./pixelTypes.js";
 
 const ADD = Phaser.BlendModes.ADD;
-const WARN_DEPTH = 21; // warnings draw above the Abyss darkness
+const WARN_DEPTH = 21;
+const METEOR_WARN = 1.1; // seconds the red target shows before a meteor drops // warnings draw above the Abyss darkness
 const snap = (v) => Math.round(v / S) * S;
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
@@ -129,10 +130,11 @@ export class Meteor extends PxObstacle {
       }
     } else if (this.state === "warn") {
       this.timer += dt;
-      if (this.timer > 1.0) {
+      // easier: it drops right after the warning and is near the floor by the time you pass
+      if (this.timer > METEOR_WARN) {
         this.state = "fall";
         this.y = -60;
-        this.vy = 1500;
+        this.vy = 1700;
       }
     } else if (this.state === "fall") {
       this.y += this.vy * dt;
@@ -155,7 +157,7 @@ export class Meteor extends PxObstacle {
       .setVisible(warn)
       .setPosition(this.x, 0)
       .setSize(2 * S, H - 40)
-      .setAlpha(0.35 + 0.4 * (this.timer / 1.0));
+      .setAlpha(0.35 + 0.4 * (this.timer / METEOR_WARN));
     this.rock
       .setVisible(this.state === "fall")
       .setPosition(this.x, snap(this.y))
@@ -163,7 +165,7 @@ export class Meteor extends PxObstacle {
   }
   clearance(px, py, r) {
     if (this.state !== "fall") return Infinity;
-    return circleClear(px, py, r, this.x, this.y + 3 * S, 22);
+    return circleClear(px, py, r, this.x, this.y + 3 * S, 17);
   }
 }
 
@@ -214,6 +216,13 @@ export class Icicle extends PxObstacle {
   constructor(mgr) {
     super(mgr);
     this.type = "icicle";
+    // faint drop line while it shakes: shows exactly where it will fall
+    this.path = this.add(
+      this.scene.add
+        .tileSprite(0, 0, 2 * S, 100, "hz_dash")
+        .setOrigin(0.5, 0)
+        .setDepth(1),
+    );
     this.img = this.add(this.scene.add.image(0, 0, "hz", "icicle").setOrigin(0.5, 0).setDepth(3));
   }
   spawn(x, { lead = 1.0 }) {
@@ -236,9 +245,9 @@ export class Icicle extends PxObstacle {
       }
     } else if (this.state === "shake") {
       this.timer += dt;
-      if (this.timer > 0.45) this.state = "fall";
+      if (this.timer > 0.7) this.state = "fall"; // longer shake = more warning
     } else if (this.state === "fall") {
-      this.vy += 2600 * dt;
+      this.vy += 1900 * dt;
       this.y += this.vy * dt;
       if (this.y > H - 60) {
         this.state = "gone";
@@ -250,6 +259,13 @@ export class Icicle extends PxObstacle {
       }
     }
     const shake = this.state === "shake" ? (Math.floor(this.timer * 30) % 2 ? S : -S) : 0;
+    const tipY = this.y + 30 * S;
+    this.path
+      .setVisible(this.state === "shake")
+      .setPosition(this.x, tipY)
+      .setSize(2 * S, Math.max(4, H - tipY))
+      .setAlpha(0.22 + 0.3 * Math.min(1, this.timer / 0.7))
+      .setTint(0xeaffff);
     this.img.setPosition(this.x + shake, snap(this.y));
     if (this.state === "shake" && Math.random() < 0.3)
       this.mgr.fx.burst("pixel", this.x, 20, 1, 0xdff8ff, {
@@ -265,8 +281,8 @@ export class Icicle extends PxObstacle {
     // start at the icicle's own top edge (it used to reach 40 units above it into empty air)
     const top = this.state === "fall" ? this.y : this.y - 40;
     return Math.min(
-      rectClear(px, py, r, this.x - 20, top, this.x + 20, this.y + 4 * S),
-      segClear(px, py, r, this.x, this.y + 4 * S, this.x, tipY, 10),
+      rectClear(px, py, r, this.x - 15, top, this.x + 15, this.y + 4 * S),
+      segClear(px, py, r, this.x, this.y + 4 * S, this.x, tipY, 7),
     );
   }
 }

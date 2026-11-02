@@ -19,6 +19,13 @@ export class HudScene extends Phaser.Scene {
   }
 
   create() {
+    // the scene object outlives its game objects: drop text caches from the previous visit
+    // (reusing destroyed texts crashed the first banner after Home → Play)
+    this.titles = null;
+    this.runBanners = null;
+    this.bannerQ = null;
+    this.bannerIdx = -1;
+    this.speedText = null;
     fitCamera(this);
     const W = VIEW.W;
     const H = VIEW.H;
