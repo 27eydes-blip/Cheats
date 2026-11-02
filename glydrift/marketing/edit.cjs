@@ -99,8 +99,9 @@ const AUDIO = path.join(WORK, "audio.wav");
     out: path.join(OUT, "glydrift_tiktok_abyss.mp4"),
     overlays: [
       { file: cards.pov, from: 0, to: 2.0 },
-      { file: cards.quiet, from: at("calm") - 0.25, to: at("entrance") + 0.6 },
-      { file: cards.tooquiet, from: at("entrance") + 0.7, to: at("speed") },
+      { file: cards.quiet, from: at("calm") - 0.25, to: at("entrance") },
+      // through the blackout, gone the instant the ENTERING ABYSS title slams in
+      { file: cards.tooquiet, from: at("entrance"), to: at("entrance") + 0.8 + 0.5 },
       { file: cards.soon, from: endA - 3, to: endA },
     ],
   });
