@@ -88,7 +88,9 @@ export class HudScene extends Phaser.Scene {
     });
 
     // banners
-    this.banner = this.add.container(W / 2, H * 0.3).setAlpha(0);
+    // biome titles sit below the run-banner lane (top + 250) so the two never overlap
+    this.bannerY = Math.max(H * 0.34, this.top + 250 + 150);
+    this.banner = this.add.container(W / 2, this.bannerY).setAlpha(0);
     // dark backing keeps the title readable over hazards
     this.bannerBack = this.add.graphics();
     this.bannerBack.fillStyle(0x000000, 0.62).fillRoundedRect(-300, -84, 600, 150, 24);
@@ -116,6 +118,7 @@ export class HudScene extends Phaser.Scene {
       if (!d) return;
       this.top = nt;
       for (const o of topElems) if (o) o.y += d;
+      this.bannerY = Math.max(this.H * 0.34, nt + 400);
     };
     this.registry.events.on("changedata-safeTop", onSafe);
     this.events.once("shutdown", () => this.registry.events.off("changedata-safeTop", onSafe));
@@ -207,10 +210,10 @@ export class HudScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.banner,
       alpha: 0,
-      y: this.H * 0.27,
+      y: this.bannerY - this.H * 0.03,
       delay: 1900,
       duration: 500,
-      onComplete: () => (this.banner.y = this.H * 0.3),
+      onComplete: () => (this.banner.y = this.bannerY),
     });
   }
 
@@ -219,10 +222,7 @@ export class HudScene extends Phaser.Scene {
     this.tweens.killTweensOf(this.banner);
     this.bannerText.setStroke(hex(0xff1030), 5).setShadow(0, 0, hex(0xff1030), 30, true, true);
     this.bannerLine.setFillStyle(0xff1030);
-    this.banner
-      .setAlpha(1)
-      .setScale(3.2)
-      .setY(this.H * 0.3);
+    this.banner.setAlpha(1).setScale(3.2).setY(this.bannerY);
     this.bannerLine.scaleX = 1;
     this.tweens.add({ targets: this.banner, scale: 1, duration: 170, ease: "Quad.easeIn" });
     this.cameras.main.shake(320, 0.012);

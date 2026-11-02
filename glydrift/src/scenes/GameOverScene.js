@@ -57,15 +57,25 @@ export class GameOverScene extends Phaser.Scene {
     this.tweens.add({ targets: dim, fillAlpha: 0.8, duration: 200 });
 
     // ---- header + score
+    // header sits just under the safe area; "SCORE" keeps clear of it on notched phones
+    // (on a Dynamic Island iPhone the header used to land on top of the label)
+    const headY = top + 32;
     const head = plainText(
       this,
       W / 2,
-      top + 60,
+      headY,
       run.mode === "daily" ? `DAILY CHALLENGE #${dailyNumber()}` : "RUN OVER",
       22,
       "#cfc6ff",
     );
-    const scoreLbl = plainText(this, W / 2, H * 0.115, "SCORE", 20, "#ffffff");
+    const scoreLbl = plainText(
+      this,
+      W / 2,
+      Math.max(H * 0.115, headY + 36),
+      "SCORE",
+      20,
+      "#ffffff",
+    );
     const scoreText = neonText(this, W / 2, H * 0.17, "0", 100, col, { blur: 22 });
     new RollingCounter(this, scoreText).to(run.score, 550, 100);
     popIn(this, [head, scoreLbl, scoreText], 0, { duration: 300 });
@@ -183,12 +193,20 @@ export class GameOverScene extends Phaser.Scene {
       slideIn(this, t, 600, 15);
       y += 30;
     }
+    // unlock / achievement banners: in the free band above RETRY, sliding in from the side
+    // (they used to drop from the top onto the score)
+    const toastY = Math.max(y + 46, Math.max(y + 90, H * 0.8) - 110);
     this.time.delayedCall(ANIM_END, () => {
       for (const u of R.unlocks)
-        toast(this, `${u.name} UNLOCKED!`, u.color, { y: top + 130, sub: u.challenge?.text });
+        toast(this, `${u.name} UNLOCKED!`, u.color, {
+          y: toastY,
+          sub: u.challenge?.text,
+          side: true,
+        });
       for (const a of R.achievements)
         toast(this, a.name.toUpperCase(), 0xffd23f, {
-          y: top + 130,
+          y: toastY,
+          side: true,
           sub: `Achievement · ${a.desc}`,
         });
     });
@@ -254,7 +272,7 @@ export class GameOverScene extends Phaser.Scene {
 
     // the hero you flew with
     const def = getCharacter(run.char);
-    this.add.image(W - 70, top + 60, def.texture).setScale(0.5 / HI);
+    this.add.image(W - 70, headY + 4, def.texture).setScale(0.5 / HI);
   }
 
   /** "You placed #N worldwide!" once the background upload + rank lookup finish. */

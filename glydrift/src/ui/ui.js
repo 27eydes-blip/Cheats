@@ -310,13 +310,18 @@ export class ProgressBar {
 }
 
 /** Slide-down toast from the top of the screen. */
-export function toast(scene, text, color = 0x3ef4ff, { y = 140, depth = 500, sub } = {}) {
+export function toast(
+  scene,
+  text,
+  color = 0x3ef4ff,
+  { y = 140, depth = 500, sub, side = false } = {},
+) {
   const W = VIEW.W;
   const queue = (scene.__toastQueue ||= { t: 0 });
   const now = scene.time.now;
   const delay = Math.max(0, queue.t - now);
   queue.t = now + delay + 1100;
-  const c = scene.add.container(W / 2, -80).setDepth(depth);
+  const c = scene.add.container(side ? W + 320 : W / 2, side ? y : -80).setDepth(depth);
   const g = scene.add.graphics();
   const w = Math.min(W - 40, 560);
   const h = sub ? 92 : 70;
@@ -327,19 +332,19 @@ export function toast(scene, text, color = 0x3ef4ff, { y = 140, depth = 500, sub
   c.setAlpha(0);
   scene.tweens.add({
     targets: c,
-    y,
+    ...(side ? { x: W / 2 } : { y }),
     alpha: 1,
     delay,
-    duration: 420,
-    ease: "Back.easeOut",
+    duration: side ? 220 : 420,
+    ease: side ? "Cubic.easeOut" : "Back.easeOut",
     onStart: () => Sfx.reward(),
   });
   scene.tweens.add({
     targets: c,
-    y: -80,
+    ...(side ? { x: -320 } : { y: -80 }),
     alpha: 0,
     delay: delay + 1900,
-    duration: 360,
+    duration: side ? 220 : 360,
     ease: "Cubic.easeIn",
     onComplete: () => c.destroy(),
   });
