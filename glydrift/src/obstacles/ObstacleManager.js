@@ -159,7 +159,8 @@ export class ObstacleManager {
       this.introduced.add(`${info.rawIndex}:${kind}`);
     }
     this.count++;
-    const spacingMul = forced ? 1.35 : info.grace ? 1.8 : 1;
+    const roomy = biomeId === "abyss" ? 1.15 : biomeId === "glitch" ? 1.12 : 1; // a little more air
+    const spacingMul = (forced ? 1.35 : info.grace ? 1.8 : 1) * roomy;
 
     switch (kind) {
       case "saw": {
@@ -365,7 +366,7 @@ export class ObstacleManager {
         o.spawn(x + 48, {
           ya: flipAB ? yb : ya,
           yb: flipAB ? ya : yb,
-          hold: r.range(1.1, 1.5),
+          hold: r.range(1.3, 1.7),
           phase: r.next(),
         });
         width = 96;
@@ -391,7 +392,7 @@ export class ObstacleManager {
         let top = r.chance(0.5);
         for (let i = 0; i < n; i++) {
           const o = this.obtain("tendril");
-          o.spawn(x + 44 + i * 240, { top, L: r.range(H * 0.32, H * 0.48), lead: 1.3 });
+          o.spawn(x + 44 + i * 240, { top, L: r.range(H * 0.28, H * 0.42), lead: 1.3 });
           top = !top;
         }
         width = 88 + (n - 1) * 240;
@@ -402,8 +403,8 @@ export class ObstacleManager {
         const o = this.obtain("slammer");
         o.spawn(x + o.w / 2, {
           gc,
-          open: Phaser.Math.Linear(400, 340, d),
-          hold: r.range(0.9, 1.2),
+          open: Phaser.Math.Linear(450, 400, d),
+          hold: r.range(1.1, 1.4),
           phase: r.next(),
         });
         width = o.w;
@@ -414,8 +415,8 @@ export class ObstacleManager {
         const o = this.obtain("walls");
         o.spawn(x + (n * 64) / 2, {
           n,
-          depth: r.range(H * 0.2, H * 0.28),
-          sway: H * 0.07,
+          depth: r.range(H * 0.17, H * 0.24),
+          sway: H * 0.055,
           phase: r.range(0, 6.28),
         });
         this.coinLine(x + 200, x + n * 64 - 200, mid, 4);

@@ -413,7 +413,7 @@ export class BlinkBlock extends PxObstacle {
     const u = (((clock + this.phase * P) % P) + P) % P;
     const atA = u < this.hold;
     const local = atA ? u : u - this.hold;
-    const warn = local > this.hold - 0.5;
+    const warn = local > this.hold - 0.65;
     this.y = atA ? this.ya : this.yb;
     const dest = atA ? this.yb : this.ya;
     // flicker + RGB jitter before teleporting, ghost outline marks where it lands
@@ -485,7 +485,7 @@ export class BrokenLaser extends PxObstacle {
       let st = 0; // 0 off, 1 warning flicker, 2 lethal
       if (i !== this.broken && u < 3.0) {
         if (u >= lightAt) st = 2;
-        else if (u >= lightAt - 0.4) st = 1;
+        else if (u >= lightAt - 0.55) st = 1;
       }
       s.state = st;
       const y = i * this.segH + 12;

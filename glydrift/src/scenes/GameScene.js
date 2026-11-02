@@ -22,8 +22,8 @@ import { Save } from "../systems/save.js";
 
 const GHOST_STEP = 8;
 const CALM_M = 150; // last meters of the Glitch Realm before the Abyss: The Calm
-const ABYSS_SPIKE = 1.28; // speed jump entering the Abyss
-const DARK_R = 340; // Abyss light radius around the player
+const ABYSS_SPIKE = 1.18; // speed jump entering the Abyss
+const DARK_R = 390; // Abyss light radius around the player
 const COIN_BONUS = 10;
 // ?god in the URL makes the player invincible (handy for testing / capturing screenshots)
 const DEBUG_GOD =
@@ -574,7 +574,8 @@ export class GameScene extends Phaser.Scene {
     const local0 = this.meters - raw0 * BL;
     let target = 1;
     if (this.calm) target = 1 - 0.18 * this.calmK;
-    else if (raw0 % 5 === 4) target = ABYSS_SPIKE + 0.16 * (local0 / BL); // keeps ramping
+    else if (raw0 % 5 === 3) target = 0.95; // Glitch Realm runs a touch slower
+    else if (raw0 % 5 === 4) target = ABYSS_SPIKE + 0.1 * (local0 / BL); // keeps ramping
     if (target > this.speedMul) this.speedMul = Math.min(target, this.speedMul + rawDt * 0.5);
     else this.speedMul = Math.max(target, this.speedMul - rawDt * 0.12);
   }
@@ -602,7 +603,7 @@ export class GameScene extends Phaser.Scene {
     // Abyss limited vision (fades in after the slam, out when the Abyss ends)
     const BL = WORLD.biomeLength;
     const inAbyssZone = Math.floor(this.meters / BL) % 5 === 4 && this.blackoutT <= 0;
-    const target = inAbyssZone && this.state !== "dead" ? 0.82 : 0;
+    const target = inAbyssZone && this.state !== "dead" ? 0.75 : 0;
     this.darkA +=
       Math.sign(target - this.darkA) * Math.min(Math.abs(target - this.darkA), rawDt * 0.7);
     if (!inAbyssZone && this.inAbyss && this.darkA <= 0) this.inAbyss = false;
