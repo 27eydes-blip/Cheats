@@ -92,13 +92,32 @@ for (const type of ["pointerdown", "touchend", "keydown"]) {
   window.addEventListener(type, () => Music.unlock(), { capture: true, passive: true });
 }
 
-// Installable / offline (production builds only, like the other games on GitHub Pages)
+// Installable / offline (production builds only, like the other games on GitHub Pages).
+// Updates: the worker is checked on launch and when the app returns to the foreground; a new
+// version that arrives right at launch reloads straight into it (never in the middle of a run).
 if (
   import.meta.env.PROD &&
   "serviceWorker" in navigator &&
   (location.protocol === "https:" || location.hostname === "localhost")
 ) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  const launchedAt = Date.now();
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloaded || Date.now() - launchedAt > 15000) return;
+    reloaded = true;
+    window.location.reload();
+  });
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("sw.js", { updateViaCache: "none" })
+      .then((reg) => {
+        reg.update().catch(() => {});
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") reg.update().catch(() => {});
+        });
+      })
+      .catch(() => {});
+  });
 }
 
 boot();

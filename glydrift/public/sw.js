@@ -25,8 +25,13 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const r = e.request;
   if (r.method !== "GET" || new URL(r.url).origin !== location.origin) return;
+  // the page itself always bypasses the HTTP cache, so a new version shows up on next launch
+  const net =
+    r.mode === "navigate"
+      ? fetch(r.url, { cache: "no-store", credentials: "same-origin" })
+      : fetch(r);
   e.respondWith(
-    fetch(r)
+    net
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();
