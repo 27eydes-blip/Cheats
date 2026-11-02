@@ -375,6 +375,16 @@ export class CharacterScene extends Phaser.Scene {
         mecha: 1,
         tide: 2,
         draco: 4,
+        pip: 0,
+        coral: 1,
+        sprout: 0,
+        ruby: 1,
+        pengu: 2,
+        jelly: 3,
+        comet: 1,
+        ronin: 3,
+        seraph: 2,
+        leviathan: 4,
       }[def.id] ?? 0;
     blendPalette(
       { a: BIOMES[bi], b: BIOMES[(bi + 1) % 5], t: def.id === "nova" ? (this.t % 4) / 4 : 0 },

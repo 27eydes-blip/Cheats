@@ -3,14 +3,14 @@
 import { PixelCanvas } from "./px.js";
 
 /** Recolour the bottom/right edge of a body colour darker for a little volume. */
-function shadeEdges(pc, col, dark) {
+export function shadeEdges(pc, col, dark) {
   for (let y = 0; y < 24; y++)
     for (let x = 0; x < 24; x++)
       if (pc.get(x, y) === col && (pc.get(x, y + 1) === null || pc.get(x + 1, y + 1) === null))
         pc.set(x, y, dark);
 }
 /** Three wing poses hinged near (hx, hy), drawn behind the body. */
-function wing(pc, frame, hx, hy, col, tip, span = 1) {
+export function wing(pc, frame, hx, hy, col, tip, span = 1) {
   const s = span;
   const poses = [
     [
@@ -39,7 +39,7 @@ function wing(pc, frame, hx, hy, col, tip, span = 1) {
   const p = poses[frame][1];
   pc.set(p[0] + (frame === 1 ? 1 : 0), p[1] + (frame === 0 ? 1 : frame === 2 ? -1 : 0), tip);
 }
-function eye(pc, x, y, iris = 0x1a0636) {
+export function eye(pc, x, y, iris = 0x1a0636) {
   pc.rect(x, y, 2, 2, 0xffffff).set(x + 1, y + 1, iris);
 }
 

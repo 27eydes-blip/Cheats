@@ -1,5 +1,6 @@
 // Shared pixel sprites: heroes, coins, portals, and pixel particle textures.
 import { LOTTERY_DRAW } from "./lotteryHeroes.js";
+import { SHOP_DRAW } from "./shopHeroes.js";
 import { addAtlas, addTexture, PixelCanvas } from "./px.js";
 
 const OUT = 0x07101e; // bold character outline
@@ -581,6 +582,7 @@ export function buildCommon(scene) {
     tide,
     mecha,
     draco,
+    ...SHOP_DRAW,
     ...LOTTERY_DRAW,
   };
   for (let f = 0; f < 3; f++)

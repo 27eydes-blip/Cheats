@@ -63,6 +63,13 @@ const FLAP = {
   frost: () => tone({ type: "triangle", f0: 1200, f1: 1600, dur: 0.08, vol: 0.18 }),
   glitch: () =>
     tone({ type: "square", f0: 200 + Math.random() * 600, f1: 90, dur: 0.06, vol: 0.1 }),
+  pip: () => tone({ type: "triangle", f0: 1500, f1: 2100, dur: 0.05, vol: 0.14 }),
+  coral: () => tone({ type: "sine", f0: 380, f1: 620, dur: 0.09, vol: 0.22 }),
+  ruby: () => tone({ type: "triangle", f0: 1800, f1: 2400, dur: 0.04, vol: 0.12 }),
+  pengu: () => tone({ type: "sawtooth", f0: 160, f1: 120, dur: 0.1, vol: 0.08 }),
+  jelly: () => tone({ type: "sine", f0: 700, f1: 520, dur: 0.12, vol: 0.18 }),
+  comet: () => tone({ type: "sawtooth", f0: 220, f1: 440, dur: 0.1, vol: 0.08 }),
+  leviathan: () => tone({ type: "sine", f0: 140, f1: 90, dur: 0.16, vol: 0.3 }),
   nova: () => {
     tone({ type: "sine", f0: 660, f1: 990, dur: 0.12, vol: 0.2 });
     tone({ type: "sine", f0: 990, f1: 1320, dur: 0.12, vol: 0.1, delay: 0.03 });
