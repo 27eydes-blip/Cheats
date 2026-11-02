@@ -51,8 +51,8 @@ export class Saw extends PxObstacle {
   constructor(mgr) {
     super(mgr);
     this.type = "saw";
-    this.rail = this.add(this.scene.add.tileSprite(0, 0, 6 * S, 100, "nv_chain").setDepth(1));
-    this.img = this.add(this.scene.add.image(0, 0, "nv", "saw_12").setDepth(2));
+    this.rail = this.add(this.scene.add.tileSprite(0, 0, 6 * S, 100, "void_chain").setDepth(1));
+    this.img = this.add(this.scene.add.image(0, 0, "void", "saw_12").setDepth(2));
   }
   spawn(x, { y, amp = 0, freq = 1, phase = 0, R = 46 }) {
     this.arm(x);
@@ -103,9 +103,9 @@ export class Blade extends PxObstacle {
   constructor(mgr) {
     super(mgr);
     this.type = "blade";
-    this.chain = this.add(this.scene.add.tileSprite(0, 0, 6 * S, 100, "nv_chain").setDepth(1));
-    this.pivot = this.add(this.scene.add.image(0, 0, "nv", "emitter").setDepth(2));
-    this.head = this.add(this.scene.add.image(0, 0, "nv", "axe").setDepth(2));
+    this.chain = this.add(this.scene.add.tileSprite(0, 0, 6 * S, 100, "void_chain").setDepth(1));
+    this.pivot = this.add(this.scene.add.image(0, 0, "void", "emitter").setDepth(2));
+    this.head = this.add(this.scene.add.image(0, 0, "void", "axe").setDepth(2));
   }
   spawn(x, { top = true, L = 360, amp = 0.7, freq = 2, phase = 0 }) {
     this.arm(x);
@@ -145,19 +145,21 @@ export class Gate extends PxObstacle {
     const len = Math.ceil((mgr.H + OFF * 2) / (16 * S)) * 16 * S;
     this.topBody = this.add(
       this.scene.add
-        .tileSprite(0, 0, 16 * S, len, "nv_pillar_0")
+        .tileSprite(0, 0, 16 * S, len, "void_pillar_0")
         .setOrigin(0.5, 1)
         .setDepth(1),
     );
     this.botBody = this.add(
       this.scene.add
-        .tileSprite(0, 0, 16 * S, len, "nv_pillar_0")
+        .tileSprite(0, 0, 16 * S, len, "void_pillar_0")
         .setOrigin(0.5, 0)
         .setDepth(1),
     );
-    this.capT = this.add(this.scene.add.image(0, 0, "nv", "cap_0").setOrigin(0.5, 1).setDepth(2));
-    this.capB = this.add(this.scene.add.image(0, 0, "nv", "cap_0b").setOrigin(0.5, 0).setDepth(2));
-    this.torch = this.add(this.scene.add.image(0, 0, "nv", "torch_0").setDepth(3));
+    this.capT = this.add(this.scene.add.image(0, 0, "void", "cap_0").setOrigin(0.5, 1).setDepth(2));
+    this.capB = this.add(
+      this.scene.add.image(0, 0, "void", "cap_0b").setOrigin(0.5, 0).setDepth(2),
+    );
+    this.torch = this.add(this.scene.add.image(0, 0, "void", "torch_0").setDepth(3));
   }
   spawn(x, { gc, gap = 280, amp = 120, freq = 1.2, phase = 0 }) {
     this.arm(x);
@@ -209,10 +211,10 @@ export class Laser extends PxObstacle {
   constructor(mgr) {
     super(mgr);
     this.type = "laser";
-    this.beamA = this.add(this.scene.add.tileSprite(0, 0, 4 * S, 100, "nv_beam_v").setDepth(2));
-    this.beamB = this.add(this.scene.add.tileSprite(0, 0, 4 * S, 100, "nv_beam_v").setDepth(2));
-    this.emA = this.add(this.scene.add.image(0, 0, "nv", "emitter").setDepth(3));
-    this.emB = this.add(this.scene.add.image(0, 0, "nv", "emitter").setDepth(3));
+    this.beamA = this.add(this.scene.add.tileSprite(0, 0, 4 * S, 100, "void_beam_v").setDepth(2));
+    this.beamB = this.add(this.scene.add.tileSprite(0, 0, 4 * S, 100, "void_beam_v").setDepth(2));
+    this.emA = this.add(this.scene.add.image(0, 0, "void", "emitter").setDepth(3));
+    this.emB = this.add(this.scene.add.image(0, 0, "void", "emitter").setDepth(3));
   }
   spawn(x, { orient = "v", gc, gap = 260, span = 300, on = 1.2, off = 1.0, phase = 0, drift = 0 }) {
     this.arm(x);

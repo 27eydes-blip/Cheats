@@ -67,7 +67,7 @@ export class CharacterRig {
     if (this.ghost) this.sprite.setAlpha(0.3).setTint(0xd8e8ff);
 
     this.extras = [];
-    if (def.id === "nova") {
+    if (def.id === "nova" && !this.px) {
       this.rings = [0, 1].map((i) => {
         const r = scene.add
           .image(this.x, this.y, "nova_ring")
@@ -90,8 +90,11 @@ export class CharacterRig {
     if (def.id === "shade" && !this.ghost) {
       this.afterImages = [];
       for (let i = 0; i < 7; i++) {
-        const im = scene.add
-          .image(0, 0, def.texture)
+        const im = (
+          this.px
+            ? scene.add.image(0, 0, this.px.atlas, this.px.frames[0])
+            : scene.add.image(0, 0, def.texture)
+        )
           .setVisible(false)
           .setActive(false)
           .setDepth(depth - 1);
@@ -237,6 +240,10 @@ export class CharacterRig {
     if (!im) return;
     im.setActive(true).setVisible(true).setPosition(this.x, this.y).setAngle(this.angle);
     im.setScale(this.sprite.scaleX, this.sprite.scaleY).setAlpha(alpha);
+    if (this.px) {
+      im.setFrame(this.sprite.frame.name).setBlendMode(NORMAL).setTintFill(0x9a5cff);
+      im.setPosition(Math.round(this.x), Math.round(this.y)).setAngle(this.sprite.angle);
+    }
     im.life = 0.32;
   }
 
@@ -369,7 +376,11 @@ export class CharacterRig {
     const sp = this.sprite;
     if (this.px) {
       // pixel sprite: frame from the same wing logic, crisp scale steps, tilt in 15° steps
-      const f = Number(String(texture).slice(-1)) || 0;
+      const mode = this.px.mode || "wings";
+      let f;
+      if (mode === "idle") f = Math.floor(this.time * 5) % 3;
+      else if (mode === "glitch") f = this.glitchT > 0 ? 2 : Math.floor(this.time * 3) % 2;
+      else f = Number(String(texture).slice(-1)) || 0;
       sp.setFrame(this.px.frames[Math.min(this.px.frames.length - 1, f)]);
       const m = Math.max(0.5, Math.round(this.sizeMul * this.displayScale * 2) / 2);
       const flip = this.gravityDir < 0 ? -1 : 1;

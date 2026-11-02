@@ -278,17 +278,23 @@ export class Effects {
       }
       const k = a.life / a.max;
       if (this.drift) for (let p = 0; p < a.pts.length; p += 2) a.pts[p] -= this.drift * dt;
-      g.lineStyle(7, a.color, 0.35 * k);
-      g.strokePoints(this.toPoints(a.pts));
-      g.lineStyle(2.5, 0xffffff, k);
-      g.strokePoints(this.toPoints(a.pts));
+      // pixel bolt: stepped squares on the 4-unit art grid (colored rim, white core)
+      for (let p = 0; p + 3 < a.pts.length; p += 2) {
+        const x0 = a.pts[p];
+        const y0 = a.pts[p + 1];
+        const x1 = a.pts[p + 2];
+        const y1 = a.pts[p + 3];
+        const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) / 4));
+        for (let q = 0; q <= n; q++) {
+          const gx = Math.round((x0 + ((x1 - x0) * q) / n) / 4) * 4;
+          const gy = Math.round((y0 + ((y1 - y0) * q) / n) / 4) * 4;
+          g.fillStyle(a.color, 0.55 * k);
+          g.fillRect(gx - 4, gy - 4, 8, 8);
+          g.fillStyle(0xffffff, k);
+          g.fillRect(gx - 2, gy - 2, 4, 4);
+        }
+      }
     }
-  }
-
-  toPoints(arr) {
-    const out = [];
-    for (let i = 0; i < arr.length; i += 2) out.push({ x: arr[i], y: arr[i + 1] });
-    return out;
   }
 
   clear() {

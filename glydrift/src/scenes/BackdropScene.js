@@ -34,6 +34,7 @@ export class BackdropScene extends Phaser.Scene {
     st.dim = state.dim ?? 0;
     st.hazards = state.hazards ?? [];
     st.scenery = state.scenery ?? true;
+    if (state.theme) st.theme = state.theme; // pixel biome to show (crossfades)
   }
 
   /** Rebuild after a graphics/style setting change. */

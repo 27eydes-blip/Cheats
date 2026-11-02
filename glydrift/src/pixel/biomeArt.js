@@ -1,5 +1,5 @@
-// NEON VOID pixel theme: dark teal stone, toxic-green slime edges, lime-green spikes, rain.
-// Every asset here is original procedural pixel art.
+// Pixel biome art generator. One palette + a few style switches per biome produce every tile,
+// hazard, decoration and background layer. All assets are original procedural pixel art.
 import { addAtlas, addTexture, PixelCanvas, seeded, shade } from "./px.js";
 
 export const NV = {
@@ -32,9 +32,12 @@ export const NV = {
   bg3: 0x0c2226,
   bg4: 0x112d30,
   rain: 0x7fb7bf,
+  bgDetail: 0x1a3d3c,
+  bgHang: 0x0a1c1e,
+  bgNear: 0x0f272a,
 };
 
-const C = NV;
+let C = NV; // palette currently being built
 
 // ------------------------------------------------------------------ helpers
 function spikeRow(pc, x0, y0, count, w, h, down = true) {
@@ -351,7 +354,7 @@ function torch(f) {
     [".y...", "..yo.", ".yory", "yorry", "yoory", ".yry."],
     ["...y.", ".oy..", "yoroy", "yrory", ".yrry", "..ry."],
   ][f];
-  pc.stamp(1, 0, flames, { y: 0xfff3a0, o: 0xffb02e, r: 0xff6a1a });
+  pc.stamp(1, 0, flames, C.flame || { y: 0xfff3a0, o: 0xffb02e, r: 0xff6a1a });
   pc.rect(1, 6, 5, 2, C.metal2).hline(1, 5, 6, C.metal3);
   pc.rect(2, 8, 3, 5, C.metal1).vline(2, 8, 12, C.metal2);
   pc.rect(0, 12, 7, 2, C.s3).hline(0, 6, 12, C.s4);
@@ -367,10 +370,10 @@ function eyes(f) {
   const pc = new PixelCanvas(11, 6);
   pc.ellipse(5, 3, 5, 2.6, 0x020506);
   if (f === 0) {
-    pc.rect(2, 2, 2, 2, 0xe6f2c0).rect(7, 2, 2, 2, 0xe6f2c0);
+    pc.rect(2, 2, 2, 2, C.eye || 0xe6f2c0).rect(7, 2, 2, 2, C.eye || 0xe6f2c0);
     pc.set(3, 3, 0x1a1a1a).set(8, 3, 0x1a1a1a);
   } else if (f === 1) {
-    pc.hline(2, 3, 3, 0xe6f2c0).hline(7, 8, 3, 0xe6f2c0);
+    pc.hline(2, 3, 3, C.eye || 0xe6f2c0).hline(7, 8, 3, C.eye || 0xe6f2c0);
   } else {
     pc.hline(2, 3, 3, 0x2b3e30).hline(7, 8, 3, 0x2b3e30);
   }
@@ -408,10 +411,11 @@ function skyCanvas(scene, key) {
   cv.height = 256;
   const ctx = cv.getContext("2d");
   const g = ctx.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0, "#020708");
-  g.addColorStop(0.45, "#071a1d");
-  g.addColorStop(0.75, "#0a2124");
-  g.addColorStop(1, "#040b0d");
+  const st = C.sky || ["#020708", "#071a1d", "#0a2124", "#040b0d"];
+  g.addColorStop(0, st[0]);
+  g.addColorStop(0.45, st[1]);
+  g.addColorStop(0.75, st[2]);
+  g.addColorStop(1, st[3]);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 4, 256);
   if (scene.textures.exists(key)) scene.textures.remove(key);
@@ -508,53 +512,212 @@ function silhouette(w, h, seed, { base, rim, detail, kind }) {
   return pc;
 }
 
-/** Build every Neon Void texture + its atlas. */
-export function buildNeonVoid(scene) {
-  addTexture(scene, "nv_pillar_0", pillarBrick(3));
-  addTexture(scene, "nv_pillar_1", pillarColumn(5));
-  addTexture(scene, "nv_pillar_2", pillarBlocks(9));
-  addTexture(scene, "nv_wall", wallTile());
-  addTexture(scene, "nv_edge", wallEdge());
-  addTexture(scene, "nv_edge_b", wallEdge().flipY());
-  addTexture(scene, "nv_chain", chainTile());
-  addTexture(scene, "nv_beam_v", beamV());
-  addTexture(scene, "nv_beam_h", beamH());
-  skyCanvas(scene, "nv_sky");
+// ------------------------------------------------------------------ metal style (Glitch Realm)
+function pillarPlates(seed) {
+  const rnd = seeded(seed);
+  const pc = new PixelCanvas(16, 16).rect(0, 0, 16, 16, C.s2);
+  pc.hline(2, 13, 0, C.s4)
+    .hline(2, 13, 1, C.s3)
+    .hline(2, 13, 7, C.m)
+    .hline(2, 13, 8, C.s3)
+    .hline(2, 13, 15, C.m);
+  for (const [x, y] of [
+    [4, 3],
+    [11, 3],
+    [4, 11],
+    [11, 11],
+  ])
+    pc.set(x, y, C.s4).set(x + 1, y + 1, C.s0);
+  // circuit trace (muted — decoration)
+  let x = 5 + Math.floor(rnd() * 6);
+  for (let y = 2; y < 15; y++) {
+    if (y === 7 || y === 8) continue;
+    pc.set(x, y, C.g1);
+    if (rnd() < 0.25 && x < 12) {
+      pc.set(x + 1, y, C.g1);
+      x += 1;
+    }
+  }
+  pc.set(x, 13, C.g2);
+  pillarEdges(pc);
+  return pc;
+}
+
+function pillarVents(seed) {
+  const rnd = seeded(seed);
+  const pc = new PixelCanvas(16, 16).rect(0, 0, 16, 16, C.s1);
+  for (let y = 1; y < 16; y += 3) pc.hline(4, 11, y, C.s0).hline(4, 11, y + 1, C.s3);
+  pc.vline(3, 0, 15, C.s3).vline(12, 0, 15, C.s0);
+  if (rnd() < 0.7) pc.set(13, 4 + Math.floor(rnd() * 8), C.g2);
+  pillarEdges(pc);
+  return pc;
+}
+
+function wallPlates() {
+  const rnd = seeded(91);
+  const pc = new PixelCanvas(32, 32).rect(0, 0, 32, 32, C.s1);
+  for (const [x0, y0, w, h] of [
+    [0, 0, 16, 12],
+    [16, 0, 16, 8],
+    [16, 8, 16, 12],
+    [0, 12, 10, 20],
+    [10, 12, 6, 20],
+    [16, 20, 16, 12],
+  ]) {
+    pc.rect(x0, y0, w - 1, h - 1, C.s2)
+      .hline(x0, x0 + w - 2, y0, C.s3)
+      .vline(x0, y0, y0 + h - 2, C.s3);
+    pc.hline(x0, x0 + w - 1, y0 + h - 1, C.m).vline(x0 + w - 1, y0, y0 + h - 1, C.m);
+    pc.set(x0 + 2, y0 + 2, C.s4).set(x0 + w - 4, y0 + h - 4, C.s0);
+  }
+  for (let i = 0; i < 4; i++) {
+    let x = Math.floor(rnd() * 30);
+    const y = Math.floor(rnd() * 30);
+    for (let k = 0; k < 6; k++) pc.set((x += 1) % 32, y, C.g1);
+  }
+  return pc;
+}
+
+// ------------------------------------------------------------------ lamp variants (decor, 7x14 frames)
+function orbLamp(f) {
+  const rnd = seeded(13 + f * 7);
+  const pc = new PixelCanvas(7, 14);
+  pc.circle(3, 4, 2.8, C.flame?.o ?? 0x8a6ad0);
+  pc.circle(3, 4, 1.5, C.flame?.y ?? 0xffffff);
+  for (let i = 0; i < 3; i++)
+    pc.set(Math.floor(rnd() * 7), Math.floor(rnd() * 8), C.flame?.y ?? 0xffffff);
+  pc.rect(2, 8, 3, 4, C.metal1).vline(2, 8, 11, C.metal2);
+  pc.rect(0, 12, 7, 2, C.s3).hline(0, 6, 12, C.s4);
+  return pc;
+}
+
+function screenLamp(f) {
+  const pc = new PixelCanvas(7, 14);
+  pc.rect(0, 2, 7, 7, C.metal1).rect(1, 3, 5, 5, 0x05080a);
+  const cols = [C.flame?.y ?? 0x2bffef, C.flame?.o ?? 0xff5ad8, C.flame?.r ?? 0xffffff];
+  for (let y = 3; y < 8; y++)
+    if ((y + f) % 2 === 0) pc.hline(1, 1 + ((y * 3 + f * 2) % 5), y, cols[(y + f) % 3]);
+  pc.rect(3, 9, 1, 3, C.metal2);
+  pc.rect(1, 12, 5, 2, C.s3);
+  pc.outline(C.O, 1);
+  return pc;
+}
+
+// ------------------------------------------------------------------ extra silhouette kinds
+function silhouette2(w, h, seed, { base, rim, detail, kind }) {
+  const rnd = seeded(seed);
+  const pc = new PixelCanvas(w, h);
+  if (kind === "city") {
+    let x = 0;
+    while (x < w) {
+      const bw = 8 + Math.floor(rnd() * 14);
+      const bh = 18 + Math.floor(rnd() * (h - 22));
+      pc.rect(x, h - bh, Math.min(bw, w - x), bh, base);
+      pc.hline(x, Math.min(x + bw, w) - 1, h - bh, rim);
+      for (let wy = h - bh + 3; wy < h - 2; wy += 4)
+        for (let wx = x + 2; wx < Math.min(x + bw, w) - 2; wx += 3)
+          if (rnd() < 0.18) pc.set(wx, wy, detail);
+      if (rnd() < 0.4) pc.vline(x + Math.floor(bw / 2), h - bh - 5, h - bh, rim);
+      x += bw + Math.floor(rnd() * 3);
+    }
+  } else if (kind === "cables" || kind === "chains") {
+    for (let x = 0; x < w; x++) pc.vline(x, 0, 2, base);
+    let x = 0;
+    while (x < w - 10) {
+      const span = 16 + Math.floor(rnd() * 26);
+      const sag = 8 + Math.floor(rnd() * (h - 16));
+      for (let i = 0; i <= span; i++) {
+        const t = i / span;
+        const y = 2 + Math.round(Math.sin(t * Math.PI) * sag);
+        if (kind === "chains") {
+          if (i % 3 !== 1) pc.set(x + i, y, base);
+          else pc.set(x + i, y - 1, base).set(x + i, y + 1, base);
+        } else pc.set(x + i, y, base).set(x + i, y + 1, rim);
+      }
+      if (rnd() < 0.5) pc.set(x + Math.floor(span / 2), 2 + sag + 2, detail);
+      x += Math.floor(span * (0.4 + rnd() * 0.5));
+    }
+  } else if (kind === "icicles") {
+    for (let x = 0; x < w; x++) pc.vline(x, 0, 3 + Math.round(Math.sin(x * 0.4)), base);
+    let x = 1;
+    while (x < w - 2) {
+      const len = 6 + Math.floor(rnd() * (h - 8));
+      for (let y = 0; y < len; y++) {
+        const half = Math.round(2 * (1 - y / len));
+        for (let dx = -half; dx <= half; dx++) pc.set(x + dx + 2, y, base);
+        pc.set(x + 2 - half, y, rim);
+      }
+      x += 4 + Math.floor(rnd() * 6);
+    }
+  }
+  return pc;
+}
+
+/**
+ * Build every texture + the sprite atlas for one biome.
+ * cfg: { pillar: "stone"|"metal", lamp: "torch"|"orb"|"screen", far, mid, hang (silhouette kinds) }
+ */
+export function buildBiome(scene, prefix, palette, cfg) {
+  C = palette;
+  const metal = cfg.pillar === "metal";
+  const p = (k) => `${prefix}_${k}`;
+  if (metal) {
+    addTexture(scene, p("pillar_0"), pillarPlates(3));
+    addTexture(scene, p("pillar_1"), pillarVents(5));
+    addTexture(scene, p("pillar_2"), pillarPlates(9));
+    addTexture(scene, p("wall"), wallPlates());
+  } else {
+    addTexture(scene, p("pillar_0"), pillarBrick(3));
+    addTexture(scene, p("pillar_1"), pillarColumn(5));
+    addTexture(scene, p("pillar_2"), pillarBlocks(9));
+    addTexture(scene, p("wall"), wallTile());
+  }
+  addTexture(scene, p("edge"), wallEdge());
+  addTexture(scene, p("edge_b"), wallEdge().flipY());
+  addTexture(scene, p("chain"), chainTile());
+  addTexture(scene, p("beam_v"), beamV());
+  addTexture(scene, p("beam_h"), beamH());
+  skyCanvas(scene, p("sky"));
+  const sil = (kind, w, h, seed, colors) =>
+    ["city", "cables", "chains", "icicles"].includes(kind)
+      ? silhouette2(w, h, seed, { ...colors, kind })
+      : silhouette(w, h, seed, { ...colors, kind });
   addTexture(
     scene,
-    "nv_far",
-    silhouette(192, 70, 11, { base: C.bg2, rim: C.bg3, detail: C.bg4, kind: "cliffs" }),
+    p("far"),
+    sil(cfg.far || "cliffs", 192, 70, 11, { base: C.bg2, rim: C.bg3, detail: C.bg4 }),
   );
   addTexture(
     scene,
-    "nv_mid",
-    silhouette(176, 80, 23, { base: C.bg3, rim: C.bg4, detail: 0x1a3d3c, kind: "ruins" }),
+    p("mid"),
+    sil(cfg.mid || "ruins", 176, 80, 23, { base: C.bg3, rim: C.bg4, detail: C.bgDetail }),
   );
   addTexture(
     scene,
-    "nv_roots",
-    silhouette(160, 90, 53, { base: 0x0a1c1e, rim: 0x123033, detail: 0x2a5a52, kind: "roots" }),
+    p("roots"),
+    sil(cfg.hang || "roots", 160, 90, 53, { base: C.bgHang, rim: C.bg3, detail: C.bgDetail }),
   );
   addTexture(
     scene,
-    "nv_near_top",
+    p("near_top"),
     silhouette(128, 40, 31, {
-      base: 0x0f272a,
-      rim: 0x163638,
-      detail: 0x2b5048,
+      base: C.bgNear,
+      rim: C.bg4,
+      detail: C.bgDetail,
       kind: "stalactites",
     }),
   );
   addTexture(
     scene,
-    "nv_near_bot",
+    p("near_bot"),
     silhouette(128, 40, 37, {
-      base: 0x0f272a,
-      rim: 0x163638,
-      detail: 0x2b5048,
+      base: C.bgNear,
+      rim: C.bg4,
+      detail: C.bgDetail,
       kind: "stalagmites",
     }),
   );
+  const lamp = cfg.lamp === "orb" ? orbLamp : cfg.lamp === "screen" ? screenLamp : torch;
   const frames = {
     cap_0: gateCap(1),
     cap_1: gateCap(2),
@@ -564,9 +727,9 @@ export function buildNeonVoid(scene) {
     saw_16: saw(16),
     axe: axe(),
     emitter: emitter(),
-    torch_0: torch(0),
-    torch_1: torch(1),
-    torch_2: torch(2),
+    torch_0: lamp(0),
+    torch_1: lamp(1),
+    torch_2: lamp(2),
     eyes_0: eyes(0),
     eyes_1: eyes(1),
     eyes_2: eyes(2),
@@ -575,5 +738,6 @@ export function buildNeonVoid(scene) {
   };
   frames.cap_0b = frames.cap_0.flipY();
   frames.cap_1b = frames.cap_1.flipY();
-  addAtlas(scene, "nv", frames);
+  addAtlas(scene, prefix, frames);
+  C = NV;
 }

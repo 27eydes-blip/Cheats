@@ -539,7 +539,15 @@ export class MenuScene extends Phaser.Scene {
     this.t += dt;
     // slowly cycle every biome palette; menus keep the backdrop dim and scenery hidden
     blendPalette(biomeStateAt((this.t * 18) % 2500), this.pal);
-    this.backdrop.drive(this.pal, { scroll: 140, speedNorm: 0, dim: 0.5, scenery: false });
+    // showcase every pixel biome on the title screen (slow crossfade every ~9 s)
+    const showId = ["void", "solar", "frozen", "glitch", "abyss"][Math.floor(this.t / 9) % 5];
+    this.backdrop.drive(this.pal, {
+      scroll: 140,
+      speedNorm: 0,
+      dim: 0.5,
+      scenery: false,
+      theme: showId,
+    });
     this.fx.drift = 140 * 0.6;
 
     const W = this.W;

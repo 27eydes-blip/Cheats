@@ -1,7 +1,7 @@
 // The run itself: world scroll, biomes, obstacles, player, ghost, juice, post-FX.
 // UI lives in the parallel Hud scene so the camera zoom / post-FX never touch it.
 import Phaser from "phaser";
-import { biomeStateAt, blendPalette, lerpColor } from "../biomes/biomes.js";
+import { BIOMES, biomeStateAt, blendPalette, lerpColor } from "../biomes/biomes.js";
 import { fitCamera, NEAR_MISS, PHYSICS, POST_FX, speedForMeters, VIEW, WORLD } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { ObstacleManager } from "../obstacles/ObstacleManager.js";
@@ -391,11 +391,15 @@ export class GameScene extends Phaser.Scene {
         this.W / 2 + (hb[i][1] - this.W / 2) * zl,
       ];
     }
+    // pixel biome art follows the dominant biome (walls + backdrop crossfade on change)
+    const biomeId = BIOMES[bs.rawIndex % BIOMES.length].id;
+    this.terrain.setTheme(themeFor(biomeId));
     this.backdrop.drive(this.pal, {
       scroll: dt > 0 ? this.scroll * this.timeScale : 0,
       speedNorm,
       dim: 0,
       hazards: this.hazardScreen,
+      theme: biomeId,
     });
     this.fx.drift = this.scroll * 0.7;
 
