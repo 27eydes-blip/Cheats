@@ -1,6 +1,6 @@
 // Glydrift offline support: network-first so updates arrive, cached copies when there's
 // no signal. Only same-origin GETs are handled — leaderboard (Supabase) calls pass through.
-const CACHE = "glydrift-mvzvp4ds";
+const CACHE = "glydrift-mvzvv8v6";
 const CORE = ["./", "manifest.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 self.addEventListener("install", (e) => {
   e.waitUntil(
