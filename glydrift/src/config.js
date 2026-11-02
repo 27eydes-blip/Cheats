@@ -82,7 +82,7 @@ export const PHYSICS = {
   flapVelocity: -790, // velocity set (not added) on tap
   terminalFall: 1080,
   terminalRise: -980,
-  radius: 28, // hitbox; the hero is drawn larger with a soft glow around it
+  radius: 19, // hitbox, matched to the drawn body of the hero
   miniScale: 0.55,
   miniFlapMul: 0.86,
   miniGravityMul: 0.92,
@@ -102,7 +102,7 @@ export const WORLD = {
 };
 
 export const NEAR_MISS = {
-  threshold: 28, // clearance in px that counts as a near miss
+  threshold: 24, // clearance in px that counts as a near miss
   bonus: 25,
   slowScale: 0.32,
   slowTime: 0.22, // real seconds
@@ -123,7 +123,7 @@ export function speedForMeters(m) {
   const s = WORLD.baseSpeed + WORLD.speedGain * (1 - Math.exp(-m / WORLD.speedRampMeters));
   return Math.min(s, WORLD.maxSpeed);
 }
-export const HERO_SCALE = 2.7; // heroes are drawn ~2.7x their original size
+export const HERO_SCALE = 1.45; // in-game hero size (menus scale their showcase up separately)
 
 /**
  * Supabase (leaderboard). Only the public *publishable* key belongs in the client — access

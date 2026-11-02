@@ -145,7 +145,7 @@ export class ObstacleManager {
         break;
       }
       case "saw2": {
-        const gap = Phaser.Math.Linear(370, 290, d);
+        const gap = Phaser.Math.Linear(330, 250, d);
         const gc = r.range(safeTop + gap / 2, safeBot - gap / 2);
         const R = 50;
         const a = this.obtain("saw");
@@ -157,7 +157,7 @@ export class ObstacleManager {
         break;
       }
       case "gate": {
-        const gap = Phaser.Math.Linear(350, 275, d) + r.range(-10, 20);
+        const gap = Phaser.Math.Linear(310, 230, d) + r.range(-10, 20);
         const amp = r.chance(0.7) ? r.range(60, 120 + d * 90) : 0;
         const gc = r.range(safeTop + gap / 2 + amp - 40, safeBot - gap / 2 - amp + 40);
         const o = this.obtain("gate");
@@ -171,8 +171,8 @@ export class ObstacleManager {
         const o = this.obtain("crusher");
         o.spawn(x + 60, {
           gc,
-          open: Phaser.Math.Linear(420, 370, d),
-          closed: Phaser.Math.Linear(170, 138, d),
+          open: Phaser.Math.Linear(380, 330, d),
+          closed: Phaser.Math.Linear(150, 112, d),
           period: Phaser.Math.Linear(2.4, 1.8, d),
           phase: r.next(),
         });
@@ -203,7 +203,7 @@ export class ObstacleManager {
         break;
       }
       case "laser": {
-        const gap = Phaser.Math.Linear(340, 285, d);
+        const gap = Phaser.Math.Linear(300, 240, d);
         const gc = r.range(safeTop + gap / 2, safeBot - gap / 2);
         const o = this.obtain("laser");
         o.spawn(x + 22, {
