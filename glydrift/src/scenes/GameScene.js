@@ -144,7 +144,6 @@ export class GameScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ run lifecycle
   resetRun(autoStart) {
-    const W = this.W;
     if (this.pal.sky0 !== undefined) {
       this.fromPal = {};
       for (const k of PAL_KEYS) this.fromPal[k] = this.pal[k];

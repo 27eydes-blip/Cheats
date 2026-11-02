@@ -7,7 +7,7 @@ const stampServiceWorker = () => ({
   name: "stamp-sw",
   apply: "build",
   closeBundle() {
-    const p = resolve(__dirname, "dist/sw.js");
+    const p = resolve(import.meta.dirname, "dist/sw.js");
     writeFileSync(p, readFileSync(p, "utf8").replace("__BUILD__", Date.now().toString(36)));
   },
 });

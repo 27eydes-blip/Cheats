@@ -1,8 +1,7 @@
 // Spawns obstacle patterns from a seeded RNG, pools every instance, and resolves
 // collisions / near-misses / portal + coin pickups against the player circle.
 import Phaser from "phaser";
-import { COIN_COLOR, hazardColors, NEAR_MISS } from "../config.js";
-import { HI } from "../gfx/textures.js";
+import { hazardColors, NEAR_MISS } from "../config.js";
 import { themeFor } from "../pixel/themes.js";
 import { RNG } from "../systems/rng.js";
 import { TYPES as BASE_TYPES } from "./pixelTypes.js";
@@ -20,8 +19,6 @@ const SIG = {
 };
 /** Biome-local meters at which each signature hazard unlocks. */
 const UNLOCK = { void: [60, 200, 340], default: [0, 120, 230] };
-
-const ADD = Phaser.BlendModes.ADD;
 
 export class ObstacleManager {
   constructor(scene, fx, { W, H, lowGfx, heroColor = 0x38f6ff }) {

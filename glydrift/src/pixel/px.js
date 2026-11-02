@@ -192,17 +192,31 @@ export class PixelCanvas {
   }
   /** HTML canvas pre-scaled by `scale` (crisp blocks). */
   toCanvas(scale = S) {
+    // write raw pixels once, then scale up with smoothing off (exact nearest-neighbour
+    // blocks) — far faster than one fillRect per art pixel
+    const small = document.createElement("canvas");
+    small.width = this.w;
+    small.height = this.h;
+    const sctx = small.getContext("2d");
+    const img = sctx.createImageData(this.w, this.h);
+    const px = img.data;
+    for (let i = 0; i < this.d.length; i++) {
+      const c = this.d[i];
+      if (c === null) continue;
+      const o = i * 4;
+      px[o] = (c >> 16) & 255;
+      px[o + 1] = (c >> 8) & 255;
+      px[o + 2] = c & 255;
+      px[o + 3] = 255;
+    }
+    sctx.putImageData(img, 0, 0);
+    if (scale === 1) return small;
     const cv = document.createElement("canvas");
     cv.width = this.w * scale;
     cv.height = this.h * scale;
     const ctx = cv.getContext("2d");
-    for (let y = 0; y < this.h; y++)
-      for (let x = 0; x < this.w; x++) {
-        const c = this.d[y * this.w + x];
-        if (c === null) continue;
-        ctx.fillStyle = `#${c.toString(16).padStart(6, "0")}`;
-        ctx.fillRect(x * scale, y * scale, scale, scale);
-      }
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(small, 0, 0, cv.width, cv.height);
     return cv;
   }
 }
@@ -242,6 +256,7 @@ export function addAtlas(scene, key, frames, scale = S) {
   cv.width = maxW;
   cv.height = y + rowH;
   const ctx = cv.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
   for (const p of place) ctx.drawImage(p.pc.toCanvas(scale), p.x, p.y);
   if (scene.textures.exists(key)) scene.textures.remove(key);
   const tex = scene.textures.addCanvas(key, cv);
