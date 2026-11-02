@@ -2,7 +2,7 @@
   "name": "glydrift",
   "private": true,
   "version": "1.0.0",
-  "description": "Glydrift — a neon-cosmos one-tap arcade flyer (Phaser 3 + Vite, Capacitor-ready).",
+  "description": "Glydrift \u2014 a neon-cosmos one-tap arcade flyer (Phaser 3 + Vite, Capacitor-ready).",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -10,12 +10,15 @@
     "preview": "vite preview --host",
     "ios:add": "npm run build && npx cap add ios",
     "ios:sync": "npm run build && npx cap sync ios",
-    "ios:open": "npx cap open ios"
+    "ios:open": "npx cap open ios",
+    "test:rls": "node scripts/test-leaderboard-rls.mjs",
+    "deploy:pages": "bash scripts/deploy-gh-pages.sh"
   },
   "dependencies": {
     "@capacitor/core": "^8.6.0",
     "@fontsource/orbitron": "^5.3.0",
     "@fontsource/rajdhani": "^5.3.0",
+    "@supabase/supabase-js": "^2.118.0",
     "phaser": "3.90.0",
     "tone": "^15.1.22"
   },

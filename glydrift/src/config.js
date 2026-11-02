@@ -124,3 +124,12 @@ export function speedForMeters(m) {
   return Math.min(s, WORLD.maxSpeed);
 }
 export const HERO_SCALE = 2.7; // heroes are drawn ~2.7x their original size
+
+/**
+ * Supabase (leaderboard). Only the public *publishable* key belongs in the client — access
+ * is enforced by Row Level Security. Never put a secret/service_role key here.
+ */
+export const SUPABASE = {
+  url: "https://cdjcvhywrbsdryagqxqg.supabase.co",
+  publishableKey: "sb_publishable_zZB05fEYY1eYhhmnzSuodg_QqpXF-dO",
+};

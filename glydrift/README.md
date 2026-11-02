@@ -17,6 +17,30 @@ Debug / review:
 - `?style=grid|space|horizon` — preview the three backdrop styles (also in Settings)
 - `?music` — opens the hidden **music test page** (also: tap the GLYDRIFT logo 5 times)
 
+## Play online (GitHub Pages app)
+
+Live at **https://27eydes-blip.github.io/Cheats/glydrift/** — installable (Add to Home
+Screen) and playable offline, like the other games on the `gh-pages` branch.
+Publish a new version with `npm run deploy:pages` (builds and copies `dist/` into
+`gh-pages/glydrift`).
+
+## Online leaderboard (Supabase)
+
+- Config in `src/config.js` (project URL + **publishable** key only — RLS does the access
+  control; never add a secret/service_role key).
+- Anonymous sign-in on launch; the session is persisted so a device keeps one `player_id`.
+- First launch asks for a 3–12 character name (letters/numbers, profanity-filtered); change
+  it in Settings → Name (existing rows are renamed).
+- After each run the score goes into a persistent local queue and uploads in the
+  background (`src/systems/leaderboard.js`): only personal bests are upserted (with
+  `created_at` = now), `character` and `run_time_ms` are always sent, implausible scores
+  (too high for the run time) are rejected, and the queue retries when back online.
+  Levels: `endless` and `daily-<number>`.
+- Leaderboard screen: Endless (All Time / This Week / Today) and today's Daily, top 100,
+  gold/silver/bronze top 3, your own row pinned with your real rank.
+- `?lbtest` routes reads/writes to `test-…` levels; `npm run test:rls` runs a two-player
+  Row Level Security check (uses level `test-rls`).
+
 ## Shipping to iOS (Capacitor)
 
 ```bash

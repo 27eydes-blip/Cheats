@@ -9,11 +9,13 @@ import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Sfx } from "../systems/audio.js";
+import { Leaderboard } from "../systems/leaderboard.js";
 import { Music } from "../systems/music.js";
 import { LOGIN_REWARDS, Progression } from "../systems/progression.js";
 import { todayKey } from "../systems/rng.js";
 import { Save } from "../systems/save.js";
 import { drawIcon } from "../ui/icons.js";
+import { askUsername } from "../ui/nameModal.js";
 import {
   button,
   drawNeonRect,
@@ -159,24 +161,55 @@ export class MenuScene extends Phaser.Scene {
       onClick: () => this.startGame("daily"),
     }).setDepth(100);
     this.dailyPlayed = played;
-    const heroes = button(this, W / 2 - 98, by + 248, 180, 72, "HEROES", {
+    const heroes = button(this, W / 2 - 220, by + 248, 200, 72, "HEROES", {
       color: 0xb45cff,
-      size: 20,
+      size: 18,
       onClick: () => this.go("Characters"),
     }).setDepth(100);
-    const prog = button(this, W / 2 + 98, by + 248, 180, 72, "PROGRESS", {
+    const ranks = button(this, W / 2, by + 248, 220, 72, "LEADERBOARD", {
+      color: 0x3ef4ff,
+      size: 16,
+      onClick: () => this.go("Leaderboard"),
+    }).setDepth(100);
+    const prog = button(this, W / 2 + 220, by + 248, 200, 72, "PROGRESS", {
       color: 0xff4fd8,
-      size: 18,
+      size: 16,
       onClick: () => this.go("Progress"),
     }).setDepth(100);
-    popIn(this, [play, this.daily, heroes, prog], 250);
+    popIn(this, [play, this.daily, heroes, ranks, prog], 250);
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.updateCountdown() });
 
     // ---- daily login reward (single source of truth: Progression.loginStatus)
+    // first launch: pick a leaderboard name, then the daily reward
     const ls = Progression.loginStatus();
-    if (ls.canClaim) this.time.delayedCall(600, () => this.openLogin(ls));
+    if (!Leaderboard.username) {
+      this.time.delayedCall(450, () =>
+        this.promptName(true).then(() => ls.canClaim && this.openLogin(ls)),
+      );
+    } else if (ls.canClaim) {
+      this.time.delayedCall(600, () => this.openLogin(ls));
+    }
 
     this.input.keyboard?.on("keydown-SPACE", () => this.startGame("normal"));
+  }
+
+  /** Neon username prompt; saves locally and renames existing leaderboard rows. */
+  async promptName(first = false) {
+    this.naming = true;
+    const name = await askUsername({
+      initial: Leaderboard.username,
+      cancellable: !first,
+      title: first ? "PICK A NAME" : "CHANGE NAME",
+    });
+    this.naming = false;
+    if (name && name !== Leaderboard.username) {
+      Leaderboard.setUsername(name);
+      toast(this, `HI, ${name.toUpperCase()}!`, 0x3ef4ff, {
+        y: this.H * 0.3,
+        sub: "You're on the worldwide leaderboard",
+      });
+    }
+    return name;
   }
 
   updateCountdown() {
@@ -196,7 +229,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   startGame(mode) {
-    if (this.leaving || this.modal) return;
+    if (this.leaving || this.modal || this.naming) return;
     this.leaving = true;
     Sfx.unlock();
     this.cameras.main.fadeOut(200, 2, 1, 7);
@@ -368,7 +401,7 @@ export class MenuScene extends Phaser.Scene {
     const W = this.W;
     const H = this.H;
     const st = Save.data.settings;
-    const h = 640;
+    const h = 730;
     const c = this.modalBase(h, 0x3ef4ff);
     const y0 = H / 2 - h / 2;
     c.add(neonText(this, W / 2, y0 + 56, "SETTINGS", 40, 0x3ef4ff, { blur: 14 }));
@@ -455,7 +488,23 @@ export class MenuScene extends Phaser.Scene {
         this.closeModal();
       },
     });
-    c.add([mute, gfx, style, done]);
+    const nameBtn = button(
+      this,
+      W / 2,
+      y0 + 525,
+      W - 180,
+      72,
+      `NAME: ${Leaderboard.username || "—"}`,
+      {
+        color: 0x3ef4ff,
+        size: 18,
+        onClick: () =>
+          this.promptName(false).then(() =>
+            nameBtn.setLabel(`NAME: ${Leaderboard.username || "—"}`),
+          ),
+      },
+    );
+    c.add([mute, gfx, style, nameBtn, done]);
   }
 
   update(time, delta) {

@@ -11,6 +11,7 @@ import { CharacterScene } from "./scenes/CharacterScene.js";
 import { GameOverScene } from "./scenes/GameOverScene.js";
 import { GameScene } from "./scenes/GameScene.js";
 import { HudScene } from "./scenes/HudScene.js";
+import { LeaderboardScene } from "./scenes/LeaderboardScene.js";
 import { MenuScene } from "./scenes/MenuScene.js";
 import { MusicTestScene } from "./scenes/MusicTestScene.js";
 import { ProgressScene } from "./scenes/ProgressScene.js";
@@ -59,6 +60,7 @@ async function boot() {
       GameOverScene,
       CharacterScene,
       ProgressScene,
+      LeaderboardScene,
       MusicTestScene,
     ],
   });
@@ -87,6 +89,15 @@ async function boot() {
 // Audio may only start inside a user gesture (iOS): the first tap anywhere unlocks it.
 for (const type of ["pointerdown", "touchend", "keydown"]) {
   window.addEventListener(type, () => Music.unlock(), { capture: true, passive: true });
+}
+
+// Installable / offline (production builds only, like the other games on GitHub Pages)
+if (
+  import.meta.env.PROD &&
+  "serviceWorker" in navigator &&
+  (location.protocol === "https:" || location.hostname === "localhost")
+) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 }
 
 boot();

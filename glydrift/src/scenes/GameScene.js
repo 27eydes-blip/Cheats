@@ -18,6 +18,7 @@ import { CharacterRig } from "../player/CharacterRig.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Player } from "../player/Player.js";
 import { Sfx } from "../systems/audio.js";
+import { Leaderboard } from "../systems/leaderboard.js";
 import { Music } from "../systems/music.js";
 import { BIOME_TRACKS } from "../systems/musicTracks.js";
 import { Progression } from "../systems/progression.js";
@@ -164,6 +165,7 @@ export class GameScene extends Phaser.Scene {
       flaps: 0,
       biome: 0,
       ghost: null,
+      runTimeMs: 0,
     };
     this.ghostRec = [];
     this.nextGhostSample = 0;
@@ -305,6 +307,8 @@ export class GameScene extends Phaser.Scene {
   finishRun() {
     this.state = "dead";
     const result = Progression.commitRun(this.run);
+    // upload in the background — never awaited, never blocks retry
+    result.upload = Leaderboard.submitRun(this.run);
     this.scene.launch("GameOver", { result, game: this });
     this.scene.bringToTop("GameOver");
   }
@@ -348,6 +352,7 @@ export class GameScene extends Phaser.Scene {
       this.scroll *= Math.exp(-rawDt * 1.6);
     }
     if (playing) {
+      this.run.runTimeMs += rawDt * 1000;
       this.distance += this.scroll * dt;
       this.meters = this.distance / WORLD.pxPerMeter;
     }

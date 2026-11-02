@@ -7,6 +7,7 @@ import { COIN_COLOR, fitCamera, VIEW } from "../config.js";
 import { HI } from "../gfx/textures.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Sfx } from "../systems/audio.js";
+import { Leaderboard, Levels } from "../systems/leaderboard.js";
 import { Music } from "../systems/music.js";
 import { Progression } from "../systems/progression.js";
 import { dailyNumber } from "../systems/rng.js";
@@ -85,7 +86,7 @@ export class GameOverScene extends Phaser.Scene {
     popIn(this, bestLine, 450, { duration: 300 });
 
     // ---- stat chips (numbers use the clean numeric font)
-    const chipY = H * 0.33;
+    const chipY = H * 0.36;
     const chips = [
       [`${run.distance}m`, "DISTANCE", col],
       [biomeName(run.biome).split(" ").slice(-1)[0], "BIOME", biome.accent],
@@ -103,7 +104,7 @@ export class GameOverScene extends Phaser.Scene {
     });
     slideIn(this, chips, 200, 30);
 
-    let y = H * 0.4;
+    let y = H * 0.428;
     // coins line — only when something was earned
     const missionCoins = R.missions.reduce((a, m) => a + m.reward.coins, 0);
     const earned = run.coins + missionCoins;
@@ -200,22 +201,29 @@ export class GameOverScene extends Phaser.Scene {
       fill: 0x0c2a1a,
       onClick: () => this.retry(),
     });
-    const share = button(this, W / 2 - 220, by + 112, 196, 76, "SHARE", {
+    const rowY = by + 112;
+    const share = button(this, 94, rowY, 140, 76, "SHARE", {
       color: 0xffd23f,
-      size: 20,
+      size: 17,
       onClick: () => openShareModal(this.game, run),
     });
-    const heroes = button(this, W / 2, by + 112, 196, 76, "HEROES", {
+    const ranks = button(this, 283, rowY, 210, 76, "LEADERBOARD", {
+      color: 0x3ef4ff,
+      size: 16,
+      onClick: () => this.goto("Leaderboard", { tab: run.mode === "daily" ? "daily" : "endless" }),
+    });
+    const heroes = button(this, 472, rowY, 140, 76, "HEROES", {
       color: 0xb45cff,
-      size: 20,
+      size: 17,
       onClick: () => this.goto("Characters"),
     });
-    const home = button(this, W / 2 + 220, by + 112, 196, 76, "HOME", {
+    const home = button(this, 626, rowY, 140, 76, "HOME", {
       color: 0xff4fd8,
-      size: 20,
+      size: 17,
       onClick: () => this.goto("Menu"),
     });
-    popIn(this, [retry, share, heroes, home], 250, { duration: 350 });
+    popIn(this, [retry, share, ranks, heroes, home], 250, { duration: 350 });
+    this.showPlacement(R, run, H * 0.3);
 
     const tapHint = plainText(
       this,
@@ -247,6 +255,62 @@ export class GameOverScene extends Phaser.Scene {
     // the hero you flew with
     const def = getCharacter(run.char);
     this.add.image(W - 70, top + 60, def.texture).setScale(0.5 / HI);
+  }
+
+  /** "You placed #N worldwide!" once the background upload + rank lookup finish. */
+  showPlacement(R, run, y) {
+    const token = (this.placementToken = {});
+    const W = VIEW.W;
+    const alive = () => this.sys.isActive() && this.placementToken === token && !this.leaving;
+    Promise.resolve(R.upload)
+      .then((up) => {
+        if (!up || up.rejected) return null;
+        return Leaderboard.placementFor(Levels.forRun(run), run.score);
+      })
+      .then((rank) => {
+        if (!rank || !alive()) return;
+        const where = run.mode === "daily" ? "on today's Daily" : "worldwide";
+        const t = neonText(
+          this,
+          W / 2,
+          y,
+          `You placed #${rank} ${where}!`,
+          26,
+          rank <= 3 ? 0xffd23f : 0x3ef4ff,
+          { blur: 10 },
+        );
+        t.setScale(0.3).setAlpha(0);
+        this.tweens.add({
+          targets: t,
+          scale: 1,
+          alpha: 1,
+          duration: 420,
+          ease: "Back.easeOut",
+          easeParams: [2.4],
+        });
+        this.tweens.add({
+          targets: t,
+          scale: 1.06,
+          yoyo: true,
+          repeat: 2,
+          delay: 450,
+          duration: 220,
+          ease: "Sine.easeInOut",
+        });
+        if (rank <= 100) Sfx.reward();
+      })
+      .catch(() => {
+        if (!alive()) return;
+        const t = plainText(
+          this,
+          W / 2,
+          y,
+          "Offline · your score will upload automatically",
+          18,
+          "#9c90c8",
+        ).setAlpha(0);
+        this.tweens.add({ targets: t, alpha: 1, duration: 300 });
+      });
   }
 
   onBackgroundTap() {
@@ -317,7 +381,7 @@ export class GameOverScene extends Phaser.Scene {
     gs.resetRun(true);
   }
 
-  goto(key) {
+  goto(key, data) {
     if (this.leaving) return;
     this.leaving = true;
     this.finishIntro();
@@ -325,6 +389,6 @@ export class GameOverScene extends Phaser.Scene {
     Music.restore();
     this.scene.stop("Hud");
     this.scene.stop("Game");
-    this.scene.start(key);
+    this.scene.start(key, data);
   }
 }

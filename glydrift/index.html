@@ -9,7 +9,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#05010d" />
+    <meta name="theme-color" content="#020107" />
+    <meta name="apple-mobile-web-app-title" content="Glydrift" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/png" href="icon-192.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <title>Glydrift</title>
     <style>
       :root {
@@ -81,6 +85,97 @@
         display: flex;
         gap: 12px;
       }
+      #name-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(2, 1, 7, 0.86);
+        z-index: 11;
+        padding: 16px;
+        box-sizing: border-box;
+        font-family: "Orbitron", system-ui, sans-serif;
+        color: #fff;
+      }
+      #name-modal.open {
+        display: flex;
+      }
+      #name-modal .card {
+        width: min(92vw, 400px);
+        border: 2px solid #3ef4ff;
+        border-radius: 22px;
+        background: rgba(10, 4, 24, 0.97);
+        box-shadow: 0 0 28px rgba(62, 244, 255, 0.45), inset 0 0 18px rgba(62, 244, 255, 0.12);
+        padding: 22px 20px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+      }
+      #name-modal h2 {
+        margin: 0;
+        font-size: 22px;
+        letter-spacing: 2px;
+        color: #fff;
+        text-shadow: 0 0 10px #3ef4ff, 0 0 2px #3ef4ff;
+      }
+      #name-modal p {
+        margin: 0;
+        font-family: "Rajdhani", system-ui, sans-serif;
+        font-weight: 600;
+        font-size: 16px;
+        color: #bfb6e8;
+      }
+      #name-modal input {
+        font-family: "Rajdhani", system-ui, sans-serif;
+        font-weight: 700;
+        font-size: 26px;
+        letter-spacing: 1px;
+        text-align: center;
+        color: #fff;
+        background: #0b0520;
+        border: 2px solid #b45cff;
+        border-radius: 14px;
+        padding: 12px;
+        outline: none;
+        box-shadow: 0 0 14px rgba(180, 92, 255, 0.4);
+        -webkit-user-select: text;
+        user-select: text;
+      }
+      #name-modal input:focus {
+        border-color: #3ef4ff;
+        box-shadow: 0 0 18px rgba(62, 244, 255, 0.55);
+      }
+      #name-modal .err {
+        min-height: 20px;
+        color: #ff4f7a;
+      }
+      #name-modal .row {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+      }
+      #name-modal button {
+        font-family: inherit;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: #fff;
+        background: rgba(12, 42, 26, 0.9);
+        border: 2px solid #39ff88;
+        border-radius: 14px;
+        padding: 12px 18px;
+        box-shadow: 0 0 14px rgba(57, 255, 136, 0.45);
+      }
+      #name-modal button.alt {
+        background: rgba(30, 10, 60, 0.85);
+        border-color: #b45cff;
+        box-shadow: 0 0 14px rgba(180, 92, 255, 0.4);
+      }
+      #name-modal button:disabled {
+        opacity: 0.4;
+      }
       #share-modal button {
         font-family: inherit;
         font-size: 15px;
@@ -106,6 +201,28 @@
         <button data-act="save">SAVE</button>
         <button data-act="close">CLOSE</button>
       </div>
+    </div>
+    <div id="name-modal">
+      <form class="card" autocomplete="off">
+        <h2>PICK A NAME</h2>
+        <p>Shown on the worldwide leaderboard</p>
+        <input
+          name="username"
+          maxlength="12"
+          inputmode="text"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          enterkeyhint="done"
+          placeholder="3–12 letters/numbers"
+        />
+        <p class="err"></p>
+        <div class="row">
+          <button type="button" class="alt" data-act="random">RANDOM</button>
+          <button type="button" class="alt" data-act="cancel">CANCEL</button>
+          <button type="submit" data-act="save">SAVE</button>
+        </div>
+      </form>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>

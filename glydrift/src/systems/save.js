@@ -35,6 +35,8 @@ function defaults() {
     login: { last: "", streak: 0, claimed: "" },
     daily: { date: "", best: 0, attempts: 0, ghost: null, ghostChar: "volt", lastPlayed: "" },
     levelRewards: {},
+    profile: { username: "" },
+    lbQueue: [],
     settings: {
       lowGfx: false,
       gfxChecked: false,
