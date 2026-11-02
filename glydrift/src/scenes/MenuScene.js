@@ -9,6 +9,7 @@ import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Sfx } from "../systems/audio.js";
+import { Install } from "../systems/install.js";
 import { Leaderboard } from "../systems/leaderboard.js";
 import { Music } from "../systems/music.js";
 import { LOGIN_REWARDS, Progression } from "../systems/progression.js";
@@ -177,6 +178,15 @@ export class MenuScene extends Phaser.Scene {
       onClick: () => this.go("Progress"),
     }).setDepth(100);
     popIn(this, [play, this.daily, heroes, ranks, prog], 250);
+    // "Add to Home Screen" — hidden once you're already playing from the home screen
+    if (Install.available) {
+      const add = button(this, W / 2, Math.min(H - 60, by + 340), 360, 64, "ADD TO HOME SCREEN", {
+        color: 0x39ff88,
+        size: 15,
+        onClick: () => Install.prompt(),
+      }).setDepth(100);
+      popIn(this, add, 450);
+    }
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.updateCountdown() });
 
     // ---- daily login reward (single source of truth: Progression.loginStatus)
@@ -401,7 +411,7 @@ export class MenuScene extends Phaser.Scene {
     const W = this.W;
     const H = this.H;
     const st = Save.data.settings;
-    const h = 730;
+    const h = Install.available ? 820 : 730;
     const c = this.modalBase(h, 0x3ef4ff);
     const y0 = H / 2 - h / 2;
     c.add(neonText(this, W / 2, y0 + 56, "SETTINGS", 40, 0x3ef4ff, { blur: 14 }));
@@ -505,6 +515,15 @@ export class MenuScene extends Phaser.Scene {
       },
     );
     c.add([mute, gfx, style, nameBtn, done]);
+    if (Install.available) {
+      c.add(
+        button(this, W / 2, y0 + 615, W - 180, 72, "ADD TO HOME SCREEN", {
+          color: 0x39ff88,
+          size: 16,
+          onClick: () => Install.prompt(),
+        }),
+      );
+    }
   }
 
   update(time, delta) {

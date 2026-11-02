@@ -16,6 +16,7 @@ import { MenuScene } from "./scenes/MenuScene.js";
 import { MusicTestScene } from "./scenes/MusicTestScene.js";
 import { ProgressScene } from "./scenes/ProgressScene.js";
 import { SkyScene } from "./scenes/SkyScene.js";
+import "./systems/install.js"; // registers beforeinstallprompt early (Android install button)
 import { Music } from "./systems/music.js";
 import { Save } from "./systems/save.js";
 

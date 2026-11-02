@@ -85,7 +85,8 @@
         display: flex;
         gap: 12px;
       }
-      #name-modal {
+      #name-modal,
+      #install-modal {
         position: fixed;
         inset: 0;
         display: none;
@@ -98,10 +99,12 @@
         font-family: "Orbitron", system-ui, sans-serif;
         color: #fff;
       }
-      #name-modal.open {
+      #name-modal.open,
+      #install-modal.open {
         display: flex;
       }
-      #name-modal .card {
+      #name-modal .card,
+      #install-modal .card {
         width: min(92vw, 400px);
         border: 2px solid #3ef4ff;
         border-radius: 22px;
@@ -113,21 +116,24 @@
         gap: 12px;
         text-align: center;
       }
-      #name-modal h2 {
+      #name-modal h2,
+      #install-modal h2 {
         margin: 0;
         font-size: 22px;
         letter-spacing: 2px;
         color: #fff;
         text-shadow: 0 0 10px #3ef4ff, 0 0 2px #3ef4ff;
       }
-      #name-modal p {
+      #name-modal p,
+      #install-modal p {
         margin: 0;
         font-family: "Rajdhani", system-ui, sans-serif;
         font-weight: 600;
         font-size: 16px;
         color: #bfb6e8;
       }
-      #name-modal input {
+      #name-modal input,
+      #install-modal input {
         font-family: "Rajdhani", system-ui, sans-serif;
         font-weight: 700;
         font-size: 26px;
@@ -143,20 +149,24 @@
         -webkit-user-select: text;
         user-select: text;
       }
-      #name-modal input:focus {
+      #name-modal input:focus,
+      #install-modal input:focus {
         border-color: #3ef4ff;
         box-shadow: 0 0 18px rgba(62, 244, 255, 0.55);
       }
-      #name-modal .err {
+      #name-modal .err,
+      #install-modal .err {
         min-height: 20px;
         color: #ff4f7a;
       }
-      #name-modal .row {
+      #name-modal .row,
+      #install-modal .row {
         display: flex;
         gap: 10px;
         justify-content: center;
       }
-      #name-modal button {
+      #name-modal button,
+      #install-modal button {
         font-family: inherit;
         font-size: 15px;
         font-weight: 700;
@@ -168,13 +178,52 @@
         padding: 12px 18px;
         box-shadow: 0 0 14px rgba(57, 255, 136, 0.45);
       }
-      #name-modal button.alt {
+      #name-modal button.alt,
+      #install-modal button.alt {
         background: rgba(30, 10, 60, 0.85);
         border-color: #b45cff;
         box-shadow: 0 0 14px rgba(180, 92, 255, 0.4);
       }
-      #name-modal button:disabled {
+      #name-modal button:disabled,
+      #install-modal button:disabled {
         opacity: 0.4;
+      }
+      #install-modal ol {
+        margin: 0;
+        padding: 0 0 0 4px;
+        list-style: none;
+        text-align: left;
+        font-family: "Rajdhani", system-ui, sans-serif;
+        font-weight: 600;
+        font-size: 18px;
+        color: #e8e0ff;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      #install-modal li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      #install-modal li b {
+        flex: 0 0 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 2px solid #3ef4ff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #3ef4ff;
+        font-family: "Orbitron", system-ui, sans-serif;
+        font-size: 14px;
+      }
+      #install-modal .glyph {
+        display: inline-block;
+        padding: 0 6px;
+        border: 1px solid #b45cff;
+        border-radius: 6px;
+        color: #fff;
       }
       #share-modal button {
         font-family: inherit;
@@ -223,6 +272,16 @@
           <button type="submit" data-act="save">SAVE</button>
         </div>
       </form>
+    </div>
+    <div id="install-modal">
+      <div class="card">
+        <h2>ADD TO HOME SCREEN</h2>
+        <p class="sub">Play full-screen, offline, with one tap.</p>
+        <ol></ol>
+        <div class="row">
+          <button type="button" data-act="close">GOT IT</button>
+        </div>
+      </div>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>
