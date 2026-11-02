@@ -61,7 +61,7 @@ const AUDIO = path.join(WORK, "audio.wav");
     { id: "quiet", text: "it gets quiet...", y: 320 },
     { id: "tooquiet", text: "...too quiet", y: 320 },
     { id: "soon", text: "GLYDRIFT · coming soon", y: 1430, size: 60, pill: true },
-    { id: "ai", text: "I built this game<br>with AI in one night", y: 360 },
+    { id: "ai", text: "I built this game<br>with AI in one night", y: 560 },
   ], path.join(WORK, "cards"));
   const endCard = await L.renderEndCard(path.join(WORK, "cards", "endcard.png"));
 
@@ -109,7 +109,7 @@ const AUDIO = path.join(WORK, "audio.wav");
 
   // ---------------------------------------------------------------- 2) the 15 s AI cut
   const B = [
-    { name: "menu", start: L.q(0.05), dur: L.q(2.4) },
+    { name: "menu", start: L.q(0.05), dur: L.q(2.4), cropY: 0 }, // keep the GLYDRIFT title in frame
     { name: "heroes", start: L.q(T(chars) + 1.4), dur: L.q(3.4) },
     L.beatClip("solar", T(solar), 0.3, 1.9, grids),
     L.beatClip("frozen", T(frozen), 0.3, 1.9, grids),
@@ -134,7 +134,7 @@ const AUDIO = path.join(WORK, "audio.wav");
     workDir: WORK,
     out: path.join(OUT, "glydrift_tiktok_ai.mp4"),
     overlays: [
-      { file: cards.ai, from: 0, to: 3.0 },
+      { file: cards.ai, from: 0, to: B[0].dur }, // the menu shot; clears before the hero names
       { file: cards.soon, from: totalB - 3, to: totalB },
     ],
   });

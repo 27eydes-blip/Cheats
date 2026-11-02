@@ -8,8 +8,8 @@ Separate from the game: nothing in `../src` is changed. The "demo mode" lives in
 ```bash
 cd glydrift
 npm run build                 # the recorder plays the built game (dist/)
-node marketing/record.cjs     # ~35 min here: 60 fps master + the game's own audio → marketing/work/
-node marketing/edit.cjs       # ~2 min: both TikTok cuts → marketing/output/
+node marketing/record.cjs     # ~20 min here: 60 fps master + the game's own audio → marketing/work/
+node marketing/edit.cjs       # ~8 min: both TikTok cuts → marketing/output/
 ```
 
 Outputs (1080x1920, 30 fps, H.264/AAC, loudness -14 LUFS):
