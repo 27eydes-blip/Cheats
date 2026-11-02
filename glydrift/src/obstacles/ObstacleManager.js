@@ -1,14 +1,16 @@
 // Spawns obstacle patterns from a seeded RNG, pools every instance, and resolves
 // collisions / near-misses / portal + coin pickups against the player circle.
 import Phaser from "phaser";
-import { NEAR_MISS } from "../config.js";
+import { COIN_COLOR, hazardColors, NEAR_MISS } from "../config.js";
+import { HI } from "../gfx/textures.js";
 import { RNG } from "../systems/rng.js";
 import { TYPES } from "./types.js";
 
 const ADD = Phaser.BlendModes.ADD;
 
 export class ObstacleManager {
-  constructor(scene, fx, { W, H, lowGfx }) {
+  constructor(scene, fx, { W, H, lowGfx, heroColor = 0x38f6ff }) {
+    this.colors = hazardColors(heroColor);
     this.scene = scene;
     this.fx = fx;
     this.W = W;
@@ -17,7 +19,6 @@ export class ObstacleManager {
     this.pools = {};
     this.active = [];
     this.coins = [];
-    this.g = scene.add.graphics().setDepth(1).setBlendMode(ADD);
     this.rightEdge = W;
     this.leftEdge = 0;
     this.rng = new RNG(1);
@@ -33,7 +34,6 @@ export class ObstacleManager {
     this.flipped = false;
     this.sinceFlip = 0;
     this.lastPortalM = 0;
-    this.g.clear();
   }
 
   obtain(type) {
@@ -54,13 +54,16 @@ export class ObstacleManager {
       c.halo = this.scene.add
         .image(0, 0, "glow")
         .setDepth(5)
-        .setBlendMode(ADD)
-        .setTint(0xffc83d)
-        .setScale(0.7)
-        .setAlpha(0.45);
+        .setBlendMode(Phaser.BlendModes.NORMAL)
+        .setTint(COIN_COLOR)
+        .setScale(0.8)
+        .setAlpha(0.5);
       this.coins.push(c);
     }
-    c.setActive(true).setVisible(true).setPosition(x, y).setScale(0.8);
+    c.setActive(true)
+      .setVisible(true)
+      .setPosition(x, y)
+      .setScale(1 / HI);
     c.halo.setVisible(true);
     c.baseY = y;
     c.phase = Math.random() * 6;
@@ -142,7 +145,7 @@ export class ObstacleManager {
         break;
       }
       case "saw2": {
-        const gap = Phaser.Math.Linear(330, 250, d);
+        const gap = Phaser.Math.Linear(370, 290, d);
         const gc = r.range(safeTop + gap / 2, safeBot - gap / 2);
         const R = 50;
         const a = this.obtain("saw");
@@ -154,7 +157,7 @@ export class ObstacleManager {
         break;
       }
       case "gate": {
-        const gap = Phaser.Math.Linear(310, 230, d) + r.range(-10, 20);
+        const gap = Phaser.Math.Linear(350, 275, d) + r.range(-10, 20);
         const amp = r.chance(0.7) ? r.range(60, 120 + d * 90) : 0;
         const gc = r.range(safeTop + gap / 2 + amp - 40, safeBot - gap / 2 - amp + 40);
         const o = this.obtain("gate");
@@ -168,8 +171,8 @@ export class ObstacleManager {
         const o = this.obtain("crusher");
         o.spawn(x + 60, {
           gc,
-          open: Phaser.Math.Linear(380, 330, d),
-          closed: Phaser.Math.Linear(150, 112, d),
+          open: Phaser.Math.Linear(420, 370, d),
+          closed: Phaser.Math.Linear(170, 138, d),
           period: Phaser.Math.Linear(2.4, 1.8, d),
           phase: r.next(),
         });
@@ -200,7 +203,7 @@ export class ObstacleManager {
         break;
       }
       case "laser": {
-        const gap = Phaser.Math.Linear(300, 240, d);
+        const gap = Phaser.Math.Linear(340, 285, d);
         const gc = r.range(safeTop + gap / 2, safeBot - gap / 2);
         const o = this.obtain("laser");
         o.spawn(x + 22, {
@@ -256,6 +259,13 @@ export class ObstacleManager {
     this.nextX = x + width + spacing;
   }
 
+  /** World-space x ranges of every hazard on screen (used to keep scenery out from behind them). */
+  hazardBounds(out = []) {
+    out.length = 0;
+    for (const o of this.active) if (o.kind !== "portal") out.push([o.left, o.right]);
+    return out;
+  }
+
   // ------------------------------------------------------------------ per-frame
   /**
    * @returns events for this frame
@@ -272,7 +282,6 @@ export class ObstacleManager {
 
     this.rightEdge = this.W / 2 + this.W / 2 / zoom + 40;
     this.leftEdge = this.W / 2 - this.W / 2 / zoom - 40;
-    this.g.clear();
 
     const dx = scroll * dt;
     this.nextX -= dx;
@@ -285,7 +294,7 @@ export class ObstacleManager {
       // the player's light brightens nearby obstacles
       const dist = Math.abs(o.x - px);
       o.lit = alive ? Math.max(0, 1 - dist / 260) : 0;
-      o.update(dt, clock, pal);
+      o.update(dt, clock);
 
       if (alive) {
         if (o.kind === "portal") {
@@ -336,7 +345,7 @@ export class ObstacleManager {
         }
       }
       c.y = c.baseY + Math.sin(t) * 5;
-      c.scaleX = 0.8 * Math.cos(t * 0.7);
+      c.scaleX = Math.cos(t * 0.7) / HI;
       c.halo.setPosition(c.x, c.y);
       if (c.x < this.leftEdge - 40) {
         c.setActive(false).setVisible(false);

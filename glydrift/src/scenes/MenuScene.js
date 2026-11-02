@@ -1,16 +1,19 @@
-// Title screen: living background cycling through every biome, the selected hero flying
-// a figure-eight, daily login streak popup and settings.
+// Title screen: dimmed living background, the selected hero flying a figure-eight, a big
+// PLAY button, the Daily Challenge with a countdown, the daily login reward and settings.
 import Phaser from "phaser";
-import { Background } from "../biomes/Background.js";
+import { BG_STYLES } from "../biomes/Background.js";
 import { biomeStateAt, blendPalette } from "../biomes/biomes.js";
-import { FONT } from "../config.js";
+import { COIN_COLOR, fitCamera, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
+import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Sfx } from "../systems/audio.js";
+import { Music } from "../systems/music.js";
 import { LOGIN_REWARDS, Progression } from "../systems/progression.js";
-import { dailyNumber, todayKey } from "../systems/rng.js";
+import { todayKey } from "../systems/rng.js";
 import { Save } from "../systems/save.js";
+import { drawIcon } from "../ui/icons.js";
 import {
   button,
   drawNeonRect,
@@ -20,8 +23,20 @@ import {
   plainText,
   popIn,
   RollingCounter,
+  slider,
   toast,
 } from "../ui/ui.js";
+
+function countdownText() {
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(24, 0, 0, 0);
+  const s = Math.max(0, Math.floor((next - now) / 1000));
+  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${hh}:${mm}:${ss}`;
+}
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -29,8 +44,9 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create() {
-    const W = this.scale.width;
-    const H = this.scale.height;
+    fitCamera(this);
+    const W = VIEW.W;
+    const H = VIEW.H;
     this.W = W;
     this.H = H;
     const s = Save.data;
@@ -40,89 +56,84 @@ export class MenuScene extends Phaser.Scene {
     const lowGfx = s.settings.lowGfx;
     const top = (this.registry.get("safeTop") || 0) + 20;
     this.top = top;
-    this.cameras.main.setBackgroundColor(0x05010d);
     if (!lowGfx && this.renderer.type === Phaser.WEBGL) {
       this.cameras.main.setPostPipeline("GlyPostFX");
       this.post = this.cameras.main.getPostPipeline("GlyPostFX");
       if (Array.isArray(this.post)) this.post = this.post[0];
+      if (this.post) this.post.params.pxScale = VIEW.Z;
     }
-    this.cameras.main.fadeIn(350, 5, 1, 13);
+    this.cameras.main.fadeIn(300, 2, 1, 7);
 
-    this.bg = new Background(this, { lowGfx, W, H, cover: 1.05 });
+    this.backdrop = this.scene.get("Backdrop");
     this.fx = new Effects(this, { lowGfx });
     this.pal = {};
     this.t = Math.random() * 400;
-    this.events.once("shutdown", () => this.bg.destroy());
+    Music.play("menu");
 
-    // logo — each letter rides a wave
-    this.letters = [];
-    const word = "GLYDRIFT";
-    // lay letters out by their real advance widths (glyphs differ, e.g. "I")
-    let cursor = 0;
-    const metrics = [];
-    for (const ch of word) {
-      const t = neonText(this, 0, H * 0.17, ch, 88, 0x3ef4ff, { blur: 30 }).setDepth(100);
-      const adv = t.width - t.padding.left - t.padding.right + 6;
-      metrics.push({ t, adv });
-      cursor += adv;
-    }
-    let x = W / 2 - cursor / 2;
-    for (const { t, adv } of metrics) {
-      t.x = x + adv / 2;
-      x += adv;
-      this.letters.push(t);
-    }
-    popIn(this, this.letters, 100);
+    // ---- logo: one text object → perfectly even letter spacing; nothing overlaps it
+    const logoY = top + 150;
+    this.logo = neonText(this, W / 2, logoY, "GLYDRIFT", 84, 0x3ef4ff, { blur: 22 }).setDepth(100);
+    this.logo.setLetterSpacing?.(6);
     this.tagline = plainText(
       this,
       W / 2,
-      H * 0.17 + 72,
-      "DRIFT THE LIVING NEON COSMOS",
-      18,
-      "#d8d0ff",
+      logoY + 66,
+      "DRIFT THE NEON COSMOS",
+      20,
+      "#bfb6e8",
     ).setDepth(100);
+    popIn(this, this.logo, 80);
+    // hidden music test: tap the logo 5 times
+    this.logoTaps = 0;
+    this.logo.setInteractive().on("pointerdown", () => {
+      this.logoTaps++;
+      if (this.logoTaps >= 5) this.go("MusicTest");
+    });
 
-    // hero
+    // ---- hero
     this.def = getCharacter(s.selected);
+    this.heroY = H * 0.43;
     this.rig = new CharacterRig(this, this.def, this.fx, {
       x: W / 2,
-      y: H * 0.4,
+      y: this.heroY,
       lowGfx,
       depth: 60,
-      scale: 1.7,
+      scale: 0.85,
     });
     this.flapT = 0;
 
-    // top bar: level + coins + settings
+    // ---- top bar: level + coins + settings
     const lvlNeed = Progression.xpToNext(s.level);
-    const lv = neonText(this, 36, top + 40, `LV ${s.level}`, 26, 0x3ef4ff, {
+    const lv = neonText(this, 32, top + 36, `LV ${s.level}`, 26, 0x3ef4ff, {
       ox: 0,
-      blur: 10,
+      blur: 8,
     }).setDepth(100);
-    this.xpBar = new ProgressBar(this, 36, top + 66, 180, 10, 0x3ef4ff).setDepth(100);
+    this.xpBar = new ProgressBar(this, 32, top + 66, 170, 10, 0x3ef4ff).setDepth(100);
     this.xpBar.set(s.xp / lvlNeed);
     this.coinIcon = this.add
-      .image(W - 210, top + 40, "coin")
-      .setScale(0.7)
+      .image(W - 236, top + 40, "coin")
+      .setScale(0.8 / HI)
       .setDepth(100);
-    this.coinText = neonText(this, W - 186, top + 40, `${s.coins}`, 28, 0xffc83d, {
+    this.coinText = neonText(this, W - 210, top + 40, `${s.coins}`, 28, COIN_COLOR, {
       ox: 0,
-      blur: 10,
+      blur: 8,
     }).setDepth(100);
     this.coinCounter = new RollingCounter(this, this.coinText, { value: s.coins });
     const gear = this.add
-      .text(W - 46, top + 98, "⚙", { fontFamily: FONT, fontSize: "40px", color: "#ffffff" })
-      .setOrigin(0.5)
-      .setDepth(100);
-    gear.setShadow(0, 0, "#3ef4ff", 12, true, true).setInteractive({ useHandCursor: true });
+      .graphics()
+      .setDepth(100)
+      .setPosition(W - 50, top + 40);
+    drawIcon(gear, "gear", 22, 0xd8d0ff);
+    gear.setInteractive(new Phaser.Geom.Circle(0, 0, 36), Phaser.Geom.Circle.Contains);
     gear.on("pointerup", () => this.openSettings());
-    popIn(this, [lv, this.coinIcon, this.coinText, gear], 200);
+    popIn(this, [lv, this.coinIcon, this.coinText], 150);
 
-    // buttons
-    const by = H * 0.62;
-    const play = button(this, W / 2, by, 440, 124, "PLAY", {
+    // ---- buttons: PLAY is the biggest & brightest
+    const by = H * 0.66;
+    const play = button(this, W / 2, by, 500, 150, "PLAY", {
       color: 0x39ff88,
-      size: 54,
+      size: 66,
+      fill: 0x0c2a1a,
       onClick: () => this.startGame("normal"),
     }).setDepth(100);
     this.tweens.add({
@@ -130,57 +141,66 @@ export class MenuScene extends Phaser.Scene {
       scale: 1.04,
       yoyo: true,
       repeat: -1,
-      duration: 800,
+      duration: 750,
       ease: "Sine.easeInOut",
     });
+    if (s.best > 0) {
+      const best = plainText(this, W / 2, by - 104, `BEST ${s.best}`, 22, "#cfc6ff").setDepth(100);
+      popIn(this, best, 250);
+    }
     const today = todayKey();
-    const dPlayed = s.daily.date === today && s.daily.attempts > 0;
-    const daily = button(this, W / 2, by + 150, 440, 100, `DAILY #${dailyNumber()}`, {
+    const played = s.daily.date === today && s.daily.attempts > 0;
+    this.daily = button(this, W / 2, by + 140, 380, 86, "DAILY CHALLENGE", {
       color: 0xffd23f,
-      size: 30,
-      sub: dPlayed ? `Today's best: ${s.daily.best}` : "Same run for everyone · NEW",
+      size: 22,
+      sub: played
+        ? `Best today ${s.daily.best} · new in ${countdownText()}`
+        : `New run in ${countdownText()}`,
       onClick: () => this.startGame("daily"),
     }).setDepth(100);
-    const heroes = button(this, W / 2 - 112, by + 278, 212, 92, "HEROES", {
+    this.dailyPlayed = played;
+    const heroes = button(this, W / 2 - 98, by + 248, 180, 72, "HEROES", {
       color: 0xb45cff,
-      size: 26,
+      size: 20,
       onClick: () => this.go("Characters"),
     }).setDepth(100);
-    const prog = button(this, W / 2 + 112, by + 278, 212, 92, "PROGRESS", {
+    const prog = button(this, W / 2 + 98, by + 248, 180, 72, "PROGRESS", {
       color: 0xff4fd8,
-      size: 24,
+      size: 18,
       onClick: () => this.go("Progress"),
     }).setDepth(100);
-    popIn(this, [play, daily, heroes, prog], 350);
+    popIn(this, [play, this.daily, heroes, prog], 250);
+    this.time.addEvent({ delay: 1000, loop: true, callback: () => this.updateCountdown() });
 
-    const best = plainText(
-      this,
-      W / 2,
-      by - 100,
-      s.best > 0 ? `BEST ${s.best}` : "TAP PLAY TO BEGIN",
-      20,
-      "#cfc6ff",
-    ).setDepth(100);
-    popIn(this, best, 300);
-
-    // daily login streak
+    // ---- daily login reward (single source of truth: Progression.loginStatus)
     const ls = Progression.loginStatus();
-    if (ls.canClaim) this.time.delayedCall(700, () => this.openLogin(ls));
+    if (ls.canClaim) this.time.delayedCall(600, () => this.openLogin(ls));
 
     this.input.keyboard?.on("keydown-SPACE", () => this.startGame("normal"));
   }
 
+  updateCountdown() {
+    const s = Save.data;
+    this.daily.subLabel?.setText(
+      this.dailyPlayed
+        ? `Best today ${s.daily.best} · new in ${countdownText()}`
+        : `New run in ${countdownText()}`,
+    );
+  }
+
   go(key) {
-    this.cameras.main.fadeOut(200, 5, 1, 13);
-    this.time.delayedCall(200, () => this.scene.start(key));
+    if (this.leaving) return;
+    this.leaving = true;
+    this.cameras.main.fadeOut(180, 2, 1, 7);
+    this.time.delayedCall(180, () => this.scene.start(key));
   }
 
   startGame(mode) {
     if (this.leaving || this.modal) return;
     this.leaving = true;
     Sfx.unlock();
-    this.cameras.main.fadeOut(220, 5, 1, 13);
-    this.time.delayedCall(220, () => this.scene.start("Game", { mode }));
+    this.cameras.main.fadeOut(200, 2, 1, 7);
+    this.time.delayedCall(200, () => this.scene.start("Game", { mode }));
   }
 
   // ------------------------------------------------------------------ modals
@@ -188,13 +208,13 @@ export class MenuScene extends Phaser.Scene {
     const W = this.W;
     const H = this.H;
     const c = this.add.container(0, 0).setDepth(300);
-    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x05010d, 0.8).setInteractive();
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x020107, 0.82).setInteractive();
     const g = this.add.graphics();
-    drawNeonRect(g, 40, H / 2 - h / 2, W - 80, h, 28, color, { fillAlpha: 0.95 });
+    drawNeonRect(g, 36, H / 2 - h / 2, W - 72, h, 26, color, { fillAlpha: 0.97 });
     c.add([dim, g]);
     this.modal = c;
     c.setAlpha(0);
-    this.tweens.add({ targets: c, alpha: 1, duration: 200 });
+    this.tweens.add({ targets: c, alpha: 1, duration: 180 });
     return c;
   }
 
@@ -204,7 +224,7 @@ export class MenuScene extends Phaser.Scene {
     this.tweens.add({
       targets: c,
       alpha: 0,
-      duration: 180,
+      duration: 160,
       onComplete: () => {
         c.destroy();
         this.modal = null;
@@ -213,122 +233,243 @@ export class MenuScene extends Phaser.Scene {
   }
 
   openLogin(ls) {
+    if (this.modal) return;
     const W = this.W;
     const H = this.H;
-    const c = this.modalBase(560, 0xffd23f);
-    const y0 = H / 2 - 280;
-    c.add(neonText(this, W / 2, y0 + 64, "DAILY REWARD", 44, 0xffd23f));
+    const h = 470; // sized to its content
+    const c = this.modalBase(h, 0xffd23f);
+    const y0 = H / 2 - h / 2;
+    c.add(neonText(this, W / 2, y0 + 56, "DAILY REWARD", 40, 0xffd23f, { blur: 14 }));
     c.add(
-      plainText(this, W / 2, y0 + 112, `${ls.streak}-day streak · keep it alive!`, 20, "#fff2c2"),
+      plainText(
+        this,
+        W / 2,
+        y0 + 100,
+        `${ls.streak}-day streak · day ${ls.day} of 7`,
+        22,
+        "#fff2c2",
+      ),
     );
-    const cellW = 80;
+    const shardFor = Progression.shardTarget();
+    const cellW = 84;
     LOGIN_REWARDS.forEach((rw, i) => {
       const day = i + 1;
-      const x = W / 2 + (i - 3) * (cellW + 8);
-      const y = y0 + 230;
+      const x = W / 2 + (i - 3) * (cellW + 4);
+      const y = y0 + 200;
       const isToday = day === ls.day;
       const done = day < ls.day;
       const col = rw.shard ? 0x3fa9ff : 0xffd23f;
       const g = this.add.graphics();
-      drawNeonRect(g, x - cellW / 2, y - 66, cellW, 132, 14, isToday ? 0xffffff : col, {
-        fillAlpha: done ? 0.3 : 0.75,
+      drawNeonRect(g, x - cellW / 2, y - 62, cellW, 124, 14, isToday ? 0xffffff : col, {
+        fillAlpha: done ? 0.35 : 0.8,
         glow: isToday,
         width: isToday ? 4 : 2,
       });
-      const items = [g, plainText(this, x, y - 44, `DAY ${day}`, 13, "#ffffff")];
-      items.push(
-        this.add.image(x, y - 2, rw.shard ? "shardIcon" : "coin").setScale(rw.shard ? 1 : 0.7),
-      );
-      items.push(plainText(this, x, y + 42, rw.shard ? "SHARD" : `${rw.coins}`, 15, hex(col)));
-      if (done) items.push(plainText(this, x, y - 2, "✔", 40, "#39ff88"));
+      const items = [g, plainText(this, x, y - 44, `DAY ${day}`, 15, "#ffffff")];
+      if (!done)
+        items.push(
+          this.add
+            .image(x, y - 6, rw.shard ? "shardIcon" : "coin")
+            .setScale((rw.shard ? 1 : 0.7) / HI),
+        );
+      if (rw.shard) {
+        const name = shardFor ? shardFor.name : "BONUS";
+        items.push(plainText(this, x, y + 32, `${name}\nSHARD`, 14, hex(col), { lineSpacing: 0 }));
+      } else {
+        items.push(plainText(this, x, y + 34, `${rw.coins}`, 18, hex(col)));
+      }
+      if (done) items.push(plainText(this, x, y - 6, "✓", 40, "#39ff88"));
       c.add(items);
       if (isToday)
-        this.tweens.add({ targets: g, alpha: 0.6, yoyo: true, repeat: -1, duration: 500 });
+        this.tweens.add({ targets: g, alpha: 0.55, yoyo: true, repeat: -1, duration: 480 });
     });
-    const claim = button(this, W / 2, y0 + 420, 340, 96, "CLAIM", {
+    const by = y0 + h - 86;
+    const claim = button(this, W / 2, by, 440, 112, "CLAIM", {
       color: 0x39ff88,
-      size: 36,
-      onClick: () => {
-        const res = Progression.claimLogin();
-        if (!res) return this.closeModal();
-        this.fx.burst("star", W / 2, y0 + 420, 30, 0xffd23f, { speed: { min: 200, max: 600 } });
-        this.coinCounter.to(Save.data.coins, 900);
-        if (res.shardResult?.id) {
-          const def = getCharacter(res.shardResult.id);
-          toast(
-            this,
-            res.shardResult.unlocked ? `${def.name} UNLOCKED!` : `${def.name} SHARD`,
-            def.color,
-            {
-              y: this.H * 0.28,
-              sub: res.shardResult.unlocked
-                ? "Rare character joins your roster"
-                : `${res.shardResult.count}/${res.shardResult.need} shards`,
-            },
-          );
-        } else {
-          toast(this, `+${res.coins} COINS`, 0xffd23f, {
-            y: this.H * 0.28,
-            sub: `Day ${res.day} reward`,
-          });
-        }
-        this.closeModal();
-      },
+      size: 48,
+      fill: 0x0c2a1a,
+      onClick: () => this.claimLogin(W / 2, by),
     });
     c.add(claim);
-    popIn(this, claim, 300);
+    popIn(this, claim, 200);
+    this.tweens.add({
+      targets: claim,
+      scale: 1.05,
+      yoyo: true,
+      repeat: -1,
+      duration: 600,
+      delay: 700,
+    });
+  }
+
+  claimLogin(x, y) {
+    const res = Progression.claimLogin();
+    this.closeModal();
+    if (!res) return;
+    Sfx.reward();
+    // coin burst: coins pop out of the button and fly into the coin counter
+    const tx = this.coinIcon.x;
+    const ty = this.coinIcon.y;
+    const n = 16;
+    for (let i = 0; i < n; i++) {
+      const coin = this.add
+        .image(x, y, "coin")
+        .setScale(0.9 / HI)
+        .setDepth(400);
+      const a = Math.random() * Math.PI * 2;
+      const r = 90 + Math.random() * 120;
+      this.tweens.add({
+        targets: coin,
+        x: x + Math.cos(a) * r,
+        y: y + Math.sin(a) * r * 0.7,
+        duration: 320,
+        ease: "Cubic.easeOut",
+        onComplete: () =>
+          this.tweens.add({
+            targets: coin,
+            x: tx,
+            y: ty,
+            scale: 0.5 / HI,
+            duration: 420,
+            delay: i * 28,
+            ease: "Cubic.easeIn",
+            onComplete: () => {
+              coin.destroy();
+              Sfx.coin();
+              this.tweens.add({
+                targets: this.coinIcon,
+                scale: { from: 1.2 / HI, to: 0.8 / HI },
+                duration: 160,
+              });
+            },
+          }),
+      });
+    }
+    this.fx.burst("star", x, y, 24, COIN_COLOR, { speed: { min: 200, max: 600 } });
+    this.time.delayedCall(700, () => this.coinCounter.to(Save.data.coins, 800));
+    if (res.shardResult?.id) {
+      const def = getCharacter(res.shardResult.id);
+      toast(
+        this,
+        res.shardResult.unlocked ? `${def.name} UNLOCKED!` : `${def.name} SHARD`,
+        def.color,
+        {
+          y: this.H * 0.3,
+          sub: res.shardResult.unlocked
+            ? "Rare hero joins your roster"
+            : `${res.shardResult.count}/${res.shardResult.need} shards`,
+        },
+      );
+    }
   }
 
   openSettings() {
     if (this.modal) return;
     const W = this.W;
     const H = this.H;
-    const s = Save.data.settings;
-    const c = this.modalBase(470, 0x3ef4ff);
-    const y0 = H / 2 - 235;
-    c.add(neonText(this, W / 2, y0 + 64, "SETTINGS", 44, 0x3ef4ff));
-    const gfx = button(this, W / 2, y0 + 170, 460, 86, `LOW GRAPHICS: ${s.lowGfx ? "ON" : "OFF"}`, {
-      color: s.lowGfx ? 0xffd23f : 0x3ef4ff,
-      size: 24,
+    const st = Save.data.settings;
+    const h = 640;
+    const c = this.modalBase(h, 0x3ef4ff);
+    const y0 = H / 2 - h / 2;
+    c.add(neonText(this, W / 2, y0 + 56, "SETTINGS", 40, 0x3ef4ff, { blur: 14 }));
+    slider(
+      this,
+      90,
+      y0 + 150,
+      W - 180,
+      st.musicVol ?? 0.7,
+      0x39ff88,
+      (v) => {
+        st.musicVol = v;
+        Music.applyVolume();
+      },
+      { container: c, label: "MUSIC" },
+    );
+    slider(
+      this,
+      90,
+      y0 + 245,
+      W - 180,
+      st.sfxVol ?? 0.8,
+      0xffd23f,
+      (v) => {
+        st.sfxVol = v;
+        Sfx.ui();
+      },
+      { container: c, label: "SOUND EFFECTS" },
+    );
+    const mute = button(this, W / 2 - 150, y0 + 335, 270, 72, st.muted ? "UNMUTE" : "MUTE ALL", {
+      color: st.muted ? 0xff4fd8 : 0x8a80b0,
+      size: 20,
       onClick: () => {
-        s.lowGfx = !s.lowGfx;
+        st.muted = !st.muted;
+        Music.applyVolume();
         Save.write();
-        this.scene.restart();
+        mute.setLabel(st.muted ? "UNMUTE" : "MUTE ALL");
+        mute.setColor(st.muted ? 0xff4fd8 : 0x8a80b0);
       },
     });
-    const snd = button(this, W / 2, y0 + 270, 460, 86, `SOUND: ${s.sound ? "ON" : "OFF"}`, {
-      color: s.sound ? 0x39ff88 : 0xff4fd8,
+    const gfx = button(
+      this,
+      W / 2 + 150,
+      y0 + 335,
+      270,
+      72,
+      `LOW GFX: ${st.lowGfx ? "ON" : "OFF"}`,
+      {
+        color: st.lowGfx ? 0xffd23f : 0x3ef4ff,
+        size: 18,
+        onClick: () => {
+          st.lowGfx = !st.lowGfx;
+          Save.write();
+          // resolution & layers are chosen at boot, so reload to apply cleanly
+          window.location.reload();
+        },
+      },
+    );
+    const styleName = { grid: "GRID", space: "DEEP SPACE", horizon: "HORIZON" };
+    const style = button(
+      this,
+      W / 2,
+      y0 + 430,
+      W - 180,
+      72,
+      `BACKDROP: ${styleName[st.bgStyle || "grid"]}`,
+      {
+        color: 0xb45cff,
+        size: 18,
+        onClick: () => {
+          const i = BG_STYLES.indexOf(st.bgStyle || "grid");
+          st.bgStyle = BG_STYLES[(i + 1) % BG_STYLES.length];
+          Save.write();
+          style.setLabel(`BACKDROP: ${styleName[st.bgStyle]}`);
+          this.scene.get("Backdrop").rebuild();
+        },
+      },
+    );
+    const done = button(this, W / 2, y0 + h - 70, 300, 80, "DONE", {
+      color: 0x39ff88,
       size: 24,
       onClick: () => {
-        s.sound = !s.sound;
         Save.write();
-        snd.setLabel(`SOUND: ${s.sound ? "ON" : "OFF"}`);
-        snd.setColor(s.sound ? 0x39ff88 : 0xff4fd8);
+        this.closeModal();
       },
     });
-    const close = button(this, W / 2, y0 + 380, 300, 80, "DONE", {
-      color: 0xff4fd8,
-      size: 26,
-      onClick: () => this.closeModal(),
-    });
-    c.add([gfx, snd, close]);
+    c.add([mute, gfx, style, done]);
   }
 
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 30);
     this.t += dt;
-    // cycle through all biomes so the menu shows off every palette
-    const meters = (this.t * 22) % 2500;
-    blendPalette(biomeStateAt(meters), this.pal);
-    this.bg.update(dt, 180, this.pal, { speedNorm: 0.25, zoom: 1 });
-    this.fx.drift = 180 * 0.6;
+    // slowly cycle every biome palette; menus keep the backdrop dim and scenery hidden
+    blendPalette(biomeStateAt((this.t * 18) % 2500), this.pal);
+    this.backdrop.drive(this.pal, { scroll: 140, speedNorm: 0, dim: 0.5, scenery: false });
+    this.fx.drift = 140 * 0.6;
 
-    // figure-eight flight with auto flaps
     const W = this.W;
-    const H = this.H;
-    const x = W / 2 + Math.sin(this.t * 0.9) * 90;
-    const y = H * 0.4 + Math.sin(this.t * 1.8) * 40;
-    const vy = Math.cos(this.t * 1.8) * 72;
+    const x = W / 2 + Math.sin(this.t * 0.9) * 110;
+    const y = this.heroY + Math.sin(this.t * 1.8) * 34;
+    const vy = Math.cos(this.t * 1.8) * 62;
     this.rig.setPosition(x, y);
     this.rig.angle = Phaser.Math.Clamp(vy * 0.25, -20, 30);
     this.flapT -= dt;
@@ -336,25 +477,18 @@ export class MenuScene extends Phaser.Scene {
       this.flapT = 0.75;
       this.rig.flap();
     }
-    this.rig.update(dt, 260);
+    this.rig.update(dt, 240);
     this.fx.update(dt);
 
-    this.letters.forEach((l, i) => {
-      l.y = this.H * 0.17 + Math.sin(this.t * 2.4 + i * 0.55) * 7;
-      const c = this.pal.neon;
-      if (i === 0 || Math.floor(this.t * 10) % 8 === 0) {
-        l.setStroke(hex(c), 6);
-        l.setShadow(0, 0, hex(c), 30, true, true);
-      }
-    });
+    if (Math.floor(this.t * 4) % 4 === 0) {
+      this.logo.setStroke(hex(this.pal.neon), this.logo.style.strokeThickness);
+    }
     if (this.post) {
       const P = this.post.params;
-      P.aberration = 0.0015;
-      P.glitch = this.pal.glitch * 0.12;
-      P.pulse = (this.bg.beat || 0) * 0.7;
+      P.aberration = 0;
+      P.glitch = 0;
       P.flash = 0;
-      P.bloom = 1;
-      P.vignette = 0.45;
+      P.bloom = 0.8;
     }
   }
 }

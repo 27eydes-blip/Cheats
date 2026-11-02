@@ -302,6 +302,11 @@ export const Progression = {
     return out;
   },
 
+  /** The character the next shard will go to (for labelling the Day 7 reward). */
+  shardTarget() {
+    return CHARACTERS.find((c) => c.shards && !Save.data.unlocked[c.id]) || null;
+  },
+
   // ---------------------------------------------------------------- unlocks
   grantShard() {
     const s = Save.data;
@@ -357,6 +362,25 @@ export const Progression = {
     return out;
   },
 
+  /**
+   * The single closest goal for the "almost there" panel: an unfinished mission or the
+   * nearest character unlock — whichever is furthest along.
+   */
+  nearestGoal() {
+    let best = null;
+    for (const m of Save.data.missions) {
+      if (m.done) continue;
+      const cur = Math.min(m.target, Progression.missionValue(m, null));
+      const frac = cur / m.target;
+      const label = m.stat === "biome" ? m.text : `${m.text} · ${cur}/${m.target}`;
+      if (!best || frac > best.frac) best = { kind: "mission", text: label, frac, color: 0x39ff88 };
+    }
+    const u = Progression.nextUnlockHint();
+    if (u && (!best || u.frac > best.frac + 0.05))
+      best = { kind: "unlock", text: u.text, frac: u.frac, color: u.def.color };
+    return best;
+  },
+
   /** "Almost there" helper: the cheapest locked character and how far away it is. */
   nextUnlockHint() {
     const s = Save.data;
@@ -368,7 +392,12 @@ export const Progression = {
       const chFrac = Progression.challengeProgress(c);
       const shardFrac = c.shards ? (s.shards[c.id] || 0) / c.shards : 0;
       const frac = Math.max(coinFrac, chFrac, shardFrac);
-      if (!best || frac > best.frac + 0.02) best = { def: c, frac, coinFrac, chFrac, shardFrac };
+      // nearest = furthest along; near-ties go to the cheaper (closer) hero
+      const better =
+        !best ||
+        frac > best.frac + 0.05 ||
+        (Math.abs(frac - best.frac) <= 0.05 && c.cost < best.def.cost);
+      if (better) best = { def: c, frac, coinFrac, chFrac, shardFrac };
     }
     const d = best.def;
     let text;

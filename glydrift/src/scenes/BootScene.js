@@ -15,6 +15,9 @@ export class BootScene extends Phaser.Scene {
     Progression.checkChallengeUnlocks();
     Save.write();
     this.scene.launch("Sky");
-    this.scene.start("Menu");
+    this.scene.launch("Backdrop");
+    // hidden music test page: ?music
+    const q = new URLSearchParams(window.location.search);
+    this.scene.start(q.has("music") ? "MusicTest" : "Menu");
   }
 }

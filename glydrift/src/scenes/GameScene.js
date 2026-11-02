@@ -1,20 +1,31 @@
 // The run itself: world scroll, biomes, obstacles, player, ghost, juice, post-FX.
 // UI lives in the parallel Hud scene so the camera zoom / post-FX never touch it.
 import Phaser from "phaser";
-import { Background } from "../biomes/Background.js";
 import { biomeStateAt, blendPalette, lerpColor } from "../biomes/biomes.js";
-import { NEAR_MISS, PHYSICS, speedForMeters, WORLD } from "../config.js";
+import {
+  fitCamera,
+  hazardColors,
+  NEAR_MISS,
+  PHYSICS,
+  speedForMeters,
+  VIEW,
+  WORLD,
+} from "../config.js";
 import { Effects } from "../effects/Effects.js";
+import { glowStroke } from "../obstacles/neon.js";
 import { ObstacleManager } from "../obstacles/ObstacleManager.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Player } from "../player/Player.js";
 import { Sfx } from "../systems/audio.js";
+import { Music } from "../systems/music.js";
+import { BIOME_TRACKS } from "../systems/musicTracks.js";
 import { Progression } from "../systems/progression.js";
 import { dailySeed, todayKey } from "../systems/rng.js";
 import { Save } from "../systems/save.js";
 
 const GHOST_STEP = 8;
+const COIN_BONUS = 10;
 // ?god in the URL makes the player invincible (handy for testing / capturing screenshots)
 const DEBUG_GOD =
   typeof location !== "undefined" && new URLSearchParams(location.search).has("god"); // px of distance per ghost sample
@@ -42,14 +53,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
-    const W = this.scale.width;
-    const H = this.scale.height;
+    const W = VIEW.W;
+    const H = VIEW.H;
     this.W = W;
     this.H = H;
     this.lowGfx = Save.data.settings.lowGfx;
     // scene instances are reused across restarts: clear per-visit references
     this.ghostRig = null;
-    this.cameras.main.setBackgroundColor(0x05010d);
+    // transparent gameplay camera drawn over the Backdrop scene (bloom = gameplay only)
+    fitCamera(this);
+    this.backdrop = this.scene.get("Backdrop");
+    this.hazardList = [];
+    this.hazardScreen = [];
 
     // post FX
     this.post = null;
@@ -60,37 +75,36 @@ export class GameScene extends Phaser.Scene {
     }
     this.fxState = { aberration: 0, glitchSpike: 0, flash: 0, zoomPunch: 0 };
 
-    this.bg = new Background(this, { lowGfx: this.lowGfx, W, H });
+    this.charDef = getCharacter(Save.data.selected);
     this.fx = new Effects(this, { lowGfx: this.lowGfx });
-    this.obstacles = new ObstacleManager(this, this.fx, { W, H, lowGfx: this.lowGfx });
+    this.obstacles = new ObstacleManager(this, this.fx, {
+      W,
+      H,
+      lowGfx: this.lowGfx,
+      heroColor: this.charDef.color,
+    });
     this.obstacles.onImpact = (o) => {
       if (Math.abs(o.x - this.player.x) < 260) this.cameras.main.shake(90, 0.004);
     };
 
-    // playfield edges: plasma barriers
-    this.edgeTop = this.add
-      .image(W / 2, 0, "beam")
-      .setAngle(90)
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .setDepth(8);
-    this.edgeBot = this.add
-      .image(W / 2, H, "beam")
-      .setAngle(90)
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .setDepth(8);
-    for (const e of [this.edgeTop, this.edgeBot]) e.setScale(0.9, (W * 1.4) / 16);
+    // playfield edges: thin danger-coloured plasma barriers (they kill, so they look like hazards)
+    const edgeCol = hazardColors(this.charDef.color).laser;
+    this.edgeTop = this.add.graphics().setDepth(8);
+    this.edgeBot = this.add.graphics().setDepth(8);
+    glowStroke(this.edgeTop, edgeCol, 3, (g) => g.lineBetween(-W, 0, W * 2, 0));
+    glowStroke(this.edgeBot, edgeCol, 3, (g) => g.lineBetween(-W, 0, W * 2, 0));
+    this.edgeBot.y = H;
 
     // player light that illuminates the background & nearby obstacles
     this.playerLight = this.add
       .image(0, 0, "glow")
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .setDepth(-36);
+      .setBlendMode(Phaser.BlendModes.NORMAL)
+      .setDepth(-6);
 
     this.pal = {};
     this.fromPal = null;
     this.palMix = 0;
 
-    this.charDef = getCharacter(Save.data.selected);
     this.player = new Player(this, this.charDef, this.fx, {
       x: W * WORLD.playerXFrac,
       y: H * 0.45,
@@ -104,7 +118,6 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on("hidden", this.onHidden, this);
     this.events.once("shutdown", () => {
       this.game.events.off("hidden", this.onHidden, this);
-      this.bg.destroy();
     });
 
     this.scene.launch("Hud", { game: this });
@@ -159,9 +172,11 @@ export class GameScene extends Phaser.Scene {
     this.obstacles.reset(seed);
     this.fx.clear();
     this.player.reset();
-    this.cameras.main.setZoom(1);
+    this.zoomLevel = 1;
+    this.cameras.main.setZoom(VIEW.Z);
     this.setupGhost();
     this.hudReady?.onReset?.();
+    Music.play(BIOME_TRACKS[0], { startBar: 8 });
     if (autoStart) this.startRun();
   }
 
@@ -272,6 +287,7 @@ export class GameScene extends Phaser.Scene {
     this.deathT = 0;
     const hints = this.player.die();
     Sfx.death();
+    Music.deathSweep();
     if (navigator.vibrate) navigator.vibrate(60);
     this.cameras.main.shake(320, hints.shake);
     this.fxState.flash = Math.max(this.fxState.flash, hints.flash);
@@ -280,6 +296,8 @@ export class GameScene extends Phaser.Scene {
     this.slowT = 0.5;
     this.run.distance = Math.floor(this.meters);
     this.run.score = this.score;
+    this.run.nearBonus = this.bonus;
+    this.run.coinBonus = this.run.coins * COIN_BONUS;
     this.run.ghost = this.ghostRec;
     this.hudReady?.onDeath?.();
   }
@@ -295,8 +313,9 @@ export class GameScene extends Phaser.Scene {
     return this.hud?.ready && this.hud.sys.isActive() ? this.hud : null;
   }
 
+  /** Score = distance + close-call bonuses + coin bonuses (so it differs from distance). */
   get score() {
-    return Math.floor(this.meters) + this.bonus;
+    return Math.floor(this.meters) + this.bonus + this.run.coins * COIN_BONUS;
   }
 
   // ------------------------------------------------------------------ main loop
@@ -334,6 +353,8 @@ export class GameScene extends Phaser.Scene {
     }
     this.clock += dt;
     const speedNorm = Phaser.Math.Clamp((this.speed - WORLD.baseSpeed) / WORLD.speedGain, 0, 1);
+    // music layers follow speed (more drums & synths as you go faster)
+    Music.setIntensity(this.state === "playing" ? 0.15 + speedNorm * 0.85 : 0.1);
 
     // biome palette (with a smooth blend back to Neon Void after a restart)
     const bs = biomeStateAt(this.meters);
@@ -348,6 +369,7 @@ export class GameScene extends Phaser.Scene {
       this.fxState.aberration = Math.max(this.fxState.aberration, 0.03);
       this.fxState.glitchSpike = Math.max(this.fxState.glitchSpike, 0.3);
       Sfx.biome();
+      Music.play(BIOME_TRACKS[bs.rawIndex % BIOME_TRACKS.length], { startBar: 8 });
       this.hudReady?.onBiome?.(bs.rawIndex);
     }
     // speed-up pulses every 250m
@@ -362,10 +384,27 @@ export class GameScene extends Phaser.Scene {
     this.fxState.zoomPunch *= Math.exp(-rawDt * 6);
     const zoomTarget = Phaser.Math.Linear(1, WORLD.minZoom, speedNorm) + this.fxState.zoomPunch;
     const cam = this.cameras.main;
-    cam.setZoom(cam.zoom + (zoomTarget - cam.zoom) * Math.min(1, rawDt * 3));
+    this.zoomLevel =
+      (this.zoomLevel ?? 1) + (zoomTarget - (this.zoomLevel ?? 1)) * Math.min(1, rawDt * 3);
+    cam.setZoom(VIEW.Z * this.zoomLevel);
 
-    // world
-    this.bg.update(dt, this.scroll, this.pal, { speedNorm, zoom: cam.zoom });
+    // world: drive the shared backdrop (hazard x-ranges in screen space keep scenery out
+    // from behind hazards)
+    const zl = this.zoomLevel;
+    const hb = this.obstacles.hazardBounds(this.hazardList);
+    this.hazardScreen.length = hb.length;
+    for (let i = 0; i < hb.length; i++) {
+      this.hazardScreen[i] = [
+        this.W / 2 + (hb[i][0] - this.W / 2) * zl,
+        this.W / 2 + (hb[i][1] - this.W / 2) * zl,
+      ];
+    }
+    this.backdrop.drive(this.pal, {
+      scroll: dt > 0 ? this.scroll * this.timeScale : 0,
+      speedNorm,
+      dim: 0,
+      hazards: this.hazardScreen,
+    });
     this.fx.drift = this.scroll * 0.7;
 
     // player
@@ -373,14 +412,14 @@ export class GameScene extends Phaser.Scene {
     if (this.state === "ready") p.hover(dt, this.scroll);
     else p.update(dt, this.scroll);
 
-    const ev = this.obstacles.update(dt, this.clock, this.scroll, this.pal, {
+    const ev = this.obstacles.update(dt, this.clock, this.scroll, null, {
       px: p.x,
       py: p.y,
       r: p.radius,
       alive: playing,
       meters: this.meters,
       biomeId: bs.b && bs.t > 0.5 ? bs.b.id : bs.a.id,
-      zoom: cam.zoom,
+      zoom: this.zoomLevel,
     });
 
     if (playing) {
@@ -430,20 +469,17 @@ export class GameScene extends Phaser.Scene {
     }
 
     // edges + light
-    const edgeCol = this.pal.neon2;
     const nearTop = playing ? Phaser.Math.Clamp(1 - p.y / 160, 0, 1) : 0;
     const nearBot = playing ? Phaser.Math.Clamp(1 - (this.H - p.y) / 160, 0, 1) : 0;
-    this.edgeTop.setTint(edgeCol).setAlpha(0.35 + nearTop * 0.6 + Math.sin(this.clock * 8) * 0.05);
-    this.edgeBot
-      .setTint(edgeCol)
-      .setAlpha(0.35 + nearBot * 0.6 + Math.sin(this.clock * 8 + 1) * 0.05);
+    this.edgeTop.setAlpha(0.45 + nearTop * 0.55 + Math.sin(this.clock * 8) * 0.05);
+    this.edgeBot.setAlpha(0.45 + nearBot * 0.55 + Math.sin(this.clock * 8 + 1) * 0.05);
     this.playerLight
       .setPosition(p.x, p.y)
       .setTint(this.charDef.color)
-      .setScale(5.2 * (0.6 + 0.4 * p.sizeMul))
+      .setScale(6.5 * (0.6 + 0.4 * p.sizeMul))
       .setAlpha(
         p.alive
-          ? 0.2 + Math.sin(this.clock * 4) * 0.03
+          ? 0.13 + Math.sin(this.clock * 4) * 0.02
           : Math.max(0, this.playerLight.alpha - rawDt),
       );
 
@@ -516,9 +552,8 @@ export class GameScene extends Phaser.Scene {
       this.pal.glitch * (0.18 + (Math.random() < 0.04 ? 0.5 : 0)) + s.glitchSpike,
     );
     P.flash = s.flash;
-    P.pulse = (this.bg.beat || 0) * 0.9;
-    P.vignette = 0.42 + speedNorm * 0.12;
     P.bloom = 1;
+    P.pxScale = VIEW.Z;
   }
 }
 

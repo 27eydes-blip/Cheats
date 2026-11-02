@@ -12,7 +12,10 @@ npm run build      # production build in dist/
 npm run preview
 ```
 
-Debug: append `?god` to the URL to make the player invincible (handy for capturing biomes).
+Debug / review:
+- `?god` — invincible player (handy for capturing biomes)
+- `?style=grid|space|horizon` — preview the three backdrop styles (also in Settings)
+- `?music` — opens the hidden **music test page** (also: tap the GLYDRIFT logo 5 times)
 
 ## Shipping to iOS (Capacitor)
 
@@ -43,18 +46,46 @@ native sheet, call `@capacitor/share` from `src/systems/shareCard.js`.
 - Portals: gravity flip (always followed by a restore portal) and mini (shrink, timed).
 - Near-miss: brief slow-mo, white flash, "CLOSE!", combo multiplier and bonus points.
 
-## Visual direction — "living neon cosmos"
+## Visual rules
 
-- Parallax: shader sky (gradient + drifting fbm nebula, rendered low-res and upscaled) →
-  two star fields → drifting planets with light halos → nebula dust → two layers of floating
-  crystal islands → near-field biome particles → foreground motes and speed lines.
-- Post-FX (single pass, `src/gfx/shaders.js`): cheap bloom, chromatic aberration (speed-ups,
-  portals, biome changes), glitch row-shift/pixelation, heartbeat vignette, flash.
-- Lighting: every obstacle has an additive halo that tints the background; the player emits
-  a large light that brightens the sky and nearby obstacles (`lit` factor per obstacle).
-- Biomes every 500 m with a 90 m smooth palette morph (`src/biomes/biomes.js`):
-  Neon Void → Solar Storm (embers) → Frozen Nebula (snow, crystals) → Glitch Realm (RGB
-  split, flicker) → Abyss (black/red, heartbeat pulse) → loops.
+Clean, high-contrast neon (Tron / vector arcade), not a photo filter:
+
+- **Hierarchy:** background dim → hazards bright → hero brightest.
+- **Background** (`src/scenes/BackdropScene.js`, `src/biomes/Background.js`): near-black skies,
+  very faint nebula, one of three styles (Tron **grid** = default, **deep space**, synthwave
+  **horizon**). At most one planet + one island, painted at 35% resolution (soft focus),
+  dark and desaturated, confined to the top/bottom bands and faded out whenever a hazard
+  passes in front of them. Menus dim the backdrop and hide scenery.
+- **Bloom only on gameplay:** the backdrop is its own scene without post-FX; the gameplay
+  camera is transparent with an alpha-preserving post pass (bloom, aberration, glitch).
+- **Colour rules** (`src/config.js`): every hazard (saw, laser, crusher, blade, pillar,
+  edge barrier) uses a danger colour — red / orange / hot pink — with the same glow; any danger
+  colour too close to the selected hero's hue is swapped out. Portals are round purple/white
+  swirls (never hazard-shaped), coins are gold, heroes keep their own colours.
+- **Hazards** are crisp vector neon (`src/obstacles/neon.js`): dark body, inner tint,
+  thick saturated outline, soft outer glow and a white core line.
+- **Heroes** are ~2.7x their original size, painted at 3x density with a bright rim outline
+  so dark heroes (Shade) stay readable anywhere; the hitbox grew moderately and gaps widened.
+- **Sharpness:** the canvas renders at the device pixel ratio (cameras zoom a logical
+  720-wide view), text renders at that resolution, numbers use Rajdhani (clean zeros).
+
+## Music (Tone.js, fully synthesized)
+
+`src/systems/music.js` + `src/systems/musicTracks.js` — no audio files, all original.
+
+- House at 124 BPM: four-on-the-floor kick, offbeat open hats, clap on 2 & 4, rolling bass,
+  chord stabs, a lead motif; pads/bass duck on every kick (sidechain pump); synths go to a
+  shared reverb + dotted-eighth delay while kick and bass stay dry.
+- One track per biome (Neon Void A minor, Solar Storm F minor, Frozen Nebula E minor,
+  Glitch Realm C# minor with bitcrush + stutter, Abyss D minor/phrygian with sub bass) plus a
+  slower lounge menu theme (112 BPM, 9th chords).
+- 8-bar sections: intro → build → main → breakdown → drop → loop, with drum fills, motif
+  swaps and phrase variations per loop. Extra layers (16th hats, arps, octave leads, brighter
+  filters) fade in with player speed.
+- Biome changes crossfade over 2 s starting on the next bar; death sweeps a low-pass down in
+  0.5 s and retry opens it back up; pause muffles.
+- Audio starts on the first tap (iOS). Settings: Music + SFX volume sliders, Mute, saved
+  locally. SFX share Tone's AudioContext.
 
 ## Characters
 
@@ -90,8 +121,8 @@ Legendary).
 - Fixed 60 fps cap, `dt` clamped, no per-frame allocations in hot paths.
 - Pools for every obstacle type, coins, rings, floating text; Phaser particle emitters with
   hard `maxParticles` caps.
-- **Low Graphics** (Settings): disables the post-FX pass, lowers sky detail, removes a
-  parallax layer, shortens trails and cuts particle budgets to ~35–40 %.
+- **Low Graphics** (Settings): caps rendering at 2x pixel ratio, disables the post-FX pass,
+  lowers sky detail, drops the island silhouette, shortens trails and cuts particle budgets to ~35–40 %.
 
 ## Code map
 
@@ -99,12 +130,13 @@ Legendary).
 src/
   main.js                 Phaser config, font loading, safe-area
   config.js               physics / world / near-miss tuning
-  scenes/                 Boot, Sky (shader RTT), Menu, Game, Hud, GameOver, Characters, Progress
+  scenes/                 Boot, Sky (shader RTT), Backdrop, Menu, Game, Hud, GameOver,
+                          Characters, Progress, MusicTest
   player/                 Player physics, CharacterRig visuals, character data
   obstacles/              ObstacleManager (seeded patterns, pooling, collisions), types, geometry
   biomes/                 palettes + morph, parallax Background
   effects/                pooled particles, rings, lightning, floating text
   gfx/                    procedural textures, GLSL shaders
-  systems/                save, progression, rng, audio synth, share card
-  ui/                     buttons, counters, progress bars, toasts
+  systems/                save, progression, rng, music (Tone.js), sfx synth, share card
+  ui/                     buttons, sliders, counters, progress bars, toasts, vector icons
 ```

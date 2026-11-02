@@ -52,24 +52,27 @@ void main() {
   // slow colour drift so the sky never sits still
   float drift = 0.5 + 0.5 * sin(uTime * 0.07 + uv.x * 2.0);
   vec3 nebCol = mix(uNeb0, uNeb1, drift * 0.6);
-  col += nebCol * neb * 0.48;
-  col += uNeb1 * pow(neb, 3.0) * 0.4;
-  col *= 0.72 + 0.5 * n;
-  // horizon glow band
-  col += uNeb0 * 0.18 * exp(-pow((uv.y - 0.3) * 4.0, 2.0));
+  // nebula is subtle atmosphere only: ~70% dimmer than before, never the brightest thing
+  col += nebCol * neb * 0.15;
+  col += uNeb1 * pow(neb, 3.0) * 0.1;
+  col *= 0.8 + 0.35 * n;
+  // faint horizon band (halved again so no bright central streak)
+  col += uNeb0 * 0.02 * exp(-pow((uv.y - 0.3) * 4.0, 2.0));
   // abyss heartbeat
-  col += vec3(0.55, 0.0, 0.04) * uPulse * (0.25 + 0.75 * neb);
+  col += vec3(0.3, 0.0, 0.03) * uPulse * (0.3 + 0.7 * neb);
   // glitch realm flicker bands
   if (uGlitch > 0.0) {
     float band = hash(vec2(floor(uTime * 9.0), floor(uv.y * 24.0)));
     float g = step(1.0 - 0.06 * uGlitch, band);
-    col = mix(col, col.gbr * 1.6, g);
-    col += vec3(0.0, 0.08, 0.04) * uGlitch * step(0.5, fract(uv.y * 90.0));
+    col = mix(col, col.gbr * 1.3, g * 0.5);
+    col += vec3(0.0, 0.015, 0.008) * uGlitch * step(0.5, fract(uv.y * 90.0));
   }
   gl_FragColor = vec4(col, 1.0);
 }
 `;
 
+// Post-FX for the gameplay layer only. The gameplay camera is transparent and drawn on top
+// of the Backdrop scene, so alpha is preserved and bloom never touches the background.
 const POST_FRAG = `
 #define SHADER_NAME GLY_POST_FS
 precision mediump float;
@@ -79,10 +82,8 @@ uniform float uTime;
 uniform float uAberration;
 uniform float uGlitch;
 uniform float uFlash;
-uniform float uVignette;
 uniform float uBloom;
-uniform float uPulse;
-uniform vec3 uPulseColor;
+uniform float uPxScale;
 varying vec2 outTexCoord;
 
 float hash(float n) { return fract(sin(n) * 43758.5453); }
@@ -101,31 +102,30 @@ void main() {
   }
   vec2 dir = uv - 0.5;
   float ab = uAberration + uGlitch * 0.007;
-  vec3 col;
+  vec4 base = texture2D(uMainSampler, uv);
+  vec3 col = base.rgb;
+  float alpha = base.a;
   if (ab > 0.0005) {
-    col.r = texture2D(uMainSampler, uv + dir * ab).r;
-    col.g = texture2D(uMainSampler, uv).g;
-    col.b = texture2D(uMainSampler, uv - dir * ab).b;
-  } else {
-    col = texture2D(uMainSampler, uv).rgb;
+    vec4 r = texture2D(uMainSampler, uv + dir * ab);
+    vec4 b = texture2D(uMainSampler, uv - dir * ab);
+    col = vec3(r.r, base.g, b.b);
+    alpha = max(alpha, max(r.a, b.a));
   }
   if (uBloom > 0.0) {
-    vec2 px = 1.0 / uResolution;
-    vec3 b = vec3(0.0);
+    vec2 px = uPxScale / uResolution;
+    vec3 g = vec3(0.0);
     for (int i = 0; i < 6; i++) {
       float a = float(i) * 1.0472 + 0.3;
       vec2 o = vec2(cos(a), sin(a));
-      b += max(texture2D(uMainSampler, uv + o * px * 6.0).rgb - 0.6, 0.0);
-      b += max(texture2D(uMainSampler, uv + o.yx * px * 15.0).rgb - 0.6, 0.0) * 0.7;
+      g += max(texture2D(uMainSampler, uv + o * px * 5.0).rgb - 0.35, 0.0);
+      g += max(texture2D(uMainSampler, uv + o.yx * px * 12.0).rgb - 0.35, 0.0) * 0.6;
     }
-    col += b * (uBloom / 9.0);
+    // premultiplied output: glow added to rgb (alpha unchanged) composites additively
+    col += g * (uBloom / 8.0);
   }
-  float d = length(dir * vec2(1.0, 0.85));
-  float vig = smoothstep(0.35, 0.95, d);
-  col *= 1.0 - vig * (uVignette + uPulse * 0.35);
-  col += uPulseColor * vig * uPulse * 0.6;
   col = mix(col, vec3(1.0), uFlash);
-  gl_FragColor = vec4(col, 1.0);
+  alpha = mix(alpha, 1.0, uFlash);
+  gl_FragColor = vec4(col, alpha);
 }
 `;
 
@@ -136,10 +136,11 @@ export class GlyPostFX extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline {
       aberration: 0,
       glitch: 0,
       flash: 0,
-      vignette: 0.45,
       bloom: 1,
+      pxScale: 1,
+      // kept for API compatibility; vignette/heartbeat now live in the Backdrop scene
+      vignette: 0,
       pulse: 0,
-      pulseColor: [0.7, 0.0, 0.05],
     };
   }
 
@@ -149,10 +150,8 @@ export class GlyPostFX extends Phaser.Renderer.WebGL.Pipelines.PostFXPipeline {
     this.set1f("uAberration", p.aberration);
     this.set1f("uGlitch", p.glitch);
     this.set1f("uFlash", p.flash);
-    this.set1f("uVignette", p.vignette);
     this.set1f("uBloom", p.bloom);
-    this.set1f("uPulse", p.pulse);
-    this.set3f("uPulseColor", p.pulseColor[0], p.pulseColor[1], p.pulseColor[2]);
+    this.set1f("uPxScale", p.pxScale);
   }
 
   onDraw(target) {

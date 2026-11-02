@@ -1,12 +1,15 @@
-// Results overlay: rolling score, "almost there" nudges, XP fill with level-ups,
-// missions/achievements, share card. A single tap anywhere restarts instantly.
+// Results overlay. The whole intro animates in under a second; a tap skips it. Taps on the
+// background only retry after 0.5 s (so a panicked tap doesn't restart), and taps on the
+// buttons never count as "retry".
 import Phaser from "phaser";
 import { BIOMES, biomeName } from "../biomes/biomes.js";
+import { COIN_COLOR, fitCamera, VIEW } from "../config.js";
+import { HI } from "../gfx/textures.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Sfx } from "../systems/audio.js";
-import { LEVEL_REWARDS, Progression } from "../systems/progression.js";
+import { Music } from "../systems/music.js";
+import { Progression } from "../systems/progression.js";
 import { dailyNumber } from "../systems/rng.js";
-import { Save } from "../systems/save.js";
 import { closeShareModal, openShareModal } from "../systems/shareCard.js";
 import {
   button,
@@ -21,6 +24,9 @@ import {
   toast,
 } from "../ui/ui.js";
 
+const TAP_GUARD = 500; // ms before "tap anywhere" retries
+const ANIM_END = 950; // ms — every intro animation finishes before this
+
 export class GameOverScene extends Phaser.Scene {
   constructor() {
     super("GameOver");
@@ -30,229 +36,265 @@ export class GameOverScene extends Phaser.Scene {
     this.result = data.result;
     this.gameScene = data.game;
     this.leaving = false;
+    this.animDone = false;
+    this.skipping = false;
   }
 
   create() {
-    const W = this.scale.width;
-    const H = this.scale.height;
+    fitCamera(this);
+    const W = VIEW.W;
+    const H = VIEW.H;
     const R = this.result;
     const run = R.run;
     const top = (this.registry.get("safeTop") || 0) + 20;
     const biome = BIOMES[run.biome % BIOMES.length];
     const col = biome.neon;
     this.scene.get("Hud")?.scene.setVisible(false);
-    this.readyAt = this.time.now + 450;
+    this.t0 = this.time.now;
 
-    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x05010d, 0).setInteractive();
-    this.tweens.add({ targets: dim, fillAlpha: 0.72, duration: 350 });
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x020107, 0).setInteractive();
+    this.tweens.add({ targets: dim, fillAlpha: 0.8, duration: 200 });
 
     // ---- header + score
     const head = plainText(
       this,
       W / 2,
-      top + 70,
+      top + 60,
       run.mode === "daily" ? `DAILY CHALLENGE #${dailyNumber()}` : "RUN OVER",
       22,
       "#cfc6ff",
     );
-    const scoreLbl = plainText(this, W / 2, H * 0.12 + 10, "SCORE", 20, "#ffffff");
-    const scoreText = neonText(this, W / 2, H * 0.18, "0", 108, col, { blur: 36 });
-    const counter = new RollingCounter(this, scoreText);
-    counter.to(run.score, 1000, 250);
-    popIn(this, [head, scoreLbl, scoreText], 0);
+    const scoreLbl = plainText(this, W / 2, H * 0.115, "SCORE", 20, "#ffffff");
+    const scoreText = neonText(this, W / 2, H * 0.17, "0", 100, col, { blur: 22 });
+    new RollingCounter(this, scoreText).to(run.score, 550, 100);
+    popIn(this, [head, scoreLbl, scoreText], 0, { duration: 300 });
+    // breakdown: why score ≠ distance
+    const parts = [`${run.distance}m`];
+    if (run.coinBonus) parts.push(`+${run.coinBonus} coins`);
+    if (run.nearBonus) parts.push(`+${run.nearBonus} close calls`);
+    const breakdown = plainText(this, W / 2, H * 0.222, parts.join("   "), 20, "#a99fd6");
+    slideIn(this, breakdown, 300, 20);
 
     let bestLine;
     if (R.newBest) {
-      bestLine = neonText(this, W / 2, H * 0.245, "NEW BEST!", 40, 0xffd23f, { blur: 20 });
-      this.time.delayedCall(1200, () => {
-        Sfx.reward();
-        this.tweens.add({ targets: bestLine, scale: 1.2, yoyo: true, duration: 180, repeat: 1 });
-      });
+      bestLine = neonText(this, W / 2, H * 0.262, "NEW BEST!", 34, 0xffd23f, { blur: 12 });
+      this.time.delayedCall(650, () => Sfx.reward());
     } else {
-      bestLine = plainText(this, W / 2, H * 0.245, `BEST ${R.prevBest}`, 24, "#d8d0ff");
+      bestLine = plainText(this, W / 2, H * 0.262, `BEST ${R.prevBest}`, 24, "#d8d0ff");
     }
-    popIn(this, bestLine, 900);
+    popIn(this, bestLine, 450, { duration: 300 });
 
-    // ---- stat chips
-    const chipY = H * 0.31;
+    // ---- stat chips (numbers use the clean numeric font)
+    const chipY = H * 0.33;
     const chips = [
       [`${run.distance}m`, "DISTANCE", col],
-      [biomeName(run.biome).split(" ")[0], "BIOME", biome.accent],
+      [biomeName(run.biome).split(" ").slice(-1)[0], "BIOME", biome.accent],
       [`${run.nearMiss}`, "CLOSE CALLS", 0xffffff],
     ].map(([v, l, c], i) => {
-      const x = W / 2 + (i - 1) * 220;
-      const cont = this.add.container(x, chipY);
+      const cont = this.add.container(W / 2 + (i - 1) * 220, chipY);
       const g = this.add.graphics();
       drawNeonRect(g, -100, -46, 200, 92, 18, c, { fillAlpha: 0.6, width: 2 });
       cont.add([
         g,
-        neonText(this, 0, -10, v, 30, c, { blur: 10 }),
-        plainText(this, 0, 26, l, 14, "#cfc6ff"),
+        neonText(this, 0, -10, v, 30, c, { blur: 8 }),
+        plainText(this, 0, 26, l, 15, "#cfc6ff"),
       ]);
       return cont;
     });
-    slideIn(this, chips, 400);
+    slideIn(this, chips, 200, 30);
 
-    // coins row
-    const coinRow = this.add.container(W / 2, H * 0.385);
-    const coinIcon = this.add.image(-70, 0, "coin").setScale(0.75);
-    const coinTxt = neonText(this, -40, 0, "+0", 34, 0xffc83d, { ox: 0, blur: 12 });
-    coinRow.add([coinIcon, coinTxt]);
-    const coinCounter = new RollingCounter(this, coinTxt, { format: (v) => `+${Math.round(v)}` });
+    let y = H * 0.4;
+    // coins line — only when something was earned
     const missionCoins = R.missions.reduce((a, m) => a + m.reward.coins, 0);
-    coinCounter.to(run.coins + missionCoins, 900, 700);
-    slideIn(this, coinRow, 600);
-
-    // ---- "almost there"
-    const ay = H * 0.46;
-    const almost = this.add.container(0, 0);
-    const ag = this.add.graphics();
-    drawNeonRect(ag, 40, ay - 58, W - 80, 150, 22, 0xff4fd8, { fillAlpha: 0.55, width: 2 });
-    almost.add(ag);
-    let line1;
-    let frac1;
-    if (R.newBest) {
-      line1 =
-        R.prevBest > 0
-          ? `You beat your best by ${run.score - R.prevBest}!`
-          : "First record set — now beat it!";
-      frac1 = 1;
-    } else {
-      const gap = R.prevBest - run.score;
-      line1 =
-        gap <= Math.max(30, R.prevBest * 0.15)
-          ? `SO CLOSE! Only ${gap} to beat your best`
-          : `${gap} more to beat your best`;
-      frac1 = R.prevBest > 0 ? run.score / R.prevBest : 0;
-    }
-    almost.add(plainText(this, W / 2, ay - 32, line1, 20, "#ffffff"));
-    const bar1 = new ProgressBar(this, 80, ay - 10, W - 160, 12, 0xff4fd8);
-    almost.add(bar1.g);
-    bar1.to(frac1, 900, 900);
-    const hint = Progression.nextUnlockHint();
-    if (hint) {
-      almost.add(plainText(this, W / 2, ay + 30, hint.text, 18, hex(hint.def.color)));
-      const bar2 = new ProgressBar(this, 80, ay + 50, W - 160, 12, hint.def.color);
-      almost.add(bar2.g);
-      bar2.to(hint.frac, 900, 1100);
-    } else {
-      almost.add(
-        plainText(this, W / 2, ay + 40, "Every character unlocked. Legend.", 18, "#ffd23f"),
+    const earned = run.coins + missionCoins;
+    if (earned > 0) {
+      const coinRow = this.add.container(W / 2, y);
+      const coinIcon = this.add.image(-60, 0, "coin").setScale(0.8 / HI);
+      const coinTxt = neonText(this, -32, 0, "+0", 32, COIN_COLOR, { ox: 0, blur: 8 });
+      coinRow.add([coinIcon, coinTxt]);
+      new RollingCounter(this, coinTxt, { format: (v) => `+${Math.round(v)}` }).to(
+        earned,
+        400,
+        450,
       );
+      slideIn(this, coinRow, 400, 20);
+      y += H * 0.065;
+    } else {
+      y += H * 0.01;
     }
-    slideIn(this, almost, 700, 40);
+
+    // ---- best + nearest goal
+    const panelH = 150;
+    const gy = y;
+    const goals = this.add.container(0, 0);
+    const gg = this.add.graphics();
+    drawNeonRect(gg, 40, gy, W - 80, panelH, 22, 0xb45cff, { fillAlpha: 0.55, width: 2 });
+    goals.add(gg);
+    const best = Math.max(R.prevBest, run.score);
+    const bestTxt = R.newBest
+      ? R.prevBest > 0
+        ? `NEW BEST ${run.score} · beat it by ${run.score - R.prevBest}`
+        : `NEW BEST ${run.score} · your first record`
+      : `BEST ${best} · ${best - run.score} to beat it`;
+    goals.add(plainText(this, 76, gy + 30, bestTxt, 21, "#ffffff", { ox: 0 }));
+    const bar1 = new ProgressBar(this, 76, gy + 52, W - 152, 12, 0xffd23f);
+    goals.add(bar1.g);
+    bar1.to(best > 0 ? Math.min(1, run.score / best) : 1, 350, 500);
+    const goal = Progression.nearestGoal();
+    if (goal) {
+      goals.add(
+        plainText(
+          this,
+          76,
+          gy + 94,
+          goal.kind === "mission" ? `MISSION · ${goal.text}` : goal.text,
+          19,
+          hex(goal.color),
+          { ox: 0 },
+        ),
+      );
+      const bar2 = new ProgressBar(this, 76, gy + 116, W - 152, 12, goal.color);
+      goals.add(bar2.g);
+      bar2.to(goal.frac, 350, 550);
+    }
+    slideIn(this, goals, 350, 25);
+    y = gy + panelH + 24;
 
     // ---- XP / level
-    const ly = H * 0.585;
     const lvl = this.add.container(0, 0);
     const lg = this.add.graphics();
-    drawNeonRect(lg, 40, ly - 50, W - 80, 104, 22, 0x3ef4ff, { fillAlpha: 0.55, width: 2 });
-    const lvlText = neonText(this, 74, ly - 18, `LV ${R.levelBefore}`, 28, 0x3ef4ff, {
+    drawNeonRect(lg, 40, y, W - 80, 100, 22, 0x3ef4ff, { fillAlpha: 0.55, width: 2 });
+    const lvlText = neonText(this, 74, y + 32, `LV ${R.levelBefore}`, 26, 0x3ef4ff, {
       ox: 0,
-      blur: 10,
+      blur: 8,
     });
-    const xpText = plainText(this, W - 74, ly - 18, `+${R.xpGained} XP`, 20, "#bdf9ff", { ox: 1 });
-    const xpBar = new ProgressBar(this, 74, ly + 12, W - 148, 16, 0x3ef4ff);
+    const xpText = plainText(this, W - 74, y + 32, `+${R.xpGained} XP`, 22, "#bdf9ff", { ox: 1 });
+    const xpBar = new ProgressBar(this, 74, y + 64, W - 148, 16, 0x3ef4ff);
     xpBar.set(R.xpBefore / Progression.xpToNext(R.levelBefore));
     lvl.add([lg, lvlText, xpText, xpBar.g]);
-    slideIn(this, lvl, 800, 40);
-    this.animateXp(xpBar, lvlText, R, 1300);
+    slideIn(this, lvl, 400, 25);
+    this.animateXp(xpBar, lvlText, R, 550);
+    y += 124;
 
-    // ---- missions / unlocks
-    let my = H * 0.675;
+    // ---- missions completed this run
     for (const m of R.missions) {
-      const t = plainText(this, W / 2, my, `✔ ${m.text}   +${m.reward.coins}`, 18, "#39ff88");
-      slideIn(this, t, 1100);
-      my += 30;
+      const t = plainText(this, W / 2, y, `✓ ${m.text}   +${m.reward.coins}`, 19, "#39ff88");
+      slideIn(this, t, 600, 15);
+      y += 30;
     }
-    this.time.delayedCall(1500, () => {
+    this.time.delayedCall(ANIM_END, () => {
       for (const u of R.unlocks)
-        toast(this, `${u.name} UNLOCKED!`, u.color, { y: top + 120, sub: u.challenge?.text });
+        toast(this, `${u.name} UNLOCKED!`, u.color, { y: top + 130, sub: u.challenge?.text });
       for (const a of R.achievements)
-        toast(this, `🏅 ${a.name}`, 0xffd23f, { y: top + 120, sub: a.desc });
+        toast(this, a.name.toUpperCase(), 0xffd23f, {
+          y: top + 130,
+          sub: `Achievement · ${a.desc}`,
+        });
     });
 
     // ---- buttons
-    const retry = button(this, W / 2, H * 0.79, 420, 108, "RETRY", {
+    const by = Math.max(y + 90, H * 0.8);
+    const retry = button(this, W / 2, by, 440, 112, "RETRY", {
       color: 0x39ff88,
-      size: 40,
+      size: 44,
+      fill: 0x0c2a1a,
       onClick: () => this.retry(),
     });
-    const share = button(this, W / 2 - 220, H * 0.885, 196, 78, "SHARE", {
+    const share = button(this, W / 2 - 220, by + 112, 196, 76, "SHARE", {
       color: 0xffd23f,
-      size: 22,
+      size: 20,
       onClick: () => openShareModal(this.game, run),
     });
-    const heroes = button(this, W / 2, H * 0.885, 196, 78, "HEROES", {
+    const heroes = button(this, W / 2, by + 112, 196, 76, "HEROES", {
       color: 0xb45cff,
-      size: 22,
+      size: 20,
       onClick: () => this.goto("Characters"),
     });
-    const home = button(this, W / 2 + 220, H * 0.885, 196, 78, "HOME", {
+    const home = button(this, W / 2 + 220, by + 112, 196, 76, "HOME", {
       color: 0xff4fd8,
-      size: 22,
+      size: 20,
       onClick: () => this.goto("Menu"),
     });
-    popIn(this, [retry, share, heroes, home], 500);
-    this.tweens.add({
-      targets: retry,
-      scale: 1.05,
-      yoyo: true,
-      repeat: -1,
-      duration: 700,
-      delay: 1200,
-      ease: "Sine.easeInOut",
+    popIn(this, [retry, share, heroes, home], 250, { duration: 350 });
+
+    const tapHint = plainText(
+      this,
+      W / 2,
+      Math.min(H - 30, by + 180),
+      "TAP ANYWHERE TO RETRY",
+      17,
+      "#9c90c8",
+    ).setAlpha(0);
+    this.time.delayedCall(TAP_GUARD, () => {
+      this.tweens.add({ targets: tapHint, alpha: 0.9, duration: 200 });
+    });
+    this.time.delayedCall(ANIM_END, () => {
+      this.finishIntro();
+      this.tweens.add({ targets: tapHint, alpha: 0.35, yoyo: true, repeat: -1, duration: 700 });
+      this.tweens.add({
+        targets: retry,
+        scale: 1.04,
+        yoyo: true,
+        repeat: -1,
+        duration: 700,
+        ease: "Sine.easeInOut",
+      });
     });
 
-    const tapHint = plainText(this, W / 2, H * 0.95, "TAP ANYWHERE TO RETRY", 16, "#9c90c8");
-    this.tweens.add({ targets: tapHint, alpha: 0.35, yoyo: true, repeat: -1, duration: 700 });
+    dim.on("pointerdown", () => this.onBackgroundTap());
+    this.input.keyboard?.on("keydown-SPACE", () => this.onBackgroundTap());
 
-    dim.on("pointerdown", () => {
-      if (this.time.now >= this.readyAt) this.retry();
-    });
-    this.input.keyboard?.on("keydown-SPACE", () => this.retry());
-
-    // a character preview to celebrate what you flew with
+    // the hero you flew with
     const def = getCharacter(run.char);
-    const icon = this.add.image(W - 80, top + 70, def.texture).setScale(0.45);
-    this.tweens.add({
-      targets: icon,
-      y: top + 62,
-      yoyo: true,
-      repeat: -1,
-      duration: 900,
-      ease: "Sine.easeInOut",
-    });
+    this.add.image(W - 70, top + 60, def.texture).setScale(0.5 / HI);
+  }
+
+  onBackgroundTap() {
+    const elapsed = this.time.now - this.t0;
+    if (!this.animDone) {
+      this.skipIntro();
+      return;
+    }
+    if (elapsed >= TAP_GUARD) this.retry();
+  }
+
+  /** Fast-forward every intro tween/timer (values and callbacks land exactly as normal). */
+  skipIntro() {
+    if (this.skipping || this.animDone) return;
+    this.skipping = true;
+    this.tweens.timeScale = 40;
+    this.time.timeScale = 40;
+  }
+
+  finishIntro() {
+    this.animDone = true;
+    this.tweens.timeScale = 1;
+    this.time.timeScale = 1;
   }
 
   animateXp(bar, lvlText, R, delay) {
     const steps = [];
-    let level = R.levelBefore;
-    for (const lu of R.levelUps) {
-      steps.push({ to: 1, level, lu });
-      level = lu.level;
-    }
-    steps.push({ to: R.xpAfter / Progression.xpToNext(R.levelAfter), level: R.levelAfter });
-    let d = delay;
+    for (const lu of R.levelUps) steps.push({ to: 1, lu });
+    steps.push({ to: R.xpAfter / Progression.xpToNext(R.levelAfter) });
     const run = (i) => {
       if (i >= steps.length) return;
       const st = steps[i];
-      bar.to(st.to, 650, i === 0 ? d : 120, () => {
+      bar.to(st.to, steps.length > 1 ? 220 : 350, i === 0 ? delay : 40, () => {
         if (st.lu) {
           Sfx.reward();
           lvlText.setText(`LV ${st.lu.level}`);
           this.tweens.add({
             targets: lvlText,
-            scale: { from: 1.5, to: 1 },
-            duration: 400,
+            scale: { from: 1.4, to: 1 },
+            duration: 250,
             ease: "Back.easeOut",
           });
           const rw = st.lu.reward;
           const parts = [];
           if (rw.coins) parts.push(`+${rw.coins} coins`);
-          if (rw.shard) parts.push(st.lu.shardResult?.id ? "+1 character shard" : "+300 coins");
+          if (rw.shard) parts.push(st.lu.shardResult?.id ? "+1 hero shard" : "+300 coins");
           toast(this, `LEVEL ${st.lu.level}!`, 0x3ef4ff, {
-            y: (this.registry.get("safeTop") || 0) + 140,
+            y: (this.registry.get("safeTop") || 0) + 150,
             sub: parts.join(" · "),
           });
           bar.set(0);
@@ -260,28 +302,29 @@ export class GameOverScene extends Phaser.Scene {
         run(i + 1);
       });
     };
-    d = delay;
     run(0);
   }
 
   retry() {
     if (this.leaving) return;
     this.leaving = true;
+    this.finishIntro();
     closeShareModal();
     const gs = this.gameScene;
     this.scene.get("Hud")?.scene.setVisible(true);
     this.scene.stop();
+    Music.restore();
     gs.resetRun(true);
   }
 
   goto(key) {
     if (this.leaving) return;
     this.leaving = true;
+    this.finishIntro();
     closeShareModal();
+    Music.restore();
     this.scene.stop("Hud");
     this.scene.stop("Game");
     this.scene.start(key);
   }
 }
-
-export { LEVEL_REWARDS, Save };

@@ -1,6 +1,8 @@
 // Visual rig for a character: sprite, light halo, signature trail, idle animation,
 // flap effect and death explosion. Used in-game, for the ghost run and for live previews.
 import Phaser from "phaser";
+import { HERO_SCALE } from "../config.js";
+import { HI } from "../gfx/textures.js";
 
 const ADD = Phaser.BlendModes.ADD;
 const NORMAL = Phaser.BlendModes.NORMAL;
@@ -52,7 +54,7 @@ export class CharacterRig {
     if (!this.ghost) {
       this.halo = scene.add
         .image(this.x, this.y, "glow")
-        .setBlendMode(ADD)
+        .setBlendMode(Phaser.BlendModes.NORMAL)
         .setTint(def.color)
         .setAlpha(0.55)
         .setDepth(depth - 1);
@@ -93,6 +95,11 @@ export class CharacterRig {
         this.afterImages.push(im);
       }
     }
+  }
+
+  /** Visual unit: mini-mode size × display scale × global hero size. */
+  get u() {
+    return this.sizeMul * this.displayScale * HERO_SCALE;
   }
 
   get objects() {
@@ -137,11 +144,11 @@ export class CharacterRig {
     if (this.ghost || !this.fx) return;
     const { x, y, def, fx } = this;
     const down = this.gravityDir > 0 ? { min: 50, max: 130 } : { min: 230, max: 310 };
-    const oy = 12 * this.gravityDir * this.sizeMul;
+    const oy = 12 * this.gravityDir * this.u;
     switch (def.id) {
       case "volt":
         fx.burst("spark", x, y + oy, 10, def.color, { angle: down });
-        fx.lightning(x, y, def.color, 3, 46 * this.sizeMul);
+        fx.lightning(x, y, def.color, 3, 46 * this.u);
         break;
       case "ember":
         fx.burst("fire", x - 6, y + oy, 14, undefined, {
@@ -162,7 +169,7 @@ export class CharacterRig {
         break;
       case "nova":
         fx.ring(x, y, hsv((this.time * 0.3) % 1, 0.5, 1), {
-          scale: 0.55 * this.sizeMul,
+          scale: 0.55 * this.u,
           duration: 360,
         });
         fx.burst("star", x, y, 7, hsv(Math.random(), 0.45, 1));
@@ -242,7 +249,7 @@ export class CharacterRig {
     }
     while (this.points.length && this.points[this.points.length - 1].age > this.trailTime)
       this.points.pop();
-    if (!this.dead) this.points.unshift({ x: this.x - 6 * this.sizeMul, y: this.y, age: 0 });
+    if (!this.dead) this.points.unshift({ x: this.x - 6 * this.u, y: this.y, age: 0 });
 
     // squash & stretch spring back
     const k = Math.exp(-dt * 11);
@@ -263,7 +270,7 @@ export class CharacterRig {
           this.emitT -= dt;
           if (this.emitT <= 0) {
             this.emitT = 0.25 + Math.random() * 0.45;
-            this.fx.lightning(this.x, this.y, def.color, 1, 30 * this.sizeMul);
+            this.fx.lightning(this.x, this.y, def.color, 1, 30 * this.u);
           }
         }
         break;
@@ -276,7 +283,7 @@ export class CharacterRig {
           this.emitT -= dt;
           if (this.emitT <= 0) {
             this.emitT = this.lowGfx ? 0.07 : 0.035;
-            this.fx.burst("fire", this.x - 16 * this.sizeMul, this.y + 4, 1, undefined, {
+            this.fx.burst("fire", this.x - 16 * this.u, this.y + 4, 1, undefined, {
               angle: { min: 160, max: 200 },
               speed: { min: 20, max: 90 },
             });
@@ -350,7 +357,7 @@ export class CharacterRig {
     }
 
     // sprite transform
-    const s = def.scale * this.sizeMul * this.displayScale;
+    const s = (def.scale * this.u) / HI;
     const sp = this.sprite;
     if (sp.texture.key !== texture) sp.setTexture(texture);
     sp.setPosition(this.x + this.offX, this.y + this.offY);
@@ -362,16 +369,16 @@ export class CharacterRig {
     if (def.id === "nova") sp.setAngle(extraAngle * 0.4);
     if (this.halo) {
       this.halo.setPosition(this.x, this.y);
-      this.halo.setScale(1.3 * this.sizeMul * this.displayScale * pulse);
+      this.halo.setScale(1.05 * this.u * pulse);
       this.halo.setAlpha(0.42 + Math.sin(this.time * 5) * 0.08 + Math.max(0, 0.3 - this.flapT));
     }
     if (this.rings) {
-      const sc = this.sizeMul * this.displayScale;
+      const sc = this.u;
       this.rings.forEach((r, i) => {
         const tilt = Phaser.Math.DegToRad(i === 0 ? 22 : -38);
         r.setPosition(this.x, this.y)
           .setRotation(tilt)
-          .setScale(0.6 * sc, 0.2 * sc);
+          .setScale((0.6 * sc) / HI, (0.2 * sc) / HI);
         // orbiting moon travels along the flattened ellipse
         const a = this.time * (i === 0 ? 2.6 : -1.9) + i * 2;
         const ex = Math.cos(a) * 38 * sc;
@@ -394,7 +401,7 @@ export class CharacterRig {
     const pts = this.points;
     const n = pts.length;
     if (n < 2) return;
-    const W = width * this.sizeMul * this.displayScale;
+    const W = width * this.u * 0.9;
     for (let i = 0; i < n - 1; i++) {
       const a = pts[i];
       const b = pts[i + 1];
@@ -463,12 +470,12 @@ export class CharacterRig {
         const path = [];
         for (let i = 0; i < pts.length; i += step) {
           const t = i / pts.length;
-          path.push({ x: pts[i].x, y: pts[i].y + this.jitter[i] * 16 * t * this.sizeMul });
+          path.push({ x: pts[i].x, y: pts[i].y + this.jitter[i] * 16 * t * this.u });
         }
         if (path.length > 1) {
-          g.lineStyle(7 * this.sizeMul, def.color, 0.35);
+          g.lineStyle(7 * this.u, def.color, 0.35);
           g.strokePoints(path);
-          g.lineStyle(2.5 * this.sizeMul, 0xffffff, 0.95);
+          g.lineStyle(2.5 * this.u, 0xffffff, 0.95);
           g.strokePoints(path);
         }
         break;

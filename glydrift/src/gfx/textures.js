@@ -1,12 +1,65 @@
-// Procedural texture factory. Every visual in Glydrift is painted at boot with Canvas2D
-// (glow baked via shadowBlur) so the game ships with zero image assets.
+// Procedural texture factory. Every visual in Glydrift is painted at boot with Canvas2D,
+// so the game ships with zero image assets.
+//  - `res`  paints at a higher (or lower) pixel density: HI-res sprites stay crisp on Retina,
+//           low-res scenery (res < 1) is upscaled for a soft, out-of-focus look.
+//  - `rim`  draws a bright outline + glow around the silhouette (characters), so even dark
+//           heroes like Shade read on any background.
 
-function canvasTex(scene, key, w, h, draw) {
+/** Pixel density of crisp sprites (characters, coins, icons). Display them at scale / HI. */
+export const HI = 3;
+/** Pixel density of blurred background scenery. */
+export const LO = 0.35;
+
+const shadowDesc = Object.getOwnPropertyDescriptor(
+  CanvasRenderingContext2D.prototype,
+  "shadowBlur",
+);
+
+function canvasTex(scene, key, w, h, draw, { res = 1, rim = null, rimWidth = 2.6 } = {}) {
   if (scene.textures.exists(key)) return;
-  const tex = scene.textures.createCanvas(key, w, h);
+  const pw = Math.max(1, Math.round(w * res));
+  const ph = Math.max(1, Math.round(h * res));
+  const tex = scene.textures.createCanvas(key, pw, ph);
   const ctx = tex.getContext();
-  ctx.clearRect(0, 0, w, h);
+  ctx.clearRect(0, 0, pw, ph);
+  // shadowBlur is in device pixels (ignores transforms): scale it with the density,
+  // and suppress it entirely for rimmed sprites (the rim provides a clean glow instead)
+  Object.defineProperty(ctx, "shadowBlur", {
+    configurable: true,
+    get: () => shadowDesc.get.call(ctx),
+    set: (v) => shadowDesc.set.call(ctx, rim ? 0 : v * res),
+  });
+  ctx.save();
+  ctx.scale(res, res);
   draw(ctx, w, h);
+  ctx.restore();
+  delete ctx.shadowBlur;
+  if (rim) {
+    const body = document.createElement("canvas");
+    body.width = pw;
+    body.height = ph;
+    body.getContext("2d").drawImage(tex.getSourceImage(), 0, 0);
+    // dilate the silhouette into a solid rim
+    const m = document.createElement("canvas");
+    m.width = pw;
+    m.height = ph;
+    const mc = m.getContext("2d");
+    const r = rimWidth * res;
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      mc.drawImage(body, Math.cos(a) * r, Math.sin(a) * r);
+    }
+    mc.globalCompositeOperation = "source-in";
+    mc.fillStyle = rim;
+    mc.fillRect(0, 0, pw, ph);
+    ctx.clearRect(0, 0, pw, ph);
+    ctx.shadowColor = rim;
+    shadowDesc.set.call(ctx, 14 * res);
+    ctx.drawImage(m, 0, 0);
+    shadowDesc.set.call(ctx, 0);
+    ctx.drawImage(m, 0, 0);
+    ctx.drawImage(body, 0, 0);
+  }
   tex.refresh();
 }
 
@@ -140,6 +193,15 @@ function particleTextures(scene) {
     c.stroke();
     c.lineWidth = 3;
     c.stroke();
+  });
+  canvasTex(scene, "vignette", 128, 128, (c) => {
+    c.fillStyle = radial(c, 64, 64, 92, [
+      [0, "rgba(0,0,0,0)"],
+      [0.55, "rgba(0,0,0,0)"],
+      [0.8, "rgba(0,0,0,0.45)"],
+      [1, "rgba(0,0,0,0.9)"],
+    ]);
+    c.fillRect(0, 0, 128, 128);
   });
   canvasTex(scene, "streak", 256, 6, (c) => {
     const g = c.createLinearGradient(0, 0, 256, 0);
@@ -394,32 +456,39 @@ function obstacleTextures(scene) {
     c.fill();
   });
 
-  canvasTex(scene, "coin", 56, 56, (c) => {
-    c.translate(28, 28);
-    c.shadowColor = "#ffd23f";
-    c.shadowBlur = 12;
-    const g = c.createLinearGradient(-16, -18, 16, 18);
-    g.addColorStop(0, "#fff7c2");
-    g.addColorStop(0.5, "#ffcf3a");
-    g.addColorStop(1, "#ff8a00");
-    c.fillStyle = g;
-    poly(c, [
-      [0, -19],
-      [15, 0],
-      [0, 19],
-      [-15, 0],
-    ]);
-    c.fill();
-    c.shadowBlur = 0;
-    c.fillStyle = "rgba(255,255,255,0.9)";
-    poly(c, [
-      [0, -12],
-      [7, 0],
-      [0, -2],
-      [-7, 0],
-    ]);
-    c.fill();
-  });
+  canvasTex(
+    scene,
+    "coin",
+    56,
+    56,
+    (c) => {
+      c.translate(28, 28);
+      c.shadowColor = "#ffd23f";
+      c.shadowBlur = 12;
+      const g = c.createLinearGradient(-16, -18, 16, 18);
+      g.addColorStop(0, "#fff7c2");
+      g.addColorStop(0.5, "#ffcf3a");
+      g.addColorStop(1, "#ff8a00");
+      c.fillStyle = g;
+      poly(c, [
+        [0, -19],
+        [15, 0],
+        [0, 19],
+        [-15, 0],
+      ]);
+      c.fill();
+      c.shadowBlur = 0;
+      c.fillStyle = "rgba(255,255,255,0.9)";
+      poly(c, [
+        [0, -12],
+        [7, 0],
+        [0, -2],
+        [-7, 0],
+      ]);
+      c.fill();
+    },
+    { res: HI },
+  );
 }
 
 // ---------------------------------------------------------------- background
@@ -467,366 +536,408 @@ function backgroundTextures(scene) {
     { bands: 3, ring: false, crater: false },
   ];
   planetStyles.forEach((st, idx) => {
-    canvasTex(scene, `planet${idx}`, 320, 320, (c) => {
-      const rnd = seeded(13 + idx * 31);
-      c.translate(160, 160);
-      const R = 100;
-      c.save();
-      c.beginPath();
-      c.arc(0, 0, R, 0, Math.PI * 2);
-      c.clip();
-      c.fillStyle = "#cfd6e6";
-      c.fillRect(-R, -R, R * 2, R * 2);
-      for (let i = 0; i < st.bands; i++) {
-        c.fillStyle = `rgba(${rnd() < 0.5 ? "255,255,255" : "60,70,90"},${0.15 + rnd() * 0.25})`;
-        const y = -R + (i / st.bands) * R * 2 + rnd() * 10;
+    canvasTex(
+      scene,
+      `planet${idx}`,
+      320,
+      320,
+      (c) => {
+        const rnd = seeded(13 + idx * 31);
+        c.translate(160, 160);
+        const R = 100;
+        c.save();
         c.beginPath();
-        c.ellipse(0, y, R * 1.4, 4 + rnd() * 14, 0.15, 0, Math.PI * 2);
-        c.fill();
-      }
-      if (st.crater) {
-        for (let i = 0; i < 9; i++) {
-          c.fillStyle = "rgba(40,50,70,0.35)";
+        c.arc(0, 0, R, 0, Math.PI * 2);
+        c.clip();
+        c.fillStyle = "#cfd6e6";
+        c.fillRect(-R, -R, R * 2, R * 2);
+        for (let i = 0; i < st.bands; i++) {
+          c.fillStyle = `rgba(${rnd() < 0.5 ? "255,255,255" : "60,70,90"},${0.15 + rnd() * 0.25})`;
+          const y = -R + (i / st.bands) * R * 2 + rnd() * 10;
           c.beginPath();
-          c.arc((rnd() - 0.5) * R * 1.6, (rnd() - 0.5) * R * 1.6, 4 + rnd() * 14, 0, 7);
+          c.ellipse(0, y, R * 1.4, 4 + rnd() * 14, 0.15, 0, Math.PI * 2);
           c.fill();
         }
-      }
-      // terminator shading
-      c.fillStyle = radial(c, -R * 0.45, -R * 0.45, R * 2, [
-        [0, "rgba(0,0,0,0)"],
-        [0.5, "rgba(0,0,0,0.3)"],
-        [1, "rgba(0,0,0,0.92)"],
-      ]);
-      c.fillRect(-R, -R, R * 2, R * 2);
-      c.restore();
-      // atmosphere rim
-      c.strokeStyle = "rgba(255,255,255,0.7)";
-      c.shadowColor = "#fff";
-      c.shadowBlur = 24;
-      c.lineWidth = 3;
-      c.beginPath();
-      c.arc(0, 0, R + 1, Math.PI * 0.8, Math.PI * 1.75);
-      c.stroke();
-      if (st.ring) {
-        c.shadowBlur = 8;
-        c.strokeStyle = "rgba(255,255,255,0.55)";
-        c.lineWidth = 6;
+        if (st.crater) {
+          for (let i = 0; i < 9; i++) {
+            c.fillStyle = "rgba(40,50,70,0.35)";
+            c.beginPath();
+            c.arc((rnd() - 0.5) * R * 1.6, (rnd() - 0.5) * R * 1.6, 4 + rnd() * 14, 0, 7);
+            c.fill();
+          }
+        }
+        // terminator shading
+        c.fillStyle = radial(c, -R * 0.45, -R * 0.45, R * 2, [
+          [0, "rgba(0,0,0,0)"],
+          [0.5, "rgba(0,0,0,0.3)"],
+          [1, "rgba(0,0,0,0.92)"],
+        ]);
+        c.fillRect(-R, -R, R * 2, R * 2);
+        c.restore();
+        // atmosphere rim
+        c.strokeStyle = "rgba(255,255,255,0.7)";
+        c.shadowColor = "#fff";
+        c.shadowBlur = 24;
+        c.lineWidth = 3;
         c.beginPath();
-        c.ellipse(0, 0, R * 1.5, R * 0.32, -0.35, 0.05, Math.PI - 0.05);
+        c.arc(0, 0, R + 1, Math.PI * 0.8, Math.PI * 1.75);
         c.stroke();
-      }
-    });
+        if (st.ring) {
+          c.shadowBlur = 8;
+          c.strokeStyle = "rgba(255,255,255,0.55)";
+          c.lineWidth = 6;
+          c.beginPath();
+          c.ellipse(0, 0, R * 1.5, R * 0.32, -0.35, 0.05, Math.PI - 0.05);
+          c.stroke();
+        }
+      },
+      { res: LO },
+    );
   });
 
   // Floating crystal islands: dark rock + bright crystals (tint colours the crystals).
   for (let idx = 0; idx < 3; idx++) {
-    canvasTex(scene, `island${idx}`, 360, 260, (c) => {
-      const rnd = seeded(77 + idx * 17);
-      const cx = 180;
-      const top = 120;
-      const w = 220 + idx * 30;
-      // rock
-      const rock = [];
-      const steps = 12;
-      for (let i = 0; i <= steps; i++) {
-        const t = i / steps;
-        rock.push([cx - w / 2 + t * w, top + (rnd() - 0.5) * 8]);
-      }
-      for (let i = steps; i >= 0; i--) {
-        const t = i / steps;
-        const depth = Math.sin(t * Math.PI) * (90 + rnd() * 20);
-        rock.push([cx - w / 2 + t * w + (rnd() - 0.5) * 16, top + 10 + depth]);
-      }
-      const rg = c.createLinearGradient(0, top, 0, top + 120);
-      rg.addColorStop(0, "#3a3f55");
-      rg.addColorStop(1, "#07080e");
-      c.fillStyle = rg;
-      poly(c, rock);
-      c.fill();
-      c.strokeStyle = "rgba(255,255,255,0.5)";
-      c.lineWidth = 2;
-      c.beginPath();
-      c.moveTo(rock[0][0], rock[0][1]);
-      for (let i = 1; i <= steps; i++) c.lineTo(rock[i][0], rock[i][1]);
-      c.stroke();
-      // crystals
-      const n = 5 + idx * 2;
-      for (let i = 0; i < n; i++) {
-        const x = cx - w / 2 + 20 + rnd() * (w - 40);
-        const h = 26 + rnd() * 70;
-        const bw = 7 + rnd() * 10;
-        const lean = (rnd() - 0.5) * 14;
-        c.shadowColor = "#fff";
-        c.shadowBlur = 18;
-        const cg = c.createLinearGradient(x, top - h, x, top);
-        cg.addColorStop(0, "rgba(255,255,255,1)");
-        cg.addColorStop(1, "rgba(255,255,255,0.35)");
-        c.fillStyle = cg;
-        poly(c, [
-          [x - bw, top + 4],
-          [x - bw * 0.7 + lean, top - h * 0.7],
-          [x + lean, top - h],
-          [x + bw * 0.7 + lean, top - h * 0.7],
-          [x + bw, top + 4],
-        ]);
+    canvasTex(
+      scene,
+      `island${idx}`,
+      360,
+      260,
+      (c) => {
+        const rnd = seeded(77 + idx * 17);
+        const cx = 180;
+        const top = 120;
+        const w = 220 + idx * 30;
+        // rock
+        const rock = [];
+        const steps = 12;
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          rock.push([cx - w / 2 + t * w, top + (rnd() - 0.5) * 8]);
+        }
+        for (let i = steps; i >= 0; i--) {
+          const t = i / steps;
+          const depth = Math.sin(t * Math.PI) * (90 + rnd() * 20);
+          rock.push([cx - w / 2 + t * w + (rnd() - 0.5) * 16, top + 10 + depth]);
+        }
+        const rg = c.createLinearGradient(0, top, 0, top + 120);
+        rg.addColorStop(0, "#3a3f55");
+        rg.addColorStop(1, "#07080e");
+        c.fillStyle = rg;
+        poly(c, rock);
         c.fill();
-      }
-      c.shadowBlur = 0;
-      // hanging glow drips
-      for (let i = 0; i < 4; i++) {
-        const x = cx - w / 3 + rnd() * (w * 0.66);
-        c.fillStyle = "rgba(255,255,255,0.7)";
+        c.strokeStyle = "rgba(255,255,255,0.5)";
+        c.lineWidth = 2;
         c.beginPath();
-        c.arc(x, top + 70 + rnd() * 40, 2 + rnd() * 2, 0, 7);
-        c.fill();
-      }
-    });
+        c.moveTo(rock[0][0], rock[0][1]);
+        for (let i = 1; i <= steps; i++) c.lineTo(rock[i][0], rock[i][1]);
+        c.stroke();
+        // crystals
+        const n = 5 + idx * 2;
+        for (let i = 0; i < n; i++) {
+          const x = cx - w / 2 + 20 + rnd() * (w - 40);
+          const h = 26 + rnd() * 70;
+          const bw = 7 + rnd() * 10;
+          const lean = (rnd() - 0.5) * 14;
+          c.shadowColor = "#fff";
+          c.shadowBlur = 18;
+          const cg = c.createLinearGradient(x, top - h, x, top);
+          cg.addColorStop(0, "rgba(255,255,255,1)");
+          cg.addColorStop(1, "rgba(255,255,255,0.35)");
+          c.fillStyle = cg;
+          poly(c, [
+            [x - bw, top + 4],
+            [x - bw * 0.7 + lean, top - h * 0.7],
+            [x + lean, top - h],
+            [x + bw * 0.7 + lean, top - h * 0.7],
+            [x + bw, top + 4],
+          ]);
+          c.fill();
+        }
+        c.shadowBlur = 0;
+        // hanging glow drips
+        for (let i = 0; i < 4; i++) {
+          const x = cx - w / 3 + rnd() * (w * 0.66);
+          c.fillStyle = "rgba(255,255,255,0.7)";
+          c.beginPath();
+          c.arc(x, top + 70 + rnd() * 40, 2 + rnd() * 2, 0, 7);
+          c.fill();
+        }
+      },
+      { res: LO },
+    );
   }
 }
 
 // ---------------------------------------------------------------- characters
 function characterTextures(scene) {
   // VOLT — electric cube
-  canvasTex(scene, "char_volt", 128, 128, (c) => {
-    c.translate(64, 64);
-    c.shadowColor = "#38f6ff";
-    c.shadowBlur = 22;
-    // side faces (pseudo 3D)
-    c.fillStyle = "#0b5a75";
-    poly(c, [
-      [-28, -28],
-      [-16, -40],
-      [40, -40],
-      [28, -28],
-    ]);
-    c.fill();
-    c.fillStyle = "#06384d";
-    poly(c, [
-      [28, -28],
-      [40, -40],
-      [40, 16],
-      [28, 28],
-    ]);
-    c.fill();
-    const fg = c.createLinearGradient(-28, -28, 28, 28);
-    fg.addColorStop(0, "#1fe0ff");
-    fg.addColorStop(1, "#0a6c9c");
-    c.fillStyle = fg;
-    c.fillRect(-28, -28, 56, 56);
-    c.shadowBlur = 10;
-    c.strokeStyle = "#c9fbff";
-    c.lineWidth = 3;
-    c.strokeRect(-28, -28, 56, 56);
-    c.beginPath();
-    c.moveTo(-28, -28);
-    c.lineTo(-16, -40);
-    c.lineTo(40, -40);
-    c.lineTo(40, 16);
-    c.lineTo(28, 28);
-    c.moveTo(28, -28);
-    c.lineTo(40, -40);
-    c.stroke();
-    // lightning glyph
-    c.fillStyle = "#ffffff";
-    c.shadowColor = "#fff";
-    c.shadowBlur = 12;
-    poly(c, [
-      [4, -22],
-      [-12, 4],
-      [-1, 4],
-      [-6, 22],
-      [12, -4],
-      [1, -4],
-    ]);
-    c.fill();
-  });
+  canvasTex(
+    scene,
+    "char_volt",
+    128,
+    128,
+    (c) => {
+      c.translate(64, 64);
+      c.shadowColor = "#38f6ff";
+      c.shadowBlur = 22;
+      // side faces (pseudo 3D)
+      c.fillStyle = "#0b5a75";
+      poly(c, [
+        [-28, -28],
+        [-16, -40],
+        [40, -40],
+        [28, -28],
+      ]);
+      c.fill();
+      c.fillStyle = "#06384d";
+      poly(c, [
+        [28, -28],
+        [40, -40],
+        [40, 16],
+        [28, 28],
+      ]);
+      c.fill();
+      const fg = c.createLinearGradient(-28, -28, 28, 28);
+      fg.addColorStop(0, "#1fe0ff");
+      fg.addColorStop(1, "#0a6c9c");
+      c.fillStyle = fg;
+      c.fillRect(-28, -28, 56, 56);
+      c.shadowBlur = 10;
+      c.strokeStyle = "#c9fbff";
+      c.lineWidth = 3;
+      c.strokeRect(-28, -28, 56, 56);
+      c.beginPath();
+      c.moveTo(-28, -28);
+      c.lineTo(-16, -40);
+      c.lineTo(40, -40);
+      c.lineTo(40, 16);
+      c.lineTo(28, 28);
+      c.moveTo(28, -28);
+      c.lineTo(40, -40);
+      c.stroke();
+      // lightning glyph
+      c.fillStyle = "#ffffff";
+      c.shadowColor = "#fff";
+      c.shadowBlur = 12;
+      poly(c, [
+        [4, -22],
+        [-12, 4],
+        [-1, 4],
+        [-6, 22],
+        [12, -4],
+        [1, -4],
+      ]);
+      c.fill();
+    },
+    { res: HI, rim: "#c8fdff" },
+  );
 
   // EMBER — phoenix, 3 wing frames
   const wingAngles = [-0.9, -0.1, 0.65];
   wingAngles.forEach((wa, f) => {
-    canvasTex(scene, `char_ember_${f}`, 128, 128, (c) => {
-      c.translate(60, 66);
-      c.shadowColor = "#ff7a1a";
-      c.shadowBlur = 20;
-      // tail flames
-      for (let i = 0; i < 3; i++) {
-        const tg = c.createLinearGradient(-50, 0, -10, 0);
-        tg.addColorStop(0, "rgba(255,40,0,0)");
-        tg.addColorStop(1, "#ffb02e");
-        c.fillStyle = tg;
+    canvasTex(
+      scene,
+      `char_ember_${f}`,
+      128,
+      128,
+      (c) => {
+        c.translate(60, 66);
+        c.shadowColor = "#ff7a1a";
+        c.shadowBlur = 20;
+        // tail flames
+        for (let i = 0; i < 3; i++) {
+          const tg = c.createLinearGradient(-50, 0, -10, 0);
+          tg.addColorStop(0, "rgba(255,40,0,0)");
+          tg.addColorStop(1, "#ffb02e");
+          c.fillStyle = tg;
+          c.beginPath();
+          c.moveTo(-8, 2);
+          c.quadraticCurveTo(-34, -14 + i * 14, -54, -10 + i * 14);
+          c.quadraticCurveTo(-30, 0 + i * 6, -8, 10);
+          c.fill();
+        }
+        // back wing
+        c.save();
+        c.rotate(wa * 0.8);
+        const wg2 = c.createLinearGradient(0, 0, 0, -50);
+        wg2.addColorStop(0, "#c2410c");
+        wg2.addColorStop(1, "#ffcf3a");
+        c.fillStyle = wg2;
+        c.globalAlpha = 0.75;
         c.beginPath();
-        c.moveTo(-8, 2);
-        c.quadraticCurveTo(-34, -14 + i * 14, -54, -10 + i * 14);
-        c.quadraticCurveTo(-30, 0 + i * 6, -8, 10);
+        c.moveTo(-6, -2);
+        c.quadraticCurveTo(-30, -46, 6, -54);
+        c.quadraticCurveTo(0, -30, 14, -6);
         c.fill();
-      }
-      // back wing
-      c.save();
-      c.rotate(wa * 0.8);
-      const wg2 = c.createLinearGradient(0, 0, 0, -50);
-      wg2.addColorStop(0, "#c2410c");
-      wg2.addColorStop(1, "#ffcf3a");
-      c.fillStyle = wg2;
-      c.globalAlpha = 0.75;
-      c.beginPath();
-      c.moveTo(-6, -2);
-      c.quadraticCurveTo(-30, -46, 6, -54);
-      c.quadraticCurveTo(0, -30, 14, -6);
-      c.fill();
-      c.restore();
-      // body
-      const bg = c.createRadialGradient(6, -4, 2, 0, 0, 30);
-      bg.addColorStop(0, "#fff1a8");
-      bg.addColorStop(0.45, "#ff9a1f");
-      bg.addColorStop(1, "#d22a00");
-      c.fillStyle = bg;
-      c.beginPath();
-      c.ellipse(4, 2, 24, 17, -0.1, 0, Math.PI * 2);
-      c.fill();
-      // head
-      c.beginPath();
-      c.arc(26, -10, 12, 0, Math.PI * 2);
-      c.fill();
-      // crest
-      c.fillStyle = "#ffd23f";
-      poly(c, [
-        [20, -20],
-        [14, -36],
-        [26, -22],
-        [28, -40],
-        [32, -20],
-      ]);
-      c.fill();
-      // beak
-      c.fillStyle = "#fff4c2";
-      poly(c, [
-        [36, -12],
-        [50, -7],
-        [36, -4],
-      ]);
-      c.fill();
-      // eye
-      c.shadowBlur = 0;
-      c.fillStyle = "#2a0500";
-      c.beginPath();
-      c.arc(30, -12, 3, 0, 7);
-      c.fill();
-      c.fillStyle = "#fff";
-      c.beginPath();
-      c.arc(31, -13, 1.2, 0, 7);
-      c.fill();
-      // front wing
-      c.save();
-      c.shadowColor = "#ffcf3a";
-      c.shadowBlur = 16;
-      c.rotate(wa);
-      const wg = c.createLinearGradient(0, 0, 0, -56);
-      wg.addColorStop(0, "#ff5a00");
-      wg.addColorStop(1, "#fff1a8");
-      c.fillStyle = wg;
-      c.beginPath();
-      c.moveTo(-2, 0);
-      c.quadraticCurveTo(-26, -40, 12, -58);
-      c.quadraticCurveTo(4, -40, 24, -26);
-      c.quadraticCurveTo(10, -22, 18, -4);
-      c.fill();
-      c.restore();
-    });
+        c.restore();
+        // body
+        const bg = c.createRadialGradient(6, -4, 2, 0, 0, 30);
+        bg.addColorStop(0, "#fff1a8");
+        bg.addColorStop(0.45, "#ff9a1f");
+        bg.addColorStop(1, "#d22a00");
+        c.fillStyle = bg;
+        c.beginPath();
+        c.ellipse(4, 2, 24, 17, -0.1, 0, Math.PI * 2);
+        c.fill();
+        // head
+        c.beginPath();
+        c.arc(26, -10, 12, 0, Math.PI * 2);
+        c.fill();
+        // crest
+        c.fillStyle = "#ffd23f";
+        poly(c, [
+          [20, -20],
+          [14, -36],
+          [26, -22],
+          [28, -40],
+          [32, -20],
+        ]);
+        c.fill();
+        // beak
+        c.fillStyle = "#fff4c2";
+        poly(c, [
+          [36, -12],
+          [50, -7],
+          [36, -4],
+        ]);
+        c.fill();
+        // eye
+        c.shadowBlur = 0;
+        c.fillStyle = "#2a0500";
+        c.beginPath();
+        c.arc(30, -12, 3, 0, 7);
+        c.fill();
+        c.fillStyle = "#fff";
+        c.beginPath();
+        c.arc(31, -13, 1.2, 0, 7);
+        c.fill();
+        // front wing
+        c.save();
+        c.shadowColor = "#ffcf3a";
+        c.shadowBlur = 16;
+        c.rotate(wa);
+        const wg = c.createLinearGradient(0, 0, 0, -56);
+        wg.addColorStop(0, "#ff5a00");
+        wg.addColorStop(1, "#fff1a8");
+        c.fillStyle = wg;
+        c.beginPath();
+        c.moveTo(-2, 0);
+        c.quadraticCurveTo(-26, -40, 12, -58);
+        c.quadraticCurveTo(4, -40, 24, -26);
+        c.quadraticCurveTo(10, -22, 18, -4);
+        c.fill();
+        c.restore();
+      },
+      { res: HI, rim: "#ffe9a8" },
+    );
   });
 
   // SHADE — shadow ninja
-  canvasTex(scene, "char_shade", 128, 128, (c) => {
-    c.translate(64, 64);
-    c.shadowColor = "#a45cff";
-    c.shadowBlur = 24;
-    const bg = c.createRadialGradient(-8, -10, 4, 0, 0, 34);
-    bg.addColorStop(0, "#3b2160");
-    bg.addColorStop(1, "#08020f");
-    c.fillStyle = bg;
-    c.beginPath();
-    c.arc(0, 0, 30, 0, Math.PI * 2);
-    c.fill();
-    // headband
-    c.shadowBlur = 12;
-    c.fillStyle = "#b45cff";
-    c.fillRect(-30, -12, 60, 9);
-    // tails
-    c.beginPath();
-    c.moveTo(-28, -10);
-    c.quadraticCurveTo(-46, -20, -58, -8);
-    c.quadraticCurveTo(-46, -12, -30, -4);
-    c.fill();
-    c.beginPath();
-    c.moveTo(-28, -8);
-    c.quadraticCurveTo(-44, 2, -56, 12);
-    c.quadraticCurveTo(-42, -2, -30, -2);
-    c.fill();
-    // eye slit
-    c.fillStyle = "#14051f";
-    c.fillRect(-6, 2, 34, 11);
-    c.fillStyle = "#f2e6ff";
-    c.shadowColor = "#e0b8ff";
-    c.shadowBlur = 14;
-    poly(c, [
-      [2, 6],
-      [12, 5],
-      [12, 10],
-    ]);
-    c.fill();
-    poly(c, [
-      [16, 5],
-      [26, 6],
-      [16, 10],
-    ]);
-    c.fill();
-  });
+  canvasTex(
+    scene,
+    "char_shade",
+    128,
+    128,
+    (c) => {
+      c.translate(64, 64);
+      c.shadowColor = "#a45cff";
+      c.shadowBlur = 24;
+      const bg = c.createRadialGradient(-8, -10, 4, 0, 0, 34);
+      bg.addColorStop(0, "#3b2160");
+      bg.addColorStop(1, "#08020f");
+      c.fillStyle = bg;
+      c.beginPath();
+      c.arc(0, 0, 30, 0, Math.PI * 2);
+      c.fill();
+      // headband
+      c.shadowBlur = 12;
+      c.fillStyle = "#b45cff";
+      c.fillRect(-30, -12, 60, 9);
+      // tails
+      c.beginPath();
+      c.moveTo(-28, -10);
+      c.quadraticCurveTo(-46, -20, -58, -8);
+      c.quadraticCurveTo(-46, -12, -30, -4);
+      c.fill();
+      c.beginPath();
+      c.moveTo(-28, -8);
+      c.quadraticCurveTo(-44, 2, -56, 12);
+      c.quadraticCurveTo(-42, -2, -30, -2);
+      c.fill();
+      // eye slit
+      c.fillStyle = "#14051f";
+      c.fillRect(-6, 2, 34, 11);
+      c.fillStyle = "#f2e6ff";
+      c.shadowColor = "#e0b8ff";
+      c.shadowBlur = 14;
+      poly(c, [
+        [2, 6],
+        [12, 5],
+        [12, 10],
+      ]);
+      c.fill();
+      poly(c, [
+        [16, 5],
+        [26, 6],
+        [16, 10],
+      ]);
+      c.fill();
+    },
+    { res: HI, rim: "#e6c8ff" },
+  );
 
   // FROST — ice crystal
-  canvasTex(scene, "char_frost", 128, 128, (c) => {
-    c.translate(64, 64);
-    c.shadowColor = "#9ff2ff";
-    c.shadowBlur = 24;
-    const pts = [];
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
-      pts.push([Math.cos(a) * 34, Math.sin(a) * 38]);
-    }
-    const g = c.createLinearGradient(-30, -36, 30, 36);
-    g.addColorStop(0, "#ffffff");
-    g.addColorStop(0.4, "#9fe8ff");
-    g.addColorStop(1, "#2a7bd6");
-    c.fillStyle = g;
-    poly(c, pts);
-    c.fill();
-    c.shadowBlur = 0;
-    // facets
-    c.strokeStyle = "rgba(255,255,255,0.85)";
-    c.lineWidth = 2;
-    for (const p of pts) {
-      c.beginPath();
-      c.moveTo(0, 0);
-      c.lineTo(p[0], p[1]);
+  canvasTex(
+    scene,
+    "char_frost",
+    128,
+    128,
+    (c) => {
+      c.translate(64, 64);
+      c.shadowColor = "#9ff2ff";
+      c.shadowBlur = 24;
+      const pts = [];
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+        pts.push([Math.cos(a) * 34, Math.sin(a) * 38]);
+      }
+      const g = c.createLinearGradient(-30, -36, 30, 36);
+      g.addColorStop(0, "#ffffff");
+      g.addColorStop(0.4, "#9fe8ff");
+      g.addColorStop(1, "#2a7bd6");
+      c.fillStyle = g;
+      poly(c, pts);
+      c.fill();
+      c.shadowBlur = 0;
+      // facets
+      c.strokeStyle = "rgba(255,255,255,0.85)";
+      c.lineWidth = 2;
+      for (const p of pts) {
+        c.beginPath();
+        c.moveTo(0, 0);
+        c.lineTo(p[0], p[1]);
+        c.stroke();
+      }
+      c.fillStyle = "rgba(255,255,255,0.35)";
+      poly(c, [[0, 0], pts[5], pts[0]]);
+      c.fill();
+      c.fillStyle = "rgba(10,40,90,0.3)";
+      poly(c, [[0, 0], pts[2], pts[3]]);
+      c.fill();
+      c.strokeStyle = "#ffffff";
+      c.shadowColor = "#fff";
+      c.shadowBlur = 8;
+      c.lineWidth = 3;
+      poly(c, pts);
       c.stroke();
-    }
-    c.fillStyle = "rgba(255,255,255,0.35)";
-    poly(c, [[0, 0], pts[5], pts[0]]);
-    c.fill();
-    c.fillStyle = "rgba(10,40,90,0.3)";
-    poly(c, [[0, 0], pts[2], pts[3]]);
-    c.fill();
-    c.strokeStyle = "#ffffff";
-    c.shadowColor = "#fff";
-    c.shadowBlur = 8;
-    c.lineWidth = 3;
-    poly(c, pts);
-    c.stroke();
-    // eyes
-    c.fillStyle = "#06305e";
-    c.shadowBlur = 0;
-    c.fillRect(4, -6, 6, 9);
-    c.fillRect(16, -6, 6, 9);
-  });
+      // eyes
+      c.fillStyle = "#06305e";
+      c.shadowBlur = 0;
+      c.fillRect(4, -6, 6, 9);
+      c.fillRect(16, -6, 6, 9);
+    },
+    { res: HI, rim: "#ffffff" },
+  );
 
   // GLITCH — pixel creature (2 frames: clean + glitched)
   const sprite = [
@@ -842,91 +953,112 @@ function characterTextures(scene) {
     "X.X....X.X",
   ];
   for (let f = 0; f < 2; f++) {
-    canvasTex(scene, `char_glitch_${f}`, 128, 128, (c) => {
-      const px = 8;
-      const ox = 24;
-      const oy = 24;
-      const draw = (color, dx, dy) => {
-        c.fillStyle = color;
+    canvasTex(
+      scene,
+      `char_glitch_${f}`,
+      128,
+      128,
+      (c) => {
+        const px = 8;
+        const ox = 24;
+        const oy = 24;
+        const draw = (color, dx, dy) => {
+          c.fillStyle = color;
+          sprite.forEach((row, y) => {
+            [...row].forEach((ch, x) => {
+              if (ch === "X") c.fillRect(ox + x * px + dx, oy + y * px + dy, px, px);
+            });
+          });
+        };
+        c.globalCompositeOperation = "lighter";
+        if (f === 1) {
+          draw("rgba(255,0,80,0.9)", -5, 0);
+          draw("rgba(0,200,255,0.9)", 5, 2);
+        } else {
+          draw("rgba(255,0,120,0.45)", -2, 0);
+          draw("rgba(0,220,255,0.45)", 2, 0);
+        }
+        c.globalCompositeOperation = "source-over";
+        c.shadowColor = "#39ff88";
+        c.shadowBlur = 16;
+        draw("#39ff88", 0, 0);
+        c.shadowBlur = 0;
+        c.fillStyle = "#eafff2";
         sprite.forEach((row, y) => {
           [...row].forEach((ch, x) => {
-            if (ch === "X") c.fillRect(ox + x * px + dx, oy + y * px + dy, px, px);
+            if (ch === "o") c.fillRect(ox + x * px, oy + y * px, px, px);
           });
         });
-      };
-      c.globalCompositeOperation = "lighter";
-      if (f === 1) {
-        draw("rgba(255,0,80,0.9)", -5, 0);
-        draw("rgba(0,200,255,0.9)", 5, 2);
-      } else {
-        draw("rgba(255,0,120,0.45)", -2, 0);
-        draw("rgba(0,220,255,0.45)", 2, 0);
-      }
-      c.globalCompositeOperation = "source-over";
-      c.shadowColor = "#39ff88";
-      c.shadowBlur = 16;
-      draw("#39ff88", 0, 0);
-      c.shadowBlur = 0;
-      c.fillStyle = "#eafff2";
-      sprite.forEach((row, y) => {
-        [...row].forEach((ch, x) => {
-          if (ch === "o") c.fillRect(ox + x * px, oy + y * px, px, px);
-        });
-      });
-      if (f === 1) {
-        c.clearRect(0, 52, 128, 6);
-        c.fillStyle = "rgba(57,255,136,0.9)";
-        c.fillRect(30, 52, 80, 3);
-      }
-    });
+        if (f === 1) {
+          c.clearRect(0, 52, 128, 6);
+          c.fillStyle = "rgba(57,255,136,0.9)";
+          c.fillRect(30, 52, 80, 3);
+        }
+      },
+      { res: HI, rim: "#c8ffe0" },
+    );
   }
 
   // NOVA — living star
-  canvasTex(scene, "char_nova", 128, 128, (c) => {
-    c.translate(64, 64);
-    c.fillStyle = radial(c, 0, 0, 62, [
-      [0, "rgba(255,255,255,1)"],
-      [0.25, "rgba(255,244,190,0.95)"],
-      [0.45, "rgba(255,190,90,0.45)"],
-      [1, "rgba(255,120,200,0)"],
-    ]);
-    c.fillRect(-64, -64, 128, 128);
-    c.shadowColor = "#fff6c8";
-    c.shadowBlur = 16;
-    c.fillStyle = "#fffdf0";
-    c.beginPath();
-    for (let i = 0; i < 16; i++) {
-      const r = i % 2 === 0 ? 34 : 18;
-      const a = (i / 16) * Math.PI * 2;
-      c.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-    }
-    c.closePath();
-    c.fill();
-    c.fillStyle = "#ffffff";
-    c.beginPath();
-    c.arc(0, 0, 16, 0, 7);
-    c.fill();
-    c.shadowBlur = 0;
-    c.fillStyle = "#6a3a00";
-    c.beginPath();
-    c.arc(5, -3, 2.5, 0, 7);
-    c.arc(12, -3, 2.5, 0, 7);
-    c.fill();
-  });
-  canvasTex(scene, "nova_ring", 160, 160, (c) => {
-    c.translate(80, 80);
-    c.shadowColor = "#fff";
-    c.shadowBlur = 10;
-    c.strokeStyle = "rgba(255,255,255,0.9)";
-    c.lineWidth = 3;
-    c.beginPath();
-    c.arc(0, 0, 64, 0, Math.PI * 2);
-    c.stroke();
-    c.fillStyle = "#fff";
-    c.beginPath();
-    c.arc(64, 0, 5, 0, 7);
-    c.fill();
-  });
+  canvasTex(
+    scene,
+    "char_nova",
+    128,
+    128,
+    (c) => {
+      c.translate(64, 64);
+      c.fillStyle = radial(c, 0, 0, 62, [
+        [0, "rgba(255,255,255,1)"],
+        [0.25, "rgba(255,244,190,0.95)"],
+        [0.45, "rgba(255,190,90,0.45)"],
+        [1, "rgba(255,120,200,0)"],
+      ]);
+      c.fillRect(-64, -64, 128, 128);
+      c.shadowColor = "#fff6c8";
+      c.shadowBlur = 16;
+      c.fillStyle = "#fffdf0";
+      c.beginPath();
+      for (let i = 0; i < 16; i++) {
+        const r = i % 2 === 0 ? 34 : 18;
+        const a = (i / 16) * Math.PI * 2;
+        c.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      c.closePath();
+      c.fill();
+      c.fillStyle = "#ffffff";
+      c.beginPath();
+      c.arc(0, 0, 16, 0, 7);
+      c.fill();
+      c.shadowBlur = 0;
+      c.fillStyle = "#6a3a00";
+      c.beginPath();
+      c.arc(5, -3, 2.5, 0, 7);
+      c.arc(12, -3, 2.5, 0, 7);
+      c.fill();
+    },
+    { res: HI, rim: "#fff6c8" },
+  );
+  canvasTex(
+    scene,
+    "nova_ring",
+    160,
+    160,
+    (c) => {
+      c.translate(80, 80);
+      c.shadowColor = "#fff";
+      c.shadowBlur = 10;
+      c.strokeStyle = "rgba(255,255,255,0.9)";
+      c.lineWidth = 3;
+      c.beginPath();
+      c.arc(0, 0, 64, 0, Math.PI * 2);
+      c.stroke();
+      c.fillStyle = "#fff";
+      c.beginPath();
+      c.arc(64, 0, 5, 0, 7);
+      c.fill();
+    },
+    { res: HI },
+  );
 }
 
 // ---------------------------------------------------------------- ui
@@ -947,36 +1079,50 @@ function uiTextures(scene) {
     c.lineWidth = 4;
     c.stroke();
   });
-  canvasTex(scene, "lock", 48, 48, (c) => {
-    c.translate(24, 24);
-    c.strokeStyle = "#fff";
-    c.lineWidth = 4;
-    c.beginPath();
-    c.arc(0, -6, 9, Math.PI, 0);
-    c.stroke();
-    c.fillStyle = "#fff";
-    roundRect(c, -13, -6, 26, 20, 4);
-    c.fill();
-    c.fillStyle = "#000";
-    c.fillRect(-2, 0, 4, 8);
-  });
-  canvasTex(scene, "shardIcon", 40, 40, (c) => {
-    c.translate(20, 20);
-    c.shadowColor = "#3fa9ff";
-    c.shadowBlur = 8;
-    const g = c.createLinearGradient(-10, -16, 10, 16);
-    g.addColorStop(0, "#e6f6ff");
-    g.addColorStop(1, "#3fa9ff");
-    c.fillStyle = g;
-    poly(c, [
-      [0, -16],
-      [10, -2],
-      [4, 16],
-      [-6, 12],
-      [-10, -4],
-    ]);
-    c.fill();
-  });
+  canvasTex(
+    scene,
+    "lock",
+    48,
+    48,
+    (c) => {
+      c.translate(24, 24);
+      c.strokeStyle = "#fff";
+      c.lineWidth = 4;
+      c.beginPath();
+      c.arc(0, -6, 9, Math.PI, 0);
+      c.stroke();
+      c.fillStyle = "#fff";
+      roundRect(c, -13, -6, 26, 20, 4);
+      c.fill();
+      c.fillStyle = "#000";
+      c.fillRect(-2, 0, 4, 8);
+    },
+    { res: HI },
+  );
+  canvasTex(
+    scene,
+    "shardIcon",
+    40,
+    40,
+    (c) => {
+      c.translate(20, 20);
+      c.shadowColor = "#3fa9ff";
+      c.shadowBlur = 8;
+      const g = c.createLinearGradient(-10, -16, 10, 16);
+      g.addColorStop(0, "#e6f6ff");
+      g.addColorStop(1, "#3fa9ff");
+      c.fillStyle = g;
+      poly(c, [
+        [0, -16],
+        [10, -2],
+        [4, 16],
+        [-6, 12],
+        [-10, -4],
+      ]);
+      c.fill();
+    },
+    { res: HI },
+  );
 }
 
 export function buildTextures(scene) {

@@ -1,19 +1,21 @@
 // Tiny WebAudio synth — no audio files, instant response, unlocked on first touch.
+import { Music, rawAudioContext } from "./music.js";
 import { Save } from "./save.js";
 
 let ctx = null;
 let master = null;
 
+/** SFX share Tone's AudioContext (one context = reliable on iOS) with their own volume. */
 function ensure() {
-  if (!Save.data.settings.sound) return null;
+  const st = Save.data.settings;
+  if (st.muted || (st.sfxVol ?? 0.8) <= 0.001) return null;
+  if (!Music.unlocked) return null; // nothing may sound before the first tap
   if (!ctx) {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return null;
-    ctx = new AC();
+    ctx = rawAudioContext();
     master = ctx.createGain();
-    master.gain.value = 0.35;
     master.connect(ctx.destination);
   }
+  master.gain.value = 0.42 * (st.sfxVol ?? 0.8);
   if (ctx.state === "suspended") ctx.resume();
   return ctx;
 }
@@ -68,7 +70,7 @@ const FLAP = {
 };
 
 export const Sfx = {
-  unlock: () => ensure(),
+  unlock: () => Music.unlock(),
   flap: (id) => (FLAP[id] || FLAP.volt)(),
   coin: () => {
     tone({ type: "triangle", f0: 1400, f1: 1400, dur: 0.06, vol: 0.15 });

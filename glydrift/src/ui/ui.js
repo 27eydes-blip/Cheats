@@ -1,28 +1,39 @@
 // Juicy UI kit: neon text, bouncy buttons, rolling counters, progress bars, toasts.
 import Phaser from "phaser";
-import { FONT } from "../config.js";
+import { FONT, NUM_FONT, VIEW } from "../config.js";
 import { Sfx } from "../systems/audio.js";
 
 export const hex = (c) => `#${c.toString(16).padStart(6, "0")}`;
 
+/** Body copy & anything with digits uses Rajdhani (clean zeros); headings use Orbitron. */
+export function fontFor(str, opts = {}) {
+  if (opts.font) return opts.font;
+  return /\d/.test(String(str)) || opts.body ? NUM_FONT : FONT;
+}
+
 export function neonText(scene, x, y, str, size, color = 0xffffff, opts = {}) {
+  const family = fontFor(str, opts);
+  const isNum = family === NUM_FONT;
+  const fs = isNum ? Math.round(size * 1.15) : size;
   const t = scene.add
     .text(x, y, str, {
-      fontFamily: FONT,
-      fontSize: `${size}px`,
-      fontStyle: opts.weight || "900",
+      fontFamily: family,
+      fontSize: `${fs}px`,
+      fontStyle: isNum ? "700" : opts.weight || "900",
       color: opts.fill || "#ffffff",
       align: opts.align || "center",
       stroke: opts.stroke || hex(color),
-      strokeThickness: opts.strokeThickness ?? Math.max(2, Math.round(size / 14)),
+      strokeThickness: opts.strokeThickness ?? Math.max(2, Math.round(size / 16)),
       wordWrap: opts.wrap ? { width: opts.wrap } : undefined,
+      resolution: VIEW.Z,
     })
     .setOrigin(opts.ox ?? 0.5, opts.oy ?? 0.5);
   if (opts.glow !== false) {
-    const blur = opts.blur ?? Math.round(size * 0.45);
+    const blur = opts.blur ?? Math.round(size * 0.3);
     // pad the text canvas so the glow is never clipped into a hard box
     t.setPadding(blur, blur, blur, blur);
-    t.setShadow(0, 0, hex(color), blur, true, true);
+    // canvas shadowBlur ignores the resolution transform: scale it so glow size is constant
+    t.setShadow(0, 0, hex(color), blur * VIEW.Z, true, true);
     if ((opts.ox ?? 0.5) === 0) t.x -= blur;
     if ((opts.ox ?? 0.5) === 1) t.x += blur;
   }
@@ -32,13 +43,14 @@ export function neonText(scene, x, y, str, size, color = 0xffffff, opts = {}) {
 export function plainText(scene, x, y, str, size, color = "#ffffff", opts = {}) {
   return scene.add
     .text(x, y, str, {
-      fontFamily: FONT,
-      fontSize: `${size}px`,
+      fontFamily: opts.font || NUM_FONT,
+      fontSize: `${Math.round(size * 1.12)}px`,
       fontStyle: opts.weight || "700",
       color,
       align: opts.align || "center",
       wordWrap: opts.wrap ? { width: opts.wrap } : undefined,
-      lineSpacing: opts.lineSpacing || 4,
+      lineSpacing: opts.lineSpacing || 2,
+      resolution: VIEW.Z,
     })
     .setOrigin(opts.ox ?? 0.5, opts.oy ?? 0.5);
 }
@@ -85,11 +97,15 @@ export function button(
     g.fillRoundedRect(-w / 2 + 6, -h / 2 + 5, w - 12, h * 0.38, Math.min(16, h / 3));
   };
   draw(color);
-  const t = neonText(scene, 0, sub ? -10 : 0, label, size, color, { blur: 12 });
+  // crisp label: white fill, thin coloured stroke, restrained glow (readable at small sizes)
+  const t = neonText(scene, 0, sub ? -12 : 0, label, size, color, {
+    blur: Math.max(4, Math.round(size * 0.22)),
+    strokeThickness: Math.max(1, Math.round(size / 24)),
+  });
   c.add([g, t]);
   let st = null;
   if (sub) {
-    st = plainText(scene, 0, h / 2 - 20, sub, Math.round(size * 0.45), "#d8d0ff");
+    st = plainText(scene, 0, h / 2 - 22, sub, Math.max(15, Math.round(size * 0.6)), "#d8d0ff");
     c.add(st);
   }
   c.setSize(w, h);
@@ -123,11 +139,17 @@ export function button(
   });
   c.label = t;
   c.subLabel = st;
-  c.setLabel = (s) => t.setText(s);
+  c.setLabel = (s) => {
+    // switch to the numeric font when the label gains digits (clean zeros)
+    const fam = fontFor(s);
+    if (t.style.fontFamily !== fam)
+      t.setFontFamily(fam).setFontStyle(fam === NUM_FONT ? "700" : "900");
+    t.setText(s);
+  };
   c.setColor = (col) => {
     draw(col);
     t.setStroke(hex(col), t.style.strokeThickness);
-    t.setShadow(0, 0, hex(col), 12, true, true);
+    t.setShadow(0, 0, hex(col), Math.max(4, Math.round(size * 0.22)) * VIEW.Z, true, true);
   };
   c.setEnabled = (v) => {
     c.enabled = v;
@@ -289,7 +311,7 @@ export class ProgressBar {
 
 /** Slide-down toast from the top of the screen. */
 export function toast(scene, text, color = 0x3ef4ff, { y = 140, depth = 500, sub } = {}) {
-  const W = scene.scale.width;
+  const W = VIEW.W;
   const queue = (scene.__toastQueue ||= { t: 0 });
   const now = scene.time.now;
   const delay = Math.max(0, queue.t - now);
@@ -330,4 +352,53 @@ export function rarityColor(rarity, time = 0) {
     return (c.r << 16) | (c.g << 8) | c.b;
   }
   return { common: 0xbfd3e6, rare: 0x3fa9ff, epic: 0xb45cff }[rarity];
+}
+
+/**
+ * Horizontal slider (0..1). Objects are added at absolute coordinates; pass a container
+ * to collect them. Drag anywhere on the track.
+ */
+export function slider(scene, x, y, w, value, color, onChange, { container, label } = {}) {
+  const g = scene.add.graphics();
+  const knob = scene.add.graphics();
+  const zone = scene.add.zone(x + w / 2, y, w + 40, 64).setInteractive({ useHandCursor: true });
+  const items = [g, knob, zone];
+  let txt = null;
+  if (label) {
+    txt = plainText(scene, x, y - 34, label, 20, "#e8e0ff", { ox: 0 });
+    items.push(txt);
+  }
+  const pct = plainText(scene, x + w, y - 34, "", 20, hex(color), { ox: 1 });
+  items.push(pct);
+  let v = value;
+  const draw = () => {
+    g.clear();
+    g.fillStyle(0x1a1030, 1).fillRoundedRect(x, y - 6, w, 12, 6);
+    g.fillStyle(color, 0.3).fillRoundedRect(x - 2, y - 9, w * v + 4, 18, 9);
+    g.fillStyle(color, 1).fillRoundedRect(x, y - 6, Math.max(12, w * v), 12, 6);
+    knob.clear();
+    knob.fillStyle(color, 0.3).fillCircle(x + w * v, y, 24);
+    knob.fillStyle(0xffffff, 1).fillCircle(x + w * v, y, 15);
+    knob.lineStyle(4, color, 1).strokeCircle(x + w * v, y, 15);
+    pct.setText(`${Math.round(v * 100)}%`);
+  };
+  const setFrom = (p) => {
+    v = Phaser.Math.Clamp((p.worldX - x) / w, 0, 1);
+    draw();
+    onChange?.(v);
+  };
+  let dragging = false;
+  zone.on("pointerdown", (p) => {
+    dragging = true;
+    setFrom(p);
+  });
+  scene.input.on("pointermove", (p) => {
+    if (dragging && p.isDown) setFrom(p);
+  });
+  scene.input.on("pointerup", () => {
+    dragging = false;
+  });
+  draw();
+  if (container) container.add(items);
+  return { items, set: (nv) => ((v = nv), draw()) };
 }

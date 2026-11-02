@@ -35,7 +35,14 @@ function defaults() {
     login: { last: "", streak: 0, claimed: "" },
     daily: { date: "", best: 0, attempts: 0, ghost: null, ghostChar: "volt", lastPlayed: "" },
     levelRewards: {},
-    settings: { lowGfx: false, sound: true, gfxChecked: false },
+    settings: {
+      lowGfx: false,
+      gfxChecked: false,
+      musicVol: 0.7,
+      sfxVol: 0.8,
+      muted: false,
+      bgStyle: "grid",
+    },
   };
 }
 

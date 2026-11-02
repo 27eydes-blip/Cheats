@@ -1,10 +1,10 @@
 // Character select: orbiting 3D-feel showcase with a live trail + flap preview, and a
 // perspective card carousel with rarity-glow borders, unlock by coins / shards / challenge.
 import Phaser from "phaser";
-import { Background } from "../biomes/Background.js";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
-import { RARITY } from "../config.js";
+import { fitCamera, RARITY, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
+import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { CHARACTERS } from "../player/characterDefs.js";
 import { Sfx } from "../systems/audio.js";
@@ -32,8 +32,9 @@ export class CharacterScene extends Phaser.Scene {
   }
 
   create() {
-    const W = this.scale.width;
-    const H = this.scale.height;
+    fitCamera(this);
+    const W = VIEW.W;
+    const H = VIEW.H;
     this.W = W;
     this.H = H;
     const s = Save.data;
@@ -44,16 +45,14 @@ export class CharacterScene extends Phaser.Scene {
     this.lowGfx = s.settings.lowGfx;
     const top = (this.registry.get("safeTop") || 0) + 20;
     this.top = top;
-    this.cameras.main.setBackgroundColor(0x05010d).fadeIn(250, 5, 1, 13);
+    this.cameras.main.fadeIn(250, 5, 1, 13);
     if (!this.lowGfx && this.renderer.type === Phaser.WEBGL) {
       this.cameras.main.setPostPipeline("GlyPostFX");
       this.post = this.cameras.main.getPostPipeline("GlyPostFX");
       if (Array.isArray(this.post)) this.post = this.post[0];
       if (this.post) this.post.params.aberration = 0.001;
     }
-
-    this.bg = new Background(this, { lowGfx: this.lowGfx, W, H, cover: 1.05 });
-    this.events.once("shutdown", () => this.bg.destroy());
+    this.backdrop = this.scene.get("Backdrop");
     this.fx = new Effects(this, { lowGfx: this.lowGfx, depth: 70 });
     this.pal = {};
     this.t = 0;
@@ -67,7 +66,7 @@ export class CharacterScene extends Phaser.Scene {
     neonText(this, W / 2, top + 46, "HEROES", 40, 0xb45cff).setDepth(200);
     this.add
       .image(W - 170, top + 46, "coin")
-      .setScale(0.65)
+      .setScale(0.75 / HI)
       .setDepth(200);
     this.coinText = neonText(this, W - 146, top + 46, `${s.coins}`, 26, 0xffc83d, {
       ox: 0,
@@ -133,15 +132,16 @@ export class CharacterScene extends Phaser.Scene {
 
     // swipe
     this.input.on("pointerdown", (p) => {
-      this.dragX = p.x;
-      this.dragY = p.y;
+      this.dragX = p.worldX;
+      this.dragY = p.worldY;
       this.dragPos = this.pos;
-      this.dragging = p.y > this.cardsY - CARD_H / 2 - 20 && p.y < this.cardsY + CARD_H / 2 + 20;
+      this.dragging =
+        p.worldY > this.cardsY - CARD_H / 2 - 20 && p.worldY < this.cardsY + CARD_H / 2 + 20;
     });
     this.input.on("pointermove", (p) => {
       if (!this.dragging || !p.isDown) return;
       this.pos = Phaser.Math.Clamp(
-        this.dragPos - (p.x - this.dragX) / 300,
+        this.dragPos - (p.worldX - this.dragX) / 300,
         -0.4,
         CHARACTERS.length - 0.6,
       );
@@ -150,10 +150,10 @@ export class CharacterScene extends Phaser.Scene {
     this.input.on("pointerup", (p) => {
       if (!this.dragging) return;
       this.dragging = false;
-      const dx = p.x - this.dragX;
+      const dx = p.worldX - this.dragX;
       if (Math.abs(dx) > 40) this.select(Math.round(this.pos + (dx < 0 ? 0.3 : -0.3)));
-      else if (Math.abs(dx) < 10 && Math.abs(p.x - this.W / 2) > CARD_W / 2)
-        this.select(this.index + (p.x > this.W / 2 ? 1 : -1));
+      else if (Math.abs(dx) < 10 && Math.abs(p.worldX - this.W / 2) > CARD_W / 2)
+        this.select(this.index + (p.worldX > this.W / 2 ? 1 : -1));
       else this.select(this.index);
     });
     this.input.keyboard?.on("keydown-LEFT", () => this.select(this.index - 1));
@@ -172,7 +172,7 @@ export class CharacterScene extends Phaser.Scene {
       .setTint(def.color)
       .setScale(2.2)
       .setAlpha(0.35);
-    const img = this.add.image(0, -50, def.texture).setScale(1.1);
+    const img = this.add.image(0, -50, def.texture).setScale(1.25 / HI);
     const name = neonText(this, 0, 70, def.name, 32, def.color, { blur: 12 });
     const rar = plainText(
       this,
@@ -183,7 +183,10 @@ export class CharacterScene extends Phaser.Scene {
       hex(RARITY[def.rarity].color),
     );
     const desc = plainText(this, 0, 148, def.desc, 13, "#d8d0ff", { wrap: CARD_W - 40 });
-    const lock = this.add.image(0, -50, "lock").setScale(1.4).setAlpha(0.9);
+    const lock = this.add
+      .image(0, -50, "lock")
+      .setScale(1.4 / HI)
+      .setAlpha(0.9);
     c.add([g, glow, img, name, rar, desc, lock]);
     c.def = def;
     c.g = g;
@@ -362,7 +365,7 @@ export class CharacterScene extends Phaser.Scene {
       { a: BIOMES[bi], b: BIOMES[(bi + 1) % 5], t: def.id === "nova" ? (this.t % 4) / 4 : 0 },
       this.pal,
     );
-    this.bg.update(dt, 60, this.pal, { speedNorm: 0, zoom: 1 });
+    this.backdrop.drive(this.pal, { scroll: 60, speedNorm: 0, dim: 0.55, scenery: false });
     this.fx.drift = 0;
 
     // orbiting showcase — depth & scale fake a 3D turntable
@@ -371,7 +374,7 @@ export class CharacterScene extends Phaser.Scene {
     const x = this.cx + Math.cos(a) * 150;
     const y = this.cy + Math.sin(a) * 34 - 10;
     const depthK = (Math.sin(a) + 1) / 2;
-    this.rig.displayScale = 1.6 + depthK * 0.7;
+    this.rig.displayScale = 0.7 + depthK * 0.3;
     this.rig.setPosition(x, y);
     this.rig.angle = Math.cos(a) < 0 ? -12 : 12;
     this.rig.sprite.setFlipX(Math.cos(a) > 0 && def.id === "ember");
@@ -404,7 +407,7 @@ export class CharacterScene extends Phaser.Scene {
       const P = this.post.params;
       P.flash *= Math.exp(-dt * 5);
       P.glitch = def.id === "glitch" ? 0.12 : 0;
-      P.pulse = (this.bg.beat || 0) * 0.5;
+      P.pulse = (this.backdrop.bg.beat || 0) * 0.5;
     }
   }
 }

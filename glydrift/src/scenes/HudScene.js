@@ -1,7 +1,9 @@
 // In-run HUD overlay: score, coins, banners, toasts, pause. Unaffected by camera zoom/post-FX.
 import Phaser from "phaser";
 import { BIOMES, biomeName } from "../biomes/biomes.js";
-import { PHYSICS } from "../config.js";
+import { fitCamera, PHYSICS, VIEW } from "../config.js";
+import { HI } from "../gfx/textures.js";
+import { Music } from "../systems/music.js";
 import { dailyNumber } from "../systems/rng.js";
 import { button, hex, neonText, plainText, RollingCounter, toast } from "../ui/ui.js";
 
@@ -16,8 +18,9 @@ export class HudScene extends Phaser.Scene {
   }
 
   create() {
-    const W = this.scale.width;
-    const H = this.scale.height;
+    fitCamera(this);
+    const W = VIEW.W;
+    const H = VIEW.H;
     this.W = W;
     this.H = H;
     this.sys.setVisible(true); // may have been hidden by a previous GameOver
@@ -40,7 +43,7 @@ export class HudScene extends Phaser.Scene {
     );
 
     // coins
-    this.coinIcon = this.add.image(W - 120, top + 46, "coin").setScale(0.7);
+    this.coinIcon = this.add.image(W - 120, top + 46, "coin").setScale(0.8 / HI);
     this.coinText = neonText(this, W - 96, top + 46, "0", 30, 0xffc83d, { ox: 0, blur: 10 });
     this.coins = new RollingCounter(this, this.coinText);
 
@@ -103,8 +106,12 @@ export class HudScene extends Phaser.Scene {
   isOverHud(pointer) {
     if (!pointer) return false;
     return (
-      Phaser.Math.Distance.Between(pointer.x, pointer.y, this.pauseBtn.x, this.pauseBtn.y) < 46 ||
-      !!this.pauseLayer
+      Phaser.Math.Distance.Between(
+        pointer.worldX,
+        pointer.worldY,
+        this.pauseBtn.x,
+        this.pauseBtn.y,
+      ) < 50 || !!this.pauseLayer
     );
   }
 
@@ -141,7 +148,7 @@ export class HudScene extends Phaser.Scene {
     this.coins.bump(n);
     this.tweens.add({
       targets: this.coinIcon,
-      scale: { from: 1, to: 0.7 },
+      scale: { from: 1.2 / HI, to: 0.8 / HI },
       duration: 200,
       ease: "Back.easeOut",
     });
@@ -215,6 +222,7 @@ export class HudScene extends Phaser.Scene {
     const gs = this.gameScene;
     if (this.pauseLayer || gs.state !== "playing") return;
     this.scene.pause("Game");
+    Music.muffle(true);
     const W = this.W;
     const H = this.H;
     const c = this.add.container(0, 0).setDepth(100);
@@ -244,6 +252,7 @@ export class HudScene extends Phaser.Scene {
     const c = this.pauseLayer;
     this.pauseLayer = null;
     c.destroy();
+    Music.muffle(false);
     if (!silent) this.scene.resume("Game");
   }
 

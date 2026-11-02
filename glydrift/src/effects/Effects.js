@@ -1,7 +1,7 @@
 // Pooled particle bursts, shockwave rings, lightning arcs and floating text.
 // Every emitter has a hard particle cap that is lowered further in Low Graphics mode.
 import Phaser from "phaser";
-import { FONT } from "../config.js";
+import { NUM_FONT, VIEW } from "../config.js";
 
 const toDeg = 180 / Math.PI;
 const alongVelocity = {
@@ -162,7 +162,7 @@ export class Effects {
       if (this.rings.length > 14) return;
       r = this.scene.add
         .image(0, 0, "ring")
-        .setBlendMode(Phaser.BlendModes.ADD)
+        .setBlendMode(Phaser.BlendModes.NORMAL)
         .setDepth(this.emitters.dot.depth + 2);
       this.rings.push(r);
     }
@@ -224,9 +224,10 @@ export class Effects {
     if (!t) {
       t = this.scene.add
         .text(0, 0, "", {
-          fontFamily: FONT,
+          fontFamily: NUM_FONT,
+          resolution: VIEW.Z,
           fontSize: "34px",
-          fontStyle: "900",
+          fontStyle: "700",
           color: "#fff",
           stroke: "#000000",
           strokeThickness: 6,
@@ -237,7 +238,7 @@ export class Effects {
       this.texts.push(t);
     }
     t.setActive(true).setVisible(true).setText(str).setColor(color).setFontSize(size);
-    t.setShadow(0, 0, color, 16, true, true);
+    t.setShadow(0, 0, color, 16 * VIEW.Z, true, true);
     t.setPosition(x, y).setScale(0.3).setAlpha(1).setAngle(Phaser.Math.Between(-8, 8));
     this.scene.tweens.add({ targets: t, scale: 1, duration: 260, ease: "Back.easeOut" });
     this.scene.tweens.add({

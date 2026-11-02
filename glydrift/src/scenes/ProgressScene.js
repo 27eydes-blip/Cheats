@@ -1,10 +1,11 @@
 // Player level & rewards, rotating missions, login streak and achievement badges.
 import Phaser from "phaser";
-import { Background } from "../biomes/Background.js";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
+import { fitCamera, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { ACHIEVEMENTS, LEVEL_REWARDS, LOGIN_REWARDS, Progression } from "../systems/progression.js";
 import { Save } from "../systems/save.js";
+import { drawIcon } from "../ui/icons.js";
 import {
   button,
   drawNeonRect,
@@ -21,20 +22,18 @@ export class ProgressScene extends Phaser.Scene {
   }
 
   create() {
-    const W = this.scale.width;
-    const H = this.scale.height;
+    fitCamera(this);
+    const W = VIEW.W;
+    const H = VIEW.H;
     const s = Save.data;
     const lowGfx = s.settings.lowGfx;
     const top = (this.registry.get("safeTop") || 0) + 20;
-    this.cameras.main.setBackgroundColor(0x05010d).fadeIn(250, 5, 1, 13);
-    this.bg = new Background(this, { lowGfx, W, H, cover: 1.05 });
-    this.events.once("shutdown", () => this.bg.destroy());
+    this.cameras.main.fadeIn(250, 5, 1, 13);
+    this.backdrop = this.scene.get("Backdrop");
     this.fx = new Effects(this, { lowGfx, depth: 200 });
     this.pal = {};
     blendPalette({ a: BIOMES[0], b: BIOMES[2], t: 0.35 }, this.pal);
     this.t = 0;
-    // soft scrim keeps the living background from fighting the UI
-    this.add.rectangle(W / 2, H / 2, W, H, 0x05010d, 0.45).setDepth(-10);
 
     button(this, 80, top + 46, 120, 64, "BACK", {
       color: 0xff4fd8,
@@ -105,7 +104,8 @@ export class ProgressScene extends Phaser.Scene {
     });
     y += 3 * 98 + 6;
 
-    // ---- streak
+    // ---- streak (same source of truth as the daily reward popup)
+    const ls = Progression.loginStatus();
     const st = this.add.container(0, 0);
     st.add(neonText(this, 40, y, "LOGIN STREAK", 26, 0xffd23f, { ox: 0 }));
     st.add(
@@ -113,22 +113,30 @@ export class ProgressScene extends Phaser.Scene {
         this,
         W - 40,
         y,
-        `${s.login.streak} day${s.login.streak === 1 ? "" : "s"}`,
+        `${ls.streak} day${ls.streak === 1 ? "" : "s"}${ls.canClaim ? " · claim today!" : ""}`,
         20,
         "#fff2c2",
         { ox: 1 },
       ),
     );
-    const day = ((Math.max(1, s.login.streak) - 1) % 7) + 1;
+    const shardFor = Progression.shardTarget();
     LOGIN_REWARDS.forEach((rw, i) => {
       const x = 40 + 36 + i * ((W - 80) / 7);
       const cy = y + 62;
-      const done = i < day && s.login.streak > 0;
+      const done = i < ls.day - (ls.canClaim ? 1 : 0);
       const g = this.add.graphics();
       g.fillStyle(done ? 0xffd23f : 0x2a2140, done ? 0.9 : 0.8).fillCircle(x, cy, 26);
-      g.lineStyle(2, rw.shard ? 0x3fa9ff : 0xffd23f, 1).strokeCircle(x, cy, 26);
+      g.lineStyle(i === ls.day - 1 ? 4 : 2, rw.shard ? 0x3fa9ff : 0xffd23f, 1).strokeCircle(
+        x,
+        cy,
+        26,
+      );
       st.add(g);
-      st.add(plainText(this, x, cy, rw.shard ? "◆" : `${i + 1}`, 18, done ? "#1a0c00" : "#ffffff"));
+      st.add(plainText(this, x, cy, `${i + 1}`, 20, done ? "#1a0c00" : "#ffffff"));
+      if (rw.shard)
+        st.add(
+          plainText(this, x, cy + 40, `${shardFor ? shardFor.name : "BONUS"} SHARD`, 12, "#9fd4ff"),
+        );
     });
     slideIn(this, st, 420);
     y += 120;
@@ -152,15 +160,20 @@ export class ProgressScene extends Phaser.Scene {
       const yy = y + cellH * Math.floor(i / cols) + cellH / 2;
       const unlocked = !!s.achievements[a.id];
       const col = unlocked ? [0xffd23f, 0x3ef4ff, 0xff4fd8, 0x39ff88, 0xb45cff][i % 5] : 0x4a4060;
-      const badge = this.add
-        .image(x, yy - 10, "badge")
-        .setScale(Math.min(0.7, cellH / 160))
-        .setTint(col);
-      const glyph = neonText(this, x, yy - 10, a.glyph, 30, col, {
-        blur: unlocked ? 12 : 0,
-        glow: unlocked,
-      });
-      if (!unlocked) glyph.setAlpha(0.4);
+      // custom vector badge: hexagon + an icon that matches the achievement
+      const badge = this.add.graphics().setPosition(x, yy - 10);
+      const R = Math.min(42, cellH * 0.34);
+      const hexPts = [];
+      for (let k = 0; k < 6; k++) {
+        const ang = (k / 6) * Math.PI * 2 - Math.PI / 2;
+        hexPts.push({ x: Math.cos(ang) * R, y: Math.sin(ang) * R });
+      }
+      badge.fillStyle(0x0a0418, 0.95).fillPoints(hexPts, true);
+      badge.fillStyle(col, unlocked ? 0.18 : 0.06).fillPoints(hexPts, true);
+      if (unlocked) badge.lineStyle(9, col, 0.18).strokePoints(hexPts, true, true);
+      badge.lineStyle(3, col, unlocked ? 1 : 0.5).strokePoints(hexPts, true, true);
+      drawIcon(badge, a.id, R * 0.55, unlocked ? 0xffffff : 0x4a4060);
+      badge.setInteractive(new Phaser.Geom.Circle(0, 0, R), Phaser.Geom.Circle.Contains);
       const label = plainText(
         this,
         x,
@@ -169,10 +182,8 @@ export class ProgressScene extends Phaser.Scene {
         12,
         unlocked ? "#ffffff" : "#7a7090",
       );
-      badge
-        .setInteractive({ useHandCursor: true })
-        .on("pointerup", () => this.showTip(a, unlocked, x, yy));
-      popIn(this, [badge, glyph], 500 + i * 30);
+      badge.on("pointerup", () => this.showTip(a, unlocked, x, yy));
+      popIn(this, badge, 300 + i * 25);
       label.setAlpha(0);
       this.tweens.add({ targets: label, alpha: 1, delay: 600 + i * 30, duration: 300 });
       if (unlocked)
@@ -189,7 +200,7 @@ export class ProgressScene extends Phaser.Scene {
 
   showTip(a, unlocked, x, y) {
     this.tip?.destroy();
-    const W = this.scale.width;
+    const W = VIEW.W;
     const c = this.add.container(Phaser.Math.Clamp(x, 170, W - 170), y - 90).setDepth(300);
     const g = this.add.graphics();
     drawNeonRect(g, -160, -44, 320, 88, 16, unlocked ? 0xffd23f : 0x8a80b0, { fillAlpha: 0.96 });
@@ -215,7 +226,7 @@ export class ProgressScene extends Phaser.Scene {
 
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 30);
-    this.bg.update(dt, 70, this.pal, { speedNorm: 0, zoom: 1 });
+    this.backdrop.drive(this.pal, { scroll: 70, speedNorm: 0, dim: 0.6, scenery: false });
     this.fx.update(dt);
   }
 }
