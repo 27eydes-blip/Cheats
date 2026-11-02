@@ -110,11 +110,12 @@ function onsetEnvelope({ data, rate }) {
 /** Beat grid phase for a tempo inside [from, to] seconds (max onset alignment). */
 function beatGrid(on, from, to, bpm) {
   const beat = 60 / bpm;
+  const end = Math.min(to, on.length / 100); // analyse only where there is audio
   let best = 0;
   let bestScore = -1;
   for (let p = 0; p < beat; p += 0.005) {
     let sc = 0;
-    for (let t = from + p; t < to; t += beat) {
+    for (let t = from + p; t < end; t += beat) {
       const j = Math.round(t * 100);
       sc += (on[j] || 0) + 0.5 * ((on[j - 1] || 0) + (on[j + 1] || 0));
     }
