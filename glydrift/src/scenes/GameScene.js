@@ -8,7 +8,7 @@ import { ObstacleManager } from "../obstacles/ObstacleManager.js";
 import { darknessTexture } from "../pixel/hazardArt.js";
 import { pixelPerfectZoom, S } from "../pixel/px.js";
 import { Terrain } from "../pixel/Terrain.js";
-import { themeFor } from "../pixel/themes.js";
+import { THEMES, themeFor } from "../pixel/themes.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Player } from "../player/Player.js";
@@ -82,6 +82,7 @@ export class GameScene extends Phaser.Scene {
       lowGfx: this.lowGfx,
       heroColor: this.charDef.color,
     });
+    this.obstacles.prewarm();
     this.obstacles.onImpact = (o) => {
       if (Math.abs(o.x - this.player.x) < 260) this.cameras.main.shake(90, 0.004);
     };
@@ -92,6 +93,7 @@ export class GameScene extends Phaser.Scene {
     this.pxZoomLevel = pixelPerfectZoom(VIEW.Z, WORLD.baseZoom) / VIEW.Z;
     this.cameras.main.roundPixels = true;
     this.terrain.setView(this.pxZoomLevel);
+    this.terrain.prebuild(Object.values(THEMES));
 
     this.pal = {};
     this.fromPal = null;
@@ -409,6 +411,8 @@ export class GameScene extends Phaser.Scene {
     // The Calm: hold the Glitch Realm (no morph) until the blackout at the Abyss border
     const calm = raw0 % 5 === 3 && local0 > BL - CALM_M;
     if (calm) bs = { a: bs.a, b: bs.b, t: 0, rawIndex: raw0 };
+    // stop spawning a little before The Calm so it starts with an empty screen
+    const preCalm = raw0 % 5 === 3 && local0 > BL - CALM_M - 35;
     this.calm = calm && playing;
     this.calmK = calm ? Phaser.Math.Clamp((local0 - (BL - CALM_M)) / CALM_M, 0, 1) : 0;
     blendPalette(bs, this.pal);
@@ -488,7 +492,7 @@ export class GameScene extends Phaser.Scene {
     info.rawIndex = bs.rawIndex;
     info.local = this.meters - bs.rawIndex * BL;
     const titleWin = this.meters > 100 && (local0 > BL - 85 || local0 < 50);
-    info.pause = playing && (calm || titleWin || this.blackoutT > 0);
+    info.pause = playing && (calm || preCalm || titleWin || this.blackoutT > 0);
     info.grace = raw0 % 5 === 4 && local0 < 120;
     this.updateCalmFx(rawDt);
 

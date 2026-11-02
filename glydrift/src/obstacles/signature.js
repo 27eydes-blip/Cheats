@@ -159,7 +159,7 @@ export class Meteor extends PxObstacle {
     this.rock
       .setVisible(this.state === "fall")
       .setPosition(this.x, snap(this.y))
-      .setFrame(`meteor_${Math.floor(this.timer * 20 + this.y * 0.02) % 3}`);
+      .setFrame(`meteor_${((Math.floor(this.timer * 20 + this.y * 0.02) % 3) + 3) % 3}`);
   }
   clearance(px, py, r) {
     if (this.state !== "fall") return Infinity;

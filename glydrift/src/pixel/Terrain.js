@@ -20,6 +20,16 @@ export class Terrain {
     this.setTheme(theme, true);
   }
 
+  /** Build every biome's wall set up front (hidden) so biome changes never hitch. */
+  prebuild(themes) {
+    for (const t of themes) {
+      if (this.sets.some((x) => x.id === t.id)) continue;
+      const set = this.makeSet(t);
+      for (const p of set.parts) p.setVisible(false).setAlpha(0);
+      this.sets.push(set);
+    }
+  }
+
   makeSet(theme) {
     const { scene, W, H } = this;
     const wide = W * 3;

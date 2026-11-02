@@ -23,6 +23,7 @@ export class BackdropScene extends Phaser.Scene {
     this.bg = new PixelBackground(this, { lowGfx: Save.data.settings.lowGfx });
     this.pal = blendPalette({ a: BIOMES[0], b: BIOMES[0], t: 0 }, {});
     this.state = { scroll: 120, speedNorm: 0, dim: 0, hazards: [] };
+    this.prebuilding = true;
   }
 
   /** Called every frame by the active screen. */
@@ -44,6 +45,8 @@ export class BackdropScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    // warm up the other biomes' layers one per frame (never during a busy frame later)
+    if (this.prebuilding && time > 600) this.prebuilding = this.bg.prebuildNext();
     const dt = Math.min(delta / 1000, 1 / 30);
     const st = this.state;
     this.bg.update(dt, st.scroll, this.pal, st);

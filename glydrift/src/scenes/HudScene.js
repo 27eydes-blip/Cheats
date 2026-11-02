@@ -252,34 +252,59 @@ export class HudScene extends Phaser.Scene {
     const now = this.time.now;
     const delay = Math.max(0, q.t - now);
     q.t = now + delay + 2000;
-    const c = this.add.container(W + 320, y).setDepth(80);
-    const g = this.add.graphics();
+    // two reusable banners (alternating) — no text objects created mid-run
+    this.runBanners ||= [0, 1].map(() => {
+      const c = this.add
+        .container(W + 320, y)
+        .setDepth(80)
+        .setVisible(false);
+      c.g = this.add.graphics();
+      c.title = neonText(this, 0, -13, "", 24, 0xffffff, { blur: 8 });
+      c.sub = plainText(this, 0, 20, "", 16, "#d8d0ff");
+      c.add([c.g, c.title, c.sub]);
+      return c;
+    });
+    const c = this.runBanners[(this.bannerIdx = ((this.bannerIdx ?? -1) + 1) % 2)];
+    this.tweens.killTweensOf(c);
     const w = Math.min(W - 60, 520);
     const h = sub ? 84 : 64;
-    drawNeonRect(g, -w / 2, -h / 2, w, h, 18, color, { fillAlpha: 0.92 });
-    c.add([g, neonText(this, 0, sub ? -13 : 0, text, 24, color, { blur: 8 })]);
-    if (sub) c.add(plainText(this, 0, 20, sub, 16, "#d8d0ff"));
-    this.tweens.add({
-      targets: c,
-      x: W / 2,
-      delay,
-      duration: 200,
-      ease: "Cubic.easeOut",
-      onStart: () => Sfx.reward(),
-    });
+    const show = () => {
+      c.g.clear();
+      drawNeonRect(c.g, -w / 2, -h / 2, w, h, 18, color, { fillAlpha: 0.92 });
+      c.title
+        .setText(text)
+        .setY(sub ? -13 : 0)
+        .setStroke(hex(color), 2);
+      c.title.setShadow(0, 0, hex(color), 8 * VIEW.Z, true, true);
+      c.sub.setText(sub || "").setVisible(!!sub);
+      c.setPosition(W + 320, y).setVisible(true);
+      Sfx.reward();
+    };
+    this.time.delayedCall(delay, show);
+    this.tweens.add({ targets: c, x: W / 2, delay, duration: 200, ease: "Cubic.easeOut" });
     this.tweens.add({
       targets: c,
       x: -320,
       delay: delay + 1700,
       duration: 200,
       ease: "Cubic.easeIn",
-      onComplete: () => c.destroy(),
+      onComplete: () => c.setVisible(false),
     });
   }
 
   onSpeedUp() {
-    const t = neonText(this, this.W / 2, this.H * 0.4, "SPEED UP", 40, 0xff4fd8, { blur: 18 });
-    t.setAlpha(0).setScale(0.6);
+    // one reusable label (creating text mid-run uploads a new texture → hitch)
+    if (!this.speedText) {
+      this.speedText = neonText(this, this.W / 2, this.H * 0.4, "SPEED UP", 40, 0xff4fd8, {
+        blur: 18,
+      });
+    }
+    const t = this.speedText;
+    this.tweens.killTweensOf(t);
+    t.setPosition(this.W / 2, this.H * 0.4)
+      .setAlpha(0)
+      .setScale(0.6)
+      .setVisible(true);
     this.tweens.add({ targets: t, alpha: 1, scale: 1, duration: 260, ease: "Back.easeOut" });
     this.tweens.add({
       targets: t,
@@ -287,7 +312,7 @@ export class HudScene extends Phaser.Scene {
       x: this.W / 2 - 160,
       delay: 700,
       duration: 360,
-      onComplete: () => t.destroy(),
+      onComplete: () => t.setVisible(false),
     });
   }
 

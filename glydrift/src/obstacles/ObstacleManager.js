@@ -56,6 +56,19 @@ export class ObstacleManager {
     this.introduced = new Set();
   }
 
+  /**
+   * Build one pooled instance of every obstacle type up front (hidden), so no hazard is
+   * ever constructed mid-run (construction creates textures → frame hitches).
+   */
+  prewarm() {
+    for (const type of Object.keys(TYPES)) {
+      if (type === "crusher") continue; // legacy neon crusher, never spawned
+      const pool = (this.pools[type] ||= []);
+      const want = ["saw", "laser", "icicle", "meteor", "blink", "tendril"].includes(type) ? 2 : 1;
+      while (pool.length < want) pool.push(new TYPES[type](this));
+    }
+  }
+
   obtain(type) {
     const pool = (this.pools[type] ||= []);
     let o = pool.find((p) => !p.active);

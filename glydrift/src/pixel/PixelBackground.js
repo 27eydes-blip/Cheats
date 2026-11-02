@@ -5,7 +5,7 @@ import Phaser from "phaser";
 import { heartbeat } from "../biomes/Background.js";
 import { VIEW } from "../config.js";
 import { S } from "./px.js";
-import { themeFor } from "./themes.js";
+import { THEMES, themeFor } from "./themes.js";
 
 const FADE = 1.6; // seconds
 
@@ -132,6 +132,24 @@ export class PixelBackground {
       d.vx = 0;
     }
     d.base = 0.18 + Math.random() * 0.32;
+  }
+
+  /**
+   * Build one not-yet-built biome set (hidden). Called once per frame while idle so every
+   * biome is ready before the player reaches it — no mid-run hitch on the first visit.
+   * @returns true while there is still work left
+   */
+  prebuildNext() {
+    for (const id of Object.keys(THEMES)) {
+      if (this.sets[id]) continue;
+      const set = this.buildSet(id);
+      set.alpha = 0;
+      set.shown = false;
+      for (const ob of set.objs) ob.setVisible(false);
+      this.sets[id] = set;
+      return true;
+    }
+    return false;
   }
 
   /** Crossfade to another biome's layer set. */
