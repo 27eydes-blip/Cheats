@@ -422,8 +422,8 @@ function mecha(frame) {
   return pc;
 }
 
-// ------------------------------------------------------------------ DRAKE — baby dragon (wings frames)
-function drake(frame) {
+// ------------------------------------------------------------------ DRACO — baby dragon (wings frames)
+function draco(frame) {
   const pc = new PixelCanvas(24, 24);
   const P = 0x9a5cff;
   const Pd = 0x5f2fc0;
@@ -569,7 +569,7 @@ function circleTex(n, r) {
 
 export function buildCommon(scene) {
   const frames = {};
-  const heroes = { volt, ember, frost, shade, glitch, nova, bloom, tide, mecha, drake };
+  const heroes = { volt, ember, frost, shade, glitch, nova, bloom, tide, mecha, draco };
   for (let f = 0; f < 3; f++)
     for (const [id, draw] of Object.entries(heroes)) frames[`${id}_${f}`] = rim(draw(f));
   for (let f = 0; f < 4; f++) frames[`coin_${f}`] = coin(f);

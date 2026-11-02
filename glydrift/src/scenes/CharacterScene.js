@@ -364,7 +364,7 @@ export class CharacterScene extends Phaser.Scene {
         bloom: 0,
         mecha: 1,
         tide: 2,
-        drake: 4,
+        draco: 4,
       }[def.id] ?? 0;
     blendPalette(
       { a: BIOMES[bi], b: BIOMES[(bi + 1) % 5], t: def.id === "nova" ? (this.t % 4) / 4 : 0 },
@@ -389,7 +389,7 @@ export class CharacterScene extends Phaser.Scene {
     this.rig.setPosition(x, y);
     this.rig.angle = Math.cos(a) < 0 ? -12 : 12;
     this.rig.sprite.setFlipX(
-      Math.cos(a) > 0 && ["ember", "volt", "drake", "mecha"].includes(def.id),
+      Math.cos(a) > 0 && ["ember", "volt", "draco", "mecha"].includes(def.id),
     );
     this.flapT -= dt;
     if (this.flapT <= 0) {
