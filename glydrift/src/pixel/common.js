@@ -313,6 +313,181 @@ function nova(frame) {
   return pc;
 }
 
+// ------------------------------------------------------------------ BLOOM — sprout spirit (idle: leaves sway)
+function bloom(frame) {
+  const pc = new PixelCanvas(24, 24);
+  const G = 0x5fe36a;
+  const Gd = 0x2c9a48;
+  const sway = [-1, 0, 1][frame];
+  // stem + two leaves
+  pc.vline(12, 4, 9, Gd);
+  pc.poly(
+    [
+      [12, 7],
+      [5 + sway, 2],
+      [3 + sway, 5],
+      [8, 8],
+    ],
+    0x8af27a,
+  );
+  pc.poly(
+    [
+      [12, 7],
+      [19 + sway, 1],
+      [21 + sway, 4],
+      [16, 8],
+    ],
+    0x6ad86a,
+  );
+  pc.line(12, 7, 5 + sway, 3, Gd).line(12, 7, 19 + sway, 2, Gd);
+  // pink bud on top
+  pc.circle(12, 3, 1.6, 0xff7ac8).set(12, 2, 0xffd0ec);
+  // round body
+  pc.ellipse(12, 15.5, 8, 6.8, G);
+  for (let y = 0; y < 24; y++)
+    for (let x = 0; x < 24; x++) {
+      if (pc.get(x, y) !== G) continue;
+      if (x + y < 20) pc.set(x, y, 0xa8ff9a);
+      else if (x - y > 6 || y > 19) pc.set(x, y, Gd);
+    }
+  // face
+  pc.rect(8, 14, 2, 3, 0x0d2a14).rect(14, 14, 2, 3, 0x0d2a14);
+  pc.set(8, 14, 0xffffff).set(14, 14, 0xffffff);
+  pc.hline(11, 12, 18, 0x0d2a14);
+  pc.set(6, 17, 0xff9ac8).set(17, 17, 0xff9ac8);
+  // tiny feet
+  pc.rect(8, 22, 2, 1, Gd).rect(14, 22, 2, 1, Gd);
+  pc.outline(0x0b2410, 1, true);
+  return pc;
+}
+
+// ------------------------------------------------------------------ TIDE — jellyfish (idle: tentacles wave)
+function tide(frame) {
+  const pc = new PixelCanvas(24, 24);
+  const B = 0x6fe8ff;
+  // tentacles (behind the bell)
+  for (let i = 0; i < 5; i++) {
+    const x0 = 6 + i * 3;
+    const col = i % 2 ? 0xff8ae0 : 0x9af4ff;
+    for (let y = 13; y < 22 - (i % 2); y++) {
+      const off = Math.round(Math.sin((y + frame * 2 + i) * 0.9) * 0.9);
+      pc.set(x0 + off, y, col);
+    }
+  }
+  // bell
+  pc.ellipse(12, 10, 9, 7.5, B);
+  pc.rect(3, 10, 19, 3, B);
+  for (let y = 0; y < 24; y++)
+    for (let x = 0; x < 24; x++) {
+      if (pc.get(x, y) !== B) continue;
+      if (y < 7 && x < 12) pc.set(x, y, 0xd0fbff);
+      else if (y > 10) pc.set(x, y, 0x3ab8e0);
+    }
+  // frilly rim
+  for (let x = 3; x <= 21; x += 2) pc.set(x, 13, 0xff8ae0);
+  // glowing spots + face
+  pc.set(7, 5, 0xffffff).set(8, 4, 0xffffff).set(16, 6, 0xd0fbff);
+  pc.rect(8, 9, 2, 2, 0x0a2a44).rect(14, 9, 2, 2, 0x0a2a44);
+  pc.set(8, 9, 0xffffff).set(14, 9, 0xffffff);
+  pc.hline(11, 12, 11 + (frame === 1 ? 1 : 0), 0x0a2a44);
+  pc.outline(0x08223a, 1, true);
+  return pc;
+}
+
+// ------------------------------------------------------------------ MECHA — robot drone (rotor spins)
+function mecha(frame) {
+  const pc = new PixelCanvas(24, 24);
+  // rotor (3 spin frames: wide, angled, narrow)
+  const span = [9, 6, 2][frame];
+  pc.vline(12, 2, 5, 0x5a6470);
+  pc.hline(12 - span, 12 + span, 2, frame === 2 ? 0x9aa6b4 : 0xd8e2ee);
+  if (frame === 1) pc.set(12 - span - 1, 3, 0xd8e2ee).set(12 + span + 1, 1, 0xd8e2ee);
+  // body
+  pc.rect(4, 6, 16, 13, 0xff8a2a);
+  pc.hline(4, 19, 6, 0xffc070).vline(4, 6, 18, 0xffc070);
+  pc.hline(4, 19, 18, 0xb8500e).vline(19, 6, 18, 0xb8500e);
+  pc.rect(6, 15, 12, 2, 0x5a6470);
+  pc.set(7, 15, 0xffd23f).set(10, 15, 0x39ff88);
+  // visor + eye (facing right)
+  pc.rect(7, 8, 12, 6, 0x10202c);
+  pc.rect(13, 9, 4, 3, 0x2bffef).set(13, 9, 0xffffff);
+  pc.hline(8, 11, 12, 0x1f3a4a);
+  // side antenna + thruster
+  pc.set(3, 9, 0x5a6470).set(2, 8, 0xff5a7a);
+  pc.rect(1, 13, 3, 4, 0x5a6470);
+  pc.rect(0, 14, 1, 2, [0xffd23f, 0xff8a2a, 0xffffff][frame]);
+  // feet
+  pc.rect(6, 19, 3, 2, 0x5a6470).rect(15, 19, 3, 2, 0x5a6470);
+  pc.outline(0x1a0e06, 1, true);
+  return pc;
+}
+
+// ------------------------------------------------------------------ DRAKE — baby dragon (wings frames)
+function drake(frame) {
+  const pc = new PixelCanvas(24, 24);
+  const P = 0x9a5cff;
+  const Pd = 0x5f2fc0;
+  // tail
+  pc.poly(
+    [
+      [6, 14],
+      [0, 17],
+      [2, 15],
+      [0, 12],
+      [6, 12],
+    ],
+    P,
+  );
+  pc.set(0, 12, 0x2bffd0).set(1, 12, 0x2bffd0);
+  // body + head
+  pc.ellipse(10.5, 14, 6, 4.6, P);
+  pc.circle(16.5, 9.5, 4.4, P);
+  pc.rect(19, 9, 4, 3, P); // snout
+  pc.ellipse(11, 16, 4, 2, 0x5fffd8); // belly
+  // horns
+  pc.set(14, 4, 0xfff0c0).set(15, 5, 0xfff0c0).set(18, 4, 0xfff0c0).set(18, 5, 0xfff0c0);
+  // eye + nostril
+  pc.rect(17, 8, 2, 2, 0xffffff).set(18, 9, 0x1a0636);
+  pc.set(22, 9, 0x3a1470);
+  // wings
+  const wings = [
+    [
+      [8, 11],
+      [5, 2],
+      [9, 5],
+      [12, 1],
+      [14, 7],
+      [13, 11],
+    ],
+    [
+      [8, 11],
+      [1, 7],
+      [6, 7],
+      [5, 4],
+      [12, 8],
+      [13, 11],
+    ],
+    [
+      [8, 13],
+      [4, 21],
+      [8, 18],
+      [11, 21],
+      [13, 15],
+    ],
+  ];
+  pc.poly(wings[frame], 0x2bffd0);
+  for (let y = 0; y < 24; y++)
+    for (let x = 0; x < 24; x++) {
+      const c = pc.get(x, y);
+      if (c === 0x2bffd0 && (x + y) % 5 === 0) pc.set(x, y, 0x18b89a);
+      if (c === P && (pc.get(x, y + 1) === null || pc.get(x + 1, y + 1) === null)) pc.set(x, y, Pd);
+    }
+  // feet
+  pc.rect(8, 18, 2, 2, Pd).rect(12, 18, 2, 2, Pd);
+  pc.outline(0x1a0636, 1, true);
+  return pc;
+}
+
 /** Thin white rim around a hero sprite so the player is always the brightest, clearest shape. */
 function rim(pc) {
   const out = new PixelCanvas(pc.w + 2, pc.h + 2);
@@ -394,13 +569,15 @@ function circleTex(n, r) {
 
 export function buildCommon(scene) {
   const frames = {};
-  const heroes = { volt, ember, frost, shade, glitch, nova };
+  const heroes = { volt, ember, frost, shade, glitch, nova, bloom, tide, mecha, drake };
   for (let f = 0; f < 3; f++)
     for (const [id, draw] of Object.entries(heroes)) frames[`${id}_${f}`] = rim(draw(f));
   for (let f = 0; f < 4; f++) frames[`coin_${f}`] = coin(f);
   for (const m of ["flip", "restore", "mini"])
     for (let f = 0; f < 4; f++) frames[`portal_${m}_${f}`] = portal(m, f);
   addAtlas(scene, "pxc", frames);
+  // big standalone hero portraits (character cards, game over, leaderboard, share card)
+  for (const id of Object.keys(heroes)) addTexture(scene, `hero_${id}`, frames[`${id}_1`], 13);
 
   // particle textures (same logical size as the old smooth ones, now pixel-crisp)
   addTexture(scene, "dot", circleTex(8, 3));

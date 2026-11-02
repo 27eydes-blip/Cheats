@@ -353,19 +353,30 @@ export class CharacterScene extends Phaser.Scene {
     const dt = Math.min(delta / 1000, 1 / 30);
     this.t += dt;
     const def = CHARACTERS[this.index];
-    const bi = {
-      volt: 0,
-      ember: 1,
-      frost: 2,
-      glitch: 3,
-      shade: 4,
-      nova: Math.floor(this.t / 4) % 5,
-    }[def.id];
+    const bi =
+      {
+        volt: 0,
+        ember: 1,
+        frost: 2,
+        glitch: 3,
+        shade: 4,
+        nova: Math.floor(this.t / 4) % 5,
+        bloom: 0,
+        mecha: 1,
+        tide: 2,
+        drake: 4,
+      }[def.id] ?? 0;
     blendPalette(
       { a: BIOMES[bi], b: BIOMES[(bi + 1) % 5], t: def.id === "nova" ? (this.t % 4) / 4 : 0 },
       this.pal,
     );
-    this.backdrop.drive(this.pal, { scroll: 60, speedNorm: 0, dim: 0.55, scenery: false });
+    this.backdrop.drive(this.pal, {
+      scroll: 60,
+      speedNorm: 0,
+      dim: 0.55,
+      scenery: false,
+      theme: BIOMES[bi].id,
+    });
     this.fx.drift = 0;
 
     // orbiting showcase — depth & scale fake a 3D turntable
@@ -377,7 +388,9 @@ export class CharacterScene extends Phaser.Scene {
     this.rig.displayScale = 1.08 + depthK * 0.46;
     this.rig.setPosition(x, y);
     this.rig.angle = Math.cos(a) < 0 ? -12 : 12;
-    this.rig.sprite.setFlipX(Math.cos(a) > 0 && (def.id === "ember" || def.id === "volt"));
+    this.rig.sprite.setFlipX(
+      Math.cos(a) > 0 && ["ember", "volt", "drake", "mecha"].includes(def.id),
+    );
     this.flapT -= dt;
     if (this.flapT <= 0) {
       this.flapT = 0.85;

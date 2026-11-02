@@ -174,6 +174,12 @@ export class CharacterRig {
         for (const c of [0xff2050, 0x39ff88, 0x20c8ff]) fx.burst("pixel", x, y, 4, c);
         this.glitchT = 0.14;
         break;
+      default:
+        if (def.fx?.flap) {
+          const { kind, color, n } = def.fx.flap;
+          fx.burst(kind, x, y + oy, n, color, { angle: down });
+        }
+        break;
       case "nova":
         fx.ring(x, y, hsv((this.time * 0.3) % 1, 0.5, 1), {
           scale: 0.55 * this.u,
@@ -218,6 +224,12 @@ export class CharacterRig {
           fx.burst("pixel", x, y, 26, c, { speed: { min: 80, max: 560 } });
         hints.glitch = 1;
         hints.flash = 0.1;
+        break;
+      default:
+        if (def.fx?.death) {
+          for (const { kind, color, n } of def.fx.death)
+            fx.burst(kind, x, y, n, color, { speed: { min: 100, max: 520 } });
+        }
         break;
       case "nova":
         fx.ring(x, y, 0xffffff, { scale: 5, duration: 1000 });
@@ -380,6 +392,12 @@ export class CharacterRig {
       let f;
       if (mode === "idle") f = Math.floor(this.time * 5) % 3;
       else if (mode === "glitch") f = this.glitchT > 0 ? 2 : Math.floor(this.time * 3) % 2;
+      else if (mode === "spin") f = Math.floor(this.time * 20) % 3;
+      else if (mode === "flap")
+        f =
+          this.flapT < 0.24
+            ? [2, 0, 1][Math.min(2, Math.floor(this.flapT / 0.08))]
+            : [0, 1, 2, 1][Math.floor(this.time * 6) % 4];
       else f = Number(String(texture).slice(-1)) || 0;
       sp.setFrame(this.px.frames[Math.min(this.px.frames.length - 1, f)]);
       const m = Math.max(0.5, Math.round(this.sizeMul * this.displayScale * 2) / 2);
