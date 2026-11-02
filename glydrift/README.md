@@ -134,7 +134,7 @@ Legendary).
 - **Missions**: 3 rotating missions (e.g. "Pass 5 lasers in one run", "Get 10 near-misses",
   "Reach Solar Storm"), auto-claimed at the end of a run and replaced; in-run toasts.
 - **Level & XP** with milestone rewards (coins / shards), animated fill on game over.
-- **Ghost run**: your best run is replayed as a translucent ghost alongside you.
+- **Ghost run**: best runs are still recorded; the on-screen ghost replay is currently turned off.
 - **"Almost there"**: distance to your best and progress to the next unlock on game over.
 - **Share card**: 1080×1350 PNG with score, biome, hero and stats.
 - **Achievements**: 16 badges.

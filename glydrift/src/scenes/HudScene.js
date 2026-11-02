@@ -195,7 +195,7 @@ export class HudScene extends Phaser.Scene {
   }
 
   onNewBest() {
-    toast(this, "NEW BEST!", 0xffd23f, { y: this.top + 250, sub: "You passed your ghost" });
+    toast(this, "NEW BEST!", 0xffd23f, { y: this.top + 250, sub: "You beat your best run" });
   }
 
   onMission(m) {

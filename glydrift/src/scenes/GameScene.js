@@ -193,7 +193,9 @@ export class GameScene extends Phaser.Scene {
       charId = s.daily.ghostChar;
       this.bestScore = s.daily.date === today ? s.daily.best : 0;
     }
-    this.ghostData = data && data.length > 4 ? data : null;
+    // ghost replay turned off (best runs are still recorded, just not shown)
+    this.ghostData = null;
+    void data;
     if (this.ghostRig && this.ghostRig.def.id !== charId) {
       this.ghostRig.destroy();
       this.ghostRig = null;

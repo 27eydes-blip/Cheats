@@ -172,7 +172,7 @@ export class ObstacleManager {
         o.spawn(x + 60, {
           gc,
           open: Phaser.Math.Linear(380, 330, d),
-          closed: Phaser.Math.Linear(150, 112, d),
+          closed: Phaser.Math.Linear(185, 150, d),
           period: Phaser.Math.Linear(2.4, 1.8, d),
           phase: r.next(),
         });
