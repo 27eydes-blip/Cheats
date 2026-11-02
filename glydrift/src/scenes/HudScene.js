@@ -123,6 +123,8 @@ export class HudScene extends Phaser.Scene {
     this.registry.events.on("changedata-safeTop", onSafe);
     this.events.once("shutdown", () => this.registry.events.off("changedata-safeTop", onSafe));
 
+    for (let i = 0; i < BIOMES.length; i++) this.titleFor(i, i === 4);
+
     this.pauseLayer = null;
     this.ready = true;
     this.events.once("shutdown", () => {
@@ -190,11 +192,36 @@ export class HudScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Biome titles are rendered once and reused: re-styling one shared text object meant three
+   * full text re-renders + GPU uploads (text, stroke, glow) right at the biome change.
+   */
+  titleFor(rawIndex, slam) {
+    const name = biomeName(rawIndex);
+    const key = `${name}|${slam ? 1 : 0}`;
+    this.titles ||= {};
+    let t = this.titles[key];
+    if (!t) {
+      const col = slam ? 0xff1030 : BIOMES[rawIndex % BIOMES.length].neon;
+      t = neonText(this, 0, 0, name, 56, 0xffffff, { blur: 26 });
+      t.setStroke(hex(col), slam ? 5 : 4).setShadow(0, 0, hex(col), slam ? 30 : 26, true, true);
+      t.setVisible(false);
+      this.banner.add(t);
+      this.titles[key] = t;
+    }
+    return t;
+  }
+
+  showTitle(rawIndex, slam) {
+    const t = this.titleFor(rawIndex, slam);
+    for (const o of Object.values(this.titles)) o.setVisible(o === t);
+    this.bannerText.setVisible(false);
+  }
+
   onBiome(rawIndex, { slam = false } = {}) {
     const b = BIOMES[rawIndex % BIOMES.length];
-    this.bannerText.setText(biomeName(rawIndex));
+    this.showTitle(rawIndex, slam);
     if (slam) return this.slamTitle(rawIndex, b);
-    this.bannerText.setStroke(hex(b.neon), 4).setShadow(0, 0, hex(b.neon), 26, true, true);
     this.bannerLine.setFillStyle(b.neon);
     this.tweens.killTweensOf(this.banner);
     this.banner.setAlpha(0).setScale(1.6);
@@ -220,7 +247,6 @@ export class HudScene extends Phaser.Scene {
   /** "ENTERING ABYSS": slams in from huge with a shake (the Game scene adds the red flash). */
   slamTitle(rawIndex, b) {
     this.tweens.killTweensOf(this.banner);
-    this.bannerText.setStroke(hex(0xff1030), 5).setShadow(0, 0, hex(0xff1030), 30, true, true);
     this.bannerLine.setFillStyle(0xff1030);
     this.banner.setAlpha(1).setScale(3.2).setY(this.bannerY);
     this.bannerLine.scaleX = 1;

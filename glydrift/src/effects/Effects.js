@@ -237,8 +237,17 @@ export class Effects {
         .setDepth(this.emitters.dot.depth + 5);
       this.texts.push(t);
     }
-    t.setActive(true).setVisible(true).setText(str).setColor(color).setFontSize(size);
-    t.setShadow(0, 0, color, 16 * VIEW.Z, true, true);
+    // restyle only when something changed: each setter re-renders the text and re-uploads it
+    // to the GPU (4 uploads per popup before); a repeated "CLOSE!" now costs none
+    t.setActive(true).setVisible(true);
+    if (t.__color !== color || t.__size !== size) {
+      t.__color = color;
+      t.__size = size;
+      t.setColor(color)
+        .setFontSize(size)
+        .setShadow(0, 0, color, 16 * VIEW.Z, true, true);
+    }
+    t.setText(str);
     t.setPosition(x, y).setScale(0.3).setAlpha(1).setAngle(Phaser.Math.Between(-8, 8));
     this.scene.tweens.add({ targets: t, scale: 1, duration: 260, ease: "Back.easeOut" });
     this.scene.tweens.add({
