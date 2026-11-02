@@ -27,15 +27,37 @@ export function viewportSize() {
   return { w, h };
 }
 
+/**
+ * Pixel budget for the drawing buffer. The art is pixel-perfect at any density, so big
+ * screens (iPad: ~5 M pixels at 2x) gain nothing visible from drawing every physical pixel —
+ * they just burn fill-rate through the full-screen backdrop layers. Phones stay at full
+ * resolution (an iPhone Pro Max is ~3.6 M); Low Graphics caps much harder.
+ */
+export const PIXEL_BUDGET = { normal: 3.7e6, low: 2.0e6 };
+
 export function setupView(lowGfx = false) {
   VIEW.H = computeGameHeight();
   const vp = viewportSize();
   const cssW = Math.min(vp.w, (vp.h * GAME_W) / VIEW.H);
   const dpr = Math.min(window.devicePixelRatio || 1, lowGfx ? 2 : 3);
-  VIEW.Z = Math.max(0.5, (cssW * dpr) / GAME_W);
+  let z = Math.max(0.5, (cssW * dpr) / GAME_W);
+  const budget = lowGfx ? PIXEL_BUDGET.low : PIXEL_BUDGET.normal;
+  const px = GAME_W * z * (VIEW.H * z);
+  if (px > budget) z *= Math.sqrt(budget / px);
+  VIEW.Z = Math.max(0.5, z);
   VIEW.PW = Math.round(GAME_W * VIEW.Z);
   VIEW.PH = Math.round(VIEW.H * VIEW.Z);
   return VIEW;
+}
+
+/**
+ * Phones (tall screens) fill edge to edge (ENVELOP — tiny rounding crops only). Squarer
+ * screens — iPad portrait/landscape, desktop — FIT the whole playfield with thin side bars:
+ * enveloping them cropped the spiked top/bottom walls (and in landscape most of the field).
+ */
+export function wantsFit() {
+  const { w, h } = viewportSize();
+  return h / w < 1.5;
 }
 
 /** Point every camera of a scene at the logical 720-wide view. */

@@ -4,7 +4,7 @@ import "@fontsource/rajdhani/600.css";
 import "@fontsource/rajdhani/700.css";
 import Phaser from "phaser";
 import "./gfx/tileSpriteFix.js";
-import { setupView, VIEW } from "./config.js";
+import { setupView, VIEW, wantsFit } from "./config.js";
 import { GlyPostFX } from "./gfx/shaders.js";
 import { BackdropScene } from "./scenes/BackdropScene.js";
 import { BootScene } from "./scenes/BootScene.js";
@@ -45,8 +45,12 @@ async function boot() {
     width: VIEW.PW,
     height: VIEW.PH,
     backgroundColor: "#020107",
-    // ENVELOP: always covers the whole screen (any rounding mismatch is cropped, never barred)
-    scale: { mode: Phaser.Scale.ENVELOP, autoCenter: Phaser.Scale.CENTER_BOTH },
+    // phones: ENVELOP (edge to edge, rounding is cropped, never barred);
+    // iPad / desktop: FIT (whole playfield visible, thin side bars) — see wantsFit()
+    scale: {
+      mode: wantsFit() ? Phaser.Scale.FIT : Phaser.Scale.ENVELOP,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+    },
     // limit 61 (not 60): on 120 Hz screens two 8.33 ms ticks (16.66 ms) fall a hair short of
     // the 60 fps threshold (16.67 ms), so frames randomly took 2 or 3 ticks → 60/40 fps judder.
     fps: { target: 60, limit: 61, smoothStep: true },
@@ -108,7 +112,32 @@ async function boot() {
       r.blendModes[Phaser.BlendModes.ADD].func = [r.gl.ONE, r.gl.ONE];
     }
   });
-  window.addEventListener("resize", () => setTimeout(updateSafe, 100));
+  // rotating an iPad / Split View can cross between "phone-like" and "squarer" shapes
+  const updateScaleMode = () => {
+    const mode = wantsFit() ? Phaser.Scale.FIT : Phaser.Scale.ENVELOP;
+    if (game.scale.scaleMode !== mode) {
+      game.scale.scaleMode = mode;
+      game.scale.refresh();
+    }
+  };
+  window.addEventListener("resize", () => {
+    updateScaleMode();
+    setTimeout(updateSafe, 100);
+  });
+  // taps on the side bars (iPad/desktop) count as game taps: on a big screen the thumb
+  // often lands outside the playfield
+  document.getElementById("game")?.addEventListener(
+    "pointerdown",
+    (e) => {
+      if (e.target === game.canvas) return;
+      const sm = game.scene;
+      const go = sm.getScene("GameOver");
+      if (go?.sys.isActive()) return go.onBackgroundTap?.();
+      const gs = sm.getScene("Game");
+      if (gs?.sys.isActive() && !sm.getScene("Hud")?.pauseLayer) gs.onTap();
+    },
+    { passive: true },
+  );
   window.addEventListener("orientationchange", () => setTimeout(updateSafe, 300));
   document.addEventListener("visibilitychange", () => setTimeout(updateSafe, 100));
   for (const ms of [300, 1000, 2500]) setTimeout(updateSafe, ms);
