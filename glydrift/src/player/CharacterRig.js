@@ -263,9 +263,13 @@ export class CharacterRig {
     let pulse = 1;
 
     switch (def.id) {
-      case "volt":
-        extraAngle = Math.sin(this.time * 2.2) * 4;
-        pulse = 1 + Math.sin(this.time * 9) * 0.03;
+      case "volt": {
+        // wings: quick down-stroke on flap, lazy glide cycle otherwise
+        let vf;
+        if (this.flapT < 0.24) vf = [2, 0, 1][Math.min(2, Math.floor(this.flapT / 0.08))];
+        else vf = [0, 1, 2, 1][Math.floor(this.time * 6) % 4];
+        texture = `char_volt_${vf}`;
+        pulse = 1 + Math.sin(this.time * 9) * 0.02;
         if (!this.ghost && !this.dead && this.fx) {
           this.emitT -= dt;
           if (this.emitT <= 0) {
@@ -274,6 +278,7 @@ export class CharacterRig {
           }
         }
         break;
+      }
       case "ember": {
         let f;
         if (this.flapT < 0.24) f = [2, 0, 1][Math.min(2, Math.floor(this.flapT / 0.08))];
@@ -364,7 +369,10 @@ export class CharacterRig {
     sp.setAngle(this.angle + (def.id === "nova" ? 0 : extraAngle));
     sp.setScale(
       s * this.sx * pulse,
-      s * this.sy * pulse * (this.gravityDir < 0 && def.id === "ember" ? -1 : 1),
+      s *
+        this.sy *
+        pulse *
+        (this.gravityDir < 0 && (def.id === "ember" || def.id === "volt") ? -1 : 1),
     );
     if (def.id === "nova") sp.setAngle(extraAngle * 0.4);
     if (this.halo) {

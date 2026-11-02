@@ -101,7 +101,7 @@ export class MenuScene extends Phaser.Scene {
       y: this.heroY,
       lowGfx,
       depth: 60,
-      scale: 1.6,
+      scale: 1.35,
     });
     this.flapT = 0;
 

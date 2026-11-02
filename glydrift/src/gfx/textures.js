@@ -670,67 +670,129 @@ function backgroundTextures(scene) {
 
 // ---------------------------------------------------------------- characters
 function characterTextures(scene) {
-  // VOLT — electric cube
-  canvasTex(
-    scene,
-    "char_volt",
-    128,
-    128,
-    (c) => {
-      c.translate(64, 64);
-      c.shadowColor = "#38f6ff";
-      c.shadowBlur = 22;
-      // side faces (pseudo 3D)
-      c.fillStyle = "#0b5a75";
-      poly(c, [
-        [-28, -28],
-        [-16, -40],
-        [40, -40],
-        [28, -28],
-      ]);
-      c.fill();
-      c.fillStyle = "#06384d";
-      poly(c, [
-        [28, -28],
-        [40, -40],
-        [40, 16],
-        [28, 28],
-      ]);
-      c.fill();
-      const fg = c.createLinearGradient(-28, -28, 28, 28);
-      fg.addColorStop(0, "#1fe0ff");
-      fg.addColorStop(1, "#0a6c9c");
-      c.fillStyle = fg;
-      c.fillRect(-28, -28, 56, 56);
-      c.shadowBlur = 10;
-      c.strokeStyle = "#c9fbff";
-      c.lineWidth = 3;
-      c.strokeRect(-28, -28, 56, 56);
-      c.beginPath();
-      c.moveTo(-28, -28);
-      c.lineTo(-16, -40);
-      c.lineTo(40, -40);
-      c.lineTo(40, 16);
-      c.lineTo(28, 28);
-      c.moveTo(28, -28);
-      c.lineTo(40, -40);
-      c.stroke();
-      // lightning glyph
-      c.fillStyle = "#ffffff";
-      c.shadowColor = "#fff";
-      c.shadowBlur = 12;
-      poly(c, [
-        [4, -22],
-        [-12, 4],
-        [-1, 4],
-        [-6, 22],
-        [12, -4],
-        [1, -4],
-      ]);
-      c.fill();
-    },
-    { res: HI, rim: "#c8fdff" },
-  );
+  // VOLT — electric storm bird, 3 wing frames (up / mid / down)
+  const voltWings = [-0.95, -0.15, 0.6];
+  voltWings.forEach((wa, f) => {
+    canvasTex(
+      scene,
+      `char_volt_${f}`,
+      128,
+      128,
+      (c) => {
+        c.translate(62, 68);
+        // lightning-bolt tail feathers
+        c.fillStyle = "#0e8fb8";
+        poly(c, [
+          [-18, 0],
+          [-40, -12],
+          [-34, -4],
+          [-54, -6],
+          [-36, 6],
+          [-46, 12],
+          [-18, 9],
+        ]);
+        c.fill();
+        c.strokeStyle = "#bdfaff";
+        c.lineWidth = 2;
+        c.stroke();
+        // far wing (behind the body, darker)
+        c.save();
+        c.rotate(wa * 0.75);
+        c.fillStyle = "#075673";
+        c.beginPath();
+        c.moveTo(-4, -2);
+        c.quadraticCurveTo(-24, -40, 8, -50);
+        c.lineTo(4, -36);
+        c.lineTo(14, -40);
+        c.lineTo(10, -26);
+        c.lineTo(18, -24);
+        c.quadraticCurveTo(12, -8, 12, -2);
+        c.closePath();
+        c.fill();
+        c.restore();
+        // body
+        const bg = c.createLinearGradient(-20, -16, 24, 18);
+        bg.addColorStop(0, "#5fe9ff");
+        bg.addColorStop(0.45, "#0fa6d6");
+        bg.addColorStop(1, "#064a78");
+        c.fillStyle = bg;
+        c.beginPath();
+        c.ellipse(2, 3, 25, 15, -0.12, 0, Math.PI * 2);
+        c.fill();
+        // belly highlight
+        c.fillStyle = "rgba(190,250,255,0.4)";
+        c.beginPath();
+        c.ellipse(6, 9, 15, 6, -0.1, 0, Math.PI * 2);
+        c.fill();
+        // head
+        c.fillStyle = "#14b4e4";
+        c.beginPath();
+        c.arc(24, -8, 12.5, 0, Math.PI * 2);
+        c.fill();
+        // jagged lightning crest
+        c.fillStyle = "#ffffff";
+        poly(c, [
+          [17, -18],
+          [12, -34],
+          [20, -24],
+          [22, -38],
+          [27, -21],
+          [24, -18],
+        ]);
+        c.fill();
+        // beak
+        c.fillStyle = "#ffd23f";
+        poly(c, [
+          [34, -12],
+          [50, -6],
+          [34, -2],
+        ]);
+        c.fill();
+        // eye
+        c.fillStyle = "#ffffff";
+        c.beginPath();
+        c.arc(28, -10, 4.8, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = "#04263a";
+        c.beginPath();
+        c.arc(29.5, -10, 2.4, 0, Math.PI * 2);
+        c.fill();
+        // near wing with feather notches + bolt highlight
+        c.save();
+        c.rotate(wa);
+        const wg = c.createLinearGradient(0, 0, 0, -56);
+        wg.addColorStop(0, "#0b8cc4");
+        wg.addColorStop(1, "#5ef0ff");
+        c.fillStyle = wg;
+        c.beginPath();
+        c.moveTo(-6, 0);
+        c.quadraticCurveTo(-30, -42, 6, -58);
+        c.lineTo(4, -44);
+        c.lineTo(16, -48);
+        c.lineTo(12, -33);
+        c.lineTo(24, -32);
+        c.lineTo(16, -19);
+        c.quadraticCurveTo(12, -6, 14, 0);
+        c.closePath();
+        c.fill();
+        c.strokeStyle = "#aef8ff";
+        c.lineWidth = 1.5;
+        c.stroke();
+        c.fillStyle = "#ffffff";
+        poly(c, [
+          [2, -40],
+          [-6, -24],
+          [0, -24],
+          [-4, -12],
+          [6, -28],
+          [0, -28],
+        ]);
+        c.fill();
+        c.restore();
+      },
+      { res: HI, rim: "#8ff4ff", rimWidth: 2.2 },
+    );
+  });
 
   // EMBER — phoenix, 3 wing frames
   const wingAngles = [-0.9, -0.1, 0.65];

@@ -4,11 +4,11 @@ export const CHARACTERS = [
   {
     id: "volt",
     name: "VOLT",
-    title: "Electric Cube",
+    title: "Storm Bird",
     rarity: "common",
     color: 0x38f6ff,
     color2: 0xffffff,
-    texture: "char_volt",
+    texture: "char_volt_1",
     scale: 0.62,
     cost: 0,
     desc: "Lightning trail. Crackles on every flap.",

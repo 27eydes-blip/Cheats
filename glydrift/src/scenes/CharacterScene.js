@@ -374,10 +374,10 @@ export class CharacterScene extends Phaser.Scene {
     const x = this.cx + Math.cos(a) * 150;
     const y = this.cy + Math.sin(a) * 34 - 10;
     const depthK = (Math.sin(a) + 1) / 2;
-    this.rig.displayScale = 1.3 + depthK * 0.55;
+    this.rig.displayScale = 1.08 + depthK * 0.46;
     this.rig.setPosition(x, y);
     this.rig.angle = Math.cos(a) < 0 ? -12 : 12;
-    this.rig.sprite.setFlipX(Math.cos(a) > 0 && def.id === "ember");
+    this.rig.sprite.setFlipX(Math.cos(a) > 0 && (def.id === "ember" || def.id === "volt"));
     this.flapT -= dt;
     if (this.flapT <= 0) {
       this.flapT = 0.85;
