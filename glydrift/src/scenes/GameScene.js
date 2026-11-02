@@ -5,7 +5,8 @@ import { BIOMES, biomeStateAt, blendPalette, lerpColor } from "../biomes/biomes.
 import { fitCamera, NEAR_MISS, PHYSICS, POST_FX, speedForMeters, VIEW, WORLD } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { ObstacleManager } from "../obstacles/ObstacleManager.js";
-import { pixelPerfectZoom } from "../pixel/px.js";
+import { darknessTexture } from "../pixel/hazardArt.js";
+import { pixelPerfectZoom, S } from "../pixel/px.js";
 import { Terrain } from "../pixel/Terrain.js";
 import { themeFor } from "../pixel/themes.js";
 import { CharacterRig } from "../player/CharacterRig.js";
@@ -20,6 +21,9 @@ import { dailySeed, todayKey } from "../systems/rng.js";
 import { Save } from "../systems/save.js";
 
 const GHOST_STEP = 8;
+const CALM_M = 150; // last meters of the Glitch Realm before the Abyss: The Calm
+const ABYSS_SPIKE = 1.28; // speed jump entering the Abyss
+const DARK_R = 340; // Abyss light radius around the player
 const COIN_BONUS = 10;
 // ?god in the URL makes the player invincible (handy for testing / capturing screenshots)
 const DEBUG_GOD =
@@ -99,6 +103,29 @@ export class GameScene extends Phaser.Scene {
       lowGfx: this.lowGfx,
     });
 
+    // The Calm / Abyss layers: edge darkening, blackout, limited-vision darkness
+    this.calmVig = this.add
+      .image(W / 2, H / 2, "vignette")
+      .setDisplaySize(W * 1.5, H * 1.5)
+      .setTintFill(0x000000)
+      .setDepth(50)
+      .setAlpha(0);
+    this.blackout = this.add
+      .rectangle(W / 2, H / 2, W * 3, H * 3, 0x000000)
+      .setDepth(60)
+      .setAlpha(0);
+    this.redFlash = this.add
+      .rectangle(W / 2, H / 2, W * 3, H * 3, 0xff0820)
+      .setDepth(59)
+      .setAlpha(0);
+    const DS = 1024;
+    if (!this.textures.exists("abyss_dark")) darknessTexture(this, "abyss_dark", DS, DS, DARK_R);
+    this.dark = [this.add.image(0, 0, "abyss_dark")];
+    for (let i = 0; i < 4; i++) this.dark.push(this.add.rectangle(0, 0, 10, 10, 0x020004));
+    for (const d of this.dark) d.setDepth(20).setAlpha(0).setVisible(false);
+    this.darkSize = DS;
+    this.desat = null;
+
     this.input.on("pointerdown", (p) => this.onTap(p));
     this.input.keyboard?.on("keydown-SPACE", () => this.onTap());
     this.input.keyboard?.on("keydown-UP", () => this.onTap());
@@ -135,6 +162,19 @@ export class GameScene extends Phaser.Scene {
     this.comboT = 0;
     this.lastSpeedTier = 0;
     this.biomeIndex = 0;
+    this.announcedBiome = 0;
+    this.speedMul = 1;
+    this.calmK = 0;
+    this.blackoutT = 0;
+    this.darkA = 0;
+    this.inZone = false;
+    this.inAbyss = false;
+    this.calmVig.setAlpha(0);
+    this.blackout.setAlpha(0);
+    this.redFlash.setAlpha(0);
+    for (const d of this.dark) d.setAlpha(0).setVisible(false);
+    this.setDesat(0);
+    Music.endCalm();
     this.passedBest = false;
     this.ghostDone = false;
     this.missionAnnounced = new Set();
@@ -278,6 +318,7 @@ export class GameScene extends Phaser.Scene {
     this.deathT = 0;
     const hints = this.player.die();
     Sfx.death();
+    Music.endCalm(true);
     Music.deathSweep();
     if (navigator.vibrate) navigator.vibrate(60);
     this.cameras.main.shake(320, hints.shake);
@@ -295,6 +336,8 @@ export class GameScene extends Phaser.Scene {
 
   finishRun() {
     this.state = "dead";
+    // music drops back to normal after the run (the Abyss track never lingers)
+    if (this.inAbyss) Music.play(BIOME_TRACKS[0], { startBar: 8 });
     const result = Progression.commitRun(this.run);
     // upload in the background — never awaited, never blocks retry
     result.upload = Leaderboard.submitRun(this.run);
@@ -324,7 +367,14 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.timeScale += (1 - this.timeScale) * Math.min(1, rawDt * 8);
     }
-    const dt = rawDt * this.timeScale;
+    // blackout before the Abyss: the world holds still for half a second
+    let freeze = false;
+    if (this.blackoutT > 0) {
+      this.blackoutT -= rawDt;
+      freeze = true;
+      if (this.blackoutT <= 0) this.enterAbyss();
+    }
+    const dt = freeze ? 0 : rawDt * this.timeScale;
     this.fx.setTimeScale(this.timeScale);
     this.tweens.timeScale = 1;
 
@@ -333,7 +383,8 @@ export class GameScene extends Phaser.Scene {
 
     // speed & distance
     if (playing) {
-      this.speed = speedForMeters(this.meters);
+      this.updateSpeedMul(rawDt, freeze);
+      this.speed = speedForMeters(this.meters) * this.speedMul;
       this.scroll = this.speed;
     } else if (this.state === "ready") {
       this.scroll = WORLD.baseSpeed * 0.55;
@@ -351,7 +402,15 @@ export class GameScene extends Phaser.Scene {
     Music.setIntensity(this.state === "playing" ? 0.15 + speedNorm * 0.85 : 0.1);
 
     // biome palette (with a smooth blend back to Neon Void after a restart)
-    const bs = biomeStateAt(this.meters);
+    let bs = biomeStateAt(this.meters);
+    const BL = WORLD.biomeLength;
+    const raw0 = Math.floor(this.meters / BL);
+    const local0 = this.meters - raw0 * BL;
+    // The Calm: hold the Glitch Realm (no morph) until the blackout at the Abyss border
+    const calm = raw0 % 5 === 3 && local0 > BL - CALM_M;
+    if (calm) bs = { a: bs.a, b: bs.b, t: 0, rawIndex: raw0 };
+    this.calm = calm && playing;
+    this.calmK = calm ? Phaser.Math.Clamp((local0 - (BL - CALM_M)) / CALM_M, 0, 1) : 0;
     blendPalette(bs, this.pal);
     if (this.palMix > 0 && this.fromPal) {
       this.palMix = Math.max(0, this.palMix - rawDt * 1.4);
@@ -359,12 +418,27 @@ export class GameScene extends Phaser.Scene {
     }
     if (playing && bs.rawIndex !== this.biomeIndex) {
       this.biomeIndex = bs.rawIndex;
+      if (bs.rawIndex % 5 === 4) {
+        // the Abyss: blackout first, then the slam (see enterAbyss)
+        this.run.biome = Math.max(this.run.biome, 4);
+        this.blackoutT = 0.5;
+        this.blackout.setAlpha(1);
+        this.calmVig.setAlpha(0);
+        Music.endCalm(true);
+        this.hudReady?.setBlackout?.(true);
+      }
+    }
+    if (this.blackoutT <= 0 && playing && bs.rawIndex !== this.announcedBiome) {
+      const abyss = bs.rawIndex % 5 === 4;
+      this.announcedBiome = bs.rawIndex;
       this.run.biome = Math.max(this.run.biome, Math.min(bs.rawIndex, 4));
       this.fxState.aberration = Math.max(this.fxState.aberration, 0.03);
       this.fxState.glitchSpike = Math.max(this.fxState.glitchSpike, 0.3);
-      Sfx.biome();
-      Music.play(BIOME_TRACKS[bs.rawIndex % BIOME_TRACKS.length], { startBar: 8 });
-      this.hudReady?.onBiome?.(bs.rawIndex);
+      if (!abyss) {
+        Sfx.biome();
+        Music.play(BIOME_TRACKS[bs.rawIndex % BIOME_TRACKS.length], { startBar: 8 });
+        this.hudReady?.onBiome?.(bs.rawIndex);
+      }
     }
     // speed-up pulses every 250m
     const tier = Math.floor(this.meters / 250);
@@ -400,6 +474,7 @@ export class GameScene extends Phaser.Scene {
       dim: 0,
       hazards: this.hazardScreen,
       theme: biomeId,
+      particleSpeed: 1 - this.calmK * 0.8,
     });
     this.fx.drift = this.scroll * 0.7;
 
@@ -407,6 +482,15 @@ export class GameScene extends Phaser.Scene {
     const p = this.player;
     if (this.state === "ready") p.hover(dt, this.scroll);
     else p.update(dt, this.scroll);
+
+    // spawn windows: keep biome titles clear, no hazards in The Calm, gentle Abyss start
+    const info = this.obstacles.info;
+    info.rawIndex = bs.rawIndex;
+    info.local = this.meters - bs.rawIndex * BL;
+    const titleWin = this.meters > 100 && (local0 > BL - 85 || local0 < 50);
+    info.pause = playing && (calm || titleWin || this.blackoutT > 0);
+    info.grace = raw0 % 5 === 4 && local0 < 120;
+    this.updateCalmFx(rawDt);
 
     const ev = this.obstacles.update(dt, this.clock, this.scroll, null, {
       px: p.x,
@@ -429,6 +513,15 @@ export class GameScene extends Phaser.Scene {
         if (o.type === "saw") this.run.saws++;
       }
       if (ev.portal) this.portal(ev.portal);
+      // Glitch Realm gravity-flip zones (harmless; flip only while inside)
+      if (ev.zone !== this.inZone) {
+        this.inZone = ev.zone;
+        if (ev.zone) {
+          p.flipGravity(-1);
+          Sfx.portal();
+          this.fx.floatText(p.x + 50, p.y - 60, "FLIP ZONE", "#ff9ce8", 28);
+        } else if (!this.obstacles.flipped) p.flipGravity(1);
+      }
       if (ev.coins) {
         this.run.coins += ev.coins;
         Sfx.coin();
@@ -468,6 +561,80 @@ export class GameScene extends Phaser.Scene {
 
     this.fx.update(rawDt);
     this.updatePost(rawDt, speedNorm);
+  }
+
+  // ------------------------------------------------------------------ The Calm → Abyss
+  updateSpeedMul(rawDt, freeze) {
+    if (freeze) return;
+    const BL = WORLD.biomeLength;
+    const raw0 = Math.floor(this.meters / BL);
+    const local0 = this.meters - raw0 * BL;
+    let target = 1;
+    if (this.calm) target = 1 - 0.18 * this.calmK;
+    else if (raw0 % 5 === 4) target = ABYSS_SPIKE + 0.16 * (local0 / BL); // keeps ramping
+    if (target > this.speedMul) this.speedMul = Math.min(target, this.speedMul + rawDt * 0.5);
+    else this.speedMul = Math.max(target, this.speedMul - rawDt * 0.12);
+  }
+
+  enterAbyss() {
+    this.inAbyss = true;
+    this.blackout.setAlpha(0);
+    this.hudReady?.setBlackout?.(false);
+    this.setDesat(0);
+    this.cameras.main.shake(380, 0.012);
+    this.redFlash.setAlpha(0.55);
+    this.tweens.add({ targets: this.redFlash, alpha: 0, duration: 650, ease: "Cubic.easeOut" });
+    Sfx.biome();
+    Music.play("abyss", { startBar: 16, immediate: true });
+    this.hudReady?.onBiome?.(this.biomeIndex, { slam: true });
+    this.announcedBiome = this.biomeIndex;
+  }
+
+  updateCalmFx(rawDt) {
+    const k = this.calm ? this.calmK : 0;
+    // edges darken, colours drain, music sinks to a hum under a rising heartbeat
+    this.calmVig.setAlpha(this.blackoutT > 0 ? 0 : k * k * 0.95);
+    this.setDesat(k);
+    if (this.calm) Music.setCalm(k);
+    // Abyss limited vision (fades in after the slam, out when the Abyss ends)
+    const BL = WORLD.biomeLength;
+    const inAbyssZone = Math.floor(this.meters / BL) % 5 === 4 && this.blackoutT <= 0;
+    const target = inAbyssZone && this.state !== "dead" ? 0.82 : 0;
+    this.darkA +=
+      Math.sign(target - this.darkA) * Math.min(Math.abs(target - this.darkA), rawDt * 0.7);
+    if (!inAbyssZone && this.inAbyss && this.darkA <= 0) this.inAbyss = false;
+    const show = this.darkA > 0.001;
+    const p = this.player;
+    const cx = Math.round(p.x / S) * S;
+    const cy = Math.round(p.y / S) * S;
+    const h = this.darkSize / 2;
+    const big = 6000;
+    const [img, l, r, t, b] = this.dark;
+    img.setPosition(cx, cy);
+    l.setPosition(cx - h - big / 2, cy).setSize(big, big * 2);
+    r.setPosition(cx + h + big / 2, cy).setSize(big, big * 2);
+    t.setPosition(cx, cy - h - big / 2).setSize(this.darkSize, big);
+    b.setPosition(cx, cy + h + big / 2).setSize(this.darkSize, big);
+    for (const d of this.dark) d.setVisible(show).setAlpha(this.darkA);
+  }
+
+  /** Colour drain for The Calm (WebGL colour-matrix FX only while needed). */
+  setDesat(k) {
+    if (this.renderer.type !== Phaser.WEBGL) return;
+    const cams = [this.cameras.main, this.backdrop?.cameras?.main].filter(Boolean);
+    if (k <= 0.001) {
+      if (this.desat) {
+        cams.forEach((c, i) => c.postFX.remove(this.desat[i]));
+        this.desat = null;
+      }
+      return;
+    }
+    if (!this.desat) this.desat = cams.map((c) => c.postFX.addColorMatrix());
+    for (const cm of this.desat) {
+      cm.reset();
+      cm.saturate(-0.85 * k);
+      cm.brightness(1 - 0.25 * k, true);
+    }
   }
 
   /**

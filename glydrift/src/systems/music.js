@@ -100,7 +100,14 @@ class Track {
           octaves: 2.2,
         },
       }),
-    ).connect(this.bassDuck);
+    );
+    if (d.dist) {
+      // heavy distorted sub: drive the bass into a waveshaper, then tame the fizz
+      const dist = keep(new Tone.Distortion({ distortion: d.dist, oversample: "2x" }));
+      const tame = keep(new Tone.Filter(900, "lowpass")).connect(this.bassDuck);
+      this.bass.connect(dist);
+      dist.connect(tame);
+    } else this.bass.connect(this.bassDuck);
     this.bass.volume.value = d.sub ? -4 : -11;
 
     // synths: ducked + reverb/delay
@@ -152,11 +159,24 @@ class Track {
       ).connect(this.synthBus);
       this.arp.volume.value = d.arp.wave === "square" ? -26 : -19;
     }
+    if (d.whisper) {
+      // breathy noise swept through a resonant band-pass (eerie whispers)
+      this.whisperF = keep(new Tone.Filter({ frequency: 600, type: "bandpass", Q: 7 })).connect(
+        this.synthBus,
+      );
+      this.whisper = keep(
+        new Tone.NoiseSynth({
+          noise: { type: "pink" },
+          envelope: { attack: 1.1, decay: 1.4, sustain: 0, release: 0.8 },
+        }),
+      ).connect(this.whisperF);
+      this.whisper.volume.value = -16;
+    }
   }
 
   chordNotes(deg, oct = 0) {
     const d = this.def;
-    const degs = [deg, deg + 2, deg + 4];
+    const degs = d.cluster ? [deg, deg + 1, deg + 4] : [deg, deg + 2, deg + 4];
     if (d.seventh) degs.push(deg + 6);
     if (d.ninth) degs.push(deg + 8);
     return degs.map((x) => midiToFreq(this.midi(x, oct)));
@@ -208,8 +228,16 @@ class Track {
 
     // ---- drums
     const kickOn = sec !== "breakdown" && !(fillBar && sec === "build" && s >= 8);
-    if (s % 4 === 0 && kickOn) {
-      this.kick.triggerAttackRelease(midiToFreq(this.midi(0, -3)), "8n", time, d.soft ? 0.75 : 1);
+    const kickHit = d.kickSteps ? d.kickSteps.includes(s) : s % 4 === 0;
+    if (kickHit && kickOn) {
+      // heartbeat kicks: the "dub" (odd hits) is softer than the "lub"
+      const dub = d.kickSteps && d.kickSteps.indexOf(s) % 2 === 1;
+      this.kick.triggerAttackRelease(
+        midiToFreq(this.midi(0, -3)),
+        "8n",
+        time,
+        d.soft ? 0.75 : dub ? 0.7 : 1,
+      );
       // sidechain-style pump
       this.bassDuck.gain.cancelScheduledValues(time);
       this.bassDuck.gain.setValueAtTime(0.3, time);
@@ -265,7 +293,7 @@ class Track {
     // ---- pad (whole bar)
     if (this.pad && s === 0 && sec !== "build") {
       this.pad.triggerAttackRelease(
-        this.chordNotes(chordDeg, -1),
+        this.chordNotes(chordDeg, d.pad.oct ?? -1),
         "1m",
         time,
         sec === "breakdown" ? 0.7 : 0.45,
@@ -291,6 +319,13 @@ class Track {
       }
     }
 
+    // ---- whisper sweeps (every 4 bars)
+    if (this.whisper && s === 0 && bar % 4 === 2) {
+      this.whisper.triggerAttackRelease("1m", time, 0.7);
+      this.whisperF.frequency.setValueAtTime(380, time);
+      this.whisperF.frequency.exponentialRampToValueAtTime(4200, time + 2.4);
+    }
+
     // ---- arpeggio
     if (this.arp && s % 2 === 0) {
       const arpOn =
@@ -309,21 +344,21 @@ class Track {
     }
   }
 
-  fadeIn(time) {
+  fadeIn(time, fade = FADE) {
     for (const g of [this.fader.gain, this.sendFader.gain]) {
       g.cancelScheduledValues(time);
       g.setValueAtTime(0, time);
-      g.linearRampToValueAtTime(1, time + FADE);
+      g.linearRampToValueAtTime(1, time + fade);
     }
   }
 
-  fadeOut(time) {
+  fadeOut(time, fade = FADE) {
     for (const g of [this.fader.gain, this.sendFader.gain]) {
       g.cancelScheduledValues(time);
       g.setValueAtTime(g.getValueAtTime(time), time);
-      g.linearRampToValueAtTime(0, time + FADE);
+      g.linearRampToValueAtTime(0, time + fade);
     }
-    const ms = Math.max(0, (time - Tone.now() + FADE + 0.6) * 1000);
+    const ms = Math.max(0, (time - Tone.now() + fade + 0.6) * 1000);
     setTimeout(() => this.dispose(), ms);
   }
 
@@ -374,6 +409,23 @@ class MusicEngine {
     this.delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.32, wet: 1 }).connect(
       this.lpf,
     );
+    // The Calm: a low detuned drone + a heartbeat, both outside the track crossfades
+    this.calmOut = new Tone.Gain(0).connect(this.limiter);
+    const droneF = new Tone.Filter(160, "lowpass").connect(this.calmOut);
+    this.drone = [36.71, 36.95, 55.0].map((f, i) => {
+      const o = new Tone.Oscillator(f, i === 2 ? "sine" : "sawtooth").connect(droneF);
+      o.volume.value = i === 2 ? -14 : -10;
+      return o;
+    });
+    this.heartGain = new Tone.Gain(0).connect(this.limiter);
+    this.heart = new Tone.MembraneSynth({
+      pitchDecay: 0.05,
+      octaves: 3,
+      envelope: { attack: 0.002, decay: 0.32, sustain: 0, release: 0.1 },
+    }).connect(this.heartGain);
+    this.heart.volume.value = 2;
+    this.calmLevel = 0;
+    this.calmOn = false;
     const t = Tone.getTransport();
     t.bpm.value = 124;
     t.start("+0.05");
@@ -404,12 +456,14 @@ class MusicEngine {
       this.pending = null;
     }
     const tr = new Track(this, id, opts.startBar ?? 0);
-    const barTicks = t.PPQ * 4;
-    const startTick = Math.ceil((t.ticks + t.PPQ / 4) / barTicks) * barTicks;
+    tr.fade = opts.immediate ? 0.12 : FADE;
+    // normally start on the next bar; `immediate` starts on the next 16th (a hard cut-in)
+    const unit = opts.immediate ? t.PPQ / 4 : t.PPQ * 4;
+    const startTick = Math.ceil((t.ticks + t.PPQ / 4) / unit) * unit;
     tr.eventId = t.scheduleRepeat((time) => tr.tick(time), "16n", `${startTick}i`);
     this.pending = tr;
     const bpm = TRACKS[id].bpm;
-    if (Math.abs(t.bpm.value - bpm) > 0.5) t.bpm.rampTo(bpm, FADE);
+    if (Math.abs(t.bpm.value - bpm) > 0.5) t.bpm.rampTo(bpm, opts.immediate ? 0.05 : FADE);
   }
 
   onTrackStarted(tr, time) {
@@ -417,11 +471,57 @@ class MusicEngine {
     const old = this.current;
     this.current = tr;
     this.pending = null;
-    tr.fadeIn(time);
+    tr.fadeIn(time, tr.fade);
     if (old) {
       old.fading = true;
-      old.fadeOut(time);
+      old.fadeOut(time, tr.fade);
     }
+  }
+
+  /**
+   * The Calm (0..1): the track's filter closes and fades to a low hum while a drone and a
+   * heartbeat rise. Throttled; safe to call every frame.
+   */
+  setCalm(level) {
+    if (!this.ready) return;
+    level = Math.max(0, Math.min(1, level));
+    if (!this.calmOn && level > 0) {
+      this.calmOn = true;
+      const now = Tone.now();
+      for (const o of this.drone) if (o.state !== "started") o.start(now);
+      this.heartLoop = new Tone.Loop((time) => {
+        // lub-dub, quickening slightly as the Calm deepens
+        this.heart.triggerAttackRelease(46, "8n", time, 1);
+        this.heart.triggerAttackRelease(44, "8n", time + 0.19, 0.65);
+      }, 0.95).start("+0.05");
+    }
+    if (!this.calmOn || Math.abs(level - this.calmLevel) < 0.02) return;
+    this.calmLevel = level;
+    if (this.heartLoop) this.heartLoop.interval = 0.95 - level * 0.25;
+    this.calmOut.gain.rampTo(0.15 + level * 0.55, 0.3);
+    this.heartGain.gain.rampTo(0.15 + level * 0.85, 0.3);
+    this.bus.gain.rampTo(0.8 * (1 - level * 0.85), 0.3);
+    this.lpf.frequency.rampTo(Math.max(220, 18000 * (1 - level) ** 3), 0.3);
+  }
+
+  /** End the Calm. `silence`: cut everything for the blackout before the Abyss. */
+  endCalm(silence = false) {
+    if (!this.ready || !this.calmOn) return;
+    this.calmOn = false;
+    this.calmLevel = 0;
+    const now = Tone.now();
+    this.heartLoop?.stop();
+    this.heartLoop?.dispose();
+    this.heartLoop = null;
+    this.calmOut.gain.cancelScheduledValues(now);
+    this.calmOut.gain.rampTo(0, silence ? 0.05 : 0.6);
+    this.heartGain.gain.cancelScheduledValues(now);
+    this.heartGain.gain.rampTo(0, silence ? 0.05 : 0.4);
+    const stopAt = now + (silence ? 0.2 : 0.8);
+    for (const o of this.drone) o.stop(stopAt);
+    this.bus.gain.cancelScheduledValues(now);
+    this.bus.gain.rampTo(0.8, silence ? 0.6 : 0.5);
+    this.restore(silence ? 0.6 : 0.5);
   }
 
   stop() {

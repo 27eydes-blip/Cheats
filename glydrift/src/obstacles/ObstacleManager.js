@@ -5,7 +5,21 @@ import { COIN_COLOR, hazardColors, NEAR_MISS } from "../config.js";
 import { HI } from "../gfx/textures.js";
 import { themeFor } from "../pixel/themes.js";
 import { RNG } from "../systems/rng.js";
-import { TYPES } from "./pixelTypes.js";
+import { TYPES as BASE_TYPES } from "./pixelTypes.js";
+import { SIGNATURE_TYPES } from "./signature.js";
+
+const TYPES = { ...BASE_TYPES, ...SIGNATURE_TYPES };
+
+/** Signature hazards per biome, in the order they are introduced (one at a time). */
+const SIG = {
+  void: ["laser", "blade", "hlaser"],
+  solar: ["geyser", "meteor", "firebar"],
+  frozen: ["icicle", "slider", "zap"],
+  glitch: ["blink", "blaser", "zone"],
+  abyss: ["tendril", "slammer", "walls"],
+};
+/** Biome-local meters at which each signature hazard unlocks. */
+const UNLOCK = { void: [60, 200, 340], default: [0, 120, 230] };
 
 const ADD = Phaser.BlendModes.ADD;
 
@@ -24,6 +38,9 @@ export class ObstacleManager {
     this.rightEdge = W;
     this.leftEdge = 0;
     this.rng = new RNG(1);
+    this.px = 0;
+    this.scroll = 300;
+    this.info = { local: 0, rawIndex: 0, pause: false, grace: false };
   }
 
   reset(seed) {
@@ -36,6 +53,7 @@ export class ObstacleManager {
     this.flipped = false;
     this.sinceFlip = 0;
     this.lastPortalM = 0;
+    this.introduced = new Set();
   }
 
   obtain(type) {
@@ -94,30 +112,44 @@ export class ObstacleManager {
       }
     }
 
-    const bias =
-      {
-        solar: { saw: 1.6, crusher: 1.5 },
-        frozen: { blade: 1.8, gate: 1.3 },
-        glitch: { laser: 1.9, hlaser: 1.6 },
-        abyss: { blade: 1.3, crusher: 1.3, saw2: 1.6 },
-      }[biomeId] || {};
+    const info = this.info;
+    const local = Math.max(0, info.local);
+    const sig = SIG[biomeId] || SIG.void;
+    const unlock = UNLOCK[biomeId] || UNLOCK.default;
+    const firstLap = info.rawIndex < 5;
+    // shared obstacles (every biome) + this biome's signature hazards
     const w = {
-      saw: 3,
-      gate: 3,
-      laser: meters > 60 ? 2.6 : 0,
-      crusher: 0, // crusher walls removed
-      blade: meters > 200 ? 2.5 : 0,
-      hlaser: meters > 340 ? 1.7 : 0,
-      saw2: meters > 600 ? 1.6 : 0,
-      flip: meters > 420 && !this.flipped && meters - this.lastPortalM > 220 ? 0.8 : 0,
-      mini: meters > 260 && !this.flipped && meters - this.lastPortalM > 160 ? 0.7 : 0,
+      saw: 2.2,
+      gate: 2.2,
+      saw2: meters > 600 ? 1 : 0,
+      flip: meters > 420 && !this.flipped && meters - this.lastPortalM > 220 ? 0.7 : 0,
+      mini: meters > 260 && !this.flipped && meters - this.lastPortalM > 160 ? 0.6 : 0,
     };
-    for (const k in bias) if (w[k]) w[k] *= bias[k];
-    if (this.count < 2) {
-      w.crusher = w.blade = w.hlaser = w.saw2 = w.flip = w.mini = 0;
+    let forced = null;
+    sig.forEach((k, i) => {
+      const open = !firstLap || local >= unlock[i] || (biomeId === "void" && meters >= unlock[i]);
+      if (!open) return;
+      w[k] = 2.6;
+      // introduce each new hazard alone the first time it appears
+      const key = `${info.rawIndex}:${k}`;
+      if (!this.introduced.has(key) && !forced) forced = k;
+    });
+    if (w.zone && this.flipped) w.zone = 0;
+    if (this.count < 2) w.saw2 = w.flip = w.mini = w.blade = w.hlaser = 0;
+    if (info.grace) {
+      // first seconds of the Abyss: only simple shared obstacles, spaced out
+      for (const k in w) if (k !== "saw" && k !== "gate") w[k] = 0;
+      forced = null;
     }
-    const kind = r.weighted(w);
+    if (forced === "zone" && this.flipped) forced = null;
+    let kind = forced || null;
+    if (kind) this.introduced.add(`${info.rawIndex}:${kind}`);
+    if (!kind) {
+      kind = r.weighted(w);
+      this.introduced.add(`${info.rawIndex}:${kind}`);
+    }
     this.count++;
+    const spacingMul = forced ? 1.35 : info.grace ? 1.8 : 1;
 
     switch (kind) {
       case "saw": {
@@ -240,6 +272,143 @@ export class ObstacleManager {
         width = span + 48;
         break;
       }
+      // ------------------------------------------------------------ solar storm
+      case "geyser": {
+        const n = local > 200 && r.chance(0.5) ? 2 : 1;
+        for (let i = 0; i < n; i++) {
+          const o = this.obtain("geyser");
+          o.spawn(x + 40 + i * 230, {
+            h: r.range(H * 0.4, H * 0.6),
+            rest: r.range(0.5, 0.9),
+            phase: r.next(),
+          });
+        }
+        this.coinLine(x, x + 80 + (n - 1) * 230, H * 0.25, 3);
+        width = 80 + (n - 1) * 230;
+        break;
+      }
+      case "meteor": {
+        const n = local > 220 && r.chance(0.5) ? 2 : 1;
+        for (let i = 0; i < n; i++) {
+          const o = this.obtain("meteor");
+          o.spawn(x + 44 + i * 280, { lead: r.range(1.25, 1.9) });
+        }
+        width = 88 + (n - 1) * 280;
+        break;
+      }
+      case "firebar": {
+        const nb = r.chance(0.5) ? 5 : 4;
+        const len = nb * 36;
+        const y = r.range(safeTop + len * 0.6, safeBot - len * 0.6);
+        const o = this.obtain("firebar");
+        o.spawn(x + len + 24, {
+          y,
+          n: nb,
+          speed: r.pick([-1, 1]) * r.range(1.2, 1.8),
+          phase: r.range(0, 6.28),
+        });
+        width = (len + 24) * 2;
+        break;
+      }
+      // ------------------------------------------------------------ frozen nebula
+      case "icicle": {
+        const n = local > 120 ? 2 + (r.chance(0.4) ? 1 : 0) : 1;
+        for (let i = 0; i < n; i++) {
+          const o = this.obtain("icicle");
+          o.spawn(x + 26 + i * 120, { lead: r.range(0.9, 1.15) });
+        }
+        this.coinLine(x, x + 52 + (n - 1) * 120, H * 0.72, 3);
+        width = 52 + (n - 1) * 120;
+        break;
+      }
+      case "slider": {
+        const o = this.obtain("slider");
+        o.spawn(x + o.w / 2, {
+          top: r.chance(0.5),
+          Lmin: H * 0.1,
+          Lmax: H * 0.55,
+          period: r.range(3.2, 4.2),
+          phase: r.next(),
+        });
+        width = o.w;
+        break;
+      }
+      case "zap": {
+        const D = r.range(300, 420);
+        const c = r.range(safeTop + D / 2, safeBot - D / 2);
+        const dx = r.chance(0.4) ? (r.chance(0.5) ? 1 : -1) * 130 : 0;
+        const o = this.obtain("zap");
+        o.spawn(x + 40 + Math.abs(dx) / 2, { y1: c - D / 2, y2: c + D / 2, dx, phase: r.next() });
+        if (r.chance(0.6)) this.coinLine(x, x + 80, c < mid ? c + D / 2 + 140 : c - D / 2 - 140, 3);
+        width = 80 + Math.abs(dx);
+        break;
+      }
+      // ------------------------------------------------------------ glitch realm
+      case "blink": {
+        const ya = r.range(safeTop + 40, mid - 60);
+        const yb = r.range(mid + 60, safeBot - 40);
+        const o = this.obtain("blink");
+        const flipAB = r.chance(0.5);
+        o.spawn(x + 48, {
+          ya: flipAB ? yb : ya,
+          yb: flipAB ? ya : yb,
+          hold: r.range(1.1, 1.5),
+          phase: r.next(),
+        });
+        width = 96;
+        break;
+      }
+      case "blaser": {
+        const o = this.obtain("blaser");
+        o.spawn(x + 26, { phase: r.next() });
+        width = 52;
+        break;
+      }
+      case "zone": {
+        const zw = r.range(320, 420);
+        const o = this.obtain("zone");
+        o.spawn(x + zw / 2, { w: zw });
+        this.coinLine(x + zw * 0.2, x + zw * 0.8, mid, 3);
+        width = zw;
+        break;
+      }
+      // ------------------------------------------------------------ abyss
+      case "tendril": {
+        const n = local > 150 && r.chance(0.5) ? 2 : 1;
+        let top = r.chance(0.5);
+        for (let i = 0; i < n; i++) {
+          const o = this.obtain("tendril");
+          o.spawn(x + 44 + i * 240, { top, L: r.range(H * 0.32, H * 0.48), lead: 1.3 });
+          top = !top;
+        }
+        width = 88 + (n - 1) * 240;
+        break;
+      }
+      case "slammer": {
+        const gc = r.range(safeTop + 220, safeBot - 220);
+        const o = this.obtain("slammer");
+        o.spawn(x + o.w / 2, {
+          gc,
+          open: Phaser.Math.Linear(400, 340, d),
+          hold: r.range(0.9, 1.2),
+          phase: r.next(),
+        });
+        width = o.w;
+        break;
+      }
+      case "walls": {
+        const n = 14 + Math.floor(r.range(0, 6));
+        const o = this.obtain("walls");
+        o.spawn(x + (n * 64) / 2, {
+          n,
+          depth: r.range(H * 0.2, H * 0.28),
+          sway: H * 0.07,
+          phase: r.range(0, 6.28),
+        });
+        this.coinLine(x + 200, x + n * 64 - 200, mid, 4);
+        width = n * 64;
+        break;
+      }
       case "flip":
       case "mini": {
         const p = this.obtain("portal");
@@ -259,13 +428,13 @@ export class ObstacleManager {
       const y = r.range(safeTop + 40, safeBot - 40);
       this.coinLine(x + width + spacing * 0.25, x + width + spacing * 0.75, y, 3);
     }
-    this.nextX = x + width + spacing;
+    this.nextX = x + width + spacing * spacingMul;
   }
 
   /** World-space x ranges of every hazard on screen (used to keep scenery out from behind them). */
   hazardBounds(out = []) {
     out.length = 0;
-    for (const o of this.active) if (o.kind !== "portal") out.push([o.left, o.right]);
+    for (const o of this.active) if (o.kind === "obstacle") out.push([o.left, o.right]);
     return out;
   }
 
@@ -282,13 +451,26 @@ export class ObstacleManager {
     ev.passed.length = 0;
     ev.portal = null;
     ev.coins = 0;
+    ev.zone = false;
+    this.px = px;
+    this.scroll = scroll;
 
     this.rightEdge = this.W / 2 + this.W / 2 / zoom + 40;
     this.leftEdge = this.W / 2 - this.W / 2 / zoom - 40;
 
     const dx = scroll * dt;
     this.nextX -= dx;
-    while (this.nextX < this.rightEdge + 160) this.spawnPattern(meters, biomeId);
+    if (this.info.pause) {
+      // title / calm window: keep the area clear (but never leave gravity flipped)
+      if (this.flipped && this.nextX < this.rightEdge + 160) {
+        const p = this.obtain("portal");
+        p.spawn(this.nextX, { y: this.H / 2, mode: "restore" });
+        this.flipped = false;
+      }
+      this.nextX = Math.max(this.nextX, this.rightEdge + 161);
+    } else {
+      while (this.nextX < this.rightEdge + 160) this.spawnPattern(meters, biomeId);
+    }
 
     for (let i = this.active.length - 1; i >= 0; i--) {
       const o = this.active[i];
@@ -305,6 +487,8 @@ export class ObstacleManager {
             o.used = true;
             ev.portal = o;
           }
+        } else if (o.kind === "zone") {
+          if (o.inside(px)) ev.zone = true;
         } else if (o.right > px - r - 30 && o.left < px + r + 30) {
           const c = o.clearance(px, py, r);
           if (c < o.minClear) o.minClear = c;
@@ -312,7 +496,7 @@ export class ObstacleManager {
         }
         if (!o.passed && o.right < px - r) {
           o.passed = true;
-          if (o.kind !== "portal") {
+          if (o.kind === "obstacle") {
             ev.passed.push(o);
             if (o.minClear > 0 && o.minClear < NEAR_MISS.threshold) ev.near.push(o);
           }

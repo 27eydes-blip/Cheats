@@ -5,7 +5,8 @@ import { fitCamera, PHYSICS, VIEW } from "../config.js";
 import { HI } from "../gfx/textures.js";
 import { Music } from "../systems/music.js";
 import { dailyNumber } from "../systems/rng.js";
-import { button, hex, neonText, plainText, RollingCounter, toast } from "../ui/ui.js";
+import { Sfx } from "../systems/audio.js";
+import { button, drawNeonRect, hex, neonText, plainText, RollingCounter } from "../ui/ui.js";
 
 export class HudScene extends Phaser.Scene {
   constructor() {
@@ -88,6 +89,10 @@ export class HudScene extends Phaser.Scene {
 
     // banners
     this.banner = this.add.container(W / 2, H * 0.3).setAlpha(0);
+    // dark backing keeps the title readable over hazards
+    this.bannerBack = this.add.graphics();
+    this.bannerBack.fillStyle(0x000000, 0.62).fillRoundedRect(-300, -84, 600, 150, 24);
+    this.banner.add(this.bannerBack);
     this.bannerSub = plainText(this, 0, -46, "ENTERING", 20, "#ffffff");
     this.bannerText = neonText(this, 0, 0, "", 56, 0xffffff, { blur: 26 });
     this.bannerLine = this.add.rectangle(0, 42, 420, 3, 0xffffff);
@@ -142,17 +147,25 @@ export class HudScene extends Phaser.Scene {
     this.coins.set(0);
     this.lastScore = 0;
     this.bestText.setText(gs.bestScore > 0 ? `BEST ${gs.bestScore}` : "");
-    this.hint.setVisible(true).setAlpha(1);
+    // "TAP TO FLY" only before the first flap (the run may already be live if the first tap
+    // landed before this HUD finished starting)
+    const waiting = gs.state === "ready";
+    this.hint.setVisible(waiting).setAlpha(waiting ? 1 : 0);
+    this.cameras.main.setAlpha(1);
     this.pauseBtn.setVisible(true);
     this.scoreText.setAlpha(1);
   }
 
   onStart() {
+    this.hintFading = true;
     this.tweens.add({
       targets: this.hint,
       alpha: 0,
       duration: 200,
-      onComplete: () => this.hint.setVisible(false),
+      onComplete: () => {
+        this.hint.setVisible(false);
+        this.hintFading = false;
+      },
     });
   }
 
@@ -174,9 +187,10 @@ export class HudScene extends Phaser.Scene {
     });
   }
 
-  onBiome(rawIndex) {
+  onBiome(rawIndex, { slam = false } = {}) {
     const b = BIOMES[rawIndex % BIOMES.length];
     this.bannerText.setText(biomeName(rawIndex));
+    if (slam) return this.slamTitle(rawIndex, b);
     this.bannerText.setStroke(hex(b.neon), 4).setShadow(0, 0, hex(b.neon), 26, true, true);
     this.bannerLine.setFillStyle(b.neon);
     this.tweens.killTweensOf(this.banner);
@@ -200,6 +214,69 @@ export class HudScene extends Phaser.Scene {
     });
   }
 
+  /** "ENTERING ABYSS": slams in from huge with a shake (the Game scene adds the red flash). */
+  slamTitle(rawIndex, b) {
+    this.tweens.killTweensOf(this.banner);
+    this.bannerText.setStroke(hex(0xff1030), 5).setShadow(0, 0, hex(0xff1030), 30, true, true);
+    this.bannerLine.setFillStyle(0xff1030);
+    this.banner
+      .setAlpha(1)
+      .setScale(3.2)
+      .setY(this.H * 0.3);
+    this.bannerLine.scaleX = 1;
+    this.tweens.add({ targets: this.banner, scale: 1, duration: 170, ease: "Quad.easeIn" });
+    this.cameras.main.shake(320, 0.012);
+    this.tweens.add({
+      targets: this.banner,
+      alpha: 0,
+      delay: 2600,
+      duration: 500,
+    });
+    void rawIndex;
+    void b;
+  }
+
+  /** Blackout before the Abyss: the HUD goes dark with the world. */
+  setBlackout(on) {
+    this.cameras.main.setAlpha(on ? 0 : 1);
+  }
+
+  /**
+   * Run banners (mission / new best / tips): slide in from the side below the score and
+   * out again quickly; queued so two never overlap.
+   */
+  hudBanner(text, color, sub) {
+    const W = this.W;
+    const y = this.top + 250;
+    const q = (this.bannerQ ||= { t: 0 });
+    const now = this.time.now;
+    const delay = Math.max(0, q.t - now);
+    q.t = now + delay + 2000;
+    const c = this.add.container(W + 320, y).setDepth(80);
+    const g = this.add.graphics();
+    const w = Math.min(W - 60, 520);
+    const h = sub ? 84 : 64;
+    drawNeonRect(g, -w / 2, -h / 2, w, h, 18, color, { fillAlpha: 0.92 });
+    c.add([g, neonText(this, 0, sub ? -13 : 0, text, 24, color, { blur: 8 })]);
+    if (sub) c.add(plainText(this, 0, 20, sub, 16, "#d8d0ff"));
+    this.tweens.add({
+      targets: c,
+      x: W / 2,
+      delay,
+      duration: 200,
+      ease: "Cubic.easeOut",
+      onStart: () => Sfx.reward(),
+    });
+    this.tweens.add({
+      targets: c,
+      x: -320,
+      delay: delay + 1700,
+      duration: 200,
+      ease: "Cubic.easeIn",
+      onComplete: () => c.destroy(),
+    });
+  }
+
   onSpeedUp() {
     const t = neonText(this, this.W / 2, this.H * 0.4, "SPEED UP", 40, 0xff4fd8, { blur: 18 });
     t.setAlpha(0).setScale(0.6);
@@ -215,17 +292,17 @@ export class HudScene extends Phaser.Scene {
   }
 
   onNewBest() {
-    toast(this, "NEW BEST!", 0xffd23f, { y: this.top + 250, sub: "You beat your best run" });
+    this.hudBanner("NEW BEST!", 0xffd23f, "You beat your best run");
   }
 
   onMission(m) {
-    toast(this, "MISSION COMPLETE", 0x39ff88, { y: this.top + 250, sub: m.text });
+    this.hudBanner("MISSION COMPLETE", 0x39ff88, m.text);
   }
 
   onPortal() {}
 
   onToast(title, sub) {
-    toast(this, title, 0x3ef4ff, { y: this.top + 250, sub });
+    this.hudBanner(title, 0x3ef4ff, sub);
   }
 
   onDeath() {
@@ -279,6 +356,7 @@ export class HudScene extends Phaser.Scene {
   update() {
     const gs = this.gameScene;
     if (!gs || (!gs.sys.isActive() && !gs.sys.isPaused())) return;
+    if (this.hint.visible && gs.state !== "ready" && !this.hintFading) this.hint.setVisible(false);
     const s = gs.score;
     if (s !== this.lastScore) {
       if (s - this.lastScore > 5) this.score.bump(s);

@@ -2,6 +2,7 @@
 // Each biome's spike colour (k*) is used only on things that kill.
 import { buildBiome, NV } from "./biomeArt.js";
 import { buildCommon } from "./common.js";
+import { buildHazards } from "./hazardArt.js";
 
 const SOLAR = {
   O: 0x120403,
@@ -212,4 +213,5 @@ export function buildPixelArt(scene) {
   built = true;
   buildCommon(scene);
   for (const [id, d] of Object.entries(DEFS)) buildBiome(scene, id, d.pal, d.cfg);
+  buildHazards(scene, { solar: SOLAR, frozen: FROZEN, glitch: GLITCH, abyss: ABYSS });
 }

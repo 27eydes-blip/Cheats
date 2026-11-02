@@ -7,11 +7,13 @@ import { circleClear, rectClear, segClear } from "./geometry.js";
 import { Crusher } from "./types.js";
 
 const TAU = Math.PI * 2;
-const OFF = 600;
-const CAP_H = 12 * S; // spiked cap height (art 12px)
+export const OFF = 600;
+export const CAP_H = 12 * S; // spiked cap height (art 12px)
 const GLOW = 14; // laser glow width (art px)
+/** Lethal edges draw above the Abyss darkness (depth 20) so a hazard is never hidden. */
+const HAZ_TOP = 21;
 
-class PxObstacle {
+export class PxObstacle {
   constructor(mgr) {
     this.mgr = mgr;
     this.scene = mgr.scene;
@@ -54,7 +56,7 @@ export class Saw extends PxObstacle {
     super(mgr);
     this.type = "saw";
     this.rail = this.add(this.scene.add.tileSprite(0, 0, 6 * S, 100, "void_chain").setDepth(1));
-    this.img = this.add(this.scene.add.image(0, 0, "void", "saw_12").setDepth(2));
+    this.img = this.add(this.scene.add.image(0, 0, "void", "saw_12").setDepth(HAZ_TOP));
   }
   spawn(x, { y, amp = 0, freq = 1, phase = 0, R = 46 }) {
     this.arm(x);
@@ -157,9 +159,11 @@ export class Gate extends PxObstacle {
         .setOrigin(0.5, 0)
         .setDepth(1),
     );
-    this.capT = this.add(this.scene.add.image(0, 0, "void", "cap_0").setOrigin(0.5, 1).setDepth(2));
+    this.capT = this.add(
+      this.scene.add.image(0, 0, "void", "cap_0").setOrigin(0.5, 1).setDepth(HAZ_TOP),
+    );
     this.capB = this.add(
-      this.scene.add.image(0, 0, "void", "cap_0b").setOrigin(0.5, 0).setDepth(2),
+      this.scene.add.image(0, 0, "void", "cap_0b").setOrigin(0.5, 0).setDepth(HAZ_TOP),
     );
     this.torch = this.add(this.scene.add.image(0, 0, "void", "torch_0").setDepth(3));
   }
@@ -401,7 +405,7 @@ export class Portal extends PxObstacle {
     super(mgr);
     this.type = "portal";
     this.kind = "portal";
-    this.img = this.add(this.scene.add.image(0, 0, "pxc", "portal_flip_0").setDepth(4));
+    this.img = this.add(this.scene.add.image(0, 0, "pxc", "portal_flip_0").setDepth(HAZ_TOP));
   }
   spawn(x, { y, mode }) {
     this.arm(x);

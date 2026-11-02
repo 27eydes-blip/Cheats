@@ -382,18 +382,23 @@ export const TRACKS = {
   // 5. Abyss — dark, heavy tech house, deep sub, tense minimal melody (D minor)
   abyss: {
     name: "Abyss",
-    mood: "Dark tech house · heavy · D minor",
-    bpm: 124,
+    mood: "Dark · 140 BPM · distorted sub · D phrygian",
+    bpm: 140,
     root: 50, // D3
     prog: [0, 0, 1, 0], // Dm Dm Eb(b2 tension) Dm
     phrygian: true,
     seventh: false,
+    cluster: true, // dissonant minor-second stabs
     chordSteps: [6, 14],
     chordWave: "sawtooth",
     chordCutoff: 900,
-    bassWave: "sine",
-    bassCutoff: 300,
+    bassWave: "sawtooth",
+    bassCutoff: 260,
     sub: true,
+    dist: 0.75,
+    kickSteps: [0, 3, 8, 11], // heartbeat kick: lub-dub, lub-dub
+    whisper: true,
+    pad: { wave: "sine", vol: -22, oct: 2 }, // eerie high pad
     bass: [0, _, _, 0, _, _, 0, _, 0, _, _, 0, _, 1, _, _],
     lead: {
       wave: "sawtooth",
@@ -467,7 +472,6 @@ export const TRACKS = {
       ],
       octave: 1,
     },
-    pad: { wave: "sawtooth", vol: -22 },
     arp: null,
     hats: "drive",
     reverb: 0.3,

@@ -146,6 +146,7 @@ export class PixelBackground {
     this.time += dt;
     this.scroll = scroll;
     if (o.theme) this.setTheme(o.theme);
+    const ps = o.particleSpeed ?? 1; // The Calm slows the weather down
     const beat = heartbeat(this.time) * (pal?.pulse || 0);
     this.beat = beat;
     const W = this.W;
@@ -194,14 +195,14 @@ export class PixelBackground {
           continue;
         }
         const drift = set.kind === "rain" ? -scroll * 0.35 - 90 : -scroll * 0.15;
-        d.x += (drift + d.vx) * dt;
-        d.y += d.vy * dt;
+        d.x += (drift + d.vx) * dt * ps;
+        d.y += d.vy * dt * ps;
         const flicker = set.kind === "embers" ? 0.6 + 0.4 * Math.sin(this.time * 9 + d.x) : 1;
         d.setAlpha(set.alpha * d.base * flicker);
         if (d.y > H + 20 || d.y < -90 || d.x < -20) this.resetPart(d, set.kind, false);
       }
       for (const m of set.motes) {
-        m.x -= (scroll * 0.12 + m.vx) * dt;
+        m.x -= (scroll * 0.12 + m.vx) * dt * ps;
         m.y += Math.sin(this.time * 1.3 + m.phase) * 12 * dt;
         m.setAlpha(set.alpha * (0.2 + 0.3 * (0.5 + 0.5 * Math.sin(this.time * 2 + m.phase))));
         if (m.x < -10) {
