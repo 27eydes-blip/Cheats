@@ -130,10 +130,10 @@ export const PHYSICS = {
 
 export const WORLD = {
   pxPerMeter: 20,
-  baseSpeed: 300,
-  speedGain: 270, // asymptotic extra speed
+  baseSpeed: 325,
+  speedGain: 290, // asymptotic extra speed
   speedRampMeters: 1500,
-  maxSpeed: 580,
+  maxSpeed: 625,
   playerXFrac: 0.22,
   baseZoom: 0.93, // < 1 shows a little more of the world
   minZoom: 0.8,

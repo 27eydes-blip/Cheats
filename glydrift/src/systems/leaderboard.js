@@ -49,7 +49,7 @@ export class LeaderboardError extends Error {
   }
 }
 
-/** Upper bounds a real run can't exceed (max speed ≈ 29 m/s; bonuses are bounded per meter). */
+/** Upper bounds a real run can't exceed (max speed ≈ 31 m/s; bonuses are bounded per meter). */
 export function isPlausible(run) {
   const ms = Math.round(run.run_time_ms ?? run.runTimeMs ?? 0);
   const score = Math.round(run.score);
