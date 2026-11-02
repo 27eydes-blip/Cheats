@@ -244,6 +244,10 @@ export class Crusher extends Obstacle {
     this.glowB.setTint(this.color).setScale(2.4, 1.4);
   }
   gapAt(clock) {
+    if (this.closed >= this.open) {
+      this.warn = false;
+      return this.open; // static walls: never slam
+    }
     const u = (((clock / this.period + this.phase) % 1) + 1) % 1;
     let k;
     if (u < 0.42) k = 0;
@@ -273,7 +277,7 @@ export class Crusher extends Obstacle {
       .setScale(0.7);
     this.glowT.setPosition(this.x, this.yt).setAlpha(0.3 + this.lit * 0.3);
     this.glowB.setPosition(this.x, this.yb).setAlpha(0.3 + this.lit * 0.3);
-    const closed = g <= this.closed + 2;
+    const closed = this.closed < this.open && g <= this.closed + 2;
     if (closed && !this.wasClosed && this.x < this.mgr.rightEdge && this.x > this.mgr.leftEdge) {
       this.mgr.fx.burst("spark", this.x, this.gc, 14, 0xffd0a0, { speed: { min: 150, max: 420 } });
       this.mgr.onImpact?.(this);

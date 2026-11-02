@@ -95,8 +95,9 @@ export const WORLD = {
   speedGain: 270, // asymptotic extra speed
   speedRampMeters: 1500,
   maxSpeed: 580,
-  playerXFrac: 0.3,
-  minZoom: 0.84,
+  playerXFrac: 0.22,
+  baseZoom: 0.93, // < 1 shows a little more of the world
+  minZoom: 0.8,
   biomeLength: 500, // meters per biome
   biomeBlend: 90, // meters of smooth morph before each boundary
 };

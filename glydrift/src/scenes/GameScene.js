@@ -174,8 +174,8 @@ export class GameScene extends Phaser.Scene {
     this.obstacles.reset(seed);
     this.fx.clear();
     this.player.reset();
-    this.zoomLevel = 1;
-    this.cameras.main.setZoom(VIEW.Z);
+    this.zoomLevel = WORLD.baseZoom;
+    this.cameras.main.setZoom(VIEW.Z * WORLD.baseZoom);
     this.setupGhost();
     this.hudReady?.onReset?.();
     Music.play(BIOME_TRACKS[0], { startBar: 8 });
@@ -389,7 +389,8 @@ export class GameScene extends Phaser.Scene {
 
     // camera zoom-out with speed (+ punch-in on near-miss)
     this.fxState.zoomPunch *= Math.exp(-rawDt * 6);
-    const zoomTarget = Phaser.Math.Linear(1, WORLD.minZoom, speedNorm) + this.fxState.zoomPunch;
+    const zoomTarget =
+      Phaser.Math.Linear(WORLD.baseZoom, WORLD.minZoom, speedNorm) + this.fxState.zoomPunch;
     const cam = this.cameras.main;
     this.zoomLevel =
       (this.zoomLevel ?? 1) + (zoomTarget - (this.zoomLevel ?? 1)) * Math.min(1, rawDt * 3);

@@ -101,9 +101,12 @@ if (
   (location.protocol === "https:" || location.hostname === "localhost")
 ) {
   const launchedAt = Date.now();
+  // only an *upgrade* (an older worker was already in control) should reload — never the
+  // very first install
+  const hadController = !!navigator.serviceWorker.controller;
   let reloaded = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (reloaded || Date.now() - launchedAt > 15000) return;
+    if (!hadController || reloaded || Date.now() - launchedAt > 15000) return;
     reloaded = true;
     window.location.reload();
   });

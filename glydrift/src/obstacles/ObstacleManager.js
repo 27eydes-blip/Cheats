@@ -171,8 +171,9 @@ export class ObstacleManager {
         const o = this.obtain("crusher");
         o.spawn(x + 60, {
           gc,
-          open: Phaser.Math.Linear(380, 330, d),
-          closed: Phaser.Math.Linear(185, 150, d),
+          // walls never close: a fixed gap (open === closed)
+          open: Phaser.Math.Linear(330, 280, d),
+          closed: Phaser.Math.Linear(330, 280, d),
           period: Phaser.Math.Linear(2.4, 1.8, d),
           phase: r.next(),
         });
