@@ -4,6 +4,7 @@ import "@fontsource/rajdhani/600.css";
 import "@fontsource/rajdhani/700.css";
 import Phaser from "phaser";
 import "./gfx/tileSpriteFix.js";
+import { watchContext } from "./systems/frameGuard.js";
 import { setupView, VIEW, wantsFit } from "./config.js";
 import { GlyPostFX } from "./gfx/shaders.js";
 import { BackdropScene } from "./scenes/BackdropScene.js";
@@ -107,6 +108,7 @@ async function boot() {
   };
   game.events.once("ready", () => {
     updateSafe();
+    watchContext(game);
     // Phaser's ADD blend is (ONE, DST_ALPHA): inside a transparent post-FX layer that darkens
     // whatever is under the quad, leaving box artifacts. Use a true premultiplied add.
     const r = game.renderer;
