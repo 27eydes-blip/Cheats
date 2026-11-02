@@ -3,6 +3,7 @@ import "@fontsource/orbitron/900.css";
 import "@fontsource/rajdhani/600.css";
 import "@fontsource/rajdhani/700.css";
 import Phaser from "phaser";
+import "./gfx/tileSpriteFix.js";
 import { setupView, VIEW } from "./config.js";
 import { GlyPostFX } from "./gfx/shaders.js";
 import { BackdropScene } from "./scenes/BackdropScene.js";
