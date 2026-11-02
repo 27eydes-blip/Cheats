@@ -1,6 +1,6 @@
 // Pixel biome art generator. One palette + a few style switches per biome produce every tile,
 // hazard, decoration and background layer. All assets are original procedural pixel art.
-import { addAtlas, addTexture, PixelCanvas, seeded, shade } from "./px.js";
+import { addAtlas, addTexture, mix, PixelCanvas, seeded, shade } from "./px.js";
 
 export const NV = {
   O: 0x040b0d, // outline
@@ -25,16 +25,22 @@ export const NV = {
   crys0: 0x2f3d73,
   crys1: 0x4a5fa8,
   crys2: 0x8aa0e6,
-  // background (darker + desaturated than anything in play)
-  bg0: 0x03080a,
-  bg1: 0x061215,
-  bg2: 0x091a1d,
-  bg3: 0x0c2226,
-  bg4: 0x112d30,
-  rain: 0x7fb7bf,
-  bgDetail: 0x1a3d3c,
-  bgHang: 0x0a1c1e,
-  bgNear: 0x0f272a,
+  // background (darker + desaturated than anything in play, but never a flat black void)
+  bg0: 0x06100f,
+  bg1: 0x0a1b1c,
+  bg2: 0x0e2527,
+  bg3: 0x122d2f,
+  bg4: 0x183a3b,
+  rain: 0x86c0c6,
+  bgDetail: 0x24504c,
+  bgHang: 0x0e2224,
+  bgNear: 0x132e30,
+  sky: ["#050f10", "#0c2426", "#123032", "#081618"],
+  // distant ruins (lighter than the near layers: atmospheric haze) + soft glow spots
+  haze: 0x1c4343,
+  hazeRim: 0x2c5c5a,
+  hazeLit: 0x5fd0b4,
+  glow: 0x2e8a78,
 };
 
 let C = NV; // palette currently being built
@@ -92,6 +98,22 @@ function pillarEdges(pc) {
   }
 }
 
+/** Pillar art width (art px). Tiles are authored 16 wide and widened by repeating the interior. */
+export const PILLAR_W = 28;
+function widen(pc, shiftY = 0) {
+  const out = new PixelCanvas(PILLAR_W, pc.h);
+  const extra = PILLAR_W - 16;
+  for (let y = 0; y < pc.h; y++) {
+    for (let x = 0; x < 14; x++) out.set(x, y, pc.get(x, y));
+    for (let i = 0; i < extra; i++) out.set(14 + i, y, pc.get(3 + (i % 10), (y + shiftY) % pc.h));
+    out.set(PILLAR_W - 2, y, pc.get(14, y)).set(PILLAR_W - 1, y, pc.get(15, y));
+    // keep the right-hand shadow column on the new right edge
+    if (out.get(PILLAR_W - 3, y) !== C.m) out.set(PILLAR_W - 3, y, C.s0);
+    if (out.get(13, y) === C.s0) out.set(13, y, pc.get(12, y));
+  }
+  return out;
+}
+
 function pillarBrick(seed) {
   const rnd = seeded(seed);
   const pc = new PixelCanvas(16, 16).rect(0, 0, 16, 16, C.s2);
@@ -145,26 +167,30 @@ function pillarBlocks(seed) {
   return pc;
 }
 
-/** End cap facing the gap: stone lip + slime + a row of bright spikes (16x11, spikes down). */
+/** End cap facing the gap: stone lip + slime + a row of bright spikes (PILLAR_W x 12, spikes down). */
 function gateCap(seed) {
   const rnd = seeded(seed);
-  const pc = new PixelCanvas(16, 12);
-  pc.rect(2, 0, 12, 3, C.s2).hline(2, 13, 0, C.s3).hline(2, 13, 2, C.s1);
-  pc.vline(0, 0, 3, C.O).vline(1, 0, 3, C.O).vline(14, 0, 3, C.O).vline(15, 0, 3, C.O);
-  pc.hline(0, 15, 3, C.O);
+  const W = PILLAR_W;
+  const pc = new PixelCanvas(W, 12);
+  pc.rect(2, 0, W - 4, 3, C.s2)
+    .hline(2, W - 3, 0, C.s3)
+    .hline(2, W - 3, 2, C.s1);
+  pc.vline(0, 0, 3, C.O)
+    .vline(1, 0, 3, C.O)
+    .vline(W - 2, 0, 3, C.O)
+    .vline(W - 1, 0, 3, C.O);
+  pc.hline(0, W - 1, 3, C.O);
   // slime lip with a couple of drips (muted green — decor)
-  pc.hline(2, 13, 2, C.g1);
-  for (let i = 0; i < 2; i++) {
-    const dx = 3 + Math.floor(rnd() * 10);
-    pc.set(dx, 3, C.g2);
-  }
-  spikeRow(pc, 0, 4, 2, 8, 8, true); // two big triangular spikes per pillar end
+  pc.hline(2, W - 3, 2, C.g1);
+  for (let i = 0; i < 3; i++) pc.set(3 + Math.floor(rnd() * (W - 6)), 3, C.g2);
+  const n = Math.floor((W - 4) / 8);
+  spikeRow(pc, (W - n * 8) / 2, 4, n, 8, 8, true); // big triangular spikes along the pillar end
   // outline only the spikes (keeps the block outline crisp)
-  const sp = new PixelCanvas(16, 12);
-  for (let y = 4; y < 12; y++) for (let x = 0; x < 16; x++) sp.set(x, y, pc.get(x, y));
+  const sp = new PixelCanvas(W, 12);
+  for (let y = 4; y < 12; y++) for (let x = 0; x < W; x++) sp.set(x, y, pc.get(x, y));
   sp.outline(C.O, 1);
   for (let y = 4; y < 12; y++)
-    for (let x = 0; x < 16; x++) if (sp.get(x, y) !== null) pc.set(x, y, sp.get(x, y));
+    for (let x = 0; x < W; x++) if (sp.get(x, y) !== null) pc.set(x, y, sp.get(x, y));
   return pc;
 }
 
@@ -329,19 +355,36 @@ function emitter() {
 }
 
 function beamV() {
+  // hot core: hazard-colour rims around a white-hot centre, with bright sparks
   const pc = new PixelCanvas(4, 8);
-  for (let y = 0; y < 8; y++) {
-    pc.set(0, y, C.k1).set(1, y, C.k3).set(2, y, 0xffffff).set(3, y, C.k1);
-  }
-  pc.set(1, 3, 0xffffff).set(2, 6, C.k3);
+  for (let y = 0; y < 8; y++)
+    pc.set(0, y, C.k2).set(1, y, C.k3).set(2, y, 0xffffff).set(3, y, C.k2);
+  pc.set(1, 3, 0xffffff).set(0, 5, C.k3).set(3, 1, C.k3);
   return pc;
 }
 function beamH() {
   const pc = new PixelCanvas(8, 4);
-  for (let x = 0; x < 8; x++) {
-    pc.set(x, 0, C.k1).set(x, 1, C.k3).set(x, 2, 0xffffff).set(x, 3, C.k1);
-  }
-  pc.set(3, 1, 0xffffff).set(6, 2, C.k3);
+  for (let x = 0; x < 8; x++)
+    pc.set(x, 0, C.k2).set(x, 1, C.k3).set(x, 2, 0xffffff).set(x, 3, C.k2);
+  pc.set(3, 1, 0xffffff).set(5, 0, C.k3).set(1, 3, C.k3);
+  return pc;
+}
+/** Stepped pixel glow around a beam (drawn additively): dithered outer band → solid inner band. */
+function beamGlow(horizontal) {
+  const N = 14;
+  const pc = new PixelCanvas(horizontal ? 8 : N, horizontal ? N : 8);
+  for (let a = 0; a < 8; a++)
+    for (let b = 0; b < N; b++) {
+      const d = Math.abs(b - (N - 1) / 2); // 0.5 … 6.5 from the centre
+      let c = null;
+      if (d < 2) c = C.k1;
+      else if (d < 3.5) c = (a + b) % 2 === 0 ? C.k1 : C.k0;
+      else if (d < 5)
+        c = (a + b) % 2 === 0 ? C.k0 : null; // dither fade-out
+      else if ((a + 2 * b) % 4 === 0) c = C.k0;
+      if (horizontal) pc.set(a, b, c);
+      else pc.set(b, a, c);
+    }
   return pc;
 }
 
@@ -653,6 +696,22 @@ function silhouette2(w, h, seed, { base, rim, detail, kind }) {
   return pc;
 }
 
+/** Soft glow spot in pixel steps: solid core → bands → dithered fringe (drawn additively). */
+function glowSpot(color) {
+  const N = 32;
+  const pc = new PixelCanvas(N, N);
+  const c = (N - 1) / 2;
+  for (let y = 0; y < N; y++)
+    for (let x = 0; x < N; x++) {
+      const d = Math.hypot(x - c, y - c);
+      if (d < 5) pc.set(x, y, color);
+      else if (d < 9) pc.set(x, y, shade(color, -0.35));
+      else if (d < 12.5) pc.set(x, y, shade(color, -0.6));
+      else if (d < 15.5 && (x + y) % 2 === 0) pc.set(x, y, shade(color, -0.72));
+    }
+  return pc;
+}
+
 /**
  * Build every texture + the sprite atlas for one biome.
  * cfg: { pillar: "stone"|"metal", lamp: "torch"|"orb"|"screen", far, mid, hang (silhouette kinds) }
@@ -662,14 +721,14 @@ export function buildBiome(scene, prefix, palette, cfg) {
   const metal = cfg.pillar === "metal";
   const p = (k) => `${prefix}_${k}`;
   if (metal) {
-    addTexture(scene, p("pillar_0"), pillarPlates(3));
-    addTexture(scene, p("pillar_1"), pillarVents(5));
-    addTexture(scene, p("pillar_2"), pillarPlates(9));
+    addTexture(scene, p("pillar_0"), widen(pillarPlates(3)));
+    addTexture(scene, p("pillar_1"), widen(pillarVents(5)));
+    addTexture(scene, p("pillar_2"), widen(pillarPlates(9)));
     addTexture(scene, p("wall"), wallPlates());
   } else {
-    addTexture(scene, p("pillar_0"), pillarBrick(3));
-    addTexture(scene, p("pillar_1"), pillarColumn(5));
-    addTexture(scene, p("pillar_2"), pillarBlocks(9));
+    addTexture(scene, p("pillar_0"), widen(pillarBrick(3), 4));
+    addTexture(scene, p("pillar_1"), widen(pillarColumn(5)));
+    addTexture(scene, p("pillar_2"), widen(pillarBlocks(9), 8));
     addTexture(scene, p("wall"), wallTile());
   }
   addTexture(scene, p("edge"), wallEdge());
@@ -677,6 +736,8 @@ export function buildBiome(scene, prefix, palette, cfg) {
   addTexture(scene, p("chain"), chainTile());
   addTexture(scene, p("beam_v"), beamV());
   addTexture(scene, p("beam_h"), beamH());
+  addTexture(scene, p("glow_v"), beamGlow(false));
+  addTexture(scene, p("glow_h"), beamGlow(true));
   skyCanvas(scene, p("sky"));
   const sil = (kind, w, h, seed, colors) =>
     ["city", "cables", "chains", "icicles"].includes(kind)
@@ -692,6 +753,19 @@ export function buildBiome(scene, prefix, palette, cfg) {
     p("mid"),
     sil(cfg.mid || "ruins", 176, 80, 23, { base: C.bg3, rim: C.bg4, detail: C.bgDetail }),
   );
+  // distant hazy ruins in the middle of the screen, with a few lit windows
+  const haze = C.haze ?? mix(C.bg4, C.s1, 0.35);
+  addTexture(
+    scene,
+    p("distant"),
+    silhouette(200, 64, 71, {
+      base: haze,
+      rim: C.hazeRim ?? shade(haze, 0.25),
+      detail: C.hazeLit ?? shade(haze, 0.6),
+      kind: "ruins",
+    }),
+  );
+  addTexture(scene, p("glowspot"), glowSpot(C.glow ?? mix(C.bg4, C.s4, 0.5)));
   addTexture(
     scene,
     p("roots"),

@@ -72,7 +72,19 @@ async function boot() {
   const updateSafe = () => {
     const probe = document.getElementById("safe-probe");
     const cs = probe ? getComputedStyle(probe) : null;
-    const insetTop = probe ? probe.getBoundingClientRect().height : 0;
+    let insetTop = probe ? probe.getBoundingClientRect().height : 0;
+    // iOS often reports env(safe-area-inset-top) as 0 until layout settles (and in some
+    // standalone launches never) → fall back to the known notch / Dynamic Island heights
+    const fullScreen =
+      window.navigator.standalone === true ||
+      window.matchMedia?.("(display-mode: standalone)").matches ||
+      window.innerHeight >= Math.max(screen.width, screen.height) - 1;
+    if (insetTop < 20 && fullScreen && /iPhone/.test(navigator.userAgent)) {
+      const sh = Math.max(screen.width, screen.height);
+      if (sh >= 852)
+        insetTop = 59; // Dynamic Island models
+      else if (sh >= 812) insetTop = 47; // notch models
+    }
     const insetBottom = cs ? Number.parseFloat(cs.paddingBottom) || 0 : 0;
     const rect = game.canvas?.getBoundingClientRect();
     const canvasH = rect?.height || window.innerHeight;
@@ -91,6 +103,9 @@ async function boot() {
     }
   });
   window.addEventListener("resize", () => setTimeout(updateSafe, 100));
+  window.addEventListener("orientationchange", () => setTimeout(updateSafe, 300));
+  document.addEventListener("visibilitychange", () => setTimeout(updateSafe, 100));
+  for (const ms of [300, 1000, 2500]) setTimeout(updateSafe, ms);
   window.__glydrift = game;
   window.__music = Music; // handy for debugging / the music test page
 }

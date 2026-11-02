@@ -1,6 +1,7 @@
 // Pixel-art background for the Backdrop scene (no post-FX, never competes with hazards):
 //   soft sky → far silhouettes → hanging layer → mid silhouettes → near cave teeth → weather
 // One reusable layer set per biome; switching biomes crossfades the sets (a smooth morph).
+import Phaser from "phaser";
 import { heartbeat } from "../biomes/Background.js";
 import { VIEW } from "../config.js";
 import { S } from "./px.js";
@@ -59,12 +60,26 @@ export class PixelBackground {
       return ts;
     };
     const layers = [
+      layer(t.distant, H * 0.66, 1, -97, 0.035),
       layer(t.far, H * 0.72, 1, -95, 0.06),
       layer(t.roots, -4, 0, -93, 0.1),
       layer(t.mid, H + 4, 1, -90, 0.16),
       layer(t.nearTop, -4, 0, -85, 0.3),
       layer(t.nearBot, H + 4, 1, -85, 0.3),
     ];
+    // soft glow spots drifting in the open middle (whole-pixel scales keep them crisp)
+    const glows = [];
+    for (let i = 0; i < (this.lowGfx ? 3 : 5); i++) {
+      const gl = scene.add
+        .image((i + Math.random() * 0.6) * (W / 4.5), H * (0.22 + Math.random() * 0.5), t.glowspot)
+        .setDepth(-96)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setScale(k * (Math.random() < 0.5 ? 2 : 3));
+      gl.phase = Math.random() * 10;
+      gl.base = 0.16 + Math.random() * 0.12;
+      glows.push(gl);
+      objs.push(gl);
+    }
     // weather particles (pooled)
     const w = t.weather;
     const n = Math.round((this.lowGfx ? 0.4 : 1) * w.rate);
@@ -91,7 +106,7 @@ export class PixelBackground {
       motes.push(m);
       objs.push(m);
     }
-    return { id, objs, sky, layers, parts, motes, kind: w.kind, alpha: 0 };
+    return { id, objs, sky, layers, glows, parts, motes, kind: w.kind, alpha: 0 };
   }
 
   resetPart(d, kind, initial) {
@@ -153,6 +168,15 @@ export class PixelBackground {
       const lift = set.id === this.current ? 0 : -40;
       set.sky.setDepth(-100 + lift).setAlpha(set.alpha);
       for (const d of set.parts) d.setDepth(-70 + lift);
+      for (const gl of set.glows) {
+        gl.setDepth(-96 + lift);
+        gl.x -= scroll * dt * 0.03;
+        if (gl.x < -gl.displayWidth / 2) {
+          gl.x = W + gl.displayWidth / 2;
+          gl.y = H * (0.22 + Math.random() * 0.5);
+        }
+        gl.setAlpha(set.alpha * gl.base * (0.75 + 0.25 * Math.sin(this.time * 0.8 + gl.phase)));
+      }
       for (const m of set.motes) m.setDepth(-72 + lift);
       for (const l of set.layers) {
         l.tilePositionX += (scroll * dt * l.speed) / this.k;

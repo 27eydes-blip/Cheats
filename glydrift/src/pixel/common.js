@@ -313,6 +313,13 @@ function nova(frame) {
   return pc;
 }
 
+/** Thin white rim around a hero sprite so the player is always the brightest, clearest shape. */
+function rim(pc) {
+  const out = new PixelCanvas(pc.w + 2, pc.h + 2);
+  out.blit(pc, 1, 1);
+  return out.outline(0xffffff, 1, false);
+}
+
 // ------------------------------------------------------------------ coins (gold, 10x12, 4 spin frames)
 function coin(frame) {
   const pc = new PixelCanvas(10, 12);
@@ -387,14 +394,9 @@ function circleTex(n, r) {
 
 export function buildCommon(scene) {
   const frames = {};
-  for (let f = 0; f < 3; f++) {
-    frames[`volt_${f}`] = volt(f);
-    frames[`ember_${f}`] = ember(f);
-    frames[`frost_${f}`] = frost(f);
-    frames[`shade_${f}`] = shade(f);
-    frames[`glitch_${f}`] = glitch(f);
-    frames[`nova_${f}`] = nova(f);
-  }
+  const heroes = { volt, ember, frost, shade, glitch, nova };
+  for (let f = 0; f < 3; f++)
+    for (const [id, draw] of Object.entries(heroes)) frames[`${id}_${f}`] = rim(draw(f));
   for (let f = 0; f < 4; f++) frames[`coin_${f}`] = coin(f);
   for (const m of ["flip", "restore", "mini"])
     for (let f = 0; f < 4; f++) frames[`portal_${m}_${f}`] = portal(m, f);

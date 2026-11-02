@@ -94,6 +94,26 @@ export class HudScene extends Phaser.Scene {
     this.banner.add([this.bannerSub, this.bannerText, this.bannerLine]);
 
     this.comboText = neonText(this, W / 2, top + 200, "", 28, 0xffffff, { blur: 12 }).setAlpha(0);
+    // keep the HUD below the notch / Dynamic Island if the safe-area inset arrives late
+    const topElems = [
+      this.scoreText,
+      this.bestText,
+      this.modeText,
+      this.coinIcon,
+      this.coinText,
+      this.pauseBtn,
+      this.statusText,
+      this.comboText,
+    ];
+    const onSafe = (_p, value) => {
+      const nt = (value || 0) + 24;
+      const d = nt - this.top;
+      if (!d) return;
+      this.top = nt;
+      for (const o of topElems) if (o) o.y += d;
+    };
+    this.registry.events.on("changedata-safeTop", onSafe);
+    this.events.once("shutdown", () => this.registry.events.off("changedata-safeTop", onSafe));
 
     this.pauseLayer = null;
     this.ready = true;

@@ -1,6 +1,7 @@
 // Pixel-art obstacles. Collision maths is identical to the neon versions (gameplay unchanged);
 // only the visuals differ: solid outlined tile blocks, bright spikes, pixel sprites.
 import Phaser from "phaser";
+import { PILLAR_W } from "../pixel/biomeArt.js";
 import { S } from "../pixel/px.js";
 import { circleClear, rectClear, segClear } from "./geometry.js";
 import { Crusher } from "./types.js";
@@ -8,6 +9,7 @@ import { Crusher } from "./types.js";
 const TAU = Math.PI * 2;
 const OFF = 600;
 const CAP_H = 12 * S; // spiked cap height (art 12px)
+const GLOW = 14; // laser glow width (art px)
 
 class PxObstacle {
   constructor(mgr) {
@@ -141,17 +143,17 @@ export class Gate extends PxObstacle {
   constructor(mgr) {
     super(mgr);
     this.type = "gate";
-    this.w = 64;
+    this.w = PILLAR_W * S; // thick pillars (art px × S)
     const len = Math.ceil((mgr.H + OFF * 2) / (16 * S)) * 16 * S;
     this.topBody = this.add(
       this.scene.add
-        .tileSprite(0, 0, 16 * S, len, "void_pillar_0")
+        .tileSprite(0, 0, PILLAR_W * S, len, "void_pillar_0")
         .setOrigin(0.5, 1)
         .setDepth(1),
     );
     this.botBody = this.add(
       this.scene.add
-        .tileSprite(0, 0, 16 * S, len, "void_pillar_0")
+        .tileSprite(0, 0, PILLAR_W * S, len, "void_pillar_0")
         .setOrigin(0.5, 0)
         .setDepth(1),
     );
@@ -211,6 +213,20 @@ export class Laser extends PxObstacle {
   constructor(mgr) {
     super(mgr);
     this.type = "laser";
+    // additive stepped glow under the hot core so the beam reads as energy, not a platform
+    const ADD = Phaser.BlendModes.ADD;
+    this.glowA = this.add(
+      this.scene.add
+        .tileSprite(0, 0, GLOW * S, 100, "void_glow_v")
+        .setDepth(1.9)
+        .setBlendMode(ADD),
+    );
+    this.glowB = this.add(
+      this.scene.add
+        .tileSprite(0, 0, GLOW * S, 100, "void_glow_v")
+        .setDepth(1.9)
+        .setBlendMode(ADD),
+    );
     this.beamA = this.add(this.scene.add.tileSprite(0, 0, 4 * S, 100, "void_beam_v").setDepth(2));
     this.beamB = this.add(this.scene.add.tileSprite(0, 0, 4 * S, 100, "void_beam_v").setDepth(2));
     this.emA = this.add(this.scene.add.image(0, 0, "void", "emitter").setDepth(3));
@@ -242,8 +258,25 @@ export class Laser extends PxObstacle {
         .setSize(4 * S, hB)
         .setDisplaySize(4 * S, hB);
       this.beamB.setVisible(true);
+      this.glowA
+        .setTexture(t.glowV)
+        .setOrigin(0.5, 1)
+        .setSize(GLOW * S, hA)
+        .setDisplaySize(GLOW * S, hA);
+      this.glowB
+        .setTexture(t.glowV)
+        .setOrigin(0.5, 0)
+        .setSize(GLOW * S, hB)
+        .setDisplaySize(GLOW * S, hB);
+      this.glowB.setVisible(true);
     } else {
       const w = span - 40;
+      this.glowA
+        .setTexture(t.glowH)
+        .setOrigin(0.5, 0.5)
+        .setSize(w, GLOW * S)
+        .setDisplaySize(w, GLOW * S);
+      this.glowB.setVisible(false);
       this.beamA
         .setTexture(t.beamH)
         .setOrigin(0.5, 0.5)
@@ -268,6 +301,53 @@ export class Laser extends PxObstacle {
         : 0;
     this.beamA.setAlpha(a);
     this.beamB.setAlpha(a);
+    // glow breathes fast and stutters (live current); a faint pre-flash while charging
+    const g = this.isOn
+      ? (0.38 + 0.2 * Math.sin(clock * 38 + this.phase * 9)) * (Math.random() < 0.15 ? 0.3 : 1)
+      : this.charging
+        ? Math.random() < 0.5
+          ? 0.3
+          : 0
+        : 0;
+    this.glowA.setAlpha(g);
+    this.glowB.setAlpha(g);
+    if (this.isOn) {
+      this.glowA.tilePositionY -= dt * 120;
+      this.glowB.tilePositionY += dt * 120;
+      this.glowA.tilePositionX -= dt * 120;
+      // crackling pixel lightning along the beam: unmistakably live current
+      this.arcT = (this.arcT ?? 0) - dt;
+      if (this.arcT <= 0 && this.x < this.mgr.rightEdge && this.mgr.fx) {
+        this.arcT = 0.12 + Math.random() * 0.16;
+        const col = this.theme.hazard;
+        if (this.orient === "v") {
+          const top = Math.random() < 0.5;
+          const y0 = top ? this.yt - 20 - Math.random() * 300 : this.yb + 20 + Math.random() * 300;
+          const y1 = y0 + (top ? -1 : 1) * (60 + Math.random() * 80);
+          this.mgr.fx.lightningBetween(this.x, y0, this.x, y1, col, 0.1);
+        } else {
+          const x0 = this.xa + 20 + Math.random() * (this.xb - this.xa - 120);
+          this.mgr.fx.lightningBetween(x0, this.y, x0 + 60 + Math.random() * 60, this.y, col, 0.1);
+        }
+      }
+      // sparks spit off the beam
+      this.sparkT = (this.sparkT ?? 0) - dt;
+      if (this.sparkT <= 0 && this.x < this.mgr.rightEdge && this.mgr.fx) {
+        this.sparkT = 0.09 + Math.random() * 0.12;
+        const v = this.orient === "v";
+        const along = Math.random();
+        const sx = v ? this.x : this.xa + (this.xb - this.xa) * along;
+        const sy = v
+          ? along < 0.5
+            ? this.yt - 20 - Math.random() * 260
+            : this.yb + 20 + Math.random() * 260
+          : this.y;
+        this.mgr.fx.burst("pixel", sx, sy, 2, this.theme.spark, {
+          angle: v ? { min: -30, max: 30 } : { min: 240, max: 300 },
+          speed: { min: 80, max: 220 },
+        });
+      }
+    }
     // beam texture crawls so the energy reads as "live"
     if (this.isOn) {
       this.beamA.tilePositionY -= dt * 240;
@@ -277,6 +357,8 @@ export class Laser extends PxObstacle {
     if (this.orient === "v") {
       this.beamA.setPosition(this.x, this.yt - 20);
       this.beamB.setPosition(this.x, this.yb + 20);
+      this.glowA.setPosition(this.x, this.yt - 20);
+      this.glowB.setPosition(this.x, this.yb + 20);
       this.emA.setPosition(this.x, this.yt);
       this.emB.setPosition(this.x, this.yb);
     } else {
@@ -284,6 +366,7 @@ export class Laser extends PxObstacle {
       this.xa = this.x - this.span / 2;
       this.xb = this.x + this.span / 2;
       this.beamA.setPosition(this.x, this.y);
+      this.glowA.setPosition(this.x, this.y);
       this.emA.setPosition(this.xa, this.y);
       this.emB.setPosition(this.xb, this.y);
     }

@@ -156,9 +156,16 @@ export class ObstacleManager {
         const amp = r.chance(0.7) ? r.range(60, 120 + d * 90) : 0;
         const gc = r.range(safeTop + gap / 2 + amp - 40, safeBot - gap / 2 - amp + 40);
         const o = this.obtain("gate");
-        o.spawn(x + 32, { gc, gap, amp, freq: r.range(1, 1.6 + d * 0.8), phase: r.range(0, 6.28) });
-        if (amp < 70) this.coinLine(x - 10, x + 74, gc, 2);
-        width = 64;
+        const gw = o.w;
+        o.spawn(x + gw / 2, {
+          gc,
+          gap,
+          amp,
+          freq: r.range(1, 1.6 + d * 0.8),
+          phase: r.range(0, 6.28),
+        });
+        if (amp < 70) this.coinLine(x - 10, x + gw + 10, gc, 2);
+        width = gw;
         break;
       }
       case "crusher": {
