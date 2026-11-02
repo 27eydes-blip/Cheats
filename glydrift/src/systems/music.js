@@ -187,11 +187,10 @@ class Track {
     if (this.disposed) return;
     try {
       this.tickInner(time);
-    } catch (err) {
-      if (!this.warned) {
-        this.warned = true;
-        console.warn("music tick skipped:", err?.message);
-      }
+    } catch {
+      // a scheduling clash after a main-thread stall: skip this 16th silently (counted for
+      // the ?music test page) instead of warning in the console
+      this.engine.skipped = (this.engine.skipped || 0) + 1;
     }
   }
 
@@ -583,6 +582,7 @@ class MusicEngine {
       bpm: this.ready ? Math.round(Tone.getTransport().bpm.value) : 0,
       unlocked: this.unlocked,
       running: !!c,
+      skipped: this.skipped || 0,
     };
   }
 }
