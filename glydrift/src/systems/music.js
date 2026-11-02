@@ -130,7 +130,8 @@ class Track {
         envelope: { attack: 0.004, decay: 0.26, sustain: 0, release: 0.22 },
       }),
     ).connect(this.chordF);
-    this.chords.maxPolyphony = 16;
+    // stutters retrigger 4-5 note chords with release tails: 16 voices dropped notes
+    this.chords.maxPolyphony = 32;
     this.chords.volume.value = d.chordWave === "sawtooth" || d.chordWave === "square" ? -21 : -15;
     if (d.pad) {
       this.pad = keep(
@@ -139,7 +140,7 @@ class Track {
           envelope: { attack: 1.1, decay: 0.6, sustain: 0.7, release: 1.8 },
         }),
       ).connect(this.synthBus);
-      this.pad.maxPolyphony = 16;
+      this.pad.maxPolyphony = 24;
       this.pad.volume.value = d.pad.vol;
     }
     this.lead = keep(
