@@ -3,14 +3,16 @@
 import Phaser from "phaser";
 import { COIN_COLOR, hazardColors, NEAR_MISS } from "../config.js";
 import { HI } from "../gfx/textures.js";
+import { themeFor } from "../pixel/themes.js";
 import { RNG } from "../systems/rng.js";
-import { TYPES } from "./types.js";
+import { TYPES } from "./pixelTypes.js";
 
 const ADD = Phaser.BlendModes.ADD;
 
 export class ObstacleManager {
   constructor(scene, fx, { W, H, lowGfx, heroColor = 0x38f6ff }) {
     this.colors = hazardColors(heroColor);
+    this.theme = themeFor("void");
     this.scene = scene;
     this.fx = fx;
     this.W = W;
@@ -50,20 +52,12 @@ export class ObstacleManager {
   coin(x, y) {
     let c = this.coins.find((o) => !o.active);
     if (!c) {
-      c = this.scene.add.image(0, 0, "coin").setDepth(6);
-      c.halo = this.scene.add
-        .image(0, 0, "glow")
-        .setDepth(5)
-        .setBlendMode(Phaser.BlendModes.NORMAL)
-        .setTint(COIN_COLOR)
-        .setScale(0.8)
-        .setAlpha(0.5);
+      c = this.scene.add.image(0, 0, "pxc", "coin_0").setDepth(6);
+      // pixel coins carry no soft halo; keep a hidden stub so the update code stays simple
+      c.halo = { setVisible() {}, setPosition() {} };
       this.coins.push(c);
     }
-    c.setActive(true)
-      .setVisible(true)
-      .setPosition(x, y)
-      .setScale(1 / HI);
+    c.setActive(true).setVisible(true).setPosition(x, y).setScale(1);
     c.halo.setVisible(true);
     c.baseY = y;
     c.phase = Math.random() * 6;
@@ -77,6 +71,7 @@ export class ObstacleManager {
 
   // ------------------------------------------------------------------ pattern generation
   spawnPattern(meters, biomeId) {
+    this.theme = themeFor(biomeId);
     const r = this.rng;
     const H = this.H;
     const d = Math.min(1, meters / 2600);
@@ -346,7 +341,7 @@ export class ObstacleManager {
         }
       }
       c.y = c.baseY + Math.sin(t) * 5;
-      c.scaleX = Math.cos(t * 0.7) / HI;
+      c.setFrame(`coin_${Math.floor(t * 2.2) % 4}`);
       c.halo.setPosition(c.x, c.y);
       if (c.x < this.leftEdge - 40) {
         c.setActive(false).setVisible(false);

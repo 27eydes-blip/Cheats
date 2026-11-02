@@ -10,9 +10,27 @@ export const GAME_W = 720;
  */
 export const VIEW = { W: GAME_W, H: 1280, Z: 1, PW: 720, PH: 1280 };
 
+/**
+ * The real drawable size. In an iPhone home-screen app the layout viewport can exclude the
+ * home-indicator strip, which left a black bar at the bottom: use the full screen there.
+ */
+export function viewportSize() {
+  let w = window.innerWidth || 390;
+  let h = Math.max(window.innerHeight || 844, document.documentElement?.clientHeight || 0);
+  const standalone =
+    window.navigator.standalone === true ||
+    window.matchMedia?.("(display-mode: standalone)").matches;
+  if (standalone && window.screen?.height && h >= w) {
+    w = Math.min(screen.width, screen.height);
+    h = Math.max(screen.width, screen.height);
+  }
+  return { w, h };
+}
+
 export function setupView(lowGfx = false) {
   VIEW.H = computeGameHeight();
-  const cssW = Math.min(window.innerWidth || 390, ((window.innerHeight || 844) * GAME_W) / VIEW.H);
+  const vp = viewportSize();
+  const cssW = Math.min(vp.w, (vp.h * GAME_W) / VIEW.H);
   const dpr = Math.min(window.devicePixelRatio || 1, lowGfx ? 2 : 3);
   VIEW.Z = Math.max(0.5, (cssW * dpr) / GAME_W);
   VIEW.PW = Math.round(GAME_W * VIEW.Z);
@@ -68,8 +86,7 @@ export const COIN_COLOR = 0xffc83d;
 
 /** Height is derived from the device aspect so tall phones get more sky, not letterboxing. */
 export function computeGameHeight() {
-  const w = window.innerWidth || 390;
-  const h = window.innerHeight || 844;
+  const { w, h } = viewportSize();
   let aspect = h / w;
   if (aspect < 1.3) aspect = 16 / 9; // desktop / landscape: show a classic portrait frame
   aspect = Math.min(Math.max(aspect, 1.5), 2.25);
@@ -134,3 +151,6 @@ export const SUPABASE = {
   url: "https://cdjcvhywrbsdryagqxqg.supabase.co",
   publishableKey: "sb_publishable_zZB05fEYY1eYhhmnzSuodg_QqpXF-dO",
 };
+
+/** Full-screen post-processing (bloom/aberration). Off for the pixel-art style: crisp + 60 fps. */
+export const POST_FX = false;

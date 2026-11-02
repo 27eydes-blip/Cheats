@@ -1,0 +1,260 @@
+// Pixel-art toolkit. Art is authored at 1 "art pixel" = 1 cell, then written to textures
+// pre-scaled by S (each art pixel becomes an S×S block) with NEAREST filtering. Game code keeps
+// working in its usual logical units: 1 art pixel = S logical units on screen.
+import Phaser from "phaser";
+
+/** Logical units per art pixel (textures are pre-scaled by this). */
+export const S = 4;
+
+export function seeded(seed) {
+  let s = seed >>> 0 || 1;
+  return () => {
+    s = (s * 16807) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+export const rgb = (c) => [(c >> 16) & 255, (c >> 8) & 255, c & 255];
+export function shade(c, k) {
+  // k > 0 lightens toward white, k < 0 darkens toward black
+  const [r, g, b] = rgb(c);
+  const f = (v) => Math.round(k >= 0 ? v + (255 - v) * k : v * (1 + k));
+  return (f(r) << 16) | (f(g) << 8) | f(b);
+}
+export function mix(a, b, t) {
+  const A = rgb(a);
+  const B = rgb(b);
+  return (
+    (Math.round(A[0] + (B[0] - A[0]) * t) << 16) |
+    (Math.round(A[1] + (B[1] - A[1]) * t) << 8) |
+    Math.round(A[2] + (B[2] - A[2]) * t)
+  );
+}
+
+/** A tiny indexed canvas: each cell is a 0xRRGGBB color or null (transparent). */
+export class PixelCanvas {
+  constructor(w, h) {
+    this.w = w;
+    this.h = h;
+    this.d = new Array(w * h).fill(null);
+  }
+  in(x, y) {
+    return x >= 0 && y >= 0 && x < this.w && y < this.h;
+  }
+  get(x, y) {
+    return this.in(x, y) ? this.d[y * this.w + x] : null;
+  }
+  set(x, y, c) {
+    x = Math.round(x);
+    y = Math.round(y);
+    if (this.in(x, y)) this.d[y * this.w + x] = c;
+    return this;
+  }
+  rect(x, y, w, h, c) {
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) this.set(x + i, y + j, c);
+    return this;
+  }
+  hline(x0, x1, y, c) {
+    for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) this.set(x, y, c);
+    return this;
+  }
+  vline(x, y0, y1, c) {
+    for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) this.set(x, y, c);
+    return this;
+  }
+  line(x0, y0, x1, y1, c) {
+    x0 = Math.round(x0);
+    y0 = Math.round(y0);
+    x1 = Math.round(x1);
+    y1 = Math.round(y1);
+    const dx = Math.abs(x1 - x0);
+    const dy = -Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy;
+    for (;;) {
+      this.set(x0, y0, c);
+      if (x0 === x1 && y0 === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) {
+        err += dy;
+        x0 += sx;
+      }
+      if (e2 <= dx) {
+        err += dx;
+        y0 += sy;
+      }
+    }
+    return this;
+  }
+  circle(cx, cy, r, c) {
+    for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++)
+      for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++)
+        if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r + r * 0.6) this.set(x, y, c);
+    return this;
+  }
+  ellipse(cx, cy, rx, ry, c) {
+    for (let y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++)
+      for (let x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++)
+        if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1.05) this.set(x, y, c);
+    return this;
+  }
+  /** Filled polygon (pixel centres inside). pts = [[x,y],...] */
+  poly(pts, c) {
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    for (let y = Math.floor(Math.min(...ys)); y <= Math.ceil(Math.max(...ys)); y++)
+      for (let x = Math.floor(Math.min(...xs)); x <= Math.ceil(Math.max(...xs)); x++) {
+        const px = x + 0.5;
+        const py = y + 0.5;
+        let inside = false;
+        for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+          const [xi, yi] = pts[i];
+          const [xj, yj] = pts[j];
+          if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi)
+            inside = !inside;
+        }
+        if (inside) this.set(x, y, c);
+      }
+    return this;
+  }
+  /** String-art: rows of chars mapped through a palette ('.'/' ' = empty). */
+  stamp(x, y, rows, pal) {
+    rows.forEach((row, j) => {
+      [...row].forEach((ch, i) => {
+        if (ch === "." || ch === " ") return;
+        const c = pal[ch];
+        if (c !== undefined) this.set(x + i, y + j, c);
+      });
+    });
+    return this;
+  }
+  /** Light from top-left: lighten exposed top/left pixels, darken exposed bottom/right. */
+  autoShade(hl = 0.25, sh = -0.35) {
+    const src = this.d.slice();
+    const g = (x, y) => (x >= 0 && y >= 0 && x < this.w && y < this.h ? src[y * this.w + x] : null);
+    for (let y = 0; y < this.h; y++)
+      for (let x = 0; x < this.w; x++) {
+        const c = g(x, y);
+        if (c === null) continue;
+        if (g(x, y - 1) === null || g(x - 1, y) === null) this.d[y * this.w + x] = shade(c, hl);
+        else if (g(x, y + 1) === null || g(x + 1, y) === null)
+          this.d[y * this.w + x] = shade(c, sh);
+      }
+    return this;
+  }
+  /** Dark outline around every opaque shape (thickness in art px, grows outward). */
+  outline(c, thickness = 1, diagonal = false) {
+    for (let t = 0; t < thickness; t++) {
+      const src = this.d.slice();
+      const g = (x, y) =>
+        x >= 0 && y >= 0 && x < this.w && y < this.h ? src[y * this.w + x] : null;
+      for (let y = 0; y < this.h; y++)
+        for (let x = 0; x < this.w; x++) {
+          if (g(x, y) !== null) continue;
+          const n =
+            g(x - 1, y) !== null ||
+            g(x + 1, y) !== null ||
+            g(x, y - 1) !== null ||
+            g(x, y + 1) !== null ||
+            (diagonal &&
+              (g(x - 1, y - 1) !== null ||
+                g(x + 1, y - 1) !== null ||
+                g(x - 1, y + 1) !== null ||
+                g(x + 1, y + 1) !== null));
+          if (n) this.d[y * this.w + x] = c;
+        }
+    }
+    return this;
+  }
+  flipY() {
+    const out = new PixelCanvas(this.w, this.h);
+    for (let y = 0; y < this.h; y++)
+      for (let x = 0; x < this.w; x++)
+        out.d[(this.h - 1 - y) * this.w + x] = this.d[y * this.w + x];
+    return out;
+  }
+  flipX() {
+    const out = new PixelCanvas(this.w, this.h);
+    for (let y = 0; y < this.h; y++)
+      for (let x = 0; x < this.w; x++)
+        out.d[y * this.w + (this.w - 1 - x)] = this.d[y * this.w + x];
+    return out;
+  }
+  /** Draw another PixelCanvas into this one. */
+  blit(pc, ox, oy) {
+    for (let y = 0; y < pc.h; y++)
+      for (let x = 0; x < pc.w; x++) {
+        const c = pc.d[y * pc.w + x];
+        if (c !== null) this.set(ox + x, oy + y, c);
+      }
+    return this;
+  }
+  /** HTML canvas pre-scaled by `scale` (crisp blocks). */
+  toCanvas(scale = S) {
+    const cv = document.createElement("canvas");
+    cv.width = this.w * scale;
+    cv.height = this.h * scale;
+    const ctx = cv.getContext("2d");
+    for (let y = 0; y < this.h; y++)
+      for (let x = 0; x < this.w; x++) {
+        const c = this.d[y * this.w + x];
+        if (c === null) continue;
+        ctx.fillStyle = `#${c.toString(16).padStart(6, "0")}`;
+        ctx.fillRect(x * scale, y * scale, scale, scale);
+      }
+    return cv;
+  }
+}
+
+/** Register a PixelCanvas as a standalone (tileable) NEAREST texture. */
+export function addTexture(scene, key, pc, scale = S) {
+  if (scene.textures.exists(key)) scene.textures.remove(key);
+  const tex = scene.textures.addCanvas(key, pc.toCanvas(scale));
+  tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
+  return tex;
+}
+
+/**
+ * Packs many PixelCanvas frames into one atlas texture (one draw-call-friendly texture per
+ * biome). `frames` = { name: PixelCanvas }.
+ */
+export function addAtlas(scene, key, frames, scale = S) {
+  const entries = Object.entries(frames);
+  const maxW = 2048;
+  let x = 0;
+  let y = 0;
+  let rowH = 0;
+  const place = [];
+  for (const [name, pc] of entries) {
+    const w = pc.w * scale + 2;
+    const h = pc.h * scale + 2;
+    if (x + w > maxW) {
+      x = 0;
+      y += rowH;
+      rowH = 0;
+    }
+    place.push({ name, pc, x, y });
+    x += w;
+    rowH = Math.max(rowH, h);
+  }
+  const cv = document.createElement("canvas");
+  cv.width = maxW;
+  cv.height = y + rowH;
+  const ctx = cv.getContext("2d");
+  for (const p of place) ctx.drawImage(p.pc.toCanvas(scale), p.x, p.y);
+  if (scene.textures.exists(key)) scene.textures.remove(key);
+  const tex = scene.textures.addCanvas(key, cv);
+  for (const p of place) tex.add(p.name, 0, p.x, p.y, p.pc.w * scale, p.pc.h * scale);
+  tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
+  return tex;
+}
+
+/**
+ * Camera zoom (physical px per logical unit) closest to `wanted` that keeps every art pixel
+ * an exact whole number of screen pixels.
+ */
+export function pixelPerfectZoom(Z, wanted) {
+  const n = Math.max(1, Math.round(S * Z * wanted));
+  return n / S;
+}

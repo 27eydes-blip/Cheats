@@ -44,7 +44,8 @@ async function boot() {
     width: VIEW.PW,
     height: VIEW.PH,
     backgroundColor: "#020107",
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    // ENVELOP: always covers the whole screen (any rounding mismatch is cropped, never barred)
+    scale: { mode: Phaser.Scale.ENVELOP, autoCenter: Phaser.Scale.CENTER_BOTH },
     fps: { target: 60, limit: 60, smoothStep: true },
     render: { antialias: true, powerPreference: "high-performance", roundPixels: false },
     input: { activePointers: 2 },
@@ -66,12 +67,19 @@ async function boot() {
     ],
   });
 
-  // safe-area (notch) offset converted into logical game units
+  // safe areas (notch / home indicator) converted into logical game units, including any
+  // part of the canvas cropped off-screen by ENVELOP scaling
   const updateSafe = () => {
     const probe = document.getElementById("safe-probe");
-    const inset = probe ? probe.getBoundingClientRect().height : 0;
-    const canvasH = game.canvas?.getBoundingClientRect().height || window.innerHeight;
-    game.registry.set("safeTop", Math.round((inset * VIEW.H) / canvasH));
+    const cs = probe ? getComputedStyle(probe) : null;
+    const insetTop = probe ? probe.getBoundingClientRect().height : 0;
+    const insetBottom = cs ? Number.parseFloat(cs.paddingBottom) || 0 : 0;
+    const rect = game.canvas?.getBoundingClientRect();
+    const canvasH = rect?.height || window.innerHeight;
+    const cropTop = Math.max(0, -(rect?.top ?? 0));
+    const cropBottom = Math.max(0, (rect?.bottom ?? canvasH) - window.innerHeight);
+    game.registry.set("safeTop", Math.round(((insetTop + cropTop) * VIEW.H) / canvasH));
+    game.registry.set("safeBottom", Math.round(((insetBottom + cropBottom) * VIEW.H) / canvasH));
   };
   game.events.once("ready", () => {
     updateSafe();

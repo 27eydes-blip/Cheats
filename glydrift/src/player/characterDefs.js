@@ -9,6 +9,12 @@ export const CHARACTERS = [
     color: 0x38f6ff,
     color2: 0xffffff,
     texture: "char_volt_1",
+    // pixel-art sprite (atlas + idle/flap frames) used in play
+    pixel: {
+      atlas: "pxc",
+      frames: ["volt_0", "volt_1", "volt_2"],
+      trail: [0xffffff, 0x8fe4ff, 0x2aa8ff, 0x1670d0],
+    },
     scale: 0.62,
     cost: 0,
     desc: "Lightning trail. Crackles on every flap.",

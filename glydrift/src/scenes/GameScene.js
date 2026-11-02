@@ -2,18 +2,12 @@
 // UI lives in the parallel Hud scene so the camera zoom / post-FX never touch it.
 import Phaser from "phaser";
 import { biomeStateAt, blendPalette, lerpColor } from "../biomes/biomes.js";
-import {
-  fitCamera,
-  hazardColors,
-  NEAR_MISS,
-  PHYSICS,
-  speedForMeters,
-  VIEW,
-  WORLD,
-} from "../config.js";
+import { fitCamera, NEAR_MISS, PHYSICS, POST_FX, speedForMeters, VIEW, WORLD } from "../config.js";
 import { Effects } from "../effects/Effects.js";
-import { glowStroke } from "../obstacles/neon.js";
 import { ObstacleManager } from "../obstacles/ObstacleManager.js";
+import { pixelPerfectZoom } from "../pixel/px.js";
+import { Terrain } from "../pixel/Terrain.js";
+import { themeFor } from "../pixel/themes.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Player } from "../player/Player.js";
@@ -69,7 +63,7 @@ export class GameScene extends Phaser.Scene {
 
     // post FX
     this.post = null;
-    if (!this.lowGfx && this.renderer.type === Phaser.WEBGL) {
+    if (POST_FX && !this.lowGfx && this.renderer.type === Phaser.WEBGL) {
       this.cameras.main.setPostPipeline("GlyPostFX");
       this.post = this.cameras.main.getPostPipeline("GlyPostFX");
       if (Array.isArray(this.post)) this.post = this.post[0];
@@ -88,19 +82,12 @@ export class GameScene extends Phaser.Scene {
       if (Math.abs(o.x - this.player.x) < 260) this.cameras.main.shake(90, 0.004);
     };
 
-    // playfield edges: thin danger-coloured plasma barriers (they kill, so they look like hazards)
-    const edgeCol = hazardColors(this.charDef.color).laser;
-    this.edgeTop = this.add.graphics().setDepth(8);
-    this.edgeBot = this.add.graphics().setDepth(8);
-    glowStroke(this.edgeTop, edgeCol, 3, (g) => g.lineBetween(-W, 0, W * 2, 0));
-    glowStroke(this.edgeBot, edgeCol, 3, (g) => g.lineBetween(-W, 0, W * 2, 0));
-    this.edgeBot.y = H;
-
-    // player light that illuminates the background & nearby obstacles
-    this.playerLight = this.add
-      .image(0, 0, "glow")
-      .setBlendMode(Phaser.BlendModes.NORMAL)
-      .setDepth(-6);
+    // pixel-art terrain walls along both screen edges (spiked surface = the existing kill line)
+    this.terrain = new Terrain(this, themeFor("void"), { W, H });
+    // camera zoom chosen so every art pixel is a whole number of screen pixels
+    this.pxZoomLevel = pixelPerfectZoom(VIEW.Z, WORLD.baseZoom) / VIEW.Z;
+    this.cameras.main.roundPixels = true;
+    this.terrain.setView(this.pxZoomLevel);
 
     this.pal = {};
     this.fromPal = null;
@@ -174,8 +161,8 @@ export class GameScene extends Phaser.Scene {
     this.obstacles.reset(seed);
     this.fx.clear();
     this.player.reset();
-    this.zoomLevel = WORLD.baseZoom;
-    this.cameras.main.setZoom(VIEW.Z * WORLD.baseZoom);
+    this.zoomLevel = this.pxZoomLevel;
+    this.cameras.main.setZoom(VIEW.Z * this.pxZoomLevel);
     this.setupGhost();
     this.hudReady?.onReset?.();
     Music.play(BIOME_TRACKS[0], { startBar: 8 });
@@ -388,12 +375,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     // camera zoom-out with speed (+ punch-in on near-miss)
-    this.fxState.zoomPunch *= Math.exp(-rawDt * 6);
-    const zoomTarget =
-      Phaser.Math.Linear(WORLD.baseZoom, WORLD.minZoom, speedNorm) + this.fxState.zoomPunch;
+    // fixed pixel-perfect zoom (a drifting zoom would make the pixel grid shimmer)
     const cam = this.cameras.main;
-    this.zoomLevel =
-      (this.zoomLevel ?? 1) + (zoomTarget - (this.zoomLevel ?? 1)) * Math.min(1, rawDt * 3);
+    this.zoomLevel = this.pxZoomLevel;
     cam.setZoom(VIEW.Z * this.zoomLevel);
 
     // world: drive the shared backdrop (hazard x-ranges in screen space keep scenery out
@@ -476,20 +460,7 @@ export class GameScene extends Phaser.Scene {
       if (this.deathT > 0.85) this.finishRun();
     }
 
-    // edges + light
-    const nearTop = playing ? Phaser.Math.Clamp(1 - p.y / 160, 0, 1) : 0;
-    const nearBot = playing ? Phaser.Math.Clamp(1 - (this.H - p.y) / 160, 0, 1) : 0;
-    this.edgeTop.setAlpha(0.45 + nearTop * 0.55 + Math.sin(this.clock * 8) * 0.05);
-    this.edgeBot.setAlpha(0.45 + nearBot * 0.55 + Math.sin(this.clock * 8 + 1) * 0.05);
-    this.playerLight
-      .setPosition(p.x, p.y)
-      .setTint(this.charDef.color)
-      .setScale(6.5 * (0.6 + 0.4 * p.sizeMul))
-      .setAlpha(
-        p.alive
-          ? 0.13 + Math.sin(this.clock * 4) * 0.02
-          : Math.max(0, this.playerLight.alpha - rawDt),
-      );
+    this.terrain.update(dt, this.scroll);
 
     this.fx.update(rawDt);
     this.updatePost(rawDt, speedNorm);

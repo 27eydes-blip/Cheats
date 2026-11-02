@@ -2,7 +2,7 @@
 // perspective card carousel with rarity-glow borders, unlock by coins / shards / challenge.
 import Phaser from "phaser";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
-import { fitCamera, RARITY, VIEW } from "../config.js";
+import { fitCamera, POST_FX, RARITY, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
@@ -46,7 +46,7 @@ export class CharacterScene extends Phaser.Scene {
     const top = (this.registry.get("safeTop") || 0) + 20;
     this.top = top;
     this.cameras.main.fadeIn(250, 5, 1, 13);
-    if (!this.lowGfx && this.renderer.type === Phaser.WEBGL) {
+    if (POST_FX && !this.lowGfx && this.renderer.type === Phaser.WEBGL) {
       this.cameras.main.setPostPipeline("GlyPostFX");
       this.post = this.cameras.main.getPostPipeline("GlyPostFX");
       if (Array.isArray(this.post)) this.post = this.post[0];

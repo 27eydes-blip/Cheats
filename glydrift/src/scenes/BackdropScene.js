@@ -1,9 +1,9 @@
 // Persistent background scene shared by every screen. It renders before the active screen
 // and has no post-FX, so bloom only ever touches gameplay elements, never the background.
 import Phaser from "phaser";
-import { Background } from "../biomes/Background.js";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
 import { fitCamera } from "../config.js";
+import { PixelBackground } from "../pixel/PixelBackground.js";
 import { Save } from "../systems/save.js";
 
 export function backgroundStyle() {
@@ -20,7 +20,7 @@ export class BackdropScene extends Phaser.Scene {
   create() {
     fitCamera(this);
     this.cameras.main.setBackgroundColor(0x020107);
-    this.bg = new Background(this, { lowGfx: Save.data.settings.lowGfx, style: backgroundStyle() });
+    this.bg = new PixelBackground(this, { lowGfx: Save.data.settings.lowGfx });
     this.pal = blendPalette({ a: BIOMES[0], b: BIOMES[0], t: 0 }, {});
     this.state = { scroll: 120, speedNorm: 0, dim: 0, hazards: [] };
   }

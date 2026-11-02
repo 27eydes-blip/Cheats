@@ -95,7 +95,8 @@ export class LeaderboardScene extends Phaser.Scene {
 
     // list viewport
     this.listTop = top + 244;
-    this.listBottom = H - 150;
+    const sb = this.registry.get("safeBottom") || 0; // keep the pinned bar above the home indicator
+    this.listBottom = H - 150 - sb;
     this.list = this.add.container(0, this.listTop).setDepth(10);
     const maskG = this.make.graphics({ x: 0, y: 0 }, false);
     maskG.fillStyle(0xffffff).fillRect(0, this.listTop, W, this.listBottom - this.listTop);
@@ -103,8 +104,8 @@ export class LeaderboardScene extends Phaser.Scene {
 
     // pinned "you" bar
     this.youG = this.add.graphics().setDepth(40);
-    drawNeonRect(this.youG, 24, H - 132, W - 48, 104, 22, 0x3ef4ff, { fillAlpha: 0.95 });
-    this.you = this.add.container(0, H - 80).setDepth(41);
+    drawNeonRect(this.youG, 24, H - 132 - sb, W - 48, 104, 22, 0x3ef4ff, { fillAlpha: 0.95 });
+    this.you = this.add.container(0, H - 80 - sb).setDepth(41);
 
     // state overlay (loading / empty / error)
     this.stateBox = this.add.container(W / 2, (this.listTop + this.listBottom) / 2).setDepth(30);

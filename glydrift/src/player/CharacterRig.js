@@ -51,7 +51,8 @@ export class CharacterRig {
 
     this.trailG = scene.add.graphics().setDepth(depth - 2);
     this.trailG.setBlendMode(def.id === "shade" && !this.ghost ? NORMAL : ADD);
-    if (!this.ghost) {
+    this.px = def.pixel || null; // pixel-art sprite (no soft halo)
+    if (!this.ghost && !this.px) {
       this.halo = scene.add
         .image(this.x, this.y, "glow")
         .setBlendMode(Phaser.BlendModes.NORMAL)
@@ -59,7 +60,10 @@ export class CharacterRig {
         .setAlpha(0.55)
         .setDepth(depth - 1);
     }
-    this.sprite = scene.add.image(this.x, this.y, def.texture).setDepth(depth);
+    this.sprite = this.px
+      ? scene.add.image(this.x, this.y, this.px.atlas, this.px.frames[1]).setDepth(depth)
+      : scene.add.image(this.x, this.y, def.texture).setDepth(depth);
+    if (this.px) this.trailG.setBlendMode(NORMAL);
     if (this.ghost) this.sprite.setAlpha(0.3).setTint(0xd8e8ff);
 
     this.extras = [];
@@ -362,8 +366,23 @@ export class CharacterRig {
     }
 
     // sprite transform
-    const s = (def.scale * this.u) / HI;
     const sp = this.sprite;
+    if (this.px) {
+      // pixel sprite: frame from the same wing logic, crisp scale steps, tilt in 15° steps
+      const f = Number(String(texture).slice(-1)) || 0;
+      sp.setFrame(this.px.frames[Math.min(this.px.frames.length - 1, f)]);
+      const m = Math.max(0.5, Math.round(this.sizeMul * this.displayScale * 2) / 2);
+      const flip = this.gravityDir < 0 ? -1 : 1;
+      sp.setPosition(Math.round(this.x + this.offX), Math.round(this.y + this.offY));
+      sp.setAngle(Math.round(this.angle / 15) * 15);
+      sp.setScale(
+        m * (this.sx < 0.9 ? 0.875 : this.sx > 1.1 ? 1.125 : 1),
+        m * (this.sy > 1.1 ? 1.125 : this.sy < 0.9 ? 0.875 : 1) * flip,
+      );
+      this.drawTrail();
+      return;
+    }
+    const s = (def.scale * this.u) / HI;
     if (sp.texture.key !== texture) sp.setTexture(texture);
     sp.setPosition(this.x + this.offX, this.y + this.offY);
     sp.setAngle(this.angle + (def.id === "nova" ? 0 : extraAngle));
@@ -453,6 +472,26 @@ export class CharacterRig {
     g.clear();
     if (this.points.length < 2) return;
     const { def } = this;
+    if (this.px && !this.ghost) {
+      // stepped pixel trail: squares snapped to the art-pixel grid, shrinking + fading
+      const P = 4;
+      const cols = this.px.trail;
+      const n = this.points.length;
+      for (let i = 1; i < n; i += 2) {
+        const p = this.points[i];
+        const t = i / n;
+        const size = Math.max(1, Math.round((1 - t) * 4 * this.sizeMul)) * P;
+        const col = cols[Math.min(cols.length - 1, Math.floor(t * cols.length))];
+        g.fillStyle(col, t < 0.15 ? 1 : 0.95 - t * 0.8);
+        g.fillRect(
+          Math.round((p.x - size / 2) / P) * P,
+          Math.round((p.y - size / 2) / P) * P,
+          size,
+          size,
+        );
+      }
+      return;
+    }
     if (this.ghost) {
       this.ribbon(
         10,

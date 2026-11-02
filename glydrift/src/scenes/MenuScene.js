@@ -3,7 +3,7 @@
 import Phaser from "phaser";
 import { BG_STYLES } from "../biomes/Background.js";
 import { biomeStateAt, blendPalette } from "../biomes/biomes.js";
-import { COIN_COLOR, fitCamera, VIEW } from "../config.js";
+import { COIN_COLOR, fitCamera, POST_FX, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
@@ -59,7 +59,7 @@ export class MenuScene extends Phaser.Scene {
     const lowGfx = s.settings.lowGfx;
     const top = (this.registry.get("safeTop") || 0) + 20;
     this.top = top;
-    if (!lowGfx && this.renderer.type === Phaser.WEBGL) {
+    if (POST_FX && !lowGfx && this.renderer.type === Phaser.WEBGL) {
       this.cameras.main.setPostPipeline("GlyPostFX");
       this.post = this.cameras.main.getPostPipeline("GlyPostFX");
       if (Array.isArray(this.post)) this.post = this.post[0];
@@ -180,11 +180,19 @@ export class MenuScene extends Phaser.Scene {
     popIn(this, [play, this.daily, heroes, ranks, prog], 250);
     // "Add to Home Screen" — hidden once you're already playing from the home screen
     if (Install.available) {
-      const add = button(this, W / 2, Math.min(H - 60, by + 340), 360, 64, "ADD TO HOME SCREEN", {
-        color: 0x39ff88,
-        size: 15,
-        onClick: () => Install.prompt(),
-      }).setDepth(100);
+      const add = button(
+        this,
+        W / 2,
+        Math.min(H - (this.registry.get("safeBottom") || 0) - 50, by + 340),
+        360,
+        64,
+        "ADD TO HOME SCREEN",
+        {
+          color: 0x39ff88,
+          size: 15,
+          onClick: () => Install.prompt(),
+        },
+      ).setDepth(100);
       popIn(this, add, 450);
     }
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.updateCountdown() });

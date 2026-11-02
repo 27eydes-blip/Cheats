@@ -228,7 +228,7 @@ export class GameOverScene extends Phaser.Scene {
     const tapHint = plainText(
       this,
       W / 2,
-      Math.min(H - 30, by + 180),
+      Math.min(H - (this.registry.get("safeBottom") || 0) - 24, by + 180),
       "TAP ANYWHERE TO RETRY",
       17,
       "#9c90c8",
