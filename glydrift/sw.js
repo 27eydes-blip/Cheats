@@ -1,6 +1,6 @@
 // Glydrift offline support: network-first so updates arrive, cached copies when there's
 // no signal. Only same-origin GETs are handled — leaderboard (Supabase) calls pass through.
-const CACHE = "glydrift-mvynaajj";
+const CACHE = "glydrift-mvyne67e";
 const CORE = ["./", "manifest.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 self.addEventListener("install", (e) => {
   e.waitUntil(
@@ -25,8 +25,13 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const r = e.request;
   if (r.method !== "GET" || new URL(r.url).origin !== location.origin) return;
+  // the page itself always bypasses the HTTP cache, so a new version shows up on next launch
+  const net =
+    r.mode === "navigate"
+      ? fetch(r.url, { cache: "no-store", credentials: "same-origin" })
+      : fetch(r);
   e.respondWith(
-    fetch(r)
+    net
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();
