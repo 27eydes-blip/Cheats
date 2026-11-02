@@ -57,11 +57,11 @@ const AUDIO = path.join(WORK, "audio.wav");
   // ---- cards
   console.log("[cards] rendering text + end card…");
   const cards = await L.renderCards([
-    { id: "pov", text: "POV: you made it<br>to the Abyss", y: 420 },
-    { id: "quiet", text: "it gets quiet...", y: 470 },
-    { id: "tooquiet", text: "...too quiet", y: 470 },
-    { id: "soon", text: "GLYDRIFT · coming soon", y: 1350, size: 64 },
-    { id: "ai", text: "I built this game<br>with AI in one night", y: 420 },
+    { id: "pov", text: "POV: you made it<br>to the Abyss", y: 360 },
+    { id: "quiet", text: "it gets quiet...", y: 320 },
+    { id: "tooquiet", text: "...too quiet", y: 320 },
+    { id: "soon", text: "GLYDRIFT · coming soon", y: 1430, size: 60, pill: true },
+    { id: "ai", text: "I built this game<br>with AI in one night", y: 360 },
   ], path.join(WORK, "cards"));
   const endCard = await L.renderEndCard(path.join(WORK, "cards", "endcard.png"));
 
@@ -115,8 +115,11 @@ const AUDIO = path.join(WORK, "audio.wav");
     L.beatClip("glitch", T(glitch), 0.3, 1.45, grids),
     { name: "entrance", start: L.q(T(blackout) - 0.4), dur: L.q(1.8) },
   ];
-  const used = B.reduce((s, c) => s + c.dur, 0);
-  B.push({ name: "near", start: L.q(T(hook) - 0.8), dur: L.q(Math.max(0.9, 15 - 1.5 - used)) });
+  // exactly 15 s: the last action clip takes whatever is left before the 1.5 s logo
+  let used = B.reduce((s, c) => s + c.dur, 0);
+  if (15 - 1.5 - used < 0.9) B[1].dur = L.q(B[1].dur - (0.9 - (15 - 1.5 - used)));
+  used = B.reduce((s, c) => s + c.dur, 0);
+  B.push({ name: "near", start: L.q(T(hook) - 0.8), dur: L.q(15 - 1.5 - used) });
   B.push({ name: "logo", start: L.q(T(over) + 2.05), dur: 1.5, image: endCard, fadeIn: 0.15, audioFadeOut: 0.9 });
   const totalB = B.reduce((s, c) => s + c.dur, 0);
   console.log(`[ai] ${B.length} clips, ${totalB.toFixed(2)} s`);

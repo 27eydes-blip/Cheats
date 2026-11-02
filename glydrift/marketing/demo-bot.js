@@ -25,6 +25,14 @@
   Math.random = () => (R.on ? prng() : nativeRandom());
 
   const DT = 1000 / 60;
+  // Virtual clock: Phaser's tweens time themselves with Date.now(), not the step delta, so a
+  // slowly-captured frame would run tweens fast (titles vanished early) and a fast simulated
+  // frame would run them slow. While the demo steps, Date.now() advances exactly 1/60 s per
+  // frame — tweens then match game time in every pass.
+  const realNow = Date.now.bind(Date);
+  let vBase = null;
+  let inStep = false;
+  Date.now = () => (inStep && vBase !== null ? vBase + D.frame * DT : realNow());
   const D = {
     R,
     frame: 0,
@@ -97,10 +105,12 @@
   /** Advance the whole game by exactly one 1/60 s frame. */
   D.step = (render) => {
     hook();
+    if (vBase === null) vBase = realNow() - D.frame * DT;
     reelAction(D.frame);
     const g = game();
     const t = 100000 + D.frame * DT;
     D.frame++;
+    inStep = true;
     beforeStep();
     R.on = true;
     try {
@@ -110,6 +120,7 @@
       g.events.emit("poststep", t, DT);
     } finally {
       R.on = false;
+      inStep = false;
     }
     afterStep();
     if (forceRender > 0) {
