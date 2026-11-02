@@ -1,0 +1,332 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body { margin: 0; background: #000; }
+    </style>
+  </head>
+  <body>
+    <canvas id="c" width="1024" height="1024"></canvas>
+    <script>
+      // Glydrift app icon: the Volt storm bird bursting out of a high-tech HUD.
+      // Render with ?safe=0.8 for the maskable (Android) variant.
+      const S = 1024;
+      const safe = Number(new URLSearchParams(location.search).get("safe") || 1);
+      const cv = document.getElementById("c");
+      const c = cv.getContext("2d");
+      const TAU = Math.PI * 2;
+      let seed = 7;
+      const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+
+      function poly(ctx, pts) {
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+        ctx.closePath();
+      }
+
+      // ---------------------------------------------------------------- background
+      const bg = c.createRadialGradient(S * 0.5, S * 0.44, 0, S * 0.5, S * 0.5, S * 0.75);
+      bg.addColorStop(0, "#0b2a5c");
+      bg.addColorStop(0.45, "#061536");
+      bg.addColorStop(1, "#01030b");
+      c.fillStyle = bg;
+      c.fillRect(0, 0, S, S);
+
+      // stars
+      for (let i = 0; i < 140; i++) {
+        c.fillStyle = `rgba(200,240,255,${0.15 + rnd() * 0.55})`;
+        c.beginPath();
+        c.arc(rnd() * S, rnd() * S * 0.7, rnd() * 2.2 + 0.4, 0, TAU);
+        c.fill();
+      }
+
+      // perspective grid floor
+      c.save();
+      const horizon = S * 0.74;
+      const vx = S / 2;
+      for (let i = 1; i <= 9; i++) {
+        const t = (i / 9) ** 2;
+        const y = horizon + (S - horizon) * t;
+        c.strokeStyle = `rgba(62,244,255,${0.08 + 0.3 * t})`;
+        c.lineWidth = 2 + 2 * t;
+        c.beginPath();
+        c.moveTo(0, y);
+        c.lineTo(S, y);
+        c.stroke();
+      }
+      for (let k = -10; k <= 10; k++) {
+        const xb = vx + k * S * 0.12;
+        const xh = vx + k * S * 0.012;
+        c.strokeStyle = "rgba(62,244,255,0.22)";
+        c.lineWidth = 2.5;
+        c.beginPath();
+        c.moveTo(xh, horizon);
+        c.lineTo(xb, S + 20);
+        c.stroke();
+      }
+      // horizon glow
+      const hg = c.createLinearGradient(0, horizon - 60, 0, horizon + 40);
+      hg.addColorStop(0, "rgba(62,244,255,0)");
+      hg.addColorStop(0.6, "rgba(62,244,255,0.35)");
+      hg.addColorStop(1, "rgba(62,244,255,0)");
+      c.fillStyle = hg;
+      c.fillRect(0, horizon - 60, S, 100);
+      c.restore();
+
+      // circuit traces from the edges
+      c.save();
+      c.lineCap = "round";
+      c.lineJoin = "round";
+      const trace = (pts, a) => {
+        c.strokeStyle = `rgba(62,244,255,${a})`;
+        c.shadowColor = "#3ef4ff";
+        c.shadowBlur = 10;
+        c.lineWidth = 4;
+        c.beginPath();
+        c.moveTo(pts[0][0], pts[0][1]);
+        for (const p of pts.slice(1)) c.lineTo(p[0], p[1]);
+        c.stroke();
+        const e = pts[pts.length - 1];
+        c.fillStyle = `rgba(190,250,255,${a + 0.2})`;
+        c.beginPath();
+        c.arc(e[0], e[1], 9, 0, TAU);
+        c.fill();
+        c.fillStyle = "#01030b";
+        c.beginPath();
+        c.arc(e[0], e[1], 4, 0, TAU);
+        c.fill();
+      };
+      trace([[0, 170], [120, 170], [170, 220], [250, 220]], 0.45);
+      trace([[0, 250], [70, 250], [110, 290], [110, 360]], 0.3);
+      trace([[S, 140], [880, 140], [830, 190], [770, 190]], 0.45);
+      trace([[S, 230], [930, 230], [900, 260], [900, 330]], 0.3);
+      trace([[180, 0], [180, 80], [230, 130]], 0.35);
+      trace([[840, 0], [840, 70], [790, 120]], 0.35);
+      c.restore();
+
+      // ---------------------------------------------------------------- HUD rings
+      const cx = S * 0.5;
+      const cy = S * 0.47;
+      const R = S * 0.36 * safe;
+      c.save();
+      c.translate(cx, cy);
+      // soft core glow
+      const core = c.createRadialGradient(0, 0, 0, 0, 0, R * 1.1);
+      core.addColorStop(0, "rgba(62,244,255,0.42)");
+      core.addColorStop(0.5, "rgba(20,120,220,0.18)");
+      core.addColorStop(1, "rgba(20,80,200,0)");
+      c.fillStyle = core;
+      c.beginPath();
+      c.arc(0, 0, R * 1.1, 0, TAU);
+      c.fill();
+      c.shadowColor = "#3ef4ff";
+      c.shadowBlur = 18;
+      // outer tick ring
+      for (let i = 0; i < 72; i++) {
+        const a = (i / 72) * TAU;
+        const long = i % 6 === 0;
+        c.strokeStyle = long ? "rgba(190,250,255,0.9)" : "rgba(62,244,255,0.45)";
+        c.lineWidth = long ? 5 : 3;
+        const r0 = R * (long ? 0.93 : 0.96);
+        c.beginPath();
+        c.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
+        c.lineTo(Math.cos(a) * R, Math.sin(a) * R);
+        c.stroke();
+      }
+      // segmented arcs
+      const arc = (r, a0, a1, w, col) => {
+        c.strokeStyle = col;
+        c.lineWidth = w;
+        c.beginPath();
+        c.arc(0, 0, r, a0, a1);
+        c.stroke();
+      };
+      arc(R * 0.86, -2.6, -0.5, 10, "rgba(62,244,255,0.95)");
+      arc(R * 0.86, 0.2, 1.2, 10, "rgba(62,244,255,0.55)");
+      arc(R * 0.86, 1.5, 2.5, 10, "rgba(180,92,255,0.75)");
+      arc(R * 0.78, -0.3, 2.1, 3, "rgba(190,250,255,0.6)");
+      arc(R * 0.78, 2.5, 4.8, 3, "rgba(62,244,255,0.35)");
+      // little HUD readout bars
+      c.shadowBlur = 8;
+      for (let i = 0; i < 5; i++) {
+        c.fillStyle = i < 4 ? "rgba(62,244,255,0.85)" : "rgba(62,244,255,0.3)";
+        c.fillRect(R * 0.5 + i * 22, R * 0.62, 14, -14 - i * 9);
+      }
+      c.restore();
+
+      // ---------------------------------------------------------------- lightning trail
+      c.save();
+      const trail = [];
+      let tx = -40;
+      let ty = S * 0.66;
+      seed = 21;
+      while (tx < cx - 40) {
+        trail.push([tx, ty]);
+        tx += 60 + rnd() * 50;
+        ty += -24 - rnd() * 26 + (rnd() < 0.3 ? 40 : 0);
+      }
+      trail.push([cx - 60, cy + 40]);
+      const drawTrail = (w, col, blur) => {
+        c.strokeStyle = col;
+        c.lineWidth = w;
+        c.shadowColor = "#3ef4ff";
+        c.shadowBlur = blur;
+        c.lineJoin = "round";
+        c.beginPath();
+        c.moveTo(trail[0][0], trail[0][1]);
+        for (const p of trail.slice(1)) c.lineTo(p[0], p[1]);
+        c.stroke();
+      };
+      drawTrail(42, "rgba(62,244,255,0.18)", 40);
+      drawTrail(18, "rgba(62,244,255,0.75)", 30);
+      drawTrail(7, "#ffffff", 14);
+      c.restore();
+
+      // ---------------------------------------------------------------- the bird
+      function drawBird(ctx, wa) {
+        ctx.fillStyle = "#0e8fb8";
+        poly(ctx, [[-18, 0], [-40, -12], [-34, -4], [-54, -6], [-36, 6], [-46, 12], [-18, 9]]);
+        ctx.fill();
+        ctx.strokeStyle = "#bdfaff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.save();
+        ctx.rotate(wa * 0.75);
+        ctx.fillStyle = "#075673";
+        ctx.beginPath();
+        ctx.moveTo(-4, -2);
+        ctx.quadraticCurveTo(-24, -40, 8, -50);
+        ctx.lineTo(4, -36);
+        ctx.lineTo(14, -40);
+        ctx.lineTo(10, -26);
+        ctx.lineTo(18, -24);
+        ctx.quadraticCurveTo(12, -8, 12, -2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        const g = ctx.createLinearGradient(-20, -16, 24, 18);
+        g.addColorStop(0, "#5fe9ff");
+        g.addColorStop(0.45, "#0fa6d6");
+        g.addColorStop(1, "#064a78");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.ellipse(2, 3, 25, 15, -0.12, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = "rgba(190,250,255,0.4)";
+        ctx.beginPath();
+        ctx.ellipse(6, 9, 15, 6, -0.1, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = "#14b4e4";
+        ctx.beginPath();
+        ctx.arc(24, -8, 12.5, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        poly(ctx, [[17, -18], [12, -34], [20, -24], [22, -38], [27, -21], [24, -18]]);
+        ctx.fill();
+        ctx.fillStyle = "#ffd23f";
+        poly(ctx, [[34, -12], [50, -6], [34, -2]]);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(28, -10, 4.8, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = "#04263a";
+        ctx.beginPath();
+        ctx.arc(29.5, -10, 2.4, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(30.5, -11, 0.9, 0, TAU);
+        ctx.fill();
+        ctx.save();
+        ctx.rotate(wa);
+        const wg = ctx.createLinearGradient(0, 0, 0, -56);
+        wg.addColorStop(0, "#0b8cc4");
+        wg.addColorStop(1, "#5ef0ff");
+        ctx.fillStyle = wg;
+        ctx.beginPath();
+        ctx.moveTo(-6, 0);
+        ctx.quadraticCurveTo(-30, -42, 6, -58);
+        ctx.lineTo(4, -44);
+        ctx.lineTo(16, -48);
+        ctx.lineTo(12, -33);
+        ctx.lineTo(24, -32);
+        ctx.lineTo(16, -19);
+        ctx.quadraticCurveTo(12, -6, 14, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#aef8ff";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = "#ffffff";
+        poly(ctx, [[2, -40], [-6, -24], [0, -24], [-4, -12], [6, -28], [0, -28]]);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // render the bird big on its own layer, then add a crisp rim + glow (like in game)
+      const scale = 5.9 * safe;
+      const bw = 128 * scale;
+      const body = document.createElement("canvas");
+      body.width = body.height = bw;
+      const bc = body.getContext("2d");
+      bc.translate(bw / 2, bw / 2 + 6 * scale);
+      bc.scale(scale, scale);
+      drawBird(bc, -0.9);
+      const rim = document.createElement("canvas");
+      rim.width = rim.height = bw;
+      const rc = rim.getContext("2d");
+      const rw = 2.4 * scale;
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * TAU;
+        rc.drawImage(body, Math.cos(a) * rw, Math.sin(a) * rw);
+      }
+      rc.globalCompositeOperation = "source-in";
+      rc.fillStyle = "#9ff6ff";
+      rc.fillRect(0, 0, bw, bw);
+
+      c.save();
+      c.translate(cx + 20 * safe, cy + 10 * safe);
+      c.rotate(-0.22);
+      c.shadowColor = "#3ef4ff";
+      c.shadowBlur = 70;
+      c.drawImage(rim, -bw / 2, -bw / 2);
+      c.shadowBlur = 24;
+      c.drawImage(rim, -bw / 2, -bw / 2);
+      c.shadowBlur = 0;
+      c.drawImage(body, -bw / 2, -bw / 2);
+      c.restore();
+
+      // sparks around the wing tip
+      seed = 99;
+      c.save();
+      c.shadowColor = "#bffcff";
+      c.shadowBlur = 16;
+      for (let i = 0; i < 26; i++) {
+        const a = rnd() * TAU;
+        const d = R * (0.55 + rnd() * 0.5);
+        const x = cx + Math.cos(a) * d;
+        const y = cy + Math.sin(a) * d * 0.9;
+        const len = 8 + rnd() * 18;
+        c.strokeStyle = `rgba(220,252,255,${0.4 + rnd() * 0.6})`;
+        c.lineWidth = 3;
+        c.beginPath();
+        c.moveTo(x, y);
+        c.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+        c.stroke();
+      }
+      c.restore();
+
+      // vignette
+      const vg = c.createRadialGradient(S / 2, S / 2, S * 0.45, S / 2, S / 2, S * 0.75);
+      vg.addColorStop(0, "rgba(0,0,0,0)");
+      vg.addColorStop(1, "rgba(0,0,0,0.6)");
+      c.fillStyle = vg;
+      c.fillRect(0, 0, S, S);
+
+      window.__done = true;
+    </script>
+  </body>
+</html>
