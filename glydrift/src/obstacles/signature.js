@@ -261,8 +261,11 @@ export class Icicle extends PxObstacle {
     if (this.state === "gone") return Infinity;
     // body (wide at the root) + tip, 30 art px long
     const tipY = this.y + 30 * S - 6;
+    // while hanging the root block is fused to the ceiling; once falling, the hitbox must
+    // start at the icicle's own top edge (it used to reach 40 units above it into empty air)
+    const top = this.state === "fall" ? this.y : this.y - 40;
     return Math.min(
-      rectClear(px, py, r, this.x - 20, this.y - 40, this.x + 20, this.y + 4 * S),
+      rectClear(px, py, r, this.x - 20, top, this.x + 20, this.y + 4 * S),
       segClear(px, py, r, this.x, this.y + 4 * S, this.x, tipY, 10),
     );
   }
