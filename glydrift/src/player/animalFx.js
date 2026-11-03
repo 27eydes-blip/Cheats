@@ -70,7 +70,7 @@ export class AnimalBits {
 
   flap() {
     const r = this.rig;
-    if (this.a.after) this.stampGhost(0.8);
+    if (this.a.after) this.stampGhost(0.6);
     if (this.a.flapRainbow && r.fx)
       for (let i = 0; i < 3; i++)
         r.fx.burst("star", r.x, r.y, 2, hsv(Math.random(), 0.6, 1), {
@@ -115,8 +115,8 @@ export class AnimalBits {
     if (this.ghosts) {
       this.ghostT = (this.ghostT || 0) - dt;
       if (!r.dead && this.ghostT <= 0 && r.flapT < 0.6) {
-        this.ghostT = 0.05;
-        this.stampGhost(0.5);
+        this.ghostT = 0.085;
+        this.stampGhost(0.42);
       }
       for (const im of this.ghosts) {
         if (!im.active) continue;
@@ -174,7 +174,8 @@ export class AnimalBits {
     const sp = this.rig.sprite;
     im.setActive(true).setVisible(true).setFrame(sp.frame.name);
     im.setPosition(sp.x, sp.y).setRotation(sp.rotation).setScale(sp.scaleX, sp.scaleY);
-    im.setTintFill(hsv(this.rig.time * 0.8, 0.6, 1)).setAlpha(alpha);
+    this.ghostHue = ((this.ghostHue ?? 0) + 0.17) % 1; // each ghost a new rainbow colour
+    im.setTintFill(hsv(this.ghostHue, 0.65, 1)).setAlpha(alpha);
     im.life = 0.3;
   }
 
