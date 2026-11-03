@@ -759,7 +759,7 @@ export const CHARACTERS = [
     id: "dzr",
     name: "DZR",
     title: "Velociraptor",
-    rarity: "epic",
+    rarity: "legendary",
     color: 0x3a5a8a,
     color2: 0xffd23f,
     texture: "hero_dzr",
@@ -777,7 +777,7 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.64,
-    cost: 3000,
+    cost: 6000,
     desc: "Matte-blue dash trail. Pounces on every flap.",
   },
   {
