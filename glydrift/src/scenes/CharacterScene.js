@@ -406,6 +406,8 @@ export class CharacterScene extends Phaser.Scene {
         milzzz: biomeIndex("valley"),
         manny: biomeIndex("frozen"),
         wallrunner: biomeIndex("valley"),
+        springer: biomeIndex("frozen"),
+        dzr: biomeIndex("valley"),
       }[def.id] ?? 0;
     blendPalette(
       {

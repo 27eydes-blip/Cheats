@@ -604,6 +604,126 @@ export function wallrunner(f) {
   return pc.outline(0x08200c, 1, true);
 }
 
+// ------------------------------------------------------------------ SPRINGER — hockey player
+// Orange-and-black jersey, black helmet with an orange stripe and a visor. Frames: 0 / 1
+// skating strides, 2 = the slap shot (stick wound up, skates together).
+export function springer(f) {
+  const pc = new PixelCanvas(24, 24);
+  const OR = 0xff7a1a;
+  const BK = 0x161616;
+  const SK = 0xffc8a0;
+  const ICE = 0xd8e8f4;
+  const shot = f === 2;
+  // legs + skates
+  const legs = shot
+    ? [
+        [11, 13],
+        [13, 15],
+      ]
+    : f === 0
+      ? [
+          [9, 11],
+          [14, 16],
+        ]
+      : [
+          [11, 12],
+          [12, 13],
+        ];
+  for (const [x0, x1] of legs) {
+    pc.rect(x0, 18, 2, 2, BK);
+    pc.rect(x0, 20, 2, 1, BK).set(x1, 20, BK);
+    pc.hline(x0 - 1, x1 + 1, 21, ICE); // blade
+  }
+  // pants + jersey with black stripes and yoke
+  pc.rect(10, 16, 7, 2, BK);
+  pc.rect(10, 10, 7, 6, OR);
+  pc.hline(10, 16, 10, BK).hline(10, 16, 14, BK);
+  pc.set(12, 12, BK).set(13, 12, BK).set(13, 11, BK); // number "7"
+  // arm, glove and the stick
+  pc.rect(16, 11, 3, 2, OR).set(18, 12, BK);
+  pc.rect(19, 11, 2, 2, BK); // glove
+  if (shot) {
+    pc.line(19, 11, 22, 4, 0x5a3a1a); // wound-up stick
+    pc.hline(21, 23, 3, 0xffffff);
+  } else {
+    pc.line(20, 12, 21, 20, 0x5a3a1a);
+    pc.hline(21, 23, 21, BK).set(22, 21, 0xffffff); // blade with tape
+  }
+  // head: face, black helmet with an orange stripe, visor
+  pc.rect(15, 6, 4, 4, SK);
+  pc.ellipse(16, 5, 3.6, 2.6, BK);
+  pc.hline(13, 18, 4, OR);
+  pc.hline(17, 20, 6, 0x9fe8ff).set(20, 7, 0x9fe8ff); // visor
+  pc.set(18, 7, 0x161616); // eye behind the visor
+  pc.rect(15, 8, 1, 2, BK); // chin strap
+  shadeEdges(pc, OR, 0xd85a0a);
+  return pc.outline(0x0a0604, 1, true);
+}
+
+// ------------------------------------------------------------------ DZR — matte blue velociraptor
+// Flat (matte) blue scales, darker stripes, yellow eye, sickle claw. Frames: 0 / 1 running,
+// 2 = the pounce (legs tucked, jaws open).
+export function dzr(f) {
+  const pc = new PixelCanvas(24, 24);
+  const B = 0x3a5a8a; // matte blue
+  const D = 0x2a4068;
+  const BELLY = 0x6a86b0;
+  const CLAW = 0xd8d0c0;
+  const pounce = f === 2;
+  // tail (long, tapering to the left)
+  pc.poly(
+    [
+      [0, 8],
+      [10, 10],
+      [10, 13],
+      [0, 9],
+    ],
+    B,
+  );
+  // legs
+  if (pounce) {
+    pc.ellipse(11, 15, 2.4, 1.8, B);
+    pc.hline(9, 14, 16, D);
+    pc.set(14, 17, CLAW).set(9, 17, CLAW);
+  } else {
+    const fwd = f === 0;
+    pc.ellipse(11, 14, 2.2, 2, B);
+    pc.line(11, 15, fwd ? 13 : 9, 18, D).line(fwd ? 13 : 9, 18, fwd ? 14 : 10, 20, D);
+    pc.hline(fwd ? 13 : 9, fwd ? 15 : 11, 20, D).set(fwd ? 15 : 11, 19, CLAW); // sickle claw
+    pc.line(10, 15, fwd ? 8 : 12, 18, D).line(fwd ? 8 : 12, 18, fwd ? 7 : 12, 20, D);
+    pc.hline(fwd ? 6 : 12, fwd ? 8 : 14, 20, D);
+  }
+  // body, belly, back stripes
+  pc.ellipse(12.5, 12, 4.6, 3.2, B);
+  pc.ellipse(13, 13.6, 3.4, 1.3, BELLY);
+  for (const x of [9, 11, 13, 15]) pc.set(x, 9, D).set(x, 10, D);
+  // little arms with claws
+  pc.line(16, 13, 18, 15, D).set(19, 15, CLAW);
+  // neck + head
+  pc.poly(
+    [
+      [15, 11],
+      [17, 6],
+      [19, 6],
+      [18, 11],
+    ],
+    B,
+  );
+  pc.ellipse(19.5, 6.5, 2.8, 2, B);
+  pc.rect(20, 6, 4, 2, B); // snout
+  if (pounce) {
+    pc.hline(19, 23, 9, B).set(23, 8, null); // lower jaw dropped
+    pc.set(21, 8, 0xffffff).set(23, 9, 0xffffff); // teeth
+  } else {
+    pc.hline(20, 23, 8, D); // closed jaw line
+    pc.set(22, 8, 0xffffff);
+  }
+  pc.set(19, 5, 0xffd23f).set(20, 5, 0x161616); // yellow eye, slit pupil
+  pc.hline(16, 19, 4, D); // brow ridge
+  shadeEdges(pc, B, D);
+  return pc.outline(0x0a1426, 1, true);
+}
+
 export const SHOP_DRAW = {
   pip,
   coral,
@@ -619,4 +739,6 @@ export const SHOP_DRAW = {
   milzzz,
   manny,
   wallrunner,
+  springer,
+  dzr,
 };
