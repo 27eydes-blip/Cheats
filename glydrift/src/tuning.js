@@ -20,7 +20,7 @@ export const COMBO = {
     [6, 3],
     [3, 2],
   ],
-  window: 3, // seconds without a combo event before it resets
+  window: 3.5, // seconds without a combo event before it resets
 };
 
 // ------------------------------------------------------------------ biome pacing
@@ -76,6 +76,13 @@ export const SPAWN = {
   /** Extra space between patterns per biome. */
   roomy: { abyss: 1.4, glitch: 1.12, valley: 1.6, hurricane: 1.05 },
   difficultyMeters: 2600, // distance at which shared obstacles reach full difficulty
+};
+
+/** Coin flow: keep a coin within reach often enough that the combo (COMBO.window) can last. */
+export const COIN_FLOW = {
+  maxGapSeconds: 2.3, // if the next coin would be further than this, a short coin trail bridges it
+  bridgeCoins: 2, // coins per bridging trail
+  pullToMiddle: 0.3, // trails drift this much toward the screen middle (keeps them catchable)
 };
 
 // ------------------------------------------------------------------ dimensions

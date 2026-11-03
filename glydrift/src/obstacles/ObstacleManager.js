@@ -5,7 +5,7 @@ import { hazardColors, NEAR_MISS } from "../config.js";
 import { S } from "../pixel/px.js";
 import { themeFor } from "../pixel/themes.js";
 import { RNG } from "../data/rng.js";
-import { SPAWN } from "../tuning.js";
+import { COIN_FLOW, SPAWN } from "../tuning.js";
 import { TYPES } from "./index.js";
 
 /** Signature hazards per biome, in the order they are introduced (one at a time). */
@@ -51,6 +51,8 @@ export class ObstacleManager {
     this.active.length = 0;
     for (const c of this.coins) c.setActive(false).setVisible(false);
     this.nextX = this.W + 260;
+    this.lastCoinX = 0; // screen x of the furthest-right coin spawned (scrolls with the world)
+    this.lastCoinY = this.H / 2;
     this.count = 0;
     this.flipped = false;
     this.sinceFlip = 0;
@@ -113,6 +115,10 @@ export class ObstacleManager {
     c.baseY = y;
     c.phase = Math.random() * 6;
     c.magnet = false;
+    if (x >= this.lastCoinX) {
+      this.lastCoinX = x;
+      this.lastCoinY = y;
+    }
     return c;
   }
 
@@ -688,12 +694,19 @@ export class ObstacleManager {
       }
     }
 
-    // a ribbon of free coins between patterns now and then
-    if (r.chance(0.22)) {
-      const y = r.range(safeTop + 40, safeBot - 40);
-      this.coinLine(x + width + spacing * 0.25, x + width + spacing * 0.75, y, 3);
+    // coin flow: if the next coin chance would come too late to keep a combo going, lay a
+    // short trail through the free space after this pattern, near the last coins' height
+    const gapEnd = x + width + spacing * spacingMul;
+    if (gapEnd - this.lastCoinX > (this.scroll || 500) * COIN_FLOW.maxGapSeconds) {
+      const y = Phaser.Math.Clamp(
+        Phaser.Math.Linear(this.lastCoinY, mid, COIN_FLOW.pullToMiddle) + r.range(-60, 60),
+        safeTop + 40,
+        safeBot - 40,
+      );
+      const sp = gapEnd - (x + width);
+      this.coinLine(x + width + sp * 0.3, x + width + sp * 0.7, y, COIN_FLOW.bridgeCoins);
     }
-    this.nextX = x + width + spacing * spacingMul;
+    this.nextX = gapEnd;
   }
 
   /** World-space x ranges of every hazard on screen (used to keep scenery out from behind them). */
@@ -730,6 +743,7 @@ export class ObstacleManager {
 
     const dx = scroll * dt;
     this.nextX -= dx;
+    this.lastCoinX -= dx;
     if (this.info.pause) {
       // title / calm window: keep the area clear (but never leave gravity flipped)
       if (this.flipped && this.nextX < this.rightEdge + 160) {
@@ -738,6 +752,17 @@ export class ObstacleManager {
         this.flipped = false;
       }
       this.nextX = Math.max(this.nextX, this.rightEdge + 161);
+      // no hazards here, but keep a gentle coin trail coming so the combo can survive
+      const edge = this.rightEdge + 160;
+      if (edge - this.lastCoinX > scroll * COIN_FLOW.maxGapSeconds * 0.75) {
+        const y = Phaser.Math.Clamp(
+          Phaser.Math.Linear(this.lastCoinY, this.H / 2, COIN_FLOW.pullToMiddle) +
+            this.rng.range(-50, 50),
+          190,
+          this.H - 190,
+        );
+        this.coinLine(edge, edge + 120, y, COIN_FLOW.bridgeCoins);
+      }
     } else {
       while (this.nextX < this.rightEdge + 160) this.spawnPattern(meters, biomeId);
     }
