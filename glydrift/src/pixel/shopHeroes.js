@@ -637,8 +637,9 @@ export function springer(f) {
   // pants + jersey with black stripes and yoke
   pc.rect(10, 16, 7, 2, BK);
   pc.rect(10, 10, 7, 6, OR);
-  pc.hline(10, 16, 10, BK).hline(10, 16, 14, BK);
-  pc.set(12, 12, BK).set(13, 12, BK).set(13, 11, BK); // number "7"
+  pc.hline(10, 16, 10, BK); // black yoke
+  // a big, readable number 9 on the jersey (3x5 pixels)
+  pc.stamp(12, 11, ["###", "#.#", "###", "..#", "###"], { "#": 0xffffff });
   // arm, glove and the stick
   pc.rect(16, 11, 3, 2, OR).set(18, 12, BK);
   pc.rect(19, 11, 2, 2, BK); // glove
