@@ -77,6 +77,12 @@ const FLAP = {
   springer: () => tone({ type: "square", f0: 220, f1: 140, dur: 0.05, vol: 0.14 }),
   dzr: () => tone({ type: "sawtooth", f0: 180, f1: 420, dur: 0.08, vol: 0.09 }),
   wallrunner: () => tone({ type: "square", f0: 880, f1: 1320, dur: 0.06, vol: 0.1 }),
+  // YARMS: a meaty "whomp" + a floppy wobble
+  yarms: () => {
+    tone({ type: "sine", f0: 150, f1: 55, dur: 0.14, vol: 0.4 });
+    tone({ type: "triangle", f0: 520, f1: 260, dur: 0.09, vol: 0.1, delay: 0.04 });
+    tone({ type: "triangle", f0: 300, f1: 420, dur: 0.06, vol: 0.06, delay: 0.12 });
+  },
   manny: () => tone({ type: "triangle", f0: 180, f1: 300, dur: 0.1, vol: 0.2 }),
   milzzz: () => tone({ type: "sine", f0: 420, f1: 760, dur: 0.07, vol: 0.2 }),
   leviathan: () => tone({ type: "sine", f0: 140, f1: 90, dur: 0.16, vol: 0.3 }),
@@ -89,6 +95,25 @@ const FLAP = {
 export const Sfx = {
   unlock: () => Music.unlock(),
   flap: (id) => (FLAP[id] || FLAP.volt)(),
+  /** YARMS flex: a stretchy creak + a short synth "hngh" grunt (no voice samples) */
+  flex: () => {
+    for (let i = 0; i < 3; i++)
+      tone({
+        type: "square",
+        f0: 70 + i * 18,
+        f1: 95 + i * 18,
+        dur: 0.035,
+        vol: 0.05,
+        delay: i * 0.04,
+      });
+    tone({ type: "sawtooth", f0: 190, f1: 150, dur: 0.17, vol: 0.09, delay: 0.1 });
+    tone({ type: "sine", f0: 130, f1: 110, dur: 0.2, vol: 0.14, delay: 0.1 });
+  },
+  /** YARMS death: a deflating "pfffft" */
+  deflate: () => {
+    noise({ dur: 0.65, vol: 0.16, f: 2400 });
+    tone({ type: "sine", f0: 420, f1: 60, dur: 0.6, vol: 0.18 });
+  },
   /** frog double jump: a springy two-step "boing" */
   doubleJump: () => {
     tone({ type: "sine", f0: 300, f1: 900, dur: 0.12, vol: 0.22 });

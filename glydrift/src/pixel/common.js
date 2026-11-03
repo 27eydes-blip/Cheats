@@ -1,6 +1,7 @@
 // Shared pixel sprites: heroes, coins, portals, and pixel particle textures.
 import { LOTTERY_DRAW } from "./lotteryHeroes.js";
 import { SHOP_DRAW } from "./shopHeroes.js";
+import { yarms } from "./yarmsArt.js";
 import { addAtlas, addTexture, PixelCanvas } from "./px.js";
 
 const OUT = 0x07101e; // bold character outline
@@ -602,16 +603,21 @@ export function buildCommon(scene) {
     draco,
     ...SHOP_DRAW,
     ...LOTTERY_DRAW,
+    yarms,
   };
   for (let f = 0; f < 3; f++)
     for (const [id, draw] of Object.entries(heroes)) frames[`${id}_${f}`] = rim(draw(f));
   for (const id of Object.keys(heroes)) HEAD_ANCHORS[id] = headAnchor(frames[`${id}_1`]);
+  // YARMS has a 4th pose (the double-bicep flex) and no head: hats sit between the shoulders
+  frames.yarms_3 = rim(yarms(3));
+  HEAD_ANCHORS.yarms = { x: 0, y: -8.5, w: 50, h: 34 };
   for (let f = 0; f < 4; f++) frames[`coin_${f}`] = coin(f);
   for (const m of ["flip", "restore", "mini"])
     for (let f = 0; f < 4; f++) frames[`portal_${m}_${f}`] = portal(m, f);
   addAtlas(scene, "pxc", frames);
   // big standalone hero portraits (character cards, game over, leaderboard, share card)
   for (const id of Object.keys(heroes)) addTexture(scene, `hero_${id}`, frames[`${id}_1`], 13);
+  addTexture(scene, "hero_yarms_flex", frames.yarms_3, 13);
 
   // particle textures (same logical size as the old smooth ones, now pixel-crisp)
   addTexture(scene, "dot", circleTex(8, 3));

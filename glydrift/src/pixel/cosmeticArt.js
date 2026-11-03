@@ -315,6 +315,19 @@ function icons() {
   return out;
 }
 
+function sweat() {
+  const pc = new PixelCanvas(3, 5);
+  pc.set(1, 0, 0xffffff).rect(0, 1, 3, 3, 0xffffff).set(1, 4, 0xffffff);
+  return pc;
+}
+function dumbbell() {
+  const pc = new PixelCanvas(9, 5);
+  pc.rect(0, 0, 2, 5, 0x5a5a6a).rect(7, 0, 2, 5, 0x5a5a6a);
+  pc.hline(2, 6, 2, 0xb8b8c8);
+  pc.set(0, 0, 0x8a8a9a).set(7, 0, 0x8a8a9a);
+  return pc.outline(0x161620, 1, false);
+}
+
 export function buildCosmeticArt(scene) {
   const frames = {
     hat_crown: crown(),
@@ -340,4 +353,6 @@ export function buildCosmeticArt(scene) {
   addTexture(scene, "fx_confetti", confetti(), 3);
   addTexture(scene, "fx_cash", cash(), 3);
   addTexture(scene, "fx_ghost", ghost(), 4);
+  addTexture(scene, "fx_sweat", sweat(), 3);
+  addTexture(scene, "fx_dumbbell", dumbbell(), 3);
 }

@@ -6,6 +6,7 @@ import { COLLECTIONS, Shop, SKINS } from "../data/cosmetics.js";
 import { HAT_FIT } from "../pixel/cosmeticArt.js";
 import { HEAD_ANCHORS } from "../pixel/common.js";
 import { greyAtlas } from "../pixel/grayHero.js";
+import { Sfx } from "../audio/sfx.js";
 
 const ADD = Phaser.BlendModes.ADD;
 const NORMAL = Phaser.BlendModes.NORMAL;
@@ -39,6 +40,11 @@ export class CharacterRig {
     this.glitchT = 0;
     this.offX = 0;
     this.offY = 0;
+    this.sounds = !!opts.sounds; // only the in-game hero plays its own flex / death sounds
+    this.flexT = 0; // YARMS: time left in the flex pose
+    this.nextFlex = 3 + Math.random() * 3;
+    this.shineT = 0;
+    this.deathFlex = 0;
     const depth = opts.depth ?? 30;
 
     this.trailG = scene.add.graphics().setDepth(depth - 2);
@@ -56,6 +62,14 @@ export class CharacterRig {
       .setVisible(false)
       .setDepth(depth + 0.5);
     this.extras.push(this.glow, this.hat);
+    // YARMS: the gold shine that sweeps across the muscles on a big flex
+    if (this.px.mode === "yarms") {
+      this.shineG = scene.add
+        .graphics()
+        .setDepth(depth + 0.4)
+        .setBlendMode(ADD);
+      this.extras.push(this.shineG);
+    }
     this.setCosmetics(opts.cosmetics === undefined ? Shop.loadout() : opts.cosmetics);
     if (def.id === "shade") {
       this.afterImages = [];
@@ -129,10 +143,38 @@ export class CharacterRig {
   }
 
   // ------------------------------------------------------------------ flap
+  /**
+   * YARMS's double-bicep flex. sparkle: a tiny flex sparkle (near-miss); shine: a gold shine
+   * sweeps across the muscles (new best / showcase); big: hold it longer.
+   */
+  flex({ sparkle = false, shine = false, big = false } = {}) {
+    if (this.px.mode !== "yarms" || this.dead) return;
+    this.flexT = big ? 0.95 : 0.55;
+    this.sx = 0.86;
+    this.sy = 1.22;
+    if (shine) this.shineT = 0.7;
+    if (this.sounds || big) Sfx.flex();
+    if (!this.fx) return;
+    const u = this.u;
+    if (sparkle || big)
+      for (const side of [-1, 1])
+        this.fx.burst("star", this.x + side * 18 * u, this.y - 16 * u, big ? 6 : 3, 0xffd23f, {
+          speed: { min: 40, max: 160 },
+        });
+    if (big) this.fx.ring(this.x, this.y, 0xffd23f, { scale: 0.9 * u, duration: 420, width: 2 });
+  }
+
   flap() {
-    this.sx = 0.72;
-    this.sy = 1.34;
     this.flapT = 0;
+    if (this.px.mode === "yarms") {
+      // the big floppy swim stroke: squash flat and wide, then spring back up tall
+      this.sx = 1.42;
+      this.sy = 0.62;
+      this.flexT = 0;
+    } else {
+      this.sx = 0.72;
+      this.sy = 1.34;
+    }
     if (!this.fx) return;
     const { x, y, def, fx } = this;
     const down = this.gravityDir > 0 ? { min: 50, max: 130 } : { min: 230, max: 310 };
@@ -165,6 +207,17 @@ export class CharacterRig {
           const { kind, color, n } = def.fx.flap;
           fx.burst(kind, x, y + oy, n, color, { angle: down });
         }
+        break;
+      case "yarms":
+        // a whoosh puff under the stroke and sparkles off both hands
+        fx.burst("smoke", x, y + oy * 1.4, 4, 0xfff0d8, {
+          angle: down,
+          speed: { min: 40, max: 140 },
+        });
+        for (const side of [-1, 1])
+          fx.burst("pixel", x + side * 16 * this.u, y + 10 * this.u, 3, 0xffd23f, {
+            speed: { min: 60, max: 200 },
+          });
         break;
       case "smash":
         // the punch: a cavitation shockwave in front + rainbow sparks
@@ -296,10 +349,20 @@ export class CharacterRig {
   // ------------------------------------------------------------------ death
   /** Returns hints for the scene's death effects (flash strength, camera shake). */
   die() {
+    const hints = { flash: 0.35, shake: 0.018 };
+    if (this.px.mode === "yarms" && !this.dead) {
+      // one last flex... then the burst (see updateYarms → yarmsExplode)
+      this.dead = true;
+      this.deathFlex = 0.32;
+      this.flexT = 0.32;
+      this.sx = 0.8;
+      this.sy = 1.3;
+      if (this.sounds) Sfx.flex();
+      return hints;
+    }
     this.dead = true;
     this.setVisible(false);
     const { x, y, def, fx } = this;
-    const hints = { flash: 0.35, shake: 0.018 };
     if (!fx) return hints;
     this.cosmeticDeath(x, y);
     fx.burst("shard", x, y, 26, def.color);
@@ -356,6 +419,25 @@ export class CharacterRig {
         break;
     }
     return hints;
+  }
+
+  yarmsExplode() {
+    this.setVisible(false);
+    if (this.sounds) Sfx.deflate();
+    if (!this.fx) return;
+    const { x, y, fx } = this;
+    this.cosmeticDeath(x, y);
+    fx.burst("pixel", x, y, 60, 0xffd23f, { speed: { min: 150, max: 650 } });
+    fx.burst("pixel", x, y, 24, 0xf0a070, { speed: { min: 100, max: 420 } });
+    fx.burst("sweat", x, y - 10, 16, 0xbfe8ff, {
+      angle: { min: 200, max: 340 },
+      speed: { min: 200, max: 520 },
+    });
+    fx.burst("dumbbell", x, y - 10, 4, 0xffffff, {
+      angle: { min: 220, max: 320 },
+      speed: { min: 300, max: 560 },
+    });
+    fx.ring(x, y, 0xffd23f, { scale: 1.8, duration: 600, width: 3 });
   }
 
   stampAfterImage(alpha = 0.5) {
@@ -476,6 +558,8 @@ export class CharacterRig {
         break;
     }
 
+    if (this.px.mode === "yarms") this.updateYarms(dt);
+
     // shop skin: the tint wins over per-hero tints; extras sparkle / sheen
     if (this.skin) {
       let tint = this.skin.tint;
@@ -521,6 +605,8 @@ export class CharacterRig {
     if (mode === "idle") f = Math.floor(this.time * 5) % 3;
     else if (mode === "glitch") f = this.glitchT > 0 ? 2 : Math.floor(this.time * 3) % 2;
     else if (mode === "spin") f = Math.floor(this.time * 20) % 3;
+    else if (mode === "yarms")
+      f = this.flexT > 0 ? 3 : this.flapT < 0.17 ? 2 : Math.floor(this.time * 7) % 2;
     else if (mode === "punch" || mode === "leap")
       f = this.flapT < 0.14 ? 2 : Math.floor(this.time * 6) % 2;
     else if (mode === "flap")
@@ -534,12 +620,66 @@ export class CharacterRig {
     const flip = this.gravityDir < 0 ? -1 : 1;
     sp.setPosition(Math.round(this.x + this.offX), Math.round(this.y + this.offY));
     sp.setAngle(Math.round(this.angle / 15) * 15);
-    sp.setScale(
-      m * (this.sx < 0.9 ? 0.875 : this.sx > 1.1 ? 1.125 : 1),
-      m * (this.sy > 1.1 ? 1.125 : this.sy < 0.9 ? 0.875 : 1) * flip,
-    );
+    // YARMS gets exaggerated (goofy) squash & stretch steps
+    const big = mode === "yarms";
+    const step = (v) =>
+      v < 0.8 && big ? 0.75 : v < 0.9 ? 0.875 : v > 1.25 && big ? 1.25 : v > 1.1 ? 1.125 : 1;
+    sp.setScale(m * step(this.sx), m * step(this.sy) * flip);
     this.placeCosmetics();
     this.drawTrail();
+  }
+
+  updateYarms(dt) {
+    if (this.flexT > 0) this.flexT -= dt;
+    if (this.deathFlex > 0) {
+      this.deathFlex -= dt;
+      if (this.deathFlex <= 0) this.yarmsExplode();
+      return;
+    }
+    if (this.dead) return;
+    // every few seconds of gliding: a quick double-bicep flex
+    if (this.flapT > 0.6 && this.flexT <= 0) {
+      this.nextFlex -= dt;
+      if (this.nextFlex <= 0) {
+        this.nextFlex = 3 + Math.random() * 3.5;
+        this.flex();
+      }
+    }
+    // sweat drops flying off the hands
+    if (this.fx && !this.trailOverride && !this.cos.trail) {
+      this.sweatT = (this.sweatT || 0) - dt;
+      if (this.sweatT <= 0) {
+        this.sweatT = this.lowGfx ? 0.3 : 0.14;
+        const side = Math.random() < 0.5 ? -1 : 1;
+        this.fx.burst("sweat", this.x + side * 16 * this.u, this.y - 4 * this.u, 1, 0xbfe8ff, {
+          angle: { min: 180, max: 240 },
+          speed: { min: 60, max: 180 },
+        });
+      }
+    }
+    // the gold shine sweep across the muscles
+    const g = this.shineG;
+    if (g) {
+      g.clear();
+      if (this.shineT > 0) {
+        this.shineT -= dt;
+        const sp = this.sprite;
+        const w = sp.displayWidth;
+        const h = Math.abs(sp.displayHeight);
+        const k = 1 - this.shineT / 0.7;
+        const cx = sp.x - w / 2 + k * w * 1.2;
+        g.fillStyle(0xfff6c0, 0.55 * Math.sin(Math.min(1, k) * Math.PI));
+        g.fillPoints(
+          [
+            { x: cx - 10, y: sp.y + h / 2 },
+            { x: cx + 6, y: sp.y + h / 2 },
+            { x: cx + 22, y: sp.y - h / 2 },
+            { x: cx + 6, y: sp.y - h / 2 },
+          ],
+          true,
+        );
+      }
+    }
   }
 
   /** Hat on the head (any hero: HEAD_ANCHORS), glow behind the body. */
@@ -584,6 +724,7 @@ export class CharacterRig {
     const P = 4;
     const style = this.trailOverride ? null : this.cos.trail;
     if (style && this.drawCosmeticTrail(g, style, P)) return;
+    if (!this.trailOverride && this.px.mode === "yarms") return this.drawYarmsTrail(g);
     const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail
     const n = this.points.length;
     for (let i = 1; i < n; i += 2) {
@@ -598,6 +739,29 @@ export class CharacterRig {
         size,
         size,
       );
+    }
+  }
+
+  /** YARMS: golden motion lines streaming off both arms and the shoulders. */
+  drawYarmsTrail(g) {
+    const pts = this.points;
+    const n = pts.length;
+    for (const [dy, w] of [
+      [-9, 2],
+      [0, 3],
+      [9, 2],
+    ]) {
+      for (let i = 1; i < n; i += 2) {
+        const a = pts[i - 1];
+        const b = pts[i];
+        const t = i / n;
+        g.lineStyle(
+          Math.max(1, w * (1 - t) * this.sizeMul + 1),
+          t < 0.4 ? 0xfff0a0 : 0xffd23f,
+          0.9 - t * 0.85,
+        );
+        g.lineBetween(a.x, a.y + dy * this.u, b.x, b.y + dy * this.u);
+      }
     }
   }
 

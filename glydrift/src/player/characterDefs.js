@@ -730,6 +730,26 @@ export const CHARACTERS = [
     desc: "Aurora trail. Dissolves into stardust.",
   },
   {
+    id: "yarms",
+    name: "YARMS",
+    title: "All Arms",
+    rarity: "legendary",
+    color: 0xffd23f,
+    color2: 0xf0a070,
+    texture: "hero_yarms",
+    pixel: {
+      atlas: "pxc",
+      // 0/1 glide (fingers flutter), 2 the flop stroke, 3 the double-bicep flex
+      frames: ["yarms_0", "yarms_1", "yarms_2", "yarms_3"],
+      mode: "yarms",
+      trail: [0xfff6c0, 0xffd23f, 0xc8901a],
+    },
+    scale: 0.64,
+    cost: 12000,
+    challenge: { stat: "maxNearRun", value: 50, text: "Do 50 near-misses in one run" },
+    desc: "All arms. No body. No problem.",
+  },
+  {
     id: "springer",
     name: "SPRINGER",
     title: "Hockey Player",

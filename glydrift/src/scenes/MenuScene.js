@@ -8,6 +8,7 @@ import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { CHARACTERS, getCharacter, onSale } from "../player/characterDefs.js";
 import { Sfx } from "../audio/sfx.js";
+import { TEST } from "../systems/testFlags.js";
 import { Haptics } from "../systems/haptics.js";
 import { Install } from "../systems/install.js";
 import { Leaderboard } from "../online/leaderboard.js";
@@ -90,7 +91,7 @@ export class MenuScene extends Phaser.Scene {
     });
 
     // ---- hero
-    this.def = getCharacter(s.selected);
+    this.def = getCharacter(TEST.character || s.selected);
     this.heroY = H * 0.43;
     this.rig = new CharacterRig(this, this.def, this.fx, {
       x: W / 2,

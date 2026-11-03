@@ -139,6 +139,18 @@ KINDS.confetti = fall("fx_confetti", 160, {
   rotate: { min: 0, max: 360 },
 });
 KINDS.cash = fall("fx_cash", 100, { gravityY: 700, rotate: { min: 0, max: 360 } });
+KINDS.sweat = fall("fx_sweat", 80, {
+  gravityY: 900,
+  lifespan: { min: 350, max: 700 },
+  rotate: 0,
+  scale: { start: 1, end: 0.7 },
+});
+KINDS.dumbbell = fall("fx_dumbbell", 24, {
+  gravityY: 1100,
+  lifespan: { min: 900, max: 1400 },
+  rotate: { min: 0, max: 360 },
+  alpha: { start: 1, end: 0.6 },
+});
 
 export class Effects {
   constructor(scene, { lowGfx = false, depth = 40 } = {}) {

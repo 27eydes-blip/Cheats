@@ -212,6 +212,14 @@ export function drawIcon(g, id, s, color) {
       g.fillTriangle(-s * 0.8, -s * 0.12, s * 0.8, -s * 0.12, 0, -s);
       g.fillTriangle(-s * 0.8, s * 0.12, s * 0.8, s * 0.12, 0, s);
       break;
+    case "arm_day": {
+      // a flexed arm: upper arm out, forearm up, fist on top, bicep bump
+      g.fillRoundedRect(-s * 0.75, s * 0.05, s * 0.9, s * 0.38, s * 0.18);
+      g.fillCircle(-s * 0.3, -s * 0.02, s * 0.3);
+      g.fillRoundedRect(s * 0.05, -s * 0.6, s * 0.36, s * 1.0, s * 0.16);
+      g.fillCircle(s * 0.23, -s * 0.62, s * 0.26);
+      break;
+    }
     case "dim_all":
       g.fillPoints(star(g, s, 4, 0.35), true);
       break;

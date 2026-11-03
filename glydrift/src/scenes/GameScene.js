@@ -83,7 +83,7 @@ export class GameScene extends Phaser.Scene {
     this.hazardList = [];
     this.hazardScreen = [];
 
-    this.charDef = getCharacter(Save.data.selected);
+    this.charDef = getCharacter(TEST.character || Save.data.selected);
     this.fx = new Effects(this, { lowGfx: this.lowGfx });
     this.obstacles = new ObstacleManager(this, this.fx, {
       W,
@@ -318,6 +318,7 @@ export class GameScene extends Phaser.Scene {
   // ------------------------------------------------------------------ events
   nearMiss(o) {
     this.run.nearMiss++;
+    this.player.rig.flex({ sparkle: true }); // YARMS: a quick flex (no-op for other heroes)
     this.addChain();
     const pts = NEAR_MISS.bonus * this.mult;
     this.bonus += pts;
@@ -835,6 +836,7 @@ export class GameScene extends Phaser.Scene {
       ) {
         this.passedBest = true;
         this.hudReady?.onNewBest?.();
+        this.player.rig.flex({ shine: true, big: true }); // YARMS: big flex + gold shine
         this.fx.floatText(p.x + 20, p.y - 120, "NEW BEST!", "#ffd23f", 50);
         Sfx.newBest();
         Haptics.strong();

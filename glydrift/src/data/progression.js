@@ -199,6 +199,13 @@ export const ACHIEVEMENTS = [
     check: (s) => s.level >= 10,
   },
   {
+    id: "arm_day",
+    name: "Never Skip Arm Day",
+    desc: "Unlock YARMS",
+    glyph: "A",
+    check: (s) => !!s.unlocked.yarms,
+  },
+  {
     id: "collector",
     name: "Full Roster",
     desc: "Unlock every character",

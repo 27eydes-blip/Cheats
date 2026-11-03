@@ -238,6 +238,17 @@ export class CharacterScene extends Phaser.Scene {
     this.flapT = 0.4;
     this.fx.ring(this.cx, this.cy, def.color, { scale: 1.4, duration: 500 });
     this.fx.burst("star", this.cx, this.cy, 14, def.color);
+    if (def.id === "yarms") {
+      // showcase: rotates in, then a full flex pose with a gold Legendary burst
+      this.time.delayedCall(700, () => {
+        if (this.rig?.def.id !== "yarms") return;
+        this.rig.flex({ big: true, shine: true });
+        this.fx.ring(this.rig.x, this.rig.y, 0xffd23f, { scale: 2.4, duration: 700, width: 3 });
+        this.fx.burst("star", this.rig.x, this.rig.y, 40, 0xffd23f, {
+          speed: { min: 200, max: 650 },
+        });
+      });
+    }
   }
 
   select(i) {
@@ -388,6 +399,7 @@ export class CharacterScene extends Phaser.Scene {
         glitch: 3,
         shade: 4,
         nova: Math.floor(this.t / 4) % 5, // the five classic biomes
+        yarms: 1,
         bloom: 0,
         mecha: 1,
         tide: 2,

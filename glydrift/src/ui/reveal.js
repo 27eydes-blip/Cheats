@@ -81,7 +81,16 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
     .setAlpha(0);
   const hero = scene.add.image(W / 2, cy - 160, def.texture).setAlpha(0);
   const base = 440 / Math.max(hero.width, hero.height);
-  const name = neonText(scene, W / 2, cy + 270, def.name, 64, def.color, { blur: 18 }).setAlpha(0);
+  const yarms = def.id === "yarms";
+  const name = neonText(
+    scene,
+    W / 2,
+    cy + 270,
+    yarms ? "YARMS UNLOCKED" : def.name,
+    yarms ? 58 : 64,
+    def.color,
+    { blur: 18 },
+  ).setAlpha(0);
   const sub = plainText(
     scene,
     W / 2,
@@ -132,6 +141,13 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
     };
     scene.time.delayedCall(1200, () => {
       // the burst, in the rarity colour
+      if (yarms) {
+        // he lands... and FLEXES: swap to the flex pose, gold flash, the title slams in
+        hero.setTexture("hero_yarms_flex");
+        flash.fillColor = 0xffd23f;
+        Sfx.flex();
+        scene.tweens.add({ targets: hero, scaleY: hero.scaleY * 1.12, duration: 120, yoyo: true });
+      }
       flash.fillAlpha = reduceFlashing() ? 0.08 : 0.38; // Reduce Flashing: a soft glow only
       scene.tweens.add({ targets: flash, fillAlpha: 0, duration: 380 });
       burst(scene, cont, W / 2, cy, rc, { ultra: 70, mega: 56, legendary: 44 }[def.rarity] ?? 30);
@@ -157,9 +173,10 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
       scene.tweens.add({ targets: [name, sub], alpha: 1, duration: 260 });
       scene.tweens.add({
         targets: name,
-        scale: { from: 1.5, to: 1 },
-        duration: 360,
-        ease: "Back.easeOut",
+        scale: { from: yarms ? 3 : 1.5, to: 1 },
+        duration: yarms ? 260 : 360,
+        ease: yarms ? "Cubic.easeIn" : "Back.easeOut",
+        onComplete: () => yarms && scene.cameras.main.shake(220, 0.012),
       });
       scene.cameras.main.shake(180, 0.006);
       Haptics.strong();

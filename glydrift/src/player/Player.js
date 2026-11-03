@@ -9,7 +9,7 @@ export class Player {
     this.def = def;
     this.x = x;
     this.startY = y;
-    this.rig = new CharacterRig(scene, def, fx, { x, y, lowGfx, depth: 30 });
+    this.rig = new CharacterRig(scene, def, fx, { x, y, lowGfx, depth: 30, sounds: true });
     this.reset();
   }
 
