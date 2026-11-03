@@ -65,7 +65,9 @@ export class AnimalBits {
     if (this.specialT > 0 && n > 3) return 3;
     if (r.flapT < (this.a.flapHold ?? 0.2)) return 2;
     if (this.a.blink) return this.blinkF;
-    return Math.floor(r.time * (r.px.idleHz ?? 3)) % 2;
+    // blinking Christmas lights slow right down with Reduce Flashing
+    const hz = this.a.lights && reduceFlashing() ? 0.8 : (r.px.idleHz ?? 3);
+    return Math.floor(r.time * hz) % 2;
   }
 
   flap() {

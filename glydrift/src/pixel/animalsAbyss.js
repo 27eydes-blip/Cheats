@@ -299,6 +299,7 @@ export function anglerfiend(f) {
   lightEdges(pc, B, 0x4a3a66);
   return finish(pc, 0x08040e);
 }
+ashspider.head = { x: 3, y: -2, w: 26, h: 26 }; // hats on the head, not a leg
 anglerfiend.head = { x: 0, y: -5, w: 26, h: 26 }; // hats sit on the head, not the lure
 
 // ------------------------------------------------------------------ RIFTWOLF — shadow wolf with smoky wings
