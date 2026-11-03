@@ -149,6 +149,8 @@
 
   /* "NEW" hero spotlight cards */
   .new { width: 100%; display: grid; gap: 12px; }
+  .hero, .rift { color: var(--ink); text-decoration: none; -webkit-tap-highlight-color: transparent; }
+  .hero:active, .rift:active { transform: scale(.98); }
   .hero {
     display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center;
     background: var(--card); border-radius: 16px; padding: 14px;
@@ -170,6 +172,7 @@
   .milzzz .r { color: #39ff6a; text-shadow: 0 0 8px #39ff6a; }
 
   .rift {
+    display: block;
     width: 100%; border-radius: 16px; padding: 14px 16px; text-align: center;
     background: radial-gradient(120% 140% at 50% 0%, #2a1060 0%, var(--card) 60%);
     border: 3px solid #b45cff; box-shadow: 0 0 22px rgba(180,92,255,.45);
@@ -198,23 +201,23 @@
 
   <h2>NEW IN GLYDRIFT</h2>
   <div class="new">
-    <div class="hero smash" id="smash">
+    <a class="hero smash" id="smash" href="https://27eydes-blip.github.io/Cheats/glydrift/">
       <img src="img/hero-smash.png" alt="SMASH, a rainbow pixel mantis shrimp throwing a punch" width="96">
       <div>
         <h3>SMASH</h3>
         <div class="r rainbow">MEGA LEGENDARY</div>
         <p>A mantis shrimp whose every flap is a sonic punch. <span class="timer" id="smash-timer">24 hours only</span></p>
       </div>
-    </div>
-    <div class="hero milzzz">
+    </a>
+    <a class="hero milzzz" href="https://27eydes-blip.github.io/Cheats/glydrift/">
       <img src="img/hero-milzzz.png" alt="MILZZZ, an angry red-eyed tree frog" width="96">
       <div>
         <h3>MILZZZ</h3>
         <div class="r">ULTRA LEGENDARY</div>
         <p>A red-eyed tree frog. The hardest hero in the game — and the only one with a <b style="color:var(--ink)">double jump</b>.</p>
       </div>
-    </div>
-    <div class="rift">
+    </a>
+    <a class="rift" href="https://27eydes-blip.github.io/Cheats/glydrift/">
       <h3>⚡ A RIFT AFTER THE HURRICANE</h3>
       <p>Fly far enough and reality tears open. Can you find all four?</p>
       <div class="dims">
@@ -223,7 +226,7 @@
         <span style="border-color:#ffc83d;color:#ffc83d">CHRONO</span>
         <span style="border-color:#b86aff;color:#b86aff">MIRROR</span>
       </div>
-    </div>
+    </a>
   </div>
 
   <details class="btn">
