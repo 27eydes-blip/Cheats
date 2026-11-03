@@ -3,8 +3,8 @@ import Phaser from "phaser";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
 import { fitCamera, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
-import { ACHIEVEMENTS, LEVEL_REWARDS, LOGIN_REWARDS, Progression } from "../systems/progression.js";
-import { Save } from "../systems/save.js";
+import { ACHIEVEMENTS, LEVEL_REWARDS, LOGIN_REWARDS, Progression } from "../data/progression.js";
+import { Save } from "../data/save.js";
 import { drawIcon } from "../ui/icons.js";
 import {
   button,

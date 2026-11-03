@@ -2,7 +2,7 @@
 // shown in a DOM modal with Web Share / download fallbacks.
 import { BIOMES, biomeName } from "../biomes/biomes.js";
 import { getCharacter } from "../player/characterDefs.js";
-import { dailyNumber } from "./rng.js";
+import { dailyNumber } from "../data/rng.js";
 
 const css = (c) => `#${c.toString(16).padStart(6, "0")}`;
 const FONT = '"Orbitron", "Avenir Next", system-ui, sans-serif';

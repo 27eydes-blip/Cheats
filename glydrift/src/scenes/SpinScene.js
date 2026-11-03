@@ -6,9 +6,9 @@ import { fitCamera, RARITY, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
 import { getCharacter, LOTTERY_HEROES } from "../player/characterDefs.js";
-import { Sfx } from "../systems/audio.js";
-import { Progression, SPIN_EVERY, SPIN_SLICES } from "../systems/progression.js";
-import { Save } from "../systems/save.js";
+import { Sfx } from "../audio/sfx.js";
+import { Progression, SPIN_EVERY, SPIN_SLICES } from "../data/progression.js";
+import { Save } from "../data/save.js";
 import {
   button,
   drawNeonRect,

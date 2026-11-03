@@ -1,7 +1,7 @@
 // Light / strong haptic taps. Uses the native Haptics plugin when the game runs as an
 // installed app (Capacitor), else the Vibration API where the browser has one (Android).
 // iPhone Safari / home-screen web apps have no web vibration API, so there it is a no-op.
-import { Save } from "./save.js";
+import { Save } from "../data/save.js";
 
 let last = 0;
 

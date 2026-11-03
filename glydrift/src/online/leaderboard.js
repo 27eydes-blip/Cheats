@@ -7,8 +7,8 @@
 //  - Table "scores": one row per (player_id, level); RLS lets anyone read and players write
 //    only their own row. Only the publishable key is used here.
 import { SUPABASE, WORLD } from "../config.js";
-import { dailyNumber } from "./rng.js";
-import { Save } from "./save.js";
+import { dailyNumber } from "../data/rng.js";
+import { Save } from "../data/save.js";
 
 // ?lbtest routes all reads/writes to "test-…" levels so testing never touches the real boards
 const PREFIX =

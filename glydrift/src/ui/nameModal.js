@@ -1,5 +1,5 @@
 // Neon username prompt (a DOM overlay so the phone's real keyboard works).
-import { suggestUsername, validateUsername } from "../systems/username.js";
+import { suggestUsername, validateUsername } from "../online/username.js";
 
 /**
  * @returns Promise<string|null> the chosen name, or null if cancelled

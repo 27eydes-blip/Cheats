@@ -21,31 +21,23 @@ import { Terrain } from "../pixel/Terrain.js";
 import { THEMES, themeFor } from "../pixel/themes.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Player } from "../player/Player.js";
-import { Sfx } from "../systems/audio.js";
+import { Sfx } from "../audio/sfx.js";
 import { Haptics } from "../systems/haptics.js";
-import { Leaderboard } from "../systems/leaderboard.js";
-import { Music } from "../systems/music.js";
-import { BIOME_TRACKS } from "../systems/musicTracks.js";
-import { Progression } from "../systems/progression.js";
-import { dailySeed, todayKey } from "../systems/rng.js";
-import { Save } from "../systems/save.js";
+import { Leaderboard } from "../online/leaderboard.js";
+import { Music } from "../audio/music.js";
+import { BIOME_TRACKS } from "../audio/musicTracks.js";
+import { Progression } from "../data/progression.js";
+import { dailySeed, todayKey } from "../data/rng.js";
+import { Save } from "../data/save.js";
+import { ABYSS, BIOME_ENTRY_SLOWMO, BIOME_SPEED, CALM, COMBO, FLASH, REWARDS } from "../tuning.js";
 
-const CALM_M = 150; // last meters of the Glitch Realm before the Abyss: The Calm
-const ABYSS_SPIKE = 1.06; // speed jump entering the Abyss
-const DARK_R = 470; // Abyss light radius around the player
-const COIN_BONUS = 10;
-// combo: near-misses, coins and perfect passes chain; the multiplier steps up with the chain
-const COMBO_TIERS = [
-  [16, 10],
-  [10, 5],
-  [6, 3],
-  [3, 2],
-]; // [chain length, multiplier]
-const COMBO_WINDOW = 3; // seconds without a combo event resets it
-const PERFECT_BONUS = 15;
-const BIOME_COINS = 50;
-const LUCKY_CHANCE = 0.05; // about 1 run in 20
-const GOLD_TRAIL = [0xffffff, 0xfff1a0, 0xffd23f, 0xc8901a];
+const CALM_M = CALM.meters;
+const DARK_R = ABYSS.darkRadius;
+const COIN_BONUS = REWARDS.coinPoints;
+const PERFECT_BONUS = REWARDS.perfectPoints;
+const BIOME_COINS = REWARDS.biomeCoins;
+const COMBO_TIERS = COMBO.tiers;
+const COMBO_WINDOW = COMBO.window;
 const FORCE_LUCKY =
   typeof location !== "undefined" && new URLSearchParams(location.search).has("lucky");
 // ?god in the URL makes the player invincible (handy for testing / capturing screenshots)
@@ -181,8 +173,8 @@ export class GameScene extends Phaser.Scene {
     this.nextMilestone = 100;
     this.sparkleT = 0;
     this.comboMeter.reset();
-    this.lucky = this.mode !== "daily" && (FORCE_LUCKY || Math.random() < LUCKY_CHANCE);
-    this.player.rig.trailOverride = this.lucky ? GOLD_TRAIL : null;
+    this.lucky = this.mode !== "daily" && (FORCE_LUCKY || Math.random() < REWARDS.luckyChance);
+    this.player.rig.trailOverride = this.lucky ? REWARDS.luckyTrail : null;
     this.lastSpeedTier = 0;
     this.biomeIndex = 0;
     this.announcedBiome = 0;
@@ -244,7 +236,7 @@ export class GameScene extends Phaser.Scene {
   startRun() {
     this.state = "playing";
     this.flashFx.refresh();
-    this.flashFx.flash(this.lucky ? 0xffd23f : BIOMES[0].neon, { peak: 0.42, dur: 0.3 });
+    this.flashFx.flash(this.lucky ? 0xffd23f : BIOMES[0].neon, FLASH.runStart);
     if (this.lucky) {
       Sfx.lucky();
       Haptics.strong();
@@ -280,7 +272,7 @@ export class GameScene extends Phaser.Scene {
     const pts = NEAR_MISS.bonus * this.mult;
     this.bonus += pts;
     this.slowT = NEAR_MISS.slowTime;
-    this.flashFx.flash(0xffffff, { peak: 0.28, dur: 0.25 });
+    this.flashFx.flash(0xffffff, FLASH.nearMiss);
     const p = this.player;
     this.fx.floatText(
       p.x + 40,
@@ -291,7 +283,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.fx.burst("star", p.x, p.y, 10, 0xffffff, { speed: { min: 120, max: 300 } });
     this.fx.ring(p.x, p.y, 0xffffff, { scale: 0.9, duration: 300 });
-    this.flashFx.flash(this.charDef.color, { peak: 0.5, dur: 0.28, edge: true });
+    this.flashFx.flash(this.charDef.color, { ...FLASH.nearMissEdge, edge: true });
     Sfx.near();
     this.hudReady?.onNearMiss?.(pts, this.mult);
   }
@@ -329,7 +321,7 @@ export class GameScene extends Phaser.Scene {
     const p = this.player;
     this.fx.floatText(p.x + 30, p.y - 92, `PERFECT! +${pts}`, "#fff1a0", 34);
     this.fx.burst("star", p.x, p.y, 8, 0xfff1a0, { speed: { min: 100, max: 280 } });
-    this.flashFx.flash(0xfff4c0, { peak: 0.16, dur: 0.15 });
+    this.flashFx.flash(0xfff4c0, FLASH.perfect);
     Sfx.perfect();
     Haptics.light();
   }
@@ -348,7 +340,7 @@ export class GameScene extends Phaser.Scene {
     this.fx.burst("star", p.x, p.y, big > 1 ? 36 : 24, 0xffd23f, { speed: { min: 200, max: 640 } });
     this.fx.burst("pixel", p.x, p.y, 16, 0xffffff, { speed: { min: 260, max: 700 } });
     this.fx.ring(p.x, p.y, 0xffd23f, { scale: big > 1 ? 2.4 : 1.8, duration: 600, width: 2 });
-    this.flashFx.flash(0xffd23f, { peak: big > 1 ? 0.32 : 0.24, dur: 0.35 });
+    this.flashFx.flash(0xffd23f, big > 1 ? FLASH.milestoneBig : FLASH.milestone);
     this.cameras.main.shake(160, 0.004);
     Sfx.milestone(big);
     Haptics.strong();
@@ -371,7 +363,7 @@ export class GameScene extends Phaser.Scene {
     this.run.portals++;
     Sfx.portal();
     const col = { flip: 0xff4fd8, restore: 0x39ff88, mini: 0xffd23f }[o.mode];
-    this.flashFx.flash(0xffffff, { peak: 0.45, dur: 0.2 });
+    this.flashFx.flash(0xffffff, FLASH.portal);
     this.fx.burst("pixel", p.x, p.y, 22, col, { speed: { min: 200, max: 560 } });
     this.fx.burst("star", p.x, p.y, 10, 0xffffff, { speed: { min: 120, max: 380 } });
     this.fx.ring(o.x, o.y, col, { scale: 1.4, duration: 500, width: 2 });
@@ -399,7 +391,7 @@ export class GameScene extends Phaser.Scene {
     Music.deathSweep();
     Haptics.strong();
     this.cameras.main.shake(320, hints.shake);
-    this.flashFx.flash(0xffffff, { peak: hints.flash, dur: 0.3, priority: true });
+    this.flashFx.flash(0xffffff, { ...FLASH.death, peak: hints.flash, priority: true });
     this.slowT = 0.5;
     this.run.distance = Math.floor(this.meters);
     this.run.score = this.score;
@@ -514,12 +506,11 @@ export class GameScene extends Phaser.Scene {
         Music.play(BIOME_TRACKS[bs.rawIndex % BIOME_TRACKS.length], { startBar: 8 });
         this.hudReady?.onBiome?.(bs.rawIndex);
         if (bs.rawIndex > 0) {
-          this.slowT = Math.max(this.slowT, 0.45); // a brief slow-mo beat
+          this.slowT = Math.max(this.slowT, BIOME_ENTRY_SLOWMO); // a brief slow-mo beat
           this.biomeBonus();
         }
         this.flashFx.flash(BIOMES[bs.rawIndex % BIOMES.length].neon, {
-          peak: 0.45,
-          dur: 0.35,
+          ...FLASH.biome,
           priority: true,
         });
       }
@@ -581,7 +572,7 @@ export class GameScene extends Phaser.Scene {
     info.local = this.meters - bs.rawIndex * BL;
     const titleWin = this.meters > 100 && (local0 > BL - 85 || local0 < 50);
     info.pause = playing && (calm || preCalm || titleWin || this.blackoutT > 0);
-    info.grace = biomeIdOf(raw0) === "abyss" && local0 < 180;
+    info.grace = biomeIdOf(raw0) === "abyss" && local0 < ABYSS.graceMeters;
     this.updateCalmFx(rawDt);
     this.flashFx.update(rawDt);
 
@@ -662,7 +653,7 @@ export class GameScene extends Phaser.Scene {
         this.fx.burst("star", p.x, p.y, 24, 0xffd23f, { speed: { min: 150, max: 420 } });
         this.fx.burst("pixel", p.x, p.y, 18, 0xfff1a0, { speed: { min: 240, max: 620 } });
         this.fx.ring(p.x, p.y, 0xffd23f, { scale: 1.6, duration: 520, width: 2 });
-        this.flashFx.flash(0xffd23f, { peak: 0.4, dur: 0.35 });
+        this.flashFx.flash(0xffd23f, FLASH.newBest);
       }
       this.missionCheckT -= rawDt;
       if (this.missionCheckT <= 0) {
@@ -706,12 +697,10 @@ export class GameScene extends Phaser.Scene {
     const raw0 = Math.floor(this.meters / BL);
     const local0 = this.meters - raw0 * BL;
     let target = 1;
-    if (this.calm) target = 1 - 0.18 * this.calmK;
-    else if (biomeIdOf(raw0) === "glitch")
-      target = 0.95; // Glitch Realm runs a touch slower
-    else if (biomeIdOf(raw0) === "valley")
-      target = 0.75; // the Peaceful Valley drifts
-    else if (biomeIdOf(raw0) === "abyss") target = ABYSS_SPIKE + 0.04 * (local0 / BL); // keeps ramping
+    const id = biomeIdOf(raw0);
+    if (this.calm) target = 1 - CALM.slowdown * this.calmK;
+    else if (id === "abyss") target = ABYSS.speedSpike + ABYSS.speedRamp * (local0 / BL);
+    else target = BIOME_SPEED[id] ?? 1; // e.g. the Glitch Realm a touch slower, the Valley drifts
     if (target > this.speedMul) this.speedMul = Math.min(target, this.speedMul + rawDt * 0.5);
     else this.speedMul = Math.max(target, this.speedMul - rawDt * 0.12);
   }
@@ -722,7 +711,7 @@ export class GameScene extends Phaser.Scene {
     this.hudReady?.setBlackout?.(false);
     this.setDesat(0);
     this.cameras.main.shake(380, 0.012);
-    this.flashFx.flash(0xff0820, { peak: 0.55, dur: 0.6, priority: true });
+    this.flashFx.flash(0xff0820, { ...FLASH.abyss, priority: true });
     this.time.delayedCall(700, () => this.state === "playing" && this.biomeBonus());
     Sfx.biome();
     Music.play("abyss", { startBar: 16, immediate: true });
@@ -739,7 +728,7 @@ export class GameScene extends Phaser.Scene {
     // Abyss limited vision (fades in after the slam, out when the Abyss ends)
     const BL = WORLD.biomeLength;
     const inAbyssZone = biomeIdOf(Math.floor(this.meters / BL)) === "abyss" && this.blackoutT <= 0;
-    const target = inAbyssZone && this.state !== "dead" ? 0.55 : 0;
+    const target = inAbyssZone && this.state !== "dead" ? ABYSS.darkAlpha : 0;
     this.darkA +=
       Math.sign(target - this.darkA) * Math.min(Math.abs(target - this.darkA), rawDt * 0.7);
     if (!inAbyssZone && this.inAbyss && this.darkA <= 0) this.inAbyss = false;

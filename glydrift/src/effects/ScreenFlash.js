@@ -3,10 +3,11 @@
 //   · at most 3 flashes start in any 1-second window (extra ones are dropped)
 //   · peaks are capped so hazards stay readable through the brightest frame
 //   · "Reduce Flashing" turns every flash into a gentle, dim colour fade
-import { Save } from "../systems/save.js";
+import { Save } from "../data/save.js";
+import { FLASH_LIMITS } from "../tuning.js";
 
-const MAX_PER_SEC = 3;
-const PEAK_CAP = 0.55;
+const MAX_PER_SEC = FLASH_LIMITS.maxPerSecond;
+const PEAK_CAP = FLASH_LIMITS.peakCap;
 
 /** Reduce Flashing: the saved choice, else the device's Reduce Motion setting. */
 export function reduceFlashing() {

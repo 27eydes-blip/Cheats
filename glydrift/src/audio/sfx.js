@@ -1,6 +1,6 @@
 // Tiny WebAudio synth — no audio files, instant response, unlocked on first touch.
 import { Music, rawAudioContext } from "./music.js";
-import { Save } from "./save.js";
+import { Save } from "../data/save.js";
 
 let ctx = null;
 let master = null;

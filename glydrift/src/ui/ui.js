@@ -1,7 +1,7 @@
 // Juicy UI kit: neon text, bouncy buttons, rolling counters, progress bars, toasts.
 import Phaser from "phaser";
 import { FONT, NUM_FONT, VIEW } from "../config.js";
-import { Sfx } from "../systems/audio.js";
+import { Sfx } from "../audio/sfx.js";
 
 export const hex = (c) => `#${c.toString(16).padStart(6, "0")}`;
 

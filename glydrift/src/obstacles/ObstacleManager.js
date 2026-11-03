@@ -4,12 +4,9 @@ import Phaser from "phaser";
 import { hazardColors, NEAR_MISS } from "../config.js";
 import { S } from "../pixel/px.js";
 import { themeFor } from "../pixel/themes.js";
-import { RNG } from "../systems/rng.js";
-import { TYPES as BASE_TYPES } from "./pixelTypes.js";
-import { NEW_BIOME_TYPES } from "./newBiomeHazards.js";
-import { SIGNATURE_TYPES } from "./signature.js";
-
-const TYPES = { ...BASE_TYPES, ...SIGNATURE_TYPES, ...NEW_BIOME_TYPES };
+import { RNG } from "../data/rng.js";
+import { SPAWN } from "../tuning.js";
+import { TYPES } from "./index.js";
 
 /** Signature hazards per biome, in the order they are introduced (one at a time). */
 const SIG = {
@@ -22,7 +19,7 @@ const SIG = {
   hurricane: ["debris", "bolt", "twister"],
 };
 /** Biome-local meters at which each signature hazard unlocks. */
-const UNLOCK = { void: [60, 200, 340], default: [0, 120, 230] };
+const UNLOCK = SPAWN.unlock;
 
 export class ObstacleManager {
   constructor(scene, fx, { W, H, lowGfx, heroColor = 0x38f6ff }) {
@@ -115,7 +112,7 @@ export class ObstacleManager {
     const r = this.rng;
     const H = this.H;
     // the Abyss caps shared-obstacle difficulty (wider gates, slower saws)
-    const d = Math.min({ abyss: 0.55, valley: 0.3 }[biomeId] ?? 1, meters / 2600);
+    const d = Math.min(SPAWN.difficultyCap[biomeId] ?? 1, meters / SPAWN.difficultyMeters);
     const x = this.nextX;
     const mid = H / 2;
     const safeTop = 150;
@@ -174,7 +171,7 @@ export class ObstacleManager {
       this.introduced.add(`${info.rawIndex}:${kind}`);
     }
     this.count++;
-    const roomy = { abyss: 1.4, glitch: 1.12, valley: 1.6, hurricane: 1.05 }[biomeId] ?? 1;
+    const roomy = SPAWN.roomy[biomeId] ?? 1;
     const spacingMul = (forced ? 1.35 : info.grace ? 1.8 : 1) * roomy;
 
     switch (kind) {

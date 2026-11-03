@@ -6,8 +6,8 @@ import { BIOMES, blendPalette } from "../biomes/biomes.js";
 import { fitCamera, VIEW } from "../config.js";
 import { HI } from "../gfx/textures.js";
 import { getCharacter } from "../player/characterDefs.js";
-import { Leaderboard, Levels } from "../systems/leaderboard.js";
-import { dailyNumber } from "../systems/rng.js";
+import { Leaderboard, Levels } from "../online/leaderboard.js";
+import { dailyNumber } from "../data/rng.js";
 import { button, drawNeonRect, neonText, plainText } from "../ui/ui.js";
 
 const MEDALS = [0xffd23f, 0xdfe8f5, 0xd8894a];

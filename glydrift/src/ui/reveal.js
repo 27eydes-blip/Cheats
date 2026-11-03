@@ -4,7 +4,7 @@
 import Phaser from "phaser";
 import { RARITY, VIEW } from "../config.js";
 import { addAtlas, PixelCanvas } from "../pixel/px.js";
-import { Sfx } from "../systems/audio.js";
+import { Sfx } from "../audio/sfx.js";
 import { Haptics } from "../systems/haptics.js";
 import { hex, neonText, plainText } from "./ui.js";
 

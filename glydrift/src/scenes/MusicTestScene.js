@@ -3,8 +3,8 @@
 import Phaser from "phaser";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
 import { fitCamera, VIEW } from "../config.js";
-import { Music } from "../systems/music.js";
-import { TRACKS } from "../systems/musicTracks.js";
+import { Music } from "../audio/music.js";
+import { TRACKS } from "../audio/musicTracks.js";
 import { button, hex, neonText, plainText, slider } from "../ui/ui.js";
 
 const ORDER = ["menu", "void", "solar", "frozen", "glitch", "abyss"];

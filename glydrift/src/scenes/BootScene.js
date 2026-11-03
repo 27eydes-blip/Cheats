@@ -1,9 +1,9 @@
 import Phaser from "phaser";
 import { buildTextures } from "../gfx/textures.js";
 import { buildPixelArt } from "../pixel/themes.js";
-import { Leaderboard } from "../systems/leaderboard.js";
-import { Progression } from "../systems/progression.js";
-import { Save } from "../systems/save.js";
+import { Leaderboard } from "../online/leaderboard.js";
+import { Progression } from "../data/progression.js";
+import { Save } from "../data/save.js";
 
 export class BootScene extends Phaser.Scene {
   constructor() {

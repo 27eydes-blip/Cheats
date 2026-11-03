@@ -32,7 +32,7 @@ Publish a new version with `npm run deploy:pages` (builds and copies `dist/` int
 - First launch asks for a 3–12 character name (letters/numbers, profanity-filtered); change
   it in Settings → Name (existing rows are renamed).
 - After each run the score goes into a persistent local queue and uploads in the
-  background (`src/systems/leaderboard.js`): only personal bests are upserted (with
+  background (`src/online/leaderboard.js`): only personal bests are upserted (with
   `created_at` = now), `character` and `run_time_ms` are always sent, implausible scores
   (too high for the run time) are rejected, and the queue retries when back online.
   Levels: `endless` and `daily-<number>`.
@@ -52,9 +52,9 @@ npm run ios:open   # opens Xcode → set your team, lock orientation to Portrait
 In Xcode, set *Deployment Info → iPhone Orientation* to **Portrait** only and enable
 *Requires full screen*. The HTML already handles the notch (`viewport-fit=cover` and a
 safe-area probe that feeds the HUD offset). Persistence uses `localStorage`, which survives
-in WKWebView; swap `src/systems/save.js` to `@capacitor/preferences` if you want iCloud
+in WKWebView; swap `src/data/save.js` to `@capacitor/preferences` if you want iCloud
 backup semantics. Sharing uses the Web Share API with a long-press/save fallback; for a
-native sheet, call `@capacitor/share` from `src/systems/shareCard.js`.
+native sheet, call `@capacitor/share` from `src/online/shareCard.js`.
 
 ## Gameplay
 
@@ -95,7 +95,7 @@ Clean, high-contrast neon (Tron / vector arcade), not a photo filter:
 
 ## Music (Tone.js, fully synthesized)
 
-`src/systems/music.js` + `src/systems/musicTracks.js` — no audio files, all original.
+`src/audio/music.js` + `src/audio/musicTracks.js` — no audio files, all original.
 
 - House at 124 BPM: four-on-the-floor kick, offbeat open hats, clap on 2 & 4, rolling bass,
   chord stabs, a lead motif; pads/bass duck on every kick (sidechain pump); synths go to a
@@ -138,7 +138,7 @@ Legendary).
 - **"Almost there"**: distance to your best and progress to the next unlock on game over.
 - **Share card**: 1080×1350 PNG with score, biome, hero and stats.
 - **Achievements**: 16 badges.
-- Everything persists locally (`src/systems/save.js`).
+- Everything persists locally (`src/data/save.js`).
 
 ## Performance
 
@@ -152,15 +152,21 @@ Legendary).
 
 ```
 src/
-  main.js                 Phaser config, font loading, safe-area
-  config.js               physics / world / near-miss tuning
-  scenes/                 Boot, Sky (shader RTT), Backdrop, Menu, Game, Hud, GameOver,
-                          Characters, Progress, MusicTest
-  player/                 Player physics, CharacterRig visuals, character data
-  obstacles/              ObstacleManager (seeded patterns, pooling, collisions), types, geometry
-  biomes/                 palettes + morph, parallax Background
-  effects/                pooled particles, rings, lightning, floating text
-  gfx/                    procedural textures, GLSL shaders
-  systems/                save, progression, rng, music (Tone.js), sfx synth, share card
-  ui/                     buttons, sliders, counters, progress bars, toasts, vector icons
+  main.js                 Phaser config, font loading, safe area, scale mode
+  config.js               view, world speed, physics, near-miss, Supabase (publishable key)
+  tuning.js               rewards, combo, biome pacing, Calm/Abyss, flashes, obstacle spacing
+  scenes/                 Boot, Backdrop, Menu, Game, Hud, GameOver, Characters, Progress,
+                          Leaderboard, Spin, MusicTest (?music)
+  player/                 Player physics, CharacterRig (pixel sprite + trail), hero data
+  obstacles/              ObstacleManager (seeded patterns, pooling, collisions), base,
+                          shared (saw / gate / portal), biomes/<one file per biome>, geometry
+  biomes/                 biome palettes + the smooth morph between them
+  pixel/                  procedural pixel art: heroes, biomes, hazards, backgrounds, floors
+  effects/                particles/rings/lightning/float text, ScreenFlash, ComboMeter
+  gfx/                    smooth particle/UI textures, TileSprite memory fix
+  audio/                  sfx synth, Tone.js music engine, music tracks
+  data/                   save, progression (XP, missions, unlocks, spins), seeded rng
+  online/                 Supabase leaderboard, usernames, share card
+  systems/                frame guard (never freeze on an error), haptics, install prompt
+  ui/                     buttons, sliders, counters, toasts, icons, reveals (unlock, chest)
 ```

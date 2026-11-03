@@ -8,7 +8,7 @@
 // Track changes start on the next bar and crossfade over 2 seconds.
 import * as Tone from "tone";
 import { SECTIONS, TRACKS } from "./musicTracks.js";
-import { Save } from "./save.js";
+import { Save } from "../data/save.js";
 
 const MINOR = [0, 2, 3, 5, 7, 8, 10];
 const PHRYGIAN = [0, 1, 3, 5, 7, 8, 10];

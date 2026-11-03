@@ -8,9 +8,9 @@ import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { CHARACTERS } from "../player/characterDefs.js";
 import { revealHero } from "../ui/reveal.js";
-import { Sfx } from "../systems/audio.js";
-import { Progression } from "../systems/progression.js";
-import { Save } from "../systems/save.js";
+import { Sfx } from "../audio/sfx.js";
+import { Progression } from "../data/progression.js";
+import { Save } from "../data/save.js";
 import {
   button,
   drawNeonRect,

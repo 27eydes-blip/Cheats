@@ -3,9 +3,9 @@ import Phaser from "phaser";
 import { BIOMES, biomeName } from "../biomes/biomes.js";
 import { fitCamera, PHYSICS, VIEW } from "../config.js";
 import { HI } from "../gfx/textures.js";
-import { Music } from "../systems/music.js";
-import { dailyNumber } from "../systems/rng.js";
-import { Sfx } from "../systems/audio.js";
+import { Music } from "../audio/music.js";
+import { dailyNumber } from "../data/rng.js";
+import { Sfx } from "../audio/sfx.js";
 import { button, drawNeonRect, hex, neonText, plainText, RollingCounter } from "../ui/ui.js";
 
 export class HudScene extends Phaser.Scene {

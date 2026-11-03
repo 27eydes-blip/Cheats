@@ -6,13 +6,13 @@ import { BIOMES, biomeName } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, VIEW } from "../config.js";
 import { HI } from "../gfx/textures.js";
 import { getCharacter } from "../player/characterDefs.js";
-import { Sfx } from "../systems/audio.js";
-import { Leaderboard, Levels } from "../systems/leaderboard.js";
-import { Music } from "../systems/music.js";
-import { Progression, SPIN_EVERY } from "../systems/progression.js";
-import { dailyNumber } from "../systems/rng.js";
+import { Sfx } from "../audio/sfx.js";
+import { Leaderboard, Levels } from "../online/leaderboard.js";
+import { Music } from "../audio/music.js";
+import { Progression, SPIN_EVERY } from "../data/progression.js";
+import { dailyNumber } from "../data/rng.js";
 import { levelUpCelebration, revealHero } from "../ui/reveal.js";
-import { closeShareModal, openShareModal } from "../systems/shareCard.js";
+import { closeShareModal, openShareModal } from "../online/shareCard.js";
 import {
   button,
   drawNeonRect,
