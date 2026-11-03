@@ -3,6 +3,7 @@ import { BIOMES } from "../biomes/biomes.js";
 import { CHARACTERS, getCharacter, onSale } from "../player/characterDefs.js";
 import { dayDiff, RNG, todayKey } from "./rng.js";
 import { Save } from "./save.js";
+import { DriftPass } from "./driftPass.js";
 
 // ------------------------------------------------------------------ missions
 const MISSION_TEMPLATES = [
@@ -678,6 +679,7 @@ export const Progression = {
     );
     res.xpGained = xp;
     s.xp += xp;
+    DriftPass.addXp(xp); // the free Drift Pass fills with the same XP
     while (s.xp >= Progression.xpToNext(s.level)) {
       s.xp -= Progression.xpToNext(s.level);
       s.level += 1;

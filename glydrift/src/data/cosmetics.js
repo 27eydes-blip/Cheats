@@ -223,10 +223,10 @@ export const Shop = {
    * everything of that rarity is already yours you get POD_REFUND coins back instead.
    * @returns {{ item: object|null, rarity: string, refund: number } | null}
    */
-  openPod() {
+  openPod({ free = false } = {}) {
     const s = state();
-    if (s.coins < POD_PRICE) return null;
-    s.coins -= POD_PRICE;
+    if (!free && s.coins < POD_PRICE) return null;
+    if (!free) s.coins -= POD_PRICE;
     let r = Math.random() * 100;
     let rarity = "common";
     for (const k of RARITY_ORDER) {
@@ -247,8 +247,20 @@ export const Shop = {
       out = { item, rarity, refund: 0 };
     }
     Save.write();
-    Analytics.log("pod_opened", { rarity, item: out.item?.id || null, refund: out.refund });
+    Analytics.log("pod_opened", { rarity, item: out.item?.id || null, refund: out.refund, free });
     return out;
+  },
+
+  // ---------------------------------------------------------------- daily drift drop
+  /** One free Mystery Pod per day. */
+  dropReady(key = todayKey()) {
+    return state().dailyDrop !== key;
+  },
+  claimDrop(key = todayKey()) {
+    if (!Shop.dropReady(key)) return null;
+    state().dailyDrop = key;
+    Save.write();
+    return Shop.openPod({ free: true });
   },
 
   // ---------------------------------------------------------------- boosts
@@ -290,6 +302,34 @@ export const Shop = {
     }
     if (used.length) Save.write();
     return used;
+  },
+
+  // ---------------------------------------------------------------- biome bundles
+  /** A Collection's trail + hat + death effect as one offer, 25% off what you still need. */
+  bundle(setId) {
+    const set = COLLECTIONS.find((c) => c.id === setId);
+    const items = set.items.filter((id) => getCosmetic(id).cat !== "skin");
+    const need = items.filter((id) => !Shop.owns(id));
+    const full = need.reduce((a, id) => a + getCosmetic(id).price, 0);
+    return { set, items, need, full, price: Math.round((full * 0.75) / 10) * 10 };
+  },
+  /** Today's two featured bundles (rotate daily, same for everyone). */
+  bundlesToday(key = todayKey()) {
+    const rng = new RNG(hashString(`glydrift-bundles-${key}`));
+    const ids = COLLECTIONS.map((c) => c.id);
+    const a = ids.splice(Math.floor(rng.next() * ids.length), 1)[0];
+    const b = ids[Math.floor(rng.next() * ids.length)];
+    return [a, b];
+  },
+  buyBundle(setId) {
+    const s = state();
+    const b = Shop.bundle(setId);
+    if (!b.need.length || s.coins < b.price) return false;
+    s.coins -= b.price;
+    for (const id of b.need) s.cos.owned[id] = true;
+    Save.write();
+    Analytics.log("item_purchased", { item: setId, price: b.price, category: "bundle" });
+    return true;
   },
 
   // ---------------------------------------------------------------- collections

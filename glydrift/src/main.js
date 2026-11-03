@@ -2,6 +2,7 @@ import "@fontsource/orbitron/700.css";
 import "@fontsource/orbitron/900.css";
 import "@fontsource/rajdhani/600.css";
 import "@fontsource/rajdhani/700.css";
+import "@fontsource/silkscreen/700.css";
 import Phaser from "phaser";
 import "./gfx/tileSpriteFix.js";
 import { watchContext } from "./systems/frameGuard.js";
@@ -33,6 +34,7 @@ async function boot() {
         document.fonts.load("900 32px Orbitron"),
         document.fonts.load("600 32px Rajdhani"),
         document.fonts.load("700 32px Rajdhani"),
+        document.fonts.load("700 32px Silkscreen"),
       ]),
       new Promise((r) => setTimeout(r, 1500)),
     ]);
