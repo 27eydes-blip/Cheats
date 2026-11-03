@@ -83,7 +83,10 @@ function strip(kind, a, b) {
       [21, 0xff8ad0],
       [27, 0xb07aff],
     ]) {
-      pc.set(x, 2, c).set(x - 1, 3, c).set(x + 1, 3, c).set(x, 3, 0xfff4b0);
+      pc.set(x, 2, c)
+        .set(x - 1, 3, c)
+        .set(x + 1, 3, c)
+        .set(x, 3, 0xfff4b0);
     }
     at(
       [
@@ -133,7 +136,8 @@ function strip(kind, a, b) {
 
 export function buildFloorStrips(scene) {
   for (const [id, f] of Object.entries(FLOOR))
-    if (!scene.textures.exists(`floor_${id}`)) addTexture(scene, `floor_${id}`, strip(f.kind, f.a, f.b));
+    if (!scene.textures.exists(`floor_${id}`))
+      addTexture(scene, `floor_${id}`, strip(f.kind, f.a, f.b));
 }
 
 /** "pxglow": a stepped (3-ring) pixel glow disc, white; tinted + additive at runtime. */

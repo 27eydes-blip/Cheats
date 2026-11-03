@@ -330,7 +330,9 @@ export function leviathan(f) {
   pc.circle(hx + 2, hy - 1, 3.6, Hd);
   pc.rect(hx + 3, hy - 1, 4, 3, Hd); // snout
   pc.hline(hx + 3, hx + 6, hy + 2, 0x0a3a8a); // jaw line
-  pc.set(hx + 1, hy - 5, 0xffd23f).set(hx, hy - 6, 0xffd23f).set(hx + 3, hy - 5, 0xffd23f); // horns
+  pc.set(hx + 1, hy - 5, 0xffd23f)
+    .set(hx, hy - 6, 0xffd23f)
+    .set(hx + 3, hy - 5, 0xffd23f); // horns
   pc.rect(hx + 2, hy - 3, 2, 2, 0xffffff).set(hx + 3, hy - 2, 0x0a8a8a); // eye
   pc.set(hx + 6, hy + 1, 0xffffff); // fang
   shadeEdges(pc, B, 0x0a3a8a);

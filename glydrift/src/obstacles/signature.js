@@ -348,10 +348,18 @@ export class ZapOrbs extends PxObstacle {
     );
     // beat-pulsing halos so the orbs read as live energy
     this.haloA = this.add(
-      this.scene.add.image(0, 0, "pxglow").setDepth(WARN_DEPTH - 0.1).setScale(S * 2).setBlendMode(ADD),
+      this.scene.add
+        .image(0, 0, "pxglow")
+        .setDepth(WARN_DEPTH - 0.1)
+        .setScale(S * 2)
+        .setBlendMode(ADD),
     );
     this.haloB = this.add(
-      this.scene.add.image(0, 0, "pxglow").setDepth(WARN_DEPTH - 0.1).setScale(S * 2).setBlendMode(ADD),
+      this.scene.add
+        .image(0, 0, "pxglow")
+        .setDepth(WARN_DEPTH - 0.1)
+        .setScale(S * 2)
+        .setBlendMode(ADD),
     );
     for (const h of [this.haloA, this.haloB]) h.setTint(0x7fd6ff);
     this.a = this.add(this.scene.add.image(0, 0, "hz", "orb_0").setDepth(WARN_DEPTH));

@@ -63,7 +63,6 @@ export class ObstacleManager {
    */
   prewarm() {
     for (const type of Object.keys(TYPES)) {
-      if (type === "crusher") continue; // legacy neon crusher, never spawned
       const pool = (this.pools[type] ||= []);
       const want = ["saw", "laser", "icicle", "meteor", "blink", "tendril", "vine"].includes(type)
         ? 2
@@ -225,21 +224,6 @@ export class ObstacleManager {
         });
         if (amp < 70) this.coinLine(x - 10, x + gw + 10, gc, 2);
         width = gw;
-        break;
-      }
-      case "crusher": {
-        const gc = r.range(safeTop + 160, safeBot - 160);
-        const o = this.obtain("crusher");
-        o.spawn(x + 60, {
-          gc,
-          // walls never close: a fixed gap (open === closed)
-          open: Phaser.Math.Linear(330, 280, d),
-          closed: Phaser.Math.Linear(330, 280, d),
-          period: Phaser.Math.Linear(2.4, 1.8, d),
-          phase: r.next(),
-        });
-        if (r.chance(0.6)) this.coinLine(x - 10, x + 130, gc, 3);
-        width = 120;
         break;
       }
       case "blade": {
@@ -503,7 +487,11 @@ export class ObstacleManager {
       }
       case "bolt": {
         const o = this.obtain("bolt");
-        o.spawn(x + 16 * S, { idle: r.range(0.9, 1.3), phase: r.next(), depth: r.range(0.45, 0.7) });
+        o.spawn(x + 16 * S, {
+          idle: r.range(0.9, 1.3),
+          phase: r.next(),
+          depth: r.range(0.45, 0.7),
+        });
         width = 32 * S;
         break;
       }

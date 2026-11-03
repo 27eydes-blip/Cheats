@@ -2,7 +2,6 @@
 //   soft sky → far silhouettes → hanging layer → mid silhouettes → near cave teeth → weather
 // One reusable layer set per biome; switching biomes crossfades the sets (a smooth morph).
 import Phaser from "phaser";
-import { heartbeat } from "../biomes/Background.js";
 import { VIEW } from "../config.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { lerpColor } from "../biomes/biomes.js";
@@ -11,6 +10,12 @@ import { S } from "./px.js";
 import { THEMES, themeFor } from "./themes.js";
 
 const FADE = 1.6; // seconds
+
+/** Lub-dub pulse curve (one beat every 1.05 s) for the Abyss vignette. */
+function heartbeat(t) {
+  const p = t % 1.05;
+  return Math.exp(-((p - 0.05) ** 2) * 600) + 0.65 * Math.exp(-((p - 0.27) ** 2) * 600);
+}
 
 export class PixelBackground {
   constructor(scene, { lowGfx = false } = {}) {
@@ -114,14 +119,15 @@ export class PixelBackground {
         // butterflies + drifting petals (one in three is a petal)
         const petal = i % 3 === 2;
         d = scene.add.image(0, 0, "wx", petal ? "petal" : "bfly_0").setDepth(-70);
-        d.setTint(
-          petal ? 0xffc8e0 : [0xff6ab0, 0xffb02a, 0x6ab8ff, 0xb07aff, 0xffffff][i % 5],
-        );
+        d.setTint(petal ? 0xffc8e0 : [0xff6ab0, 0xffb02a, 0x6ab8ff, 0xb07aff, 0xffffff][i % 5]);
         d.petal = petal;
         d.setScale(k * (petal ? 1 : Math.random() < 0.4 ? 2 : 1));
       } else {
         const rainy = w.kind === "rain" || w.kind === "storm";
-        d = scene.add.image(0, 0, rainy ? "rain" : "px1").setDepth(-70).setTint(w.color);
+        d = scene.add
+          .image(0, 0, rainy ? "rain" : "px1")
+          .setDepth(-70)
+          .setTint(w.color);
         d.setScale(k * (rainy ? 1 : Math.random() < 0.3 ? 2 : 1));
         if (w.kind === "storm") d.setRotation(0.55).setScale(k, k * 1.6); // wind-driven sheets
       }

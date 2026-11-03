@@ -92,10 +92,16 @@ export class BloomGate extends PxObstacle {
     super(mgr);
     this.type = "bloom";
     this.stemT = this.add(
-      this.scene.add.tileSprite(0, 0, 10 * S, 100, "vh_stem").setOrigin(0.5, 1).setDepth(TOP),
+      this.scene.add
+        .tileSprite(0, 0, 10 * S, 100, "vh_stem")
+        .setOrigin(0.5, 1)
+        .setDepth(TOP),
     );
     this.stemB = this.add(
-      this.scene.add.tileSprite(0, 0, 10 * S, 100, "vh_stem").setOrigin(0.5, 0).setDepth(TOP),
+      this.scene.add
+        .tileSprite(0, 0, 10 * S, 100, "vh_stem")
+        .setOrigin(0.5, 0)
+        .setDepth(TOP),
     );
     this.headT = this.add(
       this.scene.add.image(0, 0, "vh", "bloomb_0").setOrigin(0.5, 0).setDepth(TOP),
@@ -172,7 +178,10 @@ export class StormBolt extends PxObstacle {
     super(mgr);
     this.type = "bolt";
     this.warn = this.add(
-      this.scene.add.tileSprite(0, 0, 4 * S, 100, "vh_boltwarn").setOrigin(0.5, 0).setDepth(TOP),
+      this.scene.add
+        .tileSprite(0, 0, 4 * S, 100, "vh_boltwarn")
+        .setOrigin(0.5, 0)
+        .setDepth(TOP),
     );
     this.glow = this.add(
       this.scene.add
@@ -183,7 +192,10 @@ export class StormBolt extends PxObstacle {
         .setScale(2, 1),
     );
     this.bolt = this.add(
-      this.scene.add.tileSprite(0, 0, 10 * S, 100, "vh_bolt").setOrigin(0.5, 0).setDepth(TOP),
+      this.scene.add
+        .tileSprite(0, 0, 10 * S, 100, "vh_bolt")
+        .setOrigin(0.5, 0)
+        .setDepth(TOP),
     );
     this.cloud = this.add(this.scene.add.image(0, 0, "vh", "cloud_0").setDepth(TOP + 0.1));
   }
@@ -214,7 +226,9 @@ export class StormBolt extends PxObstacle {
       .setAlpha(0.35 + 0.4 * ((u - this.idle) / this.charge));
     if (this.charging) this.warn.tilePositionY -= dt * 80;
     for (const t of [this.bolt, this.glow]) {
-      t.setPosition(this.x, cy + 4 * S).setSize(10 * S, len).setVisible(this.live);
+      t.setPosition(this.x, cy + 4 * S)
+        .setSize(10 * S, len)
+        .setVisible(this.live);
       if (this.live) t.tilePositionY = Math.floor(clock * 30) * 7; // crackle
     }
     this.glow.setAlpha(0.45);

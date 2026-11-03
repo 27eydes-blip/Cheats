@@ -194,7 +194,13 @@ export function levelUpCelebration(scene, level, subText, { depth = 800 } = {}) 
   Sfx.levelUp();
   Haptics.strong();
   scene.tweens.add({ targets: dim, fillAlpha: 0.6, duration: 160 });
-  scene.tweens.add({ targets: glow, scale: 4 * 14, alpha: 0, duration: 900, ease: "Cubic.easeOut" });
+  scene.tweens.add({
+    targets: glow,
+    scale: 4 * 14,
+    alpha: 0,
+    duration: 900,
+    ease: "Cubic.easeOut",
+  });
   scene.tweens.add({
     targets: [big, lv],
     scale: { from: 0.4, to: 1 },
@@ -284,8 +290,19 @@ export function openChest(scene, x, y, { depth = 450 } = {}) {
       chest.setFrame("chest_1");
       Sfx.chestOpen();
       Haptics.strong();
-      scene.tweens.add({ targets: chest, scale: { from: 7, to: 6 }, duration: 260, ease: "Back.easeOut" });
-      scene.tweens.add({ targets: glow, scale: 4 * 16, alpha: 0, duration: 800, ease: "Cubic.easeOut" });
+      scene.tweens.add({
+        targets: chest,
+        scale: { from: 7, to: 6 },
+        duration: 260,
+        ease: "Back.easeOut",
+      });
+      scene.tweens.add({
+        targets: glow,
+        scale: 4 * 16,
+        alpha: 0,
+        duration: 800,
+        ease: "Cubic.easeOut",
+      });
       burst(scene, cont, x, y - 30, 0xffd23f, 30, 360);
       resolve({ x, y: y - 40 });
       scene.time.delayedCall(1300, () =>

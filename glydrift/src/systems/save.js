@@ -45,7 +45,6 @@ function defaults() {
       musicVol: 0.7,
       sfxVol: 0.8,
       muted: false,
-      bgStyle: "grid",
     },
   };
 }

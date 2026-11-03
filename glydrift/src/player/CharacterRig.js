@@ -1,8 +1,7 @@
-// Visual rig for a character: sprite, light halo, signature trail, idle animation,
-// flap effect and death explosion. Used in-game, for the ghost run and for live previews.
+// Visual rig for a character: pixel sprite, stepped trail, idle animation, flap effect and
+// death explosion. Used in-game and for the live previews on the menus.
 import Phaser from "phaser";
 import { HERO_SCALE } from "../config.js";
-import { HI } from "../gfx/textures.js";
 
 const ADD = Phaser.BlendModes.ADD;
 const NORMAL = Phaser.BlendModes.NORMAL;
@@ -13,20 +12,11 @@ function hsv(h, s, v) {
   return (c.r << 16) | (c.g << 8) | c.b;
 }
 
-function lerpColor(a, b, t) {
-  return Phaser.Display.Color.GetColor(
-    ((a >> 16) & 255) + (((b >> 16) & 255) - ((a >> 16) & 255)) * t,
-    ((a >> 8) & 255) + (((b >> 8) & 255) - ((a >> 8) & 255)) * t,
-    (a & 255) + ((b & 255) - (a & 255)) * t,
-  );
-}
-
 export class CharacterRig {
   constructor(scene, def, fx, opts = {}) {
     this.scene = scene;
     this.def = def;
     this.fx = fx;
-    this.ghost = !!opts.ghost;
     this.lowGfx = !!opts.lowGfx;
     this.x = opts.x ?? 0;
     this.y = opts.y ?? 0;
@@ -40,61 +30,22 @@ export class CharacterRig {
     this.dead = false;
     this.gravityDir = 1;
     this.points = [];
-    this.trailTime = this.ghost ? 0.35 : this.lowGfx ? 0.32 : 0.5;
+    this.trailTime = this.lowGfx ? 0.32 : 0.5;
     this.emitT = 0;
-    this.jitter = [];
-    this.jitterT = 0;
     this.glitchT = 0;
     this.offX = 0;
     this.offY = 0;
     const depth = opts.depth ?? 30;
 
     this.trailG = scene.add.graphics().setDepth(depth - 2);
-    this.trailG.setBlendMode(def.id === "shade" && !this.ghost ? NORMAL : ADD);
-    this.px = def.pixel || null; // pixel-art sprite (no soft halo)
-    if (!this.ghost && !this.px) {
-      this.halo = scene.add
-        .image(this.x, this.y, "glow")
-        .setBlendMode(Phaser.BlendModes.NORMAL)
-        .setTint(def.color)
-        .setAlpha(0.55)
-        .setDepth(depth - 1);
-    }
-    this.sprite = this.px
-      ? scene.add.image(this.x, this.y, this.px.atlas, this.px.frames[1]).setDepth(depth)
-      : scene.add.image(this.x, this.y, def.texture).setDepth(depth);
-    if (this.px) this.trailG.setBlendMode(NORMAL);
-    if (this.ghost) this.sprite.setAlpha(0.3).setTint(0xd8e8ff);
-
+    this.px = def.pixel; // every hero is pixel art: atlas frames + stepped trail colours
+    this.sprite = scene.add.image(this.x, this.y, this.px.atlas, this.px.frames[1]).setDepth(depth);
     this.extras = [];
-    if (def.id === "nova" && !this.px) {
-      this.rings = [0, 1].map((i) => {
-        const r = scene.add
-          .image(this.x, this.y, "nova_ring")
-          .setBlendMode(ADD)
-          .setDepth(depth + 1);
-        r.setTint(i === 0 ? 0xffd2f4 : 0xa8f0ff).setAlpha(this.ghost ? 0.2 : 0.85);
-        this.extras.push(r);
-        return r;
-      });
-      this.moons = [0, 1].map((i) => {
-        const m = scene.add
-          .image(this.x, this.y, "dot")
-          .setBlendMode(ADD)
-          .setTint(i === 0 ? 0xff9ae6 : 0x9af2ff);
-        if (this.ghost) m.setAlpha(0.25);
-        this.extras.push(m);
-        return m;
-      });
-    }
-    if (def.id === "shade" && !this.ghost) {
+    if (def.id === "shade") {
       this.afterImages = [];
       for (let i = 0; i < 7; i++) {
-        const im = (
-          this.px
-            ? scene.add.image(0, 0, this.px.atlas, this.px.frames[0])
-            : scene.add.image(0, 0, def.texture)
-        )
+        const im = scene.add
+          .image(0, 0, this.px.atlas, this.px.frames[0])
           .setVisible(false)
           .setActive(false)
           .setDepth(depth - 1);
@@ -110,13 +61,7 @@ export class CharacterRig {
   }
 
   get objects() {
-    return [
-      this.trailG,
-      this.halo,
-      this.sprite,
-      ...this.extras,
-      ...(this.afterImages || []),
-    ].filter(Boolean);
+    return [this.trailG, this.sprite, ...this.extras, ...(this.afterImages || [])];
   }
 
   setPosition(x, y) {
@@ -126,7 +71,6 @@ export class CharacterRig {
 
   setVisible(v) {
     this.sprite.setVisible(v);
-    if (this.halo) this.halo.setVisible(v);
     for (const e of this.extras) e.setVisible(v);
   }
 
@@ -148,7 +92,7 @@ export class CharacterRig {
     this.sx = 0.72;
     this.sy = 1.34;
     this.flapT = 0;
-    if (this.ghost || !this.fx) return;
+    if (!this.fx) return;
     const { x, y, def, fx } = this;
     const down = this.gravityDir > 0 ? { min: 50, max: 130 } : { min: 230, max: 310 };
     const oy = 12 * this.gravityDir * this.u;
@@ -191,12 +135,12 @@ export class CharacterRig {
   }
 
   // ------------------------------------------------------------------ death
-  /** Returns post-FX hints for the scene (flash, glitch, aberration). */
+  /** Returns hints for the scene's death effects (flash strength, camera shake). */
   die() {
     this.dead = true;
     this.setVisible(false);
     const { x, y, def, fx } = this;
-    const hints = { flash: 0.35, glitch: 0, aberration: 0.012, shake: 0.018 };
+    const hints = { flash: 0.35, shake: 0.018 };
     if (!fx) return hints;
     fx.burst("shard", x, y, 26, def.color);
     fx.ring(x, y, def.color, { scale: 1.5, duration: 600 });
@@ -222,7 +166,6 @@ export class CharacterRig {
       case "glitch":
         for (const c of [0xff2050, 0x39ff88, 0x20c8ff])
           fx.burst("pixel", x, y, 26, c, { speed: { min: 80, max: 560 } });
-        hints.glitch = 1;
         hints.flash = 0.1;
         break;
       default:
@@ -239,7 +182,6 @@ export class CharacterRig {
           fx.burst("star", x, y, 16, hsv(i / 4, 0.5, 1), { speed: { min: 200, max: 760 } });
         fx.burst("spark", x, y, 40, 0xfff1a8, { speed: { min: 300, max: 900 } });
         hints.flash = 0.85;
-        hints.aberration = 0.035;
         hints.shake = 0.028;
         break;
     }
@@ -252,10 +194,8 @@ export class CharacterRig {
     if (!im) return;
     im.setActive(true).setVisible(true).setPosition(this.x, this.y).setAngle(this.angle);
     im.setScale(this.sprite.scaleX, this.sprite.scaleY).setAlpha(alpha);
-    if (this.px) {
-      im.setFrame(this.sprite.frame.name).setBlendMode(NORMAL).setTintFill(0x9a5cff);
-      im.setPosition(Math.round(this.x), Math.round(this.y)).setAngle(this.sprite.angle);
-    }
+    im.setFrame(this.sprite.frame.name).setBlendMode(NORMAL).setTintFill(0x9a5cff);
+    im.setPosition(Math.round(this.x), Math.round(this.y)).setAngle(this.sprite.angle);
     im.life = 0.32;
   }
 
@@ -281,9 +221,7 @@ export class CharacterRig {
 
     this.offX = 0;
     this.offY = 0;
-    let texture = def.texture;
-    let extraAngle = 0;
-    let pulse = 1;
+    let wingFrame = 0; // wing pose for "wings" mode heroes (Volt, Ember)
 
     switch (def.id) {
       case "volt": {
@@ -291,9 +229,8 @@ export class CharacterRig {
         let vf;
         if (this.flapT < 0.24) vf = [2, 0, 1][Math.min(2, Math.floor(this.flapT / 0.08))];
         else vf = [0, 1, 2, 1][Math.floor(this.time * 6) % 4];
-        texture = `char_volt_${vf}`;
-        pulse = 1 + Math.sin(this.time * 9) * 0.02;
-        if (!this.ghost && !this.dead && this.fx) {
+        wingFrame = vf;
+        if (!this.dead && this.fx) {
           this.emitT -= dt;
           if (this.emitT <= 0) {
             this.emitT = 0.25 + Math.random() * 0.45;
@@ -306,8 +243,8 @@ export class CharacterRig {
         let f;
         if (this.flapT < 0.24) f = [2, 0, 1][Math.min(2, Math.floor(this.flapT / 0.08))];
         else f = [0, 1, 2, 1][Math.floor(this.time * 7) % 4];
-        texture = `char_ember_${f}`;
-        if (!this.ghost && !this.dead && this.fx) {
+        wingFrame = f;
+        if (!this.dead && this.fx) {
           this.emitT -= dt;
           if (this.emitT <= 0) {
             this.emitT = this.lowGfx ? 0.07 : 0.035;
@@ -330,9 +267,8 @@ export class CharacterRig {
         }
         break;
       case "frost":
-        extraAngle = Math.sin(this.time * 1.4) * 9;
-        if (!this.ghost) this.sprite.setTint(Math.sin(this.time * 6) > 0.85 ? 0xffffff : 0xe6fbff);
-        if (!this.ghost && !this.dead && this.fx) {
+        this.sprite.setTint(Math.sin(this.time * 6) > 0.85 ? 0xffffff : 0xe6fbff);
+        if (!this.dead && this.fx) {
           this.emitT -= dt;
           if (this.emitT <= 0) {
             this.emitT = this.lowGfx ? 0.18 : 0.08;
@@ -346,15 +282,12 @@ export class CharacterRig {
         this.glitchT -= dt;
         if (Math.random() < 0.03) this.glitchT = Math.max(this.glitchT, 0.06);
         if (this.glitchT > 0) {
-          texture = "char_glitch_1";
           this.offX = (Math.random() - 0.5) * 8;
           this.offY = (Math.random() - 0.5) * 6;
         }
         break;
       case "nova":
-        pulse = 1 + Math.sin(this.time * 4) * 0.07;
-        extraAngle = this.time * 25;
-        if (!this.ghost && !this.dead && this.fx) {
+        if (!this.dead && this.fx) {
           this.emitT -= dt;
           if (this.emitT <= 0) {
             this.emitT = this.lowGfx ? 0.14 : 0.06;
@@ -386,257 +319,51 @@ export class CharacterRig {
 
     // sprite transform
     const sp = this.sprite;
-    if (this.px) {
-      // pixel sprite: frame from the same wing logic, crisp scale steps, tilt in 15° steps
-      const mode = this.px.mode || "wings";
-      let f;
-      if (mode === "idle") f = Math.floor(this.time * 5) % 3;
-      else if (mode === "glitch") f = this.glitchT > 0 ? 2 : Math.floor(this.time * 3) % 2;
-      else if (mode === "spin") f = Math.floor(this.time * 20) % 3;
-      else if (mode === "flap")
-        f =
-          this.flapT < 0.24
-            ? [2, 0, 1][Math.min(2, Math.floor(this.flapT / 0.08))]
-            : [0, 1, 2, 1][Math.floor(this.time * 6) % 4];
-      else f = Number(String(texture).slice(-1)) || 0;
-      sp.setFrame(this.px.frames[Math.min(this.px.frames.length - 1, f)]);
-      const m = Math.max(0.5, Math.round(this.sizeMul * this.displayScale * 2) / 2);
-      const flip = this.gravityDir < 0 ? -1 : 1;
-      sp.setPosition(Math.round(this.x + this.offX), Math.round(this.y + this.offY));
-      sp.setAngle(Math.round(this.angle / 15) * 15);
-      sp.setScale(
-        m * (this.sx < 0.9 ? 0.875 : this.sx > 1.1 ? 1.125 : 1),
-        m * (this.sy > 1.1 ? 1.125 : this.sy < 0.9 ? 0.875 : 1) * flip,
-      );
-      this.drawTrail();
-      return;
-    }
-    const s = (def.scale * this.u) / HI;
-    if (sp.texture.key !== texture) sp.setTexture(texture);
-    sp.setPosition(this.x + this.offX, this.y + this.offY);
-    sp.setAngle(this.angle + (def.id === "nova" ? 0 : extraAngle));
+    // pixel sprite: frame from the same wing logic, crisp scale steps, tilt in 15° steps
+    const mode = this.px.mode || "wings";
+    let f;
+    if (mode === "idle") f = Math.floor(this.time * 5) % 3;
+    else if (mode === "glitch") f = this.glitchT > 0 ? 2 : Math.floor(this.time * 3) % 2;
+    else if (mode === "spin") f = Math.floor(this.time * 20) % 3;
+    else if (mode === "flap")
+      f =
+        this.flapT < 0.24
+          ? [2, 0, 1][Math.min(2, Math.floor(this.flapT / 0.08))]
+          : [0, 1, 2, 1][Math.floor(this.time * 6) % 4];
+    else f = wingFrame;
+    sp.setFrame(this.px.frames[Math.min(this.px.frames.length - 1, f)]);
+    const m = Math.max(0.5, Math.round(this.sizeMul * this.displayScale * 2) / 2);
+    const flip = this.gravityDir < 0 ? -1 : 1;
+    sp.setPosition(Math.round(this.x + this.offX), Math.round(this.y + this.offY));
+    sp.setAngle(Math.round(this.angle / 15) * 15);
     sp.setScale(
-      s * this.sx * pulse,
-      s *
-        this.sy *
-        pulse *
-        (this.gravityDir < 0 && (def.id === "ember" || def.id === "volt") ? -1 : 1),
+      m * (this.sx < 0.9 ? 0.875 : this.sx > 1.1 ? 1.125 : 1),
+      m * (this.sy > 1.1 ? 1.125 : this.sy < 0.9 ? 0.875 : 1) * flip,
     );
-    if (def.id === "nova") sp.setAngle(extraAngle * 0.4);
-    if (this.halo) {
-      this.halo.setPosition(this.x, this.y);
-      this.halo.setScale(1.05 * this.u * pulse);
-      this.halo.setAlpha(0.42 + Math.sin(this.time * 5) * 0.08 + Math.max(0, 0.3 - this.flapT));
-    }
-    if (this.rings) {
-      const sc = this.u;
-      this.rings.forEach((r, i) => {
-        const tilt = Phaser.Math.DegToRad(i === 0 ? 22 : -38);
-        r.setPosition(this.x, this.y)
-          .setRotation(tilt)
-          .setScale((0.6 * sc) / HI, (0.2 * sc) / HI);
-        // orbiting moon travels along the flattened ellipse
-        const a = this.time * (i === 0 ? 2.6 : -1.9) + i * 2;
-        const ex = Math.cos(a) * 38 * sc;
-        const ey = Math.sin(a) * 12.5 * sc;
-        const moon = this.moons[i];
-        moon.setPosition(
-          this.x + ex * Math.cos(tilt) - ey * Math.sin(tilt),
-          this.y + ex * Math.sin(tilt) + ey * Math.cos(tilt),
-        );
-        moon.setScale(0.32 * sc).setDepth(this.sprite.depth + (Math.sin(a) > 0 ? 1 : -1));
-      });
-    }
-
     this.drawTrail();
   }
 
   // ------------------------------------------------------------------ trails
-  ribbon(width, colorFn, alphaFn, offY = 0, quant = 0) {
-    const g = this.trailG;
-    const pts = this.points;
-    const n = pts.length;
-    if (n < 2) return;
-    const W = width * this.u * 0.9;
-    for (let i = 0; i < n - 1; i++) {
-      const a = pts[i];
-      const b = pts[i + 1];
-      const t0 = i / (n - 1);
-      const t1 = (i + 1) / (n - 1);
-      let ay = a.y + offY;
-      let by = b.y + offY;
-      if (quant) {
-        ay = Math.round(ay / quant) * quant;
-        by = Math.round(by / quant) * quant;
-      }
-      const dx = b.x - a.x;
-      const dy = by - ay;
-      const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len;
-      const ny = dx / len;
-      const w0 = (W * (1 - t0)) / 2;
-      const w1 = (W * (1 - t1)) / 2;
-      g.fillStyle(colorFn(t0, i), alphaFn(t0));
-      g.fillTriangle(
-        a.x + nx * w0,
-        ay + ny * w0,
-        a.x - nx * w0,
-        ay - ny * w0,
-        b.x + nx * w1,
-        by + ny * w1,
-      );
-      g.fillTriangle(
-        a.x - nx * w0,
-        ay - ny * w0,
-        b.x - nx * w1,
-        by - ny * w1,
-        b.x + nx * w1,
-        by + ny * w1,
-      );
-    }
-  }
-
   drawTrail() {
     const g = this.trailG;
     g.clear();
     if (this.points.length < 2) return;
-    const { def } = this;
-    if (this.px && !this.ghost) {
-      // stepped pixel trail: squares snapped to the art-pixel grid, shrinking + fading
-      const P = 4;
-      const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail
-      const n = this.points.length;
-      for (let i = 1; i < n; i += 2) {
-        const p = this.points[i];
-        const t = i / n;
-        const size = Math.max(1, Math.round((1 - t) * 4 * this.sizeMul)) * P;
-        const col = cols[Math.min(cols.length - 1, Math.floor(t * cols.length))];
-        g.fillStyle(col, t < 0.15 ? 1 : 0.95 - t * 0.8);
-        g.fillRect(
-          Math.round((p.x - size / 2) / P) * P,
-          Math.round((p.y - size / 2) / P) * P,
-          size,
-          size,
-        );
-      }
-      return;
-    }
-    if (this.ghost) {
-      this.ribbon(
-        10,
-        () => 0xcfe0ff,
-        (t) => (1 - t) * 0.22,
+    // stepped pixel trail: squares snapped to the art-pixel grid, shrinking + fading
+    const P = 4;
+    const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail
+    const n = this.points.length;
+    for (let i = 1; i < n; i += 2) {
+      const p = this.points[i];
+      const t = i / n;
+      const size = Math.max(1, Math.round((1 - t) * 4 * this.sizeMul)) * P;
+      const col = cols[Math.min(cols.length - 1, Math.floor(t * cols.length))];
+      g.fillStyle(col, t < 0.15 ? 1 : 0.95 - t * 0.8);
+      g.fillRect(
+        Math.round((p.x - size / 2) / P) * P,
+        Math.round((p.y - size / 2) / P) * P,
+        size,
+        size,
       );
-      return;
-    }
-    switch (def.id) {
-      case "volt": {
-        this.ribbon(
-          9,
-          () => def.color,
-          (t) => (1 - t) * 0.45,
-        );
-        this.jitterT -= 1 / 60;
-        if (this.jitterT <= 0 || this.jitter.length < this.points.length) {
-          this.jitterT = 0.05;
-          this.jitter = this.points.map(() => (Math.random() - 0.5) * 2);
-        }
-        const pts = this.points;
-        const step = 3;
-        const path = [];
-        for (let i = 0; i < pts.length; i += step) {
-          const t = i / pts.length;
-          path.push({ x: pts[i].x, y: pts[i].y + this.jitter[i] * 16 * t * this.u });
-        }
-        if (path.length > 1) {
-          g.lineStyle(7 * this.u, def.color, 0.35);
-          g.strokePoints(path);
-          g.lineStyle(2.5 * this.u, 0xffffff, 0.95);
-          g.strokePoints(path);
-        }
-        break;
-      }
-      case "ember":
-        this.ribbon(
-          30,
-          (t) =>
-            t < 0.35
-              ? lerpColor(0xfff1a8, 0xff8a1f, t / 0.35)
-              : lerpColor(0xff8a1f, 0xb01000, (t - 0.35) / 0.65),
-          (t) => (1 - t) * 0.5,
-        );
-        this.ribbon(
-          8,
-          () => 0xffe08a,
-          (t) => (1 - t) * 0.45,
-        );
-        break;
-      case "shade":
-        this.ribbon(
-          30,
-          () => 0x12031f,
-          (t) => (1 - t) * 0.7,
-        );
-        this.ribbon(
-          8,
-          () => 0xa45cff,
-          (t) => (1 - t) * 0.95,
-        );
-        this.ribbon(
-          3,
-          () => 0xf0dcff,
-          (t) => (1 - t) * 0.9,
-        );
-        break;
-      case "frost":
-        this.ribbon(
-          18,
-          (t) => lerpColor(0xbff4ff, 0x2a7bd6, t),
-          (t) => (1 - t) * 0.55,
-        );
-        this.ribbon(
-          5,
-          () => 0xffffff,
-          (t) => (1 - t) * 0.9,
-        );
-        break;
-      case "glitch": {
-        const j = () => (Math.random() - 0.5) * 3;
-        this.ribbon(
-          10,
-          () => 0xff2050,
-          (t) => (1 - t) * 0.7,
-          -5 + j(),
-          6,
-        );
-        this.ribbon(
-          10,
-          () => 0x39ff88,
-          (t) => (1 - t) * 0.7,
-          0,
-          6,
-        );
-        this.ribbon(
-          10,
-          () => 0x20c8ff,
-          (t) => (1 - t) * 0.7,
-          5 + j(),
-          6,
-        );
-        break;
-      }
-      case "nova":
-        this.ribbon(
-          26,
-          (t) => hsv((t * 0.9 + this.time * 0.45) % 1, 0.8, 1),
-          (t) => (1 - t) * 0.6,
-        );
-        this.ribbon(
-          6,
-          () => 0xffffff,
-          (t) => (1 - t) * 0.6,
-        );
-        break;
     }
   }
 

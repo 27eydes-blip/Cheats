@@ -173,6 +173,3 @@ export const SUPABASE = {
   url: "https://cdjcvhywrbsdryagqxqg.supabase.co",
   publishableKey: "sb_publishable_zZB05fEYY1eYhhmnzSuodg_QqpXF-dO",
 };
-
-/** Full-screen post-processing (bloom/aberration). Off for the pixel-art style: crisp + 60 fps. */
-export const POST_FX = false;

@@ -24,14 +24,8 @@ export class ScreenFlash {
     this.scene = scene;
     this.time = 0;
     this.starts = [];
-    this.full = scene.add
-      .rectangle(0, 0, 10, 10, 0xffffff, 1)
-      .setDepth(depth)
-      .setVisible(false);
-    this.edge = scene.add
-      .image(0, 0, "vignette")
-      .setDepth(depth)
-      .setVisible(false);
+    this.full = scene.add.rectangle(0, 0, 10, 10, 0xffffff, 1).setDepth(depth).setVisible(false);
+    this.edge = scene.add.image(0, 0, "vignette").setDepth(depth).setVisible(false);
     this.layers = [
       { obj: this.full, t: 1, dur: 1, peak: 0 },
       { obj: this.edge, t: 1, dur: 1, peak: 0 },

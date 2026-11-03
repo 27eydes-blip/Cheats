@@ -1,16 +1,9 @@
-// Persistent background scene shared by every screen. It renders before the active screen
-// and has no post-FX, so bloom only ever touches gameplay elements, never the background.
+// Persistent background scene shared by every screen; it renders before the active screen.
 import Phaser from "phaser";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
 import { fitCamera } from "../config.js";
 import { PixelBackground } from "../pixel/PixelBackground.js";
 import { Save } from "../systems/save.js";
-
-export function backgroundStyle() {
-  const q =
-    typeof location !== "undefined" ? new URLSearchParams(location.search).get("style") : null;
-  return q || Save.data.settings.bgStyle || "grid";
-}
 
 export class BackdropScene extends Phaser.Scene {
   constructor() {

@@ -36,8 +36,6 @@ export class HudScene extends Phaser.Scene {
     this.top = top;
     const gs = this.gameScene;
 
-    this.flashRect = this.add.rectangle(W / 2, H / 2, W, H, 0xffffff, 0).setDepth(0);
-
     this.scoreText = neonText(this, W / 2, top + 50, "0", 64, 0x3ef4ff, { blur: 22 });
     this.score = new RollingCounter(this, this.scoreText);
     this.bestText = plainText(this, W / 2, top + 100, "", 18, "#cfc6ff");
@@ -201,7 +199,12 @@ export class HudScene extends Phaser.Scene {
     const t = this.coins.text;
     this.tweens.killTweensOf(t);
     t.setScale(1);
-    this.tweens.add({ targets: t, scale: { from: 1.3, to: 1 }, duration: 220, ease: "Back.easeOut" });
+    this.tweens.add({
+      targets: t,
+      scale: { from: 1.3, to: 1 },
+      duration: 220,
+      ease: "Back.easeOut",
+    });
   }
 
   /**
@@ -444,7 +447,5 @@ export class HudScene extends Phaser.Scene {
     this.statusText
       .setText(status)
       .setAlpha(status && p.alive ? 0.8 + Math.sin(gs.clock * 8) * 0.2 : 0);
-    // low-graphics fallback flash
-    if (!gs.post) this.flashRect.setFillStyle(0xffffff, Math.min(0.8, gs.fxState.flash));
   }
 }

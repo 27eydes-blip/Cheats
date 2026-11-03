@@ -89,7 +89,9 @@ Phaser.Game.prototype.step = function guardedStep(time, delta) {
 export function watchContext(game) {
   const c = game.canvas;
   if (!c) return;
-  c.addEventListener("webglcontextlost", () => recordError("contextlost", "WebGL context lost", game));
+  c.addEventListener("webglcontextlost", () =>
+    recordError("contextlost", "WebGL context lost", game),
+  );
   c.addEventListener("webglcontextrestored", () =>
     recordError("contextrestored", "WebGL context restored", game),
   );

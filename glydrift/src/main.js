@@ -6,7 +6,6 @@ import Phaser from "phaser";
 import "./gfx/tileSpriteFix.js";
 import { watchContext } from "./systems/frameGuard.js";
 import { setupView, VIEW, wantsFit } from "./config.js";
-import { GlyPostFX } from "./gfx/shaders.js";
 import { BackdropScene } from "./scenes/BackdropScene.js";
 import { BootScene } from "./scenes/BootScene.js";
 import { CharacterScene } from "./scenes/CharacterScene.js";
@@ -17,7 +16,6 @@ import { LeaderboardScene } from "./scenes/LeaderboardScene.js";
 import { MenuScene } from "./scenes/MenuScene.js";
 import { MusicTestScene } from "./scenes/MusicTestScene.js";
 import { ProgressScene } from "./scenes/ProgressScene.js";
-import { SkyScene } from "./scenes/SkyScene.js";
 import { SpinScene } from "./scenes/SpinScene.js";
 import "./systems/install.js"; // registers beforeinstallprompt early (Android install button)
 import { Music } from "./systems/music.js";
@@ -62,11 +60,9 @@ async function boot() {
     render: { antialias: true, powerPreference: "high-performance", roundPixels: false },
     input: { activePointers: 2 },
     disableContextMenu: true,
-    pipeline: { GlyPostFX },
-    // order matters: scenes render in this order (Sky → Backdrop → screens → overlays)
+    // order matters: scenes render in this order (Backdrop → screens → overlays)
     scene: [
       BootScene,
-      SkyScene,
       BackdropScene,
       MenuScene,
       GameScene,

@@ -40,7 +40,9 @@ export class ComboMeter {
     const s = 1 + this.pop * this.pop * 0.6;
     const lx = Math.round(x + 74);
     const ly = Math.round(y - 78);
-    t.setPosition(lx, ly).setScale(s).setAlpha(frac < 0.25 ? 0.55 + 0.45 * Math.sin(frac * 60) ** 2 : 1);
+    t.setPosition(lx, ly)
+      .setScale(s)
+      .setAlpha(frac < 0.25 ? 0.55 + 0.45 * Math.sin(frac * 60) ** 2 : 1);
     const w = 64;
     const g = this.bar;
     g.clear();

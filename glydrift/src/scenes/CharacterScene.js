@@ -2,7 +2,7 @@
 // perspective card carousel with rarity-glow borders, unlock by coins / shards / challenge.
 import Phaser from "phaser";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
-import { fitCamera, POST_FX, RARITY, VIEW } from "../config.js";
+import { fitCamera, RARITY, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
@@ -41,17 +41,10 @@ export class CharacterScene extends Phaser.Scene {
     this.rig = null;
     this.challengeBar = null;
     this.posTween = null;
-    this.post = null;
     this.lowGfx = s.settings.lowGfx;
     const top = (this.registry.get("safeTop") || 0) + 20;
     this.top = top;
     this.cameras.main.fadeIn(250, 5, 1, 13);
-    if (POST_FX && !this.lowGfx && this.renderer.type === Phaser.WEBGL) {
-      this.cameras.main.setPostPipeline("GlyPostFX");
-      this.post = this.cameras.main.getPostPipeline("GlyPostFX");
-      if (Array.isArray(this.post)) this.post = this.post[0];
-      if (this.post) this.post.params.aberration = 0.001;
-    }
     this.backdrop = this.scene.get("Backdrop");
     this.fx = new Effects(this, { lowGfx: this.lowGfx, depth: 70 });
     this.pal = {};
@@ -348,7 +341,6 @@ export class CharacterScene extends Phaser.Scene {
     this.fx.ring(cx, cy, def.color, { scale: 2, duration: 650 });
     this.fx.burst("star", cx, cy, 40, def.color, { speed: { min: 200, max: 700 } });
     this.cameras.main.shake(200, 0.006);
-    if (this.post) this.post.params.flash = 0.6;
   }
 
   leave() {
@@ -384,7 +376,11 @@ export class CharacterScene extends Phaser.Scene {
         leviathan: 4,
       }[def.id] ?? 0;
     blendPalette(
-      { a: BIOMES[bi], b: BIOMES[(bi + 1) % BIOMES.length], t: def.id === "nova" ? (this.t % 4) / 4 : 0 },
+      {
+        a: BIOMES[bi],
+        b: BIOMES[(bi + 1) % BIOMES.length],
+        t: def.id === "nova" ? (this.t % 4) / 4 : 0,
+      },
       this.pal,
     );
     this.backdrop.drive(this.pal, {
@@ -432,12 +428,6 @@ export class CharacterScene extends Phaser.Scene {
       c.alpha = Phaser.Math.Clamp(1 - ao * 0.38, 0, 1);
       c.setDepth(100 - ao * 10);
       if (c.def.rarity === "legendary") this.drawCard(c);
-    }
-    if (this.post) {
-      const P = this.post.params;
-      P.flash *= Math.exp(-dt * 5);
-      P.glitch = def.id === "glitch" ? 0.12 : 0;
-      P.pulse = (this.backdrop.bg.beat || 0) * 0.5;
     }
   }
 }

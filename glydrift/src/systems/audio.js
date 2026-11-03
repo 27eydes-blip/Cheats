@@ -148,7 +148,13 @@ export const Sfx = {
     tone({ type: "sine", f0: 180, f1: 900, dur: 0.9, vol: 0.12 });
     noise({ dur: 0.9, vol: 0.1, f: 2500 });
     [0, 7, 12, 19].forEach((s, i) =>
-      tone({ type: "triangle", f0: 659 * 2 ** (s / 12), dur: 0.3, vol: 0.15, delay: 0.9 + i * 0.05 }),
+      tone({
+        type: "triangle",
+        f0: 659 * 2 ** (s / 12),
+        dur: 0.3,
+        vol: 0.15,
+        delay: 0.9 + i * 0.05,
+      }),
     );
   },
   chestShake: () => tone({ type: "square", f0: 160, f1: 120, dur: 0.05, vol: 0.08 }),

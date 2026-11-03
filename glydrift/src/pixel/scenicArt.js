@@ -40,7 +40,18 @@ export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
   const rnd = seeded(seed);
   const pc = new PixelCanvas(w, h);
   if (kind === "hills") {
-    ground(pc, (x) => h * 0.45 + wave(x, w, [[1, 7, 0.4], [3, 3, 1.3], [5, 1.2, 2]]), base, rim);
+    ground(
+      pc,
+      (x) =>
+        h * 0.45 +
+        wave(x, w, [
+          [1, 7, 0.4],
+          [3, 3, 1.3],
+          [5, 1.2, 2],
+        ]),
+      base,
+      rim,
+    );
     // a few round trees on the ridge
     for (let i = 0; i < 7; i++) {
       const x = Math.floor(rnd() * (w - 6)) + 3;
@@ -51,7 +62,15 @@ export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
     // soft, far-away snow-capped peaks (also used, as cloud banks, for the storm haze)
     ground(
       pc,
-      (x) => h * 0.35 + Math.abs(wave(x, w, [[2, 14, 0.2], [5, 4, 1.1]])) * 0.9,
+      (x) =>
+        h * 0.35 +
+        Math.abs(
+          wave(x, w, [
+            [2, 14, 0.2],
+            [5, 4, 1.1],
+          ]),
+        ) *
+          0.9,
       base,
       rim,
     );
@@ -60,7 +79,17 @@ export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
       if (t < h * 0.42) pc.vline(x, t, t + 2, detail);
     }
   } else if (kind === "meadow") {
-    ground(pc, (x) => h * 0.55 + wave(x, w, [[2, 5, 0.9], [4, 2, 0.2]]), base, rim);
+    ground(
+      pc,
+      (x) =>
+        h * 0.55 +
+        wave(x, w, [
+          [2, 5, 0.9],
+          [4, 2, 0.2],
+        ]),
+      base,
+      rim,
+    );
     // flowers dotted over the meadow
     for (let i = 0; i < 46; i++) {
       const x = Math.floor(rnd() * w);
@@ -96,7 +125,14 @@ export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
   } else if (kind === "canopy") {
     // leafy fringe along the top edge
     for (let x = 0; x < w; x++) {
-      const d = 6 + Math.round(wave(x, w, [[4, 3, 0.3], [9, 1.5, 1]]));
+      const d =
+        6 +
+        Math.round(
+          wave(x, w, [
+            [4, 3, 0.3],
+            [9, 1.5, 1],
+          ]),
+        );
       pc.vline(x, 0, d, base);
       pc.set(x, d, rim);
     }
@@ -121,13 +157,22 @@ export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
       const x = Math.floor(rnd() * (w - 2)) + 1;
       const y = h - 12 - Math.floor(rnd() * 14);
       pc.vline(x, y, h - 6, base);
-      pc.set(x, y, 0xfff4b0).set(x - 1, y, detail).set(x + 1, y, detail).set(x, y - 1, detail);
+      pc.set(x, y, 0xfff4b0)
+        .set(x - 1, y, detail)
+        .set(x + 1, y, detail)
+        .set(x, y - 1, detail);
     }
   } else if (kind === "stormclouds") {
     // heavy, rolling cloud banks with lit edges
     ground(
       pc,
-      (x) => h * 0.3 + wave(x, w, [[3, 8, 0.1], [7, 3, 1.4], [11, 1.5, 0.6]]),
+      (x) =>
+        h * 0.3 +
+        wave(x, w, [
+          [3, 8, 0.1],
+          [7, 3, 1.4],
+          [11, 1.5, 0.6],
+        ]),
       base,
       rim,
     );
@@ -162,7 +207,14 @@ export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
   } else if (kind === "scud") {
     // ragged low cloud racing along the top
     for (let x = 0; x < w; x++) {
-      const d = 4 + Math.round(wave(x, w, [[5, 3, 0.7], [11, 2, 0.1]]));
+      const d =
+        4 +
+        Math.round(
+          wave(x, w, [
+            [5, 3, 0.7],
+            [11, 2, 0.1],
+          ]),
+        );
       pc.vline(x, 0, Math.max(1, d), base);
       if (rnd() < 0.3) pc.set(x, d + 1, base);
       pc.set(x, d, rim);
@@ -174,7 +226,18 @@ export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
     }
   } else if (kind === "surf") {
     // churning waves along the bottom, white caps blown off the crests
-    ground(pc, (x) => h - 10 + wave(x, w, [[4, 3, 0.2], [9, 1.5, 1.1]]), base, rim);
+    ground(
+      pc,
+      (x) =>
+        h -
+        10 +
+        wave(x, w, [
+          [4, 3, 0.2],
+          [9, 1.5, 1.1],
+        ]),
+      base,
+      rim,
+    );
     for (let x = 0; x < w; x++) {
       const t = topOf(pc, x);
       if (Math.sin((x / w) * TAU * 4 + 0.2) > 0.75) pc.set(x, t, detail).set(x - 1, t - 1, detail);

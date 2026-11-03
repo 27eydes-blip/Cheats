@@ -2,7 +2,7 @@
 // PLAY button, the Daily Challenge with a countdown, the daily login reward and settings.
 import Phaser from "phaser";
 import { BIOMES, biomeStateAt, blendPalette } from "../biomes/biomes.js";
-import { COIN_COLOR, fitCamera, POST_FX, VIEW } from "../config.js";
+import { COIN_COLOR, fitCamera, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
@@ -57,16 +57,9 @@ export class MenuScene extends Phaser.Scene {
     const s = Save.data;
     this.leaving = false;
     this.modal = null;
-    this.post = null;
     const lowGfx = s.settings.lowGfx;
     const top = (this.registry.get("safeTop") || 0) + 20;
     this.top = top;
-    if (POST_FX && !lowGfx && this.renderer.type === Phaser.WEBGL) {
-      this.cameras.main.setPostPipeline("GlyPostFX");
-      this.post = this.cameras.main.getPostPipeline("GlyPostFX");
-      if (Array.isArray(this.post)) this.post = this.post[0];
-      if (this.post) this.post.params.pxScale = VIEW.Z;
-    }
     this.cameras.main.fadeIn(300, 2, 1, 7);
 
     this.backdrop = this.scene.get("Backdrop");
@@ -596,13 +589,6 @@ export class MenuScene extends Phaser.Scene {
 
     if (Math.floor(this.t * 4) % 4 === 0) {
       this.logo.setStroke(hex(this.pal.neon), this.logo.style.strokeThickness);
-    }
-    if (this.post) {
-      const P = this.post.params;
-      P.aberration = 0;
-      P.glitch = 0;
-      P.flash = 0;
-      P.bloom = 0.8;
     }
   }
 }

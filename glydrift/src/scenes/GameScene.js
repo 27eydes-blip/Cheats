@@ -1,5 +1,5 @@
-// The run itself: world scroll, biomes, obstacles, player, ghost, juice, post-FX.
-// UI lives in the parallel Hud scene so the camera zoom / post-FX never touch it.
+// The run itself: world scroll, biomes, obstacles, player, rewards and screen effects.
+// UI lives in the parallel Hud scene so the camera zoom never touches it.
 import Phaser from "phaser";
 import {
   BIOMES,
@@ -9,7 +9,7 @@ import {
   lerpColor,
   N_BIOMES,
 } from "../biomes/biomes.js";
-import { fitCamera, NEAR_MISS, PHYSICS, POST_FX, speedForMeters, VIEW, WORLD } from "../config.js";
+import { fitCamera, NEAR_MISS, PHYSICS, speedForMeters, VIEW, WORLD } from "../config.js";
 import { ComboMeter, TIER_COLORS } from "../effects/ComboMeter.js";
 import { Effects } from "../effects/Effects.js";
 import { ScreenFlash } from "../effects/ScreenFlash.js";
@@ -19,7 +19,6 @@ import { darknessTexture } from "../pixel/hazardArt.js";
 import { pixelPerfectZoom, S } from "../pixel/px.js";
 import { Terrain } from "../pixel/Terrain.js";
 import { THEMES, themeFor } from "../pixel/themes.js";
-import { CharacterRig } from "../player/CharacterRig.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Player } from "../player/Player.js";
 import { Sfx } from "../systems/audio.js";
@@ -31,7 +30,6 @@ import { Progression } from "../systems/progression.js";
 import { dailySeed, todayKey } from "../systems/rng.js";
 import { Save } from "../systems/save.js";
 
-const GHOST_STEP = 8;
 const CALM_M = 150; // last meters of the Glitch Realm before the Abyss: The Calm
 const ABYSS_SPIKE = 1.06; // speed jump entering the Abyss
 const DARK_R = 470; // Abyss light radius around the player
@@ -52,7 +50,7 @@ const FORCE_LUCKY =
   typeof location !== "undefined" && new URLSearchParams(location.search).has("lucky");
 // ?god in the URL makes the player invincible (handy for testing / capturing screenshots)
 const DEBUG_GOD =
-  typeof location !== "undefined" && new URLSearchParams(location.search).has("god"); // px of distance per ghost sample
+  typeof location !== "undefined" && new URLSearchParams(location.search).has("god");
 const PAL_KEYS = [
   "sky0",
   "sky1",
@@ -82,22 +80,11 @@ export class GameScene extends Phaser.Scene {
     this.W = W;
     this.H = H;
     this.lowGfx = Save.data.settings.lowGfx;
-    // scene instances are reused across restarts: clear per-visit references
-    this.ghostRig = null;
     // transparent gameplay camera drawn over the Backdrop scene (bloom = gameplay only)
     fitCamera(this);
     this.backdrop = this.scene.get("Backdrop");
     this.hazardList = [];
     this.hazardScreen = [];
-
-    // post FX
-    this.post = null;
-    if (POST_FX && !this.lowGfx && this.renderer.type === Phaser.WEBGL) {
-      this.cameras.main.setPostPipeline("GlyPostFX");
-      this.post = this.cameras.main.getPostPipeline("GlyPostFX");
-      if (Array.isArray(this.post)) this.post = this.post[0];
-    }
-    this.fxState = { aberration: 0, glitchSpike: 0, flash: 0, zoomPunch: 0 };
 
     this.charDef = getCharacter(Save.data.selected);
     this.fx = new Effects(this, { lowGfx: this.lowGfx });
@@ -214,7 +201,6 @@ export class GameScene extends Phaser.Scene {
     this.setDesat(0);
     Music.endCalm();
     this.passedBest = false;
-    this.ghostDone = false;
     this.missionAnnounced = new Set();
     this.missionCheckT = 0;
     this.run = {
@@ -229,15 +215,12 @@ export class GameScene extends Phaser.Scene {
       portals: 0,
       flaps: 0,
       biome: 0,
-      ghost: null,
       runTimeMs: 0,
       perfects: 0,
       bestCombo: 1,
       bonusCoins: 0,
       lucky: this.lucky,
     };
-    this.ghostRec = [];
-    this.nextGhostSample = 0;
 
     const seed = this.mode === "daily" ? dailySeed() : (Math.random() * 2 ** 32) >>> 0;
     this.obstacles.reset(seed);
@@ -245,45 +228,17 @@ export class GameScene extends Phaser.Scene {
     this.player.reset();
     this.zoomLevel = this.pxZoomLevel;
     this.cameras.main.setZoom(VIEW.Z * this.pxZoomLevel);
-    this.setupGhost();
+    this.setupBest();
     this.hudReady?.onReset?.();
     Music.play(BIOME_TRACKS[0], { startBar: 8 });
     if (autoStart) this.startRun();
   }
 
-  setupGhost() {
+  /** The score to beat this run (daily mode compares with today's daily best). */
+  setupBest() {
     const s = Save.data;
-    let data = s.ghost;
-    let charId = s.ghostChar;
     this.bestScore = s.best;
-    if (this.mode === "daily") {
-      const today = todayKey();
-      data = s.daily.date === today ? s.daily.ghost : null;
-      charId = s.daily.ghostChar;
-      this.bestScore = s.daily.date === today ? s.daily.best : 0;
-    }
-    // ghost replay turned off (best runs are still recorded, just not shown)
-    this.ghostData = null;
-    void data;
-    if (this.ghostRig && this.ghostRig.def.id !== charId) {
-      this.ghostRig.destroy();
-      this.ghostRig = null;
-    }
-    if (this.ghostData) {
-      if (!this.ghostRig) {
-        this.ghostRig = new CharacterRig(this, getCharacter(charId), null, {
-          ghost: true,
-          depth: 26,
-          x: this.player.x,
-          y: this.H / 2,
-        });
-      }
-      this.ghostRig.reset(this.player.x, this.ghostData[0]);
-      this.ghostRig.sprite.setAlpha(0.3);
-    } else if (this.ghostRig) {
-      this.ghostRig.setVisible(false);
-      this.ghostRig.trailG.clear();
-    }
+    if (this.mode === "daily") this.bestScore = s.daily.date === todayKey() ? s.daily.best : 0;
   }
 
   startRun() {
@@ -325,8 +280,7 @@ export class GameScene extends Phaser.Scene {
     const pts = NEAR_MISS.bonus * this.mult;
     this.bonus += pts;
     this.slowT = NEAR_MISS.slowTime;
-    this.fxState.flash = Math.max(this.fxState.flash, 0.28);
-    this.fxState.zoomPunch = 0.035;
+    this.flashFx.flash(0xffffff, { peak: 0.28, dur: 0.25 });
     const p = this.player;
     this.fx.floatText(
       p.x + 40,
@@ -422,7 +376,6 @@ export class GameScene extends Phaser.Scene {
     this.fx.burst("star", p.x, p.y, 10, 0xffffff, { speed: { min: 120, max: 380 } });
     this.fx.ring(o.x, o.y, col, { scale: 1.4, duration: 500, width: 2 });
     this.fx.burst("star", p.x, p.y, 16, col);
-    this.fxState.aberration = Math.max(this.fxState.aberration, 0.02);
     if (o.mode === "flip") {
       p.flipGravity(-1);
       this.fx.floatText(p.x + 50, p.y - 60, "GRAVITY FLIP", "#ff9ce8", 30);
@@ -444,17 +397,14 @@ export class GameScene extends Phaser.Scene {
     Sfx.death();
     Music.endCalm(true);
     Music.deathSweep();
-    if (navigator.vibrate) navigator.vibrate(60);
+    Haptics.strong();
     this.cameras.main.shake(320, hints.shake);
-    this.fxState.flash = Math.max(this.fxState.flash, hints.flash);
-    this.fxState.glitchSpike = Math.max(this.fxState.glitchSpike, hints.glitch);
-    this.fxState.aberration = Math.max(this.fxState.aberration, hints.aberration);
+    this.flashFx.flash(0xffffff, { peak: hints.flash, dur: 0.3, priority: true });
     this.slowT = 0.5;
     this.run.distance = Math.floor(this.meters);
     this.run.score = this.score;
     this.run.nearBonus = this.bonus - this.coinPts;
     this.run.coinBonus = this.coinPts;
-    this.run.ghost = this.ghostRec;
     this.hudReady?.onDeath?.();
   }
 
@@ -559,8 +509,6 @@ export class GameScene extends Phaser.Scene {
       const abyss = biomeIdOf(bs.rawIndex) === "abyss";
       this.announcedBiome = bs.rawIndex;
       this.run.biome = Math.max(this.run.biome, Math.min(bs.rawIndex, N_BIOMES - 1));
-      this.fxState.aberration = Math.max(this.fxState.aberration, 0.03);
-      this.fxState.glitchSpike = Math.max(this.fxState.glitchSpike, 0.3);
       if (!abyss) {
         Sfx.biome();
         Music.play(BIOME_TRACKS[bs.rawIndex % BIOME_TRACKS.length], { startBar: 8 });
@@ -580,7 +528,6 @@ export class GameScene extends Phaser.Scene {
     const tier = Math.floor(this.meters / 250);
     if (playing && tier > this.lastSpeedTier) {
       this.lastSpeedTier = tier;
-      this.fxState.aberration = Math.max(this.fxState.aberration, 0.022);
       if (tier % 2 === 1) this.hudReady?.onSpeedUp?.();
     }
 
@@ -649,11 +596,6 @@ export class GameScene extends Phaser.Scene {
     });
 
     if (playing) {
-      // ghost recording
-      while (this.distance >= this.nextGhostSample) {
-        this.ghostRec.push(Math.round(p.y));
-        this.nextGhostSample += GHOST_STEP;
-      }
       for (const o of ev.passed) {
         if (o.type === "laser") this.run.lasers++;
         if (o.type === "saw") this.run.saws++;
@@ -730,9 +672,6 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // ghost playback
-    this.updateGhost(dt);
-
     // dying → game over
     if (dying) {
       this.deathT += rawDt;
@@ -742,7 +681,6 @@ export class GameScene extends Phaser.Scene {
     this.terrain.update(dt, this.scroll);
 
     this.fx.update(rawDt);
-    this.updatePost(rawDt, speedNorm);
   }
 
   /** Backdrop colour drifts through the biome's related colours every SHIFT_EVERY m. */
@@ -769,8 +707,10 @@ export class GameScene extends Phaser.Scene {
     const local0 = this.meters - raw0 * BL;
     let target = 1;
     if (this.calm) target = 1 - 0.18 * this.calmK;
-    else if (biomeIdOf(raw0) === "glitch") target = 0.95; // Glitch Realm runs a touch slower
-    else if (biomeIdOf(raw0) === "valley") target = 0.75; // the Peaceful Valley drifts
+    else if (biomeIdOf(raw0) === "glitch")
+      target = 0.95; // Glitch Realm runs a touch slower
+    else if (biomeIdOf(raw0) === "valley")
+      target = 0.75; // the Peaceful Valley drifts
     else if (biomeIdOf(raw0) === "abyss") target = ABYSS_SPIKE + 0.04 * (local0 / BL); // keeps ramping
     if (target > this.speedMul) this.speedMul = Math.min(target, this.speedMul + rawDt * 0.5);
     else this.speedMul = Math.max(target, this.speedMul - rawDt * 0.12);
@@ -839,7 +779,7 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * One-time auto-detect: if the first seconds of play can't hold ~60 fps, switch to
-   * Low Graphics (drops the post-FX pass immediately; the rest applies on the next scene).
+   * Low Graphics (applies on the next scene).
    */
   watchFrameRate(deltaMs) {
     const settings = Save.data.settings;
@@ -852,58 +792,12 @@ export class GameScene extends Phaser.Scene {
     settings.gfxChecked = true;
     if (fps < 45 && !settings.lowGfx) {
       settings.lowGfx = true;
-      this.cameras.main.resetPostPipeline();
-      this.post = null;
       this.hudReady?.onToast?.(
         "LOW GRAPHICS ON",
         "Smoother play on this device · change in Settings",
       );
     }
     Save.write();
-  }
-
-  updateGhost() {
-    const g = this.ghostRig;
-    if (!g || !this.ghostData) return;
-    const idx = this.distance / GHOST_STEP;
-    const data = this.ghostData;
-    if (idx >= data.length - 1) {
-      if (!this.ghostDone) {
-        this.ghostDone = true;
-        if (this.state === "playing") {
-          this.fx.burst("dot", g.x, g.y, 14, 0xcfe0ff);
-          this.fx.ring(g.x, g.y, 0xcfe0ff, { scale: 0.8, alpha: 0.5 });
-        }
-        g.setVisible(false);
-      }
-      g.dead = true;
-      g.update(1 / 60, this.scroll);
-      return;
-    }
-    const i = Math.floor(idx);
-    const f = idx - i;
-    const y = data[i] + (data[i + 1] - data[i]) * f;
-    const vy = data[i + 1] - data[i];
-    g.setPosition(this.player.x, y);
-    g.angle += (Phaser.Math.Clamp(vy * 4, -28, 60) - g.angle) * 0.2;
-    g.update(1 / 60, this.scroll);
-  }
-
-  updatePost(dt, speedNorm) {
-    const s = this.fxState;
-    s.aberration *= Math.exp(-dt * 3.5);
-    s.glitchSpike *= Math.exp(-dt * 2.5);
-    s.flash *= Math.exp(-dt * 7);
-    if (!this.post) return;
-    const P = this.post.params;
-    P.aberration = 0.0015 + speedNorm * 0.003 + s.aberration;
-    P.glitch = Math.min(
-      1,
-      this.pal.glitch * (0.18 + (Math.random() < 0.04 ? 0.5 : 0)) + s.glitchSpike,
-    );
-    P.flash = s.flash;
-    P.bloom = 1;
-    P.pxScale = VIEW.Z;
   }
 }
 

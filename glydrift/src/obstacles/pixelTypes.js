@@ -4,7 +4,6 @@ import Phaser from "phaser";
 import { PILLAR_W } from "../pixel/biomeArt.js";
 import { S } from "../pixel/px.js";
 import { circleClear, rectClear, segClear } from "./geometry.js";
-import { Crusher } from "./types.js";
 
 const TAU = Math.PI * 2;
 export const OFF = 600;
@@ -464,7 +463,6 @@ export class Portal extends PxObstacle {
 export const TYPES = {
   saw: Saw,
   blade: Blade,
-  crusher: Crusher,
   gate: Gate,
   laser: Laser,
   portal: Portal,

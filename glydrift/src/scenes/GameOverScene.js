@@ -126,17 +126,11 @@ export class GameOverScene extends Phaser.Scene {
       const coinTxt = neonText(this, -32, 0, "+0", 32, COIN_COLOR, { ox: 0, blur: 8 });
       coinRow.add([coinIcon, coinTxt]);
       if (run.lucky)
-        coinRow.add(
-          plainText(this, 150, 0, "LUCKY RUN · x2", 18, "#ffd23f", { ox: 0 }),
-        );
+        coinRow.add(plainText(this, 150, 0, "LUCKY RUN · x2", 18, "#ffd23f", { ox: 0 }));
       new RollingCounter(this, coinTxt, {
         format: (v) => `+${Math.round(v)}`,
         onTick: Sfx.tick,
-      }).to(
-        earned,
-        400,
-        450,
-      );
+      }).to(earned, 400, 450);
       slideIn(this, coinRow, 400, 20);
       y += H * 0.065;
     } else {
