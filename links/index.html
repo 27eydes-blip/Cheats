@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Glydrift · Play free</title>
-<meta name="description" content="Glydrift — a free pixel arcade flyer. 7 biomes, 30 heroes, no download. Tap to play in your browser.">
+<meta name="description" content="Glydrift — a free pixel arcade flyer. 7 biomes, 4 secret dimensions, 32 heroes, no download. Tap to play in your browser.">
 <meta name="theme-color" content="#06041a">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Glydrift · Play free">
-<meta property="og:description" content="A free pixel arcade flyer. 7 biomes, 30 heroes, no download.">
+<meta property="og:description" content="A free pixel arcade flyer. 7 biomes, 4 secret dimensions, 32 heroes, no download.">
 <meta property="og:url" content="https://27eydes-blip.github.io/Cheats/links/">
 <meta property="og:image" content="https://27eydes-blip.github.io/Cheats/links/img/share.png">
 <meta property="og:image:width" content="1200">
@@ -130,6 +130,55 @@
   .shots figcaption { text-align: center; color: var(--dim); font-size: 15px; margin-top: 6px; }
   h2 { font-family: "Orbitron", sans-serif; font-size: 15px; letter-spacing: 2px; color: var(--cyan); margin: 10px 0 0; align-self: flex-start; }
   footer { color: #6f68a0; font-size: 14px; margin-top: 8px; text-align: center; }
+
+  /* twinkling pixel stars behind everything */
+  .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .stars i { position: absolute; width: 3px; height: 3px; background: #fff; opacity: .25; animation: tw 3s steps(3) infinite; }
+  @keyframes tw { 50% { opacity: .9; } }
+  main { position: relative; z-index: 1; }
+  .chip b { color: var(--ink); }
+  .chip.hot { border-color: #6a2a8a; color: #e8c8ff; }
+
+  .share { --c: var(--cyan); min-height: 58px; font-size: 16px; }
+  .toast {
+    position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translate(-50%, 20px);
+    background: var(--cyan); color: #041018; font-family: "Orbitron", sans-serif; font-weight: 700; font-size: 14px;
+    padding: 10px 16px; border-radius: 10px; opacity: 0; transition: opacity .2s, transform .2s; z-index: 5;
+  }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  /* "NEW" hero spotlight cards */
+  .new { width: 100%; display: grid; gap: 12px; }
+  .hero {
+    display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center;
+    background: var(--card); border-radius: 16px; padding: 14px;
+    border: 3px solid var(--c); box-shadow: 0 0 22px color-mix(in srgb, var(--c) 40%, transparent);
+  }
+  .hero img { width: 96px; height: auto; image-rendering: pixelated; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c) 70%, transparent)); }
+  .hero h3 { margin: 0; font-family: "Orbitron", sans-serif; font-size: 20px; letter-spacing: 1px; }
+  .hero .r { font-family: "Orbitron", sans-serif; font-size: 11px; font-weight: 900; letter-spacing: 1px; margin: 2px 0 4px; }
+  .hero p { margin: 0; color: var(--dim); font-size: 16px; line-height: 1.3; }
+  .hero .timer { color: var(--gold); font-weight: 700; }
+  .rainbow {
+    background: linear-gradient(90deg, #ff3a8a, #ff8a1a, #ffe14d, #39ff88, #2a8aff, #b45cff, #ff3a8a);
+    background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: slide 3s linear infinite;
+  }
+  @keyframes slide { to { background-position: 200% 0; } }
+  .smash { --c: #ff3a8a; }
+  .milzzz { --c: #39ff6a; }
+  .milzzz .r { color: #39ff6a; text-shadow: 0 0 8px #39ff6a; }
+
+  .rift {
+    width: 100%; border-radius: 16px; padding: 14px 16px; text-align: center;
+    background: radial-gradient(120% 140% at 50% 0%, #2a1060 0%, var(--card) 60%);
+    border: 3px solid #b45cff; box-shadow: 0 0 22px rgba(180,92,255,.45);
+  }
+  .rift h3 { margin: 0 0 4px; font-family: "Orbitron", sans-serif; font-size: 18px; letter-spacing: 1px; }
+  .rift p { margin: 0 0 10px; color: var(--dim); font-size: 16px; }
+  .dims { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .dims span { font-family: "Orbitron", sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .5px; padding: 8px 2px; border-radius: 8px; border: 2px solid; }
+  @media (prefers-reduced-motion: reduce) { .stars i, .rainbow { animation: none; } }
 </style>
 </head>
 <body>
@@ -138,12 +187,44 @@
   <h1>GLYDRIFT</h1>
   <p class="tag">Free pixel arcade flyer</p>
   <div class="facts">
-    <span class="chip">7 biomes</span><span class="chip">30 heroes</span><span class="chip">No download</span>
+    <span class="chip"><b>7</b> biomes</span><span class="chip hot"><b>4</b> secret dimensions</span><span class="chip"><b>32</b> heroes</span><span class="chip">No download</span>
   </div>
 
   <a class="btn play" href="https://27eydes-blip.github.io/Cheats/glydrift/">
     <span>▶ PLAY NOW<small>free · runs in your browser</small></span>
   </a>
+
+  <button class="btn share" id="share" type="button">🔗 Share with a friend</button>
+
+  <h2>NEW IN GLYDRIFT</h2>
+  <div class="new">
+    <div class="hero smash" id="smash">
+      <img src="img/hero-smash.png" alt="SMASH, a rainbow pixel mantis shrimp throwing a punch" width="96">
+      <div>
+        <h3>SMASH</h3>
+        <div class="r rainbow">MEGA LEGENDARY</div>
+        <p>A mantis shrimp whose every flap is a sonic punch. <span class="timer" id="smash-timer">24 hours only</span></p>
+      </div>
+    </div>
+    <div class="hero milzzz">
+      <img src="img/hero-milzzz.png" alt="MILZZZ, an angry red-eyed tree frog" width="96">
+      <div>
+        <h3>MILZZZ</h3>
+        <div class="r">ULTRA LEGENDARY</div>
+        <p>A red-eyed tree frog. The hardest hero in the game — and the only one with a <b style="color:var(--ink)">double jump</b>.</p>
+      </div>
+    </div>
+    <div class="rift">
+      <h3>⚡ A RIFT AFTER THE HURRICANE</h3>
+      <p>Fly far enough and reality tears open. Can you find all four?</p>
+      <div class="dims">
+        <span style="border-color:#e8f4ff;color:#e8f4ff">PRISM</span>
+        <span style="border-color:#ff6ac8;color:#ff6ac8">TIDAL</span>
+        <span style="border-color:#ffc83d;color:#ffc83d">CHRONO</span>
+        <span style="border-color:#b86aff;color:#b86aff">MIRROR</span>
+      </div>
+    </div>
+  </div>
 
   <details class="btn">
     <summary>📲 Add it to your home screen</summary>
@@ -164,9 +245,69 @@
     <figure><img src="img/shot-void.jpg" alt="Flying between pillars in the Neon Void" loading="lazy" width="390" height="844"><figcaption>Neon Void</figcaption></figure>
     <figure><img src="img/shot-valley.jpg" alt="Butterflies and flowers in the Peaceful Valley" loading="lazy" width="390" height="844"><figcaption>Peaceful Valley</figcaption></figure>
     <figure><img src="img/shot-hurricane.jpg" alt="Debris and a twister in the Hurricane" loading="lazy" width="390" height="844"><figcaption>Hurricane</figcaption></figure>
+    <figure><img src="img/shot-prism.jpg" alt="A bouncing rainbow laser in the Prism Rift" loading="lazy" width="390" height="844"><figcaption>Prism Rift</figcaption></figure>
+    <figure><img src="img/shot-tidal.jpg" alt="A stinging jellyfish in the Tidal Sky" loading="lazy" width="390" height="844"><figcaption>Tidal Sky</figcaption></figure>
+    <figure><img src="img/shot-chrono.jpg" alt="A rewinding blade and a fast-time zone in the Chrono Fracture" loading="lazy" width="390" height="844"><figcaption>Chrono Fracture</figcaption></figure>
+    <figure><img src="img/shot-mirror.jpg" alt="The player and an upside-down twin in the Mirror Realm" loading="lazy" width="390" height="844"><figcaption>Mirror Realm</figcaption></figure>
   </div>
 
   <footer>Created by Sammy Eyde III</footer>
 </main>
+<div class="stars" id="stars" aria-hidden="true"></div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+  // twinkling stars
+  (function () {
+    const box = document.getElementById("stars");
+    for (let i = 0; i < 40; i++) {
+      const s = document.createElement("i");
+      s.style.left = Math.random() * 100 + "%";
+      s.style.top = Math.random() * 100 + "%";
+      s.style.animationDelay = (Math.random() * 3).toFixed(2) + "s";
+      if (Math.random() < 0.3) s.style.background = ["#3ef4ff", "#ff4fd8", "#ffd23f"][i % 3];
+      box.appendChild(s);
+    }
+  })();
+
+  // share: the phone's share sheet, or copy the link
+  const toast = (msg) => {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("on");
+    setTimeout(() => t.classList.remove("on"), 1800);
+  };
+  document.getElementById("share").addEventListener("click", async () => {
+    const data = { title: "Glydrift", text: "Play Glydrift — a free pixel arcade flyer. Beat my score!", url: location.href };
+    try {
+      if (navigator.share) return await navigator.share(data);
+      await navigator.clipboard.writeText(data.url);
+      toast("Link copied!");
+    } catch (e) {
+      if (e && e.name !== "AbortError") toast("Copy this page's link to share");
+    }
+  });
+
+  // SMASH: live countdown, hidden once the 24-hour sale is over
+  (function () {
+    const END = Date.parse("2026-11-04T14:00:00Z");
+    const el = document.getElementById("smash-timer");
+    const tick = () => {
+      const ms = END - Date.now();
+      if (ms <= 0) { document.getElementById("smash").remove(); return; }
+      const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000), s = Math.floor((ms % 60000) / 1000);
+      el.textContent = `Leaves in ${h}h ${String(m).padStart(2, "0")}m ${String(s).padStart(2, "0")}s`;
+      setTimeout(tick, 1000);
+    };
+    tick();
+  })();
+
+  // put this device's home-screen steps first
+  (function () {
+    const ua = navigator.userAgent;
+    const items = document.querySelectorAll(".howto li");
+    const want = /iPhone|iPad|iPod/.test(ua) ? 1 : /Android/.test(ua) ? 2 : -1;
+    if (want > 0) items[want].style.color = "#eafcff";
+  })();
+</script>
 </body>
 </html>
