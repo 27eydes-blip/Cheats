@@ -190,6 +190,12 @@ export class GameScene extends Phaser.Scene {
     this.biomeIndex = 0;
     this.announcedBiome = 0;
     this.speedMul = 1;
+    // WALLRUNNER's boost dash (double-tap): timers + the eased speed multiplier
+    this.boostT = 0;
+    this.boostGrace = 0;
+    this.boostCd = 0;
+    this.boostMul = 1;
+    this.lastTapAt = -9;
     this.calmK = 0;
     this.blackoutT = 0;
     this.darkA = 0;
@@ -280,6 +286,15 @@ export class GameScene extends Phaser.Scene {
     if (this.hudReady?.isOverHud?.(pointer)) return;
     if (this.state === "ready") this.startRun();
     else if (this.state === "playing") {
+      // a quick second tap fires the boost dash (heroes with `boost`, when it's charged)
+      const B = this.charDef.boost;
+      const now = this.time.now / 1000;
+      if (B && now - this.lastTapAt < B.window && this.boostCd <= 0 && this.boostT <= 0) {
+        this.lastTapAt = -9;
+        this.startBoost();
+        return;
+      }
+      this.lastTapAt = now;
       const dbl = this.player.flap();
       this.run.flaps++;
       if (dbl) {
@@ -412,6 +427,47 @@ export class GameScene extends Phaser.Scene {
     this.hudReady?.onPortal?.(o.mode);
   }
 
+  /** WALLRUNNER's dash: a burst to 13x speed, straight and untouchable, then a short grace. */
+  startBoost() {
+    const B = this.charDef.boost;
+    const p = this.player;
+    this.boostT = B.duration;
+    this.boostCd = B.cooldown;
+    this.run.boosts = (this.run.boosts || 0) + 1;
+    p.vy = 0;
+    Sfx.whoosh();
+    Sfx.lucky();
+    Haptics.strong();
+    this.cameras.main.shake(220, 0.006);
+    this.flashFx.flash(0xffd23f, FLASH.perfect);
+    this.fx.floatText(p.x + 40, p.y - 70, `${B.mul}x BOOST!`, "#ffd23f", 56);
+    this.fx.ring(p.x, p.y, 0xffd23f, { scale: 1.6, duration: 380, width: 3 });
+  }
+
+  updateBoost(dt) {
+    const B = this.charDef.boost;
+    const p = this.player;
+    if (this.boostT > 0) {
+      this.boostT -= dt;
+      this.boostMul += (B.mul - this.boostMul) * Math.min(1, dt * 18);
+      p.vy = 0; // dead straight through everything
+      // speed streaks and gold sparks blasting off behind him
+      this.fx.burst("spark", p.x - 20, p.y, 4, 0xffd23f, {
+        angle: { min: 170, max: 190 },
+        speed: { min: 600, max: 1200 },
+      });
+      if (this.boostT <= 0) this.boostGrace = B.grace;
+    } else {
+      this.boostMul += (1 - this.boostMul) * Math.min(1, dt * 9);
+      if (this.boostMul < 1.01) this.boostMul = 1;
+      if (this.boostGrace > 0) this.boostGrace -= dt;
+    }
+    if (this.boostCd > 0) {
+      this.boostCd -= dt;
+      if (this.boostCd <= 0) this.fx.floatText(p.x + 40, p.y - 60, "BOOST READY", "#ffd23f", 28);
+    }
+  }
+
   die() {
     if (this.state !== "playing" || DEBUG_GOD) return;
     this.state = "dying";
@@ -488,8 +544,10 @@ export class GameScene extends Phaser.Scene {
     // speed & distance
     if (playing) {
       this.updateSpeedMul(rawDt, freeze);
-      // some heroes fly faster than the rest (WALLRUNNER)
-      this.speed = speedForMeters(this.meters) * this.speedMul * (this.charDef.speed ?? 1);
+      if (this.charDef.boost) this.updateBoost(rawDt);
+      // some heroes fly faster than the rest (WALLRUNNER), and his boost multiplies it again
+      this.speed =
+        speedForMeters(this.meters) * this.speedMul * (this.charDef.speed ?? 1) * this.boostMul;
       this.scroll = this.speed;
     } else if (this.state === "ready") {
       this.scroll = WORLD.baseSpeed * 0.55;
@@ -679,7 +737,8 @@ export class GameScene extends Phaser.Scene {
       if (ev.push) p.vy += ev.push * dt;
       if (ev.drag) p.vy *= Math.exp(-ev.drag * dt);
       const r = p.radius;
-      if (ev.hit || p.y < -r * 0.6 || p.y > this.H + r * 0.6) this.die();
+      const shielded = this.boostT > 0 || this.boostGrace > 0; // boosting smashes through
+      if ((ev.hit && !shielded) || p.y < -r * 0.6 || p.y > this.H + r * 0.6) this.die();
 
       // combo window runs on real time (slow-mo doesn't stretch it)
       if (this.chainT > 0) {
