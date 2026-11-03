@@ -806,12 +806,9 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    // the hardest hero to get: ALL of these, then the coins
+    // reach any dimension, then the coins
     cost: 20000,
-    requires: [
-      { stat: "dimensions", value: 4, text: "Discover all 4 dimensions" },
-      { stat: "maxDistance", value: 5000, text: "Fly 5000m in one run" },
-    ],
+    requires: [{ stat: "dimensions", value: 1, text: "Discover a dimension" }],
     // tap again right after a jump for a higher second leap
     doubleJump: { window: 0.3, boost: 1.3, cooldown: 1.0 },
     desc: "DOUBLE JUMP: tap twice fast for a higher leap.",
