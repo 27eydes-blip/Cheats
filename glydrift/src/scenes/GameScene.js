@@ -267,7 +267,9 @@ export class GameScene extends Phaser.Scene {
 
   startRun() {
     this.state = "playing";
-    this.applyBoosts();
+    // shop Boosts were removed: every run is a normal, ranked run
+    this.revives = 0;
+    this.coinBoost = 1;
     this.flashFx.refresh();
     this.flashFx.flash(this.lucky ? 0xffd23f : BIOMES[0].neon, FLASH.runStart);
     if (this.lucky) {

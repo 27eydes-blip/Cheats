@@ -44,7 +44,6 @@ const TABS = [
   { id: "featured", label: "FEATURED" },
   ...CATEGORIES.map((c) => ({ id: c.id, label: c.label })),
   { id: "heroes", label: "HEROES" },
-  { id: "boosts", label: "BOOSTS" },
 ];
 const CARD_W = 206;
 const CARD_H = 196;

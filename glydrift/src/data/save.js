@@ -36,7 +36,8 @@ function defaults() {
     achievements: {},
     dimensions: {}, // dimension ids discovered (prism, tidal, chrono, mirror)
     cos: { owned: {}, equipped: {} }, // shop cosmetics: owned ids + equipped per category
-    boosts: { owned: {}, armed: {} }, // one-run boosts: stock + which go on the next run
+    boosts: { owned: {}, armed: {} }, // (retired) one-run boosts
+    boostsRefunded: false, // unused boosts were refunded as coins when boosts were removed
     login: { last: "", streak: 0, claimed: "" },
     daily: { date: "", best: 0, attempts: 0, ghost: null, ghostChar: "volt", lastPlayed: "" },
     levelRewards: {},

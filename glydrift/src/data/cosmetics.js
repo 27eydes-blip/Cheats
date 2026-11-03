@@ -132,6 +132,16 @@ export const DAILY_DISCOUNT = 0.3;
 
 function state() {
   const s = Save.data;
+  // Boosts were taken out of the shop: refund any that were bought but not used
+  if (s.boosts && !s.boostsRefunded) {
+    let back = 0;
+    for (const [id, n] of Object.entries(s.boosts.owned || {}))
+      back += (BOOSTS.find((b) => b.id === id)?.price || 0) * (n || 0);
+    s.coins += back;
+    s.boosts = { owned: {}, armed: {} };
+    s.boostsRefunded = true;
+    if (back) Save.write();
+  }
   s.cos ||= { owned: {}, equipped: {} };
   s.cos.owned ||= {};
   s.cos.equipped ||= {};

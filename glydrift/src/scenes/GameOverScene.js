@@ -71,29 +71,30 @@ export class GameOverScene extends Phaser.Scene {
       22,
       "#cfc6ff",
     );
-    const scoreLbl = plainText(
-      this,
-      W / 2,
-      Math.max(H * 0.115, headY + 36),
-      "SCORE",
-      20,
-      "#ffffff",
-    );
-    const scoreText = neonText(this, W / 2, H * 0.17, "0", 100, col, { blur: 22 });
+    // everything below stacks from the header, so a tall safe area (notch / Dynamic Island)
+    // pushes it all down together instead of the big score landing on "RUN OVER"
+    const lblY = Math.max(H * 0.115, headY + 40);
+    const scoreY = lblY + 70;
+    const scoreLbl = plainText(this, W / 2, lblY, "SCORE", 20, "#ffffff");
+    const scoreText = neonText(this, W / 2, scoreY, "0", 100, col, { blur: 22 });
     new RollingCounter(this, scoreText, { onTick: Sfx.tick }).to(run.score, 550, 100);
     popIn(this, [head, scoreLbl, scoreText], 0, { duration: 300 });
     // breakdown: why score ≠ distance
     const parts = [`${run.distance}m`];
-    if (run.coinBonus) parts.push(`+${run.coinBonus} coins`);
-    if (run.nearBonus) parts.push(`+${run.nearBonus} combos`);
+    // these are score points (not the coins you keep, shown further down)
+    if (run.coinBonus) parts.push(`+${run.coinBonus} coin pts`);
+    if (run.nearBonus) parts.push(`+${run.nearBonus} combo pts`);
     if (run.bestCombo > 1) parts.push(`best x${run.bestCombo}`);
-    const breakdown = plainText(this, W / 2, H * 0.222, parts.join("   "), 20, "#a99fd6");
+    const breakY = scoreY + 68;
+    const breakdown = plainText(this, W / 2, breakY, parts.join("   "), 20, "#a99fd6");
+    breakdown.setScale(Math.min(1, (W - 40) / breakdown.width));
+    const bestY = breakY + 44;
     slideIn(this, breakdown, 300, 20);
 
     let bestLine;
     if (run.boosted) {
       // boosted runs keep their coins and missions but aren't ranked
-      bestLine = this.add.container(W / 2, H * 0.262);
+      bestLine = this.add.container(W / 2, bestY);
       const g = this.add.graphics();
       g.fillStyle(0x0c2a1a, 0.95).fillRoundedRect(-190, -22, 380, 44, 22);
       g.lineStyle(2, 0x39ff88, 1).strokeRoundedRect(-190, -22, 380, 44, 22);
@@ -110,15 +111,15 @@ export class GameOverScene extends Phaser.Scene {
       );
       bestLine.add([g, plainText(this, 12, 0, "BOOSTED RUN · NOT RANKED", 18, "#b8ffd8")]);
     } else if (R.newBest) {
-      bestLine = neonText(this, W / 2, H * 0.262, "NEW BEST!", 34, 0xffd23f, { blur: 12 });
+      bestLine = neonText(this, W / 2, bestY, "NEW BEST!", 34, 0xffd23f, { blur: 12 });
       this.time.delayedCall(650, () => Sfx.reward());
     } else {
-      bestLine = plainText(this, W / 2, H * 0.262, `BEST ${R.prevBest}`, 24, "#d8d0ff");
+      bestLine = plainText(this, W / 2, bestY, `BEST ${R.prevBest}`, 24, "#d8d0ff");
     }
     popIn(this, bestLine, 450, { duration: 300 });
 
     // ---- stat chips (numbers use the clean numeric font)
-    const chipY = H * 0.36;
+    const chipY = Math.max(H * 0.36, bestY + 92);
     const chips = [
       [`${run.distance}m`, "DISTANCE", col],
       [biomeName(run.biome).split(" ").slice(-1)[0], "BIOME", biome.accent],
@@ -136,7 +137,7 @@ export class GameOverScene extends Phaser.Scene {
     });
     slideIn(this, chips, 200, 30);
 
-    let y = H * 0.428;
+    let y = chipY + H * 0.068;
     // coins line — only when something was earned
     const missionCoins = R.missions.reduce((a, m) => a + m.reward.coins, 0);
     const earned = run.coins + missionCoins;
@@ -284,7 +285,7 @@ export class GameOverScene extends Phaser.Scene {
       onClick: () => this.goto("Menu"),
     });
     popIn(this, [retry, share, ranks, heroes, home], 250, { duration: 350 });
-    this.showPlacement(R, run, H * 0.3);
+    this.showPlacement(R, run, bestY + 46);
 
     const tapHint = plainText(
       this,
