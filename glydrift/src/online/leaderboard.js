@@ -154,6 +154,8 @@ class LeaderboardService {
    * @returns Promise resolving to { uploaded, queued, rejected }
    */
   submitRun(run) {
+    // runs that used a shop Boost never reach the leaderboard (coins can't buy rank)
+    if (run.boosted) return Promise.resolve({ rejected: true, boosted: true });
     const entry = {
       type: "score",
       level: Levels.forRun(run),

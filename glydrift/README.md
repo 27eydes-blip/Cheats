@@ -140,6 +140,38 @@ Legendary).
 - **Achievements**: 16 badges.
 - Everything persists locally (`src/data/save.js`).
 
+## Coin shop & economy
+
+The **Shop** (bag button on the home screen) sells cosmetics only — trails, death effects,
+hats, colour skins, flap effects and coin skins — plus heroes, a daily-rotating **Daily Shop**
+(4 items, one 30% off), the **Mystery Pod** (500 coins, odds on screen, no duplicates, 250 back
+if a tier is complete) and one-run **Boosts**. Owning a themed **Collection** (trail + hat +
+death effect + skin) unlocks a title and glow. Catalog, prices and odds: `src/data/cosmetics.js`.
+
+**Coins never buy leaderboard advantage.** Cosmetics are visual only, and any run that uses a
+Boost earns coins and mission progress but is never submitted to the worldwide leaderboard or
+the Daily Challenge (boosts can't be used there), never sets a personal best, and shows a
+"BOOSTED RUN · NOT RANKED" badge on the results.
+
+Earn rate (measured with a test bot that grabs about 60% of coins):
+
+| Run | Coins picked up | Score → Lucky Spins | Typical total per run* |
+|---|---|---|---|
+| Short (~300 m, 18 s) | ~17 | ~0.5 spin | ~100 |
+| Average (~600 m, 33 s) | ~83 (incl. 50 biome bonus) | ~1 spin | ~250 |
+| Good (~1,000 m, 52 s) | ~150 | ~1.5 spins | ~400 |
+
+\* plus spins (≈195 coins each on average), missions (~100 coins each) and level-ups.
+
+| Tier | Price | ≈ runs at ~150 coins/run |
+|---|---|---|
+| Common | 200 – 300 | 1.5 – 2 |
+| Rare | 400 – 1,200 | 3 – 8 |
+| Mystery Pod | 500 | ~3 |
+| Epic | 1,500 – 4,000 | 10 – 27 |
+| Legendary | 8,000 – 15,000 | 55 – 100 (a few days) |
+| Boosts | 200 – 750 | 1.5 – 5 |
+
 ## Performance
 
 - Fixed 60 fps cap, `dt` clamped, no per-frame allocations in hot paths.

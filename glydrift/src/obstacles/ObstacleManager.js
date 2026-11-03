@@ -6,6 +6,7 @@ import { S } from "../pixel/px.js";
 import { themeFor } from "../pixel/themes.js";
 import { RNG } from "../data/rng.js";
 import { COIN_FLOW, SPAWN } from "../tuning.js";
+import { Shop } from "../data/cosmetics.js";
 import { TYPES } from "./index.js";
 
 /** Signature hazards per biome, in the order they are introduced (one at a time). */
@@ -51,6 +52,10 @@ export class ObstacleManager {
     this.active.length = 0;
     for (const c of this.coins) c.setActive(false).setVisible(false);
     this.nextX = this.W + 260;
+    // shop coin skin (gems / stars / hearts) and the Coin Magnet boost's pull radius
+    const skin = Shop.equipped("coin");
+    this.coinSkin = skin ? { tex: "cosm", prefix: `${skin}_` } : { tex: "pxc", prefix: "coin_" };
+    this.magnetR = 110;
     this.lastCoinX = 0; // screen x of the furthest-right coin spawned (scrolls with the world)
     this.lastCoinY = this.H / 2;
     this.count = 0;
@@ -100,7 +105,7 @@ export class ObstacleManager {
   coin(x, y) {
     let c = this.coins.find((o) => !o.active);
     if (!c) {
-      c = this.scene.add.image(0, 0, "pxc", "coin_0").setDepth(6);
+      c = this.scene.add.image(0, 0, this.coinSkin.tex, `${this.coinSkin.prefix}0`).setDepth(6);
       // stepped pixel halo that pulses with the music
       c.halo = this.scene.add
         .image(0, 0, "pxglow")
@@ -111,6 +116,8 @@ export class ObstacleManager {
       this.coins.push(c);
     }
     c.setActive(true).setVisible(true).setPosition(x, y).setScale(1);
+    if (c.texture.key !== this.coinSkin.tex)
+      c.setTexture(this.coinSkin.tex, `${this.coinSkin.prefix}0`);
     c.halo.setVisible(true);
     c.baseY = y;
     c.phase = Math.random() * 6;
@@ -825,7 +832,7 @@ export class ObstacleManager {
         const ddx = px - c.x;
         const ddy = py - c.y;
         const d2 = ddx * ddx + ddy * ddy;
-        if (d2 < 110 * 110) c.magnet = true;
+        if (d2 < this.magnetR * this.magnetR) c.magnet = true;
         if (c.magnet) {
           c.x += ddx * Math.min(1, dt * 12);
           c.baseY += ddy * Math.min(1, dt * 12);
@@ -840,7 +847,7 @@ export class ObstacleManager {
         }
       }
       c.y = c.baseY + Math.sin(t) * 5;
-      c.setFrame(`coin_${Math.floor(t * 2.2) % 4}`);
+      c.setFrame(`${this.coinSkin.prefix}${Math.floor(t * 2.2) % 4}`);
       c.halo.setPosition(c.x, c.y).setAlpha(0.3 + 0.45 * (this.beat || 0));
       if (c.x < this.leftEdge - 40) {
         c.setActive(false).setVisible(false);

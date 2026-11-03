@@ -2,6 +2,8 @@
 // background only retry after 0.5 s (so a panicked tap doesn't restart), and taps on the
 // buttons never count as "retry".
 import Phaser from "phaser";
+import { heroImage } from "../ui/heroImage.js";
+import { Shop } from "../data/cosmetics.js";
 import { BIOMES, biomeName } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, VIEW } from "../config.js";
 import { HI } from "../gfx/textures.js";
@@ -89,7 +91,25 @@ export class GameOverScene extends Phaser.Scene {
     slideIn(this, breakdown, 300, 20);
 
     let bestLine;
-    if (R.newBest) {
+    if (run.boosted) {
+      // boosted runs keep their coins and missions but aren't ranked
+      bestLine = this.add.container(W / 2, H * 0.262);
+      const g = this.add.graphics();
+      g.fillStyle(0x0c2a1a, 0.95).fillRoundedRect(-190, -22, 380, 44, 22);
+      g.lineStyle(2, 0x39ff88, 1).strokeRoundedRect(-190, -22, 380, 44, 22);
+      g.fillStyle(0x39ff88, 1).fillPoints(
+        [
+          { x: -160, y: -12 },
+          { x: -170, y: 3 },
+          { x: -162, y: 3 },
+          { x: -166, y: 14 },
+          { x: -152, y: -4 },
+          { x: -160, y: -4 },
+        ],
+        true,
+      );
+      bestLine.add([g, plainText(this, 12, 0, "BOOSTED RUN · NOT RANKED", 18, "#b8ffd8")]);
+    } else if (R.newBest) {
       bestLine = neonText(this, W / 2, H * 0.262, "NEW BEST!", 34, 0xffd23f, { blur: 12 });
       this.time.delayedCall(650, () => Sfx.reward());
     } else {
@@ -295,7 +315,10 @@ export class GameOverScene extends Phaser.Scene {
 
     // the hero you flew with
     const def = getCharacter(run.char);
-    this.add.image(W - 70, headY + 4, def.texture).setScale(0.5 / HI);
+    heroImage(this, W - 70, headY + 4, def.id, 0.5 / HI);
+    // a completed Collection's title rides under your hero
+    const set = Shop.activeSet();
+    if (set) plainText(this, W - 70, headY + 52, set.title, 14, hex(set.glow));
   }
 
   /** "You placed #N worldwide!" once the background upload + rank lookup finish. */

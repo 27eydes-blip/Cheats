@@ -116,6 +116,30 @@ const KINDS = {
   },
 };
 
+// shop cosmetics: white sprites tinted per use (flap / death / trail effects)
+const fall = (tex, cap, extra = {}) => ({
+  tex,
+  cfg: {
+    lifespan: { min: 600, max: 1100 },
+    speed: { min: 60, max: 220 },
+    angle: { min: 0, max: 360 },
+    scale: { start: 1, end: 0.6 },
+    alpha: { start: 1, end: 0 },
+    rotate: { min: -40, max: 40 },
+    ...extra,
+  },
+  cap,
+});
+KINDS.note = fall("fx_note", 60, { gravityY: -120 });
+KINDS.feather = fall("fx_feather", 60, { gravityY: 140, rotate: { min: -90, max: 90 } });
+KINDS.heart = fall("fx_heart", 80, { gravityY: -60 });
+KINDS.confetti = fall("fx_confetti", 160, {
+  gravityY: 520,
+  lifespan: { min: 900, max: 1500 },
+  rotate: { min: 0, max: 360 },
+});
+KINDS.cash = fall("fx_cash", 100, { gravityY: 700, rotate: { min: 0, max: 360 } });
+
 export class Effects {
   constructor(scene, { lowGfx = false, depth = 40 } = {}) {
     this.scene = scene;

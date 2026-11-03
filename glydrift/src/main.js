@@ -17,6 +17,7 @@ import { MenuScene } from "./scenes/MenuScene.js";
 import { MusicTestScene } from "./scenes/MusicTestScene.js";
 import { ProgressScene } from "./scenes/ProgressScene.js";
 import { SpinScene } from "./scenes/SpinScene.js";
+import { ShopScene } from "./scenes/ShopScene.js";
 import "./systems/install.js"; // registers beforeinstallprompt early (Android install button)
 import { Music } from "./audio/music.js";
 import { Save } from "./data/save.js";
@@ -74,6 +75,7 @@ async function boot() {
       ProgressScene,
       LeaderboardScene,
       SpinScene,
+      ShopScene,
       MusicTestScene,
     ],
   });

@@ -491,6 +491,24 @@ function draco(frame) {
 }
 
 /** Thin white rim around a hero sprite so the player is always the brightest, clearest shape. */
+/**
+ * Top of each hero's head, in art pixels from the frame centre (frame 1, after the rim), so
+ * shop hats sit on any hero: the highest opaque row in the front (right) part of the sprite.
+ */
+export const HEAD_ANCHORS = {};
+function headAnchor(pc) {
+  const x0 = Math.floor(pc.w * 0.42);
+  for (let y = 0; y < pc.h; y++) {
+    const xs = [];
+    for (let x = x0; x < pc.w; x++) if (pc.get(x, y) !== null) xs.push(x);
+    if (xs.length) {
+      const cx = (xs[0] + xs[xs.length - 1]) / 2;
+      return { x: cx + 0.5 - pc.w / 2, y: y + 1 - pc.h / 2, w: pc.w, h: pc.h };
+    }
+  }
+  return { x: 2, y: -8, w: pc.w, h: pc.h };
+}
+
 function rim(pc) {
   const out = new PixelCanvas(pc.w + 2, pc.h + 2);
   out.blit(pc, 1, 1);
@@ -587,6 +605,7 @@ export function buildCommon(scene) {
   };
   for (let f = 0; f < 3; f++)
     for (const [id, draw] of Object.entries(heroes)) frames[`${id}_${f}`] = rim(draw(f));
+  for (const id of Object.keys(heroes)) HEAD_ANCHORS[id] = headAnchor(frames[`${id}_1`]);
   for (let f = 0; f < 4; f++) frames[`coin_${f}`] = coin(f);
   for (const m of ["flip", "restore", "mini"])
     for (let f = 0; f < 4; f++) frames[`portal_${m}_${f}`] = portal(m, f);

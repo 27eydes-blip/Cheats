@@ -18,6 +18,7 @@ import { CharacterRig } from "../player/CharacterRig.js";
 import { Player } from "../player/Player.js";
 import { Sfx } from "../audio/sfx.js";
 import { Analytics } from "../systems/analytics.js";
+import { getBoost, Shop } from "../data/cosmetics.js";
 import { Haptics } from "../systems/haptics.js";
 import { TEST } from "../systems/testFlags.js";
 import { Leaderboard } from "../online/leaderboard.js";
@@ -266,6 +267,7 @@ export class GameScene extends Phaser.Scene {
 
   startRun() {
     this.state = "playing";
+    this.applyBoosts();
     this.flashFx.refresh();
     this.flashFx.flash(this.lucky ? 0xffd23f : BIOMES[0].neon, FLASH.runStart);
     if (this.lucky) {
@@ -427,6 +429,48 @@ export class GameScene extends Phaser.Scene {
     this.hudReady?.onPortal?.(o.mode);
   }
 
+  /**
+   * Shop Boosts armed for this run (never in the Daily Challenge). A boosted run still pays
+   * coins and mission progress but is kept off the leaderboard (run.boosted).
+   */
+  applyBoosts() {
+    this.revives = 0;
+    this.coinBoost = 1;
+    if (this.mode === "daily") return;
+    const used = Shop.consumeBoosts();
+    this.run.boosts = used;
+    this.run.boosted = used.length > 0;
+    if (!used.length) return;
+    if (used.includes("revive")) this.revives = 1;
+    if (used.includes("double")) this.coinBoost = 2;
+    if (used.includes("magnet")) this.obstacles.magnetR = 300;
+    if (used.includes("headstart")) {
+      this.distance = 200 * WORLD.pxPerMeter;
+      this.meters = 200;
+      this.nextMilestone = 300;
+      this.boostGrace = 1.5; // land safely among the obstacles
+    }
+    const names = used.map((id) => getBoost(id).name).join(" · ");
+    this.time.delayedCall(this.lucky ? 1600 : 250, () =>
+      this.hudReady?.hudBanner?.("BOOSTED RUN", 0x39ff88, `${names} · not ranked`),
+    );
+  }
+
+  /** Second Chance: back to the middle of the screen with a moment of shield. */
+  revive() {
+    this.revives -= 1;
+    const p = this.player;
+    p.y = this.H / 2;
+    p.vy = 0;
+    this.boostGrace = 2;
+    Sfx.levelUp();
+    Haptics.strong();
+    this.flashFx.flash(0x39ff88, FLASH.perfect);
+    this.fx.ring(p.x, p.y, 0x39ff88, { scale: 2, duration: 600, width: 3 });
+    this.fx.burst("star", p.x, p.y, 24, 0x39ff88, { speed: { min: 150, max: 450 } });
+    this.fx.floatText(p.x + 40, p.y - 70, "SECOND CHANCE!", "#39ff88", 44);
+  }
+
   /** WALLRUNNER's dash: a burst to 13x speed, straight and untouchable, then a short grace. */
   startBoost() {
     const B = this.charDef.boost;
@@ -470,6 +514,7 @@ export class GameScene extends Phaser.Scene {
 
   die() {
     if (this.state !== "playing" || DEBUG_GOD) return;
+    if (this.revives > 0) return this.revive();
     this.state = "dying";
     this.deathT = 0;
     const hints = this.player.die();
@@ -545,6 +590,11 @@ export class GameScene extends Phaser.Scene {
     if (playing) {
       this.updateSpeedMul(rawDt, freeze);
       if (this.charDef.boost) this.updateBoost(rawDt);
+      else if (this.boostGrace > 0) this.boostGrace -= rawDt;
+      // shield blink (Second Chance / Head Start landing / boost grace)
+      this.player.rig.sprite.setAlpha(
+        this.boostGrace > 0 && Math.floor(this.boostGrace * 12) % 2 ? 0.35 : 1,
+      );
       // some heroes fly faster than the rest (WALLRUNNER), and his boost multiplies it again
       this.speed =
         speedForMeters(this.meters) * this.speedMul * (this.charDef.speed ?? 1) * this.boostMul;
@@ -721,7 +771,7 @@ export class GameScene extends Phaser.Scene {
       if (ev.coins) {
         // some heroes multiply every coin (WALLRUNNER ×15); score from coins is unchanged
         const cm = this.charDef.coinMul ?? 1;
-        this.run.coins += ev.coins * (this.lucky ? 2 : 1) * cm;
+        this.run.coins += ev.coins * (this.lucky ? 2 : 1) * cm * this.coinBoost;
         if (cm > 1)
           this.fx.floatText(
             p.x + 26,
@@ -775,7 +825,12 @@ export class GameScene extends Phaser.Scene {
       this.run.distance = Math.floor(this.meters);
       this.run.score = this.score;
 
-      if (!this.passedBest && this.bestScore > 0 && this.score > this.bestScore) {
+      if (
+        !this.passedBest &&
+        !this.run.boosted &&
+        this.bestScore > 0 &&
+        this.score > this.bestScore
+      ) {
         this.passedBest = true;
         this.hudReady?.onNewBest?.();
         this.fx.floatText(p.x + 20, p.y - 120, "NEW BEST!", "#ffd23f", 50);

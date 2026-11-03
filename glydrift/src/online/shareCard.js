@@ -1,5 +1,9 @@
 // Auto-generated shareable result card (1080x1350 PNG) built with Canvas2D,
 // shown in a DOM modal with Web Share / download fallbacks.
+import { Shop, SKINS } from "../data/cosmetics.js";
+import { HAT_FIT } from "../pixel/cosmeticArt.js";
+import { HEAD_ANCHORS } from "../pixel/common.js";
+import { greyPortrait } from "../pixel/grayHero.js";
 import { BIOMES, biomeName } from "../biomes/biomes.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { dailyNumber } from "../data/rng.js";
@@ -88,8 +92,47 @@ export function renderShareCard(game, run) {
     rg.addColorStop(1, `${css(ch.color)}00`);
     c.fillStyle = rg;
     c.fillRect(0, 260, W, 520);
-    c.drawImage(tex, W / 2 - 170, 350, 340, 340);
+    // shop skin: tint the portrait (multiply, clipped to the sprite)
+    const lo = Shop.loadout();
+    const skin = SKINS[lo.skin];
+    let art = tex;
+    if (skin) {
+      const grey = game.textures.get(greyPortrait(game.scene.scenes[0], ch)).getSourceImage();
+      const off = document.createElement("canvas");
+      off.width = tex.width;
+      off.height = tex.height;
+      const o = off.getContext("2d");
+      o.drawImage(grey, 0, 0);
+      o.globalCompositeOperation = "multiply";
+      o.fillStyle = css(skin.tint);
+      o.fillRect(0, 0, off.width, off.height);
+      o.globalCompositeOperation = "destination-in";
+      o.drawImage(grey, 0, 0);
+      art = off;
+    }
+    c.drawImage(art, W / 2 - 170, 350, 340, 340);
     c.restore();
+    // shop hat on the head
+    const fit = HAT_FIT[lo.hat];
+    if (fit) {
+      const a = HEAD_ANCHORS[ch.id] || { x: 2, y: -8 };
+      const k = 340 / (a.w || 26); // art px → card px
+      const fr = game.textures.getFrame("cosm", fit.frame);
+      const hw = (fr.cutWidth / 4) * k;
+      const hh = (fr.cutHeight / 4) * k;
+      c.imageSmoothingEnabled = false;
+      c.drawImage(
+        fr.source.image,
+        fr.cutX,
+        fr.cutY,
+        fr.cutWidth,
+        fr.cutHeight,
+        W / 2 + (a.x + fit.dx) * k - hw / 2,
+        520 + (a.y + fit.dy) * k - hh,
+        hw,
+        hh,
+      );
+    }
   } catch {
     /* texture missing — skip */
   }

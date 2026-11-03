@@ -240,6 +240,39 @@ export class MenuScene extends Phaser.Scene {
       });
       popIn(this, wb, 350);
     }
+    // ---- Shop: a neon bag on the left, mirroring the Lucky Spin wheel
+    {
+      const sb = this.add.container(96, H * 0.31).setDepth(100);
+      const g = this.add.graphics();
+      g.fillStyle(0x0a0418, 1).fillRoundedRect(-46, -30, 92, 80, 14);
+      g.lineStyle(5, 0xffd23f, 1).strokeRoundedRect(-46, -30, 92, 80, 14);
+      g.lineStyle(5, 0xffd23f, 1).beginPath().arc(0, -30, 22, Math.PI, 0).strokePath();
+      sb.add([g, this.add.image(0, 10, "coin").setScale(0.75 / HI)]);
+      sb.add(neonText(this, 0, 80, "SHOP", 18, 0xffd23f, { blur: 8 }));
+      // a red "SALE" badge for the Daily Shop deal
+      const bg = this.add.graphics();
+      bg.fillStyle(0xff2a3d, 1).fillRoundedRect(14, -58, 64, 28, 14);
+      sb.add([bg, plainText(this, 46, -44, "SALE", 15, "#ffffff")]);
+      this.tweens.add({
+        targets: sb,
+        angle: { from: -3, to: 3 },
+        yoyo: true,
+        repeat: -1,
+        duration: 1200,
+        ease: "Sine.easeInOut",
+      });
+      sb.setSize(140, 170).setInteractive(
+        new Phaser.Geom.Rectangle(0, 0, 140, 170),
+        Phaser.Geom.Rectangle.Contains,
+      );
+      sb.on("pointerdown", () => this.tweens.add({ targets: sb, scale: 0.9, duration: 70 }));
+      sb.on("pointerup", () => {
+        this.tweens.add({ targets: sb, scale: 1, duration: 200, ease: "Back.easeOut" });
+        Sfx.ui();
+        this.go("Shop");
+      });
+      popIn(this, sb, 380);
+    }
     // "Add to Home Screen" — hidden once you're already playing from the home screen
     if (Install.available) {
       const add = button(

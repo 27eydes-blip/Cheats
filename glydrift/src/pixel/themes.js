@@ -5,6 +5,7 @@ import { buildBiome, NV } from "./biomeArt.js";
 import { buildCommon } from "./common.js";
 import { buildHazards } from "./hazardArt.js";
 import { buildDimensionHazards } from "./dimensionHazardArt.js";
+import { buildCosmeticArt } from "./cosmeticArt.js";
 import { buildNewHazards } from "./newHazardArt.js";
 import { addAtlas } from "./px.js";
 import { weatherFrames } from "./scenicArt.js";
@@ -545,6 +546,7 @@ export function buildPixelArt(scene) {
   addAtlas(scene, "wx", weatherFrames());
   buildNewHazards(scene);
   buildDimensionHazards(scene);
+  buildCosmeticArt(scene);
   for (const [id, d] of Object.entries(DEFS)) buildBiome(scene, id, d.pal, d.cfg);
   buildHazards(scene, { solar: SOLAR, frozen: FROZEN, glitch: GLITCH, abyss: ABYSS });
 }

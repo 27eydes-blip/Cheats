@@ -634,8 +634,8 @@ export const Progression = {
       s.daily.attempts += 1;
     }
 
-    // best + ghost
-    res.newBest = run.score > res.prevBest;
+    // best + ghost (a boosted run never sets a best: it isn't a fair score)
+    res.newBest = !run.boosted && run.score > res.prevBest;
     if (run.mode === "daily") {
       if (res.newBest) {
         s.daily.best = run.score;

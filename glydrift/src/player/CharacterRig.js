@@ -2,6 +2,10 @@
 // death explosion. Used in-game and for the live previews on the menus.
 import Phaser from "phaser";
 import { HERO_SCALE } from "../config.js";
+import { COLLECTIONS, Shop, SKINS } from "../data/cosmetics.js";
+import { HAT_FIT } from "../pixel/cosmeticArt.js";
+import { HEAD_ANCHORS } from "../pixel/common.js";
+import { greyAtlas } from "../pixel/grayHero.js";
 
 const ADD = Phaser.BlendModes.ADD;
 const NORMAL = Phaser.BlendModes.NORMAL;
@@ -41,6 +45,18 @@ export class CharacterRig {
     this.px = def.pixel; // every hero is pixel art: atlas frames + stepped trail colours
     this.sprite = scene.add.image(this.x, this.y, this.px.atlas, this.px.frames[1]).setDepth(depth);
     this.extras = [];
+    // shop cosmetics: the player's loadout by default; previews pass their own
+    this.glow = scene.add
+      .image(this.x, this.y, "glow")
+      .setBlendMode(ADD)
+      .setVisible(false)
+      .setDepth(depth - 1);
+    this.hat = scene.add
+      .image(0, 0, "cosm", "hat_crown")
+      .setVisible(false)
+      .setDepth(depth + 0.5);
+    this.extras.push(this.glow, this.hat);
+    this.setCosmetics(opts.cosmetics === undefined ? Shop.loadout() : opts.cosmetics);
     if (def.id === "shade") {
       this.afterImages = [];
       for (let i = 0; i < 7; i++) {
@@ -72,6 +88,31 @@ export class CharacterRig {
   setVisible(v) {
     this.sprite.setVisible(v);
     for (const e of this.extras) e.setVisible(v);
+    if (v) this.applyCosmeticVisibility();
+  }
+
+  /** Equip a loadout ({ trail, death, hat, skin, flap, title } of cosmetic ids, or null). */
+  setCosmetics(lo) {
+    this.cos = lo || {};
+    this.skin = SKINS[this.cos.skin] || null;
+    const set = COLLECTIONS.find((c) => c.id === this.cos.title);
+    this.setGlow = set && (this.cos.titleForce || Shop.setComplete(set)) ? set.glow : null;
+    this.sprite.clearTint();
+    // skins recolour a greyscale copy of the hero (so gold reads gold on any hero)
+    const key = this.skin ? greyAtlas(this.scene, this.def) : this.px.atlas;
+    if (this.sprite.texture.key !== key) this.sprite.setTexture(key, this.sprite.frame.name);
+    if (this.skin) this.sprite.setTint(this.skin.tint);
+    const fit = HAT_FIT[this.cos.hat];
+    if (fit) this.hat.setFrame(fit.frame).setOrigin(0.5, 1);
+    this.applyCosmeticVisibility();
+  }
+
+  applyCosmeticVisibility() {
+    if (this.dead) return;
+    this.hat.setVisible(!!HAT_FIT[this.cos.hat] && this.sprite.visible);
+    const g = this.setGlow ?? this.skin?.glow;
+    this.glow.setVisible(!!g && this.sprite.visible);
+    if (g) this.glow.setTint(g);
   }
 
   reset(x, y) {
@@ -96,6 +137,7 @@ export class CharacterRig {
     const { x, y, def, fx } = this;
     const down = this.gravityDir > 0 ? { min: 50, max: 130 } : { min: 230, max: 310 };
     const oy = 12 * this.gravityDir * this.u;
+    this.cosmeticFlap(x, y + oy, down);
     switch (def.id) {
       case "volt":
         fx.burst("spark", x, y + oy, 10, def.color, { angle: down });
@@ -159,6 +201,98 @@ export class CharacterRig {
     fx.burst("star", x, y, 6, def.color2 ?? 0xffffff);
   }
 
+  cosmeticFlap(x, y, down) {
+    const fx = this.fx;
+    switch (this.cos.flap) {
+      case "flap_sparks":
+        fx.burst("spark", x, y, 9, 0xffd23f, { angle: down, speed: { min: 160, max: 420 } });
+        break;
+      case "flap_stars":
+        for (let i = 0; i < 3; i++)
+          fx.burst("star", x, y, 2, hsv(Math.random(), 0.55, 1), { angle: down });
+        break;
+      case "flap_feathers":
+        fx.burst("feather", x, y, 4, 0xffffff, { angle: down, speed: { min: 40, max: 140 } });
+        break;
+      case "flap_notes":
+        fx.burst("note", x - 10, y - 10, 2, 0x3ef4ff, { angle: { min: 200, max: 250 } });
+        fx.burst("note", x - 10, y - 10, 1, 0xff4fd8, { angle: { min: 200, max: 250 } });
+        break;
+    }
+  }
+
+  /** Shop death effect, played on top of the hero's own explosion. */
+  cosmeticDeath(x, y) {
+    const fx = this.fx;
+    const scene = this.scene;
+    const { def } = this;
+    switch (this.cos.death) {
+      case "death_shatter":
+        fx.burst("pixel", x, y, 50, def.color, { speed: { min: 200, max: 700 } });
+        fx.burst("pixel", x, y, 30, def.color2 ?? 0xffffff, { speed: { min: 100, max: 500 } });
+        break;
+      case "death_confetti":
+        for (const c of [0xff3a5a, 0xffe14d, 0x39ff88, 0x3ef4ff, 0xff4fd8])
+          fx.burst("confetti", x, y, 16, c, {
+            angle: { min: 200, max: 340 },
+            speed: { min: 250, max: 650 },
+          });
+        break;
+      case "death_ghost": {
+        const gh = scene.add
+          .image(x, y, "fx_ghost")
+          .setDepth(this.sprite.depth + 2)
+          .setAlpha(0.9);
+        scene.tweens.add({
+          targets: gh,
+          y: y - 220,
+          alpha: 0,
+          duration: 1500,
+          ease: "Sine.easeOut",
+          onComplete: () => gh.destroy(),
+        });
+        scene.tweens.add({
+          targets: gh,
+          x: x + 18,
+          duration: 375,
+          yoyo: true,
+          repeat: 1,
+          ease: "Sine.easeInOut",
+        });
+        break;
+      }
+      case "death_firework":
+        [0xff4fd8, 0xffd23f, 0x3ef4ff].forEach((c, i) =>
+          scene.time.delayedCall(i * 220, () => {
+            const fx2 = x + (i - 1) * 70;
+            const fy = y - 60 - i * 30;
+            fx.ring(fx2, fy, c, { scale: 1.4, duration: 520, width: 2 });
+            fx.burst("star", fx2, fy, 18, c, { speed: { min: 180, max: 420 } });
+            fx.burst("spark", fx2, fy, 14, 0xffffff);
+          }),
+        );
+        break;
+      case "death_blackhole": {
+        const g = scene.add.graphics({ x, y }).setDepth(this.sprite.depth + 2);
+        g.fillStyle(0x000000, 1).fillCircle(0, 0, 40);
+        g.lineStyle(6, 0xb45cff, 1).strokeCircle(0, 0, 44);
+        g.lineStyle(2, 0x7ad8ff, 0.8).strokeCircle(0, 0, 52);
+        g.setScale(0);
+        scene.tweens.chain({
+          targets: g,
+          tweens: [
+            { scale: 1.3, angle: 180, duration: 260, ease: "Back.easeOut" },
+            { scale: 1.1, angle: 360, duration: 500 },
+            { scale: 0, angle: 720, duration: 280, ease: "Cubic.easeIn" },
+          ],
+          onComplete: () => g.destroy(),
+        });
+        fx.burst("dot", x, y, 30, 0xb45cff, { speed: { min: 40, max: 160 } });
+        break;
+      }
+    }
+  }
+
   // ------------------------------------------------------------------ death
   /** Returns hints for the scene's death effects (flash strength, camera shake). */
   die() {
@@ -167,6 +301,7 @@ export class CharacterRig {
     const { x, y, def, fx } = this;
     const hints = { flash: 0.35, shake: 0.018 };
     if (!fx) return hints;
+    this.cosmeticDeath(x, y);
     fx.burst("shard", x, y, 26, def.color);
     fx.ring(x, y, def.color, { scale: 1.5, duration: 600 });
     switch (def.id) {
@@ -341,6 +476,32 @@ export class CharacterRig {
         break;
     }
 
+    // shop skin: the tint wins over per-hero tints; extras sparkle / sheen
+    if (this.skin) {
+      let tint = this.skin.tint;
+      if (this.skin.sheen && Math.sin(this.time * 2.2) > 0.93) tint = 0xffffff;
+      this.sprite.setTint(tint);
+      if (this.skin.sparkle && !this.dead && this.fx && Math.random() < dt * 4)
+        this.fx.burst(
+          "star",
+          this.x + (Math.random() - 0.5) * 30 * this.u,
+          this.y + (Math.random() - 0.5) * 30 * this.u,
+          1,
+          this.skin.sparkle,
+          { speed: { min: 5, max: 30 } },
+        );
+    }
+    if (this.cos.trail === "trail_money" && !this.dead && this.fx && !this.trailOverride) {
+      this.cashT = (this.cashT || 0) - dt;
+      if (this.cashT <= 0) {
+        this.cashT = this.lowGfx ? 0.2 : 0.09;
+        this.fx.burst("cash", this.x - 14 * this.u, this.y, 1, 0xffffff, {
+          angle: { min: 160, max: 200 },
+          speed: { min: 20, max: 80 },
+        });
+      }
+    }
+
     // afterimages fade
     if (this.afterImages) {
       for (const im of this.afterImages) {
@@ -377,7 +538,41 @@ export class CharacterRig {
       m * (this.sx < 0.9 ? 0.875 : this.sx > 1.1 ? 1.125 : 1),
       m * (this.sy > 1.1 ? 1.125 : this.sy < 0.9 ? 0.875 : 1) * flip,
     );
+    this.placeCosmetics();
     this.drawTrail();
+  }
+
+  /** Hat on the head (any hero: HEAD_ANCHORS), glow behind the body. */
+  placeCosmetics() {
+    const sp = this.sprite;
+    const vis = sp.visible && !this.dead;
+    if (this.glow.visible || (vis && (this.setGlow ?? this.skin?.glow))) {
+      const pulse = 1 + Math.sin(this.time * 3) * 0.08;
+      this.glow
+        .setVisible(vis && !!(this.setGlow ?? this.skin?.glow))
+        .setPosition(sp.x, sp.y)
+        .setScale(1.15 * Math.abs(sp.scaleX) * pulse)
+        .setAlpha(this.setGlow ? 0.55 : 0.4);
+    }
+    const fit = HAT_FIT[this.cos.hat];
+    if (!fit || !vis) {
+      this.hat.setVisible(false);
+      return;
+    }
+    const a = HEAD_ANCHORS[this.def.id] || { x: 2, y: -8 };
+    const k = 4 * sp.scaleX; // art px → world px (atlas frames are drawn at 4x)
+    const flip = sp.scaleY < 0 ? -1 : 1;
+    const ox = (a.x + fit.dx) * k;
+    const oy = (a.y + fit.dy) * k * flip;
+    const r = sp.rotation;
+    this.hat
+      .setVisible(true)
+      .setPosition(
+        sp.x + ox * Math.cos(r) - oy * Math.sin(r),
+        sp.y + ox * Math.sin(r) + oy * Math.cos(r),
+      )
+      .setRotation(r)
+      .setScale(sp.scaleX, sp.scaleY);
   }
 
   // ------------------------------------------------------------------ trails
@@ -387,6 +582,8 @@ export class CharacterRig {
     if (this.points.length < 2) return;
     // stepped pixel trail: squares snapped to the art-pixel grid, shrinking + fading
     const P = 4;
+    const style = this.trailOverride ? null : this.cos.trail;
+    if (style && this.drawCosmeticTrail(g, style, P)) return;
     const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail
     const n = this.points.length;
     for (let i = 1; i < n; i += 2) {
@@ -402,6 +599,95 @@ export class CharacterRig {
         size,
       );
     }
+  }
+
+  /** Shop trails. Returns false for styles that fall back to the stepped squares. */
+  drawCosmeticTrail(g, style, P) {
+    const pts = this.points;
+    const n = pts.length;
+    const snap = (v) => Math.round(v / P) * P;
+    const sq = (x, y, size, col, a) => {
+      g.fillStyle(col, a);
+      g.fillRect(snap(x - size / 2), snap(y - size / 2), size, size);
+    };
+    const T = this.time;
+    switch (style) {
+      case "trail_fire":
+      case "trail_rainbow":
+      case "trail_galaxy":
+      case "trail_money": {
+        const fire = [0xfff1a0, 0xffd23f, 0xffa21a, 0xff5a1a, 0xb01000];
+        const gal = [0xffffff, 0x9ab8ff, 0xb45cff, 0x5a2ab0, 0x2a1660];
+        const cash = [0xfff6c0, 0xffd23f, 0x39ff88, 0x1fae5a];
+        for (let i = 1; i < n; i += 2) {
+          const p = pts[i];
+          const t = i / n;
+          let size = Math.max(1, Math.round((1 - t) * 4 * this.sizeMul)) * P;
+          let col;
+          if (style === "trail_fire") {
+            col = fire[Math.min(4, Math.floor(t * 5))];
+            if (Math.random() < 0.3) size += P;
+          } else if (style === "trail_rainbow") col = hsv((t * 1.2 + T * 0.6) % 1, 0.8, 1);
+          else if (style === "trail_galaxy") col = gal[Math.min(4, Math.floor(t * 5))];
+          else col = cash[Math.min(3, Math.floor(t * 4))];
+          sq(
+            p.x,
+            p.y + (style === "trail_fire" ? -t * 14 : 0),
+            size,
+            col,
+            t < 0.15 ? 1 : 0.95 - t * 0.8,
+          );
+          if (style === "trail_galaxy" && (i * 7 + Math.floor(T * 8)) % 9 === 0)
+            sq(p.x + ((i * 13) % 17) - 8, p.y + ((i * 7) % 15) - 7, P, 0xffffff, 1 - t);
+        }
+        return true;
+      }
+      case "trail_lightning": {
+        g.lineStyle(3 * this.sizeMul + 1, 0xbff4ff, 0.95);
+        g.beginPath();
+        for (let i = 0; i < n; i += 2) {
+          const p = pts[i];
+          const j = i === 0 ? 0 : (Math.random() - 0.5) * 18 * (i / n + 0.3);
+          if (i === 0) g.moveTo(p.x, p.y);
+          else g.lineTo(p.x, p.y + j);
+        }
+        g.strokePath();
+        g.lineStyle(7, 0x2a8aff, 0.25);
+        g.beginPath();
+        g.moveTo(pts[0].x, pts[0].y);
+        g.lineTo(pts[n - 1].x, pts[n - 1].y);
+        g.strokePath();
+        return true;
+      }
+      case "trail_hearts": {
+        for (let i = 2; i < n; i += 4) {
+          const p = pts[i];
+          const t = i / n;
+          const a = 1 - t;
+          const c = i % 8 < 4 ? 0xff3a8a : 0xff8ab8;
+          const x = snap(p.x);
+          const y = snap(p.y);
+          g.fillStyle(c, a);
+          g.fillRect(x - P, y - P, P, P).fillRect(x + P, y - P, P, P);
+          g.fillRect(x - P * 1.5, y, P * 4, P).fillRect(x - P / 2, y + P, P * 2, P);
+        }
+        return true;
+      }
+      case "trail_glitch": {
+        for (let i = 1; i < n; i += 2) {
+          const p = pts[i];
+          const t = i / n;
+          const size = Math.max(1, Math.round((1 - t) * 4 * this.sizeMul)) * P;
+          const a = 0.9 - t * 0.7;
+          const jx = Math.random() < 0.15 ? (Math.random() - 0.5) * 24 : 0;
+          sq(p.x - 4 + jx, p.y, size, 0xff2050, a * 0.8);
+          sq(p.x + 4 + jx, p.y, size, 0x20c8ff, a * 0.8);
+          sq(p.x + jx, p.y, size - P, 0x39ff88, a);
+        }
+        return true;
+      }
+    }
+    return false;
   }
 
   destroy() {
