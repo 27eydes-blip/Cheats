@@ -6,7 +6,7 @@ import "@fontsource/silkscreen/700.css";
 import Phaser from "phaser";
 import "./gfx/tileSpriteFix.js";
 import { watchContext } from "./systems/frameGuard.js";
-import { setupView, VIEW, wantsFit } from "./config.js";
+import { setupView, VIEW, viewportSize, wantsFit } from "./config.js";
 import { BackdropScene } from "./scenes/BackdropScene.js";
 import { BootScene } from "./scenes/BootScene.js";
 import { CharacterScene } from "./scenes/CharacterScene.js";
@@ -41,6 +41,19 @@ async function boot() {
   } catch {
     /* fall back to system fonts */
   }
+
+  // home-screen app on iPhone: the page's layout box can stop short of the home-indicator
+  // strip, leaving a black bar under the game. Size the game's box to the whole screen.
+  const fitParent = () => {
+    const el = document.getElementById("game");
+    if (!el) return;
+    const { h } = viewportSize();
+    el.style.height = h > window.innerHeight + 1 ? `${h}px` : "";
+    el.style.bottom = h > window.innerHeight + 1 ? "auto" : "";
+  };
+  fitParent();
+  window.addEventListener("resize", fitParent);
+  window.addEventListener("pageshow", fitParent);
 
   // render at the device's full pixel ratio (capped at 2x in Low Graphics)
   setupView(Save.data.settings.lowGfx);
@@ -104,7 +117,10 @@ async function boot() {
     const rect = game.canvas?.getBoundingClientRect();
     const canvasH = rect?.height || window.innerHeight;
     const cropTop = Math.max(0, -(rect?.top ?? 0));
-    const cropBottom = Math.max(0, (rect?.bottom ?? canvasH) - window.innerHeight);
+    const cropBottom = Math.max(
+      0,
+      (rect?.bottom ?? canvasH) - Math.max(window.innerHeight, viewportSize().h),
+    );
     game.registry.set("safeTop", Math.round(((insetTop + cropTop) * VIEW.H) / canvasH));
     game.registry.set("safeBottom", Math.round(((insetBottom + cropBottom) * VIEW.H) / canvasH));
   };

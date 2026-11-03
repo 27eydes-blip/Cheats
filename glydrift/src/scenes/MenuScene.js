@@ -6,12 +6,13 @@ import { COIN_COLOR, fitCamera, FONT, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
-import { CHARACTERS, getCharacter, onSale } from "../player/characterDefs.js";
+import { CHARACTERS, getCharacter, onSale, saleLeft } from "../player/characterDefs.js";
 import { Sfx } from "../audio/sfx.js";
 import { TEST } from "../systems/testFlags.js";
 import { Haptics } from "../systems/haptics.js";
 import { Install } from "../systems/install.js";
-import { Leaderboard } from "../online/leaderboard.js";
+import { Leaderboard, Levels } from "../online/leaderboard.js";
+import { getCosmetic, Shop } from "../data/cosmetics.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { Music } from "../audio/music.js";
 import { LOGIN_REWARDS, Progression } from "../data/progression.js";
@@ -92,15 +93,31 @@ export class MenuScene extends Phaser.Scene {
 
     // ---- hero
     this.def = getCharacter(TEST.character || s.selected);
-    this.heroY = H * 0.43;
+    this.heroY = H * 0.44;
+    // spotlight: a soft glow in the hero's colour that follows it around
+    this.spot = this.add
+      .image(W / 2, this.heroY, "glow")
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(this.def.color)
+      .setScale(3.2)
+      .setAlpha(0.32)
+      .setDepth(55);
     this.rig = new CharacterRig(this, this.def, this.fx, {
       x: W / 2,
       y: this.heroY,
       lowGfx,
       depth: 60,
-      scale: 1.35,
+      scale: H < 1400 ? 1.5 : 1.9,
     });
     this.flapT = 0;
+    this.trickT = 5;
+    this.trick = 0; // >0 while a loop-the-loop is playing
+    // tap your hero: it does a trick
+    this.heroZone = this.add
+      .zone(W / 2, this.heroY, 220, 200)
+      .setInteractive()
+      .setDepth(90);
+    this.heroZone.on("pointerup", () => this.doTrick(true));
 
     // ---- top bar: level + coins + settings
     const lvlNeed = Progression.xpToNext(s.level);
@@ -119,6 +136,30 @@ export class MenuScene extends Phaser.Scene {
       blur: 8,
     }).setDepth(100);
     this.coinCounter = new RollingCounter(this, this.coinText, { value: s.coins });
+    // tap your coins: they bounce and jingle
+    this.coinIcon.setInteractive(
+      new Phaser.Geom.Rectangle(-40, -40, 240, 120),
+      Phaser.Geom.Rectangle.Contains,
+    );
+    this.coinIcon.on("pointerup", () => {
+      const sc = 0.8 / HI;
+      this.tweens.killTweensOf([this.coinIcon, this.coinText]);
+      this.coinIcon.setScale(sc).setY(top + 40);
+      this.coinText.setY(top + 40);
+      this.tweens.add({
+        targets: [this.coinIcon, this.coinText],
+        y: top + 18,
+        duration: 140,
+        yoyo: true,
+        ease: "Quad.easeOut",
+      });
+      this.tweens.add({ targets: this.coinIcon, scale: sc * 1.3, duration: 140, yoyo: true });
+      this.fx.burst("star", this.coinIcon.x, this.coinIcon.y, 10, COIN_COLOR, {
+        speed: { min: 80, max: 260 },
+      });
+      Sfx.coin?.(Math.floor(Math.random() * 6));
+      Haptics.light?.();
+    });
     const gear = this.add
       .graphics()
       .setDepth(100)
@@ -136,17 +177,22 @@ export class MenuScene extends Phaser.Scene {
       fill: 0x0c2a1a,
       onClick: () => this.startGame("normal"),
     }).setDepth(100);
-    this.tweens.add({
-      targets: play,
-      scale: 1.04,
-      yoyo: true,
-      repeat: -1,
-      duration: 750,
-      ease: "Sine.easeInOut",
-    });
+    this.play = play; // pulses to the music's beat (see update)
+    this.beatClock = 0;
     if (s.best > 0) {
-      const best = plainText(this, W / 2, by - 104, `BEST ${s.best}`, 22, "#cfc6ff").setDepth(100);
+      const best = neonText(this, W / 2, by - 106, `BEAT YOUR BEST · ${s.best}`, 24, 0xffd23f, {
+        blur: 10,
+      }).setDepth(100);
       popIn(this, best, 250);
+      this.tweens.add({
+        targets: best,
+        alpha: { from: 1, to: 0.8 },
+        delay: 900,
+        duration: 900,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
     }
     const today = todayKey();
     const played = s.daily.date === today && s.daily.attempts > 0;
@@ -203,6 +249,10 @@ export class MenuScene extends Phaser.Scene {
       onClick: () => this.go("Progress"),
     }).setDepth(100);
     popIn(this, [play, this.daily, heroes, ranks, prog], 250);
+    this.time.delayedCall(520, () => {
+      this.fx.burst("star", W / 2, by, 24, 0x39ff88, { speed: { min: 150, max: 520 } });
+      this.fx.ring(W / 2, by, 0x39ff88, { scale: 2.6, duration: 600, width: 3 });
+    });
     // ---- Lucky Spin: round wheel button beside the hero, with a spins badge
     {
       const sx = W - 96;
@@ -275,11 +325,15 @@ export class MenuScene extends Phaser.Scene {
       popIn(this, sb, 380);
     }
     // "Add to Home Screen" — hidden once you're already playing from the home screen
+    const sb0 = this.registry.get("safeBottom") || 0;
+    const roomy = H - sb0 - (by + 248) > 250; // most phones; small ones skip the extras
+    if (roomy) this.buildToday(by + 352);
+    this.buildTicker(H - sb0 - 34);
     if (Install.available) {
       const add = button(
         this,
         W / 2,
-        Math.min(H - (this.registry.get("safeBottom") || 0) - 50, by + 340),
+        roomy ? Math.min(H - sb0 - 100, by + 440) : Math.min(H - sb0 - 50, by + 340),
         360,
         64,
         "ADD TO HOME SCREEN",
@@ -324,6 +378,154 @@ export class MenuScene extends Phaser.Scene {
       });
     }
     return name;
+  }
+
+  /** "Today" row: daily challenge, free drop, spins and streak — a "!" when one is ready. */
+  buildToday(y) {
+    const s = Save.data;
+    const W = this.W;
+    const played = s.daily.date === todayKey() && s.daily.attempts > 0;
+    const ls = Progression.loginStatus();
+    const chips = [
+      {
+        label: "DAILY",
+        sub: played ? "played" : "new run",
+        col: 0xffd23f,
+        ready: !played,
+        go: () => this.startGame("daily"),
+      },
+      {
+        label: "FREE DROP",
+        sub: Shop.dropReady() ? "ready!" : "tomorrow",
+        col: 0x7ae82a,
+        ready: Shop.dropReady(),
+        go: () => this.go("Shop"),
+      },
+      {
+        label: "SPINS",
+        sub: `${s.spins || 0} left`,
+        col: 0xff7ad9,
+        ready: (s.spins || 0) > 0,
+        go: () => this.go("Spin"),
+      },
+      {
+        label: "STREAK",
+        sub: `${ls.streak || s.login.streak || 0} days`,
+        col: 0xff8a1a,
+        ready: ls.canClaim,
+        go: () =>
+          ls.canClaim
+            ? this.openLogin(Progression.loginStatus())
+            : toast(this, `${s.login.streak}-DAY STREAK!`, 0xff8a1a, {
+                y: this.H * 0.3,
+                sub: "Come back tomorrow to keep it going",
+              }),
+      },
+    ];
+    const cw = (W - 56) / 4;
+    chips.forEach((ch, i) => {
+      const x = 28 + cw * i + cw / 2;
+      const c = this.add.container(x, y).setDepth(100);
+      const g = this.add.graphics();
+      drawNeonRect(g, -cw / 2 + 5, -36, cw - 10, 72, 16, ch.col, { fillAlpha: 0.88, width: 2 });
+      c.add([
+        g,
+        plainText(this, 0, -10, ch.label, 15, hex(ch.col)),
+        plainText(this, 0, 14, ch.sub, 14, "#e8e2ff"),
+      ]);
+      if (ch.ready) {
+        const b = this.add.container(cw / 2 - 14, -34);
+        const bg = this.add.graphics();
+        bg.fillStyle(0xff2a3d, 1)
+          .fillCircle(0, 0, 15)
+          .lineStyle(2, 0xffffff, 1)
+          .strokeCircle(0, 0, 15);
+        b.add([bg, plainText(this, 0, -1, "!", 18, "#ffffff")]);
+        c.add(b);
+        this.tweens.add({
+          targets: b,
+          y: -42,
+          duration: 420,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+          delay: i * 120,
+        });
+      }
+      c.setSize(cw - 10, 72).setInteractive();
+      c.on("pointerdown", () => this.tweens.add({ targets: c, scale: 0.92, duration: 70 }));
+      c.on("pointerup", () => {
+        this.tweens.add({ targets: c, scale: 1, duration: 200, ease: "Back.easeOut" });
+        Sfx.ui();
+        ch.go();
+      });
+      popIn(this, c, 420 + i * 60);
+    });
+  }
+
+  /** News ticker along the bottom: sales, today's deal, your rank and the world's best. */
+  buildTicker(y) {
+    const W = this.W;
+    const s = Save.data;
+    const g = this.add.graphics().setDepth(99);
+    g.fillStyle(0x0a0418, 0.85).fillRect(0, y - 24, W, 48);
+    g.lineStyle(2, 0xff4fd8, 0.7).lineBetween(0, y - 24, W, y - 24);
+    this.tickY = y;
+    this.tickText = plainText(this, W, y, "", 18, "#ffe9a8").setOrigin(0, 0.5).setDepth(100);
+    const items = [];
+    for (const c of CHARACTERS)
+      if (c.limited && onSale(c) && !s.unlocked[c.id]) {
+        const h = Math.max(1, Math.round(saleLeft(c) / 3600000));
+        items.push(`★ ${c.name} leaves in about ${h}h · get it in HEROES!`);
+      }
+    try {
+      const deal = getCosmetic(Shop.daily().deal);
+      if (deal) items.push(`SHOP DEAL: ${deal.name} 30% off today`);
+    } catch {}
+    if (Shop.dropReady()) items.push("Your free Daily Drift Drop is waiting in the SHOP");
+    if ((s.spins || 0) > 0) items.push(`You have ${s.spins} Lucky Spins to use`);
+    if (s.best > 0) items.push(`Your best: ${s.best} · can you beat it?`);
+    this.tickItems = items.length ? items : ["Tap PLAY to drift the neon cosmos!"];
+    this.tickI = -1;
+    this.nextTick();
+    this.tickText.setX(W * 0.35); // the first item starts on screen
+    // world news (best effort; offline just keeps the local items)
+    Leaderboard.board(Levels.endless(), "all")
+      .then((res) => {
+        if (!this.scene.isActive() || !res) return;
+        const top = res.rows?.[0];
+        if (top) this.tickItems.push(`WORLD #1: ${top.username} · ${top.score}`);
+        if (res.me?.rank) this.tickItems.push(`You're #${res.me.rank} in the world`);
+      })
+      .catch(() => {});
+  }
+
+  nextTick() {
+    this.tickI = (this.tickI + 1) % this.tickItems.length;
+    this.tickText.setText(this.tickItems[this.tickI]).setX(this.W + 10);
+  }
+
+  /** Loop-the-loop with a sparkle burst (YARMS flexes instead). */
+  doTrick(tapped = false) {
+    if (this.trick > 0) return;
+    this.trickT = 6 + Math.random() * 4;
+    if (this.def.id === "yarms") {
+      this.rig.flex?.({ big: true, shine: true });
+      this.fx.burst("star", this.rig.x, this.rig.y, 20, 0xffd23f, {
+        speed: { min: 150, max: 420 },
+      });
+      return;
+    }
+    this.trick = 1;
+    this.rig.flap();
+    this.fx.ring(this.rig.x, this.rig.y, this.def.color, { scale: 1.6, duration: 500 });
+    this.fx.burst("star", this.rig.x, this.rig.y, tapped ? 22 : 14, this.def.color, {
+      speed: { min: 120, max: 420 },
+    });
+    if (tapped) {
+      Sfx.ui();
+      Haptics.light?.();
+    }
   }
 
   updateCountdown() {
@@ -624,11 +826,17 @@ export class MenuScene extends Phaser.Scene {
     // slowly cycle every biome palette; menus keep the backdrop dim and scenery hidden
     blendPalette(biomeStateAt((this.t * 18) % (500 * CLASSIC)), this.pal);
     // showcase every pixel biome on the title screen (slow crossfade every ~9 s)
-    const showId = BIOMES[Math.floor(this.t / 9) % CLASSIC].id; // the dimensions stay a secret
+    // only the first world and the furthest one you've reached (each world's art costs ~5 MB,
+    // so the menu never builds them all)
+    if (!this.showIds) {
+      const far = Math.min(CLASSIC - 1, Save.data.stats.maxBiome || 0);
+      this.showIds = far > 0 ? [BIOMES[0].id, BIOMES[far].id] : [BIOMES[0].id];
+    }
+    const showId = this.showIds[Math.floor(this.t / 9) % this.showIds.length];
     this.backdrop.drive(this.pal, {
       scroll: 140,
       speedNorm: 0,
-      dim: 0.5,
+      dim: 0.38,
       scenery: false,
       theme: showId,
     });
@@ -639,7 +847,25 @@ export class MenuScene extends Phaser.Scene {
     const y = this.heroY + Math.sin(this.t * 1.8) * 34;
     const vy = Math.cos(this.t * 1.8) * 62;
     this.rig.setPosition(x, y);
-    this.rig.angle = Phaser.Math.Clamp(vy * 0.25, -20, 30);
+    this.spot.setPosition(x, y + 10);
+    this.heroZone.setPosition(x, y);
+    if (this.trick > 0) {
+      this.trick = Math.max(0, this.trick - dt / 0.8);
+      this.rig.angle = -360 * Phaser.Math.Easing.Cubic.InOut(1 - this.trick);
+    } else this.rig.angle = Phaser.Math.Clamp(vy * 0.25, -20, 30);
+    this.trickT -= dt;
+    if (this.trickT <= 0 && !this.modal) this.doTrick();
+    // PLAY pulses on the beat
+    this.beatClock += dt;
+    if (this.play) {
+      const ph = Music.beatPhase(this.beatClock);
+      const k = reduceFlashing() ? 0.02 : 0.05;
+      this.play.setScale(1 + k * Math.exp(-ph * 5));
+    }
+    if (this.tickText) {
+      this.tickText.x -= dt * 120;
+      if (this.tickText.x < -this.tickText.width - 20) this.nextTick();
+    }
     this.flapT -= dt;
     if (this.flapT <= 0 && vy < -20) {
       this.flapT = 0.75;
