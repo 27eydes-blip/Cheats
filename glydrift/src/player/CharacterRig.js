@@ -124,6 +124,16 @@ export class CharacterRig {
           fx.burst(kind, x, y + oy, n, color, { angle: down });
         }
         break;
+      case "smash":
+        // the punch: a cavitation shockwave in front + rainbow sparks
+        fx.ring(x + 18 * this.u, y, hsv((this.time * 0.6) % 1, 0.7, 1), {
+          scale: 0.5 * this.u,
+          duration: 260,
+        });
+        fx.burst("star", x + 14 * this.u, y, 5, hsv(Math.random(), 0.7, 1), {
+          speed: { min: 120, max: 320 },
+        });
+        break;
       case "nova":
         fx.ring(x, y, hsv((this.time * 0.3) % 1, 0.5, 1), {
           scale: 0.55 * this.u,
@@ -173,6 +183,16 @@ export class CharacterRig {
           for (const { kind, color, n } of def.fx.death)
             fx.burst(kind, x, y, n, color, { speed: { min: 100, max: 520 } });
         }
+        break;
+      case "smash":
+        // the punch: a cavitation shockwave in front + rainbow sparks
+        fx.ring(x + 18 * this.u, y, hsv((this.time * 0.6) % 1, 0.7, 1), {
+          scale: 0.5 * this.u,
+          duration: 260,
+        });
+        fx.burst("star", x + 14 * this.u, y, 5, hsv(Math.random(), 0.7, 1), {
+          speed: { min: 120, max: 320 },
+        });
         break;
       case "nova":
         fx.ring(x, y, 0xffffff, { scale: 5, duration: 1000 });
@@ -325,6 +345,7 @@ export class CharacterRig {
     if (mode === "idle") f = Math.floor(this.time * 5) % 3;
     else if (mode === "glitch") f = this.glitchT > 0 ? 2 : Math.floor(this.time * 3) % 2;
     else if (mode === "spin") f = Math.floor(this.time * 20) % 3;
+    else if (mode === "punch") f = this.flapT < 0.14 ? 2 : Math.floor(this.time * 6) % 2;
     else if (mode === "flap")
       f =
         this.flapT < 0.24

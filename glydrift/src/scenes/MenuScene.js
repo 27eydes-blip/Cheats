@@ -2,11 +2,11 @@
 // PLAY button, the Daily Challenge with a countdown, the daily login reward and settings.
 import Phaser from "phaser";
 import { BIOMES, biomeStateAt, blendPalette, CLASSIC } from "../biomes/biomes.js";
-import { COIN_COLOR, fitCamera, VIEW } from "../config.js";
+import { COIN_COLOR, fitCamera, FONT, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
-import { getCharacter } from "../player/characterDefs.js";
+import { CHARACTERS, getCharacter, onSale } from "../player/characterDefs.js";
 import { Sfx } from "../audio/sfx.js";
 import { Haptics } from "../systems/haptics.js";
 import { Install } from "../systems/install.js";
@@ -158,11 +158,39 @@ export class MenuScene extends Phaser.Scene {
       onClick: () => this.startGame("daily"),
     }).setDepth(100);
     this.dailyPlayed = played;
+    // a limited-time hero on sale and not yet owned → "24H ONLY" tag; HEROES opens on it
+    const limitedHero = CHARACTERS.find((c) => c.limited && onSale(c) && !s.unlocked[c.id]);
     const heroes = button(this, W / 2 - 220, by + 248, 200, 72, "HEROES", {
       color: 0xb45cff,
       size: 18,
-      onClick: () => this.go("Characters"),
+      onClick: () => {
+        if (limitedHero) this.registry.set("heroFocus", limitedHero.id);
+        this.go("Characters");
+      },
     }).setDepth(100);
+    if (limitedHero) {
+      const tag = this.add.container(W / 2 - 220 + 70, by + 248 - 42).setDepth(101);
+      const tg = this.add.graphics();
+      tg.fillStyle(0xff3a8a, 1).fillRoundedRect(-58, -15, 116, 30, 15);
+      tg.lineStyle(2, 0xffffff, 0.9).strokeRoundedRect(-58, -15, 116, 30, 15);
+      const tt = this.add
+        .text(0, 1, "24H ONLY", {
+          fontFamily: FONT,
+          fontSize: "15px",
+          fontStyle: "900",
+          color: "#ffffff",
+        })
+        .setOrigin(0.5);
+      tag.add([tg, tt]);
+      this.tweens.add({
+        targets: tag,
+        scale: 1.12,
+        duration: 520,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+    }
     const ranks = button(this, W / 2, by + 248, 220, 72, "LEADERBOARD", {
       color: 0x3ef4ff,
       size: 16,

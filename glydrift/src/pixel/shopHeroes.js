@@ -339,6 +339,91 @@ export function leviathan(f) {
   return pc.outline(0x02102a, 1, true);
 }
 
+// ------------------------------------------------------------------ SMASH — mantis shrimp
+// Limited-time MEGA LEGENDARY. Frames: 0 / 1 swim (legs paddle), 2 = the punch (club fully
+// extended with an impact spark). Rainbow armour: green shell with orange segment bands, blue
+// tail fan with red tips, pink clubs and stalked "trinocular" eyes.
+export function smash(f) {
+  const pc = new PixelCanvas(24, 24);
+  const B = 0x2ad86a;
+  const BAND = 0xff8a1a;
+  const FAN = 0x2a8aff;
+  // tail fan (spread on the left)
+  pc.poly(
+    [
+      [5, 13],
+      [0, 9],
+      [1, 13],
+      [0, 18],
+      [5, 15],
+    ],
+    FAN,
+  );
+  pc.set(0, 9, 0xff2a5a).set(0, 18, 0xff2a5a).set(1, 13, 0xff2a5a);
+  pc.set(2, 11, 0xffe14d).set(2, 16, 0xffe14d); // eye-spots on the fan
+  // segmented abdomen, slightly arched
+  for (let i = 0; i < 5; i++) {
+    const x = 5 + i * 2.2;
+    pc.ellipse(x, 13.5 - (i === 2 ? 0.5 : 0), 1.8, 3 + i * 0.12, B);
+  }
+  for (let i = 1; i < 5; i++) pc.vline(Math.round(4.6 + i * 2.2), 11, 15, BAND); // bands
+  // carapace + head
+  pc.ellipse(16.5, 12.5, 4, 3.4, 0x1ac0a0);
+  pc.hline(14, 19, 10, 0x7affd8); // shell shine
+  pc.ellipse(10, 15.5, 5.5, 1.2, 0xbfffd8); // pale belly
+  // swimmerets paddle under the body
+  for (let i = 0; i < 4; i++) {
+    const down = (i + f) % 2 === 0 ? 1 : 0;
+    pc.set(7 + i * 2, 17 + down, BAND);
+  }
+  // antennal scales — orange paddles fanned forward
+  pc.poly(
+    [
+      [19, 10],
+      [23, 7],
+      [23, 9],
+      [20, 11],
+    ],
+    BAND,
+  );
+  pc.set(23, 7, 0xffe14d);
+  // stalked eyes with the mid-band stripe
+  for (const [ex, ey] of [
+    [17, 4],
+    [20, 5],
+  ]) {
+    pc.vline(ex, ey + 2, 9, 0x1ac0a0);
+    pc.rect(ex - 1, ey, 3, 3, 0x39ffe0);
+    pc.hline(ex - 1, ex + 1, ey + 1, 0x0a2a4a);
+    pc.set(ex - 1, ey, 0xffffff);
+  }
+  // raptorial clubs: folded under the head, or the PUNCH
+  const CLUB = 0xff3a8a;
+  if (f === 2) {
+    pc.hline(17, 21, 15, 0xd02a6a);
+    pc.rect(21, 14, 3, 3, CLUB);
+    pc.set(23, 14, 0xffd0e8);
+  } else {
+    pc.poly(
+      [
+        [16, 14],
+        [20, 15],
+        [19, 18],
+        [16, 17],
+      ],
+      CLUB,
+    );
+    pc.set(19, 15 + f, 0xffd0e8);
+  }
+  shadeEdges(pc, B, 0x168a48);
+  const out = pc.outline(0x04201a, 1, true);
+  if (f === 2) {
+    // impact spark in front of the club (drawn after the outline so it stays bright)
+    out.set(23, 12, 0xffffff).set(22, 13, 0xffffff).set(23, 18, 0xffffff);
+  }
+  return out;
+}
+
 export const SHOP_DRAW = {
   pip,
   coral,
@@ -350,4 +435,5 @@ export const SHOP_DRAW = {
   ronin,
   seraph,
   leviathan,
+  smash,
 };

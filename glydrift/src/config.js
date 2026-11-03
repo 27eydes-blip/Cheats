@@ -153,6 +153,7 @@ export const RARITY = {
   rare: { label: "RARE", color: 0x3fa9ff },
   epic: { label: "EPIC", color: 0xb45cff },
   legendary: { label: "LEGENDARY", color: 0xffc83d },
+  mega: { label: "MEGA LEGENDARY", color: 0xff3a8a },
 };
 
 export const FONT = '"Orbitron", "Avenir Next", system-ui, sans-serif';

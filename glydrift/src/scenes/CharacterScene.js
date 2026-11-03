@@ -1,12 +1,12 @@
 // Character select: orbiting 3D-feel showcase with a live trail + flap preview, and a
 // perspective card carousel with rarity-glow borders, unlock by coins / shards / challenge.
 import Phaser from "phaser";
-import { BIOMES, blendPalette } from "../biomes/biomes.js";
+import { BIOMES, biomeIndex, blendPalette } from "../biomes/biomes.js";
 import { fitCamera, RARITY, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
-import { CHARACTERS } from "../player/characterDefs.js";
+import { onSale, saleLeft, visibleCharacters } from "../player/characterDefs.js";
 import { revealHero } from "../ui/reveal.js";
 import { Sfx } from "../audio/sfx.js";
 import { Progression } from "../data/progression.js";
@@ -39,6 +39,8 @@ export class CharacterScene extends Phaser.Scene {
     this.W = W;
     this.H = H;
     const s = Save.data;
+    // limited-time heroes only appear while on sale (or once owned)
+    this.roster = visibleCharacters(s.unlocked);
     this.rig = null;
     this.challengeBar = null;
     this.posTween = null;
@@ -97,13 +99,15 @@ export class CharacterScene extends Phaser.Scene {
     this.titleText = plainText(this, W / 2, this.cy - 146, "", 18, "#d8d0ff").setDepth(150);
 
     // cards
+    const focus = this.registry.get("heroFocus");
+    this.registry.remove("heroFocus");
     this.index = Math.max(
       0,
-      CHARACTERS.findIndex((c) => c.id === s.selected),
+      this.roster.findIndex((c) => c.id === (focus || s.selected)),
     );
     this.pos = this.index;
     this.cardsY = H * 0.66;
-    this.cards = CHARACTERS.map((def, i) => this.makeCard(def, i));
+    this.cards = this.roster.map((def, i) => this.makeCard(def, i));
 
     // action area
     this.actionBtn = button(this, W / 2, H * 0.88, 420, 100, "SELECT", {
@@ -137,7 +141,7 @@ export class CharacterScene extends Phaser.Scene {
       this.pos = Phaser.Math.Clamp(
         this.dragPos - (p.worldX - this.dragX) / 300,
         -0.4,
-        CHARACTERS.length - 0.6,
+        this.roster.length - 0.6,
       );
       this.posTween?.stop();
     });
@@ -207,7 +211,7 @@ export class CharacterScene extends Phaser.Scene {
     drawNeonRect(g, -CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 26, col, {
       fill: 0x0b0520,
       fillAlpha: 0.88,
-      width: def.rarity === "legendary" ? 5 : 3,
+      width: def.rarity === "mega" ? 7 : def.rarity === "legendary" ? 5 : 3,
     });
     // inner rarity sheen
     g.fillStyle(col, 0.08);
@@ -222,7 +226,7 @@ export class CharacterScene extends Phaser.Scene {
 
   buildRig() {
     this.rig?.destroy();
-    const def = CHARACTERS[this.index];
+    const def = this.roster[this.index];
     this.rig = new CharacterRig(this, def, this.fx, {
       x: this.cx,
       y: this.cy,
@@ -237,7 +241,7 @@ export class CharacterScene extends Phaser.Scene {
   }
 
   select(i) {
-    i = Phaser.Math.Clamp(i, 0, CHARACTERS.length - 1);
+    i = Phaser.Math.Clamp(i, 0, this.roster.length - 1);
     const changed = i !== this.index;
     this.index = i;
     this.posTween?.stop();
@@ -257,7 +261,7 @@ export class CharacterScene extends Phaser.Scene {
   }
 
   refresh() {
-    const def = CHARACTERS[this.index];
+    const def = this.roster[this.index];
     const s = Save.data;
     const owned = Progression.isUnlocked(def.id);
     this.nameText
@@ -274,6 +278,18 @@ export class CharacterScene extends Phaser.Scene {
       this.actionBtn.setLabel(sel ? "EQUIPPED" : "SELECT");
       this.actionBtn.setColor(sel ? 0x8a80b0 : 0x39ff88);
       this.actionBtn.setEnabled(!sel);
+    } else if (def.limited) {
+      const live = onSale(def);
+      this.actionBtn.setLabel(live ? `UNLOCK  ${def.cost}` : "GONE");
+      this.actionBtn.setColor(live ? 0xff3a8a : 0x8a80b0);
+      this.actionBtn.setEnabled(live && s.coins >= def.cost);
+      const ms = saleLeft(def);
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      alt = live
+        ? `LIMITED · leaves in ${h}h ${String(m).padStart(2, "0")}m ${String(sec).padStart(2, "0")}s\nOwn it forever once unlocked`
+        : "This limited hero has left the shop";
     } else if (def.lottery) {
       this.actionBtn.setLabel("LUCKY SPIN");
       this.actionBtn.setColor(0xff7ad9);
@@ -311,7 +327,7 @@ export class CharacterScene extends Phaser.Scene {
   }
 
   act() {
-    const def = CHARACTERS[this.index];
+    const def = this.roster[this.index];
     const s = Save.data;
     if (Progression.isUnlocked(def.id)) {
       s.selected = def.id;
@@ -350,7 +366,7 @@ export class CharacterScene extends Phaser.Scene {
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 30);
     this.t += dt;
-    const def = CHARACTERS[this.index];
+    const def = this.roster[this.index];
     const bi =
       {
         volt: 0,
@@ -373,6 +389,7 @@ export class CharacterScene extends Phaser.Scene {
         ronin: 3,
         seraph: 2,
         leviathan: 4,
+        smash: biomeIndex("tidal"),
       }[def.id] ?? 0;
     blendPalette(
       {
@@ -426,7 +443,12 @@ export class CharacterScene extends Phaser.Scene {
       c.scaleY = sc;
       c.alpha = Phaser.Math.Clamp(1 - ao * 0.38, 0, 1);
       c.setDepth(100 - ao * 10);
-      if (c.def.rarity === "legendary") this.drawCard(c);
+      if (c.def.rarity === "legendary" || c.def.rarity === "mega") this.drawCard(c);
+    }
+    // limited-time countdown ticks once a second
+    if (def.limited && Math.floor(this.t) !== this.lastTick) {
+      this.lastTick = Math.floor(this.t);
+      if (!Progression.isUnlocked(def.id)) this.refresh();
     }
   }
 }

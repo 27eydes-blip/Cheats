@@ -729,10 +729,54 @@ export const CHARACTERS = [
     lottery: true, // only from the Lucky Spin
     desc: "Aurora trail. Dissolves into stardust.",
   },
+  {
+    id: "smash",
+    name: "SMASH",
+    title: "Mantis Shrimp",
+    rarity: "mega",
+    color: 0xff3a8a,
+    color2: 0x39ffe0,
+    texture: "hero_smash",
+    pixel: {
+      atlas: "pxc",
+      frames: ["smash_0", "smash_1", "smash_2"],
+      mode: "punch",
+      // sees more colours than any animal: a full-spectrum trail
+      trail: [0xffffff, 0xff3a8a, 0xff8a1a, 0xffe14d, 0x39ff88, 0x2a8aff, 0xb45cff],
+    },
+    fx: {
+      death: [
+        { kind: "star", color: 0xff3a8a, n: 30 },
+        { kind: "shard", color: 0x39ffe0, n: 24 },
+        { kind: "pixel", color: 0xffe14d, n: 30 },
+      ],
+    },
+    scale: 0.64,
+    cost: 1500,
+    // only for sale inside this window (UTC); owned forever once bought
+    limited: { start: "2026-11-03T14:00:00Z", end: "2026-11-04T14:00:00Z" },
+    desc: "Rainbow trail. Every flap is a sonic punch.",
+  },
 ];
 
 /** Heroes that can only be won from the Lucky Spin. */
 export const LOTTERY_HEROES = CHARACTERS.filter((c) => c.lottery);
+
+/** Is a limited-time hero on sale right now? (Always true for normal heroes.) */
+export function onSale(def, now = Date.now()) {
+  if (!def.limited) return true;
+  return now >= Date.parse(def.limited.start) && now < Date.parse(def.limited.end);
+}
+
+/** Milliseconds left on a limited hero's sale (0 when it's over or not limited). */
+export function saleLeft(def, now = Date.now()) {
+  return def.limited ? Math.max(0, Date.parse(def.limited.end) - now) : 0;
+}
+
+/** Heroes shown in the shop for this save: limited ones only while on sale, or once owned. */
+export function visibleCharacters(unlocked = {}) {
+  return CHARACTERS.filter((c) => !c.limited || unlocked[c.id] || onSale(c));
+}
 
 export function getCharacter(id) {
   return CHARACTERS.find((c) => c.id === id) || CHARACTERS[0];

@@ -1,6 +1,6 @@
 // Meta-progression: XP/levels, missions, achievements, login streak, daily, unlocks.
 import { BIOMES } from "../biomes/biomes.js";
-import { CHARACTERS, getCharacter } from "../player/characterDefs.js";
+import { CHARACTERS, getCharacter, onSale } from "../player/characterDefs.js";
 import { dayDiff, RNG, todayKey } from "./rng.js";
 import { Save } from "./save.js";
 
@@ -203,7 +203,7 @@ export const ACHIEVEMENTS = [
     name: "Full Roster",
     desc: "Unlock every character",
     glyph: "C",
-    check: (s) => CHARACTERS.every((c) => s.unlocked[c.id]),
+    check: (s) => CHARACTERS.every((c) => c.limited || s.unlocked[c.id]),
   },
   {
     id: "legend",
@@ -401,6 +401,7 @@ export const Progression = {
     const s = Save.data;
     const def = getCharacter(id);
     if (def.lottery || !def.cost) return false; // Lucky Spin heroes are never for sale
+    if (!onSale(def)) return false; // limited-time heroes only inside their window
     if (s.unlocked[id] || s.coins < def.cost) return false;
     s.coins -= def.cost;
     s.unlocked[id] = true;
@@ -444,7 +445,7 @@ export const Progression = {
   /** "Almost there" helper: the cheapest locked character and how far away it is. */
   nextUnlockHint() {
     const s = Save.data;
-    const locked = CHARACTERS.filter((c) => !s.unlocked[c.id] && !c.lottery);
+    const locked = CHARACTERS.filter((c) => !s.unlocked[c.id] && !c.lottery && !c.limited);
     if (!locked.length) return null;
     let best = null;
     for (const c of locked) {

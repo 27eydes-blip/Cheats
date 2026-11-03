@@ -354,6 +354,11 @@ export function toast(
 }
 
 export function rarityColor(rarity, time = 0) {
+  if (rarity === "mega") {
+    // fast, fully saturated spectrum cycle — louder than legendary
+    const c = Phaser.Display.Color.HSVToRGB((time * 0.45) % 1, 0.85, 1);
+    return (c.r << 16) | (c.g << 8) | c.b;
+  }
   if (rarity === "legendary") {
     const c = Phaser.Display.Color.HSVToRGB((time * 0.15) % 1, 0.55, 1);
     return (c.r << 16) | (c.g << 8) | c.b;
