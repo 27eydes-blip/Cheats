@@ -754,9 +754,7 @@ export const CHARACTERS = [
     scale: 0.64,
     cost: 5000,
     speed: 1.2, // EXTRA FAST: the whole run moves 20% quicker
-    // double-tap: dash at 13x speed, smashing through everything, recharges in 8 s
-    boost: { mul: 13, duration: 0.45, cooldown: 8, window: 0.3, grace: 0.5 },
-    desc: "EXTRA FAST. Double-tap for a 13x BOOST that smashes through anything.",
+    desc: "EXTRA FAST: everything flies by 20% quicker.",
   },
   {
     id: "manny",
