@@ -1,14 +1,8 @@
 // The run itself: world scroll, biomes, obstacles, player, rewards and screen effects.
 // UI lives in the parallel Hud scene so the camera zoom never touches it.
 import Phaser from "phaser";
-import {
-  BIOMES,
-  biomeIdOf,
-  biomeStateAt,
-  blendPalette,
-  lerpColor,
-  N_BIOMES,
-} from "../biomes/biomes.js";
+import { BIOMES, blendPalette, lerpColor } from "../biomes/biomes.js";
+import { Course } from "../biomes/course.js";
 import { fitCamera, NEAR_MISS, PHYSICS, speedForMeters, VIEW, WORLD } from "../config.js";
 import { ComboMeter, TIER_COLORS } from "../effects/ComboMeter.js";
 import { Effects } from "../effects/Effects.js";
@@ -20,16 +14,28 @@ import { pixelPerfectZoom, S } from "../pixel/px.js";
 import { Terrain } from "../pixel/Terrain.js";
 import { THEMES, themeFor } from "../pixel/themes.js";
 import { getCharacter } from "../player/characterDefs.js";
+import { CharacterRig } from "../player/CharacterRig.js";
 import { Player } from "../player/Player.js";
 import { Sfx } from "../audio/sfx.js";
+import { Analytics } from "../systems/analytics.js";
 import { Haptics } from "../systems/haptics.js";
+import { TEST } from "../systems/testFlags.js";
 import { Leaderboard } from "../online/leaderboard.js";
 import { Music } from "../audio/music.js";
 import { BIOME_TRACKS } from "../audio/musicTracks.js";
 import { Progression } from "../data/progression.js";
-import { dailySeed, todayKey } from "../data/rng.js";
+import { dailySeed, RNG, todayKey } from "../data/rng.js";
 import { Save } from "../data/save.js";
-import { ABYSS, BIOME_ENTRY_SLOWMO, BIOME_SPEED, CALM, COMBO, FLASH, REWARDS } from "../tuning.js";
+import {
+  ABYSS,
+  BIOME_ENTRY_SLOWMO,
+  BIOME_SPEED,
+  CALM,
+  COMBO,
+  DIMENSIONS,
+  FLASH,
+  REWARDS,
+} from "../tuning.js";
 
 const CALM_M = CALM.meters;
 const DARK_R = ABYSS.darkRadius;
@@ -38,11 +44,9 @@ const PERFECT_BONUS = REWARDS.perfectPoints;
 const BIOME_COINS = REWARDS.biomeCoins;
 const COMBO_TIERS = COMBO.tiers;
 const COMBO_WINDOW = COMBO.window;
-const FORCE_LUCKY =
-  typeof location !== "undefined" && new URLSearchParams(location.search).has("lucky");
+const FORCE_LUCKY = TEST.lucky;
 // ?god in the URL makes the player invincible (handy for testing / capturing screenshots)
-const DEBUG_GOD =
-  typeof location !== "undefined" && new URLSearchParams(location.search).has("god");
+const DEBUG_GOD = TEST.god;
 const PAL_KEYS = [
   "sky0",
   "sky1",
@@ -122,7 +126,14 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0);
     // colour flashes (run start, portals, biome entrance, near-miss edges, new best, Abyss)
     this.flashFx = new ScreenFlash(this, { depth: 55 });
+    this.tearG = this.add.graphics().setDepth(57); // dimension rift: screen-tear transition
     this.comboMeter = new ComboMeter(this, 32);
+    // Mirror Realm: a ghostly twin flies upside down across the glowing horizon
+    this.twin = new CharacterRig(this, this.charDef, null, { x: 0, y: 0, depth: 29 });
+    this.twin.trailOverride = [0xffffff, 0xd8c0ff, 0x9a3aff, 0x4a1a8a];
+    this.twin.sprite.setTint(0xd8c0ff);
+    this.twin.setVisible(false);
+    this.horizon = this.add.graphics().setDepth(2).setBlendMode(Phaser.BlendModes.ADD);
     this.shiftCol = SHIFTS.void[0];
     this.beatClock = 0;
     const DS = 1024;
@@ -216,6 +227,20 @@ export class GameScene extends Phaser.Scene {
 
     const seed = this.mode === "daily" ? dailySeed() : (Math.random() * 2 ** 32) >>> 0;
     this.obstacles.reset(seed);
+    // the run's course: classic biomes, then random dimensions behind rifts
+    const courseRng = new RNG((seed ^ 0x9e3779b9) >>> 0);
+    this.course = new Course(() => courseRng.next(), TEST.dimension);
+    this.biomeIndex = -1;
+    this.announcedBiome = -1;
+    this.rift?.destroy();
+    this.rift = null;
+    this.tearT = 0;
+    this.zoneScale = 1;
+    this.mirror = false;
+    this.glitchT = 2;
+    this.twin.setVisible(false);
+    this.twin.trailG.clear();
+    this.horizon.clear();
     this.fx.clear();
     this.player.reset();
     this.zoomLevel = this.pxZoomLevel;
@@ -386,6 +411,10 @@ export class GameScene extends Phaser.Scene {
     this.state = "dying";
     this.deathT = 0;
     const hints = this.player.die();
+    if (this.mirror) {
+      this.fx.burst("shard", this.player.x, this.H - this.player.y, 20, 0xc87aff);
+      this.twin.setVisible(false);
+    }
     this.comboMeter.setTier(1); // the multiplier label disappears with the bird
     Sfx.death();
     Music.endCalm(true);
@@ -442,7 +471,8 @@ export class GameScene extends Phaser.Scene {
       freeze = true;
       if (this.blackoutT <= 0) this.enterAbyss();
     }
-    const dt = freeze ? 0 : rawDt * this.timeScale;
+    // slow-mo × Chrono time zones (golden slows everything, red speeds it all up)
+    const dt = freeze ? 0 : rawDt * this.timeScale * this.zoneScale;
     this.fx.setTimeScale(this.timeScale);
     this.tweens.timeScale = 1;
 
@@ -469,28 +499,29 @@ export class GameScene extends Phaser.Scene {
     // music layers follow speed (more drums & synths as you go faster)
     Music.setIntensity(this.state === "playing" ? 0.15 + speedNorm * 0.85 : 0.1);
 
-    // biome palette (with a smooth blend back to Neon Void after a restart)
-    let bs = biomeStateAt(this.meters);
-    const BL = WORLD.biomeLength;
-    const raw0 = Math.floor(this.meters / BL);
-    const local0 = this.meters - raw0 * BL;
+    // biome palette from the run's course (smooth blend back to Neon Void after a restart)
+    const st = this.course.stateAt(this.meters);
+    const seg0 = st.seg; // segment the player is in
+    const local0 = st.local;
+    const len0 = seg0.length;
     // The Calm: hold the Glitch Realm (no morph) until the blackout at the Abyss border
-    const calm = biomeIdOf(raw0) === "glitch" && local0 > BL - CALM_M;
-    if (calm) bs = { a: bs.a, b: bs.b, t: 0, rawIndex: raw0 };
+    const calm = seg0.id === "glitch" && local0 > len0 - CALM_M;
+    const dom = calm ? seg0 : st.dom; // segment the screen shows
+    const bs = { a: st.a, b: st.b, t: calm ? 0 : st.t };
     // stop spawning a little before The Calm so it starts with an empty screen
-    const preCalm = biomeIdOf(raw0) === "glitch" && local0 > BL - CALM_M - 35;
+    const preCalm = seg0.id === "glitch" && local0 > len0 - CALM_M - 35;
     this.calm = calm && playing;
-    this.calmK = calm ? Phaser.Math.Clamp((local0 - (BL - CALM_M)) / CALM_M, 0, 1) : 0;
+    this.calmK = calm ? Phaser.Math.Clamp((local0 - (len0 - CALM_M)) / CALM_M, 0, 1) : 0;
     blendPalette(bs, this.pal);
     if (this.palMix > 0 && this.fromPal) {
       this.palMix = Math.max(0, this.palMix - rawDt * 1.4);
       for (const k of PAL_KEYS) this.pal[k] = lerpColor(this.pal[k], this.fromPal[k], this.palMix);
     }
-    if (playing && bs.rawIndex !== this.biomeIndex) {
-      this.biomeIndex = bs.rawIndex;
-      if (biomeIdOf(bs.rawIndex) === "abyss") {
+    if (playing && dom.i !== this.biomeIndex) {
+      this.biomeIndex = dom.i;
+      if (dom.id === "abyss") {
         // the Abyss: blackout first, then the slam (see enterAbyss)
-        this.run.biome = Math.max(this.run.biome, 4);
+        this.run.biome = dom.biome;
         this.blackoutT = 0.5;
         this.blackout.setAlpha(1);
         this.calmVig.setAlpha(0);
@@ -498,24 +529,29 @@ export class GameScene extends Phaser.Scene {
         this.hudReady?.setBlackout?.(true);
       }
     }
-    if (this.blackoutT <= 0 && playing && bs.rawIndex !== this.announcedBiome) {
-      const abyss = biomeIdOf(bs.rawIndex) === "abyss";
-      this.announcedBiome = bs.rawIndex;
-      this.run.biome = Math.max(this.run.biome, Math.min(bs.rawIndex, N_BIOMES - 1));
-      if (!abyss) {
-        Sfx.biome();
-        Music.play(BIOME_TRACKS[bs.rawIndex % BIOME_TRACKS.length], { startBar: 8 });
-        this.hudReady?.onBiome?.(bs.rawIndex);
-        if (bs.rawIndex > 0) {
-          this.slowT = Math.max(this.slowT, BIOME_ENTRY_SLOWMO); // a brief slow-mo beat
+    if (this.blackoutT <= 0 && playing && dom.i !== this.announcedBiome) {
+      this.announcedBiome = dom.i;
+      this.run.biome = dom.biome;
+      Analytics.log("biome_reached", { biome: dom.id, m: Math.round(this.meters) });
+      if (dom.id !== "abyss") {
+        if (dom.i > 0) {
+          Sfx.biome();
+          Music.play(dom.id, { startBar: 8, immediate: dom.dimension });
+          this.hudReady?.onBiome?.(dom.biome);
+          if (dom.dimension) this.enterDimension(dom);
+          else this.slowT = Math.max(this.slowT, BIOME_ENTRY_SLOWMO); // a brief slow-mo beat
           this.biomeBonus();
+          this.flashFx.flash(BIOMES[dom.biome].neon, { ...FLASH.biome, priority: true });
+        } else if (dom.dimension) {
+          // test builds can start straight inside a dimension (?dimension=…)
+          Music.play(dom.id, { startBar: 8, immediate: true });
+          this.hudReady?.onBiome?.(dom.biome);
+          this.enterDimension(dom);
         }
-        this.flashFx.flash(BIOMES[bs.rawIndex % BIOMES.length].neon, {
-          ...FLASH.biome,
-          priority: true,
-        });
       }
     }
+    if (playing) this.updateRift(seg0);
+    this.updateTear(rawDt);
     // speed-up pulses every 250m
     const tier = Math.floor(this.meters / 250);
     if (playing && tier > this.lastSpeedTier) {
@@ -540,10 +576,11 @@ export class GameScene extends Phaser.Scene {
         this.W / 2 + (hb[i][1] - this.W / 2) * zl,
       ];
     }
-    // pixel biome art follows the dominant biome (walls + backdrop crossfade on change)
-    const biomeId = BIOMES[bs.rawIndex % BIOMES.length].id;
-    this.terrain.setTheme(themeFor(biomeId));
-    this.updateColorShift(rawDt, biomeId, raw0 === bs.rawIndex ? local0 : 0);
+    // pixel biome art follows the dominant biome (walls + backdrop crossfade on change; a
+    // rift switches instantly under the screen tear)
+    const biomeId = dom.id;
+    this.terrain.setTheme(themeFor(biomeId), dom.dimension);
+    this.updateColorShift(rawDt, biomeId, seg0 === dom ? local0 : 0);
     const beatPh = Music.beatPhase(this.beatClock);
     this.beatClock += rawDt;
     const beat = Math.exp(-beatPh * 6) * (1 - this.calmK) * (playing ? 1 : 0.5);
@@ -558,6 +595,7 @@ export class GameScene extends Phaser.Scene {
       dim: 0,
       hazards: this.hazardScreen,
       theme: biomeId,
+      instant: dom.dimension,
       particleSpeed: 1 - this.calmK * 0.8,
     });
     this.fx.drift = this.scroll * 0.7;
@@ -569,11 +607,20 @@ export class GameScene extends Phaser.Scene {
 
     // spawn windows: keep biome titles clear, no hazards in The Calm, gentle Abyss start
     const info = this.obstacles.info;
-    info.rawIndex = bs.rawIndex;
-    info.local = this.meters - bs.rawIndex * BL;
-    const titleWin = this.meters > 100 && (local0 > BL - 85 || local0 < 50);
+    info.rawIndex = dom.i;
+    info.local = this.meters - dom.start;
+    info.firstVisit = dom.firstVisit;
+    info.dimension = dom.dimension;
+    this.mirror = dom.id === "mirror" && playing;
+    const riftAhead = this.course.riftAfter(seg0);
+    const titleWin =
+      this.meters > 100 &&
+      (local0 > len0 - (riftAhead ? DIMENSIONS.riftClearMeters : 85) || local0 < 50);
     info.pause = playing && (calm || preCalm || titleWin || this.blackoutT > 0);
-    info.grace = biomeIdOf(raw0) === "abyss" && local0 < ABYSS.graceMeters;
+    // gentle starts: the Abyss's first metres, and the first seconds of every dimension
+    const dimGrace = (this.speed * DIMENSIONS.graceSeconds) / WORLD.pxPerMeter;
+    info.grace =
+      (seg0.id === "abyss" && local0 < ABYSS.graceMeters) || (seg0.dimension && local0 < dimGrace);
     this.updateCalmFx(rawDt);
     this.flashFx.update(rawDt);
 
@@ -583,9 +630,13 @@ export class GameScene extends Phaser.Scene {
       r: p.radius,
       alive: playing,
       meters: this.meters,
-      biomeId: bs.b && bs.t > 0.5 ? bs.b.id : bs.a.id,
+      biomeId: dom.id,
       zoom: this.zoomLevel,
+      twinY: this.mirror ? this.H - p.y : null,
     });
+    // Chrono time zones ease in/out; the twin, horizon and prism trail follow the bird
+    this.zoneScale += ((playing ? ev.timeScale : 1) - this.zoneScale) * Math.min(1, rawDt * 5);
+    this.updateDimensionFx(rawDt, dom);
 
     if (playing) {
       for (const o of ev.passed) {
@@ -617,6 +668,9 @@ export class GameScene extends Phaser.Scene {
       }
       for (const o of ev.near) this.nearMiss(o);
       for (const o of ev.perfect) this.perfect(o);
+      // dimension fields: Tidal currents push, bubble columns drag, Chrono zones bend time
+      if (ev.push) p.vy += ev.push * dt;
+      if (ev.drag) p.vy *= Math.exp(-ev.drag * dt);
       const r = p.radius;
       if (ev.hit || p.y < -r * 0.6 || p.y > this.H + r * 0.6) this.die();
 
@@ -675,6 +729,145 @@ export class GameScene extends Phaser.Scene {
     this.fx.update(rawDt);
   }
 
+  // ------------------------------------------------------------------ dimensions
+  /** Flying through a rift: the screen tears apart, a white flash, then the title. */
+  enterDimension(dom) {
+    this.tearT = DIMENSIONS.tearSeconds;
+    this.tearSeed = Math.random() * 1000;
+    this.flashFx.flash(0xffffff, { ...FLASH.rift, priority: true });
+    this.cameras.main.shake(260, 0.01);
+    Sfx.rift();
+    Haptics.strong();
+    const found = (Save.data.dimensions ||= {});
+    if (!found[dom.id]) {
+      found[dom.id] = true;
+      this.run.newDimension = dom.id;
+      Save.write();
+    }
+  }
+
+  /** Per-dimension visuals that follow the bird: the Mirror twin + horizon, prism trail. */
+  updateDimensionFx(rawDt, dom) {
+    const p = this.player;
+    // Prism Rift paints the trail in rainbow light (a Lucky Run keeps its gold)
+    if (!this.lucky)
+      p.rig.trailOverride =
+        dom.id === "prism" ? [0xffffff, 0xff9ad8, 0xfff09a, 0x9ae8ff, 0x9aff9a] : null;
+    if (dom.id === "chrono") Music.setTempoScale(this.zoneScale);
+    const g = this.horizon;
+    g.clear();
+    if (!this.mirror) {
+      if (this.twin.sprite.visible) this.twin.setVisible(false);
+      this.twin.trailG.clear();
+      return;
+    }
+    // the glowing horizon the realm is mirrored across
+    const H = this.H;
+    const v = this.cameras.main.worldView;
+    const pulse = 0.55 + 0.25 * Math.sin(this.clock * 3);
+    g.fillStyle(0x9a3aff, 0.25 * pulse).fillRect(v.x, H / 2 - 6, v.width, 12);
+    g.fillStyle(0xe8d0ff, 0.8 * pulse).fillRect(v.x, H / 2 - 1, v.width, 2);
+    // glitchy reflection distortion now and then (purely visual)
+    this.glitchT -= rawDt;
+    let jitter = 0;
+    if (this.glitchT < 0.14) {
+      jitter = (Math.random() - 0.5) * 16;
+      for (let i = 0; i < 3; i++)
+        g.fillStyle(0xc87aff, 0.18).fillRect(
+          v.x,
+          v.y + Math.random() * (H / 2),
+          v.width,
+          4 + Math.random() * 8,
+        );
+      if (this.glitchT < 0) this.glitchT = 2 + Math.random() * 3;
+    }
+    // the twin: same x, reflected y, upside down, copying every move
+    const t = this.twin;
+    if (!t.sprite.visible && p.alive) t.setVisible(true);
+    t.gravityDir = -p.gravityDir;
+    t.angle = -p.rig.angle;
+    t.sizeMul = p.sizeMul;
+    t.setPosition(p.x + jitter, H - p.y);
+    t.update(rawDt * this.timeScale, this.scroll);
+    t.sprite.setAlpha(0.75);
+  }
+
+  /** The glowing rift portal at the end of a segment that leads into a dimension. */
+  updateRift(seg0) {
+    const PX = WORLD.pxPerMeter;
+    if (!this.rift && this.course.riftAfter(seg0)) {
+      const ahead = (seg0.end - this.meters) * PX;
+      if (ahead < this.W * 1.6) {
+        const to = this.course.next(seg0);
+        this.rift = this.add.graphics().setDepth(19).setBlendMode(Phaser.BlendModes.ADD);
+        this.rift.endM = seg0.end;
+        this.rift.col = BIOMES[to.biome].neon;
+        Sfx.riftOpen();
+      }
+    }
+    const r = this.rift;
+    if (!r) return;
+    const x = this.player.x + (r.endM - this.meters) * PX;
+    if (x < -this.W) {
+      r.destroy();
+      this.rift = null;
+      return;
+    }
+    // a jagged vertical tear of light, flickering; drawn on the art-pixel grid
+    const H = this.H;
+    const t = this.clock;
+    r.clear();
+    for (const [w, a, c] of [
+      [70, 0.22, r.col],
+      [34, 0.45, r.col],
+      [12, 0.95, 0xffffff],
+    ]) {
+      r.fillStyle(c, a * (0.85 + 0.15 * Math.sin(t * 17)));
+      for (let y = -60; y < H + 60; y += 16) {
+        const j =
+          Math.round((Math.sin(y * 0.05 + t * 6) * 10 + Math.sin(y * 0.13 - t * 9) * 6) / S) * S;
+        const ww = Math.round((w * (0.75 + 0.25 * Math.sin(y * 0.09 + t * 4))) / S) * S;
+        r.fillRect(Math.round((x + j - ww / 2) / S) * S, y, ww, 16);
+      }
+    }
+    if (Math.random() < 0.5)
+      this.fx.burst("pixel", x, Math.random() * H, 2, r.col, { speed: { min: 40, max: 160 } });
+  }
+
+  /** Screen tear while entering a dimension: offset light bands + jagged cracks, ~0.45 s. */
+  updateTear(rawDt) {
+    const g = this.tearG;
+    if (this.tearT <= 0) return;
+    this.tearT -= rawDt;
+    g.clear();
+    if (this.tearT <= 0) return;
+    const k = this.tearT / DIMENSIONS.tearSeconds;
+    const v = this.cameras.main.worldView;
+    let s = this.tearSeed;
+    const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+    const soft = this.flashFx.reduce ? 0.35 : 1;
+    const col = BIOMES[this.course.segAt(this.meters).biome].neon;
+    for (let i = 0; i < 9; i++) {
+      const y = v.y + rnd() * v.height;
+      const h = 10 + rnd() * v.height * 0.07;
+      const off = (rnd() - 0.5) * 160 * k;
+      g.fillStyle(i % 3 ? col : 0xffffff, 0.45 * k * soft);
+      g.fillRect(v.x + off, y, v.width, h);
+    }
+    for (let c = 0; c < 3; c++) {
+      let x = v.x + rnd() * v.width;
+      g.lineStyle(10, 0x000000, 0.8 * k);
+      const pts = [];
+      for (let y = v.y; y <= v.bottom + 40; y += 40) {
+        x += (rnd() - 0.5) * 90;
+        pts.push({ x, y });
+      }
+      g.strokePoints(pts);
+      g.lineStyle(3, 0xffffff, k * soft);
+      g.strokePoints(pts);
+    }
+  }
+
   /** Backdrop colour drifts through the biome's related colours every SHIFT_EVERY m. */
   updateColorShift(rawDt, biomeId, local) {
     const list = SHIFTS[biomeId] || SHIFTS.void;
@@ -694,13 +887,14 @@ export class GameScene extends Phaser.Scene {
   // ------------------------------------------------------------------ The Calm → Abyss
   updateSpeedMul(rawDt, freeze) {
     if (freeze) return;
-    const BL = WORLD.biomeLength;
-    const raw0 = Math.floor(this.meters / BL);
-    const local0 = this.meters - raw0 * BL;
+    const seg = this.course.segAt(this.meters);
+    const local0 = this.meters - seg.start;
     let target = 1;
-    const id = biomeIdOf(raw0);
+    const id = seg.id;
     if (this.calm) target = 1 - CALM.slowdown * this.calmK;
-    else if (id === "abyss") target = ABYSS.speedSpike + ABYSS.speedRamp * (local0 / BL);
+    else if (id === "abyss") target = ABYSS.speedSpike + ABYSS.speedRamp * (local0 / seg.length);
+    else if (seg.dimension)
+      target = ABYSS.speedSpike + ABYSS.speedRamp; // the Abyss's top speed
     else target = BIOME_SPEED[id] ?? 1; // e.g. the Glitch Realm a touch slower, the Valley drifts
     if (target > this.speedMul) this.speedMul = Math.min(target, this.speedMul + rawDt * 0.5);
     else this.speedMul = Math.max(target, this.speedMul - rawDt * 0.12);
@@ -716,7 +910,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(700, () => this.state === "playing" && this.biomeBonus());
     Sfx.biome();
     Music.play("abyss", { startBar: 16, immediate: true });
-    this.hudReady?.onBiome?.(this.biomeIndex, { slam: true });
+    this.hudReady?.onBiome?.(this.course.segAt(this.meters).biome, { slam: true });
     this.announcedBiome = this.biomeIndex;
   }
 
@@ -727,8 +921,7 @@ export class GameScene extends Phaser.Scene {
     this.setDesat(k);
     if (this.calm) Music.setCalm(k);
     // Abyss limited vision (fades in after the slam, out when the Abyss ends)
-    const BL = WORLD.biomeLength;
-    const inAbyssZone = biomeIdOf(Math.floor(this.meters / BL)) === "abyss" && this.blackoutT <= 0;
+    const inAbyssZone = this.course.segAt(this.meters).id === "abyss" && this.blackoutT <= 0;
     const target = inAbyssZone && this.state !== "dead" ? ABYSS.darkAlpha : 0;
     this.darkA +=
       Math.sign(target - this.darkA) * Math.min(Math.abs(target - this.darkA), rawDt * 0.7);

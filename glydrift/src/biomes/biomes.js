@@ -116,7 +116,83 @@ export const BIOMES = [
   },
 ];
 
+// ---- the dimensions beyond the Hurricane rift (picked at random, never looped in order)
+BIOMES.push(
+  {
+    id: "prism",
+    name: "PRISM RIFT",
+    dimension: true,
+    sky: [0x05031a, 0x0d0838, 0x06041a],
+    nebula: [0x3a2a9a, 0x9a3aff],
+    neon: 0xe8f4ff,
+    neon2: 0xff7ad9,
+    accent: 0x7ae8ff,
+    planet: 0x1a1250,
+    island: 0x241a5a,
+    particle: "mote",
+    particleColor: 0xe8f4ff,
+    glitch: 0,
+    pulse: 0,
+    embers: 0,
+  },
+  {
+    id: "tidal",
+    name: "TIDAL SKY",
+    dimension: true,
+    sky: [0x020a1a, 0x0a3a52, 0x03101e],
+    nebula: [0x0a5a7a, 0x1a8aa8],
+    neon: 0xff6ac8,
+    neon2: 0x5af0e0,
+    accent: 0x8af8ff,
+    planet: 0x06223a,
+    island: 0x0a3a52,
+    particle: "mote",
+    particleColor: 0xa8f8ff,
+    glitch: 0,
+    pulse: 0,
+    embers: 0,
+  },
+  {
+    id: "chrono",
+    name: "CHRONO FRACTURE",
+    dimension: true,
+    sky: [0x0a0604, 0x2e1e10, 0x0a0604],
+    nebula: [0x6a4a1a, 0x3a2410],
+    neon: 0xffc83d,
+    neon2: 0xff8a2a,
+    accent: 0xfff0c0,
+    planet: 0x1e140a,
+    island: 0x2e1e10,
+    particle: "mote",
+    particleColor: 0xe8c890,
+    glitch: 0,
+    pulse: 0,
+    embers: 0,
+  },
+  {
+    id: "mirror",
+    name: "MIRROR REALM",
+    dimension: true,
+    sky: [0x08040f, 0x1e1036, 0x08040f],
+    nebula: [0x3a1a6a, 0x6a2aaa],
+    neon: 0xb86aff,
+    neon2: 0x7ad8ff,
+    accent: 0xe8d0ff,
+    planet: 0x140a24,
+    island: 0x1e1036,
+    particle: "mote",
+    particleColor: 0xd8c0ff,
+    glitch: 0,
+    pulse: 0,
+    embers: 0,
+  },
+);
+
 export const N_BIOMES = BIOMES.length;
+/** The classic biomes run in order (Neon Void → Hurricane); dimensions follow the rift. */
+export const CLASSIC = BIOMES.filter((b) => !b.dimension).length;
+export const DIMENSION_IDS = BIOMES.filter((b) => b.dimension).map((b) => b.id);
+export const biomeIndex = (id) => BIOMES.findIndex((b) => b.id === id);
 /** Biome id for a raw (ever-increasing) biome index. */
 export const biomeIdOf = (raw) => BIOMES[((raw % N_BIOMES) + N_BIOMES) % N_BIOMES].id;
 
@@ -143,8 +219,8 @@ export function biomeStateAt(meters) {
   const L = WORLD.biomeLength;
   const raw = Math.floor(meters / L);
   const local = meters - raw * L;
-  const a = BIOMES[raw % BIOMES.length];
-  const b = BIOMES[(raw + 1) % BIOMES.length];
+  const a = BIOMES[raw % CLASSIC];
+  const b = BIOMES[(raw + 1) % CLASSIC];
   const start = L - WORLD.biomeBlend;
   const t = local > start ? smooth((local - start) / WORLD.biomeBlend) : 0;
   return { a, b, t, rawIndex: t > 0.5 ? raw + 1 : raw };
@@ -173,8 +249,7 @@ export function blendPalette(state, out) {
   return out;
 }
 
-export function biomeName(rawIndex) {
-  const name = BIOMES[rawIndex % BIOMES.length].name;
-  const loop = Math.floor(rawIndex / BIOMES.length);
-  return loop > 0 ? `${name} ${"I".repeat(Math.min(loop + 1, 3))}` : name;
+/** Display name for a BIOMES index (the course never loops back, so no "II"/"III"). */
+export function biomeName(index) {
+  return BIOMES[((index % BIOMES.length) + BIOMES.length) % BIOMES.length].name;
 }

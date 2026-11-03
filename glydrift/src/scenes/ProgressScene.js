@@ -3,7 +3,14 @@ import Phaser from "phaser";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
 import { fitCamera, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
-import { ACHIEVEMENTS, LEVEL_REWARDS, LOGIN_REWARDS, Progression } from "../data/progression.js";
+import {
+  ACHIEVEMENTS,
+  DIMENSION_COUNT,
+  dimensionsFound,
+  LEVEL_REWARDS,
+  LOGIN_REWARDS,
+  Progression,
+} from "../data/progression.js";
 import { Save } from "../data/save.js";
 import { drawIcon } from "../ui/icons.js";
 import {
@@ -141,6 +148,19 @@ export class ProgressScene extends Phaser.Scene {
     });
     slideIn(this, st, 420);
     y += 120;
+
+    // ---- dimensions discovered beyond the Hurricane rift
+    const found = dimensionsFound(s);
+    const dl = plainText(
+      this,
+      W / 2,
+      y - 6,
+      `DIMENSIONS DISCOVERED  ${found}/${DIMENSION_COUNT}`,
+      20,
+      found ? "#e8d0ff" : "#8a80a8",
+    );
+    slideIn(this, dl, 450);
+    y += 34;
 
     // ---- achievements
     const at = neonText(this, 40, y, "ACHIEVEMENTS", 26, 0xb45cff, { ox: 0 });

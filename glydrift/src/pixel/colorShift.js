@@ -12,6 +12,10 @@ export const SHIFTS = {
   abyss: [0xd00c34, 0x240006, 0x8a000e], // crimson → near-black → blood red
   valley: [0xffb0d8, 0xa8f0c8, 0xfff0a0, 0xc8b0ff], // blush → mint → butter → lavender
   hurricane: [0x506478, 0x2a8a8a, 0x5a3a8a, 0x6aa0d8], // slate → storm teal → bruise → electric
+  prism: [0x5a4aff, 0xff6ad0, 0x5ad8ff, 0xffe06a], // a slow rainbow refraction
+  tidal: [0x1a5aa8, 0x1aa8a0, 0x3a3aa8], // deep blue → lagoon → twilight
+  chrono: [0xc8901a, 0x8a3a1a, 0x6a5a2a], // brass → rust → old gold
+  mirror: [0x6a2aaa, 0x2a3aaa, 0x8a2a8a], // violet → cobalt → plum
 };
 
 /** Glowing floor material per biome (main colour, hot highlight). */
@@ -23,6 +27,10 @@ export const FLOOR = {
   abyss: { a: 0xb0001e, b: 0xff3d5a, kind: "blood" },
   valley: { a: 0x6ad070, b: 0xfff4b0, kind: "meadow" },
   hurricane: { a: 0x3a7aaa, b: 0xeaf6ff, kind: "surf" },
+  prism: { a: 0x7a70ff, b: 0xffffff, kind: "glass" },
+  tidal: { a: 0x1aa8a0, b: 0x8af8ff, kind: "reef" },
+  chrono: { a: 0xc8901a, b: 0xfff0c0, kind: "sand" },
+  mirror: { a: 0x7a3ac8, b: 0xd8c0ff, kind: "pool" },
 };
 
 /** How strongly the additive wash / floor glow apply per biome (bright biomes need less). */

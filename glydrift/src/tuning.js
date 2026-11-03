@@ -59,15 +59,30 @@ export const FLASH = {
   biome: { peak: 0.45, dur: 0.35 },
   newBest: { peak: 0.4, dur: 0.35 },
   abyss: { peak: 0.55, dur: 0.6 },
+  rift: { peak: 0.55, dur: 0.45 },
 };
 
 // ------------------------------------------------------------------ obstacle spacing
 export const SPAWN = {
   /** Biome-local metres at which each signature hazard unlocks (introduced one at a time). */
-  unlock: { void: [60, 200, 340], default: [0, 120, 230] },
+  unlock: {
+    void: [60, 200, 340],
+    default: [0, 120, 230],
+    tidal: [0, 110, 220, 330],
+    chrono: [0, 110, 220, 330],
+  },
   /** Shared-obstacle difficulty is capped in these biomes (0..1). */
   difficultyCap: { abyss: 0.55, valley: 0.3 },
   /** Extra space between patterns per biome. */
   roomy: { abyss: 1.4, glitch: 1.12, valley: 1.6, hurricane: 1.05 },
   difficultyMeters: 2600, // distance at which shared obstacles reach full difficulty
+};
+
+// ------------------------------------------------------------------ dimensions
+export const DIMENSIONS = {
+  riftAfter: 400, // metres into the Hurricane before the first rift opens
+  length: 600, // metres per dimension before the next rift
+  graceSeconds: 3, // lighter obstacles at the start of each dimension
+  riftClearMeters: 110, // no obstacles in the stretch before a rift
+  tearSeconds: 0.45, // the screen-tear transition
 };

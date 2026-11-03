@@ -17,6 +17,10 @@ const SIG = {
   abyss: ["tendril", "slammer", "walls"],
   valley: ["vine", "puffs", "bloom"],
   hurricane: ["debris", "bolt", "twister"],
+  prism: ["mlaser", "glass", "rprism"],
+  tidal: ["jelly", "mine", "current", "bubblecol"],
+  chrono: ["cgear", "pendulum", "timezone", "rewind"],
+  mirror: ["spire", "vorb", "vbar"],
 };
 /** Biome-local meters at which each signature hazard unlocks. */
 const UNLOCK = SPAWN.unlock;
@@ -38,7 +42,7 @@ export class ObstacleManager {
     this.rng = new RNG(1);
     this.px = 0;
     this.scroll = 300;
-    this.info = { local: 0, rawIndex: 0, pause: false, grace: false };
+    this.info = { local: 0, rawIndex: 0, firstVisit: true, pause: false, grace: false };
   }
 
   reset(seed) {
@@ -61,7 +65,17 @@ export class ObstacleManager {
   prewarm() {
     for (const type of Object.keys(TYPES)) {
       const pool = (this.pools[type] ||= []);
-      const want = ["saw", "laser", "icicle", "meteor", "blink", "tendril", "vine"].includes(type)
+      const want = [
+        "saw",
+        "laser",
+        "icicle",
+        "meteor",
+        "blink",
+        "tendril",
+        "vine",
+        "spire",
+        "vorb",
+      ].includes(type)
         ? 2
         : type === "debris"
           ? 3
@@ -112,7 +126,10 @@ export class ObstacleManager {
     const r = this.rng;
     const H = this.H;
     // the Abyss caps shared-obstacle difficulty (wider gates, slower saws)
-    const d = Math.min(SPAWN.difficultyCap[biomeId] ?? 1, meters / SPAWN.difficultyMeters);
+    // dimensions ramp up within themselves (gentle start, full strength by ~500 m in)
+    const d = this.info.dimension
+      ? Math.min(1, Math.max(0, this.info.local) / 500)
+      : Math.min(SPAWN.difficultyCap[biomeId] ?? 1, meters / SPAWN.difficultyMeters);
     const x = this.nextX;
     const mid = H / 2;
     const safeTop = 150;
@@ -136,7 +153,7 @@ export class ObstacleManager {
     const local = Math.max(0, info.local);
     const sig = SIG[biomeId] || SIG.void;
     const unlock = UNLOCK[biomeId] || UNLOCK.default;
-    const firstLap = info.rawIndex < 5;
+    const firstLap = info.firstVisit !== false; // first time in this biome this run
     // shared obstacles (every biome) + this biome's signature hazards
     const w = {
       saw: 2.2,
@@ -156,7 +173,8 @@ export class ObstacleManager {
     });
     if (w.zone && this.flipped) w.zone = 0;
     // the Peaceful Valley has only its own gentle hazards (no saws, gates or portals)
-    if (biomeId === "valley") w.saw = w.gate = w.saw2 = w.flip = w.mini = 0;
+    // the Peaceful Valley and the dimensions have only their own hazards
+    if (biomeId === "valley" || info.dimension) w.saw = w.gate = w.saw2 = w.flip = w.mini = 0;
     if (this.count < 2) w.saw2 = w.flip = w.mini = w.blade = w.hlaser = 0;
     if (info.grace) {
       // first seconds of the Abyss: only simple shared obstacles, spaced out
@@ -498,6 +516,164 @@ export class ObstacleManager {
         width = 200;
         break;
       }
+      // ------------------------------------------------------------ Prism Rift
+      case "mlaser": {
+        const top = r.chance(0.5);
+        const dx = r.range(H * 0.16, H * 0.24);
+        const ym = top ? r.range(H * 0.32, H * 0.5) : r.range(H * 0.5, H * 0.68);
+        const o = this.obtain("mlaser");
+        o.spawn(x + dx + 30, { top, dx, ym, phase: r.next() });
+        width = dx * 2 + 60;
+        break;
+      }
+      case "glass": {
+        const gap = Phaser.Math.Linear(360, 300, d);
+        const gc = r.range(safeTop + gap / 2 + 60, safeBot - gap / 2);
+        const o = this.obtain("glass");
+        o.spawn(x + 40, { gc, gap });
+        this.coinLine(x + 10, x + 70, gc, 2);
+        width = 80;
+        break;
+      }
+      case "rprism": {
+        const L = r.range(H * 0.2, H * 0.28);
+        const o = this.obtain("rprism");
+        o.spawn(x + L + 30, {
+          y: r.range(H * 0.35, H * 0.65),
+          L,
+          speed: (r.chance(0.5) ? 1 : -1) * r.range(0.7, 1.0 + d * 0.3),
+          phase: r.next(),
+        });
+        width = L * 2 + 60;
+        break;
+      }
+      // ------------------------------------------------------------ Tidal Sky
+      case "jelly": {
+        const o = this.obtain("jelly");
+        const y = r.range(safeTop, H * 0.55);
+        o.spawn(x + 40, { y, tl: r.range(H * 0.14, H * 0.22), phase: r.next() });
+        this.coinLine(x + 20, x + 60, y < H * 0.4 ? H * 0.72 : H * 0.25, 2);
+        width = 80;
+        break;
+      }
+      case "mine": {
+        const n = local > 200 && r.chance(0.4) ? 2 : 1;
+        let top = r.chance(0.5);
+        for (let i = 0; i < n; i++) {
+          const o = this.obtain("mine");
+          o.spawn(x + 40 + i * 260, {
+            top,
+            y: top ? r.range(H * 0.18, H * 0.42) : r.range(H * 0.58, H * 0.82),
+            phase: r.next(),
+          });
+          top = !top;
+        }
+        width = 80 + (n - 1) * 260;
+        break;
+      }
+      case "current": {
+        // a current that nudges you toward a mine — read the streaks and fly against them
+        const w = r.range(340, 420);
+        const dir = r.chance(0.5) ? -1 : 1;
+        this.obtain("current").spawn(x + w / 2, { w, dir });
+        const m = this.obtain("mine");
+        m.spawn(x + w * 0.6, {
+          top: dir < 0,
+          y: dir < 0 ? r.range(H * 0.2, H * 0.32) : r.range(H * 0.68, H * 0.8),
+          phase: r.next(),
+        });
+        width = w;
+        break;
+      }
+      case "bubblecol": {
+        // bubbles slow you inside the column, a jellyfish waits just past it
+        this.obtain("bubblecol").spawn(x + 75, { w: 150 });
+        const j = this.obtain("jelly");
+        j.spawn(x + 260, {
+          y: r.range(safeTop, H * 0.5),
+          tl: r.range(H * 0.14, H * 0.2),
+          phase: r.next(),
+        });
+        width = 300;
+        break;
+      }
+      // ------------------------------------------------------------ Chrono Fracture
+      case "cgear": {
+        const moving = r.chance(0.3 + d * 0.4);
+        const amp = moving ? r.range(60, 140) : 0;
+        const o = this.obtain("cgear");
+        o.spawn(x + 56, {
+          y: r.range(safeTop + amp, safeBot - amp),
+          amp,
+          freq: r.range(0.9, 1.6),
+          spin: (r.chance(0.5) ? 1 : -1) * r.range(2, 4),
+          phase: r.next(),
+        });
+        width = 112;
+        break;
+      }
+      case "pendulum": {
+        const L = r.range(H * 0.42, H * 0.6);
+        const o = this.obtain("pendulum");
+        o.spawn(x + Math.sin(0.6) * L + 60, {
+          L,
+          amp: r.range(0.45, 0.65),
+          period: r.range(2.2, 2.8),
+          phase: r.next(),
+        });
+        width = Math.sin(0.65) * L * 2 + 120;
+        break;
+      }
+      case "timezone": {
+        // a time zone with a gear in it: gold slows everything, red speeds it all up
+        const w = r.range(380, 460);
+        this.obtain("timezone").spawn(x + w / 2, { w, fast: r.chance(0.5) });
+        const g = this.obtain("cgear");
+        g.spawn(x + w * 0.55, {
+          y: r.range(H * 0.3, H * 0.7),
+          amp: r.range(80, 150),
+          freq: r.range(1.2, 1.8),
+          spin: 3,
+          phase: r.next(),
+        });
+        width = w;
+        break;
+      }
+      case "rewind": {
+        const y1 = r.range(safeTop, H * 0.45);
+        const y2 = y1 + r.range(H * 0.3, H * 0.42);
+        const o = this.obtain("rewind");
+        o.spawn(x + 40, { y1, y2: Math.min(y2, safeBot), phase: r.next() });
+        width = 80;
+        break;
+      }
+      // ------------------------------------------------------------ Mirror Realm
+      case "spire": {
+        // heights start low and grow; remember your reflection flies the other half
+        const h = r.range(H * 0.1, H * (0.16 + d * 0.16));
+        const o = this.obtain("spire");
+        o.spawn(x + 24, { top: r.chance(0.5), h });
+        width = 48;
+        break;
+      }
+      case "vorb": {
+        const top = r.chance(0.5);
+        const o = this.obtain("vorb");
+        o.spawn(x + 32, {
+          y: top
+            ? r.range(H * 0.12, H * (0.3 + d * 0.12))
+            : r.range(H * (0.58 - d * 0.12), H * 0.88),
+          phase: r.next(),
+        });
+        width = 64;
+        break;
+      }
+      case "vbar": {
+        const o = this.obtain("vbar");
+        o.spawn(x + 68, { top: r.chance(0.5), period: r.range(2.6, 3.4), phase: r.next() });
+        width = 136;
+        break;
+      }
       case "flip":
       case "mini": {
         const p = this.obtain("portal");
@@ -532,7 +708,7 @@ export class ObstacleManager {
    * @returns events for this frame
    */
   update(dt, clock, scroll, pal, ctx) {
-    const { px, py, r, alive, meters, biomeId, zoom } = ctx;
+    const { px, py, r, alive, meters, biomeId, zoom, twinY = null } = ctx;
     const ev =
       this.events ||
       (this.events = { hit: null, near: [], passed: [], perfect: [], portal: null, coins: 0 });
@@ -543,6 +719,9 @@ export class ObstacleManager {
     ev.portal = null;
     ev.coins = 0;
     ev.zone = false;
+    ev.push = 0; // currents (px/s² added to the player's vertical speed)
+    ev.drag = 0; // bubble columns (vertical-speed damping)
+    ev.timeScale = 1; // time zones
     this.px = px;
     this.scroll = scroll;
 
@@ -580,8 +759,12 @@ export class ObstacleManager {
           }
         } else if (o.kind === "zone") {
           if (o.inside(px)) ev.zone = true;
+        } else if (o.kind === "field") {
+          if (o.inside(px)) o.apply(ev);
         } else if (o.right > px - r - 30 && o.left < px + r + 30) {
-          const c = o.clearance(px, py, r);
+          let c = o.clearance(px, py, r);
+          // Mirror Realm: the twin (reflected across the horizon) can crash too
+          if (twinY !== null) c = Math.min(c, o.clearance(px, twinY, r));
           if (c < o.minClear) o.minClear = c;
           if (c < 0 && !ev.hit) ev.hit = o;
         }

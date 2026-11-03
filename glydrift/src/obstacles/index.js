@@ -6,6 +6,10 @@ import { BlinkBlock, BrokenLaser, GravityZone } from "./biomes/glitch.js";
 import { Debris, StormBolt, Twister } from "./biomes/hurricane.js";
 import { BloomGate, PuffDrift, ThornVine } from "./biomes/valley.js";
 import { Blade, Laser } from "./biomes/void.js";
+import { ClockGear, Pendulum, RewindBlade, TimeZone } from "./biomes/chrono.js";
+import { Spire, SweepBar, VoidOrb } from "./biomes/mirror.js";
+import { GlassWall, MirrorLaser, RotPrism } from "./biomes/prism.js";
+import { BubbleColumn, Current, Jellyfish, SeaMine } from "./biomes/tidal.js";
 import { Gate, Portal, Saw } from "./shared.js";
 
 export const TYPES = {
@@ -40,4 +44,19 @@ export const TYPES = {
   debris: Debris,
   bolt: StormBolt,
   twister: Twister,
+  // ---- dimensions
+  mlaser: MirrorLaser,
+  glass: GlassWall,
+  rprism: RotPrism,
+  jelly: Jellyfish,
+  mine: SeaMine,
+  current: Current,
+  bubblecol: BubbleColumn,
+  cgear: ClockGear,
+  pendulum: Pendulum,
+  timezone: TimeZone,
+  rewind: RewindBlade,
+  spire: Spire,
+  vorb: VoidOrb,
+  vbar: SweepBar,
 };

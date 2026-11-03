@@ -193,6 +193,28 @@ export function drawIcon(g, id, s, color) {
       g.fillCircle(0, 0, s * 0.35);
       break;
     }
+    case "dim_prism":
+      g.fillTriangle(0, -s, s * 0.9, s * 0.7, -s * 0.9, s * 0.7);
+      g.fillStyle(0x0a0418, 1).fillTriangle(0, -s * 0.35, s * 0.4, s * 0.4, -s * 0.4, s * 0.4);
+      break;
+    case "dim_tidal":
+      g.fillCircle(0, s * 0.25, s * 0.65);
+      g.fillTriangle(0, -s, s * 0.6, s * 0.05, -s * 0.6, s * 0.05);
+      break;
+    case "dim_chrono":
+      g.fillCircle(0, 0, s);
+      g.fillStyle(0x0a0418, 1).fillCircle(0, 0, s * 0.78);
+      g.fillStyle(color, 1)
+        .fillRect(-s * 0.08, -s * 0.6, s * 0.16, s * 0.65)
+        .fillRect(0, -s * 0.08, s * 0.45, s * 0.16);
+      break;
+    case "dim_mirror":
+      g.fillTriangle(-s * 0.8, -s * 0.12, s * 0.8, -s * 0.12, 0, -s);
+      g.fillTriangle(-s * 0.8, s * 0.12, s * 0.8, s * 0.12, 0, s);
+      break;
+    case "dim_all":
+      g.fillPoints(star(g, s, 4, 0.35), true);
+      break;
     default:
       g.fillPoints(star(g, s * 0.7), true);
   }

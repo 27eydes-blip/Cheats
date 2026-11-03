@@ -106,6 +106,44 @@ function strip(kind, a, b) {
       ],
       0x1a3a5a,
     );
+  } else if (kind === "glass") {
+    // shards of glass catching rainbow light
+    for (const [x, c] of [
+      [3, 0xff9ad8],
+      [10, 0x9ae8ff],
+      [17, 0xfff09a],
+      [24, 0xb0ffb0],
+      [29, 0xffffff],
+    ])
+      pc.line(x, 2, x + 2, 5, c);
+  } else if (kind === "reef") {
+    for (const x of [2, 9, 15, 22, 28])
+      pc.set(x, 2, b)
+        .set(x, 3, b)
+        .set(x + 1, 3, 0xff9ad0);
+    at(
+      [
+        [6, 5],
+        [19, 6],
+        [26, 5],
+      ],
+      dark,
+    );
+  } else if (kind === "sand") {
+    for (let x = 1; x < 32; x += 3) pc.set(x, 3 + (x % 2), b);
+    at(
+      [
+        [5, 6],
+        [13, 5],
+        [21, 6],
+        [29, 5],
+      ],
+      dark,
+    );
+  } else if (kind === "pool") {
+    // a silvery violet surface with a mirrored glint
+    pc.hline(0, 31, 3, shade(a, 0.4));
+    for (const x of [4, 14, 24]) pc.hline(x, x + 4, 2, 0xffffff);
   } else if (kind === "blood") {
     at(
       [

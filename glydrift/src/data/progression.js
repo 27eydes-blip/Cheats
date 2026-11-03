@@ -89,6 +89,16 @@ function runStat(run, stat) {
 }
 
 // ------------------------------------------------------------------ achievements
+const DIMS = {
+  prism: "Prism Rift",
+  tidal: "Tidal Sky",
+  chrono: "Chrono Fracture",
+  mirror: "Mirror Realm",
+};
+export const DIMENSION_COUNT = Object.keys(DIMS).length;
+/** How many dimensions this save has discovered. */
+export const dimensionsFound = (s) => Object.keys(DIMS).filter((d) => s.dimensions?.[d]).length;
+
 export const ACHIEVEMENTS = [
   {
     id: "first",
@@ -201,6 +211,41 @@ export const ACHIEVEMENTS = [
     desc: "Unlock Nova",
     glyph: "N",
     check: (s) => !!s.unlocked.nova,
+  },
+  {
+    id: "dim_prism",
+    name: "Prism Walker",
+    desc: "Discover the Prism Rift",
+    glyph: "P",
+    check: (s) => !!s.dimensions?.prism,
+  },
+  {
+    id: "dim_tidal",
+    name: "Sky Diver",
+    desc: "Discover the Tidal Sky",
+    glyph: "T",
+    check: (s) => !!s.dimensions?.tidal,
+  },
+  {
+    id: "dim_chrono",
+    name: "Time Bender",
+    desc: "Discover the Chrono Fracture",
+    glyph: "C",
+    check: (s) => !!s.dimensions?.chrono,
+  },
+  {
+    id: "dim_mirror",
+    name: "Reflection",
+    desc: "Discover the Mirror Realm",
+    glyph: "M",
+    check: (s) => !!s.dimensions?.mirror,
+  },
+  {
+    id: "dim_all",
+    name: "Dimension Hopper",
+    desc: "Discover all 4 dimensions",
+    glyph: "4",
+    check: (s) => dimensionsFound(s) >= DIMENSION_COUNT,
   },
 ];
 

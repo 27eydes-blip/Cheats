@@ -157,6 +157,19 @@ export const Sfx = {
       }),
     );
   },
+  /** a dimension rift opens ahead: a low rising hum */
+  riftOpen: () => {
+    tone({ type: "sine", f0: 60, f1: 240, dur: 1.4, vol: 0.18 });
+    tone({ type: "triangle", f0: 1200, f1: 1800, dur: 1.2, vol: 0.03, delay: 0.3 });
+  },
+  /** tearing through a rift */
+  rift: () => {
+    noise({ dur: 0.6, vol: 0.4, f: 4000 });
+    tone({ type: "sawtooth", f0: 900, f1: 80, dur: 0.45, vol: 0.12 });
+    [0, 7, 12, 19].forEach((s, i) =>
+      tone({ type: "sine", f0: 392 * 2 ** (s / 12), dur: 0.4, vol: 0.1, delay: 0.25 + i * 0.05 }),
+    );
+  },
   chestShake: () => tone({ type: "square", f0: 160, f1: 120, dur: 0.05, vol: 0.08 }),
   chestOpen: () => {
     noise({ dur: 0.25, vol: 0.3, f: 1200 });

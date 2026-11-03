@@ -34,6 +34,7 @@ function defaults() {
     },
     missions: [],
     achievements: {},
+    dimensions: {}, // dimension ids discovered (prism, tidal, chrono, mirror)
     login: { last: "", streak: 0, claimed: "" },
     daily: { date: "", best: 0, attempts: 0, ghost: null, ghostChar: "volt", lastPlayed: "" },
     levelRewards: {},

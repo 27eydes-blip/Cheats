@@ -127,7 +127,10 @@ class Track {
     this.chords = keep(
       new Tone.PolySynth(Tone.Synth, {
         oscillator: { type: d.chordWave },
-        envelope: { attack: 0.004, decay: 0.26, sustain: 0, release: 0.22 },
+        // `swell`: chords fade in and cut off — sounds like a reversed tape (Mirror Realm)
+        envelope: d.swell
+          ? { attack: 0.2, decay: 0.05, sustain: 0.35, release: 0.03 }
+          : { attack: 0.004, decay: 0.26, sustain: 0, release: 0.22 },
       }),
     ).connect(this.chordF);
     // stutters retrigger 4-5 note chords with release tails: 16 voices dropped notes
@@ -553,6 +556,16 @@ class MusicEngine {
       } catch {}
     }
     return (fallbackSec * (124 / 60)) % 1;
+  }
+
+  /** Chrono Fracture: the tempo follows the time zones (1 = the track's own tempo). */
+  setTempoScale(k) {
+    if (!this.ready) return;
+    const tr = this.pending || this.current;
+    const base = tr && TRACKS[tr.id]?.bpm;
+    if (!base || Math.abs(k - (this.tempoK ?? 1)) < 0.02) return;
+    this.tempoK = k;
+    Tone.getTransport().bpm.rampTo(base * k, 0.25);
   }
 
   setIntensity(x) {

@@ -264,5 +264,9 @@ export function weatherFrames() {
     { W, S: Sp, B },
   );
   const petal = new PixelCanvas(3, 2).stamp(0, 0, ["WW.", ".WW"], { W });
-  return { bfly_0: open, bfly_1: shut, petal };
+  const bubble = new PixelCanvas(5, 5).stamp(0, 0, [".WWW.", "W.S.W", "W...W", "W...W", ".WWW."], {
+    W,
+    S: 0xffffff,
+  });
+  return { bfly_0: open, bfly_1: shut, petal, bubble };
 }

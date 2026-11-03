@@ -12,12 +12,14 @@ const stampServiceWorker = () => ({
   },
 });
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: "./",
+  // test-only URL flags (?god, ?lucky, ?dimension=…): dev server or GLY_TEST=1 builds only
+  define: { __TEST_FLAGS__: JSON.stringify(mode === "development" || process.env.GLY_TEST === "1") },
   build: {
     target: "es2020",
     chunkSizeWarningLimit: 2000,
   },
   plugins: [stampServiceWorker()],
   server: { host: true },
-});
+}));

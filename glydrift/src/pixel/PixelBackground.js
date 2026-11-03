@@ -96,6 +96,36 @@ export class PixelBackground {
       layer(t.nearTop, -4, 0, -85, 0.3),
       layer(t.nearBot, H + 4, 1, -85, 0.3),
     ];
+    if (t.mirror) {
+      // Mirror Realm: the back layers are reflected (upside down, dimmer) in the top half
+      for (const [key, y, depth, speed] of [
+        [t.distant, H * 0.34, -97, 0.035],
+        [t.far, H * 0.28, -95, 0.06],
+        [t.mid, -4, -90, 0.16],
+      ]) {
+        const m = layer(key, y, 0, depth, speed).setFlipY(true);
+        m.alphaMul = 0.55;
+        layers.push(m);
+      }
+    }
+    // Tidal Sky: soft light rays slanting down through the water
+    const rays = [];
+    if (t.weather.rays) {
+      lightRayTexture(scene);
+      for (let i = 0; i < 4; i++) {
+        const r = scene.add
+          .image(W * (0.15 + i * 0.25), -20, "lightray")
+          .setOrigin(0.5, 0)
+          .setDisplaySize(W * 0.18, H * 1.1)
+          .setRotation(0.22)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setTint(t.weather.rays)
+          .setDepth(-94);
+        r.phase = i * 1.7;
+        rays.push(r);
+        objs.push(r);
+      }
+    }
     // soft glow spots drifting in the open middle (whole-pixel scales keep them crisp)
     const glows = [];
     for (let i = 0; i < (this.lowGfx ? 3 : 5); i++) {
@@ -115,7 +145,10 @@ export class PixelBackground {
     const parts = [];
     for (let i = 0; i < n; i++) {
       let d;
-      if (w.kind === "butterflies") {
+      if (w.kind === "bubbles") {
+        d = scene.add.image(0, 0, "wx", "bubble").setDepth(-70).setTint(w.color);
+        d.setScale(k * (Math.random() < 0.35 ? 2 : 1));
+      } else if (w.kind === "butterflies") {
         // butterflies + drifting petals (one in three is a petal)
         const petal = i % 3 === 2;
         d = scene.add.image(0, 0, "wx", petal ? "petal" : "bfly_0").setDepth(-70);
@@ -141,22 +174,40 @@ export class PixelBackground {
       const m = scene.add
         .image(Math.random() * W, H * (0.2 + Math.random() * 0.6), "px1")
         .setDepth(-72);
-      m.setTint(w.kind === "noise" ? 0x5affb0 : 0xbfe6e0).setScale(
-        k * (Math.random() < 0.3 ? 2 : 1),
-      );
+      m.setTint(
+        w.colors ? w.colors[i % w.colors.length] : w.kind === "noise" ? 0x5affb0 : 0xbfe6e0,
+      ).setScale(k * (Math.random() < 0.3 ? 2 : 1));
       m.phase = Math.random() * 10;
       m.vx = 10 + Math.random() * 20;
       motes.push(m);
       objs.push(m);
     }
-    return { id, objs, sky, layers, glows, parts, motes, kind: w.kind, alpha: 0 };
+    return {
+      id,
+      objs,
+      sky,
+      layers,
+      glows,
+      rays,
+      parts,
+      motes,
+      kind: w.kind,
+      colors: w.colors,
+      alpha: 0,
+    };
   }
 
   resetPart(d, kind, initial) {
     const W = this.W;
     const H = this.H;
     d.x = Math.random() * (W + 200);
-    if (kind === "embers") {
+    if (kind === "bubbles" || kind === "sandup") {
+      // rising from below: bubbles wobble up quickly, sand drifts up slowly
+      d.y = initial ? Math.random() * H : H + 10 + Math.random() * 60;
+      d.vy = kind === "bubbles" ? -(60 + Math.random() * 90) : -(18 + Math.random() * 34);
+      d.vx = -10 + Math.random() * 20;
+      d.phase = Math.random() * 10;
+    } else if (kind === "embers") {
       d.y = initial ? Math.random() * H : H + 10 + Math.random() * 60;
       d.vy = -(50 + Math.random() * 90);
       d.vx = -20 + Math.random() * 30;
@@ -219,7 +270,7 @@ export class PixelBackground {
   update(dt, scroll, pal, o = {}) {
     this.time += dt;
     this.scroll = scroll;
-    if (o.theme) this.setTheme(o.theme);
+    if (o.theme) this.setTheme(o.theme, o.instant);
     const ps = o.particleSpeed ?? 1; // The Calm slows the weather down
     const beat = heartbeat(this.time) * (pal?.pulse || 0);
     this.beat = beat;
@@ -258,9 +309,16 @@ export class PixelBackground {
         );
       }
       for (const m of set.motes) m.setDepth(-72 + lift);
+      for (const r of set.rays) {
+        r.setDepth(-94 + lift).setAlpha(
+          set.alpha * (0.06 + 0.04 * Math.sin(this.time * 0.6 + r.phase)),
+        );
+        r.x -= scroll * dt * 0.02;
+        if (r.x < -this.W * 0.15) r.x += this.W * 1.25;
+      }
       for (const l of set.layers) {
         l.tilePositionX += (scroll * dt * l.speed) / this.k;
-        l.setDepth(l.baseDepth + lift).setAlpha(set.alpha);
+        l.setDepth(l.baseDepth + lift).setAlpha(set.alpha * (l.alphaMul ?? 1));
       }
       for (const d of set.parts) {
         if (set.kind === "noise") {
@@ -268,7 +326,8 @@ export class PixelBackground {
           if (d.life <= 0) {
             this.resetPart(d, "noise", false);
             d.life = 0.05 + Math.random() * 0.35;
-            d.setTint([0x2bffef, 0xff5ad8, 0xffffff][Math.floor(Math.random() * 3)]);
+            const cols = set.colors || [0x2bffef, 0xff5ad8, 0xffffff];
+            d.setTint(cols[Math.floor(Math.random() * cols.length)]);
           }
           d.setAlpha(set.alpha * (Math.random() < 0.85 ? d.base : 0));
           continue;
@@ -291,6 +350,7 @@ export class PixelBackground {
               : -scroll * 0.15;
         d.x += (drift + d.vx) * dt * ps;
         d.y += d.vy * dt * ps;
+        if (set.kind === "bubbles") d.x += Math.sin(this.time * 3 + d.phase) * 14 * dt;
         const flicker = set.kind === "embers" ? 0.6 + 0.4 * Math.sin(this.time * 9 + d.x) : 1;
         d.setAlpha(set.alpha * d.base * flicker);
         if (d.y > H + 20 || d.y < -90 || d.x < -20) this.resetPart(d, set.kind, false);
@@ -366,6 +426,25 @@ function floorGlowTexture(scene) {
     ctx.fillStyle = `rgba(255,255,255,${bands[b]})`;
     ctx.fillRect(0, y, 4, 1);
   }
+  c.refresh();
+  c.setFilter(Phaser.Textures.FilterMode.NEAREST);
+}
+
+/** Stepped light-ray strip for the Tidal Sky: brightest in the middle, fading down. */
+function lightRayTexture(scene) {
+  if (scene.textures.exists("lightray")) return;
+  const w = 8;
+  const h = 48;
+  const c = scene.textures.createCanvas("lightray", w, h);
+  const ctx = c.getContext();
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const core = x >= 2 && x <= 5 ? 1 : 0.5;
+      const a = core * Math.max(0, 1 - Math.floor((y / h) * 6) / 6);
+      if (a <= 0) continue;
+      ctx.fillStyle = `rgba(255,255,255,${(a * 0.9).toFixed(2)})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
   c.refresh();
   c.setFilter(Phaser.Textures.FilterMode.NEAREST);
 }

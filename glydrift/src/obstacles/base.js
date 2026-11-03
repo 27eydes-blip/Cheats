@@ -59,3 +59,25 @@ export class PxObstacle {
     return this.x + this.halfW;
   }
 }
+
+/** Harmless fields: the manager asks inside() and lets them add their effect to the frame. */
+export class Field extends PxObstacle {
+  constructor(mgr, type, tex, alpha) {
+    super(mgr);
+    this.type = type;
+    this.kind = "field";
+    this.strip = this.add(
+      this.scene.add.tileSprite(0, 0, 100, 100, tex).setOrigin(0.5, 0).setDepth(1).setAlpha(alpha),
+    );
+  }
+  arm(x) {
+    super.arm(x);
+    this.strip.setTileScale(S);
+  }
+  inside(px) {
+    return Math.abs(px - this.x) < this.halfW;
+  }
+  clearance() {
+    return Infinity;
+  }
+}
