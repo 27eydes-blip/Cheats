@@ -488,7 +488,8 @@ export class GameScene extends Phaser.Scene {
     // speed & distance
     if (playing) {
       this.updateSpeedMul(rawDt, freeze);
-      this.speed = speedForMeters(this.meters) * this.speedMul;
+      // some heroes fly faster than the rest (WALLRUNNER)
+      this.speed = speedForMeters(this.meters) * this.speedMul * (this.charDef.speed ?? 1);
       this.scroll = this.speed;
     } else if (this.state === "ready") {
       this.scroll = WORLD.baseSpeed * 0.55;

@@ -733,7 +733,7 @@ export const CHARACTERS = [
     id: "wallrunner",
     name: "WALLRUNNER",
     title: "Leprechaun",
-    rarity: "epic",
+    rarity: "legendary",
     color: 0x2aa83a,
     color2: 0xff2a10,
     texture: "hero_wallrunner",
@@ -752,8 +752,9 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.64,
-    cost: 3000,
-    desc: "Lucky gold trail. Leaps in a shower of gold.",
+    cost: 5000,
+    speed: 1.2, // EXTRA FAST: the whole run moves 20% quicker
+    desc: "EXTRA FAST: everything flies by 20% quicker.",
   },
   {
     id: "manny",
