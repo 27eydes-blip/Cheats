@@ -485,6 +485,61 @@ export function milzzz(f) {
   return pc.outline(0x062a0a, 1, true);
 }
 
+// ------------------------------------------------------------------ MANNY — black bear, gold nose
+// Frames: 0 / 1 standing (chest breathes), 2 = the leap (paws flung forward and back).
+export function manny(f) {
+  const pc = new PixelCanvas(24, 24);
+  const B = 0x2a2a38; // black fur (lifted a touch so it reads on dark skies)
+  const HI = 0x4a4a60;
+  const leap = f === 2;
+  // legs
+  if (leap) {
+    pc.poly(
+      [
+        [6, 15],
+        [0, 17],
+        [1, 19],
+        [7, 18],
+      ],
+      B,
+    ); // back legs kicked out
+    pc.poly(
+      [
+        [15, 15],
+        [21, 17],
+        [20, 19],
+        [14, 18],
+      ],
+      B,
+    ); // front paws reaching
+    pc.set(21, 18, 0xd8d0c0).set(0, 18, 0xd8d0c0); // claws
+  } else {
+    pc.rect(6, 17, 3, 3, B).rect(13, 17, 3, 3, B);
+    pc.set(8, 19, 0xd8d0c0).set(15, 19, 0xd8d0c0);
+  }
+  // body + tail stub
+  pc.ellipse(10.5, 13.5, 6.5, f === 1 ? 5.2 : 4.9, B);
+  pc.circle(3.6, 11.5, 1.4, B);
+  pc.hline(7, 13, 10, HI); // back sheen
+  // head + round ears standing clear of it
+  pc.circle(16.5, 10.5, 4, B);
+  for (const ex of [13, 19]) {
+    pc.circle(ex, 4.6, 1.8, B);
+    pc.set(ex, 5, 0x9a7262); // pink-brown inner ear
+    pc.set(ex - 1, 3, HI).set(ex, 3, HI); // light catching the ear tops
+  }
+  for (let x = 15; x <= 17; x++) for (let y = 2; y <= 5; y++) pc.set(x, y, null); // gap
+  pc.hline(15, 18, 6, HI); // crown of the head catches the light
+  // tan muzzle with the famous GOLD nose (and a glint)
+  pc.ellipse(20, 11.8, 2.3, 1.7, 0xc8a070);
+  pc.rect(21, 10, 2, 2, 0xffd23f);
+  pc.set(22, 11, 0xc8901a).set(21, 10, 0xfff6c0);
+  pc.set(20, 13, 0x6a4a3a); // little mouth
+  eye(pc, 16, 8, 0x1a0a00);
+  shadeEdges(pc, B, 0x16161e);
+  return pc.outline(0x05050a, 1, true);
+}
+
 export const SHOP_DRAW = {
   pip,
   coral,
@@ -498,4 +553,5 @@ export const SHOP_DRAW = {
   leviathan,
   smash,
   milzzz,
+  manny,
 };

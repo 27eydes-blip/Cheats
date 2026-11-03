@@ -403,6 +403,7 @@ export class CharacterScene extends Phaser.Scene {
         leviathan: 4,
         smash: biomeIndex("tidal"),
         milzzz: biomeIndex("valley"),
+        manny: biomeIndex("frozen"),
       }[def.id] ?? 0;
     blendPalette(
       {

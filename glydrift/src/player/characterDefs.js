@@ -730,6 +730,31 @@ export const CHARACTERS = [
     desc: "Aurora trail. Dissolves into stardust.",
   },
   {
+    id: "manny",
+    name: "MANNY",
+    title: "Gold-Nosed Black Bear",
+    rarity: "epic",
+    color: 0xffd23f,
+    color2: 0x2a2a38,
+    texture: "hero_manny",
+    pixel: {
+      atlas: "pxc",
+      frames: ["manny_0", "manny_1", "manny_2"],
+      mode: "leap",
+      trail: [0xfff6c0, 0xffd23f, 0xc8901a, 0x4a4a60],
+    },
+    fx: {
+      flap: { kind: "star", color: 0xffd23f, n: 5 },
+      death: [
+        { kind: "dot", color: 0x4a4a60, n: 34 },
+        { kind: "star", color: 0xffd23f, n: 22 },
+      ],
+    },
+    scale: 0.64,
+    cost: 2500,
+    desc: "Gold sparkle trail. Leaps nose-first.",
+  },
+  {
     id: "milzzz",
     name: "MILZZZ",
     title: "Red-Eyed Tree Frog",
