@@ -134,7 +134,7 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
       // the burst, in the rarity colour
       flash.fillAlpha = reduceFlashing() ? 0.08 : 0.38; // Reduce Flashing: a soft glow only
       scene.tweens.add({ targets: flash, fillAlpha: 0, duration: 380 });
-      burst(scene, cont, W / 2, cy, rc, def.rarity === "legendary" ? 44 : 30);
+      burst(scene, cont, W / 2, cy, rc, { ultra: 70, mega: 56, legendary: 44 }[def.rarity] ?? 30);
       for (const [s, d] of [
         [7, 0],
         [10, 120],

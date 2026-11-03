@@ -733,7 +733,7 @@ export const CHARACTERS = [
     id: "milzzz",
     name: "MILZZZ",
     title: "Red-Eyed Tree Frog",
-    rarity: "epic",
+    rarity: "ultra",
     color: 0x39d84a,
     color2: 0xff2a2a,
     texture: "hero_milzzz",
@@ -752,8 +752,15 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    cost: 2000,
-    desc: "Leaf trail. Leaps with every flap.",
+    // the hardest hero to get: ALL of these, then the coins
+    cost: 20000,
+    requires: [
+      { stat: "dimensions", value: 4, text: "Discover all 4 dimensions" },
+      { stat: "maxDistance", value: 5000, text: "Fly 5000m in one run" },
+    ],
+    // tap again right after a jump for a higher second leap
+    doubleJump: { window: 0.3, boost: 1.3, cooldown: 1.0 },
+    desc: "DOUBLE JUMP: tap twice fast for a higher leap.",
   },
   {
     id: "smash",

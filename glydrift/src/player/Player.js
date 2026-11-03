@@ -21,6 +21,9 @@ export class Player {
     this.sizeMul = 1;
     this.alive = true;
     this.hoverT = 0;
+    this.t = 0;
+    this.lastFlapT = -9;
+    this.djReadyT = 0;
     this.rig.reset(this.x, this.y);
     this.rig.angle = 0;
   }
@@ -33,12 +36,19 @@ export class Player {
     return this.miniT > 0;
   }
 
+  /** @returns true when this tap was a double jump (heroes with `doubleJump` only) */
   flap() {
-    if (!this.alive) return;
+    if (!this.alive) return false;
     const mul = this.mini ? PHYSICS.miniFlapMul : 1;
-    this.vy = PHYSICS.flapVelocity * mul * this.gravityDir;
+    const dj = this.def.doubleJump;
+    const dbl = !!dj && this.t - this.lastFlapT < dj.window && this.t >= this.djReadyT;
+    if (dbl) this.djReadyT = this.t + dj.cooldown;
+    this.lastFlapT = this.t;
+    this.vy = PHYSICS.flapVelocity * mul * (dbl ? dj.boost : 1) * this.gravityDir;
     this.rig.gravityDir = this.gravityDir;
     this.rig.flap();
+    if (dbl) this.rig.doubleJump();
+    return dbl;
   }
 
   flipGravity(dir) {
@@ -61,6 +71,7 @@ export class Player {
   }
 
   update(dt, scroll) {
+    this.t += dt;
     if (this.alive) {
       // mini timer with smooth size easing
       if (this.miniT > 0) this.miniT = Math.max(0, this.miniT - dt);

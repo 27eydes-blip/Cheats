@@ -144,6 +144,21 @@ export class CharacterRig {
     }
   }
 
+  /** Second leap in the air: a lily-pad shockwave below and a spray of leaves. */
+  doubleJump() {
+    this.flapT = 0;
+    this.sx = 0.6;
+    this.sy = 1.5;
+    if (!this.fx) return;
+    const { x, y, fx, def } = this;
+    const oy = 16 * this.gravityDir * this.u;
+    fx.ring(x, y + oy, def.color, { scale: 0.9 * this.u, duration: 380, width: 3 });
+    fx.ring(x, y + oy, 0xffffff, { scale: 0.55 * this.u, duration: 260 });
+    const down = this.gravityDir > 0 ? { min: 30, max: 150 } : { min: 210, max: 330 };
+    fx.burst("dot", x, y + oy, 14, 0x8aff7a, { angle: down, speed: { min: 120, max: 360 } });
+    fx.burst("star", x, y, 6, def.color2 ?? 0xffffff);
+  }
+
   // ------------------------------------------------------------------ death
   /** Returns hints for the scene's death effects (flash strength, camera shake). */
   die() {

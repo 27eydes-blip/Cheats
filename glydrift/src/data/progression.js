@@ -387,6 +387,17 @@ export const Progression = {
     return !!Save.data.unlocked[id];
   },
 
+  /** A stat by name; "dimensions" = how many dimensions this save has discovered. */
+  statOf(stat) {
+    const s = Save.data;
+    return stat === "dimensions" ? dimensionsFound(s) : s.stats[stat] || 0;
+  },
+
+  /** Heroes with `requires` need every listed goal done before they can be bought. */
+  requirementsMet(def) {
+    return (def.requires || []).every((r) => Progression.statOf(r.stat) >= r.value);
+  },
+
   challengeMet(def) {
     if (!def.challenge) return false;
     return (Save.data.stats[def.challenge.stat] || 0) >= def.challenge.value;
@@ -402,6 +413,7 @@ export const Progression = {
     const def = getCharacter(id);
     if (def.lottery || !def.cost) return false; // Lucky Spin heroes are never for sale
     if (!onSale(def)) return false; // limited-time heroes only inside their window
+    if (!Progression.requirementsMet(def)) return false;
     if (s.unlocked[id] || s.coins < def.cost) return false;
     s.coins -= def.cost;
     s.unlocked[id] = true;
@@ -445,7 +457,9 @@ export const Progression = {
   /** "Almost there" helper: the cheapest locked character and how far away it is. */
   nextUnlockHint() {
     const s = Save.data;
-    const locked = CHARACTERS.filter((c) => !s.unlocked[c.id] && !c.lottery && !c.limited);
+    const locked = CHARACTERS.filter(
+      (c) => !s.unlocked[c.id] && !c.lottery && !c.limited && !c.requires,
+    );
     if (!locked.length) return null;
     let best = null;
     for (const c of locked) {

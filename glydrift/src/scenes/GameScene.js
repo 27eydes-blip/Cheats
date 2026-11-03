@@ -280,8 +280,14 @@ export class GameScene extends Phaser.Scene {
     if (this.hudReady?.isOverHud?.(pointer)) return;
     if (this.state === "ready") this.startRun();
     else if (this.state === "playing") {
-      this.player.flap();
+      const dbl = this.player.flap();
       this.run.flaps++;
+      if (dbl) {
+        Sfx.doubleJump();
+        Haptics.light();
+        const p = this.player;
+        this.fx.floatText(p.x + 30, p.y - 46, "DOUBLE JUMP!", "#8aff7a", 40);
+      }
       Sfx.flap(this.charDef.id);
     }
   }

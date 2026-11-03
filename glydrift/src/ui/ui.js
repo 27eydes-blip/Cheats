@@ -354,6 +354,13 @@ export function toast(
 }
 
 export function rarityColor(rarity, time = 0) {
+  if (rarity === "ultra") {
+    // spectrum cycle that flares to white on a heartbeat — the rarest glow in the game
+    const c = Phaser.Display.Color.HSVToRGB((time * 0.3) % 1, 0.75, 1);
+    const w = Math.max(0, Math.sin(time * 5)) ** 6;
+    const mix = (v) => Math.round(v + (255 - v) * w);
+    return (mix(c.r) << 16) | (mix(c.g) << 8) | mix(c.b);
+  }
   if (rarity === "mega") {
     // fast, fully saturated spectrum cycle — louder than legendary
     const c = Phaser.Display.Color.HSVToRGB((time * 0.45) % 1, 0.85, 1);

@@ -211,7 +211,7 @@ export class CharacterScene extends Phaser.Scene {
     drawNeonRect(g, -CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 26, col, {
       fill: 0x0b0520,
       fillAlpha: 0.88,
-      width: def.rarity === "mega" ? 7 : def.rarity === "legendary" ? 5 : 3,
+      width: { ultra: 9, mega: 7, legendary: 5 }[def.rarity] ?? 3,
     });
     // inner rarity sheen
     g.fillStyle(col, 0.08);
@@ -296,10 +296,17 @@ export class CharacterScene extends Phaser.Scene {
       this.actionBtn.setEnabled(true);
       alt = `Only from the Lucky Spin\nEarn a spin every 1000 points · you have ${s.spins || 0}`;
     } else {
-      this.actionBtn.setLabel(`UNLOCK  ${def.cost}`);
-      this.actionBtn.setColor(0xffc83d);
-      this.actionBtn.setEnabled(s.coins >= def.cost);
+      const reqOk = Progression.requirementsMet(def);
+      this.actionBtn.setLabel(reqOk ? `UNLOCK  ${def.cost}` : `LOCKED · ${def.cost}`);
+      this.actionBtn.setColor(def.requires ? (reqOk ? 0x39ff6a : 0x8a80b0) : 0xffc83d);
+      this.actionBtn.setEnabled(reqOk && s.coins >= def.cost);
       const bits = [];
+      // must-do goals (all of them) before the coins can be spent
+      for (const r of def.requires || []) {
+        const cur = Math.min(Progression.statOf(r.stat), r.value);
+        bits.push(`${cur >= r.value ? "✓" : "✗"} ${r.text} (${cur}/${r.value})`);
+      }
+      if (def.requires) bits.push(`${s.coins >= def.cost ? "✓" : "✗"} ${def.cost} coins`);
       if (def.shards)
         bits.push(`${s.shards[def.id] || 0}/${def.shards} shards (daily streak & levels)`);
       if (def.challenge) {
@@ -309,7 +316,12 @@ export class CharacterScene extends Phaser.Scene {
       }
       alt = bits.join("\n");
     }
-    this.altText.setText(alt);
+    // a long requirement list hangs below the button instead of centring on its baseline
+    const list = !owned && !!def.requires;
+    this.altText
+      .setText(alt)
+      .setOrigin(0.5, list ? 0 : 0.5)
+      .setY(this.H * 0.88 + (list ? 58 : 72));
     this.challengeBar?.g.destroy();
     this.challengeBar = null;
     if (!owned && def.challenge) {
@@ -444,7 +456,7 @@ export class CharacterScene extends Phaser.Scene {
       c.scaleY = sc;
       c.alpha = Phaser.Math.Clamp(1 - ao * 0.38, 0, 1);
       c.setDepth(100 - ao * 10);
-      if (c.def.rarity === "legendary" || c.def.rarity === "mega") this.drawCard(c);
+      if (["legendary", "mega", "ultra"].includes(c.def.rarity)) this.drawCard(c);
     }
     // limited-time countdown ticks once a second
     if (def.limited && Math.floor(this.t) !== this.lastTick) {

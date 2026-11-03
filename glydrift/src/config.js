@@ -154,6 +154,7 @@ export const RARITY = {
   epic: { label: "EPIC", color: 0xb45cff },
   legendary: { label: "LEGENDARY", color: 0xffc83d },
   mega: { label: "MEGA LEGENDARY", color: 0xff3a8a },
+  ultra: { label: "ULTRA LEGENDARY", color: 0x39ff6a },
 };
 
 export const FONT = '"Orbitron", "Avenir Next", system-ui, sans-serif';

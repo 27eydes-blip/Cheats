@@ -74,6 +74,7 @@ const FLAP = {
   pengu: () => tone({ type: "sawtooth", f0: 160, f1: 120, dur: 0.1, vol: 0.08 }),
   jelly: () => tone({ type: "sine", f0: 700, f1: 520, dur: 0.12, vol: 0.18 }),
   comet: () => tone({ type: "sawtooth", f0: 220, f1: 440, dur: 0.1, vol: 0.08 }),
+  milzzz: () => tone({ type: "sine", f0: 420, f1: 760, dur: 0.07, vol: 0.2 }),
   leviathan: () => tone({ type: "sine", f0: 140, f1: 90, dur: 0.16, vol: 0.3 }),
   nova: () => {
     tone({ type: "sine", f0: 660, f1: 990, dur: 0.12, vol: 0.2 });
@@ -84,6 +85,11 @@ const FLAP = {
 export const Sfx = {
   unlock: () => Music.unlock(),
   flap: (id) => (FLAP[id] || FLAP.volt)(),
+  /** frog double jump: a springy two-step "boing" */
+  doubleJump: () => {
+    tone({ type: "sine", f0: 300, f1: 900, dur: 0.12, vol: 0.22 });
+    tone({ type: "triangle", f0: 600, f1: 1500, dur: 0.1, vol: 0.12, delay: 0.06 });
+  },
   /** step = how many coins in a row (rising notes) */
   coin: (step = 0) => {
     const f = semis(1180, step);
