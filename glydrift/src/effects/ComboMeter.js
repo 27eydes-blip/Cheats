@@ -10,8 +10,8 @@ export class ComboMeter {
     this.scene = scene;
     this.labels = {};
     for (const m of TIERS) {
-      this.labels[m] = neonText(scene, 0, 0, `x${m}`, m === 10 ? 50 : 42, TIER_COLORS[m], {
-        blur: 12,
+      this.labels[m] = neonText(scene, 0, 0, `x${m}`, m === 10 ? 40 : 34, TIER_COLORS[m], {
+        blur: 10,
       })
         .setDepth(depth)
         .setVisible(false);
@@ -38,15 +38,15 @@ export class ComboMeter {
     const t = this.labels[this.mult];
     this.pop = Math.max(0, this.pop - dt * 5);
     const s = 1 + this.pop * this.pop * 0.6;
-    const lx = Math.round(x + 74);
-    const ly = Math.round(y - 78);
+    const lx = Math.round(x + 66);
+    const ly = Math.round(y - 70);
     t.setPosition(lx, ly)
       .setScale(s)
       .setAlpha(frac < 0.25 ? 0.55 + 0.45 * Math.sin(frac * 60) ** 2 : 1);
-    const w = 64;
+    const w = 52;
     const g = this.bar;
     g.clear();
-    g.fillStyle(0x000000, 0.45).fillRect(lx - w / 2, ly + 28, w, 6);
-    g.fillStyle(TIER_COLORS[this.mult], 1).fillRect(lx - w / 2, ly + 28, Math.round(w * frac), 6);
+    g.fillStyle(0x000000, 0.45).fillRect(lx - w / 2, ly + 23, w, 5);
+    g.fillStyle(TIER_COLORS[this.mult], 1).fillRect(lx - w / 2, ly + 23, Math.round(w * frac), 5);
   }
 }
