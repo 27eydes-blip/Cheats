@@ -456,7 +456,11 @@ export function milzzz(f) {
   for (let x = 7; x <= 14; x++) pc.set(x, 15, x % 2 ? 0x2a6aff : 0xffe14d);
   // throat sac pulses while sitting
   if (f === 1) pc.ellipse(18.5, 14, 2, 1.4, 0xfff4c8);
-  pc.hline(18, 21, 13, 0x1a7a2a); // smile
+  // snarl: mouth slants down toward the front, with a fang
+  pc.hline(17, 19, 13, 0x0a3a12).hline(20, 21, 14, 0x0a3a12);
+  pc.set(20, 15, 0xffffff);
+  // spiky ridge down the back
+  for (const x of [7, 10, 13]) pc.set(x, 8, B).set(x + 1, 9, B);
   // front arm with orange toe pads
   const ay = leap ? 15 : 17;
   pc.vline(18, 14, ay, B);
@@ -464,11 +468,19 @@ export function milzzz(f) {
     .set(17, ay + 1, TOE)
     .set(18, ay + 1, TOE);
   // the famous red eyes: a small far eye and the big near one, vertical black pupils
-  pc.circle(14, 8, 1.7, 0xd81a1a);
-  pc.circle(17.5, 7.5, leap ? 3 : 2.6, 0xff2a2a);
-  pc.vline(17, 6, 9, 0x0a0a0a);
-  pc.vline(18, 6, 9, 0x0a0a0a);
-  pc.set(16, 6, 0xffb0a0);
+  // skin bulge over the eyes so the brow reads against green, not the outline
+  pc.ellipse(16.5, 5.5, 4.2, 2.2, B);
+  pc.circle(13.5, 8.5, 1.6, 0xd81a1a); // far eye
+  pc.circle(17.5, 8.5, leap ? 2.9 : 2.6, 0xff2a2a);
+  pc.vline(18, 8, 10, 0x0a0a0a); // thin slit pupil, glaring forward
+  // heavy angry brow slanting DOWN toward the snout, chopping the top off the eye
+  for (let x = 12; x <= 21; x++) {
+    const y = 5 + Math.round((x - 12) * 0.25);
+    pc.set(x, y, 0x0a3a12);
+    if (x < 17) pc.set(x, y - 1, 0x0a3a12); // thicker over the back of the eye
+  }
+  // battle scar over the cheek
+  pc.set(15, 10, 0xd81a1a).set(16, 11, 0xd81a1a).set(17, 12, 0xd81a1a);
   shadeEdges(pc, B, 0x1f9a34);
   return pc.outline(0x062a0a, 1, true);
 }
