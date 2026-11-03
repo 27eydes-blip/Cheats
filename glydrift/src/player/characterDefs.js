@@ -34,8 +34,8 @@ export const CHARACTERS = [
       trail: [0xfff1a0, 0xffa21a, 0xff5a1a, 0xb01000],
     },
     scale: 0.64,
-    cost: 750,
-    shards: 3,
+    cost: 1500,
+    shards: 5,
     desc: "Fire trail. Bursts into flames.",
   },
   {
@@ -53,9 +53,9 @@ export const CHARACTERS = [
       trail: [0xffffff, 0xbff4ff, 0x7fd0ff, 0x3a8ad8],
     },
     scale: 0.6,
-    cost: 1000,
-    shards: 3,
-    challenge: { stat: "maxBiome", value: 2, text: "Reach the Frozen Nebula" },
+    cost: 2000,
+    shards: 5,
+    challenge: { stat: "maxBiome", value: 3, text: "Reach the Glitch Realm" },
     desc: "Frost trail. Shatters into snowflakes.",
   },
   {
@@ -73,8 +73,8 @@ export const CHARACTERS = [
       trail: [0xe0c8ff, 0xb45cff, 0x6a2cc0, 0x2a1060],
     },
     scale: 0.62,
-    cost: 2500,
-    challenge: { stat: "maxNearRun", value: 12, text: "12 near-misses in one run" },
+    cost: 5000,
+    challenge: { stat: "maxNearRun", value: 18, text: "18 near-misses in one run" },
     desc: "Afterimage trail. Dissolves into smoke.",
   },
   {
@@ -92,8 +92,8 @@ export const CHARACTERS = [
       trail: [0xff2050, 0x39ff88, 0x20c8ff, 0x39ff88],
     },
     scale: 0.56,
-    cost: 3000,
-    challenge: { stat: "maxBiome", value: 3, text: "Reach the Glitch Realm" },
+    cost: 6000,
+    challenge: { stat: "maxBiome", value: 4, text: "Reach the Abyss" },
     desc: "RGB-split trail. Glitches out of existence.",
   },
   {
@@ -111,8 +111,8 @@ export const CHARACTERS = [
       trail: [0xffffff, 0xfff1a8, 0xff7ad9, 0x7ad8ff, 0x8aff8a],
     },
     scale: 0.66,
-    cost: 8000,
-    challenge: { stat: "maxDistance", value: 2500, text: "Fly 2500m in one run" },
+    cost: 16000,
+    challenge: { stat: "maxDistance", value: 5000, text: "Fly 5000m in one run" },
     desc: "Rainbow light trail. Goes supernova.",
   },
   {
@@ -137,8 +137,8 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.6,
-    cost: 1200,
-    shards: 3,
+    cost: 2400,
+    shards: 5,
     desc: "Petal trail. Bursts into blossoms.",
   },
   {
@@ -163,8 +163,8 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.6,
-    cost: 1500,
-    challenge: { stat: "maxPortalsRun", value: 4, text: "Pass 4 portals in one run" },
+    cost: 3000,
+    challenge: { stat: "maxPortalsRun", value: 6, text: "Pass 6 portals in one run" },
     desc: "Bubble trail. Pops into a splash.",
   },
   {
@@ -189,8 +189,8 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.6,
-    cost: 4000,
-    challenge: { stat: "maxLasersRun", value: 10, text: "Pass 10 lasers in one run" },
+    cost: 8000,
+    challenge: { stat: "maxLasersRun", value: 15, text: "Pass 15 lasers in one run" },
     desc: "Exhaust trail. Blows a fuse.",
   },
   {
@@ -215,8 +215,8 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.64,
-    cost: 10000,
-    challenge: { stat: "maxBiome", value: 4, text: "Reach the Abyss" },
+    cost: 20000,
+    challenge: { stat: "maxBiome", value: 5, text: "Reach the Peaceful Valley" },
     desc: "Dragonfire trail. Erupts in flames.",
   },
   {
@@ -241,7 +241,7 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    cost: 300,
+    cost: 600,
     desc: "Feather-light trail. Poofs into fluff.",
   },
   {
@@ -266,7 +266,7 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    cost: 450,
+    cost: 900,
     desc: "Bubble trail. Pops like a balloon.",
   },
   {
@@ -291,7 +291,7 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    cost: 600,
+    cost: 1200,
     desc: "Leaf trail. Scatters into petals.",
   },
   {
@@ -316,8 +316,8 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    cost: 900,
-    shards: 3,
+    cost: 1800,
+    shards: 5,
     desc: "Ruby trail. Bursts into gems.",
   },
   {
@@ -342,8 +342,8 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    cost: 1100,
-    challenge: { stat: "maxBiome", value: 2, text: "Reach the Frozen Nebula" },
+    cost: 2200,
+    challenge: { stat: "maxBiome", value: 3, text: "Reach the Glitch Realm" },
     desc: "Jet trail. Sputters out in smoke.",
   },
   {
@@ -368,8 +368,8 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    cost: 1300,
-    shards: 3,
+    cost: 2600,
+    shards: 5,
     desc: "Glow trail. Fades into sparkles.",
   },
   {
@@ -395,8 +395,8 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    cost: 3500,
-    challenge: { stat: "maxDistance", value: 1800, text: "Fly 1800m in one run" },
+    cost: 7000,
+    challenge: { stat: "maxDistance", value: 3600, text: "Fly 3600m in one run" },
     desc: "Rocket trail. Goes out with a bang.",
   },
   {
@@ -421,8 +421,8 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    cost: 4500,
-    challenge: { stat: "maxNearRun", value: 15, text: "15 near-misses in one run" },
+    cost: 9000,
+    challenge: { stat: "maxNearRun", value: 22, text: "22 near-misses in one run" },
     desc: "Scarf trail. Vanishes in smoke.",
   },
   {
@@ -448,8 +448,8 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    cost: 5500,
-    challenge: { stat: "maxPortalsRun", value: 6, text: "Pass 6 portals in one run" },
+    cost: 11000,
+    challenge: { stat: "maxPortalsRun", value: 9, text: "Pass 9 portals in one run" },
     desc: "Holy trail. Ascends in light.",
   },
   {
@@ -475,8 +475,8 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    cost: 12000,
-    challenge: { stat: "maxDistance", value: 3000, text: "Fly 3000m in one run" },
+    cost: 24000,
+    challenge: { stat: "maxDistance", value: 6000, text: "Fly 6000m in one run" },
     desc: "Tidal trail. Crashes like a wave.",
   },
   {
@@ -745,7 +745,7 @@ export const CHARACTERS = [
       trail: [0xfff6c0, 0xffd23f, 0xc8901a],
     },
     scale: 0.64,
-    cost: 12000,
+    cost: 24000,
     challenge: { stat: "maxNearRun", value: 50, text: "Do 50 near-misses in one run" },
     desc: "All arms. No body. No problem.",
   },
@@ -772,7 +772,7 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.64,
-    cost: 6000,
+    cost: 12000,
     desc: "Ice-spray trail. Every flap is a slap shot.",
   },
   {
@@ -797,7 +797,7 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.64,
-    cost: 6000,
+    cost: 12000,
     desc: "Matte-blue dash trail. Pounces on every flap.",
   },
   {
@@ -823,7 +823,7 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.64,
-    cost: 5000,
+    cost: 10000,
     speed: 1.2, // EXTRA FAST: the whole run moves 20% quicker
     coinMul: 15, // every coin he grabs is worth 15
     desc: "EXTRA FAST, and every coin he grabs is worth 15x.",
@@ -850,7 +850,7 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.64,
-    cost: 2500,
+    cost: 5000,
     spinPool: true, // for sale AND a possible Lucky Spin prize
     desc: "Gold sparkle trail. Leaps nose-first.",
   },
@@ -878,7 +878,7 @@ export const CHARACTERS = [
     },
     scale: 0.62,
     // reach any dimension, then the coins
-    cost: 20000,
+    cost: 40000,
     requires: [{ stat: "dimensions", value: 1, text: "Discover a dimension" }],
     // tap again right after a jump for a higher second leap
     doubleJump: { window: 0.3, boost: 1.3, cooldown: 1.0 },
@@ -907,7 +907,7 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.64,
-    cost: 1500,
+    cost: 3000,
     // only for sale inside this window (UTC); owned forever once bought
     limited: { start: "2026-11-03T14:00:00Z", end: "2026-11-04T14:00:00Z" },
     desc: "Rainbow trail. Every flap is a sonic punch.",

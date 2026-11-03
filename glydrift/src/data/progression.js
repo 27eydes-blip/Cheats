@@ -283,20 +283,20 @@ export const LEVEL_REWARDS = {
 };
 
 /** Points per Lucky Spin. */
-export const SPIN_EVERY = 1000;
+export const SPIN_EVERY = 2500;
 /** The wheel, clockwise from the top. Weights are relative chances. */
 export const SPIN_SLICES = [
   { type: "coins", amount: 100, weight: 20 },
-  { type: "hero", weight: 10 },
+  { type: "hero", weight: 4 },
   { type: "coins", amount: 200, weight: 18 },
   { type: "spins", amount: 2, weight: 8 }, // two free spins back
   { type: "coins", amount: 150, weight: 18 },
-  { type: "hero", weight: 10 },
+  { type: "hero", weight: 4 },
   { type: "jackpot", amount: 2000, weight: 3 },
   { type: "coins", amount: 400, weight: 13 },
 ];
 /** A hero is guaranteed after this many spins in a row without one (while any are left). */
-export const SPIN_PITY = 12;
+export const SPIN_PITY = 30;
 /** Most spins a multi-spin uses at once. */
 export const SPIN_MULTI_MAX = 20;
 

@@ -1,4 +1,4 @@
-// Lucky Spin: spend spins (earned every 1000 points) on a prize wheel — coins, or one of ten
+// Lucky Spin: spend spins (earned every 2500 points) on a prize wheel — coins, or one of ten
 // heroes you can only win here. The prize is rolled first; the wheel then lands on it.
 import Phaser from "phaser";
 import { PORTRAIT_K } from "../pixel/common.js";

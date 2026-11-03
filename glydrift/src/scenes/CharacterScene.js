@@ -10,7 +10,7 @@ import { CharacterRig } from "../player/CharacterRig.js";
 import { onSale, saleLeft, visibleCharacters } from "../player/characterDefs.js";
 import { revealHero } from "../ui/reveal.js";
 import { Sfx } from "../audio/sfx.js";
-import { Progression } from "../data/progression.js";
+import { Progression, SPIN_EVERY } from "../data/progression.js";
 import { Save } from "../data/save.js";
 import { CATEGORIES, COSMETICS, getCosmetic, Shop, SKINS } from "../data/cosmetics.js";
 import { HAT_FIT } from "../pixel/cosmeticArt.js";
@@ -326,7 +326,7 @@ export class CharacterScene extends Phaser.Scene {
       this.actionBtn.setLabel("LUCKY SPIN");
       this.actionBtn.setColor(0xff7ad9);
       this.actionBtn.setEnabled(true);
-      alt = `Only from the Lucky Spin\nEarn a spin every 1000 points · you have ${s.spins || 0}`;
+      alt = `Only from the Lucky Spin\nEarn a spin every ${SPIN_EVERY} points · you have ${s.spins || 0}`;
     } else {
       const reqOk = Progression.requirementsMet(def);
       this.actionBtn.setLabel(reqOk ? `UNLOCK  ${def.cost}` : `LOCKED · ${def.cost}`);
