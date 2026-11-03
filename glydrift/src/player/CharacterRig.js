@@ -345,7 +345,8 @@ export class CharacterRig {
     if (mode === "idle") f = Math.floor(this.time * 5) % 3;
     else if (mode === "glitch") f = this.glitchT > 0 ? 2 : Math.floor(this.time * 3) % 2;
     else if (mode === "spin") f = Math.floor(this.time * 20) % 3;
-    else if (mode === "punch") f = this.flapT < 0.14 ? 2 : Math.floor(this.time * 6) % 2;
+    else if (mode === "punch" || mode === "leap")
+      f = this.flapT < 0.14 ? 2 : Math.floor(this.time * 6) % 2;
     else if (mode === "flap")
       f =
         this.flapT < 0.24

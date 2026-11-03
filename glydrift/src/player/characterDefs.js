@@ -730,6 +730,32 @@ export const CHARACTERS = [
     desc: "Aurora trail. Dissolves into stardust.",
   },
   {
+    id: "milzzz",
+    name: "MILZZZ",
+    title: "Red-Eyed Tree Frog",
+    rarity: "epic",
+    color: 0x39d84a,
+    color2: 0xff2a2a,
+    texture: "hero_milzzz",
+    pixel: {
+      atlas: "pxc",
+      frames: ["milzzz_0", "milzzz_1", "milzzz_2"],
+      mode: "leap",
+      trail: [0xfff4c8, 0x8aff7a, 0x39d84a, 0x2a6aff],
+    },
+    fx: {
+      flap: { kind: "dot", color: 0x8aff7a, n: 6 },
+      death: [
+        { kind: "dot", color: 0x39d84a, n: 36 },
+        { kind: "shard", color: 0xff2a2a, n: 16 },
+        { kind: "pixel", color: 0x2a6aff, n: 16 },
+      ],
+    },
+    scale: 0.62,
+    cost: 2000,
+    desc: "Leaf trail. Leaps with every flap.",
+  },
+  {
     id: "smash",
     name: "SMASH",
     title: "Mantis Shrimp",

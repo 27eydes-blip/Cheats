@@ -424,6 +424,55 @@ export function smash(f) {
   return out;
 }
 
+// ------------------------------------------------------------------ MILZZZ — red-eyed tree frog
+// Frames: 0 / 1 sitting (throat pulses), 2 = the leap (legs flung back, eyes wide).
+export function milzzz(f) {
+  const pc = new PixelCanvas(24, 24);
+  const B = 0x39d84a;
+  const TOE = 0xff8a1a;
+  const leap = f === 2;
+  // back leg: folded under the body, or kicked straight back on the leap
+  if (leap) {
+    pc.poly(
+      [
+        [8, 13],
+        [1, 15],
+        [1, 17],
+        [8, 16],
+      ],
+      B,
+    );
+    pc.set(0, 14, TOE).set(0, 16, TOE).set(0, 18, TOE);
+  } else {
+    pc.ellipse(7, 15, 3.4, 2.6, B);
+    pc.hline(4, 9, 18, B);
+    pc.set(3, 18, TOE).set(4, 19, TOE).set(10, 19, TOE).set(9, 19, TOE);
+  }
+  // body + head
+  pc.ellipse(11.5, 13, 6, 4.2, B);
+  pc.circle(17, 11, 4, B);
+  pc.ellipse(12.5, 16.2, 3.8, 1.1, 0xfff4c8); // cream belly
+  // thin blue flank stripe with yellow bars along the lower side
+  for (let x = 7; x <= 14; x++) pc.set(x, 15, x % 2 ? 0x2a6aff : 0xffe14d);
+  // throat sac pulses while sitting
+  if (f === 1) pc.ellipse(18.5, 14, 2, 1.4, 0xfff4c8);
+  pc.hline(18, 21, 13, 0x1a7a2a); // smile
+  // front arm with orange toe pads
+  const ay = leap ? 15 : 17;
+  pc.vline(18, 14, ay, B);
+  pc.set(19, ay + 1, TOE)
+    .set(17, ay + 1, TOE)
+    .set(18, ay + 1, TOE);
+  // the famous red eyes: a small far eye and the big near one, vertical black pupils
+  pc.circle(14, 8, 1.7, 0xd81a1a);
+  pc.circle(17.5, 7.5, leap ? 3 : 2.6, 0xff2a2a);
+  pc.vline(17, 6, 9, 0x0a0a0a);
+  pc.vline(18, 6, 9, 0x0a0a0a);
+  pc.set(16, 6, 0xffb0a0);
+  shadeEdges(pc, B, 0x1f9a34);
+  return pc.outline(0x062a0a, 1, true);
+}
+
 export const SHOP_DRAW = {
   pip,
   coral,
@@ -436,4 +485,5 @@ export const SHOP_DRAW = {
   seraph,
   leviathan,
   smash,
+  milzzz,
 };
