@@ -860,6 +860,7 @@ export class ShopScene extends Phaser.Scene {
             },
           };
     }
+    if (!def.cost) return { label: "CHALLENGE", col: 0xffffff, fill: 0x3a2e70, act: null };
     if (def.requires && !Progression.requirementsMet(def))
       return { label: "LOCKED", col: 0xffffff, fill: 0x3a2e70, act: null };
     return {

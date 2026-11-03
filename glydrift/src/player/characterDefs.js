@@ -1,4 +1,5 @@
 // Pure data for the character roster (no Phaser imports, safe to use in systems).
+import { ANIMALS } from "./animalDefs.js";
 
 export const CHARACTERS = [
   {
@@ -912,6 +913,7 @@ export const CHARACTERS = [
     limited: { start: "2026-11-03T14:00:00Z", end: "2026-11-04T14:00:00Z" },
     desc: "Rainbow trail. Every flap is a sonic punch.",
   },
+  ...ANIMALS,
 ];
 
 /** Heroes that can only be won from the Lucky Spin. */
@@ -919,18 +921,34 @@ export const LOTTERY_HEROES = CHARACTERS.filter((c) => c.lottery);
 
 /** Is a limited-time hero on sale right now? (Always true for normal heroes.) */
 export function onSale(def, now = Date.now()) {
+  // seasonal heroes (Christmas): only during their month, every year
+  if (def.season) return seasonMonth(now) === def.season.month;
   if (!def.limited) return true;
   return now >= Date.parse(def.limited.start) && now < Date.parse(def.limited.end);
 }
 
 /** Milliseconds left on a limited hero's sale (0 when it's over or not limited). */
 export function saleLeft(def, now = Date.now()) {
+  if (def.season) {
+    if (!onSale(def, now)) return 0;
+    const d = new Date(now);
+    return Math.max(0, new Date(d.getFullYear(), d.getMonth() + 1, 1) - now);
+  }
   return def.limited ? Math.max(0, Date.parse(def.limited.end) - now) : 0;
 }
 
 /** Heroes shown in the shop for this save: limited ones only while on sale, or once owned. */
 export function visibleCharacters(unlocked = {}) {
-  return CHARACTERS.filter((c) => !c.limited || unlocked[c.id] || onSale(c));
+  return CHARACTERS.filter((c) => !(c.limited || c.season) || unlocked[c.id] || onSale(c));
+}
+
+/** Calendar month (0-11) for seasonal heroes; test builds can force it (?month=11). */
+let monthOverride = null;
+export function setSeasonMonth(m) {
+  monthOverride = m;
+}
+function seasonMonth(now) {
+  return monthOverride ?? new Date(now).getMonth();
 }
 
 export function getCharacter(id) {

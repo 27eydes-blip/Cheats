@@ -322,6 +322,13 @@ export class CharacterScene extends Phaser.Scene {
       alt = live
         ? `LIMITED · leaves in ${h}h ${String(m).padStart(2, "0")}m ${String(sec).padStart(2, "0")}s\nOwn it forever once unlocked`
         : "This limited hero has left the shop";
+    } else if (!def.cost && def.challenge) {
+      // challenge-only heroes (Abyss / Prism / streak animals): progress shown clearly
+      const cur = Math.min(Progression.statOf(def.challenge.stat), def.challenge.value);
+      this.actionBtn.setLabel(`CHALLENGE  ${cur}/${def.challenge.value}`);
+      this.actionBtn.setColor(0x8a80b0);
+      this.actionBtn.setEnabled(false);
+      alt = `Unlock: ${def.challenge.text}`;
     } else if (def.lottery) {
       this.actionBtn.setLabel("LUCKY SPIN");
       this.actionBtn.setColor(0xff7ad9);
@@ -343,7 +350,7 @@ export class CharacterScene extends Phaser.Scene {
       if (def.shards)
         bits.push(`${s.shards[def.id] || 0}/${def.shards} shards (daily streak & levels)`);
       if (def.challenge) {
-        const cur = Math.min(s.stats[def.challenge.stat] || 0, def.challenge.value);
+        const cur = Math.min(Progression.statOf(def.challenge.stat), def.challenge.value);
         const shown = def.challenge.stat === "maxBiome" ? "" : ` (${cur}/${def.challenge.value})`;
         bits.push(`or challenge: ${def.challenge.text}${shown}`);
       }

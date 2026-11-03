@@ -24,6 +24,7 @@ import { Music } from "./audio/music.js";
 import { Save } from "./data/save.js";
 import { Leaderboard } from "./online/leaderboard.js";
 import { TEST } from "./systems/testFlags.js";
+import { CHARACTERS, setSeasonMonth } from "./player/characterDefs.js";
 
 async function boot() {
   // make sure the display fonts are ready before any Text is rasterised
@@ -182,7 +183,9 @@ async function boot() {
   document.addEventListener("visibilitychange", () => setTimeout(updateSafe, 100));
   for (const ms of [300, 1000, 2500]) setTimeout(updateSafe, ms);
   window.__glydrift = game;
-  if (TEST.on) window.__leaderboard = Leaderboard; // test builds: lets scripts stub the board
+  if (TEST.month !== null) setSeasonMonth(TEST.month);
+  if (TEST.on) window.__leaderboard = Leaderboard;
+  if (TEST.on) window.__heroDefs = CHARACTERS; // test builds: lineup screenshots // test builds: lets scripts stub the board
   window.__music = Music; // handy for debugging / the music test page
 }
 

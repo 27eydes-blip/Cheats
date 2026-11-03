@@ -211,7 +211,7 @@ export const ACHIEVEMENTS = [
     name: "Full Roster",
     desc: "Unlock every character",
     glyph: "C",
-    check: (s) => CHARACTERS.every((c) => c.limited || s.unlocked[c.id]),
+    check: (s) => CHARACTERS.every((c) => c.limited || c.season || s.unlocked[c.id]),
   },
   {
     id: "legend",
@@ -361,6 +361,7 @@ export const Progression = {
     if (!st.canClaim) return null;
     const s = Save.data;
     s.login.streak = st.streak;
+    s.stats.maxStreak = Math.max(s.stats.maxStreak || 0, st.streak);
     s.login.last = todayKey();
     s.login.claimed = todayKey();
     const reward = LOGIN_REWARDS[st.day - 1];
@@ -368,6 +369,7 @@ export const Progression = {
     s.stats.coins += 0;
     const out = { ...reward, day: st.day, streak: st.streak };
     if (reward.shard) out.shardResult = Progression.grantShard();
+    out.unlocks = Progression.checkChallengeUnlocks(); // Bao: a login-streak hero
     Progression.checkAchievements();
     Save.write();
     return out;
@@ -402,7 +404,10 @@ export const Progression = {
   /** A stat by name; "dimensions" = how many dimensions this save has discovered. */
   statOf(stat) {
     const s = Save.data;
-    return stat === "dimensions" ? dimensionsFound(s) : s.stats[stat] || 0;
+    if (stat === "dimensions") return dimensionsFound(s);
+    if (stat === "prismFound") return s.dimensions?.prism ? 1 : 0;
+    if (stat === "maxStreak") return Math.max(s.stats.maxStreak || 0, s.login?.streak || 0);
+    return s.stats[stat] || 0;
   },
 
   /** Heroes with `requires` need every listed goal done before they can be bought. */
@@ -412,12 +417,12 @@ export const Progression = {
 
   challengeMet(def) {
     if (!def.challenge) return false;
-    return (Save.data.stats[def.challenge.stat] || 0) >= def.challenge.value;
+    return Progression.statOf(def.challenge.stat) >= def.challenge.value;
   },
 
   challengeProgress(def) {
     if (!def.challenge) return 0;
-    return Math.min(1, (Save.data.stats[def.challenge.stat] || 0) / def.challenge.value);
+    return Math.min(1, Progression.statOf(def.challenge.stat) / def.challenge.value);
   },
 
   buy(id) {
@@ -470,7 +475,7 @@ export const Progression = {
   nextUnlockHint() {
     const s = Save.data;
     const locked = CHARACTERS.filter(
-      (c) => !s.unlocked[c.id] && !c.lottery && !c.limited && !c.requires,
+      (c) => !s.unlocked[c.id] && !c.lottery && !c.limited && !c.season && !c.requires,
     );
     if (!locked.length) return null;
     let best = null;
@@ -624,6 +629,12 @@ export const Progression = {
     st.maxBiome = Math.max(st.maxBiome, run.biome);
     st.maxLasersRun = Math.max(st.maxLasersRun, run.lasers);
     st.maxPortalsRun = Math.max(st.maxPortalsRun, run.portals);
+    // animal challenges: the Abyss and the Prism Rift
+    if (run.abyssM > 0) st.abyssRuns = (st.abyssRuns || 0) + 1;
+    st.maxAbyssM = Math.max(st.maxAbyssM || 0, Math.floor(run.abyssM || 0));
+    st.maxAbyssNear = Math.max(st.maxAbyssNear || 0, run.abyssNear || 0);
+    st.maxPrismM = Math.max(st.maxPrismM || 0, Math.floor(run.prismM || 0));
+    st.prismClears = (st.prismClears || 0) + (run.prismClear || 0);
 
     // daily
     if (run.mode === "daily") {
