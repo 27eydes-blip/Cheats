@@ -14,13 +14,14 @@ import { Save } from "../data/save.js";
 import {
   button,
   drawNeonRect,
+  fadeTo,
   hex,
   neonText,
-  ProgressBar,
   plainText,
   popIn,
-  RollingCounter,
+  ProgressBar,
   rarityColor,
+  RollingCounter,
 } from "../ui/ui.js";
 
 const CARD_W = 300;
@@ -321,8 +322,7 @@ export class CharacterScene extends Phaser.Scene {
       return;
     }
     if (def.lottery) {
-      this.cameras.main.fadeOut(200, 5, 1, 13);
-      this.time.delayedCall(200, () => this.scene.start("Spin"));
+      fadeTo(this, "Spin");
       return;
     }
     if (Progression.buy(def.id)) {
@@ -344,8 +344,7 @@ export class CharacterScene extends Phaser.Scene {
   }
 
   leave() {
-    this.cameras.main.fadeOut(200, 5, 1, 13);
-    this.time.delayedCall(200, () => this.scene.start("Menu"));
+    fadeTo(this, "Menu");
   }
 
   update(time, delta) {

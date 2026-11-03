@@ -409,3 +409,9 @@ export function slider(scene, x, y, w, value, color, onChange, { container, labe
   if (container) container.add(items);
   return { items, set: (nv) => ((v = nv), draw()) };
 }
+
+/** Fade the camera to a dark colour, then start another scene (every screen change uses this). */
+export function fadeTo(scene, key, data, { ms = 200, rgb = [5, 1, 13] } = {}) {
+  scene.cameras.main.fadeOut(ms, ...rgb);
+  scene.time.delayedCall(ms, () => scene.scene.start(key, data));
+}

@@ -1,19 +1,12 @@
 // Glowing floor liquids (one 32x8 tileable strip per biome): slime, lava, ice, data, blood.
 // Sits behind the floor spikes so it glows between the teeth; scrolls with the world.
 import { FLOOR } from "./colorShift.js";
-import { addTexture, PixelCanvas } from "./px.js";
-
-function shade(c, k) {
-  const r = Math.min(255, Math.round(((c >> 16) & 255) * k));
-  const g = Math.min(255, Math.round(((c >> 8) & 255) * k));
-  const b = Math.min(255, Math.round((c & 255) * k));
-  return (r << 16) | (g << 8) | b;
-}
+import { addTexture, PixelCanvas, shade } from "./px.js";
 
 function strip(kind, a, b) {
   const W = 32;
   const pc = new PixelCanvas(W, 8);
-  const dark = shade(a, 0.55);
+  const dark = shade(a, -0.45);
   for (let x = 0; x < W; x++) {
     // a wavy, tileable surface (period divides 32)
     const top = Math.round(1 + Math.sin((x / W) * Math.PI * 4) * 0.9);

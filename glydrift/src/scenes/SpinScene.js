@@ -12,11 +12,12 @@ import { Save } from "../data/save.js";
 import {
   button,
   drawNeonRect,
+  fadeTo,
   hex,
   neonText,
-  ProgressBar,
   plainText,
   popIn,
+  ProgressBar,
   RollingCounter,
 } from "../ui/ui.js";
 
@@ -298,8 +299,7 @@ export class SpinScene extends Phaser.Scene {
 
   leave() {
     if (this.spinning && !this.reveal) return; // let the wheel finish
-    this.cameras.main.fadeOut(200, 5, 1, 13);
-    this.time.delayedCall(200, () => this.scene.start("Menu"));
+    fadeTo(this, "Menu");
   }
 
   update(time, delta) {

@@ -8,7 +8,7 @@ import { HI } from "../gfx/textures.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Leaderboard, Levels } from "../online/leaderboard.js";
 import { dailyNumber } from "../data/rng.js";
-import { button, drawNeonRect, neonText, plainText } from "../ui/ui.js";
+import { button, drawNeonRect, fadeTo, neonText, plainText } from "../ui/ui.js";
 
 const MEDALS = [0xffd23f, 0xdfe8f5, 0xd8894a];
 const ROW_H = 68;
@@ -317,10 +317,7 @@ export class LeaderboardScene extends Phaser.Scene {
   }
 
   leave() {
-    this.cameras.main.fadeOut(160, 2, 1, 7);
-    this.time.delayedCall(160, () =>
-      this.scene.start(this.returnTo === "Menu" ? "Menu" : this.returnTo),
-    );
+    fadeTo(this, this.returnTo || "Menu", undefined, { ms: 160, rgb: [2, 1, 7] });
   }
 
   update(time, delta) {

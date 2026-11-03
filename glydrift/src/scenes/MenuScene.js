@@ -22,11 +22,12 @@ import { openChest, revealHero } from "../ui/reveal.js";
 import {
   button,
   drawNeonRect,
+  fadeTo,
   hex,
   neonText,
-  ProgressBar,
   plainText,
   popIn,
+  ProgressBar,
   RollingCounter,
   slider,
   toast,
@@ -275,16 +276,14 @@ export class MenuScene extends Phaser.Scene {
   go(key) {
     if (this.leaving) return;
     this.leaving = true;
-    this.cameras.main.fadeOut(180, 2, 1, 7);
-    this.time.delayedCall(180, () => this.scene.start(key));
+    fadeTo(this, key, undefined, { ms: 180, rgb: [2, 1, 7] });
   }
 
   startGame(mode) {
     if (this.leaving || this.modal || this.naming) return;
     this.leaving = true;
     Sfx.unlock();
-    this.cameras.main.fadeOut(200, 2, 1, 7);
-    this.time.delayedCall(200, () => this.scene.start("Game", { mode }));
+    fadeTo(this, "Game", { mode }, { rgb: [2, 1, 7] });
   }
 
   // ------------------------------------------------------------------ modals

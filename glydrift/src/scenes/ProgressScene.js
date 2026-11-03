@@ -9,10 +9,11 @@ import { drawIcon } from "../ui/icons.js";
 import {
   button,
   drawNeonRect,
+  fadeTo,
   neonText,
-  ProgressBar,
   plainText,
   popIn,
+  ProgressBar,
   slideIn,
 } from "../ui/ui.js";
 
@@ -220,8 +221,7 @@ export class ProgressScene extends Phaser.Scene {
   }
 
   leave() {
-    this.cameras.main.fadeOut(200, 5, 1, 13);
-    this.time.delayedCall(200, () => this.scene.start("Menu"));
+    fadeTo(this, "Menu");
   }
 
   update(time, delta) {
