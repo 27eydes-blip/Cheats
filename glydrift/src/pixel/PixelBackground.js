@@ -7,7 +7,7 @@ import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { lerpColor } from "../biomes/biomes.js";
 import { ENERGY, FLOOR } from "./colorShift.js";
 import { S } from "./px.js";
-import { THEMES, themeFor } from "./themes.js";
+import { biomeArtReady, THEMES, themeFor } from "./themes.js";
 
 const FADE = 1.6; // seconds
 
@@ -248,7 +248,7 @@ export class PixelBackground {
    */
   prebuildNext() {
     for (const id of Object.keys(THEMES)) {
-      if (this.sets[id]) continue;
+      if (this.sets[id] || !biomeArtReady(id)) continue;
       const set = this.buildSet(id);
       set.alpha = 0;
       set.shown = false;

@@ -532,9 +532,10 @@ function makeTheme(id) {
 
 export const THEMES = Object.fromEntries(Object.keys(DEFS).map((id) => [id, makeTheme(id)]));
 
-// The four dimensions' art (~5.6 MB each) is built on first use instead of at boot: most runs
-// never reach the rift, and the extra memory was crashing older iPhones on launch.
-const LAZY_BIOMES = new Set(["prism", "tidal", "chrono", "mirror"]);
+// Each biome's art (~5 MB) is built on first use instead of at boot: only the first biome is
+// made up front, and the game builds the next one as the run approaches it. Building all of
+// them at launch was crashing iPhones ("A problem repeatedly occurred").
+const EAGER_BIOME = "void";
 const biomeBuilt = new Set();
 let artScene = null;
 
@@ -545,8 +546,13 @@ export function ensureBiomeArt(id) {
   buildBiome(artScene, id, DEFS[id].pal, DEFS[id].cfg);
 }
 
+/** True once a biome's art exists (prebuilders skip biomes the player hasn't neared yet). */
+export function biomeArtReady(id) {
+  return biomeBuilt.has(id);
+}
+
 export function themeFor(biomeId) {
-  if (LAZY_BIOMES.has(biomeId)) ensureBiomeArt(biomeId);
+  ensureBiomeArt(biomeId);
   return THEMES[biomeId] || THEMES.void;
 }
 
@@ -562,6 +568,6 @@ export function buildPixelArt(scene) {
   buildNewHazards(scene);
   buildDimensionHazards(scene);
   buildCosmeticArt(scene);
-  for (const id of Object.keys(DEFS)) if (!LAZY_BIOMES.has(id)) ensureBiomeArt(id);
+  ensureBiomeArt(EAGER_BIOME);
   buildHazards(scene, { solar: SOLAR, frozen: FROZEN, glitch: GLITCH, abyss: ABYSS });
 }

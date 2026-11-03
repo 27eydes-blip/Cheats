@@ -12,7 +12,7 @@ import { SHIFT_BLEND, SHIFT_EVERY, SHIFTS } from "../pixel/colorShift.js";
 import { darknessTexture } from "../pixel/hazardArt.js";
 import { pixelPerfectZoom, S } from "../pixel/px.js";
 import { Terrain } from "../pixel/Terrain.js";
-import { ensureBiomeArt, THEMES, themeFor } from "../pixel/themes.js";
+import { biomeArtReady, ensureBiomeArt, THEMES, themeFor } from "../pixel/themes.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { Player } from "../player/Player.js";
@@ -102,7 +102,7 @@ export class GameScene extends Phaser.Scene {
     this.pxZoomLevel = pixelPerfectZoom(VIEW.Z, WORLD.baseZoom) / VIEW.Z;
     this.cameras.main.roundPixels = true;
     this.terrain.setView(this.pxZoomLevel);
-    this.terrain.prebuild(Object.values(THEMES));
+    this.terrain.prebuild(Object.values(THEMES).filter((t) => biomeArtReady(t.id)));
 
     this.pal = {};
     this.fromPal = null;
@@ -698,9 +698,9 @@ export class GameScene extends Phaser.Scene {
     // rift switches instantly under the screen tear)
     const biomeId = dom.id;
     this.terrain.setTheme(themeFor(biomeId), dom.dimension);
-    // build the next dimension's art well before the rift (it's made on demand to save memory)
+    // build the next biome's art well before it arrives (it's made on demand to save memory)
     const nx = this.course.next(seg0);
-    if (nx.dimension && nx.start - this.meters < 700) ensureBiomeArt(nx.id);
+    if (nx && nx.start - this.meters < 700) ensureBiomeArt(nx.id);
     this.updateColorShift(rawDt, biomeId, seg0 === dom ? local0 : 0);
     const beatPh = Music.beatPhase(this.beatClock);
     this.beatClock += rawDt;
