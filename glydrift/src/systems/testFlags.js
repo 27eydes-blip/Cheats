@@ -10,5 +10,4 @@ export const TEST = {
   lucky: !!q?.has("lucky"),
   dimension: q?.get("dimension") || null,
   character: q?.get("character") || null, // ?character=yarms — fly as any hero
-  month: q?.has("month") ? Number(q.get("month")) : null, // ?month=11 — pretend it is December
 };

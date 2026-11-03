@@ -6,11 +6,10 @@
 import { Save } from "./save.js";
 import { getCosmetic, Shop } from "./cosmetics.js";
 import { Analytics } from "../systems/analytics.js";
-import { getCharacter, onSale } from "../player/characterDefs.js";
 
 export const PASS_TIER_XP = 400; // ~2 runs per tier
 
-/** reward: { coins } | { item: cosmetic id } | { pod: true } | { hero: id } (December) */
+/** reward: { coins } | { item: cosmetic id } | { pod: true } */
 export const FREE_TRACK = [
   { coins: 100 },
   { item: "flap_stars" },
@@ -28,15 +27,6 @@ export const FREE_TRACK = [
   { item: "death_ghost" },
   { pod: true },
 ];
-
-// December: three of the coin tiers become the Christmas commons (they're also in the shop)
-const DECEMBER_HEROES = { 2: "mittens", 6: "pengo", 10: "hollyhog" };
-
-/** The free track as it stands today (Christmas heroes in December). */
-export function passTrack() {
-  if (!onSale(getCharacter("mittens"))) return FREE_TRACK;
-  return FREE_TRACK.map((r, i) => (DECEMBER_HEROES[i] ? { hero: DECEMBER_HEROES[i] } : r));
-}
 
 // Future premium track: hidden and disabled (no purchases exist). Keep it separate from the
 // free track so nothing here can leak into it.
@@ -58,7 +48,7 @@ export const DriftPass = {
   },
   /** Tiers whose XP is reached. */
   unlockedCount() {
-    return Math.min(passTrack().length, Math.floor(pass().xp / PASS_TIER_XP));
+    return Math.min(FREE_TRACK.length, Math.floor(pass().xp / PASS_TIER_XP));
   },
   isUnlocked(i) {
     return i < DriftPass.unlockedCount();
@@ -68,7 +58,7 @@ export const DriftPass = {
   },
   /** The first tier that is unlocked-but-unclaimed, else the next locked one (null when done). */
   nextTier() {
-    for (let i = 0; i < passTrack().length; i++) if (!DriftPass.isClaimed(i)) return i;
+    for (let i = 0; i < FREE_TRACK.length; i++) if (!DriftPass.isClaimed(i)) return i;
     return null;
   },
   /** progress 0..1 toward tier i */
@@ -89,22 +79,12 @@ export const DriftPass = {
   claim(i) {
     if (!DriftPass.isUnlocked(i) || DriftPass.isClaimed(i)) return null;
     const s = Save.data;
-    const r = passTrack()[i];
+    const r = FREE_TRACK[i];
     pass().claimed[i] = true;
     let out;
     if (r.coins) {
       s.coins += r.coins;
       out = { coins: r.coins };
-    } else if (r.hero) {
-      // a Christmas hero (if you already bought it in the shop: 400 coins instead)
-      const def = getCharacter(r.hero);
-      if (s.unlocked[r.hero]) {
-        s.coins += 400;
-        out = { coins: 400, dupeHero: def };
-      } else {
-        s.unlocked[r.hero] = true;
-        out = { hero: def };
-      }
     } else if (r.item) {
       const c = getCosmetic(r.item);
       if (Shop.owns(r.item)) {

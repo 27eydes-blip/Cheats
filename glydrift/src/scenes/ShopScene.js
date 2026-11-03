@@ -13,7 +13,7 @@ import { Haptics } from "../systems/haptics.js";
 import { Analytics } from "../systems/analytics.js";
 import { Progression } from "../data/progression.js";
 import { Save } from "../data/save.js";
-import { DriftPass, PASS_TIER_XP, passTrack } from "../data/driftPass.js";
+import { DriftPass, FREE_TRACK, PASS_TIER_XP } from "../data/driftPass.js";
 import {
   CATEGORIES,
   COLLECTIONS,
@@ -590,7 +590,7 @@ export class ShopScene extends Phaser.Scene {
         const claimable = DriftPass.claimable();
         if (next === null) sub = "Season complete!";
         else {
-          const r = passTrack()[next];
+          const r = FREE_TRACK[next];
           add(this.rewardIcon(r, 0, artY - 50, 1.4));
           const bw = W - 90;
           const by = artY + 110;
@@ -611,7 +611,7 @@ export class ShopScene extends Phaser.Scene {
               .text(0, by + 21, `${xpIn} / ${PASS_TIER_XP} XP`, this.priceStyle(28, "#ffffff"))
               .setOrigin(0.5),
           );
-          sub = `Tier ${next + 1} of ${passTrack().length} · free with XP`;
+          sub = `Tier ${next + 1} of ${FREE_TRACK.length} · free with XP`;
         }
         if (claimable) ribbon = { text: `${claimable} READY`, col: 0x1fae5a };
         cta = {
@@ -833,17 +833,12 @@ export class ShopScene extends Phaser.Scene {
       return c;
     }
     if (r.pod) return this.add.image(x, y, "cosm", "pod_0").setScale(2.0 * scale);
-    if (r.hero)
-      return this.add
-        .image(x, y, getCharacter(r.hero).texture)
-        .setScale((0.62 / HI) * PORTRAIT_K * scale);
     return this.iconCos(r.item, x, y, 0.8 * scale);
   }
 
   rewardRarity(r) {
     if (r.coins) return "coins";
     if (r.pod) return "pod";
-    if (r.hero) return getCharacter(r.hero).rarity;
     return getCosmetic(r.item).rarity;
   }
 
@@ -865,7 +860,6 @@ export class ShopScene extends Phaser.Scene {
             },
           };
     }
-    if (!def.cost) return { label: "CHALLENGE", col: 0xffffff, fill: 0x3a2e70, act: null };
     if (def.requires && !Progression.requirementsMet(def))
       return { label: "LOCKED", col: 0xffffff, fill: 0x3a2e70, act: null };
     return {
@@ -1050,7 +1044,7 @@ export class ShopScene extends Phaser.Scene {
     const bw = W - 120;
     const by = py + 142;
     const into = DriftPass.xp() - unlocked * PASS_TIER_XP;
-    const frac = unlocked >= passTrack().length ? 1 : Math.max(0, Math.min(1, into / PASS_TIER_XP));
+    const frac = unlocked >= FREE_TRACK.length ? 1 : Math.max(0, Math.min(1, into / PASS_TIER_XP));
     const bar = this.add.graphics();
     bar.fillStyle(0x1a0630, 1).fillRoundedRect(W / 2 - bw / 2 - 5, by - 5, bw + 10, 56, 18);
     bar.fillStyle(0x0a3a6a, 1).fillRoundedRect(W / 2 - bw / 2, by, bw, 46, 14);
@@ -1060,7 +1054,7 @@ export class ShopScene extends Phaser.Scene {
       .fillRect(W / 2 - bw / 2 + 8, by + 5, Math.max(8, bw * frac - 16), 12);
     c.add(bar);
     const label =
-      unlocked >= passTrack().length
+      unlocked >= FREE_TRACK.length
         ? "ALL TIERS UNLOCKED"
         : `TIER ${unlocked + 1}:  ${Math.max(0, into)} / ${PASS_TIER_XP} XP`;
     c.add(this.add.text(W / 2, by + 23, label, this.priceStyle(30, "#ffffff")).setOrigin(0.5));
@@ -1068,13 +1062,13 @@ export class ShopScene extends Phaser.Scene {
     const gridTop = by + 76;
     const gridBot = py + ph - 140;
     const tw = (W - 80) / cols;
-    const thh = Math.min(240, (gridBot - gridTop) / Math.ceil(passTrack().length / cols));
+    const thh = Math.min(240, (gridBot - gridTop) / Math.ceil(FREE_TRACK.length / cols));
     const draw = () => {
       c.tiles?.destroy();
       const tiles = this.add.container(0, 0);
       c.tiles = tiles;
       c.add(tiles);
-      passTrack().forEach((r, i) => {
+      FREE_TRACK.forEach((r, i) => {
         const x = 40 + tw * (i % cols) + tw / 2;
         const y = gridTop + thh * Math.floor(i / cols) + thh / 2;
         const un = DriftPass.isUnlocked(i);
@@ -1163,13 +1157,7 @@ export class ShopScene extends Phaser.Scene {
               this.openPod(res.pod, () => this.refreshAll());
               return;
             }
-            this.fx.floatText(
-              x,
-              y - 50,
-              res.hero ? `${res.hero.name}!` : res.item ? res.item.name : `+${res.coins}`,
-              "#ffffff",
-              36,
-            );
+            this.fx.floatText(x, y - 50, res.item ? res.item.name : `+${res.coins}`, "#ffffff", 36);
             draw();
           });
         }

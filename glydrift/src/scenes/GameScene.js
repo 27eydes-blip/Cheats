@@ -230,13 +230,7 @@ export class GameScene extends Phaser.Scene {
       bestCombo: 1,
       bonusCoins: 0,
       lucky: this.lucky,
-      abyssM: 0,
-      abyssNear: 0,
-      prismM: 0,
-      prismClear: 0,
     };
-    this.zoneId = null;
-    this.zoneLastM = undefined;
 
     const seed = this.mode === "daily" ? dailySeed() : (Math.random() * 2 ** 32) >>> 0;
     this.obstacles.reset(seed);
@@ -325,8 +319,6 @@ export class GameScene extends Phaser.Scene {
   nearMiss(o) {
     this.run.nearMiss++;
     this.player.rig.flex({ sparkle: true }); // YARMS: a quick flex (no-op for other heroes)
-    this.player.rig.onNear(); // animals: berries pop, croaks, tail fans…
-    if (this.zoneId === "abyss") this.run.abyssNear = (this.run.abyssNear || 0) + 1;
     this.addChain();
     const pts = NEAR_MISS.bonus * this.mult;
     this.bonus += pts;
@@ -480,7 +472,6 @@ export class GameScene extends Phaser.Scene {
     this.fx.ring(p.x, p.y, 0x39ff88, { scale: 2, duration: 600, width: 3 });
     this.fx.burst("star", p.x, p.y, 24, 0x39ff88, { speed: { min: 150, max: 450 } });
     this.fx.floatText(p.x + 40, p.y - 70, "SECOND CHANCE!", "#39ff88", 44);
-    p.rig.onRevive(); // Prismara shatters into light and reforms
   }
 
   /** WALLRUNNER's dash: a burst to 13x speed, straight and untouchable, then a short grace. */
@@ -536,7 +527,6 @@ export class GameScene extends Phaser.Scene {
     }
     this.comboMeter.setTier(1); // the multiplier label disappears with the bird
     Sfx.death();
-    Sfx.hero(this.charDef.id, "death");
     Music.endCalm(true);
     Music.deathSweep();
     Haptics.strong();
@@ -707,18 +697,6 @@ export class GameScene extends Phaser.Scene {
     // pixel biome art follows the dominant biome (walls + backdrop crossfade on change; a
     // rift switches instantly under the screen tear)
     const biomeId = dom.id;
-    // metres flown in the Abyss / Prism Rift and Prism Rifts survived (animal challenges)
-    if (playing) {
-      const dm = Math.max(0, this.meters - (this.zoneLastM ?? this.meters));
-      if (this.zoneId === "prism" && biomeId !== "prism")
-        this.run.prismClear = (this.run.prismClear || 0) + 1;
-      if (this.zoneId === "abyss" && biomeId !== "abyss")
-        this.run.abyssClear = (this.run.abyssClear || 0) + 1;
-      this.zoneId = biomeId;
-      if (biomeId === "abyss") this.run.abyssM = (this.run.abyssM || 0) + dm;
-      if (biomeId === "prism") this.run.prismM = (this.run.prismM || 0) + dm;
-    }
-    this.zoneLastM = this.meters;
     this.terrain.setTheme(themeFor(biomeId), dom.dimension);
     // build the next biome's art well before it arrives (it's made on demand to save memory)
     const nx = this.course.next(seg0);
@@ -862,7 +840,6 @@ export class GameScene extends Phaser.Scene {
         this.passedBest = true;
         this.hudReady?.onNewBest?.();
         this.player.rig.flex({ shine: true, big: true }); // YARMS: big flex + gold shine
-        this.player.rig.onBest(); // animals: a hoot, a howl…
         this.fx.floatText(p.x + 20, p.y - 120, "NEW BEST!", "#ffd23f", 50);
         Sfx.newBest();
         Haptics.strong();

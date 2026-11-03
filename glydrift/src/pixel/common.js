@@ -505,7 +505,7 @@ export const HEAD_ANCHORS = {};
  */
 export const PORTRAIT_SCALE = 5;
 export const PORTRAIT_K = 13 / PORTRAIT_SCALE;
-export function headAnchor(pc) {
+function headAnchor(pc) {
   const x0 = Math.floor(pc.w * 0.42);
   for (let y = 0; y < pc.h; y++) {
     const xs = [];
@@ -518,7 +518,7 @@ export function headAnchor(pc) {
   return { x: 2, y: -8, w: pc.w, h: pc.h };
 }
 
-export function rim(pc) {
+function rim(pc) {
   const out = new PixelCanvas(pc.w + 2, pc.h + 2);
   out.blit(pc, 1, 1);
   return out.outline(0xffffff, 1, false);

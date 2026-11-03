@@ -478,9 +478,6 @@ export class MenuScene extends Phaser.Scene {
         const h = Math.max(1, Math.round(saleLeft(c) / 3600000));
         items.push(`★ ${c.name} leaves in about ${h}h · get it in HEROES!`);
       }
-    const xmas = CHARACTERS.filter((c) => c.season && onSale(c) && !s.unlocked[c.id]);
-    if (xmas.length)
-      items.push(`❄ CHRISTMAS HEROES are here all December: ${xmas.length} to collect in HEROES!`);
     try {
       const deal = getCosmetic(Shop.daily().deal);
       if (deal) items.push(`SHOP DEAL: ${deal.name} 30% off today`);
@@ -699,9 +696,6 @@ export class MenuScene extends Phaser.Scene {
       });
     }
     this.time.delayedCall(700, () => this.coinCounter.to(Save.data.coins, 800));
-    // a streak hero unlocked by this login (Bao)
-    if (res.unlocks?.length)
-      this.time.delayedCall(1700, () => revealHero(this, res.unlocks[0], { title: "UNLOCKED!" }));
     if (res.shardResult?.id) {
       const def = getCharacter(res.shardResult.id);
       if (res.shardResult.unlocked) {

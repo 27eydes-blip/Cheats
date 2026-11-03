@@ -152,22 +152,6 @@ KINDS.dumbbell = fall("fx_dumbbell", 24, {
   alpha: { start: 1, end: 0.6 },
 });
 
-// animal heroes (coloured sprites: pass 0xffffff to keep their colours, or tint white ones)
-KINDS.petal = fall("fx_petal", 60, { gravityY: 60, rotate: { min: -180, max: 180 } });
-KINDS.zzz = fall("fx_zzz", 30, { gravityY: -70, rotate: 0, lifespan: { min: 900, max: 1300 } });
-KINDS.yarn = fall("fx_yarn", 40, { gravityY: 500, rotate: { min: 0, max: 360 } });
-KINDS.acorn = fall("fx_acorn", 40, { gravityY: 900, rotate: { min: 0, max: 360 } });
-KINDS.marsh = fall("fx_marsh", 40, { gravityY: 800, rotate: { min: 0, max: 360 } });
-KINDS.berry = fall("fx_berry", 40, { gravityY: 900 });
-KINDS.bubble = fall("fx_bubble", 50, {
-  gravityY: -110,
-  rotate: 0,
-  scale: { start: 0.7, end: 1.2 },
-});
-KINDS.bone = fall("fx_bone", 30, { gravityY: 1000, rotate: { min: 0, max: 360 } });
-KINDS.goo = fall("fx_goo", 50, { gravityY: 900, scale: { start: 1.2, end: 0.6 } });
-KINDS.chain = fall("fx_chain", 24, { gravityY: 1000, rotate: { min: 0, max: 360 } });
-
 export class Effects {
   constructor(scene, { lowGfx = false, depth = 40 } = {}) {
     this.scene = scene;
