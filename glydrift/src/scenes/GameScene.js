@@ -386,6 +386,7 @@ export class GameScene extends Phaser.Scene {
     this.state = "dying";
     this.deathT = 0;
     const hints = this.player.die();
+    this.comboMeter.setTier(1); // the multiplier label disappears with the bird
     Sfx.death();
     Music.endCalm(true);
     Music.deathSweep();

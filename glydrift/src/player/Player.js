@@ -67,15 +67,10 @@ export class Player {
       const targetSize = this.miniT > 0 ? PHYSICS.miniScale : 1;
       this.sizeMul += (targetSize - this.sizeMul) * Math.min(1, dt * 10);
 
-      const gmul = this.mini ? PHYSICS.miniGravityMul : 1;
-      const rising = this.vy * this.gravityDir < 0;
-      const g = (rising ? PHYSICS.gravityUp : PHYSICS.gravityDown) * gmul * this.gravityDir;
-      this.vy += g * dt;
-      // terminal velocities (relative to gravity direction)
-      const fall = this.vy * this.gravityDir;
-      if (fall > PHYSICS.terminalFall) this.vy = PHYSICS.terminalFall * this.gravityDir;
-      if (fall < PHYSICS.terminalRise) this.vy = PHYSICS.terminalRise * this.gravityDir;
-      this.y += this.vy * dt;
+      // Physics advances in steps no longer than 1/60 s, so a long frame (Low Power Mode at
+      // 30 fps, a hitch) flies exactly like two 60 fps frames: same jump height everywhere.
+      const n = Math.max(1, Math.round(dt * 60));
+      for (let i = 0; i < n; i++) this.integrate(dt / n);
 
       // tilt follows velocity, smoothed for buttery motion
       const target =
@@ -85,6 +80,19 @@ export class Player {
     this.rig.sizeMul = this.sizeMul;
     this.rig.setPosition(this.x, this.y);
     this.rig.update(dt, scroll);
+  }
+
+  /** One semi-implicit Euler step of the flight physics. */
+  integrate(dt) {
+    const gmul = this.mini ? PHYSICS.miniGravityMul : 1;
+    const rising = this.vy * this.gravityDir < 0;
+    const g = (rising ? PHYSICS.gravityUp : PHYSICS.gravityDown) * gmul * this.gravityDir;
+    this.vy += g * dt;
+    // terminal velocities (relative to gravity direction)
+    const fall = this.vy * this.gravityDir;
+    if (fall > PHYSICS.terminalFall) this.vy = PHYSICS.terminalFall * this.gravityDir;
+    if (fall < PHYSICS.terminalRise) this.vy = PHYSICS.terminalRise * this.gravityDir;
+    this.y += this.vy * dt;
   }
 
   die() {

@@ -3,6 +3,7 @@
 // never pause gameplay because they only ever run on menu / results screens.
 import Phaser from "phaser";
 import { RARITY, VIEW } from "../config.js";
+import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { addAtlas, PixelCanvas } from "../pixel/px.js";
 import { Sfx } from "../audio/sfx.js";
 import { Haptics } from "../systems/haptics.js";
@@ -131,7 +132,7 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
     };
     scene.time.delayedCall(1200, () => {
       // the burst, in the rarity colour
-      flash.fillAlpha = 0.38;
+      flash.fillAlpha = reduceFlashing() ? 0.08 : 0.38; // Reduce Flashing: a soft glow only
       scene.tweens.add({ targets: flash, fillAlpha: 0, duration: 380 });
       burst(scene, cont, W / 2, cy, rc, def.rarity === "legendary" ? 44 : 30);
       for (const [s, d] of [
@@ -186,7 +187,7 @@ export function levelUpCelebration(scene, level, subText, { depth = 800 } = {}) 
     .setScale(4 * 3)
     .setTint(0x3ef4ff)
     .setBlendMode(ADD)
-    .setAlpha(0.9);
+    .setAlpha(reduceFlashing() ? 0.3 : 0.9);
   const big = neonText(scene, W / 2, H * 0.38, "LEVEL UP!", 74, 0x3ef4ff, { blur: 22 });
   const lv = neonText(scene, W / 2, H * 0.46, `LV ${level}`, 96, 0xffffff, { blur: 26 });
   const sub = plainText(scene, W / 2, H * 0.53, subText || "", 24, "#bdf9ff");
@@ -283,7 +284,7 @@ export function openChest(scene, x, y, { depth = 450 } = {}) {
           repeat: 1,
           onComplete: () => chest.setAngle(0),
         });
-        glow.setAlpha(0.25 + i * 0.2);
+        glow.setAlpha((0.25 + i * 0.2) * (reduceFlashing() ? 0.4 : 1));
       });
     });
     scene.time.delayedCall(1150, () => {
