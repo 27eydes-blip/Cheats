@@ -537,6 +537,23 @@ class MusicEngine {
     }
   }
 
+  /**
+   * Beat clock for visuals: 0..1 position inside the current quarter note of what is
+   * audible right now (falls back to a free-running 124 BPM clock before audio starts).
+   */
+  beatPhase(fallbackSec = 0) {
+    if (this.ready) {
+      try {
+        const t = Tone.getTransport();
+        if (t.state === "started") {
+          const ticks = t.getTicksAtTime(Tone.getContext().rawContext.currentTime);
+          return (ticks % t.PPQ) / t.PPQ;
+        }
+      } catch {}
+    }
+    return (fallbackSec * (124 / 60)) % 1;
+  }
+
   setIntensity(x) {
     this.intensity = Math.max(0, Math.min(1, x));
   }

@@ -37,6 +37,11 @@ export class BackdropScene extends Phaser.Scene {
     st.scenery = state.scenery ?? true;
     if (state.theme) st.theme = state.theme; // pixel biome to show (crossfades)
     st.particleSpeed = state.particleSpeed ?? 1;
+    // colour energy (gameplay only): in-biome colour wash, beat pulse, glowing floor
+    st.shift = state.shift ?? 0;
+    st.shiftAmt = state.shift === undefined ? 0 : (state.shiftAmt ?? 1);
+    st.beat = state.beat ?? 0;
+    st.floor = state.floor ?? null;
   }
 
   /** Rebuild after a graphics/style setting change. */

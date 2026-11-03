@@ -1,5 +1,6 @@
 // Pixel biome themes: one palette + style switches per biome → tiles, hazards, decor, layers.
 // Each biome's spike colour (k*) is used only on things that kill.
+import { buildFloorStrips, buildGlowDot } from "./floorArt.js";
 import { buildBiome, NV } from "./biomeArt.js";
 import { buildCommon } from "./common.js";
 import { buildHazards } from "./hazardArt.js";
@@ -212,6 +213,8 @@ export function buildPixelArt(scene) {
   if (built) return;
   built = true;
   buildCommon(scene);
+  buildFloorStrips(scene);
+  buildGlowDot(scene);
   for (const [id, d] of Object.entries(DEFS)) buildBiome(scene, id, d.pal, d.cfg);
   buildHazards(scene, { solar: SOLAR, frozen: FROZEN, glitch: GLITCH, abyss: ABYSS });
 }

@@ -346,6 +346,14 @@ export class ZapOrbs extends PxObstacle {
         .setDepth(1.9)
         .setBlendMode(ADD),
     );
+    // beat-pulsing halos so the orbs read as live energy
+    this.haloA = this.add(
+      this.scene.add.image(0, 0, "pxglow").setDepth(WARN_DEPTH - 0.1).setScale(S * 2).setBlendMode(ADD),
+    );
+    this.haloB = this.add(
+      this.scene.add.image(0, 0, "pxglow").setDepth(WARN_DEPTH - 0.1).setScale(S * 2).setBlendMode(ADD),
+    );
+    for (const h of [this.haloA, this.haloB]) h.setTint(0x7fd6ff);
     this.a = this.add(this.scene.add.image(0, 0, "hz", "orb_0").setDepth(WARN_DEPTH));
     this.b = this.add(this.scene.add.image(0, 0, "hz", "orb_0").setDepth(WARN_DEPTH));
   }
@@ -365,6 +373,9 @@ export class ZapOrbs extends PxObstacle {
     const f = this.zapping ? 2 : this.charging ? (Math.floor(clock * 14) % 2 ? 1 : 0) : 0;
     this.a.setPosition(this.ax, this.y1).setFrame(`orb_${f}`);
     this.b.setPosition(this.bx, this.y2).setFrame(`orb_${f}`);
+    const ha = this.zapping ? 0.8 : 0.3 + 0.4 * (this.mgr.beat || 0);
+    this.haloA.setPosition(this.ax, this.y1).setAlpha(ha);
+    this.haloB.setPosition(this.bx, this.y2).setAlpha(ha);
     const len = Math.hypot(this.bx - this.ax, this.y2 - this.y1);
     const rot = Math.atan2(this.y2 - this.y1, this.bx - this.ax) - Math.PI / 2;
     for (const t of [this.beam, this.glow]) {

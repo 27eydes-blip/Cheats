@@ -405,6 +405,14 @@ export class Portal extends PxObstacle {
     super(mgr);
     this.type = "portal";
     this.kind = "portal";
+    // pulsing stepped halo behind the ring (beat-synced)
+    this.halo = this.add(
+      this.scene.add
+        .image(0, 0, "pxglow")
+        .setDepth(HAZ_TOP - 0.1)
+        .setScale(S * 3)
+        .setBlendMode(Phaser.BlendModes.ADD),
+    );
     this.img = this.add(this.scene.add.image(0, 0, "pxc", "portal_flip_0").setDepth(HAZ_TOP));
   }
   spawn(x, { y, mode }) {
@@ -422,6 +430,12 @@ export class Portal extends PxObstacle {
     this.img
       .setPosition(this.x, this.y + Math.round(Math.sin(clock * 4) * 2) * S)
       .setAlpha(this.used ? 0.35 : 1);
+    const beat = this.mgr.beat || 0;
+    this.halo
+      .setPosition(this.img.x, this.img.y)
+      .setTint({ flip: 0xff4fd8, restore: 0x39ff88, mini: 0xffd23f }[this.mode])
+      .setScale(S * (beat > 0.6 ? 4 : 3))
+      .setAlpha(this.used ? 0.1 : 0.35 + 0.4 * beat);
     this.particleT -= dt;
     if (this.particleT <= 0 && this.x < this.mgr.rightEdge && !this.used) {
       this.particleT = 0.09;

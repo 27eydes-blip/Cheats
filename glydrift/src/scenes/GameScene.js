@@ -4,7 +4,9 @@ import Phaser from "phaser";
 import { BIOMES, biomeStateAt, blendPalette, lerpColor } from "../biomes/biomes.js";
 import { fitCamera, NEAR_MISS, PHYSICS, POST_FX, speedForMeters, VIEW, WORLD } from "../config.js";
 import { Effects } from "../effects/Effects.js";
+import { ScreenFlash } from "../effects/ScreenFlash.js";
 import { ObstacleManager } from "../obstacles/ObstacleManager.js";
+import { SHIFT_BLEND, SHIFT_EVERY, SHIFTS } from "../pixel/colorShift.js";
 import { darknessTexture } from "../pixel/hazardArt.js";
 import { pixelPerfectZoom, S } from "../pixel/px.js";
 import { Terrain } from "../pixel/Terrain.js";
@@ -116,10 +118,10 @@ export class GameScene extends Phaser.Scene {
       .rectangle(W / 2, H / 2, W * 3, H * 3, 0x000000)
       .setDepth(60)
       .setAlpha(0);
-    this.redFlash = this.add
-      .rectangle(W / 2, H / 2, W * 3, H * 3, 0xff0820)
-      .setDepth(59)
-      .setAlpha(0);
+    // colour flashes (run start, portals, biome entrance, near-miss edges, new best, Abyss)
+    this.flashFx = new ScreenFlash(this, { depth: 55 });
+    this.shiftCol = SHIFTS.void[0];
+    this.beatClock = 0;
     const DS = 1024;
     if (!this.textures.exists("abyss_dark")) darknessTexture(this, "abyss_dark", DS, DS, DARK_R);
     this.dark = [this.add.image(0, 0, "abyss_dark")];
@@ -172,7 +174,9 @@ export class GameScene extends Phaser.Scene {
     this.inAbyss = false;
     this.calmVig.setAlpha(0);
     this.blackout.setAlpha(0);
-    this.redFlash.setAlpha(0);
+    this.flashFx.clear();
+    this.shiftFrom = this.shiftTo = this.shiftCol = SHIFTS.void[0];
+    this.shiftK = 1;
     for (const d of this.dark) d.setAlpha(0).setVisible(false);
     this.setDesat(0);
     Music.endCalm();
@@ -247,6 +251,8 @@ export class GameScene extends Phaser.Scene {
 
   startRun() {
     this.state = "playing";
+    this.flashFx.refresh();
+    this.flashFx.flash(BIOMES[0].neon, { peak: 0.42, dur: 0.3 });
     this.player.flap();
     this.run.flaps++;
     Sfx.flap(this.charDef.id);
@@ -288,6 +294,7 @@ export class GameScene extends Phaser.Scene {
     );
     this.fx.burst("star", p.x, p.y, 10, 0xffffff, { speed: { min: 120, max: 300 } });
     this.fx.ring(p.x, p.y, 0xffffff, { scale: 0.9, duration: 300 });
+    this.flashFx.flash(this.charDef.color, { peak: 0.5, dur: 0.28, edge: true });
     Sfx.near();
     this.hudReady?.onNearMiss?.(pts, this.combo);
   }
@@ -297,6 +304,9 @@ export class GameScene extends Phaser.Scene {
     this.run.portals++;
     Sfx.portal();
     const col = { flip: 0xff4fd8, restore: 0x39ff88, mini: 0xffd23f }[o.mode];
+    this.flashFx.flash(0xffffff, { peak: 0.45, dur: 0.2 });
+    this.fx.burst("pixel", p.x, p.y, 22, col, { speed: { min: 200, max: 560 } });
+    this.fx.burst("star", p.x, p.y, 10, 0xffffff, { speed: { min: 120, max: 380 } });
     this.fx.ring(o.x, o.y, col, { scale: 1.4, duration: 500, width: 2 });
     this.fx.burst("star", p.x, p.y, 16, col);
     this.fxState.aberration = Math.max(this.fxState.aberration, 0.02);
@@ -441,6 +451,11 @@ export class GameScene extends Phaser.Scene {
         Sfx.biome();
         Music.play(BIOME_TRACKS[bs.rawIndex % BIOME_TRACKS.length], { startBar: 8 });
         this.hudReady?.onBiome?.(bs.rawIndex);
+        this.flashFx.flash(BIOMES[bs.rawIndex % BIOMES.length].neon, {
+          peak: 0.45,
+          dur: 0.35,
+          priority: true,
+        });
       }
     }
     // speed-up pulses every 250m
@@ -471,7 +486,16 @@ export class GameScene extends Phaser.Scene {
     // pixel biome art follows the dominant biome (walls + backdrop crossfade on change)
     const biomeId = BIOMES[bs.rawIndex % BIOMES.length].id;
     this.terrain.setTheme(themeFor(biomeId));
+    this.updateColorShift(rawDt, biomeId, raw0 === bs.rawIndex ? local0 : 0);
+    const beatPh = Music.beatPhase(this.beatClock);
+    this.beatClock += rawDt;
+    const beat = Math.exp(-beatPh * 6) * (1 - this.calmK) * (playing ? 1 : 0.5);
+    this.obstacles.beat = beat;
     this.backdrop.drive(this.pal, {
+      shift: this.shiftCol,
+      shiftAmt: 1 - this.calmK,
+      beat,
+      floor: biomeId,
       scroll: dt > 0 ? this.scroll * this.timeScale : 0,
       speedNorm,
       dim: 0,
@@ -494,6 +518,7 @@ export class GameScene extends Phaser.Scene {
     info.pause = playing && (calm || preCalm || titleWin || this.blackoutT > 0);
     info.grace = raw0 % 5 === 4 && local0 < 120;
     this.updateCalmFx(rawDt);
+    this.flashFx.update(rawDt);
 
     const ev = this.obstacles.update(dt, this.clock, this.scroll, null, {
       px: p.x,
@@ -542,6 +567,9 @@ export class GameScene extends Phaser.Scene {
         this.passedBest = true;
         this.hudReady?.onNewBest?.();
         this.fx.burst("star", p.x, p.y, 24, 0xffd23f, { speed: { min: 150, max: 420 } });
+        this.fx.burst("pixel", p.x, p.y, 18, 0xfff1a0, { speed: { min: 240, max: 620 } });
+        this.fx.ring(p.x, p.y, 0xffd23f, { scale: 1.6, duration: 520, width: 2 });
+        this.flashFx.flash(0xffd23f, { peak: 0.4, dur: 0.35 });
       }
       this.missionCheckT -= rawDt;
       if (this.missionCheckT <= 0) {
@@ -566,6 +594,22 @@ export class GameScene extends Phaser.Scene {
     this.updatePost(rawDt, speedNorm);
   }
 
+  /** Backdrop colour drifts through the biome's related colours every SHIFT_EVERY m. */
+  updateColorShift(rawDt, biomeId, local) {
+    const list = SHIFTS[biomeId] || SHIFTS.void;
+    const target = list[Math.floor(Math.max(0, local) / SHIFT_EVERY) % list.length];
+    if (target !== this.shiftTo) {
+      this.shiftFrom = this.shiftCol;
+      this.shiftTo = target;
+      this.shiftK = 0;
+    }
+    if (this.shiftK < 1) {
+      this.shiftK = Math.min(1, this.shiftK + rawDt / SHIFT_BLEND);
+      const e = this.shiftK * this.shiftK * (3 - 2 * this.shiftK);
+      this.shiftCol = lerpColor(this.shiftFrom, this.shiftTo, e);
+    }
+  }
+
   // ------------------------------------------------------------------ The Calm → Abyss
   updateSpeedMul(rawDt, freeze) {
     if (freeze) return;
@@ -586,8 +630,7 @@ export class GameScene extends Phaser.Scene {
     this.hudReady?.setBlackout?.(false);
     this.setDesat(0);
     this.cameras.main.shake(380, 0.012);
-    this.redFlash.setAlpha(0.55);
-    this.tweens.add({ targets: this.redFlash, alpha: 0, duration: 650, ease: "Cubic.easeOut" });
+    this.flashFx.flash(0xff0820, { peak: 0.55, dur: 0.6, priority: true });
     Sfx.biome();
     Music.play("abyss", { startBar: 16, immediate: true });
     this.hudReady?.onBiome?.(this.biomeIndex, { slam: true });

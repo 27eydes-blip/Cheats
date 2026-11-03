@@ -50,7 +50,12 @@ export class Terrain {
       .setOrigin(0.5, 0)
       .setDepth(8);
     bot.tilePositionY = 16 * S;
-    const parts = [top, topEdge, bot, botEdge];
+    // glowing liquid (lava / slime / ice…) between the floor spikes' teeth
+    const liquid = scene.add
+      .tileSprite(W / 2, H + S, wide, 8 * S, `floor_${theme.id}`)
+      .setOrigin(0.5, 0)
+      .setDepth(7);
+    const parts = [top, topEdge, bot, liquid, botEdge];
     for (const p of parts) p.tilePositionX = this.scrollX;
     return { id: theme.id, parts, alpha: 0 };
   }

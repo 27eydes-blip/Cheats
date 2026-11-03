@@ -2,6 +2,7 @@
 // collisions / near-misses / portal + coin pickups against the player circle.
 import Phaser from "phaser";
 import { hazardColors, NEAR_MISS } from "../config.js";
+import { S } from "../pixel/px.js";
 import { themeFor } from "../pixel/themes.js";
 import { RNG } from "../systems/rng.js";
 import { TYPES as BASE_TYPES } from "./pixelTypes.js";
@@ -81,8 +82,13 @@ export class ObstacleManager {
     let c = this.coins.find((o) => !o.active);
     if (!c) {
       c = this.scene.add.image(0, 0, "pxc", "coin_0").setDepth(6);
-      // pixel coins carry no soft halo; keep a hidden stub so the update code stays simple
-      c.halo = { setVisible() {}, setPosition() {} };
+      // stepped pixel halo that pulses with the music
+      c.halo = this.scene.add
+        .image(0, 0, "pxglow")
+        .setDepth(5.9)
+        .setScale(S)
+        .setTint(0xffd23f)
+        .setBlendMode(Phaser.BlendModes.ADD);
       this.coins.push(c);
     }
     c.setActive(true).setVisible(true).setPosition(x, y).setScale(1);
@@ -547,7 +553,7 @@ export class ObstacleManager {
       }
       c.y = c.baseY + Math.sin(t) * 5;
       c.setFrame(`coin_${Math.floor(t * 2.2) % 4}`);
-      c.halo.setPosition(c.x, c.y);
+      c.halo.setPosition(c.x, c.y).setAlpha(0.3 + 0.45 * (this.beat || 0));
       if (c.x < this.leftEdge - 40) {
         c.setActive(false).setVisible(false);
         c.halo.setVisible(false);

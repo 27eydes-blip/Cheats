@@ -4,6 +4,8 @@
 import Phaser from "phaser";
 import { heartbeat } from "../biomes/Background.js";
 import { VIEW } from "../config.js";
+import { lerpColor } from "../biomes/biomes.js";
+import { FLOOR } from "./colorShift.js";
 import { S } from "./px.js";
 import { THEMES, themeFor } from "./themes.js";
 
@@ -33,6 +35,27 @@ export class PixelBackground {
       .setDepth(-19);
     this.pulseVig.setTintFill(0xff0018).setAlpha(0);
     this.dimRect = scene.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0).setDepth(-10);
+
+    // colour energy: an additive wash over the sky (under every silhouette layer, so the
+    // pixel art keeps its own colours) and a stepped pixel glow rising from the floor
+    this.wash = scene.add
+      .rectangle(W / 2, H / 2, W * 3, H * 3, 0xffffff, 1)
+      .setDepth(-98.5)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0)
+      .setVisible(false);
+    floorGlowTexture(scene);
+    this.floorGlow = scene.add
+      .image(W / 2, H + 4, "floorglow")
+      .setOrigin(0.5, 1)
+      .setDepth(-60)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0)
+      .setVisible(false);
+    this.floorGlow.setDisplaySize(W * 3, 40 * S * this.k);
+    this.washA = 0;
+    this.floorA = 0;
+    this.floorCol = FLOOR.void.a;
   }
 
   buildSet(id) {
@@ -230,7 +253,45 @@ export class PixelBackground {
       }
     }
     this.pulseVig.setAlpha(beat * 0.5);
+    // colour energy: wash follows the in-biome colour shift and breathes with the beat
+    const amt = o.shiftAmt ?? 0;
+    const pb = o.beat ?? 0;
+    this.washA += ((amt > 0 ? 0.11 + 0.05 * pb : 0) * amt - this.washA) * Math.min(1, dt * 10);
+    this.wash.setVisible(this.washA > 0.002).setAlpha(this.washA);
+    if (amt > 0) this.wash.setFillStyle(o.shift, 1);
+    const fl = o.floor ? FLOOR[o.floor] : null;
+    if (fl) this.floorCol = lerpColor(this.floorCol, fl.a, Math.min(1, dt * 1.5));
+    const fT = fl ? (0.6 + 0.4 * pb) * Math.max(0.35, amt) : 0;
+    this.floorA += (fT - this.floorA) * Math.min(1, dt * 12);
+    this.floorGlow
+      .setVisible(this.floorA > 0.005)
+      .setAlpha(this.floorA)
+      .setTint(lerpColor(this.floorCol, o.shift || this.floorCol, 0.25));
+    if (amt > 0) {
+      const gt = lerpColor(0xffffff, o.shift, 0.45);
+      const cur = this.sets[this.current];
+      if (cur) for (const gl of cur.glows) gl.setTint(gt).setAlpha(gl.alpha * (1 + 0.6 * pb));
+    } else if (this.washA <= 0.002) {
+      const cur = this.sets[this.current];
+      if (cur && cur.glows[0]?.isTinted) for (const gl of cur.glows) gl.clearTint();
+    }
     const dim = o.dim ?? 0;
     this.dimRect.fillAlpha += (dim - this.dimRect.fillAlpha) * Math.min(1, dt * 8);
   }
+}
+
+/** Stepped (banded) pixel glow: 8 bands, brightest at the bottom. White; tinted per biome. */
+function floorGlowTexture(scene) {
+  if (scene.textures.exists("floorglow")) return;
+  const rows = 40;
+  const c = scene.textures.createCanvas("floorglow", 4, rows);
+  const ctx = c.getContext();
+  const bands = [0.04, 0.08, 0.13, 0.19, 0.26, 0.34, 0.44, 0.56];
+  for (let y = 0; y < rows; y++) {
+    const b = Math.min(bands.length - 1, Math.floor((y / rows) * bands.length));
+    ctx.fillStyle = `rgba(255,255,255,${bands[b]})`;
+    ctx.fillRect(0, y, 4, 1);
+  }
+  c.refresh();
+  c.setFilter(Phaser.Textures.FilterMode.NEAREST);
 }

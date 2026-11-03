@@ -1,7 +1,6 @@
 // Title screen: dimmed living background, the selected hero flying a figure-eight, a big
 // PLAY button, the Daily Challenge with a countdown, the daily login reward and settings.
 import Phaser from "phaser";
-import { BG_STYLES } from "../biomes/Background.js";
 import { biomeStateAt, blendPalette } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, POST_FX, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
@@ -11,6 +10,7 @@ import { getCharacter } from "../player/characterDefs.js";
 import { Sfx } from "../systems/audio.js";
 import { Install } from "../systems/install.js";
 import { Leaderboard } from "../systems/leaderboard.js";
+import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { Music } from "../systems/music.js";
 import { LOGIN_REWARDS, Progression } from "../systems/progression.js";
 import { todayKey } from "../systems/rng.js";
@@ -516,26 +516,17 @@ export class MenuScene extends Phaser.Scene {
         },
       },
     );
-    const styleName = { grid: "GRID", space: "DEEP SPACE", horizon: "HORIZON" };
-    const style = button(
-      this,
-      W / 2,
-      y0 + 430,
-      W - 180,
-      72,
-      `BACKDROP: ${styleName[st.bgStyle || "grid"]}`,
-      {
-        color: 0xb45cff,
-        size: 18,
-        onClick: () => {
-          const i = BG_STYLES.indexOf(st.bgStyle || "grid");
-          st.bgStyle = BG_STYLES[(i + 1) % BG_STYLES.length];
-          Save.write();
-          style.setLabel(`BACKDROP: ${styleName[st.bgStyle]}`);
-          this.scene.get("Backdrop").rebuild();
-        },
+    // Reduce Flashing: flashes become gentle colour fades (defaults to the device's Reduce Motion)
+    const flashLabel = () => `REDUCE FLASHING: ${reduceFlashing() ? "ON" : "OFF"}`;
+    const style = button(this, W / 2, y0 + 430, W - 180, 72, flashLabel(), {
+      color: 0xb45cff,
+      size: 18,
+      onClick: () => {
+        st.reduceFlash = !reduceFlashing();
+        Save.write();
+        style.setLabel(flashLabel());
       },
-    );
+    });
     const done = button(this, W / 2, y0 + h - 70, 300, 80, "DONE", {
       color: 0x39ff88,
       size: 24,
