@@ -48,6 +48,9 @@ export function askUsername({ initial = "", cancellable = false, title = "PICK A
       cancel.removeEventListener("click", onCancel);
       random.removeEventListener("click", onRandom);
       input.blur();
+      // iOS (especially home-screen apps) can leave the page scrolled after the keyboard
+      // closes, shifting the canvas under the fingers; snap it back
+      for (const ms of [0, 120, 400]) setTimeout(() => window.scrollTo(0, 0), ms);
       resolve(value);
     };
     const onInput = () => {
@@ -79,6 +82,7 @@ export function askUsername({ initial = "", cancellable = false, title = "PICK A
     random.addEventListener("click", onRandom);
     check();
     modal.classList.add("open");
-    setTimeout(() => input.focus(), 50);
+    // desktop: focus right away; phones: no surprise keyboard (tap the box or RANDOM)
+    if (!window.matchMedia?.("(pointer: coarse)").matches) setTimeout(() => input.focus(), 50);
   });
 }

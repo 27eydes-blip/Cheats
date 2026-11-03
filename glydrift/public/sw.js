@@ -32,6 +32,22 @@ self.addEventListener("fetch", (e) => {
       : fetch(r);
   e.respondWith(
     net
+      // Safari refuses a page that a service worker served from a redirect (e.g. a home-screen
+      // icon saved without the trailing "/"): hand back a fresh, non-redirected copy
+      .then((res) =>
+        r.mode === "navigate" && res.redirected
+          ? res
+              .blob()
+              .then(
+                (b) =>
+                  new Response(b, {
+                    status: res.status,
+                    statusText: res.statusText,
+                    headers: res.headers,
+                  }),
+              )
+          : res,
+      )
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();

@@ -124,6 +124,24 @@ async function boot() {
     updateScaleMode();
     setTimeout(updateSafe, 100);
   });
+  // iOS keyboard / home-screen quirks: the page must never stay scrolled — a scrolled page
+  // moves the canvas away from where taps land, so the game looks frozen
+  const unscroll = () => {
+    const typing = document.activeElement?.tagName === "INPUT";
+    if (!typing && (window.scrollY || window.scrollX)) {
+      window.scrollTo(0, 0);
+      game.scale.refresh();
+    }
+  };
+  window.visualViewport?.addEventListener("resize", () => setTimeout(unscroll, 50));
+  window.addEventListener("scroll", unscroll, { passive: true });
+  document.addEventListener("focusout", () => setTimeout(unscroll, 150));
+  // coming back to the app (home-screen launch, app switch): re-measure everything
+  window.addEventListener("pageshow", () => {
+    unscroll();
+    game.scale.refresh();
+    setTimeout(updateSafe, 100);
+  });
   // taps on the side bars (iPad/desktop) count as game taps: on a big screen the thumb
   // often lands outside the playfield
   document.getElementById("game")?.addEventListener(
