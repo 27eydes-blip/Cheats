@@ -278,15 +278,19 @@ export const LEVEL_REWARDS = {
 export const SPIN_EVERY = 1000;
 /** The wheel, clockwise from the top. Weights are relative chances. */
 export const SPIN_SLICES = [
-  { type: "coins", amount: 50, weight: 22 },
-  { type: "hero", weight: 9 },
-  { type: "coins", amount: 100, weight: 18 },
-  { type: "coins", amount: 250, weight: 8 },
-  { type: "coins", amount: 75, weight: 18 },
-  { type: "hero", weight: 9 },
-  { type: "coins", amount: 500, weight: 4 },
-  { type: "coins", amount: 150, weight: 12 },
+  { type: "coins", amount: 100, weight: 20 },
+  { type: "hero", weight: 10 },
+  { type: "coins", amount: 200, weight: 18 },
+  { type: "spins", amount: 2, weight: 8 }, // two free spins back
+  { type: "coins", amount: 150, weight: 18 },
+  { type: "hero", weight: 10 },
+  { type: "jackpot", amount: 2000, weight: 3 },
+  { type: "coins", amount: 400, weight: 13 },
 ];
+/** A hero is guaranteed after this many spins in a row without one (while any are left). */
+export const SPIN_PITY = 12;
+/** Most spins a multi-spin uses at once. */
+export const SPIN_MULTI_MAX = 20;
 
 export const Progression = {
   xpToNext(level) {
@@ -509,14 +513,23 @@ export const Progression = {
     if ((s.spins || 0) <= 0) return null;
     s.spins -= 1;
     const left = Progression.lotteryLeft();
-    const total = SPIN_SLICES.reduce((a, sl) => a + sl.weight, 0);
-    let r = Math.random() * total;
     let idx = 0;
-    for (; idx < SPIN_SLICES.length - 1; idx++) {
-      r -= SPIN_SLICES[idx].weight;
-      if (r < 0) break;
+    if (left.length && (s.spinPity || 0) >= SPIN_PITY - 1) {
+      // pity: too long without a hero → this spin lands on a hero slice
+      const heroSlices = SPIN_SLICES.map((sl, i) => (sl.type === "hero" ? i : -1)).filter(
+        (i) => i >= 0,
+      );
+      idx = heroSlices[Math.floor(Math.random() * heroSlices.length)];
+    } else {
+      const total = SPIN_SLICES.reduce((a, sl) => a + sl.weight, 0);
+      let r = Math.random() * total;
+      for (; idx < SPIN_SLICES.length - 1; idx++) {
+        r -= SPIN_SLICES[idx].weight;
+        if (r < 0) break;
+      }
     }
     const slice = SPIN_SLICES[idx];
+    s.spinPity = slice.type === "hero" && left.length ? 0 : (s.spinPity || 0) + 1;
     let prize;
     if (slice.type === "hero" && left.length) {
       const w = (c) => ({ rare: 6, epic: 3, legendary: 1 })[c.rarity] || 3;
@@ -531,14 +544,34 @@ export const Progression = {
       }
       s.unlocked[pick.id] = true;
       prize = { type: "hero", id: pick.id };
+    } else if (slice.type === "spins") {
+      s.spins += slice.amount;
+      prize = { type: "spins", amount: slice.amount };
     } else {
       // every lottery hero owned → the hero slice pays a jackpot instead
       const amount = slice.type === "hero" ? 1000 : slice.amount;
       s.coins += amount;
-      prize = { type: "coins", amount };
+      prize = { type: "coins", amount, jackpot: slice.type === "jackpot" };
     }
     Save.write();
     return { slice: idx, prize };
+  },
+
+  /** Spins left before the hero guarantee kicks in (null when every hero is owned). */
+  spinsToGuarantee() {
+    if (!Progression.lotteryLeft().length) return null;
+    return Math.max(1, SPIN_PITY - (Save.data.spinPity || 0));
+  },
+
+  /** Use up to n spins in one go (free spins won along the way can be used too). */
+  spinMany(n) {
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      const r = Progression.spin();
+      if (!r) break;
+      out.push(r);
+    }
+    return out;
   },
 
   // ---------------------------------------------------------------- achievements
