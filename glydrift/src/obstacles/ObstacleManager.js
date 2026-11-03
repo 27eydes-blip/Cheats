@@ -549,9 +549,11 @@ export class ObstacleManager {
   update(dt, clock, scroll, pal, ctx) {
     const { px, py, r, alive, meters, biomeId, zoom } = ctx;
     const ev =
-      this.events || (this.events = { hit: null, near: [], passed: [], portal: null, coins: 0 });
+      this.events ||
+      (this.events = { hit: null, near: [], passed: [], perfect: [], portal: null, coins: 0 });
     ev.hit = null;
     ev.near.length = 0;
+    ev.perfect.length = 0;
     ev.passed.length = 0;
     ev.portal = null;
     ev.coins = 0;
@@ -598,6 +600,14 @@ export class ObstacleManager {
           if (c < o.minClear) o.minClear = c;
           if (c < 0 && !ev.hit) ev.hit = o;
         }
+        // PERFECT: crossing a gap's centre line right in the middle of the opening
+        if (!o.centerSeen && o.x <= px) {
+          o.centerSeen = true;
+          if (o.kind === "obstacle" && o.yb > o.yt) {
+            const half = (o.yb - o.yt) / 2;
+            if (Math.abs(py - (o.yt + half)) <= Math.max(22, half * 0.16)) ev.perfect.push(o);
+          }
+        }
         if (!o.passed && o.right < px - r) {
           o.passed = true;
           if (o.kind === "obstacle") {
@@ -629,7 +639,8 @@ export class ObstacleManager {
         }
         if (d2 < (r + 22) ** 2) {
           ev.coins++;
-          this.fx.burst("star", c.x, c.y, 4, 0xffd23f, { speed: { min: 60, max: 200 } });
+          this.fx.burst("star", c.x, c.y, 6, 0xffd23f, { speed: { min: 60, max: 240 } });
+          this.fx.burst("pixel", c.x, c.y, 5, 0xfff1a0, { speed: { min: 120, max: 320 } });
           c.setActive(false).setVisible(false);
           c.halo.setVisible(false);
           continue;

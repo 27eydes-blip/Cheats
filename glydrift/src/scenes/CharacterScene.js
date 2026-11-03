@@ -7,6 +7,7 @@ import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { CHARACTERS } from "../player/characterDefs.js";
+import { revealHero } from "../ui/reveal.js";
 import { Sfx } from "../systems/audio.js";
 import { Progression } from "../systems/progression.js";
 import { Save } from "../systems/save.js";
@@ -20,7 +21,6 @@ import {
   popIn,
   RollingCounter,
   rarityColor,
-  toast,
 } from "../ui/ui.js";
 
 const CARD_W = 300;
@@ -342,16 +342,13 @@ export class CharacterScene extends Phaser.Scene {
   }
 
   celebrate(def) {
+    revealHero(this, def, { title: "UNLOCKED!" });
     const { cx, cy } = this;
     this.fx.ring(cx, cy, 0xffffff, { scale: 3, duration: 800 });
     this.fx.ring(cx, cy, def.color, { scale: 2, duration: 650 });
     this.fx.burst("star", cx, cy, 40, def.color, { speed: { min: 200, max: 700 } });
     this.cameras.main.shake(200, 0.006);
     if (this.post) this.post.params.flash = 0.6;
-    toast(this, `${def.name} UNLOCKED!`, def.color, {
-      y: this.top + 140,
-      sub: RARITY[def.rarity].label,
-    });
   }
 
   leave() {

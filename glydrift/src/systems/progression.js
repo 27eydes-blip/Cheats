@@ -426,7 +426,10 @@ export const Progression = {
     } else if (best.shardFrac > best.coinFrac) {
       text = `${d.shards - (s.shards[d.id] || 0)} shard(s) to unlock ${d.name}`;
     } else {
-      text = `${Math.max(0, d.cost - s.coins)} coins to unlock ${d.name}`;
+      text =
+        s.coins >= d.cost
+          ? `You can unlock ${d.name} now!`
+          : `${d.cost - s.coins} coins to unlock ${d.name}`;
     }
     return { def: d, frac: Math.min(1, best.frac), text };
   },

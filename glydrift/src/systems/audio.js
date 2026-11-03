@@ -56,6 +56,11 @@ function noise({ dur = 0.3, vol = 0.4, f = 900, delay = 0 }) {
   src.start(t);
 }
 
+// Rising reward notes climb a major pentatonic scale (always consonant, never grating).
+const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28];
+const semis = (base, step) => base * 2 ** (PENTA[Math.min(step, PENTA.length - 1)] / 12);
+let lastTick = 0;
+
 const FLAP = {
   volt: () => tone({ type: "square", f0: 520, f1: 900, dur: 0.07, vol: 0.12 }),
   ember: () => tone({ type: "sawtooth", f0: 300, f1: 520, dur: 0.09, vol: 0.1 }),
@@ -79,9 +84,83 @@ const FLAP = {
 export const Sfx = {
   unlock: () => Music.unlock(),
   flap: (id) => (FLAP[id] || FLAP.volt)(),
-  coin: () => {
-    tone({ type: "triangle", f0: 1400, f1: 1400, dur: 0.06, vol: 0.15 });
-    tone({ type: "triangle", f0: 2100, f1: 2100, dur: 0.1, vol: 0.12, delay: 0.05 });
+  /** step = how many coins in a row (rising notes) */
+  coin: (step = 0) => {
+    const f = semis(1180, step);
+    tone({ type: "triangle", f0: f, f1: f, dur: 0.06, vol: 0.15 });
+    tone({ type: "triangle", f0: f * 1.5, f1: f * 1.5, dur: 0.1, vol: 0.11, delay: 0.045 });
+    tone({ type: "sine", f0: f * 3, f1: f * 3, dur: 0.05, vol: 0.04, delay: 0.045 }); // sparkle
+  },
+  /** combo multiplier step (tier 1..4 → x2 x3 x5 x10): a punchy, higher-each-time chime */
+  combo: (tier = 1) => {
+    const f = semis(520, tier * 2);
+    tone({ type: "square", f0: f, f1: f * 1.02, dur: 0.07, vol: 0.07 });
+    tone({ type: "triangle", f0: f * 1.5, dur: 0.12, vol: 0.15, delay: 0.06 });
+    tone({ type: "triangle", f0: f * 2, dur: 0.16, vol: 0.12, delay: 0.12 });
+    noise({ dur: 0.08, vol: 0.12, f: 5000 });
+  },
+  perfect: () => {
+    tone({ type: "triangle", f0: 1568, dur: 0.07, vol: 0.14 });
+    tone({ type: "triangle", f0: 2093, dur: 0.14, vol: 0.12, delay: 0.06 });
+    tone({ type: "sine", f0: 3136, dur: 0.1, vol: 0.05, delay: 0.06 });
+  },
+  /** 100 m pop; big = 500 m / 1000 m celebration */
+  milestone: (big = 0) => {
+    if (!big) {
+      tone({ type: "triangle", f0: 880, f1: 1320, dur: 0.1, vol: 0.12 });
+      return;
+    }
+    [0, 4, 7, 12, big > 1 ? 16 : 12].forEach((s, i) =>
+      tone({ type: "triangle", f0: 523 * 2 ** (s / 12), dur: 0.16, vol: 0.16, delay: i * 0.07 }),
+    );
+    noise({ dur: 0.35, vol: 0.18, f: 6000, delay: 0.28 });
+    tone({ type: "sine", f0: 130, f1: 65, dur: 0.3, vol: 0.3 });
+  },
+  /** passing your best mid-run: a bright brass-ish sting */
+  newBest: () => {
+    [0, 7, 12, 16].forEach((s, i) => {
+      const f = 587 * 2 ** (s / 12);
+      tone({ type: "sawtooth", f0: f, dur: 0.18, vol: 0.06, delay: i * 0.075 });
+      tone({ type: "triangle", f0: f, dur: 0.22, vol: 0.14, delay: i * 0.075 });
+    });
+    noise({ dur: 0.5, vol: 0.16, f: 7000, delay: 0.3 });
+  },
+  /** Game Over roll-ups: tiny click, throttled so a fast count never buzzes */
+  tick: () => {
+    const now = performance.now();
+    if (now - lastTick < 45) return;
+    lastTick = now;
+    tone({ type: "square", f0: 2400, f1: 1800, dur: 0.018, vol: 0.05 });
+  },
+  whoosh: () => {
+    noise({ dur: 0.45, vol: 0.22, f: 1600 });
+    tone({ type: "sine", f0: 300, f1: 900, dur: 0.4, vol: 0.06 });
+  },
+  levelUp: () => {
+    [0, 4, 7, 12, 16, 19, 24].forEach((s, i) =>
+      tone({ type: "triangle", f0: 523 * 2 ** (s / 12), dur: 0.2, vol: 0.15, delay: i * 0.06 }),
+    );
+    tone({ type: "sine", f0: 98, f1: 196, dur: 0.5, vol: 0.25 });
+    noise({ dur: 0.6, vol: 0.14, f: 8000, delay: 0.35 });
+  },
+  /** hero unlock reveal: a rising swell then a bright hit */
+  reveal: () => {
+    tone({ type: "sine", f0: 180, f1: 900, dur: 0.9, vol: 0.12 });
+    noise({ dur: 0.9, vol: 0.1, f: 2500 });
+    [0, 7, 12, 19].forEach((s, i) =>
+      tone({ type: "triangle", f0: 659 * 2 ** (s / 12), dur: 0.3, vol: 0.15, delay: 0.9 + i * 0.05 }),
+    );
+  },
+  chestShake: () => tone({ type: "square", f0: 160, f1: 120, dur: 0.05, vol: 0.08 }),
+  chestOpen: () => {
+    noise({ dur: 0.25, vol: 0.3, f: 1200 });
+    tone({ type: "triangle", f0: 784, f1: 1568, dur: 0.3, vol: 0.18 });
+    tone({ type: "sine", f0: 2093, dur: 0.25, vol: 0.08, delay: 0.12 });
+  },
+  lucky: () => {
+    [0, 4, 7, 11, 14].forEach((s, i) =>
+      tone({ type: "sine", f0: 784 * 2 ** (s / 12), dur: 0.25, vol: 0.14, delay: i * 0.09 }),
+    );
   },
   near: () => {
     noise({ dur: 0.25, vol: 0.35, f: 2400 });

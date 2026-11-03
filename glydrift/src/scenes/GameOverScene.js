@@ -11,6 +11,7 @@ import { Leaderboard, Levels } from "../systems/leaderboard.js";
 import { Music } from "../systems/music.js";
 import { Progression, SPIN_EVERY } from "../systems/progression.js";
 import { dailyNumber } from "../systems/rng.js";
+import { levelUpCelebration, revealHero } from "../ui/reveal.js";
 import { closeShareModal, openShareModal } from "../systems/shareCard.js";
 import {
   button,
@@ -77,12 +78,13 @@ export class GameOverScene extends Phaser.Scene {
       "#ffffff",
     );
     const scoreText = neonText(this, W / 2, H * 0.17, "0", 100, col, { blur: 22 });
-    new RollingCounter(this, scoreText).to(run.score, 550, 100);
+    new RollingCounter(this, scoreText, { onTick: Sfx.tick }).to(run.score, 550, 100);
     popIn(this, [head, scoreLbl, scoreText], 0, { duration: 300 });
     // breakdown: why score ≠ distance
     const parts = [`${run.distance}m`];
     if (run.coinBonus) parts.push(`+${run.coinBonus} coins`);
-    if (run.nearBonus) parts.push(`+${run.nearBonus} close calls`);
+    if (run.nearBonus) parts.push(`+${run.nearBonus} combos`);
+    if (run.bestCombo > 1) parts.push(`best x${run.bestCombo}`);
     const breakdown = plainText(this, W / 2, H * 0.222, parts.join("   "), 20, "#a99fd6");
     slideIn(this, breakdown, 300, 20);
 
@@ -123,7 +125,14 @@ export class GameOverScene extends Phaser.Scene {
       const coinIcon = this.add.image(-60, 0, "coin").setScale(0.8 / HI);
       const coinTxt = neonText(this, -32, 0, "+0", 32, COIN_COLOR, { ox: 0, blur: 8 });
       coinRow.add([coinIcon, coinTxt]);
-      new RollingCounter(this, coinTxt, { format: (v) => `+${Math.round(v)}` }).to(
+      if (run.lucky)
+        coinRow.add(
+          plainText(this, 150, 0, "LUCKY RUN · x2", 18, "#ffd23f", { ox: 0 }),
+        );
+      new RollingCounter(this, coinTxt, {
+        format: (v) => `+${Math.round(v)}`,
+        onTick: Sfx.tick,
+      }).to(
         earned,
         400,
         450,
@@ -215,12 +224,14 @@ export class GameOverScene extends Phaser.Scene {
     // (they used to drop from the top onto the score)
     const toastY = Math.max(y + 46, Math.max(y + 90, H * 0.8) - 110);
     this.time.delayedCall(ANIM_END, () => {
-      for (const u of R.unlocks)
-        toast(this, `${u.name} UNLOCKED!`, u.color, {
-          y: toastY,
-          sub: u.challenge?.text,
-          side: true,
-        });
+      // each new hero gets the full spotlight reveal, one after another
+      (async () => {
+        for (const u of R.unlocks) {
+          if (this.leaving) return;
+          const def = u.texture ? u : getCharacter(u.id);
+          if (def) await revealHero(this, def, { title: "UNLOCKED!" });
+        }
+      })();
       for (const a of R.achievements)
         toast(this, a.name.toUpperCase(), 0xffd23f, {
           y: toastY,
@@ -379,6 +390,7 @@ export class GameOverScene extends Phaser.Scene {
     const run = (i) => {
       if (i >= steps.length) return;
       const st = steps[i];
+      this.time.delayedCall(i === 0 ? delay : 40, () => Sfx.whoosh());
       bar.to(st.to, steps.length > 1 ? 220 : 350, i === 0 ? delay : 40, () => {
         if (st.lu) {
           Sfx.reward();
@@ -393,10 +405,7 @@ export class GameOverScene extends Phaser.Scene {
           const parts = [];
           if (rw.coins) parts.push(`+${rw.coins} coins`);
           if (rw.shard) parts.push(st.lu.shardResult?.id ? "+1 hero shard" : "+300 coins");
-          toast(this, `LEVEL ${st.lu.level}!`, 0x3ef4ff, {
-            y: (this.registry.get("safeTop") || 0) + 150,
-            sub: parts.join(" · "),
-          });
+          levelUpCelebration(this, st.lu.level, parts.join(" · "));
           bar.set(0);
         }
         run(i + 1);

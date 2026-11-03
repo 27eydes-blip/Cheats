@@ -34,6 +34,7 @@ export class PxObstacle {
     this.x = x;
     this.active = true;
     this.passed = false;
+    this.centerSeen = false;
     this.minClear = Infinity;
     this.t = 0;
     for (const o of this.objects) o.setVisible(true);

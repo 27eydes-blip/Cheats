@@ -504,7 +504,7 @@ export class CharacterRig {
     if (this.px && !this.ghost) {
       // stepped pixel trail: squares snapped to the art-pixel grid, shrinking + fading
       const P = 4;
-      const cols = this.px.trail;
+      const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail
       const n = this.points.length;
       for (let i = 1; i < n; i += 2) {
         const p = this.points[i];

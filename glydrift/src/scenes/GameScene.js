@@ -10,6 +10,7 @@ import {
   N_BIOMES,
 } from "../biomes/biomes.js";
 import { fitCamera, NEAR_MISS, PHYSICS, POST_FX, speedForMeters, VIEW, WORLD } from "../config.js";
+import { ComboMeter, TIER_COLORS } from "../effects/ComboMeter.js";
 import { Effects } from "../effects/Effects.js";
 import { ScreenFlash } from "../effects/ScreenFlash.js";
 import { ObstacleManager } from "../obstacles/ObstacleManager.js";
@@ -22,6 +23,7 @@ import { CharacterRig } from "../player/CharacterRig.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Player } from "../player/Player.js";
 import { Sfx } from "../systems/audio.js";
+import { Haptics } from "../systems/haptics.js";
 import { Leaderboard } from "../systems/leaderboard.js";
 import { Music } from "../systems/music.js";
 import { BIOME_TRACKS } from "../systems/musicTracks.js";
@@ -34,6 +36,20 @@ const CALM_M = 150; // last meters of the Glitch Realm before the Abyss: The Cal
 const ABYSS_SPIKE = 1.06; // speed jump entering the Abyss
 const DARK_R = 470; // Abyss light radius around the player
 const COIN_BONUS = 10;
+// combo: near-misses, coins and perfect passes chain; the multiplier steps up with the chain
+const COMBO_TIERS = [
+  [16, 10],
+  [10, 5],
+  [6, 3],
+  [3, 2],
+]; // [chain length, multiplier]
+const COMBO_WINDOW = 3; // seconds without a combo event resets it
+const PERFECT_BONUS = 15;
+const BIOME_COINS = 50;
+const LUCKY_CHANCE = 0.05; // about 1 run in 20
+const GOLD_TRAIL = [0xffffff, 0xfff1a0, 0xffd23f, 0xc8901a];
+const FORCE_LUCKY =
+  typeof location !== "undefined" && new URLSearchParams(location.search).has("lucky");
 // ?god in the URL makes the player invincible (handy for testing / capturing screenshots)
 const DEBUG_GOD =
   typeof location !== "undefined" && new URLSearchParams(location.search).has("god"); // px of distance per ghost sample
@@ -127,6 +143,7 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0);
     // colour flashes (run start, portals, biome entrance, near-miss edges, new best, Abyss)
     this.flashFx = new ScreenFlash(this, { depth: 55 });
+    this.comboMeter = new ComboMeter(this, 32);
     this.shiftCol = SHIFTS.void[0];
     this.beatClock = 0;
     const DS = 1024;
@@ -168,8 +185,17 @@ export class GameScene extends Phaser.Scene {
     this.slowT = 0;
     this.deathT = 0;
     this.bonus = 0;
-    this.combo = 0;
-    this.comboT = 0;
+    this.coinPts = 0;
+    this.chain = 0;
+    this.chainT = 0;
+    this.mult = 1;
+    this.coinStep = 0;
+    this.coinStepT = 0;
+    this.nextMilestone = 100;
+    this.sparkleT = 0;
+    this.comboMeter.reset();
+    this.lucky = this.mode !== "daily" && (FORCE_LUCKY || Math.random() < LUCKY_CHANCE);
+    this.player.rig.trailOverride = this.lucky ? GOLD_TRAIL : null;
     this.lastSpeedTier = 0;
     this.biomeIndex = 0;
     this.announcedBiome = 0;
@@ -205,6 +231,10 @@ export class GameScene extends Phaser.Scene {
       biome: 0,
       ghost: null,
       runTimeMs: 0,
+      perfects: 0,
+      bestCombo: 1,
+      bonusCoins: 0,
+      lucky: this.lucky,
     };
     this.ghostRec = [];
     this.nextGhostSample = 0;
@@ -259,7 +289,14 @@ export class GameScene extends Phaser.Scene {
   startRun() {
     this.state = "playing";
     this.flashFx.refresh();
-    this.flashFx.flash(BIOMES[0].neon, { peak: 0.42, dur: 0.3 });
+    this.flashFx.flash(this.lucky ? 0xffd23f : BIOMES[0].neon, { peak: 0.42, dur: 0.3 });
+    if (this.lucky) {
+      Sfx.lucky();
+      Haptics.strong();
+      this.time.delayedCall(250, () =>
+        this.hudReady?.hudBanner?.("LUCKY RUN!", 0xffd23f, "Golden trail · double coins"),
+      );
+    }
     this.player.flap();
     this.run.flaps++;
     Sfx.flap(this.charDef.id);
@@ -284,9 +321,8 @@ export class GameScene extends Phaser.Scene {
   // ------------------------------------------------------------------ events
   nearMiss(o) {
     this.run.nearMiss++;
-    this.combo = this.comboT > 0 ? this.combo + 1 : 1;
-    this.comboT = 2.5;
-    const pts = NEAR_MISS.bonus * this.combo;
+    this.addChain();
+    const pts = NEAR_MISS.bonus * this.mult;
     this.bonus += pts;
     this.slowT = NEAR_MISS.slowTime;
     this.fxState.flash = Math.max(this.fxState.flash, 0.28);
@@ -295,7 +331,7 @@ export class GameScene extends Phaser.Scene {
     this.fx.floatText(
       p.x + 40,
       p.y - 50,
-      this.combo > 1 ? `CLOSE! x${this.combo}` : "CLOSE!",
+      this.mult > 1 ? `CLOSE! +${pts}` : "CLOSE!",
       "#ffffff",
       40,
     );
@@ -303,7 +339,77 @@ export class GameScene extends Phaser.Scene {
     this.fx.ring(p.x, p.y, 0xffffff, { scale: 0.9, duration: 300 });
     this.flashFx.flash(this.charDef.color, { peak: 0.5, dur: 0.28, edge: true });
     Sfx.near();
-    this.hudReady?.onNearMiss?.(pts, this.combo);
+    this.hudReady?.onNearMiss?.(pts, this.mult);
+  }
+
+  /** One combo event (near-miss, coin, perfect). Steps the multiplier up the tiers. */
+  addChain() {
+    this.chain++;
+    this.chainT = COMBO_WINDOW;
+    let m = 1;
+    for (const [c, mm] of COMBO_TIERS)
+      if (this.chain >= c) {
+        m = mm;
+        break;
+      }
+    if (m > this.mult) {
+      this.mult = m;
+      this.run.bestCombo = Math.max(this.run.bestCombo, m);
+      this.comboMeter.setTier(m);
+      Sfx.combo([2, 3, 5, 10].indexOf(m) + 1);
+      Haptics.light();
+      const p = this.player;
+      this.fx.ring(p.x, p.y, TIER_COLORS[m], { scale: 1.2, duration: 340, width: 2 });
+      this.fx.burst("pixel", p.x, p.y, m >= 5 ? 14 : 8, TIER_COLORS[m], {
+        speed: { min: 140, max: 360 },
+      });
+    }
+  }
+
+  /** Flew through the dead centre of a gap. */
+  perfect() {
+    this.run.perfects++;
+    this.addChain();
+    const pts = PERFECT_BONUS * this.mult;
+    this.bonus += pts;
+    const p = this.player;
+    this.fx.floatText(p.x + 30, p.y - 92, `PERFECT! +${pts}`, "#fff1a0", 34);
+    this.fx.burst("star", p.x, p.y, 8, 0xfff1a0, { speed: { min: 100, max: 280 } });
+    this.flashFx.flash(0xfff4c0, { peak: 0.16, dur: 0.15 });
+    Sfx.perfect();
+    Haptics.light();
+  }
+
+  /** Every 100 m a pop; 500 m / 1000 m get a proper celebration. */
+  milestone(m) {
+    const p = this.player;
+    const big = m % 1000 === 0 ? 2 : m % 500 === 0 ? 1 : 0;
+    if (!big) {
+      this.fx.floatText(p.x + 20, p.y - 120, `${m}m`, "#bdf9ff", 30);
+      this.fx.ring(p.x, p.y, 0xbdf9ff, { scale: 0.8, duration: 300 });
+      Sfx.milestone(0);
+      return;
+    }
+    this.fx.floatText(p.x + 20, p.y - 130, `${m}m!`, "#ffd23f", big > 1 ? 60 : 50);
+    this.fx.burst("star", p.x, p.y, big > 1 ? 36 : 24, 0xffd23f, { speed: { min: 200, max: 640 } });
+    this.fx.burst("pixel", p.x, p.y, 16, 0xffffff, { speed: { min: 260, max: 700 } });
+    this.fx.ring(p.x, p.y, 0xffd23f, { scale: big > 1 ? 2.4 : 1.8, duration: 600, width: 2 });
+    this.flashFx.flash(0xffd23f, { peak: big > 1 ? 0.32 : 0.24, dur: 0.35 });
+    this.cameras.main.shake(160, 0.004);
+    Sfx.milestone(big);
+    Haptics.strong();
+  }
+
+  /** +50 coins for reaching a new biome (shown flying from the bird). */
+  biomeBonus() {
+    this.run.coins += BIOME_COINS;
+    this.run.bonusCoins += BIOME_COINS;
+    const p = this.player;
+    this.fx.floatText(p.x + 30, p.y - 60, `+${BIOME_COINS}`, "#ffd23f", 40);
+    this.fx.burst("star", p.x, p.y, 16, 0xffd23f, { speed: { min: 160, max: 460 } });
+    Sfx.reward();
+    Haptics.light();
+    this.hudReady?.onCoin?.(this.run.coins);
   }
 
   portal(o) {
@@ -346,8 +452,8 @@ export class GameScene extends Phaser.Scene {
     this.slowT = 0.5;
     this.run.distance = Math.floor(this.meters);
     this.run.score = this.score;
-    this.run.nearBonus = this.bonus;
-    this.run.coinBonus = this.run.coins * COIN_BONUS;
+    this.run.nearBonus = this.bonus - this.coinPts;
+    this.run.coinBonus = this.coinPts;
     this.run.ghost = this.ghostRec;
     this.hudReady?.onDeath?.();
   }
@@ -369,7 +475,8 @@ export class GameScene extends Phaser.Scene {
 
   /** Score = distance + close-call bonuses + coin bonuses (so it differs from distance). */
   get score() {
-    return Math.floor(this.meters) + this.bonus + this.run.coins * COIN_BONUS;
+    // coin points are added as they are collected (with the combo multiplier)
+    return Math.floor(this.meters) + this.bonus;
   }
 
   // ------------------------------------------------------------------ main loop
@@ -458,6 +565,10 @@ export class GameScene extends Phaser.Scene {
         Sfx.biome();
         Music.play(BIOME_TRACKS[bs.rawIndex % BIOME_TRACKS.length], { startBar: 8 });
         this.hudReady?.onBiome?.(bs.rawIndex);
+        if (bs.rawIndex > 0) {
+          this.slowT = Math.max(this.slowT, 0.45); // a brief slow-mo beat
+          this.biomeBonus();
+        }
         this.flashFx.flash(BIOMES[bs.rawIndex % BIOMES.length].neon, {
           peak: 0.45,
           dur: 0.35,
@@ -558,21 +669,54 @@ export class GameScene extends Phaser.Scene {
         } else if (!this.obstacles.flipped) p.flipGravity(1);
       }
       if (ev.coins) {
-        this.run.coins += ev.coins;
-        Sfx.coin();
+        this.run.coins += ev.coins * (this.lucky ? 2 : 1);
+        for (let i = 0; i < ev.coins; i++) this.addChain();
+        const pts = COIN_BONUS * ev.coins * this.mult;
+        this.bonus += pts;
+        this.coinPts += pts;
+        // coins in quick succession climb a scale
+        this.coinStep = this.coinStepT > 0 ? Math.min(12, this.coinStep + 1) : 0;
+        this.coinStepT = 0.8;
+        Sfx.coin(this.coinStep);
+        Haptics.light();
         this.hudReady?.onCoin?.(this.run.coins);
       }
       for (const o of ev.near) this.nearMiss(o);
+      for (const o of ev.perfect) this.perfect(o);
       const r = p.radius;
       if (ev.hit || p.y < -r * 0.6 || p.y > this.H + r * 0.6) this.die();
 
-      if (this.comboT > 0) this.comboT -= dt;
+      // combo window runs on real time (slow-mo doesn't stretch it)
+      if (this.chainT > 0) {
+        this.chainT -= rawDt;
+        if (this.chainT <= 0) {
+          this.chain = 0;
+          this.mult = 1;
+          this.comboMeter.setTier(1);
+        }
+      }
+      this.comboMeter.update(rawDt, p.x, p.y, Math.max(0, this.chainT / COMBO_WINDOW));
+      if (this.coinStepT > 0) this.coinStepT -= rawDt;
+      while (this.meters >= this.nextMilestone) {
+        this.milestone(this.nextMilestone);
+        this.nextMilestone += 100;
+      }
+      if (this.lucky) {
+        this.sparkleT -= rawDt;
+        if (this.sparkleT <= 0) {
+          this.sparkleT = 0.12;
+          this.fx.burst("star", p.x - 18, p.y + 4, 1, 0xffd23f, { speed: { min: 20, max: 80 } });
+        }
+      }
       this.run.distance = Math.floor(this.meters);
       this.run.score = this.score;
 
       if (!this.passedBest && this.bestScore > 0 && this.score > this.bestScore) {
         this.passedBest = true;
         this.hudReady?.onNewBest?.();
+        this.fx.floatText(p.x + 20, p.y - 120, "NEW BEST!", "#ffd23f", 50);
+        Sfx.newBest();
+        Haptics.strong();
         this.fx.burst("star", p.x, p.y, 24, 0xffd23f, { speed: { min: 150, max: 420 } });
         this.fx.burst("pixel", p.x, p.y, 18, 0xfff1a0, { speed: { min: 240, max: 620 } });
         this.fx.ring(p.x, p.y, 0xffd23f, { scale: 1.6, duration: 520, width: 2 });
@@ -639,6 +783,7 @@ export class GameScene extends Phaser.Scene {
     this.setDesat(0);
     this.cameras.main.shake(380, 0.012);
     this.flashFx.flash(0xff0820, { peak: 0.55, dur: 0.6, priority: true });
+    this.time.delayedCall(700, () => this.state === "playing" && this.biomeBonus());
     Sfx.biome();
     Music.play("abyss", { startBar: 16, immediate: true });
     this.hudReady?.onBiome?.(this.biomeIndex, { slam: true });

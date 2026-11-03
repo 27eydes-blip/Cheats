@@ -199,10 +199,11 @@ export function slideIn(scene, targets, delay = 0, dy = 60) {
 
 /** Number counter that rolls up with easing. */
 export class RollingCounter {
-  constructor(scene, textObj, { format = (v) => `${Math.round(v)}`, value = 0 } = {}) {
+  constructor(scene, textObj, { format = (v) => `${Math.round(v)}`, value = 0, onTick } = {}) {
     this.scene = scene;
     this.text = textObj;
     this.format = format;
+    this.onTick = onTick; // called whenever the shown whole number changes (roll-up ticks)
     this.value = value;
     this.shown = value;
     this.text.setText(format(value));
@@ -225,6 +226,7 @@ export class RollingCounter {
       delay,
       ease: "Cubic.easeOut",
       onUpdate: () => {
+        if (this.onTick && Math.round(obj.v) !== Math.round(this.shown)) this.onTick();
         this.shown = obj.v;
         this.text.setText(this.format(obj.v));
       },

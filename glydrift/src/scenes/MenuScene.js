@@ -8,6 +8,7 @@ import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Sfx } from "../systems/audio.js";
+import { Haptics } from "../systems/haptics.js";
 import { Install } from "../systems/install.js";
 import { Leaderboard } from "../systems/leaderboard.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
@@ -17,6 +18,7 @@ import { todayKey } from "../systems/rng.js";
 import { Save } from "../systems/save.js";
 import { drawIcon } from "../ui/icons.js";
 import { askUsername } from "../ui/nameModal.js";
+import { openChest, revealHero } from "../ui/reveal.js";
 import {
   button,
   drawNeonRect,
@@ -391,12 +393,14 @@ export class MenuScene extends Phaser.Scene {
     });
   }
 
-  claimLogin(x, y) {
+  async claimLogin(bx, by) {
     const res = Progression.claimLogin();
     this.closeModal();
     if (!res) return;
+    // the reward comes out of a chest that shakes and bursts open
+    const { x, y } = await openChest(this, this.W / 2, this.H * 0.46);
     Sfx.reward();
-    // coin burst: coins pop out of the button and fly into the coin counter
+    // coin burst: coins pop out of the chest and fly into the coin counter
     const tx = this.coinIcon.x;
     const ty = this.coinIcon.y;
     const n = 16;
@@ -404,14 +408,14 @@ export class MenuScene extends Phaser.Scene {
       const coin = this.add
         .image(x, y, "coin")
         .setScale(0.9 / HI)
-        .setDepth(400);
-      const a = Math.random() * Math.PI * 2;
-      const r = 90 + Math.random() * 120;
+        .setDepth(500);
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
+      const r = 120 + Math.random() * 160;
       this.tweens.add({
         targets: coin,
         x: x + Math.cos(a) * r,
-        y: y + Math.sin(a) * r * 0.7,
-        duration: 320,
+        y: y + Math.sin(a) * r * 0.8,
+        duration: 340,
         ease: "Cubic.easeOut",
         onComplete: () =>
           this.tweens.add({
@@ -424,31 +428,28 @@ export class MenuScene extends Phaser.Scene {
             ease: "Cubic.easeIn",
             onComplete: () => {
               coin.destroy();
-              Sfx.coin();
+              Sfx.coin(Math.min(12, Math.floor(i / 1.4)));
+              Haptics.light();
               this.tweens.add({
                 targets: this.coinIcon,
-                scale: { from: 1.2 / HI, to: 0.8 / HI },
+                scale: { from: 1.25 / HI, to: 0.8 / HI },
                 duration: 160,
               });
             },
           }),
       });
     }
-    this.fx.burst("star", x, y, 24, COIN_COLOR, { speed: { min: 200, max: 600 } });
     this.time.delayedCall(700, () => this.coinCounter.to(Save.data.coins, 800));
     if (res.shardResult?.id) {
       const def = getCharacter(res.shardResult.id);
-      toast(
-        this,
-        res.shardResult.unlocked ? `${def.name} UNLOCKED!` : `${def.name} SHARD`,
-        def.color,
-        {
+      if (res.shardResult.unlocked) {
+        this.time.delayedCall(1500, () => revealHero(this, def, { title: "UNLOCKED!" }));
+      } else {
+        toast(this, `${def.name} SHARD`, def.color, {
           y: this.H * 0.3,
-          sub: res.shardResult.unlocked
-            ? "Rare hero joins your roster"
-            : `${res.shardResult.count}/${res.shardResult.need} shards`,
-        },
-      );
+          sub: `${res.shardResult.count}/${res.shardResult.need} shards`,
+        });
+      }
     }
   }
 

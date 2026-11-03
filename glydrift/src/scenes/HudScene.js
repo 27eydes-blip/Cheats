@@ -193,10 +193,15 @@ export class HudScene extends Phaser.Scene {
     this.coins.bump(n);
     this.tweens.add({
       targets: this.coinIcon,
-      scale: { from: 1.2 / HI, to: 0.8 / HI },
+      scale: { from: 1.25 / HI, to: 0.8 / HI },
       duration: 200,
       ease: "Back.easeOut",
     });
+    // the number itself bounces too
+    const t = this.coins.text;
+    this.tweens.killTweensOf(t);
+    t.setScale(1);
+    this.tweens.add({ targets: t, scale: { from: 1.3, to: 1 }, duration: 220, ease: "Back.easeOut" });
   }
 
   /**
