@@ -730,6 +730,32 @@ export const CHARACTERS = [
     desc: "Aurora trail. Dissolves into stardust.",
   },
   {
+    id: "wallrunner",
+    name: "WALLRUNNER",
+    title: "Leprechaun",
+    rarity: "epic",
+    color: 0x2aa83a,
+    color2: 0xff2a10,
+    texture: "hero_wallrunner",
+    pixel: {
+      atlas: "pxc",
+      frames: ["wallrunner_0", "wallrunner_1", "wallrunner_2"],
+      mode: "leap",
+      trail: [0xfff6c0, 0xffd23f, 0x8aff7a, 0x2aa83a],
+    },
+    fx: {
+      flap: { kind: "star", color: 0xffd23f, n: 4 },
+      death: [
+        { kind: "star", color: 0xffd23f, n: 30 },
+        { kind: "dot", color: 0x2aa83a, n: 26 },
+        { kind: "pixel", color: 0xff2a10, n: 16 },
+      ],
+    },
+    scale: 0.64,
+    cost: 3000,
+    desc: "Lucky gold trail. Leaps in a shower of gold.",
+  },
+  {
     id: "manny",
     name: "MANNY",
     title: "Gold-Nosed Black Bear",

@@ -540,6 +540,70 @@ export function manny(f) {
   return pc.outline(0x05050a, 1, true);
 }
 
+// ------------------------------------------------------------------ WALLRUNNER — leprechaun
+// Very red hair and beard, ink tattoos on the face, buckled green hat. Frames: 0 / 1 standing
+// (beard bobs), 2 = the leap (legs kicked back, arm thrown forward).
+export function wallrunner(f) {
+  const pc = new PixelCanvas(24, 24);
+  const COAT = 0x2aa83a;
+  const COAT_D = 0x16702a;
+  const SKIN = 0xffc8a0;
+  const RED = 0xff2a10; // very red hair
+  const RED_HI = 0xff7a3a;
+  const INK = 0x1a2a6a; // face tattoos
+  const leap = f === 2;
+  // legs + buckled shoes
+  if (leap) {
+    pc.poly(
+      [
+        [8, 16],
+        [2, 18],
+        [2, 20],
+        [9, 18],
+      ],
+      COAT_D,
+    );
+    pc.rect(0, 18, 3, 2, 0x161616).set(1, 18, 0xffd23f);
+  } else {
+    pc.rect(8, 18, 2, 3, COAT_D).rect(12, 18, 2, 3, COAT_D);
+    pc.rect(7, 20, 3, 2, 0x161616).rect(12, 20, 3, 2, 0x161616);
+    pc.set(8, 20, 0xffd23f).set(13, 20, 0xffd23f);
+  }
+  // coat + belt with a gold buckle
+  pc.ellipse(10.5, 14.5, 5, 4, COAT);
+  pc.hline(6, 15, 16, 0x161616);
+  pc.rect(10, 15, 2, 2, 0xffd23f);
+  // arm (thrown forward on the leap)
+  if (leap) {
+    pc.hline(14, 19, 13, COAT);
+    pc.set(20, 13, SKIN).set(20, 12, SKIN);
+  } else {
+    pc.vline(14, 13, 16, COAT_D);
+    pc.set(14, 17, SKIN);
+  }
+  // head: red hair at the back, face, big very red beard
+  pc.ellipse(13, 9, 2.2, 2.6, RED); // hair behind the ear
+  pc.ellipse(17, 8.5, 3, 2.6, SKIN);
+  const by = f === 1 ? 12.4 : 12;
+  pc.ellipse(17, by, 3.4, 2.4, RED);
+  pc.set(16, Math.round(by) - 1, RED_HI).set(18, Math.round(by), RED_HI);
+  pc.set(20, 8, SKIN).set(21, 9, 0xf0a080); // nose
+  pc.rect(18, 7, 2, 1, 0xffffff).set(19, 7, 0x161616); // eye (white + pupil)
+  pc.hline(18, 19, 6, 0xc81a08); // fiery red brow
+  // face tattoos: a teardrop under the eye, cheek stripes, a forehead mark
+  pc.set(19, 9, INK);
+  pc.set(16, 8, INK).set(16, 9, INK);
+  pc.set(17, 6, INK);
+  // hat: brim, tall green crown, black band, gold buckle, a little clover
+  pc.hline(12, 21, 5, COAT_D);
+  pc.rect(14, 0, 6, 5, COAT);
+  pc.hline(14, 19, 4, 0x161616);
+  pc.rect(16, 3, 2, 2, 0xffd23f).set(16, 3, 0xfff6c0);
+  pc.set(18, 1, 0x8aff7a);
+  shadeEdges(pc, COAT, COAT_D);
+  return pc.outline(0x08200c, 1, true);
+}
+
 export const SHOP_DRAW = {
   pip,
   coral,
@@ -554,4 +618,5 @@ export const SHOP_DRAW = {
   smash,
   milzzz,
   manny,
+  wallrunner,
 };
