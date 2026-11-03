@@ -712,6 +712,8 @@ export class GameScene extends Phaser.Scene {
       const dm = Math.max(0, this.meters - (this.zoneLastM ?? this.meters));
       if (this.zoneId === "prism" && biomeId !== "prism")
         this.run.prismClear = (this.run.prismClear || 0) + 1;
+      if (this.zoneId === "abyss" && biomeId !== "abyss")
+        this.run.abyssClear = (this.run.abyssClear || 0) + 1;
       this.zoneId = biomeId;
       if (biomeId === "abyss") this.run.abyssM = (this.run.abyssM || 0) + dm;
       if (biomeId === "prism") this.run.prismM = (this.run.prismM || 0) + dm;

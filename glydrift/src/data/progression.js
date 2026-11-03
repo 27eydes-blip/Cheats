@@ -635,6 +635,7 @@ export const Progression = {
     st.maxAbyssNear = Math.max(st.maxAbyssNear || 0, run.abyssNear || 0);
     st.maxPrismM = Math.max(st.maxPrismM || 0, Math.floor(run.prismM || 0));
     st.prismClears = (st.prismClears || 0) + (run.prismClear || 0);
+    st.abyssClears = (st.abyssClears || 0) + (run.abyssClear || 0);
 
     // daily
     if (run.mode === "daily") {
