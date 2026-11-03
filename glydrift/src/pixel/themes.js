@@ -4,6 +4,9 @@ import { buildFloorStrips, buildGlowDot } from "./floorArt.js";
 import { buildBiome, NV } from "./biomeArt.js";
 import { buildCommon } from "./common.js";
 import { buildHazards } from "./hazardArt.js";
+import { buildNewHazards } from "./newHazardArt.js";
+import { addAtlas } from "./px.js";
+import { weatherFrames } from "./scenicArt.js";
 
 const SOLAR = {
   O: 0x120403,
@@ -144,6 +147,86 @@ const ABYSS = {
   flame: { y: 0xffd0a0, o: 0xff7040, r: 0x9a1a10 },
 };
 
+// Peaceful Valley: a bright pastel day. Spikes/thorns are raspberry so they still pop.
+const VALLEY = {
+  O: 0x1a2a14,
+  s0: 0x3c5a34,
+  s1: 0x52764a,
+  s2: 0x6a9460,
+  s3: 0x86b07a,
+  s4: 0xa8cc98,
+  m: 0x2c4226,
+  g0: 0x4a8a3a, // moss + clover (decor)
+  g1: 0x6aaa4a,
+  g2: 0x8ccc5a,
+  k0: 0x7a0a3a,
+  k1: 0xd0105a,
+  k2: 0xff2d78,
+  k3: 0xffc0d8,
+  metal0: 0x5a4a3a,
+  metal1: 0x7a6650,
+  metal2: 0x9a8668,
+  metal3: 0xc8b490,
+  crys0: 0x8a3a7a,
+  crys1: 0xd86ab8,
+  crys2: 0xffb0e0,
+  bg0: 0xbfe6ff,
+  bg1: 0xa8dcc0,
+  bg2: 0x9ccfb8, // far hills
+  bg3: 0x6fb88a, // mid meadow
+  bg4: 0xb8e8c8,
+  bgDetail: 0xffe0f0, // pale blossoms (never the hazard raspberry)
+  bgHang: 0x5a9a6a,
+  bgNear: 0x3f8452,
+  sky: ["#86c8f8", "#bfe4ff", "#d8eed8", "#9ccf9a"], // blue sky → soft meadow haze
+  haze: 0xc4e6d6,
+  hazeRim: 0xdcf2e6,
+  hazeLit: 0xffffff,
+  glow: 0xfff4c8,
+  eye: 0xffffff,
+  flame: { y: 0xfffbe0, o: 0xffd86a, r: 0xff9ac8 }, // glowing flower bulbs
+};
+
+// Hurricane: a dark, wet slate storm with electric-blue light; hazards are hot orange.
+const HURRICANE = {
+  O: 0x05080c,
+  s0: 0x1c242e,
+  s1: 0x283442,
+  s2: 0x364658,
+  s3: 0x4a5e74,
+  s4: 0x6a809a,
+  m: 0x10161e,
+  g0: 0x24403a, // kelp + wet moss (decor)
+  g1: 0x2e5a4a,
+  g2: 0x3a7a5e,
+  k0: 0x7a2a00,
+  k1: 0xff6a00,
+  k2: 0xffa21a,
+  k3: 0xfff0a0,
+  metal0: 0x22282e,
+  metal1: 0x3a444e,
+  metal2: 0x5a6774,
+  metal3: 0x95a3b2,
+  crys0: 0x1a3a5a,
+  crys1: 0x3a7aaa,
+  crys2: 0x8ad8ff,
+  bg0: 0x080c10,
+  bg1: 0x0c1218,
+  bg2: 0x18222e,
+  bg3: 0x141c26,
+  bg4: 0x26364a,
+  bgDetail: 0x5a7a9a,
+  bgHang: 0x1a2430,
+  bgNear: 0x0e141c,
+  sky: ["#0a1016", "#1a2634", "#2a3a4c", "#0e151c"],
+  haze: 0x2c3c4e,
+  hazeRim: 0x3e546c,
+  hazeLit: 0x8ad8ff,
+  glow: 0x3a6a9a,
+  eye: 0x8ad8ff,
+  flame: { y: 0xffffff, o: 0x8ad8ff, r: 0x3a7aaa }, // storm lanterns
+};
+
 const DEFS = {
   void: {
     pal: NV,
@@ -169,6 +252,34 @@ const DEFS = {
     pal: ABYSS,
     cfg: { pillar: "stone", lamp: "torch", far: "cliffs", mid: "ruins", hang: "chains" },
     weather: { kind: "ash", color: 0x8a4a4a, rate: 40 },
+  },
+  valley: {
+    pal: VALLEY,
+    cfg: {
+      pillar: "stone",
+      lamp: "orb",
+      far: "hills",
+      mid: "meadow",
+      hang: "blossoms",
+      distant: "mountains",
+      nearTop: "canopy",
+      nearBot: "grass",
+    },
+    weather: { kind: "butterflies", color: 0xffb0d8, rate: 22 },
+  },
+  hurricane: {
+    pal: HURRICANE,
+    cfg: {
+      pillar: "stone",
+      lamp: "orb",
+      far: "stormclouds",
+      mid: "palms",
+      hang: "scud",
+      distant: "stormclouds",
+      nearTop: "scud",
+      nearBot: "surf",
+    },
+    weather: { kind: "storm", color: 0xa8c0d8, rate: 80 },
   },
 };
 
@@ -215,6 +326,8 @@ export function buildPixelArt(scene) {
   buildCommon(scene);
   buildFloorStrips(scene);
   buildGlowDot(scene);
+  addAtlas(scene, "wx", weatherFrames());
+  buildNewHazards(scene);
   for (const [id, d] of Object.entries(DEFS)) buildBiome(scene, id, d.pal, d.cfg);
   buildHazards(scene, { solar: SOLAR, frozen: FROZEN, glitch: GLITCH, abyss: ABYSS });
 }

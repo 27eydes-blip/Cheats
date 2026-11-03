@@ -1,7 +1,7 @@
 // Title screen: dimmed living background, the selected hero flying a figure-eight, a big
 // PLAY button, the Daily Challenge with a countdown, the daily login reward and settings.
 import Phaser from "phaser";
-import { biomeStateAt, blendPalette } from "../biomes/biomes.js";
+import { BIOMES, biomeStateAt, blendPalette } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, POST_FX, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
@@ -567,9 +567,9 @@ export class MenuScene extends Phaser.Scene {
     const dt = Math.min(delta / 1000, 1 / 30);
     this.t += dt;
     // slowly cycle every biome palette; menus keep the backdrop dim and scenery hidden
-    blendPalette(biomeStateAt((this.t * 18) % 2500), this.pal);
+    blendPalette(biomeStateAt((this.t * 18) % (500 * BIOMES.length)), this.pal);
     // showcase every pixel biome on the title screen (slow crossfade every ~9 s)
-    const showId = ["void", "solar", "frozen", "glitch", "abyss"][Math.floor(this.t / 9) % 5];
+    const showId = BIOMES[Math.floor(this.t / 9) % BIOMES.length].id;
     this.backdrop.drive(this.pal, {
       scroll: 140,
       speedNorm: 0,

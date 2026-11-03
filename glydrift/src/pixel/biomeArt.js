@@ -1,6 +1,7 @@
 // Pixel biome art generator. One palette + a few style switches per biome produce every tile,
 // hazard, decoration and background layer. All assets are original procedural pixel art.
 import { addAtlas, addTexture, mix, PixelCanvas, seeded, shade } from "./px.js";
+import { EXTRA_KINDS, silhouetteExtra } from "./scenicArt.js";
 
 export const NV = {
   O: 0x040b0d, // outline
@@ -740,9 +741,11 @@ export function buildBiome(scene, prefix, palette, cfg) {
   addTexture(scene, p("glow_h"), beamGlow(true));
   skyCanvas(scene, p("sky"));
   const sil = (kind, w, h, seed, colors) =>
-    ["city", "cables", "chains", "icicles"].includes(kind)
-      ? silhouette2(w, h, seed, { ...colors, kind })
-      : silhouette(w, h, seed, { ...colors, kind });
+    EXTRA_KINDS.includes(kind)
+      ? silhouetteExtra(w, h, seed, { ...colors, kind })
+      : ["city", "cables", "chains", "icicles"].includes(kind)
+        ? silhouette2(w, h, seed, { ...colors, kind })
+        : silhouette(w, h, seed, { ...colors, kind });
   addTexture(
     scene,
     p("far"),
@@ -758,11 +761,10 @@ export function buildBiome(scene, prefix, palette, cfg) {
   addTexture(
     scene,
     p("distant"),
-    silhouette(200, 64, 71, {
+    sil(cfg.distant || "ruins", 200, 64, 71, {
       base: haze,
       rim: C.hazeRim ?? shade(haze, 0.25),
       detail: C.hazeLit ?? shade(haze, 0.6),
-      kind: "ruins",
     }),
   );
   addTexture(scene, p("glowspot"), glowSpot(C.glow ?? mix(C.bg4, C.s4, 0.5)));
@@ -774,21 +776,19 @@ export function buildBiome(scene, prefix, palette, cfg) {
   addTexture(
     scene,
     p("near_top"),
-    silhouette(128, 40, 31, {
+    sil(cfg.nearTop || "stalactites", 128, 40, 31, {
       base: C.bgNear,
       rim: C.bg4,
       detail: C.bgDetail,
-      kind: "stalactites",
     }),
   );
   addTexture(
     scene,
     p("near_bot"),
-    silhouette(128, 40, 37, {
+    sil(cfg.nearBot || "stalagmites", 128, 40, 37, {
       base: C.bgNear,
       rim: C.bg4,
       detail: C.bgDetail,
-      kind: "stalagmites",
     }),
   );
   const lamp = cfg.lamp === "orb" ? orbLamp : cfg.lamp === "screen" ? screenLamp : torch;

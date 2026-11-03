@@ -82,7 +82,43 @@ export const BIOMES = [
     pulse: 1,
     embers: 0,
   },
+  {
+    id: "valley",
+    name: "PEACEFUL VALLEY",
+    sky: [0x8fd0ff, 0xffe0ef, 0xfff4d8],
+    nebula: [0xffb0d8, 0xa8f0c8],
+    neon: 0xff8ad0,
+    neon2: 0x7ae8a8,
+    accent: 0xfff07a,
+    planet: 0xc8e8ff,
+    island: 0x7ac890,
+    particle: "mote",
+    particleColor: 0xfff0f8,
+    glitch: 0,
+    pulse: 0,
+    embers: 0,
+  },
+  {
+    id: "hurricane",
+    name: "HURRICANE",
+    sky: [0x0c1218, 0x1c2836, 0x121a22],
+    nebula: [0x2a4a6a, 0x4a3a6a],
+    neon: 0x8ad8ff,
+    neon2: 0xffd23f,
+    accent: 0xc8e8ff,
+    planet: 0x202c3a,
+    island: 0x2a3a4c,
+    particle: "mote",
+    particleColor: 0xa8c0d8,
+    glitch: 0,
+    pulse: 0,
+    embers: 0,
+  },
 ];
+
+export const N_BIOMES = BIOMES.length;
+/** Biome id for a raw (ever-increasing) biome index. */
+export const biomeIdOf = (raw) => BIOMES[((raw % N_BIOMES) + N_BIOMES) % N_BIOMES].id;
 
 const lerp = (a, b, t) => a + (b - a) * t;
 

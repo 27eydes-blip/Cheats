@@ -6,9 +6,10 @@ import { S } from "../pixel/px.js";
 import { themeFor } from "../pixel/themes.js";
 import { RNG } from "../systems/rng.js";
 import { TYPES as BASE_TYPES } from "./pixelTypes.js";
+import { NEW_BIOME_TYPES } from "./newBiomeHazards.js";
 import { SIGNATURE_TYPES } from "./signature.js";
 
-const TYPES = { ...BASE_TYPES, ...SIGNATURE_TYPES };
+const TYPES = { ...BASE_TYPES, ...SIGNATURE_TYPES, ...NEW_BIOME_TYPES };
 
 /** Signature hazards per biome, in the order they are introduced (one at a time). */
 const SIG = {
@@ -17,6 +18,8 @@ const SIG = {
   frozen: ["icicle", "slider", "zap"],
   glitch: ["blink", "blaser", "zone"],
   abyss: ["tendril", "slammer", "walls"],
+  valley: ["vine", "puffs", "bloom"],
+  hurricane: ["debris", "bolt", "twister"],
 };
 /** Biome-local meters at which each signature hazard unlocks. */
 const UNLOCK = { void: [60, 200, 340], default: [0, 120, 230] };
@@ -62,7 +65,11 @@ export class ObstacleManager {
     for (const type of Object.keys(TYPES)) {
       if (type === "crusher") continue; // legacy neon crusher, never spawned
       const pool = (this.pools[type] ||= []);
-      const want = ["saw", "laser", "icicle", "meteor", "blink", "tendril"].includes(type) ? 2 : 1;
+      const want = ["saw", "laser", "icicle", "meteor", "blink", "tendril", "vine"].includes(type)
+        ? 2
+        : type === "debris"
+          ? 3
+          : 1;
       while (pool.length < want) pool.push(new TYPES[type](this));
     }
   }
@@ -108,7 +115,8 @@ export class ObstacleManager {
     this.theme = themeFor(biomeId);
     const r = this.rng;
     const H = this.H;
-    const d = Math.min(1, meters / 2600);
+    // the Abyss caps shared-obstacle difficulty (wider gates, slower saws)
+    const d = Math.min({ abyss: 0.55, valley: 0.3 }[biomeId] ?? 1, meters / 2600);
     const x = this.nextX;
     const mid = H / 2;
     const safeTop = 150;
@@ -151,6 +159,8 @@ export class ObstacleManager {
       if (!this.introduced.has(key) && !forced) forced = k;
     });
     if (w.zone && this.flipped) w.zone = 0;
+    // the Peaceful Valley has only its own gentle hazards (no saws, gates or portals)
+    if (biomeId === "valley") w.saw = w.gate = w.saw2 = w.flip = w.mini = 0;
     if (this.count < 2) w.saw2 = w.flip = w.mini = w.blade = w.hlaser = 0;
     if (info.grace) {
       // first seconds of the Abyss: only simple shared obstacles, spaced out
@@ -165,7 +175,7 @@ export class ObstacleManager {
       this.introduced.add(`${info.rawIndex}:${kind}`);
     }
     this.count++;
-    const roomy = biomeId === "abyss" ? 1.15 : biomeId === "glitch" ? 1.12 : 1; // a little more air
+    const roomy = { abyss: 1.4, glitch: 1.12, valley: 1.6, hurricane: 1.05 }[biomeId] ?? 1;
     const spacingMul = (forced ? 1.35 : info.grace ? 1.8 : 1) * roomy;
 
     switch (kind) {
@@ -394,11 +404,11 @@ export class ObstacleManager {
       }
       // ------------------------------------------------------------ abyss
       case "tendril": {
-        const n = local > 150 && r.chance(0.5) ? 2 : 1;
+        const n = local > 200 && r.chance(0.25) ? 2 : 1;
         let top = r.chance(0.5);
         for (let i = 0; i < n; i++) {
           const o = this.obtain("tendril");
-          o.spawn(x + 44 + i * 240, { top, L: r.range(H * 0.28, H * 0.42), lead: 1.3 });
+          o.spawn(x + 44 + i * 240, { top, L: r.range(H * 0.22, H * 0.34), lead: 1.3 });
           top = !top;
         }
         width = 88 + (n - 1) * 240;
@@ -409,8 +419,9 @@ export class ObstacleManager {
         const o = this.obtain("slammer");
         o.spawn(x + o.w / 2, {
           gc,
-          open: Phaser.Math.Linear(450, 400, d),
-          hold: r.range(1.1, 1.4),
+          open: Phaser.Math.Linear(500, 470, d),
+          hold: r.range(1.4, 1.8),
+          minGap: 200,
           phase: r.next(),
         });
         width = o.w;
@@ -421,12 +432,85 @@ export class ObstacleManager {
         const o = this.obtain("walls");
         o.spawn(x + (n * 64) / 2, {
           n,
-          depth: r.range(H * 0.17, H * 0.24),
-          sway: H * 0.055,
+          depth: r.range(H * 0.13, H * 0.19),
+          sway: H * 0.04,
           phase: r.range(0, 6.28),
         });
         this.coinLine(x + 200, x + n * 64 - 200, mid, 4);
         width = n * 64;
+        break;
+      }
+      // ------------------------------------------------------------ peaceful valley
+      case "vine": {
+        const n = r.chance(0.2) ? 2 : 1;
+        let top = r.chance(0.5);
+        for (let i = 0; i < n; i++) {
+          const o = this.obtain("vine");
+          o.spawn(x + 40 + i * 320, {
+            top,
+            L: r.range(H * 0.22, H * 0.32),
+            amp: r.range(0.16, 0.26),
+            speed: r.range(0.55, 0.8),
+            phase: r.next(),
+          });
+          top = !top;
+        }
+        width = 80 + (n - 1) * 320;
+        break;
+      }
+      case "puffs": {
+        const lane = r.range(safeTop + 160, safeBot - 160); // the calm path between puffs
+        const ys = [lane - 260, lane + 260].filter((y) => y > 40 && y < H - 40);
+        if (r.chance(0.4)) {
+          const far = lane + (r.chance(0.5) ? -1 : 1) * 520;
+          if (far > 40 && far < H - 40) ys.push(far);
+        }
+        const o = this.obtain("puffs");
+        o.spawn(x + 40, { ys, bob: r.range(28, 44), phase: r.next() });
+        this.coinLine(x + 10, x + 70, lane, 2);
+        width = 80;
+        break;
+      }
+      case "bloom": {
+        const gc = r.range(safeTop + 260, safeBot - 260);
+        const o = this.obtain("bloom");
+        o.spawn(x + 13 * S, {
+          gc,
+          open: r.range(520, 560),
+          narrow: r.range(400, 430),
+          period: r.range(3.8, 4.6),
+          phase: r.next(),
+        });
+        this.coinLine(x, x + 26 * S, gc, 2);
+        width = 26 * S;
+        break;
+      }
+      // ------------------------------------------------------------ hurricane
+      case "debris": {
+        const n = 2 + (r.chance(0.4) ? 1 : 0);
+        for (let i = 0; i < n; i++) {
+          const o = this.obtain("debris");
+          o.spawn(x + 60 + i * 230, {
+            y: r.range(-40, H * 0.5),
+            vx: -r.range(60, 120),
+            vy: r.range(110, 180),
+            spin: r.range(4, 8),
+            phase: r.next(),
+          });
+        }
+        width = 120 + (n - 1) * 230;
+        break;
+      }
+      case "bolt": {
+        const o = this.obtain("bolt");
+        o.spawn(x + 16 * S, { idle: r.range(0.9, 1.3), phase: r.next(), depth: r.range(0.45, 0.7) });
+        width = 32 * S;
+        break;
+      }
+      case "twister": {
+        const o = this.obtain("twister");
+        o.spawn(x + 100, { top: r.chance(0.35), wander: r.range(25, 50), phase: r.next() });
+        width = 200;
         break;
       }
       case "flip":

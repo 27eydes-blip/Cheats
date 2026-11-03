@@ -370,7 +370,7 @@ export class CharacterScene extends Phaser.Scene {
         frost: 2,
         glitch: 3,
         shade: 4,
-        nova: Math.floor(this.t / 4) % 5,
+        nova: Math.floor(this.t / 4) % 5, // the five classic biomes
         bloom: 0,
         mecha: 1,
         tide: 2,
@@ -387,7 +387,7 @@ export class CharacterScene extends Phaser.Scene {
         leviathan: 4,
       }[def.id] ?? 0;
     blendPalette(
-      { a: BIOMES[bi], b: BIOMES[(bi + 1) % 5], t: def.id === "nova" ? (this.t % 4) / 4 : 0 },
+      { a: BIOMES[bi], b: BIOMES[(bi + 1) % BIOMES.length], t: def.id === "nova" ? (this.t % 4) / 4 : 0 },
       this.pal,
     );
     this.backdrop.drive(this.pal, {

@@ -4,8 +4,9 @@
 import Phaser from "phaser";
 import { heartbeat } from "../biomes/Background.js";
 import { VIEW } from "../config.js";
+import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { lerpColor } from "../biomes/biomes.js";
-import { FLOOR } from "./colorShift.js";
+import { ENERGY, FLOOR } from "./colorShift.js";
 import { S } from "./px.js";
 import { THEMES, themeFor } from "./themes.js";
 
@@ -108,9 +109,22 @@ export class PixelBackground {
     const n = Math.round((this.lowGfx ? 0.4 : 1) * w.rate);
     const parts = [];
     for (let i = 0; i < n; i++) {
-      const key = w.kind === "rain" ? "rain" : "px1";
-      const d = scene.add.image(0, 0, key).setDepth(-70).setTint(w.color);
-      d.setScale(k * (w.kind === "rain" ? 1 : Math.random() < 0.3 ? 2 : 1));
+      let d;
+      if (w.kind === "butterflies") {
+        // butterflies + drifting petals (one in three is a petal)
+        const petal = i % 3 === 2;
+        d = scene.add.image(0, 0, "wx", petal ? "petal" : "bfly_0").setDepth(-70);
+        d.setTint(
+          petal ? 0xffc8e0 : [0xff6ab0, 0xffb02a, 0x6ab8ff, 0xb07aff, 0xffffff][i % 5],
+        );
+        d.petal = petal;
+        d.setScale(k * (petal ? 1 : Math.random() < 0.4 ? 2 : 1));
+      } else {
+        const rainy = w.kind === "rain" || w.kind === "storm";
+        d = scene.add.image(0, 0, rainy ? "rain" : "px1").setDepth(-70).setTint(w.color);
+        d.setScale(k * (rainy ? 1 : Math.random() < 0.3 ? 2 : 1));
+        if (w.kind === "storm") d.setRotation(0.55).setScale(k, k * 1.6); // wind-driven sheets
+      }
       this.resetPart(d, w.kind, true);
       parts.push(d);
       objs.push(d);
@@ -144,6 +158,19 @@ export class PixelBackground {
       d.y = initial ? Math.random() * H : -10 - Math.random() * 60;
       d.vy = kind === "snow" ? 50 + Math.random() * 80 : 25 + Math.random() * 40;
       d.vx = -30 - Math.random() * 30;
+    } else if (kind === "butterflies") {
+      d.y = Math.random() * H * 0.75 + H * 0.08;
+      if (!initial) d.x = this.W + 20 + Math.random() * 80;
+      d.vy = 0;
+      d.vx = -(8 + Math.random() * 26);
+      d.phase = Math.random() * 10;
+      d.base = 0.85;
+      return;
+    } else if (kind === "storm") {
+      d.y = initial ? Math.random() * H : -30 - Math.random() * 80;
+      d.x = Math.random() * (W + 600);
+      d.vy = 900 + Math.random() * 300;
+      d.vx = -(480 + Math.random() * 160);
     } else if (kind === "noise") {
       d.y = Math.random() * H;
       d.life = Math.random() * 0.4;
@@ -217,7 +244,12 @@ export class PixelBackground {
           gl.x = W + gl.displayWidth / 2;
           gl.y = H * (0.22 + Math.random() * 0.5);
         }
-        gl.setAlpha(set.alpha * gl.base * (0.75 + 0.25 * Math.sin(this.time * 0.8 + gl.phase)));
+        gl.setAlpha(
+          set.alpha *
+            gl.base *
+            (ENERGY[set.id]?.glow ?? 1) *
+            (0.75 + 0.25 * Math.sin(this.time * 0.8 + gl.phase)),
+        );
       }
       for (const m of set.motes) m.setDepth(-72 + lift);
       for (const l of set.layers) {
@@ -235,7 +267,22 @@ export class PixelBackground {
           d.setAlpha(set.alpha * (Math.random() < 0.85 ? d.base : 0));
           continue;
         }
-        const drift = set.kind === "rain" ? -scroll * 0.35 - 90 : -scroll * 0.15;
+        if (set.kind === "butterflies") {
+          // lazy flutter: bob, drift, flap (petals tumble instead)
+          d.x += (-scroll * 0.1 + d.vx) * dt * ps;
+          d.y += Math.sin(this.time * 2.2 + d.phase) * 26 * dt;
+          if (!d.petal) d.setFrame(Math.floor(this.time * 9 + d.phase) % 2 ? "bfly_1" : "bfly_0");
+          else d.y += 14 * dt;
+          d.setAlpha(set.alpha * d.base);
+          if (d.x < -30 || d.y > H + 20) this.resetPart(d, set.kind, false);
+          continue;
+        }
+        const drift =
+          set.kind === "rain"
+            ? -scroll * 0.35 - 90
+            : set.kind === "storm"
+              ? -scroll * 0.5
+              : -scroll * 0.15;
         d.x += (drift + d.vx) * dt * ps;
         d.y += d.vy * dt * ps;
         const flicker = set.kind === "embers" ? 0.6 + 0.4 * Math.sin(this.time * 9 + d.x) : 1;
@@ -256,12 +303,33 @@ export class PixelBackground {
     // colour energy: wash follows the in-biome colour shift and breathes with the beat
     const amt = o.shiftAmt ?? 0;
     const pb = o.beat ?? 0;
-    this.washA += ((amt > 0 ? 0.11 + 0.05 * pb : 0) * amt - this.washA) * Math.min(1, dt * 10);
-    this.wash.setVisible(this.washA > 0.002).setAlpha(this.washA);
-    if (amt > 0) this.wash.setFillStyle(o.shift, 1);
+    const en = ENERGY[this.current] || { wash: 1, floor: 1 };
+    this.washA +=
+      ((amt > 0 ? (0.11 + 0.05 * pb) * en.wash : 0) * amt - this.washA) * Math.min(1, dt * 10);
+    let washA = this.washA;
+    let washCol = o.shift;
+    // Hurricane: distant lightning lights the clouds now and then (a double flicker,
+    // at most one strike every 4 s; off with Reduce Flashing)
+    if (this.current === "hurricane" && amt > 0) {
+      this.boltT = (this.boltT ?? 2) - dt;
+      if (this.boltT <= 0) {
+        this.boltT = 4 + Math.random() * 5;
+        if (!reduceFlashing()) this.bolt = 0.26;
+      }
+    }
+    if (this.bolt > 0) {
+      this.bolt -= dt;
+      const b = this.bolt;
+      if (b > 0.18 || (b < 0.12 && b > 0.04)) {
+        washA += 0.16;
+        washCol = 0xc8e8ff;
+      }
+    }
+    this.wash.setVisible(washA > 0.002).setAlpha(washA);
+    if (amt > 0) this.wash.setFillStyle(washCol, 1);
     const fl = o.floor ? FLOOR[o.floor] : null;
     if (fl) this.floorCol = lerpColor(this.floorCol, fl.a, Math.min(1, dt * 1.5));
-    const fT = fl ? (0.6 + 0.4 * pb) * Math.max(0.35, amt) : 0;
+    const fT = fl ? (0.6 + 0.4 * pb) * Math.max(0.35, amt) * en.floor : 0;
     this.floorA += (fT - this.floorA) * Math.min(1, dt * 12);
     this.floorGlow
       .setVisible(this.floorA > 0.005)

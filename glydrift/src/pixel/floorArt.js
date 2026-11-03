@@ -74,6 +74,42 @@ function strip(kind, a, b) {
       pc.rect(x, 3, 2, 2, (x / 4) % 2 ? b : 0xffffff);
       pc.rect(x + 2, 5, 1, 1, dark);
     }
+  } else if (kind === "meadow") {
+    // clover + little flowers poking out of the grass
+    for (const [x, c] of [
+      [3, 0xff8ad0],
+      [9, 0xfff4b0],
+      [15, 0xffffff],
+      [21, 0xff8ad0],
+      [27, 0xb07aff],
+    ]) {
+      pc.set(x, 2, c).set(x - 1, 3, c).set(x + 1, 3, c).set(x, 3, 0xfff4b0);
+    }
+    at(
+      [
+        [6, 5],
+        [12, 4],
+        [18, 5],
+        [24, 4],
+        [30, 5],
+      ],
+      dark,
+    );
+  } else if (kind === "surf") {
+    // foam caps rolling along the water
+    for (const x of [2, 10, 18, 26]) {
+      pc.hline(x, x + 3, 2, 0xffffff);
+      pc.set(x + 1, 3, b).set(x + 4, 3, b);
+    }
+    at(
+      [
+        [7, 5],
+        [15, 6],
+        [23, 5],
+        [30, 6],
+      ],
+      0x1a3a5a,
+    );
   } else if (kind === "blood") {
     at(
       [

@@ -130,7 +130,7 @@ export class HudScene extends Phaser.Scene {
     this.registry.events.on("changedata-safeTop", onSafe);
     this.events.once("shutdown", () => this.registry.events.off("changedata-safeTop", onSafe));
 
-    for (let i = 0; i < BIOMES.length; i++) this.titleFor(i, i === 4);
+    for (let i = 0; i < BIOMES.length; i++) this.titleFor(i, BIOMES[i].id === "abyss");
 
     this.pauseLayer = null;
     this.ready = true;

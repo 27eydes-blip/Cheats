@@ -248,12 +248,13 @@ class Track {
     }
     const clapOn = sec === "main" || sec === "drop" || (sec === "build" && inSec >= 4);
     const mainClap = clapOn && (s === 4 || s === 12);
-    if (mainClap) this.clap.triggerAttackRelease("16n", time, 0.9);
+    if (mainClap && !d.ambient) this.clap.triggerAttackRelease("16n", time, 0.9);
     // drum fill: rising clap roll in the last half-bar of a section, varied per loop
-    if (!mainClap && fillBar && sec !== "intro" && s >= (loop % 2 ? 12 : 8)) {
+    if (!d.ambient && !mainClap && fillBar && sec !== "intro" && s >= (loop % 2 ? 12 : 8)) {
       this.clap.triggerAttackRelease("32n", time, 0.25 + (s - 8) * 0.08);
     }
-    if (sec !== "breakdown" && s % 4 === 2) this.hatO.triggerAttackRelease("16n", time, 0.8);
+    if (!d.ambient && sec !== "breakdown" && s % 4 === 2)
+      this.hatO.triggerAttackRelease("16n", time, 0.8);
     const hats16 =
       !d.soft &&
       (d.hats === "drive" || I > 0.3) &&

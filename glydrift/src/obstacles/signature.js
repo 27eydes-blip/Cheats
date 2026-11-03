@@ -661,9 +661,9 @@ export class Slammer extends PxObstacle {
     this.lampT = this.add(this.scene.add.image(0, 0, "hz", "lamp_0").setDepth(WARN_DEPTH));
     this.lampB = this.add(this.scene.add.image(0, 0, "hz", "lamp_0").setDepth(WARN_DEPTH));
   }
-  spawn(x, { gc, open = 380, phase = 0, hold = 1.0 }) {
+  spawn(x, { gc, open = 380, phase = 0, hold = 1.0, minGap = 0 }) {
     this.arm(x);
-    Object.assign(this, { gc, open, phase, hold });
+    Object.assign(this, { gc, open, phase, hold, minGap });
     this.halfW = this.w / 2;
     // open hold → warning rattle 0.5 s → slam 0.1 s → shut 0.25 s → reopen 0.45 s
     this.period = hold + 0.5 + 0.1 + 0.25 + 0.45;
@@ -682,7 +682,9 @@ export class Slammer extends PxObstacle {
     } else if (u < h + 0.6) gap = this.open * (1 - (u - h - 0.5) / 0.1);
     else if (u < h + 0.85) gap = 0;
     else gap = this.open * ((u - h - 0.85) / 0.45);
-    const shut = gap <= 1;
+    // never closes tighter than minGap (a safe slot stays open even when it slams)
+    gap = Math.max(this.minGap, gap);
+    const shut = gap <= this.minGap + 1;
     if (shut && !this.wasShut && Math.abs(this.x - this.mgr.px) < 500) this.mgr.onImpact?.(this);
     this.wasShut = shut;
     this.gap = gap;

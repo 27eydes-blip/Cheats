@@ -478,6 +478,66 @@ export const TRACKS = {
     delay: 0.15,
   },
 
+  // 7. Peaceful Valley — ambient, no drums, warm sine chords + twinkling arp (C major feel)
+  valley: {
+    name: "Peaceful Valley",
+    mood: "Ambient · gentle · no drums · C major feel",
+    bpm: 96,
+    root: 57, // A3 (progression sits on the relative major)
+    prog: [2, 5, 0, 6], // C  F  Am  G
+    seventh: true,
+    ninth: true,
+    soft: true,
+    ambient: true, // no kick, claps or hats
+    kickSteps: [],
+    chordSteps: [0, 8],
+    chordWave: "sine",
+    chordCutoff: 1600,
+    bassWave: "sine",
+    bassCutoff: 300,
+    bass: [0, _, _, _, _, _, _, _, 4, _, _, _, _, _, _, _],
+    lead: {
+      wave: "sine",
+      a: [4, _, _, _, 2, _, _, _, 0, _, _, _, _, _, _, _, 2, _, _, _, 4, _, 5, _, 4, _, _, _, _, _, _, _],
+      b: [7, _, _, _, 6, _, 4, _, _, _, _, _, _, _, _, _, 4, _, _, _, 2, _, _, _, 0, _, _, _, _, _, _, _],
+      octave: 1,
+    },
+    pad: { wave: "sine", vol: -12 },
+    arp: { wave: "sine", pattern: [0, 2, 4, 7, 9, 7, 4, 2], octave: 2 },
+    hats: "offbeat",
+    reverb: 0.6,
+    delay: 0.35,
+  },
+
+  // 8. Hurricane — driving 132 BPM storm, gritty bass, racing hats (E phrygian)
+  hurricane: {
+    name: "Hurricane",
+    mood: "Driving · 132 BPM · gritty bass · E phrygian",
+    bpm: 132,
+    root: 52, // E3
+    prog: [0, 5, 1, 0], // Em  C  F(b2)  Em
+    phrygian: true,
+    seventh: false,
+    chordSteps: [2, 6, 10, 14],
+    chordWave: "square",
+    chordCutoff: 1300,
+    bassWave: "sawtooth",
+    bassCutoff: 520,
+    dist: 0.35,
+    bass: [0, _, 0, 0, _, 0, 0, _, 0, _, 0, 0, _, 0, 7, _],
+    lead: {
+      wave: "triangle",
+      a: [0, _, 0, _, 1, _, 0, _, _, _, 3, _, 1, _, 0, _, 0, _, 0, _, 4, _, 3, _, 1, _, _, _, 0, _, _, _],
+      b: [7, _, 6, _, 4, _, 3, _, 1, _, _, _, 0, _, _, _, 0, _, 1, _, 3, _, 4, _, 6, _, 4, _, 3, _, 1, _],
+      octave: 1,
+    },
+    pad: { wave: "sawtooth", vol: -20 },
+    arp: { wave: "square", pattern: [0, 7, 3, 7, 1, 7, 3, 9], octave: 2 },
+    hats: "drive",
+    reverb: 0.35,
+    delay: 0.2,
+  },
+
   // 6. Menu — chill lounge house, slower and relaxed (D minor, 9th chords)
   menu: {
     name: "Lounge (Menu)",
@@ -575,7 +635,7 @@ export const TRACKS = {
 };
 
 /** Biome index → track id. */
-export const BIOME_TRACKS = ["void", "solar", "frozen", "glitch", "abyss"];
+export const BIOME_TRACKS = ["void", "solar", "frozen", "glitch", "abyss", "valley", "hurricane"];
 
 /** 8-bar sections that loop. */
 export const SECTIONS = ["intro", "build", "main", "breakdown", "drop"];

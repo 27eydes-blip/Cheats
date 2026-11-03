@@ -1,7 +1,14 @@
 // The run itself: world scroll, biomes, obstacles, player, ghost, juice, post-FX.
 // UI lives in the parallel Hud scene so the camera zoom / post-FX never touch it.
 import Phaser from "phaser";
-import { BIOMES, biomeStateAt, blendPalette, lerpColor } from "../biomes/biomes.js";
+import {
+  BIOMES,
+  biomeIdOf,
+  biomeStateAt,
+  blendPalette,
+  lerpColor,
+  N_BIOMES,
+} from "../biomes/biomes.js";
 import { fitCamera, NEAR_MISS, PHYSICS, POST_FX, speedForMeters, VIEW, WORLD } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { ScreenFlash } from "../effects/ScreenFlash.js";
@@ -24,8 +31,8 @@ import { Save } from "../systems/save.js";
 
 const GHOST_STEP = 8;
 const CALM_M = 150; // last meters of the Glitch Realm before the Abyss: The Calm
-const ABYSS_SPIKE = 1.18; // speed jump entering the Abyss
-const DARK_R = 390; // Abyss light radius around the player
+const ABYSS_SPIKE = 1.06; // speed jump entering the Abyss
+const DARK_R = 470; // Abyss light radius around the player
 const COIN_BONUS = 10;
 // ?god in the URL makes the player invincible (handy for testing / capturing screenshots)
 const DEBUG_GOD =
@@ -418,10 +425,10 @@ export class GameScene extends Phaser.Scene {
     const raw0 = Math.floor(this.meters / BL);
     const local0 = this.meters - raw0 * BL;
     // The Calm: hold the Glitch Realm (no morph) until the blackout at the Abyss border
-    const calm = raw0 % 5 === 3 && local0 > BL - CALM_M;
+    const calm = biomeIdOf(raw0) === "glitch" && local0 > BL - CALM_M;
     if (calm) bs = { a: bs.a, b: bs.b, t: 0, rawIndex: raw0 };
     // stop spawning a little before The Calm so it starts with an empty screen
-    const preCalm = raw0 % 5 === 3 && local0 > BL - CALM_M - 35;
+    const preCalm = biomeIdOf(raw0) === "glitch" && local0 > BL - CALM_M - 35;
     this.calm = calm && playing;
     this.calmK = calm ? Phaser.Math.Clamp((local0 - (BL - CALM_M)) / CALM_M, 0, 1) : 0;
     blendPalette(bs, this.pal);
@@ -431,7 +438,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (playing && bs.rawIndex !== this.biomeIndex) {
       this.biomeIndex = bs.rawIndex;
-      if (bs.rawIndex % 5 === 4) {
+      if (biomeIdOf(bs.rawIndex) === "abyss") {
         // the Abyss: blackout first, then the slam (see enterAbyss)
         this.run.biome = Math.max(this.run.biome, 4);
         this.blackoutT = 0.5;
@@ -442,9 +449,9 @@ export class GameScene extends Phaser.Scene {
       }
     }
     if (this.blackoutT <= 0 && playing && bs.rawIndex !== this.announcedBiome) {
-      const abyss = bs.rawIndex % 5 === 4;
+      const abyss = biomeIdOf(bs.rawIndex) === "abyss";
       this.announcedBiome = bs.rawIndex;
-      this.run.biome = Math.max(this.run.biome, Math.min(bs.rawIndex, 4));
+      this.run.biome = Math.max(this.run.biome, Math.min(bs.rawIndex, N_BIOMES - 1));
       this.fxState.aberration = Math.max(this.fxState.aberration, 0.03);
       this.fxState.glitchSpike = Math.max(this.fxState.glitchSpike, 0.3);
       if (!abyss) {
@@ -516,7 +523,7 @@ export class GameScene extends Phaser.Scene {
     info.local = this.meters - bs.rawIndex * BL;
     const titleWin = this.meters > 100 && (local0 > BL - 85 || local0 < 50);
     info.pause = playing && (calm || preCalm || titleWin || this.blackoutT > 0);
-    info.grace = raw0 % 5 === 4 && local0 < 120;
+    info.grace = biomeIdOf(raw0) === "abyss" && local0 < 180;
     this.updateCalmFx(rawDt);
     this.flashFx.update(rawDt);
 
@@ -618,8 +625,9 @@ export class GameScene extends Phaser.Scene {
     const local0 = this.meters - raw0 * BL;
     let target = 1;
     if (this.calm) target = 1 - 0.18 * this.calmK;
-    else if (raw0 % 5 === 3) target = 0.95; // Glitch Realm runs a touch slower
-    else if (raw0 % 5 === 4) target = ABYSS_SPIKE + 0.1 * (local0 / BL); // keeps ramping
+    else if (biomeIdOf(raw0) === "glitch") target = 0.95; // Glitch Realm runs a touch slower
+    else if (biomeIdOf(raw0) === "valley") target = 0.75; // the Peaceful Valley drifts
+    else if (biomeIdOf(raw0) === "abyss") target = ABYSS_SPIKE + 0.04 * (local0 / BL); // keeps ramping
     if (target > this.speedMul) this.speedMul = Math.min(target, this.speedMul + rawDt * 0.5);
     else this.speedMul = Math.max(target, this.speedMul - rawDt * 0.12);
   }
@@ -645,8 +653,8 @@ export class GameScene extends Phaser.Scene {
     if (this.calm) Music.setCalm(k);
     // Abyss limited vision (fades in after the slam, out when the Abyss ends)
     const BL = WORLD.biomeLength;
-    const inAbyssZone = Math.floor(this.meters / BL) % 5 === 4 && this.blackoutT <= 0;
-    const target = inAbyssZone && this.state !== "dead" ? 0.75 : 0;
+    const inAbyssZone = biomeIdOf(Math.floor(this.meters / BL)) === "abyss" && this.blackoutT <= 0;
+    const target = inAbyssZone && this.state !== "dead" ? 0.55 : 0;
     this.darkA +=
       Math.sign(target - this.darkA) * Math.min(Math.abs(target - this.darkA), rawDt * 0.7);
     if (!inAbyssZone && this.inAbyss && this.darkA <= 0) this.inAbyss = false;
