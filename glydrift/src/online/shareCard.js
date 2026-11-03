@@ -110,6 +110,7 @@ export function renderShareCard(game, run) {
       o.drawImage(grey, 0, 0);
       art = off;
     }
+    c.imageSmoothingEnabled = false; // portraits are small pixel art: scale up crisp
     c.drawImage(art, W / 2 - 170, 350, 340, 340);
     c.restore();
     // shop hat on the head

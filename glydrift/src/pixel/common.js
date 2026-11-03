@@ -497,6 +497,14 @@ function draco(frame) {
  * shop hats sit on any hero: the highest opaque row in the front (right) part of the sprite.
  */
 export const HEAD_ANCHORS = {};
+
+/**
+ * Hero portraits (hero_<id>) are stored at 5 texture px per art pixel — they're pixel art drawn
+ * with NEAREST filtering, so they look the same as the old 13x versions at a fraction of the
+ * memory (older iPhones were running out). Code sizing a portrait multiplies by PORTRAIT_K.
+ */
+export const PORTRAIT_SCALE = 5;
+export const PORTRAIT_K = 13 / PORTRAIT_SCALE;
 function headAnchor(pc) {
   const x0 = Math.floor(pc.w * 0.42);
   for (let y = 0; y < pc.h; y++) {
@@ -616,8 +624,9 @@ export function buildCommon(scene) {
     for (let f = 0; f < 4; f++) frames[`portal_${m}_${f}`] = portal(m, f);
   addAtlas(scene, "pxc", frames);
   // big standalone hero portraits (character cards, game over, leaderboard, share card)
-  for (const id of Object.keys(heroes)) addTexture(scene, `hero_${id}`, frames[`${id}_1`], 13);
-  addTexture(scene, "hero_yarms_flex", frames.yarms_3, 13);
+  for (const id of Object.keys(heroes))
+    addTexture(scene, `hero_${id}`, frames[`${id}_1`], PORTRAIT_SCALE);
+  addTexture(scene, "hero_yarms_flex", frames.yarms_3, PORTRAIT_SCALE);
 
   // particle textures (same logical size as the old smooth ones, now pixel-crisp)
   addTexture(scene, "dot", circleTex(8, 3));

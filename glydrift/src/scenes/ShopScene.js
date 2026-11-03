@@ -2,6 +2,7 @@
 // (+ Mystery Pod and Collections), every cosmetic category, heroes and one-run Boosts.
 // Coins only, never real money — and nothing here can buy leaderboard rank.
 import Phaser from "phaser";
+import { PORTRAIT_K } from "../pixel/common.js";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
 import { fitCamera, RARITY, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
@@ -325,7 +326,7 @@ export class ShopScene extends Phaser.Scene {
 
   iconFor(it, x, y) {
     if (it.kind === "hero") {
-      return this.add.image(x, y, getCharacter(it.id).texture).setScale(0.42 / HI);
+      return this.add.image(x, y, getCharacter(it.id).texture).setScale((0.42 / HI) * PORTRAIT_K);
     }
     if (it.kind === "boost") {
       const c = this.add.container(x, y);
@@ -342,7 +343,7 @@ export class ShopScene extends Phaser.Scene {
     if (c.cat === "skin")
       return this.add
         .image(x, y, greyPortrait(this, getCharacter(this.charId)))
-        .setScale(0.4 / HI)
+        .setScale((0.4 / HI) * PORTRAIT_K)
         .setTint(SKINS[c.id].tint);
     return this.add.image(x, y, "cosm", `icon_${c.id}`).setScale(1.1);
   }

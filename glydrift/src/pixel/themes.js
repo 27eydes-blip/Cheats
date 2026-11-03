@@ -532,7 +532,21 @@ function makeTheme(id) {
 
 export const THEMES = Object.fromEntries(Object.keys(DEFS).map((id) => [id, makeTheme(id)]));
 
+// The four dimensions' art (~5.6 MB each) is built on first use instead of at boot: most runs
+// never reach the rift, and the extra memory was crashing older iPhones on launch.
+const LAZY_BIOMES = new Set(["prism", "tidal", "chrono", "mirror"]);
+const biomeBuilt = new Set();
+let artScene = null;
+
+/** Build a biome's background art if it hasn't been yet (cheap no-op afterwards). */
+export function ensureBiomeArt(id) {
+  if (biomeBuilt.has(id) || !DEFS[id] || !artScene) return;
+  biomeBuilt.add(id);
+  buildBiome(artScene, id, DEFS[id].pal, DEFS[id].cfg);
+}
+
 export function themeFor(biomeId) {
+  if (LAZY_BIOMES.has(biomeId)) ensureBiomeArt(biomeId);
   return THEMES[biomeId] || THEMES.void;
 }
 
@@ -540,6 +554,7 @@ let built = false;
 export function buildPixelArt(scene) {
   if (built) return;
   built = true;
+  artScene = scene;
   buildCommon(scene);
   buildFloorStrips(scene);
   buildGlowDot(scene);
@@ -547,6 +562,6 @@ export function buildPixelArt(scene) {
   buildNewHazards(scene);
   buildDimensionHazards(scene);
   buildCosmeticArt(scene);
-  for (const [id, d] of Object.entries(DEFS)) buildBiome(scene, id, d.pal, d.cfg);
+  for (const id of Object.keys(DEFS)) if (!LAZY_BIOMES.has(id)) ensureBiomeArt(id);
   buildHazards(scene, { solar: SOLAR, frozen: FROZEN, glitch: GLITCH, abyss: ABYSS });
 }

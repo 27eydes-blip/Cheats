@@ -1,6 +1,7 @@
 // Lucky Spin: spend spins (earned every 1000 points) on a prize wheel — coins, or one of ten
 // heroes you can only win here. The prize is rolled first; the wheel then lands on it.
 import Phaser from "phaser";
+import { PORTRAIT_K } from "../pixel/common.js";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
 import { fitCamera, RARITY, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
@@ -344,12 +345,12 @@ export class SpinScene extends Phaser.Scene {
         const row = Math.floor(i / per);
         const x = W / 2 + (col - (per - 1) / 2) * 150;
         const hy = y + row * 150;
-        const img = this.add.image(x, hy, def.texture).setScale(0.05 / HI);
+        const img = this.add.image(x, hy, def.texture).setScale((0.05 / HI) * PORTRAIT_K);
         const nm = plainText(this, x, hy + 62, def.name, 16, hex(RARITY[def.rarity].color));
         c.add([img, nm]);
         this.tweens.add({
           targets: img,
-          scale: 0.55 / HI,
+          scale: (0.9 / HI) * PORTRAIT_K,
           duration: 500,
           delay: 300 + i * 180,
           ease: "Back.easeOut",
@@ -474,7 +475,7 @@ export class SpinScene extends Phaser.Scene {
       fillAlpha: 0.0,
     });
     const head = neonText(this, W / 2, H * 0.22, "NEW HERO!", 54, 0xffd23f, { blur: 20 });
-    const img = this.add.image(W / 2, H * 0.42, def.texture).setScale(0.2 / HI);
+    const img = this.add.image(W / 2, H * 0.42, def.texture).setScale((0.2 / HI) * PORTRAIT_K);
     const name = neonText(this, W / 2, H * 0.58, def.name, 60, def.color, { blur: 18 });
     const rar = plainText(
       this,
@@ -500,7 +501,12 @@ export class SpinScene extends Phaser.Scene {
       onClick: () => this.closeReveal(),
     });
     c.add([dim, rays, panel, head, img, name, rar, desc, equip, ok]);
-    this.tweens.add({ targets: img, scale: 2.5 / HI, duration: 650, ease: "Back.easeOut" });
+    this.tweens.add({
+      targets: img,
+      scale: (2.5 / HI) * PORTRAIT_K,
+      duration: 650,
+      ease: "Back.easeOut",
+    });
     this.tweens.add({
       targets: img,
       y: H * 0.42 - 14,

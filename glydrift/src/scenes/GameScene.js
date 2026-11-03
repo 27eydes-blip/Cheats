@@ -12,7 +12,7 @@ import { SHIFT_BLEND, SHIFT_EVERY, SHIFTS } from "../pixel/colorShift.js";
 import { darknessTexture } from "../pixel/hazardArt.js";
 import { pixelPerfectZoom, S } from "../pixel/px.js";
 import { Terrain } from "../pixel/Terrain.js";
-import { THEMES, themeFor } from "../pixel/themes.js";
+import { ensureBiomeArt, THEMES, themeFor } from "../pixel/themes.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { Player } from "../player/Player.js";
@@ -698,6 +698,9 @@ export class GameScene extends Phaser.Scene {
     // rift switches instantly under the screen tear)
     const biomeId = dom.id;
     this.terrain.setTheme(themeFor(biomeId), dom.dimension);
+    // build the next dimension's art well before the rift (it's made on demand to save memory)
+    const nx = this.course.next(seg0);
+    if (nx.dimension && nx.start - this.meters < 700) ensureBiomeArt(nx.id);
     this.updateColorShift(rawDt, biomeId, seg0 === dom ? local0 : 0);
     const beatPh = Music.beatPhase(this.beatClock);
     this.beatClock += rawDt;

@@ -3,12 +3,12 @@
 import Phaser from "phaser";
 import { COLLECTIONS, Shop, SKINS } from "../data/cosmetics.js";
 import { HAT_FIT } from "../pixel/cosmeticArt.js";
-import { HEAD_ANCHORS } from "../pixel/common.js";
+import { HEAD_ANCHORS, PORTRAIT_K } from "../pixel/common.js";
 import { HI } from "../gfx/textures.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { greyPortrait } from "../pixel/grayHero.js";
 
-const PORTRAIT_SCALE = 13; // hero_* textures are drawn at 13 texture px per art px
+const PORTRAIT_SCALE = 13; // callers size portraits as if drawn at 13 px per art px
 
 /**
  * @param scale the same scale you'd give the bare hero image (e.g. 0.5 / HI)
@@ -26,7 +26,9 @@ export function heroImage(scene, x, y, charId, scale, lo = Shop.loadout()) {
     c.add(g);
   }
   const skin = SKINS[lo.skin];
-  const img = scene.add.image(0, 0, skin ? greyPortrait(scene, def) : def.texture).setScale(scale);
+  const img = scene.add
+    .image(0, 0, skin ? greyPortrait(scene, def) : def.texture)
+    .setScale(scale * PORTRAIT_K);
   if (skin) img.setTint(skin.tint);
   c.add(img);
   const fit = HAT_FIT[lo.hat];

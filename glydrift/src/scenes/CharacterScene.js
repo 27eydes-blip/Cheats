@@ -1,6 +1,7 @@
 // Character select: orbiting 3D-feel showcase with a live trail + flap preview, and a
 // perspective card carousel with rarity-glow borders, unlock by coins / shards / challenge.
 import Phaser from "phaser";
+import { PORTRAIT_K } from "../pixel/common.js";
 import { BIOMES, biomeIndex, blendPalette } from "../biomes/biomes.js";
 import { fitCamera, RARITY, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
@@ -170,7 +171,7 @@ export class CharacterScene extends Phaser.Scene {
       .setTint(def.color)
       .setScale(2.2)
       .setAlpha(0.35);
-    const img = this.add.image(0, -50, def.texture).setScale(1.25 / HI);
+    const img = this.add.image(0, -50, def.texture).setScale((1.25 / HI) * PORTRAIT_K);
     const name = neonText(this, 0, 70, def.name, 32, def.color, { blur: 12 });
     const rar = plainText(
       this,

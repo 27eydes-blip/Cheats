@@ -33,7 +33,10 @@ export function viewportSize() {
  * they just burn fill-rate through the full-screen backdrop layers. Phones stay at full
  * resolution (an iPhone Pro Max is ~3.6 M); Low Graphics caps much harder.
  */
-export const PIXEL_BUDGET = { normal: 3.7e6, low: 2.0e6 };
+// canvas pixel budgets: a 3x-retina canvas (2.7M px on a notch iPhone) plus the texture set
+// made older iPhones run out of memory ("A problem repeatedly occurred"); ~2x looks the same
+// for pixel art
+export const PIXEL_BUDGET = { normal: 2.3e6, low: 1.5e6 };
 
 export function setupView(lowGfx = false) {
   VIEW.H = computeGameHeight();

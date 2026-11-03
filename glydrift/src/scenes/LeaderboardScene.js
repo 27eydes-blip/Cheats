@@ -2,6 +2,7 @@
 // Top 100 with medals for the top 3, the player's own row pinned at the bottom with their
 // real rank (even outside the top 100), plus loading / empty / offline states.
 import Phaser from "phaser";
+import { PORTRAIT_K } from "../pixel/common.js";
 import { heroImage } from "../ui/heroImage.js";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
 import { fitCamera, VIEW } from "../config.js";
@@ -359,7 +360,7 @@ export class LeaderboardScene extends Phaser.Scene {
       // your own place wears your shop cosmetics (other players' aren't stored online)
       const hero = mine
         ? heroImage(this, cx, heroY, def.id, spec.scale / HI)
-        : this.add.image(cx, heroY, def.texture).setScale(spec.scale / HI);
+        : this.add.image(cx, heroY, def.texture).setScale((spec.scale / HI) * PORTRAIT_K);
       col.add([score, name, hero]);
       if (mine) {
         const tag = neonText(this, cx, heroY - 70 * spec.scale - 16, "YOU", 16, 0x3ef4ff, {
@@ -514,7 +515,7 @@ export class LeaderboardScene extends Phaser.Scene {
       const def = getCharacter(r.character);
       const icon = mine
         ? heroImage(this, 128, y, def.id, 0.36 / HI)
-        : this.add.image(128, y, def.texture).setScale(0.36 / HI);
+        : this.add.image(128, y, def.texture).setScale((0.36 / HI) * PORTRAIT_K);
       const name = plainText(this, 168, y, r.username, 24, mine ? "#3ef4ff" : "#ffffff", { ox: 0 });
       const score = medal
         ? neonText(this, W - 48, y, `${r.score}`, 26, medal, { ox: 1, blur: 8 })
