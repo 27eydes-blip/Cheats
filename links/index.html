@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Glydrift · Play free</title>
+<meta name="description" content="Glydrift — a free pixel arcade flyer. 7 biomes, 30 heroes, no download. Tap to play in your browser.">
+<meta name="theme-color" content="#06041a">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Glydrift · Play free">
+<meta property="og:description" content="A free pixel arcade flyer. 7 biomes, 30 heroes, no download.">
+<meta property="og:url" content="https://27eydes-blip.github.io/Cheats/links/">
+<meta property="og:image" content="https://27eydes-blip.github.io/Cheats/links/img/share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="img/icon.png">
+<link rel="apple-touch-icon" href="img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #06041a;
+    --grid: #0f0b2c;
+    --ink: #eafcff;
+    --dim: #b8b0e0;
+    --cyan: #3ef4ff;
+    --pink: #ff4fd8;
+    --green: #39ff88;
+    --gold: #ffd23f;
+    --card: #0d0926;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(var(--grid) 2px, transparent 2px),
+      linear-gradient(90deg, var(--grid) 2px, transparent 2px);
+    background-size: 24px 24px;
+    color: var(--ink);
+    font-family: "Rajdhani", system-ui, sans-serif;
+    font-weight: 600;
+    -webkit-font-smoothing: antialiased;
+  }
+  main {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: max(28px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .icon {
+    width: 112px; height: 112px; border-radius: 26px;
+    box-shadow: 0 0 0 3px #11233a, 0 0 28px rgba(62,244,255,.45);
+    image-rendering: auto;
+  }
+  h1 {
+    margin: 6px 0 0;
+    font-family: "Orbitron", sans-serif; font-weight: 900;
+    font-size: 40px; letter-spacing: 3px;
+    color: #f2feff;
+    text-shadow: 0 0 6px var(--cyan), 0 0 22px rgba(62,244,255,.6);
+  }
+  .tag { margin: -8px 0 4px; color: var(--pink); font-size: 19px; letter-spacing: .5px; text-align: center; }
+  .facts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .chip {
+    border: 2px solid #2a2350; background: var(--card); color: var(--dim);
+    padding: 4px 10px; border-radius: 6px; font-size: 15px;
+  }
+
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; min-height: 64px; padding: 12px 18px;
+    border-radius: 14px; text-decoration: none;
+    font-family: "Orbitron", sans-serif; font-weight: 700; font-size: 18px; letter-spacing: 1px;
+    color: var(--ink); background: var(--card);
+    border: 3px solid var(--c, var(--cyan));
+    box-shadow: 0 0 0 2px #000 inset, 0 0 18px color-mix(in srgb, var(--c, var(--cyan)) 45%, transparent);
+    transition: transform .08s ease, box-shadow .15s ease;
+    -webkit-tap-highlight-color: transparent;
+    cursor: pointer;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .play {
+    --c: var(--green);
+    min-height: 84px; font-size: 26px; font-weight: 900;
+    color: #04180c; background: var(--green);
+    text-shadow: none;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 2px #000 inset, 0 0 16px rgba(57,255,136,.45); }
+    50% { box-shadow: 0 0 0 2px #000 inset, 0 0 34px rgba(57,255,136,.85); }
+  }
+  @media (prefers-reduced-motion: reduce) { .play { animation: none; } }
+  .play small { display: block; font-family: "Rajdhani", sans-serif; font-weight: 700; font-size: 15px; letter-spacing: .5px; opacity: .8; }
+  .btn .arrow { font-size: 24px; }
+
+  details.btn { display: block; padding: 0; --c: var(--pink); }
+  details.btn summary {
+    list-style: none; min-height: 58px; display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 12px 18px;
+  }
+  details.btn summary::-webkit-details-marker { display: none; }
+  .howto {
+    font-family: "Rajdhani", sans-serif; font-weight: 600; font-size: 17px; letter-spacing: 0;
+    color: var(--dim); text-align: left; padding: 0 20px 16px; line-height: 1.45;
+  }
+  .howto b { color: var(--ink); }
+  .howto ol { margin: 0; padding-left: 20px; }
+
+  .soon { --c: #4a4370; color: var(--dim); cursor: default; box-shadow: none; }
+  .soon .badge { font-size: 12px; color: var(--gold); border: 2px solid var(--gold); border-radius: 6px; padding: 2px 6px; }
+
+  .shots {
+    display: flex; gap: 12px; overflow-x: auto; width: calc(100% + 32px); margin: 6px -16px 0;
+    padding: 4px 16px 12px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+  }
+  .shots figure { margin: 0; flex: 0 0 44%; scroll-snap-align: start; }
+  .shots img {
+    width: 100%; display: block; border-radius: 14px;
+    border: 3px solid #241d48; image-rendering: pixelated;
+  }
+  .shots figcaption { text-align: center; color: var(--dim); font-size: 15px; margin-top: 6px; }
+  h2 { font-family: "Orbitron", sans-serif; font-size: 15px; letter-spacing: 2px; color: var(--cyan); margin: 10px 0 0; align-self: flex-start; }
+  footer { color: #6f68a0; font-size: 14px; margin-top: 8px; text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <img class="icon" src="img/icon.png" alt="Glydrift app icon: a blue lightning bird" width="112" height="112">
+  <h1>GLYDRIFT</h1>
+  <p class="tag">Free pixel arcade flyer</p>
+  <div class="facts">
+    <span class="chip">7 biomes</span><span class="chip">30 heroes</span><span class="chip">No download</span>
+  </div>
+
+  <a class="btn play" href="https://27eydes-blip.github.io/Cheats/glydrift/">
+    <span>▶ PLAY NOW<small>free · runs in your browser</small></span>
+  </a>
+
+  <details class="btn">
+    <summary>📲 Add it to your home screen</summary>
+    <div class="howto">
+      <ol>
+        <li>Open the game with <b>▶ PLAY NOW</b>.</li>
+        <li><b>iPhone (Safari):</b> tap <b>Share</b> → <b>Add to Home Screen</b>.</li>
+        <li><b>Android (Chrome):</b> tap <b>⋮</b> → <b>Add to Home screen</b> or <b>Install app</b>.</li>
+      </ol>
+      It opens full-screen like an app and works offline.
+    </div>
+  </details>
+
+  <div class="btn soon" aria-disabled="true"> App Store <span class="badge">COMING SOON</span></div>
+
+  <h2>SCREENSHOTS</h2>
+  <div class="shots">
+    <figure><img src="img/shot-void.jpg" alt="Flying between pillars in the Neon Void" loading="lazy" width="390" height="844"><figcaption>Neon Void</figcaption></figure>
+    <figure><img src="img/shot-valley.jpg" alt="Butterflies and flowers in the Peaceful Valley" loading="lazy" width="390" height="844"><figcaption>Peaceful Valley</figcaption></figure>
+    <figure><img src="img/shot-hurricane.jpg" alt="Debris and a twister in the Hurricane" loading="lazy" width="390" height="844"><figcaption>Hurricane</figcaption></figure>
+  </div>
+
+  <footer>© Glydrift · made with love and pixels</footer>
+</main>
+</body>
+</html>
