@@ -754,7 +754,8 @@ export const CHARACTERS = [
     scale: 0.64,
     cost: 5000,
     speed: 1.2, // EXTRA FAST: the whole run moves 20% quicker
-    desc: "EXTRA FAST: everything flies by 20% quicker.",
+    coinMul: 15, // every coin he grabs is worth 15
+    desc: "EXTRA FAST, and every coin he grabs is worth 15x.",
   },
   {
     id: "manny",

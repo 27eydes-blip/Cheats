@@ -719,7 +719,17 @@ export class GameScene extends Phaser.Scene {
         } else if (!this.obstacles.flipped) p.flipGravity(1);
       }
       if (ev.coins) {
-        this.run.coins += ev.coins * (this.lucky ? 2 : 1);
+        // some heroes multiply every coin (WALLRUNNER ×15); score from coins is unchanged
+        const cm = this.charDef.coinMul ?? 1;
+        this.run.coins += ev.coins * (this.lucky ? 2 : 1) * cm;
+        if (cm > 1)
+          this.fx.floatText(
+            p.x + 26,
+            p.y - 40,
+            `+${ev.coins * (this.lucky ? 2 : 1) * cm}`,
+            "#ffd23f",
+            30,
+          );
         for (let i = 0; i < ev.coins; i++) this.addChain();
         const pts = COIN_BONUS * ev.coins * this.mult;
         this.bonus += pts;
