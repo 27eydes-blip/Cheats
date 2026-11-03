@@ -1,9 +1,10 @@
-// GLYDRIFT SHOP — big tilted neon offer cards you swipe through, themed by biome, over a dark
-// pixel skyline. Featured: the free Daily Drift Drop, the Drift Pass, a YARMS spotlight and
-// today's biome bundles. Coins only — never real money — and nothing here buys leaderboard rank.
+// GLYDRIFT SHOP — bright, bold offer cards you swipe through on a vivid magenta-to-blue
+// gradient. Featured: the free Daily Drift Drop, the Drift Pass, a YARMS spotlight and today's
+// biome bundles. Coins only — never real money — and nothing here buys leaderboard rank.
 import Phaser from "phaser";
 import { fitCamera, NUM_FONT, PIXEL_FONT, RARITY, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
+import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { getCharacter, visibleCharacters } from "../player/characterDefs.js";
@@ -26,37 +27,40 @@ import {
 import { HAT_FIT } from "../pixel/cosmeticArt.js";
 import { PORTRAIT_K } from "../pixel/common.js";
 import { greyPortrait } from "../pixel/grayHero.js";
-import { button, fadeTo, hex, RollingCounter } from "../ui/ui.js";
+import { button, fadeTo, RollingCounter } from "../ui/ui.js";
 
+// each tab glows its own colour when selected
 const TABS = [
-  { id: "featured", label: "FEATURED" },
-  { id: "daily", label: "DAILY" },
-  { id: "heroes", label: "CHARACTERS" },
-  { id: "trail", label: "TRAILS" },
-  { id: "skin", label: "SKINS" },
-  { id: "hat", label: "HATS" },
-  { id: "effects", label: "EFFECTS" },
-  { id: "boosts", label: "BOOSTS" },
-  { id: "pods", label: "PODS" },
+  { id: "featured", label: "FEATURED", col: 0xffb020 },
+  { id: "daily", label: "DAILY", col: 0x4ac81a },
+  { id: "heroes", label: "CHARACTERS", col: 0xff4fb8 },
+  { id: "trail", label: "TRAILS", col: 0xff6a1a },
+  { id: "skin", label: "SKINS", col: 0x10b8e8 },
+  { id: "hat", label: "HATS", col: 0xe0a010 },
+  { id: "effects", label: "EFFECTS", col: 0x9a3aff },
+  { id: "boosts", label: "BOOSTS", col: 0x7a6ac0 },
+  { id: "pods", label: "PODS", col: 0xc04aff },
 ];
 
-// card looks: neon edge, two-tone background, the tiny animated background inside
+// bright card colours: fill (lower) / light (upper) / band (title strip, darker same hue)
 const THEMES = {
-  void: { col: 0x3ef4ff, bg1: 0x0f3a55, bg2: 0x07182c, fx: "sparks" },
-  solar: { col: 0xff8a1a, bg1: 0x6a2008, bg2: 0x260a04, fx: "embers" },
-  frozen: { col: 0x9fe8ff, bg1: 0x1c5274, bg2: 0x0a1c32, fx: "snow" },
-  glitch: { col: 0x39ff88, bg1: 0x0c4a2c, bg2: 0x041a10, fx: "glitch" },
-  prism: { col: 0xff7ad9, bg1: 0x461870, bg2: 0x160828, fx: "prism" },
-  gold: { col: 0xffd23f, bg1: 0x6a4608, bg2: 0x241204, fx: "gold" },
-  common: { col: 0xbfd3e6, bg1: 0x2c3650, bg2: 0x10142a, fx: "stars" },
-  rare: { col: 0x3fa9ff, bg1: 0x15306a, bg2: 0x080f2c, fx: "stars" },
-  epic: { col: 0xb45cff, bg1: 0x3a1666, bg2: 0x140828, fx: "stars" },
-  legendary: { col: 0xffd23f, bg1: 0x5a3a08, bg2: 0x201004, fx: "gold" },
-  drop: { col: 0x39ff88, bg1: 0x0e4a3a, bg2: 0x051a16, fx: "sparks" },
-  pass: { col: 0x3ef4ff, bg1: 0x182a6a, bg2: 0x080c2a, fx: "stars" },
-  pod: { col: 0xb45cff, bg1: 0x3a1666, bg2: 0x120624, fx: "prism" },
-  off: { col: 0x6a608a, bg1: 0x1c1830, bg2: 0x0c0a18, fx: "stars" },
+  void: { fill: 0x14a8d0, light: 0x5ae0ff, band: 0x0a6a8a, fx: "sparks" },
+  solar: { fill: 0xff5a1a, light: 0xffa030, band: 0xb02a08, fx: "embers" },
+  frozen: { fill: 0x46b4ff, light: 0xb4ecff, band: 0x1a6aaa, fx: "snow" },
+  glitch: { fill: 0x22c860, light: 0x6aff9a, band: 0x0a7a3a, fx: "glitch" },
+  prism: { fill: 0x9a3aff, light: 0xff7ad9, band: 0x5a1aa8, fx: "prism", rainbow: true },
+  gold: { fill: 0xffa21a, light: 0xffd84a, band: 0xb85a00, fx: "gold", rays: 0xff6a00 },
+  common: { fill: 0x6a86c8, light: 0xa8bcec, band: 0x3a4e8a, fx: "stars" },
+  rare: { fill: 0x2a7aff, light: 0x6ab0ff, band: 0x1444aa, fx: "stars" },
+  epic: { fill: 0xa040ff, light: 0xd27aff, band: 0x5a18a8, fx: "stars" },
+  legendary: { fill: 0xffa21a, light: 0xffd84a, band: 0xb85a00, fx: "gold", rays: 0xff6a00 },
+  drop: { fill: 0x5ad41e, light: 0xa8ff5a, band: 0x2a8a0a, fx: "sparks" },
+  pass: { fill: 0x10b8e8, light: 0x6af0ff, band: 0x0a6a9a, fx: "stars" },
+  pod: { fill: 0xa040ff, light: 0xd27aff, band: 0x5a18a8, fx: "prism" },
+  off: { fill: 0x6a5aa8, light: 0x9a8ad8, band: 0x3a2e70, fx: "stars" },
 };
+THEMES.mega = THEMES.legendary;
+THEMES.ultra = THEMES.legendary;
 const SET_THEME = {
   set_void: "void",
   set_solar: "solar",
@@ -64,23 +68,38 @@ const SET_THEME = {
   set_glitch: "glitch",
   set_prism: "prism",
 };
+// pod reveal rays by rarity
+const RAY_COL = { common: 0x9ab0e0, rare: 0x2a8aff, epic: 0xb45cff, legendary: 0xffd23f };
+const TILE_COL = {
+  coins: 0xffa21a,
+  common: 0x6a86c8,
+  rare: 0x2a7aff,
+  epic: 0xa040ff,
+  legendary: 0xffa21a,
+  pod: 0xc04aff,
+};
 
-const BTN_H = 96; // ≥ 44pt on a phone
+const BTN_H = 104; // well over 44pt on a phone
+const OUTLINE = "#1a0630";
 
-/** Chunky pixel header text with a thick dark outline. */
+/** Chunky pixel header: thick dark outline, hard drop shadow, tight letter spacing. */
 function pixelText(scene, x, y, str, size, color = "#ffffff", opts = {}) {
-  return scene.add
+  const t = scene.add
     .text(x, y, str, {
       fontFamily: PIXEL_FONT,
       fontSize: `${size}px`,
       fontStyle: "700",
       color,
-      stroke: "#07020f",
-      strokeThickness: opts.stroke ?? Math.max(4, Math.round(size / 5)),
+      stroke: OUTLINE,
+      strokeThickness: opts.stroke ?? Math.max(5, Math.round(size / 4.5)),
       align: "center",
       resolution: VIEW.Z,
     })
     .setOrigin(opts.ox ?? 0.5, opts.oy ?? 0.5);
+  t.setLetterSpacing?.(opts.spacing ?? -Math.round(size / 14));
+  if (opts.shadow !== false)
+    t.setShadow(0, Math.max(3, Math.round(size / 12)), OUTLINE, 0, true, true);
+  return t;
 }
 
 const fmtTime = (ms) => {
@@ -113,9 +132,10 @@ export class ShopScene extends Phaser.Scene {
     this.W = W;
     this.H = H;
     const s = Save.data;
-    const top = (this.registry.get("safeTop") || 0) + 16;
+    const top = (this.registry.get("safeTop") || 0) + 12;
+    const bottom = this.registry.get("safeBottom") || 0;
     this.top = top;
-    this.cameras.main.fadeIn(220, 4, 1, 10);
+    this.cameras.main.fadeIn(220, 40, 10, 60);
     this.scene.get("Backdrop")?.scene.setVisible(false);
     this.events.once("shutdown", () => this.scene.get("Backdrop")?.scene.setVisible(true));
     this.fx = new Effects(this, { lowGfx: s.settings.lowGfx, depth: 300 });
@@ -127,78 +147,69 @@ export class ShopScene extends Phaser.Scene {
 
     this.buildBackground();
 
-    // ---- top bar: back, SHOP, balances, home
-    const bar = this.add.graphics().setDepth(200);
-    bar.fillStyle(0x07020f, 0.92).fillRect(0, 0, W, top + 96);
-    bar.fillStyle(0x3ef4ff, 0.5).fillRect(0, top + 94, W, 3);
-    button(this, 70, top + 48, 112, BTN_H - 8, "◀", {
-      color: 0xff4fd8,
-      size: 30,
+    // ---- top bar: back · SHOP · home, then the two balance pills
+    button(this, 72, top + 52, 116, 96, "◀", {
+      color: 0xffffff,
+      size: 36,
+      fill: 0xb01a7a,
       onClick: () => this.leave(),
     }).setDepth(210);
-    pixelText(this, 230, top + 48, "SHOP", 52, "#ffd23f", { stroke: 12 })
-      .setShadow(0, 0, "#ffb000", 14, true, true)
-      .setDepth(210);
-    this.coinIcon = this.add
-      .image(W - 300, top + 30, "pxc", "coin_0")
-      .setScale(0.85)
-      .setDepth(210);
+    pixelText(this, W / 2, top + 52, "SHOP", 80, "#ffd23f", { stroke: 18 }).setDepth(210);
+    button(this, W - 72, top + 52, 116, 96, "⌂", {
+      color: 0xffffff,
+      size: 40,
+      fill: 0x1a5af0,
+      onClick: () => this.leave(),
+    }).setDepth(210);
+    const pillY = top + 146;
+    this.pill(W / 2 - 150, pillY, 0xffd23f, 0x8a4a00);
+    this.coinGlyph = this.add
+      .image(W / 2 - 238, pillY, "pxc", "coin_0")
+      .setScale(1.2)
+      .setDepth(212);
     this.coinText = this.add
-      .text(W - 276, top + 30, `${s.coins}`, {
-        fontFamily: NUM_FONT,
-        fontSize: "32px",
-        fontStyle: "700",
-        color: "#ffd23f",
-        resolution: VIEW.Z,
-      })
+      .text(W / 2 - 202, pillY, `${s.coins}`, this.priceStyle(46, "#ffffff"))
       .setOrigin(0, 0.5)
-      .setDepth(210);
+      .setDepth(212);
     this.coins = new RollingCounter(this, this.coinText, { value: s.coins });
-    this.shardG = this.add.graphics().setDepth(210);
+    this.pill(W / 2 + 150, pillY, 0x9ffcff, 0x0a4a8a);
+    this.shardX = W / 2 + 62;
+    this.shardY = pillY;
     this.shardText = this.add
-      .text(W - 276, top + 70, `${this.shardCount()}`, {
-        fontFamily: NUM_FONT,
-        fontSize: "28px",
-        fontStyle: "700",
-        color: "#9ffcff",
-        resolution: VIEW.Z,
-      })
+      .text(W / 2 + 98, pillY, `${this.shardCount()}`, this.priceStyle(46, "#ffffff"))
       .setOrigin(0, 0.5)
-      .setDepth(210);
-    button(this, W - 64, top + 48, 100, BTN_H - 8, "⌂", {
-      color: 0x3ef4ff,
-      size: 34,
-      onClick: () => this.leave(),
-    }).setDepth(210);
+      .setDepth(212);
+    this.shardG = this.add.graphics().setDepth(212);
 
     // ---- category tabs (horizontal scroll)
-    this.tabY = top + 152;
+    this.tabY = top + 246;
     this.tabRow = this.add.container(0, this.tabY).setDepth(190);
     this.tabObjs = [];
-    let tx = 24;
+    let tx = 20;
     for (const t of TABS) {
-      const w = Math.max(150, t.label.length * 17 + 44);
+      const w = t.label.length * 24 + 56;
       const c = this.add.container(tx + w / 2, 0);
       const g = this.add.graphics();
-      const txt = pixelText(this, 0, 2, t.label, 20, "#ffffff", { stroke: 5 });
+      const txt = pixelText(this, 0, -2, t.label, 30, "#ffffff", { stroke: 7, shadow: false });
       c.add([g, txt]);
-      c.setSize(w, 84).setInteractive();
+      c.setSize(w, 96).setInteractive();
       c.on("pointerup", () => {
-        if ((this.tabDrag?.moved || 0) > 12) return;
+        if ((this.lastTabDrag || 0) > 12) return;
         Sfx.ui();
         this.setTab(t.id);
       });
       const rib = this.tabRibbon(t.id);
       if (rib) {
-        const r = this.add.container(w / 2 - 22, -38).setAngle(12);
+        const r = this.add.container(w / 2 - 24, -46).setAngle(12);
         const rg = this.add.graphics();
-        rg.fillStyle(rib.col, 1).fillRect(-34, -13, 68, 26);
-        rg.lineStyle(3, 0x07020f, 1).strokeRect(-34, -13, 68, 26);
-        r.add([rg, pixelText(this, 0, 1, rib.text, 13, "#ffffff", { stroke: 3 })]);
+        rg.fillStyle(0x1a0630, 1).fillRect(-46, -19, 92, 38);
+        rg.fillStyle(rib.col, 1).fillRect(-42, -15, 84, 30);
+        rg.fillStyle(0xffffff, 0.35).fillRect(-42, -15, 84, 9);
+        r.add([rg, pixelText(this, 0, 0, rib.text, 20, "#ffffff", { stroke: 5, shadow: false })]);
         c.add(r);
         this.tweens.add({
           targets: r,
-          y: -44,
+          y: -54,
           duration: 520,
           yoyo: true,
           repeat: -1,
@@ -210,26 +221,27 @@ export class ShopScene extends Phaser.Scene {
       this.tabObjs.push({ ...t, c, g, txt, w });
       tx += w + 12;
     }
-    this.tabsW = tx + 12;
+    this.tabsW = tx + 8;
     this.tabX = 0;
 
-    // ---- the card carousel
-    this.cardY = Math.round((this.tabY + 60 + H - (this.registry.get("safeBottom") || 0)) / 2);
-    this.cardH = Math.min(820, H - (this.registry.get("safeBottom") || 0) - this.tabY - 110);
-    this.cardW = Math.min(520, Math.round(this.cardH * 0.7));
-    this.spacing = this.cardW + 46;
+    // ---- the card carousel: ~3/4 of the screen tall, neighbours peeking in at the sides
+    const areaTop = this.tabY + 64;
+    const areaBot = H - bottom - 40;
+    this.cardH = Math.min(Math.round(H * 0.75), areaBot - areaTop - 24);
+    this.cardW = Math.min(Math.round(W * 0.76), Math.round(this.cardH * 0.68));
+    this.cardY = Math.round(areaTop + (areaBot - areaTop) / 2 - 10);
+    this.spacing = this.cardW + 30;
     this.strip = this.add.container(W / 2, this.cardY).setDepth(100);
     this.dots = this.add.graphics().setDepth(180);
-
-    // preview rig flies across the focused card
+    this.dotsY = areaBot + 12;
     this.rig = null;
 
     // ---- input: drag tabs / swipe cards
     this.input.on("pointerdown", (p) => {
       if (this.modal) return;
-      if (Math.abs(p.worldY - this.tabY) < 46) {
+      if (Math.abs(p.worldY - this.tabY) < 52) {
         this.tabDrag = { x: p.worldX, start: this.tabX, moved: 0 };
-      } else if (p.worldY > this.tabY + 50) {
+      } else if (p.worldY > this.tabY + 56) {
         this.drag = { x: p.worldX, start: this.stripX, moved: 0, t: this.time.now };
         this.snapTween?.stop();
       }
@@ -259,12 +271,22 @@ export class ShopScene extends Phaser.Scene {
       }
       if (this.tabDrag) {
         this.lastTabDrag = this.tabDrag.moved;
-        setTimeout(() => (this.tabDrag = null), 0);
-      }
+        this.tabDrag = null;
+      } else this.lastTabDrag = 0;
     });
 
     this.setTab(this.tab);
     this.yarmsPeekT = 6;
+  }
+
+  /** A rounded balance pill with a thick dark outline. */
+  pill(x, y, col, dark) {
+    const g = this.add.graphics().setDepth(211);
+    g.fillStyle(0x1a0630, 1).fillRoundedRect(x - 130, y - 40, 260, 80, 40);
+    g.fillStyle(dark, 1).fillRoundedRect(x - 124, y - 34, 248, 68, 34);
+    g.lineStyle(4, col, 1).strokeRoundedRect(x - 124, y - 34, 248, 68, 34);
+    g.fillStyle(0xffffff, 0.15).fillRoundedRect(x - 116, y - 30, 232, 22, 11);
+    return g;
   }
 
   shardCount() {
@@ -273,8 +295,7 @@ export class ShopScene extends Phaser.Scene {
 
   tabRibbon(id) {
     const deal = getCosmetic(Shop.daily().deal);
-    const dealTab =
-      deal.cat === "death" || deal.cat === "flap" || deal.cat === "coin" ? "effects" : deal.cat;
+    const dealTab = ["death", "flap", "coin"].includes(deal.cat) ? "effects" : deal.cat;
     if ((id === "daily" || id === "pods") && Shop.dropReady())
       return { text: "FREE", col: 0x1fae5a };
     if (id === "featured" && DriftPass.claimable()) return { text: "FREE", col: 0x1fae5a };
@@ -293,54 +314,67 @@ export class ShopScene extends Phaser.Scene {
   buildBackground() {
     const W = this.W;
     const H = this.H;
-    this.add.rectangle(W / 2, H / 2, W, H, 0x07041a).setDepth(-10);
-    const glow = this.add.graphics().setDepth(-9);
-    glow.fillStyle(0x2a1060, 0.35).fillCircle(W * 0.2, H * 0.3, 380);
-    glow.fillStyle(0x0c3050, 0.3).fillCircle(W * 0.85, H * 0.7, 420);
-    // two parallax layers of pixel skyline, generated once
-    for (const [key, col, hMax, win] of [
-      ["shop_sky_far", 0x150a34, 260, 0x3a2a6a],
-      ["shop_sky_near", 0x0b0620, 200, 0x7a4aff],
-    ]) {
-      if (!this.textures.exists(key)) {
-        const g = this.make.graphics({ x: 0, y: 0 }, false);
-        let x = 0;
-        let seed = key.length * 97;
-        const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-        while (x < 720) {
-          const w = 40 + Math.floor(rnd() * 70);
-          const h = 60 + Math.floor(rnd() * hMax);
-          g.fillStyle(col, 1).fillRect(x, 300 - h, w, h);
-          for (let wy = 300 - h + 12; wy < 290; wy += 18)
-            for (let wx = x + 8; wx < x + w - 8; wx += 14)
-              if (rnd() < 0.3) g.fillStyle(win, 0.8).fillRect(wx, wy, 6, 8);
-          x += w + 4;
-        }
-        g.generateTexture(key, 720, 300);
-        g.destroy();
-      }
+    // vivid gradient: deep magenta → electric purple → blue
+    const bg = this.add.graphics().setDepth(-10);
+    bg.fillGradientStyle(0xc0187a, 0xc0187a, 0x6a1ad8, 0x6a1ad8, 1).fillRect(0, 0, W, H * 0.5);
+    bg.fillGradientStyle(0x6a1ad8, 0x6a1ad8, 0x1a5af0, 0x1a5af0, 1).fillRect(
+      0,
+      H * 0.5,
+      W,
+      H * 0.5 + 2,
+    );
+    // slowly scrolling pattern of faint pixel icons (coins, stars, tiny YARMS arms, pods)
+    if (!this.textures.exists("shop_pattern")) {
+      const T = 256;
+      const cv = document.createElement("canvas");
+      cv.width = T;
+      cv.height = T;
+      const ctx = cv.getContext("2d");
+      ctx.imageSmoothingEnabled = false;
+      ctx.globalAlpha = 0.16;
+      const draw = (tex, frame, x, y, sc) => {
+        const f = this.textures.getFrame(tex, frame);
+        if (!f) return;
+        ctx.drawImage(
+          f.source.image,
+          f.cutX,
+          f.cutY,
+          f.cutWidth,
+          f.cutHeight,
+          x,
+          y,
+          f.cutWidth * sc,
+          f.cutHeight * sc,
+        );
+      };
+      draw("pxc", "coin_0", 18, 20, 0.9);
+      draw("cosm", "icon_flap_stars", 150, 30, 1.2);
+      draw("pxc", "yarms_3", 92, 132, 0.45);
+      draw("cosm", "pod_0", 20, 150, 0.6);
+      draw("pxc", "coin_2", 200, 190, 0.9);
+      draw("cosm", "icon_flap_stars", 120, 220, 0.8);
+      this.textures.addCanvas("shop_pattern", cv).setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
-    this.skyFar = this.add
-      .tileSprite(W / 2, H - 230, W, 300, "shop_sky_far")
-      .setDepth(-8)
-      .setAlpha(0.9);
-    this.skyNear = this.add.tileSprite(W / 2, H - 150, W, 300, "shop_sky_near").setDepth(-7);
-    // drifting pixel particles
+    this.pattern = this.add.tileSprite(W / 2, H / 2, W, H, "shop_pattern").setDepth(-9);
+    const glow = this.add.graphics().setDepth(-8).setBlendMode(Phaser.BlendModes.ADD);
+    glow.fillStyle(0xff4fd8, 0.12).fillCircle(W * 0.15, H * 0.25, 300);
+    glow.fillStyle(0x3ef4ff, 0.1).fillCircle(W * 0.9, H * 0.75, 340);
+    // drifting bright pixels
     this.motes = [];
-    const cols = [0x3ef4ff, 0xff4fd8, 0xffd23f, 0xb45cff];
-    for (let i = 0; i < (this.lowGfx ? 18 : 40); i++) {
+    const cols = [0xffffff, 0xffd23f, 0x3ef4ff, 0xff7ad9];
+    for (let i = 0; i < (this.lowGfx ? 16 : 34); i++) {
       const r = this.add
         .rectangle(
           Math.random() * W,
           Math.random() * H,
-          4,
-          4,
+          6,
+          6,
           cols[i % 4],
-          0.5 + Math.random() * 0.4,
+          0.45 + Math.random() * 0.4,
         )
-        .setDepth(-6);
-      r.vx = -8 - Math.random() * 18;
-      r.vy = -6 - Math.random() * 14;
+        .setDepth(-7);
+      r.vx = -6 - Math.random() * 16;
+      r.vy = -8 - Math.random() * 16;
       this.motes.push(r);
     }
   }
@@ -383,11 +417,12 @@ export class ShopScene extends Phaser.Scene {
     this.tab = id;
     for (const t of this.tabObjs) {
       const on = t.id === id;
-      t.g.clear();
-      t.g.fillStyle(0x07020f, 1).fillRect(-t.w / 2 - 4, -38, t.w + 8, 80);
-      t.g.fillStyle(on ? 0xffd23f : 0x1c1438, 1).fillRect(-t.w / 2, -34, t.w, 72);
-      t.g.fillStyle(on ? 0xfff0a0 : 0x2c2058, 1).fillRect(-t.w / 2, -34, t.w, 10);
-      t.txt.setColor(on ? "#2a1400" : "#d8d0ff").setStroke(on ? "#fff6c0" : "#07020f", on ? 2 : 5);
+      const g = t.g;
+      g.clear();
+      g.fillStyle(0x1a0630, 1).fillRoundedRect(-t.w / 2 - 4, -46, t.w + 8, 96, 18);
+      g.fillStyle(on ? t.col : 0x6a3ab8, 1).fillRoundedRect(-t.w / 2, -42, t.w, 88, 15);
+      g.fillStyle(0xffffff, on ? 0.4 : 0.18).fillRoundedRect(-t.w / 2 + 6, -38, t.w - 12, 24, 10);
+      t.c.setScale(on ? 1.06 : 1);
     }
     this.buildCards();
     this.focus(0, true);
@@ -405,48 +440,68 @@ export class ShopScene extends Phaser.Scene {
     if (o.kind === "cos") return themeForItem(o.id);
     if (o.kind === "bundle") return THEMES[SET_THEME[o.id]];
     if (o.kind === "yarms") return THEMES.gold;
-    if (o.kind === "hero") return THEMES[getCharacter(o.id).rarity] || THEMES.rare;
+    if (o.kind === "hero") return THEMES[getCharacter(o.id).rarity] || THEMES.legendary;
     return THEMES[o.kind] || THEMES.off;
   }
 
-  /** One big tilted offer card. */
+  /** One big, bright, slightly tilted offer card. */
   makeCard(o, i) {
     const W = this.cardW;
     const H = this.cardH;
     const th = this.offerTheme(o);
+    const bandY = -H / 2 + H * 0.6; // top of the title band
     const c = this.add.container(i * this.spacing, 0).setAngle(i % 2 ? 3 : -2.5);
     c.offer = o;
     c.theme = th;
-    // shadow, neon glow, body, thick outline
+    c.bandY = bandY;
     const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.5).fillRoundedRect(-W / 2 + 12, -H / 2 + 16, W, H, 22);
+    // drop shadow, outer glow, thick dark outline
+    g.fillStyle(0x1a0630, 0.45).fillRoundedRect(-W / 2 + 14, -H / 2 + 18, W, H, 26);
     c.glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-    c.glow.lineStyle(14, th.col, 0.35).strokeRoundedRect(-W / 2 - 4, -H / 2 - 4, W + 8, H + 8, 26);
-    g.fillStyle(0x07020f, 1).fillRoundedRect(-W / 2 - 8, -H / 2 - 8, W + 16, H + 16, 26);
-    g.fillStyle(th.bg2, 1).fillRoundedRect(-W / 2, -H / 2, W, H, 20);
-    g.fillStyle(th.bg1, 1).fillRoundedRect(-W / 2, -H / 2, W, H * 0.58, {
-      tl: 20,
-      tr: 20,
-      bl: 0,
-      br: 0,
-    });
-    g.fillStyle(th.col, 0.9).fillRect(-W / 2, -H / 2 + H * 0.58 - 4, W, 6); // bright band
-    g.lineStyle(4, th.col, 1).strokeRoundedRect(-W / 2, -H / 2, W, H, 20);
-    c.fxG = this.add.graphics(); // tiny animated background
+    c.glow
+      .lineStyle(18, th.light, 0.4)
+      .strokeRoundedRect(-W / 2 - 6, -H / 2 - 6, W + 12, H + 12, 30);
+    g.fillStyle(0x1a0630, 1).fillRoundedRect(-W / 2 - 9, -H / 2 - 9, W + 18, H + 18, 30);
+    // the whole card in its own bright colour: light top fading into the base colour
+    g.fillStyle(th.fill, 1).fillRoundedRect(-W / 2, -H / 2, W, H, 22);
+    g.fillGradientStyle(th.light, th.light, th.fill, th.fill, 1).fillRect(
+      -W / 2 + 10,
+      -H / 2 + 10,
+      W - 20,
+      bandY + H / 2 - 10,
+    );
+    if (th.rainbow) {
+      for (let k = 0; k < 6; k++) {
+        g.fillStyle(Phaser.Display.Color.HSVToRGB(k / 6, 0.55, 1).color, 0.22);
+        g.fillRect(
+          -W / 2 + 10 + ((W - 20) * k) / 6,
+          -H / 2 + 10,
+          (W - 20) / 6 + 1,
+          bandY + H / 2 - 10,
+        );
+      }
+    }
+    // title band: a darker strip of the card's own colour
+    g.fillStyle(th.band, 1).fillRect(-W / 2, bandY, W, H * 0.165);
+    g.fillStyle(0xffffff, 0.22).fillRect(-W / 2, bandY, W, 6);
+    g.fillStyle(0x1a0630, 0.25).fillRect(-W / 2, bandY + H * 0.165 - 6, W, 6);
+    g.lineStyle(6, 0xffffff, 0.85).strokeRoundedRect(-W / 2 + 3, -H / 2 + 3, W - 6, H - 6, 20);
+    c.fxG = this.add.graphics();
     c.motes = Array.from({ length: this.lowGfx ? 6 : 14 }, () => ({
       x: (Math.random() - 0.5) * W,
-      y: (Math.random() - 0.5) * H * 0.56 - H * 0.21,
+      y: -H / 2 + 20 + Math.random() * (bandY + H / 2 - 40),
       v: 20 + Math.random() * 40,
       p: Math.random() * 6,
     }));
     c.add([c.glow, g, c.fxG]);
-    if (th === THEMES.gold || th === THEMES.legendary || o.kind === "yarms") {
-      // gold rays behind legendary offers
-      const rays = this.add.graphics({ x: 0, y: -H * 0.2 }).setBlendMode(Phaser.BlendModes.ADD);
-      rays.fillStyle(0xffd23f, 0.1);
-      for (let k = 0; k < 10; k++) {
-        const a = (k / 10) * Math.PI * 2;
-        rays.slice(0, 0, W * 0.8, a, a + 0.22, false).fillPath();
+    if (th.rays || o.kind === "yarms") {
+      const rays = this.add
+        .graphics({ x: 0, y: (-H / 2 + bandY) / 2 })
+        .setBlendMode(Phaser.BlendModes.ADD);
+      rays.fillStyle(th.rays ?? 0xff6a00, 0.32);
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * Math.PI * 2;
+        rays.slice(0, 0, W * 0.75, a, a + 0.2, false).fillPath();
       }
       c.add(rays);
       c.rays = rays;
@@ -454,7 +509,6 @@ export class ShopScene extends Phaser.Scene {
     c.content = this.add.container(0, 0);
     c.add(c.content);
     this.fillCard(c);
-    // legendary shimmer sweep
     if (this.isLegendary(o)) {
       c.shine = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
       c.add(c.shine);
@@ -477,7 +531,21 @@ export class ShopScene extends Phaser.Scene {
     return o.kind === "yarms";
   }
 
-  /** (Re)build a card's content: ribbon, timer, art, title, subtitle, CTA. */
+  /** Icon for a cosmetic (hat / coin skin / skin / trail / effect), sized for big cards. */
+  iconCos(id, x, y, scale = 1) {
+    const cc = getCosmetic(id);
+    if (cc.cat === "hat")
+      return this.add.image(x, y, "cosm", HAT_FIT[id].frame).setScale(4.2 * scale);
+    if (cc.cat === "coin") return this.add.image(x, y, "cosm", `${id}_0`).setScale(5 * scale);
+    if (cc.cat === "skin")
+      return this.add
+        .image(x, y, greyPortrait(this, getCharacter(Save.data.selected)))
+        .setScale((0.9 / HI) * PORTRAIT_K * scale)
+        .setTint(SKINS[id].tint);
+    return this.add.image(x, y, "cosm", `icon_${id}`).setScale(3.8 * scale);
+  }
+
+  /** (Re)build a card's content: ribbon, timer, art, title, description, call to action. */
   fillCard(c) {
     const o = c.offer;
     const W = this.cardW;
@@ -485,46 +553,34 @@ export class ShopScene extends Phaser.Scene {
     const k = c.content;
     k.removeAll(true);
     const s = Save.data;
-    const artY = -H * 0.21;
+    const artY = (-H / 2 + c.bandY) / 2 + 10;
     let title = "";
     let sub = "";
     let ribbon = null;
     let timer = null;
     let cta = null;
-    const add = (o2) => k.add(o2);
-    const iconCos = (id, x, y, scale = 1) => {
-      const cc = getCosmetic(id);
-      let im;
-      if (cc.cat === "hat")
-        im = this.add.image(x, y, "cosm", HAT_FIT[id].frame).setScale(3.4 * scale);
-      else if (cc.cat === "coin") im = this.add.image(x, y, "cosm", `${id}_0`).setScale(4 * scale);
-      else if (cc.cat === "skin")
-        im = this.add
-          .image(x, y, greyPortrait(this, getCharacter(s.selected)))
-          .setScale((0.75 / HI) * PORTRAIT_K * scale)
-          .setTint(SKINS[id].tint);
-      else im = this.add.image(x, y, "cosm", `icon_${id}`).setScale(3 * scale);
-      return im;
-    };
+    const add = (x) => k.add(x);
 
     switch (o.kind) {
       case "drop": {
         title = "DAILY DRIFT DROP";
         const ready = Shop.dropReady();
-        sub = ready ? "A free Mystery Pod, every day" : "Come back for tomorrow's drop";
+        sub = ready ? "A free Mystery Pod, every day!" : "Come back for tomorrow's drop";
         ribbon = { text: "FREE", col: 0x1fae5a };
-        const pod = this.add.image(0, artY, "cosm", "pod_0").setScale(4.2);
+        const pod = this.add.image(0, artY, "cosm", "pod_0").setScale(3.6);
         add(pod);
         c.wobble = pod;
-        if (ready) cta = { label: "CLAIM!", col: 0x39ff88, act: () => this.claimDrop(c) };
+        if (ready)
+          cta = { label: "CLAIM!", col: 0xffffff, fill: 0x2a8a0a, act: () => this.claimDrop(c) };
         else {
-          c.countdown = this.add
-            .text(0, H / 2 - 74, "", this.priceStyle(34, "#b8ffd8"))
+          const cd = this.add
+            .text(0, H / 2 - 80, "", this.priceStyle(40, "#ffffff"))
             .setOrigin(0.5);
-          add(c.countdown);
+          add(cd);
+          c.countdown = cd;
           c.countdownTo = () => Shop.msToRefresh();
           c.countdownFmt = (ms) => `NEXT DROP ${fmtTime(ms)}`;
-          c.countdown.setText(c.countdownFmt(Shop.msToRefresh()));
+          cd.setText(c.countdownFmt(Shop.msToRefresh()));
         }
         break;
       }
@@ -532,37 +588,36 @@ export class ShopScene extends Phaser.Scene {
         title = "DRIFT PASS";
         const next = DriftPass.nextTier();
         const claimable = DriftPass.claimable();
-        if (next === null) {
-          sub = "Season complete — every reward claimed!";
-        } else {
+        if (next === null) sub = "Season complete!";
+        else {
           const r = FREE_TRACK[next];
-          sub = `Tier ${next + 1} of ${FREE_TRACK.length} · free with XP from playing`;
-          add(this.rewardIcon(r, 0, artY, 1.25));
-          const bw = W - 100;
-          const by = -H / 2 + H * 0.58 + 40;
-          const bar = this.add.graphics();
+          add(this.rewardIcon(r, 0, artY - 50, 1.4));
+          const bw = W - 90;
+          const by = artY + 110;
           const pr = DriftPass.isUnlocked(next) ? 1 : DriftPass.progressTo(next);
-          bar.fillStyle(0x07020f, 1).fillRect(-bw / 2 - 4, by - 4, bw + 8, 30);
-          bar.fillStyle(0x16244a, 1).fillRect(-bw / 2, by, bw, 22);
-          bar.fillStyle(0x3ef4ff, 1).fillRect(-bw / 2, by, Math.round(bw * pr), 22);
-          bar.fillStyle(0xffffff, 0.35).fillRect(-bw / 2, by, Math.round(bw * pr), 6);
+          const bar = this.add.graphics();
+          bar.fillStyle(0x1a0630, 1).fillRoundedRect(-bw / 2 - 5, by - 5, bw + 10, 52, 16);
+          bar.fillStyle(0x0a4a7a, 1).fillRoundedRect(-bw / 2, by, bw, 42, 12);
+          bar
+            .fillStyle(0xffd23f, 1)
+            .fillRoundedRect(-bw / 2, by, Math.max(24, Math.round(bw * pr)), 42, 12);
+          bar
+            .fillStyle(0xffffff, 0.4)
+            .fillRect(-bw / 2 + 8, by + 5, Math.max(8, Math.round(bw * pr) - 16), 10);
           add(bar);
-          const xpIn = Math.min(PASS_TIER_XP, DriftPass.xp() - next * PASS_TIER_XP);
+          const xpIn = Math.max(0, Math.min(PASS_TIER_XP, DriftPass.xp() - next * PASS_TIER_XP));
           add(
             this.add
-              .text(
-                0,
-                by + 52,
-                `${Math.max(0, xpIn)} / ${PASS_TIER_XP} XP`,
-                this.priceStyle(24, "#9ffcff"),
-              )
+              .text(0, by + 21, `${xpIn} / ${PASS_TIER_XP} XP`, this.priceStyle(28, "#ffffff"))
               .setOrigin(0.5),
           );
+          sub = `Tier ${next + 1} of ${FREE_TRACK.length} · free with XP`;
         }
         if (claimable) ribbon = { text: `${claimable} READY`, col: 0x1fae5a };
         cta = {
           label: claimable ? "CLAIM!" : "VIEW PASS",
-          col: claimable ? 0x39ff88 : 0x3ef4ff,
+          col: 0xffffff,
+          fill: claimable ? 0x2a8a0a : 0x0a4a9a,
           act: () => this.openPass(),
         };
         break;
@@ -571,7 +626,7 @@ export class ShopScene extends Phaser.Scene {
         const def = getCharacter("yarms");
         title = "YARMS";
         sub = "Never Skip Arm Day";
-        ribbon = { text: "LEGENDARY", col: 0xd89a10 };
+        ribbon = { text: "LEGENDARY", col: 0xe0203a };
         c.rigSpec = { hero: "yarms", flexLoop: true };
         cta = this.heroCta(def);
         break;
@@ -579,36 +634,33 @@ export class ShopScene extends Phaser.Scene {
       case "hero": {
         const def = getCharacter(o.id);
         title = def.name;
-        sub = `${def.title} · ${RARITY[def.rarity].label}`;
-        if (def.rarity !== "common" && def.rarity !== "rare")
-          ribbon = { text: RARITY[def.rarity].label.split(" ")[0], col: 0xd89a10 };
+        sub = def.title;
+        if (!["common", "rare"].includes(def.rarity))
+          ribbon = { text: RARITY[def.rarity].label.split(" ")[0], col: 0xe0203a };
         c.rigSpec = { hero: def.id };
         cta = this.heroCta(def);
         break;
       }
       case "bundle": {
         const b = Shop.bundle(o.id);
-        title = b.set.name.replace(" Set", " BUNDLE").toUpperCase();
-        sub = "Trail + Hat + Death effect";
+        title = b.set.name.replace(" Set", "").toUpperCase();
+        sub = "BUNDLE · Trail + Hat + Death FX";
         ribbon = { text: "-25%", col: 0xe0203a };
         timer = Shop.msToRefresh;
         b.items.forEach((id, j) => {
-          const im = iconCos(id, (j - 1) * 140, artY + 70, 0.8);
-          if (Shop.owns(id)) im.setAlpha(0.35);
+          const im = this.iconCos(id, (j - 1) * (W * 0.3), artY + 110, 0.62);
+          if (Shop.owns(id)) im.setAlpha(0.45);
           add(im);
         });
         c.rigSpec = { hero: s.selected, extra: b.items };
-        if (!b.need.length) cta = { label: "OWNED", col: 0x6a608a, act: null };
+        c.preview = () => b.items.map((id, j) => this.iconCos(id, (j - 1) * 130, 0, 0.55));
+        if (!b.need.length) cta = { label: "OWNED", col: 0xffffff, fill: c.theme.band, act: null };
         else
           cta = {
             label: `${b.price}`,
             coin: true,
             was: b.full,
-            col: 0xffd23f,
-            act: () =>
-              this.buy(c, `Get the ${b.set.name.replace(" Set", " Bundle")}?`, b.price, () =>
-                Shop.buyBundle(o.id),
-              ),
+            act: () => this.buy(c, title, b.price, () => Shop.buyBundle(o.id)),
           };
         break;
       }
@@ -619,16 +671,17 @@ export class ShopScene extends Phaser.Scene {
         if (o.deal) {
           ribbon = { text: "-30%", col: 0xe0203a };
           timer = Shop.msToRefresh;
-        } else if (cc.rarity === "legendary") ribbon = { text: "LEGENDARY", col: 0xd89a10 };
-        if (cc.cat === "coin" || cc.cat === "hat" || cc.cat === "skin")
-          add(iconCos(o.id, 0, artY + 60, 0.9));
+        } else if (cc.rarity === "legendary") ribbon = { text: "LEGENDARY", col: 0xe0203a };
+        if (["coin", "hat", "skin"].includes(cc.cat)) add(this.iconCos(o.id, 0, artY + 90, 0.85));
         c.rigSpec = { hero: s.selected, extra: [o.id] };
+        c.preview = () => [this.iconCos(o.id, 0, 0, 0.8)];
         const owned = Shop.owns(o.id);
         const on = Shop.equipped(cc.cat) === o.id;
         if (on)
           cta = {
             label: "EQUIPPED",
-            col: 0x6a608a,
+            col: 0xffffff,
+            fill: c.theme.band,
             act: () => {
               Shop.unequip(cc.cat);
               this.refreshCard(c);
@@ -637,7 +690,8 @@ export class ShopScene extends Phaser.Scene {
         else if (owned)
           cta = {
             label: "EQUIP",
-            col: 0x39ff88,
+            col: 0xffffff,
+            fill: 0x2a8a0a,
             act: () => {
               Shop.equip(o.id);
               Sfx.ui();
@@ -650,8 +704,7 @@ export class ShopScene extends Phaser.Scene {
             label: `${price}`,
             coin: true,
             was: price < cc.price ? cc.price : 0,
-            col: 0xffd23f,
-            act: () => this.buy(c, `Buy ${cc.name}?`, price, () => Shop.buy(o.id)),
+            act: () => this.buy(c, cc.name.toUpperCase(), price, () => Shop.buy(o.id)),
           };
         }
         break;
@@ -659,75 +712,63 @@ export class ShopScene extends Phaser.Scene {
       case "pod": {
         title = "MYSTERY POD";
         sub = "A random cosmetic you don't own";
-        const pod = this.add.image(0, artY - 20, "cosm", "pod_0").setScale(3.6);
+        const pod = this.add.image(0, artY - 40, "cosm", "pod_0").setScale(3.2);
         add(pod);
         c.wobble = pod;
         const odds = Object.entries(POD_ODDS)
           .map(([r, v]) => `${RARITY[r].label} ${v}%`)
-          .join("   ");
+          .join("  ·  ");
         add(
           this.add
-            .text(0, artY + 150, odds, this.priceStyle(17, "#e8d8ff"))
+            .text(0, artY + 170, odds, this.priceStyle(24, "#ffffff"))
             .setOrigin(0.5)
-            .setWordWrapWidth(W - 60),
+            .setWordWrapWidth(W - 50)
+            .setAlign("center"),
         );
+        c.preview = () => [this.add.image(0, 0, "cosm", "pod_0").setScale(2.6)];
         cta = {
           label: `${POD_PRICE}`,
           coin: true,
-          col: 0xb45cff,
-          act: () =>
-            this.buy(c, "Open a Mystery Pod?", POD_PRICE, () => this.openPod(Shop.openPod())),
+          act: () => this.buy(c, "MYSTERY POD", POD_PRICE, () => this.openPod(Shop.openPod())),
         };
         break;
       }
       case "boosts": {
         title = "BOOSTS";
-        sub = "Switched off: every run stays fair on the worldwide leaderboard";
-        add(pixelText(this, 0, artY, "OFF", 90, "#8a80b0", { stroke: 14 }));
+        sub = "Off — every run stays fair on the leaderboard";
+        add(pixelText(this, 0, artY, "OFF", 120, "#ffffff", { stroke: 18 }));
         break;
       }
     }
 
-    // title + subtitle
-    const tt = pixelText(
-      this,
-      0,
-      -H / 2 + H * 0.58 + (o.kind === "pass" ? -36 : 44),
-      title,
-      34,
-      "#ffffff",
-      { stroke: 8 },
-    );
-    tt.setScale(Math.min(1, (W - 50) / tt.width));
+    // title + description on the darker band
+    const tt = pixelText(this, 0, c.bandY + 52, title, 48, "#ffffff", { stroke: 11 });
+    tt.setScale(Math.min(1, (W - 40) / tt.width));
     add(tt);
     const st = this.add
-      .text(0, tt.y + 50, sub, this.priceStyle(20, "#e0d8ff"))
+      .text(0, c.bandY + 112, sub, this.priceStyle(32, "#ffffff"))
       .setOrigin(0.5)
-      .setWordWrapWidth(W - 60)
+      .setWordWrapWidth(W - 50)
       .setAlign("center");
-    if (o.kind !== "pass") add(st);
-    else {
-      st.setY(H / 2 - 150).setColor("#9ffcff");
-      add(st);
-    }
-    // ribbon (angled, top-left)
+    st.setScale(Math.min(1, (H * 0.165 - 84) / Math.max(1, st.height)));
+    add(st);
     if (ribbon) {
-      const r = this.add.container(-W / 2 + 70, -H / 2 + 26).setAngle(-14);
+      const r = this.add.container(-W / 2 + 82, -H / 2 + 32).setAngle(-12);
       const rg = this.add.graphics();
-      const rw = Math.max(110, ribbon.text.length * 17 + 30);
-      rg.fillStyle(0x07020f, 1).fillRect(-rw / 2 - 4, -21, rw + 8, 42);
-      rg.fillStyle(ribbon.col, 1).fillRect(-rw / 2, -17, rw, 34);
-      rg.fillStyle(0xffffff, 0.25).fillRect(-rw / 2, -17, rw, 8);
-      r.add([rg, pixelText(this, 0, 1, ribbon.text, 17, "#ffffff", { stroke: 4 })]);
+      const rw = Math.max(136, ribbon.text.length * 23 + 40);
+      rg.fillStyle(0x1a0630, 1).fillRect(-rw / 2 - 5, -27, rw + 10, 54);
+      rg.fillStyle(ribbon.col, 1).fillRect(-rw / 2, -22, rw, 44);
+      rg.fillStyle(0xffffff, 0.35).fillRect(-rw / 2, -22, rw, 11);
+      r.add([rg, pixelText(this, 0, 0, ribbon.text, 26, "#ffffff", { stroke: 6, shadow: false })]);
       add(r);
     }
-    // limited-offer countdown badge on the top edge
     if (timer) {
-      const tb = this.add.container(W / 2 - 120, -H / 2);
+      const tb = this.add.container(W / 2 - 130, -H / 2 - 4);
       const tg = this.add.graphics();
-      tg.fillStyle(0x07020f, 1).fillRoundedRect(-96, -26, 192, 52, 14);
-      tg.fillStyle(0xe0203a, 1).fillRoundedRect(-92, -22, 184, 44, 12);
-      const tx = this.add.text(4, 0, "", this.priceStyle(24, "#ffffff")).setOrigin(0.5);
+      tg.fillStyle(0x1a0630, 1).fillRoundedRect(-116, -34, 232, 68, 18);
+      tg.fillStyle(0xff2a5a, 1).fillRoundedRect(-110, -28, 220, 56, 14);
+      tg.fillStyle(0xffffff, 0.3).fillRoundedRect(-104, -24, 208, 12, 6);
+      const tx = this.add.text(0, 1, "", this.priceStyle(32, "#ffffff")).setOrigin(0.5);
       tb.add([tg, tx]);
       add(tb);
       c.countdown = tx;
@@ -735,11 +776,11 @@ export class ShopScene extends Phaser.Scene {
       c.countdownFmt = (ms) => `⏱ ${fmtTime(ms)}`;
       tx.setText(c.countdownFmt(timer()));
     }
-    // call to action
     if (cta) {
-      const b = button(this, 0, H / 2 - 74, W - 120, BTN_H, cta.coin ? "" : cta.label, {
-        color: cta.col,
-        size: 34,
+      const b = button(this, 0, H / 2 - 82, W - 70, BTN_H, cta.coin ? "" : cta.label, {
+        color: cta.col ?? 0xffd23f,
+        size: 42,
+        fill: cta.fill ?? 0x2a1460,
         onClick: () => {
           if (this.modal || !cta.act) return;
           cta.act();
@@ -748,17 +789,19 @@ export class ShopScene extends Phaser.Scene {
       if (!cta.act) b.setEnabled(false);
       if (cta.coin) {
         const afford = s.coins >= Number(cta.label);
-        b.add(this.add.image(-60, 0, "pxc", "coin_0").setScale(0.85));
-        b.add(
-          this.add
-            .text(-30, 0, cta.label, this.priceStyle(38, afford ? "#ffffff" : "#ff8a8a"))
-            .setOrigin(0, 0.5),
-        );
+        const txt = this.add
+          .text(0, 0, cta.label, this.priceStyle(54, afford ? "#ffffff" : "#ffb0b0"))
+          .setOrigin(0, 0.5);
+        const ic = this.add.image(0, 0, "pxc", "coin_0").setScale(1.2);
+        const total = ic.displayWidth + 14 + txt.width;
+        ic.setX(-total / 2 + ic.displayWidth / 2);
+        txt.setX(-total / 2 + ic.displayWidth + 14);
+        b.add([ic, txt]);
         if (cta.was) {
           const w2 = this.add
-            .text(W / 2 - 90, -BTN_H / 2 - 14, `${cta.was}`, this.priceStyle(20, "#ffb0b0"))
+            .text(W / 2 - 110, -BTN_H / 2 - 22, `${cta.was}`, this.priceStyle(30, "#ffffff"))
             .setOrigin(0.5);
-          b.add([w2, this.add.rectangle(w2.x, w2.y, w2.width + 6, 3, 0xff3a5a)]);
+          b.add([w2, this.add.rectangle(w2.x, w2.y, w2.width + 8, 4, 0xff2a5a)]);
         }
       }
       add(b);
@@ -773,8 +816,8 @@ export class ShopScene extends Phaser.Scene {
       fontStyle: "700",
       color,
       resolution: VIEW.Z,
-      stroke: "#07020f",
-      strokeThickness: Math.round(size / 8),
+      stroke: OUTLINE,
+      strokeThickness: Math.max(4, Math.round(size / 6)),
     };
   }
 
@@ -782,19 +825,21 @@ export class ShopScene extends Phaser.Scene {
     if (r.coins) {
       const c = this.add.container(x, y);
       c.add([
-        this.add.image(0, -20, "pxc", "coin_0").setScale(2 * scale),
-        pixelText(this, 0, 56 * scale, `${r.coins}`, Math.round(34 * scale), "#ffd23f", {
-          stroke: 7,
+        this.add.image(0, -18 * scale, "pxc", "coin_0").setScale(2.4 * scale),
+        pixelText(this, 0, 60 * scale, `${r.coins}`, Math.round(40 * scale), "#ffd23f", {
+          stroke: Math.max(4, Math.round(9 * scale)),
         }),
       ]);
       return c;
     }
-    if (r.pod) return this.add.image(x, y, "cosm", "pod_0").setScale(3 * scale);
-    const cc = getCosmetic(r.item);
-    if (cc.cat === "hat")
-      return this.add.image(x, y, "cosm", HAT_FIT[r.item].frame).setScale(3.4 * scale);
-    if (cc.cat === "coin") return this.add.image(x, y, "cosm", `${r.item}_0`).setScale(4 * scale);
-    return this.add.image(x, y, "cosm", `icon_${r.item}`).setScale(3 * scale);
+    if (r.pod) return this.add.image(x, y, "cosm", "pod_0").setScale(2.0 * scale);
+    return this.iconCos(r.item, x, y, 0.8 * scale);
+  }
+
+  rewardRarity(r) {
+    if (r.coins) return "coins";
+    if (r.pod) return "pod";
+    return getCosmetic(r.item).rarity;
   }
 
   heroCta(def) {
@@ -802,10 +847,11 @@ export class ShopScene extends Phaser.Scene {
     if (Progression.isUnlocked(def.id)) {
       const on = s.selected === def.id;
       return on
-        ? { label: "EQUIPPED", col: 0x6a608a, act: null }
+        ? { label: "EQUIPPED", col: 0xffffff, fill: 0x3a2e70, act: null }
         : {
             label: "EQUIP",
-            col: 0x39ff88,
+            col: 0xffffff,
+            fill: 0x2a8a0a,
             act: () => {
               s.selected = def.id;
               Save.write();
@@ -815,13 +861,12 @@ export class ShopScene extends Phaser.Scene {
           };
     }
     if (def.requires && !Progression.requirementsMet(def))
-      return { label: "LOCKED", col: 0x6a608a, act: null };
+      return { label: "LOCKED", col: 0xffffff, fill: 0x3a2e70, act: null };
     return {
       label: `${def.cost}`,
       coin: true,
-      col: 0xffd23f,
       act: () =>
-        this.buy(this.cards[this.index], `Unlock ${def.name}?`, def.cost, () => {
+        this.buy(this.cards[this.index], def.name, def.cost, () => {
           const ok = Progression.buy(def.id);
           if (ok) {
             s.selected = def.id;
@@ -871,8 +916,7 @@ export class ShopScene extends Phaser.Scene {
     if (changed) {
       const c = this.cards[i];
       this.buildRig(c);
-      const o = c.offer;
-      if (o.id) Analytics.log("item_viewed", { item: o.id, kind: o.kind });
+      if (c.offer.id) Analytics.log("item_viewed", { item: c.offer.id, kind: c.offer.kind });
     }
   }
 
@@ -887,7 +931,7 @@ export class ShopScene extends Phaser.Scene {
       x: 0,
       y: 0,
       depth: 150,
-      scale: spec.flexLoop ? 2.2 : 1.6,
+      scale: spec.flexLoop ? 2.6 : 2,
       cosmetics: lo,
     });
     this.rigSpec = spec;
@@ -896,7 +940,6 @@ export class ShopScene extends Phaser.Scene {
     this.flexT = 0.3;
   }
 
-  /** Squash-and-stretch pop when a card is tapped. */
   pop(c) {
     Sfx.ui();
     this.tweens.killTweensOf(c);
@@ -913,7 +956,7 @@ export class ShopScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- buying
   buy(c, title, price, doBuy) {
-    this.confirm(title, price, () => {
+    this.confirm(c, title, price, () => {
       if (!doBuy()) return;
       this.gotIt(c);
     });
@@ -921,15 +964,14 @@ export class ShopScene extends Phaser.Scene {
 
   /** Coins fly from the balance into the card, then "GOT IT!" stamps on. */
   gotIt(c) {
-    const cam = this.cameras.main;
-    const from = { x: this.coinIcon.x, y: this.coinIcon.y };
+    const from = { x: this.coinGlyph.x, y: this.coinGlyph.y };
     const to = { x: this.strip.x + c.x, y: this.cardY };
-    for (let i = 0; i < 9; i++) {
-      const im = this.add.image(from.x, from.y, "pxc", "coin_0").setScale(0.8).setDepth(400);
+    for (let i = 0; i < 10; i++) {
+      const im = this.add.image(from.x, from.y, "pxc", "coin_0").setScale(1).setDepth(400);
       this.tweens.add({
         targets: im,
-        x: to.x + (Math.random() - 0.5) * 120,
-        y: to.y + (Math.random() - 0.5) * 120,
+        x: to.x + (Math.random() - 0.5) * 140,
+        y: to.y + (Math.random() - 0.5) * 140,
         duration: 380 + i * 40,
         ease: "Cubic.easeIn",
         onComplete: () => {
@@ -939,10 +981,10 @@ export class ShopScene extends Phaser.Scene {
       });
     }
     this.coins.to(Save.data.coins, 600);
-    this.time.delayedCall(560, () => {
+    this.time.delayedCall(600, () => {
       Sfx.reward();
       Haptics.light();
-      const stamp = pixelText(this, to.x, to.y - 30, "GOT IT!", 70, "#ffd23f", { stroke: 14 })
+      const stamp = pixelText(this, to.x, to.y - 40, "GOT IT!", 96, "#ffd23f", { stroke: 20 })
         .setAngle(-10)
         .setDepth(410)
         .setScale(3)
@@ -953,7 +995,7 @@ export class ShopScene extends Phaser.Scene {
         alpha: 1,
         duration: 200,
         ease: "Cubic.easeIn",
-        onComplete: () => cam.shake(120, 0.004),
+        onComplete: () => this.cameras.main.shake(120, 0.004),
       });
       this.tweens.add({
         targets: stamp,
@@ -962,7 +1004,8 @@ export class ShopScene extends Phaser.Scene {
         duration: 300,
         onComplete: () => stamp.destroy(),
       });
-      this.fx.burst("star", to.x, to.y, 30, c.theme.col, { speed: { min: 200, max: 600 } });
+      this.fx.burst("star", to.x, to.y, 30, 0xffffff, { speed: { min: 200, max: 600 } });
+      this.fx.burst("confetti", to.x, to.y, 30, c.theme.light, { speed: { min: 250, max: 650 } });
       this.refreshCard(c);
     });
   }
@@ -970,13 +1013,9 @@ export class ShopScene extends Phaser.Scene {
   claimDrop(c) {
     const res = Shop.claimDrop();
     if (!res) return;
-    const pod = c.wobble;
-    if (pod) {
-      const x = this.strip.x + c.x;
-      this.fx.burst("star", x, this.cardY - this.cardH * 0.21, 30, 0x39ff88, {
-        speed: { min: 150, max: 500 },
-      });
-    }
+    this.fx.burst("star", this.strip.x + c.x, this.cardY - this.cardH * 0.2, 30, 0xffffff, {
+      speed: { min: 150, max: 500 },
+    });
     this.openPod(res, () => this.refreshCard(c));
   }
 
@@ -986,150 +1025,247 @@ export class ShopScene extends Phaser.Scene {
     const H = this.H;
     const c = this.add.container(0, 0).setDepth(500);
     this.modal = c;
-    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x05010d, 0.88).setInteractive();
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x2a0850, 0.82).setInteractive();
+    const py = this.top + 30;
+    const ph = H - py - 30 - (this.registry.get("safeBottom") || 0);
     const g = this.add.graphics();
-    const py = this.top + 60;
-    const ph = H - py - 40;
-    g.fillStyle(0x07020f, 1).fillRoundedRect(22, py - 8, W - 44, ph + 16, 26);
-    g.fillStyle(0x10183a, 1).fillRoundedRect(30, py, W - 60, ph, 22);
-    g.lineStyle(4, 0x3ef4ff, 1).strokeRoundedRect(30, py, W - 60, ph, 22);
-    c.add([dim, g, pixelText(this, W / 2, py + 54, "DRIFT PASS", 46, "#3ef4ff", { stroke: 10 })]);
-    c.add(
-      this.add
-        .text(
-          W / 2,
-          py + 104,
-          `FREE TRACK · ${DriftPass.xp()} XP earned · ${PASS_TIER_XP} XP per tier`,
-          this.priceStyle(19, "#cfe8ff"),
-        )
-        .setOrigin(0.5),
+    g.fillStyle(0x1a0630, 1).fillRoundedRect(14, py - 8, W - 28, ph + 16, 30);
+    g.fillStyle(0x10a0e0, 1).fillRoundedRect(22, py, W - 44, ph, 24);
+    g.fillGradientStyle(0x30d8ff, 0x30d8ff, 0x2a5af0, 0x2a5af0, 1).fillRect(
+      28,
+      py + 12,
+      W - 56,
+      ph - 24,
     );
+    g.lineStyle(6, 0xffffff, 0.85).strokeRoundedRect(22, py, W - 44, ph, 24);
+    c.add([dim, g, pixelText(this, W / 2, py + 66, "DRIFT PASS", 68, "#ffffff", { stroke: 15 })]);
+    // XP progress toward the next tier, big and clear
+    const unlocked = DriftPass.unlockedCount();
+    const bw = W - 120;
+    const by = py + 142;
+    const into = DriftPass.xp() - unlocked * PASS_TIER_XP;
+    const frac = unlocked >= FREE_TRACK.length ? 1 : Math.max(0, Math.min(1, into / PASS_TIER_XP));
+    const bar = this.add.graphics();
+    bar.fillStyle(0x1a0630, 1).fillRoundedRect(W / 2 - bw / 2 - 5, by - 5, bw + 10, 56, 18);
+    bar.fillStyle(0x0a3a6a, 1).fillRoundedRect(W / 2 - bw / 2, by, bw, 46, 14);
+    bar.fillStyle(0xffd23f, 1).fillRoundedRect(W / 2 - bw / 2, by, Math.max(28, bw * frac), 46, 14);
+    bar
+      .fillStyle(0xffffff, 0.4)
+      .fillRect(W / 2 - bw / 2 + 8, by + 5, Math.max(8, bw * frac - 16), 12);
+    c.add(bar);
+    const label =
+      unlocked >= FREE_TRACK.length
+        ? "ALL TIERS UNLOCKED"
+        : `TIER ${unlocked + 1}:  ${Math.max(0, into)} / ${PASS_TIER_XP} XP`;
+    c.add(this.add.text(W / 2, by + 23, label, this.priceStyle(30, "#ffffff")).setOrigin(0.5));
     const cols = 3;
-    const tw = (W - 120) / cols;
-    const thh = Math.min(200, (ph - 260) / Math.ceil(FREE_TRACK.length / cols));
+    const gridTop = by + 76;
+    const gridBot = py + ph - 140;
+    const tw = (W - 80) / cols;
+    const thh = Math.min(240, (gridBot - gridTop) / Math.ceil(FREE_TRACK.length / cols));
     const draw = () => {
-      if (c.tiles) c.tiles.destroy();
+      c.tiles?.destroy();
       const tiles = this.add.container(0, 0);
       c.tiles = tiles;
       c.add(tiles);
       FREE_TRACK.forEach((r, i) => {
-        const x = 60 + tw * (i % cols) + tw / 2;
-        const y = py + 150 + thh * Math.floor(i / cols) + thh / 2;
+        const x = 40 + tw * (i % cols) + tw / 2;
+        const y = gridTop + thh * Math.floor(i / cols) + thh / 2;
         const un = DriftPass.isUnlocked(i);
         const done = DriftPass.isClaimed(i);
+        const col = TILE_COL[this.rewardRarity(r)];
+        const tile = this.add.container(x, y);
         const tg = this.add.graphics();
-        tg.fillStyle(0x07020f, 1).fillRoundedRect(
-          x - tw / 2 + 6,
-          y - thh / 2 + 6,
-          tw - 12,
-          thh - 12,
-          14,
-        );
-        tg.fillStyle(done ? 0x1a2a20 : un ? 0x0e4a3a : 0x1c1830, 1).fillRoundedRect(
-          x - tw / 2 + 10,
-          y - thh / 2 + 10,
-          tw - 20,
-          thh - 20,
-          12,
-        );
-        tg.lineStyle(3, done ? 0x39ff88 : un ? 0xffd23f : 0x3a3060, 1).strokeRoundedRect(
-          x - tw / 2 + 10,
-          y - thh / 2 + 10,
-          tw - 20,
-          thh - 20,
-          12,
-        );
-        tiles.add(tg);
-        const ic = this.rewardIcon(r, x, y - 10, 0.55);
-        if (!un) ic.setAlpha(0.4);
-        tiles.add(ic);
-        tiles.add(
-          pixelText(this, x - tw / 2 + 34, y - thh / 2 + 30, `${i + 1}`, 18, "#ffffff", {
-            stroke: 4,
+        tg.fillStyle(0x1a0630, 1).fillRoundedRect(-tw / 2 + 5, -thh / 2 + 5, tw - 10, thh - 10, 18);
+        tg.fillStyle(col, 1).fillRoundedRect(-tw / 2 + 10, -thh / 2 + 10, tw - 20, thh - 20, 14);
+        tg.fillStyle(0xffffff, 0.3).fillRoundedRect(-tw / 2 + 16, -thh / 2 + 15, tw - 32, 18, 8);
+        tile.add(tg);
+        tile.add(this.rewardIcon(r, 0, -8, 0.66));
+        tile.add(
+          pixelText(this, -tw / 2 + 40, -thh / 2 + 40, `${i + 1}`, 32, "#ffffff", {
+            stroke: 8,
+            shadow: false,
           }),
         );
-        const lbl = done ? "✓" : un ? "CLAIM" : "🔒";
-        tiles.add(
-          this.add
-            .text(
-              x,
-              y + thh / 2 - 34,
-              lbl,
-              this.priceStyle(20, done ? "#39ff88" : un ? "#ffd23f" : "#8a80b0"),
-            )
-            .setOrigin(0.5),
-        );
+        if (!un) {
+          // locked: still colourful, just dimmed, with a small lock
+          tile.add(
+            this.add
+              .graphics()
+              .fillStyle(0x1a0630, 0.22)
+              .fillRoundedRect(-tw / 2 + 10, -thh / 2 + 10, tw - 20, thh - 20, 14),
+          );
+          const lk = this.add.graphics();
+          const lx = tw / 2 - 40;
+          const ly = thh / 2 - 40;
+          lk.fillStyle(0x1a0630, 1).fillRoundedRect(lx - 16, ly - 8, 32, 26, 5);
+          lk.lineStyle(6, 0x1a0630, 1).strokeCircle(lx, ly - 10, 9);
+          lk.fillStyle(0xffffff, 1).fillRect(lx - 3, ly, 6, 8);
+          tile.add(lk);
+        }
+        if (done) {
+          const chk = this.add.graphics();
+          chk
+            .fillStyle(0x1a0630, 0.3)
+            .fillRoundedRect(-tw / 2 + 10, -thh / 2 + 10, tw - 20, thh - 20, 14);
+          chk
+            .lineStyle(26, 0x1a0630, 1)
+            .beginPath()
+            .moveTo(-42, 0)
+            .lineTo(-10, 34)
+            .lineTo(48, -34)
+            .strokePath();
+          chk
+            .lineStyle(15, 0x39ff88, 1)
+            .beginPath()
+            .moveTo(-42, 0)
+            .lineTo(-10, 34)
+            .lineTo(48, -34)
+            .strokePath();
+          tile.add(chk);
+        }
         if (un && !done) {
-          const z = this.add.zone(x, y, tw - 20, thh - 20).setInteractive();
-          z.on("pointerup", () => {
+          // claimable: bounces and glows
+          const glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+          glow
+            .lineStyle(16, 0xfff6a0, 0.75)
+            .strokeRoundedRect(-tw / 2 + 2, -thh / 2 + 2, tw - 4, thh - 4, 20);
+          tile.addAt(glow, 0);
+          tile.add(
+            pixelText(this, 0, thh / 2 - 36, "CLAIM!", 28, "#ffd23f", { stroke: 7, shadow: false }),
+          );
+          this.tweens.add({
+            targets: tile,
+            scale: 1.07,
+            duration: 420,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut",
+          });
+          this.tweens.add({ targets: glow, alpha: 0.35, duration: 420, yoyo: true, repeat: -1 });
+          tile.setSize(tw - 10, thh - 10).setInteractive();
+          tile.on("pointerup", () => {
             const res = DriftPass.claim(i);
             if (!res) return;
             Sfx.reward();
             Haptics.light();
             this.fx.burst("star", x, y, 24, 0xffd23f, { speed: { min: 150, max: 450 } });
+            this.fx.burst("confetti", x, y, 24, col, { speed: { min: 200, max: 500 } });
             this.coins.to(Save.data.coins, 600);
             if (res.pod) {
               this.closeModal();
               this.openPod(res.pod, () => this.refreshAll());
               return;
             }
-            this.fx.floatText(x, y - 40, res.item ? res.item.name : `+${res.coins}`, "#ffd23f", 30);
+            this.fx.floatText(x, y - 50, res.item ? res.item.name : `+${res.coins}`, "#ffffff", 36);
             draw();
           });
-          tiles.add(z);
         }
+        tiles.add(tile);
       });
     };
     draw();
-    const close = button(this, W / 2, py + ph - 70, 300, BTN_H, "DONE", {
-      color: 0x3ef4ff,
-      size: 30,
-      onClick: () => {
-        this.closeModal();
-        this.refreshAll();
-      },
-    });
-    c.add(close);
+    c.add(
+      button(this, W / 2, py + ph - 78, 340, BTN_H, "DONE", {
+        color: 0xffffff,
+        size: 40,
+        fill: 0x2a8a0a,
+        onClick: () => {
+          this.closeModal();
+          this.refreshAll();
+        },
+      }),
+    );
   }
 
   // ---------------------------------------------------------------- modals
-  confirm(title, price, onYes) {
+  /** Big, colourful buy confirmation with the item preview inside. */
+  confirm(card, title, price, onYes) {
     const W = this.W;
     const H = this.H;
+    const th = card.theme;
     const c = this.add.container(0, 0).setDepth(500);
-    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x05010d, 0.8).setInteractive();
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x2a0850, 0.75).setInteractive();
+    const pw = W - 70;
+    const ph = 660;
+    const x0 = W / 2 - pw / 2;
+    const y0 = H / 2 - ph / 2;
     const g = this.add.graphics();
-    g.fillStyle(0x07020f, 1).fillRoundedRect(56, H / 2 - 186, W - 112, 332, 26);
-    g.fillStyle(0x1c1438, 1).fillRoundedRect(64, H / 2 - 178, W - 128, 316, 22);
-    g.lineStyle(4, 0xffd23f, 1).strokeRoundedRect(64, H / 2 - 178, W - 128, 316, 22);
-    const t = pixelText(this, W / 2, H / 2 - 118, title, 30, "#ffd23f", { stroke: 7 });
-    t.setScale(Math.min(1, (W - 180) / t.width));
-    const coin = this.add.image(W / 2 - 60, H / 2 - 52, "pxc", "coin_0").setScale(1);
+    g.fillStyle(0x1a0630, 1).fillRoundedRect(x0 - 9, y0 - 9, pw + 18, ph + 18, 34);
+    g.fillStyle(th.fill, 1).fillRoundedRect(x0, y0, pw, ph, 26);
+    g.fillGradientStyle(th.light, th.light, th.fill, th.fill, 1).fillRect(
+      x0 + 10,
+      y0 + 10,
+      pw - 20,
+      300,
+    );
+    g.fillStyle(th.band, 1).fillRect(x0, y0 + 300, pw, 160);
+    g.lineStyle(6, 0xffffff, 0.85).strokeRoundedRect(x0 + 3, y0 + 3, pw - 6, ph - 6, 24);
+    c.add([dim, g]);
+    // the preview: the item itself, or the hero for character offers
+    const pv = this.add.container(W / 2, y0 + 160);
+    const o = card.offer;
+    if (o.kind === "hero" || o.kind === "yarms") {
+      const def = getCharacter(o.kind === "yarms" ? "yarms" : o.id);
+      pv.add(
+        this.add
+          .image(0, 0, o.kind === "yarms" ? "hero_yarms_flex" : def.texture)
+          .setScale((1.0 / HI) * PORTRAIT_K),
+      );
+    } else if (card.preview) pv.add(card.preview());
+    c.add(pv);
+    this.tweens.add({
+      targets: pv,
+      y: pv.y - 10,
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+    const t = pixelText(this, W / 2, y0 + 350, title, 46, "#ffffff", { stroke: 11 });
+    t.setScale(Math.min(1, (pw - 50) / t.width));
+    const coin = this.add.image(0, y0 + 415, "pxc", "coin_0").setScale(1.2);
     const pr = this.add
-      .text(W / 2 - 30, H / 2 - 52, `${price}`, this.priceStyle(44, "#ffffff"))
+      .text(0, y0 + 415, `${price}`, this.priceStyle(56, "#ffd23f"))
       .setOrigin(0, 0.5);
+    const total = coin.displayWidth + 14 + pr.width;
+    coin.setX(W / 2 - total / 2 + coin.displayWidth / 2);
+    pr.setX(W / 2 - total / 2 + coin.displayWidth + 14);
     const left = this.add
       .text(
         W / 2,
-        H / 2 - 4,
+        y0 + 494,
         `You'll have ${Save.data.coins - price} left`,
-        this.priceStyle(19, "#cfc6ff"),
+        this.priceStyle(30, "#ffffff"),
       )
       .setOrigin(0.5);
-    const yes = button(this, W / 2 - 125, H / 2 + 74, 210, BTN_H, "BUY", {
-      color: 0x39ff88,
-      size: 30,
+    const yes = button(this, W / 2 - pw / 4 - 6, y0 + ph - 84, pw / 2 - 40, BTN_H, "BUY!", {
+      color: 0xffffff,
+      size: 42,
+      fill: 0x2a8a0a,
       onClick: () => {
         this.closeModal();
         onYes();
       },
     });
-    const no = button(this, W / 2 + 125, H / 2 + 74, 210, BTN_H, "CANCEL", {
-      color: 0xff4fd8,
-      size: 24,
+    const no = button(this, W / 2 + pw / 4 + 6, y0 + ph - 84, pw / 2 - 40, BTN_H, "NOPE", {
+      color: 0xffffff,
+      size: 36,
+      fill: 0xb01a4a,
       onClick: () => this.closeModal(),
     });
-    c.add([dim, g, t, coin, pr, left, yes, no]);
+    c.add([t, coin, pr, left, yes, no]);
+    c.setScale(0.85).setAlpha(0);
+    c.setPosition(W * 0.075, H * 0.075);
+    this.tweens.add({
+      targets: c,
+      scale: 1,
+      x: 0,
+      y: 0,
+      alpha: 1,
+      duration: 220,
+      ease: "Back.easeOut",
+    });
     this.modal = c;
   }
 
@@ -1146,10 +1282,10 @@ export class ShopScene extends Phaser.Scene {
     const H = this.H;
     const c = this.add.container(0, 0).setDepth(500);
     this.modal = c;
-    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x05010d, 0.9).setInteractive();
-    const pod = this.add.image(W / 2, H * 0.42, "cosm", "pod_0").setScale(4.6);
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x2a0850, 0.85).setInteractive();
+    const pod = this.add.image(W / 2, H * 0.42, "cosm", "pod_0").setScale(3.6);
     c.add([dim, pod]);
-    const col = RARITY[res.rarity]?.color ?? 0xffffff;
+    const col = RAY_COL[res.rarity] ?? 0xffffff;
     this.tweens.add({
       targets: pod,
       angle: { from: -6, to: 6 },
@@ -1163,7 +1299,7 @@ export class ShopScene extends Phaser.Scene {
         this.tweens.add({
           targets: pod,
           angle: { from: -12, to: 12 },
-          scale: 5,
+          scale: 6,
           duration: 50,
           yoyo: true,
           repeat: 7,
@@ -1176,20 +1312,32 @@ export class ShopScene extends Phaser.Scene {
   podReveal(c, pod, res, col, after) {
     const W = this.W;
     const H = this.H;
+    const cy = H * 0.42;
     pod.setVisible(false);
     Sfx.chestOpen?.();
     Sfx.reward();
     Haptics.strong();
-    this.fx.ring(W / 2, H * 0.42, col, { scale: 4, duration: 800, width: 4 });
-    this.fx.burst("star", W / 2, H * 0.42, 70, col, { speed: { min: 250, max: 900 } });
-    const rays = this.add.graphics({ x: W / 2, y: H * 0.42 }).setBlendMode(Phaser.BlendModes.ADD);
-    rays.fillStyle(col, 0.16);
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
-      rays.slice(0, 0, 600, a, a + 0.18, false).fillPath();
+    const legend = res.rarity === "legendary";
+    // rays in the rarity colour (legendary: a rainbow of rays) + confetti
+    const rays = this.add.graphics({ x: W / 2, y: cy }).setBlendMode(Phaser.BlendModes.ADD);
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      rays.fillStyle(legend ? Phaser.Display.Color.HSVToRGB(i / 14, 0.6, 1).color : col, 0.32);
+      rays.slice(0, 0, 900, a, a + 0.2, false).fillPath();
     }
     this.tweens.add({ targets: rays, angle: 360, duration: 12000, repeat: -1 });
     c.addAt(rays, 1);
+    // a soft colour wash instead of a white flash (Reduce Flashing makes it fainter)
+    const wash = this.add.rectangle(W / 2, H / 2, W, H, col, reduceFlashing() ? 0.1 : 0.3);
+    c.add(wash);
+    this.tweens.add({ targets: wash, alpha: 0, duration: 500 });
+    this.fx.ring(W / 2, cy, col, { scale: 4, duration: 800, width: 4 });
+    this.fx.burst("star", W / 2, cy, 60, col, { speed: { min: 250, max: 900 } });
+    for (const cc of [0xff3a5a, 0xffe14d, 0x39ff88, 0x3ef4ff, 0xff4fd8])
+      this.fx.burst("confetti", W / 2, cy, 14, cc, {
+        angle: { min: 200, max: 340 },
+        speed: { min: 300, max: 800 },
+      });
     const label = RARITY[res.rarity].label;
     const done = () => {
       this.closeModal();
@@ -1197,21 +1345,22 @@ export class ShopScene extends Phaser.Scene {
       this.refreshAll();
     };
     if (res.item) {
-      const icon = this.rewardIcon({ item: res.item.id }, W / 2, H * 0.42, 1.6);
+      const icon = this.rewardIcon({ item: res.item.id }, W / 2, cy, 2.0);
       const s0 = icon.scaleX;
       icon.setScale(0.1);
       this.tweens.add({ targets: icon, scale: s0, duration: 600, ease: "Back.easeOut" });
       c.add([
         icon,
-        pixelText(this, W / 2, H * 0.24, label, 30, hex(col), { stroke: 7 }),
-        pixelText(this, W / 2, H * 0.58, res.item.name.toUpperCase(), 44, "#ffffff", {
-          stroke: 10,
+        pixelText(this, W / 2, H * 0.2, label, 50, `#${col.toString(16).padStart(6, "0")}`, {
+          stroke: 12,
         }),
+        pixelText(this, W / 2, H * 0.6, res.item.name.toUpperCase(), 60, "#ffffff", { stroke: 13 }),
       ]);
       c.add(
-        button(this, W / 2 - 130, H * 0.7, 230, BTN_H, "EQUIP", {
-          color: 0x39ff88,
-          size: 28,
+        button(this, W / 2 - 150, H * 0.72, 270, BTN_H, "EQUIP", {
+          color: 0xffffff,
+          size: 40,
+          fill: 0x2a8a0a,
           onClick: () => {
             Shop.equip(res.item.id);
             done();
@@ -1219,19 +1368,21 @@ export class ShopScene extends Phaser.Scene {
         }),
       );
       c.add(
-        button(this, W / 2 + 130, H * 0.7, 230, BTN_H, "COOL", {
-          color: 0x3ef4ff,
-          size: 28,
+        button(this, W / 2 + 150, H * 0.72, 270, BTN_H, "NICE!", {
+          color: 0xffffff,
+          size: 40,
+          fill: 0x2a5af0,
           onClick: done,
         }),
       );
     } else {
       c.add([
-        pixelText(this, W / 2, H * 0.4, `ALL ${label} OWNED`, 32, hex(col), { stroke: 7 }),
-        pixelText(this, W / 2, H * 0.48, `+${res.refund} COINS`, 40, "#ffd23f", { stroke: 9 }),
-        button(this, W / 2, H * 0.62, 260, BTN_H, "OK", {
-          color: 0x3ef4ff,
-          size: 28,
+        pixelText(this, W / 2, H * 0.36, `ALL ${label} OWNED`, 42, "#ffffff", { stroke: 10 }),
+        pixelText(this, W / 2, H * 0.46, `+${res.refund} COINS`, 58, "#ffd23f", { stroke: 13 }),
+        button(this, W / 2, H * 0.62, 300, BTN_H, "NICE!", {
+          color: 0xffffff,
+          size: 40,
+          fill: 0x2a5af0,
           onClick: done,
         }),
       ]);
@@ -1248,57 +1399,61 @@ export class ShopScene extends Phaser.Scene {
     const dt = Math.min(delta / 1000, 1 / 30);
     this.t += dt;
     const W = this.W;
-    // background parallax + drifting pixels
-    this.skyFar.tilePositionX += dt * 6;
-    this.skyNear.tilePositionX += dt * 14;
+    this.pattern.tilePositionX += dt * 10;
+    this.pattern.tilePositionY += dt * 6;
     for (const m of this.motes) {
       m.x += m.vx * dt;
       m.y += m.vy * dt;
       if (m.x < -10) m.x = W + 10;
       if (m.y < -10) m.y = this.H + 10;
     }
-    // balances: spinning coin, glinting shard
-    this.coinIcon.setFrame(`coin_${Math.floor(this.t * 8) % 4}`);
-    const sx = W - 300;
-    const sy = this.top + 70;
+    // balance icons: spinning coin, glinting shard
+    this.coinGlyph.setFrame(`coin_${Math.floor(this.t * 8) % 4}`);
+    const sx = this.shardX;
+    const sy = this.shardY;
     const k = Math.abs(Math.cos(this.t * 2.4));
     this.shardG.clear();
-    this.shardG.fillStyle(0x9ffcff, 1).fillPoints(
+    this.shardG.fillStyle(0x1a0630, 1).fillPoints(
       [
-        { x: sx, y: sy - 14 },
-        { x: sx + 10 * k + 2, y: sy },
-        { x: sx, y: sy + 14 },
-        { x: sx - 10 * k - 2, y: sy },
+        { x: sx, y: sy - 26 },
+        { x: sx + 15 * k + 7, y: sy },
+        { x: sx, y: sy + 26 },
+        { x: sx - 15 * k - 7, y: sy },
       ],
       true,
     );
-    // cards: pulsing neon glow, tiny animated backgrounds, wobbling pods, shimmer, timers
+    this.shardG.fillStyle(0x9ffcff, 1).fillPoints(
+      [
+        { x: sx, y: sy - 19 },
+        { x: sx + 12 * k + 2, y: sy },
+        { x: sx, y: sy + 19 },
+        { x: sx - 12 * k - 2, y: sy },
+      ],
+      true,
+    );
     const now = Date.now();
     this.cards.forEach((c, i) => {
-      const vis = Math.abs(i - this.index) <= 1;
-      c.setVisible(Math.abs(this.strip.x + c.x - W / 2) < W);
-      if (!vis) return;
+      const onScreen = Math.abs(this.strip.x + c.x - W / 2) < W * 0.95;
+      c.setVisible(onScreen);
+      if (!onScreen) return;
       c.glow.setAlpha(0.55 + 0.45 * Math.sin(this.t * 2.2 + i));
-      if (c.rays) c.rays.rotation += dt * 0.25;
-      if (c.wobble)
-        c.wobble
-          .setAngle(Math.sin(this.t * 3) * 6)
-          .setScale(c.wobble.scaleX, c.wobble.scaleX * (1 + Math.sin(this.t * 6) * 0.03));
+      if (c.rays) c.rays.rotation += dt * 0.3;
+      if (c.wobble) c.wobble.setAngle(Math.sin(this.t * 3) * 6);
       this.drawCardFx(c, dt);
       if (c.shine) {
         c.shineT -= dt;
         c.shine.clear();
         if (c.shineT < 0.7) {
           const p = 1 - Math.max(0, c.shineT) / 0.7;
-          const x = -this.cardW / 2 - 80 + p * (this.cardW + 160);
+          const x = -this.cardW / 2 - 100 + p * (this.cardW + 200);
           for (let j = 0; j < 6; j++) {
-            c.shine.fillStyle(Phaser.Display.Color.HSVToRGB(j / 6, 0.6, 1).color, 0.18);
+            c.shine.fillStyle(Phaser.Display.Color.HSVToRGB(j / 6, 0.6, 1).color, 0.22);
             c.shine.fillPoints(
               [
-                { x: x + j * 10, y: this.cardH / 2 },
-                { x: x + j * 10 + 10, y: this.cardH / 2 },
-                { x: x + j * 10 + 90, y: -this.cardH / 2 },
-                { x: x + j * 10 + 80, y: -this.cardH / 2 },
+                { x: x + j * 12, y: this.cardH / 2 },
+                { x: x + j * 12 + 12, y: this.cardH / 2 },
+                { x: x + j * 12 + 110, y: -this.cardH / 2 },
+                { x: x + j * 12 + 98, y: -this.cardH / 2 },
               ],
               true,
             );
@@ -1309,12 +1464,12 @@ export class ShopScene extends Phaser.Scene {
       if (c.countdown && c.countdownTo && Math.floor(this.t * 4) % 2 === 0)
         c.countdown.setText(c.countdownFmt(c.countdownTo(new Date(now))));
     });
-    // focused card's preview: the hero flies across it (YARMS flexes on loop)
+    // the focused card's preview: the hero flies across it (YARMS flexes on loop)
     const fc = this.cards[this.index];
     if (this.rig && fc) {
       this.rigT += dt;
       const cx = this.strip.x + fc.x;
-      const cy = this.cardY - this.cardH * 0.21;
+      const cy = this.cardY + (-this.cardH / 2 + fc.bandY) / 2 - 20;
       if (this.rigSpec.flexLoop) {
         this.rig.setPosition(cx, cy + Math.sin(this.t * 2) * 8);
         this.flexT -= dt;
@@ -1324,32 +1479,33 @@ export class ShopScene extends Phaser.Scene {
         }
         this.rig.update(dt, 120);
       } else {
-        const span = this.cardW * 0.8;
-        const p = (this.rigT * 0.32) % 1;
-        this.rig.setPosition(cx - span / 2 + p * span, cy - 40 + Math.sin(this.rigT * 4) * 26);
+        const span = this.cardW * 0.78;
+        const p = (this.rigT * 0.3) % 1;
+        this.rig.setPosition(cx - span / 2 + p * span, cy - 40 + Math.sin(this.rigT * 4) * 30);
         this.rig.angle = Math.cos(this.rigT * 4) * -10;
         this.flapT -= dt;
         if (this.flapT <= 0 && !this.rig.dead) {
           this.flapT = 0.55;
           this.rig.flap();
         }
-        if (p < 0.02 && this.rig.points.length) this.rig.points.length = 0; // re-enter cleanly
-        this.rig.update(dt, 200);
+        if (p < 0.02) this.rig.points.length = 0;
+        this.rig.update(dt, 220);
       }
     }
     this.fx.update(dt);
-    // the page dots
+    // page dots
     this.dots.clear();
     const n = this.cards.length;
     if (n > 1) {
-      const dw = Math.min(26, (W - 120) / n);
-      const y0 = this.cardY + this.cardH / 2 + 34;
+      const dw = Math.min(30, (W - 100) / n);
       for (let i = 0; i < n; i++) {
-        this.dots.fillStyle(i === this.index ? 0xffd23f : 0x3a3060, 1);
-        this.dots.fillRect(W / 2 + (i - (n - 1) / 2) * dw - 5, y0 - 5, 10, 10);
+        const x = W / 2 + (i - (n - 1) / 2) * dw;
+        this.dots.fillStyle(0x1a0630, 1).fillRect(x - 9, this.dotsY - 9, 18, 18);
+        this.dots
+          .fillStyle(i === this.index ? 0xffd23f : 0xd8b0ff, 1)
+          .fillRect(x - 6, this.dotsY - 6, 12, 12);
       }
     }
-    // a tiny YARMS peeks in from the edge now and then and flexes
     this.yarmsPeekT -= dt;
     if (this.yarmsPeekT <= 0 && !this.modal) {
       this.yarmsPeekT = 12 + Math.random() * 8;
@@ -1361,9 +1517,8 @@ export class ShopScene extends Phaser.Scene {
     const g = c.fxG;
     g.clear();
     const W = this.cardW;
-    const H = this.cardH;
-    const top = -H / 2 + 10;
-    const bot = -H / 2 + H * 0.58 - 10;
+    const top = -this.cardH / 2 + 14;
+    const bot = c.bandY - 10;
     const fx = c.theme.fx;
     for (const m of c.motes) {
       m.p += dt;
@@ -1374,23 +1529,22 @@ export class ShopScene extends Phaser.Scene {
       } else m.y -= m.v * 0.3 * dt;
       if (m.y < top) m.y = bot;
       if (m.y > bot) m.y = top;
-      const x = Phaser.Math.Clamp(m.x, -W / 2 + 10, W / 2 - 14);
-      let col = c.theme.col;
-      let a = 0.6;
-      if (fx === "embers") col = m.p % 1 < 0.5 ? 0xffa21a : 0xff5a1a;
-      if (fx === "snow") col = 0xffffff;
-      if (fx === "prism") col = Phaser.Display.Color.HSVToRGB((m.p * 0.2) % 1, 0.6, 1).color;
+      const x = Phaser.Math.Clamp(m.x, -W / 2 + 14, W / 2 - 20);
+      let col = 0xffffff;
+      let a = 0.7;
+      if (fx === "embers") col = m.p % 1 < 0.5 ? 0xfff0a0 : 0xffd23f;
+      if (fx === "prism") col = Phaser.Display.Color.HSVToRGB((m.p * 0.2) % 1, 0.4, 1).color;
       if (fx === "glitch") {
         if (Math.random() < 0.08) m.x = (Math.random() - 0.5) * W;
-        col = [0xff2050, 0x39ff88, 0x20c8ff][Math.floor(m.p * 3) % 3];
-        a = Math.random() < 0.3 ? 0.9 : 0.4;
+        col = [0xff2050, 0xffffff, 0x20c8ff][Math.floor(m.p * 3) % 3];
+        a = Math.random() < 0.3 ? 0.95 : 0.5;
       }
-      if (fx === "stars") a = 0.3 + 0.4 * Math.abs(Math.sin(m.p * 2));
+      if (fx === "stars") a = 0.4 + 0.5 * Math.abs(Math.sin(m.p * 2));
       g.fillStyle(col, a).fillRect(
-        Math.round(x / 4) * 4,
-        Math.round(m.y / 4) * 4,
-        fx === "glitch" ? 12 : 4,
-        4,
+        Math.round(x / 6) * 6,
+        Math.round(m.y / 6) * 6,
+        fx === "glitch" ? 18 : 6,
+        6,
       );
     }
   }
@@ -1414,7 +1568,7 @@ export class ShopScene extends Phaser.Scene {
           repeat: 2,
           onStart: () => {
             im.setTexture("hero_yarms_flex");
-            this.fx.burst("star", W - 40, y - 30, 6, 0xffd23f, { speed: { min: 40, max: 140 } });
+            this.fx.burst("star", W - 60, y - 30, 6, 0xffd23f, { speed: { min: 40, max: 140 } });
           },
         },
         { x: W + 140, duration: 360, delay: 500, ease: "Cubic.easeIn" },

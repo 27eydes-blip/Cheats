@@ -495,7 +495,7 @@ export class SpinScene extends Phaser.Scene {
         this.closeReveal();
       },
     });
-    const ok = button(this, W / 2 + 130, H * 0.74, 230, 90, "COOL", {
+    const ok = button(this, W / 2 + 130, H * 0.74, 230, 90, "NICE!", {
       color: 0x3ef4ff,
       size: 30,
       onClick: () => this.closeReveal(),
