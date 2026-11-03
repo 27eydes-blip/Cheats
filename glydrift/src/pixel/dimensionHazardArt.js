@@ -180,16 +180,18 @@ function currentTile(dir) {
   return pc;
 }
 function bubbleTile() {
-  const pc = new PixelCanvas(16, 16);
+  // round, hollow bubbles of a few sizes (small ones are solid dots) — tileable 24 x 24
+  const pc = new PixelCanvas(24, 24);
   for (const [x, y, r] of [
-    [4, 3, 1.6],
-    [11, 7, 2.2],
-    [6, 12, 1.2],
-    [12, 14, 1],
+    [6, 5, 3.6],
+    [17, 12, 2.6],
+    [7, 18, 2.2],
+    [19, 21, 1.2],
+    [13, 2, 1],
   ]) {
     pc.circle(x, y, r, 0xa8f8ff);
-    pc.circle(x, y, Math.max(0, r - 1), null);
-    pc.set(x - 1, y - 1, 0xffffff);
+    if (r > 2) pc.circle(x, y, r - 1, null);
+    pc.set(Math.round(x - r / 2), Math.round(y - r / 2), 0xffffff);
   }
   return pc;
 }

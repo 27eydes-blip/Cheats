@@ -131,6 +131,7 @@ export class BubbleColumn extends Field {
   spawn(x, { w = 150 }) {
     this.arm(x);
     this.halfW = w / 2;
+    this.strip.setTileScale(S / 2); // finer pixels so the bubbles read round
   }
   update(dt) {
     const H = this.mgr.H;
