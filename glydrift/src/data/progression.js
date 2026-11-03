@@ -495,9 +495,9 @@ export const Progression = {
   },
 
   // ---------------------------------------------------------------- Lucky Spin
-  /** Lottery heroes the player doesn't own yet. */
+  /** Heroes the Lucky Spin can still award: spin-only ones plus shop heroes in the spin pool. */
   lotteryLeft() {
-    return CHARACTERS.filter((c) => c.lottery && !Save.data.unlocked[c.id]);
+    return CHARACTERS.filter((c) => (c.lottery || c.spinPool) && !Save.data.unlocked[c.id]);
   },
 
   /**

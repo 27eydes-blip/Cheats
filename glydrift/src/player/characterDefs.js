@@ -752,6 +752,7 @@ export const CHARACTERS = [
     },
     scale: 0.64,
     cost: 2500,
+    spinPool: true, // for sale AND a possible Lucky Spin prize
     desc: "Gold sparkle trail. Leaps nose-first.",
   },
   {

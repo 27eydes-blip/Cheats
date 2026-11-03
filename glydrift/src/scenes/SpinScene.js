@@ -166,7 +166,7 @@ export class SpinScene extends Phaser.Scene {
     this.heroLine.setText(
       owned < LOTTERY_HEROES.length
         ? `Lucky Spin heroes: ${owned} / ${LOTTERY_HEROES.length} — only found here`
-        : "All 10 Lucky Spin heroes collected! Hero slices pay 1000 coins",
+        : `All ${LOTTERY_HEROES.length} Lucky Spin heroes collected!`,
     );
   }
 

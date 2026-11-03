@@ -307,6 +307,7 @@ export class CharacterScene extends Phaser.Scene {
         bits.push(`${cur >= r.value ? "✓" : "✗"} ${r.text} (${cur}/${r.value})`);
       }
       if (def.requires) bits.push(`${s.coins >= def.cost ? "✓" : "✗"} ${def.cost} coins`);
+      if (def.spinPool) bits.push("or win him on the Lucky Spin");
       if (def.shards)
         bits.push(`${s.shards[def.id] || 0}/${def.shards} shards (daily streak & levels)`);
       if (def.challenge) {
