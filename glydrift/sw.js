@@ -1,6 +1,6 @@
 // Glydrift offline support: network-first so updates arrive, cached copies when there's
 // no signal. Only same-origin GETs are handled — leaderboard (Supabase) calls pass through.
-const CACHE = "glydrift-mw0sk672";
+const CACHE = "glydrift-mw0tcybm";
 const CORE = ["./", "manifest.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 self.addEventListener("install", (e) => {
   e.waitUntil(
@@ -32,6 +32,22 @@ self.addEventListener("fetch", (e) => {
       : fetch(r);
   e.respondWith(
     net
+      // Safari refuses a page that a service worker served from a redirect (e.g. a home-screen
+      // icon saved without the trailing "/"): hand back a fresh, non-redirected copy
+      .then((res) =>
+        r.mode === "navigate" && res.redirected
+          ? res
+              .blob()
+              .then(
+                (b) =>
+                  new Response(b, {
+                    status: res.status,
+                    statusText: res.statusText,
+                    headers: res.headers,
+                  }),
+              )
+          : res,
+      )
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();
