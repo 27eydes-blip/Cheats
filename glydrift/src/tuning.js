@@ -114,3 +114,11 @@ export const TILT = {
   rise: 16, // how fast the nose comes up on a flap (per second)
   fall: 7, // how gently it noses down while falling
 };
+
+// ------------------------------------------------------------------ hazards
+export const HAZARD = {
+  // hitbox size vs the drawn hazard (same for every hazard and every hero): 0.88 = 12% smaller
+  hitbox: 0.88,
+  deathSlow: 0.3, // seconds of slow-mo on a crash (was 0.5)
+  retryLead: 240, // px of extra open sky before the first obstacle after a retry
+};

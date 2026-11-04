@@ -2,6 +2,7 @@
 import Phaser from "phaser";
 import { FONT, NUM_FONT, VIEW } from "../config.js";
 import { Sfx } from "../audio/sfx.js";
+import { Haptics } from "../systems/haptics.js";
 
 export const hex = (c) => `#${c.toString(16).padStart(6, "0")}`;
 
@@ -116,7 +117,9 @@ export function button(
     e?.stopPropagation?.();
     if (!c.enabled) return;
     pressed = true;
-    scene.tweens.add({ targets: c, scale: 0.9, duration: 70, ease: "Quad.easeOut" });
+    // squish: wider than tall, like a soft key being pressed, with a crisp haptic tick
+    scene.tweens.add({ targets: c, scaleX: 0.93, scaleY: 0.86, duration: 70, ease: "Quad.easeOut" });
+    Haptics.tap();
   });
   c.on("pointerup", (p, lx, ly, e) => {
     e?.stopPropagation?.();
@@ -124,7 +127,8 @@ export function button(
     pressed = false;
     scene.tweens.add({
       targets: c,
-      scale: 1,
+      scaleX: 1,
+      scaleY: 1,
       duration: 420,
       ease: "Elastic.easeOut",
       easeParams: [1.2, 0.4],
@@ -135,7 +139,7 @@ export function button(
   c.on("pointerout", () => {
     if (!pressed) return;
     pressed = false;
-    scene.tweens.add({ targets: c, scale: 1, duration: 200, ease: "Back.easeOut" });
+    scene.tweens.add({ targets: c, scaleX: 1, scaleY: 1, duration: 200, ease: "Back.easeOut" });
   });
   c.label = t;
   c.subLabel = st;
@@ -208,6 +212,7 @@ export class RollingCounter {
     this.shown = value;
     this.text.setText(format(value));
     this.tween = null;
+    this.baseScale = textObj.scale; // bounces always settle back here (no drift)
   }
   set(v) {
     this.value = v;
@@ -219,6 +224,9 @@ export class RollingCounter {
     this.value = v;
     this.tween?.stop();
     const obj = { v: this.shown };
+    // a big gain (100+, or a quarter more than before) lands with a bigger, springier bounce
+    const gain = v - this.shown;
+    const big = gain >= 100 || (this.shown > 0 && gain / this.shown >= 0.25);
     this.tween = this.scene.tweens.add({
       targets: obj,
       v,
@@ -233,11 +241,13 @@ export class RollingCounter {
       onComplete: () => {
         this.shown = v;
         this.text.setText(this.format(v));
+        const b = this.baseScale;
         this.scene.tweens.add({
           targets: this.text,
-          scale: { from: this.text.scale * 1.18, to: this.text.scale },
-          duration: 260,
-          ease: "Back.easeOut",
+          scale: { from: b * (big ? 1.34 : 1.16), to: b },
+          duration: big ? 520 : 260,
+          ease: big ? "Elastic.easeOut" : "Back.easeOut",
+          easeParams: big ? [1.1, 0.5] : undefined,
         });
         onDone?.();
       },
@@ -248,7 +258,7 @@ export class RollingCounter {
     this.set(v);
     this.scene.tweens.add({
       targets: this.text,
-      scale: { from: 1.25, to: 1 },
+      scale: { from: 1.25 * this.baseScale, to: this.baseScale },
       duration: 180,
       ease: "Quad.easeOut",
     });

@@ -32,6 +32,7 @@ import {
   BIOME_SPEED,
   CALM,
   CAMERA_FEEL,
+  HAZARD,
   COMBO,
   DIMENSIONS,
   FLASH,
@@ -180,6 +181,7 @@ export class GameScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ run lifecycle
   resetRun(autoStart) {
+    this.isRetry = !!autoStart; // RETRY from game over (a fresh run from home isn't)
     if (this.pal.sky0 !== undefined) {
       this.fromPal = {};
       for (const k of PAL_KEYS) this.fromPal[k] = this.pal[k];
@@ -258,7 +260,9 @@ export class GameScene extends Phaser.Scene {
     this.zoneLastM = undefined;
 
     const seed = this.mode === "daily" ? dailySeed() : (Math.random() * 2 ** 32) >>> 0;
-    this.obstacles.reset(seed);
+    // retry grace: after a crash the first obstacle starts a little farther away, a breath to
+    // settle back in (the daily keeps its fixed course)
+    this.obstacles.reset(seed, this.isRetry && this.mode !== "daily" ? HAZARD.retryLead : 0);
     // the run's course: classic biomes, then random dimensions behind rifts
     const courseRng = new RNG((seed ^ 0x9e3779b9) >>> 0);
     this.course = new Course(() => courseRng.next(), TEST.dimension);
@@ -634,7 +638,7 @@ export class GameScene extends Phaser.Scene {
     Haptics.strong();
     this.cameras.main.shake(320, hints.shake);
     this.flashFx.flash(0xffffff, { ...FLASH.death, peak: hints.flash, priority: true });
-    this.slowT = 0.5;
+    this.slowT = HAZARD.deathSlow; // a short slow-mo beat on the crash (~0.3 s)
     this.run.distance = Math.floor(this.meters);
     this.run.score = this.score;
     this.run.nearBonus = this.bonus - this.coinPts;

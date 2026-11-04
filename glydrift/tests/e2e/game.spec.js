@@ -1483,6 +1483,60 @@ test("flow: the camera shakes only on death and the Abyss entrance; zoom and lea
   expect(log.errors).toEqual([]);
 });
 
+test("micro-polish: hazard hitboxes ~12% inside the art, retry grace, short death slow-mo, no blank load", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page);
+  // the loading splash fades out once the home screen has drawn
+  await run(page, 600);
+  expect(await page.locator("#splash:not(.gone)").count()).toBe(0);
+  await startRun(page);
+  const v = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const first = s.obstacles.nextX;
+    // fly (god-free, steering isn't needed: we only look) until a gate is on screen
+    let t = 1e6;
+    let gate = null;
+    for (let i = 0; i < 2000 && !gate; i++) {
+      s.player.y = s.H / 2;
+      s.player.vy = 0;
+      t += 1000 / 60;
+      s.stepFrame(t, 1000 / 60);
+      gate = s.obstacles.active.find((o) => o.yt !== undefined && o.w > 0);
+    }
+    if (!gate) return { first, gate: false };
+    // a point 3 px inside the drawn top pillar no longer counts as a hit
+    const inside = gate.clearance(gate.x, gate.yt - 3, 0);
+    // but 20 px inside still does
+    const deep = gate.clearance(gate.x, gate.yt - 20, 0);
+    return { first, gate: true, inside, deep };
+  });
+  expect(v.gate).toBe(true);
+  expect(v.inside).toBeGreaterThan(0);
+  expect(v.deep).toBeLessThan(0);
+  // retry: the first obstacle starts farther away than on a fresh run
+  const lead = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    s.resetRun(false);
+    const fresh = s.obstacles.nextX;
+    s.resetRun(true);
+    return s.obstacles.nextX - fresh;
+  });
+  expect(lead).toBeGreaterThanOrEqual(200);
+  // the crash slow-mo is short
+  const slow = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    s.startRun?.();
+    s.state = "playing";
+    s.die();
+    return s.slowT;
+  });
+  expect(slow).toBeGreaterThan(0.2);
+  expect(slow).toBeLessThanOrEqual(0.35);
+  expect(log.errors).toEqual([]);
+});
+
 test("accounts wait for the server to be set up", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page, { flags: ["mockcloud"] });
