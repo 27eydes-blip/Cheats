@@ -29,14 +29,12 @@ import { dailySeed, RNG, todayKey } from "../data/rng.js";
 import { Save } from "../data/save.js";
 import {
   ABYSS,
-  BIOME_ENTRY_SLOWMO,
   BIOME_SPEED,
   CALM,
   COMBO,
   DIMENSIONS,
   FLASH,
   REWARDS,
-  SPAWN,
 } from "../tuning.js";
 
 const CALM_M = CALM.meters;
@@ -763,10 +761,10 @@ export class GameScene extends Phaser.Scene {
       if (dom.id !== "abyss") {
         if (dom.i > 0) {
           Sfx.biome();
-          Music.play(dom.id, { startBar: 8, immediate: dom.dimension });
+          // no pause on entry: the music crossfades on the next bar while the run flows on
+          Music.play(dom.id, { startBar: 8 });
           this.hudReady?.onBiome?.(dom.biome);
           if (dom.dimension) this.enterDimension(dom);
-          else this.slowT = Math.max(this.slowT, BIOME_ENTRY_SLOWMO); // a brief slow-mo beat
           this.biomeBonus();
           this.flashFx.flash(BIOMES[dom.biome].neon, { ...FLASH.biome, priority: true });
         } else if (dom.dimension) {
@@ -876,16 +874,15 @@ export class GameScene extends Phaser.Scene {
     info.firstVisit = dom.firstVisit;
     info.dimension = dom.dimension;
     this.mirror = dom.id === "mirror" && playing;
-    const riftAhead = this.course.riftAfter(seg0);
-    const titleWin =
-      this.meters > 100 &&
-      (local0 > len0 - (riftAhead ? DIMENSIONS.riftClearMeters : SPAWN.titleClear.before) ||
-        local0 < SPAWN.titleClear.after);
-    info.pause = playing && (calm || preCalm || titleWin || this.blackoutT > 0);
-    // gentle starts: the Abyss's first metres, and the first seconds of every dimension
+    // Realm changes never pause the action: obstacles keep coming through every boundary
+    // (the realm title shows small, high up, over the play). Only The Calm and the blackout
+    // into the Abyss hold spawning — that is a designed moment.
+    info.pause = playing && (calm || preCalm || this.blackoutT > 0);
+    // gentle starts: the Abyss's first metres (spaced out), and the first seconds of every
+    // dimension (only simple obstacles while its new mechanics settle in, at normal spacing)
     const dimGrace = (this.speed * DIMENSIONS.graceSeconds) / WORLD.pxPerMeter;
-    info.grace =
-      (seg0.id === "abyss" && local0 < ABYSS.graceMeters) || (seg0.dimension && local0 < dimGrace);
+    info.grace = seg0.id === "abyss" && local0 < ABYSS.graceMeters;
+    info.simpleOnly = info.grace || (seg0.dimension && local0 < dimGrace);
     this.updateCalmFx(rawDt);
     this.flashFx.update(rawDt);
 

@@ -724,3 +724,82 @@ test("a huge run earns one spin, not dozens", async ({ page }, testInfo) => {
   expect(after.spinPts).toBeLessThan(2500); // and no pile of points banked for later
   expect(log.errors).toEqual([]);
 });
+
+test("realm changes never pause the run", async ({ page }, testInfo) => {
+  // Entering a realm or a dimension keeps the action going: no slow-mo, obstacles keep
+  // spawning straight through the boundary, and the title shows small and high over the play.
+  // The Calm (and the blackout into the Abyss) is the one designed pause.
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
+  const out = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const om = s.obstacles;
+    let t = 0;
+    const spawns = [];
+    const orig = om.spawnPattern.bind(om);
+    om.spawnPattern = (m, b) => {
+      spawns.push([t, s.meters]);
+      orig(m, b);
+    };
+    let near = 0;
+    const onNear = s.nearMiss.bind(s);
+    s.nearMiss = (o) => {
+      near++;
+      return onNear(o);
+    };
+    const bounds = [];
+    let last = null;
+    let pauses = 0;
+    let slowJumps = 0;
+    let prevSlow = 0;
+    let prevNear = 0;
+    while (s.meters < 3600) {
+      if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+      s.__t = (s.__t || 1e6) + 1000 / 60;
+      t += 1 / 60;
+      s.stepFrame(s.__t, 1000 / 60);
+      const seg = s.course.segAt(s.meters);
+      if (seg.id !== last) {
+        bounds.push({ m: seg.start, id: seg.id });
+        last = seg.id;
+      }
+      const preCalm = seg.id === "glitch" && s.meters - seg.start > seg.length - 185;
+      const designed = s.calm || preCalm || s.blackoutT > 0 || seg.id === "abyss";
+      if (om.info.pause && !designed) pauses++;
+      // slow-mo that no near-miss caused (realm entry used to add a slow-mo beat)
+      if (s.slowT > prevSlow + 0.01 && near === prevNear) slowJumps++;
+      prevSlow = s.slowT;
+      prevNear = near;
+    }
+    // the longest wait for the next obstacle around each boundary (bar the Abyss entry)
+    const around = bounds
+      .filter((b) => b.m > 0 && b.id !== "abyss")
+      .map((b) => {
+        let worst = 0;
+        for (let i = 1; i < spawns.length; i++)
+          if (spawns[i][1] > b.m - 60 && spawns[i - 1][1] < b.m + 90)
+            worst = Math.max(worst, spawns[i][0] - spawns[i - 1][0]);
+        return { id: b.id, worst: +worst.toFixed(2) };
+      });
+    return { pauses, slowJumps, around, ids: bounds.map((b) => b.id) };
+  });
+  expect(out.ids).toEqual(expect.arrayContaining(["solar", "frozen", "glitch", "hurricane"]));
+  expect(out.ids.length).toBeGreaterThanOrEqual(8); // into at least one dimension
+  expect(out.pauses).toBe(0);
+  expect(out.slowJumps).toBe(0);
+  for (const b of out.around) expect(b.worst, `obstacle gap entering ${b.id}`).toBeLessThan(3.5);
+  // the title is drawn small and high, over the play
+  const title = await page.evaluate(() => {
+    const h = window.__glydrift.scene.getScene("Hud");
+    h.pops.clear();
+    h.onBiome(2);
+    return { y: h.bannerY / h.H, scale: h.banner.scale };
+  });
+  await run(page, 800);
+  const settled = await page.evaluate(() => window.__glydrift.scene.getScene("Hud").banner.scale);
+  expect(title.y).toBeLessThan(0.32);
+  expect(settled).toBeLessThan(0.75);
+  expect(log.errors).toEqual([]);
+});

@@ -9,6 +9,10 @@ import { Sfx } from "../audio/sfx.js";
 import { POP_HOLD, PopQueue } from "../ui/popQueue.js";
 import { button, drawNeonRect, hex, neonText, plainText, RollingCounter } from "../ui/ui.js";
 
+/** Realm titles: drawn this much smaller than full size, centred this far below the HUD top. */
+const REALM_TITLE_SCALE = 0.68;
+const REALM_TITLE_Y = 380;
+
 export class HudScene extends Phaser.Scene {
   constructor() {
     super("Hud");
@@ -107,12 +111,13 @@ export class HudScene extends Phaser.Scene {
     });
 
     // banners
-    // biome titles sit below the run-banner lane (top + 250) so the two never overlap
-    this.bannerY = Math.max(H * 0.34, this.top + 250 + 150);
+    // realm titles show over the play without interrupting it: small, high up, just below the
+    // run-banner lane (top + 250), with a light backing that keeps the flight path visible
+    this.bannerY = this.top + REALM_TITLE_Y;
     this.banner = this.add.container(W / 2, this.bannerY).setAlpha(0);
     // dark backing keeps the title readable over hazards
     this.bannerBack = this.add.graphics();
-    this.bannerBack.fillStyle(0x000000, 0.62).fillRoundedRect(-300, -84, 600, 150, 24);
+    this.bannerBack.fillStyle(0x000000, 0.42).fillRoundedRect(-300, -84, 600, 150, 24);
     this.banner.add(this.bannerBack);
     this.bannerSub = plainText(this, 0, -46, "ENTERING", 20, "#ffffff");
     this.bannerText = neonText(this, 0, 0, "", 56, 0xffffff, { blur: 26 });
@@ -137,7 +142,7 @@ export class HudScene extends Phaser.Scene {
       if (!d) return;
       this.top = nt;
       for (const o of topElems) if (o) o.y += d;
-      this.bannerY = Math.max(this.H * 0.34, nt + 400);
+      this.bannerY = nt + REALM_TITLE_Y;
     };
     this.registry.events.on("changedata-safeTop", onSafe);
     this.events.once("shutdown", () => this.registry.events.off("changedata-safeTop", onSafe));
@@ -258,12 +263,12 @@ export class HudScene extends Phaser.Scene {
     if (slam) return this.slamTitle(rawIndex, b, done);
     this.bannerLine.setFillStyle(b.neon);
     this.tweens.killTweensOf(this.banner);
-    this.banner.setAlpha(0).setScale(1.6);
+    this.banner.setAlpha(0).setScale(1.6 * REALM_TITLE_SCALE).setY(this.bannerY);
     this.bannerLine.scaleX = 0;
     this.tweens.add({
       targets: this.banner,
       alpha: 1,
-      scale: 1,
+      scale: REALM_TITLE_SCALE,
       duration: 500,
       ease: "Back.easeOut",
     });
@@ -473,7 +478,10 @@ export class HudScene extends Phaser.Scene {
   }
 
   centerBandFor(kind, data) {
-    if (kind === "realm") return { y0: this.bannerY - 96, y1: this.bannerY + 78 };
+    if (kind === "realm") {
+      const k = this.banner.scale || 1;
+      return { y0: this.bannerY - 96 * k, y1: this.bannerY + 78 * k };
+    }
     const cur = { kind, data };
     const y = this.centerY();
     if (cur.kind === "speed") return { y0: y - 44, y1: y + 44 };

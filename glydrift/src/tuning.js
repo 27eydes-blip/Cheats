@@ -40,7 +40,6 @@ export const ABYSS = {
   graceMeters: 180, // gentle start: only simple, spaced-out obstacles
 };
 
-export const BIOME_ENTRY_SLOWMO = 0.45; // seconds of slow-mo when a new biome begins
 
 // ------------------------------------------------------------------ flashes
 /** Safety limits (ScreenFlash enforces them for every flash). */
@@ -81,8 +80,6 @@ export const SPAWN = {
    * and hazard speeds still follow difficultyMeters, so the path stays as open as before).
    */
   spacing: { start: 480, end: 340, rampMeters: 1600 },
-  /** Hazard-free metres kept around a realm change, so its title shows over clear sky. */
-  titleClear: { before: 40, after: 30 },
 };
 
 /** Coin flow: keep a coin within reach often enough that the combo (COMBO.window) can last. */
@@ -97,7 +94,6 @@ export const DIMENSIONS = {
   riftAfter: 400, // metres into the Hurricane before the first rift opens
   length: 600, // metres per dimension before the next rift
   graceSeconds: 3, // lighter obstacles at the start of each dimension
-  riftClearMeters: 110, // no obstacles in the stretch before a rift
   tearSeconds: 0.45, // the screen-tear transition
 };
 

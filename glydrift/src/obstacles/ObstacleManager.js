@@ -150,8 +150,9 @@ export class ObstacleManager {
     const mid = H / 2;
     const safeTop = 150;
     const safeBot = H - 150;
-    // density ramps up faster than difficulty: more obstacles early, same gap sizes
-    const sd = this.info.dimension ? d : Math.min(1, meters / SPAWN.spacing.rampMeters);
+    // density ramps up faster than difficulty: more obstacles early, same gap sizes (and it
+    // carries straight through realm and dimension changes, so a boundary never opens a gap)
+    const sd = Math.min(1, meters / SPAWN.spacing.rampMeters);
     const spacing = Phaser.Math.Linear(SPAWN.spacing.start, SPAWN.spacing.end, sd) + r.range(-30, 40);
     let width = 120;
 
@@ -194,8 +195,8 @@ export class ObstacleManager {
     // the Peaceful Valley and the dimensions have only their own hazards
     if (biomeId === "valley" || info.dimension) w.saw = w.gate = w.saw2 = w.flip = w.mini = 0;
     if (this.count < 2) w.saw2 = w.flip = w.mini = w.blade = w.hlaser = 0;
-    if (info.grace) {
-      // first seconds of the Abyss: only simple shared obstacles, spaced out
+    if (info.simpleOnly) {
+      // first metres of the Abyss / seconds of a dimension: only simple obstacles
       for (const k in w) if (k !== "saw" && k !== "gate") w[k] = 0;
       forced = null;
     }
