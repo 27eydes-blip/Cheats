@@ -175,6 +175,9 @@ export async function freshFrame(page) {
     window.__glyRender = true;
   });
   await page.clock.runFor(20);
+  // let the browser put that frame on screen (headed Firefox presents on its own schedule);
+  // the game clock is frozen meanwhile, so nothing in the game moves
+  await page.waitForTimeout(150);
 }
 
 /** Advance the game by `ms` of (fake) time, in frame-sized steps. */
