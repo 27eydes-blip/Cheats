@@ -187,20 +187,20 @@ export class LeaderboardScene extends Phaser.Scene {
 
   /** Tap a hero icon: a little tooltip with the hero's name (Korean names use Galmuri). */
   heroTip(cont, icon, def) {
-    icon.setInteractive({ useHandCursor: true });
+    // your own row's icon is a container (hero + cosmetics) with no size of its own: give it
+    // an explicit hit box, or Phaser's input throws on every touch and the screen locks up
+    const r = Math.max(30, (icon.displayHeight || 0) / 2 || 40);
+    if (icon.type === "Container")
+      icon.setInteractive(
+        new Phaser.Geom.Rectangle(-r, -r, r * 2, r * 2),
+        Phaser.Geom.Rectangle.Contains,
+      );
+    else icon.setInteractive();
     icon.on("pointerup", () => {
       cont.tip?.destroy();
-      const t = neonText(
-        this,
-        icon.x,
-        icon.y - icon.displayHeight / 2 - 18,
-        def.name,
-        22,
-        def.color,
-        {
-          blur: 8,
-        },
-      );
+      const t = neonText(this, icon.x, icon.y - r - 18, def.name, 22, def.color, {
+        blur: 8,
+      });
       cont.add(t);
       cont.tip = t;
       this.tweens.add({
