@@ -99,6 +99,10 @@ jobs:
             glydrift/test-results
           retention-days: 14
 
+      - name: Failed tests (summary)
+        if: failure()
+        run: cat failures.txt || true
+
   # New (or deliberately re-recorded) baselines go back onto the branch they came from
   baselines:
     name: Save baseline screenshots

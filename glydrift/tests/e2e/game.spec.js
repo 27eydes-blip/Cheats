@@ -9,7 +9,6 @@ import {
   gameState,
   isActive,
   isTouch,
-  locate,
   openGame,
   press,
   profileOf,
@@ -94,6 +93,7 @@ test("release build loads with no console errors", async ({ page }) => {
 });
 
 test("every screen opens", async ({ page }, testInfo) => {
+  test.setTimeout(300_000); // eight screens in one test
   const log = await openGame(page);
   await freshFrame(page);
   console.log(

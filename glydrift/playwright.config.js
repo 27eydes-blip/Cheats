@@ -96,14 +96,16 @@ export default defineConfig({
   fullyParallel: true,
   workers: CI ? 2 : undefined,
   retries: CI ? 1 : 0,
-  reporter: CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
+  reporter: CI
+    ? [["list"], ["html", { open: "never" }], ["./tests/summary-reporter.mjs"]]
+    : [["list"], ["./tests/summary-reporter.mjs"]],
   // baselines live next to the tests, one per project
   snapshotPathTemplate: "{testDir}/__screenshots__/{projectName}/{arg}{ext}",
   use: {
     baseURL: "http://localhost:4317",
     timezoneId: "UTC",
     locale: "en-US",
-    trace: "retain-on-failure",
+    trace: CI ? "off" : "retain-on-failure", // CI artifacts stay small
   },
   projects,
   webServer: [

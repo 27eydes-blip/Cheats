@@ -4,3 +4,4 @@ dist-test/
 test-results/
 playwright-report/
 blob-report/
+failures.txt
