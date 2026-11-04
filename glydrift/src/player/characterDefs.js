@@ -424,6 +424,12 @@ export const CHARACTERS = [
     scale: 0.62,
     cost: 9000,
     challenge: { stat: "maxNearRun", value: 22, text: "22 near-misses in one run" },
+    // perks (look + hitbox unchanged): bonus coins every run; immune to Solar Storm fire
+    perks: {
+      coinBonus: 13,
+      fireWard: ["geyser", "meteor", "firebar"],
+      list: ["+13 coins per run", "Fire Ward: immune to fire in Solar Storm"],
+    },
     desc: "Scarf trail. Vanishes in smoke.",
   },
   {

@@ -153,6 +153,28 @@ export class GameOverScene extends Phaser.Scene {
         onTick: Sfx.tick,
       }).to(earned, 400, 450);
       slideIn(this, coinRow, 400, 20);
+      // RONIN's perk: a small gold pop under the coins
+      if (run.perkBonus) {
+        const pb = run.perkBonus;
+        const pop = neonText(
+          this,
+          W / 2,
+          y + 44,
+          `+${pb.total} ${getCharacter(run.char).name} BONUS${pb.mul > 1 ? ` (x${pb.mul})` : ""}`,
+          22,
+          0xffd23f,
+          { blur: 8 },
+        ).setScale(0);
+        this.tweens.add({
+          targets: pop,
+          scale: 1,
+          duration: 360,
+          delay: 900,
+          ease: "Back.easeOut",
+        });
+        this.time.delayedCall(900, () => Sfx.coin(6));
+        y += 40;
+      }
       y += H * 0.065;
     } else {
       y += H * 0.01;

@@ -72,6 +72,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.wardAura = null; // RONIN's Fire Ward aura (rebuilt per scene)
     const W = VIEW.W;
     const H = VIEW.H;
     this.W = W;
@@ -524,6 +525,22 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /** RONIN passes through a Solar Storm fire hazard: crimson shield flash + hiss (logged). */
+  fireWardBlock(o) {
+    const p = this.player;
+    this.run.wardBlocks = (this.run.wardBlocks || 0) + 1;
+    this.fx.ring(p.x, p.y, 0xff2a3d, { scale: 1.3, duration: 320 });
+    this.fx.burst("spark", p.x, p.y, 10, 0xff6a3a, { speed: { min: 120, max: 320 } });
+    this.flashFx.flash(0xff2a3d, { ...FLASH.nearMissEdge, edge: true });
+    this.wardFlashT = 0.25;
+    Sfx.hiss();
+    Analytics.log("fire_ward_blocked", {
+      hazard: o.type,
+      m: Math.round(this.meters),
+      blocks: this.run.wardBlocks,
+    });
+  }
+
   die() {
     if (this.state !== "playing" || DEBUG_GOD) return;
     if (this.revives > 0) return this.revive();
@@ -555,6 +572,13 @@ export class GameScene extends Phaser.Scene {
 
   finishRun() {
     this.state = "dead";
+    // RONIN's coin perk: a bonus at the end of every run (doubled by Double Coins / Lucky Run)
+    const perkCoins = this.charDef.perks?.coinBonus;
+    if (perkCoins) {
+      const mul = (this.lucky ? 2 : 1) * (this.coinBoost || 1);
+      this.run.perkBonus = { base: perkCoins, mul, total: perkCoins * mul };
+      this.run.coins += perkCoins * mul;
+    }
     // music drops back to normal after the run (the Abyss track never lingers)
     if (this.inAbyss) Music.play(BIOME_TRACKS[0], { startBar: 8 });
     const result = Progression.commitRun(this.run);
@@ -722,6 +746,25 @@ export class GameScene extends Phaser.Scene {
       if (biomeId === "prism") this.run.prismM = (this.run.prismM || 0) + dm;
     }
     this.zoneLastM = this.meters;
+    // RONIN's Fire Ward: only while the run is in Solar Storm (off the moment he leaves)
+    const ward = this.charDef.perks?.fireWard && biomeId === "solar" && playing;
+    this.obstacles.ward = ward ? this.charDef.perks.fireWard : null;
+    if (ward && !this.wardAura) {
+      this.wardAura = this.add
+        .image(0, 0, "glow")
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setTint(0xff2a3d)
+        .setDepth(29);
+    }
+    if (this.wardAura) {
+      const p = this.player;
+      this.wardFlashT = Math.max(0, (this.wardFlashT || 0) - rawDt);
+      this.wardAura
+        .setVisible(!!ward && !p.rig.dead)
+        .setPosition(p.x, p.y)
+        .setScale(1.25 + Math.sin(this.time.now / 260) * 0.06 + this.wardFlashT * 1.6)
+        .setAlpha(0.32 + this.wardFlashT * 1.8);
+    }
     this.terrain.setTheme(themeFor(biomeId), dom.dimension);
     // build the next biome's art well before it arrives (it's made on demand to save memory)
     const nx = this.course.next(seg0);
@@ -827,6 +870,7 @@ export class GameScene extends Phaser.Scene {
       // dimension fields: Tidal currents push, bubble columns drag, Chrono zones bend time
       if (ev.push) p.vy += ev.push * dt;
       if (ev.drag) p.vy *= Math.exp(-ev.drag * dt);
+      for (const o of ev.warded) this.fireWardBlock(o);
       const r = p.radius;
       const shielded = this.boostT > 0 || this.boostGrace > 0; // boosting smashes through
       if ((ev.hit && !shielded) || p.y < -r * 0.6 || p.y > this.H + r * 0.6) this.die();

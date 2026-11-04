@@ -731,8 +731,17 @@ export class ObstacleManager {
     const { px, py, r, alive, meters, biomeId, zoom, twinY = null } = ctx;
     const ev =
       this.events ||
-      (this.events = { hit: null, near: [], passed: [], perfect: [], portal: null, coins: 0 });
+      (this.events = {
+        hit: null,
+        near: [],
+        passed: [],
+        perfect: [],
+        portal: null,
+        coins: 0,
+        warded: [],
+      });
     ev.hit = null;
+    ev.warded.length = 0;
     ev.near.length = 0;
     ev.perfect.length = 0;
     ev.passed.length = 0;
@@ -798,7 +807,14 @@ export class ObstacleManager {
           // Mirror Realm: the twin (reflected across the horizon) can crash too
           if (twinY !== null) c = Math.min(c, o.clearance(px, twinY, r));
           if (c < o.minClear) o.minClear = c;
-          if (c < 0 && !ev.hit) ev.hit = o;
+          // RONIN's Fire Ward: warded hazard types are passed through (one event per pass)
+          if (c < 0 && this.ward?.includes(o.type)) {
+            if (!o.inWard) ev.warded.push(o);
+            o.inWard = true;
+          } else {
+            if (c >= 0) o.inWard = false;
+            if (c < 0 && !ev.hit) ev.hit = o;
+          }
         }
         // PERFECT: crossing a gap's centre line right in the middle of the opening
         if (!o.centerSeen && o.x <= px) {

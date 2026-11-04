@@ -330,6 +330,11 @@ export const Sfx = {
     noise({ dur: 0.65, vol: 0.16, f: 2400 });
     tone({ type: "sine", f0: 420, f1: 60, dur: 0.6, vol: 0.18 });
   },
+  /** RONIN's Fire Ward: a hiss as the flames slide off */
+  hiss: () => {
+    noise({ dur: 0.32, vol: 0.18, f: 6500 });
+    tone({ type: "sine", f0: 900, f1: 300, dur: 0.25, vol: 0.05 });
+  },
   /** 손주원 near-miss: a short static crackle */
   crackle: () => {
     noise({ dur: 0.09, vol: 0.14, f: 7000 });

@@ -184,17 +184,29 @@ export class CharacterScene extends Phaser.Scene {
       .setTint(def.color)
       .setScale(2.2)
       .setAlpha(0.35);
-    const img = this.add.image(0, -50, def.texture).setScale((1.25 / HI) * PORTRAIT_K);
-    const name = neonText(this, 0, 70, def.name, 32, def.color, { blur: 12 });
+    // heroes with perks show a PERKS section instead of the flavour line (layout moves up)
+    const pk = def.perks?.list;
+    const up = pk ? 18 : 0;
+    const img = this.add.image(0, -50 - up, def.texture).setScale((1.25 / HI) * PORTRAIT_K);
+    const name = neonText(this, 0, 70 - up * 1.2, def.name, 32, def.color, { blur: 12 });
     const rar = plainText(
       this,
       0,
-      108,
+      108 - up * 1.4,
       RARITY[def.rarity].label,
       15,
       hex(RARITY[def.rarity].color),
     );
-    const desc = plainText(this, 0, 148, def.desc, 13, "#d8d0ff", { wrap: CARD_W - 40 });
+    const desc = pk
+      ? this.add
+          .container(0, 0)
+          .add([
+            plainText(this, 0, 110, "PERKS", 14, "#ffd23f"),
+            ...pk.map((t, k) =>
+              plainText(this, 0, 130 + k * 19, `◆ ${t}`, 12, "#ffe8c0", { wrap: CARD_W - 30 }),
+            ),
+          ])
+      : plainText(this, 0, 148, def.desc, 13, "#d8d0ff", { wrap: CARD_W - 40 });
     const lock = this.add
       .image(0, -50, "lock")
       .setScale(1.4 / HI)

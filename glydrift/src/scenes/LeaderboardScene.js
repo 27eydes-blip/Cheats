@@ -185,6 +185,16 @@ export class LeaderboardScene extends Phaser.Scene {
     return this.tab === "daily" ? Levels.daily() : Levels.endless();
   }
 
+  /** A small gold perk badge (a coin with a flame) next to heroes that have perks. */
+  perkBadge(x, y) {
+    const g = this.add.graphics({ x, y });
+    g.fillStyle(0x1a0630, 1).fillCircle(0, 0, 11);
+    g.fillStyle(0xffd23f, 1).fillCircle(0, 0, 8);
+    g.fillStyle(0xff2a3d, 1).fillTriangle(-4, 4, 4, 4, 0, -6);
+    g.fillStyle(0xffa21a, 1).fillTriangle(-2, 4, 2, 4, 0, -2);
+    return g;
+  }
+
   /** Tap a hero icon: a little tooltip with the hero's name (Korean names use Galmuri). */
   heroTip(cont, icon, def) {
     // your own row's icon is a container (hero + cosmetics) with no size of its own: give it
@@ -390,6 +400,7 @@ export class LeaderboardScene extends Phaser.Scene {
         ? heroImage(this, cx, heroY, def.id, spec.scale / HI)
         : this.add.image(cx, heroY, def.texture).setScale((spec.scale / HI) * PORTRAIT_K);
       col.add([score, name, hero]);
+      if (def.perks) col.add(this.perkBadge(cx + 34 * spec.scale + 14, heroY + 24 * spec.scale));
       this.heroTip(col, hero, def);
       if (mine) {
         const tag = neonText(this, cx, heroY - 70 * spec.scale - 16, "YOU", 16, 0x3ef4ff, {
@@ -550,6 +561,7 @@ export class LeaderboardScene extends Phaser.Scene {
         ? neonText(this, W - 48, y, `${r.score}`, 26, medal, { ox: 1, blur: 8 })
         : plainText(this, W - 48, y, `${r.score}`, 24, mine ? "#3ef4ff" : "#ffffff", { ox: 1 });
       this.list.add([g, rankTxt, icon, name, score]);
+      if (def.perks) this.list.add(this.perkBadge(150, y + 16));
       this.heroTip(this.list, icon, def);
     });
     this.contentH = offset + Math.max(0, rows.length - 5) * ROW_H + 12;
