@@ -55,6 +55,7 @@ That is 3 engines × 7 profiles = **21 browser/device combinations**.
 9. **A lost WebGL context:** the context is dropped and restored mid-run, and the game keeps running and drawing.
 10. **Private browsing (no storage at all):** the game runs, and the "progress won't save" note shows.
 11. **The same game speed at 30, 60 and 120 Hz**, checked once per engine (the distance flown in 4 s must match within 2%).
+12. **Gameplay looks right:** a run flown by an in-page autopilot, compared against its baseline screenshot.
 
 **Screenshot comparisons:** the Home, Heroes, Shop, gameplay and Game Over screens are compared against saved baselines for every combination (105 baselines, in `tests/e2e/__screenshots__/`). Anything over 2% of pixels different fails the run. Every other screen is screenshotted into the test report for review.
 - The tests use a frozen clock, seeded randomness and no audio, so every run draws the identical frames. I checked this: three runs matched frame for frame.
@@ -75,7 +76,7 @@ Final state (CI run RUN_NO, commit `SHA`):
 | WebKit (Safari, iOS) | WK | WK | WK | WK | WK | WK | WK |
 | Firefox | FF | FF | FF | FF | FF | FF | FF |
 
-Each cell is the 11 checks above (the 30/60/120 Hz check runs once per engine, on the laptop profile).
+Each cell is the 12 checks above (the 30/60/120 Hz check runs once per engine, on the laptop profile).
 
 **`npm run test:all` in this sandbox: 71 passed, 6 skipped, exit 0** (Chromium, all 7 profiles; the skips are the 30/60/120 Hz check, which runs only on the laptop profile). The sandbox can only run Chromium (see Notes), so WebKit and Firefox are skipped there with a message.
 
