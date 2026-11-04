@@ -36,4 +36,10 @@ export const Analytics = {
   },
 };
 
-if (typeof window !== "undefined") window.addEventListener("pagehide", () => Analytics.flush());
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", () => Analytics.flush());
+  // iOS can kill a backgrounded home-screen app without a pagehide: save when it hides too
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") Analytics.flush();
+  });
+}

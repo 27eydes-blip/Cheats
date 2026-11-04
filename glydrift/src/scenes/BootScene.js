@@ -1,3 +1,4 @@
+import { TEST } from "../systems/testFlags.js";
 import Phaser from "phaser";
 import { buildTextures } from "../gfx/textures.js";
 import { buildPixelArt } from "../pixel/themes.js";
@@ -21,8 +22,8 @@ export class BootScene extends Phaser.Scene {
     // sign in (anonymous) + upload queued scores in the background, after first frames
     setTimeout(() => Leaderboard.init(), 1200);
     this.scene.launch("Backdrop");
-    // hidden music test page: ?music
+    // hidden music test page: ?music (test builds only)
     const q = new URLSearchParams(window.location.search);
-    this.scene.start(q.has("music") ? "MusicTest" : "Menu");
+    this.scene.start(TEST.on && q.has("music") ? "MusicTest" : "Menu");
   }
 }

@@ -11,8 +11,13 @@ import { dailyNumber } from "../data/rng.js";
 import { Save } from "../data/save.js";
 
 // ?lbtest routes all reads/writes to "test-…" levels so testing never touches the real boards
+// (test builds only)
+/* global __TEST_FLAGS__ */
 const PREFIX =
-  typeof location !== "undefined" && new URLSearchParams(location.search).has("lbtest")
+  typeof __TEST_FLAGS__ !== "undefined" &&
+  __TEST_FLAGS__ &&
+  typeof location !== "undefined" &&
+  new URLSearchParams(location.search).has("lbtest")
     ? "test-"
     : "";
 
@@ -42,6 +47,13 @@ function isNetworkError(err) {
   );
 }
 
+/** The server definitely refused this write (RLS / constraint / bad request): don't retry. */
+function isRejection(err) {
+  const st = err?.status ?? err?.statusCode;
+  if ([400, 403, 404, 409, 422].includes(st)) return true;
+  return /^(22|23|42|P0)/.test(String(err?.code || ""));
+}
+
 export class LeaderboardError extends Error {
   constructor(message, offline) {
     super(message);
@@ -49,14 +61,18 @@ export class LeaderboardError extends Error {
   }
 }
 
-/** Upper bounds a real run can't exceed (max speed ≈ 31 m/s; bonuses are bounded per meter). */
+// The top speed is WORLD.maxSpeed times the fastest hero (WALLRUNNER ×1.2), the Abyss /
+// dimension spike (×1.1) and Chrono "fast" zones (×1.35): real runs must never be rejected.
+const MAX_SPEED_FACTOR = 1.8;
+
+/** Upper bounds a real run can't exceed (bonuses are bounded per meter). */
 export function isPlausible(run) {
   const ms = Math.round(run.run_time_ms ?? run.runTimeMs ?? 0);
   const score = Math.round(run.score);
   const meters = run.distance ?? 0;
   if (!Number.isFinite(score) || score <= 0 || score > 2_000_000) return false;
   if (!Number.isFinite(ms) || ms < 500) return false;
-  const maxMeters = ((WORLD.maxSpeed / WORLD.pxPerMeter) * ms) / 1000 + 40;
+  const maxMeters = ((MAX_SPEED_FACTOR * WORLD.maxSpeed) / WORLD.pxPerMeter) * (ms / 1000) + 40;
   if (meters > maxMeters) return false;
   // score = meters + coin bonus + close-call bonus; both bonuses are capped generously
   const maxScore = maxMeters * 20 + 500;
@@ -141,9 +157,11 @@ class LeaderboardService {
   // ---------------------------------------------------------------- username
   setUsername(name) {
     this.data.profile.username = name;
-    const q = this.data.lbQueue.filter((op) => op.type !== "rename");
+    // change the queue in place: a flush that's running keeps working on the same array
+    const q = this.data.lbQueue;
+    for (let i = q.length - 1; i >= 0; i--)
+      if (q[i].type === "rename" && !(this.flushing && i === 0)) q.splice(i, 1);
     q.push({ type: "rename", username: name });
-    this.data.lbQueue = q;
     Save.write();
     return this.flush();
   }
@@ -169,7 +187,10 @@ class LeaderboardService {
     }
     const q = this.data.lbQueue;
     // keep only the best pending score per level
-    const same = q.find((op) => op.type === "score" && op.level === entry.level);
+    // (never merge into the entry an upload is sending right now: that new best would be lost)
+    const same = q.find(
+      (op, i) => op.type === "score" && op.level === entry.level && !(this.flushing && i === 0),
+    );
     if (same) {
       if (entry.score > same.score) Object.assign(same, entry);
     } else {
@@ -197,8 +218,10 @@ class LeaderboardService {
             q.shift();
             Save.write();
           } catch (err) {
-            if (isNetworkError(err)) throw err;
-            console.warn("leaderboard: dropping op", op, err?.message);
+            // drop an entry only when the server clearly refused it (or after many tries);
+            // timeouts, 5xx, rate limits and token refreshes keep it for a later retry
+            op.tries = (op.tries || 0) + 1;
+            if (isNetworkError(err) || (!isRejection(err) && op.tries < 8)) throw err;
             q.shift();
             Save.write();
           }
@@ -210,6 +233,14 @@ class LeaderboardService {
         result.queued = this.data.lbQueue.length;
         this.flushing = null;
       }
+      // something is still waiting: try again later (backing off up to a minute)
+      if (result.queued && !this.retryTimer) {
+        this.retryMs = Math.min(60000, (this.retryMs || 4000) * 2);
+        this.retryTimer = setTimeout(() => {
+          this.retryTimer = null;
+          this.flush();
+        }, this.retryMs);
+      } else if (!result.queued) this.retryMs = 0;
       return result;
     })();
     return this.flushing;

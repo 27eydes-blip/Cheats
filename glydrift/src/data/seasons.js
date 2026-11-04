@@ -7,6 +7,7 @@ import { Save } from "./save.js";
 import { COSMETICS, getCosmetic, setSeasonItemCheck } from "./cosmetics.js";
 import { CHARACTERS, getCharacter, releaseHeroes } from "../player/characterDefs.js";
 import { Analytics } from "../systems/analytics.js";
+import { Leaderboard } from "../online/leaderboard.js";
 
 const CACHE_KEY = "glydrift.seasons.v1";
 const DAY = 86400000;
@@ -42,7 +43,20 @@ function validSeason(s) {
   s.pass.tiers = s.pass.tiers.map((r) => (ok(r) ? r : { coins: 100 }));
   if (!Array.isArray(s.pass.plus)) s.pass.plus = [];
   s.event ||= { name: s.name, challenges: [], shopItems: [] };
-  s.event.challenges = (s.event.challenges || []).filter((c) => c?.id && c.metric && c.type);
+  // a malformed challenge would crash the end of a run: keep only well-formed ones
+  s.event.challenges = (s.event.challenges || []).filter(
+    (c) =>
+      c?.id &&
+      c.metric &&
+      (c.type === "collect"
+        ? Array.isArray(c.values) && c.values.length > 0
+        : (c.type === "count" || c.type === "best") && Number.isFinite(c.value) && c.value > 0),
+  );
+  for (const c of s.event.challenges) {
+    c.reward ||= {};
+    c.reward.coins = Math.max(0, Math.floor(Number(c.reward.coins) || 0));
+    c.reward.xp = Math.max(0, Math.floor(Number(c.reward.xp) || 0));
+  }
   s.event.shopItems = (s.event.shopItems || []).filter(itemOk);
   return s.pass.tiers.length > 0;
 }
@@ -177,7 +191,6 @@ export const Seasons = {
       return true;
     };
     try {
-      const { Leaderboard } = await import("../online/leaderboard.js");
       const sb = await Leaderboard.client();
       const { data, error } = await sb
         .from("season_config")

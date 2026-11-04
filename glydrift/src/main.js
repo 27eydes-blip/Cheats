@@ -199,11 +199,14 @@ async function boot() {
   window.addEventListener("orientationchange", () => setTimeout(updateSafe, 300));
   document.addEventListener("visibilitychange", () => setTimeout(updateSafe, 100));
   for (const ms of [300, 1000, 2500]) setTimeout(updateSafe, ms);
-  window.__glydrift = game;
   if (TEST.month !== null) setSeasonMonth(TEST.month);
-  if (TEST.on) window.__leaderboard = Leaderboard;
-  if (TEST.on) window.__heroDefs = CHARACTERS; // test builds: lineup screenshots // test builds: lets scripts stub the board
-  window.__music = Music; // handy for debugging / the music test page
+  // test builds only: handles for test scripts (release builds expose nothing)
+  if (TEST.on) {
+    window.__glydrift = game;
+    window.__leaderboard = Leaderboard;
+    window.__heroDefs = CHARACTERS;
+    window.__music = Music;
+  }
 }
 
 // Audio may only start inside a user gesture (iOS): the first tap anywhere unlocks it.

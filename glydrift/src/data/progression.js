@@ -490,7 +490,8 @@ export const Progression = {
     if (!locked.length) return null;
     let best = null;
     for (const c of locked) {
-      const coinFrac = s.coins / c.cost;
+      // challenge-only heroes (cost 0) can't be bought: no "unlock now" from coins
+      const coinFrac = c.cost > 0 ? s.coins / c.cost : 0;
       const chFrac = Progression.challengeProgress(c);
       const shardFrac = c.shards ? (s.shards[c.id] || 0) / c.shards : 0;
       const frac = Math.max(coinFrac, chFrac, shardFrac);
@@ -504,7 +505,7 @@ export const Progression = {
     const d = best.def;
     let text;
     if (best.chFrac >= best.coinFrac && best.chFrac >= best.shardFrac && d.challenge) {
-      const cur = s.stats[d.challenge.stat] || 0;
+      const cur = Progression.statOf(d.challenge.stat);
       const left = d.challenge.value - cur;
       text =
         d.challenge.stat === "maxBiome"
@@ -678,8 +679,8 @@ export const Progression = {
       s.ghostChar = run.char;
     }
 
-    // coins
-    s.coins += run.coins;
+    // coins (+ a hero perk bonus, e.g. RONIN's +13, which isn't "collected")
+    s.coins += run.coins + (run.perkBonus?.total || 0);
 
     // missions
     for (const m of s.missions) {

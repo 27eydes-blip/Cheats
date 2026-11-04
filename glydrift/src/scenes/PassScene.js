@@ -87,6 +87,7 @@ export class PassScene extends Phaser.Scene {
 
   create() {
     fitCamera(this);
+    this.leftForSeason = false;
     const W = VIEW.W;
     const H = VIEW.H;
     this.W = W;
@@ -251,7 +252,11 @@ export class PassScene extends Phaser.Scene {
     g.fillStyle(0xffffff, 0.35).fillRect(x0 + 10, y - 13, Math.max(6, (bw - 8) * frac - 12), 8);
     this.xpText
       .setPosition(x0 + bw / 2, y)
-      .setText(done ? "ALL 50 TIERS DONE" : `TIER ${n + 1} · ${Math.max(0, into)}/${tierXp()} XP`);
+      .setText(
+        done
+          ? `ALL ${this.track.length} TIERS DONE`
+          : `TIER ${n + 1} · ${Math.max(0, into)}/${tierXp()} XP`,
+      );
   }
 
   // ---------------------------------------------------------------- the season hero
@@ -824,6 +829,12 @@ export class PassScene extends Phaser.Scene {
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 30);
     this.t += dt;
+    // the season ended (or a new one began) while the pass was open: go home, where the
+    // finished season's tiers are auto-claimed and its recap shows
+    if (!this.leftForSeason && !this.busy && Seasons.active()?.id !== this.season?.id) {
+      this.leftForSeason = true;
+      fadeTo(this, "Menu");
+    }
     this.pattern.tilePositionX += dt * 10;
     this.pattern.tilePositionY += dt * 6;
     // momentum + spring back from the ends

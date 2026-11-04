@@ -140,7 +140,7 @@ export class GameOverScene extends Phaser.Scene {
     let y = chipY + H * 0.068;
     // coins line — only when something was earned
     const missionCoins = R.missions.reduce((a, m) => a + m.reward.coins, 0);
-    const earned = run.coins + missionCoins;
+    const earned = run.coins + missionCoins + (run.perkBonus?.total || 0);
     if (earned > 0) {
       const coinRow = this.add.container(W / 2, y);
       const coinIcon = this.add.image(-60, 0, "coin").setScale(0.8 / HI);

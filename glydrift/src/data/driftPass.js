@@ -61,7 +61,7 @@ function giveReward(r) {
   if (r.xpBoost) {
     // the next few runs earn extra pass XP
     const b = (s.xpBoost ||= { mul: 1, runs: 0 });
-    b.mul = Math.max(b.mul, r.xpBoost.mul);
+    b.mul = b.runs > 0 ? Math.max(b.mul, r.xpBoost.mul) : r.xpBoost.mul; // a spent boost resets
     b.runs += r.xpBoost.runs;
     return { xpBoost: r.xpBoost };
   }

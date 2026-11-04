@@ -24,7 +24,10 @@ self.addEventListener("activate", (e) => {
 });
 self.addEventListener("fetch", (e) => {
   const r = e.request;
-  if (r.method !== "GET" || new URL(r.url).origin !== location.origin) return;
+  const url = new URL(r.url);
+  if (r.method !== "GET" || url.origin !== location.origin) return;
+  // seasons.json is fetched with a cache-busting ?t=…: keep ONE cached copy, not one per URL
+  const key = url.pathname.endsWith("/seasons.json") ? url.origin + url.pathname : r;
   // the page itself always bypasses the HTTP cache, so a new version shows up on next launch
   const net =
     r.mode === "navigate"
@@ -36,25 +39,23 @@ self.addEventListener("fetch", (e) => {
       // icon saved without the trailing "/"): hand back a fresh, non-redirected copy
       .then((res) =>
         r.mode === "navigate" && res.redirected
-          ? res
-              .blob()
-              .then(
-                (b) =>
-                  new Response(b, {
-                    status: res.status,
-                    statusText: res.statusText,
-                    headers: res.headers,
-                  }),
-              )
+          ? res.blob().then(
+              (b) =>
+                new Response(b, {
+                  status: res.status,
+                  statusText: res.statusText,
+                  headers: res.headers,
+                }),
+            )
           : res,
       )
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(r, copy));
+          caches.open(CACHE).then((c) => c.put(key, copy));
         }
         return res;
       })
-      .catch(() => caches.match(r).then((hit) => hit || caches.match("./"))),
+      .catch(() => caches.match(key).then((hit) => hit || caches.match("./"))),
   );
 });

@@ -240,11 +240,13 @@ export const Shop = {
     return deal === id ? Math.round((c.price * (1 - DAILY_DISCOUNT)) / 10) * 10 : c.price;
   },
 
-  buy(id, where = "shop") {
+  buy(id, where = "shop", shownPrice) {
     const s = state();
     const c = getCosmetic(id);
     if (!c || Shop.owns(id)) return false;
     const price = Shop.priceOf(id);
+    // the deal changed at midnight while the card was open: never charge more than shown
+    if (shownPrice !== undefined && shownPrice !== price) return false;
     if (s.coins < price) return false;
     s.coins -= price;
     s.cos.owned[id] = true;
@@ -379,10 +381,11 @@ export const Shop = {
     const b = ids[Math.floor(rng.next() * ids.length)];
     return [a, b];
   },
-  buyBundle(setId) {
+  buyBundle(setId, shownPrice) {
     const s = state();
     const b = Shop.bundle(setId);
     if (!b.need.length || s.coins < b.price) return false;
+    if (shownPrice !== undefined && shownPrice !== b.price) return false; // price changed
     s.coins -= b.price;
     for (const id of b.need) s.cos.owned[id] = true;
     Save.write();

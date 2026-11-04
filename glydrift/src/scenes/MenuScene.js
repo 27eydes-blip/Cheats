@@ -107,7 +107,7 @@ export class MenuScene extends Phaser.Scene {
     this.logoTaps = 0;
     this.logo.setInteractive().on("pointerdown", () => {
       this.logoTaps++;
-      if (this.logoTaps >= 5) this.go("MusicTest");
+      if (TEST.on && this.logoTaps >= 5) this.go("MusicTest"); // test builds only
     });
 
     // ---- hero

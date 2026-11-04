@@ -713,7 +713,8 @@ export class ShopScene extends Phaser.Scene {
             label: `${b.price}`,
             coin: true,
             was: b.full,
-            act: () => this.buy(c, title, b.price, () => Shop.buyBundle(o.id)),
+            act: () =>
+              this.buy(c, title, b.price, () => this.tryBuy(c, Shop.buyBundle(o.id, b.price))),
           };
         break;
       }
@@ -759,7 +760,10 @@ export class ShopScene extends Phaser.Scene {
             label: `${price}`,
             coin: true,
             was: price < cc.price ? cc.price : 0,
-            act: () => this.buy(c, cc.name.toUpperCase(), price, () => Shop.buy(o.id)),
+            act: () =>
+              this.buy(c, cc.name.toUpperCase(), price, () =>
+                this.tryBuy(c, Shop.buy(o.id, "shop", price)),
+              ),
           };
         }
         break;
@@ -862,6 +866,15 @@ export class ShopScene extends Phaser.Scene {
       add(b);
       c.cta = b;
     }
+  }
+
+  /** A buy that didn't go through (e.g. the daily deal changed at midnight): show the new price. */
+  tryBuy(card, ok) {
+    if (!ok) {
+      this.fx.floatText(this.W / 2, this.cardY - 120, "PRICE UPDATED", "#ffd23f", 34);
+      this.refreshAll();
+    }
+    return ok;
   }
 
   priceStyle(size, color) {

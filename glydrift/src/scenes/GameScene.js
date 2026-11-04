@@ -576,8 +576,8 @@ export class GameScene extends Phaser.Scene {
     const perkCoins = this.charDef.perks?.coinBonus;
     if (perkCoins) {
       const mul = (this.lucky ? 2 : 1) * (this.coinBoost || 1);
+      // paid in commitRun, not as "collected" coins (missions / XP / stats ignore it)
       this.run.perkBonus = { base: perkCoins, mul, total: perkCoins * mul };
-      this.run.coins += perkCoins * mul;
     }
     // music drops back to normal after the run (the Abyss track never lingers)
     if (this.inAbyss) Music.play(BIOME_TRACKS[0], { startBar: 8 });
