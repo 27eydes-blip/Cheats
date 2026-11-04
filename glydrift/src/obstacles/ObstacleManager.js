@@ -46,7 +46,7 @@ export class ObstacleManager {
     this.info = { local: 0, rawIndex: 0, firstVisit: true, pause: false, grace: false };
   }
 
-  reset(seed) {
+  reset(seed, lead = 0) {
     this.rng = new RNG(seed);
     for (const o of this.active) o.kill();
     this.active.length = 0;
@@ -54,7 +54,7 @@ export class ObstacleManager {
       c.setActive(false).setVisible(false);
       c.halo?.setVisible(false); // or its glow stays frozen on screen after a retry
     }
-    this.nextX = this.W + 260;
+    this.nextX = this.W + 260 + lead;
     // shop coin skin (gems / stars / hearts) and the Coin Magnet boost's pull radius
     const skin = Shop.equipped("coin");
     this.coinSkin = skin ? { tex: "cosm", prefix: `${skin}_` } : { tex: "pxc", prefix: "coin_" };

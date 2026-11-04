@@ -624,6 +624,11 @@ class MusicEngine {
       f.setValueAtTime(f.getValueAtTime(now), now);
       f.exponentialRampToValueAtTime(700, now + 0.25);
     } else this.restore(0.25);
+    // and the volume eases down / back up with it (no hard cut either way)
+    if (!this.out.mute) {
+      const v = Save.data.settings.musicVol ?? 0.7;
+      this.out.volume.rampTo(20 * Math.log10(v) + (on ? -9 : 0), 0.3);
+    }
   }
 
   status() {

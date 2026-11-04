@@ -54,7 +54,7 @@ export class Saw extends PxObstacle {
     }
   }
   clearance(px, py, r) {
-    return circleClear(px, py, r, this.x, this.y, this.R * 0.88);
+    return circleClear(px, py, r, this.x, this.y, this.R); // (the shared ~12% hitbox inset applies)
   }
 }
 

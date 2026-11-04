@@ -339,6 +339,14 @@ export class MenuScene extends Phaser.Scene {
     this.queueT = 0.45;
 
     this.input.keyboard?.on("keydown-SPACE", () => this.startGame("normal"));
+
+    // the loading splash fades once the home screen has drawn
+    this.events.once("postupdate", () => {
+      const sp = document.getElementById("splash");
+      if (!sp) return;
+      sp.classList.add("gone");
+      setTimeout(() => sp.remove(), 400);
+    });
   }
 
   /** Neon username prompt; saves locally and renames existing leaderboard rows. */
@@ -508,7 +516,19 @@ export class MenuScene extends Phaser.Scene {
 
   /** Loop-the-loop with a sparkle burst (YARMS flexes instead). */
   doTrick(tapped = false) {
-    if (this.trick > 0) return;
+    if (this.trick > 0) {
+      // mid-loop: a tap still gets a reaction (a squashy flap + a few sparks), never ignored
+      if (tapped) {
+        this.rig.flap();
+        this.rig.sx = 1.2;
+        this.rig.sy = 0.85;
+        this.fx.burst("star", this.rig.x, this.rig.y, 8, this.def.color, {
+          speed: { min: 100, max: 300 },
+        });
+        Haptics.tap?.();
+      }
+      return;
+    }
     this.trickT = 6 + Math.random() * 4;
     if (this.def.id === "yarms") {
       this.rig.flex?.({ big: true, shine: true });
