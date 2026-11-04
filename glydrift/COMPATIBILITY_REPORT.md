@@ -56,6 +56,8 @@ That is 3 engines × 7 profiles = **21 browser/device combinations**.
 10. **Private browsing (no storage at all):** the game runs, and the "progress won't save" note shows.
 11. **The same game speed at 30, 60 and 120 Hz**, checked once per engine (the distance flown in 4 s must match within 2%).
 12. **Gameplay looks right:** a run flown by an in-page autopilot, compared against its baseline screenshot.
+13. **A very long run** (about 10 km, through every realm and dimension; once per engine, at phone size): no errors and no coins stuck hovering behind the bird.
+14. **No read-back canvas textures** anywhere in the code (the cause of the realm-boundary freezes).
 
 **Screenshot comparisons:** the Home, Heroes, Shop, gameplay and Game Over screens are compared against saved baselines on Chromium and WebKit for all 7 profiles. That's 70 baselines, in `tests/e2e/__screenshots__/`.
 - Menus and Game Over fail at more than 2% of pixels different.
@@ -80,7 +82,7 @@ Final state (CI run RUN_NO, commit `SHA`):
 | WebKit (Safari, iOS) | WK | WK | WK | WK | WK | WK | WK |
 | Firefox | FF | FF | FF | FF | FF | FF | FF |
 
-Each cell is the 12 checks above, except that Firefox's screenshots are saved, not compared (the 30/60/120 Hz check runs once per engine, on the laptop profile).
+Each cell is the 14 checks above, except that Firefox's screenshots are saved, not compared (the 30/60/120 Hz check runs once per engine, on the laptop profile).
 
 **`npm run test:all` in this sandbox: 71 passed, 6 skipped, exit 0** (Chromium, all 7 profiles; the skips are the 30/60/120 Hz check, which runs only on the laptop profile). The sandbox can only run Chromium (see Notes), so WebKit and Firefox are skipped there with a message.
 
@@ -100,6 +102,25 @@ Each cell is the 12 checks above, except that Firefox's screenshots are saved, n
 - giving the browser a moment to put the fresh frame on screen before the picture is taken.
 
 The result: CI reproduces its own screenshots exactly from one run to the next. Pixel comparisons therefore run in CI, where the baselines were recorded. `VISUAL=1 npm run test:all` turns them on locally too; a different machine can land an animation one frame apart, which is about 3% of pixels on some screens.
+
+## The "game collapsed on a high score" reports
+
+Three players said the game collapsed during high-score runs. Two causes, both fixed:
+
+1. **A multi-second freeze at every realm boundary.** Each time a run neared a new realm (500 m, 1,000 m, 1,500 m, …), registering that realm's artwork read every pixel of it back from the graphics memory. Phaser's `addCanvas()` does this with `getImageData()`.
+   - One frame took 2.5–3.7 s on a desktop CPU, in both the live version and this branch. On iPhones canvases live on the GPU, so it's far slower: the bird freezes mid-flight, and the run ends or Safari gives up on the page.
+   - Only good runs reach realm boundaries, which is why only high-score runs collapsed.
+   - The artwork is now uploaded as a plain texture that is never read back (`canvasTexture()` in `pixel/px.js`). The worst frame over 12 km is now about 30 ms.
+   - The live version also threw an audio error ("Start time must be strictly greater than previous start time") right after the freeze. That doesn't happen any more.
+2. **Coins piled up behind the bird on fast runs.** At high speed, the coin magnet's pull and the world's scroll cancelled out, so a caught coin hovered behind the bird forever: never collected, never cleared, and drawn every frame. 14 were stuck by 12 km, and about 100 by 60 km. Caught coins now always reach the bird (and count toward the score).
+
+New automated checks keep these fixed:
+- A run flown to about 10 km on every engine, checking that no caught coin is left hovering. It fails with 14 stuck coins on the old code.
+- A check that no code uses `textures.addCanvas()` again.
+
+Two things I checked along the way that were fine:
+- JavaScript memory stays flat over 100 km (about 15 MB).
+- The results screen after a long new-best run, with four hero unlocks in a row, plays through correctly.
 
 ## What I fixed
 

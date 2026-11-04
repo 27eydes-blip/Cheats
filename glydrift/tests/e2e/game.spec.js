@@ -1,5 +1,5 @@
 // Glydrift on every device profile × browser engine (see playwright.config.js).
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import {
   expectFramed,
@@ -77,7 +77,13 @@ test("loads with no console errors, framed correctly, no browser gestures", asyn
   const blocked = await page.evaluate(() => {
     const fire = (e) => !document.body.dispatchEvent(e);
     const out = {
-      wheelZoom: fire(new WheelEvent("wheel", { ctrlKey: true, cancelable: true, bubbles: true })),
+      wheelZoom: fire(
+        new WheelEvent("wheel", {
+          ctrlKey: true,
+          cancelable: true,
+          bubbles: true,
+        }),
+      ),
       contextMenu: fire(new MouseEvent("contextmenu", { cancelable: true, bubbles: true })),
       dblclick: fire(new MouseEvent("dblclick", { cancelable: true, bubbles: true })),
     };
@@ -88,7 +94,12 @@ test("loads with no console errors, framed correctly, no browser gestures", asyn
     }
     return out;
   });
-  expect(blocked).toEqual({ wheelZoom: true, contextMenu: true, dblclick: true, touchMove: true });
+  expect(blocked).toEqual({
+    wheelZoom: true,
+    contextMenu: true,
+    dblclick: true,
+    touchMove: true,
+  });
   expect(log.errors).toEqual([]);
   expect(log.failed).toEqual([]);
   await snap(page, testInfo, "01-home");
@@ -96,7 +107,10 @@ test("loads with no console errors, framed correctly, no browser gestures", asyn
 
 test("release build loads with no console errors", async ({ page }) => {
   // the release build exposes no test hooks: openGame waits for its canvas and lets it run
-  const log = await openGame(page, { base: "http://localhost:4318", screen: null });
+  const log = await openGame(page, {
+    base: "http://localhost:4318",
+    screen: null,
+  });
   expect(log.errors).toEqual([]);
   expect(log.failed).toEqual([]);
   expect(await page.evaluate(() => typeof window.__glydrift)).toBe("undefined");
@@ -230,13 +244,22 @@ test("pause and resume (button, keys, app in background)", async ({ page }, test
 
   // the tab / app goes to the background → the run pauses itself
   await page.evaluate(() => {
-    Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
-    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => true,
+    });
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "hidden",
+    });
     document.dispatchEvent(new Event("visibilitychange"));
   });
   await run(page, 300);
   await page.evaluate(() => {
-    Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => false,
+    });
     Object.defineProperty(document, "visibilityState", {
       configurable: true,
       get: () => "visible",
@@ -474,4 +497,52 @@ test("same game speed at 30, 60 and 120 Hz", async ({ page }, testInfo) => {
   });
   expect(Math.abs(meters[30] / meters[60] - 1)).toBeLessThan(0.02);
   expect(Math.abs(meters[120] / meters[60] - 1)).toBeLessThan(0.02);
+});
+
+test("a very long run stays smooth and doesn't pile up objects", async ({ page }, testInfo) => {
+  // Players reported the game "collapsing" on high-score runs. Two causes, both fixed:
+  // registering each realm's art read its pixels back (getImageData) and froze the game for
+  // seconds at every realm boundary, and at high speed magnetised coins got stuck orbiting
+  // behind the bird forever. Fly ~10 km (every realm and dimension) and check for both.
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
+  const samples = [];
+  for (let chunk = 0; chunk < 36; chunk++) {
+    samples.push(
+      await page.evaluate(() => {
+        const g = window.__glydrift;
+        const s = g.scene.getScene("Game");
+        for (let i = 0; i < 600; i++) {
+          if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+          s.__t = (s.__t || 1e6) + 1000 / 60;
+          s.stepFrame(s.__t, 1000 / 60);
+        }
+        return {
+          m: Math.floor(s.meters),
+          state: s.state,
+          coins: s.obstacles.coins.filter((c) => c.active).length,
+          // a coin the magnet caught is collected within a few frames, never left hovering
+          caught: s.obstacles.coins.filter((c) => c.active && c.magnet).length,
+        };
+      }),
+    );
+    await run(page, 50); // draw a frame now and then, so new textures upload
+  }
+  const last = samples.at(-1);
+  expect(last.state).toBe("playing");
+  expect(last.m).toBeGreaterThan(8000);
+  // live coins are only the ones on screen ahead of the bird
+  expect(Math.max(...samples.map((x) => x.coins))).toBeLessThan(30);
+  expect(Math.max(...samples.map((x) => x.caught))).toBeLessThan(3);
+  expect(log.errors).toEqual([]);
+});
+
+test("realm art never uses read-back canvas textures", () => {
+  // textures.addCanvas() makes a CanvasTexture, which reads the whole canvas back with
+  // getImageData(): seconds of freeze per realm on iPhones. Use canvasTexture() (pixel/px.js).
+  const files = readdirSync("src", { recursive: true }).filter((f) => f.endsWith(".js"));
+  const bad = files.filter((f) => readFileSync(`src/${f}`, "utf8").includes("textures.addCanvas("));
+  expect(bad).toEqual([]);
 });

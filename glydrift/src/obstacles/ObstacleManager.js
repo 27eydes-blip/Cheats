@@ -845,7 +845,9 @@ export class ObstacleManager {
     // coins
     for (const c of this.coins) {
       if (!c.active) continue;
-      c.x -= dx;
+      // a magnetised coin flies at the bird and no longer scrolls with the world: scrolling
+      // it too let fast runs (high scores) hold it in a trailing orbit it never left
+      if (!c.magnet || !alive) c.x -= dx;
       const t = clock * 4 + c.phase;
       if (alive) {
         const ddx = px - c.x;

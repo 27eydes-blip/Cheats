@@ -1,6 +1,6 @@
 // Pixel biome art generator. One palette + a few style switches per biome produce every tile,
 // hazard, decoration and background layer. All assets are original procedural pixel art.
-import { addAtlas, addTexture, mix, PixelCanvas, seeded, shade } from "./px.js";
+import { addAtlas, addTexture, canvasTexture, mix, PixelCanvas, seeded, shade } from "./px.js";
 import { DIM_KINDS, silhouetteDim } from "./dimensionScenery.js";
 import { EXTRA_KINDS, silhouetteExtra } from "./scenicArt.js";
 
@@ -463,8 +463,7 @@ function skyCanvas(scene, key) {
   g.addColorStop(1, st[3]);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 4, 256);
-  if (scene.textures.exists(key)) scene.textures.remove(key);
-  scene.textures.addCanvas(key, cv);
+  canvasTexture(scene, key, cv);
 }
 
 function silhouette(w, h, seed, { base, rim, detail, kind }) {

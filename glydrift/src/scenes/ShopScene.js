@@ -29,6 +29,7 @@ import {
 import { HAT_FIT } from "../pixel/cosmeticArt.js";
 import { PORTRAIT_K } from "../pixel/common.js";
 import { greyPortrait } from "../pixel/grayHero.js";
+import { canvasTexture } from "../pixel/px.js";
 import { killTweensDeep, button, fadeTo, RollingCounter } from "../ui/ui.js";
 
 // each tab glows its own colour when selected
@@ -127,7 +128,7 @@ export function ensureShopPattern(scene) {
   draw("cosm", "pod_0", 20, 150, 0.6);
   draw("pxc", "coin_2", 200, 190, 0.9);
   draw("cosm", "icon_flap_stars", 120, 220, 0.8);
-  scene.textures.addCanvas("shop_pattern", cv).setFilter(Phaser.Textures.FilterMode.NEAREST);
+  canvasTexture(scene, "shop_pattern", cv).setFilter(Phaser.Textures.FilterMode.NEAREST);
 }
 
 const fmtTime = (ms) => {

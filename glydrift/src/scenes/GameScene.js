@@ -47,7 +47,9 @@ const COMBO_TIERS = COMBO.tiers;
 const COMBO_WINDOW = COMBO.window;
 const FORCE_LUCKY = TEST.lucky;
 // ?god in the URL makes the player invincible (handy for testing / capturing screenshots)
-const DEBUG_GOD = TEST.god;
+let DEBUG_GOD = TEST.god;
+// test builds only: lets an automated test end a long god-mode run
+if (TEST.on && typeof window !== "undefined") window.__glyGod = (on) => (DEBUG_GOD = !!on);
 const PAL_KEYS = [
   "sky0",
   "sky1",

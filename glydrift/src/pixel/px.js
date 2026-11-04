@@ -239,14 +239,25 @@ export function deferUploads(fn) {
   return jobs;
 }
 
+/**
+ * Register a finished canvas as a texture. Phaser's addCanvas() makes a CanvasTexture, which
+ * reads every pixel back with getImageData() when it is created: ~0.75 s for one biome's
+ * art even on a desktop, and far longer on iPhones (their canvases live on the GPU). That
+ * froze the game for seconds at every realm boundary. A plain texture uploads the canvas
+ * as-is and never reads it back.
+ */
+export function canvasTexture(scene, key, canvas) {
+  if (scene.textures.exists(key)) scene.textures.remove(key);
+  return scene.textures.addImage(key, canvas);
+}
+
 /** Register a PixelCanvas as a standalone (tileable) NEAREST texture. */
 export function addTexture(scene, key, pc, scale = S) {
   if (deferred) {
     deferred.push(() => addTexture(scene, key, pc, scale));
     return null;
   }
-  if (scene.textures.exists(key)) scene.textures.remove(key);
-  const tex = scene.textures.addCanvas(key, pc.toCanvas(scale));
+  const tex = canvasTexture(scene, key, pc.toCanvas(scale));
   tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
   return tex;
 }
@@ -284,8 +295,7 @@ export function addAtlas(scene, key, frames, scale = S) {
   const ctx = cv.getContext("2d");
   ctx.imageSmoothingEnabled = false;
   for (const p of place) ctx.drawImage(p.pc.toCanvas(scale), p.x, p.y);
-  if (scene.textures.exists(key)) scene.textures.remove(key);
-  const tex = scene.textures.addCanvas(key, cv);
+  const tex = canvasTexture(scene, key, cv);
   for (const p of place) tex.add(p.name, 0, p.x, p.y, p.pc.w * scale, p.pc.h * scale);
   tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
   return tex;
