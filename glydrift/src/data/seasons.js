@@ -65,17 +65,21 @@ function useConfig(cfg, from) {
 function rec(id) {
   const s = Save.data;
   s.seasons ||= {};
-  s.seasons[id] ||= {
-    xp: 0,
-    claimed: {},
-    started: false,
-    heroSeen: false,
-    recapShown: false,
-    stats: { runs: 0, best: 0, coins: 0, meters: 0 },
-    ev: { count: {}, best: {}, sets: {}, done: {} },
-    autoClaimed: null,
-  };
-  return s.seasons[id];
+  const r = (s.seasons[id] ||= {});
+  // fill anything missing (older or partial saves) so a run can never crash on it
+  r.xp ||= 0;
+  r.claimed ||= {};
+  r.started ??= false;
+  r.heroSeen ??= false;
+  r.recapShown ??= false;
+  r.stats = { runs: 0, best: 0, coins: 0, meters: 0, ...(r.stats || {}) };
+  r.ev ||= {};
+  r.ev.count ||= {};
+  r.ev.best ||= {};
+  r.ev.sets ||= {};
+  r.ev.done ||= {};
+  r.autoClaimed ??= null;
+  return r;
 }
 
 /** The numbers a run contributes to event challenges. */
@@ -273,8 +277,9 @@ export const Seasons = {
       }
     }
     for (const s of config.seasons) {
-      const r = Save.data.seasons?.[s.id];
-      if (!r || r.recapShown || Date.parse(s.end) > now) continue;
+      if (!Save.data.seasons?.[s.id]) continue;
+      const r = rec(s.id); // filled in if partial
+      if (r.recapShown || Date.parse(s.end) > now) continue;
       if (!r.started && !r.xp) continue;
       const tierXp = s.pass.tierXp || 400;
       const unlocked = Math.min(s.pass.tiers.length, Math.floor(r.xp / tierXp));
