@@ -74,7 +74,9 @@ for (const engine of engines) {
         // Firefox can't emulate a mobile viewport; everything else about the profile still applies
         isMobile: p.touch && engine !== "firefox" && name.startsWith("iphone"),
         userAgent: p.ua,
-        // software WebGL in headless Firefox
+        // Headless Firefox has no WebGL on Linux: CI runs it headed inside a virtual display
+        // (xvfb-run, FIREFOX_HEADED=1), where Mesa provides software WebGL.
+        headless: !(engine === "firefox" && process.env.FIREFOX_HEADED),
         launchOptions:
           engine === "firefox" ? { firefoxUserPrefs: { "webgl.force-enabled": true } } : {},
       },

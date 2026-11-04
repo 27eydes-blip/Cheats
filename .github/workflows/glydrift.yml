@@ -66,12 +66,15 @@ jobs:
 
       - name: Run the tests
         run: |
+          # headless Firefox has no WebGL on Linux: run it headed in a virtual display
+          RUN="npx playwright test"
+          if [ "$ENGINES" = "firefox" ]; then export FIREFOX_HEADED=1; RUN="xvfb-run -a $RUN"; fi
           # first run for this engine (no baselines yet) or "[update screenshots]": record them
           if [ "$UPDATE" = "true" ] || ! ls tests/e2e/__screenshots__ 2>/dev/null | grep -q "^${ENGINES}-"; then
-            npx playwright test --update-snapshots=all
+            $RUN --update-snapshots=all
           else
             # compare; a brand-new screen records its first baseline (and fails once)
-            npx playwright test --update-snapshots=missing
+            $RUN --update-snapshots=missing
           fi
 
       - name: Collect new baseline screenshots

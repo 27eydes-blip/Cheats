@@ -214,8 +214,11 @@ async function boot() {
       // Phaser sizes the canvas from displaySize's aspect mode, which it only sets at boot:
       // without this a rotated iPad / Split View kept the old mode and cropped the game
       game.scale.displaySize.setAspectMode(mode);
-      game.scale.refresh();
     }
+    // refresh() works from a cached parent size: re-read it first (Safari fires "resize"
+    // before the new layout, so the game was sized for the old window and cropped)
+    game.scale.getParentBounds();
+    game.scale.refresh();
   };
   // Rotation / window resize / Split View: the game keeps running, scaled to the new shape
   // straight away. Once no run is in progress, the canvas is re-rendered at the new size (if it
@@ -239,6 +242,8 @@ async function boot() {
   setInterval(tryReres, 500);
   window.addEventListener("resize", () => {
     updateScaleMode();
+    // and again once the new layout has settled
+    for (const ms of [120, 400]) setTimeout(updateScaleMode, ms);
     reresPending = true;
     setTimeout(updateSafe, 100);
   });

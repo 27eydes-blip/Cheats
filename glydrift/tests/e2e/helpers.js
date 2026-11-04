@@ -33,8 +33,12 @@ export async function openGame(page, opts = {}) {
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
   page.on("console", (m) => {
     const t = m.text();
-    // blocked outside requests (Supabase, analytics) are expected in tests
-    if (m.type() === "error" && !/Failed to load resource/.test(t)) errors.push(`console: ${t}`);
+    // Blocked outside requests (Supabase, analytics) are expected in tests. "Unexpected driver
+    // error" comes from WebKit's ANGLE → OpenGL backend on the CI machine's software (Mesa)
+    // driver; real Safari draws through Metal, so it's logged as a warning, not a failure.
+    if (m.type() === "error" && /Unexpected driver error/.test(t)) warnings.push(t);
+    else if (m.type() === "error" && !/Failed to load resource/.test(t))
+      errors.push(`console: ${t}`);
     else if (m.type() === "warning") warnings.push(t);
   });
   page.on("requestfailed", (r) => {
