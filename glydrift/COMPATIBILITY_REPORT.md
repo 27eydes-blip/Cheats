@@ -91,7 +91,9 @@ Each cell is the 12 checks above (the 30/60/120 Hz check runs once per engine, o
 - no audio;
 - no network at all in test builds (an `?offline` flag);
 - letting fonts and images finish loading before the clock moves;
-- taking each screenshot at an exact screen age.
+- taking each screenshot at an exact screen age;
+- making sure every real tap is handled on the very next frame;
+- giving the browser a moment to put the fresh frame on screen before the picture is taken.
 
 The result: CI reproduces its own screenshots exactly from one run to the next. Pixel comparisons therefore run in CI, where the baselines were recorded. `VISUAL=1 npm run test:all` turns them on locally too; a different machine can land an animation one frame apart, which is about 3% of pixels on some screens.
 
