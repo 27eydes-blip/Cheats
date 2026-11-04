@@ -30,9 +30,17 @@ function validSeason(s) {
   const heroOk = (id) => CHARACTERS.some((c) => c.id === id);
   const itemOk = (id) => COSMETICS.some((c) => c.id === id);
   if (s.featuredHero && !heroOk(s.featuredHero)) return false;
-  s.pass.tiers = s.pass.tiers.filter(
-    (r) => r && (r.coins > 0 || r.pod || (r.item && itemOk(r.item)) || (r.hero && heroOk(r.hero))),
-  );
+  // a reward the app doesn't know becomes coins, so tier numbers never shift
+  const ok = (r) =>
+    r &&
+    (r.coins > 0 ||
+      r.pod ||
+      r.shards > 0 ||
+      r.xpBoost?.mul > 1 ||
+      (r.item && itemOk(r.item)) ||
+      (r.hero && heroOk(r.hero)));
+  s.pass.tiers = s.pass.tiers.map((r) => (ok(r) ? r : { coins: 100 }));
+  if (!Array.isArray(s.pass.plus)) s.pass.plus = [];
   s.event ||= { name: s.name, challenges: [], shopItems: [] };
   s.event.challenges = (s.event.challenges || []).filter((c) => c?.id && c.metric && c.type);
   s.event.shopItems = (s.event.shopItems || []).filter(itemOk);
@@ -150,8 +158,20 @@ export const Seasons = {
     Seasons.refresh();
   },
 
-  /** Fetch the live config (Supabase table season_config, row "live"). Safe to fail. */
+  /**
+   * Fetch the live config. First Supabase (table season_config, row "live"), then the
+   * seasons.json published next to the game on the website. Safe to fail (offline / not set up).
+   */
   async refresh() {
+    const apply = (cfg, from) => {
+      if (!useConfig(cfg, from)) return false;
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cfg));
+      } catch {
+        /* storage full / private mode */
+      }
+      return true;
+    };
     try {
       const { Leaderboard } = await import("../online/leaderboard.js");
       const sb = await Leaderboard.client();
@@ -160,13 +180,19 @@ export const Seasons = {
         .select("data")
         .eq("id", "live")
         .maybeSingle();
-      if (error || !data?.data) return false;
-      if (!useConfig(data.data, "remote")) return false;
-      localStorage.setItem(CACHE_KEY, JSON.stringify(data.data));
-      return true;
+      if (!error && data?.data && apply(data.data, "remote")) return true;
     } catch {
-      return false; // offline, or the table isn't set up yet: keep what we have
+      /* not set up yet / offline */
     }
+    try {
+      const res = await fetch(`./seasons.json?t=${Math.floor(Date.now() / 600000)}`, {
+        cache: "no-store",
+      });
+      if (res.ok) return apply(await res.json(), "website");
+    } catch {
+      /* offline */
+    }
+    return false;
   },
 
   /** Price of a season's featured hero once its season has ended (else 0). */

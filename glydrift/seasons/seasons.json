@@ -18,49 +18,85 @@
       "featuredHero": "levijr",
       "heroPriceAfter": 12000,
       "pass": {
-        "tierXp": 350,
+        "tierXp": 450,
         "tiers": [
           {
-            "coins": 100
+            "coins": 66
           },
           {
-            "coins": 115
-          },
-          {
-            "hero": "gloombat"
-          },
-          {
-            "item": "flap_stars"
-          },
-          {
-            "coins": 160
-          },
-          {
-            "hero": "grimrat"
-          },
-          {
-            "coins": 190
+            "coins": 92
           },
           {
             "pod": true
           },
           {
-            "hero": "murktoad"
+            "shards": 1
           },
           {
-            "coins": 235
+            "hero": "gloombat"
+          },
+          {
+            "xpBoost": {
+              "mul": 2,
+              "runs": 3
+            }
+          },
+          {
+            "item": "flap_stars"
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 2
+          },
+          {
+            "hero": "grimrat"
+          },
+          {
+            "coins": 146
+          },
+          {
+            "pod": true
           },
           {
             "item": "coin_stars"
           },
           {
-            "hero": "hollowcrow"
+            "coins": 184
           },
           {
-            "coins": 280
+            "hero": "murktoad"
+          },
+          {
+            "coins": 216
+          },
+          {
+            "pod": true
           },
           {
             "item": "trail_hearts"
+          },
+          {
+            "coins": 174
+          },
+          {
+            "hero": "hollowcrow"
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 1
+          },
+          {
+            "item": "death_confetti"
+          },
+          {
+            "xpBoost": {
+              "mul": 2,
+              "runs": 3
+            }
           },
           {
             "hero": "lurkeel"
@@ -69,46 +105,251 @@
             "pod": true
           },
           {
-            "coins": 340
-          },
-          {
-            "hero": "ashspider"
-          },
-          {
-            "item": "death_confetti"
-          },
-          {
-            "coins": 385
-          },
-          {
-            "hero": "anglerfiend"
+            "shards": 2
           },
           {
             "item": "hat_shades"
           },
           {
-            "coins": 430
+            "coins": 254
           },
           {
-            "hero": "riftwolf"
+            "hero": "ashspider"
           },
           {
-            "pod": true
+            "shards": 1
           },
           {
-            "coins": 475
+            "coins": 292
           },
           {
-            "hero": "grimvulture"
+            "item": "flap_notes"
+          },
+          {
+            "coins": 324
+          },
+          {
+            "hero": "anglerfiend"
+          },
+          {
+            "shards": 2
+          },
+          {
+            "coins": 282
           },
           {
             "item": "death_ghost"
           },
           {
-            "coins": 520
+            "pod": true
+          },
+          {
+            "hero": "riftwolf"
+          },
+          {
+            "coins": 346
+          },
+          {
+            "xpBoost": {
+              "mul": 2,
+              "runs": 3
+            }
+          },
+          {
+            "item": "coin_gems"
+          },
+          {
+            "pod": true
+          },
+          {
+            "hero": "grimvulture"
+          },
+          {
+            "coins": 336
+          },
+          {
+            "item": "trail_fire"
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 1
           },
           {
             "hero": "levijr"
+          }
+        ],
+        "plus": [
+          {
+            "coins": 220
+          },
+          {
+            "coins": 240
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 280
+          },
+          {
+            "item": "trail_bloodmoon",
+            "label": "NEW TRAIL",
+            "milestone": true
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 340
+          },
+          {
+            "coins": 360
+          },
+          {
+            "pod": true
+          },
+          {
+            "title": "ABYSS LORD",
+            "label": "NEW TITLE",
+            "milestone": true
+          },
+          {
+            "coins": 420
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 460
+          },
+          {
+            "coins": 480
+          },
+          {
+            "banner": "crimson",
+            "label": "NEW BANNER",
+            "milestone": true
+          },
+          {
+            "coins": 520
+          },
+          {
+            "coins": 540
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 580
+          },
+          {
+            "emote": "roar",
+            "label": "NEW EMOTE",
+            "milestone": true
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 640
+          },
+          {
+            "coins": 660
+          },
+          {
+            "pod": true
+          },
+          {
+            "item": "hat_bloodcrown",
+            "label": "NEW HAT",
+            "milestone": true
+          },
+          {
+            "coins": 720
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 760
+          },
+          {
+            "coins": 780
+          },
+          {
+            "item": "death_firework",
+            "label": "NEW DEATH FX",
+            "milestone": true
+          },
+          {
+            "coins": 820
+          },
+          {
+            "coins": 840
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 880
+          },
+          {
+            "item": "trail_bloodmoon",
+            "label": "NEW TRAIL",
+            "milestone": true
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 940
+          },
+          {
+            "coins": 960
+          },
+          {
+            "pod": true
+          },
+          {
+            "title": "ABYSS LORD",
+            "label": "NEW TITLE",
+            "milestone": true
+          },
+          {
+            "coins": 1020
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 1060
+          },
+          {
+            "coins": 1080
+          },
+          {
+            "banner": "crimson",
+            "label": "NEW BANNER",
+            "milestone": true
+          },
+          {
+            "coins": 1120
+          },
+          {
+            "coins": 1140
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 1180
+          },
+          {
+            "emote": "roar",
+            "label": "NEW EMOTE",
+            "milestone": true
           }
         ]
       },
@@ -183,52 +424,185 @@
       "featuredHero": "prismara",
       "heroPriceAfter": 12000,
       "pass": {
-        "tierXp": 350,
+        "tierXp": 450,
         "tiers": [
           {
-            "coins": 100
+            "coins": 66
           },
           {
-            "coins": 115
-          },
-          {
-            "coins": 130
-          },
-          {
-            "item": "flap_stars"
-          },
-          {
-            "coins": 160
-          },
-          {
-            "coins": 175
-          },
-          {
-            "coins": 190
+            "coins": 92
           },
           {
             "pod": true
           },
           {
-            "coins": 220
+            "shards": 1
           },
           {
-            "coins": 235
+            "coins": 750
+          },
+          {
+            "xpBoost": {
+              "mul": 2,
+              "runs": 3
+            }
+          },
+          {
+            "item": "flap_stars"
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 2
+          },
+          {
+            "item": "trail_galaxy"
+          },
+          {
+            "coins": 146
+          },
+          {
+            "pod": true
           },
           {
             "item": "coin_stars"
           },
           {
-            "coins": 265
+            "coins": 184
           },
           {
-            "coins": 280
+            "pod": true
+          },
+          {
+            "coins": 216
+          },
+          {
+            "pod": true
           },
           {
             "item": "trail_hearts"
           },
           {
-            "coins": 310
+            "coins": 174
+          },
+          {
+            "item": "hat_halo"
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 1
+          },
+          {
+            "item": "death_confetti"
+          },
+          {
+            "xpBoost": {
+              "mul": 2,
+              "runs": 3
+            }
+          },
+          {
+            "coins": 1500
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 2
+          },
+          {
+            "item": "hat_shades"
+          },
+          {
+            "coins": 254
+          },
+          {
+            "item": "skin_neon"
+          },
+          {
+            "shards": 1
+          },
+          {
+            "coins": 292
+          },
+          {
+            "item": "flap_notes"
+          },
+          {
+            "coins": 324
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 2
+          },
+          {
+            "coins": 282
+          },
+          {
+            "item": "death_ghost"
+          },
+          {
+            "pod": true
+          },
+          {
+            "item": "death_blackhole"
+          },
+          {
+            "coins": 346
+          },
+          {
+            "xpBoost": {
+              "mul": 2,
+              "runs": 3
+            }
+          },
+          {
+            "item": "coin_gems"
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 2500
+          },
+          {
+            "coins": 336
+          },
+          {
+            "item": "trail_fire"
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 1
+          },
+          {
+            "hero": "prismara"
+          }
+        ],
+        "plus": [
+          {
+            "coins": 220
+          },
+          {
+            "coins": 240
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 280
+          },
+          {
+            "item": "trail_prism",
+            "label": "NEW TRAIL",
+            "milestone": true
           },
           {
             "pod": true
@@ -237,43 +611,151 @@
             "coins": 340
           },
           {
-            "coins": 355
-          },
-          {
-            "item": "death_confetti"
-          },
-          {
-            "coins": 385
-          },
-          {
-            "coins": 400
-          },
-          {
-            "item": "hat_shades"
-          },
-          {
-            "coins": 430
-          },
-          {
-            "coins": 445
+            "coins": 360
           },
           {
             "pod": true
           },
           {
-            "coins": 475
+            "title": "PRISM WALKER",
+            "label": "NEW TITLE",
+            "milestone": true
           },
           {
-            "coins": 490
+            "coins": 420
           },
           {
-            "item": "death_ghost"
+            "pod": true
+          },
+          {
+            "coins": 460
+          },
+          {
+            "coins": 480
+          },
+          {
+            "banner": "prism",
+            "label": "NEW BANNER",
+            "milestone": true
           },
           {
             "coins": 520
           },
           {
-            "hero": "prismara"
+            "coins": 540
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 580
+          },
+          {
+            "emote": "roar",
+            "label": "NEW EMOTE",
+            "milestone": true
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 640
+          },
+          {
+            "coins": 660
+          },
+          {
+            "pod": true
+          },
+          {
+            "item": "hat_crown",
+            "label": "NEW HAT",
+            "milestone": true
+          },
+          {
+            "coins": 720
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 760
+          },
+          {
+            "coins": 780
+          },
+          {
+            "item": "death_firework",
+            "label": "NEW DEATH FX",
+            "milestone": true
+          },
+          {
+            "coins": 820
+          },
+          {
+            "coins": 840
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 880
+          },
+          {
+            "item": "trail_prism",
+            "label": "NEW TRAIL",
+            "milestone": true
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 940
+          },
+          {
+            "coins": 960
+          },
+          {
+            "pod": true
+          },
+          {
+            "title": "PRISM WALKER",
+            "label": "NEW TITLE",
+            "milestone": true
+          },
+          {
+            "coins": 1020
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 1060
+          },
+          {
+            "coins": 1080
+          },
+          {
+            "banner": "prism",
+            "label": "NEW BANNER",
+            "milestone": true
+          },
+          {
+            "coins": 1120
+          },
+          {
+            "coins": 1140
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 1180
+          },
+          {
+            "emote": "roar",
+            "label": "NEW EMOTE",
+            "milestone": true
           }
         ]
       },
@@ -336,52 +818,185 @@
       "featuredHero": "bao",
       "heroPriceAfter": 12000,
       "pass": {
-        "tierXp": 350,
+        "tierXp": 450,
         "tiers": [
           {
-            "coins": 100
+            "coins": 66
           },
           {
-            "coins": 115
-          },
-          {
-            "coins": 130
-          },
-          {
-            "item": "flap_stars"
-          },
-          {
-            "coins": 160
-          },
-          {
-            "coins": 175
-          },
-          {
-            "coins": 190
+            "coins": 92
           },
           {
             "pod": true
           },
           {
-            "coins": 220
+            "shards": 1
           },
           {
-            "coins": 235
+            "coins": 750
+          },
+          {
+            "xpBoost": {
+              "mul": 2,
+              "runs": 3
+            }
+          },
+          {
+            "item": "flap_stars"
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 2
+          },
+          {
+            "item": "trail_galaxy"
+          },
+          {
+            "coins": 146
+          },
+          {
+            "pod": true
           },
           {
             "item": "coin_stars"
           },
           {
-            "coins": 265
+            "coins": 184
           },
           {
-            "coins": 280
+            "pod": true
+          },
+          {
+            "coins": 216
+          },
+          {
+            "pod": true
           },
           {
             "item": "trail_hearts"
           },
           {
-            "coins": 310
+            "coins": 174
+          },
+          {
+            "item": "hat_halo"
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 1
+          },
+          {
+            "item": "death_confetti"
+          },
+          {
+            "xpBoost": {
+              "mul": 2,
+              "runs": 3
+            }
+          },
+          {
+            "coins": 1500
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 2
+          },
+          {
+            "item": "hat_shades"
+          },
+          {
+            "coins": 254
+          },
+          {
+            "item": "skin_neon"
+          },
+          {
+            "shards": 1
+          },
+          {
+            "coins": 292
+          },
+          {
+            "item": "flap_notes"
+          },
+          {
+            "coins": 324
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 2
+          },
+          {
+            "coins": 282
+          },
+          {
+            "item": "death_ghost"
+          },
+          {
+            "pod": true
+          },
+          {
+            "item": "death_blackhole"
+          },
+          {
+            "coins": 346
+          },
+          {
+            "xpBoost": {
+              "mul": 2,
+              "runs": 3
+            }
+          },
+          {
+            "item": "coin_gems"
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 2500
+          },
+          {
+            "coins": 336
+          },
+          {
+            "item": "trail_fire"
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 1
+          },
+          {
+            "hero": "bao"
+          }
+        ],
+        "plus": [
+          {
+            "coins": 220
+          },
+          {
+            "coins": 240
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 280
+          },
+          {
+            "item": "trail_zen",
+            "label": "NEW TRAIL",
+            "milestone": true
           },
           {
             "pod": true
@@ -390,43 +1005,151 @@
             "coins": 340
           },
           {
-            "coins": 355
-          },
-          {
-            "item": "death_confetti"
-          },
-          {
-            "coins": 385
-          },
-          {
-            "coins": 400
-          },
-          {
-            "item": "hat_shades"
-          },
-          {
-            "coins": 430
-          },
-          {
-            "coins": 445
+            "coins": 360
           },
           {
             "pod": true
           },
           {
-            "coins": 475
+            "title": "ZEN MASTER",
+            "label": "NEW TITLE",
+            "milestone": true
           },
           {
-            "coins": 490
+            "coins": 420
           },
           {
-            "item": "death_ghost"
+            "pod": true
+          },
+          {
+            "coins": 460
+          },
+          {
+            "coins": 480
+          },
+          {
+            "banner": "garden",
+            "label": "NEW BANNER",
+            "milestone": true
           },
           {
             "coins": 520
           },
           {
-            "hero": "bao"
+            "coins": 540
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 580
+          },
+          {
+            "emote": "roar",
+            "label": "NEW EMOTE",
+            "milestone": true
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 640
+          },
+          {
+            "coins": 660
+          },
+          {
+            "pod": true
+          },
+          {
+            "item": "hat_crown",
+            "label": "NEW HAT",
+            "milestone": true
+          },
+          {
+            "coins": 720
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 760
+          },
+          {
+            "coins": 780
+          },
+          {
+            "item": "death_firework",
+            "label": "NEW DEATH FX",
+            "milestone": true
+          },
+          {
+            "coins": 820
+          },
+          {
+            "coins": 840
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 880
+          },
+          {
+            "item": "trail_zen",
+            "label": "NEW TRAIL",
+            "milestone": true
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 940
+          },
+          {
+            "coins": 960
+          },
+          {
+            "pod": true
+          },
+          {
+            "title": "ZEN MASTER",
+            "label": "NEW TITLE",
+            "milestone": true
+          },
+          {
+            "coins": 1020
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 1060
+          },
+          {
+            "coins": 1080
+          },
+          {
+            "banner": "garden",
+            "label": "NEW BANNER",
+            "milestone": true
+          },
+          {
+            "coins": 1120
+          },
+          {
+            "coins": 1140
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 1180
+          },
+          {
+            "emote": "roar",
+            "label": "NEW EMOTE",
+            "milestone": true
           }
         ]
       },
@@ -489,52 +1212,185 @@
       "featuredHero": "sonjuwon",
       "heroPriceAfter": 12000,
       "pass": {
-        "tierXp": 350,
+        "tierXp": 450,
         "tiers": [
           {
-            "coins": 100
+            "coins": 66
           },
           {
-            "coins": 115
-          },
-          {
-            "coins": 130
-          },
-          {
-            "item": "flap_stars"
-          },
-          {
-            "coins": 160
-          },
-          {
-            "coins": 175
-          },
-          {
-            "coins": 190
+            "coins": 92
           },
           {
             "pod": true
           },
           {
-            "coins": 220
+            "shards": 1
           },
           {
-            "coins": 235
+            "coins": 750
+          },
+          {
+            "xpBoost": {
+              "mul": 2,
+              "runs": 3
+            }
+          },
+          {
+            "item": "flap_stars"
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 2
+          },
+          {
+            "item": "trail_galaxy"
+          },
+          {
+            "coins": 146
+          },
+          {
+            "pod": true
           },
           {
             "item": "coin_stars"
           },
           {
-            "coins": 265
+            "coins": 184
           },
           {
-            "coins": 280
+            "pod": true
+          },
+          {
+            "coins": 216
+          },
+          {
+            "pod": true
           },
           {
             "item": "trail_hearts"
           },
           {
-            "coins": 310
+            "coins": 174
+          },
+          {
+            "item": "hat_halo"
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 1
+          },
+          {
+            "item": "death_confetti"
+          },
+          {
+            "xpBoost": {
+              "mul": 2,
+              "runs": 3
+            }
+          },
+          {
+            "coins": 1500
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 2
+          },
+          {
+            "item": "hat_shades"
+          },
+          {
+            "coins": 254
+          },
+          {
+            "item": "skin_neon"
+          },
+          {
+            "shards": 1
+          },
+          {
+            "coins": 292
+          },
+          {
+            "item": "flap_notes"
+          },
+          {
+            "coins": 324
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 2
+          },
+          {
+            "coins": 282
+          },
+          {
+            "item": "death_ghost"
+          },
+          {
+            "pod": true
+          },
+          {
+            "item": "death_blackhole"
+          },
+          {
+            "coins": 346
+          },
+          {
+            "xpBoost": {
+              "mul": 2,
+              "runs": 3
+            }
+          },
+          {
+            "item": "coin_gems"
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 2500
+          },
+          {
+            "coins": 336
+          },
+          {
+            "item": "trail_fire"
+          },
+          {
+            "pod": true
+          },
+          {
+            "shards": 1
+          },
+          {
+            "hero": "sonjuwon"
+          }
+        ],
+        "plus": [
+          {
+            "coins": 220
+          },
+          {
+            "coins": 240
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 280
+          },
+          {
+            "item": "trail_storm",
+            "label": "NEW TRAIL",
+            "milestone": true
           },
           {
             "pod": true
@@ -543,43 +1399,151 @@
             "coins": 340
           },
           {
-            "coins": 355
-          },
-          {
-            "item": "death_confetti"
-          },
-          {
-            "coins": 385
-          },
-          {
-            "coins": 400
-          },
-          {
-            "item": "hat_shades"
-          },
-          {
-            "coins": 430
-          },
-          {
-            "coins": 445
+            "coins": 360
           },
           {
             "pod": true
           },
           {
-            "coins": 475
+            "title": "STORM RIDER",
+            "label": "NEW TITLE",
+            "milestone": true
           },
           {
-            "coins": 490
+            "coins": 420
           },
           {
-            "item": "death_ghost"
+            "pod": true
+          },
+          {
+            "coins": 460
+          },
+          {
+            "coins": 480
+          },
+          {
+            "banner": "storm",
+            "label": "NEW BANNER",
+            "milestone": true
           },
           {
             "coins": 520
           },
           {
-            "hero": "sonjuwon"
+            "coins": 540
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 580
+          },
+          {
+            "emote": "roar",
+            "label": "NEW EMOTE",
+            "milestone": true
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 640
+          },
+          {
+            "coins": 660
+          },
+          {
+            "pod": true
+          },
+          {
+            "item": "hat_crown",
+            "label": "NEW HAT",
+            "milestone": true
+          },
+          {
+            "coins": 720
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 760
+          },
+          {
+            "coins": 780
+          },
+          {
+            "item": "death_firework",
+            "label": "NEW DEATH FX",
+            "milestone": true
+          },
+          {
+            "coins": 820
+          },
+          {
+            "coins": 840
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 880
+          },
+          {
+            "item": "trail_storm",
+            "label": "NEW TRAIL",
+            "milestone": true
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 940
+          },
+          {
+            "coins": 960
+          },
+          {
+            "pod": true
+          },
+          {
+            "title": "STORM RIDER",
+            "label": "NEW TITLE",
+            "milestone": true
+          },
+          {
+            "coins": 1020
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 1060
+          },
+          {
+            "coins": 1080
+          },
+          {
+            "banner": "storm",
+            "label": "NEW BANNER",
+            "milestone": true
+          },
+          {
+            "coins": 1120
+          },
+          {
+            "coins": 1140
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 1180
+          },
+          {
+            "emote": "roar",
+            "label": "NEW EMOTE",
+            "milestone": true
           }
         ]
       },

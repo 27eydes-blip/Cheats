@@ -39,6 +39,7 @@ function defaults() {
     boosts: { owned: {}, armed: {} }, // (retired) one-run boosts
     boostsRefunded: false,
     dailyDrop: "", // date the free Daily Drift Drop was last claimed
+    xpBoost: { mul: 1, runs: 0 }, // Drift Pass XP boost (runs left)
     seasons: {}, // per-season pass XP / claims, event progress, recap + new-hero flags
     pass: { xp: 0, claimed: {} }, // Drift Pass (free track) XP + claimed tiers // unused boosts were refunded as coins when boosts were removed
     login: { last: "", streak: 0, claimed: "" },

@@ -1,12 +1,16 @@
 # Running Glydrift Seasons (no app update needed)
 
-Every season is plain data. The game reads it from your Supabase project, so you can start,
-change or end a season from the Supabase dashboard. Players get the change the next time they
-open the game.
+Every season is plain data. The game looks for it in this order:
 
-Until you do the one-time setup below, the game uses the seasons built into the app
-(`src/data/seasonDefs.js`, the same data as `seasons/seasons.json`), so Season 1 already
-runs without any setup.
+1. **Supabase**: the `season_config` table, row `live`, if you've set it up (below).
+2. **The website**: `seasons.json`, published next to the game
+   (`https://27eydes-blip.github.io/Cheats/glydrift/seasons.json`; the source file is
+   `glydrift/public/seasons.json`). Claude can edit and publish this for you. It's the easiest
+   way to change seasons without Supabase.
+3. **Its last saved copy** on the device, then **the seasons built into the app**.
+
+Players get changes the next time they open the game. None of this touches the leaderboard
+scores table.
 
 ---
 
@@ -55,9 +59,9 @@ still works offline.
 | **Change dates** | Edit `start` / `end` (UTC, ISO format). Seasons shouldn't overlap. |
 | **Rename / recolour** | Edit `name`, `tagline`, `theme.primary`, `theme.accent`, `theme.dark` (hex colours). |
 | **Change the home look** | `theme.home`: `"crimson"`, `"prism"`, `"garden"` or `"storm"`. |
-| **Change pass rewards** | Edit `pass.tiers` (30 entries). See the reward types below. |
-| **Pass speed** | `pass.tierXp` = XP per tier (350 ≈ 1–2 runs). |
-| **Change the new hero** | `featuredHero` = a hero id, and put `{ "hero": "<id>" }` at tier 30. |
+| **Change pass rewards** | Edit `pass.tiers` (50 FREE tiers; every 5th is a milestone) and `pass.plus` (50 DRIFT PASS+ cards, shown locked, "coming soon"). |
+| **Pass speed** | `pass.tierXp` = XP per tier (450 ≈ 2–3 runs; most-days players finish 50 tiers in about 3 weeks). |
+| **Change the new hero** | `featuredHero` = a hero id, and put `{ "hero": "<id>" }` at tier 50. |
 | **Price after the season** | `heroPriceAfter` = coins to buy the featured hero once the season ends. |
 | **Edit event challenges** | `event.challenges`, as below. |
 | **Season shop items** | `event.shopItems` = cosmetic ids that sell only during the season. |
@@ -69,7 +73,12 @@ still works offline.
 { "item": "trail_hearts" }
 { "pod": true }
 { "hero": "levijr" }
+{ "shards": 2 }
+{ "xpBoost": { "mul": 2, "runs": 3 } }
 ```
+DRIFT PASS+ cards (display only for now) can also be `{ "title": "ABYSS LORD" }`,
+`{ "banner": "crimson" }` or `{ "emote": "roar" }`, plus an optional `"label": "NEW TITLE"`.
+A FREE reward the app doesn't know becomes 100 coins, so tier numbers never shift.
 
 ### Event challenge types
 ```json
@@ -108,7 +117,8 @@ it can be scheduled from here.
 - **Home screen:** a season banner with a countdown and pass tier, and the season's colours.
   Tapping the banner opens the pass.
 - **First open of a season:** a NEW HERO reveal of the featured hero.
-- **Shop → Featured:** the Season Pass (30 tiers), the event card with challenge progress,
+- **The Drift Pass screen:** reached from the home banner, the shop or the "TIER UP!" pop after a run. It has the season hero on a pedestal, then 50 tiers with FREE on the left and DRIFT PASS+ on the right, plus Claim All.
+- **Shop → Featured:** the Season Pass card, the event card with challenge progress,
   and the season-only items.
 - **Season end:** unclaimed tiers are auto-claimed, a Season Recap shows their stats and
   rewards, and the next season's pass starts fresh.

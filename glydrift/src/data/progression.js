@@ -701,10 +701,20 @@ export const Progression = {
     );
     res.xpGained = xp;
     s.xp += xp;
-    DriftPass.addXp(xp); // the free Drift Pass fills with the same XP
+    // the Drift Pass fills with the same XP (+ the daily challenge bonus, x XP boosts)
+    res.passBefore = DriftPass.unlockedCount();
+    let passXp = xp + (run.mode === "daily" ? 100 : 0);
+    const boost = s.xpBoost;
+    if (boost?.runs > 0) {
+      passXp *= boost.mul;
+      boost.runs -= 1;
+      res.xpBoosted = boost.mul;
+    }
+    DriftPass.addXp(passXp);
     // season event challenges (coins paid inside onRun; their XP goes into the pass)
     res.seasonDone = Seasons.onRun(run);
     for (const c of res.seasonDone) DriftPass.addXp(c.reward?.xp || 0);
+    res.passAfter = DriftPass.unlockedCount();
     while (s.xp >= Progression.xpToNext(s.level)) {
       s.xp -= Progression.xpToNext(s.level);
       s.level += 1;

@@ -615,7 +615,7 @@ export class MenuScene extends Phaser.Scene {
       Sfx.ui();
       if (this.leaving) return;
       this.leaving = true;
-      fadeTo(this, "Shop", { openPass: true }, { ms: 180, rgb: [2, 1, 7] });
+      fadeTo(this, "Pass", { from: "Menu" }, { ms: 180, rgb: [2, 1, 7] });
     });
     popIn(this, c, 200);
     this.seasonBanner = c;

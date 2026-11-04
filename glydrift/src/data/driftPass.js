@@ -6,7 +6,7 @@
 import { Save } from "./save.js";
 import { getCosmetic, Shop } from "./cosmetics.js";
 import { Analytics } from "../systems/analytics.js";
-import { getCharacter } from "../player/characterDefs.js";
+import { CHARACTERS, getCharacter, heroReleased } from "../player/characterDefs.js";
 import { Seasons } from "./seasons.js";
 
 export const PASS_TIER_XP = 400; // ~2 runs per tier
@@ -45,6 +45,25 @@ function giveReward(r) {
   if (r.coins) {
     s.coins += r.coins;
     return { coins: r.coins };
+  }
+  if (r.shards) {
+    // shards go to the next shard hero you don't own yet (coins if there isn't one)
+    const target = CHARACTERS.find((c) => c.shards && !s.unlocked[c.id] && heroReleased(c));
+    if (!target) {
+      s.coins += 150 * r.shards;
+      return { coins: 150 * r.shards };
+    }
+    s.shards ||= {};
+    s.shards[target.id] = (s.shards[target.id] || 0) + r.shards;
+    if (s.shards[target.id] >= target.shards) s.unlocked[target.id] = true;
+    return { shards: r.shards, hero: s.unlocked[target.id] ? target : null, shardHero: target };
+  }
+  if (r.xpBoost) {
+    // the next few runs earn extra pass XP
+    const b = (s.xpBoost ||= { mul: 1, runs: 0 });
+    b.mul = Math.max(b.mul, r.xpBoost.mul);
+    b.runs += r.xpBoost.runs;
+    return { xpBoost: r.xpBoost };
   }
   if (r.hero) {
     const def = getCharacter(r.hero);

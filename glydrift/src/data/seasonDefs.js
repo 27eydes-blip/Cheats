@@ -1,9 +1,10 @@
 // SEASONS — the built-in defaults (pure data, JSON-compatible). The live copy comes from
 // Supabase (table `season_config`, row id "live" — see SEASONS_ADMIN.md); this file is used
 // until that loads, and whenever it can't. Every 4 weeks: a new 30-tier Drift Pass, one new
-// character (the tier-30 reward, buyable for coins after the season ends) and one event.
+// character (the tier-50 reward, buyable for coins after the season ends) and one event.
 //
 // Pass reward types: { coins } | { item: cosmetic id } | { pod: true } | { hero: hero id }
+//   | { shards: n } | { xpBoost: { mul, runs } }   (DRIFT PASS+ adds { title } { banner } { emote })
 // Event challenge types (counted from runs played during the season):
 //   count   — add up a run metric over the season          { metric, value }
 //   best    — the metric's best single run                 { metric, value }
@@ -12,22 +13,67 @@
 //   prismM, prismClear, abyssClear, abyssKiller (hazard type that ended a run in the Abyss)
 // Home themes: "crimson" | "prism" | "garden" | "storm"
 
-const coinTier = (i) => ({ coins: 100 + i * 15 });
-
-/** 30 tiers: coins most of the way, cosmetics and pods sprinkled in, heroes where given. */
-function track(heroes = {}, extras = {}) {
-  return Array.from({ length: 30 }, (_, i) => heroes[i + 1] || extras[i + 1] || coinTier(i));
+// ---- 50-tier tracks -------------------------------------------------------------------
+// FREE track: coins, Mystery Pods, shards and XP boosts, with something special every few
+// tiers; every 5th tier is a milestone (a hero in Season 1); tier 50 is the season hero.
+// DRIFT PASS+ track: shown locked ("coming soon") — there are no real-money purchases.
+const FREE_PATTERN = [
+  (t) => ({ coins: 60 + t * 6 }),
+  (t) => ({ coins: 80 + t * 6 }),
+  () => ({ pod: true }),
+  () => ({ shards: 1 }),
+  (t) => ({ coins: 100 + t * 6 }),
+  () => ({ xpBoost: { mul: 2, runs: 3 } }),
+  (t) => ({ coins: 120 + t * 6 }),
+  () => ({ pod: true }),
+  () => ({ shards: 2 }),
+];
+const FREE_ITEMS = {
+  7: { item: "flap_stars" },
+  13: { item: "coin_stars" },
+  18: { item: "trail_hearts" },
+  23: { item: "death_confetti" },
+  28: { item: "hat_shades" },
+  33: { item: "flap_notes" },
+  38: { item: "death_ghost" },
+  43: { item: "coin_gems" },
+  47: { item: "trail_fire" },
+};
+/** milestones: { 5: reward, 10: reward, … 50: reward } */
+function freeTrack(milestones) {
+  return Array.from({ length: 50 }, (_, i) => {
+    const t = i + 1;
+    if (milestones[t]) return milestones[t];
+    if (FREE_ITEMS[t]) return FREE_ITEMS[t];
+    return FREE_PATTERN[i % FREE_PATTERN.length](t);
+  });
 }
-const EXTRAS = {
-  4: { item: "flap_stars" },
-  8: { pod: true },
-  11: { item: "coin_stars" },
-  14: { item: "trail_hearts" },
-  16: { pod: true },
-  19: { item: "death_confetti" },
-  22: { item: "hat_shades" },
-  25: { pod: true },
-  28: { item: "death_ghost" },
+function plusTrack(theme) {
+  const special = [
+    { item: theme.trail, label: "NEW TRAIL" },
+    { title: theme.title, label: "NEW TITLE" },
+    { banner: theme.banner, label: "NEW BANNER" },
+    { emote: "roar", label: "NEW EMOTE" },
+    { item: theme.hat, label: "NEW HAT" },
+    { item: "death_firework", label: "NEW DEATH FX" },
+  ];
+  return Array.from({ length: 50 }, (_, i) => {
+    const t = i + 1;
+    if (t % 5 === 0) return { ...special[(t / 5 - 1) % special.length], milestone: true };
+    if (t % 3 === 0) return { pod: true };
+    return { coins: 200 + t * 20 };
+  });
+}
+const DEFAULT_MILESTONES = {
+  5: { coins: 750 },
+  10: { item: "trail_galaxy" },
+  15: { pod: true },
+  20: { item: "hat_halo" },
+  25: { coins: 1500 },
+  30: { item: "skin_neon" },
+  35: { pod: true },
+  40: { item: "death_blackhole" },
+  45: { coins: 2500 },
 };
 
 export const SEASON_DEFAULTS = {
@@ -50,23 +96,27 @@ export const SEASON_DEFAULTS = {
       featuredHero: "levijr",
       heroPriceAfter: 12000,
       pass: {
-        tierXp: 350,
-        // all ten Abyss heroes ride the pass (they stay unlockable by Abyss challenges too)
-        tiers: track(
-          {
-            3: { hero: "gloombat" },
-            6: { hero: "grimrat" },
-            9: { hero: "murktoad" },
-            12: { hero: "hollowcrow" },
-            15: { hero: "lurkeel" },
-            18: { hero: "ashspider" },
-            21: { hero: "anglerfiend" },
-            24: { hero: "riftwolf" },
-            27: { hero: "grimvulture" },
-            30: { hero: "levijr" },
-          },
-          EXTRAS,
-        ),
+        // ~3 weeks of most-days play to finish the free track
+        tierXp: 450,
+        // all ten Abyss heroes are the milestones (still unlockable by Abyss challenges too)
+        tiers: freeTrack({
+          5: { hero: "gloombat" },
+          10: { hero: "grimrat" },
+          15: { hero: "murktoad" },
+          20: { hero: "hollowcrow" },
+          25: { hero: "lurkeel" },
+          30: { hero: "ashspider" },
+          35: { hero: "anglerfiend" },
+          40: { hero: "riftwolf" },
+          45: { hero: "grimvulture" },
+          50: { hero: "levijr" },
+        }),
+        plus: plusTrack({
+          trail: "trail_bloodmoon",
+          hat: "hat_bloodcrown",
+          title: "ABYSS LORD",
+          banner: "crimson",
+        }),
       },
       event: {
         name: "ABYSS RISING",
@@ -116,7 +166,16 @@ export const SEASON_DEFAULTS = {
       },
       featuredHero: "prismara",
       heroPriceAfter: 12000,
-      pass: { tierXp: 350, tiers: track({ 30: { hero: "prismara" } }, EXTRAS) },
+      pass: {
+        tierXp: 450,
+        tiers: freeTrack({ ...DEFAULT_MILESTONES, 50: { hero: "prismara" } }),
+        plus: plusTrack({
+          trail: "trail_prism",
+          hat: "hat_crown",
+          title: "PRISM WALKER",
+          banner: "prism",
+        }),
+      },
       event: {
         name: "PRISM SURGE",
         challenges: [
@@ -164,7 +223,16 @@ export const SEASON_DEFAULTS = {
       },
       featuredHero: "bao",
       heroPriceAfter: 12000,
-      pass: { tierXp: 350, tiers: track({ 30: { hero: "bao" } }, EXTRAS) },
+      pass: {
+        tierXp: 450,
+        tiers: freeTrack({ ...DEFAULT_MILESTONES, 50: { hero: "bao" } }),
+        plus: plusTrack({
+          trail: "trail_zen",
+          hat: "hat_crown",
+          title: "ZEN MASTER",
+          banner: "garden",
+        }),
+      },
       event: {
         name: "CALM GARDEN",
         challenges: [
@@ -212,7 +280,16 @@ export const SEASON_DEFAULTS = {
       },
       featuredHero: "sonjuwon",
       heroPriceAfter: 12000,
-      pass: { tierXp: 350, tiers: track({ 30: { hero: "sonjuwon" } }, EXTRAS) },
+      pass: {
+        tierXp: 450,
+        tiers: freeTrack({ ...DEFAULT_MILESTONES, 50: { hero: "sonjuwon" } }),
+        plus: plusTrack({
+          trail: "trail_storm",
+          hat: "hat_crown",
+          title: "STORM RIDER",
+          banner: "storm",
+        }),
+      },
       event: {
         name: "LIGHTNING STORM",
         challenges: [

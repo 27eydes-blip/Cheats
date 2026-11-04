@@ -72,20 +72,12 @@ const SET_THEME = {
 };
 // pod reveal rays by rarity
 const RAY_COL = { common: 0x9ab0e0, rare: 0x2a8aff, epic: 0xb45cff, legendary: 0xffd23f };
-const TILE_COL = {
-  coins: 0xffa21a,
-  common: 0x6a86c8,
-  rare: 0x2a7aff,
-  epic: 0xa040ff,
-  legendary: 0xffa21a,
-  pod: 0xc04aff,
-};
 
 const BTN_H = 104; // well over 44pt on a phone
 const OUTLINE = "#1a0630";
 
 /** Chunky pixel header: thick dark outline, hard drop shadow, tight letter spacing. */
-function pixelText(scene, x, y, str, size, color = "#ffffff", opts = {}) {
+export function pixelText(scene, x, y, str, size, color = "#ffffff", opts = {}) {
   const t = scene.add
     .text(x, y, str, {
       fontFamily: PIXEL_FONT,
@@ -102,6 +94,40 @@ function pixelText(scene, x, y, str, size, color = "#ffffff", opts = {}) {
   if (opts.shadow !== false)
     t.setShadow(0, Math.max(3, Math.round(size / 12)), OUTLINE, 0, true, true);
   return t;
+}
+
+/** The faint scrolling pixel-icon pattern behind the shop and the pass. */
+export function ensureShopPattern(scene) {
+  if (scene.textures.exists("shop_pattern")) return;
+  const T = 256;
+  const cv = document.createElement("canvas");
+  cv.width = T;
+  cv.height = T;
+  const ctx = cv.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.globalAlpha = 0.16;
+  const draw = (tex, frame, x, y, sc) => {
+    const f = scene.textures.getFrame(tex, frame);
+    if (!f) return;
+    ctx.drawImage(
+      f.source.image,
+      f.cutX,
+      f.cutY,
+      f.cutWidth,
+      f.cutHeight,
+      x,
+      y,
+      f.cutWidth * sc,
+      f.cutHeight * sc,
+    );
+  };
+  draw("pxc", "coin_0", 18, 20, 0.9);
+  draw("cosm", "icon_flap_stars", 150, 30, 1.2);
+  draw("pxc", "yarms_3", 92, 132, 0.45);
+  draw("cosm", "pod_0", 20, 150, 0.6);
+  draw("pxc", "coin_2", 200, 190, 0.9);
+  draw("cosm", "icon_flap_stars", 120, 220, 0.8);
+  scene.textures.addCanvas("shop_pattern", cv).setFilter(Phaser.Textures.FilterMode.NEAREST);
 }
 
 const fmtTime = (ms) => {
@@ -328,37 +354,7 @@ export class ShopScene extends Phaser.Scene {
       H * 0.5 + 2,
     );
     // slowly scrolling pattern of faint pixel icons (coins, stars, tiny YARMS arms, pods)
-    if (!this.textures.exists("shop_pattern")) {
-      const T = 256;
-      const cv = document.createElement("canvas");
-      cv.width = T;
-      cv.height = T;
-      const ctx = cv.getContext("2d");
-      ctx.imageSmoothingEnabled = false;
-      ctx.globalAlpha = 0.16;
-      const draw = (tex, frame, x, y, sc) => {
-        const f = this.textures.getFrame(tex, frame);
-        if (!f) return;
-        ctx.drawImage(
-          f.source.image,
-          f.cutX,
-          f.cutY,
-          f.cutWidth,
-          f.cutHeight,
-          x,
-          y,
-          f.cutWidth * sc,
-          f.cutHeight * sc,
-        );
-      };
-      draw("pxc", "coin_0", 18, 20, 0.9);
-      draw("cosm", "icon_flap_stars", 150, 30, 1.2);
-      draw("pxc", "yarms_3", 92, 132, 0.45);
-      draw("cosm", "pod_0", 20, 150, 0.6);
-      draw("pxc", "coin_2", 200, 190, 0.9);
-      draw("cosm", "icon_flap_stars", 120, 220, 0.8);
-      this.textures.addCanvas("shop_pattern", cv).setFilter(Phaser.Textures.FilterMode.NEAREST);
-    }
+    ensureShopPattern(this);
     this.pattern = this.add.tileSprite(W / 2, H / 2, W, H, "shop_pattern").setDepth(-9);
     const glow = this.add.graphics().setDepth(-8).setBlendMode(Phaser.BlendModes.ADD);
     glow.fillStyle(0xff4fd8, 0.12).fillCircle(W * 0.15, H * 0.25, 300);
@@ -1087,231 +1083,8 @@ export class ShopScene extends Phaser.Scene {
 
   // ---------------------------------------------------------------- drift pass
   openPass() {
-    const W = this.W;
-    const H = this.H;
-    const c = this.add.container(0, 0).setDepth(500);
-    this.modal = c;
-    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x2a0850, 0.82).setInteractive();
-    const py = this.top + 30;
-    const ph = H - py - 30 - (this.registry.get("safeBottom") || 0);
-    // a season's pass wears the season's colours
-    const season = Seasons.active();
-    const sc = season ? Seasons.colors(season) : null;
-    const g = this.add.graphics();
-    g.fillStyle(0x1a0630, 1).fillRoundedRect(14, py - 8, W - 28, ph + 16, 30);
-    g.fillStyle(sc ? sc.primary : 0x10a0e0, 1).fillRoundedRect(22, py, W - 44, ph, 24);
-    const ga = sc ? sc.primary : 0x30d8ff;
-    const gb = sc ? sc.dark : 0x2a5af0;
-    g.fillGradientStyle(ga, ga, gb, gb, 1).fillRect(28, py + 12, W - 56, ph - 24);
-    g.lineStyle(6, sc ? sc.accent : 0xffffff, 0.85).strokeRoundedRect(22, py, W - 44, ph, 24);
-    c.add([
-      dim,
-      g,
-      pixelText(
-        this,
-        W / 2,
-        py + 56,
-        season ? `SEASON ${season.number} PASS` : "DRIFT PASS",
-        54,
-        "#ffffff",
-        {
-          stroke: 13,
-        },
-      ),
-    ]);
-    if (season)
-      c.add(
-        this.add
-          .text(
-            W / 2,
-            py + 104,
-            `${season.name} · ends in ${Seasons.countdown(season)}`,
-            this.priceStyle(26, "#ffd0d0"),
-          )
-          .setOrigin(0.5),
-      );
-    // XP progress toward the next tier, big and clear
-    const unlocked = DriftPass.unlockedCount();
-    const bw = W - 120;
-    const by = py + 132;
-    const into = DriftPass.xp() - unlocked * tierXp();
-    const frac = unlocked >= passTrack().length ? 1 : Math.max(0, Math.min(1, into / tierXp()));
-    const bar = this.add.graphics();
-    bar.fillStyle(0x1a0630, 1).fillRoundedRect(W / 2 - bw / 2 - 5, by - 5, bw + 10, 56, 18);
-    bar.fillStyle(0x0a3a6a, 1).fillRoundedRect(W / 2 - bw / 2, by, bw, 46, 14);
-    bar.fillStyle(0xffd23f, 1).fillRoundedRect(W / 2 - bw / 2, by, Math.max(28, bw * frac), 46, 14);
-    bar
-      .fillStyle(0xffffff, 0.4)
-      .fillRect(W / 2 - bw / 2 + 8, by + 5, Math.max(8, bw * frac - 16), 12);
-    c.add(bar);
-    const label =
-      unlocked >= passTrack().length
-        ? "ALL TIERS UNLOCKED"
-        : `TIER ${unlocked + 1}:  ${Math.max(0, into)} / ${tierXp()} XP`;
-    c.add(this.add.text(W / 2, by + 23, label, this.priceStyle(30, "#ffffff")).setOrigin(0.5));
-    const cols = passTrack().length > 15 ? 5 : 3; // a season pass has 30 tiers
-    const k = cols === 5 ? 0.6 : 1;
-    const gridTop = by + 70;
-    const gridBot = py + ph - 140;
-    const tw = (W - 80) / cols;
-    const thh = Math.min(240, (gridBot - gridTop) / Math.ceil(passTrack().length / cols));
-    const draw = () => {
-      c.tiles?.destroy();
-      const tiles = this.add.container(0, 0);
-      c.tiles = tiles;
-      c.add(tiles);
-      passTrack().forEach((r, i) => {
-        const x = 40 + tw * (i % cols) + tw / 2;
-        const y = gridTop + thh * Math.floor(i / cols) + thh / 2;
-        const un = DriftPass.isUnlocked(i);
-        const done = DriftPass.isClaimed(i);
-        const col = TILE_COL[this.rewardRarity(r)];
-        const tile = this.add.container(x, y);
-        const tg = this.add.graphics();
-        tg.fillStyle(0x1a0630, 1).fillRoundedRect(
-          -tw / 2 + 4,
-          -thh / 2 + 4,
-          tw - 8,
-          thh - 8,
-          18 * k,
-        );
-        tg.fillStyle(col, 1).fillRoundedRect(-tw / 2 + 8, -thh / 2 + 8, tw - 16, thh - 16, 14 * k);
-        tg.fillStyle(0xffffff, 0.3).fillRoundedRect(
-          -tw / 2 + 13,
-          -thh / 2 + 12,
-          tw - 26,
-          18 * k,
-          8 * k,
-        );
-        tile.add(tg);
-        // hero tiers glow in the season colour
-        if (r.hero && sc) {
-          tg.lineStyle(6 * k, sc.accent, 1).strokeRoundedRect(
-            -tw / 2 + 8,
-            -thh / 2 + 8,
-            tw - 16,
-            thh - 16,
-            14 * k,
-          );
-        }
-        tile.add(this.rewardIcon(r, 0, -8 * k, 0.66 * k * (r.hero ? 2.4 : 1))); // heroes big
-        tile.add(
-          pixelText(
-            this,
-            -tw / 2 + 40 * k,
-            -thh / 2 + 40 * k,
-            `${i + 1}`,
-            Math.round(32 * k),
-            "#ffffff",
-            {
-              stroke: Math.round(8 * k),
-              shadow: false,
-            },
-          ),
-        );
-        if (!un) {
-          // locked: still colourful, just dimmed, with a small lock
-          tile.add(
-            this.add
-              .graphics()
-              .fillStyle(0x1a0630, 0.22)
-              .fillRoundedRect(-tw / 2 + 10, -thh / 2 + 10, tw - 20, thh - 20, 14),
-          );
-          const lk = this.add.graphics();
-          const lx = tw / 2 - 40 * k;
-          const ly = thh / 2 - 40 * k;
-          lk.setPosition(lx, ly).setScale(k);
-          lk.fillStyle(0x1a0630, 1).fillRoundedRect(-16, -8, 32, 26, 5);
-          lk.lineStyle(6, 0x1a0630, 1).strokeCircle(0, -10, 9);
-          lk.fillStyle(0xffffff, 1).fillRect(-3, 0, 6, 8);
-          tile.add(lk);
-        }
-        if (done) {
-          tile.add(
-            this.add
-              .graphics()
-              .fillStyle(0x1a0630, 0.3)
-              .fillRoundedRect(-tw / 2 + 8, -thh / 2 + 8, tw - 16, thh - 16, 14 * k),
-          );
-          const chk = this.add.graphics();
-          chk
-            .lineStyle(26, 0x1a0630, 1)
-            .beginPath()
-            .moveTo(-42, 0)
-            .lineTo(-10, 34)
-            .lineTo(48, -34)
-            .strokePath();
-          chk
-            .lineStyle(15, 0x39ff88, 1)
-            .beginPath()
-            .moveTo(-42, 0)
-            .lineTo(-10, 34)
-            .lineTo(48, -34)
-            .strokePath();
-          chk.setScale(k);
-          tile.add(chk);
-        }
-        if (un && !done) {
-          // claimable: bounces and glows
-          const glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
-          glow
-            .lineStyle(16 * k, 0xfff6a0, 0.75)
-            .strokeRoundedRect(-tw / 2 + 2, -thh / 2 + 2, tw - 4, thh - 4, 20);
-          tile.addAt(glow, 0);
-          tile.add(
-            pixelText(this, 0, thh / 2 - 36 * k, "CLAIM!", Math.round(28 * k), "#ffd23f", {
-              stroke: Math.round(7 * k),
-              shadow: false,
-            }),
-          );
-          this.tweens.add({
-            targets: tile,
-            scale: 1.07,
-            duration: 420,
-            yoyo: true,
-            repeat: -1,
-            ease: "Sine.easeInOut",
-          });
-          this.tweens.add({ targets: glow, alpha: 0.35, duration: 420, yoyo: true, repeat: -1 });
-          tile.setSize(tw - 10, thh - 10).setInteractive();
-          tile.on("pointerup", () => {
-            const res = DriftPass.claim(i);
-            if (!res) return;
-            Sfx.reward();
-            Haptics.light();
-            this.fx.burst("star", x, y, 24, 0xffd23f, { speed: { min: 150, max: 450 } });
-            this.fx.burst("confetti", x, y, 24, col, { speed: { min: 200, max: 500 } });
-            this.coins.to(Save.data.coins, 600);
-            if (res.pod) {
-              this.closeModal();
-              this.openPod(res.pod, () => this.refreshAll());
-              return;
-            }
-            this.fx.floatText(
-              x,
-              y - 50,
-              res.hero ? `${res.hero.name}!` : res.item ? res.item.name : `+${res.coins}`,
-              "#ffffff",
-              36,
-            );
-            draw();
-          });
-        }
-        tiles.add(tile);
-      });
-    };
-    draw();
-    c.add(
-      button(this, W / 2, py + ph - 78, 340, BTN_H, "DONE", {
-        color: 0xffffff,
-        size: 40,
-        fill: 0x2a8a0a,
-        onClick: () => {
-          this.closeModal();
-          this.refreshAll();
-        },
-      }),
-    );
+    // the full-screen Drift Pass
+    fadeTo(this, "Pass", { from: "Shop" });
   }
 
   // ---------------------------------------------------------------- modals

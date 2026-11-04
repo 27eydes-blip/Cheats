@@ -292,6 +292,36 @@ export class GameOverScene extends Phaser.Scene {
       onClick: () => this.goto("Menu"),
     });
     popIn(this, [retry, share, ranks, heroes, home], 250, { duration: 350 });
+
+    // ---- Drift Pass: a "TIER UP!" pop with a shortcut to the pass
+    if (R.passAfter > R.passBefore) {
+      const tx = W - 120;
+      const ty = (this.registry.get("safeTop") || 0) + 64;
+      const pop = this.add.container(tx, ty).setDepth(60);
+      const pg = this.add.graphics();
+      pg.fillStyle(0x1a0630, 1).fillRoundedRect(-104, -46, 208, 92, 18);
+      pg.fillStyle(0xc8102e, 1).fillRoundedRect(-100, -42, 200, 84, 15);
+      pg.fillStyle(0xffffff, 0.25).fillRoundedRect(-94, -38, 188, 18, 8);
+      pop.add([
+        pg,
+        neonText(this, 0, -14, "TIER UP!", 26, 0xffd23f, { blur: 8 }),
+        plainText(this, 0, 18, `Tier ${R.passAfter} · PASS ▸`, 17, "#ffffff"),
+      ]);
+      pop.setSize(208, 92).setInteractive();
+      pop.on("pointerup", () => this.goto("Pass", { from: "Menu" }));
+      pop.setScale(0);
+      this.tweens.add({ targets: pop, scale: 1, duration: 420, delay: 700, ease: "Back.easeOut" });
+      this.tweens.add({
+        targets: pop,
+        angle: { from: -4, to: 4 },
+        duration: 600,
+        yoyo: true,
+        repeat: -1,
+        delay: 1200,
+        ease: "Sine.easeInOut",
+      });
+      this.time.delayedCall(700, () => Sfx.reward());
+    }
     this.showPlacement(R, run, bestY + 46);
 
     const tapHint = plainText(
