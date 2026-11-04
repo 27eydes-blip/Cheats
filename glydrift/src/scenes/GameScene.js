@@ -12,7 +12,7 @@ import { SHIFT_BLEND, SHIFT_EVERY, SHIFTS } from "../pixel/colorShift.js";
 import { darknessTexture } from "../pixel/hazardArt.js";
 import { pixelPerfectZoom, S } from "../pixel/px.js";
 import { Terrain } from "../pixel/Terrain.js";
-import { biomeArtReady, ensureBiomeArt, THEMES, themeFor } from "../pixel/themes.js";
+import { biomeArtReady, pumpBiomeArt, queueBiomeArt, THEMES, themeFor } from "../pixel/themes.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { Player } from "../player/Player.js";
@@ -772,7 +772,8 @@ export class GameScene extends Phaser.Scene {
     this.terrain.setTheme(themeFor(biomeId), dom.dimension);
     // build the next biome's art well before it arrives (it's made on demand to save memory)
     const nx = this.course.next(seg0);
-    if (nx && nx.start - this.meters < 700) ensureBiomeArt(nx.id);
+    if (nx && nx.start - this.meters < 700) queueBiomeArt(nx.id);
+    pumpBiomeArt();
     this.updateColorShift(rawDt, biomeId, seg0 === dom ? local0 : 0);
     const beatPh = Music.beatPhase(this.beatClock);
     this.beatClock += rawDt;

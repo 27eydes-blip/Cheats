@@ -8,7 +8,7 @@ import { buildHazards } from "./hazardArt.js";
 import { buildDimensionHazards } from "./dimensionHazardArt.js";
 import { buildCosmeticArt } from "./cosmeticArt.js";
 import { buildNewHazards } from "./newHazardArt.js";
-import { addAtlas } from "./px.js";
+import { addAtlas, deferUploads } from "./px.js";
 import { weatherFrames } from "./scenicArt.js";
 
 const SOLAR = {
@@ -540,11 +540,38 @@ const EAGER_BIOME = "void";
 const biomeBuilt = new Set();
 let artScene = null;
 
-/** Build a biome's background art if it hasn't been yet (cheap no-op afterwards). */
+const pendingArt = new Map(); // biome id → texture uploads still to do (see queueBiomeArt)
+
+const buildJobs = (id) => deferUploads(() => buildBiome(artScene, id, DEFS[id].pal, DEFS[id].cfg));
+
+/** Build a biome's background art now if it isn't ready yet (cheap no-op afterwards). */
 export function ensureBiomeArt(id) {
   if (biomeBuilt.has(id) || !DEFS[id] || !artScene) return;
+  const jobs = pendingArt.get(id) || buildJobs(id);
+  pendingArt.delete(id);
+  for (const job of jobs) job();
   biomeBuilt.add(id);
-  buildBiome(artScene, id, DEFS[id].pal, DEFS[id].cfg);
+}
+
+/**
+ * Start building a biome's art ahead of time, spread over frames by pumpBiomeArt: doing all
+ * ~20 texture uploads in one frame was a visible hitch as each new biome approached.
+ */
+export function queueBiomeArt(id) {
+  if (biomeBuilt.has(id) || pendingArt.has(id) || !DEFS[id] || !artScene) return;
+  pendingArt.set(id, buildJobs(id));
+}
+
+/** Do one queued texture upload (call once per frame). */
+export function pumpBiomeArt() {
+  for (const [id, jobs] of pendingArt) {
+    jobs.shift()?.();
+    if (!jobs.length) {
+      pendingArt.delete(id);
+      biomeBuilt.add(id);
+    }
+    return;
+  }
 }
 
 /** True once a biome's art exists (prebuilders skip biomes the player hasn't neared yet). */

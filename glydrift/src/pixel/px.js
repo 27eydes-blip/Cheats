@@ -221,8 +221,30 @@ export class PixelCanvas {
   }
 }
 
+// While set, addTexture/addAtlas queue their (slow) canvas + GPU upload work here instead.
+let deferred = null;
+
+/**
+ * Runs `fn` and returns the texture uploads it asked for as a list of jobs, to be run later
+ * (one per frame) so building a biome's art mid-run doesn't stall a frame.
+ */
+export function deferUploads(fn) {
+  const jobs = [];
+  deferred = jobs;
+  try {
+    fn();
+  } finally {
+    deferred = null;
+  }
+  return jobs;
+}
+
 /** Register a PixelCanvas as a standalone (tileable) NEAREST texture. */
 export function addTexture(scene, key, pc, scale = S) {
+  if (deferred) {
+    deferred.push(() => addTexture(scene, key, pc, scale));
+    return null;
+  }
   if (scene.textures.exists(key)) scene.textures.remove(key);
   const tex = scene.textures.addCanvas(key, pc.toCanvas(scale));
   tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
@@ -234,6 +256,10 @@ export function addTexture(scene, key, pc, scale = S) {
  * biome). `frames` = { name: PixelCanvas }.
  */
 export function addAtlas(scene, key, frames, scale = S) {
+  if (deferred) {
+    deferred.push(() => addAtlas(scene, key, frames, scale));
+    return null;
+  }
   const entries = Object.entries(frames);
   const maxW = 2048;
   let x = 0;
