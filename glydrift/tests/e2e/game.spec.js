@@ -164,10 +164,15 @@ test("plays a short run with taps, clicks and keys, no double inputs", async ({
     await run(page, 100);
   }
   expect((await gameState(page)).meters).toBeGreaterThan(m0 + 20);
-  // The screenshot comes from a scripted stretch: real input reaches the page a frame early or
-  // late from one run to the next, so the picture is taken from a fresh, autopiloted run.
-  await reseed(page);
-  await page.evaluate(() => window.__glydrift.scene.getScene("Game").resetRun(true));
+  await snap(page, testInfo, "09a-gameplay-after-input");
+  expect(log.errors).toEqual([]);
+});
+
+test("gameplay looks right", async ({ page }, testInfo) => {
+  // no real input after the launch tap (input reaches the page a frame early or late from run
+  // to run), so this picture is identical every time: an in-page autopilot flies the hero
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
   for (let i = 0; i < 30; i++) {
     await page.evaluate(() => {
       const s = window.__glydrift.scene.getScene("Game");
@@ -176,7 +181,6 @@ test("plays a short run with taps, clicks and keys, no double inputs", async ({
     await run(page, 100);
   }
   await snap(page, testInfo, "09-gameplay");
-  await freshFrame(page);
   await expect(page).toHaveScreenshot("gameplay.png");
   expect(log.errors).toEqual([]);
 });
