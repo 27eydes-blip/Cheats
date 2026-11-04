@@ -93,6 +93,10 @@ export default defineConfig({
     // screenshot comparisons: small anti-aliasing differences are fine, real changes are not
     toHaveScreenshot: { maxDiffPixelRatio: 0.02, threshold: 0.25, animations: "disabled" },
   },
+  // Pixel comparisons run where the baselines were recorded (GitHub Actions). Elsewhere a
+  // different CPU / font stack can shift an animation by a frame, so they're opt-in (VISUAL=1);
+  // every functional check still runs and every screen is still screenshotted.
+  ignoreSnapshots: !CI && !process.env.VISUAL,
   fullyParallel: true,
   workers: CI ? 2 : undefined,
   retries: CI ? 1 : 0,
