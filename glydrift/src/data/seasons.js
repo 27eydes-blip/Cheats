@@ -2,6 +2,7 @@
 // end-of-season auto-claim + recap. Data comes from Supabase remote config (table
 // `season_config`, row "live"; cached on the device), else the built-in SEASON_DEFAULTS.
 // Seasons are started, changed or ended by editing that row — no app update needed.
+import { TEST } from "../systems/testFlags.js";
 import { SEASON_DEFAULTS } from "./seasonDefs.js";
 import { Save } from "./save.js";
 import { COSMETICS, getCosmetic, setSeasonItemCheck } from "./cosmetics.js";
@@ -173,7 +174,7 @@ export const Seasons = {
     }
     if (!useConfig(config, source)) useConfig(SEASON_DEFAULTS, "built-in");
     setSeasonItemCheck((c) => !c.season || Seasons.active()?.event.shopItems.includes(c.id));
-    Seasons.refresh();
+    if (!TEST.offline) Seasons.refresh();
   },
 
   /**

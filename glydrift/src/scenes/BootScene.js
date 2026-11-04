@@ -20,7 +20,7 @@ export class BootScene extends Phaser.Scene {
     Progression.checkChallengeUnlocks();
     Save.write();
     // sign in (anonymous) + upload queued scores in the background, after first frames
-    setTimeout(() => Leaderboard.init(), 1200);
+    if (!TEST.offline) setTimeout(() => Leaderboard.init(), 1200);
     this.scene.launch("Backdrop");
     // hidden music test page: ?music (test builds only)
     const q = new URLSearchParams(window.location.search);
