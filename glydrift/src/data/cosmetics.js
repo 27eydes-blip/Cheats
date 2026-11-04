@@ -58,6 +58,29 @@ export const COSMETICS = [
   { id: "coin_stars", cat: "coin", name: "Star Coins", rarity: "common", price: 300 },
   { id: "coin_gems", cat: "coin", name: "Gems", rarity: "rare", price: 600 },
   { id: "coin_hearts", cat: "coin", name: "Pixel Hearts", rarity: "epic", price: 1500 },
+  // DRIFT PASS+ exclusives: only from the paid track, never sold for coins. Pass skins are
+  // drawn ~10% smaller; every hitbox stays the standard size (skins never touch physics)
+  { id: "skin_holo", cat: "skin", name: "Hologram", rarity: "legendary", price: 0, plus: true },
+  {
+    id: "skin_inferno",
+    cat: "skin",
+    name: "Inferno Core",
+    rarity: "legendary",
+    price: 0,
+    plus: true,
+  },
+  {
+    id: "skin_starlight",
+    cat: "skin",
+    name: "Starlight",
+    rarity: "legendary",
+    price: 0,
+    plus: true,
+  },
+  { id: "trail_aurora", cat: "trail", name: "Aurora", rarity: "epic", price: 0, plus: true },
+  { id: "trail_eclipse", cat: "trail", name: "Eclipse", rarity: "epic", price: 0, plus: true },
+  { id: "death_supernova", cat: "death", name: "Supernova", rarity: "epic", price: 0, plus: true },
+  { id: "death_glitchout", cat: "death", name: "Glitch Out", rarity: "epic", price: 0, plus: true },
   // season exclusives: only for sale while their season runs (kept forever once bought)
   {
     id: "trail_bloodmoon",
@@ -116,7 +139,7 @@ export function setSeasonItemCheck(fn) {
   seasonItemLive = fn;
 }
 /** Can this cosmetic be bought / dropped right now? (owned ones are always shown) */
-export const forSale = (c) => !c.season || seasonItemLive(c);
+export const forSale = (c) => !c.plus && (!c.season || seasonItemLive(c));
 
 const BY_ID = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const getCosmetic = (id) => BY_ID[id] || null;
@@ -128,6 +151,21 @@ export const SKINS = {
   skin_shadow: { tint: 0x6a5a8a, glow: 0x7a3cff },
   skin_neon: { tint: 0xa8fff0, glow: 0x3ef4ff, neon: true },
   skin_frozen: { tint: 0xbff0ff, glow: 0x9fe8ff, sparkle: 0xffffff },
+  // Drift Pass+ skins: a new animated style each, drawn 10% smaller (visual only)
+  skin_holo: { tint: 0x7ffcff, glow: 0x3ef4ff, holo: true, visualScale: 0.9 },
+  skin_inferno: {
+    tint: 0xff8a3a,
+    glow: 0xff3a1a,
+    embers: [0xffd23f, 0xff8a1a, 0xff3a1a],
+    visualScale: 0.9,
+  },
+  skin_starlight: {
+    tint: 0x8a9aff,
+    tint2: 0xd08aff,
+    glow: 0xb45cff,
+    sparkle: 0xffffff,
+    visualScale: 0.9,
+  },
 };
 
 /** Themed sets: own all four pieces → a title and a glow you can equip. */
@@ -259,7 +297,7 @@ export const Shop = {
   /** 4 items picked from the date (same for everyone that day), one of them 30% off. */
   daily(key = todayKey()) {
     const rng = new RNG(hashString(`glydrift-shop-${key}`));
-    const pool = COSMETICS.filter((c) => !c.season); // season items stay in their own spot
+    const pool = COSMETICS.filter((c) => !c.season && !c.plus); // season / pass items stay put
     const items = [];
     while (items.length < DAILY_COUNT && pool.length) {
       const i = Math.floor(rng.next() * pool.length);
@@ -296,7 +334,9 @@ export const Shop = {
         break;
       }
     }
-    const left = COSMETICS.filter((c) => c.rarity === rarity && !s.cos.owned[c.id] && !c.season);
+    const left = COSMETICS.filter(
+      (c) => c.rarity === rarity && !s.cos.owned[c.id] && !c.season && !c.plus,
+    );
     let out;
     if (!left.length) {
       s.coins += POD_REFUND;

@@ -7,7 +7,9 @@
 // dimensions, hero shards, claimed rewards, best scores and lifetime stats.
 
 /** Device-only parts of the save that never go to the cloud. */
-const LOCAL_ONLY = ["settings", "lbQueue", "ghost", "daily"];
+// (Drift Pass+ ownership is never taken from a save: the server's verified purchases are the
+// source of truth, restored by the store)
+const LOCAL_ONLY = ["settings", "lbQueue", "ghost", "daily", "passPlus"];
 
 /** The part of a save that is uploaded. */
 export function cloudPayload(save) {

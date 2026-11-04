@@ -12,6 +12,7 @@ export const TEST = {
   character: q?.get("character") || null, // ?character=yarms — fly as any hero
   seasonNow: q?.get("seasonNow") || null, // ?seasonNow=2026-12-05 — pretend it is that date
   month: q?.has("month") ? Number(q.get("month")) : null, // ?month=11 — pretend it is December
+  mockiap: !!q?.has("mockiap"), // automated tests: Drift Pass+ purchases against a stand-in store
   mockcloud: !!q?.has("mockcloud"), // automated tests: accounts + cloud save against a local stand-in
   lbmock: !!q?.has("lbmock"), // automated tests / screenshots: a leaderboard with sample players
   offline: !!q?.has("offline"), // automated tests: skip the online start-up (leaderboard, remote seasons)

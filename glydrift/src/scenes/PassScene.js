@@ -21,6 +21,10 @@ import { greyPortrait } from "../pixel/grayHero.js";
 import { revealHero } from "../ui/reveal.js";
 import { button, fadeTo, killTweensDeep, RollingCounter } from "../ui/ui.js";
 import { ensureShopPattern, pixelText } from "./ShopScene.js";
+import { PassPlus, PLUS_PRICE_LABEL } from "../data/passPlus.js";
+import { getTitle } from "../data/titles.js";
+import { Store } from "../online/store.js";
+import { toast } from "../ui/ui.js";
 
 const OUT = 0x1a0630;
 const ROW = 176; // tier row height
@@ -336,10 +340,15 @@ export class PassScene extends Phaser.Scene {
       .text(W * 0.25, y, "FREE", priceStyle(24, "#ffffff"))
       .setOrigin(0.5)
       .setDepth(251);
-    this.add
-      .text(W * 0.75, y, "DRIFT PASS+ · COMING SOON", priceStyle(20, "#ffd23f"))
+    this.plusHead = this.add
+      .text(W * 0.75, y, "", priceStyle(20, "#ffd23f"))
       .setOrigin(0.5)
       .setDepth(251);
+    this.updatePlusHead();
+  }
+
+  updatePlusHead() {
+    this.plusHead.setText(PassPlus.owns() ? "DRIFT PASS+ ✓" : "DRIFT PASS+");
   }
 
   rowH(i) {
@@ -417,13 +426,27 @@ export class PassScene extends Phaser.Scene {
     });
     row.add(free);
     row.free = free;
-    // DRIFT PASS+ card (right): always locked for now
+    // DRIFT PASS+ card (right): locked with a PASS+ tag until the pass is owned
     const pr = this.plus[i];
     if (pr) {
       const pw = milestone ? 320 : 290;
       const ph = milestone ? 216 : 156;
-      const plus = this.card(pr, W * 0.75 + 4, 0, pw, ph, { milestone, state: "plus", big: true });
+      const pState = !PassPlus.owns()
+        ? "plus"
+        : PassPlus.isClaimed(i)
+          ? "claimed"
+          : unlocked
+            ? "ready"
+            : "locked";
+      const plus = this.card(pr, W * 0.75 + 4, 0, pw, ph, {
+        milestone,
+        state: pState,
+        big: true,
+        plus: true,
+      });
       row.add(plus);
+      row.plusCard = plus;
+      row.plusState = pState;
     }
     // tier bubble on the line (a gold star badge for milestones)
     const b = this.add.graphics();
@@ -458,7 +481,7 @@ export class PassScene extends Phaser.Scene {
   }
 
   /** One reward card: thick outline, rounded, glossy, icon + amount + label, state overlays. */
-  card(r, x, y, w, h, { milestone, state, big, legendary }) {
+  card(r, x, y, w, h, { milestone, state, big, legendary, plus }) {
     const c = this.add.container(x, y);
     const col = rewardColor(r);
     const g = this.add.graphics();
@@ -508,7 +531,7 @@ export class PassScene extends Phaser.Scene {
           : r.xpBoost
             ? `${r.xpBoost.mul}× · ${r.xpBoost.runs} RUNS`
             : r.title
-              ? `"${r.title}"`
+              ? `"${getTitle(r.title)?.name || r.title}"`
               : r.hero
                 ? getCharacter(r.hero).name
                 : r.item
@@ -600,7 +623,8 @@ export class PassScene extends Phaser.Scene {
         if ((this.drag?.moved || 0) > 10 || this.busy) return;
         if (p.worldY < this.viewTop || p.worldY > this.viewBot) return; // under the header
         const row = c.parentContainer;
-        this.claim(row.i);
+        if (plus) this.claimPlus(row.i);
+        else this.claim(row.i);
       });
     }
     return c;
@@ -677,7 +701,31 @@ export class PassScene extends Phaser.Scene {
   // ---------------------------------------------------------------- footer
   buildFooter(y) {
     const { W } = this;
-    this.claimAll = button(this, W / 2, y, 380, 84, "CLAIM ALL", {
+    // Apple requires a way to restore purchases next to the purchase itself
+    this.restoreBtn = button(this, 92, y, 156, 64, "RESTORE\nPURCHASES", {
+      color: 0xbfb6e8,
+      size: 13,
+      onClick: () => this.restorePurchases(),
+    }).setDepth(320);
+    if (this.season && !PassPlus.owns()) {
+      if (Store.canBuy())
+        this.buyBtn = button(this, W - 108, y, 196, 72, `GET PASS+\n${PLUS_PRICE_LABEL}`, {
+          color: 0xffd23f,
+          size: 17,
+          fill: 0x5a1020,
+          onClick: () => this.buyPlus(),
+        }).setDepth(320);
+      else
+        // the web version can't sell it: the iPhone app does
+        this.buyNote = this.add
+          .text(W - 108, y, "Get Drift Pass+\nin the iPhone app", {
+            ...priceStyle(15, "#ffd23f"),
+            align: "center",
+          })
+          .setOrigin(0.5)
+          .setDepth(320);
+    }
+    this.claimAll = button(this, W / 2, y, 260, 84, "CLAIM ALL", {
       color: 0xffffff,
       size: 32,
       fill: 0x2a8a0a,
@@ -692,8 +740,14 @@ export class PassScene extends Phaser.Scene {
     return out;
   }
 
+  readyPlusTiers() {
+    const out = [];
+    for (let i = 0; i < this.plus.length; i++) if (PassPlus.canClaim(i)) out.push(i);
+    return out;
+  }
+
   updateClaimAll() {
-    const n = this.readyTiers().length;
+    const n = this.readyTiers().length + this.readyPlusTiers().length;
     this.claimAll.setVisible(n >= 2);
     this.claimAll.setLabel?.(`CLAIM ALL (${n})`);
   }
@@ -779,6 +833,7 @@ export class PassScene extends Phaser.Scene {
   async claimAllReady() {
     if (this.busy) return;
     const list = this.readyTiers();
+    const plusList = this.readyPlusTiers();
     this.busy = true;
     for (const i of list) {
       this.scrollTo(i, 260);
@@ -787,7 +842,83 @@ export class PassScene extends Phaser.Scene {
       await this.claim(i, true);
       this.busy = true;
     }
+    for (const i of plusList) {
+      this.scrollTo(i, 260);
+      await new Promise((r) => this.time.delayedCall(280, r));
+      this.busy = false;
+      this.claimPlus(i, true);
+      this.busy = true;
+    }
     this.busy = false;
+    this.updateClaimAll();
+  }
+
+  /** Claim a DRIFT PASS+ tier (only once the purchase is verified). */
+  claimPlus(i, quiet = false) {
+    const row = this.rows[i];
+    if (!row || row.plusState !== "ready") return null;
+    const res = PassPlus.claim(i);
+    if (!res) return null;
+    const card = row.plusCard;
+    const wx = card.x;
+    const wy = this.content.y + row.y;
+    Sfx.reward();
+    Haptics.light();
+    this.fx.burst("star", wx, wy, quiet ? 10 : 24, 0xffd23f, { speed: { min: 150, max: 450 } });
+    if (!reduceFlashing()) this.fx.ring(wx, wy, 0xffd23f, { scale: 1.4, duration: 380 });
+    if (res.coins) this.time.delayedCall(300, () => this.coins.to(Save.data.coins, 500));
+    const label = res.item
+      ? res.item.name
+      : res.title
+        ? `"${getTitle(res.title)?.name}" title`
+        : res.banner
+          ? "New banner"
+          : res.pod?.item
+            ? res.pod.item.name
+            : res.coins
+              ? `+${res.coins} coins`
+              : "Reward";
+    if (!quiet) toast(this, "DRIFT PASS+", 0xffd23f, { y: this.H * 0.3, sub: label });
+    this.fillRow(row);
+    this.updateClaimAll();
+    return res;
+  }
+
+  async buyPlus() {
+    if (this.busy) return;
+    this.busy = true;
+    try {
+      const res = await Store.buy();
+      if (res.ok || res.already) this.onPlusOwned("DRIFT PASS+ UNLOCKED");
+    } catch (err) {
+      toast(this, "PURCHASE", 0xff4f7a, { y: this.H * 0.3, sub: err.message });
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  async restorePurchases() {
+    if (this.busy) return;
+    this.busy = true;
+    try {
+      const { restored } = await Store.restore();
+      if (PassPlus.owns()) this.onPlusOwned(restored ? "PURCHASES RESTORED" : "DRIFT PASS+ ✓");
+      else toast(this, "RESTORE", 0x3ef4ff, { y: this.H * 0.3, sub: "No purchases to restore" });
+    } catch (err) {
+      toast(this, "RESTORE", 0xff4f7a, { y: this.H * 0.3, sub: err.message });
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /** The pass is owned now: unlock the right-hand column. */
+  onPlusOwned(msg) {
+    toast(this, msg, 0xffd23f, { y: this.H * 0.3, sub: "Claim your Drift Pass+ rewards" });
+    this.buyBtn?.destroy();
+    this.buyNote?.destroy();
+    this.buyBtn = this.buyNote = null;
+    this.updatePlusHead();
+    for (const row of this.rows) this.fillRow(row);
     this.updateClaimAll();
   }
 

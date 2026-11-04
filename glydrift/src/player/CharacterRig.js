@@ -351,6 +351,24 @@ export class CharacterRig {
         });
         break;
       }
+      case "death_glitchout":
+        // the hero splits into RGB shards that jitter away
+        for (const c of [0xff2050, 0x39ff88, 0x20c8ff])
+          fx.burst("pixel", x + (Math.random() - 0.5) * 30, y, 26, c, {
+            angle: { min: 160, max: 200 },
+            speed: { min: 150, max: 650 },
+          });
+        fx.ring(x, y, 0x39ff88, { scale: 1.2, duration: 260 });
+        break;
+      case "death_supernova":
+        // a white-gold star that flares, then a slow shockwave
+        fx.ring(x, y, 0xffffff, { scale: 0.8, duration: 200 });
+        scene.time.delayedCall(120, () => {
+          fx.ring(x, y, 0xffd23f, { scale: 3.2, duration: 900 });
+          fx.burst("star", x, y, 40, 0xffd23f, { speed: { min: 220, max: 780 } });
+          fx.burst("spark", x, y, 24, 0xffffff);
+        });
+        break;
       case "death_firework":
         [0xff4fd8, 0xffd23f, 0x3ef4ff].forEach((c, i) =>
           scene.time.delayedCall(i * 220, () => {
@@ -808,7 +826,34 @@ export class CharacterRig {
     if (this.skin) {
       let tint = this.skin.tint;
       if (this.skin.sheen && Math.sin(this.time * 2.2) > 0.93) tint = 0xffffff;
+      // Starlight: the colour drifts between two hues
+      if (this.skin.tint2) {
+        const k = 0.5 + 0.5 * Math.sin(this.time * 1.6);
+        tint = Phaser.Display.Color.Interpolate.ColorWithColor(
+          Phaser.Display.Color.ValueToColor(this.skin.tint),
+          Phaser.Display.Color.ValueToColor(this.skin.tint2),
+          100,
+          k * 100,
+        );
+        tint = Phaser.Display.Color.GetColor(tint.r, tint.g, tint.b);
+      }
       this.sprite.setTint(tint);
+      // Hologram: a translucent flicker with a glitch step now and then
+      if (this.skin.holo && !this.dead) {
+        const glitch = Math.sin(this.time * 7.3) > 0.97;
+        this.sprite.setAlpha(glitch ? 0.45 : 0.72 + 0.18 * Math.sin(this.time * 11));
+        this.offX = glitch ? 3 * this.u : 0;
+      }
+      // Inferno Core: embers rise off the hero
+      if (this.skin.embers && !this.dead && this.fx && Math.random() < dt * 9)
+        this.fx.burst(
+          "pixel",
+          this.x + (Math.random() - 0.5) * 24 * this.u,
+          this.y + 8 * this.u,
+          1,
+          this.skin.embers[Math.floor(Math.random() * this.skin.embers.length)],
+          { angle: { min: 240, max: 300 }, speed: { min: 30, max: 90 } },
+        );
       if (this.skin.sparkle && !this.dead && this.fx && Math.random() < dt * 4)
         this.fx.burst(
           "star",
@@ -863,7 +908,13 @@ export class CharacterRig {
           : [0, 1, 2, 1][Math.floor(this.time * 6) % 4];
     else f = wingFrame;
     sp.setFrame(this.px.frames[Math.min(this.px.frames.length - 1, f)]);
-    const m = Math.max(0.5, Math.round(this.sizeMul * this.displayScale * 2) / 2);
+    // Drift Pass+ skins draw the hero a little smaller (~10%, snapped down to eighth steps so
+    // the shrink survives the pixel grid). Purely visual: the hitbox (Player.radius) is unchanged.
+    const vs = this.skin?.visualScale ?? 1;
+    const m =
+      vs === 1
+        ? Math.max(0.5, Math.round(this.sizeMul * this.displayScale * 2) / 2)
+        : Math.max(0.5, Math.floor(this.sizeMul * this.displayScale * vs * 8) / 8);
     const flip = this.gravityDir < 0 ? -1 : 1;
     sp.setPosition(Math.round(this.x + this.offX), Math.round(this.y + this.offY));
     sp.setAngle(Math.round(this.angle / 15) * 15);
@@ -1070,9 +1121,13 @@ export class CharacterRig {
       case "trail_abyssal":
       case "trail_prism":
       case "trail_zen":
-      case "trail_storm": {
-        // season trails: stepped squares in the season's colours, each with a little twist
+      case "trail_storm":
+      case "trail_aurora":
+      case "trail_eclipse": {
+        // season / pass trails: stepped squares in their own colours, each with a little twist
         const pal = {
+          trail_aurora: [0xd8fff0, 0x6affc8, 0x3ef4ff, 0x8a6aff, 0x3a1a8a],
+          trail_eclipse: [0xfff6c0, 0xffd23f, 0x8a5a1a, 0x1a0a2a, 0x000000],
           trail_bloodmoon: [0xffd0d0, 0xff3a4a, 0xc8102e, 0x7a0418, 0x3a020a],
           trail_abyssal: [0x8a6a9a, 0x4a2a4a, 0x2a1a2a, 0x14080c, 0x0a0206],
           trail_prism: [0xffffff, 0xff9ad8, 0x6ad8ff, 0xb48aff, 0xfff06a],

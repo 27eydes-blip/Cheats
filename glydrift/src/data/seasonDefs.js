@@ -48,18 +48,28 @@ function freeTrack(milestones) {
     return FREE_PATTERN[i % FREE_PATTERN.length](t);
   });
 }
+/**
+ * DRIFT PASS+ (the paid track, $3.99 a season): every 5th tier is a Pass+ exclusive in a
+ * new style — animated skins (drawn 10% smaller, standard hitbox), animated titles, trails,
+ * death effects and a banner. Nothing on it changes speed, hitbox, score or leaderboards.
+ */
 function plusTrack(theme) {
-  const special = [
-    { item: theme.trail, label: "NEW TRAIL" },
-    { title: theme.title, label: "NEW TITLE" },
-    { banner: theme.banner, label: "NEW BANNER" },
-    { emote: "roar", label: "NEW EMOTE" },
-    { item: theme.hat, label: "NEW HAT" },
-    { item: "death_firework", label: "NEW DEATH FX" },
-  ];
+  const special = {
+    5: { item: "skin_holo", label: "NEW SKIN" },
+    10: { title: "p_abysslord", label: "ANIMATED TITLE" },
+    15: { item: "trail_aurora", label: "NEW TRAIL" },
+    20: { banner: theme.banner, label: "NEW BANNER" },
+    25: { title: "p_neonroyal", label: "ANIMATED TITLE" },
+    30: { item: "skin_inferno", label: "NEW SKIN" },
+    35: { item: "death_supernova", label: "NEW DEATH FX" },
+    40: { title: "p_starborn", label: "ANIMATED TITLE" },
+    45: { item: "death_glitchout", label: "NEW DEATH FX" },
+    50: { item: "skin_starlight", label: "NEW SKIN" },
+  };
   return Array.from({ length: 50 }, (_, i) => {
     const t = i + 1;
-    if (t % 5 === 0) return { ...special[(t / 5 - 1) % special.length], milestone: true };
+    if (special[t]) return { ...special[t], milestone: true };
+    if (t === 22) return { item: "trail_eclipse", label: "NEW TRAIL" };
     if (t % 3 === 0) return { pod: true };
     return { coins: 200 + t * 20 };
   });

@@ -281,6 +281,10 @@ function icons() {
     icon_trail_prism: swoosh([0xffffff, 0xff9ad8, 0x6ad8ff, 0xb48aff, 0xfff06a]),
     icon_trail_zen: swoosh([0xffe0ec, 0xff9ac8, 0x9ae86a, 0x4ac84a]),
     icon_trail_storm: swoosh([0xffffff, 0xbffcff, 0x3ef4ff, 0x1a5ad8]),
+    icon_trail_aurora: swoosh([0xd8fff0, 0x6affc8, 0x3ef4ff, 0x8a6aff]),
+    icon_trail_eclipse: swoosh([0xfff6c0, 0xffd23f, 0x8a5a1a, 0x1a0a2a]),
+    icon_death_supernova: burstIcon(0xffffff, 0xffd23f),
+    icon_death_glitchout: burstIcon(0x39ff88, 0xff2050),
     icon_trail_lightning: (() => {
       const pc = new PixelCanvas(16, 16);
       pc.poly(

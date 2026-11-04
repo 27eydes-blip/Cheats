@@ -38,6 +38,8 @@ function defaults() {
     dimensions: {}, // dimension ids discovered (prism, tidal, chrono, mirror)
     cos: { owned: {}, equipped: {} }, // shop cosmetics: owned ids + equipped per category
     titles: { owned: {}, equipped: null }, // earned titles + the one shown under your name
+    banners: { owned: {}, equipped: null }, // Drift Pass+ name-card banners
+    passPlus: {}, // seasonId → server-verified Drift Pass+ purchase (restorable from the server)
     boosts: { owned: {}, armed: {} }, // (retired) one-run boosts
     boostsRefunded: false,
     dailyDrop: "", // date the free Daily Drift Drop was last claimed

@@ -1063,3 +1063,145 @@ test("titles: earn, wear, and see them on the leaderboard and game over", async 
   expect(go).toContain("GOLD LEAGUE");
   expect(log.errors).toEqual([]);
 });
+
+// ---- DRIFT PASS+ ----
+const PASS_SAVE = {
+  ...SAVE,
+  seasons: { s1: { xp: 5000, claimed: {}, started: true, heroSeen: true } }, // 11 tiers reached
+};
+const openPass = async (page) => {
+  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Pass"));
+  await waitFor(page, () => window.__glydrift.scene.isActive("Pass"));
+  await run(page, 800);
+};
+
+test("Drift Pass+ on the web: buy it in the iPhone app", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { save: PASS_SAVE });
+  await openPass(page);
+  const v = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Pass");
+    return {
+      note: s.buyNote?.text,
+      buy: !!s.buyBtn,
+      restore: !!s.restoreBtn,
+      states: [...new Set(s.rows.map((r) => r.plusState))],
+    };
+  });
+  expect(v).toEqual({
+    note: "Get Drift Pass+\nin the iPhone app",
+    buy: false,
+    restore: true,
+    states: ["plus"],
+  });
+  expect(log.errors).toEqual([]);
+});
+
+test("Drift Pass+: buy, claim, restore on a new device", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { save: PASS_SAVE, flags: ["mockiap"] });
+  await openPass(page);
+  await snap(page, testInfo, "18-pass-plus-locked");
+  // a failed server check unlocks nothing
+  await page.evaluate(() => localStorage.setItem("glydrift.mockstore.fail", "1"));
+  await tap(page, "GET PASS+ $3.99", 800);
+  expect(await page.evaluate(() => window.__glyPassPlus.owns())).toBe(false);
+  await page.evaluate(() => localStorage.removeItem("glydrift.mockstore.fail"));
+  // a verified purchase unlocks the track
+  await tap(page, "GET PASS+ $3.99", 1200);
+  expect(await page.evaluate(() => window.__glyPassPlus.owns())).toBe(true);
+  const after = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Pass");
+    return { buy: !!s.buyBtn, t5: s.rows[4].plusState, t15: s.rows[14].plusState };
+  });
+  expect(after).toEqual({ buy: false, t5: "ready", t15: "locked" });
+  // claim tier 5 (the Hologram skin) and tier 10 (the animated ABYSS LORD title)
+  await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Pass");
+    s.claimPlus(4, true);
+    s.claimPlus(9, true);
+  });
+  await run(page, 1200);
+  await snap(page, testInfo, "19-pass-plus-owned");
+  let save = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  expect(save.cos.owned.skin_holo).toBe(true);
+  expect(save.titles.owned.p_abysslord).toBe(true);
+  // a new device: no local record, RESTORE PURCHASES brings it back
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+    s.passPlus = {};
+    localStorage.setItem("glydrift.save.v1", JSON.stringify(s));
+  });
+  await page.reload();
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  await run(page, 600);
+  expect(await page.evaluate(() => window.__glyPassPlus.owns())).toBe(false);
+  await openPass(page);
+  await tap(page, "RESTORE PURCHASES", 1200);
+  expect(await page.evaluate(() => window.__glyPassPlus.owns())).toBe(true);
+  save = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  expect(Object.keys(save.passPlus)).toEqual(["s1"]);
+  expect(log.errors).toEqual([]);
+});
+
+test("no skin changes the hitbox, speed or score rules (Pass+ skins look 10% smaller)", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const skins = ["", "skin_gold", "skin_neon", "skin_holo", "skin_inferno", "skin_starlight"];
+  const owned = Object.fromEntries(skins.filter(Boolean).map((k) => [k, true]));
+  const log = await openGame(page, {
+    flags: ["god"],
+    save: { ...SAVE, cos: { owned, equipped: {} } },
+  });
+  const results = [];
+  for (const skin of skins) {
+    await page.evaluate((k) => {
+      const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+      s.cos.equipped = k ? { skin: k } : {};
+      localStorage.setItem("glydrift.save.v1", JSON.stringify(s));
+    }, skin);
+    await page.reload();
+    await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+    await run(page, 800);
+    await startRun(page);
+    results.push(
+      await page.evaluate((k) => {
+        const s = window.__glydrift.scene.getScene("Game");
+        const p = s.player;
+        const before = s.meters;
+        for (let i = 0; i < 240; i++) {
+          // no near-miss slow-mo while measuring (it depends on the obstacle layout, which a
+          // skin's particle randomness can shift): this compares the flying speed itself
+          s.slowT = 0;
+          s.timeScale = 1;
+          s.__t = (s.__t || 1e6) + 1000 / 60;
+          s.stepFrame(s.__t, 1000 / 60);
+          if (p.y > s.H * 0.55 && p.vy > -50) s.onTap();
+        }
+        return {
+          skin: k,
+          radius: p.radius,
+          metres: Math.round((s.meters - before) * 100) / 100,
+          drawn: Math.abs(p.rig.sprite.scaleX),
+        };
+      }, skin),
+    );
+  }
+  const base = results[0];
+  for (const r of results) {
+    expect(r.radius, `${r.skin} hitbox`).toBe(base.radius);
+    expect(r.metres, `${r.skin} speed`).toBe(base.metres);
+  }
+  for (const r of results.filter((x) =>
+    ["skin_holo", "skin_inferno", "skin_starlight"].includes(x.skin),
+  )) {
+    const k = r.drawn / base.drawn;
+    expect(k, `${r.skin} drawn size`).toBeGreaterThan(0.84);
+    expect(k, `${r.skin} drawn size`).toBeLessThan(0.95);
+  }
+  // nothing a skin does reaches the score / leaderboard submission
+  const src = readFileSync("src/online/leaderboard.js", "utf8");
+  expect(src).not.toMatch(/skin|passPlus|PassPlus/);
+  expect(log.errors).toEqual([]);
+});
