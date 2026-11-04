@@ -12,4 +12,8 @@ export const TEST = {
   character: q?.get("character") || null, // ?character=yarms — fly as any hero
   seasonNow: q?.get("seasonNow") || null, // ?seasonNow=2026-12-05 — pretend it is that date
   month: q?.has("month") ? Number(q.get("month")) : null, // ?month=11 — pretend it is December
+  noaudio: !!q?.has("noaudio"), // automated tests: never start audio (keeps visuals deterministic)
+  // automated tests on software GPUs: run the game logic every frame but draw only every Nth
+  // frame (and whenever a test asks for a fresh picture) — drawing is what makes them slow
+  renderEvery: Math.max(1, Number(q?.get("renderEvery")) || 1),
 };

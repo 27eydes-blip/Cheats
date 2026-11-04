@@ -423,12 +423,13 @@ export const CHARACTERS = [
     },
     scale: 0.62,
     cost: 9000,
+    speed: 1.1, // flies 10% faster than the standard heroes
     challenge: { stat: "maxNearRun", value: 22, text: "22 near-misses in one run" },
     // perks (look + hitbox unchanged): bonus coins every run; immune to Solar Storm fire
     perks: {
       coinBonus: 13,
       fireWard: ["geyser", "meteor", "firebar"],
-      list: ["+13 coins per run", "Fire Ward: immune to fire in Solar Storm"],
+      list: ["+13 coins per run", "Fire Ward: immune to fire in Solar Storm", "10% faster flight"],
     },
     desc: "Scarf trail. Vanishes in smoke.",
   },

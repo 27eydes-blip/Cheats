@@ -51,6 +51,7 @@ function defaults() {
     settings: {
       lowGfx: false,
       gfxChecked: false,
+      gfxBoot: false, // first-launch weak-device check done
       musicVol: 0.7,
       sfxVol: 0.8,
       muted: false,
@@ -76,6 +77,7 @@ function merge(base, data) {
 }
 
 let cache = null;
+let persists = null;
 
 export const Save = {
   get data() {
@@ -102,6 +104,19 @@ export const Save = {
         /* ignore */
       }
     }
+  },
+  /** False when the browser refuses storage (private browsing, blocked site data). */
+  canPersist() {
+    if (persists === null) {
+      try {
+        localStorage.setItem("glydrift.probe", "1");
+        localStorage.removeItem("glydrift.probe");
+        persists = true;
+      } catch {
+        persists = false;
+      }
+    }
+    return persists;
   },
   reset() {
     cache = defaults();

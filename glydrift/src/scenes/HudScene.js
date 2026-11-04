@@ -27,6 +27,13 @@ export class HudScene extends Phaser.Scene {
     this.bannerIdx = -1;
     this.speedText = null;
     fitCamera(this);
+    // Esc / P toggle pause (handled here: the Game scene's input stops while it's paused)
+    for (const k of ["ESC", "P"])
+      this.input.keyboard?.on(`keydown-${k}`, (e) => {
+        if (e?.repeat) return;
+        if (this.pauseLayer) this.resume();
+        else this.pause();
+      });
     const W = VIEW.W;
     const H = VIEW.H;
     this.W = W;

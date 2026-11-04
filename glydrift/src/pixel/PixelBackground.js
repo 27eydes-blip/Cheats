@@ -8,6 +8,7 @@ import { lerpColor } from "../biomes/biomes.js";
 import { ENERGY, FLOOR } from "./colorShift.js";
 import { S } from "./px.js";
 import { biomeArtReady, THEMES, themeFor } from "./themes.js";
+import { setSideTheme } from "../systems/sideBackdrop.js";
 
 const FADE = 1.6; // seconds
 
@@ -265,6 +266,8 @@ export class PixelBackground {
     if (!this.sets[id]) this.sets[id] = this.buildSet(id);
     this.current = id;
     if (instant) for (const s of Object.values(this.sets)) s.alpha = s.id === id ? 1 : 0;
+    // wide screens: the space beside the portrait frame follows the biome
+    setSideTheme(this.scene.textures, themeFor(id));
   }
 
   update(dt, scroll, pal, o = {}) {

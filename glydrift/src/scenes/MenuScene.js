@@ -65,6 +65,14 @@ export class MenuScene extends Phaser.Scene {
     const s = Save.data;
     this.leaving = false;
     this.modal = null;
+    // private browsing / blocked storage: the game runs, but say that progress won't save
+    const note = document.getElementById("storage-note");
+    if (note && !Save.canPersist()) {
+      note.classList.add("show");
+      const hide = () => note.classList.remove("show");
+      this.time.delayedCall(8000, hide);
+      this.events.once("shutdown", hide);
+    }
     const lowGfx = s.settings.lowGfx;
     const top = (this.registry.get("safeTop") || 0) + 20;
     this.top = top;

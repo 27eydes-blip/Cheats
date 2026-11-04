@@ -148,8 +148,9 @@ export class GameScene extends Phaser.Scene {
     this.desat = null;
 
     this.input.on("pointerdown", (p) => this.onTap(p));
-    this.input.keyboard?.on("keydown-SPACE", () => this.onTap());
-    this.input.keyboard?.on("keydown-UP", () => this.onTap());
+    // keyboard: Space / W / Up flap (held keys don't auto-repeat flaps); Esc / P pause (Hud)
+    for (const k of ["SPACE", "W", "UP"])
+      this.input.keyboard?.on(`keydown-${k}`, (e) => !e?.repeat && this.onTap());
 
     this.game.events.on("hidden", this.onHidden, this);
     this.events.once("shutdown", () => {
@@ -605,8 +606,17 @@ export class GameScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ main loop
   update(time, deltaMs) {
-    const rawDt = Math.min(deltaMs / 1000, 1 / 30);
     this.watchFrameRate(deltaMs);
+    // Same game speed at any refresh rate: a long frame (30 fps Low Power Mode, a hiccup) runs
+    // as several ~60 Hz steps instead of one big clamped one, so the world never slows down and
+    // collisions are checked as finely as at 60 fps. Real stalls are still capped (4 steps).
+    const n = Math.min(4, Math.max(1, Math.round(deltaMs / (1000 / 60))));
+    const d = deltaMs / n;
+    for (let i = 0; i < n; i++) this.stepFrame(time - (n - 1 - i) * d, d);
+  }
+
+  stepFrame(time, deltaMs) {
+    const rawDt = Math.min(deltaMs / 1000, 1 / 30);
 
     // slow-mo (near-miss & death) eases back to real time
     if (this.slowT > 0) {

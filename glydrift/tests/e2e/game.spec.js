@@ -1,0 +1,425 @@
+// Glydrift on every device profile × browser engine (see playwright.config.js).
+import { mkdirSync } from "node:fs";
+import { expect, test } from "@playwright/test";
+import {
+  expectFramed,
+  freshFrame,
+  fieldPoint,
+  gameState,
+  isActive,
+  isTouch,
+  locate,
+  openGame,
+  press,
+  profileOf,
+  reseed,
+  run,
+  tap,
+  waitFor,
+} from "./helpers.js";
+
+/** Save a screenshot of the current screen for review (and attach it to the report). */
+async function snap(page, testInfo, name) {
+  const dir = `test-results/screens/${testInfo.project.name}`;
+  mkdirSync(dir, { recursive: true });
+  const path = `${dir}/${name}.png`;
+  await freshFrame(page);
+  await page.screenshot({ path });
+  await testInfo.attach(name, { path, contentType: "image/png" });
+}
+
+/** Leave whatever screen is open and go back to the home screen. */
+const home = (page) =>
+  page.evaluate(() => {
+    const g = window.__glydrift;
+    for (const s of g.scene.getScenes(true))
+      if (!["Backdrop", "Menu"].includes(s.sys.settings.key)) g.scene.stop(s.sys.settings.key);
+    if (!g.scene.isActive("Menu")) g.scene.start("Menu");
+  });
+
+async function startRun(page, label = "PLAY") {
+  await tap(page, label, 300);
+  await waitFor(page, () => window.__glydrift.scene.getScene("Game")?.state === "ready");
+  await reseed(page); // the same course every time
+  await run(page, 600);
+  await press(page, await fieldPoint(page)); // the first tap launches the run
+  await run(page, 200);
+  expect((await gameState(page)).state).toBe("playing");
+}
+
+test("loads with no console errors, framed correctly, no browser gestures", async ({
+  page,
+}, testInfo) => {
+  const log = await openGame(page);
+  await run(page, 3000);
+  const frame = await expectFramed(page);
+  // wide screens: the sides show the biome's own (blurred) background, not black bars
+  if (frame.fit && frame.left > 20) {
+    const shown = await page.evaluate(
+      () =>
+        [...document.querySelectorAll("#side-bg canvas")].filter((c) => c.style.opacity === "1")
+          .length,
+    );
+    expect(shown).toBe(1);
+  }
+  // pinch / double-tap zoom, pull-to-refresh, long-press menus and ctrl+wheel zoom are blocked
+  const blocked = await page.evaluate(() => {
+    const fire = (e) => !document.body.dispatchEvent(e);
+    const out = {
+      wheelZoom: fire(new WheelEvent("wheel", { ctrlKey: true, cancelable: true, bubbles: true })),
+      contextMenu: fire(new MouseEvent("contextmenu", { cancelable: true, bubbles: true })),
+      dblclick: fire(new MouseEvent("dblclick", { cancelable: true, bubbles: true })),
+    };
+    try {
+      out.touchMove = fire(new TouchEvent("touchmove", { cancelable: true, bubbles: true }));
+    } catch {
+      out.touchMove = true; // no TouchEvent constructor in this engine (desktop)
+    }
+    return out;
+  });
+  expect(blocked).toEqual({ wheelZoom: true, contextMenu: true, dblclick: true, touchMove: true });
+  expect(log.errors).toEqual([]);
+  expect(log.failed).toEqual([]);
+  await snap(page, testInfo, "01-home");
+});
+
+test("release build loads with no console errors", async ({ page }) => {
+  // the release build exposes no test hooks: openGame waits for its canvas and lets it run
+  const log = await openGame(page, { base: "http://localhost:4318", screen: null });
+  expect(log.errors).toEqual([]);
+  expect(log.failed).toEqual([]);
+  expect(await page.evaluate(() => typeof window.__glydrift)).toBe("undefined");
+});
+
+test("every screen opens", async ({ page }, testInfo) => {
+  const log = await openGame(page);
+  await freshFrame(page);
+  await expect(page).toHaveScreenshot("home.png");
+
+  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").openSettings());
+  await run(page, 600);
+  await snap(page, testInfo, "02-settings");
+  await tap(page, "DONE", 600);
+
+  const screens = [
+    ["HEROES", "Characters", "03-heroes"],
+    ["SHOP", "Shop", "04-shop"],
+    ["LUCKY SPIN", "Spin", "05-spin"],
+    ["LEADERBOARD", "Leaderboard", "06-leaderboard"],
+    ["PROGRESS", "Progress", "07-progress"],
+    ["SEASON 1 · ABYSS RISING", "Pass", "08-pass"],
+  ];
+  for (const [label, key, shot] of screens) {
+    await tap(page, label, 1600);
+    await waitFor(page, (k) => window.__glydrift.scene.isActive(k), 10_000, key);
+    await run(page, 800);
+    await expectFramed(page);
+    await snap(page, testInfo, shot);
+    if (key === "Characters" || key === "Shop")
+      await expect(page).toHaveScreenshot(`${shot.slice(3)}.png`); // snap() just drew a fresh frame
+    await home(page);
+    await run(page, 1200);
+  }
+  expect(log.errors).toEqual([]);
+});
+
+test("plays a short run with taps, clicks and keys, no double inputs", async ({
+  page,
+}, testInfo) => {
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
+  const pt = await fieldPoint(page);
+  const before = (await gameState(page)).flaps;
+  for (let i = 0; i < 6; i++) {
+    await press(page, pt);
+    await run(page, 260);
+  }
+  // one flap per tap / click: touch never also fires a mouse click
+  expect((await gameState(page)).flaps - before).toBe(6);
+  if (!isTouch(testInfo)) {
+    const k0 = (await gameState(page)).flaps;
+    for (const key of ["Space", "KeyW", "ArrowUp"]) {
+      await page.keyboard.press(key);
+      await run(page, 260);
+    }
+    // holding a key flaps once, never auto-repeats
+    await page.keyboard.down("Space");
+    await run(page, 700);
+    await page.keyboard.up("Space");
+    expect((await gameState(page)).flaps - k0).toBe(4);
+  }
+  // fly a few seconds like a player would: tap whenever the hero sinks below the middle
+  const m0 = (await gameState(page)).meters;
+  for (let i = 0; i < 40; i++) {
+    const low = await page.evaluate(() => {
+      const s = window.__glydrift.scene.getScene("Game");
+      return s.player.y > s.H * 0.55;
+    });
+    if (low) await press(page, pt);
+    await run(page, 100);
+  }
+  expect((await gameState(page)).meters).toBeGreaterThan(m0 + 50);
+  await snap(page, testInfo, "09-gameplay");
+  await freshFrame(page);
+  await expect(page).toHaveScreenshot("gameplay.png");
+  expect(log.errors).toEqual([]);
+});
+
+test("pause and resume (button, keys, app in background)", async ({ page }, testInfo) => {
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
+  const paused = () => page.evaluate(() => !!window.__glydrift.scene.getScene("Hud").pauseLayer);
+  if (isTouch(testInfo)) {
+    const pt = await page.evaluate(() => {
+      const g = window.__glydrift;
+      const h = g.scene.getScene("Hud");
+      const b = h.pauseBtn; // a container placed at the button's centre
+      const cam = h.cameras.main;
+      const r = g.canvas.getBoundingClientRect();
+      const sx = (b.x - cam.worldView.x) * cam.zoom;
+      const sy = (b.y - cam.worldView.y) * cam.zoom;
+      return {
+        x: r.left + (sx * r.width) / g.canvas.width,
+        y: r.top + (sy * r.height) / g.canvas.height,
+      };
+    });
+    await press(page, pt);
+  } else await page.keyboard.press("Escape");
+  await run(page, 400);
+  expect(await paused()).toBe(true);
+  const m = (await gameState(page)).meters;
+  await run(page, 1500);
+  expect((await gameState(page)).meters).toBe(m); // frozen while paused
+  await snap(page, testInfo, "10-pause");
+  if (isTouch(testInfo)) await tap(page, "RESUME", 300);
+  else await page.keyboard.press("KeyP");
+  await run(page, 600);
+  expect(await paused()).toBe(false);
+  expect((await gameState(page)).meters).toBeGreaterThan(m);
+
+  // the tab / app goes to the background → the run pauses itself
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await run(page, 300);
+  await page.evaluate(() => {
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await run(page, 300);
+  expect(await paused()).toBe(true);
+  await tap(page, "RESUME", 600);
+  expect((await gameState(page)).state).toBe("playing");
+  expect(log.errors).toEqual([]);
+});
+
+test("game over and retry in under a second", async ({ page }, testInfo) => {
+  const log = await openGame(page);
+  await startRun(page);
+  await waitFor(page, () => window.__glydrift.scene.isActive("GameOver"), 30_000);
+  await run(page, 3500); // let the results roll up
+  await snap(page, testInfo, "11-game-over");
+  await freshFrame(page);
+  await expect(page).toHaveScreenshot("game-over.png");
+  await tap(page, "RETRY", 0);
+  // RETRY goes straight into a fresh run
+  const fresh = async () => {
+    const g = await gameState(page);
+    return g && ["ready", "playing"].includes(g.state) && g.meters < 30;
+  };
+  let t = 0;
+  while (t < 2000 && !(await fresh())) {
+    await run(page, 50);
+    t += 50;
+  }
+  expect(await fresh()).toBe(true);
+  expect(t).toBeLessThan(1000);
+  expect(log.errors).toEqual([]);
+});
+
+test("buys an item in the shop", async ({ page }, testInfo) => {
+  const log = await openGame(page);
+  await tap(page, "SHOP", 1600);
+  await waitFor(page, () => window.__glydrift.scene.isActive("Shop"));
+  const item = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Shop");
+    s.setTab("trail");
+    const coins = JSON.parse(localStorage.getItem("glydrift.save.v1")).coins;
+    const priceOf = (c) => c.cta?.list?.find((o) => o.type === "Text" && /^\d+$/.test(o.text));
+    const i = s.cards.findIndex((c) => priceOf(c) && +priceOf(c).text <= coins);
+    if (i < 0) return null;
+    s.focus(i, true);
+    return { id: s.cards[i].offer.id, price: +priceOf(s.cards[i]).text, coins };
+  });
+  expect(item).not.toBeNull();
+  await run(page, 800);
+  const ctaPt = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const s = g.scene.getScene("Shop");
+    const b = s.cards[s.index].cta.getBounds();
+    const cam = s.cameras.main;
+    const r = g.canvas.getBoundingClientRect();
+    const sx = (b.centerX - cam.worldView.x) * cam.zoom;
+    const sy = (b.centerY - cam.worldView.y) * cam.zoom;
+    return {
+      x: r.left + (sx * r.width) / g.canvas.width,
+      y: r.top + (sy * r.height) / g.canvas.height,
+    };
+  });
+  await press(page, ctaPt);
+  await run(page, 600);
+  await snap(page, testInfo, "12-shop-confirm");
+  await tap(page, "BUY!", 1500);
+  const after = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  expect(after.coins).toBe(item.coins - item.price);
+  expect(after.cos.owned[item.id]).toBeTruthy();
+  expect(log.errors).toEqual([]);
+});
+
+const SIZES = {
+  phone: (v) => [
+    { width: v.height, height: v.width }, // rotate to landscape
+    { width: v.width, height: v.height - 80 }, // address bar shows
+    v, // and back
+  ],
+  ipad: () => [
+    { width: 768, height: 1024 },
+    { width: 1024, height: 768 },
+    { width: 1024, height: 1366 },
+    { width: 1366, height: 1024 },
+    { width: 507, height: 1024 }, // Split View, half
+    { width: 320, height: 1024 }, // Slide Over
+    { width: 694, height: 1024 }, // Split View, two thirds
+  ],
+  desktop: () => [
+    { width: 2560, height: 720 }, // very wide
+    { width: 1366, height: 420 }, // very short
+    { width: 520, height: 900 }, // narrow window
+    { width: 1920, height: 1080 },
+  ],
+};
+
+test("resize, rotation and Split View keep the run going", async ({ page }, testInfo) => {
+  const log = await openGame(page, { flags: ["god"] });
+  const profile = profileOf(testInfo);
+  const v = page.viewportSize();
+  const sizes = profile.startsWith("iphone")
+    ? SIZES.phone(v)
+    : profile.startsWith("ipad")
+      ? SIZES.ipad()
+      : SIZES.desktop();
+  await startRun(page);
+  const pt = () => fieldPoint(page);
+  for (const size of sizes) {
+    await page.setViewportSize(size);
+    const m = (await gameState(page)).meters;
+    for (let i = 0; i < 3; i++) {
+      await press(page, await pt());
+      await run(page, 250);
+    }
+    expect((await gameState(page)).state).toBe("playing"); // never restarted
+    expect((await gameState(page)).meters).toBeGreaterThan(m);
+    await expectFramed(page);
+  }
+  // back on the home screen the canvas is re-rendered at the new size (crisp), and still fits
+  await page.setViewportSize(sizes.at(-2));
+  await run(page, 500);
+  await home(page);
+  await run(page, 2000);
+  expect(await isActive(page, "Menu")).toBe(true);
+  await expectFramed(page);
+  const crisp = await page.evaluate(() => {
+    const c = window.__glydrift.canvas;
+    return (c.getBoundingClientRect().width * devicePixelRatio) / c.width;
+  });
+  expect(crisp).toBeGreaterThan(0.6); // the budget may render a little under 1:1, never far
+  expect(crisp).toBeLessThan(1.6);
+  await snap(page, testInfo, "13-after-resize");
+  expect(log.errors).toEqual([]);
+});
+
+test("survives a lost WebGL context", async ({ page }) => {
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
+  const ok = await page.evaluate(() => {
+    const ext = window.__glydrift.renderer.gl?.getExtension("WEBGL_lose_context");
+    if (!ext) return false;
+    window.__lose = ext;
+    ext.loseContext();
+    return true;
+  });
+  test.skip(!ok, "this engine can't simulate a lost context");
+  await run(page, 500);
+  await page.evaluate(() => window.__lose.restoreContext());
+  await run(page, 1500);
+  const m = (await gameState(page)).meters;
+  await run(page, 1000);
+  expect((await gameState(page)).meters).toBeGreaterThan(m);
+  // still drawing: the frame isn't blank (the snapshot arrives with the next drawn frame)
+  await page.evaluate(() => {
+    const g = window.__glydrift;
+    window.__lit = null;
+    window.__glyRender = true;
+    g.renderer.snapshot((img) => {
+      const c = document.createElement("canvas");
+      c.width = 32;
+      c.height = 32;
+      const x = c.getContext("2d");
+      x.drawImage(img, 0, 0, 32, 32);
+      const d = x.getImageData(0, 0, 32, 32).data;
+      let sum = 0;
+      for (let i = 0; i < d.length; i += 4) sum += d[i] + d[i + 1] + d[i + 2];
+      window.__lit = sum / (32 * 32 * 3);
+    });
+  });
+  await waitFor(page, () => window.__lit !== null, 5000);
+  const lit = await page.evaluate(() => window.__lit);
+  expect(lit).toBeGreaterThan(4);
+  expect(log.errors).toEqual([]);
+});
+
+test("runs in private browsing (no storage) and says progress won't save", async ({ page }) => {
+  const log = await openGame(page, { noStorage: true, save: null });
+  // first launch: the name prompt may open; dismiss it
+  await page.evaluate(() => document.querySelector('#name-modal [data-act="cancel"]')?.click());
+  await run(page, 800);
+  await expect(page.locator("#storage-note")).toBeVisible();
+  expect(log.errors).toEqual([]);
+});
+
+test("same game speed at 30, 60 and 120 Hz", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "laptop", "engine-level check: once per browser");
+  await openGame(page, { flags: ["god"] });
+  const meters = await page.evaluate(async () => {
+    const g = window.__glydrift;
+    const out = {};
+    g.loop.sleep();
+    let t = performance.now();
+    for (const hz of [30, 60, 120]) {
+      g.scene.stop("Menu");
+      g.scene.stop("Game");
+      g.scene.start("Game", { autoStart: true });
+      for (let i = 0; i < 30; i++) g.step((t += 16.667), 16.667);
+      const s = g.scene.getScene("Game");
+      if (s.state !== "playing") s.startRun();
+      const m0 = s.meters;
+      const dt = 1000 / hz;
+      for (let i = 0; i < hz * 4; i++) {
+        const p = s.player;
+        if (p.y > s.H * 0.5 && p.vy > -50) s.onTap();
+        g.step((t += dt), dt);
+      }
+      out[hz] = s.meters - m0;
+    }
+    g.loop.wake();
+    return out;
+  });
+  expect(Math.abs(meters[30] / meters[60] - 1)).toBeLessThan(0.02);
+  expect(Math.abs(meters[120] / meters[60] - 1)).toBeLessThan(0.02);
+});

@@ -38,19 +38,35 @@ export function viewportSize() {
 // for pixel art
 export const PIXEL_BUDGET = { normal: 2.3e6, low: 1.5e6 };
 
-export function setupView(lowGfx = false) {
-  VIEW.H = computeGameHeight();
+/** The view (logical height + zoom) that suits the window as it is right now. */
+export function idealView(lowGfx = false) {
+  const H = computeGameHeight();
   const vp = viewportSize();
-  const cssW = Math.min(vp.w, (vp.h * GAME_W) / VIEW.H);
+  // phones fill edge to edge (ENVELOP), squarer screens show the whole frame (FIT)
+  const cssW = wantsFit()
+    ? Math.min(vp.w, (vp.h * GAME_W) / H)
+    : Math.max(vp.w, (vp.h * GAME_W) / H);
   const dpr = Math.min(window.devicePixelRatio || 1, lowGfx ? 2 : 3);
   let z = Math.max(0.5, (cssW * dpr) / GAME_W);
   const budget = lowGfx ? PIXEL_BUDGET.low : PIXEL_BUDGET.normal;
-  const px = GAME_W * z * (VIEW.H * z);
+  const px = GAME_W * z * (H * z);
   if (px > budget) z *= Math.sqrt(budget / px);
-  VIEW.Z = Math.max(0.5, z);
-  VIEW.PW = Math.round(GAME_W * VIEW.Z);
-  VIEW.PH = Math.round(VIEW.H * VIEW.Z);
+  const Z = Math.max(0.5, z);
+  return { H, Z, PW: Math.round(GAME_W * Z), PH: Math.round(H * Z) };
+}
+
+export function setupView(lowGfx = false) {
+  Object.assign(VIEW, idealView(lowGfx));
   return VIEW;
+}
+
+/**
+ * After a rotation / window resize: is the canvas now far enough from the window's real
+ * pixel size (or the frame shape far enough off) that it should be rebuilt to stay crisp?
+ */
+export function viewDrifted(lowGfx = false) {
+  const v = idealView(lowGfx);
+  return Math.abs(v.Z / VIEW.Z - 1) > 0.15 || Math.abs(v.H / VIEW.H - 1) > 0.08;
 }
 
 /**

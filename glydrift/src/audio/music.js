@@ -9,6 +9,7 @@
 import * as Tone from "tone";
 import { SECTIONS, TRACKS } from "./musicTracks.js";
 import { Save } from "../data/save.js";
+import { TEST } from "../systems/testFlags.js";
 
 const MINOR = [0, 2, 3, 5, 7, 8, 10];
 const PHRYGIAN = [0, 1, 3, 5, 7, 8, 10];
@@ -394,7 +395,7 @@ class MusicEngine {
 
   /** Must be called from a user gesture (iOS). Safe to call repeatedly. */
   unlock() {
-    if (this.unlocked) return;
+    if (this.unlocked || TEST.noaudio) return;
     this.unlocked = true;
     Tone.start()
       .then(() => {
@@ -404,6 +405,20 @@ class MusicEngine {
       .catch(() => {
         this.unlocked = false;
       });
+  }
+
+  /**
+   * Bring sound back after iOS suspended or "interrupted" the context (app switch, a phone
+   * call, Siri, the silent switch). Safe to call often; must run in a gesture to work on iOS.
+   */
+  revive() {
+    if (!this.unlocked) return;
+    try {
+      const ctx = Tone.getContext().rawContext;
+      if (ctx.state !== "running" && ctx.state !== "closed") ctx.resume().catch(() => {});
+    } catch {
+      /* no audio on this device */
+    }
   }
 
   build() {

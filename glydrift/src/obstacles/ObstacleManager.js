@@ -14,7 +14,7 @@ const SIG = {
   void: ["laser", "blade", "hlaser"],
   solar: ["geyser", "meteor", "firebar"],
   frozen: ["icicle", "slider", "zap"],
-  glitch: ["blink", "blaser", "zone"],
+  glitch: ["blink", "zone"], // the broken-laser wall ("blaser") was taken out
   abyss: ["tendril", "slammer", "walls"],
   valley: ["vine", "puffs", "bloom"],
   hurricane: ["debris", "bolt", "twister"],

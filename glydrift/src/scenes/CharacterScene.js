@@ -186,7 +186,8 @@ export class CharacterScene extends Phaser.Scene {
       .setAlpha(0.35);
     // heroes with perks show a PERKS section instead of the flavour line (layout moves up)
     const pk = def.perks?.list;
-    const up = pk ? 18 : 0;
+    const extra = pk ? Math.max(0, pk.length - 2) * 16 : 0; // each perk past two lifts the card
+    const up = pk ? 18 + extra * 0.7 : 0;
     const img = this.add.image(0, -50 - up, def.texture).setScale((1.25 / HI) * PORTRAIT_K);
     const name = neonText(this, 0, 70 - up * 1.2, def.name, 32, def.color, { blur: 12 });
     const rar = plainText(
@@ -197,16 +198,18 @@ export class CharacterScene extends Phaser.Scene {
       15,
       hex(RARITY[def.rarity].color),
     );
-    const desc = pk
-      ? this.add
-          .container(0, 0)
-          .add([
-            plainText(this, 0, 110, "PERKS", 14, "#ffd23f"),
-            ...pk.map((t, k) =>
-              plainText(this, 0, 130 + k * 19, `◆ ${t}`, 12, "#ffe8c0", { wrap: CARD_W - 30 }),
-            ),
-          ])
-      : plainText(this, 0, 148, def.desc, 13, "#d8d0ff", { wrap: CARD_W - 40 });
+    let desc;
+    if (pk) {
+      // stack the perk lines by their real height (a long one wraps onto two lines)
+      desc = this.add.container(0, -extra).add(plainText(this, 0, 110, "PERKS", 14, "#ffd23f"));
+      let y = 121;
+      for (const t of pk) {
+        const line = plainText(this, 0, 0, `◆ ${t}`, 12, "#ffe8c0", { wrap: CARD_W - 30 });
+        line.setY(y + line.height / 2);
+        y += line.height + 2;
+        desc.add(line);
+      }
+    } else desc = plainText(this, 0, 148, def.desc, 13, "#d8d0ff", { wrap: CARD_W - 40 });
     const lock = this.add
       .image(0, -50, "lock")
       .setScale(1.4 / HI)

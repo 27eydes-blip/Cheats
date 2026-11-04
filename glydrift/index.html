@@ -35,9 +35,55 @@
         -webkit-touch-callout: none;
         -webkit-tap-highlight-color: transparent;
       }
+      html,
+      body {
+        height: 100dvh; /* tracks Safari's address bar showing/hiding */
+      }
       #game {
         position: fixed;
         inset: 0;
+      }
+      /* the portrait game's frame on wide screens; the sides show the biome (see sideBackdrop) */
+      #game canvas {
+        box-shadow: 0 0 48px 8px rgba(0, 0, 0, 0.85);
+      }
+      #side-bg {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+      }
+      #side-bg canvas {
+        position: absolute;
+        inset: -6%;
+        width: 112%;
+        height: 112%;
+        filter: blur(20px) brightness(0.68) saturate(1.45);
+        opacity: 0;
+        transition: opacity 0.9s ease;
+      }
+      #storage-note {
+        position: fixed;
+        left: 50%;
+        bottom: calc(10px + var(--sab));
+        transform: translateX(-50%);
+        z-index: 5;
+        display: none;
+        font:
+          600 13px "Rajdhani",
+          system-ui,
+          sans-serif;
+        letter-spacing: 0.5px;
+        color: #ffd9a8;
+        background: rgba(20, 8, 2, 0.82);
+        border: 1px solid rgba(255, 170, 90, 0.6);
+        border-radius: 10px;
+        padding: 6px 12px;
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      #storage-note.show {
+        display: block;
       }
       #safe-probe {
         position: fixed;
@@ -110,7 +156,9 @@
         border: 2px solid #3ef4ff;
         border-radius: 22px;
         background: rgba(10, 4, 24, 0.97);
-        box-shadow: 0 0 28px rgba(62, 244, 255, 0.45), inset 0 0 18px rgba(62, 244, 255, 0.12);
+        box-shadow:
+          0 0 28px rgba(62, 244, 255, 0.45),
+          inset 0 0 18px rgba(62, 244, 255, 0.12);
         padding: 22px 20px 20px;
         display: flex;
         flex-direction: column;
@@ -123,7 +171,9 @@
         font-size: 22px;
         letter-spacing: 2px;
         color: #fff;
-        text-shadow: 0 0 10px #3ef4ff, 0 0 2px #3ef4ff;
+        text-shadow:
+          0 0 10px #3ef4ff,
+          0 0 2px #3ef4ff;
       }
       #name-modal p,
       #install-modal p {
@@ -241,7 +291,9 @@
     </style>
   </head>
   <body>
+    <div id="side-bg"></div>
     <div id="game"></div>
+    <div id="storage-note">Private browsing: progress won't save</div>
     <div id="safe-probe"></div>
     <div id="share-modal">
       <img alt="Glydrift result card" />

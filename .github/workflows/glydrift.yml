@@ -1,0 +1,154 @@
+name: Glydrift tests
+
+# Every push and pull request that touches the game runs the full browser suite: Chromium
+# (Chrome / Edge), Firefox and WebKit (Safari) × 7 device profiles. GitHub Pages is only
+# updated after every test has passed — a broken version never goes live.
+on:
+  push:
+    paths:
+      - "glydrift/**"
+      - ".github/workflows/glydrift.yml"
+  pull_request:
+    paths:
+      - "glydrift/**"
+      - ".github/workflows/glydrift.yml"
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Publish to GitHub Pages if every test passes"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: glydrift-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: glydrift
+
+jobs:
+  test:
+    name: Tests (${{ matrix.engine }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [chromium, firefox, webkit]
+    env:
+      CI: "true"
+      ENGINES: ${{ matrix.engine }}
+      # put "[update screenshots]" in a commit message to re-record the baseline screenshots
+      UPDATE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[update screenshots]') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: glydrift/package-lock.json
+
+      - run: npm ci
+
+      - name: Install ${{ matrix.engine }}
+        run: npx playwright install --with-deps ${{ matrix.engine }}
+
+      - name: Build (release + test builds)
+        run: npm run build && npm run build:test
+
+      - name: Run the tests
+        run: |
+          if [ "$UPDATE" = "true" ]; then
+            npx playwright test --update-snapshots=all
+          else
+            # a brand-new profile / screen records its first baseline instead of failing
+            npx playwright test --update-snapshots=missing
+          fi
+
+      - name: Collect new baseline screenshots
+        if: always()
+        run: |
+          mkdir -p ../baselines
+          git ls-files --others --modified -- tests/e2e/__screenshots__ | tar -cf ../baselines/new.tar -T - || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: baselines-${{ matrix.engine }}
+          path: baselines/new.tar
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-${{ matrix.engine }}
+          path: |
+            glydrift/playwright-report
+            glydrift/test-results
+          retention-days: 14
+
+  # New (or deliberately re-recorded) baselines go back onto the branch they came from
+  baselines:
+    name: Save baseline screenshots
+    needs: test
+    if: always() && github.event_name == 'push' && needs.test.result != 'cancelled'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: baselines-*
+          path: baselines
+      - name: Commit them
+        working-directory: .
+        run: |
+          shopt -s nullglob
+          for t in baselines/*/new.tar; do tar -xf "$t" -C glydrift; done
+          if [ -z "$(git status --porcelain -- glydrift/tests/e2e/__screenshots__)" ]; then
+            echo "No new baselines."; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add glydrift/tests/e2e/__screenshots__
+          git commit -m "Glydrift: record baseline screenshots [skip ci]"
+          git push
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: test
+    # only after every engine passed; on main, or when started by hand with "deploy"
+    if: >-
+      success() && (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'workflow_dispatch' && inputs.deploy)
+      )
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: glydrift-pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: glydrift/package-lock.json
+      - run: npm ci
+      - name: Publish
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/deploy-gh-pages.sh
