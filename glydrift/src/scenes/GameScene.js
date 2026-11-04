@@ -153,6 +153,10 @@ export class GameScene extends Phaser.Scene {
     this.game.events.on("hidden", this.onHidden, this);
     this.events.once("shutdown", () => {
       this.game.events.off("hidden", this.onHidden, this);
+      // leaving mid-Calm (pause → HOME): drop the grey filter on the shared Backdrop camera
+      // and the Calm drone / heartbeat, or they'd follow the player into every screen
+      this.setDesat(0);
+      Music.endCalm();
     });
 
     this.scene.launch("Hud", { game: this });

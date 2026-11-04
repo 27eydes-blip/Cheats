@@ -26,6 +26,7 @@ import { drawIcon } from "../ui/icons.js";
 import { askUsername } from "../ui/nameModal.js";
 import { openChest, revealHero } from "../ui/reveal.js";
 import {
+  killTweensDeep,
   button,
   drawNeonRect,
   fadeTo,
@@ -70,6 +71,7 @@ export class MenuScene extends Phaser.Scene {
     // ---- layout: one column top to bottom, spread evenly over the whole screen
     const L = this.layout(top);
     this.L = L;
+    this.showIds = null; // re-pick the showcase worlds every visit (newly reached ones too)
     this.def = getCharacter(TEST.character || s.selected);
     this.cameras.main.fadeIn(300, 2, 1, 7);
 
@@ -846,6 +848,7 @@ export class MenuScene extends Phaser.Scene {
       alpha: 0,
       duration: 160,
       onComplete: () => {
+        killTweensDeep(this, c);
         c.destroy();
         this.modal = null;
       },

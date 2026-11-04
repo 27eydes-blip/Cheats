@@ -44,6 +44,7 @@ export class PxObstacle {
     this.active = true;
     this.passed = false;
     this.centerSeen = false;
+    this.inWard = false; // RONIN's Fire Ward state from a previous use
     this.minClear = Infinity;
     this.t = 0;
     for (const o of this.objects) o.setVisible(true);

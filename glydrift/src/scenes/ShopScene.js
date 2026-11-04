@@ -29,7 +29,7 @@ import {
 import { HAT_FIT } from "../pixel/cosmeticArt.js";
 import { PORTRAIT_K } from "../pixel/common.js";
 import { greyPortrait } from "../pixel/grayHero.js";
-import { button, fadeTo, RollingCounter } from "../ui/ui.js";
+import { killTweensDeep, button, fadeTo, RollingCounter } from "../ui/ui.js";
 
 // each tab glows its own colour when selected
 const TABS = [
@@ -223,7 +223,7 @@ export class ShopScene extends Phaser.Scene {
       c.add([g, txt]);
       c.setSize(w, 96).setInteractive();
       c.on("pointerup", () => {
-        if ((this.lastTabDrag || 0) > 12) return;
+        if ((this.tabDrag?.moved || 0) > 12) return; // live drag (fires before the scene's)
         Sfx.ui();
         this.setTab(t.id);
       });
@@ -526,7 +526,7 @@ export class ShopScene extends Phaser.Scene {
     }
     c.setSize(W, H).setInteractive();
     c.on("pointerup", () => {
-      if (this.modal || (this.lastSwipe || 0) > 12) return;
+      if (this.modal || (this.drag?.moved || 0) > 12) return;
       this.pop(c);
       if (i !== this.index) this.focus(i);
     });
@@ -1192,6 +1192,7 @@ export class ShopScene extends Phaser.Scene {
   }
 
   closeModal() {
+    killTweensDeep(this, this.modal);
     this.modal?.destroy();
     this.modal = null;
   }

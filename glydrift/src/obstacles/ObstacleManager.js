@@ -50,7 +50,10 @@ export class ObstacleManager {
     this.rng = new RNG(seed);
     for (const o of this.active) o.kill();
     this.active.length = 0;
-    for (const c of this.coins) c.setActive(false).setVisible(false);
+    for (const c of this.coins) {
+      c.setActive(false).setVisible(false);
+      c.halo?.setVisible(false); // or its glow stays frozen on screen after a retry
+    }
     this.nextX = this.W + 260;
     // shop coin skin (gems / stars / hearts) and the Coin Magnet boost's pull radius
     const skin = Shop.equipped("coin");

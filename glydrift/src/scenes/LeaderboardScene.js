@@ -50,7 +50,8 @@ export class LeaderboardScene extends Phaser.Scene {
     this.cameras.main.fadeIn(200, 2, 1, 7);
     this.backdrop = this.scene.get("Backdrop");
     this.pal = blendPalette({ a: BIOMES[0], b: BIOMES[0], t: 0 }, {});
-    this.reqId = 0;
+    // keep counting up across visits: a late reply from the last visit must never match
+    this.reqId = (this.reqId || 0) + 1000;
     this.rowObjs = [];
     this.scrollY = 0;
     this.vel = 0;

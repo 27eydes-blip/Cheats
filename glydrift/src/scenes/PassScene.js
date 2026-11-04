@@ -19,7 +19,7 @@ import { HAT_FIT } from "../pixel/cosmeticArt.js";
 import { PORTRAIT_K } from "../pixel/common.js";
 import { greyPortrait } from "../pixel/grayHero.js";
 import { revealHero } from "../ui/reveal.js";
-import { button, fadeTo, RollingCounter } from "../ui/ui.js";
+import { button, fadeTo, killTweensDeep, RollingCounter } from "../ui/ui.js";
 import { ensureShopPattern, pixelText } from "./ShopScene.js";
 
 const OUT = 0x1a0630;
@@ -396,6 +396,7 @@ export class PassScene extends Phaser.Scene {
 
   /** (Re)build one tier row: bubble on the line, FREE tile left, DRIFT PASS+ card right. */
   fillRow(row) {
+    killTweensDeep(this, row); // the old tile's bounce / glow tweens
     row.removeAll(true);
     const { W } = this;
     const i = row.i;
@@ -595,7 +596,8 @@ export class PassScene extends Phaser.Scene {
       this.tweens.add({ targets: glow, alpha: 0.3, duration: 430, yoyo: true, repeat: -1 });
       c.setSize(w, h).setInteractive();
       c.on("pointerup", (p) => {
-        if ((this.lastDrag || 0) > 10 || this.busy) return;
+        // (this tile's pointerup fires before the scene's, so read the live drag)
+        if ((this.drag?.moved || 0) > 10 || this.busy) return;
         if (p.worldY < this.viewTop || p.worldY > this.viewBot) return; // under the header
         const row = c.parentContainer;
         this.claim(row.i);
