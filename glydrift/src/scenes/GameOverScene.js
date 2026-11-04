@@ -306,7 +306,7 @@ export class GameOverScene extends Phaser.Scene {
     const ranks = button(this, 283, rowY, 210, 76, "LEADERBOARD", {
       color: 0x3ef4ff,
       size: 16,
-      onClick: () => this.goto("Leaderboard", { tab: run.mode === "daily" ? "daily" : "endless" }),
+      onClick: () => this.goto("Leaderboard", { tab: run.mode === "daily" ? "daily" : "distance" }),
     });
     const heroes = button(this, 472, rowY, 140, 76, "HEROES", {
       color: 0xb45cff,
@@ -386,7 +386,10 @@ export class GameOverScene extends Phaser.Scene {
     if (set) plainText(this, W - 70, headY + 52, set.title, 14, hex(set.glow));
   }
 
-  /** "You placed #N worldwide!" once the background upload + rank lookup finish. */
+  /**
+   * Where this run placed, once the background upload + rank lookups finish:
+   * "You placed #N in Distance · #M in Score" (or "#N on today's Daily").
+   */
   showPlacement(R, run, y) {
     const token = (this.placementToken = {});
     const W = VIEW.W;
@@ -394,24 +397,37 @@ export class GameOverScene extends Phaser.Scene {
     Promise.resolve(R.upload)
       .then((up) => {
         if (!up || up.rejected) return null;
-        return Leaderboard.placementFor(Levels.forRun(run), run.score);
+        if (run.mode === "daily")
+          return Leaderboard.placementFor(Levels.daily(), run.score).then((daily) => ({ daily }));
+        return Promise.all([
+          Leaderboard.placementFor(Levels.distance(), Math.floor(run.distance)),
+          Leaderboard.placementFor(Levels.endless(), run.score),
+        ]).then(([distance, score]) => ({ distance, score }));
       })
-      .then((rank) => {
-        if (!rank || !alive()) return;
-        const where = run.mode === "daily" ? "on today's Daily" : "worldwide";
+      .then((p) => {
+        if (!p || !alive()) return;
+        const rank = Math.min(p.daily ?? Infinity, p.distance ?? Infinity, p.score ?? Infinity);
+        const msg = p.daily
+          ? `You placed #${p.daily} on today's Daily!`
+          : `You placed #${p.distance} in Distance · #${p.score} in Score`;
+        this.placementText = msg;
         const t = neonText(
           this,
           W / 2,
           y,
-          `You placed #${rank} ${where}!`,
-          26,
+          msg,
+          p.daily ? 26 : 23,
           rank <= 3 ? 0xffd23f : 0x3ef4ff,
-          { blur: 10 },
+          {
+            blur: 10,
+          },
         );
-        t.setScale(0.3).setAlpha(0);
+        t.setScale(Math.min(1, (W - 40) / Math.max(1, t.width)));
+        const full = t.scale;
+        t.setScale(0.3 * full).setAlpha(0);
         this.tweens.add({
           targets: t,
-          scale: 1,
+          scale: full,
           alpha: 1,
           duration: 420,
           ease: "Back.easeOut",
@@ -419,7 +435,7 @@ export class GameOverScene extends Phaser.Scene {
         });
         this.tweens.add({
           targets: t,
-          scale: 1.06,
+          scale: full * 1.06,
           yoyo: true,
           repeat: 2,
           delay: 450,

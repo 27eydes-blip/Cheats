@@ -6,6 +6,10 @@
 //    when the device comes back online). Only personal bests are written.
 //  - Table "scores": one row per (player_id, level); RLS lets anyone read and players write
 //    only their own row. Only the publishable key is used here.
+//  - Two endless boards: SCORE (level "endless") and DISTANCE (level "endless-distance", where
+//    the row's score is the run's metres). Every endless run submits to both; the Daily has
+//    one score board. Rows also carry `distance` once the database has that column
+//    (supabase/migrations); until then it is simply left out.
 import { SUPABASE, WORLD } from "../config.js";
 import { dailyNumber } from "../data/rng.js";
 import { Save } from "../data/save.js";
@@ -24,8 +28,10 @@ const PREFIX =
 
 export const Levels = {
   endless: () => `${PREFIX}endless`,
+  distance: () => `${PREFIX}endless-distance`,
   daily: (n = dailyNumber()) => `${PREFIX}daily-${n}`,
   forRun: (run) => (run.mode === "daily" ? Levels.daily() : Levels.endless()),
+  isDistance: (level) => level.endsWith("endless-distance"),
 };
 
 const TIMEOUT_MS = 8000;
@@ -80,8 +86,86 @@ export function isPlausible(run) {
   return score <= maxScore;
 }
 
+/** The column a "no such column" error is about (PostgREST PGRST204 / Postgres 42703). */
+function missingColumn(err, cols) {
+  if (err?.code !== "PGRST204" && err?.code !== "42703") return null;
+  const msg = `${err.message || ""} ${err.details || ""}`;
+  return (
+    cols.find((c) => msg.includes(`'${c}'`) || msg.includes(`"${c}"`) || msg.includes(c)) || null
+  );
+}
+
+// ---- test builds (?lbmock): a deterministic board of sample players, no network ----
+const MOCK_NAMES = [
+  "NeonAce",
+  "VoidKid",
+  "Starling",
+  "ZipZap",
+  "Kestrel",
+  "Lumen",
+  "Rogue7",
+  "Pixelle",
+  "Comet",
+  "Wisp",
+  "Drifter",
+  "Nova",
+  "Halo",
+  "Blaze",
+  "Frost",
+  "Echo",
+  "Rift",
+  "Glimmer",
+  "Orbit",
+  "Spark",
+  "Vex",
+  "Juno",
+  "Flux",
+  "Talon",
+  "Mira",
+  "Quill",
+  "Rune",
+  "Sable",
+  "Tempo",
+  "Umbra",
+  "Vale",
+  "Wren",
+  "Xeno",
+  "Yara",
+  "Zed",
+  "Aero",
+  "Bolt",
+  "Cinder",
+  "Dusk",
+];
+const MOCK_HEROES = ["volt", "ember", "ronin", "frost", "pengu", "glitch", "levijr"];
+function mockRows(level, period) {
+  const dist = Levels.isDistance(level);
+  const top = (dist ? 9200 : 15800) * (period === "today" ? 0.42 : period === "week" ? 0.7 : 1);
+  return MOCK_NAMES.map((name, i) => ({
+    player_id: `mock-${i}`,
+    username: name,
+    score: Math.round(top * Math.pow(0.955, i) + (dist ? 0 : 7) * (i % 3)),
+    character: MOCK_HEROES[i % MOCK_HEROES.length],
+    created_at: "2026-11-04T10:00:00Z",
+  }));
+}
+function mockBoard(level, period, username) {
+  const rows = mockRows(level, period);
+  const me = { username: username || "YOU", character: "volt", created_at: "2026-11-04T11:00:00Z" };
+  // you: just inside the list on the all-time boards, outside the top 100 on daily
+  const rank = level.includes("daily") ? 142 : 12;
+  me.score = level.includes("daily") ? 420 : Math.round(rows[rank - 1].score - 3);
+  if (rank <= rows.length) rows.splice(rank - 1, 0, { ...me, player_id: "me" });
+  return { rows: rows.slice(0, 100), me: { ...me, rank }, userId: "me" };
+}
+function mockRank(level, value) {
+  const rows = mockRows(level, "all");
+  return rows.filter((r) => r.score > value).length + 1;
+}
+
 class LeaderboardService {
   constructor() {
+    this.cols = {}; // optional columns known to be missing on the server (false)
     this.clientPromise = null;
     this.sessionPromise = null;
     this.userId = null;
@@ -175,7 +259,7 @@ class LeaderboardService {
    * @returns Promise resolving to { uploaded, queued, rejected }
    */
   submitRun(run) {
-    // runs that used a shop Boost never reach the leaderboard (coins can't buy rank)
+    // runs that used a shop Boost never reach either board (coins can't buy rank)
     if (run.boosted) return Promise.resolve({ rejected: true, boosted: true });
     const entry = {
       type: "score",
@@ -183,11 +267,23 @@ class LeaderboardService {
       score: Math.round(run.score),
       character: run.char,
       run_time_ms: Math.round(run.runTimeMs ?? 0),
-      distance: run.distance,
+      distance: Math.floor(run.distance || 0),
     };
+    // an impossible run (score or distance too high for its run time) goes to neither board
     if (!isPlausible({ ...entry, run_time_ms: entry.run_time_ms })) {
       return Promise.resolve({ rejected: true });
     }
+    if (TEST.lbmock) return Promise.resolve({ uploaded: 2, queued: 0, mock: true });
+    this.enqueue(entry);
+    // endless runs also go on the DISTANCE board (its "score" is the metres flown)
+    if (run.mode !== "daily" && entry.distance > 0)
+      this.enqueue({ ...entry, level: Levels.distance(), score: entry.distance });
+    Save.write();
+    return this.flush();
+  }
+
+  /** Keep only the best pending entry per level. */
+  enqueue(entry) {
     const q = this.data.lbQueue;
     // keep only the best pending score per level
     // (never merge into the entry an upload is sending right now: that new best would be lost)
@@ -200,12 +296,11 @@ class LeaderboardService {
       q.push(entry);
       while (q.length > MAX_QUEUE) q.shift();
     }
-    Save.write();
-    return this.flush();
   }
 
   /** Upload queued operations. Safe to call any time; concurrent calls share one run. */
   flush() {
+    if (TEST.lbmock) return Promise.resolve({ uploaded: 0, queued: 0 });
     if (this.flushing) return this.flushing;
     this.flushing = (async () => {
       const result = { uploaded: 0, queued: 0 };
@@ -267,20 +362,33 @@ class LeaderboardService {
       .maybeSingle();
     if (e1) throw e1;
     if (existing && existing.score >= op.score) return false;
-    const { error } = await sb.from("scores").upsert(
-      {
-        player_id: this.userId,
-        username: this.username,
-        level: op.level,
-        score: op.score,
-        character: op.character,
-        run_time_ms: op.run_time_ms,
-        created_at: new Date().toISOString(),
-      },
-      { onConflict: "player_id,level" },
-    );
+    const row = {
+      player_id: this.userId,
+      username: this.username,
+      level: op.level,
+      score: op.score,
+      character: op.character,
+      run_time_ms: op.run_time_ms,
+      created_at: new Date().toISOString(),
+    };
+    // optional columns the database may not have yet (added by supabase/migrations)
+    for (const [col, v] of Object.entries(this.extraColumns(op)))
+      if (this.cols[col] !== false && v != null) row[col] = v;
+    let { error } = await sb.from("scores").upsert(row, { onConflict: "player_id,level" });
+    const missing = error && missingColumn(error, Object.keys(this.extraColumns(op)));
+    if (missing) {
+      // an older database: remember the column isn't there and send the row without it
+      this.cols[missing] = false;
+      delete row[missing];
+      ({ error } = await sb.from("scores").upsert(row, { onConflict: "player_id,level" }));
+    }
     if (error) throw error;
     return true;
+  }
+
+  /** Columns added by the migrations (distance; title is added by the titles feature). */
+  extraColumns(op) {
+    return { distance: op.distance };
   }
 
   // ---------------------------------------------------------------- reading
@@ -310,6 +418,7 @@ class LeaderboardService {
 
   /** Top 100 for a level + the player's own row and rank (even outside the top 100). */
   async board(level, period = "all") {
+    if (TEST.lbmock) return mockBoard(level, period, this.username);
     try {
       const sb = await this.session();
       const since = LeaderboardService.since(period);
@@ -352,6 +461,7 @@ class LeaderboardService {
 
   /** Worldwide placement of a single run's score among other players (all time). */
   async placementFor(level, score) {
+    if (TEST.lbmock) return mockRank(level, score);
     const sb = await this.session();
     const { count, error } = await sb
       .from("scores")
@@ -365,3 +475,6 @@ class LeaderboardService {
 }
 
 export const Leaderboard = new LeaderboardService();
+
+// test builds only: let automated tests reach the board logic directly
+if (TEST.on && typeof window !== "undefined") window.__glyLb = { Leaderboard, Levels, isPlausible };

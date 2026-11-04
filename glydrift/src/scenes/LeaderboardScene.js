@@ -1,4 +1,5 @@
-// Worldwide leaderboard: Endless (All Time / This Week / Today) and today's Daily Challenge.
+// Worldwide leaderboards: DISTANCE (farthest metres in one run) and SCORE (highest score),
+// each All Time / This Week / Today, plus today's Daily Challenge.
 // Top 100 with medals for the top 3, the player's own row pinned at the bottom with their
 // real rank (even outside the top 100), plus loading / empty / offline states.
 import Phaser from "phaser";
@@ -18,6 +19,7 @@ const MEDALS = [0xffd23f, 0xdfe8f5, 0xd8894a];
 const ROW_H = 68;
 const CYAN = 0x3ef4ff;
 const STEEL = 0x2a6a88; // idle HUD lines
+const TAB_W = 212; // three tabs: DISTANCE · SCORE · DAILY
 
 /** A HUD panel: a rectangle with cut (chamfered) corners, a neon rim and an optional glow. */
 function hudPanel(g, x, y, w, h, opts = {}) {
@@ -85,7 +87,7 @@ export class LeaderboardScene extends Phaser.Scene {
   }
 
   init(data) {
-    this.tab = data?.tab === "daily" ? "daily" : "endless";
+    this.tab = ["daily", "score", "distance"].includes(data?.tab) ? data.tab : "distance";
     this.period = "all";
     this.returnTo = data?.from || "Menu";
   }
@@ -144,14 +146,15 @@ export class LeaderboardScene extends Phaser.Scene {
     // tabs
     this.tabY = top + 124;
     this.tabs = [
-      { key: "endless", label: "ENDLESS" },
+      { key: "distance", label: "DISTANCE" },
+      { key: "score", label: "SCORE" },
       { key: "daily", label: `DAILY #${dailyNumber()}` },
     ].map((t, i) => {
-      const x = W / 2 + (i - 0.5) * 300;
+      const x = W / 2 + (i - 1) * TAB_W;
       const g = this.add.graphics().setDepth(50);
       const txt = neonText(this, x, this.tabY, t.label, 20, 0x3ef4ff, { blur: 6 }).setDepth(51);
       const zone = this.add
-        .zone(x, this.tabY, 290, 64)
+        .zone(x, this.tabY, TAB_W - 10, 64)
         .setInteractive({ useHandCursor: true })
         .setDepth(52);
       zone.on("pointerup", () => {
@@ -179,7 +182,7 @@ export class LeaderboardScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
         .setDepth(52);
       zone.on("pointerup", () => {
-        if (this.tab === "endless" && this.period !== f.key) {
+        if (this.tab !== "daily" && this.period !== f.key) {
           this.period = f.key;
           this.refreshChrome();
           this.fetchBoard();
@@ -310,7 +313,7 @@ export class LeaderboardScene extends Phaser.Scene {
     for (const t of this.tabs) {
       const on = t.key === this.tab;
       t.g.clear();
-      hudPanel(t.g, t.x - 145, this.tabY - 32, 290, 64, {
+      hudPanel(t.g, t.x - TAB_W / 2 + 5, this.tabY - 32, TAB_W - 10, 64, {
         color: on ? CYAN : STEEL,
         fill: on ? 0x0b2a3a : 0x050d18,
         fillAlpha: 0.95,
@@ -320,13 +323,13 @@ export class LeaderboardScene extends Phaser.Scene {
       });
       if (on) {
         // active tab: a lit underline with tick marks
-        t.g.fillStyle(CYAN, 0.9).fillRect(t.x - 60, this.tabY + 22, 120, 3);
-        for (const dx of [-80, 72])
+        t.g.fillStyle(CYAN, 0.9).fillRect(t.x - 44, this.tabY + 22, 88, 3);
+        for (const dx of [-62, 54])
           t.g.fillStyle(CYAN, 0.6).fillRect(t.x + dx, this.tabY + 22, 8, 3);
       }
       t.txt.setAlpha(on ? 1 : 0.55);
     }
-    const showFilters = this.tab === "endless";
+    const showFilters = this.tab !== "daily";
     for (const f of this.filters) {
       const on = f.key === this.period;
       f.g.clear();
@@ -346,7 +349,13 @@ export class LeaderboardScene extends Phaser.Scene {
   }
 
   get level() {
-    return this.tab === "daily" ? Levels.daily() : Levels.endless();
+    if (this.tab === "daily") return Levels.daily();
+    return this.tab === "distance" ? Levels.distance() : Levels.endless();
+  }
+
+  /** A board value as shown: metres on the distance board, points elsewhere. */
+  fmt(v) {
+    return this.tab === "distance" ? `${v} m` : `${v}`;
   }
 
   /** A small gold perk badge (a coin with a flame) next to heroes that have perks. */
@@ -554,7 +563,7 @@ export class LeaderboardScene extends Phaser.Scene {
         this,
         cx,
         top - 24,
-        `${r.score}`,
+        this.fmt(r.score),
         spec.rank === 1 ? 30 : 24,
         spec.color,
         {
@@ -745,10 +754,18 @@ export class LeaderboardScene extends Phaser.Scene {
       const name = plainText(this, 182, y - 6, r.username, 24, mine ? "#3ef4ff" : "#ffffff", {
         ox: 0,
       });
-      const score = plainText(this, W - 48, y, `${r.score}`, 22, mine ? "#3ef4ff" : "#e8f8ff", {
-        ox: 1,
-        font: FONT,
-      });
+      const score = plainText(
+        this,
+        W - 48,
+        y,
+        this.fmt(r.score),
+        22,
+        mine ? "#3ef4ff" : "#e8f8ff",
+        {
+          ox: 1,
+          font: FONT,
+        },
+      );
       this.list.add([g, rankTxt, icon, name, score]);
       if (def.perks) this.list.add(this.perkBadge(164, y + 16));
       this.heroTip(this.list, icon, def);
@@ -767,7 +784,7 @@ export class LeaderboardScene extends Phaser.Scene {
     if (!me) {
       const msg = offline
         ? "Your rank shows up when you're back online"
-        : this.tab === "endless" && this.period !== "all"
+        : this.tab !== "daily" && this.period !== "all"
           ? `No best run ${this.period === "week" ? "this week" : "today"} yet — go fly!`
           : "Not ranked yet — finish a run to get on the board";
       this.you.add(plainText(this, 56, -16, name, 22, "#3ef4ff", { ox: 0 }));
@@ -778,8 +795,20 @@ export class LeaderboardScene extends Phaser.Scene {
     this.you.add(neonText(this, 80, 0, `#${me.rank}`, 30, 0x3ef4ff, { blur: 8 }));
     this.you.add(heroImage(this, 150, 0, def.id, 0.4 / HI));
     this.you.add(plainText(this, 192, -12, name, 24, "#ffffff", { ox: 0 }));
-    this.you.add(plainText(this, 192, 16, "YOUR BEST", 14, "#9c90c8", { ox: 0 }));
-    this.you.add(neonText(this, W - 56, 0, `${me.score}`, 28, 0x3ef4ff, { ox: 1, blur: 8 }));
+    this.you.add(
+      plainText(
+        this,
+        192,
+        16,
+        this.tab === "distance" ? "YOUR FARTHEST" : "YOUR BEST",
+        14,
+        "#9c90c8",
+        {
+          ox: 0,
+        },
+      ),
+    );
+    this.you.add(neonText(this, W - 56, 0, this.fmt(me.score), 28, 0x3ef4ff, { ox: 1, blur: 8 }));
   }
 
   setScroll(v) {

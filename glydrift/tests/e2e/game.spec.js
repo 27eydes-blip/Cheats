@@ -803,3 +803,65 @@ test("realm changes never pause the run", async ({ page }, testInfo) => {
   expect(settled).toBeLessThan(0.75);
   expect(log.errors).toEqual([]);
 });
+
+test("two leaderboards: distance and score", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { flags: ["lbmock"] });
+  await tap(page, "LEADERBOARD", 1600);
+  await waitFor(page, () => window.__glydrift.scene.isActive("Leaderboard"));
+  const view = () =>
+    page.evaluate(() => {
+      const s = window.__glydrift.scene.getScene("Leaderboard");
+      const texts = (c) =>
+        c.list.flatMap((o) => (o.type === "Text" ? [o.text] : o.list ? texts(o) : []));
+      return {
+        tab: s.tab,
+        tabs: s.tabs.map((t) => t.txt.text),
+        filters: s.filters.filter((f) => f.txt.visible).map((f) => f.txt.text),
+        rows: texts(s.list),
+        you: texts(s.you),
+      };
+    });
+  await run(page, 1200);
+  let v = await view();
+  expect(v.tabs).toEqual(["DISTANCE", "SCORE", expect.stringMatching(/^DAILY #\d+$/)]);
+  expect(v.tab).toBe("distance");
+  expect(v.filters).toEqual(["ALL TIME", "THIS WEEK", "TODAY"]);
+  expect(v.rows.some((t) => /^\d+ m$/.test(t))).toBe(true); // metres on the distance board
+  expect(v.you).toEqual(expect.arrayContaining(["#12", "YOUR FARTHEST"])); // own rank pinned
+  await snap(page, testInfo, "13-leaderboard-distance");
+  await tap(page, "SCORE", 1200);
+  v = await view();
+  expect(v.tab).toBe("score");
+  expect(v.filters).toEqual(["ALL TIME", "THIS WEEK", "TODAY"]);
+  expect(v.rows.some((t) => /^\d+ m$/.test(t))).toBe(false);
+  expect(v.you).toEqual(expect.arrayContaining(["#12", "YOUR BEST"]));
+  await snap(page, testInfo, "14-leaderboard-score");
+  // impossible distances for the run time are rejected before upload
+  const plausible = await page.evaluate(() => {
+    const { isPlausible } = window.__glyLb;
+    return {
+      real: isPlausible({ score: 3000, distance: 1700, run_time_ms: 80_000 }),
+      teleport: isPlausible({ score: 3000, distance: 9000, run_time_ms: 20_000 }),
+    };
+  });
+  expect(plausible).toEqual({ real: true, teleport: false });
+  expect(log.errors).toEqual([]);
+});
+
+test("game over shows the distance and score placements", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { flags: ["god", "lbmock"] });
+  await startRun(page);
+  await run(page, 4000);
+  await page.evaluate(() => window.__glyGod(false));
+  let msg = null;
+  for (let i = 0; i < 80 && !msg; i++) {
+    await run(page, 250);
+    msg = await page.evaluate(
+      () => window.__glydrift.scene.getScene("GameOver")?.placementText || null,
+    );
+  }
+  expect(msg).toMatch(/^You placed #\d+ in Distance · #\d+ in Score$/);
+  expect(log.errors).toEqual([]);
+});
