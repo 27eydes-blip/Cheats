@@ -105,10 +105,15 @@ export function mergeSaves(local, cloud) {
     claimed: union(base.pass?.claimed, other.pass?.claimed),
   };
   base.seasons = mergeSeasons(base.seasons, other.seasons);
+  const later = (x, y) => ((x || "") > (y || "") ? x : y) || "";
   base.login = {
     ...(base.login || {}),
     streak: Math.max(base.login?.streak || 0, other.login?.streak || 0),
+    // a reward claimed on either side today stays claimed (no double daily reward)
+    claimed: later(base.login?.claimed, other.login?.claimed),
+    last: later(base.login?.last, other.login?.last),
   };
+  base.dailyDrop = later(base.dailyDrop, other.dailyDrop);
   if (!base.profile?.username && other.profile?.username) base.profile = { ...other.profile };
   // a selected hero / equipped item the merged save doesn't own falls back safely
   if (!base.unlocked[base.selected]) base.selected = "volt";

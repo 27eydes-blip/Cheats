@@ -4,8 +4,8 @@
 // Every reward is cosmetic: nothing here touches speed, hitbox, score or leaderboards.
 import { Save } from "./save.js";
 import { Seasons } from "./seasons.js";
-import { DriftPass } from "./driftPass.js";
-import { getCosmetic, Shop } from "./cosmetics.js";
+import { DriftPass, giveReward } from "./driftPass.js";
+import { getCosmetic } from "./cosmetics.js";
 import { Titles } from "./titles.js";
 
 export const PLUS_PRICE_LABEL = "$3.99";
@@ -71,8 +71,9 @@ export const PassPlus = {
       s.banners.owned[r.banner] = true;
       s.banners.equipped = r.banner;
       out = { banner: r.banner };
-    } else if (r.pod) {
-      out = { pod: Shop.openPod({ free: true }) };
+    } else if (r.hero || r.shards || r.pod) {
+      // pass heroes unlock here and only here; shards go to the next shard hero as usual
+      out = giveReward(r);
     }
     Save.write();
     return out;

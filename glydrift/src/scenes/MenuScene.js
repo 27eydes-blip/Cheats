@@ -85,6 +85,8 @@ export class MenuScene extends Phaser.Scene {
     const s = Save.data;
     this.leaving = false;
     this.modal = null;
+    this.claiming = false;
+    this.seasonBusy = false;
     // private browsing / blocked storage: the game runs, but say that progress won't save
     const note = document.getElementById("storage-note");
     if (note && !Save.canPersist()) {
@@ -132,7 +134,6 @@ export class MenuScene extends Phaser.Scene {
       this.buildSeasonBanner(L.banner);
       if (Seasons.needsHeroReveal()) this.seasonQueue.push(() => this.newHeroReveal());
     }
-    this.queueT = 1.2;
     // hidden music test: tap the logo 5 times
     this.logoTaps = 0;
     this.logo.setInteractive().on("pointerdown", () => {
@@ -325,16 +326,17 @@ export class MenuScene extends Phaser.Scene {
     }
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.updateCountdown() });
 
-    // ---- daily login reward (single source of truth: Progression.loginStatus)
-    // first launch: pick a leaderboard name, then the daily reward
-    const ls = Progression.loginStatus();
-    if (!Leaderboard.username) {
-      this.time.delayedCall(450, () =>
-        this.promptName(true).then(() => ls.canClaim && this.openLogin(ls)),
-      );
-    } else if (ls.canClaim) {
-      this.time.delayedCall(600, () => this.openLogin(ls));
-    }
+    // ---- one pop-up at a time on arrival (first launch, or a fresh guest after logging out):
+    // pick a name → the daily reward (chest + coins) → season recaps → the NEW HERO reveal.
+    // Each waits until the one before has fully finished (see update()).
+    this.seasonQueue.unshift(
+      () => (!Leaderboard.username ? this.promptName(true) : null),
+      () => {
+        const ls = Progression.loginStatus();
+        if (ls.canClaim) this.openLogin(ls);
+      },
+    );
+    this.queueT = 0.45;
 
     this.input.keyboard?.on("keydown-SPACE", () => this.startGame("normal"));
   }
@@ -762,14 +764,8 @@ export class MenuScene extends Phaser.Scene {
           r.setFillStyle(Phaser.Display.Color.HSVToRGB((r.ph * 0.2) % 1, 0.5, 1).color);
       }
     }
-    // one season moment at a time: recaps, then the new hero reveal
-    if (
-      this.seasonQueue?.length &&
-      !this.modal &&
-      !this.naming &&
-      !this.seasonBusy &&
-      !this.leaving
-    ) {
+    // one arrival pop-up at a time: name, daily reward, recaps, then the new hero reveal
+    if (this.seasonQueue?.length && !this.seasonBusy && !this.leaving && this.popupFree()) {
       this.queueT -= dt;
       if (this.queueT <= 0) {
         this.seasonBusy = true;
@@ -781,12 +777,21 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
+  /** Nothing is on screen that another pop-up would land on top of. */
+  popupFree() {
+    if (this.modal || this.naming || this.claiming) return false;
+    // the account / name screens are page overlays, opened from elsewhere too
+    return !document.querySelector("#account-modal.open, #name-modal.open");
+  }
+
   /** First open of a season: the NEW HERO reveal for its featured character. */
   async newHeroReveal() {
     const s = this.season;
     const def = getCharacter(s.featuredHero);
     Seasons.markHeroSeen();
+    this.revealing = true;
     await revealHero(this, def, { title: `NEW HERO · SEASON ${s.number}` });
+    this.revealing = false;
     const tier = s.pass.tiers.findIndex((t) => t.hero === def.id) + 1;
     toast(this, `${def.name} IS HERE`, Seasons.colors(s).accent, {
       y: this.H * 0.3,
@@ -968,6 +973,8 @@ export class MenuScene extends Phaser.Scene {
     const res = Progression.claimLogin();
     this.closeModal();
     if (!res) return;
+    // the chest, the coins and any unlock reveal play out before the next pop-up may show
+    this.claiming = true;
     // the reward comes out of a chest that shakes and bursts open
     const { x, y } = await openChest(this, this.W / 2, this.H * 0.46);
     Sfx.reward();
@@ -1011,14 +1018,18 @@ export class MenuScene extends Phaser.Scene {
       });
     }
     this.time.delayedCall(700, () => this.coinCounter.to(Save.data.coins, 800));
-    // a streak hero unlocked by this login (Bao)
-    if (res.unlocks?.length)
-      this.time.delayedCall(1700, () => revealHero(this, res.unlocks[0], { title: "UNLOCKED!" }));
+    // a streak hero unlocked by this login (Bao), or a hero completed by its shard
+    const unlocked = [
+      ...(res.unlocks || []),
+      ...(res.shardResult?.unlocked ? [getCharacter(res.shardResult.id)] : []),
+    ];
+    this.time.delayedCall(1600, async () => {
+      for (const def of unlocked) await revealHero(this, def, { title: "UNLOCKED!" });
+      this.claiming = false;
+    });
     if (res.shardResult?.id) {
       const def = getCharacter(res.shardResult.id);
-      if (res.shardResult.unlocked) {
-        this.time.delayedCall(1500, () => revealHero(this, def, { title: "UNLOCKED!" }));
-      } else {
+      if (!res.shardResult.unlocked) {
         toast(this, `${def.name} SHARD`, def.color, {
           y: this.H * 0.3,
           sub: `${res.shardResult.count}/${res.shardResult.need} shards`,

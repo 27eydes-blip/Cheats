@@ -1,5 +1,6 @@
 // Pure data for the character roster (no Phaser imports, safe to use in systems).
 import { ANIMALS } from "./animalDefs.js";
+import { PASS_HEROES } from "./passHeroDefs.js";
 
 export const CHARACTERS = [
   {
@@ -940,6 +941,7 @@ export const CHARACTERS = [
     desc: "Rides the storm.",
   },
   ...ANIMALS,
+  ...PASS_HEROES,
 ];
 
 /** Heroes that can only be won from the Lucky Spin. */

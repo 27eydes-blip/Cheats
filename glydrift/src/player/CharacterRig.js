@@ -908,13 +908,14 @@ export class CharacterRig {
           : [0, 1, 2, 1][Math.floor(this.time * 6) % 4];
     else f = wingFrame;
     sp.setFrame(this.px.frames[Math.min(this.px.frames.length - 1, f)]);
-    // Drift Pass+ skins draw the hero a little smaller (~10%, snapped down to eighth steps so
+    // Drift Pass+ skins draw the hero a little smaller (~10%, snapped down to 1/32 steps so
     // the shrink survives the pixel grid). Purely visual: the hitbox (Player.radius) is unchanged.
-    const vs = this.skin?.visualScale ?? 1;
+    // (DRIFT PASS+ heroes are drawn smaller the same way: def.visualScale)
+    const vs = Math.min(this.skin?.visualScale ?? 1, this.def.visualScale ?? 1);
     const m =
       vs === 1
         ? Math.max(0.5, Math.round(this.sizeMul * this.displayScale * 2) / 2)
-        : Math.max(0.5, Math.floor(this.sizeMul * this.displayScale * vs * 8) / 8);
+        : Math.max(0.5, Math.floor(this.sizeMul * this.displayScale * vs * 32) / 32);
     const flip = this.gravityDir < 0 ? -1 : 1;
     sp.setPosition(Math.round(this.x + this.offX), Math.round(this.y + this.offY));
     sp.setAngle(Math.round(this.angle / 15) * 15);

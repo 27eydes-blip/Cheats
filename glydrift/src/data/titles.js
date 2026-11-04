@@ -171,7 +171,7 @@ export const TITLES = [
     source: "plus",
     style: "shimmer",
     color: "#ff3a4a",
-    how: "Drift Pass+ · Season 1, tier 10",
+    how: "Drift Pass+ · Season 1, tier 7",
   },
   {
     id: "p_neonroyal",
@@ -179,7 +179,7 @@ export const TITLES = [
     source: "plus",
     style: "shift",
     color: "#ff4fd8",
-    how: "Drift Pass+ · Season 1, tier 25",
+    how: "Drift Pass+ · Season 1, tier 27",
   },
   {
     id: "p_starborn",
@@ -187,7 +187,7 @@ export const TITLES = [
     source: "plus",
     style: "glow",
     color: "#ffd23f",
-    how: "Drift Pass+ · Season 1, tier 40",
+    how: "Drift Pass+ · Season 1, tier 42",
   },
 ];
 
