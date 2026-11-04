@@ -107,7 +107,11 @@ test("loads with no console errors, framed correctly, no browser gestures", asyn
 });
 
 test("release build loads with no console errors", async ({ page }) => {
-  // the release build exposes no test hooks: openGame waits for its canvas and lets it run
+  // the release build exposes no test hooks: openGame waits for its canvas and lets it run.
+  // It draws every frame, and the test clock ticks every 16 ms (a hair faster than a real
+  // 60 Hz screen), so with no frame cap it renders twice what it did under the old 61 fps
+  // cap: give it the time.
+  test.setTimeout(240_000);
   const log = await openGame(page, {
     base: "http://localhost:4318",
     screen: null,
