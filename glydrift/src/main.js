@@ -18,6 +18,7 @@ import { LeaderboardScene } from "./scenes/LeaderboardScene.js";
 import { MenuScene } from "./scenes/MenuScene.js";
 import { MusicTestScene } from "./scenes/MusicTestScene.js";
 import { ProgressScene } from "./scenes/ProgressScene.js";
+import { TitlesScene } from "./scenes/TitlesScene.js";
 import { SpinScene } from "./scenes/SpinScene.js";
 import { ShopScene } from "./scenes/ShopScene.js";
 import { PassScene } from "./scenes/PassScene.js";
@@ -152,6 +153,7 @@ async function boot() {
       SpinScene,
       ShopScene,
       PassScene,
+      TitlesScene,
       MusicTestScene,
     ],
   });

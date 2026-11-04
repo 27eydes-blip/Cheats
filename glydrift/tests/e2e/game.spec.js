@@ -996,3 +996,70 @@ test("cloud save merge keeps the most progress", async ({ page }, testInfo) => {
   expect(m.pass.claimed).toEqual({ 0: true, 1: true });
   expect(m.settings).toEqual({ musicVol: 0.2 }); // this device's settings stay
 });
+
+test("titles: earn, wear, and see them on the leaderboard and game over", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, {
+    flags: ["lbmock", "god"],
+    save: {
+      ...SAVE,
+      achievements: { daredevil: true, first: true },
+      stats: { maxDistance: 3200, runs: 30 },
+    },
+  });
+  // earned from an achievement and the distance leagues; Drift Pass+ ones are not
+  const owned = await page.evaluate(() => {
+    const T = window.__glyTitles;
+    T.sync();
+    return {
+      daredevil: T.owns("t_daredevil"),
+      gold: T.owns("t_gold"),
+      diamond: T.owns("t_diamond"),
+      plusWear: T.equip("p_starborn"),
+    };
+  });
+  expect(owned).toEqual({ daredevil: true, gold: true, diamond: false, plusWear: false });
+  // wear one through the Titles screen (Progress → TITLES)
+  await tap(page, "PROGRESS", 1200);
+  await waitFor(page, () => window.__glydrift.scene.isActive("Progress"));
+  await tap(page, "TITLES", 1200);
+  await waitFor(page, () => window.__glydrift.scene.isActive("Titles"));
+  await run(page, 600);
+  await tap(page, "GOLD LEAGUE", 600);
+  expect(await page.evaluate(() => window.__glyTitles.equippedId())).toBe("t_gold");
+  await snap(page, testInfo, "17-titles");
+  // under your name on the leaderboard (pinned row)…
+  await page.evaluate(() => window.__glydrift.scene.getScene("Titles").scene.start("Leaderboard"));
+  await waitFor(page, () => window.__glydrift.scene.isActive("Leaderboard"));
+  await run(page, 1200);
+  const you = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Leaderboard");
+    const texts = (c) =>
+      c.list.flatMap((o) => (o.type === "Text" ? [o.text] : o.list ? texts(o) : []));
+    return texts(s.you);
+  });
+  expect(you).toContain("GOLD LEAGUE");
+  // …and on the game over screen
+  await page.evaluate(() => window.__glydrift.scene.getScene("Leaderboard").scene.start("Menu"));
+  await waitFor(page, () => window.__glydrift.scene.isActive("Menu"));
+  await run(page, 1000);
+  await startRun(page);
+  await page.evaluate(() => window.__glyGod(false));
+  for (
+    let i = 0;
+    i < 60 && !(await page.evaluate(() => window.__glydrift.scene.isActive("GameOver")));
+    i++
+  )
+    await run(page, 250);
+  await run(page, 600);
+  const go = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("GameOver");
+    const texts = (c) =>
+      c.list.flatMap((o) => (o.type === "Text" ? [o.text] : o.list ? texts(o) : []));
+    return texts(s.children);
+  });
+  expect(go).toContain("GOLD LEAGUE");
+  expect(log.errors).toEqual([]);
+});

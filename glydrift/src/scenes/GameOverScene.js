@@ -3,7 +3,9 @@
 // buttons never count as "retry".
 import Phaser from "phaser";
 import { heroImage } from "../ui/heroImage.js";
-import { Shop } from "../data/cosmetics.js";
+import { Save } from "../data/save.js";
+import { Titles } from "../data/titles.js";
+import { titleText } from "../ui/titleText.js";
 import { BIOMES, biomeName } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, VIEW } from "../config.js";
 import { HI } from "../gfx/textures.js";
@@ -381,9 +383,11 @@ export class GameOverScene extends Phaser.Scene {
     // the hero you flew with
     const def = getCharacter(run.char);
     heroImage(this, W - 70, headY + 4, def.id, 0.5 / HI);
-    // a completed Collection's title rides under your hero
-    const set = Shop.activeSet();
-    if (set) plainText(this, W - 70, headY + 52, set.title, 14, hex(set.glow));
+    // your name and title ride under your hero
+    const name = Save.data.profile?.username;
+    if (name) plainText(this, W - 70, headY + 50, name, 15, "#ffffff");
+    const title = Titles.equippedId();
+    if (title) titleText(this, W - 70, headY + 70, title, { size: 12 });
   }
 
   /**

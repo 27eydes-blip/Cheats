@@ -13,6 +13,7 @@
 import { SUPABASE, WORLD } from "../config.js";
 import { dailyNumber } from "../data/rng.js";
 import { Save } from "../data/save.js";
+import { Titles } from "../data/titles.js";
 import { TEST } from "../systems/testFlags.js";
 
 // ?lbtest routes all reads/writes to "test-…" levels so testing never touches the real boards
@@ -138,6 +139,16 @@ const MOCK_NAMES = [
   "Dusk",
 ];
 const MOCK_HEROES = ["volt", "ember", "ronin", "frost", "pengu", "glitch", "levijr"];
+const MOCK_TITLES = [
+  "p_neonroyal",
+  "t_diamond",
+  null,
+  "t_gold",
+  "p_abysslord",
+  "t_daredevil",
+  null,
+  "t_silver",
+];
 function mockRows(level, period) {
   const dist = Levels.isDistance(level);
   const top = (dist ? 9200 : 15800) * (period === "today" ? 0.42 : period === "week" ? 0.7 : 1);
@@ -146,12 +157,18 @@ function mockRows(level, period) {
     username: name,
     score: Math.round(top * Math.pow(0.955, i) + (dist ? 0 : 7) * (i % 3)),
     character: MOCK_HEROES[i % MOCK_HEROES.length],
+    title: MOCK_TITLES[i % MOCK_TITLES.length],
     created_at: "2026-11-04T10:00:00Z",
   }));
 }
 function mockBoard(level, period, username) {
   const rows = mockRows(level, period);
-  const me = { username: username || "YOU", character: "volt", created_at: "2026-11-04T11:00:00Z" };
+  const me = {
+    username: username || "YOU",
+    character: "volt",
+    title: Titles.equippedId(),
+    created_at: "2026-11-04T11:00:00Z",
+  };
   // you: just inside the list on the all-time boards, outside the top 100 on daily
   const rank = level.includes("daily") ? 142 : 12;
   me.score = level.includes("daily") ? 420 : Math.round(rows[rank - 1].score - 3);
@@ -392,9 +409,9 @@ class LeaderboardService {
     return true;
   }
 
-  /** Columns added by the migrations (distance; title is added by the titles feature). */
+  /** Columns added by the migrations: the run's distance and the title you wear. */
   extraColumns(op) {
-    return { distance: op.distance };
+    return { distance: op.distance, title: Titles.equippedId() };
   }
 
   // ---------------------------------------------------------------- reading
@@ -430,7 +447,11 @@ class LeaderboardService {
       const since = LeaderboardService.since(period);
       let q = sb
         .from("scores")
-        .select("player_id,username,score,character,created_at")
+        .select(
+          this.cols.title === false
+            ? "player_id,username,score,character,created_at"
+            : "player_id,username,score,character,title,created_at",
+        )
         .eq("level", level)
         .order("score", { ascending: false })
         .order("created_at", { ascending: true })
@@ -441,6 +462,11 @@ class LeaderboardService {
       const me = await this.myRank(sb, level, since);
       return { rows: rows || [], me, userId: this.userId };
     } catch (err) {
+      // an older database without the title column: read without it
+      if (this.cols.title !== false && missingColumn(err, ["title"])) {
+        this.cols.title = false;
+        return this.board(level, period);
+      }
       throw this.wrap(err);
     }
   }
@@ -448,7 +474,11 @@ class LeaderboardService {
   async myRank(sb, level, since) {
     const { data: mine, error } = await sb
       .from("scores")
-      .select("username,score,character,created_at")
+      .select(
+        this.cols.title === false
+          ? "username,score,character,created_at"
+          : "username,score,character,title,created_at",
+      )
       .eq("player_id", this.userId)
       .eq("level", level)
       .maybeSingle();

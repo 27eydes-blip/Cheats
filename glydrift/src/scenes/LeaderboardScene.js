@@ -14,6 +14,8 @@ import { dailyNumber } from "../data/rng.js";
 import { Sfx } from "../audio/sfx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { button, fadeTo, neonText, plainText } from "../ui/ui.js";
+import { titleText } from "../ui/titleText.js";
+import { Titles } from "../data/titles.js";
 
 const MEDALS = [0xffd23f, 0xdfe8f5, 0xd8894a];
 const ROW_H = 68;
@@ -574,14 +576,18 @@ export class LeaderboardScene extends Phaser.Scene {
       const name = plainText(
         this,
         cx,
-        top - 58,
+        top - 72,
         r.username,
         spec.rank === 1 ? 21 : 18,
         mine ? "#3ef4ff" : "#ffffff",
       );
       fit(name, colW - 6);
+      const ttl = titleText(this, cx, top - 52, r.title, { size: 11 });
+      if (ttl.list.length)
+        ttl.setScale(Math.min(1, (colW - 6) / Math.max(1, ttl.getBounds().width)));
+      col.add(ttl);
       const def = getCharacter(r.character);
-      const heroY = top - 58 - 26 - 70 * spec.scale;
+      const heroY = top - 72 - 26 - 70 * spec.scale;
       // your own place wears your shop cosmetics (other players' aren't stored online)
       const hero = mine
         ? heroImage(this, cx, heroY, def.id, spec.scale / HI)
@@ -729,10 +735,10 @@ export class LeaderboardScene extends Phaser.Scene {
       });
       g.fillStyle(accent, 0.9).fillRect(30, y - ROW_H / 2 + 14, 4, ROW_H - 28);
       const share = Math.max(0.04, Math.min(1, r.score / Math.max(1, topScore)));
-      g.fillStyle(CYAN, 0.1).fillRect(182, y + 17, W - 374, 3);
+      g.fillStyle(CYAN, 0.1).fillRect(182, y + 23, W - 374, 3);
       g.fillStyle(mine ? CYAN : 0x7fbfdf, mine ? 0.8 : 0.45).fillRect(
         182,
-        y + 17,
+        y + 23,
         (W - 374) * share,
         3,
       );
@@ -751,9 +757,10 @@ export class LeaderboardScene extends Phaser.Scene {
       const icon = mine
         ? heroImage(this, 142, y, def.id, 0.36 / HI)
         : this.add.image(142, y, def.texture).setScale((0.36 / HI) * PORTRAIT_K);
-      const name = plainText(this, 182, y - 6, r.username, 24, mine ? "#3ef4ff" : "#ffffff", {
+      const name = plainText(this, 182, y - 12, r.username, 24, mine ? "#3ef4ff" : "#ffffff", {
         ox: 0,
       });
+      this.list.add(titleText(this, 183, y + 10, r.title, { size: 12, ox: 0 }));
       const score = plainText(
         this,
         W - 48,
@@ -794,21 +801,21 @@ export class LeaderboardScene extends Phaser.Scene {
     const def = getCharacter(me.character);
     this.you.add(neonText(this, 80, 0, `#${me.rank}`, 30, 0x3ef4ff, { blur: 8 }));
     this.you.add(heroImage(this, 150, 0, def.id, 0.4 / HI));
-    this.you.add(plainText(this, 192, -12, name, 24, "#ffffff", { ox: 0 }));
+    this.you.add(plainText(this, 192, -14, name, 24, "#ffffff", { ox: 0 }));
+    this.you.add(titleText(this, 193, 8, Titles.equippedId(), { size: 12, ox: 0 }));
     this.you.add(
+      // the label sits above the number, so the title can go under your name
       plainText(
         this,
-        192,
-        16,
+        W - 56,
+        -28,
         this.tab === "distance" ? "YOUR FARTHEST" : "YOUR BEST",
-        14,
+        12,
         "#9c90c8",
-        {
-          ox: 0,
-        },
+        { ox: 1 },
       ),
     );
-    this.you.add(neonText(this, W - 56, 0, this.fmt(me.score), 28, 0x3ef4ff, { ox: 1, blur: 8 }));
+    this.you.add(neonText(this, W - 56, 6, this.fmt(me.score), 28, 0x3ef4ff, { ox: 1, blur: 8 }));
   }
 
   setScroll(v) {

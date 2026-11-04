@@ -3,6 +3,7 @@ import { BIOMES } from "../biomes/biomes.js";
 import { CHARACTERS, getCharacter, heroReleased, onSale } from "../player/characterDefs.js";
 import { dayDiff, RNG, todayKey } from "./rng.js";
 import { Save } from "./save.js";
+import { Titles } from "./titles.js";
 import { SPIN_MAX } from "../tuning.js";
 import { Seasons } from "./seasons.js";
 import { DriftPass } from "./driftPass.js";
@@ -752,6 +753,7 @@ export const Progression = {
 
     res.unlocks = Progression.checkChallengeUnlocks();
     res.achievements = Progression.checkAchievements();
+    res.newTitles = Titles.sync(); // achievements / leagues / season tiers can earn titles
     Progression.ensureMissions();
     res.coinsAfter = s.coins;
     res.levelAfter = s.level;

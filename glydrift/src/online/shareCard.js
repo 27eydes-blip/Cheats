@@ -7,6 +7,8 @@ import { greyPortrait } from "../pixel/grayHero.js";
 import { BIOMES, biomeName } from "../biomes/biomes.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { dailyNumber } from "../data/rng.js";
+import { Save } from "../data/save.js";
+import { Titles } from "../data/titles.js";
 
 const css = (c) => `#${c.toString(16).padStart(6, "0")}`;
 const FONT = '"Orbitron", "Avenir Next", system-ui, sans-serif';
@@ -80,6 +82,12 @@ export function renderShareCard(game, run) {
   glowText("GLYDRIFT", W / 2, 150, 104, css(biome.neon));
   if (run.mode === "daily")
     glowText(`DAILY CHALLENGE #${dailyNumber()}`, W / 2, 245, 40, css(biome.accent), 700);
+  // the player and their title
+  const name = Save.data.profile?.username;
+  const title = Titles.equipped();
+  if (name) glowText(name, W / 2, run.mode === "daily" ? 296 : 262, 46, "#ffffff", 800);
+  if (title)
+    glowText(title.name.toUpperCase(), W / 2, run.mode === "daily" ? 338 : 306, 30, title.color, 700);
 
   // character
   try {

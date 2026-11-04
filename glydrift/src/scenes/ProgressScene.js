@@ -12,6 +12,8 @@ import {
   Progression,
 } from "../data/progression.js";
 import { Save } from "../data/save.js";
+import { Titles } from "../data/titles.js";
+import { titleText } from "../ui/titleText.js";
 import { drawIcon } from "../ui/icons.js";
 import {
   button,
@@ -49,6 +51,14 @@ export class ProgressScene extends Phaser.Scene {
       onClick: () => this.leave(),
     }).setDepth(100);
     neonText(this, W / 2, top + 46, "PROGRESS", 40, 0xff4fd8).setDepth(100);
+    button(this, W - 80, top + 46, 120, 64, "TITLES", {
+      color: 0xffd23f,
+      size: 18,
+      onClick: () => fadeTo(this, "Titles", { from: "Progress" }),
+    }).setDepth(100);
+    // your profile line: name + the title you wear
+    plainText(this, W / 2, top + 86, s.profile?.username || "", 18, "#ffffff").setDepth(100);
+    titleText(this, W / 2, top + 106, Titles.equippedId(), { size: 12 }).setDepth(100);
 
     // ---- level panel
     let y = top + 120;
