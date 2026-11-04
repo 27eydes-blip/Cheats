@@ -74,6 +74,42 @@ function plusTrack(theme) {
     return { coins: 200 + t * 20 };
   });
 }
+/**
+ * Season 1's DRIFT PASS+ track: the ten pass-exclusive heroes, with animated titles, skins,
+ * trails, death effects and a banner between them, and coins / shards / pods on the rest.
+ */
+function plusTrackS1(theme) {
+  const special = {
+    1: { hero: "voidcat", label: "PASS HERO" },
+    3: { item: "skin_holo", label: "NEW SKIN" },
+    5: { hero: "hexowl", label: "PASS HERO" },
+    7: { title: "p_abysslord", label: "ANIMATED TITLE" },
+    10: { hero: "wraithmoth", label: "PASS HERO" },
+    12: { item: "trail_aurora", label: "NEW TRAIL" },
+    15: { hero: "triphound", label: "PASS HERO" },
+    17: { banner: theme.banner, label: "NEW BANNER" },
+    20: { hero: "phantomray", label: "PASS HERO" },
+    22: { item: "trail_eclipse", label: "NEW TRAIL" },
+    25: { hero: "scorpyre", label: "PASS HERO" },
+    27: { title: "p_neonroyal", label: "ANIMATED TITLE" },
+    30: { hero: "krakkie", label: "PASS HERO" },
+    32: { item: "skin_inferno", label: "NEW SKIN" },
+    35: { hero: "crimsonmantis", label: "PASS HERO" },
+    37: { item: "death_supernova", label: "NEW DEATH FX" },
+    40: { hero: "gloomeleon", label: "PASS HERO" },
+    42: { title: "p_starborn", label: "ANIMATED TITLE" },
+    45: { item: "skin_starlight", label: "NEW SKIN" },
+    47: { item: "death_glitchout", label: "NEW DEATH FX" },
+    50: { hero: "umbradrake", label: "PASS HERO" },
+  };
+  return Array.from({ length: 50 }, (_, i) => {
+    const t = i + 1;
+    if (special[t]) return { ...special[t], milestone: t % 5 === 0 || !!special[t].hero };
+    if (t % 4 === 0) return { shards: 3 + Math.floor(t / 10) };
+    if (t % 3 === 0) return { pod: true };
+    return { coins: 200 + t * 20 };
+  });
+}
 const DEFAULT_MILESTONES = {
   5: { coins: 750 },
   10: { item: "trail_galaxy" },
@@ -121,7 +157,7 @@ export const SEASON_DEFAULTS = {
           45: { hero: "grimvulture" },
           50: { hero: "levijr" },
         }),
-        plus: plusTrack({
+        plus: plusTrackS1({
           trail: "trail_bloodmoon",
           hat: "hat_bloodcrown",
           title: "ABYSS LORD",

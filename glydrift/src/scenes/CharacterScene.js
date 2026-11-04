@@ -221,6 +221,16 @@ export class CharacterScene extends Phaser.Scene {
     eg.lineStyle(3, 0xffd23f, 1).strokeRoundedRect(-92, -22, 184, 44, 22);
     edit.add([eg, plainText(this, 0, 0, "✎ TAP TO EDIT", 17, "#ffd23f")]);
     c.add([g, glow, img, name, rar, desc, lock, edit]);
+    if (def.passPlus) {
+      // DRIFT PASS+ heroes: a gold-on-crimson badge on the card's top edge
+      const b = this.add.container(0, -CARD_H / 2 + 26);
+      const bg = this.add.graphics();
+      bg.fillStyle(0x14020a, 1).fillRoundedRect(-88, -16, 176, 32, 16);
+      bg.fillStyle(0xc8102e, 1).fillRoundedRect(-84, -12, 168, 24, 12);
+      bg.lineStyle(2, 0xffd23f, 1).strokeRoundedRect(-84, -12, 168, 24, 12);
+      b.add([bg, plainText(this, 0, 0, "DRIFT PASS+", 15, "#ffe9a8")]);
+      c.add(b);
+    }
     c.edit = edit;
     c.def = def;
     c.g = g;
@@ -249,6 +259,30 @@ export class CharacterScene extends Phaser.Scene {
       fillAlpha: 0.88,
       width: { ultra: 9, mega: 7, legendary: 5 }[def.rarity] ?? 3,
     });
+    if (def.passPlus) {
+      // animated rarity border: a bright band of light that runs round the card
+      // (a smooth glide, nothing flashes, so it's the same with Reduce Flashing)
+      const w = CARD_W + 6;
+      const h = CARD_H + 6;
+      const per = 2 * (w + h);
+      const at = (d) => {
+        d = ((d % per) + per) % per;
+        if (d < w) return [-w / 2 + d, -h / 2];
+        if (d < w + h) return [w / 2, -h / 2 + d - w];
+        if (d < 2 * w + h) return [w / 2 - (d - w - h), h / 2];
+        return [-w / 2, h / 2 - (d - 2 * w - h)];
+      };
+      const head = this.t * 260 + c.i * 97;
+      for (let k = 0; k < 2; k++)
+        for (let s = 0; s < 18; s++) {
+          const d = head + k * (per / 2) - s * 8;
+          const [x0, y0] = at(d);
+          const [x1, y1] = at(d - 8);
+          if (Math.abs(x0 - x1) > 9 || Math.abs(y0 - y1) > 9) continue; // round a corner
+          g.lineStyle(6 - s * 0.25, s < 3 ? 0xffffff : col, 1 - s / 18);
+          g.lineBetween(x0, y0, x1, y1);
+        }
+    }
     // inner rarity sheen
     g.fillStyle(col, 0.08);
     g.fillRoundedRect(-CARD_W / 2 + 10, -CARD_H / 2 + 10, CARD_W - 20, CARD_H * 0.5, 20);
@@ -330,6 +364,15 @@ export class CharacterScene extends Phaser.Scene {
       this.actionBtn.setLabel(sel ? "EQUIPPED" : "SELECT");
       this.actionBtn.setColor(sel ? 0x8a80b0 : 0x39ff88);
       this.actionBtn.setEnabled(!sel);
+    } else if (def.passPlus) {
+      // DRIFT PASS+ heroes: only from their tier of the paid track, never for coins
+      const live = season?.id === def.passPlus;
+      this.actionBtn.setLabel(live ? `DRIFT PASS+ · TIER ${def.passTier}` : "DRIFT PASS+");
+      this.actionBtn.setColor(0xc8102e);
+      this.actionBtn.setEnabled(live);
+      alt = live
+        ? `Exclusive to the Season ${season.number} Drift Pass+ (tier ${def.passTier}).\nNever sold for coins.`
+        : "A Season 1 Drift Pass+ exclusive. It never comes back to the shop.";
     } else if (def.limited) {
       const live = onSale(def);
       this.actionBtn.setLabel(live ? `UNLOCK  ${def.cost}` : "GONE");
@@ -412,6 +455,10 @@ export class CharacterScene extends Phaser.Scene {
     }
     if (def.lottery) {
       fadeTo(this, "Spin");
+      return;
+    }
+    if (def.passPlus) {
+      fadeTo(this, "Pass", { from: "Characters" });
       return;
     }
     if (Progression.buy(def.id)) {
@@ -684,7 +731,7 @@ export class CharacterScene extends Phaser.Scene {
       c.scaleY = sc;
       c.alpha = Phaser.Math.Clamp(1 - ao * 0.38, 0, 1);
       c.setDepth(100 - ao * 10);
-      if (["legendary", "mega", "ultra"].includes(c.def.rarity)) this.drawCard(c);
+      if (c.def.passPlus || ["legendary", "mega", "ultra"].includes(c.def.rarity)) this.drawCard(c);
     }
     // limited-time countdown ticks once a second
     if (def.limited && Math.floor(this.t) !== this.lastTick) {

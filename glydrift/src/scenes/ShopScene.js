@@ -400,7 +400,8 @@ export class ShopScene extends Phaser.Scene {
       case "daily":
         return [{ kind: "drop" }, ...daily.items.map(cos)];
       case "heroes": {
-        const list = visibleCharacters(s.unlocked).filter((c) => !c.lottery);
+        // Lucky Spin and DRIFT PASS+ heroes are never sold for coins
+        const list = visibleCharacters(s.unlocked).filter((c) => !c.lottery && !c.passPlus);
         list.sort((a, b) => (a.id === "yarms" ? -1 : b.id === "yarms" ? 1 : 0));
         return list.map((c) => (c.id === "yarms" ? { kind: "yarms" } : { kind: "hero", id: c.id }));
       }

@@ -215,7 +215,9 @@ export const ACHIEVEMENTS = [
     desc: "Unlock every character",
     glyph: "C",
     check: (s) =>
-      CHARACTERS.every((c) => c.limited || c.season || !heroReleased(c) || s.unlocked[c.id]),
+      CHARACTERS.every(
+        (c) => c.limited || c.season || c.passPlus || !heroReleased(c) || s.unlocked[c.id],
+      ),
   },
   {
     id: "legend",
@@ -439,7 +441,7 @@ export const Progression = {
     const def = getCharacter(id);
     // a season's hero goes on sale for coins once its season is over
     const cost = def.cost || Seasons.afterPrice(id);
-    if (def.lottery || !cost) return false; // Lucky Spin heroes are never for sale
+    if (def.lottery || def.passPlus || !cost) return false; // Spin / Pass+ heroes: never for sale
     if (!onSale(def)) return false; // limited-time heroes only inside their window
     if (!Progression.requirementsMet(def)) return false;
     if (s.unlocked[id] || s.coins < cost) return false;
@@ -490,6 +492,7 @@ export const Progression = {
         !s.unlocked[c.id] &&
         heroReleased(c) &&
         !c.lottery &&
+        !c.passPlus &&
         !c.limited &&
         !c.season &&
         !c.requires,

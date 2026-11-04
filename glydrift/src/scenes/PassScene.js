@@ -80,6 +80,9 @@ function rewardColor(r) {
   return 0x6a5aa8;
 }
 
+// the realm colours Gloomeleon cycles through on the Drift Pass+ screen
+const REALM_TINTS = [0x3ef4ff, 0xffb020, 0x9fe8ff, 0x39ff88, 0xff3a4a, 0xff4fd8];
+
 export class PassScene extends Phaser.Scene {
   constructor() {
     super("Pass");
@@ -128,7 +131,7 @@ export class PassScene extends Phaser.Scene {
     this.scrollY = 0;
     this.vel = 0;
     this.input.on("pointerdown", (p) => {
-      if (this.busy || p.worldY < this.viewTop || p.worldY > this.viewBot) return;
+      if (this.busy || this.offer || p.worldY < this.viewTop || p.worldY > this.viewBot) return;
       this.drag = { y: p.worldY, start: this.scrollY, last: p.worldY, t: this.time.now, moved: 0 };
       this.vel = 0;
       this.scrollTween?.stop();
@@ -708,12 +711,13 @@ export class PassScene extends Phaser.Scene {
       onClick: () => this.restorePurchases(),
     }).setDepth(320);
     if (this.season && !PassPlus.owns()) {
+      // both open the Drift Pass+ screen (its heroes, what's inside, the price)
       if (Store.canBuy())
         this.buyBtn = button(this, W - 108, y, 196, 72, `GET PASS+\n${PLUS_PRICE_LABEL}`, {
           color: 0xffd23f,
           size: 17,
           fill: 0x5a1020,
-          onClick: () => this.buyPlus(),
+          onClick: () => this.openOffer(),
         }).setDepth(320);
       else
         // the web version can't sell it: the iPhone app does
@@ -723,7 +727,9 @@ export class PassScene extends Phaser.Scene {
             align: "center",
           })
           .setOrigin(0.5)
-          .setDepth(320);
+          .setDepth(320)
+          .setInteractive({ useHandCursor: true })
+          .on("pointerup", () => this.openOffer());
     }
     this.claimAll = button(this, W / 2, y, 260, 84, "CLAIM ALL", {
       color: 0xffffff,
@@ -884,6 +890,148 @@ export class PassScene extends Phaser.Scene {
     return res;
   }
 
+  // ---------------------------------------------------------------- the Drift Pass+ screen
+  /** The purchase screen: Umbra Drake and Gloomeleon up front, what's inside, the price. */
+  openOffer() {
+    if (this.offer || !this.season) return;
+    const { W, H } = this;
+    const o = this.add.container(0, 0).setDepth(600);
+    this.offer = o;
+    const dim = this.add
+      .rectangle(W / 2, H / 2, W, H, 0x05010d, 0.9)
+      .setInteractive()
+      .on("pointerup", () => {});
+    o.add(dim);
+    const pw = Math.min(W - 40, 660);
+    const ph = Math.min(H - 120, 1060);
+    const top = H / 2 - ph / 2;
+    const g = this.add.graphics();
+    g.fillStyle(OUT, 1).fillRoundedRect(W / 2 - pw / 2 - 6, top - 6, pw + 12, ph + 12, 34);
+    g.fillGradientStyle(0x3a0614, 0x3a0614, 0x12030c, 0x12030c, 1).fillRoundedRect(
+      W / 2 - pw / 2,
+      top,
+      pw,
+      ph,
+      30,
+    );
+    g.lineStyle(4, 0xffd23f, 1).strokeRoundedRect(W / 2 - pw / 2, top, pw, ph, 30);
+    o.add(g);
+    const tx = (y, str, size, col = "#ffffff") => {
+      const t = this.add.text(W / 2, y, str, { ...priceStyle(size, col), align: "center" });
+      t.setOrigin(0.5);
+      o.add(t);
+      return t;
+    };
+    tx(top + 56, "DRIFT PASS+", 46, "#ffd23f");
+    tx(top + 104, `SEASON ${this.season.number} · ${this.season.name}`, 20, "#ff9aa8");
+    // the two legendaries on glowing pedestals
+    const stageY = top + 330;
+    const heroes = [
+      { id: "umbradrake", x: W / 2 - pw * 0.22, scale: 3.4 },
+      { id: "gloomeleon", x: W / 2 + pw * 0.24, scale: 3 },
+    ];
+    this.offerRigs = [];
+    heroes.forEach((h, i) => {
+      const def = getCharacter(h.id);
+      const glow = this.add
+        .image(h.x, stageY, "glow")
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setTint(def.color)
+        .setScale(2.6)
+        .setAlpha(0.45);
+      const ped = this.add.graphics();
+      ped.fillStyle(OUT, 1).fillEllipse(h.x, stageY + 118, 230, 46);
+      ped.fillStyle(0x2a0614, 1).fillEllipse(h.x, stageY + 112, 220, 38);
+      ped.lineStyle(3, def.color, 1).strokeEllipse(h.x, stageY + 112, 220, 38);
+      o.add([glow, ped]);
+      const rig = new CharacterRig(this, def, this.fx, {
+        x: h.x,
+        y: stageY,
+        depth: 610,
+        scale: h.scale,
+        cosmetics: {},
+      });
+      rig.baseX = h.x;
+      rig.baseY = stageY;
+      rig.phase = i * 1.7;
+      rig.showT = 1.5 + i * 1.6;
+      this.offerRigs.push(rig);
+      const nm = tx(stageY + 160, def.name, 26);
+      nm.setX(h.x);
+      tx(stageY + 192, "LEGENDARY · PASS HERO", 15, "#ffd23f").setX(h.x);
+    });
+    // Gloomeleon shows off its realm colours here (in play they follow the realm you're in)
+    this.offerRigs[1].realmTint = 0x3ef4ff;
+    tx(stageY + 238, "+ 8 MORE EXCLUSIVE HEROES", 22, "#ffffff");
+    tx(
+      stageY + 300,
+      "Voidcat · Hexowl · Wraith Moth · Triphound\nPhantom Ray · Scorpyre · Krakkie · Crimson Mantis",
+      16,
+      "#d8c8ff",
+    );
+    tx(
+      stageY + 384,
+      "Animated titles · skins · trails · death effects\na banner · coins and shards on every other tier",
+      17,
+      "#ffe9a8",
+    );
+    tx(stageY + 446, "Cosmetic only: no speed, score or hitbox changes", 15, "#bfb6e8");
+    const by = top + ph - 88;
+    if (Store.canBuy()) {
+      const buy = button(this, W / 2 + 70, by, 280, 84, `BUY ${PLUS_PRICE_LABEL}`, {
+        color: 0xffd23f,
+        size: 30,
+        fill: 0x8a1020,
+        onClick: () => this.buyPlus(),
+      });
+      o.add(buy);
+    } else {
+      const note = tx(by, "Get Drift Pass+\nin the iPhone app", 22, "#ffd23f");
+      note.setX(W / 2 + 70);
+    }
+    const restore = button(this, W / 2 - 170, by, 160, 64, "RESTORE\nPURCHASES", {
+      color: 0xbfb6e8,
+      size: 13,
+      onClick: () => this.restorePurchases(),
+    });
+    o.add(restore);
+    const close = button(this, W / 2 + pw / 2 - 40, top + 40, 60, 60, "✕", {
+      color: 0xffffff,
+      size: 26,
+      onClick: () => this.closeOffer(),
+    });
+    o.add(close);
+    // ease in
+    o.setAlpha(0);
+    this.tweens.add({ targets: o, alpha: 1, duration: 220, ease: "Cubic.easeOut" });
+    Sfx.ui?.();
+  }
+
+  closeOffer() {
+    if (!this.offer) return;
+    for (const r of this.offerRigs || []) r.destroy();
+    this.offerRigs = null;
+    killTweensDeep(this, this.offer);
+    this.offer.destroy(true);
+    this.offer = null;
+  }
+
+  updateOffer(dt) {
+    if (!this.offerRigs) return;
+    for (const r of this.offerRigs) {
+      r.setPosition(r.baseX, r.baseY + Math.sin(this.t * 1.5 + r.phase) * 10);
+      r.showT -= dt;
+      if (r.showT <= 0) {
+        // every few seconds: Umbra Drake breathes dark fire, Gloomeleon shifts to a new realm
+        r.showT = 3.4;
+        r.flap();
+        if (r.def.id === "umbradrake") r.onBest();
+        else r.realmTint = REALM_TINTS[(REALM_TINTS.indexOf(r.realmTint) + 1) % REALM_TINTS.length];
+      }
+      r.update(dt, 120);
+    }
+  }
+
   async buyPlus() {
     if (this.busy) return;
     this.busy = true;
@@ -913,6 +1061,7 @@ export class PassScene extends Phaser.Scene {
 
   /** The pass is owned now: unlock the right-hand column. */
   onPlusOwned(msg) {
+    this.closeOffer();
     toast(this, msg, 0xffd23f, { y: this.H * 0.3, sub: "Claim your Drift Pass+ rewards" });
     this.buyBtn?.destroy();
     this.buyNote?.destroy();
@@ -1026,6 +1175,7 @@ export class PassScene extends Phaser.Scene {
       }
       this.rig.update(dt, 160);
     }
+    this.updateOffer(dt);
     this.fx.update(dt);
     if (Math.floor(this.t) !== Math.floor(this.t - dt) && this.season)
       this.countText.setText(`⏱ ${Seasons.countdown(this.season)}`);

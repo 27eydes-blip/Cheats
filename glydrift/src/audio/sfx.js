@@ -117,6 +117,136 @@ const pops = (n = 4) => {
   for (let i = 0; i < n; i++) T("sine", 700 + i * 90, 1300 + i * 90, 0.05, 0.12, i * 0.06);
 };
 const ANIMAL_SFX = {
+  // ---- DRIFT PASS+ · Season 1
+  voidcat: {
+    flap: () => {
+      T("sine", 1400, 2100, 0.05, 0.05);
+      ting(2600 + Math.random() * 600, 0.02, 0.04); // a star chime
+    },
+    near: () => T("triangle", 700, 1100, 0.08, 0.08), // a little "mrrp"
+    best: () => [1320, 1660, 1980, 2640].forEach((f, i) => ting(f, i * 0.06, 0.06)),
+    death: () => {
+      T("triangle", 900, 300, 0.35, 0.1);
+      [3000, 2400, 3600].forEach((f, i) => ting(f, 0.1 + i * 0.07, 0.04));
+    },
+  },
+  hexowl: {
+    flap: () => noise({ dur: 0.08, vol: 0.08, f: 1400 }),
+    near: () => {
+      T("square", 220, 220, 0.06, 0.05);
+      T("sine", 440, 660, 0.12, 0.08, 0.03); // a rune hum
+    },
+    best: () => {
+      T("sine", 330, 330, 0.25, 0.1);
+      T("sine", 247, 247, 0.3, 0.08, 0.18); // "hoo-hoo"
+    },
+    death: () => {
+      noise({ dur: 0.4, vol: 0.14, f: 1600 });
+      T("sine", 300, 120, 0.4, 0.1);
+    },
+  },
+  wraithmoth: {
+    flap: () => noise({ dur: 0.06, vol: 0.06, f: 3200 }),
+    near: () => T("sine", 1200, 700, 0.18, 0.05),
+    best: () => {
+      noise({ dur: 0.5, vol: 0.08, f: 5000 });
+      T("sine", 600, 1200, 0.4, 0.06);
+    },
+    death: () => {
+      noise({ dur: 0.6, vol: 0.12, f: 2600 });
+      T("sine", 900, 200, 0.5, 0.06);
+    },
+  },
+  triphound: {
+    flap: () => {
+      // the next head barks (three slightly different yaps)
+      const f = [520, 600, 460][(ANIMAL_SFX.triphound.n = ((ANIMAL_SFX.triphound.n || 0) + 1) % 3)];
+      T("square", f, f * 0.7, 0.06, 0.06);
+      T("sawtooth", f * 0.5, f * 0.35, 0.07, 0.04, 0.01);
+    },
+    near: () => [500, 580, 460].forEach((f, i) => T("square", f, f * 0.7, 0.05, 0.05, i * 0.05)),
+    best: () => [700, 760, 640].forEach((f, i) => T("triangle", f, f * 1.3, 0.2, 0.07, i * 0.04)),
+    death: () => {
+      T("triangle", 900, 400, 0.3, 0.08);
+      noise({ dur: 0.4, vol: 0.12, f: 800 });
+    },
+  },
+  phantomray: {
+    flap: () => T("sine", 180, 260, 0.2, 0.08), // a soft underwater swell, no wingbeat
+    near: () => noise({ dur: 0.18, vol: 0.06, f: 900 }),
+    best: () => T("sine", 200, 600, 0.6, 0.09),
+    death: () => {
+      noise({ dur: 0.7, vol: 0.14, f: 600 });
+      T("sine", 300, 80, 0.6, 0.1);
+    },
+  },
+  scorpyre: {
+    flap: () => {
+      noise({ dur: 0.05, vol: 0.08, f: 6000 }); // spark crackle
+      T("square", 1800, 900, 0.03, 0.03);
+    },
+    near: () => [2400, 3100].forEach((f, i) => T("square", f, f * 0.6, 0.025, 0.04, i * 0.03)),
+    best: () => {
+      noise({ dur: 0.5, vol: 0.14, f: 1200 });
+      T("sawtooth", 160, 320, 0.4, 0.06);
+    },
+    death: () => {
+      noise({ dur: 0.7, vol: 0.18, f: 1000 });
+      T("sawtooth", 200, 60, 0.6, 0.08);
+    },
+  },
+  krakkie: {
+    flap: () => T("sine", 300, 600, 0.07, 0.1), // a little "bloop"
+    near: () => pops(2),
+    best: () => pops(5),
+    death: () => {
+      splash();
+      pops(3);
+    },
+  },
+  crimsonmantis: {
+    flap: () => noise({ dur: 0.05, vol: 0.06, f: 4200 }),
+    near: () => {
+      // the slash: a fast high swish + a blade ring
+      noise({ dur: 0.12, vol: 0.12, f: 7000 });
+      ting(3400, 0.05, 0.05);
+    },
+    best: () => [0, 0.08, 0.16].forEach((d) => noise({ dur: 0.1, vol: 0.1, f: 7000, delay: d })),
+    death: () => {
+      shatter();
+      T("sawtooth", 400, 120, 0.3, 0.05);
+    },
+  },
+  gloomeleon: {
+    flap: () => T("triangle", 420, 520, 0.05, 0.06),
+    near: () => T("sine", 900, 1400, 0.08, 0.05),
+    best: () => {
+      // fading out of sight: a rising shimmer
+      [880, 1100, 1320, 1760].forEach((f, i) => T("sine", f, f * 1.02, 0.18, 0.05, i * 0.07));
+    },
+    death: () => {
+      T("triangle", 700, 200, 0.4, 0.08);
+      noise({ dur: 0.3, vol: 0.08, f: 3000 });
+    },
+  },
+  umbradrake: {
+    flap: () => {
+      noise({ dur: 0.1, vol: 0.1, f: 700 }); // a heavy little wingbeat
+      T("sine", 140, 90, 0.12, 0.12);
+    },
+    near: () => T("sawtooth", 260, 180, 0.12, 0.05),
+    best: () => {
+      // dark fire breath: a roar into a roaring flame
+      T("sawtooth", 180, 90, 0.5, 0.1);
+      noise({ dur: 0.9, vol: 0.18, f: 900, delay: 0.08 });
+    },
+    death: () => {
+      // the firestorm
+      noise({ dur: 1.1, vol: 0.2, f: 700 });
+      T("sawtooth", 120, 40, 1, 0.12);
+      T("sine", 60, 40, 0.9, 0.2, 0.3);
+    },
+  },
   // peaceful
   bunbun: {
     flap: () => T("triangle", 600, 900, 0.05, 0.12),

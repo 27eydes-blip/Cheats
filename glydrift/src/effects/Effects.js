@@ -167,6 +167,59 @@ KINDS.bubble = fall("fx_bubble", 50, {
 KINDS.bone = fall("fx_bone", 30, { gravityY: 1000, rotate: { min: 0, max: 360 } });
 KINDS.goo = fall("fx_goo", 50, { gravityY: 900, scale: { start: 1.2, end: 0.6 } });
 KINDS.chain = fall("fx_chain", 24, { gravityY: 1000, rotate: { min: 0, max: 360 } });
+// DRIFT PASS+ heroes
+// Umbra Drake's red firestorm (death)
+KINDS.redfire = {
+  tex: "dot",
+  cfg: {
+    lifespan: { min: 320, max: 760 },
+    speed: { min: 60, max: 260 },
+    angle: { min: 0, max: 360 },
+    scale: { start: 1.5, end: 0.1 },
+    alpha: { start: 0.95, end: 0 },
+    color: [0xff7a5a, 0xf0283a, 0xa00a2a, 0x2a0010],
+    gravityY: -160,
+  },
+  cap: 240,
+};
+// Umbra Drake's dark fire: crimson-white core burning down to near black
+KINDS.darkfire = {
+  tex: "dot",
+  cfg: {
+    lifespan: { min: 260, max: 520 },
+    speed: { min: 300, max: 500 },
+    angle: { min: -10, max: 10 },
+    scale: { start: 1.1, end: 2.2 },
+    alpha: { start: 1, end: 0 },
+    color: [0xffe0e8, 0xff3a5a, 0x8a0a3a, 0x1a0418],
+    gravityY: -60,
+  },
+  cap: 160,
+};
+KINDS.rune = fall("fx_rune", 40, { gravityY: -40, rotate: 0, blendMode: "ADD" });
+KINDS.ember = fall("fx_ember", 90, {
+  gravityY: -90,
+  rotate: 0,
+  lifespan: { min: 500, max: 1000 },
+  scale: { start: 1, end: 0.3 },
+  blendMode: "ADD",
+});
+KINDS.ash = fall("fx_ash", 70, { gravityY: 40, rotate: { min: -90, max: 90 } });
+KINDS.slash = fall("fx_slash", 16, {
+  gravityY: 0,
+  lifespan: { min: 180, max: 280 },
+  speed: { min: 260, max: 420 },
+  scale: { start: 1.4, end: 2 },
+  rotate: { min: -50, max: 30 },
+  blendMode: "ADD",
+});
+KINDS.twinkle = fall("fx_twinkle", 90, {
+  gravityY: 60,
+  rotate: 0,
+  lifespan: { min: 500, max: 900 },
+  scale: { start: 1, end: 0.2 },
+  blendMode: "ADD",
+});
 
 export class Effects {
   constructor(scene, { lowGfx = false, depth = 40 } = {}) {
@@ -200,7 +253,8 @@ export class Effects {
     const em = this.emitters[kind];
     if (!em) return;
     const n = Math.max(1, Math.round(count * this.quality));
-    if (tint !== undefined && kind !== "fire") em.setParticleTint(tint);
+    const ownColours = kind === "fire" || kind === "redfire" || kind === "darkfire";
+    if (tint !== undefined && !ownColours) em.setParticleTint(tint);
     if (opts.angle) em.setEmitterAngle(opts.angle);
     else em.setEmitterAngle({ min: 0, max: 360 });
     if (opts.speed) em.setParticleSpeed(opts.speed.min, opts.speed.max);

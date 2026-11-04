@@ -182,44 +182,52 @@
         ],
         "plus": [
           {
-            "coins": 220
+            "hero": "voidcat",
+            "label": "PASS HERO",
+            "milestone": true
           },
           {
             "coins": 240
           },
           {
-            "pod": true
+            "item": "skin_holo",
+            "label": "NEW SKIN",
+            "milestone": false
           },
           {
-            "coins": 280
+            "shards": 3
           },
           {
-            "item": "trail_bloodmoon",
-            "label": "NEW TRAIL",
+            "hero": "hexowl",
+            "label": "PASS HERO",
             "milestone": true
           },
           {
             "pod": true
           },
           {
-            "coins": 340
+            "title": "p_abysslord",
+            "label": "ANIMATED TITLE",
+            "milestone": false
           },
           {
-            "coins": 360
+            "shards": 3
           },
           {
             "pod": true
           },
           {
-            "title": "ABYSS LORD",
-            "label": "NEW TITLE",
+            "hero": "wraithmoth",
+            "label": "PASS HERO",
             "milestone": true
           },
           {
             "coins": 420
           },
           {
-            "pod": true
+            "item": "trail_aurora",
+            "label": "NEW TRAIL",
+            "milestone": false
           },
           {
             "coins": 460
@@ -228,15 +236,17 @@
             "coins": 480
           },
           {
-            "banner": "crimson",
-            "label": "NEW BANNER",
+            "hero": "triphound",
+            "label": "PASS HERO",
             "milestone": true
           },
           {
-            "coins": 520
+            "shards": 4
           },
           {
-            "coins": 540
+            "banner": "crimson",
+            "label": "NEW BANNER",
+            "milestone": false
           },
           {
             "pod": true
@@ -245,49 +255,55 @@
             "coins": 580
           },
           {
-            "emote": "roar",
-            "label": "NEW EMOTE",
+            "hero": "phantomray",
+            "label": "PASS HERO",
             "milestone": true
           },
           {
             "pod": true
           },
           {
-            "coins": 640
+            "item": "trail_eclipse",
+            "label": "NEW TRAIL",
+            "milestone": false
           },
           {
             "coins": 660
           },
           {
-            "pod": true
+            "shards": 5
           },
           {
-            "item": "hat_bloodcrown",
-            "label": "NEW HAT",
+            "hero": "scorpyre",
+            "label": "PASS HERO",
             "milestone": true
           },
           {
             "coins": 720
           },
           {
-            "pod": true
+            "title": "p_neonroyal",
+            "label": "ANIMATED TITLE",
+            "milestone": false
           },
           {
-            "coins": 760
+            "shards": 5
           },
           {
             "coins": 780
           },
           {
-            "item": "death_firework",
-            "label": "NEW DEATH FX",
+            "hero": "krakkie",
+            "label": "PASS HERO",
             "milestone": true
           },
           {
             "coins": 820
           },
           {
-            "coins": 840
+            "item": "skin_inferno",
+            "label": "NEW SKIN",
+            "milestone": false
           },
           {
             "pod": true
@@ -296,15 +312,17 @@
             "coins": 880
           },
           {
-            "item": "trail_bloodmoon",
-            "label": "NEW TRAIL",
+            "hero": "crimsonmantis",
+            "label": "PASS HERO",
             "milestone": true
           },
           {
-            "pod": true
+            "shards": 6
           },
           {
-            "coins": 940
+            "item": "death_supernova",
+            "label": "NEW DEATH FX",
+            "milestone": false
           },
           {
             "coins": 960
@@ -313,42 +331,46 @@
             "pod": true
           },
           {
-            "title": "ABYSS LORD",
-            "label": "NEW TITLE",
+            "hero": "gloomeleon",
+            "label": "PASS HERO",
             "milestone": true
           },
           {
             "coins": 1020
           },
           {
-            "pod": true
+            "title": "p_starborn",
+            "label": "ANIMATED TITLE",
+            "milestone": false
           },
           {
             "coins": 1060
           },
           {
-            "coins": 1080
+            "shards": 7
           },
           {
-            "banner": "crimson",
-            "label": "NEW BANNER",
+            "item": "skin_starlight",
+            "label": "NEW SKIN",
             "milestone": true
           },
           {
             "coins": 1120
           },
           {
-            "coins": 1140
+            "item": "death_glitchout",
+            "label": "NEW DEATH FX",
+            "milestone": false
           },
           {
-            "pod": true
+            "shards": 7
           },
           {
             "coins": 1180
           },
           {
-            "emote": "roar",
-            "label": "NEW EMOTE",
+            "hero": "umbradrake",
+            "label": "PASS HERO",
             "milestone": true
           }
         ]

@@ -41,8 +41,19 @@ function validSeason(s) {
       r.xpBoost?.mul > 1 ||
       (r.item && itemOk(r.item)) ||
       (r.hero && heroOk(r.hero)));
-  s.pass.tiers = s.pass.tiers.map((r) => (ok(r) ? r : { coins: 100 }));
+  // DRIFT PASS+ heroes come only from their own season's paid track, at their own tiers:
+  // never the free track, never a featured (coin) hero, never another season
+  const passOf = (id) => CHARACTERS.find((c) => c.id === id)?.passPlus;
+  if (passOf(s.featuredHero)) delete s.featuredHero;
+  s.pass.tiers = s.pass.tiers.map((r) => (ok(r) && !passOf(r?.hero) ? r : { coins: 100 }));
   if (!Array.isArray(s.pass.plus)) s.pass.plus = [];
+  s.pass.plus = s.pass.plus.map((r) =>
+    r?.hero && (!heroOk(r.hero) || passOf(r.hero) !== s.id) ? { coins: 100 } : r,
+  );
+  if (s.pass.plus.length)
+    for (const h of CHARACTERS)
+      if (h.passPlus === s.id && h.passTier <= s.pass.plus.length)
+        s.pass.plus[h.passTier - 1] = { hero: h.id, label: "PASS HERO", milestone: true };
   s.event ||= { name: s.name, challenges: [], shopItems: [] };
   // a malformed challenge would crash the end of a run: keep only well-formed ones
   s.event.challenges = (s.event.challenges || []).filter(

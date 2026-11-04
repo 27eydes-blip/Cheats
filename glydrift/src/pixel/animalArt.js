@@ -8,6 +8,9 @@ import { PEACEFUL_DRAW } from "./animalsPeaceful.js";
 import { PRISM_DRAW } from "./animalsPrism.js";
 import { ABYSS_DRAW } from "./animalsAbyss.js";
 import { XMAS_DRAW } from "./animalsXmas.js";
+import { PASS_DRAW, PASS_FRAMES, PASS_TEX, passParticles } from "./passHeroes.js";
+import { canvasTexture } from "./px.js";
+import Phaser from "phaser";
 
 export const ANIMAL_DRAW = { ...PEACEFUL_DRAW, ...PRISM_DRAW, ...ABYSS_DRAW, ...XMAS_DRAW };
 
@@ -105,4 +108,42 @@ export function buildAnimals(scene) {
   addTexture(scene, "fx_bone", bone(), 3);
   addTexture(scene, "fx_goo", goo(), 3);
   addTexture(scene, "fx_chain", chain(), 3);
+  buildPassHeroes(scene);
+}
+
+/**
+ * DRIFT PASS+ heroes: their own atlas ("pxp") at 3 texture px per art px, so a 32x32 frame is
+ * the same texture size as a standard 24x24 hero at 4x. Hat anchors are stored in standard art
+ * px (x 3/4) so shop hats sit right; portraits are ~90% of a standard portrait.
+ */
+function buildPassHeroes(scene) {
+  const frames = {};
+  for (const [id, draw] of Object.entries(PASS_DRAW)) {
+    for (let f = 0; f < PASS_FRAMES; f++) frames[`${id}_${f}`] = rim(draw(f));
+    if (draw.skin) for (let f = 0; f < PASS_FRAMES; f++) frames[`${id}_s${f}`] = rim(draw.skin(f));
+    const a = headAnchor(frames[`${id}_1`]);
+    const k = PASS_TEX / 4;
+    HEAD_ANCHORS[id] = { x: a.x * k, y: a.y * k, w: a.w * k, h: a.h * k };
+  }
+  // the skin layers keep the white rim out (only the body is recoloured)
+  for (const [id, draw] of Object.entries(PASS_DRAW))
+    if (draw.skin)
+      for (let f = 0; f < PASS_FRAMES; f++) {
+        const pc = frames[`${id}_s${f}`];
+        const base = frames[`${id}_${f}`];
+        for (let i = 0; i < pc.d.length; i++) if (base.d[i] === 0xffffff) pc.d[i] = null;
+      }
+  addAtlas(scene, "pxp", frames, PASS_TEX);
+  // portraits: 90% of a standard portrait (24 art px at PORTRAIT_SCALE), nearest-neighbour
+  const px = ((24 * PORTRAIT_SCALE) / 32) * 0.9;
+  for (const id of Object.keys(PASS_DRAW)) {
+    const src = frames[`${id}_1`].toCanvas(4);
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = Math.round(34 * px);
+    const ctx = cv.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(src, 0, 0, cv.width, cv.height);
+    canvasTexture(scene, `hero_${id}`, cv).setFilter(Phaser.Textures.FilterMode.NEAREST);
+  }
+  for (const [k, pc] of Object.entries(passParticles())) addTexture(scene, k, pc, 3);
 }

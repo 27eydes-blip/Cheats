@@ -1114,29 +1114,39 @@ test("Drift Pass+: buy, claim, restore on a new device", async ({ page }, testIn
   const log = await openGame(page, { save: PASS_SAVE, flags: ["mockiap"] });
   await openPass(page);
   await snap(page, testInfo, "18-pass-plus-locked");
+  // GET PASS+ opens the Drift Pass+ screen: Umbra Drake and Gloomeleon up front
+  await tap(page, "GET PASS+ $3.99", 1500);
+  const offer = await page.evaluate(() =>
+    window.__glydrift.scene.getScene("Pass").offerRigs?.map((r) => r.def.id),
+  );
+  expect(offer).toEqual(["umbradrake", "gloomeleon"]);
+  await snap(page, testInfo, "18b-pass-plus-offer");
   // a failed server check unlocks nothing
   await page.evaluate(() => localStorage.setItem("glydrift.mockstore.fail", "1"));
-  await tap(page, "GET PASS+ $3.99", 800);
+  await tap(page, "BUY $3.99", 800);
   expect(await page.evaluate(() => window.__glyPassPlus.owns())).toBe(false);
   await page.evaluate(() => localStorage.removeItem("glydrift.mockstore.fail"));
-  // a verified purchase unlocks the track
-  await tap(page, "GET PASS+ $3.99", 1200);
+  // a verified purchase unlocks the track (and closes the screen)
+  await tap(page, "BUY $3.99", 1200);
   expect(await page.evaluate(() => window.__glyPassPlus.owns())).toBe(true);
+  expect(await page.evaluate(() => !!window.__glydrift.scene.getScene("Pass").offer)).toBe(false);
   const after = await page.evaluate(() => {
     const s = window.__glydrift.scene.getScene("Pass");
     return { buy: !!s.buyBtn, t5: s.rows[4].plusState, t15: s.rows[14].plusState };
   });
   expect(after).toEqual({ buy: false, t5: "ready", t15: "locked" });
-  // claim tier 5 (the Hologram skin) and tier 10 (the animated ABYSS LORD title)
+  // claim tier 3 (the Hologram skin), tier 5 (HEXOWL) and tier 7 (the ABYSS LORD title)
   await page.evaluate(() => {
     const s = window.__glydrift.scene.getScene("Pass");
+    s.claimPlus(2, true);
     s.claimPlus(4, true);
-    s.claimPlus(9, true);
+    s.claimPlus(6, true);
   });
   await run(page, 1200);
   await snap(page, testInfo, "19-pass-plus-owned");
   let save = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
   expect(save.cos.owned.skin_holo).toBe(true);
+  expect(save.unlocked.hexowl).toBe(true);
   expect(save.titles.owned.p_abysslord).toBe(true);
   // a new device: no local record, RESTORE PURCHASES brings it back
   await page.evaluate(() => {
@@ -1215,6 +1225,216 @@ test("no skin changes the hitbox, speed or score rules (Pass+ skins look 10% sma
   // nothing a skin does reaches the score / leaderboard submission
   const src = readFileSync("src/online/leaderboard.js", "utf8");
   expect(src).not.toMatch(/skin|passPlus|PassPlus/);
+  expect(log.errors).toEqual([]);
+});
+
+const PASS_HEROES = [
+  "voidcat",
+  "hexowl",
+  "wraithmoth",
+  "triphound",
+  "phantomray",
+  "scorpyre",
+  "krakkie",
+  "crimsonmantis",
+  "gloomeleon",
+  "umbradrake",
+];
+
+test("Drift Pass+ heroes: standard hitbox and speed, drawn ~10% smaller", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  const log = await openGame(page, { flags: ["god"], save: SAVE });
+  const results = [];
+  for (const id of ["volt", "bunbun", ...PASS_HEROES]) {
+    await page.goto(page.url().replace(/&character=[a-z]+/, "") + `&character=${id}`);
+    await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+    await run(page, 800);
+    await startRun(page);
+    results.push(
+      await page.evaluate((k) => {
+        const s = window.__glydrift.scene.getScene("Game");
+        const p = s.player;
+        const before = s.meters;
+        let frames = new Set();
+        for (let i = 0; i < 240; i++) {
+          s.slowT = 0;
+          s.timeScale = 1;
+          s.__t = (s.__t || 1e6) + 1000 / 60;
+          s.stepFrame(s.__t, 1000 / 60);
+          if (p.y > s.H * 0.55 && p.vy > -50) s.onTap();
+          frames.add(p.rig.sprite.frame.name);
+        }
+        // a new best and a near-miss play their reactions (cosmetic: nothing else changes)
+        p.rig.onBest();
+        p.rig.onNear();
+        for (let i = 0; i < 30; i++) {
+          s.__t += 1000 / 60;
+          s.stepFrame(s.__t, 1000 / 60);
+        }
+        return {
+          id: k,
+          def: p.rig.def.id,
+          radius: p.radius,
+          metres: Math.round((s.meters - before) * 100) / 100,
+          width: p.rig.sprite.displayWidth,
+          frames: frames.size,
+          alive: s.state === "playing",
+        };
+      }, id),
+    );
+  }
+  const base = results[0];
+  for (const r of results) {
+    expect(r.def, "flies as the asked hero").toBe(r.id);
+    expect(r.radius, `${r.id} hitbox`).toBe(base.radius);
+    expect(r.metres, `${r.id} speed`).toBe(base.metres);
+    expect(r.alive, `${r.id} still flying`).toBe(true);
+  }
+  for (const r of results.filter((x) => PASS_HEROES.includes(x.id))) {
+    const k = r.width / base.width;
+    expect(k, `${r.id} drawn size`).toBeGreaterThan(0.86);
+    expect(k, `${r.id} drawn size`).toBeLessThan(0.94);
+    expect(r.frames, `${r.id} animates (idle + flap frames)`).toBeGreaterThanOrEqual(4);
+  }
+  expect(log.errors).toEqual([]);
+});
+
+test("Drift Pass+ heroes come only from the pass track", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { save: { ...PASS_SAVE, coins: 999999 }, flags: ["mockiap"] });
+  // the heroes screen: a DRIFT PASS+ card, no coin price, and buying is refused
+  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Characters"));
+  await waitFor(page, () => window.__glydrift.scene.isActive("Characters"));
+  await run(page, 600);
+  await page.evaluate(() => {
+    const c = window.__glydrift.scene.getScene("Characters");
+    c.select(c.roster.findIndex((d) => d.id === "umbradrake"));
+  });
+  await run(page, 800);
+  await snap(page, testInfo, "20-pass-hero-card");
+  const card = await page.evaluate(() => {
+    const c = window.__glydrift.scene.getScene("Characters");
+    const texts = (o) => (o.type === "Text" ? [o.text] : (o.list || []).flatMap(texts));
+    return { button: texts(c.actionBtn), badge: c.cards.find((k) => k.def.id === "umbradrake") };
+  });
+  expect(card.button).toContain("DRIFT PASS+ · TIER 50");
+  expect(card.badge).toBeTruthy();
+  // tapping it leads to the pass, not a coin purchase
+  const coins = await page.evaluate(() => {
+    const c = window.__glydrift.scene.getScene("Characters");
+    c.act();
+    return JSON.parse(localStorage.getItem("glydrift.save.v1")).coins;
+  });
+  expect(coins).toBe(999999);
+  await waitFor(page, () => window.__glydrift.scene.isActive("Pass"));
+  // claim every tier of the paid track: all ten heroes, each at its own tier
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+    s.seasons.s1.xp = 450 * 50;
+    localStorage.setItem("glydrift.save.v1", JSON.stringify(s));
+  });
+  await page.reload();
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  await run(page, 600);
+  await openPass(page);
+  await tap(page, "GET PASS+ $3.99", 1200);
+  await tap(page, "BUY $3.99", 1200);
+  const got = await page.evaluate(() => {
+    const P = window.__glyPassPlus;
+    const out = {};
+    P.track().forEach((r, i) => {
+      if (r.hero) out[i + 1] = r.hero;
+      P.claim(i);
+    });
+    return out;
+  });
+  expect(got).toEqual({
+    1: "voidcat",
+    5: "hexowl",
+    10: "wraithmoth",
+    15: "triphound",
+    20: "phantomray",
+    25: "scorpyre",
+    30: "krakkie",
+    35: "crimsonmantis",
+    40: "gloomeleon",
+    50: "umbradrake",
+  });
+  const save = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  for (const id of PASS_HEROES) expect(save.unlocked[id], id).toBe(true);
+  // the free track and the coin shop never offer them
+  const free = await page.evaluate(() =>
+    window.__glydrift.scene.getScene("Pass").track.filter((r) => r.hero).map((r) => r.hero),
+  );
+  for (const id of PASS_HEROES) expect(free).not.toContain(id);
+  const src = readFileSync("src/scenes/ShopScene.js", "utf8");
+  expect(src).toMatch(/!c\.lottery && !c\.passPlus/);
+  expect(readFileSync("src/data/progression.js", "utf8")).toMatch(/def\.passPlus \|\| !cost/);
+  expect(log.errors).toEqual([]);
+});
+
+test("after logging out: one pop-up at a time, and no free rewards twice", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(180_000);
+  // a player who already claimed today's reward and free drop (and has a username)
+  const log = await openGame(page, {
+    flags: ["mockcloud"],
+    save: { ...SAVE, dailyDrop: SAVE.login.claimed, seasons: { s1: { heroSeen: true } } },
+  });
+  await run(page, 1500);
+  await page.evaluate(() => {
+    const m = window.__glydrift.scene.getScene("Menu");
+    if (m.modal) m.closeModal();
+  });
+  await run(page, 600);
+  const claimed = await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+    return { login: s.login.claimed, drop: s.dailyDrop };
+  });
+  // create an account, then log out: the device becomes a fresh guest
+  await openSettingsAccount(page);
+  await page.fill("#account-modal input[name=email]", "pilot@example.com");
+  await page.fill("#account-modal input[name=password]", "hunter2hunter2");
+  await page.click("#account-modal button[type=submit]");
+  await expect(page.locator("#account-modal h2")).toHaveText("ACCOUNT");
+  await page.click("#account-modal [data-act=logout]");
+  await page.waitForLoadState("load");
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  // sample the screen for 8 s: never more than one arrival pop-up at once
+  const seen = [];
+  let worst = 0;
+  for (let i = 0; i < 40; i++) {
+    await run(page, 200);
+    const st = await page.evaluate(() => {
+      const m = window.__glydrift.scene.getScene("Menu");
+      const name = document.querySelector("#name-modal.open") ? "name" : null;
+      const modal = m.modal ? "modal" : null;
+      const reveal = m.revealing ? "reveal" : null;
+      const chest = m.claiming ? "chest" : null;
+      return [name, modal, reveal, chest].filter(Boolean);
+    });
+    worst = Math.max(worst, st.length);
+    for (const k of st) if (seen[seen.length - 1] !== k) seen.push(k);
+    if (st.includes("name")) {
+      await page.fill("#name-modal input", "GuestPilot");
+      await page.click("#name-modal [data-act=save]");
+    }
+  }
+  expect(worst).toBe(1);
+  // the name picker came first and the season's NEW HERO reveal after it
+  expect(seen[0]).toBe("name");
+  expect(seen).toContain("reveal");
+  // the fresh guest can't take today's reward, free drop or a starter spin again
+  const after = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  expect(after.login.claimed).toBe(claimed.login);
+  expect(after.dailyDrop).toBe(claimed.drop);
+  expect(after.spins).toBe(0);
+  expect(after.coins).toBe(0);
   expect(log.errors).toEqual([]);
 });
 

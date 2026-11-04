@@ -40,7 +40,7 @@ export function tierXp() {
 }
 
 /** Hand out one tier's reward. Owned cosmetics / heroes pay coins instead. */
-function giveReward(r) {
+export function giveReward(r) {
   const s = Save.data;
   if (r.coins) {
     s.coins += r.coins;

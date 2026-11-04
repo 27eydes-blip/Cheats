@@ -80,6 +80,47 @@ function merge(base, data) {
   return base;
 }
 
+// ---- the device ledger: free rewards this DEVICE has already handed out. It lives outside
+// the save, so logging out (or deleting the account, or signing into another account) can't
+// hand the same day's daily reward, free Drift Drop or starter spin out again.
+const DEVICE_KEY = "glydrift.device.v1";
+let ledgerCache = null;
+function ledger() {
+  if (!ledgerCache)
+    try {
+      ledgerCache = JSON.parse(localStorage.getItem(DEVICE_KEY)) || {};
+    } catch {
+      ledgerCache = {};
+    }
+  return ledgerCache;
+}
+const later = (a, b) => ((a || "") > (b || "") ? a : b) || "";
+/** Remember what this save has claimed (called on every write; writes only on a change). */
+function noteLedger(d) {
+  const l = ledger();
+  const next = {
+    login: later(l.login, d.login?.claimed),
+    drop: later(l.drop, d.dailyDrop),
+    starterSpin: true, // a save has existed on this device: its free starter spin is given
+  };
+  if (next.login === l.login && next.drop === l.drop && l.starterSpin) return;
+  ledgerCache = next;
+  try {
+    localStorage.setItem(DEVICE_KEY, JSON.stringify(next));
+  } catch {
+    /* storage blocked: nothing to protect anyway */
+  }
+}
+/** A fresh or merged save can't re-claim what this device already claimed today. */
+function applyLedger(d, fresh) {
+  const l = ledger();
+  d.login ||= {};
+  d.login.claimed = later(d.login.claimed, l.login);
+  d.dailyDrop = later(d.dailyDrop, l.drop);
+  if (fresh && l.starterSpin) d.spins = 0;
+  return d;
+}
+
 let cache = null;
 let persists = null;
 const writeListeners = [];
@@ -101,6 +142,7 @@ export const Save = {
     }
   },
   write() {
+    noteLedger(Save.data);
     for (const fn of writeListeners) {
       try {
         fn();
@@ -133,13 +175,22 @@ export const Save = {
     }
     return persists;
   },
+  /**
+   * A fresh guest save on this device (log out / delete account). Device settings and today's
+   * Daily Challenge attempts stay; free rewards already claimed here today aren't given again.
+   */
   reset() {
-    cache = defaults();
+    const old = cache;
+    noteLedger(old || Save.data);
+    cache = applyLedger(defaults(), true);
+    if (old?.settings) cache.settings = { ...cache.settings, ...old.settings };
+    if (old?.daily) cache.daily = { ...old.daily, ghost: null };
     Save.write();
   },
   /** Swap in a whole save (a merged cloud save); missing fields get their defaults. */
   replace(data) {
-    cache = merge(defaults(), JSON.parse(JSON.stringify(data)));
+    noteLedger(Save.data);
+    cache = applyLedger(merge(defaults(), JSON.parse(JSON.stringify(data))), false);
     Save.write();
   },
   /** Run fn after every write (cloud sync listens here). */
