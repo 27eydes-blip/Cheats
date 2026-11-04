@@ -67,6 +67,8 @@ export const SPAWN = {
   unlock: {
     void: [60, 200, 340],
     default: [0, 120, 230],
+    // Frozen Nebula: its three hazards, the Frost Comet, then the combination patterns
+    frozen: [0, 110, 210, 260, 300, 340, 380, 420],
     tidal: [0, 110, 220, 330],
     chrono: [0, 110, 220, 330],
   },

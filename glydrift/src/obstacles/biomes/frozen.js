@@ -1,5 +1,5 @@
 // Frozen Nebula: Icicle (shakes → drops), IceSlider (slow sliding pillar), ZapOrbs
-// (charge → zap between two orbs).
+// (charge → zap between two orbs), FrostComet (its path is marked, then it streaks across).
 import { PILLAR_W } from "../../pixel/biomeArt.js";
 import { S } from "../../pixel/px.js";
 import { circleClear, rectClear, segClear } from "../geometry.js";
@@ -206,5 +206,94 @@ export class ZapOrbs extends PxObstacle {
     );
     if (this.zapping) c = Math.min(c, segClear(px, py, r, this.ax, this.y1, this.bx, this.y2, 8));
     return c;
+  }
+}
+
+/**
+ * Frost Comet. Fair warning first: a dashed line marks the whole diagonal it will travel
+ * (with a pulsing marker where it enters), for WARN seconds; then the comet streaks down
+ * that line once and is gone. The path scrolls with the world like every hazard.
+ */
+const WARN = 1.15;
+const FLY = 1.05;
+export class FrostComet extends PxObstacle {
+  constructor(mgr) {
+    super(mgr);
+    this.type = "comet";
+    this.path = this.add(
+      this.scene.add.tileSprite(0, 0, 2 * S, 100, "hz_dash").setOrigin(0.5, 0).setDepth(HAZ_TOP),
+    );
+    this.marker = this.add(this.scene.add.image(0, 0, "hz", "orb_1").setDepth(HAZ_TOP));
+    this.img = this.add(this.scene.add.image(0, 0, "hz", "comet_0").setDepth(HAZ_TOP + 1));
+  }
+  spawn(x, { dir = 1, lead = 0.7, span = 300 }) {
+    this.arm(x);
+    const H = this.mgr.H;
+    // the line runs from above the screen on one side to below it on the other
+    this.ax = dir > 0 ? span : -span;
+    this.ay = -70;
+    this.bx = -this.ax;
+    this.by = H + 70;
+    this.halfW = span + 40;
+    this.lead = lead; // the comet crosses the middle about this long before the player arrives
+    this.state = "wait";
+    this.timer = 0;
+    this.k = 0;
+    this.img.setVisible(false);
+    this.marker.setVisible(false);
+    this.path.setVisible(false);
+    const len = Math.hypot(this.bx - this.ax, this.by - this.ay);
+    this.path.setSize(2 * S, len).setRotation(Math.atan2(this.by - this.ay, this.bx - this.ax) - Math.PI / 2);
+    this.path.setTint(0xbfefff);
+  }
+  update(dt) {
+    if (this.state === "wait") {
+      const t = eta(this);
+      if (t >= 0 && t < this.lead + FLY / 2 + WARN) {
+        this.state = "warn";
+        this.timer = 0;
+      }
+    } else if (this.state === "warn") {
+      this.timer += dt;
+      if (this.timer >= WARN) {
+        this.state = "fly";
+        this.timer = 0;
+      }
+    } else if (this.state === "fly") {
+      this.timer += dt;
+      this.k = Math.min(1, this.timer / FLY);
+      if (Math.random() < (this.mgr.lowGfx ? 0.15 : 0.35))
+        this.mgr.fx.burst("flake", this.cx, this.cy, 1, 0xdff8ff, {
+          speed: { min: 20, max: 90 },
+        });
+      if (this.k >= 1) this.state = "gone";
+    }
+    const warn = this.state === "warn";
+    this.path
+      .setVisible(warn)
+      .setPosition(this.x + this.ax, this.ay)
+      .setAlpha(0.25 + 0.45 * Math.min(1, this.timer / WARN));
+    // the entry marker pulses where the comet will appear (slowly with Reduce Flashing)
+    this.marker
+      .setVisible(warn)
+      .setPosition(this.x + this.ax * 0.82, 26)
+      .setAlpha(0.6 + 0.4 * Math.sin(this.timer * 14));
+    const fly = this.state === "fly";
+    this.img.setVisible(fly);
+    if (fly) {
+      this.img
+        .setFrame(Math.floor(this.timer * 12) % 2 ? "comet_1" : "comet_0")
+        .setPosition(snap(this.cx), snap(this.cy));
+    }
+  }
+  get cx() {
+    return this.x + this.ax + (this.bx - this.ax) * this.k;
+  }
+  get cy() {
+    return this.ay + (this.by - this.ay) * this.k;
+  }
+  clearance(px, py, r) {
+    if (this.state !== "fly") return Infinity;
+    return circleClear(px, py, r, this.cx, this.cy, 7 * S);
   }
 }

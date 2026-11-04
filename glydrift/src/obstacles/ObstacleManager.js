@@ -13,7 +13,7 @@ import { TYPES } from "./index.js";
 const SIG = {
   void: ["laser", "blade", "hlaser"],
   solar: ["geyser", "meteor", "firebar"],
-  frozen: ["icicle", "slider", "zap"],
+  frozen: ["icicle", "slider", "zap", "comet", "icecurtain", "sliderpair", "zapstairs", "gauntlet"],
   glitch: ["blink", "zone"], // the broken-laser wall ("blaser") was taken out
   abyss: ["tendril", "slammer", "walls"],
   valley: ["vine", "puffs", "bloom"],
@@ -23,6 +23,8 @@ const SIG = {
   chrono: ["cgear", "pendulum", "timezone", "rewind"],
   mirror: ["spire", "vorb", "vbar"],
 };
+/** Combination patterns are a little rarer than the realm's single hazards. */
+const SIG_WEIGHT = { icecurtain: 1.4, sliderpair: 1.3, zapstairs: 1.3, gauntlet: 1.2, comet: 1.6 };
 /** Biome-local meters at which each signature hazard unlocks. */
 const UNLOCK = SPAWN.unlock;
 
@@ -62,6 +64,7 @@ export class ObstacleManager {
     this.lastCoinX = 0; // screen x of the furthest-right coin spawned (scrolls with the world)
     this.lastCoinY = this.H / 2;
     this.count = 0;
+    this.lastKind = null;
     this.flipped = false;
     this.sinceFlip = 0;
     this.lastPortalM = 0;
@@ -185,7 +188,7 @@ export class ObstacleManager {
     sig.forEach((k, i) => {
       const open = !firstLap || local >= unlock[i] || (biomeId === "void" && meters >= unlock[i]);
       if (!open) return;
-      w[k] = 2.6;
+      w[k] = SIG_WEIGHT[k] ?? 2.6;
       // introduce each new hazard alone the first time it appears
       const key = `${info.rawIndex}:${k}`;
       if (!this.introduced.has(key) && !forced) forced = k;
@@ -204,9 +207,13 @@ export class ObstacleManager {
     let kind = forced || null;
     if (kind) this.introduced.add(`${info.rawIndex}:${kind}`);
     if (!kind) {
+      // never the same pattern twice in a row (re-roll without it when there's a choice)
+      if (this.lastKind && w[this.lastKind] && Object.values(w).filter((v) => v > 0).length > 1)
+        w[this.lastKind] = 0;
       kind = r.weighted(w);
       this.introduced.add(`${info.rawIndex}:${kind}`);
     }
+    this.lastKind = kind;
     this.count++;
     const roomy = SPAWN.roomy[biomeId] ?? 1;
     const spacingMul = (forced ? 1.35 : info.grace ? 1.8 : 1) * roomy;
@@ -389,6 +396,58 @@ export class ObstacleManager {
         o.spawn(x + 40 + Math.abs(dx) / 2, { y1: c - D / 2, y2: c + D / 2, dx, phase: r.next() });
         if (r.chance(0.6)) this.coinLine(x, x + 80, c < mid ? c + D / 2 + 140 : c - D / 2 - 140, 3);
         width = 80 + Math.abs(dx);
+        break;
+      }
+      case "comet": {
+        // Frost Comet: its whole path is shown before it flies (see FrostComet)
+        const o = this.obtain("comet");
+        o.spawn(x + 160, { dir: r.chance(0.5) ? 1 : -1, lead: r.range(0.55, 0.85), span: r.range(240, 320) });
+        this.coinLine(x + 60, x + 260, r.chance(0.5) ? H * 0.3 : H * 0.7, 3);
+        width = 320;
+        break;
+      }
+      case "icecurtain": {
+        // three icicles in a cascade: each shakes (with its drop line) a beat after the last
+        for (let i = 0; i < 3; i++) {
+          const o = this.obtain("icicle");
+          o.spawn(x + 26 + i * 150, { lead: 1.25 + i * 0.12 });
+        }
+        this.coinLine(x + 40, x + 320, H * 0.74, 4);
+        width = 52 + 300;
+        break;
+      }
+      case "sliderpair": {
+        // pillars from the ceiling and the floor sliding in opposite phase: the gap moves
+        const ph = r.next();
+        const per = r.range(3.4, 4.2);
+        const a = this.obtain("slider");
+        a.spawn(x + a.w / 2, { top: true, Lmin: H * 0.08, Lmax: H * 0.36, period: per, phase: ph });
+        const b = this.obtain("slider");
+        b.spawn(x + b.w / 2, { top: false, Lmin: H * 0.08, Lmax: H * 0.36, period: per, phase: ph + 0.5 });
+        width = a.w;
+        break;
+      }
+      case "zapstairs": {
+        // two zap pairs stepped like stairs, firing in turn
+        const D = r.range(260, 320);
+        const up = r.chance(0.5);
+        for (let i = 0; i < 2; i++) {
+          const c = up ? safeBot - D / 2 - i * 230 : safeTop + D / 2 + i * 230;
+          const o = this.obtain("zap");
+          o.spawn(x + 40 + i * 220, { y1: c - D / 2, y2: c + D / 2, dx: 0, phase: (i * 0.5 + r.next() * 0.2) % 1 });
+        }
+        this.coinLine(x + 60, x + 280, up ? safeTop + 60 : safeBot - 60, 4);
+        width = 300;
+        break;
+      }
+      case "gauntlet": {
+        // a slider rising from the floor with an icicle hanging above its far side
+        const sl = this.obtain("slider");
+        sl.spawn(x + sl.w / 2, { top: false, Lmin: H * 0.12, Lmax: H * 0.42, period: r.range(3.6, 4.4), phase: r.next() });
+        const ic = this.obtain("icicle");
+        ic.spawn(x + sl.w + 150, { lead: 1.3 });
+        this.coinLine(x + 30, x + sl.w + 160, H * 0.42, 3);
+        width = sl.w + 180;
         break;
       }
       // ------------------------------------------------------------ glitch realm
