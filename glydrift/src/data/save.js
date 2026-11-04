@@ -1,5 +1,6 @@
 // Local persistence. Everything lives in one JSON blob in localStorage; when wrapped with
 // Capacitor this can be swapped for @capacitor/preferences without touching callers.
+import { SPIN_MAX } from "../tuning.js";
 
 const KEY = "glydrift.save.v1";
 
@@ -87,7 +88,10 @@ export const Save = {
   load() {
     try {
       const raw = localStorage.getItem(KEY);
-      return merge(defaults(), raw ? JSON.parse(raw) : null);
+      const d = merge(defaults(), raw ? JSON.parse(raw) : null);
+      // spins used to be uncapped (one long run could bank dozens): trim to the cap
+      if ((d.spins || 0) > SPIN_MAX) d.spins = SPIN_MAX;
+      return d;
     } catch {
       return defaults();
     }

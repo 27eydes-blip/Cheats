@@ -12,6 +12,7 @@ import { Sfx } from "../audio/sfx.js";
 import { Leaderboard, Levels } from "../online/leaderboard.js";
 import { Music } from "../audio/music.js";
 import { Progression, SPIN_EVERY } from "../data/progression.js";
+import { SPIN_MAX } from "../tuning.js";
 import { dailyNumber } from "../data/rng.js";
 import { levelUpCelebration, revealHero } from "../ui/reveal.js";
 import { closeShareModal, openShareModal } from "../online/shareCard.js";
@@ -56,8 +57,10 @@ export class GameOverScene extends Phaser.Scene {
     this.scene.get("Hud")?.scene.setVisible(false);
     this.t0 = this.time.now;
 
-    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x020107, 0).setInteractive();
-    this.tweens.add({ targets: dim, fillAlpha: 0.8, duration: 200 });
+    // dark enough that the bright neon hazards behind the results don't show through
+    // (oversized so a camera shake never reveals an edge)
+    const dim = this.add.rectangle(W / 2, H / 2, W * 3, H * 3, 0x020107, 0).setInteractive();
+    this.tweens.add({ targets: dim, fillAlpha: 0.93, duration: 200 });
 
     // ---- header + score
     // header sits just under the safe area; "SCORE" keeps clear of it on notched phones
@@ -244,7 +247,9 @@ export class GameOverScene extends Phaser.Scene {
       const earned = R.spinsEarned || 0;
       const txt = earned
         ? `LUCKY SPIN +${earned}!  spin it from the menu`
-        : `Lucky Spin: ${R.spinPts ?? 0} / ${SPIN_EVERY} points`;
+        : R.spinsFull
+          ? `Lucky Spins full (${SPIN_MAX}/${SPIN_MAX})  ·  spin them from the menu`
+          : `Lucky Spin: ${R.spinPts ?? 0} / ${SPIN_EVERY} points`;
       const t = plainText(
         this,
         W / 2,

@@ -3,6 +3,7 @@ import { BIOMES } from "../biomes/biomes.js";
 import { CHARACTERS, getCharacter, heroReleased, onSale } from "../player/characterDefs.js";
 import { dayDiff, RNG, todayKey } from "./rng.js";
 import { Save } from "./save.js";
+import { SPIN_MAX } from "../tuning.js";
 import { Seasons } from "./seasons.js";
 import { DriftPass } from "./driftPass.js";
 
@@ -286,6 +287,8 @@ export const LEVEL_REWARDS = {
 
 /** Points per Lucky Spin. */
 export const SPIN_EVERY = 2500;
+/** Most spins one run can earn (a single huge run used to bank dozens). */
+export const SPINS_PER_RUN = 1;
 /** The wheel, clockwise from the top. Weights are relative chances. */
 export const SPIN_SLICES = [
   { type: "coins", amount: 100, weight: 20 },
@@ -572,8 +575,9 @@ export const Progression = {
       s.unlocked[pick.id] = true;
       prize = { type: "hero", id: pick.id };
     } else if (slice.type === "spins") {
-      s.spins += slice.amount;
-      prize = { type: "spins", amount: slice.amount };
+      const got = Math.max(0, Math.min(slice.amount, SPIN_MAX - s.spins));
+      s.spins += got;
+      prize = { type: "spins", amount: got };
     } else {
       // every lottery hero owned → the hero slice pays a jackpot instead
       const amount = slice.type === "hero" ? 1000 : slice.amount;
@@ -732,15 +736,19 @@ export const Progression = {
       res.levelUps.push(lu);
     }
 
-    // Lucky Spin: every SPIN_EVERY points scored banks a spin
+    // Lucky Spin: every SPIN_EVERY points scored banks a spin, at most SPINS_PER_RUN per run
+    // and never more than SPIN_MAX held; points past that don't carry over
+    s.spins = Math.min(s.spins || 0, SPIN_MAX);
     s.spinPts = (s.spinPts || 0) + Math.max(0, Math.floor(run.score));
     res.spinsEarned = 0;
-    while (s.spinPts >= SPIN_EVERY) {
+    while (s.spinPts >= SPIN_EVERY && res.spinsEarned < SPINS_PER_RUN && s.spins < SPIN_MAX) {
       s.spinPts -= SPIN_EVERY;
-      s.spins = (s.spins || 0) + 1;
+      s.spins += 1;
       res.spinsEarned++;
     }
+    s.spinPts = Math.min(s.spinPts, SPIN_EVERY - 1);
     res.spinPts = s.spinPts;
+    res.spinsFull = s.spins >= SPIN_MAX;
 
     res.unlocks = Progression.checkChallengeUnlocks();
     res.achievements = Progression.checkAchievements();

@@ -150,7 +150,9 @@ export class ObstacleManager {
     const mid = H / 2;
     const safeTop = 150;
     const safeBot = H - 150;
-    const spacing = Phaser.Math.Linear(520, 360, d) + r.range(-30, 40);
+    // density ramps up faster than difficulty: more obstacles early, same gap sizes
+    const sd = this.info.dimension ? d : Math.min(1, meters / SPAWN.spacing.rampMeters);
+    const spacing = Phaser.Math.Linear(SPAWN.spacing.start, SPAWN.spacing.end, sd) + r.range(-30, 40);
     let width = 120;
 
     // gravity flip lasts a few obstacles, then a restore portal is guaranteed

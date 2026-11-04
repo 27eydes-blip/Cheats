@@ -377,7 +377,11 @@ export class HudScene extends Phaser.Scene {
   showPop(item) {
     const d = item.data;
     const done = () => this.pops.release(item);
-    if (item.kind === "realm") this.showRealm(d.rawIndex, d.slam, done);
+    if (item.kind === "realm") {
+      this.showRealm(d.rawIndex, d.slam, done);
+      // a realm title never has pops on top: clear any already rising through its strip
+      this.gameScene?.clearPopsIn?.(this.centerBandFor("realm"));
+    }
     else if (item.kind === "speed") this.showSpeed(done);
     else this.showCenterText(d.str, d.color, d.size, done);
     // released when its animation really ends; this is only the fallback
@@ -465,8 +469,12 @@ export class HudScene extends Phaser.Scene {
    */
   centerBand() {
     const cur = this.pops.live(this.time.now);
-    if (!cur) return null;
-    if (cur.kind === "realm") return { y0: this.bannerY - 96, y1: this.bannerY + 78 };
+    return cur ? this.centerBandFor(cur.kind, cur.data) : null;
+  }
+
+  centerBandFor(kind, data) {
+    if (kind === "realm") return { y0: this.bannerY - 96, y1: this.bannerY + 78 };
+    const cur = { kind, data };
     const y = this.centerY();
     if (cur.kind === "speed") return { y0: y - 44, y1: y + 44 };
     const h = (cur.data.size * this.worldZoom()) / 2 + 22;

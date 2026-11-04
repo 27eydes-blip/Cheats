@@ -17,6 +17,7 @@ import {
   settle,
   tap,
   waitFor,
+  SAVE,
 } from "./helpers.js";
 
 /**
@@ -600,6 +601,20 @@ test("centre pop-ups never pile up", async ({ page }, testInfo) => {
   });
   expect(clear).toBe(true);
 
+  // a pop that was already rising when a realm title appears is cleared out of its strip
+  const cleared = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const s = g.scene.getScene("Game");
+    const h = g.scene.getScene("Hud");
+    h.pops.clear();
+    const band = h.centerBandFor("realm");
+    const mid = (s.hudToWorldY(band.y0) + s.hudToWorldY(band.y1)) / 2;
+    const t = s.fx.floatText(s.player.x, mid, "CLOSE!", "#ffffff", 32);
+    h.onBiome(5);
+    return !t.visible;
+  });
+  expect(cleared).toBe(true);
+
   // and through a real stretch of run across a realm change at 1000 m
   await page.evaluate(() => {
     const s = window.__glydrift.scene.getScene("Game");
@@ -610,6 +625,7 @@ test("centre pop-ups never pile up", async ({ page }, testInfo) => {
     }
   });
   let maxCentre = 0;
+  let covered = 0;
   for (let i = 0; i < 70; i++) {
     await page.evaluate(() => {
       const s = window.__glydrift.scene.getScene("Game");
@@ -617,10 +633,94 @@ test("centre pop-ups never pile up", async ({ page }, testInfo) => {
     });
     await run(page, 100);
     maxCentre = Math.max(maxCentre, (await centre()).length);
+    // while a realm title shows, no CLOSE! / coin / combo pop is on top of it
+    covered += await page.evaluate(() => {
+      const g = window.__glydrift;
+      const s = g.scene.getScene("Game");
+      const h = g.scene.getScene("Hud");
+      if (!(h.banner.visible && h.banner.alpha > 0.05)) return 0;
+      const band = h.centerBandFor("realm");
+      const b0 = s.hudToWorldY(band.y0);
+      const b1 = s.hudToWorldY(band.y1);
+      return s.fx.texts.filter(
+        (t) =>
+          t.visible &&
+          t.alpha > 0.05 &&
+          t.y + t.displayHeight / 2 > b0 &&
+          t.y - t.displayHeight / 2 < b1,
+      ).length;
+    });
   }
+  expect(covered).toBe(0);
   expect(
     await page.evaluate(() => window.__glydrift.scene.getScene("Game").meters),
   ).toBeGreaterThan(1000);
   expect(maxCentre).toBeLessThanOrEqual(1);
+  expect(log.errors).toEqual([]);
+});
+
+test("home shows at most two '!' badges, free rewards first", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  // daily run unplayed, free drop ready, a spin to use and the login reward unclaimed: four
+  // things ready, only the two free rewards get a badge
+  const log = await openGame(page, {
+    save: { ...SAVE, login: { last: "2026-11-03", streak: 3, claimed: "2026-11-03" } },
+  });
+  const badged = await page.evaluate(() => {
+    const m = window.__glydrift.scene.getScene("Menu");
+    const labels = [];
+    for (const c of m.children.list) {
+      if (c.type !== "Container") continue;
+      const bang = c.list.some(
+        (o) => o.type === "Container" && o.list.some((x) => x.type === "Text" && x.text === "!"),
+      );
+      if (bang) labels.push(c.list.find((x) => x.type === "Text")?.text);
+    }
+    return labels;
+  });
+  expect(badged.sort()).toEqual(["FREE DROP", "STREAK"]);
+  expect(log.errors).toEqual([]);
+});
+
+test("lucky spins: old saves trimmed to 3, one spin per run at most", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  // an old save holding 105 spins (spins used to be uncapped) shows 3
+  const log = await openGame(page, { save: { ...SAVE, spins: 105 } });
+  const shows = (txt) =>
+    page.evaluate(
+      (t) =>
+        window.__glydrift.scene
+          .getScene("Menu")
+          .children.list.some(
+            (c) => c.type === "Container" && c.list.some((x) => x.type === "Text" && x.text === t),
+          ),
+      txt,
+    );
+  expect(await shows("3 spins ready")).toBe(true);
+  expect(log.errors).toEqual([]);
+});
+
+test("a huge run earns one spin, not dozens", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { save: { ...SAVE, spins: 1, spinPts: 0 }, flags: ["god"] });
+  await startRun(page);
+  await page.evaluate(() => {
+    window.__glydrift.scene.getScene("Game").bonus = 100000; // 40 spins' worth of points
+    window.__glyGod(false);
+  });
+  for (
+    let i = 0;
+    i < 60 && !(await page.evaluate(() => window.__glydrift.scene.isActive("GameOver")));
+    i++
+  )
+    await run(page, 250);
+  const after = await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+    return { spins: s.spins, spinPts: s.spinPts };
+  });
+  expect(after.spins).toBe(2); // one earned
+  expect(after.spinPts).toBeLessThan(2500); // and no pile of points banked for later
   expect(log.errors).toEqual([]);
 });

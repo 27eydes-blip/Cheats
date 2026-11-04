@@ -36,6 +36,7 @@ import {
   DIMENSIONS,
   FLASH,
   REWARDS,
+  SPAWN,
 } from "../tuning.js";
 
 const CALM_M = CALM.meters;
@@ -420,6 +421,29 @@ export class GameScene extends Phaser.Scene {
       }
     }
     return this.fx.floatText(x, y, str, color, sz);
+  }
+
+  /** HUD → world y (the HUD and the world are drawn at different zooms). */
+  hudToWorldY(hy) {
+    const hc = this.hud.cameras.main;
+    const gc = this.cameras.main;
+    return ((hy - hc.worldView.y) * hc.zoom) / gc.zoom + gc.worldView.y;
+  }
+
+  /** Remove pop text that would rise through a HUD strip (a realm title just appeared there). */
+  clearPopsIn(band) {
+    if (!band || !this.hud) return;
+    const b0 = this.hudToWorldY(band.y0);
+    const b1 = this.hudToWorldY(band.y1);
+    for (const t of this.fx.texts) {
+      if (!t.active) continue;
+      const h = t.height / 2;
+      // its remaining path: from where it is up to 70 above where it started (≤ 70 above now)
+      if (t.y + h > b0 && t.y - 70 - h < b1) {
+        this.tweens.killTweensOf(t);
+        t.setActive(false).setVisible(false);
+      }
+    }
   }
 
   /** Every 100 m a pop; 500 m / 1000 m get a proper celebration. */
@@ -855,7 +879,8 @@ export class GameScene extends Phaser.Scene {
     const riftAhead = this.course.riftAfter(seg0);
     const titleWin =
       this.meters > 100 &&
-      (local0 > len0 - (riftAhead ? DIMENSIONS.riftClearMeters : 85) || local0 < 50);
+      (local0 > len0 - (riftAhead ? DIMENSIONS.riftClearMeters : SPAWN.titleClear.before) ||
+        local0 < SPAWN.titleClear.after);
     info.pause = playing && (calm || preCalm || titleWin || this.blackoutT > 0);
     // gentle starts: the Abyss's first metres, and the first seconds of every dimension
     const dimGrace = (this.speed * DIMENSIONS.graceSeconds) / WORLD.pxPerMeter;

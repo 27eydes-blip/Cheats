@@ -76,6 +76,13 @@ export const SPAWN = {
   /** Extra space between patterns per biome. */
   roomy: { abyss: 1.4, glitch: 1.12, valley: 1.6, hurricane: 1.05 },
   difficultyMeters: 2600, // distance at which shared obstacles reach full difficulty
+  /**
+   * Space between patterns (px): from `start` to `end` over the first `rampMeters` (gap sizes
+   * and hazard speeds still follow difficultyMeters, so the path stays as open as before).
+   */
+  spacing: { start: 480, end: 340, rampMeters: 1600 },
+  /** Hazard-free metres kept around a realm change, so its title shows over clear sky. */
+  titleClear: { before: 40, after: 30 },
 };
 
 /** Coin flow: keep a coin within reach often enough that the combo (COMBO.window) can last. */
@@ -93,3 +100,6 @@ export const DIMENSIONS = {
   riftClearMeters: 110, // no obstacles in the stretch before a rift
   tearSeconds: 0.45, // the screen-tear transition
 };
+
+/** Lucky Spin: the most spins a player can hold (saves holding more are trimmed on load). */
+export const SPIN_MAX = 3;

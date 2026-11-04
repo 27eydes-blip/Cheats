@@ -51,6 +51,9 @@ function countdownText() {
   return `${hh}:${mm}:${ss}`;
 }
 
+/** Most red "!" badges shown on the home screen at once. */
+const MAX_BANGS = 2;
+
 export class MenuScene extends Phaser.Scene {
   constructor() {
     super("Menu");
@@ -350,6 +353,7 @@ export class MenuScene extends Phaser.Scene {
         sub: played ? "played" : "new run",
         col: 0xffd23f,
         ready: !played,
+        prio: 3,
         go: () => this.startGame("daily"),
       },
       {
@@ -357,6 +361,7 @@ export class MenuScene extends Phaser.Scene {
         sub: Shop.dropReady() ? "ready!" : "tomorrow",
         col: 0x7ae82a,
         ready: Shop.dropReady(),
+        prio: 0, // free rewards waiting to be claimed come first
         go: () => this.go("Shop"),
       },
       {
@@ -364,6 +369,7 @@ export class MenuScene extends Phaser.Scene {
         sub: `${s.spins || 0} left`,
         col: 0xff7ad9,
         ready: (s.spins || 0) > 0,
+        prio: 2,
         go: () => this.go("Spin"),
       },
       {
@@ -371,6 +377,7 @@ export class MenuScene extends Phaser.Scene {
         sub: `${ls.streak || s.login.streak || 0} days`,
         col: 0xff8a1a,
         ready: ls.canClaim,
+        prio: 1,
         go: () =>
           ls.canClaim
             ? this.openLogin(Progression.loginStatus())
@@ -380,6 +387,13 @@ export class MenuScene extends Phaser.Scene {
               }),
       },
     ];
+    // at most two "!" badges at once (more just reads as noise): free rewards first
+    const bang = new Set(
+      chips
+        .filter((ch) => ch.ready)
+        .sort((a, b) => a.prio - b.prio)
+        .slice(0, MAX_BANGS),
+    );
     const cw = (W - 56) / 4;
     chips.forEach((ch, i) => {
       const x = 28 + cw * i + cw / 2;
@@ -391,7 +405,7 @@ export class MenuScene extends Phaser.Scene {
         plainText(this, 0, -10, ch.label, 15, hex(ch.col)),
         plainText(this, 0, 14, ch.sub, 14, "#e8e2ff"),
       ]);
-      if (ch.ready) {
+      if (bang.has(ch)) {
         const b = this.add.container(cw / 2 - 14, -34);
         const bg = this.add.graphics();
         bg.fillStyle(0xff2a3d, 1)
