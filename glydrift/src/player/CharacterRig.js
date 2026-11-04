@@ -184,7 +184,7 @@ export class CharacterRig {
         this.fx.burst("star", this.x + side * 18 * u, this.y - 16 * u, big ? 6 : 3, 0xffd23f, {
           speed: { min: 40, max: 160 },
         });
-    if (big) this.fx.ring(this.x, this.y, 0xffd23f, { scale: 0.9 * u, duration: 420, width: 2 });
+    if (big) this.fx.ring(this.x, this.y, 0xffd23f, { scale: 0.9 * u, duration: 420 });
   }
 
   flap() {
@@ -284,7 +284,7 @@ export class CharacterRig {
     if (!this.fx) return;
     const { x, y, fx, def } = this;
     const oy = 16 * this.gravityDir * this.u;
-    fx.ring(x, y + oy, def.color, { scale: 0.9 * this.u, duration: 380, width: 3 });
+    fx.ring(x, y + oy, def.color, { scale: 0.9 * this.u, duration: 380 });
     fx.ring(x, y + oy, 0xffffff, { scale: 0.55 * this.u, duration: 260 });
     const down = this.gravityDir > 0 ? { min: 30, max: 150 } : { min: 210, max: 330 };
     fx.burst("dot", x, y + oy, 14, 0x8aff7a, { angle: down, speed: { min: 120, max: 360 } });
@@ -356,7 +356,7 @@ export class CharacterRig {
           scene.time.delayedCall(i * 220, () => {
             const fx2 = x + (i - 1) * 70;
             const fy = y - 60 - i * 30;
-            fx.ring(fx2, fy, c, { scale: 1.4, duration: 520, width: 2 });
+            fx.ring(fx2, fy, c, { scale: 1.4, duration: 520 });
             fx.burst("star", fx2, fy, 18, c, { speed: { min: 180, max: 420 } });
             fx.burst("spark", fx2, fy, 14, 0xffffff);
           }),
@@ -674,7 +674,7 @@ export class CharacterRig {
       angle: { min: 220, max: 320 },
       speed: { min: 300, max: 560 },
     });
-    fx.ring(x, y, 0xffd23f, { scale: 1.8, duration: 600, width: 3 });
+    fx.ring(x, y, 0xffd23f, { scale: 1.8, duration: 600 });
   }
 
   stampAfterImage(alpha = 0.5) {

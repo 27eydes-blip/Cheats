@@ -1240,7 +1240,7 @@ export class ShopScene extends Phaser.Scene {
     const wash = this.add.rectangle(W / 2, H / 2, W, H, col, reduceFlashing() ? 0.1 : 0.3);
     c.add(wash);
     this.tweens.add({ targets: wash, alpha: 0, duration: 500 });
-    this.fx.ring(W / 2, cy, col, { scale: 4, duration: 800, width: 4 });
+    this.fx.ring(W / 2, cy, col, { scale: 4, duration: 800 });
     this.fx.burst("star", W / 2, cy, 60, col, { speed: { min: 250, max: 900 } });
     for (const cc of [0xff3a5a, 0xffe14d, 0x39ff88, 0x3ef4ff, 0xff4fd8])
       this.fx.burst("confetti", W / 2, cy, 14, cc, {

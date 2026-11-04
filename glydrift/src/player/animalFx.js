@@ -325,7 +325,7 @@ export class AnimalBits {
       // the chains snap, a roar, then the burst
       r.frozen = true;
       r.fx?.burst("chain", sp.x, sp.y, 12, 0xffffff, { speed: { min: 200, max: 520 } });
-      r.fx?.ring(sp.x, sp.y, 0xb45cff, { scale: 2.2, duration: 600, width: 3 });
+      r.fx?.ring(sp.x, sp.y, 0xb45cff, { scale: 2.2, duration: 600 });
       scene.tweens.add({
         targets: sp,
         scaleX: sp.scaleX * 1.3,

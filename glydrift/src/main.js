@@ -53,8 +53,17 @@ async function boot() {
     const el = document.getElementById("game");
     if (!el) return;
     const { h } = viewportSize();
-    el.style.height = h > window.innerHeight + 1 ? `${h}px` : "";
-    el.style.bottom = h > window.innerHeight + 1 ? "auto" : "";
+    // In an iPhone home-screen app the page box can stop above the home indicator even when
+    // innerHeight already reports the full screen, so always pin the game box to the full
+    // screen height there (and let html/body follow it).
+    const standalone =
+      window.navigator.standalone === true ||
+      window.matchMedia?.("(display-mode: standalone)").matches;
+    const full = standalone ? Math.max(h, window.innerHeight) : 0; // h = full screen (portrait-aware)
+    el.style.height = full ? `${full}px` : "";
+    el.style.bottom = full ? "auto" : "";
+    document.documentElement.style.height = full ? `${full}px` : "";
+    document.body.style.height = full ? `${full}px` : "";
   };
   fitParent();
   window.addEventListener("resize", fitParent);

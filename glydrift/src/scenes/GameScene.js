@@ -365,7 +365,7 @@ export class GameScene extends Phaser.Scene {
       Sfx.combo([2, 3, 5, 10].indexOf(m) + 1);
       Haptics.light();
       const p = this.player;
-      this.fx.ring(p.x, p.y, TIER_COLORS[m], { scale: 1.2, duration: 340, width: 2 });
+      this.fx.ring(p.x, p.y, TIER_COLORS[m], { scale: 1.2, duration: 340 });
       this.fx.burst("pixel", p.x, p.y, m >= 5 ? 14 : 8, TIER_COLORS[m], {
         speed: { min: 140, max: 360 },
       });
@@ -399,7 +399,7 @@ export class GameScene extends Phaser.Scene {
     this.fx.floatText(p.x + 20, p.y - 130, `${m}m!`, "#ffd23f", big > 1 ? 60 : 50);
     this.fx.burst("star", p.x, p.y, big > 1 ? 36 : 24, 0xffd23f, { speed: { min: 200, max: 640 } });
     this.fx.burst("pixel", p.x, p.y, 16, 0xffffff, { speed: { min: 260, max: 700 } });
-    this.fx.ring(p.x, p.y, 0xffd23f, { scale: big > 1 ? 2.4 : 1.8, duration: 600, width: 2 });
+    this.fx.ring(p.x, p.y, 0xffd23f, { scale: big > 1 ? 2.4 : 1.8, duration: 600 });
     this.flashFx.flash(0xffd23f, big > 1 ? FLASH.milestoneBig : FLASH.milestone);
     this.cameras.main.shake(160, 0.004);
     Sfx.milestone(big);
@@ -426,7 +426,7 @@ export class GameScene extends Phaser.Scene {
     this.flashFx.flash(0xffffff, FLASH.portal);
     this.fx.burst("pixel", p.x, p.y, 22, col, { speed: { min: 200, max: 560 } });
     this.fx.burst("star", p.x, p.y, 10, 0xffffff, { speed: { min: 120, max: 380 } });
-    this.fx.ring(o.x, o.y, col, { scale: 1.4, duration: 500, width: 2 });
+    this.fx.ring(o.x, o.y, col, { scale: 1.4, duration: 500 });
     this.fx.burst("star", p.x, p.y, 16, col);
     if (o.mode === "flip") {
       p.flipGravity(-1);
@@ -478,7 +478,7 @@ export class GameScene extends Phaser.Scene {
     Sfx.levelUp();
     Haptics.strong();
     this.flashFx.flash(0x39ff88, FLASH.perfect);
-    this.fx.ring(p.x, p.y, 0x39ff88, { scale: 2, duration: 600, width: 3 });
+    this.fx.ring(p.x, p.y, 0x39ff88, { scale: 2, duration: 600 });
     this.fx.burst("star", p.x, p.y, 24, 0x39ff88, { speed: { min: 150, max: 450 } });
     this.fx.floatText(p.x + 40, p.y - 70, "SECOND CHANCE!", "#39ff88", 44);
     p.rig.onRevive(); // Prismara shatters into light and reforms
@@ -498,7 +498,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.shake(220, 0.006);
     this.flashFx.flash(0xffd23f, FLASH.perfect);
     this.fx.floatText(p.x + 40, p.y - 70, `${B.mul}x BOOST!`, "#ffd23f", 56);
-    this.fx.ring(p.x, p.y, 0xffd23f, { scale: 1.6, duration: 380, width: 3 });
+    this.fx.ring(p.x, p.y, 0xffd23f, { scale: 1.6, duration: 380 });
   }
 
   updateBoost(dt) {
@@ -916,7 +916,7 @@ export class GameScene extends Phaser.Scene {
         Haptics.strong();
         this.fx.burst("star", p.x, p.y, 24, 0xffd23f, { speed: { min: 150, max: 420 } });
         this.fx.burst("pixel", p.x, p.y, 18, 0xfff1a0, { speed: { min: 240, max: 620 } });
-        this.fx.ring(p.x, p.y, 0xffd23f, { scale: 1.6, duration: 520, width: 2 });
+        this.fx.ring(p.x, p.y, 0xffd23f, { scale: 1.6, duration: 520 });
         this.flashFx.flash(0xffd23f, FLASH.newBest);
       }
       this.missionCheckT -= rawDt;

@@ -277,7 +277,7 @@ export class CharacterScene extends Phaser.Scene {
       this.time.delayedCall(700, () => {
         if (this.rig?.def.id !== "yarms") return;
         this.rig.flex({ big: true, shine: true });
-        this.fx.ring(this.rig.x, this.rig.y, 0xffd23f, { scale: 2.4, duration: 700, width: 3 });
+        this.fx.ring(this.rig.x, this.rig.y, 0xffd23f, { scale: 2.4, duration: 700 });
         this.fx.burst("star", this.rig.x, this.rig.y, 40, 0xffd23f, {
           speed: { min: 200, max: 650 },
         });
