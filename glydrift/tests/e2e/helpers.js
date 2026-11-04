@@ -93,11 +93,33 @@ export async function openGame(page, opts = {}) {
   await page.waitForTimeout(400);
   if (opts.screen === null) {
     // release build: no test hooks, so wait for its canvas and let it run
-    await waitFor(page, () => !!document.querySelector("#game canvas"), 30_000);
+    await waitFor(page, () => !!document.querySelector("#game canvas"), 30_000).catch(async (e) => {
+      const text = await page.evaluate(() =>
+        document.getElementById("game")?.innerText.slice(0, 160),
+      );
+      throw new Error(`${e.message} — page says: ${text} errors: ${errors.join(" | ")}`);
+    });
     await run(page, 1200); // draws every frame (no test flags): keep it short
   } else {
     const key = opts.screen || "Menu";
-    await waitFor(page, (k) => window.__glydrift?.scene.isActive(k), 30_000, key);
+    try {
+      await waitFor(page, (k) => window.__glydrift?.scene.isActive(k), 30_000, key);
+    } catch (e) {
+      // say why the game never reached its first screen
+      const why = await page.evaluate(() => {
+        const c = document.createElement("canvas");
+        return {
+          text: document.getElementById("game")?.innerText.slice(0, 160),
+          canvas: !!document.querySelector("#game canvas"),
+          hooks: typeof window.__glydrift,
+          booted: !!window.__glydrift?.isBooted,
+          webgl2: !!c.getContext("webgl2"),
+          webgl: !!document.createElement("canvas").getContext("webgl"),
+          scenes: window.__glydrift?.scene.getScenes(true).map((x) => x.sys.settings.key),
+        };
+      });
+      throw new Error(`${e.message} — ${JSON.stringify(why)} errors: ${errors.join(" | ")}`);
+    }
     await run(page, 800);
   }
   return { errors, warnings, failed };

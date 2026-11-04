@@ -334,12 +334,30 @@ test("resize, rotation and Split View keep the run going", async ({ page }, test
   await run(page, 2000);
   expect(await isActive(page, "Menu")).toBe(true);
   await expectFramed(page);
-  const crisp = await page.evaluate(() => {
-    const c = window.__glydrift.canvas;
-    return (c.getBoundingClientRect().width * devicePixelRatio) / c.width;
-  });
-  expect(crisp).toBeGreaterThan(0.6); // the budget may render a little under 1:1, never far
-  expect(crisp).toBeLessThan(1.6);
+  // crisp: the canvas is drawn at (close to) the screen's real pixel size again
+  const measure = () =>
+    page.evaluate(() => {
+      const g = window.__glydrift;
+      const c = g.canvas;
+      const r = c.getBoundingClientRect();
+      return {
+        ratio: (r.width * devicePixelRatio) / c.width,
+        cssW: Math.round(r.width),
+        cssH: Math.round(r.height),
+        canvas: `${c.width}x${c.height}`,
+        game: `${g.scale.gameSize.width}x${g.scale.gameSize.height}`,
+        dpr: devicePixelRatio,
+        view: `${innerWidth}x${innerHeight}`,
+        mode: g.scale.scaleMode,
+      };
+    });
+  let m = await measure();
+  for (let i = 0; i < 30 && !(m.ratio > 0.6 && m.ratio < 1.6); i++) {
+    await run(page, 200);
+    m = await measure();
+  }
+  expect(m.ratio, JSON.stringify(m)).toBeGreaterThan(0.6); // the budget may render a little under 1:1
+  expect(m.ratio, JSON.stringify(m)).toBeLessThan(1.6);
   await snap(page, testInfo, "13-after-resize");
   expect(log.errors).toEqual([]);
 });
@@ -413,6 +431,9 @@ test("same game speed at 30, 60 and 120 Hz", async ({ page }, testInfo) => {
       for (let i = 0; i < hz * 4; i++) {
         const p = s.player;
         if (p.y > s.H * 0.5 && p.vy > -50) s.onTap();
+        // near-miss slow motion would land at different moments at different frame rates
+        s.slowT = 0;
+        s.timeScale = 1;
         g.step((t += dt), dt);
       }
       out[hz] = s.meters - m0;

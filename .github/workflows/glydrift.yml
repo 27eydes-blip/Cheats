@@ -56,17 +56,21 @@ jobs:
       - run: npm ci
 
       - name: Install ${{ matrix.engine }}
-        run: npx playwright install --with-deps ${{ matrix.engine }}
+        run: |
+          npx playwright install --with-deps ${{ matrix.engine }}
+          # software OpenGL (Mesa) for headless WebGL
+          sudo apt-get install -y --no-install-recommends libgl1-mesa-dri libegl1 libgl1
 
       - name: Build (release + test builds)
         run: npm run build && npm run build:test
 
       - name: Run the tests
         run: |
-          if [ "$UPDATE" = "true" ]; then
+          # first run for this engine (no baselines yet) or "[update screenshots]": record them
+          if [ "$UPDATE" = "true" ] || ! ls tests/e2e/__screenshots__ 2>/dev/null | grep -q "^${ENGINES}-"; then
             npx playwright test --update-snapshots=all
           else
-            # a brand-new profile / screen records its first baseline instead of failing
+            # compare; a brand-new screen records its first baseline (and fails once)
             npx playwright test --update-snapshots=missing
           fi
 
