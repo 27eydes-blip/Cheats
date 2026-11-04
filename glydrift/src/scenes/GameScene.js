@@ -99,6 +99,7 @@ export class GameScene extends Phaser.Scene {
 
     // pixel-art terrain walls along both screen edges (spiked surface = the existing kill line)
     this.terrain = new Terrain(this, themeFor("void"), { W, H });
+    this.terrainTodo = null;
     // camera zoom chosen so every art pixel is a whole number of screen pixels
     this.pxZoomLevel = pixelPerfectZoom(VIEW.Z, WORLD.baseZoom) / VIEW.Z;
     this.cameras.main.roundPixels = true;
@@ -773,7 +774,9 @@ export class GameScene extends Phaser.Scene {
     // build the next biome's art well before it arrives (it's made on demand to save memory)
     const nx = this.course.next(seg0);
     if (nx && nx.start - this.meters < 700) queueBiomeArt(nx.id);
-    pumpBiomeArt();
+    // once its art is in, build the biome's walls (hidden) on a later frame, not on arrival
+    if (this.terrainTodo) this.terrain.prebuild([THEMES[this.terrainTodo]]);
+    this.terrainTodo = pumpBiomeArt();
     this.updateColorShift(rawDt, biomeId, seg0 === dom ? local0 : 0);
     const beatPh = Music.beatPhase(this.beatClock);
     this.beatClock += rawDt;

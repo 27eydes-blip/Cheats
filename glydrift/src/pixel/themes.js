@@ -562,16 +562,16 @@ export function queueBiomeArt(id) {
   pendingArt.set(id, buildJobs(id));
 }
 
-/** Do one queued texture upload (call once per frame). */
+/** Do one queued texture upload (call once per frame). Returns the biome id it finished. */
 export function pumpBiomeArt() {
   for (const [id, jobs] of pendingArt) {
     jobs.shift()?.();
-    if (!jobs.length) {
-      pendingArt.delete(id);
-      biomeBuilt.add(id);
-    }
-    return;
+    if (jobs.length) return null;
+    pendingArt.delete(id);
+    biomeBuilt.add(id);
+    return id;
   }
+  return null;
 }
 
 /** True once a biome's art exists (prebuilders skip biomes the player hasn't neared yet). */
