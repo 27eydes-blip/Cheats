@@ -37,7 +37,11 @@ export async function openGame(page, opts = {}) {
     // error" comes from WebKit's ANGLE → OpenGL backend on the CI machine's software (Mesa)
     // driver; real Safari draws through Metal, so it's logged as a warning, not a failure.
     if (m.type() === "error" && /Unexpected driver error/.test(t)) warnings.push(t);
-    else if (m.type() === "error" && !/Failed to load resource/.test(t))
+    // (Firefox words a blocked request as "Cross-Origin Request Blocked … did not succeed")
+    else if (
+      m.type() === "error" &&
+      !/Failed to load resource|Cross-Origin Request Blocked.*did not succeed/.test(t)
+    )
       errors.push(`console: ${t}`);
     else if (m.type() === "warning") warnings.push(t);
   });

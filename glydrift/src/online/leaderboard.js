@@ -9,6 +9,7 @@
 import { SUPABASE, WORLD } from "../config.js";
 import { dailyNumber } from "../data/rng.js";
 import { Save } from "../data/save.js";
+import { TEST } from "../systems/testFlags.js";
 
 // ?lbtest routes all reads/writes to "test-…" levels so testing never touches the real boards
 // (test builds only)
@@ -100,6 +101,8 @@ class LeaderboardService {
   }
 
   client() {
+    // automated tests (?offline): no network at all, so nothing lands at a real-time moment
+    if (TEST.offline) return Promise.reject(new Error("offline (test)"));
     if (!this.clientPromise) {
       this.clientPromise = import("@supabase/supabase-js").then(({ createClient }) =>
         createClient(SUPABASE.url, SUPABASE.publishableKey, {
