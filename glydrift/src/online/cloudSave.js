@@ -1,0 +1,117 @@
+// Cloud save: which parts of the save go to the player's account, and how two saves (this
+// device and the cloud) are merged when they meet. Pure functions, no network.
+//
+// "Keep the most progress": the save with more progress is the base (its coins, level, XP,
+// selected hero, equipped items, pass/season progress). Anything that can only be gained,
+// never lost, is then combined from both: owned heroes and items, achievements, discovered
+// dimensions, hero shards, claimed rewards, best scores and lifetime stats.
+
+/** Device-only parts of the save that never go to the cloud. */
+const LOCAL_ONLY = ["settings", "lbQueue", "ghost", "daily"];
+
+/** The part of a save that is uploaded. */
+export function cloudPayload(save) {
+  const out = {};
+  for (const [k, v] of Object.entries(save)) if (!LOCAL_ONLY.includes(k)) out[k] = v;
+  // the daily challenge result for today still counts (its ghost replay stays local)
+  if (save.daily) out.dailyBest = { date: save.daily.date, best: save.daily.best };
+  return JSON.parse(JSON.stringify(out));
+}
+
+const count = (o) => (o ? Object.values(o).filter(Boolean).length : 0);
+
+/** One number that grows with everything a player can earn. */
+export function progressScore(save) {
+  if (!save) return -1;
+  const seasonXp = Object.values(save.seasons || {}).reduce((a, r) => a + (r?.xp || 0), 0);
+  return (
+    (save.level || 1) * 100000 +
+    (save.xp || 0) +
+    seasonXp +
+    (save.pass?.xp || 0) +
+    count(save.unlocked) * 5000 +
+    count(save.cos?.owned) * 1500 +
+    count(save.achievements) * 1000 +
+    (save.stats?.runs || 0) * 10
+  );
+}
+
+/** {a, b} → every key true in either */
+function union(a, b) {
+  const out = { ...(a || {}) };
+  for (const [k, v] of Object.entries(b || {})) if (v) out[k] = out[k] || v;
+  return out;
+}
+/** {a, b} of numbers → the larger of each */
+function maxEach(a, b) {
+  const out = { ...(a || {}) };
+  for (const [k, v] of Object.entries(b || {}))
+    if (typeof v === "number") out[k] = Math.max(out[k] ?? -Infinity, v);
+    else if (!(k in out)) out[k] = v;
+  return out;
+}
+
+/** Season records: the further pass (XP) wins, claimed tiers and challenges are combined. */
+function mergeSeasons(a = {}, b = {}) {
+  const out = { ...a };
+  for (const [id, rb] of Object.entries(b)) {
+    const ra = out[id];
+    if (!ra) {
+      out[id] = rb;
+      continue;
+    }
+    const base = (rb.xp || 0) > (ra.xp || 0) ? rb : ra;
+    out[id] = {
+      ...base,
+      xp: Math.max(ra.xp || 0, rb.xp || 0),
+      claimed: union(ra.claimed, rb.claimed),
+      plusClaimed: union(ra.plusClaimed, rb.plusClaimed),
+    };
+  }
+  return out;
+}
+
+/**
+ * Merge this device's save with the cloud's. Returns a new save; neither input is changed.
+ * `local` keeps its device-only parts (settings, pending uploads, ghosts).
+ */
+export function mergeSaves(local, cloud) {
+  if (!cloud) return local;
+  const cloudFull = { ...cloud };
+  const localWins = progressScore(local) >= progressScore(cloudFull);
+  const base = JSON.parse(JSON.stringify(localWins ? local : { ...local, ...cloudFull }));
+  const other = localWins ? cloudFull : local;
+  // can only ever be gained: combine
+  base.unlocked = union(base.unlocked, other.unlocked);
+  base.achievements = union(base.achievements, other.achievements);
+  base.dimensions = union(base.dimensions, other.dimensions);
+  base.levelRewards = union(base.levelRewards, other.levelRewards);
+  base.cos = {
+    owned: union(base.cos?.owned, other.cos?.owned),
+    equipped: { ...(base.cos?.equipped || {}) },
+  };
+  base.titles = {
+    owned: union(base.titles?.owned, other.titles?.owned),
+    equipped: base.titles?.equipped ?? other.titles?.equipped ?? null,
+  };
+  base.shards = maxEach(base.shards, other.shards);
+  base.stats = maxEach(base.stats, other.stats);
+  base.best = Math.max(base.best || 0, other.best || 0);
+  base.pass = {
+    ...(base.pass || {}),
+    xp: Math.max(base.pass?.xp || 0, other.pass?.xp || 0),
+    claimed: union(base.pass?.claimed, other.pass?.claimed),
+  };
+  base.seasons = mergeSeasons(base.seasons, other.seasons);
+  base.login = {
+    ...(base.login || {}),
+    streak: Math.max(base.login?.streak || 0, other.login?.streak || 0),
+  };
+  if (!base.profile?.username && other.profile?.username) base.profile = { ...other.profile };
+  // a selected hero / equipped item the merged save doesn't own falls back safely
+  if (!base.unlocked[base.selected]) base.selected = "volt";
+  // device-only parts always stay this device's
+  for (const k of LOCAL_ONLY) if (k in local) base[k] = local[k];
+  delete base.dailyBest;
+  return base;
+}

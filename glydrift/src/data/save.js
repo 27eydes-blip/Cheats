@@ -37,6 +37,7 @@ function defaults() {
     achievements: {},
     dimensions: {}, // dimension ids discovered (prism, tidal, chrono, mirror)
     cos: { owned: {}, equipped: {} }, // shop cosmetics: owned ids + equipped per category
+    titles: { owned: {}, equipped: null }, // earned titles + the one shown under your name
     boosts: { owned: {}, armed: {} }, // (retired) one-run boosts
     boostsRefunded: false,
     dailyDrop: "", // date the free Daily Drift Drop was last claimed
@@ -79,6 +80,7 @@ function merge(base, data) {
 
 let cache = null;
 let persists = null;
+const writeListeners = [];
 
 export const Save = {
   get data() {
@@ -97,6 +99,13 @@ export const Save = {
     }
   },
   write() {
+    for (const fn of writeListeners) {
+      try {
+        fn();
+      } catch {
+        /* a listener (cloud sync) must never break saving */
+      }
+    }
     try {
       localStorage.setItem(KEY, JSON.stringify(Save.data));
     } catch {
@@ -125,5 +134,14 @@ export const Save = {
   reset() {
     cache = defaults();
     Save.write();
+  },
+  /** Swap in a whole save (a merged cloud save); missing fields get their defaults. */
+  replace(data) {
+    cache = merge(defaults(), JSON.parse(JSON.stringify(data)));
+    Save.write();
+  },
+  /** Run fn after every write (cloud sync listens here). */
+  onWrite(fn) {
+    writeListeners.push(fn);
   },
 };

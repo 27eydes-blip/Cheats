@@ -13,6 +13,8 @@ import { TEST } from "../systems/testFlags.js";
 import { Haptics } from "../systems/haptics.js";
 import { Install } from "../systems/install.js";
 import { Leaderboard, Levels } from "../online/leaderboard.js";
+import { Account } from "../online/account.js";
+import { openAccount } from "../ui/accountModal.js";
 import { getCosmetic, Shop } from "../data/cosmetics.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { Music } from "../audio/music.js";
@@ -54,12 +56,27 @@ function countdownText() {
 /** Most red "!" badges shown on the home screen at once. */
 const MAX_BANGS = 2;
 
+const shorten = (s, n) => (s && s.length > n ? `${s.slice(0, n - 1)}…` : s || "");
+
 export class MenuScene extends Phaser.Scene {
   constructor() {
     super("Menu");
   }
 
   create() {
+    // an emailed link opened the game: a password reset continues, a confirmation says so
+    const offAcct = Account.onChange(() => {
+      const type = Account.linkType;
+      if (!type || !this.sys.isActive()) return;
+      Account.linkType = null;
+      if (type === "recovery") openAccount({ view: "newpass" });
+      else
+        toast(this, "EMAIL CONFIRMED", 0x39ff88, {
+          y: this.H * 0.3,
+          sub: "Your account is ready",
+        });
+    });
+    this.events.once("shutdown", offAcct);
     fitCamera(this);
     const W = VIEW.W;
     const H = VIEW.H;
@@ -1015,7 +1032,7 @@ export class MenuScene extends Phaser.Scene {
     const W = this.W;
     const H = this.H;
     const st = Save.data.settings;
-    const h = Install.available ? 820 : 730;
+    const h = Install.available ? 910 : 820;
     const c = this.modalBase(h, 0x3ef4ff);
     const y0 = H / 2 - h / 2;
     c.add(neonText(this, W / 2, y0 + 56, "SETTINGS", 40, 0x3ef4ff, { blur: 14 }));
@@ -1109,10 +1126,27 @@ export class MenuScene extends Phaser.Scene {
           ),
       },
     );
-    c.add([mute, gfx, style, nameBtn, done]);
+    // accounts: save progress to the cloud / restore it on another device
+    const acctLabel = () =>
+      Account.signedIn ? `ACCOUNT: ${shorten(Account.user.email, 22)}` : "ACCOUNT · SAVE YOUR PROGRESS";
+    const acct = button(this, W / 2, y0 + 615, W - 180, 72, acctLabel(), {
+      color: Account.signedIn ? 0x39ff88 : 0xffd23f,
+      size: 16,
+      onClick: () => {
+        if (!Account.available) {
+          toast(this, "OFFLINE", 0xff4f7a, { y: this.H * 0.3, sub: "Accounts need a connection" });
+          return;
+        }
+        openAccount().then(({ reload }) => {
+          if (reload) window.location.reload();
+          else if (acct.scene) acct.setLabel(acctLabel());
+        });
+      },
+    });
+    c.add([mute, gfx, style, nameBtn, acct, done]);
     if (Install.available) {
       c.add(
-        button(this, W / 2, y0 + 615, W - 180, 72, "ADD TO HOME SCREEN", {
+        button(this, W / 2, y0 + 705, W - 180, 72, "ADD TO HOME SCREEN", {
           color: 0x39ff88,
           size: 16,
           onClick: () => Install.prompt(),

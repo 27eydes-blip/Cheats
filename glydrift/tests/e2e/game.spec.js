@@ -865,3 +865,134 @@ test("game over shows the distance and score placements", async ({ page }, testI
   expect(msg).toMatch(/^You placed #\d+ in Distance · #\d+ in Score$/);
   expect(log.errors).toEqual([]);
 });
+
+// ---- accounts + cloud save (a local stand-in server: ?mockcloud) ----
+async function openSettingsAccount(page) {
+  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").openSettings());
+  await run(page, 600);
+  // "ACCOUNT · SAVE YOUR PROGRESS" for a guest, "ACCOUNT: <email>" when signed in
+  const label = await page.evaluate(() => {
+    const m = window.__glydrift.scene.getScene("Menu");
+    const texts = (c) => c.list.flatMap((o) => (o.type === "Text" ? [o] : o.list ? texts(o) : []));
+    return texts(m.modal).find((t) => t.text.startsWith("ACCOUNT"))?.text;
+  });
+  if (!label) throw new Error("no ACCOUNT button in Settings");
+  await tap(page, label, 400);
+  await expect(page.locator("#account-modal.open")).toBeVisible();
+}
+/** Open the account screen directly (after a log out the home screen is busy onboarding). */
+async function openAccountScreen(page) {
+  await run(page, 800);
+  // a fresh guest (after logging out) is first asked for a name
+  if (await page.locator("#name-modal.open").isVisible()) {
+    await page.fill("#name-modal input", "GuestPilot");
+    await page.click("#name-modal [data-act=save]");
+    await run(page, 600);
+  }
+  await page.evaluate(() => {
+    window.__glyOpenAccount(); // resolves only when it closes: don't wait for it
+  });
+  await expect(page.locator("#account-modal.open")).toBeVisible();
+}
+const saveNow = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+
+test("accounts: create, log out, sign in on a new device, delete", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, {
+    flags: ["mockcloud"],
+    save: { ...SAVE, coins: 4321, unlocked: { volt: true, ember: true, frost: true } },
+  });
+  await run(page, 800); // the account service starts in the background
+  // 1. a guest creates an account: their progress is linked to it, nothing lost
+  await openSettingsAccount(page);
+  await snap(page, testInfo, "15-account-create");
+  await page.fill("#account-modal input[name=email]", "pilot@example.com");
+  await page.fill("#account-modal input[name=password]", "hunter2hunter2");
+  await page.click("#account-modal button[type=submit]");
+  await expect(page.locator("#account-modal h2")).toHaveText("ACCOUNT");
+  await expect(page.locator("#account-modal .who")).toHaveText("pilot@example.com");
+  let server = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.mockserver")));
+  expect(server.users["pilot@example.com"].save.coins).toBe(4321);
+  expect(server.users["pilot@example.com"].save.unlocked.frost).toBe(true);
+  expect(server.users["pilot@example.com"].save.settings).toBeUndefined(); // device-only
+  // 2. log out: the account keeps everything, this device starts fresh
+  await page.click("#account-modal [data-act=logout]");
+  await page.waitForLoadState("load");
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  expect((await saveNow(page)).coins).toBe(0);
+  // 3. sign in (as on a new device): everything comes back
+  await openAccountScreen(page);
+  await page.click("#account-modal [data-act=to-signin]");
+  await snap(page, testInfo, "16-account-signin");
+  await page.fill("#account-modal input[name=email]", "pilot@example.com");
+  await page.fill("#account-modal input[name=password]", "wrong-password");
+  await page.click("#account-modal button[type=submit]");
+  await expect(page.locator("#account-modal .err")).toHaveText("Wrong email or password.");
+  await page.fill("#account-modal input[name=password]", "hunter2hunter2");
+  await page.click("#account-modal button[type=submit]");
+  await page.waitForLoadState("load");
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  let s = await saveNow(page);
+  expect(s.coins).toBe(4321);
+  expect(s.unlocked).toEqual(expect.objectContaining({ ember: true, frost: true }));
+  // 4. delete the account: gone from the server and from this device
+  await openAccountScreen(page);
+  await page.click("#account-modal [data-act=to-delete]");
+  await page.fill("#account-modal input[name=confirm]", "nope");
+  await page.click("#account-modal button[type=submit]");
+  await expect(page.locator("#account-modal .err")).toHaveText("Type DELETE to confirm.");
+  await page.fill("#account-modal input[name=confirm]", "DELETE");
+  await page.click("#account-modal button[type=submit]");
+  await page.waitForLoadState("load");
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  server = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.mockserver")));
+  expect(server.users["pilot@example.com"]).toBeUndefined();
+  s = await saveNow(page);
+  expect(s.coins).toBe(0);
+  expect(log.errors).toEqual([]);
+});
+
+test("cloud save merge keeps the most progress", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  await openGame(page, { flags: ["mockcloud"] });
+  const m = await page.evaluate(() => {
+    const { mergeSaves } = window.__glyAccount;
+    const device = {
+      level: 3,
+      xp: 50,
+      coins: 900,
+      best: 2500,
+      selected: "frost",
+      unlocked: { volt: true, frost: true },
+      cos: { owned: { trail_fire: true }, equipped: {} },
+      achievements: { a1: true },
+      stats: { runs: 40, maxDistance: 1800 },
+      pass: { xp: 300, claimed: { 0: true } },
+      settings: { musicVol: 0.2 },
+      lbQueue: [1],
+    };
+    const cloud = {
+      level: 9,
+      xp: 10,
+      coins: 7000,
+      best: 1900,
+      selected: "ember",
+      unlocked: { volt: true, ember: true },
+      cos: { owned: { hat_halo: true }, equipped: {} },
+      achievements: { a2: true },
+      stats: { runs: 120, maxDistance: 1500 },
+      pass: { xp: 1200, claimed: { 1: true } },
+    };
+    return mergeSaves(device, cloud);
+  });
+  expect(m.level).toBe(9); // the cloud save had more progress: it's the base…
+  expect(m.coins).toBe(7000);
+  expect(m.selected).toBe("ember");
+  expect(m.unlocked).toEqual({ volt: true, ember: true, frost: true }); // …and nothing earned is lost
+  expect(m.cos.owned).toEqual({ trail_fire: true, hat_halo: true });
+  expect(m.achievements).toEqual({ a1: true, a2: true });
+  expect(m.best).toBe(2500);
+  expect(m.stats.maxDistance).toBe(1800);
+  expect(m.pass.claimed).toEqual({ 0: true, 1: true });
+  expect(m.settings).toEqual({ musicVol: 0.2 }); // this device's settings stay
+});

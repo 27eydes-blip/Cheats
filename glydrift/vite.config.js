@@ -27,6 +27,18 @@ export default defineConfig(({ mode }) => ({
   build: {
     target: "es2020",
     chunkSizeWarningLimit: 2000,
+    rolldownOptions: {
+      output: {
+        // the engine and the audio library get their own files: the game code stays small and
+        // a game update doesn't make returning players download Phaser again
+        codeSplitting: {
+          groups: [
+            { name: "phaser", test: /node_modules[\\/]phaser[\\/]/ },
+            { name: "tone", test: /node_modules[\\/]tone[\\/]/ },
+          ],
+        },
+      },
+    },
   },
   plugins: [stampServiceWorker()],
   server: { host: true },

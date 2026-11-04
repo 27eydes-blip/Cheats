@@ -231,6 +231,12 @@ class LeaderboardService {
     return this.sessionPromise;
   }
 
+  /** The signed-in user changed (log in / log out): pick the session up afresh. */
+  restart() {
+    this.sessionPromise = null;
+    this.userId = null;
+  }
+
   /** Call once at launch: sign in in the background and upload anything queued. */
   init() {
     if (typeof window !== "undefined") {
