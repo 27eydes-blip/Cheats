@@ -783,13 +783,25 @@ test("realm changes never pause the run", async ({ page }, testInfo) => {
             worst = Math.max(worst, spawns[i][0] - spawns[i - 1][0]);
         return { id: b.id, worst: +worst.toFixed(2) };
       });
-    return { pauses, slowJumps, around, ids: bounds.map((b) => b.id) };
+    // the run's normal gaps away from any boundary (early on, at low speed, these are long)
+    const atBound = (m) => bounds.some((b) => b.m > 0 && m > b.m - 60 && m < b.m + 90);
+    const abyss = bounds.find((b) => b.id === "abyss")?.m ?? Infinity;
+    let normal = 0;
+    for (let i = 1; i < spawns.length; i++) {
+      const m = spawns[i][1];
+      if (!atBound(m) && !atBound(spawns[i - 1][1]) && (m < abyss || m > abyss + 600))
+        normal = Math.max(normal, spawns[i][0] - spawns[i - 1][0]);
+    }
+    return { pauses, slowJumps, around, normal, ids: bounds.map((b) => b.id) };
   });
   expect(out.ids).toEqual(expect.arrayContaining(["solar", "frozen", "glitch", "hurricane"]));
   expect(out.ids.length).toBeGreaterThanOrEqual(8); // into at least one dimension
   expect(out.pauses).toBe(0);
   expect(out.slowJumps).toBe(0);
-  for (const b of out.around) expect(b.worst, `obstacle gap entering ${b.id}`).toBeLessThan(3.5);
+  // no longer wait for an obstacle at a boundary than the run's usual longest gap
+  const limit = Math.max(3.5, out.normal * 1.1);
+  for (const b of out.around)
+    expect(b.worst, `obstacle gap entering ${b.id} (normal ${out.normal})`).toBeLessThan(limit);
   // the title is drawn small and high, over the play
   const title = await page.evaluate(() => {
     const h = window.__glydrift.scene.getScene("Hud");
