@@ -1,11 +1,12 @@
 // In-run HUD overlay: score, coins, banners, toasts, pause. Unaffected by camera zoom/post-FX.
 import Phaser from "phaser";
 import { BIOMES, biomeName } from "../biomes/biomes.js";
-import { fitCamera, PHYSICS, VIEW } from "../config.js";
+import { fitCamera, NUM_FONT, PHYSICS, VIEW } from "../config.js";
 import { HI } from "../gfx/textures.js";
 import { Music } from "../audio/music.js";
 import { dailyNumber } from "../data/rng.js";
 import { Sfx } from "../audio/sfx.js";
+import { POP_HOLD, PopQueue } from "../ui/popQueue.js";
 import { button, drawNeonRect, hex, neonText, plainText, RollingCounter } from "../ui/ui.js";
 
 export class HudScene extends Phaser.Scene {
@@ -26,6 +27,12 @@ export class HudScene extends Phaser.Scene {
     this.bannerQ = null;
     this.bannerIdx = -1;
     this.speedText = null;
+    this.centerText = null;
+    // realm titles, NEW BEST, SPEED UP and distance markers share the centre one at a time
+    this.pops = new PopQueue(
+      (item) => this.showPop(item),
+      (item) => this.hidePop(item),
+    );
     fitCamera(this);
     // Esc / P toggle pause (handled here: the Game scene's input stops while it's paused)
     for (const k of ["ESC", "P"])
@@ -160,6 +167,7 @@ export class HudScene extends Phaser.Scene {
   // ------------------------------------------------------------------ events from GameScene
   onReset() {
     const gs = this.gameScene;
+    this.pops.clear();
     this.score.set(0);
     this.coins.set(0);
     this.lastScore = 0;
@@ -241,9 +249,13 @@ export class HudScene extends Phaser.Scene {
   }
 
   onBiome(rawIndex, { slam = false } = {}) {
+    this.pops.push("realm", { rawIndex, slam }, this.time.now);
+  }
+
+  showRealm(rawIndex, slam, done) {
     const b = BIOMES[rawIndex % BIOMES.length];
     this.showTitle(rawIndex, slam);
-    if (slam) return this.slamTitle(rawIndex, b);
+    if (slam) return this.slamTitle(rawIndex, b, done);
     this.bannerLine.setFillStyle(b.neon);
     this.tweens.killTweensOf(this.banner);
     this.banner.setAlpha(0).setScale(1.6);
@@ -262,12 +274,15 @@ export class HudScene extends Phaser.Scene {
       y: this.bannerY - this.H * 0.03,
       delay: 1900,
       duration: 500,
-      onComplete: () => (this.banner.y = this.bannerY),
+      onComplete: () => {
+        this.banner.y = this.bannerY;
+        done?.();
+      },
     });
   }
 
   /** "ENTERING ABYSS": slams in from huge with a shake (the Game scene adds the red flash). */
-  slamTitle(rawIndex, b) {
+  slamTitle(rawIndex, b, done) {
     this.tweens.killTweensOf(this.banner);
     this.bannerLine.setFillStyle(0xff1030);
     this.banner.setAlpha(1).setScale(3.2).setY(this.bannerY);
@@ -279,6 +294,7 @@ export class HudScene extends Phaser.Scene {
       alpha: 0,
       delay: 2600,
       duration: 500,
+      onComplete: () => done?.(),
     });
     void rawIndex;
     void b;
@@ -341,6 +357,123 @@ export class HudScene extends Phaser.Scene {
   }
 
   onSpeedUp() {
+    this.pops.push("speed", null, this.time.now);
+  }
+
+  /** NEW BEST! in the centre (the slide-in banner below the score still shows too). */
+  onCenterBest() {
+    this.pops.push("best", { str: "NEW BEST!", color: "#ffd23f", size: 50 }, this.time.now);
+  }
+
+  /** Distance marker: every 100 m small, 500 m / 1000 m big and gold. */
+  onDistance(m, big) {
+    const data = big
+      ? { str: `${m}m!`, color: "#ffd23f", size: big > 1 ? 60 : 50 }
+      : { str: `${m}m`, color: "#bdf9ff", size: 30 };
+    this.pops.push("distance", data, this.time.now);
+  }
+
+  // ------------------------------------------------------------------ centre pop-ups
+  showPop(item) {
+    const d = item.data;
+    const done = () => this.pops.release(item);
+    if (item.kind === "realm") this.showRealm(d.rawIndex, d.slam, done);
+    else if (item.kind === "speed") this.showSpeed(done);
+    else this.showCenterText(d.str, d.color, d.size, done);
+    // released when its animation really ends; this is only the fallback
+    return POP_HOLD[item.kind] + (d?.slam ? 700 : 0) + 1500;
+  }
+
+  hidePop(item) {
+    const o =
+      item.kind === "realm"
+        ? this.banner
+        : item.kind === "speed"
+          ? this.speedText
+          : this.centerText;
+    if (!o) return;
+    // cut short: gone at once, so it never overlaps the pop-up replacing it
+    this.tweens.killTweensOf(o);
+    o.setAlpha(0);
+    if (o !== this.banner) o.setVisible(false);
+  }
+
+  /** Same look as the in-world pop text (Effects.floatText), centred and scaled to match. */
+  showCenterText(str, color, size, done) {
+    const z = this.worldZoom();
+    if (!this.centerText) {
+      this.centerText = this.add
+        .text(0, 0, "", {
+          fontFamily: NUM_FONT,
+          resolution: VIEW.Z,
+          fontSize: "34px",
+          fontStyle: "700",
+          color: "#fff",
+          stroke: "#000000",
+          strokeThickness: 6,
+        })
+        .setOrigin(0.5)
+        .setPadding(18, 18, 18, 18)
+        .setDepth(60);
+    }
+    const t = this.centerText;
+    this.tweens.killTweensOf(t);
+    if (t.__color !== color || t.__size !== size || t.__z !== z) {
+      t.__color = color;
+      t.__size = size;
+      t.__z = z;
+      t.setColor(color)
+        .setFontSize(Math.round(size * z))
+        .setStroke("#000000", 6 * z)
+        .setShadow(0, 0, color, 16 * VIEW.Z * z, true, true);
+    }
+    const y = this.centerY();
+    t.setText(str)
+      .setPosition(this.W / 2, y)
+      .setScale(0.3)
+      .setAlpha(1)
+      .setVisible(true)
+      .setAngle(Phaser.Math.Between(-8, 8));
+    this.tweens.add({ targets: t, scale: 1, duration: 260, ease: "Back.easeOut" });
+    this.tweens.add({
+      targets: t,
+      y: y - 70 * z,
+      alpha: 0,
+      delay: 380,
+      duration: 520,
+      ease: "Cubic.easeIn",
+      onComplete: () => {
+        t.setVisible(false);
+        done?.();
+      },
+    });
+  }
+
+  /** The in-run world is drawn zoomed relative to the HUD: pop text keeps its world size. */
+  worldZoom() {
+    const g = this.gameScene?.cameras?.main;
+    return g ? g.zoom / this.cameras.main.zoom : 1;
+  }
+
+  centerY() {
+    return this.H * 0.4;
+  }
+
+  /**
+   * The strip of the screen (HUD coordinates) the live centre pop-up uses, or null. Pop text
+   * near the bird is moved out of it.
+   */
+  centerBand() {
+    const cur = this.pops.live(this.time.now);
+    if (!cur) return null;
+    if (cur.kind === "realm") return { y0: this.bannerY - 96, y1: this.bannerY + 78 };
+    const y = this.centerY();
+    if (cur.kind === "speed") return { y0: y - 44, y1: y + 44 };
+    const h = (cur.data.size * this.worldZoom()) / 2 + 22;
+    return { y0: y - 70 * this.worldZoom() - h, y1: y + h };
+  }
+
+  showSpeed(done) {
     // one reusable label (creating text mid-run uploads a new texture → hitch)
     if (!this.speedText) {
       this.speedText = neonText(this, this.W / 2, this.H * 0.4, "SPEED UP", 40, 0xff4fd8, {
@@ -360,7 +493,10 @@ export class HudScene extends Phaser.Scene {
       x: this.W / 2 - 160,
       delay: 700,
       duration: 360,
-      onComplete: () => t.setVisible(false),
+      onComplete: () => {
+        t.setVisible(false);
+        done?.();
+      },
     });
   }
 
@@ -429,6 +565,7 @@ export class HudScene extends Phaser.Scene {
   update() {
     const gs = this.gameScene;
     if (!gs || (!gs.sys.isActive() && !gs.sys.isPaused())) return;
+    if (gs.sys.isActive()) this.pops.update(this.time.now);
     if (this.hint.visible && gs.state !== "ready" && !this.hintFading) this.hint.setVisible(false);
     const s = gs.score;
     if (s !== this.lastScore) {

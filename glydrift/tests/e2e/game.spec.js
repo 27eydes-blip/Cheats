@@ -546,3 +546,81 @@ test("realm art never uses read-back canvas textures", () => {
   const bad = files.filter((f) => readFileSync(`src/${f}`, "utf8").includes("textures.addCanvas("));
   expect(bad).toEqual([]);
 });
+
+test("centre pop-ups never pile up", async ({ page }, testInfo) => {
+  // A realm change lands on a milestone (both at 500 m / 1000 m) and NEW BEST and SPEED UP
+  // can fire in the same moment: only one centre pop-up shows at a time, realm title first,
+  // then NEW BEST, then SPEED UP; a distance marker that would be stale is skipped.
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
+  const centre = () =>
+    page.evaluate(() => {
+      const h = window.__glydrift.scene.getScene("Hud");
+      const on = (o) => !!o && o.visible && o.alpha > 0.05;
+      return [
+        on(h.banner) && "realm",
+        on(h.speedText) && "speed",
+        on(h.centerText) && h.centerText.text,
+      ].filter(Boolean);
+    });
+  await page.evaluate(() => {
+    const h = window.__glydrift.scene.getScene("Hud");
+    h.onDistance(1000, 2);
+    h.onBiome(3);
+    h.onCenterBest();
+    h.onSpeedUp();
+  });
+  const seen = [];
+  for (let i = 0; i < 60; i++) {
+    await run(page, 100);
+    const now = await centre();
+    expect(now.length, `centre pop-ups at ${i * 100} ms: ${now}`).toBeLessThanOrEqual(1);
+    if (now[0] && seen.at(-1) !== now[0]) seen.push(now[0]);
+  }
+  // (the run keeps flying, so a real 100m marker may follow)
+  expect(seen.slice(0, 3)).toEqual(["realm", "NEW BEST!", "speed"]);
+  expect(seen).not.toContain("1000m!"); // it waited too long: stale, skipped
+
+  // pop text by the bird is moved out of the strip a live centre pop-up uses
+  const clear = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const s = g.scene.getScene("Game");
+    const h = g.scene.getScene("Hud");
+    h.onBiome(4);
+    const band = h.centerBand();
+    const hc = h.cameras.main;
+    const gc = s.cameras.main;
+    const toWorld = (hy) => ((hy - hc.worldView.y) * hc.zoom) / gc.zoom + gc.worldView.y;
+    const mid = (toWorld(band.y0) + toWorld(band.y1)) / 2;
+    const t = s.popNear(s.player.x, mid, "CLOSE!", "#ffffff", 40);
+    const top = t.y - 70 - t.height / 2;
+    const bottom = t.y + t.height / 2;
+    return bottom < toWorld(band.y0) || top > toWorld(band.y1);
+  });
+  expect(clear).toBe(true);
+
+  // and through a real stretch of run across a realm change at 1000 m
+  await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    while (s.meters < 880) {
+      if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+      s.__t = (s.__t || 1e6) + 1000 / 60;
+      s.stepFrame(s.__t, 1000 / 60);
+    }
+  });
+  let maxCentre = 0;
+  for (let i = 0; i < 70; i++) {
+    await page.evaluate(() => {
+      const s = window.__glydrift.scene.getScene("Game");
+      if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+    });
+    await run(page, 100);
+    maxCentre = Math.max(maxCentre, (await centre()).length);
+  }
+  expect(
+    await page.evaluate(() => window.__glydrift.scene.getScene("Game").meters),
+  ).toBeGreaterThan(1000);
+  expect(maxCentre).toBeLessThanOrEqual(1);
+  expect(log.errors).toEqual([]);
+});

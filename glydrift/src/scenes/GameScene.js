@@ -43,6 +43,8 @@ const DARK_R = ABYSS.darkRadius;
 const COIN_BONUS = REWARDS.coinPoints;
 const PERFECT_BONUS = REWARDS.perfectPoints;
 const BIOME_COINS = REWARDS.biomeCoins;
+/** Pop text by the bird is drawn at this size so it reads as secondary to centre pop-ups. */
+const POP_NEAR_SCALE = 0.8;
 const COMBO_TIERS = COMBO.tiers;
 const COMBO_WINDOW = COMBO.window;
 const FORCE_LUCKY = TEST.lucky;
@@ -320,7 +322,7 @@ export class GameScene extends Phaser.Scene {
         Sfx.doubleJump();
         Haptics.light();
         const p = this.player;
-        this.fx.floatText(p.x + 30, p.y - 46, "DOUBLE JUMP!", "#8aff7a", 40);
+        this.popNear(p.x + 30, p.y - 46, "DOUBLE JUMP!", "#8aff7a", 40);
       }
       Sfx.flap(this.charDef.id);
     }
@@ -342,7 +344,7 @@ export class GameScene extends Phaser.Scene {
     this.slowT = NEAR_MISS.slowTime;
     this.flashFx.flash(0xffffff, FLASH.nearMiss);
     const p = this.player;
-    this.fx.floatText(
+    this.popNear(
       p.x + 40,
       p.y - 50,
       this.mult > 1 ? `CLOSE! +${pts}` : "CLOSE!",
@@ -387,24 +389,53 @@ export class GameScene extends Phaser.Scene {
     const pts = PERFECT_BONUS * this.mult;
     this.bonus += pts;
     const p = this.player;
-    this.fx.floatText(p.x + 30, p.y - 92, `PERFECT! +${pts}`, "#fff1a0", 34);
+    this.popNear(p.x + 30, p.y - 92, `PERFECT! +${pts}`, "#fff1a0", 34);
     this.fx.burst("star", p.x, p.y, 8, 0xfff1a0, { speed: { min: 100, max: 280 } });
     this.flashFx.flash(0xfff4c0, FLASH.perfect);
     Sfx.perfect();
     Haptics.light();
   }
 
+  /**
+   * Pop text by the bird (CLOSE!, PERFECT!, +coins…): drawn a little smaller than the centre
+   * pop-ups and moved out of the strip a live centre pop-up (realm title, NEW BEST, SPEED UP,
+   * distance) is using, so the two never overlap.
+   */
+  popNear(x, y, str, color, size) {
+    const sz = Math.round(size * POP_NEAR_SCALE);
+    const band = this.hudReady?.centerBand?.();
+    if (band) {
+      // HUD → screen → world
+      const hc = this.hud.cameras.main;
+      const gc = this.cameras.main;
+      const toWorld = (hy) => ((hy - hc.worldView.y) * hc.zoom) / gc.zoom + gc.worldView.y;
+      const b0 = toWorld(band.y0);
+      const b1 = toWorld(band.y1);
+      const h = sz / 2 + 18;
+      // the text rises 70 while it fades: keep that whole path clear of the band
+      if (y + h > b0 && y - 70 - h < b1) {
+        const below = b1 + 70 + h + 6;
+        const above = b0 - h - 6;
+        y = below + h < gc.worldView.bottom ? below : above;
+      }
+    }
+    return this.fx.floatText(x, y, str, color, sz);
+  }
+
   /** Every 100 m a pop; 500 m / 1000 m get a proper celebration. */
   milestone(m) {
     const p = this.player;
     const big = m % 1000 === 0 ? 2 : m % 500 === 0 ? 1 : 0;
+    const hud = this.hudReady;
     if (!big) {
-      this.fx.floatText(p.x + 20, p.y - 120, `${m}m`, "#bdf9ff", 30);
+      if (hud?.onDistance) hud.onDistance(m, 0);
+      else this.fx.floatText(p.x + 20, p.y - 120, `${m}m`, "#bdf9ff", 30);
       this.fx.ring(p.x, p.y, 0xbdf9ff, { scale: 0.8, duration: 300 });
       Sfx.milestone(0);
       return;
     }
-    this.fx.floatText(p.x + 20, p.y - 130, `${m}m!`, "#ffd23f", big > 1 ? 60 : 50);
+    if (hud?.onDistance) hud.onDistance(m, big);
+    else this.fx.floatText(p.x + 20, p.y - 130, `${m}m!`, "#ffd23f", big > 1 ? 60 : 50);
     this.fx.burst("star", p.x, p.y, big > 1 ? 36 : 24, 0xffd23f, { speed: { min: 200, max: 640 } });
     this.fx.burst("pixel", p.x, p.y, 16, 0xffffff, { speed: { min: 260, max: 700 } });
     this.fx.ring(p.x, p.y, 0xffd23f, { scale: big > 1 ? 2.4 : 1.8, duration: 600 });
@@ -419,7 +450,7 @@ export class GameScene extends Phaser.Scene {
     this.run.coins += BIOME_COINS;
     this.run.bonusCoins += BIOME_COINS;
     const p = this.player;
-    this.fx.floatText(p.x + 30, p.y - 60, `+${BIOME_COINS}`, "#ffd23f", 40);
+    this.popNear(p.x + 30, p.y - 60, `+${BIOME_COINS}`, "#ffd23f", 40);
     this.fx.burst("star", p.x, p.y, 16, 0xffd23f, { speed: { min: 160, max: 460 } });
     Sfx.reward();
     Haptics.light();
@@ -438,13 +469,13 @@ export class GameScene extends Phaser.Scene {
     this.fx.burst("star", p.x, p.y, 16, col);
     if (o.mode === "flip") {
       p.flipGravity(-1);
-      this.fx.floatText(p.x + 50, p.y - 60, "GRAVITY FLIP", "#ff9ce8", 30);
+      this.popNear(p.x + 50, p.y - 60, "GRAVITY FLIP", "#ff9ce8", 30);
     } else if (o.mode === "restore") {
       p.flipGravity(1);
-      this.fx.floatText(p.x + 50, p.y - 60, "GRAVITY RESTORED", "#9cffc4", 26);
+      this.popNear(p.x + 50, p.y - 60, "GRAVITY RESTORED", "#9cffc4", 26);
     } else {
       p.makeMini();
-      this.fx.floatText(p.x + 50, p.y - 60, "MINI!", "#ffe27a", 34);
+      this.popNear(p.x + 50, p.y - 60, "MINI!", "#ffe27a", 34);
     }
     this.hudReady?.onPortal?.(o.mode);
   }
@@ -488,7 +519,7 @@ export class GameScene extends Phaser.Scene {
     this.flashFx.flash(0x39ff88, FLASH.perfect);
     this.fx.ring(p.x, p.y, 0x39ff88, { scale: 2, duration: 600 });
     this.fx.burst("star", p.x, p.y, 24, 0x39ff88, { speed: { min: 150, max: 450 } });
-    this.fx.floatText(p.x + 40, p.y - 70, "SECOND CHANCE!", "#39ff88", 44);
+    this.popNear(p.x + 40, p.y - 70, "SECOND CHANCE!", "#39ff88", 44);
     p.rig.onRevive(); // Prismara shatters into light and reforms
   }
 
@@ -505,7 +536,7 @@ export class GameScene extends Phaser.Scene {
     Haptics.strong();
     this.cameras.main.shake(220, 0.006);
     this.flashFx.flash(0xffd23f, FLASH.perfect);
-    this.fx.floatText(p.x + 40, p.y - 70, `${B.mul}x BOOST!`, "#ffd23f", 56);
+    this.popNear(p.x + 40, p.y - 70, `${B.mul}x BOOST!`, "#ffd23f", 56);
     this.fx.ring(p.x, p.y, 0xffd23f, { scale: 1.6, duration: 380 });
   }
 
@@ -529,7 +560,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.boostCd > 0) {
       this.boostCd -= dt;
-      if (this.boostCd <= 0) this.fx.floatText(p.x + 40, p.y - 60, "BOOST READY", "#ffd23f", 28);
+      if (this.boostCd <= 0) this.popNear(p.x + 40, p.y - 60, "BOOST READY", "#ffd23f", 28);
     }
   }
 
@@ -859,7 +890,7 @@ export class GameScene extends Phaser.Scene {
         if (ev.zone) {
           p.flipGravity(-1);
           Sfx.portal();
-          this.fx.floatText(p.x + 50, p.y - 60, "FLIP ZONE", "#ff9ce8", 28);
+          this.popNear(p.x + 50, p.y - 60, "FLIP ZONE", "#ff9ce8", 28);
         } else if (!this.obstacles.flipped) p.flipGravity(1);
       }
       if (ev.coins) {
@@ -867,7 +898,7 @@ export class GameScene extends Phaser.Scene {
         const cm = this.charDef.coinMul ?? 1;
         this.run.coins += ev.coins * (this.lucky ? 2 : 1) * cm * this.coinBoost;
         if (cm > 1)
-          this.fx.floatText(
+          this.popNear(
             p.x + 26,
             p.y - 40,
             `+${ev.coins * (this.lucky ? 2 : 1) * cm}`,
@@ -931,7 +962,8 @@ export class GameScene extends Phaser.Scene {
         this.player.rig.flex({ shine: true, big: true }); // YARMS: big flex + gold shine
         this.player.rig.onBest(); // 손주원: roar + a lightning bolt behind it
         if (this.charDef.id === "sonjuwon") this.flashFx.flash(0xbfe8ff, FLASH.newBest);
-        this.fx.floatText(p.x + 20, p.y - 120, "NEW BEST!", "#ffd23f", 50);
+        if (this.hudReady?.onCenterBest) this.hudReady.onCenterBest();
+        else this.fx.floatText(p.x + 20, p.y - 120, "NEW BEST!", "#ffd23f", 50);
         Sfx.newBest();
         Haptics.strong();
         this.fx.burst("star", p.x, p.y, 24, 0xffd23f, { speed: { min: 150, max: 420 } });
