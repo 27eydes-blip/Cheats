@@ -1438,6 +1438,51 @@ test("after logging out: one pop-up at a time, and no free rewards twice", async
   expect(log.errors).toEqual([]);
 });
 
+test("flow: the camera shakes only on death and the Abyss entrance; zoom and lead ease", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
+  const out = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const cam = s.cameras.main;
+    const shakes = [];
+    const orig = cam.shake.bind(cam);
+    cam.shake = (...a) => {
+      shakes.push(Math.round(s.meters));
+      return orig(...a);
+    };
+    let t = 1e6;
+    let maxZoomStep = 0;
+    let maxLeadStep = 0;
+    let lastZ = cam.zoom;
+    let lastY = cam.scrollY;
+    const z0 = cam.zoom;
+    let abyssAt = null;
+    while (s.meters < 3000) {
+      if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+      t += 1000 / 60;
+      s.stepFrame(t, 1000 / 60);
+      if (abyssAt === null && s.inAbyss) abyssAt = Math.round(s.meters);
+      maxZoomStep = Math.max(maxZoomStep, Math.abs(cam.zoom - lastZ) / z0);
+      maxLeadStep = Math.max(maxLeadStep, Math.abs(cam.scrollY - lastY));
+      lastZ = cam.zoom;
+      lastY = cam.scrollY;
+    }
+    return { shakes, abyssAt, zoomOut: 1 - cam.zoom / z0, maxZoomStep, maxLeadStep };
+  });
+  // the only shake on the way was the Abyss entrance (its title slam lives in the HUD)
+  for (const m of out.shakes) expect(Math.abs(m - out.abyssAt), `shake at ${m} m`).toBeLessThan(40);
+  // the view widens a little at speed, and never in a visible jump
+  expect(out.zoomOut).toBeGreaterThan(0.005);
+  expect(out.zoomOut).toBeLessThan(0.035);
+  expect(out.maxZoomStep).toBeLessThan(0.002);
+  expect(out.maxLeadStep).toBeLessThan(1.5);
+  expect(log.errors).toEqual([]);
+});
+
 test("accounts wait for the server to be set up", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page, { flags: ["mockcloud"] });

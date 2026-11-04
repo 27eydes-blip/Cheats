@@ -1,6 +1,7 @@
 // Player physics (tap-to-flap, asymmetric gravity, terminal velocity, gravity flip,
 // mini mode) driving a CharacterRig for visuals.
 import { PHYSICS } from "../config.js";
+import { TILT } from "../tuning.js";
 import { CharacterRig } from "./CharacterRig.js";
 
 export class Player {
@@ -86,7 +87,9 @@ export class Player {
       // tilt follows velocity, smoothed for buttery motion
       const target =
         Math.max(-28, Math.min(62, ((this.vy * this.gravityDir) / 1000) * 60)) * this.gravityDir;
-      this.rig.angle += (target - this.rig.angle) * Math.min(1, dt * 12);
+      // the nose comes up crisply on a flap and eases down while falling
+      const rate = (target - this.rig.angle) * this.gravityDir < 0 ? TILT.rise : TILT.fall;
+      this.rig.angle += (target - this.rig.angle) * Math.min(1, dt * rate);
     }
     this.rig.sizeMul = this.sizeMul;
     this.rig.setPosition(this.x, this.y);

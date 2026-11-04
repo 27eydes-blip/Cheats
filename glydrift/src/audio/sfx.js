@@ -56,6 +56,62 @@ function noise({ dur = 0.3, vol = 0.4, f = 900, delay = 0 }) {
   src.start(t);
 }
 
+// ---- flight feel: a soft whoosh on every flap (higher as the run speeds up) and a wind bed
+// that builds with speed. Both quiet, both under the hero's own flap sound.
+let noiseBuf = null;
+function whiteNoise(c) {
+  if (!noiseBuf) {
+    noiseBuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  return noiseBuf;
+}
+function flapWhoosh(speed) {
+  const c = ensure();
+  if (!c) return;
+  const t = c.currentTime;
+  const src = c.createBufferSource();
+  src.buffer = whiteNoise(c);
+  const bp = c.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.Q.value = 1.2;
+  const f = 700 + speed * 1500; // pitch rises with speed
+  bp.frequency.setValueAtTime(f * 0.7, t);
+  bp.frequency.exponentialRampToValueAtTime(f * 1.4, t + 0.12);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.05 + speed * 0.04, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+  src.connect(bp).connect(g).connect(master);
+  src.start(t, Math.random());
+  src.stop(t + 0.2);
+}
+let wind = null;
+function windLevel(level) {
+  const c = level > 0 ? ensure() : ctx;
+  if (!c) return;
+  if (!wind) {
+    if (level <= 0) return;
+    const src = c.createBufferSource();
+    src.buffer = whiteNoise(c);
+    src.loop = true;
+    const lp = c.createBiquadFilter();
+    lp.type = "bandpass";
+    lp.Q.value = 0.6;
+    const g = c.createGain();
+    g.gain.value = 0;
+    src.connect(lp).connect(g).connect(master);
+    src.start();
+    wind = { src, lp, g, level: 0 };
+  }
+  if (Math.abs(level - wind.level) < 0.01) return;
+  wind.level = level;
+  const t = c.currentTime;
+  wind.g.gain.setTargetAtTime(level * 0.06, t, 0.25); // smooth: never a step
+  wind.lp.frequency.setTargetAtTime(300 + level * 900, t, 0.4);
+}
+
 // Rising reward notes climb a major pentatonic scale (always consonant, never grating).
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28];
 const semis = (base, step) => base * 2 ** (PENTA[Math.min(step, PENTA.length - 1)] / 12);
@@ -441,6 +497,10 @@ export const Sfx = {
   flap: (id) => (FLAP[id] || ANIMAL_SFX[id]?.flap || FLAP.volt)(),
   /** An animal hero's own reaction sound: "near" | "best" | "death" | "revive". */
   hero: (id, evt) => ANIMAL_SFX[id]?.[evt]?.(),
+  /** A soft whoosh under every flap; `speed` 0..1 raises its pitch. */
+  flapWhoosh: (speed = 0) => flapWhoosh(speed),
+  /** The wind bed: 0 = silent (menus, pause, death), 1 = top speed. Changes are smoothed. */
+  wind: (level) => windLevel(Math.max(0, Math.min(1, level))),
   /** YARMS flex: a stretchy creak + a short synth "hngh" grunt (no voice samples) */
   flex: () => {
     for (let i = 0; i < 3; i++)

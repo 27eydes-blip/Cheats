@@ -130,9 +130,11 @@ async function boot() {
       mode: wantsFit() ? Phaser.Scale.FIT : Phaser.Scale.ENVELOP,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    // limit 61 (not 60): on 120 Hz screens two 8.33 ms ticks (16.66 ms) fall a hair short of
-    // the 60 fps threshold (16.67 ms), so frames randomly took 2 or 3 ticks → 60/40 fps judder.
-    fps: { target: 60, limit: 61, smoothStep: true },
+    // No frame cap: the game runs at the display's own rate — a locked 60 on 60 Hz screens and
+    // 120 on ProMotion iPhones / 120 Hz monitors — so every frame lands on a vsync (a 60 cap on
+    // a 120 Hz screen made frames take 2 or 3 ticks at random: judder). Physics steps at most
+    // 1/60 s and everything else is time-based, so the game plays the same at any rate.
+    fps: { target: 60, smoothStep: true },
     // all sound is Tone.js / raw WebAudio; Phaser's own audio context only caused a
     // "not allowed to start" console warning on load
     audio: { noAudio: true },
