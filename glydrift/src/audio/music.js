@@ -189,6 +189,13 @@ class Track {
   /** Scheduled every 16th note by the Transport. Never lets a scheduling clash throw. */
   tick(time) {
     if (this.disposed) return;
+    // catching up after a long main-thread stall: Tone fires every missed 16th at once,
+    // which piles dozens of notes onto the same instant (a blast + "max polyphony")
+    if (this.step > 0 && time < Tone.getContext().rawContext.currentTime - 0.25) {
+      this.step++;
+      this.engine.skipped = (this.engine.skipped || 0) + 1;
+      return;
+    }
     try {
       this.tickInner(time);
     } catch {

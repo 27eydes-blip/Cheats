@@ -89,14 +89,16 @@ export class IceSlider extends PxObstacle {
     this.body = this.add(
       this.scene.add.tileSprite(0, 0, this.w, len, "frozen_pillar_1").setDepth(1),
     );
-    this.cap = this.add(this.scene.add.image(0, 0, "frozen", "cap_0").setDepth(2));
+    // the biome's art is built lazily; until then use the blank texture (set on spawn)
+    const tex = this.scene.textures.exists("frozen") ? ["frozen", "cap_0"] : ["__DEFAULT"];
+    this.cap = this.add(this.scene.add.image(0, 0, ...tex).setDepth(2));
   }
   spawn(x, { top = true, Lmin, Lmax, period = 3.4, phase = 0 }) {
     this.arm(x);
     Object.assign(this, { top, Lmin, Lmax, period, phase });
     this.halfW = this.w / 2;
     this.body.setOrigin(0.5, top ? 1 : 0);
-    this.cap.setOrigin(0.5, top ? 1 : 0).setFrame(top ? "cap_0" : "cap_0b");
+    this.cap.setOrigin(0.5, top ? 1 : 0).setTexture("frozen", top ? "cap_0" : "cap_0b");
   }
   update(dt, clock) {
     const H = this.mgr.H;

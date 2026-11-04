@@ -99,16 +99,31 @@ export class Slammer extends PxObstacle {
       this.scene.add.tileSprite(0, 0, this.w, len, "abyss_pillar_2").setOrigin(0.5, 0).setDepth(1),
     );
     this.capT = this.add(
-      this.scene.add.image(0, 0, "abyss", "cap_1").setOrigin(0.5, 1).setDepth(HAZ_TOP),
+      this.scene.add
+        .image(0, 0, ...this.capTex("cap_1"))
+        .setOrigin(0.5, 1)
+        .setDepth(HAZ_TOP),
     );
     this.capB = this.add(
-      this.scene.add.image(0, 0, "abyss", "cap_1b").setOrigin(0.5, 0).setDepth(HAZ_TOP),
+      this.scene.add
+        .image(0, 0, ...this.capTex("cap_1b"))
+        .setOrigin(0.5, 0)
+        .setDepth(HAZ_TOP),
     );
     this.lampT = this.add(this.scene.add.image(0, 0, "hz", "lamp_0").setDepth(HAZ_TOP));
     this.lampB = this.add(this.scene.add.image(0, 0, "hz", "lamp_0").setDepth(HAZ_TOP));
   }
+  /** The biome's art is built lazily; until then use the blank texture (fixed on spawn). */
+  capTex(f) {
+    return this.scene.textures.exists("abyss") ? ["abyss", f] : ["__DEFAULT"];
+  }
   spawn(x, { gc, open = 380, phase = 0, hold = 1.0, minGap = 0 }) {
     this.arm(x);
+    // pooled before the Abyss art was built? pick the real frames up now
+    if (this.capT.frame.name !== "cap_1") {
+      this.capT.setTexture("abyss", "cap_1");
+      this.capB.setTexture("abyss", "cap_1b");
+    }
     Object.assign(this, { gc, open, phase, hold, minGap });
     this.halfW = this.w / 2;
     // open hold → warning rattle 0.5 s → slam 0.1 s → shut 0.25 s → reopen 0.45 s

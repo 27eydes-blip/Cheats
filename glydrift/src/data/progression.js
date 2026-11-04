@@ -354,6 +354,9 @@ export const Progression = {
     if (s.login.claimed === today)
       return { canClaim: false, streak: s.login.streak, day: ((s.login.streak - 1) % 7) + 1 };
     const gap = s.login.last ? dayDiff(s.login.last, today) : 99;
+    // the date went backwards (flew west / clock changed): today is already covered
+    if (gap < 0)
+      return { canClaim: false, streak: s.login.streak, day: ((s.login.streak - 1) % 7) + 1 };
     const streak = gap === 1 ? s.login.streak + 1 : gap === 0 ? s.login.streak : 1;
     return { canClaim: true, streak, day: ((streak - 1) % 7) + 1 };
   },

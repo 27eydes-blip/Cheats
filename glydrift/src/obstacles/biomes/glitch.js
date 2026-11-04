@@ -60,11 +60,16 @@ export class BrokenLaser extends PxObstacle {
       this.segs.push({ glow, beam, state: 0 });
     }
     this.nodes = [];
+    // the biome's art is built lazily; until then use the blank texture (fixed on spawn)
+    const tex = this.scene.textures.exists("glitch") ? ["glitch", "emitter"] : ["__DEFAULT"];
     for (let i = 0; i <= SEGS; i++)
-      this.nodes.push(this.add(this.scene.add.image(0, 0, "glitch", "emitter").setDepth(3)));
+      this.nodes.push(this.add(this.scene.add.image(0, 0, ...tex).setDepth(3)));
   }
   spawn(x, { phase = 0 }) {
     this.arm(x);
+    // pooled before the Glitch art was built? pick the real frame up now
+    if (this.nodes[0].frame.name !== "emitter")
+      for (const n of this.nodes) n.setTexture("glitch", "emitter");
     this.phase = phase;
     this.halfW = 26;
     this.cycle = -1;
