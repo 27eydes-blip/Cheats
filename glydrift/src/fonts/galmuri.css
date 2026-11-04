@@ -1,0 +1,11 @@
+/* Galmuri11 Bold — an open-source pixel font with full Hangul (SIL Open Font License 1.1,
+   see Galmuri-OFL.md). Limited to Korean letters so the Latin text keeps its own fonts;
+   every font stack lists it as a fallback, so Korean names (손주원) render crisply. */
+@font-face {
+  font-family: "Galmuri11";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: block;
+  src: url("../../node_modules/galmuri/dist/Galmuri11-Bold.woff2") format("woff2");
+  unicode-range: U+1100-11FF, U+3130-318F, U+A960-A97F, U+AC00-D7AF, U+D7B0-D7FF;
+}

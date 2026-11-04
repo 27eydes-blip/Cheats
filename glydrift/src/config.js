@@ -160,11 +160,11 @@ export const RARITY = {
   ultra: { label: "ULTRA LEGENDARY", color: 0x39ff6a },
 };
 
-export const FONT = '"Orbitron", "Avenir Next", system-ui, sans-serif';
+export const FONT = '"Orbitron", "Galmuri11", "Avenir Next", system-ui, sans-serif';
 /** Numbers & body copy: Orbitron's slashed zero reads like a broken glyph at small sizes. */
 /** Chunky pixel font for shop headers. */
-export const PIXEL_FONT = '"Silkscreen", "Orbitron", monospace';
-export const NUM_FONT = '"Rajdhani", "Avenir Next", system-ui, sans-serif';
+export const PIXEL_FONT = '"Silkscreen", "Galmuri11", "Orbitron", monospace';
+export const NUM_FONT = '"Rajdhani", "Galmuri11", "Avenir Next", system-ui, sans-serif';
 
 export function speedForMeters(m) {
   const s = WORLD.baseSpeed + WORLD.speedGain * (1 - Math.exp(-m / WORLD.speedRampMeters));

@@ -3,6 +3,7 @@ import "@fontsource/orbitron/900.css";
 import "@fontsource/rajdhani/600.css";
 import "@fontsource/rajdhani/700.css";
 import "@fontsource/silkscreen/700.css";
+import "./fonts/galmuri.css"; // Hangul pixel font (손주원)
 import Phaser from "phaser";
 import "./gfx/tileSpriteFix.js";
 import { watchContext } from "./systems/frameGuard.js";
@@ -35,6 +36,7 @@ async function boot() {
         document.fonts.load("600 32px Rajdhani"),
         document.fonts.load("700 32px Rajdhani"),
         document.fonts.load("700 32px Silkscreen"),
+        document.fonts.load("700 32px Galmuri11", "손주원"),
       ]),
       new Promise((r) => setTimeout(r, 1500)),
     ]);

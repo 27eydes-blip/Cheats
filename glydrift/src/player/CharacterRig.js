@@ -71,6 +71,18 @@ export class CharacterRig {
       this.extras.push(this.shineG);
     }
     this.setCosmetics(opts.cosmetics === undefined ? Shop.loadout() : opts.cosmetics);
+    // 손주원: the hover-thruster glow under the board
+    if (this.px.mode === "surf") {
+      this.roarT = 0;
+      this.nextRoar = 1.5 + Math.random() * 2;
+      this.thrustK = 0;
+      this.thruster = scene.add
+        .image(this.x, this.y, "glow")
+        .setBlendMode(ADD)
+        .setTint(0x3ef4ff)
+        .setDepth(depth - 1);
+      this.extras.push(this.thruster);
+    }
     if (def.id === "shade") {
       this.afterImages = [];
       for (let i = 0; i < 7; i++) {
@@ -229,6 +241,19 @@ export class CharacterRig {
           speed: { min: 120, max: 320 },
         });
         break;
+      case "sonjuwon": {
+        // the board kicks up and the thrusters blast a burst of cyan energy
+        const by = y + this.boardDY();
+        this.thrustK = 1;
+        fx.burst("spark", x - 6 * this.u, by, 12, 0x3ef4ff, {
+          angle: down,
+          speed: { min: 200, max: 480 },
+        });
+        fx.burst("dot", x, by, 8, 0xbffcff, { angle: down, speed: { min: 80, max: 260 } });
+        fx.ring(x, by, 0x3ef4ff, { scale: 0.8 * this.u, duration: 300, width: 0.35 }); // flat wave
+        fx.lightning(x, y - 6 * this.u, 0x9af4ff, 1, 26 * this.u);
+        break;
+      }
       case "nova":
         fx.ring(x, y, hsv((this.time * 0.3) % 1, 0.5, 1), {
           scale: 0.55 * this.u,
@@ -407,6 +432,11 @@ export class CharacterRig {
           speed: { min: 120, max: 320 },
         });
         break;
+      case "sonjuwon":
+        this.surfDeath(x, y);
+        hints.flash = 0.5;
+        hints.shake = 0.024;
+        break;
       case "nova":
         fx.ring(x, y, 0xffffff, { scale: 5, duration: 1000 });
         fx.ring(x, y, 0xff7ad9, { scale: 3, duration: 800 });
@@ -419,6 +449,168 @@ export class CharacterRig {
         break;
     }
     return hints;
+  }
+
+  /** 손주원's crash: a lightning surge, the board flips away spinning, electric pixels. */
+  surfDeath(x, y) {
+    const { fx, scene } = this;
+    if (this.sounds) Sfx.thunder();
+    fx.lightning(x, y, 0x9af4ff, 7, 150 * this.u);
+    fx.lightning(x, y, 0xffffff, 3, 90 * this.u);
+    fx.burst("pixel", x, y, 50, 0xffffff, { speed: { min: 200, max: 680 } });
+    fx.burst("pixel", x, y, 40, 0x3ef4ff, { speed: { min: 150, max: 560 } });
+    fx.burst("spark", x, y, 30, 0xbffcff, { speed: { min: 300, max: 800 } });
+    fx.ring(x, y, 0x3ef4ff, { scale: 2.4, duration: 650 });
+    const board = scene.add
+      .image(x, y + this.boardDY(), this.px.atlas, "sonjuwon_board")
+      .setScale(this.sprite.scaleX, this.sprite.scaleY)
+      .setDepth(this.sprite.depth + 1);
+    scene.tweens.add({
+      targets: board,
+      x: x + 220,
+      angle: 900,
+      duration: 1200,
+      ease: "Cubic.easeOut",
+    });
+    scene.tweens.add({
+      targets: board,
+      y: { from: board.y, to: board.y - 170 },
+      duration: 520,
+      ease: "Quad.easeOut",
+      yoyo: true,
+      hold: 60,
+    });
+    scene.tweens.add({
+      targets: board,
+      alpha: 0,
+      delay: 900,
+      duration: 400,
+      onComplete: () => board.destroy(),
+    });
+  }
+
+  /** Offset from the sprite centre down to 손주원's board (world px, follows gravity flips). */
+  boardDY() {
+    return 7.5 * 4 * Math.abs(this.sprite.scaleX) * this.gravityDir;
+  }
+
+  /** Near-miss reaction (손주원: a quick lightning crack and a spark burst). */
+  onNear() {
+    if (this.px.mode !== "surf" || this.dead || !this.fx) return;
+    this.fx.lightning(this.x, this.y, 0xbff4ff, 3, 44 * this.u);
+    this.fx.burst("spark", this.x, this.y, 10, 0x9af4ff, { speed: { min: 150, max: 420 } });
+    if (this.sounds) Sfx.crackle();
+  }
+
+  /** New best mid-run (손주원: it roars and a big lightning bolt strikes behind it). */
+  onBest() {
+    if (this.px.mode !== "surf" || this.dead || !this.fx) return;
+    this.roarT = 1;
+    const scene = this.scene;
+    const g = scene.add
+      .graphics()
+      .setDepth(this.sprite.depth - 3)
+      .setBlendMode(ADD);
+    const bx = this.x - 40 * this.u;
+    let px = bx + 30;
+    let py = this.y - 420;
+    const pts = [[px, py]];
+    while (py < this.y + 10) {
+      px = bx + (Math.random() - 0.5) * 60;
+      py += 40 + Math.random() * 30;
+      pts.push([px, py]);
+    }
+    for (const [w, c, a] of [
+      [16, 0x3ef4ff, 0.35],
+      [7, 0xbffcff, 0.9],
+      [3, 0xffffff, 1],
+    ]) {
+      g.lineStyle(w, c, a).beginPath().moveTo(pts[0][0], pts[0][1]);
+      for (const [qx, qy] of pts) g.lineTo(qx, qy);
+      g.strokePath();
+    }
+    scene.tweens.add({
+      targets: g,
+      alpha: 0,
+      duration: 420,
+      delay: 120,
+      onComplete: () => g.destroy(),
+    });
+    this.fx.burst("spark", bx, this.y, 20, 0xbffcff, { speed: { min: 200, max: 600 } });
+    if (this.sounds) Sfx.thunder(0.6);
+  }
+
+  /** 손주원 per frame: lightning crackles over the fur, sparks jump to the board, idle roars. */
+  updateSurf(dt) {
+    if (this.roarT > 0) this.roarT -= dt;
+    this.thrustK = Math.max(0, this.thrustK - dt * 3);
+    if (this.dead || !this.fx) return;
+    const u = this.u;
+    this.emitT -= dt;
+    if (this.emitT <= 0) {
+      this.emitT = (this.lowGfx ? 0.35 : 0.14) + Math.random() * 0.22;
+      this.fx.lightning(
+        this.x + (Math.random() - 0.4) * 30 * u,
+        this.y - (4 + Math.random() * 10) * u,
+        Math.random() < 0.3 ? 0xffffff : 0x6ad8ff,
+        1,
+        (14 + Math.random() * 12) * u,
+      );
+      if (Math.random() < 0.6)
+        this.fx.burst(
+          "spark",
+          this.x + (Math.random() - 0.5) * 30 * u,
+          this.y + 22 * u,
+          2,
+          0xbffcff,
+          {
+            speed: { min: 40, max: 140 },
+          },
+        );
+    }
+    // character select / menus: it balances and roars silently now and then
+    if (!this.sounds && this.flapT > 1) {
+      this.nextRoar -= dt;
+      if (this.nextRoar <= 0) {
+        this.nextRoar = 2.8 + Math.random() * 2.5;
+        this.roarT = 0.8;
+        this.fx.lightning(this.x, this.y - 8 * u, 0xbff4ff, 2, 34 * u);
+      }
+    }
+  }
+
+  /** The electric wave wake: cyan water spray with lightning zigzags through it. */
+  drawSurfTrail(g) {
+    const pts = this.points;
+    const n = pts.length;
+    const P = 4;
+    const by = this.boardDY(); // the wake comes off the board
+    for (let i = 1; i < n; i += 2) {
+      const p = pts[i];
+      const t = i / n;
+      const spray = (((i * 37) % 11) / 11 - 0.5) * 26 * t;
+      const size = Math.max(1, Math.round((1 - t) * 4 * this.sizeMul)) * P;
+      const col = t < 0.2 ? 0xffffff : t < 0.5 ? 0xbffcff : 0x3ef4ff;
+      g.fillStyle(col, t < 0.15 ? 1 : 0.95 - t * 0.85);
+      g.fillRect(
+        Math.round((p.x - size / 2) / P) * P,
+        Math.round((p.y + by - spray - size / 2) / P) * P,
+        size,
+        size,
+      );
+      if (i % 6 === 1)
+        g.fillRect(Math.round(p.x / P) * P, Math.round((p.y + by - spray - 14 * t) / P) * P, P, P);
+    }
+    // the lightning zigzag riding the wake
+    g.lineStyle(2 + this.sizeMul, 0xd8fbff, 0.9);
+    g.beginPath();
+    for (let i = 0; i < n; i += 3) {
+      const p = pts[i];
+      const zig = i === 0 ? 0 : (i % 6 === 0 ? -1 : 1) * (5 + Math.random() * 5);
+      if (i === 0) g.moveTo(p.x, p.y + by);
+      else g.lineTo(p.x, p.y + by + zig);
+    }
+    g.strokePath();
   }
 
   yarmsExplode() {
@@ -559,6 +751,7 @@ export class CharacterRig {
     }
 
     if (this.px.mode === "yarms") this.updateYarms(dt);
+    if (this.px.mode === "surf") this.updateSurf(dt);
 
     // shop skin: the tint wins over per-hero tints; extras sparkle / sheen
     if (this.skin) {
@@ -605,6 +798,8 @@ export class CharacterRig {
     if (mode === "idle") f = Math.floor(this.time * 5) % 3;
     else if (mode === "glitch") f = this.glitchT > 0 ? 2 : Math.floor(this.time * 3) % 2;
     else if (mode === "spin") f = Math.floor(this.time * 20) % 3;
+    else if (mode === "surf")
+      f = this.roarT > 0 ? 3 : this.flapT < 0.24 ? 2 : Math.floor(this.time * 2.5) % 2;
     else if (mode === "yarms")
       f = this.flexT > 0 ? 3 : this.flapT < 0.17 ? 2 : Math.floor(this.time * 7) % 2;
     else if (mode === "punch" || mode === "leap")
@@ -626,6 +821,16 @@ export class CharacterRig {
       v < 0.8 && big ? 0.75 : v < 0.9 ? 0.875 : v > 1.25 && big ? 1.25 : v > 1.1 ? 1.125 : 1;
     sp.setScale(m * step(this.sx), m * step(this.sy) * flip);
     this.placeCosmetics();
+    if (this.thruster) {
+      // hover glow under the board (flares on a flap)
+      const k = 4 * sp.scaleX;
+      const fl = sp.scaleY < 0 ? -1 : 1;
+      this.thruster
+        .setVisible(sp.visible && !this.dead)
+        .setPosition(sp.x, sp.y + 10 * k * fl)
+        .setScale((0.5 + this.thrustK * 0.4) * Math.abs(sp.scaleX), 0.25 * Math.abs(sp.scaleX))
+        .setAlpha(0.55 + 0.25 * Math.sin(this.time * 9) + this.thrustK * 0.3);
+    }
     this.drawTrail();
   }
 
@@ -725,6 +930,7 @@ export class CharacterRig {
     const style = this.trailOverride ? null : this.cos.trail;
     if (style && this.drawCosmeticTrail(g, style, P)) return;
     if (!this.trailOverride && this.px.mode === "yarms") return this.drawYarmsTrail(g);
+    if (!this.trailOverride && this.px.mode === "surf") return this.drawSurfTrail(g);
     const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail
     const n = this.points.length;
     for (let i = 1; i < n; i += 2) {

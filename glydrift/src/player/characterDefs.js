@@ -912,6 +912,25 @@ export const CHARACTERS = [
     limited: { start: "2026-11-03T14:00:00Z", end: "2026-11-04T14:00:00Z" },
     desc: "Rainbow trail. Every flap is a sonic punch.",
   },
+  {
+    id: "sonjuwon",
+    name: "손주원", // shown in Korean everywhere (the Galmuri pixel font supplies Hangul)
+    title: "Storm Surfer",
+    rarity: "legendary",
+    color: 0x3ef4ff,
+    color2: 0xffffff,
+    texture: "hero_sonjuwon",
+    pixel: {
+      atlas: "pxc",
+      frames: ["sonjuwon_0", "sonjuwon_1", "sonjuwon_2", "sonjuwon_3"],
+      mode: "surf",
+      trail: [0xffffff, 0xbffcff, 0x3ef4ff, 0x1a8ad8],
+    },
+    scale: 0.62,
+    cost: 12000,
+    challenge: { stat: "maxAbyssM", value: 200, text: "Survive 200m in the Abyss" },
+    desc: "Rides the storm.",
+  },
 ];
 
 /** Heroes that can only be won from the Lucky Spin. */

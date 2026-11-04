@@ -230,7 +230,9 @@ export class GameScene extends Phaser.Scene {
       bestCombo: 1,
       bonusCoins: 0,
       lucky: this.lucky,
+      abyssM: 0,
     };
+    this.zoneLastM = undefined;
 
     const seed = this.mode === "daily" ? dailySeed() : (Math.random() * 2 ** 32) >>> 0;
     this.obstacles.reset(seed);
@@ -319,6 +321,7 @@ export class GameScene extends Phaser.Scene {
   nearMiss(o) {
     this.run.nearMiss++;
     this.player.rig.flex({ sparkle: true }); // YARMS: a quick flex (no-op for other heroes)
+    this.player.rig.onNear(); // 손주원: a lightning crack
     this.addChain();
     const pts = NEAR_MISS.bonus * this.mult;
     this.bonus += pts;
@@ -697,6 +700,12 @@ export class GameScene extends Phaser.Scene {
     // pixel biome art follows the dominant biome (walls + backdrop crossfade on change; a
     // rift switches instantly under the screen tear)
     const biomeId = dom.id;
+    // metres flown inside the Abyss this run (손주원's challenge)
+    if (playing) {
+      const dm = Math.max(0, this.meters - (this.zoneLastM ?? this.meters));
+      if (biomeId === "abyss") this.run.abyssM = (this.run.abyssM || 0) + dm;
+    }
+    this.zoneLastM = this.meters;
     this.terrain.setTheme(themeFor(biomeId), dom.dimension);
     // build the next biome's art well before it arrives (it's made on demand to save memory)
     const nx = this.course.next(seg0);
@@ -840,6 +849,8 @@ export class GameScene extends Phaser.Scene {
         this.passedBest = true;
         this.hudReady?.onNewBest?.();
         this.player.rig.flex({ shine: true, big: true }); // YARMS: big flex + gold shine
+        this.player.rig.onBest(); // 손주원: roar + a lightning bolt behind it
+        if (this.charDef.id === "sonjuwon") this.flashFx.flash(0xbfe8ff, FLASH.newBest);
         this.fx.floatText(p.x + 20, p.y - 120, "NEW BEST!", "#ffd23f", 50);
         Sfx.newBest();
         Haptics.strong();

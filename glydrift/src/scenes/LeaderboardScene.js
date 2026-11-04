@@ -185,6 +185,34 @@ export class LeaderboardScene extends Phaser.Scene {
     return this.tab === "daily" ? Levels.daily() : Levels.endless();
   }
 
+  /** Tap a hero icon: a little tooltip with the hero's name (Korean names use Galmuri). */
+  heroTip(cont, icon, def) {
+    icon.setInteractive({ useHandCursor: true });
+    icon.on("pointerup", () => {
+      cont.tip?.destroy();
+      const t = neonText(
+        this,
+        icon.x,
+        icon.y - icon.displayHeight / 2 - 18,
+        def.name,
+        22,
+        def.color,
+        {
+          blur: 8,
+        },
+      );
+      cont.add(t);
+      cont.tip = t;
+      this.tweens.add({
+        targets: t,
+        alpha: 0,
+        delay: 1300,
+        duration: 300,
+        onComplete: () => t.destroy(),
+      });
+    });
+  }
+
   async fetchBoard() {
     const id = ++this.reqId;
     this.stateBox.y = (this.listTop + this.listBottom) / 2;
@@ -362,6 +390,7 @@ export class LeaderboardScene extends Phaser.Scene {
         ? heroImage(this, cx, heroY, def.id, spec.scale / HI)
         : this.add.image(cx, heroY, def.texture).setScale((spec.scale / HI) * PORTRAIT_K);
       col.add([score, name, hero]);
+      this.heroTip(col, hero, def);
       if (mine) {
         const tag = neonText(this, cx, heroY - 70 * spec.scale - 16, "YOU", 16, 0x3ef4ff, {
           blur: 6,
@@ -521,6 +550,7 @@ export class LeaderboardScene extends Phaser.Scene {
         ? neonText(this, W - 48, y, `${r.score}`, 26, medal, { ox: 1, blur: 8 })
         : plainText(this, W - 48, y, `${r.score}`, 24, mine ? "#3ef4ff" : "#ffffff", { ox: 1 });
       this.list.add([g, rankTxt, icon, name, score]);
+      this.heroTip(this.list, icon, def);
     });
     this.contentH = offset + Math.max(0, rows.length - 5) * ROW_H + 12;
   }

@@ -86,6 +86,12 @@ const FLAP = {
   manny: () => tone({ type: "triangle", f0: 180, f1: 300, dur: 0.1, vol: 0.2 }),
   milzzz: () => tone({ type: "sine", f0: 420, f1: 760, dur: 0.07, vol: 0.2 }),
   leviathan: () => tone({ type: "sine", f0: 140, f1: 90, dur: 0.16, vol: 0.3 }),
+  // 손주원: an electric "zzap" over a whoosh of the hover thrusters
+  sonjuwon: () => {
+    tone({ type: "sawtooth", f0: 1800, f1: 600, dur: 0.06, vol: 0.06 });
+    tone({ type: "square", f0: 2400, f1: 900, dur: 0.04, vol: 0.04, delay: 0.02 });
+    noise({ dur: 0.18, vol: 0.12, f: 1400 });
+  },
   nova: () => {
     tone({ type: "sine", f0: 660, f1: 990, dur: 0.12, vol: 0.2 });
     tone({ type: "sine", f0: 990, f1: 1320, dur: 0.12, vol: 0.1, delay: 0.03 });
@@ -113,6 +119,18 @@ export const Sfx = {
   deflate: () => {
     noise({ dur: 0.65, vol: 0.16, f: 2400 });
     tone({ type: "sine", f0: 420, f1: 60, dur: 0.6, vol: 0.18 });
+  },
+  /** 손주원 near-miss: a short static crackle */
+  crackle: () => {
+    noise({ dur: 0.09, vol: 0.14, f: 7000 });
+    noise({ dur: 0.05, vol: 0.1, f: 9000, delay: 0.07 });
+    tone({ type: "square", f0: 3200, f1: 1200, dur: 0.03, vol: 0.03, delay: 0.03 });
+  },
+  /** 손주원 death / new best: a thunder crack and a rolling rumble (synth only) */
+  thunder: (k = 1) => {
+    noise({ dur: 0.12, vol: 0.32 * k, f: 9000 });
+    noise({ dur: 1.1, vol: 0.26 * k, f: 380, delay: 0.05 });
+    tone({ type: "sine", f0: 90, f1: 40, dur: 0.9, vol: 0.3 * k, delay: 0.05 });
   },
   /** frog double jump: a springy two-step "boing" */
   doubleJump: () => {

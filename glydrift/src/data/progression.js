@@ -624,6 +624,7 @@ export const Progression = {
     st.maxBiome = Math.max(st.maxBiome, run.biome);
     st.maxLasersRun = Math.max(st.maxLasersRun, run.lasers);
     st.maxPortalsRun = Math.max(st.maxPortalsRun, run.portals);
+    st.maxAbyssM = Math.max(st.maxAbyssM || 0, Math.floor(run.abyssM || 0));
 
     // daily
     if (run.mode === "daily") {

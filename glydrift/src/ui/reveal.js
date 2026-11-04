@@ -82,12 +82,13 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
   const hero = scene.add.image(W / 2, cy - 160, def.texture).setAlpha(0);
   const base = 440 / Math.max(hero.width, hero.height);
   const yarms = def.id === "yarms";
+  const surf = def.id === "sonjuwon"; // a lightning strike, then it surfs in
   const name = neonText(
     scene,
     W / 2,
     cy + 270,
-    yarms ? "YARMS UNLOCKED" : def.name,
-    yarms ? 58 : 64,
+    yarms ? "YARMS UNLOCKED" : surf ? `${def.name} UNLOCKED` : def.name,
+    yarms ? 58 : surf ? 54 : 64,
     def.color,
     { blur: 18 },
   ).setAlpha(0);
@@ -104,25 +105,72 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
   cont.add([dark, beam, pool, hero, name, sub, hint, flash]);
 
   Sfx.reveal();
-  scene.tweens.add({ targets: dark, fillAlpha: 0.9, duration: 260 });
-  scene.tweens.add({ targets: beam, alpha: 1, duration: 300, delay: 180 });
+  scene.tweens.add({ targets: dark, fillAlpha: surf ? 0.96 : 0.9, duration: 260 });
+  if (!surf) scene.tweens.add({ targets: beam, alpha: 1, duration: 300, delay: 180 });
   scene.tweens.add({ targets: pool, alpha: 0.9, duration: 300, delay: 260 });
+  if (surf) {
+    // the dark screen splits with a lightning strike…
+    scene.time.delayedCall(220, () => {
+      const g = scene.add.graphics().setBlendMode(ADD);
+      cont.addAt(g, 2);
+      let px = W / 2 + 40;
+      let py = -20;
+      const pts = [[px, py]];
+      while (py < cy + 120) {
+        px = W / 2 + (Math.random() - 0.5) * 140;
+        py += 50 + Math.random() * 40;
+        pts.push([px, py]);
+      }
+      for (const [w, c, a] of [
+        [22, 0x3ef4ff, 0.35],
+        [9, 0xbffcff, 0.9],
+        [4, 0xffffff, 1],
+      ]) {
+        g.lineStyle(w, c, a).beginPath().moveTo(pts[0][0], pts[0][1]);
+        for (const [qx, qy] of pts) g.lineTo(qx, qy);
+        g.strokePath();
+      }
+      scene.tweens.add({ targets: g, alpha: 0, duration: 500, delay: 100 });
+      flash.fillColor = 0xbfe8ff;
+      flash.fillAlpha = reduceFlashing() ? 0.08 : 0.5;
+      scene.tweens.add({ targets: flash, fillAlpha: 0, duration: 300 });
+      Sfx.thunder();
+      scene.cameras.main.shake(160, 0.01);
+    });
+  }
   // the hero drops into the light, spinning (scaleX through ±), slowing to face us
   const spin = { k: 0 };
-  scene.tweens.add({
-    targets: spin,
-    k: 1,
-    duration: 950,
-    delay: 250,
-    ease: "Cubic.easeOut",
-    onStart: () => hero.setAlpha(1),
-    onUpdate: () => {
-      const k = spin.k;
-      hero
-        .setScale(base * Math.cos(k * Math.PI * 6) * (0.35 + 0.65 * k), base * (0.35 + 0.65 * k))
-        .setY(cy - 160 * (1 - k));
-    },
-  });
+  if (surf) {
+    // …then the tiger surfs in from the side on its board, spraying cyan sparks
+    hero.setScale(base).setPosition(-260, cy).setAngle(-14);
+    scene.tweens.add({
+      targets: hero,
+      x: W / 2,
+      angle: 0,
+      duration: 820,
+      delay: 520,
+      ease: "Cubic.easeOut",
+      onStart: () => hero.setAlpha(1),
+      onUpdate: (tw) => {
+        hero.y = cy + Math.sin(tw.progress * Math.PI * 2) * 18;
+        if (Math.random() < 0.6) burst(scene, cont, hero.x - 140, hero.y + 120, 0x3ef4ff, 2, 160);
+      },
+    });
+  } else
+    scene.tweens.add({
+      targets: spin,
+      k: 1,
+      duration: 950,
+      delay: 250,
+      ease: "Cubic.easeOut",
+      onStart: () => hero.setAlpha(1),
+      onUpdate: () => {
+        const k = spin.k;
+        hero
+          .setScale(base * Math.cos(k * Math.PI * 6) * (0.35 + 0.65 * k), base * (0.35 + 0.65 * k))
+          .setY(cy - 160 * (1 - k));
+      },
+    });
   let closable = false;
   let closed = false;
   return new Promise((resolve) => {
@@ -141,6 +189,12 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
     };
     scene.time.delayedCall(1200, () => {
       // the burst, in the rarity colour
+      if (surf) {
+        // electric flash + the name slams in
+        flash.fillColor = 0x3ef4ff;
+        Sfx.thunder(0.5);
+        scene.tweens.add({ targets: hero, scaleY: hero.scaleY * 1.1, duration: 120, yoyo: true });
+      }
       if (yarms) {
         // he lands... and FLEXES: swap to the flex pose, gold flash, the title slams in
         hero.setTexture("hero_yarms_flex");
@@ -173,10 +227,10 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
       scene.tweens.add({ targets: [name, sub], alpha: 1, duration: 260 });
       scene.tweens.add({
         targets: name,
-        scale: { from: yarms ? 3 : 1.5, to: 1 },
-        duration: yarms ? 260 : 360,
-        ease: yarms ? "Cubic.easeIn" : "Back.easeOut",
-        onComplete: () => yarms && scene.cameras.main.shake(220, 0.012),
+        scale: { from: yarms || surf ? 3 : 1.5, to: 1 },
+        duration: yarms || surf ? 260 : 360,
+        ease: yarms || surf ? "Cubic.easeIn" : "Back.easeOut",
+        onComplete: () => (yarms || surf) && scene.cameras.main.shake(220, 0.012),
       });
       scene.cameras.main.shake(180, 0.006);
       Haptics.strong();

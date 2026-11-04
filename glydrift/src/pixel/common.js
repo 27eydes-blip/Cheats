@@ -2,6 +2,7 @@
 import { LOTTERY_DRAW } from "./lotteryHeroes.js";
 import { SHOP_DRAW } from "./shopHeroes.js";
 import { yarms } from "./yarmsArt.js";
+import { sonjuwon, sonjuwonBoard } from "./sonjuwonArt.js";
 import { addAtlas, addTexture, PixelCanvas } from "./px.js";
 
 const OUT = 0x07101e; // bold character outline
@@ -518,7 +519,7 @@ function headAnchor(pc) {
   return { x: 2, y: -8, w: pc.w, h: pc.h };
 }
 
-function rim(pc) {
+export function rim(pc) {
   const out = new PixelCanvas(pc.w + 2, pc.h + 2);
   out.blit(pc, 1, 1);
   return out.outline(0xffffff, 1, false);
@@ -612,6 +613,7 @@ export function buildCommon(scene) {
     ...SHOP_DRAW,
     ...LOTTERY_DRAW,
     yarms,
+    sonjuwon,
   };
   for (let f = 0; f < 3; f++)
     for (const [id, draw] of Object.entries(heroes)) frames[`${id}_${f}`] = rim(draw(f));
@@ -619,6 +621,10 @@ export function buildCommon(scene) {
   // YARMS has a 4th pose (the double-bicep flex) and no head: hats sit between the shoulders
   frames.yarms_3 = rim(yarms(3));
   HEAD_ANCHORS.yarms = { x: 0, y: -8.5, w: 50, h: 34 };
+  // 손주원: the roar pose, the board on its own, and hats on the tiger's head
+  frames.sonjuwon_3 = rim(sonjuwon(3));
+  frames.sonjuwon_board = rim(sonjuwonBoard());
+  HEAD_ANCHORS.sonjuwon = { x: 7.5, y: -9, w: 32, h: 26 };
   for (let f = 0; f < 4; f++) frames[`coin_${f}`] = coin(f);
   for (const m of ["flip", "restore", "mini"])
     for (let f = 0; f < 4; f++) frames[`portal_${m}_${f}`] = portal(m, f);
