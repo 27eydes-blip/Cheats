@@ -250,6 +250,9 @@ export async function locate(page, label) {
 export async function press(page, pt) {
   if (test.info().project.use.hasTouch) await page.touchscreen.tap(pt.x, pt.y);
   else await page.mouse.click(pt.x, pt.y);
+  // with the game clock frozen, give the browser a moment to deliver the input, so it is
+  // always handled on the very next frame (on a busy machine it could land a frame late)
+  await page.waitForTimeout(80);
   await run(page, 50);
 }
 
