@@ -506,7 +506,7 @@ export const HEAD_ANCHORS = {};
  */
 export const PORTRAIT_SCALE = 5;
 export const PORTRAIT_K = 13 / PORTRAIT_SCALE;
-function headAnchor(pc) {
+export function headAnchor(pc) {
   const x0 = Math.floor(pc.w * 0.42);
   for (let y = 0; y < pc.h; y++) {
     const xs = [];

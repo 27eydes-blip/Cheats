@@ -253,6 +253,13 @@ export class GameOverScene extends Phaser.Scene {
           side: true,
           sub: `Achievement · ${a.desc}`,
         });
+      // season event challenges finished this run
+      for (const c of R.seasonDone || [])
+        toast(this, "SEASON CHALLENGE!", 0xff3a4a, {
+          y: toastY,
+          side: true,
+          sub: `${c.text} · +${c.reward?.coins || 0} coins, +${c.reward?.xp || 0} pass XP`,
+        });
     });
 
     // ---- buttons

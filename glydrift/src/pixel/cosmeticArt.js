@@ -31,6 +31,43 @@ function halo() {
   pc.set(3, 1, 0xffffff).set(10, 1, 0xffffff);
   return pc;
 }
+/** Season 1: a black iron crown set with blood-red gems. */
+function bloodCrown() {
+  const pc = new PixelCanvas(12, 8);
+  pc.poly(
+    [
+      [0, 7],
+      [0, 1],
+      [2, 4],
+      [4, 0],
+      [6, 4],
+      [8, 0],
+      [10, 4],
+      [11, 1],
+      [11, 7],
+    ],
+    0x2a1a22,
+  );
+  pc.hline(0, 11, 7, 0x14080c).hline(0, 11, 5, 0x5a2a34);
+  pc.set(4, 1, 0xff3a4a)
+    .set(8, 1, 0xff3a4a)
+    .set(6, 6, 0xc8102e)
+    .set(2, 6, 0xc8102e)
+    .set(10, 6, 0xc8102e);
+  pc.set(6, 5, 0xff8a8a);
+  return pc.outline(0x000000, 1, true);
+}
+/** Season 1: a single glowing Abyss eye floating on a little stalk of shadow. */
+function abyssEye() {
+  const pc = new PixelCanvas(10, 9);
+  pc.ellipse(4.5, 3.5, 4.2, 3.2, 0x2a0a14);
+  pc.ellipse(4.5, 3.5, 3, 2.2, 0xffe0e0);
+  pc.circle(4.5, 3.5, 1.6, 0xc8102e);
+  pc.set(4, 3, 0x14020a).set(5, 3, 0x14020a).set(3, 2, 0xffffff);
+  pc.vline(4, 7, 8, 0x2a0a14).set(5, 7, 0x2a0a14);
+  return pc.outline(0x000000, 1, true);
+}
+
 function horns() {
   const pc = new PixelCanvas(14, 7);
   for (const [bx, dir] of [
@@ -82,6 +119,8 @@ export const HAT_FIT = {
   hat_crown: { frame: "hat_crown", dx: 0, dy: 1 },
   hat_halo: { frame: "hat_halo", dx: 0, dy: -3 },
   hat_horns: { frame: "hat_horns", dx: 0, dy: 1 },
+  hat_bloodcrown: { frame: "hat_bloodcrown", dx: 0, dy: 1 },
+  hat_abysseye: { frame: "hat_abysseye", dx: 0, dy: 0 },
   hat_shades: { frame: "hat_shades", dx: 2, dy: 6 }, // over the eyes, not on top
   hat_phones: { frame: "hat_phones", dx: -1, dy: 6 },
   hat_helmet: { frame: "hat_helmet", dx: 0, dy: 7 },
@@ -237,6 +276,11 @@ function icons() {
       return pc;
     })(),
     icon_trail_fire: swoosh([0xfff1a0, 0xffa21a, 0xff5a1a, 0xb01000]),
+    icon_trail_bloodmoon: swoosh([0xffd0d0, 0xff3a4a, 0xc8102e, 0x5a0414]),
+    icon_trail_abyssal: swoosh([0x5a4a6a, 0x2a1a2a, 0xc8102e, 0x14020a]),
+    icon_trail_prism: swoosh([0xffffff, 0xff9ad8, 0x6ad8ff, 0xb48aff, 0xfff06a]),
+    icon_trail_zen: swoosh([0xffe0ec, 0xff9ac8, 0x9ae86a, 0x4ac84a]),
+    icon_trail_storm: swoosh([0xffffff, 0xbffcff, 0x3ef4ff, 0x1a5ad8]),
     icon_trail_lightning: (() => {
       const pc = new PixelCanvas(16, 16);
       pc.poly(
@@ -333,6 +377,8 @@ export function buildCosmeticArt(scene) {
     hat_crown: crown(),
     hat_halo: halo(),
     hat_horns: horns(),
+    hat_bloodcrown: bloodCrown(),
+    hat_abysseye: abyssEye(),
     hat_shades: shades(),
     hat_phones: phones(),
     hat_helmet: helmet(),

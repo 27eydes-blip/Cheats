@@ -1,0 +1,629 @@
+{
+  "version": 1,
+  "seasons": [
+    {
+      "id": "s1",
+      "number": 1,
+      "name": "ABYSS RISING",
+      "tagline": "The Abyss is waking up.",
+      "start": "2026-11-04T00:00:00Z",
+      "end": "2026-12-02T00:00:00Z",
+      "theme": {
+        "primary": "#c8102e",
+        "accent": "#ff3a4a",
+        "dark": "#14020a",
+        "home": "crimson",
+        "pulse": "heartbeat"
+      },
+      "featuredHero": "levijr",
+      "heroPriceAfter": 12000,
+      "pass": {
+        "tierXp": 350,
+        "tiers": [
+          {
+            "coins": 100
+          },
+          {
+            "coins": 115
+          },
+          {
+            "hero": "gloombat"
+          },
+          {
+            "item": "flap_stars"
+          },
+          {
+            "coins": 160
+          },
+          {
+            "hero": "grimrat"
+          },
+          {
+            "coins": 190
+          },
+          {
+            "pod": true
+          },
+          {
+            "hero": "murktoad"
+          },
+          {
+            "coins": 235
+          },
+          {
+            "item": "coin_stars"
+          },
+          {
+            "hero": "hollowcrow"
+          },
+          {
+            "coins": 280
+          },
+          {
+            "item": "trail_hearts"
+          },
+          {
+            "hero": "lurkeel"
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 340
+          },
+          {
+            "hero": "ashspider"
+          },
+          {
+            "item": "death_confetti"
+          },
+          {
+            "coins": 385
+          },
+          {
+            "hero": "anglerfiend"
+          },
+          {
+            "item": "hat_shades"
+          },
+          {
+            "coins": 430
+          },
+          {
+            "hero": "riftwolf"
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 475
+          },
+          {
+            "hero": "grimvulture"
+          },
+          {
+            "item": "death_ghost"
+          },
+          {
+            "coins": 520
+          },
+          {
+            "hero": "levijr"
+          }
+        ]
+      },
+      "event": {
+        "name": "ABYSS RISING",
+        "challenges": [
+          {
+            "id": "abyss5",
+            "text": "Reach the Abyss 5 times",
+            "type": "count",
+            "metric": "reachedAbyss",
+            "value": 5,
+            "reward": {
+              "coins": 500,
+              "xp": 700
+            }
+          },
+          {
+            "id": "abyss300",
+            "text": "Survive 300m in the Abyss",
+            "type": "best",
+            "metric": "abyssM",
+            "value": 300,
+            "reward": {
+              "coins": 800,
+              "xp": 1000
+            }
+          },
+          {
+            "id": "abyssall",
+            "text": "Die to every Abyss hazard",
+            "type": "collect",
+            "metric": "abyssKiller",
+            "values": [
+              "tendril",
+              "slammer",
+              "walls"
+            ],
+            "labels": {
+              "tendril": "Tendril",
+              "slammer": "Slammer",
+              "walls": "Closing Walls"
+            },
+            "reward": {
+              "coins": 1000,
+              "xp": 1200
+            }
+          }
+        ],
+        "shopItems": [
+          "trail_bloodmoon",
+          "trail_abyssal",
+          "hat_bloodcrown",
+          "hat_abysseye"
+        ]
+      }
+    },
+    {
+      "id": "s2",
+      "number": 2,
+      "name": "PRISM RIFT",
+      "tagline": "Light splits. So do you.",
+      "start": "2026-12-02T00:00:00Z",
+      "end": "2026-12-30T00:00:00Z",
+      "theme": {
+        "primary": "#9a3aff",
+        "accent": "#6ad8ff",
+        "dark": "#0c0620",
+        "home": "prism",
+        "pulse": "shimmer"
+      },
+      "featuredHero": "prismara",
+      "heroPriceAfter": 12000,
+      "pass": {
+        "tierXp": 350,
+        "tiers": [
+          {
+            "coins": 100
+          },
+          {
+            "coins": 115
+          },
+          {
+            "coins": 130
+          },
+          {
+            "item": "flap_stars"
+          },
+          {
+            "coins": 160
+          },
+          {
+            "coins": 175
+          },
+          {
+            "coins": 190
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 220
+          },
+          {
+            "coins": 235
+          },
+          {
+            "item": "coin_stars"
+          },
+          {
+            "coins": 265
+          },
+          {
+            "coins": 280
+          },
+          {
+            "item": "trail_hearts"
+          },
+          {
+            "coins": 310
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 340
+          },
+          {
+            "coins": 355
+          },
+          {
+            "item": "death_confetti"
+          },
+          {
+            "coins": 385
+          },
+          {
+            "coins": 400
+          },
+          {
+            "item": "hat_shades"
+          },
+          {
+            "coins": 430
+          },
+          {
+            "coins": 445
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 475
+          },
+          {
+            "coins": 490
+          },
+          {
+            "item": "death_ghost"
+          },
+          {
+            "coins": 520
+          },
+          {
+            "hero": "prismara"
+          }
+        ]
+      },
+      "event": {
+        "name": "PRISM SURGE",
+        "challenges": [
+          {
+            "id": "prism1",
+            "text": "Reach the Prism Rift",
+            "type": "count",
+            "metric": "reachedPrism",
+            "value": 1,
+            "reward": {
+              "coins": 400,
+              "xp": 600
+            }
+          },
+          {
+            "id": "prism400",
+            "text": "Fly 400m inside the Prism Rift",
+            "type": "best",
+            "metric": "prismM",
+            "value": 400,
+            "reward": {
+              "coins": 800,
+              "xp": 1000
+            }
+          },
+          {
+            "id": "prism3",
+            "text": "Survive the Prism Rift 3 times",
+            "type": "count",
+            "metric": "prismClear",
+            "value": 3,
+            "reward": {
+              "coins": 1000,
+              "xp": 1200
+            }
+          }
+        ],
+        "shopItems": [
+          "trail_prism"
+        ]
+      }
+    },
+    {
+      "id": "s3",
+      "number": 3,
+      "name": "ZEN DRIFT",
+      "tagline": "Breathe in. Fly on.",
+      "start": "2026-12-30T00:00:00Z",
+      "end": "2027-01-27T00:00:00Z",
+      "theme": {
+        "primary": "#4ac84a",
+        "accent": "#ff9ac8",
+        "dark": "#06140a",
+        "home": "garden",
+        "pulse": "breathe"
+      },
+      "featuredHero": "bao",
+      "heroPriceAfter": 12000,
+      "pass": {
+        "tierXp": 350,
+        "tiers": [
+          {
+            "coins": 100
+          },
+          {
+            "coins": 115
+          },
+          {
+            "coins": 130
+          },
+          {
+            "item": "flap_stars"
+          },
+          {
+            "coins": 160
+          },
+          {
+            "coins": 175
+          },
+          {
+            "coins": 190
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 220
+          },
+          {
+            "coins": 235
+          },
+          {
+            "item": "coin_stars"
+          },
+          {
+            "coins": 265
+          },
+          {
+            "coins": 280
+          },
+          {
+            "item": "trail_hearts"
+          },
+          {
+            "coins": 310
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 340
+          },
+          {
+            "coins": 355
+          },
+          {
+            "item": "death_confetti"
+          },
+          {
+            "coins": 385
+          },
+          {
+            "coins": 400
+          },
+          {
+            "item": "hat_shades"
+          },
+          {
+            "coins": 430
+          },
+          {
+            "coins": 445
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 475
+          },
+          {
+            "coins": 490
+          },
+          {
+            "item": "death_ghost"
+          },
+          {
+            "coins": 520
+          },
+          {
+            "hero": "bao"
+          }
+        ]
+      },
+      "event": {
+        "name": "CALM GARDEN",
+        "challenges": [
+          {
+            "id": "zenruns",
+            "text": "Play 20 runs",
+            "type": "count",
+            "metric": "runs",
+            "value": 20,
+            "reward": {
+              "coins": 400,
+              "xp": 600
+            }
+          },
+          {
+            "id": "zen1500",
+            "text": "Fly 1500m in one run",
+            "type": "best",
+            "metric": "meters",
+            "value": 1500,
+            "reward": {
+              "coins": 800,
+              "xp": 1000
+            }
+          },
+          {
+            "id": "zennear",
+            "text": "100 near-misses this season",
+            "type": "count",
+            "metric": "nearMiss",
+            "value": 100,
+            "reward": {
+              "coins": 1000,
+              "xp": 1200
+            }
+          }
+        ],
+        "shopItems": [
+          "trail_zen"
+        ]
+      }
+    },
+    {
+      "id": "s4",
+      "number": 4,
+      "name": "STORM RIDERS",
+      "tagline": "Ride the lightning.",
+      "start": "2027-01-27T00:00:00Z",
+      "end": "2027-02-24T00:00:00Z",
+      "theme": {
+        "primary": "#1a8ad8",
+        "accent": "#3ef4ff",
+        "dark": "#020a18",
+        "home": "storm",
+        "pulse": "flicker"
+      },
+      "featuredHero": "sonjuwon",
+      "heroPriceAfter": 12000,
+      "pass": {
+        "tierXp": 350,
+        "tiers": [
+          {
+            "coins": 100
+          },
+          {
+            "coins": 115
+          },
+          {
+            "coins": 130
+          },
+          {
+            "item": "flap_stars"
+          },
+          {
+            "coins": 160
+          },
+          {
+            "coins": 175
+          },
+          {
+            "coins": 190
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 220
+          },
+          {
+            "coins": 235
+          },
+          {
+            "item": "coin_stars"
+          },
+          {
+            "coins": 265
+          },
+          {
+            "coins": 280
+          },
+          {
+            "item": "trail_hearts"
+          },
+          {
+            "coins": 310
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 340
+          },
+          {
+            "coins": 355
+          },
+          {
+            "item": "death_confetti"
+          },
+          {
+            "coins": 385
+          },
+          {
+            "coins": 400
+          },
+          {
+            "item": "hat_shades"
+          },
+          {
+            "coins": 430
+          },
+          {
+            "coins": 445
+          },
+          {
+            "pod": true
+          },
+          {
+            "coins": 475
+          },
+          {
+            "coins": 490
+          },
+          {
+            "item": "death_ghost"
+          },
+          {
+            "coins": 520
+          },
+          {
+            "hero": "sonjuwon"
+          }
+        ]
+      },
+      "event": {
+        "name": "LIGHTNING STORM",
+        "challenges": [
+          {
+            "id": "storm5",
+            "text": "Reach the Abyss 5 times",
+            "type": "count",
+            "metric": "reachedAbyss",
+            "value": 5,
+            "reward": {
+              "coins": 500,
+              "xp": 700
+            }
+          },
+          {
+            "id": "storm60",
+            "text": "60 near-misses in one run",
+            "type": "best",
+            "metric": "nearMiss",
+            "value": 60,
+            "reward": {
+              "coins": 800,
+              "xp": 1000
+            }
+          },
+          {
+            "id": "stormcoins",
+            "text": "Collect 3000 coins this season",
+            "type": "count",
+            "metric": "coins",
+            "value": 3000,
+            "reward": {
+              "coins": 1000,
+              "xp": 1200
+            }
+          }
+        ],
+        "shopItems": [
+          "trail_storm"
+        ]
+      }
+    }
+  ]
+}

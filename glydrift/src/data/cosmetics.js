@@ -58,7 +58,65 @@ export const COSMETICS = [
   { id: "coin_stars", cat: "coin", name: "Star Coins", rarity: "common", price: 300 },
   { id: "coin_gems", cat: "coin", name: "Gems", rarity: "rare", price: 600 },
   { id: "coin_hearts", cat: "coin", name: "Pixel Hearts", rarity: "epic", price: 1500 },
+  // season exclusives: only for sale while their season runs (kept forever once bought)
+  {
+    id: "trail_bloodmoon",
+    cat: "trail",
+    name: "Blood Moon",
+    rarity: "epic",
+    price: 2800,
+    season: "s1",
+  },
+  {
+    id: "trail_abyssal",
+    cat: "trail",
+    name: "Abyssal Smoke",
+    rarity: "rare",
+    price: 1100,
+    season: "s1",
+  },
+  {
+    id: "hat_bloodcrown",
+    cat: "hat",
+    name: "Crimson Crown",
+    rarity: "epic",
+    price: 3200,
+    season: "s1",
+  },
+  { id: "hat_abysseye", cat: "hat", name: "Abyss Eye", rarity: "rare", price: 1200, season: "s1" },
+  {
+    id: "trail_prism",
+    cat: "trail",
+    name: "Prism Shards",
+    rarity: "epic",
+    price: 2800,
+    season: "s2",
+  },
+  {
+    id: "trail_zen",
+    cat: "trail",
+    name: "Blossom Breeze",
+    rarity: "rare",
+    price: 1100,
+    season: "s3",
+  },
+  {
+    id: "trail_storm",
+    cat: "trail",
+    name: "Storm Front",
+    rarity: "epic",
+    price: 2800,
+    season: "s4",
+  },
 ];
+
+// Season shop items are for sale only while their season is live (set by seasons.js)
+let seasonItemLive = (c) => !c.season;
+export function setSeasonItemCheck(fn) {
+  seasonItemLive = fn;
+}
+/** Can this cosmetic be bought / dropped right now? (owned ones are always shown) */
+export const forSale = (c) => !c.season || seasonItemLive(c);
 
 const BY_ID = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const getCosmetic = (id) => BY_ID[id] || null;
@@ -199,7 +257,7 @@ export const Shop = {
   /** 4 items picked from the date (same for everyone that day), one of them 30% off. */
   daily(key = todayKey()) {
     const rng = new RNG(hashString(`glydrift-shop-${key}`));
-    const pool = COSMETICS.slice();
+    const pool = COSMETICS.filter((c) => !c.season); // season items stay in their own spot
     const items = [];
     while (items.length < DAILY_COUNT && pool.length) {
       const i = Math.floor(rng.next() * pool.length);
@@ -236,7 +294,7 @@ export const Shop = {
         break;
       }
     }
-    const left = COSMETICS.filter((c) => c.rarity === rarity && !s.cos.owned[c.id]);
+    const left = COSMETICS.filter((c) => c.rarity === rarity && !s.cos.owned[c.id] && !c.season);
     let out;
     if (!left.length) {
       s.coins += POD_REFUND;

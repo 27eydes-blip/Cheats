@@ -13,11 +13,13 @@ import { Haptics } from "../systems/haptics.js";
 import { Analytics } from "../systems/analytics.js";
 import { Progression } from "../data/progression.js";
 import { Save } from "../data/save.js";
-import { DriftPass, FREE_TRACK, PASS_TIER_XP } from "../data/driftPass.js";
+import { Seasons } from "../data/seasons.js";
+import { DriftPass, passTrack, tierXp } from "../data/driftPass.js";
 import {
   CATEGORIES,
   COLLECTIONS,
   COSMETICS,
+  forSale,
   getCosmetic,
   POD_ODDS,
   POD_PRICE,
@@ -123,6 +125,7 @@ export class ShopScene extends Phaser.Scene {
 
   init(data) {
     this.tab = data?.tab || "featured";
+    this.openPassOnStart = !!data?.openPass; // the home-screen season banner opens the pass
   }
 
   create() {
@@ -276,6 +279,7 @@ export class ShopScene extends Phaser.Scene {
     });
 
     this.setTab(this.tab);
+    if (this.openPassOnStart) this.time.delayedCall(250, () => this.openPass());
     this.yarmsPeekT = 6;
   }
 
@@ -389,6 +393,9 @@ export class ShopScene extends Phaser.Scene {
         return [
           { kind: "drop" },
           { kind: "pass" },
+          // the live season: its event, then its exclusive items
+          ...(Seasons.active() ? [{ kind: "event" }] : []),
+          ...Seasons.shopItems().map((c) => ({ ...cos(c.id), seasonal: true })),
           { kind: "yarms" },
           ...Shop.bundlesToday().map((id) => ({ kind: "bundle", id })),
           cos(daily.deal),
@@ -401,15 +408,17 @@ export class ShopScene extends Phaser.Scene {
         return list.map((c) => (c.id === "yarms" ? { kind: "yarms" } : { kind: "hero", id: c.id }));
       }
       case "effects":
-        return COSMETICS.filter((c) => ["death", "flap", "coin"].includes(c.cat)).map((c) =>
-          cos(c.id),
-        );
+        return COSMETICS.filter(
+          (c) => ["death", "flap", "coin"].includes(c.cat) && (forSale(c) || Shop.owns(c.id)),
+        ).map((c) => cos(c.id));
       case "boosts":
         return [{ kind: "boosts" }];
       case "pods":
         return [{ kind: "drop" }, { kind: "pod" }];
       default:
-        return COSMETICS.filter((c) => c.cat === tab).map((c) => cos(c.id));
+        return COSMETICS.filter((c) => c.cat === tab && (forSale(c) || Shop.owns(c.id))).map((c) =>
+          cos(c.id),
+        );
     }
   }
 
@@ -437,6 +446,11 @@ export class ShopScene extends Phaser.Scene {
   }
 
   offerTheme(o) {
+    const season = Seasons.active();
+    if (season && (o.kind === "pass" || o.kind === "event" || o.seasonal)) {
+      const sc = Seasons.colors(season);
+      return { fill: sc.primary, light: sc.accent, band: sc.dark, fx: "embers" };
+    }
     if (o.kind === "cos") return themeForItem(o.id);
     if (o.kind === "bundle") return THEMES[SET_THEME[o.id]];
     if (o.kind === "yarms") return THEMES.gold;
@@ -584,13 +598,56 @@ export class ShopScene extends Phaser.Scene {
         }
         break;
       }
+      case "event": {
+        // the season's event: its challenges with progress bars
+        const season = Seasons.active();
+        title = season.event.name;
+        sub = `Season ${season.number} event · ends in ${Seasons.countdown(season)}`;
+        ribbon = { text: `SEASON ${season.number}`, col: 0xc8102e };
+        const top = -H / 2 + 74;
+        const rowH = Math.min(
+          88,
+          (c.bandY - top + H / 2 - 20) / Math.max(1, season.event.challenges.length) + 0,
+        );
+        season.event.challenges.forEach((ch, i) => {
+          const y = -H / 2 + 80 + i * rowH;
+          const pr = Seasons.challengeProgress(season, ch);
+          add(
+            this.add
+              .text(-W / 2 + 34, y, ch.text, this.priceStyle(24, "#ffffff"))
+              .setOrigin(0, 0.5)
+              .setWordWrapWidth(W - 150),
+          );
+          const bw = W - 68;
+          const bar = this.add.graphics();
+          bar.fillStyle(0x1a0630, 1).fillRoundedRect(-bw / 2 - 3, y + 20, bw + 6, 22, 9);
+          bar.fillStyle(0x3a0610, 1).fillRoundedRect(-bw / 2, y + 23, bw, 16, 7);
+          bar
+            .fillStyle(pr.frac >= 1 ? 0x39ff88 : 0xffd23f, 1)
+            .fillRoundedRect(-bw / 2, y + 23, Math.max(10, bw * pr.frac), 16, 7);
+          add(bar);
+          add(
+            this.add
+              .text(
+                W / 2 - 34,
+                y,
+                pr.label,
+                this.priceStyle(22, pr.frac >= 1 ? "#39ff88" : "#ffd23f"),
+              )
+              .setOrigin(1, 0.5),
+          );
+        });
+        cta = { label: "SEASON PASS", col: 0xffffff, fill: 0x7a0418, act: () => this.openPass() };
+        break;
+      }
       case "pass": {
-        title = "DRIFT PASS";
+        const season = Seasons.active();
+        title = season ? `SEASON ${season.number} PASS` : "DRIFT PASS";
         const next = DriftPass.nextTier();
         const claimable = DriftPass.claimable();
         if (next === null) sub = "Season complete!";
         else {
-          const r = FREE_TRACK[next];
+          const r = passTrack()[next];
           add(this.rewardIcon(r, 0, artY - 50, 1.4));
           const bw = W - 90;
           const by = artY + 110;
@@ -605,13 +662,13 @@ export class ShopScene extends Phaser.Scene {
             .fillStyle(0xffffff, 0.4)
             .fillRect(-bw / 2 + 8, by + 5, Math.max(8, Math.round(bw * pr) - 16), 10);
           add(bar);
-          const xpIn = Math.max(0, Math.min(PASS_TIER_XP, DriftPass.xp() - next * PASS_TIER_XP));
+          const xpIn = Math.max(0, Math.min(tierXp(), DriftPass.xp() - next * tierXp()));
           add(
             this.add
-              .text(0, by + 21, `${xpIn} / ${PASS_TIER_XP} XP`, this.priceStyle(28, "#ffffff"))
+              .text(0, by + 21, `${xpIn} / ${tierXp()} XP`, this.priceStyle(28, "#ffffff"))
               .setOrigin(0.5),
           );
-          sub = `Tier ${next + 1} of ${FREE_TRACK.length} · free with XP`;
+          sub = `Tier ${next + 1} of ${passTrack().length} · free with XP`;
         }
         if (claimable) ribbon = { text: `${claimable} READY`, col: 0x1fae5a };
         cta = {
@@ -671,6 +728,8 @@ export class ShopScene extends Phaser.Scene {
         if (o.deal) {
           ribbon = { text: "-30%", col: 0xe0203a };
           timer = Shop.msToRefresh;
+        } else if (o.seasonal) {
+          ribbon = { text: "SEASON ONLY", col: 0xc8102e };
         } else if (cc.rarity === "legendary") ribbon = { text: "LEGENDARY", col: 0xe0203a };
         if (["coin", "hat", "skin"].includes(cc.cat)) add(this.iconCos(o.id, 0, artY + 90, 0.85));
         c.rigSpec = { hero: s.selected, extra: [o.id] };
@@ -833,12 +892,17 @@ export class ShopScene extends Phaser.Scene {
       return c;
     }
     if (r.pod) return this.add.image(x, y, "cosm", "pod_0").setScale(2.0 * scale);
+    if (r.hero)
+      return this.add
+        .image(x, y, getCharacter(r.hero).texture)
+        .setScale((0.62 / HI) * PORTRAIT_K * scale);
     return this.iconCos(r.item, x, y, 0.8 * scale);
   }
 
   rewardRarity(r) {
     if (r.coins) return "coins";
     if (r.pod) return "pod";
+    if (r.hero) return getCharacter(r.hero).rarity;
     return getCosmetic(r.item).rarity;
   }
 
@@ -860,18 +924,20 @@ export class ShopScene extends Phaser.Scene {
             },
           };
     }
+    const cost = def.cost || Seasons.afterPrice(def.id);
+    if (!cost) return { label: "CHALLENGE", col: 0xffffff, fill: 0x3a2e70, act: null };
     if (def.requires && !Progression.requirementsMet(def))
       return { label: "LOCKED", col: 0xffffff, fill: 0x3a2e70, act: null };
     return {
-      label: `${def.cost}`,
+      label: `${cost}`,
       coin: true,
       act: () =>
-        this.buy(this.cards[this.index], def.name, def.cost, () => {
+        this.buy(this.cards[this.index], def.name, cost, () => {
           const ok = Progression.buy(def.id);
           if (ok) {
             s.selected = def.id;
             Save.write();
-            Analytics.log("item_purchased", { item: def.id, price: def.cost, category: "hero" });
+            Analytics.log("item_purchased", { item: def.id, price: cost, category: "hero" });
           }
           return ok;
         }),
@@ -1028,23 +1094,48 @@ export class ShopScene extends Phaser.Scene {
     const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x2a0850, 0.82).setInteractive();
     const py = this.top + 30;
     const ph = H - py - 30 - (this.registry.get("safeBottom") || 0);
+    // a season's pass wears the season's colours
+    const season = Seasons.active();
+    const sc = season ? Seasons.colors(season) : null;
     const g = this.add.graphics();
     g.fillStyle(0x1a0630, 1).fillRoundedRect(14, py - 8, W - 28, ph + 16, 30);
-    g.fillStyle(0x10a0e0, 1).fillRoundedRect(22, py, W - 44, ph, 24);
-    g.fillGradientStyle(0x30d8ff, 0x30d8ff, 0x2a5af0, 0x2a5af0, 1).fillRect(
-      28,
-      py + 12,
-      W - 56,
-      ph - 24,
-    );
-    g.lineStyle(6, 0xffffff, 0.85).strokeRoundedRect(22, py, W - 44, ph, 24);
-    c.add([dim, g, pixelText(this, W / 2, py + 66, "DRIFT PASS", 68, "#ffffff", { stroke: 15 })]);
+    g.fillStyle(sc ? sc.primary : 0x10a0e0, 1).fillRoundedRect(22, py, W - 44, ph, 24);
+    const ga = sc ? sc.primary : 0x30d8ff;
+    const gb = sc ? sc.dark : 0x2a5af0;
+    g.fillGradientStyle(ga, ga, gb, gb, 1).fillRect(28, py + 12, W - 56, ph - 24);
+    g.lineStyle(6, sc ? sc.accent : 0xffffff, 0.85).strokeRoundedRect(22, py, W - 44, ph, 24);
+    c.add([
+      dim,
+      g,
+      pixelText(
+        this,
+        W / 2,
+        py + 56,
+        season ? `SEASON ${season.number} PASS` : "DRIFT PASS",
+        54,
+        "#ffffff",
+        {
+          stroke: 13,
+        },
+      ),
+    ]);
+    if (season)
+      c.add(
+        this.add
+          .text(
+            W / 2,
+            py + 104,
+            `${season.name} · ends in ${Seasons.countdown(season)}`,
+            this.priceStyle(26, "#ffd0d0"),
+          )
+          .setOrigin(0.5),
+      );
     // XP progress toward the next tier, big and clear
     const unlocked = DriftPass.unlockedCount();
     const bw = W - 120;
-    const by = py + 142;
-    const into = DriftPass.xp() - unlocked * PASS_TIER_XP;
-    const frac = unlocked >= FREE_TRACK.length ? 1 : Math.max(0, Math.min(1, into / PASS_TIER_XP));
+    const by = py + 132;
+    const into = DriftPass.xp() - unlocked * tierXp();
+    const frac = unlocked >= passTrack().length ? 1 : Math.max(0, Math.min(1, into / tierXp()));
     const bar = this.add.graphics();
     bar.fillStyle(0x1a0630, 1).fillRoundedRect(W / 2 - bw / 2 - 5, by - 5, bw + 10, 56, 18);
     bar.fillStyle(0x0a3a6a, 1).fillRoundedRect(W / 2 - bw / 2, by, bw, 46, 14);
@@ -1054,21 +1145,22 @@ export class ShopScene extends Phaser.Scene {
       .fillRect(W / 2 - bw / 2 + 8, by + 5, Math.max(8, bw * frac - 16), 12);
     c.add(bar);
     const label =
-      unlocked >= FREE_TRACK.length
+      unlocked >= passTrack().length
         ? "ALL TIERS UNLOCKED"
-        : `TIER ${unlocked + 1}:  ${Math.max(0, into)} / ${PASS_TIER_XP} XP`;
+        : `TIER ${unlocked + 1}:  ${Math.max(0, into)} / ${tierXp()} XP`;
     c.add(this.add.text(W / 2, by + 23, label, this.priceStyle(30, "#ffffff")).setOrigin(0.5));
-    const cols = 3;
-    const gridTop = by + 76;
+    const cols = passTrack().length > 15 ? 5 : 3; // a season pass has 30 tiers
+    const k = cols === 5 ? 0.6 : 1;
+    const gridTop = by + 70;
     const gridBot = py + ph - 140;
     const tw = (W - 80) / cols;
-    const thh = Math.min(240, (gridBot - gridTop) / Math.ceil(FREE_TRACK.length / cols));
+    const thh = Math.min(240, (gridBot - gridTop) / Math.ceil(passTrack().length / cols));
     const draw = () => {
       c.tiles?.destroy();
       const tiles = this.add.container(0, 0);
       c.tiles = tiles;
       c.add(tiles);
-      FREE_TRACK.forEach((r, i) => {
+      passTrack().forEach((r, i) => {
         const x = 40 + tw * (i % cols) + tw / 2;
         const y = gridTop + thh * Math.floor(i / cols) + thh / 2;
         const un = DriftPass.isUnlocked(i);
@@ -1076,16 +1168,46 @@ export class ShopScene extends Phaser.Scene {
         const col = TILE_COL[this.rewardRarity(r)];
         const tile = this.add.container(x, y);
         const tg = this.add.graphics();
-        tg.fillStyle(0x1a0630, 1).fillRoundedRect(-tw / 2 + 5, -thh / 2 + 5, tw - 10, thh - 10, 18);
-        tg.fillStyle(col, 1).fillRoundedRect(-tw / 2 + 10, -thh / 2 + 10, tw - 20, thh - 20, 14);
-        tg.fillStyle(0xffffff, 0.3).fillRoundedRect(-tw / 2 + 16, -thh / 2 + 15, tw - 32, 18, 8);
+        tg.fillStyle(0x1a0630, 1).fillRoundedRect(
+          -tw / 2 + 4,
+          -thh / 2 + 4,
+          tw - 8,
+          thh - 8,
+          18 * k,
+        );
+        tg.fillStyle(col, 1).fillRoundedRect(-tw / 2 + 8, -thh / 2 + 8, tw - 16, thh - 16, 14 * k);
+        tg.fillStyle(0xffffff, 0.3).fillRoundedRect(
+          -tw / 2 + 13,
+          -thh / 2 + 12,
+          tw - 26,
+          18 * k,
+          8 * k,
+        );
         tile.add(tg);
-        tile.add(this.rewardIcon(r, 0, -8, 0.66));
+        // hero tiers glow in the season colour
+        if (r.hero && sc) {
+          tg.lineStyle(6 * k, sc.accent, 1).strokeRoundedRect(
+            -tw / 2 + 8,
+            -thh / 2 + 8,
+            tw - 16,
+            thh - 16,
+            14 * k,
+          );
+        }
+        tile.add(this.rewardIcon(r, 0, -8 * k, 0.66 * k * (r.hero ? 2.4 : 1))); // heroes big
         tile.add(
-          pixelText(this, -tw / 2 + 40, -thh / 2 + 40, `${i + 1}`, 32, "#ffffff", {
-            stroke: 8,
-            shadow: false,
-          }),
+          pixelText(
+            this,
+            -tw / 2 + 40 * k,
+            -thh / 2 + 40 * k,
+            `${i + 1}`,
+            Math.round(32 * k),
+            "#ffffff",
+            {
+              stroke: Math.round(8 * k),
+              shadow: false,
+            },
+          ),
         );
         if (!un) {
           // locked: still colourful, just dimmed, with a small lock
@@ -1096,18 +1218,22 @@ export class ShopScene extends Phaser.Scene {
               .fillRoundedRect(-tw / 2 + 10, -thh / 2 + 10, tw - 20, thh - 20, 14),
           );
           const lk = this.add.graphics();
-          const lx = tw / 2 - 40;
-          const ly = thh / 2 - 40;
-          lk.fillStyle(0x1a0630, 1).fillRoundedRect(lx - 16, ly - 8, 32, 26, 5);
-          lk.lineStyle(6, 0x1a0630, 1).strokeCircle(lx, ly - 10, 9);
-          lk.fillStyle(0xffffff, 1).fillRect(lx - 3, ly, 6, 8);
+          const lx = tw / 2 - 40 * k;
+          const ly = thh / 2 - 40 * k;
+          lk.setPosition(lx, ly).setScale(k);
+          lk.fillStyle(0x1a0630, 1).fillRoundedRect(-16, -8, 32, 26, 5);
+          lk.lineStyle(6, 0x1a0630, 1).strokeCircle(0, -10, 9);
+          lk.fillStyle(0xffffff, 1).fillRect(-3, 0, 6, 8);
           tile.add(lk);
         }
         if (done) {
+          tile.add(
+            this.add
+              .graphics()
+              .fillStyle(0x1a0630, 0.3)
+              .fillRoundedRect(-tw / 2 + 8, -thh / 2 + 8, tw - 16, thh - 16, 14 * k),
+          );
           const chk = this.add.graphics();
-          chk
-            .fillStyle(0x1a0630, 0.3)
-            .fillRoundedRect(-tw / 2 + 10, -thh / 2 + 10, tw - 20, thh - 20, 14);
           chk
             .lineStyle(26, 0x1a0630, 1)
             .beginPath()
@@ -1122,17 +1248,21 @@ export class ShopScene extends Phaser.Scene {
             .lineTo(-10, 34)
             .lineTo(48, -34)
             .strokePath();
+          chk.setScale(k);
           tile.add(chk);
         }
         if (un && !done) {
           // claimable: bounces and glows
           const glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
           glow
-            .lineStyle(16, 0xfff6a0, 0.75)
+            .lineStyle(16 * k, 0xfff6a0, 0.75)
             .strokeRoundedRect(-tw / 2 + 2, -thh / 2 + 2, tw - 4, thh - 4, 20);
           tile.addAt(glow, 0);
           tile.add(
-            pixelText(this, 0, thh / 2 - 36, "CLAIM!", 28, "#ffd23f", { stroke: 7, shadow: false }),
+            pixelText(this, 0, thh / 2 - 36 * k, "CLAIM!", Math.round(28 * k), "#ffd23f", {
+              stroke: Math.round(7 * k),
+              shadow: false,
+            }),
           );
           this.tweens.add({
             targets: tile,
@@ -1157,7 +1287,13 @@ export class ShopScene extends Phaser.Scene {
               this.openPod(res.pod, () => this.refreshAll());
               return;
             }
-            this.fx.floatText(x, y - 50, res.item ? res.item.name : `+${res.coins}`, "#ffffff", 36);
+            this.fx.floatText(
+              x,
+              y - 50,
+              res.hero ? `${res.hero.name}!` : res.item ? res.item.name : `+${res.coins}`,
+              "#ffffff",
+              36,
+            );
             draw();
           });
         }

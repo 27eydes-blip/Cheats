@@ -12,6 +12,7 @@ import { revealHero } from "../ui/reveal.js";
 import { Sfx } from "../audio/sfx.js";
 import { Progression, SPIN_EVERY } from "../data/progression.js";
 import { Save } from "../data/save.js";
+import { Seasons } from "../data/seasons.js";
 import { CATEGORIES, COSMETICS, getCosmetic, Shop, SKINS } from "../data/cosmetics.js";
 import { HAT_FIT } from "../pixel/cosmeticArt.js";
 import {
@@ -296,6 +297,10 @@ export class CharacterScene extends Phaser.Scene {
     const def = this.roster[this.index];
     const s = Save.data;
     const owned = Progression.isUnlocked(def.id);
+    // season heroes: a pass tier now, coins once their season has ended
+    const season = Seasons.active();
+    const passTier = season ? season.pass.tiers.findIndex((t) => t.hero === def.id) + 1 : 0;
+    const cost = def.cost || Seasons.afterPrice(def.id);
     this.nameText
       .setText(def.name)
       .setStroke(hex(def.color), 5)
@@ -322,6 +327,14 @@ export class CharacterScene extends Phaser.Scene {
       alt = live
         ? `LIMITED · leaves in ${h}h ${String(m).padStart(2, "0")}m ${String(sec).padStart(2, "0")}s\nOwn it forever once unlocked`
         : "This limited hero has left the shop";
+    } else if (!cost && def.challenge) {
+      // challenge-only heroes (Abyss / Prism / streak animals): progress shown clearly
+      const cur = Math.min(Progression.statOf(def.challenge.stat), def.challenge.value);
+      this.actionBtn.setLabel(`CHALLENGE  ${cur}/${def.challenge.value}`);
+      this.actionBtn.setColor(0x8a80b0);
+      this.actionBtn.setEnabled(false);
+      alt = `Unlock: ${def.challenge.text}`;
+      if (passTier) alt += `\nor reach tier ${passTier} of the Season ${season.number} Drift Pass`;
     } else if (def.lottery) {
       this.actionBtn.setLabel("LUCKY SPIN");
       this.actionBtn.setColor(0xff7ad9);
@@ -329,21 +342,21 @@ export class CharacterScene extends Phaser.Scene {
       alt = `Only from the Lucky Spin\nEarn a spin every ${SPIN_EVERY} points · you have ${s.spins || 0}`;
     } else {
       const reqOk = Progression.requirementsMet(def);
-      this.actionBtn.setLabel(reqOk ? `UNLOCK  ${def.cost}` : `LOCKED · ${def.cost}`);
+      this.actionBtn.setLabel(reqOk ? `UNLOCK  ${cost}` : `LOCKED · ${cost}`);
       this.actionBtn.setColor(def.requires ? (reqOk ? 0x39ff6a : 0x8a80b0) : 0xffc83d);
-      this.actionBtn.setEnabled(reqOk && s.coins >= def.cost);
+      this.actionBtn.setEnabled(reqOk && s.coins >= cost);
       const bits = [];
       // must-do goals (all of them) before the coins can be spent
       for (const r of def.requires || []) {
         const cur = Math.min(Progression.statOf(r.stat), r.value);
         bits.push(`${cur >= r.value ? "✓" : "✗"} ${r.text} (${cur}/${r.value})`);
       }
-      if (def.requires) bits.push(`${s.coins >= def.cost ? "✓" : "✗"} ${def.cost} coins`);
+      if (def.requires) bits.push(`${s.coins >= cost ? "✓" : "✗"} ${cost} coins`);
       if (def.spinPool) bits.push("or win him on the Lucky Spin");
       if (def.shards)
         bits.push(`${s.shards[def.id] || 0}/${def.shards} shards (daily streak & levels)`);
       if (def.challenge) {
-        const cur = Math.min(s.stats[def.challenge.stat] || 0, def.challenge.value);
+        const cur = Math.min(Progression.statOf(def.challenge.stat), def.challenge.value);
         const shown = def.challenge.stat === "maxBiome" ? "" : ` (${cur}/${def.challenge.value})`;
         bits.push(`or challenge: ${def.challenge.text}${shown}`);
       }

@@ -5,6 +5,7 @@ import { BIOMES, biomeStateAt, blendPalette, CLASSIC } from "../biomes/biomes.js
 import { COIN_COLOR, fitCamera, FONT, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
+import { PORTRAIT_K } from "../pixel/common.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { CHARACTERS, getCharacter, onSale, saleLeft } from "../player/characterDefs.js";
 import { Sfx } from "../audio/sfx.js";
@@ -18,6 +19,8 @@ import { Music } from "../audio/music.js";
 import { LOGIN_REWARDS, Progression } from "../data/progression.js";
 import { todayKey } from "../data/rng.js";
 import { Save } from "../data/save.js";
+import { Seasons } from "../data/seasons.js";
+import { claimSeasonTier, DriftPass } from "../data/driftPass.js";
 import { drawIcon } from "../ui/icons.js";
 import { askUsername } from "../ui/nameModal.js";
 import { openChest, revealHero } from "../ui/reveal.js";
@@ -84,6 +87,17 @@ export class MenuScene extends Phaser.Scene {
       "#bfb6e8",
     ).setDepth(100);
     popIn(this, this.logo, 80);
+
+    // ---- seasons: wrap up ended seasons (auto-claim + recap), then the live season's look
+    const hk = Seasons.housekeeping(claimSeasonTier);
+    this.seasonQueue = hk.recaps.map((r) => () => this.openRecap(r));
+    this.season = Seasons.active();
+    if (this.season) {
+      this.buildSeasonTheme();
+      this.buildSeasonBanner(logoY + 116);
+      if (Seasons.needsHeroReveal()) this.seasonQueue.push(() => this.newHeroReveal());
+    }
+    this.queueT = 1.2;
     // hidden music test: tap the logo 5 times
     this.logoTaps = 0;
     this.logo.setInteractive().on("pointerdown", () => {
@@ -478,10 +492,20 @@ export class MenuScene extends Phaser.Scene {
         const h = Math.max(1, Math.round(saleLeft(c) / 3600000));
         items.push(`★ ${c.name} leaves in about ${h}h · get it in HEROES!`);
       }
+    const xmas = CHARACTERS.filter((c) => c.season && !c.shelved && onSale(c) && !s.unlocked[c.id]);
+    if (xmas.length)
+      items.push(`❄ CHRISTMAS HEROES are here all December: ${xmas.length} to collect in HEROES!`);
     try {
       const deal = getCosmetic(Shop.daily().deal);
       if (deal) items.push(`SHOP DEAL: ${deal.name} 30% off today`);
     } catch {}
+    const season = Seasons.active();
+    if (season) {
+      items.push(`SEASON ${season.number}: ${season.name} · ends in ${Seasons.countdown(season)}`);
+      const r = Seasons.record(season.id);
+      const left = season.event.challenges.filter((c) => !r.ev.done[c.id]);
+      if (left.length) items.push(`EVENT: ${left[0].text}`);
+    }
     if (Shop.dropReady()) items.push("Your free Daily Drift Drop is waiting in the SHOP");
     if ((s.spins || 0) > 0) items.push(`You have ${s.spins} Lucky Spins to use`);
     if (s.best > 0) items.push(`Your best: ${s.best} · can you beat it?`);
@@ -526,6 +550,189 @@ export class MenuScene extends Phaser.Scene {
       Sfx.ui();
       Haptics.light?.();
     }
+  }
+
+  // ------------------------------------------------------------------ seasons
+  /** The season's home look: an edge glow in its colours and drifting themed particles. */
+  buildSeasonTheme() {
+    const W = this.W;
+    const H = this.H;
+    const sc = Seasons.colors(this.season);
+    const g = this.add.graphics().setDepth(2);
+    g.fillGradientStyle(sc.primary, sc.primary, sc.primary, sc.primary, 0.6, 0.6, 0, 0);
+    g.fillRect(0, 0, W, H * 0.34);
+    g.fillGradientStyle(sc.primary, sc.primary, sc.primary, sc.primary, 0, 0, 0.6, 0.6);
+    g.fillRect(0, H * 0.62, W, H * 0.38);
+    g.fillStyle(sc.primary, 0.1).fillRect(0, 0, W, H); // a crimson wash over everything
+    this.seasonTint = g;
+    this.seasonBits = [];
+    const n = Save.data.settings.lowGfx ? 12 : 26;
+    for (let i = 0; i < n; i++) {
+      const r = this.add
+        .rectangle(Math.random() * W, Math.random() * H, 6, 6, i % 3 ? sc.accent : sc.primary)
+        .setDepth(3)
+        .setAlpha(0.5 + Math.random() * 0.4);
+      r.v = 20 + Math.random() * 50;
+      r.ph = Math.random() * 6;
+      this.seasonBits.push(r);
+    }
+  }
+
+  /** "SEASON 1 · ABYSS RISING" banner with a countdown; it beats like a heart. */
+  buildSeasonBanner(y) {
+    const W = this.W;
+    const s = this.season;
+    const sc = Seasons.colors(s);
+    const bw = 560;
+    const bh = 84;
+    const c = this.add.container(W / 2, y).setDepth(120);
+    const g = this.add.graphics();
+    g.fillStyle(0x000000, 0.5).fillRoundedRect(-bw / 2 + 4, -bh / 2 + 6, bw, bh, 18);
+    g.fillStyle(sc.dark, 0.96).fillRoundedRect(-bw / 2, -bh / 2, bw, bh, 18);
+    g.lineStyle(4, sc.primary, 1).strokeRoundedRect(-bw / 2, -bh / 2, bw, bh, 18);
+    g.fillStyle(sc.primary, 0.35).fillRoundedRect(-bw / 2 + 6, -bh / 2 + 6, bw - 12, 14, 7);
+    const glow = this.add
+      .image(0, 0, "glow")
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(sc.primary)
+      .setScale(5, 1.2)
+      .setAlpha(0.35);
+    const title = neonText(this, 0, -14, `SEASON ${s.number} · ${s.name}`, 24, sc.accent, {
+      blur: 10,
+    });
+    const tier = Math.min(s.pass.tiers.length, DriftPass.unlockedCount());
+    this.seasonSub = plainText(
+      this,
+      0,
+      20,
+      `Ends in ${Seasons.countdown(s)} · Pass tier ${tier}/${s.pass.tiers.length}`,
+      17,
+      "#ffd8d8",
+    );
+    c.add([glow, g, title, this.seasonSub]);
+    c.setSize(bw, bh).setInteractive();
+    c.on("pointerup", () => {
+      Sfx.ui();
+      if (this.leaving) return;
+      this.leaving = true;
+      fadeTo(this, "Shop", { openPass: true }, { ms: 180, rgb: [2, 1, 7] });
+    });
+    popIn(this, c, 200);
+    this.seasonBanner = c;
+    this.seasonGlow = glow;
+  }
+
+  updateSeason(dt) {
+    if (this.seasonBanner) {
+      // heartbeat: two quick beats then a rest (gentler with Reduce Flashing)
+      const ph = (this.t * 1.1) % 1;
+      const beat = Math.exp(-((ph * 8) % 4) * 3) * (ph < 0.5 ? 1 : 0);
+      const k = reduceFlashing() ? 0.012 : 0.04;
+      this.seasonBanner.setScale(1 + beat * k);
+      this.seasonGlow.setAlpha(0.25 + beat * (reduceFlashing() ? 0.1 : 0.45));
+      if (Math.floor(this.t) !== Math.floor(this.t - dt)) {
+        const s = this.season;
+        const tier = Math.min(s.pass.tiers.length, DriftPass.unlockedCount());
+        this.seasonSub.setText(
+          `Ends in ${Seasons.countdown(s)} · Pass tier ${tier}/${s.pass.tiers.length}`,
+        );
+      }
+    }
+    if (this.seasonBits) {
+      const home = Seasons.colors(this.season).home;
+      for (const r of this.seasonBits) {
+        r.ph += dt;
+        if (home === "garden") {
+          r.y += r.v * dt * 0.6; // petals drift down
+          r.x += Math.sin(r.ph * 1.5) * 20 * dt;
+        } else if (home === "storm") {
+          r.y += r.v * dt * 6; // rain
+          r.setSize(2, 14);
+        } else r.y -= r.v * dt; // embers / sparkles rise
+        if (r.y < -10) r.y = this.H + 10;
+        if (r.y > this.H + 10) r.y = -10;
+        if (home === "prism")
+          r.setFillStyle(Phaser.Display.Color.HSVToRGB((r.ph * 0.2) % 1, 0.5, 1).color);
+      }
+    }
+    // one season moment at a time: recaps, then the new hero reveal
+    if (
+      this.seasonQueue?.length &&
+      !this.modal &&
+      !this.naming &&
+      !this.seasonBusy &&
+      !this.leaving
+    ) {
+      this.queueT -= dt;
+      if (this.queueT <= 0) {
+        this.seasonBusy = true;
+        Promise.resolve(this.seasonQueue.shift()()).then(() => {
+          this.seasonBusy = false;
+          this.queueT = 0.5;
+        });
+      }
+    }
+  }
+
+  /** First open of a season: the NEW HERO reveal for its featured character. */
+  async newHeroReveal() {
+    const s = this.season;
+    const def = getCharacter(s.featuredHero);
+    Seasons.markHeroSeen();
+    await revealHero(this, def, { title: `NEW HERO · SEASON ${s.number}` });
+    const tier = s.pass.tiers.findIndex((t) => t.hero === def.id) + 1;
+    toast(this, `${def.name} IS HERE`, Seasons.colors(s).accent, {
+      y: this.H * 0.3,
+      sub: tier ? `Reach tier ${tier} of the Season ${s.number} pass to unlock` : s.tagline,
+    });
+  }
+
+  /** End of a season: what you did and what you got (unclaimed tiers were auto-claimed). */
+  openRecap(r) {
+    return new Promise((resolve) => {
+      const W = this.W;
+      const H = this.H;
+      const s = r.season;
+      const sc = Seasons.colors(s);
+      const h = 760;
+      const c = this.modalBase(h, sc.primary);
+      const y0 = H / 2 - h / 2;
+      c.add(neonText(this, W / 2, y0 + 56, "SEASON RECAP", 44, sc.accent, { blur: 14 }));
+      c.add(plainText(this, W / 2, y0 + 100, `Season ${s.number} · ${s.name}`, 22, "#ffd8d8"));
+      const rows = [
+        ["Runs played", `${r.stats.runs}`],
+        ["Best score", `${r.stats.best}`],
+        ["Coins collected", `${r.stats.coins}`],
+        ["Pass tiers reached", `${r.tiers} / ${r.total}`],
+        ["Event challenges", `${r.challenges} / ${r.challengeTotal}`],
+        ["Rewards auto-claimed", `${r.autoClaimed.length}`],
+      ];
+      rows.forEach(([k, v], i) => {
+        const y = y0 + 160 + i * 52;
+        c.add(plainText(this, 90, y, k, 22, "#e8e2ff", { ox: 0 }));
+        c.add(neonText(this, W - 90, y, v, 26, 0xffd23f, { ox: 1, blur: 6 }));
+      });
+      // heroes earned this season
+      const heroes = r.heroes.slice(0, 10);
+      if (heroes.length) {
+        c.add(plainText(this, W / 2, y0 + 486, "HEROES EARNED", 18, hex(sc.accent)));
+        const step = Math.min(64, (W - 140) / heroes.length);
+        heroes.forEach((d, i) => {
+          const x = W / 2 + (i - (heroes.length - 1) / 2) * step;
+          c.add(this.add.image(x, y0 + 540, d.texture).setScale((0.3 / HI) * PORTRAIT_K));
+        });
+      }
+      c.add(
+        button(this, W / 2, y0 + h - 70, 300, 84, "NICE!", {
+          color: 0x39ff88,
+          size: 30,
+          onClick: () => {
+            this.closeModal();
+            resolve();
+          },
+        }),
+      );
+    });
   }
 
   updateCountdown() {
@@ -696,6 +903,9 @@ export class MenuScene extends Phaser.Scene {
       });
     }
     this.time.delayedCall(700, () => this.coinCounter.to(Save.data.coins, 800));
+    // a streak hero unlocked by this login (Bao)
+    if (res.unlocks?.length)
+      this.time.delayedCall(1700, () => revealHero(this, res.unlocks[0], { title: "UNLOCKED!" }));
     if (res.shardResult?.id) {
       const def = getCharacter(res.shardResult.id);
       if (res.shardResult.unlocked) {
@@ -823,6 +1033,7 @@ export class MenuScene extends Phaser.Scene {
   update(time, delta) {
     const dt = Math.min(delta / 1000, 1 / 30);
     this.t += dt;
+    this.updateSeason(dt);
     // slowly cycle every biome palette; menus keep the backdrop dim and scenery hidden
     blendPalette(biomeStateAt((this.t * 18) % (500 * CLASSIC)), this.pal);
     // showcase every pixel biome on the title screen (slow crossfade every ~9 s)

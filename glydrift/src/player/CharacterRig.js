@@ -7,6 +7,7 @@ import { HAT_FIT } from "../pixel/cosmeticArt.js";
 import { HEAD_ANCHORS } from "../pixel/common.js";
 import { greyAtlas } from "../pixel/grayHero.js";
 import { Sfx } from "../audio/sfx.js";
+import { AnimalBits } from "./animalFx.js";
 
 const ADD = Phaser.BlendModes.ADD;
 const NORMAL = Phaser.BlendModes.NORMAL;
@@ -71,6 +72,8 @@ export class CharacterRig {
       this.extras.push(this.shineG);
     }
     this.setCosmetics(opts.cosmetics === undefined ? Shop.loadout() : opts.cosmetics);
+    // animal heroes: trails, lights, reactions and special deaths (see animalFx.js)
+    this.an = def.animal ? new AnimalBits(this) : null;
     // 손주원: the hover-thruster glow under the board
     if (this.px.mode === "surf") {
       this.roarT = 0;
@@ -103,7 +106,13 @@ export class CharacterRig {
   }
 
   get objects() {
-    return [this.trailG, this.sprite, ...this.extras, ...(this.afterImages || [])];
+    return [
+      this.trailG,
+      this.sprite,
+      ...this.extras,
+      ...(this.afterImages || []),
+      ...(this.an?.objects || []),
+    ];
   }
 
   setPosition(x, y) {
@@ -143,6 +152,8 @@ export class CharacterRig {
 
   reset(x, y) {
     this.dead = false;
+    this.frozen = false;
+    this.sprite.setAlpha(1);
     this.points.length = 0;
     this.x = x;
     this.y = y;
@@ -219,6 +230,7 @@ export class CharacterRig {
           const { kind, color, n } = def.fx.flap;
           fx.burst(kind, x, y + oy, n, color, { angle: down });
         }
+        this.an?.flap();
         break;
       case "yarms":
         // a whoosh puff under the stroke and sparkles off both hands
@@ -386,9 +398,15 @@ export class CharacterRig {
       return hints;
     }
     this.dead = true;
-    this.setVisible(false);
     const { x, y, def, fx } = this;
+    // animals with a death move (belly slide, last lap, snapping chains) burst at its end
+    if (this.an && fx && this.an.die((bx, by) => this.animalBurst(bx, by))) return hints;
+    this.setVisible(false);
     if (!fx) return hints;
+    if (this.an) {
+      this.animalBurst(x, y);
+      return hints;
+    }
     this.cosmeticDeath(x, y);
     fx.burst("shard", x, y, 26, def.color);
     fx.ring(x, y, def.color, { scale: 1.5, duration: 600 });
@@ -494,8 +512,35 @@ export class CharacterRig {
     return 7.5 * 4 * Math.abs(this.sprite.scaleX) * this.gravityDir;
   }
 
-  /** Near-miss reaction (손주원: a quick lightning crack and a spark burst). */
+  /** An animal's death burst: shop death FX, shards + ring in its colour, its own particles. */
+  animalBurst(x, y) {
+    const { def, fx } = this;
+    if (!fx) return;
+    this.cosmeticDeath(x, y);
+    fx.burst("shard", x, y, 22, def.color);
+    fx.ring(x, y, def.color, { scale: 1.5, duration: 600 });
+    for (const { kind, color, n, up } of def.fx?.death || [])
+      fx.burst(kind, x, y, n, color, {
+        angle: up ? { min: 200, max: 340 } : undefined,
+        speed: { min: 100, max: 520 },
+      });
+  }
+
+  /** Near-miss / new best / Second Chance reactions (animals + 손주원; YARMS uses flex()). */
   onNear() {
+    this.an?.near();
+    this.surfNear();
+  }
+  onBest() {
+    this.an?.best();
+    this.surfBest();
+  }
+  onRevive() {
+    this.an?.revive();
+  }
+
+  /** Near-miss reaction (손주원: a quick lightning crack and a spark burst). */
+  surfNear() {
     if (this.px.mode !== "surf" || this.dead || !this.fx) return;
     this.fx.lightning(this.x, this.y, 0xbff4ff, 3, 44 * this.u);
     this.fx.burst("spark", this.x, this.y, 10, 0x9af4ff, { speed: { min: 150, max: 420 } });
@@ -503,7 +548,7 @@ export class CharacterRig {
   }
 
   /** New best mid-run (손주원: it roars and a big lightning bolt strikes behind it). */
-  onBest() {
+  surfBest() {
     if (this.px.mode !== "surf" || this.dead || !this.fx) return;
     this.roarT = 1;
     const scene = this.scene;
@@ -752,6 +797,12 @@ export class CharacterRig {
 
     if (this.px.mode === "yarms") this.updateYarms(dt);
     if (this.px.mode === "surf") this.updateSurf(dt);
+    if (this.an) this.an.update(dt, scroll);
+    if (this.frozen) {
+      // a death move is animating the sprite: just keep the trail fading
+      this.drawTrail();
+      return;
+    }
 
     // shop skin: the tint wins over per-hero tints; extras sparkle / sheen
     if (this.skin) {
@@ -798,6 +849,7 @@ export class CharacterRig {
     if (mode === "idle") f = Math.floor(this.time * 5) % 3;
     else if (mode === "glitch") f = this.glitchT > 0 ? 2 : Math.floor(this.time * 3) % 2;
     else if (mode === "spin") f = Math.floor(this.time * 20) % 3;
+    else if (mode === "animal") f = this.an ? this.an.frame() : 0;
     else if (mode === "surf")
       f = this.roarT > 0 ? 3 : this.flapT < 0.24 ? 2 : Math.floor(this.time * 2.5) % 2;
     else if (mode === "yarms")
@@ -821,6 +873,7 @@ export class CharacterRig {
       v < 0.8 && big ? 0.75 : v < 0.9 ? 0.875 : v > 1.25 && big ? 1.25 : v > 1.1 ? 1.125 : 1;
     sp.setScale(m * step(this.sx), m * step(this.sy) * flip);
     this.placeCosmetics();
+    this.an?.place(scroll);
     if (this.thruster) {
       // hover glow under the board (flares on a flap)
       const k = 4 * sp.scaleX;
@@ -931,6 +984,7 @@ export class CharacterRig {
     if (style && this.drawCosmeticTrail(g, style, P)) return;
     if (!this.trailOverride && this.px.mode === "yarms") return this.drawYarmsTrail(g);
     if (!this.trailOverride && this.px.mode === "surf") return this.drawSurfTrail(g);
+    if (!this.trailOverride && this.an?.trail(g)) return;
     const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail
     const n = this.points.length;
     for (let i = 1; i < n; i += 2) {
@@ -1012,6 +1066,37 @@ export class CharacterRig {
         }
         return true;
       }
+      case "trail_bloodmoon":
+      case "trail_abyssal":
+      case "trail_prism":
+      case "trail_zen":
+      case "trail_storm": {
+        // season trails: stepped squares in the season's colours, each with a little twist
+        const pal = {
+          trail_bloodmoon: [0xffd0d0, 0xff3a4a, 0xc8102e, 0x7a0418, 0x3a020a],
+          trail_abyssal: [0x8a6a9a, 0x4a2a4a, 0x2a1a2a, 0x14080c, 0x0a0206],
+          trail_prism: [0xffffff, 0xff9ad8, 0x6ad8ff, 0xb48aff, 0xfff06a],
+          trail_zen: [0xffffff, 0xffd0e4, 0xff9ac8, 0x9ae86a, 0x4ac84a],
+          trail_storm: [0xffffff, 0xbffcff, 0x3ef4ff, 0x1a8ad8, 0x1a3a8a],
+        }[style];
+        const beat = style === "trail_bloodmoon" ? Math.exp(-((T * 2) % 1) * 5) : 0; // heartbeat
+        for (let i = 1; i < n; i += 2) {
+          const p = pts[i];
+          const t = i / n;
+          const size = Math.max(1, Math.round((1 - t) * (4 + beat * 2) * this.sizeMul)) * P;
+          const col =
+            style === "trail_prism"
+              ? pal[(i + Math.floor(T * 10)) % pal.length]
+              : pal[Math.min(pal.length - 1, Math.floor(t * pal.length))];
+          const yo = style === "trail_zen" ? Math.sin(i * 0.6 + T * 4) * 6 * t : 0;
+          sq(p.x, p.y + yo, size, col, t < 0.15 ? 1 : 0.95 - t * 0.8);
+          if (style === "trail_abyssal" && (i * 7 + Math.floor(T * 9)) % 8 === 0)
+            sq(p.x, p.y - 10 * t, P, 0xff3a4a, 1 - t); // red embers in the smoke
+          if (style === "trail_storm" && i % 10 === 1 && Math.random() < 0.5)
+            sq(p.x + (Math.random() - 0.5) * 20, p.y + (Math.random() - 0.5) * 20, P, 0xffffff, 1);
+        }
+        return true;
+      }
       case "trail_lightning": {
         g.lineStyle(3 * this.sizeMul + 1, 0xbff4ff, 0.95);
         g.beginPath();
@@ -1061,6 +1146,7 @@ export class CharacterRig {
   }
 
   destroy() {
+    this.scene.tweens?.killTweensOf(this.sprite);
     for (const o of this.objects) o.destroy();
   }
 }

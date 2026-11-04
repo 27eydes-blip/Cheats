@@ -98,9 +98,219 @@ const FLAP = {
   },
 };
 
+// The animal heroes' own sounds (all synthesised): flap, plus reactions on near-misses,
+// new bests, deaths and Second Chance revives.
+const T = (type, f0, f1, dur, vol, delay = 0) => tone({ type, f0, f1, dur, vol, delay });
+const ting = (f, delay = 0, vol = 0.08) => {
+  T("triangle", f, f, 0.06, vol, delay);
+  T("sine", f * 2, f * 2, 0.08, vol * 0.4, delay);
+};
+const shatter = () => {
+  noise({ dur: 0.45, vol: 0.16, f: 7000 });
+  [2600, 3300, 2900, 3900].forEach((f, i) => ting(f, 0.03 + i * 0.05, 0.06));
+};
+const splash = () => {
+  noise({ dur: 0.4, vol: 0.2, f: 1800 });
+  T("sine", 600, 200, 0.18, 0.12);
+};
+const pops = (n = 4) => {
+  for (let i = 0; i < n; i++) T("sine", 700 + i * 90, 1300 + i * 90, 0.05, 0.12, i * 0.06);
+};
+const ANIMAL_SFX = {
+  // peaceful
+  bunbun: {
+    flap: () => T("triangle", 600, 900, 0.05, 0.12),
+    death: () => T("triangle", 1300, 500, 0.2, 0.12),
+  },
+  puddles: {
+    flap: () => {
+      T("square", 430, 300, 0.09, 0.08);
+      T("sawtooth", 380, 270, 0.08, 0.05, 0.01);
+    },
+    death: splash,
+  },
+  snoozy: {
+    flap: () => T("sine", 320, 240, 0.12, 0.18),
+    death: () => T("sine", 300, 90, 0.7, 0.16),
+  },
+  kai: {
+    flap: () => {
+      T("sine", 500, 900, 0.06, 0.18);
+      T("sine", 900, 1300, 0.05, 0.08, 0.05);
+    },
+    death: splash,
+  },
+  bao: {
+    flap: () => {
+      T("sine", 220, 220, 0.22, 0.16);
+      T("triangle", 660, 660, 0.12, 0.05);
+    },
+    death: () => {
+      T("sine", 180, 170, 0.9, 0.2);
+      T("sine", 360, 350, 0.7, 0.06);
+    },
+  },
+  // prism
+  glassfrog: { flap: () => ting(2400), death: shatter },
+  shardcrab: {
+    flap: () => {
+      T("square", 1800, 1700, 0.02, 0.07);
+      T("square", 1900, 1800, 0.02, 0.07, 0.06);
+    },
+    death: shatter,
+  },
+  flicker: { flap: () => T("triangle", 1600, 2100, 0.04, 0.06), death: shatter },
+  spectra: {
+    flap: () => ting(1760, 0, 0.06),
+    near: () => {
+      noise({ dur: 0.25, vol: 0.1, f: 4000 });
+      [1320, 1760, 2200].forEach((f, i) => ting(f, i * 0.04, 0.06));
+    },
+    death: shatter,
+  },
+  prismara: {
+    flap: () => {
+      T("triangle", 1100, 1500, 0.06, 0.08);
+      ting(2600, 0.04, 0.04);
+    },
+    revive: () => [0, 4, 7, 12, 16].forEach((st, i) => ting(880 * 2 ** (st / 12), i * 0.06, 0.08)),
+    death: shatter,
+  },
+  // abyss
+  gloombat: {
+    flap: () => T("triangle", 2300, 1800, 0.04, 0.06),
+    death: () => T("sine", 900, 120, 0.4, 0.12),
+  },
+  grimrat: {
+    flap: () => [900, 1150, 800].forEach((f, i) => T("square", f, f * 0.9, 0.018, 0.06, i * 0.03)),
+    death: () =>
+      [700, 900, 600, 1000, 500].forEach((f, i) => T("square", f, f, 0.02, 0.06, i * 0.04)),
+  },
+  murktoad: {
+    flap: () => T("sine", 260, 160, 0.08, 0.2),
+    near: () => {
+      T("sawtooth", 150, 110, 0.12, 0.09);
+      T("sawtooth", 140, 100, 0.14, 0.09, 0.15);
+    },
+    death: () => {
+      noise({ dur: 0.3, vol: 0.2, f: 500 });
+      T("sine", 200, 60, 0.3, 0.2);
+    },
+  },
+  hollowcrow: {
+    flap: () => T("sawtooth", 720, 520, 0.11, 0.06),
+    death: () => T("sawtooth", 800, 300, 0.4, 0.07),
+  },
+  lurkeel: {
+    flap: () => noise({ dur: 0.12, vol: 0.1, f: 1200 }),
+    death: () => T("sine", 400, 60, 0.5, 0.15),
+  },
+  ashspider: {
+    flap: () => [0, 0.04, 0.08].forEach((d) => T("square", 3000, 2800, 0.012, 0.04, d)),
+    death: () => {
+      noise({ dur: 0.3, vol: 0.14, f: 3000 });
+      T("sawtooth", 300, 80, 0.3, 0.06);
+    },
+  },
+  anglerfiend: {
+    flap: () => T("sine", 160, 260, 0.1, 0.22),
+    death: () => T("sine", 220, 40, 0.6, 0.2),
+  },
+  riftwolf: {
+    flap: () => noise({ dur: 0.14, vol: 0.12, f: 900 }),
+    best: () => {
+      T("sine", 300, 620, 0.45, 0.16);
+      T("sine", 620, 420, 0.6, 0.16, 0.45);
+      T("triangle", 600, 1240, 0.45, 0.04);
+    },
+    death: () => T("sine", 500, 150, 0.6, 0.14),
+  },
+  grimvulture: {
+    flap: () => {
+      noise({ dur: 0.16, vol: 0.12, f: 500 });
+      T("sine", 140, 90, 0.12, 0.12);
+    },
+    death: () => T("sawtooth", 1200, 600, 0.5, 0.06),
+  },
+  levijr: {
+    flap: () => T("sine", 110, 70, 0.18, 0.3),
+    death: () => {
+      [1600, 2100, 1300].forEach((f, i) => T("square", f, f * 0.8, 0.03, 0.06, i * 0.03));
+      T("sawtooth", 140, 55, 0.9, 0.14, 0.12);
+      noise({ dur: 0.9, vol: 0.16, f: 450, delay: 0.12 });
+    },
+  },
+  // christmas
+  mittens: {
+    flap: () => {
+      T("triangle", 900, 1300, 0.07, 0.08);
+      T("triangle", 1300, 1000, 0.08, 0.06, 0.07);
+    },
+    death: () => T("triangle", 1200, 500, 0.3, 0.1),
+  },
+  pengo: {
+    flap: () => {
+      noise({ dur: 0.04, vol: 0.12, f: 3000 });
+      T("square", 900, 1200, 0.04, 0.05, 0.02);
+    },
+    death: () => {
+      noise({ dur: 0.55, vol: 0.12, f: 2600 });
+      T("sine", 500, 300, 0.5, 0.08);
+    },
+  },
+  hollyhog: {
+    flap: () => noise({ dur: 0.05, vol: 0.1, f: 2200 }),
+    near: () => pops(3),
+    death: () => pops(6),
+  },
+  frostfox: {
+    flap: () => ting(2000, 0, 0.07),
+    death: () => [2600, 2200, 1800].forEach((f, i) => ting(f, i * 0.07)),
+  },
+  jinglemoose: {
+    flap: () => [2600, 3150, 2800, 3400].forEach((f, i) => ting(f, i * 0.035, 0.05)),
+    death: () => [3400, 2600, 3100, 2300, 2800].forEach((f, i) => ting(f, i * 0.06, 0.06)),
+  },
+  cocoacub: {
+    flap: () => T("sine", 240, 320, 0.08, 0.16),
+    death: () => {
+      T("sine", 300, 150, 0.2, 0.15);
+      pops(5);
+    },
+  },
+  snowl: {
+    flap: () => noise({ dur: 0.1, vol: 0.08, f: 1500 }),
+    best: () => {
+      T("sine", 440, 400, 0.22, 0.2);
+      T("sine", 420, 380, 0.3, 0.2, 0.3);
+    },
+    death: () => [2400, 2000, 2800].forEach((f, i) => ting(f, i * 0.06)),
+  },
+  glowotter: {
+    flap: () => {
+      T("triangle", 1200, 1600, 0.05, 0.08);
+      ting(2400, 0.05, 0.04);
+    },
+    death: () => [0, 2, 4, 7, 9].forEach((st, i) => ting(1046 * 2 ** (st / 12), i * 0.05, 0.06)),
+  },
+  captainacorn: {
+    flap: () => [0, 0.03, 0.06, 0.09].forEach((d) => T("square", 140, 160, 0.02, 0.06, d)),
+    death: () => {
+      noise({ dur: 0.2, vol: 0.14, f: 2500 });
+      pops(4);
+    },
+  },
+  aurorastag: {
+    flap: () => [0, 4, 7].forEach((st, i) => ting(1320 * 2 ** (st / 12), i * 0.03, 0.05)),
+    death: () => [12, 7, 4, 0].forEach((st, i) => ting(660 * 2 ** (st / 12), i * 0.08, 0.08)),
+  },
+};
+
 export const Sfx = {
   unlock: () => Music.unlock(),
-  flap: (id) => (FLAP[id] || FLAP.volt)(),
+  flap: (id) => (FLAP[id] || ANIMAL_SFX[id]?.flap || FLAP.volt)(),
+  /** An animal hero's own reaction sound: "near" | "best" | "death" | "revive". */
+  hero: (id, evt) => ANIMAL_SFX[id]?.[evt]?.(),
   /** YARMS flex: a stretchy creak + a short synth "hngh" grunt (no voice samples) */
   flex: () => {
     for (let i = 0; i < 3; i++)
