@@ -11,7 +11,8 @@ export default class SummaryReporter {
     if (result.status === "passed" || result.status === "skipped") this.failed.delete(key);
     else {
       const msg = (result.error?.message || result.status).replace(/\u001b\[[0-9;]*m/g, "");
-      this.failed.set(key, msg.split("\n").filter(Boolean).slice(0, 3).join(" | ").slice(0, 400));
+      // the first lines name the failure; for "no console errors" the next ones are the errors
+      this.failed.set(key, msg.split("\n").filter(Boolean).slice(0, 9).join(" | ").slice(0, 1200));
     }
   }
   onEnd(result) {
