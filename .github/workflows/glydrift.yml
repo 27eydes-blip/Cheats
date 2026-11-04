@@ -56,8 +56,17 @@ jobs:
       - run: npm ci
 
       - name: Install ${{ matrix.engine }}
+        timeout-minutes: 35
         run: |
-          npx playwright install --with-deps ${{ matrix.engine }}
+          # the browser download / system packages occasionally hang on GitHub's machines:
+          # give each attempt 10 minutes and retry instead of stalling the whole run
+          ok=""
+          for attempt in 1 2 3; do
+            if timeout 600 npx playwright install --with-deps ${{ matrix.engine }}; then ok=1; break; fi
+            echo "::warning::browser install attempt $attempt failed or hung - retrying"
+            sleep 15
+          done
+          [ -n "$ok" ] || { echo "::error::could not install ${{ matrix.engine }}"; exit 1; }
           # software OpenGL (Mesa) for headless WebGL
           sudo apt-get install -y --no-install-recommends libgl1-mesa-dri libegl1 libgl1
 
