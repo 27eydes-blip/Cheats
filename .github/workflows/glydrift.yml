@@ -131,7 +131,13 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add glydrift/tests/e2e/__screenshots__
           git commit -m "Glydrift: record baseline screenshots [skip ci]"
-          git push
+          # GitHub occasionally answers a push with a 500: retry with backoff
+          for wait in 2 4 8 16 32; do
+            git push && exit 0
+            sleep "$wait"
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+          done
+          exit 1
 
   deploy:
     name: Publish to GitHub Pages
