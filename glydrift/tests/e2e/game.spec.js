@@ -1541,6 +1541,58 @@ test("micro-polish: hazard hitboxes ~12% inside the art, retry grace, short deat
   expect(log.errors).toEqual([]);
 });
 
+test("scenery: the Frost Comet always warns first; no pattern twice in a row", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
+  const out = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const om = s.obstacles;
+    // 1. a comet on its own: its path shows for over a second before it can hurt anyone
+    const c = om.obtain("comet");
+    c.spawn(s.player.x + 900, { dir: 1, lead: 0.7, span: 280 });
+    let t = 1e6;
+    let warnT = 0;
+    let hurtBeforeFly = false;
+    let flew = false;
+    for (let i = 0; i < 600 && c.state !== "gone"; i++) {
+      t += 1000 / 60;
+      s.stepFrame(t, 1000 / 60);
+      if (c.state === "warn") warnT += 1 / 60;
+      if (c.state !== "fly" && c.clearance(c.x, s.H / 2, 20) !== Infinity) hurtBeforeFly = true;
+      if (c.state === "fly") flew = true;
+    }
+    // 2. a long run: the same pattern never comes twice in a row
+    let last = null;
+    let repeats = 0;
+    let picks = 0;
+    const orig = om.spawnPattern.bind(om);
+    om.spawnPattern = (m, b) => {
+      const n = om.count;
+      orig(m, b);
+      if (om.count === n) return;
+      picks++;
+      if (om.lastKind === last) repeats++;
+      last = om.lastKind;
+    };
+    while (s.meters < 2000) {
+      if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+      t += 1000 / 60;
+      s.stepFrame(t, 1000 / 60);
+    }
+    return { warnT, hurtBeforeFly, flew, repeats, picks };
+  });
+  expect(out.flew).toBe(true);
+  expect(out.warnT).toBeGreaterThan(1.0);
+  expect(out.hurtBeforeFly).toBe(false);
+  expect(out.picks).toBeGreaterThan(40);
+  expect(out.repeats).toBe(0);
+  expect(log.errors).toEqual([]);
+});
+
 test("accounts wait for the server to be set up", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page, { flags: ["mockcloud"] });

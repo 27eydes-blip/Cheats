@@ -142,6 +142,23 @@ function zapOrb(P, f) {
   return pc;
 }
 
+function comet(P, f) {
+  // Frost Comet: a jagged ice core with a bright heart (f: 0/1 spin frames)
+  const pc = new PixelCanvas(18, 18);
+  const pts = [];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + f * 0.4;
+    const r = i % 2 ? 5.2 : 8.2;
+    pts.push([9 + Math.cos(a) * r, 9 + Math.sin(a) * r]);
+  }
+  pc.poly(pts, P.k1);
+  pc.circle(9, 9, 4.2, P.k2).circle(8, 8, 2, P.k3);
+  for (let y = 0; y < 18; y++)
+    for (let x = 0; x < 18; x++) if (pc.get(x, y) === P.k1 && x + y > 20) pc.set(x, y, P.k0);
+  pc.outline(P.O, 1, true);
+  return pc;
+}
+
 // ------------------------------------------------------------------ GLITCH REALM
 function blinkBlock(P, ghost) {
   // a metal block with hazard spikes on all four sides (20x20); ghost = destination outline
@@ -337,6 +354,7 @@ export function buildHazards(scene, pals) {
     frames[`lavahead_${f}`] = lavaHead(SO, f);
     frames[`meteor_${f}`] = meteor(SO, f);
     frames[`orb_${f}`] = zapOrb(FR, f);
+    if (f < 2) frames[`comet_${f}`] = comet(FR, f);
     frames[`weyes_${f}`] = warnEyes(AB, f);
   }
   for (let f = 0; f < 2; f++) frames[`fireball_${f}`] = fireball(SO, f);

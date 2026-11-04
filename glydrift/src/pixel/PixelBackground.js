@@ -127,6 +127,14 @@ export class PixelBackground {
         objs.push(r);
       }
     }
+    // Frozen Nebula: aurora ribbons, stepped pixel curtains drawn each frame (cheap: a few
+    // dozen rects; one ribbon on Low Graphics). Kept faint so hazards always read first.
+    let aurora = null;
+    if (t.weather.aurora) {
+      aurora = scene.add.graphics().setDepth(-98).setBlendMode(Phaser.BlendModes.ADD);
+      aurora.cols = t.weather.aurora;
+      objs.push(aurora);
+    }
     // soft glow spots drifting in the open middle (whole-pixel scales keep them crisp)
     const glows = [];
     for (let i = 0; i < (this.lowGfx ? 3 : 5); i++) {
@@ -192,10 +200,38 @@ export class PixelBackground {
       rays,
       parts,
       motes,
+      aurora,
       kind: w.kind,
       colors: w.colors,
       alpha: 0,
     };
+  }
+
+  /** Aurora ribbons: columns of 4-px bars whose height follows slow travelling waves. */
+  drawAurora(g, alpha, lift) {
+    g.clear().setDepth(-98 + lift);
+    const W = this.W;
+    const H = this.H;
+    const bar = 4 * S * this.k;
+    const t = this.time;
+    const calm = reduceFlashing() ? 0.6 : 1; // slower shimmer with Reduce Flashing
+    const ribbons = this.lowGfx ? 1 : 2;
+    for (let r = 0; r < ribbons; r++) {
+      const col = g.cols[r % g.cols.length];
+      const col2 = g.cols[(r + 1) % g.cols.length];
+      const y0 = H * (0.14 + r * 0.1);
+      for (let x = 0; x < W; x += bar) {
+        const u = x / W;
+        const wv =
+          Math.sin(u * 6.3 + t * 0.35 * calm + r * 2) * 0.6 +
+          Math.sin(u * 13.1 - t * 0.22 * calm + r) * 0.4;
+        const top = y0 + wv * H * 0.05;
+        const len = H * (0.07 + 0.05 * (0.5 + 0.5 * Math.sin(u * 9 + t * 0.5 * calm + r * 3)));
+        const a = alpha * (0.07 + 0.05 * (0.5 + 0.5 * wv)) * (r ? 0.7 : 1);
+        g.fillStyle(col, a).fillRect(x, top, bar, len * 0.55);
+        g.fillStyle(col2, a * 0.6).fillRect(x, top + len * 0.55, bar, len * 0.45);
+      }
+    }
   }
 
   resetPart(d, kind, initial) {
@@ -312,6 +348,7 @@ export class PixelBackground {
         );
       }
       for (const m of set.motes) m.setDepth(-72 + lift);
+      if (set.aurora) this.drawAurora(set.aurora, set.alpha, lift);
       for (const r of set.rays) {
         r.setDepth(-94 + lift).setAlpha(
           set.alpha * (0.06 + 0.04 * Math.sin(this.time * 0.6 + r.phase)),

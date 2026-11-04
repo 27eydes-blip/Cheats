@@ -1,4 +1,4 @@
-// Background silhouettes for the Peaceful Valley and the Hurricane. Every layer tiles
+// Background silhouettes for the Peaceful Valley, the Hurricane and the Frozen Nebula. Every layer tiles
 // horizontally (all shapes use periods that divide the width) and is original pixel art.
 import { PixelCanvas, seeded } from "./px.js";
 
@@ -13,6 +13,12 @@ export const EXTRA_KINDS = [
   "palms",
   "scud",
   "surf",
+  // Frozen Nebula
+  "glaciers",
+  "icespires",
+  "frozentrees",
+  "icefangs",
+  "snowdrifts",
 ];
 
 const TAU = Math.PI * 2;
@@ -39,6 +45,8 @@ const topOf = (pc, x) => {
 export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
   const rnd = seeded(seed);
   const pc = new PixelCanvas(w, h);
+  if (["glaciers", "icespires", "frozentrees", "icefangs", "snowdrifts"].includes(kind))
+    return frozenKind(pc, w, h, rnd, { base, rim, detail, kind });
   if (kind === "hills") {
     ground(
       pc,
@@ -247,6 +255,90 @@ export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
 }
 
 /** Weather sprites: butterflies (white wings, tinted per butterfly; 2 flap frames) + petals. */
+/** Frozen Nebula layers: glaciers, ice spires, frozen trees, ice fangs, snowdrifts. */
+function frozenKind(pc, w, h, rnd, { base, rim, detail, kind }) {
+  if (kind === "glaciers") {
+    // a far glacier range: sharp peaks with snow caps and blue crevasses, a ringed moon above
+    ground(
+      pc,
+      (x) => {
+        const v = Math.abs(wave(x, w, [[3, 10, 0.3], [7, 4, 1.7], [13, 1.5, 0.9]]));
+        return h * 0.62 - v * 1.1;
+      },
+      base,
+      rim,
+    );
+    for (let x = 0; x < w; x++) {
+      const t = topOf(pc, x);
+      if (t < h * 0.5) pc.vline(x, t, t + 1 + (x % 3 === 0 ? 1 : 0), detail); // snow caps
+      if (x % 9 === 4) pc.vline(x, t + 4, Math.min(h - 1, t + 9), rim); // crevasses
+    }
+    const mx = Math.floor(w * 0.68);
+    pc.circle(mx, 9, 5, detail).circle(mx - 2, 8, 4.2, base);
+    for (let x = mx - 9; x <= mx + 9; x++) if (Math.abs(x - mx) > 5) pc.set(x, 10, rim);
+  } else if (kind === "icespires") {
+    // crystal spires of different heights, each with a lit face
+    ground(pc, (x) => h * 0.86 + wave(x, w, [[2, 2, 0.2]]), base, rim);
+    let x = 3;
+    while (x < w - 6) {
+      const hw = 2 + Math.floor(rnd() * 3);
+      const top = Math.floor(h * (0.15 + rnd() * 0.45));
+      for (let y = top; y < h; y++) {
+        const k = (y - top) / (h - top);
+        const half = Math.max(0, Math.round(hw * Math.min(1, k * 2.4)));
+        pc.hline(x - half, x + half, y, base);
+        if (half > 0) pc.set(x - half, y, rim); // lit left edge
+      }
+      pc.set(x, top, detail).set(x, top + 1, detail);
+      if (rnd() < 0.5) pc.vline(x + 1, top + 4, top + 9, detail); // a glint
+      x += hw * 2 + 3 + Math.floor(rnd() * 6);
+    }
+  } else if (kind === "frozentrees") {
+    // a snowy ridge with frost-covered pines
+    ground(pc, (x) => h * 0.62 + wave(x, w, [[2, 4, 0.6], [5, 1.5, 1.2]]), base, rim);
+    for (let i = 0; i < 9; i++) {
+      const cx = Math.floor((i + 0.3 + rnd() * 0.4) * (w / 9));
+      const t = topOf(pc, cx);
+      const th = 8 + Math.floor(rnd() * 9);
+      for (let k = 0; k < th; k++) {
+        const half = Math.floor((k / th) * 4) + 1;
+        pc.hline(cx - half, cx + half, t - th + k, base);
+        if (k % 3 === 0) pc.hline(cx - half, cx - half + 1, t - th + k, detail); // snow on boughs
+      }
+      pc.set(cx, t - th - 1, detail);
+    }
+    for (let i = 0; i < 20; i++) {
+      const x = Math.floor(rnd() * w);
+      pc.set(x, topOf(pc, x), detail);
+    }
+  } else if (kind === "icefangs") {
+    // jagged ice fangs hanging from the top edge, frosted tips
+    for (let x = 0; x < w; x++) pc.vline(x, 0, 2, base);
+    let x = 1;
+    while (x < w - 3) {
+      const hw = 1 + Math.floor(rnd() * 3);
+      const len = 6 + Math.floor(rnd() * (h - 10));
+      for (let y = 0; y < len; y++) {
+        const half = Math.round(hw * (1 - y / len));
+        pc.hline(x - half, x + half, y, base);
+        pc.set(x - half, y, rim);
+      }
+      pc.set(x, len, detail);
+      x += hw * 2 + 2 + Math.floor(rnd() * 4);
+    }
+  } else if (kind === "snowdrifts") {
+    // soft snowdrifts along the bottom with a few half-buried ice shards
+    ground(pc, (x) => h * 0.5 + wave(x, w, [[2, 5, 0.1], [4, 2.5, 1.9], [8, 1, 0.4]]), base, rim);
+    for (let x = 0; x < w; x++) if (x % 5 === 2) pc.set(x, topOf(pc, x) + 1, detail);
+    for (let i = 0; i < 5; i++) {
+      const cx = Math.floor(rnd() * (w - 4)) + 2;
+      const t = topOf(pc, cx);
+      pc.line(cx, t, cx + 2, t - 6, rim).line(cx + 1, t, cx + 3, t - 5, detail);
+    }
+  }
+  return pc;
+}
+
 export function weatherFrames() {
   const W = 0xffffff;
   const Sp = 0xd8d0e0;
