@@ -1205,3 +1205,23 @@ test("no skin changes the hitbox, speed or score rules (Pass+ skins look 10% sma
   expect(src).not.toMatch(/skin|passPlus|PassPlus/);
   expect(log.errors).toEqual([]);
 });
+
+test("accounts wait for the server to be set up", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { flags: ["mockcloud"] });
+  await page.evaluate(() => localStorage.setItem("glydrift.mockserver.notready", "1"));
+  await run(page, 800);
+  await page.evaluate(() => {
+    window.__glyOpenAccount();
+  });
+  await expect(page.locator("#account-modal.open")).toBeVisible();
+  await page.fill("#account-modal input[name=email]", "early@example.com");
+  await page.fill("#account-modal input[name=password]", "hunter2hunter2");
+  await page.click("#account-modal button[type=submit]");
+  await expect(page.locator("#account-modal .err")).toHaveText(
+    "Accounts open soon — your progress is safe on this device until then.",
+  );
+  const server = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.mockserver")));
+  expect(server?.users?.["early@example.com"]).toBeUndefined();
+  expect(log.errors).toEqual([]);
+});

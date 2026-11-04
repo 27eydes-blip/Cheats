@@ -130,6 +130,14 @@ const supabaseBackend = {
       );
     if (error) throw error;
   },
+  /** Is the server set up for accounts (the accounts migration applied)? */
+  async serverReady() {
+    const sb = await this.sb();
+    const { error } = await sb.from("player_saves").select("user_id").limit(1);
+    if (error && notSetUp(error)) return false;
+    if (error) throw error;
+    return true;
+  },
   async deleteAccount() {
     const sb = await this.sb();
     const { error } = await sb.rpc("delete_my_account");
@@ -202,6 +210,9 @@ const mockBackend = {
     const u = Object.values(db.users).find((x) => x.id === uid);
     if (u) u.save = save;
     this.put(db);
+  },
+  async serverReady() {
+    return !localStorage.getItem("glydrift.mockserver.notready");
   },
   async deleteAccount() {
     const db = this.db();
@@ -319,7 +330,26 @@ class AccountService {
   }
 
   // ---------------------------------------------------------------- actions (UI)
+  /**
+   * New sign-ups wait until the server side is set up (migrations + auth settings), so no
+   * player gets a half-working account or a confirmation email that leads nowhere.
+   */
+  async ensureServer() {
+    let ready;
+    try {
+      ready = await this.backend.serverReady();
+    } catch (err) {
+      throw new AccountError(explain(err));
+    }
+    if (!ready)
+      throw new AccountError(
+        "Accounts open soon — your progress is safe on this device until then.",
+        "not-set-up",
+      );
+  }
+
   async createAccount(email, password) {
+    await this.ensureServer();
     try {
       this.user ||= await this.backend.user();
       const res = await this.backend.createAccount(email.trim(), password);
@@ -333,6 +363,7 @@ class AccountService {
   }
 
   async signIn(email, password) {
+    await this.ensureServer();
     try {
       await this.backend.signIn(email.trim(), password);
       this.user = await this.backend.user();
