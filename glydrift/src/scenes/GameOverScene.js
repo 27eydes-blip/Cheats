@@ -122,7 +122,7 @@ export class GameOverScene extends Phaser.Scene {
     const chipY = Math.max(H * 0.36, bestY + 92);
     const chips = [
       [`${run.distance}m`, "DISTANCE", col],
-      [biomeName(run.biome).split(" ").slice(-1)[0], "BIOME", biome.accent],
+      [biomeName(run.biome).split(" ")[0], "BIOME", biome.accent],
       [`${run.nearMiss}`, "CLOSE CALLS", 0xffffff],
     ].map(([v, l, c], i) => {
       const cont = this.add.container(W / 2 + (i - 1) * 220, chipY);
