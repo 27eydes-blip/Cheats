@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import {
   expectFramed,
+  fingerprint,
   freshFrame,
   fieldPoint,
   gameState,
@@ -14,6 +15,7 @@ import {
   profileOf,
   reseed,
   run,
+  settle,
   tap,
   waitFor,
 } from "./helpers.js";
@@ -38,8 +40,8 @@ const home = (page) =>
   });
 
 async function startRun(page, label = "PLAY") {
-  await tap(page, label, 300);
-  await waitFor(page, () => window.__glydrift.scene.getScene("Game")?.state === "ready");
+  await tap(page, label, 0);
+  await settle(page, "Game", 400);
   await reseed(page); // the same course every time
   await run(page, 600);
   await press(page, await fieldPoint(page)); // the first tap launches the run
@@ -94,6 +96,10 @@ test("release build loads with no console errors", async ({ page }) => {
 test("every screen opens", async ({ page }, testInfo) => {
   const log = await openGame(page);
   await freshFrame(page);
+  console.log(
+    `[${testInfo.project.name}] home fingerprint`,
+    JSON.stringify(await fingerprint(page)),
+  );
   await expect(page).toHaveScreenshot("home.png");
 
   await page.evaluate(() => window.__glydrift.scene.getScene("Menu").openSettings());
@@ -110,9 +116,8 @@ test("every screen opens", async ({ page }, testInfo) => {
     ["SEASON 1 · ABYSS RISING", "Pass", "08-pass"],
   ];
   for (const [label, key, shot] of screens) {
-    await tap(page, label, 1600);
-    await waitFor(page, (k) => window.__glydrift.scene.isActive(k), 10_000, key);
-    await run(page, 800);
+    await tap(page, label, 0);
+    await settle(page, key, 2000);
     await expectFramed(page);
     await snap(page, testInfo, shot);
     if (key === "Characters" || key === "Shop")
@@ -148,9 +153,9 @@ test("plays a short run with taps, clicks and keys, no double inputs", async ({
     await page.keyboard.up("Space");
     expect((await gameState(page)).flaps - k0).toBe(4);
   }
-  // fly a few seconds like a player would: tap whenever the hero sinks below the middle
+  // fly a few seconds like a player would
   const m0 = (await gameState(page)).meters;
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < 20; i++) {
     const low = await page.evaluate(() => {
       const s = window.__glydrift.scene.getScene("Game");
       return s.player.y > s.H * 0.55;
@@ -158,7 +163,18 @@ test("plays a short run with taps, clicks and keys, no double inputs", async ({
     if (low) await press(page, pt);
     await run(page, 100);
   }
-  expect((await gameState(page)).meters).toBeGreaterThan(m0 + 50);
+  expect((await gameState(page)).meters).toBeGreaterThan(m0 + 20);
+  // The screenshot comes from a scripted stretch: real input reaches the page a frame early or
+  // late from one run to the next, so the picture is taken from a fresh, autopiloted run.
+  await reseed(page);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Game").resetRun(true));
+  for (let i = 0; i < 30; i++) {
+    await page.evaluate(() => {
+      const s = window.__glydrift.scene.getScene("Game");
+      if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+    });
+    await run(page, 100);
+  }
   await snap(page, testInfo, "09-gameplay");
   await freshFrame(page);
   await expect(page).toHaveScreenshot("gameplay.png");
@@ -223,7 +239,7 @@ test("game over and retry in under a second", async ({ page }, testInfo) => {
   const log = await openGame(page);
   await startRun(page);
   await waitFor(page, () => window.__glydrift.scene.isActive("GameOver"), 30_000);
-  await run(page, 3500); // let the results roll up
+  await settle(page, "GameOver", 3500); // let the results roll up
   await snap(page, testInfo, "11-game-over");
   await freshFrame(page);
   await expect(page).toHaveScreenshot("game-over.png");

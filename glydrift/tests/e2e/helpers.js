@@ -59,6 +59,7 @@ export async function openGame(page, opts = {}) {
       window.__glyReseed = (seed) => {
         a = seed;
       };
+      window.__glyRngState = () => a;
       Math.random = () => {
         a |= 0;
         a = (a + 0x6d2b79f5) | 0;
@@ -124,10 +125,42 @@ export async function openGame(page, opts = {}) {
       });
       throw new Error(`${e.message} — ${JSON.stringify(why)} errors: ${errors.join(" | ")}`);
     }
-    await run(page, 800);
+    await settle(page, key, 1000);
   }
   return { errors, warnings, failed };
 }
+
+/**
+ * Wait for screen `key` and then run until it is exactly `age` ms old, so screenshots of
+ * entrance animations always land on the same frame (polling alone is only 100 ms precise).
+ */
+export async function settle(page, key, age) {
+  await waitFor(page, (k) => window.__glydrift.scene.isActive(k), 15_000, key);
+  const now = await page.evaluate((k) => {
+    const t = window.__glydrift.scene.getScene(k).time;
+    return t.now - t.startTime;
+  }, key);
+  if (age > now) await run(page, Math.round(age - now));
+}
+
+/** What the game's state is right now (printed next to screenshot comparisons). */
+export const fingerprint = (page) =>
+  page.evaluate(() => {
+    const g = window.__glydrift;
+    const m = g.scene.getScene("Menu");
+    return {
+      frame: g.loop.frame,
+      now: Math.round(g.loop.now),
+      menuNow: m?.sys.isActive() ? Math.round(m.time.now) : null,
+      rng: window.__glyRngState?.(),
+      objs: g.scene
+        .getScenes(true)
+        .map((x) => `${x.sys.settings.key}:${x.children.length}`)
+        .join(","),
+      canvas: `${g.canvas.width}x${g.canvas.height}`,
+      fonts: document.fonts.status,
+    };
+  });
 
 /** Restart the "random" sequence (so a run plays out identically every time). */
 export const reseed = (page, seed = 12345) => page.evaluate((s) => window.__glyReseed?.(s), seed);
