@@ -99,3 +99,18 @@ export const DIMENSIONS = {
 
 /** Lucky Spin: the most spins a player can hold (saves holding more are trimmed on load). */
 export const SPIN_MAX = 3;
+
+// ------------------------------------------------------------------ feel (view + sound only)
+// None of these touch physics, hitboxes, spawning or scoring.
+export const CAMERA_FEEL = {
+  zoomOut: 0.03, // the view widens by up to 3% at top speed
+  zoomEase: 0.8, // per second (slow: the zoom follows the speed ramp, never jumps)
+  lead: 0.012, // px of vertical camera lead per px/s of hero speed
+  leadMax: 10, // px
+  leadEase: 3, // per second
+};
+export const TILT = {
+  step: 3, // degrees the sprite's tilt snaps to (was 15: visibly steppy)
+  rise: 16, // how fast the nose comes up on a flap (per second)
+  fall: 7, // how gently it noses down while falling
+};

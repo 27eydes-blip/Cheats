@@ -2,6 +2,7 @@
 // death explosion. Used in-game and for the live previews on the menus.
 import Phaser from "phaser";
 import { HERO_SCALE } from "../config.js";
+import { TILT } from "../tuning.js";
 import { COLLECTIONS, Shop, SKINS } from "../data/cosmetics.js";
 import { HAT_FIT } from "../pixel/cosmeticArt.js";
 import { HEAD_ANCHORS } from "../pixel/common.js";
@@ -918,7 +919,7 @@ export class CharacterRig {
         : Math.max(0.5, Math.floor(this.sizeMul * this.displayScale * vs * 32) / 32);
     const flip = this.gravityDir < 0 ? -1 : 1;
     sp.setPosition(Math.round(this.x + this.offX), Math.round(this.y + this.offY));
-    sp.setAngle(Math.round(this.angle / 15) * 15);
+    sp.setAngle(Math.round(this.angle / TILT.step) * TILT.step);
     // YARMS gets exaggerated (goofy) squash & stretch steps
     const big = mode === "yarms";
     const step = (v) =>
@@ -1038,19 +1039,37 @@ export class CharacterRig {
     if (!this.trailOverride && this.px.mode === "surf") return this.drawSurfTrail(g);
     if (!this.trailOverride && this.an?.trail(g)) return;
     const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail
-    const n = this.points.length;
-    for (let i = 1; i < n; i += 2) {
-      const p = this.points[i];
-      const t = i / n;
-      const size = Math.max(1, Math.round((1 - t) * 4 * this.sizeMul)) * P;
-      const col = cols[Math.min(cols.length - 1, Math.floor(t * cols.length))];
-      g.fillStyle(col, t < 0.15 ? 1 : 0.95 - t * 0.8);
-      g.fillRect(
-        Math.round((p.x - size / 2) / P) * P,
-        Math.round((p.y - size / 2) / P) * P,
-        size,
-        size,
-      );
+    // squares laid at an even spacing along the path (not one per frame), so the trail has no
+    // gaps at top speed and looks the same at 60 and 120 fps
+    const pts = this.points;
+    const n = pts.length;
+    let total = 0;
+    for (let i = 1; i < n; i++) total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    if (total <= 0) return;
+    const gap = P * 1.5;
+    let walked = 0;
+    let next = 0;
+    for (let i = 1; i < n; i++) {
+      const a = pts[i - 1];
+      const b = pts[i];
+      const seg = Math.hypot(b.x - a.x, b.y - a.y);
+      while (next <= walked + seg) {
+        const k = seg > 0 ? (next - walked) / seg : 0;
+        const x = a.x + (b.x - a.x) * k;
+        const y = a.y + (b.y - a.y) * k;
+        const t = next / total;
+        const size = Math.max(1, Math.round((1 - t) * 4 * this.sizeMul)) * P;
+        const col = cols[Math.min(cols.length - 1, Math.floor(t * cols.length))];
+        g.fillStyle(col, t < 0.15 ? 1 : 0.95 - t * 0.8);
+        g.fillRect(
+          Math.round((x - size / 2) / P) * P,
+          Math.round((y - size / 2) / P) * P,
+          size,
+          size,
+        );
+        next += gap;
+      }
+      walked += seg;
     }
   }
 

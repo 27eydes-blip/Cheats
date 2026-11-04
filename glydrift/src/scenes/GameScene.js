@@ -31,6 +31,7 @@ import {
   ABYSS,
   BIOME_SPEED,
   CALM,
+  CAMERA_FEEL,
   COMBO,
   DIMENSIONS,
   FLASH,
@@ -97,7 +98,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.obstacles.prewarm();
     this.obstacles.onImpact = (o) => {
-      if (Math.abs(o.x - this.player.x) < 260) this.cameras.main.shake(90, 0.004);
+      // (no camera shake here: the camera only shakes on death and the Abyss entrance)
     };
 
     // pixel-art terrain walls along both screen edges (spiked surface = the existing kill line)
@@ -106,7 +107,8 @@ export class GameScene extends Phaser.Scene {
     // camera zoom chosen so every art pixel is a whole number of screen pixels
     this.pxZoomLevel = pixelPerfectZoom(VIEW.Z, WORLD.baseZoom) / VIEW.Z;
     this.cameras.main.roundPixels = true;
-    this.terrain.setView(this.pxZoomLevel);
+    // the walls cover the view at the camera's widest (the gentle zoom-out at top speed)
+    this.terrain.setView(this.pxZoomLevel * (1 - CAMERA_FEEL.zoomOut));
     this.terrain.prebuild(Object.values(THEMES).filter((t) => biomeArtReady(t.id)));
 
     this.pal = {};
@@ -156,6 +158,13 @@ export class GameScene extends Phaser.Scene {
       this.input.keyboard?.on(`keydown-${k}`, (e) => !e?.repeat && this.onTap());
 
     this.game.events.on("hidden", this.onHidden, this);
+    // the wind bed fades out whenever the run isn't on screen and moving
+    // (the scene's event emitter outlives restarts: hook it once)
+    if (!this.windHooked) {
+      this.windHooked = true;
+      const calmWind = () => Sfx.wind(0);
+      for (const e of ["pause", "sleep", "shutdown"]) this.events.on(e, calmWind);
+    }
     this.events.once("shutdown", () => {
       this.game.events.off("hidden", this.onHidden, this);
       // leaving mid-Calm (pause → HOME): drop the grey filter on the shared Backdrop camera
@@ -268,6 +277,8 @@ export class GameScene extends Phaser.Scene {
     this.player.reset();
     this.zoomLevel = this.pxZoomLevel;
     this.cameras.main.setZoom(VIEW.Z * this.pxZoomLevel);
+    this.camLead = 0;
+    if (this.camBaseY !== undefined) this.cameras.main.scrollY = this.camBaseY;
     this.setupBest();
     this.hudReady?.onReset?.();
     Music.play(BIOME_TRACKS[0], { startBar: 8 });
@@ -324,6 +335,8 @@ export class GameScene extends Phaser.Scene {
         this.popNear(p.x + 30, p.y - 46, "DOUBLE JUMP!", "#8aff7a", 40);
       }
       Sfx.flap(this.charDef.id);
+      Sfx.flapWhoosh(this.speedNorm || 0);
+      Haptics.tap(); // a crisp, tiny tick on every flap (installed app / Android)
     }
   }
 
@@ -462,7 +475,6 @@ export class GameScene extends Phaser.Scene {
     this.fx.burst("pixel", p.x, p.y, 16, 0xffffff, { speed: { min: 260, max: 700 } });
     this.fx.ring(p.x, p.y, 0xffd23f, { scale: big > 1 ? 2.4 : 1.8, duration: 600 });
     this.flashFx.flash(0xffd23f, big > 1 ? FLASH.milestoneBig : FLASH.milestone);
-    this.cameras.main.shake(160, 0.004);
     Sfx.milestone(big);
     Haptics.strong();
   }
@@ -556,7 +568,6 @@ export class GameScene extends Phaser.Scene {
     Sfx.whoosh();
     Sfx.lucky();
     Haptics.strong();
-    this.cameras.main.shake(220, 0.006);
     this.flashFx.flash(0xffd23f, FLASH.perfect);
     this.popNear(p.x + 40, p.y - 70, `${B.mul}x BOOST!`, "#ffd23f", 56);
     this.fx.ring(p.x, p.y, 0xffd23f, { scale: 1.6, duration: 380 });
@@ -721,6 +732,9 @@ export class GameScene extends Phaser.Scene {
     }
     this.clock += dt;
     const speedNorm = Phaser.Math.Clamp((this.speed - WORLD.baseSpeed) / WORLD.speedGain, 0, 1);
+    this.speedNorm = speedNorm;
+    // wind builds with speed while flying; it fades out when paused, dead or on another screen
+    Sfx.wind(this.state === "playing" && !this.sys.isPaused() ? 0.25 + speedNorm * 0.75 : 0);
     // music layers follow speed (more drums & synths as you go faster)
     Music.setIntensity(this.state === "playing" ? 0.15 + speedNorm * 0.85 : 0.1);
 
@@ -784,11 +798,19 @@ export class GameScene extends Phaser.Scene {
       if (tier % 2 === 1) this.hudReady?.onSpeedUp?.();
     }
 
-    // camera zoom-out with speed (+ punch-in on near-miss)
-    // fixed pixel-perfect zoom (a drifting zoom would make the pixel grid shimmer)
+    // camera: a gentle zoom-out as the run speeds up (at most a few %, eased so it is never
+    // noticed as a move) and a slight vertical lead toward where the hero is heading, smoothed.
+    // Purely a view change: the playfield, hitboxes and spawn points are untouched.
     const cam = this.cameras.main;
-    this.zoomLevel = this.pxZoomLevel;
+    const zTarget = this.pxZoomLevel * (1 - CAMERA_FEEL.zoomOut * (playing ? speedNorm : 0));
+    this.zoomLevel += (zTarget - this.zoomLevel) * Math.min(1, rawDt * CAMERA_FEEL.zoomEase);
     cam.setZoom(VIEW.Z * this.zoomLevel);
+    if (this.camBaseY === undefined) this.camBaseY = cam.scrollY;
+    const pv = this.player.alive && playing ? this.player.vy : 0;
+    const leadTarget = Phaser.Math.Clamp(pv * CAMERA_FEEL.lead, -CAMERA_FEEL.leadMax, CAMERA_FEEL.leadMax);
+    this.camLead = (this.camLead || 0) + (leadTarget - (this.camLead || 0)) * Math.min(1, rawDt * CAMERA_FEEL.leadEase);
+    cam.scrollY = this.camBaseY + this.camLead;
+
 
     // world: drive the shared backdrop (hazard x-ranges in screen space keep scenery out
     // from behind hazards)
@@ -1018,7 +1040,6 @@ export class GameScene extends Phaser.Scene {
     this.tearT = DIMENSIONS.tearSeconds;
     this.tearSeed = Math.random() * 1000;
     this.flashFx.flash(0xffffff, { ...FLASH.rift, priority: true });
-    this.cameras.main.shake(260, 0.01);
     Sfx.rift();
     Haptics.strong();
     const found = (Save.data.dimensions ||= {});

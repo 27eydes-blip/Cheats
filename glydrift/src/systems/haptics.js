@@ -25,6 +25,8 @@ function buzz(style, ms) {
 }
 
 export const Haptics = {
+  /** the lightest tick: every flap */
+  tap: () => buzz("LIGHT", 5),
   /** coins, combo steps, perfect passes */
   light: () => buzz("LIGHT", 8),
   /** milestones, new best, level-ups, unlocks */
