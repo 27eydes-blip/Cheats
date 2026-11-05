@@ -3,7 +3,8 @@
 # Usage: cd glydrift && npm run deploy:pages
 set -euo pipefail
 cd "$(dirname "$0")/.."
-npm run build
+# the old address serves the game from a sub-folder: relative paths there (glydrift.com uses /)
+GLY_BASE=./ npm run build
 ROOT="$(git rev-parse --show-toplevel)"
 WT="$(mktemp -d)"
 git -C "$ROOT" fetch origin gh-pages

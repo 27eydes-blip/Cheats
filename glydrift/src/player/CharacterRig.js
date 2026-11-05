@@ -1142,6 +1142,7 @@ export class CharacterRig {
       case "trail_prism":
       case "trail_zen":
       case "trail_storm":
+      case "trail_founder":
       case "trail_aurora":
       case "trail_eclipse": {
         // season / pass trails: stepped squares in their own colours, each with a little twist
@@ -1153,6 +1154,7 @@ export class CharacterRig {
           trail_prism: [0xffffff, 0xff9ad8, 0x6ad8ff, 0xb48aff, 0xfff06a],
           trail_zen: [0xffffff, 0xffd0e4, 0xff9ac8, 0x9ae86a, 0x4ac84a],
           trail_storm: [0xffffff, 0xbffcff, 0x3ef4ff, 0x1a8ad8, 0x1a3a8a],
+          trail_founder: [0xffffff, 0xfff0a0, 0x3ef4ff, 0xb45cff, 0x4a1a8a],
         }[style];
         const beat = style === "trail_bloodmoon" ? Math.exp(-((T * 2) % 1) * 5) : 0; // heartbeat
         for (let i = 1; i < n; i += 2) {
@@ -1167,6 +1169,9 @@ export class CharacterRig {
           sq(p.x, p.y + yo, size, col, t < 0.15 ? 1 : 0.95 - t * 0.8);
           if (style === "trail_abyssal" && (i * 7 + Math.floor(T * 9)) % 8 === 0)
             sq(p.x, p.y - 10 * t, P, 0xff3a4a, 1 - t); // red embers in the smoke
+          // Founding Drifter: gold glints twinkle along a portal-coloured stream
+          if (style === "trail_founder" && (i * 5 + Math.floor(T * 12)) % 7 === 0)
+            sq(p.x + Math.sin(i + T * 6) * 7, p.y + Math.cos(i * 1.3 + T * 5) * 7, P, 0xffd23f, 1 - t);
           if (style === "trail_storm" && i % 10 === 1 && Math.random() < 0.5)
             sq(p.x + (Math.random() - 0.5) * 20, p.y + (Math.random() - 0.5) * 20, P, 0xffffff, 1);
         }

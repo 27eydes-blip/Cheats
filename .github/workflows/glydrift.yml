@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy:
-        description: "Publish to GitHub Pages if every test passes"
+        description: "Publish (glydrift.com and the old GitHub Pages copy) if every test passes"
         type: boolean
         default: false
 
@@ -178,3 +178,52 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           bash scripts/deploy-gh-pages.sh
+
+  # glydrift.com (Cloudflare Pages). Runs only after every browser's tests have passed, for a
+  # push to the game's release branch (or by hand with "deploy"). Never before CI is green.
+  deploy-cloudflare:
+    name: Publish to glydrift.com (Cloudflare Pages)
+    needs: test
+    if: >-
+      success() && (
+        (github.event_name == 'push' && (
+          github.ref == 'refs/heads/main' ||
+          github.ref == 'refs/heads/claude/glydrift-arcade-game-7hznpc')) ||
+        (github.event_name == 'workflow_dispatch' && inputs.deploy)
+      )
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    concurrency:
+      group: glydrift-cloudflare
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Cloudflare secrets set?
+        id: keys
+        working-directory: .
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set yet - skipping the glydrift.com deploy"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.keys.outputs.ok == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.keys.outputs.ok == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: glydrift/package-lock.json
+      - if: steps.keys.outputs.ok == 'true'
+        run: npm ci && npm run build
+      - name: Create the Pages project (first time only)
+        if: steps.keys.outputs.ok == 'true'
+        run: npx --yes wrangler@3.114.0 pages project create glydrift --production-branch=main || echo "project already exists"
+      - name: Deploy
+        if: steps.keys.outputs.ok == 'true'
+        run: npx --yes wrangler@3.114.0 pages deploy dist --project-name=glydrift --branch=main --commit-dirty=true

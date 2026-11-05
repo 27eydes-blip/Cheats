@@ -19,7 +19,9 @@ const stampServiceWorker = () => {
 };
 
 export default defineConfig(({ mode }) => ({
-  base: "./",
+  // served from the root of https://glydrift.com (Cloudflare Pages). The old GitHub Pages copy
+  // (a sub-folder) builds with GLY_BASE=./ until it is replaced by a redirect.
+  base: process.env.GLY_BASE || "/",
   // test-only URL flags (?god, ?lucky, ?dimension=…): dev server or GLY_TEST=1 builds only
   define: {
     __TEST_FLAGS__: JSON.stringify(mode === "development" || process.env.GLY_TEST === "1"),

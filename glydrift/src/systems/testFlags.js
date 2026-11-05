@@ -16,6 +16,7 @@ export const TEST = {
   mockcloud: !!q?.has("mockcloud"), // automated tests: accounts + cloud save against a local stand-in
   lbmock: !!q?.has("lbmock"), // automated tests / screenshots: a leaderboard with sample players
   offline: !!q?.has("offline"), // automated tests: skip the online start-up (leaderboard, remote seasons)
+  movenotice: !!q?.has("movenotice"), // automated tests: act as the old GitHub Pages address
   noaudio: !!q?.has("noaudio"), // automated tests: never start audio (keeps visuals deterministic)
   // automated tests on software GPUs: run the game logic every frame but draw only every Nth
   // frame (and whenever a test asks for a fresh picture) — drawing is what makes them slow

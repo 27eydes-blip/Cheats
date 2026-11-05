@@ -123,6 +123,15 @@ export const COSMETICS = [
     price: 1100,
     season: "s3",
   },
+  // event exclusive: the move to glydrift.com (never sold, never in pods or the daily shop)
+  {
+    id: "trail_founder",
+    cat: "trail",
+    name: "Founding Drifter",
+    rarity: "legendary",
+    price: 0,
+    event: "move",
+  },
   {
     id: "trail_storm",
     cat: "trail",
@@ -139,7 +148,7 @@ export function setSeasonItemCheck(fn) {
   seasonItemLive = fn;
 }
 /** Can this cosmetic be bought / dropped right now? (owned ones are always shown) */
-export const forSale = (c) => !c.plus && (!c.season || seasonItemLive(c));
+export const forSale = (c) => !c.plus && !c.event && (!c.season || seasonItemLive(c));
 
 const BY_ID = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const getCosmetic = (id) => BY_ID[id] || null;
@@ -297,7 +306,7 @@ export const Shop = {
   /** 4 items picked from the date (same for everyone that day), one of them 30% off. */
   daily(key = todayKey()) {
     const rng = new RNG(hashString(`glydrift-shop-${key}`));
-    const pool = COSMETICS.filter((c) => !c.season && !c.plus); // season / pass items stay put
+    const pool = COSMETICS.filter((c) => !c.season && !c.plus && !c.event); // season / pass / event items stay put
     const items = [];
     while (items.length < DAILY_COUNT && pool.length) {
       const i = Math.floor(rng.next() * pool.length);
@@ -335,7 +344,7 @@ export const Shop = {
       }
     }
     const left = COSMETICS.filter(
-      (c) => c.rarity === rarity && !s.cos.owned[c.id] && !c.season && !c.plus,
+      (c) => c.rarity === rarity && !s.cos.owned[c.id] && !c.season && !c.plus && !c.event,
     );
     let out;
     if (!left.length) {
@@ -454,3 +463,7 @@ export const Shop = {
     return true;
   },
 };
+
+// test builds only
+import { TEST } from "../systems/testFlags.js";
+if (TEST.on && typeof window !== "undefined") window.__glyShop = { COSMETICS, forSale, Shop, data: () => Save.data };

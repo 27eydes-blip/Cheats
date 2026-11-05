@@ -43,6 +43,7 @@ function defaults() {
     boosts: { owned: {}, armed: {} }, // (retired) one-run boosts
     boostsRefunded: false,
     dailyDrop: "", // date the free Daily Drift Drop was last claimed
+    moveNotice: { shown: 0, done: false }, // the glydrift.com launch pop-up: times shown, finished
     spinPity: 0, // Lucky Spin: spins since the last hero (the guarantee survives restarts)
     xpBoost: { mul: 1, runs: 0 }, // Drift Pass XP boost (runs left)
     seasons: {}, // per-season pass XP / claims, event progress, recap + new-hero flags

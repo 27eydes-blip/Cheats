@@ -78,7 +78,7 @@ const supabaseBackend = {
     const nonce = randomString(32);
     const res = await SignInWithApple.authorize({
       clientId: "com.glydrift.game",
-      redirectURI: "https://27eydes-blip.github.io/Cheats/glydrift/",
+      redirectURI: "https://glydrift.com/",
       scopes: "email",
       nonce: await sha256(nonce),
     });

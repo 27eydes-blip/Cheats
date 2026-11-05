@@ -164,6 +164,14 @@ export const TITLES = [
     color: `#${c.glow.toString(16).padStart(6, "0")}`,
     how: `Complete the ${c.name}`,
   })),
+  // ---- events (only while the event runs)
+  {
+    id: "t_founder",
+    name: "Founding Drifter",
+    source: "event",
+    color: "#ffd23f",
+    how: "Save your progress to an account during the move to glydrift.com",
+  },
   // ---- Drift Pass+ exclusives (animated), granted only by the paid track
   {
     id: "p_abysslord",
@@ -198,6 +206,7 @@ export const TITLE_SOURCES = {
   pass: "DRIFT PASS",
   collection: "COLLECTIONS",
   plus: "DRIFT PASS+",
+  event: "EVENTS",
 };
 
 export const getTitle = (id) => TITLES.find((t) => t.id === id) || null;
@@ -248,7 +257,7 @@ export const Titles = {
     if (fresh.length) Save.write();
     return fresh;
   },
-  /** Drift Pass+ rewards (and only those) grant the exclusive titles. */
+  /** Drift Pass+ rewards and events (and only those) grant the exclusive titles. */
   grant(id) {
     if (!getTitle(id)) return false;
     state().owned[id] = true;

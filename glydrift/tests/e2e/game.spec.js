@@ -1736,6 +1736,119 @@ test("scenery: Slammer + Eye Beam always leaves a lane (forced, real collisions)
   expect(log.errors).toEqual([]);
 });
 
+test("glydrift.com launch: portal pop-up, Founding Drifter reward, LATER returns once", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(480_000); // six launches of the game
+  const texts = () =>
+    page.evaluate(() => {
+      const m = window.__glydrift.scene.getScene("Menu");
+      const all = [];
+      const walk = (o) => {
+        if (o.type === "Text" && o.visible) all.push(o.text);
+        (o.list || []).forEach(walk);
+      };
+      m.children.list.forEach(walk);
+      return all.join(" | ");
+    });
+  const save = () => page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  const launch = async () => {
+    await page.reload();
+    await waitFor(page, () => !!window.__glydrift?.scene.isActive("Menu"), 30_000);
+    await run(page, 4000); // portal + panel + typing
+  };
+  const base = { ...SAVE, dailyDrop: SAVE.login.claimed };
+  // 1. accounts not open on the server yet: nothing (it would lead nowhere), and nothing used up
+  const log = await openGame(page, { flags: ["mockcloud", "movenotice"], save: base });
+  await page.evaluate(() => localStorage.setItem("glydrift.mockserver.notready", "1"));
+  await launch();
+  expect(await texts()).not.toContain("GLYDRIFT HAS A NEW HOME");
+  expect((await save()).moveNotice).toEqual({ shown: 0, done: false });
+  // 2. accounts open: a guest sees the launch pop-up with the reward; LATER closes it
+  await page.evaluate(() => localStorage.removeItem("glydrift.mockserver.notready"));
+  await launch();
+  let t = await texts();
+  expect(t).toContain("GLYDRIFT HAS A NEW HOME");
+  expect(t).toContain("glydrift.com"); // typed in fully
+  expect(t).toContain("Lock in your progress before the jump.");
+  expect(t).toContain("FOUNDING DRIFTER REWARD");
+  expect(t).toContain("CREATE ACCOUNT");
+  // the hero flies through the portal wearing the Founding trail (a live preview)
+  const fly = await page.evaluate(() => {
+    const m = window.__glydrift.scene.getScene("Menu");
+    return m.moveFly ? m.moveFly.rig.cos.trail : null;
+  });
+  expect(fly).toBe("trail_founder");
+  await snap(page, testInfo, "17-move-guest");
+  await tap(page, "LATER", 600);
+  expect(await texts()).not.toContain("GLYDRIFT HAS A NEW HOME");
+  // ... back on the home screen again in the same launch: not again
+  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.restart());
+  await run(page, 3000);
+  expect(await texts()).not.toContain("GLYDRIFT HAS A NEW HOME");
+  // 3. the next launch: once more; CREATE ACCOUNT → sign-up → reward + celebration
+  await launch();
+  expect(await texts()).toContain("GLYDRIFT HAS A NEW HOME");
+  await tap(page, "CREATE ACCOUNT", 800);
+  await expect(page.locator("#account-modal.open input[name=email]")).toBeVisible();
+  await page.fill("#account-modal input[name=email]", "pilot@example.com");
+  await page.fill("#account-modal input[name=password]", "hunter2hunter2");
+  await page.click("#account-modal button[type=submit]");
+  await expect(page.locator("#account-modal .who")).toHaveText("pilot@example.com");
+  await page.click("#account-modal [data-act=close]");
+  await run(page, 900);
+  expect(await texts()).toContain("PROGRESS LOCKED IN!");
+  await snap(page, testInfo, "18-move-celebrate");
+  await run(page, 4000);
+  let s = await save();
+  expect(s.cos.owned.trail_founder).toBe(true);
+  expect(s.titles.owned.t_founder).toBe(true);
+  expect(s.cos.equipped.trail).toBe("trail_founder"); // nothing was worn: wear it
+  expect(s.moveNotice.done).toBe(true);
+  // the account's cloud copy has it too (it travels to glydrift.com)
+  const cloud = await page.evaluate(
+    () => JSON.parse(localStorage.getItem("glydrift.mockserver")).users["pilot@example.com"].save,
+  );
+  expect(cloud.cos.owned.trail_founder).toBe(true);
+  expect(cloud.titles.owned.t_founder).toBe(true);
+  // 4. finished: never again
+  await launch();
+  expect(await texts()).not.toContain("GLYDRIFT HAS A NEW HOME");
+  // 5. a signed-in player (here: the same one, reward reset): "You're all set!" + LET'S GO
+  await page.evaluate(() => {
+    const v = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+    v.moveNotice = { shown: 0, done: false };
+    delete v.cos.owned.trail_founder;
+    delete v.titles.owned.t_founder;
+    localStorage.setItem("glydrift.save.v1", JSON.stringify(v));
+  });
+  await launch();
+  t = await texts();
+  expect(t).toContain("You're all set! Your progress is coming with you.");
+  expect(t).toContain("LET'S GO");
+  expect(t).not.toContain("CREATE ACCOUNT");
+  await snap(page, testInfo, "19-move-signed-in");
+  await tap(page, "LET'S GO", 900);
+  expect(await texts()).toContain("PROGRESS LOCKED IN!");
+  await run(page, 4000);
+  s = await save();
+  expect(s.cos.owned.trail_founder && s.titles.owned.t_founder).toBe(true);
+  // 6. exclusive: never for sale, never in the daily shop or a Mystery Pod
+  const shop = await page.evaluate(() => {
+    const { COSMETICS, forSale, Shop, data } = window.__glyShop;
+    delete data().cos.owned.trail_founder; // not owned, so a pod could pick it if it were allowed
+    const sale = forSale(COSMETICS.find((c) => c.id === "trail_founder"));
+    let daily = false;
+    for (let d = 1; d <= 60; d++) if (Shop.daily(`2026-12-${String((d % 28) + 1).padStart(2, "0")}-${d}`).items.includes("trail_founder")) daily = true;
+    let pod = false;
+    for (let k = 0; k < 400; k++) if (Shop.openPod({ free: true })?.item?.id === "trail_founder") pod = true;
+    return { sale, daily, pod };
+  });
+  expect(shop).toEqual({ sale: false, daily: false, pod: false });
+  expect(log.errors).toEqual([]);
+});
+
 test("accounts wait for the server to be set up", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page, { flags: ["mockcloud"] });
