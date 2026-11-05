@@ -1636,6 +1636,106 @@ test("scenery: the Abyss Eye Beam warns first and never closes the way", async (
   expect(log.errors).toEqual([]);
 });
 
+test("scenery: Slammer + Eye Beam always leaves a lane (forced, real collisions)", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
+  // A steady pilot (at most 650 px/s up or down; a real bird manages 790 up / 1080 down)
+  // flies the Slammer's always-open slot and keeps out of a warning or burning beam.
+  const out = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const om = s.obstacles;
+    const H = s.H;
+    const R = 21;
+    let t = 1e6;
+    let target = H / 2;
+    const pilot = () => {
+      const p = s.player;
+      let best = Infinity;
+      for (const o of om.active) {
+        if (o.gc === undefined || o.right === undefined) continue;
+        const d = o.right - (p.x - R);
+        if (d > 0 && d < best) {
+          best = d;
+          target = o.gc;
+        }
+      }
+      for (const o of om.active) {
+        if (o.type !== "eyebeam" || !(o.state === "warn" || o.state === "beam")) continue;
+        if (o.x < p.x - 60 || o.x > p.x + 420) continue;
+        target = o.top ? Math.max(target, o.L + R + 40) : Math.min(target, H - o.L - R - 40);
+      }
+      const dy = target - p.y;
+      p.y += Math.sign(dy) * Math.min(Math.abs(dy), 650 / 60);
+      p.vy = 0;
+    };
+    const step = () => {
+      pilot();
+      t += 1000 / 60;
+      s.stepFrame(t, 1000 / 60);
+    };
+    const res = { patterns: 0, minLane: Infinity, deaths: [], minLead: Infinity };
+    const origSpawn = om.spawnPattern.bind(om);
+    om.spawnPattern = (m, b) => {
+      const before = new Set(om.active);
+      origSpawn(m, b);
+      if (om.lastKind !== "eyeslam") return;
+      const fresh = om.active.filter((o) => !before.has(o));
+      const sl = fresh.find((o) => o.type === "slammer");
+      const e = fresh.find((o) => o.type === "eyebeam");
+      if (!sl || !e) return;
+      res.patterns++;
+      const lane = e.top
+        ? sl.gc - sl.minGap / 2 - R - e.L
+        : H - e.L - (sl.gc + sl.minGap / 2 + R);
+      res.minLane = Math.min(res.minLane, lane);
+    };
+    for (let run = 0; run < 8; run++) {
+      window.__glyGod(true);
+      if (run > 0) {
+        s.resetRun(false);
+        s.startRun?.();
+      }
+      let start = 0;
+      for (let m = 0; m < 6000; m += 10)
+        if (s.course.segAt(m).id === "abyss") {
+          start = s.course.segAt(m).start;
+          break;
+        }
+      while (s.meters < start + 262) step();
+      // from here every pick that can be Slammer + Eye is, with real collisions
+      const r = om.rng;
+      const orig = r.weighted.bind(r);
+      r.weighted = (w) => ("eyeslam" in w ? "eyeslam" : orig(w));
+      window.__glyGod(false);
+      for (let i = 0; i < 60 * 240 && s.course.segAt(s.meters).id === "abyss"; i++) {
+        step();
+        for (const o of om.active)
+          if (o.type === "eyebeam" && o.state === "warn" && !o._lead) {
+            o._lead = true;
+            res.minLead = Math.min(res.minLead, (o.x - s.player.x) / Math.max(60, om.scroll));
+          }
+        if (s.state !== "playing") {
+          res.deaths.push(Math.round(s.meters - start));
+          break;
+        }
+      }
+      for (const pool of Object.values(om.pools)) for (const o of pool) delete o._lead;
+      r.weighted = orig;
+    }
+    window.__glyGod(true);
+    return res;
+  });
+  expect(out.patterns).toBeGreaterThan(8);
+  expect(out.deaths).toEqual([]);
+  expect(out.minLane).toBeGreaterThan(100); // px of open sky between the slot and the beam
+  expect(out.minLead).toBeGreaterThan(1.1); // the eye warns over a second before arrival
+  expect(log.errors).toEqual([]);
+});
+
 test("accounts wait for the server to be set up", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page, { flags: ["mockcloud"] });
