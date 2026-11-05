@@ -390,8 +390,18 @@ const MIRROR = {
 const DEFS = {
   void: {
     pal: NV,
-    cfg: { pillar: "stone", lamp: "torch", far: "cliffs", mid: "ruins", hang: "roots" },
-    weather: { kind: "rain", color: NV.rain, rate: 70 },
+    cfg: {
+      pillar: "stone",
+      lamp: "torch",
+      distant: "neonskyline",
+      far: "monoliths",
+      mid: "circuitruins",
+      hang: "roots",
+      nearTop: "neonwires",
+      nearBot: "datarubble",
+    },
+    // a faint synthwave floor grid scrolls toward the viewer below the horizon
+    weather: { kind: "rain", color: NV.rain, rate: 70, grid: 0x2bffd0 },
   },
   solar: {
     pal: SOLAR,

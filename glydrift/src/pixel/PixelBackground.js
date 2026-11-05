@@ -144,6 +144,14 @@ export class PixelBackground {
       flares.list = [];
       objs.push(flares);
     }
+    // Neon Void: a perspective floor grid below the horizon, scrolling with the run
+    let grid = null;
+    if (t.weather.grid) {
+      grid = scene.add.graphics().setDepth(-91).setBlendMode(Phaser.BlendModes.ADD);
+      grid.col = t.weather.grid;
+      grid.phase = 0;
+      objs.push(grid);
+    }
     // soft glow spots drifting in the open middle (whole-pixel scales keep them crisp)
     const glows = [];
     for (let i = 0; i < (this.lowGfx ? 3 : 5); i++) {
@@ -211,6 +219,7 @@ export class PixelBackground {
       motes,
       aurora,
       flares,
+      grid,
       kind: w.kind,
       colors: w.colors,
       alpha: 0,
@@ -241,6 +250,31 @@ export class PixelBackground {
         g.fillStyle(col, a).fillRect(x, top, bar, len * 0.55);
         g.fillStyle(col2, a * 0.6).fillRect(x, top + len * 0.55, bar, len * 0.45);
       }
+    }
+  }
+
+  /** Neon Void floor grid: lines converge on a vanishing point; cross lines slide closer. */
+  drawGrid(g, alpha, lift, dt) {
+    g.clear().setDepth(-91 + lift);
+    const W = this.W;
+    const H = this.H;
+    const hz = H * 0.7; // horizon
+    const vx = W / 2;
+    g.phase = (g.phase + dt * (0.25 + this.scroll / 2400)) % 1;
+    const a = alpha * 0.11;
+    g.lineStyle(2, g.col, a);
+    // converging lines
+    const n = this.lowGfx ? 7 : 11;
+    for (let i = 0; i <= n; i++) {
+      const bx = (i / n - 0.5) * W * 3.2 + vx;
+      g.lineBetween(vx + (bx - vx) * 0.04, hz, bx, H);
+    }
+    // cross lines: perspective spacing, sliding toward the viewer
+    for (let k = 0; k < 8; k++) {
+      const d = (k + g.phase) / 8; // 0 at the horizon, 1 at the bottom
+      const y = hz + (H - hz) * d * d;
+      g.lineStyle(2, g.col, a * (0.3 + d * 0.7));
+      g.lineBetween(0, y, W, y);
     }
   }
 
@@ -401,6 +435,7 @@ export class PixelBackground {
       for (const m of set.motes) m.setDepth(-72 + lift);
       if (set.aurora) this.drawAurora(set.aurora, set.alpha, lift);
       if (set.flares) this.drawFlares(set.flares, set.alpha, lift, dt);
+      if (set.grid) this.drawGrid(set.grid, set.alpha, lift, dt);
       for (const r of set.rays) {
         r.setDepth(-94 + lift).setAlpha(
           set.alpha * (0.06 + 0.04 * Math.sin(this.time * 0.6 + r.phase)),

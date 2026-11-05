@@ -1,8 +1,9 @@
 // Neon Void signature hazards: the axe on a chain (Blade) and the vertical / horizontal
-// lasers (Laser) with their charge-up warning.
+// lasers (Laser) with their charge-up warning, and the Neon Pulse (a charging node whose full
+// reach is drawn first, then one expanding ring).
 import { S } from "../../pixel/px.js";
 import { circleClear, rectClear, segClear } from "../geometry.js";
-import { ADD, OFF, PxObstacle, TAU } from "../base.js";
+import { ADD, clamp01, eta, HAZ_TOP, OFF, PxObstacle, snap, TAU } from "../base.js";
 
 const GLOW = 14; // laser glow width (art px)
 
@@ -227,5 +228,84 @@ export class Laser extends PxObstacle {
     );
     if (this.isOn) c = Math.min(c, segClear(px, py, r, this.xa, this.y, this.xb, this.y, 6));
     return c;
+  }
+}
+
+/**
+ * Neon Pulse: a node charges for PULSE_WARN seconds, showing a dashed circle of exactly how
+ * far its ring will reach; then one bright ring expands to that circle and fades. The node
+ * itself and the ring are the only dangers, and only while the ring is out.
+ */
+const PULSE_WARN = 1.0;
+const PULSE_GROW = 0.6;
+export class NeonPulse extends PxObstacle {
+  constructor(mgr) {
+    super(mgr);
+    this.type = "pulse";
+    this.g = this.add(this.scene.add.graphics().setDepth(HAZ_TOP));
+  }
+  spawn(x, { y, R, lead = 0.45 }) {
+    this.arm(x);
+    this.y = y;
+    this.R = R;
+    this.halfW = R + 20;
+    this.lead = lead;
+    this.state = "wait";
+    this.timer = 0;
+    this.r = 0;
+  }
+  update(dt) {
+    if (this.state === "wait") {
+      const t = eta(this);
+      if (t >= 0 && t < this.lead + PULSE_WARN + PULSE_GROW / 2) {
+        this.state = "warn";
+        this.timer = 0;
+      }
+    } else if (this.state === "warn") {
+      this.timer += dt;
+      if (this.timer >= PULSE_WARN) {
+        this.state = "grow";
+        this.timer = 0;
+      }
+    } else if (this.state === "grow") {
+      this.timer += dt;
+      this.r = this.R * Math.min(1, this.timer / PULSE_GROW);
+      if (this.timer >= PULSE_GROW + 0.15) this.state = "gone";
+    }
+    this.draw();
+  }
+  draw() {
+    const g = this.g.clear();
+    if (this.state === "wait" || this.state === "gone") {
+      if (this.state === "wait") {
+        // the dormant node
+        g.fillStyle(0x0a2a2a, 1).fillCircle(this.x, this.y, 5 * S);
+        g.fillStyle(0x2bffd0, 0.6).fillCircle(this.x, this.y, 2 * S);
+      }
+      return;
+    }
+    const k = clamp01(this.timer / PULSE_WARN);
+    if (this.state === "warn") {
+      // the reach: a dashed red circle, brighter as it charges; the node glows up
+      const N = 36;
+      g.fillStyle(0xff3030, 0.35 + 0.5 * k);
+      for (let i = 0; i < N; i += 2) {
+        const a = (i / N) * TAU;
+        g.fillRect(snap(this.x + Math.cos(a) * this.R) - 1.5 * S, snap(this.y + Math.sin(a) * this.R) - 1.5 * S, 3 * S, 3 * S);
+      }
+      g.fillStyle(0x0a2a2a, 1).fillCircle(this.x, this.y, 5 * S);
+      g.fillStyle(0xff4fd8, 0.5 + 0.5 * k).fillCircle(this.x, this.y, (2 + 2 * k) * S);
+      return;
+    }
+    // the ring (magenta body, white core), fading at the very end
+    const fade = this.timer > PULSE_GROW ? 1 - (this.timer - PULSE_GROW) / 0.15 : 1;
+    g.lineStyle(5 * S, 0xff4fd8, 0.85 * fade).strokeCircle(this.x, this.y, Math.max(1, this.r));
+    g.lineStyle(2 * S, 0xffffff, fade).strokeCircle(this.x, this.y, Math.max(1, this.r));
+    g.fillStyle(0xffffff, fade).fillCircle(this.x, this.y, 4 * S);
+  }
+  clearance(px, py, r) {
+    if (this.state !== "grow" || this.timer > PULSE_GROW) return Infinity;
+    const d = Math.hypot(px - this.x, py - this.y);
+    return Math.min(Math.abs(d - this.r) - 2.5 * S * 0.88 - r, d - 4 * S * 0.88 - r);
   }
 }
