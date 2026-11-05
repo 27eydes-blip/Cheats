@@ -264,9 +264,11 @@ export class GameOverScene extends Phaser.Scene {
       if (earned) this.time.delayedCall(900, () => Sfx.reward());
       y += 34;
     }
-    // unlock / achievement banners: in the free band above RETRY, sliding in from the side
-    // (they used to drop from the top onto the score)
-    const toastY = Math.max(y + 46, Math.max(y + 90, H * 0.8) - 110);
+    // unlock / achievement banners: in the band just above RETRY, sliding in from the side
+    // (they used to drop from the top onto the score). Always clear of the button: after a long
+    // results list (big runs) `y + 46` used to win and put the 92 px banner on top of RETRY;
+    // now it may briefly cover the last results line instead, never a button.
+    const toastY = Math.max(y + 90, H * 0.8) - 110;
     this.time.delayedCall(ANIM_END, () => {
       // each new hero gets the full spotlight reveal, one after another
       (async () => {
