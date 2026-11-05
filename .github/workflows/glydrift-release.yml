@@ -1,0 +1,55 @@
+name: Glydrift iOS release
+
+# Push to the "release" branch → wait for every Glydrift test on that exact commit to pass
+# (.github/workflows/glydrift.yml: Chromium, Firefox, WebKit × 7 devices, screenshots) → start
+# the Codemagic iOS build, which builds, signs and uploads to App Store Connect / TestFlight.
+#
+# The tests run here on GitHub (free) instead of on Codemagic's paid Mac minutes. Codemagic
+# checks the result again before it builds (codemagic.yaml), so a build can't skip the tests.
+#
+# Setup (see glydrift/CODEMAGIC_SETUP.md): repository secret CODEMAGIC_API_TOKEN and repository
+# variable CODEMAGIC_APP_ID. Until they exist this workflow stops with an explanation.
+on:
+  push:
+    branches: [release]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: glydrift-ios-release
+  cancel-in-progress: true # a newer push to release replaces the one still waiting
+
+jobs:
+  start-ios-build:
+    name: Tests pass → start Codemagic build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for every Glydrift test to pass on this commit
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GLYDRIFT_REPO: ${{ github.repository }}
+        run: bash glydrift/scripts/release/require-green-tests.sh "$GITHUB_SHA" --wait 100
+
+      - name: Start the Codemagic iOS build
+        env:
+          CODEMAGIC_API_TOKEN: ${{ secrets.CODEMAGIC_API_TOKEN }}
+          CODEMAGIC_APP_ID: ${{ vars.CODEMAGIC_APP_ID }}
+        run: |
+          if [ -z "$CODEMAGIC_API_TOKEN" ] || [ -z "$CODEMAGIC_APP_ID" ]; then
+            echo "::error::Codemagic isn't connected yet: add the CODEMAGIC_API_TOKEN secret and the CODEMAGIC_APP_ID variable (glydrift/CODEMAGIC_SETUP.md, step 6)."
+            exit 1
+          fi
+          body=$(printf '{"appId":"%s","workflowId":"glydrift-ios-release","branch":"%s","environment":{"variables":{"EXPECTED_COMMIT":"%s"}}}' \
+            "$CODEMAGIC_APP_ID" "$GITHUB_REF_NAME" "$GITHUB_SHA")
+          resp=$(curl -fsS -X POST https://api.codemagic.io/builds \
+            -H "Content-Type: application/json" -H "x-auth-token: $CODEMAGIC_API_TOKEN" -d "$body") || {
+            echo "::error::Codemagic refused the request (check the token and the app id)."; exit 1; }
+          id=$(printf '%s' "$resp" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("buildId",""))')
+          echo "Codemagic build started: https://codemagic.io/app/$CODEMAGIC_APP_ID/build/$id"
+          echo "### 🚀 Codemagic iOS build started" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://codemagic.io/app/$CODEMAGIC_APP_ID/build/$id" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,90 @@
+# Codemagic: build Glydrift for iOS and upload it to App Store Connect / TestFlight — no Mac needed.
+#
+# How a release happens:
+#   1. You push to the "release" branch.
+#   2. GitHub Actions runs every Glydrift test (.github/workflows/glydrift.yml).
+#   3. Only if all of them pass, .github/workflows/glydrift-release.yml starts this workflow
+#      through the Codemagic API (so no Codemagic Mac minutes are spent waiting on tests).
+#   4. This workflow checks the test result again, builds, signs and uploads to TestFlight.
+#
+# There is deliberately no `triggering:` section: Codemagic doesn't start builds on its own,
+# because a build started straight from a push would not wait for the tests.
+#
+# Glydrift currently lives in the glydrift/ folder of the Cheats repo, hence `working_directory`.
+# Codemagic always reads this file from the repository root. Setup: glydrift/CODEMAGIC_SETUP.md.
+workflows:
+  glydrift-ios-release:
+    name: Glydrift iOS → TestFlight
+    working_directory: glydrift
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    integrations:
+      # the App Store Connect API key you add in Codemagic → Team settings → Integrations
+      # (CODEMAGIC_SETUP.md, step 3). The name here must match the key's name there exactly.
+      app_store_connect: Glydrift App Store Connect
+    environment:
+      groups:
+        - glydrift_signing # CERTIFICATE_PRIVATE_KEY (CODEMAGIC_SETUP.md, step 4)
+      vars:
+        BUNDLE_ID: com.eyde.glydrift
+        XCODE_PROJECT: ios/App/App.xcodeproj
+        XCODE_SCHEME: App
+      node: 22
+      xcode: latest
+    cache:
+      cache_paths:
+        - $HOME/.npm
+    scripts:
+      - name: Require all Glydrift tests to have passed on this commit
+        script: |
+          if [ -n "${EXPECTED_COMMIT:-}" ] && [ "$EXPECTED_COMMIT" != "$CM_COMMIT" ]; then
+            echo "❌ release moved on ($CM_COMMIT is not the tested $EXPECTED_COMMIT) — its own run will build it."
+            exit 1
+          fi
+          bash scripts/release/require-green-tests.sh "$CM_COMMIT" --wait 10
+
+      - name: Install dependencies
+        script: npm ci
+
+      - name: Build the game and copy it into the iOS project
+        script: |
+          npm run build
+          npx cap sync ios
+
+      - name: Set the build number
+        script: |
+          # Version stays 1.0.0 (MARKETING_VERSION in the Xcode project). Every upload needs a
+          # higher build number: Codemagic's own counter for this workflow (1, 2, 3, …).
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist
+          echo "Glydrift 1.0.0 ($BUILD_NUMBER)"
+
+      - name: Code signing (automatic)
+        script: |
+          keychain initialize
+          # creates the App Store distribution certificate and provisioning profile in your
+          # Apple Developer account if they don't exist yet, and reuses them after that
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build the .ipa
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true # internal testers get it as soon as Apple finishes processing
+        # beta_groups:             # uncomment to also send it to an external tester group
+        #   - Glydrift Testers
+        submit_to_app_store: false # you submit for App Review yourself in App Store Connect
