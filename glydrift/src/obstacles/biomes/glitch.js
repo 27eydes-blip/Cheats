@@ -1,8 +1,9 @@
 // Glitch Realm: BlinkBlock (flicker + ghost outline → teleport), BrokenLaser (segments
-// flicker → light, one stays broken = the way through), GravityZone (harmless flip stripe).
+// flicker → light, one stays broken = the way through), GravityZone (harmless flip stripe),
+// CorruptColumn (a column whose opening jumps to a new height, previewed by a ghost first).
 import { S } from "../../pixel/px.js";
 import { circleClear, rectClear } from "../geometry.js";
-import { ADD, PxObstacle, snap } from "../base.js";
+import { ADD, clamp01, eta, HAZ_TOP, OFF, PxObstacle, snap } from "../base.js";
 
 export class BlinkBlock extends PxObstacle {
   constructor(mgr) {
@@ -155,5 +156,96 @@ export class GravityZone extends PxObstacle {
   }
   clearance() {
     return Infinity;
+  }
+}
+
+/**
+ * Corrupt Column: a column with an opening, like a gate. Ahead of the player it "corrupts":
+ * for COL_WARN seconds a dashed green ghost shows where the opening will move to (the
+ * old one flickers), then the opening jumps there. It always jumps at least COL_LEAD seconds
+ * before the player arrives, so there's time to line up with the new opening.
+ */
+const COL_WARN = 0.9;
+export class CorruptColumn extends PxObstacle {
+  constructor(mgr) {
+    super(mgr);
+    this.type = "column";
+    this.w = 84;
+    this.g = this.add(this.scene.add.graphics().setDepth(HAZ_TOP - 1));
+  }
+  spawn(x, { gap, gc1, gc2, lead = 0.8 }) {
+    this.arm(x);
+    this.halfW = this.w / 2;
+    this.gap = gap;
+    this.gc = gc1;
+    this.gc2 = gc2;
+    this.lead = lead;
+    this.state = "wait";
+    this.timer = 0;
+  }
+  get yt() {
+    return this.gc - this.gap / 2;
+  }
+  get yb() {
+    return this.gc + this.gap / 2;
+  }
+  update(dt) {
+    if (this.state === "wait") {
+      const t = eta(this);
+      if (t >= 0 && t < this.lead + COL_WARN) {
+        this.state = "warn";
+        this.timer = 0;
+      }
+    } else if (this.state === "warn") {
+      this.timer += dt;
+      if (this.timer >= COL_WARN) {
+        this.state = "moved";
+        this.gc = this.gc2;
+        for (const c of [0xff2050, 0x39ff88, 0x2bffef])
+          this.mgr.fx.burst("pixel", this.x, this.gc, 6, c, { speed: { min: 80, max: 260 } });
+      }
+    }
+    this.draw();
+  }
+  draw() {
+    const g = this.g.clear();
+    const H = this.mgr.H;
+    const x0 = this.x - this.w / 2;
+    const warn = this.state === "warn";
+    // during the warning the old column flickers in RGB-split slices
+    const jit = warn && Math.floor(this.timer * 20) % 2 ? 3 : 0;
+    const body = (y0, y1) => {
+      g.fillStyle(0x171e26, 1).fillRect(x0 + jit, y0, this.w, y1 - y0);
+      g.fillStyle(0x2bffef, 0.9).fillRect(x0 + jit, y0, 2 * S, y1 - y0);
+      g.fillStyle(0x2bffef, 0.9).fillRect(x0 + this.w - 2 * S + jit, y0, 2 * S, y1 - y0);
+      for (let y = y0 - (y0 % 24); y < y1; y += 24) g.fillStyle(0x24404a, 1).fillRect(x0 + 4 * S + jit, Math.max(y0, y), this.w - 8 * S, 2 * S);
+    };
+    body(-OFF, this.yt);
+    body(this.yb, H + OFF);
+    // the lit edges of the opening
+    g.fillStyle(0x39ff88, 1).fillRect(x0 + jit, this.yt - 2 * S, this.w, 2 * S).fillRect(x0 + jit, this.yb, this.w, 2 * S);
+    if (warn) {
+      // the ghost of the new opening: dashed green outline (brightening as it nears)
+      const a = 0.45 + 0.5 * clamp01(this.timer / COL_WARN);
+      const yt = this.gc2 - this.gap / 2;
+      const yb = this.gc2 + this.gap / 2;
+      g.fillStyle(0x39ff88, a);
+      for (let x = x0; x < x0 + this.w; x += 4 * S) {
+        g.fillRect(x, snap(yt) - S, 2 * S, 2 * S);
+        g.fillRect(x, snap(yb) - S, 2 * S, 2 * S);
+      }
+      for (let y = yt; y < yb; y += 4 * S) {
+        g.fillRect(x0, snap(y), 2 * S, 2 * S);
+        g.fillRect(x0 + this.w - 2 * S, snap(y), 2 * S, 2 * S);
+      }
+    }
+  }
+  clearance(px, py, r) {
+    const x0 = this.x - this.w / 2;
+    const x1 = this.x + this.w / 2;
+    return Math.min(
+      rectClear(px, py, r, x0, -OFF, x1, this.yt),
+      rectClear(px, py, r, x0, this.yb, x1, this.mgr.H + OFF),
+    );
   }
 }

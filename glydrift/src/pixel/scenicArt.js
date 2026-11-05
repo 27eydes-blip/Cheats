@@ -1,5 +1,5 @@
 // Background silhouettes for the Peaceful Valley, the Hurricane, the Frozen Nebula and the
-// Solar Storm and the Neon Void. Every layer tiles
+// Solar Storm, the Neon Void and the Glitch Realm. Every layer tiles
 // horizontally (all shapes use periods that divide the width) and is original pixel art.
 import { PixelCanvas, seeded } from "./px.js";
 
@@ -32,6 +32,12 @@ export const EXTRA_KINDS = [
   "circuitruins",
   "neonwires",
   "datarubble",
+  // Glitch Realm
+  "corruptmoon",
+  "serverstacks",
+  "slicedcity",
+  "pixeldrips",
+  "datablocks",
 ];
 
 const TAU = Math.PI * 2;
@@ -64,6 +70,8 @@ export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
     return solarKind(pc, w, h, rnd, { base, rim, detail, kind });
   if (["neonskyline", "monoliths", "circuitruins", "neonwires", "datarubble"].includes(kind))
     return voidKind(pc, w, h, rnd, { base, rim, detail, kind });
+  if (["corruptmoon", "serverstacks", "slicedcity", "pixeldrips", "datablocks"].includes(kind))
+    return glitchKind(pc, w, h, rnd, { base, rim, detail, kind });
   if (kind === "hills") {
     ground(
       pc,
@@ -500,6 +508,81 @@ function voidKind(pc, w, h, rnd, { base, rim, detail, kind }) {
       const x = Math.floor(rnd() * w);
       const y = topOf(pc, x) + 2 + Math.floor(rnd() * 8);
       if (pc.get(x, y) !== null) pc.set(x, y, detail);
+    }
+  }
+  return pc;
+}
+
+/** Glitch Realm layers: a sliced moon, server racks, a sliced city, pixel drips, data blocks. */
+function glitchKind(pc, w, h, rnd, { base, rim, detail, kind }) {
+  if (kind === "corruptmoon") {
+    // a moon cut into horizontal slices, each nudged sideways (a frozen glitch)
+    const cx = Math.floor(w * 0.3);
+    const cy = Math.floor(h * 0.4);
+    for (let y = cy - 16; y <= cy + 16; y++) {
+      const shift = Math.floor((y - cy + 16) / 5) % 2 ? (rnd() < 0.5 ? 3 : -2) : 0;
+      for (let x = cx - 16; x <= cx + 16; x++)
+        if (Math.hypot(x - cx, y - cy) <= 15.5) pc.set(x + shift, y, Math.hypot(x - cx + 4, y - cy + 4) < 9 ? detail : rim);
+    }
+    ground(pc, (x) => h * 0.9 + (x % 16 < 8 ? 0 : 1), base, rim);
+  } else if (kind === "serverstacks") {
+    // rows of server racks with LED lights; a few racks are offset by a glitch
+    for (let x = 0; x < w; x++) pc.vline(x, Math.floor(h * 0.86), h - 1, base);
+    let x = 1;
+    while (x < w - 8) {
+      const rw = 8 + Math.floor(rnd() * 5);
+      const top = Math.floor(h * (0.25 + rnd() * 0.35));
+      const dy = rnd() < 0.25 ? 3 : 0;
+      pc.rect(x, top + dy, rw, h - top - dy, base).hline(x, x + rw - 1, top + dy, rim).vline(x, top + dy, h - 1, rim);
+      for (let y = top + dy + 3; y < h - 3; y += 3) {
+        pc.hline(x + 2, x + rw - 3, y, rim);
+        if (rnd() < 0.5) pc.set(x + rw - 3, y - 1, detail);
+      }
+      x += rw + 3;
+    }
+  } else if (kind === "slicedcity") {
+    // a city skyline sliced into bands that slide against each other
+    ground(pc, () => h * 0.84, base, rim);
+    let x = 0;
+    while (x < w) {
+      const tw = 6 + Math.floor(rnd() * 9);
+      const top = Math.floor(h * (0.2 + rnd() * 0.5));
+      pc.rect(x, top, tw, h - top, base).hline(x, x + tw - 1, top, rim);
+      for (let y = top + 3; y < h - 3; y += 4) if (rnd() < 0.4) pc.set(x + 2, y, detail);
+      x += tw + 2;
+    }
+    // slice: shift whole rows sideways in a few bands
+    for (let b = 0; b < 3; b++) {
+      const y0 = Math.floor(h * (0.3 + b * 0.18));
+      const off = rnd() < 0.5 ? 4 : -4;
+      for (let y = y0; y < y0 + 3 && y < h; y++) {
+        const row = [];
+        for (let i = 0; i < w; i++) row.push(pc.get(i, y));
+        for (let i = 0; i < w; i++) pc.set((i + off + w) % w, y, row[i]);
+      }
+    }
+  } else if (kind === "pixeldrips") {
+    // square pixel drips falling from a ragged top edge
+    for (let x = 0; x < w; x += 2) {
+      const len = 2 + Math.floor(Math.abs(wave(x, w, [[5, 4, 0.3], [11, 3, 1.2]])));
+      pc.rect(x, 0, 2, len, base);
+      if (rnd() < 0.2) pc.rect(x, len + 2 + Math.floor(rnd() * 4), 2, 2, rim);
+      if (rnd() < 0.08) pc.set(x, len - 1, detail);
+    }
+  } else if (kind === "datablocks") {
+    // stacked cubes along the floor, some with missing pixels
+    ground(pc, () => h * 0.78, base, rim);
+    let x = 0;
+    while (x < w - 4) {
+      const n = 1 + Math.floor(rnd() * 3);
+      const sz = 4 + Math.floor(rnd() * 3);
+      for (let k = 0; k < n; k++) {
+        const y = Math.floor(h * 0.78) - (k + 1) * (sz + 1);
+        pc.rect(x, y, sz, sz, base).hline(x, x + sz - 1, y, rim);
+        if (rnd() < 0.35) pc.set(x + 1 + Math.floor(rnd() * (sz - 2)), y + 2, detail);
+        if (rnd() < 0.2) pc.set(x + sz - 1, y + sz - 1, null);
+      }
+      x += sz + 2 + Math.floor(rnd() * 5);
     }
   }
   return pc;
