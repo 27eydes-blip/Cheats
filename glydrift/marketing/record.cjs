@@ -18,7 +18,7 @@ const { openDemo } = require("./lib/page.cjs");
 
 const ROOT = __dirname;
 const WORK = path.join(ROOT, "work");
-const DIST = path.join(ROOT, "..", "dist");
+const DIST = path.join(ROOT, "..", "dist-test");
 const SEED = +(process.env.REEL_SEED || 20261102);
 
 async function videoPass(url) {

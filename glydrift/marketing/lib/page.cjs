@@ -9,7 +9,8 @@ const DEMO_JS = fs.readFileSync(path.join(__dirname, "..", "demo-bot.js"), "utf8
 function demoSave() {
   const d = new Date();
   const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const heroes = ["volt", "ember", "frost", "shade", "glitch", "nova", "bloom", "tide", "mecha", "draco"];
+  // every hero in src/player/characterDefs.js (2026-11-05), so the carousel shows them all
+  const heroes = ["volt", "ember", "frost", "shade", "glitch", "nova", "bloom", "tide", "mecha", "draco", "pip", "coral", "sprout", "ruby", "pengu", "jelly", "comet", "ronin", "seraph", "leviathan", "zephyr", "hoot", "lumen", "buzz", "cinder", "nyx", "koi", "kitsu", "griffo", "aurora", "yarms", "springer", "dzr", "wallrunner", "manny", "milzzz", "smash", "sonjuwon", "bunbun", "puddles", "snoozy", "kai", "bao", "glassfrog", "shardcrab", "flicker", "spectra", "prismara", "gloombat", "grimrat", "murktoad", "hollowcrow", "lurkeel", "ashspider", "anglerfiend", "riftwolf", "grimvulture", "levijr", "mittens", "pengo", "hollyhog", "frostfox", "jinglemoose", "cocoacub", "snowl", "glowotter", "captainacorn", "aurorastag", "voidcat", "hexowl", "wraithmoth", "triphound", "phantomray", "scorpyre", "krakkie", "crimsonmantis", "gloomeleon", "umbradrake"];
   return {
     coins: 2480, best: 400, selected: "volt",
     unlocked: Object.fromEntries(heroes.map((h) => [h, true])),

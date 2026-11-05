@@ -216,7 +216,44 @@ function finalize({ clips, overlays, out, workDir }) {
   return out;
 }
 
+/**
+ * Still images for X/Twitter posts (1600x900): a real game frame (crisp pixels, neon frame) on
+ * the left, a headline in the game's font on the right, the icon + wordmark underneath.
+ * stills: [{ id, frame (png path), title (html), sub }] → <outDir>/x_still_<id>.png
+ */
+async function renderStills(stills, outDir) {
+  const { chromium } = require("playwright");
+  const icon = fs.readFileSync(path.join(GAME, "public/icon-192.png")).toString("base64");
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+  for (const s of stills) {
+    const shot = fs.readFileSync(s.frame).toString("base64");
+    await page.setContent(`<html><head><style>${FONTS()}
+      html,body{margin:0;width:1600px;height:900px;overflow:hidden;
+        background:radial-gradient(circle at 70% 40%,#1b0f45 0%,#0a0420 50%,#020107 85%)}
+      .shot{position:absolute;left:150px;top:40px;height:820px;border-radius:26px;image-rendering:pixelated;
+        box-shadow:0 0 0 4px rgba(62,244,255,.7),0 0 60px rgba(62,244,255,.45),0 0 140px rgba(180,92,255,.35)}
+      .r{position:absolute;left:700px;right:90px;top:0;bottom:0;display:flex;flex-direction:column;justify-content:center}
+      h1{margin:0;font:900 92px/1.08 Orbitron;color:#fff;letter-spacing:2px;
+        text-shadow:0 0 16px rgba(62,244,255,.8),0 0 50px rgba(180,92,255,.55)}
+      p{margin:28px 0 0;font:700 44px/1.25 Rajdhani;color:#d6ceff}
+      .brand{display:flex;align-items:center;gap:22px;margin-top:64px}
+      .brand img{width:84px;height:84px;border-radius:20px;box-shadow:0 0 30px rgba(62,244,255,.5)}
+      .brand b{font:900 54px Orbitron;color:#eaffff;letter-spacing:3px;text-shadow:0 0 14px #3ef4ff}
+      .brand span{display:block;font:700 30px Rajdhani;color:#39ff88;letter-spacing:3px;margin-top:4px}
+    </style></head><body>
+      <img class="shot" src="data:image/png;base64,${shot}">
+      <div class="r"><h1>${s.title}</h1><p>${s.sub}</p>
+        <div class="brand"><img src="data:image/png;base64,${icon}"><div><b>GLYDRIFT</b><span>PLAY FREE IN YOUR BROWSER</span></div></div>
+      </div></body></html>`);
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({ path: path.join(outDir, `x_still_${s.id}.png`) });
+  }
+  await browser.close();
+}
+
 module.exports = {
+  renderStills,
   W, H, FPS, ff, probeDuration, renderCards, renderEndCard, readMono, onsetEnvelope, beatGrid, rmsWindows,
   estimateBpm, snap, beatClip, renderClip, finalize, q,
 };

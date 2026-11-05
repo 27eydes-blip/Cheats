@@ -5,7 +5,7 @@ const { serve } = require("./lib/server.cjs");
 const { openDemo } = require("./lib/page.cjs");
 (async () => {
   const seed = +(process.argv[2] || 20261102);
-  const srv = await serve(path.join(__dirname, "..", "dist"));
+  const srv = await serve(path.join(__dirname, "..", "dist-test"));
   const { browser, page, G, errors } = await openDemo(srv.url);
   page.on("crash", () => console.log("PAGE CRASHED"));
   page.on("console", (m) => { if (m.type() === "error") console.log("console", m.text().slice(0, 200)); });

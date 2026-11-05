@@ -91,9 +91,10 @@
       D.log("characters");
       D.act.toCharacters();
     }
-    for (let i = 1; i <= 10; i++) if (f === 200 + 36 * i) D.act.selectHero(i % 10);
-    if (f === 610) D.act.leaveCharacters();
-    if (f === 660) {
+    // 14 heroes spread across the whole roster, one every half second
+    for (let i = 1; i <= 14; i++) if (f === 200 + 30 * i) D.act.selectHero(D.act.rosterPick(i, 14));
+    if (f === 660) D.act.leaveCharacters();
+    if (f === 710) {
       D.runSeed = r.seed;
       D.act.play();
       Object.assign(D.bot, { on: true, mode: "drama", startAt: f + 60, killDelay: r.killDelay, dramaGap: 3 });
@@ -151,6 +152,11 @@
   D.act = {
     toCharacters: () => sc("Menu").go("Characters"),
     selectHero: (i) => sc("Characters").select(i),
+    rosterPick: (i, n) => {
+      const len = sc("Characters").roster.length;
+      if (i === 1) D.log("roster", { size: len });
+      return Math.round((i * (len - 1)) / n) % len;
+    },
     leaveCharacters: () => sc("Characters").leave(),
     play: () => {
       // reseed at the exact moment the run scene starts (before its create() draws the
