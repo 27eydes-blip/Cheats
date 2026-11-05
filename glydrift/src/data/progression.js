@@ -651,6 +651,7 @@ export const Progression = {
     st.maxBiome = Math.max(st.maxBiome, run.biome);
     st.maxLasersRun = Math.max(st.maxLasersRun, run.lasers);
     st.maxPortalsRun = Math.max(st.maxPortalsRun, run.portals);
+    if (run.killedIn === "void") st.voidDeaths = (st.voidDeaths || 0) + 1;
     // animal challenges: the Abyss and the Prism Rift
     if (run.abyssM > 0) st.abyssRuns = (st.abyssRuns || 0) + 1;
     st.maxAbyssM = Math.max(st.maxAbyssM || 0, Math.floor(run.abyssM || 0));

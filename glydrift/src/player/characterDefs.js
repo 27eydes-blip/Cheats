@@ -810,6 +810,33 @@ export const CHARACTERS = [
     desc: "Matte-blue dash trail. Pounces on every flap.",
   },
   {
+    id: "mattoe",
+    name: "MATTOE",
+    title: "The Big Toe",
+    rarity: "epic",
+    color: 0x1e7cff,
+    color2: 0xffd23f,
+    texture: "hero_mattoe",
+    pixel: {
+      atlas: "pxc",
+      frames: ["mattoe_0", "mattoe_1", "mattoe_2"],
+      mode: "toe", // an always-on aura, footprint trail and a stubbed-toe death (mattoeFx.js)
+      trail: [0xfff6c0, 0xffd23f, 0x7ad8ff, 0x1e7cff],
+    },
+    fx: {
+      flap: { kind: "spark", color: 0x7ad8ff, n: 5 },
+      death: [
+        { kind: "shard", color: 0x7ad8ff, n: 26 },
+        { kind: "star", color: 0xffd23f, n: 18 },
+      ],
+    },
+    scale: 0.62,
+    cost: 4000,
+    // the stubbed-toe joke: the Neon Void is where you start, so where most runs end
+    challenge: { stat: "voidDeaths", value: 10, text: "Die 10 times in the Neon Void" },
+    desc: "Small. Stubbable. Unstoppable. All aura.",
+  },
+  {
     id: "wallrunner",
     name: "WALLRUNNER",
     title: "Leprechaun",

@@ -725,6 +725,70 @@ export function dzr(f) {
   return pc.outline(0x0a1426, 1, true);
 }
 
+// ------------------------------------------------------------------ MATTOE — a living big toe
+// A chunky big toe with a tiny smug face and a shiny neon-blue toenail like a helmet.
+// Frames: 0 glide (straight), 1 flap (curled up in a toe-wiggle), 2 power pose (arched, eyes
+// narrowed, nail flashing).
+export function mattoe(f) {
+  const pc = new PixelCanvas(24, 24);
+  const SK = 0xf2b48c; // skin
+  const SKD = 0xd88a64; // shade
+  const SKL = 0xffd6b8; // light
+  const WR = 0xb86a48; // knuckle wrinkles
+  const NB = 0x1e7cff; // neon-blue polish
+  const NL = 0x7ad8ff; // polish highlight
+  const INK = 0x2a1006;
+  // pose: where the bulb (the tip, with the face) sits; the base stays put
+  const tip = [
+    [16.5, 12.5],
+    [16.5, 10],
+    [17, 9.5],
+  ][f];
+  const [tx, ty] = tip;
+  // the long part of the toe (base on the left), bending up to the tip when curled
+  pc.ellipse(9, 14, 6.5, 4.2, SK);
+  pc.poly(
+    [
+      [8, 10],
+      [tx - 1, ty - 4],
+      [tx + 1, ty + 4],
+      [9, 18],
+    ],
+    SK,
+  );
+  // the bulb: the chunky tip
+  pc.ellipse(tx, ty, 5.6, 5, SK);
+  pc.ellipse(tx - 1, ty - 1.5, 3, 2, SKL); // a soft light on the bulb
+  pc.ellipse(8, 12.6, 3.6, 1.4, SKL); // light along the top of the toe
+  // knuckle wrinkles across the top
+  for (const x of [6, 8, 10]) pc.set(x, 10 + (f === 1 ? 1 : 0), WR).set(x + 1, 11 + (f === 1 ? 1 : 0), WR);
+  pc.set(4, 13, WR).set(4, 15, WR); // the cut-off base (round crease)
+  // the toenail: a shiny helmet on top of the bulb
+  const nx = tx + 0.5;
+  const ny = ty - 4;
+  pc.ellipse(nx, ny, 4.2, 2.3, NB);
+  pc.hline(Math.round(nx - 3), Math.round(nx + 2), Math.round(ny - 1), NL);
+  pc.set(Math.round(nx - 2), Math.round(ny - 1), 0xffffff); // sparkle highlight
+  if (f === 2) pc.set(Math.round(nx + 1), Math.round(ny - 2), 0xffffff).set(Math.round(nx + 3), Math.round(ny), 0xffffff);
+  pc.hline(Math.round(nx - 3), Math.round(nx + 3), Math.round(ny + 2), 0x0a3a8a); // nail rim
+  // the tiny smug face on the front of the bulb
+  const ex = Math.round(tx + 1);
+  const ey = Math.round(ty);
+  if (f === 2) {
+    // narrowed, confident eyes
+    pc.hline(ex - 1, ex, ey, INK).hline(ex + 2, ex + 3, ey, INK);
+    pc.set(ex - 1, ey - 1, INK).set(ex + 3, ey - 1, INK); // eyebrows
+  } else {
+    pc.set(ex, ey, INK).set(ex + 3, ey, INK); // beady eyes
+    pc.set(ex, ey - 1, 0xffffff).set(ex + 3, ey - 1, 0xffffff); // tiny shine
+  }
+  // the confident little grin (one corner up)
+  pc.hline(ex, ex + 2, ey + 2, INK).set(ex + 3, ey + 1, INK);
+  pc.set(ex - 1, ey + 1, 0xff9a8a); // blush
+  shadeEdges(pc, SK, SKD);
+  return pc.outline(INK, 1, true);
+}
+
 export const SHOP_DRAW = {
   pip,
   coral,
@@ -742,4 +806,5 @@ export const SHOP_DRAW = {
   wallrunner,
   springer,
   dzr,
+  mattoe,
 };

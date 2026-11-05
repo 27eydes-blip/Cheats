@@ -112,6 +112,33 @@ function windLevel(level) {
   wind.lp.frequency.setTargetAtTime(300 + level * 900, t, 0.4);
 }
 
+// MATTOE's aura: a quiet low hum (two detuned sines) that swells with speed
+let hum = null;
+function humLevel(level) {
+  const c = level > 0 ? ensure() : ctx;
+  if (!c) return;
+  if (!hum) {
+    if (level <= 0) return;
+    const g = c.createGain();
+    g.gain.value = 0;
+    const oscs = [55, 55.7, 110.4].map((f, i) => {
+      const o = c.createOscillator();
+      o.type = i === 2 ? "triangle" : "sine";
+      o.frequency.value = f;
+      const og = c.createGain();
+      og.gain.value = i === 2 ? 0.25 : 0.5;
+      o.connect(og).connect(g);
+      o.start();
+      return o;
+    });
+    g.connect(master);
+    hum = { g, oscs, level: 0 };
+  }
+  if (Math.abs(level - hum.level) < 0.01) return;
+  hum.level = level;
+  hum.g.gain.setTargetAtTime(level * 0.05, c.currentTime, 0.3);
+}
+
 // Rising reward notes climb a major pentatonic scale (always consonant, never grating).
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28];
 const semis = (base, step) => base * 2 ** (PENTA[Math.min(step, PENTA.length - 1)] / 12);
@@ -133,6 +160,12 @@ const FLAP = {
   springer: () => tone({ type: "square", f0: 220, f1: 140, dur: 0.05, vol: 0.14 }),
   dzr: () => tone({ type: "sawtooth", f0: 180, f1: 420, dur: 0.08, vol: 0.09 }),
   wallrunner: () => tone({ type: "square", f0: 880, f1: 1320, dur: 0.06, vol: 0.1 }),
+  // MATTOE: a squishy little "pop" with a soft energy hum under it
+  mattoe: () => {
+    tone({ type: "sine", f0: 260, f1: 620, dur: 0.06, vol: 0.28 });
+    tone({ type: "triangle", f0: 900, f1: 500, dur: 0.05, vol: 0.06, delay: 0.03 });
+    tone({ type: "sine", f0: 110, f1: 130, dur: 0.18, vol: 0.08 });
+  },
   // YARMS: a meaty "whomp" + a floppy wobble
   yarms: () => {
     tone({ type: "sine", f0: 150, f1: 55, dur: 0.14, vol: 0.4 });
@@ -501,6 +534,30 @@ export const Sfx = {
   flapWhoosh: (speed = 0) => flapWhoosh(speed),
   /** The wind bed: 0 = silent (menus, pause, death), 1 = top speed. Changes are smoothed. */
   wind: (level) => windLevel(Math.max(0, Math.min(1, level))),
+  /** MATTOE's aura hum (0 = silent) */
+  auraHum: (level) => humLevel(Math.max(0, Math.min(1, level))),
+  /** MATTOE new best: a deep rising "power-up" with a bright crown */
+  powerUp: () => {
+    tone({ type: "sawtooth", f0: 55, f1: 220, dur: 0.9, vol: 0.12 });
+    tone({ type: "sine", f0: 80, f1: 320, dur: 0.9, vol: 0.22 });
+    noise({ dur: 0.8, vol: 0.1, f: 1800 });
+    [0, 7, 12, 19].forEach((st, i) =>
+      tone({ type: "triangle", f0: 523 * 2 ** (st / 12), dur: 0.3, vol: 0.1, delay: 0.75 + i * 0.05 }),
+    );
+  },
+  /** MATTOE death: a cartoony "bonk" (hollow wood knock + pitch drop) */
+  bonk: () => {
+    tone({ type: "square", f0: 520, f1: 180, dur: 0.08, vol: 0.12 });
+    tone({ type: "sine", f0: 340, f1: 90, dur: 0.22, vol: 0.32 });
+    tone({ type: "triangle", f0: 1400, f1: 900, dur: 0.05, vol: 0.06, delay: 0.02 });
+  },
+  /** MATTOE's aura shatters like glass: bright noise tinkles */
+  shatter: () => {
+    noise({ dur: 0.35, vol: 0.18, f: 7500 });
+    [0, 1, 2, 3, 4].forEach((i) =>
+      tone({ type: "triangle", f0: 2600 + i * 420, dur: 0.06, vol: 0.05, delay: 0.04 + i * 0.045 }),
+    );
+  },
   /** YARMS flex: a stretchy creak + a short synth "hngh" grunt (no voice samples) */
   flex: () => {
     for (let i = 0; i < 3; i++)

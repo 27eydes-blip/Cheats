@@ -1849,6 +1849,65 @@ test("glydrift.com launch: portal pop-up, Founding Drifter reward, LATER returns
   expect(log.errors).toEqual([]);
 });
 
+test("MATTOE: standard hitbox, always-on aura, STUBBED! death, Neon Void challenge", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  const log = await openGame(page, { flags: ["character=mattoe"] });
+  await startRun(page);
+  const out = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const rig = s.player.rig;
+    const toe = rig.toe;
+    let t = (window.__t = 2e6);
+    const step = (n) => {
+      for (let i = 0; i < n; i++) {
+        t += 1000 / 60;
+        s.stepFrame(t, 1000 / 60);
+      }
+    };
+    window.__glyGod(true);
+    for (let i = 0; i < 120; i++) {
+      if (s.player.y > s.H * 0.5 && s.player.vy > -60) s.onTap();
+      step(1);
+    }
+    const auraDrawn = toe.g.commandBuffer.length > 0;
+    const before = toe.flare;
+    s.onTap();
+    step(1);
+    const flared = toe.flare > before;
+    // the aura is drawn behind the sprite
+    const behind = toe.g.depth < rig.sprite.depth;
+    // die (in the Neon Void, where every run starts)
+    window.__glyGod(false);
+    for (let i = 0; i < 600 && s.state === "playing"; i++) step(1);
+    step(8);
+    const texts = s.fx.texts.filter((x) => x.active && x.visible).map((x) => x.text);
+    return {
+      radius: s.player.radius,
+      std: 21,
+      speed: s.charDef.speed ?? 1,
+      auraDrawn,
+      flared,
+      behind,
+      killedIn: s.run.killedIn,
+      stubbed: texts.includes("STUBBED!"),
+      spriteStays: rig.sprite.visible, // it flattens and bounces away before vanishing
+    };
+  });
+  expect(out.radius).toBe(out.std); // the standard hitbox
+  expect(out.speed).toBe(1);
+  expect(out.auraDrawn && out.flared && out.behind).toBe(true);
+  expect(out.killedIn).toBe("void");
+  expect(out.stubbed).toBe(true);
+  expect(out.spriteStays).toBe(true);
+  await run(page, 4000); // game over: the run is saved
+  const st = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")).stats);
+  expect(st.voidDeaths).toBe(1); // 1 of 10 toward MATTOE's challenge
+  expect(log.errors).toEqual([]);
+});
+
 test("accounts wait for the server to be set up", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page, { flags: ["mockcloud"] });

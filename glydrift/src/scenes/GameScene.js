@@ -163,7 +163,10 @@ export class GameScene extends Phaser.Scene {
     // (the scene's event emitter outlives restarts: hook it once)
     if (!this.windHooked) {
       this.windHooked = true;
-      const calmWind = () => Sfx.wind(0);
+      const calmWind = () => {
+        Sfx.wind(0);
+        Sfx.auraHum(0);
+      };
       for (const e of ["pause", "sleep", "shutdown"]) this.events.on(e, calmWind);
     }
     this.events.once("shutdown", () => {
@@ -739,6 +742,12 @@ export class GameScene extends Phaser.Scene {
     this.speedNorm = speedNorm;
     // wind builds with speed while flying; it fades out when paused, dead or on another screen
     Sfx.wind(this.state === "playing" && !this.sys.isPaused() ? 0.25 + speedNorm * 0.75 : 0);
+    // MATTOE: the aura's quiet low hum while gliding (swells with speed)
+    Sfx.auraHum(
+      this.charDef.id === "mattoe" && this.state === "playing" && !this.sys.isPaused()
+        ? 0.35 + speedNorm * 0.65
+        : 0,
+    );
     // music layers follow speed (more drums & synths as you go faster)
     Music.setIntensity(this.state === "playing" ? 0.15 + speedNorm * 0.85 : 0.1);
 
