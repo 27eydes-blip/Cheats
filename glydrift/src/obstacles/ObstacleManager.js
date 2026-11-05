@@ -15,7 +15,8 @@ const SIG = {
   solar: ["geyser", "meteor", "firebar", "flare", "eruption", "shower", "firepair", "geyserbar"],
   frozen: ["icicle", "slider", "zap", "comet", "icecurtain", "sliderpair", "zapstairs", "gauntlet"],
   // (the broken-laser wall "blaser" was taken out)
-  glitch: ["blink", "zone", "column", "blinkpair", "blinkgate", "columnpair", "blinkcolumn"],
+  // (the Corrupt Column and its combinations were taken out: too hard)
+  glitch: ["blink", "zone", "blinkpair", "blinkgate"],
   abyss: ["tendril", "slammer", "walls", "eyebeam", "eyepair", "tendrileye", "eyeslam"],
   valley: ["vine", "puffs", "bloom"],
   hurricane: ["debris", "bolt", "twister"],
