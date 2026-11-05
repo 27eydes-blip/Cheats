@@ -45,9 +45,11 @@ async function renderCards(cards, outDir) {
          font:900 ${size}px/1.18 Orbitron;color:#fff;letter-spacing:1px;
          -webkit-text-stroke:${Math.round(size * 0.16)}px #000;paint-order:stroke fill;
          text-shadow:0 ${Math.round(size * 0.08)}px 0 #000,0 0 ${Math.round(size * 0.4)}px rgba(0,0,0,.55)}
+      .band{left:50%;width:max-content;max-width:900px;transform:translate(-50%,-50%);padding:16px 38px 22px;
+         background:rgba(2,1,7,.72);border-radius:26px;-webkit-text-stroke:0;text-shadow:0 0 18px rgba(62,244,255,.55)}
       .pill{left:50%;width:auto;white-space:nowrap;transform:translate(-50%,-50%);padding:18px 40px 22px;
          background:rgba(2,1,7,.82);border-radius:28px;box-shadow:0 0 0 4px rgba(62,244,255,.55),0 0 40px rgba(62,244,255,.35)}
-    </style></head><body><div class="t${c.pill ? " pill" : ""}">${c.text}</div></body></html>`);
+    </style></head><body><div class="t${c.pill ? " pill" : ""}${c.band ? " band" : ""}">${c.text}</div></body></html>`);
     await page.evaluate(() => document.fonts.ready);
     const box = await page.evaluate(() => { const r = document.querySelector(".t").getBoundingClientRect(); return [r.top, r.bottom]; });
     if (box[0] < 150 || box[1] > H - 400) throw new Error(`card "${c.text}" leaves the TikTok safe area (${box})`);

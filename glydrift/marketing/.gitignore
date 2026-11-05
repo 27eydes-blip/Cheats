@@ -1,1 +1,3 @@
 work/
+# the ad videos are large: they are delivered as files, not kept in git (remake: edit-ads.cjs)
+output/ads/*.mp4

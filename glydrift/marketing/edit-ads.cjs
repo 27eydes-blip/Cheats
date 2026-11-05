@@ -79,13 +79,13 @@ const fmt = (n) => n.toLocaleString("en-US");
       { id: "quiet", text: "it gets quiet...", y: 320 },
       { id: "tooquiet", text: "...too quiet", y: 320 },
       { id: "cta", text: "PLAY FREE · LINK IN BIO", y: 1430, size: 52, pill: true },
-      { id: "onetap", text: "one tap.<br>that's the whole game.", y: 520 },
-      { id: "heroes", text: heroesText, y: 330 },
-      { id: "worlds", text: `${worlds} worlds`, y: 330 },
-      { id: "dims", text: `+ ${dimensions} secret<br>dimensions`, y: 360 },
-      { id: "challenge", text: `can you reach<br>${fmt(abyssAt)} m?`, y: 380 },
+      { id: "onetap", text: "one tap.<br>that's the whole game.", y: 620, size: 66, band: true },
+      { id: "heroes", text: heroesText, y: 1010, band: true },
+      { id: "worlds", text: `${worlds} worlds`, y: 760, band: true },
+      { id: "dims", text: `+ ${dimensions} secret<br>dimensions`, y: 780, band: true },
+      { id: "challenge", text: `can you reach<br>${fmt(abyssAt)} m?`, y: 420, band: true },
       { id: "most", text: "it only gets<br>faster", y: 330 },
-      { id: "beat", text: `I hit ${fmt(reached)} m.<br>beat it.`, y: 520 },
+      { id: "beat", text: `I hit ${fmt(reached)} m.<br>beat it.`, y: 1260, size: 66 },
     ],
     path.join(WORK, "cards"),
   );
@@ -154,7 +154,8 @@ const fmt = (n) => n.toLocaleString("en-US");
 
   // ---------------------------------------------------------------- 3) the challenge (~15 s)
   const C = [
-    L.beatClip("start", T(play), 0.35, 1.9, grids),
+    // open on the run itself (TAP TO FLY → first flap), not the menu
+    L.beatClip("start", T(runStart), 0.6, 1.9, grids),
     L.beatClip("near1", T(n1), 0.95, 1.45, grids),
     L.beatClip("near2", T(n2), 0.75, 1.45, grids),
     L.beatClip("near3", T(n3), 0.75, 1.45, grids),
@@ -167,7 +168,7 @@ const fmt = (n) => n.toLocaleString("en-US");
   const challengeCut = build("challenge", C, (at, total) => [
     { file: cards.challenge, from: 0, to: at("near2") },
     { file: cards.most, from: at("near3"), to: at("entrance") },
-    { file: cards.beat, from: at("gameover"), to: at("logo") },
+    { file: cards.beat, from: at("logo"), to: total }, // on the end card, clear of the LEVEL UP pop-up
     { file: cards.cta, from: total - 3, to: total },
   ], "tiktok_challenge.mp4");
 
