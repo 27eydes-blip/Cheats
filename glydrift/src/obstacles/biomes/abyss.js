@@ -258,3 +258,101 @@ export class ClosingWalls extends PxObstacle {
     return c;
   }
 }
+
+/** Eye Beam warning time (s): the eye opens and a dashed line shows the beam's reach. */
+const EYE_WARN = 1.1;
+/** How long the beam burns (s), then a short fade. */
+const EYE_ON = 0.75;
+const EYE_FADE = 0.15;
+
+/**
+ * Eye Beam: a great eye opens in the ceiling or floor and a dashed red line shows how far
+ * its beam will reach; after EYE_WARN it fires a short vertical beam that far, then closes.
+ * The beam always leaves most of the screen open (it reaches at most ~40% of the height).
+ */
+export class EyeBeam extends PxObstacle {
+  constructor(mgr) {
+    super(mgr);
+    this.type = "eyebeam";
+    this.reach = this.add(this.scene.add.tileSprite(0, 0, 2 * S, 100, "hz_dash").setDepth(HAZ_TOP));
+    this.g = this.add(this.scene.add.graphics().setDepth(HAZ_TOP));
+    this.eye = this.add(this.scene.add.image(0, 0, "hz", "beye_0").setDepth(HAZ_TOP));
+  }
+  spawn(x, { top = true, L, lead = 0.3 }) {
+    this.arm(x);
+    Object.assign(this, { top, L: snap(L), lead });
+    this.halfW = 30;
+    this.bw = 12 * S; // beam width
+    this.state = "idle";
+    this.timer = 0;
+    this.ext = 0;
+    this.eye.setFlipY(!top);
+    this.reach
+      .setOrigin(0.5, top ? 0 : 1)
+      .setSize(2 * S, this.L)
+      .setVisible(false);
+    this.g.clear();
+  }
+  /** Is the beam lethal right now? */
+  get burning() {
+    return this.state === "beam" && this.timer < EYE_ON;
+  }
+  update(dt, clock) {
+    const H = this.mgr.H;
+    if (this.state === "idle") {
+      const t = eta(this);
+      if (t >= 0 && t < this.lead + EYE_WARN) {
+        this.state = "warn";
+        this.timer = 0;
+      }
+    } else this.timer += dt;
+    if (this.state === "warn" && this.timer >= EYE_WARN) {
+      this.state = "beam";
+      this.timer = 0;
+    }
+    if (this.state === "beam" && this.timer >= EYE_ON + EYE_FADE) this.state = "done";
+    const wall = this.top ? 0 : H;
+    const dir = this.top ? 1 : -1;
+    // eye: shut → opening → open (glaring while it burns)
+    const f =
+      this.state === "idle"
+        ? 0
+        : this.state === "warn"
+          ? this.timer < 0.25
+            ? 1
+            : 2
+          : this.state === "beam"
+            ? 3
+            : 0;
+    this.eye
+      .setVisible(this.state !== "idle")
+      .setFrame(`beye_${f}`)
+      .setPosition(this.x, wall + dir * 14);
+    this.reach
+      .setVisible(this.state === "warn")
+      .setPosition(this.x, wall)
+      .setAlpha(0.3 + 0.5 * clamp01(this.timer / EYE_WARN));
+    this.reach.tilePositionY -= dt * 40 * dir;
+    const g = this.g.clear();
+    if (this.state === "beam") {
+      const fade = this.timer < EYE_ON ? 1 : 1 - (this.timer - EYE_ON) / EYE_FADE;
+      // shoots out over 0.08 s, then holds its length
+      const len = snap(this.L * clamp01(this.timer / 0.08));
+      this.ext = this.burning ? len : 0;
+      const y0 = this.top ? wall : wall - len;
+      const wob = Math.sin(clock * 30) > 0 ? S : 0; // a 1-px shimmer, not a flash
+      g.fillStyle(0x6a0010, 0.55 * fade).fillRect(this.x - this.bw / 2 - 2 * S, y0, this.bw + 4 * S, len);
+      g.fillStyle(0xff2a3d, 0.95 * fade).fillRect(this.x - this.bw / 2 + wob, y0, this.bw - 2 * wob, len);
+      g.fillStyle(0xffc0c6, fade).fillRect(this.x - 2 * S, y0, 4 * S, len);
+      // a hot end cap where the beam stops
+      g.fillStyle(0xffc0c6, fade).fillRect(this.x - this.bw / 2, this.top ? y0 + len - 2 * S : y0, this.bw, 2 * S);
+    } else this.ext = 0;
+  }
+  clearance(px, py, r) {
+    if (!this.ext) return Infinity;
+    const H = this.mgr.H;
+    const x0 = this.x - this.bw / 2;
+    const x1 = this.x + this.bw / 2;
+    return this.top ? rectClear(px, py, r, x0, -OFF, x1, this.ext) : rectClear(px, py, r, x0, H - this.ext, x1, H + OFF);
+  }
+}

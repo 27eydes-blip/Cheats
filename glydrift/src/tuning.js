@@ -75,6 +75,9 @@ export const SPAWN = {
     frozen: [0, 110, 210, 260, 130, 170, 240, 190],
     // Solar Storm: its three hazards, the Flare Arc, then the combination patterns
     solar: [0, 90, 170, 220, 110, 140, 200, 230],
+    // Abyss: its three hazards, the Eye Beam, then a few gentle combinations
+    // (the first 180 m are the grace stretch, so the Eye Beam is met just after it)
+    abyss: [0, 120, 230, 190, 250, 210, 270],
     tidal: [0, 110, 220, 330],
     chrono: [0, 110, 220, 330],
   },

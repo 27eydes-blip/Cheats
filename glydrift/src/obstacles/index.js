@@ -1,5 +1,5 @@
 // Every obstacle type the manager can spawn, by type name.
-import { ClosingWalls, Slammer, Tendril } from "./biomes/abyss.js";
+import { ClosingWalls, EyeBeam, Slammer, Tendril } from "./biomes/abyss.js";
 import { FireBar, FlareArc, Geyser, Meteor } from "./biomes/solar.js";
 import { FrostComet, IceSlider, Icicle, ZapOrbs } from "./biomes/frozen.js";
 import { BlinkBlock, BrokenLaser, CorruptColumn, GravityZone } from "./biomes/glitch.js";
@@ -40,6 +40,7 @@ export const TYPES = {
   tendril: Tendril,
   slammer: Slammer,
   walls: ClosingWalls,
+  eyebeam: EyeBeam,
   // Peaceful Valley
   vine: ThornVine,
   puffs: PuffDrift,

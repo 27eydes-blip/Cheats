@@ -450,8 +450,18 @@ const DEFS = {
   },
   abyss: {
     pal: ABYSS,
-    cfg: { pillar: "stone", lamp: "torch", far: "cliffs", mid: "ruins", hang: "chains" },
-    weather: { kind: "ash", color: 0x8a4a4a, rate: 40 },
+    cfg: {
+      pillar: "stone",
+      lamp: "torch",
+      distant: "ribcage",
+      far: "thornspires",
+      mid: "ruins",
+      hang: "chains",
+      nearTop: "abyssfangs",
+      nearBot: "bonefloor",
+    },
+    // dark red veins across the sky swell with the heartbeat
+    weather: { kind: "ash", color: 0x8a4a4a, rate: 40, veins: 0xd0101e },
   },
   valley: {
     pal: VALLEY,

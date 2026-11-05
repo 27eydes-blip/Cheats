@@ -16,7 +16,7 @@ const SIG = {
   frozen: ["icicle", "slider", "zap", "comet", "icecurtain", "sliderpair", "zapstairs", "gauntlet"],
   // (the broken-laser wall "blaser" was taken out)
   glitch: ["blink", "zone", "column", "blinkpair", "blinkgate", "columnpair", "blinkcolumn"],
-  abyss: ["tendril", "slammer", "walls"],
+  abyss: ["tendril", "slammer", "walls", "eyebeam", "eyepair", "tendrileye", "eyeslam"],
   valley: ["vine", "puffs", "bloom"],
   hurricane: ["debris", "bolt", "twister"],
   prism: ["mlaser", "glass", "rprism"],
@@ -26,6 +26,9 @@ const SIG = {
 };
 /** Combination patterns: built from a realm's own hazards, so they need no solo introduction. */
 const COMBOS = new Set([
+  "eyepair",
+  "tendrileye",
+  "eyeslam",
   "blinkpair",
   "blinkgate",
   "columnpair",
@@ -45,6 +48,11 @@ const COMBOS = new Set([
 ]);
 /** Combination patterns are a little rarer than the realm's single hazards. */
 const SIG_WEIGHT = {
+  // the Abyss stays gentle: its combinations are rarer than its single hazards
+  eyebeam: 2.2,
+  eyepair: 1.8,
+  tendrileye: 1.8,
+  eyeslam: 1.6,
   column: 2,
   blinkpair: 2,
   blinkgate: 2,
@@ -126,6 +134,7 @@ export class ObstacleManager {
         "meteor",
         "blink",
         "tendril",
+        "eyebeam",
         "vine",
         "spire",
         "vorb",
@@ -714,6 +723,41 @@ export class ObstacleManager {
         });
         this.coinLine(x + 200, x + n * 64 - 200, mid, 4);
         width = n * 64;
+        break;
+      }
+      case "eyebeam":
+      case "eyepair": {
+        // Eye Beam(s): an eye opens in the ceiling or floor, a dashed line shows the reach,
+        // then a short beam; a pair alternates ceiling / floor
+        const n = kind === "eyepair" ? 2 : 1;
+        let top = r.chance(0.5);
+        for (let i = 0; i < n; i++) {
+          const o = this.obtain("eyebeam");
+          o.spawn(x + 30 + i * 280, { top, L: r.range(H * (n > 1 ? 0.28 : 0.3), H * (n > 1 ? 0.36 : 0.4)) });
+          this.coinLine(x + i * 280, x + 60 + i * 280, top ? H * 0.68 : H * 0.32, 2);
+          top = !top;
+        }
+        width = 60 + (n - 1) * 280;
+        break;
+      }
+      case "tendrileye": {
+        // a Tendril lashes from one side, then an Eye Beam fires from the other
+        const top = r.chance(0.5);
+        const t = this.obtain("tendril");
+        t.spawn(x + 44, { top, L: r.range(H * 0.22, H * 0.3), lead: 1.3 });
+        const e = this.obtain("eyebeam");
+        e.spawn(x + 88 + 240 + 30, { top: !top, L: r.range(H * 0.28, H * 0.36) });
+        width = 88 + 240 + 60;
+        break;
+      }
+      case "eyeslam": {
+        // a Slammer, then an Eye Beam reaching from the side its opening was farther from
+        const gc = r.range(safeTop + 220, safeBot - 220);
+        const sl = this.obtain("slammer");
+        sl.spawn(x + sl.w / 2, { gc, open: Phaser.Math.Linear(500, 470, d), hold: r.range(1.4, 1.8), minGap: 200, phase: r.next() });
+        const e = this.obtain("eyebeam");
+        e.spawn(x + sl.w + 300 + 30, { top: gc > mid, L: r.range(H * 0.28, H * 0.34) });
+        width = sl.w + 300 + 60;
         break;
       }
       // ------------------------------------------------------------ peaceful valley
