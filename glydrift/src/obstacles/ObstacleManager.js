@@ -14,7 +14,8 @@ const SIG = {
   void: ["laser", "blade", "hlaser", "pulse", "slalom", "bladeduo", "laserblade", "pulsepair"],
   solar: ["geyser", "meteor", "firebar", "flare", "eruption", "shower", "firepair", "geyserbar"],
   frozen: ["icicle", "slider", "zap", "comet", "icecurtain", "sliderpair", "zapstairs", "gauntlet"],
-  glitch: ["blink", "zone"], // the broken-laser wall ("blaser") was taken out
+  // (the broken-laser wall "blaser" was taken out)
+  glitch: ["blink", "zone", "column", "blinkpair", "blinkgate", "columnpair", "blinkcolumn"],
   abyss: ["tendril", "slammer", "walls"],
   valley: ["vine", "puffs", "bloom"],
   hurricane: ["debris", "bolt", "twister"],
@@ -25,6 +26,10 @@ const SIG = {
 };
 /** Combination patterns: built from a realm's own hazards, so they need no solo introduction. */
 const COMBOS = new Set([
+  "blinkpair",
+  "blinkgate",
+  "columnpair",
+  "blinkcolumn",
   "slalom",
   "bladeduo",
   "laserblade",
@@ -40,6 +45,11 @@ const COMBOS = new Set([
 ]);
 /** Combination patterns are a little rarer than the realm's single hazards. */
 const SIG_WEIGHT = {
+  column: 2,
+  blinkpair: 2,
+  blinkgate: 2,
+  columnpair: 1.8,
+  blinkcolumn: 1.8,
   pulse: 1.8,
   slalom: 2,
   bladeduo: 1.8,
@@ -594,6 +604,52 @@ export class ObstacleManager {
         break;
       }
       // ------------------------------------------------------------ glitch realm
+      case "column":
+      case "columnpair": {
+        // Corrupt Column(s): the opening jumps to a new height after a ghost preview
+        const n = kind === "columnpair" ? 2 : 1;
+        const gap = Phaser.Math.Linear(310, 240, d);
+        let last = r.range(safeTop + gap / 2, safeBot - gap / 2);
+        for (let i = 0; i < n; i++) {
+          const gc1 = last;
+          // the new opening is clearly elsewhere (at least a gap-height away)
+          let gc2 = r.range(safeTop + gap / 2, safeBot - gap / 2);
+          if (Math.abs(gc2 - gc1) < gap) gc2 = gc1 < mid ? Math.min(safeBot - gap / 2, gc1 + gap * 1.1) : Math.max(safeTop + gap / 2, gc1 - gap * 1.1);
+          const o = this.obtain("column");
+          o.spawn(x + 42 + i * 300, { gap, gc1, gc2, lead: r.range(0.75, 0.95) });
+          this.coinLine(x + i * 300, x + 84 + i * 300, gc2, 2);
+          last = gc2;
+        }
+        width = 84 + (n - 1) * 300;
+        break;
+      }
+      case "blinkpair":
+      case "blinkgate":
+      case "blinkcolumn": {
+        // a blink block plus a partner: another blink (opposite timing), a gate, or a column
+        const ya = r.range(safeTop + 40, mid - 60);
+        const yb = r.range(mid + 60, safeBot - 40);
+        const b = this.obtain("blink");
+        b.spawn(x + 48, { ya, yb, hold: 1.5, phase: r.next() });
+        if (kind === "blinkpair") {
+          const b2 = this.obtain("blink");
+          b2.spawn(x + 48 + 260, { ya: yb, yb: ya, hold: 1.5, phase: b.phase ?? r.next() });
+          width = 96 + 260;
+        } else if (kind === "blinkgate") {
+          const gap = Phaser.Math.Linear(310, 240, d);
+          const gt = this.obtain("gate");
+          gt.spawn(x + 96 + 220 + gt.w / 2, { gc: r.range(safeTop + gap / 2, safeBot - gap / 2), gap, amp: 0 });
+          width = 96 + 220 + gt.w;
+        } else {
+          const gap = Phaser.Math.Linear(310, 240, d);
+          const gc1 = r.range(safeTop + gap / 2, safeBot - gap / 2);
+          const gc2 = gc1 < mid ? Math.min(safeBot - gap / 2, gc1 + gap * 1.1) : Math.max(safeTop + gap / 2, gc1 - gap * 1.1);
+          const c = this.obtain("column");
+          c.spawn(x + 96 + 260 + 42, { gap, gc1, gc2, lead: 0.85 });
+          width = 96 + 260 + 84;
+        }
+        break;
+      }
       case "blink": {
         const ya = r.range(safeTop + 40, mid - 60);
         const yb = r.range(mid + 60, safeBot - 40);

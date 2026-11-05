@@ -152,6 +152,14 @@ export class PixelBackground {
       grid.phase = 0;
       objs.push(grid);
     }
+    // Glitch Realm: brief horizontal tear bands (an RGB-split strip) across the sky
+    let tears = null;
+    if (t.weather.tears) {
+      tears = scene.add.graphics().setDepth(-95.5).setBlendMode(Phaser.BlendModes.ADD);
+      tears.cols = t.weather.tears;
+      tears.list = [];
+      objs.push(tears);
+    }
     // soft glow spots drifting in the open middle (whole-pixel scales keep them crisp)
     const glows = [];
     for (let i = 0; i < (this.lowGfx ? 3 : 5); i++) {
@@ -220,6 +228,7 @@ export class PixelBackground {
       aurora,
       flares,
       grid,
+      tears,
       kind: w.kind,
       colors: w.colors,
       alpha: 0,
@@ -250,6 +259,36 @@ export class PixelBackground {
         g.fillStyle(col, a).fillRect(x, top, bar, len * 0.55);
         g.fillStyle(col2, a * 0.6).fillRect(x, top + len * 0.55, bar, len * 0.45);
       }
+    }
+  }
+
+  /**
+   * Glitch tear bands: a thin strip appears, its three colour channels offset sideways, and
+   * fades over a few tenths of a second. With Reduce Flashing they're rarer and fade slowly.
+   */
+  drawTears(g, alpha, lift, dt) {
+    g.clear().setDepth(-95.5 + lift);
+    const W = this.W;
+    const H = this.H;
+    const calm = reduceFlashing();
+    g.spawnT = (g.spawnT ?? 1) - dt;
+    if (g.spawnT <= 0) {
+      g.spawnT = (calm ? 3 : 1.2) + Math.random() * (calm ? 3 : 2);
+      if (g.list.length < (this.lowGfx ? 1 : 2))
+        g.list.push({ y: H * (0.1 + Math.random() * 0.6), h: 4 * S * this.k * (1 + Math.floor(Math.random() * 3)), t: 0, life: calm ? 1.2 : 0.45, off: 6 + Math.random() * 14 });
+    }
+    for (let i = g.list.length - 1; i >= 0; i--) {
+      const b = g.list[i];
+      b.t += dt;
+      if (b.t >= b.life) {
+        g.list.splice(i, 1);
+        continue;
+      }
+      const a = alpha * 0.12 * (1 - b.t / b.life);
+      g.cols.forEach((c, k) => {
+        g.fillStyle(c, a);
+        g.fillRect((k - 1) * b.off, b.y + k * 2, W, b.h);
+      });
     }
   }
 
@@ -436,6 +475,7 @@ export class PixelBackground {
       if (set.aurora) this.drawAurora(set.aurora, set.alpha, lift);
       if (set.flares) this.drawFlares(set.flares, set.alpha, lift, dt);
       if (set.grid) this.drawGrid(set.grid, set.alpha, lift, dt);
+      if (set.tears) this.drawTears(set.tears, set.alpha, lift, dt);
       for (const r of set.rays) {
         r.setDepth(-94 + lift).setAlpha(
           set.alpha * (0.06 + 0.04 * Math.sin(this.time * 0.6 + r.phase)),

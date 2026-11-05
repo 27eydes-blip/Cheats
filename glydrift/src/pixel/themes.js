@@ -435,8 +435,18 @@ const DEFS = {
   },
   glitch: {
     pal: GLITCH,
-    cfg: { pillar: "metal", lamp: "screen", far: "city", mid: "city", hang: "cables" },
-    weather: { kind: "noise", color: 0x2bffef, rate: 40 },
+    cfg: {
+      pillar: "metal",
+      lamp: "screen",
+      distant: "corruptmoon",
+      far: "serverstacks",
+      mid: "slicedcity",
+      hang: "cables",
+      nearTop: "pixeldrips",
+      nearBot: "datablocks",
+    },
+    // now and then a faint horizontal tear band slides across the sky (RGB split)
+    weather: { kind: "noise", color: 0x2bffef, rate: 40, tears: [0xff2050, 0x2bffef, 0x39ff88] },
   },
   abyss: {
     pal: ABYSS,
