@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // In-run HUD overlay: score, coins, banners, toasts, pause. Unaffected by camera zoom/post-FX.
 import Phaser from "phaser";
 import { BIOMES, biomeName } from "../biomes/biomes.js";

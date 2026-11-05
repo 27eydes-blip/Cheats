@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // SEASONS — which season is live, the player's progress in each, event challenges, the
 // end-of-season auto-claim + recap. Data comes from Supabase remote config (table
 // `season_config`, row "live"; cached on the device), else the built-in SEASON_DEFAULTS.

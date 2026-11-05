@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Tiny event log. Events are batched (every 15 s, 20 events, or when the page hides) so
 // logging never costs a frame. No endpoint is configured yet, so batches are kept on the
 // device (last 200, localStorage "glydrift.analytics.v1"); set Analytics.endpoint to a URL

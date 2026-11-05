@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Player physics (tap-to-flap, asymmetric gravity, terminal velocity, gravity flip,
 // mini mode) driving a CharacterRig for visuals.
 import { PHYSICS } from "../config.js";

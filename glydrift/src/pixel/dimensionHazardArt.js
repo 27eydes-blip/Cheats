@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Hazard art for the four dimensions (original pixel art). Lethal parts use the dimension's
 // hazard colour; harmless parts (mirror panels, currents, bubble columns, time zones, rods,
 // chains) never do.

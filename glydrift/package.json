@@ -1,6 +1,8 @@
 {
   "name": "glydrift",
   "private": true,
+  "license": "UNLICENSED",
+  "author": "Sammy Eyde",
   "version": "1.0.0",
   "description": "Glydrift \u2014 a neon-cosmos one-tap arcade flyer (Phaser 3 + Vite, Capacitor-ready).",
   "type": "module",
@@ -12,6 +14,7 @@
     "ios:sync": "npm run build && npx cap sync ios",
     "ios:open": "npx cap open ios",
     "test:rls": "node scripts/test-leaderboard-rls.mjs",
+    "test:server": "bash scripts/test-server-checks.sh",
     "deploy:pages": "npm run test:all && bash scripts/deploy-gh-pages.sh",
     "build:test": "GLY_TEST=1 vite build --outDir dist-test --emptyOutDir",
     "test:e2e": "playwright test",

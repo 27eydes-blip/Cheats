@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Shared pixel sprites: heroes, coins, portals, and pixel particle textures.
 import { LOTTERY_DRAW } from "./lotteryHeroes.js";
 import { SHOP_DRAW } from "./shopHeroes.js";

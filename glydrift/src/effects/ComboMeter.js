@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Combo multiplier label that rides next to the player: "x2", "x3", "x5", "x10" with a
 // draining timer bar. Each label is rendered once up front (no text re-renders mid-run).
 import { neonText } from "../ui/ui.js";

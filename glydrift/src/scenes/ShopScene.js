@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // GLYDRIFT SHOP — bright, bold offer cards you swipe through on a vivid magenta-to-blue
 // gradient. Featured: the free Daily Drift Drop, the Drift Pass, a YARMS spotlight and today's
 // biome bundles. Coins only — never real money — and nothing here buys leaderboard rank.

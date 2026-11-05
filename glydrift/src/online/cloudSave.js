@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Cloud save: which parts of the save go to the player's account, and how two saves (this
 // device and the cloud) are merged when they meet. Pure functions, no network.
 //

@@ -1,3 +1,4 @@
+-- © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
 -- Glydrift · accounts + cloud save.
 --
 -- Accounts are Supabase Auth users. Everyone starts anonymous (as before); creating an account

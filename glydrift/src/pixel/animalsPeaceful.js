@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // PEACEFUL animals — cheap starters (and Bao, from a login streak).
 import { PixelCanvas } from "./px.js";
 import { eye, finish, limb, lightEdges, shadeEdges, shut } from "./animalKit.js";

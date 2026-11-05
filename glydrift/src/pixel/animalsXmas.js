@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // CHRISTMAS animals — a limited December event (shop + Drift Pass), back every year.
 import { PixelCanvas } from "./px.js";
 import { eye, finish, limb, lightEdges, shadeEdges, wing } from "./animalKit.js";

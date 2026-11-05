@@ -1,5 +1,7 @@
 # Glydrift on the App Store with Codemagic (no Mac needed)
 
+© 2026 Sammy Eyde. All rights reserved.
+
 Codemagic builds the iOS app on its Macs, signs it, and uploads it to App Store Connect /
 TestFlight. You only need a web browser, plus a terminal for one command in step 4
 (Windows PowerShell works).
@@ -171,6 +173,9 @@ It appears twice; change both.
 ---
 
 ## Moving Glydrift to its own repository later
+
+The full plan, with the exact commands, tested, is in [PRIVATE_REPO_PLAN.md](PRIVATE_REPO_PLAN.md).
+Once the repo is private, Codemagic also needs `GH_ACTIONS_READ_TOKEN` (see that file).
 
 If `glydrift/` becomes the root of a new repo, for example `27eydes-blip/Glydrift`:
 

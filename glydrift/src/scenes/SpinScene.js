@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Lucky Spin: spend spins (earned every 2500 points) on a prize wheel — coins, or one of ten
 // heroes you can only win here. The prize is rolled first; the wheel then lands on it.
 import Phaser from "phaser";

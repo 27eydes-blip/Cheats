@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Solar Storm: Geyser (bubbling vent → lava column), Meteor (red target + path → fall),
 // FireBar (rotating chain of fireballs), FlareArc (a dome of fire from the floor: dashed
 // outline first, then it erupts). Every hazard warns before it can hurt.

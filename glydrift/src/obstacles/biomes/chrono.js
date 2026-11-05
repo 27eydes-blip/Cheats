@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Chrono Fracture: ClockGear (spinning toothed gear, may slide on a rail), Pendulum (a swinging
 // blade on a brass rod — only the blade cuts), TimeZone (harmless field: golden = everything
 // slows, red = everything speeds up) and RewindBlade (runs along its track, then visibly

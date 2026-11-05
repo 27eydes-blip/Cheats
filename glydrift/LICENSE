@@ -1,0 +1,15 @@
+Copyright (c) 2026 Sammy Eyde. All rights reserved.
+
+No permission is granted to copy, modify, distribute or publish this code, art, music or
+characters.
+
+This applies to Glydrift: everything in this folder (glydrift/) and everything it builds,
+including the published web game and the iOS app. It is not open source. The MIT licence in
+the root of the repository that holds this folder belongs to other code in that repository and
+does not apply to Glydrift.
+
+Third-party components that Glydrift uses stay under their own licences, for example Phaser
+(MIT), Tone.js (MIT), supabase-js (MIT), Capacitor (MIT) and the Orbitron, Rajdhani, Silkscreen
+and Galmuri fonts (SIL Open Font License). Those licences cover only those components.
+
+Contact the copyright holder for any permission.

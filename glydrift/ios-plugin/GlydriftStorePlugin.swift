@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
 // GlydriftStore — StoreKit 2 bridge for the Glydrift Capacitor app (Drift Pass+).
 //
 // Add this file to the iOS app target (App/App), then register it in your bridge view

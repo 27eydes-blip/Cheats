@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy:
-        description: "Publish to GitHub Pages if every test passes"
+        description: "Publish the web game if every test passes"
         type: boolean
         default: false
 
@@ -33,6 +33,11 @@ defaults:
 jobs:
   test:
     name: Tests (${{ matrix.engine }})
+    # Minute saver for a private repo (repository variable GLYDRIFT_CI_SAVER=true): pushes to
+    # ordinary branches skip the suite; main, release, pull requests and manual runs test fully.
+    if: >-
+      vars.GLYDRIFT_CI_SAVER != 'true' || github.event_name != 'push' ||
+      github.ref_name == 'main' || github.ref_name == 'release'
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     strategy:
@@ -112,11 +117,39 @@ jobs:
         if: failure()
         run: cat failures.txt || true
 
+  # The server-side rules (Supabase migrations): every migration applied to a throwaway
+  # PostgreSQL, then attacked the way a cheater with the public key would. Never touches Supabase.
+  server:
+    name: Server checks (Supabase rules)
+    # Minute saver for a private repo (repository variable GLYDRIFT_CI_SAVER=true): pushes to
+    # ordinary branches skip the suite; main, release, pull requests and manual runs test fully.
+    if: >-
+      vars.GLYDRIFT_CI_SAVER != 'true' || github.event_name != 'push' ||
+      github.ref_name == 'main' || github.ref_name == 'release'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s --health-timeout 2s
+          --health-retries 30
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres # the throwaway test database's password, not a real secret
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/test-server-checks.sh
+
   # New (or deliberately re-recorded) baselines go back onto the branch they came from
   baselines:
     name: Save baseline screenshots
     needs: test
-    if: always() && github.event_name == 'push' && needs.test.result != 'cancelled'
+    if: always() && github.event_name == 'push' && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -149,9 +182,9 @@ jobs:
           exit 1
 
   deploy:
-    name: Publish to GitHub Pages
-    needs: test
-    # only after every engine passed; on main, or when started by hand with "deploy"
+    name: Publish the web game
+    needs: [test, server]
+    # only after every engine and the server checks passed; on main, or by hand with "deploy"
     if: >-
       success() && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
@@ -174,7 +207,18 @@ jobs:
           cache-dependency-path: glydrift/package-lock.json
       - run: npm ci
       - name: Publish
+        env:
+          # where the web game lives: GitHub Pages (default), or set the repository variable
+          # GLYDRIFT_WEB_HOST=cloudflare (see glydrift/PRIVATE_REPO_PLAN.md, option B)
+          WEB_HOST: ${{ vars.GLYDRIFT_WEB_HOST || 'github-pages' }}
+          PAGES_SUBDIR: ${{ vars.GLYDRIFT_PAGES_SUBDIR || 'glydrift' }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          bash scripts/deploy-gh-pages.sh
+          if [ "$WEB_HOST" = "cloudflare" ]; then
+            bash scripts/deploy-cloudflare.sh
+          else
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            bash scripts/deploy-gh-pages.sh
+          fi

@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Wide screens (iPad landscape, laptops): the portrait game sits centred in a frame and the
 // space either side shows the current biome's own background, blurred and darkened, instead
 // of black bars. Drawn into two tiny DOM canvases (crossfaded) behind the game canvas only

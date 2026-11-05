@@ -1,3 +1,4 @@
+-- © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
 -- Glydrift · titles on the leaderboard.
 -- Each score row carries the id of the title its player wears (e.g. "t_gold", "p_abysslord"),
 -- shown under their name. Titles are decoration only. Drift Pass+ titles are only ever

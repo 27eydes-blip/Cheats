@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // SEASONS — the built-in defaults (pure data, JSON-compatible). The live copy comes from
 // Supabase (table `season_config`, row id "live" — see SEASONS_ADMIN.md); this file is used
 // until that loads, and whenever it can't. Every 4 weeks: a new 30-tier Drift Pass, one new

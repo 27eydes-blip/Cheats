@@ -1,5 +1,7 @@
 # Glydrift: what you still do yourself (App Store Connect & friends)
 
+© 2026 Sammy Eyde. All rights reserved.
+
 The Codemagic steps are in [CODEMAGIC_SETUP.md](CODEMAGIC_SETUP.md). This list covers everything
 Codemagic can't do for you. Tick the items as you go.
 
@@ -26,6 +28,14 @@ The app's bundle ID is `com.eyde.glydrift`. `docs/ACCOUNTS_AND_PASS_SETUP.md` wa
       function. Otherwise every purchase is rejected as "not for this app".
 - [ ] **Supabase → Authentication → URL Configuration → Redirect URLs:** `capacitor://localhost`
       is there.
+- [ ] **Apply the server-side checks** (`docs/SECURITY_AUDIT_2026-11-05.md`, step 3):
+      `supabase db push`, `supabase functions deploy verify-purchase`, and
+      `supabase functions deploy appstore-notifications --no-verify-jwt`.
+- [ ] **App Store Connect → Glydrift → App Information → App Store Server Notifications:**
+      Production and Sandbox URL `https://<project-ref>.supabase.co/functions/v1/appstore-notifications`,
+      Version 2. Refunds then take paid extras off the leaderboard right away.
+- [ ] Optional, after launch: set the Supabase secret `ALLOW_SANDBOX=false` so free test
+      purchases stop unlocking Drift Pass+ (keep it on while App Review is testing a version).
 - [ ] The Drift Pass+ **product IDs** stay `com.glydrift.game.driftpassplus.s1`, `…s2`, and so
       on. That's what the game asks for. Product IDs don't have to start with the bundle ID.
 

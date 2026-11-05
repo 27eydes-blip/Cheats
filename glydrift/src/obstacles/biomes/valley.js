@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Peaceful Valley (gentle, slow, readable): ThornVine (slow pendulum), PuffDrift (dandelion
 // puffs bobbing with a calm lane between them), BloomGate (flower gap breathes, never shuts).
 import { S } from "../../pixel/px.js";

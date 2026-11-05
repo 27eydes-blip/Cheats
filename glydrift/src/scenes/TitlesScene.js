@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // TITLES: your name card with the equipped title on top, then every title grouped by where
 // it comes from. Tap one you own to wear it; locked ones say how to earn them. Drift Pass+
 // titles are animated and only come from the paid track.

@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Abyss: Tendril (eyes open + reach line → lash), Slammer (red lamp + rattle → slam, never
 // tighter than its safe gap), ClosingWalls (spiked walls step inward along a corridor).
 import { PILLAR_W } from "../../pixel/biomeArt.js";

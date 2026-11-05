@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // One centre pop-up at a time during a run. Realm titles, NEW BEST, SPEED UP and distance
 // markers used to fire independently and pile up whenever a realm change landed on a
 // milestone (realms start every 500 m, right where the big markers are). They now share the

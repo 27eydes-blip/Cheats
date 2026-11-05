@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // TITLES: a line under your name on the leaderboard, your profile, the game over screen and
 // the share card. Earned from achievements, distance leagues, seasons, the Drift Pass and
 // completed collections; Drift Pass+ titles are animated (shimmer, glow or colour shift) and

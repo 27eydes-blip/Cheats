@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Neon username prompt (a DOM overlay so the phone's real keyboard works).
 import { suggestUsername, validateUsername } from "../online/username.js";
 

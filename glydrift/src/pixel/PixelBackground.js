@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Pixel-art background for the Backdrop scene (no post-FX, never competes with hazards):
 //   soft sky → far silhouettes → hanging layer → mid silhouettes → near cave teeth → weather
 // One reusable layer set per biome; switching biomes crossfades the sets (a smooth morph).

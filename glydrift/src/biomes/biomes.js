@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Biome palettes and the smooth morph between them.
 import { WORLD } from "../config.js";
 

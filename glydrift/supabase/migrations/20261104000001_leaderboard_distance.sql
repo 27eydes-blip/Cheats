@@ -1,3 +1,4 @@
+-- © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
 -- Glydrift · two leaderboards (DISTANCE + SCORE) and a server-side plausibility check.
 --
 -- The DISTANCE board needs no new table: it is the level "endless-distance" in the existing

@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // YARMS — two hugely muscular arms joined at the shoulders. No body, no head. Original art.
 // 48x32 (wider than the 24x24 heroes so the flex reads). Four poses:
 //   0 glide (arms out, hands open)   1 glide, fingers fluttered

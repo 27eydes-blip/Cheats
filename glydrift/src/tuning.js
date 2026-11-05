@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Gameplay + feel tuning in one place. World speed, gravity and flap physics live in
 // config.js (WORLD, PHYSICS, NEAR_MISS); this file holds everything layered on top:
 // rewards, combo, biome pacing, The Calm / Abyss, flashes and obstacle spacing.

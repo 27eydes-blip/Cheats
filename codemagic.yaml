@@ -12,6 +12,7 @@
 #
 # Glydrift currently lives in the glydrift/ folder of the Cheats repo, hence `working_directory`.
 # Codemagic always reads this file from the repository root. Setup: glydrift/CODEMAGIC_SETUP.md.
+# © 2026 Sammy Eyde. All rights reserved. Glydrift — see glydrift/LICENSE.
 workflows:
   glydrift-ios-release:
     name: Glydrift iOS → TestFlight
@@ -24,9 +25,13 @@ workflows:
       app_store_connect: Glydrift App Store Connect
     environment:
       groups:
-        - glydrift_signing # CERTIFICATE_PRIVATE_KEY (CODEMAGIC_SETUP.md, step 4)
+        # CERTIFICATE_PRIVATE_KEY (CODEMAGIC_SETUP.md, step 5), and once the repo is private
+        # GH_ACTIONS_READ_TOKEN: a GitHub fine-grained token, read-only "Actions" access to
+        # this one repo, so the test check can see results (glydrift/PRIVATE_REPO_PLAN.md).
+        - glydrift_signing
       vars:
         BUNDLE_ID: com.eyde.glydrift
+        GLYDRIFT_REPO: 27eydes-blip/Cheats # the repo whose test results gate the build
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
       node: 22

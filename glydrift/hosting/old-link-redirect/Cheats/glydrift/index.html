@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. -->
+<!-- Old address → new address. Goes in the PUBLIC repo "27eydes-blip.github.io" (see
+     ../../README.md). Change NEW to the game's new address if it isn't the one below. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Glydrift has moved</title>
+    <meta name="robots" content="noindex" />
+    <script>
+      // the new home of the game (option A: same site, new folder; option B: e.g. https://glydrift.pages.dev/)
+      var NEW = "https://27eydes-blip.github.io/glydrift/";
+      // keep ?daily=…, #… and anything after /Cheats/glydrift/ (shared links keep working)
+      var rest = location.pathname.replace(/^\/Cheats\/glydrift\/?/, "");
+      location.replace(NEW + rest + location.search + location.hash);
+    </script>
+    <noscript><meta http-equiv="refresh" content="0; url=https://27eydes-blip.github.io/glydrift/" /></noscript>
+    <link rel="canonical" href="https://27eydes-blip.github.io/glydrift/" />
+    <style>
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #020107;
+             color: #e8fdff; font: 600 18px system-ui, sans-serif; text-align: center; }
+      a { color: #3ef4ff; }
+    </style>
+  </head>
+  <body>
+    <p>Glydrift has moved to <a href="https://27eydes-blip.github.io/glydrift/">its new home</a>.</p>
+  </body>
+</html>

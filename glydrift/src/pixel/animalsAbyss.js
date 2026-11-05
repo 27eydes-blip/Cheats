@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // ABYSS animals — shadowy creatures unlocked by Abyss challenges. Dark bodies with bright,
 // glowing details so they still read against the Abyss's black.
 import { PixelCanvas } from "./px.js";

@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Title screen: dimmed living background, the selected hero flying a figure-eight, a big
 // PLAY button, the Daily Challenge with a countdown, the daily login reward and settings.
 import Phaser from "phaser";
@@ -20,6 +21,7 @@ import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { Music } from "../audio/music.js";
 import { LOGIN_REWARDS, Progression } from "../data/progression.js";
 import { todayKey } from "../data/rng.js";
+import { COPYRIGHT } from "../legal.js";
 import { Save } from "../data/save.js";
 import { addTexture, PixelCanvas } from "../pixel/px.js";
 import { Seasons } from "../data/seasons.js";
@@ -1175,6 +1177,7 @@ export class MenuScene extends Phaser.Scene {
       },
     });
     c.add([mute, gfx, style, nameBtn, acct, done]);
+    c.add(plainText(this, W / 2, y0 + h - 135, COPYRIGHT, 14, "#8a80b0", { weight: "600" }));
     if (Install.available) {
       c.add(
         button(this, W / 2, y0 + 705, W - 180, 72, "ADD TO HOME SCREEN", {

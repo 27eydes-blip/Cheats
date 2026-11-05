@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Full-screen moments: the hero unlock reveal (dark → spotlight → hero spins in → rarity
 // burst) and the level-up celebration. Built from plain images/tweens (no shaders); they
 // never pause gameplay because they only ever run on menu / results screens.

@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Glitch Realm: BlinkBlock (flicker + ghost outline → teleport), BrokenLaser (segments
 // flicker → light, one stays broken = the way through), GravityZone (harmless flip stripe),
 // CorruptColumn (a column whose opening jumps to a new height, previewed by a ghost first).

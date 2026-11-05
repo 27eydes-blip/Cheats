@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Prism Rift: MirrorLaser (path preview → beam bounces off a mirror panel, a "V" from one edge
 // — fly round it), GlassWall (cracks → top pane shatters into falling shards), RotPrism (a
 // rotating prism sweeps its beam: dashed preview → on → off).

@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Phaser 3.90 TileSprite memory fix (WebGL only).
 //
 // Every TileSprite owns a "display" canvas the full size of the sprite. The WebGL renderer

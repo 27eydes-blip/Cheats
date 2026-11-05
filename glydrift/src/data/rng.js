@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Small seeded RNG (mulberry32) so the Daily Challenge is identical for everyone.
 
 export function hashString(str) {

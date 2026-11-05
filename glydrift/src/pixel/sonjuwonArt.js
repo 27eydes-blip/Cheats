@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // 손주원 — a fierce white tiger riding a high-tech hover surfboard. Original art.
 // 30x24 (a little wider than the 24x24 heroes so the board reads). Frames:
 //   0 glide   1 glide (board tilted a touch, lightning moved)   2 flap (crouch, nose up)

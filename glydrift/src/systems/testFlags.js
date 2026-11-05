@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Test-only URL flags (?god, ?lucky, ?dimension=prism|tidal|chrono|mirror). They exist only
 // in dev and in builds made with GLY_TEST=1; a normal `npm run build` compiles them out.
 /* global __TEST_FLAGS__ */

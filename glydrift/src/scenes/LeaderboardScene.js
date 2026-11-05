@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Worldwide leaderboards: DISTANCE (farthest metres in one run) and SCORE (highest score),
 // each All Time / This Week / Today, plus today's Daily Challenge.
 // Top 100 with medals for the top 3, the player's own row pinned at the bottom with their

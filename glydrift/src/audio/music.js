@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Procedural house music engine (Tone.js). Every sound is synthesized — no audio files.
 //
 //  master:  track faders → bus → death low-pass → limiter → volume → speakers

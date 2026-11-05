@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Small vector icons (crisp at any resolution), drawn into a Graphics centred on (0,0).
 
 const TAU = Math.PI * 2;

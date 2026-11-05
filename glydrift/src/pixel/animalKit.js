@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Drawing helpers shared by the animal hero sprites.
 
 // ------------------------------------------------------------------ shared drawing helpers

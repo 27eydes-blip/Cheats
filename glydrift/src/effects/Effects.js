@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Pooled particle bursts, shockwave rings, lightning arcs and floating text.
 // Every emitter has a hard particle cap that is lowered further in Low Graphics mode.
 import Phaser from "phaser";

@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Signed clearance helpers: distance from the player's circle edge to a shape (negative = hit).
 //
 // Every hazard's hitbox is a little smaller than what is drawn (HAZARD.hitbox, ~12%), applied

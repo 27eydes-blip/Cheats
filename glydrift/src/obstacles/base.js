@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Base class and helpers shared by every obstacle. Collision uses signed clearance
 // (see geometry.js); hitboxes follow exactly what is drawn.
 import Phaser from "phaser";

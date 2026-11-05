@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Pixel art for the biome-signature hazards (one atlas: "hz"). Every hazard has a distinct
 // warning state drawn here too (bubbling vent, target reticle, shaking icicle, charging orb,
 // ghost outline, glowing eyes, red crusher lamp). Hazard colours come from each biome's spike

@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // A hero portrait dressed in the player's shop cosmetics (skin tint, hat, set glow), for the
 // static places a hero appears: results, leaderboard rows, the share card.
 import Phaser from "phaser";

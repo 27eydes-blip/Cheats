@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // The run itself: world scroll, biomes, obstacles, player, rewards and screen effects.
 // UI lives in the parallel Hud scene so the camera zoom never touches it.
 import Phaser from "phaser";

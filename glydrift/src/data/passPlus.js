@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // DRIFT PASS+ — the season's paid track ($3.99, one purchase per season; the game's only
 // real-money purchase). Ownership only ever comes from a purchase the server has verified
 // (online/store.js); this module keeps the verified entitlement and pays out the track.

@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // The 30 animal heroes (pure data). Art: pixel/animal*.js (atlas "pxa"); behaviour:
 // player/animalFx.js (the `animal` block); sounds: audio/sfx.js (ANIMAL_SFX).
 // Every animal uses the standard hitbox (PHYSICS.radius) — none is easier or harder to fly.

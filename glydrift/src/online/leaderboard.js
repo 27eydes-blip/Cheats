@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Online leaderboard (Supabase). Everything here is asynchronous and fire-and-forget from the
 // game's point of view: nothing ever blocks a run, the game over screen or a retry.
 //

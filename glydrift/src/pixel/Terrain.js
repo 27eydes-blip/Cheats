@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Textured terrain walls along the top and bottom screen edges, spikes on the surface (the
 // kill line), plus harmless decorations living in the wall: lamps, blinking eyes, crystals.
 // Purely visual — the death boundary is unchanged. Biome changes crossfade the wall set.

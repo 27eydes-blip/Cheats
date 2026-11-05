@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Pixel biome themes: one palette + style switches per biome → tiles, hazards, decor, layers.
 // Each biome's spike colour (k*) is used only on things that kill.
 import { buildAnimals } from "./animalArt.js";

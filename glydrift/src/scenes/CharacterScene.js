@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Character select: orbiting 3D-feel showcase with a live trail + flap preview, and a
 // perspective card carousel with rarity-glow borders, unlock by coins / shards / challenge.
 import Phaser from "phaser";

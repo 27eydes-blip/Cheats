@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Smooth Canvas2D textures still used next to the pixel art: particle sprites (glow, dot,
 // spark, smoke, flake, shard, star, ring), the screen vignette, the hero pedestal beam,
 // the coin and two UI icons. Everything else is generated as pixel art in src/pixel/.

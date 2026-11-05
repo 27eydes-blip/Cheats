@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // In-biome colour energy: every SHIFT_EVERY metres the backdrop wash moves to the next of
 // 3–4 related colours (2.5 s blend), plus a glowing floor strip per biome.
 

@@ -1,3 +1,4 @@
+// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Tidal Sky: Jellyfish (tentacles glow → sting), SeaMine (spiked mine on a chain, its light
 // blinks faster as you near it), Current (harmless field: flowing streaks push you up or
 // down) and BubbleColumn (harmless field: thick bubbles slow your climb and fall).
