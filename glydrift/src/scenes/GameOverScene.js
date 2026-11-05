@@ -308,7 +308,7 @@ export class GameOverScene extends Phaser.Scene {
     const ranks = button(this, 283, rowY, 210, 76, "LEADERBOARD", {
       color: 0x3ef4ff,
       size: 16,
-      onClick: () => this.goto("Leaderboard", { tab: run.mode === "daily" ? "daily" : "distance" }),
+      onClick: () => this.goto("Leaderboard", { tab: run.mode === "daily" ? "daily" : "score" }),
     });
     const heroes = button(this, 472, rowY, 140, 76, "HEROES", {
       color: 0xb45cff,
@@ -392,7 +392,8 @@ export class GameOverScene extends Phaser.Scene {
 
   /**
    * Where this run placed, once the background upload + rank lookups finish:
-   * "You placed #N in Distance · #M in Score" (or "#N on today's Daily").
+   * "You placed #N in Score · #M in Distance" (or "#N on today's Daily"). Score comes first:
+   * it's the main board.
    */
   showPlacement(R, run, y) {
     const token = (this.placementToken = {});
@@ -413,7 +414,7 @@ export class GameOverScene extends Phaser.Scene {
         const rank = Math.min(p.daily ?? Infinity, p.distance ?? Infinity, p.score ?? Infinity);
         const msg = p.daily
           ? `You placed #${p.daily} on today's Daily!`
-          : `You placed #${p.distance} in Distance · #${p.score} in Score`;
+          : `You placed #${p.score} in Score · #${p.distance} in Distance`;
         this.placementText = msg;
         const t = neonText(
           this,

@@ -1,5 +1,5 @@
-// Worldwide leaderboards: DISTANCE (farthest metres in one run) and SCORE (highest score),
-// each All Time / This Week / Today, plus today's Daily Challenge.
+// Worldwide leaderboards: SCORE (the main one: highest score) and DISTANCE (farthest metres in
+// one run), each All Time / This Week / Today, plus today's Daily Challenge.
 // Top 100 with medals for the top 3, the player's own row pinned at the bottom with their
 // real rank (even outside the top 100), plus loading / empty / offline states.
 import Phaser from "phaser";
@@ -21,7 +21,8 @@ const MEDALS = [0xffd23f, 0xdfe8f5, 0xd8894a];
 const ROW_H = 68;
 const CYAN = 0x3ef4ff;
 const STEEL = 0x2a6a88; // idle HUD lines
-const TAB_W = 212; // three tabs: DISTANCE · SCORE · DAILY
+const TAB_W = 212; // three tabs: SCORE · DISTANCE · DAILY
+const GOLD = 0xffd23f; // the SCORE board's colour: it's the one that counts
 
 /** A HUD panel: a rectangle with cut (chamfered) corners, a neon rim and an optional glow. */
 function hudPanel(g, x, y, w, h, opts = {}) {
@@ -89,7 +90,8 @@ export class LeaderboardScene extends Phaser.Scene {
   }
 
   init(data) {
-    this.tab = ["daily", "score", "distance"].includes(data?.tab) ? data.tab : "distance";
+    // Score is the main board: it's where the leaderboard opens
+    this.tab = ["daily", "score", "distance"].includes(data?.tab) ? data.tab : "score";
     this.period = "all";
     this.returnTo = data?.from || "Menu";
   }
@@ -148,13 +150,15 @@ export class LeaderboardScene extends Phaser.Scene {
     // tabs
     this.tabY = top + 124;
     this.tabs = [
+      { key: "score", label: "SCORE", main: true },
       { key: "distance", label: "DISTANCE" },
-      { key: "score", label: "SCORE" },
       { key: "daily", label: `DAILY #${dailyNumber()}` },
     ].map((t, i) => {
       const x = W / 2 + (i - 1) * TAB_W;
       const g = this.add.graphics().setDepth(50);
-      const txt = neonText(this, x, this.tabY, t.label, 20, 0x3ef4ff, { blur: 6 }).setDepth(51);
+      const txt = neonText(this, x, this.tabY, t.label, t.main ? 24 : 18, t.main ? GOLD : 0x3ef4ff, {
+        blur: t.main ? 9 : 6,
+      }).setDepth(51);
       const zone = this.add
         .zone(x, this.tabY, TAB_W - 10, 64)
         .setInteractive({ useHandCursor: true })
@@ -314,10 +318,11 @@ export class LeaderboardScene extends Phaser.Scene {
   refreshChrome() {
     for (const t of this.tabs) {
       const on = t.key === this.tab;
+      const c = t.main ? GOLD : CYAN;
       t.g.clear();
       hudPanel(t.g, t.x - TAB_W / 2 + 5, this.tabY - 32, TAB_W - 10, 64, {
-        color: on ? CYAN : STEEL,
-        fill: on ? 0x0b2a3a : 0x050d18,
+        color: on ? c : t.main ? 0x8a6a1a : STEEL,
+        fill: on ? (t.main ? 0x2a1f04 : 0x0b2a3a) : 0x050d18,
         fillAlpha: 0.95,
         glow: on,
         width: on ? 3 : 2,
@@ -325,11 +330,11 @@ export class LeaderboardScene extends Phaser.Scene {
       });
       if (on) {
         // active tab: a lit underline with tick marks
-        t.g.fillStyle(CYAN, 0.9).fillRect(t.x - 44, this.tabY + 22, 88, 3);
-        for (const dx of [-62, 54])
-          t.g.fillStyle(CYAN, 0.6).fillRect(t.x + dx, this.tabY + 22, 8, 3);
+        t.g.fillStyle(c, 0.9).fillRect(t.x - 44, this.tabY + 22, 88, 3);
+        for (const dx of [-62, 54]) t.g.fillStyle(c, 0.6).fillRect(t.x + dx, this.tabY + 22, 8, 3);
       }
-      t.txt.setAlpha(on ? 1 : 0.55);
+      // the SCORE tab never fades as much: it's the main board
+      t.txt.setAlpha(on ? 1 : t.main ? 0.8 : 0.55);
     }
     const showFilters = this.tab !== "daily";
     for (const f of this.filters) {
@@ -355,9 +360,10 @@ export class LeaderboardScene extends Phaser.Scene {
     return this.tab === "distance" ? Levels.distance() : Levels.endless();
   }
 
-  /** A board value as shown: metres on the distance board, points elsewhere. */
+  /** A board value as shown: metres on the distance board, points elsewhere (12,345). */
   fmt(v) {
-    return this.tab === "distance" ? `${v} m` : `${v}`;
+    const n = Math.round(Number(v) || 0).toLocaleString("en-US");
+    return this.tab === "distance" ? `${n} m` : n;
   }
 
   /** A small gold perk badge (a coin with a flame) next to heroes that have perks. */
@@ -415,6 +421,7 @@ export class LeaderboardScene extends Phaser.Scene {
       this.stateBox.y = res.rows.length
         ? (this.listTop + this.listBottom) / 2
         : Math.min(this.listBottom - 80, this.listTop + PODIUM_H + 70);
+      this.rows = res.rows;
       this.renderRows(res.rows, res.userId);
       this.renderYou(res.me);
     } catch (err) {
@@ -487,8 +494,9 @@ export class LeaderboardScene extends Phaser.Scene {
       return o;
     };
 
-    add(neonText(this, W / 2, 26, "WORLD TOP 5", 30, 0xffd23f, { blur: 12 }));
-    add(brackets(this.add.graphics(), W / 2 - 170, 4, 340, 46, 14, 0xffd23f, 0.7, 2));
+    const head = this.tab === "distance" ? "FARTHEST · TOP 5" : this.tab === "daily" ? "TODAY'S TOP 5" : "TOP SCORES · WORLD TOP 5";
+    add(neonText(this, W / 2, 26, head, 30, 0xffd23f, { blur: 12 }));
+    add(brackets(this.add.graphics(), W / 2 - 230, 4, 460, 46, 14, 0xffd23f, 0.7, 2));
     // spotlight rays behind #1 (rotated in update)
     const cx1 = 20 + colW * 2.5;
     const rays = add(this.add.graphics({ x: cx1, y: base - 210 - 110 }));
@@ -816,6 +824,22 @@ export class LeaderboardScene extends Phaser.Scene {
       ),
     );
     this.you.add(neonText(this, W - 56, 6, this.fmt(me.score), 28, 0x3ef4ff, { ox: 1, blur: 8 }));
+    // the chase: how far to the next place up (or "defend it" at #1)
+    const chase = this.chaseLine(me);
+    if (chase) this.you.add(plainText(this, W - 56, 36, chase, 14, "#ffd23f", { ox: 1 }));
+  }
+
+  /** "+1,240 to pass ALEX (#11)" / "+300 to reach the top 100" / "You're #1 · defend it!" */
+  chaseLine(me) {
+    if (me.rank === 1) return "You're #1 · defend it!";
+    const rows = this.rows || [];
+    const above = rows[me.rank - 2];
+    if (above && above.score > me.score)
+      return `+${this.fmt(above.score - me.score + 1)} to pass ${above.username} (#${me.rank - 1})`;
+    const last = rows[rows.length - 1];
+    if (me.rank > rows.length && last && rows.length >= 100 && last.score >= me.score)
+      return `+${this.fmt(last.score - me.score + 1)} to reach the top 100`;
+    return null;
   }
 
   setScroll(v) {

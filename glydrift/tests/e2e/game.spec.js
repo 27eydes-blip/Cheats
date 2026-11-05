@@ -821,7 +821,7 @@ test("realm changes never pause the run", async ({ page }, testInfo) => {
   expect(log.errors).toEqual([]);
 });
 
-test("two leaderboards: distance and score", async ({ page }, testInfo) => {
+test("two leaderboards: score (the main one) and distance", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page, { flags: ["lbmock"] });
   await tap(page, "LEADERBOARD", 1600);
@@ -841,19 +841,23 @@ test("two leaderboards: distance and score", async ({ page }, testInfo) => {
     });
   await run(page, 1200);
   let v = await view();
-  expect(v.tabs).toEqual(["DISTANCE", "SCORE", expect.stringMatching(/^DAILY #\d+$/)]);
-  expect(v.tab).toBe("distance");
-  expect(v.filters).toEqual(["ALL TIME", "THIS WEEK", "TODAY"]);
-  expect(v.rows.some((t) => /^\d+ m$/.test(t))).toBe(true); // metres on the distance board
-  expect(v.you).toEqual(expect.arrayContaining(["#12", "YOUR FARTHEST"])); // own rank pinned
-  await snap(page, testInfo, "13-leaderboard-distance");
-  await tap(page, "SCORE", 1200);
-  v = await view();
+  // Score is the main board: first, and where the leaderboard opens
+  expect(v.tabs).toEqual(["SCORE", "DISTANCE", expect.stringMatching(/^DAILY #\d+$/)]);
   expect(v.tab).toBe("score");
   expect(v.filters).toEqual(["ALL TIME", "THIS WEEK", "TODAY"]);
-  expect(v.rows.some((t) => /^\d+ m$/.test(t))).toBe(false);
+  expect(v.rows.some((t) => / m$/.test(t))).toBe(false);
+  expect(v.rows.some((t) => /^\d{1,3}(,\d{3})+$/.test(t))).toBe(true); // 12,345
   expect(v.you).toEqual(expect.arrayContaining(["#12", "YOUR BEST"]));
-  await snap(page, testInfo, "14-leaderboard-score");
+  // the chase: how far to the next place up
+  expect(v.you.some((t) => /^\+[\d,]+ to pass .+ \(#11\)$/.test(t))).toBe(true);
+  await snap(page, testInfo, "13-leaderboard-score");
+  await tap(page, "DISTANCE", 1200);
+  v = await view();
+  expect(v.tab).toBe("distance");
+  expect(v.filters).toEqual(["ALL TIME", "THIS WEEK", "TODAY"]);
+  expect(v.rows.some((t) => /^[\d,]+ m$/.test(t))).toBe(true); // metres on the distance board
+  expect(v.you).toEqual(expect.arrayContaining(["#12", "YOUR FARTHEST"])); // own rank pinned
+  await snap(page, testInfo, "14-leaderboard-distance");
   // impossible distances for the run time are rejected before upload
   const plausible = await page.evaluate(() => {
     const { isPlausible } = window.__glyLb;
@@ -866,7 +870,7 @@ test("two leaderboards: distance and score", async ({ page }, testInfo) => {
   expect(log.errors).toEqual([]);
 });
 
-test("game over shows the distance and score placements", async ({ page }, testInfo) => {
+test("game over shows the score and distance placements (score first)", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page, { flags: ["god", "lbmock"] });
   await startRun(page);
@@ -879,7 +883,7 @@ test("game over shows the distance and score placements", async ({ page }, testI
       () => window.__glydrift.scene.getScene("GameOver")?.placementText || null,
     );
   }
-  expect(msg).toMatch(/^You placed #\d+ in Distance · #\d+ in Score$/);
+  expect(msg).toMatch(/^You placed #\d+ in Score · #\d+ in Distance$/);
   expect(log.errors).toEqual([]);
 });
 
