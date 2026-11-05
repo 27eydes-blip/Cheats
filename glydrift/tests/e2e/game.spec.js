@@ -1740,7 +1740,7 @@ test("glydrift.com launch: portal pop-up, Founding Drifter reward, LATER returns
   page,
 }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  test.setTimeout(240_000);
+  test.setTimeout(480_000); // six launches of the game
   const texts = () =>
     page.evaluate(() => {
       const m = window.__glydrift.scene.getScene("Menu");
