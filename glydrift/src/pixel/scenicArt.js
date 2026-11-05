@@ -1,4 +1,5 @@
-// Background silhouettes for the Peaceful Valley, the Hurricane and the Frozen Nebula. Every layer tiles
+// Background silhouettes for the Peaceful Valley, the Hurricane, the Frozen Nebula and the
+// Solar Storm. Every layer tiles
 // horizontally (all shapes use periods that divide the width) and is original pixel art.
 import { PixelCanvas, seeded } from "./px.js";
 
@@ -19,6 +20,12 @@ export const EXTRA_KINDS = [
   "frozentrees",
   "icefangs",
   "snowdrifts",
+  // Solar Storm
+  "sunrise",
+  "mesas",
+  "suntemples",
+  "scorched",
+  "lavadunes",
 ];
 
 const TAU = Math.PI * 2;
@@ -47,6 +54,8 @@ export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
   const pc = new PixelCanvas(w, h);
   if (["glaciers", "icespires", "frozentrees", "icefangs", "snowdrifts"].includes(kind))
     return frozenKind(pc, w, h, rnd, { base, rim, detail, kind });
+  if (["sunrise", "mesas", "suntemples", "scorched", "lavadunes"].includes(kind))
+    return solarKind(pc, w, h, rnd, { base, rim, detail, kind });
   if (kind === "hills") {
     ground(
       pc,
@@ -334,6 +343,86 @@ function frozenKind(pc, w, h, rnd, { base, rim, detail, kind }) {
       const cx = Math.floor(rnd() * (w - 4)) + 2;
       const t = topOf(pc, cx);
       pc.line(cx, t, cx + 2, t - 6, rim).line(cx + 1, t, cx + 3, t - 5, detail);
+    }
+  }
+  return pc;
+}
+
+/** Solar Storm layers: a low sun, mesas, sun temples, scorched overhangs, lava dunes. */
+function solarKind(pc, w, h, rnd, { base, rim, detail, kind }) {
+  if (kind === "sunrise") {
+    // a huge, dim sun sunk into the horizon (dark: the hazards are the bright things here)
+    const cx = Math.floor(w * 0.5);
+    const cy = Math.floor(h * 0.78);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const d = Math.hypot(x - cx, (y - cy) * 1.05);
+        // deep ember reds: brighter than the sky, far darker than the lava hazards
+        if (d < 30) pc.set(x, y, d < 26 ? (d < 22 ? 0x5a1c0c : 0x46150a) : 0x2e0e07);
+      }
+    // sunspot bands across the disc
+    for (const by of [cy - 18, cy - 11, cy - 4])
+      for (let x = cx - 26; x <= cx + 26; x++)
+        if (pc.get(x, by) === 0x5a1c0c && (x + by) % 5 < 3) pc.set(x, by, 0x46150a);
+    // a flat, low ridge in front of it
+    ground(pc, (x) => h * 0.86 + wave(x, w, [[3, 1.5, 0.4], [7, 0.8, 1.1]]), base, rim);
+  } else if (kind === "mesas") {
+    // flat-topped desert mesas with stepped sides and banded rock
+    for (let x = 0; x < w; x++) pc.vline(x, Math.floor(h * 0.82), h - 1, base);
+    let x = 0;
+    while (x < w) {
+      const mw = 14 + Math.floor(rnd() * 20);
+      const top = Math.floor(h * (0.3 + rnd() * 0.3));
+      for (let i = 0; i < mw && x + i < w; i++) {
+        const edge = Math.min(i, mw - 1 - i);
+        const t = top + Math.max(0, 4 - edge) * 2;
+        pc.vline(x + i, t, h - 1, base);
+        pc.set(x + i, t, rim);
+        if ((t + 6) % 7 === 0 || i % 9 === 4) pc.set(x + i, t + 6, detail);
+      }
+      for (let y = top + 8; y < h; y += 7) pc.hline(x + 2, Math.min(w - 1, x + mw - 3), y, rim);
+      x += mw + 4 + Math.floor(rnd() * 12);
+    }
+  } else if (kind === "suntemples") {
+    // ruined sun temples: stepped ziggurats and obelisks with a sun disc on top
+    ground(pc, (x) => h * 0.78 + wave(x, w, [[2, 2, 0.8]]), base, rim);
+    for (let i = 0; i < 4; i++) {
+      const cx = Math.floor((i + 0.5) * (w / 4) + (rnd() - 0.5) * 12);
+      const g = topOf(pc, cx);
+      if (i % 2 === 0) {
+        // ziggurat
+        for (let step = 0; step < 4; step++) {
+          const hw = 12 - step * 3;
+          const y0 = g - (step + 1) * 4;
+          pc.rect(cx - hw, y0, hw * 2 + 1, 4, base).hline(cx - hw, cx + hw, y0, rim);
+        }
+        pc.set(cx, g - 18, detail).set(cx - 1, g - 17, detail).set(cx + 1, g - 17, detail);
+      } else {
+        // obelisk with a sun disc
+        const oh = 16 + Math.floor(rnd() * 10);
+        pc.rect(cx - 2, g - oh, 5, oh, base).vline(cx - 2, g - oh, g, rim);
+        pc.set(cx, g - oh - 1, rim).circle(cx, g - oh - 4, 2.2, detail);
+      }
+    }
+  } else if (kind === "scorched") {
+    // charred rock overhangs with ember tips
+    for (let x = 0; x < w; x++) {
+      const len = 4 + Math.round(Math.abs(wave(x, w, [[4, 6, 0.3], [9, 3, 1.4], [16, 1.4, 0.7]])));
+      pc.vline(x, 0, len, base);
+      pc.set(x, len, rim);
+      if (x % 7 === 3 && len > 6) pc.set(x, len + 1, detail);
+    }
+  } else if (kind === "lavadunes") {
+    // dark dunes with faint glowing cracks
+    ground(pc, (x) => h * 0.45 + wave(x, w, [[2, 6, 0.2], [5, 2.5, 1.6], [11, 1, 0.3]]), base, rim);
+    for (let i = 0; i < 9; i++) {
+      let x = Math.floor(rnd() * w);
+      let y = topOf(pc, x) + 4 + Math.floor(rnd() * 8);
+      for (let k = 0; k < 6; k++) {
+        if (pc.get(x, y) !== null) pc.set(x, y, detail);
+        x += rnd() < 0.5 ? 1 : 0;
+        y += 1;
+      }
     }
   }
   return pc;

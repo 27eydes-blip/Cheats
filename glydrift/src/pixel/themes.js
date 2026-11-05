@@ -395,8 +395,18 @@ const DEFS = {
   },
   solar: {
     pal: SOLAR,
-    cfg: { pillar: "stone", lamp: "torch", far: "cliffs", mid: "ruins", hang: "chains" },
-    weather: { kind: "embers", color: 0xff8a3a, rate: 46 },
+    cfg: {
+      pillar: "stone",
+      lamp: "torch",
+      distant: "sunrise",
+      far: "mesas",
+      mid: "suntemples",
+      hang: "chains",
+      nearTop: "scorched",
+      nearBot: "lavadunes",
+    },
+    // slow prominence arcs rise off the horizon now and then
+    weather: { kind: "embers", color: 0xff8a3a, rate: 46, flares: [0xff5a1a, 0xffa02a] },
   },
   frozen: {
     pal: FROZEN,

@@ -135,6 +135,15 @@ export class PixelBackground {
       aurora.cols = t.weather.aurora;
       objs.push(aurora);
     }
+    // Solar Storm: prominence arcs (half-ellipses of stepped bars) rise off the horizon,
+    // swell and fade; kept dim so the lava hazards stay the brightest orange on screen
+    let flares = null;
+    if (t.weather.flares) {
+      flares = scene.add.graphics().setDepth(-96.5).setBlendMode(Phaser.BlendModes.ADD);
+      flares.cols = t.weather.flares;
+      flares.list = [];
+      objs.push(flares);
+    }
     // soft glow spots drifting in the open middle (whole-pixel scales keep them crisp)
     const glows = [];
     for (let i = 0; i < (this.lowGfx ? 3 : 5); i++) {
@@ -201,6 +210,7 @@ export class PixelBackground {
       parts,
       motes,
       aurora,
+      flares,
       kind: w.kind,
       colors: w.colors,
       alpha: 0,
@@ -230,6 +240,47 @@ export class PixelBackground {
         const a = alpha * (0.07 + 0.05 * (0.5 + 0.5 * wv)) * (r ? 0.7 : 1);
         g.fillStyle(col, a).fillRect(x, top, bar, len * 0.55);
         g.fillStyle(col2, a * 0.6).fillRect(x, top + len * 0.55, bar, len * 0.45);
+      }
+    }
+  }
+
+  /** Solar prominences: arcs that grow out of the horizon over ~3 s and fade. */
+  drawFlares(g, alpha, lift, dt) {
+    g.clear().setDepth(-96.5 + lift);
+    const W = this.W;
+    const H = this.H;
+    const max = this.lowGfx ? 1 : 3;
+    g.spawnT = (g.spawnT ?? 0.5) - dt;
+    if (g.spawnT <= 0 && g.list.length < max) {
+      g.spawnT = 1.6 + Math.random() * 2.2;
+      g.list.push({
+        x: Math.random() * W,
+        rx: W * (0.06 + Math.random() * 0.08),
+        ry: H * (0.08 + Math.random() * 0.1),
+        t: 0,
+        life: 3 + Math.random() * 1.5,
+        col: g.cols[Math.floor(Math.random() * g.cols.length)],
+      });
+    }
+    const base = H * 0.64;
+    const step = 4 * S * this.k;
+    for (let i = g.list.length - 1; i >= 0; i--) {
+      const f = g.list[i];
+      f.t += dt;
+      f.x -= this.scroll * dt * 0.03;
+      if (f.t >= f.life) {
+        g.list.splice(i, 1);
+        continue;
+      }
+      const k = f.t / f.life;
+      const grow = Math.min(1, k * 2.5);
+      const a = alpha * 0.16 * Math.sin(Math.PI * k);
+      g.fillStyle(f.col, a);
+      for (let u = 0; u <= 1; u += 0.04) {
+        const ang = Math.PI * u;
+        const px = f.x - Math.cos(ang) * f.rx;
+        const py = base - Math.sin(ang) * f.ry * grow;
+        g.fillRect(Math.round(px / step) * step, Math.round(py / step) * step, step, step);
       }
     }
   }
@@ -349,6 +400,7 @@ export class PixelBackground {
       }
       for (const m of set.motes) m.setDepth(-72 + lift);
       if (set.aurora) this.drawAurora(set.aurora, set.alpha, lift);
+      if (set.flares) this.drawFlares(set.flares, set.alpha, lift, dt);
       for (const r of set.rays) {
         r.setDepth(-94 + lift).setAlpha(
           set.alpha * (0.06 + 0.04 * Math.sin(this.time * 0.6 + r.phase)),

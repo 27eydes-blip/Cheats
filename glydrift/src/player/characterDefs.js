@@ -429,7 +429,7 @@ export const CHARACTERS = [
     // perks (look + hitbox unchanged): bonus coins every run; immune to Solar Storm fire
     perks: {
       coinBonus: 13,
-      fireWard: ["geyser", "meteor", "firebar"],
+      fireWard: ["geyser", "meteor", "firebar", "flare"],
       list: ["+13 coins per run", "Fire Ward: immune to fire in Solar Storm", "10% faster flight"],
     },
     desc: "Scarf trail. Vanishes in smoke.",

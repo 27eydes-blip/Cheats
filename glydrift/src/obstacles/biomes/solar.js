@@ -1,5 +1,6 @@
 // Solar Storm: Geyser (bubbling vent → lava column), Meteor (red target + path → fall),
-// FireBar (rotating chain of fireballs). Every hazard warns before it can hurt.
+// FireBar (rotating chain of fireballs), FlareArc (a dome of fire from the floor: dashed
+// outline first, then it erupts). Every hazard warns before it can hurt.
 import { S } from "../../pixel/px.js";
 import { circleClear, rectClear, segClear } from "../geometry.js";
 import { clamp01, eta, HAZ_TOP, OFF, PxObstacle, snap } from "../base.js";
@@ -187,5 +188,99 @@ export class FireBar extends PxObstacle {
       circleClear(px, py, r, this.x, this.y, 24),
       segClear(px, py, r, this.x, this.y, ex, ey, 15),
     );
+  }
+}
+
+/**
+ * Flare Arc: a half-ring of solar fire rising from the floor. For ARC_WARN seconds only a
+ * dashed, pulsing outline shows exactly where it will be; then it erupts for ARC_ON seconds
+ * (fly over the dome, or wait until it has burnt out). Harmless while it's an outline.
+ */
+const ARC_WARN = 1.1;
+const ARC_ON = 0.9;
+export class FlareArc extends PxObstacle {
+  constructor(mgr) {
+    super(mgr);
+    this.type = "flare";
+    this.g = this.add(this.scene.add.graphics().setDepth(HAZ_TOP));
+  }
+  spawn(x, { R, lead = 0.35 }) {
+    this.arm(x);
+    this.R = R;
+    this.cy = this.mgr.H + 6;
+    this.halfW = R + 20;
+    this.lead = lead;
+    this.state = "wait";
+    this.timer = 0;
+  }
+  update(dt) {
+    const t = eta(this);
+    if (this.state === "wait") {
+      // erupts just as the dome's near edge reaches the player
+      const tEdge = t - this.R / Math.max(60, this.mgr.scroll);
+      if (t >= 0 && tEdge < this.lead + ARC_WARN) {
+        this.state = "warn";
+        this.timer = 0;
+      }
+    } else if (this.state === "warn") {
+      this.timer += dt;
+      if (this.timer >= ARC_WARN) {
+        this.state = "on";
+        this.timer = 0;
+        this.mgr.fx.burst("fire", this.x, this.cy - this.R, 16, undefined, {
+          speed: { min: 80, max: 260 },
+        });
+      }
+    } else if (this.state === "on") {
+      this.timer += dt;
+      if (this.timer >= ARC_ON) this.state = "gone";
+    }
+    this.draw();
+  }
+  draw() {
+    const g = this.g.clear();
+    if (this.state === "wait" || this.state === "gone") return;
+    const N = 28;
+    if (this.state === "warn") {
+      // dashed outline (red = danger), brighter as the eruption nears
+      const a = 0.45 + 0.5 * clamp01(this.timer / ARC_WARN);
+      g.fillStyle(0xff3030, a);
+      for (let i = 0; i <= N; i += 1) {
+        if (i % 2) continue;
+        const ang = Math.PI * (i / N);
+        const px = snap(this.x - Math.cos(ang) * this.R);
+        const py = snap(this.cy - Math.sin(ang) * this.R);
+        g.fillRect(px - 1.5 * S, py - 1.5 * S, 3 * S, 3 * S);
+      }
+      return;
+    }
+    // eruption: a thick band of fire (white-hot core, orange body), flickering edges
+    const fade = 1 - clamp01((this.timer - ARC_ON * 0.7) / (ARC_ON * 0.3));
+    for (const [w, col, a] of [
+      [7 * S, 0xff5a00, 0.85],
+      [4 * S, 0xffb02a, 0.95],
+      [1.5 * S, 0xfff0c0, 1],
+    ]) {
+      g.lineStyle(w, col, a * fade);
+      g.beginPath();
+      for (let i = 0; i <= N; i++) {
+        const ang = Math.PI * (i / N);
+        const wob = Math.sin(this.timer * 30 + i) * S * 0.6;
+        const px = this.x - Math.cos(ang) * (this.R + wob);
+        const py = this.cy - Math.sin(ang) * (this.R + wob);
+        if (i === 0) g.moveTo(px, py);
+        else g.lineTo(px, py);
+      }
+      g.strokePath();
+    }
+    if (Math.random() < 0.5)
+      this.mgr.fx.burst("fire", this.x - Math.cos(Math.random() * Math.PI) * this.R, this.cy - Math.random() * this.R, 1, undefined, {
+        speed: { min: 20, max: 90 },
+      });
+  }
+  clearance(px, py, r) {
+    if (this.state !== "on") return Infinity;
+    if (py > this.cy) return Infinity;
+    return Math.abs(Math.hypot(px - this.x, py - this.cy) - this.R) - 3.5 * S * 0.88 - r;
   }
 }

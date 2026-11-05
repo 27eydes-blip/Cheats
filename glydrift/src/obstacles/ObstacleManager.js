@@ -12,7 +12,7 @@ import { TYPES } from "./index.js";
 /** Signature hazards per biome, in the order they are introduced (one at a time). */
 const SIG = {
   void: ["laser", "blade", "hlaser"],
-  solar: ["geyser", "meteor", "firebar"],
+  solar: ["geyser", "meteor", "firebar", "flare", "eruption", "shower", "firepair", "geyserbar"],
   frozen: ["icicle", "slider", "zap", "comet", "icecurtain", "sliderpair", "zapstairs", "gauntlet"],
   glitch: ["blink", "zone"], // the broken-laser wall ("blaser") was taken out
   abyss: ["tendril", "slammer", "walls"],
@@ -23,8 +23,30 @@ const SIG = {
   chrono: ["cgear", "pendulum", "timezone", "rewind"],
   mirror: ["spire", "vorb", "vbar"],
 };
+/** Combination patterns: built from a realm's own hazards, so they need no solo introduction. */
+const COMBOS = new Set([
+  "eruption",
+  "shower",
+  "firepair",
+  "geyserbar",
+  "icecurtain",
+  "sliderpair",
+  "zapstairs",
+  "gauntlet",
+]);
 /** Combination patterns are a little rarer than the realm's single hazards. */
-const SIG_WEIGHT = { icecurtain: 1.4, sliderpair: 1.3, zapstairs: 1.3, gauntlet: 1.2, comet: 1.6 };
+const SIG_WEIGHT = {
+  flare: 1.8,
+  comet: 1.8,
+  eruption: 2,
+  shower: 1.8,
+  firepair: 2,
+  geyserbar: 1.8,
+  icecurtain: 2,
+  sliderpair: 2,
+  zapstairs: 1.8,
+  gauntlet: 1.8,
+};
 /** Biome-local meters at which each signature hazard unlocks. */
 const UNLOCK = SPAWN.unlock;
 
@@ -189,9 +211,10 @@ export class ObstacleManager {
       const open = !firstLap || local >= unlock[i] || (biomeId === "void" && meters >= unlock[i]);
       if (!open) return;
       w[k] = SIG_WEIGHT[k] ?? 2.6;
-      // introduce each new hazard alone the first time it appears
+      // introduce each new hazard alone the first time it appears (combination patterns are
+      // made of hazards already met, so they just join the mix)
       const key = `${info.rawIndex}:${k}`;
-      if (!this.introduced.has(key) && !forced) forced = k;
+      if (!this.introduced.has(key) && !forced && !COMBOS.has(k)) forced = k;
     });
     if (w.zone && this.flipped) w.zone = 0;
     // the Peaceful Valley has only its own gentle hazards (no saws, gates or portals)
@@ -362,6 +385,57 @@ export class ObstacleManager {
           phase: r.range(0, 6.28),
         });
         width = (len + 24) * 2;
+        break;
+      }
+      case "flare": {
+        // Flare Arc: a dome of fire from the floor (outline first, then it erupts)
+        const R = r.range(H * 0.2, H * 0.3);
+        const o = this.obtain("flare");
+        o.spawn(x + R + 10, { R, lead: r.range(0.25, 0.45) });
+        this.coinLine(x + R - 60, x + R + 80, H - R - 160, 3);
+        width = R * 2 + 20;
+        break;
+      }
+      case "eruption": {
+        // three geysers in a row, each a beat after the last (stepping stones of lava)
+        const ph = r.next();
+        for (let i = 0; i < 3; i++) {
+          const o = this.obtain("geyser");
+          o.spawn(x + 40 + i * 200, { h: H * (0.36 + i * 0.07), rest: 0.7, phase: (ph + i * 0.22) % 1 });
+        }
+        this.coinLine(x + 20, x + 460, H * 0.22, 4);
+        width = 480;
+        break;
+      }
+      case "shower": {
+        // a short meteor shower: three falls, each marked by its own red target first
+        for (let i = 0; i < 3; i++) {
+          const o = this.obtain("meteor");
+          o.spawn(x + 44 + i * 300, { lead: 1.95 + i * 0.12 });
+        }
+        width = 88 + 600;
+        break;
+      }
+      case "firepair": {
+        // two fire bars side by side, turning opposite ways
+        const len = 4 * 36;
+        const y = r.range(safeTop + len * 0.7, safeBot - len * 0.7);
+        const sp = r.range(1.2, 1.6);
+        for (let i = 0; i < 2; i++) {
+          const o = this.obtain("firebar");
+          o.spawn(x + len + 24 + i * (len * 2 + 120), { y, n: 4, speed: i ? -sp : sp, phase: i * Math.PI });
+        }
+        width = (len + 24) * 2 + len * 2 + 120;
+        break;
+      }
+      case "geyserbar": {
+        // a fire bar turning high up, a geyser below it on the far side
+        const len = 4 * 36;
+        const fb = this.obtain("firebar");
+        fb.spawn(x + len + 24, { y: r.range(safeTop + len * 0.6, H * 0.4), n: 4, speed: r.pick([-1, 1]) * 1.3, phase: r.range(0, 6.28) });
+        const gy = this.obtain("geyser");
+        gy.spawn(x + len * 2 + 160, { h: H * 0.42, rest: 0.8, phase: r.next() });
+        width = len * 2 + 220;
         break;
       }
       // ------------------------------------------------------------ frozen nebula
