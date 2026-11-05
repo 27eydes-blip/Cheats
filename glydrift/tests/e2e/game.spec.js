@@ -740,13 +740,6 @@ test("realm changes never pause the run", async ({ page }, testInfo) => {
   const out = await page.evaluate(() => {
     const s = window.__glydrift.scene.getScene("Game");
     const om = s.obstacles;
-    let t = 0;
-    const spawns = [];
-    const orig = om.spawnPattern.bind(om);
-    om.spawnPattern = (m, b) => {
-      spawns.push([t, s.meters]);
-      orig(m, b);
-    };
     let near = 0;
     const onNear = s.nearMiss.bind(s);
     s.nearMiss = (o) => {
@@ -759,10 +752,11 @@ test("realm changes never pause the run", async ({ page }, testInfo) => {
     let slowJumps = 0;
     let prevSlow = 0;
     let prevNear = 0;
+    const stretches = [];
+    let empty = null;
     while (s.meters < 3600) {
       if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
       s.__t = (s.__t || 1e6) + 1000 / 60;
-      t += 1 / 60;
       s.stepFrame(s.__t, 1000 / 60);
       const seg = s.course.segAt(s.meters);
       if (seg.id !== last) {
@@ -776,26 +770,33 @@ test("realm changes never pause the run", async ({ page }, testInfo) => {
       if (s.slowT > prevSlow + 0.01 && near === prevNear) slowJumps++;
       prevSlow = s.slowT;
       prevNear = near;
+      // an empty stretch: no obstacle on screen ahead of the hero (a long pattern is not a wait)
+      const ahead = om.active.some(
+        (o) => o.kind !== "portal" && o.right > s.player.x && o.left < s.W,
+      );
+      if (!ahead) {
+        if (!empty) empty = { m0: s.meters, t: 0 };
+        empty.t += 1 / 60;
+      } else if (empty) {
+        stretches.push({ m0: empty.m0, m1: s.meters, t: empty.t });
+        empty = null;
+      }
     }
-    // the longest wait for the next obstacle around each boundary (bar the Abyss entry)
+    // the longest stretch with nothing on screen ahead, around each boundary (bar the Abyss entry)
+    const byBound = (st, b) => st.m1 > b.m - 60 && st.m0 < b.m + 90;
     const around = bounds
       .filter((b) => b.m > 0 && b.id !== "abyss")
       .map((b) => {
         let worst = 0;
-        for (let i = 1; i < spawns.length; i++)
-          if (spawns[i][1] > b.m - 60 && spawns[i - 1][1] < b.m + 90)
-            worst = Math.max(worst, spawns[i][0] - spawns[i - 1][0]);
+        for (const st of stretches) if (byBound(st, b)) worst = Math.max(worst, st.t);
         return { id: b.id, worst: +worst.toFixed(2) };
       });
-    // the run's normal gaps away from any boundary (early on, at low speed, these are long)
-    const atBound = (m) => bounds.some((b) => b.m > 0 && m > b.m - 60 && m < b.m + 90);
+    // the run's normal empty stretches away from any boundary (early on, at low speed, these are long)
     const abyss = bounds.find((b) => b.id === "abyss")?.m ?? Infinity;
     let normal = 0;
-    for (let i = 1; i < spawns.length; i++) {
-      const m = spawns[i][1];
-      if (!atBound(m) && !atBound(spawns[i - 1][1]) && (m < abyss || m > abyss + 600))
-        normal = Math.max(normal, spawns[i][0] - spawns[i - 1][0]);
-    }
+    for (const st of stretches)
+      if (!bounds.some((b) => b.m > 0 && byBound(st, b)) && (st.m1 < abyss || st.m0 > abyss + 600))
+        normal = Math.max(normal, st.t);
     return { pauses, slowJumps, around, normal, ids: bounds.map((b) => b.id) };
   });
   expect(out.ids).toEqual(expect.arrayContaining(["solar", "frozen", "glitch", "hurricane"]));

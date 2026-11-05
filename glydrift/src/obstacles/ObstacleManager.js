@@ -11,7 +11,8 @@ import { TYPES } from "./index.js";
 
 /** Signature hazards per biome, in the order they are introduced (one at a time). */
 const SIG = {
-  void: ["laser", "blade", "hlaser", "pulse", "slalom", "bladeduo", "laserblade", "pulsepair"],
+  // (the vertical laser and its patterns, Slalom and Laser + Blade, were taken out: too hard)
+  void: ["blade", "hlaser", "pulse", "bladeduo", "pulsepair"],
   solar: ["geyser", "meteor", "firebar", "flare", "eruption", "shower", "firepair", "geyserbar"],
   frozen: ["icicle", "slider", "zap", "comet", "icecurtain", "sliderpair", "zapstairs", "gauntlet"],
   // (the broken-laser wall "blaser" was taken out)

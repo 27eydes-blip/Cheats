@@ -928,7 +928,8 @@ export class GameScene extends Phaser.Scene {
 
     if (playing) {
       for (const o of ev.passed) {
-        if (o.type === "laser") this.run.lasers++;
+        // side lasers and the Prism dimension's mirror lasers count (the vertical laser is gone)
+        if (o.type === "laser" || o.type === "mlaser") this.run.lasers++;
         if (o.type === "saw") this.run.saws++;
       }
       if (ev.portal) this.portal(ev.portal);
