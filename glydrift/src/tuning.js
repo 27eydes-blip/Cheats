@@ -68,7 +68,10 @@ export const SPAWN = {
     void: [60, 200, 340],
     default: [0, 120, 230],
     // Frozen Nebula: its three hazards, the Frost Comet, then the combination patterns
-    frozen: [0, 110, 210, 260, 300, 340, 380, 420],
+    // (a combination unlocks soon after the hazards it is made of)
+    frozen: [0, 110, 210, 260, 130, 170, 240, 190],
+    // Solar Storm: its three hazards, the Flare Arc, then the combination patterns
+    solar: [0, 90, 170, 220, 110, 140, 200, 230],
     tidal: [0, 110, 220, 330],
     chrono: [0, 110, 220, 330],
   },
