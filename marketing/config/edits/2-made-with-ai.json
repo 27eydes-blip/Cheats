@@ -1,0 +1,45 @@
+{
+  "id": "made-with-ai",
+  "out": "glydrift-made-with-ai-tiktok.mp4",
+  "canvas": { "w": 1080, "h": 1920 },
+  "fps": 30,
+  "duration": [14.5, 15.5],
+  "safe": { "top": 150, "bottom": 400, "left": 60, "right": 140 },
+  "segments": [
+    {
+      "id": "hook",
+      "clip": "nearmiss",
+      "event": "chain",
+      "pick": "best",
+      "pre": 0.15,
+      "dur": 2.6,
+      "focusY": 0.55
+    },
+    { "id": "solar", "clip": "solar", "event": "realm", "pre": 0.3, "dur": 1.1, "flash": true },
+    {
+      "id": "frozen",
+      "clip": "frozen",
+      "event": "realm",
+      "pre": 0.3,
+      "dur": 1.1,
+      "flash": true,
+      "focusY": 0.35
+    },
+    { "id": "glitch", "clip": "glitch", "event": "realm", "pre": 0.3, "dur": 1.1, "flash": true },
+    { "id": "abyss", "clip": "abyss", "event": "abyss", "pre": 0.2, "dur": 1.5 },
+    { "id": "yarms", "clip": "yarms", "event": "flex", "pre": 0.3, "dur": 1.4, "flash": true },
+    { "id": "tiger", "clip": "tiger", "event": "surf", "pre": 0.3, "dur": 1.4, "flash": true },
+    { "id": "leaderboard", "clip": "leaderboard", "in": 0.4, "dur": 1.6, "fit": "contain" },
+    { "id": "shop", "clip": "shop", "in": 0.4, "dur": 1.6, "fit": "contain" }
+  ],
+  "texts": [
+    {
+      "text": "I'm 18 and I built this game with AI",
+      "start": 0,
+      "end": 2.6,
+      "pos": "upper",
+      "pop": false
+    }
+  ],
+  "endCard": { "dur": 1.5, "logo": "assets/logo.png", "lines": ["glydrift.com"] }
+}

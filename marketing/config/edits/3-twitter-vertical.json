@@ -1,0 +1,61 @@
+{
+  "id": "twitter-vertical",
+  "out": "glydrift-twitter-1080x1920.mp4",
+  "canvas": { "w": 1080, "h": 1920 },
+  "fps": 30,
+  "duration": [15, 20],
+  "safe": { "top": 420, "bottom": 420, "left": 70, "right": 70 },
+  "segments": [
+    {
+      "id": "hook",
+      "clip": "nearmiss",
+      "event": "chain",
+      "pick": "best",
+      "pre": 0.15,
+      "dur": 2.0,
+      "focusY": 0.55
+    },
+    {
+      "id": "nearmiss2",
+      "clip": "nearmiss",
+      "event": "chain",
+      "pick": "last",
+      "pre": 0.1,
+      "dur": 1.3,
+      "flash": true,
+      "focusY": 0.55
+    },
+    { "id": "solar", "clip": "solar", "event": "realm", "pre": 0.3, "dur": 1.2, "flash": true },
+    {
+      "id": "frozen",
+      "clip": "frozen",
+      "event": "realm",
+      "pre": 0.3,
+      "dur": 1.2,
+      "flash": true,
+      "focusY": 0.35
+    },
+    { "id": "glitch", "clip": "glitch", "event": "realm", "pre": 0.3, "dur": 1.2, "flash": true },
+    { "id": "calm", "clip": "calm", "event": "calm", "pre": 0.8, "dur": 2.2 },
+    { "id": "abyss", "clip": "abyss", "event": "abyss", "pre": 0.2, "dur": 3.0 },
+    { "id": "eyebeam", "clip": "abyss", "event": "eyeBeam", "pre": 0.7, "dur": 1.6 },
+    { "id": "death", "clip": "death", "event": "death", "pre": 0.9, "dur": 2.8 }
+  ],
+  "texts": [
+    {
+      "text": "POV: you made it to the Abyss",
+      "start": 0,
+      "end": 2.0,
+      "pos": "center",
+      "pop": false
+    },
+    { "text": "it gets quiet...", "seg": "calm", "start": 0.1, "end": 2.2, "pos": "center" },
+    { "text": "...too quiet", "seg": "abyss", "start": 0.0, "end": 1.6, "pos": "center" }
+  ],
+  "endCard": {
+    "dur": 1.5,
+    "logo": "assets/logo.png",
+    "logoY": 0.44,
+    "lines": ["Play free at glydrift.com"]
+  }
+}

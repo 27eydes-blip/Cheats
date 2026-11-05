@@ -1,0 +1,74 @@
+<!doctype html>
+<!-- Stand-in game used ONLY to self-test the recording/editing pipeline (not Glydrift). -->
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>pipeline fixture</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:monospace}
+  canvas{width:390px;height:843px;image-rendering:pixelated;display:block}
+  #hud{position:fixed;top:60px;left:0;right:0;text-align:center;color:#fff;font:bold 28px monospace}
+  #pop{position:fixed;top:300px;left:0;right:0;text-align:center;color:#ff3;font:bold 40px monospace;opacity:0}
+  #pop.on{animation:pop .5s ease-out}
+  @keyframes pop{0%{opacity:1;transform:scale(1.8)}100%{opacity:0;transform:scale(1)}}
+  #realm{position:fixed;top:380px;left:0;right:0;text-align:center;color:#fff;font:bold 34px monospace;opacity:0;transition:opacity .4s}
+  #over{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;color:#fff;background:#000a;font:bold 30px monospace}
+</style></head><body>
+<canvas id="c" width="130" height="281"></canvas>
+<div id="hud">0</div><div id="pop"></div><div id="realm"></div>
+<div id="over"><div style="color:#ff3">NEW BEST!</div><div id="fs"></div><div>#42 worldwide</div></div>
+<script>
+const c = document.getElementById("c"), g = c.getContext("2d");
+const REALMS = [["SOLAR STORM", "#3a0d00", "#ff7a1a"], ["FROZEN NEBULA", "#06142e", "#9fe8ff"], ["GLITCH REALM", "#12001f", "#ff2bd6"], ["THE ABYSS", "#000000", "#ff2020"]];
+const game = window.game = { state: "menu", t: 0, player: { x: 65, y: 250, vx: 0, r: 3 }, hazards: [], score: 0, combo: 0, realm: 0, input: "none", last: null, nid: 0 };
+let actx, nextBeat = 0, beat = 0;
+function music() {
+  // lookahead scheduler, the classic WebAudio pattern
+  while (nextBeat < actx.currentTime + 0.12) {
+    const t = nextBeat, spb = 60 / 128;
+    const o = actx.createOscillator(), gn = actx.createGain();
+    o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+    gn.gain.setValueAtTime(0.9, t); gn.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    o.connect(gn).connect(actx.destination); o.start(t); o.stop(t + 0.25);
+    const b = actx.createOscillator(), bg = actx.createGain();
+    b.type = "sawtooth"; b.frequency.value = [55, 55, 65, 49][beat % 4];
+    bg.gain.setValueAtTime(0.12, t + spb / 2); bg.gain.exponentialRampToValueAtTime(0.001, t + spb);
+    b.connect(bg).connect(actx.destination); b.start(t + spb / 2); b.stop(t + spb);
+    nextBeat += spb; beat++;
+  }
+  setTimeout(music, 25);
+}
+function sfx(f) {
+  const o = actx.createOscillator(), gn = actx.createGain();
+  o.type = "square"; o.frequency.value = f; gn.gain.value = 0.15;
+  o.connect(gn).connect(actx.destination); o.start(); o.stop(actx.currentTime + 0.08);
+}
+game.start = () => {
+  actx = actx || new AudioContext(); nextBeat = actx.currentTime + 0.05; music();
+  Object.assign(game, { state: "play", t: 0, score: 0, combo: 0, hazards: [] });
+};
+function closePop(n) { const p = document.getElementById("pop"); p.textContent = `CLOSE! x${n}`; p.classList.remove("on"); void p.offsetWidth; p.classList.add("on"); }
+function step(dt) {
+  game.t += dt; const P = game.player;
+  const acc = { left: -900, right: 900, none: 0 }[game.input];
+  P.vx = (P.vx + acc * dt) * Math.pow(0.02, dt); P.x = Math.max(3, Math.min(127, P.x + P.vx * dt));
+  if (Math.random() < dt * (2.2 + game.t / 10)) game.hazards.push({ id: game.nid++, x: Math.random() * 120, y: -10, w: 10, h: 6, vx: 0, vy: 90 + game.t * 3 });
+  for (const h of game.hazards) {
+    h.y += h.vy * dt;
+    const dx = Math.max(h.x - P.x, 0, P.x - h.x - h.w), dy = Math.max(h.y - P.y, 0, P.y - h.y - h.h), d = Math.hypot(dx, dy) - P.r;
+    if (d <= 0) { game.state = "over"; sfx(80); document.getElementById("fs").textContent = game.score; document.getElementById("over").style.display = "flex"; }
+    if (!h.passed && h.y > P.y + 2) { h.passed = true; if (d < 8) { game.combo++; game.score += 10 * game.combo; closePop(game.combo); sfx(880 + game.combo * 40); } }
+  }
+  game.hazards = game.hazards.filter((h) => h.y < 300); game.score++;
+  const r = Math.min(3, Math.floor(game.t / 8));
+  if (r !== game.realm) { game.realm = r; const el = document.getElementById("realm"); el.textContent = REALMS[r][0]; el.style.opacity = 1; setTimeout(() => el.style.opacity = 0, 1500); }
+}
+function draw() {
+  const [, bg, fg] = REALMS[game.realm];
+  g.fillStyle = bg; g.fillRect(0, 0, 130, 281);
+  for (let i = 0; i < 30; i++) { g.fillStyle = fg; g.fillRect((i * 37) % 130, (i * 53 + game.t * 40) % 281, 1, 1); }
+  g.fillStyle = fg; for (const h of game.hazards) g.fillRect(Math.round(h.x), Math.round(h.y), h.w, h.h);
+  g.fillStyle = "#fff"; g.fillRect(Math.round(game.player.x) - 3, game.player.y - 3, 6, 6);
+  document.getElementById("hud").textContent = game.score;
+}
+function loop(ts) { const dt = game.last == null ? 0 : Math.min(0.05, (ts - game.last) / 1000); game.last = ts; if (game.state === "play") step(dt); draw(); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+</script></body></html>

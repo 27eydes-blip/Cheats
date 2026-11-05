@@ -1,0 +1,27 @@
+{
+  "moments": [
+    {
+      "name": "test-run",
+      "url": "fixture-game.html",
+      "seed": 7,
+      "boot": 5,
+      "setup": [{ "call": "startRun" }, { "bot": { "style": "nearmiss", "target": 3 } }],
+      "record": 30
+    },
+    {
+      "name": "test-death",
+      "url": "fixture-game.html",
+      "seed": 3,
+      "boot": 5,
+      "setup": [
+        { "call": "startRun" },
+        { "call": "warp", "args": [3] },
+        { "wait": 1.5 },
+        { "bot": { "style": "die" } }
+      ],
+      "record": 12,
+      "until": "death",
+      "after": 2.5
+    }
+  ]
+}

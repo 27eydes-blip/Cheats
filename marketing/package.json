@@ -1,0 +1,15 @@
+{
+  "name": "glydrift-marketing",
+  "private": true,
+  "type": "module",
+  "description": "Promo video pipeline for Glydrift (separate from the game; nothing here ships).",
+  "scripts": {
+    "record": "node record/record.mjs",
+    "build": "node build.mjs",
+    "iphone": "node iphone.mjs",
+    "selftest": "node test/selftest.mjs"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

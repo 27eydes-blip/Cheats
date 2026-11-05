@@ -1,0 +1,97 @@
+{
+  "mocks": [],
+  "allowWrites": [],
+  "moments": [
+    {
+      "name": "nearmiss",
+      "seed": 11,
+      "setup": [
+        { "call": "startRun" },
+        { "call": "invincible", "args": [true] },
+        { "bot": { "style": "nearmiss", "target": 2 } }
+      ],
+      "warmup": 20,
+      "record": 30
+    },
+    {
+      "name": "solar",
+      "seed": 2,
+      "setup": [{ "call": "startRun" }, { "call": "warp", "args": ["solar"] }],
+      "record": 7
+    },
+    {
+      "name": "frozen",
+      "seed": 3,
+      "setup": [{ "call": "startRun" }, { "call": "warp", "args": ["frozen"] }],
+      "record": 7
+    },
+    {
+      "name": "glitch",
+      "seed": 4,
+      "setup": [{ "call": "startRun" }, { "call": "warp", "args": ["glitch"] }],
+      "record": 7
+    },
+    {
+      "name": "calm",
+      "seed": 5,
+      "setup": [
+        { "call": "startRun" },
+        { "call": "invincible", "args": [true] },
+        { "call": "warp", "args": ["calm"] }
+      ],
+      "record": 10
+    },
+    {
+      "name": "abyss",
+      "seed": 6,
+      "setup": [
+        { "call": "startRun" },
+        { "call": "invincible", "args": [true] },
+        { "call": "warp", "args": ["abyss"] }
+      ],
+      "record": 14
+    },
+    {
+      "name": "yarms",
+      "seed": 7,
+      "setup": [
+        { "call": "hero", "args": ["yarms"] },
+        { "call": "startRun" },
+        { "call": "invincible", "args": [true] }
+      ],
+      "warmup": 4,
+      "record": 8
+    },
+    {
+      "name": "tiger",
+      "seed": 8,
+      "setup": [
+        { "call": "hero", "args": ["sonjuwon"] },
+        { "call": "startRun" },
+        { "call": "invincible", "args": [true] }
+      ],
+      "warmup": 4,
+      "record": 8
+    },
+    {
+      "name": "death",
+      "seed": 9,
+      "setup": [
+        { "call": "startRun" },
+        { "call": "warp", "args": ["abyss"] },
+        { "bot": { "style": "nearmiss", "target": 2 } },
+        { "wait": 6 },
+        { "bot": { "style": "die" } }
+      ],
+      "record": 15,
+      "until": "death",
+      "after": 4
+    },
+    {
+      "name": "leaderboard",
+      "setup": [{ "call": "openScreen", "args": ["leaderboard"] }],
+      "record": 3
+    },
+    { "name": "shop", "setup": [{ "call": "openScreen", "args": ["shop"] }], "record": 3 }
+  ]
+}
