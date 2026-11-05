@@ -113,7 +113,7 @@ test("release build loads with no console errors", async ({ page }) => {
   // cap: give it the time.
   test.setTimeout(240_000);
   const log = await openGame(page, {
-    base: "http://localhost:4318",
+    base: process.env.RELEASE_URL || "http://localhost:4318", // (a second checkout serves its own)
     screen: null,
   });
   expect(log.errors).toEqual([]);
@@ -1594,6 +1594,44 @@ test("scenery: the Frost Comet always warns first; no pattern twice in a row", a
   expect(out.hurtBeforeFly).toBe(false);
   expect(out.picks).toBeGreaterThan(40);
   expect(out.repeats).toBe(0);
+  expect(log.errors).toEqual([]);
+});
+
+test("scenery: the Abyss Eye Beam warns first and never closes the way", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
+  const out = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const res = [];
+    let t = 1e6;
+    for (const top of [true, false]) {
+      const e = s.obstacles.obtain("eyebeam");
+      e.spawn(s.player.x + 900, { top, L: s.H * 0.4 });
+      let warnT = 0;
+      let hurtBeforeBeam = false;
+      let fired = false;
+      let maxExt = 0;
+      for (let i = 0; i < 900 && e.state !== "done"; i++) {
+        t += 1000 / 60;
+        s.stepFrame(t, 1000 / 60);
+        if (e.state === "warn") warnT += 1 / 60;
+        if (e.state !== "beam" && e.clearance(e.x, top ? 10 : s.H - 10, 10) !== Infinity) hurtBeforeBeam = true;
+        if (e.burning) fired = true;
+        maxExt = Math.max(maxExt, e.ext);
+      }
+      res.push({ warnT, hurtBeforeBeam, fired, open: 1 - maxExt / s.H });
+    }
+    return res;
+  });
+  for (const r of out) {
+    expect(r.fired).toBe(true);
+    expect(r.warnT).toBeGreaterThan(1.0);
+    expect(r.hurtBeforeBeam).toBe(false);
+    expect(r.open).toBeGreaterThanOrEqual(0.59); // the beam leaves most of the screen open
+  }
   expect(log.errors).toEqual([]);
 });
 

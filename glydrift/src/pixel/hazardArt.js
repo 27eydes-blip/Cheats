@@ -284,6 +284,22 @@ function warnEyes(P, f) {
   pc.set(3, 3, 0x050001).set(11, 3, 0x050001);
   return pc;
 }
+function beamEye(P, f) {
+  // the Eye Beam's great eye in the wall (f: 0 shut, 1 opening, 2 open, 3 glaring)
+  const pc = new PixelCanvas(17, 11);
+  pc.ellipse(8, 5, 8, 5, 0x1a0507);
+  const open = [0, 1.6, 3.4, 4][f];
+  if (open) {
+    pc.ellipse(8, 5, 7, open, f === 3 ? P.k3 : 0xd8b8b0);
+    pc.ellipse(8, 5, 3, Math.min(3, open), f === 3 ? P.k2 : P.k1);
+    pc.rect(7, 5 - Math.min(2, Math.floor(open)), 2, Math.min(4, Math.floor(open) * 2) || 1, 0x050001);
+    if (f >= 2) pc.set(6, 3, 0xffffff);
+  } else pc.hline(2, 14, 5, P.k0);
+  // veined lids
+  pc.set(1, 3, P.k0).set(15, 3, P.k0).set(2, 8, P.k0).set(14, 8, P.k0);
+  pc.outline(0x050001, 1);
+  return pc;
+}
 function lamp(P, on) {
   const pc = new PixelCanvas(8, 8);
   pc.rect(1, 1, 6, 6, 0x2a0a0e);
@@ -357,6 +373,7 @@ export function buildHazards(scene, pals) {
     if (f < 2) frames[`comet_${f}`] = comet(FR, f);
     frames[`weyes_${f}`] = warnEyes(AB, f);
   }
+  for (let f = 0; f < 4; f++) frames[`beye_${f}`] = beamEye(AB, f);
   for (let f = 0; f < 2; f++) frames[`fireball_${f}`] = fireball(SO, f);
   addAtlas(scene, "hz", frames);
   addTexture(scene, "hz_lava", lavaTile(SO));

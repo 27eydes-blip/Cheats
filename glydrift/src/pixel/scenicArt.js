@@ -1,5 +1,5 @@
 // Background silhouettes for the Peaceful Valley, the Hurricane, the Frozen Nebula and the
-// Solar Storm, the Neon Void and the Glitch Realm. Every layer tiles
+// Solar Storm, the Neon Void, the Glitch Realm and the Abyss. Every layer tiles
 // horizontally (all shapes use periods that divide the width) and is original pixel art.
 import { PixelCanvas, seeded } from "./px.js";
 
@@ -38,6 +38,11 @@ export const EXTRA_KINDS = [
   "slicedcity",
   "pixeldrips",
   "datablocks",
+  // Abyss
+  "ribcage",
+  "thornspires",
+  "abyssfangs",
+  "bonefloor",
 ];
 
 const TAU = Math.PI * 2;
@@ -72,6 +77,8 @@ export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
     return voidKind(pc, w, h, rnd, { base, rim, detail, kind });
   if (["corruptmoon", "serverstacks", "slicedcity", "pixeldrips", "datablocks"].includes(kind))
     return glitchKind(pc, w, h, rnd, { base, rim, detail, kind });
+  if (["ribcage", "thornspires", "abyssfangs", "bonefloor"].includes(kind))
+    return abyssKind(pc, w, h, rnd, { base, rim, detail, kind });
   if (kind === "hills") {
     ground(
       pc,
@@ -583,6 +590,87 @@ function glitchKind(pc, w, h, rnd, { base, rim, detail, kind }) {
         if (rnd() < 0.2) pc.set(x + sz - 1, y + sz - 1, null);
       }
       x += sz + 2 + Math.floor(rnd() * 5);
+    }
+  }
+  return pc;
+}
+
+function abyssKind(pc, w, h, rnd, { base, rim, detail, kind }) {
+  if (kind === "ribcage") {
+    // the ribs of something vast rising out of the dark floor, curving in toward a spine
+    ground(pc, (x) => h * 0.88 + wave(x, w, [[4, 1.5, 0.4]]), base, rim);
+    const spineY = Math.floor(h * 0.12);
+    const rib = 25; // 8 ribs across the 200-px tile
+    for (let r0 = 0; r0 < w; r0 += rib) {
+      const len = 0.8 + rnd() * 0.2;
+      for (let y = spineY; y < h * 0.9; y++) {
+        const u = (y - spineY) / (h * 0.9 - spineY); // 0 at the spine, 1 at the floor
+        const bow = Math.sin(u * Math.PI) * 9 * len; // ribs bow outward, then back in
+        const thick = u < 0.15 || u > 0.85 ? 1 : 2;
+        const x0 = r0 + 4 + Math.round(bow);
+        for (let k = 0; k < thick; k++) pc.set((x0 + k + w) % w, y, base);
+        if (y % 3 === 0) pc.set((x0 + w) % w, y, rim); // a broken rim keeps the ribs dim
+      }
+    }
+    // the spine: a knobbly bar across the top
+    for (let x = 0; x < w; x++) {
+      pc.vline(x, spineY - 1, spineY + 1, base);
+      if (x % rib === 4) pc.rect(x - 1, spineY - 2, 3, 5, base).set(x, spineY - 2, rim);
+    }
+  } else if (kind === "thornspires") {
+    // tall black spires bristling with thorns, a few with a dim red ember at the tip
+    ground(pc, (x) => h * 0.9 + wave(x, w, [[3, 1.5, 1.1]]), base, rim);
+    let x = 4;
+    while (x < w - 6) {
+      const top = Math.floor(h * (0.08 + rnd() * 0.4));
+      const hw = 2 + Math.floor(rnd() * 2);
+      for (let y = top; y < h; y++) {
+        const half = Math.round(hw * Math.min(1, (y - top) / (h * 0.35)));
+        pc.hline(x - half, x + half, y, base);
+        pc.set(x - half, y, rim);
+        // thorns: short spikes off the sides
+        if ((y - top) % 6 === 3 && y < h * 0.85) {
+          const side = (y >> 2) % 2 ? 1 : -1;
+          pc.set(x + side * (half + 1), y, base).set(x + side * (half + 2), y - 1, base);
+        }
+      }
+      if (rnd() < 0.35) pc.set(x, top, detail);
+      x += hw * 2 + 6 + Math.floor(rnd() * 10);
+    }
+  } else if (kind === "abyssfangs") {
+    // a jaw of fangs hanging from the top edge: big curved fangs between rows of small teeth
+    for (let x = 0; x < w; x++) pc.vline(x, 0, 3, base);
+    let x = 2;
+    let big = 0;
+    while (x < w - 4) {
+      const isBig = big++ % 3 === 1;
+      const hw = isBig ? 3 : 1 + Math.floor(rnd() * 2);
+      const len = isBig ? h - 6 - Math.floor(rnd() * 6) : 5 + Math.floor(rnd() * 8);
+      for (let y = 0; y < len; y++) {
+        const t = y / len;
+        const half = Math.round(hw * (1 - t));
+        const hook = isBig ? Math.round(t * t * 2) : 0; // big fangs curl back at the tip
+        pc.hline(x - half + hook, x + half + hook, y, base);
+        pc.set(x - half + hook, y, rim);
+      }
+      if (isBig) pc.set(x + 2, len, detail);
+      x += hw * 2 + 2 + Math.floor(rnd() * 3);
+    }
+  } else if (kind === "bonefloor") {
+    // a lumpy floor of ash with bones and the odd skull half-buried in it
+    ground(pc, (x) => h * 0.55 + wave(x, w, [[2, 2, 0.5], [7, 1.2, 2]]), base, rim);
+    for (let x = 4; x < w - 8; x += 10 + Math.floor(rnd() * 12)) {
+      const y = topOf(pc, x) - 1;
+      if (rnd() < 0.3) {
+        // a skull: round dome, two dark sockets
+        pc.rect(x, y - 3, 5, 4, rim).hline(x + 1, x + 3, y - 4, rim);
+        pc.set(x + 1, y - 2, base).set(x + 3, y - 2, base);
+      } else {
+        // a bone: a bar with knobbed ends
+        const len = 4 + Math.floor(rnd() * 4);
+        pc.hline(x, x + len, y, rim).set(x, y - 1, rim).set(x + len, y - 1, rim);
+      }
+      if (rnd() < 0.15) pc.set(x + 2, y + 2, detail);
     }
   }
   return pc;

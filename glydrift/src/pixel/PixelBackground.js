@@ -160,6 +160,13 @@ export class PixelBackground {
       tears.list = [];
       objs.push(tears);
     }
+    // Abyss: branching veins across the sky, drawn once, brightening with each heartbeat
+    let veins = null;
+    if (t.weather.veins) {
+      veins = scene.add.graphics().setDepth(-96.8).setBlendMode(Phaser.BlendModes.ADD);
+      this.paintVeins(veins, t.weather.veins);
+      objs.push(veins);
+    }
     // soft glow spots drifting in the open middle (whole-pixel scales keep them crisp)
     const glows = [];
     for (let i = 0; i < (this.lowGfx ? 3 : 5); i++) {
@@ -229,10 +236,38 @@ export class PixelBackground {
       flares,
       grid,
       tears,
+      veins,
       kind: w.kind,
       colors: w.colors,
       alpha: 0,
     };
+  }
+
+  /**
+   * Paint the Abyss veins once: a few stepped branches creeping in from the screen edges
+   * (fewer on Low Graphics). Only their alpha changes per frame, so they cost nothing to draw.
+   */
+  paintVeins(g, col) {
+    const W = this.W;
+    const H = this.H;
+    const px = 2 * S * this.k;
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const branch = (x, y, ang, len, w) => {
+      for (let i = 0; i < len; i++) {
+        ang += (rnd() - 0.5) * 0.5;
+        x += Math.cos(ang) * px;
+        y += Math.sin(ang) * px;
+        g.fillStyle(col, w > 1 ? 1 : 0.7).fillRect(Math.round(x / px) * px, Math.round(y / px) * px, px * w, px * w);
+        if (w > 1 && rnd() < 0.06) branch(x, y, ang + (rnd() < 0.5 ? 0.9 : -0.9), Math.floor(len * 0.4), 1);
+      }
+    };
+    const n = this.lowGfx ? 3 : 6;
+    for (let i = 0; i < n; i++) {
+      const left = i % 2 === 0;
+      const y0 = H * (0.12 + (i / n) * 0.7);
+      branch(left ? -px : W + px, y0, left ? 0.2 : Math.PI - 0.2, 40 + Math.floor(rnd() * 40), 2);
+    }
   }
 
   /** Aurora ribbons: columns of 4-px bars whose height follows slow travelling waves. */
@@ -476,6 +511,11 @@ export class PixelBackground {
       if (set.flares) this.drawFlares(set.flares, set.alpha, lift, dt);
       if (set.grid) this.drawGrid(set.grid, set.alpha, lift, dt);
       if (set.tears) this.drawTears(set.tears, set.alpha, lift, dt);
+      if (set.veins) {
+        // faint at rest, swelling on each lub-dub (gentler with Reduce Flashing)
+        const hb = heartbeat(this.time) * (reduceFlashing() ? 0.35 : 1);
+        set.veins.setDepth(-96.8 + lift).setAlpha(set.alpha * (0.05 + 0.13 * hb));
+      }
       for (const r of set.rays) {
         r.setDepth(-94 + lift).setAlpha(
           set.alpha * (0.06 + 0.04 * Math.sin(this.time * 0.6 + r.phase)),
