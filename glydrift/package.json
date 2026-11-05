@@ -20,6 +20,7 @@
     "test:update": "npm run build && npm run build:test && playwright test --update-snapshots"
   },
   "dependencies": {
+    "@capacitor-community/apple-sign-in": "7.1.0",
     "@capacitor/core": "^8.6.0",
     "@fontsource/orbitron": "^5.3.0",
     "@fontsource/rajdhani": "^5.3.0",
