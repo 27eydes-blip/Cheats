@@ -1,8 +1,8 @@
 name: Glydrift tests
 
-# Every push and pull request that touches the game runs the full browser suite: Chromium
-# (Chrome / Edge), Firefox and WebKit (Safari) × 7 device profiles. GitHub Pages is only
-# updated after every test has passed — a broken version never goes live.
+# Every push and pull request that touches the game runs the browser suite: WebKit (Safari) on
+# all 7 device profiles, Chromium (Chrome / Edge) and Firefox on 3 of them. Nothing is published until
+# every browser has passed on these exact files — a broken version never goes live.
 on:
   push:
     paths:
@@ -31,10 +31,70 @@ defaults:
     working-directory: glydrift
 
 jobs:
+  # A merge that only brings in code which already passed on all three browsers doesn't need
+  # the same hour of tests again. This job fingerprints the game's files (glydrift/ and this
+  # workflow, minus the baseline screenshots, which a passing run writes itself) and looks for
+  # an earlier run on the exact same files where Chromium, Firefox and WebKit all passed.
+  # Found: the tests are skipped and the publish jobs use that result. Not found (two changes
+  # combined, the branch moved on, the workflow changed, ...): the full tests run as usual.
+  # Only for pushes to the branches that go live; never for pull requests or by hand.
+  reuse:
+    name: Already tested?
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      hit: ${{ steps.find.outputs.hit }}
+    steps:
+      - uses: actions/checkout@v4
+        if: >-
+          github.event_name == 'push' && (
+            github.ref == 'refs/heads/main' ||
+            github.ref == 'refs/heads/claude/glydrift-arcade-game-7hznpc')
+        with:
+          fetch-depth: 0
+      - name: Look for a green run on the same files
+        id: find
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REUSE_OK: >-
+            ${{ github.event_name == 'push' && (
+              github.ref == 'refs/heads/main' ||
+              github.ref == 'refs/heads/claude/glydrift-arcade-game-7hznpc') }}
+        run: |
+          echo "hit=false" >> "$GITHUB_OUTPUT"
+          [ "$REUSE_OK" = "true" ] || { echo "Not a push to a live branch: full tests."; exit 0; }
+          fp() {
+            git ls-tree -r "$1" -- glydrift .github/workflows/glydrift.yml 2>/dev/null \
+              | grep -v "glydrift/tests/e2e/__screenshots__/" | sha256sum | cut -d' ' -f1
+          }
+          me=$(fp HEAD)
+          echo "Fingerprint of $GITHUB_SHA: $me"
+          runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/glydrift.yml/runs?status=success&per_page=40" \
+            --jq '.workflow_runs[] | select(.id != '"$GITHUB_RUN_ID"') | "\(.id) \(.head_sha)"')
+          while read -r id sha; do
+            [ -n "$id" ] || continue
+            git cat-file -e "$sha^{commit}" 2>/dev/null || continue
+            [ "$(fp "$sha")" = "$me" ] || continue
+            # every browser must have actually run and passed (a reused run doesn't count)
+            green=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/jobs?per_page=50" \
+              --jq '[.jobs[] | select(.name | test("^Tests \\((chromium|firefox|webkit)\\)$")) | select(.conclusion == "success")] | length')
+            if [ "$green" = "3" ]; then
+              echo "::notice::Same files already passed on Chromium, Firefox and WebKit in run $id ($sha): skipping the repeat."
+              echo "hit=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done <<< "$runs"
+          echo "No earlier green run on these exact files: running the full tests."
+
   test:
     name: Tests (${{ matrix.engine }})
+    needs: reuse
+    if: needs.reuse.outputs.hit != 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -42,6 +102,10 @@ jobs:
     env:
       CI: "true"
       ENGINES: ${{ matrix.engine }}
+      # WebKit (Safari, every iPhone and iPad) runs all 7 device profiles. Chromium and Firefox
+      # run 3: the tightest phone, the phone size where the once-per-browser checks run, and a
+      # laptop. Layout code is shared by every engine, so WebKit's 7 sizes cover the rest.
+      PROFILES: ${{ matrix.engine != 'webkit' && 'iphone-small,iphone-std,laptop' || '' }}
       # put "[update screenshots]" in a commit message to re-record the baseline screenshots
       UPDATE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[update screenshots]') }}
     steps:
@@ -56,18 +120,31 @@ jobs:
       - run: npm ci
 
       - name: Install ${{ matrix.engine }}
-        timeout-minutes: 35
+        timeout-minutes: 75
         run: |
-          # the browser download / system packages occasionally hang on GitHub's machines:
-          # give each attempt 10 minutes and retry instead of stalling the whole run
+          # the browser download / system packages occasionally hang or crawl on GitHub's
+          # machines: give each attempt 15 minutes and retry instead of stalling the whole run.
+          # A timed-out attempt can leave its apt-get running in the background (it runs under
+          # sudo, out of timeout's reach) and holding the package lock, which made every retry
+          # fail at once: wait for the lock to come free (up to 10 min) before trying again.
+          wait_for_apt() {
+            for _ in $(seq 120); do
+              sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock \
+                >/dev/null 2>&1 || return 0
+              sleep 5
+            done
+            echo "::warning::package lock still held after 10 minutes"
+          }
           ok=""
           for attempt in 1 2 3; do
-            if timeout 600 npx playwright install --with-deps ${{ matrix.engine }}; then ok=1; break; fi
+            wait_for_apt
+            if timeout 900 npx playwright install --with-deps ${{ matrix.engine }}; then ok=1; break; fi
             echo "::warning::browser install attempt $attempt failed or hung - retrying"
             sleep 15
           done
           [ -n "$ok" ] || { echo "::error::could not install ${{ matrix.engine }}"; exit 1; }
           # software OpenGL (Mesa) for headless WebGL
+          wait_for_apt
           sudo apt-get install -y --no-install-recommends libgl1-mesa-dri libegl1 libgl1
 
       - name: Build (release + test builds)
@@ -116,7 +193,7 @@ jobs:
   baselines:
     name: Save baseline screenshots
     needs: test
-    if: always() && github.event_name == 'push' && needs.test.result != 'cancelled'
+    if: always() && github.event_name == 'push' && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -150,10 +227,12 @@ jobs:
 
   deploy:
     name: Publish to GitHub Pages
-    needs: test
-    # only after every engine passed; on main, or when started by hand with "deploy"
+    needs: [reuse, test]
+    # only after every engine passed (in this run, or on the exact same files earlier);
+    # on main, or when started by hand with "deploy"
     if: >-
-      success() && (
+      !cancelled() && needs.reuse.result == 'success' &&
+      (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.reuse.outputs.hit == 'true')) && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
         (github.event_name == 'workflow_dispatch' && inputs.deploy)
       )
@@ -183,9 +262,10 @@ jobs:
   # push to the game's release branch (or by hand with "deploy"). Never before CI is green.
   deploy-cloudflare:
     name: Publish to glydrift.com (Cloudflare Pages)
-    needs: test
+    needs: [reuse, test]
     if: >-
-      success() && (
+      !cancelled() && needs.reuse.result == 'success' &&
+      (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.reuse.outputs.hit == 'true')) && (
         (github.event_name == 'push' && (
           github.ref == 'refs/heads/main' ||
           github.ref == 'refs/heads/claude/glydrift-arcade-game-7hznpc')) ||

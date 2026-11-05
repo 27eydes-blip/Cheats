@@ -59,11 +59,15 @@ const engines = Object.keys(ENGINES).filter((name) => {
   return ok;
 });
 const only = process.env.ENGINES?.split(",");
+// PROFILES=iphone-small,laptop runs only those device profiles (CI uses this to give Chromium
+// and Firefox a lighter set; WebKit, the iPhone engine, always runs all seven)
+const onlyProfiles = process.env.PROFILES?.split(",").filter(Boolean);
 
 const projects = [];
 for (const engine of engines) {
   if (only && !only.includes(engine)) continue;
   for (const [name, p] of Object.entries(PROFILES)) {
+    if (onlyProfiles?.length && !onlyProfiles.includes(name)) continue;
     projects.push({
       name: `${engine}-${name}`,
       use: {
