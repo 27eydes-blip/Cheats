@@ -65,8 +65,8 @@ export const FLASH = {
 export const SPAWN = {
   /** Biome-local metres at which each signature hazard unlocks (introduced one at a time). */
   unlock: {
-    // Neon Void: laser, axe, side lasers, the Neon Pulse, then the combinations
-    void: [60, 200, 340, 260, 140, 240, 210, 290],
+    // Neon Void: axe, side lasers, the Neon Pulse, then the combinations
+    void: [200, 340, 260, 240, 290],
     // Glitch Realm: blink blocks, gravity zones, then the combinations
     glitch: [0, 120, 120, 200],
     default: [0, 120, 230],
