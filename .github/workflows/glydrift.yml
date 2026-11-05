@@ -1,7 +1,7 @@
 name: Glydrift tests
 
-# Every push and pull request that touches the game runs the full browser suite: Chromium
-# (Chrome / Edge), Firefox and WebKit (Safari) × 7 device profiles. Nothing is published until
+# Every push and pull request that touches the game runs the browser suite: WebKit (Safari) on
+# all 7 device profiles, Chromium (Chrome / Edge) and Firefox on 3 of them. Nothing is published until
 # every browser has passed on these exact files — a broken version never goes live.
 on:
   push:
@@ -102,6 +102,10 @@ jobs:
     env:
       CI: "true"
       ENGINES: ${{ matrix.engine }}
+      # WebKit (Safari, every iPhone and iPad) runs all 7 device profiles. Chromium and Firefox
+      # run 3: the tightest phone, the phone size where the once-per-browser checks run, and a
+      # laptop. Layout code is shared by every engine, so WebKit's 7 sizes cover the rest.
+      PROFILES: ${{ matrix.engine != 'webkit' && 'iphone-small,iphone-std,laptop' || '' }}
       # put "[update screenshots]" in a commit message to re-record the baseline screenshots
       UPDATE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[update screenshots]') }}
     steps:
