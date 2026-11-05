@@ -32,6 +32,7 @@ function defaults() {
       maxBiome: 0,
       maxLasersRun: 0,
       maxPortalsRun: 0,
+      voidDeaths: 0, // MATTOE's challenge: runs that ended in the Neon Void
     },
     missions: [],
     achievements: {},

@@ -9,6 +9,7 @@ import { HEAD_ANCHORS } from "../pixel/common.js";
 import { greyAtlas } from "../pixel/grayHero.js";
 import { Sfx } from "../audio/sfx.js";
 import { AnimalBits } from "./animalFx.js";
+import { ToeBits } from "./mattoeFx.js";
 
 const ADD = Phaser.BlendModes.ADD;
 const NORMAL = Phaser.BlendModes.NORMAL;
@@ -75,6 +76,8 @@ export class CharacterRig {
     this.setCosmetics(opts.cosmetics === undefined ? Shop.loadout() : opts.cosmetics);
     // animal heroes: trails, lights, reactions and special deaths (see animalFx.js)
     this.an = def.animal ? new AnimalBits(this) : null;
+    // MATTOE: the always-on aura, footprints and the stubbed-toe death (see mattoeFx.js)
+    this.toe = this.px.mode === "toe" ? new ToeBits(this, depth) : null;
     // 손주원: the hover-thruster glow under the board
     if (this.px.mode === "surf") {
       this.roarT = 0;
@@ -113,6 +116,7 @@ export class CharacterRig {
       ...this.extras,
       ...(this.afterImages || []),
       ...(this.an?.objects || []),
+      ...(this.toe?.objects || []),
     ];
   }
 
@@ -232,6 +236,7 @@ export class CharacterRig {
           fx.burst(kind, x, y + oy, n, color, { angle: down });
         }
         this.an?.flap();
+        this.toe?.flap();
         break;
       case "yarms":
         // a whoosh puff under the stroke and sparkles off both hands
@@ -416,6 +421,13 @@ export class CharacterRig {
       if (this.sounds) Sfx.flex();
       return hints;
     }
+    if (this.toe && !this.dead) {
+      // STUBBED! (the sprite stays: it flattens, then bounces away; see ToeBits)
+      this.dead = true;
+      this.toe.die();
+      hints.shake = 0.024;
+      return hints;
+    }
     this.dead = true;
     const { x, y, def, fx } = this;
     // animals with a death move (belly slide, last lap, snapping chains) burst at its end
@@ -547,10 +559,12 @@ export class CharacterRig {
 
   /** Near-miss / new best / Second Chance reactions (animals + 손주원; YARMS uses flex()). */
   onNear() {
+    this.toe?.near();
     this.an?.near();
     this.surfNear();
   }
   onBest() {
+    this.toe?.best();
     this.an?.best();
     this.surfBest();
   }
@@ -816,6 +830,7 @@ export class CharacterRig {
 
     if (this.px.mode === "yarms") this.updateYarms(dt);
     if (this.px.mode === "surf") this.updateSurf(dt);
+    this.toe?.update(dt);
     if (this.an) this.an.update(dt, scroll);
     if (this.frozen) {
       // a death move is animating the sprite: just keep the trail fading
@@ -896,6 +911,7 @@ export class CharacterRig {
     else if (mode === "glitch") f = this.glitchT > 0 ? 2 : Math.floor(this.time * 3) % 2;
     else if (mode === "spin") f = Math.floor(this.time * 20) % 3;
     else if (mode === "animal") f = this.an ? this.an.frame() : 0;
+    else if (mode === "toe") f = this.toe ? this.toe.frame() : 0;
     else if (mode === "surf")
       f = this.roarT > 0 ? 3 : this.flapT < 0.24 ? 2 : Math.floor(this.time * 2.5) % 2;
     else if (mode === "yarms")
@@ -925,6 +941,7 @@ export class CharacterRig {
     const step = (v) =>
       v < 0.8 && big ? 0.75 : v < 0.9 ? 0.875 : v > 1.25 && big ? 1.25 : v > 1.1 ? 1.125 : 1;
     sp.setScale(m * step(this.sx), m * step(this.sy) * flip);
+    this.toe?.post(sp);
     this.placeCosmetics();
     this.an?.place(scroll);
     if (this.thruster) {
@@ -1037,6 +1054,7 @@ export class CharacterRig {
     if (style && this.drawCosmeticTrail(g, style, P)) return;
     if (!this.trailOverride && this.px.mode === "yarms") return this.drawYarmsTrail(g);
     if (!this.trailOverride && this.px.mode === "surf") return this.drawSurfTrail(g);
+    if (!this.trailOverride && this.toe) return this.toe.trail(g);
     if (!this.trailOverride && this.an?.trail(g)) return;
     const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail
     // squares laid at an even spacing along the path (not one per frame), so the trail has no
