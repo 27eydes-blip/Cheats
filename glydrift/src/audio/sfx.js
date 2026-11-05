@@ -644,6 +644,28 @@ export const Sfx = {
     tone({ type: "sine", f0: 400, f1: 1600, dur: 0.25, vol: 0.15 });
   },
   portal: () => tone({ type: "sine", f0: 200, f1: 1200, dur: 0.35, vol: 0.2 }),
+  /** the glydrift.com launch: a rift tears open (airy whoosh under a rising shimmer) */
+  portalOpen: () => {
+    noise({ dur: 0.55, vol: 0.24, f: 2200 });
+    tone({ type: "sine", f0: 140, f1: 620, dur: 0.5, vol: 0.14 });
+    tone({ type: "triangle", f0: 1400, f1: 2600, dur: 0.4, vol: 0.03, delay: 0.15 });
+  },
+  /** a bright sparkle chime (the domain finished typing) */
+  chime: () => {
+    [0, 7, 12, 19].forEach((s, i) =>
+      tone({ type: "sine", f0: 1318 * 2 ** (s / 12), dur: 0.22, vol: 0.07, delay: i * 0.045 }),
+    );
+  },
+  /** progress locked in: a short celebratory sting */
+  sting: () => {
+    [0, 4, 7, 12].forEach((s, i) => {
+      const f = 523 * 2 ** (s / 12);
+      tone({ type: "triangle", f0: f, dur: 0.24, vol: 0.15, delay: i * 0.07 });
+      tone({ type: "sawtooth", f0: f, dur: 0.16, vol: 0.04, delay: i * 0.07 });
+    });
+    tone({ type: "triangle", f0: 1046, dur: 0.6, vol: 0.14, delay: 0.3 });
+    noise({ dur: 0.5, vol: 0.12, f: 8000, delay: 0.3 });
+  },
   death: () => {
     noise({ dur: 0.7, vol: 0.6, f: 700 });
     tone({ type: "sawtooth", f0: 220, f1: 40, dur: 0.6, vol: 0.2 });

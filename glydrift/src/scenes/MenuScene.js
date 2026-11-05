@@ -4,6 +4,8 @@ import Phaser from "phaser";
 import { BIOMES, biomeStateAt, blendPalette, CLASSIC } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, FONT, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
+import { Analytics } from "../systems/analytics.js";
+import { Founding } from "../data/founding.js";
 import { HI } from "../gfx/textures.js";
 import { PORTRAIT_K } from "../pixel/common.js";
 import { CharacterRig } from "../player/CharacterRig.js";
@@ -56,6 +58,81 @@ function countdownText() {
 /** Most red "!" badges shown on the home screen at once. */
 const MAX_BANGS = 2;
 
+/** The glydrift.com launch pop-up comes up at most once per launch. */
+let moveShownThisLaunch = false;
+
+/** The launch rift: a jagged slash (k < 0.5) that widens into a glowing portal. */
+function drawRift(g, x, y, k, T, calm) {
+  g.clear();
+  if (k < 0.5) {
+    const len = 300 * (k / 0.5);
+    const steps = 14;
+    for (const [w, col, a] of [
+      [14, 0xb45cff, 0.35],
+      [7, 0x3ef4ff, 0.8],
+      [3, 0xffffff, 1],
+    ]) {
+      g.lineStyle(w, col, a).beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const yy = y - len / 2 + (len * i) / steps;
+        const xx = x + (i % 2 ? 10 : -10) * (i > 0 && i < steps ? 1 : 0);
+        if (i === 0) g.moveTo(xx, yy);
+        else g.lineTo(xx, yy);
+      }
+      g.strokePath();
+    }
+    return;
+  }
+  const u = (k - 0.5) / 0.5;
+  drawPortal(g, x, y, T, calm, 230 * u, 160);
+}
+
+/** A swirling neon portal: dark core, rings, and a few pixel motes orbiting it. */
+function drawPortal(g, x, y, T, calm, rx = 110, ry = 82) {
+  g.clear();
+  if (rx < 2) return;
+  const spin = calm ? T * 0.6 : T * 1.4;
+  g.fillStyle(0x12042a, 0.95).fillEllipse(x, y, rx * 2, ry * 2);
+  g.fillStyle(0x3a1070, 0.6).fillEllipse(x, y, rx * 1.4, ry * 1.4);
+  const rings = [
+    [1, 0x3ef4ff, 4],
+    [0.82, 0xb45cff, 3],
+    [0.62, 0xff4fd8, 2],
+  ];
+  for (const [f, col, w] of rings) {
+    const wob = calm ? 1 : 1 + Math.sin(T * 3 + f * 5) * 0.03;
+    g.lineStyle(w, col, 0.9).strokeEllipse(x, y, rx * 2 * f * wob, ry * 2 * f * wob);
+  }
+  for (let i = 0; i < 12; i++) {
+    const a = spin + (i / 12) * Math.PI * 2;
+    const r = 0.7 + 0.25 * Math.sin(i * 1.7);
+    g.fillStyle(i % 3 ? 0x3ef4ff : 0xffd23f, 0.9).fillRect(
+      Math.round(x + Math.cos(a) * rx * r) - 3,
+      Math.round(y + Math.sin(a) * ry * r) - 3,
+      6,
+      6,
+    );
+  }
+}
+
+/** Type a word into a text, one letter at a time; a neon flicker unless Reduce Flashing. */
+function typeDomain(scene, text, word, calm, onDone) {
+  let i = 0;
+  const step = () => {
+    i++;
+    text.setText(word.slice(0, i));
+    if (!calm) {
+      text.setAlpha(0.35);
+      scene.time.delayedCall(45, () => text.setAlpha(1));
+      if (Math.random() < 0.35) scene.time.delayedCall(95, () => text.setAlpha(0.6));
+      scene.time.delayedCall(140, () => text.setAlpha(1));
+    }
+    if (i < word.length) scene.time.delayedCall(75, step);
+    else onDone();
+  };
+  scene.time.delayedCall(120, step);
+}
+
 const shorten = (s, n) => (s && s.length > n ? `${s.slice(0, n - 1)}…` : s || "");
 
 export class MenuScene extends Phaser.Scene {
@@ -64,6 +141,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create() {
+    this.moveFly = null;
+    this.moveBusy = false;
     // an emailed link opened the game: a password reset continues, a confirmation says so
     const offAcct = Account.onChange(() => {
       const type = Account.linkType;
@@ -271,6 +350,7 @@ export class MenuScene extends Phaser.Scene {
         this.go("Characters");
       },
     }).setDepth(100);
+    this.heroesBtn = heroes;
     if (limitedHero) {
       const tag = this.add.container(W / 2 - 220 + 70, L.row - 42).setDepth(101);
       const tg = this.add.graphics();
@@ -785,6 +865,7 @@ export class MenuScene extends Phaser.Scene {
           r.setFillStyle(Phaser.Display.Color.HSVToRGB((r.ph * 0.2) % 1, 0.5, 1).color);
       }
     }
+    this.updateMoveFly(dt);
     // one arrival pop-up at a time: name, daily reward, recaps, then the new hero reveal
     if (this.seasonQueue?.length && !this.seasonBusy && !this.leaving && this.popupFree()) {
       this.queueT -= dt;
@@ -799,66 +880,340 @@ export class MenuScene extends Phaser.Scene {
   }
 
   /**
-   * One time, on the old GitHub Pages address only: Glydrift is moving to glydrift.com, and
-   * progress saved in this browser can't follow it, so guests are asked to make an account.
-   * Shown only once accounts are open on the server (otherwise it waits for a later launch).
+   * The move to glydrift.com, as a launch event. On the old address only: guests are invited
+   * to lock their progress into an account (browser-saved progress can't follow a new
+   * domain); signed-in players are told they're all set. Both get "Founding Drifter" (an
+   * exclusive trail + title). A guest who taps LATER sees it once more on a later launch;
+   * it never comes back after that, and never twice in one launch.
    */
   async maybeMoveNotice() {
-    const oldHost = typeof location !== "undefined" && /\.github\.io$/.test(location.hostname);
-    if (Save.data.moveNoticeSeen || !(oldHost || TEST.movenotice)) return;
-    if (!Account.available) return;
+    if (!Founding.live() || moveShownThisLaunch) return;
+    const st = Founding.state();
+    if (st.done || !Account.available) return;
     let ready = false;
+    let signedIn = false;
     try {
       Account.init();
       await Account.ready;
-      if (Account.signedIn) return; // their progress is already in their account
-      ready = await Account.backend.serverReady();
+      signedIn = Account.signedIn;
+      // a guest is only sent to sign-up once accounts are open on the server
+      ready = signedIn || (st.shown < 2 && (await Account.backend.serverReady()));
     } catch {
       ready = false;
     }
     if (!ready || this.leaving || !this.scene.isActive()) return;
-    Save.data.moveNoticeSeen = true;
+    moveShownThisLaunch = true;
+    st.shown++;
     Save.write();
+    return this.openMovePopup(signedIn);
+  }
+
+  openMovePopup(signedIn) {
+    const W = this.W;
+    const H = this.H;
+    const calm = reduceFlashing();
+    const st = Founding.state();
+    this.moveFx ||= new Effects(this, { lowGfx: !!Save.data.settings.lowGfx, depth: 360 });
+    const fx = this.moveFx;
+    const h = 960;
+    const top = -h / 2;
+    const c = this.add.container(0, 0).setDepth(300);
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x020107, 0.85).setInteractive();
+    c.add(dim);
+    this.modal = c;
+    c.setAlpha(0);
+    this.tweens.add({ targets: c, alpha: 1, duration: 160 });
+
+    // ---- 1. a rift tears open in the centre (a jagged slash that widens into a portal)
+    const rift = this.add.graphics().setDepth(301).setBlendMode(Phaser.BlendModes.ADD);
+    c.add(rift);
+    const tear = { k: 0 };
+    Sfx.portalOpen();
+    Haptics.light();
+    this.tweens.add({
+      targets: tear,
+      k: 1,
+      duration: 520,
+      ease: "Cubic.easeOut",
+      onUpdate: () => drawRift(rift, W / 2, H / 2, tear.k, this.time.now / 1000, calm),
+    });
+
+    // ---- 2. the panel flies out of it
+    const p = this.add.container(W / 2, H / 2).setDepth(302).setScale(0.05).setAngle(-10);
+    c.add(p);
+    const pw = W - 64;
+    const panel = this.add.graphics();
+    drawNeonRect(panel, -pw / 2, top, pw, h, 26, 0x3ef4ff, { fillAlpha: 0.97 });
+    p.add(panel);
+    // the portal in the header: the hero flies through it wearing the Founding trail
+    const portalY = top + 150;
+    const portal = this.add.graphics();
+    p.add(portal);
+    p.add(
+      plainText(this, 0, top + 262, "YOUR HERO · FOUNDING TRAIL", 15, "#9c90c8", {
+        weight: "800",
+      }),
+    );
+    const fit = (t, max) => (t.width > max ? t.setScale(max / t.width) : t);
+    p.add(
+      fit(neonText(this, 0, top + 318, "GLYDRIFT HAS A NEW HOME", 34, 0x3ef4ff, { blur: 14 }), pw - 70),
+    );
+    const domain = neonText(this, 0, top + 384, "glydrift.com", 50, 0xffd23f, { blur: 16 }).setText("");
+    p.add(domain);
+    p.add(
+      plainText(
+        this,
+        0,
+        top + 452,
+        signedIn
+          ? "You're all set! Your progress is coming with you."
+          : "Lock in your progress before the jump.",
+        23,
+        "#e8e4ff",
+        { wrap: pw - 90 },
+      ),
+    );
+
+    // ---- the reward, right in the pop-up
+    const ry = top + 520;
+    const card = this.add.graphics();
+    drawNeonRect(card, -pw / 2 + 34, ry, pw - 68, 214, 18, 0xffd23f, { fillAlpha: 0.9, width: 2 });
+    p.add(card);
+    p.add(neonText(this, 0, ry + 30, "FOUNDING DRIFTER REWARD", 22, 0xffd23f, { blur: 8 }));
+    const ix = -pw / 4 + 10;
+    p.add(this.add.image(ix, ry + 96, "cosm", "icon_trail_founder").setScale(2.3));
+    p.add(plainText(this, ix, ry + 150, "Exclusive trail", 17, "#bffcff"));
+    const chip = this.add.graphics();
+    drawNeonRect(chip, pw / 4 - 130, ry + 72, 240, 56, 28, 0xffd23f, { fillAlpha: 0.95, width: 2 });
+    p.add(chip);
+    p.add(plainText(this, pw / 4 - 10, ry + 100, "Founding Drifter", 21, "#ffd23f"));
+    p.add(plainText(this, pw / 4 - 10, ry + 152, "Exclusive title", 17, "#bffcff"));
+    p.add(plainText(this, 0, ry + 188, "Only during the move · yours forever", 16, "#9c90c8"));
+
+    // ---- buttons
+    let finished = false;
+    const close = () => {
+      if (this.moveFly) {
+        this.moveFly.rig.destroy();
+        this.moveFly = null;
+      }
+      this.closeModal();
+    };
+    const by = h / 2 - (signedIn ? 100 : 150);
+    const glow = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD);
+    drawNeonRect(glow, -246, by - 54, 492, 108, 30, 0x39ff88, { fillAlpha: 0.25, width: 6, glow: true });
+    p.add(glow);
     return new Promise((resolve) => {
-      const W = this.W;
-      const H = this.H;
-      const h = 560;
-      const c = this.modalBase(h, 0x3ef4ff);
-      const y0 = H / 2 - h / 2;
-      c.add(neonText(this, W / 2, y0 + 62, "WE'RE MOVING", 40, 0x3ef4ff, { blur: 14 }));
-      c.add(plainText(this, W / 2, y0 + 126, "glydrift.com", 34, "#ffd23f"));
-      c.add(
-        plainText(
-          this,
-          W / 2,
-          y0 + 238,
-          "Glydrift is moving to its new home. Progress saved in this browser can't move with it.\n\nCreate a free account now to keep your coins, heroes and best runs.",
-          21,
-          "#e8e4ff",
-          { wrap: W - 160, lineSpacing: 6 },
-        ),
-      );
-      const done = (then) => {
-        this.closeModal();
-        if (then) then();
-        resolve();
+      const done = () => {
+        if (!finished) {
+          finished = true;
+          resolve();
+        }
       };
-      const create = button(this, W / 2, y0 + h - 150, 460, 92, "CREATE ACCOUNT", {
+      const claim = () => {
+        Founding.grant();
+        st.done = true;
+        Save.write();
+        Account.pushNow?.().catch(() => {});
+        Analytics.log("move_reward", { signedIn: Account.signedIn });
+        return this.celebrateMove().then(done);
+      };
+      const main = button(this, 0, by, 460, 92, signedIn ? "LET'S GO" : "CREATE ACCOUNT", {
         color: 0x39ff88,
-        size: 30,
+        size: signedIn ? 36 : 30,
         fill: 0x0c2a1a,
-        onClick: () =>
-          done(() =>
-            openAccount({ view: "create" }).then(({ reload }) => reload && window.location.reload()),
-          ),
+        onClick: () => {
+          if (finished || this.moveBusy) return;
+          this.moveBusy = true;
+          Haptics.light();
+          fx.burst("confetti", W / 2, H / 2 + by, calm ? 12 : 30, 0xffffff);
+          if (!calm) fx.burst("star", W / 2, H / 2 + by, 14, 0x39ff88);
+          this.time.delayedCall(260, () => {
+            close();
+            this.moveBusy = false;
+            if (signedIn) {
+              claim();
+              return;
+            }
+            openAccount({ view: "create" }).then(({ reload }) => {
+              if (Account.signedIn) claim().then(() => reload && window.location.reload());
+              else {
+                // not finished (cancelled, or an email still to confirm): it comes back once
+                if (Account.user?.newEmail)
+                  toast(this, "CHECK YOUR EMAIL", 0xffd23f, {
+                    y: this.H * 0.3,
+                    sub: "Confirm it to lock in your progress and your reward",
+                  });
+                done();
+              }
+            });
+          });
+        },
       });
-      const later = button(this, W / 2, y0 + h - 58, 260, 60, "LATER", {
-        color: 0x8a80b0,
-        size: 20,
-        onClick: () => done(),
+      p.add(main);
+      if (!signedIn) {
+        const later = button(this, 0, h / 2 - 58, 180, 50, "LATER", {
+          color: 0x8a80b0,
+          size: 16,
+          onClick: () => {
+            if (finished) return;
+            Haptics.tap();
+            close();
+            done();
+          },
+        });
+        p.add(later);
+      }
+      // the main button glows and breathes (gently, and slower, with Reduce Flashing)
+      this.tweens.add({
+        targets: glow,
+        alpha: { from: 0.25, to: calm ? 0.55 : 1 },
+        yoyo: true,
+        repeat: -1,
+        duration: calm ? 1400 : 700,
+        ease: "Sine.easeInOut",
       });
-      c.add([create, later]);
-      popIn(this, create, 200);
+      if (!calm)
+        this.tweens.add({
+          targets: main,
+          scale: 1.05,
+          yoyo: true,
+          repeat: -1,
+          duration: 700,
+          ease: "Sine.easeInOut",
+        });
+
+      // ---- the panel flies out of the rift, then lands with a burst
+      this.tweens.add({
+        targets: p,
+        scale: 1,
+        angle: 0,
+        duration: 440,
+        delay: 300,
+        ease: "Back.easeOut",
+        onComplete: () => {
+          this.tweens.add({ targets: rift, alpha: 0, duration: 300 });
+          Haptics.tap();
+          const n = calm ? 0.4 : 1;
+          fx.burst("confetti", W / 2 - pw / 2 + 60, H / 2 + top + 40, 26 * n, 0xffffff);
+          fx.burst("confetti", W / 2 + pw / 2 - 60, H / 2 + top + 40, 26 * n, 0xffffff);
+          if (!calm) fx.burst("star", W / 2, H / 2 + top + 150, 18, 0xffd23f);
+          // the hero starts flying through the header portal
+          const rig = new CharacterRig(this, this.def, fx, {
+            x: W / 2,
+            y: H / 2 + portalY,
+            lowGfx: !!Save.data.settings.lowGfx,
+            depth: 340,
+            scale: 0.9,
+            cosmetics: { ...Shop.loadout(), trail: "trail_founder" },
+          });
+          this.moveFly = { rig, t: 0, base: rig.displayScale, cx: W / 2, cy: H / 2 + portalY, portal, py: portalY, calm };
+          // "glydrift.com" types in, letter by letter, with a neon flicker
+          typeDomain(this, domain, "glydrift.com", calm, () => {
+            Sfx.chime();
+            this.tweens.add({
+              targets: domain,
+              scale: calm ? 1.02 : 1.06,
+              yoyo: true,
+              repeat: -1,
+              duration: calm ? 1600 : 900,
+              ease: "Sine.easeInOut",
+            });
+          });
+        },
+      });
+    });
+  }
+
+  /** Every frame while the move pop-up is up: the header portal swirls, the hero loops through. */
+  updateMoveFly(dt) {
+    const m = this.moveFly;
+    if (!m) return;
+    m.t += dt;
+    const T = m.t;
+    drawPortal(m.portal, 0, m.py, T, m.calm);
+    // a figure-eight through the portal: tiny at the portal, full size at the far ends
+    const ph = (T / 3.2) % 1;
+    const a = ph * Math.PI * 2;
+    const rig = m.rig;
+    const px = rig.x;
+    const py = rig.y;
+    rig.x = m.cx + Math.sin(a) * 240;
+    rig.y = m.cy + Math.sin(a * 2) * 34;
+    rig.displayScale = m.base * (0.3 + 0.7 * Math.abs(Math.sin(a)));
+    rig.angle = Math.atan2(rig.y - py, rig.x - px) * 0.35;
+    rig.facing = rig.x >= px ? 1 : -1;
+    if (Math.floor((T - dt) / 0.55) !== Math.floor(T / 0.55)) rig.flap?.();
+    rig.update(dt, 0);
+  }
+
+  /** "PROGRESS LOCKED IN!": the reward flies into the collection (tap or wait to close). */
+  celebrateMove() {
+    const W = this.W;
+    const H = this.H;
+    const calm = reduceFlashing();
+    const fx = this.moveFx;
+    Sfx.sting();
+    Haptics.strong();
+    return new Promise((resolve) => {
+      const c = this.add.container(0, 0).setDepth(380);
+      const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x020107, 0.9).setInteractive();
+      c.add(dim);
+      const head = neonText(this, W / 2, H * 0.27, "PROGRESS LOCKED IN!", 46, 0x39ff88, { blur: 18 });
+      if (head.width > W - 60) head.setScale((W - 60) / head.width);
+      c.add(head);
+      c.add(plainText(this, W / 2, H * 0.27 + 64, "Welcome, Founding Drifter", 26, "#ffd23f"));
+      const icon = this.add.image(W / 2 - 120, H * 0.46, "cosm", "icon_trail_founder").setScale(0.1);
+      const chipG = this.add.graphics();
+      drawNeonRect(chipG, -120, -32, 240, 64, 32, 0xffd23f, { fillAlpha: 0.95, width: 2 });
+      const chip = this.add.container(W / 2 + 110, H * 0.46, [
+        chipG,
+        plainText(this, 0, 0, "Founding Drifter", 23, "#ffd23f"),
+      ]).setScale(0.1);
+      c.add([icon, chip]);
+      const note = plainText(this, W / 2, H * 0.6, "Added to your collection", 22, "#bffcff").setAlpha(0);
+      c.add(note);
+      c.setAlpha(0);
+      this.tweens.add({ targets: c, alpha: 1, duration: 200 });
+      this.tweens.add({ targets: icon, scale: 4.2, duration: 420, delay: 150, ease: "Back.easeOut" });
+      this.tweens.add({ targets: chip, scale: 1, duration: 420, delay: 250, ease: "Back.easeOut" });
+      const n = calm ? 0.35 : 1;
+      this.time.delayedCall(200, () => {
+        fx.burst("confetti", W * 0.2, H * 0.2, 40 * n, 0xffffff);
+        fx.burst("confetti", W * 0.8, H * 0.2, 40 * n, 0xffffff);
+        if (!calm) fx.burst("star", W / 2, H * 0.46, 24, 0xffd23f);
+      });
+      // then both fly into the collection (the HEROES button)
+      const tx = this.heroesBtn?.x ?? W / 2 - 220;
+      const ty = this.heroesBtn?.y ?? H * 0.75;
+      this.time.delayedCall(1500, () => {
+        for (const o of [icon, chip])
+          this.tweens.add({ targets: o, x: tx, y: ty, scale: 0.3, alpha: 0.2, duration: 520, ease: "Cubic.easeIn" });
+        this.tweens.add({ targets: note, alpha: 1, duration: 300, delay: 300 });
+        this.time.delayedCall(520, () => {
+          Sfx.reward();
+          Haptics.light();
+          if (!calm) fx.burst("star", tx, ty, 14, 0xffd23f);
+        });
+      });
+      let closed = false;
+      const end = () => {
+        if (closed) return;
+        closed = true;
+        this.tweens.add({
+          targets: c,
+          alpha: 0,
+          duration: 220,
+          onComplete: () => {
+            killTweensDeep(this, c);
+            c.destroy();
+            resolve();
+          },
+        });
+      };
+      dim.once("pointerup", () => this.time.now - startedAt > 900 && end());
+      const startedAt = this.time.now;
+      this.time.delayedCall(3200, end);
     });
   }
 
