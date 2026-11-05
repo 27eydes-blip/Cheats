@@ -67,8 +67,8 @@ export const SPAWN = {
   unlock: {
     // Neon Void: laser, axe, side lasers, the Neon Pulse, then the combinations
     void: [60, 200, 340, 260, 140, 240, 210, 290],
-    // Glitch Realm: blink blocks, gravity zones, the Corrupt Column, then the combinations
-    glitch: [0, 120, 160, 120, 200, 240, 260],
+    // Glitch Realm: blink blocks, gravity zones, then the combinations
+    glitch: [0, 120, 120, 200],
     default: [0, 120, 230],
     // Frozen Nebula: its three hazards, the Frost Comet, then the combination patterns
     // (a combination unlocks soon after the hazards it is made of)
