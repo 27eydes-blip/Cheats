@@ -1,5 +1,5 @@
 // Background silhouettes for the Peaceful Valley, the Hurricane, the Frozen Nebula and the
-// Solar Storm. Every layer tiles
+// Solar Storm and the Neon Void. Every layer tiles
 // horizontally (all shapes use periods that divide the width) and is original pixel art.
 import { PixelCanvas, seeded } from "./px.js";
 
@@ -26,6 +26,12 @@ export const EXTRA_KINDS = [
   "suntemples",
   "scorched",
   "lavadunes",
+  // Neon Void
+  "neonskyline",
+  "monoliths",
+  "circuitruins",
+  "neonwires",
+  "datarubble",
 ];
 
 const TAU = Math.PI * 2;
@@ -56,6 +62,8 @@ export function silhouetteExtra(w, h, seed, { base, rim, detail, kind }) {
     return frozenKind(pc, w, h, rnd, { base, rim, detail, kind });
   if (["sunrise", "mesas", "suntemples", "scorched", "lavadunes"].includes(kind))
     return solarKind(pc, w, h, rnd, { base, rim, detail, kind });
+  if (["neonskyline", "monoliths", "circuitruins", "neonwires", "datarubble"].includes(kind))
+    return voidKind(pc, w, h, rnd, { base, rim, detail, kind });
   if (kind === "hills") {
     ground(
       pc,
@@ -423,6 +431,75 @@ function solarKind(pc, w, h, rnd, { base, rim, detail, kind }) {
         x += rnd() < 0.5 ? 1 : 0;
         y += 1;
       }
+    }
+  }
+  return pc;
+}
+
+/** Neon Void layers: a far neon skyline, floating monoliths, circuit ruins, wires, rubble. */
+function voidKind(pc, w, h, rnd, { base, rim, detail, kind }) {
+  if (kind === "neonskyline") {
+    // a far city of thin towers with rows of lit windows and a few antenna lights
+    for (let x = 0; x < w; x++) pc.vline(x, Math.floor(h * 0.9), h - 1, base);
+    let x = 0;
+    while (x < w) {
+      const tw = 4 + Math.floor(rnd() * 7);
+      const top = Math.floor(h * (0.2 + rnd() * 0.55));
+      pc.rect(x, top, tw, h - top, base).hline(x, x + tw - 1, top, rim);
+      for (let y = top + 3; y < h - 2; y += 3)
+        for (let i = 1; i < tw - 1; i += 2) if (rnd() < 0.35) pc.set(x + i, y, detail);
+      if (rnd() < 0.4) pc.vline(x + Math.floor(tw / 2), top - 4, top - 1, rim).set(x + Math.floor(tw / 2), top - 5, detail);
+      x += tw + 1 + Math.floor(rnd() * 3);
+    }
+  } else if (kind === "monoliths") {
+    // tilted slabs hovering over a dark plain, each with a lit edge and a faint shadow below
+    ground(pc, (x) => h * 0.88 + wave(x, w, [[2, 1.5, 0.2]]), base, rim);
+    for (let i = 0; i < 5; i++) {
+      const cx = Math.floor((i + 0.5) * (w / 5) + (rnd() - 0.5) * 10);
+      const mh = 14 + Math.floor(rnd() * 16);
+      const mw = 5 + Math.floor(rnd() * 4);
+      const top = Math.floor(h * 0.15 + rnd() * h * 0.3);
+      const lean = rnd() < 0.5 ? -1 : 1;
+      for (let y = 0; y < mh; y++) {
+        const off = Math.round((y / mh) * 2 * lean);
+        pc.hline(cx + off, cx + off + mw - 1, top + y, base);
+        pc.set(cx + off, top + y, rim);
+      }
+      pc.hline(cx, cx + mw - 1, top, detail);
+      pc.hline(cx - 1, cx + mw, Math.floor(h * 0.88) - 1, rim); // shadow on the plain
+    }
+  } else if (kind === "circuitruins") {
+    // broken columns and arches with neon circuit strips running up them
+    ground(pc, (x) => h * 0.7 + wave(x, w, [[3, 2.5, 0.5], [7, 1, 1.3]]), base, rim);
+    for (let i = 0; i < 6; i++) {
+      const cx = Math.floor((i + 0.4 + rnd() * 0.2) * (w / 6));
+      const g = topOf(pc, cx);
+      const ch = 10 + Math.floor(rnd() * 22);
+      pc.rect(cx - 2, g - ch, 5, ch, base).vline(cx - 2, g - ch, g, rim);
+      // the strip: a lit line with a node every few pixels
+      for (let y = g - ch + 2; y < g; y++) if (y % 4 !== 0) pc.set(cx, y, detail);
+      if (rnd() < 0.5) pc.hline(cx - 4, cx + 4, g - ch, rim); // capital
+      else pc.set(cx + 2, g - ch, null).set(cx + 1, g - ch, null); // broken top
+    }
+  } else if (kind === "neonwires") {
+    // sagging cables from the top with small lamps on them
+    for (let x = 0; x < w; x++) pc.vline(x, 0, 1, base);
+    for (let c = 0; c < 3; c++) {
+      const sag = 6 + c * 4;
+      const ph = c * 1.7;
+      for (let x = 0; x < w; x++) {
+        const y = 2 + Math.round(Math.abs(Math.sin((x / w) * Math.PI * (2 + c) + ph)) * sag);
+        pc.set(x, y, c === 1 ? rim : base);
+        if (x % (17 + c * 6) === 8) pc.set(x, y + 1, detail).set(x, y + 2, detail);
+      }
+    }
+  } else if (kind === "datarubble") {
+    // rubble along the floor with blinking data glyphs (static here; lit pixels)
+    ground(pc, (x) => h * 0.5 + Math.abs(wave(x, w, [[5, 3, 0.4], [11, 2, 1.1], [19, 1, 0.2]])), base, rim);
+    for (let i = 0; i < 30; i++) {
+      const x = Math.floor(rnd() * w);
+      const y = topOf(pc, x) + 2 + Math.floor(rnd() * 8);
+      if (pc.get(x, y) !== null) pc.set(x, y, detail);
     }
   }
   return pc;

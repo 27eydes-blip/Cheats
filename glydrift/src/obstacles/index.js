@@ -5,7 +5,7 @@ import { FrostComet, IceSlider, Icicle, ZapOrbs } from "./biomes/frozen.js";
 import { BlinkBlock, BrokenLaser, GravityZone } from "./biomes/glitch.js";
 import { Debris, StormBolt, Twister } from "./biomes/hurricane.js";
 import { BloomGate, PuffDrift, ThornVine } from "./biomes/valley.js";
-import { Blade, Laser } from "./biomes/void.js";
+import { Blade, Laser, NeonPulse } from "./biomes/void.js";
 import { ClockGear, Pendulum, RewindBlade, TimeZone } from "./biomes/chrono.js";
 import { Spire, SweepBar, VoidOrb } from "./biomes/mirror.js";
 import { GlassWall, MirrorLaser, RotPrism } from "./biomes/prism.js";
@@ -20,6 +20,7 @@ export const TYPES = {
   // Neon Void
   blade: Blade,
   laser: Laser,
+  pulse: NeonPulse,
   // Solar Storm
   geyser: Geyser,
   meteor: Meteor,

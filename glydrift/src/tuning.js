@@ -65,7 +65,8 @@ export const FLASH = {
 export const SPAWN = {
   /** Biome-local metres at which each signature hazard unlocks (introduced one at a time). */
   unlock: {
-    void: [60, 200, 340],
+    // Neon Void: laser, axe, side lasers, the Neon Pulse, then the combinations
+    void: [60, 200, 340, 260, 140, 240, 210, 290],
     default: [0, 120, 230],
     // Frozen Nebula: its three hazards, the Frost Comet, then the combination patterns
     // (a combination unlocks soon after the hazards it is made of)

@@ -11,7 +11,7 @@ import { TYPES } from "./index.js";
 
 /** Signature hazards per biome, in the order they are introduced (one at a time). */
 const SIG = {
-  void: ["laser", "blade", "hlaser"],
+  void: ["laser", "blade", "hlaser", "pulse", "slalom", "bladeduo", "laserblade", "pulsepair"],
   solar: ["geyser", "meteor", "firebar", "flare", "eruption", "shower", "firepair", "geyserbar"],
   frozen: ["icicle", "slider", "zap", "comet", "icecurtain", "sliderpair", "zapstairs", "gauntlet"],
   glitch: ["blink", "zone"], // the broken-laser wall ("blaser") was taken out
@@ -25,6 +25,10 @@ const SIG = {
 };
 /** Combination patterns: built from a realm's own hazards, so they need no solo introduction. */
 const COMBOS = new Set([
+  "slalom",
+  "bladeduo",
+  "laserblade",
+  "pulsepair",
   "eruption",
   "shower",
   "firepair",
@@ -36,6 +40,11 @@ const COMBOS = new Set([
 ]);
 /** Combination patterns are a little rarer than the realm's single hazards. */
 const SIG_WEIGHT = {
+  pulse: 1.8,
+  slalom: 2,
+  bladeduo: 1.8,
+  laserblade: 2.2,
+  pulsepair: 1.6,
   flare: 1.8,
   comet: 1.8,
   eruption: 2,
@@ -345,6 +354,66 @@ export class ObstacleManager {
           });
         }
         width = span + 48;
+        break;
+      }
+      case "pulse": {
+        // Neon Pulse: its full reach is drawn while it charges, then one ring goes out
+        const R = r.range(150, 210);
+        const y = r.range(safeTop + 40, safeBot - 40);
+        const o = this.obtain("pulse");
+        o.spawn(x + R, { y, R, lead: r.range(0.35, 0.55) });
+        this.coinLine(x + R - 60, x + R + 60, y < mid ? y + R + 90 : y - R - 90, 3);
+        width = R * 2;
+        break;
+      }
+      case "slalom": {
+        // two lasers with their gaps high then low, firing together: weave through
+        const gap = Phaser.Math.Linear(300, 250, d);
+        const hi = r.chance(0.5);
+        const ph = r.next();
+        for (let i = 0; i < 2; i++) {
+          const gc = (i === 0) === hi ? safeTop + gap / 2 + 40 : safeBot - gap / 2 - 40;
+          const o = this.obtain("laser");
+          o.spawn(x + 22 + i * 280, { orient: "v", gc, gap, on: 1.3, off: 0.9, phase: ph });
+          this.coinLine(x + i * 280 - 20, x + i * 280 + 60, gc, 2);
+        }
+        width = 44 + 280;
+        break;
+      }
+      case "bladeduo": {
+        // one axe from the ceiling, one from the floor, swinging opposite ways
+        const L = r.range(H * 0.3, H * 0.4);
+        const amp = 0.6;
+        const ph = r.range(0, 6.28);
+        const halfW = Math.sin(amp) * L + 50;
+        for (let i = 0; i < 2; i++) {
+          const o = this.obtain("blade");
+          o.spawn(x + halfW + i * (halfW * 2 + 60), { top: i === 0, L, amp, freq: 1.8, phase: ph + i * Math.PI });
+        }
+        width = halfW * 4 + 60;
+        break;
+      }
+      case "laserblade": {
+        // a laser gate, then an axe swinging behind it
+        const gap = Phaser.Math.Linear(300, 250, d);
+        const gc = r.range(safeTop + gap / 2, safeBot - gap / 2);
+        const lz = this.obtain("laser");
+        lz.spawn(x + 22, { orient: "v", gc, gap, on: 1.3, off: 0.9, phase: r.next() });
+        const L = r.range(H * 0.32, H * 0.42);
+        const halfW = Math.sin(0.6) * L + 50;
+        const bl = this.obtain("blade");
+        bl.spawn(x + 44 + 200 + halfW, { top: gc > mid, L, amp: 0.6, freq: 1.9, phase: r.range(0, 6.28) });
+        width = 44 + 200 + halfW * 2;
+        break;
+      }
+      case "pulsepair": {
+        // two pulses, one high and one low, firing a beat apart
+        const R = 150;
+        for (let i = 0; i < 2; i++) {
+          const o = this.obtain("pulse");
+          o.spawn(x + R + i * (R * 2 + 40), { y: i ? safeBot - 60 : safeTop + 60, R, lead: 0.4 + i * 0.25 });
+        }
+        width = R * 4 + 40;
         break;
       }
       // ------------------------------------------------------------ solar storm
