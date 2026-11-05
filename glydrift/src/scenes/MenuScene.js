@@ -335,6 +335,7 @@ export class MenuScene extends Phaser.Scene {
         const ls = Progression.loginStatus();
         if (ls.canClaim) this.openLogin(ls);
       },
+      () => this.maybeMoveNotice(),
     );
     this.queueT = 0.45;
 
@@ -795,6 +796,70 @@ export class MenuScene extends Phaser.Scene {
         });
       }
     }
+  }
+
+  /**
+   * One time, on the old GitHub Pages address only: Glydrift is moving to glydrift.com, and
+   * progress saved in this browser can't follow it, so guests are asked to make an account.
+   * Shown only once accounts are open on the server (otherwise it waits for a later launch).
+   */
+  async maybeMoveNotice() {
+    const oldHost = typeof location !== "undefined" && /\.github\.io$/.test(location.hostname);
+    if (Save.data.moveNoticeSeen || !(oldHost || TEST.movenotice)) return;
+    if (!Account.available) return;
+    let ready = false;
+    try {
+      Account.init();
+      await Account.ready;
+      if (Account.signedIn) return; // their progress is already in their account
+      ready = await Account.backend.serverReady();
+    } catch {
+      ready = false;
+    }
+    if (!ready || this.leaving || !this.scene.isActive()) return;
+    Save.data.moveNoticeSeen = true;
+    Save.write();
+    return new Promise((resolve) => {
+      const W = this.W;
+      const H = this.H;
+      const h = 560;
+      const c = this.modalBase(h, 0x3ef4ff);
+      const y0 = H / 2 - h / 2;
+      c.add(neonText(this, W / 2, y0 + 62, "WE'RE MOVING", 40, 0x3ef4ff, { blur: 14 }));
+      c.add(plainText(this, W / 2, y0 + 126, "glydrift.com", 34, "#ffd23f"));
+      c.add(
+        plainText(
+          this,
+          W / 2,
+          y0 + 238,
+          "Glydrift is moving to its new home. Progress saved in this browser can't move with it.\n\nCreate a free account now to keep your coins, heroes and best runs.",
+          21,
+          "#e8e4ff",
+          { wrap: W - 160, lineSpacing: 6 },
+        ),
+      );
+      const done = (then) => {
+        this.closeModal();
+        if (then) then();
+        resolve();
+      };
+      const create = button(this, W / 2, y0 + h - 150, 460, 92, "CREATE ACCOUNT", {
+        color: 0x39ff88,
+        size: 30,
+        fill: 0x0c2a1a,
+        onClick: () =>
+          done(() =>
+            openAccount({ view: "create" }).then(({ reload }) => reload && window.location.reload()),
+          ),
+      });
+      const later = button(this, W / 2, y0 + h - 58, 260, 60, "LATER", {
+        color: 0x8a80b0,
+        size: 20,
+        onClick: () => done(),
+      });
+      c.add([create, later]);
+      popIn(this, create, 200);
+    });
   }
 
   /** Nothing is on screen that another pop-up would land on top of. */

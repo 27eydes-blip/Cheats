@@ -1736,6 +1736,43 @@ test("scenery: Slammer + Eye Beam always leaves a lane (forced, real collisions)
   expect(log.errors).toEqual([]);
 });
 
+test("moving to glydrift.com: guests see a one-time notice to create an account", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(180_000);
+  const modalText = () =>
+    page.evaluate(() => {
+      const m = window.__glydrift.scene.getScene("Menu");
+      const texts = (c) =>
+        c.list.flatMap((o) => (o.type === "Text" ? [o.text] : o.list ? texts(o) : []));
+      return m.modal ? texts(m.modal).join(" | ") : "";
+    });
+  // 1. accounts not open on the server yet: no notice (it would lead nowhere), and it waits
+  const log = await openGame(page, { flags: ["mockcloud", "movenotice"] });
+  await page.evaluate(() => localStorage.setItem("glydrift.mockserver.notready", "1"));
+  await page.reload();
+  await run(page, 2500);
+  expect(await modalText()).not.toContain("WE'RE MOVING");
+  expect((await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")))).moveNoticeSeen).toBe(false);
+  // 2. accounts open: a guest sees it once, and CREATE ACCOUNT opens the account screen
+  await page.evaluate(() => localStorage.removeItem("glydrift.mockserver.notready"));
+  await page.reload();
+  await run(page, 2500);
+  const text = await modalText();
+  expect(text).toContain("WE'RE MOVING");
+  expect(text).toContain("glydrift.com");
+  await snap(page, testInfo, "17-move-notice");
+  await tap(page, "CREATE ACCOUNT", 600);
+  await expect(page.locator("#account-modal.open")).toBeVisible();
+  await expect(page.locator("#account-modal input[name=email]")).toBeVisible();
+  // 3. never again on this device
+  await page.reload();
+  await run(page, 2500);
+  expect(await modalText()).not.toContain("WE'RE MOVING");
+  expect(log.errors).toEqual([]);
+});
+
 test("accounts wait for the server to be set up", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page, { flags: ["mockcloud"] });
