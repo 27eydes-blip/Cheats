@@ -932,8 +932,9 @@ test("accounts: create, log out, sign in on a new device, delete", async ({ page
   expect(server.users["pilot@example.com"].save.unlocked.frost).toBe(true);
   expect(server.users["pilot@example.com"].save.settings).toBeUndefined(); // device-only
   // 2. log out: the account keeps everything, this device starts fresh
+  let reloaded = page.waitForEvent("load"); // the old page is already loaded: wait for the new one
   await page.click("#account-modal [data-act=logout]");
-  await page.waitForLoadState("load");
+  await reloaded;
   await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
   expect((await saveNow(page)).coins).toBe(0);
   // 3. sign in (as on a new device): everything comes back
@@ -945,8 +946,9 @@ test("accounts: create, log out, sign in on a new device, delete", async ({ page
   await page.click("#account-modal button[type=submit]");
   await expect(page.locator("#account-modal .err")).toHaveText("Wrong email or password.");
   await page.fill("#account-modal input[name=password]", "hunter2hunter2");
+  reloaded = page.waitForEvent("load");
   await page.click("#account-modal button[type=submit]");
-  await page.waitForLoadState("load");
+  await reloaded;
   await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
   let s = await saveNow(page);
   expect(s.coins).toBe(4321);
@@ -958,8 +960,9 @@ test("accounts: create, log out, sign in on a new device, delete", async ({ page
   await page.click("#account-modal button[type=submit]");
   await expect(page.locator("#account-modal .err")).toHaveText("Type DELETE to confirm.");
   await page.fill("#account-modal input[name=confirm]", "DELETE");
+  reloaded = page.waitForEvent("load");
   await page.click("#account-modal button[type=submit]");
-  await page.waitForLoadState("load");
+  await reloaded;
   await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
   server = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.mockserver")));
   expect(server.users["pilot@example.com"]).toBeUndefined();
@@ -1406,8 +1409,9 @@ test("after logging out: one pop-up at a time, and no free rewards twice", async
   await page.fill("#account-modal input[name=password]", "hunter2hunter2");
   await page.click("#account-modal button[type=submit]");
   await expect(page.locator("#account-modal h2")).toHaveText("ACCOUNT");
+  const reloaded = page.waitForEvent("load"); // the old page is already loaded: wait for the new one
   await page.click("#account-modal [data-act=logout]");
-  await page.waitForLoadState("load");
+  await reloaded;
   await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
   // sample the screen for 8 s: never more than one arrival pop-up at once
   const seen = [];
