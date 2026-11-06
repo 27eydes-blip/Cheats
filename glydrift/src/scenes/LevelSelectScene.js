@@ -110,20 +110,20 @@ export class LevelSelectScene extends Phaser.Scene {
     this.input.on("pointerdown", (p) => {
       if (this.modal) return;
       this.drag = {
-        y0: p.y,
+        y0: p.worldY,
         s0: this.scrollY,
         moved: 0,
         t: this.time.now,
-        last: p.y,
+        last: p.worldY,
       };
       this.vel = 0;
     });
     this.input.on("pointermove", (p) => {
       if (!this.drag || !p.isDown) return;
-      const dy = p.y - this.drag.y0;
+      const dy = p.worldY - this.drag.y0;
       this.drag.moved = Math.max(this.drag.moved, Math.abs(dy));
-      this.vel = (p.y - this.drag.last) * 60;
-      this.drag.last = p.y;
+      this.vel = (p.worldY - this.drag.last) * 60;
+      this.drag.last = p.worldY;
       this.scrollY = Phaser.Math.Clamp(this.drag.s0 + dy, this.minY - 60, 60);
     });
     this.input.on("pointerup", (p) => {
@@ -131,9 +131,9 @@ export class LevelSelectScene extends Phaser.Scene {
       this.drag = null;
       if (!d || this.modal) return;
       if (d.moved < 12) {
-        // a tap: which node?
-        const my = p.y - this.scrollY;
-        const hit = this.nodes.find((nd) => Math.hypot(nd.x - p.x, nd.y - my) < 64);
+        // a tap: which node? (world coordinates: the camera is zoomed to fit the screen)
+        const my = p.worldY - this.scrollY;
+        const hit = this.nodes.find((nd) => Math.hypot(nd.x - p.worldX, nd.y - my) < 64);
         if (hit) this.openLevel(hit.n);
       }
     });
@@ -335,7 +335,7 @@ export class LevelSelectScene extends Phaser.Scene {
     });
     c.add([play, prac, close]);
     dim.on("pointerup", (p) => {
-      if (p.y < py || p.y > py + ph) this.closeModal();
+      if (p.worldY < py || p.worldY > py + ph) this.closeModal();
     });
     c.setAlpha(0);
     this.tweens.add({ targets: c, alpha: 1, duration: 160 });

@@ -3027,20 +3027,34 @@ test("levels: LEVELS replaces the Daily Challenge; the map, locks, stars and the
   });
   expect(map).toEqual({ star: "0/150 ★", nodes: 50 });
   await snap(page, testInfo, "levels-01-map");
-  // level 1 is open, level 2 locked: tapping it explains why
-  const card = await page.evaluate(() => {
+  // level 1 is open, level 2 locked: tapping it explains why. Press the circles like a
+  // player (a real tap through the zoomed camera), not by calling openLevel()
+  const nodeAt = (n) =>
+    page.evaluate((n) => {
+      const g = window.__glydrift;
+      const ls = window.__glyLevelSelect;
+      const nd = ls.nodes[n - 1];
+      const cam = ls.cameras.main;
+      const sx = (nd.x - cam.worldView.x) * cam.zoom + cam.x;
+      const sy = (nd.y + ls.map.y - cam.worldView.y) * cam.zoom + cam.y;
+      const r = g.canvas.getBoundingClientRect();
+      return { x: r.left + (sx * r.width) / g.canvas.width, y: r.top + (sy * r.height) / g.canvas.height };
+    }, n);
+  await press(page, await nodeAt(2));
+  await run(page, 300);
+  const locked = await page.evaluate(() => !window.__glyLevelSelect.modal);
+  await press(page, await nodeAt(1));
+  await run(page, 300);
+  const card = await page.evaluate((locked) => {
     const ls = window.__glyLevelSelect;
-    ls.openLevel(2);
-    const locked = !ls.modal;
-    ls.openLevel(1);
     const texts = [];
     const walk = (o) => {
       if (o.type === "Text") texts.push(o.text);
       if (o.list) o.list.forEach(walk);
     };
-    walk(ls.modal);
+    if (ls.modal) walk(ls.modal);
     return { locked, texts };
-  });
+  }, locked);
   expect(card.locked).toBe(true);
   expect(card.texts).toEqual(
     expect.arrayContaining(["FIRST FLIGHT", "PLAY", "PRACTICE"]),
