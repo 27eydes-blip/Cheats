@@ -7,7 +7,18 @@ import { Music } from "../audio/music.js";
 import { dailyNumber } from "../data/rng.js";
 import { Sfx } from "../audio/sfx.js";
 import { POP_HOLD, PopQueue } from "../ui/popQueue.js";
-import { button, drawNeonRect, hex, neonText, plainText, RollingCounter } from "../ui/ui.js";
+import {
+  button,
+  drawNeonRect,
+  hex,
+  neonText,
+  plainText,
+  RollingCounter,
+  slider,
+} from "../ui/ui.js";
+import { Save } from "../data/save.js";
+import { reduceFlashing } from "../effects/ScreenFlash.js";
+import { levelNameLine } from "../ui/levelName.js";
 
 /** Realm titles: drawn this much smaller than full size, centred this far below the HUD top. */
 const REALM_TITLE_SCALE = 0.68;
@@ -531,6 +542,7 @@ export class HudScene extends Phaser.Scene {
   }
 
   onDeath() {
+    if (this.gameScene?.mode === "level") return; // levels respawn: keep the pause button
     this.tweens.add({
       targets: [this.pauseBtn],
       alpha: 0,
@@ -540,47 +552,143 @@ export class HudScene extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------ pause
+  /** Can the run be paused right now? Levels can also pause before the first tap. */
+  canPause() {
+    const gs = this.gameScene;
+    if (!gs) return false;
+    if (gs.state === "playing") return true;
+    return gs.mode === "level" && gs.state === "ready";
+  }
+
   pause() {
     const gs = this.gameScene;
-    if (this.pauseLayer || gs.state !== "playing") return;
+    if (this.pauseLayer || !this.canPause()) return;
     this.scene.pause("Game");
     Music.muffle(true);
     const W = this.W;
     const H = this.H;
     const c = this.add.container(0, 0).setDepth(100);
-    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x05010d, 0.75).setInteractive();
-    const title = neonText(this, W / 2, H * 0.36, "PAUSED", 64, 0x3ef4ff);
-    const resume = button(this, W / 2, H * 0.5, 360, 96, "RESUME", {
-      color: 0x39ff88,
-      onClick: () => this.resume(),
-    });
-    // level mode: RESTART the level, or back to the LEVELS map (instead of HOME)
-    const level = gs.mode === "level" ? gs.levelDef : null;
-    const home = button(this, W / 2, H * 0.5 + (level ? 220 : 120), 360, 84, level ? "LEVELS" : "HOME", {
-      color: 0xff4fd8,
-      size: 26,
-      onClick: () => {
-        this.resume(true);
-        this.scene.stop("Game");
-        this.scene.start(level ? "LevelSelect" : "Menu", level ? { focus: level.n } : undefined);
-      },
-    });
-    c.add([dim, title, resume, home]);
-    if (level)
-      c.add(
-        button(this, W / 2, H * 0.5 + 110, 360, 84, "RESTART", {
-          color: 0x3ef4ff,
-          size: 26,
-          onClick: () => {
-            this.resume(true);
-            this.scene.stop("Game");
-            this.scene.start("Game", { mode: "level", level: level.n, practice: gs.practice });
-          },
-        }),
-      );
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x05010d, 0.78).setInteractive();
+    c.add(dim);
+    c.page = this.add.container(0, 0);
+    c.add(c.page);
     this.pauseLayer = c;
+    if (gs.mode === "level") this.levelPauseMenu();
+    else {
+      const title = neonText(this, W / 2, H * 0.36, "PAUSED", 64, 0x3ef4ff);
+      const resume = button(this, W / 2, H * 0.5, 360, 96, "RESUME", {
+        color: 0x39ff88,
+        onClick: () => this.resume(),
+      });
+      const home = button(this, W / 2, H * 0.5 + 120, 360, 84, "HOME", {
+        color: 0xff4fd8,
+        size: 26,
+        onClick: () => {
+          this.resume(true);
+          this.scene.stop("Game");
+          this.scene.start("Menu");
+        },
+      });
+      c.page.add([title, resume, home]);
+    }
     c.setAlpha(0);
     this.tweens.add({ targets: c, alpha: 1, duration: 180 });
+  }
+
+  /** LEVEL MODE pause: Resume, Restart Level, Practice Mode, Settings, Back to Level Map. */
+  levelPauseMenu() {
+    const gs = this.gameScene;
+    const def = gs.levelDef;
+    const W = this.W;
+    const H = this.H;
+    const page = this.pauseLayer.page;
+    page.removeAll(true);
+    const y0 = H * 0.24;
+    page.add(neonText(this, W / 2, y0, "PAUSED", 60, 0x3ef4ff));
+    const name = levelNameLine(this, W / 2, y0 + 64, def, 22, { maxW: W - 100, color: "#cfc6ff" });
+    page.add(name);
+    if (gs.practice) page.add(plainText(this, W / 2, y0 + 100, "PRACTICE", 18, "#7ae8ff"));
+    const restart = (practice) => {
+      this.resume(true);
+      this.scene.stop("Game");
+      this.scene.start("Game", { mode: "level", level: def.n, practice });
+    };
+    const items = [
+      ["RESUME", 0x39ff88, () => this.resume(), 96, 34],
+      ["RESTART LEVEL", 0x3ef4ff, () => restart(gs.practice), 80, 24],
+      // in practice the same slot plays it for real
+      [gs.practice ? "PLAY FOR REAL" : "PRACTICE MODE", 0xffd23f, () => restart(!gs.practice), 80, 24],
+      ["SETTINGS", 0xb45cff, () => this.pauseSettings(), 80, 24],
+      [
+        "BACK TO LEVEL MAP",
+        0xff4fd8,
+        () => {
+          this.resume(true);
+          this.scene.stop("Game");
+          this.scene.start("LevelSelect");
+        },
+        80,
+        22,
+      ],
+    ];
+    let y = y0 + 190;
+    for (const [label, color, onClick, h, size] of items) {
+      page.add(button(this, W / 2, y, 420, h, label, { color, size, onClick }));
+      y += h + 26;
+    }
+  }
+
+  /** Settings while paused: volumes, mute and Reduce Flashing (Low Graphics needs a reload). */
+  pauseSettings() {
+    const W = this.W;
+    const H = this.H;
+    const st = Save.data.settings;
+    const page = this.pauseLayer.page;
+    page.removeAll(true);
+    const y0 = H * 0.22;
+    page.add(neonText(this, W / 2, y0, "SETTINGS", 48, 0x3ef4ff, { blur: 14 }));
+    slider(this, 90, y0 + 110, W - 180, st.musicVol ?? 0.7, 0x39ff88, (v) => {
+      st.musicVol = v;
+      Music.applyVolume();
+    }, { container: page, label: "MUSIC" });
+    slider(this, 90, y0 + 205, W - 180, st.sfxVol ?? 0.8, 0x3ef4ff, (v) => {
+      st.sfxVol = v;
+      Sfx.ui?.();
+    }, { container: page, label: "SOUND EFFECTS" });
+    const mute = button(this, W / 2, y0 + 300, 420, 72, st.muted ? "UNMUTE" : "MUTE ALL", {
+      color: st.muted ? 0xff4fd8 : 0x8a80b0,
+      size: 20,
+      onClick: () => {
+        st.muted = !st.muted;
+        Music.applyVolume();
+        Save.write();
+        mute.setLabel(st.muted ? "UNMUTE" : "MUTE ALL");
+        mute.setColor(st.muted ? 0xff4fd8 : 0x8a80b0);
+      },
+    });
+    const flashLabel = () => `REDUCE FLASHING: ${reduceFlashing() ? "ON" : "OFF"}`;
+    const flash = button(this, W / 2, y0 + 392, 420, 72, flashLabel(), {
+      color: 0xb45cff,
+      size: 18,
+      onClick: () => {
+        st.reduceFlash = !reduceFlashing();
+        Save.write();
+        flash.setLabel(flashLabel());
+      },
+    });
+    page.add([
+      mute,
+      flash,
+      plainText(this, W / 2, y0 + 466, "Low Graphics is on the home screen's settings", 15, "#8a80b0"),
+      button(this, W / 2, y0 + 560, 300, 80, "BACK", {
+        color: 0x39ff88,
+        size: 24,
+        onClick: () => {
+          Save.write();
+          this.levelPauseMenu();
+        },
+      }),
+    ]);
   }
 
   resume(silent) {

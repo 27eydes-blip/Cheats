@@ -3439,6 +3439,111 @@ test("levels map: the current level, its hero and its stars sit clear of the rea
   expect(log.errors).toEqual([]);
 });
 
+test("levels: pause (button, menu, settings, practice, background, back to the map)", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page);
+  const startLevel = async (n, practice = false) => {
+    await page.evaluate(
+      ({ n, practice }) => {
+        const g = window.__glydrift;
+        for (const k of ["LevelComplete", "Hud", "Game", "LevelSelect", "Menu"]) g.scene.stop(k);
+        g.scene.start("Game", { mode: "level", level: n, practice });
+      },
+      { n, practice },
+    );
+    await run(page, 900);
+  };
+  const pauseBtnAt = () =>
+    page.evaluate(() => {
+      const g = window.__glydrift;
+      const hud = g.scene.getScene("Hud");
+      const b = hud.pauseBtn;
+      const cam = hud.cameras.main;
+      const r = g.canvas.getBoundingClientRect();
+      return {
+        x: r.left + (((b.x - cam.worldView.x) * cam.zoom + cam.x) * r.width) / g.canvas.width,
+        y: r.top + (((b.y - cam.worldView.y) * cam.zoom + cam.y) * r.height) / g.canvas.height,
+        top: b.y - 34,
+        safeTop: g.registry.get("safeTop") || 0,
+        visible: b.visible && b.alpha > 0,
+      };
+    });
+  const pauseTexts = () =>
+    page.evaluate(() => {
+      const hud = window.__glydrift.scene.getScene("Hud");
+      const out = [];
+      const walk = (o) => {
+        if (o.type === "Text" && o.visible) out.push(o.text);
+        (o.list || []).forEach(walk);
+      };
+      if (hud.pauseLayer) walk(hud.pauseLayer);
+      return out;
+    });
+  const gamePaused = () => page.evaluate(() => window.__glydrift.scene.isPaused("Game"));
+
+  await startLevel(3);
+  // the pause button is there before the first tap, top-left, clear of the notch
+  let b = await pauseBtnAt();
+  expect(b.visible).toBe(true);
+  expect(b.top).toBeGreaterThan(b.safeTop);
+  await press(page, b);
+  await run(page, 300);
+  expect(await gamePaused()).toBe(true);
+  expect(await pauseTexts()).toEqual(
+    expect.arrayContaining(["PAUSED", "RESUME", "RESTART LEVEL", "PRACTICE MODE", "SETTINGS", "BACK TO LEVEL MAP"]),
+  );
+  await snap(page, testInfo, "levels-07-pause");
+  // settings and back
+  await tap(page, "SETTINGS", 300);
+  const st = await pauseTexts();
+  expect(st).toEqual(expect.arrayContaining(["MUSIC", "SOUND EFFECTS", "BACK"]));
+  expect(st.some((t) => t.startsWith("REDUCE FLASHING"))).toBe(true);
+  await tap(page, "BACK", 300);
+  expect(await pauseTexts()).toEqual(expect.arrayContaining(["RESUME"]));
+  await tap(page, "RESUME", 300);
+  expect(await gamePaused()).toBe(false);
+  // fly, crash: the pause button stays (levels respawn at the checkpoint)
+  await page.evaluate(() => window.__glyGod(true)); // no real crashes while we test the menu
+  await page.evaluate(() => window.__glydrift.scene.getScene("Game").onTap());
+  await run(page, 500);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Hud").onDeath());
+  await run(page, 500);
+  b = await pauseBtnAt();
+  expect(b.visible).toBe(true);
+  // the app goes to the background, or a call takes focus: it pauses by itself
+  for (const ev of ["hidden", "blur"]) {
+    await page.evaluate((ev) => window.__glydrift.events.emit(ev), ev);
+    await run(page, 200);
+    expect(await gamePaused(), ev).toBe(true);
+    await tap(page, "RESUME", 300);
+    expect(await gamePaused()).toBe(false);
+  }
+  // practice mode restarts the level in practice
+  await press(page, await pauseBtnAt());
+  await run(page, 300);
+  await tap(page, "PRACTICE MODE", 900);
+  const prac = await page.evaluate(() => {
+    const gs = window.__glydrift.scene.getScene("Game");
+    return { n: gs.levelDef?.n, practice: gs.practice };
+  });
+  expect(prac).toEqual({ n: 3, practice: true });
+  // and back to the level map
+  await press(page, await pauseBtnAt());
+  await run(page, 300);
+  expect(await pauseTexts()).toEqual(expect.arrayContaining(["PLAY FOR REAL"]));
+  await tap(page, "BACK TO LEVEL MAP", 900);
+  expect(
+    await page.evaluate(() => {
+      const g = window.__glydrift;
+      return { map: g.scene.isActive("LevelSelect"), game: g.scene.isActive("Game") || g.scene.isPaused("Game") };
+    }),
+  ).toEqual({ map: true, game: false });
+  await page.evaluate(() => window.__glyGod(false));
+  expect(log.errors).toEqual([]);
+});
+
 test("levels map: Low Graphics and Reduce Flashing", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page);

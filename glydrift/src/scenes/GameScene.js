@@ -193,6 +193,8 @@ export class GameScene extends Phaser.Scene {
       );
 
     this.game.events.on("hidden", this.onHidden, this);
+    // a phone call or the app switcher can take focus without hiding the page
+    this.game.events.on("blur", this.onHidden, this);
     // the wind bed fades out whenever the run isn't on screen and moving
     // (the scene's event emitter outlives restarts: hook it once)
     if (!this.windHooked) {
@@ -207,6 +209,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.events.once("shutdown", () => {
       this.game.events.off("hidden", this.onHidden, this);
+      this.game.events.off("blur", this.onHidden, this);
       // leaving mid-Calm (pause → HOME): drop the grey filter on the shared Backdrop camera
       // and the Calm drone / heartbeat, or they'd follow the player into every screen
       this.setDesat(0);
@@ -419,7 +422,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   onHidden() {
-    if (this.state === "playing") this.hudReady?.pause?.();
+    if (this.state === "playing" || (this.mode === "level" && this.state === "ready"))
+      this.hudReady?.pause?.();
   }
 
   // ------------------------------------------------------------------ events
