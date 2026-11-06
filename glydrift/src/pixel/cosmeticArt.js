@@ -277,6 +277,7 @@ function icons() {
     })(),
     icon_trail_fire: swoosh([0xfff1a0, 0xffa21a, 0xff5a1a, 0xb01000]),
     icon_trail_founder: swoosh([0xffffff, 0xffd23f, 0x3ef4ff, 0xb45cff]),
+    icon_trail_afterburner: swoosh([0xfff4c0, 0xff8a2a, 0xd8f4ff, 0x3a8aff]),
     icon_trail_bloodmoon: swoosh([0xffd0d0, 0xff3a4a, 0xc8102e, 0x5a0414]),
     icon_trail_abyssal: swoosh([0x5a4a6a, 0x2a1a2a, 0xc8102e, 0x14020a]),
     icon_trail_prism: swoosh([0xffffff, 0xff9ad8, 0x6ad8ff, 0xb48aff, 0xfff06a]),

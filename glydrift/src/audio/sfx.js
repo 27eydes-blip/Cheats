@@ -20,7 +20,14 @@ function ensure() {
   return ctx;
 }
 
-function tone({ type = "sine", f0 = 440, f1 = f0, dur = 0.12, vol = 0.5, delay = 0 }) {
+function tone({
+  type = "sine",
+  f0 = 440,
+  f1 = f0,
+  dur = 0.12,
+  vol = 0.5,
+  delay = 0,
+}) {
   const c = ensure();
   if (!c) return;
   const t = c.currentTime + delay;
@@ -44,7 +51,8 @@ function noise({ dur = 0.3, vol = 0.4, f = 900, delay = 0 }) {
   const len = Math.floor(c.sampleRate * dur);
   const buf = c.createBuffer(1, len, c.sampleRate);
   const d = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2;
+  for (let i = 0; i < len; i++)
+    d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2;
   const src = c.createBufferSource();
   src.buffer = buf;
   const filt = c.createBiquadFilter();
@@ -139,31 +147,103 @@ function humLevel(level) {
   hum.g.gain.setTargetAtTime(level * 0.05, c.currentTime, 0.3);
 }
 
+// SXE's Afterburner: a soft jet-engine hum (a low detuned saw buzz through a lowpass plus a
+// breathy band of noise) whose pitch rises with speed. Through `master`, so it follows the
+// sound-effects volume and mute.
+let jet = null;
+function jetLevel(level, pitch) {
+  const c = level > 0 ? ensure() : ctx;
+  if (!c) return;
+  if (!jet) {
+    if (level <= 0) return;
+    const g = c.createGain();
+    g.gain.value = 0;
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 500;
+    const oscs = [0, 1].map((i) => {
+      const o = c.createOscillator();
+      o.type = "sawtooth";
+      o.frequency.value = 70 + i * 0.9;
+      o.connect(lp);
+      o.start();
+      return o;
+    });
+    const src = c.createBufferSource();
+    src.buffer = whiteNoise(c);
+    src.loop = true;
+    const bp = c.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.Q.value = 0.8;
+    bp.frequency.value = 900;
+    const ng = c.createGain();
+    ng.gain.value = 0.5;
+    src.connect(bp).connect(ng).connect(g);
+    src.start();
+    lp.connect(g);
+    g.connect(master);
+    jet = { g, lp, bp, oscs, level: 0, pitch: 0 };
+  }
+  if (Math.abs(level - jet.level) < 0.01 && Math.abs(pitch - jet.pitch) < 0.01)
+    return;
+  jet.level = level;
+  jet.pitch = pitch;
+  const t = c.currentTime;
+  jet.g.gain.setTargetAtTime(level * 0.035, t, 0.3);
+  jet.oscs.forEach((o, i) =>
+    o.frequency.setTargetAtTime(70 + pitch * 60 + i * 0.9, t, 0.4),
+  );
+  jet.lp.frequency.setTargetAtTime(420 + pitch * 700, t, 0.4);
+  jet.bp.frequency.setTargetAtTime(800 + pitch * 1400, t, 0.4);
+}
+
 // Rising reward notes climb a major pentatonic scale (always consonant, never grating).
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28];
-const semis = (base, step) => base * 2 ** (PENTA[Math.min(step, PENTA.length - 1)] / 12);
+const semis = (base, step) =>
+  base * 2 ** (PENTA[Math.min(step, PENTA.length - 1)] / 12);
 let lastTick = 0;
 
 const FLAP = {
   volt: () => tone({ type: "square", f0: 520, f1: 900, dur: 0.07, vol: 0.12 }),
-  ember: () => tone({ type: "sawtooth", f0: 300, f1: 520, dur: 0.09, vol: 0.1 }),
+  ember: () =>
+    tone({ type: "sawtooth", f0: 300, f1: 520, dur: 0.09, vol: 0.1 }),
   shade: () => tone({ type: "sine", f0: 260, f1: 180, dur: 0.1, vol: 0.25 }),
-  frost: () => tone({ type: "triangle", f0: 1200, f1: 1600, dur: 0.08, vol: 0.18 }),
+  frost: () =>
+    tone({ type: "triangle", f0: 1200, f1: 1600, dur: 0.08, vol: 0.18 }),
   glitch: () =>
-    tone({ type: "square", f0: 200 + Math.random() * 600, f1: 90, dur: 0.06, vol: 0.1 }),
-  pip: () => tone({ type: "triangle", f0: 1500, f1: 2100, dur: 0.05, vol: 0.14 }),
+    tone({
+      type: "square",
+      f0: 200 + Math.random() * 600,
+      f1: 90,
+      dur: 0.06,
+      vol: 0.1,
+    }),
+  pip: () =>
+    tone({ type: "triangle", f0: 1500, f1: 2100, dur: 0.05, vol: 0.14 }),
   coral: () => tone({ type: "sine", f0: 380, f1: 620, dur: 0.09, vol: 0.22 }),
-  ruby: () => tone({ type: "triangle", f0: 1800, f1: 2400, dur: 0.04, vol: 0.12 }),
-  pengu: () => tone({ type: "sawtooth", f0: 160, f1: 120, dur: 0.1, vol: 0.08 }),
+  ruby: () =>
+    tone({ type: "triangle", f0: 1800, f1: 2400, dur: 0.04, vol: 0.12 }),
+  pengu: () =>
+    tone({ type: "sawtooth", f0: 160, f1: 120, dur: 0.1, vol: 0.08 }),
   jelly: () => tone({ type: "sine", f0: 700, f1: 520, dur: 0.12, vol: 0.18 }),
-  comet: () => tone({ type: "sawtooth", f0: 220, f1: 440, dur: 0.1, vol: 0.08 }),
-  springer: () => tone({ type: "square", f0: 220, f1: 140, dur: 0.05, vol: 0.14 }),
+  comet: () =>
+    tone({ type: "sawtooth", f0: 220, f1: 440, dur: 0.1, vol: 0.08 }),
+  springer: () =>
+    tone({ type: "square", f0: 220, f1: 140, dur: 0.05, vol: 0.14 }),
   dzr: () => tone({ type: "sawtooth", f0: 180, f1: 420, dur: 0.08, vol: 0.09 }),
-  wallrunner: () => tone({ type: "square", f0: 880, f1: 1320, dur: 0.06, vol: 0.1 }),
+  wallrunner: () =>
+    tone({ type: "square", f0: 880, f1: 1320, dur: 0.06, vol: 0.1 }),
   // MATTOE: a squishy little "pop" with a soft energy hum under it
   mattoe: () => {
     tone({ type: "sine", f0: 260, f1: 620, dur: 0.06, vol: 0.28 });
-    tone({ type: "triangle", f0: 900, f1: 500, dur: 0.05, vol: 0.06, delay: 0.03 });
+    tone({
+      type: "triangle",
+      f0: 900,
+      f1: 500,
+      dur: 0.05,
+      vol: 0.06,
+      delay: 0.03,
+    });
     tone({ type: "sine", f0: 110, f1: 130, dur: 0.18, vol: 0.08 });
   },
   // SXE (id "splice"): a sharp, fast wing whoosh (bright noise + a quick falling chirp of air)
@@ -174,8 +254,22 @@ const FLAP = {
   // YARMS: a meaty "whomp" + a floppy wobble
   yarms: () => {
     tone({ type: "sine", f0: 150, f1: 55, dur: 0.14, vol: 0.4 });
-    tone({ type: "triangle", f0: 520, f1: 260, dur: 0.09, vol: 0.1, delay: 0.04 });
-    tone({ type: "triangle", f0: 300, f1: 420, dur: 0.06, vol: 0.06, delay: 0.12 });
+    tone({
+      type: "triangle",
+      f0: 520,
+      f1: 260,
+      dur: 0.09,
+      vol: 0.1,
+      delay: 0.04,
+    });
+    tone({
+      type: "triangle",
+      f0: 300,
+      f1: 420,
+      dur: 0.06,
+      vol: 0.06,
+      delay: 0.12,
+    });
   },
   manny: () => tone({ type: "triangle", f0: 180, f1: 300, dur: 0.1, vol: 0.2 }),
   milzzz: () => tone({ type: "sine", f0: 420, f1: 760, dur: 0.07, vol: 0.2 }),
@@ -183,7 +277,14 @@ const FLAP = {
   // 손주원: an electric "zzap" over a whoosh of the hover thrusters
   sonjuwon: () => {
     tone({ type: "sawtooth", f0: 1800, f1: 600, dur: 0.06, vol: 0.06 });
-    tone({ type: "square", f0: 2400, f1: 900, dur: 0.04, vol: 0.04, delay: 0.02 });
+    tone({
+      type: "square",
+      f0: 2400,
+      f1: 900,
+      dur: 0.04,
+      vol: 0.04,
+      delay: 0.02,
+    });
     noise({ dur: 0.18, vol: 0.12, f: 1400 });
   },
   nova: () => {
@@ -194,7 +295,8 @@ const FLAP = {
 
 // The animal heroes' own sounds (all synthesised): flap, plus reactions on near-misses,
 // new bests, deaths and Second Chance revives.
-const T = (type, f0, f1, dur, vol, delay = 0) => tone({ type, f0, f1, dur, vol, delay });
+const T = (type, f0, f1, dur, vol, delay = 0) =>
+  tone({ type, f0, f1, dur, vol, delay });
 const ting = (f, delay = 0, vol = 0.08) => {
   T("triangle", f, f, 0.06, vol, delay);
   T("sine", f * 2, f * 2, 0.08, vol * 0.4, delay);
@@ -208,7 +310,8 @@ const splash = () => {
   T("sine", 600, 200, 0.18, 0.12);
 };
 const pops = (n = 4) => {
-  for (let i = 0; i < n; i++) T("sine", 700 + i * 90, 1300 + i * 90, 0.05, 0.12, i * 0.06);
+  for (let i = 0; i < n; i++)
+    T("sine", 700 + i * 90, 1300 + i * 90, 0.05, 0.12, i * 0.06);
 };
 const ANIMAL_SFX = {
   // ---- DRIFT PASS+ · Season 1
@@ -218,7 +321,8 @@ const ANIMAL_SFX = {
       ting(2600 + Math.random() * 600, 0.02, 0.04); // a star chime
     },
     near: () => T("triangle", 700, 1100, 0.08, 0.08), // a little "mrrp"
-    best: () => [1320, 1660, 1980, 2640].forEach((f, i) => ting(f, i * 0.06, 0.06)),
+    best: () =>
+      [1320, 1660, 1980, 2640].forEach((f, i) => ting(f, i * 0.06, 0.06)),
     death: () => {
       T("triangle", 900, 300, 0.35, 0.1);
       [3000, 2400, 3600].forEach((f, i) => ting(f, 0.1 + i * 0.07, 0.04));
@@ -254,12 +358,20 @@ const ANIMAL_SFX = {
   triphound: {
     flap: () => {
       // the next head barks (three slightly different yaps)
-      const f = [520, 600, 460][(ANIMAL_SFX.triphound.n = ((ANIMAL_SFX.triphound.n || 0) + 1) % 3)];
+      const f = [520, 600, 460][
+        (ANIMAL_SFX.triphound.n = ((ANIMAL_SFX.triphound.n || 0) + 1) % 3)
+      ];
       T("square", f, f * 0.7, 0.06, 0.06);
       T("sawtooth", f * 0.5, f * 0.35, 0.07, 0.04, 0.01);
     },
-    near: () => [500, 580, 460].forEach((f, i) => T("square", f, f * 0.7, 0.05, 0.05, i * 0.05)),
-    best: () => [700, 760, 640].forEach((f, i) => T("triangle", f, f * 1.3, 0.2, 0.07, i * 0.04)),
+    near: () =>
+      [500, 580, 460].forEach((f, i) =>
+        T("square", f, f * 0.7, 0.05, 0.05, i * 0.05),
+      ),
+    best: () =>
+      [700, 760, 640].forEach((f, i) =>
+        T("triangle", f, f * 1.3, 0.2, 0.07, i * 0.04),
+      ),
     death: () => {
       T("triangle", 900, 400, 0.3, 0.08);
       noise({ dur: 0.4, vol: 0.12, f: 800 });
@@ -279,7 +391,10 @@ const ANIMAL_SFX = {
       noise({ dur: 0.05, vol: 0.08, f: 6000 }); // spark crackle
       T("square", 1800, 900, 0.03, 0.03);
     },
-    near: () => [2400, 3100].forEach((f, i) => T("square", f, f * 0.6, 0.025, 0.04, i * 0.03)),
+    near: () =>
+      [2400, 3100].forEach((f, i) =>
+        T("square", f, f * 0.6, 0.025, 0.04, i * 0.03),
+      ),
     best: () => {
       noise({ dur: 0.5, vol: 0.14, f: 1200 });
       T("sawtooth", 160, 320, 0.4, 0.06);
@@ -305,7 +420,10 @@ const ANIMAL_SFX = {
       noise({ dur: 0.12, vol: 0.12, f: 7000 });
       ting(3400, 0.05, 0.05);
     },
-    best: () => [0, 0.08, 0.16].forEach((d) => noise({ dur: 0.1, vol: 0.1, f: 7000, delay: d })),
+    best: () =>
+      [0, 0.08, 0.16].forEach((d) =>
+        noise({ dur: 0.1, vol: 0.1, f: 7000, delay: d }),
+      ),
     death: () => {
       shatter();
       T("sawtooth", 400, 120, 0.3, 0.05);
@@ -316,7 +434,9 @@ const ANIMAL_SFX = {
     near: () => T("sine", 900, 1400, 0.08, 0.05),
     best: () => {
       // fading out of sight: a rising shimmer
-      [880, 1100, 1320, 1760].forEach((f, i) => T("sine", f, f * 1.02, 0.18, 0.05, i * 0.07));
+      [880, 1100, 1320, 1760].forEach((f, i) =>
+        T("sine", f, f * 1.02, 0.18, 0.05, i * 0.07),
+      );
     },
     death: () => {
       T("triangle", 700, 200, 0.4, 0.08);
@@ -383,7 +503,10 @@ const ANIMAL_SFX = {
     },
     death: shatter,
   },
-  flicker: { flap: () => T("triangle", 1600, 2100, 0.04, 0.06), death: shatter },
+  flicker: {
+    flap: () => T("triangle", 1600, 2100, 0.04, 0.06),
+    death: shatter,
+  },
   spectra: {
     flap: () => ting(1760, 0, 0.06),
     near: () => {
@@ -397,7 +520,10 @@ const ANIMAL_SFX = {
       T("triangle", 1100, 1500, 0.06, 0.08);
       ting(2600, 0.04, 0.04);
     },
-    revive: () => [0, 4, 7, 12, 16].forEach((st, i) => ting(880 * 2 ** (st / 12), i * 0.06, 0.08)),
+    revive: () =>
+      [0, 4, 7, 12, 16].forEach((st, i) =>
+        ting(880 * 2 ** (st / 12), i * 0.06, 0.08),
+      ),
     death: shatter,
   },
   // abyss
@@ -406,9 +532,14 @@ const ANIMAL_SFX = {
     death: () => T("sine", 900, 120, 0.4, 0.12),
   },
   grimrat: {
-    flap: () => [900, 1150, 800].forEach((f, i) => T("square", f, f * 0.9, 0.018, 0.06, i * 0.03)),
+    flap: () =>
+      [900, 1150, 800].forEach((f, i) =>
+        T("square", f, f * 0.9, 0.018, 0.06, i * 0.03),
+      ),
     death: () =>
-      [700, 900, 600, 1000, 500].forEach((f, i) => T("square", f, f, 0.02, 0.06, i * 0.04)),
+      [700, 900, 600, 1000, 500].forEach((f, i) =>
+        T("square", f, f, 0.02, 0.06, i * 0.04),
+      ),
   },
   murktoad: {
     flap: () => T("sine", 260, 160, 0.08, 0.2),
@@ -430,7 +561,8 @@ const ANIMAL_SFX = {
     death: () => T("sine", 400, 60, 0.5, 0.15),
   },
   ashspider: {
-    flap: () => [0, 0.04, 0.08].forEach((d) => T("square", 3000, 2800, 0.012, 0.04, d)),
+    flap: () =>
+      [0, 0.04, 0.08].forEach((d) => T("square", 3000, 2800, 0.012, 0.04, d)),
     death: () => {
       noise({ dur: 0.3, vol: 0.14, f: 3000 });
       T("sawtooth", 300, 80, 0.3, 0.06);
@@ -459,7 +591,9 @@ const ANIMAL_SFX = {
   levijr: {
     flap: () => T("sine", 110, 70, 0.18, 0.3),
     death: () => {
-      [1600, 2100, 1300].forEach((f, i) => T("square", f, f * 0.8, 0.03, 0.06, i * 0.03));
+      [1600, 2100, 1300].forEach((f, i) =>
+        T("square", f, f * 0.8, 0.03, 0.06, i * 0.03),
+      );
       T("sawtooth", 140, 55, 0.9, 0.14, 0.12);
       noise({ dur: 0.9, vol: 0.16, f: 450, delay: 0.12 });
     },
@@ -492,8 +626,10 @@ const ANIMAL_SFX = {
     death: () => [2600, 2200, 1800].forEach((f, i) => ting(f, i * 0.07)),
   },
   jinglemoose: {
-    flap: () => [2600, 3150, 2800, 3400].forEach((f, i) => ting(f, i * 0.035, 0.05)),
-    death: () => [3400, 2600, 3100, 2300, 2800].forEach((f, i) => ting(f, i * 0.06, 0.06)),
+    flap: () =>
+      [2600, 3150, 2800, 3400].forEach((f, i) => ting(f, i * 0.035, 0.05)),
+    death: () =>
+      [3400, 2600, 3100, 2300, 2800].forEach((f, i) => ting(f, i * 0.06, 0.06)),
   },
   cocoacub: {
     flap: () => T("sine", 240, 320, 0.08, 0.16),
@@ -515,18 +651,28 @@ const ANIMAL_SFX = {
       T("triangle", 1200, 1600, 0.05, 0.08);
       ting(2400, 0.05, 0.04);
     },
-    death: () => [0, 2, 4, 7, 9].forEach((st, i) => ting(1046 * 2 ** (st / 12), i * 0.05, 0.06)),
+    death: () =>
+      [0, 2, 4, 7, 9].forEach((st, i) =>
+        ting(1046 * 2 ** (st / 12), i * 0.05, 0.06),
+      ),
   },
   captainacorn: {
-    flap: () => [0, 0.03, 0.06, 0.09].forEach((d) => T("square", 140, 160, 0.02, 0.06, d)),
+    flap: () =>
+      [0, 0.03, 0.06, 0.09].forEach((d) =>
+        T("square", 140, 160, 0.02, 0.06, d),
+      ),
     death: () => {
       noise({ dur: 0.2, vol: 0.14, f: 2500 });
       pops(4);
     },
   },
   aurorastag: {
-    flap: () => [0, 4, 7].forEach((st, i) => ting(1320 * 2 ** (st / 12), i * 0.03, 0.05)),
-    death: () => [12, 7, 4, 0].forEach((st, i) => ting(660 * 2 ** (st / 12), i * 0.08, 0.08)),
+    flap: () =>
+      [0, 4, 7].forEach((st, i) => ting(1320 * 2 ** (st / 12), i * 0.03, 0.05)),
+    death: () =>
+      [12, 7, 4, 0].forEach((st, i) =>
+        ting(660 * 2 ** (st / 12), i * 0.08, 0.08),
+      ),
   },
 };
 
@@ -539,6 +685,59 @@ export const Sfx = {
   flapWhoosh: (speed = 0) => flapWhoosh(speed),
   /** The wind bed: 0 = silent (menus, pause, death), 1 = top speed. Changes are smoothed. */
   wind: (level) => windLevel(Math.max(0, Math.min(1, level))),
+  /** SXE's Afterburner engine hum: level 0 = silent; pitch 0..1 rises with speed */
+  jetHum: (level, pitch = 0) =>
+    jetLevel(Math.max(0, Math.min(1, level)), Math.max(0, Math.min(1, pitch))),
+  /** SXE flap with the Afterburner: a short "fwoom" (a noise swell + a low sweep) */
+  afterburner: (speed = 0) => {
+    const c = ensure();
+    if (!c) return;
+    const t = c.currentTime;
+    const src = c.createBufferSource();
+    src.buffer = whiteNoise(c);
+    const bp = c.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.Q.value = 0.9;
+    bp.frequency.setValueAtTime(380 + speed * 200, t);
+    bp.frequency.exponentialRampToValueAtTime(1600 + speed * 600, t + 0.22);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.16, t + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    src.connect(bp).connect(g).connect(master);
+    src.start(t, Math.random());
+    src.stop(t + 0.32);
+    tone({ type: "sawtooth", f0: 90, f1: 180, dur: 0.2, vol: 0.06 });
+  },
+  /** SXE new best with the Afterburner: a deep sonic "boom" */
+  sonicBoom: () => {
+    tone({ type: "sine", f0: 120, f1: 32, dur: 0.7, vol: 0.5 });
+    tone({
+      type: "triangle",
+      f0: 70,
+      f1: 28,
+      dur: 0.6,
+      vol: 0.25,
+      delay: 0.02,
+    });
+    noise({ dur: 0.5, vol: 0.4, f: 700 });
+    noise({ dur: 0.9, vol: 0.12, f: 220, delay: 0.05 });
+  },
+  /** SXE death with the Afterburner: the engines cough and sputter out */
+  engineSputter: () => {
+    [0, 0.12, 0.27, 0.45].forEach((d, i) => {
+      noise({ dur: 0.08, vol: 0.28 - i * 0.05, f: 900 - i * 150, delay: d });
+      tone({
+        type: "square",
+        f0: 110 - i * 15,
+        f1: 60,
+        dur: 0.07,
+        vol: 0.06,
+        delay: d,
+      });
+    });
+    tone({ type: "sawtooth", f0: 140, f1: 40, dur: 0.8, vol: 0.05 });
+  },
   /** MATTOE's aura hum (0 = silent) */
   auraHum: (level) => humLevel(Math.max(0, Math.min(1, level))),
   /** MATTOE new best: a deep rising "power-up" with a bright crown */
@@ -547,7 +746,13 @@ export const Sfx = {
     tone({ type: "sine", f0: 80, f1: 320, dur: 0.9, vol: 0.22 });
     noise({ dur: 0.8, vol: 0.1, f: 1800 });
     [0, 7, 12, 19].forEach((st, i) =>
-      tone({ type: "triangle", f0: 523 * 2 ** (st / 12), dur: 0.3, vol: 0.1, delay: 0.75 + i * 0.05 }),
+      tone({
+        type: "triangle",
+        f0: 523 * 2 ** (st / 12),
+        dur: 0.3,
+        vol: 0.1,
+        delay: 0.75 + i * 0.05,
+      }),
     );
   },
   /** SXE new best: a fierce falcon screech, "kee-kee!" (synth only: no recordings) */
@@ -556,9 +761,30 @@ export const Sfx = {
       [0, 1],
       [0.16, 0.92],
     ]) {
-      tone({ type: "sawtooth", f0: 2500 * k, f1: 1500 * k, dur: 0.15, vol: 0.07, delay: d });
-      tone({ type: "square", f0: 3300 * k, f1: 2100 * k, dur: 0.12, vol: 0.035, delay: d + 0.01 });
-      tone({ type: "sine", f0: 1700 * k, f1: 1250 * k, dur: 0.16, vol: 0.09, delay: d });
+      tone({
+        type: "sawtooth",
+        f0: 2500 * k,
+        f1: 1500 * k,
+        dur: 0.15,
+        vol: 0.07,
+        delay: d,
+      });
+      tone({
+        type: "square",
+        f0: 3300 * k,
+        f1: 2100 * k,
+        dur: 0.12,
+        vol: 0.035,
+        delay: d + 0.01,
+      });
+      tone({
+        type: "sine",
+        f0: 1700 * k,
+        f1: 1250 * k,
+        dur: 0.16,
+        vol: 0.09,
+        delay: d,
+      });
     }
     noise({ dur: 0.3, vol: 0.06, f: 6500 });
     // the boom under it
@@ -574,13 +800,26 @@ export const Sfx = {
   bonk: () => {
     tone({ type: "square", f0: 520, f1: 180, dur: 0.08, vol: 0.12 });
     tone({ type: "sine", f0: 340, f1: 90, dur: 0.22, vol: 0.32 });
-    tone({ type: "triangle", f0: 1400, f1: 900, dur: 0.05, vol: 0.06, delay: 0.02 });
+    tone({
+      type: "triangle",
+      f0: 1400,
+      f1: 900,
+      dur: 0.05,
+      vol: 0.06,
+      delay: 0.02,
+    });
   },
   /** MATTOE's aura shatters like glass: bright noise tinkles */
   shatter: () => {
     noise({ dur: 0.35, vol: 0.18, f: 7500 });
     [0, 1, 2, 3, 4].forEach((i) =>
-      tone({ type: "triangle", f0: 2600 + i * 420, dur: 0.06, vol: 0.05, delay: 0.04 + i * 0.045 }),
+      tone({
+        type: "triangle",
+        f0: 2600 + i * 420,
+        dur: 0.06,
+        vol: 0.05,
+        delay: 0.04 + i * 0.045,
+      }),
     );
   },
   /** YARMS flex: a stretchy creak + a short synth "hngh" grunt (no voice samples) */
@@ -594,7 +833,14 @@ export const Sfx = {
         vol: 0.05,
         delay: i * 0.04,
       });
-    tone({ type: "sawtooth", f0: 190, f1: 150, dur: 0.17, vol: 0.09, delay: 0.1 });
+    tone({
+      type: "sawtooth",
+      f0: 190,
+      f1: 150,
+      dur: 0.17,
+      vol: 0.09,
+      delay: 0.1,
+    });
     tone({ type: "sine", f0: 130, f1: 110, dur: 0.2, vol: 0.14, delay: 0.1 });
   },
   /** YARMS death: a deflating "pfffft" */
@@ -611,7 +857,14 @@ export const Sfx = {
   crackle: () => {
     noise({ dur: 0.09, vol: 0.14, f: 7000 });
     noise({ dur: 0.05, vol: 0.1, f: 9000, delay: 0.07 });
-    tone({ type: "square", f0: 3200, f1: 1200, dur: 0.03, vol: 0.03, delay: 0.03 });
+    tone({
+      type: "square",
+      f0: 3200,
+      f1: 1200,
+      dur: 0.03,
+      vol: 0.03,
+      delay: 0.03,
+    });
   },
   /** 손주원 death / new best: a thunder crack and a rolling rumble (synth only) */
   thunder: (k = 1) => {
@@ -622,14 +875,35 @@ export const Sfx = {
   /** frog double jump: a springy two-step "boing" */
   doubleJump: () => {
     tone({ type: "sine", f0: 300, f1: 900, dur: 0.12, vol: 0.22 });
-    tone({ type: "triangle", f0: 600, f1: 1500, dur: 0.1, vol: 0.12, delay: 0.06 });
+    tone({
+      type: "triangle",
+      f0: 600,
+      f1: 1500,
+      dur: 0.1,
+      vol: 0.12,
+      delay: 0.06,
+    });
   },
   /** step = how many coins in a row (rising notes) */
   coin: (step = 0) => {
     const f = semis(1180, step);
     tone({ type: "triangle", f0: f, f1: f, dur: 0.06, vol: 0.15 });
-    tone({ type: "triangle", f0: f * 1.5, f1: f * 1.5, dur: 0.1, vol: 0.11, delay: 0.045 });
-    tone({ type: "sine", f0: f * 3, f1: f * 3, dur: 0.05, vol: 0.04, delay: 0.045 }); // sparkle
+    tone({
+      type: "triangle",
+      f0: f * 1.5,
+      f1: f * 1.5,
+      dur: 0.1,
+      vol: 0.11,
+      delay: 0.045,
+    });
+    tone({
+      type: "sine",
+      f0: f * 3,
+      f1: f * 3,
+      dur: 0.05,
+      vol: 0.04,
+      delay: 0.045,
+    }); // sparkle
   },
   /** combo multiplier step (tier 1..5 → x2 x3 x5 x10 x13): a punchy, higher-each-time chime */
   combo: (tier = 1) => {
@@ -651,7 +925,13 @@ export const Sfx = {
       return;
     }
     [0, 4, 7, 12, big > 1 ? 16 : 12].forEach((s, i) =>
-      tone({ type: "triangle", f0: 523 * 2 ** (s / 12), dur: 0.16, vol: 0.16, delay: i * 0.07 }),
+      tone({
+        type: "triangle",
+        f0: 523 * 2 ** (s / 12),
+        dur: 0.16,
+        vol: 0.16,
+        delay: i * 0.07,
+      }),
     );
     noise({ dur: 0.35, vol: 0.18, f: 6000, delay: 0.28 });
     tone({ type: "sine", f0: 130, f1: 65, dur: 0.3, vol: 0.3 });
@@ -678,7 +958,13 @@ export const Sfx = {
   },
   levelUp: () => {
     [0, 4, 7, 12, 16, 19, 24].forEach((s, i) =>
-      tone({ type: "triangle", f0: 523 * 2 ** (s / 12), dur: 0.2, vol: 0.15, delay: i * 0.06 }),
+      tone({
+        type: "triangle",
+        f0: 523 * 2 ** (s / 12),
+        dur: 0.2,
+        vol: 0.15,
+        delay: i * 0.06,
+      }),
     );
     tone({ type: "sine", f0: 98, f1: 196, dur: 0.5, vol: 0.25 });
     noise({ dur: 0.6, vol: 0.14, f: 8000, delay: 0.35 });
@@ -700,17 +986,31 @@ export const Sfx = {
   /** a dimension rift opens ahead: a low rising hum */
   riftOpen: () => {
     tone({ type: "sine", f0: 60, f1: 240, dur: 1.4, vol: 0.18 });
-    tone({ type: "triangle", f0: 1200, f1: 1800, dur: 1.2, vol: 0.03, delay: 0.3 });
+    tone({
+      type: "triangle",
+      f0: 1200,
+      f1: 1800,
+      dur: 1.2,
+      vol: 0.03,
+      delay: 0.3,
+    });
   },
   /** tearing through a rift */
   rift: () => {
     noise({ dur: 0.6, vol: 0.4, f: 4000 });
     tone({ type: "sawtooth", f0: 900, f1: 80, dur: 0.45, vol: 0.12 });
     [0, 7, 12, 19].forEach((s, i) =>
-      tone({ type: "sine", f0: 392 * 2 ** (s / 12), dur: 0.4, vol: 0.1, delay: 0.25 + i * 0.05 }),
+      tone({
+        type: "sine",
+        f0: 392 * 2 ** (s / 12),
+        dur: 0.4,
+        vol: 0.1,
+        delay: 0.25 + i * 0.05,
+      }),
     );
   },
-  chestShake: () => tone({ type: "square", f0: 160, f1: 120, dur: 0.05, vol: 0.08 }),
+  chestShake: () =>
+    tone({ type: "square", f0: 160, f1: 120, dur: 0.05, vol: 0.08 }),
   chestOpen: () => {
     noise({ dur: 0.25, vol: 0.3, f: 1200 });
     tone({ type: "triangle", f0: 784, f1: 1568, dur: 0.3, vol: 0.18 });
@@ -718,7 +1018,13 @@ export const Sfx = {
   },
   lucky: () => {
     [0, 4, 7, 11, 14].forEach((s, i) =>
-      tone({ type: "sine", f0: 784 * 2 ** (s / 12), dur: 0.25, vol: 0.14, delay: i * 0.09 }),
+      tone({
+        type: "sine",
+        f0: 784 * 2 ** (s / 12),
+        dur: 0.25,
+        vol: 0.14,
+        delay: i * 0.09,
+      }),
     );
   },
   near: () => {
@@ -730,12 +1036,25 @@ export const Sfx = {
   portalOpen: () => {
     noise({ dur: 0.55, vol: 0.24, f: 2200 });
     tone({ type: "sine", f0: 140, f1: 620, dur: 0.5, vol: 0.14 });
-    tone({ type: "triangle", f0: 1400, f1: 2600, dur: 0.4, vol: 0.03, delay: 0.15 });
+    tone({
+      type: "triangle",
+      f0: 1400,
+      f1: 2600,
+      dur: 0.4,
+      vol: 0.03,
+      delay: 0.15,
+    });
   },
   /** a bright sparkle chime (the domain finished typing) */
   chime: () => {
     [0, 7, 12, 19].forEach((s, i) =>
-      tone({ type: "sine", f0: 1318 * 2 ** (s / 12), dur: 0.22, vol: 0.07, delay: i * 0.045 }),
+      tone({
+        type: "sine",
+        f0: 1318 * 2 ** (s / 12),
+        dur: 0.22,
+        vol: 0.07,
+        delay: i * 0.045,
+      }),
     );
   },
   /** progress locked in: a short celebratory sting */
@@ -755,7 +1074,13 @@ export const Sfx = {
   ui: () => tone({ type: "sine", f0: 700, f1: 1100, dur: 0.06, vol: 0.15 }),
   reward: () => {
     [0, 0.08, 0.16].forEach((d, i) =>
-      tone({ type: "triangle", f0: 660 * (1 + i * 0.26), dur: 0.14, vol: 0.18, delay: d }),
+      tone({
+        type: "triangle",
+        f0: 660 * (1 + i * 0.26),
+        dur: 0.14,
+        vol: 0.18,
+        delay: d,
+      }),
     );
   },
   biome: () => tone({ type: "sine", f0: 120, f1: 480, dur: 0.8, vol: 0.18 }),

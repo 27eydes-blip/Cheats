@@ -736,7 +736,8 @@ export class ShopScene extends Phaser.Scene {
           ribbon = { text: "SEASON ONLY", col: 0xc8102e };
         } else if (cc.rarity === "legendary") ribbon = { text: "LEGENDARY", col: 0xe0203a };
         if (["coin", "hat", "skin"].includes(cc.cat)) add(this.iconCos(o.id, 0, artY + 90, 0.85));
-        c.rigSpec = { hero: s.selected, extra: [o.id] };
+        // a hero's signature item previews on that hero (SXE flies the Afterburner)
+        c.rigSpec = { hero: cc.hero || s.selected, extra: [o.id] };
         c.preview = () => [this.iconCos(o.id, 0, 0, 0.8)];
         const owned = Shop.owns(o.id);
         const on = Shop.equipped(cc.cat) === o.id;

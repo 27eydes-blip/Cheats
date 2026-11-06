@@ -25,7 +25,10 @@ const GOLD_L = 0xfff6c0;
 export class ToeBits {
   constructor(rig, depth) {
     this.rig = rig;
-    this.g = rig.scene.add.graphics().setDepth(depth - 1.5).setBlendMode(ADD);
+    this.g = rig.scene.add
+      .graphics()
+      .setDepth(depth - 1.5)
+      .setBlendMode(ADD);
     this.flare = 0; // 0..1.4, decays: flaps, near-misses, surges
     this.pillarT = 0; // new-best pillar time left
     this.poseT = 0; // power pose (frame 2) time left
@@ -60,7 +63,8 @@ export class ToeBits {
     if (!fx) return;
     const u = this.rig.u;
     fx.ring(x, y, BLUE_L, { scale: 1.1 * u, duration: 380, width: 2 });
-    if (!this.rig.lowGfx) fx.ring(x, y, GOLD, { scale: 0.75 * u, duration: 300 });
+    if (!this.rig.lowGfx)
+      fx.ring(x, y, GOLD, { scale: 0.75 * u, duration: 300 });
   }
 
   best() {
@@ -70,10 +74,11 @@ export class ToeBits {
     this.flare = 1.4;
     Sfx.powerUp();
     const { x, y, fx } = this.rig;
-    if (fx) fx.burst("star", x, y, this.rig.lowGfx ? 8 : 20, GOLD, {
-      angle: { min: 250, max: 290 },
-      speed: { min: 200, max: 520 },
-    });
+    if (fx)
+      fx.burst("star", x, y, this.rig.lowGfx ? 8 : 20, GOLD, {
+        angle: { min: 250, max: 290 },
+        speed: { min: 200, max: 520 },
+      });
   }
 
   /** Menus: the aura surges, the toenail shines, he strikes the power pose. */
@@ -81,6 +86,14 @@ export class ToeBits {
     this.flare = 1.4;
     this.poseT = 1.1;
     this.glint(true);
+  }
+
+  /** A new run (retry / revive): undo the stubbed-toe tumble, or he stays hidden next run. */
+  reset() {
+    this.dieT = -1;
+    this.flare = 0;
+    this.spin = 0;
+    this.bx = this.by = this.bvx = this.bvy = 0;
   }
 
   // ---------------------------------------------------------------- death
@@ -99,9 +112,17 @@ export class ToeBits {
     const calm = reduceFlashing();
     fx.floatText(x, y - 80 * this.rig.u, "STUBBED!", "#ffd23f", 64);
     // the aura shatters like glass (blue + gold shards flying out)
-    fx.burst("shard", x, y, this.rig.lowGfx ? 14 : 30, BLUE_L, { speed: { min: 220, max: 620 } });
-    fx.burst("shard", x, y, this.rig.lowGfx ? 8 : 18, GOLD, { speed: { min: 180, max: 520 } });
-    fx.ring(x, y, BLUE_L, { scale: 1.6 * this.rig.u, duration: calm ? 700 : 450, width: 2 });
+    fx.burst("shard", x, y, this.rig.lowGfx ? 14 : 30, BLUE_L, {
+      speed: { min: 220, max: 620 },
+    });
+    fx.burst("shard", x, y, this.rig.lowGfx ? 8 : 18, GOLD, {
+      speed: { min: 180, max: 520 },
+    });
+    fx.ring(x, y, BLUE_L, {
+      scale: 1.6 * this.rig.u,
+      duration: calm ? 700 : 450,
+      width: 2,
+    });
     fx.burst("star", x, y - 10, 10, 0xffffff, { speed: { min: 80, max: 260 } });
   }
 
@@ -119,14 +140,22 @@ export class ToeBits {
         this.bvy += 1500 * t;
         this.bx += this.bvx * t;
         this.by += this.bvy * t;
-        if (this.by > 0 && this.bvy > 0 && this.dieT < 0.9) this.bvy = -this.bvy * 0.55; // one bounce
+        if (this.by > 0 && this.bvy > 0 && this.dieT < 0.9)
+          this.bvy = -this.bvy * 0.55; // one bounce
         this.spin += 900 * t;
         this.starT = (this.starT || 0) - dt;
         if (this.starT <= 0 && rig.fx) {
           this.starT = rig.lowGfx ? 0.2 : 0.1;
-          rig.fx.burst("star", rig.x + this.bx, rig.y + this.by - 16 * rig.u, 1, 0xffd23f, {
-            speed: { min: 20, max: 70 },
-          });
+          rig.fx.burst(
+            "star",
+            rig.x + this.bx,
+            rig.y + this.by - 16 * rig.u,
+            1,
+            0xffd23f,
+            {
+              speed: { min: 20, max: 70 },
+            },
+          );
         }
       }
       if (this.dieT > 1.15) rig.setVisible(false);
@@ -170,7 +199,13 @@ export class ToeBits {
     const calm = reduceFlashing();
     const pulse = 0.1 * Math.sin(this.rig.time * 2.2);
     const rest = this.menu ? 0.8 : 0.5; // menus show him at a proud, steady glow
-    return rest + pulse + speed * 0.35 + combo * 0.04 + this.flare * (calm ? 0.25 : 0.45);
+    return (
+      rest +
+      pulse +
+      speed * 0.35 +
+      combo * 0.04 +
+      this.flare * (calm ? 0.25 : 0.45)
+    );
   }
 
   burstSparks(n) {
@@ -195,9 +230,16 @@ export class ToeBits {
     const sp = rig.sprite;
     const m = Math.abs(sp.displayWidth) / 24;
     const flip = sp.scaleY < 0 ? -1 : 1;
-    rig.fx.burst("star", sp.x + 3 * m, sp.y - 9 * m * flip, big ? 6 : 1, 0xffffff, {
-      speed: big ? { min: 60, max: 180 } : { min: 0, max: 12 },
-    });
+    rig.fx.burst(
+      "star",
+      sp.x + 3 * m,
+      sp.y - 9 * m * flip,
+      big ? 6 : 1,
+      0xffffff,
+      {
+        speed: big ? { min: 60, max: 180 } : { min: 0, max: 12 },
+      },
+    );
   }
 
   /**
@@ -230,12 +272,21 @@ export class ToeBits {
         const dome = Math.sqrt(1 - d * d);
         const flick = calm
           ? 0.5 + 0.5 * Math.sin(T * 3 + x * 0.3)
-          : 0.5 + 0.5 * Math.sin(T * 11 + x * 0.9) * Math.sin(T * 7.3 + x * 0.5);
+          : 0.5 +
+            0.5 * Math.sin(T * 11 + x * 0.9) * Math.sin(T * 7.3 + x * 0.5);
         const h = (10 + 9 * k * w + flick * 5 * k) * m * dome;
         const top = base - h * flip;
-        g.fillStyle(col, alpha * (0.7 + 0.3 * flick) * (0.5 + 0.5 * Math.min(1, k)));
+        g.fillStyle(
+          col,
+          alpha * (0.7 + 0.3 * flick) * (0.5 + 0.5 * Math.min(1, k)),
+        );
         const y0 = Math.min(base, top);
-        g.fillRect(Math.round((sp.x + x) / P) * P, Math.round(y0 / P) * P, P * 2, Math.abs(base - top));
+        g.fillRect(
+          Math.round((sp.x + x) / P) * P,
+          Math.round(y0 / P) * P,
+          P * 2,
+          Math.abs(base - top),
+        );
         // a bright tip on the tallest tongues
         if (flick > 0.75 && dome > 0.5)
           g.fillStyle(col === GOLD ? GOLD_L : BLUE_L, alpha * 0.9).fillRect(
@@ -249,7 +300,10 @@ export class ToeBits {
     // the new-best pillar: a column of golden light erupting up through him
     if (this.pillarT > 0) {
       const life = this.pillarT / 1.5;
-      const a = Math.sin(Math.min(1, (1 - life) * 4) * Math.PI * 0.5) * life * (calm ? 0.35 : 0.6);
+      const a =
+        Math.sin(Math.min(1, (1 - life) * 4) * Math.PI * 0.5) *
+        life *
+        (calm ? 0.35 : 0.6);
       const H = rig.scene.scale?.gameSize?.height || 1280;
       const top = flip > 0 ? sp.y - H : sp.y;
       const bottom = flip > 0 ? sp.y + 14 * m : sp.y + H;
@@ -279,7 +333,10 @@ export class ToeBits {
       return;
     }
     // gliding: a gentle side-to-side wiggle; power pose: a quick victory wiggle
-    const w = this.poseT > 0 ? Math.sin(rig.time * 24) * 9 : Math.sin(rig.time * 4.5) * 4;
+    const w =
+      this.poseT > 0
+        ? Math.sin(rig.time * 24) * 9
+        : Math.sin(rig.time * 4.5) * 4;
     sp.setAngle(Math.round((sp.angle + w) / 3) * 3);
   }
 
@@ -313,7 +370,13 @@ export class ToeBits {
         g.fillRect(snap(x + 5), snap(y + 1), 2, 2);
         g.fillRect(snap(x + 4), snap(y + 3), 2, 2);
         // aura sparks between the steps
-        if (!rig.lowGfx) g.fillStyle(0xffffff, al * 0.8).fillRect(snap(x - 10), snap(y - 8 * u), 2, 2);
+        if (!rig.lowGfx)
+          g.fillStyle(0xffffff, al * 0.8).fillRect(
+            snap(x - 10),
+            snap(y - 8 * u),
+            2,
+            2,
+          );
         foot++;
         next += 15 * Math.max(0.6, u);
       }

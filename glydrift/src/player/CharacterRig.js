@@ -183,6 +183,11 @@ export class CharacterRig {
     this.sizeMul = 1;
     this.sx = this.sy = 1;
     this.gravityDir = 1;
+    // a death move still animating (an animal's belly slide, a tween that hides the sprite at
+    // its end) must not carry into the new run: a quick RETRY lands before it finishes
+    this.scene.tweens?.killTweensOf(this.sprite);
+    this.sprite.setAngle(0);
+    this.toe?.reset(); // MATTOE: undo the stubbed-toe tumble
     this.falcon?.reset(); // SXE: undo the death tumble, or he stays hidden next run
     this.setVisible(true);
     this.trailG.clear();
@@ -1022,6 +1027,8 @@ export class CharacterRig {
   update(dt, scroll) {
     this.time += dt;
     this.flapT += dt;
+    // safety net: a living hero is always drawn (nothing left over from a death may hide them)
+    if (!this.dead && !this.sprite.visible) this.setVisible(true);
     const { def } = this;
 
     // trail points ride the world scroll
@@ -1144,7 +1151,7 @@ export class CharacterRig {
     if (this.px.mode === "yarms") this.updateYarms(dt);
     if (this.px.mode === "surf") this.updateSurf(dt);
     this.toe?.update(dt);
-    this.falcon?.update(dt);
+    this.falcon?.update(dt, scroll);
     if (this.an) this.an.update(dt, scroll);
     if (this.frozen) {
       // a death move is animating the sprite: just keep the trail fading
@@ -1409,7 +1416,12 @@ export class CharacterRig {
     if (this.points.length < 2) return;
     // stepped pixel trail: squares snapped to the art-pixel grid, shrinking + fading
     const P = 4;
-    const style = this.trailOverride ? null : this.cos.trail;
+    let style = this.trailOverride ? null : this.cos.trail;
+    // SXE's Afterburner draws only on SXE; any other hero shows their own trail
+    if (style === "trail_afterburner") {
+      if (this.falcon) return this.falcon.afterburner(g);
+      style = null;
+    }
     if (style && this.drawCosmeticTrail(g, style, P)) return;
     if (!this.trailOverride && this.px.mode === "yarms")
       return this.drawYarmsTrail(g);

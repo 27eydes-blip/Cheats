@@ -24,44 +24,207 @@ export const CATEGORIES = [
 // legendary 8,000–15,000 (see the economy table in the README)
 export const COSMETICS = [
   // trails
-  { id: "trail_hearts", cat: "trail", name: "Pixel Hearts", rarity: "common", price: 300 },
+  {
+    id: "trail_hearts",
+    cat: "trail",
+    name: "Pixel Hearts",
+    rarity: "common",
+    price: 300,
+  },
   { id: "trail_fire", cat: "trail", name: "Fire", rarity: "rare", price: 600 },
-  { id: "trail_lightning", cat: "trail", name: "Lightning", rarity: "rare", price: 800 },
-  { id: "trail_glitch", cat: "trail", name: "Glitch", rarity: "rare", price: 1000 },
-  { id: "trail_rainbow", cat: "trail", name: "Rainbow", rarity: "epic", price: 2500 },
-  { id: "trail_galaxy", cat: "trail", name: "Galaxy", rarity: "epic", price: 3500 },
-  { id: "trail_money", cat: "trail", name: "Money Rain", rarity: "legendary", price: 10000 },
+  {
+    id: "trail_lightning",
+    cat: "trail",
+    name: "Lightning",
+    rarity: "rare",
+    price: 800,
+  },
+  {
+    id: "trail_glitch",
+    cat: "trail",
+    name: "Glitch",
+    rarity: "rare",
+    price: 1000,
+  },
+  {
+    id: "trail_rainbow",
+    cat: "trail",
+    name: "Rainbow",
+    rarity: "epic",
+    price: 2500,
+  },
+  {
+    id: "trail_galaxy",
+    cat: "trail",
+    name: "Galaxy",
+    rarity: "epic",
+    price: 3500,
+  },
+  {
+    id: "trail_money",
+    cat: "trail",
+    name: "Money Rain",
+    rarity: "legendary",
+    price: 10000,
+  },
   // death effects
-  { id: "death_shatter", cat: "death", name: "Pixel Shatter", rarity: "common", price: 250 },
-  { id: "death_confetti", cat: "death", name: "Confetti", rarity: "common", price: 300 },
-  { id: "death_ghost", cat: "death", name: "Ghost", rarity: "rare", price: 500 },
-  { id: "death_firework", cat: "death", name: "Firework", rarity: "rare", price: 700 },
-  { id: "death_blackhole", cat: "death", name: "Black Hole", rarity: "legendary", price: 12000 },
+  {
+    id: "death_shatter",
+    cat: "death",
+    name: "Pixel Shatter",
+    rarity: "common",
+    price: 250,
+  },
+  {
+    id: "death_confetti",
+    cat: "death",
+    name: "Confetti",
+    rarity: "common",
+    price: 300,
+  },
+  {
+    id: "death_ghost",
+    cat: "death",
+    name: "Ghost",
+    rarity: "rare",
+    price: 500,
+  },
+  {
+    id: "death_firework",
+    cat: "death",
+    name: "Firework",
+    rarity: "rare",
+    price: 700,
+  },
+  {
+    id: "death_blackhole",
+    cat: "death",
+    name: "Black Hole",
+    rarity: "legendary",
+    price: 12000,
+  },
   // hats & accessories
-  { id: "hat_shades", cat: "hat", name: "Sunglasses", rarity: "common", price: 200 },
-  { id: "hat_phones", cat: "hat", name: "Headphones", rarity: "rare", price: 450 },
-  { id: "hat_horns", cat: "hat", name: "Devil Horns", rarity: "rare", price: 900 },
-  { id: "hat_helmet", cat: "hat", name: "Football Helmet", rarity: "epic", price: 1800 },
+  {
+    id: "hat_shades",
+    cat: "hat",
+    name: "Sunglasses",
+    rarity: "common",
+    price: 200,
+  },
+  {
+    id: "hat_phones",
+    cat: "hat",
+    name: "Headphones",
+    rarity: "rare",
+    price: 450,
+  },
+  {
+    id: "hat_horns",
+    cat: "hat",
+    name: "Devil Horns",
+    rarity: "rare",
+    price: 900,
+  },
+  {
+    id: "hat_helmet",
+    cat: "hat",
+    name: "Football Helmet",
+    rarity: "epic",
+    price: 1800,
+  },
   { id: "hat_halo", cat: "hat", name: "Halo", rarity: "epic", price: 3000 },
-  { id: "hat_crown", cat: "hat", name: "Crown", rarity: "legendary", price: 15000 },
+  {
+    id: "hat_crown",
+    cat: "hat",
+    name: "Crown",
+    rarity: "legendary",
+    price: 15000,
+  },
   // colour skins (work on every hero)
-  { id: "skin_frozen", cat: "skin", name: "Frozen", rarity: "rare", price: 700 },
-  { id: "skin_shadow", cat: "skin", name: "Shadow", rarity: "rare", price: 1200 },
+  {
+    id: "skin_frozen",
+    cat: "skin",
+    name: "Frozen",
+    rarity: "rare",
+    price: 700,
+  },
+  {
+    id: "skin_shadow",
+    cat: "skin",
+    name: "Shadow",
+    rarity: "rare",
+    price: 1200,
+  },
   { id: "skin_neon", cat: "skin", name: "Neon", rarity: "epic", price: 2000 },
-  { id: "skin_chrome", cat: "skin", name: "Chrome", rarity: "epic", price: 4000 },
-  { id: "skin_gold", cat: "skin", name: "Gold", rarity: "legendary", price: 8000 },
+  {
+    id: "skin_chrome",
+    cat: "skin",
+    name: "Chrome",
+    rarity: "epic",
+    price: 4000,
+  },
+  {
+    id: "skin_gold",
+    cat: "skin",
+    name: "Gold",
+    rarity: "legendary",
+    price: 8000,
+  },
   // flap effects
-  { id: "flap_sparks", cat: "flap", name: "Sparks", rarity: "common", price: 200 },
-  { id: "flap_stars", cat: "flap", name: "Stars", rarity: "common", price: 250 },
-  { id: "flap_feathers", cat: "flap", name: "Feathers", rarity: "common", price: 300 },
-  { id: "flap_notes", cat: "flap", name: "Music Notes", rarity: "rare", price: 400 },
+  {
+    id: "flap_sparks",
+    cat: "flap",
+    name: "Sparks",
+    rarity: "common",
+    price: 200,
+  },
+  {
+    id: "flap_stars",
+    cat: "flap",
+    name: "Stars",
+    rarity: "common",
+    price: 250,
+  },
+  {
+    id: "flap_feathers",
+    cat: "flap",
+    name: "Feathers",
+    rarity: "common",
+    price: 300,
+  },
+  {
+    id: "flap_notes",
+    cat: "flap",
+    name: "Music Notes",
+    rarity: "rare",
+    price: 400,
+  },
   // coin skins
-  { id: "coin_stars", cat: "coin", name: "Star Coins", rarity: "common", price: 300 },
+  {
+    id: "coin_stars",
+    cat: "coin",
+    name: "Star Coins",
+    rarity: "common",
+    price: 300,
+  },
   { id: "coin_gems", cat: "coin", name: "Gems", rarity: "rare", price: 600 },
-  { id: "coin_hearts", cat: "coin", name: "Pixel Hearts", rarity: "epic", price: 1500 },
+  {
+    id: "coin_hearts",
+    cat: "coin",
+    name: "Pixel Hearts",
+    rarity: "epic",
+    price: 1500,
+  },
   // DRIFT PASS+ exclusives: only from the paid track, never sold for coins. Pass skins are
   // drawn ~10% smaller; every hitbox stays the standard size (skins never touch physics)
-  { id: "skin_holo", cat: "skin", name: "Hologram", rarity: "legendary", price: 0, plus: true },
+  {
+    id: "skin_holo",
+    cat: "skin",
+    name: "Hologram",
+    rarity: "legendary",
+    price: 0,
+    plus: true,
+  },
   {
     id: "skin_inferno",
     cat: "skin",
@@ -78,10 +241,38 @@ export const COSMETICS = [
     price: 0,
     plus: true,
   },
-  { id: "trail_aurora", cat: "trail", name: "Aurora", rarity: "epic", price: 0, plus: true },
-  { id: "trail_eclipse", cat: "trail", name: "Eclipse", rarity: "epic", price: 0, plus: true },
-  { id: "death_supernova", cat: "death", name: "Supernova", rarity: "epic", price: 0, plus: true },
-  { id: "death_glitchout", cat: "death", name: "Glitch Out", rarity: "epic", price: 0, plus: true },
+  {
+    id: "trail_aurora",
+    cat: "trail",
+    name: "Aurora",
+    rarity: "epic",
+    price: 0,
+    plus: true,
+  },
+  {
+    id: "trail_eclipse",
+    cat: "trail",
+    name: "Eclipse",
+    rarity: "epic",
+    price: 0,
+    plus: true,
+  },
+  {
+    id: "death_supernova",
+    cat: "death",
+    name: "Supernova",
+    rarity: "epic",
+    price: 0,
+    plus: true,
+  },
+  {
+    id: "death_glitchout",
+    cat: "death",
+    name: "Glitch Out",
+    rarity: "epic",
+    price: 0,
+    plus: true,
+  },
   // Season 1 "Abyss Rising" Drift Pass+ exclusives (paid track only; cosmetic only).
   // pose: plays on a NEW BEST · name: the gold leaderboard name · badge: the forever season
   // badge · theme: a home screen look. None of these are shop tabs.
@@ -98,7 +289,14 @@ export const COSMETICS = [
     ["theme_pp_abyss", "theme", "Abyss Home", "legendary"],
     ["name_pp_gold", "name", "Gold Name", "legendary"],
     ["badge_pp_s1", "badge", "Season 1 Badge", "legendary"],
-  ].map(([id, cat, name, rarity]) => ({ id, cat, name, rarity, price: 0, plus: "s1" })),
+  ].map(([id, cat, name, rarity]) => ({
+    id,
+    cat,
+    name,
+    rarity,
+    price: 0,
+    plus: "s1",
+  })),
   // season exclusives: only for sale while their season runs (kept forever once bought)
   {
     id: "trail_bloodmoon",
@@ -124,7 +322,14 @@ export const COSMETICS = [
     price: 3200,
     season: "s1",
   },
-  { id: "hat_abysseye", cat: "hat", name: "Abyss Eye", rarity: "rare", price: 1200, season: "s1" },
+  {
+    id: "hat_abysseye",
+    cat: "hat",
+    name: "Abyss Eye",
+    rarity: "rare",
+    price: 1200,
+    season: "s1",
+  },
   {
     id: "trail_prism",
     cat: "trail",
@@ -140,6 +345,16 @@ export const COSMETICS = [
     rarity: "rare",
     price: 1100,
     season: "s3",
+  },
+  // hero signature: SXE's twin-engine Afterburner. Yours with SXE; never sold, never in pods or
+  // the daily shop. It only draws on SXE (any other hero shows their own trail).
+  {
+    id: "trail_afterburner",
+    cat: "trail",
+    name: "Afterburner",
+    rarity: "legendary",
+    price: 0,
+    hero: "splice",
   },
   // event exclusive: the move to glydrift.com (never sold, never in pods or the daily shop)
   {
@@ -166,7 +381,8 @@ export function setSeasonItemCheck(fn) {
   seasonItemLive = fn;
 }
 /** Can this cosmetic be bought / dropped right now? (owned ones are always shown) */
-export const forSale = (c) => !c.plus && !c.event && (!c.season || seasonItemLive(c));
+export const forSale = (c) =>
+  !c.plus && !c.event && !c.hero && (!c.season || seasonItemLive(c));
 
 const BY_ID = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const getCosmetic = (id) => BY_ID[id] || null;
@@ -237,10 +453,30 @@ export const COLLECTIONS = [
 // ------------------------------------------------------------------ boosts
 /** One run each. Boosted runs never reach the leaderboard or the Daily Challenge. */
 export const BOOSTS = [
-  { id: "revive", name: "Second Chance", desc: "Revive once when you crash", price: 750 },
-  { id: "headstart", name: "Head Start", desc: "Start the run at 200m", price: 300 },
-  { id: "magnet", name: "Coin Magnet", desc: "Pull in coins from far away", price: 200 },
-  { id: "double", name: "Double Coins", desc: "Every coin counts twice", price: 400 },
+  {
+    id: "revive",
+    name: "Second Chance",
+    desc: "Revive once when you crash",
+    price: 750,
+  },
+  {
+    id: "headstart",
+    name: "Head Start",
+    desc: "Start the run at 200m",
+    price: 300,
+  },
+  {
+    id: "magnet",
+    name: "Coin Magnet",
+    desc: "Pull in coins from far away",
+    price: 200,
+  },
+  {
+    id: "double",
+    name: "Double Coins",
+    desc: "Every coin counts twice",
+    price: 400,
+  },
 ];
 export const getBoost = (id) => BOOSTS.find((b) => b.id === id) || null;
 
@@ -277,7 +513,9 @@ function state() {
 export const Shop = {
   /** Owned and usable: Drift Pass+ items also need their season's verified purchase. */
   owns(id) {
-    return !!state().cos.owned[id] && plusAllowed(getCosmetic(id));
+    const c = getCosmetic(id);
+    if (c?.hero) return !!state().unlocked?.[c.hero]; // a hero's signature: yours with the hero
+    return !!state().cos.owned[id] && plusAllowed(c);
   },
   equipped(cat) {
     const id = state().cos.equipped[cat] || null;
@@ -286,7 +524,8 @@ export const Shop = {
   /** Everything equipped right now, e.g. { trail: "trail_fire", hat: null, … , title }. */
   loadout() {
     const lo = { ...state().cos.equipped };
-    for (const [cat, id] of Object.entries(lo)) if (!plusAllowed(getCosmetic(id))) delete lo[cat];
+    for (const [cat, id] of Object.entries(lo))
+      if (!plusAllowed(getCosmetic(id))) delete lo[cat];
     return lo;
   },
   equip(id) {
@@ -306,7 +545,9 @@ export const Shop = {
     const c = getCosmetic(id);
     if (!c) return Infinity;
     const deal = Shop.daily().deal;
-    return deal === id ? Math.round((c.price * (1 - DAILY_DISCOUNT)) / 10) * 10 : c.price;
+    return deal === id
+      ? Math.round((c.price * (1 - DAILY_DISCOUNT)) / 10) * 10
+      : c.price;
   },
 
   buy(id, where = "shop", shownPrice) {
@@ -320,7 +561,12 @@ export const Shop = {
     s.coins -= price;
     s.cos.owned[id] = true;
     Save.write();
-    Analytics.log("item_purchased", { item: id, price, category: c.cat, where });
+    Analytics.log("item_purchased", {
+      item: id,
+      price,
+      category: c.cat,
+      where,
+    });
     return true;
   },
 
@@ -328,7 +574,9 @@ export const Shop = {
   /** 4 items picked from the date (same for everyone that day), one of them 30% off. */
   daily(key = todayKey()) {
     const rng = new RNG(hashString(`glydrift-shop-${key}`));
-    const pool = COSMETICS.filter((c) => !c.season && !c.plus && !c.event); // season / pass / event items stay put
+    const pool = COSMETICS.filter(
+      (c) => !c.season && !c.plus && !c.event && !c.hero,
+    ); // season / pass / event items stay put
     const items = [];
     while (items.length < DAILY_COUNT && pool.length) {
       const i = Math.floor(rng.next() * pool.length);
@@ -366,7 +614,13 @@ export const Shop = {
       }
     }
     const left = COSMETICS.filter(
-      (c) => c.rarity === rarity && !s.cos.owned[c.id] && !c.season && !c.plus && !c.event,
+      (c) =>
+        c.rarity === rarity &&
+        !s.cos.owned[c.id] &&
+        !c.season &&
+        !c.plus &&
+        !c.event &&
+        !c.hero,
     );
     let out;
     if (!left.length) {
@@ -378,7 +632,12 @@ export const Shop = {
       out = { item, rarity, refund: 0 };
     }
     Save.write();
-    Analytics.log("pod_opened", { rarity, item: out.item?.id || null, refund: out.refund, free });
+    Analytics.log("pod_opened", {
+      rarity,
+      item: out.item?.id || null,
+      refund: out.refund,
+      free,
+    });
     return out;
   },
 
@@ -409,7 +668,11 @@ export const Shop = {
     s.boosts.owned[id] = (s.boosts.owned[id] || 0) + 1;
     s.boosts.armed[id] = true; // bought for the next run
     Save.write();
-    Analytics.log("item_purchased", { item: id, price: b.price, category: "boost" });
+    Analytics.log("item_purchased", {
+      item: id,
+      price: b.price,
+      category: "boost",
+    });
     return true;
   },
   toggleBoost(id) {
@@ -442,7 +705,13 @@ export const Shop = {
     const items = set.items.filter((id) => getCosmetic(id).cat !== "skin");
     const need = items.filter((id) => !Shop.owns(id));
     const full = need.reduce((a, id) => a + getCosmetic(id).price, 0);
-    return { set, items, need, full, price: Math.round((full * 0.75) / 10) * 10 };
+    return {
+      set,
+      items,
+      need,
+      full,
+      price: Math.round((full * 0.75) / 10) * 10,
+    };
   },
   /** Today's two featured bundles (rotate daily, same for everyone). */
   bundlesToday(key = todayKey()) {
@@ -460,7 +729,11 @@ export const Shop = {
     s.coins -= b.price;
     for (const id of b.need) s.cos.owned[id] = true;
     Save.write();
-    Analytics.log("item_purchased", { item: setId, price: b.price, category: "bundle" });
+    Analytics.log("item_purchased", {
+      item: setId,
+      price: b.price,
+      category: "bundle",
+    });
     return true;
   },
 
@@ -488,4 +761,5 @@ export const Shop = {
 
 // test builds only
 import { TEST } from "../systems/testFlags.js";
-if (TEST.on && typeof window !== "undefined") window.__glyShop = { COSMETICS, forSale, Shop, data: () => Save.data };
+if (TEST.on && typeof window !== "undefined")
+  window.__glyShop = { COSMETICS, forSale, Shop, data: () => Save.data };

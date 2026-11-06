@@ -194,6 +194,7 @@ export class GameScene extends Phaser.Scene {
       const calmWind = () => {
         Sfx.wind(0);
         Sfx.auraHum(0);
+        Sfx.jetHum(0);
       };
       for (const e of ["pause", "sleep", "shutdown"])
         this.events.on(e, calmWind);
@@ -871,6 +872,13 @@ export class GameScene extends Phaser.Scene {
         ? 0.35 + speedNorm * 0.65
         : 0,
     );
+    // SXE: the Afterburner's soft engine hum, rising in pitch with speed
+    const jetOn =
+      this.player?.rig?.falcon?.burner &&
+      !this.player.rig.dead &&
+      this.state === "playing" &&
+      !this.sys.isPaused();
+    Sfx.jetHum(jetOn ? 0.45 + speedNorm * 0.55 : 0, speedNorm);
     // music layers follow speed (more drums & synths as you go faster)
     Music.setIntensity(
       this.state === "playing" ? 0.15 + speedNorm * 0.85 : 0.1,
