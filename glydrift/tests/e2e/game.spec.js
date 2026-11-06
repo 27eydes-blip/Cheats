@@ -3637,10 +3637,13 @@ test("levels: the layout is the same every time, and a checkpoint replays it exa
       s.die();
       window.__glyGod(true);
       step(80);
+      // the level now waits at the checkpoint until the player taps
+      const waited = s.state;
+      s.onTap();
       step(60 * 8);
       const replay = beats();
       window.__glyNoRender = false;
-      return { seen, replay, cp, deaths: lr.deaths, state: s.state };
+      return { seen, replay, cp, deaths: lr.deaths, state: s.state, waited };
     });
   };
   const a = await layout();
@@ -3653,6 +3656,7 @@ test("levels: the layout is the same every time, and a checkpoint replays it exa
   expect(n).toBeGreaterThan(a.cp + 2);
   expect(a.replay.slice(0, n)).toEqual(a.seen.slice(0, n));
   expect(a.deaths).toBe(1);
+  expect(a.waited).toBe("ready");
   expect(a.state).toBe("playing");
   expect(log.errors).toEqual([]);
 });
