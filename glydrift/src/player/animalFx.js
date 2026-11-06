@@ -281,8 +281,12 @@ export class AnimalBits {
         im.setVisible(show)
           .setPosition(sp.x + Math.cos(a) * (O.r ?? 16) * k, sp.y + Math.sin(a) * (O.r ?? 16) * k * 0.4 - 2 * k)
           .setDisplaySize(4 * k, 4 * k)
-          .setDepth(sp.depth + (front ? 0.7 : -0.7))
           .setAlpha(front ? 0.95 : 0.55);
+        // (re-depth only when it passes in front / behind: a depth change re-sorts the scene)
+        if (im.front !== front) {
+          im.front = front;
+          im.setDepth(sp.depth + (front ? 0.7 : -0.7));
+        }
       });
     }
     const g = this.glow;

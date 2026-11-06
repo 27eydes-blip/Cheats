@@ -103,6 +103,7 @@ export function openRewardPreview(scene, r, opts = {}) {
     });
   };
   const cat = item?.cat;
+  let comboTxt = null;
   if (hero) makeRig({});
   else if (cat === "trail" || cat === "death" || cat === "pose" || cat === "flap" || cat === "skin" || cat === "hat")
     makeRig({ [cat]: item.id });
@@ -122,6 +123,11 @@ export function openRewardPreview(scene, r, opts = {}) {
     if (cat === "badge") parts.push(seasonBadge(scene, sx, sy + 110, 6));
   } else if (cat === "theme") {
     parts.push(...abyssMini(scene, sx, sy, pw - 80, ph * 0.5));
+  }
+  if (rig && cat === "trail") rig.trailTime = 0.9; // a longer trail to look at
+  if (item?.id === "trail_pp_comboflame") {
+    comboTxt = plainText(scene, W / 2, sy + 120, "COMBO ×1", 22, "#ffd23f");
+    parts.push(comboTxt);
   }
   for (const p of parts) c.add(p);
   // the hint at the bottom
@@ -178,13 +184,19 @@ export function openRewardPreview(scene, r, opts = {}) {
       rig.flap();
       loopT = 0;
     }
+    if (comboTxt) {
+      // the Combo Flame climbs through the combo tiers so you see every colour
+      const m = [1, 2, 3, 5, 10][Math.floor(t / 1.4) % 5];
+      if (rig.comboTier !== m) comboTxt.setText(`COMBO ×${m}`);
+      rig.comboTier = m;
+    }
     if (!rig.dead) {
       rig.x = sx + Math.sin(t * 1.4) * (cat === "trail" ? 40 : 14);
       rig.y = sy + Math.sin(t * 2.2) * 26;
       rig.angle = Math.cos(t * 2.2) * 10;
     }
     // trails need the world to move under the hero
-    rig.update(dt, cat === "trail" || cat === "flap" ? 380 : 120);
+    rig.update(dt, cat === "trail" || cat === "flap" ? 520 : 120);
     fx.update(dt);
   };
   scene.events.on("update", tick);

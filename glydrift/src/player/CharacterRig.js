@@ -1398,7 +1398,7 @@ export class CharacterRig {
           const t = i / n;
           const y = p.y + (i === 0 ? 0 : jit(i) * 22 * (t + 0.3));
           const a = 1 - t * 0.85;
-          sq(p.x, y, Math.max(1, Math.round((1 - t) * 3)) * P + P, 0x2a8aff, a * 0.35);
+          if (i % 4 === 0) sq(p.x, y, Math.max(1, Math.round((1 - t) * 3)) * P + P * 2, 0x2a8aff, a * 0.3);
           sq(p.x, y, Math.max(1, Math.round((1 - t) * 2)) * P, 0xe8ffff, a);
           // fill the gap to the last joint so the bolt reads as one line
           if (prev) sq((prev.x + p.x) / 2, (prev.y + y) / 2, P, 0xbff4ff, a);
