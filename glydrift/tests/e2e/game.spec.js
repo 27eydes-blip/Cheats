@@ -1186,7 +1186,8 @@ test("no skin changes the hitbox, speed or score rules (Pass+ skins look 10% sma
   const owned = Object.fromEntries(skins.filter(Boolean).map((k) => [k, true]));
   const log = await openGame(page, {
     flags: ["god"],
-    save: { ...SAVE, cos: { owned, equipped: {} } },
+    // (Pass+ skins only count with a verified Drift Pass+ purchase)
+    save: { ...SAVE, cos: { owned, equipped: {} }, passPlus: { s1: { verified: true, tx: "t" } } },
   });
   const results = [];
   for (const skin of skins) {
