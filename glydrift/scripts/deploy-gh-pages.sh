@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
+# © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE.
 # Publish the built game to this repo's gh-pages branch.
 #   PAGES_SUBDIR=glydrift (default): under /glydrift, next to the other games (the Cheats repo)
 #   PAGES_SUBDIR=.                 : at the root of the site (Glydrift's own repo)

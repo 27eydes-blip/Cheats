@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Original procedural house tracks for Glydrift (pure data — composed for this game).
 // Degrees are scale steps in natural minor (0 = tonic). Patterns are 16 steps per bar.
 // `_` = rest.

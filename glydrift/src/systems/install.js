@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // "Add to Home Screen" helper.
 //  - Android / desktop Chrome & Edge: captures `beforeinstallprompt` and shows the real
 //    install dialog with one tap.

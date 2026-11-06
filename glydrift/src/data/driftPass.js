@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // DRIFT PASS — a free reward track unlocked with XP from playing. Every run's XP fills it;
 // each tier pays coins or a cosmetic, and the last tier is a free Mystery Pod.
 //

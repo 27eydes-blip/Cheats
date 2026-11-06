@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Frozen Nebula: Icicle (shakes → drops), IceSlider (slow sliding pillar), ZapOrbs
 // (charge → zap between two orbs), FrostComet (its path is marked, then it streaks across).
 import { PILLAR_W } from "../../pixel/biomeArt.js";

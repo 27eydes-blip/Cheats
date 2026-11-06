@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Every obstacle type the manager can spawn, by type name.
 import { ClosingWalls, EyeBeam, Slammer, Tendril } from "./biomes/abyss.js";
 import { FireBar, FlareArc, Geyser, Meteor } from "./biomes/solar.js";

@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Pixel art for the coin shop: hats & accessories (sized to sit on any hero's head), particle
 // sprites for flap / death / trail effects, the three coin skins, the Mystery Pod and the
 // shop's item icons. All original designs, drawn on the same 4x art-pixel grid as the heroes.

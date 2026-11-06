@@ -1,4 +1,4 @@
-/*! Glydrift — © 2026 Sammy Eyde. All rights reserved. Not open source; see LICENSE. */
+/*! Glydrift — © 2026 Sam Eyde III. All rights reserved. Not open source; see LICENSE. */
 import "@fontsource/orbitron/700.css";
 import "@fontsource/orbitron/900.css";
 import "@fontsource/rajdhani/600.css";

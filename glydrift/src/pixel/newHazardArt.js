@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Hazard art for the Peaceful Valley (thorn vines, dandelion puffs, bloom gates) and the
 // Hurricane (tumbling debris, storm clouds + lightning, twisters). Original pixel art.
 // Everything lethal carries the biome's danger colour so it reads instantly.

@@ -1,4 +1,4 @@
--- © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
+-- © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE.
 --
 -- Glydrift · server-side checks, round 2 (security review 2026-11-05).
 -- Everything that matters to other players or to paid content is decided here, on the server.

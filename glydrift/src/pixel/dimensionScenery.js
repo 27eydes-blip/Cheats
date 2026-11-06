@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Background silhouettes for the four dimensions. Every layer tiles horizontally (shapes
 // use periods that divide the width) and is original pixel art.
 import { PixelCanvas, seeded } from "./px.js";

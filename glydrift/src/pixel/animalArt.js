@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // The 30 animal heroes: shared drawing helpers, their particle sprites, and the "pxa" atlas.
 // Every animal is an original 24x24 sprite facing right with a bold dark outline (the white
 // rim every hero has is added by rim()). Frames: 0/1 idle loop (1 is the portrait), 2 flap,

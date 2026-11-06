@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Ten more shop heroes — original 24x24 pixel creatures, 3 animation frames each, facing right.
 // Bought with coins (plus shards or a challenge for the pricier ones), like the core roster.
 import { eye, shadeEdges, wing } from "./lotteryHeroes.js";

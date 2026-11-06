@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Mirror Realm hazards. Each appears on ONE side of the glowing horizon, but your mirror twin
 // flies upside down on the other side and can crash too — so every hazard counts twice.
 //  Spire (crystal spike from an edge), VoidOrb (bobbing orb), SweepBar (an energy bar that

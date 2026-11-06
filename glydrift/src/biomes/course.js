@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // The run's course: the classic biomes in order (Neon Void → Hurricane), then a rift into a
 // random dimension; every DIMENSIONS.length metres another rift leads to a different one.
 // Replaces the old "a new biome every 500 m, looping" maths.

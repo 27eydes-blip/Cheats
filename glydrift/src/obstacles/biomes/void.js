@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Neon Void signature hazards: the axe on a chain (Blade) and the vertical / horizontal
 // lasers (Laser) with their charge-up warning, and the Neon Pulse (a charging node whose full
 // reach is drawn first, then one expanding ring).

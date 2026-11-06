@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Username rules: 3–12 letters/numbers, plus a light profanity filter that also catches
 // common leetspeak substitutions (0→o, 1→i, 3→e, 4→a, 5→s, 7→t, 8→b, 9→g, $→s, @→a).
 

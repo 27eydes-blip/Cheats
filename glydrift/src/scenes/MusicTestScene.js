@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Hidden music test page: tap the GLYDRIFT logo 5 times on the home screen (or open ?music).
 // Play every track, jump between them (on-beat crossfade), push intensity, try the death sweep.
 import Phaser from "phaser";

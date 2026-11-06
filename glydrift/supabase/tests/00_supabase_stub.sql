@@ -1,4 +1,4 @@
--- © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
+-- © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE.
 -- A minimal stand-in for what Supabase provides (roles, auth.uid()), plus the base scores
 -- table and policies that predate supabase/migrations. Used only by scripts/test-server-checks.sh.
 -- minimal stand-in for what Supabase provides, plus the base scores table the repo doesn't have

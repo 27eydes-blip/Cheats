@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Spawns obstacle patterns from a seeded RNG, pools every instance, and resolves
 // collisions / near-misses / portal + coin pickups against the player circle.
 import Phaser from "phaser";

@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE.
 //
 // Shared by the Edge Functions: ask Apple's App Store Server API about a transaction.
 // The answer is fetched straight from Apple over TLS with your In-App Purchase key, so it is

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
+# © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE.
 #
 # Release gate: succeeds only if the "Glydrift tests" GitHub Actions workflow
 # (.github/workflows/glydrift.yml) really ran and passed for one exact commit:

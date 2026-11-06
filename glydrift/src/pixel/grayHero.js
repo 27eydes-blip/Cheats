@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Greyscale copies of hero art, made on demand, so shop colour skins (gold, chrome, shadow,
 // neon, frozen) recolour any hero properly: tint × grey = that colour's shades, whereas tinting
 // a blue bird gold would just turn it green.

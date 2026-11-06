@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Auto-generated shareable result card (1080x1350 PNG) built with Canvas2D,
 // shown in a DOM modal with Web Share / download fallbacks.
 import { Shop, SKINS } from "../data/cosmetics.js";

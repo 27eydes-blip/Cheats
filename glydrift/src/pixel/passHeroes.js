@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // DRIFT PASS+ · Season 1 heroes: ten shadowy animals, only from the paid pass track.
 //
 // They're drawn in finer, more detailed pixel art than the standard heroes: a 32x32 canvas

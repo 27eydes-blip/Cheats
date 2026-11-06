@@ -2,7 +2,7 @@
   "name": "glydrift",
   "private": true,
   "license": "UNLICENSED",
-  "author": "Sammy Eyde",
+  "author": "Sam Eyde III",
   "version": "1.0.0",
   "description": "Glydrift \u2014 a neon-cosmos one-tap arcade flyer (Phaser 3 + Vite, Capacitor-ready).",
   "type": "module",

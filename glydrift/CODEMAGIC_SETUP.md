@@ -1,6 +1,6 @@
 # Glydrift on the App Store with Codemagic (no Mac needed)
 
-© 2026 Sammy Eyde. All rights reserved.
+© 2026 Sam Eyde III. All rights reserved.
 
 Codemagic builds the iOS app on its Macs, signs it, and uploads it to App Store Connect /
 TestFlight. You only need a web browser, plus a terminal for one command in step 4

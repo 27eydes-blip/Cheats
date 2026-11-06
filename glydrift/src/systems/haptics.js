@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Light / strong haptic taps. Uses the native Haptics plugin when the game runs as an
 // installed app (Capacitor), else the Vibration API where the browser has one (Android).
 // iPhone Safari / home-screen web apps have no web vibration API, so there it is a no-op.

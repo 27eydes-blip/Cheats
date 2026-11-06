@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
+# © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE.
 #
 # Server-side rules test: applies every migration in supabase/migrations to a brand-new,
 # throwaway PostgreSQL database and attacks it the way a cheater with the public key would

@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Local persistence. Everything lives in one JSON blob in localStorage; when wrapped with
 // Capacitor this can be swapped for @capacitor/preferences without touching callers.
 import { SPIN_MAX } from "../tuning.js";

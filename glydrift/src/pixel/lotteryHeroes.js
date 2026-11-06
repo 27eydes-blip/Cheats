@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // The ten Lucky Spin heroes — original 24x24 pixel creatures, 3 animation frames each.
 // Flappers: frame 0 wings up, 1 mid, 2 down. Idle heroes: a gentle 3-step loop.
 import { PixelCanvas } from "./px.js";

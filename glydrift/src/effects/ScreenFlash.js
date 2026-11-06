@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Screen flashes made of two plain overlays (a full-screen colour rect + a tinted edge
 // vignette): no shaders, no render targets. Safety rules live here:
 //   · at most 3 flashes start in any 1-second window (extra ones are dropped)

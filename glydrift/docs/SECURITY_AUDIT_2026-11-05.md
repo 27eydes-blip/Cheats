@@ -1,6 +1,6 @@
 # Security audit: 2026-11-05
 
-© 2026 Sammy Eyde. All rights reserved.
+© 2026 Sam Eyde III. All rights reserved.
 
 ## 1. Secrets in the repo and its git history
 

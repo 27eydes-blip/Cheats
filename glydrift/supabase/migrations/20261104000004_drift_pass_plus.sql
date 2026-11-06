@@ -1,4 +1,4 @@
--- © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
+-- © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE.
 -- Glydrift · DRIFT PASS+ purchases ($3.99 per season, iOS In-App Purchase, StoreKit 2).
 --
 -- A row here means: Apple confirmed this transaction (checked server-side by the Edge Function

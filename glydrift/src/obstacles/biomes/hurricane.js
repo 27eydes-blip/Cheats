@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Hurricane: Debris (planks tumbling down-left in the wind), StormBolt (cloud charges with a
 // dashed line, then strikes part-way down), Twister (funnel from the floor or ceiling).
 import { S } from "../../pixel/px.js";

@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // PRISM animals — crystal creatures unlocked by discovering and surviving the Prism Rift.
 import { PixelCanvas } from "./px.js";
 import { finish, limb, lightEdges, shadeEdges, wing } from "./animalKit.js";

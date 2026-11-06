@@ -1,6 +1,6 @@
 # Making Glydrift private: what breaks, the options, and the safe order
 
-© 2026 Sammy Eyde. All rights reserved.
+© 2026 Sam Eyde III. All rights reserved.
 
 ## First: the Cheats repo can't simply be switched to private
 

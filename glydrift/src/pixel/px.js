@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Pixel-art toolkit. Art is authored at 1 "art pixel" = 1 cell, then written to textures
 // pre-scaled by S (each art pixel becomes an S×S block) with NEAREST filtering. Game code keeps
 // working in its usual logical units: 1 art pixel = S logical units on screen.

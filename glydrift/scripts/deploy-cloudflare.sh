@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
+# © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE.
 # Publish the built game to Cloudflare Pages (option B in PRIVATE_REPO_PLAN.md). It works with
 # a private repo, and is called by the deploy job only after every test has passed.
 # Needs CLOUDFLARE_API_TOKEN (Pages: Edit) and CLOUDFLARE_ACCOUNT_ID, as GitHub secrets.

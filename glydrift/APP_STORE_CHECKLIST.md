@@ -1,6 +1,6 @@
 # Glydrift: what you still do yourself (App Store Connect & friends)
 
-© 2026 Sammy Eyde. All rights reserved.
+© 2026 Sam Eyde III. All rights reserved.
 
 The Codemagic steps are in [CODEMAGIC_SETUP.md](CODEMAGIC_SETUP.md). This list covers everything
 Codemagic can't do for you. Tick the items as you go.

@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Draw a title (titles.js). Plain titles are a single coloured line; the Drift Pass+ ones are
 // animated: SHIMMER (a bright band sweeps across), GLOW (a soft halo breathes) and SHIFT (the
 // colour cycles through the neon spectrum). Built from tints and alpha only (no per-frame

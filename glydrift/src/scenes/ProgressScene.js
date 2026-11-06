@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Player level & rewards, rotating missions, login streak and achievement badges.
 import Phaser from "phaser";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";

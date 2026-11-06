@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Glowing floor liquids (one 32x8 tileable strip per biome): slime, lava, ice, data, blood.
 // Sits behind the floor spikes so it glows between the teeth; scrolls with the world.
 import { FLOOR } from "./colorShift.js";

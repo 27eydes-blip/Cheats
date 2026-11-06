@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE.
 import Capacitor
 import UIKit
 

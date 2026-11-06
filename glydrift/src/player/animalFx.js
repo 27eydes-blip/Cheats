@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Per-animal behaviour for the 30 animal heroes, driven by each def's `animal` block:
 //   trailFx   { kind, color, every, rainbow? }   particles shed along the trail
 //   trail     "aurora" | "web" | "ripple"         a special trail drawing

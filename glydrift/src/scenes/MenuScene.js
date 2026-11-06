@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Title screen: dimmed living background, the selected hero flying a figure-eight, a big
 // PLAY button, the Daily Challenge with a countdown, the daily login reward and settings.
 import Phaser from "phaser";

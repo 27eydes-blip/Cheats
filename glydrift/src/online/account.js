@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Accounts + cloud save (Supabase Auth). Nothing here is ever required to play:
 //  - Everyone starts as an anonymous player (the leaderboard already signs in anonymously).
 //  - CREATE ACCOUNT turns that same anonymous user into an email + password account, so the

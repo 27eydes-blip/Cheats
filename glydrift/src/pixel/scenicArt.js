@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Background silhouettes for the Peaceful Valley, the Hurricane, the Frozen Nebula and the
 // Solar Storm, the Neon Void, the Glitch Realm and the Abyss. Every layer tiles
 // horizontally (all shapes use periods that divide the width) and is original pixel art.

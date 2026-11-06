@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Tiny WebAudio synth — no audio files, instant response, unlocked on first touch.
 import { Music, rawAudioContext } from "./music.js";
 import { Save } from "../data/save.js";

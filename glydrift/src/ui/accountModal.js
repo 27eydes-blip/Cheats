@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Account screen (a DOM overlay so the phone's keyboard, password managers and autofill work):
 // guest → CREATE ACCOUNT / SIGN IN (+ Sign in with Apple on iPhone, forgotten password);
 // signed in → status, change password, log out, delete account; a password-reset link opens

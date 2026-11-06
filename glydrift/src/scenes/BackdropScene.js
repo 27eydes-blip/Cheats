@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Persistent background scene shared by every screen; it renders before the active screen.
 import Phaser from "phaser";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";

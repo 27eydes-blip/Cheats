@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Visual rig for a character: pixel sprite, stepped trail, idle animation, flap effect and
 // death explosion. Used in-game and for the live previews on the menus.
 import Phaser from "phaser";

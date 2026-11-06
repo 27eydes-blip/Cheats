@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Automated cross-device / cross-browser tests. `npm run test:all` builds the game and runs
 // everything; GitHub Actions runs the same on every push and pull request.
 import { existsSync } from "node:fs";

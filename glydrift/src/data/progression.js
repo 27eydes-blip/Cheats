@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Meta-progression: XP/levels, missions, achievements, login streak, daily, unlocks.
 import { BIOMES } from "../biomes/biomes.js";
 import { CHARACTERS, getCharacter, heroReleased, onSale } from "../player/characterDefs.js";

@@ -1,4 +1,4 @@
--- © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE.
+-- © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE.
 -- Attacks a cheater could make with the public key, run against the real migrations.
 -- Every row must say PASS. Run: npm run test:server (needs a local PostgreSQL).
 \set QUIET on

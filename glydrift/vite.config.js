@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";

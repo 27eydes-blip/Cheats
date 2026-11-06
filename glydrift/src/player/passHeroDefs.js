@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // DRIFT PASS+ · Season 1 heroes (pure data). Art: pixel/passHeroes.js (atlas "pxp", 32x32 at
 // 3 texture px per art px); behaviour: player/animalFx.js (the `animal` block, `pass: true`);
 // sounds: audio/sfx.js (ANIMAL_SFX).

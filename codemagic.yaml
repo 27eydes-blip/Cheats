@@ -12,7 +12,7 @@
 #
 # Glydrift currently lives in the glydrift/ folder of the Cheats repo, hence `working_directory`.
 # Codemagic always reads this file from the repository root. Setup: glydrift/CODEMAGIC_SETUP.md.
-# © 2026 Sammy Eyde. All rights reserved. Glydrift — see glydrift/LICENSE.
+# © 2026 Sam Eyde III. All rights reserved. Glydrift — see glydrift/LICENSE.
 workflows:
   glydrift-ios-release:
     name: Glydrift iOS → TestFlight

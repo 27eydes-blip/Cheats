@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Buying DRIFT PASS+ (the game's only real-money purchase).
 //
 //  iPhone app: StoreKit 2 through the app's native GlydriftStore plugin (ios-plugin/). The

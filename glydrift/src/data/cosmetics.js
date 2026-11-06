@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // The coin shop: cosmetics (trails, death effects, hats, skins, flap effects, coin skins),
 // the Daily Shop, the Mystery Pod, one-run Boosts and themed Collections.
 //

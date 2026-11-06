@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Pixel biome art generator. One palette + a few style switches per biome produce every tile,
 // hazard, decoration and background layer. All assets are original procedural pixel art.
 import { addAtlas, addTexture, canvasTexture, mix, PixelCanvas, seeded, shade } from "./px.js";

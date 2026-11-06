@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Results overlay. The whole intro animates in under a second; a tap skips it. Taps on the
 // background only retry after 0.5 s (so a panicked tap doesn't restart), and taps on the
 // buttons never count as "retry".

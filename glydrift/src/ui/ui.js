@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Juicy UI kit: neon text, bouncy buttons, rolling counters, progress bars, toasts.
 import Phaser from "phaser";
 import { FONT, NUM_FONT, VIEW } from "../config.js";

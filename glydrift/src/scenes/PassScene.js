@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // DRIFT PASS — full-screen season pass in Glydrift's pixel-neon style (original layout/art).
 // Header (season, countdown, tier XP, balances) · the season hero pinned on a pedestal ·
 // a momentum-scrolling track of 50 tiers: a glowing line with tier bubbles, FREE rewards on

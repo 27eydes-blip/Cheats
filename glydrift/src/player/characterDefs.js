@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Pure data for the character roster (no Phaser imports, safe to use in systems).
 import { ANIMALS } from "./animalDefs.js";
 import { PASS_HEROES } from "./passHeroDefs.js";

@@ -1,4 +1,4 @@
-// © 2026 Sammy Eyde. All rights reserved. Glydrift — see LICENSE. Not open source.
+// © 2026 Sam Eyde III. All rights reserved. Glydrift — see LICENSE. Not open source.
 // Obstacles shared by every biome (except the Peaceful Valley): saw wheels, spiked stone
 // gates and the portals (gravity flip / restore / mini).
 import Phaser from "phaser";
