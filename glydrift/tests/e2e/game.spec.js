@@ -2509,42 +2509,36 @@ test("every hero is visible again after a quick RETRY (no death move carries ove
     profileOf(testInfo) !== "iphone-std",
     "once per browser, at phone size",
   );
-  test.setTimeout(240_000);
+  test.setTimeout(180_000);
   const log = await openGame(page, { flags: ["god"] });
   await startRun(page);
-  const bad = await page.evaluate(() => {
-    const g = window.__glydrift;
-    const s = g.scene.getScene("Game");
+  const res = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
     const Rig = s.player.rig.constructor;
-    let t = performance.now() + 1e6;
-    const step = (n) => {
-      for (let i = 0; i < n; i++) {
-        t += 1000 / 60;
-        g.step(t, 1000 / 60);
-      }
-    };
-    const out = [];
+    const bad = [];
+    let n = 0;
     for (const def of window.__heroDefs) {
       const rig = new Rig(s, def, s.fx, { x: 200, y: 400, depth: 31 });
-      const tick = (n) => {
-        for (let i = 0; i < n; i++) {
-          rig.update(1 / 60, 400);
-          step(1);
-        }
+      const tick = (k) => {
+        for (let i = 0; i < k; i++) rig.update(1 / 60, 400);
       };
       tick(20);
       rig.die();
       tick(8); // RETRY lands while the death move is still playing
       rig.reset(200, 400);
-      tick(150); // longer than any death move
+      // a death move that was still running finishes now (it may try to hide the hero)
+      for (const tw of s.tweens.getTweensOf(rig.sprite)) tw.complete();
+      tick(150); // longer than any death tumble
       const sp = rig.sprite;
       if (!sp.visible || sp.alpha < 0.5)
-        out.push(`${def.id}: visible=${sp.visible} alpha=${sp.alpha}`);
+        bad.push(`${def.id}: visible=${sp.visible} alpha=${sp.alpha}`);
       rig.destroy();
+      n++;
     }
-    return out;
+    return { bad, n };
   });
-  expect(bad).toEqual([]);
+  expect(res.n).toBeGreaterThan(40); // every hero, not a handful
+  expect(res.bad).toEqual([]);
   expect(log.errors).toEqual([]);
 });
 
