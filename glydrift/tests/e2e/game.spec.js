@@ -1917,15 +1917,22 @@ test("SXE: +25% speed with the standard hitbox, falcon moves, speed badge, perch
     step(20);
     tumbling = r.falcon.dieT > 0 && r.sprite.visible;
     step(90);
+    const gone = !r.sprite.visible;
+    const dead = r.dead;
+    // the next run (retry): he's back and stays visible (the tumble doesn't carry over)
+    r.reset(200, 300);
+    for (let i = 0; i < 120; i++) r.update(1 / 60, 300);
     return {
       flipped,
       screech,
-      dead: r.dead,
+      dead,
       tumbling,
-      gone: !r.sprite.visible,
+      gone,
+      back: r.sprite.visible && r.falcon.dieT < 0,
     };
   });
   expect(moves).toEqual({
+    back: true,
     flipped: true,
     screech: "splice_7",
     dead: true,
