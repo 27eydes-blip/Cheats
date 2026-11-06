@@ -38,7 +38,10 @@ export class FalconBits {
     this.perchPose = 4;
     this.perchDrop = 0;
     if (this.showcase) {
-      this.perch = rig.scene.add.graphics().setDepth(depth - 0.5).setVisible(false);
+      this.perch = rig.scene.add
+        .graphics()
+        .setDepth(depth - 0.5)
+        .setVisible(false);
     }
   }
 
@@ -68,10 +71,17 @@ export class FalconBits {
     const r = this.rig;
     if (r.dead || !r.fx) return;
     // a sharp puff of wind off the wingtips
-    r.fx.burst("pixel", r.x - 6 * r.u, r.y + 6 * r.u, r.lowGfx ? 2 : 4, STEEL_L, {
-      angle: { min: 150, max: 210 },
-      speed: { min: 160, max: 380 },
-    });
+    r.fx.burst(
+      "pixel",
+      r.x - 6 * r.u,
+      r.y + 6 * r.u,
+      r.lowGfx ? 2 : 4,
+      STEEL_L,
+      {
+        angle: { min: 150, max: 210 },
+        speed: { min: 160, max: 380 },
+      },
+    );
   }
 
   near() {
@@ -138,18 +148,37 @@ export class FalconBits {
     for (let i = 0; i < waves; i++)
       r.scene.time.delayedCall(i * 45, () => {
         const a = i * 60;
-        r.fx?.burst("feather", r.x + this.bx, r.y + this.by, r.lowGfx ? 4 : 6, i % 2 ? FEATHER_A : FEATHER_B, {
-          angle: { min: a, max: a + 50 },
-          speed: { min: 160, max: 420 },
-        });
+        r.fx?.burst(
+          "feather",
+          r.x + this.bx,
+          r.y + this.by,
+          r.lowGfx ? 4 : 6,
+          i % 2 ? FEATHER_A : FEATHER_B,
+          {
+            angle: { min: a, max: a + 50 },
+            speed: { min: 160, max: 420 },
+          },
+        );
       });
-    r.fx.burst("pixel", r.x, r.y, r.lowGfx ? 8 : 16, STEEL_L, { speed: { min: 120, max: 380 } });
+    r.fx.burst("pixel", r.x, r.y, r.lowGfx ? 8 : 16, STEEL_L, {
+      speed: { min: 120, max: 380 },
+    });
   }
 
   /** Extra spin (degrees) for the sprite this frame. */
   spinNow() {
     if (this.dieT >= 0) return this.spin;
     return 0;
+  }
+
+  /** A new run (retry / revive): undo the death tumble and any pose in progress. */
+  reset() {
+    this.dieT = -1;
+    this.rollT = 0;
+    this.screechT = 0;
+    this.lungeT = 0;
+    this.spin = 0;
+    this.bx = this.by = this.bvx = this.bvy = 0;
   }
 
   // ---------------------------------------------------------------- every frame
@@ -208,10 +237,17 @@ export class FalconBits {
         if (step) {
           [this.perchPose, this.phaseT] = step;
           if (this.perchPose === 5 && r.fx)
-            r.fx.burst("feather", r.x, r.y + drop * 0.6, r.lowGfx ? 2 : 4, FEATHER_B, {
-              angle: { min: 200, max: 340 },
-              speed: { min: 40, max: 120 },
-            });
+            r.fx.burst(
+              "feather",
+              r.x,
+              r.y + drop * 0.6,
+              r.lowGfx ? 2 : 4,
+              FEATHER_B,
+              {
+                angle: { min: 200, max: 340 },
+                speed: { min: 40, max: 120 },
+              },
+            );
         } else {
           this.phase = "fly";
           this.phaseT = 2.6;
@@ -233,12 +269,27 @@ export class FalconBits {
     const half = 15 * k;
     const P = Math.max(2, Math.round(k));
     // a pixel branch: dark outline, warm wood, a lit top edge, a twig and a stub
-    g.fillStyle(0x140a04, a).fillRect(r.x - half - P, py - P, half * 2 + P * 2, P * 5);
+    g.fillStyle(0x140a04, a).fillRect(
+      r.x - half - P,
+      py - P,
+      half * 2 + P * 2,
+      P * 5,
+    );
     g.fillStyle(0x7a5030, a).fillRect(r.x - half, py, half * 2, P * 3);
     g.fillStyle(0xc89058, a).fillRect(r.x - half, py, half * 2, P);
     g.fillStyle(0x4a2e18, a).fillRect(r.x - half, py + P * 2, half * 2, P);
-    g.fillStyle(0x140a04, a).fillRect(r.x + half * 0.55 - P, py - P * 4, P * 4, P * 4);
-    g.fillStyle(0x7a5030, a).fillRect(r.x + half * 0.55, py - P * 3, P * 2, P * 3); // twig
+    g.fillStyle(0x140a04, a).fillRect(
+      r.x + half * 0.55 - P,
+      py - P * 4,
+      P * 4,
+      P * 4,
+    );
+    g.fillStyle(0x7a5030, a).fillRect(
+      r.x + half * 0.55,
+      py - P * 3,
+      P * 2,
+      P * 3,
+    ); // twig
     g.fillStyle(0x140a04, a).fillRect(r.x - half - P * 4, py, P * 4, P * 3);
     g.fillStyle(0x7a5030, a).fillRect(r.x - half - P * 3, py + P, P * 3, P); // stub
     if (!on) g.setAlpha(a);
@@ -259,7 +310,8 @@ export class FalconBits {
       sp.scaleY *= Math.cos(p * Math.PI * 2);
     }
     // dive: nose down a little between flaps
-    if (this.phase !== "perched" && r.flapT > 0.17 && r.flapT < 0.55) sp.angle += 8;
+    if (this.phase !== "perched" && r.flapT > 0.17 && r.flapT < 0.55)
+      sp.angle += 8;
     // new best: a quick lunge forward (the drawing only) as the boom goes off
     if (this.lungeT > 0) {
       const k = Math.sin((1 - this.lungeT / 0.5) * Math.PI);
@@ -283,18 +335,31 @@ export class FalconBits {
         const b = pts[i];
         const t = i / n;
         const shimmer = calm ? 0 : 0.25 * Math.sin(T * 18 + i * 0.7);
-        g.lineStyle(Math.max(1, (1 - t) * 3 * u), t < 0.35 ? 0xffffff : STEEL_L, (0.75 + shimmer) * (1 - t));
-        g.lineBetween(a.x, a.y + off * u * (1 - t * 0.4), b.x, b.y + off * u * (1 - t * 0.4));
+        g.lineStyle(
+          Math.max(1, (1 - t) * 3 * u),
+          t < 0.35 ? 0xffffff : STEEL_L,
+          (0.75 + shimmer) * (1 - t),
+        );
+        g.lineBetween(
+          a.x,
+          a.y + off * u * (1 - t * 0.4),
+          b.x,
+          b.y + off * u * (1 - t * 0.4),
+        );
       }
     }
     // speed lines: short dashes streaming past behind him
     const lines = r.lowGfx ? 3 : 6;
     for (let k = 0; k < lines; k++) {
       const ph = (T * 2.6 + k * 0.37) % 1;
-      const y = r.y + ((k * 37) % 46 - 23) * u;
+      const y = r.y + (((k * 37) % 46) - 23) * u;
       const x0 = r.x - (30 + ph * 220) * u;
       const len = (26 + (k % 3) * 12) * u;
-      g.lineStyle(Math.max(1, 1.5 * u), k % 2 ? STEEL : 0xffffff, 0.5 * (1 - ph));
+      g.lineStyle(
+        Math.max(1, 1.5 * u),
+        k % 2 ? STEEL : 0xffffff,
+        0.5 * (1 - ph),
+      );
       g.lineBetween(x0, y, x0 - len, y);
     }
     return true;

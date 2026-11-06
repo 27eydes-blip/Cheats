@@ -16,7 +16,8 @@ import { reduceFlashing } from "../effects/ScreenFlash.js";
 const ADD = Phaser.BlendModes.ADD;
 /** Blend two 0xRRGGBB colours (t = 0 → a, 1 → b). */
 const mixCol = (a, b, t) => {
-  const ch = (sh) => Math.round(((a >> sh) & 255) + ((((b >> sh) & 255) - ((a >> sh) & 255)) * t));
+  const ch = (sh) =>
+    Math.round(((a >> sh) & 255) + (((b >> sh) & 255) - ((a >> sh) & 255)) * t);
   return (ch(16) << 16) | (ch(8) << 8) | ch(0);
 };
 const NORMAL = Phaser.BlendModes.NORMAL;
@@ -59,7 +60,9 @@ export class CharacterRig {
 
     this.trailG = scene.add.graphics().setDepth(depth - 2);
     this.px = def.pixel; // every hero is pixel art: atlas frames + stepped trail colours
-    this.sprite = scene.add.image(this.x, this.y, this.px.atlas, this.px.frames[1]).setDepth(depth);
+    this.sprite = scene.add
+      .image(this.x, this.y, this.px.atlas, this.px.frames[1])
+      .setDepth(depth);
     this.extras = [];
     // shop cosmetics: the player's loadout by default; previews pass their own
     this.glow = scene.add
@@ -80,13 +83,16 @@ export class CharacterRig {
         .setBlendMode(ADD);
       this.extras.push(this.shineG);
     }
-    this.setCosmetics(opts.cosmetics === undefined ? Shop.loadout() : opts.cosmetics);
+    this.setCosmetics(
+      opts.cosmetics === undefined ? Shop.loadout() : opts.cosmetics,
+    );
     // animal heroes: trails, lights, reactions and special deaths (see animalFx.js)
     this.an = def.animal ? new AnimalBits(this) : null;
     // MATTOE: the always-on aura, footprints and the stubbed-toe death (see mattoeFx.js)
     this.toe = this.px.mode === "toe" ? new ToeBits(this, depth) : null;
     // SXE (id "splice"): dive tucks, barrel rolls, the sonic boom, wind-streak trail, perch showcase
-    this.falcon = this.px.mode === "falcon" ? new FalconBits(this, depth) : null;
+    this.falcon =
+      this.px.mode === "falcon" ? new FalconBits(this, depth) : null;
     // 손주원: the hover-thruster glow under the board
     if (this.px.mode === "surf") {
       this.roarT = 0;
@@ -146,11 +152,13 @@ export class CharacterRig {
     this.cos = lo || {};
     this.skin = SKINS[this.cos.skin] || null;
     const set = COLLECTIONS.find((c) => c.id === this.cos.title);
-    this.setGlow = set && (this.cos.titleForce || Shop.setComplete(set)) ? set.glow : null;
+    this.setGlow =
+      set && (this.cos.titleForce || Shop.setComplete(set)) ? set.glow : null;
     this.sprite.clearTint();
     // skins recolour a greyscale copy of the hero (so gold reads gold on any hero)
     const key = this.skin ? greyAtlas(this.scene, this.def) : this.px.atlas;
-    if (this.sprite.texture.key !== key) this.sprite.setTexture(key, this.sprite.frame.name);
+    if (this.sprite.texture.key !== key)
+      this.sprite.setTexture(key, this.sprite.frame.name);
     if (this.skin) this.sprite.setTint(this.skin.tint);
     const fit = HAT_FIT[this.cos.hat];
     if (fit) this.hat.setFrame(fit.frame).setOrigin(0.5, 1);
@@ -175,9 +183,11 @@ export class CharacterRig {
     this.sizeMul = 1;
     this.sx = this.sy = 1;
     this.gravityDir = 1;
+    this.falcon?.reset(); // SXE: undo the death tumble, or he stays hidden next run
     this.setVisible(true);
     this.trailG.clear();
-    if (this.afterImages) for (const im of this.afterImages) im.setVisible(false).setActive(false);
+    if (this.afterImages)
+      for (const im of this.afterImages) im.setVisible(false).setActive(false);
   }
 
   // ------------------------------------------------------------------ flap
@@ -196,10 +206,18 @@ export class CharacterRig {
     const u = this.u;
     if (sparkle || big)
       for (const side of [-1, 1])
-        this.fx.burst("star", this.x + side * 18 * u, this.y - 16 * u, big ? 6 : 3, 0xffd23f, {
-          speed: { min: 40, max: 160 },
-        });
-    if (big) this.fx.ring(this.x, this.y, 0xffd23f, { scale: 0.9 * u, duration: 420 });
+        this.fx.burst(
+          "star",
+          this.x + side * 18 * u,
+          this.y - 16 * u,
+          big ? 6 : 3,
+          0xffd23f,
+          {
+            speed: { min: 40, max: 160 },
+          },
+        );
+    if (big)
+      this.fx.ring(this.x, this.y, 0xffd23f, { scale: 0.9 * u, duration: 420 });
   }
 
   flap() {
@@ -215,7 +233,8 @@ export class CharacterRig {
     }
     if (!this.fx) return;
     const { x, y, def, fx } = this;
-    const down = this.gravityDir > 0 ? { min: 50, max: 130 } : { min: 230, max: 310 };
+    const down =
+      this.gravityDir > 0 ? { min: 50, max: 130 } : { min: 230, max: 310 };
     const oy = 12 * this.gravityDir * this.u;
     this.cosmeticFlap(x, y + oy, down);
     switch (def.id) {
@@ -230,14 +249,18 @@ export class CharacterRig {
         });
         break;
       case "shade":
-        fx.burst("smoke", x, y + oy, 4, 0x3a1466, { angle: down, speed: { min: 30, max: 120 } });
+        fx.burst("smoke", x, y + oy, 4, 0x3a1466, {
+          angle: down,
+          speed: { min: 30, max: 120 },
+        });
         this.stampAfterImage(0.75);
         break;
       case "frost":
         fx.burst("flake", x, y + oy, 7, 0xdff8ff, { angle: down });
         break;
       case "glitch":
-        for (const c of [0xff2050, 0x39ff88, 0x20c8ff]) fx.burst("pixel", x, y, 4, c);
+        for (const c of [0xff2050, 0x39ff88, 0x20c8ff])
+          fx.burst("pixel", x, y, 4, c);
         this.glitchT = 0.14;
         break;
       default:
@@ -256,9 +279,16 @@ export class CharacterRig {
           speed: { min: 40, max: 140 },
         });
         for (const side of [-1, 1])
-          fx.burst("pixel", x + side * 16 * this.u, y + 10 * this.u, 3, 0xffd23f, {
-            speed: { min: 60, max: 200 },
-          });
+          fx.burst(
+            "pixel",
+            x + side * 16 * this.u,
+            y + 10 * this.u,
+            3,
+            0xffd23f,
+            {
+              speed: { min: 60, max: 200 },
+            },
+          );
         break;
       case "smash":
         // the punch: a cavitation shockwave in front + rainbow sparks
@@ -278,8 +308,15 @@ export class CharacterRig {
           angle: down,
           speed: { min: 200, max: 480 },
         });
-        fx.burst("dot", x, by, 8, 0xbffcff, { angle: down, speed: { min: 80, max: 260 } });
-        fx.ring(x, by, 0x3ef4ff, { scale: 0.8 * this.u, duration: 300, width: 0.35 }); // flat wave
+        fx.burst("dot", x, by, 8, 0xbffcff, {
+          angle: down,
+          speed: { min: 80, max: 260 },
+        });
+        fx.ring(x, by, 0x3ef4ff, {
+          scale: 0.8 * this.u,
+          duration: 300,
+          width: 0.35,
+        }); // flat wave
         fx.lightning(x, y - 6 * this.u, 0x9af4ff, 1, 26 * this.u);
         break;
       }
@@ -303,8 +340,12 @@ export class CharacterRig {
     const oy = 16 * this.gravityDir * this.u;
     fx.ring(x, y + oy, def.color, { scale: 0.9 * this.u, duration: 380 });
     fx.ring(x, y + oy, 0xffffff, { scale: 0.55 * this.u, duration: 260 });
-    const down = this.gravityDir > 0 ? { min: 30, max: 150 } : { min: 210, max: 330 };
-    fx.burst("dot", x, y + oy, 14, 0x8aff7a, { angle: down, speed: { min: 120, max: 360 } });
+    const down =
+      this.gravityDir > 0 ? { min: 30, max: 150 } : { min: 210, max: 330 };
+    fx.burst("dot", x, y + oy, 14, 0x8aff7a, {
+      angle: down,
+      speed: { min: 120, max: 360 },
+    });
     fx.burst("star", x, y, 6, def.color2 ?? 0xffffff);
   }
 
@@ -312,18 +353,30 @@ export class CharacterRig {
     const fx = this.fx;
     switch (this.cos.flap) {
       case "flap_sparks":
-        fx.burst("spark", x, y, 9, 0xffd23f, { angle: down, speed: { min: 160, max: 420 } });
+        fx.burst("spark", x, y, 9, 0xffd23f, {
+          angle: down,
+          speed: { min: 160, max: 420 },
+        });
         break;
       case "flap_stars":
         for (let i = 0; i < 3; i++)
-          fx.burst("star", x, y, 2, hsv(Math.random(), 0.55, 1), { angle: down });
+          fx.burst("star", x, y, 2, hsv(Math.random(), 0.55, 1), {
+            angle: down,
+          });
         break;
       case "flap_feathers":
-        fx.burst("feather", x, y, 4, 0xffffff, { angle: down, speed: { min: 40, max: 140 } });
+        fx.burst("feather", x, y, 4, 0xffffff, {
+          angle: down,
+          speed: { min: 40, max: 140 },
+        });
         break;
       case "flap_notes":
-        fx.burst("note", x - 10, y - 10, 2, 0x3ef4ff, { angle: { min: 200, max: 250 } });
-        fx.burst("note", x - 10, y - 10, 1, 0xff4fd8, { angle: { min: 200, max: 250 } });
+        fx.burst("note", x - 10, y - 10, 2, 0x3ef4ff, {
+          angle: { min: 200, max: 250 },
+        });
+        fx.burst("note", x - 10, y - 10, 1, 0xff4fd8, {
+          angle: { min: 200, max: 250 },
+        });
         break;
     }
   }
@@ -335,8 +388,12 @@ export class CharacterRig {
     const { def } = this;
     switch (this.cos.death) {
       case "death_shatter":
-        fx.burst("pixel", x, y, 50, def.color, { speed: { min: 200, max: 700 } });
-        fx.burst("pixel", x, y, 30, def.color2 ?? 0xffffff, { speed: { min: 100, max: 500 } });
+        fx.burst("pixel", x, y, 50, def.color, {
+          speed: { min: 200, max: 700 },
+        });
+        fx.burst("pixel", x, y, 30, def.color2 ?? 0xffffff, {
+          speed: { min: 100, max: 500 },
+        });
         break;
       case "death_confetti":
         for (const c of [0xff3a5a, 0xffe14d, 0x39ff88, 0x3ef4ff, 0xff4fd8])
@@ -382,7 +439,9 @@ export class CharacterRig {
         fx.ring(x, y, 0xffffff, { scale: 0.8, duration: 200 });
         scene.time.delayedCall(120, () => {
           fx.ring(x, y, 0xffd23f, { scale: 3.2, duration: 900 });
-          fx.burst("star", x, y, 40, 0xffd23f, { speed: { min: 220, max: 780 } });
+          fx.burst("star", x, y, 40, 0xffd23f, {
+            speed: { min: 220, max: 780 },
+          });
           fx.burst("spark", x, y, 24, 0xffffff);
         });
         break;
@@ -405,13 +464,21 @@ export class CharacterRig {
           scene.time.delayedCall(80 + i * 260, () => {
             const ex = x + (i - 1) * 80;
             const ey = y - 80 - (i % 2) * 50;
-            fx.burst("pixel", ex, ey, this.lowGfx ? 16 : 30, c, { speed: { min: 160, max: 440 } });
-            fx.burst("pixel", ex, ey, this.lowGfx ? 6 : 12, 0xffffff, { speed: { min: 60, max: 200 } });
-            if (!calm) fx.ring(ex, ey, c, { scale: 1.1, duration: 360, alpha: 0.7 });
+            fx.burst("pixel", ex, ey, this.lowGfx ? 16 : 30, c, {
+              speed: { min: 160, max: 440 },
+            });
+            fx.burst("pixel", ex, ey, this.lowGfx ? 6 : 12, 0xffffff, {
+              speed: { min: 60, max: 200 },
+            });
+            if (!calm)
+              fx.ring(ex, ey, c, { scale: 1.1, duration: 360, alpha: 0.7 });
           }),
         );
         // the rocket trails up from the hero
-        fx.burst("spark", x, y, 8, 0xfff0a0, { angle: { min: 250, max: 290 }, speed: { min: 300, max: 600 } });
+        fx.burst("spark", x, y, 8, 0xfff0a0, {
+          angle: { min: 250, max: 290 },
+          speed: { min: 300, max: 600 },
+        });
         break;
       }
       case "death_pp_melt": {
@@ -436,8 +503,19 @@ export class CharacterRig {
         pud.fillStyle(0x1a0628, 0.9).fillEllipse(0, 0, 90, 18);
         pud.fillStyle(0x6a1a5a, 0.8).fillEllipse(-6, -2, 60, 10);
         pud.setScale(0.2, 1);
-        scene.tweens.add({ targets: pud, scaleX: 1.2, duration: 700, ease: "Quad.easeOut" });
-        scene.tweens.add({ targets: pud, alpha: 0, delay: 900, duration: 700, onComplete: () => pud.destroy() });
+        scene.tweens.add({
+          targets: pud,
+          scaleX: 1.2,
+          duration: 700,
+          ease: "Quad.easeOut",
+        });
+        scene.tweens.add({
+          targets: pud,
+          alpha: 0,
+          delay: 900,
+          duration: 700,
+          onComplete: () => pud.destroy(),
+        });
         fx.burst("goo", x, y, this.lowGfx ? 8 : 16, 0x8a2a9a, {
           angle: { min: 60, max: 120 },
           speed: { min: 60, max: 220 },
@@ -476,7 +554,8 @@ export class CharacterRig {
             speed: { min: 180, max: 620 },
           });
         });
-        if (!calm) fx.ring(x, y, 0x39ff88, { scale: 1, duration: 220, alpha: 0.6 });
+        if (!calm)
+          fx.ring(x, y, 0x39ff88, { scale: 1, duration: 220, alpha: 0.6 });
         break;
       }
       case "death_blackhole": {
@@ -531,7 +610,8 @@ export class CharacterRig {
     this.dead = true;
     const { x, y, def, fx } = this;
     // animals with a death move (belly slide, last lap, snapping chains) burst at its end
-    if (this.an && fx && this.an.die((bx, by) => this.animalBurst(bx, by))) return hints;
+    if (this.an && fx && this.an.die((bx, by) => this.animalBurst(bx, by)))
+      return hints;
     this.setVisible(false);
     if (!fx) return hints;
     if (this.an) {
@@ -544,10 +624,14 @@ export class CharacterRig {
     switch (def.id) {
       case "volt":
         fx.lightning(x, y, def.color, 9, 150);
-        fx.burst("spark", x, y, 40, 0xbffcff, { speed: { min: 250, max: 700 } });
+        fx.burst("spark", x, y, 40, 0xbffcff, {
+          speed: { min: 250, max: 700 },
+        });
         break;
       case "ember":
-        fx.burst("fire", x, y, 80, undefined, { speed: { min: 120, max: 520 } });
+        fx.burst("fire", x, y, 80, undefined, {
+          speed: { min: 120, max: 520 },
+        });
         fx.ring(x, y, 0xff5a00, { scale: 2.4, duration: 700 });
         hints.flash = 0.45;
         break;
@@ -557,7 +641,9 @@ export class CharacterRig {
         hints.flash = 0.15;
         break;
       case "frost":
-        fx.burst("flake", x, y, 46, 0xe8fbff, { speed: { min: 120, max: 520 } });
+        fx.burst("flake", x, y, 46, 0xe8fbff, {
+          speed: { min: 120, max: 520 },
+        });
         fx.burst("shard", x, y, 20, 0xffffff);
         break;
       case "glitch":
@@ -591,8 +677,12 @@ export class CharacterRig {
         fx.ring(x, y, 0xff7ad9, { scale: 3, duration: 800 });
         fx.ring(x, y, 0x7ae8ff, { scale: 2, duration: 650 });
         for (let i = 0; i < 4; i++)
-          fx.burst("star", x, y, 16, hsv(i / 4, 0.5, 1), { speed: { min: 200, max: 760 } });
-        fx.burst("spark", x, y, 40, 0xfff1a8, { speed: { min: 300, max: 900 } });
+          fx.burst("star", x, y, 16, hsv(i / 4, 0.5, 1), {
+            speed: { min: 200, max: 760 },
+          });
+        fx.burst("spark", x, y, 40, 0xfff1a8, {
+          speed: { min: 300, max: 900 },
+        });
         hints.flash = 0.85;
         hints.shake = 0.028;
         break;
@@ -681,26 +771,43 @@ export class CharacterRig {
     if (!kind || this.dead) return;
     const fx = this.fx;
     const calm = reduceFlashing();
-    const n = (k) => Math.max(2, Math.round(k * (this.lowGfx ? 0.5 : 1) * (calm ? 0.6 : 1)));
+    const n = (k) =>
+      Math.max(2, Math.round(k * (this.lowGfx ? 0.5 : 1) * (calm ? 0.6 : 1)));
     this.poseKind = kind;
     if (kind === "pose_pp_power") {
       this.poseT = this.poseDur = 0.75;
       if (this.an) this.an.specialT = 0.75; // pass heroes strike their special pose
-      fx?.ring(this.x, this.y, 0xffd23f, { scale: 1.6, duration: calm ? 700 : 480, alpha: calm ? 0.5 : 0.9 });
+      fx?.ring(this.x, this.y, 0xffd23f, {
+        scale: 1.6,
+        duration: calm ? 700 : 480,
+        alpha: calm ? 0.5 : 0.9,
+      });
       fx?.burst("star", this.x, this.y - 10, n(18), 0xffd23f, {
         angle: { min: 230, max: 310 },
         speed: { min: 200, max: 520 },
       });
     } else if (kind === "pose_pp_spinflip") {
       this.poseT = this.poseDur = 0.6;
-      fx?.burst("spark", this.x, this.y, n(12), 0x9af4ff, { speed: { min: 120, max: 360 } });
+      fx?.burst("spark", this.x, this.y, n(12), 0x9af4ff, {
+        speed: { min: 120, max: 360 },
+      });
     } else if (kind === "pose_pp_aura") {
       this.poseT = this.poseDur = 1.1;
-      fx?.ring(this.x, this.y, 0xb45cff, { scale: 2.2, duration: calm ? 900 : 620, alpha: calm ? 0.45 : 0.85 });
+      fx?.ring(this.x, this.y, 0xb45cff, {
+        scale: 2.2,
+        duration: calm ? 900 : 620,
+        alpha: calm ? 0.45 : 0.85,
+      });
       this.scene.time.delayedCall(140, () =>
-        fx?.ring(this.x, this.y, 0xffd23f, { scale: 2.8, duration: calm ? 1000 : 700, alpha: calm ? 0.4 : 0.8 }),
+        fx?.ring(this.x, this.y, 0xffd23f, {
+          scale: 2.8,
+          duration: calm ? 1000 : 700,
+          alpha: calm ? 0.4 : 0.8,
+        }),
       );
-      fx?.burst("dot", this.x, this.y, n(26), 0xd8a0ff, { speed: { min: 80, max: 300 } });
+      fx?.burst("dot", this.x, this.y, n(26), 0xd8a0ff, {
+        speed: { min: 80, max: 300 },
+      });
       if (!this.poseGlow)
         this.poseGlow = this.scene.add
           .image(this.x, this.y, "glow")
@@ -749,7 +856,9 @@ export class CharacterRig {
   surfNear() {
     if (this.px.mode !== "surf" || this.dead || !this.fx) return;
     this.fx.lightning(this.x, this.y, 0xbff4ff, 3, 44 * this.u);
-    this.fx.burst("spark", this.x, this.y, 10, 0x9af4ff, { speed: { min: 150, max: 420 } });
+    this.fx.burst("spark", this.x, this.y, 10, 0x9af4ff, {
+      speed: { min: 150, max: 420 },
+    });
     if (this.sounds) Sfx.crackle();
   }
 
@@ -787,7 +896,9 @@ export class CharacterRig {
       delay: 120,
       onComplete: () => g.destroy(),
     });
-    this.fx.burst("spark", bx, this.y, 20, 0xbffcff, { speed: { min: 200, max: 600 } });
+    this.fx.burst("spark", bx, this.y, 20, 0xbffcff, {
+      speed: { min: 200, max: 600 },
+    });
     if (this.sounds) Sfx.thunder(0.6);
   }
 
@@ -850,14 +961,20 @@ export class CharacterRig {
         size,
       );
       if (i % 6 === 1)
-        g.fillRect(Math.round(p.x / P) * P, Math.round((p.y + by - spray - 14 * t) / P) * P, P, P);
+        g.fillRect(
+          Math.round(p.x / P) * P,
+          Math.round((p.y + by - spray - 14 * t) / P) * P,
+          P,
+          P,
+        );
     }
     // the lightning zigzag riding the wake
     g.lineStyle(2 + this.sizeMul, 0xd8fbff, 0.9);
     g.beginPath();
     for (let i = 0; i < n; i += 3) {
       const p = pts[i];
-      const zig = i === 0 ? 0 : (i % 6 === 0 ? -1 : 1) * (5 + Math.random() * 5);
+      const zig =
+        i === 0 ? 0 : (i % 6 === 0 ? -1 : 1) * (5 + Math.random() * 5);
       if (i === 0) g.moveTo(p.x, p.y + by);
       else g.lineTo(p.x, p.y + by + zig);
     }
@@ -887,10 +1004,17 @@ export class CharacterRig {
     if (!this.afterImages) return;
     const im = this.afterImages.find((o) => !o.active);
     if (!im) return;
-    im.setActive(true).setVisible(true).setPosition(this.x, this.y).setAngle(this.angle);
+    im.setActive(true)
+      .setVisible(true)
+      .setPosition(this.x, this.y)
+      .setAngle(this.angle);
     im.setScale(this.sprite.scaleX, this.sprite.scaleY).setAlpha(alpha);
-    im.setFrame(this.sprite.frame.name).setBlendMode(NORMAL).setTintFill(0x9a5cff);
-    im.setPosition(Math.round(this.x), Math.round(this.y)).setAngle(this.sprite.angle);
+    im.setFrame(this.sprite.frame.name)
+      .setBlendMode(NORMAL)
+      .setTintFill(0x9a5cff);
+    im.setPosition(Math.round(this.x), Math.round(this.y)).setAngle(
+      this.sprite.angle,
+    );
     im.life = 0.32;
   }
 
@@ -905,9 +1029,13 @@ export class CharacterRig {
       p.x -= scroll * dt;
       p.age += dt;
     }
-    while (this.points.length && this.points[this.points.length - 1].age > this.trailTime)
+    while (
+      this.points.length &&
+      this.points[this.points.length - 1].age > this.trailTime
+    )
       this.points.pop();
-    if (!this.dead) this.points.unshift({ x: this.x - 6 * this.u, y: this.y, age: 0 });
+    if (!this.dead)
+      this.points.unshift({ x: this.x - 6 * this.u, y: this.y, age: 0 });
 
     if (this.poseT > 0) this.poseT = Math.max(0, this.poseT - dt);
     // squash & stretch spring back
@@ -923,7 +1051,8 @@ export class CharacterRig {
       case "volt": {
         // wings: quick down-stroke on flap, lazy glide cycle otherwise
         let vf;
-        if (this.flapT < 0.24) vf = [2, 0, 1][Math.min(2, Math.floor(this.flapT / 0.08))];
+        if (this.flapT < 0.24)
+          vf = [2, 0, 1][Math.min(2, Math.floor(this.flapT / 0.08))];
         else vf = [0, 1, 2, 1][Math.floor(this.time * 6) % 4];
         wingFrame = vf;
         if (!this.dead && this.fx) {
@@ -937,17 +1066,25 @@ export class CharacterRig {
       }
       case "ember": {
         let f;
-        if (this.flapT < 0.24) f = [2, 0, 1][Math.min(2, Math.floor(this.flapT / 0.08))];
+        if (this.flapT < 0.24)
+          f = [2, 0, 1][Math.min(2, Math.floor(this.flapT / 0.08))];
         else f = [0, 1, 2, 1][Math.floor(this.time * 7) % 4];
         wingFrame = f;
         if (!this.dead && this.fx) {
           this.emitT -= dt;
           if (this.emitT <= 0) {
             this.emitT = this.lowGfx ? 0.07 : 0.035;
-            this.fx.burst("fire", this.x - 16 * this.u, this.y + 4, 1, undefined, {
-              angle: { min: 160, max: 200 },
-              speed: { min: 20, max: 90 },
-            });
+            this.fx.burst(
+              "fire",
+              this.x - 16 * this.u,
+              this.y + 4,
+              1,
+              undefined,
+              {
+                angle: { min: 160, max: 200 },
+                speed: { min: 20, max: 90 },
+              },
+            );
           }
         }
         break;
@@ -963,7 +1100,9 @@ export class CharacterRig {
         }
         break;
       case "frost":
-        this.sprite.setTint(Math.sin(this.time * 6) > 0.85 ? 0xffffff : 0xe6fbff);
+        this.sprite.setTint(
+          Math.sin(this.time * 6) > 0.85 ? 0xffffff : 0xe6fbff,
+        );
         if (!this.dead && this.fx) {
           this.emitT -= dt;
           if (this.emitT <= 0) {
@@ -1032,7 +1171,9 @@ export class CharacterRig {
       // Hologram: a translucent flicker with a glitch step now and then
       if (this.skin.holo && !this.dead) {
         const glitch = Math.sin(this.time * 7.3) > 0.97;
-        this.sprite.setAlpha(glitch ? 0.45 : 0.72 + 0.18 * Math.sin(this.time * 11));
+        this.sprite.setAlpha(
+          glitch ? 0.45 : 0.72 + 0.18 * Math.sin(this.time * 11),
+        );
         this.offX = glitch ? 3 * this.u : 0;
       }
       // Inferno Core: embers rise off the hero
@@ -1055,7 +1196,12 @@ export class CharacterRig {
           { speed: { min: 5, max: 30 } },
         );
     }
-    if (this.cos.trail === "trail_money" && !this.dead && this.fx && !this.trailOverride) {
+    if (
+      this.cos.trail === "trail_money" &&
+      !this.dead &&
+      this.fx &&
+      !this.trailOverride
+    ) {
       this.cashT = (this.cashT || 0) - dt;
       if (this.cashT <= 0) {
         this.cashT = this.lowGfx ? 0.2 : 0.09;
@@ -1083,15 +1229,26 @@ export class CharacterRig {
     const mode = this.px.mode || "wings";
     let f;
     if (mode === "idle") f = Math.floor(this.time * 5) % 3;
-    else if (mode === "glitch") f = this.glitchT > 0 ? 2 : Math.floor(this.time * 3) % 2;
+    else if (mode === "glitch")
+      f = this.glitchT > 0 ? 2 : Math.floor(this.time * 3) % 2;
     else if (mode === "spin") f = Math.floor(this.time * 20) % 3;
     else if (mode === "animal") f = this.an ? this.an.frame() : 0;
     else if (mode === "toe") f = this.toe ? this.toe.frame() : 0;
     else if (mode === "falcon") f = this.falcon ? this.falcon.frame() : 0;
     else if (mode === "surf")
-      f = this.roarT > 0 ? 3 : this.flapT < 0.24 ? 2 : Math.floor(this.time * 2.5) % 2;
+      f =
+        this.roarT > 0
+          ? 3
+          : this.flapT < 0.24
+            ? 2
+            : Math.floor(this.time * 2.5) % 2;
     else if (mode === "yarms")
-      f = this.flexT > 0 ? 3 : this.flapT < 0.17 ? 2 : Math.floor(this.time * 7) % 2;
+      f =
+        this.flexT > 0
+          ? 3
+          : this.flapT < 0.17
+            ? 2
+            : Math.floor(this.time * 7) % 2;
     else if (mode === "punch" || mode === "leap")
       f = this.flapT < 0.14 ? 2 : Math.floor(this.time * 6) % 2;
     else if (mode === "flap")
@@ -1108,15 +1265,29 @@ export class CharacterRig {
     const m =
       vs === 1
         ? Math.max(0.5, Math.round(this.sizeMul * this.displayScale * 2) / 2)
-        : Math.max(0.5, Math.floor(this.sizeMul * this.displayScale * vs * 32) / 32);
+        : Math.max(
+            0.5,
+            Math.floor(this.sizeMul * this.displayScale * vs * 32) / 32,
+          );
     const flip = this.gravityDir < 0 ? -1 : 1;
-    sp.setPosition(Math.round(this.x + this.offX), Math.round(this.y + this.offY));
+    sp.setPosition(
+      Math.round(this.x + this.offX),
+      Math.round(this.y + this.offY),
+    );
     const spin = this.posePlace(); // victory pose (Spin Flip) — stepped like the tilt
     sp.setAngle(Math.round((this.angle + spin) / TILT.step) * TILT.step);
     // YARMS gets exaggerated (goofy) squash & stretch steps
     const big = mode === "yarms";
     const step = (v) =>
-      v < 0.8 && big ? 0.75 : v < 0.9 ? 0.875 : v > 1.25 && big ? 1.25 : v > 1.1 ? 1.125 : 1;
+      v < 0.8 && big
+        ? 0.75
+        : v < 0.9
+          ? 0.875
+          : v > 1.25 && big
+            ? 1.25
+            : v > 1.1
+              ? 1.125
+              : 1;
     sp.setScale(m * step(this.sx), m * step(this.sy) * flip);
     this.toe?.post(sp);
     this.falcon?.post(sp);
@@ -1129,7 +1300,10 @@ export class CharacterRig {
       this.thruster
         .setVisible(sp.visible && !this.dead)
         .setPosition(sp.x, sp.y + 10 * k * fl)
-        .setScale((0.5 + this.thrustK * 0.4) * Math.abs(sp.scaleX), 0.25 * Math.abs(sp.scaleX))
+        .setScale(
+          (0.5 + this.thrustK * 0.4) * Math.abs(sp.scaleX),
+          0.25 * Math.abs(sp.scaleX),
+        )
         .setAlpha(0.55 + 0.25 * Math.sin(this.time * 9) + this.thrustK * 0.3);
     }
     this.drawTrail();
@@ -1157,10 +1331,17 @@ export class CharacterRig {
       if (this.sweatT <= 0) {
         this.sweatT = this.lowGfx ? 0.3 : 0.14;
         const side = Math.random() < 0.5 ? -1 : 1;
-        this.fx.burst("sweat", this.x + side * 16 * this.u, this.y - 4 * this.u, 1, 0xbfe8ff, {
-          angle: { min: 180, max: 240 },
-          speed: { min: 60, max: 180 },
-        });
+        this.fx.burst(
+          "sweat",
+          this.x + side * 16 * this.u,
+          this.y - 4 * this.u,
+          1,
+          0xbfe8ff,
+          {
+            angle: { min: 180, max: 240 },
+            speed: { min: 60, max: 180 },
+          },
+        );
       }
     }
     // the gold shine sweep across the muscles
@@ -1230,8 +1411,10 @@ export class CharacterRig {
     const P = 4;
     const style = this.trailOverride ? null : this.cos.trail;
     if (style && this.drawCosmeticTrail(g, style, P)) return;
-    if (!this.trailOverride && this.px.mode === "yarms") return this.drawYarmsTrail(g);
-    if (!this.trailOverride && this.px.mode === "surf") return this.drawSurfTrail(g);
+    if (!this.trailOverride && this.px.mode === "yarms")
+      return this.drawYarmsTrail(g);
+    if (!this.trailOverride && this.px.mode === "surf")
+      return this.drawSurfTrail(g);
     if (!this.trailOverride && this.toe) return this.toe.trail(g);
     if (!this.trailOverride && this.falcon) return this.falcon.trail(g);
     if (!this.trailOverride && this.an?.trail(g)) return;
@@ -1241,7 +1424,8 @@ export class CharacterRig {
     const pts = this.points;
     const n = pts.length;
     let total = 0;
-    for (let i = 1; i < n; i++) total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+    for (let i = 1; i < n; i++)
+      total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
     if (total <= 0) return;
     const gap = P * 1.5;
     let walked = 0;
@@ -1256,7 +1440,8 @@ export class CharacterRig {
         const y = a.y + (b.y - a.y) * k;
         const t = next / total;
         const size = Math.max(1, Math.round((1 - t) * 4 * this.sizeMul)) * P;
-        const col = cols[Math.min(cols.length - 1, Math.floor(t * cols.length))];
+        const col =
+          cols[Math.min(cols.length - 1, Math.floor(t * cols.length))];
         g.fillStyle(col, t < 0.15 ? 1 : 0.95 - t * 0.8);
         g.fillRect(
           Math.round((x - size / 2) / P) * P,
@@ -1319,8 +1504,10 @@ export class CharacterRig {
           if (style === "trail_fire") {
             col = fire[Math.min(4, Math.floor(t * 5))];
             if (Math.random() < 0.3) size += P;
-          } else if (style === "trail_rainbow") col = hsv((t * 1.2 + T * 0.6) % 1, 0.8, 1);
-          else if (style === "trail_galaxy") col = gal[Math.min(4, Math.floor(t * 5))];
+          } else if (style === "trail_rainbow")
+            col = hsv((t * 1.2 + T * 0.6) % 1, 0.8, 1);
+          else if (style === "trail_galaxy")
+            col = gal[Math.min(4, Math.floor(t * 5))];
           else col = cash[Math.min(3, Math.floor(t * 4))];
           sq(
             p.x,
@@ -1330,7 +1517,13 @@ export class CharacterRig {
             t < 0.15 ? 1 : 0.95 - t * 0.8,
           );
           if (style === "trail_galaxy" && (i * 7 + Math.floor(T * 8)) % 9 === 0)
-            sq(p.x + ((i * 13) % 17) - 8, p.y + ((i * 7) % 15) - 7, P, 0xffffff, 1 - t);
+            sq(
+              p.x + ((i * 13) % 17) - 8,
+              p.y + ((i * 7) % 15) - 7,
+              P,
+              0xffffff,
+              1 - t,
+            );
         }
         return true;
       }
@@ -1353,24 +1546,46 @@ export class CharacterRig {
           trail_storm: [0xffffff, 0xbffcff, 0x3ef4ff, 0x1a8ad8, 0x1a3a8a],
           trail_founder: [0xffffff, 0xfff0a0, 0x3ef4ff, 0xb45cff, 0x4a1a8a],
         }[style];
-        const beat = style === "trail_bloodmoon" ? Math.exp(-((T * 2) % 1) * 5) : 0; // heartbeat
+        const beat =
+          style === "trail_bloodmoon" ? Math.exp(-((T * 2) % 1) * 5) : 0; // heartbeat
         for (let i = 1; i < n; i += 2) {
           const p = pts[i];
           const t = i / n;
-          const size = Math.max(1, Math.round((1 - t) * (4 + beat * 2) * this.sizeMul)) * P;
+          const size =
+            Math.max(1, Math.round((1 - t) * (4 + beat * 2) * this.sizeMul)) *
+            P;
           const col =
             style === "trail_prism"
               ? pal[(i + Math.floor(T * 10)) % pal.length]
               : pal[Math.min(pal.length - 1, Math.floor(t * pal.length))];
-          const yo = style === "trail_zen" ? Math.sin(i * 0.6 + T * 4) * 6 * t : 0;
+          const yo =
+            style === "trail_zen" ? Math.sin(i * 0.6 + T * 4) * 6 * t : 0;
           sq(p.x, p.y + yo, size, col, t < 0.15 ? 1 : 0.95 - t * 0.8);
-          if (style === "trail_abyssal" && (i * 7 + Math.floor(T * 9)) % 8 === 0)
+          if (
+            style === "trail_abyssal" &&
+            (i * 7 + Math.floor(T * 9)) % 8 === 0
+          )
             sq(p.x, p.y - 10 * t, P, 0xff3a4a, 1 - t); // red embers in the smoke
           // Founding Drifter: gold glints twinkle along a portal-coloured stream
-          if (style === "trail_founder" && (i * 5 + Math.floor(T * 12)) % 7 === 0)
-            sq(p.x + Math.sin(i + T * 6) * 7, p.y + Math.cos(i * 1.3 + T * 5) * 7, P, 0xffd23f, 1 - t);
+          if (
+            style === "trail_founder" &&
+            (i * 5 + Math.floor(T * 12)) % 7 === 0
+          )
+            sq(
+              p.x + Math.sin(i + T * 6) * 7,
+              p.y + Math.cos(i * 1.3 + T * 5) * 7,
+              P,
+              0xffd23f,
+              1 - t,
+            );
           if (style === "trail_storm" && i % 10 === 1 && Math.random() < 0.5)
-            sq(p.x + (Math.random() - 0.5) * 20, p.y + (Math.random() - 0.5) * 20, P, 0xffffff, 1);
+            sq(
+              p.x + (Math.random() - 0.5) * 20,
+              p.y + (Math.random() - 0.5) * 20,
+              P,
+              0xffffff,
+              1,
+            );
         }
         return true;
       }
@@ -1381,7 +1596,13 @@ export class CharacterRig {
           const p = pts[i];
           const t = i / n;
           const size = Math.max(1, Math.round((1 - t) * 3 * this.sizeMul)) * P;
-          sq(p.x, p.y, size, pal[Math.min(4, Math.floor(t * 5))], t < 0.15 ? 0.9 : 0.85 - t * 0.75);
+          sq(
+            p.x,
+            p.y,
+            size,
+            pal[Math.min(4, Math.floor(t * 5))],
+            t < 0.15 ? 0.9 : 0.85 - t * 0.75,
+          );
         }
         const dust = this.lowGfx ? 8 : 16;
         const calm = reduceFlashing();
@@ -1416,14 +1637,28 @@ export class CharacterRig {
           const t = i / n;
           const y = p.y + (i === 0 ? 0 : jit(i) * 22 * (t + 0.3));
           const a = 1 - t * 0.85;
-          if (i % 4 === 0) sq(p.x, y, Math.max(1, Math.round((1 - t) * 3)) * P + P * 2, 0x2a8aff, a * 0.3);
+          if (i % 4 === 0)
+            sq(
+              p.x,
+              y,
+              Math.max(1, Math.round((1 - t) * 3)) * P + P * 2,
+              0x2a8aff,
+              a * 0.3,
+            );
           sq(p.x, y, Math.max(1, Math.round((1 - t) * 2)) * P, 0xe8ffff, a);
           // fill the gap to the last joint so the bolt reads as one line
           if (prev) sq((prev.x + p.x) / 2, (prev.y + y) / 2, P, 0xbff4ff, a);
           // forks
           if (i % 10 === 6 && !this.lowGfx) {
             const dir = jit(i + 99) > 0 ? 1 : -1;
-            for (let k = 1; k <= 3; k++) sq(p.x - k * P * 2, y + dir * k * P * 2, P, 0x9af4ff, a * (1 - k * 0.25));
+            for (let k = 1; k <= 3; k++)
+              sq(
+                p.x - k * P * 2,
+                y + dir * k * P * 2,
+                P,
+                0x9af4ff,
+                a * (1 - k * 0.25),
+              );
           }
           prev = { x: p.x, y };
         }
@@ -1438,9 +1673,12 @@ export class CharacterRig {
           [0xffffff, 0xbff4ff, 0x3ef4ff, 0x2a7aff, 0x1a2a8a],
           [0xffffff, 0xffd0ff, 0xd88aff, 0xa040ff, 0x4a1a8a],
         ];
-        const tierIdx = { 1: 0, 2: 1, 3: 2, 5: 3, 10: 4, 13: 4 }[this.comboTier || 1] ?? 0;
+        const tierIdx =
+          { 1: 0, 2: 1, 3: 2, 5: 3, 10: 4, 13: 4 }[this.comboTier || 1] ?? 0;
         // ease between colours so a combo step blends in over ~0.3 s
-        this.flameHeat = (this.flameHeat ?? tierIdx) + (tierIdx - (this.flameHeat ?? tierIdx)) * 0.12;
+        this.flameHeat =
+          (this.flameHeat ?? tierIdx) +
+          (tierIdx - (this.flameHeat ?? tierIdx)) * 0.12;
         const lo = Math.floor(this.flameHeat);
         const hi = Math.min(4, lo + 1);
         const f = this.flameHeat - lo;
@@ -1450,9 +1688,16 @@ export class CharacterRig {
           const t = i / n;
           const ci = Math.min(4, Math.floor(t * 5));
           const col = mixCol(ramps[lo][ci], ramps[hi][ci], f);
-          let size = Math.max(1, Math.round((1 - t) * 4 * grow * this.sizeMul)) * P;
+          let size =
+            Math.max(1, Math.round((1 - t) * 4 * grow * this.sizeMul)) * P;
           if (Math.sin(i * 1.7 + T * 14) > 0.6) size += P; // flicker in size, not brightness
-          sq(p.x, p.y - t * (14 + this.flameHeat * 4), size, col, t < 0.15 ? 1 : 0.95 - t * 0.8);
+          sq(
+            p.x,
+            p.y - t * (14 + this.flameHeat * 4),
+            size,
+            col,
+            t < 0.15 ? 1 : 0.95 - t * 0.8,
+          );
         }
         return true;
       }
@@ -1483,7 +1728,12 @@ export class CharacterRig {
           const y = snap(p.y);
           g.fillStyle(c, a);
           g.fillRect(x - P, y - P, P, P).fillRect(x + P, y - P, P, P);
-          g.fillRect(x - P * 1.5, y, P * 4, P).fillRect(x - P / 2, y + P, P * 2, P);
+          g.fillRect(x - P * 1.5, y, P * 4, P).fillRect(
+            x - P / 2,
+            y + P,
+            P * 2,
+            P,
+          );
         }
         return true;
       }
