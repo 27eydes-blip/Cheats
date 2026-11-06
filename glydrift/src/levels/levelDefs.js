@@ -90,7 +90,7 @@ export const LEVEL_DEFS = [
     gap: 520,
     beats: `gate blade saw2 bladeduo > hlaser pulse *t gate | pulsepair saw blade >
             flip gate saw2 hlaser *m | bladeduo mini pulse gate > saw pulsepair *b
-            blade hlaser | gate bladeduo saw2 pulse gate`,
+            blade hlaser | gate bladeduo > saw pulse gate`,
   },
   {
     n: 10,
@@ -113,7 +113,7 @@ export const LEVEL_DEFS = [
     d: 0.16,
     gap: 640,
     beats: `gate saw @Geysers_glow_before_they_erupt geyser > gate geyser saw *b | gate
-            geyser saw2 > blade geyser *t gate | saw geyser gate *m saw2 geyser gate saw
+            geyser saw > blade > geyser *t gate | saw > geyser gate *m saw geyser > gate saw
             geyser`,
   },
   {
@@ -232,10 +232,10 @@ export const LEVEL_DEFS = [
     n: 23,
     name: "Static",
     blurb: "Frozen sparks crackle across the sky.",
-    d: 0.31,
-    gap: 570,
-    beats: `gate slider @Zaps_flicker_before_they_strike zap > gate zap icicle *m | slider
-            zap saw2 > gate zap *t icicle | slider zap gate *b zap icicle gate zap`,
+    d: 0.27,
+    gap: 630,
+    beats: `gate slider @Zaps_flicker_before_they_strike zap > gate zap icicle *m | slider >
+            zap saw > gate zap *t icicle | slider zap gate *b zap icicle gate zap`,
   },
   {
     n: 24,
@@ -273,8 +273,8 @@ export const LEVEL_DEFS = [
     blurb: "Zaps climb like stairs.",
     d: 0.37,
     gap: 530,
-    beats: `gate zap zapstairs > sliderpair comet *m | icecurtain zapstairs flip gate
-            slider > icicle zapstairs *t | comet sliderpair > zapstairs icecurtain *b
+    beats: `gate zap zapstairs > sliderpair comet *m | icecurtain > zapstairs > flip gate
+            slider > icicle zapstairs *t | comet sliderpair > zapstairs > icecurtain *b
             gate zap zapstairs comet`,
   },
   {
@@ -347,8 +347,8 @@ export const LEVEL_DEFS = [
     d: 0.34,
     gap: 560,
     beats: `gate blinkpair @The_gate_blinks_open blinkgate > zone blinkgate blink *b |
-            blinkpair blinkgate gate > zone blink *t blinkgate | blinkpair zone blinkgate
-            *m gate blink blinkgate`,
+            blinkpair > blinkgate gate > zone blink *t blinkgate | blinkpair > zone blinkgate
+            *m gate blink > blinkgate`,
   },
   {
     n: 35,
@@ -356,8 +356,8 @@ export const LEVEL_DEFS = [
     blurb: "Gravity flips, and the blocks blink.",
     d: 0.36,
     gap: 550,
-    beats: `gate flip blink gate blinkpair > zone blinkgate *t | blink zone blinkpair >
-            gate blinkgate *m zone | flip blinkpair gate blink > blinkgate zone *b
+    beats: `gate blink > flip > gate blinkpair > zone blinkgate *t | blink zone blinkpair >
+            gate blinkgate *m zone | flip > blinkpair gate blink > blinkgate zone *b
             blinkpair blink gate`,
   },
   {
@@ -376,7 +376,7 @@ export const LEVEL_DEFS = [
     blurb: "The glitches speed up.",
     d: 0.4,
     gap: 530,
-    beats: `gate blinkgate zone blinkpair > blink zone *m | blinkgate blinkpair zone >
+    beats: `gate blinkgate > zone blinkpair > blink zone *m | blinkgate blinkpair zone >
             flip gate blink blinkpair > *t blinkgate | zone blinkpair blinkgate > zone *b
             blink blinkpair blinkgate gate`,
   },
@@ -396,7 +396,7 @@ export const LEVEL_DEFS = [
     blurb: "Everything the Glitch Realm has, together.",
     d: 0.44,
     gap: 510,
-    beats: `gate blinkgate zone blinkpair > blinkgate zone *t | flip gate blinkpair blink
+    beats: `gate blinkgate > zone blinkpair > blinkgate zone *t | flip gate blinkpair blink
             > blinkgate zone *b | mini blinkpair blinkgate zone > blinkpair *m blinkgate
             | zone blinkpair blinkgate zone blinkpair gate`,
   },
@@ -409,8 +409,8 @@ export const LEVEL_DEFS = [
     beats: `@BOSS_-_SYSTEM_CRASH gate blink zone > blinkpair blinkgate *m | zone
             blinkpair > blinkgate blink zone | flip gate blinkpair > blinkgate *t zone |
             mini blinkpair blinkgate zone > blinkpair blinkgate | d=0.5 g=490
-            @FATAL_ERROR blinkgate zone blinkpair blinkgate | zone *b blinkpair >
-            blinkgate zone | blinkpair blinkgate zone blinkpair blinkgate gate`,
+            @FATAL_ERROR blinkgate > zone blinkpair > blinkgate | zone *b blinkpair >
+            blinkgate zone | blinkpair blinkgate > zone blinkpair > blinkgate gate`,
   },
   // ================================================================ THE ABYSS (41–50)
   {
