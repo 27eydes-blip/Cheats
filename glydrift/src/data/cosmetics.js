@@ -365,6 +365,15 @@ export const COSMETICS = [
     price: 0,
     event: "levels",
   },
+  // LEVEL MODE: the reward for 15 level stars (a star-milestone on the level map)
+  {
+    id: "trail_starlight",
+    cat: "trail",
+    name: "Starlight",
+    rarity: "epic",
+    price: 0,
+    event: "levels",
+  },
   // event exclusive: the move to glydrift.com (never sold, never in pods or the daily shop)
   {
     id: "trail_founder",

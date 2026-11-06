@@ -12,6 +12,8 @@ import { Leaderboard, Levels, scoreToTime } from "../online/leaderboard.js";
 import { button, drawNeonRect, neonText, plainText, popIn } from "../ui/ui.js";
 import { REALMS, builtCount, fmtTime, getLevel, isUnlocked, starsOf } from "../levels/levels.js";
 import { TEST } from "../systems/testFlags.js";
+import { fitWidth, levelNameLine } from "../ui/levelName.js";
+import { closeShareModal, openShareModal } from "../online/shareCard.js";
 
 export class LevelCompleteScene extends Phaser.Scene {
   constructor() {
@@ -65,14 +67,7 @@ export class LevelCompleteScene extends Phaser.Scene {
       { blur: 20 },
     );
     y += 64;
-    const sub = plainText(
-      this,
-      W / 2,
-      y,
-      `LEVEL ${def.n} · ${def.name.toUpperCase()}`,
-      22,
-      "#ffffff",
-    );
+    const sub = levelNameLine(this, W / 2, y, def, 24, { maxW: W - 80 });
     popIn(this, [head, sub], 0);
     y += 150;
 
@@ -127,7 +122,7 @@ export class LevelCompleteScene extends Phaser.Scene {
       plainText(this, W / 2, y, bestLine, 17, out.bestTime ? "#39ff88" : "#cfc6ff");
       y += 40;
       // ---- first-time rewards
-      if (out.rewards.length) {
+      if (out.rewards.length || out.milestones?.length) {
         const g = this.add.graphics();
         const lines = [];
         for (const r of out.rewards) {
@@ -140,6 +135,7 @@ export class LevelCompleteScene extends Phaser.Scene {
             if (r.trail) lines.push("New trail: LEVEL MASTER (equipped)");
           }
         }
+        for (const m of out.milestones || []) lines.push(`${m.stars} STARS!  ${m.label}`);
         const bh = 30 + lines.length * 28;
         drawNeonRect(g, 60, y, W - 120, bh, 18, 0xffd23f, {
           fill: 0x1a1204,
@@ -177,17 +173,35 @@ export class LevelCompleteScene extends Phaser.Scene {
               : this.go("LevelSelect"),
       },
     );
-    const b2 = button(this, W / 2 - 130, by + 104, 230, 72, "RETRY", {
+    const b2 = button(this, W / 2 - 220, by + 104, 200, 72, "RETRY", {
       color: 0x3ef4ff,
-      size: 26,
+      size: 24,
       onClick: () => this.play(def.n, res.practice),
     });
-    const b3 = button(this, W / 2 + 130, by + 104, 230, 72, "LEVELS", {
-      color: 0xb45cff,
-      size: 26,
-      onClick: () => this.go("LevelSelect", { focus: def.n }),
+    const b4 = button(this, W / 2, by + 104, 200, 72, "SHARE", {
+      color: 0xffd23f,
+      size: 24,
+      onClick: () =>
+        openShareModal(this.game, {
+          mode: "level",
+          level: def.n,
+          name: def.name,
+          boss: def.boss,
+          realm: def.realmIdx,
+          biome: def.realmIdx,
+          timeMs: res.timeMs,
+          deaths: res.deaths,
+          stars: starsOf(def.n),
+          char: Save.data.selected,
+          score: res.timeMs,
+        }),
     });
-    popIn(this, [b1, b2, b3], 900);
+    const b3 = button(this, W / 2 + 220, by + 104, 200, 72, "LEVELS", {
+      color: 0xb45cff,
+      size: 24,
+      onClick: () => this.go("LevelSelect"), // opens on your current level
+    });
+    popIn(this, [b1, b2, b4, b3], 900);
     if (TEST.on && typeof window !== "undefined") window.__glyLevelResult = { res, out };
   }
 
@@ -197,7 +211,12 @@ export class LevelCompleteScene extends Phaser.Scene {
       if (!this.scene.isActive()) return;
       const rows = (b.rows || []).slice(0, 5);
       if (!rows.length) return;
-      plainText(this, this.W / 2, y + 6, "FASTEST (no crashes)", 16, "#cfc6ff");
+      const head = levelNameLine(this, this.W / 2, y + 6, getLevel(n), 16, {
+        maxW: this.W - 120,
+        color: "#cfc6ff",
+      });
+      head.text.setText(`${head.text.text} · FASTEST`);
+      fitWidth(head, this.W - 120);
       rows.forEach((r, i) => {
         const me = b.userId && r.player_id === b.userId;
         plainText(
@@ -245,6 +264,7 @@ export class LevelCompleteScene extends Phaser.Scene {
   }
 
   play(n, practice) {
+    closeShareModal();
     if (this.leaving) return;
     this.leaving = true;
     Sfx.ui?.();
@@ -255,6 +275,7 @@ export class LevelCompleteScene extends Phaser.Scene {
   }
 
   go(key, data) {
+    closeShareModal();
     if (this.leaving) return;
     this.leaving = true;
     Sfx.ui?.();
