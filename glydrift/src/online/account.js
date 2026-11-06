@@ -29,14 +29,10 @@ function explain(err) {
   if (/invalid login credentials/i.test(m)) return "Wrong email or password.";
   if (/already (been )?registered|already exists|email.*taken/i.test(m))
     return "That email already has an account — sign in instead.";
-  if (/password.*(at least|short|weak)/i.test(m))
-    return "Use a longer password (8+ characters).";
-  if (/rate limit|too many/i.test(m))
-    return "Too many tries — wait a minute and try again.";
-  if (/email.*invalid|invalid.*email/i.test(m))
-    return "That doesn't look like an email address.";
-  if (/fetch|network|offline|timeout|abort/i.test(m))
-    return "You're offline — try again online.";
+  if (/password.*(at least|short|weak)/i.test(m)) return "Use a longer password (8+ characters).";
+  if (/rate limit|too many/i.test(m)) return "Too many tries — wait a minute and try again.";
+  if (/email.*invalid|invalid.*email/i.test(m)) return "That doesn't look like an email address.";
+  if (/fetch|network|offline|timeout|abort/i.test(m)) return "You're offline — try again online.";
   return m || "Something went wrong. Try again.";
 }
 
@@ -57,12 +53,7 @@ const supabaseBackend = {
     } = await sb.auth.getSession();
     const u = session?.user;
     return u
-      ? {
-          id: u.id,
-          email: u.email || null,
-          newEmail: u.new_email || null,
-          anon: !!u.is_anonymous,
-        }
+      ? { id: u.id, email: u.email || null, newEmail: u.new_email || null, anon: !!u.is_anonymous }
       : null;
   },
   async createAccount(email, password) {
@@ -82,8 +73,7 @@ const supabaseBackend = {
   },
   async signInApple() {
     const { Capacitor, registerPlugin } = await import("@capacitor/core");
-    if (Capacitor.getPlatform() !== "ios")
-      throw new Error("Sign in with Apple is on iPhone.");
+    if (Capacitor.getPlatform() !== "ios") throw new Error("Sign in with Apple is on iPhone.");
     const SignInWithApple = registerPlugin("SignInWithApple");
     const nonce = randomString(32);
     const res = await SignInWithApple.authorize({
@@ -102,9 +92,7 @@ const supabaseBackend = {
   },
   async resetPassword(email) {
     const sb = await Leaderboard.client();
-    const { error } = await sb.auth.resetPasswordForEmail(email, {
-      redirectTo: siteUrl(),
-    });
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: siteUrl() });
     if (error) throw error;
   },
   async updatePassword(password) {
@@ -165,13 +153,7 @@ const MOCK_KEY = "glydrift.mockserver";
 const mockBackend = {
   db() {
     try {
-      return (
-        JSON.parse(localStorage.getItem(MOCK_KEY)) || {
-          users: {},
-          session: null,
-          n: 0,
-        }
-      );
+      return JSON.parse(localStorage.getItem(MOCK_KEY)) || { users: {}, session: null, n: 0 };
     } catch {
       return { users: {}, session: null, n: 0 };
     }
@@ -191,8 +173,7 @@ const mockBackend = {
   async createAccount(email, password) {
     const db = this.db();
     if (db.users[email]) throw new Error("User already registered");
-    if (password.length < 8)
-      throw new Error("Password should be at least 8 characters");
+    if (password.length < 8) throw new Error("Password should be at least 8 characters");
     db.users[email] = { id: db.session.id, password, save: null };
     db.session = { id: db.session.id, anon: false, email };
     this.put(db);
@@ -201,8 +182,7 @@ const mockBackend = {
   async signIn(email, password) {
     const db = this.db();
     const u = db.users[email];
-    if (!u || u.password !== password)
-      throw new Error("Invalid login credentials");
+    if (!u || u.password !== password) throw new Error("Invalid login credentials");
     db.session = { id: u.id, anon: false, email };
     this.put(db);
   },
@@ -243,9 +223,7 @@ const mockBackend = {
 };
 
 function siteUrl() {
-  return typeof location !== "undefined"
-    ? location.origin + location.pathname
-    : undefined;
+  return typeof location !== "undefined" ? location.origin + location.pathname : undefined;
 }
 function randomString(n) {
   const a = new Uint8Array(n);
@@ -253,13 +231,8 @@ function randomString(n) {
   return Array.from(a, (b) => (b % 36).toString(36)).join("");
 }
 async function sha256(s) {
-  const buf = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(s),
-  );
-  return Array.from(new Uint8Array(buf), (b) =>
-    b.toString(16).padStart(2, "0"),
-  ).join("");
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 // ------------------------------------------------------------------ the service
@@ -309,11 +282,7 @@ class AccountService {
 
   /** A password-recovery or email-confirmation link opened the game. */
   async handleLink() {
-    if (
-      typeof location === "undefined" ||
-      !location.hash.includes("access_token")
-    )
-      return;
+    if (typeof location === "undefined" || !location.hash.includes("access_token")) return;
     const p = new URLSearchParams(location.hash.slice(1));
     history.replaceState(null, "", location.pathname + location.search);
     await this.backend.adoptLinkSession({
@@ -340,10 +309,7 @@ class AccountService {
   schedulePush() {
     if (!this.signedIn || this.pushing) return;
     clearTimeout(this.pushTimer);
-    this.pushTimer = setTimeout(
-      () => this.pushNow().catch(() => {}),
-      PUSH_DELAY_MS,
-    );
+    this.pushTimer = setTimeout(() => this.pushNow().catch(() => {}), PUSH_DELAY_MS);
   }
 
   async pushNow() {
@@ -456,10 +422,7 @@ class AccountService {
       await this.backend.deleteAccount();
     } catch (err) {
       if (notSetUp(err))
-        throw new AccountError(
-          "Account deletion isn't set up on the server yet.",
-          "not-set-up",
-        );
+        throw new AccountError("Account deletion isn't set up on the server yet.", "not-set-up");
       throw new AccountError(explain(err));
     }
     this.user = null;
@@ -486,5 +449,4 @@ class AccountService {
 export const Account = new AccountService();
 
 // test builds only
-if (TEST.on && typeof window !== "undefined")
-  window.__glyAccount = { Account, mergeSaves };
+if (TEST.on && typeof window !== "undefined") window.__glyAccount = { Account, mergeSaves };

@@ -32,12 +32,8 @@ async function verify(transactionId, productId) {
   const { data, error } = await sb.functions.invoke("verify-purchase", {
     body: { transactionId, productId },
   });
-  if (error)
-    throw new StoreError(
-      "Couldn't verify the purchase — tap RESTORE PURCHASES to retry.",
-    );
-  if (!data?.ok)
-    throw new StoreError(data?.reason || "The purchase couldn't be verified.");
+  if (error) throw new StoreError("Couldn't verify the purchase — tap RESTORE PURCHASES to retry.");
+  if (!data?.ok) throw new StoreError(data?.reason || "The purchase couldn't be verified.");
   return data;
 }
 
@@ -63,8 +59,7 @@ export const Store = {
 
   /** Buy this season's Drift Pass+. Resolves once the server has verified it. */
   async buy(seasonId = PassPlus.season()) {
-    if (!seasonId)
-      throw new StoreError("Drift Pass+ is only on sale during a season.");
+    if (!seasonId) throw new StoreError("Drift Pass+ is only on sale during a season.");
     if (PassPlus.owns(seasonId)) return { already: true };
     const productId = productIdFor(seasonId);
     const p = this.platform();
@@ -84,19 +79,12 @@ export const Store = {
       data: { session },
     } = await sb.auth.getSession();
     const store = await nativeStore();
-    const res = await store.purchase({
-      productId,
-      appAccountToken: session.user.id,
-    });
+    const res = await store.purchase({ productId, appAccountToken: session.user.id });
     if (res.pending)
-      throw new StoreError(
-        "Waiting for approval — it unlocks once approved (RESTORE PURCHASES).",
-      );
+      throw new StoreError("Waiting for approval — it unlocks once approved (RESTORE PURCHASES).");
     if (res.cancelled) return { cancelled: true };
     const v = await verify(res.transactionId, productId);
-    PassPlus.grant(v.seasonId || seasonId, {
-      transactionId: res.transactionId,
-    });
+    PassPlus.grant(v.seasonId || seasonId, { transactionId: res.transactionId });
     return { ok: true, seasonId: v.seasonId || seasonId };
   },
 
@@ -115,8 +103,7 @@ export const Store = {
       const store = await nativeStore();
       const { transactions = [] } = await store.restore();
       for (const t of transactions) {
-        if (!t.productId?.startsWith("com.glydrift.game.driftpassplus."))
-          continue;
+        if (!t.productId?.startsWith("com.glydrift.game.driftpassplus.")) continue;
         const v = await verify(t.transactionId, t.productId);
         if (!PassPlus.owns(v.seasonId)) restored++;
         PassPlus.grant(v.seasonId, t);
@@ -133,13 +120,7 @@ export const Store = {
    * dropped. Offline / server not reachable: nothing changes until the next launch.
    */
   async recheck() {
-    if (
-      this.platform() === "mock" ||
-      TEST.offline ||
-      !Account.available ||
-      !Account.known
-    )
-      return;
+    if (this.platform() === "mock" || TEST.offline || !Account.available || !Account.known) return;
     if (Account.signedIn) await this.pullServerEntitlements({ exact: true });
     else PassPlus.keepOnly([]);
   },
@@ -149,9 +130,7 @@ export const Store = {
     if (TEST.offline) return 0;
     try {
       const sb = await Leaderboard.session();
-      const { data, error } = await sb
-        .from("purchases")
-        .select("season_id, transaction_id");
+      const { data, error } = await sb.from("purchases").select("season_id, transaction_id");
       if (error) return 0;
       if (exact) PassPlus.keepOnly((data || []).map((r) => r.season_id));
       let n = 0;

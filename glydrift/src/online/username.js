@@ -100,33 +100,8 @@ export function validateUsername(name) {
 }
 
 export function suggestUsername() {
-  const a = [
-    "Neon",
-    "Drift",
-    "Nova",
-    "Volt",
-    "Pixel",
-    "Comet",
-    "Glow",
-    "Flux",
-    "Zero",
-    "Echo",
-  ];
-  const b = [
-    "Fox",
-    "Wing",
-    "Byte",
-    "Star",
-    "Ray",
-    "Pilot",
-    "Ace",
-    "Jet",
-    "Orb",
-    "Kid",
-  ];
+  const a = ["Neon", "Drift", "Nova", "Volt", "Pixel", "Comet", "Glow", "Flux", "Zero", "Echo"];
+  const b = ["Fox", "Wing", "Byte", "Star", "Ray", "Pilot", "Ace", "Jet", "Orb", "Kid"];
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-  return `${pick(a)}${pick(b)}${Math.floor(Math.random() * 90 + 10)}`.slice(
-    0,
-    12,
-  );
+  return `${pick(a)}${pick(b)}${Math.floor(Math.random() * 90 + 10)}`.slice(0, 12);
 }
