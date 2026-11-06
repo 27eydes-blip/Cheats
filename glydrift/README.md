@@ -1,6 +1,8 @@
 # Glydrift
 
-© 2026 Sam Eyde III. All rights reserved. See [AUTHORSHIP.md](AUTHORSHIP.md).
+© 2026 Sam Eyde III. All rights reserved. Not open source: no permission is granted to copy,
+modify, distribute or publish this code, art, music or characters. See [LICENSE](LICENSE) and
+[AUTHORSHIP.md](AUTHORSHIP.md).
 
 A one-tap, portrait, neon-cosmos arcade flyer built with **Phaser 3 (WebGL)** and **Vite**,
 structured to be wrapped as an iOS app with **Capacitor**. Every visual is procedurally
