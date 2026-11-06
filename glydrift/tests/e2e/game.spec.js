@@ -61,7 +61,7 @@ async function startRun(page, label = "ENDLESS") {
   expect((await gameState(page)).state).toBe("playing");
 }
 
-test("loads with no console errors, framed correctly, no browser gestures", async ({
+test("loads with no console errors, framed correctly, no browser gestures @smoke", async ({
   page,
 }, testInfo) => {
   const log = await openGame(page);
@@ -115,7 +115,7 @@ test("loads with no console errors, framed correctly, no browser gestures", asyn
   await snap(page, testInfo, "01-home");
 });
 
-test("release build loads with no console errors", async ({ page }) => {
+test("release build loads with no console errors @smoke", async ({ page }) => {
   // the release build exposes no test hooks: openGame waits for its canvas and lets it run.
   // It draws every frame, and the test clock ticks every 16 ms (a hair faster than a real
   // 60 Hz screen), so with no frame cap it renders twice what it did under the old 61 fps
@@ -293,7 +293,7 @@ test("pause and resume (button, keys, app in background)", async ({
   expect(log.errors).toEqual([]);
 });
 
-test("game over and retry in under a second", async ({ page }, testInfo) => {
+test("game over and retry in under a second @smoke", async ({ page }, testInfo) => {
   const log = await openGame(page);
   await startRun(page);
   await waitFor(
@@ -321,7 +321,7 @@ test("game over and retry in under a second", async ({ page }, testInfo) => {
   expect(log.errors).toEqual([]);
 });
 
-test("buys an item in the shop", async ({ page }, testInfo) => {
+test("buys an item in the shop @smoke", async ({ page }, testInfo) => {
   const log = await openGame(page);
   await tap(page, "SHOP", 1600);
   await waitFor(page, () => window.__glydrift.scene.isActive("Shop"));
@@ -799,7 +799,7 @@ test("a huge run earns one spin, not dozens", async ({ page }, testInfo) => {
   expect(log.errors).toEqual([]);
 });
 
-test("realm changes never pause the run", async ({ page }, testInfo) => {
+test("realm changes never pause the run @smoke", async ({ page }, testInfo) => {
   // Entering a realm or a dimension keeps the action going: no slow-mo, obstacles keep
   // spawning straight through the boundary, and the title shows small and high over the play.
   // The Calm (and the blackout into the Abyss) is the one designed pause.
@@ -1024,7 +1024,7 @@ async function openAccountScreen(page) {
 const saveNow = (page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
 
-test("accounts: create, log out, sign in on a new device, delete", async ({
+test("accounts: create, log out, sign in on a new device, delete @smoke", async ({
   page,
 }, testInfo) => {
   test.skip(
@@ -3685,7 +3685,32 @@ test("levels: offline best times wait in the upload queue (time encoded as a sco
 // every built level: a bot flying with real flaps and real collisions finishes it (every stretch
 // between checkpoints cleared from a clean respawn), and in god mode it reaches all 3 star coins,
 // none of which sits inside a hazard
-test("levels: every built level is beatable (bot) and its star coins are fair (god run)", async ({
+// smoke: level 1 can be played to the finish (the full lane bots every level, below)
+test("levels: level 1 can be flown to the finish @smoke", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  const log = await openGame(page);
+  await page.evaluate(() => {
+    const g = window.__glydrift;
+    for (const k of ["LevelComplete", "Hud", "Game"]) g.scene.stop(k);
+    g.scene.start("Game", { mode: "level", level: 1 });
+  });
+  await run(page, 1000);
+  const r = await page.evaluate(botPlay, {});
+  expect(r.finished).toBe(true);
+  expect(r.stuck).toBe(null);
+  expect(log.errors).toEqual([]);
+});
+
+// one test per realm (10 levels each), so the five can run side by side on separate machines
+for (const [realm, from] of [
+  ["Neon Void", 1],
+  ["Solar Storm", 11],
+  ["Frozen Nebula", 21],
+  ["Glitch Realm", 31],
+  ["Abyss", 41],
+])
+test(`levels: every built level is beatable (bot) and its star coins are fair (god run): ${realm}`, async ({
   page,
 }, testInfo) => {
   // hazards scale with the screen's height, so every Chromium screen size is checked (small
@@ -3694,11 +3719,12 @@ test("levels: every built level is beatable (bot) and its star coins are fair (g
     testInfo.project.name.split("-")[0] !== "chromium",
     "bot runs on Chromium (the layouts are the same on every engine)",
   );
-  test.setTimeout(1_500_000);
+  test.setTimeout(600_000);
   const log = await openGame(page);
   const count = await page.evaluate(() => window.__glyLevelCount());
+  test.skip(from > count, `${realm} levels aren't built yet`);
   const report = [];
-  for (let n = 1; n <= count; n++) {
+  for (let n = from; n <= Math.min(count, from + 9); n++) {
     for (const god of [false, true]) {
       await page.evaluate(
         ({ n, god }) => {

@@ -52,7 +52,12 @@ export async function openGame(page, opts = {}) {
     if (r.url().startsWith("http://localhost") && r.status() >= 400)
       failed.push(`${r.status()} ${r.url()}`);
   });
-  await page.route(/^https?:\/\/(?!localhost[:/])/, (route) => route.abort());
+  // outside requests are blocked, except the address under test (the nightly check opens the
+  // real glydrift.com: RELEASE_URL)
+  const allowed = opts.base && !/^https?:\/\/localhost[:/]/.test(opts.base) ? new URL(opts.base).origin : null;
+  await page.route(/^https?:\/\/(?!localhost[:/])/, (route) =>
+    allowed && route.request().url().startsWith(allowed) ? route.continue() : route.abort(),
+  );
   // a frozen clock: time only moves when a test calls run() (install alone keeps it ticking)
   await page.clock.install({ time: new Date(NOW.getTime() - 1000) });
   await page.clock.pauseAt(NOW);
