@@ -141,7 +141,7 @@ Tide, Mecha, Draco); the shop and Lucky Spin heroes (Pip, Coral, Sprout, Ruby, P
 Comet, Seraph, Leviathan, Zephyr, Hoot, Lumen, Buzz, Cinder, Nyx, Koi, Kitsu, Griffo, Aurora);
 and the ten Drift Pass+ Season 1 heroes (Voidcat, Hexowl, Wraith Moth, Triphound, Phantom Ray,
 Scorpyre, Krakkie, Crimson Mantis, Gloomeleon, Umbra Drake). Another 30 animal heroes exist in
-four themed batches (Peaceful, Prism, Abyss, Christmas), set aside for later.
+four themed batches (Peaceful, Prism, Abyss, Christmas), and are also in the game.
 
 ### Realms
 - **Core realms:** Neon Void, Solar Storm, Frozen Nebula, Glitch Realm, Abyss.
