@@ -18,6 +18,10 @@ on:
         description: "Publish (glydrift.com and the old GitHub Pages copy) if every test passes"
         type: boolean
         default: false
+      skip_tests:
+        description: "Owner-approved rush only: publish glydrift.com now, without running the tests"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -92,7 +96,7 @@ jobs:
   test:
     name: Tests (${{ matrix.engine }})
     needs: reuse
-    if: needs.reuse.outputs.hit != 'true'
+    if: needs.reuse.outputs.hit != 'true' && !(github.event_name == 'workflow_dispatch' && inputs.skip_tests)
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -265,7 +269,9 @@ jobs:
     needs: [reuse, test]
     if: >-
       !cancelled() && needs.reuse.result == 'success' &&
-      (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.reuse.outputs.hit == 'true')) && (
+      (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.reuse.outputs.hit == 'true') ||
+       (github.event_name == 'workflow_dispatch' && inputs.skip_tests)) && (
+        (github.event_name == 'workflow_dispatch' && inputs.skip_tests) ||
         (github.event_name == 'push' && (
           github.ref == 'refs/heads/main' ||
           github.ref == 'refs/heads/claude/glydrift-arcade-game-7hznpc')) ||
