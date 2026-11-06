@@ -32,10 +32,11 @@ Sammy's.
 
 ## Timeline of major milestones
 
-### Before the first commit: Beat Glider → Glydr → Glydrift
-Sammy says the game was first called **Beat Glider**, then **Glydr**, and then **Glydrift**.
-Those early names come from Sammy's own account. They don't appear anywhere in this repository's
-history, because the very first commit already uses the name Glydrift.
+### Before any code: Beat Glider → Glydr → Glydrift
+*Source: Sammy's notes. This stage came before any code was written, so it isn't in git.*
+- **Beat Glider:** the game's first name.
+- **Glydr:** the second name.
+- **Glydrift:** the final name, and the one the game carries from its very first commit.
 
 ### 2 November 2026: Day 1, the game and the pixel-art pivot
 - **00:39** Glydrift is born: a one-tap, portrait, neon-cosmos arcade flyer (Phaser 3 + Vite,
