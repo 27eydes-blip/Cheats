@@ -6,7 +6,12 @@
 // God mode (no collisions) instead flies through every star coin and checks the coin isn't
 // inside a hazard when you reach it.
 export function botPlay({ maxTriesPerCp = 40, god = false, maxSeconds = 900 } = {}) {
-  const CLOCKED = new Set(["saw", "gate", "blade", "laser"]);
+  // hazards whose position or state is a pure function of the game clock (the bot can ask them
+  // where they will be when it arrives): Void saws, gates, axes, lasers; Solar fire bars and
+  // geysers; Frozen sliders and zaps; Glitch blink blocks; the Abyss slammer
+  const CLOCKED = new Set(
+    ["saw", "gate", "blade", "laser", "firebar", "geyser", "slider", "zap", "blink", "slammer"],
+  );
   const g = window.__glydrift;
   const s = g.scene.getScene("Game");
   const lr = s.levelRun;

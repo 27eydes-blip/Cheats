@@ -71,7 +71,7 @@ export function parseBeats(src, base) {
  * ships once every one of its levels passed the bot + god-mode checks and the full test suite.
  * Test builds can open later batches with ?levels=50 to verify them first.
  */
-export const SHIPPED_BATCHES = 2;
+export const SHIPPED_BATCHES = 3;
 
 let cache = null;
 /** All playable levels (n = 1..50), parsed. Levels not shipped yet are absent. */

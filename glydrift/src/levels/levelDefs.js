@@ -183,8 +183,8 @@ export const LEVEL_DEFS = [
     d: 0.36,
     gap: 520,
     beats: `gate mini geyser meteor firebar > flare shower *t | geyserbar mini eruption >
-            firepair gate *b | flare meteor saw2 shower > geyserbar *m firepair flip gate
-            eruption flare shower gate`,
+            firepair gate *b | flare meteor saw2 shower > geyserbar *m firepair > flip gate
+            > eruption flare > shower gate`,
   },
   {
     n: 19,
@@ -254,8 +254,8 @@ export const LEVEL_DEFS = [
     d: 0.34,
     gap: 550,
     beats: `gate slider @A_curtain_of_icicles icecurtain > zap icecurtain comet *t | gate
-            icicle icecurtain > slider zap *m icecurtain | comet gate icecurtain *b zap
-            slider icecurtain`,
+            icicle icecurtain > slider zap *m icecurtain | comet > gate icecurtain *b > zap
+            slider > icecurtain`,
   },
   {
     n: 26,
@@ -284,7 +284,7 @@ export const LEVEL_DEFS = [
     d: 0.39,
     gap: 520,
     beats: `gate mini sliderpair zap icecurtain > comet zapstairs *b | mini icicle
-            sliderpair > gate icecurtain *t comet | zapstairs flip gate slider zap >
+            sliderpair > gate icecurtain *t comet | zapstairs > flip > gate slider zap >
             sliderpair *m icecurtain comet zapstairs gate`,
   },
   {
@@ -344,9 +344,9 @@ export const LEVEL_DEFS = [
     n: 34,
     name: "Firewall",
     blurb: "A wall of blinking gates.",
-    d: 0.34,
-    gap: 560,
-    beats: `gate blinkpair @The_gate_blinks_open blinkgate > zone blinkgate blink *b |
+    d: 0.3,
+    gap: 610,
+    beats: `gate blinkpair > @The_gate_blinks_open blinkgate > zone blinkgate blink *b |
             blinkpair > blinkgate gate > zone blink *t blinkgate | blinkpair > zone blinkgate
             *m gate blink > blinkgate`,
   },
@@ -354,8 +354,8 @@ export const LEVEL_DEFS = [
     n: 35,
     name: "Packet Loss",
     blurb: "Gravity flips, and the blocks blink.",
-    d: 0.36,
-    gap: 550,
+    d: 0.33,
+    gap: 590,
     beats: `gate blink > flip > gate blinkpair > zone blinkgate *t | blink zone blinkpair >
             gate blinkgate *m zone | flip > blinkpair gate blink > blinkgate zone *b
             blinkpair blink gate`,
@@ -374,8 +374,8 @@ export const LEVEL_DEFS = [
     n: 37,
     name: "Overclock",
     blurb: "The glitches speed up.",
-    d: 0.4,
-    gap: 530,
+    d: 0.37,
+    gap: 570,
     beats: `gate blinkgate > zone blinkpair > blink zone *m | blinkgate blinkpair zone >
             flip gate blink blinkpair > *t blinkgate | zone blinkpair blinkgate > zone *b
             blink blinkpair blinkgate gate`,
@@ -394,21 +394,21 @@ export const LEVEL_DEFS = [
     n: 39,
     name: "Kernel Panic",
     blurb: "Everything the Glitch Realm has, together.",
-    d: 0.44,
-    gap: 510,
+    d: 0.4,
+    gap: 550,
     beats: `gate blinkgate > zone blinkpair > blinkgate zone *t | flip gate blinkpair blink
-            > blinkgate zone *b | mini blinkpair blinkgate zone > blinkpair *m blinkgate
-            | zone blinkpair blinkgate zone blinkpair gate`,
+            > blinkgate zone *b | mini > blinkpair blinkgate zone > blinkpair *m blinkgate
+            | zone blinkpair > blinkgate zone > blinkpair gate`,
   },
   {
     n: 40,
     name: "System Crash",
     blurb: "BOSS: the realm crashes around you.",
-    d: 0.46,
-    gap: 510,
+    d: 0.43,
+    gap: 550,
     beats: `@BOSS_-_SYSTEM_CRASH gate blink zone > blinkpair blinkgate *m | zone
             blinkpair > blinkgate blink zone | flip gate blinkpair > blinkgate *t zone |
-            mini blinkpair blinkgate zone > blinkpair blinkgate | d=0.5 g=490
+            mini blinkpair blinkgate zone > blinkpair blinkgate | d=0.47 g=530
             @FATAL_ERROR blinkgate > zone blinkpair > blinkgate | zone *b blinkpair >
             blinkgate zone | blinkpair blinkgate > zone blinkpair > blinkgate gate`,
   },
@@ -429,9 +429,9 @@ export const LEVEL_DEFS = [
     blurb: "The walls slam shut: one slot stays open.",
     d: 0.33,
     gap: 610,
-    beats: `gate tendril @The_slammer_closes_-_aim_for_the_open_slot slammer > gate slammer
+    beats: `gate tendril > @The_slammer_closes_-_aim_for_the_open_slot slammer > gate slammer
             tendril *b | saw slammer gate > tendril slammer *t | gate slammer *m tendril
-            slammer gate saw slammer`,
+            slammer gate saw slammer > gate tendril slammer gate`,
   },
   {
     n: 43,
@@ -459,7 +459,7 @@ export const LEVEL_DEFS = [
     d: 0.37,
     gap: 590,
     beats: `gate eyebeam @Two_eyes_take_turns eyepair > tendril walls *t | slammer eyepair
-            > gate eyebeam *m walls | tendril eyepair slammer > *b gate eyepair walls
+            > gate eyebeam *m walls | tendril > eyepair slammer > *b gate eyepair walls
             eyebeam tendril`,
   },
   {
@@ -479,7 +479,7 @@ export const LEVEL_DEFS = [
     d: 0.41,
     gap: 570,
     beats: `gate slammer @Slammer_and_eye_-_take_the_open_lane eyeslam > walls tendrileye
-            *t | eyepair eyeslam > tendril walls *b | slammer eyeslam tendrileye > eyepair
+            *t | eyepair eyeslam > tendril walls *b | slammer > eyeslam tendrileye > eyepair
             *m walls eyeslam gate`,
   },
   {
@@ -496,11 +496,11 @@ export const LEVEL_DEFS = [
     n: 49,
     name: "Event Horizon",
     blurb: "Everything the Abyss has, together.",
-    d: 0.45,
-    gap: 550,
+    d: 0.42,
+    gap: 580,
     beats: `gate eyeslam tendrileye > walls eyepair *m | slammer eyeslam > tendrileye
-            walls *t | flip gate eyepair slammer > eyeslam *b tendrileye | walls eyepair
-            eyeslam tendrileye walls eyepair gate`,
+            walls *t | flip gate eyepair slammer > eyeslam *b tendrileye | walls > eyepair
+            eyeslam > tendrileye walls > eyepair gate`,
   },
   {
     n: 50,
