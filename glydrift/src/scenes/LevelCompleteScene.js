@@ -74,7 +74,7 @@ export class LevelCompleteScene extends Phaser.Scene {
       "#ffffff",
     );
     popIn(this, [head, sub], 0);
-    y += 120;
+    y += 150;
 
     // ---- the three stars
     const stars = starsOf(def.n);
@@ -101,7 +101,7 @@ export class LevelCompleteScene extends Phaser.Scene {
       });
       const t = plainText(this, x, y + 72, labels[i], 16, lit ? "#ffd23f" : "#8a80b0");
       const newMark = out?.newStars.includes(i)
-        ? neonText(this, x, y - 70, "NEW!", 20, 0x39ff88, { blur: 8 })
+        ? neonText(this, x, y - 66, "NEW!", 20, 0x39ff88, { blur: 8 })
         : null;
       if (newMark) popIn(this, newMark, 700 + i * 380);
       // this run's star coins
