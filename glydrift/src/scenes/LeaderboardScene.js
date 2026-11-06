@@ -6,10 +6,11 @@ import Phaser from "phaser";
 import { PORTRAIT_K } from "../pixel/common.js";
 import { heroImage } from "../ui/heroImage.js";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
-import { FONT, fitCamera, VIEW } from "../config.js";
+import { FONT, fitCamera, NUM_FONT, VIEW } from "../config.js";
 import { HI } from "../gfx/textures.js";
 import { getCharacter } from "../player/characterDefs.js";
-import { Leaderboard, Levels } from "../online/leaderboard.js";
+import { flairOf, Leaderboard, Levels, myFlair } from "../online/leaderboard.js";
+import { nameText } from "../ui/nameplate.js";
 import { dailyNumber } from "../data/rng.js";
 import { Sfx } from "../audio/sfx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
@@ -581,15 +582,17 @@ export class LeaderboardScene extends Phaser.Scene {
         },
       );
       fit(score, colW - 6);
-      const name = plainText(
-        this,
-        cx,
-        top - 72,
-        r.username,
-        spec.rank === 1 ? 21 : 18,
-        mine ? "#3ef4ff" : "#ffffff",
-      );
-      fit(name, colW - 6);
+      // Drift Pass+: the animated gold name and the forever Season 1 badge
+      const fl = flairOf(r);
+      const name = nameText(this, cx, top - 72, r.username, {
+        size: spec.rank === 1 ? 21 : 18,
+        ox: 0.5,
+        color: mine ? "#3ef4ff" : "#ffffff",
+        gold: fl.gold,
+        badge: fl.s1,
+        font: NUM_FONT,
+      });
+      name.setScale(Math.min(1, (colW - 6) / Math.max(1, name.getBounds().width)));
       const ttl = titleText(this, cx, top - 52, r.title, { size: 11 });
       if (ttl.list.length)
         ttl.setScale(Math.min(1, (colW - 6) / Math.max(1, ttl.getBounds().width)));
@@ -765,8 +768,13 @@ export class LeaderboardScene extends Phaser.Scene {
       const icon = mine
         ? heroImage(this, 142, y, def.id, 0.36 / HI)
         : this.add.image(142, y, def.texture).setScale((0.36 / HI) * PORTRAIT_K);
-      const name = plainText(this, 182, y - 12, r.username, 24, mine ? "#3ef4ff" : "#ffffff", {
-        ox: 0,
+      const fl = flairOf(r);
+      const name = nameText(this, 182, y - 12, r.username, {
+        size: 24,
+        color: mine ? "#3ef4ff" : "#ffffff",
+        gold: fl.gold,
+        badge: fl.s1,
+        font: NUM_FONT,
       });
       this.list.add(titleText(this, 183, y + 10, r.title, { size: 12, ox: 0 }));
       const score = plainText(
@@ -809,7 +817,8 @@ export class LeaderboardScene extends Phaser.Scene {
     const def = getCharacter(me.character);
     this.you.add(neonText(this, 80, 0, `#${me.rank}`, 30, 0x3ef4ff, { blur: 8 }));
     this.you.add(heroImage(this, 150, 0, def.id, 0.4 / HI));
-    this.you.add(plainText(this, 192, -14, name, 24, "#ffffff", { ox: 0 }));
+    const fl = flairOf({ flair: myFlair() });
+    this.you.add(nameText(this, 192, -14, name, { size: 24, gold: fl.gold, badge: fl.s1, font: NUM_FONT }));
     this.you.add(titleText(this, 193, 8, Titles.equippedId(), { size: 12, ox: 0 }));
     this.you.add(
       // the label sits above the number, so the title can go under your name

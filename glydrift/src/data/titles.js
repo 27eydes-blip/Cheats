@@ -4,6 +4,7 @@
 // can only come from the paid track. A title is pure decoration: it never changes gameplay.
 import { Save } from "./save.js";
 import { COLLECTIONS } from "./cosmetics.js";
+import { plusEntitled } from "./plusGate.js";
 
 /** style: plain | shimmer | glow | shift (the animated ones are Drift Pass+ only). */
 export const TITLES = [
@@ -197,6 +198,39 @@ export const TITLES = [
     color: "#ffd23f",
     how: "Drift Pass+ · Season 1, tier 42",
   },
+  // Season 1 "Abyss Rising" additions (glowing, animated; paid track only)
+  {
+    id: "p_riftdiver",
+    name: "RIFT DIVER",
+    source: "plus",
+    style: "shimmer",
+    color: "#3ef4ff",
+    how: "Drift Pass+ · Season 1, tier 4",
+  },
+  {
+    id: "p_abysswalker",
+    name: "ABYSS WALKER",
+    source: "plus",
+    style: "glow",
+    color: "#ff3a4a",
+    how: "Drift Pass+ · Season 1, tier 13",
+  },
+  {
+    id: "p_voidtouched",
+    name: "VOID TOUCHED",
+    source: "plus",
+    style: "shift",
+    color: "#b45cff",
+    how: "Drift Pass+ · Season 1, tier 28",
+  },
+  {
+    id: "p_s1founder",
+    name: "SEASON 1 FOUNDER",
+    source: "plus",
+    style: "glow",
+    color: "#ffd23f",
+    how: "Drift Pass+ · Season 1, tier 43",
+  },
 ];
 
 export const TITLE_SOURCES = {
@@ -237,7 +271,9 @@ function earned(t, s) {
 
 export const Titles = {
   owns(id) {
-    return !!state().owned[id];
+    if (!state().owned[id]) return false;
+    // Drift Pass+ titles also need the season's verified purchase (all "p_" titles are Season 1)
+    return getTitle(id)?.source !== "plus" || plusEntitled("s1");
   },
   /** Grant every title the save has earned. Returns the ids that are new. */
   sync() {

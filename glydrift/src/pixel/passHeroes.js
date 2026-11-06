@@ -925,6 +925,122 @@ export function umbradrake(f) {
 }
 umbradrake.frames = PASS_FRAMES;
 
+
+// ------------------------------------------------------------------ RIFTLING (evolving)
+// Season 1's evolving Drift Pass+ hero: a one-eyed rift imp with bat wings and a crystal tail.
+// It grows up through the paid track — base form (tier 1), ARMORED (15: crimson plate with gold
+// rivets), AWAKENED (30: the armor's runes and its eye burn with abyss light) and the legendary
+// RIFT SOVEREIGN (50: a gold horn-crown, great flame-edged wings, a cape of night). The
+// sovereign has its own idle (crown gems twinkle in turn, wing tips flicker like flame) and
+// its own flap (wings thrown wide with blazing edges).
+function riftlingArt(f, stage) {
+  const pc = new PixelCanvas(32, 32);
+  const sov = stage >= 3;
+  const BODY = ramp(sov ? 0x241040 : 0x3a1a6a, 0.42);
+  const BELLY = ramp(sov ? 0x4a2a7a : 0x6a3aa8, 0.45);
+  const WING = ramp(sov ? 0x1a0a30 : 0x2a1450, 0.4);
+  const ARMOR = ramp(0xc8102e, 0.45);
+  const GOLD = 0xffd23f;
+  const EYE = stage >= 2 ? 0xff5a3a : 0x3ef4ff;
+  const flap = f === 4 || f === 5;
+  const sway = wave(f);
+  // ---- tail: a curl behind with a rift crystal on the tip
+  const tip = [3 + sway, 20 - sway];
+  tube(pc, [[10, 20], [6, 22], [4, 24 + sway * 0.5], tip], 1.6, 0.8, BODY);
+  pc.set(Math.round(tip[0]) - 1, Math.round(tip[1]) - 1, 0x9af4ff).set(Math.round(tip[0]), Math.round(tip[1]) - 2, 0xe8ffff);
+  pc.set(Math.round(tip[0]) - 2, Math.round(tip[1]), 0x3ec8ff);
+  // ---- wings (behind the body). Gliding: folded and swaying; flap: down (4) / up (5).
+  // The sovereign's are bigger, and on a flap they're thrown wide with blazing edges.
+  const span = sov ? 1.35 : 1;
+  const wingPts =
+    f === 4
+      ? [[13, 15], [4, 21 * 1], [2, 26], [7, 24], [10, 27], [14, 21]]
+      : f === 5
+        ? [[13, 15], [3, 4], [1, 9], [6, 9], [7, 13], [14, 17]]
+        : [[13, 15], [5, 9 + sway], [3, 13 + sway], [7, 14], [8, 17], [14, 18]];
+  const wp = wingPts.map(([x, y]) => [13 + (x - 13) * span, 15 + (y - 15) * span]);
+  flat(pc, (t) => t.poly(wp, 1), WING);
+  // wing membrane veins
+  pc.line(Math.round(wp[0][0]), Math.round(wp[0][1]), Math.round(wp[1][0]), Math.round(wp[1][1]), WING[0]);
+  if (sov) {
+    // blazing edge on the wing tips: on a flap all along the edge; while gliding it flickers
+    const edge = [wp[1], wp[2], wp[3]];
+    edge.forEach(([x, y], i) => {
+      const on = flap || (i + idleP(f)) % 3 !== 0;
+      if (!on) return;
+      pc.set(Math.round(x), Math.round(y), i === 1 ? 0xfff0a0 : GOLD);
+      pc.set(Math.round(x) + 1, Math.round(y), 0xff8a1a);
+    });
+    // a cape of night behind the body, with a gold hem
+    flat(pc, (t) => t.poly([[12, 13], [8, 24 - sway], [12, 26], [16, 22]], 1), ramp(0x14081e, 0.3));
+    pc.line(8, 24 - Math.round(sway), 12, 26, GOLD);
+  }
+  // ---- body + belly
+  orb(pc, 16, 18, 8, 7, BODY);
+  orb(pc, 17.5, 21, 4.6, 3.4, BELLY);
+  // feet
+  tube(pc, [[13, 24], [12, 27]], 1.3, 1.1, BODY);
+  tube(pc, [[18, 24], [19, flap ? 28 : 27]], 1.3, 1.1, BODY);
+  // ---- armor (ARMORED and up): a crimson chest plate and a helmet band with gold rivets
+  if (stage >= 1) {
+    orb(pc, 18, 20.5, 4.4, 3.4, ARMOR);
+    pc.hline(14, 21, 17, ARMOR[3]);
+    for (const x of [15, 18, 21]) pc.set(x, 20, GOLD);
+    // shoulder plate
+    orb(pc, 12.5, 16, 2.6, 2.2, ARMOR);
+    pc.set(12, 15, GOLD);
+    // helmet band across the brow
+    pc.hline(13, 22, 11, ARMOR[2]).hline(14, 21, 10, ARMOR[1]);
+    pc.set(15, 11, GOLD).set(20, 11, GOLD);
+  }
+  // ---- AWAKENED and up: runes on the armor glow with abyss light
+  if (stage >= 2) {
+    const runes = [[17, 21], [19, 21], [13, 17]];
+    runes.forEach(([x, y], i) => {
+      const lit = sov || (i + idleP(f)) % 3 !== 2 || flap;
+      pc.set(x, y, lit ? 0xffb0a0 : 0xff3a4a);
+    });
+  }
+  // ---- horns: little stubs → sharper (armored) → a gold crown of horns (sovereign)
+  if (sov) {
+    const crown = [[13, 9, 12, 4], [16, 8, 16, 2], [19, 8, 20, 3], [22, 9, 24, 5]];
+    crown.forEach(([x0, y0, x1, y1]) => {
+      pc.line(x0, y0, x1, y1, GOLD);
+      pc.set(x1, y1, 0xfff6c0);
+    });
+    pc.hline(12, 23, 9, 0xd8a020).hline(13, 22, 8, GOLD);
+    // crown gems twinkle one after another (the sovereign's idle)
+    [[14, 8], [17, 8], [20, 8]].forEach(([x, y], i) => {
+      const on = flap || i === idleP(f) % 3;
+      pc.set(x, y, on ? 0xffffff : 0xff3a4a);
+    });
+  } else {
+    const h = stage >= 1 ? 4 : 2;
+    pc.line(14, 10, 13, 10 - h, BODY[1]);
+    pc.line(20, 10, 21, 10 - h, BODY[1]);
+    pc.set(13, 10 - h, stage >= 1 ? GOLD : BODY[0]).set(21, 10 - h, stage >= 1 ? GOLD : BODY[0]);
+  }
+  // ---- the one big eye (wide on the special pose); it glints on a different frame each loop
+  const wide = f === 6;
+  const ex = 18;
+  const ey = 13;
+  pc.rect(ex - 2, ey - 2, 5, wide ? 6 : 5, 0xf4f0ff);
+  pc.rect(ex - 1, ey - 1, 3, wide ? 4 : 3, EYE);
+  pc.set(ex, ey, OUT);
+  if (idleP(f) === 1 || wide) pc.set(ex - 1, ey - 1, 0xffffff);
+  // a fanged grin on the special pose
+  if (wide) pc.hline(15, 20, 17, OUT).set(16, 18, 0xffffff).set(19, 18, 0xffffff);
+  else pc.set(17, 17, OUT).set(18, 17, OUT);
+  // the sovereign's eye burns gold at its heart
+  if (sov) pc.set(ex + 1, ey, GOLD);
+  return done(pc);
+}
+export const riftling = (f) => riftlingArt(f, 0);
+export const riftling_armor = (f) => riftlingArt(f, 1);
+export const riftling_aura = (f) => riftlingArt(f, 2);
+export const riftsovereign = (f) => riftlingArt(f, 3);
+for (const fn of [riftling, riftling_armor, riftling_aura, riftsovereign]) fn.frames = PASS_FRAMES;
+
 export const PASS_DRAW = {
   voidcat,
   hexowl,
@@ -936,6 +1052,10 @@ export const PASS_DRAW = {
   crimsonmantis,
   gloomeleon,
   umbradrake,
+  riftling,
+  riftling_armor,
+  riftling_aura,
+  riftsovereign,
 };
 
 // ------------------------------------------------------------------ particle sprites

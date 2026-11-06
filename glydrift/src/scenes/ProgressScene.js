@@ -1,7 +1,9 @@
 // Player level & rewards, rotating missions, login streak and achievement badges.
 import Phaser from "phaser";
 import { BIOMES, blendPalette } from "../biomes/biomes.js";
-import { fitCamera, VIEW } from "../config.js";
+import { fitCamera, NUM_FONT, VIEW } from "../config.js";
+import { flairOf, myFlair } from "../online/leaderboard.js";
+import { nameText } from "../ui/nameplate.js";
 import { Effects } from "../effects/Effects.js";
 import {
   ACHIEVEMENTS,
@@ -57,7 +59,15 @@ export class ProgressScene extends Phaser.Scene {
       onClick: () => fadeTo(this, "Titles", { from: "Progress" }),
     }).setDepth(100);
     // your profile line: name + the title you wear
-    plainText(this, W / 2, top + 86, s.profile?.username || "", 18, "#ffffff").setDepth(100);
+    // (Drift Pass+: the gold name and the forever Season 1 badge show here too)
+    const fl = flairOf({ flair: myFlair() });
+    nameText(this, W / 2, top + 86, s.profile?.username || "", {
+      size: 18,
+      ox: 0.5,
+      gold: fl.gold,
+      badge: fl.s1,
+      font: NUM_FONT,
+    }).setDepth(100);
     titleText(this, W / 2, top + 106, Titles.equippedId(), { size: 12 }).setDepth(100);
 
     // ---- level panel

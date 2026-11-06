@@ -271,6 +271,7 @@ class AccountService {
     try {
       await this.handleLink();
       this.user = await this.backend.user();
+      this.known = true; // the server answered: signed in or not is for certain
       if (this.signedIn) await this.pullAndMerge();
     } catch {
       this.cloud = this.signedIn ? "offline" : "off";

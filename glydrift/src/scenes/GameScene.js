@@ -89,7 +89,7 @@ export class GameScene extends Phaser.Scene {
     this.hazardList = [];
     this.hazardScreen = [];
 
-    this.charDef = getCharacter(TEST.character || Save.data.selected);
+    this.charDef = getCharacter(TEST.character || Progression.selectedHero());
     this.fx = new Effects(this, { lowGfx: this.lowGfx });
     this.obstacles = new ObstacleManager(this, this.fx, {
       W,
@@ -204,6 +204,7 @@ export class GameScene extends Phaser.Scene {
     this.chain = 0;
     this.chainT = 0;
     this.mult = 1;
+    if (this.player?.rig) this.player.rig.comboTier = 1; // Combo Flame trail cools down
     this.coinStep = 0;
     this.coinStepT = 0;
     this.nextMilestone = 100;
@@ -389,6 +390,7 @@ export class GameScene extends Phaser.Scene {
       }
     if (m > this.mult) {
       this.mult = m;
+      if (this.player?.rig) this.player.rig.comboTier = m; // Combo Flame trail heats up
       this.run.bestCombo = Math.max(this.run.bestCombo, m);
       this.comboMeter.setTier(m);
       Sfx.combo([2, 3, 5, 10].indexOf(m) + 1);
@@ -990,6 +992,7 @@ export class GameScene extends Phaser.Scene {
         if (this.chainT <= 0) {
           this.chain = 0;
           this.mult = 1;
+    if (this.player?.rig) this.player.rig.comboTier = 1; // Combo Flame trail cools down
           this.comboMeter.setTier(1);
         }
       }

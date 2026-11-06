@@ -14,6 +14,7 @@ import { SUPABASE, WORLD } from "../config.js";
 import { dailyNumber } from "../data/rng.js";
 import { Save } from "../data/save.js";
 import { Titles } from "../data/titles.js";
+import { Shop } from "../data/cosmetics.js";
 import { TEST } from "../systems/testFlags.js";
 
 // ?lbtest routes all reads/writes to "test-…" levels so testing never touches the real boards
@@ -96,6 +97,22 @@ function missingColumn(err, cols) {
   );
 }
 
+/**
+ * Drift Pass+ flair shown with your name: "gold" (the gold name, switched on in Settings) and
+ * "s1" (the forever Season 1 badge). The server keeps it only with a verified purchase.
+ */
+export function myFlair() {
+  const f = [];
+  if (Shop.equipped("name") === "name_pp_gold") f.push("gold");
+  if (Shop.owns("badge_pp_s1")) f.push("s1");
+  return f.length ? f.join(",") : null;
+}
+/** A row's flair as a set: { gold, s1 }. */
+export const flairOf = (row) => {
+  const set = new Set(String(row?.flair || "").split(",").filter(Boolean));
+  return { gold: set.has("gold"), s1: set.has("s1") };
+};
+
 // ---- test builds (?lbmock): a deterministic board of sample players, no network ----
 const MOCK_NAMES = [
   "NeonAce",
@@ -149,6 +166,7 @@ const MOCK_TITLES = [
   null,
   "t_silver",
 ];
+const MOCK_FLAIR = ["gold,s1", null, "s1", null, null, "gold,s1", null, null, null];
 function mockRows(level, period) {
   const dist = Levels.isDistance(level);
   const top = (dist ? 9200 : 15800) * (period === "today" ? 0.42 : period === "week" ? 0.7 : 1);
@@ -158,6 +176,7 @@ function mockRows(level, period) {
     score: Math.round(top * Math.pow(0.955, i) + (dist ? 0 : 7) * (i % 3)),
     character: MOCK_HEROES[i % MOCK_HEROES.length],
     title: MOCK_TITLES[i % MOCK_TITLES.length],
+    flair: MOCK_FLAIR[i % MOCK_FLAIR.length],
     created_at: "2026-11-04T10:00:00Z",
   }));
 }
@@ -167,6 +186,7 @@ function mockBoard(level, period, username) {
     username: username || "YOU",
     character: "volt",
     title: Titles.equippedId(),
+    flair: myFlair(),
     created_at: "2026-11-04T11:00:00Z",
   };
   // you: just inside the list on the all-time boards, outside the top 100 on daily
@@ -396,7 +416,7 @@ class LeaderboardService {
     };
     // optional columns the database may not have yet (added by supabase/migrations)
     for (const [col, v] of Object.entries(this.extraColumns(op)))
-      if (this.cols[col] !== false && v != null) row[col] = v;
+      if (this.cols[col] !== false && (v != null || col === "flair")) row[col] = v;
     let { error } = await sb.from("scores").upsert(row, { onConflict: "player_id,level" });
     const missing = error && missingColumn(error, Object.keys(this.extraColumns(op)));
     if (missing) {
@@ -411,7 +431,7 @@ class LeaderboardService {
 
   /** Columns added by the migrations: the run's distance and the title you wear. */
   extraColumns(op) {
-    return { distance: op.distance, title: Titles.equippedId() };
+    return { distance: op.distance, title: Titles.equippedId(), flair: myFlair() };
   }
 
   // ---------------------------------------------------------------- reading
@@ -447,11 +467,7 @@ class LeaderboardService {
       const since = LeaderboardService.since(period);
       let q = sb
         .from("scores")
-        .select(
-          this.cols.title === false
-            ? "player_id,username,score,character,created_at"
-            : "player_id,username,score,character,title,created_at",
-        )
+        .select(`player_id,${this.readCols()}`)
         .eq("level", level)
         .order("score", { ascending: false })
         .order("created_at", { ascending: true })
@@ -462,23 +478,32 @@ class LeaderboardService {
       const me = await this.myRank(sb, level, since);
       return { rows: rows || [], me, userId: this.userId };
     } catch (err) {
-      // an older database without the title column: read without it
-      if (this.cols.title !== false && missingColumn(err, ["title"])) {
-        this.cols.title = false;
+      // an older database without the title / flair column: read without it
+      const missing = missingColumn(err, ["title", "flair"]);
+      if (missing && this.cols[missing] !== false) {
+        this.cols[missing] = false;
         return this.board(level, period);
       }
       throw this.wrap(err);
     }
   }
 
+  /** Columns read for a board row (the optional ones only while the database has them). */
+  readCols() {
+    return [
+      "username,score,character",
+      this.cols.title === false ? null : "title",
+      this.cols.flair === false ? null : "flair",
+      "created_at",
+    ]
+      .filter(Boolean)
+      .join(",");
+  }
+
   async myRank(sb, level, since) {
     const { data: mine, error } = await sb
       .from("scores")
-      .select(
-        this.cols.title === false
-          ? "username,score,character,created_at"
-          : "username,score,character,title,created_at",
-      )
+      .select(this.readCols())
       .eq("player_id", this.userId)
       .eq("level", level)
       .maybeSingle();

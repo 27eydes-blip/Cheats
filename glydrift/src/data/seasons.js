@@ -3,7 +3,7 @@
 // `season_config`, row "live"; cached on the device), else the built-in SEASON_DEFAULTS.
 // Seasons are started, changed or ended by editing that row — no app update needed.
 import { TEST } from "../systems/testFlags.js";
-import { SEASON_DEFAULTS } from "./seasonDefs.js";
+import { SEASON_DEFAULTS, plusTrackS1 } from "./seasonDefs.js";
 import { Save } from "./save.js";
 import { COSMETICS, getCosmetic, setSeasonItemCheck } from "./cosmetics.js";
 import { CHARACTERS, getCharacter, releaseHeroes } from "../player/characterDefs.js";
@@ -47,6 +47,9 @@ function validSeason(s) {
   if (passOf(s.featuredHero)) delete s.featuredHero;
   s.pass.tiers = s.pass.tiers.map((r) => (ok(r) && !passOf(r?.hero) ? r : { coins: 100 }));
   if (!Array.isArray(s.pass.plus)) s.pass.plus = [];
+  // Season 1's paid track is fixed in the app (layout 2): a remote config can't move or drop
+  // its rewards, so claims recorded by tier always mean the same thing
+  if (s.id === "s1" && s.pass.plus.length) s.pass.plus = plusTrackS1({ banner: "crimson" });
   s.pass.plus = s.pass.plus.map((r) =>
     r?.hero && (!heroOk(r.hero) || passOf(r.hero) !== s.id) ? { coins: 100 } : r,
   );
