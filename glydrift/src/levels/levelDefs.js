@@ -110,8 +110,8 @@ export const LEVEL_DEFS = [
     n: 11,
     name: "Sunrise",
     blurb: "Geysers erupt from below: watch the glow.",
-    d: 0.24,
-    gap: 580,
+    d: 0.16,
+    gap: 640,
     beats: `gate saw @Geysers_glow_before_they_erupt geyser > gate geyser saw *b | gate
             geyser saw2 > blade geyser *t gate | saw geyser gate *m saw2 geyser gate saw
             geyser`,
