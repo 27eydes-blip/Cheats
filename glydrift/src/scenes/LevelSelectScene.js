@@ -47,7 +47,8 @@ export class LevelSelectScene extends Phaser.Scene {
     // ---- the map (one tall container, scrolled by dragging)
     this.map = this.add.container(0, 0);
     this.nodes = [];
-    let y = TOP_PAD;
+    // start below the header, whose height grows with the notch / status bar (safeTop)
+    let y = Math.max(TOP_PAD, top + 150);
     const pathPts = [];
     for (let r = 0; r < REALMS.length; r++) {
       const realm = REALMS[r];
