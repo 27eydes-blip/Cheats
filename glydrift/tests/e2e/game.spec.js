@@ -1551,6 +1551,131 @@ test("Season 1 Drift Pass+ rewards: placed on the track, exclusive, cosmetic, se
   expect(log.errors).toEqual([]);
 });
 
+test("SPLICE: +25% speed with the standard hitbox, falcon moves, speed badge, perch showcase", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  // 1. the same 240 frames from the same start: SPLICE covers ~25% more ground, same hitbox
+  const fly = async (id) => {
+    await page.goto(page.url().replace(/&character=[a-z_]+/, "") + `&character=${id}`);
+    await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+    await run(page, 800);
+    await startRun(page);
+    return page.evaluate(() => {
+      const s = window.__glydrift.scene.getScene("Game");
+      const p = s.player;
+      const before = s.meters;
+      const frames = new Set();
+      for (let i = 0; i < 240; i++) {
+        s.slowT = 0; // (no near-miss slow-mo: compare pure flight)
+        s.timeScale = 1;
+        s.__t = (s.__t || 1e6) + 1000 / 60;
+        s.stepFrame(s.__t, 1000 / 60);
+        if (p.y > s.H * 0.55 && p.vy > -50) s.onTap();
+        frames.add(p.rig.sprite.frame.name);
+      }
+      return {
+        radius: p.radius,
+        metres: s.meters - before,
+        frames: [...frames],
+        speed: s.charDef.speed ?? 1,
+        ratio: s.speed / (s.speedMul * (s.charDef.speed ?? 1)),
+      };
+    });
+  };
+  const log = await openGame(page, { flags: ["god"], save: SAVE });
+  const volt = await fly("volt");
+  const splice = await fly("splice");
+  expect(splice.radius).toBe(volt.radius);
+  expect(splice.speed).toBe(1.25);
+  expect(splice.metres / volt.metres).toBeGreaterThan(1.2);
+  expect(splice.metres / volt.metres).toBeLessThan(1.32);
+  // flaps (wings up, driven down), the dive tuck between flaps
+  for (const f of ["splice_1", "splice_2", "splice_3"]) expect(splice.frames, f).toContain(f);
+  // 2. near-miss: a barrel roll (the drawing flips over); new best: screech + sonic boom
+  const moves = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const r = s.player.rig;
+    const step = (n) => {
+      for (let i = 0; i < n; i++) {
+        s.__t += 1000 / 60;
+        s.stepFrame(s.__t, 1000 / 60);
+      }
+    };
+    r.onNear();
+    let flipped = false;
+    for (let i = 0; i < 24; i++) {
+      step(1);
+      if (r.sprite.scaleY < 0) flipped = true;
+    }
+    r.onBest();
+    step(3);
+    const screech = r.sprite.frame.name;
+    // the run ends: he tumbles away, still drawn, then disappears
+    window.__glyGod(false);
+    let tumbling = false;
+    for (let i = 0; i < 60 * 30 && !r.dead; i++) step(1);
+    step(20);
+    tumbling = r.falcon.dieT > 0 && r.sprite.visible;
+    step(90);
+    return { flipped, screech, dead: r.dead, tumbling, gone: !r.sprite.visible };
+  });
+  expect(moves).toEqual({ flipped: true, screech: "splice_7", dead: true, tumbling: true, gone: true });
+  // 3. shop + unlock: Legendary, 12,000 coins or "Reach 2,000m in one run"
+  const def = await page.evaluate(() => {
+    const d = window.__heroDefs.find((c) => c.id === "splice");
+    return { rarity: d.rarity, cost: d.cost, ch: d.challenge, perks: d.perks.list, desc: d.desc };
+  });
+  expect(def).toEqual({
+    rarity: "legendary",
+    cost: 12000,
+    ch: { stat: "maxDistance", value: 2000, text: "Reach 2,000m in one run" },
+    perks: ["+25% SPEED"],
+    desc: "Fastest thing in the sky.",
+  });
+  // 4. the leaderboard marks faster heroes' runs with a speed badge
+  await page.goto(page.url().replace(/&character=[a-z_]+/, "") + "&lbmock");
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Leaderboard", { tab: "score" }));
+  await waitFor(page, () => window.__glydrift.scene.isActive("Leaderboard"));
+  await run(page, 2500);
+  const badges = await page.evaluate(() => {
+    const lb = window.__glydrift.scene.getScene("Leaderboard");
+    const all = [...lb.children.list, ...(lb.list?.list || [])].flatMap((o) => (o.list ? [o, ...o.list] : [o]));
+    return all.filter((o) => o.name === "speedBadge").length;
+  });
+  expect(badges).toBeGreaterThan(0); // RONIN rows on the sample board (+10%)
+  // 5. character select: he lands on a perch, ruffles, looks back, launches
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+    s.unlocked.splice = true;
+    s.selected = "splice";
+    localStorage.setItem("glydrift.save.v1", JSON.stringify(s));
+  });
+  await page.reload();
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Characters"));
+  await waitFor(page, () => window.__glydrift.scene.isActive("Characters"));
+  await page.evaluate(() => {
+    const c = window.__glydrift.scene.getScene("Characters");
+    c.select(c.roster.findIndex((d) => d.id === "splice"));
+  });
+  const poses = new Set();
+  for (let i = 0; i < 90; i++) {
+    await run(page, 100);
+    poses.add(
+      await page.evaluate(() => {
+        const f = window.__glydrift.scene.getScene("Characters").rig.falcon;
+        return f.phase === "perched" ? `${f.phase}${f.perchPose}${f.perch.visible ? "+perch" : ""}` : f.phase;
+      }),
+    );
+  }
+  for (const p of ["land", "perched4+perch", "perched5+perch", "perched6+perch", "fly"]) expect([...poses], p).toContain(p);
+  await snap(page, testInfo, "22-splice-showcase");
+  expect(log.errors).toEqual([]);
+});
+
 test("after logging out: one pop-up at a time, and no free rewards twice", async ({
   page,
 }, testInfo) => {

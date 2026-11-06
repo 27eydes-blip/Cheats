@@ -385,7 +385,7 @@ export class LeaderboardScene extends Phaser.Scene {
    * WALLRUNNER +20%, RONIN +10%): their whole run moves quicker, so the board says so.
    */
   speedBadge(x, y) {
-    const g = this.add.graphics({ x, y });
+    const g = this.add.graphics({ x, y }).setName("speedBadge");
     g.fillStyle(0x1a0630, 1).fillCircle(0, 0, 11);
     g.fillStyle(0x3ef4ff, 1).fillCircle(0, 0, 8);
     g.fillStyle(0x0a2a4a, 1);
