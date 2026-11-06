@@ -41,8 +41,7 @@ export const Levels = {
 
 /** Level boards store a time as a score so the board's "higher is better" order still works. */
 const TIME_K = 5e8;
-export const timeToScore = (ms) =>
-  Math.max(1, Math.round(TIME_K / Math.max(1, ms)));
+export const timeToScore = (ms) => Math.max(1, Math.round(TIME_K / Math.max(1, ms)));
 export const scoreToTime = (score) => (score > 0 ? TIME_K / score : 0);
 
 const TIMEOUT_MS = 8000;
@@ -53,19 +52,15 @@ function timedFetch(input, init = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   if (init.signal) init.signal.addEventListener("abort", () => ctrl.abort());
-  return fetch(input, { ...init, signal: ctrl.signal }).finally(() =>
-    clearTimeout(timer),
-  );
+  return fetch(input, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(timer));
 }
 
 function isNetworkError(err) {
-  if (typeof navigator !== "undefined" && navigator.onLine === false)
-    return true;
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
   const msg = `${err?.message ?? err ?? ""} ${err?.details ?? ""}`;
   return (
-    /fetch|network|load failed|abort|timeout|offline|ECONN|ENOTFOUND/i.test(
-      msg,
-    ) || err?.status === 0
+    /fetch|network|load failed|abort|timeout|offline|ECONN|ENOTFOUND/i.test(msg) ||
+    err?.status === 0
   );
 }
 
@@ -94,8 +89,7 @@ export function isPlausible(run) {
   const meters = run.distance ?? 0;
   if (!Number.isFinite(score) || score <= 0 || score > 2_000_000) return false;
   if (!Number.isFinite(ms) || ms < 500) return false;
-  const maxMeters =
-    ((MAX_SPEED_FACTOR * WORLD.maxSpeed) / WORLD.pxPerMeter) * (ms / 1000) + 40;
+  const maxMeters = ((MAX_SPEED_FACTOR * WORLD.maxSpeed) / WORLD.pxPerMeter) * (ms / 1000) + 40;
   if (meters > maxMeters) return false;
   // score = meters + coin bonus + close-call bonus; both bonuses are capped generously
   const maxScore = maxMeters * 20 + 500;
@@ -107,10 +101,7 @@ function missingColumn(err, cols) {
   if (err?.code !== "PGRST204" && err?.code !== "42703") return null;
   const msg = `${err.message || ""} ${err.details || ""}`;
   return (
-    cols.find(
-      (c) =>
-        msg.includes(`'${c}'`) || msg.includes(`"${c}"`) || msg.includes(c),
-    ) || null
+    cols.find((c) => msg.includes(`'${c}'`) || msg.includes(`"${c}"`) || msg.includes(c)) || null
   );
 }
 
@@ -176,15 +167,7 @@ const MOCK_NAMES = [
   "Cinder",
   "Dusk",
 ];
-const MOCK_HEROES = [
-  "volt",
-  "ember",
-  "ronin",
-  "frost",
-  "pengu",
-  "glitch",
-  "levijr",
-];
+const MOCK_HEROES = ["volt", "ember", "ronin", "frost", "pengu", "glitch", "levijr"];
 const MOCK_TITLES = [
   "p_neonroyal",
   "t_diamond",
@@ -195,22 +178,10 @@ const MOCK_TITLES = [
   null,
   "t_silver",
 ];
-const MOCK_FLAIR = [
-  "gold,s1",
-  null,
-  "s1",
-  null,
-  null,
-  "gold,s1",
-  null,
-  null,
-  null,
-];
+const MOCK_FLAIR = ["gold,s1", null, "s1", null, null, "gold,s1", null, null, null];
 function mockRows(level, period) {
   const dist = Levels.isDistance(level);
-  const top =
-    (dist ? 9200 : 15800) *
-    (period === "today" ? 0.42 : period === "week" ? 0.7 : 1);
+  const top = (dist ? 9200 : 15800) * (period === "today" ? 0.42 : period === "week" ? 0.7 : 1);
   return MOCK_NAMES.map((name, i) => ({
     player_id: `mock-${i}`,
     username: name,
@@ -232,9 +203,7 @@ function mockBoard(level, period, username) {
   };
   // you: just inside the list on the all-time boards, outside the top 100 on daily
   const rank = level.includes("daily") ? 142 : 12;
-  me.score = level.includes("daily")
-    ? 420
-    : Math.round(rows[rank - 1].score - 3);
+  me.score = level.includes("daily") ? 420 : Math.round(rows[rank - 1].score - 3);
   if (rank <= rows.length) rows.splice(rank - 1, 0, { ...me, player_id: "me" });
   return { rows: rows.slice(0, 100), me: { ...me, rank }, userId: "me" };
 }
@@ -268,17 +237,16 @@ class LeaderboardService {
     // automated tests (?offline): no network at all, so nothing lands at a real-time moment
     if (TEST.offline) return Promise.reject(new Error("offline (test)"));
     if (!this.clientPromise) {
-      this.clientPromise = import("@supabase/supabase-js").then(
-        ({ createClient }) =>
-          createClient(SUPABASE.url, SUPABASE.publishableKey, {
-            auth: {
-              persistSession: true,
-              autoRefreshToken: true,
-              detectSessionInUrl: false,
-              storageKey: "glydrift.auth",
-            },
-            global: { fetch: timedFetch },
-          }),
+      this.clientPromise = import("@supabase/supabase-js").then(({ createClient }) =>
+        createClient(SUPABASE.url, SUPABASE.publishableKey, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: false,
+            storageKey: "glydrift.auth",
+          },
+          global: { fetch: timedFetch },
+        }),
       );
       this.clientPromise.catch(() => {
         this.clientPromise = null;
@@ -360,8 +328,7 @@ class LeaderboardService {
     if (!isPlausible({ ...entry, run_time_ms: entry.run_time_ms })) {
       return Promise.resolve({ rejected: true });
     }
-    if (TEST.lbmock)
-      return Promise.resolve({ uploaded: 2, queued: 0, mock: true });
+    if (TEST.lbmock) return Promise.resolve({ uploaded: 2, queued: 0, mock: true });
     this.enqueue(entry);
     // endless runs also go on the DISTANCE board (its "score" is the metres flown)
     if (run.mode !== "daily" && entry.distance > 0)
@@ -388,8 +355,7 @@ class LeaderboardService {
       distance: Math.floor(distance || 0),
     };
     if (!isPlausible(entry)) return Promise.resolve({ rejected: true });
-    if (TEST.lbmock)
-      return Promise.resolve({ uploaded: 1, queued: 0, mock: true });
+    if (TEST.lbmock) return Promise.resolve({ uploaded: 1, queued: 0, mock: true });
     this.enqueue(entry);
     Save.write();
     return this.flush();
@@ -401,10 +367,7 @@ class LeaderboardService {
     // keep only the best pending score per level
     // (never merge into the entry an upload is sending right now: that new best would be lost)
     const same = q.find(
-      (op, i) =>
-        op.type === "score" &&
-        op.level === entry.level &&
-        !(this.flushing && i === 0),
+      (op, i) => op.type === "score" && op.level === entry.level && !(this.flushing && i === 0),
     );
     if (same) {
       if (entry.score > same.score) Object.assign(same, entry);
@@ -435,8 +398,7 @@ class LeaderboardService {
             // drop an entry only when the server clearly refused it (or after many tries);
             // timeouts, 5xx, rate limits and token refreshes keep it for a later retry
             op.tries = (op.tries || 0) + 1;
-            if (isNetworkError(err) || (!isRejection(err) && op.tries < 8))
-              throw err;
+            if (isNetworkError(err) || (!isRejection(err) && op.tries < 8)) throw err;
             q.shift();
             Save.write();
           }
@@ -490,20 +452,14 @@ class LeaderboardService {
     };
     // optional columns the database may not have yet (added by supabase/migrations)
     for (const [col, v] of Object.entries(this.extraColumns(op)))
-      if (this.cols[col] !== false && (v != null || col === "flair"))
-        row[col] = v;
-    let { error } = await sb
-      .from("scores")
-      .upsert(row, { onConflict: "player_id,level" });
-    const missing =
-      error && missingColumn(error, Object.keys(this.extraColumns(op)));
+      if (this.cols[col] !== false && (v != null || col === "flair")) row[col] = v;
+    let { error } = await sb.from("scores").upsert(row, { onConflict: "player_id,level" });
+    const missing = error && missingColumn(error, Object.keys(this.extraColumns(op)));
     if (missing) {
       // an older database: remember the column isn't there and send the row without it
       this.cols[missing] = false;
       delete row[missing];
-      ({ error } = await sb
-        .from("scores")
-        .upsert(row, { onConflict: "player_id,level" }));
+      ({ error } = await sb.from("scores").upsert(row, { onConflict: "player_id,level" }));
     }
     if (error) throw error;
     return true;
@@ -622,5 +578,4 @@ class LeaderboardService {
 export const Leaderboard = new LeaderboardService();
 
 // test builds only: let automated tests reach the board logic directly
-if (TEST.on && typeof window !== "undefined")
-  window.__glyLb = { Leaderboard, Levels, isPlausible };
+if (TEST.on && typeof window !== "undefined") window.__glyLb = { Leaderboard, Levels, isPlausible };

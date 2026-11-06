@@ -133,17 +133,14 @@ export class LevelSelectScene extends Phaser.Scene {
       if (d.moved < 12) {
         // a tap: which node?
         const my = p.y - this.scrollY;
-        const hit = this.nodes.find(
-          (nd) => Math.hypot(nd.x - p.x, nd.y - my) < 64,
-        );
+        const hit = this.nodes.find((nd) => Math.hypot(nd.x - p.x, nd.y - my) < 64);
         if (hit) this.openLevel(hit.n);
       }
     });
     this.input.on("wheel", (_p, _o, _dx, dy) => {
       this.scrollY = Phaser.Math.Clamp(this.scrollY - dy, this.minY, 0);
     });
-    if (TEST.on && typeof window !== "undefined")
-      window.__glyLevelSelect = this;
+    if (TEST.on && typeof window !== "undefined") window.__glyLevelSelect = this;
   }
 
   update(_t, delta) {
@@ -152,15 +149,13 @@ export class LevelSelectScene extends Phaser.Scene {
       this.scrollY += this.vel * dt;
       this.vel *= Math.exp(-dt * 4);
       // spring back inside the map
-      if (this.scrollY > 0)
-        this.scrollY += (0 - this.scrollY) * Math.min(1, dt * 10);
+      if (this.scrollY > 0) this.scrollY += (0 - this.scrollY) * Math.min(1, dt * 10);
       if (this.scrollY < this.minY)
         this.scrollY += (this.minY - this.scrollY) * Math.min(1, dt * 10);
     }
     this.map.y = Math.round(this.scrollY);
     // the current level's node pulses
-    if (this.pulse)
-      this.pulse.setScale(1 + Math.sin(this.time.now / 260) * 0.08);
+    if (this.pulse) this.pulse.setScale(1 + Math.sin(this.time.now / 260) * 0.08);
   }
 
   /** A realm's band: a tinted panel with pixel stars in its colour and its name. */
@@ -243,12 +238,7 @@ export class LevelSelectScene extends Phaser.Scene {
       // three stars under the node
       [0, 1, 2].forEach((i) => {
         const sg = this.add.graphics({ x: (i - 1) * 28, y: R + 18 });
-        drawStar(
-          sg,
-          12,
-          stars[i] ? 0xffd23f : 0x2a2440,
-          stars[i] ? 0xfff6c0 : 0x4a4070,
-        );
+        drawStar(sg, 12, stars[i] ? 0xffd23f : 0x2a2440, stars[i] ? 0xfff6c0 : 0x4a4070);
         c.add(sg);
       });
     }
@@ -272,9 +262,7 @@ export class LevelSelectScene extends Phaser.Scene {
     const H = this.H;
     const realm = REALMS[def.realmIdx];
     const c = this.add.container(0, 0).setDepth(50);
-    const dim = this.add
-      .rectangle(W / 2, H / 2, W, H, 0x020107, 0.82)
-      .setInteractive();
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x020107, 0.82).setInteractive();
     const ph = 640;
     const py = H / 2 - ph / 2;
     const g = this.add.graphics();
@@ -312,14 +300,10 @@ export class LevelSelectScene extends Phaser.Scene {
       drawStar(sg, 16, on ? 0xffd23f : 0x2a2440, on ? 0xfff6c0 : 0x4a4070);
       c.add(sg);
       c.add(
-        plainText(
-          this,
-          W / 2 - 120,
-          yy,
-          labels[i],
-          20,
-          on ? "#ffd23f" : "#bfb6e8",
-        ).setOrigin(0, 0.5),
+        plainText(this, W / 2 - 120, yy, labels[i], 20, on ? "#ffd23f" : "#bfb6e8").setOrigin(
+          0,
+          0.5,
+        ),
       );
     });
     const rec = levelRecord(n);

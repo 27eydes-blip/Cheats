@@ -10,14 +10,7 @@ import { Music } from "../audio/music.js";
 import { Haptics } from "../systems/haptics.js";
 import { Leaderboard, Levels, scoreToTime } from "../online/leaderboard.js";
 import { button, drawNeonRect, neonText, plainText, popIn } from "../ui/ui.js";
-import {
-  REALMS,
-  builtCount,
-  fmtTime,
-  getLevel,
-  isUnlocked,
-  starsOf,
-} from "../levels/levels.js";
+import { REALMS, builtCount, fmtTime, getLevel, isUnlocked, starsOf } from "../levels/levels.js";
 import { TEST } from "../systems/testFlags.js";
 
 export class LevelCompleteScene extends Phaser.Scene {
@@ -66,11 +59,7 @@ export class LevelCompleteScene extends Phaser.Scene {
       this,
       W / 2,
       y,
-      res.practice
-        ? "PRACTICE DONE"
-        : def.boss
-          ? "BOSS DEFEATED!"
-          : "LEVEL COMPLETE",
+      res.practice ? "PRACTICE DONE" : def.boss ? "BOSS DEFEATED!" : "LEVEL COMPLETE",
       def.boss ? 52 : 48,
       col,
       { blur: 20 },
@@ -110,14 +99,7 @@ export class LevelCompleteScene extends Phaser.Scene {
           }
         },
       });
-      const t = plainText(
-        this,
-        x,
-        y + 72,
-        labels[i],
-        16,
-        lit ? "#ffd23f" : "#8a80b0",
-      );
+      const t = plainText(this, x, y + 72, labels[i], 16, lit ? "#ffd23f" : "#8a80b0");
       const newMark = out?.newStars.includes(i)
         ? neonText(this, x, y - 70, "NEW!", 20, 0x39ff88, { blur: 8 })
         : null;
@@ -125,14 +107,7 @@ export class LevelCompleteScene extends Phaser.Scene {
       // this run's star coins
       if (i === 1) {
         const got = res.coins.filter(Boolean).length;
-        plainText(
-          this,
-          x,
-          y + 96,
-          `${got}/3 this run`,
-          14,
-          thisRun[1] ? "#ffd23f" : "#bfb6e8",
-        );
+        plainText(this, x, y + 96, `${got}/3 this run`, 14, thisRun[1] ? "#ffd23f" : "#bfb6e8");
       }
       return { g, t };
     });
@@ -149,22 +124,14 @@ export class LevelCompleteScene extends Phaser.Scene {
       const bestLine = rec?.best
         ? `BEST (no crashes) ${fmtTime(rec.best)}${out.bestTime ? " · NEW BEST!" : ""}`
         : "Finish with no crashes to set a best time";
-      plainText(
-        this,
-        W / 2,
-        y,
-        bestLine,
-        17,
-        out.bestTime ? "#39ff88" : "#cfc6ff",
-      );
+      plainText(this, W / 2, y, bestLine, 17, out.bestTime ? "#39ff88" : "#cfc6ff");
       y += 40;
       // ---- first-time rewards
       if (out.rewards.length) {
         const g = this.add.graphics();
         const lines = [];
         for (const r of out.rewards) {
-          if (r.kind === "finish")
-            lines.push(`First finish  +${r.coins} coins`);
+          if (r.kind === "finish") lines.push(`First finish  +${r.coins} coins`);
           if (r.kind === "star") lines.push(`New star  +${r.coins} coins`);
           if (r.kind === "realm") {
             lines.push(`${realm.name} CLEARED  +${r.coins} coins`);
@@ -178,9 +145,7 @@ export class LevelCompleteScene extends Phaser.Scene {
           fill: 0x1a1204,
           fillAlpha: 0.9,
         });
-        lines.forEach((l, i) =>
-          plainText(this, W / 2, y + 28 + i * 28, l, 18, "#ffd23f"),
-        );
+        lines.forEach((l, i) => plainText(this, W / 2, y + 28 + i * 28, l, 18, "#ffd23f"));
         y += bh + 20;
       }
       if (out.rewards.some((r) => r.kind === "realm")) this.celebrate(col);
@@ -223,8 +188,7 @@ export class LevelCompleteScene extends Phaser.Scene {
       onClick: () => this.go("LevelSelect", { focus: def.n }),
     });
     popIn(this, [b1, b2, b3], 900);
-    if (TEST.on && typeof window !== "undefined")
-      window.__glyLevelResult = { res, out };
+    if (TEST.on && typeof window !== "undefined") window.__glyLevelResult = { res, out };
   }
 
   async loadBoard(n, y) {

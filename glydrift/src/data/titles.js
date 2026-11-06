@@ -330,8 +330,7 @@ export const Titles = {
     }
     // a collection title that was equipped the old way carries over
     const oldSet = s.cos?.equipped?.title;
-    if (!st.equipped && oldSet && st.owned[`t_${oldSet}`])
-      st.equipped = `t_${oldSet}`;
+    if (!st.equipped && oldSet && st.owned[`t_${oldSet}`]) st.equipped = `t_${oldSet}`;
     if (fresh.length) Save.write();
     return fresh;
   },

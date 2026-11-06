@@ -58,8 +58,7 @@ export class LevelRun {
       finished: false,
       onBeat: (i, x, snap) => this.onBeat(i, x, snap),
       onStar: (x, y) => this.onStar(x, y),
-      onHint: (x, text) =>
-        this.hints.push({ m: this.toM(x), text, shown: false }),
+      onHint: (x, text) => this.hints.push({ m: this.toM(x), text, shown: false }),
       onFinish: (x) => this.onFinish(x),
     };
     this.buildHud();
@@ -79,9 +78,7 @@ export class LevelRun {
   onStar(x, y) {
     // star coins are numbered by their order in the level, so a respawn re-creates the same one
     const i =
-      this.def.beats
-        .slice(0, this.scene.obstacles.level.i + 1)
-        .filter((b) => b.star).length - 1;
+      this.def.beats.slice(0, this.scene.obstacles.level.i + 1).filter((b) => b.star).length - 1;
     if (i < 0 || i > 2 || this.stars.some((s) => s.i === i)) return;
     const obj = this.makeStar();
     // a star coin collected on an earlier finished run shows as a ghost (it still counts again)
@@ -95,15 +92,7 @@ export class LevelRun {
     const g = sc.add.graphics();
     const P = 4;
     // a chunky pixel star: dark outline, gold body, white glint
-    const rows = [
-      "...#...",
-      "..###..",
-      "#######",
-      ".#####.",
-      "..###..",
-      ".##.##.",
-      "##...##",
-    ];
+    const rows = ["...#...", "..###..", "#######", ".#####.", "..###..", ".##.##.", "##...##"];
     const draw = (col, inset) =>
       rows.forEach((row, ry) =>
         [...row].forEach((ch, rx) => {
@@ -165,11 +154,7 @@ export class LevelRun {
     const N = this.def.beats.length;
     if (this.finishM > 0 && m >= (this.beatM[N - 1]?.m ?? 0)) {
       const a = this.beatM[N - 1]?.m ?? 0;
-      return Phaser.Math.Clamp(
-        (N - 1 + (m - a) / Math.max(1, this.finishM - a)) / N,
-        0,
-        1,
-      );
+      return Phaser.Math.Clamp((N - 1 + (m - a) / Math.max(1, this.finishM - a)) / N, 0, 1);
     }
     let k = -1;
     for (let i = 0; i < N && this.beatM[i] && this.beatM[i].m <= m; i++) k = i;
@@ -199,19 +184,14 @@ export class LevelRun {
       s.obj.setPosition(x, s.y + bob).setVisible(x > -80 && x < sc.W + 200);
       s.obj.setAlpha(s.saved ? 0.4 : 1); // collected on an earlier run: a ghost
       s.obj.glow.setScale(1.1 + Math.sin(sc.clock * 5) * 0.12);
-      if (
-        playing &&
-        !s.taken &&
-        Math.hypot(x - p.x, s.y + bob - p.y) < STAR_R + p.radius
-      ) {
+      if (playing && !s.taken && Math.hypot(x - p.x, s.y + bob - p.y) < STAR_R + p.radius) {
         s.taken = true;
         const fresh = !this.got[s.i];
         this.got[s.i] = true;
         sc.fx.burst("star", x, s.y, 18, 0xffd23f, {
           speed: { min: 120, max: 380 },
         });
-        if (!reduceFlashing())
-          sc.fx.ring(x, s.y, 0xffd23f, { scale: 1.4, duration: 420 });
+        if (!reduceFlashing()) sc.fx.ring(x, s.y, 0xffd23f, { scale: 1.4, duration: 420 });
         Sfx.coin?.(8);
         Haptics.light?.();
         s.obj.setVisible(false).setActive(false);
@@ -239,8 +219,7 @@ export class LevelRun {
     }
     if (this.finishObj) this.finishObj.setPosition(this.toX(this.finishM), 0);
     // crossing the finish line
-    if (playing && this.finishM > 0 && sc.meters >= this.finishM)
-      this.complete();
+    if (playing && this.finishM > 0 && sc.meters >= this.finishM) this.complete();
     this.hud?.update(this.progress(), this.deaths);
   }
 
@@ -330,14 +309,7 @@ class LevelHud {
     const c = hud.add.container(0, 0).setDepth(50);
     this.c = c;
     const name = `${run.def.boss ? "BOSS · " : ""}LEVEL ${run.def.n} · ${run.def.name.toUpperCase()}${run.practice ? " · PRACTICE" : ""}`;
-    this.title = plainText(
-      hud,
-      W / 2,
-      top,
-      name,
-      18,
-      run.practice ? "#7ae8ff" : "#ffffff",
-    );
+    this.title = plainText(hud, W / 2, top, name, 18, run.practice ? "#7ae8ff" : "#ffffff");
     this.barG = hud.add.graphics();
     this.pct = neonText(hud, W / 2, top + 74, "0%", 22, run.realm.col, {
       blur: 8,
@@ -395,20 +367,8 @@ class LevelHud {
     const g = this.barG;
     g.clear();
     g.fillStyle(0x0a0618, 0.85).fillRoundedRect(x0 - 4, y - 4, bw + 8, 22, 8);
-    g.fillStyle(this.run.realm.col, 1).fillRoundedRect(
-      x0,
-      y,
-      Math.max(6, bw * p),
-      14,
-      6,
-    );
-    g.lineStyle(2, 0xffffff, 0.5).strokeRoundedRect(
-      x0 - 4,
-      y - 4,
-      bw + 8,
-      22,
-      8,
-    );
+    g.fillStyle(this.run.realm.col, 1).fillRoundedRect(x0, y, Math.max(6, bw * p), 14, 6);
+    g.lineStyle(2, 0xffffff, 0.5).strokeRoundedRect(x0 - 4, y - 4, bw + 8, 22, 8);
     const pc = Math.floor(p * 100);
     if (pc !== this.lastPc) {
       this.lastPc = pc;

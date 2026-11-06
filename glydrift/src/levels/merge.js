@@ -6,8 +6,7 @@ export function mergeLevelProgress(a = {}, b = {}) {
     claimed: { ...(a.claimed || {}) },
     played: Math.max(a.played || 0, b.played || 0),
   };
-  for (const [k, v] of Object.entries(b.claimed || {}))
-    if (v) out.claimed[k] = true;
+  for (const [k, v] of Object.entries(b.claimed || {})) if (v) out.claimed[k] = true;
   for (const [n, rb] of Object.entries(b.p || {})) {
     const ra = out.p[n];
     if (!ra) {

@@ -5,11 +5,7 @@
 // (each one from a clean respawn, i.e. without a crash); `deaths` measures how hard that was.
 // God mode (no collisions) instead flies through every star coin and checks the coin isn't
 // inside a hazard when you reach it.
-export function botPlay({
-  maxTriesPerCp = 14,
-  god = false,
-  maxSeconds = 400,
-} = {}) {
+export function botPlay({ maxTriesPerCp = 14, god = false, maxSeconds = 400 } = {}) {
   const g = window.__glydrift;
   const s = g.scene.getScene("Game");
   const lr = s.levelRun;
@@ -98,7 +94,7 @@ export function botPlay({
           let v = flap ? -790 * (p.miniT > 0 ? 0.86 : 1) : vy;
           const tg = target * down;
           for (let k = 0; k < starT * 60; k++) {
-            v += (v < 0 ? 2300 : 2750) * (p.miniT > 0 ? 0.92 : 1) / 60;
+            v += ((v < 0 ? 2300 : 2750) * (p.miniT > 0 ? 0.92 : 1)) / 60;
             v = Math.min(v, 1080);
             y += v / 60;
           }

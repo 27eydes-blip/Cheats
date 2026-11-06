@@ -3071,7 +3071,9 @@ test("levels: stars, unlocks in order, first-time rewards, practice never counts
     await page.waitForFunction(
       () => window.__glydrift.scene.isActive("Hud"),
       null,
-      { timeout: 30000 },
+      {
+        timeout: 30000,
+      },
     );
     await run(page, 300);
     await page.evaluate(() => window.__glyGod(true));
@@ -3213,7 +3215,9 @@ test("levels: the layout is the same every time, and a checkpoint replays it exa
     await page.waitForFunction(
       () => window.__glydrift.scene.isActive("Hud"),
       null,
-      { timeout: 30000 },
+      {
+        timeout: 30000,
+      },
     );
     await run(page, 300);
     return page.evaluate(() => {
@@ -3328,7 +3332,9 @@ test("levels: every built level is beatable (bot) and its star coins are fair (g
       await page.waitForFunction(
         () => window.__glydrift.scene.isActive("Hud"),
         null,
-        { timeout: 30000 },
+        {
+          timeout: 30000,
+        },
       );
       await run(page, 200);
       const r = await page.evaluate(botPlay, { god });

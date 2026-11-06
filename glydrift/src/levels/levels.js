@@ -116,15 +116,10 @@ const rec = (n) => state().p[n] || null;
 export function starsOf(n) {
   const r = rec(n);
   if (!r) return [false, false, false];
-  return [
-    !!r.done,
-    !!(r.coins && r.coins.every(Boolean) && r.coins.length >= 3),
-    !!r.flawless,
-  ];
+  return [!!r.done, !!(r.coins && r.coins.every(Boolean) && r.coins.length >= 3), !!r.flawless];
 }
 export const starCount = (n) => starsOf(n).filter(Boolean).length;
-export const totalStars = () =>
-  allLevels().reduce((a, l) => a + starCount(l.n), 0);
+export const totalStars = () => allLevels().reduce((a, l) => a + starCount(l.n), 0);
 export const levelRecord = (n) => rec(n);
 
 /** Is level n playable? Level 1 always; then in order (finish the one before it). */
@@ -191,11 +186,9 @@ export function recordLevel(res) {
     out.rewards.push({ key, coins, ...extra });
   };
   if (r.done)
-    claim(
-      `f${n}`,
-      LEVEL_REWARDS.finish(n) + (def?.boss ? LEVEL_REWARDS.bossBonus : 0),
-      { kind: "finish" },
-    );
+    claim(`f${n}`, LEVEL_REWARDS.finish(n) + (def?.boss ? LEVEL_REWARDS.bossBonus : 0), {
+      kind: "finish",
+    });
   after.forEach((v, i) => {
     if (v) claim(`s${n}_${i}`, LEVEL_REWARDS.star, { kind: "star" });
   });
