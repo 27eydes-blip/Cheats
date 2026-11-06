@@ -76,7 +76,11 @@ export const CHARACTERS = [
     },
     scale: 0.62,
     cost: 5000,
-    challenge: { stat: "maxNearRun", value: 18, text: "18 near-misses in one run" },
+    challenge: {
+      stat: "maxNearRun",
+      value: 18,
+      text: "18 near-misses in one run",
+    },
     desc: "Afterimage trail. Dissolves into smoke.",
   },
   {
@@ -114,7 +118,11 @@ export const CHARACTERS = [
     },
     scale: 0.66,
     cost: 16000,
-    challenge: { stat: "maxDistance", value: 5000, text: "Fly 5000m in one run" },
+    challenge: {
+      stat: "maxDistance",
+      value: 5000,
+      text: "Fly 5000m in one run",
+    },
     desc: "Rainbow light trail. Goes supernova.",
   },
   {
@@ -166,7 +174,11 @@ export const CHARACTERS = [
     },
     scale: 0.6,
     cost: 3000,
-    challenge: { stat: "maxPortalsRun", value: 6, text: "Pass 6 portals in one run" },
+    challenge: {
+      stat: "maxPortalsRun",
+      value: 6,
+      text: "Pass 6 portals in one run",
+    },
     desc: "Bubble trail. Pops into a splash.",
   },
   {
@@ -192,7 +204,11 @@ export const CHARACTERS = [
     },
     scale: 0.6,
     cost: 8000,
-    challenge: { stat: "maxLasersRun", value: 15, text: "Pass 15 lasers in one run" },
+    challenge: {
+      stat: "maxLasersRun",
+      value: 15,
+      text: "Pass 15 lasers in one run",
+    },
     desc: "Exhaust trail. Blows a fuse.",
   },
   {
@@ -218,7 +234,11 @@ export const CHARACTERS = [
     },
     scale: 0.64,
     cost: 20000,
-    challenge: { stat: "maxBiome", value: 5, text: "Reach the Peaceful Valley" },
+    challenge: {
+      stat: "maxBiome",
+      value: 5,
+      text: "Reach the Peaceful Valley",
+    },
     desc: "Dragonfire trail. Erupts in flames.",
   },
   {
@@ -398,7 +418,11 @@ export const CHARACTERS = [
     },
     scale: 0.62,
     cost: 7000,
-    challenge: { stat: "maxDistance", value: 3600, text: "Fly 3600m in one run" },
+    challenge: {
+      stat: "maxDistance",
+      value: 3600,
+      text: "Fly 3600m in one run",
+    },
     desc: "Rocket trail. Goes out with a bang.",
   },
   {
@@ -425,12 +449,20 @@ export const CHARACTERS = [
     scale: 0.62,
     cost: 9000,
     speed: 1.1, // flies 10% faster than the standard heroes
-    challenge: { stat: "maxNearRun", value: 22, text: "22 near-misses in one run" },
+    challenge: {
+      stat: "maxNearRun",
+      value: 22,
+      text: "22 near-misses in one run",
+    },
     // perks (look + hitbox unchanged): bonus coins every run; immune to Solar Storm fire
     perks: {
       coinBonus: 13,
       fireWard: ["geyser", "meteor", "firebar", "flare"],
-      list: ["+13 coins per run", "Fire Ward: immune to fire in Solar Storm", "10% faster flight"],
+      list: [
+        "+13 coins per run",
+        "Fire Ward: immune to fire in Solar Storm",
+        "10% faster flight",
+      ],
     },
     desc: "Scarf trail. Vanishes in smoke.",
   },
@@ -458,7 +490,11 @@ export const CHARACTERS = [
     },
     scale: 0.62,
     cost: 11000,
-    challenge: { stat: "maxPortalsRun", value: 9, text: "Pass 9 portals in one run" },
+    challenge: {
+      stat: "maxPortalsRun",
+      value: 9,
+      text: "Pass 9 portals in one run",
+    },
     desc: "Holy trail. Ascends in light.",
   },
   {
@@ -485,7 +521,11 @@ export const CHARACTERS = [
     },
     scale: 0.62,
     cost: 24000,
-    challenge: { stat: "maxDistance", value: 6000, text: "Fly 6000m in one run" },
+    challenge: {
+      stat: "maxDistance",
+      value: 6000,
+      text: "Fly 6000m in one run",
+    },
     desc: "Tidal trail. Crashes like a wave.",
   },
   {
@@ -755,7 +795,11 @@ export const CHARACTERS = [
     },
     scale: 0.64,
     cost: 24000,
-    challenge: { stat: "maxNearRun", value: 50, text: "Do 50 near-misses in one run" },
+    challenge: {
+      stat: "maxNearRun",
+      value: 50,
+      text: "Do 50 near-misses in one run",
+    },
     desc: "All arms. No body. No problem.",
   },
   {
@@ -833,12 +877,16 @@ export const CHARACTERS = [
     scale: 0.62,
     cost: 4000,
     // the stubbed-toe joke: the Neon Void is where you start, so where most runs end
-    challenge: { stat: "voidDeaths", value: 10, text: "Die 10 times in the Neon Void" },
+    challenge: {
+      stat: "voidDeaths",
+      value: 10,
+      text: "Die 10 times in the Neon Void",
+    },
     desc: "Small. Stubbable. Unstoppable. All aura.",
   },
   {
     id: "splice",
-    name: "SPLICE",
+    name: "SXE",
     title: "Black Peregrine",
     rarity: "legendary",
     color: 0x5a7aa8,
@@ -857,11 +905,19 @@ export const CHARACTERS = [
       ],
     },
     scale: 0.62,
-    cost: 12000,
+    cost: 50000,
     // SPEED: the whole run moves 25% quicker for him (standard hitbox, gravity and flap)
     speed: 1.25,
-    challenge: { stat: "maxDistance", value: 2000, text: "Reach 2,000m in one run" },
-    perks: { list: ["+25% SPEED"] },
+    challenge: {
+      stat: "maxDistance",
+      value: 2000,
+      text: "Reach 2,000m in one run",
+    },
+    // glitchProof: nothing ends his run while it's in the Glitch Realm (GameScene)
+    perks: {
+      glitchProof: true,
+      list: ["+25% SPEED", "INDESTRUCTIBLE IN THE GLITCH REALM"],
+    },
     desc: "Fastest thing in the sky.",
   },
   {
@@ -961,7 +1017,9 @@ export const CHARACTERS = [
       frames: ["smash_0", "smash_1", "smash_2"],
       mode: "punch",
       // sees more colours than any animal: a full-spectrum trail
-      trail: [0xffffff, 0xff3a8a, 0xff8a1a, 0xffe14d, 0x39ff88, 0x2a8aff, 0xb45cff],
+      trail: [
+        0xffffff, 0xff3a8a, 0xff8a1a, 0xffe14d, 0x39ff88, 0x2a8aff, 0xb45cff,
+      ],
     },
     fx: {
       death: [
@@ -992,7 +1050,11 @@ export const CHARACTERS = [
     },
     scale: 0.62,
     cost: 12000,
-    challenge: { stat: "maxAbyssM", value: 200, text: "Survive 200m in the Abyss" },
+    challenge: {
+      stat: "maxAbyssM",
+      value: 200,
+      text: "Survive 200m in the Abyss",
+    },
     desc: "Rides the storm.",
   },
   ...ANIMALS,
@@ -1007,7 +1069,9 @@ export function onSale(def, now = Date.now()) {
   // seasonal heroes (Christmas): only during their month, every year
   if (def.season) return seasonMonth(now) === def.season.month;
   if (!def.limited) return true;
-  return now >= Date.parse(def.limited.start) && now < Date.parse(def.limited.end);
+  return (
+    now >= Date.parse(def.limited.start) && now < Date.parse(def.limited.end)
+  );
 }
 
 /** Milliseconds left on a limited hero's sale (0 when it's over or not limited). */
@@ -1023,7 +1087,9 @@ export function saleLeft(def, now = Date.now()) {
 /** Heroes shown in the shop for this save: limited ones only while on sale, or once owned. */
 export function visibleCharacters(unlocked = {}) {
   return CHARACTERS.filter(
-    (c) => heroReleased(c) && (!(c.limited || c.season) || unlocked[c.id] || onSale(c)),
+    (c) =>
+      heroReleased(c) &&
+      (!(c.limited || c.season) || unlocked[c.id] || onSale(c)),
   );
 }
 

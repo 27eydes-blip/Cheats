@@ -790,7 +790,7 @@ export function mattoe(f) {
 }
 
 
-// ------------------------------------------------------------------ SPLICE (legendary)
+// ------------------------------------------------------------------ SXE (legendary, id "splice")
 // A black peregrine falcon built for speed: glossy black feathers with a blue-steel sheen,
 // swept-back wings, a hooked beak, fierce golden eyes with the peregrine's dark "teardrop"
 // under each one, and yellow talons tucked up in flight.

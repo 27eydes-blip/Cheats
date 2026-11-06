@@ -166,7 +166,7 @@ const FLAP = {
     tone({ type: "triangle", f0: 900, f1: 500, dur: 0.05, vol: 0.06, delay: 0.03 });
     tone({ type: "sine", f0: 110, f1: 130, dur: 0.18, vol: 0.08 });
   },
-  // SPLICE: a sharp, fast wing whoosh (bright noise + a quick falling chirp of air)
+  // SXE (id "splice"): a sharp, fast wing whoosh (bright noise + a quick falling chirp of air)
   splice: () => {
     noise({ dur: 0.08, vol: 0.26, f: 4200 });
     tone({ type: "triangle", f0: 900, f1: 260, dur: 0.06, vol: 0.05 });
@@ -550,7 +550,7 @@ export const Sfx = {
       tone({ type: "triangle", f0: 523 * 2 ** (st / 12), dur: 0.3, vol: 0.1, delay: 0.75 + i * 0.05 }),
     );
   },
-  /** SPLICE new best: a fierce falcon screech, "kee-kee!" (synth only: no recordings) */
+  /** SXE new best: a fierce falcon screech, "kee-kee!" (synth only: no recordings) */
   falconScreech: () => {
     for (const [d, k] of [
       [0, 1],
@@ -564,7 +564,7 @@ export const Sfx = {
     // the boom under it
     tone({ type: "sine", f0: 120, f1: 45, dur: 0.35, vol: 0.28, delay: 0.02 });
   },
-  /** SPLICE death: a burst of feathers and a fading rush of wind */
+  /** SXE death: a burst of feathers and a fading rush of wind */
   featherBurst: () => {
     noise({ dur: 0.18, vol: 0.22, f: 3200 });
     tone({ type: "triangle", f0: 700, f1: 240, dur: 0.12, vol: 0.06 });

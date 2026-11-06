@@ -45,7 +45,8 @@ const home = (page) =>
   page.evaluate(() => {
     const g = window.__glydrift;
     for (const s of g.scene.getScenes(true))
-      if (!["Backdrop", "Menu"].includes(s.sys.settings.key)) g.scene.stop(s.sys.settings.key);
+      if (!["Backdrop", "Menu"].includes(s.sys.settings.key))
+        g.scene.stop(s.sys.settings.key);
     if (!g.scene.isActive("Menu")) g.scene.start("Menu");
   });
 
@@ -69,8 +70,9 @@ test("loads with no console errors, framed correctly, no browser gestures", asyn
   if (frame.fit && frame.left > 20) {
     const shown = await page.evaluate(
       () =>
-        [...document.querySelectorAll("#side-bg canvas")].filter((c) => c.style.opacity === "1")
-          .length,
+        [...document.querySelectorAll("#side-bg canvas")].filter(
+          (c) => c.style.opacity === "1",
+        ).length,
     );
     expect(shown).toBe(1);
   }
@@ -85,11 +87,17 @@ test("loads with no console errors, framed correctly, no browser gestures", asyn
           bubbles: true,
         }),
       ),
-      contextMenu: fire(new MouseEvent("contextmenu", { cancelable: true, bubbles: true })),
-      dblclick: fire(new MouseEvent("dblclick", { cancelable: true, bubbles: true })),
+      contextMenu: fire(
+        new MouseEvent("contextmenu", { cancelable: true, bubbles: true }),
+      ),
+      dblclick: fire(
+        new MouseEvent("dblclick", { cancelable: true, bubbles: true }),
+      ),
     };
     try {
-      out.touchMove = fire(new TouchEvent("touchmove", { cancelable: true, bubbles: true }));
+      out.touchMove = fire(
+        new TouchEvent("touchmove", { cancelable: true, bubbles: true }),
+      );
     } catch {
       out.touchMove = true; // no TouchEvent constructor in this engine (desktop)
     }
@@ -131,7 +139,9 @@ test("every screen opens", async ({ page }, testInfo) => {
   );
   await matchScreenshot(page, "home.png");
 
-  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").openSettings());
+  await page.evaluate(() =>
+    window.__glydrift.scene.getScene("Menu").openSettings(),
+  );
   await run(page, 600);
   await snap(page, testInfo, "02-settings");
   await tap(page, "DONE", 600);
@@ -149,7 +159,8 @@ test("every screen opens", async ({ page }, testInfo) => {
     await settle(page, key, 2000);
     await expectFramed(page);
     await snap(page, testInfo, shot);
-    if (key === "Characters" || key === "Shop") await matchScreenshot(page, `${shot.slice(3)}.png`); // snap() just drew a fresh frame
+    if (key === "Characters" || key === "Shop")
+      await matchScreenshot(page, `${shot.slice(3)}.png`); // snap() just drew a fresh frame
     await home(page);
     await run(page, 1200);
   }
@@ -215,10 +226,13 @@ test("gameplay looks right", async ({ page }, testInfo) => {
   expect(log.errors).toEqual([]);
 });
 
-test("pause and resume (button, keys, app in background)", async ({ page }, testInfo) => {
+test("pause and resume (button, keys, app in background)", async ({
+  page,
+}, testInfo) => {
   const log = await openGame(page, { flags: ["god"] });
   await startRun(page);
-  const paused = () => page.evaluate(() => !!window.__glydrift.scene.getScene("Hud").pauseLayer);
+  const paused = () =>
+    page.evaluate(() => !!window.__glydrift.scene.getScene("Hud").pauseLayer);
   if (isTouch(testInfo)) {
     const pt = await page.evaluate(() => {
       const g = window.__glydrift;
@@ -281,7 +295,11 @@ test("pause and resume (button, keys, app in background)", async ({ page }, test
 test("game over and retry in under a second", async ({ page }, testInfo) => {
   const log = await openGame(page);
   await startRun(page);
-  await waitFor(page, () => window.__glydrift.scene.isActive("GameOver"), 30_000);
+  await waitFor(
+    page,
+    () => window.__glydrift.scene.isActive("GameOver"),
+    30_000,
+  );
   await settle(page, "GameOver", 3500); // let the results roll up
   await snap(page, testInfo, "11-game-over");
   await freshFrame(page);
@@ -310,7 +328,8 @@ test("buys an item in the shop", async ({ page }, testInfo) => {
     const s = window.__glydrift.scene.getScene("Shop");
     s.setTab("trail");
     const coins = JSON.parse(localStorage.getItem("glydrift.save.v1")).coins;
-    const priceOf = (c) => c.cta?.list?.find((o) => o.type === "Text" && /^\d+$/.test(o.text));
+    const priceOf = (c) =>
+      c.cta?.list?.find((o) => o.type === "Text" && /^\d+$/.test(o.text));
     const i = s.cards.findIndex((c) => priceOf(c) && +priceOf(c).text <= coins);
     if (i < 0) return null;
     s.focus(i, true);
@@ -335,7 +354,9 @@ test("buys an item in the shop", async ({ page }, testInfo) => {
   await run(page, 600);
   await snap(page, testInfo, "12-shop-confirm");
   await tap(page, "BUY!", 1500);
-  const after = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  const after = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("glydrift.save.v1")),
+  );
   expect(after.coins).toBe(item.coins - item.price);
   expect(after.cos.owned[item.id]).toBeTruthy();
   expect(log.errors).toEqual([]);
@@ -364,7 +385,9 @@ const SIZES = {
   ],
 };
 
-test("resize, rotation and Split View keep the run going", async ({ page }, testInfo) => {
+test("resize, rotation and Split View keep the run going", async ({
+  page,
+}, testInfo) => {
   const log = await openGame(page, { flags: ["god"] });
   const profile = profileOf(testInfo);
   const v = page.viewportSize();
@@ -425,7 +448,8 @@ test("survives a lost WebGL context", async ({ page }) => {
   const log = await openGame(page, { flags: ["god"] });
   await startRun(page);
   const ok = await page.evaluate(() => {
-    const ext = window.__glydrift.renderer.gl?.getExtension("WEBGL_lose_context");
+    const ext =
+      window.__glydrift.renderer.gl?.getExtension("WEBGL_lose_context");
     if (!ext) return false;
     window.__lose = ext;
     ext.loseContext();
@@ -461,17 +485,24 @@ test("survives a lost WebGL context", async ({ page }) => {
   expect(log.errors).toEqual([]);
 });
 
-test("runs in private browsing (no storage) and says progress won't save", async ({ page }) => {
+test("runs in private browsing (no storage) and says progress won't save", async ({
+  page,
+}) => {
   const log = await openGame(page, { noStorage: true, save: null });
   // first launch: the name prompt may open; dismiss it
-  await page.evaluate(() => document.querySelector('#name-modal [data-act="cancel"]')?.click());
+  await page.evaluate(() =>
+    document.querySelector('#name-modal [data-act="cancel"]')?.click(),
+  );
   await run(page, 800);
   await expect(page.locator("#storage-note")).toBeVisible();
   expect(log.errors).toEqual([]);
 });
 
 test("same game speed at 30, 60 and 120 Hz", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "laptop", "engine-level check: once per browser");
+  test.skip(
+    profileOf(testInfo) !== "laptop",
+    "engine-level check: once per browser",
+  );
   await openGame(page, { flags: ["god"] });
   const meters = await page.evaluate(async () => {
     const g = window.__glydrift;
@@ -504,12 +535,17 @@ test("same game speed at 30, 60 and 120 Hz", async ({ page }, testInfo) => {
   expect(Math.abs(meters[120] / meters[60] - 1)).toBeLessThan(0.02);
 });
 
-test("a very long run stays smooth and doesn't pile up objects", async ({ page }, testInfo) => {
+test("a very long run stays smooth and doesn't pile up objects", async ({
+  page,
+}, testInfo) => {
   // Players reported the game "collapsing" on high-score runs. Two causes, both fixed:
   // registering each realm's art read its pixels back (getImageData) and froze the game for
   // seconds at every realm boundary, and at high speed magnetised coins got stuck orbiting
   // behind the bird forever. Fly ~10 km (every realm and dimension) and check for both.
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   test.setTimeout(240_000);
   const log = await openGame(page, { flags: ["god"] });
   await startRun(page);
@@ -547,8 +583,12 @@ test("a very long run stays smooth and doesn't pile up objects", async ({ page }
 test("realm art never uses read-back canvas textures", () => {
   // textures.addCanvas() makes a CanvasTexture, which reads the whole canvas back with
   // getImageData(): seconds of freeze per realm on iPhones. Use canvasTexture() (pixel/px.js).
-  const files = readdirSync("src", { recursive: true }).filter((f) => f.endsWith(".js"));
-  const bad = files.filter((f) => readFileSync(`src/${f}`, "utf8").includes("textures.addCanvas("));
+  const files = readdirSync("src", { recursive: true }).filter((f) =>
+    f.endsWith(".js"),
+  );
+  const bad = files.filter((f) =>
+    readFileSync(`src/${f}`, "utf8").includes("textures.addCanvas("),
+  );
   expect(bad).toEqual([]);
 });
 
@@ -556,7 +596,10 @@ test("centre pop-ups never pile up", async ({ page }, testInfo) => {
   // A realm change lands on a milestone (both at 500 m / 1000 m) and NEW BEST and SPEED UP
   // can fire in the same moment: only one centre pop-up shows at a time, realm title first,
   // then NEW BEST, then SPEED UP; a distance marker that would be stale is skipped.
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   const log = await openGame(page, { flags: ["god"] });
   await startRun(page);
   const centre = () =>
@@ -580,7 +623,10 @@ test("centre pop-ups never pile up", async ({ page }, testInfo) => {
   for (let i = 0; i < 60; i++) {
     await run(page, 100);
     const now = await centre();
-    expect(now.length, `centre pop-ups at ${i * 100} ms: ${now}`).toBeLessThanOrEqual(1);
+    expect(
+      now.length,
+      `centre pop-ups at ${i * 100} ms: ${now}`,
+    ).toBeLessThanOrEqual(1);
     if (now[0] && seen.at(-1) !== now[0]) seen.push(now[0]);
   }
   // (the run keeps flying, so a real 100m marker may follow)
@@ -596,7 +642,8 @@ test("centre pop-ups never pile up", async ({ page }, testInfo) => {
     const band = h.centerBand();
     const hc = h.cameras.main;
     const gc = s.cameras.main;
-    const toWorld = (hy) => ((hy - hc.worldView.y) * hc.zoom) / gc.zoom + gc.worldView.y;
+    const toWorld = (hy) =>
+      ((hy - hc.worldView.y) * hc.zoom) / gc.zoom + gc.worldView.y;
     const mid = (toWorld(band.y0) + toWorld(band.y1)) / 2;
     const t = s.popNear(s.player.x, mid, "CLOSE!", "#ffffff", 40);
     const top = t.y - 70 - t.height / 2;
@@ -663,12 +710,20 @@ test("centre pop-ups never pile up", async ({ page }, testInfo) => {
   expect(log.errors).toEqual([]);
 });
 
-test("home shows at most two '!' badges, free rewards first", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+test("home shows at most two '!' badges, free rewards first", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   // daily run unplayed, free drop ready, a spin to use and the login reward unclaimed: four
   // things ready, only the two free rewards get a badge
   const log = await openGame(page, {
-    save: { ...SAVE, login: { last: "2026-11-03", streak: 3, claimed: "2026-11-03" } },
+    save: {
+      ...SAVE,
+      login: { last: "2026-11-03", streak: 3, claimed: "2026-11-03" },
+    },
   });
   const badged = await page.evaluate(() => {
     const m = window.__glydrift.scene.getScene("Menu");
@@ -676,7 +731,9 @@ test("home shows at most two '!' badges, free rewards first", async ({ page }, t
     for (const c of m.children.list) {
       if (c.type !== "Container") continue;
       const bang = c.list.some(
-        (o) => o.type === "Container" && o.list.some((x) => x.type === "Text" && x.text === "!"),
+        (o) =>
+          o.type === "Container" &&
+          o.list.some((x) => x.type === "Text" && x.text === "!"),
       );
       if (bang) labels.push(c.list.find((x) => x.type === "Text")?.text);
     }
@@ -689,7 +746,10 @@ test("home shows at most two '!' badges, free rewards first", async ({ page }, t
 test("lucky spins: old saves trimmed to 3, one spin per run at most", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   // an old save holding 105 spins (spins used to be uncapped) shows 3
   const log = await openGame(page, { save: { ...SAVE, spins: 105 } });
   const shows = (txt) =>
@@ -698,7 +758,9 @@ test("lucky spins: old saves trimmed to 3, one spin per run at most", async ({
         window.__glydrift.scene
           .getScene("Menu")
           .children.list.some(
-            (c) => c.type === "Container" && c.list.some((x) => x.type === "Text" && x.text === t),
+            (c) =>
+              c.type === "Container" &&
+              c.list.some((x) => x.type === "Text" && x.text === t),
           ),
       txt,
     );
@@ -707,8 +769,14 @@ test("lucky spins: old saves trimmed to 3, one spin per run at most", async ({
 });
 
 test("a huge run earns one spin, not dozens", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  const log = await openGame(page, { save: { ...SAVE, spins: 1, spinPts: 0 }, flags: ["god"] });
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
+  const log = await openGame(page, {
+    save: { ...SAVE, spins: 1, spinPts: 0 },
+    flags: ["god"],
+  });
   await startRun(page);
   await page.evaluate(() => {
     window.__glydrift.scene.getScene("Game").bonus = 100000; // 40 spins' worth of points
@@ -716,7 +784,8 @@ test("a huge run earns one spin, not dozens", async ({ page }, testInfo) => {
   });
   for (
     let i = 0;
-    i < 60 && !(await page.evaluate(() => window.__glydrift.scene.isActive("GameOver")));
+    i < 60 &&
+    !(await page.evaluate(() => window.__glydrift.scene.isActive("GameOver")));
     i++
   )
     await run(page, 250);
@@ -733,7 +802,10 @@ test("realm changes never pause the run", async ({ page }, testInfo) => {
   // Entering a realm or a dimension keeps the action going: no slow-mo, obstacles keep
   // spawning straight through the boundary, and the title shows small and high over the play.
   // The Calm (and the blackout into the Abyss) is the one designed pause.
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   test.setTimeout(240_000);
   const log = await openGame(page, { flags: ["god"] });
   await startRun(page);
@@ -763,8 +835,10 @@ test("realm changes never pause the run", async ({ page }, testInfo) => {
         bounds.push({ m: seg.start, id: seg.id });
         last = seg.id;
       }
-      const preCalm = seg.id === "glitch" && s.meters - seg.start > seg.length - 185;
-      const designed = s.calm || preCalm || s.blackoutT > 0 || seg.id === "abyss";
+      const preCalm =
+        seg.id === "glitch" && s.meters - seg.start > seg.length - 185;
+      const designed =
+        s.calm || preCalm || s.blackoutT > 0 || seg.id === "abyss";
       if (om.info.pause && !designed) pauses++;
       // slow-mo that no near-miss caused (realm entry used to add a slow-mo beat)
       if (s.slowT > prevSlow + 0.01 && near === prevNear) slowJumps++;
@@ -788,25 +862,34 @@ test("realm changes never pause the run", async ({ page }, testInfo) => {
       .filter((b) => b.m > 0 && b.id !== "abyss")
       .map((b) => {
         let worst = 0;
-        for (const st of stretches) if (byBound(st, b)) worst = Math.max(worst, st.t);
+        for (const st of stretches)
+          if (byBound(st, b)) worst = Math.max(worst, st.t);
         return { id: b.id, worst: +worst.toFixed(2) };
       });
     // the run's normal empty stretches away from any boundary (early on, at low speed, these are long)
     const abyss = bounds.find((b) => b.id === "abyss")?.m ?? Infinity;
     let normal = 0;
     for (const st of stretches)
-      if (!bounds.some((b) => b.m > 0 && byBound(st, b)) && (st.m1 < abyss || st.m0 > abyss + 600))
+      if (
+        !bounds.some((b) => b.m > 0 && byBound(st, b)) &&
+        (st.m1 < abyss || st.m0 > abyss + 600)
+      )
         normal = Math.max(normal, st.t);
     return { pauses, slowJumps, around, normal, ids: bounds.map((b) => b.id) };
   });
-  expect(out.ids).toEqual(expect.arrayContaining(["solar", "frozen", "glitch", "hurricane"]));
+  expect(out.ids).toEqual(
+    expect.arrayContaining(["solar", "frozen", "glitch", "hurricane"]),
+  );
   expect(out.ids.length).toBeGreaterThanOrEqual(8); // into at least one dimension
   expect(out.pauses).toBe(0);
   expect(out.slowJumps).toBe(0);
   // no longer wait for an obstacle at a boundary than the run's usual longest gap
   const limit = Math.max(3.5, out.normal * 1.1);
   for (const b of out.around)
-    expect(b.worst, `obstacle gap entering ${b.id} (normal ${out.normal})`).toBeLessThan(limit);
+    expect(
+      b.worst,
+      `obstacle gap entering ${b.id} (normal ${out.normal})`,
+    ).toBeLessThan(limit);
   // the title is drawn small and high, over the play
   const title = await page.evaluate(() => {
     const h = window.__glydrift.scene.getScene("Hud");
@@ -815,14 +898,21 @@ test("realm changes never pause the run", async ({ page }, testInfo) => {
     return { y: h.bannerY / h.H, scale: h.banner.scale };
   });
   await run(page, 800);
-  const settled = await page.evaluate(() => window.__glydrift.scene.getScene("Hud").banner.scale);
+  const settled = await page.evaluate(
+    () => window.__glydrift.scene.getScene("Hud").banner.scale,
+  );
   expect(title.y).toBeLessThan(0.32);
   expect(settled).toBeLessThan(0.75);
   expect(log.errors).toEqual([]);
 });
 
-test("two leaderboards: score (the main one) and distance", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+test("two leaderboards: score (the main one) and distance", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   const log = await openGame(page, { flags: ["lbmock"] });
   await tap(page, "LEADERBOARD", 1600);
   await waitFor(page, () => window.__glydrift.scene.isActive("Leaderboard"));
@@ -830,7 +920,9 @@ test("two leaderboards: score (the main one) and distance", async ({ page }, tes
     page.evaluate(() => {
       const s = window.__glydrift.scene.getScene("Leaderboard");
       const texts = (c) =>
-        c.list.flatMap((o) => (o.type === "Text" ? [o.text] : o.list ? texts(o) : []));
+        c.list.flatMap((o) =>
+          o.type === "Text" ? [o.text] : o.list ? texts(o) : [],
+        );
       return {
         tab: s.tab,
         tabs: s.tabs.map((t) => t.txt.text),
@@ -842,7 +934,11 @@ test("two leaderboards: score (the main one) and distance", async ({ page }, tes
   await run(page, 1200);
   let v = await view();
   // Score is the main board: first, and where the leaderboard opens
-  expect(v.tabs).toEqual(["SCORE", "DISTANCE", expect.stringMatching(/^DAILY #\d+$/)]);
+  expect(v.tabs).toEqual([
+    "SCORE",
+    "DISTANCE",
+    expect.stringMatching(/^DAILY #\d+$/),
+  ]);
   expect(v.tab).toBe("score");
   expect(v.filters).toEqual(["ALL TIME", "THIS WEEK", "TODAY"]);
   expect(v.rows.some((t) => / m$/.test(t))).toBe(false);
@@ -863,15 +959,24 @@ test("two leaderboards: score (the main one) and distance", async ({ page }, tes
     const { isPlausible } = window.__glyLb;
     return {
       real: isPlausible({ score: 3000, distance: 1700, run_time_ms: 80_000 }),
-      teleport: isPlausible({ score: 3000, distance: 9000, run_time_ms: 20_000 }),
+      teleport: isPlausible({
+        score: 3000,
+        distance: 9000,
+        run_time_ms: 20_000,
+      }),
     };
   });
   expect(plausible).toEqual({ real: true, teleport: false });
   expect(log.errors).toEqual([]);
 });
 
-test("game over shows the score and distance placements (score first)", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+test("game over shows the score and distance placements (score first)", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   const log = await openGame(page, { flags: ["god", "lbmock"] });
   await startRun(page);
   await run(page, 4000);
@@ -889,12 +994,15 @@ test("game over shows the score and distance placements (score first)", async ({
 
 // ---- accounts + cloud save (a local stand-in server: ?mockcloud) ----
 async function openSettingsAccount(page) {
-  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").openSettings());
+  await page.evaluate(() =>
+    window.__glydrift.scene.getScene("Menu").openSettings(),
+  );
   await run(page, 600);
   // "ACCOUNT · SAVE YOUR PROGRESS" for a guest, "ACCOUNT: <email>" when signed in
   const label = await page.evaluate(() => {
     const m = window.__glydrift.scene.getScene("Menu");
-    const texts = (c) => c.list.flatMap((o) => (o.type === "Text" ? [o] : o.list ? texts(o) : []));
+    const texts = (c) =>
+      c.list.flatMap((o) => (o.type === "Text" ? [o] : o.list ? texts(o) : []));
     return texts(m.modal).find((t) => t.text.startsWith("ACCOUNT"))?.text;
   });
   if (!label) throw new Error("no ACCOUNT button in Settings");
@@ -915,13 +1023,23 @@ async function openAccountScreen(page) {
   });
   await expect(page.locator("#account-modal.open")).toBeVisible();
 }
-const saveNow = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+const saveNow = (page) =>
+  page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
 
-test("accounts: create, log out, sign in on a new device, delete", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+test("accounts: create, log out, sign in on a new device, delete", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   const log = await openGame(page, {
     flags: ["mockcloud"],
-    save: { ...SAVE, coins: 4321, unlocked: { volt: true, ember: true, frost: true } },
+    save: {
+      ...SAVE,
+      coins: 4321,
+      unlocked: { volt: true, ember: true, frost: true },
+    },
   });
   await run(page, 800); // the account service starts in the background
   // 1. a guest creates an account: their progress is linked to it, nothing lost
@@ -931,8 +1049,12 @@ test("accounts: create, log out, sign in on a new device, delete", async ({ page
   await page.fill("#account-modal input[name=password]", "hunter2hunter2");
   await page.click("#account-modal button[type=submit]");
   await expect(page.locator("#account-modal h2")).toHaveText("ACCOUNT");
-  await expect(page.locator("#account-modal .who")).toHaveText("pilot@example.com");
-  let server = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.mockserver")));
+  await expect(page.locator("#account-modal .who")).toHaveText(
+    "pilot@example.com",
+  );
+  let server = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("glydrift.mockserver")),
+  );
   expect(server.users["pilot@example.com"].save.coins).toBe(4321);
   expect(server.users["pilot@example.com"].save.unlocked.frost).toBe(true);
   expect(server.users["pilot@example.com"].save.settings).toBeUndefined(); // device-only
@@ -949,7 +1071,9 @@ test("accounts: create, log out, sign in on a new device, delete", async ({ page
   await page.fill("#account-modal input[name=email]", "pilot@example.com");
   await page.fill("#account-modal input[name=password]", "wrong-password");
   await page.click("#account-modal button[type=submit]");
-  await expect(page.locator("#account-modal .err")).toHaveText("Wrong email or password.");
+  await expect(page.locator("#account-modal .err")).toHaveText(
+    "Wrong email or password.",
+  );
   await page.fill("#account-modal input[name=password]", "hunter2hunter2");
   reloaded = page.waitForEvent("load");
   await page.click("#account-modal button[type=submit]");
@@ -957,19 +1081,25 @@ test("accounts: create, log out, sign in on a new device, delete", async ({ page
   await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
   let s = await saveNow(page);
   expect(s.coins).toBe(4321);
-  expect(s.unlocked).toEqual(expect.objectContaining({ ember: true, frost: true }));
+  expect(s.unlocked).toEqual(
+    expect.objectContaining({ ember: true, frost: true }),
+  );
   // 4. delete the account: gone from the server and from this device
   await openAccountScreen(page);
   await page.click("#account-modal [data-act=to-delete]");
   await page.fill("#account-modal input[name=confirm]", "nope");
   await page.click("#account-modal button[type=submit]");
-  await expect(page.locator("#account-modal .err")).toHaveText("Type DELETE to confirm.");
+  await expect(page.locator("#account-modal .err")).toHaveText(
+    "Type DELETE to confirm.",
+  );
   await page.fill("#account-modal input[name=confirm]", "DELETE");
   reloaded = page.waitForEvent("load");
   await page.click("#account-modal button[type=submit]");
   await reloaded;
   await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
-  server = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.mockserver")));
+  server = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("glydrift.mockserver")),
+  );
   expect(server.users["pilot@example.com"]).toBeUndefined();
   s = await saveNow(page);
   expect(s.coins).toBe(0);
@@ -977,7 +1107,10 @@ test("accounts: create, log out, sign in on a new device, delete", async ({ page
 });
 
 test("cloud save merge keeps the most progress", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   await openGame(page, { flags: ["mockcloud"] });
   const m = await page.evaluate(() => {
     const { mergeSaves } = window.__glyAccount;
@@ -1024,7 +1157,10 @@ test("cloud save merge keeps the most progress", async ({ page }, testInfo) => {
 test("titles: earn, wear, and see them on the leaderboard and game over", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   const log = await openGame(page, {
     flags: ["lbmock", "god"],
     save: {
@@ -1044,7 +1180,12 @@ test("titles: earn, wear, and see them on the leaderboard and game over", async 
       plusWear: T.equip("p_starborn"),
     };
   });
-  expect(owned).toEqual({ daredevil: true, gold: true, diamond: false, plusWear: false });
+  expect(owned).toEqual({
+    daredevil: true,
+    gold: true,
+    diamond: false,
+    plusWear: false,
+  });
   // wear one through the Titles screen (Progress → TITLES)
   await tap(page, "PROGRESS", 1200);
   await waitFor(page, () => window.__glydrift.scene.isActive("Progress"));
@@ -1052,28 +1193,37 @@ test("titles: earn, wear, and see them on the leaderboard and game over", async 
   await waitFor(page, () => window.__glydrift.scene.isActive("Titles"));
   await run(page, 600);
   await tap(page, "GOLD LEAGUE", 600);
-  expect(await page.evaluate(() => window.__glyTitles.equippedId())).toBe("t_gold");
+  expect(await page.evaluate(() => window.__glyTitles.equippedId())).toBe(
+    "t_gold",
+  );
   await snap(page, testInfo, "17-titles");
   // under your name on the leaderboard (pinned row)…
-  await page.evaluate(() => window.__glydrift.scene.getScene("Titles").scene.start("Leaderboard"));
+  await page.evaluate(() =>
+    window.__glydrift.scene.getScene("Titles").scene.start("Leaderboard"),
+  );
   await waitFor(page, () => window.__glydrift.scene.isActive("Leaderboard"));
   await run(page, 1200);
   const you = await page.evaluate(() => {
     const s = window.__glydrift.scene.getScene("Leaderboard");
     const texts = (c) =>
-      c.list.flatMap((o) => (o.type === "Text" ? [o.text] : o.list ? texts(o) : []));
+      c.list.flatMap((o) =>
+        o.type === "Text" ? [o.text] : o.list ? texts(o) : [],
+      );
     return texts(s.you);
   });
   expect(you).toContain("GOLD LEAGUE");
   // …and on the game over screen
-  await page.evaluate(() => window.__glydrift.scene.getScene("Leaderboard").scene.start("Menu"));
+  await page.evaluate(() =>
+    window.__glydrift.scene.getScene("Leaderboard").scene.start("Menu"),
+  );
   await waitFor(page, () => window.__glydrift.scene.isActive("Menu"));
   await run(page, 1000);
   await startRun(page);
   await page.evaluate(() => window.__glyGod(false));
   for (
     let i = 0;
-    i < 60 && !(await page.evaluate(() => window.__glydrift.scene.isActive("GameOver")));
+    i < 60 &&
+    !(await page.evaluate(() => window.__glydrift.scene.isActive("GameOver")));
     i++
   )
     await run(page, 250);
@@ -1081,7 +1231,9 @@ test("titles: earn, wear, and see them on the leaderboard and game over", async 
   const go = await page.evaluate(() => {
     const s = window.__glydrift.scene.getScene("GameOver");
     const texts = (c) =>
-      c.list.flatMap((o) => (o.type === "Text" ? [o.text] : o.list ? texts(o) : []));
+      c.list.flatMap((o) =>
+        o.type === "Text" ? [o.text] : o.list ? texts(o) : [],
+      );
     return texts(s.children);
   });
   expect(go).toContain("GOLD LEAGUE");
@@ -1094,13 +1246,20 @@ const PASS_SAVE = {
   seasons: { s1: { xp: 5000, claimed: {}, started: true, heroSeen: true } }, // 11 tiers reached
 };
 const openPass = async (page) => {
-  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Pass"));
+  await page.evaluate(() =>
+    window.__glydrift.scene.getScene("Menu").scene.start("Pass"),
+  );
   await waitFor(page, () => window.__glydrift.scene.isActive("Pass"));
   await run(page, 800);
 };
 
-test("Drift Pass+ on the web: buy it in the iPhone app", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+test("Drift Pass+ on the web: buy it in the iPhone app", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   const log = await openGame(page, { save: PASS_SAVE });
   await openPass(page);
   const v = await page.evaluate(() => {
@@ -1121,8 +1280,13 @@ test("Drift Pass+ on the web: buy it in the iPhone app", async ({ page }, testIn
   expect(log.errors).toEqual([]);
 });
 
-test("Drift Pass+: buy, claim, restore on a new device", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+test("Drift Pass+: buy, claim, restore on a new device", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   const log = await openGame(page, { save: PASS_SAVE, flags: ["mockiap"] });
   await openPass(page);
   await snap(page, testInfo, "18-pass-plus-locked");
@@ -1134,17 +1298,25 @@ test("Drift Pass+: buy, claim, restore on a new device", async ({ page }, testIn
   expect(offer).toEqual(["umbradrake", "gloomeleon"]);
   await snap(page, testInfo, "18b-pass-plus-offer");
   // a failed server check unlocks nothing
-  await page.evaluate(() => localStorage.setItem("glydrift.mockstore.fail", "1"));
+  await page.evaluate(() =>
+    localStorage.setItem("glydrift.mockstore.fail", "1"),
+  );
   await tap(page, "BUY $3.99", 800);
   expect(await page.evaluate(() => window.__glyPassPlus.owns())).toBe(false);
   await page.evaluate(() => localStorage.removeItem("glydrift.mockstore.fail"));
   // a verified purchase unlocks the track (and closes the screen)
   await tap(page, "BUY $3.99", 1200);
   expect(await page.evaluate(() => window.__glyPassPlus.owns())).toBe(true);
-  expect(await page.evaluate(() => !!window.__glydrift.scene.getScene("Pass").offer)).toBe(false);
+  expect(
+    await page.evaluate(() => !!window.__glydrift.scene.getScene("Pass").offer),
+  ).toBe(false);
   const after = await page.evaluate(() => {
     const s = window.__glydrift.scene.getScene("Pass");
-    return { buy: !!s.buyBtn, t5: s.rows[4].plusState, t15: s.rows[14].plusState };
+    return {
+      buy: !!s.buyBtn,
+      t5: s.rows[4].plusState,
+      t15: s.rows[14].plusState,
+    };
   });
   expect(after).toEqual({ buy: false, t5: "ready", t15: "locked" });
   // claim tier 3 (the Hologram skin), tier 5 (HEXOWL) and tier 7 (the ABYSS LORD title)
@@ -1156,7 +1328,9 @@ test("Drift Pass+: buy, claim, restore on a new device", async ({ page }, testIn
   });
   await run(page, 1200);
   await snap(page, testInfo, "19-pass-plus-owned");
-  let save = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  let save = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("glydrift.save.v1")),
+  );
   expect(save.cos.owned.skin_holo).toBe(true);
   expect(save.unlocked.hexowl).toBe(true);
   expect(save.titles.owned.p_abysslord).toBe(true);
@@ -1173,7 +1347,9 @@ test("Drift Pass+: buy, claim, restore on a new device", async ({ page }, testIn
   await openPass(page);
   await tap(page, "RESTORE PURCHASES", 1200);
   expect(await page.evaluate(() => window.__glyPassPlus.owns())).toBe(true);
-  save = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  save = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("glydrift.save.v1")),
+  );
   expect(Object.keys(save.passPlus)).toEqual(["s1"]);
   expect(log.errors).toEqual([]);
 });
@@ -1181,13 +1357,27 @@ test("Drift Pass+: buy, claim, restore on a new device", async ({ page }, testIn
 test("no skin changes the hitbox, speed or score rules (Pass+ skins look 10% smaller)", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  const skins = ["", "skin_gold", "skin_neon", "skin_holo", "skin_inferno", "skin_starlight"];
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
+  const skins = [
+    "",
+    "skin_gold",
+    "skin_neon",
+    "skin_holo",
+    "skin_inferno",
+    "skin_starlight",
+  ];
   const owned = Object.fromEntries(skins.filter(Boolean).map((k) => [k, true]));
   const log = await openGame(page, {
     flags: ["god"],
     // (Pass+ skins only count with a verified Drift Pass+ purchase)
-    save: { ...SAVE, cos: { owned, equipped: {} }, passPlus: { s1: { verified: true, tx: "t" } } },
+    save: {
+      ...SAVE,
+      cos: { owned, equipped: {} },
+      passPlus: { s1: { verified: true, tx: "t" } },
+    },
   });
   const results = [];
   for (const skin of skins) {
@@ -1197,7 +1387,11 @@ test("no skin changes the hitbox, speed or score rules (Pass+ skins look 10% sma
       localStorage.setItem("glydrift.save.v1", JSON.stringify(s));
     }, skin);
     await page.reload();
-    await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+    await waitFor(
+      page,
+      () => window.__glydrift?.scene.isActive("Menu"),
+      30_000,
+    );
     await run(page, 800);
     await startRun(page);
     results.push(
@@ -1261,13 +1455,22 @@ const PASS_HEROES = [
 test("Drift Pass+ heroes: standard hitbox and speed, drawn ~10% smaller", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   test.setTimeout(240_000);
   const log = await openGame(page, { flags: ["god"], save: SAVE });
   const results = [];
   for (const id of ["volt", "bunbun", ...PASS_HEROES]) {
-    await page.goto(page.url().replace(/&character=[a-z_]+/, "") + `&character=${id}`);
-    await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+    await page.goto(
+      page.url().replace(/&character=[a-z_]+/, "") + `&character=${id}`,
+    );
+    await waitFor(
+      page,
+      () => window.__glydrift?.scene.isActive("Menu"),
+      30_000,
+    );
     await run(page, 800);
     await startRun(page);
     results.push(
@@ -1314,16 +1517,29 @@ test("Drift Pass+ heroes: standard hitbox and speed, drawn ~10% smaller", async 
     const k = r.width / base.width;
     expect(k, `${r.id} drawn size`).toBeGreaterThan(0.86);
     expect(k, `${r.id} drawn size`).toBeLessThan(0.94);
-    expect(r.frames, `${r.id} animates (idle + flap frames)`).toBeGreaterThanOrEqual(4);
+    expect(
+      r.frames,
+      `${r.id} animates (idle + flap frames)`,
+    ).toBeGreaterThanOrEqual(4);
   }
   expect(log.errors).toEqual([]);
 });
 
-test("Drift Pass+ heroes come only from the pass track", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  const log = await openGame(page, { save: { ...PASS_SAVE, coins: 999999 }, flags: ["mockiap"] });
+test("Drift Pass+ heroes come only from the pass track", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
+  const log = await openGame(page, {
+    save: { ...PASS_SAVE, coins: 999999 },
+    flags: ["mockiap"],
+  });
   // the heroes screen: a DRIFT PASS+ card, no coin price, and buying is refused
-  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Characters"));
+  await page.evaluate(() =>
+    window.__glydrift.scene.getScene("Menu").scene.start("Characters"),
+  );
   await waitFor(page, () => window.__glydrift.scene.isActive("Characters"));
   await run(page, 600);
   await page.evaluate(() => {
@@ -1334,8 +1550,12 @@ test("Drift Pass+ heroes come only from the pass track", async ({ page }, testIn
   await snap(page, testInfo, "20-pass-hero-card");
   const card = await page.evaluate(() => {
     const c = window.__glydrift.scene.getScene("Characters");
-    const texts = (o) => (o.type === "Text" ? [o.text] : (o.list || []).flatMap(texts));
-    return { button: texts(c.actionBtn), badge: c.cards.find((k) => k.def.id === "umbradrake") };
+    const texts = (o) =>
+      o.type === "Text" ? [o.text] : (o.list || []).flatMap(texts);
+    return {
+      button: texts(c.actionBtn),
+      badge: c.cards.find((k) => k.def.id === "umbradrake"),
+    };
   });
   expect(card.button).toContain("DRIFT PASS+ · TIER 46");
   expect(card.badge).toBeTruthy();
@@ -1385,16 +1605,23 @@ test("Drift Pass+ heroes come only from the pass track", async ({ page }, testIn
     46: "umbradrake",
     50: "riftsovereign",
   });
-  const save = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  const save = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("glydrift.save.v1")),
+  );
   for (const id of PASS_HEROES) expect(save.unlocked[id], id).toBe(true);
   // the free track and the coin shop never offer them
   const free = await page.evaluate(() =>
-    window.__glydrift.scene.getScene("Pass").track.filter((r) => r.hero).map((r) => r.hero),
+    window.__glydrift.scene
+      .getScene("Pass")
+      .track.filter((r) => r.hero)
+      .map((r) => r.hero),
   );
   for (const id of PASS_HEROES) expect(free).not.toContain(id);
   const src = readFileSync("src/scenes/ShopScene.js", "utf8");
   expect(src).toMatch(/!c\.lottery && !c\.passPlus/);
-  expect(readFileSync("src/data/progression.js", "utf8")).toMatch(/def\.passPlus \|\| !cost/);
+  expect(readFileSync("src/data/progression.js", "utf8")).toMatch(
+    /def\.passPlus \|\| !cost/,
+  );
   expect(log.errors).toEqual([]);
 });
 
@@ -1412,17 +1639,27 @@ const S1_PLUS_NEW = [
   "name_pp_gold",
   "badge_pp_s1",
 ];
-const S1_PLUS_TITLES = ["p_riftdiver", "p_abysswalker", "p_voidtouched", "p_s1founder"];
+const S1_PLUS_TITLES = [
+  "p_riftdiver",
+  "p_abysswalker",
+  "p_voidtouched",
+  "p_s1founder",
+];
 
 test("Season 1 Drift Pass+ rewards: placed on the track, exclusive, cosmetic, server-gated", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   test.setTimeout(240_000);
   const log = await openGame(page, { save: PASS_SAVE });
   // 1. the track: Riftling evolves at 1 / 15 / 30 / 50; the best is saved for the end; every
   //    new reward appears exactly once; something new at least every 3 tiers
-  const track = await page.evaluate(() => window.__glyPlusS1.plusTrackS1({ banner: "crimson" }));
+  const track = await page.evaluate(() =>
+    window.__glyPlusS1.plusTrackS1({ banner: "crimson" }),
+  );
   expect(track).toHaveLength(50);
   expect([1, 15, 30, 50].map((t) => track[t - 1].hero)).toEqual([
     "riftling",
@@ -1434,25 +1671,40 @@ test("Season 1 Drift Pass+ rewards: placed on the track, exclusive, cosmetic, se
   expect(track[48].item).toBe("badge_pp_s1");
   const ids = track.map((r) => r.item || r.title || r.hero).filter(Boolean);
   for (const id of [...S1_PLUS_NEW, ...S1_PLUS_TITLES])
-    expect(ids.filter((x) => x === id), id).toHaveLength(1);
+    expect(
+      ids.filter((x) => x === id),
+      id,
+    ).toHaveLength(1);
   let gap = 0;
   let worst = 0;
   for (const r of track) {
     gap = r.item || r.title || r.hero || r.banner ? 0 : gap + 1;
     worst = Math.max(worst, gap);
   }
-  expect(worst, "tiers in a row with only coins / shards / pods").toBeLessThanOrEqual(2);
+  expect(
+    worst,
+    "tiers in a row with only coins / shards / pods",
+  ).toBeLessThanOrEqual(2);
   // the live (sanitised) season uses exactly this track, whatever a remote config says
-  const live = await page.evaluate(() => window.__glyPassPlus.track().map((r) => r.item || r.title || r.hero || null));
+  const live = await page.evaluate(() =>
+    window.__glyPassPlus
+      .track()
+      .map((r) => r.item || r.title || r.hero || null),
+  );
   expect(live).toEqual(track.map((r) => r.item || r.title || r.hero || null));
 
   // 2. exclusive: never for sale, never in the daily shop or a pod; the shop never lists them
   const shop = await page.evaluate((ids) => {
     const { COSMETICS, forSale, Shop } = window.__glyShop;
-    const sale = ids.filter((id) => forSale(COSMETICS.find((c) => c.id === id)));
+    const sale = ids.filter((id) =>
+      forSale(COSMETICS.find((c) => c.id === id)),
+    );
     let daily = [];
     for (let d = 1; d <= 60; d++)
-      daily.push(...Shop.daily(`2026-12-${String((d % 28) + 1).padStart(2, "0")}-${d}`).items);
+      daily.push(
+        ...Shop.daily(`2026-12-${String((d % 28) + 1).padStart(2, "0")}-${d}`)
+          .items,
+      );
     daily = daily.filter((id) => ids.includes(id));
     const pods = [];
     for (let k = 0; k < 400; k++) {
@@ -1463,7 +1715,9 @@ test("Season 1 Drift Pass+ rewards: placed on the track, exclusive, cosmetic, se
     return { sale, daily, pods, bought };
   }, S1_PLUS_NEW);
   expect(shop).toEqual({ sale: [], daily: [], pods: [], bought: [] });
-  expect(readFileSync("src/scenes/ShopScene.js", "utf8")).toMatch(/!c\.plus &&/);
+  expect(readFileSync("src/scenes/ShopScene.js", "utf8")).toMatch(
+    /!c\.plus &&/,
+  );
   expect(readFileSync("src/data/progression.js", "utf8")).not.toMatch(/pp_/); // not in the Lucky Spin
 
   // 3. owned without a verified purchase (e.g. typed into local storage): nothing counts
@@ -1472,8 +1726,17 @@ test("Season 1 Drift Pass+ rewards: placed on the track, exclusive, cosmetic, se
       ({ items, titles, verified }) => {
         const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
         s.cos.owned = Object.fromEntries(items.map((id) => [id, true]));
-        s.cos.equipped = { trail: "trail_pp_lightning", pose: "pose_pp_aura", name: "name_pp_gold", badge: "badge_pp_s1", theme: "theme_pp_abyss" };
-        s.titles = { owned: Object.fromEntries(titles.map((id) => [id, true])), equipped: "p_s1founder" };
+        s.cos.equipped = {
+          trail: "trail_pp_lightning",
+          pose: "pose_pp_aura",
+          name: "name_pp_gold",
+          badge: "badge_pp_s1",
+          theme: "theme_pp_abyss",
+        };
+        s.titles = {
+          owned: Object.fromEntries(titles.map((id) => [id, true])),
+          equipped: "p_s1founder",
+        };
         s.unlocked.riftsovereign = true;
         s.selected = "riftsovereign";
         s.passPlus = verified ? { s1: { verified: true, tx: "t" } } : {};
@@ -1482,7 +1745,11 @@ test("Season 1 Drift Pass+ rewards: placed on the track, exclusive, cosmetic, se
       { items: S1_PLUS_NEW, titles: S1_PLUS_TITLES, verified },
     );
     await page.reload();
-    await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+    await waitFor(
+      page,
+      () => window.__glydrift?.scene.isActive("Menu"),
+      30_000,
+    );
     await run(page, 600);
     return page.evaluate(() => {
       const { Shop } = window.__glyShop;
@@ -1514,8 +1781,17 @@ test("Season 1 Drift Pass+ rewards: placed on the track, exclusive, cosmetic, se
     flair: "gold,s1",
   });
   // ...and the server strips them too: the migration ties title, hero and flair to a purchase
-  const sql = readFileSync("supabase/migrations/20261106000001_pass_plus_s1_rewards.sql", "utf8");
-  for (const id of ["riftling", "riftling_armor", "riftling_aura", "riftsovereign", "umbradrake"])
+  const sql = readFileSync(
+    "supabase/migrations/20261106000001_pass_plus_s1_rewards.sql",
+    "utf8",
+  );
+  for (const id of [
+    "riftling",
+    "riftling_armor",
+    "riftling_aura",
+    "riftsovereign",
+    "umbradrake",
+  ])
     expect(sql).toContain(`'${id}'`);
   expect(sql).toMatch(/new\.flair := null/);
   expect(sql).toMatch(/new\.character := 'volt'/);
@@ -1523,7 +1799,14 @@ test("Season 1 Drift Pass+ rewards: placed on the track, exclusive, cosmetic, se
   // 4. claims made on the launch layout move with their rewards
   const moved = await page.evaluate(() => {
     const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
-    s.seasons.s1.plusClaimed = { 0: true, 2: true, 5: true, 8: true, 14: true, 49: true };
+    s.seasons.s1.plusClaimed = {
+      0: true,
+      2: true,
+      5: true,
+      8: true,
+      14: true,
+      49: true,
+    };
     delete s.seasons.s1.plusLayout;
     localStorage.setItem("glydrift.save.v1", JSON.stringify(s));
     return true;
@@ -1533,7 +1816,12 @@ test("Season 1 Drift Pass+ rewards: placed on the track, exclusive, cosmetic, se
   await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
   const claims = await page.evaluate(() => {
     const rec = window.__glyPlusS1.record("s1");
-    return { layout: rec.plusLayout, claimed: Object.keys(rec.plusClaimed).map(Number).sort((a, b) => a - b) };
+    return {
+      layout: rec.plusLayout,
+      claimed: Object.keys(rec.plusClaimed)
+        .map(Number)
+        .sort((a, b) => a - b),
+    };
   });
   // voidcat 1→2, holo stays 3, a coins tier that's now Galaxy Dust (6) opens up, coins tier 9
   // stays, triphound 15→16, umbradrake 50→46
@@ -1551,15 +1839,24 @@ test("Season 1 Drift Pass+ rewards: placed on the track, exclusive, cosmetic, se
   expect(log.errors).toEqual([]);
 });
 
-test("SPLICE: +25% speed with the standard hitbox, falcon moves, speed badge, perch showcase", async ({
+test("SXE: +25% speed with the standard hitbox, falcon moves, speed badge, perch showcase", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   test.setTimeout(240_000);
   // 1. the same 240 frames from the same start: SPLICE covers ~25% more ground, same hitbox
   const fly = async (id) => {
-    await page.goto(page.url().replace(/&character=[a-z_]+/, "") + `&character=${id}`);
-    await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+    await page.goto(
+      page.url().replace(/&character=[a-z_]+/, "") + `&character=${id}`,
+    );
+    await waitFor(
+      page,
+      () => window.__glydrift?.scene.isActive("Menu"),
+      30_000,
+    );
     await run(page, 800);
     await startRun(page);
     return page.evaluate(() => {
@@ -1592,7 +1889,8 @@ test("SPLICE: +25% speed with the standard hitbox, falcon moves, speed badge, pe
   expect(splice.metres / volt.metres).toBeGreaterThan(1.2);
   expect(splice.metres / volt.metres).toBeLessThan(1.32);
   // flaps (wings up, driven down), the dive tuck between flaps
-  for (const f of ["splice_1", "splice_2", "splice_3"]) expect(splice.frames, f).toContain(f);
+  for (const f of ["splice_1", "splice_2", "splice_3"])
+    expect(splice.frames, f).toContain(f);
   // 2. near-miss: a barrel roll (the drawing flips over); new best: screech + sonic boom
   const moves = await page.evaluate(() => {
     const s = window.__glydrift.scene.getScene("Game");
@@ -1619,30 +1917,56 @@ test("SPLICE: +25% speed with the standard hitbox, falcon moves, speed badge, pe
     step(20);
     tumbling = r.falcon.dieT > 0 && r.sprite.visible;
     step(90);
-    return { flipped, screech, dead: r.dead, tumbling, gone: !r.sprite.visible };
+    return {
+      flipped,
+      screech,
+      dead: r.dead,
+      tumbling,
+      gone: !r.sprite.visible,
+    };
   });
-  expect(moves).toEqual({ flipped: true, screech: "splice_7", dead: true, tumbling: true, gone: true });
-  // 3. shop + unlock: Legendary, 12,000 coins or "Reach 2,000m in one run"
+  expect(moves).toEqual({
+    flipped: true,
+    screech: "splice_7",
+    dead: true,
+    tumbling: true,
+    gone: true,
+  });
+  // 3. shop + unlock: Legendary, 50,000 coins or "Reach 2,000m in one run"
   const def = await page.evaluate(() => {
     const d = window.__heroDefs.find((c) => c.id === "splice");
-    return { rarity: d.rarity, cost: d.cost, ch: d.challenge, perks: d.perks.list, desc: d.desc };
+    return {
+      name: d.name,
+      rarity: d.rarity,
+      cost: d.cost,
+      ch: d.challenge,
+      perks: d.perks.list,
+      desc: d.desc,
+    };
   });
   expect(def).toEqual({
+    name: "SXE",
     rarity: "legendary",
-    cost: 12000,
+    cost: 50000,
     ch: { stat: "maxDistance", value: 2000, text: "Reach 2,000m in one run" },
-    perks: ["+25% SPEED"],
+    perks: ["+25% SPEED", "INDESTRUCTIBLE IN THE GLITCH REALM"],
     desc: "Fastest thing in the sky.",
   });
   // 4. the leaderboard marks faster heroes' runs with a speed badge
   await page.goto(page.url().replace(/&character=[a-z_]+/, "") + "&lbmock");
   await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
-  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Leaderboard", { tab: "score" }));
+  await page.evaluate(() =>
+    window.__glydrift.scene
+      .getScene("Menu")
+      .scene.start("Leaderboard", { tab: "score" }),
+  );
   await waitFor(page, () => window.__glydrift.scene.isActive("Leaderboard"));
   await run(page, 2500);
   const badges = await page.evaluate(() => {
     const lb = window.__glydrift.scene.getScene("Leaderboard");
-    const all = [...lb.children.list, ...(lb.list?.list || [])].flatMap((o) => (o.list ? [o, ...o.list] : [o]));
+    const all = [...lb.children.list, ...(lb.list?.list || [])].flatMap((o) =>
+      o.list ? [o, ...o.list] : [o],
+    );
     return all.filter((o) => o.name === "speedBadge").length;
   });
   expect(badges).toBeGreaterThan(0); // RONIN rows on the sample board (+10%)
@@ -1655,7 +1979,9 @@ test("SPLICE: +25% speed with the standard hitbox, falcon moves, speed badge, pe
   });
   await page.reload();
   await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
-  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Characters"));
+  await page.evaluate(() =>
+    window.__glydrift.scene.getScene("Menu").scene.start("Characters"),
+  );
   await waitFor(page, () => window.__glydrift.scene.isActive("Characters"));
   await page.evaluate(() => {
     const c = window.__glydrift.scene.getScene("Characters");
@@ -1667,11 +1993,20 @@ test("SPLICE: +25% speed with the standard hitbox, falcon moves, speed badge, pe
     poses.add(
       await page.evaluate(() => {
         const f = window.__glydrift.scene.getScene("Characters").rig.falcon;
-        return f.phase === "perched" ? `${f.phase}${f.perchPose}${f.perch.visible ? "+perch" : ""}` : f.phase;
+        return f.phase === "perched"
+          ? `${f.phase}${f.perchPose}${f.perch.visible ? "+perch" : ""}`
+          : f.phase;
       }),
     );
   }
-  for (const p of ["land", "perched4+perch", "perched5+perch", "perched6+perch", "fly"]) expect([...poses], p).toContain(p);
+  for (const p of [
+    "land",
+    "perched4+perch",
+    "perched5+perch",
+    "perched6+perch",
+    "fly",
+  ])
+    expect([...poses], p).toContain(p);
   await snap(page, testInfo, "22-splice-showcase");
   expect(log.errors).toEqual([]);
 });
@@ -1679,12 +2014,19 @@ test("SPLICE: +25% speed with the standard hitbox, falcon moves, speed badge, pe
 test("after logging out: one pop-up at a time, and no free rewards twice", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   test.setTimeout(180_000);
   // a player who already claimed today's reward and free drop (and has a username)
   const log = await openGame(page, {
     flags: ["mockcloud"],
-    save: { ...SAVE, dailyDrop: SAVE.login.claimed, seasons: { s1: { heroSeen: true } } },
+    save: {
+      ...SAVE,
+      dailyDrop: SAVE.login.claimed,
+      seasons: { s1: { heroSeen: true } },
+    },
   });
   await run(page, 1500);
   await page.evaluate(() => {
@@ -1731,7 +2073,9 @@ test("after logging out: one pop-up at a time, and no free rewards twice", async
   expect(seen[0]).toBe("name");
   expect(seen).toContain("reveal");
   // the fresh guest can't take today's reward, free drop or a starter spin again
-  const after = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  const after = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("glydrift.save.v1")),
+  );
   expect(after.login.claimed).toBe(claimed.login);
   expect(after.dailyDrop).toBe(claimed.drop);
   expect(after.spins).toBe(0);
@@ -1742,7 +2086,10 @@ test("after logging out: one pop-up at a time, and no free rewards twice", async
 test("flow: the camera shakes only on death and the Abyss entrance; zoom and lead ease", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   test.setTimeout(240_000);
   const log = await openGame(page, { flags: ["god"] });
   await startRun(page);
@@ -1772,10 +2119,17 @@ test("flow: the camera shakes only on death and the Abyss entrance; zoom and lea
       lastZ = cam.zoom;
       lastY = cam.scrollY;
     }
-    return { shakes, abyssAt, zoomOut: 1 - cam.zoom / z0, maxZoomStep, maxLeadStep };
+    return {
+      shakes,
+      abyssAt,
+      zoomOut: 1 - cam.zoom / z0,
+      maxZoomStep,
+      maxLeadStep,
+    };
   });
   // the only shake on the way was the Abyss entrance (its title slam lives in the HUD)
-  for (const m of out.shakes) expect(Math.abs(m - out.abyssAt), `shake at ${m} m`).toBeLessThan(40);
+  for (const m of out.shakes)
+    expect(Math.abs(m - out.abyssAt), `shake at ${m} m`).toBeLessThan(40);
   // the view widens a little at speed, and never in a visible jump
   expect(out.zoomOut).toBeGreaterThan(0.005);
   expect(out.zoomOut).toBeLessThan(0.035);
@@ -1787,7 +2141,10 @@ test("flow: the camera shakes only on death and the Abyss entrance; zoom and lea
 test("micro-polish: hazard hitboxes ~12% inside the art, retry grace, short death slow-mo, no blank load", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   const log = await openGame(page);
   // the loading splash fades out once the home screen has drawn
   await run(page, 600);
@@ -1841,7 +2198,10 @@ test("micro-polish: hazard hitboxes ~12% inside the art, retry grace, short deat
 test("scenery: the Frost Comet always warns first; no pattern twice in a row", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   test.setTimeout(240_000);
   const log = await openGame(page, { flags: ["god"] });
   await startRun(page);
@@ -1859,7 +2219,8 @@ test("scenery: the Frost Comet always warns first; no pattern twice in a row", a
       t += 1000 / 60;
       s.stepFrame(t, 1000 / 60);
       if (c.state === "warn") warnT += 1 / 60;
-      if (c.state !== "fly" && c.clearance(c.x, s.H / 2, 20) !== Infinity) hurtBeforeFly = true;
+      if (c.state !== "fly" && c.clearance(c.x, s.H / 2, 20) !== Infinity)
+        hurtBeforeFly = true;
       if (c.state === "fly") flew = true;
     }
     // 2. a long run: the same pattern never comes twice in a row
@@ -1893,7 +2254,10 @@ test("scenery: the Frost Comet always warns first; no pattern twice in a row", a
 test("scenery: the Abyss Eye Beam warns first and never closes the way", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   const log = await openGame(page, { flags: ["god"] });
   await startRun(page);
   const out = await page.evaluate(() => {
@@ -1911,7 +2275,11 @@ test("scenery: the Abyss Eye Beam warns first and never closes the way", async (
         t += 1000 / 60;
         s.stepFrame(t, 1000 / 60);
         if (e.state === "warn") warnT += 1 / 60;
-        if (e.state !== "beam" && e.clearance(e.x, top ? 10 : s.H - 10, 10) !== Infinity) hurtBeforeBeam = true;
+        if (
+          e.state !== "beam" &&
+          e.clearance(e.x, top ? 10 : s.H - 10, 10) !== Infinity
+        )
+          hurtBeforeBeam = true;
         if (e.burning) fired = true;
         maxExt = Math.max(maxExt, e.ext);
       }
@@ -1928,10 +2296,95 @@ test("scenery: the Abyss Eye Beam warns first and never closes the way", async (
   expect(log.errors).toEqual([]);
 });
 
+test("SXE: indestructible in the Glitch Realm, and only there", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
+  test.setTimeout(240_000);
+  // Fly (god mode) into the Glitch Realm, then let go: no flaps at all, real collisions.
+  const glitchRun = async (id) => {
+    await openGame(page, { flags: ["god", `character=${id}`] });
+    await startRun(page);
+    return page.evaluate(() => {
+      const s = window.__glydrift.scene.getScene("Game");
+      let t = 1e6;
+      const step = () => {
+        t += 1000 / 60;
+        s.stepFrame(t, 1000 / 60);
+      };
+      let start = 0;
+      let end = 0;
+      for (let m = 0; m < 20000; m += 10)
+        if (s.course.segAt(m).id === "glitch") {
+          const seg = s.course.segAt(m);
+          start = seg.start;
+          end = seg.end;
+          break;
+        }
+      window.__glyGod(true);
+      while (s.meters < start + 40) {
+        if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+        step();
+      }
+      window.__glyGod(false);
+      const out = {
+        alive: 0,
+        phased: 0,
+        minY: Infinity,
+        maxY: -Infinity,
+        diedIn: null,
+        end,
+      };
+      const blocks0 = s.run.wardBlocks || 0;
+      // 20 s with no input (or until the realm ends)
+      for (
+        let i = 0;
+        i < 60 * 20 && s.state === "playing" && s.zoneId === "glitch";
+        i++
+      ) {
+        step();
+        out.alive++;
+        out.minY = Math.min(out.minY, s.player.y);
+        out.maxY = Math.max(out.maxY, s.player.y);
+      }
+      out.phased = (s.run.wardBlocks || 0) - blocks0;
+      out.playing = s.state === "playing";
+      out.H = s.H;
+      out.r = s.player.radius;
+      // after the realm: mortal again (still no flaps, so he falls off the bottom)
+      if (s.state === "playing") {
+        window.__glyGod(true);
+        while (s.zoneId === "glitch") step();
+        window.__glyGod(false);
+        for (let i = 0; i < 60 * 10 && s.state === "playing"; i++) step();
+        out.diedIn = s.state === "playing" ? null : s.run.killedIn;
+      }
+      window.__glyGod(true);
+      return out;
+    });
+  };
+  const sxe = await glitchRun("splice");
+  expect(sxe.playing).toBe(true); // 20 s without a flap and he's still flying
+  expect(sxe.alive).toBeGreaterThan(60 * 5);
+  expect(sxe.phased).toBeGreaterThan(0); // he flew through hazards
+  expect(sxe.maxY).toBeLessThan(sxe.H - sxe.r / 2); // held on screen, not off the bottom
+  expect(sxe.diedIn).not.toBeNull(); // outside the realm a fall ends the run again
+  expect(sxe.diedIn).not.toBe("glitch");
+  // control: VOLT in the same spot dies without flapping
+  const volt = await glitchRun("volt");
+  expect(volt.playing).toBe(false);
+});
+
 test("scenery: Slammer + Eye Beam always leaves a lane (forced, real collisions)", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   test.setTimeout(240_000);
   const log = await openGame(page, { flags: ["god"] });
   await startRun(page);
@@ -1956,9 +2409,12 @@ test("scenery: Slammer + Eye Beam always leaves a lane (forced, real collisions)
         }
       }
       for (const o of om.active) {
-        if (o.type !== "eyebeam" || !(o.state === "warn" || o.state === "beam")) continue;
+        if (o.type !== "eyebeam" || !(o.state === "warn" || o.state === "beam"))
+          continue;
         if (o.x < p.x - 60 || o.x > p.x + 420) continue;
-        target = o.top ? Math.max(target, o.L + R + 40) : Math.min(target, H - o.L - R - 40);
+        target = o.top
+          ? Math.max(target, o.L + R + 40)
+          : Math.min(target, H - o.L - R - 40);
       }
       const dy = target - p.y;
       p.y += Math.sign(dy) * Math.min(Math.abs(dy), 650 / 60);
@@ -1969,7 +2425,12 @@ test("scenery: Slammer + Eye Beam always leaves a lane (forced, real collisions)
       t += 1000 / 60;
       s.stepFrame(t, 1000 / 60);
     };
-    const res = { patterns: 0, minLane: Infinity, deaths: [], minLead: Infinity };
+    const res = {
+      patterns: 0,
+      minLane: Infinity,
+      deaths: [],
+      minLead: Infinity,
+    };
     const origSpawn = om.spawnPattern.bind(om);
     om.spawnPattern = (m, b) => {
       const before = new Set(om.active);
@@ -2003,19 +2464,27 @@ test("scenery: Slammer + Eye Beam always leaves a lane (forced, real collisions)
       const orig = r.weighted.bind(r);
       r.weighted = (w) => ("eyeslam" in w ? "eyeslam" : orig(w));
       window.__glyGod(false);
-      for (let i = 0; i < 60 * 240 && s.course.segAt(s.meters).id === "abyss"; i++) {
+      for (
+        let i = 0;
+        i < 60 * 240 && s.course.segAt(s.meters).id === "abyss";
+        i++
+      ) {
         step();
         for (const o of om.active)
           if (o.type === "eyebeam" && o.state === "warn" && !o._lead) {
             o._lead = true;
-            res.minLead = Math.min(res.minLead, (o.x - s.player.x) / Math.max(60, om.scroll));
+            res.minLead = Math.min(
+              res.minLead,
+              (o.x - s.player.x) / Math.max(60, om.scroll),
+            );
           }
         if (s.state !== "playing") {
           res.deaths.push(Math.round(s.meters - start));
           break;
         }
       }
-      for (const pool of Object.values(om.pools)) for (const o of pool) delete o._lead;
+      for (const pool of Object.values(om.pools))
+        for (const o of pool) delete o._lead;
       r.weighted = orig;
     }
     window.__glyGod(true);
@@ -2031,7 +2500,10 @@ test("scenery: Slammer + Eye Beam always leaves a lane (forced, real collisions)
 test("glydrift.com launch: portal pop-up, Founding Drifter reward, LATER returns once", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   test.setTimeout(480_000); // six launches of the game
   const texts = () =>
     page.evaluate(() => {
@@ -2044,21 +2516,33 @@ test("glydrift.com launch: portal pop-up, Founding Drifter reward, LATER returns
       m.children.list.forEach(walk);
       return all.join(" | ");
     });
-  const save = () => page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  const save = () =>
+    page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
   const launch = async () => {
     await page.reload();
-    await waitFor(page, () => !!window.__glydrift?.scene.isActive("Menu"), 30_000);
+    await waitFor(
+      page,
+      () => !!window.__glydrift?.scene.isActive("Menu"),
+      30_000,
+    );
     await run(page, 4000); // portal + panel + typing
   };
   const base = { ...SAVE, dailyDrop: SAVE.login.claimed };
   // 1. accounts not open on the server yet: nothing (it would lead nowhere), and nothing used up
-  const log = await openGame(page, { flags: ["mockcloud", "movenotice"], save: base });
-  await page.evaluate(() => localStorage.setItem("glydrift.mockserver.notready", "1"));
+  const log = await openGame(page, {
+    flags: ["mockcloud", "movenotice"],
+    save: base,
+  });
+  await page.evaluate(() =>
+    localStorage.setItem("glydrift.mockserver.notready", "1"),
+  );
   await launch();
   expect(await texts()).not.toContain("GLYDRIFT HAS A NEW HOME");
   expect((await save()).moveNotice).toEqual({ shown: 0, done: false });
   // 2. accounts open: a guest sees the launch pop-up with the reward; LATER closes it
-  await page.evaluate(() => localStorage.removeItem("glydrift.mockserver.notready"));
+  await page.evaluate(() =>
+    localStorage.removeItem("glydrift.mockserver.notready"),
+  );
   await launch();
   let t = await texts();
   expect(t).toContain("GLYDRIFT HAS A NEW HOME");
@@ -2076,18 +2560,24 @@ test("glydrift.com launch: portal pop-up, Founding Drifter reward, LATER returns
   await tap(page, "LATER", 600);
   expect(await texts()).not.toContain("GLYDRIFT HAS A NEW HOME");
   // ... back on the home screen again in the same launch: not again
-  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.restart());
+  await page.evaluate(() =>
+    window.__glydrift.scene.getScene("Menu").scene.restart(),
+  );
   await run(page, 3000);
   expect(await texts()).not.toContain("GLYDRIFT HAS A NEW HOME");
   // 3. the next launch: once more; CREATE ACCOUNT → sign-up → reward + celebration
   await launch();
   expect(await texts()).toContain("GLYDRIFT HAS A NEW HOME");
   await tap(page, "CREATE ACCOUNT", 800);
-  await expect(page.locator("#account-modal.open input[name=email]")).toBeVisible();
+  await expect(
+    page.locator("#account-modal.open input[name=email]"),
+  ).toBeVisible();
   await page.fill("#account-modal input[name=email]", "pilot@example.com");
   await page.fill("#account-modal input[name=password]", "hunter2hunter2");
   await page.click("#account-modal button[type=submit]");
-  await expect(page.locator("#account-modal .who")).toHaveText("pilot@example.com");
+  await expect(page.locator("#account-modal .who")).toHaveText(
+    "pilot@example.com",
+  );
   await page.click("#account-modal [data-act=close]");
   await run(page, 900);
   expect(await texts()).toContain("PROGRESS LOCKED IN!");
@@ -2100,7 +2590,10 @@ test("glydrift.com launch: portal pop-up, Founding Drifter reward, LATER returns
   expect(s.moveNotice.done).toBe(true);
   // the account's cloud copy has it too (it travels to glydrift.com)
   const cloud = await page.evaluate(
-    () => JSON.parse(localStorage.getItem("glydrift.mockserver")).users["pilot@example.com"].save,
+    () =>
+      JSON.parse(localStorage.getItem("glydrift.mockserver")).users[
+        "pilot@example.com"
+      ].save,
   );
   expect(cloud.cos.owned.trail_founder).toBe(true);
   expect(cloud.titles.owned.t_founder).toBe(true);
@@ -2132,9 +2625,17 @@ test("glydrift.com launch: portal pop-up, Founding Drifter reward, LATER returns
     delete data().cos.owned.trail_founder; // not owned, so a pod could pick it if it were allowed
     const sale = forSale(COSMETICS.find((c) => c.id === "trail_founder"));
     let daily = false;
-    for (let d = 1; d <= 60; d++) if (Shop.daily(`2026-12-${String((d % 28) + 1).padStart(2, "0")}-${d}`).items.includes("trail_founder")) daily = true;
+    for (let d = 1; d <= 60; d++)
+      if (
+        Shop.daily(
+          `2026-12-${String((d % 28) + 1).padStart(2, "0")}-${d}`,
+        ).items.includes("trail_founder")
+      )
+        daily = true;
     let pod = false;
-    for (let k = 0; k < 400; k++) if (Shop.openPod({ free: true })?.item?.id === "trail_founder") pod = true;
+    for (let k = 0; k < 400; k++)
+      if (Shop.openPod({ free: true })?.item?.id === "trail_founder")
+        pod = true;
     return { sale, daily, pod };
   });
   expect(shop).toEqual({ sale: false, daily: false, pod: false });
@@ -2144,7 +2645,10 @@ test("glydrift.com launch: portal pop-up, Founding Drifter reward, LATER returns
 test("MATTOE: standard hitbox, always-on aura, STUBBED! death, Neon Void challenge", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   test.setTimeout(240_000);
   const log = await openGame(page, { flags: ["character=mattoe"] });
   await startRun(page);
@@ -2175,7 +2679,9 @@ test("MATTOE: standard hitbox, always-on aura, STUBBED! death, Neon Void challen
     window.__glyGod(false);
     for (let i = 0; i < 600 && s.state === "playing"; i++) step(1);
     step(8);
-    const texts = s.fx.texts.filter((x) => x.active && x.visible).map((x) => x.text);
+    const texts = s.fx.texts
+      .filter((x) => x.active && x.visible)
+      .map((x) => x.text);
     return {
       radius: s.player.radius,
       std: 21,
@@ -2195,15 +2701,24 @@ test("MATTOE: standard hitbox, always-on aura, STUBBED! death, Neon Void challen
   expect(out.stubbed).toBe(true);
   expect(out.spriteStays).toBe(true);
   await run(page, 4000); // game over: the run is saved
-  const st = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")).stats);
+  const st = await page.evaluate(
+    () => JSON.parse(localStorage.getItem("glydrift.save.v1")).stats,
+  );
   expect(st.voidDeaths).toBe(1); // 1 of 10 toward MATTOE's challenge
   expect(log.errors).toEqual([]);
 });
 
-test("accounts wait for the server to be set up", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+test("accounts wait for the server to be set up", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   const log = await openGame(page, { flags: ["mockcloud"] });
-  await page.evaluate(() => localStorage.setItem("glydrift.mockserver.notready", "1"));
+  await page.evaluate(() =>
+    localStorage.setItem("glydrift.mockserver.notready", "1"),
+  );
   await run(page, 800);
   await page.evaluate(() => {
     window.__glyOpenAccount();
@@ -2215,7 +2730,9 @@ test("accounts wait for the server to be set up", async ({ page }, testInfo) => 
   await expect(page.locator("#account-modal .err")).toHaveText(
     "Accounts open soon — your progress is safe on this device until then.",
   );
-  const server = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.mockserver")));
+  const server = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("glydrift.mockserver")),
+  );
   expect(server?.users?.["early@example.com"]).toBeUndefined();
   expect(log.errors).toEqual([]);
 });

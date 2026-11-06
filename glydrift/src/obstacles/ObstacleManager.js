@@ -13,12 +13,38 @@ import { TYPES } from "./index.js";
 const SIG = {
   // (the vertical laser and its patterns, Slalom and Laser + Blade, were taken out: too hard)
   void: ["blade", "hlaser", "pulse", "bladeduo", "pulsepair"],
-  solar: ["geyser", "meteor", "firebar", "flare", "eruption", "shower", "firepair", "geyserbar"],
-  frozen: ["icicle", "slider", "zap", "comet", "icecurtain", "sliderpair", "zapstairs", "gauntlet"],
+  solar: [
+    "geyser",
+    "meteor",
+    "firebar",
+    "flare",
+    "eruption",
+    "shower",
+    "firepair",
+    "geyserbar",
+  ],
+  frozen: [
+    "icicle",
+    "slider",
+    "zap",
+    "comet",
+    "icecurtain",
+    "sliderpair",
+    "zapstairs",
+    "gauntlet",
+  ],
   // (the broken-laser wall "blaser" was taken out)
   // (the Corrupt Column and its combinations were taken out: too hard)
   glitch: ["blink", "zone", "blinkpair", "blinkgate"],
-  abyss: ["tendril", "slammer", "walls", "eyebeam", "eyepair", "tendrileye", "eyeslam"],
+  abyss: [
+    "tendril",
+    "slammer",
+    "walls",
+    "eyebeam",
+    "eyepair",
+    "tendrileye",
+    "eyeslam",
+  ],
   valley: ["vine", "puffs", "bloom"],
   hurricane: ["debris", "bolt", "twister"],
   prism: ["mlaser", "glass", "rprism"],
@@ -96,7 +122,13 @@ export class ObstacleManager {
     this.rng = new RNG(1);
     this.px = 0;
     this.scroll = 300;
-    this.info = { local: 0, rawIndex: 0, firstVisit: true, pause: false, grace: false };
+    this.info = {
+      local: 0,
+      rawIndex: 0,
+      firstVisit: true,
+      pause: false,
+      grace: false,
+    };
   }
 
   reset(seed, lead = 0) {
@@ -110,7 +142,9 @@ export class ObstacleManager {
     this.nextX = this.W + 260 + lead;
     // shop coin skin (gems / stars / hearts) and the Coin Magnet boost's pull radius
     const skin = Shop.equipped("coin");
-    this.coinSkin = skin ? { tex: "cosm", prefix: `${skin}_` } : { tex: "pxc", prefix: "coin_" };
+    this.coinSkin = skin
+      ? { tex: "cosm", prefix: `${skin}_` }
+      : { tex: "pxc", prefix: "coin_" };
     this.magnetR = 110;
     this.lastCoinX = 0; // screen x of the furthest-right coin spawned (scrolls with the world)
     this.lastCoinY = this.H / 2;
@@ -163,7 +197,9 @@ export class ObstacleManager {
   coin(x, y) {
     let c = this.coins.find((o) => !o.active);
     if (!c) {
-      c = this.scene.add.image(0, 0, this.coinSkin.tex, `${this.coinSkin.prefix}0`).setDepth(6);
+      c = this.scene.add
+        .image(0, 0, this.coinSkin.tex, `${this.coinSkin.prefix}0`)
+        .setDepth(6);
       // stepped pixel halo that pulses with the music
       c.halo = this.scene.add
         .image(0, 0, "pxglow")
@@ -200,7 +236,10 @@ export class ObstacleManager {
     // dimensions ramp up within themselves (gentle start, full strength by ~500 m in)
     const d = this.info.dimension
       ? Math.min(1, Math.max(0, this.info.local) / 500)
-      : Math.min(SPAWN.difficultyCap[biomeId] ?? 1, meters / SPAWN.difficultyMeters);
+      : Math.min(
+          SPAWN.difficultyCap[biomeId] ?? 1,
+          meters / SPAWN.difficultyMeters,
+        );
     const x = this.nextX;
     const mid = H / 2;
     const safeTop = 150;
@@ -208,7 +247,9 @@ export class ObstacleManager {
     // density ramps up faster than difficulty: more obstacles early, same gap sizes (and it
     // carries straight through realm and dimension changes, so a boundary never opens a gap)
     const sd = Math.min(1, meters / SPAWN.spacing.rampMeters);
-    const spacing = Phaser.Math.Linear(SPAWN.spacing.start, SPAWN.spacing.end, sd) + r.range(-30, 40);
+    const spacing =
+      Phaser.Math.Linear(SPAWN.spacing.start, SPAWN.spacing.end, sd) +
+      r.range(-30, 40);
     let width = 120;
 
     // gravity flip lasts a few obstacles, then a restore portal is guaranteed
@@ -233,12 +274,21 @@ export class ObstacleManager {
       saw: 2.2,
       gate: 2.2,
       saw2: meters > 600 ? 1 : 0,
-      flip: meters > 420 && !this.flipped && meters - this.lastPortalM > 220 ? 0.7 : 0,
-      mini: meters > 260 && !this.flipped && meters - this.lastPortalM > 160 ? 0.6 : 0,
+      flip:
+        meters > 420 && !this.flipped && meters - this.lastPortalM > 220
+          ? 0.7
+          : 0,
+      mini:
+        meters > 260 && !this.flipped && meters - this.lastPortalM > 160
+          ? 0.6
+          : 0,
     };
     let forced = null;
     sig.forEach((k, i) => {
-      const open = !firstLap || local >= unlock[i] || (biomeId === "void" && meters >= unlock[i]);
+      const open =
+        !firstLap ||
+        local >= unlock[i] ||
+        (biomeId === "void" && meters >= unlock[i]);
       if (!open) return;
       w[k] = SIG_WEIGHT[k] ?? 2.6;
       // introduce each new hazard alone the first time it appears (combination patterns are
@@ -249,7 +299,8 @@ export class ObstacleManager {
     if (w.zone && this.flipped) w.zone = 0;
     // the Peaceful Valley has only its own gentle hazards (no saws, gates or portals)
     // the Peaceful Valley and the dimensions have only their own hazards
-    if (biomeId === "valley" || info.dimension) w.saw = w.gate = w.saw2 = w.flip = w.mini = 0;
+    if (biomeId === "valley" || info.dimension)
+      w.saw = w.gate = w.saw2 = w.flip = w.mini = 0;
     if (this.count < 2) w.saw2 = w.flip = w.mini = w.blade = w.hlaser = 0;
     if (info.simpleOnly) {
       // first metres of the Abyss / seconds of a dimension: only simple obstacles
@@ -261,7 +312,11 @@ export class ObstacleManager {
     if (kind) this.introduced.add(`${info.rawIndex}:${kind}`);
     if (!kind) {
       // never the same pattern twice in a row (re-roll without it when there's a choice)
-      if (this.lastKind && w[this.lastKind] && Object.values(w).filter((v) => v > 0).length > 1)
+      if (
+        this.lastKind &&
+        w[this.lastKind] &&
+        Object.values(w).filter((v) => v > 0).length > 1
+      )
         w[this.lastKind] = 0;
       kind = r.weighted(w);
       this.introduced.add(`${info.rawIndex}:${kind}`);
@@ -286,7 +341,10 @@ export class ObstacleManager {
         });
         width = 110;
         if (r.chance(0.55)) {
-          const cy = y < mid ? Math.min(safeBot, y + 170 + amp) : Math.max(safeTop, y - 170 - amp);
+          const cy =
+            y < mid
+              ? Math.min(safeBot, y + 170 + amp)
+              : Math.max(safeTop, y - 170 - amp);
           this.coinLine(x - 40, x + 140, cy, 4);
         }
         break;
@@ -306,7 +364,10 @@ export class ObstacleManager {
       case "gate": {
         const gap = Phaser.Math.Linear(310, 230, d) + r.range(-10, 20);
         const amp = r.chance(0.7) ? r.range(60, 120 + d * 90) : 0;
-        const gc = r.range(safeTop + gap / 2 + amp - 40, safeBot - gap / 2 - amp + 40);
+        const gc = r.range(
+          safeTop + gap / 2 + amp - 40,
+          safeBot - gap / 2 - amp + 40,
+        );
         const o = this.obtain("gate");
         const gw = o.w;
         o.spawn(x + gw / 2, {
@@ -361,7 +422,10 @@ export class ObstacleManager {
       case "hlaser": {
         const span = r.range(240, 320);
         const n = r.chance(0.4 + d * 0.3) ? 2 : 1;
-        const ys = n === 2 ? [H * 0.36, H * 0.64] : [r.range(safeTop + 60, safeBot - 60)];
+        const ys =
+          n === 2
+            ? [H * 0.36, H * 0.64]
+            : [r.range(safeTop + 60, safeBot - 60)];
         for (const y of ys) {
           const o = this.obtain("laser");
           o.spawn(x + span / 2 + 24, {
@@ -383,7 +447,12 @@ export class ObstacleManager {
         const y = r.range(safeTop + 40, safeBot - 40);
         const o = this.obtain("pulse");
         o.spawn(x + R, { y, R, lead: r.range(0.35, 0.55) });
-        this.coinLine(x + R - 60, x + R + 60, y < mid ? y + R + 90 : y - R - 90, 3);
+        this.coinLine(
+          x + R - 60,
+          x + R + 60,
+          y < mid ? y + R + 90 : y - R - 90,
+          3,
+        );
         width = R * 2;
         break;
       }
@@ -393,9 +462,17 @@ export class ObstacleManager {
         const hi = r.chance(0.5);
         const ph = r.next();
         for (let i = 0; i < 2; i++) {
-          const gc = (i === 0) === hi ? safeTop + gap / 2 + 40 : safeBot - gap / 2 - 40;
+          const gc =
+            (i === 0) === hi ? safeTop + gap / 2 + 40 : safeBot - gap / 2 - 40;
           const o = this.obtain("laser");
-          o.spawn(x + 22 + i * 280, { orient: "v", gc, gap, on: 1.3, off: 0.9, phase: ph });
+          o.spawn(x + 22 + i * 280, {
+            orient: "v",
+            gc,
+            gap,
+            on: 1.3,
+            off: 0.9,
+            phase: ph,
+          });
           this.coinLine(x + i * 280 - 20, x + i * 280 + 60, gc, 2);
         }
         width = 44 + 280;
@@ -409,7 +486,13 @@ export class ObstacleManager {
         const halfW = Math.sin(amp) * L + 50;
         for (let i = 0; i < 2; i++) {
           const o = this.obtain("blade");
-          o.spawn(x + halfW + i * (halfW * 2 + 60), { top: i === 0, L, amp, freq: 1.8, phase: ph + i * Math.PI });
+          o.spawn(x + halfW + i * (halfW * 2 + 60), {
+            top: i === 0,
+            L,
+            amp,
+            freq: 1.8,
+            phase: ph + i * Math.PI,
+          });
         }
         width = halfW * 4 + 60;
         break;
@@ -419,11 +502,24 @@ export class ObstacleManager {
         const gap = Phaser.Math.Linear(300, 250, d);
         const gc = r.range(safeTop + gap / 2, safeBot - gap / 2);
         const lz = this.obtain("laser");
-        lz.spawn(x + 22, { orient: "v", gc, gap, on: 1.3, off: 0.9, phase: r.next() });
+        lz.spawn(x + 22, {
+          orient: "v",
+          gc,
+          gap,
+          on: 1.3,
+          off: 0.9,
+          phase: r.next(),
+        });
         const L = r.range(H * 0.32, H * 0.42);
         const halfW = Math.sin(0.6) * L + 50;
         const bl = this.obtain("blade");
-        bl.spawn(x + 44 + 200 + halfW, { top: gc > mid, L, amp: 0.6, freq: 1.9, phase: r.range(0, 6.28) });
+        bl.spawn(x + 44 + 200 + halfW, {
+          top: gc > mid,
+          L,
+          amp: 0.6,
+          freq: 1.9,
+          phase: r.range(0, 6.28),
+        });
         width = 44 + 200 + halfW * 2;
         break;
       }
@@ -432,7 +528,11 @@ export class ObstacleManager {
         const R = 150;
         for (let i = 0; i < 2; i++) {
           const o = this.obtain("pulse");
-          o.spawn(x + R + i * (R * 2 + 40), { y: i ? safeBot - 60 : safeTop + 60, R, lead: 0.4 + i * 0.25 });
+          o.spawn(x + R + i * (R * 2 + 40), {
+            y: i ? safeBot - 60 : safeTop + 60,
+            R,
+            lead: 0.4 + i * 0.25,
+          });
         }
         width = R * 4 + 40;
         break;
@@ -491,7 +591,11 @@ export class ObstacleManager {
         const ph = r.next();
         for (let i = 0; i < 3; i++) {
           const o = this.obtain("geyser");
-          o.spawn(x + 40 + i * 200, { h: H * (0.36 + i * 0.07), rest: 0.7, phase: (ph + i * 0.22) % 1 });
+          o.spawn(x + 40 + i * 200, {
+            h: H * (0.36 + i * 0.07),
+            rest: 0.7,
+            phase: (ph + i * 0.22) % 1,
+          });
         }
         this.coinLine(x + 20, x + 460, H * 0.22, 4);
         width = 480;
@@ -513,7 +617,12 @@ export class ObstacleManager {
         const sp = r.range(1.2, 1.6);
         for (let i = 0; i < 2; i++) {
           const o = this.obtain("firebar");
-          o.spawn(x + len + 24 + i * (len * 2 + 120), { y, n: 4, speed: i ? -sp : sp, phase: i * Math.PI });
+          o.spawn(x + len + 24 + i * (len * 2 + 120), {
+            y,
+            n: 4,
+            speed: i ? -sp : sp,
+            phase: i * Math.PI,
+          });
         }
         width = (len + 24) * 2 + len * 2 + 120;
         break;
@@ -522,9 +631,18 @@ export class ObstacleManager {
         // a fire bar turning high up, a geyser below it on the far side
         const len = 4 * 36;
         const fb = this.obtain("firebar");
-        fb.spawn(x + len + 24, { y: r.range(safeTop + len * 0.6, H * 0.4), n: 4, speed: r.pick([-1, 1]) * 1.3, phase: r.range(0, 6.28) });
+        fb.spawn(x + len + 24, {
+          y: r.range(safeTop + len * 0.6, H * 0.4),
+          n: 4,
+          speed: r.pick([-1, 1]) * 1.3,
+          phase: r.range(0, 6.28),
+        });
         const gy = this.obtain("geyser");
-        gy.spawn(x + len * 2 + 160, { h: H * 0.42, rest: 0.8, phase: r.next() });
+        gy.spawn(x + len * 2 + 160, {
+          h: H * 0.42,
+          rest: 0.8,
+          phase: r.next(),
+        });
         width = len * 2 + 220;
         break;
       }
@@ -557,15 +675,30 @@ export class ObstacleManager {
         const c = r.range(safeTop + D / 2, safeBot - D / 2);
         const dx = r.chance(0.4) ? (r.chance(0.5) ? 1 : -1) * 130 : 0;
         const o = this.obtain("zap");
-        o.spawn(x + 40 + Math.abs(dx) / 2, { y1: c - D / 2, y2: c + D / 2, dx, phase: r.next() });
-        if (r.chance(0.6)) this.coinLine(x, x + 80, c < mid ? c + D / 2 + 140 : c - D / 2 - 140, 3);
+        o.spawn(x + 40 + Math.abs(dx) / 2, {
+          y1: c - D / 2,
+          y2: c + D / 2,
+          dx,
+          phase: r.next(),
+        });
+        if (r.chance(0.6))
+          this.coinLine(
+            x,
+            x + 80,
+            c < mid ? c + D / 2 + 140 : c - D / 2 - 140,
+            3,
+          );
         width = 80 + Math.abs(dx);
         break;
       }
       case "comet": {
         // Frost Comet: its whole path is shown before it flies (see FrostComet)
         const o = this.obtain("comet");
-        o.spawn(x + 160, { dir: r.chance(0.5) ? 1 : -1, lead: r.range(0.55, 0.85), span: r.range(240, 320) });
+        o.spawn(x + 160, {
+          dir: r.chance(0.5) ? 1 : -1,
+          lead: r.range(0.55, 0.85),
+          span: r.range(240, 320),
+        });
         this.coinLine(x + 60, x + 260, r.chance(0.5) ? H * 0.3 : H * 0.7, 3);
         width = 320;
         break;
@@ -585,9 +718,21 @@ export class ObstacleManager {
         const ph = r.next();
         const per = r.range(3.4, 4.2);
         const a = this.obtain("slider");
-        a.spawn(x + a.w / 2, { top: true, Lmin: H * 0.08, Lmax: H * 0.36, period: per, phase: ph });
+        a.spawn(x + a.w / 2, {
+          top: true,
+          Lmin: H * 0.08,
+          Lmax: H * 0.36,
+          period: per,
+          phase: ph,
+        });
         const b = this.obtain("slider");
-        b.spawn(x + b.w / 2, { top: false, Lmin: H * 0.08, Lmax: H * 0.36, period: per, phase: ph + 0.5 });
+        b.spawn(x + b.w / 2, {
+          top: false,
+          Lmin: H * 0.08,
+          Lmax: H * 0.36,
+          period: per,
+          phase: ph + 0.5,
+        });
         width = a.w;
         break;
       }
@@ -598,7 +743,12 @@ export class ObstacleManager {
         for (let i = 0; i < 2; i++) {
           const c = up ? safeBot - D / 2 - i * 230 : safeTop + D / 2 + i * 230;
           const o = this.obtain("zap");
-          o.spawn(x + 40 + i * 220, { y1: c - D / 2, y2: c + D / 2, dx: 0, phase: (i * 0.5 + r.next() * 0.2) % 1 });
+          o.spawn(x + 40 + i * 220, {
+            y1: c - D / 2,
+            y2: c + D / 2,
+            dx: 0,
+            phase: (i * 0.5 + r.next() * 0.2) % 1,
+          });
         }
         this.coinLine(x + 60, x + 280, up ? safeTop + 60 : safeBot - 60, 4);
         width = 300;
@@ -607,7 +757,13 @@ export class ObstacleManager {
       case "gauntlet": {
         // a slider rising from the floor with an icicle hanging above its far side
         const sl = this.obtain("slider");
-        sl.spawn(x + sl.w / 2, { top: false, Lmin: H * 0.12, Lmax: H * 0.42, period: r.range(3.6, 4.4), phase: r.next() });
+        sl.spawn(x + sl.w / 2, {
+          top: false,
+          Lmin: H * 0.12,
+          Lmax: H * 0.42,
+          period: r.range(3.6, 4.4),
+          phase: r.next(),
+        });
         const ic = this.obtain("icicle");
         ic.spawn(x + sl.w + 150, { lead: 1.3 });
         this.coinLine(x + 30, x + sl.w + 160, H * 0.42, 3);
@@ -625,9 +781,18 @@ export class ObstacleManager {
           const gc1 = last;
           // the new opening is clearly elsewhere (at least a gap-height away)
           let gc2 = r.range(safeTop + gap / 2, safeBot - gap / 2);
-          if (Math.abs(gc2 - gc1) < gap) gc2 = gc1 < mid ? Math.min(safeBot - gap / 2, gc1 + gap * 1.1) : Math.max(safeTop + gap / 2, gc1 - gap * 1.1);
+          if (Math.abs(gc2 - gc1) < gap)
+            gc2 =
+              gc1 < mid
+                ? Math.min(safeBot - gap / 2, gc1 + gap * 1.1)
+                : Math.max(safeTop + gap / 2, gc1 - gap * 1.1);
           const o = this.obtain("column");
-          o.spawn(x + 42 + i * 300, { gap, gc1, gc2, lead: r.range(0.75, 0.95) });
+          o.spawn(x + 42 + i * 300, {
+            gap,
+            gc1,
+            gc2,
+            lead: r.range(0.75, 0.95),
+          });
           this.coinLine(x + i * 300, x + 84 + i * 300, gc2, 2);
           last = gc2;
         }
@@ -644,17 +809,29 @@ export class ObstacleManager {
         b.spawn(x + 48, { ya, yb, hold: 1.5, phase: r.next() });
         if (kind === "blinkpair") {
           const b2 = this.obtain("blink");
-          b2.spawn(x + 48 + 260, { ya: yb, yb: ya, hold: 1.5, phase: b.phase ?? r.next() });
+          b2.spawn(x + 48 + 260, {
+            ya: yb,
+            yb: ya,
+            hold: 1.5,
+            phase: b.phase ?? r.next(),
+          });
           width = 96 + 260;
         } else if (kind === "blinkgate") {
           const gap = Phaser.Math.Linear(310, 240, d);
           const gt = this.obtain("gate");
-          gt.spawn(x + 96 + 220 + gt.w / 2, { gc: r.range(safeTop + gap / 2, safeBot - gap / 2), gap, amp: 0 });
+          gt.spawn(x + 96 + 220 + gt.w / 2, {
+            gc: r.range(safeTop + gap / 2, safeBot - gap / 2),
+            gap,
+            amp: 0,
+          });
           width = 96 + 220 + gt.w;
         } else {
           const gap = Phaser.Math.Linear(310, 240, d);
           const gc1 = r.range(safeTop + gap / 2, safeBot - gap / 2);
-          const gc2 = gc1 < mid ? Math.min(safeBot - gap / 2, gc1 + gap * 1.1) : Math.max(safeTop + gap / 2, gc1 - gap * 1.1);
+          const gc2 =
+            gc1 < mid
+              ? Math.min(safeBot - gap / 2, gc1 + gap * 1.1)
+              : Math.max(safeTop + gap / 2, gc1 - gap * 1.1);
           const c = this.obtain("column");
           c.spawn(x + 96 + 260 + 42, { gap, gc1, gc2, lead: 0.85 });
           width = 96 + 260 + 84;
@@ -695,7 +872,11 @@ export class ObstacleManager {
         let top = r.chance(0.5);
         for (let i = 0; i < n; i++) {
           const o = this.obtain("tendril");
-          o.spawn(x + 44 + i * 240, { top, L: r.range(H * 0.22, H * 0.34), lead: 1.3 });
+          o.spawn(x + 44 + i * 240, {
+            top,
+            L: r.range(H * 0.22, H * 0.34),
+            lead: 1.3,
+          });
           top = !top;
         }
         width = 88 + (n - 1) * 240;
@@ -735,8 +916,16 @@ export class ObstacleManager {
         let top = r.chance(0.5);
         for (let i = 0; i < n; i++) {
           const o = this.obtain("eyebeam");
-          o.spawn(x + 30 + i * 280, { top, L: r.range(H * (n > 1 ? 0.28 : 0.3), H * (n > 1 ? 0.36 : 0.4)) });
-          this.coinLine(x + i * 280, x + 60 + i * 280, top ? H * 0.68 : H * 0.32, 2);
+          o.spawn(x + 30 + i * 280, {
+            top,
+            L: r.range(H * (n > 1 ? 0.28 : 0.3), H * (n > 1 ? 0.36 : 0.4)),
+          });
+          this.coinLine(
+            x + i * 280,
+            x + 60 + i * 280,
+            top ? H * 0.68 : H * 0.32,
+            2,
+          );
           top = !top;
         }
         width = 60 + (n - 1) * 280;
@@ -748,7 +937,10 @@ export class ObstacleManager {
         const t = this.obtain("tendril");
         t.spawn(x + 44, { top, L: r.range(H * 0.22, H * 0.3), lead: 1.3 });
         const e = this.obtain("eyebeam");
-        e.spawn(x + 88 + 240 + 30, { top: !top, L: r.range(H * 0.28, H * 0.36) });
+        e.spawn(x + 88 + 240 + 30, {
+          top: !top,
+          L: r.range(H * 0.28, H * 0.36),
+        });
         width = 88 + 240 + 60;
         break;
       }
@@ -756,9 +948,18 @@ export class ObstacleManager {
         // a Slammer, then an Eye Beam reaching from the side its opening was farther from
         const gc = r.range(safeTop + 220, safeBot - 220);
         const sl = this.obtain("slammer");
-        sl.spawn(x + sl.w / 2, { gc, open: Phaser.Math.Linear(500, 470, d), hold: r.range(1.4, 1.8), minGap: 200, phase: r.next() });
+        sl.spawn(x + sl.w / 2, {
+          gc,
+          open: Phaser.Math.Linear(500, 470, d),
+          hold: r.range(1.4, 1.8),
+          minGap: 200,
+          phase: r.next(),
+        });
         const e = this.obtain("eyebeam");
-        e.spawn(x + sl.w + 300 + 30, { top: gc > mid, L: r.range(H * 0.28, H * 0.34) });
+        e.spawn(x + sl.w + 300 + 30, {
+          top: gc > mid,
+          L: r.range(H * 0.28, H * 0.34),
+        });
         width = sl.w + 300 + 60;
         break;
       }
@@ -835,7 +1036,11 @@ export class ObstacleManager {
       }
       case "twister": {
         const o = this.obtain("twister");
-        o.spawn(x + 100, { top: r.chance(0.35), wander: r.range(25, 50), phase: r.next() });
+        o.spawn(x + 100, {
+          top: r.chance(0.35),
+          wander: r.range(25, 50),
+          phase: r.next(),
+        });
         width = 200;
         break;
       }
@@ -843,7 +1048,9 @@ export class ObstacleManager {
       case "mlaser": {
         const top = r.chance(0.5);
         const dx = r.range(H * 0.16, H * 0.24);
-        const ym = top ? r.range(H * 0.32, H * 0.5) : r.range(H * 0.5, H * 0.68);
+        const ym = top
+          ? r.range(H * 0.32, H * 0.5)
+          : r.range(H * 0.5, H * 0.68);
         const o = this.obtain("mlaser");
         o.spawn(x + dx + 30, { top, dx, ym, phase: r.next() });
         width = dx * 2 + 60;
@@ -874,7 +1081,11 @@ export class ObstacleManager {
       case "jelly": {
         const o = this.obtain("jelly");
         const y = r.range(safeTop, H * 0.55);
-        o.spawn(x + 40, { y, tl: r.range(H * 0.14, H * 0.22), phase: r.next() });
+        o.spawn(x + 40, {
+          y,
+          tl: r.range(H * 0.14, H * 0.22),
+          phase: r.next(),
+        });
         this.coinLine(x + 20, x + 60, y < H * 0.4 ? H * 0.72 : H * 0.25, 2);
         width = 80;
         break;
@@ -993,7 +1204,11 @@ export class ObstacleManager {
       }
       case "vbar": {
         const o = this.obtain("vbar");
-        o.spawn(x + 68, { top: r.chance(0.5), period: r.range(2.6, 3.4), phase: r.next() });
+        o.spawn(x + 68, {
+          top: r.chance(0.5),
+          period: r.range(2.6, 3.4),
+          phase: r.next(),
+        });
         width = 136;
         break;
       }
@@ -1014,14 +1229,23 @@ export class ObstacleManager {
     // coin flow: if the next coin chance would come too late to keep a combo going, lay a
     // short trail through the free space after this pattern, near the last coins' height
     const gapEnd = x + width + spacing * spacingMul;
-    if (gapEnd - this.lastCoinX > (this.scroll || 500) * COIN_FLOW.maxGapSeconds) {
+    if (
+      gapEnd - this.lastCoinX >
+      (this.scroll || 500) * COIN_FLOW.maxGapSeconds
+    ) {
       const y = Phaser.Math.Clamp(
-        Phaser.Math.Linear(this.lastCoinY, mid, COIN_FLOW.pullToMiddle) + r.range(-60, 60),
+        Phaser.Math.Linear(this.lastCoinY, mid, COIN_FLOW.pullToMiddle) +
+          r.range(-60, 60),
         safeTop + 40,
         safeBot - 40,
       );
       const sp = gapEnd - (x + width);
-      this.coinLine(x + width + sp * 0.3, x + width + sp * 0.7, y, COIN_FLOW.bridgeCoins);
+      this.coinLine(
+        x + width + sp * 0.3,
+        x + width + sp * 0.7,
+        y,
+        COIN_FLOW.bridgeCoins,
+      );
     }
     this.nextX = gapEnd;
   }
@@ -1029,7 +1253,8 @@ export class ObstacleManager {
   /** World-space x ranges of every hazard on screen (used to keep scenery out from behind them). */
   hazardBounds(out = []) {
     out.length = 0;
-    for (const o of this.active) if (o.kind === "obstacle") out.push([o.left, o.right]);
+    for (const o of this.active)
+      if (o.kind === "obstacle") out.push([o.left, o.right]);
     return out;
   }
 
@@ -1082,15 +1307,19 @@ export class ObstacleManager {
       const edge = this.rightEdge + 160;
       if (edge - this.lastCoinX > scroll * COIN_FLOW.maxGapSeconds * 0.75) {
         const y = Phaser.Math.Clamp(
-          Phaser.Math.Linear(this.lastCoinY, this.H / 2, COIN_FLOW.pullToMiddle) +
-            this.rng.range(-50, 50),
+          Phaser.Math.Linear(
+            this.lastCoinY,
+            this.H / 2,
+            COIN_FLOW.pullToMiddle,
+          ) + this.rng.range(-50, 50),
           190,
           this.H - 190,
         );
         this.coinLine(edge, edge + 120, y, COIN_FLOW.bridgeCoins);
       }
     } else {
-      while (this.nextX < this.rightEdge + 160) this.spawnPattern(meters, biomeId);
+      while (this.nextX < this.rightEdge + 160)
+        this.spawnPattern(meters, biomeId);
     }
 
     for (let i = this.active.length - 1; i >= 0; i--) {
@@ -1117,8 +1346,9 @@ export class ObstacleManager {
           // Mirror Realm: the twin (reflected across the horizon) can crash too
           if (twinY !== null) c = Math.min(c, o.clearance(px, twinY, r));
           if (c < o.minClear) o.minClear = c;
-          // RONIN's Fire Ward: warded hazard types are passed through (one event per pass)
-          if (c < 0 && this.ward?.includes(o.type)) {
+          // RONIN's Fire Ward: warded hazard types are passed through (one event per pass);
+          // SXE in the Glitch Realm: ward "all" passes through everything
+          if (c < 0 && (this.ward === "all" || this.ward?.includes(o.type))) {
             if (!o.inWard) ev.warded.push(o);
             o.inWard = true;
           } else {
@@ -1131,14 +1361,16 @@ export class ObstacleManager {
           o.centerSeen = true;
           if (o.kind === "obstacle" && o.yb > o.yt) {
             const half = (o.yb - o.yt) / 2;
-            if (Math.abs(py - (o.yt + half)) <= Math.max(22, half * 0.16)) ev.perfect.push(o);
+            if (Math.abs(py - (o.yt + half)) <= Math.max(22, half * 0.16))
+              ev.perfect.push(o);
           }
         }
         if (!o.passed && o.right < px - r) {
           o.passed = true;
           if (o.kind === "obstacle") {
             ev.passed.push(o);
-            if (o.minClear > 0 && o.minClear < NEAR_MISS.threshold) ev.near.push(o);
+            if (o.minClear > 0 && o.minClear < NEAR_MISS.threshold)
+              ev.near.push(o);
           }
         }
       }
@@ -1167,8 +1399,12 @@ export class ObstacleManager {
         }
         if (d2 < (r + 22) ** 2) {
           ev.coins++;
-          this.fx.burst("star", c.x, c.y, 6, 0xffd23f, { speed: { min: 60, max: 240 } });
-          this.fx.burst("pixel", c.x, c.y, 5, 0xfff1a0, { speed: { min: 120, max: 320 } });
+          this.fx.burst("star", c.x, c.y, 6, 0xffd23f, {
+            speed: { min: 60, max: 240 },
+          });
+          this.fx.burst("pixel", c.x, c.y, 5, 0xfff1a0, {
+            speed: { min: 120, max: 320 },
+          });
           c.setActive(false).setVisible(false);
           c.halo.setVisible(false);
           continue;

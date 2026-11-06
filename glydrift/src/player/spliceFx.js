@@ -1,4 +1,4 @@
-// SPLICE, the black peregrine falcon. Everything here is visual: his hitbox is the standard
+// SXE (id "splice"), the black peregrine falcon. Everything here is visual: his hitbox is the standard
 // one (Player.radius) and his only perk, +25% speed, lives in his def (characterDefs.js).
 //   flight  a sharp stroke (wings up, then driven down), then he tucks into a dive between
 //           flaps; after a while without flapping he glides, wings swept back like a stoop.

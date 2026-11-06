@@ -3,7 +3,14 @@
 import Phaser from "phaser";
 import { BIOMES, blendPalette, lerpColor } from "../biomes/biomes.js";
 import { Course } from "../biomes/course.js";
-import { fitCamera, NEAR_MISS, PHYSICS, speedForMeters, VIEW, WORLD } from "../config.js";
+import {
+  fitCamera,
+  NEAR_MISS,
+  PHYSICS,
+  speedForMeters,
+  VIEW,
+  WORLD,
+} from "../config.js";
 import { ComboMeter, TIER_COLORS } from "../effects/ComboMeter.js";
 import { Effects } from "../effects/Effects.js";
 import { ScreenFlash } from "../effects/ScreenFlash.js";
@@ -12,7 +19,13 @@ import { SHIFT_BLEND, SHIFT_EVERY, SHIFTS } from "../pixel/colorShift.js";
 import { darknessTexture } from "../pixel/hazardArt.js";
 import { pixelPerfectZoom, S } from "../pixel/px.js";
 import { Terrain } from "../pixel/Terrain.js";
-import { biomeArtReady, pumpBiomeArt, queueBiomeArt, THEMES, themeFor } from "../pixel/themes.js";
+import {
+  biomeArtReady,
+  pumpBiomeArt,
+  queueBiomeArt,
+  THEMES,
+  themeFor,
+} from "../pixel/themes.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { Player } from "../player/Player.js";
@@ -52,7 +65,8 @@ const FORCE_LUCKY = TEST.lucky;
 // ?god in the URL makes the player invincible (handy for testing / capturing screenshots)
 let DEBUG_GOD = TEST.god;
 // test builds only: lets an automated test end a long god-mode run
-if (TEST.on && typeof window !== "undefined") window.__glyGod = (on) => (DEBUG_GOD = !!on);
+if (TEST.on && typeof window !== "undefined")
+  window.__glyGod = (on) => (DEBUG_GOD = !!on);
 const PAL_KEYS = [
   "sky0",
   "sky1",
@@ -110,7 +124,9 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.roundPixels = true;
     // the walls cover the view at the camera's widest (the gentle zoom-out at top speed)
     this.terrain.setView(this.pxZoomLevel * (1 - CAMERA_FEEL.zoomOut));
-    this.terrain.prebuild(Object.values(THEMES).filter((t) => biomeArtReady(t.id)));
+    this.terrain.prebuild(
+      Object.values(THEMES).filter((t) => biomeArtReady(t.id)),
+    );
 
     this.pal = {};
     this.fromPal = null;
@@ -138,17 +154,26 @@ export class GameScene extends Phaser.Scene {
     this.tearG = this.add.graphics().setDepth(57); // dimension rift: screen-tear transition
     this.comboMeter = new ComboMeter(this, 32);
     // Mirror Realm: a ghostly twin flies upside down across the glowing horizon
-    this.twin = new CharacterRig(this, this.charDef, null, { x: 0, y: 0, depth: 29 });
+    this.twin = new CharacterRig(this, this.charDef, null, {
+      x: 0,
+      y: 0,
+      depth: 29,
+    });
     this.twin.trailOverride = [0xffffff, 0xd8c0ff, 0x9a3aff, 0x4a1a8a];
     this.twin.sprite.setTint(0xd8c0ff);
     this.twin.setVisible(false);
-    this.horizon = this.add.graphics().setDepth(2).setBlendMode(Phaser.BlendModes.ADD);
+    this.horizon = this.add
+      .graphics()
+      .setDepth(2)
+      .setBlendMode(Phaser.BlendModes.ADD);
     this.shiftCol = SHIFTS.void[0];
     this.beatClock = 0;
     const DS = 1024;
-    if (!this.textures.exists("abyss_dark")) darknessTexture(this, "abyss_dark", DS, DS, DARK_R);
+    if (!this.textures.exists("abyss_dark"))
+      darknessTexture(this, "abyss_dark", DS, DS, DARK_R);
     this.dark = [this.add.image(0, 0, "abyss_dark")];
-    for (let i = 0; i < 4; i++) this.dark.push(this.add.rectangle(0, 0, 10, 10, 0x020004));
+    for (let i = 0; i < 4; i++)
+      this.dark.push(this.add.rectangle(0, 0, 10, 10, 0x020004));
     for (const d of this.dark) d.setDepth(20).setAlpha(0).setVisible(false);
     this.darkSize = DS;
     this.desat = null;
@@ -156,7 +181,10 @@ export class GameScene extends Phaser.Scene {
     this.input.on("pointerdown", (p) => this.onTap(p));
     // keyboard: Space / W / Up flap (held keys don't auto-repeat flaps); Esc / P pause (Hud)
     for (const k of ["SPACE", "W", "UP"])
-      this.input.keyboard?.on(`keydown-${k}`, (e) => !e?.repeat && this.onTap());
+      this.input.keyboard?.on(
+        `keydown-${k}`,
+        (e) => !e?.repeat && this.onTap(),
+      );
 
     this.game.events.on("hidden", this.onHidden, this);
     // the wind bed fades out whenever the run isn't on screen and moving
@@ -167,7 +195,8 @@ export class GameScene extends Phaser.Scene {
         Sfx.wind(0);
         Sfx.auraHum(0);
       };
-      for (const e of ["pause", "sleep", "shutdown"]) this.events.on(e, calmWind);
+      for (const e of ["pause", "sleep", "shutdown"])
+        this.events.on(e, calmWind);
     }
     this.events.once("shutdown", () => {
       this.game.events.off("hidden", this.onHidden, this);
@@ -210,7 +239,9 @@ export class GameScene extends Phaser.Scene {
     this.nextMilestone = 100;
     this.sparkleT = 0;
     this.comboMeter.reset();
-    this.lucky = this.mode !== "daily" && (FORCE_LUCKY || Math.random() < REWARDS.luckyChance);
+    this.lucky =
+      this.mode !== "daily" &&
+      (FORCE_LUCKY || Math.random() < REWARDS.luckyChance);
     this.player.rig.trailOverride = this.lucky ? REWARDS.luckyTrail : null;
     this.lastSpeedTier = 0;
     this.biomeIndex = 0;
@@ -263,10 +294,14 @@ export class GameScene extends Phaser.Scene {
     this.zoneId = null;
     this.zoneLastM = undefined;
 
-    const seed = this.mode === "daily" ? dailySeed() : (Math.random() * 2 ** 32) >>> 0;
+    const seed =
+      this.mode === "daily" ? dailySeed() : (Math.random() * 2 ** 32) >>> 0;
     // retry grace: after a crash the first obstacle starts a little farther away, a breath to
     // settle back in (the daily keeps its fixed course)
-    this.obstacles.reset(seed, this.isRetry && this.mode !== "daily" ? HAZARD.retryLead : 0);
+    this.obstacles.reset(
+      seed,
+      this.isRetry && this.mode !== "daily" ? HAZARD.retryLead : 0,
+    );
     // the run's course: classic biomes, then random dimensions behind rifts
     const courseRng = new RNG((seed ^ 0x9e3779b9) >>> 0);
     this.course = new Course(() => courseRng.next(), TEST.dimension);
@@ -297,7 +332,8 @@ export class GameScene extends Phaser.Scene {
   setupBest() {
     const s = Save.data;
     this.bestScore = s.best;
-    if (this.mode === "daily") this.bestScore = s.daily.date === todayKey() ? s.daily.best : 0;
+    if (this.mode === "daily")
+      this.bestScore = s.daily.date === todayKey() ? s.daily.best : 0;
   }
 
   startRun() {
@@ -311,7 +347,11 @@ export class GameScene extends Phaser.Scene {
       Sfx.lucky();
       Haptics.strong();
       this.time.delayedCall(250, () =>
-        this.hudReady?.hudBanner?.("LUCKY RUN!", 0xffd23f, "Golden trail · double coins"),
+        this.hudReady?.hudBanner?.(
+          "LUCKY RUN!",
+          0xffd23f,
+          "Golden trail · double coins",
+        ),
       );
     }
     this.player.flap();
@@ -328,7 +368,12 @@ export class GameScene extends Phaser.Scene {
       // a quick second tap fires the boost dash (heroes with `boost`, when it's charged)
       const B = this.charDef.boost;
       const now = this.time.now / 1000;
-      if (B && now - this.lastTapAt < B.window && this.boostCd <= 0 && this.boostT <= 0) {
+      if (
+        B &&
+        now - this.lastTapAt < B.window &&
+        this.boostCd <= 0 &&
+        this.boostT <= 0
+      ) {
         this.lastTapAt = -9;
         this.startBoost();
         return;
@@ -357,7 +402,8 @@ export class GameScene extends Phaser.Scene {
     this.run.nearMiss++;
     this.player.rig.flex({ sparkle: true }); // YARMS: a quick flex (no-op for other heroes)
     this.player.rig.onNear(); // animals: berries pop, croaks, tail fans…
-    if (this.zoneId === "abyss") this.run.abyssNear = (this.run.abyssNear || 0) + 1;
+    if (this.zoneId === "abyss")
+      this.run.abyssNear = (this.run.abyssNear || 0) + 1;
     this.addChain();
     const pts = NEAR_MISS.bonus * this.mult;
     this.bonus += pts;
@@ -371,9 +417,14 @@ export class GameScene extends Phaser.Scene {
       "#ffffff",
       40,
     );
-    this.fx.burst("star", p.x, p.y, 10, 0xffffff, { speed: { min: 120, max: 300 } });
+    this.fx.burst("star", p.x, p.y, 10, 0xffffff, {
+      speed: { min: 120, max: 300 },
+    });
     this.fx.ring(p.x, p.y, 0xffffff, { scale: 0.9, duration: 300 });
-    this.flashFx.flash(this.charDef.color, { ...FLASH.nearMissEdge, edge: true });
+    this.flashFx.flash(this.charDef.color, {
+      ...FLASH.nearMissEdge,
+      edge: true,
+    });
     Sfx.near();
     this.hudReady?.onNearMiss?.(pts, this.mult);
   }
@@ -411,7 +462,9 @@ export class GameScene extends Phaser.Scene {
     this.bonus += pts;
     const p = this.player;
     this.popNear(p.x + 30, p.y - 92, `PERFECT! +${pts}`, "#fff1a0", 34);
-    this.fx.burst("star", p.x, p.y, 8, 0xfff1a0, { speed: { min: 100, max: 280 } });
+    this.fx.burst("star", p.x, p.y, 8, 0xfff1a0, {
+      speed: { min: 100, max: 280 },
+    });
     this.flashFx.flash(0xfff4c0, FLASH.perfect);
     Sfx.perfect();
     Haptics.light();
@@ -429,7 +482,8 @@ export class GameScene extends Phaser.Scene {
       // HUD → screen → world
       const hc = this.hud.cameras.main;
       const gc = this.cameras.main;
-      const toWorld = (hy) => ((hy - hc.worldView.y) * hc.zoom) / gc.zoom + gc.worldView.y;
+      const toWorld = (hy) =>
+        ((hy - hc.worldView.y) * hc.zoom) / gc.zoom + gc.worldView.y;
       const b0 = toWorld(band.y0);
       const b1 = toWorld(band.y1);
       const h = sz / 2 + 18;
@@ -479,11 +533,28 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (hud?.onDistance) hud.onDistance(m, big);
-    else this.fx.floatText(p.x + 20, p.y - 130, `${m}m!`, "#ffd23f", big > 1 ? 60 : 50);
-    this.fx.burst("star", p.x, p.y, big > 1 ? 36 : 24, 0xffd23f, { speed: { min: 200, max: 640 } });
-    this.fx.burst("pixel", p.x, p.y, 16, 0xffffff, { speed: { min: 260, max: 700 } });
-    this.fx.ring(p.x, p.y, 0xffd23f, { scale: big > 1 ? 2.4 : 1.8, duration: 600 });
-    this.flashFx.flash(0xffd23f, big > 1 ? FLASH.milestoneBig : FLASH.milestone);
+    else
+      this.fx.floatText(
+        p.x + 20,
+        p.y - 130,
+        `${m}m!`,
+        "#ffd23f",
+        big > 1 ? 60 : 50,
+      );
+    this.fx.burst("star", p.x, p.y, big > 1 ? 36 : 24, 0xffd23f, {
+      speed: { min: 200, max: 640 },
+    });
+    this.fx.burst("pixel", p.x, p.y, 16, 0xffffff, {
+      speed: { min: 260, max: 700 },
+    });
+    this.fx.ring(p.x, p.y, 0xffd23f, {
+      scale: big > 1 ? 2.4 : 1.8,
+      duration: 600,
+    });
+    this.flashFx.flash(
+      0xffd23f,
+      big > 1 ? FLASH.milestoneBig : FLASH.milestone,
+    );
     Sfx.milestone(big);
     Haptics.strong();
   }
@@ -494,7 +565,9 @@ export class GameScene extends Phaser.Scene {
     this.run.bonusCoins += BIOME_COINS;
     const p = this.player;
     this.popNear(p.x + 30, p.y - 60, `+${BIOME_COINS}`, "#ffd23f", 40);
-    this.fx.burst("star", p.x, p.y, 16, 0xffd23f, { speed: { min: 160, max: 460 } });
+    this.fx.burst("star", p.x, p.y, 16, 0xffd23f, {
+      speed: { min: 160, max: 460 },
+    });
     Sfx.reward();
     Haptics.light();
     this.hudReady?.onCoin?.(this.run.coins);
@@ -506,8 +579,12 @@ export class GameScene extends Phaser.Scene {
     Sfx.portal();
     const col = { flip: 0xff4fd8, restore: 0x39ff88, mini: 0xffd23f }[o.mode];
     this.flashFx.flash(0xffffff, FLASH.portal);
-    this.fx.burst("pixel", p.x, p.y, 22, col, { speed: { min: 200, max: 560 } });
-    this.fx.burst("star", p.x, p.y, 10, 0xffffff, { speed: { min: 120, max: 380 } });
+    this.fx.burst("pixel", p.x, p.y, 22, col, {
+      speed: { min: 200, max: 560 },
+    });
+    this.fx.burst("star", p.x, p.y, 10, 0xffffff, {
+      speed: { min: 120, max: 380 },
+    });
     this.fx.ring(o.x, o.y, col, { scale: 1.4, duration: 500 });
     this.fx.burst("star", p.x, p.y, 16, col);
     if (o.mode === "flip") {
@@ -546,7 +623,11 @@ export class GameScene extends Phaser.Scene {
     }
     const names = used.map((id) => getBoost(id).name).join(" · ");
     this.time.delayedCall(this.lucky ? 1600 : 250, () =>
-      this.hudReady?.hudBanner?.("BOOSTED RUN", 0x39ff88, `${names} · not ranked`),
+      this.hudReady?.hudBanner?.(
+        "BOOSTED RUN",
+        0x39ff88,
+        `${names} · not ranked`,
+      ),
     );
   }
 
@@ -561,7 +642,9 @@ export class GameScene extends Phaser.Scene {
     Haptics.strong();
     this.flashFx.flash(0x39ff88, FLASH.perfect);
     this.fx.ring(p.x, p.y, 0x39ff88, { scale: 2, duration: 600 });
-    this.fx.burst("star", p.x, p.y, 24, 0x39ff88, { speed: { min: 150, max: 450 } });
+    this.fx.burst("star", p.x, p.y, 24, 0x39ff88, {
+      speed: { min: 150, max: 450 },
+    });
     this.popNear(p.x + 40, p.y - 70, "SECOND CHANCE!", "#39ff88", 44);
     p.rig.onRevive(); // Prismara shatters into light and reforms
   }
@@ -602,20 +685,30 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.boostCd > 0) {
       this.boostCd -= dt;
-      if (this.boostCd <= 0) this.popNear(p.x + 40, p.y - 60, "BOOST READY", "#ffd23f", 28);
+      if (this.boostCd <= 0)
+        this.popNear(p.x + 40, p.y - 60, "BOOST READY", "#ffd23f", 28);
     }
   }
 
   /** RONIN passes through a Solar Storm fire hazard: crimson shield flash + hiss (logged). */
   fireWardBlock(o) {
     const p = this.player;
+    const glitch = this.obstacles.ward === "all"; // SXE phasing through in the Glitch Realm
     this.run.wardBlocks = (this.run.wardBlocks || 0) + 1;
-    this.fx.ring(p.x, p.y, 0xff2a3d, { scale: 1.3, duration: 320 });
-    this.fx.burst("spark", p.x, p.y, 10, 0xff6a3a, { speed: { min: 120, max: 320 } });
-    this.flashFx.flash(0xff2a3d, { ...FLASH.nearMissEdge, edge: true });
+    this.fx.ring(p.x, p.y, glitch ? 0x39ff88 : 0xff2a3d, {
+      scale: 1.3,
+      duration: 320,
+    });
+    this.fx.burst("spark", p.x, p.y, 10, glitch ? 0x6aff9a : 0xff6a3a, {
+      speed: { min: 120, max: 320 },
+    });
+    this.flashFx.flash(glitch ? 0x39ff88 : 0xff2a3d, {
+      ...FLASH.nearMissEdge,
+      edge: true,
+    });
     this.wardFlashT = 0.25;
     Sfx.hiss();
-    Analytics.log("fire_ward_blocked", {
+    Analytics.log(glitch ? "glitch_proof_phased" : "fire_ward_blocked", {
       hazard: o.type,
       m: Math.round(this.meters),
       blocks: this.run.wardBlocks,
@@ -632,7 +725,13 @@ export class GameScene extends Phaser.Scene {
     this.run.killedIn = this.zoneId;
     const hints = this.player.die();
     if (this.mirror) {
-      this.fx.burst("shard", this.player.x, this.H - this.player.y, 20, 0xc87aff);
+      this.fx.burst(
+        "shard",
+        this.player.x,
+        this.H - this.player.y,
+        20,
+        0xc87aff,
+      );
       this.twin.setVisible(false);
     }
     this.comboMeter.setTier(1); // the multiplier label disappears with the bird
@@ -642,7 +741,11 @@ export class GameScene extends Phaser.Scene {
     Music.deathSweep();
     Haptics.strong();
     this.cameras.main.shake(320, hints.shake);
-    this.flashFx.flash(0xffffff, { ...FLASH.death, peak: hints.flash, priority: true });
+    this.flashFx.flash(0xffffff, {
+      ...FLASH.death,
+      peak: hints.flash,
+      priority: true,
+    });
     this.slowT = HAZARD.deathSlow; // a short slow-mo beat on the crash (~0.3 s)
     this.run.distance = Math.floor(this.meters);
     this.run.score = this.score;
@@ -727,7 +830,10 @@ export class GameScene extends Phaser.Scene {
       );
       // some heroes fly faster than the rest (WALLRUNNER), and his boost multiplies it again
       this.speed =
-        speedForMeters(this.meters) * this.speedMul * (this.charDef.speed ?? 1) * this.boostMul;
+        speedForMeters(this.meters) *
+        this.speedMul *
+        (this.charDef.speed ?? 1) *
+        this.boostMul;
       this.scroll = this.speed;
     } else if (this.state === "ready") {
       this.scroll = WORLD.baseSpeed * 0.55;
@@ -740,18 +846,30 @@ export class GameScene extends Phaser.Scene {
       this.meters = this.distance / WORLD.pxPerMeter;
     }
     this.clock += dt;
-    const speedNorm = Phaser.Math.Clamp((this.speed - WORLD.baseSpeed) / WORLD.speedGain, 0, 1);
+    const speedNorm = Phaser.Math.Clamp(
+      (this.speed - WORLD.baseSpeed) / WORLD.speedGain,
+      0,
+      1,
+    );
     this.speedNorm = speedNorm;
     // wind builds with speed while flying; it fades out when paused, dead or on another screen
-    Sfx.wind(this.state === "playing" && !this.sys.isPaused() ? 0.25 + speedNorm * 0.75 : 0);
+    Sfx.wind(
+      this.state === "playing" && !this.sys.isPaused()
+        ? 0.25 + speedNorm * 0.75
+        : 0,
+    );
     // MATTOE: the aura's quiet low hum while gliding (swells with speed)
     Sfx.auraHum(
-      this.charDef.id === "mattoe" && this.state === "playing" && !this.sys.isPaused()
+      this.charDef.id === "mattoe" &&
+        this.state === "playing" &&
+        !this.sys.isPaused()
         ? 0.35 + speedNorm * 0.65
         : 0,
     );
     // music layers follow speed (more drums & synths as you go faster)
-    Music.setIntensity(this.state === "playing" ? 0.15 + speedNorm * 0.85 : 0.1);
+    Music.setIntensity(
+      this.state === "playing" ? 0.15 + speedNorm * 0.85 : 0.1,
+    );
 
     // biome palette from the run's course (smooth blend back to Neon Void after a restart)
     const st = this.course.stateAt(this.meters);
@@ -765,11 +883,14 @@ export class GameScene extends Phaser.Scene {
     // stop spawning a little before The Calm so it starts with an empty screen
     const preCalm = seg0.id === "glitch" && local0 > len0 - CALM_M - 35;
     this.calm = calm && playing;
-    this.calmK = calm ? Phaser.Math.Clamp((local0 - (len0 - CALM_M)) / CALM_M, 0, 1) : 0;
+    this.calmK = calm
+      ? Phaser.Math.Clamp((local0 - (len0 - CALM_M)) / CALM_M, 0, 1)
+      : 0;
     blendPalette(bs, this.pal);
     if (this.palMix > 0 && this.fromPal) {
       this.palMix = Math.max(0, this.palMix - rawDt * 1.4);
-      for (const k of PAL_KEYS) this.pal[k] = lerpColor(this.pal[k], this.fromPal[k], this.palMix);
+      for (const k of PAL_KEYS)
+        this.pal[k] = lerpColor(this.pal[k], this.fromPal[k], this.palMix);
     }
     if (playing && dom.i !== this.biomeIndex) {
       this.biomeIndex = dom.i;
@@ -786,7 +907,10 @@ export class GameScene extends Phaser.Scene {
     if (this.blackoutT <= 0 && playing && dom.i !== this.announcedBiome) {
       this.announcedBiome = dom.i;
       this.run.biome = dom.biome;
-      Analytics.log("biome_reached", { biome: dom.id, m: Math.round(this.meters) });
+      Analytics.log("biome_reached", {
+        biome: dom.id,
+        m: Math.round(this.meters),
+      });
       if (dom.id !== "abyss") {
         if (dom.i > 0) {
           Sfx.biome();
@@ -795,7 +919,10 @@ export class GameScene extends Phaser.Scene {
           this.hudReady?.onBiome?.(dom.biome);
           if (dom.dimension) this.enterDimension(dom);
           this.biomeBonus();
-          this.flashFx.flash(BIOMES[dom.biome].neon, { ...FLASH.biome, priority: true });
+          this.flashFx.flash(BIOMES[dom.biome].neon, {
+            ...FLASH.biome,
+            priority: true,
+          });
         } else if (dom.dimension) {
           // test builds can start straight inside a dimension (?dimension=…)
           Music.play(dom.id, { startBar: 8, immediate: true });
@@ -817,15 +944,23 @@ export class GameScene extends Phaser.Scene {
     // noticed as a move) and a slight vertical lead toward where the hero is heading, smoothed.
     // Purely a view change: the playfield, hitboxes and spawn points are untouched.
     const cam = this.cameras.main;
-    const zTarget = this.pxZoomLevel * (1 - CAMERA_FEEL.zoomOut * (playing ? speedNorm : 0));
-    this.zoomLevel += (zTarget - this.zoomLevel) * Math.min(1, rawDt * CAMERA_FEEL.zoomEase);
+    const zTarget =
+      this.pxZoomLevel * (1 - CAMERA_FEEL.zoomOut * (playing ? speedNorm : 0));
+    this.zoomLevel +=
+      (zTarget - this.zoomLevel) * Math.min(1, rawDt * CAMERA_FEEL.zoomEase);
     cam.setZoom(VIEW.Z * this.zoomLevel);
     if (this.camBaseY === undefined) this.camBaseY = cam.scrollY;
     const pv = this.player.alive && playing ? this.player.vy : 0;
-    const leadTarget = Phaser.Math.Clamp(pv * CAMERA_FEEL.lead, -CAMERA_FEEL.leadMax, CAMERA_FEEL.leadMax);
-    this.camLead = (this.camLead || 0) + (leadTarget - (this.camLead || 0)) * Math.min(1, rawDt * CAMERA_FEEL.leadEase);
+    const leadTarget = Phaser.Math.Clamp(
+      pv * CAMERA_FEEL.lead,
+      -CAMERA_FEEL.leadMax,
+      CAMERA_FEEL.leadMax,
+    );
+    this.camLead =
+      (this.camLead || 0) +
+      (leadTarget - (this.camLead || 0)) *
+        Math.min(1, rawDt * CAMERA_FEEL.leadEase);
     cam.scrollY = this.camBaseY + this.camLead;
-
 
     // world: drive the shared backdrop (hazard x-ranges in screen space keep scenery out
     // from behind hazards)
@@ -854,22 +989,36 @@ export class GameScene extends Phaser.Scene {
     }
     this.zoneLastM = this.meters;
     // RONIN's Fire Ward: only while the run is in Solar Storm (off the moment he leaves)
-    const ward = this.charDef.perks?.fireWard && biomeId === "solar" && playing;
-    this.obstacles.ward = ward ? this.charDef.perks.fireWard : null;
+    const fireWard =
+      this.charDef.perks?.fireWard && biomeId === "solar" && playing;
+    // SXE: indestructible for as long as the run is in the Glitch Realm
+    this.glitchProof = !!(
+      this.charDef.perks?.glitchProof &&
+      biomeId === "glitch" &&
+      playing
+    );
+    const ward = fireWard || this.glitchProof;
+    this.obstacles.ward = this.glitchProof
+      ? "all"
+      : fireWard
+        ? this.charDef.perks.fireWard
+        : null;
     if (ward && !this.wardAura) {
       this.wardAura = this.add
         .image(0, 0, "glow")
         .setBlendMode(Phaser.BlendModes.ADD)
-        .setTint(0xff2a3d)
         .setDepth(29);
     }
+    if (ward) this.wardAura.setTint(this.glitchProof ? 0x39ff88 : 0xff2a3d);
     if (this.wardAura) {
       const p = this.player;
       this.wardFlashT = Math.max(0, (this.wardFlashT || 0) - rawDt);
       this.wardAura
         .setVisible(!!ward && !p.rig.dead)
         .setPosition(p.x, p.y)
-        .setScale(1.25 + Math.sin(this.time.now / 260) * 0.06 + this.wardFlashT * 1.6)
+        .setScale(
+          1.25 + Math.sin(this.time.now / 260) * 0.06 + this.wardFlashT * 1.6,
+        )
         .setAlpha(0.32 + this.wardFlashT * 1.8);
     }
     this.terrain.setTheme(themeFor(biomeId), dom.dimension);
@@ -934,7 +1083,8 @@ export class GameScene extends Phaser.Scene {
       twinY: this.mirror ? this.H - p.y : null,
     });
     // Chrono time zones ease in/out; the twin, horizon and prism trail follow the bird
-    this.zoneScale += ((playing ? ev.timeScale : 1) - this.zoneScale) * Math.min(1, rawDt * 5);
+    this.zoneScale +=
+      ((playing ? ev.timeScale : 1) - this.zoneScale) * Math.min(1, rawDt * 5);
     this.updateDimensionFx(rawDt, dom);
 
     if (playing) {
@@ -970,7 +1120,8 @@ export class GameScene extends Phaser.Scene {
         this.bonus += pts;
         this.coinPts += pts;
         // coins in quick succession climb a scale
-        this.coinStep = this.coinStepT > 0 ? Math.min(12, this.coinStep + 1) : 0;
+        this.coinStep =
+          this.coinStepT > 0 ? Math.min(12, this.coinStep + 1) : 0;
         this.coinStepT = 0.8;
         Sfx.coin(this.coinStep);
         Haptics.light();
@@ -984,7 +1135,24 @@ export class GameScene extends Phaser.Scene {
       for (const o of ev.warded) this.fireWardBlock(o);
       const r = p.radius;
       const shielded = this.boostT > 0 || this.boostGrace > 0; // boosting smashes through
-      if ((ev.hit && !shielded) || p.y < -r * 0.6 || p.y > this.H + r * 0.6) this.die();
+      if (this.glitchProof) {
+        // SXE in the Glitch Realm: the screen edges hold him instead of ending the run
+        const top = r;
+        const bottom = this.H - r;
+        if (p.y < top) {
+          p.y = top;
+          p.vy = Math.max(0, p.vy);
+        }
+        if (p.y > bottom) {
+          p.y = bottom;
+          p.vy = Math.min(0, p.vy);
+        }
+      } else if (
+        (ev.hit && !shielded) ||
+        p.y < -r * 0.6 ||
+        p.y > this.H + r * 0.6
+      )
+        this.die();
 
       // combo window runs on real time (slow-mo doesn't stretch it)
       if (this.chainT > 0) {
@@ -992,11 +1160,16 @@ export class GameScene extends Phaser.Scene {
         if (this.chainT <= 0) {
           this.chain = 0;
           this.mult = 1;
-    if (this.player?.rig) this.player.rig.comboTier = 1; // Combo Flame trail cools down
+          if (this.player?.rig) this.player.rig.comboTier = 1; // Combo Flame trail cools down
           this.comboMeter.setTier(1);
         }
       }
-      this.comboMeter.update(rawDt, p.x, p.y, Math.max(0, this.chainT / COMBO_WINDOW));
+      this.comboMeter.update(
+        rawDt,
+        p.x,
+        p.y,
+        Math.max(0, this.chainT / COMBO_WINDOW),
+      );
       if (this.coinStepT > 0) this.coinStepT -= rawDt;
       while (this.meters >= this.nextMilestone) {
         this.milestone(this.nextMilestone);
@@ -1006,7 +1179,9 @@ export class GameScene extends Phaser.Scene {
         this.sparkleT -= rawDt;
         if (this.sparkleT <= 0) {
           this.sparkleT = 0.12;
-          this.fx.burst("star", p.x - 18, p.y + 4, 1, 0xffd23f, { speed: { min: 20, max: 80 } });
+          this.fx.burst("star", p.x - 18, p.y + 4, 1, 0xffd23f, {
+            speed: { min: 20, max: 80 },
+          });
         }
       }
       this.run.distance = Math.floor(this.meters);
@@ -1022,20 +1197,28 @@ export class GameScene extends Phaser.Scene {
         this.hudReady?.onNewBest?.();
         this.player.rig.flex({ shine: true, big: true }); // YARMS: big flex + gold shine
         this.player.rig.onBest(); // 손주원: roar + a lightning bolt behind it
-        if (this.charDef.id === "sonjuwon") this.flashFx.flash(0xbfe8ff, FLASH.newBest);
+        if (this.charDef.id === "sonjuwon")
+          this.flashFx.flash(0xbfe8ff, FLASH.newBest);
         if (this.hudReady?.onCenterBest) this.hudReady.onCenterBest();
         else this.fx.floatText(p.x + 20, p.y - 120, "NEW BEST!", "#ffd23f", 50);
         Sfx.newBest();
         Haptics.strong();
-        this.fx.burst("star", p.x, p.y, 24, 0xffd23f, { speed: { min: 150, max: 420 } });
-        this.fx.burst("pixel", p.x, p.y, 18, 0xfff1a0, { speed: { min: 240, max: 620 } });
+        this.fx.burst("star", p.x, p.y, 24, 0xffd23f, {
+          speed: { min: 150, max: 420 },
+        });
+        this.fx.burst("pixel", p.x, p.y, 18, 0xfff1a0, {
+          speed: { min: 240, max: 620 },
+        });
         this.fx.ring(p.x, p.y, 0xffd23f, { scale: 1.6, duration: 520 });
         this.flashFx.flash(0xffd23f, FLASH.newBest);
       }
       this.missionCheckT -= rawDt;
       if (this.missionCheckT <= 0) {
         this.missionCheckT = 0.4;
-        for (const m of Progression.liveMissionCheck(this.run, this.missionAnnounced))
+        for (const m of Progression.liveMissionCheck(
+          this.run,
+          this.missionAnnounced,
+        ))
           this.hudReady?.onMission?.(m);
       }
     }
@@ -1073,7 +1256,9 @@ export class GameScene extends Phaser.Scene {
     // Prism Rift paints the trail in rainbow light (a Lucky Run keeps its gold)
     if (!this.lucky)
       p.rig.trailOverride =
-        dom.id === "prism" ? [0xffffff, 0xff9ad8, 0xfff09a, 0x9ae8ff, 0x9aff9a] : null;
+        dom.id === "prism"
+          ? [0xffffff, 0xff9ad8, 0xfff09a, 0x9ae8ff, 0x9aff9a]
+          : null;
     if (dom.id === "chrono") Music.setTempoScale(this.zoneScale);
     const g = this.horizon;
     g.clear();
@@ -1120,7 +1305,10 @@ export class GameScene extends Phaser.Scene {
       const ahead = (seg0.end - this.meters) * PX;
       if (ahead < this.W * 1.6) {
         const to = this.course.next(seg0);
-        this.rift = this.add.graphics().setDepth(19).setBlendMode(Phaser.BlendModes.ADD);
+        this.rift = this.add
+          .graphics()
+          .setDepth(19)
+          .setBlendMode(Phaser.BlendModes.ADD);
         this.rift.endM = seg0.end;
         this.rift.col = BIOMES[to.biome].neon;
         Sfx.riftOpen();
@@ -1146,13 +1334,19 @@ export class GameScene extends Phaser.Scene {
       r.fillStyle(c, a * (0.85 + 0.15 * Math.sin(t * 17)));
       for (let y = -60; y < H + 60; y += 16) {
         const j =
-          Math.round((Math.sin(y * 0.05 + t * 6) * 10 + Math.sin(y * 0.13 - t * 9) * 6) / S) * S;
-        const ww = Math.round((w * (0.75 + 0.25 * Math.sin(y * 0.09 + t * 4))) / S) * S;
+          Math.round(
+            (Math.sin(y * 0.05 + t * 6) * 10 + Math.sin(y * 0.13 - t * 9) * 6) /
+              S,
+          ) * S;
+        const ww =
+          Math.round((w * (0.75 + 0.25 * Math.sin(y * 0.09 + t * 4))) / S) * S;
         r.fillRect(Math.round((x + j - ww / 2) / S) * S, y, ww, 16);
       }
     }
     if (Math.random() < 0.5)
-      this.fx.burst("pixel", x, Math.random() * H, 2, r.col, { speed: { min: 40, max: 160 } });
+      this.fx.burst("pixel", x, Math.random() * H, 2, r.col, {
+        speed: { min: 40, max: 160 },
+      });
   }
 
   /** Screen tear while entering a dimension: offset light bands + jagged cracks, ~0.45 s. */
@@ -1192,7 +1386,8 @@ export class GameScene extends Phaser.Scene {
   /** Backdrop colour drifts through the biome's related colours every SHIFT_EVERY m. */
   updateColorShift(rawDt, biomeId, local) {
     const list = SHIFTS[biomeId] || SHIFTS.void;
-    const target = list[Math.floor(Math.max(0, local) / SHIFT_EVERY) % list.length];
+    const target =
+      list[Math.floor(Math.max(0, local) / SHIFT_EVERY) % list.length];
     if (target !== this.shiftTo) {
       this.shiftFrom = this.shiftCol;
       this.shiftTo = target;
@@ -1213,11 +1408,13 @@ export class GameScene extends Phaser.Scene {
     let target = 1;
     const id = seg.id;
     if (this.calm) target = 1 - CALM.slowdown * this.calmK;
-    else if (id === "abyss") target = ABYSS.speedSpike + ABYSS.speedRamp * (local0 / seg.length);
+    else if (id === "abyss")
+      target = ABYSS.speedSpike + ABYSS.speedRamp * (local0 / seg.length);
     else if (seg.dimension)
       target = ABYSS.speedSpike + ABYSS.speedRamp; // the Abyss's top speed
     else target = BIOME_SPEED[id] ?? 1; // e.g. the Glitch Realm a touch slower, the Valley drifts
-    if (target > this.speedMul) this.speedMul = Math.min(target, this.speedMul + rawDt * 0.5);
+    if (target > this.speedMul)
+      this.speedMul = Math.min(target, this.speedMul + rawDt * 0.5);
     else this.speedMul = Math.max(target, this.speedMul - rawDt * 0.12);
   }
 
@@ -1228,10 +1425,15 @@ export class GameScene extends Phaser.Scene {
     this.setDesat(0);
     this.cameras.main.shake(380, 0.012);
     this.flashFx.flash(0xff0820, { ...FLASH.abyss, priority: true });
-    this.time.delayedCall(700, () => this.state === "playing" && this.biomeBonus());
+    this.time.delayedCall(
+      700,
+      () => this.state === "playing" && this.biomeBonus(),
+    );
     Sfx.biome();
     Music.play("abyss", { startBar: 16, immediate: true });
-    this.hudReady?.onBiome?.(this.course.segAt(this.meters).biome, { slam: true });
+    this.hudReady?.onBiome?.(this.course.segAt(this.meters).biome, {
+      slam: true,
+    });
     this.announcedBiome = this.biomeIndex;
   }
 
@@ -1242,10 +1444,12 @@ export class GameScene extends Phaser.Scene {
     this.setDesat(k);
     if (this.calm) Music.setCalm(k);
     // Abyss limited vision (fades in after the slam, out when the Abyss ends)
-    const inAbyssZone = this.course.segAt(this.meters).id === "abyss" && this.blackoutT <= 0;
+    const inAbyssZone =
+      this.course.segAt(this.meters).id === "abyss" && this.blackoutT <= 0;
     const target = inAbyssZone && this.state !== "dead" ? ABYSS.darkAlpha : 0;
     this.darkA +=
-      Math.sign(target - this.darkA) * Math.min(Math.abs(target - this.darkA), rawDt * 0.7);
+      Math.sign(target - this.darkA) *
+      Math.min(Math.abs(target - this.darkA), rawDt * 0.7);
     if (!inAbyssZone && this.inAbyss && this.darkA <= 0) this.inAbyss = false;
     const show = this.darkA > 0.001;
     const p = this.player;
@@ -1265,7 +1469,9 @@ export class GameScene extends Phaser.Scene {
   /** Colour drain for The Calm (WebGL colour-matrix FX only while needed). */
   setDesat(k) {
     if (this.renderer.type !== Phaser.WEBGL) return;
-    const cams = [this.cameras.main, this.backdrop?.cameras?.main].filter(Boolean);
+    const cams = [this.cameras.main, this.backdrop?.cameras?.main].filter(
+      Boolean,
+    );
     if (k <= 0.001) {
       if (this.desat) {
         cams.forEach((c, i) => c.postFX.remove(this.desat[i]));

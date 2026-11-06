@@ -85,7 +85,7 @@ export class CharacterRig {
     this.an = def.animal ? new AnimalBits(this) : null;
     // MATTOE: the always-on aura, footprints and the stubbed-toe death (see mattoeFx.js)
     this.toe = this.px.mode === "toe" ? new ToeBits(this, depth) : null;
-    // SPLICE: dive tucks, barrel rolls, the sonic boom, wind-streak trail, perch showcase
+    // SXE (id "splice"): dive tucks, barrel rolls, the sonic boom, wind-streak trail, perch showcase
     this.falcon = this.px.mode === "falcon" ? new FalconBits(this, depth) : null;
     // 손주원: the hover-thruster glow under the board
     if (this.px.mode === "surf") {
@@ -515,7 +515,7 @@ export class CharacterRig {
       return hints;
     }
     if (this.falcon && !this.dead) {
-      // SPLICE: feathers burst out in a spiral and he tumbles away (the sprite stays)
+      // SXE (id "splice"): feathers burst out in a spiral and he tumbles away (the sprite stays)
       this.dead = true;
       this.falcon.die();
       if (this.fx) this.cosmeticDeath(this.x, this.y); // equipped death effects still play

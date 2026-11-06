@@ -9,7 +9,12 @@ import { BIOMES, blendPalette } from "../biomes/biomes.js";
 import { FONT, fitCamera, NUM_FONT, VIEW } from "../config.js";
 import { HI } from "../gfx/textures.js";
 import { getCharacter } from "../player/characterDefs.js";
-import { flairOf, Leaderboard, Levels, myFlair } from "../online/leaderboard.js";
+import {
+  flairOf,
+  Leaderboard,
+  Levels,
+  myFlair,
+} from "../online/leaderboard.js";
 import { nameText } from "../ui/nameplate.js";
 import { dailyNumber } from "../data/rng.js";
 import { Sfx } from "../audio/sfx.js";
@@ -17,8 +22,9 @@ import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { button, fadeTo, neonText, plainText } from "../ui/ui.js";
 import { titleText } from "../ui/titleText.js";
 
-/** Heroes whose perks touch coins or survival (RONIN), shown with the gold perk badge. */
-const hasCoinPerks = (def) => !!(def.perks?.coinBonus || def.perks?.fireWard);
+/** Heroes whose perks touch coins or survival (RONIN, SXE), shown with the gold perk badge. */
+const hasCoinPerks = (def) =>
+  !!(def.perks?.coinBonus || def.perks?.fireWard || def.perks?.glitchProof);
 import { Titles } from "../data/titles.js";
 
 const MEDALS = [0xffd23f, 0xdfe8f5, 0xd8894a];
@@ -95,7 +101,9 @@ export class LeaderboardScene extends Phaser.Scene {
 
   init(data) {
     // Score is the main board: it's where the leaderboard opens
-    this.tab = ["daily", "score", "distance"].includes(data?.tab) ? data.tab : "score";
+    this.tab = ["daily", "score", "distance"].includes(data?.tab)
+      ? data.tab
+      : "score";
     this.period = "all";
     this.returnTo = data?.from || "Menu";
   }
@@ -121,7 +129,9 @@ export class LeaderboardScene extends Phaser.Scene {
       size: 18,
       onClick: () => this.leave(),
     }).setDepth(50);
-    neonText(this, W / 2 + 40, top + 40, "LEADERBOARD", 32, CYAN, { blur: 10 }).setDepth(50);
+    neonText(this, W / 2 + 40, top + 40, "LEADERBOARD", 32, CYAN, {
+      blur: 10,
+    }).setDepth(50);
     this.add
       .text(W / 2 + 40, top + 76, "GLOBAL RANKING NETWORK", {
         fontFamily: FONT,
@@ -160,9 +170,17 @@ export class LeaderboardScene extends Phaser.Scene {
     ].map((t, i) => {
       const x = W / 2 + (i - 1) * TAB_W;
       const g = this.add.graphics().setDepth(50);
-      const txt = neonText(this, x, this.tabY, t.label, t.main ? 24 : 18, t.main ? GOLD : 0x3ef4ff, {
-        blur: t.main ? 9 : 6,
-      }).setDepth(51);
+      const txt = neonText(
+        this,
+        x,
+        this.tabY,
+        t.label,
+        t.main ? 24 : 18,
+        t.main ? GOLD : 0x3ef4ff,
+        {
+          blur: t.main ? 9 : 6,
+        },
+      ).setDepth(51);
       const zone = this.add
         .zone(x, this.tabY, TAB_W - 10, 64)
         .setInteractive({ useHandCursor: true })
@@ -186,7 +204,14 @@ export class LeaderboardScene extends Phaser.Scene {
     ].map((f, i) => {
       const x = W / 2 + (i - 1) * 210;
       const g = this.add.graphics().setDepth(50);
-      const txt = plainText(this, x, this.filterY, f.label, 17, "#ffffff").setDepth(51);
+      const txt = plainText(
+        this,
+        x,
+        this.filterY,
+        f.label,
+        17,
+        "#ffffff",
+      ).setDepth(51);
       const zone = this.add
         .zone(x, this.filterY, 196, 48)
         .setInteractive({ useHandCursor: true })
@@ -207,7 +232,9 @@ export class LeaderboardScene extends Phaser.Scene {
     this.listBottom = H - 150 - sb;
     this.list = this.add.container(0, this.listTop).setDepth(10);
     const maskG = this.make.graphics({ x: 0, y: 0 }, false);
-    maskG.fillStyle(0xffffff).fillRect(0, this.listTop, W, this.listBottom - this.listTop);
+    maskG
+      .fillStyle(0xffffff)
+      .fillRect(0, this.listTop, W, this.listBottom - this.listTop);
     this.list.setMask(maskG.createGeometryMask());
 
     // pinned "you" bar
@@ -220,7 +247,11 @@ export class LeaderboardScene extends Phaser.Scene {
     });
     brackets(this.youG, 14, H - 142 - sb, W - 28, 124, 22, CYAN, 0.7, 3);
     // a little "YOU" tab on the panel's top edge
-    hudPanel(this.youG, 44, H - 146 - sb, 84, 26, { fill: 0x0b2a3a, cut: 8, width: 2 });
+    hudPanel(this.youG, 44, H - 146 - sb, 84, 26, {
+      fill: 0x0b2a3a,
+      cut: 8,
+      width: 2,
+    });
     this.add
       .text(86, H - 133 - sb, "YOU", {
         fontFamily: FONT,
@@ -235,13 +266,20 @@ export class LeaderboardScene extends Phaser.Scene {
     this.you = this.add.container(0, H - 80 - sb).setDepth(41);
 
     // state overlay (loading / empty / error)
-    this.stateBox = this.add.container(W / 2, (this.listTop + this.listBottom) / 2).setDepth(30);
+    this.stateBox = this.add
+      .container(W / 2, (this.listTop + this.listBottom) / 2)
+      .setDepth(30);
     this.spinner = this.add.graphics().setDepth(31);
 
     // drag scrolling with inertia
     this.input.on("pointerdown", (p) => {
       if (p.worldY < this.listTop || p.worldY > this.listBottom) return;
-      this.drag = { y: p.worldY, start: this.scrollY, last: p.worldY, t: this.time.now };
+      this.drag = {
+        y: p.worldY,
+        start: this.scrollY,
+        last: p.worldY,
+        t: this.time.now,
+      };
       this.vel = 0;
     });
     this.input.on("pointermove", (p) => {
@@ -255,7 +293,9 @@ export class LeaderboardScene extends Phaser.Scene {
     this.input.on("pointerup", () => {
       this.drag = null;
     });
-    this.input.on("wheel", (p, objs, dx, dy) => this.setScroll(this.scrollY + dy));
+    this.input.on("wheel", (p, objs, dx, dy) =>
+      this.setScroll(this.scrollY + dy),
+    );
 
     this.refreshChrome();
     this.fetchBoard();
@@ -276,8 +316,13 @@ export class LeaderboardScene extends Phaser.Scene {
     scan.fillStyle(0x000000, 0.1);
     for (let y = 0; y < H; y += 4) scan.fillRect(0, y, W, 1);
     // the sweep: a soft cyan band that slides down the screen every few seconds
-    this.sweep = this.add.graphics().setDepth(59).setBlendMode(Phaser.BlendModes.ADD);
-    this.sweep.fillGradientStyle(CYAN, CYAN, CYAN, CYAN, 0, 0, 0.07, 0.07).fillRect(0, 0, W, 120);
+    this.sweep = this.add
+      .graphics()
+      .setDepth(59)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    this.sweep
+      .fillGradientStyle(CYAN, CYAN, CYAN, CYAN, 0, 0, 0.07, 0.07)
+      .fillRect(0, 0, W, 120);
     this.sweep.fillStyle(CYAN, 0.12).fillRect(0, 119, W, 2);
     this.sweepT = 0;
     const frame = this.add.graphics().setDepth(50);
@@ -294,7 +339,8 @@ export class LeaderboardScene extends Phaser.Scene {
     );
     // header rule with ticks
     frame.lineStyle(1, CYAN, 0.35).lineBetween(24, top + 90, W - 24, top + 90);
-    for (let x = 24; x <= W - 24; x += 48) frame.fillStyle(CYAN, 0.5).fillRect(x, top + 87, 2, 6);
+    for (let x = 24; x <= W - 24; x += 48)
+      frame.fillStyle(CYAN, 0.5).fillRect(x, top + 87, 2, 6);
   }
 
   /** Connection status chip: LIVE (green), SYNC (amber, blinking) or OFFLINE (red). */
@@ -305,7 +351,9 @@ export class LeaderboardScene extends Phaser.Scene {
       offline: ["OFFLINE", 0xff4f7a],
     }[kind];
     this.statusKind = kind;
-    this.statusTxt.setText(look[0]).setColor(Phaser.Display.Color.IntegerToColor(look[1]).rgba);
+    this.statusTxt
+      .setText(look[0])
+      .setColor(Phaser.Display.Color.IntegerToColor(look[1]).rgba);
     this.statusDot.setFillStyle(look[1]);
     const w = this.statusTxt.width + 40;
     this.statusG.clear();
@@ -335,7 +383,8 @@ export class LeaderboardScene extends Phaser.Scene {
       if (on) {
         // active tab: a lit underline with tick marks
         t.g.fillStyle(c, 0.9).fillRect(t.x - 44, this.tabY + 22, 88, 3);
-        for (const dx of [-62, 54]) t.g.fillStyle(c, 0.6).fillRect(t.x + dx, this.tabY + 22, 8, 3);
+        for (const dx of [-62, 54])
+          t.g.fillStyle(c, 0.6).fillRect(t.x + dx, this.tabY + 22, 8, 3);
       }
       // the SCORE tab never fades as much: it's the main board
       t.txt.setAlpha(on ? 1 : t.main ? 0.8 : 0.55);
@@ -381,7 +430,7 @@ export class LeaderboardScene extends Phaser.Scene {
   }
 
   /**
-   * A small cyan speed badge (two chevrons) on runs flown with a faster hero (SPLICE +25%,
+   * A small cyan speed badge (two chevrons) on runs flown with a faster hero (SXE +25%,
    * WALLRUNNER +20%, RONIN +10%): their whole run moves quicker, so the board says so.
    */
   speedBadge(x, y) {
@@ -406,10 +455,21 @@ export class LeaderboardScene extends Phaser.Scene {
     else icon.setInteractive();
     icon.on("pointerup", () => {
       cont.tip?.destroy();
-      const fast = (def.speed ?? 1) > 1 ? ` · +${Math.round((def.speed - 1) * 100)}% SPEED` : "";
-      const t = neonText(this, icon.x, icon.y - r - 18, def.name + fast, 22, def.color, {
-        blur: 8,
-      });
+      const fast =
+        (def.speed ?? 1) > 1
+          ? ` · +${Math.round((def.speed - 1) * 100)}% SPEED`
+          : "";
+      const t = neonText(
+        this,
+        icon.x,
+        icon.y - r - 18,
+        def.name + fast,
+        22,
+        def.color,
+        {
+          blur: 8,
+        },
+      );
       cont.add(t);
       cont.tip = t;
       this.tweens.add({
@@ -431,7 +491,10 @@ export class LeaderboardScene extends Phaser.Scene {
     this.renderYou(undefined);
     try {
       await Leaderboard.flush(); // make sure your latest best is up there first
-      const res = await Leaderboard.board(this.level, this.tab === "daily" ? "all" : this.period);
+      const res = await Leaderboard.board(
+        this.level,
+        this.tab === "daily" ? "all" : this.period,
+      );
       if (id !== this.reqId || !this.sys.isActive()) return;
       this.setStatus("live");
       this.showState(res.rows.length ? null : "empty");
@@ -466,19 +529,40 @@ export class LeaderboardScene extends Phaser.Scene {
     const W = this.W;
     if (kind === "loading") {
       this.stateBox.add(
-        plainText(this, 0, 86, "SYNCING WITH THE NETWORK…", 18, "#9fe8f7", { font: FONT }),
+        plainText(this, 0, 86, "SYNCING WITH THE NETWORK…", 18, "#9fe8f7", {
+          font: FONT,
+        }),
       );
     } else if (kind === "empty") {
-      this.stateBox.add(neonText(this, 0, -20, "BE THE FIRST!", 40, 0xffd23f, { blur: 14 }));
       this.stateBox.add(
-        plainText(this, 0, 36, "No scores on this board yet — set the record.", 19, "#cfc6ff"),
+        neonText(this, 0, -20, "BE THE FIRST!", 40, 0xffd23f, { blur: 14 }),
+      );
+      this.stateBox.add(
+        plainText(
+          this,
+          0,
+          36,
+          "No scores on this board yet — set the record.",
+          19,
+          "#cfc6ff",
+        ),
       );
     } else if (kind === "error") {
-      this.stateBox.add(neonText(this, 0, -60, "SIGNAL LOST", 34, 0xff4f7a, { blur: 10 }));
       this.stateBox.add(
-        plainText(this, 0, -10, msg || "Couldn't reach the leaderboard.", 19, "#e8e0ff", {
-          wrap: W - 140,
-        }),
+        neonText(this, 0, -60, "SIGNAL LOST", 34, 0xff4f7a, { blur: 10 }),
+      );
+      this.stateBox.add(
+        plainText(
+          this,
+          0,
+          -10,
+          msg || "Couldn't reach the leaderboard.",
+          19,
+          "#e8e0ff",
+          {
+            wrap: W - 140,
+          },
+        ),
       );
       this.stateBox.add(
         plainText(
@@ -512,9 +596,26 @@ export class LeaderboardScene extends Phaser.Scene {
       return o;
     };
 
-    const head = this.tab === "distance" ? "FARTHEST · TOP 5" : this.tab === "daily" ? "TODAY'S TOP 5" : "TOP SCORES · WORLD TOP 5";
+    const head =
+      this.tab === "distance"
+        ? "FARTHEST · TOP 5"
+        : this.tab === "daily"
+          ? "TODAY'S TOP 5"
+          : "TOP SCORES · WORLD TOP 5";
     add(neonText(this, W / 2, 26, head, 30, 0xffd23f, { blur: 12 }));
-    add(brackets(this.add.graphics(), W / 2 - 230, 4, 460, 46, 14, 0xffd23f, 0.7, 2));
+    add(
+      brackets(
+        this.add.graphics(),
+        W / 2 - 230,
+        4,
+        460,
+        46,
+        14,
+        0xffd23f,
+        0.7,
+        2,
+      ),
+    );
     // spotlight rays behind #1 (rotated in update)
     const cx1 = 20 + colW * 2.5;
     const rays = add(this.add.graphics({ x: cx1, y: base - 210 - 110 }));
@@ -529,7 +630,9 @@ export class LeaderboardScene extends Phaser.Scene {
     floor.fillStyle(CYAN, 0.35).fillRect(20, base, W - 40, 3);
     for (let i = 0; i <= 10; i++) {
       const x = 20 + ((W - 40) * i) / 10;
-      floor.lineStyle(1, CYAN, 0.16).lineBetween(x, base, W / 2 + (x - W / 2) * 1.6, base + 40);
+      floor
+        .lineStyle(1, CYAN, 0.16)
+        .lineBetween(x, base, W / 2 + (x - W / 2) * 1.6, base + 40);
     }
     for (const [dy, a] of [
       [12, 0.14],
@@ -564,7 +667,12 @@ export class LeaderboardScene extends Phaser.Scene {
       for (let yy = top + 14; yy < top + spec.h; yy += 7)
         g.fillStyle(spec.color, 0.07).fillRect(sx + 3, yy, sw - 6, 2);
       g.lineStyle(2, spec.color, r ? 1 : 0.35).strokePoints(step, true);
-      g.fillStyle(spec.color, r ? 0.9 : 0.3).fillRect(sx + 14, top + 3, sw - 28, 3);
+      g.fillStyle(spec.color, r ? 0.9 : 0.3).fillRect(
+        sx + 14,
+        top + 3,
+        sw - 28,
+        3,
+      );
       col.add(g);
       // big rank number on the step face
       col.add(
@@ -586,7 +694,8 @@ export class LeaderboardScene extends Phaser.Scene {
         this.podium.cols.push({ col, hero: null, spec, cx, top });
         continue;
       }
-      const fit = (t, maxW) => t.setScale(Math.min(1, maxW / Math.max(1, t.width)));
+      const fit = (t, maxW) =>
+        t.setScale(Math.min(1, maxW / Math.max(1, t.width)));
       const score = neonText(
         this,
         cx,
@@ -609,17 +718,23 @@ export class LeaderboardScene extends Phaser.Scene {
         badge: fl.s1,
         font: NUM_FONT,
       });
-      name.setScale(Math.min(1, (colW - 6) / Math.max(1, name.getBounds().width)));
+      name.setScale(
+        Math.min(1, (colW - 6) / Math.max(1, name.getBounds().width)),
+      );
       const ttl = titleText(this, cx, top - 52, r.title, { size: 11 });
       if (ttl.list.length)
-        ttl.setScale(Math.min(1, (colW - 6) / Math.max(1, ttl.getBounds().width)));
+        ttl.setScale(
+          Math.min(1, (colW - 6) / Math.max(1, ttl.getBounds().width)),
+        );
       col.add(ttl);
       const def = getCharacter(r.character);
       const heroY = top - 72 - 26 - 70 * spec.scale;
       // your own place wears your shop cosmetics (other players' aren't stored online)
       const hero = mine
         ? heroImage(this, cx, heroY, def.id, spec.scale / HI)
-        : this.add.image(cx, heroY, def.texture).setScale((spec.scale / HI) * PORTRAIT_K);
+        : this.add
+            .image(cx, heroY, def.texture)
+            .setScale((spec.scale / HI) * PORTRAIT_K);
       const disc = this.add.graphics();
       disc
         .fillStyle(spec.color, 0.16)
@@ -629,14 +744,26 @@ export class LeaderboardScene extends Phaser.Scene {
         .strokeEllipse(cx, heroY + 58 * spec.scale, 96 * spec.scale + 20, 16);
       col.add([disc, score, name, hero]);
       if (hasCoinPerks(def))
-        col.add(this.perkBadge(cx + 34 * spec.scale + 14, heroY + 24 * spec.scale));
+        col.add(
+          this.perkBadge(cx + 34 * spec.scale + 14, heroY + 24 * spec.scale),
+        );
       if ((def.speed ?? 1) > 1)
-        col.add(this.speedBadge(cx + 34 * spec.scale + 14, heroY - 24 * spec.scale));
+        col.add(
+          this.speedBadge(cx + 34 * spec.scale + 14, heroY - 24 * spec.scale),
+        );
       this.heroTip(col, hero, def);
       if (mine) {
-        const tag = neonText(this, cx, heroY - 70 * spec.scale - 16, "YOU", 16, 0x3ef4ff, {
-          blur: 6,
-        });
+        const tag = neonText(
+          this,
+          cx,
+          heroY - 70 * spec.scale - 16,
+          "YOU",
+          16,
+          0x3ef4ff,
+          {
+            blur: 6,
+          },
+        );
         col.add(tag);
       }
       if (spec.rank === 1) {
@@ -672,7 +799,11 @@ export class LeaderboardScene extends Phaser.Scene {
         );
         col.add(crown);
         this.podium.crown = crown;
-        col.add(neonText(this, cx, top + spec.h - 26, "WORLD #1", 15, 0xffd23f, { blur: 6 }));
+        col.add(
+          neonText(this, cx, top + spec.h - 26, "WORLD #1", 15, 0xffd23f, {
+            blur: 6,
+          }),
+        );
       }
       this.podium.cols.push({ col, hero, spec, cx, top, heroY });
     }
@@ -765,7 +896,10 @@ export class LeaderboardScene extends Phaser.Scene {
         cut: 12,
       });
       g.fillStyle(accent, 0.9).fillRect(30, y - ROW_H / 2 + 14, 4, ROW_H - 28);
-      const share = Math.max(0.04, Math.min(1, r.score / Math.max(1, topScore)));
+      const share = Math.max(
+        0.04,
+        Math.min(1, r.score / Math.max(1, topScore)),
+      );
       g.fillStyle(CYAN, 0.1).fillRect(182, y + 23, W - 374, 3);
       g.fillStyle(mine ? CYAN : 0x7fbfdf, mine ? 0.8 : 0.45).fillRect(
         182,
@@ -787,7 +921,9 @@ export class LeaderboardScene extends Phaser.Scene {
       const def = getCharacter(r.character);
       const icon = mine
         ? heroImage(this, 142, y, def.id, 0.36 / HI)
-        : this.add.image(142, y, def.texture).setScale((0.36 / HI) * PORTRAIT_K);
+        : this.add
+            .image(142, y, def.texture)
+            .setScale((0.36 / HI) * PORTRAIT_K);
       const fl = flairOf(r);
       const name = nameText(this, 182, y - 12, r.username, {
         size: 24,
@@ -822,7 +958,9 @@ export class LeaderboardScene extends Phaser.Scene {
     const W = this.W;
     const name = Leaderboard.username || "YOU";
     if (me === undefined) {
-      this.you.add(plainText(this, W / 2, 0, "Finding your rank…", 20, "#bfb6e8"));
+      this.you.add(
+        plainText(this, W / 2, 0, "Finding your rank…", 20, "#bfb6e8"),
+      );
       return;
     }
     if (!me) {
@@ -836,12 +974,23 @@ export class LeaderboardScene extends Phaser.Scene {
       return;
     }
     const def = getCharacter(me.character);
-    this.you.add(neonText(this, 80, 0, `#${me.rank}`, 30, 0x3ef4ff, { blur: 8 }));
+    this.you.add(
+      neonText(this, 80, 0, `#${me.rank}`, 30, 0x3ef4ff, { blur: 8 }),
+    );
     this.you.add(heroImage(this, 150, 0, def.id, 0.4 / HI));
     if ((def.speed ?? 1) > 1) this.you.add(this.speedBadge(172, -18));
     const fl = flairOf({ flair: myFlair() });
-    this.you.add(nameText(this, 192, -14, name, { size: 24, gold: fl.gold, badge: fl.s1, font: NUM_FONT }));
-    this.you.add(titleText(this, 193, 8, Titles.equippedId(), { size: 12, ox: 0 }));
+    this.you.add(
+      nameText(this, 192, -14, name, {
+        size: 24,
+        gold: fl.gold,
+        badge: fl.s1,
+        font: NUM_FONT,
+      }),
+    );
+    this.you.add(
+      titleText(this, 193, 8, Titles.equippedId(), { size: 12, ox: 0 }),
+    );
     this.you.add(
       // the label sits above the number, so the title can go under your name
       plainText(
@@ -854,10 +1003,18 @@ export class LeaderboardScene extends Phaser.Scene {
         { ox: 1 },
       ),
     );
-    this.you.add(neonText(this, W - 56, 6, this.fmt(me.score), 28, 0x3ef4ff, { ox: 1, blur: 8 }));
+    this.you.add(
+      neonText(this, W - 56, 6, this.fmt(me.score), 28, 0x3ef4ff, {
+        ox: 1,
+        blur: 8,
+      }),
+    );
     // the chase: how far to the next place up (or "defend it" at #1)
     const chase = this.chaseLine(me);
-    if (chase) this.you.add(plainText(this, W - 56, 36, chase, 14, "#ffd23f", { ox: 1 }));
+    if (chase)
+      this.you.add(
+        plainText(this, W - 56, 36, chase, 14, "#ffd23f", { ox: 1 }),
+      );
   }
 
   /** "+1,240 to pass ALEX (#11)" / "+300 to reach the top 100" / "You're #1 · defend it!" */
@@ -868,19 +1025,30 @@ export class LeaderboardScene extends Phaser.Scene {
     if (above && above.score > me.score)
       return `+${this.fmt(above.score - me.score + 1)} to pass ${above.username} (#${me.rank - 1})`;
     const last = rows[rows.length - 1];
-    if (me.rank > rows.length && last && rows.length >= 100 && last.score >= me.score)
+    if (
+      me.rank > rows.length &&
+      last &&
+      rows.length >= 100 &&
+      last.score >= me.score
+    )
       return `+${this.fmt(last.score - me.score + 1)} to reach the top 100`;
     return null;
   }
 
   setScroll(v) {
-    const maxScroll = Math.max(0, (this.contentH || 0) - (this.listBottom - this.listTop));
+    const maxScroll = Math.max(
+      0,
+      (this.contentH || 0) - (this.listBottom - this.listTop),
+    );
     this.scrollY = Phaser.Math.Clamp(v, 0, maxScroll);
     this.list.y = this.listTop - this.scrollY;
   }
 
   leave() {
-    fadeTo(this, this.returnTo || "Menu", undefined, { ms: 160, rgb: [2, 1, 7] });
+    fadeTo(this, this.returnTo || "Menu", undefined, {
+      ms: 160,
+      rgb: [2, 1, 7],
+    });
   }
 
   update(time, delta) {
@@ -913,14 +1081,21 @@ export class LeaderboardScene extends Phaser.Scene {
       const a = time / 450;
       const sp = this.spinner.clear();
       sp.lineStyle(2, CYAN, 0.35).strokeCircle(cx, cy, 52);
-      sp.lineStyle(1, CYAN, 0.25).strokeCircle(cx, cy, 34).strokeCircle(cx, cy, 16);
+      sp.lineStyle(1, CYAN, 0.25)
+        .strokeCircle(cx, cy, 34)
+        .strokeCircle(cx, cy, 16);
       sp.lineStyle(1, CYAN, 0.25)
         .lineBetween(cx - 60, cy, cx + 60, cy)
         .lineBetween(cx, cy - 60, cx, cy + 60);
       sp.fillStyle(CYAN, 0.22)
         .slice(cx, cy, 52, a - 0.9, a, false)
         .fillPath();
-      sp.lineStyle(2, CYAN, 0.9).lineBetween(cx, cy, cx + Math.cos(a) * 52, cy + Math.sin(a) * 52);
+      sp.lineStyle(2, CYAN, 0.9).lineBetween(
+        cx,
+        cy,
+        cx + Math.cos(a) * 52,
+        cy + Math.sin(a) * 52,
+      );
     }
   }
 }

@@ -1,4 +1,6 @@
-# SPLICE · Legendary · "Fastest thing in the sky."
+# SXE · Legendary · "Fastest thing in the sky."
+
+(Internal id `splice`; shown everywhere in the game as **SXE**.)
 
 A black peregrine falcon:
 - glossy black feathers with a blue-steel sheen;
@@ -8,8 +10,13 @@ A black peregrine falcon:
 
 He's original 24×24 pixel art in 8 frames, with the usual bold dark outline plus the white rim. His hitbox is standard.
 
-- **Unlock:** 12,000 coins in the shop, or the challenge "Reach 2,000m in one run".
+- **Unlock:** 50,000 coins in the shop, or the challenge "Reach 2,000m in one run".
 - **Perk:** +25% SPEED (`speed: 1.25`, the same mechanism as RONIN at 1.1 and WALLRUNNER at 1.2). It's shown on his hero card.
+- **Perk:** INDESTRUCTIBLE IN THE GLITCH REALM (`perks.glitchProof`). For as long as the run is in the Glitch Realm:
+  - he flies straight through every hazard, with a green flash and ring each time;
+  - the top and bottom of the screen hold him instead of ending the run;
+  - a green aura shows while it's on.
+  The moment the realm ends, he's mortal again. The Calm at the end of the realm gives him room to recover before the next biome.
 - **Test flag:** `?character=splice` (test builds only).
 
 ## Animation, effects, sound (`src/player/spliceFx.js`)
@@ -31,9 +38,19 @@ He's original 24×24 pixel art in 8 frames, with the usual bold dark outline plu
 
 ## Leaderboard
 
-Runs flown with a faster hero (SPLICE +25%, WALLRUNNER +20%, RONIN +10%) now show a small cyan speed badge (two chevrons) on both boards. Tapping the hero shows e.g. "SPLICE · +25% SPEED".
+Runs flown with a faster hero (SXE +25%, WALLRUNNER +20%, RONIN +10%) now show a small cyan speed badge (two chevrons) on both boards. Tapping the hero shows e.g. "SXE · +25% SPEED".
+
+SXE also gets the gold perk badge, because of his Glitch Realm immunity.
 
 RONIN keeps his gold perk badge, which is now only for coin and survival perks.
+
+## Fairness: the Glitch Realm immunity IS an advantage
+
+Unlike the speed, this one changes results:
+- **Distance board:** the Glitch Realm can't end his run, so every SXE run that reaches it gets through it. Other heroes die there sometimes.
+- **Score board:** he keeps his combo going through the realm, and the realm's hazards can't break it.
+- **How big:** it covers one biome per lap of the course. Every other biome and every dimension is as deadly for him as for anyone.
+- **Leaderboard:** his runs show both the speed badge and the gold perk badge, so other players can see why.
 
 ## Fairness: is +25% speed unfair? (measured, for you to decide)
 
@@ -46,7 +63,7 @@ With god mode on, a gap-steering pilot flew the same 6 courses to 3,000 m with e
 | VOLT | 1.00 | 131.5 s | 8,084 | — |
 | RONIN | 1.10 | 120.2 s | 7,335 | −9% |
 | WALLRUNNER | 1.20 | 110.2 s | 6,892 | −15% |
-| **SPLICE** | **1.25** | **105.5 s** | **7,855** | **−3%** |
+| **SXE** | **1.25** | **105.5 s** | **7,855** | **−3%** |
 
 - **Distance is the same per metre:** obstacles are placed by distance, so a faster hero meets the same obstacles per metre and earns the same metres.
 - **Bonus isn't higher:** every hero hit the ×10 combo cap, and the faster heroes didn't earn more bonus. The differences are within course-to-course noise.
@@ -55,9 +72,9 @@ With god mode on, a gap-steering pilot flew the same 6 courses to 3,000 m with e
 
 ### 2. It makes the run harder
 
-SPLICE meets 25% more obstacles per second. Time between obstacles, in seconds:
+SXE meets 25% more obstacles per second. Time between obstacles, in seconds:
 
-| Metres | VOLT | RONIN | WALLRUNNER | SPLICE |
+| Metres | VOLT | RONIN | WALLRUNNER | SXE |
 |---|---|---|---|---|
 | 0 | 1.48 | 1.34 | 1.23 | 1.18 |
 | 1,000 | 0.84 | 0.77 | 0.70 | 0.67 |
@@ -71,7 +88,7 @@ His tightest gap (0.40 s) is within 0.01 s of WALLRUNNER, who is already live.
 
 - **Gravity, flap strength, gap sizes and the hitbox are unchanged.**
 - **Every signature hazard warns by time, not distance:** comet, flare, neon pulse and eye beam trigger on time-to-arrival, so their warnings last just as long in seconds for him.
-- **The Abyss's hardest pattern (Slammer + Eye Beam), flown as SPLICE with real collisions:**
+- **The Abyss's hardest pattern (Slammer + Eye Beam), flown as SXE with real collisions:**
   - forced 16 times with no deaths;
   - the open lane was never under 142 px;
   - the eye always warned at least 1.10 s ahead.
@@ -88,13 +105,19 @@ His tightest gap (0.40 s) is within 0.01 s of WALLRUNNER, who is already live.
 
 ## Tests
 
-The new test is "SPLICE: +25% speed with the standard hitbox, falcon moves, speed badge, perch showcase". It checks:
+The new test is "SXE: +25% speed with the standard hitbox, falcon moves, speed badge, perch showcase". It checks:
+- name SXE, 50,000 coins, both perks on the card;
 - the 1.25 ratio and standard hitbox;
 - the flap, downstroke and dive frames;
 - the barrel roll flip, the screech frame on a new best, and the tumble then disappear on death;
 - the price and unlock challenge;
 - the leaderboard speed badge;
 - the full perch routine on the HEROES screen.
+
+A second test, "SXE: indestructible in the Glitch Realm, and only there", flies him into the realm and lets go (no flaps, real collisions) for 20 seconds. It checks:
+- he's still flying, passed through hazards and was held on screen;
+- after the realm, a fall ends his run as usual;
+- VOLT in the same spot dies.
 
 ![In flight](in-flight.png)
 ![Character select](character-select.png)

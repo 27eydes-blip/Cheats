@@ -702,7 +702,7 @@ export class CharacterScene extends Phaser.Scene {
     });
     this.fx.drift = 0;
 
-    // orbiting showcase — depth & scale fake a 3D turntable. SPLICE breaks off to land on his
+    // orbiting showcase — depth & scale fake a 3D turntable. SXE breaks off to land on his
     // perch in the middle (spliceFx.js), so the orbit eases out while he's down.
     const perching = !!this.rig.falcon?.holding;
     this.perchK = Phaser.Math.Clamp((this.perchK || 0) + (perching ? dt : -dt) * 2.2, 0, 1);
