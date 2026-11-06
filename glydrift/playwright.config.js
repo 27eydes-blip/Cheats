@@ -47,6 +47,9 @@ export const PROFILES = {
 
 const ENGINES = { chromium, firefox, webkit };
 const CI = !!process.env.CI;
+// TEST_PORT=4417 serves the test build on 4417 and the release build on 4418 (so parallel
+// checkouts on one machine never share a server); set RELEASE_URL to match
+const PORT = Number(process.env.TEST_PORT || 4317);
 // Locally a browser engine that isn't installed is skipped with a warning (CI always runs all 3)
 const engines = Object.keys(ENGINES).filter((name) => {
   if (CI) return true;
@@ -110,7 +113,7 @@ export default defineConfig({
   // baselines live next to the tests, one per project
   snapshotPathTemplate: "{testDir}/__screenshots__/{projectName}/{arg}{ext}",
   use: {
-    baseURL: "http://localhost:4317",
+    baseURL: `http://localhost:${PORT}`,
     timezoneId: "UTC",
     locale: "en-US",
     trace: CI ? "off" : "retain-on-failure", // CI artifacts stay small
@@ -118,13 +121,13 @@ export default defineConfig({
   projects,
   webServer: [
     {
-      command: "node tests/serve.mjs dist-test 4317",
-      url: "http://localhost:4317",
+      command: `node tests/serve.mjs dist-test ${PORT}`,
+      url: `http://localhost:${PORT}`,
       reuseExistingServer: !CI,
     },
     {
-      command: "node tests/serve.mjs dist 4318",
-      url: "http://localhost:4318",
+      command: `node tests/serve.mjs dist ${PORT + 1}`,
+      url: `http://localhost:${PORT + 1}`,
       reuseExistingServer: !CI,
     },
   ],

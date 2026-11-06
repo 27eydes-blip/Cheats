@@ -2900,3 +2900,65 @@ test("accounts wait for the server to be set up", async ({
   expect(server?.users?.["early@example.com"]).toBeUndefined();
   expect(log.errors).toEqual([]);
 });
+
+test("music: the pre-rendered reggae soundtrack is complete, fresh and served", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const manifest = JSON.parse(
+    readFileSync(new URL("../../src/audio/reggae/manifest.json", import.meta.url), "utf8"),
+  );
+  expect(manifest.complete).toBe(true);
+  // one track per realm (plus the menu), and a bridge for every realm boundary
+  const realms = ["menu", "void", "solar", "frozen", "glitch", "abyss", "valley", "hurricane"];
+  realms.push("prism", "tidal", "chrono", "mirror");
+  expect(Object.keys(manifest.tracks).sort()).toEqual([...realms].sort());
+  const dims = ["prism", "tidal", "chrono", "mirror"];
+  const pairs = ["void>solar", "solar>frozen", "frozen>glitch", "abyss>valley", "valley>hurricane"];
+  for (const d of dims) pairs.push(`hurricane>${d}`, ...dims.filter((e) => e !== d).map((e) => `${d}>${e}`));
+  expect(Object.keys(manifest.bridges).sort()).toEqual(pairs.sort());
+  const files = [manifest.calib.file, ...Object.values(manifest.calm.files)];
+  for (const t of Object.values(manifest.tracks)) {
+    files.push(...Object.values(t.files), ...Object.values(t.intro.files));
+    // bars line up: the loop is a whole number of bars, the drop starts on a bar
+    expect(Math.abs(t.length / t.bar - Math.round(t.length / t.bar))).toBeLessThan(1e-6);
+  }
+  for (const b of Object.values(manifest.bridges)) files.push(...Object.values(b.files));
+  for (const f of files) {
+    const r = await page.request.get(`/music/${f}`);
+    expect(r.status(), f).toBe(200);
+    expect((await r.body()).length, f).toBeGreaterThan(1000);
+  }
+});
+
+test("music test page: reggae tracks, the old house tracks and the full journey", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { flags: ["music"], screen: "MusicTest" });
+  const texts = () =>
+    page.evaluate(() => {
+      const out = [];
+      const walk = (l) => {
+        for (const o of l) {
+          if (o.list) walk(o.list);
+          if (o.type === "Text" && o.visible) out.push(String(o.text));
+        }
+      };
+      walk(window.__glydrift.scene.getScene("MusicTest").children.list);
+      return out;
+    });
+  let shown = await texts();
+  for (const t of ["PLAY FULL JOURNEY", "NEON VOID", "SOLAR STORM", "ABYSS", "THE CALM"])
+    expect(shown).toContain(t);
+  expect(shown).toContain("90 BPM double-time · A minor");
+  await run(page, 2000); // the old engine loads in the background
+  await tap(page, "HOUSE (OLD)");
+  shown = await texts();
+  expect(shown).toContain("NEON VOID");
+  expect(shown).toContain("124 BPM · house");
+  expect(shown).not.toContain("THE CALM");
+  await tap(page, "REGGAE (NEW)");
+  await tap(page, "PLAY FULL JOURNEY");
+  expect(log.errors).toEqual([]);
+});

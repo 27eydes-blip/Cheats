@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Glydrift music renderer</title>
+  </head>
+  <body>
+    <script type="module">
+      import { jobs, render } from "/src/audio/reggae/render.js";
+      import { bridgeTempo } from "/src/audio/reggae/render.js";
+      import { SONGS, CALM, sections, barSeconds, INTRO_BARS } from "/src/audio/reggae/songs.js";
+      const b64 = (f32) => {
+        const u8 = new Uint8Array(f32.buffer, f32.byteOffset, f32.byteLength);
+        let s = "";
+        for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode(...u8.subarray(i, i + 0x8000));
+        return btoa(s);
+      };
+      window.musicJobs = () => jobs();
+      window.musicInfo = () => {
+        const tracks = {};
+        for (const [id, s] of Object.entries(SONGS))
+          tracks[id] = {
+            name: s.name, title: s.title, style: s.style, key: s.key, bpm: s.bpm, feel: s.feel,
+            scale: s.scale || 1, bar: barSeconds(s.bpm), sections: sections(s), introBars: INTRO_BARS * (s.scale || 1),
+          };
+        return { tracks, calm: { ...CALM, bar: barSeconds(CALM.bpm) } };
+      };
+      window.bridgeBeats = (a, b) => {
+        const m = bridgeTempo(a, b);
+        const beats = [];
+        for (let x = 0; x <= m.beats; x++) beats.push(m.time(x));
+        return { bars: m.n, beats, ratio: m.ratio, related: m.related };
+      };
+      window.renderJob = async (job) => {
+        const r = await render(job);
+        return { data: b64(r.data), sampleRate: r.sampleRate, meta: r.meta };
+      };
+      window.ready = true;
+    </script>
+  </body>
+</html>
