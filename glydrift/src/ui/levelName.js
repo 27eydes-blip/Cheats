@@ -1,4 +1,4 @@
-// (fast-lane timing check)
+// (fast-lane timing check 2)
 // A level's name as one line: "LEVEL 7: UPSIDE DOWN". Boss levels are red with a skull icon.
 // The line shrinks to fit maxW, so long names never run off a small phone.
 import { VIEW } from "../config.js";
