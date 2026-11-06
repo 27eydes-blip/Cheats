@@ -621,6 +621,10 @@ export function buildCommon(scene) {
   // YARMS has a 4th pose (the double-bicep flex) and no head: hats sit between the shoulders
   frames.yarms_3 = rim(yarms(3));
   HEAD_ANCHORS.yarms = { x: 0, y: -8.5, w: 50, h: 34 };
+  // SXE (id "splice"): dive tuck, three perched poses and the screech (frames 3-7)
+  for (let f = 3; f < 8; f++) frames[`splice_${f}`] = rim(SHOP_DRAW.splice(f));
+  // (his raised wing is the top of frame 1: hats take the head from the glide pose instead)
+  HEAD_ANCHORS.splice = headAnchor(frames.splice_0);
   // 손주원: the roar pose, the board on its own, and hats on the tiger's head
   frames.sonjuwon_3 = rim(sonjuwon(3));
   frames.sonjuwon_board = rim(sonjuwonBoard());

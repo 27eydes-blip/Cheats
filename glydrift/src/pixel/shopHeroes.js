@@ -789,6 +789,95 @@ export function mattoe(f) {
   return pc.outline(INK, 1, true);
 }
 
+
+// ------------------------------------------------------------------ SXE (legendary, id "splice")
+// A black peregrine falcon built for speed: glossy black feathers with a blue-steel sheen,
+// swept-back wings, a hooked beak, fierce golden eyes with the peregrine's dark "teardrop"
+// under each one, and yellow talons tucked up in flight.
+// Frames: 0 glide (wings swept back, stooping), 1 upstroke (wings raised high), 2 downstroke,
+// 3 dive tuck (wings clamped to the body), 4 perched, 5 perched + ruffled, 6 perched, head
+// turned back, 7 screech (beak open, wings half up). The perch itself is drawn by spliceFx.js.
+export function splice(f) {
+  const pc = new PixelCanvas(24, 24);
+  const BK = 0x14161e; // glossy black
+  const BK2 = 0x252b3a; // black, lit
+  const ST = 0x3e5a82; // blue-steel sheen
+  const STL = 0x8ab4e8; // sheen highlight
+  const CH = 0x8a92a8; // pale cheek
+  const CHD = 0x5a6274; // chest (darker, barred)
+  const Y = 0xffc61a; // golden yellow (eye ring, cere, feet)
+  const YD = 0xc88a00;
+  const BEAK = 0x9aa8bc;
+  const INK = 0x05060a;
+  /** Head facing right (dir 1) or left (-1): helmet, pale cheek, golden eye ring, teardrop, hook. */
+  const head = (hx, hy, dir = 1, open = false) => {
+    pc.ellipse(hx, hy, 3, 2.8, BK);
+    const ex = Math.round(hx + dir * 0.6);
+    const ey = Math.round(hy - 0.6);
+    pc.set(ex + dir, ey + 1, CH).set(ex + dir, ey + 2, CH).set(ex - dir, ey + 2, CH); // pale cheek
+    pc.set(ex, ey, INK); // dark eye...
+    pc.set(ex - dir, ey, Y).set(ex, ey - 1, Y).set(ex - dir, ey - 1, YD); // ...with a golden ring
+    pc.set(ex, ey + 1, INK).set(ex, ey + 2, INK); // the peregrine "teardrop"
+    pc.set(Math.round(hx - dir), Math.round(hy - 2.4), STL); // sheen on the crown
+    const bx = Math.round(hx + dir * 3);
+    const by = Math.round(hy);
+    pc.set(bx - dir, by - 1, Y); // cere
+    pc.set(bx, by - 1, BEAK).set(bx, by, BEAK).set(bx + dir, by, BEAK); // beak
+    pc.set(bx + dir, by + 1, INK); // hooked tip
+    if (open) pc.set(bx, by + 1, 0xd02040).set(bx, by + 2, BEAK); // screech: beak open
+  };
+  const perched = f >= 4 && f <= 6;
+  if (perched) {
+    // upright on a perch, in profile: leaning forward a little, wing down its back
+    const puff = f === 5 ? 1 : 0;
+    pc.poly([[10, 16], [12.5, 16], [12.5, 23], [10.5, 23]], BK); // tail
+    pc.ellipse(12.2, 12.5, 3.9 + puff, 5.6 + puff, BK); // body
+    pc.ellipse(14.4, 12.6, 1.3, 3.2, CHD); // chest, at the front
+    for (const [x, y] of [[14, 11], [15, 13], [14, 15]]) pc.set(x, y, BK2); // barring
+    // folded wing: long, down the back, the tip crossing over the tail
+    pc.poly([[9.5, 8], [8, 14], [10, 22], [12, 10]], BK2);
+    pc.line(10, 9, 9, 16, ST).set(9, 12, STL).set(10, 20, ST);
+    if (puff)
+      for (const [x, y] of [[7, 10], [7, 14], [17, 11], [17, 14], [10, 6], [15, 7], [8, 17]]) pc.set(x, y, BK2);
+    // feet gripping the perch (yellow)
+    pc.hline(12, 13, 18, Y).set(15, 18, Y).set(12, 19, YD).set(15, 19, YD);
+    head(14, 5.6, f === 6 ? -1 : 1);
+    return pc.outline(INK, 1, true);
+  }
+  // ---- flight poses, facing right: a compact body with long pointed wings
+  const dive = f === 3;
+  const cy = 12;
+  // tail: narrow, squared off (fanned a little on the downstroke)
+  const fan = f === 2 ? 1 : 0;
+  pc.poly([[8, cy - 1], [2, cy - 1 - fan], [2, cy + 2 + fan], [8, cy + 1]], BK);
+  pc.hline(3, 6, cy, BK2);
+  // far wing (behind, darker) on the stroke frames
+  if (f === 1) pc.poly([[13, cy - 1], [12, 1], [9, 2], [11, cy]], BK);
+  if (f === 2) pc.poly([[13, cy + 1], [12, 21], [10, 20], [11, cy + 1]], BK);
+  // body
+  pc.ellipse(12.5, cy, dive ? 6.5 : 5.6, dive ? 2.2 : 2.7, BK);
+  pc.ellipse(14, cy + 1.2, 2.8, 1.1, CHD); // chest
+  pc.set(13, cy + 1, BK2).set(15, cy + 2, BK2); // barring
+  // near wing: long and pointed
+  let wing;
+  if (f === 0) wing = [[15, cy - 1], [1, cy - 6], [3, cy - 4], [10, cy + 1]]; // swept back, stooping
+  else if (f === 7) wing = [[15, cy - 1], [8, 2], [5, 3], [10, cy]]; // half raised (screech)
+  else if (f === 1) wing = [[15, cy - 1], [11, 0], [8, 0], [10, cy]]; // raised high
+  else if (f === 2) wing = [[15, cy + 1], [10, 23], [7, 22], [10, cy + 1]]; // driven down
+  else wing = [[17, cy - 1], [3, cy - 2], [4, cy - 1], [11, cy + 1]]; // clamped tight (dive)
+  pc.poly(wing, BK2);
+  // steel sheen along the leading edge, a highlight, and dark primary tips
+  pc.line(wing[0][0], wing[0][1], wing[1][0], wing[1][1], ST);
+  pc.set(Math.round((wing[0][0] * 2 + wing[1][0]) / 3), Math.round((wing[0][1] * 2 + wing[1][1]) / 3), STL);
+  pc.set(wing[1][0], wing[1][1], INK).set(wing[2][0], wing[2][1], INK);
+  // talons tucked up under the body
+  pc.set(12, cy + 3, Y).set(13, cy + 3, YD);
+  // head
+  head(dive ? 19 : 18.5, dive ? cy + 0.5 : cy - 2.2, 1, f === 7);
+  return pc.outline(INK, 1, true);
+}
+splice.frames = 8;
+
 export const SHOP_DRAW = {
   pip,
   coral,
@@ -807,4 +896,5 @@ export const SHOP_DRAW = {
   springer,
   dzr,
   mattoe,
+  splice,
 };

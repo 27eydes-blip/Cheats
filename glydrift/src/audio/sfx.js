@@ -166,6 +166,11 @@ const FLAP = {
     tone({ type: "triangle", f0: 900, f1: 500, dur: 0.05, vol: 0.06, delay: 0.03 });
     tone({ type: "sine", f0: 110, f1: 130, dur: 0.18, vol: 0.08 });
   },
+  // SXE (id "splice"): a sharp, fast wing whoosh (bright noise + a quick falling chirp of air)
+  splice: () => {
+    noise({ dur: 0.08, vol: 0.26, f: 4200 });
+    tone({ type: "triangle", f0: 900, f1: 260, dur: 0.06, vol: 0.05 });
+  },
   // YARMS: a meaty "whomp" + a floppy wobble
   yarms: () => {
     tone({ type: "sine", f0: 150, f1: 55, dur: 0.14, vol: 0.4 });
@@ -545,6 +550,26 @@ export const Sfx = {
       tone({ type: "triangle", f0: 523 * 2 ** (st / 12), dur: 0.3, vol: 0.1, delay: 0.75 + i * 0.05 }),
     );
   },
+  /** SXE new best: a fierce falcon screech, "kee-kee!" (synth only: no recordings) */
+  falconScreech: () => {
+    for (const [d, k] of [
+      [0, 1],
+      [0.16, 0.92],
+    ]) {
+      tone({ type: "sawtooth", f0: 2500 * k, f1: 1500 * k, dur: 0.15, vol: 0.07, delay: d });
+      tone({ type: "square", f0: 3300 * k, f1: 2100 * k, dur: 0.12, vol: 0.035, delay: d + 0.01 });
+      tone({ type: "sine", f0: 1700 * k, f1: 1250 * k, dur: 0.16, vol: 0.09, delay: d });
+    }
+    noise({ dur: 0.3, vol: 0.06, f: 6500 });
+    // the boom under it
+    tone({ type: "sine", f0: 120, f1: 45, dur: 0.35, vol: 0.28, delay: 0.02 });
+  },
+  /** SXE death: a burst of feathers and a fading rush of wind */
+  featherBurst: () => {
+    noise({ dur: 0.18, vol: 0.22, f: 3200 });
+    tone({ type: "triangle", f0: 700, f1: 240, dur: 0.12, vol: 0.06 });
+    noise({ dur: 1.3, vol: 0.12, f: 700, delay: 0.08 });
+  },
   /** MATTOE death: a cartoony "bonk" (hollow wood knock + pitch drop) */
   bonk: () => {
     tone({ type: "square", f0: 520, f1: 180, dur: 0.08, vol: 0.12 });
@@ -606,7 +631,7 @@ export const Sfx = {
     tone({ type: "triangle", f0: f * 1.5, f1: f * 1.5, dur: 0.1, vol: 0.11, delay: 0.045 });
     tone({ type: "sine", f0: f * 3, f1: f * 3, dur: 0.05, vol: 0.04, delay: 0.045 }); // sparkle
   },
-  /** combo multiplier step (tier 1..4 → x2 x3 x5 x10): a punchy, higher-each-time chime */
+  /** combo multiplier step (tier 1..5 → x2 x3 x5 x10 x13): a punchy, higher-each-time chime */
   combo: (tier = 1) => {
     const f = semis(520, tier * 2);
     tone({ type: "square", f0: f, f1: f * 1.02, dur: 0.07, vol: 0.07 });

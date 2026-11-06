@@ -10,6 +10,7 @@ import { greyAtlas } from "../pixel/grayHero.js";
 import { Sfx } from "../audio/sfx.js";
 import { AnimalBits } from "./animalFx.js";
 import { ToeBits } from "./mattoeFx.js";
+import { FalconBits } from "./spliceFx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 
 const ADD = Phaser.BlendModes.ADD;
@@ -84,6 +85,8 @@ export class CharacterRig {
     this.an = def.animal ? new AnimalBits(this) : null;
     // MATTOE: the always-on aura, footprints and the stubbed-toe death (see mattoeFx.js)
     this.toe = this.px.mode === "toe" ? new ToeBits(this, depth) : null;
+    // SXE (id "splice"): dive tucks, barrel rolls, the sonic boom, wind-streak trail, perch showcase
+    this.falcon = this.px.mode === "falcon" ? new FalconBits(this, depth) : null;
     // 손주원: the hover-thruster glow under the board
     if (this.px.mode === "surf") {
       this.roarT = 0;
@@ -123,6 +126,7 @@ export class CharacterRig {
       ...(this.afterImages || []),
       ...(this.an?.objects || []),
       ...(this.toe?.objects || []),
+      ...(this.falcon?.objects || []),
     ];
   }
 
@@ -243,6 +247,7 @@ export class CharacterRig {
         }
         this.an?.flap();
         this.toe?.flap();
+        this.falcon?.flap();
         break;
       case "yarms":
         // a whoosh puff under the stroke and sparkles off both hands
@@ -509,6 +514,13 @@ export class CharacterRig {
       if (this.sounds) Sfx.flex();
       return hints;
     }
+    if (this.falcon && !this.dead) {
+      // SXE (id "splice"): feathers burst out in a spiral and he tumbles away (the sprite stays)
+      this.dead = true;
+      this.falcon.die();
+      if (this.fx) this.cosmeticDeath(this.x, this.y); // equipped death effects still play
+      return hints;
+    }
     if (this.toe && !this.dead) {
       // STUBBED! (the sprite stays: it flattens, then bounces away; see ToeBits)
       this.dead = true;
@@ -648,11 +660,13 @@ export class CharacterRig {
   /** Near-miss / new best / Second Chance reactions (animals + 손주원; YARMS uses flex()). */
   onNear() {
     this.toe?.near();
+    this.falcon?.near();
     this.an?.near();
     this.surfNear();
   }
   onBest() {
     this.toe?.best();
+    this.falcon?.best();
     this.an?.best();
     this.surfBest();
     this.cosmeticPose();
@@ -991,6 +1005,7 @@ export class CharacterRig {
     if (this.px.mode === "yarms") this.updateYarms(dt);
     if (this.px.mode === "surf") this.updateSurf(dt);
     this.toe?.update(dt);
+    this.falcon?.update(dt);
     if (this.an) this.an.update(dt, scroll);
     if (this.frozen) {
       // a death move is animating the sprite: just keep the trail fading
@@ -1072,6 +1087,7 @@ export class CharacterRig {
     else if (mode === "spin") f = Math.floor(this.time * 20) % 3;
     else if (mode === "animal") f = this.an ? this.an.frame() : 0;
     else if (mode === "toe") f = this.toe ? this.toe.frame() : 0;
+    else if (mode === "falcon") f = this.falcon ? this.falcon.frame() : 0;
     else if (mode === "surf")
       f = this.roarT > 0 ? 3 : this.flapT < 0.24 ? 2 : Math.floor(this.time * 2.5) % 2;
     else if (mode === "yarms")
@@ -1103,6 +1119,7 @@ export class CharacterRig {
       v < 0.8 && big ? 0.75 : v < 0.9 ? 0.875 : v > 1.25 && big ? 1.25 : v > 1.1 ? 1.125 : 1;
     sp.setScale(m * step(this.sx), m * step(this.sy) * flip);
     this.toe?.post(sp);
+    this.falcon?.post(sp);
     this.placeCosmetics();
     this.an?.place(scroll);
     if (this.thruster) {
@@ -1216,6 +1233,7 @@ export class CharacterRig {
     if (!this.trailOverride && this.px.mode === "yarms") return this.drawYarmsTrail(g);
     if (!this.trailOverride && this.px.mode === "surf") return this.drawSurfTrail(g);
     if (!this.trailOverride && this.toe) return this.toe.trail(g);
+    if (!this.trailOverride && this.falcon) return this.falcon.trail(g);
     if (!this.trailOverride && this.an?.trail(g)) return;
     const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail
     // squares laid at an even spacing along the path (not one per frame), so the trail has no
@@ -1420,7 +1438,7 @@ export class CharacterRig {
           [0xffffff, 0xbff4ff, 0x3ef4ff, 0x2a7aff, 0x1a2a8a],
           [0xffffff, 0xffd0ff, 0xd88aff, 0xa040ff, 0x4a1a8a],
         ];
-        const tierIdx = { 1: 0, 2: 1, 3: 2, 5: 3, 10: 4 }[this.comboTier || 1] ?? 0;
+        const tierIdx = { 1: 0, 2: 1, 3: 2, 5: 3, 10: 4, 13: 4 }[this.comboTier || 1] ?? 0;
         // ease between colours so a combo step blends in over ~0.3 s
         this.flameHeat = (this.flameHeat ?? tierIdx) + (tierIdx - (this.flameHeat ?? tierIdx)) * 0.12;
         const lo = Math.floor(this.flameHeat);
