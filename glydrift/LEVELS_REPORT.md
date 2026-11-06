@@ -2,17 +2,17 @@
 
 LEVEL MODE replaces the Daily Challenge. There are 50 hand-built levels, 10 in each realm. Every 10th level is a boss.
 
-Work was done on the `feature/levels` branch. Each batch was merged into `claude/glydrift-arcade-game-7hznpc` with `--no-ff` once CI had passed on all three browsers.
+Work was done on the `feature/levels` branch. All five batches shipped. Each batch was merged into `claude/glydrift-arcade-game-7hznpc` with `--no-ff` once CI had passed on all three browsers.
 
 ## 1. Batches
 
 | Batch | Realm | Levels | Status |
 |---|---|---|---|
-| 1 | Neon Void | 1-10 | __B1__ |
-| 2 | Solar Storm | 11-20 | __B2__ |
-| 3 | Frozen Nebula | 21-30 | __B3__ |
-| 4 | Glitch Realm | 31-40 | __B4__ |
-| 5 | The Abyss | 41-50 | __B5__ |
+| 1 | Neon Void | 1-10 | **Live** (CI run 42182467257, merge 7effa01) |
+| 2 | Solar Storm | 11-20 | **Live** (CI run 42188617661, merge 6afffbd) |
+| 3 | Frozen Nebula | 21-30 | **Live** (CI run 42195358728, merge a03d279) |
+| 4 | Glitch Realm | 31-40 | **Live** (CI run 42201584576, merge ae80ed0) |
+| 5 | The Abyss | 41-50 | **Live** (CI run 42205697543, merge b0533e1) |
 
 **How release works:** `SHIPPED_BATCHES` in `src/levels/levels.js` decides how many realms players see. Every built level is in the game files and is cached by the service worker. Levels that haven't shipped show as **SOON** on the map. To try a later batch early, add `?levels=50` to the address of a test build.
 
