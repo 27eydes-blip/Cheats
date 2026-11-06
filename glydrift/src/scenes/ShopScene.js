@@ -407,14 +407,19 @@ export class ShopScene extends Phaser.Scene {
       }
       case "effects":
         return COSMETICS.filter(
-          (c) => ["death", "flap", "coin"].includes(c.cat) && (forSale(c) || Shop.owns(c.id)),
+          (c) =>
+            ["death", "flap", "coin"].includes(c.cat) &&
+            !c.plus && // Drift Pass+ items never appear in the shop (equip them in HEROES)
+            (forSale(c) || Shop.owns(c.id)),
         ).map((c) => cos(c.id));
       case "boosts":
         return [{ kind: "boosts" }];
       case "pods":
         return [{ kind: "drop" }, { kind: "pod" }];
       default:
-        return COSMETICS.filter((c) => c.cat === tab && (forSale(c) || Shop.owns(c.id))).map((c) =>
+        return COSMETICS.filter(
+          (c) => c.cat === tab && !c.plus && (forSale(c) || Shop.owns(c.id)),
+        ).map((c) =>
           cos(c.id),
         );
     }

@@ -7,6 +7,7 @@ import { Seasons } from "./seasons.js";
 import { DriftPass, giveReward } from "./driftPass.js";
 import { getCosmetic } from "./cosmetics.js";
 import { Titles } from "./titles.js";
+import { PLUS_S1_LAYOUT, plusTrackS1, plusTrackS1v1 } from "./seasonDefs.js";
 
 export const PLUS_PRICE_LABEL = "$3.99";
 export const productIdFor = (seasonId) => `com.glydrift.game.driftpassplus.${seasonId}`;
@@ -19,7 +20,35 @@ function ent() {
 function record(seasonId) {
   const rec = Seasons.record(seasonId);
   rec.plusClaimed ||= {};
+  if (seasonId === "s1" && rec.plusLayout !== PLUS_S1_LAYOUT) migrateS1(rec);
   return rec;
+}
+
+/** What a reward is, for matching it across layouts ("hero:voidcat", "item:skin_holo"…). */
+const rewardKey = (r) =>
+  r?.hero ? `hero:${r.hero}` : r?.item ? `item:${r.item}` : r?.title ? `title:${r.title}` : r?.banner ? "banner" : null;
+
+/**
+ * Season 1's paid track moved to layout 2 (new rewards; four pass heroes moved one tier or a
+ * few). Claims are stored by tier, so move each claimed special reward to its new tier; a
+ * claimed coins / shards / pod tier stays claimed only if it's still a filler tier (otherwise
+ * the new reward there is yours to claim).
+ */
+function migrateS1(rec) {
+  const theme = { banner: "crimson" };
+  const before = plusTrackS1v1(theme);
+  const after = plusTrackS1(theme);
+  const next = {};
+  for (const i of Object.keys(rec.plusClaimed)) {
+    if (!rec.plusClaimed[i]) continue;
+    const key = rewardKey(before[i]);
+    if (key) {
+      const j = after.findIndex((r) => rewardKey(r) === key);
+      if (j >= 0) next[j] = true;
+    } else if (!rewardKey(after[i])) next[i] = true;
+  }
+  rec.plusClaimed = next;
+  rec.plusLayout = PLUS_S1_LAYOUT;
 }
 
 export const PassPlus = {
@@ -34,6 +63,24 @@ export const PassPlus = {
   grant(seasonId, info = {}) {
     ent()[seasonId] = { verified: true, tx: info.transactionId || null, at: info.at || Date.now() };
     Save.write();
+  },
+  /**
+   * Keep only the seasons the server lists as verified purchases for this account (the store
+   * calls this after a successful read of the account's purchases). A device entitlement the
+   * server doesn't know about — e.g. typed into local storage — is dropped, and every Pass+
+   * reward stops counting with it (plusGate.js). Owned items stay recorded, so a real purchase
+   * restored later brings them all back.
+   */
+  keepOnly(seasonIds) {
+    const e = ent();
+    let dropped = 0;
+    for (const id of Object.keys(e))
+      if (!seasonIds.includes(id)) {
+        delete e[id];
+        dropped++;
+      }
+    if (dropped) Save.write();
+    return dropped;
   },
   track(seasonId = this.season()) {
     const season = Seasons.active();
@@ -62,7 +109,11 @@ export const PassPlus = {
       out = { coins: r.coins };
     } else if (r.item) {
       s.cos.owned[r.item] = true;
-      out = { item: getCosmetic(r.item) };
+      const c = getCosmetic(r.item);
+      // the forever badge and the gold name switch on as soon as they're yours (Settings has
+      // the gold-name toggle); everything else waits for you to equip it
+      if (c && (c.cat === "badge" || c.cat === "name")) s.cos.equipped[c.cat] = c.id;
+      out = { item: c };
     } else if (r.title) {
       Titles.grant(r.title);
       out = { title: r.title };

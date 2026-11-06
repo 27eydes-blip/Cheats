@@ -6,6 +6,7 @@
 import { RNG, hashString, todayKey } from "./rng.js";
 import { Save } from "./save.js";
 import { Analytics } from "../systems/analytics.js";
+import { plusAllowed } from "./plusGate.js";
 
 export const RARITY_ORDER = ["common", "rare", "epic", "legendary"];
 
@@ -81,6 +82,23 @@ export const COSMETICS = [
   { id: "trail_eclipse", cat: "trail", name: "Eclipse", rarity: "epic", price: 0, plus: true },
   { id: "death_supernova", cat: "death", name: "Supernova", rarity: "epic", price: 0, plus: true },
   { id: "death_glitchout", cat: "death", name: "Glitch Out", rarity: "epic", price: 0, plus: true },
+  // Season 1 "Abyss Rising" Drift Pass+ exclusives (paid track only; cosmetic only).
+  // pose: plays on a NEW BEST · name: the gold leaderboard name · badge: the forever season
+  // badge · theme: a home screen look. None of these are shop tabs.
+  ...[
+    ["trail_pp_galaxydust", "trail", "Galaxy Dust", "epic"],
+    ["trail_pp_lightning", "trail", "Lightning Trail", "epic"],
+    ["trail_pp_comboflame", "trail", "Combo Flame", "legendary"],
+    ["death_pp_fireworks", "death", "Pixel Fireworks", "epic"],
+    ["death_pp_melt", "death", "Abyss Melt", "epic"],
+    ["death_pp_shatter", "death", "Glitch Shatter", "legendary"],
+    ["pose_pp_power", "pose", "Power Pose", "epic"],
+    ["pose_pp_spinflip", "pose", "Spin Flip", "epic"],
+    ["pose_pp_aura", "pose", "Aura Burst", "legendary"],
+    ["theme_pp_abyss", "theme", "Abyss Home", "legendary"],
+    ["name_pp_gold", "name", "Gold Name", "legendary"],
+    ["badge_pp_s1", "badge", "Season 1 Badge", "legendary"],
+  ].map(([id, cat, name, rarity]) => ({ id, cat, name, rarity, price: 0, plus: "s1" })),
   // season exclusives: only for sale while their season runs (kept forever once bought)
   {
     id: "trail_bloodmoon",
@@ -257,15 +275,19 @@ function state() {
 }
 
 export const Shop = {
+  /** Owned and usable: Drift Pass+ items also need their season's verified purchase. */
   owns(id) {
-    return !!state().cos.owned[id];
+    return !!state().cos.owned[id] && plusAllowed(getCosmetic(id));
   },
   equipped(cat) {
-    return state().cos.equipped[cat] || null;
+    const id = state().cos.equipped[cat] || null;
+    return id && plusAllowed(getCosmetic(id)) ? id : null;
   },
   /** Everything equipped right now, e.g. { trail: "trail_fire", hat: null, … , title }. */
   loadout() {
-    return { ...state().cos.equipped };
+    const lo = { ...state().cos.equipped };
+    for (const [cat, id] of Object.entries(lo)) if (!plusAllowed(getCosmetic(id))) delete lo[cat];
+    return lo;
   },
   equip(id) {
     const c = getCosmetic(id);
@@ -290,7 +312,7 @@ export const Shop = {
   buy(id, where = "shop", shownPrice) {
     const s = state();
     const c = getCosmetic(id);
-    if (!c || Shop.owns(id)) return false;
+    if (!c || Shop.owns(id) || !forSale(c)) return false; // Pass+ / event items are never sold
     const price = Shop.priceOf(id);
     // the deal changed at midnight while the card was open: never charge more than shown
     if (shownPrice !== undefined && shownPrice !== price) return false;

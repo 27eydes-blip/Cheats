@@ -3,6 +3,7 @@ import { BIOMES } from "../biomes/biomes.js";
 import { CHARACTERS, getCharacter, heroReleased, onSale } from "../player/characterDefs.js";
 import { dayDiff, RNG, todayKey } from "./rng.js";
 import { Save } from "./save.js";
+import { plusAllowed } from "./plusGate.js";
 import { Titles } from "./titles.js";
 import { SPIN_MAX } from "../tuning.js";
 import { Seasons } from "./seasons.js";
@@ -409,7 +410,13 @@ export const Progression = {
   },
 
   isUnlocked(id) {
-    return !!Save.data.unlocked[id];
+    // a Drift Pass+ hero also needs its season's verified purchase (plusGate.js)
+    return !!Save.data.unlocked[id] && plusAllowed(getCharacter(id));
+  },
+  /** The hero to fly: the selected one, or VOLT if it isn't usable any more. */
+  selectedHero() {
+    const id = Save.data.selected;
+    return this.isUnlocked(id) ? id : "volt";
   },
 
   /** A stat by name; "dimensions" = how many dimensions this save has discovered. */

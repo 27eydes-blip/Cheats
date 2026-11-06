@@ -89,7 +89,7 @@ export class GameScene extends Phaser.Scene {
     this.hazardList = [];
     this.hazardScreen = [];
 
-    this.charDef = getCharacter(TEST.character || Save.data.selected);
+    this.charDef = getCharacter(TEST.character || Progression.selectedHero());
     this.fx = new Effects(this, { lowGfx: this.lowGfx });
     this.obstacles = new ObstacleManager(this, this.fx, {
       W,

@@ -181,7 +181,7 @@ export class MenuScene extends Phaser.Scene {
     const L = this.layout(top);
     this.L = L;
     this.showIds = null; // re-pick the showcase worlds every visit (newly reached ones too)
-    this.def = getCharacter(TEST.character || s.selected);
+    this.def = getCharacter(TEST.character || Progression.selectedHero());
     this.cameras.main.fadeIn(300, 2, 1, 7);
 
     this.backdrop = this.scene.get("Backdrop");

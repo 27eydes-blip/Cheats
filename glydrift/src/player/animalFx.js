@@ -17,6 +17,8 @@
 //   chameleon true                                skin layer tinted to the current realm
 //   best.vanish / best.breath                     flicker near-invisible / breathe dark fire
 //   death     "firestorm"                         a red firestorm
+//   orbit     { color, n, r, speed, alt? }        glowing runes circling the hero (Riftling)
+//   flapRing  color                               a ring rolls off on every flap (Rift Sovereign)
 // Everything respects Low Graphics (fewer particles) and Reduce Flashing (no fast blinking).
 import Phaser from "phaser";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
@@ -61,6 +63,21 @@ export class AnimalBits {
         .setVisible(false);
       this.skinCol = rig.def.color;
       rig.extras.push(this.skinLayer);
+    }
+    // runes that orbit the hero (Riftling's later forms; the Rift Sovereign's idle)
+    if (this.a.orbit && scene.textures.exists("fx_rune")) {
+      const O = this.a.orbit;
+      const n = rig.lowGfx ? Math.max(1, Math.ceil(O.n / 2)) : O.n;
+      this.orbit = [];
+      for (let i = 0; i < n; i++) {
+        const im = scene.add
+          .image(0, 0, "fx_rune")
+          .setBlendMode(ADD)
+          .setTint(i % 2 && O.alt ? O.alt : O.color)
+          .setDepth(depth + 0.7);
+        this.orbit.push(im);
+        rig.extras.push(im);
+      }
     }
     if (this.a.after) {
       this.ghosts = [];
@@ -112,6 +129,12 @@ export class AnimalBits {
       });
     }
     if (this.a.after) this.stampGhost(0.6);
+    // the Rift Sovereign's flap: a gold ring rolls off it (softer with Reduce Flashing)
+    if (this.a.flapRing && r.fx && !r.dead)
+      r.fx.ring(r.x, r.y, this.a.flapRing, {
+        scale: reduceFlashing() ? 0.7 : 1,
+        duration: reduceFlashing() ? 520 : 380,
+      });
     if (this.a.flapRainbow && r.fx)
       for (let i = 0; i < 3; i++)
         r.fx.burst("star", r.x, r.y, 2, hsv(Math.random(), 0.6, 1), {
@@ -246,6 +269,21 @@ export class AnimalBits {
           .setScale(sp.scaleX, sp.scaleY)
           .setTint(this.skinCol)
           .setAlpha(sp.alpha * 0.92);
+    }
+    if (this.orbit) {
+      // runes circle the hero on a tilted ellipse (in front on one side, behind on the other)
+      const O = this.a.orbit;
+      const k = (r.px.artK ?? 4) * Math.abs(sp.scaleX);
+      const show = sp.visible && !r.dead;
+      this.orbit.forEach((im, i) => {
+        const a = r.time * (O.speed ?? 2) + (i / this.orbit.length) * Math.PI * 2;
+        const front = Math.sin(a) > 0;
+        im.setVisible(show)
+          .setPosition(sp.x + Math.cos(a) * (O.r ?? 16) * k, sp.y + Math.sin(a) * (O.r ?? 16) * k * 0.4 - 2 * k)
+          .setDisplaySize(4 * k, 4 * k)
+          .setDepth(sp.depth + (front ? 0.7 : -0.7))
+          .setAlpha(front ? 0.95 : 0.55);
+      });
     }
     const g = this.glow;
     if (!g) return;

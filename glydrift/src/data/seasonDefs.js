@@ -75,10 +75,78 @@ function plusTrack(theme) {
   });
 }
 /**
- * Season 1's DRIFT PASS+ track: the ten pass-exclusive heroes, with animated titles, skins,
- * trails, death effects and a banner between them, and coins / shards / pods on the rest.
+ * Season 1's DRIFT PASS+ track (layout 2, 2026-11-06): the ten pass-exclusive heroes, the
+ * evolving RIFTLING (base form at tier 1, armor at 15, aura at 30, its legendary RIFT SOVEREIGN
+ * form at 50), animated titles, trails, death effects, victory poses, the Abyss home theme, and
+ * — at the very end — the gold leaderboard name and the forever Season 1 badge. Something new
+ * every 1–3 tiers; coins / shards / pods fill the rest. Pass heroes are placed by their own
+ * passTier (passHeroDefs.js), so this table only holds everything else.
  */
-function plusTrackS1(theme) {
+export const PLUS_S1_SPECIAL = {
+  3: { item: "skin_holo", label: "NEW SKIN" },
+  4: { title: "p_riftdiver", label: "ANIMATED TITLE" },
+  6: { item: "trail_pp_galaxydust", label: "NEW TRAIL" },
+  7: { title: "p_abysslord", label: "ANIMATED TITLE" },
+  8: { item: "death_pp_fireworks", label: "NEW DEATH FX" },
+  11: { item: "pose_pp_power", label: "VICTORY POSE" },
+  12: { item: "trail_aurora", label: "NEW TRAIL" },
+  13: { title: "p_abysswalker", label: "ANIMATED TITLE" },
+  17: { banner: "s1", label: "NEW BANNER" },
+  18: { item: "trail_pp_lightning", label: "NEW TRAIL" },
+  21: { item: "death_pp_melt", label: "NEW DEATH FX" },
+  22: { item: "trail_eclipse", label: "NEW TRAIL" },
+  23: { item: "pose_pp_spinflip", label: "VICTORY POSE" },
+  26: { item: "theme_pp_abyss", label: "HOME THEME" },
+  27: { title: "p_neonroyal", label: "ANIMATED TITLE" },
+  28: { title: "p_voidtouched", label: "ANIMATED TITLE" },
+  32: { item: "skin_inferno", label: "NEW SKIN" },
+  33: { item: "trail_pp_comboflame", label: "NEW TRAIL" },
+  36: { item: "death_pp_shatter", label: "NEW DEATH FX" },
+  37: { item: "death_supernova", label: "NEW DEATH FX" },
+  38: { item: "pose_pp_aura", label: "VICTORY POSE" },
+  42: { title: "p_starborn", label: "ANIMATED TITLE" },
+  43: { title: "p_s1founder", label: "ANIMATED TITLE" },
+  45: { item: "skin_starlight", label: "NEW SKIN" },
+  47: { item: "death_glitchout", label: "NEW DEATH FX" },
+  48: { item: "name_pp_gold", label: "GOLD NAME" },
+  49: { item: "badge_pp_s1", label: "FOREVER BADGE" },
+};
+/** Pass-hero tiers in layout 2 (kept in step with passHeroDefs.js passTier). */
+const PLUS_S1_HEROES = {
+  1: "riftling",
+  2: "voidcat",
+  5: "hexowl",
+  10: "wraithmoth",
+  15: "riftling_armor",
+  16: "triphound",
+  20: "phantomray",
+  25: "scorpyre",
+  30: "riftling_aura",
+  31: "krakkie",
+  35: "crimsonmantis",
+  40: "gloomeleon",
+  46: "umbradrake",
+  50: "riftsovereign",
+};
+const filler = (t) =>
+  t % 4 === 0 ? { shards: 3 + Math.floor(t / 10) } : t % 3 === 0 ? { pod: true } : { coins: 200 + t * 20 };
+export const PLUS_S1_LAYOUT = 2;
+export function plusTrackS1(theme) {
+  return Array.from({ length: 50 }, (_, i) => {
+    const t = i + 1;
+    if (PLUS_S1_HEROES[t])
+      return { hero: PLUS_S1_HEROES[t], label: t === 50 ? "LEGENDARY FORM" : "PASS HERO", milestone: true };
+    const sp = PLUS_S1_SPECIAL[t];
+    if (sp) {
+      const r = sp.banner ? { banner: theme.banner, label: sp.label } : { ...sp };
+      return { ...r, milestone: t % 5 === 0 || t >= 48 };
+    }
+    return filler(t);
+  });
+}
+/** Layout 1 (the launch layout), kept only to move claims made on it (passPlus.js). */
+export function plusTrackS1v1(theme) {
+
   const special = {
     1: { hero: "voidcat", label: "PASS HERO" },
     3: { item: "skin_holo", label: "NEW SKIN" },

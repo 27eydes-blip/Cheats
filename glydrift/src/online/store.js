@@ -12,6 +12,7 @@
 import { TEST } from "../systems/testFlags.js";
 import { Leaderboard } from "./leaderboard.js";
 import { PassPlus, productIdFor } from "../data/passPlus.js";
+import { Account } from "./account.js";
 
 export class StoreError extends Error {}
 
@@ -112,13 +113,26 @@ export const Store = {
     return { restored };
   },
 
+  /**
+   * Launch check: the server, not this device, decides who owns Drift Pass+. Signed in: the
+   * account's verified purchases are pulled and any season the server doesn't list is dropped.
+   * Signed out (a guest can't buy — purchases belong to an account): any local entitlement is
+   * dropped. Offline / server not reachable: nothing changes until the next launch.
+   */
+  async recheck() {
+    if (this.platform() === "mock" || TEST.offline || !Account.available || !Account.known) return;
+    if (Account.signedIn) await this.pullServerEntitlements({ exact: true });
+    else PassPlus.keepOnly([]);
+  },
+
   /** Verified purchases recorded on the server for this account (any device). */
-  async pullServerEntitlements() {
+  async pullServerEntitlements({ exact = false } = {}) {
     if (TEST.offline) return 0;
     try {
       const sb = await Leaderboard.session();
       const { data, error } = await sb.from("purchases").select("season_id, transaction_id");
       if (error) return 0;
+      if (exact) PassPlus.keepOnly((data || []).map((r) => r.season_id));
       let n = 0;
       for (const row of data || []) {
         if (!PassPlus.owns(row.season_id)) n++;
