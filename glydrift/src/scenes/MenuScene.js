@@ -27,6 +27,7 @@ import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { Music } from "../audio/music.js";
 import { LOGIN_REWARDS, Progression } from "../data/progression.js";
 import { LEVEL_COUNT, currentLevel, totalStars } from "../levels/levels.js";
+import { COPYRIGHT } from "../legal.js";
 import { Save } from "../data/save.js";
 import { addTexture, PixelCanvas } from "../pixel/px.js";
 import { Seasons } from "../data/seasons.js";
@@ -1748,6 +1749,7 @@ export class MenuScene extends Phaser.Scene {
       },
     });
     c.add([mute, gfx, style, nameBtn, acct, done]);
+    c.add(plainText(this, W / 2, y0 + h - 135, COPYRIGHT, 14, "#8a80b0", { weight: "600" }));
     if (plusRow) {
       const py = y0 + (Install.available ? 795 : 705);
       const both = hasGold && hasTheme;
