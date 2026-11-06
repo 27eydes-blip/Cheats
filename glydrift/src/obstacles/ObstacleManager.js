@@ -195,8 +195,15 @@ export class ObstacleManager {
   }
 
   coin(x, y) {
-    // LEVEL MODE has no coin pickups (only its three star coins)
-    if (this.level) return null;
+    // LEVEL MODE has no coin pickups (only its three star coins). The coin trail's bookkeeping
+    // still runs, so the level's seeded layout is exactly what it was with coins.
+    if (this.level) {
+      if (x >= this.lastCoinX) {
+        this.lastCoinX = x;
+        this.lastCoinY = y;
+      }
+      return null;
+    }
     let c = this.coins.find((o) => !o.active);
     if (!c) {
       c = this.scene.add

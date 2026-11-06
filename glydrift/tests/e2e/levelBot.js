@@ -52,7 +52,9 @@ export function botPlay({ maxTriesPerCp = 40, god = false, maxSeconds = 900 } = 
       waitFrames = waitFrames ?? (res.deaths * 7) % 23;
       if (waitFrames-- <= 0) {
         waitFrames = null;
-        s.onTap();
+        s.onTap(); // that tap is the flap: let it play out before steering again
+        step();
+        continue;
       } else {
         step();
         continue;
