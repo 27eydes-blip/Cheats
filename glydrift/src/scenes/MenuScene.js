@@ -1028,9 +1028,10 @@ export class MenuScene extends Phaser.Scene {
       this.queueT -= dt;
       if (this.queueT <= 0) {
         this.seasonBusy = true;
-        Promise.resolve(this.seasonQueue.shift()()).then(() => {
+        Promise.resolve(this.seasonQueue.shift()()).then((shown) => {
           this.seasonBusy = false;
-          this.queueT = 0.5;
+          // a step with nothing to show (it says so with false) doesn't hold up the next one
+          this.queueT = shown === false ? 0 : 0.5;
         });
       }
     }
@@ -1071,7 +1072,7 @@ export class MenuScene extends Phaser.Scene {
    */
   async maybeLbResetNotice() {
     const id = await LbReset.check();
-    if (!id || this.leaving || !this.scene.isActive()) return;
+    if (!id || this.leaving || !this.scene.isActive()) return false;
     // the old best is gone from this device: take it off the home screen too
     this.bestText?.destroy();
     this.bestText = null;
