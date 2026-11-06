@@ -1,11 +1,15 @@
-// Procedural house music engine (Tone.js). Every sound is synthesized — no audio files.
+// Procedural reggae engine (Tone.js). Every sound is synthesized: no audio files.
 //
 //  master:  track faders → bus → death low-pass → limiter → volume → speakers
-//  each track: drums (dry) · bass (dry, ducked) · synths (ducked, sent to shared reverb/delay)
+//  each track is a small reggae band:
+//    drums (one-drop / rockers / steppers / ska / digital) · deep round bass ·
+//    guitar skank on the offbeats · bubbling organ · melodica / flute / horn lead ·
+//    dub sends (shared spring-ish reverb + tempo-synced echo, rimshot echo throws, siren)
 //
-// Tracks are built from 8-bar sections (intro → build → main → breakdown → drop, looping),
-// vary each loop (motif swaps, fills) and add layers as `intensity` (player speed) rises.
-// Track changes start on the next bar and crossfade over 2 seconds.
+// Tracks are built from 8-bar sections (intro → build → main → dub breakdown → drop, looping),
+// vary each loop (motif swaps, fills, bass drop-outs) and add layers as `intensity` (player
+// speed) rises: a one-drop beat turns into rockers, then steppers, the skank doubles, the
+// lead climbs an octave. Track changes start on the next bar and crossfade over 2 seconds.
 import * as Tone from "tone";
 import { SECTIONS, TRACKS } from "./musicTracks.js";
 import { Save } from "../data/save.js";
@@ -14,10 +18,28 @@ import { TEST } from "../systems/testFlags.js";
 const MINOR = [0, 2, 3, 5, 7, 8, 10];
 const PHRYGIAN = [0, 1, 3, 5, 7, 8, 10];
 const FADE = 2;
+const KICK_HZ = 50;
+const ORGAN_PARTIALS = [1, 0.55, 0.35, 0, 0.22, 0, 0.12, 0.08];
 
 function midiToFreq(m) {
   return 440 * 2 ** ((m - 69) / 12);
 }
+
+/** Echo time for a tempo: a dotted eighth, the classic dub delay. */
+function echoTime(bpm) {
+  return (60 / bpm) * 0.75;
+}
+
+/** Drum pattern for a style: kick steps, rimshot / snare steps. */
+const DRUMS = {
+  onedrop: { kick: [8], rim: [8] },
+  rockers: { kick: [0, 8], rim: [8] },
+  steppers: { kick: [0, 4, 8, 12], rim: [8] },
+  ska: { kick: [0, 8], snare: [4, 12] },
+  digital: { kick: [0, 7, 8, 11], snare: [4, 12] },
+  heartbeat: { kick: null, rim: [8] },
+  none: { kick: [], rim: [] },
+};
 
 class Track {
   constructor(engine, id, startBar) {
@@ -43,100 +65,134 @@ class Track {
       return n;
     };
 
-    // faders (crossfade) — sends fade together with the dry signal
+    // faders (crossfade): sends fade together with the dry signal
     this.fader = keep(new Tone.Gain(0)).connect(engine.bus);
     this.sendFader = keep(new Tone.Gain(0));
-    const rev = keep(new Tone.Gain(d.reverb)).connect(engine.reverb);
-    this.sendFader.connect(rev);
-    const dly = keep(new Tone.Gain(d.delay)).connect(engine.delay);
-    this.sendFader.connect(dly);
+    this.revSend = keep(new Tone.Gain(d.reverb)).connect(engine.reverb);
+    this.sendFader.connect(this.revSend);
+    this.dlySend = keep(new Tone.Gain(d.delay)).connect(engine.delay);
+    this.sendFader.connect(this.dlySend);
 
-    // drums: dry & punchy
+    // ---- drums: a round, low kick and a dry cross-stick rimshot
     const drums = keep(new Tone.Gain(1)).connect(this.fader);
     this.kick = keep(
       new Tone.MembraneSynth({
-        pitchDecay: 0.028,
-        octaves: 6,
+        pitchDecay: 0.045,
+        octaves: 4,
         oscillator: { type: "sine" },
-        envelope: { attack: 0.001, decay: 0.32, sustain: 0, release: 0.05 },
+        envelope: { attack: 0.001, decay: 0.42, sustain: 0, release: 0.08 },
       }),
     ).connect(drums);
-    this.kick.volume.value = d.soft ? -9 : -3;
-    const clapF = keep(new Tone.Filter(1700, "bandpass")).connect(drums);
-    this.clap = keep(
+    this.kick.volume.value = d.soft ? -8 : -3;
+    // rimshots feed a dub "throw": a send to the echo that opens for single hits
+    this.rimBus = keep(new Tone.Gain(1)).connect(drums);
+    this.throwSend = keep(new Tone.Gain(0)).connect(this.sendFader);
+    this.rimBus.connect(this.throwSend);
+    const rimF = keep(new Tone.Filter({ frequency: 2300, type: "bandpass", Q: 2.2 })).connect(
+      this.rimBus,
+    );
+    this.rimNoise = keep(
       new Tone.NoiseSynth({
         noise: { type: "white" },
-        envelope: { attack: 0.001, decay: 0.14, sustain: 0 },
+        envelope: { attack: 0.001, decay: 0.045, sustain: 0 },
       }),
-    ).connect(clapF);
-    this.clap.volume.value = d.soft ? -18 : -9;
-    const hatF = keep(new Tone.Filter(7800, "highpass")).connect(drums);
-    this.hatO = keep(
+    ).connect(rimF);
+    this.rimNoise.volume.value = d.soft ? -12 : -6;
+    this.rimTone = keep(
+      new Tone.Synth({
+        oscillator: { type: "triangle" },
+        envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.02 },
+      }),
+    ).connect(this.rimBus);
+    this.rimTone.volume.value = d.soft ? -16 : -11;
+    const snareF = keep(new Tone.Filter(1700, "bandpass")).connect(this.rimBus);
+    this.snare = keep(
       new Tone.NoiseSynth({
         noise: { type: "white" },
-        envelope: { attack: 0.001, decay: 0.11, sustain: 0 },
+        envelope: { attack: 0.001, decay: 0.15, sustain: 0 },
       }),
-    ).connect(hatF);
-    this.hatO.volume.value = d.soft ? -24 : -19;
+    ).connect(snareF);
+    this.snare.volume.value = -8;
+    const hatF = keep(new Tone.Filter(7500, "highpass")).connect(drums);
     this.hatC = keep(
       new Tone.NoiseSynth({
         noise: { type: "white" },
-        envelope: { attack: 0.001, decay: 0.025, sustain: 0 },
+        envelope: { attack: 0.001, decay: 0.03, sustain: 0 },
       }),
     ).connect(hatF);
-    this.hatC.volume.value = -24;
+    this.hatC.volume.value = d.soft ? -27 : -22;
+    this.hatO = keep(
+      new Tone.NoiseSynth({
+        noise: { type: "white" },
+        envelope: { attack: 0.001, decay: 0.16, sustain: 0 },
+      }),
+    ).connect(hatF);
+    this.hatO.volume.value = d.soft ? -28 : -23;
 
-    // bass: dry, ducked by the kick
-    this.bassDuck = keep(new Tone.Gain(1)).connect(this.fader);
+    // ---- bass: deep and round (triangle through a low-pass so phone speakers still hear it)
+    this.bassOut = keep(new Tone.Gain(1)).connect(this.fader);
     this.bass = keep(
       new Tone.MonoSynth({
-        oscillator: { type: d.bassWave },
-        filter: { Q: 2, type: "lowpass", rolloff: -24 },
-        envelope: { attack: 0.004, decay: 0.18, sustain: 0.45, release: 0.07 },
+        oscillator: { type: d.bassWave || "triangle" },
+        filter: { Q: 1, type: "lowpass", rolloff: -24 },
+        envelope: { attack: 0.012, decay: 0.3, sustain: 0.8, release: 0.12 },
         filterEnvelope: {
-          attack: 0.003,
-          decay: 0.14,
-          sustain: 0.25,
-          baseFrequency: d.bassCutoff * 0.4,
-          octaves: 2.2,
+          attack: 0.005,
+          decay: 0.25,
+          sustain: 0.5,
+          baseFrequency: d.bassCutoff * 0.5,
+          octaves: 1.4,
         },
       }),
     );
     if (d.dist) {
       // heavy distorted sub: drive the bass into a waveshaper, then tame the fizz
       const dist = keep(new Tone.Distortion({ distortion: d.dist, oversample: "2x" }));
-      const tame = keep(new Tone.Filter(900, "lowpass")).connect(this.bassDuck);
+      const tame = keep(new Tone.Filter(800, "lowpass")).connect(this.bassOut);
       this.bass.connect(dist);
       dist.connect(tame);
-    } else this.bass.connect(this.bassDuck);
-    this.bass.volume.value = d.sub ? -4 : -11;
+      this.bass.volume.value = -8;
+    } else {
+      this.bass.connect(this.bassOut);
+      this.bass.volume.value = -2;
+    }
 
-    // synths: ducked + reverb/delay
+    // ---- melodic instruments: dry + sent to the shared reverb / echo
     this.synthBus = keep(new Tone.Gain(1));
     let chain = this.synthBus;
     if (d.crush) {
-      this.crusher = keep(new Tone.BitCrusher(5));
+      this.crusher = keep(new Tone.BitCrusher(6));
       chain.connect(this.crusher);
       chain = this.crusher;
     }
-    this.synthDuck = keep(new Tone.Gain(1));
-    chain.connect(this.synthDuck);
-    this.synthDuck.connect(this.fader);
-    this.synthDuck.connect(this.sendFader);
+    chain.connect(this.fader);
+    chain.connect(this.sendFader);
 
+    // guitar skank: a short, bright chop on the offbeat, strummed across the strings
     this.chordF = keep(new Tone.Filter(d.chordCutoff, "lowpass")).connect(this.synthBus);
-    this.chords = keep(
+    const skankHp = keep(new Tone.Filter(520, "highpass")).connect(this.chordF);
+    this.skank = keep(
       new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: d.chordWave },
-        // `swell`: chords fade in and cut off — sounds like a reversed tape (Mirror Realm)
-        envelope: d.swell
-          ? { attack: 0.2, decay: 0.05, sustain: 0.35, release: 0.03 }
-          : { attack: 0.004, decay: 0.26, sustain: 0, release: 0.22 },
+        oscillator: { type: d.skankWave || "sawtooth" },
+        envelope: { attack: 0.001, decay: 0.075, sustain: 0, release: 0.05 },
       }),
-    ).connect(this.chordF);
-    // stutters retrigger 4-5 note chords with release tails: 16 voices dropped notes
-    this.chords.maxPolyphony = 32;
-    this.chords.volume.value = d.chordWave === "sawtooth" || d.chordWave === "square" ? -21 : -15;
+    ).connect(skankHp);
+    this.skank.maxPolyphony = 32;
+    this.skank.volume.value = d.skankWave === "square" ? -20 : -17;
+
+    // organ: the "bubble" (and long swells in the Mirror Realm)
+    if (d.organ) {
+      this.organ = keep(
+        new Tone.PolySynth(Tone.Synth, {
+          oscillator: { type: "custom", partials: ORGAN_PARTIALS },
+          envelope: d.swell
+            ? { attack: 0.35, decay: 0.05, sustain: 0.6, release: 0.03 }
+            : { attack: 0.004, decay: 0.11, sustain: 0.15, release: 0.06 },
+        }),
+      ).connect(this.chordF);
+      this.organ.maxPolyphony = 32;
+      this.organ.volume.value = d.swell ? -20 : -19;
+    }
     if (d.pad) {
       this.pad = keep(
         new Tone.PolySynth(Tone.Synth, {
@@ -147,22 +203,51 @@ class Track {
       this.pad.maxPolyphony = 24;
       this.pad.volume.value = d.pad.vol;
     }
-    this.lead = keep(
-      new Tone.Synth({
-        oscillator: { type: d.lead.wave },
-        portamento: 0.015,
-        envelope: { attack: 0.008, decay: 0.2, sustain: 0.28, release: 0.25 },
-      }),
-    ).connect(this.synthBus);
-    this.lead.volume.value = d.lead.wave === "square" || d.lead.wave === "sawtooth" ? -23 : -15;
+
+    // lead: melodica (reedy saw), flute (sine), horn (brassy saw section) or digital (square)
+    const voice = d.lead.voice;
+    const leadWave = voice === "flute" ? "sine" : voice === "digital" ? "square" : "sawtooth";
+    const leadCut = voice === "melodica" ? 2200 : voice === "horn" ? 2800 : 5000;
+    const vib = keep(new Tone.Vibrato(5.2, voice === "digital" ? 0 : 0.07)).connect(this.synthBus);
+    const leadF = keep(new Tone.Filter(leadCut, "lowpass")).connect(vib);
+    const mkLead = () =>
+      keep(
+        new Tone.Synth({
+          oscillator: { type: leadWave },
+          portamento: voice === "horn" ? 0 : 0.03,
+          envelope:
+            voice === "horn"
+              ? { attack: 0.02, decay: 0.12, sustain: 0.6, release: 0.12 }
+              : { attack: 0.035, decay: 0.2, sustain: 0.7, release: 0.28 },
+        }),
+      ).connect(leadF);
+    const leadVol = leadWave === "sine" ? -13 : leadWave === "square" ? -22 : -19;
+    this.lead = mkLead();
+    this.lead.volume.value = leadVol;
+    if (d.lead.harm) {
+      this.lead2 = mkLead();
+      this.lead2.volume.value = leadVol - 4;
+    }
     if (d.arp) {
       this.arp = keep(
         new Tone.Synth({
           oscillator: { type: d.arp.wave },
-          envelope: { attack: 0.002, decay: 0.11, sustain: 0, release: 0.08 },
+          envelope: { attack: 0.002, decay: 0.14, sustain: 0, release: 0.1 },
         }),
       ).connect(this.synthBus);
-      this.arp.volume.value = d.arp.wave === "square" ? -26 : -19;
+      this.arp.volume.value = d.arp.wave === "square" ? -27 : -21;
+    }
+    if (d.siren) {
+      // dub siren: a wailing tone swept up and down, drowned in echo
+      this.siren = keep(
+        new Tone.Synth({
+          oscillator: { type: "square" },
+          envelope: { attack: 0.05, decay: 0.2, sustain: 0.8, release: 0.6 },
+        }),
+      );
+      const sirenF = keep(new Tone.Filter(1800, "lowpass")).connect(this.sendFader);
+      this.siren.connect(sirenF);
+      this.siren.volume.value = -24;
     }
     if (d.whisper) {
       // breathy noise swept through a resonant band-pass (eerie whispers)
@@ -187,6 +272,14 @@ class Track {
     return degs.map((x) => midiToFreq(this.midi(x, oct)));
   }
 
+  /** Bass note for a chord degree + line degree, kept in the A1..A2 range. */
+  bassFreq(deg) {
+    let m = this.midi(deg, -2);
+    while (m < 33) m += 12;
+    while (m > 47) m -= 12;
+    return midiToFreq(m);
+  }
+
   /** Scheduled every 16th note by the Transport. Never lets a scheduling clash throw. */
   tick(time) {
     if (this.disposed) return;
@@ -203,6 +296,41 @@ class Track {
       // a scheduling clash after a main-thread stall: skip this 16th silently (counted for
       // the ?music test page) instead of warning in the console
       this.engine.skipped = (this.engine.skipped || 0) + 1;
+    }
+  }
+
+  /** The drum style right now: a one-drop gets busier as the player speeds up. */
+  drumStyle(sec, I) {
+    const base = this.def.drums || "onedrop";
+    const hot = sec === "main" || sec === "drop";
+    if (!hot) return base;
+    if (base === "onedrop") return I > 0.85 ? "steppers" : I > 0.55 ? "rockers" : base;
+    if (base === "rockers" && sec === "drop" && I > 0.75) return "steppers";
+    return base;
+  }
+
+  /** One hit per drum per instant: a fill landing on a groove hit would make Tone throw. */
+  once(key, t) {
+    const k = `last${key}`;
+    if (this[k] !== undefined && t <= this[k]) return false;
+    this[k] = t;
+    return true;
+  }
+
+  snareHit(t, vel, dur = "16n") {
+    if (this.once("Snare", t)) this.snare.triggerAttackRelease(dur, t, vel);
+  }
+
+  rim(t, vel, throwIt = false) {
+    if (!this.once("Rim", t)) return;
+    this.rimNoise.triggerAttackRelease("32n", t, vel);
+    this.rimTone.triggerAttackRelease(1650, "64n", t, vel);
+    if (throwIt) {
+      // dub throw: open the echo send just for this hit
+      const g = this.throwSend.gain;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(0.9, t);
+      g.setValueAtTime(0, t + 0.09);
     }
   }
 
@@ -224,111 +352,151 @@ class Track {
     this.section = sec;
     const I = e.intensity;
     const sixteenth = Tone.Time("16n").toSeconds();
+    // the reggae shuffle: every off-16th lands a little late
+    const t = s % 2 === 1 && d.swing ? time + d.swing * sixteenth : time;
     const chordDeg = d.prog[inSec % d.prog.length];
-    const fillBar = inSec === 7 && sec !== "breakdown";
+    const fillBar = inSec === 7;
+    const dub = sec === "breakdown";
+    const full = sec === "main" || sec === "drop";
 
     // section-level automation at the top of each bar
     if (s === 0) {
-      let cut = d.chordCutoff * (0.65 + 0.7 * I);
-      if (sec === "build") cut *= 0.35 + (0.65 * inSec) / 7;
-      if (sec === "breakdown") cut *= 0.5;
+      let cut = d.chordCutoff * (0.7 + 0.5 * I);
+      if (sec === "build") cut *= 0.45 + (0.55 * inSec) / 7;
+      if (dub) cut *= 0.45;
       if (sec === "intro") cut *= 0.6;
-      this.chordF.frequency.rampTo(Math.max(200, cut), 0.4, time);
+      this.chordF.frequency.rampTo(Math.max(250, cut), 0.4, time);
       if (this.crusher) this.crusher.bits.value = sec === "drop" ? 4 : 6;
+      // dub section: everything leans into the echo
+      const echo = dub ? Math.min(0.85, d.delay * 2.2) : d.delay;
+      this.dlySend.gain.rampTo(echo, 0.6, time);
+      this.revSend.gain.rampTo(dub ? Math.min(0.85, d.reverb * 1.5) : d.reverb, 0.6, time);
     }
 
     // ---- drums
-    const kickOn = sec !== "breakdown" && !(fillBar && sec === "build" && s >= 8);
-    const kickHit = d.kickSteps ? d.kickSteps.includes(s) : s % 4 === 0;
-    if (kickHit && kickOn) {
+    const style = this.drumStyle(sec, I);
+    const pat = DRUMS[style] || DRUMS.onedrop;
+    const kicks = pat.kick ?? d.kickSteps ?? [8];
+    // intro: rim and hats only until halfway; dub: the drums drop out for bar 6
+    const drumsOn = !(sec === "intro" && inSec < 4) && !(dub && inSec === 6);
+    if (drumsOn && kicks.includes(s)) {
       // heartbeat kicks: the "dub" (odd hits) is softer than the "lub"
-      const dub = d.kickSteps && d.kickSteps.indexOf(s) % 2 === 1;
-      this.kick.triggerAttackRelease(
-        midiToFreq(this.midi(0, -3)),
-        "8n",
-        time,
-        d.soft ? 0.75 : dub ? 0.7 : 1,
-      );
-      // sidechain-style pump
-      this.bassDuck.gain.cancelScheduledValues(time);
-      this.bassDuck.gain.setValueAtTime(0.3, time);
-      this.bassDuck.gain.linearRampToValueAtTime(1, time + 0.2);
-      this.synthDuck.gain.cancelScheduledValues(time);
-      this.synthDuck.gain.setValueAtTime(0.28, time);
-      this.synthDuck.gain.linearRampToValueAtTime(1, time + 0.24);
+      const soft = style === "heartbeat" && kicks.indexOf(s) % 2 === 1;
+      const ghost = style === "steppers" && (s === 4 || s === 12);
+      this.kick.triggerAttackRelease(KICK_HZ, "8n", t, soft ? 0.7 : ghost ? 0.8 : 1);
     }
-    const clapOn = sec === "main" || sec === "drop" || (sec === "build" && inSec >= 4);
-    const mainClap = clapOn && (s === 4 || s === 12);
-    if (mainClap && !d.ambient) this.clap.triggerAttackRelease("16n", time, 0.9);
-    // drum fill: rising clap roll in the last half-bar of a section, varied per loop
-    if (!d.ambient && !mainClap && fillBar && sec !== "intro" && s >= (loop % 2 ? 12 : 8)) {
-      this.clap.triggerAttackRelease("32n", time, 0.25 + (s - 8) * 0.08);
+    const rimOn = !(sec === "intro" && inSec < 2);
+    if (rimOn && pat.rim?.includes(s)) {
+      // throw the rimshot into the echo on odd dub bars and at the end of every section
+      this.rim(t, d.soft ? 0.6 : 0.9, (dub && inSec % 2 === 1) || fillBar);
     }
-    if (!d.ambient && sec !== "breakdown" && s % 4 === 2)
-      this.hatO.triggerAttackRelease("16n", time, 0.8);
-    const hats16 =
-      !d.soft &&
-      (d.hats === "drive" || I > 0.3) &&
-      (sec === "main" || sec === "drop" || sec === "build");
-    if (hats16 && s % 2 === 1)
-      this.hatC.triggerAttackRelease("32n", time, s % 4 === 3 ? 0.55 : 0.35);
-    if (I > 0.75 && (sec === "main" || sec === "drop") && s % 4 === 3)
-      this.hatC.triggerAttackRelease("32n", time + sixteenth / 2, 0.3);
+    if (rimOn && pat.snare?.includes(s)) this.snareHit(t, 0.85);
+    // pick-up rimshot before the next bar, and the clock tick (Chrono Fracture)
+    if (full && I > 0.4 && s === 15 && pat.rim) this.rim(t, 0.35);
+    if (d.tick && rimOn && s % 2 === 0 && !pat.rim?.includes(s)) this.rim(t, 0.18);
+    // fill: a rising rimshot / snare roll over the last half-bar of a section
+    if (fillBar && sec !== "intro" && style !== "none" && s >= (loop % 2 ? 12 : 10)) {
+      const v = 0.25 + (s - 10) * 0.1;
+      if (pat.snare) this.snareHit(t, v, "32n");
+      else if (s % 2 === 0 || s >= 14) this.rim(t, v);
+    }
+    // hats: swung 8ths (16ths when it gets fast), an open hat leading into every other bar
+    if (d.hats !== "none" && drumsOn) {
+      const sixteenths = d.hats === "16ths" || (full && I > 0.6);
+      if (s % 2 === 0) this.hatC.triggerAttackRelease("32n", t, s % 4 === 2 ? 0.75 : 0.5);
+      else if (sixteenths) this.hatC.triggerAttackRelease("32n", t, 0.3);
+      if (full && s === 14 && bar % 2 === 1) this.hatO.triggerAttackRelease("16n", t, 0.6);
+    }
 
-    // ---- bass
+    // ---- bass (the dub section drops the bass out every fourth bar)
     const bassOn =
-      sec === "main" ||
-      sec === "drop" ||
+      full ||
       (sec === "build" && inSec >= 2) ||
-      (sec === "intro" && inSec >= 6);
-    const bv = d.bass[s];
-    if (bassOn && bv !== null && bv !== undefined) {
+      (sec === "intro" && inSec >= 6) ||
+      (dub && inSec % 4 !== 1);
+    const bn = d.bass[(bar * 16 + s) % d.bass.length];
+    if (bassOn && bn) {
       this.bass.triggerAttackRelease(
-        midiToFreq(this.midi(chordDeg + bv, d.sub ? -2 : -1)),
-        "16n",
-        time,
-        0.9,
+        this.bassFreq(chordDeg + bn.d),
+        bn.len * sixteenth * 0.92,
+        t,
+        0.95,
       );
     }
 
-    // ---- chords (stabs) + glitch stutter
-    const chordsOn = sec !== "intro" || inSec >= 4;
-    if (chordsOn && d.chordSteps.includes(s)) {
-      const notes = this.chordNotes(chordDeg);
-      this.chords.triggerAttackRelease(notes, "16n", time, sec === "breakdown" ? 0.45 : 0.7);
-      if (d.stutter && (sec === "main" || sec === "drop") && inSec % 4 === 3 && s >= 12) {
+    // ---- guitar skank (+ double skank at speed, + glitch stutter)
+    const skankOn =
+      full || (sec === "build" && inSec >= 2) || (dub && inSec % 2 === 0 && s === d.skank[0]);
+    if (skankOn && d.skank.includes(s)) {
+      const notes = this.chordNotes(chordDeg, 1);
+      const v = dub ? 0.5 : 0.75;
+      notes.forEach((f, k) => this.skank.triggerAttackRelease(f, "32n", t + k * 0.005, v));
+      if (dub) {
+        // the dub chop: a single skank thrown into the echo
+        this.dlySend.gain.setValueAtTime(0.9, t);
+        this.dlySend.gain.setValueAtTime(Math.min(0.85, d.delay * 2.2), t + 0.1);
+      }
+      if ((d.doubleSkank || I > 0.7) && full && d.skank.length <= 2) {
+        const t2 = t + sixteenth;
+        notes.forEach((f, k) => this.skank.triggerAttackRelease(f, "32n", t2 + k * 0.004, 0.4));
+      }
+      if (d.stutter && full && inSec % 4 === 3 && s >= 12) {
         for (let k = 1; k < 4; k++)
-          this.chords.triggerAttackRelease(notes, "64n", time + (k * sixteenth) / 2, 0.5);
+          this.skank.triggerAttackRelease(notes, "64n", t + (k * sixteenth) / 2, 0.45);
+      }
+    }
+
+    // ---- organ: bubble on the "&" with ghost notes on the "a" (or long swells)
+    if (this.organ) {
+      const organOn = full || sec === "build" || (sec === "intro" && inSec >= 4);
+      if (organOn && d.swell) {
+        if (s === 0 || s === 8)
+          this.organ.triggerAttackRelease(this.chordNotes(chordDeg), "2n", t, 0.6);
+      } else if (organOn && s % 4 >= 2) {
+        const accent = s % 4 === 2;
+        this.organ.triggerAttackRelease(
+          this.chordNotes(chordDeg, accent ? 0 : 1),
+          "32n",
+          t,
+          accent ? 0.55 : 0.28,
+        );
       }
     }
 
     // ---- pad (whole bar)
     if (this.pad && s === 0 && sec !== "build") {
       this.pad.triggerAttackRelease(
-        this.chordNotes(chordDeg, d.pad.oct ?? -1),
+        this.chordNotes(chordDeg, d.pad.oct ?? 0),
         "1m",
         time,
-        sec === "breakdown" ? 0.7 : 0.45,
+        dub ? 0.7 : 0.45,
       );
     }
 
     // ---- lead (two-bar motif, swaps A/B by loop & section, octave lift at high speed)
-    const leadOn = sec === "main" || sec === "drop" || sec === "breakdown";
+    const leadOn = full || (dub && inSec >= 4);
     if (leadOn) {
       const motif = (loop + secIdx) % 2 === 0 ? d.lead.a : d.lead.b;
-      const v = motif[(bar % 2) * 16 + s];
-      if (v !== null && v !== undefined) {
+      const n = motif[(bar % 2) * 16 + s];
+      if (n) {
         let oct = d.lead.octave;
         if (sec === "drop" && I > 0.6) oct += 1;
-        // small per-loop variation: every other loop, lift the phrase ending
-        const varied = loop % 2 === 1 && s >= 12 ? v + 2 : v;
-        this.lead.triggerAttackRelease(
-          midiToFreq(this.midi(varied, oct)),
-          "8n",
-          time,
-          sec === "breakdown" ? 0.45 : 0.7,
-        );
+        const dur = n.len * sixteenth * 0.95;
+        const v = dub ? 0.45 : 0.7;
+        this.lead.triggerAttackRelease(midiToFreq(this.midi(n.d, oct)), dur, t, v);
+        if (this.lead2 && (sec === "drop" || d.drums === "ska"))
+          this.lead2.triggerAttackRelease(midiToFreq(this.midi(n.d + d.lead.harm, oct)), dur, t, v);
       }
+    }
+
+    // ---- dub siren: a wail in the dub section every four bars
+    if (this.siren && dub && s === 0 && inSec % 4 === 1) {
+      const f = this.siren.frequency;
+      const lo = midiToFreq(this.midi(4, 1));
+      this.siren.triggerAttackRelease(lo, 1.4, time, 0.7);
+      f.setValueAtTime(lo, time + 0.01);
+      f.exponentialRampToValueAtTime(lo * 2, time + 0.5);
+      f.exponentialRampToValueAtTime(lo * 0.9, time + 1.2);
     }
 
     // ---- whisper sweeps (every 4 bars)
@@ -338,19 +506,17 @@ class Track {
       this.whisperF.frequency.exponentialRampToValueAtTime(4200, time + 2.4);
     }
 
-    // ---- arpeggio
+    // ---- arpeggio chimes
     if (this.arp && s % 2 === 0) {
       const arpOn =
-        sec === "drop" ||
-        (sec === "main" && I > 0.5) ||
-        (d.name === "Frozen Nebula" && sec !== "intro");
+        sec === "drop" || (sec === "main" && I > 0.5) || (d.arp.always && sec !== "intro");
       if (arpOn) {
         const pv = d.arp.pattern[(step / 2) % d.arp.pattern.length];
         this.arp.triggerAttackRelease(
           midiToFreq(this.midi(chordDeg + pv, d.arp.octave)),
           "32n",
-          time,
-          0.6,
+          t,
+          dub ? 0.35 : 0.55,
         );
       }
     }
@@ -432,9 +598,13 @@ class MusicEngine {
     );
     this.bus = new Tone.Gain(0.8).connect(this.lpf);
     this.reverb = new Tone.Reverb({ decay: 2.6, preDelay: 0.02, wet: 1 }).connect(this.lpf);
-    this.delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.32, wet: 1 }).connect(
-      this.lpf,
-    );
+    // tempo-synced dub echo (dotted 8th); retimed whenever the track's tempo changes
+    this.delay = new Tone.FeedbackDelay({
+      delayTime: echoTime(TRACKS.menu.bpm),
+      maxDelay: 1.5,
+      feedback: 0.42,
+      wet: 1,
+    }).connect(this.lpf);
     // The Calm: a low detuned drone + a heartbeat, both outside the track crossfades
     this.calmOut = new Tone.Gain(0).connect(this.limiter);
     const droneF = new Tone.Filter(160, "lowpass").connect(this.calmOut);
@@ -453,7 +623,7 @@ class MusicEngine {
     this.calmLevel = 0;
     this.calmOn = false;
     const t = Tone.getTransport();
-    t.bpm.value = 124;
+    t.bpm.value = TRACKS.menu.bpm;
     t.start("+0.05");
     this.ready = true;
     this.applyVolume();
@@ -489,7 +659,11 @@ class MusicEngine {
     tr.eventId = t.scheduleRepeat((time) => tr.tick(time), "16n", `${startTick}i`);
     this.pending = tr;
     const bpm = TRACKS[id].bpm;
-    if (Math.abs(t.bpm.value - bpm) > 0.5) t.bpm.rampTo(bpm, opts.immediate ? 0.05 : FADE);
+    if (Math.abs(t.bpm.value - bpm) > 0.5) {
+      t.bpm.rampTo(bpm, opts.immediate ? 0.05 : FADE);
+      this.delay.delayTime.rampTo(echoTime(bpm), opts.immediate ? 0.05 : FADE);
+    }
+    this.tempoK = 1;
   }
 
   onTrackStarted(tr, time) {
@@ -565,7 +739,8 @@ class MusicEngine {
 
   /**
    * Beat clock for visuals: 0..1 position inside the current quarter note of what is
-   * audible right now (falls back to a free-running 124 BPM clock before audio starts).
+   * audible right now (falls back to a free-running 124 BPM clock before audio starts,
+   * so silent test builds keep their timing).
    */
   beatPhase(fallbackSec = 0) {
     if (this.ready) {
