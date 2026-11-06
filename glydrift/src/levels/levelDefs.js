@@ -99,7 +99,7 @@ export const LEVEL_DEFS = [
     d: 0.3,
     gap: 520,
     beats: `@BOSS_-_HEART_OF_THE_VOID gate saw blade > hlaser pulse gate *b | bladeduo
-            saw2 hlaser > pulsepair blade gate | flip saw bladeduo hlaser > gate pulse
+            saw2 hlaser > pulsepair blade > gate | flip saw bladeduo hlaser > gate pulse
             *m mini | blade saw2 pulsepair > hlaser gate | d=0.36 g=500 @THE_CORE_OPENS
             bladeduo pulse hlaser pulsepair | blade hlaser saw2 *t bladeduo > gate
             pulsepair blade gate`,
@@ -307,7 +307,7 @@ export const LEVEL_DEFS = [
             sliderpair zapstairs > gauntlet comet | icecurtain sliderpair zap > zapstairs
             *b gauntlet | flip gate comet slider > icecurtain sliderpair | d=0.48 g=490
             @THE_THRONE_SHATTERS gauntlet comet zapstairs icecurtain | sliderpair *m
-            gauntlet > comet zapstairs | icecurtain gauntlet sliderpair comet zapstairs
+            gauntlet > comet zapstairs | icecurtain gauntlet sliderpair comet zapstairs >
             gate`,
   },
   // ================================================================ GLITCH REALM (31–40)
