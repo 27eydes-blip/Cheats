@@ -232,14 +232,36 @@ export class ObstacleManager {
     this.theme = themeFor(biomeId);
     const r = this.rng;
     const H = this.H;
+    // LEVEL MODE: the next beat of the level's fixed layout (same every time); after the last
+    // one, the finish line (see levels/LevelRun.js)
+    const lv = this.level;
+    const lvb = lv && lv.i < lv.beats.length ? lv.beats[lv.i] : null;
+    if (lv && !lvb) {
+      if (this.flipped) {
+        // gravity is always restored before the finish line
+        const p = this.obtain("portal");
+        p.spawn(this.nextX, { y: H / 2, mode: "restore" });
+        this.flipped = false;
+        this.nextX += 320;
+        return;
+      }
+      if (!lv.finished) {
+        lv.finished = true;
+        lv.onFinish?.(this.nextX + 160);
+      }
+      this.nextX += 1e6;
+      return;
+    }
     // the Abyss caps shared-obstacle difficulty (wider gates, slower saws)
     // dimensions ramp up within themselves (gentle start, full strength by ~500 m in)
-    const d = this.info.dimension
-      ? Math.min(1, Math.max(0, this.info.local) / 500)
-      : Math.min(
-          SPAWN.difficultyCap[biomeId] ?? 1,
-          meters / SPAWN.difficultyMeters,
-        );
+    const d = lvb
+      ? lvb.d
+      : this.info.dimension
+        ? Math.min(1, Math.max(0, this.info.local) / 500)
+        : Math.min(
+            SPAWN.difficultyCap[biomeId] ?? 1,
+            meters / SPAWN.difficultyMeters,
+          );
     const x = this.nextX;
     const mid = H / 2;
     const safeTop = 150;
@@ -247,9 +269,10 @@ export class ObstacleManager {
     // density ramps up faster than difficulty: more obstacles early, same gap sizes (and it
     // carries straight through realm and dimension changes, so a boundary never opens a gap)
     const sd = Math.min(1, meters / SPAWN.spacing.rampMeters);
-    const spacing =
-      Phaser.Math.Linear(SPAWN.spacing.start, SPAWN.spacing.end, sd) +
-      r.range(-30, 40);
+    const spacing = lvb
+      ? lvb.gap * (lvb.breathe ? 1.8 : 1)
+      : Phaser.Math.Linear(SPAWN.spacing.start, SPAWN.spacing.end, sd) +
+        r.range(-30, 40);
     let width = 120;
 
     // gravity flip lasts a few obstacles, then a restore portal is guaranteed
@@ -264,67 +287,72 @@ export class ObstacleManager {
       }
     }
 
+    // a level beat: remember where it starts (checkpoints replay the layout from here)
+    if (lvb) lv.onBeat?.(lv.i, x, this.snapshot());
     const info = this.info;
     const local = Math.max(0, info.local);
     const sig = SIG[biomeId] || SIG.void;
     const unlock = UNLOCK[biomeId] || UNLOCK.default;
     const firstLap = info.firstVisit !== false; // first time in this biome this run
-    // shared obstacles (every biome) + this biome's signature hazards
-    const w = {
-      saw: 2.2,
-      gate: 2.2,
-      saw2: meters > 600 ? 1 : 0,
-      flip:
-        meters > 420 && !this.flipped && meters - this.lastPortalM > 220
-          ? 0.7
-          : 0,
-      mini:
-        meters > 260 && !this.flipped && meters - this.lastPortalM > 160
-          ? 0.6
-          : 0,
-    };
+    let kind = lvb ? lvb.kind : null;
     let forced = null;
-    sig.forEach((k, i) => {
-      const open =
-        !firstLap ||
-        local >= unlock[i] ||
-        (biomeId === "void" && meters >= unlock[i]);
-      if (!open) return;
-      w[k] = SIG_WEIGHT[k] ?? 2.6;
-      // introduce each new hazard alone the first time it appears (combination patterns are
-      // made of hazards already met, so they just join the mix)
-      const key = `${info.rawIndex}:${k}`;
-      if (!this.introduced.has(key) && !forced && !COMBOS.has(k)) forced = k;
-    });
-    if (w.zone && this.flipped) w.zone = 0;
-    // the Peaceful Valley has only its own gentle hazards (no saws, gates or portals)
-    // the Peaceful Valley and the dimensions have only their own hazards
-    if (biomeId === "valley" || info.dimension)
-      w.saw = w.gate = w.saw2 = w.flip = w.mini = 0;
-    if (this.count < 2) w.saw2 = w.flip = w.mini = w.blade = w.hlaser = 0;
-    if (info.simpleOnly) {
-      // first metres of the Abyss / seconds of a dimension: only simple obstacles
-      for (const k in w) if (k !== "saw" && k !== "gate") w[k] = 0;
-      forced = null;
-    }
-    if (forced === "zone" && this.flipped) forced = null;
-    let kind = forced || null;
-    if (kind) this.introduced.add(`${info.rawIndex}:${kind}`);
-    if (!kind) {
-      // never the same pattern twice in a row (re-roll without it when there's a choice)
-      if (
-        this.lastKind &&
-        w[this.lastKind] &&
-        Object.values(w).filter((v) => v > 0).length > 1
-      )
-        w[this.lastKind] = 0;
-      kind = r.weighted(w);
-      this.introduced.add(`${info.rawIndex}:${kind}`);
+    if (!lvb) {
+      // shared obstacles (every biome) + this biome's signature hazards
+      const w = {
+        saw: 2.2,
+        gate: 2.2,
+        saw2: meters > 600 ? 1 : 0,
+        flip:
+          meters > 420 && !this.flipped && meters - this.lastPortalM > 220
+            ? 0.7
+            : 0,
+        mini:
+          meters > 260 && !this.flipped && meters - this.lastPortalM > 160
+            ? 0.6
+            : 0,
+      };
+      sig.forEach((k, i) => {
+        const open =
+          !firstLap ||
+          local >= unlock[i] ||
+          (biomeId === "void" && meters >= unlock[i]);
+        if (!open) return;
+        w[k] = SIG_WEIGHT[k] ?? 2.6;
+        // introduce each new hazard alone the first time it appears (combination patterns are
+        // made of hazards already met, so they just join the mix)
+        const key = `${info.rawIndex}:${k}`;
+        if (!this.introduced.has(key) && !forced && !COMBOS.has(k)) forced = k;
+      });
+      if (w.zone && this.flipped) w.zone = 0;
+      // the Peaceful Valley has only its own gentle hazards (no saws, gates or portals)
+      // the Peaceful Valley and the dimensions have only their own hazards
+      if (biomeId === "valley" || info.dimension)
+        w.saw = w.gate = w.saw2 = w.flip = w.mini = 0;
+      if (this.count < 2) w.saw2 = w.flip = w.mini = w.blade = w.hlaser = 0;
+      if (info.simpleOnly) {
+        // first metres of the Abyss / seconds of a dimension: only simple obstacles
+        for (const k in w) if (k !== "saw" && k !== "gate") w[k] = 0;
+        forced = null;
+      }
+      if (forced === "zone" && this.flipped) forced = null;
+      kind = forced || null;
+      if (kind) this.introduced.add(`${info.rawIndex}:${kind}`);
+      if (!kind) {
+        // never the same pattern twice in a row (re-roll without it when there's a choice)
+        if (
+          this.lastKind &&
+          w[this.lastKind] &&
+          Object.values(w).filter((v) => v > 0).length > 1
+        )
+          w[this.lastKind] = 0;
+        kind = r.weighted(w);
+        this.introduced.add(`${info.rawIndex}:${kind}`);
+      }
     }
     this.lastKind = kind;
     this.count++;
     const roomy = SPAWN.roomy[biomeId] ?? 1;
-    const spacingMul = (forced ? 1.35 : info.grace ? 1.8 : 1) * roomy;
+    const spacingMul = lvb ? 1 : (forced ? 1.35 : info.grace ? 1.8 : 1) * roomy;
 
     switch (kind) {
       case "saw": {
@@ -1229,9 +1257,20 @@ export class ObstacleManager {
     // coin flow: if the next coin chance would come too late to keep a combo going, lay a
     // short trail through the free space after this pattern, near the last coins' height
     const gapEnd = x + width + spacing * spacingMul;
+    if (lvb) {
+      // hidden star coin in the gap after this pattern; a hint at the pattern
+      const sx = x + width + (gapEnd - x - width) * 0.5;
+      if (lvb.star)
+        lv.onStar?.(
+          sx,
+          { t: H * 0.2, m: H * 0.5, b: H * 0.8 }[lvb.star] ?? mid,
+        );
+      if (lvb.hint) lv.onHint?.(x, lvb.hint);
+      lv.i++;
+    }
     if (
       gapEnd - this.lastCoinX >
-      (this.scroll || 500) * COIN_FLOW.maxGapSeconds
+      (lvb ? 520 : this.scroll || 500) * COIN_FLOW.maxGapSeconds
     ) {
       const y = Phaser.Math.Clamp(
         Phaser.Math.Linear(this.lastCoinY, mid, COIN_FLOW.pullToMiddle) +
@@ -1248,6 +1287,36 @@ export class ObstacleManager {
       );
     }
     this.nextX = gapEnd;
+  }
+
+  /** Spawner state at a level beat (a checkpoint restores it to replay the same layout). */
+  snapshot() {
+    return {
+      rng: this.rng.state,
+      flipped: this.flipped,
+      sinceFlip: this.sinceFlip,
+      count: this.count,
+      lastKind: this.lastKind,
+    };
+  }
+
+  /** Level mode: clear the screen and continue the layout from beat i (checkpoint respawn). */
+  resumeLevel(i, snap, x) {
+    for (const o of this.active) o.kill();
+    this.active.length = 0;
+    for (const c of this.coins) {
+      c.setActive(false).setVisible(false);
+      c.halo?.setVisible(false);
+    }
+    this.rng.state = snap.rng;
+    this.flipped = false; // a respawn always starts upright
+    this.sinceFlip = 0;
+    this.count = snap.count;
+    this.lastKind = snap.lastKind;
+    this.lastCoinX = 0;
+    this.level.i = i;
+    this.level.finished = false;
+    this.nextX = x;
   }
 
   /** World-space x ranges of every hazard on screen (used to keep scenery out from behind them). */

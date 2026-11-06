@@ -16,7 +16,6 @@ import {
   myFlair,
 } from "../online/leaderboard.js";
 import { nameText } from "../ui/nameplate.js";
-import { dailyNumber } from "../data/rng.js";
 import { Sfx } from "../audio/sfx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { button, fadeTo, neonText, plainText } from "../ui/ui.js";
@@ -106,9 +105,8 @@ export class LeaderboardScene extends Phaser.Scene {
 
   init(data) {
     // Score is the main board: it's where the leaderboard opens
-    this.tab = ["daily", "score", "distance"].includes(data?.tab)
-      ? data.tab
-      : "score";
+    // (the Daily Challenge tab went with the Daily Challenge: level mode has per-level boards)
+    this.tab = ["score", "distance"].includes(data?.tab) ? data.tab : "score";
     this.period = "all";
     this.returnTo = data?.from || "Menu";
   }
@@ -171,9 +169,8 @@ export class LeaderboardScene extends Phaser.Scene {
     this.tabs = [
       { key: "score", label: "SCORE", main: true },
       { key: "distance", label: "DISTANCE" },
-      { key: "daily", label: `DAILY #${dailyNumber()}` },
     ].map((t, i) => {
-      const x = W / 2 + (i - 1) * TAB_W;
+      const x = W / 2 + (i - 0.5) * TAB_W;
       const g = this.add.graphics().setDepth(50);
       const txt = neonText(
         this,

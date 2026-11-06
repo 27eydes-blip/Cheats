@@ -7,7 +7,13 @@ import "./fonts/galmuri.css"; // Hangul pixel font (손주원)
 import Phaser from "phaser";
 import "./gfx/tileSpriteFix.js";
 import { watchContext } from "./systems/frameGuard.js";
-import { setupView, VIEW, viewDrifted, viewportSize, wantsFit } from "./config.js";
+import {
+  setupView,
+  VIEW,
+  viewDrifted,
+  viewportSize,
+  wantsFit,
+} from "./config.js";
 import { BackdropScene } from "./scenes/BackdropScene.js";
 import { BootScene } from "./scenes/BootScene.js";
 import { CharacterScene } from "./scenes/CharacterScene.js";
@@ -15,6 +21,8 @@ import { GameOverScene } from "./scenes/GameOverScene.js";
 import { GameScene } from "./scenes/GameScene.js";
 import { HudScene } from "./scenes/HudScene.js";
 import { LeaderboardScene } from "./scenes/LeaderboardScene.js";
+import { LevelSelectScene } from "./scenes/LevelSelectScene.js";
+import { LevelCompleteScene } from "./scenes/LevelCompleteScene.js";
 import { MenuScene } from "./scenes/MenuScene.js";
 import { MusicTestScene } from "./scenes/MusicTestScene.js";
 import { ProgressScene } from "./scenes/ProgressScene.js";
@@ -37,7 +45,10 @@ function isWeakDevice() {
   if (mem && mem <= 2) return true;
   if (cores && cores <= 2) return true;
   // 4-inch iPhones (SE 1st gen, 5s) and anything else that small
-  if (Math.min(screen.width, screen.height) < 360 && /iPhone|iPod/.test(navigator.userAgent))
+  if (
+    Math.min(screen.width, screen.height) < 360 &&
+    /iPhone|iPod/.test(navigator.userAgent)
+  )
     return true;
   return false;
 }
@@ -138,7 +149,11 @@ async function boot() {
     // all sound is Tone.js / raw WebAudio; Phaser's own audio context only caused a
     // "not allowed to start" console warning on load
     audio: { noAudio: true },
-    render: { antialias: true, powerPreference: "high-performance", roundPixels: false },
+    render: {
+      antialias: true,
+      powerPreference: "high-performance",
+      roundPixels: false,
+    },
     input: { activePointers: 2 },
     disableContextMenu: true,
     // order matters: scenes render in this order (Backdrop → screens → overlays)
@@ -149,6 +164,8 @@ async function boot() {
       GameScene,
       HudScene,
       GameOverScene,
+      LevelCompleteScene,
+      LevelSelectScene,
       CharacterScene,
       ProgressScene,
       LeaderboardScene,
@@ -195,10 +212,17 @@ async function boot() {
     const cropTop = Math.max(0, -(rect?.top ?? 0));
     const cropBottom = Math.max(
       0,
-      (rect?.bottom ?? canvasH) - Math.max(window.innerHeight, viewportSize().h),
+      (rect?.bottom ?? canvasH) -
+        Math.max(window.innerHeight, viewportSize().h),
     );
-    game.registry.set("safeTop", Math.round(((insetTop + cropTop) * VIEW.H) / canvasH));
-    game.registry.set("safeBottom", Math.round(((insetBottom + cropBottom) * VIEW.H) / canvasH));
+    game.registry.set(
+      "safeTop",
+      Math.round(((insetTop + cropTop) * VIEW.H) / canvasH),
+    );
+    game.registry.set(
+      "safeBottom",
+      Math.round(((insetBottom + cropBottom) * VIEW.H) / canvasH),
+    );
   };
   game.events.once("ready", () => {
     updateSafe();
@@ -232,14 +256,16 @@ async function boot() {
     if (!reresPending) return;
     const sm = game.scene;
     const gs = sm.getScene("Game");
-    if (gs && (gs.sys.isActive() || gs.sys.isPaused() || gs.sys.isSleeping())) return;
+    if (gs && (gs.sys.isActive() || gs.sys.isPaused() || gs.sys.isSleeping()))
+      return;
     if (sm.getScenes(true).some((s) => s.leaving)) return; // mid scene transition
     reresPending = false;
     const lowGfx = Save.data.settings.lowGfx;
     if (!viewDrifted(lowGfx)) return;
     setupView(lowGfx);
     game.scale.setGameSize(VIEW.PW, VIEW.PH);
-    for (const s of sm.getScenes(true)) if (s.sys.settings.key !== "Boot") s.scene.restart();
+    for (const s of sm.getScenes(true))
+      if (s.sys.settings.key !== "Boot") s.scene.restart();
     updateScaleMode();
     setTimeout(updateSafe, 60);
   };
@@ -260,7 +286,9 @@ async function boot() {
       game.scale.refresh();
     }
   };
-  window.visualViewport?.addEventListener("resize", () => setTimeout(unscroll, 50));
+  window.visualViewport?.addEventListener("resize", () =>
+    setTimeout(unscroll, 50),
+  );
   window.addEventListener("scroll", unscroll, { passive: true });
   document.addEventListener("focusout", () => setTimeout(unscroll, 150));
   // coming back to the app (home-screen launch, app switch): re-measure everything
@@ -283,8 +311,12 @@ async function boot() {
     },
     { passive: true },
   );
-  window.addEventListener("orientationchange", () => setTimeout(updateSafe, 300));
-  document.addEventListener("visibilitychange", () => setTimeout(updateSafe, 100));
+  window.addEventListener("orientationchange", () =>
+    setTimeout(updateSafe, 300),
+  );
+  document.addEventListener("visibilitychange", () =>
+    setTimeout(updateSafe, 100),
+  );
   for (const ms of [300, 1000, 2500]) setTimeout(updateSafe, ms);
   if (TEST.month !== null) setSeasonMonth(TEST.month);
   // test builds only: handles for test scripts (release builds expose nothing)
@@ -299,12 +331,17 @@ async function boot() {
 // Audio may only start inside a user gesture (iOS): the first tap anywhere unlocks it. Every
 // later tap also revives it if iOS suspended / interrupted it (app switch, a phone call, Siri).
 for (const type of ["pointerdown", "touchend", "keydown"]) {
-  window.addEventListener(type, () => (Music.unlocked ? Music.revive() : Music.unlock()), {
-    capture: true,
-    passive: true,
-  });
+  window.addEventListener(
+    type,
+    () => (Music.unlocked ? Music.revive() : Music.unlock()),
+    {
+      capture: true,
+      passive: true,
+    },
+  );
 }
-const reviveSoon = () => document.visibilityState === "visible" && Music.revive();
+const reviveSoon = () =>
+  document.visibilityState === "visible" && Music.revive();
 document.addEventListener("visibilitychange", reviveSoon);
 window.addEventListener("pageshow", reviveSoon);
 // iOS 16.4+: game sound mixes with other audio and follows the ring/silent switch
@@ -322,8 +359,12 @@ const keepNative = (e) => typing(e) || e.target?.closest?.("#share-modal img");
 const block = (e) => e.cancelable && e.preventDefault();
 for (const type of ["gesturestart", "gesturechange", "gestureend", "dblclick"])
   document.addEventListener(type, block, { passive: false });
-document.addEventListener("touchmove", (e) => !typing(e) && block(e), { passive: false });
-document.addEventListener("wheel", (e) => e.ctrlKey && block(e), { passive: false }); // trackpad pinch
+document.addEventListener("touchmove", (e) => !typing(e) && block(e), {
+  passive: false,
+});
+document.addEventListener("wheel", (e) => e.ctrlKey && block(e), {
+  passive: false,
+}); // trackpad pinch
 document.addEventListener("contextmenu", (e) => !keepNative(e) && block(e));
 document.addEventListener("selectstart", (e) => !typing(e) && block(e));
 
@@ -351,7 +392,8 @@ if (
       .then((reg) => {
         reg.update().catch(() => {});
         document.addEventListener("visibilitychange", () => {
-          if (document.visibilityState === "visible") reg.update().catch(() => {});
+          if (document.visibilityState === "visible")
+            reg.update().catch(() => {});
         });
       })
       .catch(() => {});

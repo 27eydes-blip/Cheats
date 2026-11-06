@@ -81,13 +81,28 @@ export function renderShareCard(game, run) {
 
   glowText("GLYDRIFT", W / 2, 150, 104, css(biome.neon));
   if (run.mode === "daily")
-    glowText(`DAILY CHALLENGE #${dailyNumber()}`, W / 2, 245, 40, css(biome.accent), 700);
+    glowText(
+      `DAILY CHALLENGE #${dailyNumber()}`,
+      W / 2,
+      245,
+      40,
+      css(biome.accent),
+      700,
+    );
   // the player and their title
   const name = Save.data.profile?.username;
   const title = Titles.equipped();
-  if (name) glowText(name, W / 2, run.mode === "daily" ? 296 : 262, 46, "#ffffff", 800);
+  if (name)
+    glowText(name, W / 2, run.mode === "daily" ? 296 : 262, 46, "#ffffff", 800);
   if (title)
-    glowText(title.name.toUpperCase(), W / 2, run.mode === "daily" ? 338 : 306, 30, title.color, 700);
+    glowText(
+      title.name.toUpperCase(),
+      W / 2,
+      run.mode === "daily" ? 338 : 306,
+      30,
+      title.color,
+      700,
+    );
 
   // character
   try {
@@ -105,7 +120,9 @@ export function renderShareCard(game, run) {
     const skin = SKINS[lo.skin];
     let art = tex;
     if (skin) {
-      const grey = game.textures.get(greyPortrait(game.scene.scenes[0], ch)).getSourceImage();
+      const grey = game.textures
+        .get(greyPortrait(game.scene.scenes[0], ch))
+        .getSourceImage();
       const off = document.createElement("canvas");
       off.width = tex.width;
       off.height = tex.height;
@@ -221,9 +238,14 @@ export function openShareModal(game, run) {
         if (act === "share") {
           try {
             const blob = await (await fetch(src)).blob();
-            const file = new File([blob], "glydrift-result.png", { type: "image/png" });
+            const file = new File([blob], "glydrift-result.png", {
+              type: "image/png",
+            });
             if (navigator.canShare?.({ files: [file] })) {
-              await navigator.share({ files: [file], text: modal.dataset.text });
+              await navigator.share({
+                files: [file],
+                text: modal.dataset.text,
+              });
             } else if (navigator.share) {
               await navigator.share({ text: modal.dataset.text });
             } else {

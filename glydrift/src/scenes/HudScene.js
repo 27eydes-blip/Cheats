@@ -7,7 +7,14 @@ import { Music } from "../audio/music.js";
 import { dailyNumber } from "../data/rng.js";
 import { Sfx } from "../audio/sfx.js";
 import { POP_HOLD, PopQueue } from "../ui/popQueue.js";
-import { button, drawNeonRect, hex, neonText, plainText, RollingCounter } from "../ui/ui.js";
+import {
+  button,
+  drawNeonRect,
+  hex,
+  neonText,
+  plainText,
+  RollingCounter,
+} from "../ui/ui.js";
 
 /** Realm titles: drawn this much smaller than full size, centred this far below the HUD top. */
 const REALM_TITLE_SCALE = 0.68;
@@ -54,7 +61,9 @@ export class HudScene extends Phaser.Scene {
     this.top = top;
     const gs = this.gameScene;
 
-    this.scoreText = neonText(this, W / 2, top + 50, "0", 64, 0x3ef4ff, { blur: 22 });
+    this.scoreText = neonText(this, W / 2, top + 50, "0", 64, 0x3ef4ff, {
+      blur: 22,
+    });
     this.score = new RollingCounter(this, this.scoreText);
     this.bestText = plainText(this, W / 2, top + 100, "", 18, "#cfc6ff");
     this.modeText = plainText(
@@ -67,8 +76,13 @@ export class HudScene extends Phaser.Scene {
     );
 
     // coins
-    this.coinIcon = this.add.image(W - 120, top + 46, "coin").setScale(0.8 / HI);
-    this.coinText = neonText(this, W - 96, top + 46, "0", 30, 0xffc83d, { ox: 0, blur: 10 });
+    this.coinIcon = this.add
+      .image(W - 120, top + 46, "coin")
+      .setScale(0.8 / HI);
+    this.coinText = neonText(this, W - 96, top + 46, "0", 30, 0xffc83d, {
+      ox: 0,
+      blur: 10,
+    });
     this.coins = new RollingCounter(this, this.coinText);
 
     // pause
@@ -76,21 +90,31 @@ export class HudScene extends Phaser.Scene {
     const pg = this.add.graphics();
     pg.fillStyle(0x0a0418, 0.7).fillCircle(0, 0, 34);
     pg.lineStyle(3, 0x3ef4ff, 1).strokeCircle(0, 0, 34);
-    pg.fillStyle(0xffffff, 1).fillRoundedRect(-11, -13, 7, 26, 2).fillRoundedRect(4, -13, 7, 26, 2);
+    pg.fillStyle(0xffffff, 1)
+      .fillRoundedRect(-11, -13, 7, 26, 2)
+      .fillRoundedRect(4, -13, 7, 26, 2);
     this.pauseBtn.add(pg);
     this.pauseBtn
       .setSize(80, 80)
-      .setInteractive(new Phaser.Geom.Circle(40, 40, 40), Phaser.Geom.Circle.Contains);
+      .setInteractive(
+        new Phaser.Geom.Circle(40, 40, 40),
+        Phaser.Geom.Circle.Contains,
+      );
     this.pauseBtn.on("pointerdown", () => this.pause());
 
     // status (mini / flip)
-    this.statusText = neonText(this, W / 2, top + 160, "", 22, 0xffd23f, { blur: 10 }).setAlpha(0);
+    this.statusText = neonText(this, W / 2, top + 160, "", 22, 0xffd23f, {
+      blur: 10,
+    }).setAlpha(0);
     this.miniBar = this.add.graphics();
 
     // tap hint
     this.hint = this.add.container(W / 2, H * 0.68);
     const ht = neonText(this, 0, 0, "TAP TO FLY", 44, 0xff4fd8, { blur: 20 });
-    const hand = this.add.image(0, 80, "dot").setScale(1.2).setBlendMode(Phaser.BlendModes.ADD);
+    const hand = this.add
+      .image(0, 80, "dot")
+      .setScale(1.2)
+      .setBlendMode(Phaser.BlendModes.ADD);
     this.hint.add([ht, hand]);
     this.tweens.add({
       targets: ht,
@@ -117,14 +141,18 @@ export class HudScene extends Phaser.Scene {
     this.banner = this.add.container(W / 2, this.bannerY).setAlpha(0);
     // dark backing keeps the title readable over hazards
     this.bannerBack = this.add.graphics();
-    this.bannerBack.fillStyle(0x000000, 0.42).fillRoundedRect(-300, -84, 600, 150, 24);
+    this.bannerBack
+      .fillStyle(0x000000, 0.42)
+      .fillRoundedRect(-300, -84, 600, 150, 24);
     this.banner.add(this.bannerBack);
     this.bannerSub = plainText(this, 0, -46, "ENTERING", 20, "#ffffff");
     this.bannerText = neonText(this, 0, 0, "", 56, 0xffffff, { blur: 26 });
     this.bannerLine = this.add.rectangle(0, 42, 420, 3, 0xffffff);
     this.banner.add([this.bannerSub, this.bannerText, this.bannerLine]);
 
-    this.comboText = neonText(this, W / 2, top + 200, "", 28, 0xffffff, { blur: 12 }).setAlpha(0);
+    this.comboText = neonText(this, W / 2, top + 200, "", 28, 0xffffff, {
+      blur: 12,
+    }).setAlpha(0);
     // keep the HUD below the notch / Dynamic Island if the safe-area inset arrives late
     const topElems = [
       this.scoreText,
@@ -145,9 +173,12 @@ export class HudScene extends Phaser.Scene {
       this.bannerY = nt + REALM_TITLE_Y;
     };
     this.registry.events.on("changedata-safeTop", onSafe);
-    this.events.once("shutdown", () => this.registry.events.off("changedata-safeTop", onSafe));
+    this.events.once("shutdown", () =>
+      this.registry.events.off("changedata-safeTop", onSafe),
+    );
 
-    for (let i = 0; i < BIOMES.length; i++) this.titleFor(i, BIOMES[i].id === "abyss");
+    for (let i = 0; i < BIOMES.length; i++)
+      this.titleFor(i, BIOMES[i].id === "abyss");
 
     this.pauseLayer = null;
     this.ready = true;
@@ -200,11 +231,23 @@ export class HudScene extends Phaser.Scene {
   }
 
   onNearMiss(pts, combo) {
-    this.comboText.setText(combo > 1 ? `COMBO x${combo}  +${pts}` : `+${pts}`).setColor("#ffffff");
+    this.comboText
+      .setText(combo > 1 ? `COMBO x${combo}  +${pts}` : `+${pts}`)
+      .setColor("#ffffff");
     this.comboText.setAlpha(1).setScale(0.5);
     this.tweens.killTweensOf(this.comboText);
-    this.tweens.add({ targets: this.comboText, scale: 1, duration: 220, ease: "Back.easeOut" });
-    this.tweens.add({ targets: this.comboText, alpha: 0, delay: 900, duration: 400 });
+    this.tweens.add({
+      targets: this.comboText,
+      scale: 1,
+      duration: 220,
+      ease: "Back.easeOut",
+    });
+    this.tweens.add({
+      targets: this.comboText,
+      alpha: 0,
+      delay: 900,
+      duration: 400,
+    });
   }
 
   onCoin(n) {
@@ -239,7 +282,14 @@ export class HudScene extends Phaser.Scene {
     if (!t) {
       const col = slam ? 0xff1030 : BIOMES[rawIndex % BIOMES.length].neon;
       t = neonText(this, 0, 0, name, 56, 0xffffff, { blur: 26 });
-      t.setStroke(hex(col), slam ? 5 : 4).setShadow(0, 0, hex(col), slam ? 30 : 26, true, true);
+      t.setStroke(hex(col), slam ? 5 : 4).setShadow(
+        0,
+        0,
+        hex(col),
+        slam ? 30 : 26,
+        true,
+        true,
+      );
       t.setVisible(false);
       this.banner.add(t);
       this.titles[key] = t;
@@ -263,7 +313,10 @@ export class HudScene extends Phaser.Scene {
     if (slam) return this.slamTitle(rawIndex, b, done);
     this.bannerLine.setFillStyle(b.neon);
     this.tweens.killTweensOf(this.banner);
-    this.banner.setAlpha(0).setScale(1.6 * REALM_TITLE_SCALE).setY(this.bannerY);
+    this.banner
+      .setAlpha(0)
+      .setScale(1.6 * REALM_TITLE_SCALE)
+      .setY(this.bannerY);
     this.bannerLine.scaleX = 0;
     this.tweens.add({
       targets: this.banner,
@@ -272,7 +325,12 @@ export class HudScene extends Phaser.Scene {
       duration: 500,
       ease: "Back.easeOut",
     });
-    this.tweens.add({ targets: this.bannerLine, scaleX: 1, duration: 700, ease: "Cubic.easeOut" });
+    this.tweens.add({
+      targets: this.bannerLine,
+      scaleX: 1,
+      duration: 700,
+      ease: "Cubic.easeOut",
+    });
     this.tweens.add({
       targets: this.banner,
       alpha: 0,
@@ -292,7 +350,12 @@ export class HudScene extends Phaser.Scene {
     this.bannerLine.setFillStyle(0xff1030);
     this.banner.setAlpha(1).setScale(3.2).setY(this.bannerY);
     this.bannerLine.scaleX = 1;
-    this.tweens.add({ targets: this.banner, scale: 1, duration: 170, ease: "Quad.easeIn" });
+    this.tweens.add({
+      targets: this.banner,
+      scale: 1,
+      duration: 170,
+      ease: "Quad.easeIn",
+    });
     this.cameras.main.shake(320, 0.012);
     this.tweens.add({
       targets: this.banner,
@@ -333,7 +396,8 @@ export class HudScene extends Phaser.Scene {
       c.add([c.g, c.title, c.sub]);
       return c;
     });
-    const c = this.runBanners[(this.bannerIdx = ((this.bannerIdx ?? -1) + 1) % 2)];
+    const c =
+      this.runBanners[(this.bannerIdx = ((this.bannerIdx ?? -1) + 1) % 2)];
     this.tweens.killTweensOf(c);
     const w = Math.min(W - 60, 520);
     const h = sub ? 84 : 64;
@@ -350,7 +414,13 @@ export class HudScene extends Phaser.Scene {
       Sfx.reward();
     };
     this.time.delayedCall(delay, show);
-    this.tweens.add({ targets: c, x: W / 2, delay, duration: 200, ease: "Cubic.easeOut" });
+    this.tweens.add({
+      targets: c,
+      x: W / 2,
+      delay,
+      duration: 200,
+      ease: "Cubic.easeOut",
+    });
     this.tweens.add({
       targets: c,
       x: -320,
@@ -367,7 +437,11 @@ export class HudScene extends Phaser.Scene {
 
   /** NEW BEST! in the centre (the slide-in banner below the score still shows too). */
   onCenterBest() {
-    this.pops.push("best", { str: "NEW BEST!", color: "#ffd23f", size: 50 }, this.time.now);
+    this.pops.push(
+      "best",
+      { str: "NEW BEST!", color: "#ffd23f", size: 50 },
+      this.time.now,
+    );
   }
 
   /** Distance marker: every 100 m small, 500 m / 1000 m big and gold. */
@@ -386,8 +460,7 @@ export class HudScene extends Phaser.Scene {
       this.showRealm(d.rawIndex, d.slam, done);
       // a realm title never has pops on top: clear any already rising through its strip
       this.gameScene?.clearPopsIn?.(this.centerBandFor("realm"));
-    }
-    else if (item.kind === "speed") this.showSpeed(done);
+    } else if (item.kind === "speed") this.showSpeed(done);
     else this.showCenterText(d.str, d.color, d.size, done);
     // released when its animation really ends; this is only the fallback
     return POP_HOLD[item.kind] + (d?.slam ? 700 : 0) + 1500;
@@ -443,7 +516,12 @@ export class HudScene extends Phaser.Scene {
       .setAlpha(1)
       .setVisible(true)
       .setAngle(Phaser.Math.Between(-8, 8));
-    this.tweens.add({ targets: t, scale: 1, duration: 260, ease: "Back.easeOut" });
+    this.tweens.add({
+      targets: t,
+      scale: 1,
+      duration: 260,
+      ease: "Back.easeOut",
+    });
     this.tweens.add({
       targets: t,
       y: y - 70 * z,
@@ -492,9 +570,17 @@ export class HudScene extends Phaser.Scene {
   showSpeed(done) {
     // one reusable label (creating text mid-run uploads a new texture → hitch)
     if (!this.speedText) {
-      this.speedText = neonText(this, this.W / 2, this.H * 0.4, "SPEED UP", 40, 0xff4fd8, {
-        blur: 18,
-      });
+      this.speedText = neonText(
+        this,
+        this.W / 2,
+        this.H * 0.4,
+        "SPEED UP",
+        40,
+        0xff4fd8,
+        {
+          blur: 18,
+        },
+      );
     }
     const t = this.speedText;
     this.tweens.killTweensOf(t);
@@ -502,7 +588,13 @@ export class HudScene extends Phaser.Scene {
       .setAlpha(0)
       .setScale(0.6)
       .setVisible(true);
-    this.tweens.add({ targets: t, alpha: 1, scale: 1, duration: 260, ease: "Back.easeOut" });
+    this.tweens.add({
+      targets: t,
+      alpha: 1,
+      scale: 1,
+      duration: 260,
+      ease: "Back.easeOut",
+    });
     this.tweens.add({
       targets: t,
       alpha: 0,
@@ -548,22 +640,53 @@ export class HudScene extends Phaser.Scene {
     const W = this.W;
     const H = this.H;
     const c = this.add.container(0, 0).setDepth(100);
-    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x05010d, 0.75).setInteractive();
+    const dim = this.add
+      .rectangle(W / 2, H / 2, W, H, 0x05010d, 0.75)
+      .setInteractive();
     const title = neonText(this, W / 2, H * 0.36, "PAUSED", 64, 0x3ef4ff);
     const resume = button(this, W / 2, H * 0.5, 360, 96, "RESUME", {
       color: 0x39ff88,
       onClick: () => this.resume(),
     });
-    const home = button(this, W / 2, H * 0.5 + 120, 360, 84, "HOME", {
-      color: 0xff4fd8,
-      size: 26,
-      onClick: () => {
-        this.resume(true);
-        this.scene.stop("Game");
-        this.scene.start("Menu");
+    // level mode: RESTART the level, or back to the LEVELS map (instead of HOME)
+    const level = gs.mode === "level" ? gs.levelDef : null;
+    const home = button(
+      this,
+      W / 2,
+      H * 0.5 + (level ? 220 : 120),
+      360,
+      84,
+      level ? "LEVELS" : "HOME",
+      {
+        color: 0xff4fd8,
+        size: 26,
+        onClick: () => {
+          this.resume(true);
+          this.scene.stop("Game");
+          this.scene.start(
+            level ? "LevelSelect" : "Menu",
+            level ? { focus: level.n } : undefined,
+          );
+        },
       },
-    });
+    );
     c.add([dim, title, resume, home]);
+    if (level)
+      c.add(
+        button(this, W / 2, H * 0.5 + 110, 360, 84, "RESTART", {
+          color: 0x3ef4ff,
+          size: 26,
+          onClick: () => {
+            this.resume(true);
+            this.scene.stop("Game");
+            this.scene.start("Game", {
+              mode: "level",
+              level: level.n,
+              practice: gs.practice,
+            });
+          },
+        }),
+      );
     this.pauseLayer = c;
     c.setAlpha(0);
     this.tweens.add({ targets: c, alpha: 1, duration: 180 });
@@ -582,7 +705,8 @@ export class HudScene extends Phaser.Scene {
     const gs = this.gameScene;
     if (!gs || (!gs.sys.isActive() && !gs.sys.isPaused())) return;
     if (gs.sys.isActive()) this.pops.update(this.time.now);
-    if (this.hint.visible && gs.state !== "ready" && !this.hintFading) this.hint.setVisible(false);
+    if (this.hint.visible && gs.state !== "ready" && !this.hintFading)
+      this.hint.setVisible(false);
     const s = gs.score;
     if (s !== this.lastScore) {
       if (s - this.lastScore > 5) this.score.bump(s);
@@ -603,7 +727,8 @@ export class HudScene extends Phaser.Scene {
         .lineStyle(2, 0xffd23f, 0.6)
         .strokeRoundedRect(this.W / 2 - 80, this.top + 180, 160, 8, 4);
     }
-    if (p.gravityDir < 0) status = status ? `${status} · FLIPPED` : "GRAVITY FLIPPED";
+    if (p.gravityDir < 0)
+      status = status ? `${status} · FLIPPED` : "GRAVITY FLIPPED";
     this.statusText
       .setText(status)
       .setAlpha(status && p.alive ? 0.8 + Math.sin(gs.clock * 8) * 0.2 : 0);

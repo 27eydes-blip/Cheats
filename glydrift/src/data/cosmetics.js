@@ -356,6 +356,15 @@ export const COSMETICS = [
     price: 0,
     hero: "splice",
   },
+  // LEVEL MODE: the reward for beating level 50 (never sold, never in pods or the daily shop)
+  {
+    id: "trail_lv_master",
+    cat: "trail",
+    name: "Level Master",
+    rarity: "legendary",
+    price: 0,
+    event: "levels",
+  },
   // event exclusive: the move to glydrift.com (never sold, never in pods or the daily shop)
   {
     id: "trail_founder",

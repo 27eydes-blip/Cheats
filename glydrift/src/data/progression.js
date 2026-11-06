@@ -1,6 +1,11 @@
 // Meta-progression: XP/levels, missions, achievements, login streak, daily, unlocks.
 import { BIOMES } from "../biomes/biomes.js";
-import { CHARACTERS, getCharacter, heroReleased, onSale } from "../player/characterDefs.js";
+import {
+  CHARACTERS,
+  getCharacter,
+  heroReleased,
+  onSale,
+} from "../player/characterDefs.js";
 import { dayDiff, RNG, todayKey } from "./rng.js";
 import { Save } from "./save.js";
 import { plusAllowed } from "./plusGate.js";
@@ -32,7 +37,13 @@ const MISSION_TEMPLATES = [
     scope: "total",
     n: [10, 20, 35],
   },
-  { id: "biome", text: "Reach {biome}", stat: "biome", scope: "run", n: [1, 2, 3] },
+  {
+    id: "biome",
+    text: "Reach {biome}",
+    stat: "biome",
+    scope: "run",
+    n: [1, 2, 3],
+  },
   {
     id: "dist_run",
     text: "Fly {n}m in one run",
@@ -61,9 +72,35 @@ const MISSION_TEMPLATES = [
     scope: "run",
     n: [2, 4],
   },
-  { id: "saws_run", text: "Pass {n} saws in one run", stat: "saws", scope: "run", n: [6, 12] },
-  { id: "runs", text: "Play {n} runs", stat: "runs", scope: "total", n: [3, 6] },
-  { id: "daily", text: "Play the Daily Challenge", stat: "daily", scope: "total", n: [1] },
+  {
+    id: "saws_run",
+    text: "Pass {n} saws in one run",
+    stat: "saws",
+    scope: "run",
+    n: [6, 12],
+  },
+  {
+    id: "runs",
+    text: "Play {n} runs",
+    stat: "runs",
+    scope: "total",
+    n: [3, 6],
+  },
+  // LEVEL MODE (it replaced the Daily Challenge)
+  {
+    id: "levels",
+    text: "Beat {n} levels",
+    stat: "levelDone",
+    scope: "total",
+    n: [1, 3],
+  },
+  {
+    id: "stars",
+    text: "Earn {n} level stars",
+    stat: "levelStars",
+    scope: "total",
+    n: [3, 5],
+  },
 ];
 
 function missionFrom(tpl, n) {
@@ -71,7 +108,10 @@ function missionFrom(tpl, n) {
     tpl.id === "biome"
       ? tpl.text.replace(
           "{biome}",
-          BIOMES[n].name.replace(/\b\w+/g, (w) => w[0] + w.slice(1).toLowerCase()),
+          BIOMES[n].name.replace(
+            /\b\w+/g,
+            (w) => w[0] + w.slice(1).toLowerCase(),
+          ),
         )
       : tpl.text.replace("{n}", n);
   const tier = tpl.n.indexOf(n);
@@ -88,8 +128,9 @@ function missionFrom(tpl, n) {
 }
 
 function runStat(run, stat) {
-  if (stat === "runs" || stat === "daily")
-    return stat === "daily" ? (run.mode === "daily" ? 1 : 0) : 1;
+  if (stat === "runs") return 1;
+  // an old "Play the Daily Challenge" mission now completes by beating a level
+  if (stat === "daily") return run.levelDone || 0;
   return run[stat] || 0;
 }
 
@@ -102,7 +143,8 @@ const DIMS = {
 };
 export const DIMENSION_COUNT = Object.keys(DIMS).length;
 /** How many dimensions this save has discovered. */
-export const dimensionsFound = (s) => Object.keys(DIMS).filter((d) => s.dimensions?.[d]).length;
+export const dimensionsFound = (s) =>
+  Object.keys(DIMS).filter((d) => s.dimensions?.[d]).length;
 
 export const ACHIEVEMENTS = [
   {
@@ -191,10 +233,11 @@ export const ACHIEVEMENTS = [
   },
   {
     id: "daily5",
-    name: "Daily Driver",
-    desc: "Play 5 Daily Challenges",
+    name: "Level Driver",
+    desc: "Beat 5 levels",
     glyph: "★",
-    check: (s) => s.stats.dailyPlayed >= 5,
+    // (was "Play 5 Daily Challenges": earned before stays earned)
+    check: (s) => (s.stats.levelsBeaten || 0) >= 5,
   },
   {
     id: "level10",
@@ -217,7 +260,12 @@ export const ACHIEVEMENTS = [
     glyph: "C",
     check: (s) =>
       CHARACTERS.every(
-        (c) => c.limited || c.season || c.passPlus || !heroReleased(c) || s.unlocked[c.id],
+        (c) =>
+          c.limited ||
+          c.season ||
+          c.passPlus ||
+          !heroReleased(c) ||
+          s.unlocked[c.id],
       ),
   },
   {
@@ -318,6 +366,13 @@ export const Progression = {
   ensureMissions() {
     const s = Save.data;
     const rng = new RNG(Date.now());
+    // the Daily Challenge is gone: an old daily mission becomes "Beat a level"
+    for (const m of s.missions)
+      if (m.tpl === "daily") {
+        m.tpl = "levels";
+        m.stat = "levelDone";
+        m.text = "Beat 1 level";
+      }
     if (s.missions.length === 0) {
       // the first three are hand-picked so new players see the signature goals
       s.missions = [
@@ -359,12 +414,21 @@ export const Progression = {
     const s = Save.data;
     const today = todayKey();
     if (s.login.claimed === today)
-      return { canClaim: false, streak: s.login.streak, day: ((s.login.streak - 1) % 7) + 1 };
+      return {
+        canClaim: false,
+        streak: s.login.streak,
+        day: ((s.login.streak - 1) % 7) + 1,
+      };
     const gap = s.login.last ? dayDiff(s.login.last, today) : 99;
     // the date went backwards (flew west / clock changed): today is already covered
     if (gap < 0)
-      return { canClaim: false, streak: s.login.streak, day: ((s.login.streak - 1) % 7) + 1 };
-    const streak = gap === 1 ? s.login.streak + 1 : gap === 0 ? s.login.streak : 1;
+      return {
+        canClaim: false,
+        streak: s.login.streak,
+        day: ((s.login.streak - 1) % 7) + 1,
+      };
+    const streak =
+      gap === 1 ? s.login.streak + 1 : gap === 0 ? s.login.streak : 1;
     return { canClaim: true, streak, day: ((streak - 1) % 7) + 1 };
   },
 
@@ -389,7 +453,9 @@ export const Progression = {
 
   /** The character the next shard will go to (for labelling the Day 7 reward). */
   shardTarget() {
-    return CHARACTERS.find((c) => c.shards && !Save.data.unlocked[c.id]) || null;
+    return (
+      CHARACTERS.find((c) => c.shards && !Save.data.unlocked[c.id]) || null
+    );
   },
 
   // ---------------------------------------------------------------- unlocks
@@ -406,7 +472,12 @@ export const Progression = {
       s.unlocked[target.id] = true;
       unlocked = true;
     }
-    return { id: target.id, count: s.shards[target.id], need: target.shards, unlocked };
+    return {
+      id: target.id,
+      count: s.shards[target.id],
+      need: target.shards,
+      unlocked,
+    };
   },
 
   isUnlocked(id) {
@@ -424,13 +495,16 @@ export const Progression = {
     const s = Save.data;
     if (stat === "dimensions") return dimensionsFound(s);
     if (stat === "prismFound") return s.dimensions?.prism ? 1 : 0;
-    if (stat === "maxStreak") return Math.max(s.stats.maxStreak || 0, s.login?.streak || 0);
+    if (stat === "maxStreak")
+      return Math.max(s.stats.maxStreak || 0, s.login?.streak || 0);
     return s.stats[stat] || 0;
   },
 
   /** Heroes with `requires` need every listed goal done before they can be bought. */
   requirementsMet(def) {
-    return (def.requires || []).every((r) => Progression.statOf(r.stat) >= r.value);
+    return (def.requires || []).every(
+      (r) => Progression.statOf(r.stat) >= r.value,
+    );
   },
 
   challengeMet(def) {
@@ -440,7 +514,10 @@ export const Progression = {
 
   challengeProgress(def) {
     if (!def.challenge) return 0;
-    return Math.min(1, Progression.statOf(def.challenge.stat) / def.challenge.value);
+    return Math.min(
+      1,
+      Progression.statOf(def.challenge.stat) / def.challenge.value,
+    );
   },
 
   buy(id) {
@@ -482,8 +559,10 @@ export const Progression = {
       if (m.done) continue;
       const cur = Math.min(m.target, Progression.missionValue(m, null));
       const frac = cur / m.target;
-      const label = m.stat === "biome" ? m.text : `${m.text} · ${cur}/${m.target}`;
-      if (!best || frac > best.frac) best = { kind: "mission", text: label, frac, color: 0x39ff88 };
+      const label =
+        m.stat === "biome" ? m.text : `${m.text} · ${cur}/${m.target}`;
+      if (!best || frac > best.frac)
+        best = { kind: "mission", text: label, frac, color: 0x39ff88 };
     }
     const u = Progression.nextUnlockHint();
     if (u && (!best || u.frac > best.frac + 0.05))
@@ -521,7 +600,11 @@ export const Progression = {
     }
     const d = best.def;
     let text;
-    if (best.chFrac >= best.coinFrac && best.chFrac >= best.shardFrac && d.challenge) {
+    if (
+      best.chFrac >= best.coinFrac &&
+      best.chFrac >= best.shardFrac &&
+      d.challenge
+    ) {
       const cur = Progression.statOf(d.challenge.stat);
       const left = d.challenge.value - cur;
       text =
@@ -542,7 +625,9 @@ export const Progression = {
   // ---------------------------------------------------------------- Lucky Spin
   /** Heroes the Lucky Spin can still award: spin-only ones plus shop heroes in the spin pool. */
   lotteryLeft() {
-    return CHARACTERS.filter((c) => (c.lottery || c.spinPool) && !Save.data.unlocked[c.id]);
+    return CHARACTERS.filter(
+      (c) => (c.lottery || c.spinPool) && !Save.data.unlocked[c.id],
+    );
   },
 
   /**
@@ -557,9 +642,9 @@ export const Progression = {
     let idx = 0;
     if (left.length && (s.spinPity || 0) >= SPIN_PITY - 1) {
       // pity: too long without a hero → this spin lands on a hero slice
-      const heroSlices = SPIN_SLICES.map((sl, i) => (sl.type === "hero" ? i : -1)).filter(
-        (i) => i >= 0,
-      );
+      const heroSlices = SPIN_SLICES.map((sl, i) =>
+        sl.type === "hero" ? i : -1,
+      ).filter((i) => i >= 0);
       idx = heroSlices[Math.floor(Math.random() * heroSlices.length)];
     } else {
       const total = SPIN_SLICES.reduce((a, sl) => a + sl.weight, 0);
@@ -570,7 +655,8 @@ export const Progression = {
       }
     }
     const slice = SPIN_SLICES[idx];
-    s.spinPity = slice.type === "hero" && left.length ? 0 : (s.spinPity || 0) + 1;
+    s.spinPity =
+      slice.type === "hero" && left.length ? 0 : (s.spinPity || 0) + 1;
     let prize;
     if (slice.type === "hero" && left.length) {
       const w = (c) => ({ rare: 6, epic: 3, legendary: 1 })[c.rarity] || 3;
@@ -667,7 +753,12 @@ export const Progression = {
     st.prismClears = (st.prismClears || 0) + (run.prismClear || 0);
     st.abyssClears = (st.abyssClears || 0) + (run.abyssClear || 0);
 
-    // daily
+    // LEVEL MODE: levels beaten and stars earned (missions, achievements)
+    if (run.mode === "level") {
+      st.levelsBeaten = (st.levelsBeaten || 0) + (run.levelDone || 0);
+      st.levelStars = (st.levelStars || 0) + (run.levelStars || 0);
+    }
+    // (the Daily Challenge was replaced by level mode; old daily data stays stored, unused)
     if (run.mode === "daily") {
       const today = todayKey();
       if (s.daily.date !== today) {
@@ -717,13 +808,17 @@ export const Progression = {
 
     // xp
     const xp = Math.round(
-      run.distance * 0.25 + run.nearMiss * 8 + run.coins * 1.5 + 10 + completedXp,
+      run.distance * 0.25 +
+        run.nearMiss * 8 +
+        run.coins * 1.5 +
+        10 +
+        completedXp,
     );
     res.xpGained = xp;
     s.xp += xp;
-    // the Drift Pass fills with the same XP (+ the daily challenge bonus, x XP boosts)
+    // the Drift Pass fills with the same XP (+ a bonus for beating a level, x XP boosts)
     res.passBefore = DriftPass.unlockedCount();
-    let passXp = xp + (run.mode === "daily" ? 100 : 0);
+    let passXp = xp + (run.levelDone ? 100 : 0);
     const boost = s.xpBoost;
     if (boost?.runs > 0) {
       passXp *= boost.mul;
@@ -753,7 +848,11 @@ export const Progression = {
     s.spins = Math.min(s.spins || 0, SPIN_MAX);
     s.spinPts = (s.spinPts || 0) + Math.max(0, Math.floor(run.score));
     res.spinsEarned = 0;
-    while (s.spinPts >= SPIN_EVERY && res.spinsEarned < SPINS_PER_RUN && s.spins < SPIN_MAX) {
+    while (
+      s.spinPts >= SPIN_EVERY &&
+      res.spinsEarned < SPINS_PER_RUN &&
+      s.spins < SPIN_MAX
+    ) {
       s.spinPts -= SPIN_EVERY;
       s.spins += 1;
       res.spinsEarned++;
