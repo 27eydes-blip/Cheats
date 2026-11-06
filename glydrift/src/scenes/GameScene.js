@@ -247,6 +247,7 @@ export class GameScene extends Phaser.Scene {
     this.lastSpeedTier = 0;
     this.biomeIndex = 0;
     this.announcedBiome = 0;
+    this.titledBiome = 0;
     this.speedMul = 1;
     // WALLRUNNER's boost dash (double-tap): timers + the eased speed multiplier
     this.boostT = 0;
@@ -566,6 +567,23 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** +50 coins for reaching a new biome (shown flying from the bird). */
+  /** "ENTERING …": title, sound and flash (once per realm). Returns false if not shown. */
+  realmTitle(seg, withFlash = true) {
+    if (this.state !== "playing" || this.titledBiome === seg.i) return false;
+    this.titledBiome = seg.i;
+    Sfx.biome();
+    this.hudReady?.onBiome?.(seg.biome);
+    if (withFlash) this.flashBiome(seg);
+    return true;
+  }
+
+  flashBiome(seg) {
+    this.flashFx.flash(BIOMES[seg.biome].neon, {
+      ...FLASH.biome,
+      priority: true,
+    });
+  }
+
   biomeBonus() {
     this.run.coins += BIOME_COINS;
     this.run.bonusCoins += BIOME_COINS;
@@ -813,7 +831,8 @@ export class GameScene extends Phaser.Scene {
     // blackout before the Abyss: the world holds still for half a second
     let freeze = false;
     if (this.blackoutT > 0) {
-      this.blackoutT -= rawDt;
+      // (held by the audio clock while the Abyss drop is on its way: exactly one bar)
+      this.blackoutT = Music.syncBlackout(this.blackoutT - rawDt);
       freeze = true;
       if (this.blackoutT <= 0) this.enterAbyss();
     }
@@ -879,9 +898,15 @@ export class GameScene extends Phaser.Scene {
       this.state === "playing" &&
       !this.sys.isPaused();
     Sfx.jetHum(jetOn ? 0.45 + speedNorm * 0.55 : 0, speedNorm);
-    // music layers follow speed (more drums & synths as you go faster)
+    // music layers follow speed (drums + bass, then the skank, then the lead)
     Music.setIntensity(
       this.state === "playing" ? 0.15 + speedNorm * 0.85 : 0.1,
+    );
+    // the music watches the road ahead: next realm preloaded, its bridge timed to land on it
+    Music.follow(
+      this.course,
+      this.meters,
+      this.state === "playing" && !this.sys.isPaused(),
     );
 
     // biome palette from the run's course (smooth blend back to Neon Void after a restart)
@@ -910,7 +935,7 @@ export class GameScene extends Phaser.Scene {
       if (dom.id === "abyss") {
         // the Abyss: blackout first, then the slam (see enterAbyss)
         this.run.biome = dom.biome;
-        this.blackoutT = 0.5;
+        this.blackoutT = Music.abyssDrop(0.5);
         this.blackout.setAlpha(1);
         this.calmVig.setAlpha(0);
         Music.endCalm(true);
@@ -926,24 +951,38 @@ export class GameScene extends Phaser.Scene {
       });
       if (dom.id !== "abyss") {
         if (dom.i > 0) {
-          Sfx.biome();
-          // no pause on entry: the music crossfades on the next bar while the run flows on
-          Music.play(dom.id, { startBar: 8 });
-          this.hudReady?.onBiome?.(dom.biome);
+          // no pause on entry. The title, its sound and flash land on the realm's first beat
+          // (the music's drop): usually the music got there a moment ago (see realmTitle);
+          // otherwise they wait for it. Without music they happen right away, in this order.
+          let late = false;
+          let now = false;
+          if (this.titledBiome !== dom.i)
+            Music.cue(dom.id, () => {
+              if (late) this.realmTitle(dom);
+              else now = this.realmTitle(dom, false);
+            });
+          late = true;
           if (dom.dimension) this.enterDimension(dom);
           this.biomeBonus();
-          this.flashFx.flash(BIOMES[dom.biome].neon, {
-            ...FLASH.biome,
-            priority: true,
-          });
+          if (now) this.flashBiome(dom);
         } else if (dom.dimension) {
           // test builds can start straight inside a dimension (?dimension=…)
-          Music.play(dom.id, { startBar: 8, immediate: true });
+          Music.play(dom.id, { startBar: 16 });
           this.hudReady?.onBiome?.(dom.biome);
           this.enterDimension(dom);
         }
       }
     }
+    // the music lands on the realm ahead on a beat near the border: its title shows right then
+    const ahead = this.course.next(seg0);
+    if (
+      playing &&
+      this.blackoutT <= 0 &&
+      ahead.id !== "abyss" &&
+      ahead.i !== this.titledBiome &&
+      Music.landedOn(ahead.id, seg0.end - this.meters)
+    )
+      this.realmTitle(ahead);
     if (playing) this.updateRift(seg0);
     this.updateTear(rawDt);
     // speed-up pulses every 250m

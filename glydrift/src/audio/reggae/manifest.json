@@ -1,0 +1,1184 @@
+{
+  "hash": "c3b0aa9d0842c769",
+  "sampleRate": 32000,
+  "complete": true,
+  "calib": {
+    "file": "calibration.a275f975.mp3",
+    "mark": 0.1
+  },
+  "tracks": {
+    "solar": {
+      "name": "Solar Storm",
+      "title": "Sun Riddim",
+      "style": "High-energy dancehall riddim · hard drums · horn stabs",
+      "key": "E minor",
+      "bpm": 100,
+      "feel": "dancehall",
+      "scale": 1,
+      "bar": 2.4,
+      "sections": {
+        "groove": [
+          0,
+          4
+        ],
+        "build": [
+          4,
+          6
+        ],
+        "drop": [
+          6,
+          10
+        ],
+        "dub": [
+          10,
+          14
+        ],
+        "total": 14
+      },
+      "introBars": 2,
+      "length": 33.6,
+      "pad": 0.05,
+      "files": {
+        "drums": "solar-drums.4860244e.mp3",
+        "bass": "solar-bass.e4506ef7.mp3",
+        "skank": "solar-skank.af35ee1b.mp3",
+        "lead": "solar-lead.5c3c4e8b.mp3"
+      },
+      "gains": {
+        "drums": 0.4816,
+        "bass": 0.44222,
+        "skank": 1.83963,
+        "lead": 1.56155
+      },
+      "intro": {
+        "length": 4.8,
+        "files": {
+          "drums": "solar-intro-drums.3e144c3d.mp3",
+          "bass": "solar-intro-bass.dbc8491f.mp3",
+          "skank": "solar-intro-skank.57b5002f.mp3",
+          "lead": "solar-intro-lead.57b5002f.mp3"
+        }
+      }
+    },
+    "void": {
+      "name": "Neon Void",
+      "title": "Neon Skank",
+      "style": "Upbeat modern reggae · double-time feel · bright organ skank",
+      "key": "A minor",
+      "bpm": 90,
+      "feel": "double-time",
+      "scale": 1,
+      "bar": 2.6666666666666665,
+      "sections": {
+        "groove": [
+          0,
+          4
+        ],
+        "build": [
+          4,
+          6
+        ],
+        "drop": [
+          6,
+          10
+        ],
+        "dub": [
+          10,
+          14
+        ],
+        "total": 14
+      },
+      "introBars": 2,
+      "length": 37.33333333333333,
+      "pad": 0.05,
+      "files": {
+        "drums": "void-drums.4772b8e6.mp3",
+        "bass": "void-bass.8c38a791.mp3",
+        "skank": "void-skank.3a62dbed.mp3",
+        "lead": "void-lead.b9e45c8a.mp3"
+      },
+      "gains": {
+        "drums": 0.50452,
+        "bass": 0.42581,
+        "skank": 1.33622,
+        "lead": 2.18569
+      },
+      "intro": {
+        "length": 5.333333333333333,
+        "files": {
+          "drums": "void-intro-drums.65d84a90.mp3",
+          "bass": "void-intro-bass.80d22c7f.mp3",
+          "skank": "void-intro-skank.e0633d31.mp3",
+          "lead": "void-intro-lead.8a3cdc82.mp3"
+        }
+      }
+    },
+    "menu": {
+      "name": "Lounge (Menu)",
+      "title": "Sunny Side",
+      "style": "Chill, sunny roots reggae · one drop · melodica hook",
+      "key": "C major",
+      "bpm": 75,
+      "feel": "one drop",
+      "scale": 1,
+      "bar": 3.2,
+      "sections": {
+        "groove": [
+          0,
+          4
+        ],
+        "build": [
+          4,
+          6
+        ],
+        "drop": [
+          6,
+          10
+        ],
+        "dub": [
+          10,
+          14
+        ],
+        "total": 14
+      },
+      "introBars": 2,
+      "length": 44.800000000000004,
+      "pad": 0.05,
+      "files": {
+        "drums": "menu-drums.68e16d81.mp3",
+        "bass": "menu-bass.f6286601.mp3",
+        "skank": "menu-skank.bfc89a94.mp3",
+        "lead": "menu-lead.8efcf38d.mp3"
+      },
+      "gains": {
+        "drums": 0.43033,
+        "bass": 0.32346,
+        "skank": 1.79549,
+        "lead": 2.13493
+      },
+      "intro": {
+        "length": 6.4,
+        "files": {
+          "drums": "menu-intro-drums.419507a1.mp3",
+          "bass": "menu-intro-bass.d15cec00.mp3",
+          "skank": "menu-intro-skank.34046953.mp3",
+          "lead": "menu-intro-lead.c3395b8d.mp3"
+        }
+      }
+    },
+    "glitch": {
+      "name": "Glitch Realm",
+      "title": "Bit Dub",
+      "style": "Digital dub · chopped stuttering delays · bitcrushed skanks",
+      "key": "D minor",
+      "bpm": 70,
+      "feel": "double-time hats (140 feel)",
+      "scale": 1,
+      "bar": 3.4285714285714284,
+      "sections": {
+        "groove": [
+          0,
+          4
+        ],
+        "build": [
+          4,
+          6
+        ],
+        "drop": [
+          6,
+          10
+        ],
+        "dub": [
+          10,
+          14
+        ],
+        "total": 14
+      },
+      "introBars": 2,
+      "length": 48,
+      "pad": 0.05,
+      "files": {
+        "drums": "glitch-drums.14129ec5.mp3",
+        "bass": "glitch-bass.4d960ed6.mp3",
+        "skank": "glitch-skank.0e5af57d.mp3",
+        "lead": "glitch-lead.6e96b892.mp3"
+      },
+      "gains": {
+        "drums": 0.563,
+        "bass": 0.41887,
+        "skank": 2.75005,
+        "lead": 1.1275
+      },
+      "intro": {
+        "length": 6.857142857142857,
+        "files": {
+          "drums": "glitch-intro-drums.847dddba.mp3",
+          "bass": "glitch-intro-bass.9cac3db1.mp3",
+          "skank": "glitch-intro-skank.ee75c464.mp3",
+          "lead": "glitch-intro-lead.ee75c464.mp3"
+        }
+      }
+    },
+    "abyss": {
+      "name": "Abyss",
+      "title": "Abyss Dub",
+      "style": "Dark reggae-dubstep fusion · massive sub · eerie delays",
+      "key": "D phrygian",
+      "bpm": 140,
+      "feel": "half-time",
+      "scale": 2,
+      "bar": 1.7142857142857142,
+      "sections": {
+        "groove": [
+          0,
+          8
+        ],
+        "build": [
+          8,
+          12
+        ],
+        "drop": [
+          12,
+          20
+        ],
+        "dub": [
+          20,
+          28
+        ],
+        "total": 28
+      },
+      "introBars": 4,
+      "length": 48,
+      "pad": 0.05,
+      "files": {
+        "drums": "abyss-drums.e24f37f2.mp3",
+        "bass": "abyss-bass.cdc35d9a.mp3",
+        "skank": "abyss-skank.d277cd93.mp3",
+        "lead": "abyss-lead.1550d06e.mp3"
+      },
+      "gains": {
+        "drums": 0.43959,
+        "bass": 0.31959,
+        "skank": 3.36919,
+        "lead": 2.6786
+      },
+      "intro": {
+        "length": 6.857142857142857,
+        "files": {
+          "drums": "abyss-intro-drums.a4b2aee7.mp3",
+          "bass": "abyss-intro-bass.f38dc56b.mp3",
+          "skank": "abyss-intro-skank.cff5445b.mp3",
+          "lead": "abyss-intro-lead.ee75c464.mp3"
+        }
+      }
+    },
+    "frozen": {
+      "name": "Frozen Nebula",
+      "title": "Ice Echo",
+      "style": "Spacey dub · huge echoes · icy pads · floating flute",
+      "key": "A minor",
+      "bpm": 80,
+      "feel": "one drop",
+      "scale": 1,
+      "bar": 3,
+      "sections": {
+        "groove": [
+          0,
+          4
+        ],
+        "build": [
+          4,
+          6
+        ],
+        "drop": [
+          6,
+          10
+        ],
+        "dub": [
+          10,
+          14
+        ],
+        "total": 14
+      },
+      "introBars": 2,
+      "length": 42,
+      "pad": 0.05,
+      "files": {
+        "drums": "frozen-drums.5446b173.mp3",
+        "bass": "frozen-bass.00a8894e.mp3",
+        "skank": "frozen-skank.eb6456bb.mp3",
+        "lead": "frozen-lead.f5629b54.mp3"
+      },
+      "gains": {
+        "drums": 0.60899,
+        "bass": 0.44126,
+        "skank": 2.35913,
+        "lead": 0.45308
+      },
+      "intro": {
+        "length": 6,
+        "files": {
+          "drums": "frozen-intro-drums.9b8fd751.mp3",
+          "bass": "frozen-intro-bass.8340cd1e.mp3",
+          "skank": "frozen-intro-skank.55592d57.mp3",
+          "lead": "frozen-intro-lead.95088cba.mp3"
+        }
+      }
+    },
+    "valley": {
+      "name": "Peaceful Valley",
+      "title": "Valley Roots",
+      "style": "Gentle roots one drop · soft brushes · flute",
+      "key": "F major",
+      "bpm": 70,
+      "feel": "one drop",
+      "scale": 1,
+      "bar": 3.4285714285714284,
+      "sections": {
+        "groove": [
+          0,
+          4
+        ],
+        "build": [
+          4,
+          6
+        ],
+        "drop": [
+          6,
+          10
+        ],
+        "dub": [
+          10,
+          14
+        ],
+        "total": 14
+      },
+      "introBars": 2,
+      "length": 48,
+      "pad": 0.05,
+      "files": {
+        "drums": "valley-drums.4be68ab2.mp3",
+        "bass": "valley-bass.955ec396.mp3",
+        "skank": "valley-skank.3d95978d.mp3",
+        "lead": "valley-lead.5df6349e.mp3"
+      },
+      "gains": {
+        "drums": 0.75373,
+        "bass": 0.3983,
+        "skank": 1.79329,
+        "lead": 0.39142
+      },
+      "intro": {
+        "length": 6.857142857142857,
+        "files": {
+          "drums": "valley-intro-drums.e4b7b5a8.mp3",
+          "bass": "valley-intro-bass.65ffe3ec.mp3",
+          "skank": "valley-intro-skank.628e255e.mp3",
+          "lead": "valley-intro-lead.ee75c464.mp3"
+        }
+      }
+    },
+    "hurricane": {
+      "name": "Hurricane",
+      "title": "Storm Ska",
+      "style": "Fast ska · offbeat skank on every 8th · walking bass · horns",
+      "key": "G minor",
+      "bpm": 140,
+      "feel": "double-time (ska)",
+      "scale": 2,
+      "bar": 1.7142857142857142,
+      "sections": {
+        "groove": [
+          0,
+          8
+        ],
+        "build": [
+          8,
+          12
+        ],
+        "drop": [
+          12,
+          20
+        ],
+        "dub": [
+          20,
+          28
+        ],
+        "total": 28
+      },
+      "introBars": 4,
+      "length": 48,
+      "pad": 0.05,
+      "files": {
+        "drums": "hurricane-drums.59d7247c.mp3",
+        "bass": "hurricane-bass.86bfbfa5.mp3",
+        "skank": "hurricane-skank.5c556b91.mp3",
+        "lead": "hurricane-lead.6a7aa8f6.mp3"
+      },
+      "gains": {
+        "drums": 0.48796,
+        "bass": 0.39772,
+        "skank": 2.04626,
+        "lead": 1.51349
+      },
+      "intro": {
+        "length": 6.857142857142857,
+        "files": {
+          "drums": "hurricane-intro-drums.b7db7ad7.mp3",
+          "bass": "hurricane-intro-bass.b8539949.mp3",
+          "skank": "hurricane-intro-skank.ee75c464.mp3",
+          "lead": "hurricane-intro-lead.ee75c464.mp3"
+        }
+      }
+    },
+    "prism": {
+      "name": "Prism Rift",
+      "title": "Prism Rocksteady",
+      "style": "Bright rocksteady · glass chimes · sweet flute",
+      "key": "B♭ major",
+      "bpm": 70,
+      "feel": "rockers",
+      "scale": 1,
+      "bar": 3.4285714285714284,
+      "sections": {
+        "groove": [
+          0,
+          4
+        ],
+        "build": [
+          4,
+          6
+        ],
+        "drop": [
+          6,
+          10
+        ],
+        "dub": [
+          10,
+          14
+        ],
+        "total": 14
+      },
+      "introBars": 2,
+      "length": 48,
+      "pad": 0.05,
+      "files": {
+        "drums": "prism-drums.2262a3b9.mp3",
+        "bass": "prism-bass.b3afafe5.mp3",
+        "skank": "prism-skank.5af46578.mp3",
+        "lead": "prism-lead.2b9716f5.mp3"
+      },
+      "gains": {
+        "drums": 0.49268,
+        "bass": 0.39087,
+        "skank": 2.12442,
+        "lead": 0.38606
+      },
+      "intro": {
+        "length": 6.857142857142857,
+        "files": {
+          "drums": "prism-intro-drums.98b474b1.mp3",
+          "bass": "prism-intro-bass.080a697f.mp3",
+          "skank": "prism-intro-skank.59d92a0c.mp3",
+          "lead": "prism-intro-lead.ee75c464.mp3"
+        }
+      }
+    },
+    "chrono": {
+      "name": "Chrono Fracture",
+      "title": "Clockwork Rockers",
+      "style": "Ticking rockers · rimshot clock · chimes",
+      "key": "G minor",
+      "bpm": 70,
+      "feel": "rockers",
+      "scale": 1,
+      "bar": 3.4285714285714284,
+      "sections": {
+        "groove": [
+          0,
+          4
+        ],
+        "build": [
+          4,
+          6
+        ],
+        "drop": [
+          6,
+          10
+        ],
+        "dub": [
+          10,
+          14
+        ],
+        "total": 14
+      },
+      "introBars": 2,
+      "length": 48,
+      "pad": 0.05,
+      "files": {
+        "drums": "chrono-drums.bbaf91c1.mp3",
+        "bass": "chrono-bass.e3313b43.mp3",
+        "skank": "chrono-skank.e65f941d.mp3",
+        "lead": "chrono-lead.0c36304b.mp3"
+      },
+      "gains": {
+        "drums": 0.52009,
+        "bass": 0.43506,
+        "skank": 2.02935,
+        "lead": 2.33444
+      },
+      "intro": {
+        "length": 6.857142857142857,
+        "files": {
+          "drums": "chrono-intro-drums.8f553262.mp3",
+          "bass": "chrono-intro-bass.5793376b.mp3",
+          "skank": "chrono-intro-skank.09d99919.mp3",
+          "lead": "chrono-intro-lead.ee75c464.mp3"
+        }
+      }
+    },
+    "tidal": {
+      "name": "Tidal Sky",
+      "title": "Tidal Dub",
+      "style": "Deep underwater dub · muffled · long echoes",
+      "key": "D minor",
+      "bpm": 70,
+      "feel": "one drop",
+      "scale": 1,
+      "bar": 3.4285714285714284,
+      "sections": {
+        "groove": [
+          0,
+          4
+        ],
+        "build": [
+          4,
+          6
+        ],
+        "drop": [
+          6,
+          10
+        ],
+        "dub": [
+          10,
+          14
+        ],
+        "total": 14
+      },
+      "introBars": 2,
+      "length": 48,
+      "pad": 0.05,
+      "files": {
+        "drums": "tidal-drums.fdf43098.mp3",
+        "bass": "tidal-bass.cec5879e.mp3",
+        "skank": "tidal-skank.ac73ea2c.mp3",
+        "lead": "tidal-lead.3de3ba36.mp3"
+      },
+      "gains": {
+        "drums": 0.73187,
+        "bass": 0.3323,
+        "skank": 1.44241,
+        "lead": 2.35681
+      },
+      "intro": {
+        "length": 6.857142857142857,
+        "files": {
+          "drums": "tidal-intro-drums.ae12678c.mp3",
+          "bass": "tidal-intro-bass.bf807175.mp3",
+          "skank": "tidal-intro-skank.22990525.mp3",
+          "lead": "tidal-intro-lead.ee75c464.mp3"
+        }
+      }
+    },
+    "mirror": {
+      "name": "Mirror Realm",
+      "title": "Mirror Dub",
+      "style": "Eerie reverse dub · organ swells · hypnotic echoes",
+      "key": "D phrygian",
+      "bpm": 70,
+      "feel": "one drop",
+      "scale": 1,
+      "bar": 3.4285714285714284,
+      "sections": {
+        "groove": [
+          0,
+          4
+        ],
+        "build": [
+          4,
+          6
+        ],
+        "drop": [
+          6,
+          10
+        ],
+        "dub": [
+          10,
+          14
+        ],
+        "total": 14
+      },
+      "introBars": 2,
+      "length": 48,
+      "pad": 0.05,
+      "files": {
+        "drums": "mirror-drums.9677e2c1.mp3",
+        "bass": "mirror-bass.0584a021.mp3",
+        "skank": "mirror-skank.e4f1182b.mp3",
+        "lead": "mirror-lead.926c01e4.mp3"
+      },
+      "gains": {
+        "drums": 0.61819,
+        "bass": 0.38033,
+        "skank": 0.40281,
+        "lead": 2.86553
+      },
+      "intro": {
+        "length": 6.857142857142857,
+        "files": {
+          "drums": "mirror-intro-drums.0d18b7a0.mp3",
+          "bass": "mirror-intro-bass.b6565812.mp3",
+          "skank": "mirror-intro-skank.1ccaf200.mp3",
+          "lead": "mirror-intro-lead.ee75c464.mp3"
+        }
+      }
+    }
+  },
+  "bridges": {
+    "void>solar": {
+      "bars": 4,
+      "beats": [
+        0,
+        0.6635991675545314,
+        1.3211379841101565,
+        1.972726141544233,
+        2.618470380302985,
+        3.258474594344702,
+        3.892839931459857,
+        4.521664889210192,
+        5.145045406714429,
+        5.763074952494618,
+        6.375844608584043,
+        6.983443151086298,
+        7.585957127363497,
+        8.185957127363498,
+        8.785957127363497,
+        9.385957127363497,
+        9.985957127363497
+      ],
+      "ratio": 1.1111111111111112,
+      "related": false,
+      "land": 9.985957127363497,
+      "files": {
+        "drums": "bridge-void-solar-drums.28aef756.mp3",
+        "bass": "bridge-void-solar-bass.ab748f08.mp3",
+        "music": "bridge-void-solar-music.79ebdb57.mp3"
+      }
+    },
+    "solar>frozen": {
+      "bars": 4,
+      "beats": [
+        0,
+        0.6050562593897264,
+        1.2204558603245281,
+        1.8465585979518209,
+        2.4837433735302517,
+        3.132409571626673,
+        3.7929785636817464,
+        4.465895352119239,
+        5.151630371064239,
+        5.850681461919898,
+        6.563576044582366,
+        7.2908735080130675,
+        8.03316784731155,
+        8.78316784731155,
+        9.53316784731155,
+        10.28316784731155,
+        11.03316784731155
+      ],
+      "ratio": 0.8,
+      "related": false,
+      "land": 11.03316784731155,
+      "files": {
+        "drums": "bridge-solar-frozen-drums.286a3506.mp3",
+        "bass": "bridge-solar-frozen-bass.f9b85abd.mp3",
+        "music": "bridge-solar-frozen-music.28f96c06.mp3"
+      }
+    },
+    "abyss>valley": {
+      "bars": 4,
+      "beats": [
+        0,
+        0.42857142857142855,
+        0.8571428571428571,
+        1.2857142857142858,
+        1.7142857142857142,
+        2.142857142857143,
+        2.5714285714285716,
+        3,
+        3.4285714285714284,
+        3.857142857142857,
+        4.285714285714286,
+        4.714285714285714,
+        5.142857142857143,
+        5.571428571428571,
+        6,
+        6.428571428571429,
+        6.857142857142857
+      ],
+      "ratio": 0.5,
+      "related": true,
+      "land": 6.857142857142857,
+      "files": {
+        "drums": "bridge-abyss-valley-drums.9aaadbea.mp3",
+        "bass": "bridge-abyss-valley-bass.a27bd9c2.mp3",
+        "music": "bridge-abyss-valley-music.06f9c3fe.mp3"
+      }
+    },
+    "frozen>glitch": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.7619687595499272,
+        1.5489245073017082,
+        2.3625617475180607,
+        3.204753422988543,
+        4.0618962801314,
+        4.9190391372742575,
+        5.776181994417115,
+        6.633324851559971
+      ],
+      "ratio": 0.875,
+      "related": false,
+      "land": 6.633324851559971,
+      "files": {
+        "drums": "bridge-frozen-glitch-drums.cf516d6e.mp3",
+        "bass": "bridge-frozen-glitch-bass.6fdb21f7.mp3",
+        "music": "bridge-frozen-glitch-music.4bd93535.mp3"
+      }
+    },
+    "valley>hurricane": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 2,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-valley-hurricane-drums.47f1fc44.mp3",
+        "bass": "bridge-valley-hurricane-bass.666a9711.mp3",
+        "music": "bridge-valley-hurricane-music.8c0cc9bf.mp3"
+      }
+    },
+    "hurricane>tidal": {
+      "bars": 4,
+      "beats": [
+        0,
+        0.42857142857142855,
+        0.8571428571428571,
+        1.2857142857142858,
+        1.7142857142857142,
+        2.142857142857143,
+        2.5714285714285716,
+        3,
+        3.4285714285714284,
+        3.857142857142857,
+        4.285714285714286,
+        4.714285714285714,
+        5.142857142857143,
+        5.571428571428571,
+        6,
+        6.428571428571429,
+        6.857142857142857
+      ],
+      "ratio": 0.5,
+      "related": true,
+      "land": 6.857142857142857,
+      "files": {
+        "drums": "bridge-hurricane-tidal-drums.746dbeb2.mp3",
+        "bass": "bridge-hurricane-tidal-bass.e303f06c.mp3",
+        "music": "bridge-hurricane-tidal-music.c28af041.mp3"
+      }
+    },
+    "hurricane>prism": {
+      "bars": 4,
+      "beats": [
+        0,
+        0.42857142857142855,
+        0.8571428571428571,
+        1.2857142857142858,
+        1.7142857142857142,
+        2.142857142857143,
+        2.5714285714285716,
+        3,
+        3.4285714285714284,
+        3.857142857142857,
+        4.285714285714286,
+        4.714285714285714,
+        5.142857142857143,
+        5.571428571428571,
+        6,
+        6.428571428571429,
+        6.857142857142857
+      ],
+      "ratio": 0.5,
+      "related": true,
+      "land": 6.857142857142857,
+      "files": {
+        "drums": "bridge-hurricane-prism-drums.dec2bfca.mp3",
+        "bass": "bridge-hurricane-prism-bass.d99e6da6.mp3",
+        "music": "bridge-hurricane-prism-music.f785f1b3.mp3"
+      }
+    },
+    "hurricane>chrono": {
+      "bars": 4,
+      "beats": [
+        0,
+        0.42857142857142855,
+        0.8571428571428571,
+        1.2857142857142858,
+        1.7142857142857142,
+        2.142857142857143,
+        2.5714285714285716,
+        3,
+        3.4285714285714284,
+        3.857142857142857,
+        4.285714285714286,
+        4.714285714285714,
+        5.142857142857143,
+        5.571428571428571,
+        6,
+        6.428571428571429,
+        6.857142857142857
+      ],
+      "ratio": 0.5,
+      "related": true,
+      "land": 6.857142857142857,
+      "files": {
+        "drums": "bridge-hurricane-chrono-drums.0cb5685a.mp3",
+        "bass": "bridge-hurricane-chrono-bass.e2198a4d.mp3",
+        "music": "bridge-hurricane-chrono-music.27b0f7ff.mp3"
+      }
+    },
+    "hurricane>mirror": {
+      "bars": 4,
+      "beats": [
+        0,
+        0.42857142857142855,
+        0.8571428571428571,
+        1.2857142857142858,
+        1.7142857142857142,
+        2.142857142857143,
+        2.5714285714285716,
+        3,
+        3.4285714285714284,
+        3.857142857142857,
+        4.285714285714286,
+        4.714285714285714,
+        5.142857142857143,
+        5.571428571428571,
+        6,
+        6.428571428571429,
+        6.857142857142857
+      ],
+      "ratio": 0.5,
+      "related": true,
+      "land": 6.857142857142857,
+      "files": {
+        "drums": "bridge-hurricane-mirror-drums.ed447bca.mp3",
+        "bass": "bridge-hurricane-mirror-bass.4dd68555.mp3",
+        "music": "bridge-hurricane-mirror-music.8dc13d99.mp3"
+      }
+    },
+    "prism>tidal": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 1,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-prism-tidal-drums.f69f53f0.mp3",
+        "bass": "bridge-prism-tidal-bass.bc6f320d.mp3",
+        "music": "bridge-prism-tidal-music.90b249b1.mp3"
+      }
+    },
+    "prism>chrono": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 1,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-prism-chrono-drums.c187ce36.mp3",
+        "bass": "bridge-prism-chrono-bass.5a0b2175.mp3",
+        "music": "bridge-prism-chrono-music.802708c6.mp3"
+      }
+    },
+    "prism>mirror": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 1,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-prism-mirror-drums.ac4cf8ad.mp3",
+        "bass": "bridge-prism-mirror-bass.f44144c1.mp3",
+        "music": "bridge-prism-mirror-music.984ba5c9.mp3"
+      }
+    },
+    "tidal>prism": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 1,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-tidal-prism-drums.7cf3aed1.mp3",
+        "bass": "bridge-tidal-prism-bass.efc413a6.mp3",
+        "music": "bridge-tidal-prism-music.42065769.mp3"
+      }
+    },
+    "tidal>chrono": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 1,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-tidal-chrono-drums.e05f3f94.mp3",
+        "bass": "bridge-tidal-chrono-bass.67c2ad81.mp3",
+        "music": "bridge-tidal-chrono-music.09db3e65.mp3"
+      }
+    },
+    "chrono>prism": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 1,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-chrono-prism-drums.24ff5ae4.mp3",
+        "bass": "bridge-chrono-prism-bass.059c5642.mp3",
+        "music": "bridge-chrono-prism-music.c656a44d.mp3"
+      }
+    },
+    "tidal>mirror": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 1,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-tidal-mirror-drums.ab6e5420.mp3",
+        "bass": "bridge-tidal-mirror-bass.9aefb381.mp3",
+        "music": "bridge-tidal-mirror-music.95c4d6c1.mp3"
+      }
+    },
+    "chrono>tidal": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 1,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-chrono-tidal-drums.f34fb937.mp3",
+        "bass": "bridge-chrono-tidal-bass.c92e4446.mp3",
+        "music": "bridge-chrono-tidal-music.a40ff20c.mp3"
+      }
+    },
+    "chrono>mirror": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 1,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-chrono-mirror-drums.5011dd23.mp3",
+        "bass": "bridge-chrono-mirror-bass.2e6c6671.mp3",
+        "music": "bridge-chrono-mirror-music.cbcc5856.mp3"
+      }
+    },
+    "mirror>prism": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 1,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-mirror-prism-drums.c9d179df.mp3",
+        "bass": "bridge-mirror-prism-bass.c5fe77b3.mp3",
+        "music": "bridge-mirror-prism-music.730f9f7a.mp3"
+      }
+    },
+    "mirror>tidal": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 1,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-mirror-tidal-drums.424bfd6a.mp3",
+        "bass": "bridge-mirror-tidal-bass.ab84a4a3.mp3",
+        "music": "bridge-mirror-tidal-music.362479b1.mp3"
+      }
+    },
+    "mirror>chrono": {
+      "bars": 2,
+      "beats": [
+        0,
+        0.8571428571428571,
+        1.7142857142857142,
+        2.5714285714285716,
+        3.4285714285714284,
+        4.285714285714286,
+        5.142857142857143,
+        6,
+        6.857142857142857
+      ],
+      "ratio": 1,
+      "related": true,
+      "land": 6.857142857142856,
+      "files": {
+        "drums": "bridge-mirror-chrono-drums.0dff8045.mp3",
+        "bass": "bridge-mirror-chrono-bass.d4434a12.mp3",
+        "music": "bridge-mirror-chrono-music.0deb3d08.mp3"
+      }
+    }
+  },
+  "calm": {
+    "name": "The Calm",
+    "title": "Heartbeat",
+    "style": "Near silence · heartbeat · dub echo fading out",
+    "key": "D minor",
+    "mode": "minor",
+    "root": 50,
+    "bpm": 70,
+    "bars": 4,
+    "bar": 3.4285714285714284,
+    "length": 13.714285714285714,
+    "pad": 0.05,
+    "files": {
+      "drums": "calm-drums.9a83cf6b.mp3",
+      "skank": "calm-skank.5c0dae72.mp3"
+    }
+  }
+}
