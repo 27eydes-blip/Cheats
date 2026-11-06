@@ -225,10 +225,10 @@ export class CharacterScene extends Phaser.Scene {
       // DRIFT PASS+ heroes: a gold-on-crimson badge on the card's top edge
       const b = this.add.container(0, -CARD_H / 2 + 26);
       const bg = this.add.graphics();
-      bg.fillStyle(0x14020a, 1).fillRoundedRect(-88, -16, 176, 32, 16);
-      bg.fillStyle(0xc8102e, 1).fillRoundedRect(-84, -12, 168, 24, 12);
-      bg.lineStyle(2, 0xffd23f, 1).strokeRoundedRect(-84, -12, 168, 24, 12);
-      b.add([bg, plainText(this, 0, 0, "DRIFT PASS+", 15, "#ffe9a8")]);
+      bg.fillStyle(0x14020a, 1).fillRoundedRect(-124, -16, 248, 32, 16);
+      bg.fillStyle(0xc8102e, 1).fillRoundedRect(-120, -12, 240, 24, 12);
+      bg.lineStyle(2, 0xffd23f, 1).strokeRoundedRect(-120, -12, 240, 24, 12);
+      b.add([bg, plainText(this, 0, 0, "DRIFT PASS+ EXCLUSIVE", 15, "#ffe9a8")]);
       c.add(b);
     }
     c.edit = edit;
@@ -519,9 +519,10 @@ export class CharacterScene extends Phaser.Scene {
     });
     const title = neonText(this, W / 2, py + 44, `EDIT ${def.name}`, 34, def.color, { blur: 14 });
     c.add([shade, g, title]);
-    // category chips: 2 rows of 3
+    // category chips: rows of 3 (the shop's categories, plus Drift Pass+ victory poses)
     const cw = (W - 80) / 3;
-    this.catBtns = CATEGORIES.map((cat, i) => {
+    const cats = [...CATEGORIES, { id: "pose", label: "POSES", one: "Victory pose" }];
+    this.catBtns = cats.map((cat, i) => {
       const b = button(
         this,
         40 + cw * (i % 3) + cw / 2,
@@ -537,13 +538,15 @@ export class CharacterScene extends Phaser.Scene {
     });
     this.editGrid = this.add.container(0, 0);
     c.add(this.editGrid);
-    this.editGridTop = py + 196;
+    this.editGridTop = py + 196 + 70 * (Math.ceil(cats.length / 3) - 2);
     c.add(
       button(this, W / 2 - 130, H - 90 - (this.registry.get("safeBottom") || 0), 220, 84, "SHOP", {
         color: 0xffd23f,
         size: 28,
         onClick: () => {
           const cat = this.editCat;
+          // victory poses only come from the Drift Pass+ track
+          if (cat === "pose") return fadeTo(this, "Pass", { from: "Characters" });
           fadeTo(this, "Shop", { tab: ["death", "flap", "coin"].includes(cat) ? "effects" : cat });
         },
       }),
@@ -606,7 +609,8 @@ export class CharacterScene extends Phaser.Scene {
         else Shop.unequip(cat);
         Sfx.ui();
         this.buildRig();
-        this.rig.flap();
+        if (cat === "pose" && id) this.rig.cosmeticPose(id); // show the pose straight away
+        else this.rig.flap();
         this.editTab(cat);
       });
       grid.add(t);
@@ -617,7 +621,9 @@ export class CharacterScene extends Phaser.Scene {
           this,
           W / 2,
           this.editGridTop + th + 40,
-          "You don't own any yet. Get some in the SHOP!",
+          cat === "pose"
+            ? "Victory poses play on a NEW BEST. Get them on the Drift Pass+ track!"
+            : "You don't own any yet. Get some in the SHOP!",
           18,
           "#cfc6ff",
           { wrap: W - 120 },

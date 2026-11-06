@@ -7,11 +7,12 @@ import { Save } from "../data/save.js";
 import { Titles } from "../data/titles.js";
 import { titleText } from "../ui/titleText.js";
 import { BIOMES, biomeName } from "../biomes/biomes.js";
-import { COIN_COLOR, fitCamera, VIEW } from "../config.js";
+import { COIN_COLOR, fitCamera, NUM_FONT, VIEW } from "../config.js";
 import { HI } from "../gfx/textures.js";
 import { getCharacter } from "../player/characterDefs.js";
 import { Sfx } from "../audio/sfx.js";
-import { Leaderboard, Levels } from "../online/leaderboard.js";
+import { flairOf, Leaderboard, Levels, myFlair } from "../online/leaderboard.js";
+import { nameText } from "../ui/nameplate.js";
 import { Music } from "../audio/music.js";
 import { Progression, SPIN_EVERY } from "../data/progression.js";
 import { SPIN_MAX } from "../tuning.js";
@@ -387,7 +388,18 @@ export class GameOverScene extends Phaser.Scene {
     heroImage(this, W - 70, headY + 4, def.id, 0.5 / HI);
     // your name and title ride under your hero
     const name = Save.data.profile?.username;
-    if (name) plainText(this, W - 70, headY + 50, name, 15, "#ffffff");
+    if (name) {
+      // Drift Pass+: the animated gold name and the forever Season 1 badge
+      const fl = flairOf({ flair: myFlair() });
+      const nt = nameText(this, W - 70, headY + 50, name, {
+        size: 15,
+        ox: 0.5,
+        gold: fl.gold,
+        badge: fl.s1,
+        font: NUM_FONT,
+      });
+      nt.setScale(Math.min(1, 132 / Math.max(1, nt.getBounds().width)));
+    }
     const title = Titles.equippedId();
     if (title) titleText(this, W - 70, headY + 70, title, { size: 12 });
   }

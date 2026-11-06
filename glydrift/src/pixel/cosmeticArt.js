@@ -286,6 +286,88 @@ function icons() {
     icon_trail_eclipse: swoosh([0xfff6c0, 0xffd23f, 0x8a5a1a, 0x1a0a2a]),
     icon_death_supernova: burstIcon(0xffffff, 0xffd23f),
     icon_death_glitchout: burstIcon(0x39ff88, 0xff2050),
+    // Season 1 Drift Pass+ additions
+    icon_trail_pp_galaxydust: (() => {
+      const pc = swoosh([0xffffff, 0xc8b0ff, 0x8a5aff, 0x2a1a6a]);
+      for (const [x, y] of [[3, 3], [12, 2], [8, 13], [14, 11], [2, 12]]) pc.set(x, y, 0xffffff);
+      return pc;
+    })(),
+    icon_trail_pp_lightning: (() => {
+      const pc = new PixelCanvas(16, 16);
+      const pts = [[1, 8], [4, 5], [6, 9], [9, 4], [11, 9], [14, 6]];
+      for (let i = 1; i < pts.length; i++) pc.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], 0xe8ffff);
+      pc.line(6, 9, 5, 13, 0x9af4ff).line(11, 9, 12, 13, 0x9af4ff);
+      return pc.outline(0x1a3a8a, 1, false);
+    })(),
+    icon_trail_pp_comboflame: (() => {
+      const pc = swoosh([0xffffff, 0xffd23f, 0x39ff88, 0x3ef4ff, 0xa040ff]);
+      pc.set(13, 2, 0xffd23f).set(12, 1, 0xfff6a0);
+      return pc;
+    })(),
+    icon_death_pp_fireworks: (() => {
+      const pc = burstIcon(0xff4fd8, 0x3ef4ff);
+      pc.set(8, 8, 0xffd23f).set(2, 2, 0xffd23f).set(13, 3, 0xffffff);
+      return pc;
+    })(),
+    icon_death_pp_melt: (() => {
+      const pc = new PixelCanvas(16, 16);
+      pc.ellipse(8, 6, 5, 5, 0x6a2a8a).ellipse(8, 13, 7, 2, 0x2a0a3a);
+      for (const x of [4, 7, 10, 12]) pc.vline(x, 9, 11 + (x % 3), 0x8a2a9a);
+      pc.set(6, 5, 0xff3a4a).set(10, 5, 0xff3a4a);
+      return pc.outline(0x06030c, 1, false);
+    })(),
+    icon_death_pp_shatter: (() => {
+      const pc = new PixelCanvas(16, 16);
+      pc.rect(2, 3, 10, 3, 0xff2050).rect(4, 7, 10, 3, 0x39ff88).rect(1, 11, 10, 3, 0x20c8ff);
+      pc.set(14, 4, 0xff2050).set(0, 8, 0x39ff88).set(13, 12, 0x20c8ff);
+      return pc;
+    })(),
+    icon_pose_pp_power: (() => {
+      const pc = new PixelCanvas(16, 16);
+      pc.ellipse(8, 9, 4, 4, 0xffd23f);
+      pc.line(4, 8, 1, 4, 0xffd23f).line(12, 8, 15, 4, 0xffd23f);
+      pc.set(1, 3, 0xffffff).set(15, 3, 0xffffff).set(8, 2, 0xfff6a0).set(5, 1, 0xfff6a0).set(11, 1, 0xfff6a0);
+      return pc.outline(0x5a3a00, 1, false);
+    })(),
+    icon_pose_pp_spinflip: (() => {
+      const pc = new PixelCanvas(16, 16);
+      for (let i = 0; i < 20; i++) {
+        const a = (i / 20) * Math.PI * 1.7 + 0.6;
+        pc.set(Math.round(8 + Math.cos(a) * 6), Math.round(8 + Math.sin(a) * 6), i > 15 ? 0xffffff : 0x9af4ff);
+      }
+      pc.poly([[3, 3], [7, 3], [4, 7]], 0xffffff);
+      return pc;
+    })(),
+    icon_pose_pp_aura: (() => {
+      const pc = new PixelCanvas(16, 16);
+      pc.ellipse(8, 8, 7, 7, 0xb45cff).ellipse(8, 8, 5, 5, 0x2a1450).ellipse(8, 8, 3, 3, 0xffd23f);
+      pc.set(8, 8, 0xffffff);
+      return pc;
+    })(),
+    icon_theme_pp_abyss: (() => {
+      const pc = new PixelCanvas(16, 16);
+      pc.rect(0, 1, 16, 14, 0x0a0410);
+      for (const [x, y] of [[4, 5], [11, 9]]) {
+        pc.ellipse(x, y, 2, 1, 0xf4e8ff).set(x, y, 0xff3a4a);
+      }
+      pc.set(2, 12, 0x8a2a9a).set(13, 3, 0x8a2a9a).set(8, 13, 0xff3a4a);
+      return pc;
+    })(),
+    icon_name_pp_gold: (() => {
+      const pc = new PixelCanvas(16, 16);
+      pc.rect(1, 5, 14, 6, 0xffd23f).hline(2, 13, 5, 0xfff6c0).hline(1, 14, 10, 0xc89a10);
+      for (const x of [3, 6, 9, 12]) pc.vline(x, 7, 8, 0x5a3a00);
+      return pc.outline(0x3a2400, 1, false);
+    })(),
+    icon_badge_pp_s1: (() => {
+      const pc = new PixelCanvas(16, 16);
+      pc.poly([[2, 1], [13, 1], [13, 9], [8, 14], [2, 9]], 0xc8102e);
+      pc.hline(3, 12, 2, 0xff5a6a);
+      // "S1" in gold pixels
+      pc.hline(4, 6, 4, 0xffd23f).set(4, 5, 0xffd23f).hline(4, 6, 6, 0xffd23f).set(6, 7, 0xffd23f).hline(4, 6, 8, 0xffd23f);
+      pc.vline(10, 4, 8, 0xffd23f).set(9, 5, 0xffd23f);
+      return pc.outline(0x3a0208, 1, false);
+    })(),
     icon_trail_lightning: (() => {
       const pc = new PixelCanvas(16, 16);
       pc.poly(

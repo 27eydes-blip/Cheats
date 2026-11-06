@@ -372,6 +372,17 @@ export class Effects {
     for (const em of Object.values(this.emitters)) em.timeScale = ts;
   }
 
+  /** Remove everything this effects set made (modal stages, e.g. the reward preview). */
+  destroy() {
+    for (const k in this.emitters) this.emitters[k].destroy();
+    for (const r of this.rings) r.destroy();
+    this.arcG.destroy();
+    for (const t of this.texts) t.destroy?.();
+    this.emitters = {};
+    this.rings = [];
+    this.texts = [];
+  }
+
   update(dt) {
     if (this.drift) {
       const dx = this.drift * dt;

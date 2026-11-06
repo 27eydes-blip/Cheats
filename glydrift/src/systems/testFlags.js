@@ -17,6 +17,12 @@ export const TEST = {
   lbmock: !!q?.has("lbmock"), // automated tests / screenshots: a leaderboard with sample players
   offline: !!q?.has("offline"), // automated tests: skip the online start-up (leaderboard, remote seasons)
   movenotice: !!q?.has("movenotice"), // automated tests: act as the old GitHub Pages address
+  // Drift Pass+ previews (test builds only): ?pplus owns Season 1's Drift Pass+ with every
+  // reward claimed; ?ppequip=trail_pp_lightning,p_s1founder equips items / titles;
+  // ?ppreview=riftsovereign opens the tap-to-preview card for one reward on the home screen
+  pplus: !!q?.has("pplus"),
+  ppequip: q?.get("ppequip") || null,
+  ppreview: q?.get("ppreview") || null,
   noaudio: !!q?.has("noaudio"), // automated tests: never start audio (keeps visuals deterministic)
   // automated tests on software GPUs: run the game logic every frame but draw only every Nth
   // frame (and whenever a test asks for a fresh picture) — drawing is what makes them slow

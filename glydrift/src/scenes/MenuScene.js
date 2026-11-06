@@ -2,7 +2,7 @@
 // PLAY button, the Daily Challenge with a countdown, the daily login reward and settings.
 import Phaser from "phaser";
 import { BIOMES, biomeStateAt, blendPalette, CLASSIC } from "../biomes/biomes.js";
-import { COIN_COLOR, fitCamera, FONT, VIEW } from "../config.js";
+import { COIN_COLOR, fitCamera, FONT, NUM_FONT, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { Analytics } from "../systems/analytics.js";
 import { Founding } from "../data/founding.js";
@@ -14,7 +14,12 @@ import { Sfx } from "../audio/sfx.js";
 import { TEST } from "../systems/testFlags.js";
 import { Haptics } from "../systems/haptics.js";
 import { Install } from "../systems/install.js";
-import { Leaderboard, Levels } from "../online/leaderboard.js";
+import { flairOf, Leaderboard, Levels, myFlair } from "../online/leaderboard.js";
+import { nameText } from "../ui/nameplate.js";
+import { openRewardPreview } from "../ui/rewardPreview.js";
+import { plusRewardFor } from "../data/passPlus.js";
+import { titleText } from "../ui/titleText.js";
+import { Titles } from "../data/titles.js";
 import { Account } from "../online/account.js";
 import { openAccount } from "../ui/accountModal.js";
 import { getCosmetic, Shop } from "../data/cosmetics.js";
@@ -213,6 +218,13 @@ export class MenuScene extends Phaser.Scene {
       this.buildSeasonBanner(L.banner);
       if (Seasons.needsHeroReveal()) this.seasonQueue.push(() => this.newHeroReveal());
     }
+    // Drift Pass+ "Abyss" home theme (chosen in Settings)
+    this.applyHomeTheme();
+    // test builds only: ?ppreview=<reward id> opens its preview card
+    if (TEST.ppreview) {
+      const pr = plusRewardFor(TEST.ppreview);
+      if (pr) this.time.delayedCall(300, () => openRewardPreview(this, pr.reward, { plus: true, tier: pr.tier }));
+    }
     // hidden music test: tap the logo 5 times
     this.logoTaps = 0;
     this.logo.setInteractive().on("pointerdown", () => {
@@ -262,6 +274,9 @@ export class MenuScene extends Phaser.Scene {
     }).setDepth(100);
     this.xpBar = new ProgressBar(this, 32, top + 66, 170, 10, 0x3ef4ff).setDepth(100);
     this.xpBar.set(s.xp / lvlNeed);
+    // your name + the title you wear, between the level and the coins
+    this.npTop = top;
+    this.refreshNamePlate();
     this.coinIcon = this.add
       .image(W - 236, top + 40, "coin")
       .setScale(0.8 / HI)
@@ -785,6 +800,149 @@ export class MenuScene extends Phaser.Scene {
       r.v = 20 + Math.random() * 50;
       r.ph = Math.random() * 6;
       this.seasonBits.push(r);
+    }
+  }
+
+  // ------------------------------------------------------------------ name plate + home theme
+  /**
+   * Your name and the title you wear in the top bar (with the Drift Pass+ gold name and forever
+   * Season 1 badge when you have them). Rebuilt when Settings changes the gold name.
+   */
+  refreshNamePlate() {
+    for (const o of this.namePlate || []) o.destroy();
+    this.namePlate = null;
+    const uname = Save.data.profile?.username;
+    if (!uname) return;
+    const W = this.W;
+    const top = this.npTop;
+    const fl = flairOf({ flair: myFlair() });
+    const np = nameText(this, W / 2 - 12, top + 30, uname, {
+      size: 19,
+      ox: 0.5,
+      gold: fl.gold,
+      badge: fl.s1,
+      font: NUM_FONT,
+    }).setDepth(100);
+    np.setScale(Math.min(1, (W - 470) / Math.max(1, np.getBounds().width)));
+    const tt = titleText(this, W / 2 - 12, top + 56, Titles.equippedId(), { size: 11 }).setDepth(100);
+    if (tt.list.length) tt.setScale(Math.min(1, (W - 470) / Math.max(1, tt.getBounds().width)));
+    this.namePlate = [np, tt];
+  }
+
+  /** Build (or take down) the Drift Pass+ "Abyss" home theme to match Settings. */
+  applyHomeTheme() {
+    const want = Shop.equipped("theme") === "theme_pp_abyss";
+    if (!!this.abyss === want) return;
+    if (!want) {
+      for (const o of this.abyss.objects) o.destroy();
+      this.abyss = null;
+      for (const r of this.seasonBits || []) r.setVisible(true);
+      return;
+    }
+    this.buildAbyssTheme();
+  }
+
+  /**
+   * The "Abyss" home theme: the menu sinks into the dark, eyes open in the shadows at the edges
+   * and blink slowly (their pupils follow your hero), and dim motes drift up through it. Fewer
+   * eyes and motes on Low Graphics; nothing flashes, so Reduce Flashing changes nothing.
+   */
+  buildAbyssTheme() {
+    const W = this.W;
+    const H = this.H;
+    const low = !!Save.data.settings.lowGfx;
+    const objects = [];
+    const g = this.add.graphics().setDepth(4);
+    g.fillStyle(0x05010a, 0.62).fillRect(0, 0, W, H);
+    g.fillGradientStyle(0x1a0418, 0x1a0418, 0x1a0418, 0x1a0418, 0.9, 0.9, 0, 0);
+    g.fillRect(0, 0, W, H * 0.3);
+    g.fillGradientStyle(0x14020a, 0x14020a, 0x14020a, 0x14020a, 0, 0, 0.9, 0.9);
+    g.fillRect(0, H * 0.7, W, H * 0.3);
+    objects.push(g);
+    for (const r of this.seasonBits || []) r.setVisible(false);
+    // eyes in the dark at the edges (never behind the buttons in the middle)
+    const eyes = [];
+    const n = low ? 4 : 8;
+    for (let i = 0; i < n; i++) {
+      const left = i % 2 === 0;
+      const x = left ? 34 + Math.random() * 50 : W - 34 - Math.random() * 50;
+      const y = H * (0.14 + (0.72 * (i + Math.random() * 0.6)) / n);
+      const k = 1.1 + Math.random() * 0.6;
+      const eye = this.add.container(x, y).setDepth(5).setScale(k);
+      const glow = this.add
+        .image(0, 0, "glow")
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setTint(0xff2a4a)
+        .setScale(0.5)
+        .setAlpha(0.25);
+      const ball = this.add.graphics();
+      // a pixel-stepped almond eye
+      ball.fillStyle(0x2a0410, 1).fillRect(-20, -6, 40, 12).fillRect(-14, -10, 28, 20);
+      ball.fillStyle(0xf0e0e8, 1).fillRect(-17, -4, 34, 8).fillRect(-11, -7, 22, 14);
+      const iris = this.add.container(0, 0);
+      const ig = this.add.graphics();
+      ig.fillStyle(0xc8102e, 1).fillRect(-6, -6, 12, 12);
+      ig.fillStyle(0xff5a3a, 1).fillRect(-4, -6, 8, 2);
+      ig.fillStyle(0x0a0206, 1).fillRect(-1.5, -5, 3, 10);
+      iris.add(ig);
+      eye.add([glow, ball, iris]);
+      eye.iris = iris;
+      eye.setAlpha(0.7);
+      eye.lid = 1; // 1 open → 0 shut
+      eye.nextBlink = 1.5 + Math.random() * 5;
+      eyes.push(eye);
+      objects.push(eye);
+    }
+    // drifting motes
+    const motes = [];
+    const m = low ? 10 : 24;
+    for (let i = 0; i < m; i++) {
+      const r = this.add
+        .rectangle(Math.random() * W, Math.random() * H, 4, 4, [0x8a2a9a, 0xff3a4a, 0x4a1a6a][i % 3])
+        .setDepth(5)
+        .setAlpha(0.3 + Math.random() * 0.4);
+      r.v = 10 + Math.random() * 26;
+      r.ph = Math.random() * 6;
+      motes.push(r);
+      objects.push(r);
+    }
+    this.abyss = { objects, eyes, motes };
+  }
+
+  updateAbyss(dt) {
+    const a = this.abyss;
+    if (!a) return;
+    const hx = this.rig?.x ?? this.W / 2;
+    const hy = this.rig?.y ?? this.H / 2;
+    for (const e of a.eyes) {
+      // slow blinks: close over ~0.35 s, a beat shut, open over ~0.5 s
+      e.nextBlink -= dt;
+      if (e.nextBlink <= 0 && !e.blinking) {
+        e.blinking = true;
+        this.tweens.chain({
+          targets: e,
+          tweens: [
+            { scaleY: e.scaleX * 0.08, duration: 350, ease: "Sine.easeIn" },
+            { scaleY: e.scaleX, duration: 500, delay: 150, ease: "Sine.easeOut" },
+          ],
+          onComplete: () => {
+            e.blinking = false;
+            e.nextBlink = 3 + Math.random() * 5;
+          },
+        });
+      }
+      // the pupils follow your hero
+      const ang = Math.atan2(hy - e.y, hx - e.x);
+      e.iris.setPosition(Math.cos(ang) * 6, Math.sin(ang) * 2);
+    }
+    for (const r of a.motes) {
+      r.ph += dt;
+      r.y -= r.v * dt;
+      r.x += Math.sin(r.ph * 0.9) * 12 * dt;
+      if (r.y < -10) {
+        r.y = this.H + 10;
+        r.x = Math.random() * this.W;
+      }
     }
   }
 
@@ -1483,7 +1641,11 @@ export class MenuScene extends Phaser.Scene {
     const W = this.W;
     const H = this.H;
     const st = Save.data.settings;
-    const h = Install.available ? 910 : 820;
+    // Drift Pass+ extras you own get their own row: the gold leaderboard name and the home theme
+    const hasGold = Shop.owns("name_pp_gold");
+    const hasTheme = Shop.owns("theme_pp_abyss");
+    const plusRow = hasGold || hasTheme;
+    const h = (Install.available ? 910 : 820) + (plusRow ? 90 : 0);
     const c = this.modalBase(h, 0x3ef4ff);
     const y0 = H / 2 - h / 2;
     c.add(neonText(this, W / 2, y0 + 56, "SETTINGS", 40, 0x3ef4ff, { blur: 14 }));
@@ -1595,6 +1757,40 @@ export class MenuScene extends Phaser.Scene {
       },
     });
     c.add([mute, gfx, style, nameBtn, acct, done]);
+    if (plusRow) {
+      const py = y0 + (Install.available ? 795 : 705);
+      const both = hasGold && hasTheme;
+      const bw = both ? (W - 200) / 2 : W - 180;
+      if (hasGold) {
+        const goldOn = () => Shop.equipped("name") === "name_pp_gold";
+        const lbl = () => `GOLD NAME: ${goldOn() ? "ON" : "OFF"}`;
+        const gb = button(this, both ? W / 2 - bw / 2 - 10 : W / 2, py, bw, 72, lbl(), {
+          color: 0xffd23f,
+          size: 17,
+          onClick: () => {
+            if (goldOn()) Shop.unequip("name");
+            else Shop.equip("name_pp_gold");
+            gb.setLabel(lbl());
+            this.refreshNamePlate();
+          },
+        });
+        c.add(gb);
+      }
+      if (hasTheme) {
+        const lbl = () => `HOME: ${Shop.equipped("theme") ? "ABYSS" : "SEASON"}`;
+        const tb = button(this, both ? W / 2 + bw / 2 + 10 : W / 2, py, bw, 72, lbl(), {
+          color: 0xc8102e,
+          size: 17,
+          onClick: () => {
+            if (Shop.equipped("theme")) Shop.unequip("theme");
+            else Shop.equip("theme_pp_abyss");
+            tb.setLabel(lbl());
+            this.applyHomeTheme();
+          },
+        });
+        c.add(tb);
+      }
+    }
     if (Install.available) {
       c.add(
         button(this, W / 2, y0 + 705, W - 180, 72, "ADD TO HOME SCREEN", {
@@ -1610,6 +1806,7 @@ export class MenuScene extends Phaser.Scene {
     const dt = Math.min(delta / 1000, 1 / 30);
     this.t += dt;
     this.updateSeason(dt);
+    this.updateAbyss(dt);
     // slowly cycle every biome palette; menus keep the backdrop dim and scenery hidden
     blendPalette(biomeStateAt((this.t * 18) % (500 * CLASSIC)), this.pal);
     // showcase every pixel biome on the title screen (slow crossfade every ~9 s)

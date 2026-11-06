@@ -8,6 +8,7 @@ import { DriftPass, giveReward } from "./driftPass.js";
 import { getCosmetic } from "./cosmetics.js";
 import { Titles } from "./titles.js";
 import { PLUS_S1_LAYOUT, plusTrackS1, plusTrackS1v1 } from "./seasonDefs.js";
+import { Progression } from "./progression.js";
 
 export const PLUS_PRICE_LABEL = "$3.99";
 export const productIdFor = (seasonId) => `com.glydrift.game.driftpassplus.${seasonId}`;
@@ -133,4 +134,49 @@ export const PassPlus = {
 
 // test builds only
 import { TEST } from "../systems/testFlags.js";
-if (TEST.on && typeof window !== "undefined") window.__glyPassPlus = PassPlus;
+if (TEST.on && typeof window !== "undefined") {
+  window.__glyPassPlus = PassPlus;
+  window.__glyPlusS1 = {
+    plusTrackS1,
+    plusTrackS1v1,
+    layout: PLUS_S1_LAYOUT,
+    record: (id = "s1") => record(id),
+    heroUsable: (id) => Progression.isUnlocked(id),
+    selectedHero: () => Progression.selectedHero(),
+  };
+}
+
+/** The Season 1 paid-track reward (and its tier) for a hero / cosmetic / title id. */
+export function plusRewardFor(id) {
+  const track = plusTrackS1({ banner: "crimson" });
+  const i = track.findIndex((r) => r.hero === id || r.item === id || r.title === id);
+  return i < 0 ? null : { reward: track[i], tier: i + 1 };
+}
+
+/**
+ * Test builds only (?pplus / ?ppequip): own Season 1's Drift Pass+ with every paid-track reward
+ * claimed, then equip the listed items, titles or hero. Compiled out of release builds.
+ */
+export function applyPlusTestFlags() {
+  if (!TEST.on) return;
+  const s = Save.data;
+  if (TEST.pplus) {
+    PassPlus.grant("s1", { transactionId: "test-pplus" });
+    const rec = record("s1");
+    plusTrackS1({ banner: "crimson" }).forEach((r, i) => {
+      rec.plusClaimed[i] = true;
+      if (r.item) s.cos.owned[r.item] = true;
+      if (r.title) Titles.grant(r.title);
+      if (r.hero) s.unlocked[r.hero] = true;
+    });
+    s.cos.equipped.badge = "badge_pp_s1";
+    s.cos.equipped.name = "name_pp_gold";
+  }
+  for (const id of (TEST.ppequip || "").split(",").filter(Boolean)) {
+    const c = getCosmetic(id);
+    if (c) s.cos.equipped[c.cat] = id;
+    else if (id.startsWith("p_")) Titles.equip(id);
+    else if (s.unlocked[id]) s.selected = id;
+  }
+  Save.write();
+}

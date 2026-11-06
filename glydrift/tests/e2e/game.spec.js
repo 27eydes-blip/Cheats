@@ -1251,6 +1251,10 @@ const PASS_HEROES = [
   "crimsonmantis",
   "gloomeleon",
   "umbradrake",
+  "riftling",
+  "riftling_armor",
+  "riftling_aura",
+  "riftsovereign",
 ];
 
 test("Drift Pass+ heroes: standard hitbox and speed, drawn ~10% smaller", async ({
@@ -1261,7 +1265,7 @@ test("Drift Pass+ heroes: standard hitbox and speed, drawn ~10% smaller", async 
   const log = await openGame(page, { flags: ["god"], save: SAVE });
   const results = [];
   for (const id of ["volt", "bunbun", ...PASS_HEROES]) {
-    await page.goto(page.url().replace(/&character=[a-z]+/, "") + `&character=${id}`);
+    await page.goto(page.url().replace(/&character=[a-z_]+/, "") + `&character=${id}`);
     await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
     await run(page, 800);
     await startRun(page);
@@ -1332,7 +1336,7 @@ test("Drift Pass+ heroes come only from the pass track", async ({ page }, testIn
     const texts = (o) => (o.type === "Text" ? [o.text] : (o.list || []).flatMap(texts));
     return { button: texts(c.actionBtn), badge: c.cards.find((k) => k.def.id === "umbradrake") };
   });
-  expect(card.button).toContain("DRIFT PASS+ · TIER 50");
+  expect(card.button).toContain("DRIFT PASS+ · TIER 46");
   expect(card.badge).toBeTruthy();
   // tapping it leads to the pass, not a coin purchase
   const coins = await page.evaluate(() => {
@@ -1342,7 +1346,7 @@ test("Drift Pass+ heroes come only from the pass track", async ({ page }, testIn
   });
   expect(coins).toBe(999999);
   await waitFor(page, () => window.__glydrift.scene.isActive("Pass"));
-  // claim every tier of the paid track: all ten heroes, each at its own tier
+  // claim every tier of the paid track: every pass hero, each at its own tier
   await page.evaluate(() => {
     const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
     s.seasons.s1.xp = 450 * 50;
@@ -1363,17 +1367,22 @@ test("Drift Pass+ heroes come only from the pass track", async ({ page }, testIn
     });
     return out;
   });
+  // (layout 2: Riftling's four forms at 1 / 15 / 30 / 50; four heroes moved over by a tier or a few)
   expect(got).toEqual({
-    1: "voidcat",
+    1: "riftling",
+    2: "voidcat",
     5: "hexowl",
     10: "wraithmoth",
-    15: "triphound",
+    15: "riftling_armor",
+    16: "triphound",
     20: "phantomray",
     25: "scorpyre",
-    30: "krakkie",
+    30: "riftling_aura",
+    31: "krakkie",
     35: "crimsonmantis",
     40: "gloomeleon",
-    50: "umbradrake",
+    46: "umbradrake",
+    50: "riftsovereign",
   });
   const save = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
   for (const id of PASS_HEROES) expect(save.unlocked[id], id).toBe(true);
@@ -1385,6 +1394,159 @@ test("Drift Pass+ heroes come only from the pass track", async ({ page }, testIn
   const src = readFileSync("src/scenes/ShopScene.js", "utf8");
   expect(src).toMatch(/!c\.lottery && !c\.passPlus/);
   expect(readFileSync("src/data/progression.js", "utf8")).toMatch(/def\.passPlus \|\| !cost/);
+  expect(log.errors).toEqual([]);
+});
+
+const S1_PLUS_NEW = [
+  "trail_pp_galaxydust",
+  "trail_pp_lightning",
+  "trail_pp_comboflame",
+  "death_pp_fireworks",
+  "death_pp_melt",
+  "death_pp_shatter",
+  "pose_pp_power",
+  "pose_pp_spinflip",
+  "pose_pp_aura",
+  "theme_pp_abyss",
+  "name_pp_gold",
+  "badge_pp_s1",
+];
+const S1_PLUS_TITLES = ["p_riftdiver", "p_abysswalker", "p_voidtouched", "p_s1founder"];
+
+test("Season 1 Drift Pass+ rewards: placed on the track, exclusive, cosmetic, server-gated", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  const log = await openGame(page, { save: PASS_SAVE });
+  // 1. the track: Riftling evolves at 1 / 15 / 30 / 50; the best is saved for the end; every
+  //    new reward appears exactly once; something new at least every 3 tiers
+  const track = await page.evaluate(() => window.__glyPlusS1.plusTrackS1({ banner: "crimson" }));
+  expect(track).toHaveLength(50);
+  expect([1, 15, 30, 50].map((t) => track[t - 1].hero)).toEqual([
+    "riftling",
+    "riftling_armor",
+    "riftling_aura",
+    "riftsovereign",
+  ]);
+  expect(track[47].item).toBe("name_pp_gold");
+  expect(track[48].item).toBe("badge_pp_s1");
+  const ids = track.map((r) => r.item || r.title || r.hero).filter(Boolean);
+  for (const id of [...S1_PLUS_NEW, ...S1_PLUS_TITLES])
+    expect(ids.filter((x) => x === id), id).toHaveLength(1);
+  let gap = 0;
+  let worst = 0;
+  for (const r of track) {
+    gap = r.item || r.title || r.hero || r.banner ? 0 : gap + 1;
+    worst = Math.max(worst, gap);
+  }
+  expect(worst, "tiers in a row with only coins / shards / pods").toBeLessThanOrEqual(2);
+  // the live (sanitised) season uses exactly this track, whatever a remote config says
+  const live = await page.evaluate(() => window.__glyPassPlus.track().map((r) => r.item || r.title || r.hero || null));
+  expect(live).toEqual(track.map((r) => r.item || r.title || r.hero || null));
+
+  // 2. exclusive: never for sale, never in the daily shop or a pod; the shop never lists them
+  const shop = await page.evaluate((ids) => {
+    const { COSMETICS, forSale, Shop } = window.__glyShop;
+    const sale = ids.filter((id) => forSale(COSMETICS.find((c) => c.id === id)));
+    let daily = [];
+    for (let d = 1; d <= 60; d++)
+      daily.push(...Shop.daily(`2026-12-${String((d % 28) + 1).padStart(2, "0")}-${d}`).items);
+    daily = daily.filter((id) => ids.includes(id));
+    const pods = [];
+    for (let k = 0; k < 400; k++) {
+      const it = Shop.openPod({ free: true })?.item?.id;
+      if (ids.includes(it)) pods.push(it);
+    }
+    const bought = ids.filter((id) => Shop.buy(id)); // price 0, but never buyable
+    return { sale, daily, pods, bought };
+  }, S1_PLUS_NEW);
+  expect(shop).toEqual({ sale: [], daily: [], pods: [], bought: [] });
+  expect(readFileSync("src/scenes/ShopScene.js", "utf8")).toMatch(/!c\.plus &&/);
+  expect(readFileSync("src/data/progression.js", "utf8")).not.toMatch(/pp_/); // not in the Lucky Spin
+
+  // 3. owned without a verified purchase (e.g. typed into local storage): nothing counts
+  const tamper = async (verified) => {
+    await page.evaluate(
+      ({ items, titles, verified }) => {
+        const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+        s.cos.owned = Object.fromEntries(items.map((id) => [id, true]));
+        s.cos.equipped = { trail: "trail_pp_lightning", pose: "pose_pp_aura", name: "name_pp_gold", badge: "badge_pp_s1", theme: "theme_pp_abyss" };
+        s.titles = { owned: Object.fromEntries(titles.map((id) => [id, true])), equipped: "p_s1founder" };
+        s.unlocked.riftsovereign = true;
+        s.selected = "riftsovereign";
+        s.passPlus = verified ? { s1: { verified: true, tx: "t" } } : {};
+        localStorage.setItem("glydrift.save.v1", JSON.stringify(s));
+      },
+      { items: S1_PLUS_NEW, titles: S1_PLUS_TITLES, verified },
+    );
+    await page.reload();
+    await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+    await run(page, 600);
+    return page.evaluate(() => {
+      const { Shop } = window.__glyShop;
+      const P = window.__glyPlusS1;
+      return {
+        owns: Shop.owns("trail_pp_lightning"),
+        loadout: Object.keys(Shop.loadout()).sort().join(","),
+        title: window.__glyTitles.equippedId(),
+        hero: P.heroUsable("riftsovereign"),
+        flies: P.selectedHero(),
+        flair: window.__glyLb.Leaderboard.extraColumns({}).flair,
+      };
+    });
+  };
+  expect(await tamper(false)).toEqual({
+    owns: false,
+    loadout: "",
+    title: null,
+    hero: false,
+    flies: "volt",
+    flair: null,
+  });
+  expect(await tamper(true)).toEqual({
+    owns: true,
+    loadout: "badge,name,pose,theme,trail",
+    title: "p_s1founder",
+    hero: true,
+    flies: "riftsovereign",
+    flair: "gold,s1",
+  });
+  // ...and the server strips them too: the migration ties title, hero and flair to a purchase
+  const sql = readFileSync("supabase/migrations/20261106000001_pass_plus_s1_rewards.sql", "utf8");
+  for (const id of ["riftling", "riftling_armor", "riftling_aura", "riftsovereign", "umbradrake"])
+    expect(sql).toContain(`'${id}'`);
+  expect(sql).toMatch(/new\.flair := null/);
+  expect(sql).toMatch(/new\.character := 'volt'/);
+
+  // 4. claims made on the launch layout move with their rewards
+  const moved = await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+    s.seasons.s1.plusClaimed = { 0: true, 2: true, 5: true, 8: true, 14: true, 49: true };
+    delete s.seasons.s1.plusLayout;
+    localStorage.setItem("glydrift.save.v1", JSON.stringify(s));
+    return true;
+  });
+  expect(moved).toBe(true);
+  await page.reload();
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  const claims = await page.evaluate(() => {
+    const rec = window.__glyPlusS1.record("s1");
+    return { layout: rec.plusLayout, claimed: Object.keys(rec.plusClaimed).map(Number).sort((a, b) => a - b) };
+  });
+  // voidcat 1→2, holo stays 3, a coins tier that's now Galaxy Dust (6) opens up, coins tier 9
+  // stays, triphound 15→16, umbradrake 50→46
+  expect(claims).toEqual({ layout: 2, claimed: [1, 2, 8, 15, 45] });
+
+  // 5. the Drift Pass screen: tap a locked Pass+ reward to preview it
+  await openPass(page);
+  const opened = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Pass");
+    return s.previewTier(49, true) && !!window.__glyPreview && s.busy;
+  });
+  expect(opened).toBe(true);
+  await run(page, 1200);
+  await snap(page, testInfo, "21-pass-plus-preview");
   expect(log.errors).toEqual([]);
 });
 

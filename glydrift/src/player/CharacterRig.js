@@ -10,8 +10,14 @@ import { greyAtlas } from "../pixel/grayHero.js";
 import { Sfx } from "../audio/sfx.js";
 import { AnimalBits } from "./animalFx.js";
 import { ToeBits } from "./mattoeFx.js";
+import { reduceFlashing } from "../effects/ScreenFlash.js";
 
 const ADD = Phaser.BlendModes.ADD;
+/** Blend two 0xRRGGBB colours (t = 0 → a, 1 → b). */
+const mixCol = (a, b, t) => {
+  const ch = (sh) => Math.round(((a >> sh) & 255) + ((((b >> sh) & 255) - ((a >> sh) & 255)) * t));
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+};
 const NORMAL = Phaser.BlendModes.NORMAL;
 const TAU = Math.PI * 2;
 
@@ -386,6 +392,88 @@ export class CharacterRig {
           }),
         );
         break;
+      case "death_pp_fireworks": {
+        // three pixel-firework shells pop over the spot, one after another
+        const calm = reduceFlashing();
+        const cols = [0xff4fd8, 0x3ef4ff, 0xffd23f];
+        cols.forEach((c, i) =>
+          scene.time.delayedCall(80 + i * 260, () => {
+            const ex = x + (i - 1) * 80;
+            const ey = y - 80 - (i % 2) * 50;
+            fx.burst("pixel", ex, ey, this.lowGfx ? 16 : 30, c, { speed: { min: 160, max: 440 } });
+            fx.burst("pixel", ex, ey, this.lowGfx ? 6 : 12, 0xffffff, { speed: { min: 60, max: 200 } });
+            if (!calm) fx.ring(ex, ey, c, { scale: 1.1, duration: 360, alpha: 0.7 });
+          }),
+        );
+        // the rocket trails up from the hero
+        fx.burst("spark", x, y, 8, 0xfff0a0, { angle: { min: 250, max: 290 }, speed: { min: 300, max: 600 } });
+        break;
+      }
+      case "death_pp_melt": {
+        // the hero melts into a dark puddle of abyss goo that drips and fades
+        const sp = this.sprite;
+        const ghost = scene.add
+          .image(sp.x, sp.y, sp.texture.key, sp.frame.name)
+          .setScale(sp.scaleX, sp.scaleY)
+          .setTint(0x6a2a8a)
+          .setDepth(sp.depth + 1);
+        scene.tweens.add({
+          targets: ghost,
+          scaleY: sp.scaleY * 0.15,
+          scaleX: sp.scaleX * 1.5,
+          y: sp.y + 40,
+          alpha: 0,
+          duration: 900,
+          ease: "Quad.easeIn",
+          onComplete: () => ghost.destroy(),
+        });
+        const pud = scene.add.graphics({ x, y: y + 48 }).setDepth(sp.depth);
+        pud.fillStyle(0x1a0628, 0.9).fillEllipse(0, 0, 90, 18);
+        pud.fillStyle(0x6a1a5a, 0.8).fillEllipse(-6, -2, 60, 10);
+        pud.setScale(0.2, 1);
+        scene.tweens.add({ targets: pud, scaleX: 1.2, duration: 700, ease: "Quad.easeOut" });
+        scene.tweens.add({ targets: pud, alpha: 0, delay: 900, duration: 700, onComplete: () => pud.destroy() });
+        fx.burst("goo", x, y, this.lowGfx ? 8 : 16, 0x8a2a9a, {
+          angle: { min: 60, max: 120 },
+          speed: { min: 60, max: 220 },
+        });
+        fx.burst("pixel", x, y, this.lowGfx ? 6 : 12, 0xff3a4a, {
+          angle: { min: 75, max: 105 },
+          speed: { min: 40, max: 160 },
+        });
+        break;
+      }
+      case "death_pp_shatter": {
+        // the hero splits into RGB slices that slide apart, then shatter into pixels
+        const sp = this.sprite;
+        const calm = reduceFlashing();
+        const slices = [0xff2050, 0x39ff88, 0x20c8ff];
+        slices.forEach((c, i) => {
+          const im = scene.add
+            .image(sp.x, sp.y, sp.texture.key, sp.frame.name)
+            .setScale(sp.scaleX, sp.scaleY)
+            .setTintFill(c)
+            .setAlpha(0.75)
+            .setBlendMode(ADD)
+            .setDepth(sp.depth + 1);
+          scene.tweens.add({
+            targets: im,
+            x: sp.x + (i - 1) * (calm ? 30 : 46),
+            y: sp.y + (i - 1) * 10,
+            alpha: 0,
+            duration: calm ? 700 : 420,
+            ease: calm ? "Sine.easeOut" : "Stepped",
+            easeParams: calm ? undefined : [5],
+            onComplete: () => im.destroy(),
+          });
+          fx.burst("pixel", x, y + (i - 1) * 12, this.lowGfx ? 10 : 20, c, {
+            angle: { min: 150 + i * 10, max: 210 + i * 10 },
+            speed: { min: 180, max: 620 },
+          });
+        });
+        if (!calm) fx.ring(x, y, 0x39ff88, { scale: 1, duration: 220, alpha: 0.6 });
+        break;
+      }
       case "death_blackhole": {
         const g = scene.add.graphics({ x, y }).setDepth(this.sprite.depth + 2);
         g.fillStyle(0x000000, 1).fillCircle(0, 0, 40);
@@ -567,6 +655,77 @@ export class CharacterRig {
     this.toe?.best();
     this.an?.best();
     this.surfBest();
+    this.cosmeticPose();
+  }
+
+  /**
+   * Drift Pass+ victory pose, played on a NEW BEST (purely visual). Power Pose: a big flex with
+   * a gold ring and stars; Spin Flip: one full forward flip; Aura Burst: purple + gold rings and
+   * a swelling aura. Gentler with Reduce Flashing, fewer particles on Low Graphics.
+   */
+  cosmeticPose(kind = this.cos.pose) {
+    if (!kind || this.dead) return;
+    const fx = this.fx;
+    const calm = reduceFlashing();
+    const n = (k) => Math.max(2, Math.round(k * (this.lowGfx ? 0.5 : 1) * (calm ? 0.6 : 1)));
+    this.poseKind = kind;
+    if (kind === "pose_pp_power") {
+      this.poseT = this.poseDur = 0.75;
+      if (this.an) this.an.specialT = 0.75; // pass heroes strike their special pose
+      fx?.ring(this.x, this.y, 0xffd23f, { scale: 1.6, duration: calm ? 700 : 480, alpha: calm ? 0.5 : 0.9 });
+      fx?.burst("star", this.x, this.y - 10, n(18), 0xffd23f, {
+        angle: { min: 230, max: 310 },
+        speed: { min: 200, max: 520 },
+      });
+    } else if (kind === "pose_pp_spinflip") {
+      this.poseT = this.poseDur = 0.6;
+      fx?.burst("spark", this.x, this.y, n(12), 0x9af4ff, { speed: { min: 120, max: 360 } });
+    } else if (kind === "pose_pp_aura") {
+      this.poseT = this.poseDur = 1.1;
+      fx?.ring(this.x, this.y, 0xb45cff, { scale: 2.2, duration: calm ? 900 : 620, alpha: calm ? 0.45 : 0.85 });
+      this.scene.time.delayedCall(140, () =>
+        fx?.ring(this.x, this.y, 0xffd23f, { scale: 2.8, duration: calm ? 1000 : 700, alpha: calm ? 0.4 : 0.8 }),
+      );
+      fx?.burst("dot", this.x, this.y, n(26), 0xd8a0ff, { speed: { min: 80, max: 300 } });
+      if (!this.poseGlow)
+        this.poseGlow = this.scene.add
+          .image(this.x, this.y, "glow")
+          .setBlendMode(ADD)
+          .setTint(0xb45cff)
+          .setDepth(this.sprite.depth - 1)
+          .setVisible(false);
+      if (!this.extras.includes(this.poseGlow)) this.extras.push(this.poseGlow);
+    }
+  }
+
+  /** Pose state each frame: returns the extra spin (degrees) for the sprite. */
+  posePlace() {
+    if (!(this.poseT > 0)) {
+      this.poseGlow?.setVisible(false);
+      return 0;
+    }
+    const p = 1 - this.poseT / this.poseDur; // 0 → 1
+    const sp = this.sprite;
+    if (this.poseKind === "pose_pp_power") {
+      // hold a big flex, then settle
+      const k = p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3;
+      this.sx = Math.max(this.sx, 1 + 0.28 * k);
+      this.sy = Math.max(this.sy, 1 + 0.28 * k);
+      return 0;
+    }
+    if (this.poseKind === "pose_pp_spinflip") {
+      const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; // ease in-out
+      return -360 * e;
+    }
+    if (this.poseKind === "pose_pp_aura" && this.poseGlow) {
+      const k = Math.sin(p * Math.PI);
+      this.poseGlow
+        .setVisible(sp.visible && !this.dead)
+        .setPosition(sp.x, sp.y)
+        .setScale((1 + k * 1.6) * Math.abs(sp.scaleX))
+        .setAlpha((reduceFlashing() ? 0.35 : 0.6) * k);
+    }
+    return 0;
   }
   onRevive() {
     this.an?.revive();
@@ -736,6 +895,7 @@ export class CharacterRig {
       this.points.pop();
     if (!this.dead) this.points.unshift({ x: this.x - 6 * this.u, y: this.y, age: 0 });
 
+    if (this.poseT > 0) this.poseT = Math.max(0, this.poseT - dt);
     // squash & stretch spring back
     const k = Math.exp(-dt * 11);
     this.sx = 1 + (this.sx - 1) * k;
@@ -935,7 +1095,8 @@ export class CharacterRig {
         : Math.max(0.5, Math.floor(this.sizeMul * this.displayScale * vs * 32) / 32);
     const flip = this.gravityDir < 0 ? -1 : 1;
     sp.setPosition(Math.round(this.x + this.offX), Math.round(this.y + this.offY));
-    sp.setAngle(Math.round(this.angle / TILT.step) * TILT.step);
+    const spin = this.posePlace(); // victory pose (Spin Flip) — stepped like the tilt
+    sp.setAngle(Math.round((this.angle + spin) / TILT.step) * TILT.step);
     // YARMS gets exaggerated (goofy) squash & stretch steps
     const big = mode === "yarms";
     const step = (v) =>
@@ -1192,6 +1353,88 @@ export class CharacterRig {
             sq(p.x + Math.sin(i + T * 6) * 7, p.y + Math.cos(i * 1.3 + T * 5) * 7, P, 0xffd23f, 1 - t);
           if (style === "trail_storm" && i % 10 === 1 && Math.random() < 0.5)
             sq(p.x + (Math.random() - 0.5) * 20, p.y + (Math.random() - 0.5) * 20, P, 0xffffff, 1);
+        }
+        return true;
+      }
+      case "trail_pp_galaxydust": {
+        // a deep-space stream with drifting, twinkling dust around it
+        const pal = [0xffffff, 0xc8b0ff, 0x8a5aff, 0x4a2ab0, 0x1a1060];
+        for (let i = 1; i < n; i += 2) {
+          const p = pts[i];
+          const t = i / n;
+          const size = Math.max(1, Math.round((1 - t) * 3 * this.sizeMul)) * P;
+          sq(p.x, p.y, size, pal[Math.min(4, Math.floor(t * 5))], t < 0.15 ? 0.9 : 0.85 - t * 0.75);
+        }
+        const dust = this.lowGfx ? 8 : 16;
+        const calm = reduceFlashing();
+        for (let d = 0; d < dust; d++) {
+          const i = 2 + ((d * 7) % Math.max(1, n - 2));
+          const p = pts[Math.min(n - 1, i)];
+          const t = i / n;
+          const ph = d * 1.7 + T * (calm ? 1.2 : 3);
+          const tw = 0.5 + 0.5 * Math.sin(ph); // twinkle (a smooth fade)
+          const col = [0xffffff, 0xffd0f8, 0x9ad8ff, 0xd8b0ff][d % 4];
+          sq(
+            p.x + Math.sin(d * 3.1 + T * 0.8) * (8 + t * 22),
+            p.y + Math.cos(d * 2.3 + T * 0.7) * (8 + t * 22) - t * 10,
+            P,
+            col,
+            (1 - t) * (0.35 + 0.65 * tw),
+          );
+        }
+        return true;
+      }
+      case "trail_pp_lightning": {
+        // a stepped pixel bolt with forks. Reduce Flashing: it re-forms 6×/s instead of 30×/s.
+        const rate = reduceFlashing() ? 6 : 30;
+        const seed = Math.floor(T * rate);
+        const jit = (i) => {
+          const h = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
+          return h - Math.floor(h) - 0.5;
+        };
+        let prev = null;
+        for (let i = 0; i < n; i += 2) {
+          const p = pts[i];
+          const t = i / n;
+          const y = p.y + (i === 0 ? 0 : jit(i) * 22 * (t + 0.3));
+          const a = 1 - t * 0.85;
+          sq(p.x, y, Math.max(1, Math.round((1 - t) * 3)) * P + P, 0x2a8aff, a * 0.35);
+          sq(p.x, y, Math.max(1, Math.round((1 - t) * 2)) * P, 0xe8ffff, a);
+          // fill the gap to the last joint so the bolt reads as one line
+          if (prev) sq((prev.x + p.x) / 2, (prev.y + y) / 2, P, 0xbff4ff, a);
+          // forks
+          if (i % 10 === 6 && !this.lowGfx) {
+            const dir = jit(i + 99) > 0 ? 1 : -1;
+            for (let k = 1; k <= 3; k++) sq(p.x - k * P * 2, y + dir * k * P * 2, P, 0x9af4ff, a * (1 - k * 0.25));
+          }
+          prev = { x: p.x, y };
+        }
+        return true;
+      }
+      case "trail_pp_comboflame": {
+        // a pixel flame whose colour climbs with the combo: orange → gold → green → blue → violet
+        const ramps = [
+          [0xfff1a0, 0xffd23f, 0xffa21a, 0xff5a1a, 0xb01000],
+          [0xffffff, 0xfff6a0, 0xffe14d, 0xffb020, 0xa06000],
+          [0xf0fff0, 0xb0ff9a, 0x39ff88, 0x1fae5a, 0x0a5a2a],
+          [0xffffff, 0xbff4ff, 0x3ef4ff, 0x2a7aff, 0x1a2a8a],
+          [0xffffff, 0xffd0ff, 0xd88aff, 0xa040ff, 0x4a1a8a],
+        ];
+        const tierIdx = { 1: 0, 2: 1, 3: 2, 5: 3, 10: 4 }[this.comboTier || 1] ?? 0;
+        // ease between colours so a combo step blends in over ~0.3 s
+        this.flameHeat = (this.flameHeat ?? tierIdx) + (tierIdx - (this.flameHeat ?? tierIdx)) * 0.12;
+        const lo = Math.floor(this.flameHeat);
+        const hi = Math.min(4, lo + 1);
+        const f = this.flameHeat - lo;
+        const grow = 1 + this.flameHeat * 0.12;
+        for (let i = 1; i < n; i += 2) {
+          const p = pts[i];
+          const t = i / n;
+          const ci = Math.min(4, Math.floor(t * 5));
+          const col = mixCol(ramps[lo][ci], ramps[hi][ci], f);
+          let size = Math.max(1, Math.round((1 - t) * 4 * grow * this.sizeMul)) * P;
+          if (Math.sin(i * 1.7 + T * 14) > 0.6) size += P; // flicker in size, not brightness
+          sq(p.x, p.y - t * (14 + this.flameHeat * 4), size, col, t < 0.15 ? 1 : 0.95 - t * 0.8);
         }
         return true;
       }

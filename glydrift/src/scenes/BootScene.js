@@ -5,6 +5,7 @@ import { buildPixelArt } from "../pixel/themes.js";
 import { Account } from "../online/account.js";
 import { Leaderboard } from "../online/leaderboard.js";
 import { Store } from "../online/store.js";
+import { applyPlusTestFlags } from "../data/passPlus.js";
 import { Progression } from "../data/progression.js";
 import { Save } from "../data/save.js";
 
@@ -18,6 +19,7 @@ export class BootScene extends Phaser.Scene {
     buildPixelArt(this);
     buildTextures(this);
     Save.data; // load
+    applyPlusTestFlags(); // test builds only (?pplus / ?ppequip)
     Progression.ensureMissions();
     Progression.checkChallengeUnlocks();
     Save.write();

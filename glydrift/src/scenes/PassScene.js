@@ -22,6 +22,7 @@ import { revealHero } from "../ui/reveal.js";
 import { button, fadeTo, killTweensDeep, RollingCounter } from "../ui/ui.js";
 import { ensureShopPattern, pixelText } from "./ShopScene.js";
 import { PassPlus, PLUS_PRICE_LABEL } from "../data/passPlus.js";
+import { openRewardPreview, previewable } from "../ui/rewardPreview.js";
 import { getTitle } from "../data/titles.js";
 import { Store } from "../online/store.js";
 import { toast } from "../ui/ui.js";
@@ -629,8 +630,28 @@ export class PassScene extends Phaser.Scene {
         if (plus) this.claimPlus(row.i);
         else this.claim(row.i);
       });
+    } else if (previewable(r)) {
+      // every other reward: tap it to see it in action (heroes fly, trails stream, deaths and
+      // poses play, titles and the gold name animate, the Abyss theme opens its eyes)
+      c.setSize(w, h).setInteractive();
+      c.on("pointerup", (p) => {
+        if ((this.drag?.moved || 0) > 10 || this.busy) return;
+        if (p.worldY < this.viewTop || p.worldY > this.viewBot) return;
+        const row = c.parentContainer;
+        Sfx.ui();
+        this.previewTier(row?.i ?? 0, plus);
+      });
     }
     return c;
+  }
+
+  /** Open the tap-to-preview card for tier i of the free or the Drift Pass+ track. */
+  previewTier(i, plus) {
+    const r = (plus ? this.plus : this.track)[i];
+    if (!previewable(r) || this.busy) return false;
+    this.busy = true; // the track stays put under the preview
+    openRewardPreview(this, r, { tier: i + 1, plus, onClose: () => (this.busy = false) });
+    return true;
   }
 
   /** The reward's picture, sized to the card. */
@@ -962,17 +983,17 @@ export class PassScene extends Phaser.Scene {
     });
     // Gloomeleon shows off its realm colours here (in play they follow the realm you're in)
     this.offerRigs[1].realmTint = 0x3ef4ff;
-    tx(stageY + 238, "+ 8 MORE EXCLUSIVE HEROES", 22, "#ffffff");
+    tx(stageY + 232, "+ 8 MORE HEROES + RIFTLING, WHO EVOLVES 4 TIMES", 19, "#ffffff");
     tx(
-      stageY + 300,
+      stageY + 286,
       "Voidcat · Hexowl · Wraith Moth · Triphound\nPhantom Ray · Scorpyre · Krakkie · Crimson Mantis",
-      16,
+      15,
       "#d8c8ff",
     );
     tx(
-      stageY + 384,
-      "Animated titles · skins · trails · death effects\na banner · coins and shards on every other tier",
-      17,
+      stageY + 368,
+      "Animated titles · trails · death effects · victory poses\nAbyss home theme · GOLD leaderboard name\na forever Season 1 badge · skins · coins and shards",
+      16,
       "#ffe9a8",
     );
     tx(stageY + 446, "Cosmetic only: no speed, score or hitbox changes", 15, "#bfb6e8");
