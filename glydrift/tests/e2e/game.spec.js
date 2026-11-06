@@ -3897,3 +3897,195 @@ test("levels: stars and best times survive closing and reopening the game", asyn
   expect(again).toEqual(lv.p[1]);
   expect(log.errors).toEqual([]);
 });
+
+test("THE HADDAD: standard hitbox, uppercut flap, slip, punch-count combo, K.O.! best, knockout death, showcase", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  const log = await openGame(page, { flags: ["character=haddad"] });
+  await startRun(page);
+  const step = (n) =>
+    page.evaluate((n) => {
+      const s = window.__glydrift.scene.getScene("Game");
+      window.__t ??= 2e6;
+      for (let i = 0; i < n; i++) {
+        if (s.state === "playing" && s.player.y > s.H * 0.5 && s.player.vy > -60) s.onTap();
+        window.__t += 1000 / 60;
+        s.stepFrame(window.__t, 1000 / 60);
+      }
+    }, n);
+  await page.evaluate(() => window.__glyGod(true));
+  await step(150);
+  const base = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const rig = s.player.rig;
+    return {
+      id: s.charDef.id,
+      radius: s.player.radius,
+      speed: s.charDef.speed ?? 1,
+      perks: s.charDef.perks ?? null,
+      mode: rig.px.mode,
+      frame: rig.boxer.frame(),
+      hasHat: !!rig.hat,
+    };
+  });
+  expect(base).toMatchObject({ id: "haddad", radius: 21, speed: 1, perks: null, mode: "boxer" });
+  // gliding: boxer stance, gloves up (wait for the uppercut from the last flap to finish)
+  await page.evaluate(() => {
+    const b = window.__glydrift.scene.getScene("Game").player.rig.boxer;
+    b.punchT = 0;
+  });
+  expect(await page.evaluate(() => window.__glydrift.scene.getScene("Game").player.rig.boxer.frame())).toBe(0);
+  await snap(page, testInfo, "haddad-1-glide");
+  // the flap is an uppercut with a red streak
+  const flap = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    s.onTap();
+    window.__t += 1000 / 60;
+    s.stepFrame(window.__t, 1000 / 60);
+    const b = s.player.rig.boxer;
+    return { frame: b.frame(), streak: b.g.commandBuffer.length > 0 };
+  });
+  expect(flap).toEqual({ frame: 1, streak: true });
+  await snap(page, testInfo, "haddad-2-uppercut");
+  // near-miss: the slip and a WHOOSH; combo steps: punch counts
+  const texts = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const rig = s.player.rig;
+    rig.onNear();
+    const slip = rig.boxer.frame();
+    rig.onCombo(1);
+    rig.onCombo(2);
+    rig.onCombo(3);
+    const shown = s.fx.texts.filter((x) => x.active && x.visible).map((x) => x.text);
+    return { slip, shown };
+  });
+  expect(texts.slip).toBe(2);
+  expect(texts.shown).toEqual(expect.arrayContaining(["WHOOSH", "1!", "2!", "3!"]));
+  await step(60);
+  // new best: K.O.! and the knockout pose
+  const ko = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const rig = s.player.rig;
+    rig.onBest();
+    return {
+      frame: rig.boxer.frame(),
+      shown: s.fx.texts.filter((x) => x.active && x.visible).map((x) => x.text),
+    };
+  });
+  expect(ko.frame).toBe(3);
+  expect(ko.shown).toContain("K.O.!");
+  await run(page, 250);
+  await snap(page, testInfo, "haddad-3-ko-new-best");
+  await run(page, 600);
+  await step(90);
+  // death: a knockout spin, stars round his head, then he drops
+  await page.evaluate(() => window.__glyGod(false));
+  const death = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    s.die();
+    const b = s.player.rig.boxer;
+    for (let i = 0; i < 22; i++) {
+      window.__t += 1000 / 60;
+      s.stepFrame(window.__t, 1000 / 60);
+    }
+    return {
+      dying: b.dieT > 0,
+      spun: Math.abs(s.player.rig.sprite.angle) > 0,
+      stars: b.fg.commandBuffer.length > 0,
+      visible: s.player.rig.sprite.visible,
+    };
+  });
+  expect(death).toEqual({ dying: true, spun: true, stars: true, visible: true });
+  await snap(page, testInfo, "haddad-4-knockout-death");
+  // the next run: back on his feet
+  const back = await page.evaluate(() => {
+    const rig = window.__glydrift.scene.getScene("Game").player.rig;
+    rig.reset?.();
+    rig.boxer.reset();
+    return rig.boxer.dieT;
+  });
+  expect(back).toBe(-1);
+
+  // character select: the showcase (shadowboxing, toe bounce, glove taps, the smile)
+  await home(page);
+  await run(page, 600);
+  await page.evaluate(() => {
+    const g = window.__glydrift;
+    g.registry.set("heroFocus", "haddad");
+    g.scene.getScene("Menu").scene.start("Characters");
+  });
+  await waitFor(page, () => window.__glydrift.scene.isActive("Characters"));
+  await run(page, 1500);
+  const show = await page.evaluate(() => {
+    const sc = window.__glydrift.scene.getScene("Characters");
+    const rig = sc.rig;
+    const seen = new Set();
+    if (!rig?.boxer) return { found: false, id: rig?.def?.id };
+    for (let i = 0; i < 400; i++) {
+      rig.boxer.update(1 / 60);
+      seen.add(rig.boxer.frame());
+    }
+    rig.boxer.smileT = 1.5;
+    return { found: true, frames: [...seen].sort() };
+  });
+  expect(show.found).toBe(true);
+  expect(show.frames).toEqual(expect.arrayContaining([0, 4, 6])); // guard, glove tap / smile, jab
+  await snap(page, testInfo, "haddad-5-showcase");
+  expect(log.errors).toEqual([]);
+});
+
+test("THE HADDAD: 12,000 coins or a x10 combo; his best combo is saved; hats fit him", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { save: { ...SAVE, coins: 12500, stats: { runs: 5, maxCombo: 5 } } });
+  const out = await page.evaluate(() => {
+    const { Progression, getCharacter } = window.__glyHeroes;
+    const s = window.__glyShop.data();
+    const def = getCharacter("haddad");
+    const info = {
+      name: def.name,
+      rarity: def.rarity,
+      cost: def.cost,
+      desc: def.desc,
+      challenge: def.challenge,
+      perks: def.perks ?? null,
+      speed: def.speed ?? 1,
+    };
+    // the challenge: not yet at x5, done at x10 (a run's best combo is saved)
+    const before = Progression.challengeMet(def);
+    Progression.commitRun({ mode: "normal", score: 900, distance: 400, coins: 3, nearMiss: 2, lasers: 0, saws: 0, portals: 0, biome: 0, bestCombo: 10, runTimeMs: 30000, char: "volt" });
+    const saved = s.stats.maxCombo;
+    const after = Progression.challengeMet(def);
+    // or buy him for 12,000 coins
+    s.unlocked.haddad = false;
+    const bought = Progression.buy("haddad");
+    return { info, before, saved, after, bought, coinsLeft: s.coins };
+  });
+  expect(out.info).toEqual({
+    name: "THE HADDAD",
+    rarity: "legendary",
+    cost: 12000,
+    desc: "Never stays down.",
+    challenge: { stat: "maxCombo", value: 10, text: "Get a x10 combo" },
+    perks: null,
+    speed: 1,
+  });
+  expect(out.before).toBe(false);
+  expect(out.saved).toBe(10);
+  expect(out.after).toBe(true);
+  expect(out.bought).toBe(true);
+  // a shop hat sits on his hair (head anchor from the guard pose, not the uppercut glove)
+  const hat = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const tex = g.textures.get("pxc");
+    return {
+      frames: [0, 1, 2, 3, 4, 5, 6].every((f) => tex.has(`haddad_${f}`)),
+      portrait: g.textures.exists("hero_haddad"),
+    };
+  });
+  expect(hat).toEqual({ frames: true, portrait: true });
+  expect(log.errors).toEqual([]);
+});

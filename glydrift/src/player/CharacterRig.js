@@ -10,6 +10,7 @@ import { greyAtlas } from "../pixel/grayHero.js";
 import { Sfx } from "../audio/sfx.js";
 import { AnimalBits } from "./animalFx.js";
 import { ToeBits } from "./mattoeFx.js";
+import { BoxerBits } from "./haddadFx.js";
 import { FalconBits } from "./spliceFx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 
@@ -90,6 +91,8 @@ export class CharacterRig {
     this.an = def.animal ? new AnimalBits(this) : null;
     // MATTOE: the always-on aura, footprints and the stubbed-toe death (see mattoeFx.js)
     this.toe = this.px.mode === "toe" ? new ToeBits(this, depth) : null;
+    // THE HADDAD: uppercut flaps, guard bounce, slips, punch counts, K.O.! (see haddadFx.js)
+    this.boxer = this.px.mode === "boxer" ? new BoxerBits(this, depth) : null;
     // SXE (id "splice"): dive tucks, barrel rolls, the sonic boom, wind-streak trail, perch showcase
     this.falcon =
       this.px.mode === "falcon" ? new FalconBits(this, depth) : null;
@@ -132,6 +135,7 @@ export class CharacterRig {
       ...(this.afterImages || []),
       ...(this.an?.objects || []),
       ...(this.toe?.objects || []),
+      ...(this.boxer?.objects || []),
       ...(this.falcon?.objects || []),
     ];
   }
@@ -188,6 +192,7 @@ export class CharacterRig {
     this.scene.tweens?.killTweensOf(this.sprite);
     this.sprite.setAngle(0);
     this.toe?.reset(); // MATTOE: undo the stubbed-toe tumble
+    this.boxer?.reset(); // THE HADDAD: back on his feet
     this.falcon?.reset(); // SXE: undo the death tumble, or he stays hidden next run
     this.setVisible(true);
     this.trailG.clear();
@@ -275,6 +280,7 @@ export class CharacterRig {
         }
         this.an?.flap();
         this.toe?.flap();
+        this.boxer?.flap();
         this.falcon?.flap();
         break;
       case "yarms":
@@ -605,6 +611,14 @@ export class CharacterRig {
       if (this.fx) this.cosmeticDeath(this.x, this.y); // equipped death effects still play
       return hints;
     }
+    if (this.boxer && !this.dead) {
+      // THE HADDAD: knocked out (the sprite stays: he spins, sees stars, drops; see BoxerBits)
+      this.dead = true;
+      this.boxer.die();
+      if (this.fx) this.cosmeticDeath(this.x, this.y); // equipped death effects still play
+      hints.shake = 0.02;
+      return hints;
+    }
     if (this.toe && !this.dead) {
       // STUBBED! (the sprite stays: it flattens, then bounces away; see ToeBits)
       this.dead = true;
@@ -755,12 +769,18 @@ export class CharacterRig {
   /** Near-miss / new best / Second Chance reactions (animals + 손주원; YARMS uses flex()). */
   onNear() {
     this.toe?.near();
+    this.boxer?.near();
     this.falcon?.near();
     this.an?.near();
     this.surfNear();
   }
+  /** A combo step (1 = the first multiplier tier): THE HADDAD counts his punches. */
+  onCombo(step) {
+    this.boxer?.combo(step);
+  }
   onBest() {
     this.toe?.best();
+    this.boxer?.best();
     this.falcon?.best();
     this.an?.best();
     this.surfBest();
@@ -1151,6 +1171,7 @@ export class CharacterRig {
     if (this.px.mode === "yarms") this.updateYarms(dt);
     if (this.px.mode === "surf") this.updateSurf(dt);
     this.toe?.update(dt);
+    this.boxer?.update(dt);
     this.falcon?.update(dt, scroll);
     if (this.an) this.an.update(dt, scroll);
     if (this.frozen) {
@@ -1241,6 +1262,7 @@ export class CharacterRig {
     else if (mode === "spin") f = Math.floor(this.time * 20) % 3;
     else if (mode === "animal") f = this.an ? this.an.frame() : 0;
     else if (mode === "toe") f = this.toe ? this.toe.frame() : 0;
+    else if (mode === "boxer") f = this.boxer ? this.boxer.frame() : 0;
     else if (mode === "falcon") f = this.falcon ? this.falcon.frame() : 0;
     else if (mode === "surf")
       f =
@@ -1297,6 +1319,7 @@ export class CharacterRig {
               : 1;
     sp.setScale(m * step(this.sx), m * step(this.sy) * flip);
     this.toe?.post(sp);
+    this.boxer?.post(sp);
     this.falcon?.post(sp);
     this.placeCosmetics();
     this.an?.place(scroll);
@@ -1428,6 +1451,7 @@ export class CharacterRig {
     if (!this.trailOverride && this.px.mode === "surf")
       return this.drawSurfTrail(g);
     if (!this.trailOverride && this.toe) return this.toe.trail(g);
+    if (!this.trailOverride && this.boxer) return this.boxer.trail(g);
     if (!this.trailOverride && this.falcon) return this.falcon.trail(g);
     if (!this.trailOverride && this.an?.trail(g)) return;
     const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail

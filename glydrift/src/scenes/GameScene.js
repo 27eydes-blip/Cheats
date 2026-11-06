@@ -489,6 +489,7 @@ export class GameScene extends Phaser.Scene {
       this.run.bestCombo = Math.max(this.run.bestCombo, m);
       this.comboMeter.setTier(m);
       Sfx.combo([2, 3, 5, 10, 13].indexOf(m) + 1);
+      this.player?.rig?.onCombo?.([2, 3, 5, 10, 13].indexOf(m) + 1);
       Haptics.light();
       const p = this.player;
       this.fx.ring(p.x, p.y, TIER_COLORS[m], { scale: 1.2, duration: 340 });

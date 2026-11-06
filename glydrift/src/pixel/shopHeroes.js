@@ -2,6 +2,7 @@
 // Bought with coins (plus shards or a challenge for the pricier ones), like the core roster.
 import { eye, shadeEdges, wing } from "./lotteryHeroes.js";
 import { PixelCanvas } from "./px.js";
+import { haddad } from "./haddadArt.js";
 
 // ------------------------------------------------------------------ PIP — pocket sparrow
 export function pip(f) {
@@ -897,4 +898,5 @@ export const SHOP_DRAW = {
   dzr,
   mattoe,
   splice,
+  haddad,
 };

@@ -31,6 +31,7 @@ function defaults() {
       dailyPlayed: 0,
       maxDistance: 0,
       maxNearRun: 0,
+      maxCombo: 0, // best combo multiplier in one run (THE HADDAD's challenge)
       maxBiome: 0,
       maxLasersRun: 0,
       maxPortalsRun: 0,

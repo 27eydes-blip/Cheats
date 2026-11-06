@@ -8,6 +8,7 @@ import { Titles } from "./titles.js";
 import { SPIN_MAX } from "../tuning.js";
 import { Seasons } from "./seasons.js";
 import { DriftPass } from "./driftPass.js";
+import { TEST } from "../systems/testFlags.js";
 
 // ------------------------------------------------------------------ missions
 const MISSION_TEMPLATES = [
@@ -666,6 +667,7 @@ export const Progression = {
     st.coins += run.coins;
     st.maxDistance = Math.max(st.maxDistance, run.distance);
     st.maxNearRun = Math.max(st.maxNearRun, run.nearMiss);
+    st.maxCombo = Math.max(st.maxCombo || 0, run.bestCombo || 1); // THE HADDAD's challenge
     st.maxBiome = Math.max(st.maxBiome, run.biome);
     st.maxLasersRun = Math.max(st.maxLasersRun, run.lasers);
     st.maxPortalsRun = Math.max(st.maxPortalsRun, run.portals);
@@ -789,3 +791,6 @@ export const Progression = {
     return res;
   },
 };
+
+// test builds only: hero unlock rules (shop price, challenges) for automated tests
+if (TEST.on && typeof window !== "undefined") window.__glyHeroes = { Progression, getCharacter };
