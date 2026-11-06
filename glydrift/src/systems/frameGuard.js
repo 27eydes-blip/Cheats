@@ -19,6 +19,9 @@ const RELOAD_AFTER = 180; // still failing after the recovery (~3 s) → reload 
 let streak = 0;
 let recovered = false;
 
+/** Crash safety hooks (set at boot): report the error; finish the run before recovering. */
+export const GuardHooks = { onError: null, beforeRecover: null };
+
 export function recordError(kind, err, game) {
   try {
     const list = JSON.parse(localStorage.getItem(KEY) || "[]");
@@ -46,6 +49,11 @@ export function recordError(kind, err, game) {
 
 function recover(game) {
   try {
+    GuardHooks.beforeRecover?.();
+  } catch (e) {
+    recordError("recover-hook", e, game);
+  }
+  try {
     const sm = game.scene;
     for (const s of sm.getScenes(false)) {
       const k = s.sys.settings.key;
@@ -58,40 +66,52 @@ function recover(game) {
   }
 }
 
-const step = Phaser.Game.prototype.step;
-Phaser.Game.prototype.step = function guardedStep(time, delta) {
-  try {
-    step.call(this, time, delta);
-    streak = 0;
-    recovered = false;
-  } catch (err) {
-    streak++;
-    if (streak === 1) {
-      console.error("[glydrift] frame error (loop kept alive):", err);
-      recordError("frame", err, this);
-    }
-    if (streak === RECOVER_AFTER && !recovered) {
-      recovered = true;
-      recover(this);
-    } else if (streak >= RELOAD_AFTER) {
+/** Wrap one of Phaser's per-frame steps so a thrown error never stops the loop. */
+function guard(name) {
+  const orig = Phaser.Game.prototype[name];
+  Phaser.Game.prototype[name] = function guardedStep(time, delta) {
+    try {
+      orig.call(this, time, delta);
       streak = 0;
-      let last = 0;
-      try {
-        last = +sessionStorage.getItem("glydrift.reloadAt") || 0;
-        sessionStorage.setItem("glydrift.reloadAt", String(Date.now()));
-      } catch {}
-      if (Date.now() - last > 60000) location.reload();
+      recovered = false;
+    } catch (err) {
+      streak++;
+      if (streak === 1) {
+        console.error("[glydrift] frame error (loop kept alive):", err);
+        recordError("frame", err, this);
+        try {
+          GuardHooks.onError?.(err);
+        } catch {}
+      }
+      if (streak === RECOVER_AFTER && !recovered) {
+        recovered = true;
+        recover(this);
+      } else if (streak >= RELOAD_AFTER) {
+        streak = 0;
+        let last = 0;
+        try {
+          last = +sessionStorage.getItem("glydrift.reloadAt") || 0;
+          sessionStorage.setItem("glydrift.reloadAt", String(Date.now()));
+        } catch {}
+        if (Date.now() - last > 60000) location.reload();
+      }
     }
-  }
-};
+  };
+}
+// the normal frame, and the update-only frame (a hidden tab; test builds that draw less often)
+guard("step");
+guard("headlessStep");
 
 /** Also keep a record of a lost GPU context (iOS can drop it under memory pressure). */
 export function watchContext(game) {
   const c = game.canvas;
   if (!c) return;
-  c.addEventListener("webglcontextlost", () =>
-    recordError("contextlost", "WebGL context lost", game),
-  );
+  c.addEventListener("webglcontextlost", () => {
+    recordError("contextlost", "WebGL context lost", game);
+    try {
+      GuardHooks.onError?.(new Error("WebGL context lost"), "contextlost");
+    } catch {}
+  });
   c.addEventListener("webglcontextrestored", () =>
     recordError("contextrestored", "WebGL context restored", game),
   );

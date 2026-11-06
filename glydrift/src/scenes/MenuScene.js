@@ -22,6 +22,8 @@ import { titleText } from "../ui/titleText.js";
 import { Titles } from "../data/titles.js";
 import { Account } from "../online/account.js";
 import { LbReset } from "../online/lbReset.js";
+import { CrashSafety } from "../systems/crashSafety.js";
+import { Updater } from "../systems/updater.js";
 import { openAccount } from "../ui/accountModal.js";
 import { getCosmetic, Shop } from "../data/cosmetics.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
@@ -433,6 +435,19 @@ export class MenuScene extends Phaser.Scene {
       () => this.maybeMoveNotice(),
     );
     this.queueT = 0.45;
+    // a run the game was closed in the middle of (or errored out of) was finished for them
+    const saved = CrashSafety.lastRecovered;
+    if (saved) {
+      CrashSafety.lastRecovered = null;
+      this.time.delayedCall(700, () =>
+        toast(this, "YOUR LAST RUN WAS SAVED", 0x39ff88, {
+          y: this.H * 0.3,
+          sub: `${saved.score} points · ${saved.distance} m · on the leaderboard`,
+        }),
+      );
+    }
+    // a newer version is live: the home screen is a safe moment to load it
+    Updater.applyIfSafe();
 
     this.input.keyboard?.on("keydown-SPACE", () => this.startGame("normal"));
 

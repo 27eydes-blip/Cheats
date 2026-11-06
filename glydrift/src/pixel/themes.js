@@ -591,6 +591,17 @@ const biomeBuilt = new Set();
 let artScene = null;
 
 const pendingArt = new Map(); // biome id → texture uploads still to do (see queueBiomeArt)
+const biomeKeys = new Map(); // biome id → the texture keys its art made (freed by releaseBiomeArt)
+
+/** Run one art job, remembering which textures it made for this biome. */
+function trackJob(id, job) {
+  const tm = artScene.textures;
+  const before = new Set(tm.getTextureKeys());
+  job();
+  const keys = biomeKeys.get(id) || [];
+  for (const k of tm.getTextureKeys()) if (!before.has(k)) keys.push(k);
+  biomeKeys.set(id, keys);
+}
 
 const buildJobs = (id) => deferUploads(() => buildBiome(artScene, id, DEFS[id].pal, DEFS[id].cfg));
 
@@ -599,7 +610,7 @@ export function ensureBiomeArt(id) {
   if (biomeBuilt.has(id) || !DEFS[id] || !artScene) return;
   const jobs = pendingArt.get(id) || buildJobs(id);
   pendingArt.delete(id);
-  for (const job of jobs) job();
+  for (const job of jobs) trackJob(id, job);
   biomeBuilt.add(id);
 }
 
@@ -615,13 +626,36 @@ export function queueBiomeArt(id) {
 /** Do one queued texture upload (call once per frame). Returns the biome id it finished. */
 export function pumpBiomeArt() {
   for (const [id, jobs] of pendingArt) {
-    jobs.shift()?.();
+    const job = jobs.shift();
+    if (job) trackJob(id, job);
     if (jobs.length) return null;
     pendingArt.delete(id);
     biomeBuilt.add(id);
     return id;
   }
   return null;
+}
+
+/** Biomes whose art is in memory now. */
+export function builtBiomes() {
+  return [...biomeBuilt];
+}
+
+/**
+ * Free a biome's art (its ~5 MB of textures and their canvases). A long run used to keep every
+ * realm's and dimension's art: by the rift into the dimensions (~33K points) that was the same
+ * memory that once crashed iPhones at launch. Released art is rebuilt if the run (or the next
+ * one) comes back. The first biome (also the menus' backdrop) is never released.
+ * Callers must first remove whatever still draws with it (PixelBackground / Terrain sets).
+ */
+export function releaseBiomeArt(id) {
+  if (id === EAGER_BIOME || !biomeBuilt.has(id) || !artScene) return false;
+  const tm = artScene.textures;
+  for (const k of biomeKeys.get(id) || []) if (tm.exists(k)) tm.remove(k);
+  biomeKeys.delete(id);
+  biomeBuilt.delete(id);
+  pendingArt.delete(id);
+  return true;
 }
 
 /** True once a biome's art exists (prebuilders skip biomes the player hasn't neared yet). */
@@ -650,3 +684,8 @@ export function buildPixelArt(scene) {
   ensureBiomeArt(EAGER_BIOME);
   buildHazards(scene, { solar: SOLAR, frozen: FROZEN, glitch: GLITCH, abyss: ABYSS });
 }
+
+// test builds only: which biomes have art in memory (long-run memory tests)
+/* global __TEST_FLAGS__ */
+if (typeof __TEST_FLAGS__ !== "undefined" && __TEST_FLAGS__ && typeof window !== "undefined")
+  window.__glyArt = { builtBiomes };

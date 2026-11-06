@@ -4115,3 +4115,203 @@ test("THE HADDAD: 12,000 coins or a x10 combo; his best combo is saved; hats fit
   expect(hat).toEqual({ frames: true, portrait: true });
   expect(log.errors).toEqual([]);
 });
+
+// A player crashed at 33K points on a long run: every realm's and dimension's art (~5 MB
+// each) stayed in memory, so by the rift into the dimensions it was the same memory that once
+// crashed iPhones at launch. Now only the art near the player is kept. Fly a long run through
+// every realm, The Calm, the Abyss and the dimensions (the whole engine, animations included)
+// and fail if art, objects, pop-ups, tweens or memory keep growing.
+test("long runs never pile up: passed realms' art is freed, objects and memory stay flat @smoke", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(420_000);
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
+  const fly = (toM) =>
+    page.evaluate((toM) => {
+      const g = window.__glydrift;
+      const s = g.scene.getScene("Game");
+      window.__T ??= performance.now();
+      window.__glyNoRender = true; // the game logic runs every frame; drawing would just be slow here
+      for (let i = 0; i < 60 * 60 * 20 && s.meters < toM && s.state === "playing"; i++) {
+        if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+        window.__T += 1000 / 60;
+        g.step(window.__T, 1000 / 60); // the whole engine: tweens and timers too
+      }
+      window.__glyNoRender = false;
+      const texMB =
+        g.textures
+          .getTextureKeys()
+          .reduce(
+            (a, k) => a + g.textures.get(k).source.reduce((b, src) => b + (src.width || 0) * (src.height || 0) * 4, 0),
+            0,
+          ) / 1048576;
+      return {
+        m: Math.floor(s.meters),
+        state: s.state,
+        built: window.__glyArt.builtBiomes(),
+        texMB: Math.round(texMB),
+        objs: s.sys.displayList.length,
+        backdrop: g.scene.getScene("Backdrop").sys.displayList.length,
+        texts: s.fx.texts.length,
+        tweens: s.tweens.getTweens().length + g.scene.getScene("Hud").tweens.getTweens().length,
+        heapMB: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null,
+      };
+    }, toM);
+  const early = await fly(1500);
+  const mid = await fly(7000); // past the Abyss, through the rift, into the dimensions
+  const late = await fly(14000); // the dimensions again and again
+  console.log(JSON.stringify({ early, mid, late }));
+  expect(late.state).toBe("playing");
+  expect(late.m).toBeGreaterThanOrEqual(13900);
+  // only the art near the player: the first biome, the one you're in, the last and the next
+  expect(late.built.length).toBeLessThanOrEqual(4);
+  expect(mid.built.length).toBeLessThanOrEqual(4);
+  // nothing keeps growing between the middle and the end of the run
+  expect(late.texMB - mid.texMB).toBeLessThanOrEqual(8);
+  expect(late.texMB - early.texMB).toBeLessThanOrEqual(20);
+  expect(late.objs - mid.objs).toBeLessThanOrEqual(40);
+  expect(late.backdrop - mid.backdrop).toBeLessThanOrEqual(40);
+  // (pop-up texts and tweens aren't checked here: tweens run on the page's real clock, which the
+  // test freezes, so no fade-out ever finishes in this test. With a running clock the pop-up
+  // pool holds at ~15, measured with a free-running soak.)
+  if (late.heapMB && mid.heapMB) expect(late.heapMB - mid.heapMB).toBeLessThanOrEqual(15);
+  // a new run comes back to the freed realms: their art is built again, no errors
+  const again = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const s = g.scene.getScene("Game");
+    window.__glyGod(false);
+    s.die();
+    window.__glyGod(true);
+    for (let i = 0; i < 400 && s.state !== "dead"; i++) {
+      window.__T += 1000 / 60;
+      g.step(window.__T, 1000 / 60);
+    }
+    for (const k of ["GameOver", "Hud", "Game"]) g.scene.stop(k);
+    g.scene.start("Game", { mode: "normal" });
+    return true;
+  });
+  expect(again).toBe(true);
+  await run(page, 800);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Game").onTap());
+  const back = await fly(1800);
+  expect(back.state).toBe("playing");
+  // the new run's realms were built again (and the far ones freed again)
+  expect(back.built).toContain("void");
+  expect(back.built.some((id) => ["solar", "frozen", "glitch", "abyss"].includes(id))).toBe(true);
+  expect(back.built.length).toBeLessThanOrEqual(4);
+  expect(log.errors).toEqual([]);
+});
+
+// crash safety: the phone closes the game mid-run (iOS does that, without any error, when
+// memory runs out). The next launch finishes the run from its checkpoint, puts the score on
+// the leaderboard queue, reports it, and tells the player.
+test("crash safety: a run the phone closed is saved and reported at the next launch @smoke", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(180_000);
+  const log = await openGame(page, { flags: ["god"], save: { ...SAVE, best: 100, stats: { runs: 3 } } });
+  await startRun(page);
+  const at = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    for (let i = 0; i < 60 * 30 && s.meters < 600; i++) {
+      if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+      s.__t = (s.__t || 1e6) + 1000 / 60;
+      s.stepFrame(s.__t, 1000 / 60);
+    }
+    s.saveCheckpoint();
+    return { score: s.score, m: Math.floor(s.meters), cp: !!window.__glyCrash.CrashSafety.pending() };
+  });
+  expect(at.cp).toBe(true);
+  // the phone closes the game: no game over, no commit. Reopen it.
+  await page.reload();
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  await run(page, 1500);
+  const after = await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+    const m = window.__glydrift.scene.getScene("Menu");
+    const texts = [];
+    const walk = (o) => {
+      if (o?.text) texts.push(o.text);
+      (o?.list || []).forEach(walk);
+    };
+    m.children.list.forEach(walk);
+    return {
+      best: s.best,
+      runs: s.stats.runs,
+      queued: s.lbQueue.filter((q) => q.type === "score" && /endless/.test(q.level)).map((q) => q.score),
+      crashes: window.__glyCrash.CrashReport.queued().map((r) => [r.kind, r.score, r.distance, r.realm != null, r.build]),
+      left: window.__glyCrash.CrashSafety.pending(),
+      toast: texts.some((t) => t === "YOUR LAST RUN WAS SAVED"),
+    };
+  });
+  expect(after.best).toBe(at.score);
+  expect(after.runs).toBe(4);
+  expect(after.queued).toContain(at.score);
+  expect(after.crashes).toEqual([["killed_mid_run", at.score, at.m, true, expect.any(String)]]);
+  expect(after.left).toBe(null);
+  expect(after.toast).toBe(true);
+  expect(log.errors).toEqual([]);
+});
+
+// crash safety: an error mid-run. The frame guard keeps the game alive; if the frame keeps
+// failing it goes back to the home screen. Before it does, the run is finished (saved, score
+// queued) and the crash is reported with the score, distance and realm.
+test("crash safety: an error mid-run is reported and the run is still saved @smoke", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(180_000);
+  const log = await openGame(page, { flags: ["god"], save: { ...SAVE, best: 50, stats: { runs: 3 } } });
+  await startRun(page);
+  const at = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    for (let i = 0; i < 60 * 30 && s.meters < 500; i++) {
+      if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+      s.__t = (s.__t || 1e6) + 1000 / 60;
+      s.stepFrame(s.__t, 1000 / 60);
+    }
+    s.saveCheckpoint();
+    // something breaks: every frame of the run now throws
+    s.sys.sceneUpdate = () => {
+      throw new Error("test: broken frame");
+    };
+    return { score: s.score, m: Math.floor(s.meters) };
+  });
+  await run(page, 1500); // > 20 failing frames: back to the home screen
+  await waitFor(page, () => window.__glydrift.scene.isActive("Menu"), 20_000);
+  const after = await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+    return {
+      best: s.best,
+      runs: s.stats.runs,
+      queued: s.lbQueue.filter((q) => q.type === "score" && /endless/.test(q.level)).map((q) => q.score),
+      kinds: window.__glyCrash.CrashReport.queued().map((r) => r.kind),
+      frame: window.__glyCrash.CrashReport.queued().find((r) => r.kind === "frame"),
+      left: window.__glyCrash.CrashSafety.pending(),
+    };
+  });
+  expect(after.best).toBe(at.score);
+  expect(after.runs).toBe(4);
+  expect(after.queued).toContain(at.score);
+  expect(after.kinds).toEqual(expect.arrayContaining(["frame", "error"]));
+  expect(after.frame.message).toContain("broken frame");
+  expect(after.frame.score).toBeGreaterThan(0);
+  expect(after.frame.distance).toBeGreaterThan(400);
+  expect(after.left).toBe(null);
+  // the frame error is logged on purpose here
+  expect(log.errors.filter((e) => !/broken frame|loop kept alive/.test(e))).toEqual([]);
+});
+
+// always the latest version: every build publishes its id in version.json (an open game polls
+// it and reloads into a new version when it's safe), the same id as the service worker's cache
+test("every build publishes its version for the auto-update check @smoke", async ({}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const v = JSON.parse(readFileSync("dist/version.json", "utf8"));
+  expect(v.build).toMatch(/^[a-z0-9]+$/);
+  expect(readFileSync("dist/sw.js", "utf8")).toContain(`glydrift-${v.build}`);
+  const js = readdirSync("dist/assets").filter((f) => f.endsWith(".js"));
+  expect(js.some((f) => readFileSync(`dist/assets/${f}`, "utf8").includes(v.build))).toBe(true);
+});

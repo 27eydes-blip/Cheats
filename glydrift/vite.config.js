@@ -3,7 +3,11 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import { MANIFEST, musicHash } from "./scripts/music/hash.mjs";
 
-// Stamp the service worker's cache name on every build so installed copies update.
+// One id per build: stamped into the service worker's cache name (installed copies update),
+// compiled into the game (__BUILD_ID__) and written to version.json, which an open game polls
+// to notice that a newer version is live (src/systems/updater.js).
+const BUILD_ID = Date.now().toString(36);
+
 const stampServiceWorker = () => {
   let outDir = "dist";
   return {
@@ -14,7 +18,8 @@ const stampServiceWorker = () => {
     },
     closeBundle() {
       const p = resolve(import.meta.dirname, outDir, "sw.js");
-      writeFileSync(p, readFileSync(p, "utf8").replace("__BUILD__", Date.now().toString(36)));
+      writeFileSync(p, readFileSync(p, "utf8").replace("__BUILD__", BUILD_ID));
+      writeFileSync(resolve(import.meta.dirname, outDir, "version.json"), JSON.stringify({ build: BUILD_ID }));
     },
   };
 };
@@ -38,6 +43,7 @@ export default defineConfig(({ mode }) => ({
   // test-only URL flags (?god, ?lucky, ?dimension=…): dev server or GLY_TEST=1 builds only
   define: {
     __TEST_FLAGS__: JSON.stringify(mode === "development" || process.env.GLY_TEST === "1"),
+    __BUILD_ID__: JSON.stringify(BUILD_ID),
   },
   build: {
     target: "es2020",
