@@ -183,6 +183,11 @@ export class CharacterRig {
     this.sizeMul = 1;
     this.sx = this.sy = 1;
     this.gravityDir = 1;
+    // a death move still animating (an animal's belly slide, a tween that hides the sprite at
+    // its end) must not carry into the new run: a quick RETRY lands before it finishes
+    this.scene.tweens?.killTweensOf(this.sprite);
+    this.sprite.setAngle(0);
+    this.toe?.reset(); // MATTOE: undo the stubbed-toe tumble
     this.falcon?.reset(); // SXE: undo the death tumble, or he stays hidden next run
     this.setVisible(true);
     this.trailG.clear();
@@ -1022,6 +1027,8 @@ export class CharacterRig {
   update(dt, scroll) {
     this.time += dt;
     this.flapT += dt;
+    // safety net: a living hero is always drawn (nothing left over from a death may hide them)
+    if (!this.dead && !this.sprite.visible) this.setVisible(true);
     const { def } = this;
 
     // trail points ride the world scroll
