@@ -199,7 +199,7 @@ export class LevelCompleteScene extends Phaser.Scene {
     const b3 = button(this, W / 2 + 220, by + 104, 200, 72, "LEVELS", {
       color: 0xb45cff,
       size: 24,
-      onClick: () => this.go("LevelSelect", { focus: def.n }),
+      onClick: () => this.go("LevelSelect"), // opens on your current level
     });
     popIn(this, [b1, b2, b4, b3], 900);
     if (TEST.on && typeof window !== "undefined") window.__glyLevelResult = { res, out };

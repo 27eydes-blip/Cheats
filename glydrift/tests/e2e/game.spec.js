@@ -3368,6 +3368,58 @@ test("levels map: the journey (hero flies to a tapped level, chests, star milest
   expect(log.errors).toEqual([]);
 });
 
+test("levels map: the current level, its hero and its stars sit clear of the realm bar and PLAY", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    !["iphone-small", "iphone-std", "iphone-large"].includes(profileOf(testInfo)),
+    "small, standard and large iPhones",
+  );
+  const log = await openGame(page);
+  for (const done of [0, 4, 9, 23, 39, 49]) {
+    await page.evaluate((k) => {
+      const g = window.__glydrift;
+      const d = window.__glyShop.data();
+      d.lv = { p: {}, claimed: {}, played: 0 };
+      for (let n = 1; n <= k; n++)
+        d.lv.p[n] = { done: true, coins: [true, true, false], flawless: true, best: 40000, attempts: 1 };
+      for (let c = 1; c <= 10; c++) d.lv.claimed[`chest${c}`] = true; // no chest animations
+      for (const m of [15, 40, 75, 110, 150]) d.lv.claimed[`m${m}`] = true;
+      const from = g.scene.isActive("LevelSelect") ? "LevelSelect" : "Menu";
+      g.scene.getScene(from).scene.start("LevelSelect");
+    }, done);
+    await run(page, 900);
+    const fit = await page.evaluate(() => {
+      const ls = window.__glyLevelSelect;
+      const nd = ls.nodes[ls.heroAt.n - 1];
+      const y = nd.y + ls.map.y;
+      const out = {
+        n: nd.n,
+        top: ls.headerH + 50,
+        bottom: ls.playY - 50,
+        heroTop: ls.rig.y - 40,
+        nodeTop: y - nd.R,
+        starsBottom: y + nd.R + 34,
+      };
+      ls.openLevel(nd.n);
+      return out;
+    });
+    await run(page, 600);
+    const card = await page.evaluate(() => {
+      const ls = window.__glyLevelSelect;
+      const nd = ls.nodes[ls.heroAt.n - 1];
+      return { y: nd.y + ls.map.y + nd.R + 34, sheetTop: ls.sheetTop };
+    });
+    const where = `level ${fit.n} (${done} beaten)`;
+    expect(fit.heroTop, `${where}: hero under the realm bar`).toBeGreaterThanOrEqual(fit.top - 1);
+    expect(fit.nodeTop, `${where}: node under the realm bar`).toBeGreaterThanOrEqual(fit.top - 1);
+    expect(fit.starsBottom, `${where}: stars behind PLAY`).toBeLessThanOrEqual(fit.bottom + 1);
+    expect(card.y, `${where}: stars behind the card`).toBeLessThanOrEqual(card.sheetTop + 1);
+  }
+  await snap(page, testInfo, "levels-06-map-fit");
+  expect(log.errors).toEqual([]);
+});
+
 test("levels map: Low Graphics and Reduce Flashing", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page);

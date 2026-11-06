@@ -80,6 +80,19 @@ export class LevelSelectScene extends Phaser.Scene {
     this.H = H;
     this.modal = null;
     this.t = 0;
+    // the scene object is reused on every visit: start every list and handle afresh
+    this.titlePlates = [];
+    this.bosses = [];
+    this.starred = [];
+    this.blinkers = [];
+    this.pools = [];
+    this.pulse = null;
+    this.selLabel = null;
+    this.toastT = null;
+    this.flight = null;
+    this.flying = false;
+    this.scrollTween = null;
+    this.drag = null;
     this.lowGfx = !!Save.data.settings?.lowGfx;
     this.rf = reduceFlashing();
     const top = (this.registry.get("safeTop") || 0) + 20;
@@ -87,6 +100,10 @@ export class LevelSelectScene extends Phaser.Scene {
     this.headerH = top + 150;
     this.playY = H - sb - 86;
     this.viewBottom = this.playY - 64;
+    // where a level may sit when the map moves on its own: under the realm bar (header + 50)
+    // and above the PLAY button, with room for the hero above it and its stars and name below
+    this.safeTop = this.headerH + 50 + 12;
+    this.safeBottom = this.playY - 50 - 16;
 
     // rewards earned since the last visit (chests, star milestones) open on arrival
     this.newChests = claimChests();
@@ -116,8 +133,9 @@ export class LevelSelectScene extends Phaser.Scene {
     // ---- scrolling: drag with a little inertia; opens on the current level (or the focus)
     const focusN = this.focus || nextLevel();
     const fNode = this.nodes[focusN - 1] || this.nodes[0];
-    this.minY = Math.min(0, this.viewBottom - this.mapH);
-    this.scrollY = Phaser.Math.Clamp((this.headerH + this.viewBottom) / 2 - fNode.y, this.minY, 0);
+    // bottom padding: even the last stop can scroll clear above the PLAY button
+    this.minY = Math.min(0, this.safeBottom - this.mapH - 40);
+    this.scrollY = this.scrollFor(fNode.y, fNode.R || R_CUR);
     this.lastScroll = this.scrollY;
     this.vel = 0;
     this.applyScroll();
@@ -748,12 +766,23 @@ export class LevelSelectScene extends Phaser.Scene {
       },
     });
     // keep the target on screen while flying
-    this.scrollTo(nd.y);
+    this.scrollTo(nd.y, nd.R);
   }
 
-  scrollTo(y, extraBottom = 0) {
-    const mid = (this.headerH + this.viewBottom - extraBottom) / 2;
-    const target = Phaser.Math.Clamp(mid - y, this.minY, 0);
+  /** The scroll that puts map point y (a node of radius R) inside the safe window: centred,
+   * with the hero (above) and the stars and name (below) clear of the realm bar and PLAY. */
+  scrollFor(y, R = R_NODE, bottom = this.safeBottom) {
+    const above = R + 100; // hero hovering over the node
+    const below = R + (R >= R_BOSS ? 112 : 78); // stars, BOSS and the selected level's name
+    const top = this.safeTop;
+    let s = (top + above + bottom - below) / 2 - y; // centre of the room the node needs
+    s = Math.min(s, top + above - y); // never under the realm bar...
+    s = Math.max(s, bottom - below - y); // ...nor behind PLAY (wins if the window is short)
+    return Phaser.Math.Clamp(s, this.minY, 0);
+  }
+
+  scrollTo(y, R = R_NODE, bottom = this.safeBottom) {
+    const target = this.scrollFor(y, R, bottom);
     this.scrollTween?.stop();
     this.vel = 0;
     const o = { v: this.scrollY };
@@ -769,7 +798,7 @@ export class LevelSelectScene extends Phaser.Scene {
   /** The selected level's name, under its node (bosses red with a skull). */
   showName(nd, def) {
     this.selLabel?.destroy();
-    const lab = levelNameLine(this, nd.x, nd.y + nd.R + 52, def, 20, { prefix: false, maxW: 320 });
+    const lab = levelNameLine(this, nd.x, nd.y + nd.R + (nd.boss ? 86 : 52), def, 20, { prefix: false, maxW: 320 });
     this.map.add(lab);
     this.selLabel = lab;
   }
@@ -847,7 +876,7 @@ export class LevelSelectScene extends Phaser.Scene {
     // then back to where you are on the journey
     if (this.newChests.length) {
       const home = this.nodes[nextLevel() - 1];
-      this.time.delayedCall(delay + 200, () => home && this.scrollTo(home.y));
+      this.time.delayedCall(delay + 200, () => home && this.scrollTo(home.y, home.R));
       delay += 600;
     }
     for (const m of this.newMilestones) {
@@ -885,6 +914,7 @@ export class LevelSelectScene extends Phaser.Scene {
     const sb = this.registry.get("safeBottom") || 0;
     const ph = 470;
     const py = H - sb - ph - 10;
+    this.sheetTop = py;
     const c = this.add.container(0, 0).setDepth(50);
     const dim = this.add.rectangle(W / 2, py / 2, W, py, 0x020107, 0.35).setInteractive();
     dim.on("pointerup", () => this.closeModal());
@@ -954,13 +984,11 @@ export class LevelSelectScene extends Phaser.Scene {
     // keep the level in view above the sheet
     const nd = this.nodes[n - 1];
     this.showName(nd, def);
-    const mid = (this.headerH + py) / 2;
-    this.scrollY = this.scrollY; // (no jump; ease there)
     const o = { v: this.scrollY };
     this.scrollTween?.stop();
     this.scrollTween = this.tweens.add({
       targets: o,
-      v: Phaser.Math.Clamp(mid - nd.y, this.minY - 400, 0),
+      v: Phaser.Math.Clamp(this.scrollFor(nd.y, nd.R, py - 12), this.minY - 400, 0),
       duration: 300,
       onUpdate: () => (this.scrollY = o.v),
     });
