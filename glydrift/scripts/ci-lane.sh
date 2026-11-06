@@ -36,7 +36,9 @@ fi
 
 base="${BASE:-}"
 if [ -z "$base" ] || [[ "$base" =~ ^0+$ ]] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
-  say full "no earlier commit to compare with (new branch)"
+  # a new branch: compare with what's live (the release branch) instead
+  base=$(git merge-base "$H" "origin/${LIVE_BRANCH:-claude/glydrift-arcade-game-7hznpc}" 2>/dev/null || echo "")
+  [ -n "$base" ] || say full "no earlier commit to compare with"
 fi
 files=$(git diff --name-only "$base" "$H" -- glydrift .github/workflows/glydrift.yml .github/actions/glydrift-setup)
 [ -n "$files" ] || say none "no game files changed"
