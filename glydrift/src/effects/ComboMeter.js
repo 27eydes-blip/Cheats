@@ -1,18 +1,32 @@
-// Combo multiplier label that rides next to the player: "x2", "x3", "x5", "x10" with a
+// Combo multiplier label that rides next to the player: "x2", "x3", "x5", "x10" (SXE: "x13") with a
 // draining timer bar. Each label is rendered once up front (no text re-renders mid-run).
 import { neonText } from "../ui/ui.js";
 
-export const TIERS = [2, 3, 5, 10];
-export const TIER_COLORS = { 2: 0x3ef4ff, 3: 0x39ff88, 5: 0xff4fd8, 10: 0xffd23f };
+export const TIERS = [2, 3, 5, 10, 13]; // x13: SXE only (perks.comboMax)
+export const TIER_COLORS = {
+  2: 0x3ef4ff,
+  3: 0x39ff88,
+  5: 0xff4fd8,
+  10: 0xffd23f,
+  13: 0xff5a1f,
+};
 
 export class ComboMeter {
   constructor(scene, depth = 32) {
     this.scene = scene;
     this.labels = {};
     for (const m of TIERS) {
-      this.labels[m] = neonText(scene, 0, 0, `x${m}`, m === 10 ? 40 : 34, TIER_COLORS[m], {
-        blur: 10,
-      })
+      this.labels[m] = neonText(
+        scene,
+        0,
+        0,
+        `x${m}`,
+        m >= 10 ? (m > 10 ? 44 : 40) : 34,
+        TIER_COLORS[m],
+        {
+          blur: 10,
+        },
+      )
         .setDepth(depth)
         .setVisible(false);
     }
@@ -47,6 +61,11 @@ export class ComboMeter {
     const g = this.bar;
     g.clear();
     g.fillStyle(0x000000, 0.45).fillRect(lx - w / 2, ly + 23, w, 5);
-    g.fillStyle(TIER_COLORS[this.mult], 1).fillRect(lx - w / 2, ly + 23, Math.round(w * frac), 5);
+    g.fillStyle(TIER_COLORS[this.mult], 1).fillRect(
+      lx - w / 2,
+      ly + 23,
+      Math.round(w * frac),
+      5,
+    );
   }
 }

@@ -17,6 +17,7 @@ He's original 24×24 pixel art in 8 frames, with the usual bold dark outline plu
   - the top and bottom of the screen hold him instead of ending the run;
   - a green aura shows while it's on.
   The moment the realm ends, he's mortal again. The Calm at the end of the realm gives him room to recover before the next biome.
+- **Perk:** COMBO UP TO x13 (`perks.comboMax: 13`). Everyone else's combo stops at x10 (16 in a row); SXE has one more tier, x13, at 22 in a row, shown in hot orange.
 - **Test flag:** `?character=splice` (test builds only).
 
 ## Animation, effects, sound (`src/player/spliceFx.js`)
@@ -51,6 +52,10 @@ Unlike the speed, this one changes results:
 - **Score board:** he keeps his combo going through the realm, and the realm's hazards can't break it.
 - **How big:** it covers one biome per lap of the course. Every other biome and every dimension is as deadly for him as for anyone.
 - **Leaderboard:** his runs show both the speed badge and the gold perk badge, so other players can see why.
+
+## Fairness: the x13 combo is a score advantage
+
+Every close call, coin and PERFECT he earns at the top tier is worth 13 instead of 10 (+30% bonus once he gets there). Distance doesn't change. The server's impossible-score limit (20 points a metre) is far above this (about 3 a metre), so his runs are still accepted.
 
 ## Fairness: is +25% speed unfair? (measured, for you to decide)
 
@@ -122,3 +127,4 @@ A second test, "SXE: indestructible in the Glitch Realm, and only there", flies 
 ![In flight](in-flight.png)
 ![Character select](character-select.png)
 ![Card, hat, frames](card-hat-frames.png)
+![Combo x13](combo-x13.png)

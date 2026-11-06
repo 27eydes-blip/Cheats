@@ -631,7 +631,7 @@ export const Sfx = {
     tone({ type: "triangle", f0: f * 1.5, f1: f * 1.5, dur: 0.1, vol: 0.11, delay: 0.045 });
     tone({ type: "sine", f0: f * 3, f1: f * 3, dur: 0.05, vol: 0.04, delay: 0.045 }); // sparkle
   },
-  /** combo multiplier step (tier 1..4 → x2 x3 x5 x10): a punchy, higher-each-time chime */
+  /** combo multiplier step (tier 1..5 → x2 x3 x5 x10 x13): a punchy, higher-each-time chime */
   combo: (tier = 1) => {
     const f = semis(520, tier * 2);
     tone({ type: "square", f0: f, f1: f * 1.02, dur: 0.07, vol: 0.07 });

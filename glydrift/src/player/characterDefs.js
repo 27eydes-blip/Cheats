@@ -914,9 +914,15 @@ export const CHARACTERS = [
       text: "Reach 2,000m in one run",
     },
     // glitchProof: nothing ends his run while it's in the Glitch Realm (GameScene)
+    // comboMax 13: one more combo tier above x10 (GameScene, tuning COMBO.overdrive)
     perks: {
       glitchProof: true,
-      list: ["+25% SPEED", "INDESTRUCTIBLE IN THE GLITCH REALM"],
+      comboMax: 13,
+      list: [
+        "+25% SPEED",
+        "INDESTRUCTIBLE IN THE GLITCH REALM",
+        "COMBO UP TO x13",
+      ],
     },
     desc: "Fastest thing in the sky.",
   },

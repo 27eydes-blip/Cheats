@@ -434,7 +434,12 @@ export class GameScene extends Phaser.Scene {
     this.chain++;
     this.chainT = COMBO_WINDOW;
     let m = 1;
-    for (const [c, mm] of COMBO_TIERS)
+    // SXE (perks.comboMax 13) has one more tier above x10
+    const tiers =
+      this.charDef.perks?.comboMax >= 13
+        ? [COMBO.overdrive, ...COMBO_TIERS]
+        : COMBO_TIERS;
+    for (const [c, mm] of tiers)
       if (this.chain >= c) {
         m = mm;
         break;
@@ -444,7 +449,7 @@ export class GameScene extends Phaser.Scene {
       if (this.player?.rig) this.player.rig.comboTier = m; // Combo Flame trail heats up
       this.run.bestCombo = Math.max(this.run.bestCombo, m);
       this.comboMeter.setTier(m);
-      Sfx.combo([2, 3, 5, 10].indexOf(m) + 1);
+      Sfx.combo([2, 3, 5, 10, 13].indexOf(m) + 1);
       Haptics.light();
       const p = this.player;
       this.fx.ring(p.x, p.y, TIER_COLORS[m], { scale: 1.2, duration: 340 });

@@ -21,6 +21,8 @@ export const COMBO = {
     [3, 2],
   ],
   window: 3.5, // seconds without a combo event before it resets
+  /** heroes with perks.comboMax 13 (SXE) can keep going past x10 */
+  overdrive: [22, 13],
 };
 
 // ------------------------------------------------------------------ biome pacing
@@ -39,7 +41,6 @@ export const ABYSS = {
   darkAlpha: 0.55, // darkness outside the light
   graceMeters: 180, // gentle start: only simple, spaced-out obstacles
 };
-
 
 // ------------------------------------------------------------------ flashes
 /** Safety limits (ScreenFlash enforces them for every flash). */

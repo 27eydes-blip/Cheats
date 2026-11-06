@@ -24,7 +24,12 @@ import { titleText } from "../ui/titleText.js";
 
 /** Heroes whose perks touch coins or survival (RONIN, SXE), shown with the gold perk badge. */
 const hasCoinPerks = (def) =>
-  !!(def.perks?.coinBonus || def.perks?.fireWard || def.perks?.glitchProof);
+  !!(
+    def.perks?.coinBonus ||
+    def.perks?.fireWard ||
+    def.perks?.glitchProof ||
+    def.perks?.comboMax
+  );
 import { Titles } from "../data/titles.js";
 
 const MEDALS = [0xffd23f, 0xdfe8f5, 0xd8894a];

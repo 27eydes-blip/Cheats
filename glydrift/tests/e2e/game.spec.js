@@ -1949,7 +1949,11 @@ test("SXE: +25% speed with the standard hitbox, falcon moves, speed badge, perch
     rarity: "legendary",
     cost: 50000,
     ch: { stat: "maxDistance", value: 2000, text: "Reach 2,000m in one run" },
-    perks: ["+25% SPEED", "INDESTRUCTIBLE IN THE GLITCH REALM"],
+    perks: [
+      "+25% SPEED",
+      "INDESTRUCTIBLE IN THE GLITCH REALM",
+      "COMBO UP TO x13",
+    ],
     desc: "Fastest thing in the sky.",
   });
   // 4. the leaderboard marks faster heroes' runs with a speed badge
@@ -2296,7 +2300,7 @@ test("scenery: the Abyss Eye Beam warns first and never closes the way", async (
   expect(log.errors).toEqual([]);
 });
 
-test("SXE: indestructible in the Glitch Realm, and only there", async ({
+test("SXE: indestructible in the Glitch Realm, and only there; combo up to x13", async ({
   page,
 }, testInfo) => {
   test.skip(
@@ -2315,6 +2319,16 @@ test("SXE: indestructible in the Glitch Realm, and only there", async ({
         t += 1000 / 60;
         s.stepFrame(t, 1000 / 60);
       };
+      // combo: SXE climbs to x13 (22 in a row), everyone else stops at x10
+      const steps = [];
+      for (let i = 0; i < 30; i++) {
+        s.addChain();
+        if (steps.at(-1) !== s.mult) steps.push(s.mult);
+      }
+      const comboLabel = s.comboMeter.labels[s.mult]?.visible;
+      s.chain = 0;
+      s.mult = 1;
+      s.comboMeter.setTier(1);
       let start = 0;
       let end = 0;
       for (let m = 0; m < 20000; m += 10)
@@ -2337,6 +2351,8 @@ test("SXE: indestructible in the Glitch Realm, and only there", async ({
         maxY: -Infinity,
         diedIn: null,
         end,
+        steps,
+        comboLabel,
       };
       const blocks0 = s.run.wardBlocks || 0;
       // 20 s with no input (or until the realm ends)
@@ -2367,6 +2383,8 @@ test("SXE: indestructible in the Glitch Realm, and only there", async ({
     });
   };
   const sxe = await glitchRun("splice");
+  expect(sxe.steps).toEqual([1, 2, 3, 5, 10, 13]); // SXE's combo goes to x13
+  expect(sxe.comboLabel).toBe(true);
   expect(sxe.playing).toBe(true); // 20 s without a flap and he's still flying
   expect(sxe.alive).toBeGreaterThan(60 * 5);
   expect(sxe.phased).toBeGreaterThan(0); // he flew through hazards
@@ -2376,6 +2394,7 @@ test("SXE: indestructible in the Glitch Realm, and only there", async ({
   // control: VOLT in the same spot dies without flapping
   const volt = await glitchRun("volt");
   expect(volt.playing).toBe(false);
+  expect(volt.steps).toEqual([1, 2, 3, 5, 10]); // everyone else still stops at x10
 });
 
 test("scenery: Slammer + Eye Beam always leaves a lane (forced, real collisions)", async ({

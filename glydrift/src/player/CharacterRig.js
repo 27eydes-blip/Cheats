@@ -1438,7 +1438,7 @@ export class CharacterRig {
           [0xffffff, 0xbff4ff, 0x3ef4ff, 0x2a7aff, 0x1a2a8a],
           [0xffffff, 0xffd0ff, 0xd88aff, 0xa040ff, 0x4a1a8a],
         ];
-        const tierIdx = { 1: 0, 2: 1, 3: 2, 5: 3, 10: 4 }[this.comboTier || 1] ?? 0;
+        const tierIdx = { 1: 0, 2: 1, 3: 2, 5: 3, 10: 4, 13: 4 }[this.comboTier || 1] ?? 0;
         // ease between colours so a combo step blends in over ~0.3 s
         this.flameHeat = (this.flameHeat ?? tierIdx) + (tierIdx - (this.flameHeat ?? tierIdx)) * 0.12;
         const lo = Math.floor(this.flameHeat);
