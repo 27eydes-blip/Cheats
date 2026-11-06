@@ -1,6 +1,7 @@
 // Glydrift on every device profile × browser engine (see playwright.config.js).
 import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { botPlay } from "./levelBot.js";
 import {
   expectFramed,
   fingerprint,
@@ -50,7 +51,7 @@ const home = (page) =>
     if (!g.scene.isActive("Menu")) g.scene.start("Menu");
   });
 
-async function startRun(page, label = "PLAY") {
+async function startRun(page, label = "ENDLESS") {
   await tap(page, label, 0);
   await settle(page, "Game", 400);
   await reseed(page); // the same course every time
@@ -717,8 +718,8 @@ test("home shows at most two '!' badges, free rewards first", async ({
     profileOf(testInfo) !== "iphone-std",
     "once per browser, at phone size",
   );
-  // daily run unplayed, free drop ready, a spin to use and the login reward unclaimed: four
-  // things ready, only the two free rewards get a badge
+  // free drop ready, a spin to use and the login reward unclaimed: only the two free rewards
+  // get a badge (LEVELS replaced the daily chip and never shows one)
   const log = await openGame(page, {
     save: {
       ...SAVE,
@@ -934,11 +935,8 @@ test("two leaderboards: score (the main one) and distance", async ({
   await run(page, 1200);
   let v = await view();
   // Score is the main board: first, and where the leaderboard opens
-  expect(v.tabs).toEqual([
-    "SCORE",
-    "DISTANCE",
-    expect.stringMatching(/^DAILY #\d+$/),
-  ]);
+  // (the Daily Challenge tab went with the Daily Challenge: levels have their own boards)
+  expect(v.tabs).toEqual(["SCORE", "DISTANCE"]);
   expect(v.tab).toBe("score");
   expect(v.filters).toEqual(["ALL TIME", "THIS WEEK", "TODAY"]);
   expect(v.rows.some((t) => / m$/.test(t))).toBe(false);
@@ -2904,26 +2902,54 @@ test("accounts wait for the server to be set up", async ({
 test("music: the pre-rendered reggae soundtrack is complete, fresh and served", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   const manifest = JSON.parse(
-    readFileSync(new URL("../../src/audio/reggae/manifest.json", import.meta.url), "utf8"),
+    readFileSync(
+      new URL("../../src/audio/reggae/manifest.json", import.meta.url),
+      "utf8",
+    ),
   );
   expect(manifest.complete).toBe(true);
   // one track per realm (plus the menu), and a bridge for every realm boundary
-  const realms = ["menu", "void", "solar", "frozen", "glitch", "abyss", "valley", "hurricane"];
+  const realms = [
+    "menu",
+    "void",
+    "solar",
+    "frozen",
+    "glitch",
+    "abyss",
+    "valley",
+    "hurricane",
+  ];
   realms.push("prism", "tidal", "chrono", "mirror");
   expect(Object.keys(manifest.tracks).sort()).toEqual([...realms].sort());
   const dims = ["prism", "tidal", "chrono", "mirror"];
-  const pairs = ["void>solar", "solar>frozen", "frozen>glitch", "abyss>valley", "valley>hurricane"];
-  for (const d of dims) pairs.push(`hurricane>${d}`, ...dims.filter((e) => e !== d).map((e) => `${d}>${e}`));
+  const pairs = [
+    "void>solar",
+    "solar>frozen",
+    "frozen>glitch",
+    "abyss>valley",
+    "valley>hurricane",
+  ];
+  for (const d of dims)
+    pairs.push(
+      `hurricane>${d}`,
+      ...dims.filter((e) => e !== d).map((e) => `${d}>${e}`),
+    );
   expect(Object.keys(manifest.bridges).sort()).toEqual(pairs.sort());
   const files = [manifest.calib.file, ...Object.values(manifest.calm.files)];
   for (const t of Object.values(manifest.tracks)) {
     files.push(...Object.values(t.files), ...Object.values(t.intro.files));
     // bars line up: the loop is a whole number of bars, the drop starts on a bar
-    expect(Math.abs(t.length / t.bar - Math.round(t.length / t.bar))).toBeLessThan(1e-6);
+    expect(
+      Math.abs(t.length / t.bar - Math.round(t.length / t.bar)),
+    ).toBeLessThan(1e-6);
   }
-  for (const b of Object.values(manifest.bridges)) files.push(...Object.values(b.files));
+  for (const b of Object.values(manifest.bridges))
+    files.push(...Object.values(b.files));
   for (const f of files) {
     const r = await page.request.get(`/music/${f}`);
     expect(r.status(), f).toBe(200);
@@ -2934,7 +2960,10 @@ test("music: the pre-rendered reggae soundtrack is complete, fresh and served", 
 test("music test page: reggae tracks, the old house tracks and the full journey", async ({
   page,
 }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
   const log = await openGame(page, { flags: ["music"], screen: "MusicTest" });
   const texts = () =>
     page.evaluate(() => {
@@ -2949,7 +2978,13 @@ test("music test page: reggae tracks, the old house tracks and the full journey"
       return out;
     });
   let shown = await texts();
-  for (const t of ["PLAY FULL JOURNEY", "NEON VOID", "SOLAR STORM", "ABYSS", "THE CALM"])
+  for (const t of [
+    "PLAY FULL JOURNEY",
+    "NEON VOID",
+    "SOLAR STORM",
+    "ABYSS",
+    "THE CALM",
+  ])
     expect(shown).toContain(t);
   expect(shown).toContain("90 BPM double-time · A minor");
   await run(page, 2000); // the old engine loads in the background
@@ -2960,5 +2995,336 @@ test("music test page: reggae tracks, the old house tracks and the full journey"
   expect(shown).not.toContain("THE CALM");
   await tap(page, "REGGAE (NEW)");
   await tap(page, "PLAY FULL JOURNEY");
+  expect(log.errors).toEqual([]);
+});
+
+// ================================================================ LEVEL MODE
+test("levels: LEVELS replaces the Daily Challenge; the map, locks, stars and the level card", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
+  const log = await openGame(page);
+  const menuTexts = await page.evaluate(() => {
+    const out = [];
+    const walk = (o) => {
+      if (o.type === "Text") out.push(o.text);
+      if (o.list) o.list.forEach(walk);
+    };
+    window.__glydrift.scene.getScene("Menu").children.list.forEach(walk);
+    return out;
+  });
+  expect(menuTexts).toContain("LEVELS");
+  expect(menuTexts).toContain("ENDLESS");
+  expect(menuTexts.some((t) => /DAILY CHALLENGE/.test(t))).toBe(false);
+  expect(menuTexts.some((t) => t === "DAILY")).toBe(false);
+  await tap(page, "LEVELS", 1200);
+  const map = await page.evaluate(() => {
+    const ls = window.__glyLevelSelect;
+    return { star: ls.starsText.text, nodes: ls.nodes.length };
+  });
+  expect(map).toEqual({ star: "0/150 ★", nodes: 50 });
+  await snap(page, testInfo, "levels-01-map");
+  // level 1 is open, level 2 locked: tapping it explains why
+  const card = await page.evaluate(() => {
+    const ls = window.__glyLevelSelect;
+    ls.openLevel(2);
+    const locked = !ls.modal;
+    ls.openLevel(1);
+    const texts = [];
+    const walk = (o) => {
+      if (o.type === "Text") texts.push(o.text);
+      if (o.list) o.list.forEach(walk);
+    };
+    walk(ls.modal);
+    return { locked, texts };
+  });
+  expect(card.locked).toBe(true);
+  expect(card.texts).toEqual(
+    expect.arrayContaining(["FIRST FLIGHT", "PLAY", "PRACTICE"]),
+  );
+  await run(page, 400);
+  await snap(page, testInfo, "levels-02-card");
+  expect(log.errors).toEqual([]);
+});
+
+test("levels: stars, unlocks in order, first-time rewards, practice never counts, cloud merge", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
+  const log = await openGame(page);
+  // finish level 1 in god mode through the real game, collecting the star coins
+  const play = async (n, practice) => {
+    await page.evaluate(
+      ({ n, practice }) => {
+        const g = window.__glydrift;
+        for (const k of ["LevelComplete", "Hud", "Game"]) g.scene.stop(k);
+        g.scene.start("Game", { mode: "level", level: n, practice });
+      },
+      { n, practice },
+    );
+    await run(page, 800);
+    await run(page, 300);
+    await page.evaluate(() => window.__glyGod(true));
+    const res = await page.evaluate(botPlay, { god: true });
+    await page.evaluate(() => window.__glyGod(false));
+    await run(page, 2200);
+    return res;
+  };
+  const before = await page.evaluate(() => window.__glyShop.data().coins);
+  const p1 = await play(1, true); // practice first: nothing counts
+  expect(p1.finished).toBe(true);
+  const afterPractice = await page.evaluate(() => ({
+    coins: window.__glyShop.data().coins,
+    lv: JSON.stringify(window.__glyShop.data().lv?.p?.[1] || null),
+  }));
+  expect(afterPractice.lv).toBe("null");
+  const r1 = await play(1, false);
+  expect(r1.finished).toBe(true);
+  expect(r1.stars).toEqual([true, true, true]); // all three star coins are reachable
+  const after = await page.evaluate(() => {
+    const d = window.__glyShop.data();
+    return {
+      coins: d.coins,
+      p: d.lv.p[1],
+      claimed: Object.keys(d.lv.claimed).sort(),
+      result: window.__glyLevelResult.out,
+    };
+  });
+  expect(after.p).toMatchObject({
+    done: true,
+    coins: [true, true, true],
+    flawless: true,
+  });
+  expect(after.result.newStars).toEqual([0, 1, 2]);
+  expect(after.coins).toBeGreaterThan(afterPractice.coins + 150); // finish + 3 stars (+ run coins)
+  expect(after.claimed).toEqual(["f1", "s1_0", "s1_1", "s1_2"]);
+  // replaying never pays the first-time rewards again
+  await play(1, false);
+  const again = await page.evaluate(() => window.__glyLevelResult.out);
+  expect(again.coins).toBe(0);
+  expect(again.first).toBe(false);
+  // level 2 is open now, level 3 isn't
+  await page.evaluate(() => {
+    const g = window.__glydrift;
+    for (const k of ["LevelComplete", "Hud", "Game"]) g.scene.stop(k);
+    g.scene.start("LevelSelect");
+  });
+  await run(page, 800);
+  const locks = await page.evaluate(() => {
+    const ls = window.__glyLevelSelect;
+    ls.openLevel(3);
+    const three = !!ls.modal;
+    ls.closeModal();
+    ls.openLevel(2);
+    return { two: !!ls.modal, three, total: ls.starsText.text };
+  });
+  expect(locks).toEqual({ two: true, three: false, total: "3/150 ★" });
+  expect(before).toBeGreaterThanOrEqual(0);
+  expect(log.errors).toEqual([]);
+});
+
+test("levels: the cloud merge keeps the most progress and never loses a star", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
+  const log = await openGame(page);
+  const merged = await page.evaluate(() => {
+    const merge = window.__glyLevelMerge;
+    const a = {
+      p: {
+        1: {
+          done: true,
+          coins: [true, false, false],
+          flawless: false,
+          best: 41000,
+          attempts: 3,
+        },
+        2: {
+          done: true,
+          coins: [false, false, false],
+          flawless: true,
+          best: 0,
+          attempts: 1,
+        },
+      },
+      claimed: { f1: true },
+    };
+    const b = {
+      p: {
+        1: {
+          done: true,
+          coins: [false, true, true],
+          flawless: true,
+          best: 39000,
+          attempts: 1,
+        },
+        3: {
+          done: false,
+          coins: [true, false, false],
+          flawless: false,
+          best: 0,
+          attempts: 2,
+        },
+      },
+      claimed: { f2: true },
+    };
+    return merge(a, b);
+  });
+  expect(merged.p[1]).toEqual({
+    done: true,
+    coins: [true, true, true],
+    flawless: true,
+    best: 39000,
+    attempts: 3,
+  });
+  expect(merged.p[2].done).toBe(true);
+  expect(merged.p[3].coins).toEqual([true, false, false]);
+  expect(merged.claimed).toEqual({ f1: true, f2: true });
+  expect(log.errors).toEqual([]);
+});
+
+test("levels: the layout is the same every time, and a checkpoint replays it exactly", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { flags: ["god"] });
+  const layout = async () => {
+    await page.evaluate(() => {
+      const g = window.__glydrift;
+      for (const k of ["Hud", "Game"]) g.scene.stop(k);
+      g.scene.start("Game", { mode: "level", level: 4 });
+    });
+    await run(page, 800);
+    return page.evaluate(() => {
+      const g = window.__glydrift;
+      const s = g.scene.getScene("Game");
+      const lr = s.levelRun;
+      window.__glyNoRender = true;
+      let t = performance.now() + 1e6;
+      const step = (n) => {
+        for (let i = 0; i < n; i++) {
+          if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+          t += 1000 / 60;
+          g.step(t, 1000 / 60);
+        }
+      };
+      // where every pattern of the level starts (metres) and what it is
+      const beats = () => lr.beatM.map((b, i) => `${lr.def.beats[i].kind}@${b.m.toFixed(1)}`);
+      s.onTap();
+      step(60 * 25);
+      const seen = beats();
+      // crash: back to the last checkpoint, then the same stretch again
+      const cp = lr.lastCp;
+      window.__glyGod(false);
+      s.die();
+      window.__glyGod(true);
+      step(80);
+      step(60 * 8);
+      const replay = beats();
+      window.__glyNoRender = false;
+      return { seen, replay, cp, deaths: lr.deaths, state: s.state };
+    });
+  };
+  const a = await layout();
+  const b = await layout();
+  expect(a.seen.length).toBeGreaterThan(8);
+  expect(b.seen).toEqual(a.seen); // identical every time
+  // after the crash the patterns from the checkpoint on come back at exactly the same places
+  expect(a.cp).toBeGreaterThan(0);
+  const n = Math.min(a.replay.length, a.seen.length);
+  expect(n).toBeGreaterThan(a.cp + 2);
+  expect(a.replay.slice(0, n)).toEqual(a.seen.slice(0, n));
+  expect(a.deaths).toBe(1);
+  expect(a.state).toBe("playing");
+  expect(log.errors).toEqual([]);
+});
+
+test("levels: offline best times wait in the upload queue (time encoded as a score)", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
+  const log = await openGame(page);
+  const q = await page.evaluate(async () => {
+    const lb = window.__glyLb.Leaderboard;
+    await lb
+      .submitLevelTime({ n: 3, timeMs: 42000, distance: 700, char: "volt" })
+      .catch(() => {});
+    return window.__glyShop.data().lbQueue.filter((e) => /lv-3$/.test(e.level));
+  });
+  expect(q.length).toBe(1);
+  expect(q[0].score).toBe(Math.round(5e8 / 42000));
+  expect(q[0].run_time_ms).toBe(42000);
+  expect(log.errors).toEqual([]);
+});
+
+// every built level: a bot flying with real flaps and real collisions finishes it (every stretch
+// between checkpoints cleared from a clean respawn), and in god mode it reaches all 3 star coins,
+// none of which sits inside a hazard
+test("levels: every built level is beatable (bot) and its star coins are fair (god run)", async ({
+  page,
+}, testInfo) => {
+  // hazards scale with the screen's height, so every Chromium screen size is checked (small
+  // phone, tall phone, laptop); the layouts and physics are the same on every engine
+  test.skip(
+    testInfo.project.name.split("-")[0] !== "chromium",
+    "bot runs on Chromium (the layouts are the same on every engine)",
+  );
+  test.setTimeout(1_500_000);
+  const log = await openGame(page);
+  const count = await page.evaluate(() => window.__glyLevelCount());
+  const report = [];
+  for (let n = 1; n <= count; n++) {
+    for (const god of [false, true]) {
+      await page.evaluate(
+        ({ n, god }) => {
+          const g = window.__glydrift;
+          window.__glyGod(god);
+          for (const k of ["LevelComplete", "Hud", "Game"]) g.scene.stop(k);
+          g.scene.start("Game", { mode: "level", level: n });
+        },
+        { n, god },
+      );
+      await run(page, 800);
+      await run(page, 200);
+      const r = await page.evaluate(botPlay, { god });
+      report.push({ n, god, ...r });
+      expect.soft(r.finished, `level ${n} ${god ? "god" : "bot"}`).toBe(true);
+      expect.soft(r.stuck, `level ${n}`).toBe(null);
+      if (god) {
+        expect
+          .soft(r.stars, `level ${n} star coins`)
+          .toEqual([true, true, true]);
+        for (const c of r.starHazard)
+          expect
+            .soft(c, `level ${n} star coin clear of hazards`)
+            .toBeGreaterThan(0);
+      }
+    }
+  }
+  await page.evaluate(() => window.__glyGod(false));
+  console.log(
+    JSON.stringify(
+      report.map((r) => ({
+        n: r.n,
+        god: r.god,
+        s: r.seconds,
+        d: r.deaths,
+        worst: r.worstCp,
+        m: r.finishM,
+      })),
+    ),
+  );
   expect(log.errors).toEqual([]);
 });

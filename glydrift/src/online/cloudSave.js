@@ -6,6 +6,8 @@
 // never lost, is then combined from both: owned heroes and items, achievements, discovered
 // dimensions, hero shards, claimed rewards, best scores and lifetime stats.
 
+import { mergeLevelProgress } from "../levels/merge.js";
+
 /** Device-only parts of the save that never go to the cloud. */
 // (Drift Pass+ ownership is never taken from a save: the server's verified purchases are the
 // source of truth, restored by the store)
@@ -34,6 +36,7 @@ export function progressScore(save) {
     count(save.unlocked) * 5000 +
     count(save.cos?.owned) * 1500 +
     count(save.achievements) * 1000 +
+    count(save.lv?.p) * 800 +
     (save.stats?.runs || 0) * 10
   );
 }
@@ -105,6 +108,8 @@ export function mergeSaves(local, cloud) {
     claimed: union(base.pass?.claimed, other.pass?.claimed),
   };
   base.seasons = mergeSeasons(base.seasons, other.seasons);
+  // LEVEL MODE: per level the best of both (done, each star coin, flawless, fastest time)
+  if (base.lv || other.lv) base.lv = mergeLevelProgress(base.lv, other.lv);
   const later = (x, y) => ((x || "") > (y || "") ? x : y) || "";
   base.login = {
     ...(base.login || {}),

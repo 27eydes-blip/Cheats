@@ -554,16 +554,30 @@ export class HudScene extends Phaser.Scene {
       color: 0x39ff88,
       onClick: () => this.resume(),
     });
-    const home = button(this, W / 2, H * 0.5 + 120, 360, 84, "HOME", {
+    // level mode: RESTART the level, or back to the LEVELS map (instead of HOME)
+    const level = gs.mode === "level" ? gs.levelDef : null;
+    const home = button(this, W / 2, H * 0.5 + (level ? 220 : 120), 360, 84, level ? "LEVELS" : "HOME", {
       color: 0xff4fd8,
       size: 26,
       onClick: () => {
         this.resume(true);
         this.scene.stop("Game");
-        this.scene.start("Menu");
+        this.scene.start(level ? "LevelSelect" : "Menu", level ? { focus: level.n } : undefined);
       },
     });
     c.add([dim, title, resume, home]);
+    if (level)
+      c.add(
+        button(this, W / 2, H * 0.5 + 110, 360, 84, "RESTART", {
+          color: 0x3ef4ff,
+          size: 26,
+          onClick: () => {
+            this.resume(true);
+            this.scene.stop("Game");
+            this.scene.start("Game", { mode: "level", level: level.n, practice: gs.practice });
+          },
+        }),
+      );
     this.pauseLayer = c;
     c.setAlpha(0);
     this.tweens.add({ targets: c, alpha: 1, duration: 180 });

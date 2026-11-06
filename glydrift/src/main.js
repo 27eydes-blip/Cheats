@@ -15,6 +15,8 @@ import { GameOverScene } from "./scenes/GameOverScene.js";
 import { GameScene } from "./scenes/GameScene.js";
 import { HudScene } from "./scenes/HudScene.js";
 import { LeaderboardScene } from "./scenes/LeaderboardScene.js";
+import { LevelSelectScene } from "./scenes/LevelSelectScene.js";
+import { LevelCompleteScene } from "./scenes/LevelCompleteScene.js";
 import { MenuScene } from "./scenes/MenuScene.js";
 import { MusicTestScene } from "./scenes/MusicTestScene.js";
 import { ProgressScene } from "./scenes/ProgressScene.js";
@@ -149,6 +151,8 @@ async function boot() {
       GameScene,
       HudScene,
       GameOverScene,
+      LevelCompleteScene,
+      LevelSelectScene,
       CharacterScene,
       ProgressScene,
       LeaderboardScene,
@@ -164,7 +168,8 @@ async function boot() {
     const fullStep = game.step.bind(game);
     let k = 0;
     game.step = (time, delta) => {
-      if (window.__glyRender || ++k % TEST.renderEvery === 0) {
+      // (window.__glyNoRender: long automated runs, e.g. the level bot, skip drawing entirely)
+      if (!window.__glyNoRender && (window.__glyRender || ++k % TEST.renderEvery === 0)) {
         window.__glyRender = false;
         fullStep(time, delta);
       } else game.headlessStep(time, delta);

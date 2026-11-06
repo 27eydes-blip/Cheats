@@ -38,7 +38,9 @@ import { Leaderboard } from "../online/leaderboard.js";
 import { Music } from "../audio/music.js";
 import { BIOME_TRACKS } from "../audio/musicTracks.js";
 import { Progression } from "../data/progression.js";
-import { dailySeed, RNG, todayKey } from "../data/rng.js";
+import { LevelRun } from "../levels/LevelRun.js";
+import { getLevel, recordLevel } from "../levels/levels.js";
+import { RNG } from "../data/rng.js";
 import { Save } from "../data/save.js";
 import {
   ABYSS,
@@ -87,7 +89,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   init(data) {
-    this.mode = data?.mode === "daily" ? "daily" : "normal";
+    // "normal" (endless) or "level" (LEVEL MODE: data.level = 1..50, data.practice); the
+    // Daily Challenge was replaced by level mode
+    this.levelDef = data?.mode === "level" ? getLevel(data.level) : null;
+    this.mode = this.levelDef ? "level" : "normal";
+    this.practice = !!(this.levelDef && data.practice);
   }
 
   create() {
@@ -207,6 +213,13 @@ export class GameScene extends Phaser.Scene {
       Music.endCalm();
     });
 
+    this.events.once("shutdown", () => {
+      this.levelRun?.destroy();
+      this.levelRun = null;
+    });
+    this.levelRun = this.levelDef
+      ? new LevelRun(this, this.levelDef, { practice: this.practice })
+      : null;
     this.scene.launch("Hud", { game: this });
     this.hud = this.scene.get("Hud");
     this.resetRun(false);
@@ -241,7 +254,7 @@ export class GameScene extends Phaser.Scene {
     this.sparkleT = 0;
     this.comboMeter.reset();
     this.lucky =
-      this.mode !== "daily" &&
+      this.mode === "normal" &&
       (FORCE_LUCKY || Math.random() < REWARDS.luckyChance);
     this.player.rig.trailOverride = this.lucky ? REWARDS.luckyTrail : null;
     this.lastSpeedTier = 0;
@@ -296,17 +309,21 @@ export class GameScene extends Phaser.Scene {
     this.zoneId = null;
     this.zoneLastM = undefined;
 
-    const seed =
-      this.mode === "daily" ? dailySeed() : (Math.random() * 2 ** 32) >>> 0;
+    const seed = this.levelRun
+      ? this.levelRun.def.seed
+      : (Math.random() * 2 ** 32) >>> 0;
     // retry grace: after a crash the first obstacle starts a little farther away, a breath to
     // settle back in (the daily keeps its fixed course)
     this.obstacles.reset(
       seed,
-      this.isRetry && this.mode !== "daily" ? HAZARD.retryLead : 0,
+      this.isRetry && this.mode === "normal" ? HAZARD.retryLead : 0,
     );
     // the run's course: classic biomes, then random dimensions behind rifts
     const courseRng = new RNG((seed ^ 0x9e3779b9) >>> 0);
-    this.course = new Course(() => courseRng.next(), TEST.dimension);
+    this.course = this.levelRun
+      ? this.levelRun.course()
+      : new Course(() => courseRng.next(), TEST.dimension);
+    this.levelRun?.reset();
     this.biomeIndex = -1;
     this.announcedBiome = -1;
     this.rift?.destroy();
@@ -326,16 +343,15 @@ export class GameScene extends Phaser.Scene {
     if (this.camBaseY !== undefined) this.cameras.main.scrollY = this.camBaseY;
     this.setupBest();
     this.hudReady?.onReset?.();
-    Music.play(BIOME_TRACKS[0], { startBar: 8 });
+    Music.play(this.levelRun ? this.levelRun.def.realm : BIOME_TRACKS[0], {
+      startBar: 8,
+    });
     if (autoStart) this.startRun();
   }
 
-  /** The score to beat this run (daily mode compares with today's daily best). */
+  /** The score to beat this run (levels have no score: their HUD shows progress instead). */
   setupBest() {
-    const s = Save.data;
-    this.bestScore = s.best;
-    if (this.mode === "daily")
-      this.bestScore = s.daily.date === todayKey() ? s.daily.best : 0;
+    this.bestScore = this.levelRun ? 0 : Save.data.best;
   }
 
   startRun() {
@@ -344,7 +360,14 @@ export class GameScene extends Phaser.Scene {
     this.revives = 0;
     this.coinBoost = 1;
     this.flashFx.refresh();
-    this.flashFx.flash(this.lucky ? 0xffd23f : BIOMES[0].neon, FLASH.runStart);
+    this.flashFx.flash(
+      this.lucky
+        ? 0xffd23f
+        : this.levelRun
+          ? this.levelRun.realm.col
+          : BIOMES[0].neon,
+      FLASH.runStart,
+    );
     if (this.lucky) {
       Sfx.lucky();
       Haptics.strong();
@@ -631,7 +654,7 @@ export class GameScene extends Phaser.Scene {
   applyBoosts() {
     this.revives = 0;
     this.coinBoost = 1;
-    if (this.mode === "daily") return;
+    if (this.mode === "level") return; // levels never use boosts (their best times are ranked)
     const used = Shop.consumeBoosts();
     this.run.boosts = used;
     this.run.boosted = used.length > 0;
@@ -796,6 +819,70 @@ export class GameScene extends Phaser.Scene {
     this.scene.bringToTop("GameOver");
   }
 
+  /** Level mode: the world was rewound to a checkpoint — bring the hero back. */
+  respawnAt() {
+    const p = this.player;
+    p.reset();
+    p.y = this.H * 0.45;
+    p.vy = 0;
+    this.state = "playing";
+    this.deathT = 0;
+    this.slowT = 0;
+    this.timeScale = 1;
+    this.boostGrace = 1.1; // a short blink of safety after the respawn
+    this.chain = 0;
+    this.mult = 1;
+    this.comboMeter.setTier(1);
+    this.fx.ring(p.x, p.y, 0x39ff88, { scale: 1.6, duration: 420 });
+    this.flashFx.flash(0x39ff88, { ...FLASH.nearMissEdge, edge: true });
+    this.player.flap();
+    Sfx.flap(this.charDef.id);
+  }
+
+  /** Level mode: crossed the finish line. */
+  levelComplete(res) {
+    if (this.state !== "playing") return;
+    this.state = "won";
+    const p = this.player;
+    const col = this.levelRun.realm.col;
+    const boss = this.levelRun.def.boss;
+    // a burst at the line; the boss levels get a big finale
+    this.fx.burst("star", p.x, p.y, boss ? 60 : 30, 0xffd23f, {
+      speed: { min: 150, max: 520 },
+    });
+    this.fx.ring(p.x, p.y, col, { scale: boss ? 3.2 : 2, duration: 700 });
+    if (boss)
+      for (let k = 0; k < 5; k++)
+        this.time.delayedCall(140 * k, () =>
+          this.fx.burst(
+            "pixel",
+            this.W * (0.3 + Math.random() * 0.6),
+            this.H * (0.2 + Math.random() * 0.6),
+            30,
+            [col, 0xffd23f, 0xffffff][k % 3],
+            { speed: { min: 200, max: 600 } },
+          ),
+        );
+    this.flashFx.flash(col, { ...FLASH.biome, priority: true });
+    this.cameras.main.shake(boss ? 500 : 200, boss ? 0.012 : 0.004);
+    Sfx.newBest?.();
+    Haptics.strong();
+    this.run.distance = Math.floor(this.meters);
+    this.run.score = 0;
+    this.run.level = res;
+    // practice never counts; a normal finish saves the stars / rewards, then also feeds
+    // missions ("Beat 3 levels", "Earn 5 stars"), achievements, XP and the Drift Pass
+    const out = res.practice ? null : recordLevel(res);
+    this.run.levelDone = out ? 1 : 0;
+    this.run.levelStars = out ? out.newStars.length : 0;
+    const result = res.practice ? null : Progression.commitRun(this.run);
+    this.time.delayedCall(boss ? 1700 : 1100, () => {
+      this.state = "dead";
+      this.scene.launch("LevelComplete", { res, out, result, game: this });
+      this.scene.bringToTop("LevelComplete");
+    });
+  }
+
   get hudReady() {
     return this.hud?.ready && this.hud.sys.isActive() ? this.hud : null;
   }
@@ -855,13 +942,16 @@ export class GameScene extends Phaser.Scene {
       );
       // some heroes fly faster than the rest (WALLRUNNER), and his boost multiplies it again
       this.speed =
-        speedForMeters(this.meters) *
+        (this.levelRun
+          ? this.levelRun.speedAt(this.meters)
+          : speedForMeters(this.meters)) *
         this.speedMul *
         (this.charDef.speed ?? 1) *
         this.boostMul;
       this.scroll = this.speed;
     } else if (this.state === "ready") {
-      this.scroll = WORLD.baseSpeed * 0.55;
+      // a level holds still until the first tap (so its layout is exactly the same every time)
+      this.scroll = this.levelRun ? 0 : WORLD.baseSpeed * 0.55;
     } else {
       this.scroll *= Math.exp(-rawDt * 1.6);
     }
@@ -932,7 +1022,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (playing && dom.i !== this.biomeIndex) {
       this.biomeIndex = dom.i;
-      if (dom.id === "abyss") {
+      if (dom.id === "abyss" && !this.levelRun) {
         // the Abyss: blackout first, then the slam (see enterAbyss)
         this.run.biome = dom.biome;
         this.blackoutT = Music.abyssDrop(0.5);
@@ -989,7 +1079,8 @@ export class GameScene extends Phaser.Scene {
     const tier = Math.floor(this.meters / 250);
     if (playing && tier > this.lastSpeedTier) {
       this.lastSpeedTier = tier;
-      if (tier % 2 === 1) this.hudReady?.onSpeedUp?.();
+      // (levels show their progress bar instead of SPEED UP / distance pop-ups)
+      if (tier % 2 === 1 && !this.levelRun) this.hudReady?.onSpeedUp?.();
     }
 
     // camera: a gentle zoom-out as the run speeds up (at most a few %, eased so it is never
@@ -1102,7 +1193,8 @@ export class GameScene extends Phaser.Scene {
 
     // player
     const p = this.player;
-    if (this.state === "ready") p.hover(dt, this.scroll);
+    if (this.state === "ready" || this.state === "won")
+      p.hover(dt, this.scroll);
     else p.update(dt, this.scroll);
 
     // spawn windows: keep biome titles clear, no hazards in The Calm, gentle Abyss start
@@ -1121,6 +1213,7 @@ export class GameScene extends Phaser.Scene {
     const dimGrace = (this.speed * DIMENSIONS.graceSeconds) / WORLD.pxPerMeter;
     info.grace = seg0.id === "abyss" && local0 < ABYSS.graceMeters;
     info.simpleOnly = info.grace || (seg0.dimension && local0 < dimGrace);
+    if (this.levelRun) info.pause = info.grace = info.simpleOnly = false;
     this.updateCalmFx(rawDt);
     this.flashFx.update(rawDt);
 
@@ -1134,6 +1227,7 @@ export class GameScene extends Phaser.Scene {
       zoom: this.zoomLevel,
       twinY: this.mirror ? this.H - p.y : null,
     });
+    this.levelRun?.update(rawDt);
     // Chrono time zones ease in/out; the twin, horizon and prism trail follow the bird
     this.zoneScale +=
       ((playing ? ev.timeScale : 1) - this.zoneScale) * Math.min(1, rawDt * 5);
@@ -1224,7 +1318,7 @@ export class GameScene extends Phaser.Scene {
       );
       if (this.coinStepT > 0) this.coinStepT -= rawDt;
       while (this.meters >= this.nextMilestone) {
-        this.milestone(this.nextMilestone);
+        if (!this.levelRun) this.milestone(this.nextMilestone);
         this.nextMilestone += 100;
       }
       if (this.lucky) {
@@ -1278,7 +1372,11 @@ export class GameScene extends Phaser.Scene {
     // dying → game over
     if (dying) {
       this.deathT += rawDt;
-      if (this.deathT > 0.85) this.finishRun();
+      if (this.deathT > 0.85) {
+        // level mode: back to the last checkpoint (no game over)
+        if (this.levelRun) this.levelRun.respawn();
+        else this.finishRun();
+      }
     }
 
     this.terrain.update(dt, this.scroll);

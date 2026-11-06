@@ -12,13 +12,19 @@ export class Course {
    * @param rng () => [0,1) — the run's random source (daily runs use a seeded one)
    * @param start optional dimension id to begin in (test builds: ?dimension=…)
    */
-  constructor(rng = Math.random, start = null) {
+  constructor(rng = Math.random, start = null, only = null) {
     this.rng = rng;
     this.segs = [];
     this.cursor = 0;
     this.seen = new Set();
     const L = WORLD.biomeLength;
-    if (start && DIMENSION_IDS.includes(start)) {
+    if (only) {
+      // level mode: one realm for the whole level (no boundaries, rifts or the Calm)
+      this.only = true;
+      this.push(biomeIndex(only), 0, 1e9);
+      this.push(biomeIndex(only), 1e9, 1e9);
+      return;
+    } else if (start && DIMENSION_IDS.includes(start)) {
       this.push(biomeIndex(start), 0, DIMENSIONS.length);
     } else {
       for (let i = 0; i < CLASSIC; i++) {
@@ -48,6 +54,7 @@ export class Course {
 
   /** Make sure segments exist well past `m`. */
   extend(m) {
+    if (this.only) return;
     while (this.segs[this.segs.length - 1].end < m + 3000) {
       const last = this.segs[this.segs.length - 1];
       const pool = DIMENSION_IDS.filter((id) => id !== last.id);
@@ -67,7 +74,7 @@ export class Course {
 
   next(seg) {
     this.extend(seg.end);
-    return this.segs[seg.i + 1];
+    return this.segs[seg.i + 1] || seg;
   }
 
   /** Is the boundary at the end of `seg` a rift (into a dimension)? */

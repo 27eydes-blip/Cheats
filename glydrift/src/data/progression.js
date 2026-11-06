@@ -63,7 +63,9 @@ const MISSION_TEMPLATES = [
   },
   { id: "saws_run", text: "Pass {n} saws in one run", stat: "saws", scope: "run", n: [6, 12] },
   { id: "runs", text: "Play {n} runs", stat: "runs", scope: "total", n: [3, 6] },
-  { id: "daily", text: "Play the Daily Challenge", stat: "daily", scope: "total", n: [1] },
+  // LEVEL MODE (it replaced the Daily Challenge)
+  { id: "levels", text: "Beat {n} levels", stat: "levelDone", scope: "total", n: [1, 3] },
+  { id: "stars", text: "Earn {n} level stars", stat: "levelStars", scope: "total", n: [3, 5] },
 ];
 
 function missionFrom(tpl, n) {
@@ -88,8 +90,9 @@ function missionFrom(tpl, n) {
 }
 
 function runStat(run, stat) {
-  if (stat === "runs" || stat === "daily")
-    return stat === "daily" ? (run.mode === "daily" ? 1 : 0) : 1;
+  if (stat === "runs") return 1;
+  // an old "Play the Daily Challenge" mission now completes by beating a level
+  if (stat === "daily") return run.levelDone || 0;
   return run[stat] || 0;
 }
 
@@ -191,10 +194,11 @@ export const ACHIEVEMENTS = [
   },
   {
     id: "daily5",
-    name: "Daily Driver",
-    desc: "Play 5 Daily Challenges",
+    name: "Level Driver",
+    desc: "Beat 5 levels",
     glyph: "★",
-    check: (s) => s.stats.dailyPlayed >= 5,
+    // (was "Play 5 Daily Challenges": earned before stays earned)
+    check: (s) => (s.stats.levelsBeaten || 0) >= 5,
   },
   {
     id: "level10",
@@ -318,6 +322,13 @@ export const Progression = {
   ensureMissions() {
     const s = Save.data;
     const rng = new RNG(Date.now());
+    // the Daily Challenge is gone: an old daily mission becomes "Beat a level"
+    for (const m of s.missions)
+      if (m.tpl === "daily") {
+        m.tpl = "levels";
+        m.stat = "levelDone";
+        m.text = "Beat 1 level";
+      }
     if (s.missions.length === 0) {
       // the first three are hand-picked so new players see the signature goals
       s.missions = [
@@ -667,7 +678,12 @@ export const Progression = {
     st.prismClears = (st.prismClears || 0) + (run.prismClear || 0);
     st.abyssClears = (st.abyssClears || 0) + (run.abyssClear || 0);
 
-    // daily
+    // LEVEL MODE: levels beaten and stars earned (missions, achievements)
+    if (run.mode === "level") {
+      st.levelsBeaten = (st.levelsBeaten || 0) + (run.levelDone || 0);
+      st.levelStars = (st.levelStars || 0) + (run.levelStars || 0);
+    }
+    // (the Daily Challenge was replaced by level mode; old daily data stays stored, unused)
     if (run.mode === "daily") {
       const today = todayKey();
       if (s.daily.date !== today) {
@@ -721,9 +737,9 @@ export const Progression = {
     );
     res.xpGained = xp;
     s.xp += xp;
-    // the Drift Pass fills with the same XP (+ the daily challenge bonus, x XP boosts)
+    // the Drift Pass fills with the same XP (+ a bonus for beating a level, x XP boosts)
     res.passBefore = DriftPass.unlockedCount();
-    let passXp = xp + (run.mode === "daily" ? 100 : 0);
+    let passXp = xp + (run.levelDone ? 100 : 0);
     const boost = s.xpBoost;
     if (boost?.runs > 0) {
       passXp *= boost.mul;

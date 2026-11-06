@@ -34,7 +34,15 @@ export const Levels = {
   daily: (n = dailyNumber()) => `${PREFIX}daily-${n}`,
   forRun: (run) => (run.mode === "daily" ? Levels.daily() : Levels.endless()),
   isDistance: (level) => level.endsWith("endless-distance"),
+  /** LEVEL MODE best times: one board per level (score encodes the time, higher = faster). */
+  level: (n) => `${PREFIX}lv-${n}`,
+  isLevel: (level) => /lv-\d+$/.test(level),
 };
+
+/** Level boards store a time as a score so the board's "higher is better" order still works. */
+const TIME_K = 5e8;
+export const timeToScore = (ms) => Math.max(1, Math.round(TIME_K / Math.max(1, ms)));
+export const scoreToTime = (score) => (score > 0 ? TIME_K / score : 0);
 
 const TIMEOUT_MS = 8000;
 const MAX_QUEUE = 40;
@@ -109,7 +117,11 @@ export function myFlair() {
 }
 /** A row's flair as a set: { gold, s1 }. */
 export const flairOf = (row) => {
-  const set = new Set(String(row?.flair || "").split(",").filter(Boolean));
+  const set = new Set(
+    String(row?.flair || "")
+      .split(",")
+      .filter(Boolean),
+  );
   return { gold: set.has("gold"), s1: set.has("s1") };
 };
 
@@ -320,7 +332,31 @@ class LeaderboardService {
     this.enqueue(entry);
     // endless runs also go on the DISTANCE board (its "score" is the metres flown)
     if (run.mode !== "daily" && entry.distance > 0)
-      this.enqueue({ ...entry, level: Levels.distance(), score: entry.distance });
+      this.enqueue({
+        ...entry,
+        level: Levels.distance(),
+        score: entry.distance,
+      });
+    Save.write();
+    return this.flush();
+  }
+
+  /**
+   * A level finished with no crashes (normal mode, never practice): its time goes on that
+   * level's board in the background; offline it waits in the same queue as endless scores.
+   */
+  submitLevelTime({ n, timeMs, distance, char }) {
+    const entry = {
+      type: "score",
+      level: Levels.level(n),
+      score: timeToScore(timeMs),
+      character: char,
+      run_time_ms: Math.round(timeMs),
+      distance: Math.floor(distance || 0),
+    };
+    if (!isPlausible(entry)) return Promise.resolve({ rejected: true });
+    if (TEST.lbmock) return Promise.resolve({ uploaded: 1, queued: 0, mock: true });
+    this.enqueue(entry);
     Save.write();
     return this.flush();
   }
@@ -431,7 +467,11 @@ class LeaderboardService {
 
   /** Columns added by the migrations: the run's distance and the title you wear. */
   extraColumns(op) {
-    return { distance: op.distance, title: Titles.equippedId(), flair: myFlair() };
+    return {
+      distance: op.distance,
+      title: Titles.equippedId(),
+      flair: myFlair(),
+    };
   }
 
   // ---------------------------------------------------------------- reading

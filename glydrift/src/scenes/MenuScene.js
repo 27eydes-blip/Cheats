@@ -1,5 +1,5 @@
 // Title screen: dimmed living background, the selected hero flying a figure-eight, a big
-// PLAY button, the Daily Challenge with a countdown, the daily login reward and settings.
+// ENDLESS button, LEVELS (level mode, which replaced the Daily Challenge), the daily login reward and settings.
 import Phaser from "phaser";
 import { BIOMES, biomeStateAt, blendPalette, CLASSIC } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, FONT, NUM_FONT, VIEW } from "../config.js";
@@ -26,7 +26,7 @@ import { getCosmetic, Shop } from "../data/cosmetics.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { Music } from "../audio/music.js";
 import { LOGIN_REWARDS, Progression } from "../data/progression.js";
-import { todayKey } from "../data/rng.js";
+import { LEVEL_COUNT, currentLevel, totalStars } from "../levels/levels.js";
 import { Save } from "../data/save.js";
 import { addTexture, PixelCanvas } from "../pixel/px.js";
 import { Seasons } from "../data/seasons.js";
@@ -321,9 +321,9 @@ export class MenuScene extends Phaser.Scene {
 
     // ---- buttons: PLAY is the biggest & brightest
     const by = L.play;
-    const play = button(this, W / 2, by, 500, 150, "PLAY", {
+    const play = button(this, W / 2, by, 500, 150, "ENDLESS", {
       color: 0x39ff88,
-      size: 66,
+      size: 60,
       fill: 0x0c2a1a,
       onClick: () => this.startGame("normal"),
     }).setDepth(100);
@@ -344,17 +344,14 @@ export class MenuScene extends Phaser.Scene {
         ease: "Sine.easeInOut",
       });
     }
-    const today = todayKey();
-    const played = s.daily.date === today && s.daily.attempts > 0;
-    this.daily = button(this, W / 2, L.daily, 380, 86, "DAILY CHALLENGE", {
+    // LEVEL MODE replaced the Daily Challenge: 50 hand-made levels with stars
+    this.daily = button(this, W / 2, L.daily, 380, 86, "LEVELS", {
       color: 0xffd23f,
-      size: 22,
-      sub: played
-        ? `Best today ${s.daily.best} · new in ${countdownText()}`
-        : `New run in ${countdownText()}`,
-      onClick: () => this.startGame("daily"),
+      size: 30,
+      sub: `${totalStars()}/${LEVEL_COUNT * 3} ★ · level ${currentLevel()}`,
+      onClick: () => this.go("LevelSelect"),
     }).setDepth(100);
-    this.dailyPlayed = played;
+    this.levelsBtn = this.daily;
     // a limited-time hero on sale and not yet owned → "24H ONLY" tag; HEROES opens on it
     const limitedHero = CHARACTERS.find((c) => c.limited && onSale(c) && !s.unlocked[c.id]);
     const heroes = button(this, W / 2 - 220, L.row, 200, 72, "HEROES", {
@@ -468,16 +465,15 @@ export class MenuScene extends Phaser.Scene {
   buildToday(y) {
     const s = Save.data;
     const W = this.W;
-    const played = s.daily.date === todayKey() && s.daily.attempts > 0;
     const ls = Progression.loginStatus();
     const chips = [
       {
-        label: "DAILY",
-        sub: played ? "played" : "new run",
+        label: "LEVELS",
+        sub: `${totalStars()} ★`,
         col: 0xffd23f,
-        ready: !played,
+        ready: false,
         prio: 3,
-        go: () => this.startGame("daily"),
+        go: () => this.go("LevelSelect"),
       },
       {
         label: "FREE DROP",
@@ -1446,12 +1442,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   updateCountdown() {
-    const s = Save.data;
-    this.daily.subLabel?.setText(
-      this.dailyPlayed
-        ? `Best today ${s.daily.best} · new in ${countdownText()}`
-        : `New run in ${countdownText()}`,
-    );
+    // (the Daily Challenge countdown is gone: the LEVELS button shows stars instead)
   }
 
   go(key) {

@@ -233,6 +233,46 @@ export const TITLES = [
   },
 ];
 
+// LEVEL MODE: clearing a realm's boss level (levels 10, 20, 30, 40, 50) earns its title
+TITLES.push(
+  {
+    id: "lv_void",
+    name: "Void Pilot",
+    source: "levels",
+    color: "#3ef4ff",
+    how: "Beat level 10 (Neon Void boss)",
+  },
+  {
+    id: "lv_solar",
+    name: "Storm Chaser",
+    source: "levels",
+    color: "#ff8a2a",
+    how: "Beat level 20 (Solar Storm boss)",
+  },
+  {
+    id: "lv_frozen",
+    name: "Frost Runner",
+    source: "levels",
+    color: "#9ad8ff",
+    how: "Beat level 30 (Frozen Nebula boss)",
+  },
+  {
+    id: "lv_glitch",
+    name: "Glitch Breaker",
+    source: "levels",
+    color: "#39ff88",
+    how: "Beat level 40 (Glitch Realm boss)",
+  },
+  {
+    id: "lv_abyss",
+    name: "ABYSS CONQUEROR",
+    source: "levels",
+    style: "glow",
+    color: "#ff3a4a",
+    how: "Beat level 50, the final boss",
+  },
+);
+
 export const TITLE_SOURCES = {
   achievement: "ACHIEVEMENTS",
   league: "DISTANCE LEAGUES",
@@ -241,6 +281,7 @@ export const TITLE_SOURCES = {
   collection: "COLLECTIONS",
   plus: "DRIFT PASS+",
   event: "EVENTS",
+  levels: "LEVELS",
 };
 
 export const getTitle = (id) => TITLES.find((t) => t.id === id) || null;
