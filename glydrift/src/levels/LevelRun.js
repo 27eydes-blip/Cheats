@@ -47,6 +47,7 @@ export class LevelRun {
     this.finishM = 0;
     this.finished = false;
     this.lastCp = -1;
+    this.cpPending = false;
     this.starIdx = 0;
     this.deaths = 0;
     this.timeMs = 0;
@@ -210,9 +211,13 @@ export class LevelRun {
       for (let i = this.lastCp + 1; i < this.def.beats.length; i++) {
         const b = this.beatM[i];
         if (!b || b.m > sc.meters) break;
-        const isCp = this.practice || this.def.beats[i].cp;
+        // a checkpoint inside a gravity flip moves to the first pattern after gravity is back
+        // (a respawn always starts upright)
+        const isCp = this.practice || this.def.beats[i].cp || this.cpPending;
+        if (isCp && b.snap.flipped) this.cpPending = true;
         if (isCp && !b.snap.flipped && i > this.lastCp) {
           this.lastCp = i;
+          this.cpPending = false;
           if (!this.practice && i > 0) this.hud?.flashCheckpoint();
         }
       }

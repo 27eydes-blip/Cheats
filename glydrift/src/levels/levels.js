@@ -66,11 +66,20 @@ export function parseBeats(src, base) {
   return out;
 }
 
+/**
+ * Batches shipped to players (10 levels each, one realm per batch, in order). A batch only
+ * ships once every one of its levels passed the bot + god-mode checks and the full test suite.
+ * Test builds can open later batches with ?levels=50 to verify them first.
+ */
+export const SHIPPED_BATCHES = 1;
+
 let cache = null;
-/** All defined levels (n = 1..50), parsed. Levels not built yet are absent. */
+/** All playable levels (n = 1..50), parsed. Levels not shipped yet are absent. */
 export function allLevels() {
   if (cache) return cache;
-  cache = LEVEL_DEFS.map((def) => {
+  const q = TEST.on && typeof location !== "undefined" ? new URLSearchParams(location.search) : null;
+  const upTo = Number(q?.get("levels")) || SHIPPED_BATCHES * 10;
+  cache = LEVEL_DEFS.filter((d) => d.n <= upTo).map((def) => {
     const realm = REALMS[Math.floor((def.n - 1) / 10)];
     const boss = def.n % 10 === 0;
     const base = { d: def.d ?? 0.1, gap: def.gap ?? 520 };

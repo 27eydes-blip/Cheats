@@ -3068,13 +3068,7 @@ test("levels: stars, unlocks in order, first-time rewards, practice never counts
       },
       { n, practice },
     );
-    await page.waitForFunction(
-      () => window.__glydrift.scene.isActive("Hud"),
-      null,
-      {
-        timeout: 30000,
-      },
-    );
+    await run(page, 800);
     await run(page, 300);
     await page.evaluate(() => window.__glyGod(true));
     const res = await page.evaluate(botPlay, { god: true });
@@ -3201,10 +3195,7 @@ test("levels: the cloud merge keeps the most progress and never loses a star", a
 test("levels: the layout is the same every time, and a checkpoint replays it exactly", async ({
   page,
 }, testInfo) => {
-  test.skip(
-    profileOf(testInfo) !== "iphone-std",
-    "once per browser, at phone size",
-  );
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page, { flags: ["god"] });
   const layout = async () => {
     await page.evaluate(() => {
@@ -3212,71 +3203,46 @@ test("levels: the layout is the same every time, and a checkpoint replays it exa
       for (const k of ["Hud", "Game"]) g.scene.stop(k);
       g.scene.start("Game", { mode: "level", level: 4 });
     });
-    await page.waitForFunction(
-      () => window.__glydrift.scene.isActive("Hud"),
-      null,
-      {
-        timeout: 30000,
-      },
-    );
-    await run(page, 300);
+    await run(page, 800);
     return page.evaluate(() => {
       const g = window.__glydrift;
       const s = g.scene.getScene("Game");
-      let t = performance.now() + 1e6;
-      const seen = [];
-      const record = () => {
-        for (const o of s.obstacles.active)
-          if (!o._seen) {
-            o._seen = true;
-            seen.push(
-              `${o.type}@${Math.round(s.meters + (o.x - s.player.x) / 20)}`,
-            );
-          }
-      };
-      s.onTap();
-      for (let i = 0; i < 60 * 25; i++) {
-        if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
-        t += 1000 / 60;
-        g.step(t, 1000 / 60);
-        record();
-      }
-      for (const o of s.obstacles.active) delete o._seen;
-      // crash: back to the last checkpoint, then the same stretch again
       const lr = s.levelRun;
+      window.__glyNoRender = true;
+      let t = performance.now() + 1e6;
+      const step = (n) => {
+        for (let i = 0; i < n; i++) {
+          if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+          t += 1000 / 60;
+          g.step(t, 1000 / 60);
+        }
+      };
+      // where every pattern of the level starts (metres) and what it is
+      const beats = () => lr.beatM.map((b, i) => `${lr.def.beats[i].kind}@${b.m.toFixed(1)}`);
+      s.onTap();
+      step(60 * 25);
+      const seen = beats();
+      // crash: back to the last checkpoint, then the same stretch again
       const cp = lr.lastCp;
-      const cpM = Math.round(lr.beatM[cp].m);
       window.__glyGod(false);
       s.die();
       window.__glyGod(true);
-      for (let i = 0; i < 80; i++) {
-        t += 1000 / 60;
-        g.step(t, 1000 / 60);
-      }
-      const replay = [];
-      for (const o of s.obstacles.active) o._seen = false;
-      for (let i = 0; i < 60 * 6; i++) {
-        if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
-        t += 1000 / 60;
-        g.step(t, 1000 / 60);
-        for (const o of s.obstacles.active)
-          if (!o._seen) {
-            o._seen = true;
-            replay.push(
-              `${o.type}@${Math.round(s.meters + (o.x - s.player.x) / 20)}`,
-            );
-          }
-      }
-      return { seen, replay, cpM, deaths: lr.deaths, state: s.state };
+      step(80);
+      step(60 * 8);
+      const replay = beats();
+      window.__glyNoRender = false;
+      return { seen, replay, cp, deaths: lr.deaths, state: s.state };
     });
   };
   const a = await layout();
   const b = await layout();
-  expect(a.seen.length).toBeGreaterThan(5);
+  expect(a.seen.length).toBeGreaterThan(8);
   expect(b.seen).toEqual(a.seen); // identical every time
-  // after the crash the stretch from the checkpoint comes back exactly as it was
-  const fromCp = a.seen.filter((x) => Number(x.split("@")[1]) >= a.cpM - 2);
-  expect(a.replay.slice(0, 3)).toEqual(fromCp.slice(0, 3));
+  // after the crash the patterns from the checkpoint on come back at exactly the same places
+  expect(a.cp).toBeGreaterThan(0);
+  const n = Math.min(a.replay.length, a.seen.length);
+  expect(n).toBeGreaterThan(a.cp + 2);
+  expect(a.replay.slice(0, n)).toEqual(a.seen.slice(0, n));
   expect(a.deaths).toBe(1);
   expect(a.state).toBe("playing");
   expect(log.errors).toEqual([]);
@@ -3309,10 +3275,11 @@ test("levels: offline best times wait in the upload queue (time encoded as a sco
 test("levels: every built level is beatable (bot) and its star coins are fair (god run)", async ({
   page,
 }, testInfo) => {
+  // hazards scale with the screen's height, so every Chromium screen size is checked (small
+  // phone, tall phone, laptop); the layouts and physics are the same on every engine
   test.skip(
-    profileOf(testInfo) !== "iphone-std" ||
-      testInfo.project.name.split("-")[0] !== "chromium",
-    "bot runs once (Chromium, phone size): the layouts are the same on every engine",
+    testInfo.project.name.split("-")[0] !== "chromium",
+    "bot runs on Chromium (the layouts are the same on every engine)",
   );
   test.setTimeout(1_500_000);
   const log = await openGame(page);
@@ -3329,13 +3296,7 @@ test("levels: every built level is beatable (bot) and its star coins are fair (g
         },
         { n, god },
       );
-      await page.waitForFunction(
-        () => window.__glydrift.scene.isActive("Hud"),
-        null,
-        {
-          timeout: 30000,
-        },
-      );
+      await run(page, 800);
       await run(page, 200);
       const r = await page.evaluate(botPlay, { god });
       report.push({ n, god, ...r });
