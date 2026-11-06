@@ -1066,7 +1066,7 @@ export class ShopScene extends Phaser.Scene {
     this.coins.to(Save.data.coins, 600);
     this.time.delayedCall(600, () => {
       Sfx.reward();
-      Haptics.light();
+      Haptics.purchase();
       const stamp = pixelText(this, to.x, to.y - 40, "GOT IT!", 96, "#ffd23f", { stroke: 20 })
         .setAngle(-10)
         .setDepth(410)

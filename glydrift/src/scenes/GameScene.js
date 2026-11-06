@@ -451,6 +451,7 @@ export class GameScene extends Phaser.Scene {
       edge: true,
     });
     Sfx.near();
+    Haptics.nearMiss();
     this.hudReady?.onNearMiss?.(pts, this.mult);
   }
 
@@ -595,6 +596,7 @@ export class GameScene extends Phaser.Scene {
     if (this.state !== "playing" || this.titledBiome === seg.i) return false;
     this.titledBiome = seg.i;
     Sfx.biome();
+    Haptics.realm(Music.status?.().bpm);
     this.hudReady?.onBiome?.(seg.biome);
     if (withFlash) this.flashBiome(seg);
     return true;
@@ -786,7 +788,7 @@ export class GameScene extends Phaser.Scene {
     Sfx.hero(this.charDef.id, "death");
     Music.endCalm(true);
     Music.deathSweep();
-    Haptics.strong();
+    Haptics.crash();
     this.cameras.main.shake(320, hints.shake);
     this.flashFx.flash(0xffffff, {
       ...FLASH.death,
@@ -866,7 +868,7 @@ export class GameScene extends Phaser.Scene {
     this.flashFx.flash(col, { ...FLASH.biome, priority: true });
     this.cameras.main.shake(boss ? 500 : 200, boss ? 0.012 : 0.004);
     Sfx.newBest?.();
-    Haptics.strong();
+    Haptics.levelComplete();
     this.run.distance = Math.floor(this.meters);
     this.run.score = 0;
     this.run.level = res;
@@ -1270,7 +1272,7 @@ export class GameScene extends Phaser.Scene {
           this.coinStepT > 0 ? Math.min(12, this.coinStep + 1) : 0;
         this.coinStepT = 0.8;
         Sfx.coin(this.coinStep);
-        Haptics.light();
+        Haptics.coin();
         this.hudReady?.onCoin?.(this.run.coins);
       }
       for (const o of ev.near) this.nearMiss(o);
@@ -1348,7 +1350,7 @@ export class GameScene extends Phaser.Scene {
         if (this.hudReady?.onCenterBest) this.hudReady.onCenterBest();
         else this.fx.floatText(p.x + 20, p.y - 120, "NEW BEST!", "#ffd23f", 50);
         Sfx.newBest();
-        Haptics.strong();
+        Haptics.newBest();
         this.fx.burst("star", p.x, p.y, 24, 0xffd23f, {
           speed: { min: 150, max: 420 },
         });
@@ -1580,6 +1582,7 @@ export class GameScene extends Phaser.Scene {
       () => this.state === "playing" && this.biomeBonus(),
     );
     Sfx.biome();
+    Haptics.abyss();
     Music.play("abyss", { startBar: 16, immediate: true });
     this.hudReady?.onBiome?.(this.course.segAt(this.meters).biome, {
       slam: true,

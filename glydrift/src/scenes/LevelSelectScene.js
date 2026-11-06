@@ -882,7 +882,7 @@ export class LevelSelectScene extends Phaser.Scene {
     for (const m of this.newMilestones) {
       this.time.delayedCall(delay, () => {
         Sfx.reward?.();
-        Haptics.strong();
+        Haptics.unlock();
         this.toastMsg(`${m.stars} STARS! ${m.label} unlocked`, "#ffd23f");
       });
       delay += 1800;

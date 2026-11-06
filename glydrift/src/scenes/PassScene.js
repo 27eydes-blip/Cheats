@@ -1058,6 +1058,7 @@ export class PassScene extends Phaser.Scene {
     this.busy = true;
     try {
       const res = await Store.buy();
+      if (res.ok) Haptics.purchase();
       if (res.ok || res.already) this.onPlusOwned("DRIFT PASS+ UNLOCKED");
     } catch (err) {
       toast(this, "PURCHASE", 0xff4f7a, { y: this.H * 0.3, sub: err.message });

@@ -195,7 +195,7 @@ export class LevelRun {
         });
         if (!reduceFlashing()) sc.fx.ring(x, s.y, 0xffd23f, { scale: 1.4, duration: 420 });
         Sfx.coin?.(8);
-        Haptics.light?.();
+        Haptics.starCoin?.();
         s.obj.setVisible(false).setActive(false);
         if (fresh) this.hud?.starGot(s.i);
       }

@@ -12,7 +12,7 @@ import { CharacterRig } from "../player/CharacterRig.js";
 import { CHARACTERS, getCharacter, onSale, saleLeft } from "../player/characterDefs.js";
 import { Sfx } from "../audio/sfx.js";
 import { TEST } from "../systems/testFlags.js";
-import { Haptics } from "../systems/haptics.js";
+import { HAPTIC_LEVELS, Haptics, hapticLevel } from "../systems/haptics.js";
 import { Install } from "../systems/install.js";
 import { flairOf, Leaderboard, Levels, myFlair } from "../online/leaderboard.js";
 import { nameText } from "../ui/nameplate.js";
@@ -1697,13 +1697,25 @@ export class MenuScene extends Phaser.Scene {
     );
     // Reduce Flashing: flashes become gentle colour fades (defaults to the device's Reduce Motion)
     const flashLabel = () => `REDUCE FLASHING: ${reduceFlashing() ? "ON" : "OFF"}`;
-    const style = button(this, W / 2, y0 + 430, W - 180, 72, flashLabel(), {
+    const style = button(this, W / 2 - 140, y0 + 430, 260, 72, flashLabel(), {
       color: 0xb45cff,
-      size: 18,
+      size: 14,
       onClick: () => {
         st.reduceFlash = !reduceFlashing();
         Save.write();
         style.setLabel(flashLabel());
+      },
+    });
+    // Haptics: OFF / LIGHT / FULL (default FULL); a sample buzz shows the new strength
+    const hapLabel = () => `HAPTICS: ${hapticLevel().toUpperCase()}`;
+    const hap = button(this, W / 2 + 140, y0 + 430, 260, 72, hapLabel(), {
+      color: 0xff4fd8,
+      size: 14,
+      onClick: () => {
+        st.haptics = HAPTIC_LEVELS[(HAPTIC_LEVELS.indexOf(hapticLevel()) + 1) % 3];
+        Save.write();
+        hap.setLabel(hapLabel());
+        Haptics.nearMiss();
       },
     });
     const done = button(this, W / 2, y0 + h - 70, 300, 80, "DONE", {
@@ -1747,7 +1759,7 @@ export class MenuScene extends Phaser.Scene {
         });
       },
     });
-    c.add([mute, gfx, style, nameBtn, acct, done]);
+    c.add([mute, gfx, style, hap, nameBtn, acct, done]);
     if (plusRow) {
       const py = y0 + (Install.available ? 795 : 705);
       const both = hasGold && hasTheme;

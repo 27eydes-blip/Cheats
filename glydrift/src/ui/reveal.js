@@ -233,7 +233,7 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
         onComplete: () => (yarms || surf) && scene.cameras.main.shake(220, 0.012),
       });
       scene.cameras.main.shake(180, 0.006);
-      Haptics.strong();
+      Haptics.unlock();
     });
     scene.time.delayedCall(1500, () => {
       closable = true;
