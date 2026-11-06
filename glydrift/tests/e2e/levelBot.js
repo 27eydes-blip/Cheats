@@ -40,11 +40,24 @@ export function botPlay({ maxTriesPerCp = 40, god = false, maxSeconds = 900 } = 
   };
   let offset = 0;
   let lastDeathCp = null;
+  let waitFrames = null;
   s.onTap();
   let frames = 0;
   while (frames < 60 * maxSeconds) {
     frames++;
     if (s.state === "won" || s.state === "dead") break;
+    // after a crash the level waits at its checkpoint for a tap; like a person, the bot
+    // takes a different moment each time (the moving hazards keep going while it waits)
+    if (s.state === "ready") {
+      waitFrames = waitFrames ?? (res.deaths * 7) % 23;
+      if (waitFrames-- <= 0) {
+        waitFrames = null;
+        s.onTap();
+      } else {
+        step();
+        continue;
+      }
+    }
     const p = s.player;
     if (s.state === "playing") {
       const r = p.radius;

@@ -3544,6 +3544,40 @@ test("levels: pause (button, menu, settings, practice, background, back to the m
   expect(log.errors).toEqual([]);
 });
 
+test("levels: after a crash the level waits at the checkpoint until you tap", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page);
+  await page.evaluate(() => {
+    const g = window.__glydrift;
+    for (const k of ["LevelComplete", "Hud", "Game", "LevelSelect", "Menu"]) g.scene.stop(k);
+    g.scene.start("Game", { mode: "level", level: 1 });
+  });
+  await run(page, 900);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Game").onTap());
+  await run(page, 600);
+  // a crash: back to the checkpoint, holding still
+  await page.evaluate(() => window.__glydrift.scene.getScene("Game").levelRun.respawn());
+  await run(page, 3000); // hands off for 3 s: no fall into the floor, no extra crashes
+  const waiting = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const gs = g.scene.getScene("Game");
+    return {
+      state: gs.state,
+      deaths: gs.levelRun.deaths,
+      hint: g.scene.getScene("Hud").hint.visible,
+      onScreen: gs.player.y > 0 && gs.player.y < gs.H,
+    };
+  });
+  expect(waiting).toEqual({ state: "ready", deaths: 1, hint: true, onScreen: true });
+  // one tap and it flies on
+  await page.evaluate(() => window.__glydrift.scene.getScene("Game").onTap());
+  await run(page, 300);
+  expect(await page.evaluate(() => window.__glydrift.scene.getScene("Game").state)).toBe("playing");
+  expect(log.errors).toEqual([]);
+});
+
 test("levels map: Low Graphics and Reduce Flashing", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page);

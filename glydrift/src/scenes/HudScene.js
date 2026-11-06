@@ -197,6 +197,13 @@ export class HudScene extends Phaser.Scene {
     this.scoreText.setAlpha(1);
   }
 
+  /** "TAP TO FLY" again (a level waiting at its checkpoint after a crash). */
+  showTapHint() {
+    this.tweens.killTweensOf(this.hint);
+    this.hintFading = false;
+    this.hint.setVisible(true).setAlpha(1);
+  }
+
   onStart() {
     this.hintFading = true;
     this.tweens.add({

@@ -237,6 +237,7 @@ export class GameScene extends Phaser.Scene {
       this.palMix = 1;
     }
     this.state = "ready";
+    this.respawnWait = false;
     this.distance = 0; // px
     this.meters = 0;
     this.clock = 0;
@@ -359,6 +360,15 @@ export class GameScene extends Phaser.Scene {
 
   startRun() {
     this.state = "playing";
+    if (this.respawnWait) {
+      // flying again after a checkpoint respawn: a short blink of safety, no run-start fanfare
+      this.respawnWait = false;
+      this.boostGrace = 1.1;
+      this.player.flap();
+      Sfx.flap(this.charDef.id);
+      this.hudReady?.onStart?.();
+      return;
+    }
     // shop Boosts were removed: every run is a normal, ranked run
     this.revives = 0;
     this.coinBoost = 1;
@@ -829,18 +839,19 @@ export class GameScene extends Phaser.Scene {
     p.reset();
     p.y = this.H * 0.45;
     p.vy = 0;
-    this.state = "playing";
+    // wait at the checkpoint until the next tap (like the level start), so a crash never
+    // drops you straight into the floor before you're ready; the world and the clock wait too
+    this.state = "ready";
+    this.respawnWait = true;
     this.deathT = 0;
     this.slowT = 0;
     this.timeScale = 1;
-    this.boostGrace = 1.1; // a short blink of safety after the respawn
     this.chain = 0;
     this.mult = 1;
     this.comboMeter.setTier(1);
     this.fx.ring(p.x, p.y, 0x39ff88, { scale: 1.6, duration: 420 });
     this.flashFx.flash(0x39ff88, { ...FLASH.nearMissEdge, edge: true });
-    this.player.flap();
-    Sfx.flap(this.charDef.id);
+    this.hudReady?.showTapHint?.();
   }
 
   /** Level mode: crossed the finish line. */
