@@ -3400,6 +3400,8 @@ test("levels map: the current level, its hero and its stars sit clear of the rea
         heroTop: ls.rig.y - 40,
         nodeTop: y - nd.R,
         starsBottom: y + nd.R + 34,
+        // where the level sits in the free space (0 = at the realm bar, 1 = at PLAY)
+        at: (y - (ls.headerH + 50)) / (ls.playY - 50 - (ls.headerH + 50)),
       };
       ls.openLevel(nd.n);
       return out;
@@ -3415,6 +3417,8 @@ test("levels map: the current level, its hero and its stars sit clear of the rea
     expect(fit.nodeTop, `${where}: node under the realm bar`).toBeGreaterThanOrEqual(fit.top - 1);
     expect(fit.starsBottom, `${where}: stars behind PLAY`).toBeLessThanOrEqual(fit.bottom + 1);
     expect(card.y, `${where}: stars behind the card`).toBeLessThanOrEqual(card.sheetTop + 1);
+    // centred in the free space, not squeezed against PLAY (level 1 sits at the top of the map)
+    if (done > 0) expect(fit.at, `${where}: squeezed against PLAY`).toBeLessThan(0.65);
   }
   await snap(page, testInfo, "levels-06-map-fit");
   expect(log.errors).toEqual([]);
