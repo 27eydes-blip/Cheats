@@ -54,6 +54,7 @@ function defaults() {
     login: { last: "", streak: 0, claimed: "" },
     daily: { date: "", best: 0, attempts: 0, ghost: null, ghostChar: "volt", lastPlayed: "" },
     levelRewards: {},
+    lv: { p: {}, claimed: {}, played: 0 }, // LEVEL MODE progress (levels/levels.js); kept on load
     profile: { username: "" },
     lbQueue: [],
     settings: {

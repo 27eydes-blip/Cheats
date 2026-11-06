@@ -3755,7 +3755,7 @@ test("leaderboard reset: one notice per player, bests cleared, progress kept, st
     coins: 4321,
     stats: { runs: 40, maxDistance: 3826 },
     daily: { date: "", best: 9000, attempts: 2, ghost: null, ghostChar: "volt", lastPlayed: "" },
-    lv: { p: { 1: { done: true, stars: { t: true, m: true, b: true } } } },
+    lv: { p: { 1: { done: true, coins: [true, true, true], flawless: true, best: 30000, attempts: 1 } }, claimed: {}, played: 1 },
     lbQueue: [
       { type: "score", level: "endless", score: 20000, character: "volt", run_time_ms: 120000, distance: 3000 },
       { type: "score", level: "lv-3", score: 11905, character: "volt", run_time_ms: 42000, distance: 700 },
@@ -3803,7 +3803,7 @@ test("leaderboard reset: one notice per player, bests cleared, progress kept, st
   expect(st.dailyBest).toBe(0);
   expect(st.bestText).toBe(false);
   expect(st.coins).toBe(4321);
-  expect(st.unlocked).toEqual(returning.unlocked);
+  expect(st.unlocked).toMatchObject(returning.unlocked); // every hero kept (challenges met can add more)
   expect(st.lv).toEqual(returning.lv);
   expect(st.queue).toEqual(["lv-3"]); // a pre-reset endless score never reaches the new board
   await run(page, 700);
@@ -3875,5 +3875,25 @@ test("leaderboard reset: never shown on a brand-new install", async ({ page }, t
   const s = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
   expect(s.lbReset).toBe("2026-11"); // applied quietly, so it never comes up later
   expect(s.lbNotice).toBe("");
+  expect(log.errors).toEqual([]);
+});
+
+// the save keeps only the parts it knows on load: LEVEL MODE progress must be one of them
+test("levels: stars and best times survive closing and reopening the game", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const lv = {
+    p: { 1: { done: true, coins: [true, true, true], flawless: true, best: 30000, attempts: 2 } },
+    claimed: {},
+    played: 2,
+  };
+  const log = await openGame(page, { save: { ...SAVE, stats: { runs: 3 }, lv } });
+  await run(page, 600);
+  const first = await page.evaluate(() => window.__glyShop.data().lv.p[1]);
+  await page.reload();
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  await run(page, 600);
+  const again = await page.evaluate(() => window.__glyShop.data().lv.p[1]);
+  expect(first).toEqual(lv.p[1]);
+  expect(again).toEqual(lv.p[1]);
   expect(log.errors).toEqual([]);
 });
