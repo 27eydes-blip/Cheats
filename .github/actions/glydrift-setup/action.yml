@@ -42,7 +42,7 @@ runs:
       run: |
         # The browser itself comes from the cache when it can; its system packages are always
         # installed (apt). The download / apt occasionally hang on GitHub's machines: give each
-        # attempt 10 minutes and retry. A timed-out attempt can leave apt-get holding the package
+        # attempt 4 minutes (a good install takes under 1) and retry. A timed-out attempt can leave apt-get holding the package
         # lock: wait for the lock to come free before trying again.
         wait_for_apt() {
           for _ in $(seq 120); do
@@ -54,9 +54,9 @@ runs:
         }
         if [ "$CACHED" = "true" ]; then CMD="npx playwright install-deps $ENGINE"; else CMD="npx playwright install --with-deps $ENGINE"; fi
         ok=""
-        for attempt in 1 2 3; do
+        for attempt in 1 2 3 4; do
           wait_for_apt
-          if timeout 600 $CMD; then ok=1; break; fi
+          if timeout 240 $CMD; then ok=1; break; fi
           echo "::warning::browser install attempt $attempt failed or hung - retrying"
           sleep 10
         done
