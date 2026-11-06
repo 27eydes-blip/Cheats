@@ -16,6 +16,8 @@ function defaults() {
     spins: 1, // Lucky Spin tokens (everyone starts with one free spin)
     spinPts: 0, // points banked toward the next spin
     best: 0,
+    lbReset: "", // the last leaderboard reset applied here (see online/lbReset.js)
+    lbNotice: "", // that reset's notice, waiting to be shown on this device
     ghost: null,
     ghostChar: "volt",
     stats: {

@@ -16,6 +16,7 @@ export const TEST = {
   mockcloud: !!q?.has("mockcloud"), // automated tests: accounts + cloud save against a local stand-in
   lbmock: !!q?.has("lbmock"), // automated tests / screenshots: a leaderboard with sample players
   offline: !!q?.has("offline"), // automated tests: skip the online start-up (leaderboard, remote seasons)
+  lbreset: q?.get("lbreset") || null, // automated tests: act as if the server announced this leaderboard reset
   movenotice: !!q?.has("movenotice"), // automated tests: act as the old GitHub Pages address
   // Drift Pass+ previews (test builds only): ?pplus owns Season 1's Drift Pass+ with every
   // reward claimed; ?ppequip=trail_pp_lightning,p_s1founder equips items / titles;

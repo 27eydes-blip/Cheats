@@ -11,7 +11,7 @@ import { mergeLevelProgress } from "../levels/merge.js";
 /** Device-only parts of the save that never go to the cloud. */
 // (Drift Pass+ ownership is never taken from a save: the server's verified purchases are the
 // source of truth, restored by the store)
-const LOCAL_ONLY = ["settings", "lbQueue", "ghost", "daily", "passPlus"];
+const LOCAL_ONLY = ["settings", "lbQueue", "ghost", "daily", "passPlus", "lbNotice"];
 
 /** The part of a save that is uploaded. */
 export function cloudPayload(save) {
@@ -101,7 +101,13 @@ export function mergeSaves(local, cloud) {
   };
   base.shards = maxEach(base.shards, other.shards);
   base.stats = maxEach(base.stats, other.stats);
-  base.best = Math.max(base.best || 0, other.best || 0);
+  // a leaderboard reset (online/lbReset.js) wipes the best scores set before it: the later
+  // reset wins, and a best from a save that hasn't applied it doesn't count
+  const later = (x, y) => ((x || "") > (y || "") ? x : y) || "";
+  const reset = later(base.lbReset, other.lbReset);
+  const bestOf = (sv) => ((sv.lbReset || "") >= reset ? sv.best || 0 : 0);
+  base.best = Math.max(bestOf(base), bestOf(other));
+  base.lbReset = reset;
   base.pass = {
     ...(base.pass || {}),
     xp: Math.max(base.pass?.xp || 0, other.pass?.xp || 0),
@@ -110,7 +116,6 @@ export function mergeSaves(local, cloud) {
   base.seasons = mergeSeasons(base.seasons, other.seasons);
   // LEVEL MODE: per level the best of both (done, each star coin, flawless, fastest time)
   if (base.lv || other.lv) base.lv = mergeLevelProgress(base.lv, other.lv);
-  const later = (x, y) => ((x || "") > (y || "") ? x : y) || "";
   base.login = {
     ...(base.login || {}),
     streak: Math.max(base.login?.streak || 0, other.login?.streak || 0),
@@ -124,6 +129,12 @@ export function mergeSaves(local, cloud) {
   if (!base.unlocked[base.selected]) base.selected = "volt";
   // device-only parts always stay this device's
   for (const k of LOCAL_ONLY) if (k in local) base[k] = local[k];
+  // the reset came from the account (applied on another device): this device's ghost and
+  // daily best are from before it, and the notice was already seen there
+  if ((local.lbReset || "") < reset) {
+    base.ghost = null;
+    if (base.daily) base.daily = { ...base.daily, best: 0, ghost: null };
+  }
   delete base.dailyBest;
   return base;
 }

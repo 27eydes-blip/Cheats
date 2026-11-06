@@ -3741,3 +3741,139 @@ test("levels: every built level is beatable (bot) and its star coins are fair (g
   );
   expect(log.errors).toEqual([]);
 });
+
+// the November 2026 leaderboard reset: once the server publishes it (glydrift_meta), every
+// returning player's best is cleared and they see the notice once; new installs never do
+test("leaderboard reset: one notice per player, bests cleared, progress kept, strict score checks", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(180_000);
+  const returning = {
+    ...SAVE,
+    best: 25191,
+    coins: 4321,
+    stats: { runs: 40, maxDistance: 3826 },
+    daily: { date: "", best: 9000, attempts: 2, ghost: null, ghostChar: "volt", lastPlayed: "" },
+    lv: { p: { 1: { done: true, stars: { t: true, m: true, b: true } } } },
+    lbQueue: [
+      { type: "score", level: "endless", score: 20000, character: "volt", run_time_ms: 120000, distance: 3000 },
+      { type: "score", level: "lv-3", score: 11905, character: "volt", run_time_ms: 42000, distance: 700 },
+    ],
+  };
+  const log = await openGame(page, { flags: ["lbreset=2026-11"], save: returning });
+  const menuState = () =>
+    page.evaluate(() => {
+      const m = window.__glydrift.scene.getScene("Menu");
+      const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+      const texts = [];
+      const walk = (o) => {
+        if (o?.text) texts.push(o.text);
+        o?.list?.forEach(walk);
+      };
+      walk(m.modal);
+      return {
+        open: !!m.lbNoticeOpen,
+        modals: [m.modal, document.querySelector("#name-modal.open"), m.claiming].filter(Boolean).length,
+        texts,
+        best: s.best,
+        dailyBest: s.daily.best,
+        coins: s.coins,
+        unlocked: s.unlocked,
+        lv: s.lv,
+        queue: s.lbQueue.map((q) => q.level),
+        lbReset: s.lbReset,
+        lbNotice: s.lbNotice,
+        bestText: !!m.bestText,
+      };
+    });
+  let st;
+  for (let i = 0; i < 30 && !(st = await menuState()).open; i++) await run(page, 200);
+  expect(st.open).toBe(true);
+  expect(st.modals).toBe(1); // nothing stacks on top of it
+  expect(st.texts).toEqual(
+    expect.arrayContaining([
+      "LEADERBOARD RESET",
+      "Due to inflated scores, the leaderboard has been reset. Your coins, heroes and progress are safe. Everyone starts fresh — go claim the #1 spot!",
+      "LET'S GO",
+    ]),
+  );
+  // the old best is gone (so the next run sets a new one); everything else is kept
+  expect(st.best).toBe(0);
+  expect(st.dailyBest).toBe(0);
+  expect(st.bestText).toBe(false);
+  expect(st.coins).toBe(4321);
+  expect(st.unlocked).toEqual(returning.unlocked);
+  expect(st.lv).toEqual(returning.lv);
+  expect(st.queue).toEqual(["lv-3"]); // a pre-reset endless score never reaches the new board
+  await run(page, 700);
+  await snap(page, testInfo, "lb-reset-notice");
+  // LET'S GO closes it for good
+  await tap(page, "LET'S GO", 600);
+  st = await menuState();
+  expect(st.open).toBe(false);
+  expect(st.lbReset).toBe("2026-11");
+  expect(st.lbNotice).toBe("");
+  // next launch: no notice again
+  await page.reload();
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  for (let i = 0; i < 15; i++) {
+    await run(page, 200);
+    expect((await menuState()).open).toBe(false);
+  }
+
+  // the account remembers it: a save that saw the reset wins over an old best from before it
+  const merged = await page.evaluate(() => {
+    const { mergeSaves } = window.__glyAccount;
+    const old = { best: 25191, lbReset: "", stats: { runs: 40 }, unlocked: { volt: true } };
+    const fresh = { best: 300, lbReset: "2026-11", stats: { runs: 41 }, unlocked: { volt: true } };
+    const a = mergeSaves(old, fresh);
+    const b = mergeSaves(fresh, old);
+    return { a: [a.best, a.lbReset], b: [b.best, b.lbReset] };
+  });
+  expect(merged).toEqual({ a: [300, "2026-11"], b: [300, "2026-11"] });
+
+  // the same limits as the server's glydrift_check_score
+  const checks = await page.evaluate(() => {
+    const { isPlausible } = window.__glyLb;
+    const t = (level, score, distance, run_time_ms) => isPlausible({ level, score, distance, run_time_ms });
+    return {
+      realTop: t("endless", 25191, 3826, 129000),
+      noDistance: t("endless", 25191, 0, 129000),
+      tooManyPoints: t("endless", 200000, 3826, 129000),
+      teleport: t("endless", 9000, 9000, 20000),
+      distanceOk: t("endless-distance", 3826, 3826, 129000),
+      distanceMismatch: t("endless-distance", 5000, 3826, 129000),
+      levelOk: t("lv-5", Math.round(5e8 / 42000), 700, 42000),
+      levelFaked: t("lv-6", 99999, 700, 42000),
+    };
+  });
+  expect(checks).toEqual({
+    realTop: true,
+    noDistance: false,
+    tooManyPoints: false,
+    teleport: false,
+    distanceOk: true,
+    distanceMismatch: false,
+    levelOk: true,
+    levelFaked: false,
+  });
+  expect(log.errors).toEqual([]);
+});
+
+test("leaderboard reset: never shown on a brand-new install", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, {
+    flags: ["lbreset=2026-11"],
+    save: { ...SAVE, best: 0, stats: { runs: 0 } },
+  });
+  for (let i = 0; i < 20; i++) {
+    await run(page, 200);
+    const open = await page.evaluate(() => !!window.__glydrift.scene.getScene("Menu").lbNoticeOpen);
+    expect(open).toBe(false);
+  }
+  const s = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  expect(s.lbReset).toBe("2026-11"); // applied quietly, so it never comes up later
+  expect(s.lbNotice).toBe("");
+  expect(log.errors).toEqual([]);
+});
