@@ -13,7 +13,7 @@ import { REALMS, levelRecord } from "./levels.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 
 const PX = WORLD.pxPerMeter;
-const LEAD = 640; // px between the respawn point and the first pattern after it
+const LEAD = 1000; // px between the respawn point and the first pattern after it (~2.5 s)
 const STAR_R = 30; // pickup radius around a star coin
 
 export class LevelRun {
@@ -203,7 +203,7 @@ export class LevelRun {
     for (const h of this.hints) {
       if (!h.shown && sc.meters >= h.m - 6) {
         h.shown = true;
-        sc.hudReady?.hudBanner?.(h.text.toUpperCase(), this.realm.col, "");
+        this.hud?.hint(h.text.toUpperCase());
       }
     }
     // checkpoints
@@ -350,6 +350,20 @@ class LevelHud {
 
   starGot() {
     this.drawSlots();
+  }
+
+  /** A level hint, shown under the progress bar (it never shares the centre with pop-ups). */
+  hint(text) {
+    if (!this.c) return;
+    this.hintText?.destroy();
+    const t = neonText(this.hud, this.W / 2, this.top + 200, text, 26, this.run.realm.col, {
+      blur: 12,
+    });
+    t.setAlpha(0);
+    this.c.add(t);
+    this.hintText = t;
+    this.hud.tweens.add({ targets: t, alpha: 1, duration: 200 });
+    this.hud.tweens.add({ targets: t, alpha: 0, delay: 2600, duration: 400, onComplete: () => t.destroy() });
   }
 
   flashCheckpoint() {
