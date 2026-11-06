@@ -1546,6 +1546,7 @@ export class CharacterRig {
       case "trail_storm":
       case "trail_founder":
       case "trail_lv_master":
+      case "trail_starlight":
       case "trail_aurora":
       case "trail_eclipse": {
         // season / pass trails: stepped squares in their own colours, each with a little twist
@@ -1560,6 +1561,8 @@ export class CharacterRig {
           trail_founder: [0xffffff, 0xfff0a0, 0x3ef4ff, 0xb45cff, 0x4a1a8a],
           // Level Master: the five realms' colours, cycling along the stream
           trail_lv_master: [0x3ef4ff, 0xff8a2a, 0x9ad8ff, 0x39ff88, 0xc8102e],
+          // Starlight: gold and white star sparks
+          trail_starlight: [0xffffff, 0xfff6c0, 0xffd23f, 0xffb02a, 0x8a5a1a],
         }[style];
         const beat =
           style === "trail_bloodmoon" ? Math.exp(-((T * 2) % 1) * 5) : 0; // heartbeat
@@ -1570,7 +1573,7 @@ export class CharacterRig {
             Math.max(1, Math.round((1 - t) * (4 + beat * 2) * this.sizeMul)) *
             P;
           const col =
-            style === "trail_prism" || style === "trail_lv_master"
+            style === "trail_prism" || style === "trail_lv_master" || style === "trail_starlight"
               ? pal[(i + Math.floor(T * 10)) % pal.length]
               : pal[Math.min(pal.length - 1, Math.floor(t * pal.length))];
           const yo =

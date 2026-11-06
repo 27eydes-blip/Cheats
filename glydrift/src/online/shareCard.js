@@ -146,6 +146,10 @@ export function renderShareCard(game, run) {
     /* texture missing — skip */
   }
 
+  if (run.mode === "level") {
+    levelCard(c, game, run, W, glowText, biome);
+    return cv;
+  }
   glowText(`${Math.floor(run.score)}`, W / 2, 820, 190, css(biome.neon));
   c.font = `700 40px ${FONT}`;
   c.fillStyle = "rgba(255,255,255,0.8)";
@@ -179,6 +183,64 @@ export function renderShareCard(game, run) {
   return cv;
 }
 
+/** The level result: "LEVEL 7" + its name (bosses red with a skull), time and stars. */
+function levelCard(c, game, run, W, glowText, biome) {
+  const red = "#ff3a4a";
+  glowText(`LEVEL ${run.level}`, W / 2, 790, 72, run.boss ? red : css(biome.neon));
+  // the name, shrunk to fit the card
+  let size = 92;
+  c.font = `900 ${size}px ${FONT}`;
+  const name = run.name.toUpperCase();
+  const maxW = run.boss ? W - 330 : W - 160;
+  while (c.measureText(name).width > maxW && size > 40) {
+    size -= 4;
+    c.font = `900 ${size}px ${FONT}`;
+  }
+  glowText(name, W / 2, 900, size, run.boss ? red : css(biome.accent));
+  if (run.boss) {
+    try {
+      const fr = game.textures.getFrame("lvmap", "skull");
+      const hw = c.measureText(name).width / 2;
+      const sz = size * 1.1;
+      c.imageSmoothingEnabled = false;
+      for (const x of [W / 2 - hw - 30 - sz, W / 2 + hw + 30]) {
+        c.drawImage(fr.source.image, fr.cutX, fr.cutY, fr.cutWidth, fr.cutHeight, x, 900 - sz / 2, sz, sz);
+      }
+    } catch {
+      /* no map art yet */
+    }
+  }
+  // stars earned on this level
+  const st = run.stars || [];
+  for (let i = 0; i < 3; i++) {
+    const x = W / 2 + (i - 1) * 120;
+    const y = 1030;
+    c.beginPath();
+    for (let k = 0; k < 10; k++) {
+      const a = -Math.PI / 2 + (k * Math.PI) / 5;
+      const r = k % 2 ? 22 : 48;
+      c.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+    }
+    c.closePath();
+    c.fillStyle = st[i] ? "#ffd23f" : "rgba(60,50,90,0.9)";
+    c.shadowColor = st[i] ? "#ffd23f" : "transparent";
+    c.shadowBlur = st[i] ? 24 : 0;
+    c.fill();
+    c.shadowBlur = 0;
+  }
+  const s = (run.timeMs || 0) / 1000;
+  const mm = Math.floor(s / 60);
+  const ss = s - mm * 60;
+  const time = `${mm}:${ss < 10 ? "0" : ""}${ss.toFixed(1)}`;
+  c.font = `700 40px ${FONT}`;
+  c.fillStyle = "#ffffff";
+  c.textAlign = "center";
+  c.fillText(`${time} · ${run.deaths ? `${run.deaths} crash${run.deaths > 1 ? "es" : ""}` : "no crashes"}`, W / 2, 1140);
+  c.font = `700 32px ${FONT}`;
+  c.fillStyle = "rgba(255,255,255,0.75)";
+  c.fillText("CAN YOU BEAT MY TIME?", W / 2, 1240);
+}
+
 let modalBound = false;
 
 export function openShareModal(game, run) {
@@ -189,7 +251,9 @@ export function openShareModal(game, run) {
   img.src = url;
   modal.classList.add("open");
   const text =
-    run.mode === "daily"
+    run.mode === "level"
+      ? `I beat Level ${run.level}: ${run.name} in Glydrift! Can you beat my time?`
+      : run.mode === "daily"
       ? `Glydrift Daily #${dailyNumber()}: ${Math.floor(run.score)} pts — can you beat it?`
       : `I scored ${Math.floor(run.score)} in Glydrift! Can you drift further?`;
   modal.dataset.text = text;

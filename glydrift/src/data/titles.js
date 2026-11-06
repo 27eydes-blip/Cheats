@@ -271,6 +271,21 @@ TITLES.push(
     color: "#ff3a4a",
     how: "Beat level 50, the final boss",
   },
+  {
+    id: "lv_starchaser",
+    name: "Star Chaser",
+    source: "levels",
+    color: "#ffd23f",
+    how: "Earn 75 level stars",
+  },
+  {
+    id: "lv_perfect",
+    name: "PERFECT PILOT",
+    source: "levels",
+    style: "glow",
+    color: "#ffd23f",
+    how: "Earn all 150 level stars",
+  },
 );
 
 export const TITLE_SOURCES = {

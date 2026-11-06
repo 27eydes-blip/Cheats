@@ -3206,6 +3206,191 @@ test("levels: the cloud merge keeps the most progress and never loses a star", a
   expect(log.errors).toEqual([]);
 });
 
+test("levels: every level has its own name, shown on the start screen, HUD and LEVEL COMPLETE", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page);
+  // 50 different names; the label keeps the number ("Level 7: Upside Down")
+  const names = await page.evaluate(() => {
+    const L = window.__glyLevels;
+    return {
+      all: L.names(),
+      seven: L.levelLabel(L.getLevel(7)),
+      bosses: [10, 20, 30, 40, 50].map((n) => L.getLevel(n).boss),
+    };
+  });
+  expect(names.all).toHaveLength(50);
+  expect(new Set(names.all).size).toBe(50);
+  expect(names.seven).toBe("Level 7: Upside Down");
+  expect(names.bosses).toEqual([true, true, true, true, true]);
+  // the start screen and HUD of a boss: the name in red with a skull, never wider than the screen
+  const startOf = async (n) => {
+    await page.evaluate((n) => {
+      const g = window.__glydrift;
+      for (const k of ["LevelComplete", "Hud", "Game"]) g.scene.stop(k);
+      g.scene.start("Game", { mode: "level", level: n });
+    }, n);
+    await run(page, 900);
+    return page.evaluate(() => {
+      const hud = window.__glydrift.scene.getScene("Hud");
+      const texts = [];
+      const walk = (o) => {
+        if (o.type === "Text" && o.visible) {
+          const b = o.getBounds();
+          texts.push({ t: o.text, c: o.style.color, w: b.width, left: b.left, right: b.right });
+        }
+        (o.list || []).forEach(walk);
+      };
+      hud.children.list.forEach(walk);
+      const skulls = [];
+      const walkI = (o) => {
+        if (o.type === "Image" && o.frame?.name === "skull") skulls.push(o.frame.name);
+        (o.list || []).forEach(walkI);
+      };
+      hud.children.list.forEach(walkI);
+      return { texts, skulls: skulls.length, W: hud.W };
+    });
+  };
+  const ten = await startOf(10);
+  const big = ten.texts.find((t) => t.t === "HEART OF THE VOID");
+  expect(big).toBeTruthy();
+  expect(ten.texts.some((t) => t.t === "LEVEL 10: HEART OF THE VOID" && t.c === "#ff3a4a")).toBe(true);
+  expect(ten.skulls).toBeGreaterThanOrEqual(2);
+  for (const t of ten.texts) {
+    expect(t.left).toBeGreaterThanOrEqual(-1);
+    expect(t.right).toBeLessThanOrEqual(ten.W + 1);
+  }
+  await snap(page, testInfo, "levels-03-start-boss");
+  // the longest name fits too
+  const long = await startOf(48);
+  expect(long.texts.some((t) => t.t === "POINT OF NO RETURN")).toBe(true);
+  for (const t of long.texts) expect(t.right).toBeLessThanOrEqual(long.W + 1);
+  // the start screen goes away once you fly
+  await page.evaluate(() => window.__glydrift.scene.getScene("Game").onTap());
+  await run(page, 800);
+  const gone = await page.evaluate(
+    () => !window.__glydrift.scene.getScene("Game").levelRun.hud.introC,
+  );
+  expect(gone).toBe(true);
+  expect(log.errors).toEqual([]);
+});
+
+test("levels map: the journey (hero flies to a tapped level, chests, star milestones, PLAY, portals)", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page);
+  // levels 1-5 beaten with every star: 15 stars (the Starlight trail) and the first chest
+  const coins0 = await page.evaluate(() => {
+    const d = window.__glyShop.data();
+    d.lv = { p: {}, claimed: {}, played: 0 };
+    for (let n = 1; n <= 5; n++)
+      d.lv.p[n] = { done: true, coins: [true, true, true], flawless: true, best: 40000, attempts: 1 };
+    window.__glydrift.scene.getScene("Menu").scene.start("LevelSelect");
+    return d.coins;
+  });
+  await run(page, 2800); // the chest opens, then the map returns to the current level
+  const arrived = await page.evaluate(() => {
+    const d = window.__glyShop.data();
+    const ls = window.__glyLevelSelect;
+    return {
+      coins: d.coins,
+      chest: window.__glyLevels.chestState(1),
+      trail: !!d.cos?.owned?.trail_starlight,
+      newChests: ls.newChests.map((c) => c.k),
+      hero: ls.heroAt.n,
+      play: ls.playBtn.list.filter((o) => o.type === "Text").map((o) => o.text),
+      realm: ls.bands[0].titleObjs.map((o) => o.text),
+    };
+  });
+  expect(arrived.newChests).toEqual([1]);
+  expect(arrived.chest).toBe("open");
+  expect(arrived.coins).toBe(coins0 + 150);
+  expect(arrived.trail).toBe(true); // 15 stars
+  expect(arrived.hero).toBe(6); // the hero waits on the next level
+  expect(arrived.play).toEqual(["PLAY", "Level 6: Pulse Point"]);
+  expect(arrived.realm).toEqual(["NEON VOID", "15/30 ★", "LEVELS 1–10"]);
+  await snap(page, testInfo, "levels-04-map-journey");
+  // tap level 3 like a player: the hero flies there, its name shows, then its card opens
+  const nodeAt = (n) =>
+    page.evaluate((n) => {
+      const g = window.__glydrift;
+      const ls = window.__glyLevelSelect;
+      const nd = ls.nodes[n - 1];
+      const cam = ls.cameras.main;
+      const r = g.canvas.getBoundingClientRect();
+      return {
+        x: r.left + (((nd.x - cam.worldView.x) * cam.zoom + cam.x) * r.width) / g.canvas.width,
+        y: r.top + (((nd.y + ls.map.y - cam.worldView.y) * cam.zoom + cam.y) * r.height) / g.canvas.height,
+      };
+    }, n);
+  await page.evaluate(() => {
+    const ls = window.__glyLevelSelect;
+    ls.scrollY = (ls.headerH + ls.viewBottom) / 2 - ls.nodes[3].y;
+  });
+  await run(page, 300);
+  await press(page, await nodeAt(3));
+  await run(page, 200);
+  const mid = await page.evaluate(() => window.__glyLevelSelect.flying);
+  await run(page, 1800);
+  const card = await page.evaluate(() => {
+    const ls = window.__glyLevelSelect;
+    const texts = [];
+    const walk = (o) => {
+      if (o.type === "Text") texts.push(o.text);
+      (o.list || []).forEach(walk);
+    };
+    if (ls.modal) walk(ls.modal);
+    return { at: ls.heroAt.n, modal: !!ls.modal, label: ls.selLabel?.text?.text, texts };
+  });
+  expect(mid).toBe(true);
+  expect(card).toMatchObject({ at: 3, modal: true, label: "PILLAR RUN" });
+  expect(card.texts).toEqual(expect.arrayContaining(["PILLAR RUN", "PLAY", "PRACTICE"]));
+  await snap(page, testInfo, "levels-05-card");
+  // the portal to the Solar Storm stays shut until the boss falls
+  await page.evaluate(() => {
+    const ls = window.__glyLevelSelect;
+    ls.closeModal(true);
+    ls.tapPortal(ls.portals[0]);
+  });
+  await run(page, 200);
+  const toast = await page.evaluate(() => window.__glyLevelSelect.toastT.list[1].text);
+  expect(toast).toBe("Beat level 10 to unlock Solar Storm");
+  // PLAY jumps straight to the next unbeaten level
+  await page.evaluate(() => window.__glyLevelSelect.playNext());
+  await run(page, 2500);
+  const started = await page.evaluate(() => {
+    const g = window.__glydrift;
+    return g.scene.isActive("Game") ? g.scene.getScene("Game").levelRun?.def.n : null;
+  });
+  expect(started).toBe(6);
+  expect(log.errors).toEqual([]);
+});
+
+test("levels map: Low Graphics and Reduce Flashing", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page);
+  await page.evaluate(() => {
+    const d = window.__glyShop.data();
+    d.settings.lowGfx = true;
+    d.settings.reduceFlash = true;
+    window.__glydrift.scene.getScene("Menu").scene.start("LevelSelect");
+  });
+  await run(page, 1500);
+  const s = await page.evaluate(() => {
+    const ls = window.__glyLevelSelect;
+    const sy = ls.scrollY;
+    ls.scrollY = ls.minY; // all the way down to the Abyss
+    return { drops: ls.drops.length, flow: ls.flow.length, rf: ls.rf, low: ls.lowGfx, sy };
+  });
+  await run(page, 1500);
+  expect(s).toMatchObject({ drops: 0, flow: 0, rf: true, low: true });
+  const eye = await page.evaluate(() => window.__glyLevelSelect.eyeShown);
+  expect(eye).toBeGreaterThan(0);
+  expect(log.errors).toEqual([]);
+});
+
 test("levels: the layout is the same every time, and a checkpoint replays it exactly", async ({
   page,
 }, testInfo) => {

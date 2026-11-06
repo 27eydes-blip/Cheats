@@ -9,6 +9,7 @@ import { Course } from "../biomes/course.js";
 import { Sfx } from "../audio/sfx.js";
 import { Haptics } from "../systems/haptics.js";
 import { neonText, plainText } from "../ui/ui.js";
+import { BOSS_RED, BOSS_RED_HEX, fitWidth, levelNameLine } from "../ui/levelName.js";
 import { REALMS, levelRecord } from "./levels.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 
@@ -313,8 +314,14 @@ class LevelHud {
     const top = (hud.top || 24) + 30;
     const c = hud.add.container(0, 0).setDepth(50);
     this.c = c;
-    const name = `${run.def.boss ? "BOSS · " : ""}LEVEL ${run.def.n} · ${run.def.name.toUpperCase()}${run.practice ? " · PRACTICE" : ""}`;
-    this.title = plainText(hud, W / 2, top, name, 18, run.practice ? "#7ae8ff" : "#ffffff");
+    // "LEVEL 7: UPSIDE DOWN" (bosses red with a skull); practice says so in its own colour
+    this.title = levelNameLine(hud, W / 2, top, run.def, 18, {
+      maxW: W - 220,
+      color: run.practice ? "#7ae8ff" : "#ffffff",
+    });
+    if (run.practice) this.title.text.setText(`${this.title.text.text} · PRACTICE`);
+    fitWidth(this.title, W - 220);
+    this.intro(hud, W, run);
     this.barG = hud.add.graphics();
     this.pct = neonText(hud, W / 2, top + 74, "0%", 22, run.realm.col, {
       blur: 8,
@@ -336,6 +343,48 @@ class LevelHud {
     // the endless score sits where the bar goes: hide it during a level
     hud.scoreText?.setVisible(false);
     hud.bestText?.setVisible(false);
+  }
+
+  /** The level start screen: the level's number and name, big, until the first tap. */
+  intro(hud, W, run) {
+    const H = hud.H || 1280;
+    const y = H * 0.27;
+    const def = run.def;
+    const col = def.boss ? BOSS_RED_HEX : run.realm.col;
+    const g = hud.add.container(0, 0).setDepth(49);
+    const shade = hud.add.rectangle(W / 2, y + 10, W, 230, 0x05020e, 0.55);
+    const top = plainText(
+      hud,
+      W / 2,
+      y - 56,
+      `${def.boss ? "BOSS · " : ""}LEVEL ${def.n} · ${run.realm.name}${run.practice ? " · PRACTICE" : ""}`,
+      20,
+      def.boss ? BOSS_RED : "#cfc6ff",
+    );
+    fitWidth(top, W - 80);
+    const name = neonText(hud, W / 2, y + 10, def.name.toUpperCase(), 54, col, { blur: 16 });
+    fitWidth(name, W - (def.boss ? 180 : 80));
+    const parts = [shade, top, name];
+    if (def.boss) {
+      const sk = hud.add.image(0, y + 10, "lvmap", "skull").setTint(BOSS_RED_HEX);
+      sk.setScale(58 / sk.height);
+      sk.x = W / 2 - name.displayWidth / 2 - sk.displayWidth / 2 - 14;
+      const sk2 = hud.add.image(W / 2 + name.displayWidth / 2 + sk.displayWidth / 2 + 14, y + 10, "lvmap", "skull");
+      sk2.setTint(BOSS_RED_HEX).setScale(sk.scale);
+      parts.push(sk, sk2);
+    }
+    g.add(parts);
+    g.setAlpha(0);
+    hud.tweens.add({ targets: g, alpha: 1, duration: 260 });
+    this.introC = g;
+  }
+
+  /** Fade the start screen out once the run is under way. */
+  hideIntro() {
+    const g = this.introC;
+    if (!g) return;
+    this.introC = null;
+    this.hud.tweens.add({ targets: g, alpha: 0, duration: 300, onComplete: () => g.destroy() });
   }
 
   drawSlots() {
@@ -379,6 +428,7 @@ class LevelHud {
 
   update(p, deaths) {
     if (!this.barG?.active) return;
+    if (this.introC && this.run.scene.state !== "ready") this.hideIntro();
     const W = this.W;
     const bw = 460;
     const x0 = W / 2 - bw / 2;
@@ -406,6 +456,8 @@ class LevelHud {
   }
 
   destroy() {
+    this.introC?.destroy();
+    this.introC = null;
     this.c?.destroy();
     this.c = null;
     this.barG = null;

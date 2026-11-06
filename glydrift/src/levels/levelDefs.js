@@ -17,7 +17,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 2,
-    name: "Saw Alley",
+    name: "Neon Drizzle",
     blurb: "Saws that drift up and down.",
     d: 0.08,
     gap: 600,
@@ -26,8 +26,8 @@ export const LEVEL_DEFS = [
   },
   {
     n: 3,
-    name: "Twin Teeth",
-    blurb: "Two saws, one gap between them.",
+    name: "Pillar Run",
+    blurb: "Pillars and twin saws: one gap between them.",
     d: 0.1,
     gap: 580,
     beats: `gate saw @Fly_between_the_twin_saws saw2 > gate saw2 *m saw | gate saw2
@@ -35,7 +35,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 4,
-    name: "Pendulum",
+    name: "Sawmill",
     blurb: "The axe swings: time your pass.",
     d: 0.12,
     gap: 580,
@@ -44,7 +44,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 5,
-    name: "Laser Lines",
+    name: "Laser Alley",
     blurb: "Side lasers warn, then fire.",
     d: 0.14,
     gap: 560,
@@ -54,7 +54,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 6,
-    name: "Heartbeat",
+    name: "Pulse Point",
     blurb: "The Neon Pulse breathes in and out.",
     d: 0.16,
     gap: 560,
@@ -74,7 +74,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 8,
-    name: "Small Wonder",
+    name: "The Ruins",
     blurb: "Yellow portals shrink you.",
     d: 0.2,
     gap: 540,
@@ -84,7 +84,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 9,
-    name: "Neon Gauntlet",
+    name: "Static Storm",
     blurb: "Everything the Void has, together.",
     d: 0.26,
     gap: 520,
@@ -94,11 +94,11 @@ export const LEVEL_DEFS = [
   },
   {
     n: 10,
-    name: "The Void Core",
+    name: "Heart of the Void",
     blurb: "BOSS: the heart of the Void wakes up.",
     d: 0.3,
     gap: 520,
-    beats: `@BOSS_-_THE_VOID_CORE gate saw blade > hlaser pulse gate *b | bladeduo
+    beats: `@BOSS_-_HEART_OF_THE_VOID gate saw blade > hlaser pulse gate *b | bladeduo
             saw2 hlaser > pulsepair blade gate | flip saw bladeduo hlaser > gate pulse
             *m mini | blade saw2 pulsepair > hlaser gate | d=0.36 g=500 @THE_CORE_OPENS
             bladeduo pulse hlaser pulsepair | blade hlaser saw2 *t bladeduo > gate
@@ -108,7 +108,7 @@ export const LEVEL_DEFS = [
   // ================================================================ SOLAR STORM (11–20)
   {
     n: 11,
-    name: "Sunrise",
+    name: "Lava Lanes",
     blurb: "Geysers erupt from below: watch the glow.",
     d: 0.16,
     gap: 640,
@@ -118,7 +118,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 12,
-    name: "Meteor Shower",
+    name: "Ember Fall",
     blurb: "Meteors fall in a line: fly the gap behind them.",
     d: 0.25,
     gap: 570,
@@ -148,7 +148,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 15,
-    name: "Eruption",
+    name: "Geyser Field",
     blurb: "Geysers in a row, then all at once.",
     d: 0.3,
     gap: 550,
@@ -158,7 +158,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 16,
-    name: "Firefall",
+    name: "Meteor Shower",
     blurb: "Meteors in a storm, bars in pairs.",
     d: 0.32,
     gap: 540,
@@ -168,7 +168,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 17,
-    name: "Under Pressure",
+    name: "Ash Cloud",
     blurb: "Geysers under spinning flame.",
     d: 0.34,
     gap: 530,
@@ -188,7 +188,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 19,
-    name: "Corona",
+    name: "Molten Core",
     blurb: "Everything the Storm has, together.",
     d: 0.38,
     gap: 510,
@@ -198,11 +198,11 @@ export const LEVEL_DEFS = [
   },
   {
     n: 20,
-    name: "Heart of the Sun",
+    name: "The Inferno",
     blurb: "BOSS: fly into the sun's core.",
     d: 0.4,
     gap: 510,
-    beats: `@BOSS_-_HEART_OF_THE_SUN gate geyser meteor > firebar flare eruption *b |
+    beats: `@BOSS_-_THE_INFERNO gate geyser meteor > firebar flare eruption *b |
             shower firepair > geyserbar flare | meteor eruption shower > firepair *m
             geyserbar | flip gate flare shower > eruption firepair | d=0.46 g=490
             @THE_SUN_ERUPTS flare geyserbar shower eruption | firepair flare *t shower >
@@ -220,7 +220,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 22,
-    name: "Ice Sliders",
+    name: "Glacier Gap",
     blurb: "Blocks of ice slide up and down.",
     d: 0.3,
     gap: 570,
@@ -230,7 +230,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 23,
-    name: "Static",
+    name: "Snowblind",
     blurb: "Frozen sparks crackle across the sky.",
     d: 0.27,
     gap: 630,
@@ -239,7 +239,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 24,
-    name: "Frost Comet",
+    name: "Frozen Peaks",
     blurb: "A comet streaks through the nebula.",
     d: 0.32,
     gap: 560,
@@ -249,7 +249,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 25,
-    name: "Ice Curtain",
+    name: "Icicle Drop",
     blurb: "A wall of icicles with one way through.",
     d: 0.34,
     gap: 550,
@@ -259,7 +259,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 26,
-    name: "Glacier Pass",
+    name: "Aurora",
     blurb: "Sliders in pairs.",
     d: 0.36,
     gap: 540,
@@ -269,7 +269,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 27,
-    name: "Staircase",
+    name: "Shatterpoint",
     blurb: "Zaps climb like stairs.",
     d: 0.37,
     gap: 530,
@@ -289,7 +289,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 29,
-    name: "The Gauntlet",
+    name: "Absolute Zero",
     blurb: "The Nebula's hardest run.",
     d: 0.41,
     gap: 510,
@@ -299,11 +299,11 @@ export const LEVEL_DEFS = [
   },
   {
     n: 30,
-    name: "Frozen Throne",
+    name: "The Ice Throne",
     blurb: "BOSS: the nebula freezes solid.",
     d: 0.43,
     gap: 510,
-    beats: `@BOSS_-_THE_FROZEN_THRONE gate icicle slider > zap comet icecurtain *t |
+    beats: `@BOSS_-_THE_ICE_THRONE gate icicle slider > zap comet icecurtain *t |
             sliderpair zapstairs > gauntlet comet | icecurtain sliderpair zap > zapstairs
             *b gauntlet | flip gate comet slider > icecurtain sliderpair | d=0.48 g=490
             @THE_THRONE_SHATTERS gauntlet comet zapstairs icecurtain | sliderpair *m
@@ -313,7 +313,7 @@ export const LEVEL_DEFS = [
   // ================================================================ GLITCH REALM (31–40)
   {
     n: 31,
-    name: "Corrupted",
+    name: "Boot Sequence",
     blurb: "Blocks blink in and out of existence.",
     d: 0.3,
     gap: 580,
@@ -323,7 +323,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 32,
-    name: "Flip Field",
+    name: "Bad Pixel",
     blurb: "Green zones flip your gravity inside them.",
     d: 0.31,
     gap: 580,
@@ -332,7 +332,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 33,
-    name: "Double Vision",
+    name: "Blink Blocks",
     blurb: "Blink blocks in pairs.",
     d: 0.33,
     gap: 570,
@@ -342,7 +342,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 34,
-    name: "Firewall",
+    name: "Data Stream",
     blurb: "A wall of blinking gates.",
     d: 0.3,
     gap: 610,
@@ -352,7 +352,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 35,
-    name: "Packet Loss",
+    name: "Corrupted",
     blurb: "Gravity flips, and the blocks blink.",
     d: 0.33,
     gap: 590,
@@ -362,7 +362,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 36,
-    name: "Bit Rot",
+    name: "Lag Spike",
     blurb: "Small, fast and glitching.",
     d: 0.38,
     gap: 540,
@@ -372,7 +372,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 37,
-    name: "Overclock",
+    name: "Firewall",
     blurb: "The glitches speed up.",
     d: 0.37,
     gap: 570,
@@ -382,7 +382,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 38,
-    name: "Buffer Overflow",
+    name: "Packet Loss",
     blurb: "Blades meet the glitch.",
     d: 0.42,
     gap: 520,
@@ -392,7 +392,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 39,
-    name: "Kernel Panic",
+    name: "Fatal Error",
     blurb: "Everything the Glitch Realm has, together.",
     d: 0.4,
     gap: 550,
@@ -409,13 +409,13 @@ export const LEVEL_DEFS = [
     beats: `@BOSS_-_SYSTEM_CRASH gate blink zone > blinkpair blinkgate *m | zone
             blinkpair > blinkgate blink zone | flip gate blinkpair > blinkgate *t zone |
             mini blinkpair blinkgate zone > blinkpair blinkgate | d=0.47 g=530
-            @FATAL_ERROR blinkgate > zone blinkpair > blinkgate | zone *b blinkpair >
+            @CRITICAL_FAILURE blinkgate > zone blinkpair > blinkgate | zone *b blinkpair >
             blinkgate zone | blinkpair blinkgate > zone blinkpair > blinkgate gate`,
   },
   // ================================================================ THE ABYSS (41–50)
   {
     n: 41,
-    name: "The Deep",
+    name: "The Descent",
     blurb: "Tendrils reach up from the dark.",
     d: 0.32,
     gap: 620,
@@ -425,7 +425,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 42,
-    name: "Slammer",
+    name: "Whispers",
     blurb: "The walls slam shut: one slot stays open.",
     d: 0.33,
     gap: 610,
@@ -435,7 +435,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 43,
-    name: "Closing In",
+    name: "Crushing Dark",
     blurb: "The walls of the Abyss close in.",
     d: 0.34,
     gap: 600,
@@ -444,7 +444,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 44,
-    name: "The Eye",
+    name: "Eye Beam",
     blurb: "An eye opens and fires a beam.",
     d: 0.35,
     gap: 600,
@@ -454,7 +454,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 45,
-    name: "Watchers",
+    name: "The Watchers",
     blurb: "Two eyes, two beams.",
     d: 0.37,
     gap: 590,
@@ -464,7 +464,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 46,
-    name: "Grasp",
+    name: "Tendrils",
     blurb: "Tendrils under a watching eye.",
     d: 0.39,
     gap: 580,
@@ -474,7 +474,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 47,
-    name: "The Crush",
+    name: "No Light",
     blurb: "The slammer and the eye, together.",
     d: 0.41,
     gap: 570,
@@ -484,7 +484,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 48,
-    name: "Pressure",
+    name: "Point of No Return",
     blurb: "Shrink to slip through the dark.",
     d: 0.43,
     gap: 560,
@@ -494,7 +494,7 @@ export const LEVEL_DEFS = [
   },
   {
     n: 49,
-    name: "Event Horizon",
+    name: "Last Breath",
     blurb: "Everything the Abyss has, together.",
     d: 0.42,
     gap: 580,
@@ -504,11 +504,11 @@ export const LEVEL_DEFS = [
   },
   {
     n: 50,
-    name: "The Abyss Awakens",
+    name: "The Abyss",
     blurb: "FINAL BOSS: the Abyss opens its eyes.",
     d: 0.47,
     gap: 550,
-    beats: `@FINAL_BOSS_-_THE_ABYSS_AWAKENS gate tendril slammer > walls eyebeam *t |
+    beats: `@FINAL_BOSS_-_THE_ABYSS gate tendril slammer > walls eyebeam *t |
             tendrileye eyepair > eyeslam walls | slammer tendrileye > eyepair *m eyeslam
             | flip gate walls tendril > eyepair eyeslam | mini tendrileye walls > slammer
             eyepair | d=0.52 g=530 @THE_ABYSS_OPENS_ITS_EYES eyeslam tendrileye eyepair

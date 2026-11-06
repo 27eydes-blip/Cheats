@@ -226,7 +226,107 @@ export function recordLevel(res) {
     }
   }
   Save.write();
+  // star milestones reached by this run (paid once each; the map rail shows them too)
+  out.milestones = claimMilestones();
   return out;
+}
+
+// ------------------------------------------------------------------ names, map goodies
+/** "Level 7: Upside Down" (bosses keep the same form; screens add the red boss styling). */
+export const levelLabel = (def) => `Level ${def.n}: ${def.name}`;
+
+/** Hazard kind -> map icon (the faint silhouette inside a locked node). */
+const ICON_OF = {
+  saw: "saw", saw2: "saw", gate: "gate", blade: "axe", bladeduo: "axe", hlaser: "laser",
+  pulse: "pulse", pulsepair: "pulse", flip: "flip", mini: "mini", geyser: "geyser",
+  eruption: "geyser", geyserbar: "geyser", meteor: "meteor", shower: "meteor",
+  firebar: "firebar", firepair: "firebar", flare: "flare", icicle: "icicle",
+  icecurtain: "icicle", slider: "slider", sliderpair: "slider", gauntlet: "slider",
+  zap: "zap", zapstairs: "zap", comet: "comet", blink: "blink", blinkpair: "blink",
+  blinkgate: "blink", zone: "zone", tendril: "tendril", tendrileye: "tendril",
+  slammer: "slammer", eyeslam: "slammer", walls: "walls", eyebeam: "eye", eyepair: "eye",
+};
+let hazardCache = null;
+/** Each level's signature hazard icon: the hazard it introduces, else its most used one. */
+export function mainHazard(n) {
+  if (!hazardCache) {
+    hazardCache = {};
+    const seen = new Set();
+    for (const d of LEVEL_DEFS) {
+      const beats = parseBeats(d.beats, { d: 0, gap: 0 });
+      const cnt = {};
+      for (const b of beats) cnt[b.kind] = (cnt[b.kind] || 0) + 1;
+      const fresh = Object.keys(cnt).filter((k) => !seen.has(k) && k !== "gate");
+      Object.keys(cnt).forEach((k) => seen.add(k));
+      const top = Object.entries(cnt)
+        .filter(([k]) => k !== "gate")
+        .sort((a, b) => b[1] - a[1])[0]?.[0];
+      hazardCache[d.n] = ICON_OF[fresh[0] || top] || "saw";
+    }
+  }
+  return hazardCache[n] || "saw";
+}
+
+/** Treasure chests on the map after every 5th level: chest k opens when level 5k is beaten. */
+export const CHEST_COUNT = LEVEL_COUNT / 5;
+export const chestCoins = (k) => 150 + 50 * (k - 1);
+export const chestState = (k) =>
+  state().claimed[`chest${k}`] ? "open" : rec(5 * k)?.done ? "ready" : "locked";
+/** Open every chest whose level is beaten (once each). Returns [{k, coins}]. */
+export function claimChests() {
+  const lv = state();
+  const out = [];
+  for (let k = 1; k <= CHEST_COUNT; k++) {
+    if (lv.claimed[`chest${k}`] || !rec(5 * k)?.done) continue;
+    lv.claimed[`chest${k}`] = true;
+    out.push({ k, coins: chestCoins(k) });
+    Save.data.coins += chestCoins(k);
+  }
+  if (out.length) Save.write();
+  return out;
+}
+
+/** Star milestones along the map's side rail. */
+export const STAR_MILESTONES = [
+  { stars: 15, kind: "trail", id: "trail_starlight", label: "Starlight trail" },
+  { stars: 40, kind: "coins", coins: 1500, label: "1,500 coins" },
+  { stars: 75, kind: "title", id: "lv_starchaser", label: "Star Chaser title" },
+  { stars: 110, kind: "coins", coins: 4000, label: "4,000 coins" },
+  { stars: 150, kind: "title", id: "lv_perfect", label: "Perfect Pilot title" },
+];
+export const milestoneClaimed = (m) => !!state().claimed[`m${m.stars}`];
+/** Grant every milestone the star total has reached (once each). Returns the new ones. */
+export function claimMilestones() {
+  const lv = state();
+  const have = totalStars();
+  const out = [];
+  for (const m of STAR_MILESTONES) {
+    if (have < m.stars || lv.claimed[`m${m.stars}`]) continue;
+    lv.claimed[`m${m.stars}`] = true;
+    if (m.kind === "coins") Save.data.coins += m.coins;
+    if (m.kind === "title") Titles.grant(m.id);
+    if (m.kind === "trail") {
+      Save.data.cos ||= { owned: {}, equipped: {} };
+      Save.data.cos.owned ||= {};
+      Save.data.cos.owned[m.id] = true;
+    }
+    out.push(m);
+  }
+  if (out.length) Save.write();
+  return out;
+}
+/** Stars earned in realm r (0..4), out of 30. */
+export function realmStars(r) {
+  let s = 0;
+  for (let n = r * 10 + 1; n <= r * 10 + 10; n++) s += starCount(n);
+  return s;
+}
+/** The next level to play: the first unbeaten one, else the first without 3 stars. */
+export function nextLevel() {
+  const c = currentLevel();
+  if (!rec(c)?.done) return c;
+  for (let n = 1; n <= builtCount(); n++) if (starCount(n) < 3) return n;
+  return builtCount();
 }
 
 export { mergeLevelProgress } from "./merge.js";
@@ -244,4 +344,13 @@ export function fmtTime(ms) {
 if (TEST.on && typeof window !== "undefined") {
   window.__glyLevelMerge = mergeLv;
   window.__glyLevelCount = () => builtCount();
+  window.__glyLevels = {
+    getLevel,
+    levelLabel,
+    mainHazard,
+    nextLevel,
+    chestState,
+    STAR_MILESTONES,
+    names: () => LEVEL_DEFS.map((d) => d.name),
+  };
 }
