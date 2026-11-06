@@ -74,7 +74,7 @@ export class LevelCompleteScene extends Phaser.Scene {
       "#ffffff",
     );
     popIn(this, [head, sub], 0);
-    y += 90;
+    y += 120;
 
     // ---- the three stars
     const stars = starsOf(def.n);

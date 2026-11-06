@@ -1079,7 +1079,8 @@ export class GameScene extends Phaser.Scene {
     const tier = Math.floor(this.meters / 250);
     if (playing && tier > this.lastSpeedTier) {
       this.lastSpeedTier = tier;
-      if (tier % 2 === 1) this.hudReady?.onSpeedUp?.();
+      // (levels show their progress bar instead of SPEED UP / distance pop-ups)
+      if (tier % 2 === 1 && !this.levelRun) this.hudReady?.onSpeedUp?.();
     }
 
     // camera: a gentle zoom-out as the run speeds up (at most a few %, eased so it is never
@@ -1317,7 +1318,7 @@ export class GameScene extends Phaser.Scene {
       );
       if (this.coinStepT > 0) this.coinStepT -= rawDt;
       while (this.meters >= this.nextMilestone) {
-        this.milestone(this.nextMilestone);
+        if (!this.levelRun) this.milestone(this.nextMilestone);
         this.nextMilestone += 100;
       }
       if (this.lucky) {
