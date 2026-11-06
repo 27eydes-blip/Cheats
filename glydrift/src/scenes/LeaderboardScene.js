@@ -16,6 +16,9 @@ import { Sfx } from "../audio/sfx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { button, fadeTo, neonText, plainText } from "../ui/ui.js";
 import { titleText } from "../ui/titleText.js";
+
+/** Heroes whose perks touch coins or survival (RONIN), shown with the gold perk badge. */
+const hasCoinPerks = (def) => !!(def.perks?.coinBonus || def.perks?.fireWard);
 import { Titles } from "../data/titles.js";
 
 const MEDALS = [0xffd23f, 0xdfe8f5, 0xd8894a];
@@ -377,6 +380,19 @@ export class LeaderboardScene extends Phaser.Scene {
     return g;
   }
 
+  /**
+   * A small cyan speed badge (two chevrons) on runs flown with a faster hero (SPLICE +25%,
+   * WALLRUNNER +20%, RONIN +10%): their whole run moves quicker, so the board says so.
+   */
+  speedBadge(x, y) {
+    const g = this.add.graphics({ x, y });
+    g.fillStyle(0x1a0630, 1).fillCircle(0, 0, 11);
+    g.fillStyle(0x3ef4ff, 1).fillCircle(0, 0, 8);
+    g.fillStyle(0x0a2a4a, 1);
+    for (const dx of [-4, 1]) g.fillTriangle(dx - 1, -5, dx - 1, 5, dx + 4, 0);
+    return g;
+  }
+
   /** Tap a hero icon: a little tooltip with the hero's name (Korean names use Galmuri). */
   heroTip(cont, icon, def) {
     // your own row's icon is a container (hero + cosmetics) with no size of its own: give it
@@ -390,7 +406,8 @@ export class LeaderboardScene extends Phaser.Scene {
     else icon.setInteractive();
     icon.on("pointerup", () => {
       cont.tip?.destroy();
-      const t = neonText(this, icon.x, icon.y - r - 18, def.name, 22, def.color, {
+      const fast = (def.speed ?? 1) > 1 ? ` · +${Math.round((def.speed - 1) * 100)}% SPEED` : "";
+      const t = neonText(this, icon.x, icon.y - r - 18, def.name + fast, 22, def.color, {
         blur: 8,
       });
       cont.add(t);
@@ -611,7 +628,10 @@ export class LeaderboardScene extends Phaser.Scene {
         .lineStyle(2, spec.color, 0.55)
         .strokeEllipse(cx, heroY + 58 * spec.scale, 96 * spec.scale + 20, 16);
       col.add([disc, score, name, hero]);
-      if (def.perks) col.add(this.perkBadge(cx + 34 * spec.scale + 14, heroY + 24 * spec.scale));
+      if (hasCoinPerks(def))
+        col.add(this.perkBadge(cx + 34 * spec.scale + 14, heroY + 24 * spec.scale));
+      if ((def.speed ?? 1) > 1)
+        col.add(this.speedBadge(cx + 34 * spec.scale + 14, heroY - 24 * spec.scale));
       this.heroTip(col, hero, def);
       if (mine) {
         const tag = neonText(this, cx, heroY - 70 * spec.scale - 16, "YOU", 16, 0x3ef4ff, {
@@ -790,7 +810,8 @@ export class LeaderboardScene extends Phaser.Scene {
         },
       );
       this.list.add([g, rankTxt, icon, name, score]);
-      if (def.perks) this.list.add(this.perkBadge(164, y + 16));
+      if (hasCoinPerks(def)) this.list.add(this.perkBadge(164, y + 16));
+      if ((def.speed ?? 1) > 1) this.list.add(this.speedBadge(164, y - 16));
       this.heroTip(this.list, icon, def);
     });
     this.contentH = offset + Math.max(0, rows.length - 5) * ROW_H + 12;
@@ -817,6 +838,7 @@ export class LeaderboardScene extends Phaser.Scene {
     const def = getCharacter(me.character);
     this.you.add(neonText(this, 80, 0, `#${me.rank}`, 30, 0x3ef4ff, { blur: 8 }));
     this.you.add(heroImage(this, 150, 0, def.id, 0.4 / HI));
+    if ((def.speed ?? 1) > 1) this.you.add(this.speedBadge(172, -18));
     const fl = flairOf({ flair: myFlair() });
     this.you.add(nameText(this, 192, -14, name, { size: 24, gold: fl.gold, badge: fl.s1, font: NUM_FONT }));
     this.you.add(titleText(this, 193, 8, Titles.equippedId(), { size: 12, ox: 0 }));

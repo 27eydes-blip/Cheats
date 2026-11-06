@@ -837,6 +837,34 @@ export const CHARACTERS = [
     desc: "Small. Stubbable. Unstoppable. All aura.",
   },
   {
+    id: "splice",
+    name: "SPLICE",
+    title: "Black Peregrine",
+    rarity: "legendary",
+    color: 0x5a7aa8,
+    color2: 0xffc61a,
+    texture: "hero_splice",
+    pixel: {
+      atlas: "pxc",
+      frames: Array.from({ length: 8 }, (_, i) => `splice_${i}`),
+      mode: "falcon", // dive tucks, barrel roll, sonic boom, wind streaks, perch (spliceFx.js)
+      trail: [0xffffff, 0xbfe0ff, 0x7aa0d0, 0x3a5274],
+    },
+    fx: {
+      death: [
+        { kind: "feather", color: 0x2a3040, n: 18 },
+        { kind: "pixel", color: 0x7aa0d0, n: 14 },
+      ],
+    },
+    scale: 0.62,
+    cost: 12000,
+    // SPEED: the whole run moves 25% quicker for him (standard hitbox, gravity and flap)
+    speed: 1.25,
+    challenge: { stat: "maxDistance", value: 2000, text: "Reach 2,000m in one run" },
+    perks: { list: ["+25% SPEED"] },
+    desc: "Fastest thing in the sky.",
+  },
+  {
     id: "wallrunner",
     name: "WALLRUNNER",
     title: "Leprechaun",

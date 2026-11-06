@@ -702,20 +702,24 @@ export class CharacterScene extends Phaser.Scene {
     });
     this.fx.drift = 0;
 
-    // orbiting showcase — depth & scale fake a 3D turntable
-    this.orbit += dt * 1.25;
+    // orbiting showcase — depth & scale fake a 3D turntable. SPLICE breaks off to land on his
+    // perch in the middle (spliceFx.js), so the orbit eases out while he's down.
+    const perching = !!this.rig.falcon?.holding;
+    this.perchK = Phaser.Math.Clamp((this.perchK || 0) + (perching ? dt : -dt) * 2.2, 0, 1);
+    const pk = this.perchK * this.perchK * (3 - 2 * this.perchK);
+    if (!perching) this.orbit += dt * 1.25;
     const a = this.orbit;
     const x = this.cx + Math.cos(a) * 150;
     const y = this.cy + Math.sin(a) * 34 - 10;
     const depthK = (Math.sin(a) + 1) / 2;
-    this.rig.displayScale = 1.08 + depthK * 0.46;
-    this.rig.setPosition(x, y);
-    this.rig.angle = Math.cos(a) < 0 ? -12 : 12;
+    this.rig.displayScale = Phaser.Math.Linear(1.08 + depthK * 0.46, 1.5, pk);
+    this.rig.setPosition(Phaser.Math.Linear(x, this.cx, pk), Phaser.Math.Linear(y, this.cy - 30, pk));
+    this.rig.angle = (Math.cos(a) < 0 ? -12 : 12) * (1 - pk);
     this.rig.sprite.setFlipX(
       Math.cos(a) > 0 && ["ember", "volt", "draco", "mecha"].includes(def.id),
     );
     this.flapT -= dt;
-    if (this.flapT <= 0) {
+    if (this.flapT <= 0 && !perching) {
       this.flapT = 0.85;
       this.rig.flap();
     }
