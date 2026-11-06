@@ -21,6 +21,9 @@ import { plusRewardFor } from "../data/passPlus.js";
 import { titleText } from "../ui/titleText.js";
 import { Titles } from "../data/titles.js";
 import { Account } from "../online/account.js";
+import { LbReset } from "../online/lbReset.js";
+import { CrashSafety } from "../systems/crashSafety.js";
+import { Updater } from "../systems/updater.js";
 import { openAccount } from "../ui/accountModal.js";
 import { getCosmetic, Shop } from "../data/cosmetics.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
@@ -333,6 +336,7 @@ export class MenuScene extends Phaser.Scene {
       const best = neonText(this, W / 2, L.best, `BEAT YOUR BEST · ${s.best}`, 24, 0xffd23f, {
         blur: 10,
       }).setDepth(100);
+      this.bestText = best;
       popIn(this, best, 250);
       this.tweens.add({
         targets: best,
@@ -423,6 +427,7 @@ export class MenuScene extends Phaser.Scene {
     // Each waits until the one before has fully finished (see update()).
     this.seasonQueue.unshift(
       () => (!Leaderboard.username ? this.promptName(true) : null),
+      () => this.maybeLbResetNotice(),
       () => {
         const ls = Progression.loginStatus();
         if (ls.canClaim) this.openLogin(ls);
@@ -430,6 +435,19 @@ export class MenuScene extends Phaser.Scene {
       () => this.maybeMoveNotice(),
     );
     this.queueT = 0.45;
+    // a run the game was closed in the middle of (or errored out of) was finished for them
+    const saved = CrashSafety.lastRecovered;
+    if (saved) {
+      CrashSafety.lastRecovered = null;
+      this.time.delayedCall(700, () =>
+        toast(this, "YOUR LAST RUN WAS SAVED", 0x39ff88, {
+          y: this.H * 0.3,
+          sub: `${saved.score} points · ${saved.distance} m · on the leaderboard`,
+        }),
+      );
+    }
+    // a newer version is live: the home screen is a safe moment to load it
+    Updater.applyIfSafe();
 
     this.input.keyboard?.on("keydown-SPACE", () => this.startGame("normal"));
 
@@ -1025,9 +1043,10 @@ export class MenuScene extends Phaser.Scene {
       this.queueT -= dt;
       if (this.queueT <= 0) {
         this.seasonBusy = true;
-        Promise.resolve(this.seasonQueue.shift()()).then(() => {
+        Promise.resolve(this.seasonQueue.shift()()).then((shown) => {
           this.seasonBusy = false;
-          this.queueT = 0.5;
+          // a step with nothing to show (it says so with false) doesn't hold up the next one
+          this.queueT = shown === false ? 0 : 0.5;
         });
       }
     }
@@ -1060,6 +1079,87 @@ export class MenuScene extends Phaser.Scene {
     st.shown++;
     Save.write();
     return this.openMovePopup(signedIn);
+  }
+
+  /**
+   * The leaderboards were reset on the server (online/lbReset.js): once per player, a
+   * notice that their progress is safe and everyone starts fresh. Never on a new install.
+   */
+  async maybeLbResetNotice() {
+    const id = await LbReset.check();
+    if (!id || this.leaving || !this.scene.isActive()) return false;
+    // the old best is gone from this device: take it off the home screen too
+    this.bestText?.destroy();
+    this.bestText = null;
+    if (this.tickItems) this.tickItems = this.tickItems.filter((t) => !/^Your best:/.test(t));
+    // the queue waits for a free screen, but the check above took a moment: wait again
+    while (!this.popupFree()) {
+      await new Promise((r) => this.time.delayedCall(250, r));
+      if (this.leaving || !this.scene.isActive()) return;
+    }
+    return this.openLbResetNotice();
+  }
+
+  openLbResetNotice() {
+    return new Promise((resolve) => {
+      const W = this.W;
+      const H = this.H;
+      const h = 620;
+      const y0 = H / 2 - h / 2;
+      const c = this.modalBase(h, 0xff3ea8);
+      this.lbNoticeOpen = true;
+      // a trophy with a reset arrow, drawn in the game's pixel-icon style
+      const icon = this.add.graphics().setPosition(W / 2, y0 + 92);
+      const px = 8; // a chunky pixel trophy
+      const cup = [
+        "1111111111",
+        "1011111101",
+        "1011111101",
+        "0111111110",
+        "0011111100",
+        "0001111000",
+        "0000110000",
+        "0001111000",
+        "0011111100",
+      ];
+      cup.forEach((row, j) =>
+        [...row].forEach((v, i) => {
+          if (v !== "1") return;
+          icon.fillStyle(j === 0 || i === 2 ? 0xfff1a0 : 0xffd23f, 1);
+          icon.fillRect((i - 5) * px, (j - 5) * px, px, px);
+        }),
+      );
+      c.add(icon);
+      c.add(
+        neonText(this, W / 2, y0 + 176, "LEADERBOARD RESET", 40, 0xff3ea8, { blur: 14 }),
+      );
+      c.add(
+        plainText(
+          this,
+          W / 2,
+          y0 + 318,
+          "Due to inflated scores, the leaderboard has been reset. Your coins, heroes and " +
+            "progress are safe. Everyone starts fresh — go claim the #1 spot!",
+          24,
+          "#f1ebff",
+          { wrap: W - 150, lineSpacing: 8 },
+        ),
+      );
+      Sfx.combo(3);
+      Haptics.light();
+      c.add(
+        button(this, W / 2, y0 + h - 78, 320, 88, "LET'S GO", {
+          color: 0x39ff88,
+          size: 32,
+          onClick: () => {
+            LbReset.markShown();
+            this.lbNoticeOpen = false;
+            this.closeModal();
+            resolve();
+          },
+        }),
+      );
+    });
   }
 
   openMovePopup(signedIn) {

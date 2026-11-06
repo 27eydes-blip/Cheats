@@ -6,7 +6,10 @@ import "@fontsource/silkscreen/700.css";
 import "./fonts/galmuri.css"; // Hangul pixel font (손주원)
 import Phaser from "phaser";
 import "./gfx/tileSpriteFix.js";
-import { watchContext } from "./systems/frameGuard.js";
+import { GuardHooks, watchContext } from "./systems/frameGuard.js";
+import { CrashReport } from "./systems/crashReport.js";
+import { CrashSafety } from "./systems/crashSafety.js";
+import { Updater } from "./systems/updater.js";
 import { setupView, VIEW, viewDrifted, viewportSize, wantsFit } from "./config.js";
 import { BackdropScene } from "./scenes/BackdropScene.js";
 import { BootScene } from "./scenes/BootScene.js";
@@ -205,6 +208,15 @@ async function boot() {
     game.registry.set("safeTop", Math.round(((insetTop + cropTop) * VIEW.H) / canvasH));
     game.registry.set("safeBottom", Math.round(((insetBottom + cropBottom) * VIEW.H) / canvasH));
   };
+  // crash safety: report errors (with where the run was), finish an interrupted run instead of
+  // losing it, and keep everyone on the latest version (src/systems/crash*.js, updater.js)
+  CrashReport.setClient(() => Leaderboard.client());
+  CrashReport.install();
+  GuardHooks.onError = (err, kind = "frame") => CrashReport.report(kind, err);
+  GuardHooks.beforeRecover = () => CrashSafety.recover("error");
+  CrashSafety.lastRecovered = CrashSafety.recoverAtLaunch();
+  CrashReport.flush();
+  Updater.start(game);
   game.events.once("ready", () => {
     updateSafe();
     watchContext(game);

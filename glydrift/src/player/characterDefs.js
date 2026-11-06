@@ -927,6 +927,37 @@ export const CHARACTERS = [
     desc: "Fastest thing in the sky.",
   },
   {
+    // THE HADDAD: an original pixel boxer. Cosmetic only: standard hitbox, speed, gravity
+    // and score rules (no perks). Moves and effects in haddadFx.js.
+    id: "haddad",
+    name: "THE HADDAD",
+    title: "The Contender",
+    rarity: "legendary",
+    color: 0xe8202a,
+    color2: 0xffffff,
+    texture: "hero_haddad",
+    pixel: {
+      atlas: "pxc",
+      frames: Array.from({ length: 7 }, (_, i) => `haddad_${i}`),
+      mode: "boxer", // uppercut flaps, guard bounce, slips, punch-count combos, K.O.! (haddadFx.js)
+      trail: [0xffffff, 0xff7a72, 0xe8202a, 0x9c0e16],
+    },
+    fx: {
+      death: [
+        { kind: "star", color: 0xffd23f, n: 16 },
+        { kind: "pixel", color: 0xe8202a, n: 14 },
+      ],
+    },
+    scale: 0.62,
+    cost: 12000,
+    challenge: {
+      stat: "maxCombo",
+      value: 10,
+      text: "Get a x10 combo",
+    },
+    desc: "Never stays down.",
+  },
+  {
     id: "wallrunner",
     name: "WALLRUNNER",
     title: "Leprechaun",

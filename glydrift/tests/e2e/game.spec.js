@@ -61,7 +61,7 @@ async function startRun(page, label = "ENDLESS") {
   expect((await gameState(page)).state).toBe("playing");
 }
 
-test("loads with no console errors, framed correctly, no browser gestures", async ({
+test("loads with no console errors, framed correctly, no browser gestures @smoke", async ({
   page,
 }, testInfo) => {
   const log = await openGame(page);
@@ -115,7 +115,7 @@ test("loads with no console errors, framed correctly, no browser gestures", asyn
   await snap(page, testInfo, "01-home");
 });
 
-test("release build loads with no console errors", async ({ page }) => {
+test("release build loads with no console errors @smoke", async ({ page }) => {
   // the release build exposes no test hooks: openGame waits for its canvas and lets it run.
   // It draws every frame, and the test clock ticks every 16 ms (a hair faster than a real
   // 60 Hz screen), so with no frame cap it renders twice what it did under the old 61 fps
@@ -293,7 +293,7 @@ test("pause and resume (button, keys, app in background)", async ({
   expect(log.errors).toEqual([]);
 });
 
-test("game over and retry in under a second", async ({ page }, testInfo) => {
+test("game over and retry in under a second @smoke", async ({ page }, testInfo) => {
   const log = await openGame(page);
   await startRun(page);
   await waitFor(
@@ -321,7 +321,7 @@ test("game over and retry in under a second", async ({ page }, testInfo) => {
   expect(log.errors).toEqual([]);
 });
 
-test("buys an item in the shop", async ({ page }, testInfo) => {
+test("buys an item in the shop @smoke", async ({ page }, testInfo) => {
   const log = await openGame(page);
   await tap(page, "SHOP", 1600);
   await waitFor(page, () => window.__glydrift.scene.isActive("Shop"));
@@ -799,7 +799,7 @@ test("a huge run earns one spin, not dozens", async ({ page }, testInfo) => {
   expect(log.errors).toEqual([]);
 });
 
-test("realm changes never pause the run", async ({ page }, testInfo) => {
+test("realm changes never pause the run @smoke", async ({ page }, testInfo) => {
   // Entering a realm or a dimension keeps the action going: no slow-mo, obstacles keep
   // spawning straight through the boundary, and the title shows small and high over the play.
   // The Calm (and the blackout into the Abyss) is the one designed pause.
@@ -1024,7 +1024,7 @@ async function openAccountScreen(page) {
 const saveNow = (page) =>
   page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
 
-test("accounts: create, log out, sign in on a new device, delete", async ({
+test("accounts: create, log out, sign in on a new device, delete @smoke", async ({
   page,
 }, testInfo) => {
   test.skip(
@@ -3273,6 +3273,21 @@ test("levels: every level has its own name, shown on the start screen, HUD and L
     () => !window.__glydrift.scene.getScene("Game").levelRun.hud.introC,
   );
   expect(gone).toBe(true);
+  // no coin pickups in a level (only its three star coins), and no coin counter
+  await page.evaluate(() => window.__glyGod(true));
+  await run(page, 8000);
+  const coins = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const om = g.scene.getScene("Game").obstacles;
+    return {
+      active: om.coins.filter((c) => c.active).length,
+      counter: g.scene.getScene("Hud").coinText.visible,
+      metres: Math.round(g.scene.getScene("Game").meters),
+    };
+  });
+  await page.evaluate(() => window.__glyGod(false));
+  expect(coins.metres).toBeGreaterThan(100);
+  expect(coins).toMatchObject({ active: 0, counter: false });
   expect(log.errors).toEqual([]);
 });
 
@@ -3400,6 +3415,8 @@ test("levels map: the current level, its hero and its stars sit clear of the rea
         heroTop: ls.rig.y - 40,
         nodeTop: y - nd.R,
         starsBottom: y + nd.R + 34,
+        // where the level sits in the free space (0 = at the realm bar, 1 = at PLAY)
+        at: (y - (ls.headerH + 50)) / (ls.playY - 50 - (ls.headerH + 50)),
       };
       ls.openLevel(nd.n);
       return out;
@@ -3415,8 +3432,149 @@ test("levels map: the current level, its hero and its stars sit clear of the rea
     expect(fit.nodeTop, `${where}: node under the realm bar`).toBeGreaterThanOrEqual(fit.top - 1);
     expect(fit.starsBottom, `${where}: stars behind PLAY`).toBeLessThanOrEqual(fit.bottom + 1);
     expect(card.y, `${where}: stars behind the card`).toBeLessThanOrEqual(card.sheetTop + 1);
+    // centred in the free space, not squeezed against PLAY (level 1 sits at the top of the map)
+    if (done > 0) expect(fit.at, `${where}: squeezed against PLAY`).toBeLessThan(0.65);
   }
   await snap(page, testInfo, "levels-06-map-fit");
+  expect(log.errors).toEqual([]);
+});
+
+test("levels: pause (button, menu, settings, practice, background, back to the map)", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page);
+  const startLevel = async (n, practice = false) => {
+    await page.evaluate(
+      ({ n, practice }) => {
+        const g = window.__glydrift;
+        for (const k of ["LevelComplete", "Hud", "Game", "LevelSelect", "Menu"]) g.scene.stop(k);
+        g.scene.start("Game", { mode: "level", level: n, practice });
+      },
+      { n, practice },
+    );
+    await run(page, 900);
+  };
+  const pauseBtnAt = () =>
+    page.evaluate(() => {
+      const g = window.__glydrift;
+      const hud = g.scene.getScene("Hud");
+      const b = hud.pauseBtn;
+      const cam = hud.cameras.main;
+      const r = g.canvas.getBoundingClientRect();
+      return {
+        x: r.left + (((b.x - cam.worldView.x) * cam.zoom + cam.x) * r.width) / g.canvas.width,
+        y: r.top + (((b.y - cam.worldView.y) * cam.zoom + cam.y) * r.height) / g.canvas.height,
+        top: b.y - 34,
+        safeTop: g.registry.get("safeTop") || 0,
+        visible: b.visible && b.alpha > 0,
+      };
+    });
+  const pauseTexts = () =>
+    page.evaluate(() => {
+      const hud = window.__glydrift.scene.getScene("Hud");
+      const out = [];
+      const walk = (o) => {
+        if (o.type === "Text" && o.visible) out.push(o.text);
+        (o.list || []).forEach(walk);
+      };
+      if (hud.pauseLayer) walk(hud.pauseLayer);
+      return out;
+    });
+  const gamePaused = () => page.evaluate(() => window.__glydrift.scene.isPaused("Game"));
+
+  await startLevel(3);
+  // the pause button is there before the first tap, top-left, clear of the notch
+  let b = await pauseBtnAt();
+  expect(b.visible).toBe(true);
+  expect(b.top).toBeGreaterThan(b.safeTop);
+  await press(page, b);
+  await run(page, 300);
+  expect(await gamePaused()).toBe(true);
+  expect(await pauseTexts()).toEqual(
+    expect.arrayContaining(["PAUSED", "RESUME", "RESTART LEVEL", "PRACTICE MODE", "SETTINGS", "BACK TO LEVEL MAP"]),
+  );
+  await snap(page, testInfo, "levels-07-pause");
+  // settings and back
+  await tap(page, "SETTINGS", 300);
+  const st = await pauseTexts();
+  expect(st).toEqual(expect.arrayContaining(["MUSIC", "SOUND EFFECTS", "BACK"]));
+  expect(st.some((t) => t.startsWith("REDUCE FLASHING"))).toBe(true);
+  await tap(page, "BACK", 300);
+  expect(await pauseTexts()).toEqual(expect.arrayContaining(["RESUME"]));
+  await tap(page, "RESUME", 300);
+  expect(await gamePaused()).toBe(false);
+  // fly, crash: the pause button stays (levels respawn at the checkpoint)
+  await page.evaluate(() => window.__glyGod(true)); // no real crashes while we test the menu
+  await page.evaluate(() => window.__glydrift.scene.getScene("Game").onTap());
+  await run(page, 500);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Hud").onDeath());
+  await run(page, 500);
+  b = await pauseBtnAt();
+  expect(b.visible).toBe(true);
+  // the app goes to the background, or a call takes focus: it pauses by itself
+  for (const ev of ["hidden", "blur"]) {
+    await page.evaluate((ev) => window.__glydrift.events.emit(ev), ev);
+    await run(page, 200);
+    expect(await gamePaused(), ev).toBe(true);
+    await tap(page, "RESUME", 300);
+    expect(await gamePaused()).toBe(false);
+  }
+  // practice mode restarts the level in practice
+  await press(page, await pauseBtnAt());
+  await run(page, 300);
+  await tap(page, "PRACTICE MODE", 900);
+  const prac = await page.evaluate(() => {
+    const gs = window.__glydrift.scene.getScene("Game");
+    return { n: gs.levelDef?.n, practice: gs.practice };
+  });
+  expect(prac).toEqual({ n: 3, practice: true });
+  // and back to the level map
+  await press(page, await pauseBtnAt());
+  await run(page, 300);
+  expect(await pauseTexts()).toEqual(expect.arrayContaining(["PLAY FOR REAL"]));
+  await tap(page, "BACK TO LEVEL MAP", 900);
+  expect(
+    await page.evaluate(() => {
+      const g = window.__glydrift;
+      return { map: g.scene.isActive("LevelSelect"), game: g.scene.isActive("Game") || g.scene.isPaused("Game") };
+    }),
+  ).toEqual({ map: true, game: false });
+  await page.evaluate(() => window.__glyGod(false));
+  expect(log.errors).toEqual([]);
+});
+
+test("levels: after a crash the level waits at the checkpoint until you tap", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page);
+  await page.evaluate(() => {
+    const g = window.__glydrift;
+    for (const k of ["LevelComplete", "Hud", "Game", "LevelSelect", "Menu"]) g.scene.stop(k);
+    g.scene.start("Game", { mode: "level", level: 1 });
+  });
+  await run(page, 900);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Game").onTap());
+  await run(page, 600);
+  // a crash: back to the checkpoint, holding still
+  await page.evaluate(() => window.__glydrift.scene.getScene("Game").levelRun.respawn());
+  await run(page, 3000); // hands off for 3 s: no fall into the floor, no extra crashes
+  const waiting = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const gs = g.scene.getScene("Game");
+    return {
+      state: gs.state,
+      deaths: gs.levelRun.deaths,
+      hint: g.scene.getScene("Hud").hint.visible,
+      onScreen: gs.player.y > 0 && gs.player.y < gs.H,
+    };
+  });
+  expect(waiting).toEqual({ state: "ready", deaths: 1, hint: true, onScreen: true });
+  // one tap and it flies on
+  await page.evaluate(() => window.__glydrift.scene.getScene("Game").onTap());
+  await run(page, 300);
+  expect(await page.evaluate(() => window.__glydrift.scene.getScene("Game").state)).toBe("playing");
   expect(log.errors).toEqual([]);
 });
 
@@ -3479,10 +3637,13 @@ test("levels: the layout is the same every time, and a checkpoint replays it exa
       s.die();
       window.__glyGod(true);
       step(80);
+      // the level now waits at the checkpoint until the player taps
+      const waited = s.state;
+      s.onTap();
       step(60 * 8);
       const replay = beats();
       window.__glyNoRender = false;
-      return { seen, replay, cp, deaths: lr.deaths, state: s.state };
+      return { seen, replay, cp, deaths: lr.deaths, state: s.state, waited };
     });
   };
   const a = await layout();
@@ -3495,6 +3656,7 @@ test("levels: the layout is the same every time, and a checkpoint replays it exa
   expect(n).toBeGreaterThan(a.cp + 2);
   expect(a.replay.slice(0, n)).toEqual(a.seen.slice(0, n));
   expect(a.deaths).toBe(1);
+  expect(a.waited).toBe("ready");
   expect(a.state).toBe("playing");
   expect(log.errors).toEqual([]);
 });
@@ -3523,7 +3685,32 @@ test("levels: offline best times wait in the upload queue (time encoded as a sco
 // every built level: a bot flying with real flaps and real collisions finishes it (every stretch
 // between checkpoints cleared from a clean respawn), and in god mode it reaches all 3 star coins,
 // none of which sits inside a hazard
-test("levels: every built level is beatable (bot) and its star coins are fair (god run)", async ({
+// smoke: level 1 can be played to the finish (the full lane bots every level, below)
+test("levels: level 1 can be flown to the finish @smoke", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  const log = await openGame(page);
+  await page.evaluate(() => {
+    const g = window.__glydrift;
+    for (const k of ["LevelComplete", "Hud", "Game"]) g.scene.stop(k);
+    g.scene.start("Game", { mode: "level", level: 1 });
+  });
+  await run(page, 1000);
+  const r = await page.evaluate(botPlay, {});
+  expect(r.finished).toBe(true);
+  expect(r.stuck).toBe(null);
+  expect(log.errors).toEqual([]);
+});
+
+// one test per realm (10 levels each), so the five can run side by side on separate machines
+for (const [realm, from] of [
+  ["Neon Void", 1],
+  ["Solar Storm", 11],
+  ["Frozen Nebula", 21],
+  ["Glitch Realm", 31],
+  ["Abyss", 41],
+])
+test(`levels: every built level is beatable (bot) and its star coins are fair (god run): ${realm}`, async ({
   page,
 }, testInfo) => {
   // hazards scale with the screen's height, so every Chromium screen size is checked (small
@@ -3532,11 +3719,12 @@ test("levels: every built level is beatable (bot) and its star coins are fair (g
     testInfo.project.name.split("-")[0] !== "chromium",
     "bot runs on Chromium (the layouts are the same on every engine)",
   );
-  test.setTimeout(1_500_000);
+  test.setTimeout(600_000);
   const log = await openGame(page);
   const count = await page.evaluate(() => window.__glyLevelCount());
+  test.skip(from > count, `${realm} levels aren't built yet`);
   const report = [];
-  for (let n = 1; n <= count; n++) {
+  for (let n = from; n <= Math.min(count, from + 9); n++) {
     for (const god of [false, true]) {
       await page.evaluate(
         ({ n, god }) => {
@@ -3578,4 +3766,552 @@ test("levels: every built level is beatable (bot) and its star coins are fair (g
     ),
   );
   expect(log.errors).toEqual([]);
+});
+
+// the November 2026 leaderboard reset: once the server publishes it (glydrift_meta), every
+// returning player's best is cleared and they see the notice once; new installs never do
+test("leaderboard reset: one notice per player, bests cleared, progress kept, strict score checks", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(180_000);
+  const returning = {
+    ...SAVE,
+    best: 25191,
+    coins: 4321,
+    stats: { runs: 40, maxDistance: 3826 },
+    daily: { date: "", best: 9000, attempts: 2, ghost: null, ghostChar: "volt", lastPlayed: "" },
+    lv: { p: { 1: { done: true, coins: [true, true, true], flawless: true, best: 30000, attempts: 1 } }, claimed: {}, played: 1 },
+    lbQueue: [
+      { type: "score", level: "endless", score: 20000, character: "volt", run_time_ms: 120000, distance: 3000 },
+      { type: "score", level: "lv-3", score: 11905, character: "volt", run_time_ms: 42000, distance: 700 },
+    ],
+  };
+  const log = await openGame(page, { flags: ["lbreset=2026-11"], save: returning });
+  const menuState = () =>
+    page.evaluate(() => {
+      const m = window.__glydrift.scene.getScene("Menu");
+      const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+      const texts = [];
+      const walk = (o) => {
+        if (o?.text) texts.push(o.text);
+        o?.list?.forEach(walk);
+      };
+      walk(m.modal);
+      return {
+        open: !!m.lbNoticeOpen,
+        modals: [m.modal, document.querySelector("#name-modal.open"), m.claiming].filter(Boolean).length,
+        texts,
+        best: s.best,
+        dailyBest: s.daily.best,
+        coins: s.coins,
+        unlocked: s.unlocked,
+        lv: s.lv,
+        queue: s.lbQueue.map((q) => q.level),
+        lbReset: s.lbReset,
+        lbNotice: s.lbNotice,
+        bestText: !!m.bestText,
+      };
+    });
+  let st;
+  for (let i = 0; i < 30 && !(st = await menuState()).open; i++) await run(page, 200);
+  expect(st.open).toBe(true);
+  expect(st.modals).toBe(1); // nothing stacks on top of it
+  expect(st.texts).toEqual(
+    expect.arrayContaining([
+      "LEADERBOARD RESET",
+      "Due to inflated scores, the leaderboard has been reset. Your coins, heroes and progress are safe. Everyone starts fresh — go claim the #1 spot!",
+      "LET'S GO",
+    ]),
+  );
+  // the old best is gone (so the next run sets a new one); everything else is kept
+  expect(st.best).toBe(0);
+  expect(st.dailyBest).toBe(0);
+  expect(st.bestText).toBe(false);
+  expect(st.coins).toBe(4321);
+  expect(st.unlocked).toMatchObject(returning.unlocked); // every hero kept (challenges met can add more)
+  expect(st.lv).toEqual(returning.lv);
+  expect(st.queue).toEqual(["lv-3"]); // a pre-reset endless score never reaches the new board
+  await run(page, 700);
+  await snap(page, testInfo, "lb-reset-notice");
+  // LET'S GO closes it for good
+  await tap(page, "LET'S GO", 600);
+  st = await menuState();
+  expect(st.open).toBe(false);
+  expect(st.lbReset).toBe("2026-11");
+  expect(st.lbNotice).toBe("");
+  // next launch: no notice again
+  await page.reload();
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  for (let i = 0; i < 15; i++) {
+    await run(page, 200);
+    expect((await menuState()).open).toBe(false);
+  }
+
+  // the account remembers it: a save that saw the reset wins over an old best from before it
+  const merged = await page.evaluate(() => {
+    const { mergeSaves } = window.__glyAccount;
+    const old = { best: 25191, lbReset: "", stats: { runs: 40 }, unlocked: { volt: true } };
+    const fresh = { best: 300, lbReset: "2026-11", stats: { runs: 41 }, unlocked: { volt: true } };
+    const a = mergeSaves(old, fresh);
+    const b = mergeSaves(fresh, old);
+    return { a: [a.best, a.lbReset], b: [b.best, b.lbReset] };
+  });
+  expect(merged).toEqual({ a: [300, "2026-11"], b: [300, "2026-11"] });
+
+  // the same limits as the server's glydrift_check_score
+  const checks = await page.evaluate(() => {
+    const { isPlausible } = window.__glyLb;
+    const t = (level, score, distance, run_time_ms) => isPlausible({ level, score, distance, run_time_ms });
+    return {
+      realTop: t("endless", 25191, 3826, 129000),
+      noDistance: t("endless", 25191, 0, 129000),
+      tooManyPoints: t("endless", 200000, 3826, 129000),
+      teleport: t("endless", 9000, 9000, 20000),
+      distanceOk: t("endless-distance", 3826, 3826, 129000),
+      distanceMismatch: t("endless-distance", 5000, 3826, 129000),
+      levelOk: t("lv-5", Math.round(5e8 / 42000), 700, 42000),
+      levelFaked: t("lv-6", 99999, 700, 42000),
+    };
+  });
+  expect(checks).toEqual({
+    realTop: true,
+    noDistance: false,
+    tooManyPoints: false,
+    teleport: false,
+    distanceOk: true,
+    distanceMismatch: false,
+    levelOk: true,
+    levelFaked: false,
+  });
+  expect(log.errors).toEqual([]);
+});
+
+test("leaderboard reset: never shown on a brand-new install", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, {
+    flags: ["lbreset=2026-11"],
+    save: { ...SAVE, best: 0, stats: { runs: 0 } },
+  });
+  for (let i = 0; i < 20; i++) {
+    await run(page, 200);
+    const open = await page.evaluate(() => !!window.__glydrift.scene.getScene("Menu").lbNoticeOpen);
+    expect(open).toBe(false);
+  }
+  const s = await page.evaluate(() => JSON.parse(localStorage.getItem("glydrift.save.v1")));
+  expect(s.lbReset).toBe("2026-11"); // applied quietly, so it never comes up later
+  expect(s.lbNotice).toBe("");
+  expect(log.errors).toEqual([]);
+});
+
+// the save keeps only the parts it knows on load: LEVEL MODE progress must be one of them
+test("levels: stars and best times survive closing and reopening the game", async ({ page }, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const lv = {
+    p: { 1: { done: true, coins: [true, true, true], flawless: true, best: 30000, attempts: 2 } },
+    claimed: {},
+    played: 2,
+  };
+  const log = await openGame(page, { save: { ...SAVE, stats: { runs: 3 }, lv } });
+  await run(page, 600);
+  const first = await page.evaluate(() => window.__glyShop.data().lv.p[1]);
+  await page.reload();
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  await run(page, 600);
+  const again = await page.evaluate(() => window.__glyShop.data().lv.p[1]);
+  expect(first).toEqual(lv.p[1]);
+  expect(again).toEqual(lv.p[1]);
+  expect(log.errors).toEqual([]);
+});
+
+test("THE HADDAD: standard hitbox, uppercut flap, slip, punch-count combo, K.O.! best, knockout death, showcase", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(240_000);
+  const log = await openGame(page, { flags: ["character=haddad"] });
+  await startRun(page);
+  const step = (n) =>
+    page.evaluate((n) => {
+      const s = window.__glydrift.scene.getScene("Game");
+      window.__t ??= 2e6;
+      for (let i = 0; i < n; i++) {
+        if (s.state === "playing" && s.player.y > s.H * 0.5 && s.player.vy > -60) s.onTap();
+        window.__t += 1000 / 60;
+        s.stepFrame(window.__t, 1000 / 60);
+      }
+    }, n);
+  await page.evaluate(() => window.__glyGod(true));
+  await step(150);
+  const base = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const rig = s.player.rig;
+    return {
+      id: s.charDef.id,
+      radius: s.player.radius,
+      speed: s.charDef.speed ?? 1,
+      perks: s.charDef.perks ?? null,
+      mode: rig.px.mode,
+      frame: rig.boxer.frame(),
+      hasHat: !!rig.hat,
+    };
+  });
+  expect(base).toMatchObject({ id: "haddad", radius: 21, speed: 1, perks: null, mode: "boxer" });
+  // gliding: boxer stance, gloves up (wait for the uppercut from the last flap to finish)
+  await page.evaluate(() => {
+    const b = window.__glydrift.scene.getScene("Game").player.rig.boxer;
+    b.punchT = 0;
+  });
+  expect(await page.evaluate(() => window.__glydrift.scene.getScene("Game").player.rig.boxer.frame())).toBe(0);
+  await snap(page, testInfo, "haddad-1-glide");
+  // the flap is an uppercut with a red streak
+  const flap = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    s.onTap();
+    window.__t += 1000 / 60;
+    s.stepFrame(window.__t, 1000 / 60);
+    const b = s.player.rig.boxer;
+    return { frame: b.frame(), streak: b.g.commandBuffer.length > 0 };
+  });
+  expect(flap).toEqual({ frame: 1, streak: true });
+  await snap(page, testInfo, "haddad-2-uppercut");
+  // near-miss: the slip and a WHOOSH; combo steps: punch counts
+  const texts = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const rig = s.player.rig;
+    rig.onNear();
+    const slip = rig.boxer.frame();
+    rig.onCombo(1);
+    rig.onCombo(2);
+    rig.onCombo(3);
+    const shown = s.fx.texts.filter((x) => x.active && x.visible).map((x) => x.text);
+    return { slip, shown };
+  });
+  expect(texts.slip).toBe(2);
+  expect(texts.shown).toEqual(expect.arrayContaining(["WHOOSH", "1!", "2!", "3!"]));
+  await step(60);
+  // new best: K.O.! and the knockout pose
+  const ko = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const rig = s.player.rig;
+    rig.onBest();
+    return {
+      frame: rig.boxer.frame(),
+      shown: s.fx.texts.filter((x) => x.active && x.visible).map((x) => x.text),
+    };
+  });
+  expect(ko.frame).toBe(3);
+  expect(ko.shown).toContain("K.O.!");
+  await run(page, 250);
+  await snap(page, testInfo, "haddad-3-ko-new-best");
+  await run(page, 600);
+  await step(90);
+  // death: a knockout spin, stars round his head, then he drops
+  await page.evaluate(() => window.__glyGod(false));
+  const death = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    s.die();
+    const b = s.player.rig.boxer;
+    for (let i = 0; i < 22; i++) {
+      window.__t += 1000 / 60;
+      s.stepFrame(window.__t, 1000 / 60);
+    }
+    return {
+      dying: b.dieT > 0,
+      spun: Math.abs(s.player.rig.sprite.angle) > 0,
+      stars: b.fg.commandBuffer.length > 0,
+      visible: s.player.rig.sprite.visible,
+    };
+  });
+  expect(death).toEqual({ dying: true, spun: true, stars: true, visible: true });
+  await snap(page, testInfo, "haddad-4-knockout-death");
+  // the next run: back on his feet
+  const back = await page.evaluate(() => {
+    const rig = window.__glydrift.scene.getScene("Game").player.rig;
+    rig.reset?.();
+    rig.boxer.reset();
+    return rig.boxer.dieT;
+  });
+  expect(back).toBe(-1);
+
+  // character select: the showcase (shadowboxing, toe bounce, glove taps, the smile)
+  await home(page);
+  await run(page, 600);
+  await page.evaluate(() => {
+    const g = window.__glydrift;
+    g.registry.set("heroFocus", "haddad");
+    g.scene.getScene("Menu").scene.start("Characters");
+  });
+  await waitFor(page, () => window.__glydrift.scene.isActive("Characters"));
+  await run(page, 1500);
+  const show = await page.evaluate(() => {
+    const sc = window.__glydrift.scene.getScene("Characters");
+    const rig = sc.rig;
+    const seen = new Set();
+    if (!rig?.boxer) return { found: false, id: rig?.def?.id };
+    for (let i = 0; i < 400; i++) {
+      rig.boxer.update(1 / 60);
+      seen.add(rig.boxer.frame());
+    }
+    rig.boxer.smileT = 1.5;
+    return { found: true, frames: [...seen].sort() };
+  });
+  expect(show.found).toBe(true);
+  expect(show.frames).toEqual(expect.arrayContaining([0, 4, 6])); // guard, glove tap / smile, jab
+  await snap(page, testInfo, "haddad-5-showcase");
+  expect(log.errors).toEqual([]);
+});
+
+test("THE HADDAD: 12,000 coins or a x10 combo; his best combo is saved; hats fit him", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page, { save: { ...SAVE, coins: 12500, stats: { runs: 5, maxCombo: 5 } } });
+  const out = await page.evaluate(() => {
+    const { Progression, getCharacter } = window.__glyHeroes;
+    const s = window.__glyShop.data();
+    const def = getCharacter("haddad");
+    const info = {
+      name: def.name,
+      rarity: def.rarity,
+      cost: def.cost,
+      desc: def.desc,
+      challenge: def.challenge,
+      perks: def.perks ?? null,
+      speed: def.speed ?? 1,
+    };
+    // the challenge: not yet at x5, done at x10 (a run's best combo is saved)
+    const before = Progression.challengeMet(def);
+    Progression.commitRun({ mode: "normal", score: 900, distance: 400, coins: 3, nearMiss: 2, lasers: 0, saws: 0, portals: 0, biome: 0, bestCombo: 10, runTimeMs: 30000, char: "volt" });
+    const saved = s.stats.maxCombo;
+    const after = Progression.challengeMet(def);
+    // or buy him for 12,000 coins
+    s.unlocked.haddad = false;
+    const bought = Progression.buy("haddad");
+    return { info, before, saved, after, bought, coinsLeft: s.coins };
+  });
+  expect(out.info).toEqual({
+    name: "THE HADDAD",
+    rarity: "legendary",
+    cost: 12000,
+    desc: "Never stays down.",
+    challenge: { stat: "maxCombo", value: 10, text: "Get a x10 combo" },
+    perks: null,
+    speed: 1,
+  });
+  expect(out.before).toBe(false);
+  expect(out.saved).toBe(10);
+  expect(out.after).toBe(true);
+  expect(out.bought).toBe(true);
+  // a shop hat sits on his hair (head anchor from the guard pose, not the uppercut glove)
+  const hat = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const tex = g.textures.get("pxc");
+    return {
+      frames: [0, 1, 2, 3, 4, 5, 6].every((f) => tex.has(`haddad_${f}`)),
+      portrait: g.textures.exists("hero_haddad"),
+    };
+  });
+  expect(hat).toEqual({ frames: true, portrait: true });
+  expect(log.errors).toEqual([]);
+});
+
+// A player crashed at 33K points on a long run: every realm's and dimension's art (~5 MB
+// each) stayed in memory, so by the rift into the dimensions it was the same memory that once
+// crashed iPhones at launch. Now only the art near the player is kept. Fly a long run through
+// every realm, The Calm, the Abyss and the dimensions (the whole engine, animations included)
+// and fail if art, objects, pop-ups, tweens or memory keep growing.
+test("long runs never pile up: passed realms' art is freed, objects and memory stay flat @smoke", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(420_000);
+  const log = await openGame(page, { flags: ["god"] });
+  await startRun(page);
+  const fly = (toM) =>
+    page.evaluate((toM) => {
+      const g = window.__glydrift;
+      const s = g.scene.getScene("Game");
+      window.__T ??= performance.now();
+      window.__glyNoRender = true; // the game logic runs every frame; drawing would just be slow here
+      for (let i = 0; i < 60 * 60 * 20 && s.meters < toM && s.state === "playing"; i++) {
+        if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+        window.__T += 1000 / 60;
+        g.step(window.__T, 1000 / 60); // the whole engine: tweens and timers too
+      }
+      window.__glyNoRender = false;
+      const texMB =
+        g.textures
+          .getTextureKeys()
+          .reduce(
+            (a, k) => a + g.textures.get(k).source.reduce((b, src) => b + (src.width || 0) * (src.height || 0) * 4, 0),
+            0,
+          ) / 1048576;
+      return {
+        m: Math.floor(s.meters),
+        state: s.state,
+        built: window.__glyArt.builtBiomes(),
+        texMB: Math.round(texMB),
+        objs: s.sys.displayList.length,
+        backdrop: g.scene.getScene("Backdrop").sys.displayList.length,
+        texts: s.fx.texts.length,
+        tweens: s.tweens.getTweens().length + g.scene.getScene("Hud").tweens.getTweens().length,
+        heapMB: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null,
+      };
+    }, toM);
+  const early = await fly(1500);
+  const mid = await fly(7000); // past the Abyss, through the rift, into the dimensions
+  const late = await fly(14000); // the dimensions again and again
+  console.log(JSON.stringify({ early, mid, late }));
+  expect(late.state).toBe("playing");
+  expect(late.m).toBeGreaterThanOrEqual(13900);
+  // only the art near the player: the first biome, the one you're in, the last and the next
+  expect(late.built.length).toBeLessThanOrEqual(4);
+  expect(mid.built.length).toBeLessThanOrEqual(4);
+  // nothing keeps growing between the middle and the end of the run
+  expect(late.texMB - mid.texMB).toBeLessThanOrEqual(8);
+  expect(late.texMB - early.texMB).toBeLessThanOrEqual(20);
+  expect(late.objs - mid.objs).toBeLessThanOrEqual(40);
+  expect(late.backdrop - mid.backdrop).toBeLessThanOrEqual(40);
+  // (pop-up texts and tweens aren't checked here: tweens run on the page's real clock, which the
+  // test freezes, so no fade-out ever finishes in this test. With a running clock the pop-up
+  // pool holds at ~15, measured with a free-running soak.)
+  if (late.heapMB && mid.heapMB) expect(late.heapMB - mid.heapMB).toBeLessThanOrEqual(15);
+  // a new run comes back to the freed realms: their art is built again, no errors
+  const again = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const s = g.scene.getScene("Game");
+    window.__glyGod(false);
+    s.die();
+    window.__glyGod(true);
+    for (let i = 0; i < 400 && s.state !== "dead"; i++) {
+      window.__T += 1000 / 60;
+      g.step(window.__T, 1000 / 60);
+    }
+    for (const k of ["GameOver", "Hud", "Game"]) g.scene.stop(k);
+    g.scene.start("Game", { mode: "normal" });
+    return true;
+  });
+  expect(again).toBe(true);
+  await run(page, 800);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Game").onTap());
+  const back = await fly(1800);
+  expect(back.state).toBe("playing");
+  // the new run's realms were built again (and the far ones freed again)
+  expect(back.built).toContain("void");
+  expect(back.built.some((id) => ["solar", "frozen", "glitch", "abyss"].includes(id))).toBe(true);
+  expect(back.built.length).toBeLessThanOrEqual(4);
+  expect(log.errors).toEqual([]);
+});
+
+// crash safety: the phone closes the game mid-run (iOS does that, without any error, when
+// memory runs out). The next launch finishes the run from its checkpoint, puts the score on
+// the leaderboard queue, reports it, and tells the player.
+test("crash safety: a run the phone closed is saved and reported at the next launch @smoke", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(180_000);
+  const log = await openGame(page, { flags: ["god"], save: { ...SAVE, best: 100, stats: { runs: 3 } } });
+  await startRun(page);
+  const at = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    for (let i = 0; i < 60 * 30 && s.meters < 600; i++) {
+      if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+      s.__t = (s.__t || 1e6) + 1000 / 60;
+      s.stepFrame(s.__t, 1000 / 60);
+    }
+    s.saveCheckpoint();
+    return { score: s.score, m: Math.floor(s.meters), cp: !!window.__glyCrash.CrashSafety.pending() };
+  });
+  expect(at.cp).toBe(true);
+  // the phone closes the game: no game over, no commit. Reopen it.
+  await page.reload();
+  await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
+  await run(page, 1500);
+  const after = await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+    const m = window.__glydrift.scene.getScene("Menu");
+    const texts = [];
+    const walk = (o) => {
+      if (o?.text) texts.push(o.text);
+      (o?.list || []).forEach(walk);
+    };
+    m.children.list.forEach(walk);
+    return {
+      best: s.best,
+      runs: s.stats.runs,
+      queued: s.lbQueue.filter((q) => q.type === "score" && /endless/.test(q.level)).map((q) => q.score),
+      crashes: window.__glyCrash.CrashReport.queued().map((r) => [r.kind, r.score, r.distance, r.realm != null, r.build]),
+      left: window.__glyCrash.CrashSafety.pending(),
+      toast: texts.some((t) => t === "YOUR LAST RUN WAS SAVED"),
+    };
+  });
+  expect(after.best).toBe(at.score);
+  expect(after.runs).toBe(4);
+  expect(after.queued).toContain(at.score);
+  expect(after.crashes).toEqual([["killed_mid_run", at.score, at.m, true, expect.any(String)]]);
+  expect(after.left).toBe(null);
+  expect(after.toast).toBe(true);
+  expect(log.errors).toEqual([]);
+});
+
+// crash safety: an error mid-run. The frame guard keeps the game alive; if the frame keeps
+// failing it goes back to the home screen. Before it does, the run is finished (saved, score
+// queued) and the crash is reported with the score, distance and realm.
+test("crash safety: an error mid-run is reported and the run is still saved @smoke", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  test.setTimeout(180_000);
+  const log = await openGame(page, { flags: ["god"], save: { ...SAVE, best: 50, stats: { runs: 3 } } });
+  await startRun(page);
+  const at = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    for (let i = 0; i < 60 * 30 && s.meters < 500; i++) {
+      if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+      s.__t = (s.__t || 1e6) + 1000 / 60;
+      s.stepFrame(s.__t, 1000 / 60);
+    }
+    s.saveCheckpoint();
+    // something breaks: every frame of the run now throws
+    s.sys.sceneUpdate = () => {
+      throw new Error("test: broken frame");
+    };
+    return { score: s.score, m: Math.floor(s.meters) };
+  });
+  await run(page, 1500); // > 20 failing frames: back to the home screen
+  await waitFor(page, () => window.__glydrift.scene.isActive("Menu"), 20_000);
+  const after = await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
+    return {
+      best: s.best,
+      runs: s.stats.runs,
+      queued: s.lbQueue.filter((q) => q.type === "score" && /endless/.test(q.level)).map((q) => q.score),
+      kinds: window.__glyCrash.CrashReport.queued().map((r) => r.kind),
+      frame: window.__glyCrash.CrashReport.queued().find((r) => r.kind === "frame"),
+      left: window.__glyCrash.CrashSafety.pending(),
+    };
+  });
+  expect(after.best).toBe(at.score);
+  expect(after.runs).toBe(4);
+  expect(after.queued).toContain(at.score);
+  expect(after.kinds).toEqual(expect.arrayContaining(["frame", "error"]));
+  expect(after.frame.message).toContain("broken frame");
+  expect(after.frame.score).toBeGreaterThan(0);
+  expect(after.frame.distance).toBeGreaterThan(400);
+  expect(after.left).toBe(null);
+  // the frame error is logged on purpose here
+  expect(log.errors.filter((e) => !/broken frame|loop kept alive/.test(e))).toEqual([]);
+});
+
+// always the latest version: every build publishes its id in version.json (an open game polls
+// it and reloads into a new version when it's safe), the same id as the service worker's cache
+test("every build publishes its version for the auto-update check @smoke", async ({}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const v = JSON.parse(readFileSync("dist/version.json", "utf8"));
+  expect(v.build).toMatch(/^[a-z0-9]+$/);
+  expect(readFileSync("dist/sw.js", "utf8")).toContain(`glydrift-${v.build}`);
+  const js = readdirSync("dist/assets").filter((f) => f.endsWith(".js"));
+  expect(js.some((f) => readFileSync(`dist/assets/${f}`, "utf8").includes(v.build))).toBe(true);
 });

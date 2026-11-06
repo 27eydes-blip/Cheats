@@ -455,6 +455,15 @@ export class PixelBackground {
     return false;
   }
 
+  /** Destroy a biome's (hidden) layer set so its art can be freed (never the current one). */
+  releaseSet(id) {
+    const set = this.sets[id];
+    if (!set || id === this.current) return false;
+    for (const ob of set.objs) ob.destroy();
+    delete this.sets[id];
+    return true;
+  }
+
   /** Crossfade to another biome's layer set. */
   setTheme(id, instant = false) {
     if (this.current === id) return;

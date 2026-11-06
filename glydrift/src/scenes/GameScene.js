@@ -21,7 +21,9 @@ import { pixelPerfectZoom, S } from "../pixel/px.js";
 import { Terrain } from "../pixel/Terrain.js";
 import {
   biomeArtReady,
+  builtBiomes,
   pumpBiomeArt,
+  releaseBiomeArt,
   queueBiomeArt,
   THEMES,
   themeFor,
@@ -31,6 +33,8 @@ import { CharacterRig } from "../player/CharacterRig.js";
 import { Player } from "../player/Player.js";
 import { Sfx } from "../audio/sfx.js";
 import { Analytics } from "../systems/analytics.js";
+import { CrashReport } from "../systems/crashReport.js";
+import { CrashSafety } from "../systems/crashSafety.js";
 import { getBoost, Shop } from "../data/cosmetics.js";
 import { Haptics } from "../systems/haptics.js";
 import { TEST } from "../systems/testFlags.js";
@@ -193,6 +197,8 @@ export class GameScene extends Phaser.Scene {
       );
 
     this.game.events.on("hidden", this.onHidden, this);
+    // a phone call or the app switcher can take focus without hiding the page
+    this.game.events.on("blur", this.onHidden, this);
     // the wind bed fades out whenever the run isn't on screen and moving
     // (the scene's event emitter outlives restarts: hook it once)
     if (!this.windHooked) {
@@ -207,6 +213,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.events.once("shutdown", () => {
       this.game.events.off("hidden", this.onHidden, this);
+      this.game.events.off("blur", this.onHidden, this);
       // leaving mid-Calm (pause → HOME): drop the grey filter on the shared Backdrop camera
       // and the Calm drone / heartbeat, or they'd follow the player into every screen
       this.setDesat(0);
@@ -216,7 +223,23 @@ export class GameScene extends Phaser.Scene {
     this.events.once("shutdown", () => {
       this.levelRun?.destroy();
       this.levelRun = null;
+      // left the run (HOME from the pause menu, or a finished run's game over): nothing to
+      // recover. (The phone closing the game mid-run never gets here: that's what it's for.)
+      if (!this.crashRecovering) CrashSafety.clear();
+      CrashReport.setContext(null);
     });
+    // crash reports say where the run was
+    CrashReport.setContext(() => ({
+      score: this.score,
+      distance: this.meters,
+      realm: this.zoneId || this.run?.biome,
+      hero: this.charDef?.id,
+      mode: this.levelRun ? `level ${this.levelDef?.n}` : this.mode,
+      scene: this.game.scene
+        .getScenes(true)
+        .map((s) => s.sys.settings.key)
+        .join(","),
+    }));
     this.levelRun = this.levelDef
       ? new LevelRun(this, this.levelDef, { practice: this.practice })
       : null;
@@ -234,6 +257,7 @@ export class GameScene extends Phaser.Scene {
       this.palMix = 1;
     }
     this.state = "ready";
+    this.respawnWait = false;
     this.distance = 0; // px
     this.meters = 0;
     this.clock = 0;
@@ -326,6 +350,9 @@ export class GameScene extends Phaser.Scene {
     this.levelRun?.reset();
     this.biomeIndex = -1;
     this.announcedBiome = -1;
+    this.artBiome = null; // (see releaseOldArt)
+    this.artPrev = null;
+    this.artReleaseT = -1;
     this.rift?.destroy();
     this.rift = null;
     this.tearT = 0;
@@ -356,6 +383,15 @@ export class GameScene extends Phaser.Scene {
 
   startRun() {
     this.state = "playing";
+    if (this.respawnWait) {
+      // flying again after a checkpoint respawn: a short blink of safety, no run-start fanfare
+      this.respawnWait = false;
+      this.boostGrace = 1.1;
+      this.player.flap();
+      Sfx.flap(this.charDef.id);
+      this.hudReady?.onStart?.();
+      return;
+    }
     // shop Boosts were removed: every run is a normal, ranked run
     this.revives = 0;
     this.coinBoost = 1;
@@ -419,7 +455,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   onHidden() {
-    if (this.state === "playing") this.hudReady?.pause?.();
+    if (this.state === "playing" || (this.mode === "level" && this.state === "ready"))
+      this.hudReady?.pause?.();
   }
 
   // ------------------------------------------------------------------ events
@@ -475,6 +512,7 @@ export class GameScene extends Phaser.Scene {
       this.run.bestCombo = Math.max(this.run.bestCombo, m);
       this.comboMeter.setTier(m);
       Sfx.combo([2, 3, 5, 10, 13].indexOf(m) + 1);
+      this.player?.rig?.onCombo?.([2, 3, 5, 10, 13].indexOf(m) + 1);
       Haptics.light();
       const p = this.player;
       this.fx.ring(p.x, p.y, TIER_COLORS[m], { scale: 1.2, duration: 340 });
@@ -525,6 +563,33 @@ export class GameScene extends Phaser.Scene {
       }
     }
     return this.fx.floatText(x, y, str, color, sz);
+  }
+
+  /**
+   * Keep only the art that's near: the biome you're in, the one you just left and the next
+   * one (plus the first biome, which the menus use). A few seconds after each change (once the
+   * crossfade is over), one older biome per frame has its layer sets destroyed and its art
+   * freed. Without this a long run kept every realm and dimension in memory at once.
+   */
+  releaseOldArt(dt, biomeId, nextId) {
+    if (biomeId !== this.artBiome) {
+      this.artPrev = this.artBiome;
+      this.artBiome = biomeId;
+      this.artReleaseT = 4;
+      return;
+    }
+    if (this.artReleaseT === undefined || this.artReleaseT < 0) return;
+    this.artReleaseT -= dt;
+    if (this.artReleaseT > 0) return;
+    const keep = new Set(["void", biomeId, this.artPrev, nextId]);
+    const old = builtBiomes().find((id) => !keep.has(id));
+    if (!old) {
+      this.artReleaseT = -1; // done until the next change
+      return;
+    }
+    this.backdrop?.bg?.releaseSet(old);
+    this.terrain.releaseSet(old);
+    releaseBiomeArt(old);
   }
 
   /** HUD → world y (the HUD and the world are drawn at different zooms). */
@@ -801,8 +866,21 @@ export class GameScene extends Phaser.Scene {
     this.hudReady?.onDeath?.();
   }
 
+  /** The run so far, as a crash would leave it (see CrashSafety). */
+  saveCheckpoint() {
+    const run = {
+      ...this.run,
+      distance: Math.floor(this.meters),
+      score: this.score,
+      nearBonus: this.bonus - this.coinPts,
+      coinBonus: this.coinPts,
+    };
+    CrashSafety.checkpoint(run, { realm: this.zoneId || this.run.biome });
+  }
+
   finishRun() {
     this.state = "dead";
+    CrashSafety.clear(); // finished normally: committed below
     // RONIN's coin perk: a bonus at the end of every run (doubled by Double Coins / Lucky Run)
     const perkCoins = this.charDef.perks?.coinBonus;
     if (perkCoins) {
@@ -825,24 +903,26 @@ export class GameScene extends Phaser.Scene {
     p.reset();
     p.y = this.H * 0.45;
     p.vy = 0;
-    this.state = "playing";
+    // wait at the checkpoint until the next tap (like the level start), so a crash never
+    // drops you straight into the floor before you're ready; the world and the clock wait too
+    this.state = "ready";
+    this.respawnWait = true;
     this.deathT = 0;
     this.slowT = 0;
     this.timeScale = 1;
-    this.boostGrace = 1.1; // a short blink of safety after the respawn
     this.chain = 0;
     this.mult = 1;
     this.comboMeter.setTier(1);
     this.fx.ring(p.x, p.y, 0x39ff88, { scale: 1.6, duration: 420 });
     this.flashFx.flash(0x39ff88, { ...FLASH.nearMissEdge, edge: true });
-    this.player.flap();
-    Sfx.flap(this.charDef.id);
+    this.hudReady?.showTapHint?.();
   }
 
   /** Level mode: crossed the finish line. */
   levelComplete(res) {
     if (this.state !== "playing") return;
     this.state = "won";
+    this.comboMeter.setTier(1); // no "x13" left floating behind LEVEL COMPLETE
     const p = this.player;
     const col = this.levelRun.realm.col;
     const boss = this.levelRun.def.boss;
@@ -959,6 +1039,12 @@ export class GameScene extends Phaser.Scene {
       this.run.runTimeMs += rawDt * 1000;
       this.distance += this.scroll * dt;
       this.meters = this.distance / WORLD.pxPerMeter;
+      // crash safety: the run so far, every few seconds (endless and daily runs)
+      this.checkpointT = (this.checkpointT ?? 3) - rawDt;
+      if (this.checkpointT <= 0 && !this.levelRun) {
+        this.checkpointT = 3;
+        this.saveCheckpoint();
+      }
     }
     this.clock += dt;
     const speedNorm = Phaser.Math.Clamp(
@@ -1168,6 +1254,7 @@ export class GameScene extends Phaser.Scene {
     // build the next biome's art well before it arrives (it's made on demand to save memory)
     const nx = this.course.next(seg0);
     if (nx && nx.start - this.meters < 700) queueBiomeArt(nx.id);
+    this.releaseOldArt(rawDt, biomeId, nx?.id);
     // once its art is in, build the biome's walls (hidden) on a later frame, not on arrival
     if (this.terrainTodo) this.terrain.prebuild([THEMES[this.terrainTodo]]);
     this.terrainTodo = pumpBiomeArt();

@@ -16,6 +16,8 @@ function defaults() {
     spins: 1, // Lucky Spin tokens (everyone starts with one free spin)
     spinPts: 0, // points banked toward the next spin
     best: 0,
+    lbReset: "", // the last leaderboard reset applied here (see online/lbReset.js)
+    lbNotice: "", // that reset's notice, waiting to be shown on this device
     ghost: null,
     ghostChar: "volt",
     stats: {
@@ -29,6 +31,7 @@ function defaults() {
       dailyPlayed: 0,
       maxDistance: 0,
       maxNearRun: 0,
+      maxCombo: 0, // best combo multiplier in one run (THE HADDAD's challenge)
       maxBiome: 0,
       maxLasersRun: 0,
       maxPortalsRun: 0,
@@ -52,6 +55,7 @@ function defaults() {
     login: { last: "", streak: 0, claimed: "" },
     daily: { date: "", best: 0, attempts: 0, ghost: null, ghostChar: "volt", lastPlayed: "" },
     levelRewards: {},
+    lv: { p: {}, claimed: {}, played: 0 }, // LEVEL MODE progress (levels/levels.js); kept on load
     profile: { username: "" },
     lbQueue: [],
     settings: {

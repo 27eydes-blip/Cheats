@@ -82,18 +82,31 @@ export class LeaderboardError extends Error {
 // dimension spike (×1.1) and Chrono "fast" zones (×1.35): real runs must never be rejected.
 const MAX_SPEED_FACTOR = 1.8;
 
-/** Upper bounds a real run can't exceed (bonuses are bounded per meter). */
+/**
+ * Score = metres + bonuses (coins, close calls, dead-centre passes), each bonus times the
+ * combo (x10, x13 for SXE). Endless spawns at most ~0.07 coins and ~0.04 hazards per metre,
+ * so even every coin and every close call at x13 stays under 30 points per metre; real runs
+ * make 5–9. The same limits are checked on the server (glydrift_check_score).
+ */
+export const MAX_POINTS_PER_METER = 30;
+const POINTS_ALLOWANCE = 2000;
+
+/** Upper bounds a real run can't exceed. Same rules as the server's glydrift_check_score. */
 export function isPlausible(run) {
   const ms = Math.round(run.run_time_ms ?? run.runTimeMs ?? 0);
   const score = Math.round(run.score);
-  const meters = run.distance ?? 0;
+  const meters = Math.floor(run.distance ?? 0);
+  const level = run.level || "";
   if (!Number.isFinite(score) || score <= 0 || score > 2_000_000) return false;
   if (!Number.isFinite(ms) || ms < 500) return false;
   const maxMeters = ((MAX_SPEED_FACTOR * WORLD.maxSpeed) / WORLD.pxPerMeter) * (ms / 1000) + 40;
-  if (meters > maxMeters) return false;
-  // score = meters + coin bonus + close-call bonus; both bonuses are capped generously
-  const maxScore = maxMeters * 20 + 500;
-  return score <= maxScore;
+  if (!Number.isFinite(meters) || meters < 0 || meters > maxMeters) return false;
+  // a level's board stores its time as a score: the two must agree
+  if (Levels.isLevel(level)) return Math.abs(score - timeToScore(ms)) <= 1;
+  // endless, daily and distance runs always carry the distance flown
+  if (meters <= 0) return false;
+  if (Levels.isDistance(level)) return score === meters;
+  return score >= meters - 2 && score <= meters * MAX_POINTS_PER_METER + POINTS_ALLOWANCE;
 }
 
 /** The column a "no such column" error is about (PostgREST PGRST204 / Postgres 42703). */
@@ -325,7 +338,7 @@ class LeaderboardService {
       distance: Math.floor(run.distance || 0),
     };
     // an impossible run (score or distance too high for its run time) goes to neither board
-    if (!isPlausible({ ...entry, run_time_ms: entry.run_time_ms })) {
+    if (!isPlausible(entry)) {
       return Promise.resolve({ rejected: true });
     }
     if (TEST.lbmock) return Promise.resolve({ uploaded: 2, queued: 0, mock: true });

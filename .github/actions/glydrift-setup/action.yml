@@ -1,0 +1,71 @@
+name: Glydrift test setup
+description: >-
+  Node + cached npm packages, one Playwright browser (cached between runs: only its system
+  packages are installed fresh), and the release + test builds.
+inputs:
+  engine:
+    description: chromium, firefox or webkit
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+        cache-dependency-path: glydrift/package-lock.json
+
+    - name: Install packages
+      shell: bash
+      working-directory: glydrift
+      run: npm ci --prefer-offline --no-audit --no-fund
+
+    - name: Playwright version
+      id: pw
+      shell: bash
+      working-directory: glydrift
+      run: echo "v=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+    - name: Cached ${{ inputs.engine }}
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: pw-${{ runner.os }}-${{ steps.pw.outputs.v }}-${{ inputs.engine }}
+
+    - name: Install ${{ inputs.engine }}
+      shell: bash
+      working-directory: glydrift
+      env:
+        CACHED: ${{ steps.cache.outputs.cache-hit }}
+        ENGINE: ${{ inputs.engine }}
+      run: |
+        # The browser itself comes from the cache when it can; its system packages are always
+        # installed (apt). The download / apt occasionally hang on GitHub's machines: give each
+        # attempt 10 minutes and retry. A timed-out attempt can leave apt-get holding the package
+        # lock: wait for the lock to come free before trying again.
+        wait_for_apt() {
+          for _ in $(seq 120); do
+            sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock \
+              >/dev/null 2>&1 || return 0
+            sleep 5
+          done
+          echo "::warning::package lock still held after 10 minutes"
+        }
+        if [ "$CACHED" = "true" ]; then CMD="npx playwright install-deps $ENGINE"; else CMD="npx playwright install --with-deps $ENGINE"; fi
+        ok=""
+        for attempt in 1 2 3; do
+          wait_for_apt
+          if timeout 600 $CMD; then ok=1; break; fi
+          echo "::warning::browser install attempt $attempt failed or hung - retrying"
+          sleep 10
+        done
+        [ -n "$ok" ] || { echo "::error::could not install $ENGINE"; exit 1; }
+        # software OpenGL (Mesa) for headless WebGL
+        wait_for_apt
+        sudo apt-get install -y --no-install-recommends libgl1-mesa-dri libegl1 libgl1
+
+    - name: Build (release + test builds)
+      shell: bash
+      working-directory: glydrift
+      run: npm run build && npm run build:test

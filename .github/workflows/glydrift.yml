@@ -1,21 +1,43 @@
 name: Glydrift tests
 
-# Every push and pull request that touches the game runs the browser suite: WebKit (Safari) on
-# all 7 device profiles, Chromium (Chrome / Edge) and Firefox on 3 of them. Nothing is published until
-# every browser has passed on these exact files — a broken version never goes live.
+# Two-speed testing. Nothing is published until its lane has passed on these exact files.
+#   FAST lane  small changes (text, colours, one hero, one bug fix): the smoke suite (@smoke:
+#              the game loads, the release build loads, a run through several realms, death and
+#              retry, level 1 to the finish, the shop, account sign-in, no console errors) on
+#              iPhone Safari (WebKit) and Chromium, side by side. Target: live in under 10 min.
+#   FULL lane  everything else: the whole suite on all three browsers and every device profile
+#              (WebKit 7 profiles, Chromium and Firefox 3), split across 14 machines.
+#   no tests   docs-only changes (README, *.md, docs/, marketing/): nothing to test or publish.
+# glydrift/scripts/ci-lane.sh picks the lane: [fast] or [full] in the commit message, else
+# what changed. Anything touching purchases, accounts, saving or the leaderboard is ALWAYS full.
+#
+# NIGHTLY: started by hand (or by the nightly scheduled task) with nightly=true: the full lane on
+# the live version (the release branch), plus the release build on the real glydrift.com.
+# Nothing is published; a failure opens (or updates) a GitHub issue, which emails the owner.
 on:
   push:
     paths:
       - "glydrift/**"
       - ".github/workflows/glydrift.yml"
+      - ".github/actions/glydrift-setup/**"
   pull_request:
     paths:
       - "glydrift/**"
       - ".github/workflows/glydrift.yml"
+      - ".github/actions/glydrift-setup/**"
   workflow_dispatch:
     inputs:
+      lane:
+        description: "Which tests: auto (decide from what changed), fast or full"
+        type: choice
+        options: [auto, fast, full]
+        default: auto
       deploy:
-        description: "Publish (glydrift.com and the old GitHub Pages copy) if every test passes"
+        description: "Publish (glydrift.com and the old GitHub Pages copy) if the tests pass"
+        type: boolean
+        default: false
+      nightly:
+        description: "Nightly check of the live version: full lane + the real glydrift.com, never publishes"
         type: boolean
         default: false
       skip_tests:
@@ -26,83 +48,148 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: glydrift-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+# No run is ever cancelled by a newer push: runs go side by side. Publishing is one at a time
+# (the publish jobs' own concurrency groups), and a run whose commit is no longer the newest on
+# its branch doesn't publish: the newer run will.
 
 defaults:
   run:
     working-directory: glydrift
 
+env:
+  LIVE_BRANCH: claude/glydrift-arcade-game-7hznpc
+
 jobs:
-  # A merge that only brings in code which already passed on all three browsers doesn't need
-  # the same hour of tests again. This job fingerprints the game's files (glydrift/ and this
-  # workflow, minus the baseline screenshots, which a passing run writes itself) and looks for
-  # an earlier run on the exact same files where Chromium, Firefox and WebKit all passed.
-  # Found: the tests are skipped and the publish jobs use that result. Not found (two changes
-  # combined, the branch moved on, the workflow changed, ...): the full tests run as usual.
-  # Only for pushes to the branches that go live; never for pull requests or by hand.
-  reuse:
-    name: Already tested?
+  # ------------------------------------------------------------------ which lane, already tested?
+  plan:
+    name: Plan (which tests)
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       actions: read
     outputs:
-      hit: ${{ steps.find.outputs.hit }}
+      lane: ${{ steps.lane.outputs.lane }}
+      reason: ${{ steps.lane.outputs.reason }}
+      hit: ${{ steps.reuse.outputs.hit }}
+      live: ${{ steps.lane.outputs.live }}
     steps:
       - uses: actions/checkout@v4
-        if: >-
-          github.event_name == 'push' && (
-            github.ref == 'refs/heads/main' ||
-            github.ref == 'refs/heads/claude/glydrift-arcade-game-7hznpc')
         with:
           fetch-depth: 0
-      - name: Look for a green run on the same files
-        id: find
+          ref: ${{ (github.event_name == 'workflow_dispatch' && inputs.nightly) && env.LIVE_BRANCH || '' }}
+      - name: Pick the lane
+        id: lane
+        working-directory: .
+        env:
+          EVENT: ${{ (github.event_name == 'workflow_dispatch' && inputs.nightly) && 'schedule' || github.event_name }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          MSG: ${{ github.event.head_commit.message }}
+          DISPATCH_LANE: ${{ inputs.lane || 'auto' }}
+        run: |
+          bash glydrift/scripts/ci-lane.sh | tee -a "$GITHUB_OUTPUT"
+          live=false
+          if [ "$GITHUB_EVENT_NAME" = push ] && { [ "$GITHUB_REF" = refs/heads/main ] || [ "$GITHUB_REF" = "refs/heads/$LIVE_BRANCH" ]; }; then live=true; fi
+          echo "live=$live" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Lane: \`$(grep '^lane=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2)\`"
+            echo "$(grep '^reason=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2-)"
+          } >> "$GITHUB_STEP_SUMMARY"
+      # A merge that only brings in files which already passed this lane (or the full lane) on
+      # an earlier run doesn't need the same tests again: the publish jobs use that result.
+      - name: Already tested on these exact files?
+        id: reuse
         working-directory: .
         env:
           GH_TOKEN: ${{ github.token }}
-          REUSE_OK: >-
-            ${{ github.event_name == 'push' && (
-              github.ref == 'refs/heads/main' ||
-              github.ref == 'refs/heads/claude/glydrift-arcade-game-7hznpc') }}
+          LANE: ${{ steps.lane.outputs.lane }}
+          REUSE_OK: ${{ github.event_name == 'push' }}
         run: |
           echo "hit=false" >> "$GITHUB_OUTPUT"
-          [ "$REUSE_OK" = "true" ] || { echo "Not a push to a live branch: full tests."; exit 0; }
+          [ "$REUSE_OK" = "true" ] && [ "$LANE" != "none" ] || exit 0
           fp() {
-            git ls-tree -r "$1" -- glydrift .github/workflows/glydrift.yml 2>/dev/null \
+            git ls-tree -r "$1" -- glydrift .github/workflows/glydrift.yml .github/actions/glydrift-setup 2>/dev/null \
               | grep -v "glydrift/tests/e2e/__screenshots__/" | sha256sum | cut -d' ' -f1
           }
           me=$(fp HEAD)
-          echo "Fingerprint of $GITHUB_SHA: $me"
+          sel='.name == "All tests passed (full)"'
+          [ "$LANE" = fast ] && sel="$sel or .name == \"All tests passed (fast)\""
           runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/glydrift.yml/runs?status=success&per_page=40" \
             --jq '.workflow_runs[] | select(.id != '"$GITHUB_RUN_ID"') | "\(.id) \(.head_sha)"')
           while read -r id sha; do
             [ -n "$id" ] || continue
             git cat-file -e "$sha^{commit}" 2>/dev/null || continue
             [ "$(fp "$sha")" = "$me" ] || continue
-            # every browser must have actually run and passed (a reused run doesn't count)
-            green=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/jobs?per_page=50" \
-              --jq '[.jobs[] | select(.name | test("^Tests \\((chromium|firefox|webkit)\\)$")) | select(.conclusion == "success")] | length')
-            if [ "$green" = "3" ]; then
-              echo "::notice::Same files already passed on Chromium, Firefox and WebKit in run $id ($sha): skipping the repeat."
+            ok=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id/jobs?per_page=60" \
+              --jq "[.jobs[] | select($sel) | select(.conclusion == \"success\")] | length")
+            if [ "${ok:-0}" -ge 1 ]; then
+              echo "::notice::These exact files already passed the $LANE lane in run $id ($sha): not repeating it."
               echo "hit=true" >> "$GITHUB_OUTPUT"
+              echo "Already tested in run $id: reused." >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
           done <<< "$runs"
-          echo "No earlier green run on these exact files: running the full tests."
 
-  test:
-    name: Tests (${{ matrix.engine }})
-    needs: reuse
-    if: needs.reuse.outputs.hit != 'true' && !(github.event_name == 'workflow_dispatch' && inputs.skip_tests)
+  # ------------------------------------------------------------------ fast lane: the smoke suite
+  smoke:
+    name: Smoke (${{ matrix.engine }})
+    needs: plan
+    if: needs.plan.outputs.lane == 'fast' && needs.plan.outputs.hit != 'true' && !(github.event_name == 'workflow_dispatch' && inputs.skip_tests)
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        engine: [chromium, firefox, webkit]
+        engine: [webkit, chromium]
+    env:
+      CI: "true"
+      ENGINES: ${{ matrix.engine }}
+      PROFILES: iphone-std
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/glydrift-setup
+        with:
+          engine: ${{ matrix.engine }}
+      - name: Smoke tests
+        run: npx playwright test --grep @smoke --workers=3
+      - name: Failed tests (summary)
+        if: failure()
+        run: |
+          cat failures.txt || true
+          { echo "### Smoke (${{ matrix.engine }}) failed"; echo '```'; cat failures.txt || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smoke-report-${{ matrix.engine }}
+          path: |
+            glydrift/playwright-report
+            glydrift/test-results
+          retention-days: 7
+
+  # ------------------------------------------------------------------ full lane: every test, sharded
+  full:
+    name: Tests (${{ matrix.engine }} ${{ matrix.shard }}/${{ matrix.total }})
+    needs: plan
+    if: needs.plan.outputs.lane == 'full' && needs.plan.outputs.hit != 'true' && !(github.event_name == 'workflow_dispatch' && inputs.skip_tests)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { engine: chromium, shard: 1, total: 5 }
+          - { engine: chromium, shard: 2, total: 5 }
+          - { engine: chromium, shard: 3, total: 5 }
+          - { engine: chromium, shard: 4, total: 5 }
+          - { engine: chromium, shard: 5, total: 5 }
+          - { engine: firefox, shard: 1, total: 3 }
+          - { engine: firefox, shard: 2, total: 3 }
+          - { engine: firefox, shard: 3, total: 3 }
+          - { engine: webkit, shard: 1, total: 6 }
+          - { engine: webkit, shard: 2, total: 6 }
+          - { engine: webkit, shard: 3, total: 6 }
+          - { engine: webkit, shard: 4, total: 6 }
+          - { engine: webkit, shard: 5, total: 6 }
+          - { engine: webkit, shard: 6, total: 6 }
     env:
       CI: "true"
       ENGINES: ${{ matrix.engine }}
@@ -114,50 +201,15 @@ jobs:
       UPDATE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[update screenshots]') }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: glydrift/package-lock.json
-
-      - run: npm ci
-
-      - name: Install ${{ matrix.engine }}
-        timeout-minutes: 75
-        run: |
-          # the browser download / system packages occasionally hang or crawl on GitHub's
-          # machines: give each attempt 15 minutes and retry instead of stalling the whole run.
-          # A timed-out attempt can leave its apt-get running in the background (it runs under
-          # sudo, out of timeout's reach) and holding the package lock, which made every retry
-          # fail at once: wait for the lock to come free (up to 10 min) before trying again.
-          wait_for_apt() {
-            for _ in $(seq 120); do
-              sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock \
-                >/dev/null 2>&1 || return 0
-              sleep 5
-            done
-            echo "::warning::package lock still held after 10 minutes"
-          }
-          ok=""
-          for attempt in 1 2 3; do
-            wait_for_apt
-            if timeout 900 npx playwright install --with-deps ${{ matrix.engine }}; then ok=1; break; fi
-            echo "::warning::browser install attempt $attempt failed or hung - retrying"
-            sleep 15
-          done
-          [ -n "$ok" ] || { echo "::error::could not install ${{ matrix.engine }}"; exit 1; }
-          # software OpenGL (Mesa) for headless WebGL
-          wait_for_apt
-          sudo apt-get install -y --no-install-recommends libgl1-mesa-dri libegl1 libgl1
-
-      - name: Build (release + test builds)
-        run: npm run build && npm run build:test
-
-      - name: Run the tests
+          ref: ${{ (github.event_name == 'workflow_dispatch' && inputs.nightly) && env.LIVE_BRANCH || '' }}
+      - uses: ./.github/actions/glydrift-setup
+        with:
+          engine: ${{ matrix.engine }}
+      - name: Run the tests (shard ${{ matrix.shard }} of ${{ matrix.total }})
         run: |
           # headless Firefox has no WebGL on Linux: run it headed in a virtual display
-          RUN="npx playwright test"
+          RUN="npx playwright test --shard=${{ matrix.shard }}/${{ matrix.total }}"
           if [ "$ENGINES" = "firefox" ]; then export FIREFOX_HEADED=1; RUN="xvfb-run -a $RUN"; fi
           # first run for this engine (no baselines yet) or "[update screenshots]": record them
           if [ "$UPDATE" = "true" ] || ! ls tests/e2e/__screenshots__ 2>/dev/null | grep -q "^${ENGINES}-"; then
@@ -166,38 +218,113 @@ jobs:
             # compare; a brand-new screen records its first baseline (and fails once)
             $RUN --update-snapshots=missing
           fi
-
       - name: Collect new baseline screenshots
         if: always()
         run: |
           mkdir -p ../baselines
           git ls-files --others --modified -- tests/e2e/__screenshots__ | tar -cf ../baselines/new.tar -T - || true
-
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: baselines-${{ matrix.engine }}
+          name: baselines-${{ matrix.engine }}-${{ matrix.shard }}
           path: baselines/new.tar
           if-no-files-found: ignore
-
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: report-${{ matrix.engine }}
+          name: report-${{ matrix.engine }}-${{ matrix.shard }}
           path: |
             glydrift/playwright-report
             glydrift/test-results
           retention-days: 14
-
       - name: Failed tests (summary)
         if: failure()
-        run: cat failures.txt || true
+        run: |
+          cat failures.txt || true
+          { echo "### ${{ matrix.engine }} ${{ matrix.shard }}/${{ matrix.total }} failed"; echo '```'; cat failures.txt || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
+  # nightly only: the release build as it is live on the real glydrift.com
+  live:
+    name: Live glydrift.com (${{ matrix.engine }})
+    if: github.event_name == 'workflow_dispatch' && inputs.nightly
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [webkit, chromium]
+    env:
+      CI: "true"
+      ENGINES: ${{ matrix.engine }}
+      PROFILES: iphone-std
+      RELEASE_URL: https://glydrift.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.LIVE_BRANCH }}
+      - uses: ./.github/actions/glydrift-setup
+        with:
+          engine: ${{ matrix.engine }}
+      - name: The live site loads with no errors
+        run: npx playwright test -g "release build loads"
+      - name: Failed tests (summary)
+        if: failure()
+        run: |
+          { echo "### live glydrift.com (${{ matrix.engine }}) failed"; echo '```'; cat failures.txt || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  # ------------------------------------------------------------------ one green light per lane
+  gate:
+    name: All tests passed (${{ needs.plan.outputs.lane }})
+    needs: [plan, smoke, full]
+    if: always() && needs.plan.outputs.lane != 'none' && needs.plan.outputs.hit != 'true' && !(github.event_name == 'workflow_dispatch' && inputs.skip_tests)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check
+        working-directory: .
+        env:
+          LANE: ${{ needs.plan.outputs.lane }}
+          SMOKE: ${{ needs.smoke.result }}
+          FULL: ${{ needs.full.result }}
+        run: |
+          echo "lane=$LANE smoke=$SMOKE full=$FULL"
+          if [ "$LANE" = fast ] && [ "$SMOKE" = success ]; then exit 0; fi
+          if [ "$LANE" = full ] && [ "$FULL" = success ]; then exit 0; fi
+          echo "::error::the $LANE lane did not pass"; exit 1
+
+  # nightly only: tell the owner when something broke (a GitHub issue emails them)
+  nightly-report:
+    name: Nightly report
+    needs: [gate, live]
+    if: always() && github.event_name == 'workflow_dispatch' && inputs.nightly
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the issue on a failure
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GATE: ${{ needs.gate.result }}
+          LIVE: ${{ needs.live.result }}
+          URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          echo "full suite: $GATE, live site: $LIVE"
+          if [ "$GATE" = success ] && [ "$LIVE" = success ]; then
+            echo "Nightly check passed." >> "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+          title="Glydrift nightly check failed"
+          body="The nightly check of the live version failed on $(date -u +%F). Full suite: $GATE. Live glydrift.com: $LIVE. Details: $URL"
+          n=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "$title in:title" --json number --jq '.[0].number')
+          if [ -n "$n" ]; then gh issue comment "$n" -R "$GITHUB_REPOSITORY" --body "$body"
+          else gh issue create -R "$GITHUB_REPOSITORY" --title "$title" --body "$body"; fi
+          exit 1
+
+  # ------------------------------------------------------------------ baselines and publishing
   # New (or deliberately re-recorded) baselines go back onto the branch they came from
   baselines:
     name: Save baseline screenshots
-    needs: test
-    if: always() && github.event_name == 'push' && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+    needs: full
+    if: always() && github.event_name == 'push' && needs.full.result != 'cancelled' && needs.full.result != 'skipped'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -231,12 +358,13 @@ jobs:
 
   deploy:
     name: Publish to GitHub Pages
-    needs: [reuse, test]
-    # only after every engine passed (in this run, or on the exact same files earlier);
-    # on main, or when started by hand with "deploy"
+    needs: [plan, gate]
+    # only after the lane passed (in this run, or on the exact same files earlier); on main, or
+    # when started by hand with "deploy"
     if: >-
-      !cancelled() && needs.reuse.result == 'success' &&
-      (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.reuse.outputs.hit == 'true')) && (
+      !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.lane != 'none' &&
+      !(github.event_name == 'workflow_dispatch' && inputs.nightly) &&
+      (needs.gate.result == 'success' || (needs.gate.result == 'skipped' && needs.plan.outputs.hit == 'true')) && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
         (github.event_name == 'workflow_dispatch' && inputs.deploy)
       )
@@ -250,33 +378,40 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Still the newest commit on the branch?
+        id: fresh
+        run: |
+          head=$(git ls-remote origin "refs/heads/$GITHUB_REF_NAME" | cut -f1)
+          if [ "$head" = "$GITHUB_SHA" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::$GITHUB_REF_NAME moved on to $head: that run publishes"; echo "ok=false" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/setup-node@v4
+        if: steps.fresh.outputs.ok == 'true'
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: glydrift/package-lock.json
-      - run: npm ci
+      - if: steps.fresh.outputs.ok == 'true'
+        run: npm ci --prefer-offline --no-audit --no-fund
       - name: Publish
+        if: steps.fresh.outputs.ok == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           bash scripts/deploy-gh-pages.sh
 
-  # glydrift.com (Cloudflare Pages). Runs only after every browser's tests have passed, for a
-  # push to the game's release branch (or by hand with "deploy"). Never before CI is green.
+  # glydrift.com (Cloudflare Pages): only after the lane passed, for a push to the game's release
+  # branch (or by hand with "deploy"). Never before the tests are green.
   deploy-cloudflare:
     name: Publish to glydrift.com (Cloudflare Pages)
-    needs: [reuse, test]
+    needs: [plan, gate]
     if: >-
-      !cancelled() && needs.reuse.result == 'success' &&
-      (needs.test.result == 'success' || (needs.test.result == 'skipped' && needs.reuse.outputs.hit == 'true') ||
-       (github.event_name == 'workflow_dispatch' && inputs.skip_tests)) && (
-        (github.event_name == 'workflow_dispatch' && inputs.skip_tests) ||
-        (github.event_name == 'push' && (
-          github.ref == 'refs/heads/main' ||
-          github.ref == 'refs/heads/claude/glydrift-arcade-game-7hznpc')) ||
-        (github.event_name == 'workflow_dispatch' && inputs.deploy)
-      )
+      !cancelled() && needs.plan.result == 'success' &&
+      !(github.event_name == 'workflow_dispatch' && inputs.nightly) && (
+        (github.event_name == 'workflow_dispatch' && inputs.skip_tests) || (
+          needs.plan.outputs.lane != 'none' &&
+          (needs.gate.result == 'success' || (needs.gate.result == 'skipped' && needs.plan.outputs.hit == 'true')) && (
+            (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/claude/glydrift-arcade-game-7hznpc')) ||
+            (github.event_name == 'workflow_dispatch' && inputs.deploy))))
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -299,17 +434,24 @@ jobs:
           fi
       - uses: actions/checkout@v4
         if: steps.keys.outputs.ok == 'true'
-      - uses: actions/setup-node@v4
+      - name: Still the newest commit on the branch?
+        id: fresh
         if: steps.keys.outputs.ok == 'true'
+        run: |
+          head=$(git ls-remote origin "refs/heads/$GITHUB_REF_NAME" | cut -f1)
+          if [ "$GITHUB_EVENT_NAME" != push ] || [ "$head" = "$GITHUB_SHA" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::$GITHUB_REF_NAME moved on to $head: that run publishes"; echo "ok=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-node@v4
+        if: steps.fresh.outputs.ok == 'true'
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: glydrift/package-lock.json
-      - if: steps.keys.outputs.ok == 'true'
-        run: npm ci && npm run build
+      - if: steps.fresh.outputs.ok == 'true'
+        run: npm ci --prefer-offline --no-audit --no-fund && npm run build
       - name: Create the Pages project (first time only)
-        if: steps.keys.outputs.ok == 'true'
+        if: steps.fresh.outputs.ok == 'true'
         run: npx --yes wrangler@3.114.0 pages project create glydrift --production-branch=main || echo "project already exists"
       - name: Deploy
-        if: steps.keys.outputs.ok == 'true'
+        if: steps.fresh.outputs.ok == 'true'
         run: npx --yes wrangler@3.114.0 pages deploy dist --project-name=glydrift --branch=main --commit-dirty=true

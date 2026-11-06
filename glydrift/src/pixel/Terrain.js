@@ -60,6 +60,15 @@ export class Terrain {
     return { id: theme.id, parts, alpha: 0 };
   }
 
+  /** Destroy a biome's (hidden) wall set so its art can be freed (never the current one). */
+  releaseSet(id) {
+    const i = this.sets.findIndex((s) => s.id === id);
+    if (i < 0 || this.theme?.id === id) return false;
+    for (const p of this.sets[i].parts) p.destroy();
+    this.sets.splice(i, 1);
+    return true;
+  }
+
   setTheme(theme, instant = false) {
     if (this.theme && this.theme.id === theme.id) return;
     this.theme = theme;

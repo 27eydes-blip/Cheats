@@ -597,6 +597,9 @@ function circleTex(n, r) {
   return pc;
 }
 
+/** Heroes whose portrait isn't frame 1 (THE HADDAD's is the big smile, not the uppercut). */
+const PORTRAIT_FRAME = { haddad: 4 };
+
 export function buildCommon(scene) {
   const frames = {};
   const heroes = {
@@ -625,6 +628,10 @@ export function buildCommon(scene) {
   for (let f = 3; f < 8; f++) frames[`splice_${f}`] = rim(SHOP_DRAW.splice(f));
   // (his raised wing is the top of frame 1: hats take the head from the glide pose instead)
   HEAD_ANCHORS.splice = headAnchor(frames.splice_0);
+  // THE HADDAD: slip, K.O., smile, knocked out and the jab (frames 3-6); hats sit on his hair
+  // in the guard pose (the uppercut's glove is the top of frame 1)
+  for (let f = 3; f < 7; f++) frames[`haddad_${f}`] = rim(SHOP_DRAW.haddad(f));
+  HEAD_ANCHORS.haddad = headAnchor(frames.haddad_0);
   // 손주원: the roar pose, the board on its own, and hats on the tiger's head
   frames.sonjuwon_3 = rim(sonjuwon(3));
   frames.sonjuwon_board = rim(sonjuwonBoard());
@@ -635,7 +642,7 @@ export function buildCommon(scene) {
   addAtlas(scene, "pxc", frames);
   // big standalone hero portraits (character cards, game over, leaderboard, share card)
   for (const id of Object.keys(heroes))
-    addTexture(scene, `hero_${id}`, frames[`${id}_1`], PORTRAIT_SCALE);
+    addTexture(scene, `hero_${id}`, frames[`${id}_${PORTRAIT_FRAME[id] ?? 1}`], PORTRAIT_SCALE);
   addTexture(scene, "hero_yarms_flex", frames.yarms_3, PORTRAIT_SCALE);
 
   // particle textures (same logical size as the old smooth ones, now pixel-crisp)

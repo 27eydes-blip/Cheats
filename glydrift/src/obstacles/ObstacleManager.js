@@ -195,6 +195,15 @@ export class ObstacleManager {
   }
 
   coin(x, y) {
+    // LEVEL MODE has no coin pickups (only its three star coins). The coin trail's bookkeeping
+    // still runs, so the level's seeded layout is exactly what it was with coins.
+    if (this.level) {
+      if (x >= this.lastCoinX) {
+        this.lastCoinX = x;
+        this.lastCoinY = y;
+      }
+      return null;
+    }
     let c = this.coins.find((o) => !o.active);
     if (!c) {
       c = this.scene.add
@@ -847,8 +856,14 @@ export class ObstacleManager {
         } else if (kind === "blinkgate") {
           const gap = Phaser.Math.Linear(310, 240, d);
           const gt = this.obtain("gate");
+          // the gate comes only 220 px after the blink block: keep its opening near the middle
+          // so it can always be reached from either lane of the block
+          const reach = H * 0.2;
           gt.spawn(x + 96 + 220 + gt.w / 2, {
-            gc: r.range(safeTop + gap / 2, safeBot - gap / 2),
+            gc: r.range(
+              Math.max(safeTop + gap / 2, mid - reach),
+              Math.min(safeBot - gap / 2, mid + reach),
+            ),
             gap,
             amp: 0,
           });

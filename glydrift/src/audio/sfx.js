@@ -251,6 +251,12 @@ const FLAP = {
     noise({ dur: 0.08, vol: 0.26, f: 4200 });
     tone({ type: "triangle", f0: 900, f1: 260, dur: 0.06, vol: 0.05 });
   },
+  // THE HADDAD: a punchy glove "thwap" (a short noise smack + a low thump under it)
+  haddad: () => {
+    noise({ dur: 0.05, vol: 0.34, f: 2600 });
+    tone({ type: "sine", f0: 190, f1: 70, dur: 0.09, vol: 0.34 });
+    tone({ type: "square", f0: 900, f1: 420, dur: 0.025, vol: 0.05 });
+  },
   // YARMS: a meaty "whomp" + a floppy wobble
   yarms: () => {
     tone({ type: "sine", f0: 150, f1: 55, dur: 0.14, vol: 0.4 });
@@ -808,6 +814,23 @@ export const Sfx = {
       vol: 0.06,
       delay: 0.02,
     });
+  },
+  /** THE HADDAD's new best: a boxing-ring bell, "ding ding" (struck metal partials) */
+  bell: () => {
+    for (const d of [0, 0.26])
+      for (const [f, v, dur] of [
+        [1180, 0.16, 0.9],
+        [2832, 0.06, 0.6],
+        [3906, 0.035, 0.4],
+        [590, 0.05, 0.7],
+      ])
+        tone({ type: "sine", f0: f, f1: f * 0.995, dur, vol: v, delay: d });
+  },
+  /** THE HADDAD's knockout: a heavy body "thud" on the canvas */
+  thud: () => {
+    tone({ type: "sine", f0: 120, f1: 38, dur: 0.32, vol: 0.5 });
+    noise({ dur: 0.16, vol: 0.28, f: 420 });
+    tone({ type: "triangle", f0: 70, f1: 45, dur: 0.2, vol: 0.18, delay: 0.05 });
   },
   /** MATTOE's aura shatters like glass: bright noise tinkles */
   shatter: () => {
