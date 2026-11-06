@@ -843,6 +843,7 @@ export class GameScene extends Phaser.Scene {
   levelComplete(res) {
     if (this.state !== "playing") return;
     this.state = "won";
+    this.comboMeter.setTier(1); // no "x13" left floating behind LEVEL COMPLETE
     const p = this.player;
     const col = this.levelRun.realm.col;
     const boss = this.levelRun.def.boss;

@@ -3273,6 +3273,21 @@ test("levels: every level has its own name, shown on the start screen, HUD and L
     () => !window.__glydrift.scene.getScene("Game").levelRun.hud.introC,
   );
   expect(gone).toBe(true);
+  // no coin pickups in a level (only its three star coins), and no coin counter
+  await page.evaluate(() => window.__glyGod(true));
+  await run(page, 8000);
+  const coins = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const om = g.scene.getScene("Game").obstacles;
+    return {
+      active: om.coins.filter((c) => c.active).length,
+      counter: g.scene.getScene("Hud").coinText.visible,
+      metres: Math.round(g.scene.getScene("Game").meters),
+    };
+  });
+  await page.evaluate(() => window.__glyGod(false));
+  expect(coins.metres).toBeGreaterThan(100);
+  expect(coins).toMatchObject({ active: 0, counter: false });
   expect(log.errors).toEqual([]);
 });
 

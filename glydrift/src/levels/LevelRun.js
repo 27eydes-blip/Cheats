@@ -343,6 +343,9 @@ class LevelHud {
     // the endless score sits where the bar goes: hide it during a level
     hud.scoreText?.setVisible(false);
     hud.bestText?.setVisible(false);
+    // levels have no coin pickups: no coin counter either
+    hud.coinIcon?.setVisible(false);
+    hud.coinText?.setVisible(false);
   }
 
   /** The level start screen: the level's number and name, big, until the first tap. */
@@ -464,6 +467,8 @@ class LevelHud {
     if (this.hud?.sys?.isActive()) {
       this.hud.scoreText?.setVisible(true);
       this.hud.bestText?.setVisible(true);
+      this.hud.coinIcon?.setVisible(true);
+      this.hud.coinText?.setVisible(true);
     }
   }
 }

@@ -195,6 +195,8 @@ export class ObstacleManager {
   }
 
   coin(x, y) {
+    // LEVEL MODE has no coin pickups (only its three star coins)
+    if (this.level) return null;
     let c = this.coins.find((o) => !o.active);
     if (!c) {
       c = this.scene.add
