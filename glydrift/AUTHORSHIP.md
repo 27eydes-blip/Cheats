@@ -1,10 +1,10 @@
 # Glydrift: Authorship
 
-© 2026 Sammy Eyde. All rights reserved.
+© 2026 Sam Eyde III. All rights reserved.
 
-Glydrift was created by **Sammy Eyde**. Sammy came up with the game, named it, designed its
+Glydrift was created by **Sam Eyde III**. Sam came up with the game, named it, designed its
 characters and worlds, and directed every feature, change and fix. The code and the pixel art
-were written with **Claude Code**, an AI coding tool, working from Sammy's direction.
+were written with **Claude Code**, an AI coding tool, working from Sam's direction.
 
 This document draws on the git history of this repository (`27eydes-blip/Cheats`, folder
 `glydrift/`) and on the project's own files. Wherever a fact did not come from git, the text
@@ -26,14 +26,14 @@ says so.
 Where these numbers come from: `git log` on `glydrift/` along the main Glydrift branch
 (`claude/glydrift-arcade-game-7hznpc`), measured on 6 November 2026. Every commit is authored as
 "Claude" because Claude Code made the commits. The ideas and decisions behind them were
-Sammy's.
+Sam's.
 
 ---
 
 ## Timeline of major milestones
 
 ### Before any code: Beat Glider → Glydr → Glydrift
-*Source: Sammy's notes. This stage came before any code was written, so it isn't in git.*
+*Source: Sam's notes. This stage came before any code was written, so it isn't in git.*
 - **Beat Glider:** the game's first name.
 - **Glydr:** the second name.
 - **Glydrift:** the final name, and the one the game carries from its very first commit.
@@ -56,7 +56,7 @@ Sammy's.
 ### 3 November 2026: Realms, dimensions and the hero roster
 - **01:49** A much easier Abyss, followed by two new biomes: **Peaceful Valley** and **Hurricane**.
 - **02:26** Runs get combos, perfects, milestones and Lucky Runs.
-- **02:33–02:45** A link-in-bio page for TikTok, with the footer "Created by Sammy Eyde".
+- **02:33–02:45** A link-in-bio page for TikTok, with the footer "Created by Sam Eyde III".
 - **04:36** **Dimensions**: a rift after the Hurricane opens into four new worlds (Prism Rift,
   Tidal Sky, Chrono Fracture, Mirror Realm).
 - **14:07–20:29** New heroes: **SMASH**, **MILZZZ**, **MANNY**, **WALLRUNNER**, **SPRINGER**,
@@ -105,12 +105,12 @@ Sammy's.
 
 ---
 
-## Sammy's creative decisions
+## Sam's creative decisions
 
 ### The concept
 A **one-tap, portrait arcade flyer**: tap to flap through a scrolling cosmos that keeps
 speeding up. One hit ends the run, and you're flying again the instant you tap retry. You travel
-through a chain of themed worlds, each with its own hazards. Sammy then built on that core with
+through a chain of themed worlds, each with its own hazards. Sam then built on that core with
 collectible heroes, a season pass, competitive leaderboards and a hand-designed Level Mode.
 
 ### The names
@@ -119,7 +119,7 @@ collectible heroes, a season pass, competitive leaderboards and a hand-designed 
   Drop** and the **Founding Drifter** launch reward.
 
 ### Characters
-Sammy designed the cast. Some highlights:
+Sam designed the cast. Some highlights:
 
 | Hero | Who they are |
 | --- | --- |
@@ -180,12 +180,12 @@ reggae soundtrack** that plays as one continuous mix.
 
 ## How it was built
 
-- **Sammy Eyde (creator and director):** the concept, the names, the characters and what makes
+- **Sam Eyde III (creator and director):** the concept, the names, the characters and what makes
   each one special, the realms, the level names, the look, the monetization model, the music
   direction, and every feature, tweak and fix: what to add, what to cut, what felt too hard,
-  what to rename. Sammy playtested the game and pointed each step in its direction.
+  what to rename. Sam playtested the game and pointed each step in its direction.
 - **Claude Code (development tool):** wrote the code, the procedurally drawn pixel art and the
-  music engine; ran the tests; and made the commits, following Sammy's direction in Claude Code
+  music engine; ran the tests; and made the commits, following Sam's direction in Claude Code
   sessions. That's why git lists "Claude" as the author of each commit.
 - **Stack:** Phaser 3 (WebGL), Vite, Capacitor for iOS, Supabase for accounts and leaderboards,
   Playwright for cross-browser tests, and Cloudflare Pages hosting at glydrift.com.
@@ -194,4 +194,4 @@ reggae soundtrack** that plays as one continuous mix.
 
 ---
 
-© 2026 Sammy Eyde. All rights reserved.
+© 2026 Sam Eyde III. All rights reserved.
