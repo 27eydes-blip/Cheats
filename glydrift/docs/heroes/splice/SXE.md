@@ -37,6 +37,32 @@ He's original 24×24 pixel art in 8 frames, with the usual bold dark outline plu
 - **Shop hats:** they sit on his head (anchored from the glide pose).
 - **Portraits:** the leaderboard, share card and game over use his wings-up portrait.
 
+## Afterburner (his signature trail)
+
+SXE's default trail is a fighter-jet **Afterburner**. It's cosmetic only: no gameplay changes.
+
+| | |
+|---|---|
+| Trail | Two blue-white afterburner flames from behind him, each with a flickering hot orange core at the nozzle. Thin white contrails stretch behind and slowly fade. Small sparks and smoke puffs drift off. Heat shimmer just past the flames. |
+| Speed | The flames and contrails get longer, brighter and bigger as he speeds up. |
+| Flap | The afterburners flare bigger with a burst of sparks and a short "fwoom". |
+| Near-miss | Wing-tip vapour streaks above and below him, like a jet pulling a tight turn (with his barrel roll). |
+| New best | A sonic boom ring bursts out behind him with a deep "boom" (and his screech). |
+| Death | The engines sputter out: they flicker off in a burst of smoke and sparks, with a coughing engine sound. |
+| Sound | A soft jet-engine hum while flying, rising in pitch with speed. Original synth (no recordings); it follows the sound effects volume and mute, and stops on pause and death. |
+
+- **Trails tab:** it's listed as "Afterburner". You own it with SXE; it's never sold and never comes from pods or the daily shop.
+- **Other trails:** equip another trail and SXE flies with that instead, with his usual reactions.
+- **Other heroes:** the Afterburner only draws on SXE. Equipped on another hero, they show their own trail.
+- **Low Graphics:** no heat shimmer, and fewer sparks and smoke puffs.
+- **Reduce Flashing:** steady flames (no flicker), no shimmer, and softer, slower boom rings.
+- **Performance:** the flames are a few dozen pixel squares a frame on the trail layer that's already drawn; sparks and smoke use the shared particle pools.
+
+![Gliding](afterburner/1-glide.png)
+![Afterburner flare on a flap](afterburner/2-flap-flare.png)
+![Sonic boom on a new best](afterburner/3-sonic-boom.png)
+![Death: engines sputter out](afterburner/4-death-sputter.png)
+
 ## Leaderboard
 
 Runs flown with a faster hero (SXE +25%, WALLRUNNER +20%, RONIN +10%) now show a small cyan speed badge (two chevrons) on both boards. Tapping the hero shows e.g. "SXE · +25% SPEED".

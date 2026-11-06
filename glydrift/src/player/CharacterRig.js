@@ -1144,7 +1144,7 @@ export class CharacterRig {
     if (this.px.mode === "yarms") this.updateYarms(dt);
     if (this.px.mode === "surf") this.updateSurf(dt);
     this.toe?.update(dt);
-    this.falcon?.update(dt);
+    this.falcon?.update(dt, scroll);
     if (this.an) this.an.update(dt, scroll);
     if (this.frozen) {
       // a death move is animating the sprite: just keep the trail fading
@@ -1409,7 +1409,12 @@ export class CharacterRig {
     if (this.points.length < 2) return;
     // stepped pixel trail: squares snapped to the art-pixel grid, shrinking + fading
     const P = 4;
-    const style = this.trailOverride ? null : this.cos.trail;
+    let style = this.trailOverride ? null : this.cos.trail;
+    // SXE's Afterburner draws only on SXE; any other hero shows their own trail
+    if (style === "trail_afterburner") {
+      if (this.falcon) return this.falcon.afterburner(g);
+      style = null;
+    }
     if (style && this.drawCosmeticTrail(g, style, P)) return;
     if (!this.trailOverride && this.px.mode === "yarms")
       return this.drawYarmsTrail(g);

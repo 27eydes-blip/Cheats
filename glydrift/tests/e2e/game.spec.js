@@ -2404,6 +2404,104 @@ test("SXE: indestructible in the Glitch Realm, and only there; combo up to x13",
   expect(volt.steps).toEqual([1, 2, 3, 5, 10]); // everyone else still stops at x10
 });
 
+test("SXE Afterburner: twin jet flames, flare, vapour, sonic boom, sputter; SXE only", async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    profileOf(testInfo) !== "iphone-std",
+    "once per browser, at phone size",
+  );
+  test.setTimeout(180_000);
+  const log = await openGame(page, { flags: ["god", "character=splice"] });
+  await startRun(page);
+  const out = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const r = s.player.rig;
+    const f = r.falcon;
+    let t = 1e6;
+    const step = (n) => {
+      for (let i = 0; i < n; i++) {
+        if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
+        t += 1000 / 60;
+        s.stepFrame(t, 1000 / 60);
+      }
+    };
+    step(90);
+    const res = {
+      burner: f.burner,
+      flames: r.trailG.commandBuffer.length > 40, // flames + contrails drawn
+    };
+    // flap: the burners flare, then settle
+    s.onTap();
+    res.flare = f.flareT > 0.3;
+    step(30);
+    res.settled = f.flareT === 0;
+    // speed: the trail gets longer at top speed
+    const slowTrail = r.trailTime;
+    f.speedK = 1;
+    f.update(1 / 60, 900);
+    res.longer = r.trailTime > slowTrail * 1.4;
+    // near-miss: wing-tip vapour; new best: the sonic boom (and his screech pose)
+    r.onNear();
+    res.vapor = f.vaporT > 0.4;
+    r.onBest();
+    res.boom = f.flareT > 0.5 && f.screechT > 0;
+    step(60);
+    // death: the engines sputter out, then stop drawing
+    window.__glyGod(false);
+    s.die();
+    res.sputter = f.sputterT > 0.5;
+    window.__glyGod(true);
+    for (let i = 0; i < 80; i++) r.update(1 / 60, 0);
+    res.out = f.sputterT === 0;
+    // another trail equipped: that trail shows, the reactions are his usual ones
+    r.cos = { trail: "trail_fire" };
+    res.otherTrail = !f.burner;
+    r.cos = { trail: "trail_afterburner" };
+    res.equipped = f.burner;
+    // the shop: never sold, never in pods or the daily shop; yours with SXE
+    const { COSMETICS, forSale, Shop, data } = window.__glyShop;
+    const c = COSMETICS.find((x) => x.id === "trail_afterburner");
+    const d = data();
+    const had = !!d.unlocked.splice;
+    delete d.unlocked.splice;
+    res.notOwned = !Shop.owns(c.id);
+    d.unlocked.splice = true;
+    res.owned = Shop.owns(c.id);
+    if (!had) delete d.unlocked.splice;
+    res.shop = { name: c.name, cat: c.cat, sold: forSale(c) };
+    return res;
+  });
+  expect(out).toEqual({
+    burner: true,
+    flames: true,
+    flare: true,
+    settled: true,
+    longer: true,
+    vapor: true,
+    boom: true,
+    sputter: true,
+    out: true,
+    otherTrail: true,
+    equipped: true,
+    notOwned: true,
+    owned: true,
+    shop: { name: "Afterburner", cat: "trail", sold: false },
+  });
+  // Low Graphics + Reduce Flashing: still draws, with no errors
+  const calm = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const r = s.player.rig;
+    window.__glyShop.data().settings.reduceFlash = true;
+    r.lowGfx = true;
+    r.reset(r.x, s.H / 2);
+    for (let i = 0; i < 60; i++) r.update(1 / 60, 500);
+    return r.falcon.burner && r.trailG.commandBuffer.length > 0;
+  });
+  expect(calm).toBe(true);
+  expect(log.errors).toEqual([]);
+});
+
 test("scenery: Slammer + Eye Beam always leaves a lane (forced, real collisions)", async ({
   page,
 }, testInfo) => {
