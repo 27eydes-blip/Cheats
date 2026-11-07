@@ -457,6 +457,8 @@ export class GameScene extends Phaser.Scene {
   onHidden() {
     if (this.state === "playing" || (this.mode === "level" && this.state === "ready"))
       this.hudReady?.pause?.();
+    // the phone may close a backgrounded game without warning (memory, a call): save the run now
+    if (this.state === "playing" && this.mode === "normal") this.saveCheckpoint();
   }
 
   // ------------------------------------------------------------------ events
@@ -878,7 +880,19 @@ export class GameScene extends Phaser.Scene {
     CrashSafety.checkpoint(run, { realm: this.zoneId || this.run.biome });
   }
 
-  finishRun() {
+  /**
+   * Crash safety: the run keeps failing (frameGuard). End it the normal way: the score, coins
+   * and distance are saved and sent to the leaderboard, and GAME OVER shows. The broken scene
+   * stops updating; RETRY then starts a fresh one. Returns false when there's no run to end.
+   */
+  endAfterError() {
+    if (this.state !== "playing" || this.mode !== "normal") return false;
+    this.scene.pause();
+    this.finishRun({ afterError: true });
+    return true;
+  }
+
+  finishRun({ afterError = false } = {}) {
     this.state = "dead";
     CrashSafety.clear(); // finished normally: committed below
     // RONIN's coin perk: a bonus at the end of every run (doubled by Double Coins / Lucky Run)
@@ -893,7 +907,7 @@ export class GameScene extends Phaser.Scene {
     const result = Progression.commitRun(this.run);
     // upload in the background — never awaited, never blocks retry
     result.upload = Leaderboard.submitRun(this.run);
-    this.scene.launch("GameOver", { result, game: this });
+    this.scene.launch("GameOver", { result, game: this, afterError });
     this.scene.bringToTop("GameOver");
   }
 

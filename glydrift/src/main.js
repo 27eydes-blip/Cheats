@@ -6,7 +6,7 @@ import "@fontsource/silkscreen/700.css";
 import "./fonts/galmuri.css"; // Hangul pixel font (손주원)
 import Phaser from "phaser";
 import "./gfx/tileSpriteFix.js";
-import { GuardHooks, watchContext } from "./systems/frameGuard.js";
+import { GuardHooks, guardScenes, watchContext } from "./systems/frameGuard.js";
 import { CrashReport } from "./systems/crashReport.js";
 import { CrashSafety } from "./systems/crashSafety.js";
 import { Updater } from "./systems/updater.js";
@@ -123,6 +123,26 @@ async function boot() {
   // seasons: cached / built-in config now, the live one from Supabase in the background
   if (TEST.seasonNow) Seasons.setNow(Date.parse(TEST.seasonNow));
   Seasons.init();
+  const SCENES = [
+    BootScene,
+    BackdropScene,
+    MenuScene,
+    GameScene,
+    HudScene,
+    GameOverScene,
+    LevelCompleteScene,
+    LevelSelectScene,
+    CharacterScene,
+    ProgressScene,
+    LeaderboardScene,
+    SpinScene,
+    ShopScene,
+    PassScene,
+    TitlesScene,
+    MusicTestScene,
+  ];
+  // a screen that fails to open sends the player home instead of leaving them stuck
+  guardScenes(SCENES);
   const game = new Phaser.Game({
     type: Phaser.WEBGL,
     parent: "game",
@@ -147,24 +167,7 @@ async function boot() {
     input: { activePointers: 2 },
     disableContextMenu: true,
     // order matters: scenes render in this order (Backdrop → screens → overlays)
-    scene: [
-      BootScene,
-      BackdropScene,
-      MenuScene,
-      GameScene,
-      HudScene,
-      GameOverScene,
-      LevelCompleteScene,
-      LevelSelectScene,
-      CharacterScene,
-      ProgressScene,
-      LeaderboardScene,
-      SpinScene,
-      ShopScene,
-      PassScene,
-      TitlesScene,
-      MusicTestScene,
-    ],
+    scene: SCENES,
   });
 
   if (TEST.renderEvery > 1) {
@@ -214,7 +217,16 @@ async function boot() {
   CrashReport.install();
   GuardHooks.onError = (err, kind = "frame") => CrashReport.report(kind, err);
   GuardHooks.beforeRecover = () => CrashSafety.recover("error");
+  // a run that keeps failing ends the normal way (GAME OVER, score saved), not on the home screen
+  GuardHooks.endRun = (g) => {
+    const gs = g.scene.getScene("Game");
+    if (!gs?.sys.isActive() || !gs.endAfterError?.()) return false;
+    CrashReport.report("recovered", "run ended after an error");
+    return true;
+  };
   CrashSafety.lastRecovered = CrashSafety.recoverAtLaunch();
+  if (Save.data && Save.restoredFromBackup)
+    CrashReport.report("save_restored", "the save was damaged: loaded the backup copy");
   CrashReport.flush();
   Updater.start(game);
   game.events.once("ready", () => {
@@ -310,6 +322,7 @@ async function boot() {
     window.__leaderboard = Leaderboard;
     window.__heroDefs = CHARACTERS;
     window.__music = Music;
+    window.__glySave = Save;
   }
 }
 
@@ -375,4 +388,11 @@ if (
   });
 }
 
-boot();
+boot().catch((err) => {
+  // the game couldn't start: say so (with a retry) instead of a blank screen, and report it
+  console.error("[glydrift] boot failed:", err);
+  try {
+    CrashReport.report("boot", err);
+  } catch {}
+  window.__glyBootStuck?.();
+});

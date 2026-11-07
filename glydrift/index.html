@@ -467,6 +467,41 @@
         </div>
       </div>
     </div>
+    <!-- never stuck on the loading screen: if the game hasn't drawn its home screen after 20 s,
+         or its code failed to load (a lost connection mid-load), the splash offers a retry -->
+    <script>
+      (function () {
+        var shown = false;
+        function stuck() {
+          var s = document.getElementById("splash");
+          if (shown || !s || s.classList.contains("gone")) return;
+          shown = true;
+          s.style.pointerEvents = "auto";
+          var b = s.querySelector(".bar");
+          if (b) b.outerHTML =
+            '<div style="font:700 18px system-ui,sans-serif;color:#e8e0ff;text-align:center;' +
+            'padding:0 24px">Couldn\'t load the game.<br><br><span style="display:inline-block;' +
+            'padding:12px 22px;border:2px solid #3ef4ff;border-radius:14px;color:#fff">' +
+            "TAP TO TRY AGAIN</span></div>";
+          s.addEventListener("click", function () {
+            location.reload();
+          });
+        }
+        var t = setTimeout(stuck, 20000);
+        window.__glyBootStuck = stuck;
+        window.__glyBooted = function () {
+          clearTimeout(t);
+        };
+        window.addEventListener(
+          "error",
+          function (e) {
+            var el = e.target;
+            if (el && el.tagName === "SCRIPT") stuck();
+          },
+          true,
+        );
+      })();
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

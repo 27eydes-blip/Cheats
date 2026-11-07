@@ -43,6 +43,7 @@ export class GameOverScene extends Phaser.Scene {
   init(data) {
     this.result = data.result;
     this.gameScene = data.game;
+    this.afterError = !!data.afterError; // the run ended because the game kept failing
     this.leaving = false;
     this.animDone = false;
     this.skipping = false;
@@ -537,6 +538,11 @@ export class GameOverScene extends Phaser.Scene {
     this.finishIntro();
     closeShareModal();
     const gs = this.gameScene;
+    if (this.afterError) {
+      // after a crash: a fresh game scene, not the one that broke
+      this.leaving = false;
+      return this.goto("Game", { mode: "normal" });
+    }
     this.scene.get("Hud")?.scene.setVisible(true);
     this.scene.stop();
     Music.restore();
