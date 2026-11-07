@@ -457,9 +457,8 @@ export class GameScene extends Phaser.Scene {
   onHidden() {
     if (this.state === "playing" || (this.mode === "level" && this.state === "ready"))
       this.hudReady?.pause?.();
-    // the phone may close a backgrounded game without warning (memory, a call): save now
+    // the phone may close a backgrounded game without warning (memory, a call): save the run now
     if (this.state === "playing" && this.mode === "normal") this.saveCheckpoint();
-    Save.write();
   }
 
   // ------------------------------------------------------------------ events

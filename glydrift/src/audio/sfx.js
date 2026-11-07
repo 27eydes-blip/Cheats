@@ -17,7 +17,15 @@ function ensure() {
     master.connect(ctx.destination);
   }
   master.gain.value = 0.42 * (st.sfxVol ?? 0.8);
-  if (ctx.state === "suspended") ctx.resume();
+  if (ctx.state !== "running") {
+    // suspended or interrupted (iOS: a call, Siri, the app in the background): ask for it back,
+    // but play nothing meanwhile. A stopped audio clock never ends a sound, so every sound made
+    // now would sit in the audio graph for good.
+    try {
+      if (ctx.state !== "closed") ctx.resume().catch(() => {});
+    } catch {}
+    return null;
+  }
   return voices;
 }
 

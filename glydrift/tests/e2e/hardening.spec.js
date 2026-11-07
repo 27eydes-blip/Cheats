@@ -631,7 +631,9 @@ test("100 deaths and retries in a row", async ({ page }, testInfo) => {
     });
     await waitFor(page, () => window.__glydrift.scene.isActive("GameOver"));
     await run(page, 700);
-    await page.evaluate(() => window.__glydrift.scene.getScene("GameOver").onBackgroundTap());
+    // (a tap skips the score roll-up, the next one retries; the roll-up's tweens don't run on
+    // the test's frozen clock, so press RETRY itself)
+    await page.evaluate(() => window.__glydrift.scene.getScene("GameOver").retry());
     await run(page, 400);
     await waitFor(page, () => !window.__glydrift.scene.isActive("GameOver"));
     await press(page, await fieldPoint(page));
@@ -755,6 +757,8 @@ for (let part = 0; part < 5; part++)
             const d = window.__glySave.data;
             d.unlocked[id] = true;
             d.selected = id;
+            // (Pass+ and season heroes need their pass too: fly them regardless)
+            window.__glyHeroes.Progression.selectedHero = () => id;
             window.__glyGod(true);
             for (const k of ["LevelComplete", "Hud", "Game"]) g.scene.stop(k);
             g.scene.start("Game", { mode: "level", level: n });
