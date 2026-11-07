@@ -75,3 +75,19 @@ mode. No email, username or account details. The top crashes of the week:
 | Drift Pass+: a failed purchase grants nothing, restoring grants it once | No duplicates. |
 | levels in practice mode | All 50, start to finish, nothing saved. |
 | every hero (game.spec, plus the overnight sweep below) | Visible again after RETRY; every hero flown through every realm and dimension. |
+
+## Overnight results (7 Nov 2026)
+
+- **Every hero, every world:** all 85 heroes flew 9.5 km each in endless mode, through all 7
+  realms and all 4 dimensions. Then each one died, went to GAME OVER, retried and flew again.
+  No errors, no missing or invisible heroes, all trails present. (A few runs skipped one
+  dimension: the order of dimensions is random, so a 9.5 km run doesn't always reach the
+  fourth.) Every hero also finished level 1 and the level 50 boss (in CI).
+- **Long run:** up to 55,000 score (28 km) in Chromium, plus 50,000+ in CI on WebKit and
+  Chromium. Memory stayed at about 20 MB, display objects about 800, textures about 540,
+  timers 0, listeners flat, the upload queue empty. With sound on, the sound fix holds the
+  audio graph at only the sounds still playing (it was about 450 more nodes every km).
+- **Frame time (game logic, 20,000 frames per run, VOLT and THE HADDAD):** median 0.1 ms,
+  99th percentile 1.1 ms, worst 29 ms. Nothing over 50 ms. About 12 frames per run went over
+  16 ms, all on entering a realm or dimension (its art being prepared). Drawing time can't be
+  measured fairly on the test machines (software graphics), so it isn't included.
