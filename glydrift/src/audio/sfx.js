@@ -736,9 +736,127 @@ const ANIMAL_SFX = {
   },
 };
 
+// ------------------------------------------------------------------ JAMAL's strange noises
+// Every flap is one of these, picked at random (never the same twice in a row), all
+// synthesized here (no recordings). p: pitch multiplier, v: volume multiplier. They play
+// through `master`, so they follow the sound-effects volume and mute.
+const T2 = (type, f0, f1, dur, vol, delay = 0) => tone({ type, f0, f1, dur, vol, delay });
+const JAMAL_NOISES = [
+  // snort: a short breathy rasp over a low buzz
+  (p, v) => {
+    noise({ dur: 0.1, vol: 0.32 * v, f: 700 * p });
+    T2("sawtooth", 120 * p, 80 * p, 0.1, 0.12 * v);
+  },
+  // honk: a goose-ish double reed
+  (p, v) => {
+    T2("square", 420 * p, 370 * p, 0.16, 0.13 * v);
+    T2("sawtooth", 210 * p, 190 * p, 0.16, 0.1 * v);
+  },
+  // wheeze: a thin whistling breath in
+  (p, v) => {
+    noise({ dur: 0.2, vol: 0.22 * v, f: 3200 * p });
+    T2("sine", 900 * p, 1350 * p, 0.2, 0.06 * v);
+  },
+  // squeaky-toy squeak: up, then down
+  (p, v) => {
+    T2("sine", 1400 * p, 2300 * p, 0.07, 0.2 * v);
+    T2("sine", 2300 * p, 1500 * p, 0.08, 0.18 * v, 0.07);
+  },
+  // grunt: a low push of air
+  (p, v) => {
+    T2("sawtooth", 115 * p, 78 * p, 0.12, 0.2 * v);
+    noise({ dur: 0.08, vol: 0.14 * v, f: 380 * p });
+  },
+  // gurgle: four quick wet blips
+  (p, v) => {
+    [0, 0.04, 0.08, 0.12].forEach((d, i) =>
+      T2("sine", (260 + ((i * 97) % 140)) * p, (180 + i * 30) * p, 0.04, 0.16 * v, d),
+    );
+  },
+  // tiny sneeze: a squeaky "a-" and a sharp "choo"
+  (p, v) => {
+    T2("triangle", 900 * p, 1500 * p, 0.05, 0.08 * v);
+    noise({ dur: 0.05, vol: 0.3 * v, f: 5200 * p, delay: 0.06 });
+  },
+  // "hrrrk": a throaty rattle (three fast pulses)
+  (p, v) => {
+    [0, 0.05, 0.1].forEach((d) => T2("sawtooth", 170 * p, 230 * p, 0.04, 0.14 * v, d));
+    noise({ dur: 0.15, vol: 0.12 * v, f: 950 * p });
+  },
+  // warbly howl: a wobbling rise and fall
+  (p, v) => {
+    [500, 680, 560, 760, 620].forEach((f, i) =>
+      T2("triangle", f * p, (f + (i % 2 ? -110 : 110)) * p, 0.07, 0.1 * v, i * 0.06),
+    );
+  },
+  // raspberry: a flappy "pbbbt"
+  (p, v) => {
+    T2("square", 88 * p, 76 * p, 0.2, 0.12 * v);
+    noise({ dur: 0.18, vol: 0.16 * v, f: 1300 * p });
+  },
+  // hiccup: a tiny chirp with a catch
+  (p, v) => {
+    T2("sine", 520 * p, 980 * p, 0.045, 0.22 * v);
+    T2("square", 300 * p, 260 * p, 0.03, 0.05 * v, 0.03);
+  },
+  // bark-burp: a yap that collapses into a burp
+  (p, v) => {
+    T2("square", 270 * p, 150 * p, 0.09, 0.14 * v);
+    T2("sawtooth", 120 * p, 66 * p, 0.2, 0.14 * v, 0.06);
+  },
+  // blep: a soft wet little pop
+  (p, v) => T2("sine", 760 * p, 380 * p, 0.06, 0.22 * v),
+  // yip: a bright tiny bark
+  (p, v) => {
+    T2("square", 900 * p, 640 * p, 0.05, 0.1 * v);
+    T2("triangle", 1300 * p, 900 * p, 0.04, 0.06 * v, 0.01);
+  },
+];
+let lastJamal = -1;
+/** JAMAL's flap: a random noise, never the last one, pitched up with speed (0..1) and combo. */
+function jamalFlap({ speed = 0, combo = 1 } = {}) {
+  const mode = Save.data.settings.jamalNoise || "on";
+  if (mode === "off") {
+    noise({ dur: 0.04, vol: 0.08, f: 1500 }); // just a soft paw-flap
+    return null;
+  }
+  let i = Math.floor(Math.random() * JAMAL_NOISES.length);
+  if (i === lastJamal) i = (i + 1 + Math.floor(Math.random() * (JAMAL_NOISES.length - 1))) % JAMAL_NOISES.length;
+  lastJamal = i;
+  const rise = 1 + 0.22 * Math.max(0, Math.min(1, speed)) + 0.025 * Math.max(0, Math.min(9, combo - 1));
+  const p = (0.9 + Math.random() * 0.2) * rise;
+  const v = mode === "quiet" ? 0.4 : 1;
+  JAMAL_NOISES[i](p, v);
+  return { i, p, v }; // (tests read which noise, its pitch and volume)
+}
+/** JAMAL's big moments: "honk" (new best), "wheeze" (death), "sneeze" (idle). */
+function jamalMoment(evt) {
+  const mode = Save.data.settings.jamalNoise || "on";
+  if (mode === "off") return;
+  const v = mode === "quiet" ? 0.4 : 1;
+  if (evt === "honk") {
+    // a loud triumphant double honk
+    [0, 0.2].forEach((d, k) => {
+      T2("square", 440 + k * 60, 400 + k * 60, 0.18, 0.2 * v, d);
+      T2("sawtooth", 220 + k * 30, 200 + k * 30, 0.18, 0.15 * v, d);
+    });
+  } else if (evt === "wheeze") {
+    // a long, dramatic wheeze that runs out of air
+    noise({ dur: 1.2, vol: 0.26 * v, f: 2800 });
+    T2("sine", 1200, 380, 1.2, 0.07 * v);
+    T2("sawtooth", 160, 70, 0.5, 0.06 * v, 0.8);
+  } else if (evt === "sneeze") {
+    JAMAL_NOISES[6](1, 0.7 * v);
+  }
+}
+
 export const Sfx = {
   unlock: () => Music.unlock(),
-  flap: (id) => (FLAP[id] || ANIMAL_SFX[id]?.flap || FLAP.volt)(),
+  /** ctx (JAMAL): { speed 0..1, combo } raise his noises' pitch. */
+  flap: (id, ctx) =>
+    id === "jamal" ? jamalFlap(ctx) : (FLAP[id] || ANIMAL_SFX[id]?.flap || FLAP.volt)(),
+  /** JAMAL: "honk" | "wheeze" | "sneeze" (follow his Jamal noises setting). */
+  jamal: (evt) => jamalMoment(evt),
   /** An animal hero's own reaction sound: "near" | "best" | "death" | "revive". */
   hero: (id, evt) => ANIMAL_SFX[id]?.[evt]?.(),
   /** A soft whoosh under every flap; `speed` 0..1 raises its pitch. */
@@ -1164,4 +1282,4 @@ export const Sfx = {
 };
 
 if (TEST.on && typeof window !== "undefined")
-  window.__glySfx = { Sfx, live: () => liveNodes, persistent: () => (wind ? 3 : 0) + (hum ? 7 : 0) + (jet ? 9 : 0) };
+  window.__glySfx = { Sfx, jamalCount: JAMAL_NOISES.length, live: () => liveNodes, persistent: () => (wind ? 3 : 0) + (hum ? 7 : 0) + (jet ? 9 : 0) };

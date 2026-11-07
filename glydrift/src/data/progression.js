@@ -437,6 +437,7 @@ export const Progression = {
     if (stat === "dimensions") return dimensionsFound(s);
     if (stat === "prismFound") return s.dimensions?.prism ? 1 : 0;
     if (stat === "maxStreak") return Math.max(s.stats.maxStreak || 0, s.login?.streak || 0);
+    if (stat === "deaths") return s.stats.deaths ?? s.stats.runs ?? 0;
     return s.stats[stat] || 0;
   },
 
@@ -672,6 +673,9 @@ export const Progression = {
     st.maxLasersRun = Math.max(st.maxLasersRun, run.lasers);
     st.maxPortalsRun = Math.max(st.maxPortalsRun, run.portals);
     if (run.killedIn === "void") st.voidDeaths = (st.voidDeaths || 0) + 1;
+    // JAMAL's challenge ("Die 50 times"): a run that ended in a crash (a save from before this
+    // was counted starts from its earlier runs, nearly all of which ended that way)
+    if (run.killedIn) st.deaths = (st.deaths ?? Math.max(0, st.runs - 1)) + 1;
     // animal challenges: the Abyss and the Prism Rift
     if (run.abyssM > 0) st.abyssRuns = (st.abyssRuns || 0) + 1;
     st.maxAbyssM = Math.max(st.maxAbyssM || 0, Math.floor(run.abyssM || 0));

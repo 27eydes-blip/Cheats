@@ -388,7 +388,7 @@ export class GameScene extends Phaser.Scene {
       this.respawnWait = false;
       this.boostGrace = 1.1;
       this.player.flap();
-      Sfx.flap(this.charDef.id);
+      Sfx.flap(this.charDef.id, { speed: this.speedNorm || 0, combo: this.mult || 1 });
       this.hudReady?.onStart?.();
       return;
     }
@@ -417,7 +417,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.player.flap();
     this.run.flaps++;
-    Sfx.flap(this.charDef.id);
+    Sfx.flap(this.charDef.id, { speed: this.speedNorm || 0, combo: this.mult || 1 });
     this.hudReady?.onStart?.();
   }
 
@@ -448,7 +448,7 @@ export class GameScene extends Phaser.Scene {
         const p = this.player;
         this.popNear(p.x + 30, p.y - 46, "DOUBLE JUMP!", "#8aff7a", 40);
       }
-      Sfx.flap(this.charDef.id);
+      Sfx.flap(this.charDef.id, { speed: this.speedNorm || 0, combo: this.mult || 1 });
       Sfx.flapWhoosh(this.speedNorm || 0);
       Haptics.tap(); // a crisp, tiny tick on every flap (installed app / Android)
     }
