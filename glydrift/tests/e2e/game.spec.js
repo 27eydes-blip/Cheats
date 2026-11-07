@@ -4280,8 +4280,8 @@ test("crash safety: an error mid-run is reported and the run is still saved @smo
     };
     return { score: s.score, m: Math.floor(s.meters) };
   });
-  await run(page, 1500); // > 20 failing frames: back to the home screen
-  await waitFor(page, () => window.__glydrift.scene.isActive("Menu"), 20_000);
+  await run(page, 1500); // > 20 failing frames: the run ends the normal way
+  await waitFor(page, () => window.__glydrift.scene.isActive("GameOver"), 20_000);
   const after = await page.evaluate(() => {
     const s = JSON.parse(localStorage.getItem("glydrift.save.v1"));
     return {
@@ -4296,11 +4296,25 @@ test("crash safety: an error mid-run is reported and the run is still saved @smo
   expect(after.best).toBe(at.score);
   expect(after.runs).toBe(4);
   expect(after.queued).toContain(at.score);
-  expect(after.kinds).toEqual(expect.arrayContaining(["frame", "error"]));
+  expect(after.kinds).toEqual(expect.arrayContaining(["frame", "recovered"]));
   expect(after.frame.message).toContain("broken frame");
   expect(after.frame.score).toBeGreaterThan(0);
   expect(after.frame.distance).toBeGreaterThan(400);
   expect(after.left).toBe(null);
+  // GAME OVER shows the run like any other; RETRY starts a fresh, working run
+  expect(await page.evaluate(() => window.__glydrift.scene.isActive("Hud"))).toBe(true);
+  await run(page, 1500);
+  // (the button can sit under a NEW BEST / level-up pop-up for a moment: press RETRY itself)
+  await page.evaluate(() => window.__glydrift.scene.getScene("GameOver").retry());
+  await run(page, 1200);
+  await waitFor(page, () => {
+    const s = window.__glydrift.scene.getScene("Game");
+    return window.__glydrift.scene.isActive("Game") && !window.__glydrift.scene.isPaused("Game") && s.state !== "dead";
+  });
+  await press(page, await fieldPoint(page));
+  await run(page, 1000);
+  expect((await gameState(page)).state).toBe("playing");
+  expect(await page.evaluate(() => window.__glydrift.scene.isActive("GameOver"))).toBe(false);
   // the frame error is logged on purpose here
   expect(log.errors.filter((e) => !/broken frame|loop kept alive/.test(e))).toEqual([]);
 });

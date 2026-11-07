@@ -69,21 +69,46 @@ function defaults() {
   };
 }
 
+/**
+ * Lay saved data over the defaults. A value of the wrong type (an old or damaged save: null
+ * where a list of heroes belongs, text where a number belongs) keeps the default instead, so
+ * a damaged save loads with everything that's still good in it, never a crash.
+ */
 function merge(base, data) {
-  if (!data || typeof data !== "object") return base;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return base;
   for (const k of Object.keys(base)) {
     if (!(k in data)) continue;
     const bv = base[k];
     const dv = data[k];
-    if (bv && typeof bv === "object" && !Array.isArray(bv) && dv && typeof dv === "object") {
+    if (bv && typeof bv === "object" && !Array.isArray(bv)) {
+      if (!dv || typeof dv !== "object" || Array.isArray(dv)) continue; // damaged: default
       base[k] = merge(bv, dv);
       // keep dynamic keys (unlocked chars, achievements…)
       for (const dk of Object.keys(dv)) if (!(dk in base[k])) base[k][dk] = dv[dk];
+    } else if (Array.isArray(bv)) {
+      if (Array.isArray(dv)) base[k] = dv;
+    } else if (typeof bv === "number") {
+      if (typeof dv === "number" && Number.isFinite(dv)) base[k] = dv;
+    } else if (typeof bv === "string") {
+      if (typeof dv === "string") base[k] = dv;
+    } else if (typeof bv === "boolean") {
+      if (typeof dv === "boolean") base[k] = dv;
     } else {
-      base[k] = dv;
+      base[k] = dv; // null defaults (ghosts): anything
     }
   }
   return base;
+}
+
+/** Counters that can never be negative (a damaged save, or an old bug). */
+function repair(d) {
+  for (const k of ["coins", "xp", "spins", "spinPts", "best", "spinPity"])
+    if (!(d[k] >= 0)) d[k] = 0;
+  if (!(d.level >= 1)) d.level = 1;
+  d.unlocked.volt = true; // the starter hero is always there
+  if (typeof d.selected !== "string" || !d.selected) d.selected = "volt";
+  d.lbQueue = d.lbQueue.filter((q) => q && typeof q === "object");
+  return d;
 }
 
 // ---- the device ledger: free rewards this DEVICE has already handed out. It lives outside
@@ -129,6 +154,30 @@ function applyLedger(d, fresh) {
 
 let cache = null;
 let persists = null;
+const BACKUP = "glydrift.save.v1.bak";
+const CORRUPT = "glydrift.save.v1.corrupt";
+let lastBackup = 0;
+let restoredFromBackup = false;
+function safeGet(k) {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+}
+function safeSet(k, v) {
+  try {
+    localStorage.setItem(k, v);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function safeRemove(k) {
+  try {
+    localStorage.removeItem(k);
+  } catch {}
+}
 const writeListeners = [];
 
 export const Save = {
@@ -137,15 +186,30 @@ export const Save = {
     return cache;
   },
   load() {
+    let raw = null;
     try {
-      const raw = localStorage.getItem(KEY);
-      const d = merge(defaults(), raw ? JSON.parse(raw) : null);
-      // spins used to be uncapped (one long run could bank dozens): trim to the cap
-      if ((d.spins || 0) > SPIN_MAX) d.spins = SPIN_MAX;
-      return d;
+      raw = localStorage.getItem(KEY);
     } catch {
-      return defaults();
+      return defaults(); // storage blocked (private browsing)
     }
+    for (const text of [raw, safeGet(BACKUP)]) {
+      if (!text) continue;
+      try {
+        const d = repair(merge(defaults(), JSON.parse(text)));
+        // spins used to be uncapped (one long run could bank dozens): trim to the cap
+        if ((d.spins || 0) > SPIN_MAX) d.spins = SPIN_MAX;
+        if (text !== raw) restoredFromBackup = true;
+        return d;
+      } catch {
+        // unreadable (cut off mid-write, edited by hand): keep it aside, try the backup
+        if (text === raw) safeSet(CORRUPT, raw);
+      }
+    }
+    return defaults();
+  },
+  /** True when this launch's save came from the backup copy (the main copy was damaged). */
+  get restoredFromBackup() {
+    return restoredFromBackup;
   },
   write() {
     noteLedger(Save.data);
@@ -156,16 +220,20 @@ export const Save = {
         /* a listener (cloud sync) must never break saving */
       }
     }
-    try {
-      localStorage.setItem(KEY, JSON.stringify(Save.data));
-    } catch {
-      // storage full / private mode: try once more without ghosts
-      try {
+    const json = JSON.stringify(Save.data);
+    if (!safeSet(KEY, json)) {
+      // storage full: make room (local logs only), then try again without ghost replays
+      for (const k of ["glydrift.analytics.v1", "glydrift.errors", CORRUPT]) safeRemove(k);
+      if (!safeSet(KEY, json)) {
         const slim = { ...Save.data, ghost: null, daily: { ...Save.data.daily, ghost: null } };
-        localStorage.setItem(KEY, JSON.stringify(slim));
-      } catch {
-        /* ignore */
+        safeSet(KEY, JSON.stringify(slim));
       }
+    }
+    // a second copy, at most every 20 s: what's restored if the main copy is ever damaged
+    const now = Date.now();
+    if (now - lastBackup > 20000) {
+      lastBackup = now;
+      safeSet(BACKUP, JSON.stringify({ ...Save.data, ghost: null, daily: { ...Save.data.daily, ghost: null } }));
     }
   },
   /** False when the browser refuses storage (private browsing, blocked site data). */
@@ -196,7 +264,7 @@ export const Save = {
   /** Swap in a whole save (a merged cloud save); missing fields get their defaults. */
   replace(data) {
     noteLedger(Save.data);
-    cache = applyLedger(merge(defaults(), JSON.parse(JSON.stringify(data))), false);
+    cache = applyLedger(repair(merge(defaults(), JSON.parse(JSON.stringify(data)))), false);
     Save.write();
   },
   /** Run fn after every write (cloud sync listens here). */

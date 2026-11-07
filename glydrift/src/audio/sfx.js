@@ -1,6 +1,7 @@
 // Tiny WebAudio synth — no audio files, instant response, unlocked on first touch.
 import { Music, rawAudioContext } from "./music.js";
 import { Save } from "../data/save.js";
+import { TEST } from "../systems/testFlags.js";
 
 let ctx = null;
 let master = null;
@@ -17,8 +18,53 @@ function ensure() {
   }
   master.gain.value = 0.42 * (st.sfxVol ?? 0.8);
   if (ctx.state === "suspended") ctx.resume();
-  return ctx;
+  return voices;
 }
+
+// Every sound is a few short-lived nodes (source → filter → gain → master). Safari keeps an
+// audio node alive for as long as it's connected, even after it has finished, so on long runs
+// thousands of dead nodes piled up in the audio graph. Each sound's nodes are disconnected
+// as soon as its sources end: a node goes once everything feeding it has ended.
+let liveNodes = 0; // sound nodes still connected (test builds read it: window.__glySfx)
+function release(node) {
+  if (node.__gone) return;
+  node.__gone = true;
+  liveNodes--;
+  try {
+    node.disconnect();
+  } catch {}
+  for (const d of node.__out || []) {
+    if (d.__sfx && --d.__ins <= 0) release(d);
+  }
+  node.__out = null;
+}
+function track(node, source) {
+  liveNodes++;
+  node.__sfx = true;
+  node.__ins = 0;
+  const connect = node.connect;
+  node.connect = function (dest, ...rest) {
+    (this.__out ||= []).push(dest);
+    if (dest?.__sfx) dest.__ins++;
+    return connect.call(this, dest, ...rest);
+  };
+  if (source) node.onended = () => release(node);
+  return node;
+}
+/** The audio context as the sounds see it: the same context, with every node tracked. */
+const voices = {
+  get currentTime() {
+    return ctx.currentTime;
+  },
+  get sampleRate() {
+    return ctx.sampleRate;
+  },
+  createBuffer: (...a) => ctx.createBuffer(...a),
+  createOscillator: () => track(ctx.createOscillator(), true),
+  createBufferSource: () => track(ctx.createBufferSource(), true),
+  createGain: () => track(ctx.createGain(), false),
+  createBiquadFilter: () => track(ctx.createBiquadFilter(), false),
+};
 
 function tone({
   type = "sine",
@@ -1108,3 +1154,6 @@ export const Sfx = {
   },
   biome: () => tone({ type: "sine", f0: 120, f1: 480, dur: 0.8, vol: 0.18 }),
 };
+
+if (TEST.on && typeof window !== "undefined")
+  window.__glySfx = { Sfx, live: () => liveNodes, persistent: () => (wind ? 3 : 0) + (hum ? 7 : 0) + (jet ? 9 : 0) };

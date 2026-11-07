@@ -42,6 +42,16 @@ function browser() {
   return `${m ? m[0].replace("Version", "Safari").replace("CriOS", "Chrome iOS") : "?"}${os ? ` · iOS ${os}` : ""}`.slice(0, 120);
 }
 
+// never personal info in a report: email addresses, tokens and keys, ids, URLs with queries
+function scrub(text) {
+  return String(text ?? "")
+    .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "<email>")
+    .replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+/g, "<token>")
+    .replace(/\b(sb_[a-z]+_)[\w-]+/gi, "$1<key>")
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, "<id>")
+    .replace(/([?&#][\w-]+=)[^&\s"')]+/g, "$1…");
+}
+
 function readQueue() {
   try {
     return JSON.parse(localStorage.getItem(KEY) || "[]");
@@ -56,6 +66,7 @@ function writeQueue(q) {
 }
 
 export const CrashReport = {
+  scrub,
   /** The game says how to read the run in progress (score, distance, realm…). */
   setContext(fn) {
     liveContext = fn;
@@ -71,7 +82,7 @@ export const CrashReport = {
    */
   report(kind, err, extra = {}) {
     try {
-      const message = String(err?.message ?? err ?? kind).slice(0, 300);
+      const message = scrub(err?.message ?? err ?? kind).slice(0, 300);
       if (kind !== "killed_mid_run" && IGNORE.test(message)) return null;
       const dedupe = `${kind}|${message}`;
       if (seen.has(dedupe) || sentThisSession >= MAX_SESSION) return null;
@@ -86,7 +97,7 @@ export const CrashReport = {
       const row = {
         kind,
         message,
-        stack: String(err?.stack || "")
+        stack: scrub(err?.stack || "")
           .split("\n")
           .slice(0, 8)
           .join(" | ")
