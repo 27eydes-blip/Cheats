@@ -958,6 +958,37 @@ export const CHARACTERS = [
     desc: "Never stays down.",
   },
   {
+    // JAMAL: a lovably ugly little white dog. Cosmetic only: standard hitbox, speed, gravity
+    // and score rules (no perks). Moves and effects in jamalFx.js, his noises in sfx.js.
+    id: "jamal",
+    name: "JAMAL",
+    title: "Very Good Boy",
+    rarity: "legendary",
+    color: 0xf6f1e6,
+    color2: 0x3f86ec,
+    texture: "hero_jamal",
+    pixel: {
+      atlas: "pxc",
+      frames: Array.from({ length: 9 }, (_, i) => `jamal_${i}`),
+      mode: "dog", // scrunch flaps, propeller tail, zoomies, the dramatic wheeze (jamalFx.js)
+      trail: [0xffffff, 0xf6f1e6, 0xe2d6bf, 0xfff6c0],
+    },
+    fx: {
+      death: [
+        { kind: "pixel", color: 0xf6f1e6, n: 14 },
+        { kind: "pixel", color: 0x3f86ec, n: 6 },
+      ],
+    },
+    scale: 0.62,
+    cost: 12000,
+    challenge: {
+      stat: "deaths",
+      value: 50,
+      text: "Die 50 times",
+    },
+    desc: "Ugly. Loud. Loved.",
+  },
+  {
     id: "wallrunner",
     name: "WALLRUNNER",
     title: "Leprechaun",

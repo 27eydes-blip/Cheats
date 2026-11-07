@@ -101,6 +101,23 @@ export class CharacterScene extends Phaser.Scene {
       150,
     );
     this.titleText = plainText(this, W / 2, this.cy - 146, "", 18, "#d8d0ff").setDepth(150);
+    // JAMAL's hero page: his noises can be turned down (On / Quieter / Off)
+    const noiseLabel = () =>
+      `JAMAL NOISES: ${{ on: "ON", quiet: "QUIETER", off: "OFF" }[s.settings.jamalNoise || "on"]}`;
+    this.noiseBtn = button(this, W / 2, this.cy - 112, 300, 46, noiseLabel(), {
+      color: 0x3f86ec,
+      size: 16,
+      onClick: () => {
+        const order = ["on", "quiet", "off"];
+        const cur = order.indexOf(s.settings.jamalNoise || "on");
+        s.settings.jamalNoise = order[(cur + 1) % order.length];
+        Save.write();
+        this.noiseBtn.setLabel(noiseLabel());
+        Sfx.flap("jamal"); // a sample at the new level
+      },
+    })
+      .setDepth(150)
+      .setVisible(false);
 
     // cards
     const focus = this.registry.get("heroFocus");
@@ -355,6 +372,7 @@ export class CharacterScene extends Phaser.Scene {
       .setStroke(hex(def.color), 5)
       .setShadow(0, 0, hex(def.color), 24, true, true);
     this.titleText.setText(`${def.title} · ${RARITY[def.rarity].label}`);
+    this.noiseBtn?.setVisible(def.id === "jamal");
     this.pedRings.forEach((r) => r.setTint(RARITY[def.rarity].color));
     this.pedGlow.setTint(def.color);
     this.beam.setTint(def.color);

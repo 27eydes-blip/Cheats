@@ -598,7 +598,7 @@ function circleTex(n, r) {
 }
 
 /** Heroes whose portrait isn't frame 1 (THE HADDAD's is the big smile, not the uppercut). */
-const PORTRAIT_FRAME = { haddad: 4 };
+const PORTRAIT_FRAME = { haddad: 4, jamal: 6 };
 
 export function buildCommon(scene) {
   const frames = {};
@@ -632,6 +632,10 @@ export function buildCommon(scene) {
   // in the guard pose (the uppercut's glove is the top of frame 1)
   for (let f = 3; f < 7; f++) frames[`haddad_${f}`] = rim(SHOP_DRAW.haddad(f));
   HEAD_ANCHORS.haddad = headAnchor(frames.haddad_0);
+  // JAMAL: tilt, sneeze, scratch, the stare, knocked out and the second glide frame (3-8);
+  // hats sit on top of his head, between the two antenna tufts (not on the tuft tips)
+  for (let f = 3; f < 9; f++) frames[`jamal_${f}`] = rim(SHOP_DRAW.jamal(f));
+  HEAD_ANCHORS.jamal = { x: 2.5, y: -7, w: 26, h: 26 };
   // 손주원: the roar pose, the board on its own, and hats on the tiger's head
   frames.sonjuwon_3 = rim(sonjuwon(3));
   frames.sonjuwon_board = rim(sonjuwonBoard());
