@@ -85,6 +85,7 @@ jobs:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           MSG: ${{ github.event.head_commit.message }}
           DISPATCH_LANE: ${{ inputs.lane || 'auto' }}
+          REF: ${{ github.ref }}
         run: |
           bash glydrift/scripts/ci-lane.sh | tee -a "$GITHUB_OUTPUT"
           live=false
@@ -102,7 +103,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           LANE: ${{ steps.lane.outputs.lane }}
-          REUSE_OK: ${{ github.event_name == 'push' }}
+          # (an App Store release always runs its own full lane: never reused)
+          REUSE_OK: ${{ github.event_name == 'push' && github.ref != 'refs/heads/release' }}
         run: |
           echo "hit=false" >> "$GITHUB_OUTPUT"
           [ "$REUSE_OK" = "true" ] && [ "$LANE" != "none" ] || exit 0

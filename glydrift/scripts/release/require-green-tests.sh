@@ -28,8 +28,11 @@ echo "Checking '${WORKFLOW}' runs for ${REPO}@${SHA:0:12} …"
 while :; do
   body=$(curl -fsSL "${AUTH[@]}" -H "Accept: application/vnd.github+json" "$URL") || body=""
   # prints: <state> <details>   state = pass | fail | running | none | error
-  verdict=$(printf '%s' "$body" | python3 -c '
-import json, sys
+  verdict=$(printf '%s' "$body" | GH_AUTH="${GITHUB_TOKEN:-}" python3 -c '
+import json, os, sys, urllib.request
+HDRS = {"Accept": "application/vnd.github+json"}
+if os.environ.get("GH_AUTH"):
+    HDRS["Authorization"] = "Bearer " + os.environ["GH_AUTH"]
 try:
     runs = json.load(sys.stdin)["workflow_runs"]
 except Exception:
@@ -38,10 +41,23 @@ if not runs:
     print("none no test run found for this commit"); sys.exit()
 ok = [r for r in runs if r["status"] == "completed" and r["conclusion"] == "success"]
 busy = [r for r in runs if r["status"] != "completed"]
-if ok:
-    print("pass", ok[0]["html_url"])
+# a run can succeed with only the smoke tests (fast lane) or none (docs only): a release needs
+# the FULL lane ("All tests passed (full)") to have passed on this exact commit
+full = []
+for r in ok:
+    try:
+        req = urllib.request.Request(r["jobs_url"] + "?per_page=60", headers=HDRS)
+        jobs = json.load(urllib.request.urlopen(req, timeout=30))["jobs"]
+    except Exception:
+        continue
+    if any(j["name"] == "All tests passed (full)" and j["conclusion"] == "success" for j in jobs):
+        full.append(r)
+if full:
+    print("pass", full[0]["html_url"])
 elif busy:
     print("running", busy[0]["html_url"])
+elif ok:
+    print("fail", "only the fast lane or no tests ran on this commit: a release needs the full lane. " + ok[0]["html_url"])
 else:
     print("fail", ", ".join("%s: %s" % (r["conclusion"], r["html_url"]) for r in runs))
 ')

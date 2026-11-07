@@ -26,7 +26,7 @@ workflows:
       groups:
         - glydrift_signing # CERTIFICATE_PRIVATE_KEY (CODEMAGIC_SETUP.md, step 4)
       vars:
-        BUNDLE_ID: com.eyde.glydrift
+        BUNDLE_ID: com.glydrift.game
         XCODE_PROJECT: ios/App/App.xcodeproj
         XCODE_SCHEME: App
       node: 22

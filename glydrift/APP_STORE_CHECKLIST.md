@@ -9,7 +9,7 @@ Codemagic can't do for you. Tick the items as you go.
 - [ ] **Agreements, Tax, and Banking** (App Store Connect → Business): accept the **Paid Apps**
       agreement and fill in tax and bank details. Drift Pass+ can't be sold without this, and
       the in-app purchase won't even load in TestFlight.
-- [ ] **Identifier** `com.eyde.glydrift` registered, with **Sign In with Apple** ticked
+- [ ] **Identifier** `com.glydrift.game` registered, with **Sign In with Apple** ticked
       (CODEMAGIC_SETUP.md step 1).
 - [ ] **App record** created in App Store Connect with that bundle ID (step 2).
 - [ ] Codemagic connected: API key, `CERTIFICATE_PRIVATE_KEY`, and the GitHub secret and
@@ -17,17 +17,17 @@ Codemagic can't do for you. Tick the items as you go.
 
 ## Server settings that follow the bundle ID
 
-The app's bundle ID is `com.eyde.glydrift`. `docs/ACCOUNTS_AND_PASS_SETUP.md` was written for
-`com.glydrift.game`. Where it says that, use `com.eyde.glydrift` instead:
+The app's bundle ID is `com.glydrift.game`, the same ID `docs/ACCOUNTS_AND_PASS_SETUP.md`, the
+game's Sign in with Apple and the `verify-purchase` function use:
 
-- [ ] **Supabase → Authentication → Providers → Apple → Client IDs:** add `com.eyde.glydrift`.
+- [ ] **Supabase → Authentication → Providers → Apple → Client IDs:** add `com.glydrift.game`.
       On iPhone, Apple's sign-in token is issued for the app's bundle ID.
-- [ ] **Supabase secret** `APPSTORE_BUNDLE_ID=com.eyde.glydrift` for the `verify-purchase`
+- [ ] **Supabase secret** `APPSTORE_BUNDLE_ID=com.glydrift.game` for the `verify-purchase`
       function. Otherwise every purchase is rejected as "not for this app".
 - [ ] **Supabase → Authentication → URL Configuration → Redirect URLs:** `capacitor://localhost`
       is there.
-- [ ] The Drift Pass+ **product IDs** stay `com.glydrift.game.driftpassplus.s1`, `…s2`, and so
-      on. That's what the game asks for. Product IDs don't have to start with the bundle ID.
+- [ ] The Drift Pass+ **product IDs** are `com.glydrift.game.driftpassplus.s1`, `…s2`, and so
+      on. That's what the game asks for.
 
 ## In-App Purchase (Drift Pass+)
 

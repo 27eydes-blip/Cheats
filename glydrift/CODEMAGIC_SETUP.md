@@ -38,7 +38,7 @@ Then watch **GitHub → Actions → Glydrift iOS release**. When it finishes, it
 | | |
 |---|---|
 | App name | Glydrift |
-| Bundle ID | `com.eyde.glydrift` (`capacitor.config.json`, Xcode project, `codemagic.yaml`) |
+| Bundle ID | `com.glydrift.game` (`capacitor.config.json`, Xcode project, `codemagic.yaml`) |
 | Version | 1.0.0. The build number goes up automatically. |
 | Orientation | Portrait only, on iPhone and iPad |
 | Display | Full screen, no status bar, home indicator auto-hides, no iPad split screen (`UIRequiresFullScreen`) |
@@ -55,14 +55,14 @@ on, and the app needs it.
 
 1. Go to <https://developer.apple.com/account> → **Certificates, IDs & Profiles** → **Identifiers** → **+**.
 2. Choose **App IDs**, then **App**, then **Continue**.
-3. Description: `Glydrift`. Bundle ID: **Explicit**, `com.eyde.glydrift`.
+3. Description: `Glydrift`. Bundle ID: **Explicit**, `com.glydrift.game`.
 4. Under **Capabilities**, tick **Sign In with Apple**. In-App Purchase is already on for every app.
 5. **Continue** → **Register**.
 
 ## Step 2: Create the app in App Store Connect
 
 1. Go to <https://appstoreconnect.apple.com> → **Apps** → **+** → **New App**.
-2. Platform: **iOS**. Name: `Glydrift`. If that name is taken, try something like "Glydrift: Neon Flyer"; the name under the icon stays Glydrift. Primary language: English (U.S.). Bundle ID: pick `com.eyde.glydrift`. SKU: `glydrift`. User access: Full Access.
+2. Platform: **iOS**. Name: `Glydrift`. If that name is taken, try something like "Glydrift: Neon Flyer"; the name under the icon stays Glydrift. Primary language: English (U.S.). Bundle ID: pick `com.glydrift.game`. SKU: `glydrift`. User access: Full Access.
 3. **Create.**
 
 ## Step 3: Create a free Codemagic account and connect the GitHub repo
@@ -106,7 +106,7 @@ This key lets Codemagic upload builds and manage signing for you.
 ## Step 5: Let Codemagic handle code signing automatically
 
 On every build, `codemagic.yaml` runs
-`app-store-connect fetch-signing-files com.eyde.glydrift --type IOS_APP_STORE --create`.
+`app-store-connect fetch-signing-files com.glydrift.game --type IOS_APP_STORE --create`.
 The first time, this creates the **Apple Distribution certificate** and the **App Store
 provisioning profile** in your developer account. After that it reuses them, and it makes a
 new profile if the old one expires. You don't need Xcode or Keychain.
