@@ -2608,7 +2608,9 @@ test("scenery: Slammer + Eye Beam always leaves a lane (forced, real collisions)
         : H - e.L - (sl.gc + sl.minGap / 2 + R);
       res.minLane = Math.min(res.minLane, lane);
     };
-    for (let run = 0; run < 8; run++) {
+    // (12 runs: the second with no new obstacles after the Abyss entrance moves the layout a
+    // little later, so the stretch tested in each run now holds one pattern, not two)
+    for (let run = 0; run < 12; run++) {
       window.__glyGod(true);
       if (run > 0) {
         s.resetRun(false);
@@ -2621,6 +2623,14 @@ test("scenery: Slammer + Eye Beam always leaves a lane (forced, real collisions)
           break;
         }
       while (s.meters < start + 262) step();
+      // (god mode flies through hazards: turn it off only with nothing at the bird, or the
+      // bird starts inside an obstacle that has nothing to do with the pattern under test)
+      for (
+        let k = 0;
+        k < 600 && om.active.some((o) => o.active && Math.abs(o.x - s.player.x) < 260);
+        k++
+      )
+        step();
       // from here every pick that can be Slammer + Eye is, with real collisions
       const r = om.rng;
       const orig = r.weighted.bind(r);
