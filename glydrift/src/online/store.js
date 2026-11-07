@@ -11,7 +11,7 @@
 //  Test builds (?mockiap): a stand-in store + server so the flow can be tested.
 import { TEST } from "../systems/testFlags.js";
 import { Leaderboard } from "./leaderboard.js";
-import { PassPlus, productIdFor } from "../data/passPlus.js";
+import { PassPlus, productIdFor, PLUS_PRICE_LABEL } from "../data/passPlus.js";
 import { Account } from "./account.js";
 
 export class StoreError extends Error {}
@@ -116,13 +116,28 @@ export const Store = {
   /**
    * Launch check: the server, not this device, decides who owns Drift Pass+. Signed in: the
    * account's verified purchases are pulled and any season the server doesn't list is dropped.
-   * Signed out (a guest can't buy — purchases belong to an account): any local entitlement is
-   * dropped. Offline / server not reachable: nothing changes until the next launch.
+   * A guest (anonymous player ID) can buy too: their purchases are recorded under that ID, so
+   * the same check applies. After signing out (a new ID with no purchases) any local entitlement
+   * is dropped by that check. Offline / server not reachable: nothing changes until next launch.
    */
   async recheck() {
     if (this.platform() === "mock" || TEST.offline || !Account.available || !Account.known) return;
-    if (Account.signedIn) await this.pullServerEntitlements({ exact: true });
-    else PassPlus.keepOnly([]);
+    if (Account.user) await this.pullServerEntitlements({ exact: true });
+  },
+
+  /**
+   * The buy button's price in the player's own currency and App Store region (StoreKit), so the
+   * price shown before buying is exactly what Apple charges. Web and tests: the US price.
+   */
+  async priceLabel(seasonId = PassPlus.season()) {
+    if (this.platform() !== "ios" || !seasonId) return PLUS_PRICE_LABEL;
+    try {
+      const store = await nativeStore();
+      const { products = [] } = await store.products({ productIds: [productIdFor(seasonId)] });
+      return products[0]?.displayPrice || PLUS_PRICE_LABEL;
+    } catch {
+      return PLUS_PRICE_LABEL;
+    }
   },
 
   /** Verified purchases recorded on the server for this account (any device). */

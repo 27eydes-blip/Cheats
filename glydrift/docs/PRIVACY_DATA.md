@@ -50,3 +50,12 @@ Apple keeps its own record of App Store purchases under Apple's policy.
 - **Identifiers → User ID:** App Functionality; linked; not tracking.
 - **User Content → Other User Content (username, title):** App Functionality; linked; not tracking.
 - **Usage Data → Product Interaction (scores and runs on the leaderboards):** App Functionality; linked; not tracking.
+
+## Added for the App Store (7 Nov 2026)
+
+| Data | When | Why | Where | Linked |
+|---|---|---|---|---|
+| **Crash reports** (error, build, device model, OS/browser, screen, run position) | When the game errors or is closed mid-run | Fixing crashes | Supabase `crash_reports` (nobody can read it from the app) | Yes (player ID) |
+| **Name reports** (who reported which name) | REPORT A NAME on the leaderboard | Removing offensive names | Supabase `name_reports` | Yes (reporter's ID) |
+
+The public policy is `public/privacy.html` (https://glydrift.com/privacy); App Privacy answers are in `docs/APP_STORE_REVIEW.md`.

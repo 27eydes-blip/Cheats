@@ -5,6 +5,8 @@
   "ios": {
     "contentInset": "never",
     "backgroundColor": "#05010d",
-    "preferredContentMode": "mobile"
+    "preferredContentMode": "mobile",
+    "scrollEnabled": false,
+    "allowsLinkPreview": false
   }
 }

@@ -4,6 +4,7 @@
 //  - iPhone / iPad (Safari has no install API): shows the Share → Add to Home Screen steps.
 //  - Hidden entirely once the game is running from the home screen.
 
+import { isNativeApp } from "./platform.js";
 let deferred = null;
 const listeners = new Set();
 
@@ -37,9 +38,9 @@ export const Install = {
     );
   },
 
-  /** Worth offering the button? (not already installed) */
+  /** Worth offering the button? (not already installed, and never inside the App Store app) */
   get available() {
-    return !this.standalone;
+    return !this.standalone && !isNativeApp();
   },
 
   onChange(fn) {

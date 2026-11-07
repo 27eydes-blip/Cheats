@@ -24,6 +24,7 @@ import { Account } from "../online/account.js";
 import { LbReset } from "../online/lbReset.js";
 import { CrashSafety } from "../systems/crashSafety.js";
 import { Updater } from "../systems/updater.js";
+import { openSite } from "../systems/platform.js";
 import { openAccount } from "../ui/accountModal.js";
 import { getCosmetic, Shop } from "../data/cosmetics.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
@@ -1736,7 +1737,8 @@ export class MenuScene extends Phaser.Scene {
     const hasGold = Shop.owns("name_pp_gold");
     const hasTheme = Shop.owns("theme_pp_abyss");
     const plusRow = hasGold || hasTheme;
-    const h = (Install.available ? 910 : 820) + (plusRow ? 90 : 0);
+    // + the privacy policy / support row (App Review needs the policy reachable in the app)
+    const h = (Install.available ? 910 : 820) + (plusRow ? 90 : 0) + 76; // ≤ 1080, the shortest view
     const c = this.modalBase(h, 0x3ef4ff);
     const y0 = H / 2 - h / 2;
     c.add(neonText(this, W / 2, y0 + 56, "SETTINGS", 40, 0x3ef4ff, { blur: 14 }));
@@ -1882,6 +1884,21 @@ export class MenuScene extends Phaser.Scene {
         c.add(tb);
       }
     }
+    // privacy policy and support: pages on glydrift.com (the app opens them in Safari)
+    const linksY = y0 + 705 + (Install.available ? 90 : 0) + (plusRow ? 90 : 0);
+    const lw = (W - 200) / 2;
+    c.add([
+      button(this, W / 2 - lw / 2 - 10, linksY, lw, 56, "PRIVACY POLICY", {
+        color: 0xbfb6e8,
+        size: 15,
+        onClick: () => openSite("privacy"),
+      }),
+      button(this, W / 2 + lw / 2 + 10, linksY, lw, 56, "SUPPORT", {
+        color: 0xbfb6e8,
+        size: 15,
+        onClick: () => openSite("support"),
+      }),
+    ]);
     if (Install.available) {
       c.add(
         button(this, W / 2, y0 + 705, W - 180, 72, "ADD TO HOME SCREEN", {
