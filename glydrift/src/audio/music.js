@@ -640,11 +640,14 @@ class MusicEngine {
     this.journeyTick();
   }
 
-  /** The Abyss: one bar of silence, then the heavy drop. Returns the seconds until the drop. */
-  abyssDrop(fallback = 0.5) {
+  /**
+   * The Abyss: `secs` of silence (the blackout), then the heavy drop: its first note is heard
+   * the moment the blackout ends, whatever the track's tempo (no waiting for a bar line).
+   */
+  abyssDrop(secs = 0.2) {
     if (!this.ready || !this.isLoaded("track", "abyss")) {
       this.preload("track", "abyss");
-      return fallback;
+      return secs;
     }
     const c = this.ctx;
     const now = c.currentTime;
@@ -656,23 +659,18 @@ class MusicEngine {
       g.cancelScheduledValues(now);
       g.setTargetAtTime(0, now, 0.01);
     }
-    this.sendBus.gain.setTargetAtTime(1, now + 0.5, 0.05);
-    this.feedback.gain.setTargetAtTime(0.4, now + 0.7, 0.1);
+    // scheduled so it's *heard* (after the device's output delay) exactly when the blackout ends
+    const D = Math.max(now + 0.005, now + secs - (now - this.heard()));
+    this.sendBus.gain.setTargetAtTime(1, D, 0.05);
+    this.feedback.gain.setTargetAtTime(0.4, D + 0.2, 0.1);
     const t = manifest.tracks.abyss;
-    const D = now + 0.06 + t.bar;
     this.deck = this.startDeck("abyss", D, t.sections.drop[0]);
     this.retimeEcho(t.bpm, D);
     this.lastLand = { id: "abyss", at: D };
     this.dropAt = D;
     this.event("abyss-drop", "abyss", D);
     this.prune(["abyss"]);
-    return Math.max(0.05, D - this.heard());
-  }
-
-  /** The blackout timer, driven by the audio clock while the Abyss drop is on its way. */
-  syncBlackout(t) {
-    if (!this.ready || !this.dropAt) return t;
-    return Math.max(0, this.dropAt - this.heard());
+    return secs;
   }
 
   /**
