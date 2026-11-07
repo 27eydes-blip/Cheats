@@ -162,16 +162,28 @@ export function guardScenes(classes, game) {
     const create = Cls.prototype.create;
     if (typeof create !== "function" || create.__guarded) continue;
     const wrapped = function guardedCreate(...args) {
+      this.__createFailed = false;
       try {
         const r = create.apply(this, args);
-        if (r && typeof r.catch === "function") r.catch((e) => sceneFailed(this, e));
+        if (r && typeof r.catch === "function")
+          r.catch((e) => {
+            this.__createFailed = true;
+            sceneFailed(this, e);
+          });
         return r;
       } catch (err) {
+        this.__createFailed = true; // its update would only fail on the half-built screen
         sceneFailed(this, err);
       }
     };
     wrapped.__guarded = true;
     Cls.prototype.create = wrapped;
+    const update = Cls.prototype.update;
+    if (typeof update === "function")
+      Cls.prototype.update = function guardedUpdate(...args) {
+        if (this.__createFailed) return;
+        return update.apply(this, args);
+      };
   }
 }
 

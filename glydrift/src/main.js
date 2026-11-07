@@ -322,6 +322,7 @@ async function boot() {
     window.__leaderboard = Leaderboard;
     window.__heroDefs = CHARACTERS;
     window.__music = Music;
+    window.__glySave = Save;
   }
 }
 

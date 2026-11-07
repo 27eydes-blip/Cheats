@@ -564,6 +564,7 @@ export class CharacterScene extends Phaser.Scene {
   }
 
   editTab(cat) {
+    if (!this.catBtns) return; // the editor is fading out: its buttons no longer count
     this.editCat = cat;
     for (const b of this.catBtns) b.setColor(b.cat === cat ? 0xffd23f : 0x6a5aa8);
     const grid = this.editGrid;
@@ -636,6 +637,7 @@ export class CharacterScene extends Phaser.Scene {
     if (!c) return;
     this.editor = null;
     this.catBtns = null;
+    for (const o of c.list) o.setEnabled?.(false); // no taps on it while it fades out
     this.tweens.add({
       targets: c,
       alpha: 0,
