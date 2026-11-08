@@ -40,6 +40,8 @@ export const ABYSS = {
   darkRadius: 470, // light radius around the player
   darkAlpha: 0.55, // darkness outside the light
   graceMeters: 180, // gentle start: only simple, spaced-out obstacles
+  blackout: 0.2, // seconds of black before the slam (fixed, whatever the music's tempo)
+  clearAfter: 1, // seconds after the blackout with no new obstacles
 };
 
 // ------------------------------------------------------------------ flashes

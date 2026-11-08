@@ -46,6 +46,7 @@ import { LevelRun } from "../levels/LevelRun.js";
 import { getLevel, recordLevel } from "../levels/levels.js";
 import { RNG } from "../data/rng.js";
 import { Save } from "../data/save.js";
+import { reduceFlashing } from "../effects/ScreenFlash.js";
 import {
   ABYSS,
   BIOME_SPEED,
@@ -294,6 +295,7 @@ export class GameScene extends Phaser.Scene {
     this.lastTapAt = -9;
     this.calmK = 0;
     this.blackoutT = 0;
+    this.abyssClearT = 0;
     this.darkA = 0;
     this.inZone = false;
     this.inAbyss = false;
@@ -392,6 +394,8 @@ export class GameScene extends Phaser.Scene {
       this.hudReady?.onStart?.();
       return;
     }
+    // levels 41-50 (and their practice runs) open with the Abyss entrance
+    if (this.levelRun?.def.realm === "abyss") this.startAbyssBlackout();
     // shop Boosts were removed: every run is a normal, ranked run
     this.revives = 0;
     this.coinBoost = 1;
@@ -1009,14 +1013,17 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.timeScale += (1 - this.timeScale) * Math.min(1, rawDt * 8);
     }
-    // blackout before the Abyss: the world holds still for half a second
+    // blackout before the Abyss: the world holds still for exactly ABYSS.blackout seconds
     let freeze = false;
     if (this.blackoutT > 0) {
-      // (held by the audio clock while the Abyss drop is on its way: exactly one bar)
-      this.blackoutT = Music.syncBlackout(this.blackoutT - rawDt);
+      this.blackoutT -= rawDt;
       freeze = true;
-      if (this.blackoutT <= 0) this.enterAbyss();
+      if (this.blackoutT <= 0) {
+        this.blackoutT = 0;
+        this.enterAbyss();
+      }
     }
+    if (this.abyssClearT > 0 && !freeze) this.abyssClearT -= rawDt;
     // slow-mo × Chrono time zones (golden slows everything, red speeds it all up)
     const dt = freeze ? 0 : rawDt * this.timeScale * this.zoneScale;
     this.fx.setTimeScale(this.timeScale);
@@ -1125,11 +1132,7 @@ export class GameScene extends Phaser.Scene {
       if (dom.id === "abyss" && !this.levelRun) {
         // the Abyss: blackout first, then the slam (see enterAbyss)
         this.run.biome = dom.biome;
-        this.blackoutT = Music.abyssDrop(0.5);
-        this.blackout.setAlpha(1);
-        this.calmVig.setAlpha(0);
-        Music.endCalm(true);
-        this.hudReady?.setBlackout?.(true);
+        this.startAbyssBlackout();
       }
     }
     if (this.blackoutT <= 0 && playing && dom.i !== this.announcedBiome) {
@@ -1308,13 +1311,18 @@ export class GameScene extends Phaser.Scene {
     // Realm changes never pause the action: obstacles keep coming through every boundary
     // (the realm title shows small, high up, over the play). Only The Calm and the blackout
     // into the Abyss hold spawning — that is a designed moment.
-    info.pause = playing && (calm || preCalm || this.blackoutT > 0);
+    // (the Abyss entrance: nothing new during the blackout or the first second after it)
+    const abyssHold = this.blackoutT > 0 || this.abyssClearT > 0;
+    info.pause = playing && (calm || preCalm || abyssHold);
     // gentle starts: the Abyss's first metres (spaced out), and the first seconds of every
     // dimension (only simple obstacles while its new mechanics settle in, at normal spacing)
     const dimGrace = (this.speed * DIMENSIONS.graceSeconds) / WORLD.pxPerMeter;
     info.grace = seg0.id === "abyss" && local0 < ABYSS.graceMeters;
     info.simpleOnly = info.grace || (seg0.dimension && local0 < dimGrace);
-    if (this.levelRun) info.pause = info.grace = info.simpleOnly = false;
+    if (this.levelRun) {
+      info.grace = info.simpleOnly = false;
+      info.pause = playing && abyssHold; // levels 41-50 open with the same entrance
+    }
     this.updateCalmFx(rawDt);
     this.flashFx.update(rawDt);
 
@@ -1669,12 +1677,29 @@ export class GameScene extends Phaser.Scene {
     else this.speedMul = Math.max(target, this.speedMul - rawDt * 0.12);
   }
 
+  /** The Abyss entrance: ABYSS.blackout seconds of black and silence, then the slam. */
+  startAbyssBlackout() {
+    const reduce = reduceFlashing();
+    this.blackoutT = Music.abyssDrop(ABYSS.blackout);
+    this.abyssClearT = ABYSS.clearAfter;
+    this.tweens.killTweensOf(this.blackout);
+    // Reduce Flashing: a deep dim instead of a hard cut to black
+    this.blackout.setAlpha(reduce ? 0.8 : 1);
+    this.calmVig.setAlpha(0);
+    Music.endCalm(true);
+    this.hudReady?.setBlackout?.(true);
+  }
+
   enterAbyss() {
+    const reduce = reduceFlashing();
     this.inAbyss = true;
-    this.blackout.setAlpha(0);
+    this.abyssClearT = ABYSS.clearAfter; // counted from the end of the blackout
+    if (reduce)
+      this.tweens.add({ targets: this.blackout, alpha: 0, duration: 250, ease: "Sine.easeOut" });
+    else this.blackout.setAlpha(0);
     this.hudReady?.setBlackout?.(false);
     this.setDesat(0);
-    this.cameras.main.shake(380, 0.012);
+    this.cameras.main.shake(380, reduce ? 0.004 : 0.012);
     this.flashFx.flash(0xff0820, { ...FLASH.abyss, priority: true });
     this.time.delayedCall(
       700,
