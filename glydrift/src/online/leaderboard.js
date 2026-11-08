@@ -225,6 +225,8 @@ function mockRank(level, value) {
   return rows.filter((r) => r.score > value).length + 1;
 }
 
+export const HIDDEN_NAME = "Hidden player";
+
 class LeaderboardService {
   constructor() {
     this.cols = {}; // optional columns known to be missing on the server (false)
@@ -244,6 +246,56 @@ class LeaderboardService {
 
   get username() {
     return this.data.profile.username || "";
+  }
+
+  // ---------------------------------------------------------------- reported names
+  /** Players this player reported or hid: { player_id: the name they had } (this device). */
+  get hidden() {
+    const s = Save.data;
+    s.hiddenPlayers ||= {};
+    return s.hiddenPlayers;
+  }
+
+  /** Rows with every hidden player's name replaced (their score stays, the name doesn't). */
+  maskHidden(rows) {
+    const hidden = this.hidden;
+    return rows.map((r) =>
+      r && hidden[r.player_id] && r.player_id !== this.userId
+        ? { ...r, username: HIDDEN_NAME, hiddenName: true }
+        : r,
+    );
+  }
+
+  /**
+   * Report an offensive name: it's hidden for this player straight away and the report goes to
+   * the server (table name_reports), where enough reports rename the player automatically and
+   * the owner can remove it by hand. Works offline (the hide is local; the report is retried).
+   */
+  async reportName(playerId, name) {
+    if (!playerId || playerId === this.userId) return false;
+    this.hidden[playerId] = String(name || "").slice(0, 40);
+    Save.write();
+    if (TEST.lbmock || TEST.offline) {
+      (window.__glyReports ||= []).push({ playerId, name });
+      return true;
+    }
+    try {
+      const sb = await this.session();
+      const { error } = await sb
+        .from("name_reports")
+        .insert({ reported_player: playerId, reported_name: String(name || "").slice(0, 40) });
+      // already reported by this player (unique) is fine
+      if (error && error.code !== "23505") throw error;
+      return true;
+    } catch {
+      return false; // still hidden here
+    }
+  }
+
+  /** Show every hidden name again. */
+  unhideAll() {
+    Save.data.hiddenPlayers = {};
+    Save.write();
   }
 
   client() {
@@ -514,7 +566,10 @@ class LeaderboardService {
 
   /** Top 100 for a level + the player's own row and rank (even outside the top 100). */
   async board(level, period = "all") {
-    if (TEST.lbmock) return mockBoard(level, period, this.username);
+    if (TEST.lbmock) {
+      const b = mockBoard(level, period, this.username);
+      return { ...b, rows: this.maskHidden(b.rows) };
+    }
     try {
       const sb = await this.session();
       const since = LeaderboardService.since(period);
@@ -529,7 +584,7 @@ class LeaderboardService {
       const { data: rows, error } = await q;
       if (error) throw error;
       const me = await this.myRank(sb, level, since);
-      return { rows: rows || [], me, userId: this.userId };
+      return { rows: this.maskHidden(rows || []), me, userId: this.userId };
     } catch (err) {
       // an older database without the title / flair column: read without it
       const missing = missingColumn(err, ["title", "flair"]);

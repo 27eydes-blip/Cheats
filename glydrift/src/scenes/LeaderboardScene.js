@@ -21,15 +21,17 @@ import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { button, fadeTo, neonText, plainText } from "../ui/ui.js";
 import { titleText } from "../ui/titleText.js";
 
-/** Heroes whose perks touch coins or survival (RONIN, SXE), shown with the gold perk badge. */
+/** Heroes whose perks touch coins or survival (RONIN, SXE, WALLRUNNER's ×15 coins), shown with the gold perk badge. */
 const hasCoinPerks = (def) =>
   !!(
+    (def.coinMul ?? 1) > 1 ||
     def.perks?.coinBonus ||
     def.perks?.fireWard ||
     def.perks?.glitchProof ||
     def.perks?.comboMax
   );
 import { Titles } from "../data/titles.js";
+import { openReport } from "../ui/reportModal.js";
 
 const MEDALS = [0xffd23f, 0xdfe8f5, 0xd8894a];
 const ROW_H = 68;
@@ -266,6 +268,12 @@ export class LeaderboardScene extends Phaser.Scene {
       .setLetterSpacing(3)
       .setDepth(41);
     this.you = this.add.container(0, H - 80 - sb).setDepth(41);
+    // REPORT A NAME (offensive usernames): hidden for you at once, reported to be removed
+    this.reportBtn = button(this, W / 2 + 30, H - 133 - sb, 180, 40, "REPORT A NAME", {
+      color: 0xbfb6e8,
+      size: 13,
+      onClick: () => this.openReport(),
+    }).setDepth(42);
 
     // state overlay (loading / empty / error)
     this.stateBox = this.add
@@ -505,6 +513,7 @@ export class LeaderboardScene extends Phaser.Scene {
         ? (this.listTop + this.listBottom) / 2
         : Math.min(this.listBottom - 80, this.listTop + PODIUM_H + 70);
       this.rows = res.rows;
+      this.userId = res.userId;
       this.renderRows(res.rows, res.userId);
       this.renderYou(res.me);
     } catch (err) {
@@ -955,6 +964,17 @@ export class LeaderboardScene extends Phaser.Scene {
     this.contentH = offset + Math.max(0, rows.length - 5) * ROW_H + 12;
   }
 
+  async openReport() {
+    if (this.reporting) return;
+    this.reporting = true;
+    try {
+      const { changed } = await openReport(this.rows || [], this.userId);
+      if (changed && this.sys.isActive()) this.fetchBoard();
+    } finally {
+      this.reporting = false;
+    }
+  }
+
   renderYou(me, offline = false) {
     this.you.removeAll(true);
     const W = this.W;
@@ -981,6 +1001,7 @@ export class LeaderboardScene extends Phaser.Scene {
     );
     this.you.add(heroImage(this, 150, 0, def.id, 0.4 / HI));
     if ((def.speed ?? 1) > 1) this.you.add(this.speedBadge(172, -18));
+    if (hasCoinPerks(def)) this.you.add(this.perkBadge(172, 18)); // (your own row too)
     const fl = flairOf({ flair: myFlair() });
     this.you.add(
       nameText(this, 192, -14, name, {

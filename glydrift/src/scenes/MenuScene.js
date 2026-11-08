@@ -12,7 +12,7 @@ import { CharacterRig } from "../player/CharacterRig.js";
 import { CHARACTERS, getCharacter, onSale, saleLeft } from "../player/characterDefs.js";
 import { Sfx } from "../audio/sfx.js";
 import { TEST } from "../systems/testFlags.js";
-import { Haptics } from "../systems/haptics.js";
+import { Haptics, hapticsLevel } from "../systems/haptics.js";
 import { Install } from "../systems/install.js";
 import { flairOf, Leaderboard, Levels, myFlair } from "../online/leaderboard.js";
 import { nameText } from "../ui/nameplate.js";
@@ -24,6 +24,7 @@ import { Account } from "../online/account.js";
 import { LbReset } from "../online/lbReset.js";
 import { CrashSafety } from "../systems/crashSafety.js";
 import { Updater } from "../systems/updater.js";
+import { openSite } from "../systems/platform.js";
 import { openAccount } from "../ui/accountModal.js";
 import { getCosmetic, Shop } from "../data/cosmetics.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
@@ -1736,7 +1737,8 @@ export class MenuScene extends Phaser.Scene {
     const hasGold = Shop.owns("name_pp_gold");
     const hasTheme = Shop.owns("theme_pp_abyss");
     const plusRow = hasGold || hasTheme;
-    const h = (Install.available ? 910 : 820) + (plusRow ? 90 : 0);
+    // + the privacy policy / support row (App Review needs the policy reachable in the app)
+    const h = (Install.available ? 910 : 820) + (plusRow ? 90 : 0) + 76; // ≤ 1080, the shortest view
     const c = this.modalBase(h, 0x3ef4ff);
     const y0 = H / 2 - h / 2;
     c.add(neonText(this, W / 2, y0 + 56, "SETTINGS", 40, 0x3ef4ff, { blur: 14 }));
@@ -1797,13 +1799,27 @@ export class MenuScene extends Phaser.Scene {
     );
     // Reduce Flashing: flashes become gentle colour fades (defaults to the device's Reduce Motion)
     const flashLabel = () => `REDUCE FLASHING: ${reduceFlashing() ? "ON" : "OFF"}`;
-    const style = button(this, W / 2, y0 + 430, W - 180, 72, flashLabel(), {
+    const half = (W - 200) / 2;
+    const style = button(this, W / 2 - half / 2 - 10, y0 + 430, half, 72, flashLabel(), {
       color: 0xb45cff,
-      size: 18,
+      size: 15,
       onClick: () => {
         st.reduceFlash = !reduceFlashing();
         Save.write();
         style.setLabel(flashLabel());
+      },
+    });
+    // haptics: FULL (every flap too) → LIGHT (softer, no flap tick) → OFF
+    const hapLabel = () => `HAPTICS: ${hapticsLevel().toUpperCase()}`;
+    const hap = button(this, W / 2 + half / 2 + 10, y0 + 430, half, 72, hapLabel(), {
+      color: 0x3ef4ff,
+      size: 15,
+      onClick: () => {
+        const next = { full: "light", light: "off", off: "full" }[hapticsLevel()];
+        st.haptics = next;
+        Save.write();
+        hap.setLabel(hapLabel());
+        if (next !== "off") Haptics.strong();
       },
     });
     const done = button(this, W / 2, y0 + h - 70, 300, 80, "DONE", {
@@ -1847,7 +1863,7 @@ export class MenuScene extends Phaser.Scene {
         });
       },
     });
-    c.add([mute, gfx, style, nameBtn, acct, done]);
+    c.add([mute, gfx, style, hap, nameBtn, acct, done]);
     if (plusRow) {
       const py = y0 + (Install.available ? 795 : 705);
       const both = hasGold && hasTheme;
@@ -1882,6 +1898,21 @@ export class MenuScene extends Phaser.Scene {
         c.add(tb);
       }
     }
+    // privacy policy and support: pages on glydrift.com (the app opens them in Safari)
+    const linksY = y0 + 705 + (Install.available ? 90 : 0) + (plusRow ? 90 : 0);
+    const lw = (W - 200) / 2;
+    c.add([
+      button(this, W / 2 - lw / 2 - 10, linksY, lw, 56, "PRIVACY POLICY", {
+        color: 0xbfb6e8,
+        size: 15,
+        onClick: () => openSite("privacy"),
+      }),
+      button(this, W / 2 + lw / 2 + 10, linksY, lw, 56, "SUPPORT", {
+        color: 0xbfb6e8,
+        size: 15,
+        onClick: () => openSite("support"),
+      }),
+    ]);
     if (Install.available) {
       c.add(
         button(this, W / 2, y0 + 705, W - 180, 72, "ADD TO HOME SCREEN", {

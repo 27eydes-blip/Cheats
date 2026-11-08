@@ -673,6 +673,7 @@ export class CharacterRig {
       // STUBBED! (the sprite stays: it flattens, then bounces away; see ToeBits)
       this.dead = true;
       this.toe.die();
+      if (this.fx) this.cosmeticDeath(this.x, this.y); // equipped death effects still play
       hints.shake = 0.024;
       return hints;
     }

@@ -78,6 +78,9 @@ export function drawNeonRect(
   g.strokeRoundedRect(x, y, w, h, r);
 }
 
+/** 44 pt in game units: the logical screen is 720 wide, an iPhone 390 pt (720 / 390 × 44). */
+export const MIN_TAP = 82;
+
 /** Bouncy neon button. Returns a Container with `.setLabel()` and `.setEnabled()`. */
 export function button(
   scene,
@@ -110,7 +113,14 @@ export function button(
     c.add(st);
   }
   c.setSize(w, h);
-  c.setInteractive(new Phaser.Geom.Rectangle(0, 0, w, h), Phaser.Geom.Rectangle.Contains);
+  // the tap area is at least 44 pt each way (Apple's minimum; ~82 game units on a phone) even
+  // when the button is drawn smaller: the invisible area grows, the button looks the same
+  const hw = Math.max(w, MIN_TAP);
+  const hh = Math.max(h, MIN_TAP);
+  c.setInteractive(
+    new Phaser.Geom.Rectangle(-(hw - w) / 2, -(hh - h) / 2, hw, hh),
+    Phaser.Geom.Rectangle.Contains,
+  );
   c.enabled = true;
   let pressed = false;
   c.on("pointerdown", (p, lx, ly, e) => {

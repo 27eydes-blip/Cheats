@@ -71,6 +71,9 @@ function showNoWebGL() {
 
 async function boot() {
   if (!hasWebGL()) return showNoWebGL();
+  // the Korean-capable pixel font (164 KB) is only for one hero's name: load it alongside the
+  // game, never holding up the first screen
+  document.fonts?.load("700 32px Galmuri11", "손주원").catch(() => {});
   // make sure the display fonts are ready before any Text is rasterised
   try {
     await Promise.race([
@@ -80,7 +83,6 @@ async function boot() {
         document.fonts.load("600 32px Rajdhani"),
         document.fonts.load("700 32px Rajdhani"),
         document.fonts.load("700 32px Silkscreen"),
-        document.fonts.load("700 32px Galmuri11", "손주원"),
       ]),
       new Promise((r) => setTimeout(r, 1500)),
     ]);
@@ -184,12 +186,33 @@ async function boot() {
     };
   }
 
+  // Menus at most 60 fps on 120 Hz screens (ProMotion iPhones): a menu gains nothing from 120
+  // frames a second and it costs battery. Flying keeps the display's full rate (see fps above).
+  // A skipped frame's time is carried into the next one, so menu animations keep their speed.
+  {
+    const inner = game.step.bind(game);
+    let carry = 0;
+    game.step = (time, delta) => {
+      const gs = game.scene.keys.Game;
+      const flying = gs && game.scene.isActive("Game") && (gs.state === "playing" || gs.state === "ready");
+      if (!flying && delta > 0 && delta + carry < 10) {
+        carry += delta;
+        return;
+      }
+      const d = delta + carry;
+      carry = 0;
+      inner(time, d);
+    };
+  }
+
   // safe areas (notch / home indicator) converted into logical game units, including any
   // part of the canvas cropped off-screen by ENVELOP scaling
   const updateSafe = () => {
     const probe = document.getElementById("safe-probe");
     const cs = probe ? getComputedStyle(probe) : null;
-    let insetTop = probe ? probe.getBoundingClientRect().height : 0;
+    // (the probe's own height is the top inset; its box also holds the bottom inset as padding,
+    // so its outer height was top + bottom: the top UI sat ~34 pt too low on Face ID iPhones)
+    let insetTop = cs ? Number.parseFloat(cs.height) || 0 : 0;
     // iOS often reports env(safe-area-inset-top) as 0 until layout settles (and in some
     // standalone launches never) → fall back to the known notch / Dynamic Island heights
     const fullScreen =
@@ -213,6 +236,7 @@ async function boot() {
     game.registry.set("safeTop", Math.round(((insetTop + cropTop) * VIEW.H) / canvasH));
     game.registry.set("safeBottom", Math.round(((insetBottom + cropBottom) * VIEW.H) / canvasH));
   };
+  if (TEST.on) window.__glySafe = updateSafe;
   // crash safety: report errors (with where the run was), finish an interrupted run instead of
   // losing it, and keep everyone on the latest version (src/systems/crash*.js, updater.js)
   CrashReport.setClient(() => Leaderboard.client());

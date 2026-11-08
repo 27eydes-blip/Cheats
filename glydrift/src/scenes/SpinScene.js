@@ -8,7 +8,13 @@ import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
 import { getCharacter, LOTTERY_HEROES } from "../player/characterDefs.js";
 import { Sfx } from "../audio/sfx.js";
-import { Progression, SPIN_EVERY, SPIN_MULTI_MAX, SPIN_SLICES } from "../data/progression.js";
+import {
+  Progression,
+  SPIN_EVERY,
+  SPIN_MULTI_MAX,
+  SPIN_PITY,
+  SPIN_SLICES,
+} from "../data/progression.js";
 import { Save } from "../data/save.js";
 import {
   button,
@@ -56,6 +62,12 @@ export class SpinScene extends Phaser.Scene {
       onClick: () => this.leave(),
     }).setDepth(100);
     neonText(this, W / 2, top + 46, "LUCKY SPIN", 38, 0xffd23f).setDepth(100);
+    // the chance of every prize, shown before spinning (spins are earned by playing, never bought)
+    this.oddsBtn = button(this, 80, top + 122, 120, 52, "ODDS", {
+      color: 0x3ef4ff,
+      size: 18,
+      onClick: () => this.showOdds(),
+    }).setDepth(100);
     this.add
       .image(W - 150, top + 46, "coin")
       .setScale(0.7 / HI)
@@ -520,6 +532,46 @@ export class SpinScene extends Phaser.Scene {
     this.reveal = c;
   }
 
+  /** The chance of every prize, from the same table the wheel rolls on. */
+  showOdds() {
+    if (this.spinning || this.reveal) return;
+    const W = this.W;
+    const H = this.H;
+    const c = this.add.container(0, 0).setDepth(400);
+    const dim = this.add.rectangle(W / 2, H / 2, W, H, 0x05010d, 0.9).setInteractive();
+    const panel = this.add.graphics();
+    const top = H * 0.14;
+    const ph = Math.min(H * 0.72, 900);
+    drawNeonRect(panel, 36, top, W - 72, ph, 30, 0x3ef4ff, { fill: 0x0b0520, fillAlpha: 0.96 });
+    c.add([dim, panel]);
+    c.add(neonText(this, W / 2, top + 56, "SPIN ODDS", 40, 0x3ef4ff, { blur: 14 }));
+    let y = top + 130;
+    for (const r of spinOdds()) {
+      c.add(plainText(this, 90, y, r.label, 22, "#ffffff").setOrigin(0, 0.5));
+      c.add(plainText(this, W - 90, y, `${r.pct}%`, 22, "#ffd23f").setOrigin(1, 0.5));
+      y += 46;
+    }
+    const notes = [
+      "A hero is rare 6 : epic 3 : legendary 1 among",
+      "the heroes you don't have yet.",
+      `No hero in ${SPIN_PITY - 1} spins? The next one is a hero.`,
+      "Own every spin hero? Hero slices pay 1000 coins.",
+      "Spins are earned by playing. They can't be bought.",
+    ];
+    y += 14;
+    for (const n of notes) {
+      c.add(plainText(this, W / 2, y, n, 17, "#d8d0ff"));
+      y += 30;
+    }
+    const ok = button(this, W / 2, top + ph - 70, 260, 84, "GOT IT", {
+      color: 0x39ff88,
+      size: 28,
+      onClick: () => this.closeReveal(),
+    });
+    c.add(ok);
+    this.reveal = c;
+  }
+
   closeReveal() {
     if (!this.reveal) return;
     this.reveal.destroy();
@@ -554,4 +606,22 @@ export class SpinScene extends Phaser.Scene {
     }
     this.fx.update(dt);
   }
+}
+
+/** The odds of every prize on the wheel (from SPIN_SLICES, so they always match the game). */
+export function spinOdds() {
+  const total = SPIN_SLICES.reduce((a, sl) => a + sl.weight, 0);
+  const rows = new Map();
+  for (const sl of SPIN_SLICES) {
+    const key =
+      sl.type === "coins"
+        ? `${sl.amount} coins`
+        : sl.type === "jackpot"
+          ? `JACKPOT: ${sl.amount} coins`
+          : sl.type === "spins"
+            ? `${sl.amount} free spins`
+            : "A new hero";
+    rows.set(key, (rows.get(key) || 0) + sl.weight);
+  }
+  return [...rows].map(([label, w]) => ({ label, pct: Math.round((w / total) * 1000) / 10 }));
 }

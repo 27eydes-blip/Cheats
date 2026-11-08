@@ -21,7 +21,8 @@ export function titleText(scene, x, y, id, opts = {}) {
   const tw = [];
   const add = (cfg) => tw.push(scene.tweens.add(cfg));
   c.once("destroy", () => tw.forEach((x) => x.remove()));
-  const size = opts.size || 14;
+  // never under 15 (~8 pt on a phone): titles under names were 11–12, unreadable on small iPhones
+  const size = Math.max(15, opts.size || 15);
   const ox = opts.ox ?? 0.5;
   const make = (color) =>
     scene.add
