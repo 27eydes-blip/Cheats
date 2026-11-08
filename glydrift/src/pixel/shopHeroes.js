@@ -6,6 +6,7 @@ import { haddad } from "./haddadArt.js";
 import { jamal } from "./jamalArt.js";
 import { dawson } from "./dawsonArt.js";
 import { dewberry } from "./dewberryArt.js";
+import { tung } from "./tungArt.js";
 
 // ------------------------------------------------------------------ PIP — pocket sparrow
 export function pip(f) {
@@ -905,4 +906,5 @@ export const SHOP_DRAW = {
   jamal,
   dawson,
   dewberry,
+  tung,
 };

@@ -599,7 +599,7 @@ function circleTex(n, r) {
 }
 
 /** Heroes whose portrait isn't frame 1 (THE HADDAD's is the big smile, not the uppercut). */
-const PORTRAIT_FRAME = { haddad: 4, jamal: 6, dawson: 4, dewberry: 4 };
+const PORTRAIT_FRAME = { haddad: 4, jamal: 6, dawson: 4, dewberry: 4, tung: 4 };
 
 export function buildCommon(scene) {
   const frames = {};
@@ -645,6 +645,9 @@ export function buildCommon(scene) {
   for (let f = 3; f < 5; f++) frames[`dewberry_${f}`] = rim(SHOP_DRAW.dewberry(f));
   HEAD_ANCHORS.dawson = { x: 5.5, y: -3, w: 26, h: 26 };
   HEAD_ANCHORS.dewberry = { x: 0.5, y: -6, w: 26, h: 26 };
+  // TUNG: wink, delighted, blink and the prance (3-6); hats sit on her crown, behind the horn
+  for (let f = 3; f < 7; f++) frames[`tung_${f}`] = rim(SHOP_DRAW.tung(f));
+  HEAD_ANCHORS.tung = { x: 0.5, y: -8, w: 26, h: 26 };
   // 손주원: the roar pose, the board on its own, and hats on the tiger's head
   frames.sonjuwon_3 = rim(sonjuwon(3));
   frames.sonjuwon_board = rim(sonjuwonBoard());

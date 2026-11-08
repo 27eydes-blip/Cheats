@@ -1051,6 +1051,37 @@ export const CHARACTERS = [
     desc: "Small, sweet, and glowing.",
   },
   {
+    // TUNG: the super cute baby unicorn. Cosmetic only (no perks). Flutters, wink, prance,
+    // the new-best rainbow and the sparkly poof in tungFx.js.
+    id: "tung",
+    name: "TUNG",
+    title: "Baby Unicorn",
+    rarity: "legendary",
+    color: 0xffa8d8,
+    color2: 0xa8d8ff,
+    texture: "hero_tung",
+    pixel: {
+      atlas: "pxc",
+      frames: Array.from({ length: 7 }, (_, i) => `tung_${i}`),
+      mode: "unicorn", // fast flutter, floaty bob, wink, prance + blink, rainbow, pastel poof
+      trail: [0xffa8d8, 0xfff0a0, 0xa8f0d0, 0xa8d8ff],
+    },
+    fx: {
+      death: [
+        { kind: "spark", color: 0xffa8d8, n: 10 },
+        { kind: "heart", color: 0xff8ac0, n: 6 },
+      ],
+    },
+    scale: 0.62,
+    cost: 12000,
+    challenge: {
+      stat: "levelStars",
+      value: 30,
+      text: "Earn 30 level stars",
+    },
+    desc: "Too cute to crash.",
+  },
+  {
     id: "wallrunner",
     name: "WALLRUNNER",
     title: "Leprechaun",
