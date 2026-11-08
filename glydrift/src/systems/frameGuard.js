@@ -87,7 +87,7 @@ function guard(name) {
       } catch {}
       streak++;
       if (streak === 1) {
-        console.error("[glydrift] frame error (loop kept alive):", err);
+        console.error("[glydrift] frame error (loop kept alive):", err?.stack || String(err)); // (text: every browser logs it readably)
         recordError("frame", err, this);
         try {
           GuardHooks.onError?.(err);
