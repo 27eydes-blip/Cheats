@@ -297,6 +297,25 @@ export const COSMETICS = [
     price: 0,
     plus: "s1",
   })),
+  // DAWSON's own skins: drawn only on DAWSON (his own palettes; standard hitbox). They have
+  // their own slot ("dskin"), so a colour skin stays on every other hero. Shown in the shop's
+  // SKINS tab and his hero editor; never in the Daily Shop or Mystery Pods.
+  {
+    id: "dskin_greatwhite",
+    cat: "dskin",
+    name: "Great White",
+    rarity: "rare",
+    price: 1200,
+    forHero: "dawson",
+  },
+  {
+    id: "dskin_neonreef",
+    cat: "dskin",
+    name: "Neon Reef",
+    rarity: "epic",
+    price: 3500,
+    forHero: "dawson",
+  },
   // season exclusives: only for sale while their season runs (kept forever once bought)
   {
     id: "trail_bloodmoon",
@@ -593,8 +612,8 @@ export const Shop = {
   daily(key = todayKey()) {
     const rng = new RNG(hashString(`glydrift-shop-${key}`));
     const pool = COSMETICS.filter(
-      (c) => !c.season && !c.plus && !c.event && !c.hero,
-    ); // season / pass / event items stay put
+      (c) => !c.season && !c.plus && !c.event && !c.hero && !c.forHero,
+    ); // season / pass / event / one-hero items stay put
     const items = [];
     while (items.length < DAILY_COUNT && pool.length) {
       const i = Math.floor(rng.next() * pool.length);
@@ -638,7 +657,8 @@ export const Shop = {
         !c.season &&
         !c.plus &&
         !c.event &&
-        !c.hero,
+        !c.hero &&
+        !c.forHero,
     );
     let out;
     if (!left.length) {

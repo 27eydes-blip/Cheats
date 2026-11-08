@@ -4,6 +4,7 @@
 import Phaser from "phaser";
 import { heroImage } from "../ui/heroImage.js";
 import { Save } from "../data/save.js";
+import { Shop } from "../data/cosmetics.js";
 import { Titles } from "../data/titles.js";
 import { titleText } from "../ui/titleText.js";
 import { BIOMES, biomeName } from "../biomes/biomes.js";
@@ -38,6 +39,32 @@ const ANIM_END = 950; // ms — every intro animation finishes before this
 export class GameOverScene extends Phaser.Scene {
   constructor() {
     super("GameOver");
+  }
+
+  /** DAWSON takes a quick twirl and a bow (beside the header, as the results come in). */
+  dawsonBow(x, y) {
+    const skin = Shop.equipped("dskin");
+    const im = this.add.image(x, y, skin ? `hero_dawson_${skin}` : "hero_dawson").setAlpha(0);
+    const k = 110 / im.height;
+    im.setScale(k);
+    this.tweens.add({ targets: im, alpha: 1, duration: 160 });
+    // the twirl: one full turn with the tail fanned…
+    const tw = { p: 0 };
+    this.tweens.add({
+      targets: tw,
+      p: 1,
+      duration: 480,
+      delay: 80,
+      ease: "Sine.easeInOut",
+      onUpdate: () => im.setScale(k * Math.cos(tw.p * Math.PI * 2), k),
+      onComplete: () => {
+        // …then a bow: nose dipped, back up
+        if (!skin) im.setTexture("hero_dawson_0");
+        im.setScale(k);
+        this.tweens.add({ targets: im, angle: 30, y: y + 8, duration: 200, yoyo: true, hold: 220, ease: "Sine.easeOut" });
+      },
+    });
+    this.dawsonFig = im;
   }
 
   init(data) {
@@ -86,6 +113,7 @@ export class GameOverScene extends Phaser.Scene {
     const scoreText = neonText(this, W / 2, scoreY, "0", 100, col, { blur: 22 });
     new RollingCounter(this, scoreText, { onTick: Sfx.tick }).to(run.score, 550, 100);
     popIn(this, [head, scoreLbl, scoreText], 0, { duration: 300 });
+    if (run.char === "dawson") this.dawsonBow(W / 2 - 190, headY + 40);
     // breakdown: why score ≠ distance
     const parts = [`${run.distance}m`];
     // these are score points (not the coins you keep, shown further down)

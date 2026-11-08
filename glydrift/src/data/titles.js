@@ -288,6 +288,16 @@ TITLES.push(
   },
 );
 
+// HEROES: titles earned with one hero
+TITLES.push({
+  id: "h_showoff",
+  name: "Show-Off",
+  source: "hero",
+  req: { stat: "dawsonBests", value: 10 },
+  color: "#18c8b8",
+  how: "10 new bests with DAWSON",
+});
+
 export const TITLE_SOURCES = {
   achievement: "ACHIEVEMENTS",
   league: "DISTANCE LEAGUES",
@@ -297,6 +307,7 @@ export const TITLE_SOURCES = {
   plus: "DRIFT PASS+",
   event: "EVENTS",
   levels: "LEVELS",
+  hero: "HEROES",
 };
 
 export const getTitle = (id) => TITLES.find((t) => t.id === id) || null;
@@ -318,6 +329,7 @@ function earned(t, s) {
     return !!rec && (rec.xp || 0) >= r.tier * (rec.tierXp || 450);
   }
   if (r.passTier) return (s.pass?.xp || 0) >= r.passTier * 400;
+  if (r.stat) return (s.stats?.[r.stat] || 0) >= r.value;
   if (r.set) {
     const set = COLLECTIONS.find((c) => c.id === r.set);
     return !!set && set.items.every((id) => s.cos?.owned?.[id]);
