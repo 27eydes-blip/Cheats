@@ -4,6 +4,7 @@ import { SHOP_DRAW } from "./shopHeroes.js";
 import { yarms } from "./yarmsArt.js";
 import { sonjuwon, sonjuwonBoard } from "./sonjuwonArt.js";
 import { DAWSON_SKINS, dawson, dawsonLook, miniButterfly } from "./dawsonArt.js";
+import { TUNG_SKINS, tung, tungLook } from "./tungArt.js";
 import { addAtlas, addTexture, PixelCanvas } from "./px.js";
 
 const OUT = 0x07101e; // bold character outline
@@ -646,7 +647,7 @@ export function buildCommon(scene) {
   HEAD_ANCHORS.dawson = { x: 5.5, y: -3, w: 26, h: 26 };
   HEAD_ANCHORS.dewberry = { x: 0.5, y: -6, w: 26, h: 26 };
   // TUNG: wink, delighted, blink and the prance (3-6); hats sit on her crown, behind the horn
-  for (let f = 3; f < 7; f++) frames[`tung_${f}`] = rim(SHOP_DRAW.tung(f));
+  for (let f = 3; f < 8; f++) frames[`tung_${f}`] = rim(SHOP_DRAW.tung(f)); // (7: the victory pose)
   HEAD_ANCHORS.tung = { x: 0.5, y: -8, w: 26, h: 26 };
   // 손주원: the roar pose, the board on its own, and hats on the tiger's head
   frames.sonjuwon_3 = rim(sonjuwon(3));
@@ -664,6 +665,9 @@ export function buildCommon(scene) {
   for (const skin of Object.keys(DAWSON_SKINS))
     addTexture(scene, `hero_dawson_${skin}`, rim(dawson(4, dawsonLook(skin))), PORTRAIT_SCALE);
   addTexture(scene, "hero_dawson_0", frames.dawson_0, PORTRAIT_SCALE);
+  // TUNG: a portrait per skin (shop cards, her editor)
+  for (const skin of Object.keys(TUNG_SKINS))
+    addTexture(scene, `hero_tung_${skin}`, rim(tung(4, tungLook(1, skin))), PORTRAIT_SCALE);
 
   // particle textures (same logical size as the old smooth ones, now pixel-crisp)
   addTexture(scene, "dot", circleTex(8, 3));

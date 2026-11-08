@@ -316,6 +316,43 @@ export const COSMETICS = [
     price: 3500,
     forHero: "dawson",
   },
+  // TUNG's own skins (slot "tskin", only drawn on TUNG; standard hitbox)
+  {
+    id: "tskin_cottoncandy",
+    cat: "tskin",
+    name: "Cotton Candy",
+    rarity: "rare",
+    price: 1200,
+    forHero: "tung",
+  },
+  {
+    id: "tskin_moonbeam",
+    cat: "tskin",
+    name: "Moonbeam",
+    rarity: "epic",
+    price: 3000,
+    forHero: "tung",
+  },
+  {
+    id: "tskin_rosegold",
+    cat: "tskin",
+    name: "Rose Gold",
+    rarity: "epic",
+    price: 4000,
+    forHero: "tung",
+  },
+  // Drift Pass+ reward: every Season 1 Drift Pass+ owner gets Nightmare Tung (equip it in her
+  // editor). Black body, glowing purple mane, red eyes.
+  {
+    id: "tskin_nightmare",
+    cat: "tskin",
+    name: "Nightmare Tung",
+    rarity: "legendary",
+    price: 0,
+    plus: "s1",
+    plusBonus: true,
+    forHero: "tung",
+  },
   // season exclusives: only for sale while their season runs (kept forever once bought)
   {
     id: "trail_bloodmoon",
@@ -552,6 +589,7 @@ export const Shop = {
   owns(id) {
     const c = getCosmetic(id);
     if (c?.hero) return !!state().unlocked?.[c.hero]; // a hero's signature: yours with the hero
+    if (c?.plusBonus) return plusAllowed(c); // a Drift Pass+ bonus: yours with the season's pass
     return !!state().cos.owned[id] && plusAllowed(c);
   },
   equipped(cat) {

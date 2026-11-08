@@ -314,7 +314,13 @@ const FLAP = {
   // DEWBERRY: a juicy little "bloop"
   // TUNG: a soft twinkly chime (a random pitch every time, so it never gets repetitive)
   tung: () => {
-    const p = 0.9 + Math.random() * 0.2;
+    // (a little higher and more magical at each of her upgrade levels: Sfx.tungLevel 1-5)
+    const lv = Sfx.tungLevel || 1;
+    const p = (0.9 + Math.random() * 0.2) * (1 + (lv - 1) * 0.06);
+    if (lv >= 3)
+      [0.08, 0.12].forEach((d, i) =>
+        tone({ type: "sine", f0: 3136 * p * (1 + i * 0.12), f1: 3520 * p, dur: 0.05, vol: 0.02 + (lv - 3) * 0.006, delay: d }),
+      );
     tone({ type: "sine", f0: 1568 * p, f1: 1568 * p, dur: 0.07, vol: 0.07 });
     tone({ type: "sine", f0: 2349 * p, f1: 2093 * p, dur: 0.09, vol: 0.05, delay: 0.03 });
     tone({ type: "triangle", f0: 3136 * p, f1: 3520 * p, dur: 0.04, vol: 0.025, delay: 0.05 });

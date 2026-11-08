@@ -47,6 +47,7 @@ import { getLevel, recordLevel } from "../levels/levels.js";
 import { RNG } from "../data/rng.js";
 import { Save } from "../data/save.js";
 import { Titles } from "../data/titles.js";
+import { countTungRun } from "../player/tungFx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import {
   ABYSS,
@@ -910,6 +911,8 @@ export class GameScene extends Phaser.Scene {
     // music drops back to normal after the run (the Abyss track never lingers)
     if (this.inAbyss) Music.play(BIOME_TRACKS[0], { startBar: 8 });
     const result = Progression.commitRun(this.run);
+    // TUNG: every run with her counts toward her upgrade levels
+    if (this.charDef.id === "tung") this.run.tungLevelUp = countTungRun();
     // DAWSON's new bests count toward the "Show-Off" title
     if (this.charDef.id === "dawson" && result.newBest) {
       const st = Save.data.stats;
@@ -982,6 +985,7 @@ export class GameScene extends Phaser.Scene {
     this.run.levelDone = out ? 1 : 0;
     this.run.levelStars = out ? out.newStars.length : 0;
     const result = res.practice ? null : Progression.commitRun(this.run);
+    if (this.charDef.id === "tung") this.run.tungLevelUp = countTungRun(); // (levels count too)
     this.time.delayedCall(boss ? 1700 : 1100, () => {
       this.state = "dead";
       this.scene.launch("LevelComplete", { res, out, result, game: this });

@@ -5,6 +5,7 @@ import Phaser from "phaser";
 import { heroImage } from "../ui/heroImage.js";
 import { Save } from "../data/save.js";
 import { Shop } from "../data/cosmetics.js";
+import { tungLevelUpCelebration } from "../player/tungFx.js";
 import { Titles } from "../data/titles.js";
 import { titleText } from "../ui/titleText.js";
 import { BIOMES, biomeName } from "../biomes/biomes.js";
@@ -114,6 +115,7 @@ export class GameOverScene extends Phaser.Scene {
     new RollingCounter(this, scoreText, { onTick: Sfx.tick }).to(run.score, 550, 100);
     popIn(this, [head, scoreLbl, scoreText], 0, { duration: 300 });
     if (run.char === "dawson") this.dawsonBow(W / 2 - 190, headY + 40);
+    if (run.tungLevelUp) tungLevelUpCelebration(this, run.tungLevelUp, W / 2, H * 0.5);
     // breakdown: why score ≠ distance
     const parts = [`${run.distance}m`];
     // these are score points (not the coins you keep, shown further down)

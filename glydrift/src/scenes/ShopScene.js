@@ -419,7 +419,7 @@ export class ShopScene extends Phaser.Scene {
       default:
         return COSMETICS.filter(
           (c) =>
-            (c.cat === tab || (tab === "skin" && c.cat === "dskin")) && // (DAWSON's skins too)
+            (c.cat === tab || (tab === "skin" && (c.cat === "dskin" || c.cat === "tskin"))) && // (DAWSON's and TUNG's skins too)
             !c.plus &&
             (forSale(c) || Shop.owns(c.id)),
         ).map((c) =>
@@ -557,8 +557,8 @@ export class ShopScene extends Phaser.Scene {
     if (cc.cat === "hat")
       return this.add.image(x, y, "cosm", HAT_FIT[id].frame).setScale(4.2 * scale);
     if (cc.cat === "coin") return this.add.image(x, y, "cosm", `${id}_0`).setScale(5 * scale);
-    if (cc.cat === "dskin")
-      return this.add.image(x, y, `hero_dawson_${id}`).setScale((0.9 / HI) * PORTRAIT_K * scale);
+    if (cc.cat === "dskin" || cc.cat === "tskin")
+      return this.add.image(x, y, `hero_${cc.forHero}_${id}`).setScale((0.9 / HI) * PORTRAIT_K * scale);
     if (cc.cat === "skin")
       return this.add
         .image(x, y, greyPortrait(this, getCharacter(Save.data.selected)))
@@ -733,14 +733,14 @@ export class ShopScene extends Phaser.Scene {
       case "cos": {
         const cc = getCosmetic(o.id);
         title = cc.name.toUpperCase();
-        sub = `${cc.cat === "dskin" ? "Dawson skin" : CATEGORIES.find((x) => x.id === cc.cat).one} · ${RARITY[cc.rarity].label}`;
+        sub = `${cc.cat === "dskin" ? "Dawson skin" : cc.cat === "tskin" ? "Tung skin" : CATEGORIES.find((x) => x.id === cc.cat).one} · ${RARITY[cc.rarity].label}`;
         if (o.deal) {
           ribbon = { text: "-30%", col: 0xe0203a };
           timer = Shop.msToRefresh;
         } else if (o.seasonal) {
           ribbon = { text: "SEASON ONLY", col: 0xc8102e };
         } else if (cc.rarity === "legendary") ribbon = { text: "LEGENDARY", col: 0xe0203a };
-        if (["coin", "hat", "skin", "dskin"].includes(cc.cat)) add(this.iconCos(o.id, 0, artY + 90, 0.85));
+        if (["coin", "hat", "skin", "dskin", "tskin"].includes(cc.cat)) add(this.iconCos(o.id, 0, artY + 90, 0.85));
         // a hero's signature item previews on that hero (SXE flies the Afterburner; DAWSON's
         // skins show on DAWSON)
         c.rigSpec = { hero: cc.hero || cc.forHero || s.selected, extra: [o.id] };

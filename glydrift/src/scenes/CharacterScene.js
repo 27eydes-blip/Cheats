@@ -14,6 +14,8 @@ import { Progression, SPIN_EVERY } from "../data/progression.js";
 import { Save } from "../data/save.js";
 import { Seasons } from "../data/seasons.js";
 import { CATEGORIES, COSMETICS, getCosmetic, Shop, SKINS } from "../data/cosmetics.js";
+import { tungLookLevel, tungProgress } from "../player/tungFx.js";
+import { TUNG_LEVEL_NAMES } from "../pixel/tungArt.js";
 import { HAT_FIT } from "../pixel/cosmeticArt.js";
 import {
   button,
@@ -118,6 +120,27 @@ export class CharacterScene extends Phaser.Scene {
     })
       .setDepth(150)
       .setVisible(false);
+    // TUNG's hero page: her upgrade level and progress, and any unlocked level's look
+    const tungLine = () => {
+      const p = tungProgress();
+      return `LEVEL ${p.level} · ${p.name}${p.next ? ` · ${p.runs}/${p.next} RUNS` : " · MAX"}`;
+    };
+    const lookLabel = () => `LOOK: ${TUNG_LEVEL_NAMES[tungLookLevel() - 1]} ▸`;
+    this.tungText = plainText(this, W / 2, this.cy - 122, tungLine(), 16, "#ffd0ec").setDepth(150).setVisible(false);
+    this.tungBtn = button(this, W / 2, this.cy - 88, 260, 40, lookLabel(), {
+      color: 0xffa8d8,
+      size: 15,
+      onClick: () => {
+        const top = tungProgress().level;
+        s.settings.tungLook = (tungLookLevel() % top) + 1; // cycle through the unlocked looks
+        Save.write();
+        this.tungBtn.setLabel(lookLabel());
+        this.buildRig();
+      },
+    })
+      .setDepth(150)
+      .setVisible(false);
+    this.tungLine = tungLine;
 
     // cards
     const focus = this.registry.get("heroFocus");
@@ -226,7 +249,12 @@ export class CharacterScene extends Phaser.Scene {
         y += line.height + 2;
         desc.add(line);
       }
-    } else desc = plainText(this, 0, 148, def.desc, 13, "#d8d0ff", { wrap: CARD_W - 40 });
+    } else {
+      // (TUNG's card also shows her upgrade level)
+      const p = def.id === "tung" ? tungProgress() : null;
+      const text = p ? `${def.desc}\nLV ${p.level} ${p.name}${p.next ? ` · ${p.runs}/${p.next}` : ""}` : def.desc;
+      desc = plainText(this, 0, p ? 136 : 148, text, 13, "#d8d0ff", { wrap: CARD_W - 40 });
+    }
     const lock = this.add
       .image(0, -50, "lock")
       .setScale(1.4 / HI)
@@ -373,6 +401,9 @@ export class CharacterScene extends Phaser.Scene {
       .setShadow(0, 0, hex(def.color), 24, true, true);
     this.titleText.setText(`${def.title} · ${RARITY[def.rarity].label}`);
     this.noiseBtn?.setVisible(def.id === "jamal");
+    const isTung = def.id === "tung" && owned;
+    this.tungText?.setVisible(isTung).setText(this.tungLine?.() || "");
+    this.tungBtn?.setVisible(isTung && tungProgress().level > 1);
     this.pedRings.forEach((r) => r.setTint(RARITY[def.rarity].color));
     this.pedGlow.setTint(def.color);
     this.beam.setTint(def.color);
@@ -502,8 +533,8 @@ export class CharacterScene extends Phaser.Scene {
     const cc = getCosmetic(id);
     if (cc.cat === "hat") return this.add.image(x, y, "cosm", HAT_FIT[id].frame).setScale(2);
     if (cc.cat === "coin") return this.add.image(x, y, "cosm", `${id}_0`).setScale(2.4);
-    if (cc.cat === "dskin")
-      return this.add.image(x, y, `hero_dawson_${id}`).setScale((0.42 / HI) * PORTRAIT_K);
+    if (cc.cat === "dskin" || cc.cat === "tskin")
+      return this.add.image(x, y, `hero_${cc.forHero}_${id}`).setScale((0.42 / HI) * PORTRAIT_K);
     if (cc.cat === "skin")
       return this.add
         .image(x, y, this.roster[this.index].texture)
@@ -544,6 +575,7 @@ export class CharacterScene extends Phaser.Scene {
     const cats = [...CATEGORIES, { id: "pose", label: "POSES", one: "Victory pose" }];
     // DAWSON has his own skins as well
     if (def.id === "dawson") cats.push({ id: "dskin", label: "DAWSON", one: "Dawson skin" });
+    if (def.id === "tung") cats.push({ id: "tskin", label: "TUNG", one: "Tung skin" });
     this.catBtns = cats.map((cat, i) => {
       const b = button(
         this,
@@ -570,7 +602,7 @@ export class CharacterScene extends Phaser.Scene {
           // victory poses only come from the Drift Pass+ track
           if (cat === "pose") return fadeTo(this, "Pass", { from: "Characters" });
           fadeTo(this, "Shop", {
-            tab: ["death", "flap", "coin"].includes(cat) ? "effects" : cat === "dskin" ? "skin" : cat,
+            tab: ["death", "flap", "coin"].includes(cat) ? "effects" : cat === "dskin" || cat === "tskin" ? "skin" : cat,
           });
         },
       }),

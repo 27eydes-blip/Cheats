@@ -73,11 +73,15 @@ test("TUNG: legendary unicorn, cosmetic only; flutter, wink, rainbow behind game
   await p2.close();
   expect(await ev(page, `return s.player.radius;`)).toBe(voltR);
   await step(page, 30);
+  await ev(page, `h.nearT = h.flapT = h.bestT = 0;`); // (a real near-miss on the way doesn't count)
+  await step(page, 1);
   expect(await ev(page, `return r.sprite.frame.name;`)).toBe("tung_0");
   // flap: a fast flutter (frames 1 / 2) and little hearts
-  await ev(page, `window.__h0 = r.fx.emitters.heart?.getAliveParticleCount() || 0; s.onTap();`);
+  // (no near-miss slow motion while watching the flutter)
+  await ev(page, `s.slowT = 0; h.nearT = 0; s.onTap();`);
   const seen = new Set();
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 12; i++) {
+    await ev(page, `s.slowT = 0;`);
     await step(page, 1);
     seen.add(await ev(page, `return r.sprite.frame.name;`));
   }
@@ -89,12 +93,15 @@ test("TUNG: legendary unicorn, cosmetic only; flutter, wink, rainbow behind game
   await step(page, 2);
   expect(await ev(page, `return r.sprite.frame.name;`)).toBe("tung_3");
   await step(page, 60);
-  // new best: delighted, and a rainbow arcs across the screen behind gameplay
+  // new best: the victory pose (rearing up), then delighted, and a rainbow arcs across the
+  // screen behind gameplay
   await ev(page, `r.onBest();`);
-  await step(page, 20);
+  await step(page, 6);
+  expect(await ev(page, `return r.sprite.frame.name;`)).toBe("tung_7");
+  await step(page, 44);
   const rb = await ev(page, `return { f: r.sprite.frame.name, v: h.arc.visible, d: h.arc.depth };`);
   expect(rb).toEqual({ f: "tung_4", v: true, d: 0.5 }); // (hazards start at depth 1)
-  await step(page, 80);
+  await step(page, 60);
   expect(await ev(page, `return h.arc.visible;`)).toBe(false);
   // death: she bursts into a pastel poof (the picture is gone), then RETRY brings her back
   await ev(page, `window.__glyGod(false); s.die();`);
