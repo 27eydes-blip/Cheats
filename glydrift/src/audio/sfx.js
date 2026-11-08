@@ -305,6 +305,18 @@ const FLAP = {
     noise({ dur: 0.08, vol: 0.26, f: 4200 });
     tone({ type: "triangle", f0: 900, f1: 260, dur: 0.06, vol: 0.05 });
   },
+  // DAWSON: a soft fluttering whoosh with an underwater "bloop"
+  dawson: () => {
+    noise({ dur: 0.07, vol: 0.12, f: 2400 });
+    noise({ dur: 0.05, vol: 0.08, f: 3000, delay: 0.04 });
+    tone({ type: "sine", f0: 260, f1: 560, dur: 0.08, vol: 0.22, delay: 0.02 });
+  },
+  // DEWBERRY: a juicy little "bloop"
+  dewberry: () => {
+    const p = 0.94 + Math.random() * 0.12;
+    tone({ type: "sine", f0: 520 * p, f1: 230 * p, dur: 0.09, vol: 0.26 });
+    tone({ type: "triangle", f0: 900 * p, f1: 700 * p, dur: 0.04, vol: 0.05, delay: 0.02 });
+  },
   // THE HADDAD: a punchy glove "thwap" (a short noise smack + a low thump under it)
   haddad: () => {
     noise({ dur: 0.05, vol: 0.34, f: 2600 });
@@ -850,6 +862,41 @@ function jamalMoment(evt) {
   }
 }
 
+// Big moments for DAWSON and DEWBERRY (original synth sounds, through the SFX volume)
+const MOMENTS = {
+  dawson: {
+    near: () => [2200, 2900].forEach((f, i) => tone({ type: "sine", f0: f, f1: f * 1.2, dur: 0.06, vol: 0.06, delay: i * 0.05 })),
+    best: () => {
+      // a shimmer up the scale and a happy chomp
+      [880, 1100, 1320, 1760, 2200].forEach((f, i) =>
+        tone({ type: "triangle", f0: f, f1: f * 1.05, dur: 0.1, vol: 0.06, delay: i * 0.05 }),
+      );
+      noise({ dur: 0.05, vol: 0.3, f: 1800, delay: 0.3 });
+      tone({ type: "square", f0: 180, f1: 90, dur: 0.07, vol: 0.12, delay: 0.3 });
+    },
+    death: () => {
+      // glassy scales shattering, then a splash of bubbles
+      [3200, 2600, 3800, 2900].forEach((f, i) => tone({ type: "sine", f0: f, f1: f * 0.8, dur: 0.08, vol: 0.05, delay: i * 0.04 }));
+      [0.15, 0.22, 0.3, 0.4].forEach((d, i) => tone({ type: "sine", f0: 300 + i * 90, f1: 700 + i * 120, dur: 0.06, vol: 0.12, delay: d }));
+      noise({ dur: 0.3, vol: 0.14, f: 900, delay: 0.12 });
+    },
+  },
+  dewberry: {
+    near: () => tone({ type: "sine", f0: 700, f1: 1100, dur: 0.1, vol: 0.12 }),
+    best: () =>
+      // a sweet chime
+      [1047, 1319, 1568, 2093].forEach((f, i) =>
+        tone({ type: "sine", f0: f, f1: f, dur: 0.22, vol: 0.12, delay: i * 0.08 }),
+      ),
+    death: () => {
+      // a juicy splat
+      noise({ dur: 0.12, vol: 0.32, f: 700 });
+      tone({ type: "sine", f0: 400, f1: 90, dur: 0.16, vol: 0.28 });
+      [0.08, 0.14, 0.2].forEach((d, i) => tone({ type: "sine", f0: 900 - i * 150, f1: 400, dur: 0.05, vol: 0.08, delay: d }));
+    },
+  },
+};
+
 export const Sfx = {
   unlock: () => Music.unlock(),
   /** ctx (JAMAL): { speed 0..1, combo } raise his noises' pitch. */
@@ -857,6 +904,8 @@ export const Sfx = {
     id === "jamal" ? jamalFlap(ctx) : (FLAP[id] || ANIMAL_SFX[id]?.flap || FLAP.volt)(),
   /** JAMAL: "honk" | "wheeze" | "sneeze" (follow his Jamal noises setting). */
   jamal: (evt) => jamalMoment(evt),
+  /** DAWSON / DEWBERRY: "near" | "best" | "death". */
+  moment: (id, evt) => MOMENTS[id]?.[evt]?.(),
   /** An animal hero's own reaction sound: "near" | "best" | "death" | "revive". */
   hero: (id, evt) => ANIMAL_SFX[id]?.[evt]?.(),
   /** A soft whoosh under every flap; `speed` 0..1 raises its pitch. */

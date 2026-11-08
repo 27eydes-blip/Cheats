@@ -989,6 +989,68 @@ export const CHARACTERS = [
     desc: "Ugly. Loud. Loved.",
   },
   {
+    // DAWSON: a shark, butterfly and peacock hybrid. Cosmetic only: standard hitbox, speed,
+    // gravity and score rules (no perks). Moves and effects in hybridFx.js.
+    id: "dawson",
+    name: "DAWSON",
+    title: "Sharkfly Peacock",
+    rarity: "legendary",
+    color: 0x18c8b8,
+    color2: 0x1f4fb0,
+    texture: "hero_dawson",
+    pixel: {
+      atlas: "pxc",
+      frames: Array.from({ length: 6 }, (_, i) => `dawson_${i}`),
+      mode: "shark", // flutter + swim wiggle, tail flash, the fanned display, shattered spin
+      trail: [0x18c8b8, 0x18a050, 0xffd23f, 0x8a3cd8],
+    },
+    fx: {
+      death: [
+        { kind: "shard", color: 0x18c8b8, n: 10 },
+        { kind: "bubble", color: 0xbfeaff, n: 8 },
+      ],
+    },
+    scale: 0.62,
+    cost: 12000,
+    challenge: {
+      stat: "maxNearRun",
+      value: 25,
+      text: "Get 25 near-misses in one run",
+    },
+    desc: "Part shark. Part butterfly. All show-off.",
+  },
+  {
+    // DEWBERRY: a glowing pink berry with a face. Cosmetic only (no perks). Glow, squish and
+    // the juicy pop in hybridFx.js.
+    id: "dewberry",
+    name: "DEWBERRY",
+    title: "Glowberry",
+    rarity: "epic",
+    color: 0xff4fa0,
+    color2: 0x4ad85a,
+    texture: "hero_dewberry",
+    pixel: {
+      atlas: "pxc",
+      frames: Array.from({ length: 5 }, (_, i) => `dewberry_${i}`),
+      mode: "berry", // jelly squish, propeller leaf, pulsing glow, hearts, the juicy pop
+      trail: [0xffffff, 0xff9ad0, 0xff4fa0, 0xc82a78],
+    },
+    fx: {
+      death: [
+        { kind: "dot", color: 0xff4fa0, n: 14 },
+        { kind: "pixel", color: 0x4ad85a, n: 6 },
+      ],
+    },
+    scale: 0.62,
+    cost: 4000,
+    challenge: {
+      stat: "coins",
+      value: 500,
+      text: "Collect 500 coins total",
+    },
+    desc: "Small, sweet, and glowing.",
+  },
+  {
     id: "wallrunner",
     name: "WALLRUNNER",
     title: "Leprechaun",

@@ -4,6 +4,8 @@ import { eye, shadeEdges, wing } from "./lotteryHeroes.js";
 import { PixelCanvas } from "./px.js";
 import { haddad } from "./haddadArt.js";
 import { jamal } from "./jamalArt.js";
+import { dawson } from "./dawsonArt.js";
+import { dewberry } from "./dewberryArt.js";
 
 // ------------------------------------------------------------------ PIP — pocket sparrow
 export function pip(f) {
@@ -901,4 +903,6 @@ export const SHOP_DRAW = {
   splice,
   haddad,
   jamal,
+  dawson,
+  dewberry,
 };
