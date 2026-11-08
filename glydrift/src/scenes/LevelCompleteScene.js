@@ -4,6 +4,7 @@
 import Phaser from "phaser";
 import { fitCamera, VIEW } from "../config.js";
 import { Save } from "../data/save.js";
+import { tungLevelUpCelebration } from "../player/tungFx.js";
 import { getTitle } from "../data/titles.js";
 import { Sfx } from "../audio/sfx.js";
 import { Music } from "../audio/music.js";
@@ -34,6 +35,9 @@ export class LevelCompleteScene extends Phaser.Scene {
     const H = VIEW.H;
     this.W = W;
     this.H = H;
+    // TUNG levelled up on this level: her celebration (drawn on top, takes no input)
+    const tungUp = this.game0?.run?.tungLevelUp;
+    if (tungUp) tungLevelUpCelebration(this, tungUp, W / 2, H * 0.5);
     const res = this.res;
     const def = getLevel(res.n);
     const realm = REALMS[def.realmIdx];

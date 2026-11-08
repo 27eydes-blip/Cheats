@@ -1062,7 +1062,7 @@ export const CHARACTERS = [
     texture: "hero_tung",
     pixel: {
       atlas: "pxc",
-      frames: Array.from({ length: 7 }, (_, i) => `tung_${i}`),
+      frames: Array.from({ length: 8 }, (_, i) => `tung_${i}`),
       mode: "unicorn", // fast flutter, floaty bob, wink, prance + blink, rainbow, pastel poof
       trail: [0xffa8d8, 0xfff0a0, 0xa8f0d0, 0xa8d8ff],
     },

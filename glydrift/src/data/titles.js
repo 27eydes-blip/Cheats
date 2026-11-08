@@ -290,6 +290,15 @@ TITLES.push(
 
 // HEROES: titles earned with one hero
 TITLES.push({
+  id: "h_toocute",
+  name: "Too Cute to Crash",
+  source: "hero",
+  req: { stat: "tungRuns", value: 100 },
+  style: "glow",
+  color: "#ffa8d8",
+  how: "Reach level 5 with TUNG",
+});
+TITLES.push({
   id: "h_showoff",
   name: "Show-Off",
   source: "hero",

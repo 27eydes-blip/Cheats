@@ -107,7 +107,7 @@ export class CharacterRig {
           : this.px.mode === "unicorn" // TUNG (tungFx.js)
             ? new UnicornBits(this, depth)
             : null;
-    if (this.px.mode === "shark") this.setCosmetics(this.cos); // (his look needs this.hb)
+    if (this.px.mode === "shark" || this.px.mode === "unicorn") this.setCosmetics(this.cos); // (their looks need this.hb)
     // SXE (id "splice"): dive tucks, barrel rolls, the sonic boom, wind-streak trail, perch showcase
     this.falcon =
       this.px.mode === "falcon" ? new FalconBits(this, depth) : null;
@@ -817,6 +817,7 @@ export class CharacterRig {
   /** A combo step (1 = the first multiplier tier): THE HADDAD counts his punches. */
   onCombo(step) {
     this.boxer?.combo(step);
+    this.hb?.combo?.(step); // TUNG: hearts
   }
   onBest() {
     this.toe?.best();
