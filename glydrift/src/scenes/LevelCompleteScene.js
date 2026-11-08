@@ -7,6 +7,7 @@ import { Save } from "../data/save.js";
 import { tungLevelUpCelebration } from "../player/tungFx.js";
 import { getTitle } from "../data/titles.js";
 import { Sfx } from "../audio/sfx.js";
+import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { Music } from "../audio/music.js";
 import { Haptics } from "../systems/haptics.js";
 import { Leaderboard, Levels, scoreToTime } from "../online/leaderboard.js";
@@ -97,6 +98,7 @@ export class LevelCompleteScene extends Phaser.Scene {
             Haptics.light?.();
           }
         },
+        onComplete: () => lit && this.starSparkle(g.x, g.y),
       });
       const t = plainText(this, x, y + 72, labels[i], 16, lit ? "#ffd23f" : "#8a80b0");
       const newMark = out?.newStars.includes(i)
@@ -286,6 +288,30 @@ export class LevelCompleteScene extends Phaser.Scene {
     this.scene.stop("Hud");
     this.scene.stop("Game");
     this.scene.start(key, data);
+  }
+
+  /** An earned star lands: a soft gold ring and a few sparkles (calmer with Reduce Flashing / Low Graphics). */
+  starSparkle(x, y) {
+    const calm = reduceFlashing() || Save.data.settings?.lowGfx;
+    const ring = this.add.graphics({ x, y });
+    ring.lineStyle(4, 0xffe27a, calm ? 0.4 : 0.85).strokeCircle(0, 0, 40);
+    this.tweens.add({ targets: ring, scale: 1.7, alpha: 0, duration: 380, ease: "Quad.easeOut", onComplete: () => ring.destroy() });
+    if (calm) return;
+    for (let k = 0; k < 6; k++) {
+      const a = (k / 6) * Math.PI * 2 + 0.3;
+      const d = this.add.graphics({ x, y });
+      d.fillStyle(0xfff6c0, 1).fillCircle(0, 0, 4);
+      this.tweens.add({
+        targets: d,
+        x: x + Math.cos(a) * 78,
+        y: y + Math.sin(a) * 78,
+        alpha: 0,
+        scale: 0.4,
+        duration: 420,
+        ease: "Cubic.easeOut",
+        onComplete: () => d.destroy(),
+      });
+    }
   }
 }
 

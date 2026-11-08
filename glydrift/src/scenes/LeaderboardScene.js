@@ -515,6 +515,10 @@ export class LeaderboardScene extends Phaser.Scene {
       this.rows = res.rows;
       this.userId = res.userId;
       this.renderRows(res.rows, res.userId);
+      // the board fades in (a quick 180 ms) instead of popping onto the screen at once
+      this.tweens.killTweensOf(this.list);
+      this.list.setAlpha(0);
+      this.tweens.add({ targets: this.list, alpha: 1, duration: 180, ease: "Quad.easeOut" });
       this.renderYou(res.me);
     } catch (err) {
       if (id !== this.reqId || !this.sys.isActive()) return;

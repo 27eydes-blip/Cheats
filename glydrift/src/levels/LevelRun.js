@@ -10,7 +10,7 @@ import { Sfx } from "../audio/sfx.js";
 import { Haptics } from "../systems/haptics.js";
 import { neonText, plainText } from "../ui/ui.js";
 import { BOSS_RED, BOSS_RED_HEX, fitWidth, levelNameLine } from "../ui/levelName.js";
-import { REALMS, levelRecord } from "./levels.js";
+import { REALMS, fmtTime, levelRecord, starsOf } from "./levels.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 
 const PX = WORLD.pxPerMeter;
@@ -370,6 +370,14 @@ class LevelHud {
     const name = neonText(hud, W / 2, y + 10, def.name.toUpperCase(), 54, col, { blur: 16 });
     fitWidth(name, W - (def.boss ? 180 : 80));
     const parts = [shade, top, name];
+    // your stars and best time so far (a played level only), small under the name
+    const st = starsOf(def.n);
+    const best = levelRecord(def.n)?.best;
+    if (st.some(Boolean) || best) {
+      const stars = st.map((x) => (x ? "★" : "☆")).join("");
+      const info = plainText(hud, W / 2, y + 68, best ? `${stars}  ·  BEST ${fmtTime(best)}` : stars, 20, "#ffd23f");
+      parts.push(info);
+    }
     if (def.boss) {
       const sk = hud.add.image(0, y + 10, "lvmap", "skull").setTint(BOSS_RED_HEX);
       sk.setScale(58 / sk.height);
