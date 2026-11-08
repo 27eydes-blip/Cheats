@@ -733,14 +733,15 @@ export class PassScene extends Phaser.Scene {
     }).setDepth(320);
     if (this.season && !PassPlus.owns()) {
       // both open the Drift Pass+ screen (its heroes, what's inside, the price)
-      if (Store.canBuy())
+      if (Store.canBuy()) {
         this.buyBtn = button(this, W - 108, y, 196, 72, `GET PASS+\n${PLUS_PRICE_LABEL}`, {
           color: 0xffd23f,
           size: 17,
           fill: 0x5a1020,
           onClick: () => this.openOffer(),
         }).setDepth(320);
-      else
+        this.showStorePrice(this.buyBtn, (p) => `GET PASS+\n${p}`);
+      } else
         // the web version can't sell it: the iPhone app does
         this.buyNote = this.add
           .text(W - 108, y, "Get Drift Pass+\nin the iPhone app", {
@@ -1006,6 +1007,7 @@ export class PassScene extends Phaser.Scene {
         onClick: () => this.buyPlus(),
       });
       o.add(buy);
+      this.showStorePrice(buy, (p) => `BUY ${p}`);
     } else {
       const note = tx(by, "Get Drift Pass+\nin the iPhone app", 22, "#ffd23f");
       note.setX(W / 2 + 70);
@@ -1051,6 +1053,13 @@ export class PassScene extends Phaser.Scene {
       }
       r.update(dt, 120);
     }
+  }
+
+  /** The App Store's own price (the player's currency) on a buy button, once StoreKit answers. */
+  showStorePrice(btn, fmt) {
+    Store.priceLabel().then((p) => {
+      if (btn?.active && p) btn.setLabel(fmt(p));
+    });
   }
 
   async buyPlus() {

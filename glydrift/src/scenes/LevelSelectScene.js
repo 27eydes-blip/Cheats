@@ -902,7 +902,7 @@ export class LevelSelectScene extends Phaser.Scene {
   /** The card for level n (a sheet at the bottom; the map stays visible above it). */
   openLevel(n) {
     const def = getLevel(n);
-    if (!def) return this.toastMsg("Coming soon: more levels are on the way");
+    if (!def) return this.toastMsg("That level isn't available");
     if (!isUnlocked(n)) {
       return this.toastMsg(
         n % 10 === 1 ? `Beat the boss at level ${n - 1} to open this realm` : `Beat level ${n - 1} first`,

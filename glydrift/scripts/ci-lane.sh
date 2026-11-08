@@ -30,6 +30,7 @@ say() {
 }
 
 [ "${EVENT:-}" = "schedule" ] && say full "nightly check of the live version"
+[ "${REF:-}" = "refs/heads/release" ] && say full "App Store release: every test, on this exact commit"
 if [ "${EVENT:-}" = "workflow_dispatch" ] && [ "${DISPATCH_LANE:-auto}" != "auto" ]; then
   say "$DISPATCH_LANE" "chosen by hand"
 fi

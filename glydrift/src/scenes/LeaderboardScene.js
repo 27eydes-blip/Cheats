@@ -30,6 +30,7 @@ const hasCoinPerks = (def) =>
     def.perks?.comboMax
   );
 import { Titles } from "../data/titles.js";
+import { openReport } from "../ui/reportModal.js";
 
 const MEDALS = [0xffd23f, 0xdfe8f5, 0xd8894a];
 const ROW_H = 68;
@@ -266,6 +267,12 @@ export class LeaderboardScene extends Phaser.Scene {
       .setLetterSpacing(3)
       .setDepth(41);
     this.you = this.add.container(0, H - 80 - sb).setDepth(41);
+    // REPORT A NAME (offensive usernames): hidden for you at once, reported to be removed
+    this.reportBtn = button(this, W - 110, H - 133 - sb, 180, 40, "REPORT A NAME", {
+      color: 0xbfb6e8,
+      size: 13,
+      onClick: () => this.openReport(),
+    }).setDepth(42);
 
     // state overlay (loading / empty / error)
     this.stateBox = this.add
@@ -505,6 +512,7 @@ export class LeaderboardScene extends Phaser.Scene {
         ? (this.listTop + this.listBottom) / 2
         : Math.min(this.listBottom - 80, this.listTop + PODIUM_H + 70);
       this.rows = res.rows;
+      this.userId = res.userId;
       this.renderRows(res.rows, res.userId);
       this.renderYou(res.me);
     } catch (err) {
@@ -953,6 +961,17 @@ export class LeaderboardScene extends Phaser.Scene {
       this.heroTip(this.list, icon, def);
     });
     this.contentH = offset + Math.max(0, rows.length - 5) * ROW_H + 12;
+  }
+
+  async openReport() {
+    if (this.reporting) return;
+    this.reporting = true;
+    try {
+      const { changed } = await openReport(this.rows || [], this.userId);
+      if (changed && this.sys.isActive()) this.fetchBoard();
+    } finally {
+      this.reporting = false;
+    }
   }
 
   renderYou(me, offline = false) {

@@ -5,6 +5,8 @@
 //
 //   purchase({ productId, appAccountToken }) → { transactionId, productId } | { cancelled: true }
 //   restore() → { transactions: [{ transactionId, productId }] }
+//   products({ productIds }) → { products: [{ productId, displayPrice, displayName }] }
+//     (the price in the player's own currency, shown on the buy button before buying)
 //
 // The game never trusts this result on its own: it sends the transaction id to the Supabase
 // Edge Function "verify-purchase", which asks Apple's App Store Server API before unlocking.
@@ -18,7 +20,26 @@ public class GlydriftStorePlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "purchase", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "restore", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "products", returnType: CAPPluginReturnPromise),
     ]
+
+    @objc func products(_ call: CAPPluginCall) {
+        let ids = (call.getArray("productIds") as? [String]) ?? []
+        Task {
+            do {
+                let found = try await Product.products(for: ids)
+                call.resolve(["products": found.map { product in
+                    [
+                        "productId": product.id,
+                        "displayPrice": product.displayPrice,
+                        "displayName": product.displayName,
+                    ]
+                }])
+            } catch {
+                call.resolve(["products": []])
+            }
+        }
+    }
 
     @objc func purchase(_ call: CAPPluginCall) {
         guard let productId = call.getString("productId") else {

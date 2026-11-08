@@ -2,11 +2,24 @@
 // installed app (Capacitor), else the Vibration API where the browser has one (Android).
 // iPhone Safari / home-screen web apps have no web vibration API, so there it is a no-op.
 import { Save } from "../data/save.js";
+import { isNativeApp } from "./platform.js";
 
 let last = 0;
 
+// the app: the @capacitor/haptics plugin (the Taptic Engine), loaded once at first use
+let plugin = null;
+let loading = false;
 function native() {
-  return typeof window !== "undefined" ? window.Capacitor?.Plugins?.Haptics : null;
+  if (!isNativeApp()) return null;
+  if (!plugin && !loading) {
+    plugin = window.Capacitor?.Plugins?.Haptics || null;
+    loading = !plugin;
+    if (!plugin)
+      import("@capacitor/haptics")
+        .then((m) => (plugin = m.Haptics))
+        .catch(() => {});
+  }
+  return plugin;
 }
 
 function buzz(style, ms) {
