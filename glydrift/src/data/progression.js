@@ -720,6 +720,14 @@ export const Progression = {
       s.ghostChar = run.char;
     }
 
+    // DAWSON: runs flown with him (Feather Growth), his new bests ("Show-Off") and his trips
+    // into the Abyss ("Apex")
+    if (run.char === "dawson") {
+      st.dawsonRuns = (st.dawsonRuns || 0) + 1;
+      if (res.newBest) st.dawsonBests = (st.dawsonBests || 0) + 1;
+      if (run.abyssM > 0) st.dawsonAbyss = (st.dawsonAbyss || 0) + 1;
+    }
+
     // coins (+ a hero perk bonus, e.g. RONIN's +13, which isn't "collected")
     s.coins += run.coins + (run.perkBonus?.total || 0);
 

@@ -880,6 +880,26 @@ const MOMENTS = {
       [0.15, 0.22, 0.3, 0.4].forEach((d, i) => tone({ type: "sine", f0: 300 + i * 90, f1: 700 + i * 120, dur: 0.06, vol: 0.12, delay: d }));
       noise({ dur: 0.3, vol: 0.14, f: 900, delay: 0.12 });
     },
+    // Chomp Combo: a snappy double jaw-clack with a low thump
+    chomp: () => {
+      noise({ dur: 0.04, vol: 0.34, f: 2400 });
+      tone({ type: "square", f0: 220, f1: 70, dur: 0.08, vol: 0.14 });
+      noise({ dur: 0.04, vol: 0.28, f: 2000, delay: 0.09 });
+      tone({ type: "square", f0: 180, f1: 60, dur: 0.07, vol: 0.12, delay: 0.09 });
+    },
+    // Feeding Frenzy: a rising growl with a glint on top
+    frenzy: () => {
+      tone({ type: "sawtooth", f0: 90, f1: 180, dur: 0.3, vol: 0.08 });
+      [1760, 2640].forEach((f, i) => tone({ type: "sine", f0: f, f1: f * 1.1, dur: 0.08, vol: 0.06, delay: 0.2 + i * 0.06 }));
+    },
+    // the signature combo step: a bubbly shimmer, higher with every step
+    combo: (step = 1) => {
+      const k = 1 + (Math.max(1, step) - 1) * 0.12;
+      [0, 0.04, 0.08].forEach((d, i) =>
+        tone({ type: "sine", f0: (420 + i * 160) * k, f1: (900 + i * 220) * k, dur: 0.05, vol: 0.08, delay: d }),
+      );
+      [1800, 2400].forEach((f, i) => tone({ type: "triangle", f0: f * k, f1: f * k * 1.06, dur: 0.12, vol: 0.04, delay: 0.1 + i * 0.05 }));
+    },
   },
   dewberry: {
     near: () => tone({ type: "sine", f0: 700, f1: 1100, dur: 0.1, vol: 0.12 }),
@@ -905,7 +925,7 @@ export const Sfx = {
   /** JAMAL: "honk" | "wheeze" | "sneeze" (follow his Jamal noises setting). */
   jamal: (evt) => jamalMoment(evt),
   /** DAWSON / DEWBERRY: "near" | "best" | "death". */
-  moment: (id, evt) => MOMENTS[id]?.[evt]?.(),
+  moment: (id, evt, arg) => MOMENTS[id]?.[evt]?.(arg),
   /** An animal hero's own reaction sound: "near" | "best" | "death" | "revive". */
   hero: (id, evt) => ANIMAL_SFX[id]?.[evt]?.(),
   /** A soft whoosh under every flap; `speed` 0..1 raises its pitch. */

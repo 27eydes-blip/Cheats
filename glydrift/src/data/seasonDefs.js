@@ -130,13 +130,18 @@ const PLUS_S1_HEROES = {
 };
 const filler = (t) =>
   t % 4 === 0 ? { shards: 3 + Math.floor(t / 10) } : t % 3 === 0 ? { pod: true } : { coins: 200 + t * 20 };
-export const PLUS_S1_LAYOUT = 2;
-export function plusTrackS1(theme) {
+/** Layout 3 (2026-11-08): Abyss Dawson took tier 44 (a shards tier before). */
+const PLUS_S1_ADDED_V3 = {
+  44: { item: "dskin_abyss", label: "NEW SKIN" },
+};
+export const PLUS_S1_LAYOUT = 3;
+/** The track in the current layout (or layout 2, kept only to move claims made on it). */
+export function plusTrackS1(theme, layout = PLUS_S1_LAYOUT) {
   return Array.from({ length: 50 }, (_, i) => {
     const t = i + 1;
     if (PLUS_S1_HEROES[t])
       return { hero: PLUS_S1_HEROES[t], label: t === 50 ? "LEGENDARY FORM" : "PASS HERO", milestone: true };
-    const sp = PLUS_S1_SPECIAL[t];
+    const sp = PLUS_S1_SPECIAL[t] || (layout >= 3 ? PLUS_S1_ADDED_V3[t] : null);
     if (sp) {
       const r = sp.banner ? { banner: theme.banner, label: sp.label } : { ...sp };
       return { ...r, milestone: t % 5 === 0 || t >= 48 };

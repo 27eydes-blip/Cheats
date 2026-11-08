@@ -53,8 +53,10 @@ const HEROES = [
     rarity: "legendary",
     cost: 12000,
     challenge: { stat: "maxNearRun", value: 25, text: "Get 25 near-misses in one run" },
-    desc: "Part shark. Part butterfly. All show-off.",
-    frames: 6,
+    desc: "Part shark. Part butterfly. All show-off. +5% speed.",
+    frames: 7,
+    speed: 1.05, // his perk (dawson-package.spec.js)
+    perks: { list: ["+5% SPEED"] },
   },
   {
     id: "dewberry",
@@ -63,11 +65,13 @@ const HEROES = [
     challenge: { stat: "coins", value: 500, text: "Collect 500 coins total" },
     desc: "Small, sweet, and glowing.",
     frames: 5,
+    speed: 1,
+    perks: null,
   },
 ];
 
 for (const h of HEROES) {
-  test(`${h.id.toUpperCase()}: ${h.rarity}, cosmetic only (standard hitbox and speed), portrait ready`, async ({ page }, testInfo) => {
+  test(`${h.id.toUpperCase()}: ${h.rarity}, standard hitbox, portrait ready`, async ({ page }, testInfo) => {
     phoneOnly(testInfo);
     const log = await flyAs(page, h.id);
     const r = await page.evaluate((id) => {
@@ -95,8 +99,8 @@ for (const h of HEROES) {
     expect(r.cost).toBe(h.cost);
     expect(r.challenge).toEqual(h.challenge);
     expect(r.desc).toBe(h.desc);
-    expect(r.speed).toBe(r.voltSpeed);
-    expect(r.perks).toBe(null);
+    expect(r.speed).toBe(r.voltSpeed * h.speed);
+    expect(r.perks).toEqual(h.perks);
     expect(r.coinMul).toBe(1);
     expect(r.nFrames).toBe(h.frames);
     expect(r.frames).toBe(true);

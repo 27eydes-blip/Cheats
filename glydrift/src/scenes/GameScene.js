@@ -1380,6 +1380,7 @@ export class GameScene extends Phaser.Scene {
         this.coinStepT = 0.8;
         Sfx.coin(this.coinStep);
         Haptics.light();
+        p.rig.onCoin(ev.coins); // DAWSON: Feeding Frenzy
         this.hudReady?.onCoin?.(this.run.coins);
       }
       for (const o of ev.near) this.nearMiss(o);

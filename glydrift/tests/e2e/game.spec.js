@@ -1823,7 +1823,7 @@ test("Season 1 Drift Pass+ rewards: placed on the track, exclusive, cosmetic, se
   });
   // voidcat 1→2, holo stays 3, a coins tier that's now Galaxy Dust (6) opens up, coins tier 9
   // stays, triphound 15→16, umbradrake 50→46
-  expect(claims).toEqual({ layout: 2, claimed: [1, 2, 8, 15, 45] });
+  expect(claims).toEqual({ layout: 3, claimed: [1, 2, 8, 15, 45] });
 
   // 5. the Drift Pass screen: tap a locked Pass+ reward to preview it
   await openPass(page);

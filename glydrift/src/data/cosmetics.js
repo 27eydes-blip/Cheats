@@ -20,6 +20,12 @@ export const CATEGORIES = [
   { id: "coin", label: "COINS", one: "Coin skin" },
 ];
 
+/** A cosmetic's category name for one item ("Trail", "Dawson skin"…). */
+export const catOne = (cat) =>
+  CATEGORIES.find((x) => x.id === cat)?.one ??
+  { dskin: "Dawson skin", pose: "Victory pose", name: "Leaderboard name", badge: "Badge", theme: "Home theme" }[cat] ??
+  "Item";
+
 // prices sit inside the rarity bands: common 100–300, rare 400–1,200, epic 1,500–5,000,
 // legendary 8,000–15,000 (see the economy table in the README)
 export const COSMETICS = [
@@ -297,6 +303,61 @@ export const COSMETICS = [
     price: 0,
     plus: "s1",
   })),
+  // DAWSON's own skins: drawn only on DAWSON (his own palettes and frames; standard hitbox).
+  // They have their own slot ("dskin"), so a colour skin stays on every other hero. Shown in
+  // the shop's SKINS tab and his hero editor; never in the Daily Shop or Mystery Pods.
+  {
+    id: "dskin_greatwhite",
+    cat: "dskin",
+    name: "Great White",
+    rarity: "rare",
+    price: 1200,
+    forHero: "dawson",
+  },
+  {
+    id: "dskin_hammerhead",
+    cat: "dskin",
+    name: "Hammerhead",
+    rarity: "epic",
+    price: 2500,
+    forHero: "dawson",
+  },
+  {
+    id: "dskin_neonreef",
+    cat: "dskin",
+    name: "Neon Reef",
+    rarity: "epic",
+    price: 3500,
+    forHero: "dawson",
+  },
+  {
+    id: "dskin_monarch",
+    cat: "dskin",
+    name: "Midnight Monarch",
+    rarity: "legendary",
+    price: 8000,
+    forHero: "dawson",
+  },
+  // Drift Pass+ Season 1 (tier 44): black wings, red glowing eyes, a dark smoke trail
+  {
+    id: "dskin_abyss",
+    cat: "dskin",
+    name: "Abyss Dawson",
+    rarity: "legendary",
+    price: 0,
+    plus: "s1",
+    forHero: "dawson",
+  },
+  // DAWSON's victory pose (his signature: yours with him, never sold): spins in place with
+  // his tail fully fanned. Plays on his new bests when no other pose is equipped.
+  {
+    id: "pose_dawson",
+    cat: "pose",
+    name: "Fanned Spin",
+    rarity: "legendary",
+    price: 0,
+    hero: "dawson",
+  },
   // season exclusives: only for sale while their season runs (kept forever once bought)
   {
     id: "trail_bloodmoon",
@@ -593,8 +654,8 @@ export const Shop = {
   daily(key = todayKey()) {
     const rng = new RNG(hashString(`glydrift-shop-${key}`));
     const pool = COSMETICS.filter(
-      (c) => !c.season && !c.plus && !c.event && !c.hero,
-    ); // season / pass / event items stay put
+      (c) => !c.season && !c.plus && !c.event && !c.hero && !c.forHero,
+    ); // season / pass / event / one-hero items stay put
     const items = [];
     while (items.length < DAILY_COUNT && pool.length) {
       const i = Math.floor(rng.next() * pool.length);
@@ -638,7 +699,8 @@ export const Shop = {
         !c.season &&
         !c.plus &&
         !c.event &&
-        !c.hero,
+        !c.hero &&
+        !c.forHero,
     );
     let out;
     if (!left.length) {
@@ -780,4 +842,4 @@ export const Shop = {
 // test builds only
 import { TEST } from "../systems/testFlags.js";
 if (TEST.on && typeof window !== "undefined")
-  window.__glyShop = { COSMETICS, forSale, Shop, data: () => Save.data };
+  window.__glyShop = { COSMETICS, forSale, getCosmetic, Shop, data: () => Save.data };

@@ -104,6 +104,7 @@ export class CharacterRig {
         : this.px.mode === "berry"
           ? new BerryBits(this, depth)
           : null;
+    if (this.px.mode === "shark") this.setCosmetics(this.cos); // (his look needs this.hb)
     // SXE (id "splice"): dive tucks, barrel rolls, the sonic boom, wind-streak trail, perch showcase
     this.falcon =
       this.px.mode === "falcon" ? new FalconBits(this, depth) : null;
@@ -171,8 +172,12 @@ export class CharacterRig {
     this.setGlow =
       set && (this.cos.titleForce || Shop.setComplete(set)) ? set.glow : null;
     this.sprite.clearTint();
+    // DAWSON draws from his own look atlas (his skins, realm wings and tail stage); one of his
+    // own skins replaces a colour skin
+    if (this.hb?.skinned) this.skin = null;
+    const look = this.hb?.lookKey && !this.skin ? this.hb.lookKey() : null;
     // skins recolour a greyscale copy of the hero (so gold reads gold on any hero)
-    const key = this.skin ? greyAtlas(this.scene, this.def) : this.px.atlas;
+    const key = look || (this.skin ? greyAtlas(this.scene, this.def) : this.px.atlas);
     if (this.sprite.texture.key !== key)
       this.sprite.setTexture(key, this.sprite.frame.name);
     if (this.skin) this.sprite.setTint(this.skin.tint);
@@ -809,6 +814,11 @@ export class CharacterRig {
   /** A combo step (1 = the first multiplier tier): THE HADDAD counts his punches. */
   onCombo(step) {
     this.boxer?.combo(step);
+    this.hb?.combo?.(step); // DAWSON: the bubbly shimmer
+  }
+  /** Coins picked up (DAWSON's Feeding Frenzy). */
+  onCoin(n = 1) {
+    this.hb?.coin?.(n);
   }
   onBest() {
     this.toe?.best();
@@ -818,7 +828,8 @@ export class CharacterRig {
     this.falcon?.best();
     this.an?.best();
     this.surfBest();
-    this.cosmeticPose();
+    // DAWSON's own victory pose plays when no other pose is equipped
+    this.cosmeticPose(this.cos.pose || (this.px.mode === "shark" ? "pose_dawson" : null));
   }
 
   /**
@@ -828,12 +839,18 @@ export class CharacterRig {
    */
   cosmeticPose(kind = this.cos.pose) {
     if (!kind || this.dead) return;
+    if (kind === "pose_dawson" && this.px.mode !== "shark") return; // his signature: only on DAWSON
     const fx = this.fx;
     const calm = reduceFlashing();
     const n = (k) =>
       Math.max(2, Math.round(k * (this.lowGfx ? 0.5 : 1) * (calm ? 0.6 : 1)));
     this.poseKind = kind;
-    if (kind === "pose_pp_power") {
+    if (kind === "pose_dawson") {
+      // DAWSON: spins in place with his tail fully fanned
+      this.poseT = this.poseDur = 1;
+      this.hb.bestT = Math.max(this.hb.bestT, 1);
+      fx?.burst("star", this.x, this.y, n(14), 0xffd23f, { speed: { min: 100, max: 320 } });
+    } else if (kind === "pose_pp_power") {
       this.poseT = this.poseDur = 0.75;
       if (this.an) this.an.specialT = 0.75; // pass heroes strike their special pose
       fx?.ring(this.x, this.y, 0xffd23f, {
@@ -892,6 +909,11 @@ export class CharacterRig {
       this.sx = Math.max(this.sx, 1 + 0.28 * k);
       this.sy = Math.max(this.sy, 1 + 0.28 * k);
       return 0;
+    }
+    if (this.poseKind === "pose_dawson") {
+      const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; // ease in-out
+      this.sx = Math.max(this.sx, 1 + 0.12 * Math.sin(p * Math.PI)); // (a spin in place, on the spot)
+      return 360 * e;
     }
     if (this.poseKind === "pose_pp_spinflip") {
       const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; // ease in-out
@@ -1207,7 +1229,7 @@ export class CharacterRig {
     this.toe?.update(dt);
     this.boxer?.update(dt);
     this.dog?.update(dt);
-    this.hb?.update(dt);
+    this.hb?.update(dt, scroll);
     this.falcon?.update(dt, scroll);
     if (this.an) this.an.update(dt, scroll);
     if (this.frozen) {

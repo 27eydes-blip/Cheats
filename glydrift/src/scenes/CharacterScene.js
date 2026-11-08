@@ -502,6 +502,8 @@ export class CharacterScene extends Phaser.Scene {
     const cc = getCosmetic(id);
     if (cc.cat === "hat") return this.add.image(x, y, "cosm", HAT_FIT[id].frame).setScale(2);
     if (cc.cat === "coin") return this.add.image(x, y, "cosm", `${id}_0`).setScale(2.4);
+    if (cc.cat === "dskin")
+      return this.add.image(x, y, `hero_dawson_${id}`).setScale((0.42 / HI) * PORTRAIT_K);
     if (cc.cat === "skin")
       return this.add
         .image(x, y, this.roster[this.index].texture)
@@ -540,6 +542,8 @@ export class CharacterScene extends Phaser.Scene {
     // category chips: rows of 3 (the shop's categories, plus Drift Pass+ victory poses)
     const cw = (W - 80) / 3;
     const cats = [...CATEGORIES, { id: "pose", label: "POSES", one: "Victory pose" }];
+    // DAWSON has his own skins as well
+    if (def.id === "dawson") cats.push({ id: "dskin", label: "DAWSON", one: "Dawson skin" });
     this.catBtns = cats.map((cat, i) => {
       const b = button(
         this,
@@ -565,7 +569,9 @@ export class CharacterScene extends Phaser.Scene {
           const cat = this.editCat;
           // victory poses only come from the Drift Pass+ track
           if (cat === "pose") return fadeTo(this, "Pass", { from: "Characters" });
-          fadeTo(this, "Shop", { tab: ["death", "flap", "coin"].includes(cat) ? "effects" : cat });
+          fadeTo(this, "Shop", {
+            tab: ["death", "flap", "coin"].includes(cat) ? "effects" : cat === "dskin" ? "skin" : cat,
+          });
         },
       }),
     );
@@ -588,7 +594,15 @@ export class CharacterScene extends Phaser.Scene {
     const grid = this.editGrid;
     grid.removeAll(true);
     const W = this.W;
-    const owned = COSMETICS.filter((x) => x.cat === cat && Shop.owns(x.id));
+    const hero = this.roster[this.index]?.id;
+    // (one hero's items — DAWSON's skins and pose — only show for that hero)
+    const owned = COSMETICS.filter(
+      (x) =>
+        x.cat === cat &&
+        Shop.owns(x.id) &&
+        (!x.forHero || x.forHero === hero) &&
+        !(x.cat === "pose" && x.hero && x.hero !== hero),
+    );
     const opts = [null, ...owned.map((x) => x.id)];
     const on = Shop.equipped(cat) || null;
     const cols = 4;

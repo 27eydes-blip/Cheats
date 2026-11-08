@@ -67,7 +67,7 @@ function rewardLabel(r) {
   if (r.hero) return "NEW HERO";
   if (r.item) {
     const c = getCosmetic(r.item);
-    return `NEW ${{ trail: "TRAIL", hat: "HAT", death: "DEATH FX", flap: "FLAP FX", coin: "COINS", skin: "SKIN" }[c.cat] || "ITEM"}`;
+    return `NEW ${{ trail: "TRAIL", hat: "HAT", death: "DEATH FX", flap: "FLAP FX", coin: "COINS", skin: "SKIN", dskin: "SKIN" }[c.cat] || "ITEM"}`;
   }
   return "REWARD";
 }
@@ -685,6 +685,8 @@ export class PassScene extends Phaser.Scene {
       if (cc.cat === "hat")
         return this.add.image(x, y, "cosm", HAT_FIT[r.item].frame).setScale(3.4 * s);
       if (cc.cat === "coin") return this.add.image(x, y, "cosm", `${r.item}_0`).setScale(2.4 * s);
+      if (cc.cat === "dskin")
+        return this.add.image(x, y, `hero_dawson_${r.item}`).setScale((0.4 / HI) * PORTRAIT_K * s);
       if (cc.cat === "skin")
         return this.add
           .image(x, y, greyPortrait(this, getCharacter(Save.data.selected)))

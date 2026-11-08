@@ -83,6 +83,7 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
   const base = 440 / Math.max(hero.width, hero.height);
   const yarms = def.id === "yarms";
   const surf = def.id === "sonjuwon"; // a lightning strike, then it surfs in
+  const hatch = def.id === "dawson"; // he hatches from a glowing cocoon
   const name = neonText(
     scene,
     W / 2,
@@ -155,6 +156,37 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
         hero.y = cy + Math.sin(tw.progress * Math.PI * 2) * 18;
         if (Math.random() < 0.6) burst(scene, cont, hero.x - 140, hero.y + 120, 0x3ef4ff, 2, 160);
       },
+    });
+  } else if (hatch) {
+    // a glowing cocoon drops into the light and starts to wobble, faster and faster…
+    const coc = scene.add.image(W / 2, cy - 160, "dawson_cocoon").setAlpha(0);
+    coc.setScale(380 / coc.height);
+    cont.addAt(coc, 4);
+    hero.setTexture("hero_dawson_0").setPosition(W / 2, cy).setScale(base * 0.55);
+    scene.tweens.add({ targets: coc, alpha: 1, y: cy, duration: 420, delay: 250, ease: "Cubic.easeOut" });
+    const wob = { t: 0 };
+    scene.tweens.add({
+      targets: wob,
+      t: 1,
+      duration: 560,
+      delay: 640,
+      onUpdate: () => coc.setAngle(Math.sin(wob.t * wob.t * 40) * 9 * wob.t),
+    });
+    scene.tweens.add({ targets: pool, scaleX: 4 * 9, duration: 560, delay: 640, yoyo: true });
+    scene.time.delayedCall(980, () => coc.setTexture("dawson_cocoon_crack"));
+    // …then it bursts: wings unfold, and the tail fans open
+    scene.time.delayedCall(1200, () => {
+      coc.setVisible(false);
+      for (const c of [0x7af4d0, 0x3aa88a, 0xffd23f])
+        burst(scene, cont, W / 2, cy, c, reduceFlashing() ? 8 : 14);
+      hero.setAlpha(1);
+      scene.tweens.add({ targets: hero, scale: base * 0.8, duration: 160, ease: "Back.easeOut" });
+    });
+    scene.time.delayedCall(1360, () => hero.setTexture("hero_dawson_1")); // wings unfold
+    scene.time.delayedCall(1560, () => {
+      hero.setTexture(def.texture); // the tail fans open
+      scene.tweens.add({ targets: hero, scale: base, duration: 260, ease: "Back.easeOut" });
+      Sfx.moment("dawson", "best");
     });
   } else
     scene.tweens.add({
@@ -388,3 +420,7 @@ export function openChest(scene, x, y, { depth = 450 } = {}) {
     });
   });
 }
+
+// test builds only
+import { TEST } from "../systems/testFlags.js";
+if (TEST.on && typeof window !== "undefined") window.__glyReveal = { revealHero };

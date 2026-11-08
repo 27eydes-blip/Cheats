@@ -37,7 +37,8 @@ const rewardKey = (r) =>
  */
 function migrateS1(rec) {
   const theme = { banner: "crimson" };
-  const before = plusTrackS1v1(theme);
+  // claims made on layout 2 (before Abyss Dawson took tier 44) or on the launch layout
+  const before = rec.plusLayout === 2 ? plusTrackS1(theme, 2) : plusTrackS1v1(theme);
   const after = plusTrackS1(theme);
   const next = {};
   for (const i of Object.keys(rec.plusClaimed)) {

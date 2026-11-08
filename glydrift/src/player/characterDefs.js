@@ -1000,7 +1000,7 @@ export const CHARACTERS = [
     texture: "hero_dawson",
     pixel: {
       atlas: "pxc",
-      frames: Array.from({ length: 6 }, (_, i) => `dawson_${i}`),
+      frames: Array.from({ length: 7 }, (_, i) => `dawson_${i}`),
       mode: "shark", // flutter + swim wiggle, tail flash, the fanned display, shattered spin
       trail: [0x18c8b8, 0x18a050, 0xffd23f, 0x8a3cd8],
     },
@@ -1012,12 +1012,14 @@ export const CHARACTERS = [
     },
     scale: 0.62,
     cost: 12000,
+    speed: 1.05, // flies 5% faster than the standard heroes (hitbox unchanged)
     challenge: {
       stat: "maxNearRun",
       value: 25,
       text: "Get 25 near-misses in one run",
     },
-    desc: "Part shark. Part butterfly. All show-off.",
+    perks: { list: ["+5% SPEED"] },
+    desc: "Part shark. Part butterfly. All show-off. +5% speed.",
   },
   {
     // DEWBERRY: a glowing pink berry with a face. Cosmetic only (no perks). Glow, squish and
