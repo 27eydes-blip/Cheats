@@ -598,7 +598,7 @@ function circleTex(n, r) {
 }
 
 /** Heroes whose portrait isn't frame 1 (THE HADDAD's is the big smile, not the uppercut). */
-const PORTRAIT_FRAME = { haddad: 4, jamal: 6 };
+const PORTRAIT_FRAME = { haddad: 4, jamal: 6, dawson: 4, dewberry: 4 };
 
 export function buildCommon(scene) {
   const frames = {};
@@ -636,6 +636,13 @@ export function buildCommon(scene) {
   // hats sit on top of his head, between the two antenna tufts (not on the tuft tips)
   for (let f = 3; f < 9; f++) frames[`jamal_${f}`] = rim(SHOP_DRAW.jamal(f));
   HEAD_ANCHORS.jamal = { x: 2.5, y: -7, w: 26, h: 26 };
+  // DAWSON: tail flash, the fanned display and the shattered spin (3-5); DEWBERRY: wide eyes and
+  // delighted (3-4). Hats: DAWSON's on his head behind the eye (not on a raised wing tip),
+  // DEWBERRY's on top of the berry beside the leaf
+  for (let f = 3; f < 6; f++) frames[`dawson_${f}`] = rim(SHOP_DRAW.dawson(f));
+  for (let f = 3; f < 5; f++) frames[`dewberry_${f}`] = rim(SHOP_DRAW.dewberry(f));
+  HEAD_ANCHORS.dawson = { x: 5.5, y: -3, w: 26, h: 26 };
+  HEAD_ANCHORS.dewberry = { x: 0.5, y: -6, w: 26, h: 26 };
   // 손주원: the roar pose, the board on its own, and hats on the tiger's head
   frames.sonjuwon_3 = rim(sonjuwon(3));
   frames.sonjuwon_board = rim(sonjuwonBoard());

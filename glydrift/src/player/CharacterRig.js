@@ -12,6 +12,7 @@ import { AnimalBits } from "./animalFx.js";
 import { ToeBits } from "./mattoeFx.js";
 import { BoxerBits } from "./haddadFx.js";
 import { DogBits } from "./jamalFx.js";
+import { BerryBits, SharkBits } from "./hybridFx.js";
 import { FalconBits } from "./spliceFx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 
@@ -96,6 +97,13 @@ export class CharacterRig {
     this.boxer = this.px.mode === "boxer" ? new BoxerBits(this, depth) : null;
     // JAMAL: scrunch flaps, propeller tail, zoomies, the dramatic wheeze (see jamalFx.js)
     this.dog = this.px.mode === "dog" ? new DogBits(this, depth) : null;
+    // DAWSON (shark x butterfly x peacock) and DEWBERRY (glowing berry): see hybridFx.js
+    this.hb =
+      this.px.mode === "shark"
+        ? new SharkBits(this, depth)
+        : this.px.mode === "berry"
+          ? new BerryBits(this, depth)
+          : null;
     // SXE (id "splice"): dive tucks, barrel rolls, the sonic boom, wind-streak trail, perch showcase
     this.falcon =
       this.px.mode === "falcon" ? new FalconBits(this, depth) : null;
@@ -139,6 +147,7 @@ export class CharacterRig {
       ...(this.an?.objects || []),
       ...(this.toe?.objects || []),
       ...(this.boxer?.objects || []),
+      ...(this.hb?.objects || []),
       ...(this.falcon?.objects || []),
     ];
   }
@@ -197,6 +206,7 @@ export class CharacterRig {
     this.toe?.reset(); // MATTOE: undo the stubbed-toe tumble
     this.boxer?.reset(); // THE HADDAD: back on his feet
     this.dog?.reset(); // JAMAL: back on his paws
+    this.hb?.reset();
     this.falcon?.reset(); // SXE: undo the death tumble, or he stays hidden next run
     this.setVisible(true);
     this.trailG.clear();
@@ -286,6 +296,7 @@ export class CharacterRig {
         this.toe?.flap();
         this.boxer?.flap();
         this.dog?.flap();
+        this.hb?.flap();
         this.falcon?.flap();
         break;
       case "yarms":
@@ -616,6 +627,13 @@ export class CharacterRig {
       if (this.fx) this.cosmeticDeath(this.x, this.y); // equipped death effects still play
       return hints;
     }
+    if (this.hb && !this.dead) {
+      // DAWSON shatters and spins away / DEWBERRY pops (see hybridFx.js)
+      this.dead = true;
+      this.hb.die();
+      if (this.fx) this.cosmeticDeath(this.x, this.y); // equipped death effects still play
+      return hints;
+    }
     if (this.dog && !this.dead) {
       // JAMAL: the long wheeze and the flop (the sprite stays: X eyes, bouncing diaper)
       this.dead = true;
@@ -783,6 +801,7 @@ export class CharacterRig {
     this.toe?.near();
     this.boxer?.near();
     this.dog?.near();
+    this.hb?.near();
     this.falcon?.near();
     this.an?.near();
     this.surfNear();
@@ -795,6 +814,7 @@ export class CharacterRig {
     this.toe?.best();
     this.boxer?.best();
     this.dog?.best();
+    this.hb?.best();
     this.falcon?.best();
     this.an?.best();
     this.surfBest();
@@ -1187,6 +1207,7 @@ export class CharacterRig {
     this.toe?.update(dt);
     this.boxer?.update(dt);
     this.dog?.update(dt);
+    this.hb?.update(dt);
     this.falcon?.update(dt, scroll);
     if (this.an) this.an.update(dt, scroll);
     if (this.frozen) {
@@ -1279,6 +1300,7 @@ export class CharacterRig {
     else if (mode === "toe") f = this.toe ? this.toe.frame() : 0;
     else if (mode === "boxer") f = this.boxer ? this.boxer.frame() : 0;
     else if (mode === "dog") f = this.dog ? this.dog.frame() : 0;
+    else if (mode === "shark" || mode === "berry") f = this.hb ? this.hb.frame() : 0;
     else if (mode === "falcon") f = this.falcon ? this.falcon.frame() : 0;
     else if (mode === "surf")
       f =
@@ -1337,6 +1359,7 @@ export class CharacterRig {
     this.toe?.post(sp);
     this.boxer?.post(sp);
     this.dog?.post(sp);
+    this.hb?.post(sp);
     this.falcon?.post(sp);
     this.placeCosmetics();
     this.an?.place(scroll);
@@ -1470,6 +1493,7 @@ export class CharacterRig {
     if (!this.trailOverride && this.toe) return this.toe.trail(g);
     if (!this.trailOverride && this.boxer) return this.boxer.trail(g);
     if (!this.trailOverride && this.dog) return this.dog.trail(g);
+    if (!this.trailOverride && this.hb) return this.hb.trail(g);
     if (!this.trailOverride && this.falcon) return this.falcon.trail(g);
     if (!this.trailOverride && this.an?.trail(g)) return;
     const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail
