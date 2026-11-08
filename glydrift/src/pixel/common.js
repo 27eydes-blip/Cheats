@@ -3,6 +3,7 @@ import { LOTTERY_DRAW } from "./lotteryHeroes.js";
 import { SHOP_DRAW } from "./shopHeroes.js";
 import { yarms } from "./yarmsArt.js";
 import { sonjuwon, sonjuwonBoard } from "./sonjuwonArt.js";
+import { DAWSON_SKINS, dawson, dawsonLook, miniButterfly } from "./dawsonArt.js";
 import { addAtlas, addTexture, PixelCanvas } from "./px.js";
 
 const OUT = 0x07101e; // bold character outline
@@ -639,7 +640,8 @@ export function buildCommon(scene) {
   // DAWSON: tail flash, the fanned display and the shattered spin (3-5); DEWBERRY: wide eyes and
   // delighted (3-4). Hats: DAWSON's on his head behind the eye (not on a raised wing tip),
   // DEWBERRY's on top of the berry beside the leaf
-  for (let f = 3; f < 6; f++) frames[`dawson_${f}`] = rim(SHOP_DRAW.dawson(f));
+  for (let f = 3; f < 7; f++) frames[`dawson_${f}`] = rim(SHOP_DRAW.dawson(f)); // (6: the chomp)
+  for (let f = 0; f < 2; f++) frames[`dawson_bfly_${f}`] = miniButterfly(f); // his butterflies
   for (let f = 3; f < 5; f++) frames[`dewberry_${f}`] = rim(SHOP_DRAW.dewberry(f));
   HEAD_ANCHORS.dawson = { x: 5.5, y: -3, w: 26, h: 26 };
   HEAD_ANCHORS.dewberry = { x: 0.5, y: -6, w: 26, h: 26 };
@@ -655,6 +657,10 @@ export function buildCommon(scene) {
   for (const id of Object.keys(heroes))
     addTexture(scene, `hero_${id}`, frames[`${id}_${PORTRAIT_FRAME[id] ?? 1}`], PORTRAIT_SCALE);
   addTexture(scene, "hero_yarms_flex", frames.yarms_3, PORTRAIT_SCALE);
+  // DAWSON: a portrait per skin (shop cards, his editor) and the wings-level pose (the bow)
+  for (const skin of Object.keys(DAWSON_SKINS))
+    addTexture(scene, `hero_dawson_${skin}`, rim(dawson(4, dawsonLook(skin))), PORTRAIT_SCALE);
+  addTexture(scene, "hero_dawson_0", frames.dawson_0, PORTRAIT_SCALE);
 
   // particle textures (same logical size as the old smooth ones, now pixel-crisp)
   addTexture(scene, "dot", circleTex(8, 3));

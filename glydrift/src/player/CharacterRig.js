@@ -104,6 +104,7 @@ export class CharacterRig {
         : this.px.mode === "berry"
           ? new BerryBits(this, depth)
           : null;
+    if (this.px.mode === "shark") this.setCosmetics(this.cos); // (his look needs this.hb)
     // SXE (id "splice"): dive tucks, barrel rolls, the sonic boom, wind-streak trail, perch showcase
     this.falcon =
       this.px.mode === "falcon" ? new FalconBits(this, depth) : null;
@@ -171,8 +172,12 @@ export class CharacterRig {
     this.setGlow =
       set && (this.cos.titleForce || Shop.setComplete(set)) ? set.glow : null;
     this.sprite.clearTint();
+    // DAWSON draws from his own look atlas (his skins, realm wings); one of his own skins
+    // replaces a colour skin
+    if (this.hb?.skinned) this.skin = null;
+    const look = this.hb?.lookKey && !this.skin ? this.hb.lookKey() : null;
     // skins recolour a greyscale copy of the hero (so gold reads gold on any hero)
-    const key = this.skin ? greyAtlas(this.scene, this.def) : this.px.atlas;
+    const key = look || (this.skin ? greyAtlas(this.scene, this.def) : this.px.atlas);
     if (this.sprite.texture.key !== key)
       this.sprite.setTexture(key, this.sprite.frame.name);
     if (this.skin) this.sprite.setTint(this.skin.tint);

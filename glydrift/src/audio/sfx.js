@@ -880,6 +880,13 @@ const MOMENTS = {
       [0.15, 0.22, 0.3, 0.4].forEach((d, i) => tone({ type: "sine", f0: 300 + i * 90, f1: 700 + i * 120, dur: 0.06, vol: 0.12, delay: d }));
       noise({ dur: 0.3, vol: 0.14, f: 900, delay: 0.12 });
     },
+    // the Chomp (x5+ near-miss): a snappy double jaw-clack with a low thump
+    chomp: () => {
+      noise({ dur: 0.04, vol: 0.34, f: 2400 });
+      tone({ type: "square", f0: 220, f1: 70, dur: 0.08, vol: 0.14 });
+      noise({ dur: 0.04, vol: 0.28, f: 2000, delay: 0.09 });
+      tone({ type: "square", f0: 180, f1: 60, dur: 0.07, vol: 0.12, delay: 0.09 });
+    },
   },
   dewberry: {
     near: () => tone({ type: "sine", f0: 700, f1: 1100, dur: 0.1, vol: 0.12 }),

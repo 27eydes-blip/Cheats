@@ -1000,7 +1000,7 @@ export const CHARACTERS = [
     texture: "hero_dawson",
     pixel: {
       atlas: "pxc",
-      frames: Array.from({ length: 6 }, (_, i) => `dawson_${i}`),
+      frames: Array.from({ length: 7 }, (_, i) => `dawson_${i}`),
       mode: "shark", // flutter + swim wiggle, tail flash, the fanned display, shattered spin
       trail: [0x18c8b8, 0x18a050, 0xffd23f, 0x8a3cd8],
     },

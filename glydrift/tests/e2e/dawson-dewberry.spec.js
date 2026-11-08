@@ -54,7 +54,7 @@ const HEROES = [
     cost: 12000,
     challenge: { stat: "maxNearRun", value: 25, text: "Get 25 near-misses in one run" },
     desc: "Part shark. Part butterfly. All show-off.",
-    frames: 6,
+    frames: 7,
   },
   {
     id: "dewberry",
