@@ -269,6 +269,14 @@ test("DEWBERRY's moves: squish and spin, wide eyes + glow flare, delighted, the 
 test("DEWBERRY glows brighter in the Abyss; steady on Low Graphics; gentler with Reduce Flashing", async ({ page }, testInfo) => {
   phoneOnly(testInfo);
   const log = await flyAs(page, "dewberry");
+  // (real near-misses and new bests flare the glow: keep them out of the steady readings)
+  await page.evaluate(() => {
+    const hb = window.__glydrift.scene.getScene("Game").player.rig.hb;
+    hb.__near = hb.near;
+    hb.__best = hb.best;
+    hb.near = hb.best = () => {};
+    hb.flare = 0;
+  });
   await step(page, 10);
   const glowAt = async (zone) => {
     // (the scene works out its realm every frame: pin it for this check)
@@ -295,6 +303,10 @@ test("DEWBERRY glows brighter in the Abyss; steady on Low Graphics; gentler with
   const low = await glowAt(null);
   expect(Math.max(...low) - Math.min(...low)).toBeLessThan(0.005);
   // Reduce Flashing: a smaller flare on a near-miss
+  await page.evaluate(() => {
+    const hb = window.__glydrift.scene.getScene("Game").player.rig.hb;
+    hb.near = hb.__near;
+  });
   const flare = async () => {
     await step(page, 120);
     const b = (await look(page)).glow.a;
