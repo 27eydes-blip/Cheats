@@ -119,10 +119,17 @@ export class Slammer extends PxObstacle {
   }
   spawn(x, { gc, open = 380, phase = 0, hold = 1.0, minGap = 0 }) {
     this.arm(x);
-    // pooled before the Abyss art was built? pick the real frames up now
-    if (this.capT.frame.name !== "cap_1") {
+    // pooled before the Abyss art was built (or before it was freed and built again in a later
+    // run)? pick up the real art now: the frame NAME matching isn't enough, the texture itself
+    // must be the live one
+    const tm = this.scene.textures;
+    if (tm.exists("abyss") && (this.capT.texture !== tm.get("abyss") || this.capT.frame.name !== "cap_1")) {
       this.capT.setTexture("abyss", "cap_1");
       this.capB.setTexture("abyss", "cap_1b");
+    }
+    if (tm.exists("abyss_pillar_2") && this.topBody.texture !== tm.get("abyss_pillar_2")) {
+      this.topBody.setTexture("abyss_pillar_2");
+      this.botBody.setTexture("abyss_pillar_2");
     }
     Object.assign(this, { gc, open, phase, hold, minGap });
     this.halfW = this.w / 2;

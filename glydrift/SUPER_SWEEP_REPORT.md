@@ -183,5 +183,5 @@ Local, whole suite on the iPhone profile (Chromium): **131 passed, 1 failed** â€
 skin speed test's rounding (#32), now fixed; it and the 12 super-sweep tests then passed, as did every
 crash-safety, shop and skin test rerun against the final builds.
 
-CI full lane (every test, Chromium + Firefox + WebKit, all 7 device profiles): see the deploy note
-below.
+CI full lane (every test, Chromium + Firefox + WebKit, all 7 device profiles): **all green**
+(run 168). Deployed: live on glydrift.com as build `mw7j13k9`, 8 Nov 14:44 (UTC+7).

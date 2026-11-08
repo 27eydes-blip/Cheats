@@ -8,7 +8,7 @@ import { buildHazards } from "./hazardArt.js";
 import { buildDimensionHazards } from "./dimensionHazardArt.js";
 import { buildCosmeticArt } from "./cosmeticArt.js";
 import { buildNewHazards } from "./newHazardArt.js";
-import { addAtlas, deferUploads } from "./px.js";
+import { addAtlas, deferUploads, forgetTextures } from "./px.js";
 import { weatherFrames } from "./scenicArt.js";
 
 const SOLAR = {
@@ -650,8 +650,8 @@ export function builtBiomes() {
  */
 export function releaseBiomeArt(id) {
   if (id === EAGER_BIOME || !biomeBuilt.has(id) || !artScene) return false;
-  const tm = artScene.textures;
-  for (const k of biomeKeys.get(id) || []) if (tm.exists(k)) tm.remove(k);
+  // (anything still pointing at this art, e.g. a pooled hazard, is switched off it first)
+  forgetTextures(artScene, biomeKeys.get(id) || []);
   biomeKeys.delete(id);
   biomeBuilt.delete(id);
   pendingArt.delete(id);
