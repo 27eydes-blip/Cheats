@@ -92,7 +92,9 @@ export async function openGame(page, opts = {}) {
   );
   // draw only every 12th frame (logic still runs every frame): software GPUs are slow
   // (opts.audio: sound on, for the tests that check the sound effects themselves)
-  const query = [...(opts.audio ? [] : ["noaudio"]), "offline", "renderEvery=12", ...(opts.flags || [])].join("&");
+  // (opts.online: the real online start-up runs; outside requests are still blocked unless the
+  // test routes them itself — network tests do)
+  const query = [...(opts.audio ? [] : ["noaudio"]), ...(opts.online ? [] : ["offline"]), "renderEvery=12", ...(opts.flags || [])].join("&");
   await page.goto(`${opts.base || ""}/?${query}`);
   // Let everything that loads in real time (fonts, images, seasons.json) finish before the
   // fake clock moves, so every run boots on exactly the same frame.

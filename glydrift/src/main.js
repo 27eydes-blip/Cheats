@@ -9,6 +9,7 @@ import Phaser from "phaser";
 import "./gfx/tileSpriteFix.js";
 import { GuardHooks, guardScenes, watchContext } from "./systems/frameGuard.js";
 import { CrashReport } from "./systems/crashReport.js";
+import { installA11y } from "./ui/a11y.js";
 import { CrashSafety } from "./systems/crashSafety.js";
 import { Updater } from "./systems/updater.js";
 import { setupView, VIEW, viewDrifted, viewportSize, wantsFit } from "./config.js";
@@ -204,6 +205,9 @@ async function boot() {
       inner(time, d);
     };
   }
+
+  // VoiceOver: an invisible, labelled button over every game button (ui/a11y.js)
+  installA11y(game);
 
   // safe areas (notch / home indicator) converted into logical game units, including any
   // part of the canvas cropped off-screen by ENVELOP scaling
