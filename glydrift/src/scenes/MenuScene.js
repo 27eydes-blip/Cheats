@@ -12,7 +12,7 @@ import { CharacterRig } from "../player/CharacterRig.js";
 import { CHARACTERS, getCharacter, onSale, saleLeft } from "../player/characterDefs.js";
 import { Sfx } from "../audio/sfx.js";
 import { TEST } from "../systems/testFlags.js";
-import { Haptics } from "../systems/haptics.js";
+import { Haptics, hapticsLevel } from "../systems/haptics.js";
 import { Install } from "../systems/install.js";
 import { flairOf, Leaderboard, Levels, myFlair } from "../online/leaderboard.js";
 import { nameText } from "../ui/nameplate.js";
@@ -1799,13 +1799,27 @@ export class MenuScene extends Phaser.Scene {
     );
     // Reduce Flashing: flashes become gentle colour fades (defaults to the device's Reduce Motion)
     const flashLabel = () => `REDUCE FLASHING: ${reduceFlashing() ? "ON" : "OFF"}`;
-    const style = button(this, W / 2, y0 + 430, W - 180, 72, flashLabel(), {
+    const half = (W - 200) / 2;
+    const style = button(this, W / 2 - half / 2 - 10, y0 + 430, half, 72, flashLabel(), {
       color: 0xb45cff,
-      size: 18,
+      size: 15,
       onClick: () => {
         st.reduceFlash = !reduceFlashing();
         Save.write();
         style.setLabel(flashLabel());
+      },
+    });
+    // haptics: FULL (every flap too) → LIGHT (softer, no flap tick) → OFF
+    const hapLabel = () => `HAPTICS: ${hapticsLevel().toUpperCase()}`;
+    const hap = button(this, W / 2 + half / 2 + 10, y0 + 430, half, 72, hapLabel(), {
+      color: 0x3ef4ff,
+      size: 15,
+      onClick: () => {
+        const next = { full: "light", light: "off", off: "full" }[hapticsLevel()];
+        st.haptics = next;
+        Save.write();
+        hap.setLabel(hapLabel());
+        if (next !== "off") Haptics.strong();
       },
     });
     const done = button(this, W / 2, y0 + h - 70, 300, 80, "DONE", {
@@ -1849,7 +1863,7 @@ export class MenuScene extends Phaser.Scene {
         });
       },
     });
-    c.add([mute, gfx, style, nameBtn, acct, done]);
+    c.add([mute, gfx, style, hap, nameBtn, acct, done]);
     if (plusRow) {
       const py = y0 + (Install.available ? 795 : 705);
       const both = hasGold && hasTheme;

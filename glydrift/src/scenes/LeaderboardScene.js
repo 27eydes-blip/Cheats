@@ -21,9 +21,10 @@ import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { button, fadeTo, neonText, plainText } from "../ui/ui.js";
 import { titleText } from "../ui/titleText.js";
 
-/** Heroes whose perks touch coins or survival (RONIN, SXE), shown with the gold perk badge. */
+/** Heroes whose perks touch coins or survival (RONIN, SXE, WALLRUNNER's ×15 coins), shown with the gold perk badge. */
 const hasCoinPerks = (def) =>
   !!(
+    (def.coinMul ?? 1) > 1 ||
     def.perks?.coinBonus ||
     def.perks?.fireWard ||
     def.perks?.glitchProof ||
@@ -268,7 +269,7 @@ export class LeaderboardScene extends Phaser.Scene {
       .setDepth(41);
     this.you = this.add.container(0, H - 80 - sb).setDepth(41);
     // REPORT A NAME (offensive usernames): hidden for you at once, reported to be removed
-    this.reportBtn = button(this, W - 110, H - 133 - sb, 180, 40, "REPORT A NAME", {
+    this.reportBtn = button(this, W / 2 + 30, H - 133 - sb, 180, 40, "REPORT A NAME", {
       color: 0xbfb6e8,
       size: 13,
       onClick: () => this.openReport(),
@@ -1000,6 +1001,7 @@ export class LeaderboardScene extends Phaser.Scene {
     );
     this.you.add(heroImage(this, 150, 0, def.id, 0.4 / HI));
     if ((def.speed ?? 1) > 1) this.you.add(this.speedBadge(172, -18));
+    if (hasCoinPerks(def)) this.you.add(this.perkBadge(172, 18)); // (your own row too)
     const fl = flairOf({ flair: myFlair() });
     this.you.add(
       nameText(this, 192, -14, name, {

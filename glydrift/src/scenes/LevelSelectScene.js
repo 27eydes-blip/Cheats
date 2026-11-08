@@ -778,8 +778,10 @@ export class LevelSelectScene extends Phaser.Scene {
     const below = R + (R >= R_BOSS ? 112 : 78); // stars, BOSS and the selected level's name
     const top = this.safeTop;
     let s = (top + above + bottom - below) / 2 - y; // centre of the room the node needs
-    s = Math.max(s, top + above - y); // never under the realm bar...
-    s = Math.min(s, bottom - below - y); // ...nor behind PLAY (wins if the window is short)
+    s = Math.min(s, bottom - below - y); // never behind PLAY / the level card...
+    // ...nor under the realm bar: when the window is too short for both (a boss with its card
+    // open on an iPad), the hero over the node stays in view and its name tucks under the card
+    s = Math.max(s, top + above - y);
     return Phaser.Math.Clamp(s, this.minY, 0);
   }
 

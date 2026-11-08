@@ -728,7 +728,7 @@ export class PassScene extends Phaser.Scene {
     // Apple requires a way to restore purchases next to the purchase itself
     this.restoreBtn = button(this, 92, y, 156, 64, "RESTORE\nPURCHASES", {
       color: 0xbfb6e8,
-      size: 13,
+      size: 16,
       onClick: () => this.restorePurchases(),
     }).setDepth(320);
     if (this.season && !PassPlus.owns()) {
@@ -1014,7 +1014,7 @@ export class PassScene extends Phaser.Scene {
     }
     const restore = button(this, W / 2 - 170, by, 160, 64, "RESTORE\nPURCHASES", {
       color: 0xbfb6e8,
-      size: 13,
+      size: 16,
       onClick: () => this.restorePurchases(),
     });
     o.add(restore);
