@@ -75,9 +75,10 @@ for (const kind of ["slow", "spotty", "offline-mid-run"]) {
       runs: window.__glySave.data.stats.runs,
     }));
     // the run counted on this device, and the score waits in the queue for the connection
-    expect(after.runs).toBeGreaterThanOrEqual(1);
-    expect(after.coins).toBeGreaterThanOrEqual(before);
-    expect(after.queue).toBeGreaterThanOrEqual(1);
+    const why = JSON.stringify({ ...after, calls, lb: await page.evaluate(() => ({ online: window.__glyLb.Leaderboard.online, name: window.__glyLb.Leaderboard.username, q: window.__glySave.data.lbQueue })) });
+    expect(after.runs, `runs counted ${why}`).toBeGreaterThanOrEqual(1);
+    expect(after.coins, `coins kept ${why}`).toBeGreaterThanOrEqual(before);
+    expect(after.queue, `score queued ${why}`).toBeGreaterThanOrEqual(1);
     if (kind === "offline-mid-run") await context.setOffline(false);
     // back to the home screen and into another run: nothing is stuck waiting for the network
     await page.evaluate(() => window.__glydrift.scene.getScene("GameOver").retry());
