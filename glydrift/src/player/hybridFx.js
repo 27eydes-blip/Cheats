@@ -32,7 +32,7 @@ const RAINBOW = [0xff3a5a, 0xff8a2a, 0xffd23f, 0x5ae06a, 0x18c8b8, 0x3a8aff, 0x8
 const PINK = 0xff4fa0;
 const PINK_L = 0xff9ad0;
 
-class HeroBits {
+export class HeroBits {
   constructor(rig, depth) {
     this.rig = rig;
     this.depth = depth;

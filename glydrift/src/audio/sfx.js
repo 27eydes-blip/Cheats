@@ -312,6 +312,13 @@ const FLAP = {
     tone({ type: "sine", f0: 260, f1: 560, dur: 0.08, vol: 0.22, delay: 0.02 });
   },
   // DEWBERRY: a juicy little "bloop"
+  // TUNG: a soft twinkly chime (a random pitch every time, so it never gets repetitive)
+  tung: () => {
+    const p = 0.9 + Math.random() * 0.2;
+    tone({ type: "sine", f0: 1568 * p, f1: 1568 * p, dur: 0.07, vol: 0.07 });
+    tone({ type: "sine", f0: 2349 * p, f1: 2093 * p, dur: 0.09, vol: 0.05, delay: 0.03 });
+    tone({ type: "triangle", f0: 3136 * p, f1: 3520 * p, dur: 0.04, vol: 0.025, delay: 0.05 });
+  },
   dewberry: () => {
     const p = 0.94 + Math.random() * 0.12;
     tone({ type: "sine", f0: 520 * p, f1: 230 * p, dur: 0.09, vol: 0.26 });
@@ -886,6 +893,23 @@ const MOMENTS = {
       tone({ type: "square", f0: 220, f1: 70, dur: 0.08, vol: 0.14 });
       noise({ dur: 0.04, vol: 0.28, f: 2000, delay: 0.09 });
       tone({ type: "square", f0: 180, f1: 60, dur: 0.07, vol: 0.12, delay: 0.09 });
+    },
+  },
+  tung: {
+    // a little "ting" with the wink
+    near: () => [2637, 3136].forEach((f, i) => tone({ type: "sine", f0: f, f1: f, dur: 0.08, vol: 0.06, delay: i * 0.05 })),
+    best: () =>
+      // a magical chime: a soft arpeggio up with a shimmer on top
+      [784, 988, 1175, 1568, 1976, 2349].forEach((f, i) => {
+        tone({ type: "sine", f0: f, f1: f, dur: 0.3, vol: 0.08, delay: i * 0.07 });
+        tone({ type: "triangle", f0: f * 2, f1: f * 2, dur: 0.12, vol: 0.02, delay: i * 0.07 + 0.02 });
+      }),
+    death: () => {
+      // a gentle sparkly "poof"
+      noise({ dur: 0.18, vol: 0.12, f: 1200 });
+      [2400, 2000, 2800, 1800, 2600].forEach((f, i) =>
+        tone({ type: "sine", f0: f, f1: f * 1.15, dur: 0.06, vol: 0.04, delay: 0.05 + i * 0.05 }),
+      );
     },
   },
   dewberry: {

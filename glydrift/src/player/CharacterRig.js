@@ -13,6 +13,7 @@ import { ToeBits } from "./mattoeFx.js";
 import { BoxerBits } from "./haddadFx.js";
 import { DogBits } from "./jamalFx.js";
 import { BerryBits, SharkBits } from "./hybridFx.js";
+import { UnicornBits } from "./tungFx.js";
 import { FalconBits } from "./spliceFx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 
@@ -103,7 +104,9 @@ export class CharacterRig {
         ? new SharkBits(this, depth)
         : this.px.mode === "berry"
           ? new BerryBits(this, depth)
-          : null;
+          : this.px.mode === "unicorn" // TUNG (tungFx.js)
+            ? new UnicornBits(this, depth)
+            : null;
     if (this.px.mode === "shark") this.setCosmetics(this.cos); // (his look needs this.hb)
     // SXE (id "splice"): dive tucks, barrel rolls, the sonic boom, wind-streak trail, perch showcase
     this.falcon =
@@ -1305,7 +1308,7 @@ export class CharacterRig {
     else if (mode === "toe") f = this.toe ? this.toe.frame() : 0;
     else if (mode === "boxer") f = this.boxer ? this.boxer.frame() : 0;
     else if (mode === "dog") f = this.dog ? this.dog.frame() : 0;
-    else if (mode === "shark" || mode === "berry") f = this.hb ? this.hb.frame() : 0;
+    else if (mode === "shark" || mode === "berry" || mode === "unicorn") f = this.hb ? this.hb.frame() : 0;
     else if (mode === "falcon") f = this.falcon ? this.falcon.frame() : 0;
     else if (mode === "surf")
       f =
