@@ -1418,7 +1418,9 @@ test("no skin changes the hitbox, speed or score rules (Pass+ skins look 10% sma
   const base = results[0];
   for (const r of results) {
     expect(r.radius, `${r.skin} hitbox`).toBe(base.radius);
-    expect(r.metres, `${r.skin} speed`).toBe(base.metres);
+    // (within 0.05 m: a run starts a frame earlier or later and speed grows with distance; a
+    // real speed difference is metres over 240 frames)
+    expect(Math.abs(r.metres - base.metres), `${r.skin} speed`).toBeLessThan(0.05);
   }
   for (const r of results.filter((x) =>
     ["skin_holo", "skin_inferno", "skin_starlight"].includes(x.skin),
@@ -1508,7 +1510,9 @@ test("Drift Pass+ heroes: standard hitbox and speed, drawn ~10% smaller", async 
   for (const r of results) {
     expect(r.def, "flies as the asked hero").toBe(r.id);
     expect(r.radius, `${r.id} hitbox`).toBe(base.radius);
-    expect(r.metres, `${r.id} speed`).toBe(base.metres);
+    // (the run starts a frame earlier or later depending on frame timing, and speed grows with
+    // distance: a hundredth of a metre either way; a real speed difference is metres)
+    expect(Math.abs(r.metres - base.metres), `${r.id} speed`).toBeLessThan(0.05);
     expect(r.alive, `${r.id} still flying`).toBe(true);
   }
   for (const r of results.filter((x) => PASS_HEROES.includes(x.id))) {

@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 import { MANIFEST, musicHash } from "./scripts/music/hash.mjs";
@@ -18,7 +18,20 @@ const stampServiceWorker = () => {
     },
     closeBundle() {
       const p = resolve(import.meta.dirname, outDir, "sw.js");
-      writeFileSync(p, readFileSync(p, "utf8").replace("__BUILD__", BUILD_ID));
+      // pre-cache the build's scripts, styles, fonts and images (not the music: it's large and
+      // cached as each track first plays)
+      const dir = resolve(import.meta.dirname, outDir, "assets");
+      const assets = existsSync(dir)
+        ? readdirSync(dir)
+            .filter((f) => /\.(js|css|woff2?|png|webp|json)$/.test(f))
+            .map((f) => `assets/${f}`)
+        : [];
+      writeFileSync(
+        p,
+        readFileSync(p, "utf8")
+          .replace("__BUILD__", BUILD_ID)
+          .replace("/*__ASSETS__*/ []", JSON.stringify(assets)),
+      );
       writeFileSync(resolve(import.meta.dirname, outDir, "version.json"), JSON.stringify({ build: BUILD_ID }));
     },
   };

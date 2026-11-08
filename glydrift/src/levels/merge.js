@@ -6,6 +6,8 @@ export function mergeLevelProgress(a = {}, b = {}) {
     claimed: { ...(a.claimed || {}) },
     played: Math.max(a.played || 0, b.played || 0),
   };
+  // how far the finale's eye has opened (it only ever opens further)
+  if (a.eyeOpen || b.eyeOpen) out.eyeOpen = Math.max(a.eyeOpen || 0, b.eyeOpen || 0);
   for (const [k, v] of Object.entries(b.claimed || {})) if (v) out.claimed[k] = true;
   for (const [n, rb] of Object.entries(b.p || {})) {
     const ra = out.p[n];

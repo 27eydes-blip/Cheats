@@ -12,6 +12,7 @@ import { CrashReport } from "./crashReport.js";
 import { TEST } from "./testFlags.js";
 
 const KEY = "glydrift.liveRun";
+const DONE = "glydrift.recoveredRuns"; // sessions whose run another page load already credited
 // a page load: a checkpoint from an earlier page load is a run the phone closed
 const SESSION = (() => {
   try {
@@ -21,17 +22,46 @@ const SESSION = (() => {
   }
 })();
 
+// how the run ended, for telling iOS memory kills apart from players closing the game: a run
+// last seen on screen that never came back is a crash (memory, a freeze); one last seen in the
+// background is the phone tidying up (or the player swiping it away)
+function killedMessage(cp) {
+  const secs = Math.round((cp.run?.runTimeMs || 0) / 1000);
+  return `the game was closed mid-run (${cp.hidden ? "in the background" : "on screen"}, ${secs}s in)`;
+}
+
 export const CrashSafety = {
   session: SESSION,
 
   /** Called every few seconds while a run is on. */
   checkpoint(run, where = {}) {
     try {
+      // another page load (a second tab, or the home-screen app reopened while this page was
+      // still alive in the background) already credited and reported this run: writing it again
+      // made the next launch report and credit it a second time
+      if (this.recoveredElsewhere()) return;
       localStorage.setItem(
         KEY,
-        JSON.stringify({ sid: SESSION, at: Date.now(), run: JSON.parse(JSON.stringify(run)), ...where }),
+        JSON.stringify({
+          sid: SESSION,
+          at: Date.now(),
+          hidden:
+            typeof document !== "undefined" &&
+            document.visibilityState === "hidden",
+          run: JSON.parse(JSON.stringify(run)),
+          ...where,
+        }),
       );
     } catch {}
+  },
+
+  /** This page's run was credited by another page load (see recover). */
+  recoveredElsewhere() {
+    try {
+      return JSON.parse(localStorage.getItem(DONE) || "[]").includes(SESSION);
+    } catch {
+      return false;
+    }
   },
 
   clear() {
@@ -57,6 +87,16 @@ export const CrashSafety = {
     const cp = this.pending();
     if (!cp?.run) return null;
     this.clear(); // first: a run is credited once, even if crediting it fails
+    if (cp.sid !== SESSION)
+      try {
+        const done = JSON.parse(localStorage.getItem(DONE) || "[]").filter(
+          (s) => s !== cp.sid,
+        );
+        localStorage.setItem(
+          DONE,
+          JSON.stringify([...done, cp.sid].slice(-10)),
+        );
+      } catch {}
     const run = { ...cp.run, recovered: reason };
     if (!(run.distance > 0)) return null;
     try {
@@ -67,14 +107,20 @@ export const CrashSafety = {
     try {
       Leaderboard.submitRun(run);
     } catch {}
-    CrashReport.report(reason, reason === "killed_mid_run" ? "the game was closed mid-run" : "run recovered after an error", {
-      score: run.score,
-      distance: run.distance,
-      realm: cp.realm,
-      hero: run.char,
-      mode: run.mode,
-      scene: "Game",
-    });
+    CrashReport.report(
+      reason,
+      reason === "killed_mid_run"
+        ? killedMessage(cp)
+        : "run recovered after an error",
+      {
+        score: run.score,
+        distance: run.distance,
+        realm: cp.realm,
+        hero: run.char,
+        mode: run.mode,
+        scene: "Game",
+      },
+    );
     return run;
   },
 
@@ -87,4 +133,5 @@ export const CrashSafety = {
 };
 
 // test builds only
-if (TEST.on && typeof window !== "undefined") window.__glyCrash = { CrashSafety, CrashReport };
+if (TEST.on && typeof window !== "undefined")
+  window.__glyCrash = { CrashSafety, CrashReport };

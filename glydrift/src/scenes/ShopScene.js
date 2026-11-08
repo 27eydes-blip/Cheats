@@ -326,7 +326,7 @@ export class ShopScene extends Phaser.Scene {
 
   tabRibbon(id) {
     const deal = getCosmetic(Shop.daily().deal);
-    const dealTab = ["death", "flap", "coin"].includes(deal.cat) ? "effects" : deal.cat;
+    const dealTab = !deal ? null : ["death", "flap", "coin"].includes(deal.cat) ? "effects" : deal.cat;
     if ((id === "daily" || id === "pods") && Shop.dropReady())
       return { text: "FREE", col: 0x1fae5a };
     if (id === "featured" && DriftPass.claimable()) return { text: "FREE", col: 0x1fae5a };
@@ -445,7 +445,9 @@ export class ShopScene extends Phaser.Scene {
 
   buildCards() {
     this.strip.removeAll(true);
-    this.offers = this.offersFor(this.tab);
+    // (an item this build doesn't know — e.g. from an older or newer save / season config —
+    // is skipped instead of crashing the whole shop: crash reports "i.cat", 5x)
+    this.offers = this.offersFor(this.tab).filter((o) => o.kind !== "cos" || getCosmetic(o.id));
     this.cards = this.offers.map((o, i) => this.makeCard(o, i));
     this.stripX = 0;
     this.strip.x = this.W / 2;
@@ -554,6 +556,7 @@ export class ShopScene extends Phaser.Scene {
   /** Icon for a cosmetic (hat / coin skin / skin / trail / effect), sized for big cards. */
   iconCos(id, x, y, scale = 1) {
     const cc = getCosmetic(id);
+    if (!cc) return this.add.image(x, y, "__DEFAULT").setVisible(false); // (an unknown item)
     if (cc.cat === "hat")
       return this.add.image(x, y, "cosm", HAT_FIT[id].frame).setScale(4.2 * scale);
     if (cc.cat === "coin") return this.add.image(x, y, "cosm", `${id}_0`).setScale(5 * scale);

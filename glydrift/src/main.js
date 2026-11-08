@@ -1,3 +1,4 @@
+/* global __TEST_FLAGS__ */
 import "@fontsource/orbitron/700.css";
 import "@fontsource/orbitron/900.css";
 import "@fontsource/rajdhani/600.css";
@@ -21,7 +22,6 @@ import { LeaderboardScene } from "./scenes/LeaderboardScene.js";
 import { LevelSelectScene } from "./scenes/LevelSelectScene.js";
 import { LevelCompleteScene } from "./scenes/LevelCompleteScene.js";
 import { MenuScene } from "./scenes/MenuScene.js";
-import { MusicTestScene } from "./scenes/MusicTestScene.js";
 import { ProgressScene } from "./scenes/ProgressScene.js";
 import { TitlesScene } from "./scenes/TitlesScene.js";
 import { SpinScene } from "./scenes/SpinScene.js";
@@ -139,8 +139,10 @@ async function boot() {
     ShopScene,
     PassScene,
     TitlesScene,
-    MusicTestScene,
+    // the soundtrack test page: test builds only (a release build leaves it, and the synth
+    // engine it loads, out entirely)
   ];
+  if (__TEST_FLAGS__) SCENES.push((await import("./scenes/MusicTestScene.js")).MusicTestScene);
   // a screen that fails to open sends the player home instead of leaving them stuck
   guardScenes(SCENES);
   const game = new Phaser.Game({
@@ -334,7 +336,8 @@ for (const type of ["pointerdown", "touchend", "keydown"]) {
     passive: true,
   });
 }
-const reviveSoon = () => document.visibilityState === "visible" && Music.revive();
+// (in the background the music sleeps: phones don't keep the audio hardware busy)
+const reviveSoon = () => (document.visibilityState === "visible" ? Music.revive() : Music.sleep());
 document.addEventListener("visibilitychange", reviveSoon);
 window.addEventListener("pageshow", reviveSoon);
 // iOS 16.4+: game sound mixes with other audio and follows the ring/silent switch
@@ -372,6 +375,8 @@ if (
   let reloaded = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (!hadController || reloaded || Date.now() - launchedAt > 15000) return;
+    // never in the middle of a run (the update check reloads later, at a safe moment)
+    if (!Updater.safe()) return;
     reloaded = true;
     window.location.reload();
   });

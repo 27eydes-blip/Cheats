@@ -242,7 +242,7 @@ export class SharkBits extends HeroBits {
     }
     // realm wings: a new realm or dimension repaints them
     const rig = this.rig;
-    if (this.live && !this.skinned && (rig.scene.zoneId || null) !== this.realm)
+    if (this.live && !this.skinned && !rig.skin && (rig.scene.zoneId || null) !== this.realm)
       rig.sprite.setTexture(this.lookKey(), rig.sprite.frame.name);
     this.updateBflies(dt);
     this.updateDisplay(dt);

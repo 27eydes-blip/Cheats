@@ -19,15 +19,18 @@ export function heroImage(scene, x, y, charId, scale, lo = Shop.loadout()) {
   const def = getCharacter(charId);
   const c = scene.add.container(x, y);
   const set = COLLECTIONS.find((s) => s.id === lo.title);
-  const glowCol = (set && Shop.setComplete(set) ? set.glow : null) ?? SKINS[lo.skin]?.glow;
+  // DAWSON / TUNG wear their own skins (which replace a colour skin, as in the game)
+  const own = def.id === "dawson" ? lo.dskin : def.id === "tung" ? lo.tskin : null;
+  const ownKey = own && scene.textures.exists(`hero_${def.id}_${own}`) ? `hero_${def.id}_${own}` : null;
+  const glowCol = (set && Shop.setComplete(set) ? set.glow : null) ?? (ownKey ? null : SKINS[lo.skin]?.glow);
   if (glowCol) {
     const g = scene.add.image(0, 0, "glow").setBlendMode(Phaser.BlendModes.ADD).setTint(glowCol);
     g.setScale(scale * HI * 1.6).setAlpha(0.5);
     c.add(g);
   }
-  const skin = SKINS[lo.skin];
+  const skin = ownKey ? null : SKINS[lo.skin];
   const img = scene.add
-    .image(0, 0, skin ? greyPortrait(scene, def) : def.texture)
+    .image(0, 0, ownKey || (skin ? greyPortrait(scene, def) : def.texture))
     .setScale(scale * PORTRAIT_K);
   if (skin) img.setTint(skin.tint);
   c.add(img);
@@ -44,3 +47,7 @@ export function heroImage(scene, x, y, charId, scale, lo = Shop.loadout()) {
   c.img = img;
   return c;
 }
+
+// test builds only
+import { TEST } from "../systems/testFlags.js";
+if (TEST.on && typeof window !== "undefined") window.__glyHeroImage = { heroImage };

@@ -174,7 +174,10 @@ class MusicEngine {
         );
       p.then((b) => {
         p.value = b;
-      }).catch(() => this.buffers.delete(file));
+      }).catch(() =>
+        // retried after a while, not every frame (offline, preload asks again each frame)
+        setTimeout(() => this.buffers.get(file) === p && this.buffers.delete(file), 10000),
+      );
       this.buffers.set(file, p);
     }
     return this.buffers.get(file);
@@ -293,6 +296,7 @@ class MusicEngine {
       } else s.start(when, off + bar * t.bar);
       deck.sources.push(s);
     }
+    this.releaseOnEnd(deck.sources, [deck.gain, deck.send, deck.filter, ...Object.values(deck.gains)]);
     this.event("deck", id, when);
     return deck;
   }
@@ -334,6 +338,7 @@ class MusicEngine {
       s.start(when, this.offset);
       br.sources.push(s);
     }
+    this.releaseOnEnd(br.sources, [br.gain, ...Object.values(br.gains)]);
     this.event("bridge", key, when);
     return br;
   }
@@ -469,6 +474,35 @@ class MusicEngine {
     g.cancelScheduledValues(at);
     g.setTargetAtTime(0, at, tau);
     for (const s of deck.sources) this.stopSource(s, at + tau * 6);
+  }
+
+  /**
+   * Once every source of a deck / bridge has ended, unplug its nodes from the mix (Safari keeps
+   * connected nodes — and their decoded buffers — alive otherwise, run after run).
+   */
+  releaseOnEnd(sources, nodes) {
+    let left = sources.length;
+    const done = () => {
+      if (--left > 0) return;
+      for (const n of nodes)
+        try {
+          n.disconnect();
+        } catch {
+          /* already unplugged */
+        }
+    };
+    for (const s of sources) s.onended = done;
+  }
+
+  /** The game went to the background: let the audio hardware rest (revive() wakes it). */
+  sleep() {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== "running") return;
+    try {
+      ctx.suspend().catch(() => {});
+    } catch {
+      /* no audio on this device */
+    }
   }
 
   stopSource(s, at) {

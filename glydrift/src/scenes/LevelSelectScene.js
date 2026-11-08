@@ -608,7 +608,9 @@ export class LevelSelectScene extends Phaser.Scene {
     this.fx = new Effects(this, { lowGfx: this.lowGfx });
     this.fx.drift = 84;
     this.heroDef = getCharacter(TEST.character || Progression.selectedHero());
-    const home = this.nodes[currentLevel() - 1] || this.nodes[0];
+    // (the same stop the map opens on: once every level is done that's the first one short of
+    // 3 stars, not level 50 — the hero used to stand off screen)
+    const home = this.nodes[nextLevel() - 1] || this.nodes[0];
     this.heroAt = home;
     this.heroU = home.i / (this.wps.length - 1);
     this.rig = new CharacterRig(this, this.heroDef, this.fx, {
@@ -1033,7 +1035,9 @@ export class LevelSelectScene extends Phaser.Scene {
 
   saveEye() {
     if (!Save.data.lv) return;
-    Save.data.lv.eyeOpen = Math.max(Save.data.lv.eyeOpen || 0, this.eyeShown || 0);
+    const was = Save.data.lv.eyeOpen || 0;
+    Save.data.lv.eyeOpen = Math.max(was, this.eyeShown || 0);
+    if (Save.data.lv.eyeOpen !== was) Save.write(); // (or it's lost on reload)
   }
 
   // ================================================================ weather

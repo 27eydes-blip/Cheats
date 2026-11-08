@@ -86,6 +86,7 @@ export class UnicornBits extends HeroBits {
     this.arc = null; // the new-best rainbow (graphics, made on the first new best)
     // upgrade-level extras: orbiting stars / halo (graphics) and the aura (Starlight, Celestial)
     this.fxg = sc.add.graphics().setDepth(depth + 0.3);
+    if (this.live) Sfx.tungLevel = tungProgress().level; // her flap chime rises with each level
     this.aura = sc.add
       .image(rig.x, rig.y, "glow")
       .setBlendMode(Phaser.BlendModes.ADD)
@@ -118,7 +119,6 @@ export class UnicornBits extends HeroBits {
       for (let f = 0; f < 8; f++) frames[`tung_${f}`] = rim(tung(f, L));
       addAtlas(sc, key, frames);
     }
-    Sfx.tungLevel = level; // her flap chime rises with each level
     return key;
   }
 
@@ -224,6 +224,8 @@ export class UnicornBits extends HeroBits {
     Sfx.moment("tung", "death");
     this.rig.setVisible(false); // poof
     this.hornGlow.setVisible(false);
+    this.aura.setVisible(false); // (her level extras go with her)
+    this.fxg.clear();
     const { x, y, fx } = this.rig;
     if (!fx) return;
     const low = this.rig.lowGfx;
@@ -238,6 +240,7 @@ export class UnicornBits extends HeroBits {
   reset() {
     super.reset();
     this.rainbowT = 0;
+    if (this.live) Sfx.tungLevel = tungProgress().level; // her chime rises with her real level
     // a new run: she may have levelled up (or a new look was picked) since the last one
     this.rig.setCosmetics(this.rig.cos);
   }

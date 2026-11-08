@@ -720,7 +720,8 @@ export const Shop = {
   // ---------------------------------------------------------------- daily drift drop
   /** One free Mystery Pod per day. */
   dropReady(key = todayKey()) {
-    return state().dailyDrop !== key;
+    // only a LATER day counts: winding the clock forward then back can't claim it again
+    return (state().dailyDrop || "") < key;
   },
   claimDrop(key = todayKey()) {
     if (!Shop.dropReady(key)) return null;

@@ -71,6 +71,8 @@ function mergeSeasons(a = {}, b = {}) {
       xp: Math.max(ra.xp || 0, rb.xp || 0),
       claimed: union(ra.claimed, rb.claimed),
       plusClaimed: union(ra.plusClaimed, rb.plusClaimed),
+      // a finished event challenge stays finished (its coins are never paid twice)
+      ...(ra.ev || rb.ev ? { ev: { ...(base.ev || {}), done: union(ra.ev?.done, rb.ev?.done) } } : {}),
     };
   }
   return out;
@@ -94,6 +96,11 @@ export function mergeSaves(local, cloud) {
   base.cos = {
     owned: union(base.cos?.owned, other.cos?.owned),
     equipped: { ...(base.cos?.equipped || {}) },
+  };
+  // Drift Pass+ banners are owned for good (their tier stays claimed in seasons)
+  base.banners = {
+    owned: union(base.banners?.owned, other.banners?.owned),
+    equipped: base.banners?.equipped ?? other.banners?.equipped ?? null,
   };
   base.titles = {
     owned: union(base.titles?.owned, other.titles?.owned),

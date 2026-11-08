@@ -17,7 +17,7 @@ import { Install } from "../systems/install.js";
 import { flairOf, Leaderboard, Levels, myFlair } from "../online/leaderboard.js";
 import { nameText } from "../ui/nameplate.js";
 import { openRewardPreview } from "../ui/rewardPreview.js";
-import { plusRewardFor } from "../data/passPlus.js";
+import { PassPlus, plusRewardFor } from "../data/passPlus.js";
 import { titleText } from "../ui/titleText.js";
 import { Titles } from "../data/titles.js";
 import { Account } from "../online/account.js";
@@ -213,7 +213,7 @@ export class MenuScene extends Phaser.Scene {
     popIn(this, this.logo, 80);
 
     // ---- seasons: wrap up ended seasons (auto-claim + recap), then the live season's look
-    const hk = Seasons.housekeeping(claimSeasonTier);
+    const hk = Seasons.housekeeping(claimSeasonTier, (s, i) => PassPlus.claimEnded(s, i));
     this.seasonQueue = hk.recaps.map((r) => () => this.openRecap(r));
     this.season = Seasons.active();
     if (this.season) {

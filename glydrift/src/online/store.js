@@ -116,12 +116,13 @@ export const Store = {
   /**
    * Launch check: the server, not this device, decides who owns Drift Pass+. Signed in: the
    * account's verified purchases are pulled and any season the server doesn't list is dropped.
-   * Signed out (a guest can't buy — purchases belong to an account): any local entitlement is
-   * dropped. Offline / server not reachable: nothing changes until the next launch.
+   * A guest (an anonymous session) can buy too: its own verified purchases are kept the same
+   * way. No session at all: any local entitlement is dropped. Offline / server not reachable:
+   * nothing changes until the next launch.
    */
   async recheck() {
     if (this.platform() === "mock" || TEST.offline || !Account.available || !Account.known) return;
-    if (Account.signedIn) await this.pullServerEntitlements({ exact: true });
+    if (Account.user) await this.pullServerEntitlements({ exact: true });
     else PassPlus.keepOnly([]);
   },
 

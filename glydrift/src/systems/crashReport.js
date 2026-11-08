@@ -12,6 +12,8 @@ let sentThisSession = 0;
 const seen = new Set();
 let liveContext = null; // () => { score, distance, realm, hero, mode, scene } from the game
 let clientFn = null; // () => Promise<supabase client>
+let flushing = null; // the upload in progress
+let flushHook = null; // test builds only
 
 // noise that isn't the game's fault: lost network, browser extensions, a cancelled fetch
 const IGNORE =
@@ -29,7 +31,8 @@ function device() {
           ? "Windows"
           : "other";
   const standalone =
-    window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone === true;
+    window.matchMedia?.("(display-mode: standalone)").matches ||
+    navigator.standalone === true;
   return `${model || "?"}${standalone ? " · home screen app" : ""}`;
 }
 
@@ -39,7 +42,10 @@ function browser() {
     ua.match(/(CriOS|FxiOS|EdgiOS|Edg|Chrome|Firefox)\/[\d.]+/) ||
     (/Safari/.test(ua) ? ua.match(/Version\/[\d.]+/) : null);
   const os = ua.match(/OS (\d+[_\d]*) like Mac OS X/)?.[1]?.replace(/_/g, ".");
-  return `${m ? m[0].replace("Version", "Safari").replace("CriOS", "Chrome iOS") : "?"}${os ? ` · iOS ${os}` : ""}`.slice(0, 120);
+  return `${m ? m[0].replace("Version", "Safari").replace("CriOS", "Chrome iOS") : "?"}${os ? ` · iOS ${os}` : ""}`.slice(
+    0,
+    120,
+  );
 }
 
 // never personal info in a report: email addresses, tokens and keys, ids, URLs with queries
@@ -48,7 +54,10 @@ function scrub(text) {
     .replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, "<email>")
     .replace(/eyJ[\w-]+\.[\w-]+\.[\w-]+/g, "<token>")
     .replace(/\b(sb_[a-z]+_)[\w-]+/gi, "$1<key>")
-    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, "<id>")
+    .replace(
+      /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+      "<id>",
+    )
     .replace(/([?&#][\w-]+=)[^&\s"')]+/g, "$1…");
 }
 
@@ -107,7 +116,9 @@ export const CrashReport = {
         browser: browser(),
         screen: `${screen.width}x${screen.height}@${window.devicePixelRatio || 1}`,
         score: Number.isFinite(src.score) ? Math.round(src.score) : null,
-        distance: Number.isFinite(src.distance) ? Math.round(src.distance) : null,
+        distance: Number.isFinite(src.distance)
+          ? Math.round(src.distance)
+          : null,
         realm: src.realm ? String(src.realm).slice(0, 40) : null,
         hero: src.hero ? String(src.hero).slice(0, 40) : null,
         mode: src.mode ? String(src.mode).slice(0, 20) : null,
@@ -127,25 +138,45 @@ export const CrashReport = {
 
   /** Send what's queued (best effort; kept for later when offline or not set up yet). */
   async flush() {
-    if (TEST.on || !clientFn) return; // test builds keep them in the queue for the tests to read
-    const q = readQueue();
-    if (!q.length) return;
-    try {
-      const sb = await clientFn();
-      const { error } = await sb.from("crash_reports").insert(
-        q.map(({ at, ...r }) => ({ ...r, happened_at: at })),
-      );
-      if (!error) writeQueue(readQueue().slice(q.length));
-    } catch {
-      // offline: next time
-    }
+    if (TEST.on && !flushHook) return; // test builds keep them in the queue for the tests to read
+    if (!clientFn && !flushHook) return;
+    // one upload at a time, and the rows leave the queue BEFORE they're sent: two overlapping
+    // flushes (two reports in a row at launch) used to send the same rows twice, and a page
+    // closed mid-upload resent them at the next launch (duplicate pairs in crash_reports)
+    if (flushing) return flushing;
+    flushing = (async () => {
+      const q = readQueue();
+      if (!q.length) return;
+      writeQueue([]);
+      try {
+        const rows = q.map(({ at, ...r }) => ({ ...r, happened_at: at }));
+        const error = flushHook
+          ? await flushHook(rows)
+          : (await (await clientFn()).from("crash_reports").insert(rows)).error;
+        if (error) throw error;
+      } catch {
+        writeQueue([...q, ...readQueue()]); // offline / refused: back in the queue for next time
+      }
+    })().finally(() => {
+      flushing = null;
+    });
+    return flushing;
+  },
+
+  /** test builds only: send the queue through fn(rows) instead of Supabase. */
+  setFlushHook(fn) {
+    if (TEST.on) flushHook = fn;
   },
 
   queued: readQueue,
 
   /** Catch everything the game doesn't: script errors and rejected promises. */
   install() {
-    window.addEventListener("error", (e) => this.report("error", e.error || e.message));
-    window.addEventListener("unhandledrejection", (e) => this.report("rejection", e.reason));
+    window.addEventListener("error", (e) =>
+      this.report("error", e.error || e.message),
+    );
+    window.addEventListener("unhandledrejection", (e) =>
+      this.report("rejection", e.reason),
+    );
   },
 };
