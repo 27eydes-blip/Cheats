@@ -153,7 +153,11 @@ export function button(
   });
   c.label = t;
   c.subLabel = st;
+  // what VoiceOver reads for this button (see ui/a11y.js)
+  const spoken = (s) => [s, sub].filter(Boolean).join(", ").replace(/\s*\n\s*/g, " ");
+  c.a11yLabel = spoken(label);
   c.setLabel = (s) => {
+    c.a11yLabel = spoken(s);
     // switch to the numeric font when the label gains digits (clean zeros)
     const fam = fontFor(s);
     if (t.style.fontFamily !== fam)

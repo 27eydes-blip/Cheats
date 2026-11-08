@@ -195,6 +195,7 @@ jobs:
     env:
       CI: "true"
       ENGINES: ${{ matrix.engine }}
+      NIGHTLY: ${{ github.event_name == 'workflow_dispatch' && inputs.nightly }}
       # WebKit (Safari, every iPhone and iPad) runs all 7 device profiles. Chromium and Firefox
       # run 3: the tightest phone, the phone size where the once-per-browser checks run, and a
       # laptop. Layout code is shared by every engine, so WebKit's 7 sizes cover the rest.
@@ -212,6 +213,8 @@ jobs:
         run: |
           # headless Firefox has no WebGL on Linux: run it headed in a virtual display
           RUN="npx playwright test --shard=${{ matrix.shard }}/${{ matrix.total }}"
+          # the heavy checks (weak phones, a 2-hour session, multi-hazard stress) run nightly only
+          if [ "$NIGHTLY" != "true" ]; then RUN="$RUN --grep-invert @nightly"; fi
           if [ "$ENGINES" = "firefox" ]; then export FIREFOX_HEADED=1; RUN="xvfb-run -a $RUN"; fi
           # first run for this engine (no baselines yet) or "[update screenshots]": record them
           if [ "$UPDATE" = "true" ] || ! ls tests/e2e/__screenshots__ 2>/dev/null | grep -q "^${ENGINES}-"; then

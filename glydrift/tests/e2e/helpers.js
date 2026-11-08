@@ -58,6 +58,22 @@ export async function openGame(page, opts = {}) {
   await page.route(/^https?:\/\/(?!localhost[:/])/, (route) =>
     allowed && route.request().url().startsWith(allowed) ? route.continue() : route.abort(),
   );
+  // a test's own handling of some outside requests (registered after the block-everything route,
+  // so it's the one that answers them: Playwright tries the newest route first)
+  for (const [pattern, handler] of opts.routes || []) await page.route(pattern, handler);
+  // and never the real leaderboard / database from an offline test, whatever the browser does
+  // (WebKit let the game's service worker fetch around the routes above)
+  if (!opts.online && !opts.base)
+    await page.addInitScript(() => {
+      const blocked = (u) => /supabase\.co/.test(String(u?.url ?? u));
+      const f = window.fetch.bind(window);
+      window.fetch = (u, o) => (blocked(u) ? Promise.reject(new TypeError("Failed to fetch (blocked in tests)")) : f(u, o));
+      const open = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function (m, u, ...rest) {
+        if (blocked(u)) throw new TypeError("blocked in tests");
+        return open.call(this, m, u, ...rest);
+      };
+    });
   // a frozen clock: time only moves when a test calls run() (install alone keeps it ticking)
   await page.clock.install({ time: new Date(NOW.getTime() - 1000) });
   await page.clock.pauseAt(NOW);
@@ -92,7 +108,9 @@ export async function openGame(page, opts = {}) {
   );
   // draw only every 12th frame (logic still runs every frame): software GPUs are slow
   // (opts.audio: sound on, for the tests that check the sound effects themselves)
-  const query = [...(opts.audio ? [] : ["noaudio"]), "offline", "renderEvery=12", ...(opts.flags || [])].join("&");
+  // (opts.online: the real online start-up runs; outside requests are still blocked unless the
+  // test routes them itself — network tests do)
+  const query = [...(opts.audio ? [] : ["noaudio"]), ...(opts.online ? [] : ["offline"]), "renderEvery=12", ...(opts.flags || [])].join("&");
   await page.goto(`${opts.base || ""}/?${query}`);
   // Let everything that loads in real time (fonts, images, seasons.json) finish before the
   // fake clock moves, so every run boots on exactly the same frame.

@@ -145,6 +145,7 @@ test("every screen opens", async ({ page }, testInfo) => {
   );
   await run(page, 600);
   await snap(page, testInfo, "02-settings");
+  if (/^iphone-(small|std|large)$/.test(profileOf(testInfo))) await matchScreenshot(page, "settings.png");
   await tap(page, "DONE", 600);
 
   const screens = [
@@ -160,7 +161,9 @@ test("every screen opens", async ({ page }, testInfo) => {
     await settle(page, key, 2000);
     await expectFramed(page);
     await snap(page, testInfo, shot);
-    if (key === "Characters" || key === "Shop")
+    // reference screenshots: every main screen on the small, standard and large iPhones
+    // (heroes and the shop on every profile)
+    if (key === "Characters" || key === "Shop" || /^iphone-(small|std|large)$/.test(profileOf(testInfo)))
       await matchScreenshot(page, `${shot.slice(3)}.png`); // snap() just drew a fresh frame
     await home(page);
     await run(page, 1200);

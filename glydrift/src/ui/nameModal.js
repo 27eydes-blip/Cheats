@@ -7,6 +7,11 @@ import { suggestUsername, validateUsername } from "../online/username.js";
 export function askUsername({ initial = "", cancellable = false, title = "PICK A NAME" } = {}) {
   const modal = document.getElementById("name-modal");
   const form = modal.querySelector("form");
+  // never a real form submission (it would reload the game), even when no prompt is listening
+  if (!form.dataset.guarded) {
+    form.dataset.guarded = "1";
+    form.addEventListener("submit", (e) => e.preventDefault());
+  }
   const input = modal.querySelector("input");
   const err = modal.querySelector(".err");
   const save = modal.querySelector('[data-act="save"]');
