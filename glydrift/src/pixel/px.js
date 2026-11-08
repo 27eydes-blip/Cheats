@@ -247,8 +247,63 @@ export function deferUploads(fn) {
  * as-is and never reads it back.
  */
 export function canvasTexture(scene, key, canvas) {
-  if (scene.textures.exists(key)) scene.textures.remove(key);
-  return scene.textures.addImage(key, canvas);
+  if (scene.textures.exists(key)) forgetTextures(scene, [key]);
+  const tex = scene.textures.addImage(key, canvas);
+  restoreTextures(scene, key);
+  return tex;
+}
+
+// Objects that were showing a texture when it was removed, by texture key: { o, frame }.
+const lost = new Map();
+
+/**
+ * Remove textures safely. Removing a texture destroys its frames, but objects still pointing
+ * at it (pooled hazards waiting for their next spawn, a scene's scenery) would draw a destroyed
+ * frame the next time they're shown: "Cannot read properties of null (reading 'glTexture')",
+ * the Abyss crash (a Slammer pooled in an earlier run drew the Abyss art freed after that run).
+ * Every object on any scene still using one of them is switched to the blank texture first, and
+ * goes back to its texture and frame when that texture is built again (restoreTextures).
+ */
+export function forgetTextures(scene, keys) {
+  const tm = scene.textures;
+  const dead = new Map();
+  for (const k of keys) if (tm.exists(k)) dead.set(tm.get(k), k);
+  if (!dead.size) return;
+  const visit = (o) => {
+    if (!o) return;
+    if (o.texture && dead.has(o.texture) && typeof o.setTexture === "function") {
+      const key = dead.get(o.texture);
+      if (!lost.has(key)) lost.set(key, new Set());
+      lost.get(key).add({ o, frame: o.frame?.name });
+      try {
+        o.setTexture("__DEFAULT");
+      } catch {}
+    }
+    const kids = o.list || (o.type === "Layer" ? o.getChildren?.() : null);
+    if (Array.isArray(kids)) for (const c of kids) visit(c);
+  };
+  for (const sc of scene.sys.game.scene.scenes) for (const o of sc.sys.displayList?.list || []) visit(o);
+  for (const k of dead.values()) tm.remove(k);
+}
+
+/** A texture was (re)built: objects that lost it when it was removed get it back. */
+export function restoreTextures(scene, key) {
+  const set = lost.get(key);
+  if (!set) return;
+  const tex = scene.textures.get(key);
+  for (const e of set) {
+    // gone, or the game has given it another texture since: forget it
+    if (!e.o.scene || e.o.texture?.key !== "__DEFAULT") {
+      set.delete(e);
+      continue;
+    }
+    if (e.frame && e.frame !== "__BASE" && !tex.has(e.frame)) continue; // (an atlas adds its frames next)
+    try {
+      e.o.setTexture(key, e.frame);
+    } catch {}
+    set.delete(e);
+  }
+  if (!set.size) lost.delete(key);
 }
 
 /** Register a PixelCanvas as a standalone (tileable) NEAREST texture. */
@@ -259,6 +314,7 @@ export function addTexture(scene, key, pc, scale = S) {
   }
   const tex = canvasTexture(scene, key, pc.toCanvas(scale));
   tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
+  restoreTextures(scene, key);
   return tex;
 }
 
@@ -298,6 +354,7 @@ export function addAtlas(scene, key, frames, scale = S) {
   const tex = canvasTexture(scene, key, cv);
   for (const p of place) tex.add(p.name, 0, p.x, p.y, p.pc.w * scale, p.pc.h * scale);
   tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
+  restoreTextures(scene, key); // (objects that lost this atlas get their frames back)
   return tex;
 }
 
