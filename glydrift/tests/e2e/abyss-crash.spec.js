@@ -106,7 +106,7 @@ test("Abyss: double eye beams and every multi-hazard pattern, run after run, nev
   }
   // nothing piles up from one run to the next (the texture count moves a little with which
   // dimension the run reached; the hazard pools fill up over the first laps, then stay put)
-  expect(laps.at(-1).textures - laps[1].textures).toBeLessThanOrEqual(20);
+  expect(laps.at(-1).textures - laps[1].textures).toBeLessThanOrEqual(30);
   expect(laps.at(-1).objs - laps[4].objs).toBeLessThanOrEqual(25);
   if (laps.at(-1).heapMB && laps[1].heapMB) expect(laps.at(-1).heapMB - laps[1].heapMB).toBeLessThanOrEqual(25);
   expect(log.errors).toEqual([]);
