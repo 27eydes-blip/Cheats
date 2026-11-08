@@ -10,6 +10,7 @@ import { CharacterRig } from "../player/CharacterRig.js";
 import { onSale, saleLeft, visibleCharacters } from "../player/characterDefs.js";
 import { revealHero } from "../ui/reveal.js";
 import { Sfx } from "../audio/sfx.js";
+import { Haptics } from "../systems/haptics.js";
 import { Progression, SPIN_EVERY } from "../data/progression.js";
 import { Save } from "../data/save.js";
 import { Seasons } from "../data/seasons.js";
@@ -499,6 +500,8 @@ export class CharacterScene extends Phaser.Scene {
       Save.write();
       this.rig.flap();
       this.fx.ring(this.cx, this.cy, 0x39ff88, { scale: 1.8, duration: 500 });
+      Sfx.chime?.(); // equipped: a little chime and a light tap
+      Haptics.light();
       this.refresh();
       return;
     }
