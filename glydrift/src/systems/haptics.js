@@ -17,7 +17,8 @@ function buzz(style, ms) {
   try {
     const h = native();
     if (h?.impact) {
-      h.impact({ style });
+      // (the native call is async: a rejection must not surface as an unhandled error)
+      Promise.resolve(h.impact({ style })).catch(() => {});
       return;
     }
     navigator.vibrate?.(ms);

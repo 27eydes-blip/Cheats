@@ -101,7 +101,18 @@ export const PassPlus = {
   /** Pay out tier i of the paid track. */
   claim(i, seasonId = this.season()) {
     if (!this.canClaim(i, seasonId)) return null;
-    const r = this.track(seasonId)[i];
+    return this.payout(this.track(seasonId)[i], seasonId, i);
+  },
+  /**
+   * The season is over: pay out an earned paid tier that was never claimed (the season recap
+   * auto-claims them, like the free track) — a paid reward is never lost to the end date.
+   */
+  claimEnded(season, i) {
+    if (!this.owns(season.id) || record(season.id).plusClaimed[i]) return null;
+    const r = season.pass.plus?.[i];
+    return r ? this.payout(r, season.id, i) : null;
+  },
+  payout(r, seasonId, i) {
     record(seasonId).plusClaimed[i] = true;
     const s = Save.data;
     let out;

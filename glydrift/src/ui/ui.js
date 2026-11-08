@@ -421,11 +421,18 @@ export function slider(scene, x, y, w, value, color, onChange, { container, labe
     dragging = true;
     setFrom(p);
   });
-  scene.input.on("pointermove", (p) => {
+  const onMove = (p) => {
     if (dragging && p.isDown) setFrom(p);
-  });
-  scene.input.on("pointerup", () => {
+  };
+  const onUp = () => {
     dragging = false;
+  };
+  scene.input.on("pointermove", onMove);
+  scene.input.on("pointerup", onUp);
+  // the scene-wide listeners go with the slider (pause settings open again and again)
+  zone.once("destroy", () => {
+    scene.input?.off("pointermove", onMove);
+    scene.input?.off("pointerup", onUp);
   });
   draw();
   if (container) container.add(items);
@@ -441,6 +448,19 @@ export function killTweensDeep(scene, obj) {
 }
 
 export function fadeTo(scene, key, data, { ms = 200, rgb = [5, 1, 13] } = {}) {
+  // one screen change at a time: a second tap during the fade (or two fingers on two buttons)
+  // can't start another scene on top
+  if (scene.__fading) return;
+  scene.__fading = true;
+  if (scene.input) scene.input.enabled = false;
+  scene.events.once("shutdown", () => {
+    scene.__fading = false;
+    if (scene.input) scene.input.enabled = true;
+  });
   scene.cameras.main.fadeOut(ms, ...rgb);
   scene.time.delayedCall(ms, () => scene.scene.start(key, data));
 }
+
+// test builds only
+import { TEST } from "../systems/testFlags.js";
+if (TEST.on && typeof window !== "undefined") window.__glyUi = { fadeTo };

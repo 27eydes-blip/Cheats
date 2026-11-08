@@ -11,7 +11,8 @@ import { Save } from "../data/save.js";
 import { Titles } from "../data/titles.js";
 
 const css = (c) => `#${c.toString(16).padStart(6, "0")}`;
-const FONT = '"Orbitron", "Avenir Next", system-ui, sans-serif';
+// (Galmuri11 covers Korean hero names like 손주원 in the game's own pixel font)
+const FONT = '"Orbitron", "Galmuri11", "Avenir Next", system-ui, sans-serif';
 
 export function renderShareCard(game, run) {
   const W = 1080;

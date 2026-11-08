@@ -26,6 +26,10 @@ function safeNow() {
 }
 
 export const Updater = {
+  /** True when a reload would lose nothing (no run in progress). */
+  safe() {
+    return safeNow();
+  },
   get latest() {
     return latest;
   },

@@ -167,6 +167,18 @@ export class CharacterRig {
     if (v) this.applyCosmeticVisibility();
   }
 
+  /**
+   * Hide everything this rig draws, its hero module's glows and graphics too (the Mirror
+   * twin: it stops updating once hidden, so nothing may be left frozen on screen).
+   */
+  hideAll() {
+    this.setVisible(false);
+    this.trailG.clear();
+    for (const o of [...(this.hb?.objects || []), ...(this.toe?.objects || []), ...(this.boxer?.objects || []), ...(this.falcon?.objects || [])])
+      if (o.type === "Graphics") o.clear();
+      else o.setVisible?.(false);
+  }
+
   /** Equip a loadout ({ trail, death, hat, skin, flap, title } of cosmetic ids, or null). */
   setCosmetics(lo) {
     this.cos = lo || {};

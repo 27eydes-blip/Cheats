@@ -292,7 +292,7 @@ export const Seasons = {
    * ended seasons — every unlocked-but-unclaimed tier is auto-claimed and a recap is
    * returned (once). The caller shows the recap; the pass then starts fresh next season.
    */
-  housekeeping(claimTier) {
+  housekeeping(claimTier, claimPlus = null) {
     const out = { started: null, recaps: [] };
     const now = Seasons.now();
     const active = Seasons.active();
@@ -315,6 +315,12 @@ export const Seasons = {
       for (let i = 0; i < unlocked; i++)
         if (!r.claimed[i]) {
           const res = claimTier(s, r, i);
+          if (res) got.push(res);
+        }
+      // the paid track too, for verified Drift Pass+ owners
+      if (claimPlus)
+        for (let i = 0; i < unlocked; i++) {
+          const res = claimPlus(s, i);
           if (res) got.push(res);
         }
       r.recapShown = true;

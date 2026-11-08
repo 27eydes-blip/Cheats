@@ -174,7 +174,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.twin.trailOverride = [0xffffff, 0xd8c0ff, 0x9a3aff, 0x4a1a8a];
     this.twin.sprite.setTint(0xd8c0ff);
-    this.twin.setVisible(false);
+    this.twin.hideAll();
     this.horizon = this.add
       .graphics()
       .setDepth(2)
@@ -363,7 +363,7 @@ export class GameScene extends Phaser.Scene {
     this.zoneScale = 1;
     this.mirror = false;
     this.glitchT = 2;
-    this.twin.setVisible(false);
+    this.twin.hideAll();
     this.twin.trailG.clear();
     this.horizon.clear();
     this.fx.clear();
@@ -852,7 +852,7 @@ export class GameScene extends Phaser.Scene {
         20,
         0xc87aff,
       );
-      this.twin.setVisible(false);
+      this.twin.hideAll();
     }
     this.comboMeter.setTier(1); // the multiplier label disappears with the bird
     Sfx.death();
@@ -985,7 +985,8 @@ export class GameScene extends Phaser.Scene {
     this.run.levelDone = out ? 1 : 0;
     this.run.levelStars = out ? out.newStars.length : 0;
     const result = res.practice ? null : Progression.commitRun(this.run);
-    if (this.charDef.id === "tung") this.run.tungLevelUp = countTungRun(); // (levels count too)
+    // (finished levels count too; practice never counts toward anything)
+    if (this.charDef.id === "tung" && !res.practice) this.run.tungLevelUp = countTungRun();
     this.time.delayedCall(boss ? 1700 : 1100, () => {
       this.state = "dead";
       this.scene.launch("LevelComplete", { res, out, result, game: this });
@@ -1480,7 +1481,8 @@ export class GameScene extends Phaser.Scene {
         this.flashFx.flash(0xffd23f, FLASH.newBest);
       }
       this.missionCheckT -= rawDt;
-      if (this.missionCheckT <= 0) {
+      // (practice never completes missions, so it never announces them either)
+      if (this.missionCheckT <= 0 && !this.levelRun?.practice) {
         this.missionCheckT = 0.4;
         for (const m of Progression.liveMissionCheck(
           this.run,
@@ -1534,7 +1536,7 @@ export class GameScene extends Phaser.Scene {
     const g = this.horizon;
     g.clear();
     if (!this.mirror) {
-      if (this.twin.sprite.visible) this.twin.setVisible(false);
+      if (this.twin.sprite.visible) this.twin.hideAll();
       this.twin.trailG.clear();
       return;
     }

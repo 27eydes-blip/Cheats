@@ -245,7 +245,9 @@ export class LevelRun {
     sc.distance = Math.max(0, startM) * PX;
     sc.meters = sc.distance / PX;
     // everything spawned after the checkpoint is forgotten and re-spawned identically
-    this.beatM.length = i;
+    // (the checkpoint's own entry stays: a second crash before its beat spawns again must
+    // still return here, not to the one before)
+    this.beatM.length = i + 1;
     this.hints = this.hints.filter((h) => h.m < startM);
     for (const s of this.stars)
       if (s.m >= startM) {

@@ -571,6 +571,7 @@ export class HudScene extends Phaser.Scene {
     const gs = this.gameScene;
     if (this.pauseLayer || !this.canPause()) return;
     this.scene.pause("Game");
+    this.cameras.main.setAlpha(1); // (paused during the Abyss blackout: the menu still shows)
     Music.muffle(true);
     const W = this.W;
     const H = this.H;

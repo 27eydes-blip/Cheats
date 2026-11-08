@@ -242,6 +242,10 @@ class AccountService {
     this.user = null; // { id, email, anon }
     this.cloud = "off"; // off | synced | syncing | offline | not-set-up
     this.pushTimer = null;
+    // a push may only follow a successful pull + merge for this user (otherwise a device that
+    // couldn't read the cloud would overwrite the account's progress with its own)
+    this.merged = false;
+    this.dirty = false; // a write landed while an upload was in flight
     this.listeners = new Set();
     // settles once init() has restored the session (screens wait for it before showing state)
     this.ready = new Promise((r) => (this.markReady = r));
@@ -268,6 +272,19 @@ class AccountService {
     this.started = true;
     if (!this.available) return this.markReady();
     Save.onWrite(() => this.schedulePush());
+    // upload before the app goes away (hidden / closed), and catch up when back online
+    if (typeof window !== "undefined") {
+      const flush = () => {
+        if (this.signedIn && (this.pushTimer || this.dirty)) this.pushNow().catch(() => {});
+      };
+      document.addEventListener("visibilitychange", () => document.hidden && flush());
+      window.addEventListener("pagehide", flush);
+      window.addEventListener("online", () => {
+        if (!this.signedIn) return;
+        if (!this.merged) this.pullAndMerge();
+        else this.schedulePush();
+      });
+    }
     try {
       await this.handleLink();
       this.user = await this.backend.user();
@@ -289,6 +306,8 @@ class AccountService {
       access_token: p.get("access_token"),
       refresh_token: p.get("refresh_token"),
     });
+    this.merged = false; // (a different user, possibly)
+    Leaderboard.restart(); // scores and renames go to the new session's player
     this.linkType = p.get("type"); // recovery | signup | email_change | magiclink
   }
 
@@ -299,6 +318,7 @@ class AccountService {
     try {
       const cloud = await this.backend.loadSave(this.user.id);
       if (cloud) Save.replace(mergeSaves(Save.data, cloud));
+      this.merged = true;
       await this.pushNow();
     } catch (err) {
       this.cloud = notSetUp(err) ? "not-set-up" : "offline";
@@ -307,7 +327,11 @@ class AccountService {
   }
 
   schedulePush() {
-    if (!this.signedIn || this.pushing) return;
+    if (!this.signedIn) return;
+    if (this.pushing) {
+      this.dirty = true; // pushed again when the current upload finishes
+      return;
+    }
     clearTimeout(this.pushTimer);
     this.pushTimer = setTimeout(() => this.pushNow().catch(() => {}), PUSH_DELAY_MS);
   }
@@ -315,7 +339,11 @@ class AccountService {
   async pushNow() {
     if (!this.signedIn) return;
     clearTimeout(this.pushTimer);
+    this.pushTimer = null;
+    // never overwrite the cloud before this session has read and merged it
+    if (!this.merged) return this.pullAndMerge();
     this.pushing = true;
+    this.dirty = false;
     try {
       const save = cloudPayload(Save.data);
       await this.backend.storeSave(this.user.id, save, progressScore(save));
@@ -327,6 +355,10 @@ class AccountService {
     } finally {
       this.pushing = false;
       this.emit();
+      if (this.dirty) {
+        this.dirty = false;
+        this.schedulePush();
+      }
     }
   }
 
@@ -355,7 +387,8 @@ class AccountService {
       this.user ||= await this.backend.user();
       const res = await this.backend.createAccount(email.trim(), password);
       this.user = await this.backend.user();
-      if (!res.confirmPending) await this.pushNow().catch(() => {});
+      this.merged = false;
+      if (!res.confirmPending) await this.pullAndMerge();
       this.emit();
       return res;
     } catch (err) {
@@ -368,6 +401,7 @@ class AccountService {
     try {
       await this.backend.signIn(email.trim(), password);
       this.user = await this.backend.user();
+      this.merged = false;
       Leaderboard.restart();
       await this.pullAndMerge();
       this.emit();
@@ -380,6 +414,7 @@ class AccountService {
     try {
       await this.backend.signInApple();
       this.user = await this.backend.user();
+      this.merged = false;
       Leaderboard.restart();
       await this.pullAndMerge();
       this.emit();
@@ -407,9 +442,16 @@ class AccountService {
 
   /** Log out: the account keeps everything; this device starts fresh as a guest. */
   async logOut() {
+    // the device's progress is only safe to wipe once the account has it
     await this.pushNow().catch(() => {});
+    if (this.signedIn && (!this.merged || this.cloud !== "synced"))
+      throw new AccountError(
+        "Can't reach the cloud right now. Connect to the internet to log out without losing progress.",
+        "offline",
+      );
     await this.backend.signOut().catch(() => {});
     this.user = null;
+    this.merged = false;
     this.cloud = "off";
     Save.reset();
     Leaderboard.restart();

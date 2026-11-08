@@ -90,7 +90,8 @@ export function openRewardPreview(scene, r, opts = {}) {
   let t = 0;
   let loopT = 0;
   const parts = [];
-  const flyer = hero?.id || (getCharacter(Save.data.selected)?.id ?? "volt");
+  // (a hero's own skin is shown on that hero)
+  const flyer = hero?.id || item?.forHero || (getCharacter(Save.data.selected)?.id ?? "volt");
   const makeRig = (lo) => {
     rig?.destroy();
     rig = new CharacterRig(scene, getCharacter(flyer), fx, {
@@ -105,7 +106,7 @@ export function openRewardPreview(scene, r, opts = {}) {
   const cat = item?.cat;
   let comboTxt = null;
   if (hero) makeRig({});
-  else if (cat === "trail" || cat === "death" || cat === "pose" || cat === "flap" || cat === "skin" || cat === "hat")
+  else if (cat === "trail" || cat === "death" || cat === "pose" || cat === "flap" || cat === "skin" || cat === "hat" || cat === "dskin" || cat === "tskin")
     makeRig({ [cat]: item.id });
   else if (title) {
     parts.push(titleText(scene, sx, sy, title, { size: 34 }));
