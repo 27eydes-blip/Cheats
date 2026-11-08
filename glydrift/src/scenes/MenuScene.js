@@ -51,6 +51,7 @@ import {
   RollingCounter,
   slider,
   toast,
+  num,
 } from "../ui/ui.js";
 
 function countdownText() {
@@ -334,7 +335,7 @@ export class MenuScene extends Phaser.Scene {
     this.play = play; // pulses to the music's beat (see update)
     this.beatClock = 0;
     if (s.best > 0) {
-      const best = neonText(this, W / 2, L.best, `BEAT YOUR BEST · ${s.best}`, 24, 0xffd23f, {
+      const best = neonText(this, W / 2, L.best, `BEAT YOUR BEST · ${num(s.best)}`, 24, 0xffd23f, {
         blur: 10,
       }).setDepth(100);
       this.bestText = best;

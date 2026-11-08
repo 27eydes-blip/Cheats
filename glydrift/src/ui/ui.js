@@ -215,9 +215,12 @@ export function slideIn(scene, targets, delay = 0, dy = 60) {
   });
 }
 
+/** Whole numbers with thousands separators everywhere (12,345), like the leaderboard. */
+export const num = (v) => Math.round(Number(v) || 0).toLocaleString("en-US");
+
 /** Number counter that rolls up with easing. */
 export class RollingCounter {
-  constructor(scene, textObj, { format = (v) => `${Math.round(v)}`, value = 0, onTick } = {}) {
+  constructor(scene, textObj, { format = (v) => num(v), value = 0, onTick } = {}) {
     this.scene = scene;
     this.text = textObj;
     this.format = format;
