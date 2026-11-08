@@ -32,6 +32,7 @@ import {
   RollingCounter,
   slideIn,
   toast,
+  num,
 } from "../ui/ui.js";
 
 const TAP_GUARD = 500; // ms before "tap anywhere" retries
@@ -151,7 +152,7 @@ export class GameOverScene extends Phaser.Scene {
       bestLine = neonText(this, W / 2, bestY, "NEW BEST!", 34, 0xffd23f, { blur: 12 });
       this.time.delayedCall(650, () => Sfx.reward());
     } else {
-      bestLine = plainText(this, W / 2, bestY, `BEST ${R.prevBest}`, 24, "#d8d0ff");
+      bestLine = plainText(this, W / 2, bestY, `BEST ${num(R.prevBest)}`, 24, "#d8d0ff");
     }
     popIn(this, bestLine, 450, { duration: 300 });
 
@@ -186,7 +187,7 @@ export class GameOverScene extends Phaser.Scene {
       if (run.lucky)
         coinRow.add(plainText(this, 150, 0, "LUCKY RUN · x2", 18, "#ffd23f", { ox: 0 }));
       new RollingCounter(this, coinTxt, {
-        format: (v) => `+${Math.round(v)}`,
+        format: (v) => `+${num(v)}`,
         onTick: Sfx.tick,
       }).to(earned, 400, 450);
       slideIn(this, coinRow, 400, 20);
@@ -227,9 +228,9 @@ export class GameOverScene extends Phaser.Scene {
     const best = Math.max(R.prevBest, run.score);
     const bestTxt = R.newBest
       ? R.prevBest > 0
-        ? `NEW BEST ${run.score} · beat it by ${run.score - R.prevBest}`
-        : `NEW BEST ${run.score} · your first record`
-      : `BEST ${best} · ${best - run.score} to beat it`;
+        ? `NEW BEST ${num(run.score)} · beat it by ${num(run.score - R.prevBest)}`
+        : `NEW BEST ${num(run.score)} · your first record`
+      : `BEST ${num(best)} · ${num(best - run.score)} to beat it`;
     goals.add(plainText(this, 76, gy + 30, bestTxt, 21, "#ffffff", { ox: 0 }));
     const bar1 = new ProgressBar(this, 76, gy + 52, W - 152, 12, 0xffd23f);
     goals.add(bar1.g);
@@ -283,7 +284,7 @@ export class GameOverScene extends Phaser.Scene {
         ? `LUCKY SPIN +${earned}!  spin it from the menu`
         : R.spinsFull
           ? `Lucky Spins full (${SPIN_MAX}/${SPIN_MAX})  ·  spin them from the menu`
-          : `Lucky Spin: ${R.spinPts ?? 0} / ${SPIN_EVERY} points`;
+          : `Lucky Spin: ${num(R.spinPts ?? 0)} / ${num(SPIN_EVERY)} points`;
       const t = plainText(
         this,
         W / 2,

@@ -15,6 +15,7 @@ import {
   plainText,
   RollingCounter,
   slider,
+  num,
 } from "../ui/ui.js";
 import { Save } from "../data/save.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
@@ -187,7 +188,7 @@ export class HudScene extends Phaser.Scene {
     this.score.set(0);
     this.coins.set(0);
     this.lastScore = 0;
-    this.bestText.setText(gs.bestScore > 0 ? `BEST ${gs.bestScore}` : "");
+    this.bestText.setText(gs.bestScore > 0 ? `BEST ${num(gs.bestScore)}` : "");
     // "TAP TO FLY" only before the first flap (the run may already be live if the first tap
     // landed before this HUD finished starting)
     const waiting = gs.state === "ready";

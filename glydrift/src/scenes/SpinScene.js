@@ -26,6 +26,7 @@ import {
   popIn,
   ProgressBar,
   RollingCounter,
+  num,
 } from "../ui/ui.js";
 
 const N = SPIN_SLICES.length;
@@ -227,7 +228,7 @@ export class SpinScene extends Phaser.Scene {
       b.setEnabled(ready && spins >= 2);
     });
     const pts = s.spinPts || 0;
-    this.info.setText(`Next spin: ${pts} / ${SPIN_EVERY} points  ·  every run counts`);
+    this.info.setText(`Next spin: ${num(pts)} / ${num(SPIN_EVERY)} points  ·  every run counts`);
     this.bar.set(pts / SPIN_EVERY);
     const owned = LOTTERY_HEROES.filter((c) => s.unlocked[c.id]).length;
     const g = Progression.spinsToGuarantee();
