@@ -251,7 +251,7 @@ export class Effects {
 
   burst(kind, x, y, count, tint, opts = {}) {
     const em = this.emitters[kind];
-    if (!em) return;
+    if (!em?.ops) return; // (missing, or destroyed with its screen)
     const n = Math.max(1, Math.round(count * this.quality));
     const ownColours = kind === "fire" || kind === "redfire" || kind === "darkfire";
     if (tint !== undefined && !ownColours) em.setParticleTint(tint);

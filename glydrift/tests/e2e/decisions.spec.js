@@ -125,3 +125,40 @@ test("notch: the top safe inset is the top inset only (not top + bottom)", async
   expect(r).toBe(1);
   expect(log.errors).toEqual([]);
 });
+
+test("a reward preview left open when the screen ends leaves nothing running (no errors on the next visit)", async ({ page }, testInfo) => {
+  phoneOnly(testInfo);
+  test.setTimeout(120_000);
+  const log = await openGame(page);
+  const before = await page.evaluate(() => {
+    const g = window.__glydrift;
+    g.scene.getScene("Menu").scene.start("Pass");
+    return 0;
+  });
+  await run(page, 1500);
+  // a Drift Pass+ hero with a fire-breath move (Umbra Drake), previewed, then the screen ends
+  const opened = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Pass");
+    const i = s.plus.findIndex((r) => r.hero === "umbradrake");
+    const j = i >= 0 ? i : s.plus.findIndex((r) => r.hero);
+    const ok = s.previewTier(j, true);
+    const rig = window.__glyPreview?.rig;
+    rig?.onBest?.(); // breathe now
+    return ok;
+  });
+  expect(opened).toBe(true);
+  await run(page, 300);
+  const listeners = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Pass");
+    const n = s.events.listenerCount("update");
+    s.scene.start("Menu");
+    return n;
+  });
+  await run(page, 1200);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Pass"));
+  await run(page, 3000);
+  const after = await page.evaluate(() => window.__glydrift.scene.getScene("Pass").events.listenerCount("update"));
+  expect(after).toBeLessThan(listeners); // the preview's own animation went with it
+  expect(log.errors).toEqual([]);
+  expect(before).toBe(0);
+});

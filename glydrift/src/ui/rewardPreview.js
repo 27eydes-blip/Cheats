@@ -143,8 +143,9 @@ export function openRewardPreview(scene, r, opts = {}) {
         : "Cosmetic only. Never in the shop, pods, spins or daily deals.";
   c.add(plainText(scene, W / 2, py + ph - 150, hint, 16, "#bfb6e8", { wrap: pw - 80 }));
   const close = () => {
-    if (!c.active) return;
     scene.events.off("update", tick);
+    scene.events.off("shutdown", close);
+    if (!c.active) return;
     rig?.destroy();
     fx.destroy();
     c.destroy();
@@ -201,6 +202,9 @@ export function openRewardPreview(scene, r, opts = {}) {
     fx.update(dt);
   };
   scene.events.on("update", tick);
+  // the screen ending with the preview still open (going home, a restart): clean up the same way,
+  // or the animation kept running on the next visit with effects that no longer existed
+  scene.events.once("shutdown", close);
   // test builds only: a handle for automated tests
   if (TEST.on && typeof window !== "undefined") window.__glyPreview = { fx, get rig() { return rig; }, close };
   c.setAlpha(0);
