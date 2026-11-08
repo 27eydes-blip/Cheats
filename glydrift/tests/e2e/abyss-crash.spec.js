@@ -18,8 +18,11 @@ test("Abyss: double eye beams and every multi-hazard pattern, run after run, nev
   const log = await openGame(page, { flags: ["god"] });
   await tap(page, "ENDLESS", 0);
   await settle(page, "Game", 400);
+  let seed = 12345;
   const launch = async () => {
-    await reseed(page);
+    // a new seed each run: the tests' seeded Math.random replayed from the same seed would hand
+    // Phaser's text textures the same random ids as texts still alive from the last run
+    await reseed(page, (seed += 7919));
     await run(page, 600);
     await press(page, await fieldPoint(page));
     await run(page, 200);
