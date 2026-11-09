@@ -175,7 +175,7 @@ test.describe("stage 1: capture → read → fix → quiz", () => {
     const guest = await guestCtx.newPage();
     // Not shared yet: private.
     await guest.goto(`/q/${code}`);
-    await expect(guest.getByText("This quiz isn't available")).toBeVisible();
+    await expect(guest.locator("h1:visible", { hasText: "This quiz isn't available" })).toBeVisible();
 
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
     await dialog.getByRole("button", { name: "Copy link" }).click();
