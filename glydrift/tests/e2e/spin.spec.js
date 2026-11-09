@@ -3,7 +3,7 @@
 // coin prizes doubled, and a full spin animation (rim lights, slowdown, celebration) that
 // lands exactly on the prize rolled before it started, with no errors.
 import { expect, test } from "@playwright/test";
-import { openGame, profileOf, run, SAVE, settle, tap } from "./helpers.js";
+import { openGame, profileOf, run, SAVE, settle, tap, tapHome } from "./helpers.js";
 
 const once = (testInfo) =>
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
@@ -15,7 +15,7 @@ const OLD_HERO_COINS = 1000;
 
 async function openSpin(page, save = {}) {
   const log = await openGame(page, { save: { ...SAVE, spins: 3, ...save } });
-  await tap(page, "LUCKY SPIN", 0);
+  await tapHome(page, "LUCKY SPIN", 0); // (in the home MORE sheet)
   await settle(page, "Spin", 1200);
   return log;
 }
