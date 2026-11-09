@@ -24,7 +24,7 @@ import { LevelSelectScene } from "./scenes/LevelSelectScene.js";
 import { LevelCompleteScene } from "./scenes/LevelCompleteScene.js";
 import { MenuScene } from "./scenes/MenuScene.js";
 import { ProgressScene } from "./scenes/ProgressScene.js";
-import { TitlesScene } from "./scenes/TitlesScene.js";
+import { LockerScene } from "./scenes/LockerScene.js";
 import { SpinScene } from "./scenes/SpinScene.js";
 import { ShopScene } from "./scenes/ShopScene.js";
 import { PassScene } from "./scenes/PassScene.js";
@@ -141,7 +141,7 @@ async function boot() {
     SpinScene,
     ShopScene,
     PassScene,
-    TitlesScene,
+    LockerScene,
     // the soundtrack test page: test builds only (a release build leaves it, and the synth
     // engine it loads, out entirely)
   ];

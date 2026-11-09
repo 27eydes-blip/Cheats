@@ -328,6 +328,7 @@ test("tidy home: PLAY + 5 main buttons, at most 2 badges, the rest in MORE, a bi
     ["LUCKY SPIN", "Spin"],
     ["FREE DROP", "Shop"],
     ["PROGRESS", "Progress"],
+    ["LOCKER ROOM", "Locker"],
     ["SEASON 1 · ABYSS RISING", "Pass"],
   ]) {
     await tap(page, "MORE", 600);
@@ -1248,11 +1249,11 @@ test("titles: earn, wear, and see them on the leaderboard and game over", async 
     diamond: false,
     plusWear: false,
   });
-  // wear one through the Titles screen (Progress → TITLES)
+  // wear one through the Locker Room's TITLES tab (Progress → TITLES)
   await tapHome(page, "PROGRESS", 1200);
   await waitFor(page, () => window.__glydrift.scene.isActive("Progress"));
   await tap(page, "TITLES", 1200);
-  await waitFor(page, () => window.__glydrift.scene.isActive("Titles"));
+  await waitFor(page, () => window.__glydrift.scene.isActive("Locker"));
   await run(page, 600);
   await tap(page, "GOLD LEAGUE", 600);
   expect(await page.evaluate(() => window.__glyTitles.equippedId())).toBe(
@@ -1261,7 +1262,7 @@ test("titles: earn, wear, and see them on the leaderboard and game over", async 
   await snap(page, testInfo, "17-titles");
   // under your name on the leaderboard (pinned row)…
   await page.evaluate(() =>
-    window.__glydrift.scene.getScene("Titles").scene.start("Leaderboard"),
+    window.__glydrift.scene.getScene("Locker").scene.start("Leaderboard"),
   );
   await waitFor(page, () => window.__glydrift.scene.isActive("Leaderboard"));
   await run(page, 1200);
