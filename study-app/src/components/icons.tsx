@@ -344,17 +344,33 @@ export const IconSpinner = ({ className, ...p }: P) => (
   </Svg>
 );
 
-/** Brand mark: an open notebook page with a check. */
+/**
+ * Flashdrop logo: a lime flashcard with a lightning bolt on a near-black tile.
+ * Same artwork as assets/brand/*.svg. Below 24px the single-card version is
+ * used so it stays legible.
+ */
 export function BrandMark({ size = 32 }: { size?: number }) {
+  const L = "#C4F82A";
+  const K = "#0B0C0E";
+  const small = size < 24;
   return (
-    <span
-      className="relative inline-flex items-center justify-center rounded-[10px] bg-accent text-accent-fg shadow-[0_0_24px_-4px_rgb(196_248_42/0.6)]"
-      style={{ width: size, height: size }}
-    >
-      <svg viewBox="0 0 24 24" width={size * 0.62} height={size * 0.62} fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M5 19V6.5A2.5 2.5 0 0 1 7.5 4H19v13H7.5A2.5 2.5 0 0 0 5 19.5 2.5 2.5 0 0 0 7.5 22H19" />
-        <path d="m9 10.5 2 2 4-4" />
-      </svg>
-    </span>
+    <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden className="shrink-0">
+      <rect width="64" height="64" rx="15" fill={K} />
+      <rect width="63" height="63" x=".5" y=".5" rx="14.5" fill="none" stroke="#fff" strokeOpacity=".08" />
+      {small ? (
+        <g transform="rotate(-8 32 32)">
+          <rect x="15" y="10" width="34" height="44" rx="7" fill={L} />
+          <path d="M35 17 21 36h10l-3.5 13L43 29H32.5z" fill={K} />
+        </g>
+      ) : (
+        <>
+          <rect x="22" y="9" width="28" height="38" rx="6" transform="rotate(14 36 28)" fill={L} opacity=".38" />
+          <g transform="rotate(-8 28 35)">
+            <rect x="13" y="15" width="30" height="40" rx="6.5" fill={L} />
+            <path d="M31.5 20.5 20.5 37.5h8l-2.6 11.5 12-18.5h-8.2z" fill={K} />
+          </g>
+        </>
+      )}
+    </svg>
   );
 }

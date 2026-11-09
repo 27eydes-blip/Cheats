@@ -1,4 +1,4 @@
-# FlashdropAI
+# Flashdrop
 
 Live at **[flashdropai.com](https://flashdropai.com)** (once deployed).
 
@@ -34,6 +34,7 @@ Snap your notes, get a quiz in seconds. Students photograph handwritten or print
 ## Design system
 
 - **Look:** dark first, one accent (electric lime `#C4F82A`) on neutral grays, Geist type. All colors are tokens in `src/app/globals.css`; light and dark are defined side by side.
+- **Logo:** a lime flashcard with a lightning bolt on a near-black tile. Source art in `assets/brand/` (full mark, square version for iOS, and a simpler single-card mark for 16–32px). `node scripts/make-icons.mjs` regenerates the favicon, browser-tab and home-screen icons.
 - **Icons:** our own set in `src/components/icons.tsx` (24px, 1.8px rounded stroke, soft duotone fill). Empty-state illustrations are in `src/components/ui/illustrations.tsx`.
 - **Motion:** springy buttons, page transitions (React `<ViewTransition>`), 3D flip + physics swipe flashcards, a scanning animation while notes are read, confetti on wins (`src/lib/celebrate.ts`).
 - **Visual QA:** `node scripts/screenshots.mjs <outDir>` seeds a demo account and screenshots every main screen on phone, iPad and laptop in both themes, plus side-by-side contact sheets.

@@ -3,8 +3,8 @@
  * (page titles, link previews, sign-in screen).
  */
 export const APP_CONFIG = {
-  name: "FlashdropAI",
-  shortName: "FlashdropAI",
+  name: "Flashdrop",
+  shortName: "Flashdrop",
   /** Production domain. Share links and link previews use this. */
   domain: "flashdropai.com",
   siteUrl: "https://flashdropai.com",

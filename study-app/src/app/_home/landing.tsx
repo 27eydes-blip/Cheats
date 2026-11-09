@@ -1,5 +1,6 @@
 "use client";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Logo, ThemeToggle } from "@/components/app-shell";
 import { IconBook, IconCamera, IconCards, IconCheck, IconLink, IconPencil, IconSparkle, IconTarget } from "@/components/icons";
@@ -26,6 +27,33 @@ const STEPS = [
   { n: "02", title: "Check", body: "We highlight any word we weren't sure about. Tap to fix it in a second." },
   { n: "03", title: "Study", body: "Get a full quiz, flashcards and a timed practice test, all from your own notes." },
 ];
+
+/**
+ * Marker-style highlight: a lime block sweeps in behind the words (covering
+ * them fully, with padding) and the words switch to near-black so they stay
+ * readable in dark and light mode.
+ */
+function MarkerHighlight({ children }: { children: React.ReactNode }) {
+  const reduce = useReducedMotion();
+  const [on, setOn] = useState(!!reduce);
+  useEffect(() => {
+    if (reduce) return;
+    const t = setTimeout(() => setOn(true), 550);
+    return () => clearTimeout(t);
+  }, [reduce]);
+  return (
+    <span className="relative inline-block whitespace-nowrap px-[0.12em]">
+      <motion.span
+        aria-hidden
+        className="absolute inset-x-0 -bottom-[0.1em] top-[0.06em] -z-0 origin-left -rotate-[1deg] rounded-[0.14em] bg-accent"
+        initial={reduce ? false : { scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ delay: 0.5, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+      />
+      <span className={`relative transition-colors duration-300 ${on ? "text-accent-fg" : "text-fg"}`}>{children}</span>
+    </span>
+  );
+}
 
 export function Landing() {
   return (
@@ -61,15 +89,7 @@ export function Landing() {
             <motion.h1 custom={1} variants={rise} className="text-[44px] font-semibold leading-[1.02] tracking-[-0.045em] sm:text-6xl lg:text-[64px] xl:text-[70px]">
               Snap your notes.
               <br />
-              <span className="relative inline-block">
-                <span className="relative z-10">Get a quiz</span>
-                <motion.span
-                  className="absolute inset-x-[-4px] bottom-[0.08em] z-0 h-[0.32em] origin-left rounded-[4px] bg-accent"
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  transition={{ delay: 0.6, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-                />
-              </span>{" "}
+              <MarkerHighlight>Get a quiz</MarkerHighlight>{" "}
               in seconds.
             </motion.h1>
             <motion.p custom={2} variants={rise} className="mt-6 max-w-[34ch] text-lg leading-relaxed text-muted md:text-xl">
