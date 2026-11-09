@@ -1,5 +1,6 @@
 // Title screen: dimmed living background, the selected hero flying a figure-eight, a big
-// ENDLESS button, LEVELS (level mode, which replaced the Daily Challenge), the daily login reward and settings.
+// ENDLESS button, LEVELS (level mode, which replaced the Daily Challenge), four main buttons
+// (Heroes, Shop, Leaderboard, Settings) and one MORE sheet holding everything else.
 import Phaser from "phaser";
 import { BIOMES, biomeStateAt, blendPalette, CLASSIC } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, FONT, NUM_FONT, VIEW } from "../config.js";
@@ -32,10 +33,8 @@ import { Music } from "../audio/music.js";
 import { LOGIN_REWARDS, Progression } from "../data/progression.js";
 import { LEVEL_COUNT, currentLevel, totalStars } from "../levels/levels.js";
 import { Save } from "../data/save.js";
-import { addTexture, PixelCanvas } from "../pixel/px.js";
 import { Seasons } from "../data/seasons.js";
 import { claimSeasonTier, DriftPass } from "../data/driftPass.js";
-import { drawIcon } from "../ui/icons.js";
 import { askUsername } from "../ui/nameModal.js";
 import { openChest, revealHero } from "../ui/reveal.js";
 import {
@@ -219,8 +218,7 @@ export class MenuScene extends Phaser.Scene {
     this.seasonQueue = hk.recaps.map((r) => () => this.openRecap(r));
     this.season = Seasons.active();
     if (this.season) {
-      this.buildSeasonTheme();
-      this.buildSeasonBanner(L.banner);
+      this.buildSeasonTheme(); // (the season banner itself lives in the MORE sheet)
       if (Seasons.needsHeroReveal()) this.seasonQueue.push(() => this.newHeroReveal());
     }
     // Drift Pass+ "Abyss" home theme (chosen in Settings)
@@ -283,10 +281,10 @@ export class MenuScene extends Phaser.Scene {
     this.npTop = top;
     this.refreshNamePlate();
     this.coinIcon = this.add
-      .image(W - 236, top + 40, "coin")
+      .image(W - 196, top + 40, "coin") // (the gear moved into the main row as SETTINGS)
       .setScale(0.8 / HI)
       .setDepth(100);
-    this.coinText = neonText(this, W - 210, top + 40, `${s.coins}`, 28, COIN_COLOR, {
+    this.coinText = neonText(this, W - 170, top + 40, `${s.coins}`, 28, COIN_COLOR, {
       ox: 0,
       blur: 8,
     }).setDepth(100);
@@ -315,13 +313,6 @@ export class MenuScene extends Phaser.Scene {
       Sfx.coin?.(Math.floor(Math.random() * 6));
       Haptics.light?.();
     });
-    const gear = this.add
-      .graphics()
-      .setDepth(100)
-      .setPosition(W - 50, top + 40);
-    drawIcon(gear, "gear", 22, 0xd8d0ff);
-    gear.setInteractive(new Phaser.Geom.Circle(0, 0, 36), Phaser.Geom.Circle.Contains);
-    gear.on("pointerup", () => this.openSettings());
     popIn(this, [lv, this.coinIcon, this.coinText], 150);
 
     // ---- buttons: PLAY is the biggest & brightest
@@ -358,70 +349,49 @@ export class MenuScene extends Phaser.Scene {
       onClick: () => this.go("LevelSelect"),
     }).setDepth(100);
     this.levelsBtn = this.daily;
+    // ---- the main row: HEROES · SHOP · LEADERBOARD · SETTINGS. Everything else (Lucky Spin,
+    // the free drop, the season pass, progress, the streak, "Add to Home Screen") sits in
+    // the one MORE sheet under it, so the home screen stays calm (see moreEntries()).
     // a limited-time hero on sale and not yet owned → "24H ONLY" tag; HEROES opens on it
     const limitedHero = CHARACTERS.find((c) => c.limited && onSale(c) && !s.unlocked[c.id]);
-    const heroes = button(this, W / 2 - 220, L.row, 200, 72, "HEROES", {
-      color: 0xb45cff,
-      size: 18,
-      onClick: () => {
+    const row = [
+      ["HEROES", 0xb45cff, 150, () => {
         if (limitedHero) this.registry.set("heroFocus", limitedHero.id);
         this.go("Characters");
-      },
-    }).setDepth(100);
+      }],
+      ["SHOP", 0xffd23f, 150, () => this.go("Shop")],
+      ["LEADERBOARD", 0x3ef4ff, 190, () => this.go("Leaderboard")],
+      ["SETTINGS", 0xd8d0ff, 150, () => this.openSettings()],
+    ];
+    const rowGap = 12;
+    let rx = W / 2 - (row.reduce((a, r) => a + r[2], 0) + rowGap * (row.length - 1)) / 2;
+    this.mainButtons = row.map(([label, color, w, onClick]) => {
+      const b = button(this, rx + w / 2, L.row, w, 76, label, {
+        color,
+        size: label === "LEADERBOARD" ? 14 : 16,
+        onClick,
+      }).setDepth(100);
+      rx += w + rowGap;
+      return b;
+    });
+    const [heroes, shop, ranks, settings] = this.mainButtons;
     this.heroesBtn = heroes;
-    if (limitedHero) {
-      const tag = this.add.container(W / 2 - 220 + 70, L.row - 42).setDepth(101);
-      const tg = this.add.graphics();
-      tg.fillStyle(0xff3a8a, 1).fillRoundedRect(-58, -15, 116, 30, 15);
-      tg.lineStyle(2, 0xffffff, 0.9).strokeRoundedRect(-58, -15, 116, 30, 15);
-      const tt = this.add
-        .text(0, 1, "24H ONLY", {
-          fontFamily: FONT,
-          fontSize: "15px",
-          fontStyle: "900",
-          color: "#ffffff",
-        })
-        .setOrigin(0.5);
-      tag.add([tg, tt]);
-      this.tweens.add({
-        targets: tag,
-        scale: 1.12,
-        duration: 520,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-    }
-    const ranks = button(this, W / 2, L.row, 220, 72, "LEADERBOARD", {
-      color: 0x3ef4ff,
-      size: 16,
-      onClick: () => this.go("Leaderboard"),
+    this.shopBtn = shop;
+    // MORE: smaller and quieter than the main row (it's the "everything else" drawer)
+    this.moreBtn = button(this, W / 2, L.more, 260, 58, "MORE", {
+      color: 0x9c90c8,
+      size: 18,
+      onClick: () => this.openMore(),
     }).setDepth(100);
-    const prog = button(this, W / 2 + 220, L.row, 200, 72, "PROGRESS", {
-      color: 0xff4fd8,
-      size: 16,
-      onClick: () => this.go("Progress"),
-    }).setDepth(100);
-    popIn(this, [play, this.daily, heroes, ranks, prog], 250);
+    popIn(this, [play, this.daily, heroes, shop, ranks, settings], 250);
+    popIn(this, this.moreBtn, 320);
+    this.placeBadges(limitedHero);
     this.time.delayedCall(520, () => {
       this.fx.burst("star", W / 2, by, 24, 0x39ff88, { speed: { min: 150, max: 520 } });
       this.fx.ring(W / 2, by, 0x39ff88, { scale: 2.6, duration: 600 });
     });
-    // ---- Shop (left) and Lucky Spin (right): two tiles of the same size under the banner
-    this.buildShopTile(W / 2 - L.tileW / 2 - 8, L.tiles, L.tileW);
-    this.buildSpinTile(W / 2 + L.tileW / 2 + 8, L.tiles, L.tileW);
-    // Today row (when there's room), the news ticker at the very bottom, and "Add to Home
-    // Screen" (only in the browser)
-    if (L.today) this.buildToday(L.today);
+    // the news ticker at the very bottom
     this.buildTicker(L.ticker);
-    if (L.install) {
-      const add = button(this, W / 2, L.install, 360, 60, "ADD TO HOME SCREEN", {
-        color: 0x39ff88,
-        size: 15,
-        onClick: () => Install.prompt(),
-      }).setDepth(100);
-      popIn(this, add, 450);
-    }
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.updateCountdown() });
 
     // ---- one pop-up at a time on arrival (first launch, or a fresh guest after logging out):
@@ -481,97 +451,176 @@ export class MenuScene extends Phaser.Scene {
     return name;
   }
 
-  /** "Today" row: daily challenge, free drop, spins and streak — a "!" when one is ready. */
-  buildToday(y) {
+  // ------------------------------------------------------------------ MORE sheet + badges
+  /**
+   * Everything that isn't PLAY, LEVELS or one of the four main buttons, as one plain list: the
+   * MORE sheet draws one row per entry, in this order. To add a page later (a Stats page, the
+   * Locker Room), add an entry here: `{ id, label, sub, color, go }` (+ `ready: true` for a
+   * red "!" when something is waiting there). Entries that don't apply are left out (null).
+   */
+  moreEntries() {
     const s = Save.data;
-    const W = this.W;
     const ls = Progression.loginStatus();
-    const chips = [
-      {
-        label: "LEVELS",
-        sub: `${totalStars()} ★`,
-        col: 0xffd23f,
-        ready: false,
-        prio: 3,
-        go: () => this.go("LevelSelect"),
+    const spins = s.spins || 0;
+    const drop = Shop.dropReady();
+    const season = this.season;
+    const total = season?.pass.tiers.length || 0;
+    return [
+      season && {
+        id: "pass",
+        label: `SEASON ${season.number} · ${season.name}`,
+        sub: `Drift Pass · tier ${Math.min(total, DriftPass.unlockedCount())}/${total} · ends in ${Seasons.countdown(season)}`,
+        color: Seasons.colors(season).accent,
+        ready: DriftPass.claimable() > 0,
+        go: () => {
+          if (this.leaving) return;
+          this.leaving = true;
+          fadeTo(this, "Pass", { from: "Menu" }, { ms: 180, rgb: [2, 1, 7] });
+        },
       },
       {
-        label: "FREE DROP",
-        sub: Shop.dropReady() ? "ready!" : "tomorrow",
-        col: 0x7ae82a,
-        ready: Shop.dropReady(),
-        prio: 0, // free rewards waiting to be claimed come first
-        go: () => this.go("Shop"),
-      },
-      {
-        label: "SPINS",
-        sub: `${s.spins || 0} left`,
-        col: 0xff7ad9,
-        ready: (s.spins || 0) > 0,
-        prio: 2,
+        id: "spin",
+        label: "LUCKY SPIN",
+        sub: spins > 0 ? `${spins} spin${spins > 1 ? "s" : ""} ready` : "Earn spins by playing",
+        color: 0xff7ad9,
+        ready: spins > 0,
         go: () => this.go("Spin"),
       },
       {
-        label: "STREAK",
-        sub: `${ls.streak || s.login.streak || 0} days`,
-        col: 0xff8a1a,
+        id: "drop",
+        label: "FREE DROP",
+        sub: drop ? "Your free Daily Drift Drop is waiting" : "A new free drop tomorrow",
+        color: 0x7ae82a,
+        ready: drop,
+        go: () => this.go("Shop"),
+      },
+      {
+        id: "streak",
+        label: "DAILY STREAK",
+        sub: ls.canClaim
+          ? "Today's reward is ready to claim"
+          : `${ls.streak || s.login.streak || 0}-day streak · back tomorrow`,
+        color: 0xff8a1a,
         ready: ls.canClaim,
-        prio: 1,
         go: () =>
-          ls.canClaim
+          Progression.loginStatus().canClaim
             ? this.openLogin(Progression.loginStatus())
             : toast(this, `${s.login.streak}-DAY STREAK!`, 0xff8a1a, {
                 y: this.H * 0.3,
                 sub: "Come back tomorrow to keep it going",
               }),
       },
-    ];
-    // at most two "!" badges at once (more just reads as noise): free rewards first
-    const bang = new Set(
-      chips
-        .filter((ch) => ch.ready)
-        .sort((a, b) => a.prio - b.prio)
-        .slice(0, MAX_BANGS),
-    );
-    const cw = (W - 56) / 4;
-    chips.forEach((ch, i) => {
-      const x = 28 + cw * i + cw / 2;
-      const c = this.add.container(x, y).setDepth(100);
+      {
+        id: "progress",
+        label: "PROGRESS",
+        sub: "Missions · achievements · titles",
+        color: 0xff4fd8,
+        go: () => this.go("Progress"),
+      },
+      Install.available && {
+        id: "install",
+        label: "ADD TO HOME SCREEN",
+        sub: "Play full screen, like an app",
+        color: 0x39ff88,
+        go: () => Install.prompt(),
+      },
+    ].filter(Boolean);
+  }
+
+  /**
+   * Badges on the home screen: at most MAX_BANGS at once (more just reads as noise), the most
+   * important first: a free reward in the Shop, then a reward to claim inside MORE (the daily
+   * streak), a limited-time hero leaving soon, other things waiting in MORE (spins, pass
+   * tiers), and last the Shop's new season items. MORE carries one badge: how many of its
+   * entries are waiting (the free drop is left out of that count while SHOP shows it).
+   */
+  placeBadges(limitedHero) {
+    const drop = Shop.dropReady();
+    const waiting = this.moreEntries().filter((e) => e.ready && e.id !== "drop");
+    const loginReady = waiting.some((e) => e.id === "streak");
+    const cands = [
+      drop && { id: "shop-free", host: this.shopBtn, text: "FREE", color: 0x1fae5a, prio: 0 },
+      waiting.length && {
+        id: "more",
+        host: this.moreBtn,
+        text: `${waiting.length}`,
+        prio: loginReady ? 1 : 3,
+      },
+      limitedHero && { id: "heroes-24h", host: this.heroesBtn, text: "24H ONLY", color: 0xff3a8a, prio: 2, top: true },
+      !drop && Seasons.shopItems().length && { id: "shop-new", host: this.shopBtn, text: "NEW", prio: 4 },
+    ]
+      .filter(Boolean)
+      .sort((a, b) => a.prio - b.prio)
+      .slice(0, MAX_BANGS);
+    this.homeBadges = cands.map((c) => c.id); // (read by the tests)
+    for (const c of cands) {
+      const b = c.host;
+      // a wide tag sits centred on the top edge; a short one on the top-right corner
+      const x = c.top ? 0 : b.width / 2 - 14;
+      this.tileBadge(b, x, -b.height / 2 - 4, c.text, c.color);
+      b.setDepth(101); // over its neighbour in the row
+    }
+  }
+
+  /** The MORE sheet: one tidy list of everything off the home screen (see moreEntries()). */
+  openMore() {
+    if (this.modal || this.leaving || this.naming) return;
+    const W = this.W;
+    const H = this.H;
+    const entries = this.moreEntries();
+    const st = this.registry.get("safeTop") || 0;
+    const sb = this.registry.get("safeBottom") || 0;
+    // rows share the height between the title and CLOSE, up to a comfortable size
+    const rowH = Phaser.Math.Clamp((H - st - sb - 80 - 250) / entries.length, 84, 112);
+    const h = 120 + rowH * entries.length + 130;
+    const c = this.modalBase(h, 0x9c90c8);
+    c.isMore = true;
+    const y0 = H / 2 - h / 2 + (st - sb) / 2;
+    c.list[1].y = (st - sb) / 2; // the panel frame follows the safe-area shift
+    const dim = c.list[0];
+    dim.on("pointerup", () => this.closeModal());
+    c.add(neonText(this, W / 2, y0 + 62, "MORE", 40, 0xd8d0ff, { blur: 12 }));
+    const rw = W - 120;
+    const rh = rowH - 14;
+    entries.forEach((e, i) => {
+      const r = this.add.container(W / 2, y0 + 120 + rowH * i + rowH / 2);
       const g = this.add.graphics();
-      drawNeonRect(g, -cw / 2 + 5, -36, cw - 10, 72, 16, ch.col, { fillAlpha: 0.88, width: 2 });
-      c.add([
-        g,
-        plainText(this, 0, -10, ch.label, 15, hex(ch.col)),
-        plainText(this, 0, 14, ch.sub, 14, "#e8e2ff"),
-      ]);
-      if (bang.has(ch)) {
-        const b = this.add.container(cw / 2 - 14, -34);
-        const bg = this.add.graphics();
-        bg.fillStyle(0xff2a3d, 1)
-          .fillCircle(0, 0, 15)
-          .lineStyle(2, 0xffffff, 1)
-          .strokeCircle(0, 0, 15);
-        b.add([bg, plainText(this, 0, -1, "!", 18, "#ffffff")]);
-        c.add(b);
-        this.tweens.add({
-          targets: b,
-          y: -42,
-          duration: 420,
-          yoyo: true,
-          repeat: -1,
-          ease: "Sine.easeInOut",
-          delay: i * 120,
-        });
-      }
-      c.setSize(cw - 10, 72).setInteractive();
-      c.on("pointerdown", () => this.tweens.add({ targets: c, scale: 0.92, duration: 70 }));
-      c.on("pointerup", () => {
-        this.tweens.add({ targets: c, scale: 1, duration: 200, ease: "Back.easeOut" });
-        Sfx.ui();
-        ch.go();
+      drawNeonRect(g, -rw / 2, -rh / 2, rw, rh, 18, e.color, { fillAlpha: 0.92, width: 2 });
+      const label = neonText(this, -rw / 2 + 26, -rh * 0.17, e.label, 21, e.color, {
+        ox: 0,
+        blur: 6,
       });
-      popIn(this, c, 420 + i * 60);
+      label.setScale(Math.min(1, (rw - 110) / Math.max(1, label.width)));
+      const sub = plainText(this, -rw / 2 + 26, rh * 0.22, e.sub, 15, "#d8d0ff", { ox: 0 });
+      sub.setScale(Math.min(1, (rw - 110) / Math.max(1, sub.width)));
+      r.add([g, label, sub, plainText(this, rw / 2 - 30, 0, "▸", 26, hex(e.color))]);
+      if (e.ready) {
+        const b = this.add.graphics();
+        b.fillStyle(0xff2a3d, 1).fillCircle(rw / 2 - 70, 0, 14);
+        b.lineStyle(2, 0xffffff, 1).strokeCircle(rw / 2 - 70, 0, 14);
+        r.add([b, plainText(this, rw / 2 - 70, -1, "!", 17, "#ffffff")]);
+      }
+      r.setSize(rw, rh).setInteractive();
+      r.on("pointerdown", () => this.tweens.add({ targets: r, scale: 0.96, duration: 70 }));
+      r.on("pointerup", () => {
+        Sfx.ui();
+        // the sheet goes at once, so a pop-up the entry opens (the daily reward) can show
+        killTweensDeep(this, c);
+        c.destroy();
+        this.modal = null;
+        e.go();
+      });
+      c.add(r);
+      popIn(this, r, 40 + i * 40, { duration: 320 });
     });
+    c.add(
+      button(this, W / 2, y0 + h - 66, 260, 76, "CLOSE", {
+        color: 0x9c90c8,
+        size: 22,
+        onClick: () => this.closeModal(),
+      }),
+    );
+    this.moreEntriesShown = entries.map((e) => e.label); // (read by the tests)
   }
 
   /** News ticker along the bottom: sales, today's deal, your rank and the world's best. */
@@ -664,36 +713,30 @@ export class MenuScene extends Phaser.Scene {
   // ------------------------------------------------------------------ layout
   /**
    * Centre Y of every home-screen block, top to bottom, with even gaps that fill the screen:
-   * top bar · logo + tagline · season banner · Shop / Lucky Spin · hero · BEAT YOUR BEST ·
-   * PLAY · Daily Challenge · Heroes / Leaderboard / Progress · (Today row) · (install) · ticker.
+   * top bar · logo + tagline · hero · BEAT YOUR BEST · PLAY · LEVELS ·
+   * Heroes / Shop / Leaderboard / Settings · MORE · ticker. (Everything else is in MORE.)
    */
   layout(top) {
     const H = this.H;
     const sb = this.registry.get("safeBottom") || 0;
     const tickerH = 48;
     const bottom = H - sb - tickerH; // the ticker sits under everything
-    const season = !!Seasons.active();
     const avail = bottom - top;
     const blocks = [
       ["bar", 70],
       ["logo", 104],
-      ...(season ? [["banner", 84]] : []),
-      ["tiles", 112],
       ["hero", 0],
       ["best", 30],
       ["play", 140],
       ["daily", 86],
-      ["row", 72],
+      ["row", 76],
+      ["more", 58],
     ];
-    const fixed0 = blocks.reduce((a, b) => a + b[1], 0);
-    // extras only when they fit without squeezing the hero
-    if (avail - fixed0 - 72 - 12 * 11 > 230) blocks.push(["today", 72]);
-    if (Install.available && avail - fixed0 - 72 - 64 - 12 * 12 > 230) blocks.push(["install", 60]);
     const fixed = blocks.reduce((a, b) => a + b[1], 0);
     const n = blocks.length;
     const gap = Phaser.Math.Clamp((avail - fixed - 240) / n, 8, 34);
     const heroH = Math.max(150, avail - fixed - gap * n);
-    const L = { heroH, tileW: Math.min(320, (this.W - 64) / 2), ticker: H - sb - tickerH / 2 };
+    const L = { heroH, ticker: H - sb - tickerH / 2 };
     let y = top;
     for (const [name, h0] of blocks) {
       const h = name === "hero" ? heroH : h0;
@@ -703,31 +746,10 @@ export class MenuScene extends Phaser.Scene {
     return L;
   }
 
-  /** A same-size home tile: neon frame, icon on the left, label + sub-label on the right. */
-  homeTile(x, y, w, color, label, sub, onClick) {
-    const h = 112;
-    const c = this.add.container(x, y).setDepth(100);
-    const g = this.add.graphics();
-    drawNeonRect(g, -w / 2, -h / 2, w, h, 20, color, { fillAlpha: 0.9, width: 3 });
-    g.fillStyle(0xffffff, 0.06).fillRoundedRect(-w / 2 + 6, -h / 2 + 5, w - 12, h * 0.36, 14);
-    c.add(g);
-    c.add(neonText(this, -w / 2 + 120, -14, label, 22, color, { ox: 0, blur: 8 }));
-    c.sub = plainText(this, -w / 2 + 120, 20, sub, 16, "#d8d0ff", { ox: 0 });
-    c.add(c.sub);
-    c.setSize(w, h).setInteractive();
-    c.on("pointerdown", () => this.tweens.add({ targets: c, scale: 0.95, duration: 70 }));
-    c.on("pointerup", () => {
-      this.tweens.add({ targets: c, scale: 1, duration: 200, ease: "Back.easeOut" });
-      Sfx.ui();
-      onClick();
-    });
-    popIn(this, c, 340);
-    return c;
-  }
-
   /** A little red corner ribbon / badge on a tile. */
   tileBadge(c, x, y, text, color = 0xff2a3d) {
     const b = this.add.container(x, y);
+    b.isBadge = true; // (counted by the tests: never more than MAX_BANGS on the home screen)
     const g = this.add.graphics();
     const w = Math.max(44, text.length * 12 + 22);
     g.fillStyle(0x1a0630, 1).fillRoundedRect(-w / 2 - 3, -17, w + 6, 34, 17);
@@ -744,53 +766,6 @@ export class MenuScene extends Phaser.Scene {
       ease: "Sine.easeInOut",
     });
     return b;
-  }
-
-  buildShopTile(x, y, w) {
-    // pixel-art shopping bag (drawn once)
-    if (!this.textures.exists("menu_bag")) {
-      const pc = new PixelCanvas(16, 16);
-      pc.rect(2, 5, 12, 10, 0xffd23f).rect(2, 13, 12, 2, 0xc8901a); // bag
-      pc.rect(3, 6, 10, 2, 0xfff1a0); // shine
-      pc.rect(5, 1, 1, 5, 0x8a5a10).rect(10, 1, 1, 5, 0x8a5a10).rect(5, 1, 6, 1, 0x8a5a10); // handle
-      pc.rect(7, 8, 2, 4, 0xff2a3d).rect(6, 9, 4, 2, 0xff2a3d); // a red tag mark
-      addTexture(this, "menu_bag", pc.outline(0x3a2400, 1, true), 4);
-    }
-    const c = this.homeTile(x, y, w, 0xffd23f, "SHOP", "Daily deals", () => this.go("Shop"));
-    c.add(this.add.image(-w / 2 + 62, 0, "menu_bag").setScale(1.1));
-    // ribbon: FREE (drop ready) · NEW (season items) · SALE (today's deal)
-    const tag = Shop.dropReady() ? "FREE" : Seasons.shopItems().length ? "NEW" : "SALE";
-    this.tileBadge(c, w / 2 - 34, -50, tag, tag === "FREE" ? 0x1fae5a : 0xff2a3d);
-  }
-
-  buildSpinTile(x, y, w) {
-    const spins = Save.data.spins || 0;
-    const c = this.homeTile(
-      x,
-      y,
-      w,
-      0xff7ad9,
-      "LUCKY SPIN",
-      spins > 0 ? `${spins} spin${spins > 1 ? "s" : ""} ready` : "Earn spins by playing",
-      () => this.go("Spin"),
-    );
-    const wg = this.add.graphics({ x: -w / 2 + 62, y: 0 });
-    const cols = [0x3ef4ff, 0xb45cff, 0xffd23f, 0xff4fd8];
-    for (let i = 0; i < 8; i++) {
-      wg.fillStyle(cols[i % 4], 0.9);
-      wg.slice(0, 0, 38, (i / 8) * Math.PI * 2, ((i + 1) / 8) * Math.PI * 2, false).fillPath();
-    }
-    wg.fillStyle(0x0a0418, 1).fillCircle(0, 0, 12);
-    wg.lineStyle(4, 0xffd23f, 1).strokeCircle(0, 0, 38);
-    c.add(wg);
-    const ptr = this.add.graphics({ x: -w / 2 + 62, y: 0 });
-    ptr.fillStyle(0xffffff, 1).fillTriangle(-7, -46, 7, -46, 0, -32);
-    c.add(ptr);
-    // badge: the number of spins you can use right now (hidden when there are none)
-    if (spins > 0) {
-      this.tileBadge(c, w / 2 - 34, -50, spins > 99 ? "99+" : `${spins}`);
-      this.tweens.add({ targets: wg, angle: 360, duration: 6000, repeat: -1 });
-    }
   }
 
   // ------------------------------------------------------------------ seasons
@@ -962,66 +937,7 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
-  /** "SEASON 1 · ABYSS RISING" banner with a countdown; it beats like a heart. */
-  buildSeasonBanner(y) {
-    const W = this.W;
-    const s = this.season;
-    const sc = Seasons.colors(s);
-    const bw = W - 48; // full width
-    const bh = 84;
-    const c = this.add.container(W / 2, y).setDepth(120);
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.5).fillRoundedRect(-bw / 2 + 4, -bh / 2 + 6, bw, bh, 18);
-    g.fillStyle(sc.dark, 0.96).fillRoundedRect(-bw / 2, -bh / 2, bw, bh, 18);
-    g.lineStyle(4, sc.primary, 1).strokeRoundedRect(-bw / 2, -bh / 2, bw, bh, 18);
-    g.fillStyle(sc.primary, 0.35).fillRoundedRect(-bw / 2 + 6, -bh / 2 + 6, bw - 12, 14, 7);
-    const glow = this.add
-      .image(0, 0, "glow")
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .setTint(sc.primary)
-      .setScale(5, 1.2)
-      .setAlpha(0.35);
-    const title = neonText(this, 0, -14, `SEASON ${s.number} · ${s.name}`, 24, sc.accent, {
-      blur: 10,
-    });
-    const tier = Math.min(s.pass.tiers.length, DriftPass.unlockedCount());
-    this.seasonSub = plainText(
-      this,
-      0,
-      20,
-      `Ends in ${Seasons.countdown(s)} · Pass tier ${tier}/${s.pass.tiers.length}`,
-      17,
-      "#ffd8d8",
-    );
-    c.add([glow, g, title, this.seasonSub]);
-    c.setSize(bw, bh).setInteractive();
-    c.on("pointerup", () => {
-      Sfx.ui();
-      if (this.leaving) return;
-      this.leaving = true;
-      fadeTo(this, "Pass", { from: "Menu" }, { ms: 180, rgb: [2, 1, 7] });
-    });
-    popIn(this, c, 200);
-    this.seasonBanner = c;
-    this.seasonGlow = glow;
-  }
-
   updateSeason(dt) {
-    if (this.seasonBanner) {
-      // heartbeat: two quick beats then a rest (gentler with Reduce Flashing)
-      const ph = (this.t * 1.1) % 1;
-      const beat = Math.exp(-((ph * 8) % 4) * 3) * (ph < 0.5 ? 1 : 0);
-      const k = reduceFlashing() ? 0.012 : 0.04;
-      this.seasonBanner.setScale(1 + beat * k);
-      this.seasonGlow.setAlpha(0.25 + beat * (reduceFlashing() ? 0.1 : 0.45));
-      if (Math.floor(this.t) !== Math.floor(this.t - dt)) {
-        const s = this.season;
-        const tier = Math.min(s.pass.tiers.length, DriftPass.unlockedCount());
-        this.seasonSub.setText(
-          `Ends in ${Seasons.countdown(s)} · Pass tier ${tier}/${s.pass.tiers.length}`,
-        );
-      }
-    }
     if (this.seasonBits) {
       const home = Seasons.colors(this.season).home;
       for (const r of this.seasonBits) {
@@ -1730,7 +1646,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   openSettings() {
-    if (this.modal) return;
+    if (this.modal || this.leaving) return;
     const W = this.W;
     const H = this.H;
     const st = Save.data.settings;
@@ -1950,7 +1866,7 @@ export class MenuScene extends Phaser.Scene {
     this.fx.drift = 140 * 0.6;
 
     const W = this.W;
-    // centred: a gentle sway and bob inside its slot (never into the tiles or the text)
+    // centred: a gentle sway and bob inside its slot (never into the buttons or the text)
     const x = W / 2 + Math.sin(this.t * 0.9) * 26;
     const y = this.heroY + Math.sin(this.t * 1.8) * this.heroAmp;
     const vy = Math.cos(this.t * 1.8) * 62;
