@@ -1,10 +1,10 @@
 "use client";
-import { Plus, X } from "lucide-react";
+import { IconClose, IconPlus } from "@/components/icons";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { validateQuestionData, type Question, type QuestionData } from "@/lib/quiz/schema";
 
-const field = "w-full rounded-xl border border-line bg-bg px-3 py-2 text-[15px]";
+const field = "w-full rounded-2xl border border-line bg-bg px-4 py-2.5 text-[15px] outline-none transition focus:border-accent";
 
 /** Form for editing any question type. Validates before saving. */
 export function QuestionEditor({
@@ -53,13 +53,13 @@ export function QuestionEditor({
         {items.map((it, i) => (
           <div key={i} className="flex gap-2">
             <input className={field} value={it} onChange={(e) => set(k, items.map((x, j) => (j === i ? e.target.value : x)))} />
-            <button type="button" aria-label="Remove" onClick={() => set(k, items.filter((_, j) => j !== i))} className="rounded-lg px-2 hover:bg-danger-soft">
-              <X className="size-4" />
+            <button type="button" aria-label="Remove" onClick={() => set(k, items.filter((_, j) => j !== i))} className="rounded-full px-2.5 text-muted hover:bg-danger-soft hover:text-danger">
+              <IconClose size={15} />
             </button>
           </div>
         ))}
-        <button type="button" onClick={() => set(k, [...items, ""])} className="flex items-center gap-1 self-start text-sm font-semibold text-primary">
-          <Plus className="size-4" /> Add
+        <button type="button" onClick={() => set(k, [...items, ""])} className="flex items-center gap-1 self-start text-sm font-semibold text-accent-ink">
+          <IconPlus size={15} /> Add
         </button>
       </div>
     );
@@ -74,7 +74,7 @@ export function QuestionEditor({
             Choices (pick the correct one)
             {((data.choices as string[]) ?? []).map((c, i) => (
               <div key={i} className="flex items-center gap-2">
-                <input type="radio" name="correct" checked={data.answer_index === i} onChange={() => set("answer_index", i)} aria-label={`Choice ${i + 1} is correct`} className="size-5 accent-[var(--success)]" />
+                <input type="radio" name="correct" checked={data.answer_index === i} onChange={() => set("answer_index", i)} aria-label={`Choice ${i + 1} is correct`} className="size-5 accent-[var(--accent)]" />
                 <input
                   className={field}
                   value={c}
@@ -88,15 +88,15 @@ export function QuestionEditor({
                     const ai = data.answer_index as number;
                     setData((d) => ({ ...d, choices, answer_index: ai === i ? 0 : ai > i ? ai - 1 : ai }));
                   }}
-                  className="rounded-lg px-2 hover:bg-danger-soft"
+                  className="rounded-full px-2.5 text-muted hover:bg-danger-soft hover:text-danger"
                 >
-                  <X className="size-4" />
+                  <IconClose size={15} />
                 </button>
               </div>
             ))}
             {((data.choices as string[]) ?? []).length < 6 && (
-              <button type="button" onClick={() => set("choices", [...(data.choices as string[]), ""])} className="flex items-center gap-1 self-start text-sm font-semibold text-primary">
-                <Plus className="size-4" /> Add choice
+              <button type="button" onClick={() => set("choices", [...(data.choices as string[]), ""])} className="flex items-center gap-1 self-start text-sm font-semibold text-accent-ink">
+                <IconPlus size={15} /> Add choice
               </button>
             )}
           </div>
@@ -143,13 +143,13 @@ export function QuestionEditor({
               <div key={i} className="flex gap-2">
                 <input className={field} value={p.left} placeholder="Term" onChange={(e) => set("pairs", (data.pairs as { left: string; right: string }[]).map((x, j) => (j === i ? { ...x, left: e.target.value } : x)))} />
                 <input className={field} value={p.right} placeholder="Match" onChange={(e) => set("pairs", (data.pairs as { left: string; right: string }[]).map((x, j) => (j === i ? { ...x, right: e.target.value } : x)))} />
-                <button type="button" aria-label="Remove pair" onClick={() => set("pairs", (data.pairs as unknown[]).filter((_, j) => j !== i))} className="rounded-lg px-2 hover:bg-danger-soft">
-                  <X className="size-4" />
+                <button type="button" aria-label="Remove pair" onClick={() => set("pairs", (data.pairs as unknown[]).filter((_, j) => j !== i))} className="rounded-full px-2.5 text-muted hover:bg-danger-soft hover:text-danger">
+                  <IconClose size={15} />
                 </button>
               </div>
             ))}
-            <button type="button" onClick={() => set("pairs", [...(data.pairs as unknown[]), { left: "", right: "" }])} className="flex items-center gap-1 self-start text-sm font-semibold text-primary">
-              <Plus className="size-4" /> Add pair
+            <button type="button" onClick={() => set("pairs", [...(data.pairs as unknown[]), { left: "", right: "" }])} className="flex items-center gap-1 self-start text-sm font-semibold text-accent-ink">
+              <IconPlus size={15} /> Add pair
             </button>
           </div>
         </>
@@ -158,7 +158,7 @@ export function QuestionEditor({
         Explanation
         <textarea className={field} rows={2} value={explanation} onChange={(e) => setExplanation(e.target.value)} />
       </label>
-      {error && <p className="rounded-xl bg-danger-soft p-2 text-sm text-danger">{error}</p>}
+      {error && <p className="rounded-2xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
         <Button onClick={save} loading={busy}>
           Save

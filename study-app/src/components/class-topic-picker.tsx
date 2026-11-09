@@ -1,5 +1,5 @@
 "use client";
-import { Plus } from "lucide-react";
+import { IconPlus } from "./icons";
 import { useState } from "react";
 import { useLive } from "@/hooks/use-live";
 import { createClass, createTopic, listClasses } from "@/lib/data";
@@ -47,10 +47,10 @@ export function ClassTopicPicker({
     }
   };
 
-  const field = "h-11 w-full rounded-xl border border-line bg-bg px-3 text-[15px]";
+  const field = "h-12 w-full rounded-2xl border border-line bg-bg px-4 text-[15px] outline-none transition focus:border-accent disabled:opacity-50";
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <label className="flex flex-col gap-1 text-sm font-medium">
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
         Class
         {newClass !== null ? (
           <span className="flex gap-2">
@@ -63,7 +63,7 @@ export function ClassTopicPicker({
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addClass())}
               aria-label="New class name"
             />
-            <button type="button" onClick={addClass} className="rounded-xl bg-primary px-3 font-semibold text-primary-fg">
+            <button type="button" onClick={addClass} className="rounded-2xl bg-accent px-4 font-semibold text-accent-fg">
               Add
             </button>
           </span>
@@ -86,7 +86,7 @@ export function ClassTopicPicker({
           </select>
         )}
       </label>
-      <label className="flex flex-col gap-1 text-sm font-medium">
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
         Topic
         {newTopic !== null ? (
           <span className="flex gap-2">
@@ -99,7 +99,7 @@ export function ClassTopicPicker({
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTopic())}
               aria-label="New topic name"
             />
-            <button type="button" onClick={addTopic} className="rounded-xl bg-primary px-3 font-semibold text-primary-fg">
+            <button type="button" onClick={addTopic} className="rounded-2xl bg-accent px-4 font-semibold text-accent-fg">
               Add
             </button>
           </span>
@@ -127,9 +127,9 @@ export function ClassTopicPicker({
         <button
           type="button"
           onClick={() => setNewClass("")}
-          className="flex items-center gap-1 text-sm font-semibold text-primary sm:col-span-2"
+          className="flex items-center gap-1 text-sm font-semibold text-accent-ink sm:col-span-2"
         >
-          <Plus className="size-4" /> Add your first class (helps the AI read subject words)
+          <IconPlus size={16} /> Add your first class (helps the AI read subject words)
         </button>
       )}
     </div>

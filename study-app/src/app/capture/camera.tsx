@@ -1,6 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
-import { Check, X } from "lucide-react";
+import { IconCheck, IconClose } from "@/components/icons";
 import { useEffect, useRef, useState } from "react";
 
 /**
@@ -65,23 +65,23 @@ export function CameraView({
       <video ref={video} playsInline muted className="min-h-0 flex-1 object-contain" />
       <motion.div key={flash} initial={{ opacity: flash ? 0.7 : 0 }} animate={{ opacity: 0 }} className="pointer-events-none absolute inset-0 bg-white" />
       <div className="pb-safe flex items-center justify-between px-8 pt-4">
-        <button type="button" onClick={onDone} aria-label="Close camera" className="flex size-12 items-center justify-center rounded-full bg-white/15 text-white">
-          <X className="size-6" />
+        <button type="button" onClick={onDone} aria-label="Close camera" className="flex size-12 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur">
+          <IconClose size={24} />
         </button>
         <button
           type="button"
           onClick={shoot}
           disabled={!ready}
           aria-label="Take photo"
-          className="size-20 rounded-full border-4 border-white bg-white/90 transition active:scale-90 disabled:opacity-40"
+          className="size-[76px] rounded-full border-[5px] border-white bg-[#c4f82a] shadow-[0_0_40px_-6px_rgb(196_248_42/0.8)] transition active:scale-90 disabled:opacity-40"
         />
         <button
           type="button"
           onClick={onDone}
           aria-label={`Done, ${count} pages`}
-          className="flex h-12 min-w-12 items-center justify-center gap-1 rounded-full bg-primary px-3 font-bold text-primary-fg"
+          className="flex h-12 min-w-12 items-center justify-center gap-1 rounded-full bg-white px-3 font-bold text-black"
         >
-          {count > 0 ? count : <Check className="size-6" />}
+          {count > 0 ? count : <IconCheck size={24} />}
         </button>
       </div>
       <p className="pb-4 text-center text-sm text-white/70">Fill the frame with one page. Snap as many pages as you like.</p>

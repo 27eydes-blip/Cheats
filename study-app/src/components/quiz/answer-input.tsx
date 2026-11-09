@@ -1,6 +1,6 @@
 "use client";
 import clsx from "clsx";
-import { Check, PenLine, X } from "lucide-react";
+import { IconCheck, IconClose, IconPencil } from "@/components/icons";
 import { useMemo, useRef, useState } from "react";
 import { InkCanvas, type InkCanvasHandle } from "@/components/ink-canvas";
 import { Button } from "@/components/ui/button";
@@ -54,15 +54,22 @@ export function AnswerInput({
                 disabled={reveal}
                 onClick={() => onChange({ type: "multiple_choice", choice: i })}
                 className={clsx(
-                  "flex min-h-14 items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left font-medium transition active:scale-[0.98]",
-                  reveal && correct && "border-success bg-success-soft",
-                  reveal && chosen === i && !correct && "border-danger bg-danger-soft",
-                  !reveal && chosen === i && "border-primary bg-primary-soft",
-                  !reveal && chosen !== i && "border-line bg-elev hover:border-primary",
-                  reveal && !correct && chosen !== i && "border-line opacity-60",
+                  "flex min-h-[60px] items-center gap-3.5 rounded-[20px] border-2 px-4 py-3 text-left text-[15px] font-medium transition-all duration-200 active:scale-[0.97]",
+                  reveal && correct && "border-accent bg-accent text-accent-fg shadow-glow",
+                  reveal && chosen === i && !correct && "animate-[shake_0.4s] border-danger bg-danger-soft",
+                  !reveal && chosen === i && "border-accent bg-accent-soft",
+                  !reveal && chosen !== i && "border-line bg-elev hover:border-line-strong hover:bg-elev-2",
+                  reveal && !correct && chosen !== i && "border-line opacity-50",
                 )}
               >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-bg text-sm font-bold">{String.fromCharCode(65 + i)}</span>
+                <span
+                  className={clsx(
+                    "flex size-8 shrink-0 items-center justify-center rounded-xl text-sm font-bold transition-colors",
+                    reveal && correct ? "bg-black/10" : !reveal && chosen === i ? "bg-accent text-accent-fg" : "bg-elev-2 text-muted",
+                  )}
+                >
+                  {reveal && correct ? <IconCheck size={16} strokeWidth={2.6} /> : reveal && chosen === i ? <IconClose size={16} /> : String.fromCharCode(65 + i)}
+                </span>
                 {c}
               </button>
             );
@@ -83,10 +90,12 @@ export function AnswerInput({
                 disabled={reveal}
                 onClick={() => onChange({ type: "true_false", value: v })}
                 className={clsx(
-                  "h-16 rounded-2xl border-2 text-lg font-bold transition active:scale-[0.97]",
-                  reveal && correct && "border-success bg-success-soft",
+                  "h-[72px] rounded-[22px] border-2 text-lg font-semibold tracking-[-0.01em] transition-all active:scale-[0.96]",
+                  reveal && correct && "border-accent bg-accent text-accent-fg shadow-glow",
                   reveal && chosen === v && !correct && "border-danger bg-danger-soft",
-                  !reveal && chosen === v ? "border-primary bg-primary-soft" : "border-line bg-elev",
+                  !reveal && chosen === v && "border-accent bg-accent-soft",
+                  !reveal && chosen !== v && "border-line bg-elev hover:border-line-strong",
+                  reveal && !correct && chosen !== v && "border-line opacity-50",
                 )}
               >
                 {v ? "True" : "False"}
@@ -156,7 +165,7 @@ function TextAnswer({
     }
   };
 
-  const cls = "w-full rounded-2xl border-2 border-line bg-elev px-4 py-3 text-lg outline-none focus:border-primary disabled:opacity-70";
+  const cls = "w-full rounded-[20px] border-2 border-line bg-elev px-5 py-4 text-lg outline-none transition placeholder:text-faint focus:border-accent disabled:opacity-70";
   return (
     <div className="flex flex-col gap-2">
       {writing ? (
@@ -177,8 +186,8 @@ function TextAnswer({
         <input aria-label="Your answer" className={cls} value={text} disabled={disabled} onChange={(e) => onChange(e.target.value)} placeholder="Type the missing word" autoCapitalize="off" autoCorrect="off" />
       )}
       {device === "tablet" && !writing && !disabled && (
-        <button type="button" onClick={() => setWriting(true)} className="flex items-center gap-1 self-start text-sm font-semibold text-primary">
-          <PenLine className="size-4" /> Write it with Pencil
+        <button type="button" onClick={() => setWriting(true)} className="flex items-center gap-1.5 self-start text-sm font-semibold text-accent-ink">
+          <IconPencil size={16} /> Write it with Pencil
         </button>
       )}
     </div>
@@ -212,14 +221,14 @@ function MatchingAnswer({
               disabled={reveal}
               onClick={() => setPicked(picked === i ? null : i)}
               className={clsx(
-                "min-h-12 rounded-2xl border-2 px-3 py-2 text-left text-sm font-medium",
-                picked === i ? "border-primary bg-primary-soft" : "border-line bg-elev",
-                reveal && (ok ? "border-success bg-success-soft" : "border-danger bg-danger-soft"),
+                "min-h-14 rounded-[18px] border-2 px-3.5 py-2.5 text-left text-sm font-medium transition-all",
+                picked === i ? "border-accent bg-accent-soft" : "border-line bg-elev",
+                reveal && (ok ? "border-accent bg-accent-soft" : "border-danger bg-danger-soft"),
               )}
             >
               {p.left}
               {assigned !== undefined && <span className="mt-1 block text-xs text-muted">→ {question.data.pairs[assigned].right}</span>}
-              {reveal && !ok && <span className="mt-1 block text-xs text-success">✓ {p.right}</span>}
+              {reveal && !ok && <span className="mt-1 block text-xs font-semibold text-accent-ink">✓ {p.right}</span>}
             </button>
           );
         })}
@@ -239,9 +248,9 @@ function MatchingAnswer({
               setPicked(null);
             }}
             className={clsx(
-              "min-h-12 rounded-2xl border-2 border-dashed px-3 py-2 text-left text-sm transition",
-              usedRight.has(j) ? "border-line opacity-50" : "border-line bg-elev hover:border-primary",
-              picked !== null && !reveal && "border-primary",
+              "min-h-14 rounded-[18px] border-2 border-dashed px-3.5 py-2.5 text-left text-sm transition-all",
+              usedRight.has(j) ? "border-line opacity-45" : "border-line-strong bg-elev hover:border-accent",
+              picked !== null && !reveal && !usedRight.has(j) && "border-accent",
             )}
           >
             {question.data.pairs[j].right}
@@ -255,10 +264,12 @@ function MatchingAnswer({
 
 export function Verdict({ correct, partial }: { correct: boolean; partial?: string }) {
   return (
-    <div className={clsx("flex items-center gap-2 rounded-2xl px-4 py-3 font-bold", correct ? "bg-success-soft text-success" : "bg-danger-soft text-danger")}>
-      {correct ? <Check className="size-5" /> : <X className="size-5" />}
+    <div className={clsx("flex items-center gap-2.5 rounded-[20px] px-4 py-3.5 font-semibold", correct ? "bg-accent-soft text-accent-ink" : "bg-danger-soft text-danger")}>
+      <span className={clsx("flex size-7 items-center justify-center rounded-full", correct ? "bg-accent text-accent-fg" : "bg-danger text-white")}>
+        {correct ? <IconCheck size={16} strokeWidth={2.6} /> : <IconClose size={15} strokeWidth={2.4} />}
+      </span>
       {correct ? "Correct!" : "Not quite"}
-      {partial && <span className="font-normal">{partial}</span>}
+      {partial && <span className="font-normal text-fg-2">{partial}</span>}
     </div>
   );
 }

@@ -241,7 +241,9 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "get_shared_quiz":
+{ Args: { "code": string }; Returns: Json
+                           }
           }
           Enums: {
             [_ in never]: never

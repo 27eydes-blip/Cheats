@@ -7,7 +7,8 @@ test.describe("device-tuned layouts", () => {
     const page = await ctx.newPage();
     await signIn(page);
     await page.goto("/");
-    await expect(page.getByRole("link", { name: "Snap notes" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Snap notes" }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Snap your notes" })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Write" })).toHaveCount(0);
     await ctx.close();

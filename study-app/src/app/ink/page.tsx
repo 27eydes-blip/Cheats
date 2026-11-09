@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Write notes" };
 
 export default function InkPage() {
   return (
-    <Screen>
+    <Screen focus>
       <InkScreen />
     </Screen>
   );

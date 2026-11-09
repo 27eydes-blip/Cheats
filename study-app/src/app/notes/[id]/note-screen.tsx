@@ -1,11 +1,15 @@
 "use client";
 import clsx from "clsx";
-import { AlertCircle, ImageIcon, Loader2, RotateCcw, Sparkles, Trash2, Type } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { QuizCard } from "@/components/cards";
 import { ClassTopicPicker } from "@/components/class-topic-picker";
-import { Button } from "@/components/ui/button";
+import { IconAlert, IconCheck, IconImage, IconRetry, IconSparkle, IconSpinner, IconText, IconTrash } from "@/components/icons";
+import { ReadingLines, ScanOverlay } from "@/components/scan-overlay";
+import { Button, buttonClass, IconButton } from "@/components/ui/button";
+import { EditableTitle } from "@/components/ui/editable-title";
 import { Card, EmptyState, Spinner } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { useDevice } from "@/hooks/use-device";
@@ -52,7 +56,14 @@ export function NoteScreen() {
   }, [pages, id]);
 
   if (note.loading) return <Spinner />;
-  if (!note.data) return <EmptyState title="Notes not found" body="They may have been deleted." />;
+  if (!note.data)
+    return (
+      <EmptyState art="lost" title="Notes not found" body="They may have been deleted, or they belong to someone else.">
+        <Link href="/library" className={buttonClass("secondary")}>
+          Go to library
+        </Link>
+      </EmptyState>
+    );
   const n = note.data;
   const allRead = pages.length > 0 && pages.every((p) => p.status === "done");
   const totalUncertain = pages.reduce((s, p) => s + countUncertain(p.raw_text ?? ""), 0);
@@ -62,46 +73,50 @@ export function NoteScreen() {
     if (errs.length) toast(errs[0], "error");
   };
 
+  const stepIndex = !allRead ? 0 : totalUncertain ? 1 : 2;
+  const reading = page && (page.status === "pending" || page.status === "reading");
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <input
-            aria-label="Title"
-            defaultValue={n.title}
-            key={n.title}
-            onBlur={(e) => e.target.value.trim() && e.target.value !== n.title && updateNote(id, { title: e.target.value.trim() })}
-            className="w-full truncate bg-transparent text-2xl font-bold outline-none focus:underline"
-          />
-          <p className="text-sm text-muted">
-            {allRead
-              ? totalUncertain
-                ? `Check ${totalUncertain} highlighted word${totalUncertain === 1 ? "" : "s"}, then make your quiz.`
-                : "Looks good. Make your quiz below."
-              : "Reading your notes…"}
-          </p>
+    <div className="flex flex-col gap-7">
+      <div className="flex flex-col gap-5">
+        <Stepper index={stepIndex} />
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <EditableTitle
+              label="Title"
+              value={n.title}
+              onSave={(v) => updateNote(id, { title: v })}
+              className="text-[28px] font-semibold leading-tight tracking-[-0.035em] md:text-[40px]"
+            />
+            <p className="mt-1 text-[15px] text-muted">
+              {allRead
+                ? totalUncertain
+                  ? `Tap the ${totalUncertain} highlighted word${totalUncertain === 1 ? "" : "s"}${pages.length > 1 ? ` across ${pages.length} pages` : ""} to check them, then make your quiz.`
+                  : "Everything looks good. Make your quiz below."
+                : "Reading your notes. This usually takes a few seconds per page."}
+            </p>
+          </div>
+          <IconButton
+            label="Delete notes"
+            className="hover:!bg-danger-soft hover:!text-danger"
+            onClick={async () => {
+              if (!confirm("Delete these notes and their photos? Quizzes made from them are kept.")) return;
+              await deleteNote(id);
+              router.push("/library");
+            }}
+          >
+            <IconTrash size={18} />
+          </IconButton>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={async () => {
-            if (!confirm("Delete these notes and their photos? Quizzes made from them are kept.")) return;
-            await deleteNote(id);
-            router.push("/library");
-          }}
-        >
-          <Trash2 className="size-4" /> Delete
-        </Button>
+        <ClassTopicSummary
+          className={n.classes?.name ?? null}
+          topic={n.topics?.name ?? null}
+          picker={<ClassTopicPicker classId={n.class_id} topicId={n.topic_id} onChange={(v) => updateNote(id, { class_id: v.classId, topic_id: v.topicId }).then(note.refresh)} />}
+        />
       </div>
 
-      <ClassTopicPicker
-        classId={n.class_id}
-        topicId={n.topic_id}
-        onChange={(v) => updateNote(id, { class_id: v.classId, topic_id: v.topicId }).then(note.refresh)}
-      />
-
       {pages.length > 1 && (
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label="Pages">
+        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label="Pages">
           {pages.map((p, i) => (
             <button
               key={p.id}
@@ -109,70 +124,91 @@ export function NoteScreen() {
               aria-selected={i === pageIdx}
               onClick={() => setPageIdx(i)}
               className={clsx(
-                "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition",
-                i === pageIdx ? "border-primary bg-primary text-primary-fg" : "border-line bg-elev",
+                "relative flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+                i === pageIdx ? "text-accent-fg" : "text-muted hover:text-fg",
               )}
             >
-              {p.status === "reading" || p.status === "pending" ? <Loader2 className="size-3.5 animate-spin" /> : p.status === "error" ? <AlertCircle className="size-3.5" /> : null}
-              Page {i + 1}
-              {countUncertain(p.raw_text ?? "") > 0 && <span className="size-2 rounded-full bg-accent" />}
+              {i === pageIdx && <motion.span layoutId="page-tab" className="absolute inset-0 rounded-full bg-accent" transition={{ type: "spring", stiffness: 500, damping: 36 }} />}
+              <span className="relative flex items-center gap-1.5">
+                {p.status === "reading" || p.status === "pending" ? <IconSpinner size={14} /> : p.status === "error" ? <IconAlert size={14} /> : null}
+                Page {i + 1}
+                {countUncertain(p.raw_text ?? "") > 0 && <span className="size-1.5 rounded-full bg-warn" />}
+              </span>
             </button>
           ))}
         </div>
       )}
 
-      {device === "phone" && page?.image_path && (
-        <div className="flex rounded-2xl bg-elev p-1" role="tablist">
+      {device === "phone" && page?.image_path && !reading && (
+        <div className="flex rounded-full border border-line bg-elev p-1" role="tablist">
           {(["text", "photo"] as const).map((v) => (
             <button
               key={v}
               role="tab"
               aria-selected={view === v}
               onClick={() => setView(v)}
-              className={clsx("flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-semibold", view === v ? "bg-primary text-primary-fg" : "text-muted")}
+              className={clsx("relative flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-sm font-semibold transition-colors", view === v ? "text-fg" : "text-muted")}
             >
-              {v === "text" ? <Type className="size-4" /> : <ImageIcon className="size-4" />}
-              {v === "text" ? "Text" : "Photo"}
+              {view === v && <motion.span layoutId="view-toggle" className="absolute inset-0 rounded-full bg-elev-2" />}
+              <span className="relative flex items-center gap-1.5">
+                {v === "text" ? <IconText size={17} /> : <IconImage size={17} />}
+                {v === "text" ? "Text" : "Photo"}
+              </span>
             </button>
           ))}
         </div>
       )}
 
       {page && (
-        <div className={clsx("grid gap-4", page.image_path && device !== "phone" && "md:grid-cols-2")}>
-          {page.image_path && (device !== "phone" || view === "photo") && (
-            <Card className="overflow-hidden p-2 md:sticky md:top-4 md:self-start">
+        <div className={clsx("grid gap-5", page.image_path && device !== "phone" && "md:grid-cols-2")}>
+          {page.image_path && (device !== "phone" || view === "photo" || reading) && (
+            <div className="relative overflow-hidden rounded-[28px] border border-line bg-elev-2 shadow-soft md:sticky md:top-6 md:self-start">
               {urls[page.image_path] ? (
-                <a href={urls[page.image_path]} target="_blank" rel="noreferrer">
+                <a href={urls[page.image_path]} target="_blank" rel="noreferrer" className="block">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={urls[page.image_path]} alt={`Page ${page.page_index + 1}`} className="max-h-[80vh] w-full rounded-2xl object-contain" />
+                  <img src={urls[page.image_path]} alt={`Page ${page.page_index + 1}`} className="max-h-[78vh] w-full object-contain" />
                 </a>
               ) : (
-                <div className="flex aspect-[3/4] items-center justify-center">
-                  <Spinner />
-                </div>
+                <div className="skeleton aspect-[3/4]" />
               )}
-            </Card>
+              {reading && <ScanOverlay seed={page.page_index + 1} />}
+            </div>
           )}
-          {(device !== "phone" || view === "text" || !page.image_path) && (
-            <Card className="p-4">
+          {(device !== "phone" || view === "text" || !page.image_path) && !(device === "phone" && reading && page.image_path) && (
+            <Card className="p-5 md:p-6">
               {page.status === "done" ? (
                 <PageText key={page.id} page={page} classId={n.class_id} />
               ) : page.status === "error" ? (
-                <div className="flex flex-col items-start gap-3">
-                  <p className="flex items-center gap-2 text-danger">
-                    <AlertCircle className="size-5" /> {page.error ?? "Couldn't read this page."}
-                  </p>
+                <div className="flex flex-col items-start gap-4 py-4">
+                  <span className="flex size-11 items-center justify-center rounded-2xl bg-danger-soft text-danger">
+                    <IconAlert size={22} />
+                  </span>
+                  <div>
+                    <p className="font-semibold">We couldn&apos;t read this page</p>
+                    <p className="text-sm text-muted">{page.error ?? "Something went wrong."}</p>
+                  </div>
                   <Button onClick={() => retry(page.page_index)}>
-                    <RotateCcw className="size-4" /> Try again
+                    <IconRetry size={17} /> Try again
+                  </Button>
+                </div>
+              ) : now > 0 && now - new Date(page.updated_at).getTime() > STUCK_MS && !isReading(id, page.page_index) ? (
+                <div className="flex flex-col items-start gap-4 py-4">
+                  <p className="text-muted">This page is taking longer than usual.</p>
+                  <Button onClick={() => retry(page.page_index)}>
+                    <IconRetry size={17} /> Read again
                   </Button>
                 </div>
               ) : (
-                <ReadingSkeleton stuck={now > 0 && now - new Date(page.updated_at).getTime() > STUCK_MS && !isReading(id, page.page_index)} onRetry={() => retry(page.page_index)} />
+                <div className="flex flex-col gap-5" aria-live="polite">
+                  <p className="flex items-center gap-2 text-sm font-semibold text-accent-ink">
+                    <IconSparkle size={18} /> Reading page {page.page_index + 1}…
+                  </p>
+                  <ReadingLines />
+                </div>
               )}
               {page.status === "done" && (
-                <button type="button" onClick={() => retry(page.page_index)} className="mt-3 flex items-center gap-1 text-xs font-semibold text-muted hover:text-primary">
-                  <RotateCcw className="size-3.5" /> Read this page again
+                <button type="button" onClick={() => retry(page.page_index)} className="mt-5 flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-fg">
+                  <IconRetry size={14} /> Read this page again
                 </button>
               )}
             </Card>
@@ -180,12 +216,12 @@ export function NoteScreen() {
         </div>
       )}
 
-      {allRead && <MakeQuiz noteId={id} onMade={(qid) => router.push(`/quizzes/${qid}`)} />}
+      <AnimatePresence>{allRead && <MakeQuiz noteId={id} onMade={(qid) => router.push(`/quizzes/${qid}`)} />}</AnimatePresence>
 
       {!!quizzes.data?.length && (
         <section>
-          <h2 className="mb-3 font-bold">Quizzes from these notes</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <h2 className="mb-4 text-lg font-semibold tracking-[-0.02em]">Quizzes from these notes</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {quizzes.data.map((q) => (
               <QuizCard key={q.id} quiz={q} />
             ))}
@@ -196,26 +232,51 @@ export function NoteScreen() {
   );
 }
 
-function ReadingSkeleton({ stuck, onRetry }: { stuck: boolean; onRetry: () => void }) {
-  if (stuck) {
-    return (
-      <div className="flex flex-col items-start gap-3">
-        <p className="text-muted">This page is taking longer than usual.</p>
-        <Button onClick={onRetry}>
-          <RotateCcw className="size-4" /> Read again
-        </Button>
-      </div>
-    );
-  }
+/** "AP Biology · Cells  Change" line that expands into the full picker. */
+function ClassTopicSummary({ className, topic, picker }: { className: string | null; topic: string | null; picker: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="flex flex-col gap-3" aria-live="polite">
-      <p className="flex items-center gap-2 font-semibold">
-        <Sparkles className="size-5 animate-pulse text-primary" /> Reading your handwriting…
-      </p>
-      {[90, 75, 85, 60, 80].map((w, i) => (
-        <div key={i} className="h-4 animate-pulse rounded-full bg-primary-soft" style={{ width: `${w}%`, animationDelay: `${i * 120}ms` }} />
-      ))}
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-elev px-3 py-1.5 font-medium text-fg-2">
+          <span className="size-1.5 rounded-full bg-accent" />
+          {className ?? "No class"}
+          {topic && <span className="text-muted">· {topic}</span>}
+        </span>
+        <button type="button" onClick={() => setOpen((o) => !o)} className="font-semibold text-accent-ink" aria-expanded={open}>
+          {open ? "Done" : className ? "Change" : "Add class"}
+        </button>
+      </div>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            {picker}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function Stepper({ index }: { index: number }) {
+  const steps = ["Read", "Check", "Quiz"];
+  return (
+    <ol className="flex items-center gap-2 text-[13px] font-semibold" aria-label="Progress">
+      {steps.map((s, i) => (
+        <li key={s} className="flex items-center gap-2">
+          <span
+            className={clsx(
+              "flex size-6 items-center justify-center rounded-full text-[11px] transition-colors",
+              i < index ? "bg-accent text-accent-fg" : i === index ? "border-2 border-accent text-accent-ink" : "border border-line-strong text-faint",
+            )}
+          >
+            {i < index ? <IconCheck size={13} strokeWidth={3} /> : i + 1}
+          </span>
+          <span className={i <= index ? "text-fg" : "text-faint"}>{s}</span>
+          {i < steps.length - 1 && <span className={clsx("h-px w-6 md:w-10", i < index ? "bg-accent" : "bg-line-strong")} />}
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -239,39 +300,52 @@ function MakeQuiz({ noteId, onMade }: { noteId: string; onMade: (id: string) => 
   };
 
   return (
-    <Card className="flex flex-col gap-4 p-5">
-      <h2 className="text-lg font-bold">Make a quiz</h2>
-      <div className="flex flex-wrap gap-2">
-        {QUESTION_TYPES.map((t) => (
-          <button
-            key={t}
-            type="button"
-            aria-pressed={types.includes(t)}
-            onClick={() => toggle(t)}
-            className={clsx(
-              "rounded-full border px-3 py-1.5 text-sm font-semibold transition",
-              types.includes(t) ? "border-primary bg-primary-soft text-primary" : "border-line text-muted",
-            )}
-          >
-            {QUESTION_TYPE_LABELS[t]}
-          </button>
-        ))}
-      </div>
-      <label className="flex items-center gap-3 text-sm font-medium">
-        Questions
-        <input type="range" min={5} max={40} value={count} onChange={(e) => setCount(Number(e.target.value))} className="flex-1 accent-[var(--primary)]" aria-label="Number of questions" />
-        <span className="w-8 text-right font-bold">{count}</span>
-      </label>
-      <input
-        className="h-11 rounded-xl border border-line bg-bg px-3 text-[15px]"
-        placeholder="Anything to focus on? (optional)"
-        value={instructions}
-        onChange={(e) => setInstructions(e.target.value)}
-        maxLength={500}
-      />
-      <Button size="lg" onClick={make} loading={busy}>
-        <Sparkles className="size-5" /> {busy ? "Writing your questions…" : "Make quiz"}
-      </Button>
-    </Card>
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 260, damping: 26 }}>
+      <Card className="relative flex flex-col gap-6 overflow-hidden p-6 md:p-8">
+        <div className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full bg-accent opacity-15 blur-3xl" />
+        <div className="relative">
+          <h2 className="text-2xl font-semibold tracking-[-0.03em]">Make your quiz</h2>
+          <p className="mt-1 text-[15px] text-muted">Pick the question types you want. We&apos;ll mix them up.</p>
+        </div>
+        <div className="relative flex flex-wrap gap-2">
+          {QUESTION_TYPES.map((t) => {
+            const on = types.includes(t);
+            return (
+              <motion.button
+                key={t}
+                type="button"
+                whileTap={{ scale: 0.94 }}
+                aria-pressed={on}
+                onClick={() => toggle(t)}
+                className={clsx(
+                  "flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
+                  on ? "border-accent bg-accent-soft text-fg" : "border-line text-muted hover:border-line-strong hover:text-fg",
+                )}
+              >
+                <span className={clsx("flex size-4 items-center justify-center rounded-full transition", on ? "bg-accent text-accent-fg" : "border border-line-strong")}>
+                  {on && <IconCheck size={11} strokeWidth={3.2} />}
+                </span>
+                {QUESTION_TYPE_LABELS[t]}
+              </motion.button>
+            );
+          })}
+        </div>
+        <label className="relative flex items-center gap-4 text-sm font-medium">
+          <span className="w-20 shrink-0 text-muted">Questions</span>
+          <input type="range" min={5} max={40} value={count} onChange={(e) => setCount(Number(e.target.value))} className="flex-1" aria-label="Number of questions" />
+          <span className="w-10 text-right text-lg font-semibold tabular-nums">{count}</span>
+        </label>
+        <input
+          className="relative h-12 rounded-2xl border border-line bg-bg px-4 text-[15px] outline-none transition placeholder:text-faint focus:border-accent"
+          placeholder="Anything to focus on? (optional)"
+          value={instructions}
+          onChange={(e) => setInstructions(e.target.value)}
+          maxLength={500}
+        />
+        <Button size="lg" onClick={make} loading={busy} className="relative">
+          {!busy && <IconSparkle size={20} />} {busy ? "Writing your questions…" : "Make quiz"}
+        </Button>
+      </Card>
+    </motion.div>
   );
 }

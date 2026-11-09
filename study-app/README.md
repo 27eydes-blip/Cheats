@@ -16,17 +16,25 @@ Snap your notes, get a quiz in seconds. Students photograph handwritten or print
 | Focus marks | Pink highlighter on a photo or Pencil page, or select text in review: "Quiz me harder on this". Those passages get more and harder questions. |
 | Quiz generation | Concepts, definitions, dates, formulas and vocabulary, then multiple choice, flashcards, fill in the blank, true/false, short answer and matching. Every question stores the page and exact quote it came from. Edit, delete, regenerate (or switch type). |
 | Studying | Practice with instant feedback and the source passage, swipeable flashcards, timed practice test. Pencil answers on iPad. |
-| Devices | Phone opens to a big camera button; iPad gets Pencil writing; laptop gets the full dashboard and library. Installable PWA, dark and light mode. |
+| Devices | Phone opens to a big camera button; iPad gets Pencil writing; laptop gets the full dashboard and library. Runs in the browser at a normal link (no install). Dark mode first, plus light mode. |
+| Sharing | Share any quiz by link or code. Friends open `/q/CODE` and play without an account. Link previews (iMessage, Snapchat, WhatsApp) show a card with the title, class and question count. |
 | Sync | Supabase Realtime: changes on one device show up on the others instantly. |
 
-**Stage 2 (next):** smart review with spaced repetition, AI tutor, sharing and group-chat links with preview cards, no-sign-up quiz taking, quiz requests, study groups, live games, streaks/points/badges, test countdown plan. The schema already has hooks for these (`quiz_sets.share_code`, `visibility`, anonymous sign-in enabled).
+**Stage 2 (next):** smart review with spaced repetition, AI tutor, saving guest scores after sign-up, quiz requests, study groups, live games, daily streaks/points/badges, test countdown plan.
 
 ## Stack and why
 
-- **Next.js 16 (App Router, TypeScript)**: one responsive PWA for phone, iPad and laptop; server routes keep AI keys off the device.
+- **Next.js 16 (App Router, TypeScript)**: one responsive website for phone, iPad and laptop; server routes keep AI keys off the device.
 - **Supabase**: Postgres with row-level security (each student can only touch their own rows and image folder), Google/Apple auth, Realtime for cross-device sync and later live games, private storage for page photos.
 - **Claude (Anthropic API)**: vision model that reads words in context; structured JSON output for reliable quizzes.
-- **Tailwind CSS 4 + Framer Motion**: fast, themeable UI with smooth animations.
+- **Tailwind CSS 4 + Framer Motion**: fast, themeable UI with smooth animations (all respect the system reduce-motion setting).
+
+## Design system
+
+- **Look:** dark first, one accent (electric lime `#C4F82A`) on neutral grays, Geist type. All colors are tokens in `src/app/globals.css`; light and dark are defined side by side.
+- **Icons:** our own set in `src/components/icons.tsx` (24px, 1.8px rounded stroke, soft duotone fill). Empty-state illustrations are in `src/components/ui/illustrations.tsx`.
+- **Motion:** springy buttons, page transitions (React `<ViewTransition>`), 3D flip + physics swipe flashcards, a scanning animation while notes are read, confetti on wins (`src/lib/celebrate.ts`).
+- **Visual QA:** `node scripts/screenshots.mjs <outDir>` seeds a demo account and screenshots every main screen on phone, iPad and laptop in both themes, plus side-by-side contact sheets.
 
 ## Project layout
 
@@ -71,7 +79,7 @@ For offline development without an AI key set `AI_PROVIDER=mock` and `NEXT_PUBLI
 ```bash
 npm test                  # unit: image cleanup, handwriting learning, grading, quiz schemas, Claude request shape (36 tests)
 npm run test:integration  # row-level security against local Supabase (7 tests)
-npm run build && npm run test:e2e   # Playwright: full capture → read → fix → quiz → study flow, sync, phone/iPad layouts (6 tests)
+npm run build && npm run test:e2e   # Playwright: full capture → read → fix → quiz → study flow, sharing, sync, phone/iPad layouts (7 tests)
 ```
 
 ## Going live (checklist)

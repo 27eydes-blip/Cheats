@@ -1,13 +1,16 @@
 "use client";
 import clsx from "clsx";
-import { FolderPlus, Plus, Trash2 } from "lucide-react";
+import { motion } from "framer-motion";
+import Link from "next/link";
 import { useState } from "react";
 import { NoteCard, QuizCard } from "@/components/cards";
-import { Button } from "@/components/ui/button";
-import { Card, EmptyState, Spinner } from "@/components/ui/card";
+import { IconCamera, IconFolderPlus, IconGrid, IconPlus, IconTrash } from "@/components/icons";
+import { PageHeader } from "@/components/screen";
+import { Button, buttonClass, IconButton } from "@/components/ui/button";
+import { EmptyState, Spinner } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { useLive } from "@/hooks/use-live";
-import { COLOR_SWATCH, createClass, createTopic, deleteClass, deleteTopic, listClasses, listNotes, listQuizSets } from "@/lib/data";
+import { createClass, createTopic, deleteClass, deleteTopic, listClasses, listNotes, listQuizSets } from "@/lib/data";
 
 /** Organize classes and topics; browse every note and quiz. */
 export function LibraryScreen() {
@@ -33,116 +36,147 @@ export function LibraryScreen() {
     }
   };
 
+  const chip = (active: boolean) =>
+    clsx(
+      "relative flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+      active ? "text-accent-fg" : "border border-line text-fg-2 hover:border-line-strong hover:text-fg",
+    );
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
-      <aside className="flex flex-col gap-3">
-        <h1 className="text-2xl font-bold">Library</h1>
-        <Card className="flex flex-col gap-1 p-2">
-          <button
-            type="button"
-            onClick={() => (setClassId(null), setTopicId(null))}
-            className={clsx("rounded-xl px-3 py-2 text-left font-medium", !classId ? "bg-primary-soft text-primary" : "hover:bg-primary-soft")}
-          >
-            Everything
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        eyebrow="Library"
+        title={current ? current.name : "Everything"}
+        subtitle="All your classes, notes and quizzes in one place."
+        actions={
+          <Link href="/capture" className={buttonClass("primary")}>
+            <IconCamera size={18} /> Add notes
+          </Link>
+        }
+      />
+
+      {/* Classes */}
+      <div className="flex flex-col gap-3">
+        <div className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:px-0">
+          <button type="button" onClick={() => (setClassId(null), setTopicId(null))} className={chip(!classId)}>
+            {!classId && <motion.span layoutId="class-pill" className="absolute inset-0 rounded-full bg-accent" />}
+            <span className="relative flex items-center gap-2">
+              <IconGrid size={16} /> All
+            </span>
           </button>
           {classes.data?.map((c) => (
-            <div key={c.id}>
-              <div className="group flex items-center">
-                <button
-                  type="button"
-                  onClick={() => (setClassId(c.id), setTopicId(null))}
-                  className={clsx("flex flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left font-medium", classId === c.id && !topicId ? "bg-primary-soft text-primary" : "hover:bg-primary-soft")}
-                >
-                  <span className="size-2.5 rounded-full" style={{ background: COLOR_SWATCH[c.color] }} />
-                  {c.name}
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Delete ${c.name}`}
-                  onClick={() => confirm(`Delete the class "${c.name}"? Notes and quizzes are kept.`) && run(() => deleteClass(c.id).then(() => setClassId(null)))}
-                  className="rounded-lg p-1.5 opacity-0 hover:bg-danger-soft group-hover:opacity-100"
-                >
-                  <Trash2 className="size-4" />
-                </button>
-              </div>
-              {classId === c.id &&
-                c.topics.map((t) => (
-                  <div key={t.id} className="group ml-6 flex items-center">
-                    <button
-                      type="button"
-                      onClick={() => setTopicId(t.id)}
-                      className={clsx("flex-1 rounded-xl px-3 py-1.5 text-left text-sm", topicId === t.id ? "bg-primary-soft font-semibold text-primary" : "hover:bg-primary-soft")}
-                    >
-                      {t.name}
-                    </button>
-                    <button type="button" aria-label={`Delete ${t.name}`} onClick={() => run(() => deleteTopic(t.id).then(() => setTopicId(null)))} className="rounded-lg p-1 opacity-0 hover:bg-danger-soft group-hover:opacity-100">
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </div>
-                ))}
-            </div>
-          ))}
-        </Card>
-        <form
-          className="flex gap-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (newClass.trim()) run(() => createClass(newClass).then((c) => (setNewClass(""), setClassId(c.id))));
-          }}
-        >
-          <input className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-elev px-3 text-sm" placeholder="New class" value={newClass} onChange={(e) => setNewClass(e.target.value)} />
-          <Button size="sm" type="submit" variant="secondary" aria-label="Add class">
-            <FolderPlus className="size-4" />
-          </Button>
-        </form>
-        {current && (
-          <form
-            className="flex gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (newTopic.trim()) run(() => createTopic(current.id, newTopic).then(() => setNewTopic("")));
-            }}
-          >
-            <input className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-elev px-3 text-sm" placeholder={`New topic in ${current.name}`} value={newTopic} onChange={(e) => setNewTopic(e.target.value)} />
-            <Button size="sm" type="submit" variant="secondary" aria-label="Add topic">
-              <Plus className="size-4" />
-            </Button>
-          </form>
-        )}
-      </aside>
-
-      <section className="flex flex-col gap-4">
-        <div className="flex rounded-2xl bg-elev p-1 sm:self-start" role="tablist">
-          {(["quizzes", "notes"] as const).map((t) => (
-            <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={clsx("flex-1 rounded-xl px-5 py-2 text-sm font-semibold capitalize", tab === t ? "bg-primary text-primary-fg" : "text-muted")}>
-              {t}
+            <button key={c.id} type="button" onClick={() => (setClassId(c.id), setTopicId(null))} className={chip(classId === c.id)}>
+              {classId === c.id && <motion.span layoutId="class-pill" className="absolute inset-0 rounded-full bg-accent" />}
+              <span className="relative">{c.name}</span>
             </button>
           ))}
+          <form
+            className="flex shrink-0 items-center rounded-full border border-dashed border-line-strong pl-4 pr-1 focus-within:border-accent"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (newClass.trim()) run(() => createClass(newClass).then((c) => (setNewClass(""), setClassId(c.id))));
+            }}
+          >
+            <input className="h-9 w-28 bg-transparent text-sm outline-none placeholder:text-faint md:w-32" placeholder="New class" value={newClass} onChange={(e) => setNewClass(e.target.value)} />
+            <IconButton label="Add class" type="submit" className="size-8">
+              <IconFolderPlus size={17} />
+            </IconButton>
+          </form>
         </div>
-        {tab === "quizzes" ? (
-          quizzes.loading ? (
-            <Spinner />
-          ) : shownQuizzes.length ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {shownQuizzes.map((q) => (
-                <QuizCard key={q.id} quiz={q} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState title="No quizzes here yet" body="Add notes to this class and make a quiz from them." />
-          )
-        ) : notes.loading ? (
+
+        {current && (
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-center gap-2 rounded-[24px] border border-line bg-elev/60 p-2">
+            <span className="px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Topics</span>
+            <button
+              type="button"
+              onClick={() => setTopicId(null)}
+              className={clsx("rounded-full px-3 py-1.5 text-sm font-medium", !topicId ? "bg-elev-2 text-fg" : "text-muted hover:text-fg")}
+            >
+              All
+            </button>
+            {current.topics.map((t) => (
+              <span key={t.id} className={clsx("group flex items-center rounded-full", topicId === t.id ? "bg-elev-2" : "")}>
+                <button type="button" onClick={() => setTopicId(t.id)} className={clsx("py-1.5 pl-3 text-sm font-medium", topicId === t.id ? "text-fg" : "text-muted hover:text-fg")}>
+                  {t.name}
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Delete ${t.name}`}
+                  onClick={() => run(() => deleteTopic(t.id).then(() => setTopicId(null)))}
+                  className="ml-1 mr-1 rounded-full p-1 text-faint opacity-0 transition hover:text-danger group-hover:opacity-100"
+                >
+                  <IconTrash size={13} />
+                </button>
+              </span>
+            ))}
+            <form
+              className="flex items-center"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (newTopic.trim()) run(() => createTopic(current.id, newTopic).then(() => setNewTopic("")));
+              }}
+            >
+              <input className="h-8 w-32 bg-transparent px-2 text-sm outline-none placeholder:text-faint" placeholder="+ New topic" value={newTopic} onChange={(e) => setNewTopic(e.target.value)} aria-label="New topic" />
+              {newTopic && (
+                <IconButton label="Add topic" type="submit" className="size-8">
+                  <IconPlus size={16} />
+                </IconButton>
+              )}
+            </form>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto !text-muted hover:!text-danger"
+              onClick={() => confirm(`Delete the class "${current.name}"? Notes and quizzes are kept.`) && run(() => deleteClass(current.id).then(() => setClassId(null)))}
+            >
+              <IconTrash size={15} /> Delete class
+            </Button>
+          </motion.div>
+        )}
+      </div>
+
+      <div className="flex w-full rounded-full border border-line bg-elev p-1 sm:w-fit" role="tablist">
+        {(["quizzes", "notes"] as const).map((t) => (
+          <button
+            key={t}
+            role="tab"
+            aria-selected={tab === t}
+            onClick={() => setTab(t)}
+            className={clsx("relative flex-1 rounded-full px-6 py-2 text-sm font-semibold capitalize transition-colors", tab === t ? "text-fg" : "text-muted")}
+          >
+            {tab === t && <motion.span layoutId="lib-tab" className="absolute inset-0 rounded-full bg-elev-2" />}
+            <span className="relative">{t}</span>
+          </button>
+        ))}
+      </div>
+
+      {tab === "quizzes" ? (
+        quizzes.loading ? (
           <Spinner />
-        ) : notes.data?.length ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            {notes.data.map((n) => (
-              <NoteCard key={n.id} note={n} />
+        ) : shownQuizzes.length ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {shownQuizzes.map((q) => (
+              <QuizCard key={q.id} quiz={q} />
             ))}
           </div>
         ) : (
-          <EmptyState title="No notes here yet" />
-        )}
-      </section>
+          <EmptyState art="quiz" title="No quizzes here yet" body="Add notes to this class and we'll write the questions for you.">
+            <Link href="/capture" className={buttonClass("primary")}>
+              <IconCamera size={18} /> Add notes
+            </Link>
+          </EmptyState>
+        )
+      ) : notes.loading ? (
+        <Spinner />
+      ) : notes.data?.length ? (
+        <div className="-mx-2.5 grid gap-1 md:grid-cols-2">
+          {notes.data.map((n) => (
+            <NoteCard key={n.id} note={n} />
+          ))}
+        </div>
+      ) : (
+        <EmptyState art="library" title="Your shelf is empty" body="Snap a page of notes and it'll be filed here, ready to study." />
+      )}
     </div>
   );
 }

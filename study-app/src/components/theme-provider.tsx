@@ -2,7 +2,7 @@
 import { createContext, useCallback, useContext, useSyncExternalStore, type ReactNode } from "react";
 
 type Theme = "light" | "dark";
-const Ctx = createContext<{ theme: Theme; toggle: () => void }>({ theme: "light", toggle: () => {} });
+const Ctx = createContext<{ theme: Theme; toggle: () => void }>({ theme: "dark", toggle: () => {} });
 
 function read(): Theme {
   return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
@@ -14,7 +14,7 @@ function subscribe(cb: () => void) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const theme = useSyncExternalStore(subscribe, read, () => "light" as Theme);
+  const theme = useSyncExternalStore(subscribe, read, () => "dark" as Theme);
   const toggle = useCallback(() => {
     const next = read() === "dark" ? "light" : "dark";
     document.documentElement.dataset.theme = next;

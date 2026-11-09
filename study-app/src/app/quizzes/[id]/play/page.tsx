@@ -6,7 +6,7 @@ export const metadata: Metadata = { title: "Study" };
 
 export default function PlayPage() {
   return (
-    <Screen>
+    <Screen focus>
       <Player />
     </Screen>
   );

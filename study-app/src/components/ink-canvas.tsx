@@ -1,6 +1,6 @@
 "use client";
 import clsx from "clsx";
-import { Eraser, Highlighter, PenLine, Redo2, Trash2, Undo2 } from "lucide-react";
+import { IconEraser, IconHighlighter, IconPencil, IconRedo, IconTrash, IconUndo } from "./icons";
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 
 /**
@@ -250,8 +250,8 @@ export const InkCanvas = forwardRef<InkCanvasHandle, Props>(function InkCanvas(
         aria-pressed={tool === t}
         onClick={() => setTool(t)}
         className={clsx(
-          "flex size-10 items-center justify-center rounded-xl transition",
-          tool === t ? "bg-primary text-primary-fg" : "hover:bg-primary-soft",
+          "flex size-10 items-center justify-center rounded-full transition active:scale-90",
+          tool === t ? "bg-accent text-accent-fg" : "text-fg-2 hover:bg-elev-2",
         )}
       >
         {icon}
@@ -260,10 +260,10 @@ export const InkCanvas = forwardRef<InkCanvasHandle, Props>(function InkCanvas(
 
   return (
     <div className={clsx("flex flex-col gap-2", className)}>
-      <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-line bg-elev p-1.5">
-        {toolBtn("pen", <PenLine className="size-5" />, "Pen")}
-        {toolBtn("focus", <Highlighter className="size-5" style={{ color: tool === "focus" ? undefined : FOCUS_COLOR }} />, "Focus highlighter: quiz me harder on this")}
-        {toolBtn("eraser", <Eraser className="size-5" />, "Eraser")}
+      <div className="sticky top-16 z-10 flex flex-wrap items-center gap-1 rounded-full border border-line bg-elev/90 p-1.5 shadow-soft backdrop-blur lg:top-4">
+        {toolBtn("pen", <IconPencil />, "Pen")}
+        {toolBtn("focus", <IconHighlighter style={{ color: tool === "focus" ? undefined : FOCUS_COLOR }} />, "Focus highlighter: quiz me harder on this")}
+        {toolBtn("eraser", <IconEraser />, "Eraser")}
         {tools.includes("pen") && tool === "pen" && (
           <div className="ml-1 flex items-center gap-1">
             {PEN_COLORS.map((c) => (
@@ -272,18 +272,18 @@ export const InkCanvas = forwardRef<InkCanvasHandle, Props>(function InkCanvas(
                 type="button"
                 aria-label={`Ink color ${c}`}
                 onClick={() => setColor(c)}
-                className={clsx("size-7 rounded-full border-2", color === c ? "border-primary" : "border-transparent")}
+                className={clsx("size-7 rounded-full border-2 ring-offset-2 ring-offset-elev transition", color === c ? "border-white ring-2 ring-accent" : "border-transparent")}
                 style={{ background: c }}
               />
             ))}
           </div>
         )}
         <div className="ml-auto flex items-center gap-1">
-          <button type="button" aria-label="Undo" onClick={undo} disabled={!strokes.current.length} className="flex size-10 items-center justify-center rounded-xl hover:bg-primary-soft disabled:opacity-40">
-            <Undo2 className="size-5" />
+          <button type="button" aria-label="Undo" onClick={undo} disabled={!strokes.current.length} className="flex size-10 items-center justify-center rounded-full text-fg-2 hover:bg-elev-2 disabled:opacity-35">
+            <IconUndo />
           </button>
-          <button type="button" aria-label="Redo" onClick={doRedo} disabled={!redo.current.length} className="flex size-10 items-center justify-center rounded-xl hover:bg-primary-soft disabled:opacity-40">
-            <Redo2 className="size-5" />
+          <button type="button" aria-label="Redo" onClick={doRedo} disabled={!redo.current.length} className="flex size-10 items-center justify-center rounded-full text-fg-2 hover:bg-elev-2 disabled:opacity-35">
+            <IconRedo />
           </button>
           <button
             type="button"
@@ -294,16 +294,16 @@ export const InkCanvas = forwardRef<InkCanvasHandle, Props>(function InkCanvas(
               onChange?.();
               force((n) => n + 1);
             }}
-            className="flex size-10 items-center justify-center rounded-xl hover:bg-danger-soft"
+            className="flex size-10 items-center justify-center rounded-full text-fg-2 hover:bg-danger-soft hover:text-danger"
           >
-            <Trash2 className="size-5" />
+            <IconTrash />
           </button>
         </div>
       </div>
       <canvas
         ref={canvasRef}
         data-testid="ink-canvas"
-        className="ink-surface w-full rounded-2xl border border-line bg-white shadow-card"
+        className="ink-surface w-full rounded-[24px] border border-line bg-white shadow-lift"
         style={{ aspectRatio: `${width} / ${height}`, cursor: tool === "eraser" ? "cell" : "crosshair" }}
         onPointerDown={onDown}
         onPointerMove={onMove}

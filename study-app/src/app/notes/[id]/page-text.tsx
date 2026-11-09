@@ -1,7 +1,7 @@
 "use client";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronRight, Pencil, Target, X } from "lucide-react";
+import { IconCheck, IconChevronRight, IconClose, IconEdit, IconTarget } from "@/components/icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
@@ -120,11 +120,11 @@ export function PageText({ page, classId }: { page: NotePageRow; classId: string
           aria-label="Edit text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="min-h-[50vh] w-full rounded-2xl border border-line bg-bg p-4 font-mono text-sm leading-relaxed"
+          className="min-h-[50vh] w-full rounded-2xl border border-line bg-bg p-5 font-mono text-[13px] leading-relaxed outline-none focus:border-accent"
         />
         <div className="flex gap-2">
           <Button onClick={saveEdit}>
-            <Check className="size-4" /> Save
+            <IconCheck size={16} /> Save
           </Button>
           <Button variant="ghost" onClick={() => setEditing(false)}>
             Cancel
@@ -141,29 +141,39 @@ export function PageText({ page, classId }: { page: NotePageRow; classId: string
       <div className="flex flex-wrap items-center gap-2">
         {uncertain.length > 0 ? (
           <>
-            <button
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.95 }}
               onClick={() => setOpen(uncertain[0])}
-              className="inline-flex items-center gap-1 rounded-full bg-uncertain px-3 py-1 text-sm font-semibold text-uncertain-fg"
+              className="inline-flex items-center gap-1.5 rounded-full bg-warn-soft py-1.5 pl-3 pr-2 text-sm font-semibold text-warn"
             >
-              {uncertain.length} word{uncertain.length === 1 ? "" : "s"} to check <ChevronRight className="size-4" />
-            </button>
+              <span className="size-1.5 animate-pulse rounded-full bg-warn" />
+              {uncertain.length} word{uncertain.length === 1 ? "" : "s"} to check <IconChevronRight size={16} />
+            </motion.button>
             <Button size="sm" variant="ghost" onClick={acceptAll}>
               All look right
             </Button>
           </>
         ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-3 py-1 text-sm font-semibold text-success">
-            <Check className="size-4" /> All words checked
-          </span>
+          <motion.span
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 500, damping: 20 }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft py-1.5 pl-2 pr-3 text-sm font-semibold text-accent-ink"
+          >
+            <span className="flex size-5 items-center justify-center rounded-full bg-accent text-accent-fg">
+              <IconCheck size={13} strokeWidth={3} />
+            </span>
+            All words checked
+          </motion.span>
         )}
         <Button size="sm" variant="ghost" onClick={startEdit} className="ml-auto">
-          <Pencil className="size-4" /> Edit text
+          <IconEdit size={16} /> Edit text
         </Button>
       </div>
 
       <div ref={box} className="relative" onMouseUp={onSelect} onTouchEnd={() => setTimeout(onSelect, 50)}>
-        <div data-testid="page-text" className="whitespace-pre-wrap break-words rounded-2xl border border-line bg-bg p-4 text-[15px] leading-relaxed">
+        <div data-testid="page-text" className="whitespace-pre-wrap break-words rounded-[20px] bg-bg p-5 text-[15.5px] leading-[1.75] text-fg-2 md:text-base">
           {segments.map((s, i) =>
             s.kind === "text" ? (
               <span key={i}>{s.text}</span>
@@ -174,8 +184,8 @@ export function PageText({ page, classId }: { page: NotePageRow; classId: string
                 data-uncertain
                 onClick={() => setOpen(open === i ? null : i)}
                 className={clsx(
-                  "rounded-md px-1 font-medium text-uncertain-fg underline decoration-dotted underline-offset-4 transition",
-                  open === i ? "bg-accent text-white" : "bg-uncertain",
+                  "rounded-md px-1 py-0.5 font-semibold underline decoration-dotted decoration-2 underline-offset-4 transition-all",
+                  open === i ? "bg-accent text-accent-fg no-underline shadow-glow" : "bg-warn-soft text-warn hover:brightness-110",
                 )}
               >
                 {s.guess}
@@ -193,10 +203,10 @@ export function PageText({ page, classId }: { page: NotePageRow; classId: string
               setSelection(null);
               window.getSelection()?.removeAllRanges();
             }}
-            className="absolute z-10 -translate-x-1/2 -translate-y-full rounded-full bg-[#ff00d4] px-3 py-1.5 text-xs font-bold text-white shadow-card"
+            className="absolute z-10 flex -translate-x-1/2 -translate-y-full items-center whitespace-nowrap rounded-full bg-fg px-3.5 py-2 text-xs font-bold text-bg shadow-lift"
             style={{ left: selection.x, top: selection.y - 6 }}
           >
-            <Target className="mr-1 inline size-3.5" /> Quiz me harder on this
+            <IconTarget size={14} className="mr-1.5 text-accent-ink" /> Quiz me harder on this
           </button>
         )}
       </div>
@@ -208,21 +218,21 @@ export function PageText({ page, classId }: { page: NotePageRow; classId: string
       </AnimatePresence>
 
       {focus.length > 0 && (
-        <div className="flex flex-col gap-2 rounded-2xl border border-[#ff00d4]/40 bg-[#ff00d4]/5 p-3">
-          <p className="flex items-center gap-1 text-sm font-semibold" style={{ color: "#d100ad" }}>
-            <Target className="size-4" /> Quizzed harder
+        <div className="flex flex-col gap-2 rounded-[20px] border border-accent/40 bg-accent-soft p-4">
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-accent-ink">
+            <IconTarget size={17} /> Quizzed harder
           </p>
           {focus.map((f, i) => (
             <div key={i} className="flex items-start gap-2 text-sm">
               <span className="flex-1">“{f.quote}”</span>
-              <button type="button" aria-label="Remove focus" onClick={() => saveFocus(focus.filter((_, j) => j !== i))} className="rounded p-0.5 hover:bg-danger-soft">
-                <X className="size-4" />
+              <button type="button" aria-label="Remove focus" onClick={() => saveFocus(focus.filter((_, j) => j !== i))} className="rounded-full p-1 text-muted hover:bg-danger-soft hover:text-danger">
+                <IconClose size={15} />
               </button>
             </div>
           ))}
         </div>
       )}
-      <p className="text-xs text-muted">Tip: select any text to mark it as something to be quizzed on harder.</p>
+      <p className="text-xs text-faint">Tip: select any text to get quizzed harder on it.</p>
     </div>
   );
 }
@@ -234,7 +244,7 @@ function FixPopover({ seg, onPick, onClose }: { seg: Extract<Segment, { kind: "u
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 8 }}
-      className="fixed inset-x-3 bottom-24 z-40 rounded-3xl border border-line bg-elev p-4 shadow-card md:static md:inset-auto"
+      className="fixed inset-x-3 bottom-28 z-40 rounded-[26px] border border-line-strong bg-elev p-5 shadow-lift md:static md:inset-auto md:shadow-soft"
       role="dialog"
       aria-label="Fix word"
     >
@@ -242,13 +252,13 @@ function FixPopover({ seg, onPick, onClose }: { seg: Extract<Segment, { kind: "u
         <p className="text-sm text-muted">
           We read <span className="font-semibold text-fg">“{seg.guess}”</span>. What does it say?
         </p>
-        <button type="button" aria-label="Close" onClick={onClose} className="rounded-lg p-1 hover:bg-primary-soft">
-          <X className="size-4" />
+        <button type="button" aria-label="Close" onClick={onClose} className="rounded-full p-1.5 text-muted hover:bg-elev-2">
+          <IconClose size={16} />
         </button>
       </div>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={() => onPick(seg.guess)}>
-          <Check className="size-4" /> {seg.guess}
+          <IconCheck size={15} /> {seg.guess}
         </Button>
         {seg.alternatives.map((a) => (
           <Button key={a} size="sm" variant="secondary" onClick={() => onPick(a)}>
@@ -269,7 +279,7 @@ function FixPopover({ seg, onPick, onClose }: { seg: Extract<Segment, { kind: "u
           onChange={(e) => setValue(e.target.value)}
           placeholder="Type the right word"
           aria-label="Correct word"
-          className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-bg px-3"
+          className="h-10 min-w-0 flex-1 rounded-full border border-line bg-bg px-4 outline-none focus:border-accent"
         />
         <Button size="sm" type="submit" variant="secondary">
           Fix

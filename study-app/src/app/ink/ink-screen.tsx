@@ -1,5 +1,6 @@
 "use client";
-import { Plus, Sparkles, X } from "lucide-react";
+import { IconClose, IconPlus, IconSparkle } from "@/components/icons";
+import { PageHeader } from "@/components/screen";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { ClassTopicPicker } from "@/components/class-topic-picker";
@@ -50,18 +51,19 @@ export function InkScreen() {
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-bold">Write notes</h1>
-        <p className="text-sm text-muted">Write with Apple Pencil. Your palm won&apos;t leave marks. Use the pink highlighter on anything you want quizzed harder.</p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="Apple Pencil"
+        title="Write notes"
+        subtitle="Rest your palm on the screen, it won't leave marks. Use the pink highlighter on anything you want quizzed harder."
+      />
       {pageIds.map((id, i) => (
         <div key={id} className="relative">
-          <div className="mb-1 flex items-center justify-between text-sm font-semibold text-muted">
+          <div className="mb-2 flex items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
             Page {i + 1}
             {pageIds.length > 1 && (
-              <button type="button" aria-label={`Remove page ${i + 1}`} onClick={() => setPageIds((p) => p.filter((x) => x !== id))} className="rounded-lg p-1 hover:bg-danger-soft">
-                <X className="size-4" />
+              <button type="button" aria-label={`Remove page ${i + 1}`} onClick={() => setPageIds((p) => p.filter((x) => x !== id))} className="rounded-full p-1.5 hover:bg-danger-soft hover:text-danger">
+                <IconClose size={16} />
               </button>
             )}
           </div>
@@ -77,13 +79,13 @@ export function InkScreen() {
         </div>
       ))}
       <Button variant="secondary" onClick={() => setPageIds((p) => [...p, crypto.randomUUID()])}>
-        <Plus className="size-5" /> Add page
+        <IconPlus size={18} /> Add page
       </Button>
-      <Card className="flex flex-col gap-4 p-5">
+      <Card className="flex flex-col gap-5 p-6">
         <ClassTopicPicker classId={meta.classId} topicId={meta.topicId} onChange={setMeta} />
-        <input className="h-11 rounded-xl border border-line bg-bg px-3" placeholder="Title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input className="h-12 rounded-2xl border border-line bg-bg px-4 outline-none placeholder:text-faint focus:border-accent" placeholder="Title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
         <Button size="lg" onClick={submit} loading={!!saving}>
-          <Sparkles className="size-5" /> {saving ?? "Read my notes"}
+          {!saving && <IconSparkle size={20} />} {saving ?? "Read my notes"}
         </Button>
       </Card>
     </div>

@@ -58,7 +58,7 @@ test.describe("stage 1: capture → read → fix → quiz", () => {
       el.parentElement!.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
     });
     await page.getByRole("button", { name: /Quiz me harder on this/ }).click();
-    await expect(page.getByText("Quizzed harder")).toBeVisible();
+    await expect(page.getByText("Quizzed harder", { exact: true })).toBeVisible();
 
     // Generate a quiz.
     await page.getByRole("button", { name: "Make quiz" }).click();
@@ -93,24 +93,30 @@ test.describe("stage 1: capture → read → fix → quiz", () => {
     await target.getByRole("button", { name: "Regenerate" }).click();
     await target.getByRole("button", { name: "True or false" }).click();
     await expect(page.getByText("New question ready")).toBeVisible();
-    await expect(page.getByTestId("question-item").nth(1).getByText("True or false", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("question-item").nth(1).locator("span", { hasText: /^True or false$/ })).toBeVisible();
 
     // Practice: answer and get feedback.
-    await page.getByRole("link", { name: "Practice", exact: true }).click();
+    await page.getByRole("link", { name: /^Practice Instant feedback/ }).click();
     await expect(page.getByTestId("question-prompt")).toBeVisible();
     const show = page.getByRole("button", { name: "Show answer" });
+    const mcChoice = page.locator("button:has(> span:text-is('A'))").first();
+    const trueBtn = page.getByRole("button", { name: "True", exact: true });
+    const textBox = page.getByLabel("Your answer");
     if (await show.isVisible()) {
       await show.click();
       await page.getByRole("button", { name: "Knew it" }).click();
     } else {
-      const choice = page.getByRole("button", { name: /^(A|True)/ }).first();
-      if (await choice.isVisible()) await choice.click();
+      if (await mcChoice.isVisible()) await mcChoice.click();
+      else if (await trueBtn.isVisible()) await trueBtn.click();
+      else if (await textBox.isVisible()) await textBox.fill("mitochondria");
       else {
-        const tile = page.getByRole("button").filter({ hasText: /\w/ }).nth(3);
-        if (await page.getByLabel("Your answer").isVisible()) await page.getByLabel("Your answer").fill("mitochondria");
-        else await tile.click();
+        // Matching: tap a term, then a match.
+        await page.getByText("Tap a term, then tap its match.").waitFor();
+        const grid = page.locator(".grid-cols-2").first();
+        await grid.locator("> div").first().locator("button").first().click();
+        await grid.locator("> div").nth(1).locator("button").first().click();
       }
-      if (await page.getByRole("button", { name: "Check" }).isEnabled()) await page.getByRole("button", { name: "Check" }).click();
+      await page.getByRole("button", { name: "Check" }).click();
     }
     await expect(page.getByRole("button", { name: /Next|See results/ })).toBeVisible();
 
@@ -126,7 +132,7 @@ test.describe("stage 1: capture → read → fix → quiz", () => {
     await expect(page.getByText(/\d+:\d\d/)).toBeVisible();
     page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Submit", exact: true }).click();
-    await expect(page.getByText(/^Score: \d+%/)).toBeVisible();
+    await expect(page.getByText(/Score: \d+%/)).toBeVisible();
 
     expect(email).toContain("@");
   });
@@ -148,6 +154,43 @@ test.describe("stage 1: capture → read → fix → quiz", () => {
     const res = await intruder.request.post(`${url.replace("/notes/", "/api/notes/")}/pages/0/read`);
     expect(res.status()).toBe(404);
     await ctx.close();
+  });
+
+  test("friends can open a shared quiz without an account", async ({ page, browser }) => {
+    await signIn(page);
+    await page.goto("/capture");
+    await page.getByTestId("file-input").setInputFiles({ name: "notes.png", mimeType: "image/png", buffer: await notesPhoto(page) });
+    await page.getByRole("button", { name: /Read 1 page/ }).click();
+    await page.waitForURL(/\/notes\//);
+    await page.getByTestId("page-text").waitFor({ timeout: 30_000 });
+    await page.getByRole("button", { name: "Make quiz" }).click();
+    await page.waitForURL(/\/quizzes\//);
+    await waitForQuestions(page, 5);
+
+    await page.getByRole("button", { name: "Share" }).click();
+    const dialog = page.getByRole("dialog", { name: "Share quiz" });
+    const code = (await dialog.locator(".font-mono.text-2xl").textContent())!.trim();
+
+    const guestCtx = await browser.newContext();
+    const guest = await guestCtx.newPage();
+    // Not shared yet: private.
+    await guest.goto(`/q/${code}`);
+    await expect(guest.getByText("This quiz isn't available")).toBeVisible();
+
+    await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+    await dialog.getByRole("button", { name: "Copy link" }).click();
+    await expect(page.getByText(/Link copied/)).toBeVisible();
+
+    // Shared: anyone with the link can see and play it, right away.
+    await guest.goto(`/q/${code}`);
+    await expect(guest.getByRole("link", { name: /Start quiz/ })).toBeVisible();
+    await guest.getByRole("link", { name: /Start quiz/ }).click();
+    await expect(guest.getByTestId("question-prompt")).toBeVisible();
+    // Link preview image renders.
+    const og = await guest.request.get(`/q/${code}/opengraph-image`);
+    expect(og.status()).toBe(200);
+    expect(og.headers()["content-type"]).toContain("image/png");
+    await guestCtx.close();
   });
 
   test("API rejects signed-out requests", async ({ request }) => {

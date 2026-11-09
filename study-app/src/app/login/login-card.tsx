@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { Logo } from "@/components/app-shell";
+import { BrandMark } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { APP_CONFIG } from "@/config/app";
@@ -75,56 +75,39 @@ export function LoginCard() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
-      <Card className="p-7">
-        <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <Logo className="text-xl" />
-          <h1 className="text-2xl font-bold">Sign in to start studying</h1>
-          <p className="text-sm text-muted">{APP_CONFIG.tagline}</p>
+    <motion.div initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} className="w-full max-w-[400px]">
+      <Card className="relative overflow-hidden p-8 shadow-lift md:p-10">
+        <div className="pointer-events-none absolute -top-24 left-1/2 h-40 w-64 -translate-x-1/2 rounded-full bg-accent opacity-20 blur-3xl" />
+        <div className="relative mb-8 flex flex-col items-center gap-5 text-center">
+          <BrandMark size={52} />
+          <div>
+            <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.035em]">Welcome to {APP_CONFIG.shortName}</h1>
+            <p className="mt-2 text-[15px] text-muted">{APP_CONFIG.tagline}</p>
+          </div>
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="relative flex flex-col gap-3">
           <Button variant="secondary" size="lg" onClick={() => oauth("google")} loading={busy === "google"}>
             <GoogleIcon /> Continue with Google
           </Button>
-          <Button
-            size="lg"
-            className="bg-black text-white dark:bg-white dark:text-black"
-            onClick={() => oauth("apple")}
-            loading={busy === "apple"}
-          >
+          <Button size="lg" className="!bg-fg !text-bg !shadow-none" onClick={() => oauth("apple")} loading={busy === "apple"}>
             <AppleIcon /> Continue with Apple
           </Button>
         </div>
         {devLogin && (
-          <form onSubmit={devSignIn} className="mt-6 flex flex-col gap-2 border-t border-line pt-5" aria-label="Developer sign in">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Local testing only</p>
-            <input
-              type="email"
-              required
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-11 rounded-xl border border-line bg-bg px-3"
-            />
-            <input
-              type="password"
-              required
-              minLength={6}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-11 rounded-xl border border-line bg-bg px-3"
-            />
-            <Button type="submit" variant="secondary" loading={busy === "email"}>
+          <form onSubmit={devSignIn} className="relative mt-7 flex flex-col gap-2.5 border-t border-line pt-6" aria-label="Developer sign in">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-faint">Local testing only</p>
+            <input type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className={field} />
+            <input type="password" required minLength={6} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className={field} />
+            <Button type="submit" variant="outline" loading={busy === "email"}>
               Sign in with email
             </Button>
           </form>
         )}
-        {error && <p className="mt-4 rounded-xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
-        <p className="mt-6 text-center text-xs text-muted">
-          Your notes are private to you. We never sell your data.
-        </p>
+        {error && <p className="relative mt-5 rounded-2xl bg-danger-soft p-3 text-sm text-danger">{error}</p>}
+        <p className="relative mt-8 text-center text-xs leading-relaxed text-faint">Your notes stay private to you. We never sell your data.</p>
       </Card>
     </motion.div>
   );
 }
+
+const field = "h-12 rounded-2xl border border-line bg-bg px-4 text-[15px] outline-none transition focus:border-accent";
