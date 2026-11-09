@@ -82,6 +82,10 @@ test("Abyss: double eye beams and every multi-hazard pattern, run after run, nev
         out.state = s.state;
         out.textures = g.textures.getTextureKeys().length;
         out.objs = s.sys.displayList.length;
+        out.texts = s.fx.texts.length; // pop-up texts (their fade-out needs the real clock)
+        // display objects held by the hazard pools (pools grow while new pattern mixes need
+        // more of one hazard at once, then stop)
+        out.pooled = Object.values(mgr.pools).reduce((a, pool) => a + pool.reduce((b, o) => b + (o.objects?.length || 0), 0), 0);
         out.heapMB = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null;
         out.crashes = window.__glyCrash.CrashReport.queued().filter((r) => r.kind !== "killed_mid_run").map((r) => r.message);
         // end the run; RETRY keeps the same game screen and its pools (the case that crashed)
@@ -107,7 +111,12 @@ test("Abyss: double eye beams and every multi-hazard pattern, run after run, nev
   // nothing piles up from one run to the next (the texture count moves a little with which
   // dimension the run reached; the hazard pools fill up over the first laps, then stay put)
   expect(laps.at(-1).textures - laps[1].textures).toBeLessThanOrEqual(30);
-  expect(laps.at(-1).objs - laps[4].objs).toBeLessThanOrEqual(25);
+  // Everything on the game screen except the hazard pools and the pop-up texts must stay put
+  // (pop-up texts: under the frozen test clock their fade-out never finishes). The pools fill up
+  // over the laps (slower machines take longer) and must have stopped growing by the end.
+  const rest = (l) => l.objs - l.texts - l.pooled;
+  expect(rest(laps.at(-1)) - rest(laps[4])).toBeLessThanOrEqual(25);
+  expect(laps.at(-1).pooled - laps.at(-3).pooled, "hazard pools stopped growing").toBeLessThanOrEqual(25);
   if (laps.at(-1).heapMB && laps[1].heapMB) expect(laps.at(-1).heapMB - laps[1].heapMB).toBeLessThanOrEqual(25);
   expect(log.errors).toEqual([]);
 });

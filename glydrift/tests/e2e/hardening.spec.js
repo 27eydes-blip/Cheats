@@ -13,6 +13,8 @@ import {
   SAVE,
   settle,
   tap,
+  tapHome,
+  reveal,
   waitFor,
 } from "./helpers.js";
 
@@ -236,7 +238,7 @@ test("a screen that fails to open sends the player home with their progress", as
   await waitFor(page, () => window.__glydrift.scene.isActive("Menu") && !window.__glydrift.scene.isActive("Shop"));
   await run(page, 600);
   // the home screen works: open another screen and come back
-  await tap(page, "LUCKY SPIN", 0);
+  await tapHome(page, "LUCKY SPIN", 0);
   await settle(page, "Spin", 1200);
   await tap(page, "BACK", 0);
   await settle(page, "Menu", 1500);
@@ -374,7 +376,7 @@ test("crash reports never carry personal info", async ({ page }, testInfo) => {
 });
 
 // ------------------------------------------------------------------ chaos / monkey testing
-// [the home screen's button, the screen, its back button]
+// [the home screen's button (or its row in the MORE sheet), the screen, its back button]
 const SCREENS = [
   ["SHOP", "Shop", "◀"],
   ["HEROES", "Characters", "BACK"],
@@ -438,7 +440,7 @@ test("monkey: random rapid taps, double taps and spam on every screen", async ({
     await goHome(page);
     await run(page, 800);
     if (key !== "Menu") {
-      await tap(page, label, 0);
+      await tapHome(page, label, 0);
       await settle(page, key, 1200);
     }
     for (let i = 0; i < 120; i++) {
@@ -474,6 +476,7 @@ test("taps during transitions, pop-ups and reveals never leave two screens (or n
     for (const delay of [0, 40, 120, 260]) {
       await goHome(page);
       await run(page, 700);
+      await reveal(page, label); // (opens the MORE sheet for the screens that live in it)
       const a = await locate(page, label);
       await press(page, a);
       await run(page, delay);
@@ -489,7 +492,7 @@ test("taps during transitions, pop-ups and reveals never leave two screens (or n
   // the Lucky Spin reveal: spam taps while the wheel spins and the prize is shown
   await goHome(page);
   await run(page, 700);
-  await tap(page, "LUCKY SPIN", 0);
+  await tapHome(page, "LUCKY SPIN", 0);
   await settle(page, "Spin", 1200);
   const spin = await locate(page, "SPIN");
   for (let i = 0; i < 30; i++) {
@@ -528,7 +531,7 @@ test("opening and closing every screen over and over leaves nothing behind", asy
     });
   const cycle = async () => {
     for (const [label, key, back] of SCREENS) {
-      await tap(page, label, 0);
+      await tapHome(page, label, 0);
       await settle(page, key, 900);
       await tap(page, back, 0);
       await settle(page, "Menu", 900);
@@ -686,7 +689,7 @@ test("Drift Pass+: a purchase that fails mid-way grants nothing; restoring it la
   phoneOnly(testInfo);
   const log = await openGame(page, { flags: ["mockiap"] });
   // through the game's own screen: the store is reached from the Pass
-  await tap(page, "SEASON 1 · ABYSS RISING", 0);
+  await tapHome(page, "SEASON 1 · ABYSS RISING", 0);
   await settle(page, "Pass", 1500);
   await page.evaluate(() => localStorage.setItem("glydrift.mockstore.fail", "1")); // the server can't be reached
   await page.evaluate(() => window.__glydrift.scene.getScene("Pass").buyPlus());

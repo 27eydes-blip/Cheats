@@ -337,6 +337,12 @@ const FLAP = {
     tone({ type: "sine", f0: 190, f1: 70, dur: 0.09, vol: 0.34 });
     tone({ type: "square", f0: 900, f1: 420, dur: 0.025, vol: 0.05 });
   },
+  // THE NEWBLEIZER: a blade swoosh (a filtered air sweep with a thin metal "shing" on top)
+  newbleizer: () => {
+    noise({ dur: 0.11, vol: 0.22, f: 1800 });
+    tone({ type: "sawtooth", f0: 420, f1: 1500, dur: 0.08, vol: 0.035 });
+    tone({ type: "sine", f0: 3300, f1: 3700, dur: 0.06, vol: 0.03, delay: 0.04 });
+  },
   // YARMS: a meaty "whomp" + a floppy wobble
   yarms: () => {
     tone({ type: "sine", f0: 150, f1: 55, dur: 0.14, vol: 0.4 });
@@ -901,6 +907,29 @@ const MOMENTS = {
       noise({ dur: 0.04, vol: 0.28, f: 2000, delay: 0.09 });
       tone({ type: "square", f0: 180, f1: 60, dur: 0.07, vol: 0.12, delay: 0.09 });
     },
+  },
+  newbleizer: {
+    // the sword-flash glint
+    near: () => [3520, 4186].forEach((f, i) => tone({ type: "sine", f0: f, f1: f * 1.04, dur: 0.06, vol: 0.05, delay: i * 0.035 })),
+    best: () => {
+      // the dunk: a rim clank and a net swish, then a crowd-cheer style sting (a rising synth
+      // chord over a soft roar of noise) and the katana sliding home
+      tone({ type: "square", f0: 260, f1: 240, dur: 0.06, vol: 0.08 });
+      noise({ dur: 0.22, vol: 0.18, f: 3200, delay: 0.06 });
+      noise({ dur: 0.7, vol: 0.09, f: 900, delay: 0.2 });
+      [523, 659, 784, 1047].forEach((f, i) =>
+        tone({ type: "triangle", f0: f, f1: f * 1.01, dur: 0.42, vol: 0.07, delay: 0.22 + i * 0.06 }),
+      );
+      tone({ type: "sawtooth", f0: 1047, f1: 1568, dur: 0.3, vol: 0.03, delay: 0.46 });
+      tone({ type: "sine", f0: 2600, f1: 4200, dur: 0.16, vol: 0.04, delay: 1.0 }); // shhing
+      tone({ type: "square", f0: 140, f1: 90, dur: 0.05, vol: 0.08, delay: 1.16 }); // click home
+    },
+    death: () =>
+      // the ball bouncing away: thumps that get quicker, quieter and higher
+      [0, 0.32, 0.56, 0.74, 0.87].forEach((d, i) => {
+        tone({ type: "sine", f0: 150 + i * 14, f1: 70, dur: 0.08, vol: 0.32 * 0.72 ** i, delay: d });
+        noise({ dur: 0.03, vol: 0.08 * 0.72 ** i, f: 1400, delay: d });
+      }),
   },
   tung: {
     // a little "ting" with the wink

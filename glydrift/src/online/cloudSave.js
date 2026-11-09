@@ -108,6 +108,9 @@ export function mergeSaves(local, cloud) {
   };
   base.shards = maxEach(base.shards, other.shards);
   base.stats = maxEach(base.stats, other.stats);
+  // the per-hero / per-realm counters are maps: the larger count of each key
+  for (const k of ["heroRuns", "realmDeaths"])
+    base.stats[k] = maxEach(base.stats?.[k], other.stats?.[k]);
   // a leaderboard reset (online/lbReset.js) wipes the best scores set before it: the later
   // reset wins, and a best from a save that hasn't applied it doesn't count
   const later = (x, y) => ((x || "") > (y || "") ? x : y) || "";

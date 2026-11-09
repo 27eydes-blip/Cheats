@@ -725,6 +725,18 @@ export const Progression = {
     st.maxPrismM = Math.max(st.maxPrismM || 0, Math.floor(run.prismM || 0));
     st.prismClears = (st.prismClears || 0) + (run.prismClear || 0);
     st.abyssClears = (st.abyssClears || 0) + (run.abyssClear || 0);
+    // the Stats page: time flown, runs per hero and crashes per realm. Only runs from now on
+    // are timed, so the average run time divides by timedRuns, not by every run ever played.
+    st.playMs = (st.playMs || 0) + Math.round(run.runTimeMs || 0);
+    st.timedRuns = (st.timedRuns || 0) + 1;
+    if (run.char) {
+      st.heroRuns ||= {};
+      st.heroRuns[run.char] = (st.heroRuns[run.char] || 0) + 1;
+    }
+    if (run.killedIn) {
+      st.realmDeaths ||= {};
+      st.realmDeaths[run.killedIn] = (st.realmDeaths[run.killedIn] || 0) + 1;
+    }
 
     // LEVEL MODE: levels beaten and stars earned (missions, achievements)
     if (run.mode === "level") {

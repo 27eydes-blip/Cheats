@@ -1,6 +1,6 @@
 // App Store review readiness: what App Review checks in the iPhone app (APP_STORE_REVIEW.md).
 import { expect, test } from "@playwright/test";
-import { locate, openGame, press, profileOf, run, settle, tap, waitFor } from "./helpers.js";
+import { locate, openGame, press, profileOf, run, settle, tap, tapHome, waitFor } from "./helpers.js";
 
 /** Pretend to be the Capacitor iPhone app (window.Capacitor before the game loads). */
 async function asIOSApp(page) {
@@ -34,6 +34,10 @@ test("iPhone app: no Add to Home Screen, privacy policy + support in Settings, n
   const log = await openGame(page);
   await run(page, 600);
   expect(await texts(page, "Menu")).not.toContain("ADD TO HOME SCREEN");
+  // nor in the MORE sheet (where it lives in the browser)
+  await tap(page, "MORE", 600);
+  expect(await texts(page, "Menu")).not.toContain("ADD TO HOME SCREEN");
+  await tap(page, "CLOSE", 600);
   await page.evaluate(() => window.__glydrift.scene.getScene("Menu").openSettings());
   await run(page, 600);
   const shown = await texts(page, "Menu");
@@ -70,7 +74,7 @@ test("privacy policy and support pages are published with the site", async ({ pa
 test("Lucky Spin shows the odds of every prize, matching the wheel", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page);
-  await tap(page, "LUCKY SPIN", 0);
+  await tapHome(page, "LUCKY SPIN", 0);
   await settle(page, "Spin", 1500);
   await tap(page, "ODDS", 500);
   const shown = await texts(page, "Spin");
