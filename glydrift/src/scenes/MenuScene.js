@@ -37,6 +37,7 @@ import { Save } from "../data/save.js";
 import { Seasons } from "../data/seasons.js";
 import { claimSeasonTier, DriftPass } from "../data/driftPass.js";
 import { askUsername } from "../ui/nameModal.js";
+import { openStats } from "./StatsScene.js";
 import { openChest, revealHero } from "../ui/reveal.js";
 import {
   killTweensDeep,
@@ -525,6 +526,13 @@ export class MenuScene extends Phaser.Scene {
         sub: "Missions · achievements · titles",
         color: 0xff4fd8,
         go: () => this.go("Progress"),
+      },
+      {
+        id: "stats",
+        label: "STATS",
+        sub: `${(s.stats.runs || 0).toLocaleString("en-US")} runs · best ${(s.best || 0).toLocaleString("en-US")}`,
+        color: 0x3ef4ff,
+        go: () => openStats(this),
       },
       Install.available && {
         id: "install",

@@ -28,6 +28,7 @@ import { LockerScene } from "./scenes/LockerScene.js";
 import { SpinScene } from "./scenes/SpinScene.js";
 import { ShopScene } from "./scenes/ShopScene.js";
 import { PassScene } from "./scenes/PassScene.js";
+import { StatsScene } from "./scenes/StatsScene.js";
 import "./systems/install.js"; // registers beforeinstallprompt early (Android install button)
 import { Music } from "./audio/music.js";
 import { Save } from "./data/save.js";
@@ -142,6 +143,7 @@ async function boot() {
     ShopScene,
     PassScene,
     LockerScene,
+    StatsScene,
     // the soundtrack test page: test builds only (a release build leaves it, and the synth
     // engine it loads, out entirely)
   ];

@@ -40,7 +40,9 @@ export class Player {
   /** @returns true when this tap was a double jump (heroes with `doubleJump` only) */
   flap() {
     if (!this.alive) return false;
-    const mul = this.mini ? PHYSICS.miniFlapMul : 1;
+    // THE NEWBLEIZER's perk: flaps reach perks.jump × the height (+8%). Same gravity, so the
+    // flap speed grows by the square root of that (height = v² / 2g).
+    const mul = (this.mini ? PHYSICS.miniFlapMul : 1) * Math.sqrt(this.def.perks?.jump ?? 1);
     const dj = this.def.doubleJump;
     const dbl = !!dj && this.t - this.lastFlapT < dj.window && this.t >= this.djReadyT;
     if (dbl) this.djReadyT = this.t + dj.cooldown;
