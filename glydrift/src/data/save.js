@@ -112,6 +112,23 @@ function repair(d) {
   for (const k of ["coins", "xp", "spins", "spinPts", "best", "spinPity"])
     if (!(d[k] >= 0)) d[k] = 0;
   if (!(d.level >= 1)) d.level = 1;
+  // lifetime stats only ever count up: a negative counter (damaged save) reads as 0, and the
+  // per-hero / per-realm maps keep numbers only (text there would turn the next "+ 1" into
+  // "51" string-gluing, and the Stats page would show that hero's runs as 0 for good)
+  const st = d.stats;
+  for (const [k, v] of Object.entries(st)) if (typeof v === "number" && !(v >= 0)) st[k] = 0;
+  for (const k of ["heroRuns", "realmDeaths"]) {
+    const m = st[k];
+    if (!m || typeof m !== "object" || Array.isArray(m)) {
+      st[k] = {};
+      continue;
+    }
+    for (const [id, v] of Object.entries(m)) {
+      const num = typeof v === "string" && v.trim() !== "" ? Number(v) : v;
+      if (typeof num === "number" && Number.isFinite(num) && num >= 0) m[id] = Math.floor(num);
+      else delete m[id];
+    }
+  }
   d.unlocked.volt = true; // the starter hero is always there
   if (typeof d.selected !== "string" || !d.selected) d.selected = "volt";
   d.lbQueue = d.lbQueue.filter((q) => q && typeof q === "object");
