@@ -1082,6 +1082,42 @@ export const CHARACTERS = [
     desc: "Too cute to crash.",
   },
   {
+    // THE NEWBLEIZER: an original samurai hooper. One perk, HIGHER JUMPS: each flap reaches 8%
+    // higher (the same gravity and hitbox; Player.flap). His moves and effects are in
+    // newbleizerFx.js, his sounds in sfx.js.
+    id: "newbleizer",
+    name: "THE NEWBLEIZER",
+    title: "Samurai Hooper",
+    rarity: "legendary",
+    color: 0xd8202a,
+    color2: 0xff8a1a,
+    texture: "hero_newbleizer",
+    pixel: {
+      atlas: "pxc",
+      frames: Array.from({ length: 8 }, (_, i) => `newbleizer_${i}`),
+      mode: "samurai", // jump + katana spin, sash glide, sword glint, the dunk, the bouncing ball
+      trail: [0xff5a52, 0xd8202a, 0x8e1018, 0xffc83a],
+    },
+    fx: {
+      death: [
+        { kind: "star", color: 0xffc83a, n: 12 },
+        { kind: "pixel", color: 0xd8202a, n: 12 },
+      ],
+    },
+    scale: 0.62,
+    cost: 12000,
+    challenge: {
+      stat: "abyssRuns",
+      value: 3,
+      text: "Reach the Abyss 3 times",
+    },
+    perks: {
+      jump: 1.08, // flap height ×1.08
+      list: ["+8% JUMP"],
+    },
+    desc: "Rises above it all.",
+  },
+  {
     id: "wallrunner",
     name: "WALLRUNNER",
     title: "Leprechaun",
