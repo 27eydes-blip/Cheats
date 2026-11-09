@@ -25,6 +25,9 @@ const step = (page, n, hold = true) =>
         if (hold && s.state === "playing") {
           s.player.y = s.H * 0.45;
           s.player.vy = 0;
+          // a chance near-miss with a passing hazard would start slow motion and stretch the
+          // timings below (the dunk's swish at 0.5 s); held flight runs at steady game time
+          s.slowT = 0;
         }
         s.__t = (s.__t || 1e6) + 1000 / 60;
         s.stepFrame(s.__t, 1000 / 60);
