@@ -1,8 +1,8 @@
-# [APP NAME]
+# Flashdrop
 
 Snap your notes, get a quiz in seconds. Students photograph handwritten or printed notes (or write them on an iPad with Apple Pencil). The app cleans up the photo, reads it with AI, lets the student fix any word it wasn't sure about, then makes quizzes, flashcards and practice tests linked back to the notes.
 
-> The name is a placeholder. Change it in **`src/config/app.ts`**; it flows to titles, the PWA manifest and share previews.
+> To rename the app, change it in **`src/config/app.ts`**; it flows to page titles, link previews and the sign-in screen.
 
 ## Status: Stage 1 done
 
