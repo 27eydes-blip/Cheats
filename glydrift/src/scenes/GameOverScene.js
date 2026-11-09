@@ -437,8 +437,12 @@ export class GameOverScene extends Phaser.Scene {
       });
       nt.setScale(Math.min(1, 132 / Math.max(1, nt.getBounds().width)));
     }
-    const title = Titles.equippedId();
-    if (title) titleText(this, W - 70, headY + 70, title, { size: 12 });
+    // (ALL MIGHTY while the server says you're the world's #1)
+    const title = Titles.shownId();
+    if (title) {
+      const tt = titleText(this, W - 70, headY + 70, title, { size: 12 });
+      tt.setScale(Math.min(1, 112 / Math.max(1, tt.lineWidth)));
+    }
   }
 
   /**

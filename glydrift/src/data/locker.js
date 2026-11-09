@@ -5,7 +5,7 @@
 // save as one worn from the hero editor, the Titles screen or Settings.
 import { Save } from "./save.js";
 import { COSMETICS, forSale, Shop } from "./cosmetics.js";
-import { TITLES, Titles } from "./titles.js";
+import { ALL_MIGHTY, TITLES, Titles } from "./titles.js";
 import { Progression, SPIN_EVERY } from "./progression.js";
 import { Seasons } from "./seasons.js";
 import { FREE_TRACK } from "./driftPass.js";
@@ -234,9 +234,13 @@ export function lockerEntries(tabId) {
         name: t.name,
         title: t,
         owned,
-        equipped: owned && on === t.id,
-        kindLabel: t.style ? "ANIMATED TITLE" : "TITLE",
-        unlock: owned ? null : { text: t.how, tag: t.source === "plus" ? "PASS+" : "", route: t.source === "plus" ? "Pass" : null },
+        // ALL MIGHTY is worn by itself while the server says you're the world's #1 (never picked)
+        equipped: t.id === ALL_MIGHTY ? owned : owned && on === t.id,
+        auto: t.id === ALL_MIGHTY,
+        kindLabel: t.id === ALL_MIGHTY ? "WORLD #1 · WORN AUTOMATICALLY" : t.style ? "ANIMATED TITLE" : "TITLE",
+        unlock: owned
+          ? null
+          : { text: t.how, tag: t.source === "plus" ? "PASS+" : t.id === ALL_MIGHTY ? "#1" : "", route: t.source === "plus" ? "Pass" : null },
       };
     });
   } else {
@@ -328,7 +332,7 @@ export function lockerEquip(e) {
       Save.write();
       return "equipped";
     case "title":
-      if (e.equipped) return null;
+      if (e.equipped || e.auto) return null; // (ALL MIGHTY can't be picked: it's worn by itself)
       Titles.equip(e.id);
       return "equipped";
     case "banner":

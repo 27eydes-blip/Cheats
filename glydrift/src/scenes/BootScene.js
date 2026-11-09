@@ -4,6 +4,7 @@ import { buildTextures } from "../gfx/textures.js";
 import { buildPixelArt } from "../pixel/themes.js";
 import { Account } from "../online/account.js";
 import { Leaderboard } from "../online/leaderboard.js";
+import { refreshAllMighty } from "../online/allMighty.js";
 import { Store } from "../online/store.js";
 import { applyPlusTestFlags } from "../data/passPlus.js";
 import { Progression } from "../data/progression.js";
@@ -25,6 +26,10 @@ export class BootScene extends Phaser.Scene {
     Save.write();
     // sign in (anonymous) + upload queued scores in the background, after first frames
     if (!TEST.offline) setTimeout(() => Leaderboard.init(), 1200);
+    // who the server says is ALL MIGHTY (the world's #1): after the sign-in has started
+    // (?lbmock: the mock answer straight away; ?offline: the cached answer, no network)
+    if (TEST.lbmock) refreshAllMighty();
+    else setTimeout(() => refreshAllMighty(), 1600);
     // accounts + cloud save: restore the signed-in account and sync (in the background)
     // …then let the server confirm Drift Pass+ ownership (store.js recheck)
     setTimeout(() => Account.init().then(() => Store.recheck()), 1500);

@@ -215,8 +215,14 @@ function mockBoard(level, period, username) {
     created_at: "2026-11-04T11:00:00Z",
   };
   // you: just inside the list on the all-time boards, outside the top 100 on daily
-  const rank = level.includes("daily") ? 142 : 12;
-  me.score = level.includes("daily") ? 420 : Math.round(rows[rank - 1].score - 3);
+  // (?allmighty=me: the mock server says you're ALL MIGHTY, so you top the all-time Score board)
+  const top = TEST.allmighty === "me" && level === Levels.endless() && period === "all";
+  const rank = level.includes("daily") ? 142 : top ? 1 : 12;
+  me.score = level.includes("daily")
+    ? 420
+    : top
+      ? rows[0].score + 412
+      : Math.round(rows[rank - 1].score - 3);
   if (rank <= rows.length) rows.splice(rank - 1, 0, { ...me, player_id: "me" });
   return { rows: rows.slice(0, 100), me: { ...me, rank }, userId: "me" };
 }

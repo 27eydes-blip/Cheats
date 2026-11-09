@@ -62,6 +62,7 @@ function defaults() {
     levelRewards: {},
     lv: { p: {}, claimed: {}, played: 0 }, // LEVEL MODE progress (levels/levels.js); kept on load
     profile: { username: "" },
+    allMighty: { former: false, at: "" }, // been the world's #1 (ALL MIGHTY) at least once: for good
     lbQueue: [],
     settings: {
       lowGfx: false,

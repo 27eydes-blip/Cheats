@@ -419,7 +419,7 @@ export class LockerScene extends Phaser.Scene {
     const gold = e.id === "name_pp_gold" || Shop.equipped("name") === "name_pp_gold";
     const badge = e.id === "badge_pp_s1" || Shop.owns("badge_pp_s1");
     const np = nameText(this, 0, -14, uname, { size: 20, ox: 0.5, gold, badge, font: NUM_FONT });
-    const title = e.kind === "title" ? e.title : e.kind === "none" && e.cat === "title" ? null : Titles.equipped();
+    const title = e.kind === "title" ? e.title : e.kind === "none" && e.cat === "title" ? null : Titles.shown(); // (ALL MIGHTY while you're the world's #1)
     const tt = titleText(this, 0, 14, title, { size: 15 });
     this.plate.add([np, tt]);
     const w = Math.max(1, this.plate.getBounds().width);

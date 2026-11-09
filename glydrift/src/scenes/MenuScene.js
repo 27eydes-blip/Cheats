@@ -20,6 +20,7 @@ import { nameText } from "../ui/nameplate.js";
 import { openRewardPreview } from "../ui/rewardPreview.js";
 import { PassPlus, plusRewardFor } from "../data/passPlus.js";
 import { titleText } from "../ui/titleText.js";
+import { AllMighty } from "../data/allMighty.js";
 import { Titles } from "../data/titles.js";
 import { Account } from "../online/account.js";
 import { LbReset } from "../online/lbReset.js";
@@ -282,6 +283,9 @@ export class MenuScene extends Phaser.Scene {
     // your name + the title you wear, between the level and the coins
     this.npTop = top;
     this.refreshNamePlate();
+    // the server's ALL MIGHTY answer can land after the home screen is up: wear it at once
+    const offMighty = AllMighty.onChange(() => this.sys.isActive() && this.refreshNamePlate());
+    this.events.once("shutdown", offMighty);
     this.coinIcon = this.add
       .image(W - 196, top + 40, "coin") // (the gear moved into the main row as SETTINGS)
       .setScale(0.8 / HI)
@@ -832,7 +836,8 @@ export class MenuScene extends Phaser.Scene {
       font: NUM_FONT,
     }).setDepth(100);
     np.setScale(Math.min(1, (W - 470) / Math.max(1, np.getBounds().width)));
-    const tt = titleText(this, W / 2 - 12, top + 56, Titles.equippedId(), { size: 11 }).setDepth(100);
+    // (ALL MIGHTY while the server says you're the world's #1)
+    const tt = titleText(this, W / 2 - 12, top + 56, Titles.shownId(), { size: 11 }).setDepth(100);
     if (tt.list.length) tt.setScale(Math.min(1, (W - 470) / Math.max(1, tt.getBounds().width)));
     this.namePlate = [np, tt];
   }
