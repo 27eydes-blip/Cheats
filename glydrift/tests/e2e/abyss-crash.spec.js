@@ -86,6 +86,11 @@ test("Abyss: double eye beams and every multi-hazard pattern, run after run, nev
         // display objects held by the hazard pools (pools grow while new pattern mixes need
         // more of one hazard at once, then stop)
         out.pooled = Object.values(mgr.pools).reduce((a, pool) => a + pool.reduce((b, o) => b + (o.objects?.length || 0), 0), 0);
+        // per hazard type: how many instances its pool holds (a high-water mark: a pool only
+        // grows when every instance of that type is on screen at once), and instances that are
+        // live but no longer tracked by the manager (those could never be reused: a real leak)
+        out.perType = Object.fromEntries(Object.entries(mgr.pools).map(([k, pool]) => [k, pool.length]));
+        out.orphans = Object.values(mgr.pools).flat().filter((o) => o.active && !mgr.active.includes(o)).length;
         out.heapMB = performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : null;
         out.crashes = window.__glyCrash.CrashReport.queued().filter((r) => r.kind !== "killed_mid_run").map((r) => r.message);
         // end the run; RETRY keeps the same game screen and its pools (the case that crashed)
@@ -112,11 +117,18 @@ test("Abyss: double eye beams and every multi-hazard pattern, run after run, nev
   // dimension the run reached; the hazard pools fill up over the first laps, then stay put)
   expect(laps.at(-1).textures - laps[1].textures).toBeLessThanOrEqual(30);
   // Everything on the game screen except the hazard pools and the pop-up texts must stay put
-  // (pop-up texts: under the frozen test clock their fade-out never finishes). The pools fill up
-  // over the laps (slower machines take longer) and must have stopped growing by the end.
+  // (pop-up texts: under the frozen test clock their fade-out never finishes). The pools are
+  // checked on their own below.
   const rest = (l) => l.objs - l.texts - l.pooled;
   expect(rest(laps.at(-1)) - rest(laps[4])).toBeLessThanOrEqual(25);
-  expect(laps.at(-1).pooled - laps.at(-3).pooled, "hazard pools stopped growing").toBeLessThanOrEqual(25);
+  // The pools are high-water marks, not something that stops growing on a fixed lap: each pool
+  // keeps as many instances of its hazard type as were ever on screen at once, so a new seed now
+  // and then sets a new record for one type (one more saw, blink or meteor: +2 to +15 display
+  // objects). Over 16 laps no type went past 5 instances. A leak would show as instances that
+  // stay live but untracked (never reused), or a type whose pool keeps growing with every lap.
+  for (const l of laps) expect(l.orphans, `lap ${l.lap}: hazards left live but untracked`).toBe(0);
+  const most = Math.max(...Object.values(laps.at(-1).perType));
+  expect(most, "no hazard type needs more than a screenful of instances").toBeLessThanOrEqual(8);
   if (laps.at(-1).heapMB && laps[1].heapMB) expect(laps.at(-1).heapMB - laps[1].heapMB).toBeLessThanOrEqual(25);
   expect(log.errors).toEqual([]);
 });
