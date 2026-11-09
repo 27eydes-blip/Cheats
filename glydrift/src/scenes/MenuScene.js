@@ -1,6 +1,7 @@
 // Title screen: dimmed living background, the selected hero flying a figure-eight, a big
 // ENDLESS button, LEVELS (level mode, which replaced the Daily Challenge), four main buttons
 // (Heroes, Shop, Leaderboard, Settings) and one MORE sheet holding everything else.
+import { COPYRIGHT, CREATED_BY, CREATOR_ROLE } from "../legal.js";
 import Phaser from "phaser";
 import { BIOMES, biomeStateAt, blendPalette, CLASSIC } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, FONT, NUM_FONT, VIEW } from "../config.js";
@@ -398,6 +399,11 @@ export class MenuScene extends Phaser.Scene {
     });
     // the news ticker at the very bottom
     this.buildTicker(L.ticker);
+    // the creator credit: a small, quiet line under MORE (NEVER remove or hide it)
+    this.creditText = plainText(this, W / 2, L.credit, CREATED_BY, 14, "#a89ed8")
+      .setAlpha(0.85)
+      .setDepth(100)
+      .setName("creatorCredit");
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.updateCountdown() });
 
     // ---- one pop-up at a time on arrival (first launch, or a fresh guest after logging out):
@@ -752,6 +758,7 @@ export class MenuScene extends Phaser.Scene {
       ["daily", 86],
       ["row", 76],
       ["more", 58],
+      ["credit", 18], // "Created by Sam Eyde III" (never remove: tests/e2e/credit.spec.js)
     ];
     const fixed = blocks.reduce((a, b) => a + b[1], 0);
     const n = blocks.length;
@@ -1677,7 +1684,8 @@ export class MenuScene extends Phaser.Scene {
     const hasTheme = Shop.owns("theme_pp_abyss");
     const plusRow = hasGold || hasTheme;
     // + the privacy policy / support row (App Review needs the policy reachable in the app)
-    const h = (Install.available ? 910 : 820) + (plusRow ? 90 : 0) + 76; // ≤ 1080, the shortest view
+    // + CREDITS (the creator and copyright: never remove; tests/e2e/credit.spec.js)
+    const h = (Install.available ? 910 : 820) + (plusRow ? 90 : 0) + 76 + 92;
     const c = this.modalBase(h, 0x3ef4ff);
     const y0 = H / 2 - h / 2;
     c.add(neonText(this, W / 2, y0 + 56, "SETTINGS", 40, 0x3ef4ff, { blur: 14 }));
@@ -1852,6 +1860,24 @@ export class MenuScene extends Phaser.Scene {
         onClick: () => openSite("support"),
       }),
     ]);
+    // CREDITS: the creator and the copyright (NEVER remove or hide: tests/e2e/credit.spec.js)
+    const cy = linksY + 76;
+    const credits = this.add.container(0, 0).setName("creditsSection");
+    const cg = this.add.graphics();
+    cg.lineStyle(1, 0xbfb6e8, 0.35).lineBetween(W / 2 - 150, cy - 40, W / 2 + 150, cy - 40);
+    credits.add([
+      cg,
+      plainText(this, W / 2, cy - 22, "Glydrift", 17, "#e8fdff"),
+      plainText(this, W / 2, cy, CREATOR_ROLE, 15, "#d8d0ff"),
+      plainText(this, W / 2, cy + 22, COPYRIGHT, 14, "#a89ed8"),
+    ]);
+    c.add(credits);
+    // (on the shortest screens with every optional row showing, shrink the panel to fit)
+    if (h > H - 24) {
+      const k = (H - 24) / h;
+      c.setScale(k).setPosition((W / 2) * (1 - k), (H / 2) * (1 - k));
+      c.list[0].setScale(1 / k); // the dimmed backdrop still covers the whole screen
+    }
     if (Install.available) {
       c.add(
         button(this, W / 2, y0 + 705, W - 180, 72, "ADD TO HOME SCREEN", {

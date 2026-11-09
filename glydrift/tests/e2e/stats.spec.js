@@ -156,3 +156,56 @@ test("Stats: the cloud merge keeps the larger counters @smoke", async ({ page },
       realmDeaths: { void: 20, solar: 1, abyss: 5 },
     });
 });
+
+test("Stats: a damaged save (negative counters, text in the per-hero map) loads clean and keeps counting @smoke", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const bad = {
+    ...SAVE,
+    stats: {
+      runs: -7,
+      totalDistance: -100,
+      nearMisses: 3,
+      heroRuns: { volt: "5", ember: "junk", frost: -2, ronin: null },
+      realmDeaths: { void: "4", solar: {} },
+    },
+  };
+  const log = await openGame(page, { save: bad });
+  const st = await page.evaluate(() => window.__glySave.data.stats);
+  expect(st.runs).toBe(0);
+  expect(st.totalDistance).toBe(0);
+  expect(st.nearMisses).toBe(3);
+  expect(st.heroRuns).toEqual({ volt: 5 });
+  expect(st.realmDeaths).toEqual({ void: 4 });
+  // the next run adds 1 (as a number: "5" + 1 used to make "51")
+  const after = await page.evaluate(() => {
+    window.__glyHeroes.Progression.commitRun({
+      mode: "normal",
+      char: "volt",
+      killedIn: "void",
+      score: 10,
+      distance: 50,
+      coins: 0,
+      nearMiss: 0,
+      lasers: 0,
+      saws: 0,
+      portals: 0,
+      biome: 0,
+      runTimeMs: 4000,
+      bestCombo: 1,
+    });
+    return window.__glySave.data.stats;
+  });
+  expect(after.heroRuns.volt).toBe(6);
+  expect(after.realmDeaths.void).toBe(5);
+  expect(after.runs).toBe(1);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Stats"));
+  await settle(page, "Stats", 900);
+  const v = await shown(page);
+  expect(v.tiles["TOTAL RUNS"]).toBe("1");
+  expect(v.text).toContain("6 runs");
+  expect(v.deaths.void).toBe("5");
+  expect(v.text).not.toMatch(/NaN|undefined|Infinity|-\d/);
+  expect(log.errors).toEqual([]);
+});

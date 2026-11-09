@@ -12,6 +12,7 @@
 import { Save } from "../data/save.js";
 import { TEST } from "../systems/testFlags.js";
 import { Leaderboard } from "./leaderboard.js";
+import { refreshAllMighty } from "./allMighty.js";
 import { cloudPayload, mergeSaves, progressScore } from "./cloudSave.js";
 
 const PUSH_DELAY_MS = 4000;
@@ -308,6 +309,7 @@ class AccountService {
     });
     this.merged = false; // (a different user, possibly)
     Leaderboard.restart(); // scores and renames go to the new session's player
+    refreshAllMighty(); // (is the new player ALL MIGHTY? never the old one's answer)
     this.linkType = p.get("type"); // recovery | signup | email_change | magiclink
   }
 
@@ -403,6 +405,7 @@ class AccountService {
       this.user = await this.backend.user();
       this.merged = false;
       Leaderboard.restart();
+      refreshAllMighty(); // (is the new player ALL MIGHTY? never the old one's answer)
       await this.pullAndMerge();
       this.emit();
     } catch (err) {
@@ -416,6 +419,7 @@ class AccountService {
       this.user = await this.backend.user();
       this.merged = false;
       Leaderboard.restart();
+      refreshAllMighty(); // (is the new player ALL MIGHTY? never the old one's answer)
       await this.pullAndMerge();
       this.emit();
     } catch (err) {
@@ -455,6 +459,7 @@ class AccountService {
     this.cloud = "off";
     Save.reset();
     Leaderboard.restart();
+    refreshAllMighty(); // (is the new player ALL MIGHTY? never the old one's answer)
   }
 
   /** Delete the account and every piece of its data, here and on the server. */
@@ -471,6 +476,7 @@ class AccountService {
     this.cloud = "off";
     Save.reset();
     Leaderboard.restart();
+    refreshAllMighty(); // (is the new player ALL MIGHTY? never the old one's answer)
   }
 
   /** One line for Settings. */

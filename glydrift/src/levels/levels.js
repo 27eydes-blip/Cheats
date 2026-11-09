@@ -125,7 +125,9 @@ const rec = (n) => state().p[n] || null;
 export function starsOf(n) {
   const r = rec(n);
   if (!r) return [false, false, false];
-  return [!!r.done, !!(r.coins && r.coins.every(Boolean) && r.coins.length >= 3), !!r.flawless];
+  // (a damaged or hand-edited save may hold something other than a list here: never crash on it)
+  const coins = Array.isArray(r.coins) ? r.coins : [];
+  return [!!r.done, coins.length >= 3 && coins.every(Boolean), !!r.flawless];
 }
 export const starCount = (n) => starsOf(n).filter(Boolean).length;
 export const totalStars = () => allLevels().reduce((a, l) => a + starCount(l.n), 0);
@@ -177,6 +179,7 @@ export function recordLevel(res) {
     out.first = true;
   }
   // star coins only count on a finished run (each one is kept once collected)
+  if (!Array.isArray(r.coins)) r.coins = [false, false, false]; // (a damaged save)
   r.coins = r.coins.map((c, i) => c || !!res.coins?.[i]);
   if (res.deaths === 0) r.flawless = true;
   if (res.deaths === 0 && res.timeMs > 0 && (!r.best || res.timeMs < r.best)) {
