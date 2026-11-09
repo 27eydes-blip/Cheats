@@ -85,7 +85,7 @@ export function renderShareCard(game, run) {
     glowText(`DAILY CHALLENGE #${dailyNumber()}`, W / 2, 245, 40, css(biome.accent), 700);
   // the player and their title
   const name = Save.data.profile?.username;
-  const title = Titles.equipped();
+  const title = Titles.shown(); // (ALL MIGHTY while you're the world's #1)
   if (name) glowText(name, W / 2, run.mode === "daily" ? 296 : 262, 46, "#ffffff", 800);
   if (title)
     glowText(title.name.toUpperCase(), W / 2, run.mode === "daily" ? 338 : 306, 30, title.color, 700);

@@ -103,7 +103,7 @@ export class TitlesScene extends Phaser.Scene {
 
   renderCard() {
     this.card.removeAll(true);
-    const t = Titles.equipped();
+    const t = Titles.shown(); // (ALL MIGHTY while you're the world's #1)
     if (t) this.card.add(titleText(this, 0, 0, t, { size: 22 }));
     else this.card.add(plainText(this, 0, 0, "NO TITLE", 18, "#7a70a8"));
   }
@@ -183,7 +183,8 @@ export class TitlesScene extends Phaser.Scene {
   }
 
   choose(row) {
-    if (!row.owned) {
+    // ALL MIGHTY can't be picked: it's worn by itself while the server says you're #1
+    if (!row.owned || row.source === "world") {
       Sfx.ui();
       return;
     }

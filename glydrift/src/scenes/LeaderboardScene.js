@@ -19,7 +19,9 @@ import { nameText } from "../ui/nameplate.js";
 import { Sfx } from "../audio/sfx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { button, fadeTo, neonText, plainText } from "../ui/ui.js";
-import { titleText } from "../ui/titleText.js";
+import { titleLine } from "../ui/titleText.js";
+import { AllMighty } from "../data/allMighty.js";
+import { refreshAllMighty } from "../online/allMighty.js";
 
 /** Heroes whose perks touch coins or survival (RONIN, SXE, WALLRUNNER's ×15 coins), shown with the gold perk badge. */
 const hasCoinPerks = (def) =>
@@ -501,10 +503,11 @@ export class LeaderboardScene extends Phaser.Scene {
     this.renderYou(undefined);
     try {
       await Leaderboard.flush(); // make sure your latest best is up there first
-      const res = await Leaderboard.board(
-        this.level,
-        this.tab === "daily" ? "all" : this.period,
-      );
+      // (and who the server says is ALL MIGHTY: cached, never fails the board)
+      const [res] = await Promise.all([
+        Leaderboard.board(this.level, this.tab === "daily" ? "all" : this.period),
+        refreshAllMighty(),
+      ]);
       if (id !== this.reqId || !this.sys.isActive()) return;
       this.setStatus("live");
       this.showState(res.rows.length ? null : "empty");
@@ -736,7 +739,13 @@ export class LeaderboardScene extends Phaser.Scene {
       name.setScale(
         Math.min(1, (colW - 6) / Math.max(1, name.getBounds().width)),
       );
-      const ttl = titleText(this, cx, top - 52, r.title, { size: 11 });
+      // ALL MIGHTY on the holder's place (the server's answer). A former holder's place shows
+      // the Former All Mighty badge instead of their title (a podium column fits only one)
+      const former = AllMighty.formerRow(r, mine);
+      const ttl = titleLine(this, cx, top - 52, former ? null : Titles.forRow(r), {
+        size: 11,
+        former,
+      });
       if (ttl.list.length)
         ttl.setScale(
           Math.min(1, (colW - 6) / Math.max(1, ttl.getBounds().width)),
@@ -947,7 +956,6 @@ export class LeaderboardScene extends Phaser.Scene {
         badge: fl.s1,
         font: NUM_FONT,
       });
-      this.list.add(titleText(this, 183, y + 10, r.title, { size: 12, ox: 0 }));
       const score = plainText(
         this,
         W - 48,
@@ -960,7 +968,15 @@ export class LeaderboardScene extends Phaser.Scene {
           font: FONT,
         },
       );
-      this.list.add([g, rankTxt, icon, name, score]);
+      const ttl = titleLine(this, 183, y + 10, Titles.forRow(r), {
+        size: 12,
+        ox: 0,
+        former: AllMighty.formerRow(r, mine),
+      });
+      // a long title + badge never runs into the score
+      const room = W - 48 - score.width - 18 - 183;
+      if (ttl.lineWidth > room) ttl.setScale(room / ttl.lineWidth);
+      this.list.add([g, rankTxt, icon, name, score, ttl]);
       if (hasCoinPerks(def)) this.list.add(this.perkBadge(164, y + 16));
       if ((def.speed ?? 1) > 1) this.list.add(this.speedBadge(164, y - 16));
       this.heroTip(this.list, icon, def);
@@ -1015,9 +1031,14 @@ export class LeaderboardScene extends Phaser.Scene {
         font: NUM_FONT,
       }),
     );
-    this.you.add(
-      titleText(this, 193, 8, Titles.equippedId(), { size: 12, ox: 0 }),
-    );
+    const ttl = titleLine(this, 193, 8, Titles.shownId(), {
+      size: 12,
+      ox: 0,
+      former: AllMighty.former() && !AllMighty.isMe(),
+    });
+    // (the right side holds YOUR BEST and the chase line)
+    if (ttl.lineWidth > W - 193 - 250) ttl.setScale((W - 193 - 250) / ttl.lineWidth);
+    this.you.add(ttl);
     this.you.add(
       // the label sits above the number, so the title can go under your name
       plainText(
