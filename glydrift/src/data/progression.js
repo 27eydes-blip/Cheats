@@ -8,6 +8,7 @@ import { Titles } from "./titles.js";
 import { SPIN_MAX } from "../tuning.js";
 import { Seasons } from "./seasons.js";
 import { DriftPass } from "./driftPass.js";
+import { perkCoins, perkPassXp, perkXp } from "./heroPerks.js";
 import { TEST } from "../systems/testFlags.js";
 
 // ------------------------------------------------------------------ missions
@@ -722,6 +723,15 @@ export const Progression = {
 
     // coins (+ a hero perk bonus, e.g. RONIN's +13, which isn't "collected")
     s.coins += run.coins + (run.perkBonus?.total || 0);
+    // reward-only hero perks (DRIFT PASS+ heroes: +% coins / XP / pass XP, a daily bonus).
+    // Paid on top, never counted as "collected" (missions, stats and XP ignore them), and
+    // they never touch run.score or run.distance.
+    const perks = getCharacter(run.char)?.perks;
+    const pc = perkCoins(perks, run, s);
+    if (pc.pct || pc.daily || perks?.xpPct || perks?.passPct) {
+      run.heroPerk = { coins: pc.pct + pc.daily, pctCoins: pc.pct, daily: pc.daily, xp: 0, passXp: 0 };
+      s.coins += pc.pct + pc.daily;
+    }
 
     // missions
     for (const m of s.missions) {
@@ -741,11 +751,18 @@ export const Progression = {
     const xp = Math.round(
       run.distance * 0.25 + run.nearMiss * 8 + run.coins * 1.5 + 10 + completedXp,
     );
-    res.xpGained = xp;
-    s.xp += xp;
-    // the Drift Pass fills with the same XP (+ a bonus for beating a level, x XP boosts)
+    const xpPerk = perkXp(perks, xp);
+    res.xpGained = xp + xpPerk;
+    s.xp += xp + xpPerk;
+    // the Drift Pass fills with the run's XP (+ a bonus for beating a level, x XP boosts); a
+    // hero's XP perk is level XP only, its pass perk is pass XP only
     res.passBefore = DriftPass.unlockedCount();
-    let passXp = xp + (run.levelDone ? 100 : 0);
+    const passBase = xp + (run.levelDone ? 100 : 0);
+    let passXp = perkPassXp(perks, passBase);
+    if (run.heroPerk) {
+      run.heroPerk.xp = xpPerk;
+      run.heroPerk.passXp = passXp - passBase;
+    }
     const boost = s.xpBoost;
     if (boost?.runs > 0) {
       passXp *= boost.mul;

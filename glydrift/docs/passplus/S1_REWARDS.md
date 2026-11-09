@@ -4,7 +4,7 @@
 
 ## Rules (all of them)
 
-- **Cosmetic only.** Heroes have the standard hitbox and speed and are drawn about 10% smaller. Nothing changes score, coins, physics or leaderboard rules. The hitbox/speed test now covers the four Riftling forms.
+- **Cosmetic only.** Heroes have the standard hitbox and speed and are drawn about 10% smaller. Nothing changes score, physics or leaderboard rules. Each hero has one small reward-only perk (a few % more coins, XP or Drift Pass XP, or a once-a-day coin bonus; `perks` in `src/player/passHeroDefs.js`, paid in `Progression.commitRun` via `src/data/heroPerks.js`): it changes what a run pays, never its score or distance. The hitbox/speed test now covers the four Riftling forms.
 - **Exclusive to the paid track.** None of them is ever:
   - for sale;
   - in a Mystery Pod, the Lucky Spin or the daily deals;

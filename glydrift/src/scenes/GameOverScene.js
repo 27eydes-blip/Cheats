@@ -178,7 +178,8 @@ export class GameOverScene extends Phaser.Scene {
     let y = chipY + H * 0.068;
     // coins line — only when something was earned
     const missionCoins = R.missions.reduce((a, m) => a + m.reward.coins, 0);
-    const earned = run.coins + missionCoins + (run.perkBonus?.total || 0);
+    const earned =
+      run.coins + missionCoins + (run.perkBonus?.total || 0) + (run.heroPerk?.coins || 0);
     if (earned > 0) {
       const coinRow = this.add.container(W / 2, y);
       const coinIcon = this.add.image(-60, 0, "coin").setScale(0.8 / HI);
@@ -191,14 +192,18 @@ export class GameOverScene extends Phaser.Scene {
         onTick: Sfx.tick,
       }).to(earned, 400, 450);
       slideIn(this, coinRow, 400, 20);
-      // RONIN's perk: a small gold pop under the coins
-      if (run.perkBonus) {
-        const pb = run.perkBonus;
+      // RONIN's perk (or a DRIFT PASS+ hero's coin perk): a small gold pop under the coins
+      const pb = run.perkBonus;
+      const hp = run.heroPerk?.coins > 0 ? run.heroPerk : null;
+      if (pb || hp) {
+        const label = pb
+          ? `+${pb.total} ${getCharacter(run.char).name} BONUS${pb.mul > 1 ? ` (x${pb.mul})` : ""}`
+          : `+${hp.coins} ${getCharacter(run.char).name} PERK${hp.daily ? " · DAILY" : ""}`;
         const pop = neonText(
           this,
           W / 2,
           y + 44,
-          `+${pb.total} ${getCharacter(run.char).name} BONUS${pb.mul > 1 ? ` (x${pb.mul})` : ""}`,
+          label,
           22,
           0xffd23f,
           { blur: 8 },

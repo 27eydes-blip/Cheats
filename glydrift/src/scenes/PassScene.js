@@ -997,7 +997,8 @@ export class PassScene extends Phaser.Scene {
       16,
       "#ffe9a8",
     );
-    tx(stageY + 446, "Cosmetic only: no speed, score or hitbox changes", 15, "#bfb6e8");
+    // (the heroes' small perks only add coins / XP after a run: data/heroPerks.js)
+    tx(stageY + 446, "Hero perks add coins or XP only: never speed, score or hitbox", 15, "#bfb6e8");
     const by = top + ph - 88;
     if (Store.canBuy()) {
       const buy = button(this, W / 2 + 70, by, 280, 84, `BUY ${PLUS_PRICE_LABEL}`, {

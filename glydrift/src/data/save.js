@@ -47,6 +47,7 @@ function defaults() {
     boosts: { owned: {}, armed: {} }, // (retired) one-run boosts
     boostsRefunded: false,
     dailyDrop: "", // date the free Daily Drift Drop was last claimed
+    perkDaily: "", // date a hero's daily coin perk was last paid (one per day, any hero)
     moveNotice: { shown: 0, done: false }, // the glydrift.com launch pop-up: times shown, finished
     spinPity: 0, // Lucky Spin: spins since the last hero (the guarantee survives restarts)
     xpBoost: { mul: 1, runs: 0 }, // Drift Pass XP boost (runs left)
@@ -113,7 +114,8 @@ function repair(d) {
 
 // ---- the device ledger: free rewards this DEVICE has already handed out. It lives outside
 // the save, so logging out (or deleting the account, or signing into another account) can't
-// hand the same day's daily reward, free Drift Drop or starter spin out again.
+// hand the same day's daily reward, free Drift Drop, hero daily coin perk or starter spin out
+// again.
 const DEVICE_KEY = "glydrift.device.v1";
 let ledgerCache = null;
 function ledger() {
@@ -132,9 +134,11 @@ function noteLedger(d) {
   const next = {
     login: later(l.login, d.login?.claimed),
     drop: later(l.drop, d.dailyDrop),
+    perk: later(l.perk, d.perkDaily),
     starterSpin: true, // a save has existed on this device: its free starter spin is given
   };
-  if (next.login === l.login && next.drop === l.drop && l.starterSpin) return;
+  if (next.login === l.login && next.drop === l.drop && next.perk === (l.perk || "") && l.starterSpin)
+    return;
   ledgerCache = next;
   try {
     localStorage.setItem(DEVICE_KEY, JSON.stringify(next));
@@ -148,6 +152,7 @@ function applyLedger(d, fresh) {
   d.login ||= {};
   d.login.claimed = later(d.login.claimed, l.login);
   d.dailyDrop = later(d.dailyDrop, l.drop);
+  d.perkDaily = later(d.perkDaily, l.perk);
   if (fresh && l.starterSpin) d.spins = 0;
   return d;
 }

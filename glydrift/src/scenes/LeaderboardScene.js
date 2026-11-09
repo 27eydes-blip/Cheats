@@ -21,7 +21,12 @@ import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { button, fadeTo, neonText, plainText } from "../ui/ui.js";
 import { titleText } from "../ui/titleText.js";
 
-/** Heroes whose perks touch coins or survival (RONIN, SXE, WALLRUNNER's ×15 coins), shown with the gold perk badge. */
+/**
+ * Heroes whose perks touch coins or survival (RONIN, SXE, WALLRUNNER's ×15 coins), shown with
+ * the gold perk badge. The DRIFT PASS+ heroes' small reward perks (coinPct, xpPct, passPct,
+ * dailyCoins: data/heroPerks.js) are paid after the run and never touch a run's score or its
+ * survival, so they stay off this list on purpose.
+ */
 const hasCoinPerks = (def) =>
   !!(
     (def.coinMul ?? 1) > 1 ||
