@@ -53,6 +53,7 @@ export function statsSummary(s = Save.data) {
   return {
     runs,
     playMs: n(st.playMs),
+    untimed: runs > 0 && timed === 0, // every run so far was flown before play time was counted
     avgRunMs: timed ? n(st.playMs) / timed : 0,
     avgDistance: runs ? n(st.totalDistance) / runs : 0,
     bestDistance: n(st.maxDistance),
@@ -161,8 +162,9 @@ export class StatsScene extends Phaser.Scene {
     // ---- the tiles
     const tiles = [
       ["TOTAL RUNS", fmtNum(m.runs), 0x3ef4ff],
-      ["TIME PLAYED", fmtSpan(m.playMs), 0x3ef4ff],
-      ["AVERAGE RUN", fmtSpan(m.avgRunMs), 0x3ef4ff],
+      // (runs flown before this page existed were never timed: say so instead of "0:00")
+      ["TIME PLAYED", m.untimed ? "—" : fmtSpan(m.playMs), 0x3ef4ff, m.untimed && "COUNTING FROM NOW"],
+      ["AVERAGE RUN", m.untimed ? "—" : fmtSpan(m.avgRunMs), 0x3ef4ff, m.untimed && "COUNTING FROM NOW"],
       ["BEST SCORE", fmtNum(m.bestScore), 0xffd23f],
       ["BEST DISTANCE", `${fmtNum(m.bestDistance)} m`, 0xffd23f],
       ["AVERAGE DISTANCE", `${fmtNum(m.avgDistance)} m`, 0xffd23f],
@@ -175,7 +177,7 @@ export class StatsScene extends Phaser.Scene {
     ];
     const cols = 2;
     const tw = (W - PAD * 2 - GAP * (cols - 1)) / cols;
-    tiles.forEach(([label, value, col], i) => {
+    tiles.forEach(([label, value, col, note], i) => {
       const x = PAD + (i % cols) * (tw + GAP);
       const ty = y + Math.floor(i / cols) * (TILE_H + GAP);
       const c = this.add.container(0, 0);
@@ -193,6 +195,7 @@ export class StatsScene extends Phaser.Scene {
         .setOrigin(0.5);
       if (v.width > tw - 24) v.setScale((tw - 24) / v.width);
       c.add([g, v, plainText(this, x + tw / 2, ty + 106, label, 15, hex(col))]);
+      if (note) c.add(plainText(this, x + tw / 2, ty + 18, note, 11, "#8a80a8"));
       c.name = `tile:${label}`;
       c.statValue = value;
       L.add(c);

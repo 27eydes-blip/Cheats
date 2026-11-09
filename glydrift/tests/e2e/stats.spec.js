@@ -113,6 +113,14 @@ test("Stats: an old save without the new counters shows zeros, not NaN @smoke", 
   expect(Object.values(v.deaths).every((d) => d === "0")).toBe(true);
   expect(v.text).toContain("Fly a few runs to find out");
   expect(v.text).not.toMatch(/NaN|undefined|Infinity/);
+  // a long-time player: 500 runs flown before play time was counted shows "—" (counting from
+  // now), never "0:00 played" next to 500 runs
+  const vet = await page.evaluate(() => {
+    const { statsSummary } = window.__glyStats;
+    const d = window.__glySave.data;
+    return statsSummary({ ...d, stats: { ...d.stats, runs: 500, playMs: 0, timedRuns: 0 } }).untimed;
+  });
+  expect(vet).toBe(true);
   // and the time formats
   const f = await page.evaluate(() => {
     const { fmtSpan, fmtNum } = window.__glyStats;
