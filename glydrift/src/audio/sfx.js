@@ -256,6 +256,7 @@ const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28];
 const semis = (base, step) =>
   base * 2 ** (PENTA[Math.min(step, PENTA.length - 1)] / 12);
 let lastTick = 0;
+let lastSpinTick = 0;
 
 const FLAP = {
   volt: () => tone({ type: "square", f0: 520, f1: 900, dur: 0.07, vol: 0.12 }),
@@ -1232,6 +1233,14 @@ export const Sfx = {
     if (now - lastTick < 45) return;
     lastTick = now;
     tone({ type: "square", f0: 2400, f1: 1800, dur: 0.018, vol: 0.05 });
+  },
+  /** Lucky Spin: the wheel's peg clicking past the pointer; `speed` 0..1 brightens it */
+  spinTick: (speed = 0) => {
+    const now = performance.now();
+    if (now - lastSpinTick < 38) return; // a fast wheel clicks steadily instead of buzzing
+    lastSpinTick = now;
+    const f = 1300 + speed * 1100;
+    tone({ type: "square", f0: f, f1: f * 0.7, dur: 0.022, vol: 0.045 + (1 - speed) * 0.03 });
   },
   whoosh: () => {
     noise({ dur: 0.45, vol: 0.22, f: 1600 });

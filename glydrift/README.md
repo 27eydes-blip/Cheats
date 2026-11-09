@@ -161,7 +161,7 @@ Earn rate (measured with a test bot that grabs about 60% of coins):
 | Average (~600 m, 33 s) | ~83 (incl. 50 biome bonus) | ~1 spin | ~250 |
 | Good (~1,000 m, 52 s) | ~150 | ~1.5 spins | ~400 |
 
-\* plus spins (≈195 coins each on average), missions (~100 coins each) and level-ups.
+\* plus spins (≈410 coins each on average, plus a 3% rare cosmetic), missions (~100 coins each) and level-ups.
 
 | Tier | Price | ≈ runs at ~150 coins/run |
 |---|---|---|
