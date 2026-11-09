@@ -137,7 +137,7 @@ jobs:
     needs: plan
     if: needs.plan.outputs.lane == 'fast' && needs.plan.outputs.hit != 'true' && !(github.event_name == 'workflow_dispatch' && inputs.skip_tests)
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40 # the smoke suite grew with the big update: Chromium now needs ~25 min
     strategy:
       fail-fast: false
       matrix:
