@@ -64,7 +64,9 @@ async function fetchServer() {
  */
 export function refreshAllMighty({ force = false } = {}) {
   if (pending) return pending;
-  if (!force && last && Date.now() - last < TTL_MS) return Promise.resolve(false);
+  // (a different player signed in or out: ask again now, the cached "you" was cleared)
+  if (!force && last && Date.now() - last < TTL_MS && !AllMighty.userStale())
+    return Promise.resolve(false);
   pending = (async () => {
     try {
       if (TEST.lbmock) {

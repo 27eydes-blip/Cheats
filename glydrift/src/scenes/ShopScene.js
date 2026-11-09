@@ -232,6 +232,7 @@ export class ShopScene extends Phaser.Scene {
     this.fx = new Effects(this, { lowGfx: s.settings.lowGfx, depth: 300 });
     this.t = 0;
     this.modal = null;
+    this.buying = false; // a purchase's animation is playing (see gotIt)
     this.index = 0;
     this.lowGfx = s.settings.lowGfx;
     this.timers = [];
@@ -1328,7 +1329,9 @@ export class ShopScene extends Phaser.Scene {
         size: cta.label.length > 8 ? 30 : 38,
         fill: cta.fill ?? 0x2a1460,
         onClick: () => {
-          if (this.modal || !cta.act) return;
+          // (not while a purchase is still flying in: the button shows the old price until it
+          // lands, and a second tap would open a confirmation for something already yours)
+          if (this.modal || (this.buying && this.time.now - this.buyingAt < 3000) || !cta.act) return;
           cta.act();
         },
       });
@@ -1515,6 +1518,8 @@ export class ShopScene extends Phaser.Scene {
    * the particles.
    */
   gotIt(c) {
+    this.buying = true; // (until landed: the stage still shows the price)
+    this.buyingAt = this.time.now; // (and never longer than 3 s, whatever happens)
     const calm = reduceFlashing();
     const lo = this.lowGfx;
     const col = c.col;
@@ -1598,6 +1603,7 @@ export class ShopScene extends Phaser.Scene {
 
   /** 3. the item lands on the hero: the stage rebuilds (now owned / equipped) and lights up. */
   landed(c, to, calm) {
+    this.buying = false;
     const col = c.col;
     Sfx.reward();
     Haptics.light();

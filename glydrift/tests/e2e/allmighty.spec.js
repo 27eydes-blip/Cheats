@@ -180,3 +180,27 @@ test("ALL MIGHTY: offline never crashes or grants it (a stale cached answer does
   expect(await tree(page, "Progress")).not.toContain(`title:${MIGHTY}`);
   expect(log.errors).toEqual([]);
 });
+
+test("ALL MIGHTY: logging out (or into another account) drops the old player's title at once @smoke", async ({
+  page,
+}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
+  const log = await openGame(page); // (?offline: the refresh can't fetch a new answer)
+  // a fresh server answer: this device's player (u1) is #1
+  await page.evaluate(() =>
+    window.__glyAllMighty.AllMighty.apply({ holder: "u1", holderName: "Ace", since: "", history: ["u1"] }, "u1"),
+  );
+  await waitFor(page, () => window.__glyTitles.shownId() === "w_allmighty");
+  // the session's player changes (log out → a new guest; log in → another account)
+  await page.evaluate(() => window.__glyLb.Leaderboard.restart());
+  expect(await page.evaluate(() => window.__glyAllMighty.AllMighty.isMe())).toBe(false);
+  expect(await page.evaluate(() => window.__glyTitles.shownId())).not.toBe("w_allmighty");
+  await settle(page, "Menu", 300);
+  expect(await tree(page, "Menu")).not.toContain(`title:${MIGHTY}`);
+  // and it stays gone after a reload (the cached answer no longer says "you")
+  await reopen(page, page.url());
+  expect(await page.evaluate(() => window.__glyAllMighty.AllMighty.isMe())).toBe(false);
+  // the holder's own row on a board still shows it (that doesn't depend on who you are)
+  expect(await page.evaluate(() => window.__glyAllMighty.AllMighty.holderId())).toBe("u1");
+  expect(log.errors).toEqual([]);
+});

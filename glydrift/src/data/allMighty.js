@@ -18,6 +18,7 @@ const MAX_HISTORY = 500;
 
 const listeners = new Set();
 let cache = null; // { holder, holderName, since, history: [ids], me, at }
+let userStale = false; // the signed-in player changed since the last answer (see userChanged)
 
 function readCache() {
   if (cache) return cache;
@@ -44,6 +45,24 @@ function sanitize(d) {
   };
 }
 
+function writeCache() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    /* no storage: it still works for this session */
+  }
+}
+
+function notify() {
+  for (const fn of listeners) {
+    try {
+      fn();
+    } catch {
+      /* a screen that's gone */
+    }
+  }
+}
+
 function saved() {
   const s = Save.data;
   if (!s.allMighty || typeof s.allMighty !== "object") s.allMighty = { former: false, at: "" };
@@ -56,11 +75,8 @@ export const AllMighty = {
     const prev = this.isMe();
     const prevFormer = this.former();
     cache = sanitize({ ...data, me: myId || null, at: Date.now() });
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-    } catch {
-      /* no storage: it still works for this session */
-    }
+    userStale = userStale && !myId; // (still nobody signed in: ask again next time)
+    writeCache();
     // been #1 (now or before)? that's yours for good, in the save
     const me = cache.me;
     if (me && (cache.holder === me || cache.history.includes(me)) && !saved().former) {
@@ -68,14 +84,28 @@ export const AllMighty = {
       saved().at = new Date().toISOString();
       Save.write();
     }
-    if (prev !== this.isMe() || prevFormer !== this.former())
-      for (const fn of listeners) {
-        try {
-          fn();
-        } catch {
-          /* a screen that's gone */
-        }
-      }
+    if (prev !== this.isMe() || prevFormer !== this.former()) notify();
+  },
+
+  /**
+   * The signed-in player changed (log in / log out / account deleted): the cached answer's
+   * "you" was the previous player, so it must not give the title to whoever is playing now.
+   * The holder and history stay (they don't depend on who you are); the next refresh fills
+   * "you" in again.
+   */
+  userChanged() {
+    const c = readCache();
+    userStale = true;
+    if (!c || !c.me) return;
+    const prev = this.isMe();
+    c.me = null;
+    writeCache();
+    if (prev) notify();
+  },
+
+  /** True after userChanged() until the next server answer (refresh it now, not in 30 min). */
+  userStale() {
+    return userStale;
   },
 
   /** The current holder's player id (from the server's last answer), or null. */
@@ -112,6 +142,7 @@ export const AllMighty = {
   /** test builds: forget the cached answer */
   _reset() {
     cache = null;
+    userStale = false;
     try {
       localStorage.removeItem(CACHE_KEY);
     } catch {
