@@ -58,6 +58,7 @@ const BEFORE = {
     ["hero", "dawson", 12000, "coins"],
     ["hero", "dewberry", 4000, "coins"],
     ["hero", "tung", 12000, "coins"],
+    ["hero", "newbleizer", 12000, "coins"], // (added after this list was captured: THE NEWBLEIZER, live since)
     ["hero", "wallrunner", 10000, "coins"],
     ["hero", "manny", 5000, "coins"],
     ["hero", "milzzz", null, "LOCKED"],
