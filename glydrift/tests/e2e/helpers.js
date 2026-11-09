@@ -286,6 +286,27 @@ export async function tap(page, label, after = 900) {
   await run(page, after);
 }
 
+/**
+ * Make a home-screen feature's label visible: the main buttons are on the home screen itself,
+ * everything else (Lucky Spin, the season pass, Progress, the free drop…) is a row in the MORE
+ * sheet, which this opens first when needed.
+ */
+export async function reveal(page, label) {
+  if (await locate(page, label).then(() => true, () => false)) return;
+  // (the home screen may still be popping its buttons in)
+  await waitFor(page, () => {
+    const m = window.__glydrift.scene.getScene("Menu");
+    return m?.sys.isActive() && m.moreBtn?.alpha > 0.5;
+  });
+  await tap(page, "MORE", 600);
+}
+
+/** Open a home-screen feature by its label, through the MORE sheet when it lives there. */
+export async function tapHome(page, label, after = 900) {
+  await reveal(page, label);
+  await tap(page, label, after);
+}
+
 /** A point on the playfield away from every button (for flapping). */
 export async function fieldPoint(page) {
   return page.evaluate(() => {

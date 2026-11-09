@@ -62,7 +62,7 @@ Expected rating: **9+** (because of mild cartoon violence). Made for Kids: **No.
 > RESTORE PURCHASES is next to the buy button. Purchases are verified on our server with the App
 > Store Server API before anything unlocks.
 >
-> Lucky Spin and Mystery Pods use coins earned in the game only. Odds are shown (ODDS button on
+> Lucky Spin and Mystery Pods use coins earned in the game only. Odds are shown (under the wheel and behind the ODDS button on
 > the Lucky Spin screen; on each pod in the Shop). They can't be bought with real money.
 >
 > Account deletion: Settings → ACCOUNT → DELETE MY ACCOUNT (deletes everything immediately).

@@ -5,6 +5,7 @@ import { dayDiff, RNG, todayKey } from "./rng.js";
 import { Save } from "./save.js";
 import { plusAllowed } from "./plusGate.js";
 import { Titles } from "./titles.js";
+import { getCosmetic } from "./cosmetics.js";
 import { SPIN_MAX } from "../tuning.js";
 import { Seasons } from "./seasons.js";
 import { DriftPass } from "./driftPass.js";
@@ -298,17 +299,42 @@ export const LEVEL_REWARDS = {
 export const SPIN_EVERY = 2500;
 /** Most spins one run can earn (a single huge run used to bank dozens). */
 export const SPINS_PER_RUN = 1;
-/** The wheel, clockwise from the top. Weights are relative chances. */
+/**
+ * The wheel, clockwise from the top. Weights are relative chances and add up to 100, so each
+ * weight is that slice's chance in percent (the odds table shows exactly these numbers).
+ * Coin slices pay double what they used to (100 / 150 / 200 / 400 / 2000 → 200 / 300 / 400 /
+ * 800 / 4000), and one slice is a rare cosmetic from SPIN_COSMETICS.
+ */
 export const SPIN_SLICES = [
-  { type: "coins", amount: 100, weight: 20 },
-  { type: "hero", weight: 4 },
-  { type: "coins", amount: 200, weight: 18 },
-  { type: "spins", amount: 2, weight: 8 }, // two free spins back
-  { type: "coins", amount: 150, weight: 18 },
-  { type: "hero", weight: 4 },
-  { type: "jackpot", amount: 2000, weight: 3 },
-  { type: "coins", amount: 400, weight: 13 },
+  { type: "coins", amount: 200, weight: 22 },
+  { type: "hero", weight: 5 },
+  { type: "coins", amount: 400, weight: 20 },
+  { type: "spins", amount: 2, weight: 9 }, // two free spins back
+  { type: "cosmetic", weight: 3 }, // one of SPIN_COSMETICS, or its coin value if owned
+  { type: "coins", amount: 300, weight: 20 },
+  { type: "hero", weight: 5 },
+  { type: "jackpot", amount: 4000, weight: 3 },
+  { type: "coins", amount: 800, weight: 13 },
 ];
+/** What a hero slice pays once every spin hero is owned. */
+export const SPIN_HERO_COINS = 2000;
+/**
+ * The cosmetic slice: one of these epic shop items, picked evenly. They stay for sale in the
+ * shop as before; the wheel is just a lucky way to get one. Already own the one rolled? You
+ * get half its shop price in coins instead (the screen says so).
+ */
+export const SPIN_COSMETICS = [
+  "trail_rainbow",
+  "trail_galaxy",
+  "hat_halo",
+  "hat_helmet",
+  "skin_neon",
+  "skin_chrome",
+  "coin_hearts",
+];
+/** The coins a cosmetic you already own pays instead: half its shop price, to the nearest 50. */
+export const spinCosmeticCoins = (id) =>
+  Math.max(500, Math.round((getCosmetic(id)?.price || 1000) / 100) * 50);
 /** A hero is guaranteed after this many spins in a row without one (while any are left). */
 export const SPIN_PITY = 30;
 /** Most spins a multi-spin uses at once. */
@@ -559,16 +585,20 @@ export const Progression = {
   },
 
   /**
-   * Spend a spin and roll the prize (decided before the wheel animates; the wheel just lands
-   * on a matching slice). Returns { slice, prize: {type:"coins", amount} | {type:"hero", id} }.
+   * Spend a spin and roll the prize (decided before the wheel animates; the wheel then lands
+   * exactly on that slice). Returns { slice, prize } where prize is one of
+   * {type:"coins", amount, jackpot} | {type:"spins", amount} | {type:"hero", id} |
+   * {type:"cosmetic", id, dupe, amount} (dupe: already owned, so `amount` coins instead).
+   * `force` (test builds only) picks the slice, so tests can check every kind of prize.
    */
-  spin() {
+  spin(force) {
     const s = Save.data;
     if ((s.spins || 0) <= 0) return null;
     s.spins -= 1;
     const left = Progression.lotteryLeft();
     let idx = 0;
-    if (left.length && (s.spinPity || 0) >= SPIN_PITY - 1) {
+    if (TEST.on && Number.isInteger(force) && SPIN_SLICES[force]) idx = force;
+    else if (left.length && (s.spinPity || 0) >= SPIN_PITY - 1) {
       // pity: too long without a hero → this spin lands on a hero slice
       const heroSlices = SPIN_SLICES.map((sl, i) => (sl.type === "hero" ? i : -1)).filter(
         (i) => i >= 0,
@@ -602,9 +632,21 @@ export const Progression = {
       const got = Math.max(0, Math.min(slice.amount, SPIN_MAX - s.spins));
       s.spins += got;
       prize = { type: "spins", amount: got };
+    } else if (slice.type === "cosmetic") {
+      const id = SPIN_COSMETICS[Math.floor(Math.random() * SPIN_COSMETICS.length)];
+      s.cos ||= { owned: {}, equipped: {} };
+      s.cos.owned ||= {};
+      if (s.cos.owned[id]) {
+        const amount = spinCosmeticCoins(id);
+        s.coins += amount;
+        prize = { type: "cosmetic", id, dupe: true, amount };
+      } else {
+        s.cos.owned[id] = true;
+        prize = { type: "cosmetic", id, dupe: false, amount: 0 };
+      }
     } else {
       // every lottery hero owned → the hero slice pays a jackpot instead
-      const amount = slice.type === "hero" ? 1000 : slice.amount;
+      const amount = slice.type === "hero" ? SPIN_HERO_COINS : slice.amount;
       s.coins += amount;
       prize = { type: "coins", amount, jackpot: slice.type === "jackpot" };
     }
@@ -683,6 +725,18 @@ export const Progression = {
     st.maxPrismM = Math.max(st.maxPrismM || 0, Math.floor(run.prismM || 0));
     st.prismClears = (st.prismClears || 0) + (run.prismClear || 0);
     st.abyssClears = (st.abyssClears || 0) + (run.abyssClear || 0);
+    // the Stats page: time flown, runs per hero and crashes per realm. Only runs from now on
+    // are timed, so the average run time divides by timedRuns, not by every run ever played.
+    st.playMs = (st.playMs || 0) + Math.round(run.runTimeMs || 0);
+    st.timedRuns = (st.timedRuns || 0) + 1;
+    if (run.char) {
+      st.heroRuns ||= {};
+      st.heroRuns[run.char] = (st.heroRuns[run.char] || 0) + 1;
+    }
+    if (run.killedIn) {
+      st.realmDeaths ||= {};
+      st.realmDeaths[run.killedIn] = (st.realmDeaths[run.killedIn] || 0) + 1;
+    }
 
     // LEVEL MODE: levels beaten and stars earned (missions, achievements)
     if (run.mode === "level") {
