@@ -332,19 +332,18 @@ test("buys an item in the shop @smoke", async ({ page }, testInfo) => {
     const s = window.__glydrift.scene.getScene("Shop");
     s.setTab("trail");
     const coins = JSON.parse(localStorage.getItem("glydrift.save.v1")).coins;
-    const priceOf = (c) =>
-      c.cta?.list?.find((o) => o.type === "Text" && /^\d+$/.test(o.text));
-    const i = s.cards.findIndex((c) => priceOf(c) && +priceOf(c).text <= coins);
+    // (each tile knows its coin price; the selected one is bought from the stage's button)
+    const i = s.cards.findIndex((c) => c.price !== null && c.price <= coins);
     if (i < 0) return null;
     s.focus(i, true);
-    return { id: s.cards[i].offer.id, price: +priceOf(s.cards[i]).text, coins };
+    return { id: s.cards[i].offer.id, price: +s.cta.priceText.text, coins };
   });
   expect(item).not.toBeNull();
   await run(page, 800);
   const ctaPt = await page.evaluate(() => {
     const g = window.__glydrift;
     const s = g.scene.getScene("Shop");
-    const b = s.cards[s.index].cta.getBounds();
+    const b = s.cta.getBounds();
     const cam = s.cameras.main;
     const r = g.canvas.getBoundingClientRect();
     const sx = (b.centerX - cam.worldView.x) * cam.zoom;
