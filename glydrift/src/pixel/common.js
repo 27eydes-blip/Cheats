@@ -5,6 +5,7 @@ import { yarms } from "./yarmsArt.js";
 import { sonjuwon, sonjuwonBoard } from "./sonjuwonArt.js";
 import { DAWSON_SKINS, dawson, dawsonLook, miniButterfly } from "./dawsonArt.js";
 import { TUNG_SKINS, tung, tungLook } from "./tungArt.js";
+import { newbleizerBall } from "./newbleizerArt.js";
 import { addAtlas, addTexture, PixelCanvas } from "./px.js";
 
 const OUT = 0x07101e; // bold character outline
@@ -600,7 +601,7 @@ function circleTex(n, r) {
 }
 
 /** Heroes whose portrait isn't frame 1 (THE HADDAD's is the big smile, not the uppercut). */
-const PORTRAIT_FRAME = { haddad: 4, jamal: 6, dawson: 4, dewberry: 4, tung: 4 };
+const PORTRAIT_FRAME = { haddad: 4, jamal: 6, dawson: 4, dewberry: 4, tung: 4, newbleizer: 4 };
 
 export function buildCommon(scene) {
   const frames = {};
@@ -649,6 +650,11 @@ export function buildCommon(scene) {
   // TUNG: wink, delighted, blink and the prance (3-6); hats sit on her crown, behind the horn
   for (let f = 3; f < 8; f++) frames[`tung_${f}`] = rim(SHOP_DRAW.tung(f)); // (7: the victory pose)
   HEAD_ANCHORS.tung = { x: 0.5, y: -8, w: 26, h: 26 };
+  // THE NEWBLEIZER: guard, confident, dunk, sheathe and dazed (3-7) and his basketball; hats
+  // sit on the flat top of his high-top fade (from the glide pose: the jump's blade is higher)
+  for (let f = 3; f < 8; f++) frames[`newbleizer_${f}`] = rim(SHOP_DRAW.newbleizer(f));
+  frames.newbleizer_ball = newbleizerBall();
+  HEAD_ANCHORS.newbleizer = headAnchor(frames.newbleizer_0);
   // 손주원: the roar pose, the board on its own, and hats on the tiger's head
   frames.sonjuwon_3 = rim(sonjuwon(3));
   frames.sonjuwon_board = rim(sonjuwonBoard());

@@ -28,6 +28,11 @@ export function botPlay({ maxTriesPerCp = 40, god = false, maxSeconds = 900 } = 
     return rng / 0x7fffffff;
   };
   const H = s.H;
+  // heroes with a jump perk (THE NEWBLEIZER: perks.jump, flap height ×1.08) rise higher per
+  // flap: the bot flies them the way a player who knows that would (waits a little longer)
+  const JUMP = s.charDef?.perks?.jump ?? 1;
+  const JUMP_V = Math.sqrt(JUMP);
+  const JUMP_EXTRA = 135 * (JUMP - 1);
   const res = {
     deaths: 0,
     triesAt: {},
@@ -172,7 +177,7 @@ export function botPlay({ maxTriesPerCp = 40, god = false, maxSeconds = 900 } = 
         // when the coin arrives (a one-step look-ahead with the real flight physics)
         const sim = (flap) => {
           let y = p.y * down;
-          let v = flap ? -790 * (p.miniT > 0 ? 0.86 : 1) : vy;
+          let v = flap ? -790 * JUMP_V * (p.miniT > 0 ? 0.86 : 1) : vy;
           const tg = target * down;
           for (let k = 0; k < starT * 60; k++) {
             v += ((v < 0 ? 2300 : 2750) * (p.miniT > 0 ? 0.92 : 1)) / 60;
@@ -182,7 +187,7 @@ export function botPlay({ maxTriesPerCp = 40, god = false, maxSeconds = 900 } = 
           return Math.abs(y - tg);
         };
         if (sim(true) + 4 < sim(false)) s.onTap();
-      } else if (err > 60 && vy > -100) s.onTap();
+      } else if (err > 60 + JUMP_EXTRA && vy > -100) s.onTap();
     }
     step();
     if (s.state === "dying" && lastDeathCp === null) {
