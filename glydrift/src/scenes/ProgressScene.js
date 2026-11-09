@@ -199,7 +199,8 @@ export class ProgressScene extends Phaser.Scene {
     y += 40;
     const cols = 4;
     const cellW = (W - 60) / cols;
-    const avail = H - y - 30;
+    // (above the home indicator: the last row's names used to sit under it on notched iPhones)
+    const avail = H - (this.registry.get("safeBottom") || 0) - y - 30;
     const rows = Math.ceil(ACHIEVEMENTS.length / cols);
     const cellH = Math.min(118, avail / rows);
     this.tip = null;
