@@ -328,6 +328,7 @@ test("tidy home: PLAY + 5 main buttons, at most 2 badges, the rest in MORE, a bi
     ["LUCKY SPIN", "Spin"],
     ["FREE DROP", "Shop"],
     ["PROGRESS", "Progress"],
+    ["STATS", "Stats"],
     ["SEASON 1 · ABYSS RISING", "Pass"],
   ]) {
     await tap(page, "MORE", 600);
