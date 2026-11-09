@@ -79,8 +79,13 @@ test("Lucky Spin shows the odds of every prize, matching the wheel", async ({ pa
   await tap(page, "ODDS", 500);
   const shown = await texts(page, "Spin");
   expect(shown).toContain("SPIN ODDS");
-  const pcts = shown.filter((t) => /^\d+(\.\d)?%$/.test(t)).map((t) => parseFloat(t));
-  expect(pcts.length).toBe(7); // 100 / 150 / 200 / 400 coins, 2 spins, jackpot, hero
+  // (the odds panel's rows; the always-on odds strip under the wheel is checked in spin.spec)
+  const panel = await page.evaluate(() => {
+    const walk = (list) => list.flatMap((o) => (o.type === "Text" && o.visible ? [o.text] : o.list ? walk(o.list) : []));
+    return walk(window.__glydrift.scene.getScene("Spin").reveal.list);
+  });
+  const pcts = panel.filter((t) => /^\d+(\.\d)?%$/.test(t)).map((t) => parseFloat(t));
+  expect(pcts.length).toBe(8); // 200 / 300 / 400 / 800 coins, jackpot, 2 spins, cosmetic, hero
   expect(Math.abs(pcts.reduce((a, b) => a + b, 0) - 100)).toBeLessThan(0.5);
   expect(shown).toContain("A new hero");
   // the wheel can't spin while the odds are up; GOT IT closes them
