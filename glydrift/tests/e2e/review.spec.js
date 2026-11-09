@@ -1,6 +1,6 @@
 // App Store review readiness: what App Review checks in the iPhone app (APP_STORE_REVIEW.md).
 import { expect, test } from "@playwright/test";
-import { locate, openGame, press, profileOf, run, settle, tap, waitFor } from "./helpers.js";
+import { locate, openGame, press, profileOf, run, settle, tap, tapHome, waitFor } from "./helpers.js";
 
 /** Pretend to be the Capacitor iPhone app (window.Capacitor before the game loads). */
 async function asIOSApp(page) {
@@ -34,6 +34,10 @@ test("iPhone app: no Add to Home Screen, privacy policy + support in Settings, n
   const log = await openGame(page);
   await run(page, 600);
   expect(await texts(page, "Menu")).not.toContain("ADD TO HOME SCREEN");
+  // nor in the MORE sheet (where it lives in the browser)
+  await tap(page, "MORE", 600);
+  expect(await texts(page, "Menu")).not.toContain("ADD TO HOME SCREEN");
+  await tap(page, "CLOSE", 600);
   await page.evaluate(() => window.__glydrift.scene.getScene("Menu").openSettings());
   await run(page, 600);
   const shown = await texts(page, "Menu");
@@ -70,13 +74,18 @@ test("privacy policy and support pages are published with the site", async ({ pa
 test("Lucky Spin shows the odds of every prize, matching the wheel", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page);
-  await tap(page, "LUCKY SPIN", 0);
+  await tapHome(page, "LUCKY SPIN", 0);
   await settle(page, "Spin", 1500);
   await tap(page, "ODDS", 500);
   const shown = await texts(page, "Spin");
   expect(shown).toContain("SPIN ODDS");
-  const pcts = shown.filter((t) => /^\d+(\.\d)?%$/.test(t)).map((t) => parseFloat(t));
-  expect(pcts.length).toBe(7); // 100 / 150 / 200 / 400 coins, 2 spins, jackpot, hero
+  // (the odds panel's rows; the always-on odds strip under the wheel is checked in spin.spec)
+  const panel = await page.evaluate(() => {
+    const walk = (list) => list.flatMap((o) => (o.type === "Text" && o.visible ? [o.text] : o.list ? walk(o.list) : []));
+    return walk(window.__glydrift.scene.getScene("Spin").reveal.list);
+  });
+  const pcts = panel.filter((t) => /^\d+(\.\d)?%$/.test(t)).map((t) => parseFloat(t));
+  expect(pcts.length).toBe(8); // 200 / 300 / 400 / 800 coins, jackpot, 2 spins, cosmetic, hero
   expect(Math.abs(pcts.reduce((a, b) => a + b, 0) - 100)).toBeLessThan(0.5);
   expect(shown).toContain("A new hero");
   // the wheel can't spin while the odds are up; GOT IT closes them

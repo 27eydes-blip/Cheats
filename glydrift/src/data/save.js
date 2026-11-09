@@ -36,6 +36,11 @@ function defaults() {
       maxLasersRun: 0,
       maxPortalsRun: 0,
       voidDeaths: 0, // MATTOE's challenge: runs that ended in the Neon Void
+      // the Stats page (runs before these were added count as 0 here)
+      playMs: 0, // total time flown, in ms
+      timedRuns: 0, // runs counted in playMs (for the average run time)
+      heroRuns: {}, // hero id → runs played with it
+      realmDeaths: {}, // biome id → runs that crashed there
     },
     missions: [],
     achievements: {},
@@ -58,6 +63,7 @@ function defaults() {
     levelRewards: {},
     lv: { p: {}, claimed: {}, played: 0 }, // LEVEL MODE progress (levels/levels.js); kept on load
     profile: { username: "" },
+    allMighty: { former: false, at: "" }, // been the world's #1 (ALL MIGHTY) at least once: for good
     lbQueue: [],
     settings: {
       lowGfx: false,

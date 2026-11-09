@@ -15,7 +15,8 @@ import {
 } from "../data/progression.js";
 import { Save } from "../data/save.js";
 import { Titles } from "../data/titles.js";
-import { titleText } from "../ui/titleText.js";
+import { titleLine } from "../ui/titleText.js";
+import { AllMighty } from "../data/allMighty.js";
 import { drawIcon } from "../ui/icons.js";
 import {
   button,
@@ -56,7 +57,8 @@ export class ProgressScene extends Phaser.Scene {
     button(this, W - 80, top + 46, 120, 64, "TITLES", {
       color: 0xffd23f,
       size: 18,
-      onClick: () => fadeTo(this, "Titles", { from: "Progress" }),
+      // titles are worn from the Locker Room now (its TITLES tab)
+      onClick: () => fadeTo(this, "Locker", { tab: "titles", from: "Progress" }),
     }).setDepth(100);
     // your profile line: name + the title you wear
     // (Drift Pass+: the gold name and the forever Season 1 badge show here too)
@@ -68,7 +70,12 @@ export class ProgressScene extends Phaser.Scene {
       badge: fl.s1,
       font: NUM_FONT,
     }).setDepth(100);
-    titleText(this, W / 2, top + 106, Titles.equippedId(), { size: 12 }).setDepth(100);
+    // (ALL MIGHTY while you're the world's #1; the Former All Mighty badge once you've been it)
+    const tl = titleLine(this, W / 2, top + 106, Titles.shownId(), {
+      size: 12,
+      former: AllMighty.former() && !AllMighty.isMe(),
+    }).setDepth(100);
+    if (tl.lineWidth > W - 80) tl.setScale((W - 80) / tl.lineWidth);
 
     // ---- level panel
     let y = top + 120;

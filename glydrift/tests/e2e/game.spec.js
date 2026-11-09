@@ -17,6 +17,7 @@ import {
   run,
   settle,
   tap,
+  tapHome,
   waitFor,
   SAVE,
 } from "./helpers.js";
@@ -157,7 +158,7 @@ test("every screen opens", async ({ page }, testInfo) => {
     ["SEASON 1 · ABYSS RISING", "Pass", "08-pass"],
   ];
   for (const [label, key, shot] of screens) {
-    await tap(page, label, 0);
+    await tapHome(page, label, 0); // (Lucky Spin, Progress and the season are in MORE)
     await settle(page, key, 2000);
     await expectFramed(page);
     await snap(page, testInfo, shot);
@@ -296,6 +297,76 @@ test("pause and resume (button, keys, app in background)", async ({
   expect(log.errors).toEqual([]);
 });
 
+test("tidy home: PLAY + 5 main buttons, at most 2 badges, the rest in MORE, a big RETRY @smoke", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const log = await openGame(page);
+  // the labelled buttons on the home screen (button() containers carry a .label)
+  const homeButtons = () =>
+    page.evaluate(() => {
+      const m = window.__glydrift.scene.getScene("Menu");
+      return m.children.list
+        .filter((c) => c.type === "Container" && c.label && c.visible && !c.isMore)
+        .map((c) => c.label.text);
+    });
+  expect((await homeButtons()).sort()).toEqual(
+    ["ENDLESS", "LEVELS", "HEROES", "SHOP", "LEADERBOARD", "SETTINGS", "MORE"].sort(),
+  );
+  const badges = await page.evaluate(() => {
+    let n = 0;
+    const walk = (o) => {
+      if (o.isBadge && o.visible) n++;
+      o.list?.forEach(walk);
+    };
+    window.__glydrift.scene.getScene("Menu").children.list.forEach(walk);
+    return n;
+  });
+  expect(badges).toBeLessThanOrEqual(2);
+  // every moved feature opens from the MORE sheet
+  for (const [label, key] of [
+    ["LUCKY SPIN", "Spin"],
+    ["FREE DROP", "Shop"],
+    ["PROGRESS", "Progress"],
+    ["LOCKER ROOM", "Locker"],
+    ["STATS", "Stats"],
+    ["SEASON 1 · ABYSS RISING", "Pass"],
+  ]) {
+    await tap(page, "MORE", 600);
+    await tap(page, label, 0);
+    await settle(page, key, 600);
+    await home(page);
+    await run(page, 1200);
+  }
+  // the daily streak (already claimed today: a toast says come back tomorrow)
+  await tap(page, "MORE", 600);
+  await tap(page, "DAILY STREAK", 600);
+  expect(await page.evaluate(() => window.__glydrift.scene.getScene("Menu").modal)).toBe(null);
+  // "Add to Home Screen", where the browser offers it
+  await tap(page, "MORE", 600);
+  const shown = await page.evaluate(() => window.__glydrift.scene.getScene("Menu").moreEntriesShown);
+  if (shown.includes("ADD TO HOME SCREEN")) {
+    await tap(page, "ADD TO HOME SCREEN", 600);
+    await page.evaluate(() => document.getElementById("install-modal")?.classList.remove("open"));
+  } else await tap(page, "CLOSE", 600);
+  // game over: RETRY is the biggest button on screen
+  await home(page);
+  await run(page, 1200);
+  await startRun(page);
+  await waitFor(page, () => window.__glydrift.scene.isActive("GameOver"), 30_000);
+  await settle(page, "GameOver", 1500);
+  const sizes = await page.evaluate(() => {
+    const go = window.__glydrift.scene.getScene("GameOver");
+    return go.children.list
+      .filter((c) => c.type === "Container" && c.label && c.visible)
+      .map((c) => ({ label: c.label.text, area: c.width * c.height }));
+  });
+  const biggest = sizes.reduce((a, b) => (b.area > a.area ? b : a));
+  expect(biggest.label).toBe("RETRY");
+  expect(sizes.filter((b) => b.label !== "RETRY").every((b) => b.area * 3 < biggest.area)).toBe(true);
+  expect(log.errors).toEqual([]);
+});
+
 test("game over and retry in under a second @smoke", async ({ page }, testInfo) => {
   const log = await openGame(page);
   await startRun(page);
@@ -332,19 +403,18 @@ test("buys an item in the shop @smoke", async ({ page }, testInfo) => {
     const s = window.__glydrift.scene.getScene("Shop");
     s.setTab("trail");
     const coins = JSON.parse(localStorage.getItem("glydrift.save.v1")).coins;
-    const priceOf = (c) =>
-      c.cta?.list?.find((o) => o.type === "Text" && /^\d+$/.test(o.text));
-    const i = s.cards.findIndex((c) => priceOf(c) && +priceOf(c).text <= coins);
+    // (each tile knows its coin price; the selected one is bought from the stage's button)
+    const i = s.cards.findIndex((c) => c.price !== null && c.price <= coins);
     if (i < 0) return null;
     s.focus(i, true);
-    return { id: s.cards[i].offer.id, price: +priceOf(s.cards[i]).text, coins };
+    return { id: s.cards[i].offer.id, price: +s.cta.priceText.text, coins };
   });
   expect(item).not.toBeNull();
   await run(page, 800);
   const ctaPt = await page.evaluate(() => {
     const g = window.__glydrift;
     const s = g.scene.getScene("Shop");
-    const b = s.cards[s.index].cta.getBounds();
+    const b = s.cta.getBounds();
     const cam = s.cameras.main;
     const r = g.canvas.getBoundingClientRect();
     const sx = (b.centerX - cam.worldView.x) * cam.zoom;
@@ -714,36 +784,33 @@ test("centre pop-ups never pile up", async ({ page }, testInfo) => {
   expect(log.errors).toEqual([]);
 });
 
-test("home shows at most two '!' badges, free rewards first", async ({
+test("home shows at most two badges, free rewards first", async ({
   page,
 }, testInfo) => {
   test.skip(
     profileOf(testInfo) !== "iphone-std",
     "once per browser, at phone size",
   );
-  // free drop ready, a spin to use and the login reward unclaimed: only the two free rewards
-  // get a badge (LEVELS replaced the daily chip and never shows one)
+  // free drop ready, a spin to use, a pass tier to claim, the login reward unclaimed and a
+  // limited hero on sale: only the free drop (on SHOP) and MORE (the daily reward is inside)
+  // get a badge
   const log = await openGame(page, {
     save: {
       ...SAVE,
       login: { last: "2026-11-03", streak: 3, claimed: "2026-11-03" },
     },
   });
-  const badged = await page.evaluate(() => {
+  const shown = await page.evaluate(() => {
     const m = window.__glydrift.scene.getScene("Menu");
-    const labels = [];
-    for (const c of m.children.list) {
-      if (c.type !== "Container") continue;
-      const bang = c.list.some(
-        (o) =>
-          o.type === "Container" &&
-          o.list.some((x) => x.type === "Text" && x.text === "!"),
-      );
-      if (bang) labels.push(c.list.find((x) => x.type === "Text")?.text);
-    }
-    return labels;
+    let n = 0;
+    const walk = (o) => {
+      if (o.isBadge) n++;
+      o.list?.forEach(walk);
+    };
+    m.children.list.forEach(walk);
+    return { ids: m.homeBadges, n };
   });
-  expect(badged.sort()).toEqual(["FREE DROP", "STREAK"]);
+  expect(shown).toEqual({ ids: ["shop-free", "more"], n: 2 });
   expect(log.errors).toEqual([]);
 });
 
@@ -756,18 +823,13 @@ test("lucky spins: old saves trimmed to 3, one spin per run at most", async ({
   );
   // an old save holding 105 spins (spins used to be uncapped) shows 3
   const log = await openGame(page, { save: { ...SAVE, spins: 105 } });
+  // (Lucky Spin is a row in the MORE sheet)
+  await tap(page, "MORE", 600);
   const shows = (txt) =>
-    page.evaluate(
-      (t) =>
-        window.__glydrift.scene
-          .getScene("Menu")
-          .children.list.some(
-            (c) =>
-              c.type === "Container" &&
-              c.list.some((x) => x.type === "Text" && x.text === t),
-          ),
-      txt,
-    );
+    page.evaluate((t) => {
+      const has = (o) => (o.type === "Text" && o.text === t) || !!o.list?.some(has);
+      return window.__glydrift.scene.getScene("Menu").children.list.some(has);
+    }, txt);
   expect(await shows("3 spins ready")).toBe(true);
   expect(log.errors).toEqual([]);
 });
@@ -1187,11 +1249,11 @@ test("titles: earn, wear, and see them on the leaderboard and game over", async 
     diamond: false,
     plusWear: false,
   });
-  // wear one through the Titles screen (Progress → TITLES)
-  await tap(page, "PROGRESS", 1200);
+  // wear one through the Locker Room's TITLES tab (Progress → TITLES)
+  await tapHome(page, "PROGRESS", 1200);
   await waitFor(page, () => window.__glydrift.scene.isActive("Progress"));
   await tap(page, "TITLES", 1200);
-  await waitFor(page, () => window.__glydrift.scene.isActive("Titles"));
+  await waitFor(page, () => window.__glydrift.scene.isActive("Locker"));
   await run(page, 600);
   await tap(page, "GOLD LEAGUE", 600);
   expect(await page.evaluate(() => window.__glyTitles.equippedId())).toBe(
@@ -1200,7 +1262,7 @@ test("titles: earn, wear, and see them on the leaderboard and game over", async 
   await snap(page, testInfo, "17-titles");
   // under your name on the leaderboard (pinned row)…
   await page.evaluate(() =>
-    window.__glydrift.scene.getScene("Titles").scene.start("Leaderboard"),
+    window.__glydrift.scene.getScene("Locker").scene.start("Leaderboard"),
   );
   await waitFor(page, () => window.__glydrift.scene.isActive("Leaderboard"));
   await run(page, 1200);
@@ -1490,6 +1552,9 @@ test("Drift Pass+ heroes: standard hitbox and speed, drawn ~10% smaller", async 
           if (p.y > s.H * 0.55 && p.vy > -50) s.onTap();
           frames.add(p.rig.sprite.frame.name);
         }
+        // (measured before the reactions below: those frames don't hold slow-mo off, and a real
+        // near-miss there would slow one hero's run and not another's)
+        const metres = Math.round((s.meters - before) * 100) / 100;
         // a new best and a near-miss play their reactions (cosmetic: nothing else changes)
         p.rig.onBest();
         p.rig.onNear();
@@ -1501,7 +1566,7 @@ test("Drift Pass+ heroes: standard hitbox and speed, drawn ~10% smaller", async 
           id: k,
           def: p.rig.def.id,
           radius: p.radius,
-          metres: Math.round((s.meters - before) * 100) / 100,
+          metres,
           width: p.rig.sprite.displayWidth,
           frames: frames.size,
           alive: s.state === "playing",
@@ -4188,7 +4253,9 @@ test("long runs never pile up: passed realms' art is freed, objects and memory s
   // nothing keeps growing between the middle and the end of the run
   expect(late.texMB - mid.texMB).toBeLessThanOrEqual(8);
   expect(late.texMB - early.texMB).toBeLessThanOrEqual(20);
-  expect(late.objs - mid.objs).toBeLessThanOrEqual(40);
+  // (pop-up texts are left out: under this test's frozen clock their fade-out never finishes, so
+  // they pile up here and only here; the rest of the display list must stay flat)
+  expect(late.objs - late.texts - (mid.objs - mid.texts)).toBeLessThanOrEqual(40);
   expect(late.backdrop - mid.backdrop).toBeLessThanOrEqual(40);
   // (pop-up texts and tweens aren't checked here: tweens run on the page's real clock, which the
   // test freezes, so no fade-out ever finishes in this test. With a running clock the pop-up

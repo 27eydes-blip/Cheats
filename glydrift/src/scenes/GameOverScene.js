@@ -306,7 +306,7 @@ export class GameOverScene extends Phaser.Scene {
     // (they used to drop from the top onto the score). Always clear of the button: after a long
     // results list (big runs) `y + 46` used to win and put the 92 px banner on top of RETRY;
     // now it may briefly cover the last results line instead, never a button.
-    const toastY = Math.max(y + 90, H * 0.8) - 110;
+    const toastY = Math.max(y + 110, H * 0.79) - 140; // (by - 140: clear of the tall RETRY)
     this.time.delayedCall(ANIM_END, () => {
       // each new hero gets the full spotlight reveal, one after another
       (async () => {
@@ -331,35 +331,40 @@ export class GameOverScene extends Phaser.Scene {
         });
     });
 
-    // ---- buttons
-    const by = Math.max(y + 90, H * 0.8);
-    const retry = button(this, W / 2, by, 440, 112, "RETRY", {
+    // ---- buttons: RETRY is by far the biggest and brightest thing on screen, centred low where
+    // the thumb already is; the row under it is smaller and dimmer so it never competes
+    const by = Math.max(y + 110, H * 0.79);
+    const retry = button(this, W / 2, by, 600, 156, "RETRY", {
       color: 0x39ff88,
-      size: 44,
-      fill: 0x0c2a1a,
+      size: 68,
+      fill: 0x138a42, // a lit green fill (the other buttons are dark): the eye lands here first
       onClick: () => this.retry(),
     });
-    const rowY = by + 112;
-    const share = button(this, 94, rowY, 140, 76, "SHARE", {
+    this.retryBtn = retry;
+    const rowY = by + 78 + 22 + 32;
+    const small = { size: 15 };
+    const share = button(this, 94, rowY, 140, 64, "SHARE", {
+      ...small,
       color: 0xffd23f,
-      size: 17,
       onClick: () => openShareModal(this.game, run),
     });
-    const ranks = button(this, 283, rowY, 210, 76, "LEADERBOARD", {
+    const ranks = button(this, 283, rowY, 210, 64, "LEADERBOARD", {
+      ...small,
+      size: 14,
       color: 0x3ef4ff,
-      size: 16,
       onClick: () => this.goto("Leaderboard", { tab: run.mode === "daily" ? "daily" : "score" }),
     });
-    const heroes = button(this, 472, rowY, 140, 76, "HEROES", {
+    const heroes = button(this, 472, rowY, 140, 64, "HEROES", {
+      ...small,
       color: 0xb45cff,
-      size: 17,
       onClick: () => this.goto("Characters"),
     });
-    const home = button(this, 626, rowY, 140, 76, "HOME", {
+    const home = button(this, 626, rowY, 140, 64, "HOME", {
+      ...small,
       color: 0xff4fd8,
-      size: 17,
       onClick: () => this.goto("Menu"),
     });
+    for (const b of [share, ranks, heroes, home]) b.setAlpha(0.82);
     popIn(this, [retry, share, ranks, heroes, home], 250, { duration: 350 });
 
     // ---- Drift Pass: a "TIER UP!" pop with a shortcut to the pass
@@ -396,7 +401,7 @@ export class GameOverScene extends Phaser.Scene {
     const tapHint = plainText(
       this,
       W / 2,
-      Math.min(H - (this.registry.get("safeBottom") || 0) - 24, by + 180),
+      Math.min(H - (this.registry.get("safeBottom") || 0) - 24, rowY + 62),
       "TAP ANYWHERE TO RETRY",
       17,
       "#9c90c8",
@@ -437,8 +442,12 @@ export class GameOverScene extends Phaser.Scene {
       });
       nt.setScale(Math.min(1, 132 / Math.max(1, nt.getBounds().width)));
     }
-    const title = Titles.equippedId();
-    if (title) titleText(this, W - 70, headY + 70, title, { size: 12 });
+    // (ALL MIGHTY while the server says you're the world's #1)
+    const title = Titles.shownId();
+    if (title) {
+      const tt = titleText(this, W - 70, headY + 70, title, { size: 12 });
+      tt.setScale(Math.min(1, 112 / Math.max(1, tt.lineWidth)));
+    }
   }
 
   /**

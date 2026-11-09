@@ -5,6 +5,7 @@
 import { Save } from "./save.js";
 import { COLLECTIONS } from "./cosmetics.js";
 import { plusEntitled } from "./plusGate.js";
+import { AllMighty } from "./allMighty.js";
 
 /** style: plain | shimmer | glow | shift (the animated ones are Drift Pass+ only). */
 export const TITLES = [
@@ -307,6 +308,19 @@ TITLES.push({
   how: "10 new bests with DAWSON",
 });
 
+// WORLD #1: ALL MIGHTY, worn automatically while the SERVER says you're #1 in the world on the
+// all-time Score board (checked daily; data/allMighty.js). Never equipped, never uploaded: the
+// leaderboard shows it on the holder's row from the server's answer.
+export const ALL_MIGHTY = "w_allmighty";
+TITLES.push({
+  id: ALL_MIGHTY,
+  name: "ALL MIGHTY",
+  source: "world",
+  style: "mighty",
+  color: "#ffd23f",
+  how: "Be #1 in the world on the all-time Score board",
+});
+
 export const TITLE_SOURCES = {
   achievement: "ACHIEVEMENTS",
   league: "DISTANCE LEAGUES",
@@ -317,6 +331,7 @@ export const TITLE_SOURCES = {
   event: "EVENTS",
   levels: "LEVELS",
   hero: "HEROES",
+  world: "WORLD #1", // (last: the list's earnable titles keep their places)
 };
 
 export const getTitle = (id) => TITLES.find((t) => t.id === id) || null;
@@ -348,6 +363,7 @@ function earned(t, s) {
 
 export const Titles = {
   owns(id) {
+    if (id === ALL_MIGHTY) return AllMighty.isMe(); // only ever the server's answer
     if (!state().owned[id]) return false;
     // Drift Pass+ titles also need the season's verified purchase (all "p_" titles are Season 1)
     return getTitle(id)?.source !== "plus" || plusEntitled("s1");
@@ -372,7 +388,7 @@ export const Titles = {
   },
   /** Drift Pass+ rewards and events (and only those) grant the exclusive titles. */
   grant(id) {
-    if (!getTitle(id)) return false;
+    if (!getTitle(id) || id === ALL_MIGHTY) return false;
     state().owned[id] = true;
     Save.write();
     return true;
@@ -384,7 +400,23 @@ export const Titles = {
   equipped() {
     return getTitle(this.equippedId());
   },
+  /** The title shown with your name: ALL MIGHTY while you hold it, else the one you wear. */
+  shownId() {
+    return AllMighty.isMe() ? ALL_MIGHTY : this.equippedId();
+  },
+  shown() {
+    return getTitle(this.shownId());
+  },
+  /**
+   * The title to draw on a leaderboard row: ALL MIGHTY on the holder's row (from the server's
+   * answer, whatever the row's rank), and never on anyone else's, even if a row claims it.
+   */
+  forRow(row) {
+    if (row?.player_id && row.player_id === AllMighty.holderId()) return ALL_MIGHTY;
+    return row?.title && row.title !== ALL_MIGHTY ? row.title : null;
+  },
   equip(id) {
+    if (id === ALL_MIGHTY) return false; // worn automatically while you hold it
     if (id !== null && !this.owns(id)) return false;
     state().equipped = id;
     Save.write();
@@ -395,7 +427,7 @@ export const Titles = {
     return TITLES.map((t) => ({
       ...t,
       owned: this.owns(t.id),
-      equipped: this.equippedId() === t.id,
+      equipped: t.id === ALL_MIGHTY ? AllMighty.isMe() : this.equippedId() === t.id,
     }));
   },
 };
