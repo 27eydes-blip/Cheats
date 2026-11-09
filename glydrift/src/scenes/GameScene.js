@@ -1339,7 +1339,11 @@ export class GameScene extends Phaser.Scene {
     this.updateCalmFx(rawDt);
     this.flashFx.update(rawDt);
 
-    const ev = this.obstacles.update(dt, this.clock, this.scroll, null, {
+    // Before the first tap the hazards hold still (only the scenery drifts): collisions start
+    // with the run, so nothing may move onto (or through) the hovering bird while it waits,
+    // and the first hazard is still off screen, exactly as far away, when the run starts.
+    const hazardScroll = this.state === "ready" ? 0 : this.scroll;
+    const ev = this.obstacles.update(dt, this.clock, hazardScroll, null, {
       px: p.x,
       py: p.y,
       r: p.radius,

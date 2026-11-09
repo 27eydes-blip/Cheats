@@ -1490,6 +1490,9 @@ test("Drift Pass+ heroes: standard hitbox and speed, drawn ~10% smaller", async 
           if (p.y > s.H * 0.55 && p.vy > -50) s.onTap();
           frames.add(p.rig.sprite.frame.name);
         }
+        // (measured before the reactions below: those frames don't hold slow-mo off, and a real
+        // near-miss there would slow one hero's run and not another's)
+        const metres = Math.round((s.meters - before) * 100) / 100;
         // a new best and a near-miss play their reactions (cosmetic: nothing else changes)
         p.rig.onBest();
         p.rig.onNear();
@@ -1501,7 +1504,7 @@ test("Drift Pass+ heroes: standard hitbox and speed, drawn ~10% smaller", async 
           id: k,
           def: p.rig.def.id,
           radius: p.radius,
-          metres: Math.round((s.meters - before) * 100) / 100,
+          metres,
           width: p.rig.sprite.displayWidth,
           frames: frames.size,
           alive: s.state === "playing",
@@ -4188,7 +4191,9 @@ test("long runs never pile up: passed realms' art is freed, objects and memory s
   // nothing keeps growing between the middle and the end of the run
   expect(late.texMB - mid.texMB).toBeLessThanOrEqual(8);
   expect(late.texMB - early.texMB).toBeLessThanOrEqual(20);
-  expect(late.objs - mid.objs).toBeLessThanOrEqual(40);
+  // (pop-up texts are left out: under this test's frozen clock their fade-out never finishes, so
+  // they pile up here and only here; the rest of the display list must stay flat)
+  expect(late.objs - late.texts - (mid.objs - mid.texts)).toBeLessThanOrEqual(40);
   expect(late.backdrop - mid.backdrop).toBeLessThanOrEqual(40);
   // (pop-up texts and tweens aren't checked here: tweens run on the page's real clock, which the
   // test freezes, so no fade-out ever finishes in this test. With a running clock the pop-up
