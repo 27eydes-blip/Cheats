@@ -225,7 +225,7 @@ test("shop remodel: buying each kind of offer charges the shown price and grants
   page,
 }, testInfo) => {
   phoneOnly(testInfo);
-  test.setTimeout(120_000);
+  test.setTimeout(300_000); // (eight purchases, each with its full animation: ~1.3 min here, slower on CI)
   const log = await openGame(page, { save: { ...SAVE, coins: 60000 } });
   await openShop(page);
   // select an offer, press the stage's buy button, then BUY! in the confirmation
