@@ -38,6 +38,7 @@
     "includes": [
       "**",
       "!**/node_modules/**",
+      "!study-app",
       "!**/dist/**",
       "!packages/dsh-plugin-browserskill/lib/**",
       "!packages/dsh-plugin-browserskill/src/skill-content.generated.ts",

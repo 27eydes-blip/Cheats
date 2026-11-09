@@ -6,3 +6,5 @@
 # Generated client CSS (tailwind compile output); built by
 # packages/dsh-plugin-browserskill/scripts/build-client-css.mjs.
 **/dsh-plugin-browserskill/src/client/bsk-ui.nomodule.css
+# Separate Next.js app with its own lint setup.
+study-app/**

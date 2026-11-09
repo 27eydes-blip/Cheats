@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+/* Dark mode follows data-theme on <html> (set before paint by the theme script). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --bg: #f7f6fb;
+  --bg-elev: #ffffff;
+  --fg: #16131f;
+  --muted: #6b6680;
+  --border: #e6e3ef;
+  --primary: #7c3aed;
+  --primary-fg: #ffffff;
+  --primary-soft: #efe7ff;
+  --accent: #f59e0b;
+  --success: #16a34a;
+  --success-soft: #dcfce7;
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
+  --uncertain: #fde68a;
+  --uncertain-fg: #78350f;
+  --focus-mark: #ff00d4;
+  --shadow: 0 1px 2px rgb(22 19 31 / 0.06), 0 8px 24px rgb(22 19 31 / 0.06);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0b0a12;
+  --bg-elev: #15131f;
+  --fg: #f1eff8;
+  --muted: #9a95ad;
+  --border: #2a2738;
+  --primary: #a78bfa;
+  --primary-fg: #140d26;
+  --primary-soft: #2a2145;
+  --accent: #fbbf24;
+  --success: #4ade80;
+  --success-soft: #14321f;
+  --danger: #f87171;
+  --danger-soft: #3b1717;
+  --uncertain: #713f12;
+  --uncertain-fg: #fde68a;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-elev: var(--bg-elev);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-uncertain: var(--uncertain);
+  --color-uncertain-fg: var(--uncertain-fg);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --shadow-card: var(--shadow);
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Safe areas for the installed PWA on iPhone/iPad. */
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
+
+/* Ink canvases must not scroll or zoom the page while drawing. */
+.ink-surface {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
