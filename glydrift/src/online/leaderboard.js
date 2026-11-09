@@ -14,6 +14,7 @@ import { SUPABASE, WORLD } from "../config.js";
 import { dailyNumber } from "../data/rng.js";
 import { Save } from "../data/save.js";
 import { Titles } from "../data/titles.js";
+import { AllMighty } from "../data/allMighty.js";
 import { Shop } from "../data/cosmetics.js";
 import { TEST } from "../systems/testFlags.js";
 
@@ -355,6 +356,7 @@ class LeaderboardService {
   restart() {
     this.sessionPromise = null;
     this.userId = null;
+    AllMighty.userChanged(); // the old player's ALL MIGHTY answer isn't the new player's
   }
 
   /** Call once at launch: sign in in the background and upload anything queued. */
