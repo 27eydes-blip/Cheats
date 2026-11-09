@@ -7,17 +7,15 @@ import { fitCamera, RARITY, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
-import { onSale, saleLeft, visibleCharacters } from "../player/characterDefs.js";
+import { visibleCharacters } from "../player/characterDefs.js";
 import { revealHero } from "../ui/reveal.js";
 import { Sfx } from "../audio/sfx.js";
 import { Haptics } from "../systems/haptics.js";
-import { Progression, SPIN_EVERY } from "../data/progression.js";
+import { Progression } from "../data/progression.js";
+import { heroUnlock } from "../data/locker.js";
 import { Save } from "../data/save.js";
-import { Seasons } from "../data/seasons.js";
-import { CATEGORIES, COSMETICS, getCosmetic, Shop, SKINS } from "../data/cosmetics.js";
 import { tungLookLevel, tungProgress } from "../player/tungFx.js";
 import { TUNG_LEVEL_NAMES } from "../pixel/tungArt.js";
-import { HAT_FIT } from "../pixel/cosmeticArt.js";
 import {
   button,
   drawNeonRect,
@@ -175,7 +173,6 @@ export class CharacterScene extends Phaser.Scene {
 
     // swipe
     this.input.on("pointerdown", (p) => {
-      if (this.editor) return;
       this.dragX = p.worldX;
       this.dragY = p.worldY;
       this.dragPos = this.pos;
@@ -183,7 +180,6 @@ export class CharacterScene extends Phaser.Scene {
         p.worldY > this.cardsY - CARD_H / 2 - 20 && p.worldY < this.cardsY + CARD_H / 2 + 20;
     });
     this.input.on("pointermove", (p) => {
-      if (this.editor) return;
       if (!this.dragging || !p.isDown) return;
       this.pos = Phaser.Math.Clamp(
         this.dragPos - (p.worldX - this.dragX) / 300,
@@ -201,7 +197,7 @@ export class CharacterScene extends Phaser.Scene {
         Math.abs(p.worldX - this.W / 2) < CARD_W / 2 &&
         Math.abs(this.pos - this.index) < 0.1;
       if (tapCentre && Progression.isUnlocked(this.roster[this.index].id)) {
-        this.openEditor();
+        this.openLocker();
         return;
       }
       if (Math.abs(dx) > 40) this.select(Math.round(this.pos + (dx < 0 ? 0.3 : -0.3)));
@@ -392,10 +388,6 @@ export class CharacterScene extends Phaser.Scene {
     const def = this.roster[this.index];
     const s = Save.data;
     const owned = Progression.isUnlocked(def.id);
-    // season heroes: a pass tier now, coins once their season has ended
-    const season = Seasons.active();
-    const passTier = season ? season.pass.tiers.findIndex((t) => t.hero === def.id) + 1 : 0;
-    const cost = def.cost || Seasons.afterPrice(def.id);
     this.nameText
       .setText(def.name)
       .setStroke(hex(def.color), 5)
@@ -414,61 +406,13 @@ export class CharacterScene extends Phaser.Scene {
       this.actionBtn.setLabel(sel ? "EQUIPPED" : "SELECT");
       this.actionBtn.setColor(sel ? 0x8a80b0 : 0x39ff88);
       this.actionBtn.setEnabled(!sel);
-    } else if (def.passPlus) {
-      // DRIFT PASS+ heroes: only from their tier of the paid track, never for coins
-      const live = season?.id === def.passPlus;
-      this.actionBtn.setLabel(live ? `DRIFT PASS+ · TIER ${def.passTier}` : "DRIFT PASS+");
-      this.actionBtn.setColor(0xc8102e);
-      this.actionBtn.setEnabled(live);
-      alt = live
-        ? `Exclusive to the Season ${season.number} Drift Pass+ (tier ${def.passTier}).\nNever sold for coins.`
-        : "A Season 1 Drift Pass+ exclusive. It never comes back to the shop.";
-    } else if (def.limited) {
-      const live = onSale(def);
-      this.actionBtn.setLabel(live ? `UNLOCK  ${def.cost}` : "GONE");
-      this.actionBtn.setColor(live ? 0xff3a8a : 0x8a80b0);
-      this.actionBtn.setEnabled(live && s.coins >= def.cost);
-      const ms = saleLeft(def);
-      const h = Math.floor(ms / 3600000);
-      const m = Math.floor((ms % 3600000) / 60000);
-      const sec = Math.floor((ms % 60000) / 1000);
-      alt = live
-        ? `LIMITED · leaves in ${h}h ${String(m).padStart(2, "0")}m ${String(sec).padStart(2, "0")}s\nOwn it forever once unlocked`
-        : "This limited hero has left the shop";
-    } else if (!cost && def.challenge) {
-      // challenge-only heroes (Abyss / Prism / streak animals): progress shown clearly
-      const cur = Math.min(Progression.statOf(def.challenge.stat), def.challenge.value);
-      this.actionBtn.setLabel(`CHALLENGE  ${cur}/${def.challenge.value}`);
-      this.actionBtn.setColor(0x8a80b0);
-      this.actionBtn.setEnabled(false);
-      alt = `Unlock: ${def.challenge.text}`;
-      if (passTier) alt += `\nor reach tier ${passTier} of the Season ${season.number} Drift Pass`;
-    } else if (def.lottery) {
-      this.actionBtn.setLabel("LUCKY SPIN");
-      this.actionBtn.setColor(0xff7ad9);
-      this.actionBtn.setEnabled(true);
-      alt = `Only from the Lucky Spin\nEarn a spin every ${SPIN_EVERY} points · you have ${s.spins || 0}`;
     } else {
-      const reqOk = Progression.requirementsMet(def);
-      this.actionBtn.setLabel(reqOk ? `UNLOCK  ${cost}` : `LOCKED · ${cost}`);
-      this.actionBtn.setColor(def.requires ? (reqOk ? 0x39ff6a : 0x8a80b0) : 0xffc83d);
-      this.actionBtn.setEnabled(reqOk && s.coins >= cost);
-      const bits = [];
-      // must-do goals (all of them) before the coins can be spent
-      for (const r of def.requires || []) {
-        const cur = Math.min(Progression.statOf(r.stat), r.value);
-        bits.push(`${cur >= r.value ? "✓" : "✗"} ${r.text} (${cur}/${r.value})`);
-      }
-      if (def.requires) bits.push(`${s.coins >= cost ? "✓" : "✗"} ${cost} coins`);
-      if (def.spinPool) bits.push("or win him on the Lucky Spin");
-      if (def.shards)
-        bits.push(`${s.shards[def.id] || 0}/${def.shards} shards (daily streak & levels)`);
-      if (def.challenge) {
-        const cur = Math.min(Progression.statOf(def.challenge.stat), def.challenge.value);
-        const shown = def.challenge.stat === "maxBiome" ? "" : ` (${cur}/${def.challenge.value})`;
-        bits.push(`or challenge: ${def.challenge.text}${shown}`);
-      }
-      alt = bits.join("\n");
+      // how to get it: the same words the Locker Room shows (locker.js)
+      const u = heroUnlock(def);
+      this.actionBtn.setLabel(u.label);
+      this.actionBtn.setColor(u.color);
+      this.actionBtn.setEnabled(u.enabled);
+      alt = u.alt;
     }
     // a long requirement list hangs below the button instead of centring on its baseline
     const list = !owned && !!def.requires;
@@ -531,188 +475,21 @@ export class CharacterScene extends Phaser.Scene {
     this.cameras.main.shake(200, 0.006);
   }
 
-  /** Icon for a cosmetic, fitted to a ~110 px tile. */
-  cosIcon(id, x, y) {
-    const cc = getCosmetic(id);
-    if (cc.cat === "hat") return this.add.image(x, y, "cosm", HAT_FIT[id].frame).setScale(2);
-    if (cc.cat === "coin") return this.add.image(x, y, "cosm", `${id}_0`).setScale(2.4);
-    if (cc.cat === "dskin" || cc.cat === "tskin")
-      return this.add.image(x, y, `hero_${cc.forHero}_${id}`).setScale((0.42 / HI) * PORTRAIT_K);
-    if (cc.cat === "skin")
-      return this.add
-        .image(x, y, this.roster[this.index].texture)
-        .setScale((0.42 / HI) * PORTRAIT_K)
-        .setTint(SKINS[id].tint);
-    return this.add.image(x, y, "cosm", `icon_${id}`).setScale(1.8);
-  }
-
-  /** Edit your look: pick a trail, hat, skin and effects; the hero above updates live. */
-  openEditor() {
-    const W = this.W;
-    const H = this.H;
+  /**
+   * Edit your look: the Locker Room opens on SKINS for this hero (it took over the old pop-up
+   * editor; BACK there comes back here, on the same hero).
+   */
+  openLocker() {
     const def = this.roster[this.index];
     if (Save.data.selected !== def.id) {
       Save.data.selected = def.id;
       Save.write();
-      this.refresh();
     }
     Sfx.ui();
-    const c = this.add.container(0, 0).setDepth(400);
-    this.editor = c;
-    this.editCat = this.editCat || "trail";
-    const py = H * 0.5;
-    const shade = this.add.rectangle(W / 2, H / 2, W, H, 0x05010d, 0.35).setInteractive();
-    shade.on("pointerup", (p) => {
-      if (p.worldY < py - 20) this.closeEditor();
-    });
-    const g = this.add.graphics();
-    drawNeonRect(g, 16, py, W - 32, H - py - 16, 28, def.color, {
-      fill: 0x0b0520,
-      fillAlpha: 0.96,
-      width: 4,
-    });
-    const title = neonText(this, W / 2, py + 44, `EDIT ${def.name}`, 34, def.color, { blur: 14 });
-    c.add([shade, g, title]);
-    // category chips: rows of 3 (the shop's categories, plus Drift Pass+ victory poses)
-    const cw = (W - 80) / 3;
-    const cats = [...CATEGORIES, { id: "pose", label: "POSES", one: "Victory pose" }];
-    // DAWSON has his own skins as well
-    if (def.id === "dawson") cats.push({ id: "dskin", label: "DAWSON", one: "Dawson skin" });
-    if (def.id === "tung") cats.push({ id: "tskin", label: "TUNG", one: "Tung skin" });
-    this.catBtns = cats.map((cat, i) => {
-      const b = button(
-        this,
-        40 + cw * (i % 3) + cw / 2,
-        py + 108 + Math.floor(i / 3) * 70,
-        cw - 12,
-        58,
-        cat.label,
-        { color: 0x3ef4ff, size: 18, onClick: () => this.editTab(cat.id) },
-      );
-      b.cat = cat.id;
-      c.add(b);
-      return b;
-    });
-    this.editGrid = this.add.container(0, 0);
-    c.add(this.editGrid);
-    this.editGridTop = py + 196 + 70 * (Math.ceil(cats.length / 3) - 2);
-    c.add(
-      button(this, W / 2 - 130, H - 90 - (this.registry.get("safeBottom") || 0), 220, 84, "SHOP", {
-        color: 0xffd23f,
-        size: 28,
-        onClick: () => {
-          const cat = this.editCat;
-          // victory poses only come from the Drift Pass+ track
-          if (cat === "pose") return fadeTo(this, "Pass", { from: "Characters" });
-          fadeTo(this, "Shop", {
-            tab: ["death", "flap", "coin"].includes(cat) ? "effects" : cat === "dskin" || cat === "tskin" ? "skin" : cat,
-          });
-        },
-      }),
-    );
-    c.add(
-      button(this, W / 2 + 130, H - 90 - (this.registry.get("safeBottom") || 0), 220, 84, "DONE", {
-        color: 0x39ff88,
-        size: 28,
-        onClick: () => this.closeEditor(),
-      }),
-    );
-    c.setAlpha(0).setY(60);
-    this.tweens.add({ targets: c, alpha: 1, y: 0, duration: 240, ease: "Back.easeOut" });
-    this.editTab(this.editCat);
-  }
-
-  editTab(cat) {
-    if (!this.catBtns) return; // the editor is fading out: its buttons no longer count
-    this.editCat = cat;
-    for (const b of this.catBtns) b.setColor(b.cat === cat ? 0xffd23f : 0x6a5aa8);
-    const grid = this.editGrid;
-    grid.removeAll(true);
-    const W = this.W;
-    const hero = this.roster[this.index]?.id;
-    // (one hero's items — DAWSON's skins — only show for that hero)
-    const owned = COSMETICS.filter(
-      (x) => x.cat === cat && Shop.owns(x.id) && (!x.forHero || x.forHero === hero),
-    );
-    const opts = [null, ...owned.map((x) => x.id)];
-    const on = Shop.equipped(cat) || null;
-    const cols = 4;
-    const tw = (W - 80) / cols;
-    const th = 128;
-    const bottom = this.H - 150 - (this.registry.get("safeBottom") || 0);
-    const rows = Math.max(1, Math.floor((bottom - this.editGridTop) / th));
-    opts.slice(0, rows * cols).forEach((id, i) => {
-      const x = 40 + tw * (i % cols) + tw / 2;
-      const y = this.editGridTop + th * Math.floor(i / cols) + th / 2;
-      const t = this.add.container(x, y);
-      const sel = id === on;
-      const col = id ? RARITY[getCosmetic(id).rarity].color : 0x8a80b0;
-      const g = this.add.graphics();
-      drawNeonRect(g, -tw / 2 + 6, -th / 2 + 6, tw - 12, th - 12, 16, sel ? 0x39ff88 : col, {
-        fill: sel ? 0x0f3a24 : 0x140a30,
-        width: sel ? 5 : 2,
-      });
-      t.add(g);
-      if (id) t.add(this.cosIcon(id, 0, -12));
-      else t.add(plainText(this, 0, -12, "NONE", 20, "#cfc6ff"));
-      const name = id ? getCosmetic(id).name : "";
-      t.add(
-        plainText(
-          this,
-          0,
-          th / 2 - 26,
-          name.length > 11 ? name.slice(0, 10) + "…" : name,
-          13,
-          "#ffffff",
-        ),
-      );
-      if (sel) t.add(plainText(this, tw / 2 - 26, -th / 2 + 24, "✓", 22, "#39ff88"));
-      t.setSize(tw - 12, th - 12).setInteractive();
-      t.on("pointerup", () => {
-        if (id) Shop.equip(id);
-        else Shop.unequip(cat);
-        Sfx.ui();
-        this.buildRig();
-        if (cat === "pose" && id) this.rig.cosmeticPose(id); // show the pose straight away
-        else this.rig.flap();
-        this.editTab(cat);
-      });
-      grid.add(t);
-    });
-    if (owned.length === 0)
-      grid.add(
-        plainText(
-          this,
-          W / 2,
-          this.editGridTop + th + 40,
-          cat === "pose"
-            ? "Victory poses play on a NEW BEST. Get them on the Drift Pass+ track!"
-            : "You don't own any yet. Get some in the SHOP!",
-          18,
-          "#cfc6ff",
-          { wrap: W - 120 },
-        ),
-      );
-  }
-
-  closeEditor() {
-    const c = this.editor;
-    if (!c) return;
-    this.editor = null;
-    this.catBtns = null;
-    for (const o of c.list) o.setEnabled?.(false); // no taps on it while it fades out
-    this.tweens.add({
-      targets: c,
-      alpha: 0,
-      y: 60,
-      duration: 180,
-      onComplete: () => c.destroy(),
-    });
-    this.refresh();
+    fadeTo(this, "Locker", { tab: "skin", from: "Characters" });
   }
 
   leave() {
-    if (this.editor) return this.closeEditor();
     fadeTo(this, "Menu");
   }
 

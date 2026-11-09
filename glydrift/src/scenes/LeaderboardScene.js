@@ -21,14 +21,18 @@ import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { button, fadeTo, neonText, plainText } from "../ui/ui.js";
 import { titleText } from "../ui/titleText.js";
 
-/** Heroes whose perks touch coins or survival (RONIN, SXE, WALLRUNNER's ×15 coins), shown with the gold perk badge. */
+/**
+ * Heroes whose perks touch coins or survival (RONIN, SXE, WALLRUNNER's ×15 coins, THE
+ * NEWBLEIZER's higher jumps), shown with the gold perk badge.
+ */
 const hasCoinPerks = (def) =>
   !!(
     (def.coinMul ?? 1) > 1 ||
     def.perks?.coinBonus ||
     def.perks?.fireWard ||
     def.perks?.glitchProof ||
-    def.perks?.comboMax
+    def.perks?.comboMax ||
+    (def.perks?.jump ?? 1) > 1
   );
 import { Titles } from "../data/titles.js";
 import { openReport } from "../ui/reportModal.js";
@@ -431,7 +435,7 @@ export class LeaderboardScene extends Phaser.Scene {
 
   /** A small gold perk badge (a coin with a flame) next to heroes that have perks. */
   perkBadge(x, y) {
-    const g = this.add.graphics({ x, y });
+    const g = this.add.graphics({ x, y }).setName("perkBadge");
     g.fillStyle(0x1a0630, 1).fillCircle(0, 0, 11);
     g.fillStyle(0xffd23f, 1).fillCircle(0, 0, 8);
     g.fillStyle(0xff2a3d, 1).fillTriangle(-4, 4, 4, 4, 0, -6);
@@ -468,7 +472,9 @@ export class LeaderboardScene extends Phaser.Scene {
       const fast =
         (def.speed ?? 1) > 1
           ? ` · +${Math.round((def.speed - 1) * 100)}% SPEED`
-          : "";
+          : (def.perks?.jump ?? 1) > 1
+            ? ` · +${Math.round((def.perks.jump - 1) * 100)}% JUMP`
+            : "";
       const t = neonText(
         this,
         icon.x,

@@ -56,7 +56,8 @@ export class ProgressScene extends Phaser.Scene {
     button(this, W - 80, top + 46, 120, 64, "TITLES", {
       color: 0xffd23f,
       size: 18,
-      onClick: () => fadeTo(this, "Titles", { from: "Progress" }),
+      // titles are worn from the Locker Room now (its TITLES tab)
+      onClick: () => fadeTo(this, "Locker", { tab: "titles", from: "Progress" }),
     }).setDepth(100);
     // your profile line: name + the title you wear
     // (Drift Pass+: the gold name and the forever Season 1 badge show here too)
