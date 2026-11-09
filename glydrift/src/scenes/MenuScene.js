@@ -28,6 +28,7 @@ import { Updater } from "../systems/updater.js";
 import { openSite } from "../systems/platform.js";
 import { openAccount } from "../ui/accountModal.js";
 import { getCosmetic, Shop } from "../data/cosmetics.js";
+import { lockerTotals } from "../data/locker.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { Music } from "../audio/music.js";
 import { LOGIN_REWARDS, Progression } from "../data/progression.js";
@@ -455,9 +456,9 @@ export class MenuScene extends Phaser.Scene {
   // ------------------------------------------------------------------ MORE sheet + badges
   /**
    * Everything that isn't PLAY, LEVELS or one of the four main buttons, as one plain list: the
-   * MORE sheet draws one row per entry, in this order. To add a page later (a Stats page, the
-   * Locker Room), add an entry here: `{ id, label, sub, color, go }` (+ `ready: true` for a
-   * red "!" when something is waiting there). Entries that don't apply are left out (null).
+   * MORE sheet draws one row per entry, in this order. To add a page later (a Stats page), add
+   * an entry here: `{ id, label, sub, color, go }` (+ `ready: true` for a red "!" when
+   * something is waiting there). Entries that don't apply are left out (null).
    */
   moreEntries() {
     const s = Save.data;
@@ -466,6 +467,7 @@ export class MenuScene extends Phaser.Scene {
     const drop = Shop.dropReady();
     const season = this.season;
     const total = season?.pass.tiers.length || 0;
+    const locker = lockerTotals();
     return [
       season && {
         id: "pass",
@@ -510,6 +512,13 @@ export class MenuScene extends Phaser.Scene {
                 y: this.H * 0.3,
                 sub: "Come back tomorrow to keep it going",
               }),
+      },
+      {
+        id: "locker",
+        label: "LOCKER ROOM",
+        sub: `Heroes ${locker.heroes.owned}/${locker.heroes.total} · wear your looks, titles & badges`,
+        color: 0x39ff88,
+        go: () => this.go("Locker"),
       },
       {
         id: "progress",
