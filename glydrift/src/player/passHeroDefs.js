@@ -4,7 +4,9 @@
 //
 // Cosmetic only. Each one:
 //   - is drawn ~10% smaller (visualScale) with exactly the standard hitbox (PHYSICS.radius);
-//   - has no perks: same speed, gravity, score and leaderboards as every other hero;
+//   - has the same speed, gravity, score and leaderboards as every other hero: its one small
+//     perk (`perks`, shown on its hero card) only adds coins, XP or Drift Pass XP to what a
+//     run pays, never to what it scores (data/heroPerks.js, applied in Progression.commitRun);
 //   - can only come from its tier of the Season 1 DRIFT PASS+ track — never the coin shop,
 //     the Lucky Spin, pods or shards, during the season or after it.
 
@@ -53,6 +55,8 @@ export const PASS_HEROES = [
         { kind: "star", color: 0x3ae8ff, n: 10, up: true },
       ],
     },
+    // perk: a lucky cat: a little coin bonus once a day (rewards only, never score)
+    perks: { dailyCoins: 50, list: ["+50 COINS, FIRST RUN EACH DAY"] },
     desc: "A galaxy inside a cat. Stars spill from its paws on every flap.",
   }),
   P({
@@ -77,6 +81,8 @@ export const PASS_HEROES = [
         { kind: "feather", color: 0x6a6080, n: 20 },
       ],
     },
+    // perk: the wise owl learns faster (rewards only, never score)
+    perks: { xpPct: 10, list: ["+10% XP"] },
     desc: "Red rune eyes. The runes on its wings flash on every near-miss.",
   }),
   P({
@@ -102,6 +108,8 @@ export const PASS_HEROES = [
         { kind: "ember", color: 0xff8a2a, n: 24 },
       ],
     },
+    // perk: embers it gathers in the dark (rewards only, never score)
+    perks: { dailyCoins: 60, list: ["+60 COINS, FIRST RUN EACH DAY"] },
     desc: "Torn wings that glow in the dark. Leaves a trail of ash and embers.",
   }),
   P({
@@ -126,6 +134,8 @@ export const PASS_HEROES = [
         { kind: "dot", color: 0xff3a4a, n: 24 },
       ],
     },
+    // perk: three heads fetch more coins (rewards only, never score)
+    perks: { coinPct: 8, list: ["+8% COINS (THREE HEADS FETCH MORE)"] },
     desc: "Three heads, one tiny shadow pup. The heads take turns barking as it flaps.",
   }),
   P({
@@ -151,6 +161,8 @@ export const PASS_HEROES = [
         { kind: "dot", color: 0xb48aff, n: 24 },
       ],
     },
+    // perk: rides the drift: the pass fills faster (rewards only, never score)
+    perks: { passPct: 10, list: ["+10% DRIFT PASS XP"] },
     desc: "A manta of shadow and smoke. It ripples through the air instead of flapping.",
   }),
   P({
@@ -175,6 +187,8 @@ export const PASS_HEROES = [
         { kind: "ember", color: 0xff6a1a, n: 20 },
       ],
     },
+    // perk: armour forged by every run (rewards only, never score)
+    perks: { xpPct: 10, list: ["+10% XP"] },
     desc: "Obsidian armour and a flaming stinger. Throws sparks on every flap.",
   }),
   P({
@@ -199,6 +213,8 @@ export const PASS_HEROES = [
         { kind: "bubble", color: 0x4affd8, n: 20 },
       ],
     },
+    // perk: eight arms grab more coins (rewards only, never score)
+    perks: { coinPct: 10, list: ["+10% COINS (TENTACLES GRAB MORE)"] },
     desc: "A baby shadow kraken with glowing suckers. Its tentacles swirl behind it.",
   }),
   P({
@@ -223,6 +239,8 @@ export const PASS_HEROES = [
         { kind: "shard", color: 0xd8203a, n: 16 },
       ],
     },
+    // perk: a dancer sharpened by practice (rewards only, never score)
+    perks: { xpPct: 8, passPct: 5, list: ["+8% XP", "+5% DRIFT PASS XP"] },
     desc: "A crimson mantis that slashes the air whenever you skim past danger.",
   }),
   P({
@@ -246,6 +264,8 @@ export const PASS_HEROES = [
         { kind: "shard", color: 0x3aa86a, n: 16 },
       ],
     },
+    // perk: blends into every realm, picks up a little from each (rewards only, never score)
+    perks: { passPct: 10, coinPct: 5, list: ["+10% DRIFT PASS XP", "+5% COINS"] },
     desc: "Its skin takes on each realm's colour. On a new best it flickers almost invisible (still hittable).",
   }),
   P({
@@ -271,10 +291,13 @@ export const PASS_HEROES = [
         { kind: "ember", color: 0xff2a4a, n: 30 },
       ],
     },
+    // perk: a dragon's hoard (rewards only, never score)
+    perks: { dailyCoins: 100, coinPct: 5, list: ["+100 COINS, FIRST RUN EACH DAY", "+5% COINS"] },
     desc: "A baby shadow dragon with a crimson flame heart. Breathes dark fire on a new best.",
   }),
   // ---- RIFTLING: Season 1's evolving pass hero. Each form is its own hero in the picker
   // (keep flying any form you've unlocked); same hitbox, speed and score rules as everyone.
+  // Its perk (Drift Pass XP, then coins too) grows with each form.
   P({
     id: "riftling",
     tier: 1,
@@ -292,6 +315,8 @@ export const PASS_HEROES = [
       best: { burst: ["star", 0x9af4ff, 14] },
     },
     fx: { death: [{ kind: "twinkle", color: 0x9af4ff, n: 24 }, { kind: "dot", color: 0x6a3aa8, n: 24 }] },
+    // perk: it grows by climbing the pass (rewards only, never score)
+    perks: { passPct: 5, list: ["+5% DRIFT PASS XP"] },
     desc: "A one-eyed rift imp, newly hatched. It evolves as you climb the Drift Pass+.",
   }),
   P({
@@ -312,6 +337,8 @@ export const PASS_HEROES = [
       best: { burst: ["star", 0xffd23f, 18] },
     },
     fx: { death: [{ kind: "spark", color: 0xffd23f, n: 30 }, { kind: "dot", color: 0xc8102e, n: 30 }] },
+    // perk: gold rivets: a little coin too (rewards only, never score)
+    perks: { passPct: 5, coinPct: 5, list: ["+5% DRIFT PASS XP", "+5% COINS"] },
     desc: "Riftling in crimson plate with gold rivets. Sparks fly from its armor on every flap.",
   }),
   P({
@@ -333,6 +360,8 @@ export const PASS_HEROES = [
       best: { burst: ["star", 0xff5a3a, 22] },
     },
     fx: { death: [{ kind: "ember", color: 0xff3a4a, n: 40 }, { kind: "twinkle", color: 0xb45cff, n: 20 }] },
+    // perk: the awakened form climbs faster (rewards only, never score)
+    perks: { passPct: 8, coinPct: 5, list: ["+8% DRIFT PASS XP", "+5% COINS"] },
     desc: "The armor's runes wake up: an aura of abyss fire, and two runes circling it.",
   }),
   P({
@@ -363,6 +392,8 @@ export const PASS_HEROES = [
         { kind: "twinkle", color: 0xffffff, n: 16, up: true },
       ],
     },
+    // perk: the crowned final form (rewards only, never score)
+    perks: { passPct: 10, coinPct: 8, list: ["+10% DRIFT PASS XP", "+8% COINS"] },
     desc: "Riftling's final form: a gold horn-crown, flame-edged wings and a cape of night.",
   }),
 ];

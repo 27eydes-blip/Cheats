@@ -135,7 +135,9 @@ export function openRewardPreview(scene, r, opts = {}) {
   const hint = hero
     ? hero.evolve
       ? "Same hitbox, speed and score as every hero. Each form stays yours to fly."
-      : "Cosmetic only: same hitbox, speed and score as every hero."
+      : hero.perks
+        ? `Perk: ${hero.perks.list.join(" · ")}. Same hitbox, speed and score as every hero.`
+        : "Cosmetic only: same hitbox, speed and score as every hero."
     : cat === "pose"
       ? "Tap to play it again."
       : cat === "death"

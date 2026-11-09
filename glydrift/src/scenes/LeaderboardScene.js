@@ -25,7 +25,9 @@ import { refreshAllMighty } from "../online/allMighty.js";
 
 /**
  * Heroes whose perks touch coins or survival (RONIN, SXE, WALLRUNNER's ×15 coins, THE
- * NEWBLEIZER's higher jumps), shown with the gold perk badge.
+ * NEWBLEIZER's higher jumps), shown with the gold perk badge. The DRIFT PASS+ heroes' small
+ * reward perks (coinPct, xpPct, passPct, dailyCoins: data/heroPerks.js) are paid after the run
+ * and never touch a run's score or its survival, so they stay off this list on purpose.
  */
 const hasCoinPerks = (def) =>
   !!(
