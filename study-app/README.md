@@ -1,4 +1,6 @@
-# Flashdrop
+# FlashdropAI
+
+Live at **[flashdropai.com](https://flashdropai.com)** (once deployed).
 
 Snap your notes, get a quiz in seconds. Students photograph handwritten or printed notes (or write them on an iPad with Apple Pencil). The app cleans up the photo, reads it with AI, lets the student fix any word it wasn't sure about, then makes quizzes, flashcards and practice tests linked back to the notes.
 
@@ -87,9 +89,10 @@ npm run build && npm run test:e2e   # Playwright: full capture → read → fix 
 1. **Supabase project**: create one, run `npx supabase link` then `npx supabase db push` to apply the schema.
 2. **Google sign-in**: create an OAuth client in Google Cloud and add it under Supabase → Authentication → Providers → Google.
 3. **Apple sign-in**: needs a paid Apple Developer account. Create a Services ID and key, then add them under Supabase → Providers → Apple.
-4. **Redirect URLs**: in Supabase → Authentication → URL Configuration add `https://YOUR-DOMAIN/auth/callback`.
+4. **Redirect URLs**: in Supabase → Authentication → URL Configuration set Site URL to `https://flashdropai.com` and add `https://flashdropai.com/auth/callback` (and `https://www.flashdropai.com/auth/callback` if you use www).
 5. **Anthropic API key**: set `ANTHROPIC_API_KEY` on the server (never in `NEXT_PUBLIC_*`).
-6. **Deploy** (e.g. Vercel) with the variables from `.env.example`. Leave `NEXT_PUBLIC_ENABLE_DEV_LOGIN` unset. Long AI routes set `maxDuration` up to 300 s.
+6. **Deploy** (e.g. Vercel) with the variables from `.env.example`, `NEXT_PUBLIC_SITE_URL=https://flashdropai.com`. Leave `NEXT_PUBLIC_ENABLE_DEV_LOGIN` unset. Long AI routes set `maxDuration` up to 300 s.
+7. **Domain**: add `flashdropai.com` in your host's domain settings and point your registrar's DNS records at it as the host instructs.
 
 ## Privacy and security
 

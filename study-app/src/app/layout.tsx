@@ -8,7 +8,7 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? APP_CONFIG.siteUrl),
   title: { default: `${APP_CONFIG.name} · ${APP_CONFIG.tagline}`, template: `%s · ${APP_CONFIG.name}` },
   description: APP_CONFIG.description,
   applicationName: APP_CONFIG.name,

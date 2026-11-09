@@ -3,8 +3,11 @@
  * (page titles, link previews, sign-in screen).
  */
 export const APP_CONFIG = {
-  name: "Flashdrop",
-  shortName: "Flashdrop",
+  name: "FlashdropAI",
+  shortName: "FlashdropAI",
+  /** Production domain. Share links and link previews use this. */
+  domain: "flashdropai.com",
+  siteUrl: "https://flashdropai.com",
   tagline: "Snap your notes. Get a quiz in seconds.",
   description:
     "Turn handwritten or printed notes into quizzes, flashcards and games with AI.",
