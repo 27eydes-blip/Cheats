@@ -212,7 +212,7 @@ test("first-time player: one pop-up at a time, then the first run, game over and
   page,
 }, testInfo) => {
   phoneOnly(testInfo);
-  test.setTimeout(180_000);
+  test.setTimeout(300_000); // ~1 min locally, up to ~3 min on a loaded CI machine
   const log = await openGame(page, { save: null });
   // what is on screen, sampled while the arrival pop-ups play
   const seen = [];
@@ -469,7 +469,7 @@ test("accessibility: every button on screen has a VoiceOver label over it; Reduc
   page,
 }, testInfo) => {
   phoneOnly(testInfo);
-  test.setTimeout(180_000);
+  test.setTimeout(300_000); // ~1 min locally, up to ~3 min on a loaded CI machine
   const log = await openGame(page);
   for (const key of [
     "Menu",
