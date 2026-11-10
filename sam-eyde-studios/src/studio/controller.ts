@@ -2,6 +2,7 @@ import { decodeAudio, toMono } from "../audio/decode";
 import { engine } from "../audio/engine";
 import { computePeaks, type Peaks } from "../audio/peaks";
 import { MicRecorder } from "../audio/recorder";
+import { syncAutotune } from "../autotune/manager";
 import { addTrack, getState, removeTrack, setUi, subscribe, toast } from "../state/store";
 import type { Project, Track, TrackKind } from "../types";
 import { stripExtension, uid } from "../util";
@@ -22,6 +23,7 @@ subscribe(() => {
   if (p !== lastProject) {
     lastProject = p;
     engine.sync(p);
+    syncAutotune();
   }
 });
 
@@ -37,6 +39,7 @@ export function registerAudio(audioId: string, buffer: AudioBuffer): void {
   peaks.set(audioId, computePeaks(buffer));
   setUi({ audioReady: { ...getState().ui.audioReady, [audioId]: true } });
   engine.sync(getState().project);
+  syncAutotune();
 }
 
 export function makeTrack(kind: TrackKind, name: string, audioId: string, duration: number): Track {
