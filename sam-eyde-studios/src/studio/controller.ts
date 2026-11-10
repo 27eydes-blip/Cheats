@@ -16,6 +16,21 @@ let take: { pos: number; playStart: number; recStart: number } | null = null;
 let countInTimer: ReturnType<typeof setTimeout> | undefined;
 let busy = false;
 
+/** Persistence hooks, installed by the session layer. */
+export interface AudioHooks {
+  imported(audioId: string, data: ArrayBuffer, mime: string): Promise<void>;
+  recorded(audioId: string, buffer: AudioBuffer): Promise<void>;
+  removed(audioId: string): Promise<void>;
+}
+let hooks: AudioHooks = {
+  imported: async () => {},
+  recorded: async () => {},
+  removed: async () => {},
+};
+export function setAudioHooks(h: AudioHooks): void {
+  hooks = h;
+}
+
 // Keep the audio graph in sync with every project change.
 let lastProject: Project | null = null;
 subscribe(() => {
@@ -70,6 +85,7 @@ export async function importFile(file: File, kind: TrackKind): Promise<void> {
     const data = await file.arrayBuffer();
     const buffer = await decodeAudio(ctx, data);
     const audioId = uid();
+    await hooks.imported(audioId, data, file.type || "audio/mpeg");
     registerAudio(audioId, buffer);
     const fallback = kind === "beat" ? "Beat" : "Vocal";
     addTrack(makeTrack(kind, stripExtension(file.name) || fallback, audioId, buffer.duration));
@@ -82,7 +98,30 @@ export async function importFile(file: File, kind: TrackKind): Promise<void> {
 }
 
 export function deleteTrack(id: string): void {
+  const track = getState().project?.tracks.find((t) => t.id === id);
   removeTrack(id);
+  if (!track) return;
+  // Free the audio too, unless another track still uses it.
+  const stillUsed = getState().project?.tracks.some((t) => t.audioId === track.audioId);
+  if (!stillUsed) {
+    engine.buffers.delete(track.audioId);
+    peaks.delete(track.audioId);
+    void hooks.removed(track.audioId).catch((err) => console.error(err));
+  }
+}
+
+/** Stop playback and abandon any recording in progress (used when leaving a project). */
+export function stopEverything(): void {
+  clearTimeout(countInTimer);
+  if (take) {
+    take = null;
+    void mic.stop().then(() => mic.close());
+    engine.setSession("playback");
+  }
+  engine.pause();
+  if (getState().ui.playing || getState().ui.recording) {
+    setUi({ playing: false, recording: false, countingIn: false });
+  }
 }
 
 export function position(): number {
@@ -199,6 +238,11 @@ async function stopRecording(): Promise<void> {
     const mono = toMono(ctx, decoded, info.playStart - info.recStart);
     const audioId = uid();
     registerAudio(audioId, mono);
+    // Keep the take even if storing it fails — but say so.
+    void hooks.recorded(audioId, mono).catch((err) => {
+      console.error(err);
+      toast("Take recorded, but it couldn't be stored. Export it now — storage may be full.", 8000);
+    });
     const project = getState().project;
     const n = (project?.tracks.filter((t) => t.latencyComp).length ?? 0) + 1;
     const track = makeTrack("vocal", `Take ${n}`, audioId, mono.duration);
@@ -213,7 +257,6 @@ async function stopRecording(): Promise<void> {
       track.fxAmount = prev.fxAmount;
     }
     addTrack(track);
-    await onTakeRecorded(track, mono);
   } catch (err) {
     console.error(err);
     toast("That take couldn't be saved. Please try again.", 5000);
@@ -221,15 +264,6 @@ async function stopRecording(): Promise<void> {
     setUi({ loading: false });
     busy = false;
   }
-}
-
-/** Hook for persistence (set by the storage layer). */
-let takeListener: (track: Track, buffer: AudioBuffer) => Promise<void> | void = () => {};
-export function setTakeListener(fn: typeof takeListener): void {
-  takeListener = fn;
-}
-async function onTakeRecorded(track: Track, buffer: AudioBuffer): Promise<void> {
-  await takeListener(track, buffer);
 }
 
 /**

@@ -6,13 +6,14 @@ const { browser, page, errors } = await launch({ mic: voiceWav(6) });
 await page.goto(URL);
 const st = () => page.evaluate(() => window.__ses.getState());
 const pos = () => page.evaluate(() => window.__ses.engine.position());
+await page.waitForSelector(".projects, .transport");
+check("no AudioContext before a tap", await page.evaluate(() => window.__ses.engine.ctx === null));
 // On the project list (phase 5+), open a fresh project first.
 if (await page.locator("[data-new-project]").count()) await page.locator("[data-new-project]").click();
 await page.waitForSelector(".transport");
 
 check("title is Sam Eyde Studios", (await page.title()) === "Sam Eyde Studios");
 check("header shows the logo", (await page.locator(".header .logo").innerText()).includes("Sam Eyde"));
-check("no AudioContext before a tap", await page.evaluate(() => window.__ses.engine.ctx === null));
 
 // Header controls
 await page.selectOption('select[aria-label="Key"]', "9");

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { type ExportFormat, type ExportResult, exportAudio } from "../export/exporter";
-import { canShareFile, downloadBlob, shareBlob } from "../export/save";
 import { useStore } from "../state/store";
 import { startAudio } from "../studio/controller";
 import { formatTime } from "../util";
+import { SaveButtons } from "./SaveButtons";
 import { Sheet } from "./Sheet";
 
 export function ExportSheet({ onClose }: { onClose: () => void }) {
@@ -94,31 +94,7 @@ export function ExportSheet({ onClose }: { onClose: () => void }) {
       )}
       {error && <p className="error">{error}</p>}
       {result && (
-        <div className="export-done">
-          <p className="export-file">
-            <b>{result.filename}</b>
-            <span>
-              {formatTime(result.seconds)} · {(result.blob.size / 1048576).toFixed(1)} MB
-            </span>
-          </p>
-          <button
-            type="button"
-            className="btn primary block big"
-            data-export-save
-            onClick={() => downloadBlob(result.blob, result.filename)}
-          >
-            Save file
-          </button>
-          {canShareFile(result.blob, result.filename) && (
-            <button
-              type="button"
-              className="btn block big"
-              onClick={() => void shareBlob(result.blob, result.filename).catch(() => setError("Sharing failed"))}
-            >
-              Share…
-            </button>
-          )}
-        </div>
+        <SaveButtons blob={result.blob} filename={result.filename} detail={formatTime(result.seconds)} />
       )}
     </Sheet>
   );

@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
-import { getState, newProject, setState, useStore } from "./state/store";
+import { useStore } from "./state/store";
 import { startAudio } from "./studio/controller";
+import { closeProject } from "./studio/session";
 import { ExportSheet } from "./ui/ExportSheet";
-import { IconExport } from "./ui/Icons";
+import { IconBack, IconExport } from "./ui/Icons";
+import { ProjectList } from "./ui/ProjectList";
 import { Studio } from "./ui/Studio";
 
 export function App() {
+  const screen = useStore((s) => s.screen);
   const project = useStore((s) => s.project);
   const toastText = useStore((s) => s.ui.toast);
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
-    if (!getState().project) {
-      setState({ ...getState(), screen: "studio", project: newProject("My First Song") });
-    }
     // iOS: the AudioContext may only start inside a user gesture — arm it on the first tap.
     const arm = () => startAudio();
     window.addEventListener("touchend", arm, { passive: true });
@@ -26,16 +26,23 @@ export function App() {
 
   return (
     <>
-      {project && (
+      {screen === "studio" && project ? (
         <Studio
+          headerLeft={
+            <button type="button" className="icon-btn" aria-label="Back to projects" onClick={() => void closeProject()}>
+              <IconBack />
+            </button>
+          }
           headerRight={
             <button type="button" className="icon-btn" aria-label="Export" onClick={() => setExporting(true)}>
               <IconExport />
             </button>
           }
         />
+      ) : (
+        <ProjectList />
       )}
-      {exporting && <ExportSheet onClose={() => setExporting(false)} />}
+      {exporting && screen === "studio" && <ExportSheet onClose={() => setExporting(false)} />}
       {toastText && (
         <div className="toast" role="alert">
           {toastText}

@@ -990,3 +990,141 @@ input[type="range"]::-moz-range-thumb {
   font-size: 13px;
   color: var(--muted);
 }
+
+/* ---------- Project list ---------- */
+.projects {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: calc(var(--safe-t) + 28px) 16px calc(28px + var(--safe-b));
+}
+
+.projects-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.projects-head .logo-word {
+  font-size: 26px;
+}
+
+.projects-sub {
+  margin: 0 0 0 2px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.projects-actions {
+  display: flex;
+  gap: 10px;
+  margin: 22px 0 18px;
+}
+
+.projects-actions .btn {
+  flex: 1;
+}
+
+.project-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-item {
+  border-radius: 16px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.project-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 10px;
+}
+
+.project-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 8px 14px 16px;
+  text-align: left;
+}
+
+.project-open:active {
+  background: var(--surface-2);
+}
+
+.project-title {
+  font-size: 17px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.project-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.project-menu .btn {
+  flex: 1;
+  min-height: 42px;
+}
+
+.projects-empty {
+  padding: 36px 20px;
+  border: 1px dashed var(--surface-3);
+  border-radius: 16px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.projects-foot {
+  margin: 22px 4px 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.rename-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.text-input {
+  height: 52px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+  font-size: 17px;
+  font-weight: 600;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: var(--violet);
+}
+
+.sheet .hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
