@@ -184,7 +184,11 @@ export function Studio({
             <span className="slider-value">{project.latencyMs} ms</span>
           </label>
           <p className="hint">
-            Shifts recorded takes earlier so they sit on the beat. If your takes sound late, raise it; if
+            Drag a take left or right to move it, or pull its white edge handles to trim. Zoom in (+) for fine
+            moves.
+          </p>
+          <p className="hint">
+            Latency fix shifts recorded takes earlier so they sit on the beat. If your takes sound late, raise it; if
             they sound early, lower it.
           </p>
         </section>

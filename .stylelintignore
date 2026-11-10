@@ -3,6 +3,8 @@
 **/.output/**
 **/target/**
 **/node_modules/**
+# Standalone app with its own toolchain (not part of the pnpm workspace).
+sam-eyde-studios/**
 # Generated client CSS (tailwind compile output); built by
 # packages/dsh-plugin-browserskill/scripts/build-client-css.mjs.
 **/dsh-plugin-browserskill/src/client/bsk-ui.nomodule.css

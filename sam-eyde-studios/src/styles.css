@@ -1128,3 +1128,38 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   gap: 8px;
 }
+
+/* ---------- Editing: drag + trim ---------- */
+.lane.editing {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  touch-action: none;
+  cursor: ew-resize;
+}
+
+.trim-handle::after {
+  content: "";
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  width: 5px;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  opacity: 0.9;
+}
+
+/* The white bar sits just inside the edge of the take (12px of the zone is outside it). */
+.trim-handle.left::after {
+  left: 14px;
+}
+
+.trim-handle.right::after {
+  right: 14px;
+}

@@ -39,6 +39,7 @@
       "**",
       "!**/node_modules/**",
       "!**/dist/**",
+      "!sam-eyde-studios/**",
       "!packages/dsh-plugin-browserskill/lib/**",
       "!packages/dsh-plugin-browserskill/src/skill-content.generated.ts",
       "!packages/dsh-plugin-browserskill/src/client/bsk-ui.nomodule.css",

@@ -12,7 +12,7 @@ function offlineServiceWorker(): Plugin {
     apply: "build",
     generateBundle(_options, bundle) {
       const files = Object.keys(bundle).filter((f) => !f.endsWith(".map"));
-      const assets = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", ...files];
+      const assets = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png", ...files];
       const version = createHash("sha1").update(assets.join("|")).digest("hex").slice(0, 10);
       const source = `const CACHE = "ses-${version}";
 const ASSETS = ${JSON.stringify([...new Set(assets)])};
