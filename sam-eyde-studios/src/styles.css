@@ -1213,7 +1213,9 @@ input[type="range"] {
 .toolbar .btn.import {
   flex: 1 1 0;
   min-width: 0;
-  padding: 0 10px;
+  padding: 0 8px;
+  gap: 6px;
+  font-size: 13px;
 }
 
 .zoom {

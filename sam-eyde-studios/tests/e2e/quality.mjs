@@ -7,6 +7,7 @@ const SIZES = [
   { name: "iPhone SE (320)", width: 320, height: 568 },
   { name: "iPhone mini (375)", width: 375, height: 667 },
   { name: "iPhone (390)", width: 390, height: 844 },
+  { name: "iPhone Pro (402)", width: 402, height: 874 },
   { name: "iPhone Max (430)", width: 430, height: 932 },
 ];
 const allErrors = [];
