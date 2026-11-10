@@ -12,7 +12,7 @@ import { computeView, projectDuration } from "./timeline";
 export const peaks = new Map<string, Peaks>();
 
 const mic = new MicRecorder();
-let take: { pos: number; playStart: number; recStart: number } | null = null;
+let take: { pos: number; playStart: number; recStart: number; countedIn: boolean } | null = null;
 let countInTimer: ReturnType<typeof setTimeout> | undefined;
 let busy = false;
 
@@ -78,20 +78,50 @@ export function makeTrack(kind: TrackKind, name: string, audioId: string, durati
   };
 }
 
+const MAX_IMPORT_BYTES = 300 * 1024 * 1024;
+
 export async function importFile(file: File, kind: TrackKind): Promise<void> {
   const ctx = startAudio();
+  const shown = file.name.length > 28 ? `${file.name.slice(0, 25)}…` : file.name;
+  const looksLikeAudio =
+    file.type.startsWith("audio/") ||
+    file.type.startsWith("video/mp4") ||
+    /\.(mp3|wav|m4a|aac|aif|aiff|flac|ogg|mp4|caf)$/i.test(file.name);
+  if (file.size === 0) {
+    toast(`“${shown}” is empty. Pick a different file.`, 5000);
+    return;
+  }
+  if (!looksLikeAudio) {
+    toast(`“${shown}” isn't an audio file. Pick an MP3, WAV or M4A.`, 5000);
+    return;
+  }
+  if (file.size > MAX_IMPORT_BYTES) {
+    toast(`“${shown}” is too big (over 300 MB). Try an MP3 or M4A version.`, 6000);
+    return;
+  }
   setUi({ loading: true });
   try {
-    const data = await file.arrayBuffer();
-    const buffer = await decodeAudio(ctx, data);
+    let data: ArrayBuffer;
+    let buffer: AudioBuffer;
+    try {
+      data = await file.arrayBuffer();
+      buffer = await decodeAudio(ctx, data);
+    } catch (err) {
+      console.warn("decode failed", err);
+      toast(`Couldn't read “${shown}”. It may be damaged or in a format this phone can't play — try MP3, WAV or M4A.`, 6000);
+      return;
+    }
     const audioId = uid();
-    await hooks.imported(audioId, data, file.type || "audio/mpeg");
+    try {
+      await hooks.imported(audioId, data, file.type || "audio/mpeg");
+    } catch (err) {
+      console.warn("store failed", err);
+      toast("There isn't enough storage on this device to add that file. Free up space or delete old projects.", 7000);
+      return;
+    }
     registerAudio(audioId, buffer);
     const fallback = kind === "beat" ? "Beat" : "Vocal";
     addTrack(makeTrack(kind, stripExtension(file.name) || fallback, audioId, buffer.duration));
-  } catch (err) {
-    console.error(err);
-    toast("Couldn't open that file. Try an MP3, WAV or M4A.");
   } finally {
     setUi({ loading: false });
   }
@@ -167,6 +197,29 @@ export function toggleRecord(): void {
   else void startRecording();
 }
 
+/** Plain-language explanation of why the microphone didn't start. */
+function micErrorMessage(err: unknown): string {
+  const name = err instanceof DOMException ? err.name : "";
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    return "The microphone only works on a secure (https) address. Open the app from its https link.";
+  }
+  if (typeof MediaRecorder === "undefined") {
+    return "This browser can't record audio. Update iOS, or open the app in Safari.";
+  }
+  if (name === "NotAllowedError" || name === "SecurityError") {
+    return "Microphone access is blocked. Allow the microphone for this site in Settings, then tap record again.";
+  }
+  if (name === "NotFoundError" || name === "OverconstrainedError") {
+    return "No microphone was found. Plug in your headset or check your microphone, then try again.";
+  }
+  if (name === "NotReadableError" || name === "AbortError") {
+    return "The microphone is busy in another app (a call or voice memo?). Close that and try again.";
+  }
+  return "Couldn't start the microphone. Check that this site is allowed to use it in Settings, then try again.";
+}
+
+const MIN_TAKE_SEC = 0.4;
+
 async function startRecording(): Promise<void> {
   const project = getState().project;
   if (!project) return;
@@ -187,7 +240,7 @@ async function startRecording(): Promise<void> {
     const t0 = ctx.currentTime + 0.12;
     if (beats) engine.countIn(t0, beats, project.bpm);
     const playStart = engine.play(pos, t0 + (beats * 60) / project.bpm);
-    take = { pos, playStart, recStart };
+    take = { pos, playStart, recStart, countedIn: beats > 0 };
     setUi({ recording: true, playing: true, countingIn: beats > 0 });
     clearTimeout(countInTimer);
     if (beats) {
@@ -200,15 +253,7 @@ async function startRecording(): Promise<void> {
     console.error(err);
     mic.close();
     engine.setSession("playback");
-    const denied = err instanceof DOMException && err.name === "NotAllowedError";
-    toast(
-      denied
-        ? "Microphone access was blocked. Allow it in Settings to record."
-        : err instanceof Error
-          ? err.message
-          : "Couldn't start recording.",
-      5000,
-    );
+    toast(micErrorMessage(err), 7000);
   } finally {
     busy = false;
   }
@@ -228,9 +273,19 @@ async function stopRecording(): Promise<void> {
     const blob = await mic.stop();
     mic.close();
     engine.setSession("playback");
-    if (stopTime < info.playStart + 0.2) {
+    if (info.countedIn && stopTime < info.playStart) {
       engine.seek(info.pos);
       toast("Recording cancelled");
+      return;
+    }
+    if (stopTime < info.playStart + MIN_TAKE_SEC) {
+      engine.seek(info.pos);
+      toast("That take was too short to keep. Tap record, sing, then tap stop.", 4500);
+      return;
+    }
+    if (blob.size === 0) {
+      engine.seek(info.pos);
+      toast("Nothing was recorded. Check the microphone and try again.", 5000);
       return;
     }
     const decoded = await decodeAudio(ctx, await blob.arrayBuffer());
@@ -259,7 +314,7 @@ async function stopRecording(): Promise<void> {
     addTrack(track);
   } catch (err) {
     console.error(err);
-    toast("That take couldn't be saved. Please try again.", 5000);
+    toast("That take couldn't be read back from the microphone. Please record it again.", 6000);
   } finally {
     setUi({ loading: false });
     busy = false;

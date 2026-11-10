@@ -58,21 +58,21 @@ export const voiceWav = (seconds = 6) => {
   );
 };
 
-export async function launch({ mic } = {}) {
+export async function launch({ mic, denyMic = false, viewport = { width: 390, height: 844 } } = {}) {
   const browser = await chromium.launch({
     args: [
       "--use-fake-device-for-media-stream",
-      "--use-fake-ui-for-media-stream",
+      ...(denyMic ? ["--deny-permission-prompts"] : ["--use-fake-ui-for-media-stream"]),
       "--autoplay-policy=no-user-gesture-required",
       ...(mic ? [`--use-file-for-fake-audio-capture=${mic}`] : []),
     ],
   });
   const context = await browser.newContext({
-    viewport: { width: 390, height: 844 },
+    viewport,
     deviceScaleFactor: 2,
     hasTouch: true,
     isMobile: true,
-    permissions: ["microphone"],
+    permissions: denyMic ? [] : ["microphone"],
     acceptDownloads: true,
   });
   const page = await context.newPage();

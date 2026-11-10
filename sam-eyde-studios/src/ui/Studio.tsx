@@ -13,7 +13,7 @@ import { getState } from "../state/store";
 
 function ImportButton({ kind, children }: { kind: TrackKind; children: React.ReactNode }) {
   return (
-    <label className="btn import" onClick={() => startAudio()}>
+    <label className="btn import" aria-label={`Import ${kind}`} onClick={() => startAudio()}>
       {children}
       <input
         type="file"
@@ -130,10 +130,16 @@ export function Studio({
       <main className="main">
         <div className="toolbar">
           <ImportButton kind="beat">
-            <IconMusic /> Import beat
+            <IconMusic />
+            <span>
+              <span className="wide-only">Import </span>beat
+            </span>
           </ImportButton>
           <ImportButton kind="vocal">
-            <IconMic /> Import vocal
+            <IconMic />
+            <span>
+              <span className="wide-only">Import </span>vocal
+            </span>
           </ImportButton>
           <span className="spacer" />
           <div className="zoom" role="group" aria-label="Zoom">

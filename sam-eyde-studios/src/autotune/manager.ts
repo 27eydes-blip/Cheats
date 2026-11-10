@@ -1,7 +1,7 @@
 import { engine } from "../audio/engine";
 import { markLayered } from "../audio/graph";
 import { PRESETS } from "../effects/presets";
-import { getState, setUi } from "../state/store";
+import { getState, setUi, toast } from "../state/store";
 import type { Project, Track } from "../types";
 import { type TuneSettings, tuneKey } from "./tune";
 import type { TuneRequest, TuneResponse } from "./worker";
@@ -105,6 +105,7 @@ function onResult(res: TuneResponse): void {
     trimCache();
   } else if (!res.ok) {
     console.error("autotune failed:", res.error);
+    toast("Autotune couldn't process that track. It will play untuned.", 5000);
   }
   for (const [trackId, p] of pending) {
     if (p.jobId === res.jobId) {

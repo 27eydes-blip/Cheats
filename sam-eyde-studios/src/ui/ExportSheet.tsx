@@ -92,6 +92,9 @@ export function ExportSheet({ onClose }: { onClose: () => void }) {
           )}
         </button>
       )}
+      {project.tracks.length === 0 && (
+        <p className="hint">Nothing to export yet — import a beat or record a take first.</p>
+      )}
       {error && <p className="error">{error}</p>}
       {result && (
         <SaveButtons blob={result.blob} filename={result.filename} detail={formatTime(result.seconds)} />

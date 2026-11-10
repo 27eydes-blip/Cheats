@@ -1163,3 +1163,134 @@ input[type="range"]::-moz-range-thumb {
 .trim-handle.right::after {
   right: 14px;
 }
+
+/* ---------- Tap sizes + small phones ---------- */
+.chip,
+.icon-btn {
+  min-width: 44px;
+  width: 44px;
+  height: 44px;
+}
+
+.chip.danger.armed {
+  width: auto;
+}
+
+.stepper button {
+  width: 40px;
+  min-height: 44px;
+}
+
+.stepper input {
+  width: 40px;
+}
+
+.btn.small {
+  min-height: 44px;
+}
+
+input[type="range"] {
+  height: 44px;
+}
+
+.switch {
+  width: 60px;
+  height: 40px;
+  border-radius: 20px;
+}
+
+.switch-knob {
+  top: 4px;
+  left: 4px;
+  width: 32px;
+  height: 32px;
+}
+
+.switch.on .switch-knob {
+  transform: translateX(20px);
+}
+
+.toolbar .btn.import {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.zoom {
+  flex: none;
+}
+
+.zoom button {
+  width: 44px;
+}
+
+.crash {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+@media (max-width: 400px) {
+  .wide-only {
+    display: none;
+  }
+
+  .toolbar .btn.import {
+    text-transform: capitalize;
+  }
+
+  .slider-end {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .transport {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .transport-row {
+    gap: 5px;
+  }
+
+  .tbtn {
+    width: 42px;
+  }
+
+  .tbtn.play,
+  .tbtn.rec {
+    width: 46px;
+  }
+
+  .tbtn.toggle {
+    width: 42px;
+  }
+
+  .time-now {
+    font-size: 16px;
+  }
+
+  .time-total {
+    font-size: 10px;
+  }
+
+  .field.key select {
+    width: 66px;
+  }
+
+  .logo.compact .logo-word {
+    font-size: 15px;
+  }
+
+  .slider-label.wide {
+    width: 70px;
+  }
+}
+
+.btn svg,
+.chip svg,
+.tbtn svg,
+.icon-btn svg {
+  flex: none;
+}
