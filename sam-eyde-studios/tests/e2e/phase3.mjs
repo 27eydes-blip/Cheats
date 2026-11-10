@@ -58,7 +58,7 @@ await page.setInputFiles('input[data-import="vocal"]', click);
 await page.waitForSelector(".track.vocal");
 const card = page.locator(".track.vocal").first();
 const preset = card.locator('select[aria-label="Vocal preset"]');
-check("5 presets offered", (await preset.locator("option").count()) === 5);
+check("the 5 classic presets are still offered", (await preset.locator("option").allInnerTexts()).filter((n) => ["Melodic Trap", "R&B Smooth", "Country", "Pop Polish", "Clean"].includes(n)).length === 5);
 
 // Clean: nothing but the click
 let m = await measure();

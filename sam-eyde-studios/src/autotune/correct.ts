@@ -3,7 +3,7 @@ import type { PitchTrack } from "./pitch";
 import { hzToMidi, nearestScaleNote, scaleMask } from "./scales";
 
 /** How far past the midpoint the voice must go before the target note changes. */
-const HYSTERESIS_SEMITONES = 0.2;
+export const DEFAULT_HYSTERESIS = 0.2;
 /** A silence longer than this starts a fresh phrase. */
 const PHRASE_GAP_SEC = 0.15;
 
@@ -24,6 +24,7 @@ export function correctionSemitones(
   key: number,
   scale: ScaleId,
   retune: number,
+  hysteresis = DEFAULT_HYSTERESIS,
 ): Float32Array {
   const { f0, hop } = pitch;
   const out = new Float32Array(f0.length);
@@ -50,7 +51,7 @@ export function correctionSemitones(
     if (
       note === null ||
       (candidate !== note &&
-        Math.abs(midi - note) - Math.abs(midi - candidate) > 2 * HYSTERESIS_SEMITONES)
+        Math.abs(midi - note) - Math.abs(midi - candidate) > 2 * hysteresis)
     ) {
       note = candidate;
     }

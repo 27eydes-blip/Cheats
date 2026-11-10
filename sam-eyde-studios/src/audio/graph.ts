@@ -17,8 +17,19 @@ export function audibleGain(track: Track, project: Project): number {
   return track.volume;
 }
 
+/**
+ * Tuned buffers can carry generated layers (octave-up ad-libs, harmonies…) as
+ * extra channels: channel 0 is the lead, the rest are layers — not stereo.
+ */
+const layered = new WeakSet<AudioBuffer>();
+export function markLayered(buffer: AudioBuffer): void {
+  layered.add(buffer);
+}
+
 export interface TrackStrip {
   input: AudioNode;
+  /** Input for layered buffers (channel 0 = lead, channel 1 = layer). */
+  layeredInput?: AudioNode;
   update(track: Track, project: Project, immediate?: boolean): void;
   dispose(): void;
 }
@@ -33,9 +44,13 @@ export function createTrackStrip(
   const fader = ctx.createGain();
   // Vocals run through the preset effect chain; beats go straight to the fader.
   const chain = track.kind === "vocal" ? createVocalChain(ctx) : null;
+  let layeredInput: ChannelSplitterNode | undefined;
   if (chain) {
     input.connect(chain.input);
     chain.output.connect(fader);
+    layeredInput = ctx.createChannelSplitter(2);
+    layeredInput.connect(chain.input, 0);
+    layeredInput.connect(chain.layerInput, 1);
   } else {
     input.connect(fader);
   }
@@ -43,6 +58,7 @@ export function createTrackStrip(
 
   const strip: TrackStrip = {
     input,
+    layeredInput,
     update(t, p, immediate = false) {
       const g = audibleGain(t, p);
       if (immediate) fader.gain.value = g;
@@ -51,6 +67,7 @@ export function createTrackStrip(
     },
     dispose() {
       input.disconnect();
+      layeredInput?.disconnect();
       fader.disconnect();
       chain?.dispose();
     },
@@ -92,7 +109,14 @@ export function startVoice(
     gain.gain.setValueAtTime(0, when + delay);
     gain.gain.linearRampToValueAtTime(1, when + delay + fadeIn);
   }
-  src.connect(gain).connect(strip.input);
+  const isLayered = layered.has(buffer) && !!strip.layeredInput;
+  if (isLayered) {
+    // Keep the channels separate on their way to the splitter.
+    gain.channelCountMode = "explicit";
+    gain.channelCount = buffer.numberOfChannels;
+    gain.channelInterpretation = "discrete";
+  }
+  src.connect(gain).connect(isLayered ? (strip.layeredInput as AudioNode) : strip.input);
   src.start(when + delay, track.trimStart + into, length - into);
   return { src, gain };
 }

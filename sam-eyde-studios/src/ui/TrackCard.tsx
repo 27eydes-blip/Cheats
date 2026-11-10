@@ -68,6 +68,11 @@ function VocalControls({ track }: { track: Track }) {
           </span>
         )}
       </div>
+      {!track.autotune && PRESETS[track.preset].tune && (
+        <p className="hint preset-hint">
+          Turn Autotune on to get this preset's tone shift and ad-lib layer.
+        </p>
+      )}
       {track.autotune && (
         <label className="slider-row">
           <span className="slider-label wide2">Retune</span>

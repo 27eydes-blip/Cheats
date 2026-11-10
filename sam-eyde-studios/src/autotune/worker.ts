@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import type { PitchTrack } from "./pitch";
-import { analyze, tune, type TuneSettings } from "./tune";
+import { analyze, type TuneSettings, tuneAll } from "./tune";
 
 export interface TuneRequest {
   jobId: number;
@@ -12,7 +12,7 @@ export interface TuneRequest {
 }
 
 export type TuneResponse =
-  | { jobId: number; ok: true; samples: Float32Array }
+  | { jobId: number; ok: true; /** tuned lead, then one channel per layer */ channels: Float32Array[] }
   | { jobId: number; ok: false; error: string };
 
 const audio = new Map<string, { samples: Float32Array; pitch: PitchTrack | null }>();
@@ -32,9 +32,12 @@ scope.onmessage = (e: MessageEvent<TuneRequest | { forget: string }>) => {
       audio.set(msg.audioId, entry);
     }
     if (!entry.pitch) entry.pitch = analyze(entry.samples, msg.sampleRate);
-    const samples = tune(entry.samples, msg.sampleRate, entry.pitch, msg.settings);
-    const res: TuneResponse = { jobId: msg.jobId, ok: true, samples };
-    scope.postMessage(res, [samples.buffer]);
+    const channels = tuneAll(entry.samples, msg.sampleRate, entry.pitch, msg.settings);
+    const res: TuneResponse = { jobId: msg.jobId, ok: true, channels };
+    scope.postMessage(
+      res,
+      channels.map((c) => c.buffer),
+    );
   } catch (err) {
     const res: TuneResponse = { jobId: msg.jobId, ok: false, error: String(err) };
     scope.postMessage(res);

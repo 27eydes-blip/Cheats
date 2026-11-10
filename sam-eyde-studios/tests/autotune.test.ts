@@ -2,18 +2,18 @@ import { describe, expect, it } from "vitest";
 import { correctionSemitones } from "../src/autotune/correct";
 import { detectPitch } from "../src/autotune/pitch";
 import { hzToMidi, nearestScaleNote, scaleMask } from "../src/autotune/scales";
-import { analyze, tune } from "../src/autotune/tune";
+import { analyze, tune, tuneAll, tuneKey } from "../src/autotune/tune";
 
 const SR = 48000;
 
 /** Buzzy harmonic "voice" following a frequency function. */
-function voice(seconds: number, freq: (t: number) => number, sr = SR): Float32Array {
+function voice(seconds: number, freq: (t: number) => number, sr = SR, harmonics = 10): Float32Array {
   const out = new Float32Array(Math.round(seconds * sr));
   let ph = 0;
   for (let i = 0; i < out.length; i++) {
     ph += freq(i / sr) / sr;
     let v = 0;
-    for (let h = 1; h <= 10; h++) v += Math.sin(2 * Math.PI * h * ph + h) / h;
+    for (let h = 1; h <= harmonics; h++) v += Math.sin(2 * Math.PI * h * ph + h) / h;
     out[i] = v * 0.25;
   }
   return out;
@@ -120,7 +120,7 @@ describe("autotune (YIN + snap + TD-PSOLA)", () => {
     // C minor pentatonic pulls it down to C3: an 8 % pitch drop.
     const sr = SR;
     const inMidi = 49.4;
-    const src = voice(1.5, () => 440 * 2 ** ((inMidi - 69) / 12));
+    const src = voice(1.5, () => 440 * 2 ** ((inMidi - 69) / 12), SR, 24);
     const sung = new Float32Array(src.length);
     const w = (2 * Math.PI * 2000) / sr;
     const r = 0.97;
@@ -178,5 +178,95 @@ describe("autotune (YIN + snap + TD-PSOLA)", () => {
     const t2 = performance.now();
     console.log(`30 s take: analyze ${(t1 - t0).toFixed(0)} ms, tune ${(t2 - t1).toFixed(0)} ms`);
     expect(t2 - t0).toBeLessThan(15000);
+  });
+});
+
+describe("signature preset tuning (Cactus Wave)", () => {
+  /** Energy-weighted centre of the harmonics between lo and hi Hz. */
+  const centre = (x: Float32Array, f0: number, lo: number, hi: number) => {
+    let num = 0;
+    let den = 0;
+    for (let h = Math.ceil(lo / f0); h * f0 <= hi; h++) {
+      const hz = h * f0;
+      let re = 0;
+      let im = 0;
+      // A short window keeps each harmonic's peak wide enough to hit reliably.
+      for (let i = SR * 0.5; i < SR * 0.6; i++) {
+        re += x[i] * Math.cos((2 * Math.PI * hz * i) / SR);
+        im += x[i] * Math.sin((2 * Math.PI * hz * i) / SR);
+      }
+      num += (re * re + im * im) * hz;
+      den += re * re + im * im;
+    }
+    return num / den;
+  };
+  /** In-tune A2 voice with a formant at 2 kHz. */
+  const withFormant = () => {
+    const src = voice(1.5, () => 110, SR, 30);
+    const out = new Float32Array(src.length);
+    const w = (2 * Math.PI * 2000) / SR;
+    const r = 0.97;
+    let y1 = 0;
+    let y2 = 0;
+    for (let i = 0; i < src.length; i++) {
+      const y = src[i] + 2 * r * Math.cos(w) * y1 - r * r * y2;
+      y2 = y1;
+      y1 = y;
+      out[i] = y * 0.03;
+    }
+    return out;
+  };
+
+  it("formant shift lifts the tone but not the pitch", () => {
+    const x = withFormant();
+    const p = analyze(x, SR);
+    const up = tune(x, SR, p, { key: 9, scale: "minor", retune: 1, formant: 1 });
+    expect(Math.abs(mean(voicedMidi(up)) - 45)).toBeLessThan(0.06); // still A2
+    const hz = (a: Float32Array) => 440 * 2 ** ((mean(voicedMidi(a)) - 69) / 12);
+    const before = centre(x, hz(x), 1400, 2700);
+    const after = centre(up, hz(up), 1400, 2700);
+    // +1 semitone = +5.9 % → about +118 Hz at 2 kHz
+    expect(after - before).toBeGreaterThan(70);
+    expect(after - before).toBeLessThan(170);
+    expect(Math.abs(rms(up) / rms(x) - 1)).toBeLessThan(0.2);
+  });
+
+  it("octave-up layer: an octave above the tuned lead, silent where there is no singing", () => {
+    const x = voice(2, () => 212);
+    for (let i = SR; i < SR * 1.5; i++) x[i] = (Math.random() - 0.5) * 0.02; // a breathy gap
+    const [lead, layer] = tuneAll(x, SR, analyze(x, SR), { key: 9, scale: "minor", retune: 1, layers: [12] });
+    expect(layer.length).toBe(lead.length);
+    expect(Math.abs(mean(voicedMidi(lead, SR, 0.2, 0.9)) - 57)).toBeLessThan(0.06);
+    expect(Math.abs(mean(voicedMidi(layer, SR, 0.2, 0.9)) - 69)).toBeLessThan(0.1);
+    expect(rms(layer.subarray(SR * 1.1, SR * 1.4))).toBeLessThan(1e-4);
+    expect(rms(layer.subarray(SR * 0.3, SR * 0.8))).toBeGreaterThan(0.05);
+  });
+
+  it("zero hysteresis makes vibrato warble between notes", () => {
+    // Vibrato ±0.15 st centred just under the A3/B3 midpoint (58) in A minor.
+    const n = 600;
+    const f0 = new Float32Array(n).map(
+      (_, i) => 440 * 2 ** ((57.9 + 0.15 * Math.sin((2 * Math.PI * 6 * i) / 200) - 69) / 12),
+    );
+    const flips = (h: number) => {
+      const corr = correctionSemitones({ f0, hop: 0.005, t0: 0 }, 9, "minor", 1, h);
+      let count = 0;
+      let prev = -1;
+      corr.forEach((c, i) => {
+        const note = Math.round(hzToMidi(f0[i]) + c);
+        if (prev >= 0 && note !== prev) count++;
+        prev = note;
+      });
+      return count;
+    };
+    expect(flips(0)).toBeGreaterThan(20); // snaps back and forth with every vibrato cycle
+    expect(flips(0.2)).toBeLessThan(flips(0) / 4 + 1); // default tuning holds the note
+  });
+
+  it("cache key separates presets with different tuning", () => {
+    const base = { key: 0, scale: "minor" as const, retune: 1 };
+    expect(tuneKey("a", base)).not.toBe(tuneKey("a", { ...base, formant: 0.75 }));
+    expect(tuneKey("a", base)).not.toBe(tuneKey("a", { ...base, layers: [12] }));
+    expect(tuneKey("a", base)).not.toBe(tuneKey("a", { ...base, hysteresis: 0 }));
   });
 });

@@ -6,7 +6,9 @@ export type ScaleId =
   | "harmonicMinor"
   | "chromatic";
 
-export type PresetId = "melodicTrap" | "rnbSmooth" | "country" | "popPolish" | "clean";
+export type PresetId =
+  | "cactusWave"
+  | "melodicTrap" | "rnbSmooth" | "country" | "popPolish" | "clean";
 
 export type TrackKind = "beat" | "vocal";
 

@@ -1,4 +1,6 @@
 import { engine } from "../audio/engine";
+import { markLayered } from "../audio/graph";
+import { PRESETS } from "../effects/presets";
 import { getState, setUi } from "../state/store";
 import type { Project, Track } from "../types";
 import { type TuneSettings, tuneKey } from "./tune";
@@ -35,7 +37,15 @@ function getWorker(): Worker {
 }
 
 function settingsFor(project: Project, track: Track): TuneSettings {
-  return { key: project.key, scale: project.scale, retune: track.retune };
+  const t = PRESETS[track.preset]?.tune;
+  return {
+    key: project.key,
+    scale: project.scale,
+    retune: track.retune,
+    hysteresis: t?.hysteresis,
+    formant: t?.formant,
+    layers: t?.layers,
+  };
 }
 
 function setTuning(trackId: string, on: boolean): void {
@@ -87,8 +97,10 @@ function onResult(res: TuneResponse): void {
   const job = jobs.get(res.jobId);
   jobs.delete(res.jobId);
   if (job && res.ok && engine.ctx) {
-    const buf = engine.ctx.createBuffer(1, res.samples.length, job.sampleRate);
-    buf.getChannelData(0).set(res.samples);
+    const buf = engine.ctx.createBuffer(res.channels.length, res.channels[0].length, job.sampleRate);
+    res.channels.forEach((c, i) => buf.getChannelData(i).set(c));
+    // Channel 0 is the lead; any further channels are generated layers, not stereo.
+    markLayered(buf);
     cache.set(job.key, buf);
     trimCache();
   } else if (!res.ok) {
@@ -105,14 +117,14 @@ function onResult(res: TuneResponse): void {
 
 function trimCache(): void {
   let total = 0;
-  for (const b of cache.values()) total += b.length;
+  for (const b of cache.values()) total += b.length * b.numberOfChannels;
   if (total <= MAX_CACHE_SAMPLES) return;
   const inUse = new Set(active.values());
   for (const [key, b] of cache) {
     if (total <= MAX_CACHE_SAMPLES) break;
     if (inUse.has(key)) continue;
     cache.delete(key);
-    total -= b.length;
+    total -= b.length * b.numberOfChannels;
   }
 }
 

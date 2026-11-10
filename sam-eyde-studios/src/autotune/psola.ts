@@ -6,12 +6,30 @@ import type { PitchTrack } from "./pitch";
  * its original shape, so formants (the tone of the voice) stay put — no
  * chipmunk effect. Unvoiced parts (breaths, consonants) pass through untouched.
  */
+export interface PsolaOptions {
+  /**
+   * Formant shift in semitones. Each grain is read slightly faster (or slower),
+   * which moves the vocal tract resonances — the "size" of the voice — without
+   * touching the pitch, which is set only by how far apart the grains are placed.
+   */
+  formant?: number;
+  /** Added to every voiced frame's pitch shift (e.g. +12 for an octave-up layer). */
+  extraSemitones?: number;
+  /** Leave unvoiced audio (breaths, consonants, silence) out of the result. */
+  voicedOnly?: boolean;
+}
+
 export function psola(
   x: Float32Array,
   sampleRate: number,
   pitch: PitchTrack,
   shiftSemitones: Float32Array,
+  options: PsolaOptions = {},
 ): Float32Array {
+  const formantRatio = 2 ** ((options.formant ?? 0) / 12);
+  const extra = options.extraSemitones ?? 0;
+  const voicedOnly = options.voicedOnly ?? false;
+  const reshape = formantRatio !== 1 || extra !== 0;
   const N = x.length;
   const out = new Float32Array(N);
   const frames = pitch.f0.length;
@@ -79,8 +97,12 @@ export function psola(
     const left = ai > 0 ? m - marks[ai - 1] : right;
     const fi = frameAt(m);
     const f = f0[fi];
-    const shift = shiftSemitones[fi];
-    const tuned = f > 0 && Math.abs(shift) > 1e-3;
+    const shift = shiftSemitones[fi] + (f > 0 ? extra : 0);
+    const tuned = f > 0 && (reshape || Math.abs(shift) > 1e-3);
+    if (voicedOnly && f <= 0) {
+      ts = m + right;
+      continue;
+    }
 
     let centre: number;
     let frac = 0;
@@ -98,11 +120,12 @@ export function psola(
       if (o < 0 || o >= N) continue;
       const w = k < 0 ? 0.5 * (1 + Math.cos((Math.PI * k) / left)) : 0.5 * (1 + Math.cos((Math.PI * k) / right));
       let v: number;
-      if (frac === 0) {
+      if (frac === 0 && (!tuned || formantRatio === 1)) {
         v = x[m + k];
       } else {
-        // Sub-sample placement keeps the tuned pitch exact.
-        const p = m + k - frac;
+        // Sub-sample placement keeps the tuned pitch exact; reading the grain at a
+        // different speed is what shifts the formants.
+        const p = tuned ? m + (k - frac) * formantRatio : m + k;
         const i0 = Math.floor(p);
         if (i0 < 0 || i0 + 1 >= N) continue;
         const t = p - i0;
@@ -113,7 +136,7 @@ export function psola(
     }
 
     if (tuned) {
-      const ratio = Math.min(2, Math.max(0.5, 2 ** (shift / 12)));
+      const ratio = Math.min(2.6, Math.max(0.4, 2 ** (shift / 12)));
       ts += sampleRate / (f * ratio);
     } else {
       ts += right;

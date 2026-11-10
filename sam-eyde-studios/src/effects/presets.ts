@@ -13,13 +13,64 @@ export interface PresetDef {
   presenceDb: number;
   /** Air high-shelf around 9 kHz (dB). */
   airDb: number;
+  /** Shelf frequency for the air boost (default 9 kHz). */
+  airHz?: number;
+  /** Cut (negative dB) of low-mid "mud". */
+  mud?: { hz: number; db: number };
+  /** Tape-style soft saturation; `drive` 0..1. */
+  saturation?: { drive: number };
+  /** Vocal compressor, after the saturation. */
+  comp?: { thresholdDb: number; ratio: number; attack: number; release: number };
   reverb: { seconds: number; predelayMs: number; toneHz: number; mix: number } | null;
   /** Delay time is either tempo-synced (`beats`) or fixed (`seconds`). */
-  delay: { beats?: number; seconds?: number; feedback: number; mix: number; toneHz: number } | null;
+  delay: {
+    beats?: number;
+    seconds?: number;
+    feedback: number;
+    mix: number;
+    toneHz: number;
+    /** 0 = mono repeats, 1 = repeats bounce hard left / right (ping-pong). */
+    pingPong?: number;
+    /** How much of the repeats is also fed into the reverb. */
+    toReverb?: number;
+  } | null;
   doubler: { mix: number; depthMs: number } | null;
+  /** Slow, deep chorus for a floating feel. */
+  chorus?: { mix: number; depthMs: number; rateHz: number };
+  /** Level of the first generated layer (see `tune.layers`): a touch dry, mostly reverb. */
+  layer?: { dry: number; reverb: number };
+  /** Extra autotune behaviour for this preset. */
+  tune?: {
+    /** Note "stickiness" in semitones (0 = vibrato flips between notes: the warble). */
+    hysteresis?: number;
+    /** Formant shift in semitones. */
+    formant?: number;
+    /** Generated voices, as semitone offsets from the tuned lead. */
+    layers?: number[];
+  };
 }
 
 export const PRESETS: Record<PresetId, PresetDef> = {
+  cactusWave: {
+    id: "cactusWave",
+    name: "Cactus Wave",
+    blurb: "Hard-snapped warble, airy tone, dark plate, ping-pong delay, octave-up ad-libs",
+    autotune: true,
+    retune: 1,
+    hpHz: 130,
+    presenceDb: 1.5,
+    airDb: 4.5,
+    airHz: 11000,
+    mud: { hz: 400, db: -3.5 },
+    saturation: { drive: 0.3 },
+    comp: { thresholdDb: -24, ratio: 6, attack: 0.003, release: 0.09 },
+    reverb: { seconds: 3.3, predelayMs: 40, toneHz: 6000, mix: 0.35 },
+    delay: { beats: 0.75, feedback: 0.38, mix: 0.22, toneHz: 3200, pingPong: 0.85, toReverb: 0.5 },
+    doubler: { mix: 0.5, depthMs: 2.6 },
+    chorus: { mix: 0.3, depthMs: 4.5, rateHz: 0.17 },
+    layer: { dry: 0.04, reverb: 0.24 },
+    tune: { hysteresis: 0, formant: 0.75, layers: [12] },
+  },
   melodicTrap: {
     id: "melodicTrap",
     name: "Melodic Trap",
@@ -87,7 +138,9 @@ export const PRESETS: Record<PresetId, PresetDef> = {
   },
 };
 
-export const PRESET_ORDER: PresetId[] = ["melodicTrap", "rnbSmooth", "country", "popPolish", "clean"];
+export const PRESET_ORDER: PresetId[] = [
+  "cactusWave",
+  "melodicTrap", "rnbSmooth", "country", "popPolish", "clean"];
 
 /** Delay time in seconds for a preset at a tempo. */
 export function delaySeconds(preset: PresetDef, bpm: number): number {
