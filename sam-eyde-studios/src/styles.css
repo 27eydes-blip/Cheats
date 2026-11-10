@@ -883,3 +883,12 @@ input[type="range"]::-moz-range-thumb {
 .vocal-controls .slider-value {
   width: 56px;
 }
+
+.preset-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.preset-hint {
+  margin: 0 12px 2px 72px;
+}

@@ -1,3 +1,6 @@
+import { createVocalChain } from "../effects/chain";
+import { createMaster, type MasterBus } from "../effects/master";
+import { PRESETS } from "../effects/presets";
 import { clipLength, clipStart } from "../studio/timeline";
 import type { Project, Track } from "../types";
 
@@ -28,7 +31,15 @@ export function createTrackStrip(
 ): TrackStrip {
   const input = ctx.createGain();
   const fader = ctx.createGain();
-  input.connect(fader).connect(dest);
+  // Vocals run through the preset effect chain; beats go straight to the fader.
+  const chain = track.kind === "vocal" ? createVocalChain(ctx) : null;
+  if (chain) {
+    input.connect(chain.input);
+    chain.output.connect(fader);
+  } else {
+    input.connect(fader);
+  }
+  fader.connect(dest);
 
   const strip: TrackStrip = {
     input,
@@ -36,25 +47,19 @@ export function createTrackStrip(
       const g = audibleGain(t, p);
       if (immediate) fader.gain.value = g;
       else fader.gain.setTargetAtTime(g, ctx.currentTime, 0.015);
+      chain?.set(PRESETS[t.preset] ?? PRESETS.clean, p.bpm, t.fxAmount, immediate);
     },
     dispose() {
       input.disconnect();
       fader.disconnect();
+      chain?.dispose();
     },
   };
   strip.update(track, project, true);
   return strip;
 }
 
-export interface MasterBus {
-  input: AudioNode;
-}
-
-export function createMaster(ctx: BaseAudioContext): MasterBus {
-  const input = ctx.createGain();
-  input.connect(ctx.destination);
-  return { input };
-}
+export { createMaster, type MasterBus };
 
 export interface Voice {
   src: AudioBufferSourceNode;

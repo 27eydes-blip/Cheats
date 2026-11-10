@@ -17,5 +17,6 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
 
 // Debug handle (also used by the end-to-end tests).
 import { engine } from "./audio/engine";
+import { renderMix } from "./export/render";
 import { getState } from "./state/store";
-(window as unknown as Record<string, unknown>).__ses = { engine, getState };
+(window as unknown as Record<string, unknown>).__ses = { engine, getState, renderMix };

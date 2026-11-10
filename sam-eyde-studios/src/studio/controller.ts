@@ -204,6 +204,14 @@ async function stopRecording(): Promise<void> {
     const track = makeTrack("vocal", `Take ${n}`, audioId, mono.duration);
     track.startSec = info.pos;
     track.latencyComp = true;
+    // A new take starts with the same sound as your last vocal.
+    const prev = project?.tracks.filter((t) => t.kind === "vocal").at(-1);
+    if (prev) {
+      track.preset = prev.preset;
+      track.autotune = prev.autotune;
+      track.retune = prev.retune;
+      track.fxAmount = prev.fxAmount;
+    }
     addTrack(track);
     await onTakeRecorded(track, mono);
   } catch (err) {

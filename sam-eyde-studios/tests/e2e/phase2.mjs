@@ -74,7 +74,7 @@ await card.locator('input[aria-label="Retune speed"]').fill("0");
 await sleep(100);
 check("changing retune speed triggers re-tune", Object.keys((await st()).ui.tuning).length === 1);
 await page.waitForSelector(".badge.tuning", { state: "detached", timeout: 30000 });
-check("label shows Natural", (await card.locator(".vocal-controls .slider-value").innerText()) === "Natural");
+check("label shows Natural", (await card.locator(".vocal-controls .slider-value").last().innerText()) === "Natural");
 
 // UI stays responsive while tuning + playback swaps live
 await page.click('button[aria-label="Play"]');

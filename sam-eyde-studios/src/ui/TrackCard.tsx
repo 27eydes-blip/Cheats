@@ -1,6 +1,7 @@
+import { PRESET_ORDER, PRESETS } from "../effects/presets";
 import { updateTrack, useStore } from "../state/store";
 import { deleteTrack } from "../studio/controller";
-import type { Track } from "../types";
+import type { PresetId, Track } from "../types";
 import { ConfirmButton } from "./ConfirmButton";
 import { IconMic, IconMusic, IconTrash } from "./Icons";
 import { Lane } from "./Lane";
@@ -17,6 +18,38 @@ function VocalControls({ track }: { track: Track }) {
   const tuning = useStore((s) => !!s.ui.tuning[track.id]);
   return (
     <div className="vocal-controls">
+      <label className="control-row preset-row">
+        <span className="slider-label wide2">Preset</span>
+        <select
+          value={track.preset}
+          aria-label="Vocal preset"
+          onChange={(e) => {
+            const def = PRESETS[e.target.value as PresetId];
+            // A preset also brings its own autotune defaults.
+            updateTrack(track.id, { preset: def.id, autotune: def.autotune, retune: def.retune });
+          }}
+        >
+          {PRESET_ORDER.map((id) => (
+            <option key={id} value={id}>
+              {PRESETS[id].name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="hint preset-hint">{PRESETS[track.preset].blurb}</p>
+      <label className="slider-row">
+        <span className="slider-label wide2">FX</span>
+        <input
+          type="range"
+          min={0}
+          max={2}
+          step={0.05}
+          value={track.fxAmount}
+          aria-label="FX amount"
+          onChange={(e) => updateTrack(track.id, { fxAmount: Number(e.target.value) })}
+        />
+        <span className="slider-value">{Math.round(track.fxAmount * 100)}%</span>
+      </label>
       <div className="control-row">
         <button
           type="button"
