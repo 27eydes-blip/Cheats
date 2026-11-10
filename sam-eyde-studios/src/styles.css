@@ -1232,7 +1232,7 @@ input[type="range"] {
   gap: 18px;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 420px) {
   .wide-only {
     display: none;
   }
