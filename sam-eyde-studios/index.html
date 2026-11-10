@@ -14,7 +14,8 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="SE Studios" />
-    <link rel="manifest" href="./manifest.webmanifest" />
+    <!-- use-credentials: behind a login wall the manifest must be fetched with the session cookie -->
+    <link rel="manifest" href="./manifest.webmanifest" crossorigin="use-credentials" />
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   </head>
