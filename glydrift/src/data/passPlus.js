@@ -7,7 +7,7 @@ import { Seasons } from "./seasons.js";
 import { DriftPass, giveReward } from "./driftPass.js";
 import { getCosmetic } from "./cosmetics.js";
 import { Titles } from "./titles.js";
-import { PLUS_S1_LAYOUT, plusTrackS1, plusTrackS1v1 } from "./seasonDefs.js";
+import { PLUS_S1_LAYOUT, migratePlusClaimsS1, plusTrackS1, plusTrackS1v1 } from "./seasonDefs.js";
 import { Progression } from "./progression.js";
 
 export const PLUS_PRICE_LABEL = "$3.99";
@@ -25,30 +25,9 @@ function record(seasonId) {
   return rec;
 }
 
-/** What a reward is, for matching it across layouts ("hero:voidcat", "item:skin_holo"…). */
-const rewardKey = (r) =>
-  r?.hero ? `hero:${r.hero}` : r?.item ? `item:${r.item}` : r?.title ? `title:${r.title}` : r?.banner ? "banner" : null;
-
-/**
- * Season 1's paid track moved to layout 2 (new rewards; four pass heroes moved one tier or a
- * few). Claims are stored by tier, so move each claimed special reward to its new tier; a
- * claimed coins / shards / pod tier stays claimed only if it's still a filler tier (otherwise
- * the new reward there is yours to claim).
- */
+/** Season 1's paid track moved to layout 2: move claims made on layout 1 (seasonDefs.js). */
 function migrateS1(rec) {
-  const theme = { banner: "crimson" };
-  const before = plusTrackS1v1(theme);
-  const after = plusTrackS1(theme);
-  const next = {};
-  for (const i of Object.keys(rec.plusClaimed)) {
-    if (!rec.plusClaimed[i]) continue;
-    const key = rewardKey(before[i]);
-    if (key) {
-      const j = after.findIndex((r) => rewardKey(r) === key);
-      if (j >= 0) next[j] = true;
-    } else if (!rewardKey(after[i])) next[i] = true;
-  }
-  rec.plusClaimed = next;
+  rec.plusClaimed = migratePlusClaimsS1(rec.plusClaimed);
   rec.plusLayout = PLUS_S1_LAYOUT;
 }
 

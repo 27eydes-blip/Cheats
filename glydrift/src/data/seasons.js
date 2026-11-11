@@ -307,10 +307,19 @@ export const Seasons = {
     for (const s of config.seasons) {
       if (!Save.data.seasons?.[s.id]) continue;
       const r = rec(s.id); // filled in if partial
-      if (r.recapShown || Date.parse(s.end) > now) continue;
+      if (Date.parse(s.end) > now) continue;
       if (!r.started && !r.xp) continue;
       const tierXp = s.pass.tierXp || 400;
       const unlocked = Math.min(s.pass.tiers.length, Math.floor(r.xp / tierXp));
+      if (r.recapShown) {
+        // the recap already ran, but this device may only have learned about a Drift Pass+
+        // purchase since (Drift Pass+ ownership is never in the cloud save: the store restores
+        // it from the server a moment after launch, so the first launch on a new device, or
+        // after logging back in, recaps the season before it knows). Pay the earned paid tiers
+        // now instead of losing them; claimEnded skips non-owners and tiers already paid.
+        if (claimPlus) for (let i = 0; i < unlocked; i++) claimPlus(s, i);
+        continue;
+      }
       const got = [];
       for (let i = 0; i < unlocked; i++)
         if (!r.claimed[i]) {
