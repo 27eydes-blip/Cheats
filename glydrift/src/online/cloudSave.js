@@ -7,6 +7,7 @@
 // dimensions, hero shards, claimed rewards, best scores and lifetime stats.
 
 import { mergeLevelProgress } from "../levels/merge.js";
+import { PLUS_S1_LAYOUT, migratePlusClaimsS1 } from "../data/seasonDefs.js";
 
 /** Device-only parts of the save that never go to the cloud. */
 // (Drift Pass+ ownership is never taken from a save: the server's verified purchases are the
@@ -66,11 +67,17 @@ function mergeSeasons(a = {}, b = {}) {
       continue;
     }
     const base = (rb.xp || 0) > (ra.xp || 0) ? rb : ra;
+    // Season 1's paid-track claims are stored by tier, and its track changed layout: a save
+    // still on the old layout (e.g. a cloud copy uploaded before the update) has its claims
+    // moved to the new tiers first, or old tier numbers would mark new rewards as claimed
+    const s1New = id === "s1" && (ra.plusLayout === PLUS_S1_LAYOUT || rb.plusLayout === PLUS_S1_LAYOUT);
+    const plusOf = (r) => (s1New && r.plusLayout !== PLUS_S1_LAYOUT ? migratePlusClaimsS1(r.plusClaimed || {}) : r.plusClaimed);
     out[id] = {
       ...base,
+      ...(s1New ? { plusLayout: PLUS_S1_LAYOUT } : {}),
       xp: Math.max(ra.xp || 0, rb.xp || 0),
       claimed: union(ra.claimed, rb.claimed),
-      plusClaimed: union(ra.plusClaimed, rb.plusClaimed),
+      plusClaimed: union(plusOf(ra), plusOf(rb)),
       // a finished event challenge stays finished (its coins are never paid twice)
       ...(ra.ev || rb.ev ? { ev: { ...(base.ev || {}), done: union(ra.ev?.done, rb.ev?.done) } } : {}),
     };

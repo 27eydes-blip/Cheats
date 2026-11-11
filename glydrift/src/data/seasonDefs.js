@@ -178,6 +178,32 @@ export function plusTrackS1v1(theme) {
     return { coins: 200 + t * 20 };
   });
 }
+
+/** What a reward is, for matching it across layouts ("hero:voidcat", "item:skin_holo"…). */
+const rewardKey = (r) =>
+  r?.hero ? `hero:${r.hero}` : r?.item ? `item:${r.item}` : r?.title ? `title:${r.title}` : r?.banner ? "banner" : null;
+
+/**
+ * Season 1's paid track moved to layout 2 (new rewards; four pass heroes moved one tier or a
+ * few). Claims are stored by tier, so move each claimed special reward to its new tier; a
+ * claimed coins / shards / pod tier stays claimed only if it's still a filler tier (otherwise
+ * the new reward there is yours to claim). Pure: used by passPlus.js and the cloud save merge.
+ */
+export function migratePlusClaimsS1(claimed = {}) {
+  const theme = { banner: "crimson" };
+  const before = plusTrackS1v1(theme);
+  const after = plusTrackS1(theme);
+  const next = {};
+  for (const i of Object.keys(claimed)) {
+    if (!claimed[i]) continue;
+    const key = rewardKey(before[i]);
+    if (key) {
+      const j = after.findIndex((r) => rewardKey(r) === key);
+      if (j >= 0) next[j] = true;
+    } else if (!rewardKey(after[i])) next[i] = true;
+  }
+  return next;
+}
 const DEFAULT_MILESTONES = {
   5: { coins: 750 },
   10: { item: "trail_galaxy" },
