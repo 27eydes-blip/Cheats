@@ -3,6 +3,7 @@
 import { addAtlas, addTexture, canvasTexture, mix, PixelCanvas, seeded, shade } from "./px.js";
 import { DIM_KINDS, silhouetteDim } from "./dimensionScenery.js";
 import { EXTRA_KINDS, silhouetteExtra } from "./scenicArt.js";
+import { lanternLamp, roofTile, SAKURA_KINDS, silhouetteSakura } from "./sakuraScenery.js";
 
 export const NV = {
   O: 0x040b0d, // outline
@@ -715,7 +716,9 @@ function glowSpot(color) {
 
 /**
  * Build every texture + the sprite atlas for one biome.
- * cfg: { pillar: "stone"|"metal", lamp: "torch"|"orb"|"screen", far, mid, hang (silhouette kinds) }
+ * cfg: { pillar: "stone"|"metal", lamp: "torch"|"orb"|"screen"|"lantern", far, mid, hang (silhouette
+ * kinds), wallTop: "roof" (a separate top-wall tile), nearW (bottom near layer tile width, default 128),
+ * frames (extra atlas sprites) }
  */
 export function buildBiome(scene, prefix, palette, cfg) {
   C = palette;
@@ -732,6 +735,7 @@ export function buildBiome(scene, prefix, palette, cfg) {
     addTexture(scene, p("pillar_2"), widen(pillarBlocks(9), 8));
     addTexture(scene, p("wall"), wallTile());
   }
+  if (cfg.wallTop === "roof") addTexture(scene, p("wall_top"), roofTile(C));
   addTexture(scene, p("edge"), wallEdge());
   addTexture(scene, p("edge_b"), wallEdge().flipY());
   addTexture(scene, p("chain"), chainTile());
@@ -743,6 +747,8 @@ export function buildBiome(scene, prefix, palette, cfg) {
   const sil = (kind, w, h, seed, colors) =>
     DIM_KINDS.includes(kind)
       ? silhouetteDim(w, h, seed, { ...colors, kind })
+      : SAKURA_KINDS.includes(kind)
+        ? silhouetteSakura(w, h, seed, { ...colors, kind })
       : EXTRA_KINDS.includes(kind)
         ? silhouetteExtra(w, h, seed, { ...colors, kind })
         : ["city", "cables", "chains", "icicles"].includes(kind)
@@ -787,13 +793,20 @@ export function buildBiome(scene, prefix, palette, cfg) {
   addTexture(
     scene,
     p("near_bot"),
-    sil(cfg.nearBot || "stalagmites", 128, 40, 37, {
+    sil(cfg.nearBot || "stalagmites", cfg.nearW || 128, 40, 37, {
       base: C.bgNear,
       rim: C.bg4,
       detail: C.bgDetail,
     }),
   );
-  const lamp = cfg.lamp === "orb" ? orbLamp : cfg.lamp === "screen" ? screenLamp : torch;
+  const lamp =
+    cfg.lamp === "orb"
+      ? orbLamp
+      : cfg.lamp === "screen"
+        ? screenLamp
+        : cfg.lamp === "lantern"
+          ? (f) => lanternLamp(C, f)
+          : torch;
   const frames = {
     cap_0: gateCap(1),
     cap_1: gateCap(2),
@@ -814,6 +827,7 @@ export function buildBiome(scene, prefix, palette, cfg) {
   };
   frames.cap_0b = frames.cap_0.flipY();
   frames.cap_1b = frames.cap_1.flipY();
+  if (cfg.frames) Object.assign(frames, cfg.frames(C));
   addAtlas(scene, prefix, frames);
   C = NV;
 }

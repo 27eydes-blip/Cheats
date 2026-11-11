@@ -10,6 +10,7 @@ import { buildCosmeticArt } from "./cosmeticArt.js";
 import { buildNewHazards } from "./newHazardArt.js";
 import { addAtlas, deferUploads, forgetTextures } from "./px.js";
 import { weatherFrames } from "./scenicArt.js";
+import { SAKURA, sakuraFrames } from "./sakuraScenery.js";
 
 const SOLAR = {
   O: 0x120403,
@@ -477,6 +478,33 @@ const DEFS = {
     },
     weather: { kind: "butterflies", color: 0xffb0d8, rate: 22 },
   },
+  // Sakura Skies: golden hour. A low sun with soft rays, birds, floating islands, cherry
+  // blossom, paper lanterns and a koi pond; petals drift across everything. The crossfade in
+  // and out is slower than usual (dark Neon Void → bright Sakura → dark Solar Storm).
+  sakura: {
+    pal: SAKURA,
+    cfg: {
+      pillar: "stone",
+      lamp: "lantern",
+      distant: "sakurapeaks",
+      far: "skyislands",
+      mid: "sakuragrove",
+      hang: "blossomboughs",
+      nearTop: "lanternfringe",
+      nearBot: "koipond",
+      nearW: 256,
+      wallTop: "roof",
+      frames: sakuraFrames,
+    },
+    weather: {
+      kind: "petals",
+      rate: 44,
+      sun: { x: 0.7, y: 0.57, rays: 0xffe2a0 },
+      birds: 5,
+      colors: [0xfff0b8, 0xffe0f0, 0xffffff], // golden pollen motes
+      fade: 2.6,
+    },
+  },
   hurricane: {
     pal: HURRICANE,
     cfg: {
@@ -559,6 +587,7 @@ function makeTheme(id) {
     pillars: [p("pillar_0"), p("pillar_1"), p("pillar_2")],
     caps: ["cap_0", "cap_1"],
     wall: p("wall"),
+    wallTop: cfg.wallTop ? p("wall_top") : p("wall"),
     edge: p("edge"),
     edgeB: p("edge_b"),
     chain: p("chain"),

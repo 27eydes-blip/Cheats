@@ -34,7 +34,7 @@ export class Terrain {
     const { scene, W, H } = this;
     const wide = W * 3;
     const top = scene.add
-      .tileSprite(W / 2, -EDGE_H + S * 3, wide, 900, theme.wall)
+      .tileSprite(W / 2, -EDGE_H + S * 3, wide, 900, theme.wallTop || theme.wall)
       .setOrigin(0.5, 1)
       .setDepth(7);
     const topEdge = scene.add

@@ -24,6 +24,13 @@ import { levelNameLine } from "../ui/levelName.js";
 /** Realm titles: drawn this much smaller than full size, centred this far below the HUD top. */
 const REALM_TITLE_SCALE = 0.68;
 const REALM_TITLE_Y = 380;
+/**
+ * Realm titles with their own colours (the others use the realm's neon): a fill that fades
+ * from `top` to `bottom`, its outline, glow, underline and the "ENTERING" line above it.
+ */
+const TITLE_LOOK = {
+  sakura: { top: "#ffd8e8", bottom: "#ffd27a", stroke: 0xee6a9c, glow: 0xffb64a, line: 0xffc24a, sub: "#ffe0a8" },
+};
 
 export class HudScene extends Phaser.Scene {
   constructor() {
@@ -256,9 +263,19 @@ export class HudScene extends Phaser.Scene {
     this.titles ||= {};
     let t = this.titles[key];
     if (!t) {
+      const look = slam ? null : TITLE_LOOK[BIOMES[rawIndex % BIOMES.length].id];
       const col = slam ? 0xff1030 : BIOMES[rawIndex % BIOMES.length].neon;
       t = neonText(this, 0, 0, name, 56, 0xffffff, { blur: 26 });
       t.setStroke(hex(col), slam ? 5 : 4).setShadow(0, 0, hex(col), slam ? 30 : 26, true, true);
+      if (look) {
+        // soft pink → gold letters, a rose outline and a warm golden glow (rendered once)
+        t.setStroke(hex(look.stroke), 4).setShadow(0, 0, hex(look.glow), 26, true, true);
+        const pad = t.padding;
+        const g = t.context.createLinearGradient(0, pad.top + 6, 0, t.height - pad.bottom - 6);
+        g.addColorStop(0, look.top);
+        g.addColorStop(1, look.bottom);
+        t.setFill(g);
+      }
       t.setVisible(false);
       this.banner.add(t);
       this.titles[key] = t;
@@ -279,8 +296,10 @@ export class HudScene extends Phaser.Scene {
   showRealm(rawIndex, slam, done) {
     const b = BIOMES[rawIndex % BIOMES.length];
     this.showTitle(rawIndex, slam);
+    const look = TITLE_LOOK[b.id];
+    this.bannerSub.setColor(!slam && look ? look.sub : "#ffffff");
     if (slam) return this.slamTitle(rawIndex, b, done);
-    this.bannerLine.setFillStyle(b.neon);
+    this.bannerLine.setFillStyle(look ? look.line : b.neon);
     this.tweens.killTweensOf(this.banner);
     this.banner.setAlpha(0).setScale(1.6 * REALM_TITLE_SCALE).setY(this.bannerY);
     this.bannerLine.scaleX = 0;
