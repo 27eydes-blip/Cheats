@@ -703,6 +703,11 @@ export function buildPixelArt(scene) {
   if (built) return;
   built = true;
   artScene = scene;
+  buildBootArt(scene);
+}
+
+/** Everything buildPixelArt makes at launch (also re-run by rebuildPixelArt). */
+function buildBootArt(scene) {
   buildCommon(scene);
   buildAnimals(scene);
   buildFloorStrips(scene);
@@ -714,6 +719,18 @@ export function buildPixelArt(scene) {
   buildCosmeticArt(scene);
   ensureBiomeArt(EAGER_BIOME);
   buildHazards(scene, { solar: SOLAR, frozen: FROZEN, glitch: GLITCH, abyss: ABYSS });
+}
+
+/**
+ * After a lost GPU context (gfx/rebuildArt.js, with px.rebuild on): draw the launch art and
+ * every realm's art that's in memory again, from scratch. The textures keep their keys and
+ * objects (px.canvasTexture swaps the pixels in place). Realm art still queued is left to
+ * finish the normal way (its uploads haven't happened yet).
+ */
+export function rebuildPixelArt() {
+  if (!artScene) return;
+  buildBootArt(artScene);
+  for (const id of biomeBuilt) for (const job of buildJobs(id)) job();
 }
 
 // test builds only: which biomes have art in memory (long-run memory tests)

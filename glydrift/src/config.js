@@ -36,7 +36,17 @@ export function viewportSize() {
 // canvas pixel budgets: a 3x-retina canvas (2.7M px on a notch iPhone) plus the texture set
 // made older iPhones run out of memory ("A problem repeatedly occurred"); ~2x looks the same
 // for pixel art
-export const PIXEL_BUDGET = { normal: 2.3e6, low: 1.5e6 };
+export const PIXEL_BUDGET = { normal: 2.3e6, low: 1.5e6, ipad: 2.0e6, ipadLow: 1.4e6 };
+
+/**
+ * iPad (iPadOS Safari says "Macintosh" but has a touch screen). iPads ran out of graphics
+ * memory mid-run (lost WebGL context): their canvas is drawn at most 2x, inside a smaller
+ * pixel budget (so the big iPads draw below 2x), and without multisampling (main.js).
+ */
+export function isIPad() {
+  const ua = navigator.userAgent || "";
+  return /iPad/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 0);
+}
 
 /** The view (logical height + zoom) that suits the window as it is right now. */
 export function idealView(lowGfx = false) {
@@ -46,9 +56,16 @@ export function idealView(lowGfx = false) {
   const cssW = wantsFit()
     ? Math.min(vp.w, (vp.h * GAME_W) / H)
     : Math.max(vp.w, (vp.h * GAME_W) / H);
-  const dpr = Math.min(window.devicePixelRatio || 1, lowGfx ? 2 : 3);
+  const ipad = isIPad();
+  const dpr = Math.min(window.devicePixelRatio || 1, lowGfx || ipad ? 2 : 3);
   let z = Math.max(0.5, (cssW * dpr) / GAME_W);
-  const budget = lowGfx ? PIXEL_BUDGET.low : PIXEL_BUDGET.normal;
+  const budget = ipad
+    ? lowGfx
+      ? PIXEL_BUDGET.ipadLow
+      : PIXEL_BUDGET.ipad
+    : lowGfx
+      ? PIXEL_BUDGET.low
+      : PIXEL_BUDGET.normal;
   const px = GAME_W * z * (H * z);
   if (px > budget) z *= Math.sqrt(budget / px);
   const Z = Math.max(0.5, z);

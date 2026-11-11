@@ -217,6 +217,7 @@ export class PixelCanvas {
     const ctx = cv.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(small, 0, 0, cv.width, cv.height);
+    releaseCanvas(small); // (the 1x copy is done with: give its memory back now, not at GC)
     return cv;
   }
 }
@@ -247,10 +248,45 @@ export function deferUploads(fn) {
  * as-is and never reads it back.
  */
 export function canvasTexture(scene, key, canvas) {
-  if (scene.textures.exists(key)) forgetTextures(scene, [key]);
-  const tex = scene.textures.addImage(key, canvas);
+  const tm = scene.textures;
+  // rebuilding after a lost GPU context (gfx/rebuildArt.js): the texture keeps its identity
+  // (every sprite, tile sprite and particle emitter still points at it) and only gets the
+  // freshly drawn canvas, uploaded into its own GPU texture
+  if (rebuild.on && tm.exists(key)) {
+    const src = tm.get(key).source[0];
+    if (src && src.glTexture && src.width === canvas.width && src.height === canvas.height) {
+      src.image = canvas;
+      src.isCanvas = true;
+      src.update();
+      rebuild.done.add(key);
+      return tm.get(key);
+    }
+  }
+  if (tm.exists(key)) forgetTextures(scene, [key]);
+  const tex = tm.addImage(key, canvas);
+  if (rebuild.on) rebuild.done.add(key);
   restoreTextures(scene, key);
   return tex;
+}
+
+/**
+ * Rebuild mode (set by gfx/rebuildArt.js while it re-runs the art builders after a lost GPU
+ * context): `done` collects every texture key that got freshly drawn pixels. `extra`: texture
+ * key → its builder, for art made on demand outside the launch / realm sets.
+ */
+export const rebuild = { on: false, done: new Set(), extra: new Map() };
+
+/**
+ * Give a canvas's memory back straight away. iPad Safari caps the memory of all canvases
+ * together and draws NEW canvases blank once it's over the cap; a canvas that's only waiting
+ * to be garbage-collected still counts. Only for canvases nothing will draw from again.
+ */
+export function releaseCanvas(c) {
+  if (!c || typeof c.getContext !== "function") return;
+  try {
+    c.width = 0;
+    c.height = 0;
+  } catch {}
 }
 
 // Objects that were showing a texture when it was removed, by texture key: { o, frame }.
@@ -283,7 +319,12 @@ export function forgetTextures(scene, keys) {
     if (Array.isArray(kids)) for (const c of kids) visit(c);
   };
   for (const sc of scene.sys.game.scene.scenes) for (const o of sc.sys.displayList?.list || []) visit(o);
-  for (const k of dead.values()) tm.remove(k);
+  for (const [tex, k] of dead) {
+    const imgs = tex.source.map((src) => src.image);
+    tm.remove(k);
+    // (a freed realm's ~5 MB of canvases go now, not whenever the garbage collector runs)
+    for (const img of imgs) releaseCanvas(img);
+  }
 }
 
 /** A texture was (re)built: objects that lost it when it was removed get it back. */
@@ -350,8 +391,13 @@ export function addAtlas(scene, key, frames, scale = S) {
   cv.height = y + rowH;
   const ctx = cv.getContext("2d");
   ctx.imageSmoothingEnabled = false;
-  for (const p of place) ctx.drawImage(p.pc.toCanvas(scale), p.x, p.y);
+  for (const p of place) {
+    const fc = p.pc.toCanvas(scale);
+    ctx.drawImage(fc, p.x, p.y);
+    releaseCanvas(fc);
+  }
   const tex = canvasTexture(scene, key, cv);
+  // (Texture.add skips frames it already has: a texture rebuilt in place keeps its frames)
   for (const p of place) tex.add(p.name, 0, p.x, p.y, p.pc.w * scale, p.pc.h * scale);
   tex.setFilter(Phaser.Textures.FilterMode.NEAREST);
   restoreTextures(scene, key); // (objects that lost this atlas get their frames back)

@@ -119,20 +119,7 @@ function guard(name) {
 guard("step");
 guard("headlessStep");
 
-/** Also keep a record of a lost GPU context (iOS can drop it under memory pressure). */
-export function watchContext(game) {
-  const c = game.canvas;
-  if (!c) return;
-  c.addEventListener("webglcontextlost", () => {
-    recordError("contextlost", "WebGL context lost", game);
-    try {
-      GuardHooks.onError?.(new Error("WebGL context lost"), "contextlost");
-    } catch {}
-  });
-  c.addEventListener("webglcontextrestored", () =>
-    recordError("contextrestored", "WebGL context restored", game),
-  );
-}
+// (a lost GPU context: systems/contextGuard.js)
 
 /**
  * A screen that fails while it's being built (its create() throws) would sit half-drawn, often

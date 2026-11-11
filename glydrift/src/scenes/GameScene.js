@@ -183,7 +183,7 @@ export class GameScene extends Phaser.Scene {
     const DS = 1024;
     if (!this.textures.exists("abyss_dark"))
       darknessTexture(this, "abyss_dark", DS, DS, DARK_R);
-    this.dark = [this.add.image(0, 0, "abyss_dark")];
+    this.dark = [this.add.image(0, 0, "abyss_dark").setScale(S)]; // (texture is 1/S size)
     for (let i = 0; i < 4; i++)
       this.dark.push(this.add.rectangle(0, 0, 10, 10, 0x020004));
     for (const d of this.dark) d.setDepth(20).setAlpha(0).setVisible(false);
@@ -1291,8 +1291,14 @@ export class GameScene extends Phaser.Scene {
     this.terrain.setTheme(themeFor(biomeId), dom.dimension);
     // build the next biome's art well before it arrives (it's made on demand to save memory)
     const nx = this.course.next(seg0);
-    if (nx && nx.start - this.meters < 700) queueBiomeArt(nx.id);
+    // the next realm's art is built once the older one is freed (releaseOldArt, ~4 s after a
+    // border): building it straight away held five realms' art at every border, the memory
+    // peak iPads ran out at. (Always by 250 m out, whatever happens.)
+    // (released first: on the frame of a border it starts the release countdown)
     this.releaseOldArt(rawDt, biomeId, nx?.id);
+    const artAhead = nx ? nx.start - this.meters : Infinity;
+    const freeing = this.artReleaseT !== undefined && this.artReleaseT >= 0;
+    if (nx && (artAhead < 250 || (artAhead < 700 && !freeing))) queueBiomeArt(nx.id);
     // once its art is in, build the biome's walls (hidden) on a later frame, not on arrival
     if (this.terrainTodo) this.terrain.prebuild([THEMES[this.terrainTodo]]);
     this.terrainTodo = pumpBiomeArt();
