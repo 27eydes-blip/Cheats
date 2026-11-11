@@ -86,7 +86,12 @@ test("creator credit: loading screen, website footer, README and LICENSE @smoke"
   expect(splash).toContain("GLYDRIFT");
   expect(splash).toContain(`A ${NAME} game`);
   expect(splash.indexOf(`A ${NAME} game`)).toBeGreaterThan(splash.indexOf("GLYDRIFT")); // under the logo
-  expect(html).toMatch(/<footer id="legal">[^<]*© 2026 Sam Eyde III\. All rights reserved\.[^<]*<\/footer>/);
+  // (the footer may hold no-wrap spans so a narrow side area never splits the name: check its text)
+  const footer = html.match(/<footer id="legal">([\s\S]*?)<\/footer>/);
+  expect(footer).not.toBeNull();
+  const footerText = footer[1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ");
+  expect(footerText).toContain("Created by Sam Eyde III");
+  expect(footerText).toContain("© 2026 Sam Eyde III. All rights reserved.");
   // the repository files
   expect(readFileSync("README.md", "utf8")).toContain(COPYRIGHT);
   expect(readFileSync("LICENSE", "utf8")).toContain(COPYRIGHT);

@@ -87,6 +87,10 @@
         max-width: calc(50vw - 28.125vh - 28px);
         text-align: right;
       }
+      /* the name and the copyright line never split across lines when the footer wraps */
+      #legal .nw {
+        white-space: nowrap;
+      }
       @media (max-aspect-ratio: 1/1) {
         #legal {
           display: none;
@@ -459,7 +463,7 @@
       <div class="bar"><i></i></div>
     </div>
     <div id="side-bg"></div>
-    <footer id="legal">Glydrift · Created by Sam Eyde III · © 2026 Sam Eyde III. All rights reserved.</footer>
+    <footer id="legal">Glydrift · <span class="nw">Created by Sam Eyde III</span> · <span class="nw">© 2026 Sam Eyde III.</span> All rights reserved.</footer>
     <div id="game"></div>
     <div id="storage-note">Private browsing: progress won't save</div>
     <div id="safe-probe"></div>
