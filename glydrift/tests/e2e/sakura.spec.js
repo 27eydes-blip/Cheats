@@ -255,7 +255,15 @@ test("an old save loads with everything kept and nothing gained; reaching Sakura
   expect(after.realms).toEqual({ sakura: true });
   expect(after.achievements).toEqual([...Object.keys(OLD.achievements), "sakura"].sort());
   expect(after.maxBiome).toBe(3); // Sakura is not "further" than the Glitch Realm
-  expect(after.unlocked).toEqual(loaded.unlocked); // (no "Reach the Abyss" hero handed out)
+  // no "Reach the Abyss" (or any other realm-reach) hero handed out, and nothing lost. (A hero
+  // whose challenge the run really met, e.g. THE HADDAD's x10 combo, can unlock: whether the
+  // autopilot strings a x10 combo together on the way varies from run to run.)
+  expect(after.unlocked).toEqual(expect.arrayContaining(loaded.unlocked));
+  const gained = after.unlocked.filter((k) => !loaded.unlocked.includes(k));
+  const byRealm = await page.evaluate(() =>
+    window.__heroDefs.filter((c) => c.challenge?.stat === "maxBiome").map((c) => c.id),
+  );
+  expect(gained.filter((k) => byRealm.includes(k))).toEqual([]);
   const texts = after.missions.map((m) => m.text);
   expect(texts).toContain("Reach Solar Storm");
   expect(texts).toContain("Reach Abyss");
