@@ -2999,6 +2999,7 @@ test("music: the pre-rendered reggae soundtrack is complete, fresh and served", 
   const realms = [
     "menu",
     "void",
+    "sakura",
     "solar",
     "frozen",
     "glitch",
@@ -3010,7 +3011,8 @@ test("music: the pre-rendered reggae soundtrack is complete, fresh and served", 
   expect(Object.keys(manifest.tracks).sort()).toEqual([...realms].sort());
   const dims = ["prism", "tidal", "chrono", "mirror"];
   const pairs = [
-    "void>solar",
+    "void>sakura",
+    "sakura>solar",
     "solar>frozen",
     "frozen>glitch",
     "abyss>valley",
@@ -3063,12 +3065,14 @@ test("music test page: reggae tracks, the old house tracks and the full journey"
   for (const t of [
     "PLAY FULL JOURNEY",
     "NEON VOID",
+    "SAKURA SKIES",
     "SOLAR STORM",
     "ABYSS",
     "THE CALM",
   ])
     expect(shown).toContain(t);
   expect(shown).toContain("90 BPM double-time · A minor");
+  expect(shown).toContain("95 BPM · G major");
   await run(page, 2000); // the old engine loads in the background
   await tap(page, "HOUSE (OLD)");
   shown = await texts();
