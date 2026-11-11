@@ -1,5 +1,5 @@
 // Meta-progression: XP/levels, missions, achievements, login streak, daily, unlocks.
-import { BIOMES } from "../biomes/biomes.js";
+import { BIOMES, progressRank } from "../biomes/biomes.js";
 import { CHARACTERS, getCharacter, heroReleased, onSale } from "../player/characterDefs.js";
 import { dayDiff, RNG, todayKey } from "./rng.js";
 import { Save } from "./save.js";
@@ -36,6 +36,7 @@ const MISSION_TEMPLATES = [
     n: [10, 20, 35],
   },
   { id: "biome", text: "Reach {biome}", stat: "biome", scope: "run", n: [1, 2, 3] },
+  { id: "sakura", text: "Reach Sakura Skies", stat: "sakura", scope: "run", n: [1] },
   {
     id: "dist_run",
     text: "Fly {n}m in one run",
@@ -96,6 +97,9 @@ function runStat(run, stat) {
   if (stat === "runs") return 1;
   // an old "Play the Daily Challenge" mission now completes by beating a level
   if (stat === "daily") return run.levelDone || 0;
+  // "Reach Solar Storm" etc. count the original realm ladder (Sakura Skies is BIOMES' last
+  // entry, so its raw index would otherwise read as further than every realm)
+  if (stat === "biome") return progressRank(run.biome || 0);
   return run[stat] || 0;
 }
 
@@ -131,6 +135,13 @@ export const ACHIEVEMENTS = [
     desc: "10 near-misses in one run",
     glyph: "D",
     check: (s) => s.stats.maxNearRun >= 10,
+  },
+  {
+    id: "sakura",
+    name: "Blossom Drifter",
+    desc: "Reach Sakura Skies",
+    glyph: "B",
+    check: (s) => !!s.realms?.sakura,
   },
   {
     id: "solar",
@@ -522,7 +533,7 @@ export const Progression = {
       if (m.done) continue;
       const cur = Math.min(m.target, Progression.missionValue(m, null));
       const frac = cur / m.target;
-      const label = m.stat === "biome" ? m.text : `${m.text} · ${cur}/${m.target}`;
+      const label = m.stat === "biome" || m.stat === "sakura" ? m.text : `${m.text} · ${cur}/${m.target}`;
       if (!best || frac > best.frac) best = { kind: "mission", text: label, frac, color: 0x39ff88 };
     }
     const u = Progression.nextUnlockHint();
@@ -712,7 +723,7 @@ export const Progression = {
     st.maxDistance = Math.max(st.maxDistance, run.distance);
     st.maxNearRun = Math.max(st.maxNearRun, run.nearMiss);
     st.maxCombo = Math.max(st.maxCombo || 0, run.bestCombo || 1); // THE HADDAD's challenge
-    st.maxBiome = Math.max(st.maxBiome, run.biome);
+    st.maxBiome = Math.max(st.maxBiome, progressRank(run.biome || 0));
     st.maxLasersRun = Math.max(st.maxLasersRun, run.lasers);
     st.maxPortalsRun = Math.max(st.maxPortalsRun, run.portals);
     if (run.killedIn === "void") st.voidDeaths = (st.voidDeaths || 0) + 1;

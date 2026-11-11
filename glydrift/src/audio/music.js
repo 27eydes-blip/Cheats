@@ -551,10 +551,12 @@ class MusicEngine {
     hist.push([wall, meters]);
     while (hist.length > 2 && wall - hist[1][0] > 1.5) hist.shift();
     const [w0, m0] = hist[0];
-    const model = speedForMeters(meters) / WORLD.pxPerMeter;
+    // (the course's speed curve: it holds still across Sakura Skies)
+    this.course = course;
+    const model = course.speedAt(meters) / WORLD.pxPerMeter;
     if (wall - w0 > 0.5 && meters >= m0) {
       const ratio =
-        (meters - m0) / (wall - w0) / (speedForMeters((meters + m0) / 2) / WORLD.pxPerMeter);
+        (meters - m0) / (wall - w0) / (course.speedAt((meters + m0) / 2) / WORLD.pxPerMeter);
       this.v = model * Math.max(0.5, Math.min(3, ratio));
     } else this.v = this.v ?? model;
     const seg = course.segAt(meters);
@@ -587,11 +589,12 @@ class MusicEngine {
   timeToTravel(m, m2) {
     if (m2 <= m || !this.v) return 0;
     const n = 24;
-    const f0 = speedForMeters(m);
+    const speedAt = (x) => (this.course ? this.course.speedAt(x) : speedForMeters(x));
+    const f0 = speedAt(m);
     let t = 0;
     for (let i = 0; i < n; i++) {
       const a = m + ((m2 - m) * (i + 0.5)) / n;
-      t += (m2 - m) / n / (this.v * (speedForMeters(a) / f0));
+      t += (m2 - m) / n / (this.v * (speedAt(a) / f0));
     }
     return t;
   }

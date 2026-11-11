@@ -2,9 +2,9 @@
 // big-number tiles (runs, time, distance, score, coins…), then crashes per realm as a small
 // bar list in each realm's colour. Read-only: nothing here changes the save.
 import Phaser from "phaser";
-import { BIOMES, blendPalette, CLASSIC } from "../biomes/biomes.js";
+import { BIOMES, biomeIndex, blendPalette, ENDLESS } from "../biomes/biomes.js";
 import { fitCamera, NUM_FONT, VIEW } from "../config.js";
-import { DIMENSION_COUNT, dimensionsFound } from "../data/progression.js";
+import { DIMENSION_COUNT } from "../data/progression.js";
 import { Save } from "../data/save.js";
 import { HI } from "../gfx/textures.js";
 import { allLevels, LEVEL_COUNT, levelRecord, totalStars } from "../levels/levels.js";
@@ -40,15 +40,21 @@ export function statsSummary(s = Save.data) {
     if (r > 0 && (!fav || r > fav.runs)) fav = { id: c.id, name: c.name, color: c.color, texture: c.texture, runs: r };
   }
   const deaths = st.realmDeaths && typeof st.realmDeaths === "object" ? st.realmDeaths : {};
-  // classic realms in order up to the furthest reached, plus the dimensions found
-  const far = Math.min(CLASSIC - 1, n(st.maxBiome));
-  const realms = BIOMES.map((b, i) => ({
-    id: b.id,
-    name: b.name,
-    color: b.neon,
-    deaths: Math.round(n(deaths[b.id])),
-    found: b.dimension ? !!s.dimensions?.[b.id] : i <= far,
-  }));
+  // the classic realms in the order they are flown, then the dimensions. The original realms
+  // are found up to the furthest reached (stats.maxBiome, by BIOMES index); Sakura Skies and
+  // the dimensions have their own discovered flags.
+  const far = Math.min(biomeIndex("hurricane"), n(st.maxBiome));
+  const order = [...ENDLESS, ...BIOMES.map((b, i) => i).filter((i) => BIOMES[i].dimension)];
+  const realms = order.map((i) => {
+    const b = BIOMES[i];
+    return {
+      id: b.id,
+      name: b.name,
+      color: b.neon,
+      deaths: Math.round(n(deaths[b.id])),
+      found: b.dimension ? !!s.dimensions?.[b.id] : b.id === "sakura" ? !!s.realms?.sakura : i <= far,
+    };
+  });
   const levels = allLevels().filter((l) => levelRecord(l.n)?.done).length;
   return {
     runs,
@@ -63,7 +69,7 @@ export function statsSummary(s = Save.data) {
     maxCombo: n(st.maxCombo),
     fav,
     realms,
-    realmsFound: far + 1 + dimensionsFound(s),
+    realmsFound: realms.filter((r) => r.found).length,
     realmCount: BIOMES.length,
     dimensionCount: DIMENSION_COUNT,
     levels,

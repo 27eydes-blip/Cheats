@@ -45,6 +45,7 @@ function defaults() {
     missions: [],
     achievements: {},
     dimensions: {}, // dimension ids discovered (prism, tidal, chrono, mirror)
+    realms: {}, // classic realms with their own discovered flag (sakura: Sakura Skies)
     cos: { owned: {}, equipped: {} }, // shop cosmetics: owned ids + equipped per category
     titles: { owned: {}, equipped: null }, // earned titles + the one shown under your name
     banners: { owned: {}, equipped: null }, // Drift Pass+ name-card banners
