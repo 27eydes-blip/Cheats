@@ -123,6 +123,17 @@ export class SpinScene extends Phaser.Scene {
     this.cx = W / 2;
     this.cy = Math.max(top + 400, H * 0.4);
     this.R = 250;
+    // Short frames (iPad portrait and other 3:2 windows, 1080 units tall): the wheel, the
+    // controls and the odds strip under them (cy + 712) didn't fit, and the odds strip, which
+    // must always be on screen, fell off the bottom. There the wheel moves up (its pointer
+    // still clear of the title) and the controls and odds rows sit closer together; taller
+    // screens keep the layout exactly as it was.
+    const fitBottom = H - (this.registry.get("safeBottom") || 0) - 10;
+    const tight = this.cy + 712 > fitBottom;
+    if (tight) this.cy = Math.max(top + 362, Math.min(this.cy, fitBottom - 658));
+    const k = tight
+      ? { spin: 80, multi: 94, info: 146, bar: 168, hero: 192, odds: 226, row: 21 }
+      : { spin: 96, multi: 98, info: 158, bar: 182, hero: 210, odds: 248, row: 25 };
     // light rays behind the wheel (shown on a win; brighter for bigger prizes)
     this.rays = this.add.graphics().setDepth(9).setBlendMode(Phaser.BlendModes.ADD);
     this.rays.setPosition(this.cx, this.cy).setAlpha(0);
@@ -156,7 +167,7 @@ export class SpinScene extends Phaser.Scene {
     plainText(this, this.cx, this.cy + 30, "SPINS", 16, "#ffe9a8").setDepth(13);
 
     // ---- controls
-    const by = this.cy + this.R + 96;
+    const by = this.cy + this.R + k.spin;
     this.spinBtn = button(this, W / 2, by, 420, 112, "SPIN", {
       color: 0x39ff88,
       size: 50,
@@ -165,16 +176,16 @@ export class SpinScene extends Phaser.Scene {
     }).setDepth(100);
     // multi-spin: up to 10 / 20 at once, one big spin and a results sheet
     this.multi = [10, SPIN_MULTI_MAX].map((n, i) =>
-      button(this, W / 2 + (i - 0.5) * 230, by + 98, 210, 70, `×${n}`, {
+      button(this, W / 2 + (i - 0.5) * 230, by + k.multi, 210, 70, `×${n}`, {
         color: i ? 0xffd23f : 0xb45cff,
         size: 24,
         onClick: () => this.spinMulti(n),
       }).setDepth(100),
     );
-    this.info = plainText(this, W / 2, by + 158, "", 17, "#d8d0ff").setDepth(100);
-    this.bar = new ProgressBar(this, W / 2 - 180, by + 182, 360, 10, 0xffd23f).setDepth(100);
-    this.heroLine = plainText(this, W / 2, by + 210, "", 16, "#ffe9a8").setDepth(100);
-    this.buildOddsStrip(by + 248);
+    this.info = plainText(this, W / 2, by + k.info, "", 17, "#d8d0ff").setDepth(100);
+    this.bar = new ProgressBar(this, W / 2 - 180, by + k.bar, 360, 10, 0xffd23f).setDepth(100);
+    this.heroLine = plainText(this, W / 2, by + k.hero, "", 16, "#ffe9a8").setDepth(100);
+    this.buildOddsStrip(by + k.odds, k.row);
     popIn(this, [this.spinBtn, ...this.multi], 150);
     this.refresh();
     if (TEST.on)
@@ -262,13 +273,13 @@ export class SpinScene extends Phaser.Scene {
   }
 
   /** The odds, always on screen under the wheel (the ODDS button shows the details). */
-  buildOddsStrip(y) {
+  buildOddsStrip(y, rowH = 25) {
     const W = this.W;
     const c = this.add.container(0, 0).setDepth(100);
     const rows = spinOdds();
     const per = Math.ceil(rows.length / 2);
     const g = this.add.graphics();
-    const h = 36 + per * 25;
+    const h = 36 + per * rowH;
     g.fillStyle(0x0b0520, 0.72).fillRoundedRect(44, y - 18, W - 88, h, 14);
     g.lineStyle(2, 0x3ef4ff, 0.5).strokeRoundedRect(44, y - 18, W - 88, h, 14);
     c.add(g);
@@ -277,7 +288,7 @@ export class SpinScene extends Phaser.Scene {
       const col = i < per ? 0 : 1;
       const x0 = col ? W / 2 + 14 : 64;
       const x1 = col ? W - 64 : W / 2 - 14;
-      const yy = y + 28 + (i % per) * 25;
+      const yy = y + 28 + (i % per) * rowH;
       c.add(plainText(this, x0, yy, r.short, 15, "#ffffff").setOrigin(0, 0.5));
       c.add(plainText(this, x1, yy, `${r.pct}%`, 15, "#ffd23f").setOrigin(1, 0.5));
     });

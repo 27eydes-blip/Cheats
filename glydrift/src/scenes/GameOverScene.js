@@ -306,7 +306,14 @@ export class GameOverScene extends Phaser.Scene {
     // (they used to drop from the top onto the score). Always clear of the button: after a long
     // results list (big runs) `y + 46` used to win and put the 92 px banner on top of RETRY;
     // now it may briefly cover the last results line instead, never a button.
-    const toastY = Math.max(y + 110, H * 0.79) - 140; // (by - 140: clear of the tall RETRY)
+    // where RETRY sits: low, under the results. A long results list (coins + a perk + three
+    // missions + a Lucky Spin) on a short screen (iPhone SE) used to push it to the bottom edge
+    // and the SHARE / LEADERBOARD / HEROES / HOME row right off the screen (no way home but
+    // RETRY). The block (RETRY, the row and "TAP ANYWHERE") now always stays above the home
+    // indicator; on the rare crowded screen RETRY covers the last results lines instead.
+    const sbot = this.registry.get("safeBottom") || 0;
+    const by = Math.min(Math.max(y + 110, H * 0.79), H - sbot - 210);
+    const toastY = by - 140; // (clear of the tall RETRY)
     this.time.delayedCall(ANIM_END, () => {
       // each new hero gets the full spotlight reveal, one after another
       (async () => {
@@ -333,7 +340,6 @@ export class GameOverScene extends Phaser.Scene {
 
     // ---- buttons: RETRY is by far the biggest and brightest thing on screen, centred low where
     // the thumb already is; the row under it is smaller and dimmer so it never competes
-    const by = Math.max(y + 110, H * 0.79);
     const retry = button(this, W / 2, by, 600, 156, "RETRY", {
       color: 0x39ff88,
       size: 68,
