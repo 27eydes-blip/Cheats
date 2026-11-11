@@ -1902,7 +1902,10 @@ export class MenuScene extends Phaser.Scene {
     if (!this.showIds) {
       // (stats.maxBiome is a BIOMES index on the original ladder: Void … Hurricane = 0 … 6)
       const far = Math.min(biomeIndex("hurricane"), Save.data.stats.maxBiome || 0);
-      this.showIds = far > 0 ? [BIOMES[0].id, BIOMES[far].id] : [BIOMES[0].id];
+      // (Sakura Skies, the second realm, isn't on that ladder: when it's the furthest a player
+      // has flown, it is the one the title screen shows)
+      const sakura = far === 0 && Save.data.realms?.sakura;
+      this.showIds = far > 0 ? [BIOMES[0].id, BIOMES[far].id] : sakura ? [BIOMES[0].id, "sakura"] : [BIOMES[0].id];
     }
     const showId = this.showIds[Math.floor(this.t / 9) % this.showIds.length];
     this.backdrop.drive(this.pal, {
