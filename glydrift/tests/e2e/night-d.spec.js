@@ -1,0 +1,51 @@
+// Overnight checker D (Nov 11): regression tests for screens on every device size.
+import { expect, test } from "@playwright/test";
+import { fieldPoint, openGame, press, profileOf, run, settle, waitFor } from "./helpers.js";
+
+test("game over: a long results list never pushes the buttons off a short screen @smoke", async ({ page }, testInfo) => {
+  test.skip(!["iphone-small", "iphone-std"].includes(profileOf(testInfo)), "short and notched iPhones");
+  test.setTimeout(180_000);
+  const log = await openGame(page);
+  // a notch + home indicator on the standard iPhone (Playwright reports no insets itself)
+  if (profileOf(testInfo) === "iphone-std")
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty("--sat", "47px");
+      document.documentElement.style.setProperty("--sab", "34px");
+      window.__glySafe();
+    });
+  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Game", { mode: "normal" }));
+  await settle(page, "Game", 800);
+  await press(page, await fieldPoint(page)); // launch, then fall into the floor
+  await waitFor(page, () => window.__glydrift.scene.isActive("GameOver"), 40_000);
+  await settle(page, "GameOver", 500);
+  // the same run's results, as crowded as they get: coins + a hero bonus, three missions
+  // finished and a Lucky Spin earned
+  await page.evaluate(() => {
+    const g = window.__glydrift;
+    const go = g.scene.getScene("GameOver");
+    const R = { ...go.result, run: { ...go.result.run, coins: 12, perkBonus: { total: 5, mul: 1 } } };
+    R.missions = [1, 2, 3].map((i) => ({ text: `Fly ${i}00m in one run`, reward: { coins: 50 } }));
+    R.achievements = [];
+    R.unlocks = [];
+    R.spinsEarned = 1;
+    const data = { result: R, game: go.gameScene };
+    g.scene.stop("GameOver");
+    g.scene.getScene("Game").scene.launch("GameOver", data);
+  });
+  await settle(page, "GameOver", 3000);
+  const r = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const go = g.scene.getScene("GameOver");
+    const cam = go.cameras.main;
+    const limit = cam.height / cam.zoom - (g.registry.get("safeBottom") || 0);
+    return {
+      limit,
+      buttons: go.children.list
+        .filter((c) => c.type === "Container" && c.label && c.visible)
+        .map((c) => ({ label: c.label.text, bottom: c.getBounds().bottom })),
+    };
+  });
+  expect(r.buttons.map((b) => b.label).sort()).toEqual(["HEROES", "HOME", "LEADERBOARD", "RETRY", "SHARE"]);
+  for (const b of r.buttons) expect(b.bottom, `${b.label} above the bottom edge / home indicator`).toBeLessThanOrEqual(r.limit);
+  expect(log.errors).toEqual([]);
+});
