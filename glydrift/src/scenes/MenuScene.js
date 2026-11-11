@@ -3,7 +3,7 @@
 // (Heroes, Shop, Leaderboard, Settings) and one MORE sheet holding everything else.
 import { COPYRIGHT, CREATED_BY, CREATOR_ROLE } from "../legal.js";
 import Phaser from "phaser";
-import { BIOMES, biomeStateAt, blendPalette, CLASSIC } from "../biomes/biomes.js";
+import { BIOMES, biomeIndex, biomeStateAt, blendPalette, CLASSIC } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, FONT, NUM_FONT, VIEW } from "../config.js";
 import { Effects } from "../effects/Effects.js";
 import { Analytics } from "../systems/analytics.js";
@@ -1900,7 +1900,8 @@ export class MenuScene extends Phaser.Scene {
     // only the first world and the furthest one you've reached (each world's art costs ~5 MB,
     // so the menu never builds them all)
     if (!this.showIds) {
-      const far = Math.min(CLASSIC - 1, Save.data.stats.maxBiome || 0);
+      // (stats.maxBiome is a BIOMES index on the original ladder: Void … Hurricane = 0 … 6)
+      const far = Math.min(biomeIndex("hurricane"), Save.data.stats.maxBiome || 0);
       this.showIds = far > 0 ? [BIOMES[0].id, BIOMES[far].id] : [BIOMES[0].id];
     }
     const showId = this.showIds[Math.floor(this.t / 9) % this.showIds.length];

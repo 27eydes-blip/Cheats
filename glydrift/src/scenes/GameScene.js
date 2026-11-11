@@ -7,7 +7,6 @@ import {
   fitCamera,
   NEAR_MISS,
   PHYSICS,
-  speedForMeters,
   VIEW,
   WORLD,
 } from "../config.js";
@@ -1058,7 +1057,7 @@ export class GameScene extends Phaser.Scene {
       this.speed =
         (this.levelRun
           ? this.levelRun.speedAt(this.meters)
-          : speedForMeters(this.meters)) *
+          : this.course.speedAt(this.meters)) *
         this.speedMul *
         (this.charDef.speed ?? 1) *
         this.boostMul;
@@ -1151,6 +1150,15 @@ export class GameScene extends Phaser.Scene {
     if (this.blackoutT <= 0 && playing && dom.i !== this.announcedBiome) {
       this.announcedBiome = dom.i;
       this.run.biome = dom.biome;
+      // Sakura Skies has its own discovered flag (stats.maxBiome keeps the original ladder)
+      if (dom.id === "sakura" && !this.levelRun) {
+        this.run.sakura = 1;
+        const realms = (Save.data.realms ||= {});
+        if (!realms.sakura) {
+          realms.sakura = true;
+          Save.write();
+        }
+      }
       Analytics.log("biome_reached", {
         biome: dom.id,
         m: Math.round(this.meters),
@@ -1191,8 +1199,8 @@ export class GameScene extends Phaser.Scene {
       this.realmTitle(ahead);
     if (playing) this.updateRift(seg0);
     this.updateTear(rawDt);
-    // speed-up pulses every 250m
-    const tier = Math.floor(this.meters / 250);
+    // speed-up pulses every 250m of pace (none while the speed holds in Sakura Skies)
+    const tier = Math.floor(this.course.pace(this.meters) / 250);
     if (playing && tier > this.lastSpeedTier) {
       this.lastSpeedTier = tier;
       // (levels show their progress bar instead of SPEED UP / distance pop-ups)
@@ -1348,7 +1356,8 @@ export class GameScene extends Phaser.Scene {
       py: p.y,
       r: p.radius,
       alive: playing,
-      meters: this.meters,
+      // (pace metres: hazard difficulty and spacing hold still across Sakura Skies)
+      meters: this.course.pace(this.meters),
       biomeId: dom.id,
       zoom: this.zoomLevel,
       twinY: this.mirror ? this.H - p.y : null,
@@ -1401,7 +1410,7 @@ export class GameScene extends Phaser.Scene {
       }
       for (const o of ev.near) this.nearMiss(o);
       for (const o of ev.perfect) this.perfect(o);
-      // dimension fields: Tidal currents push, bubble columns drag, Chrono zones bend time
+      // fields: Sakura wind gusts and Tidal currents push, bubble columns drag, Chrono zones bend time
       if (ev.push) p.vy += ev.push * dt;
       if (ev.drag) p.vy *= Math.exp(-ev.drag * dt);
       for (const o of ev.warded) this.fireWardBlock(o);

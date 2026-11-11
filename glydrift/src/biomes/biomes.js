@@ -188,11 +188,52 @@ BIOMES.push(
   },
 );
 
+// ---- Sakura Skies: the second realm of an endless run (Neon Void → Sakura Skies → Solar Storm …).
+// It is added at the END of the list on purpose: a realm's BIOMES index is stored in saves
+// (stats.maxBiome, the "Reach the Glitch Realm" style achievements and hero challenges, past
+// runs), so every existing realm keeps its number. The run's order lives in ENDLESS_IDS.
+BIOMES.push({
+  id: "sakura",
+  name: "SAKURA SKIES",
+  sky: [0xffb48a, 0xffd0c0, 0xffe8c8],
+  nebula: [0xff9ab8, 0xffc070],
+  neon: 0xff8fb8,
+  neon2: 0xffc24a,
+  accent: 0xffe08a,
+  planet: 0xffe4c8,
+  island: 0xb87a8a,
+  particle: "petal",
+  particleColor: 0xffc8dc,
+  glitch: 0,
+  pulse: 0,
+  embers: 0,
+});
+
 export const N_BIOMES = BIOMES.length;
-/** The classic biomes run in order (Neon Void → Hurricane); dimensions follow the rift. */
-export const CLASSIC = BIOMES.filter((b) => !b.dimension).length;
-export const DIMENSION_IDS = BIOMES.filter((b) => b.dimension).map((b) => b.id);
 export const biomeIndex = (id) => BIOMES.findIndex((b) => b.id === id);
+/** The classic realms of an endless run, in the order they are flown; dimensions follow the rift. */
+export const ENDLESS_IDS = [
+  "void",
+  "sakura",
+  "solar",
+  "frozen",
+  "glitch",
+  "abyss",
+  "valley",
+  "hurricane",
+];
+/** BIOMES indices of ENDLESS_IDS. */
+export const ENDLESS = ENDLESS_IDS.map(biomeIndex);
+export const CLASSIC = ENDLESS.length;
+/** Realms flown at a held pace: the speed and difficulty curves pause while you cross them. */
+export const PLATEAU_IDS = ["sakura"];
+export const DIMENSION_IDS = BIOMES.filter((b) => b.dimension).map((b) => b.id);
+/**
+ * stats.maxBiome keeps its old meaning (the furthest of the original realms, by BIOMES index),
+ * so the achievements and hero challenges built on it unlock exactly as before. Sakura Skies
+ * is not in that ladder (it has its own discovered flag, save.realms.sakura).
+ */
+export const progressRank = (index) => (PLATEAU_IDS.includes(BIOMES[index]?.id) ? 0 : index);
 /** Biome id for a raw (ever-increasing) biome index. */
 export const biomeIdOf = (raw) => BIOMES[((raw % N_BIOMES) + N_BIOMES) % N_BIOMES].id;
 
@@ -219,8 +260,8 @@ export function biomeStateAt(meters) {
   const L = WORLD.biomeLength;
   const raw = Math.floor(meters / L);
   const local = meters - raw * L;
-  const a = BIOMES[raw % CLASSIC];
-  const b = BIOMES[(raw + 1) % CLASSIC];
+  const a = BIOMES[ENDLESS[raw % CLASSIC]];
+  const b = BIOMES[ENDLESS[(raw + 1) % CLASSIC]];
   const start = L - WORLD.biomeBlend;
   const t = local > start ? smooth((local - start) / WORLD.biomeBlend) : 0;
   return { a, b, t, rawIndex: t > 0.5 ? raw + 1 : raw };

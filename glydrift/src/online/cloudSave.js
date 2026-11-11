@@ -92,6 +92,7 @@ export function mergeSaves(local, cloud) {
   base.unlocked = union(base.unlocked, other.unlocked);
   base.achievements = union(base.achievements, other.achievements);
   base.dimensions = union(base.dimensions, other.dimensions);
+  base.realms = union(base.realms, other.realms);
   base.levelRewards = union(base.levelRewards, other.levelRewards);
   base.cos = {
     owned: union(base.cos?.owned, other.cos?.owned),

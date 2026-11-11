@@ -11,6 +11,7 @@ export const SHIFTS = {
   glitch: [0x20f8e8, 0xb050ff, 0xa8ff20], // cyan → purple → acid green
   abyss: [0xd00c34, 0x240006, 0x8a000e], // crimson → near-black → blood red
   valley: [0xffb0d8, 0xa8f0c8, 0xfff0a0, 0xc8b0ff], // blush → mint → butter → lavender
+  sakura: [0xffa8c8, 0xffc864, 0xff9a7a, 0xd8a8ff], // blossom → gold → coral → dusk lavender
   hurricane: [0x506478, 0x2a8a8a, 0x5a3a8a, 0x6aa0d8], // slate → storm teal → bruise → electric
   prism: [0x5a4aff, 0xff6ad0, 0x5ad8ff, 0xffe06a], // a slow rainbow refraction
   tidal: [0x1a5aa8, 0x1aa8a0, 0x3a3aa8], // deep blue → lagoon → twilight
@@ -26,6 +27,7 @@ export const FLOOR = {
   glitch: { a: 0xff2ad8, b: 0x2bffef, kind: "data" },
   abyss: { a: 0xb0001e, b: 0xff3d5a, kind: "blood" },
   valley: { a: 0x6ad070, b: 0xfff4b0, kind: "meadow" },
+  sakura: { a: 0x6aa8b8, b: 0xd8f4f4, kind: "koi" },
   hurricane: { a: 0x3a7aaa, b: 0xeaf6ff, kind: "surf" },
   prism: { a: 0x7a70ff, b: 0xffffff, kind: "glass" },
   tidal: { a: 0x1aa8a0, b: 0x8af8ff, kind: "reef" },
@@ -34,4 +36,7 @@ export const FLOOR = {
 };
 
 /** How strongly the additive wash / floor glow apply per biome (bright biomes need less). */
-export const ENERGY = { valley: { wash: 0.45, floor: 0.35, glow: 0.3 } };
+export const ENERGY = {
+  valley: { wash: 0.45, floor: 0.35, glow: 0.3 },
+  sakura: { wash: 0.35, floor: 0.3, glow: 0.2 },
+};
