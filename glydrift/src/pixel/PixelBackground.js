@@ -644,9 +644,17 @@ export class PixelBackground {
         }
       }
       if (set.birds.length) this.updateBirds(set.birds, set.alpha, lift, dt, scroll);
+      // Bright ↔ dark borders (the slow fade): the incoming sky fades in over the old realm
+      // first and the new silhouettes only once it is mostly there. A dark skyline at half
+      // alpha over a bright sky read as a hard translucent band.
+      let la = set.alpha;
+      if (cur && (this.fade ?? FADE) > FADE) {
+        const u = Math.min(1, Math.max(0, (set.alpha - 0.7) / 0.3));
+        la = u * u * (3 - 2 * u);
+      }
       for (const l of set.layers) {
         l.tilePositionX += (scroll * dt * l.speed) / this.k;
-        l.setDepth(l.baseDepth + lift).setAlpha(set.alpha * (l.alphaMul ?? 1));
+        l.setDepth(l.baseDepth + lift).setAlpha(la * (l.alphaMul ?? 1));
       }
       for (const d of set.parts) {
         if (set.kind === "noise") {
