@@ -65,3 +65,42 @@ test("website footer: the copyright line stays beside the game, never over it @s
   expect(f.legalRight).toBeLessThanOrEqual(f.vw);
   expect(log.errors).toEqual([]);
 });
+
+test("Lucky Spin: the prize odds are fully on screen on every device, under the wheel @smoke", async ({ page }, testInfo) => {
+  test.skip(!["iphone-small", "iphone-std", "ipad-portrait", "laptop"].includes(profileOf(testInfo)), "short, notched and 3:2 frames");
+  const log = await openGame(page);
+  // a status bar / home indicator (Playwright reports no insets itself)
+  const inset = { "iphone-std": [47, 34], "ipad-portrait": [24, 20] }[profileOf(testInfo)];
+  if (inset)
+    await page.evaluate(([t, b]) => {
+      document.documentElement.style.setProperty("--sat", `${t}px`);
+      document.documentElement.style.setProperty("--sab", `${b}px`);
+      window.__glySafe();
+    }, inset);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Spin"));
+  await settle(page, "Spin", 1500);
+  const r = await page.evaluate(() => {
+    const g = window.__glydrift;
+    const s = g.scene.getScene("Spin");
+    const cam = s.cameras.main;
+    const H = cam.height / cam.zoom;
+    const texts = s.oddsStrip.list.filter((o) => o.type === "Text").map((o) => o.getBounds());
+    const wheelBottom = s.cy + s.R;
+    return {
+      limit: H - (g.registry.get("safeBottom") || 0),
+      top: g.registry.get("safeTop") || 0,
+      pointerTop: s.cy - s.R - 34,
+      rows: texts.length,
+      lowest: Math.max(...texts.map((b) => b.bottom)),
+      highest: Math.min(...texts.map((b) => b.top)),
+      below: s.spinBtn.getBounds().top - wheelBottom,
+      oddsBelowControls: Math.min(...texts.map((b) => b.top)) - s.heroLine.getBounds().bottom,
+    };
+  });
+  expect(r.rows).toBeGreaterThan(8); // the heading + every prize and its chance
+  expect(r.lowest).toBeLessThanOrEqual(r.limit);
+  expect(r.pointerTop).toBeGreaterThan(r.top + 70); // the wheel stays under the title
+  expect(r.below).toBeGreaterThan(0); // SPIN under the wheel, not on it
+  expect(r.oddsBelowControls).toBeGreaterThan(0);
+  expect(log.errors).toEqual([]);
+});
