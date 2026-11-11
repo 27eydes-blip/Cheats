@@ -5,30 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <!-- SEO. Find-and-replace [YOUR TOWNS] across this file once you know your service area. -->
-    <title>Yarema Landscaping | Lawn Care, Mulch &amp; Cleanups in [YOUR TOWNS]</title>
+    <title>Yarema Landscaping | Lawn Care &amp; Landscaping in [YOUR TOWNS]</title>
     <meta
       name="description"
       content="Yarema Landscaping — lawn mowing, mulch, cleanups and landscaping in [YOUR TOWNS]. Free quotes: (248) 251-7642."
     />
     <meta name="theme-color" content="#0B0D0C" />
 
-    <!-- Open Graph (how the link looks when shared by text, Facebook, etc.) -->
+    <!-- Share preview (texts, Facebook, etc). Change yaremalandscaping.com to your real domain. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Yarema Landscaping" />
     <meta property="og:title" content="Yarema Landscaping | Your Yard. Handled." />
     <meta
       property="og:description"
-      content="Yarema Landscaping — lawn mowing, mulch, cleanups and landscaping in [YOUR TOWNS]. Free quotes: (248) 251-7642."
+      content="Lawn mowing, mulch, cleanups and landscaping in [YOUR TOWNS]. Free quotes: (248) 251-7642."
     />
     <meta property="og:locale" content="en_US" />
-    <!-- Once the site is live on your domain and images/hero.jpg exists, uncomment these two lines
-         (they must be full https:// addresses):
     <meta property="og:url" content="https://yaremalandscaping.com/" />
-    <meta property="og:image" content="https://yaremalandscaping.com/images/hero.jpg" />
-    -->
+    <meta property="og:image" content="https://yaremalandscaping.com/images/share.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://yaremalandscaping.com/images/share.png" />
 
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="images/app-icon.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -38,13 +39,15 @@
     />
     <link rel="stylesheet" href="styles.css" />
 
-    <!-- LocalBusiness schema: helps Google show the business correctly in search results. -->
+    <!-- Business schema: helps Google show the business correctly in local search. -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "LandscapingBusiness",
         "name": "Yarema Landscaping",
         "description": "Lawn mowing, mulch, cleanups and landscaping in [YOUR TOWNS].",
+        "url": "https://yaremalandscaping.com/",
+        "image": "https://yaremalandscaping.com/images/share.png",
         "telephone": "+1-248-251-7642",
         "email": "yaremalandscaping@gmail.com",
         "founder": { "@type": "Person", "name": "Luke Yarema" },
@@ -69,7 +72,7 @@
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
 
-    <!-- ============ HEADER ============ -->
+    <!-- ============ 1. HEADER ============ -->
     <header class="site-header" id="site-header">
       <div class="container header-inner">
         <a class="brand" href="#top" aria-label="Yarema Landscaping, back to top">
@@ -103,93 +106,150 @@
           <a class="btn btn-primary btn-small" href="#quote">
             Free quote <span class="arrow" aria-hidden="true">&rarr;</span>
           </a>
+          <p class="nav-contact">
+            <a href="tel:+12482517642">Call</a> or <a href="sms:+12482517642">text</a>
+            (248) 251-7642
+          </p>
         </nav>
       </div>
     </header>
 
     <main id="main">
-      <!-- ============ HERO ============ -->
+      <!-- ============ 2. HERO ============ -->
       <section class="hero" id="top">
-        <!-- PHOTO: save your best wide shot (striped lawn / finished property) as images/hero.jpg -->
-        <div class="hero-media photo" data-label="Photo: striped lawn or finished property, wide">
-          <img src="images/hero.jpg" alt="" width="1920" height="1080" />
+        <!-- PHOTO: save your best wide shot as images/hero.webp -->
+        <div class="hero-media photo" data-label="images/hero.webp — striped lawn, wide shot">
+          <img
+            src="images/hero.webp"
+            alt="A freshly striped lawn finished by Yarema Landscaping"
+            width="1920"
+            height="1080"
+            fetchpriority="high"
+          />
         </div>
 
         <div class="container hero-inner">
           <p class="eyebrow">Lawn care · Landscaping · Cleanups — [YOUR TOWNS]</p>
           <h1 class="reveal">Your yard. <span class="hl">Handled.</span></h1>
           <p class="lead">
-            Mowing. Mulch. Planting. Cleanups. Trimming. Done on schedule and done right by a local
-            crew that shows up when we say we will.
+            Precision mowing, sharp edges, and full-season property care from a crew that shows up
+            when we say we will. Every time.
           </p>
           <div class="btn-row">
             <a class="btn btn-primary" href="#quote">
               Get a free quote <span class="arrow" aria-hidden="true">&rarr;</span>
             </a>
             <a class="btn btn-outline" href="tel:+12482517642">Call (248) 251-7642</a>
-            <a class="btn btn-outline" href="sms:+12482517642">Text us</a>
           </div>
+        </div>
+
+        <div class="container">
+          <ul class="creds">
+            <li>Free estimates</li>
+            <li>Locally owned</li>
+            <!-- Confirm insurance, then change the next line to "Fully insured" (or delete it). -->
+            <li>[Fully insured — confirm]</li>
+            <li>Fast response</li>
+          </ul>
         </div>
       </section>
 
-      <!-- ============ TRUST STRIP ============ -->
-      <section class="trust slant" aria-label="Why homeowners choose us">
-        <ul class="container trust-list">
-          <li>Free estimates</li>
-          <li>Locally owned</li>
-          <li>Weekly &amp; one-time service</li>
-          <!-- Confirm insurance, then change the next line to "Fully insured" (or delete it). -->
-          <li>[Insured — confirm]</li>
-        </ul>
-      </section>
+      <!-- ============ 3. STATEMENT BAND ============ -->
+      <div class="marquee">
+        <p class="visually-hidden">Precision. Reliability. Results.</p>
+        <div class="marquee-track" aria-hidden="true">
+          <span>Precision <i>—</i> Reliability <i>—</i> Results <i>—</i>&nbsp;</span>
+          <span>Precision <i>—</i> Reliability <i>—</i> Results <i>—</i>&nbsp;</span>
+          <span>Precision <i>—</i> Reliability <i>—</i> Results <i>—</i>&nbsp;</span>
+          <span>Precision <i>—</i> Reliability <i>—</i> Results <i>—</i>&nbsp;</span>
+        </div>
+      </div>
 
-      <!-- ============ 01 / SERVICES ============ -->
+      <!-- ============ 4. SERVICES ============ -->
       <section class="section" id="services">
         <span class="ghost-num" aria-hidden="true">01</span>
         <div class="container">
           <div class="section-head">
-            <p class="eyebrow">01 / Services</p>
-            <h2 class="reveal">What we <span class="hl">do.</span></h2>
-            <p class="section-intro">
-              One cleanup or a full season. Pick what you need, or bundle it for the property.
-            </p>
+            <p class="eyebrow">01 / What we do</p>
+            <h2 class="reveal">Built for people who <span class="hl">expect more.</span></h2>
           </div>
 
           <!-- To add or remove a service: copy or delete one <article class="service">…</article>
-               block, and update the matching <option> in the quote form further down. -->
+               block, and add or remove the matching <option> in the quote form further down.
+               data-service must match the option text exactly. -->
           <div class="service-grid">
             <article class="service">
-              <span class="service-num" aria-hidden="true">01</span>
+              <svg class="service-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M3 20h18M6 20v-6l-2-3M10 20v-9l2-4M14 20v-7l-2-3M18 20V10l2-4"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
               <h3>Lawn mowing</h3>
               <p>
-                Weekly or bi-weekly. Clean edges along every walk and drive. Hard surfaces blown
-                clear.
+                Weekly or bi-weekly precision cuts. Clean edging. Hard surfaces blown clean.
               </p>
+              <a class="text-link" href="#quote" data-service="Lawn mowing">
+                Get a quote <span class="arrow" aria-hidden="true">&rarr;</span>
+              </a>
             </article>
+
             <article class="service">
-              <span class="service-num" aria-hidden="true">02</span>
+              <svg class="service-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M2 20 8 12h8l6 8H2Z" stroke="currentColor" stroke-width="2" />
+                <path d="M12 12V4M12 8l4-3M12 10 8 7" stroke="currentColor" stroke-width="2" />
+              </svg>
               <h3>Mulch &amp; beds</h3>
-              <p>Weeds pulled. Bed edges cut crisp. Fresh mulch laid even.</p>
+              <p>Weeding. Razor-sharp bed edges. Fresh mulch that holds all season.</p>
+              <a class="text-link" href="#quote" data-service="Mulch &amp; beds">
+                Get a quote <span class="arrow" aria-hidden="true">&rarr;</span>
+              </a>
             </article>
+
             <article class="service">
-              <span class="service-num" aria-hidden="true">03</span>
+              <svg class="service-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 14h12l-2 7H8l-2-7ZM12 14V7" stroke="currentColor" stroke-width="2" />
+                <path d="M12 9V3h6v2l-6 4ZM12 12V8H7v1l5 3Z" stroke="currentColor" stroke-width="2" />
+              </svg>
               <h3>Planting</h3>
-              <p>Shrubs, perennials and flowers. Placed for your sun, soil and style.</p>
+              <p>Shrubs, perennials and flowers. Chosen for your yard&rsquo;s sun, soil and style.</p>
+              <a class="text-link" href="#quote" data-service="Planting">
+                Get a quote <span class="arrow" aria-hidden="true">&rarr;</span>
+              </a>
             </article>
+
             <article class="service">
-              <span class="service-num" aria-hidden="true">04</span>
+              <svg class="service-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M12 2v11M5 13h14M6 13v8M9 13v8M12 13v8M15 13v8M18 13v8"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
               <h3>Spring &amp; fall cleanups</h3>
-              <p>Leaves, sticks and winter debris. Cleared and hauled away.</p>
+              <p>Leaves, branches and debris. Cleared and hauled away.</p>
+              <a class="text-link" href="#quote" data-service="Spring &amp; fall cleanups">
+                Get a quote <span class="arrow" aria-hidden="true">&rarr;</span>
+              </a>
             </article>
+
             <article class="service">
-              <span class="service-num" aria-hidden="true">05</span>
+              <svg class="service-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 4h5v5H4zM4 15h5v5H4z" stroke="currentColor" stroke-width="2" />
+                <path d="M9 8.5 22 17M9 15.5 22 7" stroke="currentColor" stroke-width="2" />
+              </svg>
               <h3>Hedge &amp; shrub trimming</h3>
-              <p>Shaped tight. Cut back from windows, walks and siding.</p>
+              <p>Tight, shaped hedges. Trimmed back from windows, walks and siding.</p>
+              <a class="text-link" href="#quote" data-service="Hedge &amp; shrub trimming">
+                Get a quote <span class="arrow" aria-hidden="true">&rarr;</span>
+              </a>
             </article>
+
             <article class="service service-cta">
-              <h3>Something else?</h3>
+              <h3>Need something else?</h3>
               <p>Tell us the job. We&rsquo;ll tell you straight if it&rsquo;s a fit.</p>
-              <a class="text-link" href="#quote">
+              <a class="text-link" href="#quote" data-service="Something else">
                 Ask us <span class="arrow" aria-hidden="true">&rarr;</span>
               </a>
             </article>
@@ -197,12 +257,145 @@
         </div>
       </section>
 
-      <!-- ============ 02 / PROCESS ============ -->
-      <section class="section section-forest slant slant-both" id="process">
+      <!-- ============ 5. BEFORE / AFTER ============ -->
+      <section class="section section-panel slant slant-both" id="difference">
         <span class="ghost-num" aria-hidden="true">02</span>
         <div class="container">
           <div class="section-head">
-            <p class="eyebrow">02 / Process</p>
+            <p class="eyebrow">02 / The difference</p>
+            <h2 class="reveal">Results speak. <span class="hl">We let them.</span></h2>
+          </div>
+
+          <!--
+            BEFORE / AFTER: each tab is one project and needs two photos in /images:
+            before-1.webp + after-1.webp, before-2.webp + after-2.webp, and so on.
+            To add a project: copy a <button> below, bump the number in data-n and the label.
+            To rename a tab: change the text inside the button.
+          -->
+          <div class="ba-tabs" role="tablist" aria-label="Choose a project">
+            <button
+              class="ba-tab"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="ba-stage"
+              data-n="1"
+            >
+              Project 01
+            </button>
+            <button
+              class="ba-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="ba-stage"
+              data-n="2"
+              tabindex="-1"
+            >
+              Project 02
+            </button>
+            <button
+              class="ba-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="ba-stage"
+              data-n="3"
+              tabindex="-1"
+            >
+              Project 03
+            </button>
+          </div>
+        </div>
+
+        <div class="ba-stage" id="ba-stage" role="tabpanel" aria-label="Before and after comparison">
+          <div class="ba-layer ba-after photo" data-label="images/after-1.webp">
+            <img
+              src="images/after-1.webp"
+              alt="The property after Yarema Landscaping finished"
+              loading="lazy"
+            />
+          </div>
+          <div class="ba-layer ba-before photo" data-label="images/before-1.webp">
+            <img src="images/before-1.webp" alt="The same property before work began" loading="lazy" />
+          </div>
+          <span class="ba-tag ba-tag-before" aria-hidden="true">Before</span>
+          <span class="ba-tag ba-tag-after" aria-hidden="true">After</span>
+          <input
+            class="ba-range"
+            id="ba-range"
+            type="range"
+            min="0"
+            max="100"
+            value="50"
+            aria-label="Slide to compare before and after"
+          />
+          <div class="ba-handle" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <!-- ============ 6. WORK GALLERY ============ -->
+      <section class="section section-work" id="work">
+        <span class="ghost-num" aria-hidden="true">03</span>
+        <div class="container">
+          <div class="section-head">
+            <p class="eyebrow">03 / Recent work</p>
+            <h2 class="reveal">Every edge. <span class="hl">Every time.</span></h2>
+          </div>
+        </div>
+
+        <!--
+          GALLERY: each photo is one <button class="shot"> block.
+          - Real photo: save it in /images with the file name shown in src.
+          - Add another: copy a whole block, paste it after the last one, and change the file
+            name (in src), the alt text and the caption. The grid and viewer adjust themselves.
+        -->
+        <div class="gallery" id="gallery">
+          <button class="shot" type="button">
+            <span class="photo" data-label="images/work-1.webp">
+              <img src="images/work-1.webp" alt="Freshly striped front lawn" loading="lazy" />
+            </span>
+            <span class="shot-cap">Lawn striping — [TOWN]</span>
+          </button>
+          <button class="shot" type="button">
+            <span class="photo" data-label="images/work-2.webp">
+              <img src="images/work-2.webp" alt="Fresh mulch with a cut bed edge" loading="lazy" />
+            </span>
+            <span class="shot-cap">Mulch &amp; edging — [TOWN]</span>
+          </button>
+          <button class="shot" type="button">
+            <span class="photo" data-label="images/work-3.webp">
+              <img src="images/work-3.webp" alt="Yard cleared after a spring cleanup" loading="lazy" />
+            </span>
+            <span class="shot-cap">Spring cleanup — [TOWN]</span>
+          </button>
+          <button class="shot" type="button">
+            <span class="photo" data-label="images/work-4.webp">
+              <img src="images/work-4.webp" alt="Hedges trimmed tight and level" loading="lazy" />
+            </span>
+            <span class="shot-cap">Hedge trimming — [TOWN]</span>
+          </button>
+          <button class="shot" type="button">
+            <span class="photo" data-label="images/work-5.webp">
+              <img src="images/work-5.webp" alt="New shrubs and flowers planted" loading="lazy" />
+            </span>
+            <span class="shot-cap">Planting — [TOWN]</span>
+          </button>
+          <button class="shot" type="button">
+            <span class="photo" data-label="images/work-6.webp">
+              <img src="images/work-6.webp" alt="Crisp lawn edge along a walkway" loading="lazy" />
+            </span>
+            <span class="shot-cap">Edging — [TOWN]</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ============ 7. PROCESS ============ -->
+      <section class="section section-forest slant slant-both" id="process">
+        <span class="ghost-num" aria-hidden="true">04</span>
+        <div class="container">
+          <div class="section-head">
+            <p class="eyebrow">04 / How it works</p>
             <h2 class="reveal">We show up. <span class="hl">We finish.</span></h2>
           </div>
 
@@ -210,117 +403,81 @@
             <li class="step">
               <span class="step-num" aria-hidden="true">01</span>
               <h3>Reach out</h3>
-              <p>Send the quote form, call or text. Give us the address and the job.</p>
+              <p>Call, text, or send the form. Address and what you need. That&rsquo;s it.</p>
             </li>
             <li class="step">
               <span class="step-num" aria-hidden="true">02</span>
               <h3>Get your price</h3>
-              <p>We look at the property and give a clear, upfront quote. No surprises.</p>
+              <p>Clear, upfront quote. No surprises. No games.</p>
             </li>
             <li class="step">
               <span class="step-num" aria-hidden="true">03</span>
-              <h3>Consider it handled</h3>
-              <p>We work on the schedule you choose. You come home to a finished yard.</p>
+              <h3>Consider it done</h3>
+              <p>We work on your schedule. You come home to a yard that&rsquo;s handled.</p>
             </li>
           </ol>
         </div>
       </section>
 
-      <!-- ============ 03 / WORK ============ -->
-      <section class="section section-work" id="work">
-        <span class="ghost-num" aria-hidden="true">03</span>
-        <div class="container">
-          <div class="section-head">
-            <p class="eyebrow">03 / Work</p>
-            <h2 class="reveal">The work <span class="hl">speaks.</span></h2>
-          </div>
-        </div>
-
-        <!--
-          GALLERY: each photo is one <figure> block.
-          - To use a real photo: save it in the images folder with the file name shown in src.
-          - To add another: copy a whole <figure>…</figure> block, paste it after the last one,
-            and change the src, alt, data-label and caption. The grid adjusts itself.
-        -->
-        <div class="gallery">
-          <figure class="shot">
-            <div class="photo" data-label="Photo: before / after lawn">
-              <img
-                src="images/work-1.jpg"
-                alt="Before and after of a lawn mowed and edged by Yarema Landscaping"
-                loading="lazy"
-                width="1200"
-                height="900"
-              />
-            </div>
-            <figcaption>Lawn. Before &amp; after.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="photo" data-label="Photo: fresh mulch beds">
-              <img
-                src="images/work-2.jpg"
-                alt="Garden beds with fresh mulch and crisp edges"
-                loading="lazy"
-                width="1200"
-                height="900"
-              />
-            </div>
-            <figcaption>Fresh mulch. Clean beds.</figcaption>
-          </figure>
-          <figure class="shot">
-            <div class="photo" data-label="Photo: crisp edging close-up">
-              <img
-                src="images/work-3.jpg"
-                alt="Close-up of a crisp lawn edge along a walkway"
-                loading="lazy"
-                width="1200"
-                height="900"
-              />
-            </div>
-            <figcaption>Edges. Razor sharp.</figcaption>
-          </figure>
-        </div>
-      </section>
-
-      <!-- ============ 04 / REVIEWS ============ -->
+      <!-- ============ 8. REVIEWS ============ -->
       <!--
         REVIEWS: these are empty slots, not real reviews. Paste in real customer reviews (with
         permission) before going live. If you have none yet, delete this whole <section> and the
         "Reviews" link in the header.
       -->
-      <section class="section section-panel slant slant-both" id="reviews">
-        <span class="ghost-num" aria-hidden="true">04</span>
+      <section class="section" id="reviews">
+        <span class="ghost-num" aria-hidden="true">05</span>
         <div class="container">
           <div class="section-head">
-            <p class="eyebrow">04 / Reviews</p>
-            <h2 class="reveal">Don&rsquo;t take <span class="hl">our word.</span></h2>
+            <p class="eyebrow">05 / Reputation</p>
+            <h2 class="reveal">Our work has a <span class="hl">reputation.</span></h2>
           </div>
 
           <div class="review-grid">
-            <blockquote class="review">
-              <p>[CUSTOMER REVIEW — paste a real review here]</p>
-              <footer>[Customer name] · [Town]</footer>
-            </blockquote>
-            <blockquote class="review">
-              <p>[CUSTOMER REVIEW — paste a real review here]</p>
-              <footer>[Customer name] · [Town]</footer>
-            </blockquote>
-            <blockquote class="review">
-              <p>[CUSTOMER REVIEW — paste a real review here]</p>
-              <footer>[Customer name] · [Town]</footer>
-            </blockquote>
+            <figure class="review">
+              <svg class="stars" viewBox="0 0 120 24" role="img" aria-label="5 out of 5 stars">
+                <path
+                  d="M12 2l3 7h7l-5.5 5 2 8-6.5-4.5L5.5 22l2-8L2 9h7zM36 2l3 7h7l-5.5 5 2 8-6.5-4.5-6.5 4.5 2-8L26 9h7zM60 2l3 7h7l-5.5 5 2 8-6.5-4.5-6.5 4.5 2-8L50 9h7zM84 2l3 7h7l-5.5 5 2 8-6.5-4.5-6.5 4.5 2-8L74 9h7zM108 2l3 7h7l-5.5 5 2 8-6.5-4.5-6.5 4.5 2-8L98 9h7z"
+                />
+              </svg>
+              <blockquote>[REAL CUSTOMER REVIEW]</blockquote>
+              <figcaption>[First name] [Last initial]. · [Town]</figcaption>
+            </figure>
+            <figure class="review">
+              <svg class="stars" viewBox="0 0 120 24" role="img" aria-label="5 out of 5 stars">
+                <path
+                  d="M12 2l3 7h7l-5.5 5 2 8-6.5-4.5L5.5 22l2-8L2 9h7zM36 2l3 7h7l-5.5 5 2 8-6.5-4.5-6.5 4.5 2-8L26 9h7zM60 2l3 7h7l-5.5 5 2 8-6.5-4.5-6.5 4.5 2-8L50 9h7zM84 2l3 7h7l-5.5 5 2 8-6.5-4.5-6.5 4.5 2-8L74 9h7zM108 2l3 7h7l-5.5 5 2 8-6.5-4.5-6.5 4.5 2-8L98 9h7z"
+                />
+              </svg>
+              <blockquote>[REAL CUSTOMER REVIEW]</blockquote>
+              <figcaption>[First name] [Last initial]. · [Town]</figcaption>
+            </figure>
+            <figure class="review">
+              <svg class="stars" viewBox="0 0 120 24" role="img" aria-label="5 out of 5 stars">
+                <path
+                  d="M12 2l3 7h7l-5.5 5 2 8-6.5-4.5L5.5 22l2-8L2 9h7zM36 2l3 7h7l-5.5 5 2 8-6.5-4.5-6.5 4.5 2-8L26 9h7zM60 2l3 7h7l-5.5 5 2 8-6.5-4.5-6.5 4.5 2-8L50 9h7zM84 2l3 7h7l-5.5 5 2 8-6.5-4.5-6.5 4.5 2-8L74 9h7zM108 2l3 7h7l-5.5 5 2 8-6.5-4.5-6.5 4.5 2-8L98 9h7z"
+                />
+              </svg>
+              <blockquote>[REAL CUSTOMER REVIEW]</blockquote>
+              <figcaption>[First name] [Last initial]. · [Town]</figcaption>
+            </figure>
           </div>
+
+          <!-- Replace the href with your Google review link (see README.md). -->
+          <a class="btn btn-outline review-cta" href="#reviews" data-placeholder="[GOOGLE REVIEW LINK]">
+            Leave a review <span class="arrow" aria-hidden="true">&rarr;</span>
+          </a>
         </div>
       </section>
 
-      <!-- ============ 05 / ABOUT ============ -->
-      <section class="section" id="about">
-        <span class="ghost-num" aria-hidden="true">05</span>
+      <!-- ============ 9. ABOUT ============ -->
+      <section class="section section-panel slant slant-both" id="about">
+        <span class="ghost-num" aria-hidden="true">06</span>
         <div class="container about-grid">
-          <!-- PHOTO: save a photo of Luke as images/luke.jpg -->
-          <div class="photo photo-about" data-label="Photo: Luke on the job">
+          <!-- PHOTO: save a photo of Luke as images/luke.webp (it is shown in black and white) -->
+          <div class="photo photo-about" data-label="images/luke.webp — Luke on the job">
             <img
-              src="images/luke.jpg"
+              src="images/luke.webp"
               alt="Luke Yarema, owner of Yarema Landscaping"
               loading="lazy"
               width="900"
@@ -329,56 +486,76 @@
           </div>
 
           <div class="about-copy">
-            <p class="eyebrow">05 / About · Owner-operated</p>
-            <h2 class="reveal">No excuses. <span class="hl">No missed cuts.</span></h2>
+            <p class="eyebrow">06 / The owner</p>
+            <h2 class="reveal">I&rsquo;m Luke. This is <span class="hl">my name on the line.</span></h2>
             <p>
-              I&rsquo;m Luke Yarema. I started Yarema Landscaping because I like hard work and I
-              like seeing a job done right. Hire us and you get someone local who treats your yard
-              like his own.
+              I built Yarema Landscaping on one standard: do the job right, every time. When you
+              hire us, you get someone who shows up on schedule, communicates straight, and treats
+              your property like it&rsquo;s his own. No shortcuts. No excuses.
             </p>
-            <!-- Replace this paragraph with Luke's own background. -->
+            <!-- Replace this paragraph with Luke's own story. -->
             <p class="placeholder-text">
-              [LUKE&rsquo;S BACKGROUND — a few sentences: where you grew up, how long you&rsquo;ve
-              been doing this work, and what you like about it.]
+              [Luke&rsquo;s story — how long he&rsquo;s been doing this, where he&rsquo;s from, what
+              drives him]
             </p>
-            <ul class="standards">
-              <li>On time</li>
-              <li>Clear communication</li>
-              <li>Every property left cleaner than we found it</li>
-            </ul>
+            <p class="signature">— Luke Yarema, Owner</p>
           </div>
         </div>
       </section>
 
-      <!-- ============ 06 / QUOTE ============ -->
-      <section class="section section-forest slant" id="quote">
-        <span class="ghost-num" aria-hidden="true">06</span>
+      <!-- ============ 10. FAQ ============ -->
+      <section class="section" id="faq">
+        <span class="ghost-num" aria-hidden="true">07</span>
+        <div class="container faq-grid">
+          <div class="section-head">
+            <p class="eyebrow">07 / Questions</p>
+            <h2 class="reveal">Straight <span class="hl">answers.</span></h2>
+          </div>
+
+          <div class="faq">
+            <details>
+              <summary>Are estimates free?</summary>
+              <p>Yes. Always.</p>
+            </details>
+            <details>
+              <summary>What areas do you serve?</summary>
+              <p>[YOUR TOWNS].</p>
+            </details>
+            <details>
+              <summary>Do I need to be home?</summary>
+              <p>[ANSWER]</p>
+            </details>
+            <details>
+              <summary>How do I pay?</summary>
+              <p>[PAYMENT METHODS]</p>
+            </details>
+            <details>
+              <summary>One-time jobs or weekly service?</summary>
+              <p>Both.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 11. QUOTE ============ -->
+      <section class="section section-forest section-quote slant" id="quote">
+        <span class="ghost-num" aria-hidden="true">08</span>
         <div class="container quote-grid">
           <div class="quote-copy">
-            <p class="eyebrow">06 / Free quote</p>
-            <h2 class="reveal">Get your <span class="hl">quote.</span></h2>
-            <p class="section-intro">
-              Free estimate. No pressure. We respond within [RESPONSE TIME].
-            </p>
+            <p class="eyebrow">08 / Get started</p>
+            <h2 class="reveal">Ready? Let&rsquo;s get it <span class="hl">handled.</span></h2>
+            <p class="section-intro">Response within [RESPONSE TIME].</p>
 
-            <dl class="contact-list">
-              <div>
-                <dt>Call</dt>
-                <dd><a href="tel:+12482517642">(248) 251-7642</a></dd>
-              </div>
-              <div>
-                <dt>Text</dt>
-                <dd><a href="sms:+12482517642">(248) 251-7642</a></dd>
-              </div>
-              <div>
-                <dt>Email</dt>
-                <dd><a href="mailto:yaremalandscaping@gmail.com">yaremalandscaping@gmail.com</a></dd>
-              </div>
-              <div>
-                <dt>Serving</dt>
-                <dd>[YOUR TOWNS]</dd>
-              </div>
-            </dl>
+            <a class="big-link" href="tel:+12482517642">(248) 251-7642</a>
+            <p class="contact-actions">
+              <a class="text-link" href="tel:+12482517642">Call</a>
+              <span aria-hidden="true">/</span>
+              <a class="text-link" href="sms:+12482517642">Text</a>
+            </p>
+            <a class="mid-link" href="mailto:yaremalandscaping@gmail.com"
+              >yaremalandscaping@gmail.com</a
+            >
+            <p class="eyebrow serving">Serving [YOUR TOWNS]</p>
           </div>
 
           <div class="form-card">
@@ -393,12 +570,13 @@
               id="quote-form"
               action="https://api.web3forms.com/submit"
               method="POST"
+              enctype="multipart/form-data"
               novalidate
             >
               <input type="hidden" name="access_key" value="YOUR_WEB3FORMS_ACCESS_KEY" />
               <input type="hidden" name="subject" value="New quote request — Yarema Landscaping" />
               <input type="hidden" name="from_name" value="Yarema Landscaping website" />
-              <!-- Spam trap: real people never see or tick this. -->
+              <!-- Spam trap (honeypot): real people never see or tick this. -->
               <input
                 type="checkbox"
                 name="botcheck"
@@ -411,7 +589,15 @@
               <div class="field-row">
                 <div class="field">
                   <label for="q-name">Name</label>
-                  <input id="q-name" name="name" type="text" autocomplete="name" required />
+                  <input
+                    id="q-name"
+                    name="name"
+                    type="text"
+                    autocomplete="name"
+                    required
+                    aria-describedby="q-name-err"
+                  />
+                  <p class="field-error" id="q-name-err"></p>
                 </div>
                 <div class="field">
                   <label for="q-phone">Phone</label>
@@ -422,8 +608,22 @@
                     autocomplete="tel"
                     inputmode="tel"
                     required
+                    aria-describedby="q-phone-err"
                   />
+                  <p class="field-error" id="q-phone-err"></p>
                 </div>
+              </div>
+
+              <div class="field">
+                <label for="q-email">Email <span class="optional">Optional</span></label>
+                <input
+                  id="q-email"
+                  name="email"
+                  type="email"
+                  autocomplete="email"
+                  aria-describedby="q-email-err"
+                />
+                <p class="field-error" id="q-email-err"></p>
               </div>
 
               <div class="field">
@@ -434,12 +634,14 @@
                   type="text"
                   autocomplete="street-address"
                   required
+                  aria-describedby="q-address-err"
                 />
+                <p class="field-error" id="q-address-err"></p>
               </div>
 
               <div class="field">
-                <label for="q-service">Service needed</label>
-                <select id="q-service" name="service" required>
+                <label for="q-service">Service</label>
+                <select id="q-service" name="service" required aria-describedby="q-service-err">
                   <option value="" selected disabled>Choose a service</option>
                   <option>Lawn mowing</option>
                   <option>Mulch &amp; beds</option>
@@ -448,10 +650,11 @@
                   <option>Hedge &amp; shrub trimming</option>
                   <option>Something else</option>
                 </select>
+                <p class="field-error" id="q-service-err"></p>
               </div>
 
               <div class="field">
-                <label for="q-notes">Anything we should know?</label>
+                <label for="q-notes">Details</label>
                 <textarea
                   id="q-notes"
                   name="message"
@@ -459,6 +662,19 @@
                   placeholder="Yard size, timing, gate codes, dogs…"
                 ></textarea>
               </div>
+
+              <!--
+                YARD PHOTO UPLOAD: switched off (hidden) by default, because email attachments
+                need a paid form plan. To switch it on, delete the word hidden from the next line
+                (see README.md first). Until then visitors are told to text photos instead.
+              -->
+              <div class="field" id="photo-field" hidden>
+                <label for="q-photo">Yard photo <span class="optional">Optional</span></label>
+                <input id="q-photo" name="attachment" type="file" accept="image/*" />
+              </div>
+              <p class="photo-hint">
+                Have photos? <a href="sms:+12482517642">Text them to (248) 251-7642</a>.
+              </p>
 
               <button class="btn btn-primary btn-block" type="submit">
                 <span class="btn-label">Request my quote</span>
@@ -468,10 +684,10 @@
             </form>
 
             <div class="form-success" id="form-success" tabindex="-1" hidden>
-              <h3>Request <span class="hl">received.</span></h3>
+              <h3><span class="hl">Received.</span></h3>
+              <p>Luke will be in touch within [RESPONSE TIME].</p>
               <p>
-                Thanks, we&rsquo;ll be in touch. Need it sooner? Call or text
-                <a href="tel:+12482517642">(248) 251-7642</a>.
+                Need it sooner? Call or text <a href="tel:+12482517642">(248) 251-7642</a>.
               </p>
             </div>
           </div>
@@ -479,25 +695,83 @@
       </section>
     </main>
 
-    <!-- ============ FOOTER ============ -->
+    <!-- ============ 12. FOOTER ============ -->
     <footer class="site-footer">
+      <svg class="footer-word" viewBox="0 0 1000 212" aria-hidden="true">
+        <text x="2" y="209" textLength="996" lengthAdjust="spacingAndGlyphs">YAREMA</text>
+      </svg>
+
       <div class="container footer-inner">
-        <p class="footer-brand">Yarema <span>Landscaping</span></p>
         <ul class="footer-list">
           <li><a href="tel:+12482517642">(248) 251-7642</a></li>
           <li><a href="mailto:yaremalandscaping@gmail.com">yaremalandscaping@gmail.com</a></li>
-          <li>[YOUR TOWNS]</li>
-          <li>&copy; 2026 Yarema Landscaping</li>
+          <li>Serving [YOUR TOWNS]</li>
+        </ul>
+
+        <ul class="footer-list footer-links">
+          <li><a href="#services">Services</a></li>
+          <li><a href="#work">Work</a></li>
+          <li><a href="#reviews">Reviews</a></li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#quote">Free quote</a></li>
+        </ul>
+
+        <!-- Replace [INSTAGRAM] and [FACEBOOK] with your usernames, or delete a line you don't use. -->
+        <ul class="social">
+          <li>
+            <a href="https://www.instagram.com/[INSTAGRAM]" aria-label="Yarema Landscaping on Instagram">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+                <path d="M3 3h18v18H3z" stroke="currentColor" stroke-width="2" />
+                <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2" />
+                <path d="M16.5 6.5h2v2h-2z" fill="currentColor" />
+              </svg>
+            </a>
+          </li>
+          <li>
+            <a href="https://www.facebook.com/[FACEBOOK]" aria-label="Yarema Landscaping on Facebook">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+                <path d="M3 3h18v18H3z" stroke="currentColor" stroke-width="2" />
+                <path d="M13 21v-9h3M10 12h3V9.5c0-1.5 1-2.5 2.5-2.5H17" stroke="currentColor" stroke-width="2" />
+              </svg>
+            </a>
+          </li>
         </ul>
       </div>
+
+      <p class="container copyright">&copy; 2026 Yarema Landscaping. All rights reserved.</p>
     </footer>
 
-    <!-- Phone-only action bar, always within thumb reach -->
+    <!-- ============ 13. MOBILE STICKY BAR (phones only) ============ -->
     <nav class="action-bar" aria-label="Quick contact">
-      <a href="tel:+12482517642">Call</a>
-      <a href="sms:+12482517642">Text</a>
-      <a class="action-primary" href="#quote">Free quote</a>
+      <a class="btn btn-outline" href="tel:+12482517642">Call</a>
+      <a class="btn btn-primary" href="#quote">Free quote</a>
     </nav>
+
+    <!-- Photo viewer for the gallery -->
+    <dialog class="lightbox" id="lightbox" aria-label="Photo viewer">
+      <button class="lb-btn lb-close" type="button" aria-label="Close photo viewer">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true">
+          <path d="M4 4l16 16M20 4 4 20" stroke="currentColor" stroke-width="2.5" />
+        </svg>
+      </button>
+      <button class="lb-btn lb-prev" type="button" aria-label="Previous photo">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true">
+          <path d="M21 12H4M10 5l-7 7 7 7" stroke="currentColor" stroke-width="2.5" />
+        </svg>
+      </button>
+      <figure class="lb-figure">
+        <div class="photo lb-photo" id="lb-photo"></div>
+        <figcaption>
+          <span class="lb-count" id="lb-count"></span>
+          <span class="lb-cap" id="lb-cap"></span>
+        </figcaption>
+      </figure>
+      <button class="lb-btn lb-next" type="button" aria-label="Next photo">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true">
+          <path d="M3 12h17M14 5l7 7-7 7" stroke="currentColor" stroke-width="2.5" />
+        </svg>
+      </button>
+    </dialog>
 
     <script src="script.js"></script>
   </body>

@@ -1,19 +1,19 @@
 # Photos go here
 
-Save photos in this folder with these exact file names and they appear on the site
-automatically. Until a file exists, the site shows a striped placeholder box.
+Save photos in this folder with these exact names and they appear on the site
+automatically. Until a file exists, the site shows a striped stand-in labeled with the
+file name it is waiting for.
 
-| File name    | Where it shows       | What to use                        |
-| ------------ | -------------------- | ---------------------------------- |
-| `hero.jpg`   | Top of the page      | Best finished yard, wide shot      |
-| `work-1.jpg` | Recent work, photo 1 | Before / after lawn                |
-| `work-2.jpg` | Recent work, photo 2 | Fresh mulch beds                   |
-| `work-3.jpg` | Recent work, photo 3 | Crisp edging close-up              |
-| `luke.jpg`   | About section        | Photo of Luke (portrait or square) |
+| File name                       | Where it shows            |
+| ------------------------------- | ------------------------- |
+| `hero.webp`                     | Top of the page           |
+| `before-1.webp`, `after-1.webp` | Before/after, Project 01  |
+| `before-2.webp`, `after-2.webp` | Before/after, Project 02  |
+| `before-3.webp`, `after-3.webp` | Before/after, Project 03  |
+| `work-1.webp` … `work-6.webp`   | Recent work gallery       |
+| `luke.webp`                     | About section             |
 
-Tips:
+Already here: `share.png` (link preview image) and `app-icon.png` (phone home-screen icon).
 
-- Landscape (wide) photos work best everywhere except `luke.jpg`.
-- Resize to about 1600px wide before uploading so the page loads fast on phones
-  (a free tool like squoosh.app does this).
-- File names are case-sensitive: `hero.jpg`, not `Hero.JPG`.
+Convert phone photos to WebP at <https://squoosh.app>, about 1600px wide. File names are
+case-sensitive. Shooting tips are in the main `README.md`.
