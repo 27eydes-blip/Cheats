@@ -41,9 +41,15 @@ test("Abyss: double eye beams and every multi-hazard pattern, run after run, nev
         const CYCLE = ["eyepair", "eyeslam", "eyepair", "eyepair", "tendrileye", "eyepair", "slammer", "eyepair", "walls", "eyepair"];
         const spawn = mgr.spawnPattern;
         let n = 0;
+        // where the Abyss sits in this run's course (its place in the realm order moves when a
+        // realm is added: Sakura Skies put it at 2500–3000 m). Patterns are picked by pace
+        // metres (the difficulty curve holds still across Sakura Skies), so compare in those.
+        const abyss = s.course.segs.find((g) => g.id === "abyss");
+        const from = s.course.pace(abyss.start) + 10;
+        const to = abyss.end + 300;
         if (lap > 0)
           mgr.spawnPattern = function (meters, biomeId) {
-            if (biomeId !== "abyss" || meters < 2010) return spawn.call(this, meters, biomeId);
+            if (biomeId !== "abyss" || meters < from) return spawn.call(this, meters, biomeId);
             const kind = CYCLE[n++ % CYCLE.length];
             out.patterns++;
             if (kind === "eyepair") out.pairs++;
@@ -64,7 +70,7 @@ test("Abyss: double eye beams and every multi-hazard pattern, run after run, nev
           };
           for (const sc of g.scene.getScenes(true)) for (const o of sc.sys.displayList.list) walk(o, sc.sys.settings.key);
         };
-        for (let i = 0; i < 60 * 60 * 30 && s.meters < 3300 && s.state === "playing"; i++) {
+        for (let i = 0; i < 60 * 60 * 30 && s.meters < to && s.state === "playing"; i++) {
           const inAbyss = s.zoneId === "abyss" && lap > 0;
           // draw the Abyss (every other frame: anything shown stays up for many frames), skip the rest
           window.__glyNoRender = !(inAbyss && i % 2 === 0);
@@ -79,6 +85,7 @@ test("Abyss: double eye beams and every multi-hazard pattern, run after run, nev
         window.__glyNoRender = false;
         mgr.spawnPattern = spawn;
         out.m = Math.floor(s.meters);
+        out.to = to;
         out.state = s.state;
         out.textures = g.textures.getTextureKeys().length;
         out.objs = s.sys.displayList.length;
@@ -111,7 +118,7 @@ test("Abyss: double eye beams and every multi-hazard pattern, run after run, nev
   for (const l of laps) {
     expect(l.dead, `lap ${l.lap}: drawn with freed art`).toEqual([]);
     expect(l.crashes, `lap ${l.lap}: errors`).toEqual([]);
-    expect(l.m, `lap ${l.lap} reached the end of the Abyss`).toBeGreaterThanOrEqual(3300);
+    expect(l.m, `lap ${l.lap} reached the end of the Abyss`).toBeGreaterThanOrEqual(l.to);
   }
   // nothing piles up from one run to the next (the texture count moves a little with which
   // dimension the run reached; the hazard pools fill up over the first laps, then stay put)

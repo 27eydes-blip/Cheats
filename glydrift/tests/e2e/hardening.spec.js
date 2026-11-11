@@ -149,7 +149,7 @@ test("soak: a 50,000+ score run through every realm and dimension never piles an
   expect(late.state).toBe("playing");
   expect(late.score).toBeGreaterThanOrEqual(50000);
   // every realm and every dimension on the way
-  for (const z of ["void", "solar", "frozen", "glitch", "abyss", "valley", "hurricane", "prism", "tidal", "chrono", "mirror"])
+  for (const z of ["void", "sakura", "solar", "frozen", "glitch", "abyss", "valley", "hurricane", "prism", "tidal", "chrono", "mirror"])
     expect(late.zones).toContain(z);
   // nothing grows between the middle and the end of the run
   // (the count swings by up to ~120 with the realm on screen at the moment it's sampled; a leak
