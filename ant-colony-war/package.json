@@ -1,0 +1,34 @@
+{
+  "name": "ant-colony-war",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Ant Colony War: a 10-episode vertical story series rendered with Remotion",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "sfx": "tsx scripts/make-sfx.ts",
+    "audio": "tsx scripts/generate-audio.ts",
+    "audio:estimate": "tsx scripts/generate-audio.ts --mock",
+    "voices": "tsx scripts/list-voices.ts",
+    "render": "tsx scripts/render.ts",
+    "render:all": "npm run sfx && npm run audio && npm run render",
+    "render:preview": "npm run sfx && npm run render",
+    "still": "tsx scripts/still.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.535",
+    "@remotion/cli": "4.0.535",
+    "@remotion/google-fonts": "^4.0.535",
+    "@remotion/renderer": "4.0.535",
+    "dotenv": "16.4.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.535"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "@types/react": "18.3.12",
+    "tsx": "4.19.2",
+    "typescript": "5.6.3"
+  }
+}
