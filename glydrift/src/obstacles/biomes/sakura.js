@@ -53,6 +53,8 @@ export class TempleBell extends PxObstacle {
     this.arm(x);
     Object.assign(this, { L, amp, period, phase });
     this.ay = -S * 2;
+    this.bc = 1;
+    this.bs = 0;
     this.halfW = TempleBell.halfWFor(L, amp);
     // dotted arc of the bell's centre (+ end ticks), in pivot-local coordinates
     const g = this.arc.clear();
@@ -69,6 +71,8 @@ export class TempleBell extends PxObstacle {
     const c = Math.cos(a);
     this.bx = this.x + s * this.L;
     this.by = this.ay + c * this.L;
+    this.bc = c; // (the bell's tilt, for its lip and shoulders in clearance())
+    this.bs = s;
     const top = this.L - BELL.cy * S; // the rope ends at the bell's hanging loop
     lay(this.rope, this.x, this.ay, this.x + s * top, this.ay + c * top);
     this.arc.setPosition(snap(this.x), this.ay);
@@ -76,7 +80,17 @@ export class TempleBell extends PxObstacle {
     this.bell.setPosition(snap(this.bx), snap(this.by)).setRotation(-a);
   }
   clearance(px, py, r) {
-    return circleClear(px, py, r, this.bx, this.by, BELL.r * S);
+    // the round body, plus the flared lip and the shoulders (a circle alone left the lip's
+    // corners, drawn ~11 px wider than it, safe to fly through: the bird could visibly
+    // overlap the bell by ~21 px and live). Points are bell-local art px, tilted with the bell.
+    const { bx, by, bc: c, bs: s } = this;
+    const X = (u, v) => bx + (u * c + v * s) * S;
+    const Y = (u, v) => by + (v * c - u * s) * S;
+    return Math.min(
+      circleClear(px, py, r, bx, by, BELL.r * S),
+      segClear(px, py, r, X(-8.5, 7.5), Y(-8.5, 7.5), X(8.5, 7.5), Y(8.5, 7.5), 1.5 * S),
+      segClear(px, py, r, X(-3.5, -7.5), Y(-3.5, -7.5), X(3.5, -7.5), Y(3.5, -7.5), 2.5 * S),
+    );
   }
 }
 
@@ -104,19 +118,27 @@ export class BambooBlade extends PxObstacle {
     this.img.setPosition(snap(this.x), snap(this.y)).setRotation(a);
   }
   clearance(px, py, r) {
+    // The staff (5 px + outline) out to where the leaf blades start, each pointed leaf as
+    // three capsules that narrow toward its tip, and the hub. (One full-width capsule out to
+    // the tip used to reach ~16 px past the drawn point: a clear miss off the tip killed.)
+    const { x, y, ca, sa } = this;
     const hl = this.hl;
-    const ex = this.ca * hl;
-    const ey = this.sa * hl;
-    const bx = this.ca * (hl - 10 * S);
-    const by = this.sa * (hl - 10 * S);
-    const { x, y } = this;
-    return Math.min(
-      // the staff (5 px + outline), then the wider leaf blades at both tips, and the hub
-      segClear(px, py, r, x - ex, y - ey, x + ex, y + ey, 3.5 * S),
-      segClear(px, py, r, x + bx, y + by, x + ex * 0.97, y + ey * 0.97, 5.5 * S),
-      segClear(px, py, r, x - bx, y - by, x - ex * 0.97, y - ey * 0.97, 5.5 * S),
-      circleClear(px, py, r, x, y, 4.5 * S),
-    );
+    let m = circleClear(px, py, r, x, y, 4.5 * S);
+    const ux = ca * hl;
+    const uy = sa * hl;
+    for (const k of [1, -1]) {
+      // point `u` art px in from this end's tip
+      const PX = (u) => x + k * (ux - ca * u * S);
+      const PY = (u) => y + k * (uy - sa * u * S);
+      m = Math.min(
+        m,
+        segClear(px, py, r, x, y, PX(8.5), PY(8.5), 3.5 * S),
+        segClear(px, py, r, PX(8.5), PY(8.5), PX(7.5), PY(7.5), 5.5 * S),
+        segClear(px, py, r, PX(7.5), PY(7.5), PX(5), PY(5), 4.2 * S),
+        segClear(px, py, r, PX(5), PY(5), PX(2.5), PY(2.5), 2.8 * S),
+      );
+    }
+    return m;
   }
 }
 
@@ -219,7 +241,14 @@ export class PaperLantern extends PxObstacle {
   }
   clearance(px, py, r) {
     if (this.state === "done") return Infinity;
-    return circleClear(px, py, r, this.cx, this.y + 0.5 * S, LANTERN.r * S);
+    // the round paper body, plus its black caps top and bottom (drawn ~4 px past the circle:
+    // the bird could overlap a cap by ~17 px and live)
+    const { cx, y } = this;
+    return Math.min(
+      circleClear(px, py, r, cx, y + 0.5 * S, LANTERN.r * S),
+      segClear(px, py, r, cx - 2.5 * S, y - 7.5 * S, cx + 2.5 * S, y - 7.5 * S, 2 * S),
+      segClear(px, py, r, cx - 2.5 * S, y + 8 * S, cx + 2.5 * S, y + 8 * S, 2 * S),
+    );
   }
 }
 
