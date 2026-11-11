@@ -311,11 +311,11 @@ export class GameOverScene extends Phaser.Scene {
     // and the SHARE / LEADERBOARD / HEROES / HOME row right off the screen (no way home but
     // RETRY). The block (RETRY and the row under it) now always stays above the home
     // indicator; on the rare crowded screen RETRY covers the last results lines instead.
-    // 166 = the row's bottom edge (by + 132 + 32) + 2: the cap only bites when the row would
+    // 150 = the row's drawn bottom edge (measured: by + 146) + 4: the cap only bites when the row would
     // otherwise leave the screen, so every normal game over keeps its old layout
     // ("TAP ANYWHERE" already clamps itself above the home indicator, below).
     const sbot = this.registry.get("safeBottom") || 0;
-    const by = Math.min(Math.max(y + 110, H * 0.79), H - sbot - 166);
+    const by = Math.min(Math.max(y + 110, H * 0.79), H - sbot - 150);
     const toastY = by - 140; // (clear of the tall RETRY)
     this.time.delayedCall(ANIM_END, () => {
       // each new hero gets the full spotlight reveal, one after another
