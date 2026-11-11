@@ -8,8 +8,16 @@ import { fitCamera, VIEW } from "../config.js";
 import { CALM_INFO, JOURNEY_ROUTE, Music, TRACK_INFO } from "../audio/music.js";
 import { button, hex, neonText, plainText, slider } from "../ui/ui.js";
 
-const REGGAE = ["menu", ...JOURNEY_ROUTE.slice(0, 4), "calm", ...JOURNEY_ROUTE.slice(4)];
-const HOUSE = ["menu", ...JOURNEY_ROUTE];
+// (the Calm sits between the Glitch Realm and the Abyss, as in a run)
+const CALM_AT = JOURNEY_ROUTE.indexOf("abyss");
+const REGGAE = [
+  "menu",
+  ...JOURNEY_ROUTE.slice(0, CALM_AT),
+  "calm",
+  ...JOURNEY_ROUTE.slice(CALM_AT),
+];
+// the old house soundtrack predates Sakura Skies: it has no track for it
+const HOUSE = ["menu", ...JOURNEY_ROUTE.filter((id) => id !== "sakura")];
 const colorOf = (id) =>
   id === "menu"
     ? 0xb45cff

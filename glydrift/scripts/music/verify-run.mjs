@@ -102,7 +102,7 @@ const press = async (label) => {
 
 await page.mouse.click(215, 80); // first tap: unlocks audio
 await page.waitForTimeout(2500);
-await press("PLAY");
+await press("ENDLESS"); // (the home screen's play button)
 await page.waitForTimeout(1500);
 // record realm titles with the audio clock; then launch the run
 await page.evaluate(() => {

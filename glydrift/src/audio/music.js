@@ -23,7 +23,16 @@ const FADE = 0.012; // click-free starts / stops
 const SKANK_AT = 0.22; // intensity where the skank comes in
 const LEAD_AT = 0.4; // … and the lead
 const FALLBACK_BPM = 124; // silent builds keep their old visual beat clock
-const JOURNEY = ["void", "solar", "frozen", "glitch", "abyss", "valley", "hurricane"].concat([
+const JOURNEY = [
+  "void",
+  "sakura",
+  "solar",
+  "frozen",
+  "glitch",
+  "abyss",
+  "valley",
+  "hurricane",
+].concat([
   "prism",
   "tidal",
   "chrono",
