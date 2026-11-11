@@ -18,6 +18,8 @@ this folder are the website.
    - `[RESPONSE TIME]` — e.g. `one business day`
    - `[Insured — confirm]` — change to `Fully insured` once confirmed, or delete that line
    - `[LUKE'S BACKGROUND …]` — a few sentences about Luke
+   - `[CUSTOMER REVIEW …]` — paste real reviews, or delete the Reviews section (and its
+     header link) until you have some
 2. **Add photos** to `images/` using the file names in `images/README.md`.
 3. **Connect the quote form** (below).
 
