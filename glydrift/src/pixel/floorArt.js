@@ -91,6 +91,24 @@ function strip(kind, a, b) {
       ],
       dark,
     );
+  } else if (kind === "koi") {
+    // pond water: lily pads with a pink lotus, a koi and the sun's glints
+    pc.hline(4, 7, 3, 0x5a9a6a).hline(5, 6, 2, 0x6aac78).set(6, 2, 0xf590b2);
+    pc.hline(18, 21, 4, 0xff8a3a).set(19, 4, 0xffffff).set(22, 3, 0xff8a3a).set(22, 5, 0xff8a3a);
+    at(
+      [
+        [12, 2],
+        [27, 3],
+      ],
+      0xfff0c0,
+    );
+    at(
+      [
+        [9, 5],
+        [25, 6],
+      ],
+      dark,
+    );
   } else if (kind === "surf") {
     // foam caps rolling along the water
     for (const x of [2, 10, 18, 26]) {

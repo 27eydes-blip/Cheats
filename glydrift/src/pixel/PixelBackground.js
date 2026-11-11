@@ -11,6 +11,7 @@ import { biomeArtReady, THEMES, themeFor } from "./themes.js";
 import { setSideTheme } from "../systems/sideBackdrop.js";
 
 const FADE = 1.6; // seconds
+const PETAL_FRAMES = ["petal_0", "petal_1", "petal_2", "petal_1"]; // a petal tumbling over
 
 /** Lub-dub pulse curve (one beat every 1.05 s) for the Abyss vignette. */
 function heartbeat(t) {
@@ -127,6 +128,56 @@ export class PixelBackground {
         objs.push(r);
       }
     }
+    // Sakura Skies: a low golden sun on the horizon (behind the far peaks) with a soft halo
+    // and slow rays fanning up from it, and a small flock of distant birds
+    let sun = null;
+    if (t.weather.sun) {
+      const sw = t.weather.sun;
+      const sx = W * sw.x;
+      const sy = H * sw.y;
+      sunHaloTexture(scene);
+      const halo = scene.add
+        .image(sx, sy, "sunhalo")
+        .setScale(S * k * 2)
+        .setTint(sw.rays)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(-98.4);
+      const disc = scene.add.image(sx, sy, t.atlas, "sun").setScale(k).setDepth(-98.6);
+      lightRayTexture(scene);
+      const sunRays = [];
+      const fan = this.lowGfx ? [-0.75, 0, 0.75] : [-1.15, -0.62, -0.2, 0.25, 0.7, 1.2];
+      fan.forEach((a, i) => {
+        const r = scene.add
+          .image(sx, sy, "lightray")
+          .setOrigin(0.5, 0)
+          .setDisplaySize(W * (0.09 + (i % 2) * 0.05), H * (0.6 + (i % 3) * 0.12))
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setTint(sw.rays)
+          .setDepth(-98.2);
+        r.baseRot = Math.PI + a;
+        r.phase = i * 1.9;
+        sunRays.push(r);
+        objs.push(r);
+      });
+      objs.push(halo, disc);
+      sun = { halo, disc, rays: sunRays };
+    }
+    const birds = [];
+    if (t.weather.birds) {
+      const n = this.lowGfx ? 3 : t.weather.birds;
+      for (let i = 0; i < n; i++) {
+        const b = scene.add.image(0, 0, t.atlas, "bird_0").setScale(k).setDepth(-96.6);
+        // a loose V: each bird keeps its place behind the leader
+        b.ox = (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 7 * S * k * 0.6 + i * 10;
+        b.oy = Math.ceil(i / 2) * 5 * S * k * 0.6;
+        b.phase = i * 0.7;
+        b.frameI = 0;
+        birds.push(b);
+        objs.push(b);
+      }
+      birds.flockX = W * 0.8;
+      birds.flockY = H * 0.24;
+    }
     // Frozen Nebula: aurora ribbons, stepped pixel curtains drawn each frame (cheap: a few
     // dozen rects; one ribbon on Low Graphics). Kept faint so hazards always read first.
     let aurora = null;
@@ -186,7 +237,13 @@ export class PixelBackground {
     const parts = [];
     for (let i = 0; i < n; i++) {
       let d;
-      if (w.kind === "bubbles") {
+      if (w.kind === "petals") {
+        // cherry petals (their own pink art, tumbling through three frames)
+        d = scene.add.image(0, 0, t.atlas, "petal_0").setDepth(-70);
+        d.setTint([0xffffff, 0xfff2f6, 0xffdce8][i % 3]);
+        d.setScale(k * (i % 4 === 0 ? 2 : 1));
+        d.frameI = 0;
+      } else if (w.kind === "bubbles") {
         d = scene.add.image(0, 0, "wx", "bubble").setDepth(-70).setTint(w.color);
         d.setScale(k * (Math.random() < 0.35 ? 2 : 1));
       } else if (w.kind === "butterflies") {
@@ -230,6 +287,8 @@ export class PixelBackground {
       layers,
       glows,
       rays,
+      sun,
+      birds,
       parts,
       motes,
       aurora,
@@ -393,6 +452,30 @@ export class PixelBackground {
     }
   }
 
+  /** Sakura birds: a small flock glides across the far sky, flapping now and then. */
+  updateBirds(birds, alpha, lift, dt, scroll) {
+    const W = this.W;
+    birds.flockX -= (scroll * 0.045 + 22) * dt;
+    birds.flockY += Math.sin(this.time * 0.6) * 4 * dt;
+    if (birds.flockX < -W * 0.3) {
+      birds.flockX = W * (1.2 + Math.random() * 0.8);
+      birds.flockY = this.H * (0.14 + Math.random() * 0.2);
+    }
+    for (const b of birds) {
+      b.setDepth(-96.6 + lift);
+      b.x = birds.flockX + b.ox;
+      b.y = birds.flockY + b.oy + Math.sin(this.time * 1.3 + b.phase) * 3;
+      // flap in bursts, then glide with the wings up
+      const flap = Math.sin(this.time * 0.9 + b.phase) > 0.2;
+      const fi = flap && Math.floor(this.time * 7 + b.phase * 3) % 2 ? 1 : 0;
+      if (fi !== b.frameI) {
+        b.frameI = fi;
+        b.setFrame(fi ? "bird_1" : "bird_0");
+      }
+      b.setAlpha(alpha * 0.75);
+    }
+  }
+
   resetPart(d, kind, initial) {
     const W = this.W;
     const H = this.H;
@@ -411,6 +494,20 @@ export class PixelBackground {
       d.y = initial ? Math.random() * H : -10 - Math.random() * 60;
       d.vy = kind === "snow" ? 50 + Math.random() * 80 : 25 + Math.random() * 40;
       d.vx = -30 - Math.random() * 30;
+    } else if (kind === "petals") {
+      // they come in from the top and the right and drift down-left, swaying
+      if (initial) d.y = Math.random() * H;
+      else if (Math.random() < 0.6) d.y = -10 - Math.random() * 50;
+      else {
+        d.x = W + 10 + Math.random() * 60;
+        d.y = Math.random() * H * 0.85;
+      }
+      d.vx = -(15 + Math.random() * 45);
+      d.vy = 20 + Math.random() * 30;
+      d.phase = Math.random() * 10;
+      d.spin = 2.5 + Math.random() * 4;
+      d.base = 0.75 + Math.random() * 0.25;
+      return;
     } else if (kind === "butterflies") {
       d.y = Math.random() * H * 0.75 + H * 0.08;
       if (!initial) d.x = this.W + 20 + Math.random() * 80;
@@ -468,6 +565,8 @@ export class PixelBackground {
   setTheme(id, instant = false) {
     if (this.current === id) return;
     if (!this.sets[id]) this.sets[id] = this.buildSet(id);
+    // a realm can ask for a slower crossfade (in and out): bright ↔ dark morphs gently
+    this.fade = Math.max(THEMES[id]?.weather.fade ?? FADE, THEMES[this.current]?.weather.fade ?? FADE);
     this.current = id;
     if (instant) for (const s of Object.values(this.sets)) s.alpha = s.id === id ? 1 : 0;
     // wide screens: the space beside the portrait frame follows the biome
@@ -488,7 +587,8 @@ export class PixelBackground {
       // incoming set fades in on top; outgoing sets stay solid until it fully covers them
       const cur = set.id === this.current;
       const target = cur ? 1 : this.curAlpha >= 1 ? 0 : set.alpha;
-      const rate = cur ? dt / FADE : (dt * 4) / FADE;
+      const fade = this.fade ?? FADE;
+      const rate = cur ? dt / fade : (dt * 4) / fade;
       set.alpha += Math.sign(target - set.alpha) * Math.min(Math.abs(target - set.alpha), rate);
       if (set.alpha <= 0.001) {
         if (set.shown !== false) for (const ob of set.objs) ob.setVisible(false);
@@ -532,6 +632,18 @@ export class PixelBackground {
         r.x -= scroll * dt * 0.02;
         if (r.x < -this.W * 0.15) r.x += this.W * 1.25;
       }
+      if (set.sun) {
+        // the sun stays put (it is far away); its halo and rays breathe very slowly
+        const sn = set.sun;
+        sn.disc.setDepth(-98.6 + lift).setAlpha(set.alpha);
+        sn.halo.setDepth(-98.4 + lift).setAlpha(set.alpha * (0.65 + 0.07 * Math.sin(this.time * 0.5)));
+        for (const r of sn.rays) {
+          r.setDepth(-98.2 + lift)
+            .setRotation(r.baseRot + 0.03 * Math.sin(this.time * 0.17 + r.phase))
+            .setAlpha(set.alpha * (0.075 + 0.035 * Math.sin(this.time * 0.4 + r.phase)));
+        }
+      }
+      if (set.birds.length) this.updateBirds(set.birds, set.alpha, lift, dt, scroll);
       for (const l of set.layers) {
         l.tilePositionX += (scroll * dt * l.speed) / this.k;
         l.setDepth(l.baseDepth + lift).setAlpha(set.alpha * (l.alphaMul ?? 1));
@@ -546,6 +658,18 @@ export class PixelBackground {
             d.setTint(cols[Math.floor(Math.random() * cols.length)]);
           }
           d.setAlpha(set.alpha * (Math.random() < 0.85 ? d.base : 0));
+          continue;
+        }
+        if (set.kind === "petals") {
+          d.x += (-scroll * 0.15 + d.vx) * dt * ps;
+          d.y += (d.vy + Math.sin(this.time * 1.6 + d.phase) * 24) * dt * ps;
+          const fi = Math.floor(this.time * d.spin + d.phase) & 3;
+          if (fi !== d.frameI) {
+            d.frameI = fi;
+            d.setFrame(PETAL_FRAMES[fi]);
+          }
+          d.setAlpha(set.alpha * d.base);
+          if (d.x < -20 || d.y > H + 20) this.resetPart(d, "petals", false);
           continue;
         }
         if (set.kind === "butterflies") {
@@ -642,6 +766,25 @@ function floorGlowTexture(scene) {
     ctx.fillStyle = `rgba(255,255,255,${bands[b]})`;
     ctx.fillRect(0, y, 4, 1);
   }
+  c.refresh();
+  c.setFilter(Phaser.Textures.FilterMode.NEAREST);
+}
+
+/** Sun halo: soft stepped rings (no dither: it is big on screen), white; tinted gold. */
+function sunHaloTexture(scene) {
+  if (scene.textures.exists("sunhalo")) return;
+  const n = 64;
+  const c = scene.textures.createCanvas("sunhalo", n, n);
+  const ctx = c.getContext();
+  const bands = [0.5, 0.36, 0.24, 0.15, 0.08, 0.035];
+  for (let y = 0; y < n; y++)
+    for (let x = 0; x < n; x++) {
+      const d = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2) / (n / 2);
+      const b = Math.floor(d * 7);
+      if (b >= bands.length) continue;
+      ctx.fillStyle = `rgba(255,255,255,${bands[b]})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
   c.refresh();
   c.setFilter(Phaser.Textures.FilterMode.NEAREST);
 }
