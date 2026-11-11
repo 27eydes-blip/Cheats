@@ -10,6 +10,7 @@ import { ClockGear, Pendulum, RewindBlade, TimeZone } from "./biomes/chrono.js";
 import { Spire, SweepBar, VoidOrb } from "./biomes/mirror.js";
 import { GlassWall, MirrorLaser, RotPrism } from "./biomes/prism.js";
 import { BubbleColumn, Current, Jellyfish, SeaMine } from "./biomes/tidal.js";
+import { BambooBlade, PaperLantern, TempleBell, WindGust } from "./biomes/sakura.js";
 import { Gate, Portal, Saw } from "./shared.js";
 
 export const TYPES = {
@@ -21,6 +22,11 @@ export const TYPES = {
   blade: Blade,
   laser: Laser,
   pulse: NeonPulse,
+  // Sakura Skies
+  bell: TempleBell,
+  bamboo: BambooBlade,
+  lantern: PaperLantern,
+  gust: WindGust,
   // Solar Storm
   geyser: Geyser,
   meteor: Meteor,

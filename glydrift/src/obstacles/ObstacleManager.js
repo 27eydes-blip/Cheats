@@ -8,11 +8,15 @@ import { RNG } from "../data/rng.js";
 import { COIN_FLOW, SPAWN } from "../tuning.js";
 import { Shop } from "../data/cosmetics.js";
 import { TYPES } from "./index.js";
+import { TempleBell } from "./biomes/sakura.js";
+import { BAMBOO } from "../pixel/sakuraHazardArt.js";
 
 /** Signature hazards per biome, in the order they are introduced (one at a time). */
 const SIG = {
   // (the vertical laser and its patterns, Slalom and Laser + Blade, were taken out: too hard)
   void: ["blade", "hlaser", "pulse", "bladeduo", "pulsepair"],
+  // Sakura Skies: temple bell, bamboo blade, paper lantern, wind gust, then two bells together
+  sakura: ["bell", "bamboo", "lantern", "gust", "bellduo"],
   solar: [
     "geyser",
     "meteor",
@@ -54,6 +58,7 @@ const SIG = {
 };
 /** Combination patterns: built from a realm's own hazards, so they need no solo introduction. */
 const COMBOS = new Set([
+  "bellduo",
   "eyepair",
   "tendrileye",
   "eyeslam",
@@ -101,6 +106,7 @@ const SIG_WEIGHT = {
   sliderpair: 2,
   zapstairs: 1.8,
   gauntlet: 1.8,
+  bellduo: 1.8,
 };
 /** Biome-local meters at which each signature hazard unlocks. */
 const UNLOCK = SPAWN.unlock;
@@ -174,8 +180,11 @@ export class ObstacleManager {
         "vine",
         "spire",
         "vorb",
+        "bell",
       ].includes(type)
         ? 2
+        : type === "lantern"
+          ? 3
         : type === "debris"
           ? 3
           : 1;
@@ -333,6 +342,11 @@ export class ObstacleManager {
         if (!this.introduced.has(key) && !forced && !COMBOS.has(k)) forced = k;
       });
       if (w.zone && this.flipped) w.zone = 0;
+      // Sakura Skies is gentle: saws and gates (less often than its own hazards), no portals
+      if (biomeId === "sakura") {
+        w.saw = w.gate = SPAWN.sakuraShared;
+        w.saw2 = w.flip = w.mini = 0;
+      }
       // the Peaceful Valley has only its own gentle hazards (no saws, gates or portals)
       // the Peaceful Valley and the dimensions have only their own hazards
       if (biomeId === "valley" || info.dimension)
@@ -1004,6 +1018,84 @@ export class ObstacleManager {
           L: r.range(H * 0.28, H * 0.34),
         });
         width = sl.w + 300 + 60;
+        break;
+      }
+      // ------------------------------------------------------------ sakura skies
+      case "bell": {
+        // a temple bell swinging on a rope from the top (the rope is harmless, the bell isn't)
+        const L = r.range(H * 0.3, H * 0.56);
+        const amp = r.range(0.36, 0.48);
+        const hw = TempleBell.halfWFor(L, amp);
+        this.obtain("bell").spawn(x + hw, { L, amp, period: r.range(2.7, 3.2), phase: r.next() });
+        // coins on the open side of the bell
+        this.coinLine(x + hw - 40, x + hw + 40, L > H * 0.45 ? L - 230 : L + 230, 3);
+        width = hw * 2;
+        break;
+      }
+      case "bellduo": {
+        // two bells swinging in turn, one hung higher than the other
+        const hi = r.chance(0.5);
+        const ph = r.next();
+        let cx = x;
+        for (let i = 0; i < 2; i++) {
+          const L = (i === 0) === hi ? r.range(H * 0.3, H * 0.38) : r.range(H * 0.48, H * 0.56);
+          const amp = r.range(0.32, 0.4);
+          const hw = TempleBell.halfWFor(L, amp);
+          this.obtain("bell").spawn(cx + hw, { L, amp, period: 3, phase: (ph + i * 0.5) % 1 });
+          cx += hw * 2 + 60;
+        }
+        width = cx - x - 60;
+        break;
+      }
+      case "bamboo": {
+        const long = local > 160 && r.chance(0.5);
+        const hl = ((long ? BAMBOO.long : BAMBOO.short) / 2) * S;
+        const y = r.range(safeTop + hl + 40, safeBot - hl - 40);
+        this.obtain("bamboo").spawn(x + hl + 8, {
+          y,
+          long,
+          speed: r.pick([-1, 1]) * r.range(1.2, 1.6),
+          phase: r.range(0, 6.28),
+        });
+        this.coinLine(x + hl - 30, x + hl + 46, y < mid ? y + hl + 120 : y - hl - 120, 3);
+        width = (hl + 8) * 2;
+        break;
+      }
+      case "lantern": {
+        // paper lanterns hang high, flicker, then drop: two in a row later in the realm
+        const n = local > 300 && r.chance(0.45) ? 2 : 1;
+        for (let i = 0; i < n; i++) {
+          this.obtain("lantern").spawn(x + 40 + i * 300, {
+            y: r.range(H * 0.1, H * 0.2),
+            lead: r.range(1.45, 2.0),
+            phase: r.next(),
+          });
+        }
+        width = 80 + (n - 1) * 300;
+        break;
+      }
+      case "gust": {
+        // wind: the petal streaks show which way it pushes. Met alone first (coins ride it);
+        // after that it nudges you toward a bell (up) or a bamboo blade (down)
+        const w = r.range(340, 400);
+        const dir = r.chance(0.5) ? -1 : 1;
+        this.obtain("gust").spawn(x + w / 2, { w, dir });
+        if (forced === "gust") {
+          this.coinLine(x + 40, x + w - 40, dir < 0 ? H * 0.58 : H * 0.42, 4);
+        } else if (dir < 0) {
+          this.obtain("bell").spawn(x + w * 0.6, {
+            L: r.range(H * 0.28, H * 0.36),
+            amp: r.range(0.3, 0.38),
+            phase: r.next(),
+          });
+        } else {
+          this.obtain("bamboo").spawn(x + w * 0.6, {
+            y: r.range(H * 0.68, H * 0.74),
+            speed: r.pick([-1, 1]) * r.range(1.0, 1.3),
+            phase: r.range(0, 6.28),
+          });
+        }
+        width = w;
         break;
       }
       // ------------------------------------------------------------ peaceful valley

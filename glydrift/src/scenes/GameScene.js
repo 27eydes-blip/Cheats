@@ -1410,7 +1410,7 @@ export class GameScene extends Phaser.Scene {
       }
       for (const o of ev.near) this.nearMiss(o);
       for (const o of ev.perfect) this.perfect(o);
-      // dimension fields: Tidal currents push, bubble columns drag, Chrono zones bend time
+      // fields: Sakura wind gusts and Tidal currents push, bubble columns drag, Chrono zones bend time
       if (ev.push) p.vy += ev.push * dt;
       if (ev.drag) p.vy *= Math.exp(-ev.drag * dt);
       for (const o of ev.warded) this.fireWardBlock(o);
