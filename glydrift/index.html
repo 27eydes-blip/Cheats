@@ -80,7 +80,12 @@
         letter-spacing: 0.4px;
         color: rgba(214, 206, 255, 0.6);
         pointer-events: none;
-        white-space: nowrap;
+        /* stay in the side area: on one line it ran over the game's bottom-right corner (the
+           home ticker) on iPad landscape (~120 px) and laptops. The game frame is 0.5625 of
+           the window height wide here (16:9, see computeGameHeight), so each side is
+           50vw - 28.125vh; the line wraps to fit it, right-aligned */
+        max-width: calc(50vw - 28.125vh - 28px);
+        text-align: right;
       }
       @media (max-aspect-ratio: 1/1) {
         #legal {
