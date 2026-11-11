@@ -892,7 +892,7 @@ test("realm changes never pause the run @smoke", async ({ page }, testInfo) => {
     let prevNear = 0;
     const stretches = [];
     let empty = null;
-    while (s.meters < 3600) {
+    while (s.meters < 4100) {
       if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
       s.__t = (s.__t || 1e6) + 1000 / 60;
       s.stepFrame(s.__t, 1000 / 60);
@@ -944,9 +944,10 @@ test("realm changes never pause the run @smoke", async ({ page }, testInfo) => {
     return { pauses, slowJumps, around, normal, ids: bounds.map((b) => b.id) };
   });
   expect(out.ids).toEqual(
-    expect.arrayContaining(["solar", "frozen", "glitch", "hurricane"]),
+    expect.arrayContaining(["sakura", "solar", "frozen", "glitch", "hurricane"]),
   );
-  expect(out.ids.length).toBeGreaterThanOrEqual(8); // into at least one dimension
+  // the eight realms (Hurricane's rift opens 400 m in, at 3900 m), then at least one dimension
+  expect(out.ids.length).toBeGreaterThanOrEqual(9);
   expect(out.pauses).toBe(0);
   expect(out.slowJumps).toBe(0);
   // no longer wait for an obstacle at a boundary than the run's usual longest gap
@@ -2190,7 +2191,8 @@ test("flow: the camera shakes only on death and the Abyss entrance; zoom and lea
     let lastY = cam.scrollY;
     const z0 = cam.zoom;
     let abyssAt = null;
-    while (s.meters < 3000) {
+    // (through the Abyss, 2500–3000 m, and on to the same top speed as before Sakura Skies)
+    while (s.meters < 3500) {
       if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
       t += 1000 / 60;
       s.stepFrame(t, 1000 / 60);
@@ -4242,7 +4244,9 @@ test("long runs never pile up: passed realms' art is freed, objects and memory s
       };
     }, toM);
   const early = await fly(1500);
-  const mid = await fly(7000); // past the Abyss, through the rift, into the dimensions
+  // past the Abyss, through the rift (3900 m), into the dimensions: 300 m into the sixth one,
+  // well after the last one's art was let go (4 s after each change)
+  const mid = await fly(7200);
   const late = await fly(14000); // the dimensions again and again
   console.log(JSON.stringify({ early, mid, late }));
   expect(late.state).toBe("playing");
