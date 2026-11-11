@@ -3,11 +3,11 @@
 // back by ../music.js. Nothing here runs in the game itself except the metadata.
 //
 // KEYS: every realm sits on the circle of fifths next to the realms it meets:
-//   Menu C → Neon Void Am (same) → Solar Em (1♯) → Frozen Am (0) → Glitch Dm (1♭)
-//   → Abyss D phrygian (2♭) → Valley F (1♭) → Hurricane Gm (2♭) → the dimensions,
+//   Menu C → Neon Void Am (same) → Sakura Skies G (1♯) → Solar Em (same) → Frozen Am (0)
+//   → Glitch Dm (1♭) → Abyss D phrygian (2♭) → Valley F (1♭) → Hurricane Gm (2♭) → the dimensions,
 //   which all use 1♭ / 2♭ keys (Prism B♭, Tidal Dm, Chrono Gm, Mirror D phrygian).
-// TEMPO: Menu 75 → Void 90 → Solar 100 → Frozen 80 → Glitch 70 (ramped in the bridges); from
-// there on everything lives on one 70 / 140 grid (half-time and double-time feels), so the
+// TEMPO: Menu 75 → Void 90 → Sakura 95 → Solar 100 → Frozen 80 → Glitch 70 (ramped in the
+// bridges); from there on everything lives on one 70 / 140 grid (half-time and double-time feels), so the
 // Calm's heartbeat, the Abyss (140 half-time), Valley, the Hurricane ska (140) and the
 // dimensions (70) flow into each other without any tempo jump.
 //
@@ -128,6 +128,39 @@ export const SONGS = {
     airhorn: true,
     echo: 0.28,
     reverb: 0.25,
+  },
+
+  sakura: {
+    name: "Sakura Skies",
+    title: "Petal Breeze",
+    style: "Calm, flowing roots reggae · soft skank · melodica · wind-chime plucks",
+    // G major (1♯): the relative major of Solar's E minor, one step round from Neon Void's
+    // A minor; the lead keeps to the major pentatonic (G A B D E) for its sunny, airy sound
+    key: "G major",
+    mode: "major",
+    root: 55, // G3
+    bpm: 95, // halfway between Void (90) and Solar (100): both bridges are gentle ramps
+    feel: "one drop",
+    soft: true,
+    drums: { groove: "onedrop", drop: "rockers", dub: "onedrop", hats: "8ths", swing: 0.22 },
+    chords: { groove: [0, 3, 5, 4], drop: [0, 4, 5, 3] }, // Gmaj7 Cmaj7 Em7 D7 | G D Em C
+    seventh: true,
+    bass: line("0-----.4-2-0.... 0---..4-5---4-2-"),
+    skank: { steps: [4, 12], wave: "triangle" },
+    organ: "bubble",
+    horns: null,
+    lead: {
+      voice: "melodica",
+      octave: 1,
+      groove: line("........4---5-4- 2-------........ ........5---7-5- 4-----2-1-------"),
+      // the hook: a slow rise and fall, like a petal on the wind
+      drop: line("7-5-4---2-4-5--- 4-------1-2-4--- 5-7-8-7-5---4-2- 4---2---0-------"),
+    },
+    pad: { wave: "sine", vol: -10 },
+    arp: { pattern: [0, 4, 7, 9, 7, 4, 2, 4], octave: 2 },
+    airhorn: false,
+    echo: 0.34,
+    reverb: 0.38,
   },
 
   solar: {
@@ -451,13 +484,23 @@ export const CALM = {
 };
 
 /** Realm order of the classic run; the dimensions follow in random order. */
-export const CLASSIC_ORDER = ["void", "solar", "frozen", "glitch", "abyss", "valley", "hurricane"];
+export const CLASSIC_ORDER = [
+  "void",
+  "sakura",
+  "solar",
+  "frozen",
+  "glitch",
+  "abyss",
+  "valley",
+  "hurricane",
+];
 export const DIMENSION_ORDER = ["prism", "tidal", "chrono", "mirror"];
 
 /** Every realm boundary the course can produce (glitch → abyss goes through The Calm). */
 export function bridgePairs() {
   const pairs = [
-    ["void", "solar"],
+    ["void", "sakura"],
+    ["sakura", "solar"],
     ["solar", "frozen"],
     ["frozen", "glitch"],
     ["abyss", "valley"],

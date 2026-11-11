@@ -1,5 +1,5 @@
 {
-  "hash": "c3b0aa9d0842c769",
+  "hash": "3ac30b6d73683747",
   "sampleRate": 32000,
   "complete": true,
   "calib": {
@@ -642,39 +642,62 @@
           "lead": "mirror-intro-lead.ee75c464.mp3"
         }
       }
+    },
+    "sakura": {
+      "name": "Sakura Skies",
+      "title": "Petal Breeze",
+      "style": "Calm, flowing roots reggae · soft skank · melodica · wind-chime plucks",
+      "key": "G major",
+      "bpm": 95,
+      "feel": "one drop",
+      "scale": 1,
+      "bar": 2.526315789473684,
+      "sections": {
+        "groove": [
+          0,
+          4
+        ],
+        "build": [
+          4,
+          6
+        ],
+        "drop": [
+          6,
+          10
+        ],
+        "dub": [
+          10,
+          14
+        ],
+        "total": 14
+      },
+      "introBars": 2,
+      "length": 35.368421052631575,
+      "pad": 0.05,
+      "files": {
+        "drums": "sakura-drums.3b10c728.mp3",
+        "bass": "sakura-bass.59bc9d4d.mp3",
+        "skank": "sakura-skank.4fd79dd4.mp3",
+        "lead": "sakura-lead.5c687063.mp3"
+      },
+      "gains": {
+        "drums": 0.67211,
+        "bass": 0.38205,
+        "skank": 1.71211,
+        "lead": 2.11654
+      },
+      "intro": {
+        "length": 5.052631578947368,
+        "files": {
+          "drums": "sakura-intro-drums.297bc301.mp3",
+          "bass": "sakura-intro-bass.2762cdb1.mp3",
+          "skank": "sakura-intro-skank.95c9b12b.mp3",
+          "lead": "sakura-intro-lead.b6a54305.mp3"
+        }
+      }
     }
   },
   "bridges": {
-    "void>solar": {
-      "bars": 4,
-      "beats": [
-        0,
-        0.6635991675545314,
-        1.3211379841101565,
-        1.972726141544233,
-        2.618470380302985,
-        3.258474594344702,
-        3.892839931459857,
-        4.521664889210192,
-        5.145045406714429,
-        5.763074952494618,
-        6.375844608584043,
-        6.983443151086298,
-        7.585957127363497,
-        8.185957127363498,
-        8.785957127363497,
-        9.385957127363497,
-        9.985957127363497
-      ],
-      "ratio": 1.1111111111111112,
-      "related": false,
-      "land": 9.985957127363497,
-      "files": {
-        "drums": "bridge-void-solar-drums.28aef756.mp3",
-        "bass": "bridge-void-solar-bass.ab748f08.mp3",
-        "music": "bridge-void-solar-music.79ebdb57.mp3"
-      }
-    },
     "solar>frozen": {
       "bars": 4,
       "beats": [
@@ -1161,6 +1184,66 @@
         "drums": "bridge-mirror-chrono-drums.0dff8045.mp3",
         "bass": "bridge-mirror-chrono-bass.d4434a12.mp3",
         "music": "bridge-mirror-chrono-music.0deb3d08.mp3"
+      }
+    },
+    "void>sakura": {
+      "bars": 4,
+      "beats": [
+        0,
+        0.665128203306402,
+        1.3271983351090628,
+        1.9862383870563507,
+        2.642275968220313,
+        3.295338312036644,
+        3.945452283088466,
+        4.592644383737346,
+        5.23694076060597,
+        5.878367210916749,
+        6.516949188689404,
+        7.15271181080221,
+        7.785679862919714,
+        8.417258810288136,
+        9.048837757656557,
+        9.680416705024978,
+        10.3119956523934
+      ],
+      "ratio": 1.0555555555555556,
+      "related": false,
+      "land": 10.3119956523934,
+      "files": {
+        "drums": "bridge-void-sakura-drums.c48d2e6f.mp3",
+        "bass": "bridge-void-sakura-bass.65f7b588.mp3",
+        "music": "bridge-void-sakura-music.f82b279b.mp3"
+      }
+    },
+    "sakura>solar": {
+      "bars": 4,
+      "beats": [
+        0,
+        0.6301979423710246,
+        1.2576499155006668,
+        1.882379745698789,
+        2.5044109505091705,
+        3.1237667440214048,
+        3.7404700420695463,
+        4.354543467319417,
+        4.966009354248394,
+        5.574889754019422,
+        6.181206439252874,
+        6.784980908698071,
+        7.386234391807269,
+        7.986234391807269,
+        8.586234391807269,
+        9.18623439180727,
+        9.78623439180727
+      ],
+      "ratio": 1.0526315789473684,
+      "related": false,
+      "land": 9.78623439180727,
+      "files": {
+        "drums": "bridge-sakura-solar-drums.04b18573.mp3",
+        "bass": "bridge-sakura-solar-bass.584dadf6.mp3",
+        "music": "bridge-sakura-solar-music.1ed3fb88.mp3"
       }
     }
   },

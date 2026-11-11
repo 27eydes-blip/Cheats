@@ -8,6 +8,7 @@ import { buildHazards } from "./hazardArt.js";
 import { buildDimensionHazards } from "./dimensionHazardArt.js";
 import { buildCosmeticArt } from "./cosmeticArt.js";
 import { buildNewHazards } from "./newHazardArt.js";
+import { buildSakuraHazards } from "./sakuraHazardArt.js";
 import { addAtlas, deferUploads, forgetTextures } from "./px.js";
 import { weatherFrames } from "./scenicArt.js";
 import { SAKURA, sakuraFrames } from "./sakuraScenery.js";
@@ -709,6 +710,7 @@ export function buildPixelArt(scene) {
   addAtlas(scene, "wx", weatherFrames());
   buildNewHazards(scene);
   buildDimensionHazards(scene);
+  buildSakuraHazards(scene);
   buildCosmeticArt(scene);
   ensureBiomeArt(EAGER_BIOME);
   buildHazards(scene, { solar: SOLAR, frozen: FROZEN, glitch: GLITCH, abyss: ABYSS });

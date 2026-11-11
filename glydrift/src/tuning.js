@@ -81,13 +81,19 @@ export const SPAWN = {
     // Abyss: its three hazards, the Eye Beam, then a few gentle combinations
     // (the first 180 m are the grace stretch, so the Eye Beam is met just after it)
     abyss: [0, 120, 230, 190, 250, 210, 270],
+    // Sakura Skies (500 m): bell, bamboo blade, lantern, wind gust, then two bells together
+    sakura: [0, 100, 200, 300, 380],
     tidal: [0, 110, 220, 330],
     chrono: [0, 110, 220, 330],
   },
   /** Shared-obstacle difficulty is capped in these biomes (0..1). */
-  difficultyCap: { abyss: 0.55, valley: 0.3 },
+  // (Sakura's pace is held at the end-of-Neon-Void value anyway; the cap keeps the test start,
+  // ?dimension=sakura, the same)
+  difficultyCap: { abyss: 0.55, valley: 0.3, sakura: 0.2 },
   /** Extra space between patterns per biome. */
-  roomy: { abyss: 1.4, glitch: 1.12, valley: 1.6, hurricane: 1.05 },
+  roomy: { abyss: 1.4, glitch: 1.12, valley: 1.6, hurricane: 1.05, sakura: 1.05 },
+  /** Sakura Skies: weight of saws and gates (each) beside its own hazards (2.6 each). */
+  sakuraShared: 1.5,
   difficultyMeters: 2600, // distance at which shared obstacles reach full difficulty
   /**
    * Space between patterns (px): from `start` to `end` over the first `rampMeters` (gap sizes

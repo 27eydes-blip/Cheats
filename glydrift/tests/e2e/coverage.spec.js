@@ -589,7 +589,7 @@ test("multi-hazard stress: every realm and dimension's busiest patterns back to 
   expect(r.dead).toEqual([]);
   expect(r.crashes).toEqual([]);
   expect(r.m).toBeGreaterThanOrEqual(6900);
-  for (const z of ["void", "solar", "frozen", "glitch", "abyss"])
+  for (const z of ["void", "sakura", "solar", "frozen", "glitch", "abyss"])
     expect(r.zones).toContain(z);
   expect(log.errors).toEqual([]);
 });
