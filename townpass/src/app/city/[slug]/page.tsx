@@ -2,16 +2,15 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ListingCard } from "@/components/ListingCard";
 import { Brand, Footer, Notice } from "@/components/ui";
 import { currentAccess } from "@/lib/access";
 import { isAdmin } from "@/lib/admin-auth";
 import { accessLabel, formatMoney, getCityBySlug, getGuide, type City, type GuideSection } from "@/lib/db";
 import { getEnv } from "@/lib/env";
-import { isSummer, localTime } from "@/lib/hours";
 import { sectionType } from "@/lib/sections";
 import { getConditions, type Conditions } from "@/lib/weather";
-import { BeachLine, ConditionsPanel, WeatherTicker } from "@/components/Weather";
+import { Guide } from "@/components/Guide";
+import { WeatherTicker } from "@/components/Weather";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +64,7 @@ export default async function CityPage({ params, searchParams }: Props) {
         reported={sp.reported ? Number(sp.reported) : undefined}
         adminPreview={!access && admin}
         weather={weather}
+        view={{ section: sp.s, q: sp.q, openOnly: sp.open === "1", reservable: sp.res === "1" }}
         brand={env.BRAND_NAME}
         support={env.SUPPORT_EMAIL}
       />
@@ -163,94 +163,5 @@ function Landing(props: {
       <Footer brand={props.brand} support={props.support} />
     </main>
     </>
-  );
-}
-
-/* ----------------------------------- Guide ---------------------------------- */
-
-function Guide(props: {
-  city: City;
-  guide: GuideSection[];
-  apple: boolean;
-  welcome: boolean;
-  reported?: number;
-  adminPreview: boolean;
-  weather: Conditions | null;
-  brand: string;
-  support: string;
-}) {
-  const { city, guide, weather } = props;
-  const now = localTime(city.timezone);
-  const summer = isSummer(now.mmdd, city.summer_start, city.summer_end);
-  const sections = guide.filter((s) => s.listings.length > 0);
-
-  return (
-    <div>
-      {weather && <div className="pt-[env(safe-area-inset-top)]"><WeatherTicker c={weather} cityName={city.name} /></div>}
-      <header className="mx-auto max-w-xl px-5 pt-5">
-        <div className="flex items-center justify-between">
-          <Brand name={props.brand} />
-          <span className="font-mono text-[11px] tracking-wider text-muted">{summer ? `☀️ ${city.peak_label.toUpperCase()} HOURS` : "🍂 OFF-SEASON HOURS"}</span>
-        </div>
-        <h1 className="mt-4 font-serif text-4xl">
-          <span className="gold-text">{city.name}</span>
-        </h1>
-        {props.adminPreview && (
-          <div className="mt-3">
-            <Notice>Admin preview, not a paid session.</Notice>
-          </div>
-        )}
-        {props.welcome && (
-          <div className="mt-3">
-            <Notice tone="green">You’re in! We emailed you a link so you can come back anytime.</Notice>
-          </div>
-        )}
-        {weather && (
-          <div className="mt-4">
-            <ConditionsPanel c={weather} cityName={city.name} />
-          </div>
-        )}
-      </header>
-
-      <nav className="no-scrollbar sticky top-0 z-10 mt-4 flex gap-2 overflow-x-auto border-b border-line bg-ink/95 px-5 py-3 backdrop-blur">
-        {sections.map((s) => (
-          <a key={s.id} href={`#s${s.id}`} className="shrink-0 rounded-full border border-line bg-panel px-3 py-1.5 text-sm text-zinc-200 active:border-gold">
-            {sectionType(s.type).icon} {s.title}
-          </a>
-        ))}
-      </nav>
-
-      <main className="mx-auto max-w-xl space-y-10 px-5 pt-6">
-        {sections.map((s) => (
-          <section key={s.id} id={`s${s.id}`}>
-            <h2 className="font-serif text-2xl text-gold-soft">
-              {sectionType(s.type).icon} {s.title}
-            </h2>
-            {s.intro && <p className="mt-1 text-sm text-zinc-400">{s.intro}</p>}
-            {s.type === "beaches" && weather && <BeachLine c={weather} />}
-            <div className="mt-4 space-y-3">
-              {s.listings.map((l) => (
-                <ListingCard
-                  key={l.id}
-                  listing={l}
-                  sectionKind={s.type}
-                  now={now}
-                  summer={summer}
-                  seasonLabel={summer ? city.peak_label.toLowerCase() : "off-season"}
-                  timezone={city.timezone}
-                  apple={props.apple}
-                  citySlug={city.slug}
-                  reported={props.reported === l.id}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
-        <p className="text-center text-xs text-muted">
-          Hours are shown in local time and can change, especially around holidays. Call ahead when it matters.
-        </p>
-      </main>
-      <Footer brand={props.brand} support={props.support} />
-    </div>
   );
 }

@@ -10,11 +10,11 @@ export async function POST(req: Request) {
   const message = String(form.get("message") || "").trim().slice(0, 1000);
 
   const row = await db
-    .prepare("SELECT c.slug FROM listings l JOIN sections s ON s.id = l.section_id JOIN cities c ON c.id = s.city_id WHERE l.id = ?")
+    .prepare("SELECT c.slug, s.type FROM listings l JOIN sections s ON s.id = l.section_id JOIN cities c ON c.id = s.city_id WHERE l.id = ?")
     .bind(listingId)
-    .first<{ slug: string }>();
+    .first<{ slug: string; type: string }>();
   if (!row) return new Response("Not found", { status: 404 });
-  const back = `/city/${row.slug}`;
+  const back = `/city/${row.slug}?s=${row.type}`;
   if (!message) return seeOther(`${back}#l${listingId}`);
 
   const who = await clientHash(req.headers, env.ACCESS_TOKEN_SECRET);
@@ -24,5 +24,5 @@ export async function POST(req: Request) {
       .bind(listingId, message, who, Date.now())
       .run();
   }
-  return seeOther(`${back}?reported=${listingId}#l${listingId}`);
+  return seeOther(`${back}&reported=${listingId}#l${listingId}`);
 }
