@@ -5,6 +5,7 @@ import { Btn, Card, Field, Flash, fmtDate } from "@/components/admin";
 import { isStale, parseDetails, type Listing, type Section } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { sectionType } from "@/lib/sections";
+import { RESERVABLE, reservePlatform } from "@/lib/reserve";
 
 export const dynamic = "force-dynamic";
 
@@ -119,6 +120,17 @@ export default async function ListingAdmin({
             {def.fields.map((f) => (
               <Field key={f.key} label={f.label} name={`detail_${f.key}`} multiline={f.multiline} defaultValue={details[f.key]} placeholder={f.placeholder} />
             ))}
+            {RESERVABLE.has(section.type) && (
+              <Field
+                label={`Reservation link${listing?.reserve_url ? ` (${reservePlatform(listing.reserve_url) ?? "own website"})` : ""}`}
+                name="reserve_url"
+                type="url"
+                defaultValue={listing?.reserve_url}
+                placeholder="https://resy.com/cities/…  or  https://www.opentable.com/r/…"
+                hint="Open the restaurant on Resy / OpenTable / Tock / its own site and copy the address bar. Adds a Reserve button. Leave blank for walk-in only."
+                className="md:col-span-2"
+              />
+            )}
             {def.uses.tip && <Field label="Local tip (one line, gold callout)" name="local_tip" defaultValue={listing?.local_tip} className="md:col-span-2" />}
             {def.uses.body && <Field label="Tip text" name="body" multiline rows={6} defaultValue={listing?.body} className="md:col-span-2" />}
           </div>

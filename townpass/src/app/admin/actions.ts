@@ -9,6 +9,7 @@ import { validateHours } from "@/lib/hours";
 import { clientHash, rateLimit } from "@/lib/ratelimit";
 import { SECTION_TYPES, sectionType } from "@/lib/sections";
 import { safeEqual, stickerSuffix } from "@/lib/token";
+import { validateReserveUrl } from "@/lib/reserve";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const opt = (f: FormData, k: string) => str(f, k) || null;
@@ -175,6 +176,8 @@ export async function saveListing(form: FormData) {
     const e = validateHours(str(form, k));
     if (e) err(path, `${k.replace("hours_", "")} hours: ${e}`);
   }
+  const reserveErr = validateReserveUrl(str(form, "reserve_url"));
+  if (reserveErr) err(path, reserveErr);
   const details: Record<string, string> = {};
   for (const f of sectionType(section!.type).fields) {
     const v = str(form, `detail_${f.key}`);
@@ -198,6 +201,7 @@ export async function saveListing(form: FormData) {
     Number(str(form, "sort")) || 0,
     form.get("active") ? 1 : 0,
     now,
+    opt(form, "reserve_url"),
   ];
 
   let listingId = Number(id);
@@ -205,7 +209,7 @@ export async function saveListing(form: FormData) {
     await db
       .prepare(
         `UPDATE listings SET section_id=?, name=?, category=?, address=?, phone=?, website=?, hours_default=?, hours_summer=?,
-         hours_offseason=?, price_range=?, details=?, local_tip=?, body=?, sort=?, active=?, updated_at=? WHERE id=?`,
+         hours_offseason=?, price_range=?, details=?, local_tip=?, body=?, sort=?, active=?, updated_at=?, reserve_url=? WHERE id=?`,
       )
       .bind(...values, listingId)
       .run();
@@ -213,7 +217,7 @@ export async function saveListing(form: FormData) {
     const row = await db
       .prepare(
         `INSERT INTO listings (section_id, name, category, address, phone, website, hours_default, hours_summer, hours_offseason,
-         price_range, details, local_tip, body, sort, active, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id`,
+         price_range, details, local_tip, body, sort, active, updated_at, reserve_url) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id`,
       )
       .bind(...values)
       .first<{ id: number }>();

@@ -38,6 +38,10 @@ QR sticker ──► /city/montauk?src=MTK-7F3K2Q        (scan recorded for that
 * **Report wrong info** on every listing goes to `/admin/reports`, which also shows a badge in the admin nav.
 * **QR stickers:** `/admin/stickers` generates unique IDs (`MTK-XXXXXX`), with PNG/SVG downloads and a printable sheet.
   The dashboard shows scans, sales, conversion and revenue **per sticker**, **per city** and **per day**.
+* **Reserve buttons:** paste a restaurant's Resy / OpenTable / Tock / SevenRooms page (or its own booking page)
+  into a listing's **Reservation link** and the card gets a gold **Reserve on Resy** (etc.) button. Taps go through
+  `/r/<id>`, which counts them, then hands the diner to the booking page; the dashboard shows taps per restaurant.
+  Restaurants with no link but a phone number show **Call to reserve**.
 * **Refunds:** Terms say *all sales final*. To make an exception (e.g. a double charge), refund in the Stripe Dashboard
   and access is revoked automatically. `/admin/purchases` links each sale to Stripe.
 

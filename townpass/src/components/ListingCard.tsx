@@ -1,6 +1,7 @@
 import { isStale, parseDetails, type Listing } from "@/lib/db";
 import { localTime, openStatus, pickHoursSpec, weeklyTable, type LocalTime } from "@/lib/hours";
 import { sectionType } from "@/lib/sections";
+import { reserveLabel } from "@/lib/reserve";
 
 const BADGE: Record<string, string> = {
   open: "bg-open/15 text-open ring-open/30",
@@ -85,15 +86,30 @@ export function ListingCard(props: {
         </p>
       )}
 
+      {l.reserve_url && (
+        <a
+          href={`/r/${l.id}`}
+          target="_blank"
+          rel="noopener"
+          className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-gold py-3 text-[15px] font-semibold text-ink shadow-[0_6px_20px_rgba(212,175,55,0.2)] active:bg-gold-deep"
+        >
+          🗓️ {reserveLabel(l.reserve_url)}
+        </a>
+      )}
       {(l.phone || l.address || l.website) && (
-        <div className="mt-4 grid grid-cols-2 gap-2 text-sm font-medium">
+        <div className={`${l.reserve_url ? "mt-2" : "mt-4"} grid grid-cols-2 gap-2 text-sm font-medium`}>
           {l.phone && (
             <a href={`tel:${l.phone.replace(/[^\d+]/g, "")}`} className="rounded-xl bg-panel-2 py-2.5 text-center text-white ring-1 ring-line active:bg-line">
-              📞 Call
+              {props.sectionKind === "food" && !l.reserve_url ? "📞 Call to reserve" : "📞 Call"}
             </a>
           )}
           {l.address && (
-            <a href={mapsUrl(l.address, l.name, apple)} target="_blank" rel="noopener" className="rounded-xl bg-gold py-2.5 text-center text-ink active:bg-gold-deep">
+            <a
+              href={mapsUrl(l.address, l.name, apple)}
+              target="_blank"
+              rel="noopener"
+              className={`rounded-xl py-2.5 text-center ${l.reserve_url ? "bg-panel-2 text-white ring-1 ring-line active:bg-line" : "bg-gold text-ink active:bg-gold-deep"}`}
+            >
               ➜ Directions
             </a>
           )}

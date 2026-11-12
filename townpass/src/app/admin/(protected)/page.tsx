@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card } from "@/components/admin";
 import { formatMoney, type City } from "@/lib/db";
 import { getEnv } from "@/lib/env";
+import { reservePlatform } from "@/lib/reserve";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const cityFilter = cityId ? "AND p.city_id = ?" : "";
   const cb = cityId ? [cityId] : [];
 
-  const [cities, totals, refunds, perCity, perSticker, daily, direct] = await db.batch([
+  const [cities, totals, refunds, perCity, perSticker, daily, direct, reserves] = await db.batch([
     db.prepare("SELECT * FROM cities ORDER BY name"),
     db.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(amount_cents),0) AS cents FROM purchases p WHERE status='paid' ${cityFilter}`).bind(...cb),
     db.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(amount_cents),0) AS cents FROM purchases p WHERE status IN ('refunded','disputed') ${cityFilter}`).bind(...cb),
@@ -41,6 +42,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     ).bind(...cb),
     db.prepare(`SELECT paid_at, amount_cents FROM purchases p WHERE status='paid' AND paid_at > ? ${cityFilter}`).bind(since, ...cb),
     db.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(amount_cents),0) AS cents FROM purchases p WHERE status='paid' AND sticker_id IS NULL ${cityFilter}`).bind(...cb),
+    db.prepare(
+      `SELECT l.id, l.name, l.reserve_url, c.name AS city, COUNT(*) AS taps FROM reserve_clicks r
+       JOIN listings l ON l.id = r.listing_id JOIN cities c ON c.id = r.city_id
+       WHERE r.created_at > ? ${cityId ? "AND r.city_id = ?" : ""} GROUP BY l.id ORDER BY taps DESC LIMIT 25`,
+    ).bind(since, ...cb),
   ]);
 
   const t = totals.results[0] as Agg;
@@ -140,6 +146,28 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             </tr>
           ))}
         </Table>
+      </Card>
+
+      <Card title={`Reservation taps · last ${days} days`}>
+        {reserves.results.length === 0 ? (
+          <p className="text-sm text-muted">No taps yet. Add reservation links to restaurants (edit a listing → Reservation link) and taps on the Reserve button show up here.</p>
+        ) : (
+          <Table head={["Restaurant", "City", "Books with", "Taps"]}>
+            {(reserves.results as { id: number; name: string; reserve_url: string; city: string; taps: number }[]).map((r) => (
+              <tr key={r.id} className="border-t border-line">
+                <td className="py-2">
+                  <Link href={`/admin/listings/${r.id}`} className="text-gold hover:underline">
+                    {r.name}
+                  </Link>
+                </td>
+                <td>{r.city}</td>
+                <td className="text-zinc-400">{reservePlatform(r.reserve_url) ?? "Own website"}</td>
+                <td>{r.taps}</td>
+              </tr>
+            ))}
+          </Table>
+        )}
+        <p className="mt-3 text-xs text-muted">Each tap is a diner you sent to that restaurant. Useful when asking a booking service about referral fees.</p>
       </Card>
 
       <Card title="Per sticker">

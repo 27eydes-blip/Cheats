@@ -45,6 +45,7 @@ export interface Listing {
   details: string;
   local_tip: string | null;
   body: string | null;
+  reserve_url: string | null;
   verified: number;
   last_verified_at: number | null;
   sort: number;
