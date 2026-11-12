@@ -1,7 +1,8 @@
 # CoastPassGo
 
 Tourists scan a QR sticker → pay $5 (Apple Pay / Google Pay / card) → unlock a local guide for that town.
-Cities: **Montauk, NY**, **Key West, FL**, **Nantucket, MA**, **Outer Banks, NC** (all seeded as UNVERIFIED placeholders).
+Cities: **Montauk, NY**, **Key West, FL**, **Nantucket, MA**, **Outer Banks, NC**, **Fort Myers, FL**, **Marco Island, FL**,
+**Tampa, FL**, **Miami, FL** and **Traverse City, MI** (all seeded as UNVERIFIED placeholders).
 Any US city can be added from `/admin` without code changes.
 
 **Stack:** Next.js 16 (App Router) + Tailwind 4, deployed to **Cloudflare Workers** via
