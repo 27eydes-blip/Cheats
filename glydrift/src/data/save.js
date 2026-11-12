@@ -56,6 +56,7 @@ function defaults() {
     perkDaily: "", // date a hero's daily coin perk was last paid (one per day, any hero)
     moveNotice: { shown: 0, done: false }, // the glydrift.com launch pop-up: times shown, finished
     spinPity: 0, // Lucky Spin: spins since the last hero (the guarantee survives restarts)
+    cloudSync: null, // device-only: this device's last cloud sync (online/account.js)
     xpBoost: { mul: 1, runs: 0 }, // Drift Pass XP boost (runs left)
     seasons: {}, // per-season pass XP / claims, event progress, recap + new-hero flags
     pass: { xp: 0, claimed: {} }, // Drift Pass (free track) XP + claimed tiers // unused boosts were refunded as coins when boosts were removed

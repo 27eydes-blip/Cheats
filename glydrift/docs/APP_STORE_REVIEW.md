@@ -109,12 +109,12 @@ on conflict do nothing;
 
 - **Name:** Glydrift
 - **Subtitle (30):** `Neon one-tap arcade flyer` (25)
-- **Promotional text (170):** `Season 1 · Abyss Rising is live: 50 handmade levels, 7 realms, new heroes and a whole new Drift Pass. How far can you glide?`
+- **Promotional text (170):** `New realm: Sakura Skies! 50 handmade levels, 8 living realms, 4 hidden dimensions, new heroes and a whole new Drift Pass. How far can you glide?`
 - **Description:**
 
 > Tap to fly. Thread the gaps. Don't stop.
 >
-> Glydrift is a fast, neon, one-tap arcade game. Glide through seven living realms, from the
+> Glydrift is a fast, neon, one-tap arcade game. Glide through eight living realms, from the
 > Neon Void to the Abyss, as the world speeds up around you.
 >
 > • ENDLESS: one run through every realm, with combos, close calls and coin streaks
@@ -131,7 +131,7 @@ on conflict do nothing;
 - **Category:** Games → Arcade (secondary: Casual)
 - **Support URL:** `https://glydrift.com/support`
 - **Marketing URL:** `https://glydrift.com`
-- **Copyright:** `2026 <your name>`
+- **Copyright:** `2026 Sam Eyde III`
 
 ## Screenshots
 
@@ -145,7 +145,7 @@ Required sizes (portrait):
 Smaller sizes are scaled from these. Up to 10 per size; 5 suggested, in this order:
 
 1. **Mid-run in the Neon Void** with a combo going: "Tap. Glide. Don't stop."
-2. **The Abyss realm** at speed: "7 living realms"
+2. **Sakura Skies / the Abyss** at speed: "8 living realms"
 3. **The level map**: "50 handmade levels"
 4. **The leaderboard podium**: "Climb the world leaderboard"
 5. **Heroes / Drift Pass**: "Unlock dozens of heroes"

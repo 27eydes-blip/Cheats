@@ -8,11 +8,28 @@
 
 import { mergeLevelProgress } from "../levels/merge.js";
 import { PLUS_S1_LAYOUT, migratePlusClaimsS1 } from "../data/seasonDefs.js";
+import { SPIN_MAX } from "../tuning.js";
+
+/**
+ * Spendable amounts. When both sides changed since they last synced (two devices playing in
+ * the same day), each side's earnings and spending are added up instead of one side's total
+ * winning: coins earned on the tablet aren't lost to the phone's total, and a hero bought on
+ * one device isn't paid for by the other's coins.
+ */
+const SPENDABLE = { coins: Infinity, spins: SPIN_MAX, spinPts: Infinity };
+
+/** The spendable amounts of a save (what the device remembers as "last synced"). */
+export function spendable(save) {
+  const out = {};
+  for (const k of Object.keys(SPENDABLE)) out[k] = Math.max(0, Number(save?.[k]) || 0);
+  return out;
+}
 
 /** Device-only parts of the save that never go to the cloud. */
 // (Drift Pass+ ownership is never taken from a save: the server's verified purchases are the
 // source of truth, restored by the store)
-const LOCAL_ONLY = ["settings", "lbQueue", "ghost", "daily", "passPlus", "lbNotice"];
+// (cloudSync: what this device last synced, see account.js)
+const LOCAL_ONLY = ["settings", "lbQueue", "ghost", "daily", "passPlus", "lbNotice", "cloudSync"];
 
 /** The part of a save that is uploaded. */
 export function cloudPayload(save) {
@@ -89,9 +106,10 @@ function mergeSeasons(a = {}, b = {}) {
  * Merge this device's save with the cloud's. Returns a new save; neither input is changed.
  * `local` keeps its device-only parts (settings, pending uploads, ghosts).
  */
-export function mergeSaves(local, cloud) {
+export function mergeSaves(local, cloud, synced = null) {
   if (!cloud) return local;
   const cloudFull = { ...cloud };
+  delete cloudFull.syncId; // (the cloud copy's write id: see account.js pushNow)
   const localWins = progressScore(local) >= progressScore(cloudFull);
   const base = JSON.parse(JSON.stringify(localWins ? local : { ...local, ...cloudFull }));
   const other = localWins ? cloudFull : local;
@@ -161,5 +179,14 @@ export function mergeSaves(local, cloud) {
     if (base.daily) base.daily = { ...base.daily, best: 0, ghost: null };
   }
   delete base.dailyBest;
+  delete base.syncId;
+  // spendable amounts: what both sides gained or spent since they last synced, added up
+  // (`synced` = the amounts this device last saw in the cloud; without it, the base's own)
+  if (synced)
+    for (const [k, cap] of Object.entries(SPENDABLE)) {
+      const was = Number(synced[k]) || 0;
+      const v = was + ((Number(local[k]) || 0) - was) + ((Number(cloudFull[k]) || 0) - was);
+      base[k] = Math.min(cap, Math.max(0, Math.round(v)));
+    }
   return base;
 }

@@ -61,7 +61,7 @@ game's Sign in with Apple and the `verify-purchase` function use:
 - [ ] **Category:** Games → Arcade, plus a secondary category if you want one.
 - [ ] **Age rating** questionnaire. Leaderboard usernames are user-generated content that other
       players see, so answer that question honestly.
-- [ ] **Copyright** line, for example "2026 Your Name".
+- [ ] **Copyright** line: "2026 Sam Eyde III".
 - [ ] **Price:** Free, plus availability (countries).
 - [ ] **Build:** choose the TestFlight build that Codemagic uploaded.
 
