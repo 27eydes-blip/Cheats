@@ -16,56 +16,87 @@
       "options": {
         "hatch": true
       },
-      "note": "Nursery: a pale new ant unfolds from its pupa among the brood."
+      "note": "A pale new ant unfolds among the brood."
     },
     {
       "scene": "antLine",
       "text": "Not first, not last, just... in the middle.",
-      "pause": 0.9,
-      "note": "A single-file line of identical ants; 250 is the one in the middle."
+      "pause": 0.8,
+      "note": "A single-file line; 250 is the one in the middle."
+    },
+    {
+      "scene": "colonyQueen",
+      "text": "The first ants born get names, stories, a place near the queen.",
+      "pause": 0.6,
+      "note": "The queen's chamber, the first-born at her side."
+    },
+    {
+      "scene": "nursery",
+      "text": "The last ones get pity.",
+      "pause": 0.5,
+      "note": "The smallest, palest brood."
+    },
+    {
+      "scene": "antLine",
+      "text": "The ones in the middle get nothing.",
+      "pause": 0.8,
+      "note": "Back to the line; nobody looks at the middle."
     },
     {
       "scene": "nursery",
       "text": "In the nursery tunnels, nobody learned my name because I didn't have one.",
-      "pause": 0.7,
-      "note": "Nurses tend the brood; 250 walks past unnoticed."
+      "pause": 0.6,
+      "note": "250 walks past the nurses, unnoticed."
     },
     {
       "scene": "antLine",
       "text": "I carried crumbs.",
-      "pause": 0.5,
+      "pause": 0.4,
       "options": {
         "carry": true
-      },
-      "note": "The line again, every ant carrying a crumb."
+      }
     },
     {
       "scene": "antLine",
       "text": "I followed lines.",
-      "pause": 0.5,
-      "note": "Following the scent trail."
+      "pause": 0.5
+    },
+    {
+      "scene": "stepAside",
+      "text": "When the soldiers marched past, I stepped aside without being asked.",
+      "pause": 0.6,
+      "note": "Big soldiers march by; 250 presses himself against the wall."
     },
     {
       "scene": "colony",
-      "text": "I was good at being invisible.",
-      "pause": 0.9,
+      "text": "I was good at being invisible. Too good.",
+      "pause": 0.7,
       "options": {
         "find250": true
+      }
+    },
+    {
+      "scene": "vast",
+      "text": "Sometimes I wondered if I'd disappear completely and nobody would even count the difference.",
+      "pause": 0.7,
+      "options": {
+        "fade": true
       },
-      "note": "250 in the crowd; only a tiny glint."
+      "camera": "pull",
+      "note": "Pull back; 250 slowly fades out of the crowd."
     },
     {
       "scene": "rootWall",
-      "text": "Then one morning, out past the root wall,",
+      "text": "Then one morning, out past the root wall, where young ants aren't supposed to go,",
       "pause": 0.3,
-      "note": "Dawn light through a wall of giant roots; 250 walks out."
+      "note": "Dawn light through a wall of giant roots; 250 walks out alone."
     },
     {
       "scene": "amoeba",
       "text": "I stepped in something that glowed.",
       "pause": 1.2,
       "tense": true,
-      "note": "The green amoeba, glowing at his feet."
+      "note": "The green amoeba at his feet."
     }
   ]
 }

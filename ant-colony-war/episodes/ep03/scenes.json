@@ -6,39 +6,88 @@
     {
       "scene": "amoeba",
       "text": "It was green, kind of like light you could touch.",
+      "pause": 0.6,
+      "note": "The amoeba: liquid light, bloom, tendrils."
+    },
+    {
+      "scene": "amoeba",
+      "text": "It pulsed, slowly, like it was breathing.",
       "pause": 0.7,
-      "note": "Close on the amoeba: liquid light, bloom, tendrils."
+      "options": {
+        "close": true
+      },
+      "note": "Closer: it swells and settles like breath."
+    },
+    {
+      "scene": "closeup",
+      "text": "I should've run. Every instinct told me to run.",
+      "pause": 0.5,
+      "tense": true,
+      "options": {
+        "glow": "green"
+      },
+      "note": "250 lit green from the front, frozen."
+    },
+    {
+      "scene": "amoeba",
+      "text": "But I just stood there, staring, because nothing in my whole life had ever looked back at me before.",
+      "pause": 0.8,
+      "options": {
+        "eye": true
+      },
+      "note": "Something like an eye opens in its core and looks at him."
     },
     {
       "scene": "infection",
       "text": "It crawled up my leg like it knew exactly where it was going.",
-      "pause": 0.6,
+      "pause": 0.5,
       "tense": true,
       "infection": 0.15,
       "note": "Tendrils climb his leg."
     },
     {
       "scene": "infection",
-      "text": "Then it {impact}went inside.",
-      "pause": 1.0,
+      "text": "It was warm, then hot, then burning.",
+      "pause": 0.5,
       "tense": true,
-      "infection": 0.35,
-      "note": "It slides in through the crack in his shell. Impact."
+      "infection": 0.3,
+      "note": "The glow brightens up his body."
+    },
+    {
+      "scene": "infection",
+      "text": "Then it {impact}went inside.",
+      "pause": 0.9,
+      "tense": true,
+      "infection": 0.4,
+      "note": "It slides in through a crack in his shell. Impact."
+    },
+    {
+      "scene": "closeup",
+      "text": "I felt it moving through me, through every segment, rewriting something I didn't understand.",
+      "pause": 0.5,
+      "infection": 0.55,
+      "tense": true,
+      "note": "Green veins spread segment by segment."
     },
     {
       "scene": "closeup",
       "text": "I remember the burning,",
       "pause": 0.3,
-      "infection": 0.7,
-      "tense": true,
-      "note": "Close-up: green veins flaring under his shell."
+      "infection": 0.75,
+      "note": "The veins flare."
     },
     {
       "scene": "fall",
       "text": "and I remember falling.",
-      "pause": 0.8,
+      "pause": 0.3,
       "infection": 0.6,
       "note": "Slow motion: he topples onto his back."
+    },
+    {
+      "scene": "dirtMacro",
+      "text": "The dirt {impact}rushed up to meet me.",
+      "pause": 0.7,
+      "note": "Impact: dirt fills the frame."
     },
     {
       "scene": "sky",
@@ -47,7 +96,7 @@
       "options": {
         "closing": true
       },
-      "note": "Looking up through giant grass at the dawn sky; his vision closes."
+      "note": "Looking up through giant grass; his vision closes."
     },
     {
       "scene": "sky",

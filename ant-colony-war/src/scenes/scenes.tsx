@@ -150,7 +150,7 @@ const hero: SceneDef = {
 };
 
 const closeup: SceneDef = {
-  pal: (p) => (p.inf > 0.55 ? { ...AMBER, rim: mix(AMBER.rim, '#7dffa0', (p.inf - 0.55) * 1.2), grade: mix(AMBER.grade, '#39ff6a', (p.inf - 0.5)) } : AMBER),
+  pal: (p) => (p.beat.options?.glow === 'green' ? { ...GREEN, cavity0: '#1a4a2a' } : p.inf > 0.55 ? { ...AMBER, rim: mix(AMBER.rim, '#7dffa0', (p.inf - 0.55) * 1.2), grade: mix(AMBER.grade, '#39ff6a', (p.inf - 0.5)) } : AMBER),
   focus: () => [430 + 110 * 4.1, 930],
   render: (p) => {
     const pal = closeup.pal(p);
@@ -293,7 +293,13 @@ const amoeba: SceneDef = {
       <Stage pal={pal} bg={pal.dirt}>
         <Tunnel id="a-main" pal={pal} camX={p.index * 400 + p.T * 6} t={p.t} ceil={600} floor={1420} seed={51} lights={0} solid={false} />
         <Fog t={p.t} amount={0.8} y={1000} spread={500} />
-        <Amoeba id="am" t={p.T} cx={500} cy={1080} r={170} reach={reach} target={[1000, 1250]} />
+        <Amoeba id="am" t={p.T} cx={p.beat.options?.close ? 540 : 500} cy={p.beat.options?.close ? 1000 : 1080} r={p.beat.options?.close ? 290 : 170} reach={reach} target={[1000, 1250]} />
+        {p.beat.options?.eye && (
+          <g>
+            <ellipse cx={500 + Math.sin(p.T * 0.7) * 10 + 24} cy={1080} rx={44} ry={44 * (0.25 + 0.75 * ease((p.t - 0.6) / 0.8))} fill="#062a12" />
+            <circle cx={500 + Math.sin(p.T * 0.7) * 10 + 34} cy={1072} r={9} fill="#e8ffe8" opacity={ease((p.t - 0.8) / 0.6)} />
+          </g>
+        )}
         <Ant species="trapjaw" t={p.T} x={900} y={1330 - TJ_GROUND * 1.1} scale={1.1} dir={-1} jaw={p.jaw} infection={p.inf} fill={pal.antFill} rim={pal.rim} seed={250} pitch={0.06} />
         <Foreground pal={pal} camX={p.T * 6} t={p.t} />
         <Dust t={p.t} count={70} seed={p.index + 61} color={pal.dust} speed={0.6} />
@@ -375,6 +381,26 @@ const senses: SceneDef = {
             })}
           </g>
         )}
+        {p.beat.options?.reveal === 'queen' && (
+          <g>
+            {range(3).map((k) => {
+              const u = wrap(p.t / 2.4 + k / 3, 1);
+              return <ellipse key={'qr' + k} cx={560} cy={1400} rx={80 + u * 520} ry={40 + u * 260} fill="none" stroke="#ffd28a" strokeOpacity={(1 - u) * 0.45} strokeWidth={2 + (1 - u) * 4} />;
+            })}
+            <g transform={`translate(560 1400) scale(${1 + 0.03 * Math.sin(p.T * 1.6)}) translate(-560 -1400)`}>
+              <Ant species="tjqueen" t={p.T * 0.3} x={600} y={1400} scale={1.15} outline="#ffd28a" seed={3} />
+            </g>
+          </g>
+        )}
+        {p.beat.options?.reveal === 'ghosts' && range(12).map((i) => {
+          const h = hash2(i, 77), x = 60 + h * 960, y = 300 + hash2(i, 78) * 1250;
+          const fade = 0.5 + 0.4 * Math.abs(Math.sin(p.T * 0.6 + i));
+          return (
+            <g key={'gh' + i} opacity={fade} transform={`rotate(${(hash2(i, 79) - 0.5) * 120} ${x} ${y})`}>
+              <Ant species="trapjaw" t={0} x={x} y={y} scale={0.55 + h * 0.3} flip lie={1} eyeOpen={0} outline="#d0e8dc" seed={i} lod={1} />
+            </g>
+          );
+        })}
         <ellipse cx={W / 2} cy={1000} rx={340} ry={220} fill="url(#glintGlow)" opacity={0.35} />
         <Ant species="trapjaw" t={p.T} x={W / 2 - 20} y={1000} scale={1.25} jaw={p.jaw} infection={Math.max(0.5, p.inf)} glowId="veinGlow" fill="#010302" rim="#7dffa0" seed={250} />
         <Dust t={p.t} count={60} seed={p.index + 81} color="#c8ffd2" speed={0.3} />
@@ -844,7 +870,7 @@ const vast: SceneDef = {
               <FloorWalkers t={p.T} camX={camX * (0.5 + (i % 3) * 0.2)} floor={y + 30} seed={700 + i} n={i === 3 ? 10 : 14} scale={0.3} pal={pal} both haze={i === 3 ? 0.1 : 0.4} depth={0.6} lod={2} tseed={70 + i} rough={34} />
             </g>
           ))}
-          <Ant species="trapjaw" t={p.T} x={540} y={floorAt(540, camX * 0.5, 1110, 73, 34, 0.6) - TJ_GROUND * 0.3 + 2} scale={0.3} walk={1} infection={p.inf} fill={pal.antFill} rim={pal.rim} seed={250} lod={1} />
+          <Ant species="trapjaw" t={p.T} x={540} y={floorAt(540, camX * 0.5, 1110, 73, 34, 0.6) - TJ_GROUND * 0.3 + 2} scale={0.3} walk={1} infection={p.inf} fill={pal.antFill} rim={pal.rim} seed={250} lod={1} opacity={p.beat.options?.fade ? 1 - 0.85 * ease(p.t / Math.max(2, p.dur)) : 1} />
           <circle cx={540 + 30} cy={floorAt(540, camX * 0.5, 1110, 73, 34, 0.6) - 22} r={14} fill="url(#glintGlow)" opacity={0.5 + 0.3 * Math.sin(p.T * 2.5)} style={{ mixBlendMode: 'screen' }} />
         </g>
         <Fog t={p.t} amount={0.5} y={1000} spread={700} />

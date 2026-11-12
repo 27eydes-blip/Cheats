@@ -2,13 +2,13 @@ ANT COLONY WAR — SEASON 1
 Narrator: Ant 250 (trap-jaw ant), first person. Voice: low, calm, cinematic.
 
 EPISODE 1 — "WAKE"
-Dirt. That's the first thing I felt. Cold dirt on my face, and a heartbeat that wasn't slowing down. They told me later I was gone for two days. Dead. But I could hear everything: a beetle digging three tunnels over, a drop of water about to fall. My name is 250. I'm two months old. And before this... I was nobody.
+Dirt. That's the first thing I felt. Cold dirt on my face, and a heartbeat that wasn't slowing down. I tried to move my legs, and all six answered at once, too fast, like they belonged to someone else. They told me later I was gone for two days. Dead. But I could hear everything: a beetle digging three tunnels over, a drop of water about to fall, the queen breathing somewhere deep below. I could smell fear in the walls, old fear, from ants who'd died here long before me. My jaws twitched open, then snapped shut so fast the air cracked. I'd never done that before. My name is 250. I'm two months old. And before this... I was nobody.
 
 EPISODE 2 — "NUMBER 250"
-Three hundred twenty ants in my colony. I was born 250th. Not first, not last, just... in the middle. In the nursery tunnels, nobody learned my name because I didn't have one. I carried crumbs. I followed lines. I was good at being invisible. Then one morning, out past the root wall, I stepped in something that glowed.
+Three hundred twenty ants in my colony. I was born 250th. Not first, not last, just... in the middle. The first ants born get names, stories, a place near the queen. The last ones get pity. The ones in the middle get nothing. In the nursery tunnels, nobody learned my name because I didn't have one. I carried crumbs. I followed lines. When the soldiers marched past, I stepped aside without being asked. I was good at being invisible. Too good. Sometimes I wondered if I'd disappear completely and nobody would even count the difference. Then one morning, out past the root wall, where young ants aren't supposed to go, I stepped in something that glowed.
 
 EPISODE 3 — "THE GLOW"
-It was green, kind of like light you could touch. It crawled up my leg like it knew exactly where it was going. Then it went inside. I remember the burning, and I remember falling. The last thing I saw was the sky, and for the first time I wondered what was up there looking back.
+It was green, kind of like light you could touch. It pulsed, slowly, like it was breathing. I should've run. Every instinct told me to run. But I just stood there, staring, because nothing in my whole life had ever looked back at me before. It crawled up my leg like it knew exactly where it was going. It was warm, then hot, then burning. Then it went inside. I felt it moving through me, through every segment, rewriting something I didn't understand. I remember the burning, and I remember falling. The dirt rushed up to meet me. The last thing I saw was the sky, and for the first time I wondered what was up there looking back.
 
 EPISODE 4 — "INVISIBLE"
 When I came back, the workers had already carried me to the waste chamber. Ants don't bury their dead, they just throw them out. So I climbed out of a pile of bodies, walked back into the colony, and nobody noticed. Nobody even looked up. And that's when I realized being invisible might be my greatest weapon.

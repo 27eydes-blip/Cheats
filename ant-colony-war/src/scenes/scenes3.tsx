@@ -3,10 +3,11 @@ import React from 'react';
 import { Ant } from '../art/Ant';
 import { Dust, Embers, Fog, Smoke } from '../art/Atmosphere';
 import { Tunnel } from '../art/Earth';
-import { FIRE, type Palette } from '../art/palette';
+import { AMBER, FIRE, type Palette } from '../art/palette';
 import { mix } from '../lib/color';
 import { ease, hash, lerp, range } from '../lib/random';
-import { COLD, Deep, FIRE_GROUND, Glow, Stage, TJ_GROUND, wrap } from './scenes';
+import { COLD, Deep, FIRE_GROUND, FloorWalkers, Glow, Hero, Stage, TJ_GROUND, wrap } from './scenes';
+import { floorAt, Foreground } from '../art/Earth';
 import type { SceneDef } from './types';
 
 const SLAVE: Palette = { ...COLD, rim: '#c8a890', light: '#d0a070', grade: '#8a7060', cavity0: '#3a3028', cavity1: '#12100c' };
@@ -164,4 +165,69 @@ const royalChamber: SceneDef = {
   },
 };
 
-export const SCENES3: Record<string, SceneDef> = { lineup, execution, assassins, royalChamber };
+/** 250 lying in the dirt, all six legs suddenly kicking too fast. */
+const legs: SceneDef = {
+  pal: () => AMBER,
+  focus: () => [540, 1100],
+  render: (p) => {
+    const pal = AMBER, ground = 1260, sc = 3.4;
+    const kick = 0.6 + 0.4 * Math.sin(p.T * 3);
+    return (
+      <Stage pal={pal} bg={pal.dirt}>
+        <rect x={-300} y={-300} width={1680} height={ground + 300} fill="url(#bgGrad)" />
+        <Glow x={560} y={860} r={900} t={p.t} amount={1.1} ry={600} />
+        <rect x={-300} y={ground} width={1680} height={900} fill={pal.dirt} />
+        <g transform={`translate(${Math.sin(p.T * 40) * 2 * kick} 0)`}>
+          <Ant species="trapjaw" t={p.T} x={540 - 20 * sc} y={ground - TJ_GROUND * sc} scale={sc} lie={0.55} walk={4.5 * kick} eyeOpen={0.6} infection={p.inf} glowId="veinGlow" fill={pal.antFill} rim={pal.rim} seed={250} jaw={0.8} />
+        </g>
+        {range(18).map((i) => {
+          const age = wrap(p.T * 2 + hash(i) * 3, 1);
+          return <circle key={i} cx={260 + hash(i + 4) * 560} cy={ground - age * 160} r={3 + hash(i + 8) * 6} fill="#5a3a1c" opacity={1 - age} />;
+        })}
+        <Dust t={p.t} count={50} seed={p.index + 501} color={pal.dust} />
+      </Stage>
+    );
+  },
+};
+
+/** The trap-jaw queen in her chamber: the first-born at her side, grooming her. */
+const colonyQueen: SceneDef = {
+  pal: () => AMBER,
+  focus: () => [600, 1000],
+  render: (p) => {
+    const pal = AMBER, floor = 1300;
+    return (
+      <Stage pal={pal} bg={pal.dirt}>
+        <Glow x={620} y={980} r={900} t={p.t} amount={1.2} ry={600} />
+        <Fog t={p.t} amount={0.5} y={1000} spread={300} />
+        <Ant species="tjqueen" t={p.T * 0.4} x={700} y={floor - TJ_GROUND * 1.7} scale={1.7} dir={-1} fill="#0c0704" rim="#ffc27a" seed={3} pitch={0.04} />
+        {[[180, 1], [330, 1], [1000, -1]].map(([x, d], i) => (
+          <Ant key={i} species="trapjaw" t={p.T} x={x} y={floor - TJ_GROUND * 1.0 + 4 - (i === 2 ? 220 : 0)} scale={1.0} dir={d as 1 | -1} pitch={0.15 + Math.sin(p.T * 1.4 + i) * 0.05} fill={pal.antFill} rim="#ffd8a0" rimOpacity={0.95} seed={i + 510} />
+        ))}
+        <Dust t={p.t} count={70} seed={p.index + 511} color={pal.dust} />
+      </Stage>
+    );
+  },
+};
+
+/** Soldiers march past; 250 presses against the wall to let them by. */
+const stepAside: SceneDef = {
+  pal: () => AMBER,
+  focus: () => [300, 1150],
+  render: (p) => {
+    const pal = AMBER, floor = 1300, camX = p.index * 300;
+    return (
+      <Stage pal={pal} bg={pal.dirt}>
+        <Deep pal={pal} camX={camX} t={p.t} T={p.T} seed={521} />
+        <Tunnel id="sa" pal={pal} camX={camX} t={p.t} ceil={640} floor={floor} seed={523} lights={2} solid={false} />
+        <FloorWalkers t={p.T} camX={camX} floor={floor} seed={525} n={6} scale={1.45} pal={pal} speed={90} dir={-1} tseed={523} lod={0} fill="#080402" rim="#ffc27a" />
+        <Hero {...p} x={140} y={floorAt(140, camX, floor, 523) - TJ_GROUND * 0.9 - 150} scale={0.9} pal={pal} pitch={0.25} />
+        <Fog t={p.t} amount={0.4} y={1200} spread={150} />
+        <Foreground pal={pal} camX={camX} t={p.t} />
+        <Dust t={p.t} count={60} seed={p.index + 521} color={pal.dust} />
+      </Stage>
+    );
+  },
+};
+
+export const SCENES3: Record<string, SceneDef> = { lineup, execution, assassins, royalChamber, legs, colonyQueen, stepAside };
