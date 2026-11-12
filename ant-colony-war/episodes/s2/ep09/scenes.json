@@ -1,0 +1,130 @@
+{
+  "season": 2,
+  "episode": 9,
+  "title": "HIGH GROUND",
+  "infection": 0.93,
+  "voice": {
+    "stability": 0.244,
+    "style": 0.62
+  },
+  "greenVoice": {
+    "semitones": -0.3,
+    "whisper": 0.06,
+    "echo": 0.12
+  },
+  "shots": [
+    {
+      "scene": "burningCreek",
+      "text": "We fought until the sun came up.",
+      "pause": 0.3,
+      "options": {
+        "mode": "clash"
+      }
+    },
+    {
+      "scene": "burningCreek",
+      "text": "Kael got a {snap}snap through my armor.",
+      "pause": 0.3,
+      "options": {
+        "mode": "clash"
+      },
+      "whip": true
+    },
+    {
+      "scene": "burningCreek",
+      "text": "I {impact}took one of his legs. Neither of us stopped.",
+      "pause": 0.4,
+      "options": {
+        "mode": "clash"
+      },
+      "whip": true
+    },
+    {
+      "scene": "burningCreek",
+      "text": "Then he climbed. Up the giant root arching over the burning creek.",
+      "pause": 0.5,
+      "options": {
+        "mode": "climb"
+      }
+    },
+    {
+      "scene": "burningCreek",
+      "text": "He looked down at me and said, \"It's over. Don't follow me.\"",
+      "pause": 0.5,
+      "memory": true,
+      "options": {
+        "mode": "climb"
+      }
+    },
+    {
+      "scene": "theGreen",
+      "text": "The voice screamed inside me.",
+      "pause": 0.2,
+      "options": {
+        "intensity": 1
+      }
+    },
+    {
+      "scene": "theGreen",
+      "text": "[He's weak. Take him.]",
+      "pause": 0.4,
+      "options": {
+        "intensity": 1
+      }
+    },
+    {
+      "scene": "burningCreek",
+      "text": "I jumped. I was faster than him. I'd always been faster than him.",
+      "pause": 0.4,
+      "options": {
+        "mode": "jump"
+      },
+      "slowmo": true
+    },
+    {
+      "scene": "dark",
+      "text": "But faster isn't the same as smarter.",
+      "pause": 0.5
+    },
+    {
+      "scene": "burningCreek",
+      "text": "Kael {snap}snapped at the exact moment I landed.",
+      "pause": 0.4,
+      "options": {
+        "mode": "jump"
+      },
+      "slowmo": true
+    },
+    {
+      "scene": "burningCreek",
+      "text": "My jaw {impact}cracked. My legs gave out. I fell, and the burning mud swallowed half my body.",
+      "pause": 0.6,
+      "options": {
+        "mode": "fallen"
+      }
+    },
+    {
+      "scene": "burningCreek",
+      "text": "Kael looked down at me, crying. \"You were my brother. I loved you.\"",
+      "pause": 0.7,
+      "memory": true,
+      "options": {
+        "mode": "fallen"
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "I screamed his name until my voice broke.",
+      "pause": 0.6,
+      "tense": true
+    },
+    {
+      "scene": "burningCreek",
+      "text": "He picked up Tavi and walked into the smoke. And he never looked back.",
+      "pause": 1.4,
+      "options": {
+        "mode": "leave"
+      }
+    }
+  ]
+}

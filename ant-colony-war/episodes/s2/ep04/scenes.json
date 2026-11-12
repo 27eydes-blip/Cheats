@@ -1,0 +1,110 @@
+{
+  "season": 2,
+  "episode": 4,
+  "title": "KAEL",
+  "infection": 0.58,
+  "voice": {
+    "stability": 0.354,
+    "style": 0.47
+  },
+  "greenVoice": {
+    "semitones": -2.35,
+    "whisper": 0.27,
+    "echo": 0.35
+  },
+  "shots": [
+    {
+      "scene": "kael",
+      "text": "He came at night, through a tunnel even I didn't know existed.",
+      "pause": 0.5,
+      "options": {
+        "mode": "alive"
+      }
+    },
+    {
+      "scene": "kael",
+      "text": "One broken antenna, a scar across his face, the same crooked smile from the nursery.",
+      "pause": 0.5,
+      "options": {
+        "mode": "alive"
+      }
+    },
+    {
+      "scene": "hideout",
+      "text": "\"Hey, 250.\"",
+      "pause": 0.6,
+      "memory": true,
+      "options": {
+        "mode": "visit"
+      }
+    },
+    {
+      "scene": "hideout",
+      "text": "I could've called the guards. I didn't. We sat in the dark like we were kids again.",
+      "pause": 0.6,
+      "options": {
+        "mode": "visit"
+      }
+    },
+    {
+      "scene": "hideout",
+      "text": "He told me about the rebellion. Two hundred trap-jaws, hiding in an old beetle burrow, waiting.",
+      "pause": 0.5,
+      "options": {
+        "mode": "rebels"
+      }
+    },
+    {
+      "scene": "hideout",
+      "text": "\"Free our people,\" he said. \"Come home. This isn't you.\"",
+      "pause": 0.6,
+      "memory": true,
+      "options": {
+        "mode": "visit"
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "For one second, I almost said yes. I almost took off the armor.",
+      "pause": 0.5
+    },
+    {
+      "scene": "theGreen",
+      "text": "Then the green pulsed, hot, behind my eyes.",
+      "pause": 0.3,
+      "options": {
+        "intensity": 0.9
+      }
+    },
+    {
+      "scene": "theGreen",
+      "text": "[He'll take Tavi. He'll take everything.]",
+      "pause": 0.6,
+      "options": {
+        "intensity": 0.9
+      }
+    },
+    {
+      "scene": "hideout",
+      "text": "Kael stood up to leave and said, \"Tomorrow night. The cold tunnels. Be there, brother.\"",
+      "pause": 0.6,
+      "memory": true,
+      "options": {
+        "mode": "visit"
+      }
+    },
+    {
+      "scene": "dark",
+      "text": "Then he was gone. And the voice kept repeating one word.",
+      "pause": 0.4
+    },
+    {
+      "scene": "theGreen",
+      "text": "[Tomorrow.]",
+      "pause": 1.4,
+      "options": {
+        "intensity": 1
+      }
+    }
+  ]
+}

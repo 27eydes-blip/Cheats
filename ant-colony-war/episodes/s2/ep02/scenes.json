@@ -1,0 +1,96 @@
+{
+  "season": 2,
+  "episode": 2,
+  "title": "THE VOICE",
+  "infection": 0.44,
+  "voice": {
+    "stability": 0.398,
+    "style": 0.41
+  },
+  "greenVoice": {
+    "semitones": -3.45,
+    "whisper": 0.39,
+    "echo": 0.45
+  },
+  "shots": [
+    {
+      "scene": "closeup",
+      "text": "It started as a hum. Low, in the back of my head, every time the green pulsed.",
+      "pause": 0.6,
+      "note": "Close on Lord Mandros; the veins pulse with the hum."
+    },
+    {
+      "scene": "throneRoom",
+      "text": "Then one night, alone on the throne, the hum turned into words.",
+      "pause": 0.5,
+      "options": {
+        "phase": "night"
+      }
+    },
+    {
+      "scene": "theGreen",
+      "text": "[You're welcome.]",
+      "pause": 0.8,
+      "options": {
+        "intensity": 0.5
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "I froze.",
+      "pause": 0.6,
+      "camera": "still"
+    },
+    {
+      "scene": "theGreen",
+      "text": "[I gave you everything. Your speed. Your senses. Your crown.]",
+      "pause": 0.6,
+      "options": {
+        "intensity": 0.6
+      }
+    },
+    {
+      "scene": "throneRoom",
+      "text": "I asked what it wanted.",
+      "pause": 0.4,
+      "options": {
+        "phase": "night"
+      }
+    },
+    {
+      "scene": "theGreen",
+      "text": "[The same thing you want. To never be weak again.]",
+      "pause": 0.6,
+      "options": {
+        "intensity": 0.7
+      }
+    },
+    {
+      "scene": "dark",
+      "text": "I should've been scared. Instead, I felt understood for the first time in my life.",
+      "pause": 0.6
+    },
+    {
+      "scene": "wasteChamber",
+      "text": "Every ant who ever ignored me, every ant who threw me into the waste chamber, the voice remembered them too.",
+      "pause": 0.5,
+      "note": "Memory: the waste chamber."
+    },
+    {
+      "scene": "theGreen",
+      "text": "[They will always fear what you are. Let them.]",
+      "pause": 0.8,
+      "options": {
+        "intensity": 0.8
+      }
+    },
+    {
+      "scene": "throneRoom",
+      "text": "I didn't sleep that night. I didn't need to. The voice kept me company until morning.",
+      "pause": 1.4,
+      "options": {
+        "phase": "night"
+      }
+    }
+  ]
+}

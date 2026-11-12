@@ -1,0 +1,114 @@
+{
+  "season": 2,
+  "episode": 3,
+  "title": "THE SICKNESS",
+  "infection": 0.51,
+  "voice": {
+    "stability": 0.376,
+    "style": 0.44
+  },
+  "greenVoice": {
+    "semitones": -2.9,
+    "whisper": 0.33,
+    "echo": 0.4
+  },
+  "shots": [
+    {
+      "scene": "healingChamber",
+      "text": "I started visiting Tavi in secret.",
+      "pause": 0.5,
+      "options": {
+        "visit": true
+      }
+    },
+    {
+      "scene": "healingChamber",
+      "text": "I'd bring him the best food in the colony, and he'd tell me stories about our mother.",
+      "pause": 0.5,
+      "options": {
+        "visit": true
+      }
+    },
+    {
+      "scene": "taviClose",
+      "text": "He laughed exactly like I used to, before I forgot how.",
+      "pause": 0.7
+    },
+    {
+      "scene": "taviClose",
+      "text": "Then one morning, he didn't laugh. His shell was pale. His antennae barely moved.",
+      "pause": 0.6,
+      "tense": true,
+      "options": {
+        "sick": 0.8
+      }
+    },
+    {
+      "scene": "healingChamber",
+      "text": "The healers called it creek rot. They said no ant survives it.",
+      "pause": 0.6,
+      "tense": true,
+      "options": {
+        "sick": 1,
+        "table": "whole"
+      }
+    },
+    {
+      "scene": "healingChamber",
+      "text": "I {snap}snapped the healer's table in half. The whole chamber went silent.",
+      "pause": 0.7,
+      "options": {
+        "sick": 1,
+        "table": "snapped"
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "And the voice whispered,",
+      "pause": 0.2
+    },
+    {
+      "scene": "theGreen",
+      "text": "[I can save him.]",
+      "pause": 0.6,
+      "options": {
+        "intensity": 0.6
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "I asked how.",
+      "pause": 0.4
+    },
+    {
+      "scene": "theGreen",
+      "text": "[Let me all the way in. No more holding back. No more half of you.]",
+      "pause": 0.6,
+      "options": {
+        "intensity": 0.8
+      }
+    },
+    {
+      "scene": "healingChamber",
+      "text": "I looked at Tavi, breathing so slow I could count every breath. Seven a minute. Then six.",
+      "pause": 0.6,
+      "tense": true,
+      "options": {
+        "sick": 1
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "I said, \"Do it.\"",
+      "pause": 0.6
+    },
+    {
+      "scene": "theGreen",
+      "text": "[Not yet. First... you have to prove you're mine.]",
+      "pause": 1.4,
+      "options": {
+        "intensity": 0.9
+      }
+    }
+  ]
+}

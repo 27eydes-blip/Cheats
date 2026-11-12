@@ -140,3 +140,39 @@ const env = (i: number, at: number, dec: number) => (i < at ? 0 : Math.exp(-(i -
   for (let i = 0; i < x.length; i++) { const t = i / SR; x[i] = white() * env(i, 0, 0.03) * 0.6 + b[i] * 14 * (Math.min(1, t * 6)) * Math.exp(-t / 1.4) * (0.6 + 0.4 * Math.sin(TAU * 3 * t + Math.sin(TAU * 0.7 * t) * 3)); }
   writeWav('thunder.wav', x);
 }
+// --- armor clamp: a heavy metallic thud (Season 2 rebuild)
+{
+  const x = buf(1.4);
+  for (let i = 0; i < x.length; i++) {
+    const t = i / SR;
+    x[i] = Math.sin(TAU * (60 + 90 * Math.exp(-t * 20)) * t) * env(i, 0, 0.18) * 1.0 + white() * env(i, 0, 0.012) * 0.8 +
+      (Math.sin(TAU * 410 * t) + 0.6 * Math.sin(TAU * 1130 * t) + 0.4 * Math.sin(TAU * 2270 * t)) * env(i, 0, 0.22) * 0.35;
+  }
+  writeWav('clamp.wav', reverb(x, 1.0, 0.3));
+}
+// --- deep mechanical breathing, like stone grinding (loop)
+{
+  const L = 4, x = buf(L), b = lowpass(brown(x.length), 500), g = bandpass(Float32Array.from({ length: x.length }, white), 180, 1.5);
+  for (let i = 0; i < x.length; i++) {
+    const t = i / SR, ph = (t % L) / L;
+    const inhale = Math.sin(Math.PI * Math.min(1, ph / 0.45)) * (ph < 0.45 ? 1 : 0), exhale = Math.sin(Math.PI * Math.max(0, (ph - 0.5) / 0.45)) * (ph >= 0.5 && ph < 0.95 ? 1 : 0);
+    const grind = 0.5 + 0.5 * Math.sign(Math.sin(TAU * 31 * t));
+    x[i] = (b[i] * 10 + g[i] * 2.2 * grind) * (inhale * 0.7 + exhale);
+  }
+  writeWav('breath.wav', loopable(x, 0.3), 0.8);
+}
+// --- whip-pan whoosh (short, sharp)
+{
+  const L = 0.45, x = Float32Array.from({ length: Math.round(L * SR) }, white);
+  const y = bandpass(x, (i) => 600 + 5000 * (i / x.length), 1.4).map((v, i) => v * Math.sin((Math.PI * i) / x.length) ** 2);
+  writeWav('whip.wav', y, 0.8);
+}
+// --- the Green: a low, breathing hum under its lines (loop)
+{
+  const L = 6, x = buf(L);
+  for (let i = 0; i < x.length; i++) {
+    const t = i / SR;
+    x[i] = (0.5 * Math.sin(TAU * 49.5 * t) + 0.3 * Math.sin(TAU * 74.25 * t + Math.sin(TAU * 0.5 * t)) + 0.08 * Math.sin(TAU * 990 * t) * (0.5 + 0.5 * Math.sin(TAU * 4 * t))) * (0.6 + 0.4 * Math.sin((TAU * t) / 3));
+  }
+  writeWav('green.wav', loopable(x, 0.5), 0.6);
+}

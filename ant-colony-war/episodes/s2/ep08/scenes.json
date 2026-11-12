@@ -1,0 +1,107 @@
+{
+  "season": 2,
+  "episode": 8,
+  "title": "THE BURNING CREEK",
+  "infection": 0.86,
+  "voice": {
+    "stability": 0.266,
+    "style": 0.59
+  },
+  "greenVoice": {
+    "semitones": -0.3,
+    "whisper": 0.06,
+    "echo": 0.15
+  },
+  "shots": [
+    {
+      "scene": "burningCreek",
+      "text": "The creek was on fire. The fire ants had burned the banks during the war, and the sap still glowed in the mud like rivers of light.",
+      "pause": 0.5,
+      "options": {
+        "mode": "wide"
+      },
+      "camera": "push"
+    },
+    {
+      "scene": "burningCreek",
+      "text": "Kael stood on the far bank, Tavi hiding behind him.",
+      "pause": 0.5,
+      "options": {
+        "mode": "standoff"
+      }
+    },
+    {
+      "scene": "burningCreek",
+      "text": "\"Look at yourself,\" Kael said. \"Look what it's done to you.\"",
+      "pause": 0.5,
+      "memory": true,
+      "options": {
+        "mode": "standoff"
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "I told him to give me my brother.",
+      "pause": 0.4
+    },
+    {
+      "scene": "burningCreek",
+      "text": "\"He's not safe with you,\" Kael said. \"Nobody is.\"",
+      "pause": 0.6,
+      "memory": true,
+      "options": {
+        "mode": "standoff"
+      }
+    },
+    {
+      "scene": "burningCreek",
+      "text": "Then we {impact}moved.",
+      "pause": 0.3,
+      "options": {
+        "mode": "clash"
+      },
+      "whip": true
+    },
+    {
+      "scene": "burningCreek",
+      "text": "Two trap-jaws, the fastest jaws in the world, {snap}snapping so fast the air cracked.",
+      "pause": 0.3,
+      "options": {
+        "mode": "clash"
+      },
+      "slowmo": true
+    },
+    {
+      "scene": "burningCreek",
+      "text": "Sparks flew off our shells.",
+      "pause": 0.3,
+      "options": {
+        "mode": "clash"
+      },
+      "whip": true
+    },
+    {
+      "scene": "burningCreek",
+      "text": "We fought across the burning mud, over stones, through smoke so thick I could only see him by his heartbeat.",
+      "pause": 0.5,
+      "options": {
+        "mode": "smoke"
+      },
+      "tense": true
+    },
+    {
+      "scene": "burningCreek",
+      "text": "He'd trained his whole life for this. I'd been given it in one night.",
+      "pause": 0.5,
+      "options": {
+        "mode": "clash"
+      },
+      "whip": true
+    },
+    {
+      "scene": "closeup",
+      "text": "And for the first time since the amoeba... someone was keeping up with me.",
+      "pause": 1.4
+    }
+  ]
+}

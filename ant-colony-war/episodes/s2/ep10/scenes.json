@@ -1,0 +1,178 @@
+{
+  "season": 2,
+  "episode": 10,
+  "title": "LORD MANDROS",
+  "infection": 1,
+  "voice": {
+    "stability": 0.222,
+    "style": 0.65
+  },
+  "greenVoice": {
+    "semitones": -0.3,
+    "whisper": 0.06,
+    "echo": 0.12
+  },
+  "endCard": "FOLLOW FOR SEASON 3",
+  "shots": [
+    {
+      "scene": "burningCreek",
+      "text": "The fire soldiers found me at sunset, barely breathing, the green leaking out of my cracks like blood.",
+      "pause": 0.5,
+      "options": {
+        "mode": "fallen"
+      }
+    },
+    {
+      "scene": "rebuild",
+      "text": "Velka had them carry me to the deepest chamber in the colony.",
+      "pause": 0.5,
+      "options": {
+        "mode": "carry"
+      }
+    },
+    {
+      "scene": "rebuild",
+      "text": "For nine days, they rebuilt me. Black resin armor, sealed piece by piece over the burns.",
+      "pause": 0.4,
+      "options": {
+        "mode": "seal"
+      },
+      "sfx": [
+        {
+          "name": "clamp",
+          "at": 1.2
+        },
+        {
+          "name": "clamp",
+          "at": 2.4
+        },
+        {
+          "name": "clamp",
+          "at": 3.6
+        },
+        {
+          "name": "clamp",
+          "at": 4.8
+        },
+        {
+          "name": "clamp",
+          "at": 6.0
+        }
+      ]
+    },
+    {
+      "scene": "rebuild",
+      "text": "New mandibles, carved from beetle shell and sharpened like blades. Every piece hurt more than the last.",
+      "pause": 0.5,
+      "options": {
+        "mode": "seal"
+      },
+      "sfx": [
+        {
+          "name": "clamp",
+          "at": 0.8
+        },
+        {
+          "name": "clamp",
+          "at": 2.2
+        },
+        {
+          "name": "clamp",
+          "at": 3.6
+        },
+        {
+          "name": "clamp",
+          "at": 5.0
+        }
+      ]
+    },
+    {
+      "scene": "theGreen",
+      "text": "And through all of it, the voice stayed with me.",
+      "pause": 0.3,
+      "options": {
+        "intensity": 0.8
+      }
+    },
+    {
+      "scene": "theGreen",
+      "text": "[You don't need them. You only need me.]",
+      "pause": 0.8,
+      "options": {
+        "intensity": 1
+      }
+    },
+    {
+      "scene": "rebuild",
+      "text": "When it was done, I stood up. Every step was heavy. Every breath sounded like stone grinding.",
+      "pause": 0.6,
+      "options": {
+        "mode": "reveal"
+      },
+      "breathing": true,
+      "slowmo": true
+    },
+    {
+      "scene": "velkaChamber",
+      "text": "Velka bowed.",
+      "pause": 0.5,
+      "options": {
+        "mode": "bow"
+      },
+      "breathing": true
+    },
+    {
+      "scene": "rebuild",
+      "text": "Then I asked her the only question that mattered. \"Where's Tavi?\"",
+      "pause": 0.6,
+      "options": {
+        "mode": "reveal"
+      },
+      "breathing": true
+    },
+    {
+      "scene": "velkaChamber",
+      "text": "She looked at the floor. \"He's gone. With Kael.\"",
+      "pause": 0.7,
+      "memory": true,
+      "options": {
+        "mode": "bow"
+      }
+    },
+    {
+      "scene": "rebuild",
+      "text": "I {impact}screamed, and the whole colony shook. Thousands of soldiers fell to the ground.",
+      "pause": 0.6,
+      "options": {
+        "mode": "scream"
+      }
+    },
+    {
+      "scene": "vast",
+      "text": "Number 250 died in that creek.",
+      "pause": 0.7,
+      "options": {
+        "fade": true
+      },
+      "camera": "pull"
+    },
+    {
+      "scene": "rebuild",
+      "text": "There's only Lord Mandros now.",
+      "pause": 0.8,
+      "options": {
+        "mode": "reveal"
+      },
+      "breathing": true,
+      "camera": "push"
+    },
+    {
+      "scene": "kael",
+      "text": "And somewhere out there, my brother is learning to hate me.",
+      "pause": 1.8,
+      "options": {
+        "mode": "alive"
+      }
+    }
+  ]
+}

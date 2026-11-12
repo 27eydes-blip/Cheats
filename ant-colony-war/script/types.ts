@@ -71,7 +71,15 @@ export type SceneId =
   | 'throneRoom'
   | 'coldTunnels'
   | 'taviClose'
-  | 'kael';
+  | 'kael'
+  | 'healingChamber'
+  | 'hideout'
+  | 'velkaChamber'
+  | 'theGreen'
+  | 'purge'
+  | 'collapse'
+  | 'burningCreek'
+  | 'rebuild';
 
 export type Shot = {
   scene: SceneId;
@@ -102,6 +110,10 @@ export type Shot = {
   slowmo?: boolean;
   /** Whip-pan into this shot. */
   whip?: boolean;
+  /** Extra sound hits in this shot: [{ "name": "clamp", "at": 1.2 }] (seconds from the shot's start). */
+  sfx?: { name: string; at: number; volume?: number }[];
+  /** Deep mechanical breathing under this shot. */
+  breathing?: boolean;
 };
 
 /** Kept as an alias: a "beat" is a shot. */

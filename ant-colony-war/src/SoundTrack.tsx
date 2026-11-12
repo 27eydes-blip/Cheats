@@ -2,8 +2,9 @@ import React from 'react';
 import { Audio, interpolate, Sequence, staticFile, useVideoConfig } from 'remotion';
 import type { Episode } from '../script/types';
 import type { Timeline } from './timeline/types';
+import { isGreenShot } from './timeline/remap';
 
-const SWARM_SCENES = new Set(['swarm', 'battle', 'army', 'fireColony']);
+const SWARM_SCENES = new Set(['swarm', 'battle', 'army', 'fireColony', 'purge']);
 
 /** Loop a sound over a time range with short fades. */
 const Bed: React.FC<{ src: string; from: number; to: number; volume: number; fade?: number }> = ({ src, from, to, volume, fade = 0.4 }) => {
@@ -57,6 +58,11 @@ export const SoundTrack: React.FC<{ ep: Episode; tl: Timeline; cues: { type: str
       {ranges(tl, ep, (i) => !!ep.beats[i].fire).map(([a, b], i) => <Bed key={'fi' + i} src="sfx/fire.wav" from={a} to={b} volume={0.5} />)}
       {ranges(tl, ep, (i) => !!ep.beats[i].rain).map(([a, b], i) => <Bed key={'ra' + i} src="sfx/rain.wav" from={a} to={b} volume={0.5} />)}
       {ranges(tl, ep, (i) => !!ep.beats[i].senses).map(([a, b], i) => <Bed key={'se' + i} src="sfx/senses.wav" from={a} to={b} volume={0.6} fade={0.6} />)}
+      {ranges(tl, ep, (i) => isGreenShot(ep.beats[i])).map(([a, b], i) => <Bed key={'gr' + i} src="sfx/green.wav" from={a} to={b} volume={0.55} fade={0.5} />)}
+      {ranges(tl, ep, (i) => !!ep.beats[i].breathing).map(([a, b], i) => <Bed key={'br' + i} src="sfx/breath.wav" from={a} to={b} volume={0.8} fade={0.4} />)}
+      {ranges(tl, ep, (i) => ep.beats[i].scene === 'burningCreek').map(([a, b], i) => <Bed key={'cr' + i} src="sfx/fire.wav" from={a} to={b} volume={0.45} />)}
+      {ep.beats.map((b, i) => (b.whip ? <Hit key={'wh' + i} src="sfx/whip.wav" at={tl.beats[i].start - 0.05} volume={0.7} /> : null))}
+      {ep.beats.flatMap((b, i) => (b.sfx ?? []).map((s, k) => <Hit key={'sx' + i + '-' + k} src={`sfx/${s.name}.wav`} at={tl.beats[i].start + s.at} volume={s.volume ?? 0.9} />))}
       {cues.map((c, i) =>
         c.type === 'snap' ? (
           <Hit key={'c' + i} src="sfx/snap.wav" at={c.at - 0.02} volume={1} />

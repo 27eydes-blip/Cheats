@@ -1,0 +1,113 @@
+{
+  "season": 2,
+  "episode": 5,
+  "title": "THE CHOICE",
+  "infection": 0.65,
+  "voice": {
+    "stability": 0.332,
+    "style": 0.5
+  },
+  "greenVoice": {
+    "semitones": -1.8,
+    "whisper": 0.21,
+    "echo": 0.3
+  },
+  "shots": [
+    {
+      "scene": "theGreen",
+      "text": "The voice showed me things.",
+      "pause": 0.3,
+      "options": {
+        "intensity": 0.6
+      }
+    },
+    {
+      "scene": "purge",
+      "text": "Tavi in the middle of the rebellion. Fire soldiers flooding the cold tunnels. Tavi trapped in the crowd.",
+      "pause": 0.5,
+      "options": {
+        "mode": "vision"
+      },
+      "tense": true
+    },
+    {
+      "scene": "theGreen",
+      "text": "[This is what happens if they fight. Your brother dies in their war.]",
+      "pause": 0.6,
+      "options": {
+        "intensity": 0.8
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "I asked what I should do.",
+      "pause": 0.4
+    },
+    {
+      "scene": "theGreen",
+      "text": "[End it before it starts.]",
+      "pause": 0.6,
+      "options": {
+        "intensity": 0.9
+      }
+    },
+    {
+      "scene": "velkaChamber",
+      "text": "I walked to General Velka Thrane's chamber. She'd always watched me like she knew something I didn't.",
+      "pause": 0.5,
+      "options": {
+        "mode": "watch"
+      }
+    },
+    {
+      "scene": "velkaChamber",
+      "text": "I told her everything. The beetle burrow. The cold tunnels. Tomorrow night.",
+      "pause": 0.5,
+      "options": {
+        "mode": "tell"
+      }
+    },
+    {
+      "scene": "velkaChamber",
+      "text": "She smiled for the first time since I'd met her. \"And the leader?\"",
+      "pause": 0.7,
+      "memory": true,
+      "options": {
+        "mode": "smile"
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "I hesitated. Just for a second.",
+      "pause": 0.6,
+      "tense": true,
+      "camera": "still"
+    },
+    {
+      "scene": "closeup",
+      "text": "Then I said his name. \"Kael.\"",
+      "pause": 0.7
+    },
+    {
+      "scene": "theGreen",
+      "text": "The green flared so bright it lit the whole chamber.",
+      "pause": 0.3,
+      "options": {
+        "intensity": 1
+      }
+    },
+    {
+      "scene": "theGreen",
+      "text": "[Good. Now you're mine.]",
+      "pause": 0.8,
+      "options": {
+        "intensity": 1
+      }
+    },
+    {
+      "scene": "dark",
+      "text": "I told myself I was saving Tavi. I told myself a lot of things that night.",
+      "pause": 1.4
+    }
+  ]
+}

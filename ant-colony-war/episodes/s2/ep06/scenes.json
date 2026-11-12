@@ -1,0 +1,102 @@
+{
+  "season": 2,
+  "episode": 6,
+  "title": "THE PURGE",
+  "infection": 0.72,
+  "voice": {
+    "stability": 0.31,
+    "style": 0.53
+  },
+  "greenVoice": {
+    "semitones": -1.25,
+    "whisper": 0.15,
+    "echo": 0.25
+  },
+  "shots": [
+    {
+      "scene": "purge",
+      "text": "I led them myself. Five hundred fire soldiers, moving through the dark, and me at the front.",
+      "pause": 0.4,
+      "options": {
+        "mode": "march"
+      }
+    },
+    {
+      "scene": "hideout",
+      "text": "The rebels never had a chance. They were waiting for their friend.",
+      "pause": 0.3,
+      "options": {
+        "mode": "rebels"
+      },
+      "tense": true
+    },
+    {
+      "scene": "purge",
+      "text": "Instead, they got Lord Mandros.",
+      "pause": 0.3,
+      "options": {
+        "mode": "flood"
+      },
+      "strobe": true,
+      "whip": true
+    },
+    {
+      "scene": "purge",
+      "text": "Every trap-jaw who raised his jaws against me {impact}went down.",
+      "pause": 0.4,
+      "options": {
+        "mode": "flood"
+      },
+      "strobe": true,
+      "whip": true
+    },
+    {
+      "scene": "purge",
+      "text": "The old worker who fed me in the nursery stood in front of the younger ones and looked at me with tears in his eyes.",
+      "pause": 0.4,
+      "options": {
+        "mode": "stand"
+      }
+    },
+    {
+      "scene": "purge",
+      "text": "\"Not you, 250. Anyone but you.\"",
+      "pause": 0.8,
+      "memory": true,
+      "options": {
+        "mode": "stand"
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "I didn't answer. I just let the soldiers pass.",
+      "pause": 0.6
+    },
+    {
+      "scene": "hideout",
+      "text": "By morning, the beetle burrow was empty. The rebellion was over.",
+      "pause": 0.6,
+      "options": {
+        "mode": "empty"
+      }
+    },
+    {
+      "scene": "senses",
+      "text": "But when I searched every tunnel, one body was missing. Kael.",
+      "pause": 0.6,
+      "senses": true,
+      "options": {
+        "reveal": "kael"
+      }
+    },
+    {
+      "scene": "healingChamber",
+      "text": "And when I got back to the healing chamber... Tavi's bed was empty too.",
+      "pause": 1.4,
+      "tense": true,
+      "options": {
+        "empty": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "season": 2,
+  "episode": 7,
+  "title": "ALL THE WAY IN",
+  "infection": 0.79,
+  "voice": {
+    "stability": 0.288,
+    "style": 0.56
+  },
+  "greenVoice": {
+    "semitones": -0.7,
+    "whisper": 0.09,
+    "echo": 0.2
+  },
+  "shots": [
+    {
+      "scene": "theGreen",
+      "text": "[You did everything I asked.]",
+      "pause": 0.6,
+      "options": {
+        "intensity": 0.8
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "I demanded to know where Tavi was.",
+      "pause": 0.4
+    },
+    {
+      "scene": "theGreen",
+      "text": "[Safe. For now.]",
+      "pause": 0.6,
+      "options": {
+        "intensity": 0.8
+      }
+    },
+    {
+      "scene": "collapse",
+      "text": "And then it happened. The green didn't just pulse. It flooded. Through every vein, every segment, every thought.",
+      "pause": 0.4,
+      "options": {
+        "mode": "fall"
+      },
+      "tense": true
+    },
+    {
+      "scene": "collapse",
+      "text": "I collapsed on the throne room floor while thousands of soldiers watched.",
+      "pause": 0.6,
+      "options": {
+        "mode": "fall"
+      }
+    },
+    {
+      "scene": "vast",
+      "text": "I felt my old self leaving. Number 250, the crumb carrier, the ant nobody noticed, fading like a scent in the rain.",
+      "pause": 0.6,
+      "options": {
+        "fade": true
+      },
+      "camera": "pull"
+    },
+    {
+      "scene": "collapse",
+      "text": "When I stood up, the soldiers backed away. My eyes weren't glowing anymore. They were burning.",
+      "pause": 0.6,
+      "options": {
+        "mode": "rise"
+      }
+    },
+    {
+      "scene": "collapse",
+      "text": "Then a scout ran in, shaking. \"The rebel leader. He's at the creek. And he has a small trap-jaw with him.\"",
+      "pause": 0.5,
+      "memory": true,
+      "options": {
+        "mode": "scout"
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "Tavi. Kael had taken Tavi.",
+      "pause": 0.5,
+      "tense": true
+    },
+    {
+      "scene": "theGreen",
+      "text": "[Go,]",
+      "pause": 0.1,
+      "options": {
+        "intensity": 1
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "the voice said.",
+      "pause": 0.1
+    },
+    {
+      "scene": "theGreen",
+      "text": "[End him.]",
+      "pause": 0.7,
+      "options": {
+        "intensity": 1
+      }
+    },
+    {
+      "scene": "dark",
+      "text": "For the first time, it didn't feel like the voice was talking. It felt like I was.",
+      "pause": 1.4
+    }
+  ]
+}
