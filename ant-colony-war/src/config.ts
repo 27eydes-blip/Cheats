@@ -9,4 +9,4 @@ export const SERIES = 'ANT COLONY WAR';
 /** Scenes are drawn a little higher than centre so the action sits above the captions. */
 export const SCENE_SHIFT = -190;
 export const MIN_SECONDS = 45;
-export const MAX_SECONDS = 75;
+export const MAX_SECONDS = 180;

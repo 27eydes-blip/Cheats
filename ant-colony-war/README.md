@@ -51,7 +51,9 @@ Shot fields:
 - `options`: per-scene settings (see below).
 - `note`: free text for you.
 
-If an episode's narration comes out under 45 s, the audio step lengthens the pauses between shots (never the words) until it reaches 45 s.
+If an episode's narration comes out under 45 s, the audio step lengthens the pauses between shots (never the words) until it reaches 45 s. Episodes can run up to 3 minutes (`MAX_SECONDS` in `src/config.ts`); past that, the pauses are tightened.
+
+To make an episode longer, add lines to its paragraph in `script/season1.md`, then add or extend shots in its `scenes.json` so the shot text matches again (`npm run check` shows exactly where it differs).
 
 Inline markup in `text` is not spoken and not shown:
 
