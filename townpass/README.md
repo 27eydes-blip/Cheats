@@ -1,7 +1,8 @@
 # TownPass
 
 Tourists scan a QR sticker → pay $5 (Apple Pay / Google Pay / card) → unlock a local guide for that town.
-Launch city: **Montauk, NY**. Any US city can be added from `/admin` without code changes.
+Cities: **Montauk, NY**, **Key West, FL**, **Nantucket, MA**, **Outer Banks, NC** (all seeded as UNVERIFIED placeholders).
+Any US city can be added from `/admin` without code changes.
 
 **Stack:** Next.js 16 (App Router) + Tailwind 4, deployed to **Cloudflare Workers** via
 [`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare), **D1** (SQLite) database, **Stripe Checkout**,
@@ -40,6 +41,14 @@ QR sticker ──► /city/montauk?src=MTK-7F3K2Q        (scan recorded for that
 * **Refunds:** Terms say *all sales final*. To make an exception (e.g. a double charge), refund in the Stripe Dashboard
   and access is revoked automatically. `/admin/purchases` links each sale to Stripe.
 
+* **Live weather & UV:** a scrolling ticker (temp, feels-like, UV, wind, rain chance, water temp, waves, sunset)
+  sits on every city page. The guide adds a conditions panel with a color-coded **UV gauge plus sun-safety advice**
+  (EPA categories), an 8-hour strip with UV and rain chance, and a UV/water/waves line on the Beaches section.
+  Data comes from [Open-Meteo](https://open-meteo.com), cached per city in D1 for 15 minutes. If the weather service
+  is down the page still loads, using the last reading for up to 6 hours, then hiding the weather.
+* **Busy season per city:** each city names its own busy season and dates. Montauk's is "Summer" (May 22–Sep 8);
+  Key West's is "Peak season" (Dec 15–Apr 30, wrapping the new year).
+
 ### Hours format (admin)
 
 ```
@@ -60,7 +69,7 @@ cd townpass
 npm install
 cp .dev.vars.example .dev.vars          # fill in Stripe TEST keys, a secret, an admin password
 npm run db:migrate:local
-npm run db:seed:local                   # Montauk placeholder data (UNVERIFIED, city hidden)
+npm run db:seed:local                   # all 4 cities' placeholder data (UNVERIFIED, cities hidden)
 npm run preview                         # builds for Workers and serves http://localhost:8787
 ```
 
@@ -80,6 +89,9 @@ npm run preview                         # builds for Workers and serves http://l
 1. **Log in:** `npx wrangler login`
 2. **Create the database:** `npx wrangler d1 create townpass` → copy the `database_id` into `wrangler.jsonc`.
 3. **Schema + seed:** `npm run db:migrate:remote && npm run db:seed:remote`
+   *(Already done once for Montauk? Run only `npm run db:migrate:remote` and then
+   `npx wrangler d1 execute townpass --remote --file=seed/<city>.sql` for each new city. Never re-run a seed for a
+   city that already exists.)*
 4. **Secrets** (each command prompts for the value):
    ```bash
    npx wrangler secret put STRIPE_SECRET_KEY        # sk_live_… (or sk_test_… first)
@@ -87,6 +99,7 @@ npm run preview                         # builds for Workers and serves http://l
    npx wrangler secret put ACCESS_TOKEN_SECRET      # openssl rand -base64 48   (never change after launch)
    npx wrangler secret put ADMIN_PASSWORD           # long and unique; changing it logs out all admin sessions
    npx wrangler secret put RESEND_API_KEY
+   npx wrangler secret put OPEN_METEO_API_KEY       # only once you're selling (see "Weather" below)
    ```
 5. **Vars** in `wrangler.jsonc`: `PUBLIC_BASE_URL`, `BRAND_NAME`, `SUPPORT_EMAIL`, `FROM_EMAIL`.
 6. **Deploy:** `npm run deploy`
@@ -158,6 +171,18 @@ fraud tools up to date. The in-page button is a good v2 upgrade once the domain 
 
 Without `RESEND_API_KEY`, emails are only logged (`npx wrangler tail`). Purchases still work through the cookie,
 but restore-by-email won't send anything.
+
+---
+
+## Weather (Open-Meteo)
+
+* Nothing to set up for testing: the free API needs no key or account.
+* **Licensing:** the free tier is for non-commercial use. Once you're selling passes, get an Open-Meteo API
+  subscription (the entry plan is about $29/month at the time of writing) and run
+  `npx wrangler secret put OPEN_METEO_API_KEY`. The app then switches to the commercial endpoints automatically.
+* Each city needs a latitude/longitude (`/admin → Cities`) and a **Coastal** checkbox for water temperature and waves.
+  The four seeded cities already have them.
+* Volume: with the 15-minute cache, each city makes at most about 200 forecast calls a day, well inside every plan.
 
 ---
 

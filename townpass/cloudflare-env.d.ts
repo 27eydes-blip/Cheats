@@ -15,5 +15,6 @@ interface CloudflareEnv {
   ADMIN_PASSWORD: string;
   RESEND_API_KEY?: string;
   APPLE_PAY_DOMAIN_ASSOCIATION?: string;
+  OPEN_METEO_API_KEY?: string;
 }
 }

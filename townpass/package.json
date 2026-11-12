@@ -10,8 +10,8 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "db:migrate:local": "wrangler d1 migrations apply townpass --local",
     "db:migrate:remote": "wrangler d1 migrations apply townpass --remote",
-    "db:seed:local": "wrangler d1 execute townpass --local --file=seed/montauk.sql",
-    "db:seed:remote": "wrangler d1 execute townpass --remote --file=seed/montauk.sql",
+    "db:seed:local": "for f in seed/*.sql; do wrangler d1 execute townpass --local --file=$f; done",
+    "db:seed:remote": "for f in seed/*.sql; do wrangler d1 execute townpass --remote --file=$f; done",
     "typecheck": "tsc --noEmit",
     "test": "node --test --experimental-strip-types tests/*.test.ts"
   },

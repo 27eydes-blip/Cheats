@@ -48,6 +48,11 @@ function cityFields(form: FormData, path: string) {
   } catch {
     err(path, `Unknown timezone "${tz}"`);
   }
+  const lat = str(form, "lat") ? Number(str(form, "lat")) : null;
+  const lon = str(form, "lon") ? Number(str(form, "lon")) : null;
+  if ((lat !== null && !(Math.abs(lat) <= 90)) || (lon !== null && !(Math.abs(lon) <= 180)) || (lat === null) !== (lon === null)) {
+    err(path, "Enter both latitude and longitude as decimal numbers (e.g. 41.0359, -71.9545)");
+  }
   const code = str(form, "code").toUpperCase();
   if (!/^[A-Z]{2,5}$/.test(code)) err(path, "Code must be 2-5 letters, e.g. MTK");
   return {
@@ -61,6 +66,10 @@ function cityFields(form: FormData, path: string) {
     summer_start: summerStart,
     summer_end: summerEnd,
     published: form.get("published") ? 1 : 0,
+    lat,
+    lon,
+    coastal: form.get("coastal") ? 1 : 0,
+    peak_label: str(form, "peak_label").slice(0, 24) || "Summer",
   };
 }
 
@@ -73,10 +82,10 @@ export async function createCity(form: FormData) {
   let id: number;
   try {
     const row = await env.DB.prepare(
-      `INSERT INTO cities (slug, code, name, state, tagline, timezone, price_cents, access_hours, summer_start, summer_end, published, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      `INSERT INTO cities (slug, code, name, state, tagline, timezone, price_cents, access_hours, summer_start, summer_end, published, created_at, lat, lon, coastal, peak_label)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
     )
-      .bind(slug, c.code, c.name, c.state, c.tagline, c.timezone, c.price_cents, c.access_hours, c.summer_start, c.summer_end, c.published, now)
+      .bind(slug, c.code, c.name, c.state, c.tagline, c.timezone, c.price_cents, c.access_hours, c.summer_start, c.summer_end, c.published, now, c.lat, c.lon, c.coastal, c.peak_label)
       .first<{ id: number }>();
     id = row!.id;
   } catch {
@@ -98,10 +107,13 @@ export async function updateCity(form: FormData) {
   const c = cityFields(form, path);
   try {
     await env.DB.prepare(
-      `UPDATE cities SET code=?, name=?, state=?, tagline=?, timezone=?, price_cents=?, access_hours=?, summer_start=?, summer_end=?, published=? WHERE id=?`,
+      `UPDATE cities SET code=?, name=?, state=?, tagline=?, timezone=?, price_cents=?, access_hours=?, summer_start=?, summer_end=?, published=?,
+       lat=?, lon=?, coastal=?, peak_label=? WHERE id=?`,
     )
-      .bind(c.code, c.name, c.state, c.tagline, c.timezone, c.price_cents, c.access_hours, c.summer_start, c.summer_end, c.published, id)
+      .bind(c.code, c.name, c.state, c.tagline, c.timezone, c.price_cents, c.access_hours, c.summer_start, c.summer_end, c.published, c.lat, c.lon, c.coastal, c.peak_label, id)
       .run();
+    // Location may have changed: drop cached weather.
+    await env.DB.prepare("DELETE FROM weather_cache WHERE city_id = ?").bind(id).run();
   } catch {
     err(path, "Code already in use");
   }

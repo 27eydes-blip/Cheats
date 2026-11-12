@@ -10,6 +10,8 @@ import { accessLabel, formatMoney, getCityBySlug, getGuide, type City, type Guid
 import { getEnv } from "@/lib/env";
 import { isSummer, localTime } from "@/lib/hours";
 import { sectionType } from "@/lib/sections";
+import { getConditions, type Conditions } from "@/lib/weather";
+import { BeachLine, ConditionsPanel, WeatherTicker } from "@/components/Weather";
 
 export const dynamic = "force-dynamic";
 
@@ -46,8 +48,11 @@ export default async function CityPage({ params, searchParams }: Props) {
       .run();
   }
 
-  const access = await currentAccess(db, city, env.ACCESS_TOKEN_SECRET);
-  const guide = await getGuide(db, city.id);
+  const [access, guide, weather] = await Promise.all([
+    currentAccess(db, city, env.ACCESS_TOKEN_SECRET),
+    getGuide(db, city.id),
+    getConditions(db, city, env.OPEN_METEO_API_KEY),
+  ]);
 
   if (access || admin) {
     const ua = (await headers()).get("user-agent") || "";
@@ -59,12 +64,13 @@ export default async function CityPage({ params, searchParams }: Props) {
         welcome={sp.welcome === "1"}
         reported={sp.reported ? Number(sp.reported) : undefined}
         adminPreview={!access && admin}
+        weather={weather}
         brand={env.BRAND_NAME}
         support={env.SUPPORT_EMAIL}
       />
     );
   }
-  return <Landing city={city} guide={guide} src={src} canceled={sp.canceled === "1"} error={sp.error} brand={env.BRAND_NAME} support={env.SUPPORT_EMAIL} />;
+  return <Landing city={city} guide={guide} weather={weather} src={src} canceled={sp.canceled === "1"} error={sp.error} brand={env.BRAND_NAME} support={env.SUPPORT_EMAIL} />;
 }
 
 /* ---------------------------------- Landing --------------------------------- */
@@ -74,6 +80,7 @@ const FAKE = ["Hidden lobster shack", "Late-night slice spot", "Free parking sec
 function Landing(props: {
   city: City;
   guide: GuideSection[];
+  weather: Conditions | null;
   src: string | null;
   canceled: boolean;
   error?: string;
@@ -85,7 +92,9 @@ function Landing(props: {
   const total = guide.reduce((n, s) => n + s.listings.length, 0);
 
   return (
-    <main className="mx-auto max-w-xl px-5 pb-6 pt-[max(1.25rem,env(safe-area-inset-top))]">
+    <>
+    {props.weather && <div className="pt-[env(safe-area-inset-top)]"><WeatherTicker c={props.weather} cityName={city.name} /></div>}
+    <main className="mx-auto max-w-xl px-5 pb-6 pt-5">
       <Brand name={props.brand} />
       <h1 className="mt-6 font-serif text-5xl leading-none">
         <span className="gold-text">{city.name}</span>
@@ -153,6 +162,7 @@ function Landing(props: {
       </div>
       <Footer brand={props.brand} support={props.support} />
     </main>
+    </>
   );
 }
 
@@ -165,20 +175,22 @@ function Guide(props: {
   welcome: boolean;
   reported?: number;
   adminPreview: boolean;
+  weather: Conditions | null;
   brand: string;
   support: string;
 }) {
-  const { city, guide } = props;
+  const { city, guide, weather } = props;
   const now = localTime(city.timezone);
   const summer = isSummer(now.mmdd, city.summer_start, city.summer_end);
   const sections = guide.filter((s) => s.listings.length > 0);
 
   return (
     <div>
-      <header className="mx-auto max-w-xl px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
+      {weather && <div className="pt-[env(safe-area-inset-top)]"><WeatherTicker c={weather} cityName={city.name} /></div>}
+      <header className="mx-auto max-w-xl px-5 pt-5">
         <div className="flex items-center justify-between">
           <Brand name={props.brand} />
-          <span className="text-xs text-muted">{summer ? "☀️ Summer hours" : "🍂 Off-season hours"}</span>
+          <span className="font-mono text-[11px] tracking-wider text-muted">{summer ? `☀️ ${city.peak_label.toUpperCase()} HOURS` : "🍂 OFF-SEASON HOURS"}</span>
         </div>
         <h1 className="mt-4 font-serif text-4xl">
           <span className="gold-text">{city.name}</span>
@@ -191,6 +203,11 @@ function Guide(props: {
         {props.welcome && (
           <div className="mt-3">
             <Notice tone="green">You’re in! We emailed you a link so you can come back anytime.</Notice>
+          </div>
+        )}
+        {weather && (
+          <div className="mt-4">
+            <ConditionsPanel c={weather} cityName={city.name} />
           </div>
         )}
       </header>
@@ -210,6 +227,7 @@ function Guide(props: {
               {sectionType(s.type).icon} {s.title}
             </h2>
             {s.intro && <p className="mt-1 text-sm text-zinc-400">{s.intro}</p>}
+            {s.type === "beaches" && weather && <BeachLine c={weather} />}
             <div className="mt-4 space-y-3">
               {s.listings.map((l) => (
                 <ListingCard
@@ -218,6 +236,7 @@ function Guide(props: {
                   sectionKind={s.type}
                   now={now}
                   summer={summer}
+                  seasonLabel={summer ? city.peak_label.toLowerCase() : "off-season"}
                   timezone={city.timezone}
                   apple={props.apple}
                   citySlug={city.slug}

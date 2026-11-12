@@ -52,3 +52,6 @@ INSERT INTO stickers (id, city_id, label, batch, created_at) VALUES
   ('MTK-TEST01', (SELECT id FROM cities WHERE slug = 'montauk'), 'Test sticker: desk', 'test', 1762905600000),
   ('MTK-TEST02', (SELECT id FROM cities WHERE slug = 'montauk'), 'Test sticker: dock', 'test', 1762905600000);
 
+
+-- Location for live weather/UV (needs migration 0002)
+UPDATE cities SET lat = 41.0359, lon = -71.9545, coastal = 1, peak_label = 'Summer' WHERE slug = 'montauk';

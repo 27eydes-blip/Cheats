@@ -23,6 +23,7 @@ export function ListingCard(props: {
   sectionKind: string;
   now: LocalTime;
   summer: boolean;
+  seasonLabel: string;
   timezone: string;
   apple: boolean;
   citySlug: string;
@@ -57,7 +58,7 @@ export function ListingCard(props: {
       {status && status.state !== "unknown" && (
         <details className="mt-3 text-sm">
           <summary className="text-zinc-300">
-            {status.label} <span className="text-muted">· {summer ? "summer" : "off-season"} hours ▾</span>
+            {status.label} <span className="text-muted">· {props.seasonLabel} hours ▾</span>
           </summary>
           <table className="mt-2 w-full text-[13px]">
             <tbody>

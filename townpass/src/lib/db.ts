@@ -15,6 +15,10 @@ export interface City {
   summer_end: string;
   published: number;
   created_at: number;
+  lat: number | null;
+  lon: number | null;
+  coastal: number;
+  peak_label: string;
 }
 
 export interface Section {

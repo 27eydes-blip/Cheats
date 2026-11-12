@@ -20,8 +20,15 @@ export function CityFields({ city }: { city?: City }) {
         </select>
       </label>
       <Field label="Pass length (hours)" name="access_hours" type="number" defaultValue={city?.access_hours ?? 24} hint="Used only for timed passes" />
-      <Field label="Summer starts (MM-DD)" name="summer_start" defaultValue={city?.summer_start ?? "05-22"} hint="Summer hours apply from this date…" />
-      <Field label="Summer ends (MM-DD)" name="summer_end" defaultValue={city?.summer_end ?? "09-08"} hint="…through this date (inclusive)" />
+      <Field label="Busy season name" name="peak_label" defaultValue={city?.peak_label ?? "Summer"} hint={'"Summer", or "Peak season" for winter towns'} />
+      <Field label="Busy season starts (MM-DD)" name="summer_start" defaultValue={city?.summer_start ?? "05-22"} hint="Busy-season hours apply from this date…" />
+      <Field label="Busy season ends (MM-DD)" name="summer_end" defaultValue={city?.summer_end ?? "09-08"} hint="…through this date. Can wrap New Year (12-15 → 04-30)" />
+      <Field label="Latitude" name="lat" type="number" defaultValue={city?.lat} placeholder="41.0359" hint="For live weather & UV. Right-click the town in Google Maps to copy." />
+      <Field label="Longitude" name="lon" type="number" defaultValue={city?.lon} placeholder="-71.9545" hint="US longitudes are negative" />
+      <label className="flex items-center gap-2 self-center text-sm">
+        <input type="checkbox" name="coastal" defaultChecked={city ? !!city.coastal : true} className="size-4 accent-[#d4af37]" />
+        Coastal (show water temp & waves)
+      </label>
       <label className="flex items-center gap-2 self-center text-sm">
         <input type="checkbox" name="published" defaultChecked={!!city?.published} className="size-4 accent-[#d4af37]" />
         Published (visible to the public)

@@ -67,3 +67,117 @@ details > summary::-webkit-details-marker {
     display: none !important;
   }
 }
+
+/* ------------------------- live data / "HUD" layer ------------------------- */
+@theme {
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --color-uv-low: #4ade80;
+  --color-uv-moderate: #facc15;
+  --color-uv-high: #fb923c;
+  --color-uv-veryhigh: #f87171;
+  --color-uv-extreme: #c084fc;
+}
+
+.ticker {
+  display: flex;
+  align-items: center;
+  height: 2.25rem;
+}
+.ticker-live {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0 0.75rem 0 1.25rem;
+  height: 100%;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--color-gold);
+  border-right: 1px solid var(--color-line);
+  background: var(--color-ink);
+}
+.ticker-viewport {
+  overflow: hidden;
+  flex: 1;
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 92%, transparent);
+}
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: ticker 38s linear infinite;
+}
+.ticker-row {
+  display: flex;
+  padding-left: 1rem;
+}
+@keyframes ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ticker-viewport {
+    overflow-x: auto;
+    mask-image: none;
+  }
+  .ticker-track {
+    animation: none;
+  }
+  .ticker-row[aria-hidden="true"] {
+    display: none;
+  }
+}
+
+.live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6);
+  vertical-align: middle;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .live-dot {
+    animation: pulse 2s ease-out infinite;
+  }
+}
+@keyframes pulse {
+  70% {
+    box-shadow: 0 0 0 6px rgba(74, 222, 128, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
+/* faint instrument grid behind data panels and the city hero */
+.hud::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(212, 175, 55, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212, 175, 55, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(180deg, #000, transparent 85%);
+}
+.hud > * {
+  position: relative;
+}
+
+.uv-bar {
+  background: linear-gradient(90deg, #4ade80 0%, #4ade80 18%, #facc15 25%, #facc15 42%, #fb923c 50%, #fb923c 58%, #f87171 67%, #f87171 83%, #c084fc 92%);
+}
+.uv-marker {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--color-ink);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4), 0 0 12px rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+}

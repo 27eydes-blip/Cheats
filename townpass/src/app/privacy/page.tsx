@@ -40,7 +40,7 @@ export default async function Privacy() {
         restore access.
       </p>
       <h2>Service providers</h2>
-      <p>Cloudflare (hosting), Stripe (payments), Resend (email).</p>
+      <p>Cloudflare (hosting), Stripe (payments), Resend (email), Open-Meteo (weather data; we send only each town’s coordinates, never anything about you).</p>
     </LegalPage>
   );
 }
