@@ -44,6 +44,14 @@ body {
   scroll-margin-top: 4.5rem;
 }
 
+/* Long unbroken words (pasted links, keyboard mashing) must wrap instead of pushing the page sideways. */
+h1,
+h2,
+h3,
+p {
+  overflow-wrap: anywhere;
+}
+
 details > summary {
   list-style: none;
   cursor: pointer;

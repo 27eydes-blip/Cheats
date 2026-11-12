@@ -89,6 +89,21 @@ npm run preview                         # builds for Workers and serves http://l
 
 ---
 
+## Testing
+
+* `npm test`: unit tests (hours, tokens, weather parsing, reservation links).
+* `npm run e2e -- --rounds 3 --steps 120`: full end-to-end harness against a running local server
+  (`npm run preview` in another terminal). It runs:
+  * **smoke**: every public, guide (all sections, filters, search) and admin page in every city
+  * **security**: locked admin pages/QR endpoint, forged and tampered cookies, cross-city access, bad webhook signatures
+  * **bug/functional**: checkout failure handling, webhook → access link → guide → refund revokes access, restore,
+    form fuzzing (XSS, SQL-ish, huge and unicode input) on reports, restore, checkout and guide URLs
+  * **browser flows**: a phone-sized visitor (tabs, details, report, search) and the admin (create city, bad input
+    rejected, listing with hours + reservation link, publish, stickers + PNG download)
+  * **monkey**: random taps, typing, back/scroll and URL fuzzing on every city, watching for JS errors, 5xx, error
+    pages, sideways scrolling and executed XSS. Set `DEMO_FILE=/path/to/demo.html` to monkey-test the demo too.
+  It only writes to the **local** database and saves a report to `tests/e2e/report.json`.
+
 ## Deploy to Cloudflare (step by step)
 
 1. **Log in:** `npx wrangler login`

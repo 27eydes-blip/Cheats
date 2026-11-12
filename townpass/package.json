@@ -13,7 +13,8 @@
     "db:seed:local": "for f in seed/*.sql; do wrangler d1 execute townpass --local --file=$f; done",
     "db:seed:remote": "for f in seed/*.sql; do wrangler d1 execute townpass --remote --file=$f; done",
     "typecheck": "tsc --noEmit",
-    "test": "node --test --experimental-strip-types tests/*.test.ts"
+    "test": "node --test --experimental-strip-types tests/*.test.ts",
+    "e2e": "node --experimental-strip-types --no-warnings tests/e2e/run.mts"
   },
   "dependencies": {
     "next": "^16.4.6",

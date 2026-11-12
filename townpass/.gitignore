@@ -6,3 +6,5 @@ node_modules/
 .env*.local
 next-env.d.ts
 *.tsbuildinfo
+tests/e2e/report.json
+tests/e2e/.fixtures.sql
