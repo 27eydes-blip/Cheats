@@ -71,7 +71,7 @@ export const Deep: React.FC<{ pal: Palette; camX: number; t: number; T: number; 
 
 /** Big trap-jaw hero (250). */
 export const Hero: React.FC<SceneProps & { x: number; y: number; scale: number; dir?: 1 | -1; walk?: number; pal: Palette; rim?: string; pitch?: number }> = (p) => (
-  <Ant species="trapjaw" t={p.T} x={p.x} y={p.y} scale={p.scale} dir={p.dir} walk={p.walk} fill={p.pal.antFill} rim={p.rim ?? p.pal.rim} jaw={p.jaw} infection={p.inf} glowId="veinGlow" seed={250} pitch={p.pitch} />
+  <Ant species="trapjaw" t={p.T} x={p.x} y={p.y} scale={p.scale} dir={p.dir} walk={p.walk} fill={p.pal.antFill} rim={p.rim ?? p.pal.rim} jaw={p.jaw} infection={p.inf} glowId="veinGlow" seed={250} pitch={p.pitch} armor={p.armor} />
 );
 
 // ---------------------------------------------------------------------------------------------
@@ -88,7 +88,7 @@ const dark: SceneDef = {
         <Glow x={700} y={820} r={760} t={p.t} amount={0.55} ry={620} />
         <Fog t={p.t} amount={0.6} y={1000} />
         <g transform={`translate(0 ${Math.sin(p.t * 0.8) * 6})`}>
-          <Ant species="trapjaw" t={p.T} x={hx} y={hy} scale={sc} fill="#040201" rim={pal.rim} rimOpacity={0.45} jaw={p.jaw} infection={Math.max(0.15, p.inf)} glowId="veinGlow" seed={250} />
+          <Ant species="trapjaw" t={p.T} x={hx} y={hy} scale={sc} fill="#040201" rim={pal.rim} rimOpacity={0.45} jaw={p.jaw} infection={Math.max(0.15, p.inf)} glowId="veinGlow" seed={250} armor={p.armor} />
         </g>
         <Dust t={p.t} count={80} seed={p.index + 3} color={pal.dust} speed={0.5} />
       </Stage>
@@ -517,7 +517,14 @@ const kesh: SceneDef = {
         <Smoke t={p.t} amount={0.6} y={700} />
         <Glow x={620} y={1080} r={760} t={p.T} amount={1.6} ry={520} />
         <Glow x={560} y={1150} r={380} t={p.T + 1} amount={1.4} ry={260} />
-        <Ant species="kesh" t={p.T} x={kx} y={ky} scale={sc} dir={-1} fill="#1a0402" rim="#ff8a3a" rimOpacity={0.95} oneAntenna={p.keshScarred} seed={17} pitch={Math.sin(p.t * 0.6) * 0.03} />
+        {p.beat.options?.general ? (
+          <g>
+            <Ant species="fire" t={p.T} x={kx} y={ky} scale={sc * 1.1} dir={-1} fill="#140302" rim="#ffcf70" rimOpacity={0.95} seed={23} pitch={Math.sin(p.t * 0.6) * 0.03 + 0.05} />
+            <circle cx={kx - 86 * sc * 1.1} cy={ky - 28 * sc * 1.1} r={18} fill="url(#emberGlow)" opacity={0.7} style={{ mixBlendMode: 'screen' }} />
+          </g>
+        ) : (
+          <Ant species="kesh" t={p.T} x={kx} y={ky} scale={sc} dir={-1} fill="#1a0402" rim="#ff8a3a" rimOpacity={0.95} oneAntenna={p.keshScarred} seed={17} pitch={Math.sin(p.t * 0.6) * 0.03} />
+        )}
         <Smoke t={p.t + 20} amount={0.3} y={1400} />
         <Foreground pal={pal} camX={p.T * 4} t={p.t} side="bottom" />
         <Embers t={p.T} amount={0.8} />
@@ -550,6 +557,8 @@ const duel: SceneDef = {
         <Hero {...p} x={260 + circle} y={floor - TJ_GROUND * hsc} scale={hsc} pal={pal} rim={elder ? pal.rim : '#ffa060'} walk={0.15} />
         {elder ? (
           <Ant species="trapjaw" t={p.T} x={820 - circle} y={floor - TJ_GROUND * osc} scale={osc} dir={-1} fill="#100905" rim="#ffc27a" seed={3} walk={0.1} />
+        ) : p.beat.options?.opponent ? (
+          <Ant species="fire" t={p.T} x={820 - circle} y={floor - FIRE_GROUND * osc} scale={osc} dir={-1} fill="#1a0402" rim={p.beat.options.opponent === 'general' ? '#ffcf70' : '#ff8a3a'} seed={29} walk={0.2} jaw={0.5} lie={p.sinceSnap < 30 ? Math.min(1, p.sinceSnap / 0.5) : 0} flip={p.sinceSnap < 30 && p.sinceSnap > 0.5} />
         ) : (
           <Ant species="kesh" t={p.T} x={820 - circle} y={floor - FIRE_GROUND * osc} scale={osc} dir={-1} fill="#1a0402" rim="#ff8a3a" oneAntenna={p.keshScarred} seed={17} walk={0.2} />
         )}
@@ -762,7 +771,7 @@ const eyeOpen: SceneDef = {
     return (
       <Stage pal={pal} bg="#050302">
         <Glow x={420} y={600} r={900} t={p.t} amount={0.55} ry={700} />
-        <Ant species="trapjaw" t={p.T} x={540 - 100 * sc} y={880 + 29 * sc} scale={sc} eyeOpen={open} infection={inf} glowId="veinGlow" fill={pal.antFill} rim={pal.rim} seed={250} jaw={1} />
+        <Ant species="trapjaw" t={p.T} x={540 - 100 * sc} y={880 + 29 * sc} scale={sc} eyeOpen={open} infection={inf} glowId="veinGlow" fill={pal.antFill} rim={pal.rim} seed={250} jaw={1} armor={p.armor} />
         <circle cx={540} cy={880} r={60 + flare * 260} fill="url(#glintGlow)" opacity={flare * 0.9} style={{ mixBlendMode: 'screen' }} />
         <line x1={540 - flare * 520} y1={880} x2={540 + flare * 520} y2={880} stroke="#c8ffd2" strokeWidth={3} strokeOpacity={flare * 0.8} />
         <Dust t={p.t} count={50} seed={p.index + 23} color="#c8ffd2" speed={0.2} />

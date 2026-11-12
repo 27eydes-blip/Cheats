@@ -1,5 +1,5 @@
 import type { Episode } from '../../script/types';
-import { END_CARD, MIN_SECONDS, TITLE_LEAD } from '../config';
+import { END_CARD, MAX_SECONDS, MIN_SECONDS, TITLE_LEAD } from '../config';
 import { parseBeat } from './parse';
 import type { BeatAlignment, BeatTiming, Timeline, Word } from './types';
 
@@ -24,7 +24,7 @@ export function mockAlignment(ep: Episode): BeatAlignment[] {
   });
 }
 
-/** Lengthens the pauses between lines (max 3.4 s each) so a short episode reaches MIN_SECONDS. Words are never touched. */
+/** Lengthens the pauses between lines (max 3.4 s each) so a short episode reaches MIN_SECONDS, or tightens them on a long one. Words are never touched. */
 export function fitPauses(ep: Episode, align: BeatAlignment[]): Episode {
   const pauses = ep.beats.map((b) => b.pause ?? DEFAULT_PAUSE);
   const total = () => TITLE_LEAD + END_CARD + align.reduce((s, a, i) => s + a.duration + pauses[i], 0);
@@ -34,6 +34,14 @@ export function fitPauses(ep: Episode, align: BeatAlignment[]): Episode {
       if (p < 3.4) { pauses[i] = Math.min(3.4, p + 0.05 * (0.5 + p)); grown = true; }
     });
     if (!grown) break;
+  }
+  // long episodes: tighten the pauses (down to 0.25 s, never the words) toward MAX_SECONDS
+  for (let k = 0; k < 200 && total() > MAX_SECONDS; k++) {
+    let shrunk = false;
+    pauses.forEach((p, i) => {
+      if (p > 0.25) { pauses[i] = Math.max(0.25, p * 0.95); shrunk = true; }
+    });
+    if (!shrunk) break;
   }
   return { ...ep, beats: ep.beats.map((b, i) => ({ ...b, pause: +pauses[i].toFixed(2) })) };
 }

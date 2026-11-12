@@ -21,6 +21,8 @@ export type SceneProps = {
   /** Story seconds since the last {snap} / {impact} cue (Infinity if none yet). */
   sinceSnap: number;
   sinceImpact: number;
+  /** 250 is wearing Kesh's armor. */
+  armor: boolean;
 };
 
 export type SceneDef = {

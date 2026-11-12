@@ -19,7 +19,8 @@ export function loadEpisodes(): Episode[] {
 export function loadScript(): Map<number, { title: string; text: string }> {
   const src = fs.readFileSync(path.join(ROOT, 'script', 'season1.md'), 'utf8');
   const out = new Map<number, { title: string; text: string }>();
-  const re = /^EPISODE\s+(\d+)\s+[—-]+\s+"([^"]+)"\s*\n([\s\S]*?)(?=\n\s*EPISODE\s+\d+|\s*$)/gm;
+  // heading: EPISODE 10 — "MY COLONY" (SEASON FINALE)  -> anything after the quoted title is ignored
+  const re = /^EPISODE\s+(\d+)\s+[—-]+\s+"([^"]+)"[^\n]*\n([\s\S]*?)(?=\n\s*EPISODE\s+\d+|\s*$)/gm;
   for (const m of src.matchAll(re)) out.set(+m[1], { title: m[2], text: m[3].replace(/\s+/g, ' ').trim() });
   return out;
 }

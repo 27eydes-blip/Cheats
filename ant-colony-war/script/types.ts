@@ -57,7 +57,11 @@ export type SceneId =
   | 'ranks'
   | 'run'
   | 'shove'
-  | 'chains';
+  | 'chains'
+  | 'lineup'
+  | 'execution'
+  | 'assassins'
+  | 'royalChamber';
 
 export type Shot = {
   scene: SceneId;

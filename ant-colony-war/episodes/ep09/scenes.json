@@ -1,0 +1,106 @@
+{
+  "episode": 9,
+  "title": "THE SNAP",
+  "infection": 0.6,
+  "shots": [
+    {
+      "scene": "lineup",
+      "text": "The day it changed, Kesh picked an old worker from my colony. The ant who used to feed me in the nursery.",
+      "pause": 0.6,
+      "options": {
+        "walker": "kesh"
+      },
+      "note": "The chained trap-jaws in the cold chamber. Kesh walks the line and stops at the old worker."
+    },
+    {
+      "scene": "execution",
+      "text": "He raised his stinger, and before I even decided to, I moved.",
+      "pause": 0.2,
+      "tense": true,
+      "options": {
+        "phase": "raise"
+      },
+      "note": "Kesh rears up over the old worker, stinger high. 250 lunges."
+    },
+    {
+      "scene": "closeup",
+      "text": "One {snap}snap.",
+      "pause": 0.9,
+      "camera": "still",
+      "note": "SNAP."
+    },
+    {
+      "scene": "execution",
+      "text": "Kesh dropped, and the whole chamber went silent. I waited for them to kill me.",
+      "pause": 0.8,
+      "tense": true,
+      "options": {
+        "phase": "fallen"
+      },
+      "note": "Kesh dead on his back. Every fire ant frozen."
+    },
+    {
+      "scene": "kesh",
+      "text": "Instead, the fire queen's general stepped forward, looked at the body, then looked at me.",
+      "pause": 0.5,
+      "options": {
+        "general": true
+      },
+      "note": "The fire queen's general, gold-rimmed, steps out of the smoke."
+    },
+    {
+      "scene": "kesh",
+      "text": "\"You,\" he said. \"You fight for us now.\"",
+      "pause": 0.8,
+      "options": {
+        "general": true
+      },
+      "camera": "push"
+    },
+    {
+      "scene": "lineup",
+      "text": "I should've said no. I should've stood with my own.",
+      "pause": 0.7,
+      "note": "His own colony, still in chains."
+    },
+    {
+      "scene": "army",
+      "text": "But when they gave me Kesh's armor and the fire soldiers stepped aside as I walked past...",
+      "pause": 0.3,
+      "fire": true,
+      "options": {
+        "armor": true
+      },
+      "note": "250 in Kesh's red armor, walking at the head of the fire soldiers."
+    },
+    {
+      "scene": "closeup",
+      "text": "something in my blood purred.",
+      "pause": 0.8,
+      "infection": 0.8,
+      "options": {
+        "armor": true
+      },
+      "note": "Close-up in the armor; the green veins pulse."
+    },
+    {
+      "scene": "lineup",
+      "text": "The old worker whispered, \"Thank you, 250.\"",
+      "pause": 0.7,
+      "options": {
+        "focus": "old"
+      },
+      "note": "Close on the old worker in chains."
+    },
+    {
+      "scene": "hero",
+      "text": "I didn't answer. I didn't even look back.",
+      "pause": 1.4,
+      "fire": true,
+      "options": {
+        "armor": true
+      },
+      "note": "250 walks on in the armor, away from them."
+    }
+  ]
+}

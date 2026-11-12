@@ -49,6 +49,8 @@ export type AntProps = {
   glowId?: string;
   /** Something held in the mandibles: a crumb or a sand grain. */
   carry?: 'crumb' | 'grain' | 'twig';
+  /** Kesh's scarred red armor plates (250 wears them from episode 9). */
+  armor?: boolean;
 };
 
 type Geo = {
@@ -371,6 +373,16 @@ export const Ant: React.FC<AntProps> = (p) => {
                 </g>
               )}
             </>
+          )}
+          {p.armor && lod < 2 && (
+            <g>
+              <path d="M-30,-14 C-32,-26 -20,-33 -6,-32 C8,-31 14,-36 26,-39 C40,-42 52,-34 52,-24 C40,-22 20,-20 -30,-14 Z" fill="#3a0a04" stroke="#ff7a2e" strokeOpacity={0.8} strokeWidth={2} />
+              <path d="M-140,-26 C-128,-46 -100,-50 -76,-44 C-62,-40 -54,-32 -52,-24 C-80,-30 -110,-30 -140,-26 Z" fill="#3a0a04" stroke="#ff7a2e" strokeOpacity={0.7} strokeWidth={2} />
+              <g transform={headRot}>
+                <path d="M54,-28 C60,-42 78,-48 98,-45 C112,-43 122,-38 126,-31 C110,-34 80,-34 54,-28 Z" fill="#3a0a04" stroke="#ff7a2e" strokeOpacity={0.8} strokeWidth={2} />
+              </g>
+              <g stroke="#e8c9a8" strokeOpacity={0.45} strokeWidth={1.6} strokeLinecap="round"><path d="M10,-36 L18,-24 M-110,-46 L-96,-30 M84,-46 L90,-36" /></g>
+            </g>
           )}
           {inf > 0.01 && g.veins.length > 0 && lod < 2 && (
             <g stroke="#6dff8a" fill="none" strokeLinecap="round" opacity={inf * (0.35 + 0.5 * pulse)} filter={p.glowId ? `url(#${p.glowId})` : undefined}>

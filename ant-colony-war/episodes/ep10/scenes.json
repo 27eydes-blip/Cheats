@@ -1,0 +1,115 @@
+{
+  "episode": 10,
+  "title": "MY COLONY",
+  "infection": 0.85,
+  "shots": [
+    {
+      "scene": "ranks",
+      "text": "Fire ants rule through fear.",
+      "pause": 0.6
+    },
+    {
+      "scene": "queen",
+      "text": "Their venom burns for days, and their queen hasn't left her chamber in three years.",
+      "pause": 0.6
+    },
+    {
+      "scene": "run",
+      "text": "But I was faster than their venom.",
+      "pause": 0.5
+    },
+    {
+      "scene": "army",
+      "text": "Over the next weeks I climbed their ranks.",
+      "pause": 0.5,
+      "fire": true
+    },
+    {
+      "scene": "duel",
+      "text": "I {snap}snapped the jaws of every soldier who challenged me, until no one challenged me anymore.",
+      "pause": 0.6,
+      "options": {
+        "opponent": "soldier"
+      },
+      "note": "SNAP: a challenger goes down."
+    },
+    {
+      "scene": "kesh",
+      "text": "Then the general who made me a soldier started to fear me.",
+      "pause": 0.4,
+      "options": {
+        "general": true
+      }
+    },
+    {
+      "scene": "queen",
+      "text": "So did the queen.",
+      "pause": 0.6,
+      "tense": true
+    },
+    {
+      "scene": "assassins",
+      "text": "One night she sent twenty of her best to kill me while I slept.",
+      "pause": 0.4,
+      "tense": true,
+      "note": "Assassins creep up on 250 lying in the dark."
+    },
+    {
+      "scene": "eyeOpen",
+      "text": "They didn't know I don't really sleep anymore.",
+      "pause": 0.4,
+      "note": "His eye snaps open, green."
+    },
+    {
+      "scene": "senses",
+      "text": "I heard them three tunnels away.",
+      "pause": 0.6,
+      "senses": true
+    },
+    {
+      "scene": "royalChamber",
+      "text": "In the morning, I walked into the royal chamber alone, covered in red.",
+      "pause": 0.5,
+      "options": {
+        "phase": "walkIn"
+      }
+    },
+    {
+      "scene": "royalChamber",
+      "text": "The queen looked at me and whispered, \"What are you?\"",
+      "pause": 0.6,
+      "tense": true,
+      "options": {
+        "phase": "confront"
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "I told her the truth.",
+      "pause": 0.4,
+      "infection": 0.95
+    },
+    {
+      "scene": "royalChamber",
+      "text": "\"I'm number 250. And this is my colony now.\"",
+      "pause": 0.9,
+      "options": {
+        "phase": "claim"
+      },
+      "camera": "push",
+      "note": "The queen lowers her head."
+    },
+    {
+      "scene": "lineup",
+      "text": "Behind me, my own kind, the trap-jaws, were still in chains. I could've freed them.",
+      "pause": 0.6
+    },
+    {
+      "scene": "dark",
+      "text": "I didn't. Not yet.",
+      "pause": 1.6,
+      "infection": 1,
+      "note": "Darkness, and one green eye."
+    }
+  ]
+}
