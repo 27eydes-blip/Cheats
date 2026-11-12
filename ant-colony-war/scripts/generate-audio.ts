@@ -43,12 +43,12 @@ const API = process.env.ELEVENLABS_API_BASE || 'https://api.elevenlabs.io';
 const ENGINE = (process.env.TTS_ENGINE || 'kokoro').toLowerCase();
 const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || 'nPczCjzI2devNBz1zQrb';
 
-// The British boy (local engine). Blend of Kokoro voices + pitch shift; tweak to taste.
-// Raise SEMITONES for a younger boy, lower it for a teenager.
+// The narrator (local engine): an older British boy, a blend of two Kokoro voices with no pitch
+// processing (~136 Hz). VOICE_SEMITONES shifts the pitch (+ younger, - older); VOICE_SPEED sets the pace.
 const KOKORO = {
-  voice: [['bm_fable', 0.55], ['bf_emma', 0.45]] as [string, number][],
-  semitones: Number(process.env.VOICE_SEMITONES ?? 5),
-  speed: Number(process.env.VOICE_SPEED ?? 0.92),
+  voice: [['bm_fable', 0.7], ['bf_emma', 0.3]] as [string, number][],
+  semitones: Number(process.env.VOICE_SEMITONES ?? 0),
+  speed: Number(process.env.VOICE_SPEED ?? 0.78),
 };
 const MODEL_ID = process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2';
 const VOICE_SETTINGS = {
@@ -145,7 +145,7 @@ async function episodeAudio(ep: Episode): Promise<Timeline> {
     const text = lines[i];
     const prev = lines.slice(Math.max(0, i - 2), i).join(' ') || undefined;
     const next = lines[i + 1];
-    const cfg = ENGINE === 'elevenlabs' ? { VOICE_ID, MODEL_ID, VOICE_SETTINGS, prev, next } : { KOKORO, v: 2 };
+    const cfg = ENGINE === 'elevenlabs' ? { VOICE_ID, MODEL_ID, VOICE_SETTINGS, prev, next } : { KOKORO, v: 3 };
     return crypto.createHash('sha1').update(JSON.stringify({ ENGINE, cfg, text })).digest('hex').slice(0, 16);
   };
   const keys = lines.map((_, i) => keyOf(i));

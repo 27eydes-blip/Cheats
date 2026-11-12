@@ -109,14 +109,14 @@ Fire ants, Kesh (scarred) and the fire queen use the same rig.
 
 ## Narrator voice
 
-The narrator is **250 as a young British boy**. It's a local voice, so it's free and needs no account:
-- It's Kokoro TTS, blending 55% `bm_fable` with 45% `bf_emma` and raised 5 semitones.
-- That lands at about 200 Hz, a boy's speaking pitch.
+The narrator is **250 as an older British boy**, speaking slowly. It's a local voice, so it's free and needs no account:
+- It's Kokoro TTS, blending 70% `bm_fable` with 30% `bf_emma`, with no pitch processing.
+- That lands at about 136 Hz, a teenage boy's register.
 - `npm run voice:setup` installs it once. It needs Python 3.10+ and downloads a ~340 MB model.
 
 Tune it in `.env`:
-- `VOICE_SEMITONES`: higher sounds younger, lower sounds more like a teenager. Default 5.
-- `VOICE_SPEED`: default 0.92.
+- `VOICE_SEMITONES`: shifts the pitch; positive sounds younger, negative older. Default 0.
+- `VOICE_SPEED`: lower is slower. Default 0.78.
 - The blend itself is at the top of `scripts/generate-audio.ts`.
 
 Kokoro doesn't output timestamps, so `tts/narrate.py` measures them from the audio. It matches silences to punctuation and spreads words by phoneme count, which is accurate to roughly a syllable.

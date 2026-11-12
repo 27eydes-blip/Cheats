@@ -1,10 +1,10 @@
-"""Local narrator: Kokoro TTS with a British boy voice, plus word timings.
+"""Local narrator: Kokoro TTS with an older British boy voice, plus word timings.
 
 Reads a JSON job from stdin:
   { "model": "...onnx", "voices": "...bin",
-    "voice": [["bm_fable", 0.55], ["bf_emma", 0.45]],   # blend of Kokoro voices
-    "semitones": 5,                                     # pitch (and formants) up: younger
-    "speed": 0.95,
+    "voice": [["bm_fable", 0.7], ["bf_emma", 0.3]],     # blend of Kokoro voices
+    "semitones": 0,                                     # optional pitch shift (+ younger, - older)
+    "speed": 0.78,
     "lines": [ { "text": "...", "words": ["...", ...], "out": "file.wav" } ] }
 
 Writes each line to its .wav and prints one JSON object per line:
@@ -28,11 +28,20 @@ ratio = 2 ** (job.get("semitones", 0) / 12)
 speed = job.get("speed", 1.0)
 
 
+def resample(s, n):
+    # band-limited (FFT) resampling: clean, no aliasing
+    S = np.fft.rfft(s)
+    m = n // 2 + 1
+    S2 = np.zeros(m, complex)
+    c = min(m, len(S))
+    S2[:c] = S[:c]
+    return (np.fft.irfft(S2, n) * n / len(s)).astype(np.float32)
+
+
 def synth(text):
     s, sr = k.create(text, voice=style, speed=speed / ratio, lang="en-gb")
     if ratio != 1:
-        n = int(len(s) / ratio)
-        s = np.interp(np.linspace(0, len(s) - 1, n), np.arange(len(s)), s).astype(np.float32)
+        s = resample(s, int(len(s) / ratio))
     return s, sr
 
 
