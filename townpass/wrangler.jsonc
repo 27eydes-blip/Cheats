@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "townpass",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "townpass",
+      // Replace with the id printed by `npx wrangler d1 create townpass`
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // Change to your real domain once you have one (QR codes encode this!)
+    "PUBLIC_BASE_URL": "https://townpass.YOUR-SUBDOMAIN.workers.dev",
+    "BRAND_NAME": "TownPass",
+    "SUPPORT_EMAIL": "support@example.com",
+    "FROM_EMAIL": "TownPass <access@example.com>"
+  }
+  // Secrets (set with `npx wrangler secret put NAME`, never commit):
+  //   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, ACCESS_TOKEN_SECRET,
+  //   ADMIN_PASSWORD, RESEND_API_KEY
+}

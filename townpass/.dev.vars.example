@@ -1,0 +1,9 @@
+# Copy to .dev.vars for local development (never commit .dev.vars)
+PUBLIC_BASE_URL=http://localhost:3000
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+# Long random string: `openssl rand -base64 48`
+ACCESS_TOKEN_SECRET=change-me-to-a-long-random-string
+ADMIN_PASSWORD=change-me
+# Optional locally - emails are logged to the console if unset
+RESEND_API_KEY=

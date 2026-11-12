@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0b0b0d;
+  --color-panel: #141418;
+  --color-panel-2: #1b1b21;
+  --color-line: #2a2a31;
+  --color-muted: #9a9aa3;
+  --color-gold: #d4af37;
+  --color-gold-soft: #e9cf7a;
+  --color-gold-deep: #a8862a;
+  --color-open: #4ade80;
+  --color-closing: #fbbf24;
+  --color-closed: #f87171;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, ui-serif, serif;
+}
+
+html {
+  background: var(--color-ink);
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-ink);
+  color: #ececf1;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Keep section headers visible under the sticky nav when jumping to anchors */
+[id] {
+  scroll-margin-top: 4.5rem;
+}
+
+details > summary {
+  list-style: none;
+  cursor: pointer;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.gold-text {
+  background: linear-gradient(180deg, var(--color-gold-soft), var(--color-gold) 60%, var(--color-gold-deep));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
