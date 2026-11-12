@@ -55,6 +55,14 @@ export type AntProps = {
   cracks?: number;
   /** The Snap's final form: black resin armor, blade mandibles, green seams, one eye fully green. */
   finalForm?: boolean;
+  /** Override any part of the body geometry (used by the 22 colony designs). */
+  geo?: Partial<Geo>;
+  /** Mandible colour / gaster colour / head colour, for two-tone species. */
+  jawFill?: string;
+  gasterFill?: string;
+  headFill?: string;
+  /** Extra signature details drawn in the ant's own coordinates (spines, leaf, shield...). */
+  extra?: (c: { t: number; headRot: string; rim: string }) => React.ReactNode;
   /** Head tilt, radians (+ = down). */
   pitch?: number;
   opacity?: number;
@@ -67,7 +75,7 @@ export type AntProps = {
   armor?: boolean;
 };
 
-type Geo = {
+export type Geo = {
   gaster: [number, number, number, number, number];
   bands: number;
   petiole: 'spine' | 'double';
@@ -76,7 +84,7 @@ type Geo = {
   eye: [number, number, number];
   jawBase: [number, number];
   jawLen: number;
-  jawKind: 'trap' | 'short';
+  jawKind: 'trap' | 'short' | 'sickle' | 'saber' | 'blade';
   antBase: [number, number];
   scape: number;
   funic: number;
@@ -203,7 +211,7 @@ const GEO: Record<Species, Geo> = { trapjaw: TRAPJAW, fire: FIRE, kesh: FIRE, qu
 type P = [number, number];
 
 export const Ant: React.FC<AntProps> = (p) => {
-  const g = GEO[p.species];
+  const g: Geo = { ...GEO[p.species], ...(p.geo ?? {}) };
   const s = p.scale ?? 1;
   const dir = p.dir ?? 1;
   const t = p.t;
@@ -279,6 +287,12 @@ export const Ant: React.FC<AntProps> = (p) => {
   const jawOpen = clamp(p.jaw ?? 1);
   const jaw = (upper: boolean) => {
     const [jx, jy] = g.jawBase;
+    if (g.jawKind === 'sickle' || g.jawKind === 'saber') {
+      // army ants: long pale hooks curving inward; slave-makers: thin curved sabers
+      const L = g.jawLen * (p.jawScale ?? 1), k = upper ? -1 : 1, w = g.jawKind === 'sickle' ? 5 : 3.2;
+      const o = jawOpen * 0.25;
+      return `M${jx - 4},${jy - w * k * -1} C${jx + L * 0.5},${jy + k * (L * (0.1 + o))} ${jx + L * 0.95},${jy + k * L * (0.05 + o)} ${jx + L},${jy + k * L * (0.35 + o * 0.5)} C${jx + L * 0.85},${jy + k * L * (0.12 + o)} ${jx + L * 0.45},${jy + k * L * (0.02 + o)} ${jx - 4},${jy + w * k} Z`;
+    }
     if (g.jawKind === 'short') {
       const a = upper ? -0.2 : 0.35;
       return `M${jx - 6},${jy - 3} Q${jx + 18 * Math.cos(a)},${jy + 18 * Math.sin(a) - 4} ${jx + g.jawLen},${jy + (upper ? -2 : 8)} Q${jx + 14},${jy + 6} ${jx - 4},${jy + 5} Z`;
@@ -288,7 +302,7 @@ export const Ant: React.FC<AntProps> = (p) => {
     const L = g.jawLen * (p.jawScale ?? 1), c = Math.cos(spread), sn = Math.sin(spread);
     const P = (u: number, v: number) => `${(jx + u * c - v * sn).toFixed(1)},${(jy + u * sn + v * c).toFixed(1)}`;
     const k = upper ? 1 : -1; // teeth hook toward the other jaw
-    if (p.finalForm) return `M${P(-6, -7 * k)} L${P(L * 0.55, -6 * k)} L${P(L + 10, 1 * k)} L${P(L * 0.55, 7 * k)} L${P(L * 0.5, 3 * k)} L${P(L * 0.42, 7 * k)} L${P(L * 0.36, 3 * k)} L${P(L * 0.28, 7 * k)} L${P(-6, 7 * k)} Z`;
+    if (p.finalForm || g.jawKind === 'blade') return `M${P(-6, -7 * k)} L${P(L * 0.55, -6 * k)} L${P(L + 10, 1 * k)} L${P(L * 0.55, 7 * k)} L${P(L * 0.5, 3 * k)} L${P(L * 0.42, 7 * k)} L${P(L * 0.36, 3 * k)} L${P(L * 0.28, 7 * k)} L${P(-6, 7 * k)} Z`;
     return `M${P(-6, -5.5 * k)} L${P(L - 10, -3 * k)} L${P(L, 2 * k)} L${P(L - 2, 12 * k)} L${P(L - 9, 4 * k)} L${P(L - 13, 10 * k)} L${P(L - 18, 3.5 * k)} L${P(L - 24, 7 * k)} L${P(L - 28, 4 * k)} L${P(-6, 5.5 * k)} Z`;
   };
   const jawRim = (upper: boolean) => {
@@ -346,14 +360,14 @@ export const Ant: React.FC<AntProps> = (p) => {
       <g>
         {legEls(true)}
         <g transform={headRot}>{antEls(true)}</g>
-        <path d={gaster} transform={`rotate(${grot} ${gcx} ${gcy})`} fill={f} stroke={st} strokeWidth={sw} />
+        <path d={gaster} transform={`rotate(${grot} ${gcx} ${gcy})`} fill={pass === 'body' && p.gasterFill ? p.gasterFill : f} stroke={st} strokeWidth={sw} />
         {stinger && <path d={stinger} fill={f} stroke={st} strokeWidth={sw} />}
         <path d={petiole} fill={f} stroke={st} strokeWidth={sw} />
         <path d={g.meso} fill={f} stroke={st} strokeWidth={sw} />
         <g transform={headRot}>
-          {g.jawKind === 'trap' && <path d={jaw(false)} fill={f} stroke={st} strokeWidth={sw} />}
-          <path d={g.head} fill={f} stroke={st} strokeWidth={sw} />
-          <path d={jaw(true)} fill={f} stroke={st} strokeWidth={sw} />
+          {g.jawKind !== 'short' && <path d={jaw(false)} fill={pass === 'body' && p.jawFill ? p.jawFill : f} stroke={st} strokeWidth={sw} />}
+          <path d={g.head} fill={pass === 'body' && p.headFill ? p.headFill : f} stroke={st} strokeWidth={sw} />
+          <path d={jaw(true)} fill={pass === 'body' && p.jawFill ? p.jawFill : f} stroke={st} strokeWidth={sw} />
           {p.carry && pass !== 'outline' && (
             p.carry === 'twig'
               ? <path d={`M${g.jawBase[0] + 30},${g.jawBase[1] - 60} L${g.jawBase[0] + 50},${g.jawBase[1] + 50}`} stroke={pass === 'rim' ? color : '#2a1a0c'} strokeWidth={12} strokeLinecap="round" />
@@ -442,6 +456,7 @@ export const Ant: React.FC<AntProps> = (p) => {
               <g stroke="#e8c9a8" strokeOpacity={0.45} strokeWidth={1.6} strokeLinecap="round"><path d="M10,-36 L18,-24 M-110,-46 L-96,-30 M84,-46 L90,-36" /></g>
             </g>
           )}
+          {p.extra && lod < 2 && p.extra({ t, headRot, rim })}
           {(p.cracks ?? 0) > 0.01 && lod < 2 && (
             <g stroke="#9dffb0" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={Math.min(1, p.cracks! * 1.2) * (0.65 + 0.35 * pulse)} filter={p.glowId ? `url(#${p.glowId})` : undefined}>
               <path d="M-128,-40 L-116,-26 L-104,-34 L-92,-18 L-80,-24" strokeWidth={2.2} />

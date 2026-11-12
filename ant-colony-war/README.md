@@ -111,6 +111,19 @@ Every ant is drawn by one shared rig, `src/art/Ant.tsx`, so 250 looks identical 
 
 Fire ants, Kesh (scarred) and the fire queen use the same rig.
 
+## The world
+
+All 22 colonies (ranked strongest to weakest, every one a real ant species) are reusable designs in `src/art/species.tsx`:
+
+```tsx
+<ColonyAnt id="bulldog" t={t} x={400} y={900} scale={1.6} />
+```
+
+The ids are: `army`, `argentine`, `bullet`, `leafcutter`, `bulldog`, `weaver`, `crazy`, `slavemaker`, `fire`, `harvester`, `honeypot`, `carpenter`, `jackjumper`, `silver`, `exploding`, `turtle`, `dracula`, `gliding`, `acrobat`, `ghost`, `pharaoh` and `trapjaw`.
+
+- **World Map sheet:** `reference/world-map-22-colonies.png`. Regenerate it with `npx remotion still src/dev/index.ts WorldMap out.png`.
+- **Season 2 cast:** Pip, Rix, Sorra, the Old Worker, the Snap and his final form are in `src/art/characters.tsx`; the sheet is `reference/season2-cast.png`.
+
 ## Narrator voice
 
 The narrator is **250 as an older British boy**, speaking slowly. It's a local voice, so it's free and needs no account:
