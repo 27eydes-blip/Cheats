@@ -1,0 +1,76 @@
+{
+  "episode": 5,
+  "title": "TESTING",
+  "infection": 0.25,
+  "shots": [
+    {
+      "scene": "dark",
+      "text": "I started testing it in secret.",
+      "pause": 0.8,
+      "note": "Alone in the dark, only his glint."
+    },
+    {
+      "scene": "sandGrain",
+      "text": "A falling grain of sand?",
+      "pause": 0.5,
+      "senses": true,
+      "note": "Slow motion: a grain falls from the ceiling."
+    },
+    {
+      "scene": "sandGrain",
+      "text": "I could catch it before it hit the ground.",
+      "pause": 0.8,
+      "options": {
+        "catch": true
+      },
+      "note": "He snatches it out of the air in his jaws."
+    },
+    {
+      "scene": "twig",
+      "text": "A twig the soldiers needed four ants to cut?",
+      "pause": 0.6,
+      "options": {
+        "who": "four"
+      },
+      "note": "Four soldiers strain at a twig."
+    },
+    {
+      "scene": "twig",
+      "text": "I {snap}snapped through it alone.",
+      "pause": 0.9,
+      "options": {
+        "who": "alone"
+      },
+      "note": "250 alone: SNAP, the twig flies apart."
+    },
+    {
+      "scene": "senses",
+      "text": "And when I closed my eyes, I could smell every ant in the tunnels.",
+      "pause": 0.6,
+      "senses": true,
+      "note": "Hyper senses: every sister glowing through the dirt."
+    },
+    {
+      "scene": "senses",
+      "text": "All 319 of them.",
+      "pause": 0.7,
+      "senses": true
+    },
+    {
+      "scene": "senses",
+      "text": "Plus something that didn't belong.",
+      "pause": 0.6,
+      "senses": true,
+      "tense": true,
+      "note": "Orange outlines that aren't sisters."
+    },
+    {
+      "scene": "senses",
+      "text": "Something from outside... and it was getting closer.",
+      "pause": 1.2,
+      "senses": true,
+      "tense": true,
+      "note": "The fire ants creep closer."
+    }
+  ]
+}

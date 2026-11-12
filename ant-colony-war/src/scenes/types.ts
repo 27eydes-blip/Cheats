@@ -18,6 +18,9 @@ export type SceneProps = {
   keshScarred: boolean;
   /** Index of this beat in the episode (used as a seed). */
   index: number;
+  /** Story seconds since the last {snap} / {impact} cue (Infinity if none yet). */
+  sinceSnap: number;
+  sinceImpact: number;
 };
 
 export type SceneDef = {

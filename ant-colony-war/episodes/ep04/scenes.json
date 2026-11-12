@@ -1,0 +1,53 @@
+{
+  "episode": 4,
+  "title": "INVISIBLE",
+  "infection": 0.2,
+  "shots": [
+    {
+      "scene": "wasteChamber",
+      "text": "When I came back, the workers had already carried me to the waste chamber.",
+      "pause": 0.7,
+      "note": "The waste chamber: a heap of dead ants."
+    },
+    {
+      "scene": "wasteChamber",
+      "text": "Ants don't bury their dead, they just throw them out.",
+      "pause": 0.8,
+      "options": {
+        "action": "dump"
+      },
+      "note": "A worker hauls a body and tips it onto the pile."
+    },
+    {
+      "scene": "wasteChamber",
+      "text": "So I climbed out of a pile of bodies,",
+      "pause": 0.4,
+      "options": {
+        "action": "climb"
+      },
+      "note": "250 rises out of the heap."
+    },
+    {
+      "scene": "hero",
+      "text": "walked back into the colony, and nobody noticed.",
+      "pause": 0.7,
+      "note": "Walking back through the tunnels."
+    },
+    {
+      "scene": "colony",
+      "text": "Nobody even looked up.",
+      "pause": 0.9,
+      "options": {
+        "find250": true
+      },
+      "note": "The colony streams past him."
+    },
+    {
+      "scene": "closeup",
+      "text": "And that's when I realized being invisible might be my greatest weapon.",
+      "pause": 1.3,
+      "infection": 0.3,
+      "note": "Close-up: the green glint in his eye."
+    }
+  ]
+}

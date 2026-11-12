@@ -1,0 +1,71 @@
+{
+  "episode": 2,
+  "title": "NUMBER 250",
+  "infection": 0.0,
+  "shots": [
+    {
+      "scene": "colony",
+      "text": "Three hundred twenty ants in my colony.",
+      "pause": 0.8,
+      "note": "Wide: the amber tunnels, hundreds of identical trap-jaws."
+    },
+    {
+      "scene": "nursery",
+      "text": "I was born *250th*.",
+      "pause": 0.8,
+      "options": {
+        "hatch": true
+      },
+      "note": "Nursery: a pale new ant unfolds from its pupa among the brood."
+    },
+    {
+      "scene": "antLine",
+      "text": "Not first, not last, just... in the middle.",
+      "pause": 0.9,
+      "note": "A single-file line of identical ants; 250 is the one in the middle."
+    },
+    {
+      "scene": "nursery",
+      "text": "In the nursery tunnels, nobody learned my name because I didn't have one.",
+      "pause": 0.7,
+      "note": "Nurses tend the brood; 250 walks past unnoticed."
+    },
+    {
+      "scene": "antLine",
+      "text": "I carried crumbs.",
+      "pause": 0.5,
+      "options": {
+        "carry": true
+      },
+      "note": "The line again, every ant carrying a crumb."
+    },
+    {
+      "scene": "antLine",
+      "text": "I followed lines.",
+      "pause": 0.5,
+      "note": "Following the scent trail."
+    },
+    {
+      "scene": "colony",
+      "text": "I was good at being invisible.",
+      "pause": 0.9,
+      "options": {
+        "find250": true
+      },
+      "note": "250 in the crowd; only a tiny glint."
+    },
+    {
+      "scene": "rootWall",
+      "text": "Then one morning, out past the root wall,",
+      "pause": 0.3,
+      "note": "Dawn light through a wall of giant roots; 250 walks out."
+    },
+    {
+      "scene": "amoeba",
+      "text": "I stepped in something that glowed.",
+      "pause": 1.2,
+      "tense": true,
+      "note": "The green amoeba, glowing at his feet."
+    }
+  ]
+}

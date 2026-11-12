@@ -3,6 +3,7 @@
 //   npm run render -- 3 4     -> episodes 3 and 4
 import 'dotenv/config';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { bundle } from '@remotion/bundler';
 import { renderMedia, selectComposition } from '@remotion/renderer';
@@ -46,6 +47,7 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
       browserExecutable,
       imageFormat: 'jpeg',
       jpegQuality: 92,
+      concurrency: Number(process.env.RENDER_CONCURRENCY) || os.cpus().length,
       onProgress: ({ progress }) => {
         const pct = Math.floor(progress * 20) * 5;
         if (pct !== last) { last = pct; process.stdout.write(`\r${id} ${pct}%   `); }

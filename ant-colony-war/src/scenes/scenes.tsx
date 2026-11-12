@@ -11,10 +11,10 @@ import { mix } from '../lib/color';
 import { clamp, ease, fbm, hash, hash2, lerp, range } from '../lib/random';
 import type { SceneDef, SceneProps } from './types';
 
-const TJ_GROUND = 46, FIRE_GROUND = 40;
-const wrap = (v: number, m: number) => ((v % m) + m) % m;
+export const TJ_GROUND = 46, FIRE_GROUND = 40;
+export const wrap = (v: number, m: number) => ((v % m) + m) % m;
 
-const Stage: React.FC<{ pal: Palette; children: React.ReactNode; bg?: string }> = ({ pal, children, bg }) => (
+export const Stage: React.FC<{ pal: Palette; children: React.ReactNode; bg?: string }> = ({ pal, children, bg }) => (
   <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: 'absolute', inset: 0, overflow: 'visible' }}>
     <EarthDefs pal={pal} />
     <AntDefs />
@@ -24,13 +24,13 @@ const Stage: React.FC<{ pal: Palette; children: React.ReactNode; bg?: string }> 
 );
 
 /** A light source glow with flicker. */
-const Glow: React.FC<{ x: number; y: number; r: number; t: number; amount?: number; ry?: number }> = ({ x, y, r, t, amount = 1, ry }) => {
+export const Glow: React.FC<{ x: number; y: number; r: number; t: number; amount?: number; ry?: number }> = ({ x, y, r, t, amount = 1, ry }) => {
   const fl = 0.88 + 0.08 * Math.sin(t * 9.3) + 0.04 * Math.sin(t * 23.1);
   return <ellipse cx={x} cy={y} rx={r} ry={ry ?? r} fill="url(#lightGlow)" opacity={amount * fl} style={{ mixBlendMode: 'screen' }} />;
 };
 
 /** Ants walking along a tunnel floor that scrolls with the camera. */
-const FloorWalkers: React.FC<{
+export const FloorWalkers: React.FC<{
   t: number; camX: number; floor: number; seed: number; n: number; scale: number; pal: Palette;
   species?: 'trapjaw' | 'fire'; speed?: number; both?: boolean; haze?: number; depth?: number; lod?: 0 | 1 | 2; rough?: number; tseed?: number; dir?: 1 | -1;
   rim?: string; fill?: string; ceiling?: number;
@@ -61,7 +61,7 @@ const FloorWalkers: React.FC<{
 };
 
 /** A faint, deeper tunnel below the action so the lower frame has depth. */
-const Deep: React.FC<{ pal: Palette; camX: number; t: number; T: number; seed: number; species?: 'trapjaw' | 'fire'; y?: number }> = ({ pal, camX, t, T, seed, species = 'trapjaw', y = 1600 }) => (
+export const Deep: React.FC<{ pal: Palette; camX: number; t: number; T: number; seed: number; species?: 'trapjaw' | 'fire'; y?: number }> = ({ pal, camX, t, T, seed, species = 'trapjaw', y = 1600 }) => (
   <>
     <Tunnel id={`deep${seed}`} pal={pal} camX={camX} t={t} ceil={y - 150} floor={y + 40} depth={0.5} seed={seed} haze={0.72} roots={false} solid={false} />
     <FloorWalkers t={T} camX={camX} floor={y + 40} seed={seed + 3} n={12} scale={0.3} pal={pal} both haze={0.65} depth={0.5} lod={2} tseed={seed} species={species} />
@@ -70,7 +70,7 @@ const Deep: React.FC<{ pal: Palette; camX: number; t: number; T: number; seed: n
 );
 
 /** Big trap-jaw hero (250). */
-const Hero: React.FC<SceneProps & { x: number; y: number; scale: number; dir?: 1 | -1; walk?: number; pal: Palette; rim?: string; pitch?: number }> = (p) => (
+export const Hero: React.FC<SceneProps & { x: number; y: number; scale: number; dir?: 1 | -1; walk?: number; pal: Palette; rim?: string; pitch?: number }> = (p) => (
   <Ant species="trapjaw" t={p.T} x={p.x} y={p.y} scale={p.scale} dir={p.dir} walk={p.walk} fill={p.pal.antFill} rim={p.rim ?? p.pal.rim} jaw={p.jaw} infection={p.inf} glowId="veinGlow" seed={250} pitch={p.pitch} />
 );
 
@@ -652,7 +652,7 @@ const army: SceneDef = {
   },
 };
 
-const COLD: Palette = { ...AMBER, rim: '#9aa8b4', light: '#8fa3b5', fog: '#3a4450', dust: '#c8d4de', cavity0: '#2a2f36', cavity1: '#0e1114', grade: '#6a8aa8', antFill: '#07080a' };
+export const COLD: Palette = { ...AMBER, rim: '#9aa8b4', light: '#8fa3b5', fog: '#3a4450', dust: '#c8d4de', cavity0: '#2a2f36', cavity1: '#0e1114', grade: '#6a8aa8', antFill: '#07080a' };
 
 const dirtMacro: SceneDef = {
   pal: () => AMBER,
@@ -845,7 +845,7 @@ const vast: SceneDef = {
   },
 };
 
-export const SCENES: Record<SceneId, SceneDef> = {
+export const SCENES: Partial<Record<SceneId, SceneDef>> = {
   dark, colony, hero, closeup, surface, flood, amoeba, infection, senses, fireColony, swarm, battle, kesh, duel, queen, council, army,
   dirtMacro, faceInDirt, lyingInChamber, deadStill, eyeOpen, waterDrop, rise, vast,
 };

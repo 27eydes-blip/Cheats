@@ -44,7 +44,20 @@ export type SceneId =
   | 'eyeOpen'
   | 'waterDrop'
   | 'rise'
-  | 'vast';
+  | 'vast'
+  | 'nursery'
+  | 'antLine'
+  | 'rootWall'
+  | 'fall'
+  | 'sky'
+  | 'wasteChamber'
+  | 'sandGrain'
+  | 'twig'
+  | 'scout'
+  | 'ranks'
+  | 'run'
+  | 'shove'
+  | 'chains';
 
 export type Shot = {
   scene: SceneId;

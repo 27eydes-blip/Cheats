@@ -11,6 +11,7 @@ export type Clock = {
   beatT: number[];
   /** Story times of every snap. */
   snapsT: number[];
+  impactsT: number[];
   /** Real times of cues. */
   cues: { type: string; at: number }[];
 };
@@ -33,7 +34,7 @@ export function buildClock(tl: Timeline, ep: Episode, fps: number): Clock {
   const T = new Float64Array(n);
   for (let f = 1; f < n; f++) T[f] = T[f - 1] + speed((f - 0.5) / fps) / fps;
   const at = (r: number) => T[Math.max(0, Math.min(n - 1, Math.round(r * fps)))];
-  return { T, beatT: tl.beats.map((b) => at(b.start)), snapsT: snaps.map(at), cues };
+  return { T, beatT: tl.beats.map((b) => at(b.start)), snapsT: snaps.map(at), impactsT: cues.filter((c) => c.type === 'impact').map((c) => at(c.at)), cues };
 }
 
 /** Trap-jaw mandibles: snapped shut at each snap, then slowly cocked open again. */

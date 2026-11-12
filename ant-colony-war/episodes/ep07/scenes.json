@@ -1,0 +1,64 @@
+{
+  "episode": 7,
+  "title": "THE FALL",
+  "infection": 0.35,
+  "shots": [
+    {
+      "scene": "run",
+      "text": "I ran home faster than any ant has ever run.",
+      "pause": 0.5,
+      "note": "Flat-out run through the tunnels, speed lines."
+    },
+    {
+      "scene": "run",
+      "text": "I screamed it through every tunnel: they're coming.",
+      "pause": 0.7,
+      "tense": true,
+      "options": {
+        "shout": true
+      },
+      "note": "Sound waves pour out of him."
+    },
+    {
+      "scene": "council",
+      "text": "The guards laughed.",
+      "pause": 0.6
+    },
+    {
+      "scene": "shove",
+      "text": "A soldier {impact}pushed me into the dirt and said, \"Go carry your crumbs, 250.\"",
+      "pause": 0.9,
+      "note": "A soldier shoves 250 into the dirt."
+    },
+    {
+      "scene": "swarm",
+      "text": "By sunrise the walls were burning.",
+      "pause": 0.6,
+      "fire": true
+    },
+    {
+      "scene": "battle",
+      "text": "I fought.",
+      "pause": 0.4,
+      "fire": true
+    },
+    {
+      "scene": "battle",
+      "text": "I {snap}snapped through twelve of them.",
+      "pause": 0.7,
+      "fire": true
+    },
+    {
+      "scene": "dark",
+      "text": "It didn't matter.",
+      "pause": 0.9
+    },
+    {
+      "scene": "chains",
+      "text": "Our queen was dragged out in chains... and I watched.",
+      "pause": 1.4,
+      "tense": true,
+      "note": "The queen dragged away in chains; 250 watches in the foreground."
+    }
+  ]
+}

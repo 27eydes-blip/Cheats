@@ -10,7 +10,7 @@ import { clamp, fbm, lerp, noise1 } from '../lib/random';
  * Anatomy: head – mesosoma (middle body; all six legs attach here) – petiole – gaster.
  * Each leg: coxa → femur → knee → tibia → ankle → tarsus (three visible segments).
  */
-export type Species = 'trapjaw' | 'fire' | 'kesh' | 'queen';
+export type Species = 'trapjaw' | 'fire' | 'kesh' | 'queen' | 'tjqueen';
 
 export type AntProps = {
   species: Species;
@@ -47,6 +47,8 @@ export type AntProps = {
   /** Upside-down (walking on a ceiling). */
   flip?: boolean;
   glowId?: string;
+  /** Something held in the mandibles: a crumb or a sand grain. */
+  carry?: 'crumb' | 'grain' | 'twig';
 };
 
 type Geo = {
@@ -147,7 +149,20 @@ const QUEEN: Geo = {
   legW: 7,
 };
 
-const GEO: Record<Species, Geo> = { trapjaw: TRAPJAW, fire: FIRE, kesh: FIRE, queen: QUEEN };
+/** The trap-jaw queen: same family look as 250, but a huge gaster and broad thorax. */
+const TJQUEEN: Geo = {
+  ...TRAPJAW,
+  gaster: [-150, -30, 100, 64, -8],
+  bands: 5,
+  meso: 'M-40,-6 C-50,-30 -30,-50 -6,-52 C16,-54 30,-56 46,-50 C58,-44 60,-30 56,-16 C52,-6 40,-2 24,-2 C0,0 -24,0 -40,-6 Z',
+  hips: [[44, -8], [16, -6], [-14, -8]],
+  feet: [116, 22, -100],
+  femur: 48,
+  tibia: 54,
+  legW: 6.5,
+};
+
+const GEO: Record<Species, Geo> = { trapjaw: TRAPJAW, fire: FIRE, kesh: FIRE, queen: QUEEN, tjqueen: TJQUEEN };
 
 type P = [number, number];
 
@@ -301,6 +316,11 @@ export const Ant: React.FC<AntProps> = (p) => {
           {g.jawKind === 'trap' && <path d={jaw(false)} fill={f} stroke={st} strokeWidth={sw} />}
           <path d={g.head} fill={f} stroke={st} strokeWidth={sw} />
           <path d={jaw(true)} fill={f} stroke={st} strokeWidth={sw} />
+          {p.carry && pass !== 'outline' && (
+            p.carry === 'twig'
+              ? <path d={`M${g.jawBase[0] + 30},${g.jawBase[1] - 60} L${g.jawBase[0] + 50},${g.jawBase[1] + 50}`} stroke={pass === 'rim' ? color : '#2a1a0c'} strokeWidth={12} strokeLinecap="round" />
+              : <ellipse cx={g.jawBase[0] + g.jawLen * 0.55} cy={g.jawBase[1] + 2} rx={p.carry === 'crumb' ? 22 : 9} ry={p.carry === 'crumb' ? 16 : 8} fill={pass === 'rim' ? color : p.carry === 'crumb' ? '#c8a272' : '#8a7a62'} />
+          )}
           {antEls(false)}
         </g>
         {legEls(false)}

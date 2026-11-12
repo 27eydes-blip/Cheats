@@ -24,14 +24,14 @@ export function mockAlignment(ep: Episode): BeatAlignment[] {
   });
 }
 
-/** Lengthens the pauses between lines (max 2.6 s each) so a short episode reaches MIN_SECONDS. Words are never touched. */
+/** Lengthens the pauses between lines (max 3.4 s each) so a short episode reaches MIN_SECONDS. Words are never touched. */
 export function fitPauses(ep: Episode, align: BeatAlignment[]): Episode {
   const pauses = ep.beats.map((b) => b.pause ?? DEFAULT_PAUSE);
   const total = () => TITLE_LEAD + END_CARD + align.reduce((s, a, i) => s + a.duration + pauses[i], 0);
   for (let k = 0; k < 200 && total() < MIN_SECONDS + 0.5; k++) {
     let grown = false;
     pauses.forEach((p, i) => {
-      if (p < 2.6) { pauses[i] = Math.min(2.6, p + 0.05 * (0.5 + p)); grown = true; }
+      if (p < 3.4) { pauses[i] = Math.min(3.4, p + 0.05 * (0.5 + p)); grown = true; }
     });
     if (!grown) break;
   }

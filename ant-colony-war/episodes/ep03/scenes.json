@@ -1,0 +1,62 @@
+{
+  "episode": 3,
+  "title": "THE GLOW",
+  "infection": 0.1,
+  "shots": [
+    {
+      "scene": "amoeba",
+      "text": "It was green, kind of like light you could touch.",
+      "pause": 0.7,
+      "note": "Close on the amoeba: liquid light, bloom, tendrils."
+    },
+    {
+      "scene": "infection",
+      "text": "It crawled up my leg like it knew exactly where it was going.",
+      "pause": 0.6,
+      "tense": true,
+      "infection": 0.15,
+      "note": "Tendrils climb his leg."
+    },
+    {
+      "scene": "infection",
+      "text": "Then it {impact}went inside.",
+      "pause": 1.0,
+      "tense": true,
+      "infection": 0.35,
+      "note": "It slides in through the crack in his shell. Impact."
+    },
+    {
+      "scene": "closeup",
+      "text": "I remember the burning,",
+      "pause": 0.3,
+      "infection": 0.7,
+      "tense": true,
+      "note": "Close-up: green veins flaring under his shell."
+    },
+    {
+      "scene": "fall",
+      "text": "and I remember falling.",
+      "pause": 0.8,
+      "infection": 0.6,
+      "note": "Slow motion: he topples onto his back."
+    },
+    {
+      "scene": "sky",
+      "text": "The last thing I saw was the sky,",
+      "pause": 0.4,
+      "options": {
+        "closing": true
+      },
+      "note": "Looking up through giant grass at the dawn sky; his vision closes."
+    },
+    {
+      "scene": "sky",
+      "text": "and for the first time I wondered what was up there looking back.",
+      "pause": 1.4,
+      "options": {
+        "watch": true
+      },
+      "note": "Night sky; one green star pulses, watching."
+    }
+  ]
+}

@@ -2,8 +2,8 @@ import type { Beat } from '../../script/types';
 import type { Cue, Highlight, Token } from './types';
 
 const ORANGE = /^(fire|fires|ember|embers|flame|flames|burn|burns|burning|venom|stinger|stingers|kesh|queen|smoke|glow|war|blood)$/i;
-const GREEN = /^(dead|die|died|death|kill|killed|killing|green|snap|snapped|alive|awake|average|traitor|me|evil)$/i;
-const NUMBER = /^[\d,]+$|^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirty|hundred|hundreds|thousand|thousands)$/i;
+const GREEN = /^(dead|die|died|death|kill|killed|killing|green|snap|snapped|alive|awake|traitor|evil|invisible|weapon)$/i;
+const NUMBER = /^[\d,]+$|^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|sixty|hundred|hundreds|thousand|thousands)$/i;
 const PHRASES: [RegExp, Exclude<Highlight, null>][] = [
   [/^fire ants?$/i, 'orange'],
   [/^fire (queen|colony)$/i, 'orange'],

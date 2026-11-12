@@ -1,0 +1,56 @@
+{
+  "episode": 6,
+  "title": "THE SCOUT",
+  "infection": 0.3,
+  "shots": [
+    {
+      "scene": "scout",
+      "text": "Fire ants.",
+      "pause": 0.7,
+      "note": "Ember eyes in a crack in the wall."
+    },
+    {
+      "scene": "scout",
+      "text": "A scout from the colony across the creek, hiding in our walls and counting us.",
+      "pause": 0.7,
+      "note": "The scout watches trap-jaws pass beneath it."
+    },
+    {
+      "scene": "dark",
+      "text": "I could have warned the queen, but who'd listen to number 250?",
+      "pause": 0.9
+    },
+    {
+      "scene": "surface",
+      "text": "So I followed him home that night.",
+      "pause": 0.7,
+      "note": "Night above ground."
+    },
+    {
+      "scene": "fireColony",
+      "text": "What I saw there wasn't a colony.",
+      "pause": 0.7,
+      "fire": true,
+      "note": "The fire colony, glowing like embers."
+    },
+    {
+      "scene": "ranks",
+      "text": "It was an army.",
+      "pause": 0.6,
+      "note": "Rows of fire ants."
+    },
+    {
+      "scene": "swarm",
+      "text": "Thousands of them.",
+      "pause": 0.7,
+      "fire": true
+    },
+    {
+      "scene": "ranks",
+      "text": "And they were all facing our way.",
+      "pause": 1.3,
+      "tense": true,
+      "note": "Every one of them facing toward us."
+    }
+  ]
+}

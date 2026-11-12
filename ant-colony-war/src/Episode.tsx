@@ -5,7 +5,7 @@ import { Finish } from './art/Atmosphere';
 import { SCENE_SHIFT } from './config';
 import { FireFx, FlashFx, SensesFx, SnapFx, shakeAt } from './fx/Effects';
 import { clamp, ease } from './lib/random';
-import { SCENES } from './scenes/scenes';
+import { ALL_SCENES as SCENES } from './scenes';
 import type { SceneProps } from './scenes/types';
 import { SoundTrack } from './SoundTrack';
 import { getTimeline } from './timeline/load';
@@ -36,7 +36,8 @@ export const EpisodeVideo: React.FC<{ ep: Ep }> = ({ ep }) => {
     const beat = ep.beats[i];
     const t = T - clock.beatT[i];
     const dur = (tl.beats[i].end - tl.beats[i].start) * (beat.senses ? 0.5 : 1);
-    return { t, T, dur, beat, ep, inf: infectionFor(ep, i), jaw: jawAt(T, clock.snapsT), keshScarred: keshScarred(ep, i), index: i };
+    const since = (list: number[]) => { let d = Infinity; for (const s of list) if (s <= T + 1e-6) d = T - s; return d; };
+    return { t, T, dur, beat, ep, inf: infectionFor(ep, i), jaw: jawAt(T, clock.snapsT), keshScarred: keshScarred(ep, i), index: i, sinceSnap: since(clock.snapsT), sinceImpact: since(clock.impactsT) };
   };
 
   const layers: { i: number; opacity: number }[] = [{ i: bi, opacity: 1 }];
@@ -70,7 +71,7 @@ export const EpisodeVideo: React.FC<{ ep: Ep }> = ({ ep }) => {
     () => clock.cues.filter((c) => c.type === 'snap').map((c) => {
       const b = tl.beats.findIndex((x) => c.at >= x.start && c.at < x.end);
       const bb = Math.max(0, b);
-      const p = { t: 0, T: 0, dur: 1, beat: ep.beats[bb], ep, inf: infectionFor(ep, bb), jaw: 1, keshScarred: keshScarred(ep, bb), index: bb };
+      const p = { t: 0, T: 0, dur: 1, beat: ep.beats[bb], ep, inf: infectionFor(ep, bb), jaw: 1, keshScarred: keshScarred(ep, bb), index: bb, sinceSnap: Infinity, sinceImpact: Infinity };
       const [fx, fy] = SCENES[ep.beats[bb].scene].focus(p);
       return { at: c.at, focus: [fx, fy + SCENE_SHIFT] as [number, number] };
     }),
