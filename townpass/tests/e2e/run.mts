@@ -315,7 +315,7 @@ async function browserFlows(slug: string, token: string) {
 async function adminBrowserFlow(round: number) {
   // The login lockout (10 failed attempts / 15 min) is working as designed; each round deliberately
   // fails once, so clear the LOCAL lockout first or repeated runs would lock the harness out.
-  require("node:child_process").execFileSync("npx", ["wrangler", "d1", "execute", "townpass", "--local", "--command", "DELETE FROM rate_limits WHERE key LIKE 'admin-login:%'"], { stdio: "ignore" });
+  resetLoginLockout();
   const b = await chromium.launch();
   const errors: string[] = [];
   try {
@@ -531,6 +531,9 @@ async function demoMonkey(file: string, seed: number, steps: number) {
 
 /* ================================================================== main */
 const started = Date.now();
+const resetLoginLockout = () =>
+  require("node:child_process").execFileSync("npx", ["wrangler", "d1", "execute", "townpass", "--local", "--command", "DELETE FROM rate_limits WHERE key LIKE 'admin-login:%'"], { stdio: "ignore" });
+resetLoginLockout(); // local only: earlier runs may have tripped the (working) 10-failures lockout
 const admin = await adminCookie();
 const slugs = (await cities(admin)).filter((s) => !s.startsWith("e2e-town"));
 console.log(`Testing ${BASE} · ${slugs.length} cities · ${ROUNDS} round(s)`);
