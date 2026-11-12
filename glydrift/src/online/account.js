@@ -13,7 +13,22 @@ import { Save } from "../data/save.js";
 import { TEST } from "../systems/testFlags.js";
 import { Leaderboard } from "./leaderboard.js";
 import { refreshAllMighty } from "./allMighty.js";
-import { cloudPayload, mergeSaves, progressScore } from "./cloudSave.js";
+import { cloudPayload, mergeSaves, progressScore, spendable } from "./cloudSave.js";
+
+// What this device last wrote to (or read from) the cloud: the id of its last upload and the
+// coins/spins in it. It lives in this device's own save (a device-only part, never uploaded),
+// so a save wiped at log-out starts again from nothing. Before each upload the cloud copy is
+// read: a different id means another device saved since, and it's merged in first (two devices
+// signed in at once used to overwrite each other's progress).
+function syncState(uid) {
+  const st = Save.data.cloudSync;
+  return st && st.uid === uid ? st : { uid, syncId: null, base: null };
+}
+function newSyncId() {
+  const a = new Uint32Array(2);
+  crypto.getRandomValues(a);
+  return `${Date.now().toString(36)}-${a[0].toString(36)}${a[1].toString(36)}`;
+}
 
 const PUSH_DELAY_MS = 4000;
 
@@ -319,7 +334,7 @@ class AccountService {
     this.emit();
     try {
       const cloud = await this.backend.loadSave(this.user.id);
-      if (cloud) Save.replace(mergeSaves(Save.data, cloud));
+      if (cloud) this.mergeCloud(cloud);
       this.merged = true;
       await this.pushNow();
     } catch (err) {
@@ -328,8 +343,29 @@ class AccountService {
     }
   }
 
+  /**
+   * Merge a cloud copy into this device's save. From then on that copy is what this device has
+   * "last synced" (so the same copy is never merged twice: coins would be added twice).
+   */
+  mergeCloud(cloud) {
+    const uid = this.user.id;
+    Save.replace(mergeSaves(Save.data, cloud, syncState(uid).base));
+    this.setSyncState({ uid, syncId: cloud.syncId || null, base: spendable(cloud) });
+  }
+
+  /** Remember the sync point in the save (a write that doesn't start another upload). */
+  setSyncState(st) {
+    Save.data.cloudSync = st;
+    this.quietWrite = true;
+    try {
+      Save.write();
+    } finally {
+      this.quietWrite = false;
+    }
+  }
+
   schedulePush() {
-    if (!this.signedIn) return;
+    if (!this.signedIn || this.quietWrite) return;
     if (this.pushing) {
       this.dirty = true; // pushed again when the current upload finishes
       return;
@@ -347,8 +383,18 @@ class AccountService {
     this.pushing = true;
     this.dirty = false;
     try {
+      const uid = this.user.id;
+      const st = syncState(uid);
+      // another device saved since this one last did: merge its copy in, never overwrite it
+      const cloud = await this.backend.loadSave(uid);
+      if (cloud && (cloud.syncId || null) !== st.syncId) {
+        this.mergeCloud(cloud);
+        this.mergedFromOther = (this.mergedFromOther || 0) + 1;
+      }
       const save = cloudPayload(Save.data);
-      await this.backend.storeSave(this.user.id, save, progressScore(save));
+      save.syncId = newSyncId();
+      await this.backend.storeSave(uid, save, progressScore(save));
+      this.setSyncState({ uid, syncId: save.syncId, base: spendable(save) });
       this.cloud = "synced";
       this.lastSync = Date.now();
     } catch (err) {

@@ -72,7 +72,8 @@ test("cloud sync: never uploads before a successful merge; a write during an upl
     return { offline, online, merged, keptCloudHero, dirty, again };
   });
   expect(r.offline).toEqual(["load"]);
-  expect(r.online).toEqual(["load", "store"]);
+  // (pull + merge, then the check before every upload that no other device saved meanwhile)
+  expect(r.online).toEqual(["load", "load", "store"]);
   expect(r.merged).toBe(true);
   expect(r.keptCloudHero).toBe(true);
   expect(r.dirty).toBe(true);
