@@ -221,6 +221,16 @@ const wasteChamber: SceneDef = {
             <Ant species="trapjaw" t={0} x={b.x} y={b.y - 20} scale={b.sc} dir={b.dir} flip lie={1} eyeOpen={0} fill={mix(pal.antFill, '#2a1e14', 0.3)} rim={pal.rim} rimOpacity={0.45} seed={i} lod={1} />
           </g>
         ))}
+        {action === 'under' && (
+          <g>
+            <Ant species="trapjaw" t={p.T} x={480} y={floor - 110} scale={1.3} lie={1} eyeOpen={ease(p.t / 2)} infection={p.inf} glowId="veinGlow" fill={pal.antFill} rim="#ffc890" seed={250} jaw={0.8} />
+            {[0, 1, 2].map((i) => (
+              <g key={i} transform={`rotate(${170 + i * 12} ${400 + i * 120} ${floor - 150 - i * 10})`}>
+                <Ant species="trapjaw" t={0} x={400 + i * 120} y={floor - 150 - i * 10} scale={1.0} lie={1} eyeOpen={0} fill={mix(pal.antFill, '#2a1e14', 0.3)} rim={pal.rim} rimOpacity={0.45} seed={i + 90} lod={1} />
+              </g>
+            ))}
+          </g>
+        )}
         {action === 'climb' && (
           <Ant species="trapjaw" t={p.T} x={500} y={lerp(floor - 120, floor - 230, climbK)} scale={1.3} lie={1 - climbK} pitch={-0.15} infection={p.inf} glowId="veinGlow" fill={pal.antFill} rim="#ffc890" seed={250} jaw={p.jaw} walk={0.5} />
         )}
@@ -357,7 +367,7 @@ const ranks: SceneDef = {
               const fx = x + 86 * r.sc * -1;
               return (
                 <g key={i}>
-                  <Ant species="fire" t={p.T} x={x + 80 * r.sc} y={r.y - FIRE_GROUND * r.sc} scale={r.sc} dir={-1} fill={mix('#160402', pal.fog, r.haze * 0.6)} rim="#ff7a2e" rimOpacity={0.8 - r.haze * 0.6} seed={i + ri * 20} lod={ri < 2 ? 2 : 1} />
+                  <Ant species="fire" t={p.T} x={x + 80 * r.sc} y={r.y - FIRE_GROUND * r.sc} scale={r.sc} dir={-1} pitch={p.beat.options?.bow ? 0.35 * ease(p.t / 1.5) : 0} fill={mix('#160402', pal.fog, r.haze * 0.6)} rim="#ff7a2e" rimOpacity={0.8 - r.haze * 0.6} seed={i + ri * 20} lod={ri < 2 ? 2 : 1} />
                   <circle cx={fx + 80 * r.sc} cy={r.y - FIRE_GROUND * r.sc - 28 * r.sc} r={5 * r.sc + 2} fill="#ffb050" opacity={0.5 + 0.4 * Math.sin(p.T * 2 + i + ri)} />
                 </g>
               );

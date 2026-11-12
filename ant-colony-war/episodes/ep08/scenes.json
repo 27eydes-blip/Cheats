@@ -1,0 +1,104 @@
+{
+  "episode": 8,
+  "title": "CHAINS",
+  "infection": 0.45,
+  "shots": [
+    {
+      "scene": "bridge",
+      "text": "They marched us across the creek on a bridge made of our own dead.",
+      "pause": 0.6,
+      "note": "Chained trap-jaws marched over a bridge of their own dead."
+    },
+    {
+      "scene": "lineup",
+      "text": "Three hundred twenty of us had become one hundred and six.",
+      "pause": 0.7
+    },
+    {
+      "scene": "vask",
+      "text": "And Vask? They gave him a place in their army, the one trap-jaw with no chains.",
+      "pause": 0.6,
+      "options": {
+        "phase": "army"
+      }
+    },
+    {
+      "scene": "fireColony",
+      "text": "In the fire colony, we weren't ants anymore. We were tools.",
+      "pause": 0.5,
+      "fire": true
+    },
+    {
+      "scene": "lineup",
+      "text": "We dug their tunnels, fed their larvae, and slept in the cold chambers near the surface where the rain came in.",
+      "pause": 0.6,
+      "note": "Chained in the cold chamber, rain dripping in."
+    },
+    {
+      "scene": "lineup",
+      "text": "Every morning a fire soldier named Kesh walked down our line and picked one of us to make an example of.",
+      "pause": 0.6,
+      "tense": true,
+      "options": {
+        "walker": "kesh"
+      }
+    },
+    {
+      "scene": "lineup",
+      "text": "Every morning I kept my head down and let him pass.",
+      "pause": 0.6,
+      "options": {
+        "focus": "250"
+      },
+      "note": "250 in the line, head down, a faint green glint."
+    },
+    {
+      "scene": "senses",
+      "text": "Every night I listened to Vask laughing with the fire soldiers above us.",
+      "pause": 0.6,
+      "senses": true,
+      "options": {
+        "reveal": "vask"
+      }
+    },
+    {
+      "scene": "dark",
+      "text": "Because I'd learned something the night my colony fell: strength you show too early gets you killed.",
+      "pause": 0.7
+    },
+    {
+      "scene": "eyeOpen",
+      "text": "So I watched.",
+      "pause": 0.4
+    },
+    {
+      "scene": "senses",
+      "text": "I learned their scent signals. I learned which guards were lazy, which tunnels led to the queen, and which of their soldiers secretly hated each other.",
+      "pause": 0.6,
+      "senses": true
+    },
+    {
+      "scene": "lineup",
+      "text": "They thought I was just another slave.",
+      "pause": 0.4,
+      "options": {
+        "focus": "250"
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "Good. Let them think that.",
+      "pause": 0.6,
+      "infection": 0.55
+    },
+    {
+      "scene": "vask",
+      "text": "And one day, Vask, I'm coming for you first.",
+      "pause": 1.4,
+      "options": {
+        "phase": "portrait"
+      },
+      "note": "Vask, unaware, in the dark."
+    }
+  ]
+}

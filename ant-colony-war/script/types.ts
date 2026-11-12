@@ -64,7 +64,10 @@ export type SceneId =
   | 'royalChamber'
   | 'legs'
   | 'colonyQueen'
-  | 'stepAside';
+  | 'stepAside'
+  | 'vask'
+  | 'bridge'
+  | 'bump';
 
 export type Shot = {
   scene: SceneId;

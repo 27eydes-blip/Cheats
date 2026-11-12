@@ -392,6 +392,12 @@ const senses: SceneDef = {
             </g>
           </g>
         )}
+        {p.beat.options?.reveal === 'vask' && (
+          <g>
+            {range(5).map((i) => <Ant key={'vf' + i} species="fire" t={p.T} x={180 + i * 170} y={tunnels[1].y - 10 + Math.abs(Math.sin(p.T * 5 + i)) * -10} scale={0.5} dir={i % 2 ? -1 : 1} outline="#ff8a3a" seed={i + 90} lod={1} />)}
+            <Ant species="trapjaw" t={p.T} x={520} y={tunnels[1].y - 16 + Math.abs(Math.sin(p.T * 6)) * -12} scale={0.65} outline="#ffd27a" seed={61} />
+          </g>
+        )}
         {p.beat.options?.reveal === 'ghosts' && range(12).map((i) => {
           const h = hash2(i, 77), x = 60 + h * 960, y = 300 + hash2(i, 78) * 1250;
           const fade = 0.5 + 0.4 * Math.abs(Math.sin(p.T * 0.6 + i));

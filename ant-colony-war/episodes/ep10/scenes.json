@@ -6,32 +6,36 @@
     {
       "scene": "ranks",
       "text": "Fire ants rule through fear.",
-      "pause": 0.6
+      "pause": 0.5
     },
     {
       "scene": "queen",
       "text": "Their venom burns for days, and their queen hasn't left her chamber in three years.",
-      "pause": 0.6
+      "pause": 0.5
     },
     {
       "scene": "run",
       "text": "But I was faster than their venom.",
-      "pause": 0.5
+      "pause": 0.4
     },
     {
       "scene": "army",
       "text": "Over the next weeks I climbed their ranks.",
-      "pause": 0.5,
+      "pause": 0.4,
       "fire": true
     },
     {
       "scene": "duel",
       "text": "I {snap}snapped the jaws of every soldier who challenged me, until no one challenged me anymore.",
-      "pause": 0.6,
+      "pause": 0.5,
       "options": {
         "opponent": "soldier"
-      },
-      "note": "SNAP: a challenger goes down."
+      }
+    },
+    {
+      "scene": "ranks",
+      "text": "They stopped calling me trap-jaw. They started calling me the *Snap*.",
+      "pause": 0.6
     },
     {
       "scene": "kesh",
@@ -44,40 +48,58 @@
     {
       "scene": "queen",
       "text": "So did the queen.",
-      "pause": 0.6,
+      "pause": 0.5,
       "tense": true
     },
     {
       "scene": "assassins",
       "text": "One night she sent twenty of her best to kill me while I slept.",
       "pause": 0.4,
-      "tense": true,
-      "note": "Assassins creep up on 250 lying in the dark."
+      "tense": true
     },
     {
       "scene": "eyeOpen",
       "text": "They didn't know I don't really sleep anymore.",
-      "pause": 0.4,
-      "note": "His eye snaps open, green."
+      "pause": 0.3
     },
     {
       "scene": "senses",
       "text": "I heard them three tunnels away.",
-      "pause": 0.6,
+      "pause": 0.4,
       "senses": true
+    },
+    {
+      "scene": "assassins",
+      "text": "I let them get close. Close enough to see my eyes glow green in the dark.",
+      "pause": 0.3,
+      "tense": true
+    },
+    {
+      "scene": "dark",
+      "text": "Then I {impact}moved.",
+      "pause": 0.8
     },
     {
       "scene": "royalChamber",
       "text": "In the morning, I walked into the royal chamber alone, covered in red.",
-      "pause": 0.5,
+      "pause": 0.4,
       "options": {
         "phase": "walkIn"
       }
     },
     {
       "scene": "royalChamber",
+      "text": "The general was already dead at the door.",
+      "pause": 0.5,
+      "options": {
+        "phase": "walkIn",
+        "generalDead": true
+      }
+    },
+    {
+      "scene": "royalChamber",
       "text": "The queen looked at me and whispered, \"What are you?\"",
-      "pause": 0.6,
+      "pause": 0.5,
       "tense": true,
       "options": {
         "phase": "confront"
@@ -92,24 +114,55 @@
     {
       "scene": "royalChamber",
       "text": "\"I'm number 250. And this is my colony now.\"",
-      "pause": 0.9,
+      "pause": 0.6,
       "options": {
         "phase": "claim"
       },
-      "camera": "push",
-      "note": "The queen lowers her head."
+      "camera": "push"
+    },
+    {
+      "scene": "ranks",
+      "text": "The whole army bowed. Thousands of them.",
+      "pause": 0.6,
+      "options": {
+        "bow": true
+      }
     },
     {
       "scene": "lineup",
-      "text": "Behind me, my own kind, the trap-jaws, were still in chains. I could've freed them.",
-      "pause": 0.6
+      "text": "Behind me, my own kind, the trap-jaws, were still in chains.",
+      "pause": 0.5
+    },
+    {
+      "scene": "lineup",
+      "text": "The old worker pushed to the front and begged, \"Free us. Please. You're one of us.\"",
+      "pause": 0.6,
+      "options": {
+        "focus": "old"
+      }
+    },
+    {
+      "scene": "closeup",
+      "text": "I looked at him for a long time.",
+      "pause": 0.9,
+      "infection": 0.95
+    },
+    {
+      "scene": "army",
+      "text": "Then I turned to my new soldiers and said, \"Make them dig deeper.\"",
+      "pause": 0.6,
+      "fire": true
+    },
+    {
+      "scene": "lineup",
+      "text": "I could've freed them.",
+      "pause": 0.5
     },
     {
       "scene": "dark",
-      "text": "I didn't. Not yet.",
-      "pause": 1.6,
-      "infection": 1,
-      "note": "Darkness, and one green eye."
+      "text": "I didn't. Not yet. Maybe not ever.",
+      "pause": 1.8,
+      "infection": 1
     }
   ]
 }
