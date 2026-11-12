@@ -31,7 +31,7 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
     if (tl.mock) console.warn(`EP${ep.n}: no narration generated yet, rendering a silent preview (run \`npm run audio\`).`);
     if (tl.duration < MIN_SECONDS || tl.duration > MAX_SECONDS) console.warn(`EP${ep.n}: ${tl.duration.toFixed(1)}s is outside ${MIN_SECONDS}-${MAX_SECONDS}s. Adjust the script or pauses.`);
     const id = `EP${String(ep.n).padStart(2, '0')}`;
-    const composition = await selectComposition({ serveUrl, id, inputProps: { ep }, browserExecutable });
+    const composition = await selectComposition({ serveUrl, id, inputProps: { ep }, browserExecutable, timeoutInMilliseconds: 180000 });
     const file = path.join(OUT, `ant-colony-war-ep${String(ep.n).padStart(2, '0')}-${slug(ep.title)}.mp4`);
     const t0 = Date.now();
     let last = -1;
@@ -48,6 +48,8 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
       imageFormat: 'jpeg',
       jpegQuality: 92,
       concurrency: Number(process.env.RENDER_CONCURRENCY) || os.cpus().length,
+      // heavy swarm shots can take a while per frame on slow machines
+      timeoutInMilliseconds: 180000,
       onProgress: ({ progress }) => {
         const pct = Math.floor(progress * 20) * 5;
         if (pct !== last) { last = pct; process.stdout.write(`\r${id} ${pct}%   `); }
