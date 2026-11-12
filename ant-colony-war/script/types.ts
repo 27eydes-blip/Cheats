@@ -67,7 +67,11 @@ export type SceneId =
   | 'stepAside'
   | 'vask'
   | 'bridge'
-  | 'bump';
+  | 'bump'
+  | 'throneRoom'
+  | 'coldTunnels'
+  | 'taviClose'
+  | 'kael';
 
 export type Shot = {
   scene: SceneId;
@@ -90,12 +94,29 @@ export type Shot = {
   options?: Record<string, string | number | boolean>;
   /** Free text for you; ignored by the renderer. */
   note?: string;
+  /** Quoted lines in this shot are other characters, remembered: give them a faint memory filter. */
+  memory?: boolean;
+  /** Red/green strobing (the purge). */
+  strobe?: boolean;
+  /** A full slow-motion moment for this shot. */
+  slowmo?: boolean;
+  /** Whip-pan into this shot. */
+  whip?: boolean;
 };
 
 /** Kept as an alias: a "beat" is a shot. */
 export type Beat = Shot;
 
+/** Narrator delivery for an episode (ElevenLabs voice settings). */
+export type VoiceTone = { stability?: number; style?: number; speed?: number };
+/** How the Green's voice is processed: pitch down (semitones), whisper layer and echo, 0..1. */
+export type GreenTone = { semitones: number; whisper: number; echo: number };
+
 export type EpisodeFile = {
+  /** 1 (default) or 2... */
+  season?: number;
+  voice?: VoiceTone;
+  greenVoice?: GreenTone;
   episode: number;
   title: string;
   infection: number;
@@ -105,6 +126,9 @@ export type EpisodeFile = {
 };
 
 export type Episode = {
+  season: number;
+  voice?: VoiceTone;
+  greenVoice?: GreenTone;
   n: number;
   title: string;
   infection: number;
@@ -112,4 +136,4 @@ export type Episode = {
   beats: Shot[];
 };
 
-export const toEpisode = (f: EpisodeFile): Episode => ({ n: f.episode, title: f.title, infection: f.infection ?? 0, endCard: f.endCard, beats: f.shots });
+export const toEpisode = (f: EpisodeFile): Episode => ({ season: f.season ?? 1, voice: f.voice, greenVoice: f.greenVoice, n: f.episode, title: f.title, infection: f.infection ?? 0, endCard: f.endCard, beats: f.shots });

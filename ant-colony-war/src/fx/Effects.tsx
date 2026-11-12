@@ -7,7 +7,7 @@ import { FIRE } from '../art/palette';
 import { SNAP_FREEZE } from '../timeline/remap';
 
 /** Trap-jaw SNAP: white flash during the freeze, then a double shockwave and speed lines. */
-export const SnapFx: React.FC<{ snaps: { at: number; focus: [number, number] }[]; time: number }> = ({ snaps, time }) => (
+export const SnapFx: React.FC<{ snaps: { at: number; focus: [number, number] }[]; time: number; color?: string }> = ({ snaps, time, color = '#fff' }) => (
   <>
     {snaps.map((s, i) => {
       const d = time - s.at;
@@ -41,7 +41,7 @@ export const SnapFx: React.FC<{ snaps: { at: number; focus: [number, number] }[]
               </>
             )}
           </svg>
-          <div style={{ position: 'absolute', inset: 0, background: '#fff', opacity: flash, mixBlendMode: 'screen' }} />
+          <div style={{ position: 'absolute', inset: 0, background: color, opacity: flash, mixBlendMode: 'screen' }} />
         </React.Fragment>
       );
     })}
@@ -109,4 +109,30 @@ export const shakeAt = (time: number, cues: { type: string; at: number }[]) => {
   }
   const f = Math.floor(time * 60);
   return { x: (hash2(f, 1) - 0.5) * 2 * amp, y: (hash2(f, 2) - 0.5) * 2 * amp, r: (hash2(f, 3) - 0.5) * amp * 0.03 };
+};
+
+/** The Green speaking: the screen breathes, the edges pulse green, ripples pass through everything. */
+export const GreenFx: React.FC<{ k: number; t: number }> = ({ k, t }) => {
+  if (k <= 0) return null;
+  const pulse = 0.5 + 0.5 * Math.sin(t * 2.4);
+  return (
+    <div style={{ position: 'absolute', inset: 0, opacity: k }}>
+      <div style={{ position: 'absolute', inset: 0, boxShadow: `inset 0 0 ${160 + pulse * 140}px ${40 + pulse * 40}px rgba(40,255,110,${0.35 + 0.25 * pulse})` }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 40%, rgba(10,60,30,0.55) 100%)', mixBlendMode: 'multiply' }} />
+      <svg width={W} height={H} style={{ position: 'absolute', inset: 0, mixBlendMode: 'screen' }}>
+        {range(4).map((i) => {
+          const u = (((t / 3 + i / 4) % 1) + 1) % 1;
+          return <ellipse key={i} cx={W / 2} cy={H * 0.42} rx={60 + u * 900} ry={40 + u * 1100} fill="none" stroke="#7dffa0" strokeWidth={2 + (1 - u) * 6} strokeOpacity={(1 - u) * 0.4} />;
+        })}
+      </svg>
+    </div>
+  );
+};
+
+/** The purge: hard red/green strobing. */
+export const StrobeFx: React.FC<{ on: boolean; frame: number }> = ({ on, frame }) => {
+  if (!on) return null;
+  const phase = Math.floor(frame / 3) % 4;
+  const c = phase === 0 ? 'rgba(255,30,20,0.32)' : phase === 2 ? 'rgba(40,255,100,0.26)' : 'rgba(0,0,0,0)';
+  return <div style={{ position: 'absolute', inset: 0, background: c, mixBlendMode: 'screen' }} />;
 };

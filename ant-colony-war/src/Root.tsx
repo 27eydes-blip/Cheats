@@ -4,6 +4,7 @@ import { EPISODES } from './episodes';
 import { FPS, H, W } from './config';
 import { EpisodeVideo } from './Episode';
 import { getTimeline } from './timeline/load';
+import { compositionId } from './episodeKey';
 
 export const episodeId = (n: number) => `EP${String(n).padStart(2, '0')}`;
 
@@ -11,8 +12,8 @@ export const Root: React.FC = () => (
   <>
     {EPISODES.map((ep) => (
       <Composition
-        key={ep.n}
-        id={episodeId(ep.n)}
+        key={compositionId(ep)}
+        id={compositionId(ep)}
         component={EpisodeVideo}
         defaultProps={{ ep }}
         width={W}

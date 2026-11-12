@@ -28,7 +28,9 @@ export function mockAlignment(ep: Episode): BeatAlignment[] {
 export function fitPauses(ep: Episode, align: BeatAlignment[]): Episode {
   const pauses = ep.beats.map((b) => b.pause ?? DEFAULT_PAUSE);
   const total = () => TITLE_LEAD + END_CARD + align.reduce((s, a, i) => s + a.duration + pauses[i], 0);
-  for (let k = 0; k < 200 && total() < MIN_SECONDS + 0.5; k++) {
+  // Season 1 pads short episodes to MIN_SECONDS; later seasons run at their natural length
+  const min = ep.season === 1 ? MIN_SECONDS : 0;
+  for (let k = 0; k < 200 && total() < min + 0.5; k++) {
     let grown = false;
     pauses.forEach((p, i) => {
       if (p < 3.4) { pauses[i] = Math.min(3.4, p + 0.05 * (0.5 + p)); grown = true; }
@@ -56,7 +58,7 @@ export function buildTimeline(ep: Episode, align: BeatAlignment[], audio: string
     const al = align[bi];
     tokens.forEach((tk, i) => {
       const a = al.tokens[i] ?? al.tokens[al.tokens.length - 1];
-      words.push({ text: tk.display, start: cursor + a.start, end: cursor + a.end, beat: bi, hl: tk.hl, cues: tk.cues });
+      words.push({ text: tk.display, start: cursor + a.start, end: cursor + a.end, beat: bi, hl: tk.hl, cues: tk.cues, green: tk.green, quote: tk.quote });
     });
     const first = al.tokens[0]?.start ?? 0;
     beats.push({ start: cursor + first, end: cursor + al.duration });

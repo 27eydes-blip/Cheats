@@ -3,6 +3,7 @@ import type { SceneId } from '../../script/types';
 import { Amoeba } from '../art/Amoeba';
 import { Beetle, Drop, Grains } from '../art/Props';
 import { Ant, AntDefs } from '../art/Ant';
+import { Mandros } from '../art/characters';
 import { Dust, Embers, Fog, Rain, Shafts, Smoke } from '../art/Atmosphere';
 import { ceilAt, EarthDefs, floorAt, Foreground, smoothPath, Tunnel } from '../art/Earth';
 import { AMBER, FIRE, GREEN, NIGHT, VOID, type Palette } from '../art/palette';
@@ -71,7 +72,11 @@ export const Deep: React.FC<{ pal: Palette; camX: number; t: number; T: number; 
 
 /** Big trap-jaw hero (250). */
 export const Hero: React.FC<SceneProps & { x: number; y: number; scale: number; dir?: 1 | -1; walk?: number; pal: Palette; rim?: string; pitch?: number }> = (p) => (
+  p.ep.season > 1 ? (
+    <Mandros episode={p.ep.n} t={p.T} x={p.x} y={p.y} scale={p.scale} dir={p.dir} walk={p.walk} jaw={p.jaw} pitch={p.pitch} />
+  ) : (
   <Ant species="trapjaw" t={p.T} x={p.x} y={p.y} scale={p.scale} dir={p.dir} walk={p.walk} fill={p.pal.antFill} rim={p.rim ?? p.pal.rim} jaw={p.jaw} infection={p.inf} glowId="veinGlow" seed={250} pitch={p.pitch} armor={p.armor} />
+  )
 );
 
 // ---------------------------------------------------------------------------------------------
@@ -396,6 +401,15 @@ const senses: SceneDef = {
           <g>
             {range(5).map((i) => <Ant key={'vf' + i} species="fire" t={p.T} x={180 + i * 170} y={tunnels[1].y - 10 + Math.abs(Math.sin(p.T * 5 + i)) * -10} scale={0.5} dir={i % 2 ? -1 : 1} outline="#ff8a3a" seed={i + 90} lod={1} />)}
             <Ant species="trapjaw" t={p.T} x={520} y={tunnels[1].y - 16 + Math.abs(Math.sin(p.T * 6)) * -12} scale={0.65} outline="#ffd27a" seed={61} />
+          </g>
+        )}
+        {p.beat.options?.reveal === 'kael' && (
+          <g>
+            {range(3).map((k) => {
+              const u = wrap(p.t / 1.6 + k / 3, 1);
+              return <ellipse key={'kr' + k} cx={300} cy={tunnels[2].y - 20} rx={30 + u * 360} ry={20 + u * 240} fill="none" stroke="#9fd0ff" strokeOpacity={(1 - u) * 0.5} strokeWidth={2 + (1 - u) * 4} />;
+            })}
+            <Ant species="trapjaw" t={p.T} x={300} y={tunnels[2].y - 30} scale={0.8} outline="#9fd0ff" oneAntenna crouch={0.7} seed={33} />
           </g>
         )}
         {p.beat.options?.reveal === 'ghosts' && range(12).map((i) => {

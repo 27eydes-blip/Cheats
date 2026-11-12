@@ -8,18 +8,31 @@ const PHRASES: [RegExp, Exclude<Highlight, null>][] = [
   [/^fire ants?$/i, 'orange'],
   [/^fire (queen|colony)$/i, 'orange'],
   [/^my colony$/i, 'green'],
+  [/^(tavi ren|kael varro)$/i, 'blue'],
   [/^lord mandros$/i, 'green'],
   [/^my sisters$/i, 'green'],
   [/^trap-jaws?$/i, 'green'],
 ];
+const BLUE = /^(tavi|kael|ren|varro|pip|rix|brother)$/i;
 const bare = (s: string) => s.replace(/[^\p{L}\p{N},'-]/gu, '').replace(/,$/, '');
 
 /** Splits a beat's text into tokens, resolving inline markup. */
 export function parseBeat(beat: Beat): Token[] {
   const tokens: Token[] = [];
   // keep [display|spoken] groups together even when they contain spaces
-  const parts = beat.text.match(/(\{[a-z]+\})*\[[^\]]+\][^\s]*|\S+/g) ?? [];
+  // only [display|spoken] (with a bar) is a pronunciation group; plain [ ... ] marks the Green speaking
+  const parts = beat.text.match(/(\{[a-z]+\})*\[[^\]|]+\|[^\]]+\][^\s]*|\S+/g) ?? [];
+  let inGreen = false, inQuote = false;
   for (let raw of parts) {
+    let green = inGreen, quote = inQuote;
+    if (!/\|/.test(raw)) {
+      if (raw.includes('[')) { green = true; inGreen = true; }
+      if (raw.includes(']')) inGreen = false;
+      raw = raw.replace(/[[\]]/g, '');
+      const q = (raw.match(/"/g) ?? []).length;
+      if (raw.startsWith('"')) quote = true;
+      if (q % 2 === 1) inQuote = !inQuote;
+    }
     const cues: Cue[] = [];
     raw = raw.replace(/\{(snap|impact|shake|flash)\}/g, (_, c) => {
       cues.push(c as Cue);
@@ -36,7 +49,7 @@ export function parseBeat(beat: Beat): Token[] {
       spoken = m[1] + m[3] + m[4];
     }
     if (!display) continue;
-    tokens.push({ display, spoken, cues, hl });
+    tokens.push({ display, spoken, cues, hl, green: green || undefined, quote: quote || undefined });
   }
   // automatic highlights
   for (let i = 0; i < tokens.length; i++) {
@@ -45,6 +58,7 @@ export function parseBeat(beat: Beat): Token[] {
     const w = bare(t.display);
     if (NUMBER.test(w) || GREEN.test(w)) t.hl = 'green';
     else if (ORANGE.test(w)) t.hl = 'orange';
+    else if (BLUE.test(w)) t.hl = 'blue';
     if (i + 1 < tokens.length) {
       const pair = w + ' ' + bare(tokens[i + 1].display);
       for (const [re, c] of PHRASES)

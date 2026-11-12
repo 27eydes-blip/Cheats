@@ -1,5 +1,5 @@
 export type Cue = 'snap' | 'impact' | 'shake' | 'flash';
-export type Highlight = 'green' | 'orange' | null;
+export type Highlight = 'green' | 'orange' | 'blue' | null;
 
 export type Token = {
   /** What the captions show. */
@@ -8,6 +8,10 @@ export type Token = {
   spoken: string;
   cues: Cue[];
   hl: Highlight;
+  /** Spoken by the Green (inside [brackets]). */
+  green?: boolean;
+  /** Inside "quotes" (someone else's words, remembered). */
+  quote?: boolean;
 };
 
 export type Word = {
@@ -18,6 +22,8 @@ export type Word = {
   beat: number;
   hl: Highlight;
   cues: Cue[];
+  green?: boolean;
+  quote?: boolean;
 };
 
 export type BeatTiming = { start: number; end: number };

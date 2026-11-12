@@ -1,5 +1,6 @@
 import React from 'react';
 import { Ant, AntDefs } from '../art/Ant';
+import { LordMandrosFinal, Mandros } from '../art/characters';
 import { H, SERIES, W } from '../config';
 import { clamp, easeOut, hash2, range } from '../lib/random';
 import { CAPTION_FONT, TITLE_FONT } from './fonts';
@@ -29,23 +30,28 @@ const GlitchText: React.FC<{ text: string; size: number; frame: number; strength
 };
 
 /** "ANT COLONY WAR — EP X: TITLE" with a glitchy cinematic reveal. t = seconds since the episode started. */
-export const TitleCard: React.FC<{ n: number; title: string; t: number; frame: number; lead: number }> = ({ n, title, t, frame, lead }) => {
+export const TitleCard: React.FC<{ n: number; title: string; t: number; frame: number; lead: number; season?: number }> = ({ n, title, t, frame, lead, season = 1 }) => {
+  const s2 = season > 1;
   const out = lead + 0.15;
   if (t > out + 0.7) return null;
   const inK = easeOut(t / 0.7);
   const glitchIn = Math.max(0, 1 - t / 0.9);
   const glitchOut = clamp((t - out) / 0.5);
   const flick = t < 0.9 ? (hash2(frame, 99) > 0.25 + glitchIn * 0.5 ? 1 : 0.25) : t > out ? (hash2(frame, 98) > glitchOut * 0.8 ? 1 : 0) : 1;
-  const strength = Math.max(glitchIn, glitchOut, 0.04 + (hash2(Math.floor(frame / 9), 5) > 0.88 ? 0.5 : 0));
+  const strength = Math.max(glitchIn, glitchOut, 0.04 + (hash2(Math.floor(frame / (s2 ? 5 : 9)), 5) > (s2 ? 0.75 : 0.88) ? 0.5 : 0)) * (s2 ? 1.5 : 1);
   const opacity = flick * (1 - glitchOut);
   const bar = easeOut((t - 0.25) / 0.6);
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0.35), rgba(0,0,0,0.85))', opacity: 1 - glitchOut }} />
+      <div style={{ position: 'absolute', inset: 0, background: s2 ? 'radial-gradient(ellipse at 50% 45%, rgba(40,0,0,0.6), rgba(0,0,0,0.95))' : 'radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0.35), rgba(0,0,0,0.85))', opacity: 1 - glitchOut }} />
       <div style={{ position: 'absolute', left: 0, right: 0, top: 640, display: 'flex', flexDirection: 'column', alignItems: 'center', opacity, transform: `scale(${0.92 + 0.08 * inK + glitchOut * 0.15})` }}>
         <GlitchText text={SERIES} size={156} frame={frame} strength={strength} spacing="0.03em" />
+        {s2 && <div style={{ marginTop: 18 }}><GlitchText text={`SEASON ${season}`} size={58} frame={frame + 7} strength={strength} color="#ff4a3a" spacing="0.5em" /></div>}
         <div style={{ width: 760 * bar, height: 3, background: 'linear-gradient(90deg, transparent, #ffb35c, transparent)', margin: '34px 0' }} />
-        <GlitchText text={`EP ${n}: ${title}`} size={74} frame={frame + 3} strength={strength * 0.8} color="#ffcf94" spacing="0.08em" />
+        <GlitchText text={`EP ${n}: ${title}`} size={74} frame={frame + 3} strength={strength * 0.8} color={s2 ? '#e8e0d8' : '#ffcf94'} spacing="0.08em" />
+      </div>
+      {s2 && strength > 0.25 && <div style={{ position: 'absolute', left: 0, right: 0, top: 500 + hash2(frame, 41) * 700, height: 8 + hash2(frame, 42) * 40, background: hash2(frame, 43) > 0.5 ? 'rgba(255,40,40,0.35)' : 'rgba(61,255,106,0.25)', mixBlendMode: 'screen' }} />}
+      <div style={{ display: 'none' }}>
       </div>
       {/* scanlines, only while the title is up */}
       <div style={{ position: 'absolute', left: 0, right: 0, top: 560, height: 520, background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0 2px, transparent 2px 5px)', opacity: 0.5 * (1 - glitchOut) }} />
@@ -54,7 +60,7 @@ export const TitleCard: React.FC<{ n: number; title: string; t: number; frame: n
 };
 
 /** "FOLLOW FOR PART X+1" with 250's silhouette. t = seconds since the end card started. */
-export const EndCard: React.FC<{ text: string; t: number; frame: number; infection: number }> = ({ text, t, frame, infection }) => {
+export const EndCard: React.FC<{ text: string; t: number; frame: number; infection: number; season?: number; episode?: number }> = ({ text, t, frame, infection, season = 1, episode = 1 }) => {
   if (t < 0) return null;
   const fade = clamp(t / 0.6);
   const k = easeOut((t - 0.35) / 0.6);
@@ -65,7 +71,11 @@ export const EndCard: React.FC<{ text: string; t: number; frame: number; infecti
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: 'absolute', inset: 0, opacity: fade }}>
         <AntDefs />
         <ellipse cx={W / 2} cy={1030} rx={420} ry={40} fill="rgba(255,170,80,0.18)" />
-        <Ant species="trapjaw" t={t + 3} x={W / 2 - 40} y={980} scale={2.4 + t * 0.04} fill="#050302" rim="#ffb066" infection={infection} glowId="veinGlow" seed={250} walk={0} />
+        {season > 1 ? (
+          episode >= 10 ? <LordMandrosFinal t={t + 3} x={W / 2 - 40} y={980} scale={2.4 + t * 0.04} /> : <Mandros episode={episode} t={t + 3} x={W / 2 - 40} y={980} scale={2.4 + t * 0.04} />
+        ) : (
+          <Ant species="trapjaw" t={t + 3} x={W / 2 - 40} y={980} scale={2.4 + t * 0.04} fill="#050302" rim="#ffb066" infection={infection} glowId="veinGlow" seed={250} walk={0} />
+        )}
       </svg>
       <div style={{ position: 'absolute', left: 0, right: 0, top: 560, textAlign: 'center', opacity: k, transform: `translateY(${(1 - k) * 40}px)` }}>
         <GlitchText text={SERIES} size={64} frame={frame} strength={Math.max(0, 0.5 - t)} color="#ffcf94" spacing="0.12em" />

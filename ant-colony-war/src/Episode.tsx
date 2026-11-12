@@ -3,7 +3,8 @@ import { AbsoluteFill, useCurrentFrame, useVideoConfig } from 'remotion';
 import type { Episode as Ep } from '../script/types';
 import { Finish } from './art/Atmosphere';
 import { SCENE_SHIFT } from './config';
-import { FireFx, FlashFx, SensesFx, SnapFx, shakeAt } from './fx/Effects';
+import { FireFx, FlashFx, GreenFx, SensesFx, SnapFx, StrobeFx, shakeAt } from './fx/Effects';
+import { isGreenShot } from './timeline/remap';
 import { clamp, ease } from './lib/random';
 import { ALL_SCENES as SCENES } from './scenes';
 import type { SceneProps } from './scenes/types';
@@ -62,7 +63,12 @@ export const EpisodeVideo: React.FC<{ ep: Ep }> = ({ ep }) => {
   const hb = beat.tense ? Math.pow(Math.max(0, Math.sin(time * Math.PI * 2 * 1.2)), 12) * 0.012 : 0;
   const sh = shakeAt(time, clock.cues);
   const driftX = Math.sin(T * 0.17) * 12, driftY = Math.cos(T * 0.13) * 10;
-  const cam = `translate(${driftX + sh.x}px, ${driftY + sh.y + SCENE_SHIFT}px) rotate(${Math.sin(T * 0.11) * 0.35 + sh.r}deg) scale(${1.06 * zoom * (1 + hb)})`;
+  const greenShot = isGreenShot(beat);
+  const greenK = greenShot ? clamp((time - tl.beats[bi].start) / 0.4) * clamp((tl.beats[bi].end - time) / 0.4 + 0.2) : 0;
+  // whip-pan into a shot: a fast horizontal smear for the first few frames
+  const whipK = beat.whip ? clamp(1 - (time - tl.beats[bi].start) / 0.22) : 0;
+  const breathe = greenShot ? 1 + 0.018 * Math.sin(time * 2.4) : 1;
+  const cam = `translate(${driftX + sh.x + whipK * whipK * 900}px, ${driftY + sh.y + SCENE_SHIFT}px) rotate(${Math.sin(T * 0.11) * 0.35 + sh.r}deg) scale(${1.06 * zoom * (1 + hb) * breathe})`;
 
   // effect intensities
   const sensesK = beat.senses ? clamp((time - tl.beats[bi].start) / 0.5) : 0;
@@ -96,10 +102,13 @@ export const EpisodeVideo: React.FC<{ ep: Ep }> = ({ ep }) => {
       <SensesFx k={sensesK} t={T} focus={[def.focus(cur)[0], def.focus(cur)[1] + SCENE_SHIFT]} />
       <Finish frame={frame} pal={pal} vignette={1 + hb * 20} />
       <FlashFx cues={clock.cues} time={time} />
-      <SnapFx snaps={snaps} time={time} />
-      <Captions groups={groups} time={time} />
-      <TitleCard n={ep.n} title={ep.title} t={time} frame={frame} lead={tl.narrationStart} />
-      <EndCard text={ep.endCard ?? `FOLLOW FOR PART ${ep.n + 1}`} t={time - tl.endStart} frame={frame} infection={ep.infection} />
+      <GreenFx k={greenK} t={time} />
+      <StrobeFx on={!!beat.strobe} frame={frame} />
+      {whipK > 0 && <div style={{ position: 'absolute', inset: 0, backdropFilter: `blur(${whipK * 30}px)` }} />}
+      <SnapFx snaps={snaps} time={time} color={ep.season > 1 ? '#5dff7e' : '#fff'} />
+      <Captions groups={groups} time={time} season={ep.season} />
+      <TitleCard n={ep.n} title={ep.title} t={time} frame={frame} lead={tl.narrationStart} season={ep.season} />
+      <EndCard text={ep.endCard ?? `FOLLOW FOR PART ${ep.n + 1}`} t={time - tl.endStart} frame={frame} infection={ep.infection} season={ep.season} episode={ep.n} />
       <SoundTrack ep={ep} tl={tl} cues={clock.cues} />
     </AbsoluteFill>
   );

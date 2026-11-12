@@ -4,7 +4,9 @@ import { clamp } from '../lib/random';
 import type { Word } from '../timeline/types';
 import { CAPTION_FONT } from './fonts';
 
-const COLORS = { green: '#5dff7e', orange: '#ff8a2a' } as const;
+const COLORS = { green: '#5dff7e', orange: '#ff8a2a', blue: '#7ec8ff' } as const;
+/** Season 2+: fire ants light up red instead of orange. */
+const COLORS_S2 = { green: '#5dff7e', orange: '#ff3a2a', blue: '#7ec8ff' } as const;
 
 export type Group = { words: Word[]; start: number; end: number };
 
@@ -64,7 +66,8 @@ export function groupWords(words: Word[]): Group[] {
   return groups;
 }
 
-export const Captions: React.FC<{ groups: Group[]; time: number; y?: number }> = ({ groups, time, y = 1290 }) => {
+export const Captions: React.FC<{ groups: Group[]; time: number; y?: number; season?: number }> = ({ groups, time, y = 1290, season = 1 }) => {
+  const palette = season > 1 ? COLORS_S2 : COLORS;
   const g = groups.find((x) => time >= x.start - 0.04 && time < x.end);
   if (!g) return null;
   const age = time - g.start;
@@ -93,7 +96,9 @@ export const Captions: React.FC<{ groups: Group[]; time: number; y?: number }> =
       {g.words.map((w, i) => {
         const spoken = time >= w.start - 0.03;
         const wk = clamp((time - w.start) / 0.14);
-        const hl = w.hl ? COLORS[w.hl] : null;
+        // the Green speaks in green, with a glitch shimmer
+        const hl = w.green ? '#7dffa0' : w.hl ? palette[w.hl] : null;
+        const shimmer = w.green ? Math.sin(time * 37 + i * 3) * 2.5 : 0;
         const s = hl ? (spoken ? 1 + 0.22 * Math.sin(wk * Math.PI) + 0.06 : 0.94) : spoken ? 1 + 0.06 * Math.sin(wk * Math.PI) : 0.97;
         return (
           <span
@@ -105,14 +110,16 @@ export const Captions: React.FC<{ groups: Group[]; time: number; y?: number }> =
               lineHeight: 1.08,
               letterSpacing: '-0.01em',
               textTransform: 'uppercase',
-              color: hl && spoken ? hl : '#ffffff',
+              color: hl && (spoken || w.green) ? hl : '#ffffff',
               opacity: spoken ? 1 : 0.55,
               transform: `scale(${s}) translateY(${spoken ? 0 : 6}px)`,
               display: 'inline-block',
               margin: hl ? '0 0.24em' : 0,
               WebkitTextStroke: '12px rgba(0,0,0,0.92)',
               paintOrder: 'stroke fill',
-              textShadow: hl && spoken ? `0 0 28px ${hl}aa, 0 6px 18px rgba(0,0,0,0.9)` : '0 6px 18px rgba(0,0,0,0.9)',
+              textShadow: w.green
+                ? `${shimmer}px 0 0 rgba(255,40,80,0.55), ${-shimmer}px 0 0 rgba(40,255,220,0.55), 0 0 30px #3dff6aaa, 0 6px 18px rgba(0,0,0,0.9)`
+                : hl && spoken ? `0 0 28px ${hl}aa, 0 6px 18px rgba(0,0,0,0.9)` : '0 6px 18px rgba(0,0,0,0.9)',
             }}
           >
             {w.text.replace(/\.\.\.$/, '…')}

@@ -21,7 +21,10 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { checkEpisode, loadEpisodes } from './lib/episodes';
+import { checkEpisode, loadEpisodes, selectEpisodes } from './lib/episodes';
+import { greenVoice, memoryFilter } from './lib/dsp';
+import { isGreenShot } from '../src/timeline/remap';
+import { audioBase, epKey } from '../src/episodeKey';
 import type { Episode } from '../script/types';
 import { DEFAULT_PAUSE, buildTimeline, fitPauses, mockAlignment } from '../src/timeline/build';
 import { parseBeat, spokenText } from '../src/timeline/parse';
@@ -62,9 +65,9 @@ const VOICE_SETTINGS = {
 const args = process.argv.slice(2);
 const MOCK = args.includes('--mock');
 const FORCE = args.includes('--force');
-const only = args.filter((a) => /^\d+$/.test(a)).map(Number);
 const EPISODES = loadEpisodes();
-const episodes = EPISODES.filter((e) => !only.length || only.includes(e.n));
+// npm run audio -- 3 4 (season 1)  |  npm run audio -- s2 1  (season 2)  |  no numbers = everything
+const episodes = selectEpisodes(args, EPISODES);
 const pad = (n: number) => String(n).padStart(2, '0');
 
 /** Remotion ships its own ffmpeg, so nobody needs to install one. */
@@ -80,10 +83,10 @@ type ElevenResponse = {
   alignment: { characters: string[]; character_start_times_seconds: number[]; character_end_times_seconds: number[] } | null;
 };
 
-async function synthesise(text: string, previous: string | undefined, next: string | undefined): Promise<ElevenResponse> {
+async function synthesise(text: string, previous: string | undefined, next: string | undefined, settings: typeof VOICE_SETTINGS = VOICE_SETTINGS): Promise<ElevenResponse> {
   const key = process.env.ELEVENLABS_API_KEY;
   if (!key) throw new Error('TTS_ENGINE=elevenlabs needs ELEVENLABS_API_KEY in .env.');
-  const body = JSON.stringify({ text, model_id: MODEL_ID, voice_settings: VOICE_SETTINGS, previous_text: previous, next_text: next });
+  const body = JSON.stringify({ text, model_id: MODEL_ID, voice_settings: settings, previous_text: previous, next_text: next });
   for (let attempt = 1; ; attempt++) {
     const res = await fetch(`${API}/v1/text-to-speech/${VOICE_ID}/with-timestamps?output_format=mp3_44100_128`, {
       method: 'POST',
@@ -161,11 +164,19 @@ async function episodeAudio(ep: Episode): Promise<Timeline> {
   const lines = ep.beats.map((b) => spokenText(parseBeat(b)));
   const aligns: BeatAlignment[] = [];
   const pcm: Int16Array[] = [];
+  // Per-episode delivery (Season 2 gets colder: lower stability), and the Green's lines a little less stable still.
+  const greenShot = ep.beats.map((b) => isGreenShot(b));
+  const settingsFor = (i: number) => {
+    const base = { ...VOICE_SETTINGS, ...(ep.voice ?? {}) };
+    return greenShot[i] ? { ...base, stability: Math.max(0.15, base.stability * 0.8) } : base;
+  };
   const keyOf = (i: number) => {
     const text = lines[i];
     const prev = lines.slice(Math.max(0, i - 2), i).join(' ') || undefined;
     const next = lines[i + 1];
-    const cfg = ENGINE === 'elevenlabs' ? { VOICE_ID, MODEL_ID, VOICE_SETTINGS, prev, next } : { KOKORO, v: 3 };
+    // season 1 keeps its original cache keys
+    const st = ep.season === 1 && !ep.voice ? VOICE_SETTINGS : settingsFor(i);
+    const cfg = ENGINE === 'elevenlabs' ? { VOICE_ID, MODEL_ID, VOICE_SETTINGS: st, prev, next } : { KOKORO, v: 3 };
     return crypto.createHash('sha1').update(JSON.stringify({ ENGINE, cfg, text })).digest('hex').slice(0, 16);
   };
   const keys = lines.map((_, i) => keyOf(i));
@@ -176,7 +187,7 @@ async function episodeAudio(ep: Episode): Promise<Timeline> {
     const index = textIndex();
     lines.forEach((text, i) => {
       if (fs.existsSync(audioOf(i)) && fs.existsSync(jsonOf(i))) return;
-      const prior = index.get(JSON.stringify(VOICE_SETTINGS) + '|' + text);
+      const prior = index.get(JSON.stringify(settingsFor(i)) + '|' + text);
       if (prior) {
         fs.copyFileSync(path.join(CACHE, prior + '.mp3'), audioOf(i));
         fs.copyFileSync(path.join(CACHE, prior + '.json'), jsonOf(i));
@@ -187,9 +198,9 @@ async function episodeAudio(ep: Episode): Promise<Timeline> {
   if (ENGINE === 'elevenlabs') {
     for (const i of missing) {
       console.log(`  line ${i + 1}/${lines.length}: ${lines[i]}`);
-      const r = await synthesise(lines[i], lines.slice(Math.max(0, i - 2), i).join(' ') || undefined, lines[i + 1]);
+      const r = await synthesise(lines[i], lines.slice(Math.max(0, i - 2), i).join(' ') || undefined, lines[i + 1], settingsFor(i));
       fs.writeFileSync(audioOf(i), Buffer.from(r.audio_base64, 'base64'));
-      fs.writeFileSync(jsonOf(i), JSON.stringify({ alignment: r.alignment, text: lines[i], settings: VOICE_SETTINGS }));
+      fs.writeFileSync(jsonOf(i), JSON.stringify({ alignment: r.alignment, text: lines[i], settings: settingsFor(i) }));
     }
   } else if (missing.length) {
     if (!fs.existsSync(VOICE_PY)) throw new Error('The narrator voice is not installed yet. Run `npm run voice:setup` first.');
@@ -207,10 +218,22 @@ async function episodeAudio(ep: Episode): Promise<Timeline> {
   }
   for (let i = 0; i < ep.beats.length; i++) {
     const cached = JSON.parse(fs.readFileSync(jsonOf(i), 'utf8'));
-    const samples = decode(fs.readFileSync(audioOf(i)));
+    let samples = decode(fs.readFileSync(audioOf(i)));
+    const parsed = parseBeat(ep.beats[i]);
+    const tokens = parsed.map((t) => t.spoken);
+    let timed: { start: number; end: number }[] = cached.words ?? (cached.alignment ? alignTokens(tokens, cached.alignment, samples.length / SR) : mockAlignment({ ...ep, beats: [ep.beats[i]] })[0].tokens);
+    // the Green: pitched down, whisper layer, echo (it gets closer to the narrator's own voice as the season goes on)
+    if (greenShot[i] && ep.greenVoice) {
+      const g = greenVoice(samples, ep.greenVoice);
+      samples = g.pcm;
+      timed = timed.map((w) => ({ start: w.start * g.stretch, end: w.end * g.stretch }));
+    }
+    // other characters' words, remembered: a faint memory filter over the quoted part
+    if (ep.beats[i].memory) {
+      const q = parsed.map((t, k) => (t.quote ? k : -1)).filter((k) => k >= 0);
+      if (q.length) samples = memoryFilter(samples, timed[q[0]].start - 0.05, timed[q[q.length - 1]].end + 0.08);
+    }
     const duration = samples.length / SR;
-    const tokens = parseBeat(ep.beats[i]).map((t) => t.spoken);
-    const timed = cached.words ?? (cached.alignment ? alignTokens(tokens, cached.alignment, duration) : mockAlignment({ ...ep, beats: [ep.beats[i]] })[0].tokens);
     aligns.push({ duration, tokens: timed });
     pcm.push(samples);
   }
@@ -224,27 +247,27 @@ async function episodeAudio(ep: Episode): Promise<Timeline> {
     out.set(p, Math.round(cursor * SR));
     cursor += aligns[i].duration + (ep.beats[i].pause ?? DEFAULT_PAUSE);
   });
-  const file = `ep${pad(ep.n)}.mp3`;
+  const file = `${audioBase(ep)}.mp3`;
   const mp3 = ffmpeg(['-f', 's16le', '-ac', '1', '-ar', String(SR), '-i', 'pipe:0', '-c:a', 'libmp3lame', '-b:a', '192k', '-f', 'mp3', 'pipe:1'], Buffer.from(out.buffer));
   fs.writeFileSync(path.join(AUDIO, file), mp3);
   fs.writeFileSync(path.join(PUBLIC_AUDIO, file), mp3);
   const tl = buildTimeline(ep, aligns, `audio/${file}`, false);
-  fs.writeFileSync(path.join(AUDIO, `ep${pad(ep.n)}.json`), JSON.stringify({ episode: ep.n, title: ep.title, duration: tl.duration, words: tl.words.map((w) => ({ text: w.text, start: +w.start.toFixed(3), end: +w.end.toFixed(3) })) }, null, 1));
+  fs.writeFileSync(path.join(AUDIO, `${audioBase(ep)}.json`), JSON.stringify({ episode: ep.n, title: ep.title, duration: tl.duration, words: tl.words.map((w) => ({ text: w.text, start: +w.start.toFixed(3), end: +w.end.toFixed(3) })) }, null, 1));
   return tl;
 }
 
-function writeTimelines(all: Record<number, Timeline>) {
-  const sorted = Object.fromEntries(Object.entries(all).sort((a, b) => +a[0] - +b[0]));
+function writeTimelines(all: Record<string, Timeline>) {
+  const sorted = Object.fromEntries(Object.entries(all).sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true })));
   fs.writeFileSync(
     DATA,
-    `// AUTO-GENERATED by scripts/generate-audio.ts. Do not edit by hand.\nimport type { Timeline } from '../timeline/types';\n\nexport const TIMELINES: Record<number, Timeline> = ${JSON.stringify(sorted)};\n`,
+    `// AUTO-GENERATED by scripts/generate-audio.ts. Do not edit by hand.\nimport type { Timeline } from '../timeline/types';\n\nexport const TIMELINES: Record<string, Timeline> = ${JSON.stringify(sorted)};\n`,
   );
 }
 
-function readTimelines(): Record<number, Timeline> {
+function readTimelines(): Record<string, Timeline> {
   try {
     const src = fs.readFileSync(DATA, 'utf8');
-    const m = src.match(/TIMELINES: Record<number, Timeline> = (\{[\s\S]*\});\s*$/);
+    const m = src.match(/TIMELINES: Record<string, Timeline> = (\{[\s\S]*\});\s*$/);
     return m ? JSON.parse(m[1]) : {};
   } catch {
     return {};
@@ -268,10 +291,10 @@ function readTimelines(): Record<number, Timeline> {
   for (const ep of episodes) {
     console.log(`EP${pad(ep.n)}: ${ep.title}`);
     const tl = await episodeAudio(ep);
-    all[ep.n] = tl;
+    all[epKey(ep)] = tl;
     writeTimelines(all);
     const flag = tl.duration < MIN_SECONDS || tl.duration > MAX_SECONDS ? `  (outside ${MIN_SECONDS}-${MAX_SECONDS}s, adjust the script)` : '';
-    console.log(`  -> audio/ep${pad(ep.n)}.mp3, episode length ${tl.duration.toFixed(1)}s${flag}`);
+    console.log(`  -> audio/${audioBase(ep)}.mp3, episode length ${tl.duration.toFixed(1)}s${flag}`);
   }
 })().catch((e) => {
   console.error('\n' + (e instanceof Error ? e.message : e));

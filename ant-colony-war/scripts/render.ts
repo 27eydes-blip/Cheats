@@ -7,7 +7,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { bundle } from '@remotion/bundler';
 import { renderMedia, selectComposition } from '@remotion/renderer';
-import { checkEpisode, loadEpisodes } from './lib/episodes';
+import { checkEpisode, loadEpisodes, selectEpisodes } from './lib/episodes';
+import { compositionId, outName } from '../src/episodeKey';
 import { hasFfmpeg, makeTv } from './tv';
 
 const EPISODES = loadEpisodes();
@@ -16,11 +17,10 @@ import { MAX_SECONDS, MIN_SECONDS } from '../src/config';
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'out');
-const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 (async () => {
-  const want = process.argv.slice(2).map(Number).filter(Boolean);
-  const eps = EPISODES.filter((e) => !want.length || want.includes(e.n));
+  // npm run render -- 3 4      (season 1)   |   npm run render -- s2 1 2   (season 2)
+  const eps = selectEpisodes(process.argv.slice(2), EPISODES);
   fs.mkdirSync(OUT, { recursive: true });
   console.log('Bundling…');
   const serveUrl = await bundle({ entryPoint: path.join(ROOT, 'src', 'index.ts'), publicDir: path.join(ROOT, 'public') });
@@ -31,9 +31,9 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
     const tl = getTimeline(ep);
     if (tl.mock) console.warn(`EP${ep.n}: no narration generated yet, rendering a silent preview (run \`npm run audio\`).`);
     if (tl.duration < MIN_SECONDS || tl.duration > MAX_SECONDS) console.warn(`EP${ep.n}: ${tl.duration.toFixed(1)}s is outside ${MIN_SECONDS}-${MAX_SECONDS}s. Adjust the script or pauses.`);
-    const id = `EP${String(ep.n).padStart(2, '0')}`;
+    const id = compositionId(ep);
     const composition = await selectComposition({ serveUrl, id, inputProps: { ep }, browserExecutable, timeoutInMilliseconds: 180000 });
-    const file = path.join(OUT, `ant-colony-war-ep${String(ep.n).padStart(2, '0')}-${slug(ep.title)}.mp4`);
+    const file = path.join(OUT, outName(ep));
     const t0 = Date.now();
     let last = -1;
     // Chrome occasionally stalls on a frame under heavy load: retry with fewer parallel tabs.

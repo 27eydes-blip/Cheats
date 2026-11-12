@@ -51,8 +51,8 @@ export const Tavi: React.FC<Placement & { sick?: number }> = ({ sick = 0, ...p }
   <Ant
     species="trapjaw"
     fill={sick > 0.5 ? '#4a3e32' : '#1a120a'}
-    rim={sick > 0.5 ? '#d8cbb8' : '#ffe0b0'}
-    rimOpacity={0.95}
+    rim={sick > 0.5 ? '#d8cbb8' : '#ffe8c8'}
+    rimOpacity={1}
     eyeScale={2.8}
     jawScale={1.35}
     antennaSpeed={1 - 0.7 * sick}

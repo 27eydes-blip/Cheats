@@ -1,0 +1,128 @@
+{
+  "season": 2,
+  "episode": 1,
+  "title": "THE THRONE",
+  "infection": 0.3,
+  "voice": {
+    "stability": 0.42,
+    "style": 0.38
+  },
+  "greenVoice": {
+    "semitones": -4.0,
+    "whisper": 0.45,
+    "echo": 0.5
+  },
+  "shots": [
+    {
+      "scene": "throneRoom",
+      "text": "Six months. That's how long I've ruled the fire colony.",
+      "pause": 0.6,
+      "options": {
+        "phase": "wide"
+      },
+      "camera": "push",
+      "note": "The throne room: Lord Mandros on the root throne above rows of bowing fire soldiers."
+    },
+    {
+      "scene": "throneRoom",
+      "text": "Thousands of soldiers, and every one of them lowers their head when I pass.",
+      "pause": 0.5,
+      "options": {
+        "phase": "walk"
+      },
+      "note": "He walks between the rows; every head lowers as he passes."
+    },
+    {
+      "scene": "closeup",
+      "text": "They don't call me 250 anymore. They call me Lord Mandros.",
+      "pause": 0.7,
+      "note": "Close on him in Krell's cracked armor, faint green veins."
+    },
+    {
+      "scene": "throneRoom",
+      "text": "The green in my veins is brighter now. Some nights it's the only light in the throne room.",
+      "pause": 0.6,
+      "options": {
+        "phase": "night"
+      },
+      "note": "Night: the room is dark except for the green in his veins."
+    },
+    {
+      "scene": "coldTunnels",
+      "text": "The trap-jaws still dig in the cold tunnels.",
+      "pause": 0.5,
+      "note": "Blue-gray tunnels, dripping water, chained trap-jaws digging."
+    },
+    {
+      "scene": "dark",
+      "text": "I tell myself it's to keep them safe. Some days I even believe it.",
+      "pause": 0.7
+    },
+    {
+      "scene": "throneRoom",
+      "text": "This morning, a young trap-jaw broke from the line and ran toward me.",
+      "pause": 0.3,
+      "options": {
+        "phase": "run"
+      },
+      "note": "A tiny trap-jaw breaks from the line and runs at the throne."
+    },
+    {
+      "scene": "throneRoom",
+      "text": "My guards {impact}grabbed him before he got close.",
+      "pause": 0.5,
+      "options": {
+        "phase": "grab"
+      }
+    },
+    {
+      "scene": "taviClose",
+      "text": "He looked up at me and said, \"My mother says you're my brother.\"",
+      "pause": 0.8,
+      "memory": true,
+      "note": "Tavi, tiny, huge eyes, looking up at him."
+    },
+    {
+      "scene": "taviClose",
+      "text": "His name was Tavi Ren. I didn't even know he existed.",
+      "pause": 0.7
+    },
+    {
+      "scene": "senses",
+      "text": "And then I heard another name, whispered three tunnels down.",
+      "pause": 0.4,
+      "senses": true,
+      "options": {
+        "reveal": "kael"
+      },
+      "note": "A whisper, three tunnels away: Kael's outline."
+    },
+    {
+      "scene": "kael",
+      "text": "Kael Varro. The only friend I ever had.",
+      "pause": 0.6,
+      "options": {
+        "mode": "memory"
+      },
+      "note": "Kael's face, remembered: broken antenna, the scar."
+    },
+    {
+      "scene": "kael",
+      "text": "I watched him die the night our colony fell.",
+      "pause": 0.6,
+      "options": {
+        "mode": "fall"
+      },
+      "note": "Memory: Kael falling into fire and smoke."
+    },
+    {
+      "scene": "kael",
+      "text": "Apparently... I was wrong.",
+      "pause": 1.4,
+      "options": {
+        "mode": "alive"
+      },
+      "note": "The rebel hideout. Kael, alive, in the dark."
+    }
+  ]
+}

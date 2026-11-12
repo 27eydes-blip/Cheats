@@ -32,7 +32,9 @@ if (require.main === module) {
     console.error('TV versions need ffmpeg on your PATH (https://ffmpeg.org/download.html).');
     process.exit(1);
   }
-  const want = process.argv.slice(2).map(Number).filter(Boolean);
-  const files = fs.readdirSync(OUT).filter((f) => /^ant-colony-war-ep\d+.*\.mp4$/.test(f)).filter((f) => !want.length || want.includes(Number(f.match(/ep(\d+)/)![1])));
+  const args = process.argv.slice(2);
+  const want = args.map(Number).filter(Boolean);
+  const s = args.find((a) => /^s\d+$/i.test(a))?.toLowerCase();
+  const files = fs.readdirSync(OUT).filter((f) => (s ? f.startsWith(`ant-colony-war-${s}-ep`) : /^ant-colony-war-ep\d+.*\.mp4$/.test(f))).filter((f) => !want.length || want.includes(Number(f.match(/ep(\d+)/)![1])));
   for (const f of files) console.log('TV version ->', path.relative(ROOT, makeTv(path.join(OUT, f))));
 }

@@ -1,5 +1,9 @@
 import type { Episode } from '../../script/types';
 import type { Timeline } from './types';
+import { parseBeat } from './parse';
+
+/** A shot where every word is the Green speaking. */
+export const isGreenShot = (b: Episode['beats'][number]) => { const t = parseBeat(b); return t.length > 0 && t.every((x) => x.green); };
 
 export const SNAP_FREEZE = 0.22;
 export const SENSES_SPEED = 0.38;
@@ -25,9 +29,11 @@ export function buildClock(tl: Timeline, ep: Episode, fps: number): Clock {
     for (const s of snaps) if (r >= s && r < s + SNAP_FREEZE) return 0;
     let v = 1;
     tl.beats.forEach((b, i) => {
-      if (!ep.beats[i].senses) return;
+      const b0 = ep.beats[i];
+      const slow = b0.senses ? SENSES_SPEED : b0.slowmo ? 0.3 : isGreenShot(b0) ? 0.55 : 1;
+      if (slow >= 1) return;
       const k = Math.min(1, Math.max(0, (r - b.start) / 0.5), Math.max(0, (b.end - r) / 0.5));
-      v = Math.min(v, 1 - (1 - SENSES_SPEED) * k);
+      v = Math.min(v, 1 - (1 - slow) * k);
     });
     return v;
   };
