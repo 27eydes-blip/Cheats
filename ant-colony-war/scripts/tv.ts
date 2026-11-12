@@ -22,7 +22,7 @@ export function makeTv(file: string): string {
   const dir = path.join(path.dirname(file), 'tv');
   fs.mkdirSync(dir, { recursive: true });
   const dest = path.join(dir, path.basename(file, '.mp4') + '-tv.mp4');
-  const r = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', file, '-filter_complex', FILTER, '-map', '[v]', '-map', '0:a', '-c:v', 'libx264', '-preset', 'medium', '-crf', '19', '-c:a', 'copy', '-movflags', '+faststart', dest], { stdio: 'inherit' });
+  const r = spawnSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', file, '-filter_complex', FILTER, '-map', '[v]', '-map', '0:a', '-c:v', 'libx264', '-preset', 'slow', '-crf', '25', '-maxrate', '4M', '-bufsize', '8M', '-c:a', 'copy', '-movflags', '+faststart', dest], { stdio: 'inherit' });
   if (r.status !== 0) throw new Error('ffmpeg failed for ' + file);
   return dest;
 }
