@@ -8,7 +8,7 @@ CREATE TABLE cities (
   state           TEXT NOT NULL,                 -- two-letter US state
   tagline         TEXT,
   timezone        TEXT NOT NULL DEFAULT 'America/New_York',
-  price_cents     INTEGER NOT NULL DEFAULT 300,
+  price_cents     INTEGER NOT NULL DEFAULT 500,
   currency        TEXT NOT NULL DEFAULT 'usd',
   access_hours    INTEGER,                       -- NULL = lifetime access; e.g. 24 = 24-hour pass
   summer_start    TEXT NOT NULL DEFAULT '05-22', -- MM-DD, inclusive (summer season hours apply)

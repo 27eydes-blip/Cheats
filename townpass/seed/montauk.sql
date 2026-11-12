@@ -7,7 +7,7 @@
 -- =====================================================================
 
 INSERT INTO cities (slug, code, name, state, tagline, timezone, price_cents, currency, access_hours, summer_start, summer_end, published, created_at)
-VALUES ('montauk', 'MTK', 'Montauk', 'NY', 'The End, like a local. Where to eat, drink, park and swim.', 'America/New_York', 300, 'usd', NULL, '05-22', '09-08', 0, 1762905600000);
+VALUES ('montauk', 'MTK', 'Montauk', 'NY', 'The End, like a local. Where to eat, drink, park and swim.', 'America/New_York', 500, 'usd', NULL, '05-22', '09-08', 0, 1762905600000);
 
 INSERT INTO sections (city_id, type, title, intro, sort) VALUES ((SELECT id FROM cities WHERE slug = 'montauk'), 'essentials', 'Essentials', 'The everyday stuff: forgot sunscreen, need ice, need a charger.', 0);
 INSERT INTO sections (city_id, type, title, intro, sort) VALUES ((SELECT id FROM cities WHERE slug = 'montauk'), 'food', 'Dinner', 'Where to eat tonight, and how to actually get a table in July.', 10);

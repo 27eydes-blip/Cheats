@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     case "charge.refunded": {
       const charge = event.data.object as Stripe.Charge;
       const pi = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
-      // Any refund on a $3 pass revokes access (partial refunds included).
+      // Any refund on a pass revokes access (partial refunds included).
       if (pi && charge.amount_refunded > 0) await revokeByPaymentIntent(env, pi, "refunded");
       break;
     }

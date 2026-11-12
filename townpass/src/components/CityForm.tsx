@@ -11,7 +11,7 @@ export function CityFields({ city }: { city?: City }) {
       <Field label="Sticker code" name="code" required defaultValue={city?.code} placeholder="MTK" hint="Prefix of sticker IDs" />
       <Field label="Tagline" name="tagline" defaultValue={city?.tagline} className="md:col-span-2" placeholder="The End, done right." />
       <Field label="Timezone" name="timezone" defaultValue={city?.timezone ?? "America/New_York"} hint="IANA name, e.g. America/Chicago" />
-      <Field label="Price (USD)" name="price" type="number" required defaultValue={city ? city.price_cents / 100 : 3} />
+      <Field label="Price (USD)" name="price" type="number" required defaultValue={city ? city.price_cents / 100 : 5} />
       <label className="block">
         <span className="text-xs font-medium uppercase tracking-wide text-muted">Access</span>
         <select name="access_mode" defaultValue={lifetime ? "lifetime" : "hours"} className="mt-1 w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm">

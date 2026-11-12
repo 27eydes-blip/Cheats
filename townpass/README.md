@@ -1,6 +1,6 @@
 # TownPass
 
-Tourists scan a QR sticker → pay $3 (Apple Pay / Google Pay / card) → unlock a local guide for that town.
+Tourists scan a QR sticker → pay $5 (Apple Pay / Google Pay / card) → unlock a local guide for that town.
 Launch city: **Montauk, NY**. Any US city can be added from `/admin` without code changes.
 
 **Stack:** Next.js 16 (App Router) + Tailwind 4, deployed to **Cloudflare Workers** via
@@ -13,7 +13,7 @@ Launch city: **Montauk, NY**. Any US city can be added from `/admin` without cod
 
 ```
 QR sticker ──► /city/montauk?src=MTK-7F3K2Q        (scan recorded for that sticker)
-                 │  landing: blurred preview + "Unlock for $3"
+                 │  landing: blurred preview + "Unlock for $5"
                  ▼
             POST /api/checkout ──► Stripe Checkout (Apple Pay · Google Pay · card)
                  │                     │
@@ -132,7 +132,7 @@ verified that domain with Apple. Apple Pay appears automatically on Checkout whe
 Google Pay works the same way in Chrome/Android with a saved card. In test mode Apple Pay still appears on a real
 device and Stripe swaps in a test card, so nothing is charged.
 
-**You'd only need domain verification if** you later replace the "Unlock for $3" button with an *in-page* Apple Pay
+**You'd only need domain verification if** you later replace the "Unlock for $5" button with an *in-page* Apple Pay
 button (Stripe's **Express Checkout Element**), so the Apple Pay sheet opens directly on your landing page and skips
 the Checkout page. That saves one screen. The steps are:
 
@@ -169,7 +169,7 @@ but restore-by-email won't send anything.
 2. Check the **summer date range** on the city (default 05-22 → 09-08), and fill in summer and off-season hours.
 3. Edit the Terms/Privacy templates in `src/app/terms` and `src/app/privacy` (business name, state). Have a lawyer
    look before launch.
-4. Tick **Published**, do one real $3 live purchase on your own phone, then refund it in Stripe and confirm access is revoked.
+4. Tick **Published**, do one real $5 live purchase on your own phone, then refund it in Stripe and confirm access is revoked.
 5. Generate stickers (batch per placement round), print the sheet (US Letter, 100% scale, "Background graphics" on),
    put them up, and label each sticker's location in `/admin/stickers` so the dashboard shows what sells.
 6. Re-verify anything that turns stale (30 days). The admin nav badge shows how many.
