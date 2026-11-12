@@ -104,6 +104,25 @@ npm run preview                         # builds for Workers and serves http://l
     pages, sideways scrolling and executed XSS. Set `DEMO_FILE=/path/to/demo.html` to monkey-test the demo too.
   It only writes to the **local** database and saves a report to `tests/e2e/report.json`.
 
+## Go live from the Cloudflare dashboard (no terminal)
+
+Cloudflare builds and deploys the site from GitHub, then redeploys automatically on every push.
+
+1. Cloudflare dashboard → **Workers & Pages** → **Create** → **Import a repository** → connect GitHub and pick
+   `27eydes-blip/Cheats`.
+2. Settings:
+   * **Project name:** `coastpassgo` (must match `name` in `wrangler.jsonc`)
+   * **Production branch:** `claude/townpass-mobile-guide-q6f10u` (or `main` once merged)
+   * **Root directory / path:** `townpass`
+   * **Build command:** `npx opennextjs-cloudflare build`
+   * **Deploy command:** `npx opennextjs-cloudflare deploy`
+3. **Create and deploy.** The first build takes a few minutes. It also attaches coastpassgo.com and www.
+4. Worker **coastpassgo** → **Settings** → **Variables and Secrets** → add, as type **Secret**:
+   * `ACCESS_TOKEN_SECRET`: a long random string (40+ characters). Never change it after launch.
+   * `ADMIN_PASSWORD`: your admin password
+   * Later: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`, `OPEN_METEO_API_KEY`
+5. Open https://coastpassgo.com/admin and log in. Towns stay hidden until you tick **Published**.
+
 ## Deploy to Cloudflare (step by step)
 
 1. **Log in:** `npx wrangler login`
