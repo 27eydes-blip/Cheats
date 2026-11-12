@@ -36,26 +36,36 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
     const file = path.join(OUT, `ant-colony-war-ep${String(ep.n).padStart(2, '0')}-${slug(ep.title)}.mp4`);
     const t0 = Date.now();
     let last = -1;
-    await renderMedia({
-      composition,
-      serveUrl,
-      codec: 'h264',
-      crf: 18,
-      pixelFormat: 'yuv420p',
-      audioBitrate: '192k',
-      outputLocation: file,
-      inputProps: { ep },
-      browserExecutable,
-      imageFormat: 'jpeg',
-      jpegQuality: 92,
-      concurrency: Number(process.env.RENDER_CONCURRENCY) || os.cpus().length,
-      // heavy swarm shots can take a while per frame on slow machines
-      timeoutInMilliseconds: 180000,
-      onProgress: ({ progress }) => {
-        const pct = Math.floor(progress * 20) * 5;
-        if (pct !== last) { last = pct; process.stdout.write(`\r${id} ${pct}%   `); }
-      },
-    });
+    // Chrome occasionally stalls on a frame under heavy load: retry with fewer parallel tabs.
+    for (let attempt = 1; ; attempt++) {
+      const concurrency = Math.max(1, (Number(process.env.RENDER_CONCURRENCY) || os.cpus().length) - (attempt - 1));
+      try {
+        await renderMedia({
+        composition,
+        serveUrl,
+        codec: 'h264',
+        crf: 18,
+        pixelFormat: 'yuv420p',
+        audioBitrate: '192k',
+        outputLocation: file,
+        inputProps: { ep },
+        browserExecutable,
+        imageFormat: 'jpeg',
+        jpegQuality: 92,
+        concurrency,
+        // heavy swarm shots can take a while per frame on slow machines
+        timeoutInMilliseconds: 180000,
+        onProgress: ({ progress }) => {
+          const pct = Math.floor(progress * 20) * 5;
+          if (pct !== last) { last = pct; process.stdout.write(`\r${id} ${pct}%   `); }
+        },
+      });
+        break;
+      } catch (e) {
+        if (attempt >= 3) throw e;
+        console.warn(`\n${id}: render stalled (${e instanceof Error ? e.message.split('\n')[0] : e}); retrying with concurrency ${concurrency - 1}…`);
+      }
+    }
     // 16:9 TV / screen-share version alongside the vertical one
     if (process.env.TV !== '0' && hasFfmpeg()) console.log(`\r${id} TV version -> ${path.relative(ROOT, makeTv(file))}`);
     console.log(`\r${id} done in ${((Date.now() - t0) / 1000).toFixed(0)}s -> ${path.relative(ROOT, file)} (${tl.duration.toFixed(1)}s)`);
