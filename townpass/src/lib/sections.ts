@@ -14,7 +14,7 @@ export interface FieldDef {
 export interface SectionType {
   type: string;
   defaultTitle: string;
-  icon: string; // simple emoji keeps it dependency-free and tiny
+  icon: string; // name in components/Icon.tsx
   /** which core columns this type uses */
   uses: { hours: boolean; address: boolean; phone: boolean; price: boolean; tip: boolean; body: boolean };
   priceLabel?: string;
@@ -25,14 +25,14 @@ export const SECTION_TYPES: SectionType[] = [
   {
     type: "essentials",
     defaultTitle: "Essentials",
-    icon: "🛒",
+    icon: "essentials",
     uses: { hours: true, address: true, phone: true, price: false, tip: true, body: false },
     fields: [],
   },
   {
     type: "food",
-    defaultTitle: "Dinner",
-    icon: "🍽️",
+    defaultTitle: "Dining",
+    icon: "food",
     uses: { hours: true, address: true, phone: true, price: true, tip: true, body: false },
     priceLabel: "Price range",
     fields: [{ key: "reservations", label: "Reservation tips", multiline: true }],
@@ -40,7 +40,7 @@ export const SECTION_TYPES: SectionType[] = [
   {
     type: "nightlife",
     defaultTitle: "Nightlife",
-    icon: "🍸",
+    icon: "nightlife",
     uses: { hours: true, address: true, phone: true, price: false, tip: true, body: false },
     fields: [
       { key: "cover", label: "Cover", placeholder: "Free / $20 after 10pm" },
@@ -51,7 +51,7 @@ export const SECTION_TYPES: SectionType[] = [
   {
     type: "parking",
     defaultTitle: "Parking",
-    icon: "🅿️",
+    icon: "parking",
     uses: { hours: false, address: true, phone: false, price: true, tip: true, body: false },
     priceLabel: "Price",
     fields: [
@@ -63,7 +63,7 @@ export const SECTION_TYPES: SectionType[] = [
   {
     type: "beaches",
     defaultTitle: "Beaches",
-    icon: "🏖️",
+    icon: "beaches",
     uses: { hours: true, address: true, phone: false, price: false, tip: true, body: false },
     fields: [
       { key: "parking", label: "Parking / permit rules", multiline: true },
@@ -74,7 +74,7 @@ export const SECTION_TYPES: SectionType[] = [
   {
     type: "tips",
     defaultTitle: "Insider Tips",
-    icon: "🤫",
+    icon: "tips",
     uses: { hours: false, address: false, phone: false, price: false, tip: false, body: true },
     fields: [],
   },

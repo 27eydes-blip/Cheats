@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ListingCard } from "@/components/ListingCard";
 import { Brand, Footer, Notice } from "@/components/ui";
+import { Icon } from "@/components/Icon";
 import { BeachLine, ConditionsPanel, WeatherTicker } from "@/components/Weather";
 import type { City, GuideSection, Listing } from "@/lib/db";
 import { isSummer, localTime, openStatus, pickHoursSpec, type LocalTime } from "@/lib/hours";
@@ -15,11 +16,11 @@ import type { Conditions } from "@/lib/weather";
  */
 
 const TABS: { type: string | null; label: string; icon: string }[] = [
-  { type: null, label: "Home", icon: "🏠" },
-  { type: "food", label: "Eat", icon: "🍽️" },
-  { type: "nightlife", label: "Drink", icon: "🍸" },
-  { type: "beaches", label: "Beach", icon: "🏖️" },
-  { type: "parking", label: "Park", icon: "🅿️" },
+  { type: null, label: "Home", icon: "home" },
+  { type: "food", label: "Dining", icon: "food" },
+  { type: "nightlife", label: "Nightlife", icon: "nightlife" },
+  { type: "beaches", label: "Beaches", icon: "beaches" },
+  { type: "parking", label: "Parking", icon: "parking" },
 ];
 
 export interface GuideView {
@@ -86,12 +87,13 @@ export function Guide(props: {
     let list = current.listings;
     if (view.openOnly) list = list.filter((l) => isOpen(l, current.type, summer, now));
     if (view.reservable) list = list.filter((l) => l.reserve_url);
-    const chip = (href: string, active: boolean, label: string) => (
+    const chip = (href: string, active: boolean, label: string, lead?: React.ReactNode) => (
       <Link
         href={href}
         scroll={false}
-        className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm ${active ? "border-gold bg-gold text-ink" : "border-line bg-panel text-zinc-200"}`}
+        className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm ${active ? "border-gold bg-gold font-medium text-ink" : "border-line bg-panel text-zinc-200"}`}
       >
+        {lead}
         {label}
       </Link>
     );
@@ -99,18 +101,21 @@ export function Guide(props: {
       <>
         <div className="sticky top-0 z-10 -mx-5 border-b border-line bg-ink/95 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
           <div className="flex items-center gap-3">
-            <Link href={base} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-panel text-lg" aria-label="Back to home">
-              ‹
+            <Link href={base} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-panel text-zinc-200" aria-label="Back to home">
+              <Icon name="back" className="size-5" />
             </Link>
-            <h1 className="min-w-0 flex-1 truncate font-serif text-2xl text-gold-soft">
-              {def.icon} {current.title}
+            <h1 className="flex min-w-0 flex-1 items-center gap-2 truncate font-serif text-2xl text-white">
+              <Icon name={def.icon} className="size-6 text-gold" />
+              {current.title}
             </h1>
             <span className="font-mono text-[11px] text-muted">{city.name.toUpperCase()}</span>
           </div>
           <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
             {chip(`${base}?s=${current.type}`, !view.openOnly && !view.reservable, `All · ${current.listings.length}`)}
-            {def.uses.hours && chip(`${base}?s=${current.type}&open=1`, !!view.openOnly, `🟢 Open now · ${openCount}`)}
-            {resCount > 0 && chip(`${base}?s=${current.type}&res=1`, !!view.reservable, `🗓️ Reservations · ${resCount}`)}
+            {def.uses.hours &&
+              chip(`${base}?s=${current.type}&open=1`, !!view.openOnly, `Open now · ${openCount}`, <span className="size-2 rounded-full bg-open" />)}
+            {resCount > 0 &&
+              chip(`${base}?s=${current.type}&res=1`, !!view.reservable, `Reservations · ${resCount}`, <Icon name="calendar" className="size-4" />)}
           </div>
         </div>
         {current.intro && <p className="mt-4 text-sm text-zinc-400">{current.intro}</p>}
@@ -139,8 +144,8 @@ export function Guide(props: {
         <header className="pt-5">
           <div className="flex items-center justify-between">
             <Brand name={props.brand} />
-            <span className="font-mono text-[11px] tracking-wider text-muted">
-              {summer ? `☀️ ${city.peak_label.toUpperCase()} HOURS` : "🍂 OFF-SEASON HOURS"}
+            <span className="rounded-full border border-line px-2.5 py-1 text-[11px] font-medium text-zinc-300">
+              {summer ? `${city.peak_label} hours` : "Off-season hours"}
             </span>
           </div>
           <h1 className="mt-3 font-serif text-4xl">
@@ -154,7 +159,7 @@ export function Guide(props: {
         )}
         {props.welcome && (
           <div className="mt-3">
-            <Notice tone="green">You’re in! We emailed you a link so you can come back anytime.</Notice>
+            <Notice tone="green">Access confirmed. We’ve emailed you a link so you can return to this guide on any device.</Notice>
           </div>
         )}
 
@@ -163,13 +168,13 @@ export function Guide(props: {
             type="search"
             name="q"
             defaultValue={q}
-            placeholder="Search lobster, CVS, parking…"
+            placeholder="Search seafood, pharmacy, parking…"
             aria-label={`Search ${city.name}`}
             enterKeyHint="search"
             className="min-w-0 flex-1 rounded-xl border border-line bg-panel px-4 py-3 text-[16px] text-white placeholder:text-zinc-500 focus:border-gold focus:outline-none"
           />
-          <button className="shrink-0 rounded-xl bg-gold px-4 font-semibold text-ink" aria-label="Search">
-            🔍
+          <button className="flex shrink-0 items-center rounded-xl bg-gold px-4 text-ink" aria-label="Search">
+            <Icon name="search" className="size-5" strokeWidth={2.25} />
           </button>
         </form>
 
@@ -186,8 +191,8 @@ export function Guide(props: {
             {results.length === 0 && <p className="mt-3 text-sm text-muted">No matches. Try a shorter word, like “pizza” or “parking”.</p>}
             {results.map(({ s, items }) => (
               <div key={s.id} className="mt-4">
-                <p className="mb-2 font-mono text-[11px] tracking-[0.18em] text-muted">
-                  {sectionType(s.type).icon} {s.title.toUpperCase()}
+                <p className="mb-2 flex items-center gap-1.5 font-mono text-[11px] tracking-[0.18em] text-muted">
+                  <Icon name={sectionType(s.type).icon} className="size-4" /> {s.title.toUpperCase()}
                 </p>
                 <div className="space-y-3">{items.map((l) => card(l, s.type))}</div>
               </div>
@@ -211,7 +216,9 @@ export function Guide(props: {
                     href={`${base}?s=${s.type}`}
                     className="hud relative flex min-h-[6.5rem] flex-col overflow-hidden justify-between rounded-2xl border border-line bg-panel p-4 active:border-gold"
                   >
-                    <span className="text-2xl">{def.icon}</span>
+                    <span className="flex size-10 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold">
+                      <Icon name={def.icon} className="size-5" />
+                    </span>
                     <span>
                       <span className="block font-serif text-lg leading-tight text-white">{s.title}</span>
                       <span className="mt-0.5 block font-mono text-[11px] text-muted">
@@ -232,9 +239,9 @@ export function Guide(props: {
             {tips && tips.listings.length > 0 && (
               <section className="mt-7" aria-label="Insider tips">
                 <div className="flex items-baseline justify-between">
-                  <h2 className="font-serif text-xl text-gold-soft">🤫 Insider tips</h2>
+                  <h2 className="font-serif text-xl text-white">Insider tips</h2>
                   <Link href={`${base}?s=tips`} className="text-sm text-gold">
-                    All {tips.listings.length} →
+                    View all {tips.listings.length}
                   </Link>
                 </div>
                 <div className="mt-3 space-y-2">
@@ -282,7 +289,7 @@ export function Guide(props: {
                 aria-current={active ? "page" : undefined}
                 className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${active ? "text-gold" : "text-zinc-400"}`}
               >
-                <span className={`text-xl leading-none ${active ? "" : "opacity-80 grayscale-[30%]"}`}>{t.icon}</span>
+                <Icon name={t.icon} className="size-6" strokeWidth={active ? 2 : 1.6} />
                 {t.label}
               </Link>
             );

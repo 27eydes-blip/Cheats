@@ -1,4 +1,5 @@
 import { uvLevel, type Conditions } from "@/lib/weather";
+import { Icon, weatherIcon } from "./Icon";
 
 const UV_TEXT: Record<string, string> = {
   low: "text-uv-low",
@@ -18,7 +19,7 @@ const UV_BG: Record<string, string> = {
 function tickerItems(c: Conditions, cityName: string) {
   const uv = uvLevel(c.uvNow);
   const items: { k: string; v: string; cls?: string }[] = [
-    { k: cityName.toUpperCase(), v: `${c.icon} ${c.tempF}°F ${c.desc}` },
+    { k: cityName.toUpperCase(), v: `${c.tempF}°F ${c.desc}` },
     { k: "FEELS", v: `${c.feelsF}°` },
     { k: "UV", v: `${c.uvNow} ${uv.label.toUpperCase()}`, cls: UV_TEXT[uv.key] },
     { k: "WIND", v: `${c.windMph} MPH ${c.windDir}${c.gustMph && c.gustMph > c.windMph + 4 ? ` · GUSTS ${c.gustMph}` : ""}` },
@@ -40,7 +41,7 @@ export function WeatherTicker({ c, cityName }: { c: Conditions; cityName: string
         <span key={i} className="flex shrink-0 items-baseline gap-1.5 pr-6">
           <span className="text-[10px] tracking-[0.18em] text-muted">{it.k}</span>
           <span className={`font-semibold ${it.cls ?? "text-zinc-100"}`}>{it.v}</span>
-          <span className="pl-4 text-gold/40">◆</span>
+          <span className="ml-4 h-3 w-px self-center bg-zinc-700" />
         </span>
       ))}
     </div>
@@ -74,7 +75,7 @@ export function ConditionsPanel({ c, cityName }: { c: Conditions; cityName: stri
           </p>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="font-serif text-5xl leading-none text-white">{c.tempF}°</span>
-            <span className="text-2xl">{c.icon}</span>
+            <Icon name={weatherIcon(c.icon)} className="size-8 text-gold-soft" strokeWidth={1.5} />
           </div>
           <p className="mt-1 text-sm text-zinc-300">
             {c.desc} · feels {c.feelsF}°
@@ -142,7 +143,7 @@ export function ConditionsPanel({ c, cityName }: { c: Conditions; cityName: stri
             return (
               <div key={i} className="flex min-w-[3.4rem] flex-1 flex-col items-center gap-1 font-mono text-[11px]">
                 <span className="text-muted">{i === 0 ? "NOW" : h.label}</span>
-                <span className="text-base">{h.icon}</span>
+                <Icon name={weatherIcon(h.icon)} className="size-5 text-zinc-300" />
                 <span className="text-zinc-100">{h.tempF}°</span>
                 <span className={`rounded px-1 ring-1 ${UV_BG[lv.key]}`}>UV {h.uv}</span>
                 {h.rain !== null && <span className={h.rain >= 40 ? "text-sky-300" : "text-zinc-500"}>{h.rain}%</span>}

@@ -10,6 +10,7 @@ import { getEnv } from "@/lib/env";
 import { sectionType } from "@/lib/sections";
 import { getConditions, type Conditions } from "@/lib/weather";
 import { Guide } from "@/components/Guide";
+import { Icon } from "@/components/Icon";
 import { WeatherTicker } from "@/components/Weather";
 
 export const dynamic = "force-dynamic";
@@ -75,7 +76,7 @@ export default async function CityPage({ params, searchParams }: Props) {
 
 /* ---------------------------------- Landing --------------------------------- */
 
-const FAKE = ["Hidden lobster shack", "Late-night slice spot", "Free parking secret", "Sunset bar w/ no line", "24h pharmacy"];
+const FAKE = ["Waterfront seafood house", "Late-night kitchen", "Free parking near the beach", "Sunset bar", "24-hour pharmacy"];
 
 function Landing(props: {
   city: City;
@@ -103,7 +104,7 @@ function Landing(props: {
 
       {props.canceled && (
         <div className="mt-5">
-          <Notice>Payment canceled, no charge was made.</Notice>
+          <Notice>Payment canceled. You have not been charged.</Notice>
         </div>
       )}
       {props.error && (
@@ -112,14 +113,30 @@ function Landing(props: {
         </div>
       )}
 
-      <ul className="mt-6 flex flex-wrap gap-2">
-        {guide.map((s) => (
-          <li key={s.id} className="rounded-full border border-line bg-panel px-3 py-1.5 text-sm text-zinc-300">
-            {sectionType(s.type).icon} {s.title}
-            {s.listings.length > 0 && <span className="text-muted"> · {s.listings.length}</span>}
-          </li>
-        ))}
-      </ul>
+      <section aria-label="What's inside" className="mt-7 rounded-2xl border border-line bg-panel">
+        <p className="border-b border-line px-4 py-3 font-mono text-[10px] tracking-[0.2em] text-muted">WHAT’S INSIDE</p>
+        <ul className="grid grid-cols-2 gap-px bg-line">
+          {guide.filter((s) => s.listings.length > 0).map((s) => (
+            <li key={s.id} className="flex items-center gap-3 bg-panel px-4 py-3">
+              <Icon name={sectionType(s.type).icon} className="size-5 text-gold" />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-zinc-100">{s.title}</span>
+                <span className="block text-xs text-muted">
+                  {s.listings.length} {s.type === "tips" ? "tips" : "places"}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <ul className="space-y-2 border-t border-line px-4 py-4 text-sm text-zinc-300">
+          {["Open-now status and hours for every listing", "Live weather, water temperature and UV index", "Directions, calls and table reservations in one tap"].map((t) => (
+            <li key={t} className="flex gap-2.5">
+              <Icon name="check" className="mt-0.5 size-4 text-gold" strokeWidth={2.25} />
+              {t}
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {/* Blurred teaser: fake text, so nothing real leaks before payment. */}
       <div className="relative mt-6" aria-hidden="true">
@@ -131,7 +148,7 @@ function Landing(props: {
                 <span className="rounded-full bg-open/15 px-2 text-xs text-open">Open now</span>
               </div>
               <p className="mt-2 text-sm text-muted">Main St · Open until 11 PM · $$</p>
-              <p className="mt-2 rounded-lg bg-gold/10 p-2 text-sm text-gold-soft">Local tip: ask for the off-menu…</p>
+              <p className="mt-2 rounded-lg bg-gold/10 p-2 text-sm text-gold-soft">Local tip: ask for a table on the deck…</p>
             </div>
           ))}
         </div>
@@ -141,15 +158,14 @@ function Landing(props: {
       <form method="post" action="/api/checkout" className="sticky bottom-0 -mx-5 mt-2 bg-gradient-to-t from-ink via-ink to-transparent px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6">
         <input type="hidden" name="city" value={city.slug} />
         {props.src && <input type="hidden" name="src" value={props.src} />}
-        <button className="w-full rounded-2xl bg-gold py-4 text-lg font-semibold text-ink shadow-[0_8px_30px_rgba(212,175,55,0.25)] active:bg-gold-deep">
-          Unlock for {price}
+        <button className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gold py-4 text-lg font-semibold text-ink shadow-[0_8px_30px_rgba(212,175,55,0.25)] active:bg-gold-deep">
+          <Icon name="lock" className="size-5" strokeWidth={2} />
+          Unlock the full guide · {price}
         </button>
         <p className="mt-2 text-center text-sm text-zinc-300">
-          {price} · {accessLabel(city)} · {total > 0 ? `${total}+ spots` : "full guide"}
+          One-time payment · {accessLabel(city)} · {total > 0 ? `${total}+ places` : "full guide"}
         </p>
-        <p className="mt-1 text-center text-xs text-muted">
-          Apple Pay · Google Pay · Card · No account needed
-        </p>
+        <p className="mt-1 text-center text-xs text-muted">Apple Pay, Google Pay or card. No account required.</p>
       </form>
 
       <div className="mt-6 space-y-2 text-center text-sm">
@@ -157,7 +173,7 @@ function Landing(props: {
           Already paid? Restore access
         </Link>
         <p className="text-xs text-muted">
-          Secure payment by Stripe. All sales final. See <Link href="/terms" className="underline">Terms</Link>.
+          Payments processed securely by Stripe. All sales are final. See our <Link href="/terms" className="underline">Terms</Link>.
         </p>
       </div>
       <Footer brand={props.brand} support={props.support} />

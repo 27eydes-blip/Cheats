@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Brand, Footer } from "@/components/ui";
+import { Icon } from "@/components/Icon";
 import type { City } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 
@@ -12,11 +13,11 @@ export default async function Home() {
     <main className="mx-auto max-w-xl px-5 pt-[max(1.25rem,env(safe-area-inset-top))]">
       <Brand name={env.BRAND_NAME} />
       <h1 className="mt-6 font-serif text-4xl leading-tight">
-        Skip the tourist traps.
+        Local guides to
         <br />
-        <span className="gold-text">Get the local’s guide.</span>
+        <span className="gold-text">America’s coastal towns.</span>
       </h1>
-      <p className="mt-3 text-zinc-400">Stores, dinner, nightlife, parking and beaches, verified by locals. One tap to unlock.</p>
+      <p className="mt-3 text-zinc-400">Where to eat, drink, park and swim, with live weather, UV and open-now hours. Scan a CoastPassGo sticker or choose a town below.</p>
       <ul className="mt-8 space-y-3">
         {cities.map((c) => (
           <li key={c.id}>
@@ -25,7 +26,7 @@ export default async function Home() {
                 {c.name}
                 <span className="text-base text-muted">, {c.state}</span>
               </span>
-              <span className="text-gold">→</span>
+              <Icon name="back" className="size-5 rotate-180 text-gold" />
             </Link>
           </li>
         ))}

@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: "CoastPassGo", template: "%s · CoastPassGo" },
-  description: "The local's guide to beach towns: where to eat, drink, park and swim, with live weather and UV. Unlock in seconds.",
+  description: "Local guides to America's coastal towns: where to eat, drink, park and swim, with live weather, UV and open-now hours.",
   robots: { index: true, follow: true },
 };
 

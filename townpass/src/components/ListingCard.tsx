@@ -2,6 +2,7 @@ import { isStale, parseDetails, type Listing } from "@/lib/db";
 import { localTime, openStatus, pickHoursSpec, weeklyTable, type LocalTime } from "@/lib/hours";
 import { sectionType } from "@/lib/sections";
 import { reserveLabel } from "@/lib/reserve";
+import { Icon } from "./Icon";
 
 const BADGE: Record<string, string> = {
   open: "bg-open/15 text-open ring-open/30",
@@ -66,11 +67,15 @@ export function ListingCard(props: {
 
       {/* At a glance: status line, price for parking, the tip. Everything else folds into "More info". */}
       {status && status.state !== "unknown" && <p className="mt-2 text-sm text-zinc-300">{status.label}</p>}
-      {props.sectionKind === "parking" && l.price_range && <p className="mt-2 text-sm text-zinc-200">💲 {l.price_range}</p>}
+      {props.sectionKind === "parking" && l.price_range && (
+        <p className="mt-2 flex items-center gap-1.5 text-sm text-zinc-200">
+          <Icon name="rate" className="size-4 text-gold" /> {l.price_range}
+        </p>
+      )}
       {l.body && <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-zinc-200">{l.body}</p>}
       {l.local_tip && (
         <p className="mt-3 rounded-xl border-l-2 border-gold bg-gold/5 px-3 py-2 text-sm text-gold-soft">
-          <span className="font-semibold">Local tip:</span> {l.local_tip}
+          <span className="font-semibold">Local tip</span> · {l.local_tip}
         </p>
       )}
 
@@ -81,14 +86,16 @@ export function ListingCard(props: {
           rel="noopener"
           className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-gold py-3 text-[15px] font-semibold text-ink shadow-[0_6px_20px_rgba(212,175,55,0.2)] active:bg-gold-deep"
         >
-          🗓️ {reserveLabel(l.reserve_url)}
+          <Icon name="calendar" className="size-5" strokeWidth={2} />
+          {reserveLabel(l.reserve_url)}
         </a>
       )}
       {(l.phone || l.address || l.website) && (
         <div className={`${l.reserve_url ? "mt-2" : "mt-3"} grid grid-cols-2 gap-2 text-sm font-medium`}>
           {l.phone && (
-            <a href={`tel:${l.phone.replace(/[^\d+]/g, "")}`} className="rounded-xl bg-panel-2 py-2.5 text-center text-white ring-1 ring-line active:bg-line">
-              {props.sectionKind === "food" && !l.reserve_url ? "📞 Call to reserve" : "📞 Call"}
+            <a href={`tel:${l.phone.replace(/[^\d+]/g, "")}`} className="flex items-center justify-center gap-2 rounded-xl bg-panel-2 py-2.5 text-white ring-1 ring-line active:bg-line">
+              <Icon name="phone" className="size-4" />
+              {props.sectionKind === "food" && !l.reserve_url ? "Call to reserve" : "Call"}
             </a>
           )}
           {l.address && (
@@ -96,9 +103,10 @@ export function ListingCard(props: {
               href={mapsUrl(l.address, l.name, apple)}
               target="_blank"
               rel="noopener"
-              className={`rounded-xl py-2.5 text-center ${l.reserve_url ? "bg-panel-2 text-white ring-1 ring-line active:bg-line" : "bg-gold text-ink active:bg-gold-deep"}`}
+              className={`flex items-center justify-center gap-2 rounded-xl py-2.5 ${l.reserve_url ? "bg-panel-2 text-white ring-1 ring-line active:bg-line" : "bg-gold text-ink active:bg-gold-deep"}`}
             >
-              ➜ Directions
+              <Icon name="directions" className="size-4" />
+              Directions
             </a>
           )}
           {l.website && !l.phone && (
@@ -112,8 +120,8 @@ export function ListingCard(props: {
       <details className="group mt-3 border-t border-line pt-3" open={props.reported || undefined}>
         <summary className="flex items-center justify-between gap-3 text-[12px] text-muted">
           <span>{verified}</span>
-          <span className="shrink-0 rounded-full border border-line px-3 py-1 text-zinc-300 group-open:border-gold group-open:text-gold-soft">
-            {hasMore ? "More info" : "Report"} <span className="inline-block transition-transform group-open:rotate-180">▾</span>
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-line px-3 py-1 text-zinc-300 group-open:border-gold group-open:text-gold-soft">
+            {hasMore ? "Details" : "Report"} <Icon name="down" className="size-3.5 transition-transform group-open:rotate-180" strokeWidth={2.25} />
           </span>
         </summary>
         <div className="mt-3">
@@ -133,13 +141,19 @@ export function ListingCard(props: {
             </>
           )}
           {def.fields.map((f) => (details[f.key] ? <Row key={f.key} label={f.label} value={details[f.key]} /> : null))}
-          {l.address && <p className="mt-3 text-sm text-zinc-400">📍 {l.address}</p>}
+          {l.address && (
+            <p className="mt-3 flex items-start gap-1.5 text-sm text-zinc-400">
+              <Icon name="pin" className="mt-0.5 size-4" /> {l.address}
+            </p>
+          )}
           {props.reported ? (
-            <p className="mt-3 text-sm text-open">Thanks, we’ll check it ✓</p>
+            <p className="mt-3 flex items-center gap-1.5 text-sm text-open">
+              <Icon name="check" className="size-4" strokeWidth={2.25} /> Thank you. We’ll review this listing.
+            </p>
           ) : (
             <form method="post" action="/api/report" className="mt-4 flex flex-col gap-2">
               <label htmlFor={`rep-${l.id}`} className="text-xs text-muted">
-                Something wrong? Tell us and we’ll fix it.
+                Spotted an error? Let us know and we’ll update it.
               </label>
               <textarea
                 id={`rep-${l.id}`}

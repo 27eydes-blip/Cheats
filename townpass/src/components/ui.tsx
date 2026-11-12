@@ -1,9 +1,22 @@
 import Link from "next/link";
+import { Icon } from "./Icon";
 
+/** Wordmark: compass-and-wave mark + name, with the last word ("Go") in gold. */
 export function Brand({ name = "CoastPassGo" }: { name?: string }) {
+  const m = /^(.*?)(Go)$/.exec(name);
   return (
-    <Link href="/" className="text-[11px] font-semibold uppercase tracking-[0.25em] text-gold">
-      {name}
+    <Link href="/" className="inline-flex items-center gap-2 text-[15px] font-semibold tracking-tight text-white" aria-label={`${name} home`}>
+      <Icon name="logo" className="size-6 text-gold" strokeWidth={1.6} />
+      <span>
+        {m ? (
+          <>
+            {m[1]}
+            <span className="text-gold">{m[2]}</span>
+          </>
+        ) : (
+          name
+        )}
+      </span>
     </Link>
   );
 }

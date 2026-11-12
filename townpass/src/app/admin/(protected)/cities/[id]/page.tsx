@@ -40,7 +40,7 @@ export default async function CityAdmin({ params, searchParams }: { params: Prom
       {guide.map((s) => (
         <Card
           key={s.id}
-          title={`${sectionType(s.type).icon} ${s.title}`}
+          title={s.title}
           actions={
             <Link href={`/admin/listings/new?section=${s.id}`} className="rounded-lg bg-gold px-3 py-1.5 text-sm font-semibold text-ink">
               + Add listing
@@ -99,7 +99,7 @@ export default async function CityAdmin({ params, searchParams }: { params: Prom
             <select name="type" className="mt-1 rounded-lg border border-line bg-ink px-3 py-2">
               {SECTION_TYPES.map((t) => (
                 <option key={t.type} value={t.type}>
-                  {t.icon} {t.defaultTitle}
+                  {t.defaultTitle}
                 </option>
               ))}
             </select>
