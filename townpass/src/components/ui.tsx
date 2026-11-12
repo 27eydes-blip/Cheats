@@ -5,13 +5,16 @@ import { Icon } from "./Icon";
 export function Brand({ name = "CoastPassGo" }: { name?: string }) {
   const m = /^(.*?)(Go)$/.exec(name);
   return (
-    <Link href="/" className="inline-flex items-center gap-2 text-[15px] font-semibold tracking-tight text-white" aria-label={`${name} home`}>
-      <Icon name="logo" className="size-6 text-gold" strokeWidth={1.6} />
-      <span>
+    <Link href="/" className="inline-flex items-center gap-2.5" aria-label={`${name} home`}>
+      {/* old money: gold crest; new money: metallic turquoise "Go" */}
+      <span className="crest size-8">
+        <Icon name="logo" className="size-5" strokeWidth={1.6} />
+      </span>
+      <span className="font-serif text-[19px] tracking-[0.02em] text-ivory">
         {m ? (
           <>
             {m[1]}
-            <span className="text-gold">{m[2]}</span>
+            <span className="sea-text font-sans text-[17px] font-bold tracking-tight">{m[2]}</span>
           </>
         ) : (
           name

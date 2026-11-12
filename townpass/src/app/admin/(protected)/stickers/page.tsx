@@ -63,7 +63,7 @@ export default async function Stickers({ searchParams }: { searchParams: Promise
         actions={
           <Link
             href={`/admin/stickers/print?city=${cityId}${sp.batch ? `&batch=${encodeURIComponent(sp.batch)}` : ""}`}
-            className="rounded-lg bg-gold px-3 py-1.5 text-sm font-semibold text-ink"
+            className="btn-metal rounded-lg px-3 py-1.5 text-sm"
             target="_blank"
           >
             Printable sheet ↗

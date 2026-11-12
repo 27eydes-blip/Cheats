@@ -66,7 +66,7 @@ export function ConditionsPanel({ c, cityName }: { c: Conditions; cityName: stri
   const uv = uvLevel(c.uvNow);
   const pos = Math.min(100, (Math.min(c.uvNow, 12) / 12) * 100);
   return (
-    <section aria-label="Live conditions" className="hud relative overflow-hidden rounded-2xl border border-line bg-panel p-4">
+    <section aria-label="Live conditions" className="glass hud relative overflow-hidden rounded-2xl p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-mono text-[10px] tracking-[0.2em] text-muted">
@@ -74,8 +74,8 @@ export function ConditionsPanel({ c, cityName }: { c: Conditions; cityName: stri
             {cityName.toUpperCase()} · NOW
           </p>
           <div className="mt-1 flex items-baseline gap-2">
-            <span className="font-serif text-5xl leading-none text-white">{c.tempF}°</span>
-            <Icon name={weatherIcon(c.icon)} className="size-8 text-gold-soft" strokeWidth={1.5} />
+            <span className="sea-text font-serif text-5xl leading-none">{c.tempF}°</span>
+            <Icon name={weatherIcon(c.icon)} className="size-8 text-sea-soft" strokeWidth={1.5} />
           </div>
           <p className="mt-1 text-sm text-zinc-300">
             {c.desc} · feels {c.feelsF}°

@@ -1,19 +1,25 @@
 @import "tailwindcss";
 
+/* Palette: deep sea-black ground; metallic turquoise leads (new money: actions, live data, glass);
+   gold is the trim (old money: crest, serif headings, engraved rules, prices, tips). */
 @theme {
-  --color-ink: #0b0b0d;
-  --color-panel: #141418;
-  --color-panel-2: #1b1b21;
-  --color-line: #2a2a31;
-  --color-muted: #9a9aa3;
-  --color-gold: #d4af37;
-  --color-gold-soft: #e9cf7a;
-  --color-gold-deep: #a8862a;
+  --color-ink: #06100f;
+  --color-panel: #0c1918;
+  --color-panel-2: #11211f;
+  --color-line: #1d3330;
+  --color-muted: #8aa29e;
+  --color-ivory: #efe7d4;
+  --color-sea: #2fc4b4;
+  --color-sea-soft: #8ff0e2;
+  --color-sea-deep: #127e74;
+  --color-gold: #c9a54a;
+  --color-gold-soft: #e7cf8f;
+  --color-gold-deep: #977326;
   --color-open: #4ade80;
   --color-closing: #fbbf24;
   --color-closed: #f87171;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, ui-serif, serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, ui-serif, serif;
 }
 
 html {
@@ -24,8 +30,11 @@ html {
 }
 
 body {
-  background: var(--color-ink);
-  color: #ececf1;
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(47, 196, 180, 0.12), transparent 60%),
+    var(--color-ink);
+  background-attachment: fixed;
+  color: #e9f0ee;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
@@ -44,7 +53,7 @@ details > summary::-webkit-details-marker {
 }
 
 .gold-text {
-  background: linear-gradient(180deg, var(--color-gold-soft), var(--color-gold) 60%, var(--color-gold-deep));
+  background: linear-gradient(180deg, #f3e2ae, var(--color-gold) 55%, var(--color-gold-deep));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -92,7 +101,7 @@ details > summary::-webkit-details-marker {
   height: 100%;
   font-size: 10px;
   letter-spacing: 0.2em;
-  color: var(--color-gold);
+  color: var(--color-sea-soft);
   border-right: 1px solid var(--color-line);
   background: var(--color-ink);
 }
@@ -133,8 +142,8 @@ details > summary::-webkit-details-marker {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6);
+  background: var(--color-sea);
+  box-shadow: 0 0 0 0 rgba(47, 196, 180, 0.6);
   vertical-align: middle;
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -144,10 +153,10 @@ details > summary::-webkit-details-marker {
 }
 @keyframes pulse {
   70% {
-    box-shadow: 0 0 0 6px rgba(74, 222, 128, 0);
+    box-shadow: 0 0 0 6px rgba(47, 196, 180, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+    box-shadow: 0 0 0 0 rgba(47, 196, 180, 0);
   }
 }
 
@@ -158,8 +167,8 @@ details > summary::-webkit-details-marker {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(212, 175, 55, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(212, 175, 55, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(143, 240, 226, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(143, 240, 226, 0.05) 1px, transparent 1px);
   background-size: 22px 22px;
   mask-image: linear-gradient(180deg, #000, transparent 85%);
 }
@@ -184,4 +193,59 @@ details > summary::-webkit-details-marker {
   border: 3px solid var(--color-ink);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4), 0 0 12px rgba(255, 255, 255, 0.5);
   transform: translate(-50%, -50%);
+}
+
+
+/* ----------------------------- new money: metal + glass ----------------------------- */
+.btn-metal {
+  background: linear-gradient(135deg, #a6f5ea 0%, #3fd0c0 28%, #1a9d91 58%, #46d6c6 82%, #a6f5ea 100%);
+  color: #032420;
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 8px 26px rgba(47, 196, 180, 0.28);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.btn-metal:active {
+  filter: brightness(0.92);
+}
+.btn-ghost {
+  background: rgba(17, 33, 31, 0.7);
+  color: #e9f0ee;
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
+.glass {
+  background: linear-gradient(180deg, rgba(20, 42, 39, 0.72), rgba(12, 25, 24, 0.72));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(143, 240, 226, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.sea-text {
+  background: linear-gradient(135deg, #b9faf0, #3fd0c0 45%, #1a9d91 80%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ----------------------------- old money: engraving + crest ----------------------------- */
+.rule-engraved {
+  height: 4px;
+  border-top: 1px solid rgba(201, 165, 74, 0.55);
+  border-bottom: 1px solid rgba(201, 165, 74, 0.25);
+}
+.smallcaps {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 500;
+}
+.crest {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(201, 165, 74, 0.7);
+  box-shadow: 0 0 0 2px var(--color-ink), 0 0 0 3px rgba(201, 165, 74, 0.35);
+  color: var(--color-gold);
 }

@@ -45,9 +45,9 @@ export default async function Restore({
           autoComplete="email"
           inputMode="email"
           placeholder="you@example.com"
-          className="w-full rounded-2xl border border-line bg-panel px-4 py-4 text-lg text-white placeholder:text-zinc-600 focus:border-gold focus:outline-none"
+          className="w-full rounded-2xl border border-line bg-panel px-4 py-4 text-lg text-white placeholder:text-zinc-600 focus:border-sea focus:outline-none"
         />
-        <button className="w-full rounded-2xl bg-gold py-4 font-semibold text-ink active:bg-gold-deep">Email me my link</button>
+        <button className="btn-metal w-full rounded-2xl py-4">Email me my link</button>
       </form>
       <p className="mt-6 text-center text-sm">
         <Link href={`/city/${city.slug}`} className="text-muted underline">

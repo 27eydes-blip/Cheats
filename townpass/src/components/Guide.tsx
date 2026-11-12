@@ -91,7 +91,7 @@ export function Guide(props: {
       <Link
         href={href}
         scroll={false}
-        className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm ${active ? "border-gold bg-gold font-medium text-ink" : "border-line bg-panel text-zinc-200"}`}
+        className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm ${active ? "btn-metal border-transparent" : "border-line bg-panel/80 text-zinc-200"}`}
       >
         {lead}
         {label}
@@ -99,12 +99,12 @@ export function Guide(props: {
     );
     body = (
       <>
-        <div className="sticky top-0 z-10 -mx-5 border-b border-line bg-ink/95 px-5 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
+        <div className="sticky top-0 z-10 -mx-5 border-b border-line bg-ink/90 px-5 pb-3 backdrop-blur-md pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
           <div className="flex items-center gap-3">
             <Link href={base} className="flex size-9 shrink-0 items-center justify-center rounded-full border border-line bg-panel text-zinc-200" aria-label="Back to home">
               <Icon name="back" className="size-5" />
             </Link>
-            <h1 className="flex min-w-0 flex-1 items-center gap-2 truncate font-serif text-2xl text-white">
+            <h1 className="flex min-w-0 flex-1 items-center gap-2 truncate font-serif text-2xl text-ivory">
               <Icon name={def.icon} className="size-6 text-gold" />
               {current.title}
             </h1>
@@ -144,13 +144,14 @@ export function Guide(props: {
         <header className="pt-5">
           <div className="flex items-center justify-between">
             <Brand name={props.brand} />
-            <span className="rounded-full border border-line px-2.5 py-1 text-[11px] font-medium text-zinc-300">
+            <span className="smallcaps rounded-full border border-gold/40 px-2.5 py-0.5 text-[11px] text-gold-soft">
               {summer ? `${city.peak_label} hours` : "Off-season hours"}
             </span>
           </div>
-          <h1 className="mt-3 font-serif text-4xl">
+          <h1 className="mt-4 font-serif text-4xl">
             <span className="gold-text">{city.name}</span>
           </h1>
+          <div className="rule-engraved mt-3 w-20" />
         </header>
         {props.adminPreview && (
           <div className="mt-3">
@@ -171,9 +172,9 @@ export function Guide(props: {
             placeholder="Search seafood, pharmacy, parking…"
             aria-label={`Search ${city.name}`}
             enterKeyHint="search"
-            className="min-w-0 flex-1 rounded-xl border border-line bg-panel px-4 py-3 text-[16px] text-white placeholder:text-zinc-500 focus:border-gold focus:outline-none"
+            className="min-w-0 flex-1 rounded-xl border border-line bg-panel px-4 py-3 text-[16px] text-white placeholder:text-zinc-500 focus:border-sea focus:outline-none"
           />
-          <button className="flex shrink-0 items-center rounded-xl bg-gold px-4 text-ink" aria-label="Search">
+          <button className="btn-metal flex shrink-0 items-center rounded-xl px-4" aria-label="Search">
             <Icon name="search" className="size-5" strokeWidth={2.25} />
           </button>
         </form>
@@ -214,17 +215,17 @@ export function Guide(props: {
                   <Link
                     key={s.id}
                     href={`${base}?s=${s.type}`}
-                    className="hud relative flex min-h-[6.5rem] flex-col overflow-hidden justify-between rounded-2xl border border-line bg-panel p-4 active:border-gold"
+                    className="glass relative flex min-h-[6.5rem] flex-col justify-between overflow-hidden rounded-2xl p-4 active:border-sea"
                   >
                     <span className="flex size-10 items-center justify-center rounded-xl border border-gold/30 bg-gold/10 text-gold">
                       <Icon name={def.icon} className="size-5" />
                     </span>
                     <span>
-                      <span className="block font-serif text-lg leading-tight text-white">{s.title}</span>
+                      <span className="block font-serif text-lg leading-tight text-ivory">{s.title}</span>
                       <span className="mt-0.5 block font-mono text-[11px] text-muted">
                         {def.uses.hours ? (
                           <>
-                            <span className={open ? "text-open" : ""}>{open} open</span> · {s.listings.length} spots
+                            <span className={open ? "text-sea-soft" : ""}>{open} open</span> · {s.listings.length} spots
                           </>
                         ) : (
                           `${s.listings.length} ${s.type === "tips" ? "tips" : "spots"}`
@@ -239,15 +240,15 @@ export function Guide(props: {
             {tips && tips.listings.length > 0 && (
               <section className="mt-7" aria-label="Insider tips">
                 <div className="flex items-baseline justify-between">
-                  <h2 className="font-serif text-xl text-white">Insider tips</h2>
+                  <h2 className="font-serif text-xl text-ivory">Insider tips</h2>
                   <Link href={`${base}?s=tips`} className="text-sm text-gold">
                     View all {tips.listings.length}
                   </Link>
                 </div>
                 <div className="mt-3 space-y-2">
                   {tips.listings.slice(0, 3).map((t) => (
-                    <Link key={t.id} href={`${base}?s=tips#l${t.id}`} className="block rounded-xl border border-line bg-panel px-4 py-3">
-                      <span className="block text-[15px] font-semibold text-white">{t.name}</span>
+                    <Link key={t.id} href={`${base}?s=tips#l${t.id}`} className="glass block rounded-xl px-4 py-3">
+                      <span className="block font-serif text-[17px] text-ivory">{t.name}</span>
                       <span className="mt-0.5 line-clamp-2 block text-sm text-zinc-400">{t.body}</span>
                     </Link>
                   ))}
@@ -275,7 +276,7 @@ export function Guide(props: {
 
       <nav
         aria-label="Guide tabs"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-panel/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-panel/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md"
       >
         <div className="mx-auto grid max-w-xl grid-cols-5">
           {TABS.map((t) => {
@@ -287,7 +288,7 @@ export function Guide(props: {
                 key={t.label}
                 href={t.type ? `${base}?s=${t.type}` : base}
                 aria-current={active ? "page" : undefined}
-                className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${active ? "text-gold" : "text-zinc-400"}`}
+                className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${active ? "text-sea-soft" : "text-zinc-400"}`}
               >
                 <Icon name={t.icon} className="size-6" strokeWidth={active ? 2 : 1.6} />
                 {t.label}

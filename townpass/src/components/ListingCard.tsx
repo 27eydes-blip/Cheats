@@ -50,10 +50,10 @@ export function ListingCard(props: {
   );
 
   return (
-    <article id={`l${l.id}`} className="scroll-mt-32 rounded-2xl border border-line bg-panel p-4">
+    <article id={`l${l.id}`} className="glass scroll-mt-32 rounded-2xl p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-serif text-lg leading-tight text-white">{l.name}</h3>
+          <h3 className="font-serif text-lg leading-tight text-ivory">{l.name}</h3>
           <p className="mt-0.5 text-xs text-muted">
             {[l.category, def.uses.price && props.sectionKind !== "parking" ? l.price_range : null].filter(Boolean).join(" · ")}
           </p>
@@ -74,7 +74,7 @@ export function ListingCard(props: {
       )}
       {l.body && <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-zinc-200">{l.body}</p>}
       {l.local_tip && (
-        <p className="mt-3 rounded-xl border-l-2 border-gold bg-gold/5 px-3 py-2 text-sm text-gold-soft">
+        <p className="mt-3 rounded-xl border-l-2 border-gold bg-gold/[0.06] px-3 py-2 text-sm text-gold-soft">
           <span className="font-semibold">Local tip</span> · {l.local_tip}
         </p>
       )}
@@ -84,7 +84,7 @@ export function ListingCard(props: {
           href={`/r/${l.id}`}
           target="_blank"
           rel="noopener"
-          className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-gold py-3 text-[15px] font-semibold text-ink shadow-[0_6px_20px_rgba(212,175,55,0.2)] active:bg-gold-deep"
+          className="mt-3 flex items-center justify-center gap-2 btn-metal rounded-xl py-3 text-[15px]"
         >
           <Icon name="calendar" className="size-5" strokeWidth={2} />
           {reserveLabel(l.reserve_url)}
@@ -103,7 +103,7 @@ export function ListingCard(props: {
               href={mapsUrl(l.address, l.name, apple)}
               target="_blank"
               rel="noopener"
-              className={`flex items-center justify-center gap-2 rounded-xl py-2.5 ${l.reserve_url ? "bg-panel-2 text-white ring-1 ring-line active:bg-line" : "bg-gold text-ink active:bg-gold-deep"}`}
+              className={`flex items-center justify-center gap-2 rounded-xl py-2.5 ${l.reserve_url ? "btn-ghost" : "btn-metal"}`}
             >
               <Icon name="directions" className="size-4" />
               Directions
@@ -120,7 +120,7 @@ export function ListingCard(props: {
       <details className="group mt-3 border-t border-line pt-3" open={props.reported || undefined}>
         <summary className="flex items-center justify-between gap-3 text-[12px] text-muted">
           <span>{verified}</span>
-          <span className="flex shrink-0 items-center gap-1 rounded-full border border-line px-3 py-1 text-zinc-300 group-open:border-gold group-open:text-gold-soft">
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-line px-3 py-1 text-zinc-300 group-open:border-sea group-open:text-sea-soft">
             {hasMore ? "Details" : "Report"} <Icon name="down" className="size-3.5 transition-transform group-open:rotate-180" strokeWidth={2.25} />
           </span>
         </summary>

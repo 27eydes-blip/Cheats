@@ -97,10 +97,14 @@ function Landing(props: {
     {props.weather && <div className="pt-[env(safe-area-inset-top)]"><WeatherTicker c={props.weather} cityName={city.name} /></div>}
     <main className="mx-auto max-w-xl px-5 pb-6 pt-5">
       <Brand name={props.brand} />
-      <h1 className="mt-6 font-serif text-5xl leading-none">
+      <p className="smallcaps mt-7 text-[11px] text-gold-soft">
+        Est. 2026 · {city.name}, {city.state}
+      </p>
+      <h1 className="mt-1 font-serif text-5xl leading-none">
         <span className="gold-text">{city.name}</span>
       </h1>
-      <p className="mt-3 text-lg text-zinc-300">{city.tagline || `The local's guide to ${city.name}.`}</p>
+      <div className="rule-engraved mt-4 w-24" />
+      <p className="mt-4 text-lg text-zinc-300">{city.tagline || `The local's guide to ${city.name}.`}</p>
 
       {props.canceled && (
         <div className="mt-5">
@@ -113,14 +117,14 @@ function Landing(props: {
         </div>
       )}
 
-      <section aria-label="What's inside" className="mt-7 rounded-2xl border border-line bg-panel">
-        <p className="border-b border-line px-4 py-3 font-mono text-[10px] tracking-[0.2em] text-muted">WHAT’S INSIDE</p>
+      <section aria-label="What's inside" className="glass mt-7 overflow-hidden rounded-2xl">
+        <p className="smallcaps border-b border-line px-4 py-3 text-[11px] text-gold-soft">What’s inside</p>
         <ul className="grid grid-cols-2 gap-px bg-line">
           {guide.filter((s) => s.listings.length > 0).map((s) => (
-            <li key={s.id} className="flex items-center gap-3 bg-panel px-4 py-3">
+            <li key={s.id} className="flex items-center gap-3 bg-panel/90 px-4 py-3">
               <Icon name={sectionType(s.type).icon} className="size-5 text-gold" />
               <span className="min-w-0">
-                <span className="block text-sm font-medium text-zinc-100">{s.title}</span>
+                <span className="block font-serif text-[16px] text-ivory">{s.title}</span>
                 <span className="block text-xs text-muted">
                   {s.listings.length} {s.type === "tips" ? "tips" : "places"}
                 </span>
@@ -158,7 +162,7 @@ function Landing(props: {
       <form method="post" action="/api/checkout" className="sticky bottom-0 -mx-5 mt-2 bg-gradient-to-t from-ink via-ink to-transparent px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-6">
         <input type="hidden" name="city" value={city.slug} />
         {props.src && <input type="hidden" name="src" value={props.src} />}
-        <button className="flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gold py-4 text-lg font-semibold text-ink shadow-[0_8px_30px_rgba(212,175,55,0.25)] active:bg-gold-deep">
+        <button className="btn-metal flex w-full items-center justify-center gap-2.5 rounded-2xl py-4 text-lg">
           <Icon name="lock" className="size-5" strokeWidth={2} />
           Unlock the full guide · {price}
         </button>

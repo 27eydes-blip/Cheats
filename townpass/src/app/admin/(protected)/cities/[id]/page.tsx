@@ -42,7 +42,7 @@ export default async function CityAdmin({ params, searchParams }: { params: Prom
           key={s.id}
           title={s.title}
           actions={
-            <Link href={`/admin/listings/new?section=${s.id}`} className="rounded-lg bg-gold px-3 py-1.5 text-sm font-semibold text-ink">
+            <Link href={`/admin/listings/new?section=${s.id}`} className="btn-metal rounded-lg px-3 py-1.5 text-sm">
               + Add listing
             </Link>
           }

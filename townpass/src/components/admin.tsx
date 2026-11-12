@@ -13,7 +13,7 @@ export function Field(props: {
   className?: string;
   mono?: boolean;
 }) {
-  const cls = `mt-1 w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm text-white focus:border-gold focus:outline-none ${props.mono ? "font-mono" : ""}`;
+  const cls = `mt-1 w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm text-white focus:border-sea focus:outline-none ${props.mono ? "font-mono" : ""}`;
   return (
     <label className={`block ${props.className ?? ""}`}>
       <span className="text-xs font-medium uppercase tracking-wide text-muted">{props.label}</span>
@@ -30,7 +30,7 @@ export function Field(props: {
 export function Btn({ children, name, value, tone = "gold" }: { children: React.ReactNode; name?: string; value?: string; tone?: "gold" | "plain" | "danger" }) {
   const cls =
     tone === "gold"
-      ? "bg-gold text-ink"
+      ? "btn-metal"
       : tone === "danger"
         ? "bg-closed/15 text-closed ring-1 ring-closed/40"
         : "bg-panel-2 text-white ring-1 ring-line";

@@ -26,11 +26,11 @@ export function CityFields({ city }: { city?: City }) {
       <Field label="Latitude" name="lat" type="number" defaultValue={city?.lat} placeholder="41.0359" hint="For live weather & UV. Right-click the town in Google Maps to copy." />
       <Field label="Longitude" name="lon" type="number" defaultValue={city?.lon} placeholder="-71.9545" hint="US longitudes are negative" />
       <label className="flex items-center gap-2 self-center text-sm">
-        <input type="checkbox" name="coastal" defaultChecked={city ? !!city.coastal : true} className="size-4 accent-[#d4af37]" />
+        <input type="checkbox" name="coastal" defaultChecked={city ? !!city.coastal : true} className="size-4 accent-[#2fc4b4]" />
         Coastal (show water temp & waves)
       </label>
       <label className="flex items-center gap-2 self-center text-sm">
-        <input type="checkbox" name="published" defaultChecked={!!city?.published} className="size-4 accent-[#d4af37]" />
+        <input type="checkbox" name="published" defaultChecked={!!city?.published} className="size-4 accent-[#2fc4b4]" />
         Published (visible to the public)
       </label>
       <div className="md:col-span-3">

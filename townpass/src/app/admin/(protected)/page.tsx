@@ -106,7 +106,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <div className="flex h-40 items-end gap-[2px]">
           {series.map(([day, v]) => (
             <div key={day} title={`${day}: ${v.n} sales, ${formatMoney(v.cents)}`} className="group relative flex-1">
-              <div className="w-full rounded-t bg-gold/80 group-hover:bg-gold" style={{ height: `${Math.max(v.cents ? 4 : 1, (v.cents / max) * 152)}px` }} />
+              <div className="w-full rounded-t bg-sea/80 group-hover:bg-sea-soft" style={{ height: `${Math.max(v.cents ? 4 : 1, (v.cents / max) * 152)}px` }} />
             </div>
           ))}
         </div>

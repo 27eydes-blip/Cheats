@@ -27,7 +27,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
           placeholder="Password"
           className="w-full rounded-xl border border-line bg-panel px-4 py-3 text-white focus:border-gold focus:outline-none"
         />
-        <button className="w-full rounded-xl bg-gold py-3 font-semibold text-ink">Log in</button>
+        <button className="btn-metal w-full rounded-xl py-3">Log in</button>
       </form>
     </main>
   );
