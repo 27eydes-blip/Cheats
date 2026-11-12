@@ -1,4 +1,4 @@
-# TownPass
+# CoastPassGo
 
 Tourists scan a QR sticker → pay $5 (Apple Pay / Google Pay / card) → unlock a local guide for that town.
 Cities: **Montauk, NY**, **Key West, FL**, **Nantucket, MA**, **Outer Banks, NC** (all seeded as UNVERIFIED placeholders).
@@ -103,12 +103,12 @@ npm run preview                         # builds for Workers and serves http://l
    ```
 5. **Vars** in `wrangler.jsonc`: `PUBLIC_BASE_URL`, `BRAND_NAME`, `SUPPORT_EMAIL`, `FROM_EMAIL`.
 6. **Deploy:** `npm run deploy`
-7. **Custom domain** (when you have one): Cloudflare Dashboard → Workers & Pages → `townpass` → Settings →
-   Domains & Routes → *Add custom domain*. Then set `PUBLIC_BASE_URL` to it, redeploy, and update the Stripe
-   webhook URL.
+7. **Domain:** `wrangler.jsonc` already attaches **coastpassgo.com** and **www.coastpassgo.com** (both on this
+   Cloudflare account), and `www` redirects to the bare domain. `npm run deploy` creates the DNS records and
+   certificates. If deploy says a record already exists, delete the old `A`/`AAAA`/`CNAME` record for that name
+   in Cloudflare → coastpassgo.com → DNS, then deploy again.
 
-> ⚠️ **QR codes encode `PUBLIC_BASE_URL`.** Don't print stickers until it's your final domain.
-> Sticker IDs don't change, so you can always re-download.
+> ⚠️ **QR codes encode `PUBLIC_BASE_URL`** (`https://coastpassgo.com`). Test that a sticker opens before printing a batch.
 
 ---
 
@@ -122,7 +122,7 @@ npm run preview                         # builds for Workers and serves http://l
    **Google Pay** are on (wallets are on by default with cards). The app does *not* hard-code payment methods, so
    anything you enable here appears in Checkout automatically.
 4. **Webhook:** Developers → Webhooks → *Add endpoint*
-   * URL: `https://YOUR-DOMAIN/api/webhooks/stripe`
+   * URL: `https://coastpassgo.com/api/webhooks/stripe`
    * Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
      `checkout.session.expired`, `charge.refunded`, `charge.dispute.created`
    * Copy the **Signing secret** (`whsec_…`) into `STRIPE_WEBHOOK_SECRET`.
@@ -131,7 +131,7 @@ npm run preview                         # builds for Workers and serves http://l
    Stripe only sends these in live mode. That email is the "receipt link" customers search for when restoring access.
 6. **Branding:** Settings → Business → **Branding**: upload an icon and set brand color `#0b0b0d` and accent `#d4af37`,
    so Checkout matches the dark/gold site.
-7. **Public details:** Settings → Business → **Public details**: set the statement descriptor (e.g. `TOWNPASS`) and
+7. **Public details:** Settings → Business → **Public details**: set the statement descriptor (e.g. `COASTPASSGO`) and
    support email. Clear descriptors reduce "I don't recognize this charge" disputes, which cost about $15 each.
 
 ### Apple Pay & domain verification: do I need it?
@@ -150,10 +150,10 @@ button (Stripe's **Express Checkout Element**), so the Apple Pay sheet opens dir
 the Checkout page. That saves one screen. The steps are:
 
 1. Stripe Dashboard → Settings → Payments → **Payment method domains** → *Add a new domain* → enter
-   `yourdomain.com` (and `www.` if used). Add the test-mode domain too.
+   `coastpassgo.com` (and `www.` if used). Add the test-mode domain too.
 2. Stripe registers the domain with Apple. If it asks you to host Apple's association file, download it and save it
    to `townpass/public/.well-known/apple-developer-merchantid-domain-association` (no file extension). Deploy, and
-   check that `https://yourdomain.com/.well-known/apple-developer-merchantid-domain-association` serves it.
+   check that `https://coastpassgo.com/.well-known/apple-developer-merchantid-domain-association` serves it.
 3. Click *Verify* in Stripe. Every domain and subdomain that shows the button must be registered separately,
    and the site must be HTTPS (Cloudflare handles that).
 
@@ -164,10 +164,10 @@ fraud tools up to date. The in-page button is a good v2 upgrade once the domain 
 
 ## Email (Resend)
 
-1. Create an account at resend.com → **Domains** → add a sending domain such as `mail.yourdomain.com`.
+1. Create an account at resend.com → **Domains** → add a sending domain such as `coastpassgo.com`.
 2. Add the DNS records it shows (SPF/DKIM, optionally DMARC) in Cloudflare DNS, then click *Verify*.
 3. **API Keys** → create a key with "Sending access" → `npx wrangler secret put RESEND_API_KEY`.
-4. Set `FROM_EMAIL` (e.g. `TownPass <access@mail.yourdomain.com>`) and `SUPPORT_EMAIL` in `wrangler.jsonc`.
+4. Set `FROM_EMAIL` (e.g. `CoastPassGo <access@coastpassgo.com>`) and `SUPPORT_EMAIL` in `wrangler.jsonc`.
 
 Without `RESEND_API_KEY`, emails are only logged (`npx wrangler tail`). Purchases still work through the cookie,
 but restore-by-email won't send anything.

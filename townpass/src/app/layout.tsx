@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "TownPass", template: "%s · TownPass" },
-  description: "The local's guide to town. Unlock in seconds.",
+  title: { default: "CoastPassGo", template: "%s · CoastPassGo" },
+  description: "The local's guide to beach towns: where to eat, drink, park and swim, with live weather and UV. Unlock in seconds.",
   robots: { index: true, follow: true },
 };
 

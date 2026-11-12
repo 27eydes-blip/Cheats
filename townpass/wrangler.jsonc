@@ -1,9 +1,14 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "townpass",
+  "name": "coastpassgo",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // Serve the app on your domains (coastpassgo.com is on this Cloudflare account).
+  "routes": [
+    { "pattern": "coastpassgo.com", "custom_domain": true },
+    { "pattern": "www.coastpassgo.com", "custom_domain": true }
+  ],
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   "d1_databases": [
     {
@@ -15,11 +20,11 @@
     }
   ],
   "vars": {
-    // Change to your real domain once you have one (QR codes encode this!)
-    "PUBLIC_BASE_URL": "https://townpass.YOUR-SUBDOMAIN.workers.dev",
-    "BRAND_NAME": "TownPass",
-    "SUPPORT_EMAIL": "support@example.com",
-    "FROM_EMAIL": "TownPass <access@example.com>"
+    // QR codes encode this: keep it as the final domain once stickers are printed.
+    "PUBLIC_BASE_URL": "https://coastpassgo.com",
+    "BRAND_NAME": "CoastPassGo",
+    "SUPPORT_EMAIL": "support@coastpassgo.com",
+    "FROM_EMAIL": "CoastPassGo <access@coastpassgo.com>"
   }
   // Secrets (set with `npx wrangler secret put NAME`, never commit):
   //   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, ACCESS_TOKEN_SECRET,

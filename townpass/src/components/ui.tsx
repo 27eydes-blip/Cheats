@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export function Brand({ name = "TownPass" }: { name?: string }) {
+export function Brand({ name = "CoastPassGo" }: { name?: string }) {
   return (
     <Link href="/" className="text-[11px] font-semibold uppercase tracking-[0.25em] text-gold">
       {name}
@@ -8,7 +8,7 @@ export function Brand({ name = "TownPass" }: { name?: string }) {
   );
 }
 
-export function Footer({ brand = "TownPass", support }: { brand?: string; support?: string }) {
+export function Footer({ brand = "CoastPassGo", support }: { brand?: string; support?: string }) {
   return (
     <footer className="mx-auto max-w-xl px-5 pb-10 pt-8 text-center text-xs text-muted">
       <div className="flex justify-center gap-4">
