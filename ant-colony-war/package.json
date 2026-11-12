@@ -15,7 +15,8 @@
     "still": "tsx scripts/still.ts",
     "typecheck": "tsc --noEmit",
     "check": "tsx scripts/check.ts",
-    "voice:setup": "tsx scripts/setup-voice.ts"
+    "voice:setup": "tsx scripts/setup-voice.ts",
+    "tv": "tsx scripts/tv.ts"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.535",

@@ -8,6 +8,7 @@ import path from 'node:path';
 import { bundle } from '@remotion/bundler';
 import { renderMedia, selectComposition } from '@remotion/renderer';
 import { checkEpisode, loadEpisodes } from './lib/episodes';
+import { hasFfmpeg, makeTv } from './tv';
 
 const EPISODES = loadEpisodes();
 import { getTimeline } from '../src/timeline/load';
@@ -55,6 +56,8 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
         if (pct !== last) { last = pct; process.stdout.write(`\r${id} ${pct}%   `); }
       },
     });
+    // 16:9 TV / screen-share version alongside the vertical one
+    if (process.env.TV !== '0' && hasFfmpeg()) console.log(`\r${id} TV version -> ${path.relative(ROOT, makeTv(file))}`);
     console.log(`\r${id} done in ${((Date.now() - t0) / 1000).toFixed(0)}s -> ${path.relative(ROOT, file)} (${tl.duration.toFixed(1)}s)`);
   }
 })().catch((e) => { console.error(e); process.exit(1); });

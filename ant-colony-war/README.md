@@ -21,6 +21,8 @@ npm run render:all            # check script -> sound effects -> voice -> narrat
 | `npm run audio` | Narrates every line (local British boy voice by default), writes `audio/epXX.mp3` + `audio/epXX.json` (word timings) and updates `src/data/timelines.ts`. Lines are cached in `audio/cache/`, so re-running only redoes changed lines. `-- 1` for one episode, `-- --force` to re-synthesise. |
 | `npm run render` | Renders each episode that has a `scenes.json` to `out/ant-colony-war-epXX-title.mp4`. `-- 1` for one episode. |
 
+**TV / screen sharing:** every render also writes a 16:9 version (1920×1080) to `out/tv/`. It shows the vertical video at full height, with a blurred copy of the same shot filling the sides, so it fills a TV. `npm run tv` makes them for already-rendered episodes. This needs ffmpeg on your PATH. Play them full screen in your video player before you start sharing.
+
 Also: `npm run still -- 1` (one still per shot into `out/stills/`, fast for reviewing), `npm run audio:estimate` (estimated lengths, no API calls), `npm run voices` (list your ElevenLabs voices, if you use ElevenLabs).
 
 No ffmpeg install is needed; the scripts use the one that ships with Remotion. If Remotion can't download its headless browser on your network, set `REMOTION_BROWSER_EXECUTABLE` to a local Chrome or Chromium.
