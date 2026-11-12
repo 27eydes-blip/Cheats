@@ -2,6 +2,7 @@
 import React from 'react';
 import { AbsoluteFill, Composition, useCurrentFrame } from 'remotion';
 import { Ant, AntDefs } from '../art/Ant';
+import { Cast } from './Cast';
 const Rig: React.FC = () => {
   const f = useCurrentFrame();
   return (
@@ -17,4 +18,9 @@ const Rig: React.FC = () => {
     </AbsoluteFill>
   );
 };
-export const RigRoot: React.FC = () => <Composition id="Rig" component={Rig} width={1080} height={1920} fps={30} durationInFrames={60} />;
+export const RigRoot: React.FC = () => (
+  <>
+    <Composition id="Rig" component={Rig} width={1080} height={1920} fps={30} durationInFrames={60} />
+    <Composition id="Cast" component={Cast} width={2040} height={1800} fps={30} durationInFrames={60} />
+  </>
+);

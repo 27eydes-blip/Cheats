@@ -10,7 +10,7 @@ import { clamp, fbm, lerp, noise1 } from '../lib/random';
  * Anatomy: head – mesosoma (middle body; all six legs attach here) – petiole – gaster.
  * Each leg: coxa → femur → knee → tibia → ankle → tarsus (three visible segments).
  */
-export type Species = 'trapjaw' | 'fire' | 'kesh' | 'queen' | 'tjqueen';
+export type Species = 'trapjaw' | 'fire' | 'kesh' | 'queen' | 'tjqueen' | 'sorra';
 
 export type AntProps = {
   species: Species;
@@ -41,6 +41,20 @@ export type AntProps = {
   /** 0 full detail, 1 medium, 2 swarm. */
   lod?: 0 | 1 | 2;
   oneAntenna?: boolean;
+  /** Bigger eyes (Pip). */
+  eyeScale?: number;
+  /** Longer/shorter mandibles relative to the body (Pip has oversized jaws). */
+  jawScale?: number;
+  /** A scar across the head (Rix). */
+  headScar?: boolean;
+  /** 0..1 body held low to the ground (Rix moves fast and low). */
+  crouch?: number;
+  /** Antenna twitch speed (sick Pip: slow). */
+  antennaSpeed?: number;
+  /** 0..1 cracks of green light breaking through the shell and armor (Season 2). */
+  cracks?: number;
+  /** The Snap's final form: black resin armor, blade mandibles, green seams, one eye fully green. */
+  finalForm?: boolean;
   /** Head tilt, radians (+ = down). */
   pitch?: number;
   opacity?: number;
@@ -164,7 +178,27 @@ const TJQUEEN: Geo = {
   legW: 6.5,
 };
 
-const GEO: Record<Species, Geo> = { trapjaw: TRAPJAW, fire: FIRE, kesh: FIRE, queen: QUEEN, tjqueen: TJQUEEN };
+/** General Sorra: a tall, sleek fire ant: long thorax, slim gaster, long legs. */
+const SORRA: Geo = {
+  ...FIRE,
+  gaster: [-104, -22, 40, 26, -16],
+  bands: 4,
+  meso: 'M-36,-10 C-40,-26 -26,-36 -8,-36 C8,-36 14,-42 28,-46 C44,-50 56,-40 56,-28 C56,-16 46,-8 30,-6 C6,-4 -18,-4 -36,-10 Z',
+  head: 'M52,-30 C56,-48 74,-56 94,-52 C112,-48 120,-36 118,-24 C116,-14 104,-10 88,-10 C70,-10 56,-16 52,-30 Z',
+  eye: [94, -36, 4.6],
+  jawBase: [116, -20],
+  antBase: [104, -48],
+  scape: 42,
+  funic: 54,
+  hips: [[42, -10], [14, -8], [-14, -10]],
+  feet: [118, 20, -104],
+  femur: 50,
+  tibia: 60,
+  tarsus: 30,
+  ground: 56,
+};
+
+const GEO: Record<Species, Geo> = { trapjaw: TRAPJAW, fire: FIRE, kesh: FIRE, queen: QUEEN, tjqueen: TJQUEEN, sorra: SORRA };
 
 type P = [number, number];
 
@@ -186,7 +220,7 @@ export const Ant: React.FC<AntProps> = (p) => {
   const phase = t * walk * Math.PI * 2 + seed * 1.7;
   const bob = walk ? -Math.abs(Math.sin(phase)) * 2 : Math.sin(t * 1.3 + seed) * 0.6 * (1 - lie);
   const breathe = 1 + Math.sin(t * (lie > 0.5 ? 0.6 : 1.6) + seed) * 0.012;
-  const sink = lie * (g.ground - 6); // body settles onto the dirt
+  const sink = lie * (g.ground - 6) + (p.crouch ?? 0) * 12; // body settles onto the dirt (or crouches low)
   const pitch = (p.pitch ?? 0) + lie * 0.12 + (walk ? Math.sin(phase * 2) * 0.012 : 0);
 
   // ---- legs: three segments, tripod gait ----
@@ -227,7 +261,8 @@ export const Ant: React.FC<AntProps> = (p) => {
   // ---- antennae: elbowed (scape + funiculus with a club), twitching ----
   const ants: { pts: P[]; far: boolean; stub: boolean }[] = [];
   for (const side of [1, 0]) {
-    const tw = (fbm(t * 1.7 + side * 9 + seed, 31) * 0.35 + Math.sin(t * 7 + seed + side) * 0.04) * (1 - lie * 0.8);
+    const as = p.antennaSpeed ?? 1;
+    const tw = (fbm(t * 1.7 * as + side * 9 + seed, 31) * 0.35 + Math.sin(t * 7 * as + seed + side) * 0.04) * (1 - lie * 0.8) - (as < 0.6 ? 0.25 : 0);
     const [bx, by] = [g.antBase[0] + (side ? 5 : 0), g.antBase[1] - (side ? 3 : 0)];
     const a1 = -2.2 + (side ? 0.14 : 0) + tw * 0.25 + lie * 1.1;
     const ex = bx + Math.cos(a1) * g.scape, ey = by + Math.sin(a1) * g.scape;
@@ -250,15 +285,16 @@ export const Ant: React.FC<AntProps> = (p) => {
     }
     // trap-jaw: long, thick, dead-straight blades with hooked teeth at the tip
     const spread = (upper ? -1 : 1) * (0.03 + 0.3 * jawOpen);
-    const L = g.jawLen, c = Math.cos(spread), sn = Math.sin(spread);
+    const L = g.jawLen * (p.jawScale ?? 1), c = Math.cos(spread), sn = Math.sin(spread);
     const P = (u: number, v: number) => `${(jx + u * c - v * sn).toFixed(1)},${(jy + u * sn + v * c).toFixed(1)}`;
     const k = upper ? 1 : -1; // teeth hook toward the other jaw
+    if (p.finalForm) return `M${P(-6, -7 * k)} L${P(L * 0.55, -6 * k)} L${P(L + 10, 1 * k)} L${P(L * 0.55, 7 * k)} L${P(L * 0.5, 3 * k)} L${P(L * 0.42, 7 * k)} L${P(L * 0.36, 3 * k)} L${P(L * 0.28, 7 * k)} L${P(-6, 7 * k)} Z`;
     return `M${P(-6, -5.5 * k)} L${P(L - 10, -3 * k)} L${P(L, 2 * k)} L${P(L - 2, 12 * k)} L${P(L - 9, 4 * k)} L${P(L - 13, 10 * k)} L${P(L - 18, 3.5 * k)} L${P(L - 24, 7 * k)} L${P(L - 28, 4 * k)} L${P(-6, 5.5 * k)} Z`;
   };
   const jawRim = (upper: boolean) => {
     const [jx, jy] = g.jawBase;
     const spread = (upper ? -1 : 1) * (0.03 + 0.3 * jawOpen);
-    const L = g.jawLen, k = upper ? 1 : -1;
+    const L = g.jawLen * (p.jawScale ?? 1), k = upper ? 1 : -1;
     const x1 = jx - 2, y1 = jy - 5 * k, x2 = jx + (L - 10) * Math.cos(spread) + 3 * k * Math.sin(spread), y2 = jy + (L - 10) * Math.sin(spread) - 3 * k * Math.cos(spread);
     return `M${x1},${y1} L${x2.toFixed(1)},${y2.toFixed(1)}`;
   };
@@ -374,6 +410,28 @@ export const Ant: React.FC<AntProps> = (p) => {
               )}
             </>
           )}
+          {p.headScar && lod < 2 && (
+            <g transform={headRot} stroke="#e8d2b4" strokeOpacity={0.75} strokeWidth={2.4} strokeLinecap="round" fill="none">
+              <path d="M66,-42 L84,-12 M72,-44 L76,-36 M80,-30 L88,-24" />
+            </g>
+          )}
+          {p.finalForm && lod < 2 && (
+            <g>
+              {/* black hardened resin, sealed over the burns; green light leaking from the seams */}
+              <path d="M-36,-10 C-40,-28 -24,-38 -6,-36 C10,-35 16,-42 30,-44 C46,-46 56,-36 54,-22 C40,-18 10,-14 -36,-10 Z" fill="#030303" stroke="#3a3a3a" strokeWidth={2} />
+              <path d={`M${gcx - grx * 0.95},${gcy - 2} C${gcx - grx * 0.8},${gcy - gry * 1.15} ${gcx + grx * 0.8},${gcy - gry * 1.15} ${gcx + grx * 0.98},${gcy - 4} C${gcx + grx * 0.6},${gcy - gry * 0.45} ${gcx - grx * 0.6},${gcy - gry * 0.45} ${gcx - grx * 0.95},${gcy - 2} Z`} fill="#040404" stroke="#3a3a3a" strokeWidth={2} transform={`rotate(${grot} ${gcx} ${gcy})`} />
+              <g transform={headRot}>
+                <path d="M50,-26 C56,-44 76,-50 98,-47 C114,-44 126,-38 130,-28 C110,-32 80,-32 50,-26 Z" fill="#030303" stroke="#3a3a3a" strokeWidth={2} />
+                <path d="M96,-46 L104,-62 L108,-44 Z M80,-48 L84,-60 L90,-47 Z" fill="#050505" />
+              </g>
+              <g stroke="#6dff8a" strokeLinecap="round" fill="none" opacity={0.75 + 0.25 * Math.sin(t * 2.2)} filter={p.glowId ? `url(#${p.glowId})` : undefined}>
+                <path d="M-30,-14 C-10,-20 20,-18 50,-22" strokeWidth={2} />
+                <path d={`M${gcx - grx * 0.7},${gcy - gry * 0.6} C${gcx},${gcy - gry * 0.85} ${gcx + grx * 0.5},${gcy - gry * 0.7} ${gcx + grx * 0.85},${gcy - gry * 0.35}`} strokeWidth={2} transform={`rotate(${grot} ${gcx} ${gcy})`} />
+                <path d="M56,-28 C76,-34 100,-34 126,-30" strokeWidth={1.8} transform={headRot} />
+              </g>
+              <ellipse cx={gcx + 12} cy={gcy - gry * 0.55} rx={grx * 0.4} ry={gry * 0.12} transform={`rotate(${grot} ${gcx} ${gcy})`} fill="#ffffff" opacity={0.12} />
+            </g>
+          )}
           {p.armor && lod < 2 && (
             <g>
               <path d="M-30,-14 C-32,-26 -20,-33 -6,-32 C8,-31 14,-36 26,-39 C40,-42 52,-34 52,-24 C40,-22 20,-20 -30,-14 Z" fill="#3a0a04" stroke="#ff7a2e" strokeOpacity={0.8} strokeWidth={2} />
@@ -384,6 +442,16 @@ export const Ant: React.FC<AntProps> = (p) => {
               <g stroke="#e8c9a8" strokeOpacity={0.45} strokeWidth={1.6} strokeLinecap="round"><path d="M10,-36 L18,-24 M-110,-46 L-96,-30 M84,-46 L90,-36" /></g>
             </g>
           )}
+          {(p.cracks ?? 0) > 0.01 && lod < 2 && (
+            <g stroke="#9dffb0" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={Math.min(1, p.cracks! * 1.2) * (0.65 + 0.35 * pulse)} filter={p.glowId ? `url(#${p.glowId})` : undefined}>
+              <path d="M-128,-40 L-116,-26 L-104,-34 L-92,-18 L-80,-24" strokeWidth={2.2} />
+              <path d="M-118,4 L-104,-6 L-96,2 L-82,-8" strokeWidth={1.8} />
+              <path d="M-20,-30 L-8,-20 L4,-28 L16,-14" strokeWidth={2} />
+              <path d="M26,-34 L36,-22 L46,-30" strokeWidth={1.8} />
+              <path d="M64,-38 L76,-26 L90,-34 L100,-20" strokeWidth={2} transform={headRot} />
+              {(p.cracks ?? 0) > 0.6 && <path d="M-150,-14 L-138,-22 L-126,-10 M-62,-30 L-56,-18 M110,-26 L118,-14" strokeWidth={1.6} />}
+            </g>
+          )}
           {inf > 0.01 && g.veins.length > 0 && lod < 2 && (
             <g stroke="#6dff8a" fill="none" strokeLinecap="round" opacity={inf * (0.35 + 0.5 * pulse)} filter={p.glowId ? `url(#${p.glowId})` : undefined}>
               {g.veins.map((d, i) => (
@@ -392,7 +460,9 @@ export const Ant: React.FC<AntProps> = (p) => {
             </g>
           )}
           <g transform={headRot}>
-            <ellipse cx={g.eye[0]} cy={g.eye[1]} rx={g.eye[2]} ry={g.eye[2] * 0.8 * Math.max(0.15, eyeOpen)} fill="#030201" />
+            <ellipse cx={g.eye[0]} cy={g.eye[1]} rx={g.eye[2] * (p.eyeScale ?? 1)} ry={g.eye[2] * (p.eyeScale ?? 1) * 0.8 * Math.max(0.15, eyeOpen)} fill={p.finalForm ? '#3dff6a' : '#030201'} />
+            {p.finalForm && <circle cx={g.eye[0]} cy={g.eye[1]} r={g.eye[2] * 7} fill="url(#glintGlow)" opacity={0.9} />}
+            {(p.eyeScale ?? 1) > 1.2 && eyeOpen > 0.3 && <circle cx={g.eye[0] + 2} cy={g.eye[1] - 2.5} r={g.eye[2] * 0.45} fill="#fff" opacity={0.75} />}
             {eyeOpen > 0.3 && <circle cx={g.eye[0] + 1.5} cy={g.eye[1] - 1.5} r={g.eye[2] * 0.3} fill={rim} opacity={0.5 * eyeOpen} />}
             {inf > 0.01 && eyeOpen > 0.05 && (
               <>
