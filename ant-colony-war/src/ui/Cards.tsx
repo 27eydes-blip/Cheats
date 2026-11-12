@@ -1,6 +1,6 @@
 import React from 'react';
 import { Ant, AntDefs } from '../art/Ant';
-import { GAME_CTA, H, SERIES, W } from '../config';
+import { H, SERIES, W } from '../config';
 import { clamp, easeOut, hash2, range } from '../lib/random';
 import { CAPTION_FONT, TITLE_FONT } from './fonts';
 
@@ -43,14 +43,12 @@ export const TitleCard: React.FC<{ n: number; title: string; t: number; frame: n
     <div style={{ position: 'absolute', inset: 0 }}>
       <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0.35), rgba(0,0,0,0.85))', opacity: 1 - glitchOut }} />
       <div style={{ position: 'absolute', left: 0, right: 0, top: 640, display: 'flex', flexDirection: 'column', alignItems: 'center', opacity, transform: `scale(${0.92 + 0.08 * inK + glitchOut * 0.15})` }}>
-        <div style={{ fontFamily: CAPTION_FONT, fontWeight: 800, fontSize: 30, letterSpacing: '0.6em', color: 'rgba(255,214,160,0.75)', marginBottom: 26, paddingLeft: '0.6em' }}>A STORY FROM THE DIRT</div>
         <GlitchText text={SERIES} size={156} frame={frame} strength={strength} spacing="0.03em" />
         <div style={{ width: 760 * bar, height: 3, background: 'linear-gradient(90deg, transparent, #ffb35c, transparent)', margin: '34px 0' }} />
         <GlitchText text={`EP ${n}: ${title}`} size={74} frame={frame + 3} strength={strength * 0.8} color="#ffcf94" spacing="0.08em" />
       </div>
-      {/* scanlines */}
-      <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0 2px, transparent 2px 5px)', opacity: 0.5 * (1 - glitchOut) }} />
-      {strength > 0.3 && <div style={{ position: 'absolute', left: 0, right: 0, top: hash2(frame, 7) * H, height: 30 + hash2(frame, 8) * 120, background: 'rgba(255,255,255,0.08)', mixBlendMode: 'screen' }} />}
+      {/* scanlines, only while the title is up */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 560, height: 520, background: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0 2px, transparent 2px 5px)', opacity: 0.5 * (1 - glitchOut) }} />
     </div>
   );
 };
@@ -77,11 +75,6 @@ export const EndCard: React.FC<{ text: string; t: number; frame: number; infecti
           <GlitchText text={text} size={92} frame={frame} strength={Math.max(0, 0.6 - t * 0.8)} spacing="0.03em" />
         </div>
       </div>
-      {GAME_CTA && (
-        <div style={{ position: 'absolute', left: 0, right: 0, top: 1380, textAlign: 'center', fontFamily: CAPTION_FONT, fontWeight: 800, fontSize: 34, letterSpacing: '0.35em', color: 'rgba(255,214,160,0.8)', opacity: easeOut((t - 0.9) / 0.6) }}>
-          {GAME_CTA}
-        </div>
-      )}
     </div>
   );
 };

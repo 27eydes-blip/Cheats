@@ -1,6 +1,7 @@
 import React from 'react';
 import type { SceneId } from '../../script/types';
 import { Amoeba } from '../art/Amoeba';
+import { Beetle, Drop, Grains } from '../art/Props';
 import { Ant, AntDefs } from '../art/Ant';
 import { Dust, Embers, Fog, Rain, Shafts, Smoke } from '../art/Atmosphere';
 import { ceilAt, EarthDefs, floorAt, Foreground, smoothPath, Tunnel } from '../art/Earth';
@@ -75,22 +76,21 @@ const Hero: React.FC<SceneProps & { x: number; y: number; scale: number; dir?: 1
 
 // ---------------------------------------------------------------------------------------------
 
-const black: SceneDef = {
+const dark: SceneDef = {
   pal: (p) => (p.ep.infection > 0.5 ? { ...VOID, fog: '#1c4a2a', dust: '#b8ffc8', light: '#3dff6a', grade: '#39ff6a' } : VOID),
-  focus: () => [W / 2, H * 0.48],
+  focus: () => [600, 900],
   render: (p) => {
-    const pal = black.pal(p);
+    const pal = dark.pal(p);
+    // a dim silhouette of 250's head in the dark: rim light, glinting eye, drifting particles
+    const sc = 3.6, hx = 560 - 95 * sc, hy = 1060;
     return (
       <Stage pal={pal}>
-        <Glow x={W / 2} y={H * 0.5} r={700} t={p.t} amount={0.35} ry={900} />
-        <Fog t={p.t} amount={0.5} />
-        <Dust t={p.t} count={60} seed={p.index + 3} color={pal.dust} speed={0.5} />
-        {p.ep.n > 1 && (
-          <g opacity={0.25 + 0.75 * p.inf}>
-            <circle cx={W / 2 + 40} cy={H * 0.47} r={6 + p.inf * 6} fill="url(#glintGlow)" />
-            <circle cx={W / 2 + 40} cy={H * 0.47} r={1.5 + p.inf * 2} fill="#c8ffd2" opacity={0.4 + 0.5 * Math.abs(Math.sin(p.t * 1.5))} />
-          </g>
-        )}
+        <Glow x={700} y={820} r={760} t={p.t} amount={0.55} ry={620} />
+        <Fog t={p.t} amount={0.6} y={1000} />
+        <g transform={`translate(0 ${Math.sin(p.t * 0.8) * 6})`}>
+          <Ant species="trapjaw" t={p.T} x={hx} y={hy} scale={sc} fill="#040201" rim={pal.rim} rimOpacity={0.45} jaw={p.jaw} infection={Math.max(0.15, p.inf)} glowId="veinGlow" seed={250} />
+        </g>
+        <Dust t={p.t} count={80} seed={p.index + 3} color={pal.dust} speed={0.5} />
       </Stage>
     );
   },
@@ -100,7 +100,7 @@ const colony: SceneDef = {
   pal: () => AMBER,
   focus: () => [W / 2, 1100],
   render: (p) => {
-    const pal = AMBER, camX = p.T * 45 + p.index * 700;
+    const pal = AMBER, camX = p.T * (p.beat.options?.find250 ? 52 : 45) + p.index * 700;
     return (
       <Stage pal={pal} bg={pal.dirt}>
         <Tunnel id="c-far1" pal={pal} camX={camX} t={p.t} ceil={330} floor={520} depth={0.45} seed={11} haze={0.65} roots={false} solid={false} />
@@ -110,6 +110,12 @@ const colony: SceneDef = {
         <Fog t={p.t} camX={camX} amount={0.7} y={500} spread={300} />
         <Tunnel id="c-main" pal={pal} camX={camX} t={p.t} ceil={800} floor={1340} seed={3} lights={2} solid={false} />
         <FloorWalkers t={p.T} camX={camX} floor={1340} seed={1} n={8} scale={1.15} pal={pal} both tseed={3} lod={0} />
+        {p.beat.options?.find250 && (
+          <>
+            <Hero {...p} x={430} y={floorAt(430, camX, 1340, 3) - TJ_GROUND * 1.15 + 3} scale={1.15} walk={0.8} pal={pal} />
+            <circle cx={430 + 100 * 1.15} cy={floorAt(430, camX, 1340, 3) - TJ_GROUND * 1.15 - 29 * 1.15} r={26} fill="url(#glintGlow)" opacity={0.35 + 0.2 * Math.sin(p.T * 3)} style={{ mixBlendMode: 'screen' }} />
+          </>
+        )}
         <FloorWalkers t={p.T} camX={camX} floor={1340} seed={41} n={4} scale={0.7} pal={pal} both tseed={3} ceiling={800} lod={1} />
         <Fog t={p.t} camX={camX} amount={0.5} y={1150} spread={200} />
         <Foreground pal={pal} camX={camX} t={p.t} />
@@ -356,6 +362,19 @@ const senses: SceneDef = {
             </g>
           );
         })}
+        {p.beat.options?.reveal === 'beetle' && (
+          <g>
+            {range(4).map((k) => {
+              const u = wrap(p.t / 1.4 + k / 4, 1);
+              return <circle key={'br' + k} cx={300} cy={tunnels[2].y - 20} r={30 + u * 380} fill="none" stroke="#ffd28a" strokeOpacity={(1 - u) * 0.5} strokeWidth={2 + (1 - u) * 4} />;
+            })}
+            <Beetle t={p.T} x={300} y={tunnels[2].y - 60} scale={1.7} outline="#ffd28a" />
+            {range(14).map((k) => {
+              const h = hash(k + 300), age = wrap(p.T * 1.5 + h, 1);
+              return <circle key={'bd' + k} cx={300 + 200 + age * 90 * (h - 0.3)} cy={tunnels[2].y - age * 70} r={2 + h * 3} fill="#ffd28a" opacity={(1 - age) * 0.8} />;
+            })}
+          </g>
+        )}
         <ellipse cx={W / 2} cy={1000} rx={340} ry={220} fill="url(#glintGlow)" opacity={0.35} />
         <Ant species="trapjaw" t={p.T} x={W / 2 - 20} y={1000} scale={1.25} jaw={p.jaw} infection={Math.max(0.5, p.inf)} glowId="veinGlow" fill="#010302" rim="#7dffa0" seed={250} />
         <Dust t={p.t} count={60} seed={p.index + 81} color="#c8ffd2" speed={0.3} />
@@ -633,6 +652,200 @@ const army: SceneDef = {
   },
 };
 
+const COLD: Palette = { ...AMBER, rim: '#9aa8b4', light: '#8fa3b5', fog: '#3a4450', dust: '#c8d4de', cavity0: '#2a2f36', cavity1: '#0e1114', grade: '#6a8aa8', antFill: '#07080a' };
+
+const dirtMacro: SceneDef = {
+  pal: () => AMBER,
+  focus: () => [560, 1100],
+  render: (p) => {
+    const pal = AMBER, ground = 1250, sc = 3.6;
+    const focus = ease((p.t - 0.6) / 2.6);
+    return (
+      <Stage pal={pal} bg={pal.dirt}>
+        <defs>
+          <filter id="rack" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation={(1 - focus) * 14} /></filter>
+          <filter id="lens" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation={10 + focus * 8} /></filter>
+        </defs>
+        <rect x={-300} y={-300} width={W + 600} height={ground + 300} fill="url(#bgGrad)" />
+        <Glow x={700} y={900} r={900} t={p.t} amount={1.25} ry={600} />
+        <Shafts t={p.t} x={760} amount={0.5} angle={18} />
+        <Grains seed={5} n={40} x0={-100} x1={1180} y0={ground - 300} y1={ground - 60} rMin={6} rMax={26} fill={mix(pal.dirt, pal.strata, 0.5)} rim={pal.rim} blur="rack" rimOpacity={0.3} />
+        <rect x={-300} y={ground} width={W + 600} height={900} fill={pal.dirt} />
+        <path d={smoothPath(range(30).map((i) => [i * 45 - 100, ground + fbm(i * 0.5, 4) * 16] as [number, number]))} stroke={pal.rim} strokeOpacity={0.35} strokeWidth={3} fill="none" />
+        <g filter="url(#rack)">
+          <Ant species="trapjaw" t={p.T} x={560 - 95 * sc} y={ground - TJ_GROUND * sc} scale={sc} lie={1} eyeOpen={0} infection={p.inf * 0.6} fill={pal.antFill} rim={pal.rim} rimOpacity={1} jaw={0.8} seed={250} />
+        </g>
+        <Grains seed={9} n={26} x0={-60} x1={1140} y0={ground - 30} y1={ground + 80} rMin={10} rMax={36} fill={mix(pal.dirt, pal.strata, 0.35)} rim={pal.rim} rimOpacity={0.6} />
+        <Grains seed={13} n={9} x0={-200} x1={1280} y0={ground + 60} y1={ground + 380} rMin={90} rMax={190} fill="#070402" rim={pal.rim} blur="lens" drift={-6} t={p.t} rimOpacity={0.25} />
+        <Grains seed={17} n={5} x0={-200} x1={1280} y0={-80} y1={260} rMin={70} rMax={150} fill="#070402" rim={pal.rim} blur="lens" drift={4} t={p.t} rimOpacity={0.15} />
+        <Dust t={p.t} count={70} seed={p.index + 11} color={pal.dust} speed={0.35} />
+      </Stage>
+    );
+  },
+};
+
+const faceInDirt: SceneDef = {
+  pal: () => AMBER,
+  focus: () => [560, 1000],
+  render: (p) => {
+    const pal = AMBER, ground = 1230, sc = 7.4;
+    const eyes = p.beat.options?.eyes;
+    const eyeOpen = eyes === 'opening' ? ease((p.t - 1.2) / 2.8) : eyes === 'open' ? 1 : 0;
+    const beatK = Math.pow(Math.max(0, Math.sin(p.T * Math.PI * 2 * 1.2)), 10);
+    return (
+      <Stage pal={pal} bg={pal.dirt}>
+        <defs><filter id="lens2" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation={16} /></filter></defs>
+        <rect x={-300} y={-300} width={W + 600} height={ground + 300} fill="url(#bgGrad)" />
+        <Glow x={560} y={760} r={980} t={p.t} amount={1.3} ry={660} />
+        <Fog t={p.t} amount={0.5} y={900} />
+        <rect x={-300} y={ground} width={W + 600} height={900} fill={pal.dirt} />
+        <g transform={`translate(560 ${ground}) scale(${1 + beatK * 0.01}) translate(-560 ${-ground})`}>
+          <Ant species="trapjaw" t={p.T} x={560 - 95 * sc} y={ground - TJ_GROUND * sc} scale={sc} lie={1} eyeOpen={eyeOpen} infection={p.inf * (0.7 + 0.6 * beatK)} glowId="veinGlow" fill={pal.antFill} rim={pal.rim} jaw={0.8} seed={250} />
+        </g>
+        <Grains seed={21} n={22} x0={-60} x1={1140} y0={ground - 20} y1={ground + 60} rMin={12} rMax={40} fill={mix(pal.dirt, pal.strata, 0.35)} rim={pal.rim} rimOpacity={0.55} />
+        <Grains seed={23} n={6} x0={-200} x1={1280} y0={ground + 80} y1={ground + 360} rMin={110} rMax={200} fill="#060302" rim={pal.rim} blur="lens2" drift={-5} t={p.t} rimOpacity={0.2} />
+        <Dust t={p.t} count={50} seed={p.index + 13} color={pal.dust} speed={0.3} />
+      </Stage>
+    );
+  },
+};
+
+const lyingInChamber: SceneDef = {
+  pal: () => AMBER,
+  focus: () => [520, 1200],
+  render: (p) => {
+    const pal = AMBER, camX = p.index * 300, floor = 1300;
+    const day = 0.5 + 0.5 * Math.sin(p.t * 1.7 - 1.2); // time passing
+    return (
+      <Stage pal={pal} bg={pal.dirt}>
+        <Deep pal={pal} camX={camX} t={p.t} T={p.T} seed={41} />
+        <Tunnel id="lc-main" pal={pal} camX={camX} t={p.t} ceil={720} floor={floor} seed={43} lights={2} solid={false} flicker={0.4} />
+        <Glow x={540} y={1050} r={700} t={p.t} amount={0.35 + 0.65 * day} ry={420} />
+        <FloorWalkers t={p.T} camX={camX} floor={floor - 30} seed={402} n={4} scale={0.8} pal={pal} speed={70} haze={0.35} tseed={43} both />
+        <Ant species="trapjaw" t={0} x={460} y={floorAt(460, camX, floor, 43) - TJ_GROUND * 1.6 + 4} scale={1.6} lie={1} eyeOpen={0} fill={pal.antFill} rim={pal.rim} seed={250} jaw={0.8} />
+        <FloorWalkers t={p.T} camX={camX} floor={floor + 10} seed={404} n={3} scale={1.05} pal={pal} speed={85} tseed={43} dir={-1} lod={0} />
+        <rect x={-300} y={-300} width={W + 600} height={H + 600} fill="#000" opacity={0.35 * (1 - day)} />
+        <Fog t={p.t} amount={0.5} y={1150} spread={200} />
+        <Foreground pal={pal} camX={camX} t={p.t} side="top" />
+        <Dust t={p.t} count={60} seed={p.index + 17} color={pal.dust} />
+      </Stage>
+    );
+  },
+};
+
+const deadStill: SceneDef = {
+  pal: () => COLD,
+  focus: () => [540, 1100],
+  render: (p) => {
+    const pal = COLD, ground = 1260, sc = 3.2;
+    return (
+      <Stage pal={pal} bg={pal.dirt}>
+        <rect x={-300} y={-300} width={W + 600} height={ground + 300} fill="url(#bgGrad)" />
+        <Glow x={560} y={980} r={760} t={0} amount={0.6} ry={480} />
+        <rect x={-300} y={ground} width={W + 600} height={900} fill="#06070a" />
+        <Ant species="trapjaw" t={0} x={540 - 30 * sc} y={ground - TJ_GROUND * sc} scale={sc} lie={1} eyeOpen={0} fill={pal.antFill} rim={pal.rim} rimOpacity={0.6} seed={250} jaw={0.8} />
+        <Grains seed={31} n={24} x0={-60} x1={1140} y0={ground - 10} y1={ground + 60} rMin={10} rMax={30} fill="#0c0e12" rim={pal.rim} rimOpacity={0.4} />
+        <Dust t={p.t} count={90} seed={p.index + 19} color={pal.dust} speed={0.25} />
+      </Stage>
+    );
+  },
+};
+
+const eyeOpen: SceneDef = {
+  pal: () => ({ ...AMBER, grade: '#5aff8a' }),
+  focus: () => [540, 880],
+  render: (p) => {
+    const pal = AMBER, sc = 11;
+    const open = ease((p.t - 0.15) / 0.35);
+    const flare = Math.max(0, 1 - Math.abs(p.t - 0.5) / 0.5);
+    const inf = Math.max(p.inf, 0.35);
+    return (
+      <Stage pal={pal} bg="#050302">
+        <Glow x={420} y={600} r={900} t={p.t} amount={0.55} ry={700} />
+        <Ant species="trapjaw" t={p.T} x={540 - 100 * sc} y={880 + 29 * sc} scale={sc} eyeOpen={open} infection={inf} glowId="veinGlow" fill={pal.antFill} rim={pal.rim} seed={250} jaw={1} />
+        <circle cx={540} cy={880} r={60 + flare * 260} fill="url(#glintGlow)" opacity={flare * 0.9} style={{ mixBlendMode: 'screen' }} />
+        <line x1={540 - flare * 520} y1={880} x2={540 + flare * 520} y2={880} stroke="#c8ffd2" strokeWidth={3} strokeOpacity={flare * 0.8} />
+        <Dust t={p.t} count={50} seed={p.index + 23} color="#c8ffd2" speed={0.2} />
+      </Stage>
+    );
+  },
+};
+
+const waterDrop: SceneDef = {
+  pal: () => AMBER,
+  focus: () => [560, 900],
+  render: (p) => {
+    const pal = AMBER, camX = p.index * 500;
+    const grow = ease(p.t / Math.max(1.5, p.dur));
+    const rootTip = 820;
+    const sway = Math.sin(p.T * 0.6) * 4;
+    return (
+      <Stage pal={pal} bg={pal.dirt}>
+        <Tunnel id="wd-main" pal={pal} camX={camX} t={p.t} ceil={560} floor={1330} seed={53} lights={1} solid={false} roots={false} />
+        <Fog t={p.t} amount={0.5} y={1000} />
+        <path d={smoothPath([[520, 480], [548, 620], [552 + sway, 740], [560 + sway, rootTip]])} stroke={pal.dirt} strokeWidth={30} strokeLinecap="round" fill="none" />
+        <path d={smoothPath([[520, 480], [548, 620], [552 + sway, 740], [560 + sway, rootTip]])} stroke={pal.rim} strokeOpacity={0.35} strokeWidth={3} fill="none" transform="translate(-10,0)" />
+        {range(3).map((k) => {
+          const u = wrap(p.t / 1.8 + k / 3, 1);
+          return <ellipse key={k} cx={560 + sway} cy={rootTip + 70} rx={20 + u * 420} ry={14 + u * 300} fill="none" stroke="#c8ffd2" strokeOpacity={(1 - u) * 0.35} strokeWidth={2 + (1 - u) * 3} />;
+        })}
+        <Drop x={560 + sway} y={rootTip} r={44} grow={grow} t={p.T} light="#ffd59a" />
+        <Ant species="trapjaw" t={p.T} x={470} y={floorAt(470, camX, 1330, 53) - TJ_GROUND * 1.2 + 4} scale={1.2} pitch={-0.35} infection={p.inf} glowId="veinGlow" fill={pal.antFill} rim={pal.rim} seed={250} jaw={p.jaw} />
+        <Dust t={p.t} count={60} seed={p.index + 29} color={pal.dust} speed={0.25} />
+      </Stage>
+    );
+  },
+};
+
+const rise: SceneDef = {
+  pal: () => AMBER,
+  focus: () => [380 + 150 * 2.2, 1100],
+  render: (p) => {
+    const pal = AMBER, camX = p.index * 400 + p.T * 4, floor = 1300, sc = 2.2;
+    const lie = 1 - ease(p.t / 1.6);
+    const jaw = Math.min(p.jaw, 0.25 + 0.75 * ease((p.t - 1.3) / 0.5));
+    return (
+      <Stage pal={pal} bg={pal.dirt}>
+        <Deep pal={pal} camX={camX} t={p.t} T={p.T} seed={61} />
+        <Tunnel id="ri-main" pal={pal} camX={camX} t={p.t} ceil={700} floor={floor} seed={63} lights={1} solid={false} />
+        <Glow x={620} y={1000} r={760} t={p.t} amount={0.6 + 0.6 * ease(p.t / 2)} ry={500} />
+        <Ant species="trapjaw" t={p.T} x={380} y={floorAt(380, camX, floor, 63) - TJ_GROUND * sc + 4} scale={sc} lie={lie} jaw={jaw} infection={p.inf} glowId="veinGlow" fill={pal.antFill} rim={pal.rim} rimOpacity={0.6 + 0.35 * ease(p.t / 2)} seed={250} />
+        <Fog t={p.t} amount={0.4} y={1200} spread={160} />
+        <Foreground pal={pal} camX={camX} t={p.t} />
+        <Dust t={p.t} count={70} seed={p.index + 31} color={pal.dust} />
+      </Stage>
+    );
+  },
+};
+
+const vast: SceneDef = {
+  pal: () => AMBER,
+  focus: () => [540, 1000],
+  render: (p) => {
+    const pal = AMBER, camX = p.T * 20;
+    const k = ease(p.t / Math.max(2, p.dur));
+    const zoom = lerp(2.6, 1, k);
+    const rows = [300, 560, 820, 1080, 1340, 1600, 1860];
+    return (
+      <Stage pal={pal} bg={pal.dirt}>
+        <g transform={`translate(540 1000) scale(${zoom}) translate(-540 -1000)`}>
+          {rows.map((y, i) => (
+            <g key={i}>
+              <Tunnel id={`va${i}`} pal={pal} camX={camX * (0.5 + (i % 3) * 0.2)} t={p.t} ceil={y - 120} floor={y + 30} depth={0.6} seed={70 + i} haze={i === 3 ? 0.1 : 0.45} roots={i % 2 === 0} solid={false} roughness={34} />
+              <FloorWalkers t={p.T} camX={camX * (0.5 + (i % 3) * 0.2)} floor={y + 30} seed={700 + i} n={i === 3 ? 10 : 14} scale={0.3} pal={pal} both haze={i === 3 ? 0.1 : 0.4} depth={0.6} lod={2} tseed={70 + i} rough={34} />
+            </g>
+          ))}
+          <Ant species="trapjaw" t={p.T} x={540} y={floorAt(540, camX * 0.5, 1110, 73, 34, 0.6) - TJ_GROUND * 0.3 + 2} scale={0.3} walk={1} infection={p.inf} fill={pal.antFill} rim={pal.rim} seed={250} lod={1} />
+          <circle cx={540 + 30} cy={floorAt(540, camX * 0.5, 1110, 73, 34, 0.6) - 22} r={14} fill="url(#glintGlow)" opacity={0.5 + 0.3 * Math.sin(p.T * 2.5)} style={{ mixBlendMode: 'screen' }} />
+        </g>
+        <Fog t={p.t} amount={0.5} y={1000} spread={700} />
+        <Dust t={p.t} count={60} seed={p.index + 37} color={pal.dust} speed={0.4} />
+      </Stage>
+    );
+  },
+};
+
 export const SCENES: Record<SceneId, SceneDef> = {
-  black, colony, hero, closeup, surface, flood, amoeba, infection, senses, fireColony, swarm, battle, kesh, duel, queen, council, army,
+  dark, colony, hero, closeup, surface, flood, amoeba, infection, senses, fireColony, swarm, battle, kesh, duel, queen, council, army,
+  dirtMacro, faceInDirt, lyingInChamber, deadStill, eyeOpen, waterDrop, rise, vast,
 };

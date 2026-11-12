@@ -6,7 +6,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { bundle } from '@remotion/bundler';
 import { renderStill, selectComposition } from '@remotion/renderer';
-import { EPISODES } from '../script/episodes';
+import { loadEpisodes } from './lib/episodes';
+
+const EPISODES = loadEpisodes();
 import { getTimeline } from '../src/timeline/load';
 import { FPS } from '../src/config';
 

@@ -1,6 +1,15 @@
 import React from 'react';
-import { clamp, fbm, noise1 } from '../lib/random';
+import { clamp, fbm, lerp, noise1 } from '../lib/random';
 
+/**
+ * The shared character rig. Every ant in every episode is drawn by this one component,
+ * so 250 always looks the same: a dark-brown trap-jaw, identical to his sisters except
+ * for the amoeba's green veins and eye glint.
+ *
+ * Side view, facing right. Units: ~270 from gaster tip to head, mandibles add ~95.
+ * Anatomy: head – mesosoma (middle body; all six legs attach here) – petiole – gaster.
+ * Each leg: coxa → femur → knee → tibia → ankle → tarsus (three visible segments).
+ */
 export type Species = 'trapjaw' | 'fire' | 'kesh' | 'queen';
 
 export type AntProps = {
@@ -9,29 +18,30 @@ export type AntProps = {
   t: number;
   x: number;
   y: number;
-  /** Body length in px is ~260 * scale. */
+  /** 1 = default size (~270px long). */
   scale?: number;
   /** 1 = facing right, -1 = facing left. */
   dir?: 1 | -1;
   /** Walk cycles per second (0 = standing). */
   walk?: number;
-  /** Body colour and rim-light colour. */
   fill?: string;
   rim?: string;
   rimOpacity?: number;
-  /** 0..1, trap-jaw mandible spread (1 = cocked open). */
+  /** 0..1 trap-jaw mandible spread (1 = cocked open, 0 = snapped shut). */
   jaw?: number;
   /** 0..1 green veins + eye glint. */
   infection?: number;
+  /** 0..1 how open the eyes are (for waking up). Default 1. */
+  eyeOpen?: number;
+  /** 0..1 lying in the dirt (legs folded, body down, antennae limp). */
+  lie?: number;
   /** Draw as a glowing outline only (hyper-senses view). */
   outline?: string;
-  /** Unique seed so ants do not move in lockstep. */
   seed?: number;
-  /** Low detail for swarms. */
+  /** 0 full detail, 1 medium, 2 swarm. */
   lod?: 0 | 1 | 2;
-  /** Kesh loses an antenna in episode 5. */
   oneAntenna?: boolean;
-  /** Head tilt / lunge in radians. */
+  /** Head tilt, radians (+ = down). */
   pitch?: number;
   opacity?: number;
   /** Upside-down (walking on a ceiling). */
@@ -40,7 +50,7 @@ export type AntProps = {
 };
 
 type Geo = {
-  gaster: [number, number, number, number, number]; // cx, cy, rx, ry, rot(deg)
+  gaster: [number, number, number, number, number];
   bands: number;
   petiole: 'spine' | 'double';
   meso: string;
@@ -52,10 +62,15 @@ type Geo = {
   antBase: [number, number];
   scape: number;
   funic: number;
+  /** Coxae (on the mesosoma underside). */
   hips: [number, number][];
+  /** Resting tarsus-tip x for front, mid, hind. */
   feet: number[];
   femur: number;
   tibia: number;
+  tarsus: number;
+  /** Femur angle (radians, screen space) for front, mid, hind: up-forward → up-back. */
+  femurAng: number[];
   ground: number;
   legW: number;
   stinger: boolean;
@@ -63,53 +78,57 @@ type Geo = {
 };
 
 const TRAPJAW: Geo = {
-  gaster: [-96, -16, 46, 30, -14],
+  gaster: [-98, -18, 46, 31, -12],
   bands: 3,
   petiole: 'spine',
-  meso: 'M-34,-8 C-38,-22 -26,-30 -12,-28 C-2,-27 4,-22 12,-24 C22,-34 40,-36 50,-26 C56,-20 54,-10 46,-6 C30,-2 -10,-1 -34,-8 Z',
-  head: 'M50,-24 C56,-38 74,-44 96,-40 C112,-37 124,-32 128,-24 C130,-16 124,-8 110,-6 C92,-4 70,-6 58,-10 C52,-13 49,-18 50,-24 Z',
-  eye: [104, -28, 5.5],
-  jawBase: [126, -20],
-  jawLen: 78,
+  meso: 'M-34,-8 C-38,-22 -26,-30 -12,-28 C-2,-27 4,-22 12,-24 C22,-34 40,-37 50,-27 C56,-21 54,-11 46,-6 C30,-2 -10,-1 -34,-8 Z',
+  head: 'M50,-24 C54,-38 72,-45 94,-42 C110,-40 122,-35 128,-28 C132,-20 128,-10 116,-7 C96,-3 72,-5 60,-9 C53,-12 49,-18 50,-24 Z',
+  eye: [100, -29, 5.8],
+  jawBase: [126, -19],
+  jawLen: 96,
   jawKind: 'trap',
-  antBase: [116, -36],
+  antBase: [112, -38],
   scape: 40,
-  funic: 62,
-  hips: [[38, -6], [12, -5], [-16, -6]],
-  feet: [100, 8, -84],
-  femur: 60,
-  tibia: 70,
+  funic: 60,
+  hips: [[40, -8], [17, -6], [-10, -8]],
+  feet: [108, 22, -88],
+  femur: 42,
+  tibia: 48,
+  tarsus: 30,
+  femurAng: [-0.85, -1.9, -2.3],
   ground: 46,
-  legW: 6,
+  legW: 5.5,
   stinger: false,
   veins: [
-    'M-140,-20 C-120,-34 -96,-30 -80,-40 C-70,-46 -62,-38 -56,-30',
-    'M-136,-6 C-114,0 -96,-12 -74,-6 C-64,-2 -58,-12 -50,-18',
+    'M-140,-22 C-120,-36 -96,-32 -80,-42 C-70,-48 -62,-40 -56,-32',
+    'M-136,-8 C-114,-2 -96,-14 -74,-8 C-64,-4 -58,-14 -50,-20',
     'M-30,-18 C-16,-24 0,-16 14,-26 C26,-32 38,-26 48,-20',
-    'M60,-20 C72,-30 84,-24 96,-34',
-    'M64,-12 C80,-10 92,-16 112,-14',
+    'M60,-20 C72,-32 84,-26 98,-36',
+    'M64,-12 C80,-10 94,-16 116,-14',
   ],
 };
 
 const FIRE: Geo = {
-  gaster: [-84, -14, 46, 34, -10],
+  gaster: [-84, -16, 44, 33, -10],
   bands: 3,
   petiole: 'double',
   meso: 'M-30,-8 C-34,-22 -22,-30 -8,-28 C4,-26 10,-30 20,-34 C34,-38 46,-30 46,-20 C46,-10 38,-5 26,-4 C6,-2 -16,-2 -30,-8 Z',
   head: 'M44,-22 C46,-40 66,-48 86,-44 C104,-40 112,-28 110,-16 C108,-6 96,-2 80,-2 C62,-2 48,-8 44,-22 Z',
-  eye: [86, -28, 4.5],
+  eye: [86, -28, 4.8],
   jawBase: [108, -12],
-  jawLen: 24,
+  jawLen: 26,
   jawKind: 'short',
-  antBase: [98, -38],
-  scape: 40,
+  antBase: [96, -40],
+  scape: 34,
   funic: 46,
-  hips: [[34, -6], [8, -5], [-18, -6]],
-  feet: [88, 4, -74],
-  femur: 48,
-  tibia: 56,
+  hips: [[34, -8], [12, -6], [-12, -8]],
+  feet: [92, 18, -76],
+  femur: 36,
+  tibia: 40,
+  tarsus: 24,
+  femurAng: [-0.85, -1.9, -2.3],
   ground: 40,
-  legW: 5.5,
+  legW: 5,
   stinger: true,
   veins: [],
 };
@@ -119,29 +138,18 @@ const QUEEN: Geo = {
   gaster: [-150, -30, 110, 72, -8],
   bands: 5,
   meso: 'M-40,-6 C-50,-30 -30,-52 -6,-54 C16,-56 26,-58 40,-56 C58,-52 66,-38 64,-22 C62,-8 50,-2 30,-2 C0,0 -24,0 -40,-6 Z',
-  hips: [[44, -8], [14, -6], [-20, -8]],
-  feet: [112, 6, -96],
-  femur: 62,
-  tibia: 74,
-  ground: 50,
+  hips: [[44, -8], [18, -6], [-14, -8]],
+  feet: [116, 22, -96],
+  femur: 50,
+  tibia: 56,
+  tarsus: 32,
+  ground: 52,
   legW: 7,
 };
 
 const GEO: Record<Species, Geo> = { trapjaw: TRAPJAW, fire: FIRE, kesh: FIRE, queen: QUEEN };
 
-/** Two-bone IK. Returns the knee, preferring the solution above the hip→foot line. */
-export function knee(hx: number, hy: number, fx: number, fy: number, a: number, b: number, back: boolean): [number, number] {
-  const dx = fx - hx, dy = fy - hy;
-  const d = Math.min(Math.hypot(dx, dy), a + b - 0.01);
-  const cosA = clamp((a * a + d * d - b * b) / (2 * a * d), -1, 1);
-  const base = Math.atan2(dy, dx), off = Math.acos(cosA);
-  const k1: [number, number] = [hx + Math.cos(base - off) * a, hy + Math.sin(base - off) * a];
-  const k2: [number, number] = [hx + Math.cos(base + off) * a, hy + Math.sin(base + off) * a];
-  // the knee arches above the body line; hind legs bend backwards, front legs forwards
-  const pickHigh = k1[1] < k2[1] ? k1 : k2;
-  if (Math.abs(k1[1] - k2[1]) < 4) return back ? (k1[0] < k2[0] ? k1 : k2) : k1[0] > k2[0] ? k1 : k2;
-  return pickHigh;
-}
+type P = [number, number];
 
 export const Ant: React.FC<AntProps> = (p) => {
   const g = GEO[p.species];
@@ -149,65 +157,73 @@ export const Ant: React.FC<AntProps> = (p) => {
   const dir = p.dir ?? 1;
   const t = p.t;
   const seed = p.seed ?? 0;
-  const walk = p.walk ?? 0;
+  const lie = clamp(p.lie ?? 0);
+  const walk = (p.walk ?? 0) * (1 - lie);
   const lod = p.lod ?? 0;
   const inf = clamp(p.infection ?? 0);
+  const eyeOpen = clamp(p.eyeOpen ?? 1);
   const fill = p.fill ?? '#0e0805';
   const rim = p.rim ?? '#ffae55';
   const rimOp = p.rimOpacity ?? 0.85;
   const outline = p.outline;
   const phase = t * walk * Math.PI * 2 + seed * 1.7;
-  const bob = walk ? -Math.abs(Math.sin(phase)) * 2.2 : Math.sin(t * 1.3 + seed) * 0.8;
-  const breathe = 1 + Math.sin(t * 1.6 + seed) * 0.012;
-  const pitch = (p.pitch ?? 0) + (walk ? Math.sin(phase * 2) * 0.015 : 0);
+  const bob = walk ? -Math.abs(Math.sin(phase)) * 2 : Math.sin(t * 1.3 + seed) * 0.6 * (1 - lie);
+  const breathe = 1 + Math.sin(t * (lie > 0.5 ? 0.6 : 1.6) + seed) * 0.012;
+  const sink = lie * (g.ground - 6); // body settles onto the dirt
+  const pitch = (p.pitch ?? 0) + lie * 0.12 + (walk ? Math.sin(phase * 2) * 0.012 : 0);
 
-  // legs: tripod gait; side 0 = near (in front of the body), 1 = far
-  const legs: { pts: [number, number][]; far: boolean }[] = [];
+  // ---- legs: three segments, tripod gait ----
+  const legs: { pts: P[]; far: boolean }[] = [];
+  const stride = 30;
   for (const side of [1, 0]) {
     g.hips.forEach(([hx, hy], i) => {
       const group = (i + side) % 2;
-      const u = (((phase + group * Math.PI) / (Math.PI * 2)) % 1 + 1) % 1;
-      const stride = walk ? 34 : 0;
-      let fx = g.feet[i], fy = g.ground, lift = 0;
+      const u = ((((phase + group * Math.PI) / (Math.PI * 2)) % 1) + 1) % 1;
+      let tipX = g.feet[i], lift = 0, swing = 0;
       if (walk) {
-        if (u < 0.5) fx += stride * (0.5 - u * 2);
+        if (u < 0.5) swing = 0.5 - u * 2; // stance: foot slides back
         else {
           const k = (u - 0.5) * 2;
-          fx += stride * (-0.5 + k * k * (3 - 2 * k));
-          lift = Math.sin(Math.PI * k) * 12;
+          swing = -0.5 + k * k * (3 - 2 * k);
+          lift = Math.sin(Math.PI * k) * 11;
         }
-      } else fx += noise1(t * 0.4 + i * 3 + side * 7, seed) * 3;
-      fy -= lift;
-      const ox = side ? 7 : 0, oy = side ? -4 : 0;
-      const H: [number, number] = [hx + ox, hy + oy];
-      const F: [number, number] = [fx + ox * 1.6, fy + oy];
-      // arched knee above the hip (stylised, slightly spider-like)
-      const K: [number, number] = [H[0] + (F[0] - H[0]) * 0.4 + [14, 4, -14][i], H[1] - g.femur * [0.7, 0.6, 0.72][i] + lift * 0.4];
-      const tarsus: [number, number] = [F[0] + (i === 2 ? -10 : 10), F[1] + 2];
-      legs.push({ pts: [H, K, F, tarsus], far: !!side });
+        tipX += stride * swing;
+      } else tipX += noise1(t * 0.35 + i * 3 + side * 7, seed) * 2.5;
+      // lying: feet tuck in under the body
+      tipX = lerp(tipX, hx + [16, 2, -14][i], lie);
+      const ox = side ? 6 : 0, oy = side ? -4 : 0;
+      const ground = g.ground - sink;
+      const H: P = [hx + ox, hy + oy];
+      const tip: P = [tipX + ox * 1.5, ground - lift + oy * 0.5];
+      // tarsus points out and down from the ankle
+      const tdir = [0.62, 0.15, -0.62][i];
+      const tlen = g.tarsus * lerp(1, 0.7, lie);
+      const ankle: P = [tip[0] - tdir * tlen, tip[1] - Math.sqrt(1 - tdir * tdir) * tlen * 0.75];
+      // femur from the coxa, angled up so the knee arches above the body line
+      const fa = g.femurAng[i] + swing * 0.28 * (i === 2 ? -1 : 1) - lift * 0.01 + lie * [0.75, 1.75, -0.75][i];
+      const fl = g.femur * lerp(1, 0.8, lie);
+      const knee: P = [H[0] + Math.cos(fa) * fl, H[1] + Math.sin(fa) * fl];
+      legs.push({ pts: [H, knee, ankle, tip], far: !!side });
     });
   }
 
-  // antennae: elbowed, twitching
-  const antennae = (oneAntenna: boolean) => {
-    const out: { pts: [number, number][]; far: boolean; stub: boolean }[] = [];
-    for (const side of [1, 0]) {
-      const tw = fbm(t * 1.8 + side * 9 + seed, 31) * 0.35 + Math.sin(t * 7 + seed + side) * 0.04;
-      const [bx, by] = [g.antBase[0] + (side ? 5 : 0), g.antBase[1] - (side ? 3 : 0)];
-      const a1 = -2.25 + (side ? 0.15 : 0) + tw * 0.25;
-      const ex = bx + Math.cos(a1) * g.scape, ey = by + Math.sin(a1) * g.scape;
-      const stub = oneAntenna && side === 0;
-      const a2 = -0.62 + tw * 0.8 + (side ? -0.14 : 0);
-      const len = stub ? g.funic * 0.18 : g.funic;
-      const mx = ex + Math.cos(a2) * len * 0.55, my = ey + Math.sin(a2) * len * 0.55;
-      const a3 = a2 + 0.25 + tw * 0.4;
-      const tx = mx + Math.cos(a3) * len * 0.45, ty = my + Math.sin(a3) * len * 0.45;
-      out.push({ pts: stub ? [[bx, by], [ex, ey], [mx, my]] : [[bx, by], [ex, ey], [mx, my], [tx, ty]], far: !!side, stub });
-    }
-    return out;
-  };
-  const ants = antennae(!!p.oneAntenna);
+  // ---- antennae: elbowed (scape + funiculus with a club), twitching ----
+  const ants: { pts: P[]; far: boolean; stub: boolean }[] = [];
+  for (const side of [1, 0]) {
+    const tw = (fbm(t * 1.7 + side * 9 + seed, 31) * 0.35 + Math.sin(t * 7 + seed + side) * 0.04) * (1 - lie * 0.8);
+    const [bx, by] = [g.antBase[0] + (side ? 5 : 0), g.antBase[1] - (side ? 3 : 0)];
+    const a1 = -2.2 + (side ? 0.14 : 0) + tw * 0.25 + lie * 1.1;
+    const ex = bx + Math.cos(a1) * g.scape, ey = by + Math.sin(a1) * g.scape;
+    const stub = !!p.oneAntenna && side === 0;
+    const a2 = -0.5 + tw * 0.8 + (side ? -0.14 : 0) + lie * 1.25;
+    const len = stub ? g.funic * 0.18 : g.funic;
+    const mx = ex + Math.cos(a2) * len * 0.55, my = ey + Math.sin(a2) * len * 0.55;
+    const a3 = a2 + 0.22 + tw * 0.4 + lie * 0.3;
+    const tx = mx + Math.cos(a3) * len * 0.45, ty = my + Math.sin(a3) * len * 0.45;
+    ants.push({ pts: stub ? [[bx, by], [ex, ey], [mx, my]] : [[bx, by], [ex, ey], [mx, my], [tx, ty]], far: !!side, stub });
+  }
 
+  // ---- mandibles ----
   const jawOpen = clamp(p.jaw ?? 1);
   const jaw = (upper: boolean) => {
     const [jx, jy] = g.jawBase;
@@ -215,28 +231,35 @@ export const Ant: React.FC<AntProps> = (p) => {
       const a = upper ? -0.2 : 0.35;
       return `M${jx - 6},${jy - 3} Q${jx + 18 * Math.cos(a)},${jy + 18 * Math.sin(a) - 4} ${jx + g.jawLen},${jy + (upper ? -2 : 8)} Q${jx + 14},${jy + 6} ${jx - 4},${jy + 5} Z`;
     }
-    const spread = (upper ? -1 : 1) * (0.05 + 0.32 * jawOpen);
+    // trap-jaw: long, thick, dead-straight blades with hooked teeth at the tip
+    const spread = (upper ? -1 : 1) * (0.03 + 0.3 * jawOpen);
     const L = g.jawLen, c = Math.cos(spread), sn = Math.sin(spread);
-    const P = (u: number, v: number): string => `${jx + u * c - v * sn},${jy + u * sn + v * c}`;
-    const hook = upper ? 1 : -1;
-    // long straight blade, teeth at the tip curling inward
-    return `M${P(-4, -3.2)} L${P(L - 8, -2.2)} L${P(L, 4 * hook)} L${P(L - 4, 9 * hook)} L${P(L - 10, 2.4 * hook)} L${P(L - 14, 6 * hook)} L${P(L - 18, 2)} L${P(-4, 3.2)} Z`;
+    const P = (u: number, v: number) => `${(jx + u * c - v * sn).toFixed(1)},${(jy + u * sn + v * c).toFixed(1)}`;
+    const k = upper ? 1 : -1; // teeth hook toward the other jaw
+    return `M${P(-6, -5.5 * k)} L${P(L - 10, -3 * k)} L${P(L, 2 * k)} L${P(L - 2, 12 * k)} L${P(L - 9, 4 * k)} L${P(L - 13, 10 * k)} L${P(L - 18, 3.5 * k)} L${P(L - 24, 7 * k)} L${P(L - 28, 4 * k)} L${P(-6, 5.5 * k)} Z`;
+  };
+  const jawRim = (upper: boolean) => {
+    const [jx, jy] = g.jawBase;
+    const spread = (upper ? -1 : 1) * (0.03 + 0.3 * jawOpen);
+    const L = g.jawLen, k = upper ? 1 : -1;
+    const x1 = jx - 2, y1 = jy - 5 * k, x2 = jx + (L - 10) * Math.cos(spread) + 3 * k * Math.sin(spread), y2 = jy + (L - 10) * Math.sin(spread) - 3 * k * Math.cos(spread);
+    return `M${x1},${y1} L${x2.toFixed(1)},${y2.toFixed(1)}`;
   };
 
   const [gcx, gcy, grx, gry, grot] = g.gaster;
   const gaster = `M${gcx - grx},${gcy} a${grx},${gry * breathe} 0 1,0 ${grx * 2},0 a${grx},${gry * breathe} 0 1,0 ${-grx * 2},0`;
-  const isFire = p.species !== 'trapjaw';
   const petiole =
     g.petiole === 'spine'
       ? 'M-50,-10 C-50,-20 -46,-34 -42,-40 C-38,-34 -34,-22 -32,-10 C-38,-6 -46,-6 -50,-10 Z'
       : 'M-48,-12 C-48,-24 -40,-28 -36,-20 C-34,-14 -38,-8 -44,-8 Z M-36,-12 C-34,-22 -26,-26 -24,-16 C-24,-10 -28,-6 -34,-8 Z';
-  const stinger = g.stinger ? `M${gcx - grx + 4},${gcy + 6} L${gcx - grx - 16},${gcy + 14} L${gcx - grx + 6},${gcy + 14} Z` : '';
-
+  const stinger = g.stinger ? `M${gcx - grx + 4},${gcy + 6} L${gcx - grx - 18},${gcy + 14} L${gcx - grx + 6},${gcy + 14} Z` : '';
   const legW = g.legW;
-  const polyline = (pts: [number, number][]) => 'M' + pts.map((q) => q.join(',')).join(' L');
+  const line = (a: P, b: P) => `M${a[0].toFixed(1)},${a[1].toFixed(1)} L${b[0].toFixed(1)},${b[1].toFixed(1)}`;
+  const polyline = (pts: P[]) => 'M' + pts.map((q) => q.map((v) => v.toFixed(1)).join(',')).join(' L');
+  const headRot = `rotate(${(pitch * 57.3).toFixed(2)} 52 -18)`;
 
-  /** One full drawing pass of the ant (used for the rim light and the body). */
-  const body = (color: string, legColor: string, pass: 'rim' | 'body' | 'outline') => {
+  /** One drawing pass (rim light, body, or outline). */
+  const body = (color: string, pass: 'rim' | 'body' | 'outline') => {
     const strokeOnly = pass === 'outline';
     const f = strokeOnly ? 'none' : color;
     const st = strokeOnly ? color : 'none';
@@ -244,34 +267,40 @@ export const Ant: React.FC<AntProps> = (p) => {
     const legEls = (far: boolean) =>
       legs
         .filter((l) => l.far === far)
-        .map((l, i) => (
-          <g key={'l' + far + i}>
-            <path d={polyline(l.pts.slice(0, 2))} stroke={legColor} strokeWidth={strokeOnly ? 2.4 : legW * 1.15} strokeLinecap="round" fill="none" />
-            <path d={polyline(l.pts.slice(1, 3))} stroke={legColor} strokeWidth={strokeOnly ? 2 : legW * 0.8} strokeLinecap="round" fill="none" />
-            {lod < 2 && <path d={polyline(l.pts.slice(2, 4))} stroke={legColor} strokeWidth={strokeOnly ? 1.6 : legW * 0.5} strokeLinecap="round" fill="none" />}
-          </g>
-        ));
+        .map((l, i) => {
+          const [H, K, A, T] = l.pts;
+          return (
+            <g key={'l' + far + i} stroke={color} strokeLinecap="round" fill="none">
+              {!strokeOnly && <ellipse cx={H[0]} cy={H[1]} rx={legW * 1.2} ry={legW * 0.9} fill={color} stroke="none" />}
+              <path d={line(H, K)} strokeWidth={strokeOnly ? 2.4 : legW * 1.35} />
+              <path d={line(K, A)} strokeWidth={strokeOnly ? 2 : legW * 0.95} />
+              {lod < 2 && <path d={line(A, T)} strokeWidth={strokeOnly ? 1.6 : legW * 0.6} />}
+              {!strokeOnly && lod === 0 && <circle cx={K[0]} cy={K[1]} r={legW * 0.85} fill={color} stroke="none" />}
+              {!strokeOnly && lod === 0 && <path d={`M${T[0]},${T[1]} l${(T[0] - A[0]) * 0.18},2`} strokeWidth={legW * 0.4} />}
+            </g>
+          );
+        });
     const antEls = (far: boolean) =>
       ants
         .filter((a) => a.far === far)
         .map((a, i) => (
           <g key={'a' + far + i}>
-            <path d={polyline(a.pts)} stroke={legColor} strokeWidth={strokeOnly ? 2 : legW * 0.55} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            {!a.stub && <circle cx={a.pts[3][0]} cy={a.pts[3][1]} r={strokeOnly ? 3 : legW * 0.75} fill={f} stroke={st} strokeWidth={sw} />}
+            <path d={polyline(a.pts)} stroke={color} strokeWidth={strokeOnly ? 2 : legW * 0.55} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            {!a.stub && <ellipse cx={a.pts[3][0]} cy={a.pts[3][1]} rx={strokeOnly ? 3.5 : legW * 1.0} ry={strokeOnly ? 2.5 : legW * 0.7} fill={f} stroke={st} strokeWidth={sw} />}
           </g>
         ));
     return (
       <g>
         {legEls(true)}
-        {antEls(true)}
+        <g transform={headRot}>{antEls(true)}</g>
         <path d={gaster} transform={`rotate(${grot} ${gcx} ${gcy})`} fill={f} stroke={st} strokeWidth={sw} />
         {stinger && <path d={stinger} fill={f} stroke={st} strokeWidth={sw} />}
         <path d={petiole} fill={f} stroke={st} strokeWidth={sw} />
         <path d={g.meso} fill={f} stroke={st} strokeWidth={sw} />
-        <g transform={`rotate(${pitch * 57.3} 52 -18)`}>
+        <g transform={headRot}>
           {g.jawKind === 'trap' && <path d={jaw(false)} fill={f} stroke={st} strokeWidth={sw} />}
           <path d={g.head} fill={f} stroke={st} strokeWidth={sw} />
-          {g.jawKind === 'trap' ? <path d={jaw(true)} fill={f} stroke={st} strokeWidth={sw} /> : <path d={jaw(true)} fill={f} stroke={st} strokeWidth={sw} />}
+          <path d={jaw(true)} fill={f} stroke={st} strokeWidth={sw} />
           {antEls(false)}
         </g>
         {legEls(false)}
@@ -285,30 +314,34 @@ export const Ant: React.FC<AntProps> = (p) => {
   const flipY = p.flip ? -1 : 1;
 
   return (
-    <g transform={`translate(${p.x},${p.y}) scale(${s * dir},${s * flipY}) translate(0,${bob})`} opacity={p.opacity ?? 1}>
+    <g transform={`translate(${p.x},${p.y}) scale(${s * dir},${s * flipY}) translate(0,${(bob + sink).toFixed(2)})`} opacity={p.opacity ?? 1}>
       {outline ? (
         <g>
-          <g opacity={0.35} style={{ filter: 'blur(3px)' }}>{body(outline, outline, 'outline')}</g>
-          {body(outline, outline, 'outline')}
+          <g opacity={0.35} style={{ filter: 'blur(3px)' }}>{body(outline, 'outline')}</g>
+          {body(outline, 'outline')}
         </g>
       ) : (
         <>
           {lod < 2 && rimOp > 0 && (
             <g transform={`translate(${rimDx},${rimDy})`} opacity={rimOp}>
-              {body(rim, rim, 'rim')}
+              {body(rim, 'rim')}
             </g>
           )}
-          {body(fill, fill, 'body')}
+          {body(fill, 'body')}
           {lod === 0 && (
             <>
-              {/* gaster sheen and segment bands */}
               <ellipse cx={gcx + 10} cy={gcy - gry * 0.45} rx={grx * 0.55} ry={gry * 0.22} transform={`rotate(${grot} ${gcx} ${gcy})`} fill={rim} opacity={0.13} />
               {Array.from({ length: g.bands }, (_, i) => {
                 const bx = gcx + grx * (0.55 - i * 0.38);
                 return <path key={i} d={`M${bx},${gcy - gry * 0.92} Q${bx - 9},${gcy} ${bx},${gcy + gry * 0.92}`} stroke={rim} strokeOpacity={0.16} strokeWidth={1.6} fill="none" transform={`rotate(${grot} ${gcx} ${gcy})`} />;
               })}
-              {/* body texture: tiny pits catching the light */}
               <path d={g.meso} fill="none" stroke={rim} strokeOpacity={0.1} strokeWidth={1.2} />
+              {g.jawKind === 'trap' && (
+                <g transform={headRot} stroke={rim} strokeOpacity={0.55} strokeWidth={1.8} strokeLinecap="round">
+                  <path d={jawRim(true)} />
+                  <path d={jawRim(false)} strokeOpacity={0.3} />
+                </g>
+              )}
               {p.species === 'kesh' && (
                 <g stroke="#e8c9a8" strokeOpacity={0.55} strokeWidth={2.2} strokeLinecap="round" fill="none">
                   <path d="M64,-40 L80,-18 M70,-42 L74,-34" />
@@ -319,22 +352,20 @@ export const Ant: React.FC<AntProps> = (p) => {
               )}
             </>
           )}
-          {/* infection: veins under the shell */}
           {inf > 0.01 && g.veins.length > 0 && lod < 2 && (
             <g stroke="#6dff8a" fill="none" strokeLinecap="round" opacity={inf * (0.35 + 0.5 * pulse)} filter={p.glowId ? `url(#${p.glowId})` : undefined}>
               {g.veins.map((d, i) => (
-                <path key={i} d={d} strokeWidth={1.4 + inf * 1.2} strokeDasharray={inf < 0.4 ? '18 10' : undefined} />
+                <path key={i} d={d} strokeWidth={1.4 + inf * 1.2} strokeDasharray={inf < 0.4 ? '18 10' : undefined} transform={i >= 3 ? headRot : undefined} />
               ))}
             </g>
           )}
-          {/* eye */}
-          <g transform={`rotate(${pitch * 57.3} 52 -18)`}>
-            <ellipse cx={g.eye[0]} cy={g.eye[1]} rx={g.eye[2]} ry={g.eye[2] * 0.8} fill="#030201" />
-            <circle cx={g.eye[0] + 1.5} cy={g.eye[1] - 1.5} r={g.eye[2] * 0.3} fill={rim} opacity={0.5} />
-            {inf > 0.01 && (
+          <g transform={headRot}>
+            <ellipse cx={g.eye[0]} cy={g.eye[1]} rx={g.eye[2]} ry={g.eye[2] * 0.8 * Math.max(0.15, eyeOpen)} fill="#030201" />
+            {eyeOpen > 0.3 && <circle cx={g.eye[0] + 1.5} cy={g.eye[1] - 1.5} r={g.eye[2] * 0.3} fill={rim} opacity={0.5 * eyeOpen} />}
+            {inf > 0.01 && eyeOpen > 0.05 && (
               <>
-                <circle cx={g.eye[0] + 1} cy={g.eye[1] - 0.5} r={glintR * 5} fill="url(#glintGlow)" opacity={Math.min(1, inf * 1.2) * (0.6 + 0.4 * pulse)} />
-                <circle cx={g.eye[0] + 1} cy={g.eye[1] - 0.5} r={glintR} fill="#b8ffc6" opacity={Math.min(1, 0.4 + inf)} />
+                <circle cx={g.eye[0] + 1} cy={g.eye[1] - 0.5} r={glintR * 5} fill="url(#glintGlow)" opacity={Math.min(1, inf * 1.2) * (0.6 + 0.4 * pulse) * eyeOpen} />
+                <circle cx={g.eye[0] + 1} cy={g.eye[1] - 0.5} r={glintR * eyeOpen} fill="#b8ffc6" opacity={Math.min(1, 0.4 + inf)} />
               </>
             )}
           </g>

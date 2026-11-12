@@ -17,7 +17,7 @@ const keshScarred = (ep: Ep, beat: number) => ep.n > 5 || (ep.n === 5 && beat >=
 const infectionFor = (ep: Ep, beat: number) => ep.beats[beat].infection ?? ep.infection;
 
 /** Shot transition length (seconds): soft dissolves in and out of black, quick dissolves elsewhere. */
-const fadeLen = (a: string, b: string) => (a === b ? 0 : a === 'black' || b === 'black' ? 0.6 : 0.28);
+const fadeLen = (a: string, b: string) => (a === b ? 0 : a === 'dark' || b === 'dark' ? 0.6 : 0.28);
 
 export const EpisodeVideo: React.FC<{ ep: Ep }> = ({ ep }) => {
   const frame = useCurrentFrame();
@@ -56,7 +56,7 @@ export const EpisodeVideo: React.FC<{ ep: Ep }> = ({ ep }) => {
   // camera: slow push-ins, drift, heartbeat pulse, shake
   const beat = ep.beats[bi];
   const shotK = ease(cur.t / Math.max(2, cur.dur));
-  const mode = beat.camera ?? (beat.scene === 'black' ? 'drift' : 'push');
+  const mode = beat.camera ?? (beat.scene === 'dark' ? 'drift' : 'push');
   const zoom = mode === 'push' ? 1 + 0.1 * shotK : mode === 'pull' ? 1.1 - 0.1 * shotK : mode === 'still' ? 1.04 : 1.03 + 0.02 * Math.sin(T * 0.2);
   const hb = beat.tense ? Math.pow(Math.max(0, Math.sin(time * Math.PI * 2 * 1.2)), 12) * 0.012 : 0;
   const sh = shakeAt(time, clock.cues);

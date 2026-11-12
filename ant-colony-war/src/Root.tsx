@@ -1,6 +1,6 @@
 import React from 'react';
 import { Composition } from 'remotion';
-import { EPISODES } from '../script/episodes';
+import { EPISODES } from './episodes';
 import { FPS, H, W } from './config';
 import { EpisodeVideo } from './Episode';
 import { getTimeline } from './timeline/load';

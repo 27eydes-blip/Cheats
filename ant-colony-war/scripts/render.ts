@@ -6,7 +6,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { bundle } from '@remotion/bundler';
 import { renderMedia, selectComposition } from '@remotion/renderer';
-import { EPISODES } from '../script/episodes';
+import { checkEpisode, loadEpisodes } from './lib/episodes';
+
+const EPISODES = loadEpisodes();
 import { getTimeline } from '../src/timeline/load';
 import { MAX_SECONDS, MIN_SECONDS } from '../src/config';
 
@@ -22,6 +24,8 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(
   const serveUrl = await bundle({ entryPoint: path.join(ROOT, 'src', 'index.ts'), publicDir: path.join(ROOT, 'public') });
   const browserExecutable = process.env.REMOTION_BROWSER_EXECUTABLE || null;
   for (const ep of eps) {
+    const problems = checkEpisode(ep);
+    if (problems.length) throw new Error(problems.join('\n'));
     const tl = getTimeline(ep);
     if (tl.mock) console.warn(`EP${ep.n}: no narration generated yet, rendering a silent preview (run \`npm run audio\`).`);
     if (tl.duration < MIN_SECONDS || tl.duration > MAX_SECONDS) console.warn(`EP${ep.n}: ${tl.duration.toFixed(1)}s is outside ${MIN_SECONDS}-${MAX_SECONDS}s. Adjust the script or pauses.`);

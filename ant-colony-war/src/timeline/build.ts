@@ -1,5 +1,5 @@
 import type { Episode } from '../../script/types';
-import { END_CARD, TITLE_LEAD } from '../config';
+import { END_CARD, MIN_SECONDS, TITLE_LEAD } from '../config';
 import { parseBeat } from './parse';
 import type { BeatAlignment, BeatTiming, Timeline, Word } from './types';
 
@@ -22,6 +22,20 @@ export function mockAlignment(ep: Episode): BeatAlignment[] {
     });
     return { duration: t + 0.1, tokens: out };
   });
+}
+
+/** Lengthens the pauses between lines (max 2.6 s each) so a short episode reaches MIN_SECONDS. Words are never touched. */
+export function fitPauses(ep: Episode, align: BeatAlignment[]): Episode {
+  const pauses = ep.beats.map((b) => b.pause ?? DEFAULT_PAUSE);
+  const total = () => TITLE_LEAD + END_CARD + align.reduce((s, a, i) => s + a.duration + pauses[i], 0);
+  for (let k = 0; k < 200 && total() < MIN_SECONDS + 0.5; k++) {
+    let grown = false;
+    pauses.forEach((p, i) => {
+      if (p < 2.6) { pauses[i] = Math.min(2.6, p + 0.05 * (0.5 + p)); grown = true; }
+    });
+    if (!grown) break;
+  }
+  return { ...ep, beats: ep.beats.map((b, i) => ({ ...b, pause: +pauses[i].toFixed(2) })) };
 }
 
 /** Lays the beats end to end (with their pauses) and returns the full episode timeline. */

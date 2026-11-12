@@ -8,37 +8,52 @@ const COLORS = { green: '#5dff7e', orange: '#ff8a2a' } as const;
 
 export type Group = { words: Word[]; start: number; end: number };
 
-/** Splits narration into 2-4 word TikTok-style chunks, breaking on punctuation, pauses and shot changes. */
+// Words a chunk should never end on, and words that make a natural start for a new chunk.
+const NO_END = /^(the|a|an|my|his|her|our|their|its|of|to|in|on|at|into|from|for|with|by|and|but|or|that|this|these|those|i|i'm|i'd|i've|was|is|were|be|every|any|no|not|just|like|about|than|as|so|one|two|three|four|five|six)$/i;
+const GOOD_START = /^(and|but|or|so|that|because|before|after|when|where|while|who|which|for|from|with|without|into|in|on|at|of|to|like|than|until|since|through|across|past|near|i|we|they|he|she|it|nobody|every|all)$/i;
+const bare = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}']/gu, '');
+
+/** Splits one phrase (no inner punctuation) into chunks of 2-4 words at the most natural points. */
+function splitPhrase(words: Word[]): Word[][] {
+  const n = words.length;
+  if (n <= 4) return [words];
+  // dynamic programming over split points
+  const best: number[] = Array(n + 1).fill(Infinity), from: number[] = Array(n + 1).fill(-1);
+  best[0] = 0;
+  for (let j = 1; j <= n; j++)
+    for (let len = 2; len <= 4; len++) {
+      const i = j - len;
+      if (i < 0 || best[i] === Infinity) continue;
+      let c = best[i] + (len === 3 ? 0 : len === 2 ? 1.2 : 0.6);
+      if (j < n) {
+        if (NO_END.test(bare(words[j - 1].text))) c += 6;
+        if (GOOD_START.test(bare(words[j].text))) c -= 1.5;
+        c -= Math.min(0.3, Math.max(0, words[j].start - words[j - 1].end)) * 6; // a breath is a good place to split
+      }
+      if (c < best[j]) { best[j] = c; from[j] = i; }
+    }
+  if (best[n] === Infinity) return [words];
+  const out: Word[][] = [];
+  for (let j = n; j > 0; j = from[j]) out.unshift(words.slice(from[j], j));
+  return out;
+}
+
+/** Splits narration into 2-4 word TikTok-style chunks. Chunks never cross punctuation, shots or pauses. */
 export function groupWords(words: Word[]): Group[] {
-  const groups: Group[] = [];
+  const phrases: Word[][] = [];
   let cur: Word[] = [];
-  const flush = () => {
-    if (cur.length) groups.push({ words: cur, start: cur[0].start, end: cur[cur.length - 1].end });
-    cur = [];
-  };
   words.forEach((w, i) => {
     cur.push(w);
     const next = words[i + 1];
-    const punct = /[.!?…]$|\.\.\.$/.test(w.text);
-    const comma = /[,;:—]$/.test(w.text);
-    const longWord = cur.reduce((s, x) => s + x.text.length, 0) > 16;
-    // never end a chunk on a little word like 'the' or 'like' unless we have to
-    const dangling = /^(the|a|an|of|to|in|on|at|my|his|her|our|their|and|like|that|for|with|from|every|one|no)$/i.test(w.text) && cur.length < 5 && next && next.beat === w.beat && next.start - w.end < 0.45;
-    if (dangling) return;
-    if (!next || next.beat !== w.beat || next.start - w.end > 0.45 || punct || cur.length >= 4 || (cur.length >= 3 && (comma || longWord)) || (cur.length >= 2 && comma && longWord)) flush();
-  });
-  // merge lonely single words into the previous chunk when they belong to the same sentence
-  for (let i = groups.length - 1; i > 0; i--) {
-    const g = groups[i], p = groups[i - 1];
-    if (g.words.length === 1 && p.words.length < 3 && g.words[0].beat === p.words[0].beat && !/[.!?]$/.test(p.words[p.words.length - 1].text) && g.start - p.end < 0.3) {
-      p.words.push(...g.words);
-      p.end = g.end;
-      groups.splice(i, 1);
+    if (!next || next.beat !== w.beat || /[.,;:!?…"]$|\.\.\.$/.test(w.text) || next.start - w.end > 0.6) {
+      phrases.push(cur);
+      cur = [];
     }
-  }
+  });
+  const groups: Group[] = phrases.flatMap(splitPhrase).map((ws) => ({ words: ws, start: ws[0].start, end: ws[ws.length - 1].end }));
   groups.forEach((g, i) => {
     const next = groups[i + 1];
-    g.end = Math.min(next ? next.start - 0.02 : g.end + 0.8, g.end + 0.7);
+    g.end = Math.min(next ? next.start - 0.02 : g.end + 0.8, g.end + 0.9);
   });
   return groups;
 }
@@ -88,6 +103,7 @@ export const Captions: React.FC<{ groups: Group[]; time: number; y?: number }> =
               opacity: spoken ? 1 : 0.55,
               transform: `scale(${s}) translateY(${spoken ? 0 : 6}px)`,
               display: 'inline-block',
+              margin: hl ? '0 12px' : 0,
               WebkitTextStroke: '12px rgba(0,0,0,0.92)',
               paintOrder: 'stroke fill',
               textShadow: hl && spoken ? `0 0 28px ${hl}aa, 0 6px 18px rgba(0,0,0,0.9)` : '0 6px 18px rgba(0,0,0,0.9)',

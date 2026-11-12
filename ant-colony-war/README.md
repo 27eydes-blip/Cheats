@@ -1,6 +1,6 @@
 # Ant Colony War
 
-A 10-episode vertical (1080×1920, 30 fps) story series rendered with [Remotion](https://www.remotion.dev).
+A vertical (1080×1920, 30 fps) story series rendered with [Remotion](https://www.remotion.dev), narrated by 250 in the first person.
 Narration comes from ElevenLabs with word-level timestamps, so captions, shot changes and effects land exactly on the voice.
 
 ## Quick start
@@ -8,95 +8,120 @@ Narration comes from ElevenLabs with word-level timestamps, so captions, shot ch
 ```bash
 npm install
 cp .env.example .env          # paste your ELEVENLABS_API_KEY
-npm run render:all            # sound effects -> narration -> all 10 MP4s in out/
+npm run studio                # preview in Remotion Studio (works before audio exists, with estimated timing)
+npm run render:all            # check script -> sound effects -> narration -> MP4s in out/
 ```
 
-`render:all` runs three steps you can also run on their own:
+`render:all` runs these steps, which you can also run on their own:
 
 | Command | What it does |
 | --- | --- |
-| `npm run sfx` | Synthesises the sound effects into `public/sfx/` (drone, heartbeat, swarm, fire, rain, snap crack, impacts, whoosh, glitch, thunder, senses ping). All generated in code, so they're royalty-free. |
-| `npm run audio` | Calls ElevenLabs for every line, writes `audio/epXX.mp3` and `audio/epXX.json` (word timings), and updates `src/data/timelines.ts`. Lines are cached in `audio/cache/`, so re-running only pays for lines you changed. Add `-- 3 4` for specific episodes or `-- --force` to re-synthesise. |
-| `npm run render` | Renders every episode to `out/ant-colony-war-epXX-title.mp4`. Add `-- 3` for one episode. |
+| `npm run check` | Confirms every `episodes/epXX/scenes.json` matches `script/season1.md` **word for word** and the titles match. Audio and render refuse to run if it doesn't. |
+| `npm run sfx` | Synthesises the sound effects into `public/sfx/` (drone, heartbeat, swarm, fire, rain, snap crack, impacts, whoosh, glitch, thunder, senses ping). Generated in code, so royalty-free. |
+| `npm run audio` | Calls ElevenLabs line by line, writes `audio/epXX.mp3` + `audio/epXX.json` (word timings) and updates `src/data/timelines.ts`. Lines are cached in `audio/cache/`, so re-running only pays for changed lines. `-- 1` for one episode, `-- --force` to re-synthesise. |
+| `npm run render` | Renders each episode that has a `scenes.json` to `out/ant-colony-war-epXX-title.mp4`. `-- 1` for one episode. |
 
-Other useful commands:
+Also: `npm run still -- 1` (one still per shot into `out/stills/`, fast for reviewing), `npm run audio:estimate` (estimated lengths, no API calls), `npm run voices` (list your ElevenLabs voices).
 
-- `npm run studio` opens Remotion Studio to scrub through any episode live (it works before audio exists, using estimated timing).
-- `npm run still -- 4` renders one still per shot of episode 4 into `out/stills/`, which is quick for reviewing visuals.
-- `npm run audio:estimate` prints each episode's estimated length without calling the API.
-- `npm run voices` lists the voices on your ElevenLabs account.
-- `npm run render:preview` renders without generating narration (silent, estimated timing).
+No ffmpeg install is needed; the scripts use the one that ships with Remotion. If Remotion can't download its headless browser on your network, set `REMOTION_BROWSER_EXECUTABLE` to a local Chrome or Chromium.
 
-No ffmpeg install is needed; the scripts use the one that ships with Remotion.
-If Remotion can't download its headless browser on your network, point `REMOTION_BROWSER_EXECUTABLE` at a local Chrome or Chromium.
+## The script and the shots
 
-## Editing the script
+- `script/season1.md` is your script, verbatim. It is the source of truth for every word the narrator says.
+- `episodes/epXX/scenes.json` is the shot list for each episode. Edit shots here without touching code.
 
-Everything lives in `script/episodes.ts`. Each episode is a list of **beats**: one line of narration plus the shot it plays over. The shot cuts exactly when the narrator starts the line.
+Each shot is a slice of the narration plus what's on screen while it's spoken. The cut lands exactly when the narrator starts the shot's first word. Joined together, the shots' `text` must equal the episode's script (`npm run check` tells you where it differs).
 
-```ts
-{ scene: 'closeup', text: 'Our jaws lock open... like a loaded spring.', pause: 0.3, tense: true },
-{ scene: 'closeup', text: '{snap}SNAP.', pause: 1.0, camera: 'still' },
+```json
+{
+  "scene": "faceInDirt",
+  "text": "Cold dirt on my face, and a heartbeat that wasn't slowing down.",
+  "pause": 0.8,
+  "tense": true,
+  "options": { "eyes": "opening" },
+  "note": "Extreme close-up of 250's head on the dirt; his eye slowly opens."
+}
 ```
 
-Beat options: `pause` (silence after the line, in seconds), `tense` (heartbeat), `senses` (hyper senses), `fire` (fire attack), `rain`, `infection` (0–1 override), `camera` (`push` | `pull` | `still` | `drift`), `with` (`'elder'` for the duel shot).
+Shot fields:
+- `pause`: silence after the line, in seconds.
+- Effect flags: `tense` (heartbeat), `senses` (slow motion, sound ripples, outlines through dirt), `fire` (embers, smoke, orange glow), `rain`.
+- `infection`: 0–1, overrides 250's green veins and eye glint for this shot. The episode-level `infection` sets the default, so the glint can stay subtle early and grow as he turns.
+- `camera`: `push` | `pull` | `still` | `drift`.
+- `options`: per-scene settings (see below).
+- `note`: free text for you.
 
-Inline markup in `text`:
+If an episode's narration comes out under 45 s, the audio step lengthens the pauses between shots (never the words) until it reaches 45 s.
+
+Inline markup in `text` is not spoken and not shown:
 
 | Markup | Effect |
 | --- | --- |
-| `{snap}word` | Trap-jaw **SNAP** on that word: freeze frame, white flash, shockwave ring, screen shake, crack sound, and 250's mandibles slam shut |
+| `{snap}word` | Trap-jaw **SNAP** on that word: freeze frame, white flash, shockwave ring, screen shake, crack sound, mandibles slam shut |
 | `{impact}word` | Impact hit + camera shake |
 | `{shake}word` | Camera shake |
 | `{flash}word` | Lightning flash + thunder |
 | `*word*` / `^word^` | Force a green / orange caption highlight |
-| `[250\|two fifty]` | Captions show `250`, narrator says "two fifty" |
 
-Numbers, "dead", "fire ants", "my colony", "Kesh", "queen", "venom" and similar words are highlighted automatically (`src/timeline/parse.ts`).
+Numbers, "dead", "fire ants", "my colony", "Kesh", "queen" and similar words are highlighted automatically (`src/timeline/parse.ts`). Captions show 2–4 words at a time and never split across punctuation or end on a little word like "the" or "my".
 
-Episode options: `infection` (0–1, how far the amoeba has taken 250, which drives the green veins and eye glint) and `endCard` (overrides "FOLLOW FOR PART X+1").
+### Scenes
 
-### Shots (`scene`)
+| `scene` | What you see | `options` |
+| --- | --- | --- |
+| `dirtMacro` | Macro on dirt grains; rack focus reveals 250 lying in the dirt | |
+| `faceInDirt` | Extreme close-up of 250's head on the dirt, heartbeat pulse | `eyes`: `closed` / `opening` / `open` |
+| `lyingInChamber` | 250 lying still while sisters walk past; light rises and falls (time passing) | |
+| `deadStill` | Cold, desaturated close shot of his motionless body, dust settling | |
+| `eyeOpen` | His eye snaps open with a green glint | |
+| `waterDrop` | Slow motion: a drop swelling on a root tip, about to fall | |
+| `rise` | 250 pushes up off the dirt; mandibles cock open | |
+| `vast` | Pull back: endless tunnels, 250 a speck in the middle | |
+| `dark` | Near darkness: a dim silhouette of 250 with a glinting eye, drifting particles | |
+| `colony` | Layered amber tunnels full of identical trap-jaws | `find250`: true (a tiny glint picks him out) |
+| `hero` | 250 walking, the camera tracking him | |
+| `closeup` | 250's head: mandibles, twitching antennae, veins, glint | |
+| `senses` | Hyper senses: sound waves; sisters and fire ants as outlines through the dirt | `reveal`: `beetle` |
+| `surface` | Night above ground: giant grass, moon, the nest glowing | |
+| `flood` | Flooded tunnel, something glowing under the water | |
+| `amoeba` | The amoeba: liquid green blob, bloom, creeping tendrils | |
+| `infection` | The amoeba's tendrils entering 250; veins light up | |
+| `fireColony` | The fire colony's ember-lit chambers | |
+| `swarm` | A river of fire ants pouring through a tunnel | |
+| `battle` | Trap-jaws vs fire ants: lunges, flashes, smoke, embers | |
+| `kesh` | Kesh, huge and scarred, backlit by fire | |
+| `duel` | 250 facing Kesh (or `"with": "elder"`) in a ring of onlookers | |
+| `queen` | The fire queen, enormous and almost invisible in shadow | |
+| `council` | The colony gathered against 250 | |
+| `army` | 250 at the head of the fire ant army | |
 
-| Scene | Look |
-| --- | --- |
-| `black` | Near darkness, dust, a faint glow (and a green glint once 250 is turning) |
-| `colony` | Layered amber tunnels full of trap-jaws, parallax, roots, fog |
-| `hero` | 250 walking, the camera tracking him through the tunnels |
-| `closeup` | 250's head: mandibles, twitching antennae, veins, eye glint |
-| `surface` | Night above ground: giant grass, moon, the nest glowing, rain and lightning |
-| `flood` | A flooded tunnel with something glowing under the water |
-| `amoeba` | The alien amoeba: liquid green blob, bloom, creeping tendrils |
-| `infection` | The amoeba's tendrils entering 250; veins light up through the shot |
-| `senses` | Hyper senses: sound waves, sisters and fire ants as glowing outlines through the dirt |
-| `fireColony` | The fire colony's ember-lit chambers swarming with fire ants |
-| `swarm` | A river of fire ants pouring through a tunnel, on the floor and the ceiling |
-| `battle` | Trap-jaws vs fire ants: lunges, flashes, smoke, embers, the fallen |
-| `kesh` | Kesh, huge and scarred, backlit by fire (loses an antenna from EP5) |
-| `duel` | 250 facing Kesh (or the oldest soldier with `with: 'elder'`) inside a ring of onlookers |
-| `queen` | The fire queen, enormous and almost invisible in shadow |
-| `council` | The colony gathered against 250 |
-| `army` | 250 at the head of the fire ant army |
+## Characters
+
+Every ant is drawn by one shared rig, `src/art/Ant.tsx`, so 250 looks identical in every episode. The rig has:
+- Segmented bodies: head, mesosoma, petiole and gaster.
+- Six legs, all attached to the mesosoma, each with three jointed segments (femur, tibia, tarsus) and a tripod walking gait.
+- Elbowed antennae that twitch.
+- Long straight trap-jaw mandibles that snap shut.
+- Rim lighting.
+- Poses: lying down (`lie`) and eyes opening (`eyeOpen`).
+
+Fire ants, Kesh (scarred) and the fire queen use the same rig.
 
 ## Narrator voice
 
-The default is ElevenLabs' **Brian** (deep, resonant, calm), set up for a slow, dramatic read (`speed 0.86`, lower stability for more expression). For a grittier war-veteran sound, set `ELEVENLABS_VOICE_ID=2EiwWnXFnvU5JabPnv8n` (Clyde), or pick any voice from `npm run voices`. Voice settings live at the top of `scripts/generate-audio.ts`.
+The default is ElevenLabs' **Brian** (deep, resonant, calm), set up for a slow, dramatic read (`speed 0.86`, lower stability for more expression). For a grittier sound, try `ELEVENLABS_VOICE_ID=2EiwWnXFnvU5JabPnv8n` (Clyde), or any voice from `npm run voices`. Voice settings live at the top of `scripts/generate-audio.ts`. Each line is synthesised with its neighbours as context so the delivery flows.
 
-Each line is synthesised separately, with the surrounding lines passed as context so the delivery flows. That gives exact word timings and precise, controllable dramatic pauses (`pause`).
-
-## Project layout
+## Layout
 
 ```
-script/            the story: episodes.ts (edit this) + types.ts (markup reference)
-scripts/           make-sfx, generate-audio, render, still, list-voices
-src/art/           Ant (procedural SVG ants), Earth (tunnels/roots), Amoeba, Atmosphere (fog, dust, embers, smoke, rain, grain)
-src/scenes/        the 17 shot types
-src/fx/            snap, flashes, hyper senses, fire attack, camera shake
-src/ui/            captions, title card, end card, fonts
-src/timeline/      script parsing, word timing, story clock (slow-mo + freeze frames)
-src/Episode.tsx    puts it all together; src/SoundTrack.tsx layers the audio
-audio/             generated narration (epXX.mp3 + epXX.json)
-out/               rendered MP4s
+script/season1.md      your script (source of truth)
+episodes/epXX/         scenes.json per episode (the shot list)
+scripts/               check, make-sfx, generate-audio, render, still, list-voices
+src/art/               Ant rig, Earth (tunnels/roots), Amoeba, Props (beetle, grains, drop), Atmosphere
+src/scenes/            the shot types
+src/fx/                snap, flashes, hyper senses, fire attack, camera shake
+src/ui/                captions, title card, end card, fonts
+src/timeline/          parsing, word timing, story clock (slow motion + freeze frames)
+audio/                 generated narration (epXX.mp3 + epXX.json)
+out/                   rendered MP4s
 ```
-
-Settings like the series name, the end-card game line (`GAME_CTA`), title length and end-card length are in `src/config.ts`.

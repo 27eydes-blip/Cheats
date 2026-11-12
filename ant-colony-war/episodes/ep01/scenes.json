@@ -1,0 +1,79 @@
+{
+  "episode": 1,
+  "title": "WAKE",
+  "infection": 0.15,
+  "shots": [
+    {
+      "scene": "dirtMacro",
+      "text": "Dirt. That's the first thing I felt.",
+      "pause": 0.9,
+      "camera": "push",
+      "note": "Macro on dirt grains. Rack focus pulls through the out-of-focus grains to reveal 250's head lying in the dirt, eyes closed."
+    },
+    {
+      "scene": "faceInDirt",
+      "text": "Cold dirt on my face, and a heartbeat that wasn't slowing down.",
+      "pause": 0.8,
+      "tense": true,
+      "options": { "eyes": "opening" },
+      "note": "Extreme close-up of 250's head on the dirt. Heartbeat pulses through the frame; his eye slowly opens."
+    },
+    {
+      "scene": "lyingInChamber",
+      "text": "They told me later I was gone for two days.",
+      "pause": 0.7,
+      "camera": "drift",
+      "note": "Wide: 250 lying still on the chamber floor while sisters walk past without stopping. The light rises and falls (time passing)."
+    },
+    {
+      "scene": "deadStill",
+      "text": "Dead.",
+      "pause": 1.3,
+      "camera": "still",
+      "note": "Cold, desaturated close shot of his motionless body. Dust settles on him."
+    },
+    {
+      "scene": "eyeOpen",
+      "text": "But I could hear everything:",
+      "pause": 0.4,
+      "senses": true,
+      "note": "His eye snaps open with a green glint; sound waves ripple out. Hyper senses begin (slow motion)."
+    },
+    {
+      "scene": "senses",
+      "text": "a beetle digging three tunnels over,",
+      "pause": 0.3,
+      "senses": true,
+      "options": { "reveal": "beetle" },
+      "note": "X-ray through the dirt: a beetle glowing as an outline, digging three tunnels away."
+    },
+    {
+      "scene": "waterDrop",
+      "text": "a drop of water about to fall.",
+      "pause": 0.9,
+      "senses": true,
+      "note": "Slow motion: a drop swelling on a root tip, trembling, about to fall."
+    },
+    {
+      "scene": "rise",
+      "text": "My name is 250.",
+      "pause": 0.8,
+      "camera": "push",
+      "note": "250 pushes himself up off the dirt; his long mandibles cock open. Rim-lit hero shot."
+    },
+    {
+      "scene": "colony",
+      "text": "I'm two months old.",
+      "pause": 0.7,
+      "options": { "find250": true },
+      "note": "Among his sisters he looks identical. Only a tiny green glint gives him away."
+    },
+    {
+      "scene": "vast",
+      "text": "And before this... I was nobody.",
+      "pause": 1.4,
+      "camera": "pull",
+      "note": "Pull back: the tunnels go on forever. 250 is a speck in the middle of it all."
+    }
+  ]
+}

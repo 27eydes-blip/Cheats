@@ -17,9 +17,9 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { EPISODES } from '../script/episodes';
+import { checkEpisode, loadEpisodes } from './lib/episodes';
 import type { Episode } from '../script/types';
-import { DEFAULT_PAUSE, buildTimeline, mockAlignment } from '../src/timeline/build';
+import { DEFAULT_PAUSE, buildTimeline, fitPauses, mockAlignment } from '../src/timeline/build';
 import { parseBeat, spokenText } from '../src/timeline/parse';
 import type { BeatAlignment, Timeline } from '../src/timeline/types';
 import { MAX_SECONDS, MIN_SECONDS } from '../src/config';
@@ -49,6 +49,7 @@ const args = process.argv.slice(2);
 const MOCK = args.includes('--mock');
 const FORCE = args.includes('--force');
 const only = args.filter((a) => /^\d+$/.test(a)).map(Number);
+const EPISODES = loadEpisodes();
 const episodes = EPISODES.filter((e) => !only.length || only.includes(e.n));
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -122,6 +123,7 @@ const decode = (mp3: Buffer) => {
 };
 
 async function episodeAudio(ep: Episode): Promise<Timeline> {
+  // (ep is reassigned below once the line lengths are known)
   const lines = ep.beats.map((b) => spokenText(parseBeat(b)));
   const aligns: BeatAlignment[] = [];
   const pcm: Int16Array[] = [];
@@ -149,6 +151,8 @@ async function episodeAudio(ep: Episode): Promise<Timeline> {
     aligns.push({ duration, tokens: timed });
     pcm.push(samples);
   }
+  // if the narration is short, stretch the dramatic pauses (never the words) to reach the minimum length
+  ep = fitPauses(ep, aligns);
   // assemble: line, pause, line, pause… (exactly the layout buildTimeline uses)
   const total = aligns.reduce((s, a, i) => s + a.duration + (ep.beats[i].pause ?? DEFAULT_PAUSE), 0);
   const out = new Int16Array(Math.ceil(total * SR) + SR);
@@ -188,12 +192,14 @@ function readTimelines(): Record<number, Timeline> {
   if (MOCK) {
     console.log('Estimated lengths (no API calls):');
     for (const ep of episodes) {
-      const tl = buildTimeline(ep, mockAlignment(ep), null, true);
+      const tl = buildTimeline(fitPauses(ep, mockAlignment(ep)), mockAlignment(ep), null, true);
       const flag = tl.duration < MIN_SECONDS || tl.duration > MAX_SECONDS ? '  <- outside target' : '';
       console.log(`  EP${pad(ep.n)} ${ep.title.padEnd(16)} ${tl.duration.toFixed(1)}s${flag}`);
     }
     return;
   }
+  const problems = episodes.flatMap((e) => checkEpisode(e));
+  if (problems.length) throw new Error('Shots do not match script/season1.md:\n' + problems.join('\n'));
   for (const d of [AUDIO, CACHE, PUBLIC_AUDIO]) fs.mkdirSync(d, { recursive: true });
   const all = readTimelines();
   for (const ep of episodes) {
