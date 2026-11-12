@@ -533,7 +533,13 @@ test("survives a lost WebGL context", async ({ page }) => {
   await run(page, 500);
   await page.evaluate(() => window.__lose.restoreContext());
   await run(page, 1500);
+  // the run paused when the graphics went (never flown unseen): RESUME carries on
+  // (the full story: context-loss.spec.js)
   const m = (await gameState(page)).meters;
+  await run(page, 1000);
+  expect((await gameState(page)).meters).toBe(m);
+  expect(await page.evaluate(() => !!window.__glydrift.scene.getScene("Hud").pauseLayer)).toBe(true);
+  await page.evaluate(() => window.__glydrift.scene.getScene("Hud").resume());
   await run(page, 1000);
   expect((await gameState(page)).meters).toBeGreaterThan(m);
   // still drawing: the frame isn't blank (the snapshot arrives with the next drawn frame)

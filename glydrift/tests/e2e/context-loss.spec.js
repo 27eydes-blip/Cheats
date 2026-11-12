@@ -2,7 +2,7 @@
 // is rebuilt when the context is back (even if the browser wiped the canvases they came from),
 // and the game shows everything again. If it never comes back, the run ends safely.
 import { expect, test } from "@playwright/test";
-import { fieldPoint, freshFrame, openGame, press, reseed, run, settle, tap, waitFor } from "./helpers.js";
+import { fieldPoint, openGame, press, reseed, run, settle, tap, waitFor } from "./helpers.js";
 
 /** Fly a god run forward `frames` frames (logic only), keeping the game's clock continuous. */
 const fly = (page, frames) =>
@@ -50,61 +50,56 @@ const wipeCanvases = (page) =>
   });
 
 /**
- * Compare two screenshots on a 12 x 16 grid of cells (in the page): the share of cells whose
- * average colour changed a lot, and the share of lit pixels in the second one. Blank textures
- * change most cells; rebuilt scenery (its decorations are placed at random again) only a few.
+ * The game's own frame (read from the WebGL canvas: page screenshots of it come out black in
+ * Firefox), as the average colour of each cell of a 12 x 16 grid, plus the share of lit pixels.
  */
-const diffRatio = (page, a, b) =>
-  page.evaluate(
-    async ([a, b]) => {
-      const load = async (b64) => {
-        const img = new Image();
-        img.src = `data:image/png;base64,${b64}`;
-        await img.decode();
-        const c = document.createElement("canvas");
-        c.width = img.width;
-        c.height = img.height;
-        const ctx = c.getContext("2d");
-        ctx.drawImage(img, 0, 0);
-        return { d: ctx.getImageData(0, 0, c.width, c.height).data, w: c.width, h: c.height };
-      };
-      const [A, B] = [await load(a), await load(b)];
-      const GX = 12;
-      const GY = 16;
-      const cells = (P) => {
-        const sum = new Float64Array(GX * GY * 4);
-        for (let y = 0; y < P.h; y += 2)
-          for (let x = 0; x < P.w; x += 2) {
-            const i = (y * P.w + x) * 4;
-            const c = (Math.floor((y * GY) / P.h) * GX + Math.floor((x * GX) / P.w)) * 4;
-            sum[c] += P.d[i];
-            sum[c + 1] += P.d[i + 1];
-            sum[c + 2] += P.d[i + 2];
-            sum[c + 3]++;
-          }
-        return sum;
-      };
-      const ca = cells(A);
-      const cb = cells(B);
-      let changed = 0;
-      for (let c = 0; c < GX * GY * 4; c += 4) {
-        const d = Math.max(
-          Math.abs(ca[c] / ca[c + 3] - cb[c] / cb[c + 3]),
-          Math.abs(ca[c + 1] / ca[c + 3] - cb[c + 1] / cb[c + 3]),
-          Math.abs(ca[c + 2] / ca[c + 3] - cb[c + 2] / cb[c + 3]),
-        );
-        if (d > 24) changed++;
-      }
+async function grabFrame(page) {
+  await page.evaluate(() => {
+    window.__glyFrame = null;
+    window.__glyRender = true;
+    window.__glydrift.renderer.snapshot((img) => {
+      const W = 120;
+      const H = 160;
+      const c = document.createElement("canvas");
+      c.width = W;
+      c.height = H;
+      const x = c.getContext("2d");
+      x.drawImage(img, 0, 0, W, H);
+      const d = x.getImageData(0, 0, W, H).data;
+      const cells = [];
       let lit = 0;
-      let n = 0;
-      for (let i = 0; i < B.d.length; i += 64) {
-        n++;
-        if (B.d[i] + B.d[i + 1] + B.d[i + 2] > 120) lit++;
-      }
-      return { diff: changed / (GX * GY), lit: lit / n };
-    },
-    [a.toString("base64"), b.toString("base64")],
-  );
+      for (let cy = 0; cy < 16; cy++)
+        for (let cx = 0; cx < 12; cx++) {
+          const m = [0, 0, 0];
+          for (let y = cy * 10; y < cy * 10 + 10; y++)
+            for (let xx = cx * 10; xx < cx * 10 + 10; xx++) {
+              const i = (y * W + xx) * 4;
+              m[0] += d[i];
+              m[1] += d[i + 1];
+              m[2] += d[i + 2];
+              if (d[i] + d[i + 1] + d[i + 2] > 120) lit++;
+            }
+          cells.push(m.map((v) => v / 100));
+        }
+      window.__glyFrame = { cells, lit: lit / (W * H) };
+    });
+  });
+  await waitFor(page, () => window.__glyFrame !== null, 5000);
+  return page.evaluate(() => window.__glyFrame);
+}
+
+/**
+ * Share of grid cells whose average colour changed a lot. Blank textures change most cells;
+ * rebuilt scenery (its decorations are placed at random again) only a few.
+ */
+function diffRatio(a, b) {
+  let changed = 0;
+  a.cells.forEach((ca, i) => {
+    const cb = b.cells[i];
+    if (Math.max(...ca.map((v, k) => Math.abs(v - cb[k]))) > 24) changed++;
+  });
+  return { diff: changed / a.cells.length, lit: b.lit };
+}
 
 async function startGodRun(page) {
   const log = await openGame(page, { flags: ["god"] });
@@ -125,10 +120,18 @@ test("lost GPU context mid-run: pauses at once, rebuilds every texture, everythi
   // into Sakura Skies, with hazards and the realm's own art on screen
   const at = await fly(page, 60 * 30);
   expect(at.state).toBe("playing");
-  await freshFrame(page);
-  const before = await page.screenshot({ path: test.info().outputPath("run-before.png") });
+  // (the frame to compare against, with the world held still so it's the very frame the
+  // context is lost on)
+  await page.evaluate(() => window.__glydrift.scene.pause("Game"));
+  const before = await grabFrame(page);
 
-  await loseContext(page);
+  // flying again, and the context goes in the same moment (no frame in between)
+  await page.evaluate(() => {
+    window.__glydrift.scene.resume("Game");
+    const gl = window.__glydrift.renderer.gl;
+    window.__glyLose = gl.getExtension("WEBGL_lose_context");
+    window.__glyLose.loseContext();
+  });
   await run(page, 50);
   const lost = await page.evaluate(() => {
     const gs = window.__glydrift.scene.getScene("Game");
@@ -174,9 +177,8 @@ test("lost GPU context mid-run: pauses at once, rebuilds every texture, everythi
 
   // the frozen frame looks the same as before the loss (pause menu out of the way)
   await page.evaluate(() => window.__glydrift.scene.getScene("Hud").pauseLayer.setVisible(false));
-  await freshFrame(page);
-  const after = await page.screenshot({ path: test.info().outputPath("run-after.png") });
-  const cmp = await diffRatio(page, before, after);
+  const after = await grabFrame(page);
+  const cmp = diffRatio(before, after);
   console.log("context restore diff", JSON.stringify(cmp));
   // (without the rebuild: ~88% of the cells change and only a third of the screen is lit;
   // with it: a few cells, where the rebuilt scenery placed its decorations differently)
@@ -237,8 +239,7 @@ test("GPU context that never comes back: the run ends safely, the score is saved
 
 test("GPU context lost on the home screen: comes back with the screen rebuilt", async ({ page }) => {
   const log = await openGame(page);
-  await freshFrame(page);
-  const before = await page.screenshot();
+  const before = await grabFrame(page);
   await loseContext(page);
   await run(page, 300);
   expect(await page.evaluate(() => window.__glyCtx.lost)).toBe(true);
@@ -247,9 +248,8 @@ test("GPU context lost on the home screen: comes back with the screen rebuilt", 
   await waitFor(page, () => !window.__glyCtx.lost, 10_000);
   expect(await page.evaluate(() => window.__glyCtx.lastRebuild.missing)).toEqual([]);
   await run(page, 3000); // (the home screen starts again: let its fade-in finish)
-  await freshFrame(page);
-  const after = await page.screenshot({ path: test.info().outputPath("home-after.png") });
-  const cmp = await diffRatio(page, before, after);
+  const after = await grabFrame(page);
+  const cmp = diffRatio(before, after);
   console.log("home restore diff", JSON.stringify(cmp));
   expect(cmp.lit).toBeGreaterThan(0.05);
   expect(cmp.diff).toBeLessThan(0.15); // (the home screen animates: its ticker, the hero)
