@@ -3,6 +3,7 @@ import { Card } from "@/components/admin";
 import { formatMoney, type City } from "@/lib/db";
 import { getEnv } from "@/lib/env";
 import { reservePlatform } from "@/lib/reserve";
+import { SPONSOR } from "@/lib/sponsor";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const cityFilter = cityId ? "AND p.city_id = ?" : "";
   const cb = cityId ? [cityId] : [];
 
-  const [cities, totals, refunds, perCity, perSticker, daily, direct, reserves] = await db.batch([
+  const [cities, totals, refunds, perCity, perSticker, daily, direct, reserves, sponsor] = await db.batch([
     db.prepare("SELECT * FROM cities ORDER BY name"),
     db.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(amount_cents),0) AS cents FROM purchases p WHERE status='paid' ${cityFilter}`).bind(...cb),
     db.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(amount_cents),0) AS cents FROM purchases p WHERE status IN ('refunded','disputed') ${cityFilter}`).bind(...cb),
@@ -47,6 +48,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
        JOIN listings l ON l.id = r.listing_id JOIN cities c ON c.id = r.city_id
        WHERE r.created_at > ? ${cityId ? "AND r.city_id = ?" : ""} GROUP BY l.id ORDER BY taps DESC LIMIT 25`,
     ).bind(since, ...cb),
+    db.prepare(
+      `SELECT placement, COUNT(*) AS n, COUNT(DISTINCT city_slug) AS towns FROM sponsor_clicks
+       WHERE sponsor = ? AND created_at > ? GROUP BY placement ORDER BY n DESC`,
+    ).bind(SPONSOR.id, since),
   ]);
 
   const t = totals.results[0] as Agg;
@@ -168,6 +173,33 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </Table>
         )}
         <p className="mt-3 text-xs text-muted">Each tap is a diner you sent to that restaurant. Useful when asking a booking service about referral fees.</p>
+      </Card>
+
+      <Card title={`Sponsor: ${SPONSOR.name} · last ${days} days`}>
+        {(() => {
+          const rows = sponsor.results as { placement: string; n: number; towns: number }[];
+          const total = rows.reduce((a, r) => a + r.n, 0);
+          const label: Record<string, string> = { "guide-home": "Guide home card", footer: "Footer link", landing: "Landing page", other: "Other" };
+          return (
+            <>
+              <p className="text-sm text-zinc-300">
+                <span className="font-serif text-2xl text-sea-soft">{total}</span> taps sent to {SPONSOR.url.replace("https://", "")}
+              </p>
+              {rows.length > 0 && (
+                <Table head={["Placement", "Towns", "Taps"]}>
+                  {rows.map((r) => (
+                    <tr key={r.placement} className="border-t border-line">
+                      <td className="py-2">{label[r.placement] ?? r.placement}</td>
+                      <td>{r.towns}</td>
+                      <td>{r.n}</td>
+                    </tr>
+                  ))}
+                </Table>
+              )}
+              <p className="mt-3 text-xs text-muted">Links carry utm_source=coastpassgo so {SPONSOR.name} can see the same traffic in its own analytics.</p>
+            </>
+          );
+        })()}
       </Card>
 
       <Card title="Per sticker">

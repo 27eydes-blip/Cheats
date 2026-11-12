@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ListingCard } from "@/components/ListingCard";
 import { Brand, Footer, Notice } from "@/components/ui";
 import { Icon } from "@/components/Icon";
+import { SponsorCard } from "@/components/Sponsor";
 import { BeachLine, ConditionsPanel, WeatherTicker } from "@/components/Weather";
 import type { City, GuideSection, Listing } from "@/lib/db";
 import { isSummer, localTime, openStatus, pickHoursSpec, type LocalTime } from "@/lib/hours";
@@ -255,6 +256,7 @@ export function Guide(props: {
                 </div>
               </section>
             )}
+            <SponsorCard citySlug={city.slug} />
           </>
         )}
       </>

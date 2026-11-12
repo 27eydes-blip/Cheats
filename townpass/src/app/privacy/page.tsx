@@ -39,6 +39,11 @@ export default async function Privacy() {
         data, email <a className="text-gold underline" href={`mailto:${support}`}>{support}</a>. Deleting your data ends your ability to
         restore access.
       </p>
+      <h2>Sponsor</h2>
+      <p>
+        CoastPassGo is sponsored by Glydrift. Sponsor links count a tap on our side (which page and town, nothing about
+        you) and then open glydrift.com, which has its own privacy policy. We don’t share your email or purchase with sponsors.
+      </p>
       <h2>Service providers</h2>
       <p>Cloudflare (hosting), Stripe (payments), Resend (email), Open-Meteo (weather data; we send only each town’s coordinates, never anything about you).</p>
     </LegalPage>

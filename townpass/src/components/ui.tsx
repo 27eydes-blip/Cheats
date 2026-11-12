@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon } from "./Icon";
+import { SponsorLine } from "./Sponsor";
 
 /** Wordmark: compass-and-wave mark + name, with the last word ("Go") in gold. */
 export function Brand({ name = "CoastPassGo" }: { name?: string }) {
@@ -36,6 +37,7 @@ export function Footer({ brand = "CoastPassGo", support }: { brand?: string; sup
           </a>
         )}
       </div>
+      <SponsorLine />
       <p className="mt-3">© {new Date().getFullYear()} {brand}</p>
     </footer>
   );
