@@ -21,6 +21,7 @@ const BASE = process.env.E2E_BASE || "http://127.0.0.1:8787";
 const args = process.argv.slice(2);
 const ROUNDS = Number(args[args.indexOf("--rounds") + 1]) || 1;
 const MONKEY_STEPS = Number(args[args.indexOf("--steps") + 1]) || 80;
+const SEED = args.includes("--seed") ? Number(args[args.indexOf("--seed") + 1]) : 0; // vary to get new random sequences
 const vars = Object.fromEntries(
   readFileSync(new URL("../../.dev.vars", import.meta.url), "utf8")
     .split("\n")
@@ -214,7 +215,7 @@ async function paidJourney(slug: string, purchaseId: string, sessionId: string) 
   check("refund revokes access", (await after.text()).includes("Unlock the full guide"));
   const fd = new FormData();
   fd.set("city", slug);
-  fd.set("email", "e2e@example.com");
+  fd.set("email", `e2e+${purchaseId}@example.com`); // unique per run so the 3-per-hour limit isn't what we're testing here
   const rs = await get("/api/restore", { method: "POST", body: fd });
   check("restore responds without revealing purchase", rs.status === 303 && (rs.headers.get("location") || "").includes("sent=1"), `got ${rs.status} ${rs.headers.get("location")}`);
 }
@@ -322,7 +323,7 @@ async function adminBrowserFlow(round: number) {
     await p.fill('input[name="password"]', "definitely-wrong");
     await p.click("button:has-text('Log in')");
     await p.waitForURL(/error=/, { timeout: 8000 });
-    check("wrong admin password rejected", (await p.locator("text=/Wrong password|Too many attempts/").count()) === 1);
+    check("wrong admin password rejected", (await p.locator("text=/Wrong password|Too many/").count()) === 1);
     await p.fill('input[name="password"]', vars.ADMIN_PASSWORD);
     await p.click("button:has-text('Log in')");
     await p.waitForURL(/\/admin$/);
@@ -452,7 +453,7 @@ async function monkey(slug: string, token: string, seed: number, steps: number) 
         if (!p.url().startsWith(BASE)) await p.goto(`${BASE}/city/${slug}`);
         const html = await p.content().catch(() => "");
         if (/Application error|Internal Server Error/.test(html)) problems.push(`error page at ${p.url()}`);
-        const sw = await p.evaluate(() => document.documentElement.scrollWidth);
+        const sw = await p.evaluate(() => document.documentElement?.scrollWidth ?? 0).catch(() => 0);
         if (sw > 392) problems.push(`horizontal overflow ${sw}px at ${p.url()}`);
         if (await p.evaluate(() => (window as any).__xss)) problems.push(`XSS executed at ${p.url()}`);
       } catch (e) {
@@ -493,7 +494,11 @@ async function demoMonkey(file: string, seed: number, steps: number) {
         } else if (roll < 0.3) {
           const inputs = p.locator("#overlay input, #view input:not([type=checkbox]), #view textarea");
           const n = await inputs.count();
-          if (n) await inputs.nth(Math.floor(rand() * n)).fill(WEIRD[Math.floor(rand() * WEIRD.length)]);
+          if (n) {
+            const inp = inputs.nth(Math.floor(rand() * n));
+            const numeric = (await inp.getAttribute("type")) === "number";
+            await inp.fill(numeric ? String(Math.floor(rand() * 200) - 50) : WEIRD[Math.floor(rand() * WEIRD.length)]);
+          }
         } else {
           const els = p.locator("#overlay button, #view button, #view summary, .tabbar button, .bar button");
           const n = await els.count();
@@ -503,7 +508,7 @@ async function demoMonkey(file: string, seed: number, steps: number) {
           }
         }
         if (i % 10 === 0) await p.waitForTimeout(rand() < 0.3 ? 2600 : 50); // let the pay/booking timers finish sometimes
-        const sw = await p.evaluate(() => document.documentElement.scrollWidth);
+        const sw = await p.evaluate(() => document.documentElement?.scrollWidth ?? 0).catch(() => 0);
         if (sw > 392) problems.push(`demo horizontal overflow ${sw}px (city ${await p.inputValue("#city")})`);
         if (await p.evaluate(() => (window as any).__xss)) problems.push("demo XSS executed");
       } catch (e) {
@@ -560,8 +565,8 @@ for (let round = 1; round <= ROUNDS; round++) {
   await suite("bug: form fuzzing", () => formFuzz(slugs[round % slugs.length], tokens[slugs[round % slugs.length]], admin));
   await suite("browser: visitor flow", () => browserFlows(slugs[(round + 1) % slugs.length], tokens[slugs[(round + 1) % slugs.length]]));
   await suite("browser: admin flow", () => adminBrowserFlow(round));
-  for (const [i, s] of slugs.entries()) await suite(`monkey: ${s}`, () => monkey(s, tokens[s], round * 1000 + i, MONKEY_STEPS));
-  if (process.env.DEMO_FILE) await suite("monkey: demo page", () => demoMonkey(process.env.DEMO_FILE!, round * 7 + 1, MONKEY_STEPS * 4));
+  for (const [i, s] of slugs.entries()) await suite(`monkey: ${s}`, () => monkey(s, tokens[s], SEED + round * 1000 + i, MONKEY_STEPS));
+  if (process.env.DEMO_FILE) await suite("monkey: demo page", () => demoMonkey(process.env.DEMO_FILE!, SEED + round * 7 + 1, MONKEY_STEPS * 4));
 }
 
 const failed = results.filter((r) => !r.ok);

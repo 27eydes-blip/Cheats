@@ -42,6 +42,8 @@ export interface Conditions {
 }
 
 export const CACHE_MS = 15 * 60_000;
+/** After a failed fetch, wait this long before trying the weather service again. */
+export const RETRY_MS = 2 * 60_000;
 const STALE_MAX_MS = 6 * 3_600_000;
 const TIMEOUT_MS = 2500;
 
@@ -205,7 +207,11 @@ export async function getConditions(db: D1Database, city: City, apiKey?: string)
     .bind(city.id)
     .first<{ json: string; fetched_at: number }>()
     .catch(() => null);
-  if (cached && now - cached.fetched_at < CACHE_MS) return JSON.parse(cached.json) as Conditions;
+  const last = cached ? (JSON.parse(cached.json) as Conditions | null) : null;
+  if (cached && now - cached.fetched_at < CACHE_MS) {
+    // `null` = a recent failed attempt; serve the last good reading (if still reasonably fresh) without refetching
+    return last && now - last.updatedAt < STALE_MAX_MS ? last : null;
+  }
 
   try {
     const [forecast, marine] = await Promise.all([
@@ -221,7 +227,13 @@ export async function getConditions(db: D1Database, city: City, apiKey?: string)
     return parsed;
   } catch (e) {
     console.warn("weather unavailable for", city.slug, (e as Error).message);
-    if (cached && now - cached.fetched_at < STALE_MAX_MS) return JSON.parse(cached.json) as Conditions;
-    return null;
+    // Back off: mark the cache so the next RETRY_MS of page views don't each wait on a failing service.
+    // Keeps the last good reading (its own updatedAt still tells us how old it is).
+    await db
+      .prepare("INSERT OR REPLACE INTO weather_cache (city_id, json, fetched_at) VALUES (?, ?, ?)")
+      .bind(city.id, JSON.stringify(last), now - CACHE_MS + RETRY_MS)
+      .run()
+      .catch(() => {});
+    return last && now - last.updatedAt < STALE_MAX_MS ? last : null;
   }
 }

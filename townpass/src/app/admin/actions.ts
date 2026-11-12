@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { ADMIN_COOKIE, createAdminSession, requireAdmin } from "@/lib/admin-auth";
 import { getEnv } from "@/lib/env";
 import { validateHours } from "@/lib/hours";
-import { clientHash, rateLimit } from "@/lib/ratelimit";
+import { clientHash, recordHit, underLimit } from "@/lib/ratelimit";
 import { SECTION_TYPES, sectionType } from "@/lib/sections";
 import { safeEqual, stickerSuffix } from "@/lib/token";
 import { validateReserveUrl } from "@/lib/reserve";
@@ -20,8 +20,13 @@ const err = (path: string, msg: string): never => redirect(`${path}${path.includ
 export async function login(form: FormData) {
   const env = await getEnv();
   const who = await clientHash(await headers(), env.ACCESS_TOKEN_SECRET);
-  if (!(await rateLimit(env.DB, `admin-login:${who}`, 10, 15 * 60_000))) err("/admin/login", "Too many attempts. Wait 15 minutes.");
-  if (!env.ADMIN_PASSWORD || !safeEqual(str(form, "password"), env.ADMIN_PASSWORD)) err("/admin/login", "Wrong password");
+  // Only failed attempts count, so an owner logging in and out normally is never locked out.
+  const key = `admin-login:${who}`;
+  if (!(await underLimit(env.DB, key, 10, 15 * 60_000))) err("/admin/login", "Too many failed attempts. Wait 15 minutes.");
+  if (!env.ADMIN_PASSWORD || !safeEqual(str(form, "password"), env.ADMIN_PASSWORD)) {
+    await recordHit(env.DB, key);
+    err("/admin/login", "Wrong password");
+  }
   await createAdminSession(env);
   redirect("/admin");
 }
