@@ -29,12 +29,12 @@
     },
     {
       "scene": "vask",
-      "text": "So I went to the one ant I thought would listen. Captain Vask, head of the gate guard.",
+      "text": "So I went to the one ant I thought would listen. Captain Drax Venn, head of the gate guard.",
       "pause": 0.5,
       "options": {
         "phase": "listen"
       },
-      "note": "Captain Vask at the gate, 250 small before him."
+      "note": "Captain Drax at the gate, 250 small before him."
     },
     {
       "scene": "vask",
@@ -52,7 +52,7 @@
       "options": {
         "phase": "gate"
       },
-      "note": "Vask opens the outer gate; fire beyond."
+      "note": "Drax opens the outer gate; fire beyond."
     },
     {
       "scene": "vask",
@@ -62,7 +62,7 @@
       "options": {
         "phase": "smell"
       },
-      "note": "Close on Vask: orange fire-ant scent all over him."
+      "note": "Close on Drax: orange fire-ant scent all over him."
     },
     {
       "scene": "swarm",
@@ -96,7 +96,7 @@
     },
     {
       "scene": "vask",
-      "text": "and Vask stood beside the fire general, smiling.",
+      "text": "and Drax stood beside the fire general, smiling.",
       "pause": 0.6,
       "options": {
         "phase": "smile"

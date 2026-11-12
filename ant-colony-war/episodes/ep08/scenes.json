@@ -16,7 +16,7 @@
     },
     {
       "scene": "vask",
-      "text": "And Vask? They gave him a place in their army, the one trap-jaw with no chains.",
+      "text": "And Drax? They gave him a place in their army, the one trap-jaw with no chains.",
       "pause": 0.6,
       "options": {
         "phase": "army"
@@ -36,7 +36,7 @@
     },
     {
       "scene": "lineup",
-      "text": "Every morning a fire soldier named Kesh walked down our line and picked one of us to make an example of.",
+      "text": "Every morning a fire soldier named Krell Dukar walked down our line and picked one of us to make an example of.",
       "pause": 0.6,
       "tense": true,
       "options": {
@@ -54,7 +54,7 @@
     },
     {
       "scene": "senses",
-      "text": "Every night I listened to Vask laughing with the fire soldiers above us.",
+      "text": "Every night I listened to Drax laughing with the fire soldiers above us.",
       "pause": 0.6,
       "senses": true,
       "options": {
@@ -93,12 +93,12 @@
     },
     {
       "scene": "vask",
-      "text": "And one day, Vask, I'm coming for you first.",
+      "text": "And one day, Drax, I'm coming for you first.",
       "pause": 1.4,
       "options": {
         "phase": "portrait"
       },
-      "note": "Vask, unaware, in the dark."
+      "note": "Drax, unaware, in the dark."
     }
   ]
 }

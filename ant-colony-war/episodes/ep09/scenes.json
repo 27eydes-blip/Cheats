@@ -5,7 +5,7 @@
   "shots": [
     {
       "scene": "lineup",
-      "text": "The day it changed, Kesh picked an old worker from my colony.",
+      "text": "The day it changed, Krell picked an old worker from my colony.",
       "pause": 0.5,
       "options": {
         "walker": "kesh"
@@ -37,7 +37,7 @@
     },
     {
       "scene": "execution",
-      "text": "Kesh dropped, and the whole chamber went silent. Not one ant breathed. I waited for them to kill me.",
+      "text": "Krell dropped, and the whole chamber went silent. Not one ant breathed. I waited for them to kill me.",
       "pause": 0.7,
       "tense": true,
       "options": {
@@ -54,7 +54,7 @@
     },
     {
       "scene": "kesh",
-      "text": "\"You,\" he said. \"You fight for us now.\" Then he pointed at Vask. \"Prove it.\"",
+      "text": "\"You,\" he said. \"You fight for us now.\" Then he pointed at Drax. \"Prove it.\"",
       "pause": 0.7,
       "options": {
         "general": true
@@ -63,7 +63,7 @@
     },
     {
       "scene": "vask",
-      "text": "Vask backed away. He begged. He said we were brothers, that we came from the same dirt.",
+      "text": "Drax backed away. He begged. He said we were brothers, that we came from the same dirt.",
       "pause": 0.5,
       "tense": true,
       "options": {
@@ -94,7 +94,7 @@
     },
     {
       "scene": "army",
-      "text": "But when they gave me Kesh's armor and the fire soldiers stepped aside as I walked past...",
+      "text": "But when they gave me Krell's armor and the fire soldiers stepped aside as I walked past...",
       "pause": 0.3,
       "fire": true,
       "options": {

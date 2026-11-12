@@ -136,6 +136,26 @@ const decode = (mp3: Buffer) => {
   return pcm;
 };
 
+/** Maps (voice settings + line text) -> cache key, from every ElevenLabs line recorded so far. */
+let _index: Map<string, string> | null = null;
+function textIndex() {
+  if (_index) return _index;
+  _index = new Map();
+  for (const f of fs.readdirSync(CACHE)) {
+    if (!f.endsWith('.json')) continue;
+    const key = f.slice(0, -5);
+    if (!fs.existsSync(path.join(CACHE, key + '.mp3'))) continue;
+    try {
+      const j = JSON.parse(fs.readFileSync(path.join(CACHE, f), 'utf8'));
+      const text = j.text ?? (j.alignment?.characters ? j.alignment.characters.join('') : null);
+      if (!text) continue;
+      const settings = JSON.stringify(j.settings ?? VOICE_SETTINGS);
+      if (!_index.has(settings + '|' + text)) _index.set(settings + '|' + text, key);
+    } catch {}
+  }
+  return _index;
+}
+
 async function episodeAudio(ep: Episode): Promise<Timeline> {
   // (ep is reassigned below once the line lengths are known)
   const lines = ep.beats.map((b) => spokenText(parseBeat(b)));
@@ -151,13 +171,25 @@ async function episodeAudio(ep: Episode): Promise<Timeline> {
   const keys = lines.map((_, i) => keyOf(i));
   const audioOf = (i: number) => path.join(CACHE, `${keys[i]}.${ENGINE === 'elevenlabs' ? 'mp3' : 'wav'}`);
   const jsonOf = (i: number) => path.join(CACHE, `${keys[i]}.json`);
+  // Unchanged lines whose neighbours changed: reuse the earlier recording of the identical text instead of paying again.
+  if (ENGINE === 'elevenlabs' && !FORCE) {
+    const index = textIndex();
+    lines.forEach((text, i) => {
+      if (fs.existsSync(audioOf(i)) && fs.existsSync(jsonOf(i))) return;
+      const prior = index.get(JSON.stringify(VOICE_SETTINGS) + '|' + text);
+      if (prior) {
+        fs.copyFileSync(path.join(CACHE, prior + '.mp3'), audioOf(i));
+        fs.copyFileSync(path.join(CACHE, prior + '.json'), jsonOf(i));
+      }
+    });
+  }
   const missing = lines.map((_, i) => i).filter((i) => FORCE || !fs.existsSync(audioOf(i)) || !fs.existsSync(jsonOf(i)));
   if (ENGINE === 'elevenlabs') {
     for (const i of missing) {
       console.log(`  line ${i + 1}/${lines.length}: ${lines[i]}`);
       const r = await synthesise(lines[i], lines.slice(Math.max(0, i - 2), i).join(' ') || undefined, lines[i + 1]);
       fs.writeFileSync(audioOf(i), Buffer.from(r.audio_base64, 'base64'));
-      fs.writeFileSync(jsonOf(i), JSON.stringify({ alignment: r.alignment }));
+      fs.writeFileSync(jsonOf(i), JSON.stringify({ alignment: r.alignment, text: lines[i], settings: VOICE_SETTINGS }));
     }
   } else if (missing.length) {
     if (!fs.existsSync(VOICE_PY)) throw new Error('The narrator voice is not installed yet. Run `npm run voice:setup` first.');

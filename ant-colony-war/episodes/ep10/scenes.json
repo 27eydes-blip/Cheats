@@ -34,7 +34,7 @@
     },
     {
       "scene": "ranks",
-      "text": "They stopped calling me trap-jaw. They started calling me the *Snap*.",
+      "text": "They stopped calling me trap-jaw. They started calling me *Lord Mandros*.",
       "pause": 0.6
     },
     {
@@ -164,5 +164,6 @@
       "pause": 1.8,
       "infection": 1
     }
-  ]
+  ],
+  "endCard": "FOLLOW FOR SEASON 2"
 }
