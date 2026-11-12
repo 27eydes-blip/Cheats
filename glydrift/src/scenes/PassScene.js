@@ -327,7 +327,10 @@ export class PassScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(170);
     const owned = !!Save.data.unlocked[def.id];
-    button(this, nx, y0 + h * 0.62, 190, 76, owned ? "OWNED" : "GET", {
+    // (a short header, as on iPad, put the button over the "TIER n REWARD" line: it now sits
+    // just under that line there; taller headers keep it where it was)
+    const by = Math.max(y0 + h * 0.62, y0 + h * 0.3 + 38 + 12 + 4 + 38);
+    button(this, nx, by, 190, 76, owned ? "OWNED" : "GET", {
       color: 0xffffff,
       size: 32,
       fill: owned ? 0x2a8a0a : 0xc8102e,

@@ -150,15 +150,22 @@ export class CharacterScene extends Phaser.Scene {
     );
     this.pos = this.index;
     this.cardsY = H * 0.66;
+    // Short screens (iPad, H < ~1170): the card's "TAP TO EDIT" pill ran under the SELECT /
+    // EQUIPPED button. There the button sits a little lower and the cards are drawn a little
+    // smaller (never below 86%), so the pill always clears the button. Phones are unchanged.
+    const short = H < 1173;
+    this.actionY = H * 0.88 + (short ? 12 : 0);
+    const room = this.actionY - 50 - 8 - this.cardsY; // card centre → button top, less a gap
+    this.cardK = Phaser.Math.Clamp(room / (CARD_H / 2 + 22), 0.86, 1);
     this.cards = this.roster.map((def, i) => this.makeCard(def, i));
 
     // action area
-    this.actionBtn = button(this, W / 2, H * 0.88, 420, 100, "SELECT", {
+    this.actionBtn = button(this, W / 2, this.actionY, 420, 100, "SELECT", {
       color: 0x39ff88,
       size: 34,
       onClick: () => this.act(),
     }).setDepth(200);
-    this.altText = plainText(this, W / 2, H * 0.88 + 72, "", 17, "#cfc6ff").setDepth(200);
+    this.altText = plainText(this, W / 2, this.actionY + 72, "", 17, "#cfc6ff").setDepth(200);
     this.leftArrow = button(this, 50, this.cardsY, 64, 120, "‹", {
       color: 0x3ef4ff,
       size: 48,
@@ -419,14 +426,14 @@ export class CharacterScene extends Phaser.Scene {
     this.altText
       .setText(alt)
       .setOrigin(0.5, list ? 0 : 0.5)
-      .setY(this.H * 0.88 + (list ? 58 : 72));
+      .setY(this.actionY + (list ? 58 : 72));
     this.challengeBar?.g.destroy();
     this.challengeBar = null;
     if (!owned && def.challenge) {
       this.challengeBar = new ProgressBar(
         this,
         this.W / 2 - 150,
-        this.H * 0.88 + (def.shards ? 112 : 96),
+        this.actionY + (def.shards ? 112 : 96),
         300,
         8,
         def.color,
@@ -578,7 +585,7 @@ export class CharacterScene extends Phaser.Scene {
       c.setVisible(ao < 2.6);
       c.x = this.W / 2 + Math.sign(o) * Math.min(ao, 2.4) * 250;
       c.y = this.cardsY + ao * 18;
-      const sc = 1 - Math.min(ao, 2) * 0.2;
+      const sc = (1 - Math.min(ao, 2) * 0.2) * this.cardK;
       c.scaleX = sc * Math.cos(Phaser.Math.Clamp(o, -1.4, 1.4) * 0.75);
       c.scaleY = sc;
       c.alpha = Phaser.Math.Clamp(1 - ao * 0.38, 0, 1);
