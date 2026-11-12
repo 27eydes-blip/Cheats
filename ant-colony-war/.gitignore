@@ -5,3 +5,4 @@ audio/*
 !audio/.gitkeep
 public/audio/
 public/sfx/
+.voice/

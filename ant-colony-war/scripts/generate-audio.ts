@@ -1,12 +1,16 @@
-// Generates the narration for every episode with ElevenLabs, with word-level timestamps.
+// Generates the narration for every episode, with word-level timestamps.
+//
+// Narrator: a young British boy. By default this is a local voice (Kokoro TTS, free, no account):
+// a blend of Kokoro's British voices pitched up into a boy's register. Run `npm run voice:setup` once.
+// To use ElevenLabs instead, set TTS_ENGINE=elevenlabs, ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID in .env.
 //
 //   npm run audio                 all episodes
 //   npm run audio -- 3 4          only episodes 3 and 4
 //   npm run audio -- --force      ignore the cache and re-synthesise
 //   npm run audio -- --mock       no API calls: print estimated episode lengths
 //
-// Each line (beat) is synthesised on its own, with the neighbouring lines passed as context so the
-// delivery stays continuous. That gives exact timing for every word and lets us put real, precise
+// Each line (shot) is synthesised on its own (with ElevenLabs, the neighbouring lines are passed as
+// context so the delivery stays continuous). That gives exact timing for every word and lets us put real, precise
 // dramatic pauses between lines. Results are cached in audio/cache, so re-running only pays for lines
 // you changed.
 //
@@ -23,6 +27,7 @@ import { DEFAULT_PAUSE, buildTimeline, fitPauses, mockAlignment } from '../src/t
 import { parseBeat, spokenText } from '../src/timeline/parse';
 import type { BeatAlignment, Timeline } from '../src/timeline/types';
 import { MAX_SECONDS, MIN_SECONDS } from '../src/config';
+import { VOICE_DIR, VOICE_PY } from './setup-voice';
 
 const ROOT = path.join(__dirname, '..');
 const AUDIO = path.join(ROOT, 'audio');
@@ -35,7 +40,16 @@ const API = process.env.ELEVENLABS_API_BASE || 'https://api.elevenlabs.io';
 // Deep, calm, cinematic male narrator. "Brian" is a deep, resonant premade voice available on every
 // account. For a grittier, war-veteran sound try Clyde (2EiwWnXFnvU5JabPnv8n), or run `npm run voices`
 // and set ELEVENLABS_VOICE_ID in .env.
+const ENGINE = (process.env.TTS_ENGINE || 'kokoro').toLowerCase();
 const VOICE_ID = process.env.ELEVENLABS_VOICE_ID || 'nPczCjzI2devNBz1zQrb';
+
+// The British boy (local engine). Blend of Kokoro voices + pitch shift; tweak to taste.
+// Raise SEMITONES for a younger boy, lower it for a teenager.
+const KOKORO = {
+  voice: [['bm_fable', 0.55], ['bf_emma', 0.45]] as [string, number][],
+  semitones: Number(process.env.VOICE_SEMITONES ?? 5),
+  speed: Number(process.env.VOICE_SPEED ?? 0.92),
+};
 const MODEL_ID = process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2';
 const VOICE_SETTINGS = {
   stability: 0.42, // a little lower = more dramatic delivery
@@ -68,7 +82,7 @@ type ElevenResponse = {
 
 async function synthesise(text: string, previous: string | undefined, next: string | undefined): Promise<ElevenResponse> {
   const key = process.env.ELEVENLABS_API_KEY;
-  if (!key) throw new Error('ELEVENLABS_API_KEY is missing. Copy .env.example to .env and paste your key (or run with --mock).');
+  if (!key) throw new Error('TTS_ENGINE=elevenlabs needs ELEVENLABS_API_KEY in .env.');
   const body = JSON.stringify({ text, model_id: MODEL_ID, voice_settings: VOICE_SETTINGS, previous_text: previous, next_text: next });
   for (let attempt = 1; ; attempt++) {
     const res = await fetch(`${API}/v1/text-to-speech/${VOICE_ID}/with-timestamps?output_format=mp3_44100_128`, {
@@ -111,7 +125,7 @@ function alignTokens(spokenTokens: string[], al: NonNullable<ElevenResponse['ali
   return out;
 }
 
-/** Decodes an MP3 to mono 16-bit PCM (via a WAV stream; Remotion's ffmpeg has no raw PCM muxer). */
+/** Decodes an MP3/WAV to mono 16-bit PCM (via a WAV stream; Remotion's ffmpeg has no raw PCM muxer). */
 const decode = (mp3: Buffer) => {
   const wav = ffmpeg(['-i', 'pipe:0', '-f', 'wav', '-acodec', 'pcm_s16le', '-ac', '1', '-ar', String(SR), 'pipe:1'], mp3);
   let off = 12;
@@ -127,27 +141,44 @@ async function episodeAudio(ep: Episode): Promise<Timeline> {
   const lines = ep.beats.map((b) => spokenText(parseBeat(b)));
   const aligns: BeatAlignment[] = [];
   const pcm: Int16Array[] = [];
-  for (let i = 0; i < ep.beats.length; i++) {
+  const keyOf = (i: number) => {
     const text = lines[i];
     const prev = lines.slice(Math.max(0, i - 2), i).join(' ') || undefined;
     const next = lines[i + 1];
-    const hash = crypto.createHash('sha1').update(JSON.stringify({ VOICE_ID, MODEL_ID, VOICE_SETTINGS, text, prev, next })).digest('hex').slice(0, 16);
-    const mp3Path = path.join(CACHE, `${hash}.mp3`), jsonPath = path.join(CACHE, `${hash}.json`);
-    let alignment: ElevenResponse['alignment'];
-    if (!FORCE && fs.existsSync(mp3Path) && fs.existsSync(jsonPath)) {
-      alignment = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-      console.log(`  line ${i + 1}/${lines.length} (cached)`);
-    } else {
-      console.log(`  line ${i + 1}/${lines.length}: ${text}`);
-      const r = await synthesise(text, prev, next);
-      fs.writeFileSync(mp3Path, Buffer.from(r.audio_base64, 'base64'));
-      fs.writeFileSync(jsonPath, JSON.stringify(r.alignment));
-      alignment = r.alignment;
+    const cfg = ENGINE === 'elevenlabs' ? { VOICE_ID, MODEL_ID, VOICE_SETTINGS, prev, next } : { KOKORO, v: 2 };
+    return crypto.createHash('sha1').update(JSON.stringify({ ENGINE, cfg, text })).digest('hex').slice(0, 16);
+  };
+  const keys = lines.map((_, i) => keyOf(i));
+  const audioOf = (i: number) => path.join(CACHE, `${keys[i]}.${ENGINE === 'elevenlabs' ? 'mp3' : 'wav'}`);
+  const jsonOf = (i: number) => path.join(CACHE, `${keys[i]}.json`);
+  const missing = lines.map((_, i) => i).filter((i) => FORCE || !fs.existsSync(audioOf(i)) || !fs.existsSync(jsonOf(i)));
+  if (ENGINE === 'elevenlabs') {
+    for (const i of missing) {
+      console.log(`  line ${i + 1}/${lines.length}: ${lines[i]}`);
+      const r = await synthesise(lines[i], lines.slice(Math.max(0, i - 2), i).join(' ') || undefined, lines[i + 1]);
+      fs.writeFileSync(audioOf(i), Buffer.from(r.audio_base64, 'base64'));
+      fs.writeFileSync(jsonOf(i), JSON.stringify({ alignment: r.alignment }));
     }
-    const samples = decode(fs.readFileSync(mp3Path));
+  } else if (missing.length) {
+    if (!fs.existsSync(VOICE_PY)) throw new Error('The narrator voice is not installed yet. Run `npm run voice:setup` first.');
+    console.log(`  synthesising ${missing.length} line(s) with the local voice…`);
+    const job = {
+      model: path.join(VOICE_DIR, 'kokoro-v1.0.onnx'),
+      voices: path.join(VOICE_DIR, 'voices-v1.0.bin'),
+      ...KOKORO,
+      lines: missing.map((i) => ({ text: lines[i], words: parseBeat(ep.beats[i]).map((t) => t.spoken), out: audioOf(i) })),
+    };
+    const r = spawnSync(VOICE_PY, [path.join(ROOT, 'tts', 'narrate.py')], { input: JSON.stringify(job), maxBuffer: 1 << 26 });
+    if (r.status !== 0) throw new Error('Local voice failed:\n' + r.stderr?.toString());
+    const results = r.stdout.toString().trim().split('\n').map((l) => JSON.parse(l));
+    missing.forEach((i, k) => fs.writeFileSync(jsonOf(i), JSON.stringify({ words: results[k].words })));
+  }
+  for (let i = 0; i < ep.beats.length; i++) {
+    const cached = JSON.parse(fs.readFileSync(jsonOf(i), 'utf8'));
+    const samples = decode(fs.readFileSync(audioOf(i)));
     const duration = samples.length / SR;
     const tokens = parseBeat(ep.beats[i]).map((t) => t.spoken);
-    const timed = alignment ? alignTokens(tokens, alignment, duration) : mockAlignment({ ...ep, beats: [ep.beats[i]] })[0].tokens;
+    const timed = cached.words ?? (cached.alignment ? alignTokens(tokens, cached.alignment, duration) : mockAlignment({ ...ep, beats: [ep.beats[i]] })[0].tokens);
     aligns.push({ duration, tokens: timed });
     pcm.push(samples);
   }

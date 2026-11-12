@@ -1,15 +1,15 @@
 # Ant Colony War
 
 A vertical (1080×1920, 30 fps) story series rendered with [Remotion](https://www.remotion.dev), narrated by 250 in the first person.
-Narration comes from ElevenLabs with word-level timestamps, so captions, shot changes and effects land exactly on the voice.
+Narration has word-level timings, so captions, shot changes and effects land on the voice.
 
 ## Quick start
 
 ```bash
 npm install
-cp .env.example .env          # paste your ELEVENLABS_API_KEY
+npm run voice:setup           # one-time: installs the narrator voice
 npm run studio                # preview in Remotion Studio (works before audio exists, with estimated timing)
-npm run render:all            # check script -> sound effects -> narration -> MP4s in out/
+npm run render:all            # check script -> sound effects -> voice -> narration -> MP4s in out/
 ```
 
 `render:all` runs these steps, which you can also run on their own:
@@ -18,10 +18,10 @@ npm run render:all            # check script -> sound effects -> narration -> MP
 | --- | --- |
 | `npm run check` | Confirms every `episodes/epXX/scenes.json` matches `script/season1.md` **word for word** and the titles match. Audio and render refuse to run if it doesn't. |
 | `npm run sfx` | Synthesises the sound effects into `public/sfx/` (drone, heartbeat, swarm, fire, rain, snap crack, impacts, whoosh, glitch, thunder, senses ping). Generated in code, so royalty-free. |
-| `npm run audio` | Calls ElevenLabs line by line, writes `audio/epXX.mp3` + `audio/epXX.json` (word timings) and updates `src/data/timelines.ts`. Lines are cached in `audio/cache/`, so re-running only pays for changed lines. `-- 1` for one episode, `-- --force` to re-synthesise. |
+| `npm run audio` | Narrates every line (local British boy voice by default), writes `audio/epXX.mp3` + `audio/epXX.json` (word timings) and updates `src/data/timelines.ts`. Lines are cached in `audio/cache/`, so re-running only redoes changed lines. `-- 1` for one episode, `-- --force` to re-synthesise. |
 | `npm run render` | Renders each episode that has a `scenes.json` to `out/ant-colony-war-epXX-title.mp4`. `-- 1` for one episode. |
 
-Also: `npm run still -- 1` (one still per shot into `out/stills/`, fast for reviewing), `npm run audio:estimate` (estimated lengths, no API calls), `npm run voices` (list your ElevenLabs voices).
+Also: `npm run still -- 1` (one still per shot into `out/stills/`, fast for reviewing), `npm run audio:estimate` (estimated lengths, no API calls), `npm run voices` (list your ElevenLabs voices, if you use ElevenLabs).
 
 No ffmpeg install is needed; the scripts use the one that ships with Remotion. If Remotion can't download its headless browser on your network, set `REMOTION_BROWSER_EXECUTABLE` to a local Chrome or Chromium.
 
@@ -109,7 +109,24 @@ Fire ants, Kesh (scarred) and the fire queen use the same rig.
 
 ## Narrator voice
 
-The default is ElevenLabs' **Brian** (deep, resonant, calm), set up for a slow, dramatic read (`speed 0.86`, lower stability for more expression). For a grittier sound, try `ELEVENLABS_VOICE_ID=2EiwWnXFnvU5JabPnv8n` (Clyde), or any voice from `npm run voices`. Voice settings live at the top of `scripts/generate-audio.ts`. Each line is synthesised with its neighbours as context so the delivery flows.
+The narrator is **250 as a young British boy**. It's a local voice, so it's free and needs no account:
+- It's Kokoro TTS, blending 55% `bm_fable` with 45% `bf_emma` and raised 5 semitones.
+- That lands at about 200 Hz, a boy's speaking pitch.
+- `npm run voice:setup` installs it once. It needs Python 3.10+ and downloads a ~340 MB model.
+
+Tune it in `.env`:
+- `VOICE_SEMITONES`: higher sounds younger, lower sounds more like a teenager. Default 5.
+- `VOICE_SPEED`: default 0.92.
+- The blend itself is at the top of `scripts/generate-audio.ts`.
+
+Kokoro doesn't output timestamps, so `tts/narrate.py` measures them from the audio. It matches silences to punctuation and spreads words by phoneme count, which is accurate to roughly a syllable.
+
+To use ElevenLabs instead, set these in `.env`:
+- `TTS_ENGINE=elevenlabs`
+- `ELEVENLABS_API_KEY`
+- `ELEVENLABS_VOICE_ID`: pick a young British male voice from their Voice Library; `npm run voices` lists the ones on your account.
+
+ElevenLabs gives exact word timestamps from the API.
 
 ## Layout
 

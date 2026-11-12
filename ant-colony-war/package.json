@@ -10,11 +10,12 @@
     "audio:estimate": "tsx scripts/generate-audio.ts --mock",
     "voices": "tsx scripts/list-voices.ts",
     "render": "tsx scripts/render.ts",
-    "render:all": "npm run check && npm run sfx && npm run audio && npm run render",
+    "render:all": "npm run check && npm run sfx && npm run voice:setup && npm run audio && npm run render",
     "render:preview": "npm run sfx && npm run render",
     "still": "tsx scripts/still.ts",
     "typecheck": "tsc --noEmit",
-    "check": "tsx scripts/check.ts"
+    "check": "tsx scripts/check.ts",
+    "voice:setup": "tsx scripts/setup-voice.ts"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.535",
