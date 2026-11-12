@@ -2,7 +2,7 @@
 // warning state drawn here too (bubbling vent, target reticle, shaking icicle, charging orb,
 // ghost outline, glowing eyes, red crusher lamp). Hazard colours come from each biome's spike
 // palette (k0..k3), which nothing harmless uses.
-import { addAtlas, addTexture, canvasTexture, PixelCanvas, S, seeded, shade } from "./px.js";
+import { addAtlas, addTexture, canvasTexture, PixelCanvas, rebuild, S, seeded, shade } from "./px.js";
 
 // ------------------------------------------------------------------ SOLAR STORM
 function vent(P, hot) {
@@ -340,14 +340,12 @@ export function darknessTexture(scene, key, w, h, radius) {
       img.data[i + 3] = Math.round(a * 255);
     }
   ctx.putImageData(img, 0, 0);
-  const big = document.createElement("canvas");
-  big.width = pw * S;
-  big.height = ph * S;
-  const bctx = big.getContext("2d");
-  bctx.imageSmoothingEnabled = false;
-  bctx.drawImage(cv, 0, 0, big.width, big.height);
-  const tex = canvasTexture(scene, key, big);
+  // kept at 1/S size and shown at scale S (NEAREST: the same chunky rings): a pre-scaled copy
+  // was 1024x1024 (4 MB of graphics memory, made at the start of every run)
+  const tex = canvasTexture(scene, key, cv);
   tex.setFilter(1); // NEAREST
+  // (drawn again after a lost GPU context: gfx/rebuildArt.js)
+  rebuild.extra.set(key, () => darknessTexture(scene, key, w, h, radius));
   return tex;
 }
 

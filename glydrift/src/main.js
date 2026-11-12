@@ -7,12 +7,13 @@ import "@fontsource/silkscreen/700.css";
 import "./fonts/galmuri.css"; // Hangul pixel font (손주원)
 import Phaser from "phaser";
 import "./gfx/tileSpriteFix.js";
-import { GuardHooks, guardScenes, watchContext } from "./systems/frameGuard.js";
+import { GuardHooks, guardScenes } from "./systems/frameGuard.js";
+import { ContextGuard } from "./systems/contextGuard.js";
 import { CrashReport } from "./systems/crashReport.js";
 import { installA11y } from "./ui/a11y.js";
 import { CrashSafety } from "./systems/crashSafety.js";
 import { Updater } from "./systems/updater.js";
-import { setupView, VIEW, viewDrifted, viewportSize, wantsFit } from "./config.js";
+import { isIPad, setupView, VIEW, viewDrifted, viewportSize, wantsFit } from "./config.js";
 import { BackdropScene } from "./scenes/BackdropScene.js";
 import { BootScene } from "./scenes/BootScene.js";
 import { CharacterScene } from "./scenes/CharacterScene.js";
@@ -170,7 +171,15 @@ async function boot() {
     // all sound is Tone.js / raw WebAudio; Phaser's own audio context only caused a
     // "not allowed to start" console warning on load
     audio: { noAudio: true },
-    render: { antialias: true, powerPreference: "high-performance", roundPixels: false },
+    // iPad: no multisampled canvas (antialiasGL). Its 4x sample buffer cost ~40 MB of graphics
+    // memory on iPad, part of what ran iPads out of memory mid-run (lost WebGL context:
+    // invisible graphics, then a crash). Textures keep smooth filtering (antialias).
+    render: {
+      antialias: true,
+      antialiasGL: !isIPad(),
+      powerPreference: "high-performance",
+      roundPixels: false,
+    },
     input: { activePointers: 2 },
     disableContextMenu: true,
     // order matters: scenes render in this order (Backdrop → screens → overlays)
@@ -263,7 +272,9 @@ async function boot() {
   Updater.start(game);
   game.events.once("ready", () => {
     updateSafe();
-    watchContext(game);
+    // a lost GPU context pauses the run, rebuilds every texture when it's back, or ends the
+    // run safely (systems/contextGuard.js)
+    ContextGuard.install(game);
     // Phaser's ADD blend is (ONE, DST_ALPHA): inside a transparent post-FX layer that darkens
     // whatever is under the quad, leaving box artifacts. Use a true premultiplied add.
     const r = game.renderer;
@@ -355,6 +366,7 @@ async function boot() {
     window.__heroDefs = CHARACTERS;
     window.__music = Music;
     window.__glySave = Save;
+    window.__glyCtx = ContextGuard;
   }
 }
 

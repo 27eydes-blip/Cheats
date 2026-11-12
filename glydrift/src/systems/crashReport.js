@@ -26,7 +26,10 @@ function device() {
     : /Android/.test(ua)
       ? ua.match(/Android[^;)]*;?[^;)]*/)?.[0]
       : /Mac OS X/.test(ua)
-        ? "Mac"
+        ? // iPadOS Safari says "Macintosh": a touch screen gives it away
+          (navigator.maxTouchPoints || 0) > 1
+          ? "iPad"
+          : "Mac"
         : /Windows/.test(ua)
           ? "Windows"
           : "other";

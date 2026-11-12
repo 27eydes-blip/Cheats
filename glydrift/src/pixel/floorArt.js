@@ -1,7 +1,7 @@
 // Glowing floor liquids (one 32x8 tileable strip per biome): slime, lava, ice, data, blood.
 // Sits behind the floor spikes so it glows between the teeth; scrolls with the world.
 import { FLOOR } from "./colorShift.js";
-import { addTexture, PixelCanvas, shade } from "./px.js";
+import { addTexture, PixelCanvas, rebuild, shade } from "./px.js";
 
 function strip(kind, a, b) {
   const W = 32;
@@ -185,7 +185,7 @@ function strip(kind, a, b) {
 
 export function buildFloorStrips(scene) {
   for (const [id, f] of Object.entries(FLOOR))
-    if (!scene.textures.exists(`floor_${id}`))
+    if (rebuild.on || !scene.textures.exists(`floor_${id}`))
       addTexture(scene, `floor_${id}`, strip(f.kind, f.a, f.b));
 }
 

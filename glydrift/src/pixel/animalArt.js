@@ -3,7 +3,7 @@
 // rim every hero has is added by rim()). Frames: 0/1 idle loop (1 is the portrait), 2 flap,
 // 3 an optional special pose (yawn, fanned tail…).
 import { HEAD_ANCHORS, headAnchor, PORTRAIT_SCALE, rim } from "./common.js";
-import { addAtlas, addTexture, PixelCanvas } from "./px.js";
+import { addAtlas, addTexture, PixelCanvas, rebuild } from "./px.js";
 import { PEACEFUL_DRAW } from "./animalsPeaceful.js";
 import { PRISM_DRAW } from "./animalsPrism.js";
 import { ABYSS_DRAW } from "./animalsAbyss.js";
@@ -87,7 +87,7 @@ function chain() {
 // ------------------------------------------------------------------ build
 let built = false;
 export function buildAnimals(scene) {
-  if (built) return;
+  if (built && !rebuild.on) return; // (drawn again after a lost GPU context: gfx/rebuildArt.js)
   built = true;
   const frames = {};
   for (const [id, draw] of Object.entries(ANIMAL_DRAW)) {
