@@ -92,6 +92,8 @@ npm run preview                         # builds for Workers and serves http://l
    *(Already done once for Montauk? Run only `npm run db:migrate:remote` and then
    `npx wrangler d1 execute townpass --remote --file=seed/<city>.sql` for each new city. Never re-run a seed for a
    city that already exists.)*
+   Content updates such as `seed/update-001-insider-tips.sql` are safe to run once on an existing database;
+   they skip entries that already exist.
 4. **Secrets** (each command prompts for the value):
    ```bash
    npx wrangler secret put STRIPE_SECRET_KEY        # sk_live_… (or sk_test_… first)
