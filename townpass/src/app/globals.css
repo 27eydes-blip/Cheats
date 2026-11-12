@@ -44,11 +44,9 @@ body {
   scroll-margin-top: 4.5rem;
 }
 
-/* Long unbroken words (pasted links, keyboard mashing) must wrap instead of pushing the page sideways. */
-h1,
-h2,
-h3,
-p {
+/* Long unbroken words (pasted links, keyboard mashing, long emails) must wrap instead of pushing
+   the page sideways. Inherited by everything; tables keep their own min-width inside scroll boxes. */
+body {
   overflow-wrap: anywhere;
 }
 

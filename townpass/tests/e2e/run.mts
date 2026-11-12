@@ -21,6 +21,7 @@ const BASE = process.env.E2E_BASE || "http://127.0.0.1:8787";
 const args = process.argv.slice(2);
 const ROUNDS = Number(args[args.indexOf("--rounds") + 1]) || 1;
 const MONKEY_STEPS = Number(args[args.indexOf("--steps") + 1]) || 80;
+const ONLY = args.includes("--only") ? args[args.indexOf("--only") + 1] : ""; // run only suites whose name contains this
 const SEED = args.includes("--seed") ? Number(args[args.indexOf("--seed") + 1]) : 0; // vary to get new random sequences
 const vars = Object.fromEntries(
   readFileSync(new URL("../../.dev.vars", import.meta.url), "utf8")
@@ -38,6 +39,7 @@ function check(name: string, ok: boolean, detail?: string) {
   if (!ok) console.log(`  ✗ [${current}] ${name}${detail ? ` — ${detail}` : ""}`);
 }
 async function suite(name: string, fn: () => Promise<void>) {
+  if (ONLY && !name.includes(ONLY)) return;
   current = name;
   const before = results.length;
   try {
@@ -311,6 +313,9 @@ async function browserFlows(slug: string, token: string) {
 }
 
 async function adminBrowserFlow(round: number) {
+  // The login lockout (10 failed attempts / 15 min) is working as designed; each round deliberately
+  // fails once, so clear the LOCAL lockout first or repeated runs would lock the harness out.
+  require("node:child_process").execFileSync("npx", ["wrangler", "d1", "execute", "townpass", "--local", "--command", "DELETE FROM rate_limits WHERE key LIKE 'admin-login:%'"], { stdio: "ignore" });
   const b = await chromium.launch();
   const errors: string[] = [];
   try {
