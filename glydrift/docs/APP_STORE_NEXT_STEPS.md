@@ -2,18 +2,18 @@
 
 Everything in the game itself is done and tested. These are the steps only you can do (they need
 your Apple account, your Supabase dashboard or a real device). Details for each are in
-`APP_STORE_CHECKLIST.md`, `CODEMAGIC_SETUP.md` and `docs/APP_STORE_REVIEW.md`.
+`APP_STORE_CHECKLIST.md`, `CODEMAGIC_SETUP.md` and `appstore/APP_STORE_TEXT.md`.
 
 ## 1. Supabase (SQL Editor, ~10 minutes)
 
-1. **Database → Extensions → pg_cron → Enable.** Then run
+1. Run `supabase/cleanup/20261108_remove_ci_test_scores.sql` (removes test scores from the
+   leaderboard before ALL MIGHTY or a reviewer sees them). Do this one first.
+2. **Database → Extensions → pg_cron → Enable.** Then run
    `supabase/migrations/20261109000001_all_mighty.sql` (see `supabase/ALL_MIGHTY.md`). Without it
    ALL MIGHTY doesn't update.
-2. Run `supabase/migrations/20261113000001_delete_account_everything.sql` (Delete my account
+3. Run `supabase/migrations/20261113000001_delete_account_everything.sql` (Delete my account
    now also removes the player's crash reports, their rows in the November leaderboard backup and
    their name on the ALL MIGHTY board). Safe to run more than once.
-3. Run `supabase/cleanup/20261108_remove_ci_test_scores.sql` (removes test scores from the
-   leaderboard before reviewers see it).
 4. Run `supabase/queries/ipad_crashes.sql` (read-only). Look at result 2: if the iPad crashes
    cluster at realm borders, the 12 Nov fix covers them. If they cluster somewhere else, send me
    the result before submitting.
@@ -45,15 +45,16 @@ your Apple account, your Supabase dashboard or a real device). Details for each 
 
 ## 4. The listing
 
-1. **Screenshots**: ready-made at the exact sizes (iPhone 6.9" 1290 × 2796, iPad 13"
-   2048 × 2732): upload them as they are.
+1. **Screenshots**: ready-made in `glydrift/appstore/screenshots/` at the exact sizes (iPhone 6.9"
+   1320 × 2868, iPad 13" 2064 × 2752, five each, captions drawn in): upload them in order 01–05.
+   Optional App Preview video: `glydrift/appstore/preview/app-preview-886x1920.mp4`.
 2. Name, subtitle, promotional text, description, keywords: copy from
-   `docs/APP_STORE_REVIEW.md` → "Store listing".
+   `glydrift/appstore/APP_STORE_TEXT.md` → "Listing".
 3. **Privacy Policy URL:** `https://glydrift.com/privacy` (live). **Support URL:**
    `https://glydrift.com/support` (live).
-4. **App Privacy** answers and the **age rating** answers: `docs/APP_STORE_REVIEW.md`.
+4. **App Privacy** answers and the **age rating** answers: `glydrift/appstore/APP_STORE_TEXT.md`.
 5. **Copyright:** `2026 Sam Eyde III`. Category: Games → Arcade. Price: Free.
 6. **App Review Information**: your contact details, the review notes and a demo account
-   (`docs/APP_STORE_REVIEW.md` → "Review notes" / "The demo account").
+   (`glydrift/appstore/APP_STORE_TEXT.md` → "App Review Notes"; fill in the demo account).
 7. Attach the Drift Pass+ in-app purchase to version 1.0.0, choose the TestFlight build,
    **Submit for Review**.
