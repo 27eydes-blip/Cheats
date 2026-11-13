@@ -2,7 +2,16 @@
 // is rebuilt when the context is back (even if the browser wiped the canvases they came from),
 // and the game shows everything again. If it never comes back, the run ends safely.
 import { expect, test } from "@playwright/test";
-import { fieldPoint, openGame, press, reseed, run, settle, tap, waitFor } from "./helpers.js";
+import {
+  fieldPoint,
+  openGame,
+  press,
+  reseed,
+  run,
+  settle,
+  tap,
+  waitFor,
+} from "./helpers.js";
 
 /** Fly a god run forward `frames` frames (logic only), keeping the game's clock continuous. */
 const fly = (page, frames) =>
@@ -39,7 +48,8 @@ const wipeCanvases = (page) =>
     let n = 0;
     const seen = new Set();
     const wipe = (c) => {
-      if (!c || seen.has(c) || typeof c.getContext !== "function" || !c.width) return;
+      if (!c || seen.has(c) || typeof c.getContext !== "function" || !c.width)
+        return;
       seen.add(c);
       c.getContext("2d")?.clearRect(0, 0, c.width, c.height);
       n++;
@@ -151,7 +161,9 @@ test("lost GPU context mid-run: pauses at once, rebuilds every texture, everythi
   expect(lost.checkpoint, "the run is checkpointed").toBe(true);
   // nothing moves while the screen can't be drawn
   await run(page, 2000);
-  expect(await page.evaluate(() => window.__glydrift.scene.getScene("Game").meters)).toBe(lost.m);
+  expect(
+    await page.evaluate(() => window.__glydrift.scene.getScene("Game").meters),
+  ).toBe(lost.m);
 
   // the canvases behind every texture are wiped too (iOS), then the context comes back
   expect(await wipeCanvases(page)).toBeGreaterThan(100);
@@ -176,17 +188,24 @@ test("lost GPU context mid-run: pauses at once, rebuilds every texture, everythi
   expect(back.pauseMenu, "the PAUSED menu is up").toBe(true);
 
   // the frozen frame looks the same as before the loss (pause menu out of the way)
-  await page.evaluate(() => window.__glydrift.scene.getScene("Hud").pauseLayer.setVisible(false));
+  await page.evaluate(() =>
+    window.__glydrift.scene.getScene("Hud").pauseLayer.setVisible(false),
+  );
   const after = await grabFrame(page);
   const cmp = diffRatio(before, after);
   console.log("context restore diff", JSON.stringify(cmp));
   // (without the rebuild: ~88% of the cells change and only a third of the screen is lit;
   // with it: a few cells, where the rebuilt scenery placed its decorations differently)
-  expect(cmp.diff, "hero, hazards and scenery are all drawn again").toBeLessThan(0.3);
+  expect(
+    cmp.diff,
+    "hero, hazards and scenery are all drawn again",
+  ).toBeLessThan(0.3);
   expect(cmp.lit).toBeGreaterThan(0.6);
 
   // RESUME: the run carries on and keeps scoring
-  await page.evaluate(() => window.__glydrift.scene.getScene("Hud").pauseLayer.setVisible(true));
+  await page.evaluate(() =>
+    window.__glydrift.scene.getScene("Hud").pauseLayer.setVisible(true),
+  );
   await page.evaluate(() => window.__glydrift.scene.getScene("Hud").resume());
   const go = await fly(page, 60 * 5);
   expect(go.state).toBe("playing");
@@ -203,14 +222,22 @@ test("GPU context that never comes back: the run ends safely, the score is saved
   expect(at.state).toBe("playing");
   const before = await page.evaluate(() => {
     const st = window.__glySave.data.stats;
-    return { runs: st.runs ?? st.totalRuns ?? 0, dist: st.totalDistance ?? st.distance ?? 0 };
+    return {
+      runs: st.runs ?? st.totalRuns ?? 0,
+      dist: st.totalDistance ?? st.distance ?? 0,
+    };
   });
   await loseContext(page);
   await run(page, 50);
   expect(await page.evaluate(() => window.__glyCtx.lost)).toBe(true);
   // no context for 8 s of the game on screen → the run ends, the page starts again
   const reloaded = page.waitForEvent("load", { timeout: 60_000 });
-  for (let i = 0; i < 12 && (await page.evaluate(() => !window.__glyCtx.gaveUp)); i++) await run(page, 1000);
+  for (
+    let i = 0;
+    i < 12 && (await page.evaluate(() => !window.__glyCtx.gaveUp));
+    i++
+  )
+    await run(page, 1000);
   const ended = await page.evaluate(() => ({
     gaveUp: window.__glyCtx.gaveUp,
     note: document.getElementById("gfx-note")?.textContent || "",
@@ -230,14 +257,19 @@ test("GPU context that never comes back: the run ends safely, the score is saved
   await waitFor(page, () => window.__glydrift?.scene.isActive("Menu"), 30_000);
   const home = await page.evaluate(() => ({
     lost: window.__glyCtx.lost,
-    runs: window.__glySave.data.stats.runs ?? window.__glySave.data.stats.totalRuns ?? 0,
+    runs:
+      window.__glySave.data.stats.runs ??
+      window.__glySave.data.stats.totalRuns ??
+      0,
   }));
   expect(home.lost).toBe(false);
   expect(home.runs).toBe(runsNow); // (counted once: not again at the next launch)
   expect(log.errors).toEqual([]);
 });
 
-test("GPU context lost on the home screen: comes back with the screen rebuilt", async ({ page }) => {
+test("GPU context lost on the home screen: comes back with the screen rebuilt", async ({
+  page,
+}) => {
   const log = await openGame(page);
   const before = await grabFrame(page);
   await loseContext(page);
@@ -246,7 +278,9 @@ test("GPU context lost on the home screen: comes back with the screen rebuilt", 
   await wipeCanvases(page);
   await page.evaluate(() => window.__glyLose.restoreContext());
   await waitFor(page, () => !window.__glyCtx.lost, 10_000);
-  expect(await page.evaluate(() => window.__glyCtx.lastRebuild.missing)).toEqual([]);
+  expect(
+    await page.evaluate(() => window.__glyCtx.lastRebuild.missing),
+  ).toEqual([]);
   await run(page, 3000); // (the home screen starts again: let its fade-in finish)
   const after = await grabFrame(page);
   const cmp = diffRatio(before, after);
@@ -265,7 +299,9 @@ test("GPU context lost while the next realm's art is still uploading: rebuilt in
   // the next realm's uploads are part-way through (they're spread over ~20 frames)
   const mid = await page.evaluate(() => {
     const a = window.__glyArt;
-    const id = ["solar", "frozen", "glitch"].find((r) => !a.builtBiomes().includes(r));
+    const id = ["solar", "frozen", "glitch"].find(
+      (r) => !a.builtBiomes().includes(r),
+    );
     a.queueBiomeArt(id);
     for (let i = 0; i < 3; i++) a.pumpBiomeArt();
     return { id, pending: a.pendingBiomes() };
@@ -282,9 +318,58 @@ test("GPU context lost while the next realm's art is still uploading: rebuilt in
     built: window.__glyArt.builtBiomes(),
     pending: window.__glyArt.pendingBiomes(),
   }));
-  expect(back.gaveUp, "the run isn't ended: everything could be rebuilt").toBeNull();
+  expect(
+    back.gaveUp,
+    "the run isn't ended: everything could be rebuilt",
+  ).toBeNull();
   expect(back.missing).toEqual([]);
   expect(back.built).toContain(mid.id);
   expect(back.pending).toEqual([]);
+  expect(log.errors).toEqual([]);
+});
+
+test("GPU context lost after visiting the Shop and the Levels map: nothing missing, no give-up", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const log = await openGame(page);
+  // (their textures outlive the screens: the rebuild must know how to draw them again)
+  for (const key of ["Shop", "LevelSelect"]) {
+    await page.evaluate((k) => {
+      const g = window.__glydrift;
+      g.scene.stop("Menu");
+      g.scene.start(k);
+    }, key);
+    await settle(page, key, 600);
+    await page.evaluate((k) => {
+      const g = window.__glydrift;
+      g.scene.stop(k);
+      g.scene.start("Menu");
+    }, key);
+    await settle(page, "Menu", 400);
+  }
+  expect(
+    await page.evaluate(() =>
+      window.__glydrift.textures.exists("shop_pattern"),
+    ),
+  ).toBe(true);
+  expect(
+    await page.evaluate(() => window.__glydrift.textures.exists("lvmap")),
+  ).toBe(true);
+  await loseContext(page);
+  await run(page, 300);
+  await wipeCanvases(page);
+  await page.evaluate(() => window.__glyLose.restoreContext());
+  await waitFor(
+    page,
+    () => !window.__glyCtx.lost || !!window.__glyCtx.gaveUp,
+    10_000,
+  );
+  const r = await page.evaluate(() => ({
+    gaveUp: window.__glyCtx.gaveUp,
+    missing: window.__glyCtx.lastRebuild?.missing,
+  }));
+  expect(r.gaveUp).toBeNull();
+  expect(r.missing).toEqual([]);
   expect(log.errors).toEqual([]);
 });
