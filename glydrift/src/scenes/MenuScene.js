@@ -27,7 +27,7 @@ import { Account } from "../online/account.js";
 import { LbReset } from "../online/lbReset.js";
 import { CrashSafety } from "../systems/crashSafety.js";
 import { Updater } from "../systems/updater.js";
-import { openSite } from "../systems/platform.js";
+import { isNativeApp, openMail, openSite, SUPPORT_EMAIL } from "../systems/platform.js";
 import { openAccount } from "../ui/accountModal.js";
 import { getCosmetic, Shop } from "../data/cosmetics.js";
 import { lockerTotals } from "../data/locker.js";
@@ -182,6 +182,8 @@ export class MenuScene extends Phaser.Scene {
     // private browsing / blocked storage: the game runs, but say that progress won't save
     const note = document.getElementById("storage-note");
     if (note && !Save.canPersist()) {
+      // (the App Store app has no private browsing: say it the app's way)
+      if (isNativeApp()) note.textContent = "Storage unavailable: progress won't save";
       note.classList.add("show");
       const hide = () => note.classList.remove("show");
       this.time.delayedCall(8000, hide);
@@ -1872,6 +1874,19 @@ export class MenuScene extends Phaser.Scene {
       plainText(this, W / 2, cy + 22, COPYRIGHT, 14, "#a89ed8"),
     ]);
     c.add(credits);
+    // the support address, readable in the app itself (App Review: a way to reach the developer);
+    // tapping it starts an email
+    const mail = plainText(this, W / 2, cy + 50, SUPPORT_EMAIL, 15, "#3ef4ff").setName("supportEmail");
+    // (a roomier tap area than the text itself, still clear of DONE)
+    mail
+      .setInteractive({
+        hitArea: new Phaser.Geom.Rectangle(-30, -12, mail.width + 60, mail.height + 24),
+        hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+        useHandCursor: true,
+      })
+      .on("pointerup", () => openMail("Glydrift support"));
+    mail.a11yLabel = `Email ${SUPPORT_EMAIL}`;
+    c.add(mail);
     // (on the shortest screens with every optional row showing, shrink the panel to fit)
     if (h > H - 24) {
       const k = (H - 24) / h;

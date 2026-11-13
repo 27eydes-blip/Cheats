@@ -13,6 +13,7 @@ import { CrashReport } from "./systems/crashReport.js";
 import { installA11y } from "./ui/a11y.js";
 import { CrashSafety } from "./systems/crashSafety.js";
 import { Updater } from "./systems/updater.js";
+import { isNativeApp } from "./systems/platform.js";
 import { isIPad, setupView, VIEW, viewDrifted, viewportSize, wantsFit } from "./config.js";
 import { BackdropScene } from "./scenes/BackdropScene.js";
 import { BootScene } from "./scenes/BootScene.js";
@@ -68,8 +69,11 @@ function showNoWebGL() {
   el.innerHTML =
     '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;' +
     'padding:24px;text-align:center;color:#e8e0ff;font:600 18px Rajdhani,system-ui,sans-serif">' +
-    "Glydrift needs WebGL graphics.<br>Turn on hardware acceleration in your browser settings," +
-    " or try another browser.</div>";
+    (isNativeApp()
+      ? "Glydrift couldn't start its graphics.<br>Close the app and open it again, or restart your device."
+      : "Glydrift needs WebGL graphics.<br>Turn on hardware acceleration in your browser settings," +
+        " or try another browser.") +
+    "</div>";
 }
 
 async function boot() {
@@ -397,7 +401,9 @@ const keepNative = (e) => typing(e) || e.target?.closest?.("#share-modal img");
 const block = (e) => e.cancelable && e.preventDefault();
 for (const type of ["gesturestart", "gesturechange", "gestureend", "dblclick"])
   document.addEventListener(type, block, { passive: false });
-document.addEventListener("touchmove", (e) => !typing(e) && block(e), { passive: false });
+// (a scrolling list in an overlay, REPORT A NAME's names, still scrolls with a finger)
+const scrolls = (e) => e.target?.closest?.(".report-list");
+document.addEventListener("touchmove", (e) => !typing(e) && !scrolls(e) && block(e), { passive: false });
 document.addEventListener("wheel", (e) => e.ctrlKey && block(e), { passive: false }); // trackpad pinch
 document.addEventListener("contextmenu", (e) => !keepNative(e) && block(e));
 document.addEventListener("selectstart", (e) => !typing(e) && block(e));

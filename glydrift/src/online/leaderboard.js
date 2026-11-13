@@ -17,6 +17,7 @@ import { Titles } from "../data/titles.js";
 import { AllMighty } from "../data/allMighty.js";
 import { Shop } from "../data/cosmetics.js";
 import { TEST } from "../systems/testFlags.js";
+import { isOffensiveName } from "./username.js";
 
 // ?lbtest routes all reads/writes to "test-…" levels so testing never touches the real boards
 // (test builds only)
@@ -266,11 +267,20 @@ class LeaderboardService {
   /** Rows with every hidden player's name replaced (their score stays, the name doesn't). */
   maskHidden(rows) {
     const hidden = this.hidden;
+    // (also any name the word filter refuses: one set before the filter, or by a modified game)
     return rows.map((r) =>
-      r && hidden[r.player_id] && r.player_id !== this.userId
+      r && r.player_id !== this.userId && (hidden[r.player_id] || isOffensiveName(r.username))
         ? { ...r, username: HIDDEN_NAME, hiddenName: true }
         : r,
     );
+  }
+
+  /** Block a player: their name is hidden on this device (no report is sent). */
+  blockPlayer(playerId, name) {
+    if (!playerId || playerId === this.userId) return false;
+    this.hidden[playerId] = String(name || "").slice(0, 40);
+    Save.write();
+    return true;
   }
 
   /**

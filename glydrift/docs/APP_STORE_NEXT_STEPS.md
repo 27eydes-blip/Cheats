@@ -9,15 +9,18 @@ your Apple account, your Supabase dashboard or a real device). Details for each 
 1. **Database → Extensions → pg_cron → Enable.** Then run
    `supabase/migrations/20261109000001_all_mighty.sql` (see `supabase/ALL_MIGHTY.md`). Without it
    ALL MIGHTY doesn't update.
-2. Run `supabase/cleanup/20261108_remove_ci_test_scores.sql` (removes test scores from the
+2. Run `supabase/migrations/20261113000001_delete_account_everything.sql` (Delete my account
+   now also removes the player's crash reports, their rows in the November leaderboard backup and
+   their name on the ALL MIGHTY board). Safe to run more than once.
+3. Run `supabase/cleanup/20261108_remove_ci_test_scores.sql` (removes test scores from the
    leaderboard before reviewers see it).
-3. Run `supabase/queries/ipad_crashes.sql` (read-only). Look at result 2: if the iPad crashes
+4. Run `supabase/queries/ipad_crashes.sql` (read-only). Look at result 2: if the iPad crashes
    cluster at realm borders, the 12 Nov fix covers them. If they cluster somewhere else, send me
    the result before submitting.
-4. **Authentication → Providers → Apple → Client IDs:** add `com.glydrift.game`.
-5. **Edge Functions → Secrets:** `APPSTORE_BUNDLE_ID` = `com.glydrift.game` (without it every
+5. **Authentication → Providers → Apple → Client IDs:** add `com.glydrift.game`.
+6. **Edge Functions → Secrets:** `APPSTORE_BUNDLE_ID` = `com.glydrift.game` (without it every
    Drift Pass+ purchase is rejected).
-6. **Authentication → URL Configuration → Redirect URLs:** `capacitor://localhost`.
+7. **Authentication → URL Configuration → Redirect URLs:** `capacitor://localhost`.
 
 ## 2. Apple (App Store Connect)
 
