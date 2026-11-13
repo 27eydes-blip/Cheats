@@ -21,9 +21,22 @@ const nativeIOS = () => {
   return !!cap?.isNativePlatform?.() && cap.getPlatform?.() === "ios";
 };
 
+// The native plugin, registered once. It is never returned from an async function or awaited
+// itself: a Capacitor plugin is a Proxy that answers every property, "then" included, so
+// awaiting it calls GlydriftStore.then(), which doesn't exist: the await never finished and
+// BUY / RESTORE / the price hung forever. A plain object of its methods is safe to await.
+let storePlugin = null;
 async function nativeStore() {
-  const { registerPlugin } = await import("@capacitor/core");
-  return registerPlugin("GlydriftStore");
+  if (!storePlugin) {
+    const { registerPlugin } = await import("@capacitor/core");
+    storePlugin = registerPlugin("GlydriftStore");
+  }
+  const p = storePlugin;
+  return {
+    purchase: (opts) => p.purchase(opts),
+    restore: () => p.restore(),
+    products: (opts) => p.products(opts),
+  };
 }
 
 /** Ask the server to verify a transaction; resolves to the season it unlocks. */

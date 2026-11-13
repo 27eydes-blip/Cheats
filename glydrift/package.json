@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
+    "postinstall": "node scripts/ios/spm-capacitor-version.mjs",
     "music": "node scripts/music/render.mjs",
     "preview": "vite preview --host",
     "ios:add": "npm run build && npx cap add ios",
