@@ -82,6 +82,12 @@ export function validateUsername(name) {
   if (n.length < 3) return "At least 3 characters";
   if (n.length > 12) return "12 characters max";
   if (!/^[A-Za-z0-9]+$/.test(n)) return "Letters and numbers only";
+  if (hasBlockedWord(n)) return "Please pick a different name";
+  return null;
+}
+
+/** The word filter on its own (profanity, slurs; leetspeak and repeated letters too). */
+function hasBlockedWord(n) {
   const forms = [n.toLowerCase(), ...normalize(n)];
   // word parts split on camelCase and letter/digit boundaries
   const parts = n
@@ -95,8 +101,16 @@ export function validateUsername(name) {
     forms.some((f) => BLOCKED_ANYWHERE.some((w) => f.includes(w))) ||
     parts.some((p) => BLOCKED_EDGE.includes(p)) ||
     forms.some((f) => BLOCKED_EDGE.includes(f));
-  if (bad) return "Please pick a different name";
-  return null;
+  return bad;
+}
+
+/**
+ * A name already on the leaderboard that the word filter refuses (set before the filter got
+ * stricter, or sent by a modified game): the board shows it as a hidden player instead.
+ */
+export function isOffensiveName(name) {
+  const n = String(name ?? "").replace(/[^A-Za-z0-9$@!]/g, "").slice(0, 40);
+  return n.length > 0 && hasBlockedWord(n);
 }
 
 export function suggestUsername() {

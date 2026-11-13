@@ -132,7 +132,7 @@ export async function openAccount({ view } = {}) {
       try {
         await fn();
       } catch (err) {
-        say(err.message || "Something went wrong.");
+        if (err?.code !== "cancelled") say(err.message || "Something went wrong.");
       } finally {
         busy(false);
       }

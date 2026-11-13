@@ -1,7 +1,7 @@
 // Pixel art for the LEVEL MAP: hazard silhouettes for locked nodes, the boss skull, chests,
 // coins and sparkles, and each realm's scenery props (ruins and toxic pools, volcanoes, snowy
 // peaks, broken screens, cavern spires and eyes in the dark). Original art, one atlas ("lvmap").
-import { PixelCanvas, addAtlas, mix, shade } from "./px.js";
+import { PixelCanvas, addAtlas, mix, rebuild, shade } from "./px.js";
 
 const WH = 0xffffff;
 const GR = 0xb8b8c8;
@@ -247,7 +247,9 @@ function abyssArch() {
 /** Build the map atlas once (frames: icon_<hazard>, skull, lock, chest, chest_open, coin,
  * sparkle, and the realm props). */
 export function ensureMapArt(scene) {
-  if (scene.textures.exists("lvmap")) return;
+  // (drawn again after a lost GPU context, gfx/rebuildArt.js: it outlives the level map)
+  if (scene.textures.exists("lvmap") && !rebuild.on) return;
+  rebuild.extra.set("lvmap", () => ensureMapArt(scene));
   const frames = {};
   for (const [k, draw] of Object.entries(ICONS)) frames[`icon_${k}`] = pc(16, 16, draw);
   Object.assign(frames, {

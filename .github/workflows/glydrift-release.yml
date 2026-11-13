@@ -1,6 +1,6 @@
 name: Glydrift iOS release
 
-# Push to the "release" branch → wait for every Glydrift test on that exact commit to pass
+# Push to the "release" branch (or a "release/…" branch, e.g. release/appstore-v1) → wait for every Glydrift test on that exact commit to pass
 # (.github/workflows/glydrift.yml: Chromium, Firefox, WebKit × 7 devices, screenshots) → start
 # the Codemagic iOS build, which builds, signs and uploads to App Store Connect / TestFlight.
 #
@@ -11,7 +11,7 @@ name: Glydrift iOS release
 # variable CODEMAGIC_APP_ID. Until they exist this workflow stops with an explanation.
 on:
   push:
-    branches: [release]
+    branches: [release, "release/**"]
 
 permissions:
   contents: read

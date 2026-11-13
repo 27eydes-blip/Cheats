@@ -43,7 +43,7 @@ Connect doesn't ask again for each build. No documents needed.
 | Simulated Gambling | None. (Lucky Spin and Mystery Pods use coins earned by playing, can't be bought with money, never pay out money and show their odds.) |
 | Contests | None |
 | Unrestricted web access | No |
-| User-generated content | Yes: usernames on the leaderboard (profanity filter, REPORT A NAME, names removed after reports) |
+| User-generated content | Yes: usernames on the leaderboard (profanity filter, REPORT A NAME, BLOCK, names removed after reports) |
 | Messaging / chat | No |
 | Loot boxes (paid random items) | No |
 
@@ -66,8 +66,10 @@ Expected rating: **9+** (because of mild cartoon violence). Made for Kids: **No.
 > the Lucky Spin screen; on each pod in the Shop). They can't be bought with real money.
 >
 > Account deletion: Settings → ACCOUNT → DELETE MY ACCOUNT (deletes everything immediately).
-> Report an offensive name: Leaderboard → REPORT A NAME.
-> Privacy policy and support: Settings → PRIVACY POLICY / SUPPORT.
+> Report or block a player: Leaderboard → REPORT A NAME (tap a name to report it, or BLOCK to
+> hide that player). Names are also checked against a word filter.
+> Privacy policy and support: Settings → PRIVACY POLICY / SUPPORT; support@glydrift.com is shown
+> in Settings and on the report screen.
 >
 > Some playable heroes are based on real people; each has given permission to appear in the game.
 

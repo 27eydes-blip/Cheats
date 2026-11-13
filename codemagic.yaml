@@ -1,7 +1,7 @@
 # Codemagic: build Glydrift for iOS and upload it to App Store Connect / TestFlight — no Mac needed.
 #
 # How a release happens:
-#   1. You push to the "release" branch.
+#   1. You push to the "release" branch (or a "release/…" branch, e.g. release/appstore-v1).
 #   2. GitHub Actions runs every Glydrift test (.github/workflows/glydrift.yml).
 #   3. Only if all of them pass, .github/workflows/glydrift-release.yml starts this workflow
 #      through the Codemagic API (so no Codemagic Mac minutes are spent waiting on tests).
@@ -54,9 +54,12 @@ workflows:
       - name: Set the build number
         script: |
           # Version stays 1.0.0 (MARKETING_VERSION in the Xcode project). Every upload needs a
-          # higher build number: Codemagic's own counter for this workflow (1, 2, 3, …).
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" ios/App/App/Info.plist
-          echo "Glydrift 1.0.0 ($BUILD_NUMBER)"
+          # higher build number: Codemagic's own counter for this workflow (1, 2, 3, …) plus 100,
+          # so it is always above any build uploaded earlier some other way (Xcode, an earlier
+          # Codemagic app whose counter started again at 1). Never lower this offset.
+          IOS_BUILD=$((BUILD_NUMBER + 100))
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $IOS_BUILD" ios/App/App/Info.plist
+          echo "Glydrift 1.0.0 ($IOS_BUILD)"
 
       - name: Code signing (automatic)
         script: |

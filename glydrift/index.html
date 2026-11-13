@@ -364,6 +364,31 @@
         max-height: 46vh;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+      }
+      #account-modal .report-row {
+        display: flex;
+        gap: 8px;
+      }
+      #account-modal .report-row button:first-child {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #account-modal .report-row button.block {
+        flex: none;
+        font-size: 12px;
+        padding: 8px 12px;
+        border-color: #ff4f7a;
+        box-shadow: none;
+      }
+      #account-modal p.contact {
+        font-size: 13px;
+        text-align: center;
+      }
+      #account-modal p.contact a {
+        color: #8fe9ff;
       }
       #account-modal button.link {
         background: none;

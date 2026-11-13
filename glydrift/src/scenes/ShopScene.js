@@ -32,7 +32,7 @@ import {
 import { HAT_FIT } from "../pixel/cosmeticArt.js";
 import { PORTRAIT_K } from "../pixel/common.js";
 import { greyPortrait } from "../pixel/grayHero.js";
-import { canvasTexture } from "../pixel/px.js";
+import { canvasTexture, rebuild } from "../pixel/px.js";
 import { killTweensDeep, button, fadeTo, RollingCounter } from "../ui/ui.js";
 
 // each tab glows its own colour when selected
@@ -114,7 +114,9 @@ export function pixelText(scene, x, y, str, size, color = "#ffffff", opts = {}) 
 
 /** The faint scrolling pixel-icon pattern behind the shop and the pass. */
 export function ensureShopPattern(scene) {
-  if (scene.textures.exists("shop_pattern")) return;
+  // (drawn again after a lost GPU context, gfx/rebuildArt.js: it outlives the shop screen)
+  if (scene.textures.exists("shop_pattern") && !rebuild.on) return;
+  rebuild.extra.set("shop_pattern", () => ensureShopPattern(scene));
   const T = 256;
   const cv = document.createElement("canvas");
   cv.width = T;

@@ -22,3 +22,22 @@ export function openSite(page) {
     // nothing more to do: the address is also listed on the App Store page
   }
 }
+
+/** The support address shown in the game (Settings, REPORT A NAME) and on glydrift.com/support. */
+export const SUPPORT_EMAIL = "support@glydrift.com";
+
+/**
+ * Write to support: the Mail app (the App Store app hands mailto: links to iOS; a browser opens
+ * its mail handler).
+ */
+export function openMail(subject = "") {
+  const url = `mailto:${SUPPORT_EMAIL}${subject ? `?subject=${encodeURIComponent(subject)}` : ""}`;
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.rel = "noopener";
+    a.click();
+  } catch {
+    // nothing more to do: the address is on screen
+  }
+}

@@ -57,6 +57,8 @@ function notSetUp(err) {
   return ["42P01", "PGRST205", "PGRST202", "42883"].includes(err?.code);
 }
 
+let appleSignIn = null; // the native Sign in with Apple plugin, once registered
+
 // ------------------------------------------------------------------ real backend (Supabase)
 const supabaseBackend = {
   async sb() {
@@ -90,7 +92,9 @@ const supabaseBackend = {
   async signInApple() {
     const { Capacitor, registerPlugin } = await import("@capacitor/core");
     if (Capacitor.getPlatform() !== "ios") throw new Error("Sign in with Apple is on iPhone.");
-    const SignInWithApple = registerPlugin("SignInWithApple");
+    // (registered once; never awaited itself: see nativeStore() in store.js)
+    appleSignIn ||= registerPlugin("SignInWithApple");
+    const SignInWithApple = appleSignIn;
     const nonce = randomString(32);
     const res = await SignInWithApple.authorize({
       clientId: "com.glydrift.game",
@@ -469,6 +473,9 @@ class AccountService {
       await this.pullAndMerge();
       this.emit();
     } catch (err) {
+      // closing Apple's sheet isn't an error: no message
+      if (/\b1001\b|cancel/i.test(`${err?.message || err || ""} ${err?.code || ""}`))
+        throw new AccountError("", "cancelled");
       throw new AccountError(explain(err));
     }
   }

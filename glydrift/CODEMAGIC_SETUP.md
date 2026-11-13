@@ -16,7 +16,7 @@ you push to "release"
           └─► starts Codemagic "Glydrift iOS → TestFlight"   (codemagic.yaml)
                  1. checks the test result again (a build can't skip the tests)
                  2. npm ci → vite build → cap sync ios
-                 3. build number = Codemagic's build counter (version stays 1.0.0)
+                 3. build number = Codemagic's build counter + 100 (version stays 1.0.0)
                  4. automatic code signing
                  5. builds the .ipa → uploads to App Store Connect → TestFlight
 ```
@@ -30,6 +30,8 @@ To release:
 ```bash
 git push origin <the-branch-you-want-to-ship>:release
 ```
+
+Pushing to a `release/…` branch (for example `release/appstore-v1`) releases the same way.
 
 Then watch **GitHub → Actions → Glydrift iOS release**. When it finishes, it links to the Codemagic build.
 
