@@ -104,7 +104,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           LANE: ${{ steps.lane.outputs.lane }}
           # (an App Store release always runs its own full lane: never reused)
-          REUSE_OK: ${{ github.event_name == 'push' && github.ref != 'refs/heads/release' }}
+          REUSE_OK: ${{ github.event_name == 'push' && github.ref != 'refs/heads/release' && !startsWith(github.ref, 'refs/heads/release/') }}
         run: |
           echo "hit=false" >> "$GITHUB_OUTPUT"
           [ "$REUSE_OK" = "true" ] && [ "$LANE" != "none" ] || exit 0
