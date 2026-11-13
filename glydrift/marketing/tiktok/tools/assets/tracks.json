@@ -1,0 +1,171 @@
+{
+ "solar": {
+  "name": "Solar Storm",
+  "bpm": 100,
+  "bar": 2.4,
+  "length": 33.6,
+  "pad": 0.05,
+  "files": {
+   "drums": "solar-drums.4860244e.mp3",
+   "bass": "solar-bass.e4506ef7.mp3",
+   "skank": "solar-skank.af35ee1b.mp3",
+   "lead": "solar-lead.5c3c4e8b.mp3"
+  }
+ },
+ "void": {
+  "name": "Neon Void",
+  "bpm": 90,
+  "bar": 2.6666666666666665,
+  "length": 37.33333333333333,
+  "pad": 0.05,
+  "files": {
+   "drums": "void-drums.4772b8e6.mp3",
+   "bass": "void-bass.8c38a791.mp3",
+   "skank": "void-skank.3a62dbed.mp3",
+   "lead": "void-lead.b9e45c8a.mp3"
+  }
+ },
+ "menu": {
+  "name": "Lounge (Menu)",
+  "bpm": 75,
+  "bar": 3.2,
+  "length": 44.800000000000004,
+  "pad": 0.05,
+  "files": {
+   "drums": "menu-drums.68e16d81.mp3",
+   "bass": "menu-bass.f6286601.mp3",
+   "skank": "menu-skank.bfc89a94.mp3",
+   "lead": "menu-lead.8efcf38d.mp3"
+  }
+ },
+ "glitch": {
+  "name": "Glitch Realm",
+  "bpm": 70,
+  "bar": 3.4285714285714284,
+  "length": 48,
+  "pad": 0.05,
+  "files": {
+   "drums": "glitch-drums.14129ec5.mp3",
+   "bass": "glitch-bass.4d960ed6.mp3",
+   "skank": "glitch-skank.0e5af57d.mp3",
+   "lead": "glitch-lead.6e96b892.mp3"
+  }
+ },
+ "abyss": {
+  "name": "Abyss",
+  "bpm": 140,
+  "bar": 1.7142857142857142,
+  "length": 48,
+  "pad": 0.05,
+  "files": {
+   "drums": "abyss-drums.e24f37f2.mp3",
+   "bass": "abyss-bass.cdc35d9a.mp3",
+   "skank": "abyss-skank.d277cd93.mp3",
+   "lead": "abyss-lead.1550d06e.mp3"
+  }
+ },
+ "frozen": {
+  "name": "Frozen Nebula",
+  "bpm": 80,
+  "bar": 3,
+  "length": 42,
+  "pad": 0.05,
+  "files": {
+   "drums": "frozen-drums.5446b173.mp3",
+   "bass": "frozen-bass.00a8894e.mp3",
+   "skank": "frozen-skank.eb6456bb.mp3",
+   "lead": "frozen-lead.f5629b54.mp3"
+  }
+ },
+ "valley": {
+  "name": "Peaceful Valley",
+  "bpm": 70,
+  "bar": 3.4285714285714284,
+  "length": 48,
+  "pad": 0.05,
+  "files": {
+   "drums": "valley-drums.4be68ab2.mp3",
+   "bass": "valley-bass.955ec396.mp3",
+   "skank": "valley-skank.3d95978d.mp3",
+   "lead": "valley-lead.5df6349e.mp3"
+  }
+ },
+ "hurricane": {
+  "name": "Hurricane",
+  "bpm": 140,
+  "bar": 1.7142857142857142,
+  "length": 48,
+  "pad": 0.05,
+  "files": {
+   "drums": "hurricane-drums.59d7247c.mp3",
+   "bass": "hurricane-bass.86bfbfa5.mp3",
+   "skank": "hurricane-skank.5c556b91.mp3",
+   "lead": "hurricane-lead.6a7aa8f6.mp3"
+  }
+ },
+ "prism": {
+  "name": "Prism Rift",
+  "bpm": 70,
+  "bar": 3.4285714285714284,
+  "length": 48,
+  "pad": 0.05,
+  "files": {
+   "drums": "prism-drums.2262a3b9.mp3",
+   "bass": "prism-bass.b3afafe5.mp3",
+   "skank": "prism-skank.5af46578.mp3",
+   "lead": "prism-lead.2b9716f5.mp3"
+  }
+ },
+ "chrono": {
+  "name": "Chrono Fracture",
+  "bpm": 70,
+  "bar": 3.4285714285714284,
+  "length": 48,
+  "pad": 0.05,
+  "files": {
+   "drums": "chrono-drums.bbaf91c1.mp3",
+   "bass": "chrono-bass.e3313b43.mp3",
+   "skank": "chrono-skank.e65f941d.mp3",
+   "lead": "chrono-lead.0c36304b.mp3"
+  }
+ },
+ "tidal": {
+  "name": "Tidal Sky",
+  "bpm": 70,
+  "bar": 3.4285714285714284,
+  "length": 48,
+  "pad": 0.05,
+  "files": {
+   "drums": "tidal-drums.fdf43098.mp3",
+   "bass": "tidal-bass.cec5879e.mp3",
+   "skank": "tidal-skank.ac73ea2c.mp3",
+   "lead": "tidal-lead.3de3ba36.mp3"
+  }
+ },
+ "mirror": {
+  "name": "Mirror Realm",
+  "bpm": 70,
+  "bar": 3.4285714285714284,
+  "length": 48,
+  "pad": 0.05,
+  "files": {
+   "drums": "mirror-drums.9677e2c1.mp3",
+   "bass": "mirror-bass.0584a021.mp3",
+   "skank": "mirror-skank.e4f1182b.mp3",
+   "lead": "mirror-lead.926c01e4.mp3"
+  }
+ },
+ "sakura": {
+  "name": "Sakura Skies",
+  "bpm": 95,
+  "bar": 2.526315789473684,
+  "length": 35.368421052631575,
+  "pad": 0.05,
+  "files": {
+   "drums": "sakura-drums.3b10c728.mp3",
+   "bass": "sakura-bass.59bc9d4d.mp3",
+   "skank": "sakura-skank.4fd79dd4.mp3",
+   "lead": "sakura-lead.5c687063.mp3"
+  }
+ }
+}
