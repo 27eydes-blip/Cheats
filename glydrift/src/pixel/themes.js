@@ -731,9 +731,16 @@ export function rebuildPixelArt() {
   if (!artScene) return;
   buildBootArt(artScene);
   for (const id of biomeBuilt) for (const job of buildJobs(id)) job();
+  // a realm whose art was still uploading (queueBiomeArt, ~20 frames as the next realm nears):
+  // the uploads already done need fresh pixels too, so it's finished here in one go
+  for (const id of [...pendingArt.keys()]) {
+    pendingArt.delete(id);
+    for (const job of buildJobs(id)) trackJob(id, job);
+    biomeBuilt.add(id);
+  }
 }
 
 // test builds only: which biomes have art in memory (long-run memory tests)
 /* global __TEST_FLAGS__ */
 if (typeof __TEST_FLAGS__ !== "undefined" && __TEST_FLAGS__ && typeof window !== "undefined")
-  window.__glyArt = { builtBiomes };
+  window.__glyArt = { builtBiomes, queueBiomeArt, pumpBiomeArt, pendingBiomes: () => [...pendingArt.keys()] };

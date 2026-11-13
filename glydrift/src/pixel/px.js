@@ -240,6 +240,12 @@ export function deferUploads(fn) {
   return jobs;
 }
 
+/** Run `fn` (one texture upload) now, or inside deferUploads as one of its queued jobs. */
+export function uploadJob(fn) {
+  if (deferred) deferred.push(fn);
+  else fn();
+}
+
 /**
  * Register a finished canvas as a texture. Phaser's addCanvas() makes a CanvasTexture, which
  * reads every pixel back with getImageData() when it is created: ~0.75 s for one biome's

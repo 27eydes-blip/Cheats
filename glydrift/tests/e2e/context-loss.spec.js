@@ -255,3 +255,36 @@ test("GPU context lost on the home screen: comes back with the screen rebuilt", 
   expect(cmp.diff).toBeLessThan(0.15); // (the home screen animates: its ticker, the hero)
   expect(log.errors).toEqual([]);
 });
+
+test("GPU context lost while the next realm's art is still uploading: rebuilt in full", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const log = await startGodRun(page);
+  await fly(page, 60 * 3);
+  // the next realm's uploads are part-way through (they're spread over ~20 frames)
+  const mid = await page.evaluate(() => {
+    const a = window.__glyArt;
+    const id = ["solar", "frozen", "glitch"].find((r) => !a.builtBiomes().includes(r));
+    a.queueBiomeArt(id);
+    for (let i = 0; i < 3; i++) a.pumpBiomeArt();
+    return { id, pending: a.pendingBiomes() };
+  });
+  expect(mid.pending).toContain(mid.id);
+  await loseContext(page);
+  await run(page, 50);
+  await wipeCanvases(page);
+  await page.evaluate(() => window.__glyLose.restoreContext());
+  await waitFor(page, () => !window.__glyCtx.lost, 10_000);
+  const back = await page.evaluate(() => ({
+    gaveUp: window.__glyCtx.gaveUp,
+    missing: window.__glyCtx.lastRebuild?.missing,
+    built: window.__glyArt.builtBiomes(),
+    pending: window.__glyArt.pendingBiomes(),
+  }));
+  expect(back.gaveUp, "the run isn't ended: everything could be rebuilt").toBeNull();
+  expect(back.missing).toEqual([]);
+  expect(back.built).toContain(mid.id);
+  expect(back.pending).toEqual([]);
+  expect(log.errors).toEqual([]);
+});
