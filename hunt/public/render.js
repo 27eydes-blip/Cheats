@@ -226,11 +226,36 @@ function visRange(map, x0, y0, x1, y1) {
     Math.min(map.gw - 1, Math.floor(x1 / TILE) + 1), Math.min(map.gh - 1, Math.floor(y1 / TILE) + 1)];
 }
 
-export function drawGround(ctx, map, x0, y0, x1, y1, t) {
+// Ground is static, so it's painted once into chunk canvases (CHUNK x CHUNK tiles) at the current
+// render resolution and blitted each frame. Water ripples and the hub stay live.
+const CHUNK = 8;
+export function resetGroundCache(map) { if (map) map._ground = null; }
+export function drawGround(ctx, map, x0, y0, x1, y1, t, res = 1) {
   const th0 = theme(worldKeyAt(map, (x0 + x1) / 2, (y0 + y1) / 2));
   ctx.fillStyle = th0.void;
   ctx.fillRect(x0 - 10, y0 - 10, x1 - x0 + 20, y1 - y0 + 20);
-  const [tx0, ty0, tx1, ty1] = visRange(map, x0, y0, x1, y1);
+  res = Math.max(0.35, Math.min(2, Math.round(res * 4) / 4));
+  if (!map._ground || map._ground.res !== res) map._ground = { res, chunks: new Map() };
+  const G = map._ground, cs = CHUNK * TILE;
+  const cx0 = Math.max(0, Math.floor(x0 / cs)), cy0 = Math.max(0, Math.floor(y0 / cs));
+  const cx1 = Math.min(Math.ceil(map.gw / CHUNK) - 1, Math.floor(x1 / cs)), cy1 = Math.min(Math.ceil(map.gh / CHUNK) - 1, Math.floor(y1 / cs));
+  for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+    let c = G.chunks.get(cy * 1000 + cx);
+    if (!c) {
+      const px = Math.ceil(cs * res);
+      c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(px, px) : Object.assign(document.createElement('canvas'), { width: px, height: px });
+      const g = c.getContext('2d');
+      g.scale(res, res); g.translate(-cx * cs, -cy * cs);
+      paintGround(g, map, cx * cs, cy * cs, cx * cs + cs - 1, cy * cs + cs - 1);
+      G.chunks.set(cy * 1000 + cx, c);
+    }
+    ctx.drawImage(c, cx * cs, cy * cs, cs, cs);
+  }
+  drawGroundLive(ctx, map, x0, y0, x1, y1, t);
+}
+function paintGround(ctx, map, x0, y0, x1, y1) {
+  const t = 0;
+  const [tx0, ty0, tx1, ty1] = [Math.floor(x0 / TILE), Math.floor(y0 / TILE), Math.min(map.gw - 1, Math.floor(x1 / TILE)), Math.min(map.gh - 1, Math.floor(y1 / TILE))];
   for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
     const th = theme(worldKeyAt(map, x * TILE, y * TILE));
     ctx.fillStyle = (x + y) & 1 ? th.groundB : th.groundA;
@@ -246,6 +271,9 @@ export function drawGround(ctx, map, x0, y0, x1, y1, t) {
     ctx.strokeStyle = th.tuft;
     ctx.beginPath(); ctx.moveTo(px - 4, py); ctx.lineTo(px - 6, py - 7); ctx.moveTo(px, py); ctx.lineTo(px, py - 9); ctx.moveTo(px + 4, py); ctx.lineTo(px + 6, py - 7); ctx.stroke();
   }
+}
+function drawGroundLive(ctx, map, x0, y0, x1, y1, t) {
+  const [tx0, ty0, tx1, ty1] = visRange(map, x0, y0, x1, y1);
   // water
   for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
     if (map.t[y * map.gw + x] !== WATER) continue;
@@ -869,6 +897,7 @@ export function drawPortrait(canvas, id) {
   let t = Math.random() * 10;
   const loop = () => {
     if (!canvas.isConnected) return;
+    if (canvas.offsetParent === null) { requestAnimationFrame(loop); return; } // lobby hidden: don't draw
     t += 1 / 60;
     ctx.setTransform(d, 0, 0, d, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);

@@ -12,7 +12,18 @@ test('free play: crossing a zone border is seamless (handoff, no snap)', async (
     const f = () => { window.__L.maxErr = Math.max(window.__L.maxErr, Math.hypot(G.err.x, G.err.y)); requestAnimationFrame(f); };
     requestAnimationFrame(f);
   });
-  await page.keyboard.down(key); await page.waitForTimeout(3500); await page.keyboard.up(key);
+  // walk across the border; sidestep if a hub pillar is in the way (like a player would)
+  await page.keyboard.down(key);
+  let last = null;
+  for (let i = 0; i < 30; i++) {
+    await page.waitForTimeout(200);
+    const s = await page.evaluate(() => ({ x: window.__hunt.pred.x, y: window.__hunt.pred.y, k: [...window.__hunt.conns.values()].find((c) => c.primary)?.key }));
+    if (s.k && s.k !== start) break;
+    if (last && Math.hypot(s.x - last.x, s.y - last.y) < 4) { const side = i % 2 ? 'a' : 'd'; await page.keyboard.down(side); await page.waitForTimeout(400); await page.keyboard.up(side); }
+    last = s;
+  }
+  await page.waitForTimeout(500);
+  await page.keyboard.up(key);
   const end = await page.evaluate(() => [...window.__hunt.conns.values()].find((c) => c.primary)?.key);
   const maxErr = await page.evaluate(() => window.__L.maxErr);
   expect(end).not.toBe(start);
