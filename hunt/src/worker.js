@@ -5,6 +5,7 @@
 //   everything else: static client from ./public
 import { Sim, newId } from './sim.js';
 import { QUICK_MODES, MODES } from './modes.js';
+import { EVENTS } from '../public/events/index.js';
 import {
   BRAWLERS, DT, WORLDS, ZONES, generateArena, generateWorld, zoneBounds, zoneAt, worldId,
 } from '../public/shared.js';
@@ -89,7 +90,7 @@ export class MatchRoom {
     this.endedAt = 0;
     const seed = (Math.random() * 2 ** 32) >>> 0;
     this.sim = new Sim({
-      map: generateArena(seed, cfg.world), mode: cfg.mode, seed, lobbyTime: cfg.lobby, fillBots: cfg.bots,
+      map: generateArena(seed, cfg.world), mode: cfg.mode, seed, lobbyTime: cfg.lobby, fillBots: cfg.bots, forceEvent: cfg.ev,
       send: (id, msg) => { const ws = sockets.get(id); if (ws) sendJSON(ws, msg); },
     });
   }
@@ -110,7 +111,8 @@ export class MatchRoom {
         world = worldId(qw) >= 0 && WORLDS[worldId(qw)].arena ? qw : pick(arenaWorlds());
       } else [, mode, world] = mname.split(':');
       const lobby = isRoom ? Math.max(1.5, Math.min(12, Number(url.searchParams.get('lobby')) || 12)) : 8;
-      this.newMatch({ mode, world, lobby, bots: !(isRoom && url.searchParams.get('bots') === '0') });
+      const ev = isRoom && EVENTS[url.searchParams.get('ev')] ? url.searchParams.get('ev') : null;
+      this.newMatch({ mode, world, lobby, ev, bots: !(isRoom && url.searchParams.get('bots') === '0') });
     }
     const sim = this.sim, sockets = this.sockets;
     const b = url.searchParams.get('brawler');

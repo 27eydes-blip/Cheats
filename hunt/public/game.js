@@ -143,7 +143,7 @@ function startQuick(opts = G.opts) {
   if (room) q.set('room', room);
   if (opts.skip) q.set('skip', opts.skip);
   if (room && !$('bots').checked && !opts.world) q.set('bots', '0');
-  for (const k of ['world', 'mode', 'lobby']) if (opts[k]) q.set(k, opts[k]);
+  for (const k of ['world', 'mode', 'lobby', 'ev']) if (opts[k]) q.set(k, opts[k]);
   openConn('main', '/ws?' + q, { primary: true });
   G.phase = 'waiting';
   $('countdown').textContent = '…'; $('plist').innerHTML = ''; $('waitMode').textContent = 'FINDING HUNTERS'; $('waitDesc').textContent = '';
@@ -614,6 +614,7 @@ function render(t) {
   }
   for (const c of G.view.cubes) R.drawCube(ctx, c[1], c[2], t);
   for (const c of G.view.crystals) R.drawCrystal(ctx, c[1], c[2], t);
+  R.drawShadows(ctx, G.map, x0, y0, x1, y1);
   R.drawBlocks(ctx, G.map, G.crateHp, x0, y0, x1, y1);
 
   const list = G.view.others.map((o) => ({ ...o, me: false, size: sizeOf(o) }));
@@ -625,6 +626,7 @@ function render(t) {
     });
   }
   list.sort((a, b) => a.y - b.y);
+  for (const p of list) R.drawRim(ctx, G.map, p);
   for (const p of list) R.drawAura(ctx, p, t);
   for (const p of list) {
     let alpha = 1;
@@ -636,11 +638,13 @@ function render(t) {
     R.drawBrawler(ctx, p.brawler, p.x, p.y, p.facing, t, { alpha, moving: p.moving, flash: G.flash[p.id], size: p.size });
     R.drawBubble(ctx, p, t);
   }
-  for (const b of G.view.bullets) R.drawBullet(ctx, b.kind, b.x, b.y, b.ang);
-  for (const b of G.localBullets) R.drawBullet(ctx, G.brawler, b.x, b.y, b.ang);
+  const rimAt = (x, y) => R.theme(worldKeyAt(G.map, x, y)).bulletRim;
+  for (const b of G.view.bullets) R.drawBullet(ctx, b.kind, b.x, b.y, b.ang, rimAt(b.x, b.y));
+  for (const b of G.localBullets) R.drawBullet(ctx, G.brawler, b.x, b.y, b.ang, rimAt(b.x, b.y));
 
   R.drawBushes(ctx, G.map, x0, y0, x1, y1, meAlive ? mePos : null, t);
   for (const e of evs) if (EVENTS[e.id].layer !== 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
+  R.drawAmbient(ctx, G.map, view, t, false);
   const P = primary();
   if (P && P.last && P.last.z > 0) R.drawPoison(ctx, P.last.z, ARENA_SIZE, x0, y0, x1, y1, t);
 
@@ -671,6 +675,7 @@ function render(t) {
   ctx.restore();
 
   // ---- screen space
+  R.drawGrade(ctx, G.map, cam, W, H);
   const pe = P?.ev;
   if (pe && EVENTS[pe.id].drawScreen) EVENTS[pe.id].drawScreen(ctx, pe.p, pe.ph, t, W, H, s);
   if (G.hurt > 0) {
@@ -807,6 +812,7 @@ function drawMenuBackdrop(t) {
   ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.translate(-cx, -cy);
   const hw = W / 2 / s, hh = H / 2 / s;
   R.drawGround(ctx, menuMap, cx - hw, cy - hh, cx + hw, cy + hh, t);
+  R.drawShadows(ctx, menuMap, cx - hw, cy - hh, cx + hw, cy + hh);
   R.drawBlocks(ctx, menuMap, new Map(), cx - hw, cy - hh - 60, cx + hw, cy + hh + 60);
   R.drawBushes(ctx, menuMap, cx - hw, cy - hh, cx + hw, cy + hh, null, t);
   ctx.restore();
@@ -830,7 +836,7 @@ $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('play').
 
 // Test flags: ?world=<key>[&mode=<mode>] drops you straight into that arena with bots; ?free=1 into Free Play.
 const qs = new URLSearchParams(location.search);
-if (qs.get('world')) startQuick({ world: qs.get('world'), mode: qs.get('mode') || '', lobby: '1.5', room: 'T' + Math.floor(Math.random() * 1e8) });
+if (qs.get('world')) startQuick({ world: qs.get('world'), mode: qs.get('mode') || '', ev: qs.get('ev') || '', lobby: '1.5', room: 'T' + Math.floor(Math.random() * 1e8) });
 else if (qs.get('free')) startFree();
 
 // exposed for e2e tests

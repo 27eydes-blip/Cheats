@@ -85,6 +85,8 @@ export const WORLDS = [
   { key: 'forest', name: 'Wildwood', order: 2, arena: true, gen: { walls: 5, blocks: 0, bushes: 14, crates: 4, water: 1 } },
   { key: 'desert', name: 'Dust Flats', order: 3, arena: true, gen: { walls: 6, blocks: 1, bushes: 3, crates: 4, water: 1 } },
   { key: 'frozen', name: 'Frozen Lake', order: 4, arena: true, gen: { walls: 6, blocks: 0, bushes: 5, crates: 4, water: 2 } },
+  // id 5 — appended (never reorder). Displayed between Wildwood and Frozen Lake.
+  { key: 'mirage', name: 'Desert Mirage', order: 2.5, arena: true, gen: { walls: 2, blocks: 0, bushes: 3, crates: 4, water: 1, ruins: 4, canyons: 2 } },
 ];
 export const worldId = (key) => WORLDS.findIndex((w) => w.key === key);
 export const worldsInDisplayOrder = () => WORLDS.map((w, id) => ({ ...w, id })).sort((a, b) => a.order - b.order);
@@ -93,7 +95,7 @@ export const worldsInDisplayOrder = () => WORLDS.map((w, id) => ({ ...w, id })).
 export const ZONES = [
   { slot: 'nw', world: 'city', x0: 0, y0: 0 },
   { slot: 'ne', world: 'forest', x0: 2000, y0: 0 },
-  { slot: 'se', world: 'desert', x0: 2000, y0: 2000 },
+  { slot: 'se', world: 'mirage', x0: 2000, y0: 2000 },
   { slot: 'sw', world: 'frozen', x0: 0, y0: 2000 },
 ];
 export const zoneBySlot = (slot) => ZONES.find((z) => z.slot === slot);
@@ -136,6 +138,25 @@ function fillRegion(q, qw, qh, gen, r, scale = 1) {
     }
     // bushes ringing the pond (oasis)
     for (let k = 0; k < 6; k++) { const a = r() * Math.PI * 2; const bx = Math.round(cx + Math.cos(a) * (w + 1.3)), by = Math.round(cy + Math.sin(a) * (h + 1.3)); if (get(bx, by) === EMPTY) set(bx, by, BUSH); }
+  }
+  for (let i = 0; i < (gen.canyons || 0) * scale; i++) { // sandstone canyon ridges: meandering 2-thick walls
+    let x = rx(10), y = ry(10);
+    const horiz = r() < 0.5, len = 6 + Math.floor(r() * 5);
+    for (let k = 0; k < len; k++) {
+      if (k === Math.floor(len / 2)) { horiz ? x++ : y++; continue; } // a pass through the ridge
+      for (let w = 0; w < 2; w++) if (get(horiz ? x : x + w, horiz ? y + w : y) === EMPTY) set(horiz ? x : x + w, horiz ? y + w : y, WALL);
+      if (horiz) { x++; if (r() < 0.3) y += r() < 0.5 ? -1 : 1; } else { y++; if (r() < 0.3) x += r() < 0.5 ? -1 : 1; }
+    }
+  }
+  for (let i = 0; i < (gen.ruins || 0) * scale; i++) { // ancient ruins: a broken ring of single pillars
+    const cx = rx(6) + 3, cy = ry(6) + 3, rad = 2 + Math.floor(r() * 2);
+    for (let k = 0; k < 10; k++) {
+      if (r() < 0.3) continue; // broken / fallen pillar
+      const a = (k / 10) * Math.PI * 2;
+      const px = Math.round(cx + Math.cos(a) * rad), py = Math.round(cy + Math.sin(a) * rad);
+      if (get(px, py) === EMPTY && get(px + 1, py) !== WALL && get(px, py + 1) !== WALL && get(px - 1, py) !== WALL && get(px, py - 1) !== WALL) set(px, py, WALL);
+    }
+    if (r() < 0.6 && get(cx, cy) === EMPTY) set(cx, cy, CRATE); // relic chest in the middle
   }
   for (let i = 0; i < gen.blocks * scale; i++) { // solid "buildings"
     const w = 2 + Math.floor(r() * 2), h = 2 + Math.floor(r() * 3), x = rx(w), y = ry(h);

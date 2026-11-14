@@ -45,35 +45,38 @@ npm run deploy         # → https://hunt.<your-subdomain>.workers.dev
 
 Durable Objects are declared as SQLite-backed classes, so this works on the Workers free plan.
 
+## Game content
+
+**Twists (all modes)**
+- **Bounty:** each kill gives +1 bounty plus everything the victim was carrying. Higher bounty means a stronger glow and more frequent pings on everyone's radar. The top bounty holder is shown on screen with a 👑.
+- **Lay Low:** after 5s in a bush, your glow and radar pings fade out over the next 5s.
+- **Shrink & Speed:** the lower your HP, the smaller your hitbox and the faster you move. Dropping under 25% HP gives you a short speed rush and +15% damage.
+
+**Environment events** (every 30s, with a 5s warning) live in `public/events/`, one file each: walls, overgrowth, wildfire, lava, ice, blackout, supply drop, low gravity, wind. To add one, create a module there and list it in `public/events/index.js`. The comment at the top of that file documents the hooks.
+
+**Quick Hunt modes** (`src/modes.js`): Showdown, Bounty Rush, Hunted, Crystal Grab, played on a random arena from the pool.
+
+**Free Play:** a 4000×4000 world made of 4 zones, each its own Durable Object: Neon City (NW), Wildwood (NE), **Desert Mirage (SE)** and Frozen Lake (SW). A safe hub where the zones meet is where you change brawler and see who's online. When you walk across a zone border, your player is handed off to the next zone's Durable Object. Your client already has that zone's socket open as an observer, and it gets promoted, so there's no loading screen. Bullets that cross a border carry on in the next zone, and kill and bounty credit is sent back to the shooter's zone.
+
+**Worlds** (`WORLDS` in `public/shared.js`): a world's ID is its index in that list, and per-world stats are saved by ID. **Only ever append** to the list. `order` controls display order.
+
+| id | world | display order |
+|----|-------|---------------|
+| 0 | Meadow | 1 |
+| 1 | Neon City | 2 |
+| 2 | Wildwood | 3 |
+| 5 | **Desert Mirage** | 4 |
+| 3 | Dust Flats | 5 |
+| 4 | Frozen Lake | 6 |
+
+### Test flags
+- `?world=mirage` drops you straight into a Desert Mirage arena with bots. Add `&mode=showdown|bounty|hunted|crystals` to pick the mode, and `&ev=lava|wildfire|wind|…` to force that event every cycle, starting at 8s.
+- `?free=1` puts you straight into Free Play.
+
 ## Tests
 
 ```bash
-npm test                       # headless 10-player match in Node (sim only)
+npm test                       # headless sims: every mode × every world, twists, zone handoff, cross-zone combat, Desert Mirage
 npm run dev &                  # then, against the running worker:
 BOTS=0 node test/ws.test.js    # two WebSocket clients; one hunts the other until eliminated
 ```
-
-## How it works
-
-```
-public/
-  shared.js   constants, brawler stats, seeded mirrored map generator, circle-vs-tile collision.
-              Imported by BOTH server and client so prediction matches the server exactly.
-  game.js     lobby UI, socket protocol, prediction/reconciliation, interpolation, effects, HUD
-  input.js    floating twin-stick touch controls, super button, keyboard/mouse
-  render.js   all canvas drawing (characters are drawn in code, so there are no image assets)
-src/
-  worker.js   routes /ws → Matchmaker DO (quick play) or room:<CODE> → MatchRoom DO
-  match.js    the authoritative simulation (movement, bullets, hits, supers, poison, cubes, placement)
-  bots.js     bot brains: target, strafe, lead shots, loot crates/cubes, flee poison, use supers
-```
-
-**Protocol (JSON over WebSocket).**
-- Client to server: `{t:'in', s:seq, mx,my (move), ax,ay (facing), f:angle|null (fire), u:angle|null (super)}`, sent 20 times a second.
-- Server to client: `welcome`, `lobby` (countdown and player list), `start` (map seed and roster), `s` (per-player snapshot: your state plus the last acknowledged input seq, visible enemies, bullets, cubes, crate changes, poison inset, effects), `kill`, `dead` (your placement), `end` (full results).
-
-**Visibility is enforced on the server.** Enemies hidden in bushes, or cloaked Wisps, are never sent to your client unless you're close (170 px for bushes, 110 px for cloak). The server also throttles inputs per tick, so a modified client can't speed-hack.
-
-## Tuning knobs
-
-Most balance values live at the top of `public/shared.js`: brawler HP, speed, damage, range, reload and super cost; poison start (60 s) and close time; crate HP; power-cube bonus; and regen. Bot aggression is set in `src/bots.js` (`sight`, `fireCd`, `skill`).

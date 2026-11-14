@@ -36,6 +36,7 @@ export class Sim {
     this.botTarget = o.botTarget ?? MAX_PLAYERS;
     this.lobbyTime = o.lobbyTime ?? 8;
     this.eventsOn = o.events !== false;
+    this.forceEvent = o.forceEvent || null; // test flag: always run this event, starting at 8s
     this.seed = o.seed ?? 0;
     this.rand = rng((o.seed ?? Date.now()) ^ 0x5bd1e995);
 
@@ -60,7 +61,7 @@ export class Sim {
     this.zoneInset = 0;
     this.event = null; // {id, ph:'warn'|'on', t, params}
     this.lastEvent = null;
-    this.nextEventAt = EVENT_EVERY;
+    this.nextEventAt = this.forceEvent ? 8 : EVENT_EVERY;
     this.mods = {};
     this.botSpawnT = 0;
     this.mode.init?.(this);
@@ -445,7 +446,7 @@ export class Sim {
     const e = this.event;
     if (!e) {
       if (this.time >= this.nextEventAt - EVENT_WARN) {
-        const id = pickEvent(this.rand, this.lastEvent);
+        const id = this.forceEvent || pickEvent(this.rand, this.lastEvent);
         this.lastEvent = id;
         this.event = { id, ph: 'warn', t: EVENT_WARN, params: EVENTS[id].prepare?.(this) || {} };
         this.broadcast(this.evMsg());

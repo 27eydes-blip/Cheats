@@ -10,7 +10,8 @@ export function circlesIn(sim, n, rMin, rMax, nearPlayers = true) {
     } else { const pt = sim.randomPoint(); x = pt.x; y = pt.y; }
     const r = rMin + sim.rand() * (rMax - rMin);
     const b = sim.bounds;
-    if (x < b.x0 + r * 0.5 || y < b.y0 + r * 0.5 || x > b.x1 - r * 0.5 || y > b.y1 - r * 0.5) continue;
+    const m = r + 60; // whole pool inside the playable area (outer walls are 50px)
+    if (x < b.x0 + m || y < b.y0 + m || x > b.x1 - m || y > b.y1 - m) continue;
     if (sim.isSafe(x, y) || (sim.hub && Math.hypot(x - sim.hub.x, y - sim.hub.y) < sim.hub.r + r)) continue;
     if (out.some((c) => Math.hypot(c.x - x, c.y - y) < c.r + r)) continue;
     out.push({ x: Math.round(x), y: Math.round(y), r: Math.round(r) });

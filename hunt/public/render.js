@@ -66,7 +66,151 @@ export const THEMES = {
     },
   },
 };
+
+// DESERT MIRAGE: golden sunset desert. Everything you can fight or get hurt by gets a
+// cool teal/purple rim + dark outline so it pops off the warm ground.
+const MIRAGE = {
+  groundA: '#f3c26a', groundB: '#ecb85f', tuft: 'rgba(168,96,32,0.32)', wallTop: '#eda661', wallSide: '#a3542c',
+  borderTop: '#c4733d', borderSide: '#6e3020', bush: '#4f8a3c', bushHi: '#a8d45e', water: '#1fd6c6', waterHi: '#d4fff8', void: '#3a1a48',
+  pillars: true, shadow: 'rgba(92,30,82,0.30)', shadowDx: 34, shadowDy: 20,
+  rim: '#0e8f97', rimDeep: '#3b1f78', bulletRim: '#3b1f78',
+  hazard: { lava: ['#b9fbff', '#2bc4cf', '#3b1f78'], flame: ['#7ef9ff', '#7a4cff'], warn: '#5ff4ff', ice: '#3b1f78' },
+  deco: (ctx, x, y, h, t) => {
+    // dune ripples
+    if ((h & 3) === 0) {
+      ctx.strokeStyle = 'rgba(190,120,45,0.38)'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(x + 4, y + 30); ctx.quadraticCurveTo(x + 25, y + 20 + (h % 7), x + 46, y + 30); ctx.stroke();
+    }
+    // patches of cracked stone (low-frequency so they cluster)
+    const g = ((((x / 200) | 0) * 92821) ^ (((y / 200) | 0) * 68917)) >>> 0;
+    if ((g & 3) === 0 && (h & 1)) {
+      ctx.fillStyle = '#d8a35a'; ctx.fillRect(x + 1, y + 1, TILE - 2, TILE - 2);
+      ctx.strokeStyle = 'rgba(110,55,30,0.45)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x + 6, y + 10 + (h % 9)); ctx.lineTo(x + 22, y + 24); ctx.lineTo(x + 18, y + 42); ctx.moveTo(x + 22, y + 24); ctx.lineTo(x + 40, y + 20 + (h % 11)); ctx.stroke();
+    }
+    const k = (h >>> 4) % 97;
+    if (k === 1) { // bones
+      ctx.strokeStyle = '#fff7e6'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x + 14, y + 30); ctx.lineTo(x + 34, y + 22); ctx.stroke();
+      ctx.fillStyle = '#fff7e6'; for (const [bx, by] of [[13, 27], [15, 33], [33, 19], [36, 25]]) { ctx.beginPath(); ctx.arc(x + bx, y + by, 3, 0, 7); ctx.fill(); }
+    } else if (k === 2 || k === 3) { // pottery
+      ctx.fillStyle = k === 2 ? '#c4552b' : '#3b8f9a';
+      ctx.beginPath(); ctx.ellipse(x + 25, y + 30, 9, 11, 0, 0, 7); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+      ctx.fillRect(x + 21, y + 15, 8, 6); ctx.strokeRect(x + 21, y + 15, 8, 6);
+    } else if (k === 4) { // tattered flag
+      ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 18, y + 42); ctx.lineTo(x + 18, y + 6); ctx.stroke();
+      const w = Math.sin(t * 4 + x) * 3;
+      ctx.beginPath(); ctx.moveTo(x + 18, y + 7); ctx.lineTo(x + 40, y + 11 + w); ctx.lineTo(x + 18, y + 19); ctx.closePath();
+      ctx.fillStyle = '#2bc4cf'; ctx.fill(); ctx.lineWidth = 2; ctx.stroke();
+    } else if (k === 5 || k === 6) { // cactus
+      ctx.lineCap = 'round'; ctx.strokeStyle = INK; ctx.lineWidth = 11;
+      ctx.beginPath(); ctx.moveTo(x + 25, y + 42); ctx.lineTo(x + 25, y + 10); ctx.moveTo(x + 25, y + 28); ctx.lineTo(x + 14, y + 24); ctx.lineTo(x + 14, y + 16); ctx.moveTo(x + 25, y + 22); ctx.lineTo(x + 35, y + 18); ctx.lineTo(x + 35, y + 12); ctx.stroke();
+      ctx.strokeStyle = '#3f9a4a'; ctx.lineWidth = 6; ctx.stroke();
+    }
+  },
+  wallDeco: (ctx, x, y, h) => { // sandstone strata
+    ctx.strokeStyle = 'rgba(140,60,30,0.45)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x + 5, y - 2 + (h % 5)); ctx.lineTo(x + 45, y + (h % 7) - 3); ctx.moveTo(x + 5, y + 12 + (h % 4)); ctx.lineTo(x + 45, y + 10 + (h % 6)); ctx.stroke();
+  },
+};
+THEMES.mirage = MIRAGE;
 export const theme = (key) => THEMES[key] || THEMES.meadow;
+
+// broken sandstone column for isolated wall tiles in pillar themes
+function drawPillar(ctx, x, y, h) {
+  const cx = x + 25, top = y - 30 + (h % 3) * 6;
+  ctx.lineWidth = 3.5; ctx.strokeStyle = INK;
+  rr(ctx, cx - 17, y + 30, 34, 12, 4); ctx.fillStyle = '#a3542c'; ctx.fill(); ctx.stroke(); // base
+  rr(ctx, cx - 13, top + 6, 26, y + 34 - top - 6, 4); ctx.fillStyle = '#eda661'; ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(140,60,30,0.6)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx - 5, top + 12); ctx.lineTo(cx - 5, y + 30); ctx.moveTo(cx + 5, top + 12); ctx.lineTo(cx + 5, y + 30); ctx.stroke();
+  // jagged broken top
+  ctx.beginPath(); ctx.moveTo(cx - 13, top + 8); ctx.lineTo(cx - 6, top); ctx.lineTo(cx, top + 7); ctx.lineTo(cx + 6, top + 2); ctx.lineTo(cx + 13, top + 9); ctx.closePath();
+  ctx.fillStyle = '#f7c98a'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+}
+function isolated(map, tx, ty) {
+  const W = (x, y) => map.t[y * map.gw + x] === WALL;
+  return !W(tx + 1, ty) && !W(tx - 1, ty) && !W(tx, ty + 1) && !W(tx, ty - 1);
+}
+
+// long sunset shadows (themes with `shadow`)
+export function drawShadows(ctx, map, x0, y0, x1, y1) {
+  const [tx0, ty0, tx1, ty1] = visRange(map, x0 - 60, y0 - 40, x1, y1);
+  for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
+    const t = map.t[ty * map.gw + tx];
+    if (t !== WALL && t !== CRATE) continue;
+    const th = theme(worldKeyAt(map, tx * TILE, ty * TILE));
+    if (!th.shadow) continue;
+    const x = tx * TILE, y = ty * TILE, dx = th.shadowDx * (t === CRATE ? 0.6 : 1.4), dy = th.shadowDy * (t === CRATE ? 0.6 : 1.4);
+    ctx.fillStyle = th.shadow;
+    ctx.beginPath(); ctx.moveTo(x + 2, y + TILE); ctx.lineTo(x + TILE, y + TILE); ctx.lineTo(x + TILE, y + 2);
+    ctx.lineTo(x + TILE + dx, y + dy); ctx.lineTo(x + TILE + dx, y + TILE + dy); ctx.lineTo(x + 2 + dx, y + TILE + dy); ctx.closePath(); ctx.fill();
+  }
+}
+
+// heat shimmer + drifting sand (world space) and sunset grade (screen space)
+export function drawAmbient(ctx, map, view, t, lowFx) {
+  const key = worldKeyAt(map, (view.x0 + view.x1) / 2, (view.y0 + view.y1) / 2);
+  if (key !== 'mirage') return;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, map.gw * TILE, map.gh * TILE); ctx.clip();
+  // heat shimmer: faint wavy bands sliding over open sand
+  ctx.strokeStyle = 'rgba(255,248,220,0.16)'; ctx.lineWidth = 3;
+  const step = 90;
+  for (let y = Math.floor(view.y0 / step) * step; y < view.y1; y += step) {
+    ctx.beginPath();
+    for (let x = view.x0; x <= view.x1; x += 30) {
+      const yy = y + Math.sin(x * 0.02 + t * 3 + y) * 6 + Math.sin(t * 1.3 + y) * 10;
+      x === view.x0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+    }
+    ctx.stroke();
+  }
+  // drifting sand grains (stateless: position is a function of time)
+  if (!lowFx) {
+    ctx.fillStyle = 'rgba(255,226,160,0.75)';
+    const W = view.x1 - view.x0, H = view.y1 - view.y0;
+    for (let i = 0; i < 70; i++) {
+      const sp = 60 + (i % 7) * 18;
+      const x = view.x0 + ((i * 197.3 + t * sp) % W);
+      const y = view.y0 + ((i * 311.9 + t * sp * 0.25 + Math.sin(t + i) * 20) % H);
+      ctx.fillRect(x, y, 3 + (i % 3), 2);
+    }
+  }
+  ctx.restore();
+}
+export function drawGrade(ctx, map, cam, W, H) {
+  if (worldKeyAt(map, cam.x, cam.y) !== 'mirage') return;
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, 'rgba(255,140,40,0.10)'); g.addColorStop(1, 'rgba(110,40,140,0.12)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+
+// cool rim under players in rim themes (teal ring + long shadow)
+export function drawRim(ctx, map, p) {
+  const th = theme(worldKeyAt(map, p.x, p.y));
+  if (!th.rim) return;
+  const s = p.size || 1;
+  ctx.save();
+  ctx.fillStyle = th.shadow;
+  ctx.beginPath(); ctx.ellipse(p.x + 26 * s, p.y + 22 * s, 34 * s, 10 * s, 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(p.x, p.y + 2, 31 * s, 0, Math.PI * 2);
+  ctx.lineWidth = 9; ctx.strokeStyle = th.rimDeep; ctx.stroke();
+  ctx.lineWidth = 4; ctx.strokeStyle = th.rim; ctx.stroke();
+  ctx.restore();
+}
+
+function drawPalm(ctx, x, y, t) {
+  ctx.save(); ctx.lineCap = 'round';
+  ctx.strokeStyle = INK; ctx.lineWidth = 11; ctx.beginPath(); ctx.moveTo(x, y + 10); ctx.quadraticCurveTo(x + 10, y - 20, x + 4, y - 46); ctx.stroke();
+  ctx.strokeStyle = '#a0612f'; ctx.lineWidth = 6; ctx.stroke();
+  const sw = Math.sin(t * 1.5) * 0.08;
+  for (let i = 0; i < 6; i++) {
+    const a = -Math.PI / 2 + (i - 2.5) * 0.62 + sw;
+    ctx.beginPath(); ctx.moveTo(x + 4, y - 46); ctx.quadraticCurveTo(x + 4 + Math.cos(a) * 26, y - 46 + Math.sin(a) * 26 - 10, x + 4 + Math.cos(a) * 42, y - 46 + Math.sin(a) * 42 + 6);
+    ctx.strokeStyle = INK; ctx.lineWidth = 10; ctx.stroke(); ctx.strokeStyle = '#3f9a4a'; ctx.lineWidth = 5; ctx.stroke();
+  }
+  ctx.restore();
+}
 
 function visRange(map, x0, y0, x1, y1) {
   return [Math.max(0, Math.floor(x0 / TILE) - 1), Math.max(0, Math.floor(y0 / TILE) - 1),
@@ -106,6 +250,14 @@ export function drawGround(ctx, map, x0, y0, x1, y1, t) {
     ctx.strokeStyle = th.waterHi; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(x * TILE + 12 + w, y * TILE + 26); ctx.lineTo(x * TILE + 26 + w, y * TILE + 26); ctx.stroke();
   }
+  // palms around oases
+  for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
+    const i = y * map.gw + x;
+    if (map.t[i] !== 0 || !theme(worldKeyAt(map, x * TILE, y * TILE)).pillars) continue;
+    if (map.t[i + 1] !== WATER && map.t[i - 1] !== WATER && map.t[i + map.gw] !== WATER && map.t[i - map.gw] !== WATER) continue;
+    if (hash(x, y) % 3) continue;
+    drawPalm(ctx, x * TILE + 25, y * TILE + 30, t + x);
+  }
   // hub safe zone
   if (map.kind === 'world' && Math.abs(HUB.x - (x0 + x1) / 2) < (x1 - x0) / 2 + HUB.r && Math.abs(HUB.y - (y0 + y1) / 2) < (y1 - y0) / 2 + HUB.r) {
     ctx.save();
@@ -136,6 +288,7 @@ export function drawBlocks(ctx, map, crateHp, x0, y0, x1, y1) {
       if (t === WALL) {
         const th = theme(worldKeyAt(map, x, y));
         const border = tx === 0 || ty === 0 || tx === map.gw - 1 || ty === map.gh - 1;
+        if (th.pillars && !border && isolated(map, tx, ty)) { drawPillar(ctx, x, y, hash(tx, ty)); continue; }
         ctx.fillStyle = border ? th.borderSide : th.wallSide;
         rr(ctx, x + 1, y - H + 4, TILE - 2, TILE + H - 4, 6); ctx.fill(); ctx.stroke();
         ctx.fillStyle = border ? th.borderTop : th.wallTop;
@@ -333,9 +486,10 @@ export function drawCrystal(ctx, x, y, t) {
 }
 
 const BULLET_COL = { volt: ['#bde0ff', '#3a86ff'], brick: ['#ffe066', '#ff7b39'], wisp: ['#f3e8ff', '#8f5cff'] };
-export function drawBullet(ctx, kind, x, y, ang) {
+export function drawBullet(ctx, kind, x, y, ang, rim) {
   const [c1, c2] = BULLET_COL[kind] || BULLET_COL.volt;
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+  if (rim) { ctx.beginPath(); ctx.ellipse(-4, 0, 22, 12, 0, 0, Math.PI * 2); ctx.fillStyle = rim; ctx.globalAlpha = 0.55; ctx.fill(); ctx.globalAlpha = 1; }
   ctx.lineWidth = 3; ctx.strokeStyle = INK;
   if (kind === 'wisp') {
     rr(ctx, -22, -6, 36, 12, 6); ctx.fillStyle = c2; ctx.fill(); ctx.stroke();
@@ -368,36 +522,46 @@ export function drawPoison(ctx, inset, size, x0, y0, x1, y1, t) {
 
 // helpers handed to event modules' draw()
 export function eventHelpers(ctx, map, view) {
+  const hz = (x, y) => theme(worldKeyAt(map, x, y)).hazard;
   return {
     map,
     visible: (x, y) => x > view.x0 - 80 && x < view.x1 + 80 && y > view.y0 - 80 && y < view.y1 + 80,
     warnTile(x, y, color, t) {
-      ctx.globalAlpha = 0.45 + Math.sin(t * 10) * 0.25;
-      ctx.lineWidth = 5; ctx.strokeStyle = color; rr(ctx, x - 22, y - 22, 44, 44, 10); ctx.stroke(); ctx.globalAlpha = 1;
+      color = hz(x, y)?.warn || color;
+      const pulse = 0.75 + Math.sin(t * 8) * 0.25;
+      rr(ctx, x - 21, y - 21, 42, 42, 10);
+      ctx.fillStyle = color; ctx.globalAlpha = 0.25 * pulse; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.lineWidth = 9; ctx.strokeStyle = INK; ctx.stroke();
+      ctx.lineWidth = 4.5; ctx.strokeStyle = color; ctx.globalAlpha = pulse; ctx.stroke(); ctx.globalAlpha = 1;
+      outlinedText(ctx, '!', x, y, 22, color);
     },
     flame(x, y, t) {
+      const fc = hz(x, y)?.flame || ['#ffd23f', '#ff6b2b'];
       for (let i = 0; i < 3; i++) {
         const fx = x + (i - 1) * 13, h = 22 + Math.sin(t * 12 + i * 2) * 7;
         ctx.beginPath(); ctx.moveTo(fx - 9, y + 10); ctx.quadraticCurveTo(fx - 8, y - h * 0.5, fx, y - h); ctx.quadraticCurveTo(fx + 8, y - h * 0.5, fx + 9, y + 10); ctx.closePath();
-        ctx.fillStyle = i === 1 ? '#ffd23f' : '#ff6b2b'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+        ctx.fillStyle = i === 1 ? fc[0] : fc[1]; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
       }
     },
     pool(c, phase, t, kind) {
       if (!this.visible(c.x, c.y)) return;
+      const H = hz(c.x, c.y);
       ctx.save();
       ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
       if (phase === 'warn') {
         ctx.fillStyle = kind === 'lava' ? 'rgba(255,90,40,0.18)' : 'rgba(150,230,255,0.2)'; ctx.fill();
+        ctx.lineWidth = 11; ctx.strokeStyle = INK; ctx.stroke();
         ctx.setLineDash([16, 12]); ctx.lineDashOffset = -t * 30; ctx.lineWidth = 6;
-        ctx.strokeStyle = kind === 'lava' ? '#ff4d2e' : '#8ee8ff'; ctx.stroke();
+        ctx.strokeStyle = H ? H.warn : kind === 'lava' ? '#ff4d2e' : '#8ee8ff'; ctx.stroke();
       } else if (kind === 'lava') {
         const g = ctx.createRadialGradient(c.x, c.y, c.r * 0.2, c.x, c.y, c.r);
-        g.addColorStop(0, '#ffe066'); g.addColorStop(0.55, '#ff7b1c'); g.addColorStop(1, '#d6331c');
+        const L = H?.lava || ['#ffe066', '#ff7b1c', '#d6331c'];
+        g.addColorStop(0, L[0]); g.addColorStop(0.55, L[1]); g.addColorStop(1, L[2]);
         ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 7; ctx.strokeStyle = INK; ctx.stroke();
         ctx.fillStyle = 'rgba(255,240,150,0.85)';
         for (let i = 0; i < 5; i++) { const a = t * 0.7 + i * 1.3, d = c.r * 0.55 * ((i * 37) % 10) / 10; ctx.beginPath(); ctx.arc(c.x + Math.cos(a) * d, c.y + Math.sin(a) * d, 5 + Math.sin(t * 5 + i) * 3, 0, 7); ctx.fill(); }
       } else {
-        ctx.fillStyle = 'rgba(200,245,255,0.75)'; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = '#4a9fd0'; ctx.stroke();
+        ctx.fillStyle = 'rgba(200,245,255,0.75)'; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = H?.ice || '#4a9fd0'; ctx.stroke();
         ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 4;
         ctx.beginPath(); ctx.moveTo(c.x - c.r * 0.4, c.y - c.r * 0.2); ctx.lineTo(c.x - c.r * 0.1, c.y - c.r * 0.5); ctx.moveTo(c.x + c.r * 0.1, c.y + c.r * 0.3); ctx.lineTo(c.x + c.r * 0.45, c.y); ctx.stroke();
       }
