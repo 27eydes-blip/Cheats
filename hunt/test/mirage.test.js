@@ -6,7 +6,7 @@ import { QUICK_MODES } from '../src/modes.js';
 
 // IDs persisted in saves/stats must never move: Mirage is APPENDED.
 assert.deepEqual(WORLDS.slice(0, 5).map((w) => w.key), ['meadow', 'city', 'forest', 'desert', 'frozen']);
-assert.equal(worldId('mirage'), WORLDS.length - 1);
+assert.equal(worldId('mirage'), 5); // ids are append-only (new worlds come after it)
 // ...only display order changes: Wildwood -> Desert Mirage -> ... -> Frozen Lake
 const order = worldsInDisplayOrder().map((w) => w.key);
 assert(order.indexOf('forest') < order.indexOf('mirage') && order.indexOf('mirage') < order.indexOf('frozen'), order.join(','));

@@ -7,6 +7,7 @@ import {
   CLOAK_REVEAL_DIST, SPAWNS, BOT_NAMES, EVENT_EVERY, EVENT_WARN, LOW_HP, RUSH_TIME, COMEBACK_DMG,
   applyMove, moveCircle, inBush, attackDirs, poisonInset, moveStats, bountyGlow, pingInterval,
   layLowFactor, rng, inHub, HUB, MINE_SEEN, PLAYER_R, touchingBorder, SPIKE_DMG, SPIKE_CD, lineOfSight, isSolidTile, tileAt, blocksMove,
+  dayNight, visionRange, onHigh, HIGH_REVEAL,
 } from '../public/shared.js';
 import { EVENTS, pickEvent } from '../public/events/index.js';
 import { MODES } from './modes.js';
@@ -73,6 +74,10 @@ export class Sim {
     this.nextEventAt = this.forceEvent ? 8 : EVENT_EVERY;
     this.mods = {};
     this.botSpawnT = 0;
+    // Free Play day/night runs on the wall clock (shared by every zone); tests can pass `now`
+    this.now = o.now || (() => Date.now());
+    this.dn = this.hub ? dayNight(this.now()) : null;
+    this.brokenCrates = new Map(); // Free Play: idx -> time broken (they come back)
     this.mode.init?.(this);
   }
 
@@ -290,12 +295,18 @@ export class Sim {
     if (viewer === t) return true;
     if (viewer.team && viewer.team === t.team) return true; // teammates are always visible
     if (viewer.alive === false) return true;
+    const dist = Math.hypot(viewer.x - t.x, viewer.y - t.y);
+    if (this.mods.vision && dist > this.mods.vision) return false;
+    // darkness: caves, marsh fog and night shrink vision, but at night a high bounty glows and
+    // can be spotted from further away (high-bounty hunters are easier to hunt after dark)
+    const vr = visionRange(this.map, viewer.x, viewer.y, this.dn);
+    if (dist > vr && !(this.dn && this.dn.dark > 0 && t.bounty >= 3 && dist < Math.max(vr, 2000))) return false;
     // observer sockets (Free Play border views) send their own position, so it can't be trusted:
     // they never get the "close enough to reveal" exception for bushes, cloak or armed mines
-    const d = viewer.observer ? Infinity : Math.hypot(viewer.x - t.x, viewer.y - t.y);
-    if (this.mods.vision && d > this.mods.vision) return false;
+    const d = viewer.observer ? Infinity : dist;
     if (t.cloak > 0 && d > CLOAK_REVEAL_DIST) return false;
-    if (t.reveal <= 0 && d > BUSH_REVEAL_DIST && inBush(this.map, t.x, t.y)) return false;
+    const bushReveal = BUSH_REVEAL_DIST * (!viewer.observer && onHigh(this.map, viewer.x, viewer.y) ? HIGH_REVEAL : 1); // high ground sees into bushes
+    if (t.reveal <= 0 && d > bushReveal && inBush(this.map, t.x, t.y)) return false;
     return true;
   }
 
@@ -468,9 +479,10 @@ export class Sim {
     t.rank = this.aliveCount() + 1;
     for (const v of this.deathList) v.rank = t.rank;
     const stolen = t.bounty;
+    const moon = this.dn && this.dn.blood ? 2 : 1; // BLOOD MOON: double bounty for every kill
     if (src && src !== t) {
-      if (src.remote) this.hooks.credit?.(src.zone, { id: src.id, kill: 1, gain: 1 + stolen });
-      else this.gainBounty(src, 1 + stolen);
+      if (src.remote) this.hooks.credit?.(src.zone, { id: src.id, kill: 1, gain: (1 + stolen) * moon });
+      else this.gainBounty(src, (1 + stolen) * moon);
       // SQUAD HUNT: kills feed the shared team pot; the stolen bounty leaves the victim's pot
       if (this.mode.teams && src.team && t.team && src.team !== t.team) {
         this.teamPot[src.team] += 1 + stolen;
@@ -518,6 +530,17 @@ export class Sim {
         if (this.inBounds(x, y, -30) && !blocksMove(tileAt(this.map, x, y)) && !blocksMove(tileAt(this.map, x + 30, y)) && !blocksMove(tileAt(this.map, x - 30, y))) { pt = { x, y }; break; }
       }
     }
+    if (!pt && this.hub && p.bot) {
+      // Free Play zones are huge: bring bots to where the people are (but not on top of them)
+      const hs = this.humans().filter((h) => h.alive && h.connected && !this.isSafe(h.x, h.y));
+      if (hs.length) {
+        const h = hs[Math.floor(this.rand() * hs.length)];
+        for (let i = 0; i < 30 && !pt; i++) {
+          const a = this.rand() * Math.PI * 2, d = 900 + this.rand() * 900, x = h.x + Math.cos(a) * d, y = h.y + Math.sin(a) * d;
+          if (this.inBounds(x, y, -80) && !this.isSafe(x, y) && Math.hypot(x - HUB.x, y - HUB.y) > HUB.r + 150 && !blocksMove(tileAt(this.map, x, y)) && !blocksMove(tileAt(this.map, x + 28, y)) && !blocksMove(tileAt(this.map, x - 28, y)) && !blocksMove(tileAt(this.map, x, y + 28)) && !blocksMove(tileAt(this.map, x, y - 28))) pt = { x, y };
+        }
+      }
+    }
     if (!pt) {
       let best = null, bd = -1;
       for (let i = 0; i < 12; i++) {
@@ -560,6 +583,7 @@ export class Sim {
     if (c.hp <= 0) {
       this.crates.delete(idx);
       this.setTile(idx, EMPTY);
+      if (this.hub && this.map.base[idx] === CRATE) this.brokenCrates.set(idx, this.time);
       const x = (idx % this.map.gw) * TILE + TILE / 2, y = Math.floor(idx / this.map.gw) * TILE + TILE / 2;
       this.fx.push(['crate', x, y, c.supply ? 1 : 0, 0]);
       if (c.supply) for (let i = 0; i < 3; i++) this.dropCube(x + Math.cos(i * 2.1) * 30, y + Math.sin(i * 2.1) * 30);
@@ -732,6 +756,13 @@ export class Sim {
     this.updateDelayed();
     if (this.hooks.handoff) this.checkHandoffs();
     if (this.hub) this.maintainBots();
+    if (this.hub && this.tickN % 40 === 0) {
+      this.dn = dayNight(this.now());
+      for (const [idx, at] of this.brokenCrates) { // Free Play crates (vaults, caches) refill after 90s
+        if (this.time - at < 90 || this.map.t[idx] !== EMPTY || this.tileOccupied(idx)) continue;
+        this.brokenCrates.delete(idx); this.addCrate(idx);
+      }
+    }
     this.sendSnapshots();
     this.pingLog = this.pings;
     this.fx = []; this.tileDirty = []; this.crateDirty = []; this.pings = [];

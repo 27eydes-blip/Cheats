@@ -116,6 +116,56 @@ const MIRAGE = {
   },
 };
 THEMES.mirage = MIRAGE;
+
+// ---- the world upgrade: four new zones + the Hub district ----
+const crack = (ctx, x, y, h, col, w = 2.5) => {
+  ctx.strokeStyle = col; ctx.lineWidth = w;
+  ctx.beginPath(); ctx.moveTo(x + 6, y + 8 + (h % 9)); ctx.lineTo(x + 20, y + 24); ctx.lineTo(x + 16, y + 42); ctx.moveTo(x + 20, y + 24); ctx.lineTo(x + 40, y + 18 + (h % 11)); ctx.stroke();
+};
+THEMES.ashlands = { // volcanic black rock, glowing cracks, lava rivers
+  groundA: '#3b3337', groundB: '#352d31', tuft: 'rgba(255,110,40,0.28)', wallTop: '#3b3540', wallSide: '#221d26',
+  borderTop: '#2e282f', borderSide: '#151116', bush: '#5a3a2a', bushHi: '#b0602a', water: '#ff5a1f', waterHi: '#ffd23f', void: '#140c10',
+  road: '#5b4c47', roadEdge: '#2a2226', lava: true, glow: 'rgba(255,90,20,0.35)',
+  deco: (ctx, x, y, h) => {
+    if ((h & 7) === 1) { crack(ctx, x, y, h, 'rgba(40,10,10,0.8)', 5); crack(ctx, x, y, h, '#ff6a1f', 2); } // glowing crack
+    else if ((h & 31) === 2) { ctx.fillStyle = 'rgba(120,110,115,0.5)'; ctx.beginPath(); ctx.ellipse(x + 25, y + 30, 14, 6, 0, 0, 7); ctx.fill(); } // ash pile
+  },
+};
+THEMES.marsh = { // swamp, twisted dead trees, fog, sinking mud
+  groundA: '#4d5b3c', groundB: '#485638', tuft: 'rgba(20,30,10,0.45)', wallTop: '#5b4a3a', wallSide: '#3a2e24',
+  borderTop: '#3e3a2a', borderSide: '#24221a', bush: '#2f4a2a', bushHi: '#6f8a3a', water: '#36513f', waterHi: '#8fb08a', void: '#12170f',
+  road: '#7a6040', roadEdge: '#3e2e1c', boards: true, mud: '#3a2e20', mudHi: '#5a4630',
+  deco: (ctx, x, y, h) => {
+    if ((h & 15) === 3) { ctx.strokeStyle = '#2e3a1e'; ctx.lineWidth = 3; ctx.beginPath(); for (const o of [-6, 0, 6]) { ctx.moveTo(x + 25 + o, y + 40); ctx.lineTo(x + 25 + o * 1.6, y + 14 + Math.abs(o)); } ctx.stroke(); } // reeds
+    else if ((h & 31) === 5) { ctx.fillStyle = 'rgba(60,80,70,0.55)'; ctx.beginPath(); ctx.ellipse(x + 25, y + 28, 15, 8, 0, 0, 7); ctx.fill(); } // puddle
+  },
+};
+THEMES.citadel = { // a giant crumbling fortress: grey flagstones and rubble
+  groundA: '#7c808d', groundB: '#767a87', tuft: 'rgba(80,120,70,0.35)', wallTop: '#8a8fa0', wallSide: '#4f5466',
+  borderTop: '#5a5f70', borderSide: '#2f3240', bush: '#3d6b4a', bushHi: '#6aa86a', water: '#4a6a8a', waterHi: '#a9c4dd', void: '#16181f',
+  road: '#9a8f78', roadEdge: '#4a4538',
+  deco: (ctx, x, y, h) => {
+    ctx.strokeStyle = 'rgba(40,44,56,0.35)'; ctx.lineWidth = 2; ctx.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4); // flagstones
+    if ((h & 15) === 4) { ctx.fillStyle = '#62666f'; for (const [a, b, r] of [[14, 30, 6], [26, 34, 4], [33, 26, 5]]) { ctx.beginPath(); ctx.arc(x + a, y + b, r, 0, 7); ctx.fill(); } } // rubble
+  },
+};
+THEMES.hollow = { // an underground cave: darkness, glowing crystals, narrow passages
+  groundA: '#2d2b40', groundB: '#29273b', tuft: 'rgba(110,255,230,0.25)', wallTop: '#3a3550', wallSide: '#221f33',
+  borderTop: '#2a2640', borderSide: '#141222', bush: '#24403f', bushHi: '#4fe0c0', water: '#2fd6c8', waterHi: '#d4fffa', void: '#07060d',
+  road: '#433e5a', roadEdge: '#1a1828', glow: 'rgba(95,244,255,0.25)',
+  deco: (ctx, x, y, h) => {
+    if ((h & 15) === 6) { ctx.fillStyle = '#5ff4ff'; ctx.beginPath(); ctx.moveTo(x + 22, y + 38); ctx.lineTo(x + 26, y + 18); ctx.lineTo(x + 30, y + 38); ctx.fill(); } // crystal shard
+    else if ((h & 31) === 7) { ctx.fillStyle = '#9b6bff'; ctx.beginPath(); ctx.arc(x + 20, y + 32, 4, Math.PI, 0); ctx.fill(); ctx.fillStyle = '#e0d0ff'; ctx.fillRect(x + 19, y + 32, 2, 6); } // glow mushroom
+  },
+};
+THEMES.hub = { // the Hub district: warm plaza stone
+  groundA: '#d9c9a3', groundB: '#d2c29c', tuft: 'rgba(140,110,60,0.3)', wallTop: '#f3e3b8', wallSide: '#c9a45a',
+  borderTop: '#e0c27a', borderSide: '#8f6f2e', bush: '#4f8a3c', bushHi: '#8fd05a', water: '#4cc9f0', waterHi: '#a5e9ff', void: '#2b1d55',
+  road: '#bfa775', roadEdge: '#8a7448',
+  deco: (ctx, x, y, h) => { if ((h & 3) === 0) { ctx.strokeStyle = 'rgba(140,110,60,0.35)'; ctx.lineWidth = 2; ctx.strokeRect(x + 3, y + 3, TILE - 6, TILE - 6); } },
+};
+THEMES.meadow.road = '#c9b07a'; THEMES.forest.road = '#9a7448'; THEMES.city.road = '#5d6274'; THEMES.desert.road = '#d6a868';
+THEMES.frozen.road = '#c4d5e6'; MIRAGE.road = '#d99a4e';
 export const theme = (key) => THEMES[key] || THEMES.meadow;
 
 // broken sandstone column for isolated wall tiles in pillar themes
@@ -262,10 +312,38 @@ function paintGround(ctx, map, x0, y0, x1, y1) {
     ctx.fillRect(x * TILE, y * TILE, TILE + 0.5, TILE + 0.5);
   }
   ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  const at = (arr, x, y) => x >= 0 && y >= 0 && x < map.gw && y < map.gh && arr[y * map.gw + x] === 1;
   for (let y = ty0; y <= ty1; y++) for (let x = tx0; x <= tx1; x++) {
     const h = hash(x, y);
     const th = theme(worldKeyAt(map, x * TILE, y * TILE));
-    if (th.deco) th.deco(ctx, x * TILE, y * TILE, h, t);
+    const X = x * TILE, Y = y * TILE;
+    if (map.mud && at(map.mud, x, y)) { // sinking mud: dark sludge with lighter swirls
+      ctx.fillStyle = th.mud || '#3a2e20'; ctx.fillRect(X, Y, TILE + 0.5, TILE + 0.5);
+      ctx.strokeStyle = th.mudHi || '#5a4630'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(X + 18 + (h % 14), Y + 20 + ((h >>> 4) % 12), 6 + (h % 4), 0.4, 4.6); ctx.stroke(); ctx.lineWidth = 2.5;
+      continue;
+    }
+    if (map.road && at(map.road, x, y)) { // roads: paved paths (plank boardwalk in the marsh)
+      ctx.fillStyle = th.road || '#c9b07a'; ctx.fillRect(X, Y, TILE + 0.5, TILE + 0.5);
+      ctx.fillStyle = th.roadEdge || 'rgba(27,16,51,0.35)';
+      if (!at(map.road, x, y - 1)) ctx.fillRect(X, Y, TILE, 4);
+      if (!at(map.road, x, y + 1)) ctx.fillRect(X, Y + TILE - 4, TILE, 4);
+      if (!at(map.road, x - 1, y)) ctx.fillRect(X, Y, 4, TILE);
+      if (!at(map.road, x + 1, y)) ctx.fillRect(X + TILE - 4, Y, 4, TILE);
+      if (th.boards) { ctx.fillStyle = 'rgba(40,25,10,0.45)'; for (let k = 8; k < TILE; k += 12) ctx.fillRect(X, Y + k, TILE, 2); }
+      else if ((h & 7) === 0) { ctx.fillStyle = 'rgba(27,16,51,0.18)'; ctx.fillRect(X + 10 + (h % 20), Y + 14, 12, 8); }
+      continue;
+    }
+    if (th.deco) th.deco(ctx, X, Y, h, t);
+    if (map.high && at(map.high, x, y)) { // HIGH GROUND: raised, lighter, with a cliff edge
+      ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.fillRect(X, Y, TILE + 0.5, TILE + 0.5);
+      ctx.fillStyle = 'rgba(27,16,51,0.45)';
+      if (!at(map.high, x, y + 1)) ctx.fillRect(X, Y + TILE - 8, TILE, 8);
+      if (!at(map.high, x + 1, y)) ctx.fillRect(X + TILE - 6, Y, 6, TILE);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      if (!at(map.high, x, y - 1)) ctx.fillRect(X, Y, TILE, 3);
+      if (!at(map.high, x - 1, y)) ctx.fillRect(X, Y, 3, TILE);
+    }
     if ((h & 7) !== 0 || SETTINGS.lowGfx) continue;
     const px = x * TILE + 10 + (h >>> 3) % 30, py = y * TILE + 14 + (h >>> 7) % 26;
     ctx.strokeStyle = th.tuft;

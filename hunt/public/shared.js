@@ -14,11 +14,13 @@ export const EMPTY = 0, WALL = 1, BUSH = 2, CRATE = 3, WATER = 4;
 export const ARENA_SIZE = 3000; // the standard 10-player arena
 export const ARENA_GRID = ARENA_SIZE / TILE; // 60
 export function arenaSizeFor(players = MAX_PLAYERS) { return players >= 20 ? 5000 : players <= 4 ? 2000 : players <= 6 ? 2400 : ARENA_SIZE; }
-// Free Play world: 2x2 zones of 2000x2000, safe hub where they meet
-export const ZONE_SIZE = 2000;
-export const WORLD_SIZE = 4000;
-export const WORLD_GRID = WORLD_SIZE / TILE; // 80
-export const HUB = { x: 2000, y: 2000, r: 340 };
+// Free Play world: 20000x20000, a 3x3 grid of zones (each its own Durable Object): eight themed
+// zones around the Hub district in the middle, with the safe hub at the very centre
+export const WORLD_SIZE = 20000;
+export const WORLD_GRID = WORLD_SIZE / TILE; // 400
+export const ZONE_EDGES = [0, 6700, 13300, 20000]; // column/row edges (tile aligned)
+export const ZONE_SIZE = 6700; // the outer zones (the middle row/column is 6600)
+export const HUB = { x: 10000, y: 10000, r: 420 };
 
 export const CRATE_HP = 2400;
 export const SUPPLY_HP = 4000;
@@ -114,20 +116,26 @@ export const WORLDS = [
   { key: 'frozen', name: 'Frozen Lake', order: 4, arena: true, layouts: ['scatter', 'rings'], gen: { pieces: 8, shapes: ['s1', 's2', 'sq', 'L3', 's3'], bushes: 2, crates: 4, water: 1 } },
   // id 5 — appended (never reorder). Displayed between Wildwood and Frozen Lake.
   { key: 'mirage', name: 'Desert Mirage', order: 2.5, arena: true, layouts: ['keep', 'scatter'], gen: { pieces: 8, shapes: ['s1', 's1', 's3', 'L4', 'L3', 's2'], bushes: 2, crates: 4, water: 1 } },
+  // ids 6-9: the world upgrade (Free Play zones that are also Quick Hunt arenas)
+  { key: 'ashlands', name: 'Ashlands', order: 5, arena: true, layouts: ['rings', 'keep'], gen: { pieces: 8, shapes: ['s1', 's2', 'L3', 'sq', 's3'], bushes: 1, crates: 4, water: 2 } },
+  { key: 'marsh', name: 'Dead Marsh', order: 6, arena: true, layouts: ['scatter', 'lanes'], gen: { pieces: 7, shapes: ['s1', 's1', 's2', 'L3', 's3'], bushes: 3, crates: 4, water: 2 } },
+  { key: 'citadel', name: 'Ruined Citadel', order: 7, arena: true, layouts: ['keep', 'lanes'], gen: { pieces: 9, shapes: ['s3', 'L4', 'sq', 's2', 'L3'], bushes: 2, crates: 5, water: 0 } },
+  { key: 'hollow', name: 'The Hollow', order: 8, arena: true, layouts: ['rings', 'scatter'], gen: { pieces: 8, shapes: ['s1', 's2', 'sq', 'L3', 's1'], bushes: 1, crates: 4, water: 1 } },
 ];
 export const worldId = (key) => WORLDS.findIndex((w) => w.key === key);
 export const worldsInDisplayOrder = () => WORLDS.map((w, id) => ({ ...w, id })).sort((a, b) => a.order - b.order);
 
-// Free Play layout: quadrant slot -> world (clockwise City -> Forest -> Desert -> Frozen)
+// Free Play layout: 3x3 zones. The Hub district ('hub' art) is in the middle.
+const Z = (slot, world, name, c, r) => ({ slot, world, name, c, r, x0: ZONE_EDGES[c], y0: ZONE_EDGES[r], x1: ZONE_EDGES[c + 1], y1: ZONE_EDGES[r + 1] });
 export const ZONES = [
-  { slot: 'nw', world: 'city', x0: 0, y0: 0 },
-  { slot: 'ne', world: 'forest', x0: 2000, y0: 0 },
-  { slot: 'se', world: 'mirage', x0: 2000, y0: 2000 },
-  { slot: 'sw', world: 'frozen', x0: 0, y0: 2000 },
+  Z('nw', 'city', 'Neon City', 0, 0), Z('n', 'citadel', 'Ruined Citadel', 1, 0), Z('ne', 'forest', 'Wildwood', 2, 0),
+  Z('w', 'hollow', 'The Hollow', 0, 1), Z('c', 'hub', 'The Hub', 1, 1), Z('e', 'ashlands', 'Ashlands', 2, 1),
+  Z('sw', 'frozen', 'Frozen Lake', 0, 2), Z('s', 'marsh', 'Dead Marsh', 1, 2), Z('se', 'mirage', 'Desert Mirage', 2, 2),
 ];
 export const zoneBySlot = (slot) => ZONES.find((z) => z.slot === slot);
-export function zoneAt(x, y) { return y < ZONE_SIZE ? (x < ZONE_SIZE ? 'nw' : 'ne') : (x < ZONE_SIZE ? 'sw' : 'se'); }
-export function zoneBounds(slot) { const z = zoneBySlot(slot); return { x0: z.x0, y0: z.y0, x1: z.x0 + ZONE_SIZE, y1: z.y0 + ZONE_SIZE }; }
+const band = (v) => (v < ZONE_EDGES[1] ? 0 : v < ZONE_EDGES[2] ? 1 : 2);
+export function zoneAt(x, y) { return ZONES[band(y) * 3 + band(x)].slot; }
+export function zoneBounds(slot) { const z = zoneBySlot(slot); return { x0: z.x0, y0: z.y0, x1: z.x1, y1: z.y1 }; }
 export const inHub = (x, y) => Math.hypot(x - HUB.x, y - HUB.y) < HUB.r;
 
 // ---------- RNG ----------
@@ -156,8 +164,12 @@ export const SPAWNS = arenaSpawns(ARENA_SIZE, MAX_PLAYERS);
 //         pieces: [{cells:[[x,y]..], variant, spike:'n'|'e'|'s'|'w'|null, world?}],
 //         pieceAt: Int32Array (cell -> piece index | -1), border: Uint8Array (1 = spiked border wall) }
 // Cover is built from whole PIECES so what's drawn is exactly what collides.
+// overlays (all Uint8Array, 1 = yes): road (paths), high (high ground), mud (slows), rock (cave/cliff
+// wall masses drawn as solid rock), lm (landmark footprint: drawn by the landmark art)
 function newMap(gw, gh, kind, world) {
-  return { gw, gh, t: new Uint8Array(gw * gh), base: null, kind, world, pieces: [], pieceAt: new Int32Array(gw * gh).fill(-1), border: new Uint8Array(gw * gh) };
+  const n = gw * gh, u8 = () => new Uint8Array(n);
+  return { gw, gh, t: u8(), base: null, kind, world, pieces: [], pieceAt: new Int32Array(n).fill(-1), border: u8(),
+    road: u8(), high: u8(), mud: u8(), rock: u8(), lm: u8(), landmarks: [], pois: [] };
 }
 // cover shapes (cells) on the art grid; rotated/reflected at placement
 export const SHAPES = {
@@ -326,10 +338,11 @@ export function generateArena(seed, worldKey = 'meadow', players = MAX_PLAYERS) 
     for (let j = H - k + 1; j < H - 2; j++) side.push([H - k, j]);
     wallRun(top); wallRun(side);
   } else if (m.layout === 'rings') {
-    for (const [rad, gaps] of [[G * 0.15, 3], [G * 0.3, 4]]) {
+    // short wall arcs with wide gaps (a third wall): solid rings made every fight close-range
+    for (const [rad, arcs] of [[G * 0.16, 3], [G * 0.31, 4]]) {
       const cells = [];
       for (let a = 0; a <= Math.PI / 2; a += 0.35 / rad) {
-        if (Math.floor((a / (Math.PI / 2)) * gaps * 2 - 0.5) % 2) continue; // gaps
+        if (Math.floor((a / (Math.PI / 2)) * arcs * 3 - 1) % 3) continue; // gaps
         const x = Math.floor(H - Math.cos(a) * rad), y = Math.floor(H - Math.sin(a) * rad);
         if (!cells.some((c) => c[0] === x && c[1] === y)) cells.push([x, y]);
       }
@@ -361,39 +374,9 @@ export function generateArena(seed, worldKey = 'meadow', players = MAX_PLAYERS) 
   return m;
 }
 
-// Free Play world: four themed zones around a safe stone hub. Zone edges are spiked border walls
-// with wide gaps to walk through. Layouts are fixed (WORLD_SEED) so every zone DO and client agree.
-export const WORLD_SEED = 424242;
-export function generateWorld(zones = ZONES) {
-  const m = newMap(WORLD_GRID, WORLD_GRID, 'world', null);
-  borderRing(m);
-  const ZG = ZONE_SIZE / TILE, hx = HUB.x / TILE, hy = HUB.y / TILE;
-  // inner zone borders: border walls with gates (6 wall, 4 open), never inside the hub
-  for (let k = 1; k < WORLD_GRID - 1; k++) {
-    for (const [x, y] of [[ZG - 1, k], [ZG, k], [k, ZG - 1], [k, ZG]]) {
-      if (Math.hypot(x + 0.5 - hx, y + 0.5 - hy) < HUB.r / TILE + 3) continue;
-      if ((k % 10) < 6) continue; // gaps
-      const i = y * WORLD_GRID + x; m.t[i] = WALL; m.border[i] = 1;
-    }
-  }
-  const nearHub = (x, y) => Math.hypot(x + 0.5 - hx, y + 0.5 - hy) < HUB.r / TILE + 2.5;
-  for (const z of zones) {
-    const W = WORLDS[worldId(z.world)];
-    const r = rng(WORLD_SEED + worldId(z.world) * 7919);
-    const ox = z.x0 / TILE, oy = z.y0 / TILE;
-    const gen = { ...W.gen, pieces: W.gen.pieces * 4, bushes: Math.round(W.gen.bushes * 3.5), crates: W.gen.crates * 3, water: W.gen.water * 3 };
-    layout(m, r, gen, [ox + 2, oy + 2, ox + ZG - 2, oy + ZG - 2], (x, y) => [[x, y]], nearHub);
-  }
-  // hub: ring of warm stone pillars (never spiked), everything else cleared
-  clearCircle(m, hx, hy, HUB.r / TILE + 1.5, false);
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
-    const x = Math.floor(hx + Math.cos(a) * 4.2), y = Math.floor(hy + Math.sin(a) * 4.2);
-    addPiece(m, [[x, y]], i % 3, null, 'hub');
-  }
-  m.base = m.t.slice();
-  return m;
-}
+// world generation lives in worldgen.js; it builds on these helpers
+export const GEN = { newMap, layout, addPiece, borderRing, clearCircle, freeAround, shapeCells };
+export { generateWorld, WORLD_SEED } from './worldgen.js';
 
 export function worldKeyAt(map, x, y) { return map.kind === 'world' ? zoneBySlot(zoneAt(x, y)).world : map.world; }
 
@@ -464,12 +447,23 @@ export function onIce(mods, x, y) {
   return false;
 }
 
+// ground overlays (same on client and server)
+const overlayAt = (map, arr, x, y) => {
+  if (!arr) return false;
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  return tx >= 0 && ty >= 0 && tx < map.gw && ty < map.gh && arr[ty * map.gw + tx] === 1;
+};
+export const MUD_MUL = 0.62; // Dead Marsh sinking mud slows you down
+export const onMud = (map, x, y) => overlayAt(map, map.mud, x, y);
+export const onHigh = (map, x, y) => overlayAt(map, map.high, x, y);
+export const onRoad = (map, x, y) => overlayAt(map, map.road, x, y);
+
 // Apply one movement input for one tick. Same on client and server.
 // p needs x, y, mvx, mvy (velocity carried for ice sliding).
 export function applyMove(map, p, mx, my, speed, r, mods, dt = DT) {
   let len = Math.hypot(mx, my);
   if (len < 0.08) { mx = 0; my = 0; } else if (len > 1) { mx /= len; my /= len; }
-  const mul = (mods && mods.speedMul) || 1;
+  const mul = ((mods && mods.speedMul) || 1) * (onMud(map, p.x, p.y) ? MUD_MUL : 1);
   const tx = mx * speed * mul, ty = my * speed * mul;
   if (onIce(mods, p.x, p.y)) { p.mvx += (tx - p.mvx) * 0.07; p.mvy += (ty - p.mvy) * 0.07; }
   else { p.mvx = tx; p.mvy = ty; }
@@ -504,5 +498,30 @@ export function poisonInset(matchTime, size = 2000) {
   const k = size / 2000, max = POISON_MAX_INSET * k, close = POISON_CLOSE_TIME * Math.sqrt(k);
   return Math.min(max, ((matchTime - POISON_START) / close) * max);
 }
+
+// ---------- Day / night (Free Play) ----------
+// A 10-minute cycle on the wall clock, so every zone and every client agree without syncing.
+// phase 0..1: day until 0.55, dusk to 0.62, night to 0.93, dawn to 1.
+export const DAY_MS = 600000, DUSK = 0.55, NIGHT_START = 0.62, NIGHT_END = 0.93, BLOOD_MS = 120000;
+export function dayNight(ms) {
+  const cycle = Math.floor(ms / DAY_MS), into = ms - cycle * DAY_MS, ph = into / DAY_MS;
+  const dark = ph < DUSK ? 0 : ph < NIGHT_START ? (ph - DUSK) / (NIGHT_START - DUSK) : ph < NIGHT_END ? 1 : 1 - (ph - NIGHT_END) / (1 - NIGHT_END);
+  // one BLOOD MOON per night (2 minutes); its start inside the night is picked from the cycle number
+  const nightMs = (NIGHT_END - NIGHT_START) * DAY_MS, h = ((cycle * 2654435761) >>> 0) / 4294967296;
+  const bStart = NIGHT_START * DAY_MS + 10000 + h * (nightMs - BLOOD_MS - 20000);
+  const b = into - bStart;
+  return { cycle, phase: ph, dark, night: dark >= 0.5, blood: b >= 0 && b < BLOOD_MS ? (BLOOD_MS - b) / 1000 : 0 };
+}
+// how far a player standing at (x,y) can see (Infinity = the normal screen): caves are dark,
+// the marsh is foggy, night shrinks vision, high ground lets you see further
+export function visionRange(map, x, y, dn) {
+  let v = Infinity;
+  const w = worldKeyAt(map, x, y);
+  if (w === 'hollow') v = 1050; else if (w === 'marsh') v = 1250; // just beyond Wisp's sniper range (960)
+  if (dn && dn.dark > 0) v = Math.min(v, 2400 - 1300 * dn.dark);
+  if (v < Infinity && onHigh(map, x, y)) v *= 1.4;
+  return v;
+}
+export const HIGH_REVEAL = 2; // high ground: see into bushes from twice as far
 
 export const BOT_NAMES = ['Mossy', 'Pip', 'Glint', 'Rumble', 'Zest', 'Nox', 'Biscuit', 'Kestrel', 'Juno', 'Sprocket', 'Tumble', 'Pepper', 'Fizz', 'Odo', 'Quill', 'Ember', 'Rook', 'Sable', 'Tansy', 'Wren'];

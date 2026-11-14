@@ -275,7 +275,7 @@ export class ZoneRoom {
     const conns = this.conns;
     this.sim = new Sim({
       map: generateWorld(), mode: 'freeplay', zone: this.slot, bounds: zoneBounds(this.slot), hub: true, phase: 'play',
-      botTarget: 4, seed: (Math.random() * 2 ** 32) >>> 0,
+      botTarget: this.slot === 'c' ? 4 : 8, seed: (Math.random() * 2 ** 32) >>> 0,
       send: (id, msg) => { const ws = conns.get(id); if (ws) sendJSON(ws, msg); },
       hooks: {
         handoff: (p, state) => this.handoff(p, state),
@@ -367,7 +367,7 @@ export class ZoneRoom {
       server.huntKey = p.id;
       this.conns.set(p.id, server);
       p.secret = crypto.randomUUID();
-      sendJSON(server, { t: 'welcome', id: p.id, zone: this.slot, mode: 'freeplay', secret: p.secret });
+      sendJSON(server, { t: 'welcome', id: p.id, zone: this.slot, mode: 'freeplay', secret: p.secret, sv: Date.now() });
     } else {
       const okey = 'o:' + crypto.randomUUID();
       server.huntKey = okey;
@@ -435,10 +435,14 @@ export class ZoneRoom {
     if (this.dirT <= 0) {
       this.dirT = 3;
       const players = this.sim.humans().map((p) => [p.name, p.brawler, p.bounty]);
+      // for the full map: this zone's top bounty holder and its running event
+      let top = null;
+      for (const p of this.sim.players.values()) if (p.alive && p.bounty > 0 && (!top || p.bounty > top.bounty)) top = p;
+      const ev = this.sim.event ? [this.sim.event.id, this.sim.event.ph] : null;
       const dir = this.env.DIRECTORY.get(this.env.DIRECTORY.idFromName('world'));
-      dir.fetch('https://d/report', { method: 'POST', body: JSON.stringify({ slot: this.slot, players, bots: this.sim.players.size - players.length }) })
+      dir.fetch('https://d/report', { method: 'POST', body: JSON.stringify({ slot: this.slot, players, bots: this.sim.players.size - players.length, top: top ? [top.name, top.bounty, Math.round(top.x), Math.round(top.y)] : null, ev }) })
         .then((r) => r.json())
-        .then((zones) => { this.online = zones; this.sim?.broadcast({ t: 'online', zones }); })
+        .then((zones) => { this.online = zones; this.sim?.broadcast({ t: 'online', zones, sv: Date.now() }); })
         .catch(() => {});
     }
   }
@@ -449,9 +453,9 @@ export class Directory {
   constructor() { this.zones = {}; }
   async fetch(req) {
     const r = await req.json();
-    this.zones[r.slot] = { players: r.players, bots: r.bots, at: Date.now() };
+    this.zones[r.slot] = { players: r.players, bots: r.bots, top: r.top || null, ev: r.ev || null, at: Date.now() };
     const out = {};
-    for (const [slot, z] of Object.entries(this.zones)) if (Date.now() - z.at < 10000) out[slot] = { players: z.players, bots: z.bots };
+    for (const [slot, z] of Object.entries(this.zones)) if (Date.now() - z.at < 10000) out[slot] = { players: z.players, bots: z.bots, top: z.top, ev: z.ev };
     return Response.json(out);
   }
 }
