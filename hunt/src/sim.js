@@ -18,7 +18,7 @@ export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
 // fields carried across a zone handoff
 const CARRY = ['id', 'name', 'brawler', 'x', 'y', 'mvx', 'mvy', 'hp', 'maxHp', 'cubes', 'ammo', 'reloadP', 'atkCd', 'superC',
   'lastCombat', 'stun', 'cloak', 'reveal', 'facing', 'lastSeq', 'kills', 'bounty', 'bountyEarned', 'bestBounty', 'bushT',
-  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp', 'cos', 'equipped', 'account', 'secret'];
+  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp', 'cos', 'equipped', 'account', 'secret', 'spikeCd', 'burst'];
 
 export class Sim {
   constructor(o) {
