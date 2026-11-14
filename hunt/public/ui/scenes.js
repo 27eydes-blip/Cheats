@@ -183,6 +183,11 @@ export class LobbyScene {
     this.prop(g, W.prop, t);
     if (!SETTINGS.lowGfx) this.particles(g, W.particles, t);
     g.drawImage(this.vig, 0, 0, w, h);
+    // the hunter theme: dusk falls over every backdrop, with a low red glow on the horizon
+    g.fillStyle = 'rgba(14,6,26,0.42)'; g.fillRect(0, 0, w, h);
+    const hz = g.createLinearGradient(0, h * 0.45, 0, h);
+    hz.addColorStop(0, 'rgba(160,20,40,0)'); hz.addColorStop(1, 'rgba(120,10,30,0.28)');
+    g.fillStyle = hz; g.fillRect(0, h * 0.45, w, h * 0.55);
   }
   prop(g, kind, t) {
     const { w, h } = this, sway = SETTINGS.reduceFlash ? 0 : Math.sin(t * 0.9) * 0.06;
