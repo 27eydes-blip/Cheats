@@ -26,6 +26,15 @@ export const SKINS = {
 // CLASSIC: the original round, cute look of every brawler, free for everyone (the default look is
 // now the scary hunter design; paid skins above are palettes that apply to the new design)
 for (const b of ['volt', 'brick', 'wisp', 'dune', 'rook', 'flicker']) SKINS[b + '_classic'] = { brawler: b, name: 'Classic', classic: true, free: true, price: 0 };
+// LEVEL SKINS: earned on the account level road (never sold)
+Object.assign(SKINS, {
+  volt_static: { brawler: 'volt', name: 'Dead Static', color: '#3a3f4a', dark: '#1c1f26', accent: '#c9fbff', acc: 'cloud', level: 15 },
+  dune_bone: { brawler: 'dune', name: 'Bone Drifter', color: '#e8dcc0', dark: '#9a8a6a', accent: '#ff2d6a', acc: 'moon', level: 35 },
+  brick_obsidian: { brawler: 'brick', name: 'Obsidian', color: '#2a2433', dark: '#120e18', accent: '#ff7a1f', acc: 'horns', level: 50 },
+  wisp_hollow: { brawler: 'wisp', name: 'Hollow Choir', color: '#cfd6e6', dark: '#6a7390', accent: '#7dffb0', acc: 'snowflake', level: 65 },
+  rook_grave: { brawler: 'rook', name: 'Gravewing', color: '#3d3546', dark: '#1b1622', accent: '#d65cff', acc: 'antenna', level: 80 },
+  flicker_void: { brawler: 'flicker', name: 'Void Grin', color: '#14101c', dark: '#050308', accent: '#ff2846', acc: 'visor', level: 95 },
+});
 export const FREE_SKINS = Object.keys(SKINS).filter((k) => SKINS[k].free);
 export const KILL_FX = {
   sparks: { name: 'Sparks', price: 250 }, stars: { name: 'Starburst', price: 300 }, confetti: { name: 'Confetti', price: 300 },
@@ -34,7 +43,22 @@ export const KILL_FX = {
 export const TITLES = {
   tracker: 'Tracker', bounty_hunter: 'Bounty Hunter', apex: 'Apex Hunter', sharpshooter: 'Sharpshooter', night_owl: 'Night Owl',
   sand_strider: 'Sand Strider', crate_crusher: 'Crate Crusher', squad_leader: 'Squad Leader', unstoppable: 'Unstoppable', lay_low: 'Bush Whisperer',
+  // level road titles (never sold)
+  marksman: 'Marksman', arsenal: 'Walking Arsenal', veteran: 'Veteran', warlord: 'Warlord', nightmare: 'Nightmare', legend: 'Legend of the Hunt',
 };
+export const LEVEL_TITLES = { 10: 'marksman', 25: 'arsenal', 40: 'veteran', 60: 'warlord', 75: 'nightmare', 100: 'legend' };
+// EMOTES: short call-outs shown over your head in a match. The first two are free.
+export const EMOTES = [
+  { id: 'e_hey', text: 'HEY!', col: '#ffffff', level: 1 },
+  { id: 'e_gg', text: 'GG', col: '#7dff7a', level: 1 },
+  { id: 'e_seeyou', text: 'I SEE YOU', col: '#ff6b81', level: 5 },
+  { id: 'e_run', text: 'RUN.', col: '#ff2846', level: 12 },
+  { id: 'e_nice', text: 'NICE SHOT', col: '#ffd23f', level: 20 },
+  { id: 'e_here', text: 'OVER HERE', col: '#5ff4ff', level: 28 },
+  { id: 'e_oops', text: 'OOPS', col: '#c9a6ff', level: 38 },
+  { id: 'e_boo', text: 'BOO!', col: '#ff9f43', level: 55 },
+];
+export const emoteIndex = (id) => EMOTES.findIndex((e) => e.id === id);
 export const TITLE_PRICE = 150;
 // kept for the trophy road labels
 export const CATALOG = { titles: TITLES, fx: Object.fromEntries(Object.entries(KILL_FX).map(([k, v]) => [k, v.name])), skins: SKINS };
@@ -51,7 +75,8 @@ export const PASS = Array.from({ length: PASS_TIERS }, (_, i) => {
 export const passTier = (xp) => Math.min(PASS_TIERS, Math.floor((xp || 0) / PASS_XP_PER_TIER));
 export const itemId = (r) => r.skin || r.fx || r.title || null;
 export function priceOf(id) {
-  if (SKINS[id]) return SKINS[id].price;
+  if (SKINS[id]) return SKINS[id].price ?? null;
+  if (Object.values(LEVEL_TITLES).includes(id)) return null;
   if (KILL_FX[id]) return KILL_FX[id].price;
   if (TITLES[id]) return TITLE_PRICE;
   return null;
@@ -63,7 +88,9 @@ function grant(p, r) {
 }
 
 // All progression-changing shop actions. Runs on the server for accounts (authoritative).
-import { claimMission } from './progression.js';
+import { claimMission, weaponUnlocked } from './progression.js';
+import { WEAPONS, perksFor, masteryInfo } from './weapons.js';
+import { powerAction } from './power.js';
 export function applyPurchase(p, req) {
   switch (req.action) {
     case 'mission': return claimMission(p, req.id);
@@ -77,6 +104,22 @@ export function applyPurchase(p, req) {
         if (slot.startsWith('skin:') && SKINS[id]?.brawler !== slot.slice(5)) return { error: 'wrong brawler' };
       }
       p.equipped[slot] = id || null;
+      return { progress: p };
+    }
+    case 'upgrade': case 'gadget': case 'star': return powerAction(p, req); // brawler Power (coins earned by playing)
+    case 'loadout': { // secondary weapon for every match
+      if (req.w2 != null && !weaponUnlocked(p, req.w2)) return { error: 'weapon locked' };
+      p.loadout = { ...(p.loadout || {}), w2: req.w2 || null };
+      return { progress: p };
+    }
+    case 'perk': { // mastery 2/5/8: pick one of two (you can change your pick any time)
+      const tier = req.tier | 0, opts = WEAPONS[req.weapon] ? perksFor(req.weapon)[tier] : null;
+      if (!opts || !opts.some((o) => o.id === req.id)) return { error: 'bad perk' };
+      if (!WEAPONS[req.weapon]) return { error: 'bad weapon' };
+      if (masteryInfo(p.mastery?.[req.weapon] || 0).level < tier) return { error: `Reach mastery ${tier} first` };
+      p.perks = p.perks || {};
+      const cur = (p.perks[req.weapon] || []).filter((id) => !opts.some((o) => o.id === id));
+      p.perks[req.weapon] = [...cur, req.id];
       return { progress: p };
     }
     case 'buy': {

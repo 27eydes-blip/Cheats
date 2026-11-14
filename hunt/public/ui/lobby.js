@@ -26,7 +26,7 @@ export const MODES_UI = {
   free: { name: 'FREE PLAY', desc: 'Drop into the open world anytime. Eight zones around a safe hub.', players: 'Open world', mode: 'free', ribbon: null },
   showdown: { name: 'SHOWDOWN', desc: 'Last hunter standing wins while the poison closes in.', players: '10 players', mode: 'showdown', ribbon: 'EVENT' },
 };
-export const powerLevel = (tro) => ({ level: Math.min(11, 1 + Math.floor(tro / 50)), frac: tro >= 500 ? 1 : (tro % 50) / 50 });
+import { clampPower, POWER_COST, MAX_POWER } from '../power.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TAUNTS = ['The hunt is on.', 'I see you.', 'Run.', 'Your bounty is mine.', 'Nowhere to hide.', 'Ready.'];
@@ -49,7 +49,7 @@ export function createLobby(api) {
         <div class="guestchip" id="guestChip" hidden><span>Guest · save progress</span><button id="guestX" aria-label="Dismiss">✕</button></div>
       </div>
       <div class="rail">
-        ${[['locker', 'LOCKER'], ['pass', 'HUNT PASS'], ['road', 'TROPHY ROAD'], ['friends', 'FRIENDS'], ['settings', 'SETTINGS']].map(([k, l]) =>
+        ${[['armory', 'ARMORY'], ['locker', 'LOCKER'], ['pass', 'HUNT PASS'], ['road', 'TROPHY ROAD'], ['friends', 'FRIENDS'], ['settings', 'SETTINGS']].map(([k, l]) =>
           `<button class="btn btn-sm railbtn" id="rail_${k}">${icon(k)}<span>${l}</span><span class="dot" id="dot_${k}" hidden></span></button>`).join('')}
       </div>
     </div>
@@ -57,7 +57,7 @@ export function createLobby(api) {
       <canvas id="stage" aria-label="Your brawler — tap to choose"></canvas>
       <div class="card-a nameplate">
         <div class="np-row"><span class="title np-name" id="npName">Volt</span><span class="role" id="npRole">BALANCED</span><span class="np-tro">${icon('trophy')}<span id="npTro">0</span></span></div>
-        <div class="power">POWER <b id="npPow">1</b><div class="bar shine"><i id="npBar" style="width:0%"></i></div></div>
+        <div class="power tap" id="npPower">POWER <b id="npPow">1</b><div class="bar shine"><i id="npBar" style="width:0%"></i></div><button class="btn btn-sm" id="npUp">UPGRADE</button></div>
       </div>
     </div>
     <div class="lb-right">
@@ -156,8 +156,9 @@ export function createLobby(api) {
     const guest = !A.ACC.user || A.ACC.user.guest;
     $('guestChip').hidden = !guest || store.get('hunt-guestchip') === 'x';
     $('npName').textContent = B.name; $('npRole').textContent = B.role.toUpperCase(); $('npRole').style.setProperty('--role-col', ROLE_COL[B.role]);
-    const tro = p.trophies[id] | 0, pw = powerLevel(tro);
-    $('npTro').textContent = tro; $('npPow').textContent = pw.level; $('npBar').style.width = `${Math.round(pw.frac * 100)}%`;
+    const tro = p.trophies[id] | 0, pl = clampPower(p.power?.[id] || 1), cost = POWER_COST[pl] || 0;
+    $('npTro').textContent = tro; $('npPow').textContent = pl; $('npBar').style.width = `${Math.round((pl / MAX_POWER) * 100)}%`;
+    $('npUp').textContent = pl >= MAX_POWER ? 'MAX' : p.coins >= cost ? 'UPGRADE' : 'POWER'; $('npUp').classList.toggle('alt', !(pl < MAX_POWER && p.coins >= cost));
     // missions
     const ms = missionState(p), done = ms.filter((m) => m.done).length, claimable = ms.some((m) => m.done && !m.claimed);
     $('misN').textContent = `${done}/3`;
@@ -211,6 +212,8 @@ export function createLobby(api) {
     const M = MODES_UI[L.mode];
     if (L.mode === 'free') api.startFree(); else api.startQuick({ mode: M.mode || '' });
   });
+  $('rail_armory').onclick = () => SC.openArmory(api, refresh);
+  $('npPower').addEventListener('click', (e) => { e.stopPropagation(); SC.openPower(api, refresh); });
   $('rail_locker').onclick = () => { store.set('hunt-seen-owned', A.progress().owned.length); SC.openLocker(api, refresh); };
   $('rail_pass').onclick = () => SC.openPass(refresh);
   $('rail_road').onclick = () => SC.openRoad(refresh);

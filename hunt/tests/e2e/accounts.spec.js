@@ -15,8 +15,8 @@ test('guest -> upgrade keeps progress; login elsewhere syncs; match results appl
   const W = new WebSocket(base + `&name=Winner&brawler=wisp&token=${g.json.token}`);
   const L = new WebSocket(base + '&name=Loser&brawler=volt');
   const st = { w: null, l: null, wid: 0, lid: 0, prog: null };
-  W.onmessage = (e) => { const m = JSON.parse(e.data); if (m.t === 's') st.w = m.me; if (m.t === 'progress') st.prog = m; };
-  L.onmessage = (e) => { const m = JSON.parse(e.data); if (m.t === 's') st.l = m.me; };
+  W.onmessage = (e) => { const m = JSON.parse(e.data); if (m.t === 's' && m.me) st.w = Object.assign(st.w || {}, m.me); if (m.t === 'progress') st.prog = m; };
+  L.onmessage = (e) => { const m = JSON.parse(e.data); if (m.t === 's' && m.me) st.l = Object.assign(st.l || {}, m.me); };
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const t0 = Date.now();
   while (!st.w || !st.l) { await wait(100); if (Date.now() - t0 > 20000) throw new Error('no start'); }

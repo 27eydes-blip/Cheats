@@ -41,8 +41,10 @@ assert(BRAWLERS.flicker.speed > Math.max(...Object.entries(BRAWLERS).filter(([k]
 assert.equal(BRAWLERS.flicker.hp, 3000);
 
 // Balance: large sample must sit inside 45-55% for every brawler
-// deterministic (balance.js seeds Math.random); seed 1 sits mid-band. See BUG_LIST.md: single 1800-duel runs swing ±2-3%.
-const r = runBalance(1800, 1);
+// deterministic (balance.js seeds Math.random). One 1800-duel run swings ±2-3% (see BUG_LIST.md),
+// so the gate is the average of three seeds.
+const runs = [1, 2, 3].map((s) => runBalance(1800, s));
+const r = { rates: Object.fromEntries(Object.keys(runs[0].rates).map((b) => [b, runs.reduce((a, q) => a + q.rates[b], 0) / runs.length])) };
 for (const [b, v] of Object.entries(r.rates)) assert(v >= 0.45 && v <= 0.55, `${b} win rate ${(v * 100).toFixed(1)}%`);
-console.log('balance (1800 duels):', Object.entries(r.rates).map(([b, v]) => `${b} ${(v * 100).toFixed(1)}%`).join(', '));
+console.log('balance (3 x 1800 duels):', Object.entries(r.rates).map(([b, v]) => `${b} ${(v * 100).toFixed(1)}%`).join(', '));
 console.log('BRAWLERS OK');

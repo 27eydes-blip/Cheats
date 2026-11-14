@@ -1,7 +1,7 @@
 export function trackErrors(page) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  page.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|ERR_|Failed to load resource/.test(m.text())) errors.push(m.text()); });
+  page.on('console', (m) => { if ((m.type() === 'error' && !/fonts\.g|ERR_|Failed to load resource/.test(m.text())) || /frame error/.test(m.text())) errors.push(m.text()); });
   return errors;
 }
 export const G = (page, fn) => page.evaluate(fn);

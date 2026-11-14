@@ -47,11 +47,11 @@ export function layLowFactor(bushTime) { return Math.max(0, Math.min(1, (bushTim
 // SHRINK & SPEED: lower HP = smaller + faster; below 25% = speed rush + 15% damage
 export const LOW_HP = 0.25, RUSH_TIME = 1.6, RUSH_BONUS = 0.4, COMEBACK_DMG = 1.15;
 export const SLOW_MUL = 0.6; // Dune's wave
-export function moveStats(brawler, hp, maxHp, rush = 0, slowed = 0) {
+export function moveStats(brawler, hp, maxHp, rush = 0, slowed = 0, bonus = 1) { // bonus: Star Power speed
   const f = Math.max(0, Math.min(1, hp / maxHp));
   return {
     r: PLAYER_R * (0.7 + 0.3 * f),
-    speed: BRAWLERS[brawler].speed * (1 + 0.22 * (1 - f) + (rush > 0 ? RUSH_BONUS : 0)) * (slowed > 0 ? SLOW_MUL : 1),
+    speed: BRAWLERS[brawler].speed * (1 + 0.22 * (1 - f) + (rush > 0 ? RUSH_BONUS : 0)) * (slowed > 0 ? SLOW_MUL : 1) * bonus,
   };
 }
 // attacks the client draws instantly as predicted projectiles

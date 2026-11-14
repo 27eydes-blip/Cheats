@@ -125,6 +125,38 @@ for (const m of Object.values(MODES)) {
   // players equal on every tie-break share a place (1, 1, 3 ...)
   if (!m.tieKey && !m.teams) m.tieKey = (sim, p) => `${score(p)}|${p.kills}|${p.bounty}`;
 }
+// TEST RANGE: a private open map with target dummies to try any unlocked weapon. No rewards.
+MODES.range = {
+  name: 'Test Range', desc: 'Try your weapons on target dummies. Leave any time.', respawn: true, maxPlayers: 1, timeLimit: 900, noRewards: true,
+  checkEnd: (sim) => sim.time >= 900,
+  hud: (sim) => ({ tl: Math.max(0, 900 - sim.time) }),
+  score: () => 0,
+  rank: (sim) => [...sim.players.values()],
+  onStart: (sim) => {
+    const c = sim.center, me = sim.humans()[0];
+    if (me) { me.x = me.px = c.x - 420; me.y = me.py = c.y; me.facing = 0; }
+    // dummies at several ranges (one strafes), as tough as you are
+    const spots = [[-150, -170, 0], [0, 0, 0], [150, 170, 0], [330, -240, 1], [330, 240, 0], [620, 0, 0]];
+    const kinds = ['brick', 'volt', 'wisp', 'flicker', 'dune', 'rook'];
+    spots.forEach(([dx, dy, mover], i) => {
+      const d = sim.addPlayer({ name: mover ? 'Moving Dummy' : 'Dummy', brawler: kinds[i], bot: true });
+      d.dummy = true; d.mover = !!mover; d.home = { x: c.x + dx, y: c.y + dy };
+      d.pset = { [d.brawler]: { power: me ? me.power || 1 : 1 } }; sim.applyPower(d, true); d.hp = d.maxHp;
+      d.x = d.px = d.home.x; d.y = d.py = d.home.y; d.facing = Math.PI;
+    });
+  },
+  dummyInput: (sim, d) => ({ t: 'in', s: 0, mx: 0, my: d.mover ? (Math.sin(sim.time * 1.3) > 0 ? 1 : -1) : 0, ax: -1, ay: 0, f: null, u: null }),
+  tick: (sim) => {
+    for (const d of sim.players.values()) {
+      if (!d.dummy || !d.alive) continue;
+      if (sim.time - d.lastCombat > 2.5) d.hp = d.maxHp; // dummies heal up when you stop shooting
+      const far = Math.hypot(d.x - d.home.x, d.y - d.home.y) > (d.mover ? 300 : 40);
+      if (far && !d.knock) { d.x = d.px = d.home.x; d.y = d.py = d.home.y; } // back to its spot (after a respawn or a shove)
+    }
+  },
+  botGoal: () => null,
+};
+
 export const QUICK_MODES = Object.keys(MODES).filter((k) => MODES[k].quick);
 // the "any mode" pool for Quick Hunt (Big Hunt is only played when picked)
 export const RANDOM_MODES = QUICK_MODES.filter((k) => !MODES[k].noRandom);

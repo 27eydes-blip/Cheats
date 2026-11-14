@@ -195,3 +195,34 @@ body.reduce-flash .marker { animation: none; }
 .ui-body.modes { display: flex; flex-direction: column; overflow: hidden; }
 .ui-body.modes .modes-grid { flex: 1; min-height: 0; height: auto; }
 .ui-body.modes .events-row { flex: none; }
+
+/* ARMORY */
+.armory .preview { gap: 2px; overflow: auto; }
+.armory .stats { width: 100%; display: grid; grid-template-columns: 1fr; gap: 3px; font-size: inherit; }
+.statrow { width: 100%; display: grid; grid-template-columns: calc(var(--u) * 9) 1fr calc(var(--u) * 7); gap: 6px; align-items: center; font-family: var(--font); color: #fff; font-size: calc(var(--u) * 1.3); }
+.statrow b { text-align: right; color: var(--gold); font-weight: normal; }
+.statrow .bar { height: max(11px, calc(var(--u) * 1.3)); border-width: 2px; }
+.perks { width: 100%; display: grid; gap: 4px; margin-top: 6px; }
+.perkrow { display: grid; grid-template-columns: calc(var(--u) * 3.4) 1fr 1fr; gap: 6px; align-items: center; font-family: var(--font); color: #fff; font-size: calc(var(--u) * 1.3); }
+.perkrow .chipbtn[disabled] { opacity: .4; }
+.armory .ped canvas { aspect-ratio: 2; flex: none; }
+.armory .ped { justify-content: flex-start; min-height: 0; }
+.armory .ped .tag { white-space: nowrap; font-size: .75em; display: flex; align-items: center; gap: 3px; }
+.armory .ped .tag .ico, .armory .ped .tag svg { width: 1.1em; height: 1.1em; }
+.lvups { font-family: var(--font); color: #fff; font-size: calc(var(--u) * 1.4); display: grid; gap: 2px; margin-top: 4px; }
+.lvups b { color: var(--gold); font-weight: normal; }
+.power .btn { padding: 2px 8px; font-size: .9em; }
+.pwlv { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.pwnum { font-family: var(--font); font-size: calc(var(--u) * 4.2); color: var(--gold); -webkit-text-stroke: 2px var(--ink); min-width: 2ch; text-align: center; }
+.pwpick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0; }
+.pwpick .pwhead { grid-column: 1 / -1; font-family: var(--font); color: #fff; font-size: calc(var(--u) * 1.6); text-align: left; }
+.pwpick .chipbtn { text-align: left; line-height: 1.15; padding: 6px 8px; white-space: normal; }
+.pwpick .chipbtn small { font-family: system-ui, sans-serif; opacity: .85; }
+.pwpick .chipbtn[disabled] { opacity: .45; }
+.mxp { margin-top: 4px; }
+.coinsline { font-family: var(--font); color: var(--gold); font-size: calc(var(--u) * 1.6); }
+.ucards { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; perspective: 600px; }
+.ucard { min-width: calc(var(--u) * 12); padding: 6px 10px; border: 3px solid var(--ink); border-radius: 12px; background: var(--panel-2); box-shadow: inset 0 -4px 0 var(--uc);
+  display: flex; flex-direction: column; font-family: var(--font); color: #fff; text-align: center; opacity: 0; animation: ureveal .55s cubic-bezier(.2,1.4,.4,1) forwards; }
+.ucard small { color: var(--uc); font-size: .75em; } .ucard b { font-weight: normal; font-size: 1.1em; } .ucard span { font-size: .75em; opacity: .85; }
+@keyframes ureveal { from { opacity: 0; transform: rotateY(90deg) scale(.6); } to { opacity: 1; transform: none; } }
