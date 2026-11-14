@@ -72,6 +72,7 @@ export async function recordMatch(db, userId, result) {
   return mutateProgress(db, userId, (raw) => applyMatch(JSON.parse(raw), result));
 }
 
+const DUMMY_SALT = 'AAAAAAAAAAAAAAAAAAAAAA==';
 const validName = (n) => typeof n === 'string' && /^[A-Za-z0-9_]{3,16}$/.test(n);
 const validPass = (p) => typeof p === 'string' && p.length >= 6 && p.length <= 128;
 
@@ -97,15 +98,23 @@ export async function handleApi(req, env) {
     if (await db.prepare('SELECT 1 FROM users WHERE username = ?').bind(body.username).first()) return json({ error: 'That username is taken' }, 409);
     const { hash, salt } = await hashPassword(body.password);
     let id;
-    if (me && !me.username) { id = me.id; await db.prepare('UPDATE users SET username = ?, pass_hash = ?, salt = ?, updated = ? WHERE id = ?').bind(body.username, hash, salt, now(), id).run(); }
-    else { id = crypto.randomUUID(); await db.prepare('INSERT INTO users (id, username, pass_hash, salt, progress, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(id, body.username, hash, salt, JSON.stringify(newProgress()), now(), now()).run(); }
+    try {
+      if (me && !me.username) { id = me.id; await db.prepare('UPDATE users SET username = ?, pass_hash = ?, salt = ?, updated = ? WHERE id = ?').bind(body.username, hash, salt, now(), id).run(); }
+      else { id = crypto.randomUUID(); await db.prepare('INSERT INTO users (id, username, pass_hash, salt, progress, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(id, body.username, hash, salt, JSON.stringify(newProgress()), now(), now()).run(); }
+    } catch (e) {
+      // two sign-ups racing for the same name: the UNIQUE constraint catches the second one
+      if (/UNIQUE/i.test(String(e && e.message))) return json({ error: 'That username is taken' }, 409);
+      throw e;
+    }
     const token = await newSession(db, id);
     const u = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
     return json({ token, user: publicUser(u) });
   }
   if (path === '/login' && req.method === 'POST') {
     const u = typeof body.username === 'string' ? await db.prepare('SELECT * FROM users WHERE username = ?').bind(body.username).first() : null;
-    const ok = u && u.pass_hash && validPass(body.password) && safeEqual((await hashPassword(body.password, u.salt)).hash, u.pass_hash);
+    // always run the hash, so response time doesn't reveal whether a username exists
+    const h = await hashPassword(typeof body.password === 'string' ? body.password.slice(0, 128) : '', u && u.salt ? u.salt : DUMMY_SALT);
+    const ok = u && u.pass_hash && validPass(body.password) && safeEqual(h.hash, u.pass_hash);
     if (!ok) return json({ error: 'Wrong username or password' }, 401);
     return json({ token: await newSession(db, u.id), user: publicUser(u) });
   }
