@@ -902,6 +902,7 @@ export class Sim {
     const score = this.mode.score || (() => 0);
     const results = ranked.map((p) => [p.name, p.brawler, p.rank, p.kills, p.wasBot ? 1 : 0, p.id, p.bountyEarned, Math.floor(score(p)), p.team]);
     const winner = ranked[0];
+    this.hooks.finished?.(ranked.filter((p) => !p.wasBot).map((p) => ({ p, rank: p.rank, players: this.players.size, won: this.mode.teams ? (winTeam === 0 ? null : p.team === winTeam) : undefined })));
     for (const p of this.players.values()) {
       if (p.connected) {
         this.send(p.id, { t: 'end', mode: this.modeKey, rank: p.rank, kills: p.kills, bounty: p.bountyEarned, winner: winner ? winner.name : null, results,

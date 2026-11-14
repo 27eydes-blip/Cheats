@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "wrangler dev --ip 0.0.0.0 --port 8787",
     "deploy": "wrangler deploy",
-    "test": "node test/sim.test.js && node test/mirage.test.js && node test/brawlers.test.js && node test/squad.test.js",
+    "test": "node test/sim.test.js && node test/mirage.test.js && node test/brawlers.test.js && node test/squad.test.js && node test/progression.test.js",
     "e2e": "playwright test --trace off",
     "test:all": "npm test && npm run e2e"
   },

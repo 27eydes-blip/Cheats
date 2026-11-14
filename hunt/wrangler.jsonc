@@ -4,6 +4,8 @@
   "main": "src/worker.js",
   "compatibility_date": "2025-10-01",
   "assets": { "directory": "./public", "binding": "ASSETS" },
+  // Local dev uses a local D1 file; the preview deploy uses wrangler.preview.jsonc with a real database id.
+  "d1_databases": [{ "binding": "DB", "database_name": "hunt-db", "database_id": "00000000-0000-4000-8000-000000000001", "migrations_dir": "migrations" }],
   "durable_objects": {
     "bindings": [
       { "name": "MATCH", "class_name": "MatchRoom" },

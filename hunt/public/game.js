@@ -9,6 +9,8 @@ import { EVENTS } from './events/index.js';
 import { Input } from './input.js';
 import * as R from './render.js';
 import { SETTINGS, setSetting } from './settings.js';
+import * as A from './account.js';
+import { levelInfo } from './progression.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -64,14 +66,20 @@ function buildCards() {
     const B = BRAWLERS[id];
     const el = document.createElement('div');
     el.className = 'card' + (id === selBrawler ? ' sel' : '');
-    el.innerHTML = `<canvas></canvas><div class="nm">${B.name}</div><div class="role">${B.role.toUpperCase()}</div>
+    el.innerHTML = `<span class="tro" data-tro="${id}"></span><canvas></canvas><div class="nm">${B.name}</div><div class="role">${B.role.toUpperCase()}</div>
       <div class="stats">${B.hp} HP · ${B.speed > 260 ? 'Fast' : B.speed < 230 ? 'Slow' : 'Normal'} · ${B.attack.range > 800 ? 'Long' : B.attack.range < 400 ? 'Short' : 'Mid'} range<br>${B.blurb}</div>`;
     el.onclick = () => { selBrawler = id; prefs.brawler = id; savePrefs(); for (const c of wrap.children) c.classList.remove('sel'); el.classList.add('sel'); };
     wrap.appendChild(el);
     R.drawPortrait(el.querySelector('canvas'), id);
   }
 }
-document.fonts?.load(`20px ${R.FONT}`).finally(buildCards);
+document.fonts?.load(`20px ${R.FONT}`).finally(() => { buildCards(); showTrophies(); });
+function showTrophies() {
+  const t = A.progress().trophies;
+  for (const el of document.querySelectorAll('[data-tro]')) el.textContent = `🏆 ${t[el.dataset.tro] | 0}`;
+}
+A.onUser(showTrophies);
+const booted = A.boot();
 
 function show(screen) {
   for (const id of ['lobby', 'waiting', 'dead', 'end']) $(id).hidden = id !== screen;
@@ -144,6 +152,7 @@ function startQuick(opts = G.opts) {
   const room = opts.room ?? formRoom;
   G.kind = 'quick'; G.room = room; G.brawler = selBrawler;
   const q = new URLSearchParams({ name, brawler: selBrawler });
+  if (A.ACC.token) q.set('token', A.ACC.token);
   if (room) q.set('room', room);
   if (opts.skip) q.set('skip', opts.skip);
   if (room && !$('bots').checked && !opts.world) q.set('bots', '0');
@@ -268,6 +277,12 @@ function onMsg(c, m) {
       break;
     case 'claimfail': toast('Zone transfer failed — rejoining'); startFree(); break;
     case 'online': G.online = m.zones; break;
+    case 'progress': {
+      if (A.ACC.user) A.setUser({ ...A.ACC.user, progress: m.progress });
+      const L = levelInfo(m.progress.xp);
+      $('endProg').innerHTML = `🏆 <b>${m.delta >= 0 ? '+' : ''}${m.delta}</b> · +${m.xp} XP · LV ${L.level}`;
+      break;
+    }
     case 'pong': if (c.primary) { G.ping = Math.round(performance.now() - m.c); $('ping').textContent = `${G.ping} ms`; } break;
   }
 }
@@ -286,7 +301,7 @@ function onEnd(m) {
   savePrefs();
   $('endRank').textContent = m.winTeam !== undefined ? (m.won ? 'WIN!' : m.winTeam === 0 ? 'DRAW' : 'LOSS') : '#' + m.rank;
   $('endMsg').textContent = m.winTeam !== undefined ? `Team pot ★${m.pots[m.team]} vs ★${m.pots[3 - m.team]}` : won ? `VICTORY! ${MODE_INFO[m.mode].name} on ${worldName(G.world)}` : `${m.winner || 'Nobody'} won ${MODE_INFO[m.mode].name}.`;
-  $('endK').textContent = m.kills; $('endB').textContent = m.bounty;
+  $('endK').textContent = m.kills; $('endB').textContent = m.bounty; $('endProg').textContent = '';
   const scoreLbl = { bounty: '★', hunted: 'pts', crystals: '💎' }[m.mode];
   $('results').innerHTML = m.results.map(([n, b, r, k, bot, id, be, sc, tm]) =>
     `<li class="${id === G.myId ? 'me' : ''} ${tm ? (tm === m.team ? 'mate' : 'foe') : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${scoreLbl ? `${sc} ${scoreLbl} · ` : ''}${k} KO · ★${be}</span></li>`).join('');
@@ -882,8 +897,10 @@ $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('play').
 
 // Test flags: ?world=<key>[&mode=<mode>] drops you straight into that arena with bots; ?free=1 into Free Play.
 const qs = new URLSearchParams(location.search);
+booted.then(() => {
 if (qs.get('world')) startQuick({ world: qs.get('world'), mode: qs.get('mode') || '', ev: qs.get('ev') || '', lobby: '1.5', room: 'T' + Math.floor(Math.random() * 1e8) });
 else if (qs.get('free')) startFree();
+});
 
 // exposed for e2e tests
 window.__hunt = G;
