@@ -2,12 +2,14 @@
 // burst) and the level-up celebration. Built from plain images/tweens (no shaders); they
 // never pause gameplay because they only ever run on menu / results screens.
 import Phaser from "phaser";
-import { RARITY, VIEW } from "../config.js";
+import { PIXEL_FONT, RARITY, VIEW } from "../config.js";
+import { Save } from "../data/save.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { addAtlas, PixelCanvas } from "../pixel/px.js";
 import { Sfx } from "../audio/sfx.js";
 import { Haptics } from "../systems/haptics.js";
 import { hex, neonText, plainText } from "./ui.js";
+import { tapeBand } from "./illegal.js";
 
 const ADD = Phaser.BlendModes.ADD;
 
@@ -59,6 +61,8 @@ function burst(scene, cont, x, y, color, n = 28, dist = 420) {
  * @returns Promise that resolves when it has closed
  */
 export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}) {
+  // ILLEGAL LEGENDARY: the first unlock gets its own cinematic (once per save)
+  if (def.rarity === "illegal" && !Save.data.revealed?.[def.id]) return revealIllegal(scene, def, { depth, title });
   beamTexture(scene);
   const W = VIEW.W;
   const H = VIEW.H;
@@ -204,7 +208,7 @@ export function revealHero(scene, def, { depth = 900, title = "UNLOCKED!" } = {}
       }
       flash.fillAlpha = reduceFlashing() ? 0.08 : 0.38; // Reduce Flashing: a soft glow only
       scene.tweens.add({ targets: flash, fillAlpha: 0, duration: 380 });
-      burst(scene, cont, W / 2, cy, rc, { ultra: 70, mega: 56, legendary: 44 }[def.rarity] ?? 30);
+      burst(scene, cont, W / 2, cy, rc, { illegal: 80, ultra: 70, mega: 56, legendary: 44 }[def.rarity] ?? 30);
       for (const [s, d] of [
         [7, 0],
         [10, 120],
@@ -387,4 +391,195 @@ export function openChest(scene, x, y, { depth = 450 } = {}) {
       );
     });
   });
+}
+
+/**
+ * The ILLEGAL LEGENDARY unlock (WASP LORD), played once, on his first unlock:
+ *   1. the screen goes black and an alarm flashes "ILLEGAL" between bands of warning tape
+ *      (Reduce Flashing: a steady red glow, no strobe)
+ *   2. two red eyes open in the dark, and the buzz-roar plays
+ *   3. the armour slams on (he drops in with a metallic boom, plates and sparks fly)
+ *   4. his name drops in big metal letters: WASP LORD
+ * Tap to skip (from a moment in) like the other reveals. Resolves when it has closed.
+ */
+export function revealIllegal(scene, def, { depth = 900, title = "UNLOCKED!" } = {}) {
+  (Save.data.revealed ||= {})[def.id] = true;
+  Save.write?.();
+  const W = VIEW.W;
+  const H = VIEW.H;
+  const calm = reduceFlashing();
+  const RED = 0xff1a2a;
+  const cy = H * 0.42;
+  const cont = scene.add.container(0, 0).setDepth(depth);
+  cont.name = "illegalReveal";
+  const timers = [];
+  const later = (ms, fn) => timers.push(scene.time.delayedCall(ms, fn));
+  const dark = scene.add.rectangle(W / 2, H / 2, W * 3, H * 3, 0x000000, 0).setInteractive();
+  // 1. the alarm: a red wash, tape bands and the word
+  const alarm = scene.add.rectangle(W / 2, H / 2, W * 3, H * 3, 0x9a0010, 0);
+  const tape = scene.add.graphics().setAlpha(0);
+  tapeBand(tape, -40, H * 0.27, W + 80, 54, { stripe: 26 });
+  tapeBand(tape, -40, H * 0.56, W + 80, 54, { stripe: 26 });
+  const word = scene.add
+    .text(W / 2, H * 0.445, "ILLEGAL", {
+      fontFamily: PIXEL_FONT,
+      fontSize: "112px",
+      fontStyle: "700",
+      color: "#ff1a2a",
+      stroke: "#140004",
+      strokeThickness: 16,
+      resolution: VIEW.Z,
+    })
+    .setOrigin(0.5)
+    .setAlpha(0);
+  word.setScale(Math.min(1, (W - 60) / word.width));
+  const warn = plainText(scene, W / 2, H * 0.53, "⚠ UNAUTHORISED HERO DETECTED ⚠", 22, "#ffd0d0").setAlpha(0);
+  // 2. the eyes in the dark: two angled slits that open, with a glow
+  const eyes = scene.add.container(W / 2, cy).setAlpha(0);
+  const eg = scene.add.graphics();
+  for (const s of [-1, 1]) {
+    eg.fillStyle(RED, 1).fillPoints(
+      [
+        { x: s * 18, y: -10 },
+        { x: s * 96, y: -22 },
+        { x: s * 104, y: 4 },
+        { x: s * 30, y: 16 },
+      ],
+      true,
+    );
+    eg.fillStyle(0xffe0e0, 1).fillPoints(
+      [
+        { x: s * 40, y: -8 },
+        { x: s * 80, y: -14 },
+        { x: s * 84, y: 0 },
+        { x: s * 46, y: 6 },
+      ],
+      true,
+    );
+  }
+  const eyeGlow = scene.add.image(0, 0, "pxglow").setScale(4 * 9, 4 * 3).setTint(RED).setBlendMode(ADD).setAlpha(0.8);
+  eyes.add([eyeGlow, eg]);
+  eyes.setScale(1.5, 0.05);
+  // 3. the hero (armour on) and 4. his name
+  const hero = scene.add.image(W / 2, cy, def.texture).setAlpha(0);
+  const base = 460 / Math.max(hero.width, hero.height);
+  const heroGlow = scene.add.image(W / 2, cy, "pxglow").setScale(4 * 12).setTint(RED).setBlendMode(ADD).setAlpha(0);
+  const name = scene.add
+    .text(W / 2, cy + 300, def.name, {
+      fontFamily: PIXEL_FONT,
+      fontSize: "92px",
+      fontStyle: "700",
+      color: "#e4e8f2",
+      stroke: "#1a1c24",
+      strokeThickness: 14,
+      resolution: VIEW.Z,
+    })
+    .setOrigin(0.5)
+    .setAlpha(0);
+  name.setShadow(0, 8, "#ff1a2a", 0, true, true);
+  const nameK = Math.min(1, (W - 50) / name.width);
+  // a metal sheen across the letters (a bright band that sweeps once when they land)
+  const sub = plainText(scene, W / 2, cy + 378, `${RARITY[def.rarity]?.label ?? ""} · ${title}`, 24, hex(RED)).setAlpha(0);
+  const hint = plainText(scene, W / 2, H * 0.9, "TAP TO CONTINUE", 18, "#ffb0b0").setAlpha(0);
+  const flash = scene.add.rectangle(W / 2, H / 2, W * 3, H * 3, 0xffffff, 0);
+  cont.add([dark, alarm, tape, word, warn, heroGlow, eyes, hero, name, sub, hint, flash]);
+
+  scene.tweens.add({ targets: dark, fillAlpha: 1, duration: 180 });
+  // 1. the alarm (0.2 s - 1.5 s): three red flashes, or one steady glow with Reduce Flashing
+  later(200, () => {
+    Sfx.waspPhase?.();
+    tape.setAlpha(1);
+    word.setAlpha(1);
+    warn.setAlpha(1);
+    if (calm) alarm.fillAlpha = 0.35;
+    else
+      scene.tweens.add({
+        targets: alarm,
+        fillAlpha: { from: 0.7, to: 0.08 },
+        duration: 200,
+        repeat: 2,
+        repeatDelay: 140,
+      });
+    scene.tweens.add({ targets: word, scale: { from: word.scale * 1.25, to: word.scale }, duration: 160, ease: "Cubic.easeIn" });
+  });
+  later(1000, () => !calm && Sfx.waspPhase?.());
+  later(1500, () => {
+    scene.tweens.add({ targets: [alarm, tape, word, warn], alpha: 0, duration: 260 });
+    alarm.fillAlpha = calm ? alarm.fillAlpha : 0;
+  });
+  // 2. the eyes open (1.8 s) and the buzz-roar
+  later(1800, () => {
+    Sfx.waspRoar?.();
+    eyes.setAlpha(1);
+    scene.tweens.add({ targets: eyes, scaleY: 1.5, duration: 420, ease: "Back.easeOut" });
+    if (!calm)
+      scene.tweens.add({ targets: eyeGlow, alpha: { from: 0.5, to: 1 }, duration: 380, yoyo: true, repeat: 2 });
+  });
+  // 3. the armour slams on (3.0 s)
+  later(3000, () => {
+    scene.tweens.add({ targets: eyes, alpha: 0, duration: 160 });
+    hero.setAlpha(1).setScale(base * 1.8);
+    scene.tweens.add({
+      targets: hero,
+      scale: base,
+      duration: 220,
+      ease: "Cubic.easeIn",
+      onComplete: () => {
+        Sfx.waspBoom?.();
+        Haptics.strong();
+        flash.fillColor = calm ? RED : 0xffffff;
+        flash.fillAlpha = calm ? 0.12 : 0.55;
+        scene.tweens.add({ targets: flash, fillAlpha: 0, duration: 360 });
+        scene.cameras.main.shake(calm ? 120 : 260, calm ? 0.004 : 0.014);
+        heroGlow.setAlpha(0.55);
+        burst(scene, cont, W / 2, cy, RED, 60, 460);
+        burst(scene, cont, W / 2, cy, 0x8a90a6, 24, 360);
+        scene.tweens.add({ targets: heroGlow, alpha: 0.3, duration: 900 });
+      },
+    });
+  });
+  // 4. the name drops in big metal letters (3.6 s)
+  later(3600, () => {
+    name.setAlpha(1).setScale(nameK).setY(cy + 120);
+    scene.tweens.add({
+      targets: name,
+      y: cy + 300,
+      duration: 420,
+      ease: "Bounce.easeOut",
+      onComplete: () => Sfx.waspBoom?.(0.5),
+    });
+    scene.tweens.add({ targets: sub, alpha: 1, duration: 300, delay: 380 });
+  });
+  let closable = false;
+  let closed = false;
+  return new Promise((resolve) => {
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      for (const t of timers) t.remove(false);
+      scene.tweens.add({
+        targets: cont,
+        alpha: 0,
+        duration: 220,
+        onComplete: () => {
+          killTree(scene, cont);
+          cont.destroy();
+          resolve();
+        },
+      });
+    };
+    later(350, () => (closable = true)); // (the buy tap itself never skips it)
+    later(4200, () => scene.tweens.add({ targets: hint, alpha: 0.85, duration: 300 }));
+    later(7000, close);
+    dark.on("pointerdown", () => closable && close());
+  });
+}
+
+/** Stop every tween on a container and its children (so nothing animates a destroyed object). */
+function killTree(scene, cont) {
+  scene.tweens.killTweensOf(cont);
+  for (const o of cont.list) {
+    scene.tweens.killTweensOf(o);
+    if (o.list) killTree(scene, o);
+  }
 }

@@ -45,6 +45,7 @@ const TYPE_COL = {
   legendary: 0xff8a1a,
   mega: 0xff4fd8,
   ultra: 0xff4fd8,
+  illegal: 0xff1a2a,
 };
 
 const priceStyle = (size, color = "#ffffff") => ({

@@ -34,6 +34,9 @@ import { PORTRAIT_K } from "../pixel/common.js";
 import { greyPortrait } from "../pixel/grayHero.js";
 import { canvasTexture, rebuild } from "../pixel/px.js";
 import { killTweensDeep, button, fadeTo, RollingCounter } from "../ui/ui.js";
+import { illegalStamp, isIllegal, warningTape } from "../ui/illegal.js";
+import { revealHero } from "../ui/reveal.js";
+import { WASP_EYE } from "../pixel/waspLordArt.js";
 
 // each tab glows its own colour when selected
 const TABS = [
@@ -62,6 +65,7 @@ const THEMES = {
   legendary: { fill: 0xffa21a, light: 0xffd84a, band: 0xb85a00 },
   mega: { fill: 0xff3a8a, light: 0xff9ac8, band: 0xa01050 },
   ultra: { fill: 0x22c860, light: 0x8affa8, band: 0x0a7a3a },
+  illegal: { fill: 0xb80a18, light: 0xff4a5a, band: 0x14020a },
   drop: { fill: 0x5ad41e, light: 0xa8ff5a, band: 0x2a8a0a },
   pass: { fill: 0x10b8e8, light: 0x6af0ff, band: 0x0a6a9a },
   pod: { fill: 0xa040ff, light: 0xd27aff, band: 0x5a18a8 },
@@ -75,11 +79,11 @@ const SET_THEME = {
   set_prism: "prism",
 };
 // pod reveal rays by rarity
-const RAY_COL = { common: 0x9ab0e0, rare: 0x2a8aff, epic: 0xb45cff, legendary: 0xffd23f };
-// the rarity sections, best first; MEGA / ULTRA LEGENDARY heroes go at the top of LEGENDARY
+const RAY_COL = { common: 0x9ab0e0, rare: 0x2a8aff, epic: 0xb45cff, legendary: 0xffd23f, illegal: 0xff1a2a };
+// the rarity sections, best first; ILLEGAL / ULTRA / MEGA LEGENDARY heroes go at the top of LEGENDARY
 export const RARITY_SECTIONS = ["legendary", "epic", "rare", "common"];
 const SECTION_TIERS = {
-  legendary: ["ultra", "mega", "legendary"],
+  legendary: ["illegal", "ultra", "mega", "legendary"],
   epic: ["epic"],
   rare: ["rare"],
   common: ["common"],
@@ -737,6 +741,8 @@ export class ShopScene extends Phaser.Scene {
     c.legend = this.isLegendary(o);
     const g = this.add.graphics();
     neonPanel(g, -w / 2, -h / 2, w, h, 18, c.col, { tint: c.legend ? 0.55 : 0.38, glow: !this.lowGfx });
+    // ILLEGAL LEGENDARY: red warning tape round the card
+    if (o.kind === "hero" && isIllegal(getCharacter(o.id))) warningTape(g, -w / 2 + 6, -h / 2 + 6, w - 12, h - 12, 9, { stripe: 10 });
     // the price strip along the bottom
     g.fillStyle(0x07010f, 0.75).fillRect(-w / 2 + 5, h / 2 - 64, w - 10, 59);
     g.lineStyle(2, c.col, 0.6).lineBetween(-w / 2 + 5, h / 2 - 64, w / 2 - 5, h / 2 - 64);
@@ -756,7 +762,7 @@ export class ShopScene extends Phaser.Scene {
 
   isLegendary(o) {
     const r = this.offerRarity(o);
-    return ["legendary", "mega", "ultra"].includes(r);
+    return ["legendary", "mega", "ultra", "illegal"].includes(r);
   }
 
   /** Icon for a cosmetic (hat / coin skin / skin / trail / effect), sized for big cards. */
@@ -784,8 +790,11 @@ export class ShopScene extends Phaser.Scene {
       return im;
     };
     switch (o.kind) {
-      case "hero":
-        return fit(this.add.image(x, y, getCharacter(o.id).texture), (0.9 / HI) * PORTRAIT_K);
+      case "hero": {
+        const def = getCharacter(o.id);
+        const locked = isIllegal(def) && !Progression.isUnlocked(def.id) && this.textures.exists(`${def.texture}_locked`);
+        return fit(this.add.image(x, y, locked ? `${def.texture}_locked` : def.texture), (0.9 / HI) * PORTRAIT_K);
+      }
       case "yarms":
         return fit(this.add.image(x, y, "hero_yarms_flex"), (0.9 / HI) * PORTRAIT_K);
       case "cos":
@@ -877,11 +886,14 @@ export class ShopScene extends Phaser.Scene {
       }
       case "hero": {
         const def = getCharacter(o.id);
-        m.title = def.name;
-        m.sub = def.title;
-        if (!["common", "rare"].includes(def.rarity))
+        // ILLEGAL LEGENDARY: until he's yours he's classified, a black shape with red eyes, "???"
+        m.illegal = isIllegal(def);
+        m.hidden = m.illegal && !Progression.isUnlocked(def.id);
+        m.title = m.hidden ? "???" : def.name;
+        m.sub = m.hidden ? "CLASSIFIED · coins only" : def.title;
+        if (!["common", "rare"].includes(def.rarity) && !m.illegal)
           m.ribbon = { text: RARITY[def.rarity].label.split(" ")[0], col: 0xe0203a };
-        m.rigSpec = { hero: def.id };
+        m.rigSpec = m.hidden ? null : { hero: def.id };
         m.cta = this.heroCta(def);
         break;
       }
@@ -1010,7 +1022,7 @@ export class ShopScene extends Phaser.Scene {
     if (m.cta?.coin) {
       const afford = s.coins >= c.price;
       const txt = this.add
-        .text(0, sy, m.cta.label, this.priceStyle(34, afford ? "#ffe680" : "#ff8a9a"))
+        .text(0, sy, m.cta.display || m.cta.label, this.priceStyle(34, m.cta.red ? "#ff3a4a" : afford ? "#ffe680" : "#ff8a9a"))
         .setOrigin(0, 0.5);
       const ic = this.add.image(0, sy, "pxc", "coin_0").setScale(0.85);
       const total = ic.displayWidth + 10 + txt.width;
@@ -1062,6 +1074,12 @@ export class ShopScene extends Phaser.Scene {
       tg.fillStyle(0xff2a5a, 1).fillRoundedRect(tt.x - tt.width - 8, tt.y - 14, tt.width + 16, 28, 9);
       this.timers.push({ text: tt, fn: m.timer.fn, fmt: m.timer.fmt, card: c });
       if (m.cta.was) k.list.filter((x) => x.y === -h / 2 + 30 && x !== tt).forEach((x) => (x.y += 32));
+    }
+    // ILLEGAL LEGENDARY: the glitchy stamp over the art's top-right corner
+    c.stamp = null;
+    if (m.illegal) {
+      c.stamp = illegalStamp(this, w / 2 - 54, -h / 2 + 22, 16, { angle: 8 });
+      add(c.stamp);
     }
     // what VoiceOver reads for the tile
     c.a11yLabel = `${m.title}, ${c.price !== null ? `${c.price} coins` : m.cta?.label || m.sub}`;
@@ -1136,11 +1154,15 @@ export class ShopScene extends Phaser.Scene {
     if (!cost) return { label: "CHALLENGE", col: 0xffffff, fill: 0x3a2e70, act: null };
     if (def.requires && !Progression.requirementsMet(def))
       return { label: "LOCKED", col: 0xffffff, fill: 0x3a2e70, act: null };
+    const illegal = isIllegal(def);
     return {
       label: `${cost}`,
       coin: true,
+      // ILLEGAL LEGENDARY: the price in red with thousands commas ("55,000"), the name kept secret
+      display: illegal ? cost.toLocaleString("en-US") : null,
+      red: illegal,
       act: () =>
-        this.buy(this.cards[this.index], def.name, cost, () => {
+        this.buy(this.cards[this.index], illegal ? "???" : def.name, cost, () => {
           const ok = Progression.buy(def.id);
           if (ok) {
             s.selected = def.id;
@@ -1297,6 +1319,14 @@ export class ShopScene extends Phaser.Scene {
       this.stageCountdown = { text: tx, ...m.timer };
     } else if (m.ribbon && !chipText.startsWith(m.ribbon.text)) this.stageInfo.add(this.chip(W / 2 - 22, -H / 2 + 30, m.ribbon.text, m.ribbon.col, 1, true));
 
+    // ILLEGAL LEGENDARY: warning tape inside the stage frame, and the stamp
+    this.stageStamp = null;
+    this.stageEyes = null;
+    if (m.illegal) {
+      warningTape(g, -W / 2 + 8, -H / 2 + 8, W - 16, H - 16, 10, { stripe: 12 });
+      this.stageStamp = illegalStamp(this, W / 2 - 92, -H / 2 + 34, 24, { angle: 6 });
+      this.stageInfo.add(this.stageStamp);
+    }
     // the art: a live hero rig for heroes and wearables, a picture for everything else
     const artH = artBot - artTop;
     if (m.rigSpec) {
@@ -1341,7 +1371,7 @@ export class ShopScene extends Phaser.Scene {
       if (cta.coin) {
         const afford = Save.data.coins >= Number(cta.label);
         const txt = this.add
-          .text(0, 0, cta.label, this.priceStyle(50, afford ? "#ffffff" : "#ffb0b0"))
+          .text(0, 0, cta.display || cta.label, this.priceStyle(50, cta.red ? "#ff3a4a" : afford ? "#ffffff" : "#ffb0b0"))
           .setOrigin(0, 0.5);
         const ic = this.add.image(0, 0, "pxc", "coin_0").setScale(1.15);
         const total = ic.displayWidth + 12 + txt.width;
@@ -1459,6 +1489,20 @@ export class ShopScene extends Phaser.Scene {
               .setOrigin(1, 0.5),
           );
         });
+        break;
+      }
+      case "hero": {
+        // a classified hero: his black silhouette, only the red eyes glowing (and pulsing)
+        const def = getCharacter(o.id);
+        const im = this.add.image(0, y, `${def.texture}_locked`);
+        im.setScale(Math.min((1.3 / HI) * PORTRAIT_K, (h - 20) / im.height));
+        const eyes = this.add
+          .image(im.x + ((WASP_EYE.x - 13) / 26) * im.displayWidth, y + ((WASP_EYE.y - 13) / 26) * im.displayHeight, "glow")
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setTint(0xff1a2a)
+          .setDisplaySize(im.displayWidth * 0.42, im.displayHeight * 0.22);
+        add([im, eyes]);
+        this.stageEyes = eyes;
         break;
       }
       default:
@@ -1607,6 +1651,10 @@ export class ShopScene extends Phaser.Scene {
   landed(c, to, calm) {
     this.buying = false;
     const col = c.col;
+    // ILLEGAL LEGENDARY: his first unlock gets the full cinematic reveal (reveal.js plays it once)
+    const hero = c.offer.kind === "hero" ? getCharacter(c.offer.id) : null;
+    if (hero && isIllegal(hero) && Progression.isUnlocked(hero.id))
+      this.time.delayedCall(250, () => revealHero(this, hero, { title: "UNLOCKED!", depth: 950 }));
     Sfx.reward();
     Haptics.light();
     this.refreshCard(c);
@@ -1697,9 +1745,10 @@ export class ShopScene extends Phaser.Scene {
     const o = card.offer;
     if (o.kind === "hero" || o.kind === "yarms") {
       const def = getCharacter(o.kind === "yarms" ? "yarms" : o.id);
+      const secret = isIllegal(def) && !Progression.isUnlocked(def.id) && this.textures.exists(`${def.texture}_locked`);
       pv.add(
         this.add
-          .image(0, 0, o.kind === "yarms" ? "hero_yarms_flex" : def.texture)
+          .image(0, 0, o.kind === "yarms" ? "hero_yarms_flex" : secret ? `${def.texture}_locked` : def.texture)
           .setScale((1.0 / HI) * PORTRAIT_K),
       );
     } else if (card.preview) pv.add(card.preview());
@@ -1716,7 +1765,7 @@ export class ShopScene extends Phaser.Scene {
     t.setScale(Math.min(1, (pw - 50) / t.width));
     const coin = this.add.image(0, y0 + 415, "pxc", "coin_0").setScale(1.2);
     const pr = this.add
-      .text(0, y0 + 415, `${price}`, this.priceStyle(56, "#ffd23f"))
+      .text(0, y0 + 415, card.model?.illegal ? price.toLocaleString("en-US") : `${price}`, this.priceStyle(56, card.model?.illegal ? "#ff3a4a" : "#ffd23f"))
       .setOrigin(0, 0.5);
     const total = coin.displayWidth + 14 + pr.width;
     coin.setX(W / 2 - total / 2 + coin.displayWidth / 2);
@@ -1898,6 +1947,11 @@ export class ShopScene extends Phaser.Scene {
       if (m.x < -10) m.x = W + 10;
       if (m.y < -10) m.y = this.H + 10;
     }
+    // ILLEGAL LEGENDARY: the stamps twitch, the classified hero's eyes pulse (steady with
+    // Reduce Flashing)
+    for (const c of this.cards || []) if (c.stamp && c.visible) c.stamp.glitch(this.t + c.offer.id.length);
+    this.stageStamp?.glitch(this.t);
+    if (this.stageEyes) this.stageEyes.setAlpha(reduceFlashing() ? 0.75 : 0.6 + 0.3 * Math.sin(this.t * 3.4));
     // balance icons: spinning coin, glinting shard
     this.coinGlyph.setFrame(`coin_${Math.floor(this.t * 8) % 4}`);
     const sx = this.shardX;

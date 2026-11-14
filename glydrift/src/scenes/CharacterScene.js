@@ -9,6 +9,7 @@ import { HI } from "../gfx/textures.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { visibleCharacters } from "../player/characterDefs.js";
 import { revealHero } from "../ui/reveal.js";
+import { illegalStamp, isIllegal, warningTape } from "../ui/illegal.js";
 import { Sfx } from "../audio/sfx.js";
 import { Haptics } from "../systems/haptics.js";
 import { Progression } from "../data/progression.js";
@@ -280,6 +281,11 @@ export class CharacterScene extends Phaser.Scene {
       b.add([bg, plainText(this, 0, 0, "DRIFT PASS+ EXCLUSIVE", 15, "#ffe9a8")]);
       c.add(b);
     }
+    if (isIllegal(def)) {
+      // ILLEGAL LEGENDARY: the glitchy stamp on the card's top corner
+      c.stamp = illegalStamp(this, CARD_W / 2 - 62, -CARD_H / 2 + 34, 18, { angle: 8 });
+      c.add(c.stamp);
+    }
     c.edit = edit;
     c.def = def;
     c.g = g;
@@ -306,7 +312,7 @@ export class CharacterScene extends Phaser.Scene {
     drawNeonRect(g, -CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 26, col, {
       fill: 0x0b0520,
       fillAlpha: 0.88,
-      width: { ultra: 9, mega: 7, legendary: 5 }[def.rarity] ?? 3,
+      width: { illegal: 10, ultra: 9, mega: 7, legendary: 5 }[def.rarity] ?? 3,
     });
     if (def.passPlus) {
       // animated rarity border: a bright band of light that runs round the card
@@ -332,6 +338,8 @@ export class CharacterScene extends Phaser.Scene {
           g.lineBetween(x0, y0, x1, y1);
         }
     }
+    // ILLEGAL LEGENDARY: red warning tape round the inside of the card
+    if (isIllegal(def)) warningTape(g, -CARD_W / 2 + 8, -CARD_H / 2 + 8, CARD_W - 16, CARD_H - 16, 9, { stripe: 10 });
     // inner rarity sheen
     g.fillStyle(col, 0.08);
     g.fillRoundedRect(-CARD_W / 2 + 10, -CARD_H / 2 + 10, CARD_W - 20, CARD_H * 0.5, 20);
@@ -339,7 +347,13 @@ export class CharacterScene extends Phaser.Scene {
       g.fillStyle(0x39ff88, 1);
       g.fillRoundedRect(-62, -CARD_H / 2 - 16, 124, 30, 15);
     }
-    c.img.setTint(owned ? 0xffffff : 0x222233);
+    // (a locked ILLEGAL hero is his own black silhouette, the red eyes still lit)
+    const lockedTex = isIllegal(def) && this.textures.exists(`${def.texture}_locked`) ? `${def.texture}_locked` : null;
+    if (lockedTex) {
+      c.img.setTexture(owned ? def.texture : lockedTex);
+      c.img.clearTint();
+    } else c.img.setTint(owned ? 0xffffff : 0x222233);
+    c.stamp?.glitch(this.t);
     c.lock.setVisible(!owned);
     c.edit.setVisible(owned && c.i === this.index);
   }
@@ -590,7 +604,7 @@ export class CharacterScene extends Phaser.Scene {
       c.scaleY = sc;
       c.alpha = Phaser.Math.Clamp(1 - ao * 0.38, 0, 1);
       c.setDepth(100 - ao * 10);
-      if (c.def.passPlus || ["legendary", "mega", "ultra"].includes(c.def.rarity)) this.drawCard(c);
+      if (c.def.passPlus || ["legendary", "mega", "ultra", "illegal"].includes(c.def.rarity)) this.drawCard(c);
     }
     // limited-time countdown ticks once a second
     if (def.limited && Math.floor(this.t) !== this.lastTick) {

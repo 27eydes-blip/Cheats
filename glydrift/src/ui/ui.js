@@ -381,6 +381,15 @@ export function toast(
 }
 
 export function rarityColor(rarity, time = 0) {
+  if (rarity === "illegal") {
+    // warning red that throbs, with a short glitch drop to dark red now and then (a dip into the
+    // dark, never a flash toward white)
+    const k = 0.5 + 0.5 * Math.sin(time * 3);
+    const glitch = time % 2.3 < 0.08 || (time + 0.5) % 3.7 < 0.05;
+    if (glitch) return 0x7a0612;
+    const g = Math.round(26 + 40 * k);
+    return (255 << 16) | (g << 8) | Math.round(42 + 30 * k);
+  }
   if (rarity === "ultra") {
     // spectrum cycle that flares to white on a heartbeat — the rarest glow in the game
     const c = Phaser.Display.Color.HSVToRGB((time * 0.3) % 1, 0.75, 1);

@@ -19,6 +19,7 @@ import { LOCKER_TABS, lockerCount, lockerEntries, lockerEquip, lockerTab, shopTa
 import { getCharacter } from "../player/characterDefs.js";
 import { CharacterRig } from "../player/CharacterRig.js";
 import { Effects } from "../effects/Effects.js";
+import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { HI } from "../gfx/textures.js";
 import { PORTRAIT_K } from "../pixel/common.js";
 import { HAT_FIT } from "../pixel/cosmeticArt.js";
@@ -28,6 +29,7 @@ import { Haptics } from "../systems/haptics.js";
 import { titleText } from "../ui/titleText.js";
 import { nameText } from "../ui/nameplate.js";
 import { button, drawNeonRect, fadeTo, hex, neonText, plainText } from "../ui/ui.js";
+import { ILLEGAL_RED, illegalStamp, tapeBand } from "../ui/illegal.js";
 
 const SILHOUETTE = 0x2e2848; // not owned: a flat dark shape (still reads as the thing)
 const ON = 0x39ff88; // worn
@@ -178,21 +180,64 @@ export class LockerScene extends Phaser.Scene {
     const cols = titles ? 2 : 4;
     const tw = (W - 40 - GAP * (cols - 1)) / cols;
     const th = titles ? 104 : 168;
+    // THE VAULT: ILLEGAL LEGENDARY heroes get their own full-width spot at the top of the
+    // heroes tab, behind warning tape
+    const vault = id === "heroes" ? this.entries.filter((e) => e.rarity === "illegal") : [];
+    this.entries = [...vault, ...this.entries.filter((e) => !vault.includes(e))];
+    const vh = 150;
+    this.vault = { n: vault.length, h: vh, top: vault.length * (vh + GAP) };
     this.cell = { cols, tw, th };
+    this.vaultStamps = [];
     this.tiles = this.entries.map((e, i) => {
-      const x = 20 + (tw + GAP) * (i % cols) + tw / 2;
-      const y = 6 + (th + GAP) * Math.floor(i / cols) + th / 2;
+      if (i < vault.length) return this.makeVaultTile(e, W / 2, 6 + i * (vh + GAP) + vh / 2, W - 40, vh);
+      const j = i - vault.length;
+      const x = 20 + (tw + GAP) * (j % cols) + tw / 2;
+      const y = this.vault.top + 6 + (th + GAP) * Math.floor(j / cols) + th / 2;
       return this.makeTile(e, x, y, tw, th);
     });
     // a focus ring (one image, moved to the tile in the preview)
     this.focusRing = this.add.image(0, 0, this.frameTex(tw, th, "focus", FOCUS)).setScale(1 / VIEW.Z);
     this.grid.add(this.focusRing);
-    this.contentH = 6 + Math.ceil(this.entries.length / cols) * (th + GAP) + 10;
+    this.contentH = this.vault.top + 6 + Math.ceil((this.entries.length - this.vault.n) / cols) * (th + GAP) + 10;
     this.setScroll(0);
     this.vel = 0;
     // preview what you're wearing in this slot (or your hero)
     const worn = this.entries.find((e) => e.equipped && e.kind !== "none") || this.entries[0];
     this.preview(worn);
+  }
+
+  /** The vault's wide tile: the hero big on the left, the name, the rarity and the stamp. */
+  makeVaultTile(e, x, y, tw, th) {
+    const c = this.add.container(x, y);
+    c.entry = e;
+    c.vault = true;
+    c.tw = tw;
+    c.th = th;
+    c.frame = this.add.image(0, 0, this.tileTexFor(e, tw, th, true)).setScale(1 / VIEW.Z);
+    c.add(c.frame);
+    const def = getCharacter(e.id);
+    const tex = !e.owned && this.textures.exists(`${def.texture}_locked`) ? `${def.texture}_locked` : def.texture;
+    const im = this.add.image(-tw / 2 + 92, 0, tex);
+    im.setScale(Math.min(118 / im.width, 118 / im.height));
+    const eyes = this.add
+      .image(im.x + ((21.5 - 13) / 26) * im.displayWidth, ((9.5 - 13) / 26) * im.displayHeight, "glow")
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(ILLEGAL_RED)
+      .setDisplaySize(im.displayWidth * 0.4, im.displayHeight * 0.2)
+      .setAlpha(0.55);
+    c.eyes = eyes;
+    const nm = neonText(this, -tw / 2 + 180, -26, e.owned ? e.name : "???", 30, ILLEGAL_RED, { ox: 0, blur: 8 });
+    nm.setScale(Math.min(1, (tw - 330) / Math.max(1, nm.width)));
+    const rar = plainText(this, -tw / 2 + 180, 14, "ILLEGAL LEGENDARY · THE VAULT", 14, "#ff8a94", { ox: 0 });
+    rar.setScale(Math.min(1, (tw - 200) / Math.max(1, rar.width)));
+    const stamp = illegalStamp(this, tw / 2 - 86, -th / 2 + 40, 20, { angle: 8 });
+    this.vaultStamps.push(stamp);
+    c.add([im, eyes, nm, rar, stamp]);
+    c.tag = plainText(this, -tw / 2 + 180, th / 2 - 34, "", 15, "#ffd23f", { ox: 0 });
+    c.add(c.tag);
+    this.fillTag(c);
+    this.grid.add(c);
+    return c;
   }
 
   makeTile(e, x, y, tw, th) {
@@ -230,7 +275,7 @@ export class LockerScene extends Phaser.Scene {
 
   fillTag(c) {
     const e = c.entry;
-    const { tw, th } = this.cell;
+    const { tw, th } = c.vault ? c : this.cell;
     const titles = this.tab === "titles";
     if (e.equipped) {
       c.tag.setText(e.cat === "badge" ? "✓ ALWAYS ON" : "✓ WEARING").setColor(hex(ON));
@@ -241,11 +286,12 @@ export class LockerScene extends Phaser.Scene {
     // titles: the tag sits in the top-right corner (their row has no room underneath)
     if (titles) c.tag.setOrigin(1, 0.5).setPosition(tw / 2 - 14, -th / 2 + 16);
     c.tag.setScale(Math.min(1, (tw - 16) / Math.max(1, c.tag.width)));
-    c.frame.setTexture(this.tileTexFor(e, tw, th));
+    c.frame.setTexture(this.tileTexFor(e, tw, th, c.vault));
   }
 
   /** A tile's frame: worn (green), yours (its rarity colour) or locked (dim). Shared textures. */
-  tileTexFor(e, tw, th) {
+  tileTexFor(e, tw, th, vault = false) {
+    if (vault) return this.frameTex(tw, th, e.equipped ? "vaulton" : "vault", e.equipped ? ON : ILLEGAL_RED);
     if (e.equipped) return this.frameTex(tw, th, "on", ON);
     if (!e.owned) return this.frameTex(tw, th, "lock", 0x3a3060);
     const col = e.rarity ? RARITY[e.rarity]?.color ?? 0x8a80b0 : e.kind === "title" ? 0x3ef4ff : 0x8a80b0;
@@ -262,12 +308,26 @@ export class LockerScene extends Phaser.Scene {
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     const r = 16 * Z;
     const lw = (kind === "on" || kind === "focus" ? 4 : 2) * Z;
-    if (kind !== "focus") {
+    if (kind !== "focus" && kind !== "vault" && kind !== "vaulton") {
       g.fillStyle(kind === "on" ? 0x0f3a24 : kind === "lock" ? 0x0c0820 : 0x140a30, 0.92);
       g.fillRoundedRect(lw, lw, w - lw * 2, h - lw * 2, r);
     }
-    g.lineStyle(lw, col, kind === "lock" ? 0.8 : 1);
-    g.strokeRoundedRect(lw, lw, w - lw * 2, h - lw * 2, r);
+    if (kind !== "vault" && kind !== "vaulton") {
+      g.lineStyle(lw, col, kind === "lock" ? 0.8 : 1);
+      g.strokeRoundedRect(lw, lw, w - lw * 2, h - lw * 2, r);
+    }
+    if (kind === "vault" || kind === "vaulton") {
+      // the vault: dark red-black glass behind red warning tape (green line when worn)
+      g.fillStyle(0x16030a, 0.95).fillRoundedRect(lw, lw, w - lw * 2, h - lw * 2, r);
+      const b = 9 * Z;
+      for (const [x, y, bw, bh] of [
+        [lw * 2, lw * 2, w - lw * 4, b],
+        [lw * 2, h - lw * 2 - b, w - lw * 4, b],
+      ])
+        tapeBand(g, x, y, bw, bh, { stripe: 12 * Z });
+      g.fillStyle(ILLEGAL_RED, 0.12).fillRect(lw * 2, lw * 2 + b, w - lw * 4, h * 0.4);
+      g.lineStyle(lw * 1.5, col, 1).strokeRoundedRect(lw, lw, w - lw * 2, h - lw * 2, r);
+    }
     if (kind === "own" || kind === "on") {
       // a soft rarity sheen in the top half
       g.fillStyle(col, 0.1);
@@ -324,12 +384,18 @@ export class LockerScene extends Phaser.Scene {
     if (wy < this.gridTop || wy > this.gridBottom) return null;
     const { cols, tw, th } = this.cell;
     const lx = wx - 20;
-    const ly = wy - this.gridTop + this.scrollY - 6;
+    let ly = wy - this.gridTop + this.scrollY - 6;
     if (lx < 0 || ly < 0) return null;
+    // the vault rows first (full width)
+    if (ly < this.vault.top) {
+      const i = Math.floor(ly / (this.vault.h + GAP));
+      return ly - i * (this.vault.h + GAP) <= this.vault.h && lx <= this.W - 40 ? this.tiles[i] || null : null;
+    }
+    ly -= this.vault.top;
     const col = Math.floor(lx / (tw + GAP));
     const row = Math.floor(ly / (th + GAP));
     if (col >= cols || lx - col * (tw + GAP) > tw || ly - row * (th + GAP) > th) return null; // the gap
-    return this.tiles[row * cols + col] || null;
+    return this.tiles[this.vault.n + row * cols + col] || null;
   }
 
   setScroll(v) {
@@ -338,8 +404,10 @@ export class LockerScene extends Phaser.Scene {
     this.scrollY = Phaser.Math.Clamp(v, 0, max);
     this.grid.y = this.gridTop - this.scrollY;
     // tiles outside the window aren't drawn at all
-    const h = this.cell.th / 2 + 4;
-    for (const t of this.tiles) t.setVisible(t.y + h > this.scrollY && t.y - h < this.scrollY + view);
+    for (const t of this.tiles) {
+      const h = (t.th ?? this.cell.th) / 2 + 4;
+      t.setVisible(t.y + h > this.scrollY && t.y - h < this.scrollY + view);
+    }
   }
 
   // ------------------------------------------------------------------ tap → preview / equip
@@ -374,7 +442,7 @@ export class LockerScene extends Phaser.Scene {
     if (!e) return;
     this.focus = e;
     const tile = this.tiles.find((t) => t.entry.key === e.key);
-    this.focusRing.setVisible(!!tile && !e.equipped);
+    this.focusRing.setVisible(!!tile && !e.equipped && !tile.vault); // (the vault tile is its own frame)
     if (tile) this.focusRing.setPosition(tile.x, tile.y);
     // which hero: the one tapped, a hero's own skin on that hero, else the one you fly
     const heroId = e.kind === "hero" ? e.id : e.forHero || Progression.selectedHero();
@@ -504,6 +572,10 @@ export class LockerScene extends Phaser.Scene {
       this.setScroll(this.scrollY - this.vel);
       this.vel *= Math.exp(-dt * 5);
     }
+    // the vault: the stamp twitches, the eyes pulse (steady with Reduce Flashing)
+    for (const st of this.vaultStamps || []) st.glitch(this.t);
+    const calm = reduceFlashing();
+    for (const t of this.tiles || []) if (t.eyes) t.eyes.setAlpha(calm ? 0.6 : 0.45 + 0.25 * Math.sin(this.t * 3.4));
     const rig = this.rig;
     if (!rig) return;
     if (this.mode === "death") {
