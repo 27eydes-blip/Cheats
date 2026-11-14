@@ -244,7 +244,9 @@ function startFree() {
   show(null);
 }
 
+let retryTimer = 0;
 function toMenu() {
+  clearTimeout(retryTimer);
   G.phase = 'menu';
   closeAll();
   input.enabled = false; input.reset();
@@ -299,7 +301,8 @@ function onMsg(c, m) {
       UI.mm.update({ players: m.players.length, max: m.mode === 'squad' ? 6 : 10, startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world, bots: m.bots !== false });
       break;
     case 'retry':
-      if (!G.room && G.retries++ < 5) setTimeout(() => startQuick({ ...G.opts, skip: m.match }), 150);
+      G.conns.delete(c.key); // the server closes this socket next: that's expected, not a lost connection
+      if (!G.room && G.retries++ < 5) { clearTimeout(retryTimer); retryTimer = setTimeout(() => { if (G.phase === 'waiting') startQuick({ ...G.opts, skip: m.match }); }, 150); }
       else { toast(m.reason + (G.room ? ' — try again when it ends' : '')); toMenu(); }
       break;
     case 'start':
