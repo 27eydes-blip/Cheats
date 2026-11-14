@@ -6,7 +6,7 @@ import {
   CRATE_HP, SUPPLY_HP, CUBE_HP, CUBE_DMG, REGEN_DELAY, REGEN_RATE, POISON_DPS, BUSH_REVEAL_DIST,
   CLOAK_REVEAL_DIST, SPAWNS, BOT_NAMES, EVENT_EVERY, EVENT_WARN, LOW_HP, RUSH_TIME, COMEBACK_DMG,
   applyMove, moveCircle, inBush, attackDirs, poisonInset, moveStats, bountyGlow, pingInterval,
-  layLowFactor, rng, inHub, HUB, MINE_SEEN, PLAYER_R, lineOfSight, isSolidTile, tileAt, blocksMove,
+  layLowFactor, rng, inHub, HUB, MINE_SEEN, PLAYER_R, touchingBorder, SPIKE_DMG, SPIKE_CD, lineOfSight, isSolidTile, tileAt, blocksMove,
 } from '../public/shared.js';
 import { EVENTS, pickEvent } from '../public/events/index.js';
 import { MODES } from './modes.js';
@@ -442,7 +442,7 @@ export class Sim {
     for (let i = 0; i < t.crystals; i++) { const a = this.rand() * Math.PI * 2, d = 20 + this.rand() * 50; this.dropCrystal(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d); }
     t.crystals = 0;
     this.fx.push(['die', Math.round(t.x), Math.round(t.y), BRAWLER_IDS.indexOf(t.brawler), t.id, (src && !src.remote && src.cos && src.cos.fx) || 0]);
-    const causeName = { poison: 'Poison', lava: 'Lava', fire: 'Wildfire' }[cause] || 'The Wild';
+    const causeName = { poison: 'Poison', lava: 'Lava', fire: 'Wildfire', spikes: 'Spikes' }[cause] || 'The Wild';
     this.broadcast({ t: 'kill', k: src ? src.name : causeName, v: t.name, kid: src ? src.id : 0, vid: t.id, st: stolen });
     if (this.mode.respawn) t.respawnT = 3;
     if (t.connected) {
@@ -473,7 +473,7 @@ export class Sim {
       for (let i = 0; i < 30; i++) {
         const a = this.rand() * Math.PI * 2, d = this.rand() * (HUB.r - 60);
         const x = HUB.x + Math.cos(a) * d, y = HUB.y + Math.sin(a) * d;
-        if (this.inBounds(x, y, -30)) { pt = { x, y }; break; }
+        if (this.inBounds(x, y, -30) && !blocksMove(tileAt(this.map, x, y)) && !blocksMove(tileAt(this.map, x + 30, y)) && !blocksMove(tileAt(this.map, x - 30, y))) { pt = { x, y }; break; }
       }
     }
     if (!pt) {
@@ -641,6 +641,14 @@ export class Sim {
       p.bushT = inBush(this.map, p.x, p.y) && p.reveal <= 0 ? p.bushT + DT : 0;
       p.lowF = layLowFactor(p.bushT);
 
+      // spiked border walls
+      p.spikeCd = (p.spikeCd || 0) - DT;
+      if (p.spikeCd <= 0 && touchingBorder(this.map, p.x, p.y, this.stats(p).r) && !this.isSafe(p.x, p.y) && p.spawnProt <= 0) {
+        p.spikeCd = SPIKE_CD;
+        this.fx.push(['spike', Math.round(p.x), Math.round(p.y), 0, p.id]);
+        this.damage(null, p, p.maxHp * SPIKE_DMG, false, 'spikes');
+        if (!p.alive) continue;
+      }
       const z = this.zoneInset;
       if (z > 0 && (p.x < z || p.y < z || p.x > this.bounds.x1 - z || p.y > this.bounds.y1 - z)) {
         p.poisonT -= DT;

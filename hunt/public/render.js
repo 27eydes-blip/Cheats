@@ -291,7 +291,7 @@ export function drawBlocks(ctx, map, crateHp, x0, y0, x1, y1) {
   for (let ty = ty0; ty <= ty1; ty++) {
     for (let tx = tx0; tx <= tx1; tx++) {
       const t = map.t[ty * map.gw + tx];
-      if (t !== WALL && t !== CRATE) continue;
+      if (t !== CRATE) continue; // walls/cover are drawn by art/walls.js
       const x = tx * TILE, y = ty * TILE;
       ctx.lineWidth = 3.5; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
       if (t === WALL) {

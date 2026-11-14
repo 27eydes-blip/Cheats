@@ -4,7 +4,7 @@
 //   - players they can see right now (m.canSee: bushes, cloak and blackout fog apply), and
 //   - public radar pings, remembered as "last known position" for a few seconds.
 // They never read hidden players' live positions.
-import { BRAWLERS, DT, TILE, PLAYER_R, HUB, BUSH, tileAt, blocksMove, lineOfSight } from '../public/shared.js';
+import { BRAWLERS, DT, TILE, PLAYER_R, HUB, BUSH, tileAt, blocksMove, lineOfSight, touchingBorder } from '../public/shared.js';
 import { inCircles } from '../public/events/helpers.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -38,6 +38,7 @@ function blocked(m, x, y, self, L) {
   if (blocksMove(tileAt(m.map, x, y))) return true;
   if (m.hub && Math.hypot(x - HUB.x, y - HUB.y) < HUB.r + 30) return true;
   if (m.hub && !m.inBounds(x, y, -30)) return true;
+  if (touchingBorder(m.map, x, y, 14)) return true; // keep off the spiked border
   if (self) {
     const [hx, hy] = hazardAt(m, x, y, L, self);
     if (hx || hy) return true;

@@ -61,21 +61,21 @@ export const BRAWLERS = {
     name: 'Volt', role: 'Balanced', hp: 3600, speed: 250, reload: 1.3, superHits: 9,
     color: '#ffd23f', dark: '#c98f00', accent: '#3a86ff',
     blurb: 'Fires 3 fast bolts. Super: dash that knocks enemies back.',
-    attack: { kind: 'burst', count: 3, interval: 0.09, damage: 340, speed: 1150, range: 540, radius: 9, cooldown: 0.42 },
-    super: { kind: 'dash', dist: 360, time: 0.26, damage: 570, knock: 240, radius: 50 },
+    attack: { kind: 'burst', count: 3, interval: 0.09, damage: 330, speed: 1150, range: 540, radius: 9, cooldown: 0.42 },
+    super: { kind: 'dash', dist: 360, time: 0.26, damage: 550, knock: 240, radius: 50 },
   },
   brick: {
     name: 'Brick', role: 'Tank', hp: 6000, speed: 215, reload: 1.7, superHits: 14,
     color: '#ff7b39', dark: '#b8461a', accent: '#6b4226',
     blurb: 'Short-range shotgun blast. Super: ground slam that stuns.',
-    attack: { kind: 'spread', count: 5, arc: 0.55, damage: 260, speed: 950, range: 330, radius: 8, cooldown: 0.4 },
-    super: { kind: 'slam', radius: 210, damage: 710, stun: 1.4 },
+    attack: { kind: 'spread', count: 5, arc: 0.55, damage: 280, speed: 950, range: 330, radius: 8, cooldown: 0.4 },
+    super: { kind: 'slam', radius: 210, damage: 770, stun: 1.4 },
   },
   wisp: {
     name: 'Wisp', role: 'Sniper', hp: 2600, speed: 285, reload: 2.0, superHits: 3,
     color: '#5ef2c6', dark: '#1fa883', accent: '#8f5cff',
     blurb: 'One long-range heavy shot. Super: invisible for 3s.',
-    attack: { kind: 'single', count: 1, damage: 1670, speed: 1700, range: 960, radius: 10, cooldown: 0.4 },
+    attack: { kind: 'single', count: 1, damage: 1620, speed: 1700, range: 960, radius: 10, cooldown: 0.4 },
     super: { kind: 'cloak', time: 3 },
   },
   dune: {
@@ -96,7 +96,7 @@ export const BRAWLERS = {
     name: 'Flicker', role: 'Assassin', hp: 3000, speed: 310, reload: 1.1, superHits: 6,
     color: '#c04dff', dark: '#7a1fb0', accent: '#ff5fa2',
     blurb: 'Fastest hunter. Short double slash. Super: teleports behind the nearest enemy.',
-    attack: { kind: 'slash', count: 2, interval: 0.14, damage: 500, range: 125, arc: 1.7, radius: 0, cooldown: 0.35 },
+    attack: { kind: 'slash', count: 2, interval: 0.14, damage: 490, range: 125, arc: 1.7, radius: 0, cooldown: 0.35 },
     super: { kind: 'blink', range: 750 },
   },
 };
@@ -106,13 +106,13 @@ export const BRAWLER_IDS = Object.keys(BRAWLERS);
 // IDs are the array index and are persisted in saves/stats: ONLY APPEND to this list.
 // `order` controls display order (lobby stats etc.).
 export const WORLDS = [
-  { key: 'meadow', name: 'Meadow', order: 0, arena: true, gen: { walls: 9, blocks: 0, bushes: 8, crates: 4, water: 0 } },
-  { key: 'city', name: 'Neon City', order: 1, arena: true, gen: { walls: 3, blocks: 6, bushes: 4, crates: 5, water: 0 } },
-  { key: 'forest', name: 'Wildwood', order: 2, arena: true, gen: { walls: 5, blocks: 0, bushes: 14, crates: 4, water: 1 } },
-  { key: 'desert', name: 'Dust Flats', order: 3, arena: true, gen: { walls: 6, blocks: 1, bushes: 3, crates: 4, water: 1 } },
-  { key: 'frozen', name: 'Frozen Lake', order: 4, arena: true, gen: { walls: 6, blocks: 0, bushes: 5, crates: 4, water: 2 } },
+  { key: 'meadow', name: 'Meadow', order: 0, arena: true, gen: { pieces: 8, shapes: ['s1', 's2', 's3', 'L3', 'sq', 'L4'], bushes: 2, crates: 4, water: 0 } },
+  { key: 'city', name: 'Neon City', order: 1, arena: true, gen: { pieces: 8, shapes: ['sq', 's3', 'L4', 's2', 'sq'], bushes: 2, crates: 5, water: 0 } },
+  { key: 'forest', name: 'Wildwood', order: 2, arena: true, gen: { pieces: 7, shapes: ['s1', 's2', 's3', 'L3', 's1'], bushes: 2, crates: 4, water: 1 } },
+  { key: 'desert', name: 'Dust Flats', order: 3, arena: true, gen: { pieces: 7, shapes: ['s2', 's3', 'L3', 'L4', 's1'], bushes: 2, crates: 4, water: 1 } },
+  { key: 'frozen', name: 'Frozen Lake', order: 4, arena: true, gen: { pieces: 8, shapes: ['s1', 's2', 'sq', 'L3', 's3'], bushes: 2, crates: 4, water: 1 } },
   // id 5 — appended (never reorder). Displayed between Wildwood and Frozen Lake.
-  { key: 'mirage', name: 'Desert Mirage', order: 2.5, arena: true, gen: { walls: 2, blocks: 0, bushes: 3, crates: 4, water: 1, ruins: 4, canyons: 2 } },
+  { key: 'mirage', name: 'Desert Mirage', order: 2.5, arena: true, gen: { pieces: 8, shapes: ['s1', 's1', 's3', 'L4', 'L3', 's2'], bushes: 2, crates: 4, water: 1 } },
 ];
 export const worldId = (key) => WORLDS.findIndex((w) => w.key === key);
 export const worldsInDisplayOrder = () => WORLDS.map((w, id) => ({ ...w, id })).sort((a, b) => a.order - b.order);
@@ -147,64 +147,48 @@ export const SPAWNS = Array.from({ length: MAX_PLAYERS }, (_, i) => {
 });
 
 // ---------- Maps ----------
-// map = { gw, gh, t: Uint8Array, base: Uint8Array, kind: 'arena'|'world', world }
-function newMap(gw, gh, kind, world) { return { gw, gh, t: new Uint8Array(gw * gh), base: null, kind, world }; }
+// map = { gw, gh, t: Uint8Array (collision), base, kind: 'arena'|'world', world,
+//         pieces: [{cells:[[x,y]..], variant, spike:'n'|'e'|'s'|'w'|null, world?}],
+//         pieceAt: Int32Array (cell -> piece index | -1), border: Uint8Array (1 = spiked border wall) }
+// Cover is built from whole PIECES so what's drawn is exactly what collides.
+function newMap(gw, gh, kind, world) {
+  return { gw, gh, t: new Uint8Array(gw * gh), base: null, kind, world, pieces: [], pieceAt: new Int32Array(gw * gh).fill(-1), border: new Uint8Array(gw * gh) };
+}
+// cover shapes (cells) on the art grid; rotated/reflected at placement
+export const SHAPES = {
+  s1: [[0, 0]], s2: [[0, 0], [1, 0]], s3: [[0, 0], [1, 0], [2, 0]], sq: [[0, 0], [1, 0], [0, 1], [1, 1]],
+  L3: [[0, 0], [1, 0], [0, 1]], L4: [[0, 0], [1, 0], [2, 0], [0, 1]],
+};
+const ORIENT = [(x, y) => [x, y], (x, y) => [y, x], (x, y) => [-x, y], (x, y) => [x, -y], (x, y) => [-y, -x], (x, y) => [-x, -y], (x, y) => [y, -x], (x, y) => [-y, x]];
+function shapeCells(name, o, ox, oy) {
+  const c = SHAPES[name].map(([x, y]) => ORIENT[o](x, y));
+  const mx = Math.min(...c.map((p) => p[0])), my = Math.min(...c.map((p) => p[1]));
+  return c.map(([x, y]) => [x - mx + ox, y - my + oy]);
+}
+const SIDES = ['n', 'e', 's', 'w'];
 
-// Fill a rectangular region of `q` (width qw) with features for a world's generator params.
-function fillRegion(q, qw, qh, gen, r, scale = 1) {
-  const inQ = (x, y) => x >= 1 && y >= 1 && x < qw - 1 && y < qh - 1;
-  const set = (x, y, v) => { if (inQ(x, y)) q[y * qw + x] = v; };
-  const get = (x, y) => (inQ(x, y) ? q[y * qw + x] : WALL);
-  const rx = (m) => 2 + Math.floor(r() * (qw - 4 - m));
-  const ry = (m) => 2 + Math.floor(r() * (qh - 4 - m));
-  for (let i = 0; i < gen.water * scale; i++) { // ponds/pools: rough ellipses
-    const cx = rx(4) + 2, cy = ry(4) + 2, w = 1.5 + r() * 1.6, h = 1.2 + r() * 1.2;
-    for (let y = cy - 3; y <= cy + 3; y++) for (let x = cx - 3; x <= cx + 3; x++) {
-      if (((x - cx) / w) ** 2 + ((y - cy) / h) ** 2 <= 1) set(x, y, WATER);
-    }
-    // bushes ringing the pond (oasis)
-    for (let k = 0; k < 6; k++) { const a = r() * Math.PI * 2; const bx = Math.round(cx + Math.cos(a) * (w + 1.3)), by = Math.round(cy + Math.sin(a) * (h + 1.3)); if (get(bx, by) === EMPTY) set(bx, by, BUSH); }
+function addPiece(m, cells, variant, spike, world) {
+  const id = m.pieces.length;
+  m.pieces.push({ cells, variant, spike, world });
+  for (const [x, y] of cells) { m.t[y * m.gw + x] = WALL; m.pieceAt[y * m.gw + x] = id; }
+  return id;
+}
+const freeAround = (m, cells, gap = 1) => cells.every(([x, y]) => {
+  for (let dy = -gap; dy <= gap; dy++) for (let dx = -gap; dx <= gap; dx++) {
+    const xx = x + dx, yy = y + dy;
+    if (xx < 1 || yy < 1 || xx >= m.gw - 1 || yy >= m.gh - 1) { if (!dx && !dy) return false; continue; }
+    if (m.t[yy * m.gw + xx] !== EMPTY && !(dx || dy ? m.t[yy * m.gw + xx] === BUSH : false)) return false;
   }
-  for (let i = 0; i < (gen.canyons || 0) * scale; i++) { // sandstone canyon ridges: meandering 2-thick walls
-    let x = rx(10), y = ry(10);
-    const horiz = r() < 0.5, len = 6 + Math.floor(r() * 5);
-    for (let k = 0; k < len; k++) {
-      if (k === Math.floor(len / 2)) { horiz ? x++ : y++; continue; } // a pass through the ridge
-      for (let w = 0; w < 2; w++) if (get(horiz ? x : x + w, horiz ? y + w : y) === EMPTY) set(horiz ? x : x + w, horiz ? y + w : y, WALL);
-      if (horiz) { x++; if (r() < 0.3) y += r() < 0.5 ? -1 : 1; } else { y++; if (r() < 0.3) x += r() < 0.5 ? -1 : 1; }
-    }
-  }
-  for (let i = 0; i < (gen.ruins || 0) * scale; i++) { // ancient ruins: a broken ring of single pillars
-    const cx = rx(6) + 3, cy = ry(6) + 3, rad = 2 + Math.floor(r() * 2);
-    for (let k = 0; k < 10; k++) {
-      if (r() < 0.3) continue; // broken / fallen pillar
-      const a = (k / 10) * Math.PI * 2;
-      const px = Math.round(cx + Math.cos(a) * rad), py = Math.round(cy + Math.sin(a) * rad);
-      if (get(px, py) === EMPTY && get(px + 1, py) !== WALL && get(px, py + 1) !== WALL && get(px - 1, py) !== WALL && get(px, py - 1) !== WALL) set(px, py, WALL);
-    }
-    if (r() < 0.6 && get(cx, cy) === EMPTY) set(cx, cy, CRATE); // relic chest in the middle
-  }
-  for (let i = 0; i < gen.blocks * scale; i++) { // solid "buildings"
-    const w = 2 + Math.floor(r() * 2), h = 2 + Math.floor(r() * 3), x = rx(w), y = ry(h);
-    for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) if (get(xx, yy) === EMPTY) set(xx, yy, WALL);
-  }
-  for (let i = 0; i < gen.walls * scale; i++) { // wall segments and L shapes
-    const x = rx(0), y = ry(0), len = 2 + Math.floor(r() * 4), horiz = r() < 0.5;
-    for (let k = 0; k < len; k++) if (get(horiz ? x + k : x, horiz ? y : y + k) !== WATER) set(horiz ? x + k : x, horiz ? y : y + k, WALL);
-    if (r() < 0.35) {
-      const ex = horiz ? x + len - 1 : x, ey = horiz ? y : y + len - 1;
-      for (let k = 1; k <= 2; k++) set(horiz ? ex : ex + k, horiz ? ey + k : ey, WALL);
-    }
-  }
-  for (let i = 0; i < gen.bushes * scale; i++) {
-    const x = rx(0), y = ry(0), w = 2 + Math.floor(r() * 3), h = 2 + Math.floor(r() * 2);
-    for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) if (get(xx, yy) === EMPTY) set(xx, yy, BUSH);
-  }
-  let placed = 0, tries = 0;
-  while (placed < gen.crates * scale && tries++ < 400) {
-    const x = rx(1), y = ry(1);
-    if (get(x, y) === EMPTY) { set(x, y, CRATE); placed++; }
-  }
+  return true;
+});
+
+function placeFeature(m, r, cells, kind) { for (const [x, y] of cells) m.t[y * m.gw + x] = kind; }
+
+// border ring (spiked) around the map edge
+function borderRing(m) {
+  const mark = (i) => { m.t[i] = WALL; m.border[i] = 1; };
+  for (let i = 0; i < m.gw; i++) { mark(i); mark((m.gh - 1) * m.gw + i); }
+  for (let i = 0; i < m.gh; i++) { mark(i * m.gw); mark(i * m.gw + m.gw - 1); }
 }
 
 function clearCircle(m, cx, cy, rTiles, keepBush = true) {
@@ -212,57 +196,132 @@ function clearCircle(m, cx, cy, rTiles, keepBush = true) {
     if (x <= 0 || y <= 0 || x >= m.gw - 1 || y >= m.gh - 1) continue;
     if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) > rTiles) continue;
     const i = y * m.gw + x;
-    if (!(keepBush && m.t[i] === BUSH)) m.t[i] = EMPTY;
+    if (!(keepBush && m.t[i] === BUSH) && m.pieceAt[i] < 0 && !m.border[i]) m.t[i] = EMPTY;
   }
 }
 
-function border(m) {
-  for (let i = 0; i < m.gw; i++) { m.t[i] = WALL; m.t[(m.gh - 1) * m.gw + i] = WALL; }
-  for (let i = 0; i < m.gh; i++) { m.t[i * m.gw] = WALL; m.t[i * m.gw + m.gw - 1] = WALL; }
+// Fill a region with cover pieces, bushes, water and crates. `forbid(x,y)` vetoes cells (spawns,
+// hub, lanes); `images(x,y)` returns all mirrored copies of a cell (identity for non-mirrored).
+function layout(m, r, gen, rect, images, forbid) {
+  const [x0, y0, x1, y1] = rect;
+  const ok = (cells) => cells.every(([x, y]) => x >= x0 && y >= y0 && x < x1 && y < y1)
+    && cells.every(([x, y]) => images(x, y).every(([ix, iy]) => !forbid(ix, iy)));
+  const all = (cells) => cells.flatMap(([x, y]) => images(x, y));
+  // water first (oasis / frozen holes), ringed by bushes
+  for (let i = 0; i < gen.water; i++) for (let tries = 0; tries < 30; tries++) {
+    const cx = x0 + 3 + Math.floor(r() * (x1 - x0 - 6)), cy = y0 + 3 + Math.floor(r() * (y1 - y0 - 6));
+    const cells = []; for (let y = cy - 1; y <= cy + 1; y++) for (let x = cx - 1; x <= cx + 1; x++) if (Math.abs(x - cx) + Math.abs(y - cy) < 2 || r() < 0.4) cells.push([x, y]);
+    if (!ok(cells) || !freeAround(m, all(cells), 1)) continue;
+    placeFeature(m, r, all(cells), WATER);
+    break;
+  }
+  // cover pieces
+  const shapes = gen.shapes;
+  let placed = 0;
+  for (let tries = 0; tries < 600 && placed < gen.pieces; tries++) {
+    const name = shapes[Math.floor(r() * shapes.length)];
+    const cells = shapeCells(name, Math.floor(r() * 8), x0 + 1 + Math.floor(r() * (x1 - x0 - 2)), y0 + 1 + Math.floor(r() * (y1 - y0 - 2)));
+    if (!ok(cells)) continue;
+    const imgs = cells.map(([x, y]) => images(x, y));
+    const copies = imgs[0].length;
+    const sets = Array.from({ length: copies }, (_, k) => imgs.map((im) => im[k]));
+    // de-duplicate copies that land on the same cells (pieces on a mirror axis)
+    const uniq = []; const seen = new Set();
+    for (const s of sets) { const key = s.map((c) => c.join(',')).sort().join(';'); if (!seen.has(key)) { seen.add(key); uniq.push(s); } }
+    if (!uniq.every((s) => freeAround(m, s, 1))) continue;
+    if (new Set(uniq.flat().map((c) => c.join(','))).size !== uniq.flat().length) continue; // copies overlap each other
+    const variant = Math.floor(r() * 3);
+    uniq.forEach((s, k) => addPiece(m, s, (variant + k) % 3, r() < 1 / 6 ? SIDES[Math.floor(r() * 4)] : null));
+    placed++;
+  }
+  // bush patches (may hug cover: good hiding spots)
+  let bushes = 0;
+  for (let tries = 0; tries < 200 && bushes < gen.bushes; tries++) {
+    const w = 2 + Math.floor(r() * 2), h = 2 + Math.floor(r() * 2);
+    const bx = x0 + 1 + Math.floor(r() * (x1 - x0 - w - 1)), by = y0 + 1 + Math.floor(r() * (y1 - y0 - h - 1));
+    const cells = []; for (let y = by; y < by + h; y++) for (let x = bx; x < bx + w; x++) cells.push([x, y]);
+    if (!ok(cells)) continue;
+    const a = all(cells);
+    if (!a.every(([x, y]) => m.t[y * m.gw + x] === EMPTY)) continue;
+    placeFeature(m, r, a, BUSH); bushes++;
+  }
+  let crates = 0;
+  for (let tries = 0; tries < 300 && crates < gen.crates; tries++) {
+    const x = x0 + 1 + Math.floor(r() * (x1 - x0 - 2)), y = y0 + 1 + Math.floor(r() * (y1 - y0 - 2));
+    if (!ok([[x, y]])) continue;
+    const a = all([[x, y]]);
+    if (!a.every(([cx, cy]) => m.t[cy * m.gw + cx] === EMPTY)) continue;
+    placeFeature(m, r, a, CRATE); crates++;
+  }
 }
 
-// Quick Hunt arena: 4-fold mirrored so it feels designed and fair.
+// make sure every spawn has cover within reach (adds a 2x1 piece toward the centre if not)
+export const SPAWN_COVER_DIST = 320;
+export function spawnHasCover(m, sp) {
+  for (const p of m.pieces) for (const [x, y] of p.cells) if (Math.hypot(x * TILE + 25 - sp.x, y * TILE + 25 - sp.y) < SPAWN_COVER_DIST) return true;
+  return false;
+}
+function coverSpawns(m, spawns, r) {
+  for (const sp of spawns) {
+    if (spawnHasCover(m, sp)) continue;
+    const cx = m.gw * TILE / 2, cy = m.gh * TILE / 2, a = Math.atan2(cy - sp.y, cx - sp.x);
+    search: for (const da of [0, 0.4, -0.4, 0.8, -0.8, 1.3, -1.3, 2, -2, Math.PI]) {
+      for (let d = 150; d < 290; d += 35) for (const [shape, o] of [['s2', 0], ['s2', 1], ['s1', 0]]) {
+        const tx = Math.floor((sp.x + Math.cos(a + da) * d) / TILE), ty = Math.floor((sp.y + Math.sin(a + da) * d) / TILE);
+        const cells = shapeCells(shape, o, tx, ty);
+        if (cells.every(([x, y]) => x > 1 && y > 1 && x < m.gw - 2 && y < m.gh - 2) && freeAround(m, cells, 1)) { addPiece(m, cells, Math.floor(r() * 3), null); break search; }
+      }
+    }
+  }
+}
+
+// Quick Hunt arena: 4-fold mirrored so it's fair; open middle lanes; cover near every spawn.
 export function generateArena(seed, worldKey = 'meadow') {
   const W = WORLDS[worldId(worldKey)] || WORLDS[0];
   const r = rng(seed);
-  const H = ARENA_GRID / 2;
-  const q = new Uint8Array(H * H);
-  fillRegion(q, H, H, W.gen, r); // one quadrant; mirrored below
-  // 2x2 crate block in the middle of the map
-  q[(H - 1) * H + (H - 1)] = CRATE;
-  const m = newMap(ARENA_GRID, ARENA_GRID, 'arena', W.key);
-  for (let y = 0; y < ARENA_GRID; y++) for (let x = 0; x < ARENA_GRID; x++) {
-    const qx = x < H ? x : ARENA_GRID - 1 - x, qy = y < H ? y : ARENA_GRID - 1 - y;
-    m.t[y * ARENA_GRID + x] = q[qy * H + qx];
-  }
-  border(m);
-  for (const sp of SPAWNS) clearCircle(m, sp.x / TILE, sp.y / TILE, 2.6);
+  const G = ARENA_GRID, m = newMap(G, G, 'arena', W.key);
+  borderRing(m);
+  const images = (x, y) => [[x, y], [G - 1 - x, y], [x, G - 1 - y], [G - 1 - x, G - 1 - y]];
+  const nearSpawn = (x, y) => SPAWNS.some((sp) => Math.hypot(x + 0.5 - sp.x / TILE, y + 0.5 - sp.y / TILE) < 2.6);
+  const lane = (x, y) => x === G / 2 - 1 || y === G / 2 - 1 || x === G / 2 || y === G / 2; // open cross lanes
+  layout(m, r, W.gen, [1, 1, G / 2 - 1, G / 2 - 1], images, (x, y) => nearSpawn(x, y) || lane(x, y));
+  // central crate block (loot, not cover)
+  for (const [x, y] of [[19, 19], [20, 19], [19, 20], [20, 20]]) m.t[y * G + x] = CRATE;
+  coverSpawns(m, SPAWNS, r);
   m.base = m.t.slice();
   return m;
 }
 
-// Free Play world: each quadrant generated from its own world theme, hub cleared in the middle.
+// Free Play world: four themed zones around a safe stone hub. Zone edges are spiked border walls
+// with wide gaps to walk through. Layouts are fixed (WORLD_SEED) so every zone DO and client agree.
 export const WORLD_SEED = 424242;
 export function generateWorld(zones = ZONES) {
   const m = newMap(WORLD_GRID, WORLD_GRID, 'world', null);
-  const ZG = ZONE_SIZE / TILE;
+  borderRing(m);
+  const ZG = ZONE_SIZE / TILE, hx = HUB.x / TILE, hy = HUB.y / TILE;
+  // inner zone borders: border walls with gates (6 wall, 4 open), never inside the hub
+  for (let k = 1; k < WORLD_GRID - 1; k++) {
+    for (const [x, y] of [[ZG - 1, k], [ZG, k], [k, ZG - 1], [k, ZG]]) {
+      if (Math.hypot(x + 0.5 - hx, y + 0.5 - hy) < HUB.r / TILE + 3) continue;
+      if ((k % 10) < 6) continue; // gaps
+      const i = y * WORLD_GRID + x; m.t[i] = WALL; m.border[i] = 1;
+    }
+  }
+  const nearHub = (x, y) => Math.hypot(x + 0.5 - hx, y + 0.5 - hy) < HUB.r / TILE + 2.5;
   for (const z of zones) {
     const W = WORLDS[worldId(z.world)];
     const r = rng(WORLD_SEED + worldId(z.world) * 7919);
-    const q = new Uint8Array(ZG * ZG);
-    fillRegion(q, ZG, ZG, W.gen, r, 3);
     const ox = z.x0 / TILE, oy = z.y0 / TILE;
-    for (let y = 0; y < ZG; y++) for (let x = 0; x < ZG; x++) m.t[(oy + y) * WORLD_GRID + ox + x] = q[y * ZG + x];
-    // fence along the zone's inner edges with wide gates so crossing stays easy
-    const fx = z.x0 === 0 ? ZG - 1 : 0, fy = z.y0 === 0 ? ZG - 1 : 0;
-    for (let k = 0; k < ZG; k++) {
-      const gate = (k % 10) >= 3; // 3 fence tiles then 7 open
-      m.t[(oy + k) * WORLD_GRID + ox + fx] = gate ? EMPTY : WALL;
-      m.t[(oy + fy) * WORLD_GRID + ox + k] = gate ? EMPTY : WALL;
-    }
+    const gen = { ...W.gen, pieces: W.gen.pieces * 4, bushes: Math.round(W.gen.bushes * 3.5), crates: W.gen.crates * 3, water: W.gen.water * 3 };
+    layout(m, r, gen, [ox + 2, oy + 2, ox + ZG - 2, oy + ZG - 2], (x, y) => [[x, y]], nearHub);
   }
-  border(m);
-  clearCircle(m, HUB.x / TILE, HUB.y / TILE, HUB.r / TILE + 1.5, false);
+  // hub: ring of warm stone pillars (never spiked), everything else cleared
+  clearCircle(m, hx, hy, HUB.r / TILE + 1.5, false);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+    const x = Math.floor(hx + Math.cos(a) * 4.2), y = Math.floor(hy + Math.sin(a) * 4.2);
+    addPiece(m, [[x, y]], i % 3, null, 'hub');
+  }
   m.base = m.t.slice();
   return m;
 }
@@ -273,6 +332,19 @@ export function tileAt(map, x, y) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
   if (tx < 0 || ty < 0 || tx >= map.gw || ty >= map.gh) return WALL;
   return map.t[ty * map.gw + tx];
+}
+// Glydrift-style spiked border: touching it hurts (5% max HP, 1s cooldown). Cover spikes are decoration.
+export const SPIKE_DMG = 0.05, SPIKE_CD = 1;
+export function touchingBorder(map, x, y, r) {
+  if (!map.border) return false;
+  const reach = r + 3;
+  const x0 = Math.floor((x - reach) / TILE), x1 = Math.floor((x + reach) / TILE), y0 = Math.floor((y - reach) / TILE), y1 = Math.floor((y + reach) / TILE);
+  for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+    if (tx < 0 || ty < 0 || tx >= map.gw || ty >= map.gh || !map.border[ty * map.gw + tx]) continue;
+    const cx = Math.max(tx * TILE, Math.min(x, tx * TILE + TILE)), cy = Math.max(ty * TILE, Math.min(y, ty * TILE + TILE));
+    if ((x - cx) ** 2 + (y - cy) ** 2 <= reach * reach) return true;
+  }
+  return false;
 }
 export function isSolidTile(t) { return t === WALL || t === CRATE; } // blocks bullets
 export function blocksMove(t) { return t === WALL || t === CRATE || t === WATER; }
