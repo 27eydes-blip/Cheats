@@ -1,12 +1,12 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "hunt-preview",
+  "name": "hunt",
   "main": "src/worker.js",
   "workers_dev": true,
   "preview_urls": true,
   "compatibility_date": "2025-10-01",
   "assets": { "directory": "./public", "binding": "ASSETS" },
-  // PREVIEW deploy only (separate Worker + database). Never point this at the live site.
+  // Deploys to the "hunt" Worker (name must match the Cloudflare Worker for Workers Builds).
   "d1_databases": [{ "binding": "DB", "database_name": "hunt-preview-db", "database_id": "cd603982-d837-4ab0-a694-8c027afd9904", "migrations_dir": "migrations" }],
   "durable_objects": {
     "bindings": [
