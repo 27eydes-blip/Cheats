@@ -8,7 +8,7 @@ import {
 import { EVENTS } from './events/index.js';
 import { Input } from './input.js';
 import * as R from './render.js';
-import { SETTINGS, setSetting } from './settings.js';
+import { SETTINGS, setSetting, pulse } from './settings.js';
 import * as A from './account.js';
 import { createLobby } from './ui/lobby.js';
 import { createMatchmaking, createResults, showIntro } from './ui/flow.js';
@@ -799,7 +799,7 @@ function render(t) {
   for (const p of list) R.drawAura(ctx, p, t);
   for (const p of list) {
     let alpha = 1;
-    if (p.fl & 4) alpha = p.me ? 0.45 + Math.sin(t * 8) * 0.08 : 0.35;
+    if (p.fl & 4) alpha = p.me ? 0.37 + pulse(t, 8, 0.5) * 0.16 : 0.35;
     else if (p.fl & 1) alpha = p.me ? 0.7 : 0.75;
     if (G.flash['dash' + p.id] > 0) {
       for (let i = 1; i <= 3; i++) R.drawBrawler(ctx, p.brawler, p.x - Math.cos(p.facing) * i * 22, p.y - Math.sin(p.facing) * i * 22, p.facing, t, { alpha: 0.18 * (4 - i), size: p.size });

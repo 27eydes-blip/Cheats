@@ -886,7 +886,7 @@ export function drawControls(ctx, input, superC, brawler, t, safe) {
     ctx.beginPath(); ctx.arc(sb.x, sb.y, sb.r - 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * superC);
     ctx.lineWidth = 7; ctx.strokeStyle = '#ffd23f'; ctx.stroke();
   } else {
-    ctx.beginPath(); ctx.arc(sb.x + sx, sb.y + sy, sb.r + 6 + Math.sin(t * 7) * 3, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(sb.x + sx, sb.y + sy, sb.r + 6 + (pulse(t, 7) - 0.5) * 6, 0, Math.PI * 2);
     ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,230,120,0.8)'; ctx.stroke();
   }
   outlinedText(ctx, 'SUPER', sb.x + sx, sb.y + sy + 1, 13, ready ? '#fff' : '#cfc3ff');
