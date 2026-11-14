@@ -77,4 +77,19 @@ const run = (sim, ticks) => { for (let i = 0; i < ticks; i++) sim.tick(); };
   assert(Math.abs((A.time - back.lastCombat) - 1) < 1e-9, 'and back again');
 }
 
+// M-observer: a Free Play observer can't move its (client-sent) view next to a bush to see who hides there
+{
+  const { generateWorld, zoneBounds, BUSH, TILE: TL } = await import('../public/shared.js');
+  const msgs = [];
+  const sim = new Sim({ map: generateWorld(), mode: 'freeplay', zone: 'nw', bounds: zoneBounds('nw'), hub: true, phase: 'play', botTarget: 0, send: (k, m) => msgs.push([k, m]) });
+  const hider = sim.addPlayer({ name: 'Hider', brawler: 'wisp' });
+  const idx = sim.map.t.findIndex((t, i) => t === BUSH && sim.inBoundsIdx(i));
+  assert(idx >= 0, 'a bush in the zone');
+  hider.x = (idx % sim.map.gw) * TL + TL / 2; hider.y = Math.floor(idx / sim.map.gw) * TL + TL / 2;
+  sim.observers.set('o:spy', { x: hider.x + 20, y: hider.y });
+  for (let i = 0; i < 4; i++) sim.tick();
+  const seen = msgs.filter(([k, m]) => k === 'o:spy' && m.t === 's').some(([, m]) => m.p.some((r) => r[0] === hider.id));
+  assert.equal(seen, false, 'bush-hidden player not revealed to an observer parked next to them');
+}
+
 console.log('bug-sweep regression tests passed');

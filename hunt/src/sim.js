@@ -273,7 +273,9 @@ export class Sim {
     if (viewer === t) return true;
     if (viewer.team && viewer.team === t.team) return true; // teammates are always visible
     if (viewer.alive === false) return true;
-    const d = Math.hypot(viewer.x - t.x, viewer.y - t.y);
+    // observer sockets (Free Play border views) send their own position, so it can't be trusted:
+    // they never get the "close enough to reveal" exception for bushes, cloak or armed mines
+    const d = viewer.observer ? Infinity : Math.hypot(viewer.x - t.x, viewer.y - t.y);
     if (this.mods.vision && d > this.mods.vision) return false;
     if (t.cloak > 0 && d > CLOAK_REVEAL_DIST) return false;
     if (t.reveal <= 0 && d > BUSH_REVEAL_DIST && inBush(this.map, t.x, t.y)) return false;
@@ -745,7 +747,7 @@ export class Sim {
 
   mineVisible(v, m) {
     if (v.id === m.owner || (m.team && v.team === m.team) || v.alive === false || m.arm > 0) return true;
-    return Math.hypot(v.x - m.x, v.y - m.y) < MINE_SEEN;
+    return !v.observer && Math.hypot(v.x - m.x, v.y - m.y) < MINE_SEEN;
   }
 
   updateMines() {
@@ -925,7 +927,7 @@ export class Sim {
       });
     }
     if (this.observers.size && this.tickN % 2 === 0) {
-      for (const [k, o] of this.observers) { const v = { x: o.x, y: o.y, alive: true }; this.send(k, { ...common, p: rows(v), mn: mineRows(v) }); }
+      for (const [k, o] of this.observers) { const v = { x: o.x, y: o.y, alive: true, observer: true }; this.send(k, { ...common, p: rows(v), mn: mineRows(v) }); }
     }
   }
 
