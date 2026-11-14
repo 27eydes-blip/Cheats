@@ -12,6 +12,7 @@ export const MODES = {
     name: 'Showdown', desc: 'Last hunter standing wins. The poison closes in!', respawn: false, poison: true, quick: true,
     checkEnd: (sim) => sim.aliveCount() <= 1,
     rank: (sim) => [...sim.players.values()].sort((a, b) => (b.alive - a.alive) || (a.rank || 99) - (b.rank || 99)),
+    tieKey: (sim, p) => (p.alive ? 'alive' : 'r' + p.rank), // eliminated on the same tick = same place
   },
 
   bounty: {
@@ -110,5 +111,10 @@ export const MODES = {
     score: (p) => p.bounty,
   },
 };
-for (const m of Object.values(MODES)) if (!m.rank) m.rank = byScore(m.score || ((p) => p.kills));
+for (const m of Object.values(MODES)) {
+  const score = m.score || ((p) => p.kills);
+  if (!m.rank) m.rank = byScore(score);
+  // players equal on every tie-break share a place (1, 1, 3 ...)
+  if (!m.tieKey && !m.teams) m.tieKey = (sim, p) => `${score(p)}|${p.kills}|${p.bounty}`;
+}
 export const QUICK_MODES = Object.keys(MODES).filter((k) => MODES[k].quick);

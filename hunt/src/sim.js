@@ -459,7 +459,11 @@ export class Sim {
     t.alive = false;
     t.hp = 0;
     t.dash = t.knock = t.burst = null;
+    // everyone eliminated on the same tick shares the best of their places (a trade = a tie)
+    if (this.deathTick !== this.tickN) { this.deathTick = this.tickN; this.deathList = []; }
+    this.deathList.push(t);
     t.rank = this.aliveCount() + 1;
+    for (const v of this.deathList) v.rank = t.rank;
     const stolen = t.bounty;
     if (src && src !== t) {
       if (src.remote) this.hooks.credit?.(src.zone, { id: src.id, kill: 1, gain: 1 + stolen });
@@ -961,7 +965,8 @@ export class Sim {
     this.phase = 'end';
     const ranked = this.mode.rank(this);
     const winTeam = this.mode.teams ? (this.teamPot[1] === this.teamPot[2] ? 0 : this.teamPot[1] > this.teamPot[2] ? 1 : 2) : 0;
-    ranked.forEach((p, i) => { p.rank = i + 1; });
+    const key = this.mode.tieKey ? (p) => this.mode.tieKey(this, p) : null;
+    ranked.forEach((p, i) => { p.rank = i > 0 && key && key(p) === key(ranked[i - 1]) ? ranked[i - 1].rank : i + 1; });
     const score = this.mode.score || (() => 0);
     const results = ranked.map((p) => [p.name, p.brawler, p.rank, p.kills, p.wasBot ? 1 : 0, p.id, p.bountyEarned, Math.floor(score(p)), p.team]);
     const winner = ranked[0];

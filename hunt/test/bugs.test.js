@@ -122,4 +122,42 @@ const run = (sim, ticks) => { for (let i = 0; i < ticks; i++) sim.tick(); };
   }
 }
 
+// M-ties: last two Showdown players trading fatal shots on the same tick share 1st place
+{
+  const rows = [], ends = [];
+  const sim = new Sim({ map: generateArena(4), mode: 'showdown', phase: 'play', fillBots: false, hooks: { finished: (r) => rows.push(...r) }, send: (id, m) => { if (m.t === 'end') ends.push(m); } });
+  const a = sim.addPlayer({ name: 'A', brawler: 'volt' }), b = sim.addPlayer({ name: 'B', brawler: 'volt' }), c = sim.addPlayer({ name: 'C', brawler: 'volt' });
+  sim.tick();
+  sim.kill(c, a, 'x'); // C out first: 3rd
+  sim.tick();
+  a.hp = 1; b.hp = 1;
+  sim.tickN++; // same tick for both
+  sim.damage(b, a, 100, true); sim.damage(a, b, 100, true);
+  assert.equal(a.rank, b.rank, 'same-tick deaths share a place');
+  assert.equal(a.rank, 1);
+  sim.finish();
+  assert.deepEqual([a.rank, b.rank, c.rank], [1, 1, 3], 'final placements 1, 1, 3');
+  assert.equal(rows.filter((r) => r.rank === 1).length, 2, 'both get the 1st-place result');
+}
+// ...and equal scores share a place in score modes
+{
+  const sim = new Sim({ map: generateArena(4), mode: 'bounty', phase: 'play', fillBots: false });
+  const a = sim.addPlayer({ name: 'A', brawler: 'volt' }), b = sim.addPlayer({ name: 'B', brawler: 'volt' }), c = sim.addPlayer({ name: 'C', brawler: 'volt' });
+  a.bounty = b.bounty = 5; a.kills = b.kills = 2; c.bounty = 1;
+  sim.finish();
+  assert.deepEqual([a.rank, b.rank, c.rank], [1, 1, 3]);
+}
+// Crystal Grab: a holder killed as the countdown ends does not win
+{
+  const sim = new Sim({ map: generateArena(4), mode: 'crystals', phase: 'play', fillBots: false });
+  const a = sim.addPlayer({ name: 'A', brawler: 'volt' }), b = sim.addPlayer({ name: 'B', brawler: 'brick' });
+  a.crystals = 10; sim.holdId = a.id; sim.holdT = 0;
+  a.alive = false; a.crystals = 0;
+  assert.equal(sim.mode.checkEnd(sim), false, 'dead holder: no win');
+  a.alive = true; a.crystals = 10; b.crystals = 12;
+  assert.equal(sim.mode.checkEnd(sim), true);
+  sim.finish();
+  assert.equal(a.rank, 1, 'the holder wins even if someone else picked up more');
+}
+
 console.log('bug-sweep regression tests passed');
