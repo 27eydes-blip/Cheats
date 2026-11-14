@@ -146,7 +146,7 @@ export class MatchRoom {
     }
     sockets.set(id, server);
     const token = url.searchParams.get('token');
-    if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { const p = sim.players.get(id); if (u && p) { p.account = u.id; sim.setCosmetics(id, JSON.parse(u.progress || '{}').equipped); } }).catch(() => {});
+    if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { const p = sim.players.get(id); if (u && p) { const pr = JSON.parse(u.progress || '{}'); p.account = u.id; p.trophies = pr.trophies?.[p.brawler] | 0; sim.setCosmetics(id, pr.equipped); } }).catch(() => {});
     sendJSON(server, { t: 'welcome', id, room: isRoom ? mname.slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world });
     sim.broadcastLobby();
 

@@ -10,7 +10,7 @@ import {
 } from '../public/shared.js';
 import { EVENTS, pickEvent } from '../public/events/index.js';
 import { MODES } from './modes.js';
-import { botInput } from './bots.js';
+import { botInput, levelForTrophies } from './bots.js';
 
 const r2 = (v) => Math.round(v * 100) / 100;
 export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
@@ -55,6 +55,8 @@ export class Sim {
     this.crateDirty = [];
     this.fx = [];
     this.pings = [];
+    this.pingLog = []; // last tick's public radar pings (bots may use them, like humans)
+    this.botLevel = o.botLevel || 'normal';
     this.feed = [];
     this.nextEnt = 1;
     this.phase = o.phase || 'lobby';
@@ -238,9 +240,12 @@ export class Sim {
     }
     this.phase = 'play';
     this.time = 0;
+    // bot difficulty follows the humans' trophies (guests/new players get easy bots)
+    const hs = this.humans();
+    if (hs.length) this.botLevel = levelForTrophies(hs.reduce((s, h) => s + (h.trophies || 0), 0) / hs.length);
     for (const p of this.players.values()) {
       if (!p.connected) continue;
-      this.send(p.id, { t: 'start', you: p.id, mode: this.modeKey, world: this.map.world, seed: this.seed, open: !!this.map.open });
+      this.send(p.id, { t: 'start', botLevel: this.botLevel, you: p.id, mode: this.modeKey, world: this.map.world, seed: this.seed, open: !!this.map.open });
       this.send(p.id, this.rosterMsg());
     }
   }
@@ -674,6 +679,7 @@ export class Sim {
     if (this.hooks.handoff) this.checkHandoffs();
     if (this.hub) this.maintainBots();
     this.sendSnapshots();
+    this.pingLog = this.pings;
     this.fx = []; this.tileDirty = []; this.crateDirty = []; this.pings = [];
 
     if (this.mode.checkEnd(this)) this.finish();
