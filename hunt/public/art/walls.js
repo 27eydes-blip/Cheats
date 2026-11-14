@@ -8,6 +8,7 @@ import { TILE, WALL, worldKeyAt } from '../shared.js';
 
 export const P = 16; // art pixels per cell
 const SIDE = 4; // side-face height in art pixels
+const MAX_SPRITES = 600; // per world: far more than one screen ever shows
 const MAX_WORLDS = 4;
 
 const hash = (x, y) => (((x * 73856093) ^ (y * 19349663)) >>> 0);
@@ -195,7 +196,10 @@ export class WallArt {
   get(world, key, build) {
     const b = this.bucket(world);
     let s = b.get(key);
-    if (!s) { s = build(); b.set(key, s); this.builds++; }
+    if (s) { b.delete(key); b.set(key, s); return s; } // LRU touch
+    s = build(); b.set(key, s); this.builds++;
+    // piece sprites are keyed by map position, so every new arena adds new ones: cap each world
+    while (b.size > MAX_SPRITES) b.delete(b.keys().next().value);
     return s;
   }
   stats() { return { worlds: [...this.worlds.keys()], sprites: [...this.worlds.values()].reduce((n, b) => n + b.size, 0), generation: this.generation, builds: this.builds }; }

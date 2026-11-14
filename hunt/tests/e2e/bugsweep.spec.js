@@ -96,3 +96,15 @@ test('public retry re-queues without flashing the lobby or "Connection lost"', a
   expect(await page.evaluate(() => window.__hunt.phase)).toBe('waiting');
   expect(await page.evaluate(() => window.__seen)).not.toContain('Connection lost');
 });
+
+test('wall art cache stays bounded across many arena layouts (no leak over many matches)', async ({ page }) => {
+  await page.goto('/');
+  const n = await page.evaluate(async () => {
+    const { WallArt } = await import('/art/walls.js');
+    const a = new WallArt();
+    for (let i = 0; i < 2000; i++) a.get('meadow', 'P' + i, () => ({ cv: null }));
+    a.get('meadow', 'P1999', () => { throw new Error('should be cached'); });
+    return a.stats().sprites;
+  });
+  expect(n).toBeLessThanOrEqual(600);
+});
