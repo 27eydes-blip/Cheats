@@ -123,6 +123,7 @@ function resetMatchState() {
   $('feed').innerHTML = '';
   $('hudAgain').hidden = true;
   UI.res?.reset?.();
+  bulletAng.clear();
 }
 
 // ------------------------------------------------------------------ connections
@@ -454,6 +455,7 @@ function onSnap(c, m) {
   for (const [idx, hp] of m.ch) G.crateHp.set(idx, hp);
   c.last = m;
   if (m.ev && c.ev && c.ev.id === m.ev[0]) { c.ev.ph = m.ev[1]; c.ev.tl = m.ev[2]; }
+  if (G.pings.length > 200) G.pings = G.pings.filter((p) => now - p.t0 < 3000);
   for (const [id, x, y, bt] of m.pg) G.pings.push({ id, x, y, bt, t0: now, target: !!(m.md && m.md.tg === id) });
   if (c.primary) G.mates = m.mates || [];
   if (c.primary && m.me) reconcile(m);
