@@ -360,6 +360,7 @@ export class Sim {
   trySuper(p, ang) {
     if (!p.alive || p.superC < 1 || p.stun > 0 || p.dash || this.isSafe(p.x, p.y)) return;
     const s = BRAWLERS[p.brawler].super;
+    if (s.kind === 'blink' && !this.nearestEnemy(p, s.range)) return; // nothing to blink to: no charge spent, protection kept
     p.superC = 0;
     p.reveal = 0.8;
     p.spawnProt = 0;
