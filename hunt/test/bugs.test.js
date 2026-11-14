@@ -110,4 +110,16 @@ const run = (sim, ticks) => { for (let i = 0; i < ticks; i++) sim.tick(); };
   assert(rows.some((r) => r.p.name === 'Stayer'));
 }
 
+// m-walls: Shifting Walls never touches spiked border walls or the shared zone-edge band (Free Play)
+{
+  const { generateWorld, zoneBounds, WALL: WL, TILE: TL } = await import('../public/shared.js');
+  const sim = new Sim({ map: generateWorld(), mode: 'freeplay', zone: 'nw', bounds: zoneBounds('nw'), hub: true, phase: 'play', botTarget: 0 });
+  const b = sim.bounds, tx1 = b.x1 / TL - 1, ty1 = b.y1 / TL - 1;
+  for (const idx of sim.tilesInBounds(WL, true)) {
+    const x = idx % sim.map.gw, y = Math.floor(idx / sim.map.gw);
+    assert(!sim.map.border[idx], 'no border wall');
+    assert(x !== tx1 && y !== ty1 && x > 0 && y > 0, 'not on the zone edge');
+  }
+}
+
 console.log('bug-sweep regression tests passed');

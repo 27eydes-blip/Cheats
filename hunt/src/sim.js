@@ -49,6 +49,7 @@ export class Sim {
     this.crystals = [];
     this.mines = [];
     this.delayed = []; // timed effects (sand-worm eruptions)
+    this.wallsToRestore = []; // Shifting Walls tiles that were occupied when the event ended
     this.crates = new Map(); // idx -> {hp, supply}
     for (const idx of this.tilesInBounds(CRATE, false)) this.crates.set(idx, { hp: CRATE_HP });
     this.tileDirty = [];
@@ -85,7 +86,10 @@ export class Sim {
     const tx0 = Math.floor(b.x0 / TILE), ty0 = Math.floor(b.y0 / TILE), tx1 = Math.floor(b.x1 / TILE), ty1 = Math.floor(b.y1 / TILE);
     for (let y = ty0; y < ty1; y++) for (let x = tx0; x < tx1; x++) {
       if (interior && (x <= 0 || y <= 0 || x >= gw - 1 || y >= this.map.gh - 1)) continue;
+      // never the spiked border walls, nor the tile band on a Free Play zone edge (the neighbour zone shares it)
+      if (interior && (x === tx0 || y === ty0 || x === tx1 - 1 || y === ty1 - 1)) continue;
       const idx = y * gw + x;
+      if (interior && this.map.border && this.map.border[idx]) continue;
       if (this.map.t[idx] === type && !(interior && this.isSafe(x * TILE + 25, y * TILE + 25))) out.push(idx);
     }
     return out;
@@ -624,6 +628,9 @@ export class Sim {
     this.tickN++;
     this.zoneInset = this.mode.poison ? poisonInset(this.time) : 0;
     this.updateEvent();
+    if (this.wallsToRestore.length && this.tickN % 10 === 0) {
+      this.wallsToRestore = this.wallsToRestore.filter((idx) => { if (this.map.t[idx] !== EMPTY || this.tileOccupied(idx)) return this.map.t[idx] === EMPTY; this.setTile(idx, WALL); return false; });
+    }
     this.mode.tick?.(this);
     const mods = this.mods;
 
