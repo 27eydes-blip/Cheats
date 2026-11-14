@@ -241,7 +241,7 @@ function onMsg(c, m) {
       G.phase = 'play';
       input.enabled = true; input.reset();
       show(null);
-      showBanner(MODE_INFO[m.mode].name, `${MODE_INFO[m.mode].desc} (${worldName(m.world)})`, '#ffd23f', 3500);
+      showBanner(MODE_INFO[m.mode].name, `${MODE_INFO[m.mode].desc} (${worldName(m.world)} · ${m.botLevel || 'normal'} bots)`, '#ffd23f', 3500);
       break;
     case 'ro':
       if (m.add) Object.assign(G.roster, m.add);
