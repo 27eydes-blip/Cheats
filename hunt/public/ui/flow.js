@@ -59,9 +59,9 @@ export function createMatchmaking(onCancel) {
       el.hidden = false; el.classList.remove('leave'); void el.offsetWidth; el.classList.add('ui-screen', 'enter');
       if (!st.raf) st.raf = requestAnimationFrame(loop);
     },
-    update({ players, max, startIn, mode, world }) {
+    update({ players, max, startIn, mode, world, bots = true }) {
       st.found = players;
-      $('mmCount').textContent = `${players}/${max} hunters found${startIn != null ? ` · starts in ${Math.ceil(startIn)}` : ''}`;
+      $('mmCount').textContent = `${players}/${max} hunters found${startIn != null ? ` · starts in ${Math.ceil(startIn)}` : !bots && players < 2 ? ' · waiting for another hunter (bots off)' : ''}`;
       if (mode) $('mmMode').textContent = `${mode} · ${worldName(world)}`;
     },
     hide() { el.hidden = true; },

@@ -216,15 +216,18 @@ export class Sim {
     const msg = {
       t: 'lobby', mode: this.modeKey, world: this.map.world,
       players: this.humans().map((p) => [p.name, p.brawler]),
-      startIn: this.lobbyEnd == null ? null : Math.max(0, this.lobbyEnd - this.clock), bots: this.fillBots,
+      startIn: this.lobbyEnd == null || !this.canStart() ? null : Math.max(0, this.lobbyEnd - this.clock), bots: this.fillBots,
     };
     for (const p of this.players.values()) if (p.connected) this.send(p.id, msg);
   }
 
+  // with "fill empty slots with bots" OFF, a match needs two humans: never add bots to fill it
+  canStart() { return this.humans().length >= (this.fillBots ? 1 : 2); }
+
   start() {
     const taken = new Set([...this.players.values()].map((p) => p.name));
     const names = BOT_NAMES.filter((n) => !taken.has(n)).sort(() => Math.random() - 0.5);
-    const target = this.fillBots || this.players.size < 2 ? this.maxPlayers : 0;
+    const target = this.fillBots ? this.maxPlayers : 0;
     while (this.players.size < target) {
       const b = this.addPlayer({ name: names.pop() || 'Bot', brawler: BRAWLER_IDS[Math.floor(Math.random() * BRAWLER_IDS.length)], bot: true });
       if (this.mode.teams) b.team = this.smallerTeam();
@@ -582,7 +585,7 @@ export class Sim {
   tick() {
     this.clock += DT;
     if (this.phase === 'lobby') {
-      if (this.lobbyEnd != null && this.clock >= this.lobbyEnd && this.humans().length > 0) this.start();
+      if (this.lobbyEnd != null && this.clock >= this.lobbyEnd && this.canStart()) this.start();
       else if (Math.round(this.clock / DT) % 10 === 0) this.broadcastLobby();
       return;
     }

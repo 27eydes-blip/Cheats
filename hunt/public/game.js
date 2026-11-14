@@ -226,7 +226,7 @@ function onMsg(c, m) {
       if (G.phase === 'waiting') UI.mm.update({ players: 1, max: m.mode === 'squad' ? 6 : 10, mode: MODE_INFO[m.mode]?.name, world: m.world });
       break;
     case 'lobby':
-      UI.mm.update({ players: m.players.length, max: m.mode === 'squad' ? 6 : 10, startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world });
+      UI.mm.update({ players: m.players.length, max: m.mode === 'squad' ? 6 : 10, startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world, bots: m.bots !== false });
       break;
     case 'retry':
       if (!G.room && G.retries++ < 5) setTimeout(() => startQuick({ ...G.opts, skip: m.match }), 150);
