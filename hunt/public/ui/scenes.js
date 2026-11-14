@@ -246,10 +246,12 @@ export function drawModePreview(g, mode, w, h, t) {
     g.fillStyle = 'rgba(70,200,90,.45)'; g.beginPath(); g.rect(0, 0, w, h); g.rect(inset, inset, w - inset * 2, h - inset * 2); g.fill('evenodd');
     g.setLineDash([12, 8]); g.lineWidth = 4; g.strokeStyle = '#d4ff4f'; g.strokeRect(inset, inset, w - inset * 2, h - inset * 2); g.setLineDash([]);
   }
-  if (mode === 'free') { // four zones around a hub
-    const cols = ['#8c93a8', '#5fb84a', '#ecc77e', '#e2eefb'];
-    [[0, 0], [1, 0], [1, 1], [0, 1]].forEach(([i, j], k) => { g.globalAlpha = 0.55; g.fillStyle = cols[k]; g.fillRect(i * w / 2, j * h / 2, w / 2, h / 2); });
-    g.globalAlpha = 1; g.beginPath(); g.arc(w / 2, h / 2, Math.min(w, h) * 0.16, 0, 7); g.fillStyle = '#c7b8ff'; g.fill(); g.lineWidth = 4; g.strokeStyle = INK; g.stroke();
+  if (mode === 'free') { // eight zones around the Hub district
+    const cols = ['#8c93a8', '#7c808d', '#5fb84a', '#2d2b40', '#d9c9a3', '#3b3337', '#e2eefb', '#4d5b3c', '#f3c26a'];
+    cols.forEach((c, k) => { g.globalAlpha = 0.6; g.fillStyle = c; g.fillRect((k % 3) * w / 3, Math.floor(k / 3) * h / 3, w / 3 + 1, h / 3 + 1); });
+    g.globalAlpha = 1; g.strokeStyle = 'rgba(201,176,122,0.9)'; g.lineWidth = 6;
+    for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; g.beginPath(); g.moveTo(w / 2, h / 2); g.lineTo(w / 2 + Math.cos(a) * w, h / 2 + Math.sin(a) * h); g.stroke(); } // roads
+    g.beginPath(); g.arc(w / 2, h / 2, Math.min(w, h) * 0.12, 0, 7); g.fillStyle = '#ffd23f'; g.fill(); g.lineWidth = 4; g.strokeStyle = INK; g.stroke();
   }
   const ids = mode === 'squad' || mode === 'bighunt' ? (mode === 'bighunt' ? [...BRAWLER_IDS, ...BRAWLER_IDS.slice(0, 2)] : ['volt', 'brick', 'wisp', 'dune', 'rook', 'flicker']) : BRAWLER_IDS.slice(0, mode === 'quick' ? 4 : 3);
   ids.forEach((id, i) => {

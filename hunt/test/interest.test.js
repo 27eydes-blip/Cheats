@@ -21,3 +21,20 @@ const quiet = measure(0), busy = measure(200);
 console.log(`snapshot bytes: quiet ${quiet.toFixed(0)}, 200 far-away bullets + effects per tick ${busy.toFixed(0)}`);
 assert(busy < quiet * 1.15, 'far-away action must not bloat a player\'s snapshot');
 console.log('INTEREST OK');
+
+// Free Play: a player's snapshot is the same size in a busy zone as in a quiet one (bots far away)
+{
+  const { generateWorld, zoneBounds } = await import('../public/shared.js');
+  const measureZone = (bots) => {
+    const sizes = [];
+    const b = zoneBounds('se');
+    const sim = new Sim({ map: generateWorld(), mode: 'freeplay', zone: 'se', bounds: b, hub: true, phase: 'play', botTarget: 0, events: false, now: () => 0, send: (id, m) => { if (m.t === 's' && id === me.id) sizes.push(JSON.stringify(m).length); } });
+    const me = sim.addPlayer({ name: 'Me', brawler: 'volt' }); me.x = b.x0 + 800; me.y = b.y0 + 800;
+    for (let i = 0; i < bots; i++) { const q = sim.addPlayer({ name: 'B' + i, brawler: 'volt', bot: true }); q.x = b.x0 + 4000 + (i % 8) * 200; q.y = b.y0 + 4000 + Math.floor(i / 8) * 200; }
+    for (let k = 0; k < 30; k++) sim.tick();
+    return sizes.reduce((a, c) => a + c, 0) / sizes.length;
+  };
+  const quiet = measureZone(0), busy = measureZone(40);
+  console.log(`free play snapshot bytes: empty zone ${quiet.toFixed(0)}, 40 far-away bots ${busy.toFixed(0)}`);
+  assert(busy < quiet * 1.25, 'bandwidth per player does not grow with the zone population far away');
+}
