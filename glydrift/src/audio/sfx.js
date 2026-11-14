@@ -258,6 +258,22 @@ const semis = (base, step) =>
 let lastTick = 0;
 let lastSpinTick = 0;
 
+// ---- WASP LORD (synth only, nothing sampled): a low buzz, a distorted "zzzt", a metallic boom
+// and a deep buzz-roar. The "buzz" is a stack of very short saw/square blips at the wing-beat
+// rate, so it rasps like a wasp rather than humming like a tone.
+function buzz({ f = 110, dur = 0.16, vol = 0.1, rate = 70, delay = 0, rise = 1 }) {
+  const n = Math.max(1, Math.floor(dur * rate));
+  for (let i = 0; i < n; i++) {
+    const k = i / n;
+    const fr = f * (1 + (rise - 1) * k);
+    tone({ type: i % 2 ? "sawtooth" : "square", f0: fr * 1.04, f1: fr * 0.96, dur: 0.6 / rate + 0.008, vol: vol * (1 - k * 0.6), delay: delay + i / rate });
+  }
+}
+function waspFlap() {
+  buzz({ f: 92, dur: 0.14, vol: 0.075, rate: 60, rise: 1.25 });
+  noise({ dur: 0.09, vol: 0.12, f: 1600 });
+}
+
 const FLAP = {
   volt: () => tone({ type: "square", f0: 520, f1: 900, dur: 0.07, vol: 0.12 }),
   ember: () =>
@@ -306,6 +322,8 @@ const FLAP = {
     noise({ dur: 0.08, vol: 0.26, f: 4200 });
     tone({ type: "triangle", f0: 900, f1: 260, dur: 0.06, vol: 0.05 });
   },
+  // WASP LORD: a low, aggressive buzz on every flap (Sfx.waspFlap)
+  wasplord: () => waspFlap(),
   // DAWSON: a soft fluttering whoosh with an underwater "bloop"
   dawson: () => {
     noise({ dur: 0.07, vol: 0.12, f: 2400 });
@@ -1002,6 +1020,37 @@ export const Sfx = {
     src.start(t, Math.random());
     src.stop(t + 0.32);
     tone({ type: "sawtooth", f0: 90, f1: 180, dur: 0.2, vol: 0.06 });
+  },
+  /** WASP LORD flap: a low, aggressive buzz (Sfx.flap("wasplord") plays it too) */
+  waspFlap: () => waspFlap(),
+  /** WASP LORD starts phasing through a wall: a distorted, glitchy "zzzt" */
+  waspPhase: () => {
+    const c = ensure();
+    if (!c) return;
+    buzz({ f: 180, dur: 0.22, vol: 0.06, rate: 90, rise: 2.4 });
+    [0, 0.05, 0.11, 0.15].forEach((d, i) => noise({ dur: 0.035, vol: 0.2 - i * 0.03, f: 5200 - i * 900, delay: d }));
+    tone({ type: "square", f0: 1400, f1: 220, dur: 0.18, vol: 0.035 });
+  },
+  /** WASP LORD double jump (and his armour breaking, quieter): a metallic boom. k 0..1 */
+  waspBoom: (k = 1) => {
+    tone({ type: "sine", f0: 150, f1: 38, dur: 0.5, vol: 0.42 * k });
+    noise({ dur: 0.3, vol: 0.3 * k, f: 900 });
+    // the clang: inharmonic metal partials ringing out
+    for (const [f, v] of [
+      [523, 0.07],
+      [811, 0.05],
+      [1187, 0.04],
+      [1733, 0.025],
+    ])
+      tone({ type: "triangle", f0: f, f1: f * 0.97, dur: 0.55, vol: v * k, delay: 0.01 });
+  },
+  /** WASP LORD's unlock reveal (and his new best): a deep buzz-roar */
+  waspRoar: () => {
+    buzz({ f: 55, dur: 1.3, vol: 0.11, rate: 48, rise: 1.5 });
+    buzz({ f: 82, dur: 1.1, vol: 0.06, rate: 53, rise: 1.4, delay: 0.08 });
+    tone({ type: "sawtooth", f0: 48, f1: 70, dur: 1.4, vol: 0.12 });
+    noise({ dur: 1.2, vol: 0.14, f: 700 });
+    noise({ dur: 0.5, vol: 0.18, f: 3200, delay: 0.9 });
   },
   /** SXE new best with the Afterburner: a deep sonic "boom" */
   sonicBoom: () => {

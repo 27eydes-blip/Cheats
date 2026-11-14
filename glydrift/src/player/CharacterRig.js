@@ -16,6 +16,7 @@ import { BerryBits, SharkBits } from "./hybridFx.js";
 import { UnicornBits } from "./tungFx.js";
 import { SamuraiBits } from "./newbleizerFx.js";
 import { FalconBits } from "./spliceFx.js";
+import { WaspBits } from "./waspLordFx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 
 const ADD = Phaser.BlendModes.ADD;
@@ -114,6 +115,8 @@ export class CharacterRig {
     // SXE (id "splice"): dive tucks, barrel rolls, the sonic boom, wind-streak trail, perch showcase
     this.falcon =
       this.px.mode === "falcon" ? new FalconBits(this, depth) : null;
+    // WASP LORD: buzzing wings, glowing eyes, the phase glitch, the shockwave, armour break
+    this.wasp = this.px.mode === "wasp" ? new WaspBits(this, depth) : null;
     // 손주원: the hover-thruster glow under the board
     if (this.px.mode === "surf") {
       this.roarT = 0;
@@ -156,6 +159,7 @@ export class CharacterRig {
       ...(this.boxer?.objects || []),
       ...(this.hb?.objects || []),
       ...(this.falcon?.objects || []),
+      ...(this.wasp?.objects || []),
     ];
   }
 
@@ -177,7 +181,7 @@ export class CharacterRig {
   hideAll() {
     this.setVisible(false);
     this.trailG.clear();
-    for (const o of [...(this.hb?.objects || []), ...(this.toe?.objects || []), ...(this.boxer?.objects || []), ...(this.falcon?.objects || [])])
+    for (const o of [...(this.hb?.objects || []), ...(this.toe?.objects || []), ...(this.boxer?.objects || []), ...(this.falcon?.objects || []), ...(this.wasp?.objects || [])])
       if (o.type === "Graphics") o.clear();
       else o.setVisible?.(false);
   }
@@ -231,6 +235,7 @@ export class CharacterRig {
     this.dog?.reset(); // JAMAL: back on his paws
     this.hb?.reset();
     this.falcon?.reset(); // SXE: undo the death tumble, or he stays hidden next run
+    this.wasp?.reset(); // WASP LORD: armour back on, out of phase
     this.setVisible(true);
     this.trailG.clear();
     if (this.afterImages)
@@ -321,6 +326,7 @@ export class CharacterRig {
         this.dog?.flap();
         this.hb?.flap();
         this.falcon?.flap();
+        this.wasp?.flap();
         break;
       case "yarms":
         // a whoosh puff under the stroke and sparkles off both hands
@@ -385,6 +391,7 @@ export class CharacterRig {
     this.flapT = 0;
     this.sx = 0.6;
     this.sy = 1.5;
+    if (this.wasp) return this.wasp.doubleJump(); // WASP LORD: a red shockwave + a metallic boom
     if (!this.fx) return;
     const { x, y, fx, def } = this;
     const oy = 16 * this.gravityDir * this.u;
@@ -629,6 +636,14 @@ export class CharacterRig {
     }
   }
 
+  /**
+   * Phasing through an obstacle (WASP LORD): on = the glitchy red ghost look, off = solid again.
+   * The gameplay code calls it; every other hero ignores it.
+   */
+  phase(on) {
+    this.wasp?.phase(on);
+  }
+
   // ------------------------------------------------------------------ death
   /** Returns hints for the scene's death effects (flash strength, camera shake). */
   die() {
@@ -641,6 +656,14 @@ export class CharacterRig {
       this.sx = 0.8;
       this.sy = 1.3;
       if (this.sounds) Sfx.flex();
+      return hints;
+    }
+    if (this.wasp && !this.dead) {
+      // WASP LORD: the armour cracks and flies off, the eyes flicker out (the sprite stays)
+      this.dead = true;
+      this.wasp.die();
+      if (this.fx) this.cosmeticDeath(this.x, this.y); // equipped death effects still play
+      hints.shake = 0.024;
       return hints;
     }
     if (this.falcon && !this.dead) {
@@ -827,6 +850,7 @@ export class CharacterRig {
     this.dog?.near();
     this.hb?.near();
     this.falcon?.near();
+    this.wasp?.near();
     this.an?.near();
     this.surfNear();
   }
@@ -841,6 +865,7 @@ export class CharacterRig {
     this.dog?.best();
     this.hb?.best();
     this.falcon?.best();
+    this.wasp?.best();
     this.an?.best();
     this.surfBest();
     this.cosmeticPose();
@@ -1234,6 +1259,7 @@ export class CharacterRig {
     this.dog?.update(dt);
     this.hb?.update(dt);
     this.falcon?.update(dt, scroll);
+    this.wasp?.update(dt);
     if (this.an) this.an.update(dt, scroll);
     if (this.frozen) {
       // a death move is animating the sprite: just keep the trail fading
@@ -1327,6 +1353,7 @@ export class CharacterRig {
     else if (mode === "dog") f = this.dog ? this.dog.frame() : 0;
     else if (mode === "shark" || mode === "berry" || mode === "unicorn" || mode === "samurai") f = this.hb ? this.hb.frame() : 0;
     else if (mode === "falcon") f = this.falcon ? this.falcon.frame() : 0;
+    else if (mode === "wasp") f = this.wasp ? this.wasp.frame() : 0;
     else if (mode === "surf")
       f =
         this.roarT > 0
@@ -1386,6 +1413,7 @@ export class CharacterRig {
     this.dog?.post(sp);
     this.hb?.post(sp);
     this.falcon?.post(sp);
+    this.wasp?.post(sp);
     this.placeCosmetics();
     this.an?.place(scroll);
     if (this.thruster) {
@@ -1520,6 +1548,7 @@ export class CharacterRig {
     if (!this.trailOverride && this.dog) return this.dog.trail(g);
     if (!this.trailOverride && this.hb) return this.hb.trail(g);
     if (!this.trailOverride && this.falcon) return this.falcon.trail(g);
+    if (!this.trailOverride && this.wasp) return this.wasp.trail(g);
     if (!this.trailOverride && this.an?.trail(g)) return;
     const cols = this.trailOverride || this.px.trail; // Lucky Run: golden trail
     // squares laid at an even spacing along the path (not one per frame), so the trail has no
