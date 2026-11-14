@@ -96,10 +96,12 @@ export class MatchRoom {
   }
 
   newMatch(cfg) {
+    if (this.dropped) for (const id of [...this.dropped.keys()]) this.abandon(id); // previous match's leavers
     if (this.sockets) for (const ws of this.sockets.values()) { try { ws.close(1000, 'new match'); } catch {} }
     const sockets = new Map();
     this.sockets = sockets;
     this.endedAt = 0;
+    this.dropped = new Map(); // player id -> when their socket dropped mid-match
     const seed = (Math.random() * 2 ** 32) >>> 0;
     const map = generateArena(seed, cfg.world);
     if (cfg.open) map.open = true;
@@ -115,7 +117,8 @@ export class MatchRoom {
   async recordResults(rows, sockets) {
     if (!this.env.DB) return;
     for (const r of rows) {
-      if (!r.p.account) continue;
+      if (!r.p.account || r.p.recorded) continue;
+      r.p.recorded = true;
       try {
         const out = await recordMatch(this.env.DB, r.p.account, { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, won: r.won });
         const ws = sockets.get(r.p.id);
@@ -167,7 +170,7 @@ export class MatchRoom {
   rejoin(url, server, client) {
     const sim = this.sim, id = Number(url.searchParams.get('rejoin'));
     const p = sim && sim.phase !== 'end' ? sim.players.get(id) : null;
-    if (!p || p.wasBot || !p.secret || p.secret !== url.searchParams.get('secret')) {
+    if (!p || p.wasBot || p.left || !p.secret || p.secret !== url.searchParams.get('secret')) {
       sendJSON(server, { t: 'rejoinfail' });
       server.close(1000, 'rejoin failed');
       return new Response(null, { status: 101, webSocket: client });
@@ -176,6 +179,7 @@ export class MatchRoom {
     this.sockets.delete(id); // so the old socket's close handler is a no-op
     if (old) { try { old.close(1000, 'replaced'); } catch {} }
     sim.rejoin(id);
+    this.dropped.delete(id);
     sendJSON(server, { t: 'welcome', id, rejoin: 1, room: url.searchParams.get('match').startsWith('room:') ? url.searchParams.get('match').slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: url.searchParams.get('match'), secret: p.secret });
     if (sim.phase === 'play') {
       sendJSON(server, { t: 'start', rejoin: 1, botLevel: sim.botLevel, you: id, mode: sim.modeKey, world: sim.map.world, seed: sim.seed, open: !!sim.map.open });
@@ -196,7 +200,7 @@ export class MatchRoom {
       let m;
       try { m = JSON.parse(e.data); } catch { return; }
       if (m.t === 'ping') return sendJSON(server, { t: 'pong', c: m.c });
-      if (m.t === 'bye') { const p = sim.players.get(id); if (p) p.secret = null; onClose(true); try { server.close(1000, 'bye'); } catch {} return; }
+      if (m.t === 'bye') { this.abandon(id); onClose(true); try { server.close(1000, 'bye'); } catch {} return; }
       sim.input(id, m);
     });
     // bye = the player quit on purpose (no reconnect wanted); otherwise the connection dropped
@@ -204,6 +208,7 @@ export class MatchRoom {
       if (sockets.get(id) !== server) return;
       sockets.delete(id);
       sim.leave(id);
+      if (bye !== true && sim.phase === 'play' && this.sim === sim) this.dropped.set(id, Date.now());
       // nobody left: keep the match alive for a short grace period so a dropped player can come back,
       // then shut the room down (no Durable Object left ticking forever)
       if (this.sockets === sockets && sockets.size === 0) {
@@ -216,8 +221,17 @@ export class MatchRoom {
     return new Response(null, { status: 101, webSocket: client });
   }
 
+  // a leave is final: record it now (a loss), so quitting can't dodge a trophy drop
+  abandon(id) {
+    this.dropped.delete(id);
+    const row = this.sim && this.sim.abandon(id);
+    if (row) this.recordResults([row], this.sockets);
+  }
+
   step() {
     if (!this.sim) return this.loop.stop();
+    const now = Date.now();
+    for (const [id, at] of this.dropped) if (now - at > REJOIN_GRACE_MS) this.abandon(id);
     if (this.emptyAt && this.sockets.size === 0 && Date.now() - this.emptyAt > REJOIN_GRACE_MS) return this.stop();
     this.sim.tick();
     if (this.sim.phase === 'end') {
@@ -229,6 +243,7 @@ export class MatchRoom {
 
   stop() {
     this.loop.stop();
+    if (this.dropped) for (const id of [...this.dropped.keys()]) this.abandon(id);
     if (!this.sockets || this.sockets.size === 0) this.sim = null;
   }
 }

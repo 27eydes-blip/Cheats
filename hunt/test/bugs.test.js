@@ -92,4 +92,22 @@ const run = (sim, ticks) => { for (let i = 0; i < ticks; i++) sim.tick(); };
   assert.equal(seen, false, 'bush-hidden player not revealed to an observer parked next to them');
 }
 
+// M-leaver: leaving mid-match counts as a loss right away; the bot that takes the slot earns nothing
+{
+  const rows = [];
+  const sim = arena({ fillBots: true, hooks: { finished: (r) => rows.push(...r) } });
+  const id = sim.join('Quitter', 'volt');
+  sim.join('Stayer', 'brick');
+  run(sim, 120);
+  assert.equal(sim.phase, 'play');
+  sim.leave(id);
+  const row = sim.abandon(id);
+  assert(row, 'a result row for the leaver');
+  assert.equal(row.rank, sim.players.size, 'counted as last place');
+  assert.equal(sim.abandon(id), null, 'only once');
+  while (sim.phase === 'play') sim.tick();
+  assert(!rows.some((r) => r.p.id === id), 'final results do not credit the leaver again');
+  assert(rows.some((r) => r.p.name === 'Stayer'));
+}
+
 console.log('bug-sweep regression tests passed');
