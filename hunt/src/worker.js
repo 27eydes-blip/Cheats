@@ -294,6 +294,14 @@ export class ZoneRoom {
 
   async handoff(p, state) {
     const dest = zoneAt(state.x, state.y);
+    if (dest === this.slot) { // a hair inside our own edge: not a crossing, keep them here
+      const b = this.sim.bounds;
+      state.x = Math.max(b.x0 + 1, Math.min(b.x1 - 1, state.x)); state.y = Math.max(b.y0 + 1, Math.min(b.y1 - 1, state.y));
+      const np = this.sim.importPlayer(state, state.name, true);
+      const ws0 = this.conns.get(p.id);
+      if (ws0) { this.conns.delete(p.id); this.conns.set(np.id, ws0); ws0.huntKey = np.id; }
+      return;
+    }
     const token = crypto.randomUUID();
     const ws = this.conns.get(p.id);
     // this socket is now an observer of this zone
@@ -304,6 +312,8 @@ export class ZoneRoom {
       if (!r.ok) throw new Error('handoff refused');
       if (ws) sendJSON(ws, { t: 'handoff', zone: dest, token, ack: state.lastSeq });
     } catch {
+      // the socket closed (or the zone emptied) while we waited: don't resurrect a ghost player
+      if (!this.sim || !ws || ws.readyState !== 1 || this.conns.get(okey) !== ws) return;
       // put them back on our side of the border
       const b = this.sim.bounds;
       state.x = Math.max(b.x0 + 30, Math.min(b.x1 - 30, state.x));
@@ -377,6 +387,7 @@ export class ZoneRoom {
       if (m.t === 'pos') { const o = sim.observers.get(key); if (o) { o.x = +m.x || 0; o.y = +m.y || 0; } return; }
       if (m.t === 'bye') { onClose(true); try { server.close(1000, 'bye'); } catch {} return; }
       if (m.t === 'claim') {
+        if (typeof key === 'number') return sendJSON(server, { t: 'claimfail' }); // already a player here
         const pend = this.pending.get(m.token);
         if (!pend) return sendJSON(server, { t: 'claimfail' });
         this.pending.delete(m.token);
