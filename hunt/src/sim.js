@@ -18,7 +18,7 @@ export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
 // fields carried across a zone handoff
 const CARRY = ['id', 'name', 'brawler', 'x', 'y', 'mvx', 'mvy', 'hp', 'maxHp', 'cubes', 'ammo', 'reloadP', 'atkCd', 'superC',
   'lastCombat', 'stun', 'cloak', 'reveal', 'facing', 'lastSeq', 'kills', 'bounty', 'bountyEarned', 'bestBounty', 'bushT',
-  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp'];
+  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp', 'cos', 'equipped', 'account'];
 
 export class Sim {
   constructor(o) {
@@ -133,8 +133,18 @@ export class Sim {
     if (state) for (const k of CARRY) if (state[k] !== undefined) p[k] = state[k];
     while (this.players.has(p.id)) p.id = newId();
     this.players.set(p.id, p);
-    this.broadcast({ t: 'ro', add: { [p.id]: [p.name, p.brawler, p.wasBot ? 1 : 0] } });
+    this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
     return p;
+  }
+
+  rosterRow(p) { return [p.name, p.brawler, p.wasBot ? 1 : 0, p.cos || null]; }
+  // cosmetics: drawn by clients only. Never read by the simulation.
+  setCosmetics(id, equipped) {
+    const p = this.players.get(id);
+    if (!p) return;
+    p.equipped = equipped || {};
+    p.cos = { skin: p.equipped['skin:' + p.brawler] || null, fx: p.equipped.fx || null, title: p.equipped.title || null };
+    this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
   }
 
   removePlayer(id) {
@@ -159,7 +169,7 @@ export class Sim {
 
   rosterMsg() {
     const add = {};
-    for (const p of this.players.values()) add[p.id] = [p.name, p.brawler, p.wasBot ? 1 : 0];
+    for (const p of this.players.values()) add[p.id] = this.rosterRow(p);
     return { t: 'ro', add, full: 1, zone: this.zone };
   }
   stateMsg() {
@@ -426,7 +436,7 @@ export class Sim {
     for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, d = n > 1 ? 30 : 0; this.dropCube(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d); }
     for (let i = 0; i < t.crystals; i++) { const a = this.rand() * Math.PI * 2, d = 20 + this.rand() * 50; this.dropCrystal(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d); }
     t.crystals = 0;
-    this.fx.push(['die', Math.round(t.x), Math.round(t.y), BRAWLER_IDS.indexOf(t.brawler), t.id]);
+    this.fx.push(['die', Math.round(t.x), Math.round(t.y), BRAWLER_IDS.indexOf(t.brawler), t.id, (src && !src.remote && src.cos && src.cos.fx) || 0]);
     const causeName = { poison: 'Poison', lava: 'Lava', fire: 'Wildfire' }[cause] || 'The Wild';
     this.broadcast({ t: 'kill', k: src ? src.name : causeName, v: t.name, kid: src ? src.id : 0, vid: t.id, st: stolen });
     if (this.mode.respawn) t.respawnT = 3;
@@ -481,7 +491,7 @@ export class Sim {
     p.brawler = brawler;
     p.hp = p.maxHp = BRAWLERS[brawler].hp + p.cubes * CUBE_HP;
     p.ammo = 3; p.superC = 0;
-    this.broadcast({ t: 'ro', add: { [p.id]: [p.name, p.brawler, 0] } });
+    if (p.equipped) this.setCosmetics(p.id, p.equipped); else this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
   }
 
   dropCube(x, y) {

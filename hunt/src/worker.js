@@ -146,7 +146,7 @@ export class MatchRoom {
     }
     sockets.set(id, server);
     const token = url.searchParams.get('token');
-    if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { const p = sim.players.get(id); if (u && p) p.account = u.id; }).catch(() => {});
+    if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { const p = sim.players.get(id); if (u && p) { p.account = u.id; sim.setCosmetics(id, JSON.parse(u.progress || '{}').equipped); } }).catch(() => {});
     sendJSON(server, { t: 'welcome', id, room: isRoom ? mname.slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world });
     sim.broadcastLobby();
 
@@ -272,6 +272,8 @@ export class ZoneRoom {
       const p = sim.addPlayer({ name: cleanName(url.searchParams.get('name')), brawler: BRAWLERS[b] ? b : 'volt' });
       p.alive = false;
       sim.respawn(p);
+      const token = url.searchParams.get('token');
+      if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { if (u && sim.players.has(p.id)) { p.account = u.id; sim.setCosmetics(p.id, JSON.parse(u.progress || '{}').equipped); } }).catch(() => {});
       server.huntKey = p.id;
       this.conns.set(p.id, server);
       sendJSON(server, { t: 'welcome', id: p.id, zone: this.slot, mode: 'freeplay' });

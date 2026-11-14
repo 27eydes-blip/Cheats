@@ -2,6 +2,7 @@
 import { BRAWLERS, BRAWLER_IDS, TILE, PLAYER_R, WALL, BUSH, CRATE, WATER, CRATE_HP, SUPPLY_HP, HUB, worldKeyAt, attackDirs } from './shared.js';
 import { STICK_R } from './input.js';
 import { SETTINGS, pulse } from './settings.js';
+import { SKINS } from './catalog.js';
 
 export const INK = '#1b1033';
 export const FONT = '"Lilita One", "Arial Black", system-ui, sans-serif';
@@ -363,8 +364,30 @@ function eyes(ctx, facing, ox, oy, spread, size) {
   }
 }
 
+// skin accessories, drawn on top of the body (cosmetic only)
+function drawAccessory(ctx, acc, t) {
+  ctx.save(); ctx.lineWidth = 3.5; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+  const blob = (x, y, r, c) => { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fillStyle = c; ctx.fill(); ctx.stroke(); };
+  switch (acc) {
+    case 'cloud': blob(-10, -36, 9, '#eef'); blob(2, -40, 11, '#eef'); blob(14, -35, 8, '#eef'); break;
+    case 'shades': rr(ctx, -18, -14, 36, 10, 4); ctx.fillStyle = INK; ctx.fill(); break;
+    case 'moss': blob(-14, -26, 7, '#5fb84a'); blob(-4, -29, 6, '#3f9a4a'); break;
+    case 'horns': for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s * 18, -24); ctx.quadraticCurveTo(s * 30, -34, s * 26, -44); ctx.lineTo(s * 14, -28); ctx.closePath(); ctx.fillStyle = '#fff3d6'; ctx.fill(); ctx.stroke(); } break;
+    case 'snowflake': ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; ctx.moveTo(Math.cos(a) * 9, -40 + Math.sin(a) * 9); ctx.lineTo(-Math.cos(a) * 9, -40 - Math.sin(a) * 9); } ctx.stroke(); break;
+    case 'flame': { const h = 12 + (SETTINGS.reduceFlash ? 2 : Math.sin(t * 10) * 3); ctx.beginPath(); ctx.moveTo(-8, -32); ctx.quadraticCurveTo(0, -32 - h * 2, 8, -32); ctx.closePath(); ctx.fillStyle = '#ffb347'; ctx.fill(); ctx.stroke(); break; }
+    case 'moon': ctx.beginPath(); ctx.arc(14, -36, 9, 0.6, 5.7); ctx.arc(18, -38, 7, 5.2, 1.1, true); ctx.closePath(); ctx.fillStyle = '#fff6b0'; ctx.fill(); ctx.stroke(); break;
+    case 'leaf': ctx.beginPath(); ctx.ellipse(0, -38, 6, 12, 0.5, 0, 7); ctx.fillStyle = '#3f9a4a'; ctx.fill(); ctx.stroke(); break;
+    case 'antenna': ctx.beginPath(); ctx.moveTo(14, -22); ctx.lineTo(20, -44); ctx.stroke(); blob(20, -46, 4, '#ff2846'); break;
+    case 'bolt': for (const s of [-1, 1]) blob(s * 22, -14, 4, '#c0c0c8'); break;
+    case 'visor': rr(ctx, -20, -12, 40, 9, 4); ctx.fillStyle = '#5ff4ff'; ctx.fill(); ctx.stroke(); break;
+    case 'flower': for (let i = 0; i < 5; i++) { const a = i * 1.257; blob(16 + Math.cos(a) * 5, -30 + Math.sin(a) * 5, 4, '#fff'); } blob(16, -30, 3, '#ffd23f'); break;
+  }
+  ctx.restore();
+}
+
 export function drawBrawler(ctx, id, x, y, facing, t, o = {}) {
-  const B = BRAWLERS[id];
+  const sk = o.skin && SKINS[o.skin] && SKINS[o.skin].brawler === id ? SKINS[o.skin] : null;
+  const B = sk ? { ...BRAWLERS[id], color: sk.color, dark: sk.dark, accent: sk.accent } : BRAWLERS[id];
   ctx.save();
   ctx.translate(x, y);
   const sc = (o.scale || 1) * (o.size || 1);
@@ -479,6 +502,7 @@ export function drawBrawler(ctx, id, x, y, facing, t, o = {}) {
     for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 8 + fx, -2 + fy, 4, 6, 0, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 2.5; ctx.stroke(); }
   }
   if (!behind) gun();
+  if (sk) drawAccessory(ctx, sk.acc, t);
   ctx.restore();
 }
 
@@ -702,7 +726,8 @@ export function drawAim(ctx, brawler, x, y, ang, kind, mag) {
 export function drawStatus(ctx, p, isMe, t, side) {
   const y = p.y - 58 * (p.size || 1) - 4;
   const w = 74, h = 15;
-  outlinedText(ctx, p.name, p.x, y - 16, 15, isMe ? '#b8ff6b' : (p.fl & 32) ? '#ff8a9a' : '#fff');
+  outlinedText(ctx, p.name, p.x, y - (p.title ? 30 : 16), 15, isMe ? '#b8ff6b' : (p.fl & 32) ? '#ff8a9a' : '#fff');
+  if (p.title) outlinedText(ctx, p.title, p.x, y - 15, 11, '#ffd23f');
   rr(ctx, p.x - w / 2 - 2, y - h / 2 - 2, w + 4, h + 4, 7); ctx.fillStyle = INK; ctx.fill();
   const f = Math.max(0, Math.min(1, p.hp / p.mh));
   rr(ctx, p.x - w / 2, y - h / 2, w, h, 5); ctx.fillStyle = '#3a2a5e'; ctx.fill();

@@ -154,3 +154,27 @@ body.reduce-flash * { animation: none !important; transition: none !important; }
 .err { color: #ff9aa8; min-height: 1em; font-family: system-ui, sans-serif; font-weight: 700; }
 .card .tro { position: absolute; top: 4px; right: 6px; font-size: 12px; background: rgba(27,16,51,.8); border-radius: 8px; padding: 0 5px; }
 #modal { z-index: 20; }
+
+.panel.wide { width: min(900px, 100%); }
+.tabs { display: flex; gap: 6px; justify-content: center; margin: 4px 0; }
+.tabs button { font-size: 14px; padding: 4px 12px; background: var(--panel2); }
+.tabs button.sel { background: var(--gold); color: var(--ink); }
+.lbody { max-height: 52vh; overflow: auto; }
+.lrow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.lrow > b { width: 64px; text-align: left; }
+.litem { background: var(--panel2); border: 3px solid var(--ink); border-radius: 10px; padding: 3px 6px; display: flex; flex-direction: column; align-items: center; font-size: 13px; min-width: 92px; }
+.litem.on { background: #7b52ff; }
+.litem canvas { width: 60px; height: 55px; image-rendering: auto; }
+.litem button { font-size: 12px; padding: 1px 8px; border-width: 3px; border-radius: 8px; background: var(--gold); color: var(--ink); }
+.litem i { font-style: normal; font-size: 11px; color: var(--gold); }
+.testnote { font-size: 11px; opacity: .75; font-family: system-ui, sans-serif; font-weight: 700; margin: 6px 0; }
+.pass { display: flex; gap: 4px; overflow-x: auto; padding: 4px 0 8px; }
+.ptrack { display: flex; flex-direction: column; justify-content: space-around; gap: 4px; padding-top: 22px; font-size: 12px; min-width: 58px; }
+.pcol { display: flex; flex-direction: column; gap: 4px; min-width: 96px; }
+.ptier { text-align: center; font-size: 14px; opacity: .6; } .ptier.reached { opacity: 1; color: var(--gold); }
+.pcell { background: var(--panel2); border: 3px solid var(--ink); border-radius: 10px; padding: 3px; min-height: 56px; font-size: 12px; font-family: system-ui, sans-serif; font-weight: 700; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+.pcell.premium { background: #6a3f9a; } .pcell.got { opacity: .55; } .pcell.locked { filter: grayscale(.6); }
+.pcell button { font-size: 11px; padding: 0 6px; border-width: 2px; border-radius: 6px; background: var(--gold); color: var(--ink); font-family: var(--font); }
+.pcell i { font-style: normal; }
+.prem.on { color: var(--gold); }
+h2 small { font-size: 16px; color: var(--gold); }
