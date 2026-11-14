@@ -112,3 +112,20 @@ assert(cnt('w', (i) => m.rock[i]) > 3000, 'cave rock');
   assert(near >= bots.length - 1, `bots spawn near the human in a huge zone (${near}/${bots.length})`);
 }
 console.log(`WORLD OK (generated in ${genMs}ms, ${m.pieces.length} cover pieces, ${m.pois.length} points of interest)`);
+// HEARTBEAT: a hidden enemy (bush) close by sets me.hb; a visible one or a far one doesn't
+{
+  const { generateArena, BUSH } = await import('../public/shared.js');
+  const map = generateArena(3, 'meadow', 2);
+  for (let i = 0; i < map.t.length; i++) if (!map.border[i]) map.t[i] = 0;
+  for (let y = 18; y < 22; y++) for (let x = 24; x < 28; x++) map.t[y * map.gw + x] = BUSH;
+  const snaps = [];
+  const sim = new Sim({ map, mode: 'bounty', phase: 'play', fillBots: false, events: false, send: (id, m) => { if (m.t === 's') snaps.push(m.me.hb); } });
+  const me = sim.addPlayer({ name: 'Me', brawler: 'volt' }); me.x = 1100; me.y = 1000;
+  const foe = sim.addPlayer({ name: 'Foe', brawler: 'volt', bot: true }); foe.x = 1300; foe.y = 1000; foe.reveal = 0; foe.botLevel = 'easy';
+  foe.bot = false; // keep it still
+  sim.tick(); sim.tick();
+  assert.equal(snaps.at(-1), 1, 'heartbeat: hidden enemy 200px away');
+  foe.x = 1900; sim.tick();
+  assert.equal(snaps.at(-1), 0, 'no heartbeat when far');
+  console.log('heartbeat: OK');
+}

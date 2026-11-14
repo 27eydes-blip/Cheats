@@ -123,7 +123,7 @@ function demo(g, w, h, id, which, t) {
 function openDetail(api, id, onClose) {
   const B = BRAWLERS[id], p = A.progress();
   const el = document.createElement('div'); el.className = 'detail'; el.hidden = true;
-  const skins = [[null, 'Classic'], ...Object.entries(SKINS).filter(([, s]) => s.brawler === id).map(([k, s]) => [k, s.name])];
+  const skins = [[null, 'Hunter'], ...Object.entries(SKINS).filter(([, s]) => s.brawler === id).map(([k, s]) => [k, s.name])];
   el.innerHTML = `<div class="card-b" style="--card-col:${ROLE_COL[B.role]}">
     <div><canvas class="portrait"></canvas><div class="title" style="font-size:calc(var(--u)*4);text-align:center">${B.name}</div>
       <div style="text-align:center"><span class="role" style="--role-col:${ROLE_COL[B.role]}">${B.role.toUpperCase()}</span> <span class="np-tro">🏆 ${p.trophies[id] | 0}</span></div></div>
@@ -190,7 +190,7 @@ export function openLocker(api, onDone) {
     $('lkWho').innerHTML = tab === 'skins' ? BRAWLER_IDS.map((b) => `<button class="chipbtn ${b === who ? 'on' : ''}" data-w="${b}">${BRAWLERS[b].name}</button>`).join('') : '';
     for (const b of $('lkWho').children) b.onclick = () => { who = b.dataset.w; render(); };
     let items;
-    if (tab === 'skins') items = [[null, 'Classic', 0], ...Object.entries(SKINS).filter(([, s]) => s.brawler === who).map(([k, s]) => [k, s.name, s.price])].map(([k, n, price]) => ({ k, n, price, slot: 'skin:' + who, on: (p.equipped['skin:' + who] || null) === k }));
+    if (tab === 'skins') items = [[null, 'Hunter', 0], ...Object.entries(SKINS).filter(([, s]) => s.brawler === who).map(([k, s]) => [k, s.name, s.price])].map(([k, n, price]) => ({ k, n, price, slot: 'skin:' + who, on: (p.equipped['skin:' + who] || null) === k }));
     else if (tab === 'fx') items = [[null, 'None', 0], ...Object.entries(KILL_FX).map(([k, f]) => [k, f.name, f.price])].map(([k, n, price]) => ({ k, n, price, slot: 'fx', on: (p.equipped.fx || null) === k }));
     else items = [[null, 'None'], ...Object.entries(TITLES)].map(([k, n]) => ({ k, n, price: TITLE_PRICE, slot: 'title', on: (p.equipped.title || null) === k }));
     $('lkItems').innerHTML = items.map((it) => {

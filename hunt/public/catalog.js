@@ -23,6 +23,10 @@ export const SKINS = {
   flicker_neon: { brawler: 'flicker', name: 'Neon Fang', color: '#2b2b44', dark: '#141426', accent: '#5ff4ff', acc: 'visor', price: 500 },
   flicker_petal: { brawler: 'flicker', name: 'Petal Blade', color: '#ffb3d1', dark: '#d1588a', accent: '#ffffff', acc: 'flower', price: 400 },
 };
+// CLASSIC: the original round, cute look of every brawler, free for everyone (the default look is
+// now the scary hunter design; paid skins above are palettes that apply to the new design)
+for (const b of ['volt', 'brick', 'wisp', 'dune', 'rook', 'flicker']) SKINS[b + '_classic'] = { brawler: b, name: 'Classic', classic: true, free: true, price: 0 };
+export const FREE_SKINS = Object.keys(SKINS).filter((k) => SKINS[k].free);
 export const KILL_FX = {
   sparks: { name: 'Sparks', price: 250 }, stars: { name: 'Starburst', price: 300 }, confetti: { name: 'Confetti', price: 300 },
   ghost: { name: 'Little Ghost', price: 350 }, bolt: { name: 'Thunder Mark', price: 350 },

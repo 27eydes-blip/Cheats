@@ -18,6 +18,7 @@ import { TITLES } from './catalog.js';
 import { sfx, falloff } from './audio.js';
 import { setMusicVolume } from './ui/music.js';
 import { pickAimTarget } from './aim.js';
+import { HUNTER_PAL } from './art/hunters.js';
 import { drawMiniMap, drawFullMap } from './minimap.js';
 import { envState, drawLandmarks, drawAtmosphere, drawCompass, ZONE_INFO, zoneLabel } from './world-fx.js';
 import { startTense, stopTense } from './ui/music.js';
@@ -564,6 +565,24 @@ function sampleWorld() {
 }
 
 // ------------------------------------------------------------------ effects
+// ELIMINATION: the hunter shatters into dark shards, rolling smoke and rising embers (no blood)
+function shatter(x, y, id) {
+  const low = SETTINGS.lowGfx, pal = HUNTER_PAL[id] || HUNTER_PAL.volt;
+  for (let i = 0; i < (low ? 6 : 14); i++) { // dark shards spinning out
+    const a = Math.random() * Math.PI * 2, v = 160 + Math.random() * 260;
+    G.parts.push({ kind: 'shard', x, y: y - 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, life: 0.9, max: 0.9, color: i % 3 ? pal.dark : pal.body, size: 5 + Math.random() * 7, rot: Math.random() * 6, spin: (Math.random() - 0.5) * 14 });
+  }
+  for (let i = 0; i < (low ? 4 : 10); i++) { // smoke billowing up
+    const a = Math.random() * Math.PI * 2, v = 30 + Math.random() * 70;
+    G.parts.push({ kind: 'smoke', x: x + Math.cos(a) * 10, y: y + Math.sin(a) * 8, vx: Math.cos(a) * v, vy: -40 - Math.random() * 40, life: 1.4 + Math.random() * 0.6, max: 2, color: i % 2 ? '#2b2433' : '#3d3546', size: 14 + Math.random() * 10, grow: 26 });
+  }
+  for (let i = 0; i < (low ? 6 : 18); i++) { // embers drifting upward
+    const a = Math.random() * Math.PI * 2, v = 60 + Math.random() * 160;
+    G.parts.push({ kind: 'ember', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.5 - 90, life: 1 + Math.random() * 0.8, max: 1.8, color: Math.random() < 0.5 ? '#ff7a1f' : pal.accent, size: 2 + Math.random() * 2.5 });
+  }
+  G.rings.push({ x, y, r0: 12, r1: 90, life: 0.45, max: 0.45, color: SETTINGS.reduceFlash ? 'rgba(80,60,90,0.6)' : '#3d3546', w: 7, ink: true });
+}
+
 function burst(x, y, color, n, speed = 180, size = 5, life = 0.45) {
   if (SETTINGS.lowGfx) n = Math.ceil(n / 3);
   for (let i = 0; i < n; i++) {
@@ -588,11 +607,7 @@ function applyFx([type, x, y, v, id, extra]) {
       burst(x, y, v ? '#ffd23f' : '#d98c3f', 16, 260, 7, 0.6); burst(x, y, v ? '#1f6f8b' : '#8a4b1f', 8, 200, 6, 0.5);
       if (near) G.shake = Math.max(G.shake, 5);
       break;
-    case 'die':
-      burst(x, y, '#fff', 18, 300, 8, 0.7); burst(x, y, BRAWLERS[BRAWLER_IDS[v]]?.color || '#fff', 18, 240, 7, 0.8);
-      G.rings.push({ x, y, r0: 10, r1: 110, life: 0.5, max: 0.5, color: '#fff', w: 8 });
-      if (extra) killFx(extra, x, y);
-      break;
+    case 'die': shatter(x, y, BRAWLER_IDS[v]); if (extra) killFx(extra, x, y); break;
     case 'slam':
       G.rings.push({ x, y, r0: 20, r1: v, life: 0.45, max: 0.45, color: '#ffd23f', w: 14 });
       G.rings.push({ x, y, r0: 10, r1: v * 0.7, life: 0.35, max: 0.35, color: '#ff7b39', w: 8 });
@@ -628,7 +643,12 @@ function killFx(id, x, y) {
 }
 
 function updateEffects(dt) {
-  for (const p of G.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.9; p.vy *= 0.9; p.life -= dt; }
+  for (const p of G.parts) {
+    p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+    if (p.kind === 'smoke') { p.vx *= 0.96; p.vy *= 0.97; p.size += p.grow * dt; }
+    else if (p.kind === 'ember') { p.vx *= 0.97; p.vy = p.vy * 0.97 - 30 * dt; }
+    else { p.vx *= 0.9; p.vy *= 0.9; if (p.kind === 'shard') { p.rot += p.spin * dt; p.vy += 260 * dt; } }
+  }
   G.parts = G.parts.filter((p) => p.life > 0);
   for (const r of G.rings) r.life -= dt;
   for (const s of G.slashes) s.life -= dt;
@@ -911,9 +931,15 @@ function render(t) {
     ctx.globalAlpha = 1 - k; if (r.ink) { ctx.lineWidth = r.w + 5; ctx.strokeStyle = R.INK; ctx.stroke(); } ctx.lineWidth = r.w; ctx.strokeStyle = r.color; ctx.stroke(); ctx.globalAlpha = 1;
   }
   for (const p of G.parts) {
-    ctx.globalAlpha = Math.min(1, (p.life / p.max) * 1.5);
+    const k = p.life / p.max;
     ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+    if (p.kind === 'smoke') { ctx.globalAlpha = Math.min(0.55, k * 0.7); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); }
+    else if (p.kind === 'shard') {
+      ctx.globalAlpha = Math.min(1, k * 1.6); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.beginPath(); ctx.moveTo(-p.size, -p.size * 0.4); ctx.lineTo(p.size, 0); ctx.lineTo(-p.size * 0.3, p.size * 0.7); ctx.closePath(); ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = R.INK; ctx.stroke(); ctx.restore();
+    } else if (p.kind === 'ember') { ctx.globalAlpha = Math.min(1, k * 1.4) * (SETTINGS.reduceFlash ? 0.8 : 0.6 + Math.sin(p.life * 30) * 0.4); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); }
+    else { ctx.globalAlpha = Math.min(1, k * 1.5); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); }
   }
   ctx.globalAlpha = 1;
   for (const p of list) { if (p.fl & 4 && !p.me && p.team !== myTeam) continue; R.drawStatus(ctx, p, p.me, t, myTeam ? (p.me || p.team === myTeam ? 'mate' : 'foe') : null); }
@@ -940,6 +966,14 @@ function render(t) {
   if (G.kind === 'free') drawCompass(ctx, G.map, cam, W, H, s);
   const pe = P?.ev;
   if (pe && EVENTS[pe.id]?.drawScreen) EVENTS[pe.id].drawScreen(ctx, pe.p, pe.ph, t, W, H, s);
+  // HEARTBEAT: an enemy is hiding close by -> pounding heart + slightly darker screen edges (steady)
+  if (meAlive && G.me.hb) {
+    const now2 = performance.now();
+    if (!G.hbAt || now2 - G.hbAt > 900) { G.hbAt = now2; sfx('heartbeat', 0.8); }
+    const g2 = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.4, W / 2, H / 2, Math.max(W, H) * 0.72);
+    g2.addColorStop(0, 'rgba(10,4,16,0)'); g2.addColorStop(1, 'rgba(10,4,16,0.32)');
+    ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+  }
   if (G.hurt > 0) {
     const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.7);
     g.addColorStop(0, 'rgba(255,40,60,0)'); g.addColorStop(1, `rgba(255,40,60,${G.hurt})`);
@@ -1159,7 +1193,7 @@ UI.lobby = createLobby({
   startQuick: (o = {}) => { goFullscreen(); startQuick(o.fromFriends ? {} : { mode: o.mode || '', room: '' }); },
   startFree: () => { goFullscreen(); startFree(); },
   getBrawler: () => selBrawler,
-  setBrawler: (id) => { selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); },
+  setBrawler: (id) => { const changed = id !== selBrawler; selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); if (changed) sfx('growl_' + id, 0.9); }, // each hunter growls when picked
   prefs, saveName: () => { readForm(); UI.lobby?.refresh(); }, statRows,
 });
 UI.mm = createMatchmaking(() => toMenu());

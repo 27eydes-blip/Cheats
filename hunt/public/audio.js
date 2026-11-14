@@ -36,7 +36,22 @@ function noise(t0, { dur = 0.15, vol = 0.3, f0 = 2000, f1 = 400, q = 1, type = '
   s.connect(f); f.connect(g); g.connect(master); s.start(t0); s.stop(t0 + dur + 0.02);
 }
 
+// a vibrato-ish growl: a few detuned saws gliding down, roughened with filtered noise
+function growl(t, v, f0, f1, dur, rough = 0.3, type = 'sawtooth') {
+  for (const d of [1, 1.013, 0.497]) tone(t, { type, f0: f0 * d, f1: f1 * d, dur, vol: 0.13 * v, attack: 0.04 });
+  noise(t, { dur: dur * 0.9, vol: rough * v, f0: f0 * 4, f1: f1 * 2, q: 0.8, type: 'lowpass' });
+}
+
 const SOUNDS = {
+  // INTRO GROWLS (lobby pick), one original voice per hunter
+  growl_volt: (t, v) => { growl(t, v, 180, 90, 0.55, 0.2, 'square'); noise(t + 0.05, { dur: 0.3, vol: 0.25 * v, f0: 7000, f1: 2500, q: 4, type: 'bandpass' }); tone(t + 0.1, { type: 'square', f0: 1800, f1: 400, dur: 0.12, vol: 0.06 * v }); }, // electric snarl
+  growl_brick: (t, v) => { growl(t, v, 95, 42, 0.8, 0.45); tone(t, { type: 'sine', f0: 60, f1: 35, dur: 0.7, vol: 0.4 * v, attack: 0.05 }); }, // deep roar
+  growl_wisp: (t, v) => { noise(t, { dur: 0.9, vol: 0.22 * v, f0: 1200, f1: 3800, q: 6, type: 'bandpass' }); tone(t + 0.1, { type: 'sine', f0: 520, f1: 300, dur: 0.7, vol: 0.08 * v, attack: 0.2 }); }, // ghostly breath
+  growl_dune: (t, v) => { noise(t, { dur: 0.7, vol: 0.3 * v, f0: 2600, f1: 600, q: 2, type: 'bandpass' }); growl(t + 0.05, v * 0.7, 130, 70, 0.6, 0.15); }, // sandy rasp
+  growl_rook: (t, v) => { tone(t, { type: 'square', f0: 880, f1: 520, dur: 0.16, vol: 0.12 * v }); tone(t + 0.22, { type: 'square', f0: 820, f1: 460, dur: 0.2, vol: 0.12 * v }); noise(t, { dur: 0.4, vol: 0.12 * v, f0: 3000, f1: 1200, q: 3 }); }, // crow-like screech
+  growl_flicker: (t, v) => { noise(t, { dur: 0.35, vol: 0.32 * v, f0: 5000, f1: 9000, q: 2, type: 'highpass' }); tone(t + 0.02, { type: 'sawtooth', f0: 300, f1: 1200, dur: 0.18, vol: 0.06 * v }); }, // hiss
+  // HEARTBEAT: someone is hiding close by
+  heartbeat: (t, v) => { tone(t, { type: 'sine', f0: 70, f1: 45, dur: 0.16, vol: 0.5 * v }); tone(t + 0.2, { type: 'sine', f0: 62, f1: 40, dur: 0.14, vol: 0.35 * v }); },
   // shots, one voice per brawler
   shoot_volt: (t, v) => tone(t, { type: 'square', f0: 1400, f1: 500, dur: 0.07, vol: 0.18 * v }),
   shoot_brick: (t, v) => { noise(t, { dur: 0.18, vol: 0.5 * v, f0: 900, f1: 120, type: 'lowpass' }); tone(t, { type: 'sine', f0: 140, f1: 50, dur: 0.15, vol: 0.4 * v }); },

@@ -49,6 +49,6 @@ await Promise.all([
 ]);
 const q = JSON.parse(db.users.get('u2').progress);
 assert.equal(q.games, 1, 'match result kept');
-assert.equal(q.owned.filter((k) => k.startsWith('volt_')).length, 1, 'only one 400-coin skin affordable from 450');
+assert.equal(q.owned.filter((k) => k.startsWith('volt_') && !k.endsWith('_classic')).length, 1, 'only one 400-coin skin affordable from 450');
 assert(q.coins >= 0, 'coins never negative');
 console.log('accounts concurrency tests passed');

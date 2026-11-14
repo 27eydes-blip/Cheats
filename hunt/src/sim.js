@@ -16,6 +16,7 @@ import { botInput, levelForTrophies } from './bots.js';
 const r2 = (v) => Math.round(v * 100) / 100;
 // interest management: how far around a viewer the server sends things (half-extents, px)
 export const VIEW_X = 1500, VIEW_Y = 1100, RADAR_RANGE = 2600;
+export const HEARTBEAT_DIST = 330; // a hidden enemy this close makes your heart pound
 export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
 
 // fields carried across a zone handoff
@@ -977,6 +978,16 @@ export class Sim {
       fx: this.fx.filter((f) => f[4] === v.id || near(v, f[1], f[2], VIEW_X + 200, VIEW_Y + 200)),
       pg: this.pings.filter((g) => Math.hypot(g[1] - v.x, g[2] - v.y) < RADAR_RANGE),
     });
+    // HEARTBEAT: an enemy is close but hidden from you (bush / cloak) -> the client plays a heartbeat
+    const lurking = (v) => {
+      if (!v.alive) return 0;
+      for (const p of this.players.values()) {
+        if (p === v || !p.alive || !this.enemies(v, p)) continue;
+        const d = Math.hypot(p.x - v.x, p.y - v.y);
+        if (d < HEARTBEAT_DIST && !this.canSee(v, p)) return 1;
+      }
+      return 0;
+    };
     for (const v of this.players.values()) {
       if (!v.connected) continue;
       this.send(v.id, {
@@ -988,7 +999,7 @@ export class Sim {
           cl: r2(Math.max(0, v.cloak)), bt: v.bounty, lo: r2(v.lowF), bt5: r2(Math.min(v.bushT, 5)), rs: r2(Math.max(0, v.rush)),
           rt: r2(Math.max(0, v.respawnT)), cr: v.crystals, scr: Math.floor(this.mode.score ? this.mode.score(v) : 0),
           k: v.kills, be: v.bountyEarned, sk: v.sessionKills, bb: v.bestBounty, gl: this.glow(v), id: v.id, br: v.brawler,
-          sl: v.slowT > 0 ? r2(v.slowT) : 0, tp: v.tp, tm: v.team,
+          sl: v.slowT > 0 ? r2(v.slowT) : 0, tp: v.tp, tm: v.team, hb: lurking(v),
         },
       });
     }

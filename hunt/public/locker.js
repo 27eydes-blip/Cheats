@@ -21,7 +21,7 @@ export function openLocker(tab = 'skins') {
   let body = '';
   if (tab === 'skins') {
     body = BRAWLER_IDS.map((b) => {
-      const opts = [[null, 'Classic'], ...Object.entries(SKINS).filter(([, s]) => s.brawler === b).map(([id, s]) => [id, s.name])];
+      const opts = [[null, 'Hunter'], ...Object.entries(SKINS).filter(([, s]) => s.brawler === b).map(([id, s]) => [id, s.name])];
       return `<div class="lrow"><b>${BRAWLERS[b].name}</b>${opts.map(([id, name]) => {
         const owned = !id || p.owned.includes(id), on = (p.equipped['skin:' + b] || null) === id;
         return `<div class="litem ${on ? 'on' : ''}"><canvas data-b="${b}" data-skin="${id || ''}"></canvas><span>${name}</span>${on ? '<i>EQUIPPED</i>' : owned ? `<button data-eq="skin:${b}" data-id="${id || ''}">EQUIP</button>` : `<button data-buy="${id}">🪙 ${SKINS[id].price}</button>`}</div>`;

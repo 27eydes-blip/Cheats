@@ -3,6 +3,7 @@ import { BRAWLERS, BRAWLER_IDS, TILE, PLAYER_R, WALL, BUSH, CRATE, WATER, CRATE_
 import { STICK_R } from './input.js';
 import { SETTINGS, pulse } from './settings.js';
 import { SKINS } from './catalog.js';
+import { drawHunter, HUNTER_PAL, HEAD } from './art/hunters.js';
 
 export const INK = '#1b1033';
 export const FONT = '"Lilita One", "Arial Black", system-ui, sans-serif';
@@ -516,7 +517,28 @@ function drawAccessory(ctx, acc, t) {
   ctx.restore();
 }
 
+// The default look: the HUNTER designs (art/hunters.js). Skins recolour them; a Classic skin
+// brings back the original round look (drawClassic below). Same size and footprint either way.
 export function drawBrawler(ctx, id, x, y, facing, t, o = {}) {
+  const sk = o.skin && SKINS[o.skin] && SKINS[o.skin].brawler === id ? SKINS[o.skin] : null;
+  if (sk && sk.classic) return drawClassic(ctx, id, x, y, facing, t, { ...o, skin: null });
+  ctx.save();
+  ctx.translate(x, y);
+  const sc = (o.scale || 1) * (o.size || 1);
+  if (sc !== 1) ctx.scale(sc, sc);
+  ctx.globalAlpha = o.alpha ?? 1;
+  const bob = Math.sin(t * (o.moving ? 14 : 2.2)) * (o.moving ? 2.2 : 0.8);
+  ctx.beginPath(); ctx.ellipse(0, 22, 26, 9, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(10,5,20,0.32)'; ctx.fill();
+  ctx.translate(0, bob);
+  const pal = sk ? { ...HUNTER_PAL[id], body: sk.color, dark: sk.dark, accent: sk.accent } : HUNTER_PAL[id];
+  drawHunter(ctx, id, facing, t, { flash: o.flash, moving: o.moving, blinkK: 1 - (o.blink || 0) * 0.9 }, pal);
+  if (sk) { ctx.save(); ctx.translate(0, HEAD[id] + 30); drawAccessory(ctx, sk.acc, t); ctx.restore(); }
+  ctx.restore();
+}
+
+// the original round look (Classic skins)
+function drawClassic(ctx, id, x, y, facing, t, o = {}) {
   const sk = o.skin && SKINS[o.skin] && SKINS[o.skin].brawler === id ? SKINS[o.skin] : null;
   const B = sk ? { ...BRAWLERS[id], color: sk.color, dark: sk.dark, accent: sk.accent } : BRAWLERS[id];
   blinkK = 1 - (o.blink || 0) * 0.9;
