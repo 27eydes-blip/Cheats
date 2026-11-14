@@ -13,6 +13,8 @@ import { MODES } from './modes.js';
 import { botInput, levelForTrophies } from './bots.js';
 
 const r2 = (v) => Math.round(v * 100) / 100;
+// interest management: how far around a viewer the server sends things (half-extents, px)
+export const VIEW_X = 1500, VIEW_Y = 1100, RADAR_RANGE = 2600;
 export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
 
 // fields carried across a zone handoff
@@ -915,8 +917,8 @@ export class Sim {
     let top = null;
     for (const p of this.players.values()) if (p.bounty > 0 && (!top || p.bounty > top.bounty)) top = p;
     const common = {
-      t: 's', zone: this.zone, n: this.tickN, tm: r2(this.time), b: bullets, cu: cubes, cy: crystals,
-      td: this.tileDirty, ch: this.crateDirty, z: Math.round(this.zoneInset), al: alive, fx: this.fx, pg: this.pings,
+      t: 's', zone: this.zone, n: this.tickN, tm: r2(this.time),
+      td: this.tileDirty, ch: this.crateDirty, z: Math.round(this.zoneInset), al: alive,
       top: top ? [top.id, top.name, top.bounty] : null, ev: this.event ? [this.event.id, this.event.ph, r2(this.event.t)] : null,
       md: this.mode.hud?.(this) || null,
     };
@@ -928,16 +930,26 @@ export class Sim {
       const others = [];
       for (const p of this.players.values()) {
         if (p === v || !p.alive || !this.canSee(v, p)) continue;
-        if (Math.abs(p.x - v.x) > 1500 || Math.abs(p.y - v.y) > 1100) continue;
+        if (Math.abs(p.x - v.x) > VIEW_X || Math.abs(p.y - v.y) > VIEW_Y) continue;
         others.push([p.id, Math.round(p.x), Math.round(p.y), Math.round(p.hp), p.maxHp, Math.round(p.facing * 100) / 100,
           this.flags(p), p.cubes, p.bounty, this.glow(p), p.crystals, p.team]);
       }
       return others;
     };
+    // INTEREST MANAGEMENT: each viewer only gets what's near them (bullets, pickups, effects,
+    // radar pings), so a snapshot's size doesn't grow with the map or the player count
+    const near = (v, x, y, mx, my) => Math.abs(x - v.x) < mx && Math.abs(y - v.y) < my;
+    const local = (v) => ({
+      b: bullets.filter((r) => near(v, r[1], r[2], VIEW_X + 300, VIEW_Y + 300)),
+      cu: cubes.filter((r) => near(v, r[1], r[2], VIEW_X + 200, VIEW_Y + 200)),
+      cy: crystals.filter((r) => near(v, r[1], r[2], VIEW_X + 200, VIEW_Y + 200)),
+      fx: this.fx.filter((f) => f[4] === v.id || near(v, f[1], f[2], VIEW_X + 200, VIEW_Y + 200)),
+      pg: this.pings.filter((g) => Math.hypot(g[1] - v.x, g[2] - v.y) < RADAR_RANGE),
+    });
     for (const v of this.players.values()) {
       if (!v.connected) continue;
       this.send(v.id, {
-        ...common, ack: v.lastSeq, p: rows(v), mn: mineRows(v),
+        ...common, ...local(v), ack: v.lastSeq, p: rows(v), mn: mineRows(v),
         ...(v.team ? { mates: [...this.players.values()].filter((q) => q !== v && q.team === v.team && q.alive).map((q) => [q.id, Math.round(q.x), Math.round(q.y)]) } : {}),
         me: {
           x: r2(v.x), y: r2(v.y), mvx: r2(v.mvx), mvy: r2(v.mvy), hp: Math.round(v.hp), mh: v.maxHp, am: r2(v.ammo + v.reloadP),
@@ -950,7 +962,7 @@ export class Sim {
       });
     }
     if (this.observers.size && this.tickN % 2 === 0) {
-      for (const [k, o] of this.observers) { const v = { x: o.x, y: o.y, alive: true, observer: true }; this.send(k, { ...common, p: rows(v), mn: mineRows(v) }); }
+      for (const [k, o] of this.observers) { const v = { x: o.x, y: o.y, alive: true, observer: true }; this.send(k, { ...common, ...local(v), p: rows(v), mn: mineRows(v) }); }
     }
   }
 
