@@ -16,6 +16,7 @@ import './ui/fx.js';
 import { levelInfo } from './progression.js';
 import { TITLES } from './catalog.js';
 import { sfx, falloff } from './audio.js';
+import { setMusicVolume } from './ui/music.js';
 import { WallArt } from './art/walls.js';
 import { artFor } from './art/themes.js';
 import { SPAWNS, spawnHasCover, SPAWN_COVER_DIST, blocksMove, TILE as TILE_ } from './shared.js';
@@ -1052,7 +1053,7 @@ for (const [id, key] of [['setFlash', 'reduceFlash'], ['setLow', 'lowGfx'], ['se
   $(id).checked = !!SETTINGS[key];
   $(id).onchange = () => { setSetting(key, $(id).checked); applySettings(); };
 }
-function applySettings() { document.body.classList.toggle('reduce-flash', SETTINGS.reduceFlash); resize(); }
+function applySettings() { document.body.classList.toggle('reduce-flash', SETTINGS.reduceFlash); setMusicVolume(); resize(); }
 applySettings();
 const playAgain = () => { goFullscreen(); startQuick(G.opts.world ? { ...G.opts, room: 'T' + Math.floor(Math.random() * 1e8) } : { mode: G.opts.mode, room: G.opts.room }); };
 $('hudAgain').onclick = playAgain;

@@ -15,7 +15,7 @@ function ctx() {
   }
   return ac;
 }
-export function unlockAudio() { const a = ctx(); if (a && a.state === 'suspended') a.resume(); }
+export function unlockAudio() { const a = ctx(); if (a && a.state !== 'running' && a.state !== 'closed') a.resume().catch(() => {}); }
 export const audioCtx = () => ctx();
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, unlockAudio, { once: false, passive: true });
 
@@ -81,3 +81,9 @@ export function sfx(id, vol = 1) {
 }
 // distance falloff for world sounds
 export const falloff = (d) => Math.max(0, 1 - d / 1100);
+
+// app switched away: silence everything (music + SFX); resume when we're back
+document.addEventListener('visibilitychange', () => {
+  if (!ac) return;
+  if (document.hidden) ac.suspend().catch(() => {}); else if (ac.state !== 'closed') ac.resume().catch(() => {});
+});
