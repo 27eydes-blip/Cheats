@@ -595,6 +595,17 @@ export function drawCrystal(ctx, x, y, t) {
 }
 
 const BULLET_COL = { volt: ['#bde0ff', '#3a86ff'], brick: ['#ffe066', '#ff7b39'], wisp: ['#f3e8ff', '#8f5cff'], dune: ['#f7d98a', '#2a9d8f'], rook: ['#ffd23f', '#4a4a5e'], cage: ['#ffe066', '#ff8c1a'] };
+const TRAIL = { volt: ['#7db8ff', 46], brick: ['#ffb347', 22], wisp: ['#c9a6ff', 90], dune: ['#f7d98a', 40] };
+export function drawTrail(ctx, kind, x, y, ang) {
+  const tr = TRAIL[kind];
+  if (!tr) return;
+  const [col, len] = tr, x0 = x - Math.cos(ang) * len, y0 = y - Math.sin(ang) * len;
+  const g = ctx.createLinearGradient(x0, y0, x, y);
+  g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, col);
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineWidth = kind === 'dune' ? 14 : 7; ctx.strokeStyle = g; ctx.globalAlpha = 0.75;
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x, y); ctx.stroke(); ctx.restore();
+}
+
 export function drawBullet(ctx, kind, x, y, ang, rim) {
   const [c1, c2] = BULLET_COL[kind] || BULLET_COL.volt;
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang);

@@ -12,6 +12,7 @@ import { SETTINGS, setSetting } from './settings.js';
 import * as A from './account.js';
 import { levelInfo } from './progression.js';
 import { TITLES } from './catalog.js';
+import { sfx, falloff } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -253,10 +254,18 @@ function onMsg(c, m) {
       break;
     case 'ev':
       c.ev = m.id ? { ...m, at: performance.now() } : null;
+      if (c.primary && m.id) sfx(m.ph === 'warn' ? 'event_warn' : 'event_on', 0.8);
       if (c.primary && m.id && m.ph === 'on') { const def = EVENTS[m.id]; showBanner(def.name, def.desc, def.color, 2500); }
       break;
     case 's': onSnap(c, m); break;
-    case 'kill': addFeed(m); break;
+    case 'kill':
+      addFeed(m);
+      if (m.kid === G.myId && G.me) {
+        const me = renderMe();
+        G.texts.push({ x: me.x, y: me.y - 110, txt: 'KO!', color: '#ffd23f', life: 1.1, max: 1.1, size: 34, pop: true });
+        if (m.st > 0) { G.texts.push({ x: me.x, y: me.y - 145, txt: `+★${m.st + 1} BOUNTY STOLEN`, color: '#ffe066', life: 1.4, max: 1.4, size: 18, pop: true }); sfx('bounty'); }
+      }
+      break;
     case 'dead':
       if (m.respawn > 0) { G.deadMsg = m; G.spectate = m.killerId; break; }
       G.phase = 'dead';
@@ -306,7 +315,34 @@ function onEnd(m) {
   const scoreLbl = { bounty: '★', hunted: 'pts', crystals: '💎' }[m.mode];
   $('results').innerHTML = m.results.map(([n, b, r, k, bot, id, be, sc, tm]) =>
     `<li class="${id === G.myId ? 'me' : ''} ${tm ? (tm === m.team ? 'mate' : 'foe') : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${scoreLbl ? `${sc} ${scoreLbl} · ` : ''}${k} KO · ★${be}</span></li>`).join('');
-  setTimeout(() => { if (G.phase === 'end') show('end'); }, won ? 1800 : 600);
+  const mvp = m.results.reduce((b, r) => (!b || r[6] > b[6] ? r : b), null);
+  $('mvp').hidden = !mvp || mvp[6] <= 0;
+  if (mvp) $('mvp').innerHTML = `👑 TOP BOUNTY HUNTER <b>${esc(mvp[0])}</b> ★${mvp[6]}`;
+  setTimeout(() => { if (G.phase === 'end') { show('end'); sfx(won ? 'victory' : 'defeat'); startPose(won); } }, won ? 1800 : 600);
+}
+
+// short victory pose (or a sulk) on the end screen
+function startPose(won) {
+  const cv = $('pose'), c2 = cv.getContext('2d');
+  const d = Math.min(2, devicePixelRatio || 1);
+  cv.width = cv.clientWidth * d; cv.height = cv.clientHeight * d;
+  const skin = G.roster[G.myId]?.[3]?.skin, t0 = performance.now();
+  const loop = (now) => {
+    if (G.phase !== 'end' || $('end').hidden) return;
+    const t = (now - t0) / 1000;
+    c2.setTransform(d, 0, 0, d, 0, 0); c2.clearRect(0, 0, cv.width, cv.height);
+    const w = cv.clientWidth, h = cv.clientHeight;
+    let y = h * 0.62, face = 0.3, sc = 1.6;
+    if (won) {
+      const k = Math.min(1, t / 1.2);
+      y -= Math.abs(Math.sin(t * 5)) * 18 * (1 - k * 0.5) + (k < 1 ? Math.sin(k * Math.PI) * 30 : 0);
+      face = t < 1.2 ? t * 6 : Math.sin(t * 2) * 0.6 - Math.PI / 2;
+      if (!SETTINGS.reduceFlash) for (let i = 0; i < 8; i++) { const a = t * 2 + i; R.outlinedText(c2, '★', w / 2 + Math.cos(a) * 70, h * 0.45 + Math.sin(a * 1.3) * 30, 16, '#ffd23f'); }
+    } else { y += Math.sin(t * 2) * 2; face = Math.PI / 2 + Math.sin(t) * 0.3; sc = 1.4; }
+    R.drawBrawler(c2, G.brawler, w / 2, y, face, t, { scale: sc, skin, moving: won });
+    requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
 }
 
 function addFeed(m) {
@@ -407,6 +443,7 @@ function sampleConn(c, out) {
     const x = ea ? ea[1] + (e[1] - ea[1]) * f : e[1], y = ea ? ea[2] + (e[2] - ea[2]) * f : e[2];
     const ang = ea ? Math.atan2(e[2] - ea[2], e[1] - ea[1]) : (bulletAng.get(key) ?? 0);
     if (ea) bulletAng.set(key, ang);
+    else if (!bulletAng.has(key + 's') && G.me) { bulletAng.set(key + 's', 1); sfx('shoot_' + bulletKind(e[4]), falloff(Math.hypot(x - G.pred.x, y - G.pred.y)) * 0.5); }
     out.bullets.push({ x, y, ang, kind: bulletKind(e[4]) });
   }
   out.cubes.push(...(b.cu || []));
@@ -435,7 +472,9 @@ function burst(x, y, color, n, speed = 180, size = 5, life = 0.45) {
 }
 const KIND_COL = ['#7db8ff', '#ffb347', '#c9a6ff'];
 function applyFx([type, x, y, v, id, extra]) {
-  const near = G.me && Math.hypot(x - G.pred.x, y - G.pred.y) < 700;
+  const dist = G.me ? Math.hypot(x - G.pred.x, y - G.pred.y) : 9999, near = dist < 700, vol = falloff(dist);
+  const S = { hit: id === G.myId ? 'hurt' : 'hit', die: 'elim', slam: 'slam', boom: 'boom', worm: 'worm', blink: 'blink', cloak: 'cloak', dash: 'super', cube: 'pickup', gem: 'pickup', cage: 'super', wormwarn: 'super' }[type];
+  if (S && (type !== 'hit' || id)) sfx(S, type === 'hit' && id !== G.myId ? vol * 0.6 : vol);
   switch (type) {
     case 'dmg':
       G.texts.push({ x: x + (Math.random() - 0.5) * 20, y: y - 70, txt: String(v), color: id === G.myId ? '#ff4d5e' : '#fff', life: 0.9, max: 0.9, size: v >= 1000 ? 26 : 20 });
@@ -584,11 +623,12 @@ function clientTick() {
       if (me.al && !(me.f & 2) && !me.fo && G.localCd <= 0 && !G.localBurst && Math.floor(me.am) - shotsPending >= 1 && f == null && !G.handoff) {
         f = ang; G.facing = ang; G.localCd = B.attack.cooldown;
         fd = a.mag ?? (a.mode === 'mouse' ? Math.min(1, Math.hypot(input.mouse.x - W / 2, input.mouse.y - H / 2) / (B.attack.range * worldScale())) : 1);
+        sfx('shoot_' + G.brawler);
         if (PREDICTED_KINDS.includes(B.attack.kind)) spawnLocalShot(G.pred.x, G.pred.y, ang);
         if (B.attack.kind === 'slash') localSlash(ang);
         if (B.attack.kind === 'burst' || B.attack.kind === 'slash') G.localBurst = { left: B.attack.count - 1, t: B.attack.interval, ang };
       }
-    } else if (me.sc >= 1 && G.superCd <= 0 && me.al) { u = ang; G.superCd = 0.6; G.facing = ang; }
+    } else if (me.sc >= 1 && G.superCd <= 0 && me.al) { u = ang; G.superCd = 0.6; G.facing = ang; sfx('super'); }
   }
   const aim = input.getAim();
   if (aim) G.facing = aim.ang;
@@ -703,6 +743,7 @@ function render(t) {
     ctx.restore();
   }
   const rimAt = (x, y) => R.theme(worldKeyAt(G.map, x, y)).bulletRim;
+  if (!SETTINGS.lowGfx) { for (const b of G.view.bullets) R.drawTrail(ctx, b.kind, b.x, b.y, b.ang); for (const b of G.localBullets) R.drawTrail(ctx, G.brawler, b.x, b.y, b.ang); }
   for (const b of G.view.bullets) R.drawBullet(ctx, b.kind, b.x, b.y, b.ang, rimAt(b.x, b.y));
   for (const b of G.localBullets) R.drawBullet(ctx, G.brawler, b.x, b.y, b.ang, rimAt(b.x, b.y));
 
@@ -734,7 +775,10 @@ function render(t) {
       if (G.me.lo > 0) { ctx.globalAlpha = 0.5 + G.me.lo * 0.5; R.outlinedText(ctx, 'LAYING LOW', mePos.x, mePos.y + 66, 13, '#9dffb0'); ctx.globalAlpha = 1; }
     }
   }
-  for (const tx of G.texts) { ctx.globalAlpha = Math.min(1, (tx.life / tx.max) * 2); R.outlinedText(ctx, tx.txt, tx.x, tx.y, tx.size, tx.color); }
+  for (const tx of G.texts) {
+    const k = 1 - tx.life / tx.max, pop = k < 0.15 ? 1 + (0.15 - k) * (tx.pop ? 6 : 3) : 1;
+    ctx.globalAlpha = Math.min(1, (tx.life / tx.max) * 2); R.outlinedText(ctx, tx.txt, tx.x, tx.y, Math.round(tx.size * pop), tx.color);
+  }
   ctx.globalAlpha = 1;
   ctx.restore();
 
@@ -916,3 +960,4 @@ else if (qs.get('free')) startFree();
 
 // exposed for e2e tests
 window.__hunt = G;
+window.__huntMsg = (m) => onMsg(primary() || { primary: true }, m); // e2e hook: inject server messages
