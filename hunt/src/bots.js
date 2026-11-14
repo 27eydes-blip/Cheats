@@ -5,6 +5,18 @@
 //   - public radar pings, remembered as "last known position" for a few seconds.
 // They never read hidden players' live positions.
 import { BRAWLERS, DT, TILE, PLAYER_R, HUB, BUSH, tileAt, blocksMove, lineOfSight, touchingBorder } from '../public/shared.js';
+import { WEAPONS } from '../public/weapons.js';
+
+// what the bot is holding right now: its signature attack or its secondary weapon
+function activeWeapon(m, p) {
+  if (p.slot === 1 && p.w2) {
+    const w = m.w2def(p);
+    return { range: w.range, speed: w.speed || 99999, kind: w.kind, ammo: p.w2.ammo, auto: !!w.auto, cls: w.cls, charge: w.charge || 0, cd: p.w2.cd };
+  }
+  const a = BRAWLERS[p.brawler].attack;
+  return { range: a.range, speed: a.speed || 99999, kind: a.kind, ammo: p.ammo, sig: true, cd: p.atkCd };
+}
+const WANT = { melee: 0.6, shotgun: 0.55, sniper: 0.8, launcher: 0.75 };
 import { inCircles } from '../public/events/helpers.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -123,8 +135,9 @@ export function botInput(m, p) {
   for (const [id, x, y] of m.pingLog) ai.mem.set(id, { x, y, t: m.time });
 
   const B = BRAWLERS[p.brawler];
-  const range = B.attack.range;
-  const inp = { s: 0, mx: 0, my: 0, ax: 0, ay: 0, f: null, u: null };
+  const W = activeWeapon(m, p);
+  const range = W.range;
+  const inp = { s: 0, mx: 0, my: 0, ax: 0, ay: 0, f: null, u: null, w: null, ch: 0 };
   const hpF = p.hp / p.maxHp;
 
   // ---- choose a visible target (bounty makes a target more attractive)
@@ -177,30 +190,45 @@ export function botInput(m, p) {
     mx = goal.x - p.x; my = goal.y - p.y;
   } else if (tgt) {
     const nx = (tgt.x - p.x) / d, ny = (tgt.y - p.y) / d;
-    const want = range * ({ brick: 0.55, flicker: 0.45, rook: 0.75, dune: 0.7 }[p.brawler] ?? 0.72);
+    // weapons: hold whichever suits the distance (a harness bot can be locked to its secondary)
+    if (p.w2) {
+      ai.swapCd = (ai.swapCd ?? 1) - DT;
+      if (p.forceSlot != null) { if (p.slot !== p.forceSlot) inp.w = p.forceSlot; }
+      else if (ai.swapCd <= 0) {
+        const sigR = B.attack.range, w2 = m.w2def(p);
+        const fit = (r, c) => Math.abs(d - r * (WANT[c] ?? 0.72));
+        const best = fit(w2.range, w2.cls) + 60 < fit(sigR, null) ? 1 : 0;
+        const other = p.slot === 1 ? p.ammo : p.w2.ammo;
+        if ((best !== p.slot && other >= 1) || (W.ammo < 1 && other >= 1)) { inp.w = p.slot === 1 ? 0 : 1; ai.swapCd = 2.2; }
+      }
+    }
+    const want = W.sig ? range * ({ brick: 0.55, flicker: 0.45, rook: 0.75, dune: 0.7 }[p.brawler] ?? 0.72) : range * (WANT[W.cls] ?? 0.72);
     let fwd = d > want + 60 ? 1 : d < want - 90 ? -1 : 0;
     if ((hpF < 0.3 && tgt.hp > p.hp && p.brawler !== 'brick') || (amTarget && d < range)) fwd = -1;
     // reloading or hurt while exposed: duck behind cover
-    const cover = L.cover && los && (p.ammo < 1 || (hpF < 0.45 && tgt.hp / tgt.maxHp > hpF)) && p.brawler !== 'flicker' ? findCover(m, p, tgt) : null;
+    const cover = L.cover && los && (W.ammo < 1 || (hpF < 0.45 && tgt.hp / tgt.maxHp > hpF)) && p.brawler !== 'flicker' && W.kind !== 'melee' ? findCover(m, p, tgt) : null;
     if (cover) { mx = cover.x - p.x; my = cover.y - p.y; }
     else if (!los) { mx = nx; my = ny; }
     else { mx = nx * fwd - ny * ai.strafe * 0.75; my = ny * fwd + nx * ai.strafe * 0.75; }
     inp.ax = nx; inp.ay = ny;
 
-    const myMines = B.attack.kind === 'mine' ? m.mines.filter((q) => q.owner === p.id).length : 0;
-    const mineOk = B.attack.kind !== 'mine' || myMines < B.attack.max || d < 260;
-    if (los && d < range * 0.95 && p.ammo >= 1 && ai.fireCd <= 0 && mineOk) {
-      const lead = (d / B.attack.speed) * L.lead;
+    const myMines = W.sig && W.kind === 'mine' ? m.mines.filter((q) => q.owner === p.id).length : 0;
+    const mineOk = !(W.sig && W.kind === 'mine') || myMines < B.attack.max || d < 260;
+    const lob = W.kind === 'grenade'; // grenades roll: throw them a little short, walls are fine
+    if ((los || lob) && d < range * (lob ? 0.85 : 0.95) && W.ammo >= 1 && ai.fireCd <= 0 && mineOk && (p.swapT || 0) <= 0) {
+      const lead = (d / W.speed) * L.lead;
       const aimX = tgt.x + tgt.vx * lead, aimY = tgt.y + tgt.vy * lead;
       inp.f = Math.atan2(aimY - p.y, aimX - p.x) + (Math.random() - 0.5) * L.aimErr;
-      if (B.attack.kind === 'mine') {
+      if (W.sig && W.kind === 'mine') {
         // lay it where they'll be once it arms, between us when they're closing in
         const fx = tgt.x + tgt.vx * B.attack.arm * L.lead, fy = tgt.y + tgt.vy * B.attack.arm * L.lead;
         const mx2 = (fx + p.x * 0.25) / 1.25, my2 = (fy + p.y * 0.25) / 1.25;
         inp.f = Math.atan2(my2 - p.y, mx2 - p.x) + (Math.random() - 0.5) * L.aimErr * 0.5;
         inp.fd = Math.min(1, Math.hypot(mx2 - p.x, my2 - p.y) / range);
       }
-      ai.fireCd = B.attack.kind === 'slash' ? rand(0.15, 0.4) : rand(...L.gap) / ai.aggro;
+      ai.fireCd = W.kind === 'slash' || W.kind === 'melee' ? rand(0.15, 0.4) : W.auto ? rand(0.04, 0.1) : rand(...L.gap) / ai.aggro;
+      if (W.kind === 'charge') { inp.ch = W.charge; ai.fireCd = Math.max(ai.fireCd, W.charge * rand(0.8, 1.1)); }
+      if (W.kind === 'grenade') { inp.fd = Math.min(1, d / range); inp.f = Math.atan2(tgt.y + tgt.vy * 0.9 - p.y, tgt.x + tgt.vx * 0.9 - p.x); } // where they'll be at the fuse
     }
     if (p.superC >= 1) inp.u = useSuper(m, p, tgt, d, los, L);
   } else {
@@ -261,7 +289,7 @@ function loot(m, p, ai, inp, range, B0, margin, move) {
   if (ci) {
     const dx = ci.x - p.x, dy = ci.y - p.y;
     if (gd > Math.min(range * 0.8, 300)) move(dx, dy);
-    if (gd < range * 0.9 && p.ammo >= 1 && ai.fireCd <= 0 && lineOfSight(m.map, p.x, p.y, ci.x - Math.sign(dx) * 30, ci.y - Math.sign(dy) * 30)) {
+    if (gd < range * 0.9 && (p.slot === 1 && p.w2 ? p.w2.ammo : p.ammo) >= 1 && ai.fireCd <= 0 && lineOfSight(m.map, p.x, p.y, ci.x - Math.sign(dx) * 30, ci.y - Math.sign(dy) * 30)) {
       inp.f = Math.atan2(dy, dx); inp.fd = Math.min(1, gd / range);
       ai.fireCd = rand(0.5, 1.0);
     }

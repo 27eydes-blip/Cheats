@@ -12,8 +12,22 @@ import {
 import { EVENTS, pickEvent } from '../public/events/index.js';
 import { MODES } from './modes.js';
 import { botInput, levelForTrophies } from './bots.js';
+import { WEAPONS, WEAPON_IDS, withPerks, shotAngles, stepShot, SWAP_TIME, MAX_SHOTS_PER_SEC, AIM_ASSIST, LAG_COMP_TICKS, WKIND, weaponIndex, STARTER_WEAPONS } from '../public/weapons.js';
 
 const r2 = (v) => Math.round(v * 100) / 100;
+const W2C = new Map(); // weapon + perks -> stats (memo)
+// your own state: only the fields that changed since the last snapshot (full every 2s)
+function meDelta(me, v, full) {
+  const last = v.meSent || (v.meSent = {});
+  if (full) { for (const k in me) last[k] = Array.isArray(me[k]) ? me[k].join(',') : me[k]; return me; }
+  const out = {};
+  for (const k in me) {
+    const val = me[k], key = Array.isArray(val) ? val.join(',') : val;
+    if (last[k] !== key) { last[k] = key; out[k] = val; }
+  }
+  return out;
+}
+const angDiff = (a, b) => { const d = a - b; return Math.atan2(Math.sin(d), Math.cos(d)); };
 // interest management: how far around a viewer the server sends things (half-extents, px)
 export const VIEW_X = 1500, VIEW_Y = 1100, RADAR_RANGE = 2600;
 export const HEARTBEAT_DIST = 330; // a hidden enemy this close makes your heart pound
@@ -22,7 +36,7 @@ export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
 // fields carried across a zone handoff
 const CARRY = ['id', 'name', 'brawler', 'x', 'y', 'mvx', 'mvy', 'hp', 'maxHp', 'cubes', 'ammo', 'reloadP', 'atkCd', 'superC',
   'lastCombat', 'stun', 'cloak', 'reveal', 'facing', 'lastSeq', 'kills', 'bounty', 'bountyEarned', 'bestBounty', 'bushT',
-  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp', 'cos', 'equipped', 'account', 'secret', 'spikeCd', 'burst'];
+  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp', 'cos', 'equipped', 'account', 'secret', 'spikeCd', 'burst', 'w2', 'slot', 'assists', 'steals', 'wstat'];
 
 export class Sim {
   constructor(o) {
@@ -49,6 +63,9 @@ export class Sim {
     this.players = new Map();
     this.observers = new Map(); // key -> {x, y}
     this.bullets = [];
+    this.bnew = []; // projectiles fired this tick (sent once as events)
+    this.bdead = []; // [id, x, y] projectiles that ended this tick
+    this.flares = []; // Flare Gun reveals {x, y, r, t}
     this.cubes = [];
     this.crystals = [];
     this.mines = [];
@@ -143,15 +160,34 @@ export class Sim {
       bounty: 0, bountyEarned: 0, bestBounty: 0, bushT: 0, lowF: 0, rush: 0, rushArmed: true, pingT: 0,
       spawnProt: 0, respawnT: 0, score: 0, crystals: 0, sessionKills: 0, hazAcc: 0, lastHitBy: 0,
       slowT: 0, cageT: 0, tp: 0, team: 0,
+      // combat upgrade: secondary weapon (w2) + active slot (0 = signature), swap timer, lag
+      // compensation rewind (ticks), position history, hit markers, assists, steals, per-weapon stats
+      w2: null, slot: 0, swapT: 0, rw: 0, hx: new Float32Array(8), hy: new Float32Array(8), hm: 0,
+      assists: 0, steals: 0, wstat: {}, shotLog: [], poison: null, flareT: 0,
     };
     if (state) for (const k of CARRY) if (state[k] !== undefined) p[k] = state[k];
     while (this.players.has(p.id)) p.id = newId();
+    p.hx.fill(p.x); p.hy.fill(p.y);
     this.players.set(p.id, p);
     this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
     return p;
   }
 
   rosterRow(p) { return [p.name, p.brawler, p.wasBot ? 1 : 0, p.cos || null]; }
+  // give a player a secondary weapon (armory pick, a bot's random pick, or a Free Play drop)
+  setWeapon(p, id, perks = []) {
+    if (!WEAPONS[id]) { p.w2 = null; p.slot = 0; return; }
+    const w = withPerks(id, perks);
+    p.w2 = { id, perks, ammo: w.ammo, reloadP: 0, cd: 0, lastFire: -99 };
+    if (p.slot === 1) p.swapT = 0;
+  }
+  w2def(p) {
+    if (!p.w2) return null;
+    const key = p.w2.id + '|' + (p.w2.perks || []).join(',');
+    let w = W2C.get(key);
+    if (!w) { w = withPerks(p.w2.id, p.w2.perks || []); W2C.set(key, w); }
+    return w;
+  }
   // cosmetics: drawn by clients only. Never read by the simulation.
   setCosmetics(id, equipped) {
     const p = this.players.get(id);
@@ -236,7 +272,7 @@ export class Sim {
     if (!p || p.wasBot || p.left) return null;
     p.left = true; p.secret = null;
     if (this.phase !== 'play') return null;
-    return { p, rank: !p.alive && p.rank ? p.rank : this.players.size, players: this.players.size, won: this.mode.teams ? false : undefined };
+    return { p, rank: !p.alive && p.rank ? p.rank : this.players.size, players: this.players.size, won: this.mode.teams ? false : undefined, assists: p.assists, steals: p.steals, wstat: p.wstat };
   }
 
   // a dropped player reconnected (same match): hand control back
@@ -244,6 +280,7 @@ export class Sim {
     const p = this.players.get(id);
     if (!p) return null;
     p.connected = true;
+    p.sentStatic = null; p.meSent = null; // a new socket knows nothing yet: resend everything
     p.bot = p.wasBot;
     p.queue.length = 0;
     p.ai = null;
@@ -269,6 +306,7 @@ export class Sim {
     while (this.players.size < target) {
       const b = this.addPlayer({ name: names.pop() || 'Bot', brawler: BRAWLER_IDS[Math.floor(Math.random() * BRAWLER_IDS.length)], bot: true });
       if (this.mode.teams) b.team = this.smallerTeam();
+      this.setWeapon(b, WEAPON_IDS[Math.floor(Math.random() * WEAPON_IDS.length)]); // bots carry a random secondary
     }
     // teams spawn on opposite sides of the ring; FFA spawns are shuffled
     const SP = this.map.spawns || SPAWNS;
@@ -305,6 +343,7 @@ export class Sim {
     // observer sockets (Free Play border views) send their own position, so it can't be trusted:
     // they never get the "close enough to reveal" exception for bushes, cloak or armed mines
     const d = viewer.observer ? Infinity : dist;
+    if (t.flareT > 0) return true; // lit up by a flare
     if (t.cloak > 0 && d > CLOAK_REVEAL_DIST) return false;
     const bushReveal = BUSH_REVEAL_DIST * (!viewer.observer && onHigh(this.map, viewer.x, viewer.y) ? HIGH_REVEAL : 1); // high ground sees into bushes
     if (t.reveal <= 0 && d > bushReveal && inBush(this.map, t.x, t.y)) return false;
@@ -317,9 +356,34 @@ export class Sim {
   }
 
   // ---------------------------------------------------------------- combat
-  tryAttack(p, ang, fd = 1) {
+  // anti-cheat + performance: at most MAX_SHOTS_PER_SEC trigger pulls a second
+  shotAllowed(p) {
+    const t = this.time, log = p.shotLog;
+    while (log.length && t - log[0] >= 1) log.shift();
+    if (log.length >= MAX_SHOTS_PER_SEC) return false;
+    log.push(t); return true;
+  }
+  // AIM ASSIST (humans only, never snipers): nudge the shot toward an enemy within 6 degrees of the
+  // aim line, as the shooter saw them. Half way there: it helps, it never locks on.
+  assist(p, ang, range) {
+    if (p.bot) return ang;
+    let best = null, bd = AIM_ASSIST;
+    for (const e of this.players.values()) {
+      if (!this.enemies(p, e) || !e.alive || !this.canSee(p, e)) continue;
+      const [ex, ey] = this.posAt(e, p.rw);
+      const d = Math.hypot(ex - p.x, ey - p.y);
+      if (d > range * 1.1 || d < 1) continue;
+      const da = Math.abs(angDiff(Math.atan2(ey - p.y, ex - p.x), ang));
+      if (da < bd && lineOfSight(this.map, p.x, p.y, ex, ey)) { bd = da; best = Math.atan2(ey - p.y, ex - p.x); }
+    }
+    return best == null ? ang : ang + angDiff(best, ang) * 0.5;
+  }
+
+  tryAttack(p, ang, fd = 1, seq = 0) {
     const B = BRAWLERS[p.brawler], a = B.attack;
-    if (!p.alive || p.ammo < 1 || p.atkCd > 0 || p.stun > 0 || p.burst || p.dash || this.isSafe(p.x, p.y)) return;
+    if (!p.alive || p.ammo < 1 || p.atkCd > 0 || p.stun > 0 || p.burst || p.dash || p.swapT > 0 || this.isSafe(p.x, p.y)) return;
+    if (!this.shotAllowed(p)) return;
+    if (p.brawler !== 'wisp' && a.kind !== 'mine') ang = this.assist(p, ang, a.range);
     p.ammo -= 1;
     p.atkCd = a.cooldown;
     p.reveal = 0.8;
@@ -337,12 +401,103 @@ export class Sim {
     const sp = a.speed * (this.mods.bulletSpeed || 1), range = a.range * (this.mods.bulletRange || 1);
     for (const d of attackDirs(p.brawler, ang)) {
       const c = Math.cos(d), s = Math.sin(d);
-      this.bullets.push({
-        id: this.nextEnt++, owner: p.id, oname: p.name, ozone: this.zone, kind: BRAWLER_IDS.indexOf(p.brawler),
-        x: p.x + c * 16, y: p.y + s * 16, vx: c * sp, vy: s * sp, dist: 0, range, dmg, r: a.radius, team: p.team,
+      this.addShot({
+        owner: p.id, oname: p.name, ozone: this.zone, kind: BRAWLER_IDS.indexOf(p.brawler),
+        x: p.x + c * 16, y: p.y + s * 16, vx: c * sp, vy: s * sp, dist: 0, range, dmg, r: a.radius, team: p.team, rw: p.rw,
         ...(a.kind === 'wave' ? { pierce: true, hit: [], slow: a.slowTime } : {}),
         ...(a.kind === 'mine' ? { mine: true, range: Math.max(80, range * Math.max(0, Math.min(1, fd))) } : {}),
       });
+    }
+  }
+
+  // every projectile goes through here: clients get ONE "fired from x,y with velocity v at tick n"
+  // event and simulate it themselves (no per-tick bullet positions on the wire)
+  addShot(b) {
+    b.id = this.nextEnt++;
+    b.t0 = this.tickN;
+    b.ev = [r2(b.x), r2(b.y), r2(b.vx), r2(b.vy), b.fuse || 0]; // exact spawn state for the clients
+    this.bullets.push(b);
+    this.bnew.push(b);
+    return b;
+  }
+
+  // ---------------------------------------------------------------- secondary weapons
+  tryWeapon(p, ang, inp, seq = 0) {
+    const w = this.w2def(p), st = p.w2;
+    if (!p.alive || !w || st.ammo < 1 || st.cd > 0 || p.stun > 0 || p.dash || p.swapT > 0 || this.isSafe(p.x, p.y)) return;
+    if (!this.shotAllowed(p)) return;
+    if (w.cls !== 'sniper' && w.kind !== 'melee') ang = this.assist(p, ang, w.range);
+    st.ammo -= 1; st.cd = w.cooldown;
+    const held = Math.min(w.charge || 0, inp ? inp.ch : 0, this.time - st.lastFire); // charge can't exceed time since the last shot
+    st.lastFire = this.time;
+    p.reveal = 0.8; p.cloak = 0; p.spawnProt = 0; p.facing = ang;
+    const mult = this.dmgMult(p), wi = WKIND + weaponIndex(st.id);
+    this.fx.push(['shot', Math.round(p.x), Math.round(p.y), r2(ang), p.id, wi]);
+    if (w.kind === 'melee') return this.weaponMelee(p, w, ang, mult);
+    let sp = (w.speed || 1000) * (this.mods.bulletSpeed || 1);
+    const range = w.range * (this.mods.bulletRange || 1);
+    // grenades land where you aim: the throw speed is set so the roll stops at aim distance
+    if (w.kind === 'grenade') sp = range * Math.max(0.15, Math.min(1, inp && inp.fd != null ? inp.fd : 1)) * (1 - 0.93) / DT;
+    const fire = (k) => {
+      for (const a of shotAngles(w, ang, seq * 7 + k)) {
+        const c = Math.cos(a), s = Math.sin(a);
+        let dmg = w.damage * mult, crit = 0;
+        if (w.kind === 'charge') { const f = Math.min(1, held / w.charge); dmg = (w.damage + (w.maxDamage - w.damage) * f) * mult; crit = f >= 0.95 ? 1 : 0; }
+        this.addShot({
+          owner: p.id, oname: p.name, ozone: this.zone, kind: wi, wid: st.id, x: p.x + c * 16, y: p.y + s * 16, vx: c * sp, vy: s * sp, dist: 0, range, dmg, crit,
+          r: w.radius || 8, team: p.team, rw: p.rw, x0: p.x, y0: p.y,
+          ...(w.pierce ? { pierce: w.pierce, hit: [] } : {}), ...(w.slow ? { slow: w.slow } : {}), ...(w.poison ? { poison: w.poison } : {}),
+          ...(w.chain ? { chain: w.chain } : {}), ...(w.flare ? { flare: w.flare } : {}), ...(w.crit === 'close' ? { close: 1 } : {}),
+          ...(w.kind === 'grenade' ? { bounce: 1, fuse: w.fuse, blast: w.blast, range: 1e9 } : {}),
+          ...(w.kind === 'rocket' ? { rocket: 1, blast: w.blast, splash: w.splash * mult } : {}),
+        });
+      }
+    };
+    fire(0);
+    if (w.burst > 1) p.wburst = { left: w.burst - 1, t: w.interval, ang, fire, k: 1 };
+  }
+
+  // melee: an instant arc, checked against where enemies were on the attacker's screen
+  weaponMelee(p, w, ang, mult) {
+    this.fx.push(['swing', Math.round(p.x), Math.round(p.y), r2(ang), p.id, WKIND + weaponIndex(p.w2.id)]);
+    if (w.lunge) p.knock = { vx: Math.cos(ang) * w.lunge / 0.12, vy: Math.sin(ang) * w.lunge / 0.12, t: 0.12 };
+    for (const e of this.players.values()) {
+      if (!this.enemies(p, e) || !e.alive) continue;
+      const [ex, ey] = this.posAt(e, p.rw);
+      const dx = ex - p.x, dy = ey - p.y, d = Math.hypot(dx, dy);
+      if (d > w.range + this.stats(e).r) continue;
+      const dir = Math.atan2(dy, dx);
+      if (Math.abs(angDiff(dir, ang)) > w.arc / 2 + 0.15) continue;
+      if (!lineOfSight(this.map, p.x, p.y, ex, ey)) continue;
+      const behind = w.crit === 'behind' && Math.abs(angDiff(e.facing, dir)) < Math.PI / 3; // they're facing away
+      this.fx.push(['hit', Math.round(ex), Math.round(ey), WKIND + weaponIndex(p.w2.id), e.id]);
+      this.damage(p, e, w.damage * mult * (behind ? 1.3 : 1), true, 'poison', { wid: p.w2.id, crit: behind });
+    }
+    const cx = p.x + Math.cos(ang) * Math.min(w.range * 0.6, 90), cy = p.y + Math.sin(ang) * Math.min(w.range * 0.6, 90);
+    const idx = Math.floor(cy / TILE) * this.map.gw + Math.floor(cx / TILE);
+    if (this.map.t[idx] === CRATE) this.hitCrate(idx, w.damage * mult);
+  }
+
+  // where a player was `rw` ticks ago (lag compensation)
+  posAt(e, rw) {
+    if (!rw || !e.hx) return [e.x, e.y];
+    const i = (this.tickN - rw) & 7;
+    return [e.hx[i], e.hy[i]];
+  }
+
+  // explosions (grenades, rockets): everything in the blast, crates too
+  explode(b, x, y) {
+    this.fx.push(['boom', Math.round(x), Math.round(y), b.blast, b.owner]);
+    const src = this.players.get(b.owner) || (b.ozone && b.ozone !== this.zone ? { remote: true, id: b.owner, name: b.oname, zone: b.ozone } : null);
+    const dmg = b.rocket ? b.splash : b.dmg;
+    for (const e of this.players.values()) {
+      if (!e.alive || (b.team && e.team === b.team && e.id !== b.owner) || e.id === b.owner) continue;
+      if (Math.hypot(e.x - x, e.y - y) < b.blast + this.stats(e).r && lineOfSight(this.map, x, y, e.x, e.y)) this.damage(src, e, dmg, true, 'poison', { wid: b.wid });
+    }
+    const r = Math.ceil(b.blast / TILE);
+    for (let ty = Math.floor(y / TILE) - r; ty <= Math.floor(y / TILE) + r; ty++) for (let tx = Math.floor(x / TILE) - r; tx <= Math.floor(x / TILE) + r; tx++) {
+      const idx = ty * this.map.gw + tx;
+      if (tx >= 0 && ty >= 0 && tx < this.map.gw && ty < this.map.gh && this.map.t[idx] === CRATE && Math.hypot(tx * TILE + 25 - x, ty * TILE + 25 - y) < b.blast + 25) this.hitCrate(idx, dmg);
     }
   }
 
@@ -447,22 +602,30 @@ export class Sim {
   }
 
   // src: local player | {remote:true, id, name, zone} | null
-  damage(src, t, amount, charge, cause = 'poison') {
+  // opt: { wid (secondary weapon id), crit } — crits are drawn big; hit markers go to the shooter
+  damage(src, t, amount, charge, cause = 'poison', opt = null) {
     if (!t.alive || t.spawnProt > 0 || this.isSafe(t.x, t.y)) return;
     amount = Math.round(amount);
     t.hp -= amount;
     t.lastCombat = this.time;
     t.reveal = Math.max(t.reveal, 0.5);
-    this.fx.push(['dmg', Math.round(t.x), Math.round(t.y), amount, t.id]);
+    const crit = !!(opt && opt.crit) || amount >= 900;
+    this.fx.push(['dmg', Math.round(t.x), Math.round(t.y), amount, t.id, crit ? 1 : 0]);
     if (src) {
       t.lastHitBy = src.id;
       if (src.remote) { if (charge) this.hooks.credit?.(src.zone, { id: src.id, charge: 1 }); }
       else {
         src.lastCombat = this.time;
-        if (charge && src.alive) src.superC = Math.min(1, src.superC + 1 / BRAWLERS[src.brawler].superHits);
+        src.hm |= crit ? 4 : 1; // HIT MARKER (4 = critical)
+        (t.dmgBy ||= new Map()).set(src.id, this.time); // for assists
+        if (opt && opt.wid) {
+          const ws = (src.wstat[opt.wid] ||= { d: 0, k: 0 }); ws.d += amount;
+          const a = BRAWLERS[src.brawler].attack;
+          if (charge && src.alive) src.superC = Math.min(1, src.superC + amount / (a.damage * BRAWLERS[src.brawler].superHits));
+        } else if (charge && src.alive) src.superC = Math.min(1, src.superC + 1 / BRAWLERS[src.brawler].superHits);
       }
     }
-    if (t.hp <= 0) this.kill(t, src, cause);
+    if (t.hp <= 0) this.kill(t, src, cause, opt);
   }
 
   gainBounty(p, gain) {
@@ -470,8 +633,18 @@ export class Sim {
     p.bestBounty = Math.max(p.bestBounty, p.bounty);
   }
 
-  kill(t, src, cause) {
+  kill(t, src, cause, opt = null) {
     t.alive = false;
+    if (src && !src.remote) {
+      src.hm |= 2; // kill marker
+      if (opt && opt.wid) (src.wstat[opt.wid] ||= { d: 0, k: 0 }).k++;
+      if (t.bounty > 0) src.steals++;
+    }
+    if (t.dmgBy) { // ASSISTS: anyone else who hurt them in the last 5 seconds
+      for (const [id, at] of t.dmgBy) { const a = this.players.get(id); if (a && a !== src && this.time - at < 5) a.assists++; }
+      t.dmgBy = null;
+    }
+    t.poison = null;
     t.hp = 0;
     t.dash = t.knock = t.burst = null;
     // everyone eliminated on the same tick shares the best of their places (a trade = a tie)
@@ -599,7 +772,13 @@ export class Sim {
     if (p.stun <= 0 && !p.dash && !p.knock) applyMove(this.map, p, inp.mx, inp.my, st.speed, st.r, this.mods);
     if (Math.hypot(inp.ax, inp.ay) > 0.2) p.facing = Math.atan2(inp.ay, inp.ax);
     else if (Math.hypot(inp.mx, inp.my) > 0.2) p.facing = Math.atan2(inp.my, inp.mx);
-    if (inp.f != null) this.tryAttack(p, inp.f, inp.fd ?? 1);
+    // LAG COMPENSATION: how far back (in ticks, max 150ms) the shooter was seeing everyone else
+    if (inp.vt != null) p.rw = Math.max(0, Math.min(LAG_COMP_TICKS, Math.round(this.tickN - inp.vt)));
+    if (inp.w != null && inp.w !== p.slot && p.w2 && p.swapT <= 0 && !p.dash) {
+      p.slot = inp.w; p.burst = null;
+      p.swapT = p.slot === 1 ? this.w2def(p).swap : SWAP_TIME;
+    }
+    if (inp.f != null) { if (p.slot === 1 && p.w2) this.tryWeapon(p, inp.f, inp, inp.s); else this.tryAttack(p, inp.f, inp.fd ?? 1, inp.s); }
     if (inp.u != null) this.trySuper(p, inp.u);
   }
 
@@ -611,7 +790,13 @@ export class Sim {
     const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0);
     // angles from the client are untrusted: wrap into (-PI, PI] (a huge value would hang the angle loops)
     const ang = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.atan2(Math.sin(v), Math.cos(v)) : null);
-    p.queue.push({ s: m.s | 0, mx: num(m.mx), my: num(m.my), ax: num(m.ax), ay: num(m.ay), f: ang(m.f), u: ang(m.u), fd: typeof m.fd === 'number' ? Math.max(0, Math.min(1, m.fd)) : 1 });
+    if (m.t === 'emote') return this.emote(p, m.e);
+    p.queue.push({
+      s: m.s | 0, mx: num(m.mx), my: num(m.my), ax: num(m.ax), ay: num(m.ay), f: ang(m.f), u: ang(m.u), fd: typeof m.fd === 'number' ? Math.max(0, Math.min(1, m.fd)) : 1,
+      w: m.w === 0 || m.w === 1 ? m.w : null, // swap request (0 signature, 1 secondary)
+      ch: typeof m.ch === 'number' && Number.isFinite(m.ch) ? Math.max(0, Math.min(2, m.ch)) : 0, // charge held (s)
+      vt: typeof m.vt === 'number' && Number.isFinite(m.vt) ? m.vt : null, // the server tick the shooter was looking at
+    });
     if (p.queue.length > 12) p.queue.splice(0, p.queue.length - 12);
   }
 
@@ -674,6 +859,19 @@ export class Sim {
       }
       p.px = p.x; p.py = p.y;
       p.atkCd -= DT; p.stun -= DT; p.cloak -= DT; p.reveal -= DT; p.rush -= DT; p.spawnProt -= DT; p.slowT -= DT; p.cageT -= DT;
+      p.swapT -= DT; p.flareT -= DT;
+      if (p.w2) { // secondary weapon: cooldown, magazine reload, burst rounds
+        const w = this.w2def(p), st = p.w2;
+        st.cd -= DT;
+        if (st.ammo < w.ammo) { st.reloadP += DT / w.reload; if (st.reloadP >= 1) { st.ammo++; st.reloadP = st.ammo >= w.ammo ? 0 : st.reloadP - 1; } }
+        if (p.wburst) { p.wburst.t -= DT; if (p.wburst.t <= 0) { p.wburst.fire(p.wburst.k++); p.wburst.left--; p.wburst.t += w.interval; if (p.wburst.left <= 0 || p.slot !== 1) p.wburst = null; } }
+      }
+      if (p.poison) { // Viper poison: damage over time
+        const ps = p.poison; ps.t -= DT; ps.tick -= DT;
+        if (ps.tick <= 0) { ps.tick += 0.5; this.damage(this.players.get(ps.src) || null, p, ps.dps * 0.5, false, 'poison', { wid: ps.wid }); }
+        if (ps.t <= 0 || !p.alive) p.poison = null;
+        if (!p.alive) continue;
+      }
 
       if (p.bot) p.queue = [botInput(this, p)];
       p.credits = Math.min(p.credits + 1, 4);
@@ -753,6 +951,13 @@ export class Sim {
     }
 
     this.updateBullets();
+    // LAG COMPENSATION history: where everyone is at the end of this tick (8 ticks kept)
+    const hi = this.tickN & 7;
+    for (const p of this.players.values()) { p.hx[hi] = p.x; p.hy[hi] = p.y; }
+    if (this.flares.length) {
+      for (const f of this.flares) { f.t -= DT; for (const p of this.players.values()) if (p.alive && Math.hypot(p.x - f.x, p.y - f.y) < f.r) p.flareT = Math.max(p.flareT, 0.15); }
+      this.flares = this.flares.filter((f) => f.t > 0);
+    }
     this.updateMines();
     this.updateDelayed();
     if (this.hooks.handoff) this.checkHandoffs();
@@ -766,7 +971,8 @@ export class Sim {
     }
     this.sendSnapshots();
     this.pingLog = this.pings;
-    this.fx = []; this.tileDirty = []; this.crateDirty = []; this.pings = [];
+    this.fx = []; this.tileDirty = []; this.crateDirty = []; this.pings = []; this.bnew = []; this.bdead = [];
+    for (const p of this.players.values()) p.hm = 0;
 
     if (this.mode.checkEnd(this)) this.finish();
   }
@@ -865,56 +1071,119 @@ export class Sim {
     this.mines.push(mine);
   }
 
-  addBullets(list) { for (const b of list) this.bullets.push({ ...b, id: this.nextEnt++ }); }
+  addBullets(list) { for (const b of list) this.addShot({ ...b }); } // crossed in from a neighbour zone
+
+  // SPATIAL GRID: players bucketed into 160px cells (one grid per rewind amount), so each bullet
+  // only checks the few players near it instead of everyone
+  grid(rw) {
+    let g = this.grids[rw];
+    if (g) return g;
+    g = new Map();
+    for (const p of this.players.values()) {
+      if (!p.alive) continue;
+      const [x, y] = this.posAt(p, rw), k = ((x / 160) | 0) * 4096 + ((y / 160) | 0);
+      let cell = g.get(k);
+      if (!cell) g.set(k, (cell = []));
+      cell.push(p, x, y);
+    }
+    return (this.grids[rw] = g);
+  }
 
   updateBullets() {
     const out = [], leaving = [];
-    const bw = this.mods.bulletWind || 0;
-    const wl = Math.hypot(this.mods.wx || 0, this.mods.wy || 0) || 1;
-    const wdx = bw ? ((this.mods.wx || 0) / wl) * bw : 0, wdy = bw ? ((this.mods.wy || 0) / wl) * bw : 0;
+    this.grids = [];
     for (const b of this.bullets) {
-      if (bw) { b.vx += wdx * DT; b.vy += wdy * DT; }
-      const step = Math.hypot(b.vx, b.vy) * DT;
-      const n = Math.max(1, Math.ceil(step / 16));
-      let dead = false;
-      for (let i = 0; i < n && !dead; i++) {
-        b.x += (b.vx * DT) / n; b.y += (b.vy * DT) / n; b.dist += step / n;
-        const tx = Math.floor(b.x / TILE), ty = Math.floor(b.y / TILE);
-        const idx = ty * this.map.gw + tx;
-        const t = tx < 0 || ty < 0 || tx >= this.map.gw || ty >= this.map.gh ? WALL : this.map.t[idx];
-        if (b.mine && (t === WALL || t === CRATE || this.isSafe(b.x, b.y) || b.dist >= b.range)) {
-          // a thrown mine breaks crates on impact, otherwise lands just before whatever it hit
-          if (t === CRATE) { this.hitCrate(idx, b.dmg); this.fx.push(['boom', Math.round(b.x), Math.round(b.y), 60, b.owner]); dead = true; break; }
-          if (t === WALL) { b.x -= (b.vx * DT) / n; b.y -= (b.vy * DT) / n; }
-          if (!this.isSafe(b.x, b.y)) this.placeMine(b);
-          dead = true; break;
-        }
-        if (b.mine) continue;
-        if (t === WALL) { dead = true; this.fx.push(['wall', Math.round(b.x), Math.round(b.y), b.kind, 0]); break; }
-        if (t === CRATE) { this.hitCrate(idx, b.dmg); dead = true; this.fx.push(['hit', Math.round(b.x), Math.round(b.y), b.kind, 0]); break; }
-        if (this.isSafe(b.x, b.y)) { dead = true; break; }
-        for (const p of this.players.values()) {
-          if (!p.alive || p.id === b.owner || (b.team && p.team === b.team)) continue;
-          if (b.hit && b.hit.includes(p.id)) continue;
-          const rr = this.stats(p).r + b.r;
-          if ((p.x - b.x) ** 2 + (p.y - b.y) ** 2 < rr * rr) {
-            this.fx.push(['hit', Math.round(b.x), Math.round(b.y), b.kind, p.id]);
-            const src = this.players.get(b.owner) || (b.ozone && b.ozone !== this.zone ? { remote: true, id: b.owner, name: b.oname, zone: b.ozone } : null);
-            if (b.slow && p.spawnProt <= 0 && !this.isSafe(p.x, p.y)) p.slowT = Math.max(p.slowT, b.slow);
-            if (b.cage && p.spawnProt <= 0 && !this.isSafe(p.x, p.y)) { p.stun = Math.max(p.stun, b.cage); p.cageT = b.cage; p.dash = null; p.burst = null; this.fx.push(['cage', Math.round(p.x), Math.round(p.y), 0, p.id]); }
-            this.damage(src, p, b.dmg, !b.cage);
-            if (b.pierce) { b.hit.push(p.id); continue; }
-            dead = true;
-            break;
+      let victim = null, vx = 0, vy = 0;
+      const g = this.grid(b.rw || 0);
+      const hit = b.mine || b.bounce ? null : (bb) => {
+        if (this.isSafe(bb.x, bb.y)) { victim = 'safe'; return true; }
+        const cx = (bb.x / 160) | 0, cy = (bb.y / 160) | 0;
+        for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
+          const cell = g.get((cx + i) * 4096 + cy + j);
+          if (!cell) continue;
+          for (let k = 0; k < cell.length; k += 3) {
+            const p = cell[k];
+            if (p.id === bb.owner || (bb.team && p.team === bb.team) || !p.alive || (bb.hit && bb.hit.includes(p.id))) continue;
+            const rr = this.stats(p).r + bb.r;
+            if ((cell[k + 1] - bb.x) ** 2 + (cell[k + 2] - bb.y) ** 2 < rr * rr) {
+              if (bb.pierce) { // piercing shots hit and keep flying (Dune's wave: everyone; Needle: one extra)
+                this.bulletHit(bb, p, cell[k + 1], cell[k + 2]);
+                if (bb.pierce !== true && bb.hit.length > bb.pierce) return true;
+                continue;
+              }
+              victim = p; vx = cell[k + 1]; vy = cell[k + 2]; return true;
+            }
           }
         }
-        if (b.dist >= b.range) dead = true;
+        return false;
+      };
+      let why = stepShot(this.map, b, this.mods, hit);
+      if (b.mine && !why && this.isSafe(b.x, b.y)) why = 'safe';
+      if (why === 'hit' && victim && victim !== 'safe') this.bulletHit(b, victim, vx, vy);
+      if (why === 'crate') {
+        const idx = Math.floor(b.y / TILE) * this.map.gw + Math.floor(b.x / TILE);
+        if (b.mine) { this.hitCrate(idx, b.dmg); this.fx.push(['boom', Math.round(b.x), Math.round(b.y), 60, b.owner]); }
+        else if (b.rocket) this.explode(b, b.x, b.y);
+        else { this.hitCrate(idx, b.dmg); this.fx.push(['hit', Math.round(b.x), Math.round(b.y), b.kind, 0]); }
       }
-      if (dead) continue;
-      if (!this.inBounds(b.x, b.y)) leaving.push(b); else out.push(b);
+      if (b.mine && why && why !== 'crate') {
+        // a thrown mine lands just before whatever it hit
+        if (why === 'wall') { b.x -= b.vx * DT / 4; b.y -= b.vy * DT / 4; }
+        if (!this.isSafe(b.x, b.y)) this.placeMine(b);
+      }
+      if (b.rocket && (why === 'wall' || why === 'range' || why === 'hit')) this.explode(b, b.x, b.y);
+      if (b.bounce && why === 'fuse') this.explode(b, b.x, b.y);
+      if (b.flare && why) this.lightFlare(b);
+      if (why) { this.bdead.push([b.id, Math.round(b.x), Math.round(b.y)]); continue; }
+      if (!this.inBounds(b.x, b.y)) { leaving.push(b); this.bdead.push([b.id, Math.round(b.x), Math.round(b.y)]); } else out.push(b);
     }
     this.bullets = out;
     if (leaving.length && this.hooks.bulletsOut) this.hooks.bulletsOut(leaving);
+  }
+
+  bulletHit(b, p, x, y) {
+    this.fx.push(['hit', Math.round(b.x), Math.round(b.y), b.kind, p.id]);
+    const src = this.players.get(b.owner) || (b.ozone && b.ozone !== this.zone ? { remote: true, id: b.owner, name: b.oname, zone: b.ozone } : null);
+    const ok = p.spawnProt <= 0 && !this.isSafe(p.x, p.y);
+    if (b.slow && ok) p.slowT = Math.max(p.slowT, b.slow);
+    if (b.cage && ok) { p.stun = Math.max(p.stun, b.cage); p.cageT = b.cage; p.dash = null; p.burst = null; this.fx.push(['cage', Math.round(p.x), Math.round(p.y), 0, p.id]); }
+    if (b.poison && ok) p.poison = { dps: b.poison.dps, t: b.poison.time, tick: 0.5, src: b.owner, wid: b.wid };
+    let dmg = b.dmg, crit = !!b.crit;
+    if (b.close && Math.hypot(x - b.x0, y - b.y0) < 170) { dmg *= 1.3; crit = true; } // Slugger point-blank
+    if (b.rocket) return; // the explosion does the damage
+    if (b.hit) b.hit.push(p.id);
+    this.damage(src, p, dmg, !b.cage, 'poison', b.wid ? { wid: b.wid, crit } : crit ? { crit } : null);
+    if (b.chain) { // Arc Gun: jump to up to n more enemies near the last one
+      let from = p, mul = 1;
+      const done = new Set([p.id]);
+      for (let k = 0; k < b.chain.n; k++) {
+        let next = null, nd = b.chain.range;
+        for (const e of this.players.values()) {
+          if (done.has(e.id) || !e.alive || e.id === b.owner || (b.team && e.team === b.team)) continue;
+          const d = Math.hypot(e.x - from.x, e.y - from.y);
+          if (d < nd && lineOfSight(this.map, from.x, from.y, e.x, e.y)) { nd = d; next = e; }
+        }
+        if (!next) break;
+        mul *= b.chain.mul; done.add(next.id);
+        this.fx.push(['arc', Math.round(from.x), Math.round(from.y), Math.round(next.x), Math.round(next.y)]);
+        this.damage(src, next, b.dmg * mul, true, 'poison', { wid: b.wid });
+        from = next;
+      }
+    }
+  }
+
+  // Flare Gun: lights an area; everyone inside is revealed (bushes, cloak) for a few seconds
+  lightFlare(b) {
+    this.flares.push({ x: Math.round(b.x), y: Math.round(b.y), r: b.flare.r, t: b.flare.time });
+    this.fx.push(['flare', Math.round(b.x), Math.round(b.y), b.flare.r, b.owner]);
+  }
+
+  // signature melee etc. still use emote / misc helpers below
+  emote(p, e) {
+    if (typeof e !== 'number' || e < 0 || e > 31 || this.time - (p.emoteT ?? -9) < 2.5) return;
+    if (p.emotes && !p.emotes.includes(e)) return; // only emotes you own
+    p.emoteT = this.time;
+    this.fx.push(['emote', Math.round(p.x), Math.round(p.y), e, p.id]);
   }
 
   checkHandoffs() {
@@ -936,12 +1205,21 @@ export class Sim {
     const taken = new Set([...this.players.values()].map((p) => p.name));
     const name = BOT_NAMES.filter((n) => !taken.has(n))[Math.floor(this.rand() * 10)] || 'Bot';
     const p = this.addPlayer({ name, brawler: BRAWLER_IDS[Math.floor(this.rand() * BRAWLER_IDS.length)], bot: true });
+    this.setWeapon(p, WEAPON_IDS[Math.floor(this.rand() * WEAPON_IDS.length)]);
     p.alive = false;
     this.respawn(p);
   }
 
   sendSnapshots() {
-    const bullets = this.bullets.map((b) => [b.id, Math.round(b.x), Math.round(b.y), b.owner, b.kind]);
+    // BULLETS AS EVENTS: one "fired" row per projectile ([id, x, y, vx, vy, range, kind, tick, owner,
+    // fuse]); clients simulate it with the same stepShot. Plus [id, x, y] when one ends.
+    const shots = this.bnew.map((b) => [b.id, b.ev[0], b.ev[1], b.ev[2], b.ev[3], Math.round(Math.min(b.range, 99999)), b.kind, b.t0 - 1, b.owner, b.ev[4]]);
+    const shotPath = (r) => { // the box a shot can reach (grenades: a circle of their roll distance)
+      const reach = r[9] ? 700 : r[5];
+      const l = Math.hypot(r[3], r[4]) || 1;
+      return [r[1], r[2], r[1] + (r[3] / l) * reach, r[2] + (r[4] / l) * reach, r[9] ? 700 : 0];
+    };
+    const paths = shots.map(shotPath);
     const cubes = this.cubes.map((c) => [c.id, Math.round(c.x), Math.round(c.y)]);
     const crystals = this.crystals.map((c) => [c.id, Math.round(c.x), Math.round(c.y)]);
     const mineRows = (v) => this.mines.filter((m) => this.mineVisible(v, m)).map((m) => [m.id, Math.round(m.x), Math.round(m.y), m.arm <= 0 ? 1 : 0, m.owner]);
@@ -958,21 +1236,39 @@ export class Sim {
       common.lb = this.mode.rank(this).slice(0, 3).map((p) => [p.id, p.name, this.mode.score(p)]);
     }
     if (this.hub && this.tickN % 40 === 0) common.on = this.humans().length;
-    const rows = (v) => {
-      const others = [];
+    // players: the fast-changing part every tick [id, x, y, hp, facing, flags]; the slow part
+    // ([id, maxHp, cubes, bounty, glow, crystals, team]) only when it changed for that viewer, plus a
+    // full refresh every 2s. Static rows are computed once per player per tick.
+    const fast = new Map(), slow = new Map();
+    for (const p of this.players.values()) {
+      if (!p.alive) continue;
+      fast.set(p.id, [p.id, Math.round(p.x), Math.round(p.y), Math.round(p.hp), Math.round(p.facing * 100) / 100, this.flags(p)]);
+      const st = [p.id, p.maxHp, p.cubes, p.bounty, this.glow(p), p.crystals, p.team];
+      slow.set(p.id, [st, st.join(',')]);
+    }
+    const refresh = this.tickN % 40 === 0;
+    const rows = (v, memo) => {
+      const others = [], statics = [];
       for (const p of this.players.values()) {
-        if (p === v || !p.alive || !this.canSee(v, p)) continue;
-        if (Math.abs(p.x - v.x) > VIEW_X || Math.abs(p.y - v.y) > VIEW_Y) continue;
-        others.push([p.id, Math.round(p.x), Math.round(p.y), Math.round(p.hp), p.maxHp, Math.round(p.facing * 100) / 100,
-          this.flags(p), p.cubes, p.bounty, this.glow(p), p.crystals, p.team]);
+        if (p === v || !p.alive) continue;
+        if (Math.abs(p.x - v.x) > VIEW_X || Math.abs(p.y - v.y) > VIEW_Y || !this.canSee(v, p)) continue;
+        others.push(fast.get(p.id));
+        const [st, key] = slow.get(p.id);
+        if (refresh || memo.get(p.id) !== key) { memo.set(p.id, key); statics.push(st); }
       }
-      return others;
+      return [others, statics];
     };
     // INTEREST MANAGEMENT: each viewer only gets what's near them (bullets, pickups, effects,
     // radar pings), so a snapshot's size doesn't grow with the map or the player count
     const near = (v, x, y, mx, my) => Math.abs(x - v.x) < mx && Math.abs(y - v.y) < my;
+    const seesPath = (v, q) => { // does the viewer's area overlap this shot's path?
+      const x0 = Math.min(q[0], q[2]) - q[4], x1 = Math.max(q[0], q[2]) + q[4], y0 = Math.min(q[1], q[3]) - q[4], y1 = Math.max(q[1], q[3]) + q[4];
+      return x1 > v.x - VIEW_X - 300 && x0 < v.x + VIEW_X + 300 && y1 > v.y - VIEW_Y - 300 && y0 < v.y + VIEW_Y + 300;
+    };
     const local = (v) => ({
-      b: bullets.filter((r) => near(v, r[1], r[2], VIEW_X + 300, VIEW_Y + 300)),
+      bn: shots.filter((r, i) => seesPath(v, paths[i])),
+      bd: this.bdead.filter((r) => near(v, r[1], r[2], VIEW_X + 400, VIEW_Y + 400)),
+      fl: this.flares.length ? this.flares.filter((f) => near(v, f.x, f.y, VIEW_X + f.r, VIEW_Y + f.r)).map((f) => [f.x, f.y, f.r, r2(f.t)]) : undefined,
       cu: cubes.filter((r) => near(v, r[1], r[2], VIEW_X + 200, VIEW_Y + 200)),
       cy: crystals.filter((r) => near(v, r[1], r[2], VIEW_X + 200, VIEW_Y + 200)),
       fx: this.fx.filter((f) => f[4] === v.id || near(v, f[1], f[2], VIEW_X + 200, VIEW_Y + 200)),
@@ -990,21 +1286,27 @@ export class Sim {
     };
     for (const v of this.players.values()) {
       if (!v.connected) continue;
+      const [pr, px] = rows(v, v.sentStatic ||= new Map());
       this.send(v.id, {
-        ...common, ...local(v), ack: v.lastSeq, p: rows(v), mn: mineRows(v),
+        ...common, ...local(v), ack: v.lastSeq, p: pr, ...(px.length ? { px } : {}), mn: mineRows(v), ...(v.hm ? { hm: v.hm } : {}),
         ...(v.team ? { mates: [...this.players.values()].filter((q) => q !== v && q.team === v.team && q.alive).map((q) => [q.id, Math.round(q.x), Math.round(q.y)]) } : {}),
-        me: {
+        me: meDelta({
           x: r2(v.x), y: r2(v.y), mvx: r2(v.mvx), mvy: r2(v.mvy), hp: Math.round(v.hp), mh: v.maxHp, am: r2(v.ammo + v.reloadP),
           sc: r2(v.superC), cu: v.cubes, f: this.flags(v), al: v.alive ? 1 : 0, fo: v.dash || v.knock || v.stun > 0 ? 1 : 0,
           cl: r2(Math.max(0, v.cloak)), bt: v.bounty, lo: r2(v.lowF), bt5: r2(Math.min(v.bushT, 5)), rs: r2(Math.max(0, v.rush)),
           rt: r2(Math.max(0, v.respawnT)), cr: v.crystals, scr: Math.floor(this.mode.score ? this.mode.score(v) : 0),
           k: v.kills, be: v.bountyEarned, sk: v.sessionKills, bb: v.bestBounty, gl: this.glow(v), id: v.id, br: v.brawler,
           sl: v.slowT > 0 ? r2(v.slowT) : 0, tp: v.tp, tm: v.team, hb: lurking(v),
-        },
+          ws: v.slot, sw: v.swapT > 0 ? r2(v.swapT) : 0, pz: v.poison ? 1 : 0,
+          w2: v.w2 ? [weaponIndex(v.w2.id), r2(v.w2.ammo + v.w2.reloadP), r2(Math.max(0, v.w2.cd))] : null,
+        }, v, refresh),
       });
     }
     if (this.observers.size && this.tickN % 2 === 0) {
-      for (const [k, o] of this.observers) { const v = { x: o.x, y: o.y, alive: true, observer: true }; this.send(k, { ...common, ...local(v), p: rows(v), mn: mineRows(v) }); }
+      for (const [k, o] of this.observers) {
+        const v = { x: o.x, y: o.y, alive: true, observer: true }, [pr, px] = rows(v, o.sentStatic ||= new Map());
+        this.send(k, { ...common, ...local(v), p: pr, ...(px.length ? { px } : {}), mn: mineRows(v) });
+      }
     }
   }
 
@@ -1025,7 +1327,7 @@ export class Sim {
     const score = this.mode.score || (() => 0);
     const results = ranked.map((p) => [p.name, p.brawler, p.rank, p.kills, p.wasBot ? 1 : 0, p.id, p.bountyEarned, Math.floor(score(p)), p.team]);
     const winner = ranked[0];
-    this.hooks.finished?.(ranked.filter((p) => !p.wasBot && !p.left).map((p) => ({ p, rank: p.rank, players: this.players.size, won: this.mode.teams ? (winTeam === 0 ? null : p.team === winTeam) : undefined })));
+    this.hooks.finished?.(ranked.filter((p) => !p.wasBot && !p.left).map((p) => ({ p, rank: p.rank, players: this.players.size, won: this.mode.teams ? (winTeam === 0 ? null : p.team === winTeam) : undefined, assists: p.assists, steals: p.steals, wstat: p.wstat })));
     for (const p of this.players.values()) {
       if (p.connected) {
         this.send(p.id, { t: 'end', mode: this.modeKey, rank: p.rank, kills: p.kills, bounty: p.bountyEarned, winner: winner ? winner.name : null, results,

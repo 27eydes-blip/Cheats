@@ -1,0 +1,2 @@
+[{"msPerTick":0.417,"bytesPerPlayerPerSec":26082,"entities":1727,"alive":20},{"msPerTick":0.39,"bytesPerPlayerPerSec":28851,"entities":1736,"alive":20},{"msPerTick":0.319,"bytesPerPlayerPerSec":27016,"entities":1735,"alive":20}]
+{"msPerTick":0.375,"bytesPerPlayerPerSec":27316.333}
