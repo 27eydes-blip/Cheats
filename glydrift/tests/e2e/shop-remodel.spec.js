@@ -59,6 +59,7 @@ const BEFORE = {
     ["hero", "dewberry", 4000, "coins"],
     ["hero", "tung", 12000, "coins"],
     ["hero", "newbleizer", 12000, "coins"], // (added after this list was captured: THE NEWBLEIZER, live since)
+    ["hero", "wasplord", 55000, "coins"], // (added after this list was captured: WASP LORD, ILLEGAL LEGENDARY)
     ["hero", "wallrunner", 10000, "coins"],
     ["hero", "manny", 5000, "coins"],
     ["hero", "milzzz", null, "LOCKED"],
@@ -182,7 +183,7 @@ test("shop remodel: the same offers at the same prices, heroes by rarity, live d
   }
   expect(Object.keys(now).sort()).toEqual(Object.keys(BEFORE).sort());
 
-  // heroes: LEGENDARY (MEGA / ULTRA at its top), then EPIC, RARE, COMMON — every hero in the
+  // heroes: LEGENDARY (ILLEGAL / ULTRA / MEGA at its top), then EPIC, RARE, COMMON — every hero in the
   // section of its own rarity, with that rarity's border colour
   const heroes = await page.evaluate(() => {
     const s = window.__glydrift.scene.getScene("Shop");
@@ -197,10 +198,10 @@ test("shop remodel: the same offers at the same prices, heroes by rarity, live d
     };
   });
   expect(heroes.sections.map((x) => x.label)).toEqual(["LEGENDARY", "EPIC", "RARE", "COMMON"]);
-  expect(heroes.sections[0].rarities.every((r) => ["ultra", "mega", "legendary"].includes(r))).toBe(true);
+  expect(heroes.sections[0].rarities.every((r) => ["illegal", "ultra", "mega", "legendary"].includes(r))).toBe(true);
   for (const [i, r] of ["epic", "rare", "common"].entries()) expect(heroes.sections[i + 1].rarities).toEqual([r]);
   expect(heroes.borders).toBe(true);
-  const rank = { ultra: 0, mega: 0, legendary: 0, epic: 1, rare: 2, common: 3 };
+  const rank = { illegal: 0, ultra: 0, mega: 0, legendary: 0, epic: 1, rare: 2, common: 3 };
   const ranks = heroes.ordered.map((r) => rank[r]);
   expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
 

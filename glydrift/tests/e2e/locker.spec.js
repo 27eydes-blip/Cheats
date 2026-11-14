@@ -114,8 +114,8 @@ test("Locker Room: opens from MORE, counts match, equips like the old menus, loc
   }
   expect(expected.HEROES.total).toBeGreaterThan(50); // a big tab: 50+ tiles, still one rig
   await tap(page, "HEROES", 300);
-  // tiles are plain pictures: the only hero rig is the preview's
-  expect(await locker(page, "return L.tiles.every((t) => t.list.every((o) => o.type !== 'Container' || o.entry));")).toBe(true);
+  // tiles are plain pictures: the only hero rig is the preview's (the vault's ILLEGAL stamp is text)
+  expect(await locker(page, "return L.tiles.every((t) => t.list.every((o) => o.type !== 'Container' || o.entry || o.name === 'illegalStamp'));")).toBe(true);
 
   // equipping from the Locker saves exactly what the old menus (Shop.equip / Titles.equip /
   // HEROES' SELECT) saved
