@@ -8,6 +8,7 @@ import {
 import { EVENTS } from './events/index.js';
 import { Input } from './input.js';
 import * as R from './render.js';
+import { SETTINGS, setSetting } from './settings.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -26,7 +27,7 @@ const worldName = (key) => WORLDS[worldId(key)]?.name || key;
 
 let W = 0, H = 0, DPR = 1;
 function resize() {
-  DPR = Math.min(2, devicePixelRatio || 1);
+  DPR = SETTINGS.lowGfx ? 1 : Math.min(2, devicePixelRatio || 1);
   W = innerWidth; H = innerHeight;
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   input.layout(W, H);
@@ -403,6 +404,7 @@ function sampleWorld() {
 
 // ------------------------------------------------------------------ effects
 function burst(x, y, color, n, speed = 180, size = 5, life = 0.45) {
+  if (SETTINGS.lowGfx) n = Math.ceil(n / 3);
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, v = speed * (0.4 + Math.random() * 0.8);
     G.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life, max: life, color, size: size * (0.6 + Math.random() * 0.8) });
@@ -414,8 +416,8 @@ function applyFx([type, x, y, v, id]) {
   switch (type) {
     case 'dmg':
       G.texts.push({ x: x + (Math.random() - 0.5) * 20, y: y - 70, txt: String(v), color: id === G.myId ? '#ff4d5e' : '#fff', life: 0.9, max: 0.9, size: v >= 1000 ? 26 : 20 });
-      G.flash[id] = 0.12;
-      if (id === G.myId) { G.hurt = 0.35; G.shake = Math.max(G.shake, 6); }
+      if (!SETTINGS.reduceFlash) G.flash[id] = 0.12;
+      if (id === G.myId) { G.hurt = SETTINGS.reduceFlash ? 0.18 : 0.35; G.shake = Math.max(G.shake, 6); }
       break;
     case 'hit': burst(x, y, KIND_COL[v] || '#fff', 7, 200, 5, 0.3); break;
     case 'wall': burst(x, y, '#d8cfff', 4, 120, 4, 0.25); break;
@@ -454,7 +456,7 @@ function updateEffects(dt) {
   for (const t of G.texts) { t.life -= dt; t.y -= 40 * dt; }
   G.texts = G.texts.filter((t) => t.life > 0);
   for (const k in G.flash) { G.flash[k] -= dt; if (G.flash[k] <= 0) delete G.flash[k]; }
-  G.shake = Math.max(0, G.shake - dt * 30);
+  G.shake = SETTINGS.reduceFlash ? 0 : Math.max(0, G.shake - dt * 30);
   G.hurt = Math.max(0, G.hurt - dt);
   const k = Math.exp(-dt * 10);
   G.err.x *= k; G.err.y *= k;
@@ -614,7 +616,7 @@ function render(t) {
   }
   for (const c of G.view.cubes) R.drawCube(ctx, c[1], c[2], t);
   for (const c of G.view.crystals) R.drawCrystal(ctx, c[1], c[2], t);
-  R.drawShadows(ctx, G.map, x0, y0, x1, y1);
+  if (!SETTINGS.lowGfx) R.drawShadows(ctx, G.map, x0, y0, x1, y1);
   R.drawBlocks(ctx, G.map, G.crateHp, x0, y0, x1, y1);
 
   const list = G.view.others.map((o) => ({ ...o, me: false, size: sizeOf(o) }));
@@ -644,7 +646,7 @@ function render(t) {
 
   R.drawBushes(ctx, G.map, x0, y0, x1, y1, meAlive ? mePos : null, t);
   for (const e of evs) if (EVENTS[e.id].layer !== 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
-  R.drawAmbient(ctx, G.map, view, t, false);
+  if (!SETTINGS.lowGfx) R.drawAmbient(ctx, G.map, view, t, false);
   const P = primary();
   if (P && P.last && P.last.z > 0) R.drawPoison(ctx, P.last.z, ARENA_SIZE, x0, y0, x1, y1, t);
 
@@ -675,7 +677,7 @@ function render(t) {
   ctx.restore();
 
   // ---- screen space
-  R.drawGrade(ctx, G.map, cam, W, H);
+  if (!SETTINGS.lowGfx) R.drawGrade(ctx, G.map, cam, W, H);
   const pe = P?.ev;
   if (pe && EVENTS[pe.id].drawScreen) EVENTS[pe.id].drawScreen(ctx, pe.p, pe.ph, t, W, H, s);
   if (G.hurt > 0) {
@@ -685,7 +687,7 @@ function render(t) {
   }
   if (meAlive && P && P.last && P.last.z > 0) {
     const z = P.last.z;
-    if (mePos.x < z || mePos.y < z || mePos.x > ARENA_SIZE - z || mePos.y > ARENA_SIZE - z) { ctx.fillStyle = `rgba(80,220,90,${0.15 + Math.sin(t * 6) * 0.05})`; ctx.fillRect(0, 0, W, H); }
+    if (mePos.x < z || mePos.y < z || mePos.x > ARENA_SIZE - z || mePos.y > ARENA_SIZE - z) { ctx.fillStyle = `rgba(80,220,90,${SETTINGS.reduceFlash ? 0.15 : 0.15 + Math.sin(t * 6) * 0.05})`; ctx.fillRect(0, 0, W, H); }
   }
   // hunted: arrow towards the target when it's off-screen
   const tg = P?.last?.md?.tg;
@@ -831,6 +833,12 @@ $('free').onclick = () => { goFullscreen(); startFree(); };
 $('cancel').onclick = toMenu;
 $('leaveWorld').onclick = toMenu;
 $('spectate').onclick = () => { $('dead').hidden = true; $('hudAgain').hidden = false; };
+for (const [id, key] of [['setFlash', 'reduceFlash'], ['setLow', 'lowGfx'], ['setSound', 'sound']]) {
+  $(id).checked = !!SETTINGS[key];
+  $(id).onchange = () => { setSetting(key, $(id).checked); applySettings(); };
+}
+function applySettings() { document.body.classList.toggle('reduce-flash', SETTINGS.reduceFlash); resize(); }
+applySettings();
 for (const b of document.querySelectorAll('.again')) b.onclick = () => startQuick(G.opts.world ? { ...G.opts, room: 'T' + Math.floor(Math.random() * 1e8) } : {});
 $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('play').click(); });
 

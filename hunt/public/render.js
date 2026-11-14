@@ -1,6 +1,7 @@
 // All canvas drawing. Chunky cartoon look: bold dark outlines, bright flat fills.
 import { BRAWLERS, BRAWLER_IDS, TILE, PLAYER_R, WALL, BUSH, CRATE, WATER, CRATE_HP, SUPPLY_HP, HUB, worldKeyAt, attackDirs } from './shared.js';
 import { STICK_R } from './input.js';
+import { SETTINGS, pulse } from './settings.js';
 
 export const INK = '#1b1033';
 export const FONT = '"Lilita One", "Arial Black", system-ui, sans-serif';
@@ -232,7 +233,7 @@ export function drawGround(ctx, map, x0, y0, x1, y1, t) {
     const h = hash(x, y);
     const th = theme(worldKeyAt(map, x * TILE, y * TILE));
     if (th.deco) th.deco(ctx, x * TILE, y * TILE, h, t);
-    if ((h & 7) !== 0) continue;
+    if ((h & 7) !== 0 || SETTINGS.lowGfx) continue;
     const px = x * TILE + 10 + (h >>> 3) % 30, py = y * TILE + 14 + (h >>> 7) % 26;
     ctx.strokeStyle = th.tuft;
     ctx.beginPath(); ctx.moveTo(px - 4, py); ctx.lineTo(px - 6, py - 7); ctx.moveTo(px, py); ctx.lineTo(px, py - 9); ctx.moveTo(px + 4, py); ctx.lineTo(px + 6, py - 7); ctx.stroke();
@@ -434,7 +435,7 @@ export function drawBrawler(ctx, id, x, y, facing, t, o = {}) {
 export function drawAura(ctx, p, t) {
   const g = (p.glow || 0) / 100;
   if (p.fl & 32) { // hunted target
-    ctx.beginPath(); ctx.arc(p.x, p.y, 46 + Math.sin(t * 8) * 4, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(p.x, p.y, 42 + pulse(t) * 8, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,40,70,0.28)'; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = '#ff2846'; ctx.stroke();
   } else if (g > 0) {
     const r = 40 + g * 34;
@@ -458,7 +459,7 @@ export function drawBubble(ctx, p, t) {
   if (!(p.fl & 16)) return;
   ctx.beginPath(); ctx.arc(p.x, p.y, 38, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(160,220,255,0.18)'; ctx.fill();
-  ctx.lineWidth = 3; ctx.strokeStyle = `rgba(200,240,255,${0.6 + Math.sin(t * 10) * 0.3})`; ctx.stroke();
+  ctx.lineWidth = 3; ctx.strokeStyle = `rgba(200,240,255,${0.3 + pulse(t, 10) * 0.6})`; ctx.stroke();
 }
 
 // ---------------------------------------------------------------- items
@@ -528,11 +529,11 @@ export function eventHelpers(ctx, map, view) {
     visible: (x, y) => x > view.x0 - 80 && x < view.x1 + 80 && y > view.y0 - 80 && y < view.y1 + 80,
     warnTile(x, y, color, t) {
       color = hz(x, y)?.warn || color;
-      const pulse = 0.75 + Math.sin(t * 8) * 0.25;
+      const pu = 0.5 + pulse(t) * 0.5;
       rr(ctx, x - 21, y - 21, 42, 42, 10);
-      ctx.fillStyle = color; ctx.globalAlpha = 0.25 * pulse; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.fillStyle = color; ctx.globalAlpha = 0.25 * pu; ctx.fill(); ctx.globalAlpha = 1;
       ctx.lineWidth = 9; ctx.strokeStyle = INK; ctx.stroke();
-      ctx.lineWidth = 4.5; ctx.strokeStyle = color; ctx.globalAlpha = pulse; ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.lineWidth = 4.5; ctx.strokeStyle = color; ctx.globalAlpha = pu; ctx.stroke(); ctx.globalAlpha = 1;
       outlinedText(ctx, '!', x, y, 22, color);
     },
     flame(x, y, t) {
@@ -568,7 +569,7 @@ export function eventHelpers(ctx, map, view) {
       ctx.restore();
     },
     target(x, y, t) {
-      const r = 60 + Math.sin(t * 8) * 6;
+      const r = 54 + pulse(t) * 12;
       ctx.lineWidth = 6; ctx.strokeStyle = '#ffd23f';
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x - r - 14, y); ctx.lineTo(x + r + 14, y); ctx.moveTo(x, y - r - 14); ctx.lineTo(x, y + r + 14); ctx.stroke();
@@ -633,7 +634,7 @@ export function drawAmmo(ctx, x, y, ammo, superReady, t) {
     if (f > 0) { rr(ctx, sx + i * (w + gap), sy, w * f, h, 3); ctx.fillStyle = f >= 1 ? '#ff9f1c' : '#b86f12'; ctx.fill(); }
   }
   if (superReady) {
-    ctx.beginPath(); ctx.arc(x, y, 34 + Math.sin(t * 8) * 3, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(x, y, 31 + pulse(t) * 6, 0, Math.PI * 2);
     ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,210,63,0.85)'; ctx.stroke();
   }
 }
