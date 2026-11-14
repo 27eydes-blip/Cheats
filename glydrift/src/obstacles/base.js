@@ -45,13 +45,39 @@ export class PxObstacle {
     this.passed = false;
     this.centerSeen = false;
     this.inWard = false; // RONIN's Fire Ward state from a previous use
+    this.inPhase = false; // WASP LORD is inside it right now (phasing through)
+    this.phasedThrough = false; // ...at any point of this pass (no CLOSE! / PERFECT! for it)
+    this.perfectPending = false;
     this.minClear = Infinity;
     this.t = 0;
     for (const o of this.objects) o.setVisible(true);
   }
   kill() {
     this.active = false;
+    this.phaseClear();
     for (const o of this.objects) o.setVisible(false);
+  }
+  /**
+   * WASP LORD is phasing through: the obstacle's sprites flicker (alpha × k this frame). The
+   * hazard's own update may set an alpha every frame (warnings, blink blocks), so a value that
+   * changed since the last flicker is taken as the new base; phaseClear puts the base back.
+   */
+  phaseFlicker(k) {
+    const m = (this.phaseAlpha ||= new Map());
+    for (const obj of this.objects) {
+      if (!obj.visible || obj.setAlpha === undefined) continue;
+      const was = m.get(obj);
+      const base = was && Math.abs(obj.alpha - was.out) < 1e-4 ? was.base : obj.alpha;
+      const out = base * k;
+      obj.setAlpha(out);
+      m.set(obj, { base, out });
+    }
+  }
+  phaseClear() {
+    if (!this.phaseAlpha) return;
+    for (const [obj, { base, out }] of this.phaseAlpha)
+      if (Math.abs(obj.alpha - out) < 1e-4) obj.setAlpha(base);
+    this.phaseAlpha = null;
   }
   get left() {
     return this.x - this.halfW;

@@ -16,6 +16,7 @@ import {
   myFlair,
 } from "../online/leaderboard.js";
 import { nameText } from "../ui/nameplate.js";
+import { illegalTag, isIllegalHero } from "../ui/illegalTag.js";
 import { Sfx } from "../audio/sfx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { button, fadeTo, neonText, plainText } from "../ui/ui.js";
@@ -437,6 +438,19 @@ export class LeaderboardScene extends Phaser.Scene {
     return this.tab === "distance" ? `${n} m` : n;
   }
 
+  /**
+   * The ILLEGAL tag just after a left-aligned name at (x, y); if the two don't fit in `room`
+   * px, the name shrinks (never the tag, so it always reads).
+   */
+  tagAfterName(name, x, y, room) {
+    const tag = illegalTag(this, 0, y);
+    const nw = Math.max(1, name.getBounds().width);
+    const fit = Math.min(1, (room - tag.tagWidth - 8) / nw);
+    if (fit < 1) name.setScale(Math.max(0.5, fit));
+    tag.x = x + nw * name.scaleX + 8;
+    return tag;
+  }
+
   /** A small gold perk badge (a coin with a flame) next to heroes that have perks. */
   perkBadge(x, y) {
     const g = this.add.graphics({ x, y }).setName("perkBadge");
@@ -784,6 +798,15 @@ export class LeaderboardScene extends Phaser.Scene {
           this.speedBadge(cx + 34 * spec.scale + 14, heroY - 24 * spec.scale),
         );
       this.heroTip(col, hero, def);
+      // WASP LORD's runs (from the row's stored hero, so every device shows it): ILLEGAL, on
+      // the hero's stand (above his head is where the #1 crown goes)
+      if (isIllegalHero(r.character))
+        col.add(
+          illegalTag(this, cx, heroY + 58 * spec.scale, {
+            ox: 0.5,
+            k: spec.rank === 1 ? 1 : 0.9,
+          }),
+        );
       if (mine) {
         const tag = neonText(
           this,
@@ -985,6 +1008,8 @@ export class LeaderboardScene extends Phaser.Scene {
       const room = W - 48 - score.width - 18 - 183;
       if (ttl.lineWidth > room) ttl.setScale(room / ttl.lineWidth);
       this.list.add([g, rankTxt, icon, name, score, ttl]);
+      // WASP LORD's runs: the ILLEGAL tag after the name (the name shrinks to make room)
+      if (isIllegalHero(r.character)) this.list.add(this.tagAfterName(name, 182, y - 12, room));
       if (hasCoinPerks(def)) this.list.add(this.perkBadge(164, y + 16));
       if ((def.speed ?? 1) > 1) this.list.add(this.speedBadge(164, y - 16));
       this.heroTip(this.list, icon, def);
@@ -1039,6 +1064,9 @@ export class LeaderboardScene extends Phaser.Scene {
         font: NUM_FONT,
       }),
     );
+    // (WASP LORD's best: the ILLEGAL tag after your name, left of YOUR BEST)
+    if (isIllegalHero(me.character))
+      this.you.add(this.tagAfterName(this.you.list.at(-1), 192, -14, W - 192 - 250));
     const ttl = titleLine(this, 193, 8, Titles.shownId(), {
       size: 12,
       ox: 0,

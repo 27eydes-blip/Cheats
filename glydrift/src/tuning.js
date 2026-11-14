@@ -23,6 +23,8 @@ export const COMBO = {
   window: 3.5, // seconds without a combo event before it resets
   /** heroes with perks.comboMax 13 (SXE) can keep going past x10 */
   overdrive: [22, 13],
+  /** WASP LORD (perks.comboMax 16): one more step, six events after x13 like the steps below */
+  illegal: [28, 16],
 };
 
 // ------------------------------------------------------------------ biome pacing

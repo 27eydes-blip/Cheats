@@ -12,6 +12,7 @@ import { BIOMES, biomeName } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, NUM_FONT, VIEW } from "../config.js";
 import { HI } from "../gfx/textures.js";
 import { getCharacter } from "../player/characterDefs.js";
+import { illegalTag, isIllegalHero } from "../ui/illegalTag.js";
 import { Sfx } from "../audio/sfx.js";
 import { flairOf, Leaderboard, Levels, myFlair } from "../online/leaderboard.js";
 import { nameText } from "../ui/nameplate.js";
@@ -457,6 +458,9 @@ export class GameOverScene extends Phaser.Scene {
       const tt = titleText(this, W - 70, headY + 70, title, { size: 12 });
       tt.setScale(Math.min(1, 112 / Math.max(1, tt.lineWidth)));
     }
+    // a run with WASP LORD is tagged ILLEGAL here too, as it is on the leaderboard
+    if (isIllegalHero(run.char))
+      illegalTag(this, W - 70, headY + (title ? 92 : name ? 72 : 50), { ox: 0.5 });
   }
 
   /**
