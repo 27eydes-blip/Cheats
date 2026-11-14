@@ -11,6 +11,7 @@ import {
 } from '../public/shared.js';
 import { EVENTS, pickEvent } from '../public/events/index.js';
 import { MODES } from './modes.js';
+import { powerMult, clampPower, GADGETS, STARS, gadgetOf, starOf, GADGET_USES } from '../public/power.js';
 import { botInput, levelForTrophies } from './bots.js';
 import { WEAPONS, WEAPON_IDS, withPerks, shotAngles, stepShot, SWAP_TIME, MAX_SHOTS_PER_SEC, AIM_ASSIST, LAG_COMP_TICKS, WKIND, weaponIndex, STARTER_WEAPONS, CLASS_FX } from '../public/weapons.js';
 
@@ -38,7 +39,7 @@ export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
 // fields carried across a zone handoff
 const CARRY = ['id', 'name', 'brawler', 'x', 'y', 'mvx', 'mvy', 'hp', 'maxHp', 'cubes', 'ammo', 'reloadP', 'atkCd', 'superC',
   'lastCombat', 'stun', 'cloak', 'reveal', 'facing', 'lastSeq', 'kills', 'bounty', 'bountyEarned', 'bestBounty', 'bushT',
-  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp', 'cos', 'equipped', 'account', 'secret', 'spikeCd', 'burst', 'w2', 'slot', 'assists', 'steals', 'wstat'];
+  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp', 'cos', 'equipped', 'account', 'secret', 'spikeCd', 'burst', 'w2', 'slot', 'assists', 'steals', 'wstat', 'pset', 'gUses', 'lowHealUsed', 'lo', 'emotes', 'wmast'];
 
 export class Sim {
   constructor(o) {
@@ -147,8 +148,21 @@ export class Sim {
     }
     return { ...this.center };
   }
-  dmgMult(p) { return (1 + CUBE_DMG * p.cubes) * (p.hp / p.maxHp < LOW_HP ? COMEBACK_DMG : 1); }
-  stats(p) { return moveStats(p.brawler, p.hp, p.maxHp, p.rush, p.slowT); }
+  dmgMult(p) { return (1 + CUBE_DMG * p.cubes) * (p.hp / p.maxHp < LOW_HP ? COMEBACK_DMG : 1) * powerMult(p.power); }
+  stats(p) { return moveStats(p.brawler, p.hp, p.maxHp, p.rush, p.slowT, p.star ? p.star.fx.speed || 1 : 1); }
+  baseHp(p) { return Math.round(BRAWLERS[p.brawler].hp * powerMult(p.power)); }
+  // BRAWLER POWER: level (HP + damage), gadget and star power for the brawler being played
+  applyPower(p, resetUses = false) {
+    const s = (p.pset && p.pset[p.brawler]) || null;
+    const oldGadget = p.gadget;
+    p.power = s ? clampPower(s.power) : clampPower(p.power || 1);
+    p.gadget = s ? gadgetOf(p.brawler, s.gadget) : p.gadget && GADGETS[p.brawler]?.includes(p.gadget) ? p.gadget : null;
+    p.star = s ? starOf(p.brawler, s.star) : p.star && STARS[p.brawler]?.includes(p.star) ? p.star : null;
+    if (resetUses || p.gadget !== oldGadget || p.gUses == null) p.gUses = p.gadget ? GADGET_USES : 0;
+    const f = p.maxHp > 0 ? p.hp / p.maxHp : 1;
+    p.maxHp = this.baseHp(p) + p.cubes * CUBE_HP;
+    p.hp = Math.max(1, Math.round(p.maxHp * Math.min(1, f)));
+  }
   enemies(a, b) { return a !== b && (!a.team || a.team !== b.team); }
 
   // ---------------------------------------------------------------- players
@@ -192,6 +206,7 @@ export class Sim {
     p.emotes = Array.isArray(lo.emotes) ? lo.emotes : [0, 1];
     p.wmast = lo.mastery | 0;
     p.lo = lo; // kept so a respawn gives your armory weapon back after a Free Play pick-up
+    if (lo.power) { p.pset = lo.power; this.applyPower(p, this.phase !== 'play' || !!this.hub); }
     if (lo.w2 && WEAPONS[lo.w2] && !(p.w2 && p.w2.dropped)) this.setWeapon(p, lo.w2, lo.perks || []);
     p.cos = { ...(p.cos || {}), badge: lo.badge || null, wskin: lo.badge || null };
     this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
@@ -230,6 +245,7 @@ export class Sim {
   importPlayer(state, name, connected) {
     const p = this.addPlayer({ name: state.name || name, brawler: state.brawler, state, connected });
     if (typeof state.lastCombat === 'number') p.lastCombat = this.time + state.lastCombat;
+    if (p.pset) { const hp = p.hp, mh = p.maxHp; this.applyPower(p); p.hp = hp; p.maxHp = mh; }
     if (state.dash) p.dash = { ...state.dash, hit: new Set() };
     if (state.knock) p.knock = { ...state.knock };
     return p;
@@ -323,6 +339,15 @@ export class Sim {
       if (this.mode.teams) b.team = this.smallerTeam();
       this.setWeapon(b, WEAPON_IDS[Math.floor(Math.random() * WEAPON_IDS.length)]); // bots carry a random secondary
     }
+    // bots play at the humans' average power, so a match stays fair at every level
+    const humansNow = this.humans(), avg = humansNow.length ? Math.round(humansNow.reduce((t, h) => t + (h.power || 1), 0) / humansNow.length) : 1;
+    for (const b of this.players.values()) {
+      if (!b.wasBot) continue;
+      const pick = (list) => list[Math.floor(Math.random() * list.length)].id;
+      b.pset = { [b.brawler]: { power: avg, gadget: avg >= 7 ? pick(GADGETS[b.brawler]) : null, star: avg >= 9 ? pick(STARS[b.brawler]) : null } };
+      this.applyPower(b, true); b.hp = b.maxHp;
+    }
+    for (const p of humansNow) if (p.gadget) p.gUses = GADGET_USES; // 3 gadget uses per match
     // teams spawn on opposite sides of the ring; FFA spawns are shuffled
     const SP = this.map.spawns || SPAWNS;
     const spawns = SP.slice().sort(() => Math.random() - 0.5);
@@ -333,6 +358,7 @@ export class Sim {
       p.x = p.px = s.x; p.y = p.py = s.y;
       p.facing = Math.atan2(this.center.y - s.y, this.center.x - s.x);
     }
+    this.mode.onStart?.(this);
     this.phase = 'play';
     this.time = 0;
     // bot difficulty follows the humans' trophies (guests/new players get easy bots)
@@ -624,6 +650,8 @@ export class Sim {
   // opt: { wid (secondary weapon id), crit } — crits are drawn big; hit markers go to the shooter
   damage(src, t, amount, charge, cause = 'poison', opt = null) {
     if (!t.alive || t.spawnProt > 0 || this.isSafe(t.x, t.y)) return;
+    if (t.armorT > 0) amount *= 1 - t.armorF; // Iron Skin gadget
+    if (t.star && t.star.fx.armor) amount *= t.star.fx.armor; // Bulwark / Iron Will
     amount = Math.round(amount);
     t.hp -= amount;
     t.lastCombat = this.time;
@@ -640,11 +668,15 @@ export class Sim {
         if (opt && opt.wid) {
           const ws = (src.wstat[opt.wid] ||= { d: 0, k: 0 }); ws.d += amount;
           const a = BRAWLERS[src.brawler].attack;
-          if (charge && src.alive) src.superC = Math.min(1, src.superC + amount / (a.damage * BRAWLERS[src.brawler].superHits));
-        } else if (charge && src.alive) src.superC = Math.min(1, src.superC + 1 / BRAWLERS[src.brawler].superHits);
+          if (charge && src.alive) src.superC = Math.min(1, src.superC + (amount / (a.damage * BRAWLERS[src.brawler].superHits)) * (src.star?.fx.charge || 1));
+        } else if (charge && src.alive) src.superC = Math.min(1, src.superC + (1 / BRAWLERS[src.brawler].superHits) * (src.star?.fx.charge || 1));
       }
     }
     if (t.hp <= 0) this.kill(t, src, cause, opt);
+    else if (t.star && t.star.fx.lowHeal && !t.lowHealUsed && t.hp < t.maxHp * 0.25) { // Second Wind
+      t.lowHealUsed = true; t.hp = Math.min(t.maxHp, t.hp + t.maxHp * t.star.fx.lowHeal);
+      this.fx.push(['gadget', Math.round(t.x), Math.round(t.y), -1, t.id]);
+    }
   }
 
   gainBounty(p, gain) {
@@ -653,6 +685,7 @@ export class Sim {
   }
 
   kill(t, src, cause, opt = null) {
+    if (src && !src.remote && src.alive && src.star && src.star.fx.killHeal) src.hp = Math.min(src.maxHp, src.hp + src.maxHp * src.star.fx.killHeal); // Scavenger
     t.alive = false;
     if (src && !src.remote) {
       src.hm |= 2; // kill marker
@@ -712,12 +745,13 @@ export class Sim {
   respawn(p) {
     const B = BRAWLERS[p.brawler];
     Object.assign(p, {
-      alive: true, hp: B.hp, maxHp: B.hp, cubes: 0, ammo: 3, reloadP: 0, stun: 0, cloak: 0, dash: null, knock: null, burst: null,
+      alive: true, hp: this.baseHp(p), maxHp: this.baseHp(p), cubes: 0, ammo: 3, reloadP: 0, stun: 0, cloak: 0, dash: null, knock: null, burst: null,
       spawnProt: 2, respawnT: 0, mvx: 0, mvy: 0, rushArmed: true, rush: 0, lastCombat: -99, poisonT: 0.5, bushT: 0,
     });
     if (p.w2 && p.w2.dropped) { if (p.lo && p.lo.w2) this.setWeapon(p, p.lo.w2, p.lo.perks || []); else this.setWeapon(p, null); }
     else if (p.w2) { const w = this.w2def(p); p.w2.ammo = w.ammo; p.w2.reloadP = 0; p.w2.cd = 0; }
     p.slot = 0; p.swapT = 0;
+    if (this.hub && p.gadget) p.gUses = GADGET_USES; p.lowHealUsed = false;
     let pt;
     if (this.hub && !p.bot) {
       // somewhere in our slice of the hub
@@ -756,7 +790,7 @@ export class Sim {
   pick(p, brawler) {
     if (!BRAWLERS[brawler] || !p.alive || !this.isSafe(p.x, p.y) || p.brawler === brawler) return;
     p.brawler = brawler;
-    p.hp = p.maxHp = BRAWLERS[brawler].hp + p.cubes * CUBE_HP;
+    p.maxHp = 1; p.hp = 1; this.applyPower(p, true); p.hp = p.maxHp;
     p.ammo = 3; p.superC = 0;
     if (p.equipped) this.setCosmetics(p.id, p.equipped); else this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
   }
@@ -809,18 +843,20 @@ export class Sim {
     }
     if (inp.f != null) { if (p.slot === 1 && p.w2) this.tryWeapon(p, inp.f, inp, inp.s); else this.tryAttack(p, inp.f, inp.fd ?? 1, inp.s); }
     if (inp.u != null) this.trySuper(p, inp.u);
+    if (inp.gd) this.useGadget(p);
   }
 
   input(id, m) {
     const p = this.players.get(id);
     if (!p || p.bot) return;
     if (m.t === 'pick') return this.pick(p, m.brawler);
+    if (m.t === 'emote') return this.emote(p, m.e);
     if (m.t !== 'in') return;
     const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0);
     // angles from the client are untrusted: wrap into (-PI, PI] (a huge value would hang the angle loops)
     const ang = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.atan2(Math.sin(v), Math.cos(v)) : null);
-    if (m.t === 'emote') return this.emote(p, m.e);
     p.queue.push({
+      gd: m.gd === 1 ? 1 : 0, // use the gadget
       s: m.s | 0, mx: num(m.mx), my: num(m.my), ax: num(m.ax), ay: num(m.ay), f: ang(m.f), u: ang(m.u), fd: typeof m.fd === 'number' ? Math.max(0, Math.min(1, m.fd)) : 1,
       w: m.w === 0 || m.w === 1 ? m.w : null, // swap request (0 signature, 1 secondary)
       ch: typeof m.ch === 'number' && Number.isFinite(m.ch) ? Math.max(0, Math.min(2, m.ch)) : 0, // charge held (s)
@@ -888,11 +924,11 @@ export class Sim {
       }
       p.px = p.x; p.py = p.y;
       p.atkCd -= DT; p.stun -= DT; p.cloak -= DT; p.reveal -= DT; p.rush -= DT; p.spawnProt -= DT; p.slowT -= DT; p.cageT -= DT;
-      p.swapT -= DT; p.flareT -= DT;
+      p.swapT -= DT; p.flareT -= DT; p.armorT -= DT;
       if (p.w2) { // secondary weapon: cooldown, magazine reload, burst rounds
         const w = this.w2def(p), st = p.w2;
         st.cd -= DT;
-        if (st.ammo < w.ammo) { st.reloadP += DT / w.reload; if (st.reloadP >= 1) { st.ammo++; st.reloadP = st.ammo >= w.ammo ? 0 : st.reloadP - 1; } }
+        if (st.ammo < w.ammo) { st.reloadP += (DT / w.reload) * (p.star?.fx.reload || 1); if (st.reloadP >= 1) { st.ammo++; st.reloadP = st.ammo >= w.ammo ? 0 : st.reloadP - 1; } }
         if (p.wburst) { p.wburst.t -= DT; if (p.wburst.t <= 0) { p.wburst.fire(p.wburst.k++); p.wburst.left--; p.wburst.t += w.interval; if (p.wburst.left <= 0 || p.slot !== 1) p.wburst = null; } }
       }
       if (p.poison) { // Viper poison: damage over time
@@ -902,7 +938,10 @@ export class Sim {
         if (!p.alive) continue;
       }
 
-      if (p.bot) p.queue = [botInput(this, p)];
+      if (p.bot) {
+        p.queue = [p.dummy ? this.mode.dummyInput(this, p) : botInput(this, p)];
+        if (p.gadget && p.gUses > 0 && this.time - p.lastCombat < 1 && p.hp < p.maxHp * 0.55 && Math.random() < 0.04) this.useGadget(p);
+      }
       p.credits = Math.min(p.credits + 1, 4);
       while (p.queue.length && p.credits >= 1) {
         p.credits -= 1;
@@ -926,7 +965,7 @@ export class Sim {
         if (p.knock.t <= 0) p.knock = null;
       }
       if (p.ammo < 3) {
-        p.reloadP += DT / B.reload;
+        p.reloadP += (DT / B.reload) * (p.star?.fx.reload || 1);
         if (p.reloadP >= 1) { p.ammo++; p.reloadP = p.ammo >= 3 ? 0 : p.reloadP - 1; }
       }
       if (this.time - p.lastCombat > REGEN_DELAY && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * REGEN_RATE * DT);
@@ -1103,6 +1142,32 @@ export class Sim {
     this.delayed = keep;
   }
 
+  // GADGET: an active ability with 3 uses a match (Power 7+)
+  useGadget(p) {
+    const g = p.gadget, fx = g && g.fx;
+    if (!g || !p.alive || p.gUses <= 0 || p.stun > 0 || p.dash || this.isSafe(p.x, p.y) || this.time - (p.gadgetT ?? -9) < 1) return;
+    p.gUses--; p.gadgetT = this.time;
+    const near = (r) => [...this.players.values()].filter((e) => this.enemies(p, e) && e.alive && Math.hypot(e.x - p.x, e.y - p.y) < r);
+    if (fx.dash) { const a = p.facing, t = 0.15; p.knock = { vx: (Math.cos(a) * fx.dash) / t, vy: (Math.sin(a) * fx.dash) / t, t }; }
+    if (fx.slowAoe) for (const e of near(fx.slowAoe[0])) e.slowT = Math.max(e.slowT, fx.slowAoe[1]);
+    if (fx.armor) { p.armorT = fx.armor[1]; p.armorF = fx.armor[0]; }
+    if (fx.knockAoe) for (const e of near(fx.knockAoe[0])) {
+      const a = Math.atan2(e.y - p.y, e.x - p.x), t = 0.15;
+      e.knock = { vx: (Math.cos(a) * 220) / t, vy: (Math.sin(a) * 220) / t, t };
+      this.damage(p, e, fx.knockAoe[1] * this.dmgMult(p), true);
+    }
+    if (fx.cloak) p.cloak = Math.max(p.cloak, fx.cloak);
+    if (fx.revealAoe) for (const e of near(fx.revealAoe[0])) { e.reveal = Math.max(e.reveal, fx.revealAoe[1]); e.flareT = Math.max(e.flareT || 0, fx.revealAoe[1]); }
+    if (fx.heal) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * fx.heal);
+    if (fx.mine) this.placeMine({ owner: p.id, oname: p.name, ozone: this.zone, team: p.team, x: p.x, y: p.y, dmg: BRAWLERS.rook.attack.damage * this.dmgMult(p) });
+    if (fx.pull) {
+      let best = null, bd = fx.pull;
+      for (const e of near(fx.pull)) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bd && this.canSee(p, e) && lineOfSight(this.map, p.x, p.y, e.x, e.y)) { bd = d; best = e; } }
+      if (best) { const a = Math.atan2(p.y - best.y, p.x - best.x), dist = Math.max(0, bd - 70), t = 0.2; best.knock = { vx: (Math.cos(a) * dist) / t, vy: (Math.sin(a) * dist) / t, t }; best.stun = Math.max(best.stun, 0.3); }
+    }
+    this.fx.push(['gadget', Math.round(p.x), Math.round(p.y), GADGETS[p.brawler].indexOf(g), p.id]);
+  }
+
   placeMine(b) {
     const a = BRAWLERS.rook.attack;
     const mine = { id: this.nextEnt++, owner: b.owner, oname: b.oname, ozone: b.ozone, team: b.team, x: b.x, y: b.y, arm: a.arm, life: a.life, trigger: a.trigger, blast: a.blast, dmg: b.dmg };
@@ -1272,7 +1337,7 @@ export class Sim {
       top: top ? [top.id, top.name, top.bounty] : null, ev: this.event ? [this.event.id, this.event.ph, r2(this.event.t)] : null,
       md: this.mode.hud?.(this) || null,
     };
-    if (this.mode.respawn && this.tickN % 10 === 0) {
+    if (this.mode.respawn && !this.mode.noRewards && this.tickN % 10 === 0) {
       common.lb = this.mode.rank(this).slice(0, 3).map((p) => [p.id, p.name, this.mode.score(p)]);
     }
     if (this.hub && this.tickN % 40 === 0) common.on = this.humans().length;
@@ -1283,7 +1348,7 @@ export class Sim {
     for (const p of this.players.values()) {
       if (!p.alive) continue;
       fast.set(p.id, [p.id, Math.round(p.x), Math.round(p.y), Math.round(p.hp), Math.round(p.facing * 100) / 100, this.flags(p)]);
-      const st = [p.id, p.maxHp, p.cubes, p.bounty, this.glow(p), p.crystals, p.team];
+      const st = [p.id, p.maxHp, p.cubes, p.bounty, this.glow(p), p.crystals, p.team, p.w2 ? weaponIndex(p.w2.id) : -1, p.power || 1];
       slow.set(p.id, st);
     }
     const refresh = this.tickN % 40 === 0;
@@ -1300,7 +1365,7 @@ export class Sim {
         }
         others.push(fast.get(p.id));
         const st = slow.get(p.id), was = memo.get(p.id);
-        if (refresh || !was || was[1] !== st[1] || was[2] !== st[2] || was[3] !== st[3] || was[4] !== st[4] || was[5] !== st[5] || was[6] !== st[6]) { memo.set(p.id, st); statics.push(st); }
+        if (refresh || !was || was[1] !== st[1] || was[2] !== st[2] || was[3] !== st[3] || was[4] !== st[4] || was[5] !== st[5] || was[6] !== st[6] || was[7] !== st[7] || was[8] !== st[8]) { memo.set(p.id, st); statics.push(st); }
       }
       return [others, statics];
     };
@@ -1336,6 +1401,7 @@ export class Sim {
           sl: v.slowT > 0 ? r2(v.slowT) : 0, tp: v.tp, tm: v.team, hb,
           ws: v.slot, sw: v.swapT > 0 ? r2(v.swapT) : 0, pz: v.poison ? 1 : 0,
           w2: v.w2 ? [weaponIndex(v.w2.id), r2(v.w2.ammo + v.w2.reloadP), r2(Math.max(0, v.w2.cd))] : null,
+          pw: v.power || 1, gu: v.gadget ? v.gUses : -1, gi: v.gadget ? GADGETS[v.brawler].indexOf(v.gadget) : -1, sp: v.star ? v.star.fx.speed || 1 : 1,
         }, v, refresh),
       });
     }

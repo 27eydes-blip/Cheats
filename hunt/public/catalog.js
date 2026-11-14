@@ -89,7 +89,8 @@ function grant(p, r) {
 
 // All progression-changing shop actions. Runs on the server for accounts (authoritative).
 import { claimMission, weaponUnlocked } from './progression.js';
-import { WEAPONS, PERKS, masteryInfo } from './weapons.js';
+import { WEAPONS, perksFor, masteryInfo } from './weapons.js';
+import { powerAction } from './power.js';
 export function applyPurchase(p, req) {
   switch (req.action) {
     case 'mission': return claimMission(p, req.id);
@@ -105,13 +106,14 @@ export function applyPurchase(p, req) {
       p.equipped[slot] = id || null;
       return { progress: p };
     }
+    case 'upgrade': case 'gadget': case 'star': return powerAction(p, req); // brawler Power (coins earned by playing)
     case 'loadout': { // secondary weapon for every match
       if (req.w2 != null && !weaponUnlocked(p, req.w2)) return { error: 'weapon locked' };
       p.loadout = { ...(p.loadout || {}), w2: req.w2 || null };
       return { progress: p };
     }
     case 'perk': { // mastery 2/5/8: pick one of two (you can change your pick any time)
-      const tier = req.tier | 0, opts = PERKS[tier];
+      const tier = req.tier | 0, opts = WEAPONS[req.weapon] ? perksFor(req.weapon)[tier] : null;
       if (!opts || !opts.some((o) => o.id === req.id)) return { error: 'bad perk' };
       if (!WEAPONS[req.weapon]) return { error: 'bad weapon' };
       if (masteryInfo(p.mastery?.[req.weapon] || 0).level < tier) return { error: `Reach mastery ${tier} first` };

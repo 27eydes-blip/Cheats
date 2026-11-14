@@ -908,6 +908,8 @@ export function drawStatus(ctx, p, isMe, t, side) {
   rr(ctx, p.x - w / 2, y - h / 2, w, h, 5); ctx.fillStyle = '#3a2a5e'; ctx.fill();
   if (f > 0) { rr(ctx, p.x - w / 2, y - h / 2, Math.max(8, w * f), h, 5); ctx.fillStyle = isMe ? '#4be06e' : side === 'mate' ? '#3a86ff' : '#ff4d5e'; ctx.fill(); }
   outlinedText(ctx, String(Math.ceil(p.hp)), p.x, y + 1, 12);
+  if (p.pw) drawPowerChip(ctx, p.x - w / 2 - (p.cu > 0 ? 38 : 14), y, p.pw); // POWER level
+  if (p.wpn) { ctx.save(); ctx.translate(p.x + w / 2 + (p.bt > 0 ? 44 : 20), y + 2); ctx.scale(0.42, 0.42); drawWeaponDrop(ctx, 0, 0, p.wpn, 0, 0); ctx.restore(); } // secondary weapon
   if (p.cu > 0) {
     rr(ctx, p.x - w / 2 - 24, y - 10, 20, 20, 5); ctx.fillStyle = '#5be35b'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
     outlinedText(ctx, String(p.cu), p.x - w / 2 - 14, y + 1, 12);
@@ -1199,3 +1201,43 @@ export function drawWeaponDrop(ctx, x, y, id, rare, t) {
 }
 // mastery weapon skin tint for a bullet's trail (Bronze/Silver/Gold/Bane)
 export const masteryTint = (id, t) => (id === 'bane' ? (SETTINGS.reduceFlash || Math.sin(t * 8) > 0 ? '#ff2d6a' : '#9b1a4a') : BADGE_COL[id] ? BADGE_COL[id][1] : null);
+
+// CURRENT WEAPON next to the fire button: its icon, name and ammo
+export function drawWeaponPanel(ctx, panel, info, t) {
+  if (!panel || !info) return;
+  const s = panel.s || 1, w = 104 * s, h = 46 * s, x = panel.x - w / 2, y = panel.y - h / 2;
+  ctx.save();
+  rr(ctx, x, y, w, h, 12 * s); ctx.fillStyle = 'rgba(30,16,51,0.82)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+  ctx.save(); ctx.translate(x + 24 * s, y + h / 2 - 2 * s); ctx.scale(0.62 * s, 0.62 * s);
+  if (info.weapon) drawWeaponDrop(ctx, 0, 0, info.weapon, 0, 0);
+  else { ctx.beginPath(); ctx.arc(0, 0, 16, 0, 7); ctx.fillStyle = info.color || '#ffd23f'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke(); outlinedText(ctx, '✦', 0, 1, 18); }
+  ctx.restore();
+  outlinedText(ctx, info.name, x + 70 * s, y + 15 * s, 11 * s, '#fff');
+  const n = Math.min(info.max, 12), pw = Math.max(3, Math.min(9, (52 * s) / n - 2)), gap = 2, total = n * pw + (n - 1) * gap;
+  for (let i = 0; i < n; i++) {
+    const f = Math.max(0, Math.min(1, info.ammo * (n / info.max) - i));
+    const px = x + 70 * s - total / 2 + i * (pw + gap), py = y + 26 * s;
+    rr(ctx, px, py, pw, 8 * s, 2); ctx.fillStyle = INK; ctx.fill();
+    if (f > 0) { rr(ctx, px, py, pw * f, 8 * s, 2); ctx.fillStyle = f >= 1 ? (info.weapon ? '#5ff4ff' : '#ffb000') : '#7a6a9a'; ctx.fill(); }
+  }
+  ctx.restore();
+}
+// GADGET button (Power 7+): uses left as pips
+export function drawGadgetButton(ctx, btn, info, t) {
+  if (!btn || !info) return;
+  const ok = info.uses > 0;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(btn.x, btn.y, btn.r, 0, Math.PI * 2); ctx.fillStyle = ok ? '#4be0c8' : 'rgba(60,45,100,0.85)'; ctx.fill();
+  ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke();
+  outlinedText(ctx, 'GADGET', btn.x, btn.y - 3, 9, ok ? '#fff' : '#9f93c4');
+  for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(btn.x - 9 + i * 9, btn.y + 9, 3.2, 0, 7); ctx.fillStyle = i < info.uses ? '#fff' : 'rgba(0,0,0,0.4)'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = INK; ctx.stroke(); }
+  ctx.restore();
+}
+// POWER chip + weapon icon on a player's nameplate ("why did I lose?")
+export function drawPowerChip(ctx, x, y, power) {
+  ctx.save(); ctx.translate(x, y);
+  ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; ctx.lineTo(Math.cos(a) * 10, Math.sin(a) * 10); } ctx.closePath();
+  ctx.fillStyle = power >= 9 ? '#ff6bd6' : power >= 7 ? '#4be0c8' : '#7b52ff'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
+  outlinedText(ctx, String(power), 0, 1, 11);
+  ctx.restore();
+}

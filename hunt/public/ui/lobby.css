@@ -211,3 +211,18 @@ body.reduce-flash .marker { animation: none; }
 .armory .ped .tag .ico, .armory .ped .tag svg { width: 1.1em; height: 1.1em; }
 .lvups { font-family: var(--font); color: #fff; font-size: calc(var(--u) * 1.4); display: grid; gap: 2px; margin-top: 4px; }
 .lvups b { color: var(--gold); font-weight: normal; }
+.power .btn { padding: 2px 8px; font-size: .9em; }
+.pwlv { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.pwnum { font-family: var(--font); font-size: calc(var(--u) * 4.2); color: var(--gold); -webkit-text-stroke: 2px var(--ink); min-width: 2ch; text-align: center; }
+.pwpick { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0; }
+.pwpick .pwhead { grid-column: 1 / -1; font-family: var(--font); color: #fff; font-size: calc(var(--u) * 1.6); text-align: left; }
+.pwpick .chipbtn { text-align: left; line-height: 1.15; padding: 6px 8px; white-space: normal; }
+.pwpick .chipbtn small { font-family: system-ui, sans-serif; opacity: .85; }
+.pwpick .chipbtn[disabled] { opacity: .45; }
+.mxp { margin-top: 4px; }
+.coinsline { font-family: var(--font); color: var(--gold); font-size: calc(var(--u) * 1.6); }
+.ucards { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; perspective: 600px; }
+.ucard { min-width: calc(var(--u) * 12); padding: 6px 10px; border: 3px solid var(--ink); border-radius: 12px; background: var(--panel-2); box-shadow: inset 0 -4px 0 var(--uc);
+  display: flex; flex-direction: column; font-family: var(--font); color: #fff; text-align: center; opacity: 0; animation: ureveal .55s cubic-bezier(.2,1.4,.4,1) forwards; }
+.ucard small { color: var(--uc); font-size: .75em; } .ucard b { font-weight: normal; font-size: 1.1em; } .ucard span { font-size: .75em; opacity: .85; }
+@keyframes ureveal { from { opacity: 0; transform: rotateY(90deg) scale(.6); } to { opacity: 1; transform: none; } }

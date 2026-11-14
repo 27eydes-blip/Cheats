@@ -65,11 +65,17 @@ console.log('PROGRESSION OK');
   assert(m.progress.mastery.hornet > 0 && !m.progress.mastery.volt, 'mastery for weapons only');
   const q = m.progress; assert(W.masteryInfo(q.mastery.hornet).level >= 2, 'mastery 2 reached');
   assert(!C.applyPurchase(q, { action: 'perk', weapon: 'hornet', tier: 2, id: 'deeppockets' }).error);
-  assert.equal(C.applyPurchase(q, { action: 'perk', weapon: 'hornet', tier: 8, id: 'hollowpoint' }).error, 'Reach mastery 8 first');
+  assert.equal(C.applyPurchase(q, { action: 'perk', weapon: 'hornet', tier: 8, id: 'hotrounds' }).error, 'Reach mastery 8 first');
   C.applyPurchase(q, { action: 'perk', weapon: 'hornet', tier: 2, id: 'quickhands' });
   assert.deepEqual(q.perks.hornet, ['quickhands'], 'one perk per tier (re-pick replaces)');
   q.loadout = { w2: 'hornet' };
   assert.deepEqual(P.loadoutFor(q).perks, ['quickhands']);
   assert(W.withPerks('hornet', ['quickhands']).swap < W.SWAP_TIME);
+  // weapon-specific perks: Stormline at mastery 5 is faster reload OR +1 round per burst
+  assert.deepEqual(W.perksFor('stormline')[5].map((x) => x.id), ['fastreload', 'extraround']);
+  assert.equal(W.withPerks('stormline', ['extraround']).burst, W.WEAPONS.stormline.burst + 1);
+  assert(Math.abs(W.withPerks('stormline', ['fastreload']).reload / W.WEAPONS.stormline.reload - 0.9) < 1e-9);
+  assert.equal(C.applyPurchase(q, { action: 'perk', weapon: 'hornet', tier: 5, id: 'extraround' }).error, 'bad perk', "another weapon's perk is refused");
+  for (const id of W.WEAPON_IDS) { const t = W.perksFor(id); assert(t[2].length === 2 && t[5].length === 2 && t[8].length === 2, id); assert.equal(new Set([...t[2], ...t[5], ...t[8]].map((x) => x.id)).size, 6, id + ' perk ids unique'); }
   console.log('LEVELING + MASTERY OK');
 }

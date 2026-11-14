@@ -6,18 +6,29 @@ import { sfx } from '../audio.js';
 import { icon } from './icons.js';
 import { rewardBurst } from './fx.js';
 import { levelInfo } from '../progression.js';
-import { WEAPONS } from '../weapons.js';
+import { WEAPONS, masteryInfo } from '../weapons.js';
 import { SKINS, TITLES, EMOTES } from '../catalog.js';
-// what a level-up or a mastery-up gave you, in a line each
-function upsText(m) {
-  const out = [];
+// UNLOCK REVEAL: a card for each reward (level-ups, weapon unlocks, mastery-ups), flipping in one by one
+function upsHtml(m) {
+  const cards = [];
+  const card = (kind, title, sub, col) => cards.push(`<div class="ucard" style="--uc:${col};animation-delay:${0.9 + cards.length * 0.35}s"><small>${esc(kind)}</small><b>${esc(title)}</b><span>${esc(sub)}</span></div>`);
   for (const r of m.levels || []) {
-    const bits = [`${r.coins} coins`, ...(r.weapons || []).map((w) => `weapon: ${WEAPONS[w].name}`), ...(r.emotes || []).map((e) => `emote: ${EMOTES.find((x) => x.id === e)?.text}`)];
-    if (r.skin) bits.push(`skin: ${SKINS[r.skin].name}`); if (r.title) bits.push(`title: ${TITLES[r.title]}`);
-    out.push(`<div><b>LEVEL ${r.level}!</b> ${bits.map(esc).join(' · ')}</div>`);
+    card('LEVEL UP', `LEVEL ${r.level}`, `+${r.coins} coins`, '#ffd23f');
+    for (const w of r.weapons || []) card('NEW WEAPON', WEAPONS[w].name, 'in the Armory', '#5ff4ff');
+    for (const e of r.emotes || []) card('NEW EMOTE', EMOTES.find((x) => x.id === e)?.text || e, 'tap !? in a match', '#ff9f43');
+    if (r.skin) card('NEW SKIN', SKINS[r.skin].name, 'in the Locker', '#ff6bd6');
+    if (r.title) card('NEW TITLE', TITLES[r.title], 'in the Locker', '#c9a6ff');
   }
-  for (const x of m.mastery || []) out.push(`<div><b>${esc(WEAPONS[x.id]?.name || x.id)} MASTERY ${x.level}</b>${[2, 5, 8].includes(x.level) ? ' · pick a perk in the Armory' : ''}</div>`);
-  return out.slice(-4).join('');
+  for (const x of m.mastery || []) card('MASTERY UP', `${WEAPONS[x.id]?.name || x.id} ${x.level}`, [2, 5, 8].includes(x.level) ? 'pick a perk in the Armory' : x.level === 3 ? 'Bronze skin' : x.level === 6 ? 'Silver skin' : x.level === 7 ? 'kill effect' : x.level === 9 ? 'Gold skin' : x.level === 10 ? "Hunter's Bane!" : 'keep going', '#4be0c8');
+  // weapon mastery progress for the weapon you used most
+  const w = (m.wxp || [])[0];
+  let bar = '';
+  if (w && WEAPONS[w.id]) {
+    const a = masteryInfo(w.xp0), b2 = masteryInfo(w.xp1);
+    const from = b2.level > a.level ? 0 : a.need ? a.into / a.need : 1, to = b2.need ? b2.into / b2.need : 1;
+    bar = `<div class="xp mxp">${esc(WEAPONS[w.id].name.toUpperCase())} <b>M${b2.level}</b><div class="bar shine"><i data-from="${Math.round(from * 100)}" data-to="${Math.round(to * 100)}" style="width:${Math.round(from * 100)}%;background:linear-gradient(#7dfff0,#2bc4cf)"></i></div><span>+${w.xp1 - w.xp0}</span></div>`;
+  }
+  return bar + (m.coins ? `<div class="coinsline">+${m.coins} coins</div>` : '') + (cards.length ? `<div class="ucards">${cards.slice(0, 6).join('')}</div>` : '');
 }
 
 const $ = (id) => document.getElementById(id);
@@ -119,7 +130,9 @@ export function createResults({ onAgain, onLobby }) {
     const L = levelInfo(m.progress.xp), before = levelInfo(Math.max(0, m.progress.xp - m.xp));
     count($('rsTro'), 0, m.delta, 900, (v) => (v >= 0 ? '+' : '') + v);
     $('rsLv').textContent = L.level; $('rsXpN').textContent = `+${m.xp} XP`;
-    $('rsUps').innerHTML = upsText(m);
+    $('rsUps').innerHTML = upsHtml(m);
+    for (const i of $('rsUps').querySelectorAll('[data-to]')) setTimeout(() => { i.style.transition = 'width 1.2s cubic-bezier(.2,.8,.3,1)'; i.style.width = i.dataset.to + '%'; }, 500);
+    if ((m.levels || []).length || (m.mastery || []).length) setTimeout(() => sfx('reward'), 1000);
     const bar = $('rsXp');
     bar.style.transition = 'none'; bar.style.width = `${L.level > before.level ? 0 : Math.round((before.into / before.need) * 100)}%`;
     requestAnimationFrame(() => { bar.style.transition = 'width 1.2s cubic-bezier(.2,.8,.3,1)'; bar.style.width = `${Math.round((L.into / L.need) * 100)}%`; });

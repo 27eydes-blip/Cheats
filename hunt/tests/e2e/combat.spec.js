@@ -46,3 +46,28 @@ test('armory: 15 weapons, 3 open at level 1, equip a starter, locked ones say th
   await expect(page.locator('#arInfo')).toContainText('REACH LEVEL 40');
   expect(errors).toEqual([]);
 });
+
+test('power screen: level, upgrade cost, gadgets and star powers locked until 7 / 9', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+  await page.click('#npUp');
+  await expect(page.locator('.pwlv .pwnum')).toHaveText('1');
+  await expect(page.locator('.pwpick')).toHaveCount(2);
+  await expect(page.locator('.pwpick .chipbtn[disabled]')).toHaveCount(4);
+  expect(errors).toEqual([]);
+});
+
+test('test range: armory TEST RANGE opens a private range with 6 dummies and the picked weapon', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.setViewportSize({ width: 667, height: 375 });
+  await page.goto('/');
+  await page.click('#rail_armory');
+  await page.click('#arItems .ped[data-w="breaker"]');
+  await page.click('#arTry');
+  await page.waitForFunction(() => window.__hunt?.me?.w2 && window.__hunt.view.others.filter((o) => /Dummy/.test(o.name)).length === 6, null, { timeout: 30_000 });
+  expect(await page.evaluate(() => window.__hunt.me.w2[0])).toBe(2); // breaker
+  await expect(page.locator('#rangeLeave')).toBeVisible();
+  await page.click('#rangeLeave');
+  await expect(page.locator('#lobby')).toBeVisible();
+  expect(errors).toEqual([]);
+});

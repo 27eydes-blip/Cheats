@@ -49,6 +49,7 @@ export class Input {
       if (!this.enabled || e.repeat) return;
       if (k === 'e' || k === 'q') this.actions.push({ type: 'super', mode: 'mouse' });
       if (k === 'r' || k === 'tab' || k === '2') { this.actions.push({ type: 'swap' }); e.preventDefault(); }
+      if (k === 'f' || k === 'g') this.actions.push({ type: 'gadget' });
       if (k === ' ') { this.actions.push({ type: 'fire', mode: 'mouse' }); e.preventDefault(); }
     });
     addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
@@ -63,7 +64,11 @@ export class Input {
     const L = !!SETTINGS.leftHanded, X = (x) => (L ? W - x : x);
     this.superBtn = { x: X(W - 205 * s - 10 - sa.r), y: H - 70 * s - 10 - sa.b, r: 38 * s };
     this.atkHint = { x: X(W - 95 * s - 10 - sa.r), y: H - 100 * s - 10 - sa.b, r: STICK_R };
-    this.swapBtn = { x: X(W - 205 * s - 10 - sa.r), y: H - 155 * s - 10 - sa.b, r: 30 * s };
+    // swap button right above the fire button; the current weapon (icon + ammo) beside it;
+    // the gadget button next to SUPER
+    this.swapBtn = { x: X(W - 95 * s - 10 - sa.r), y: H - 196 * s - 10 - sa.b, r: 28 * s };
+    this.weaponPanel = { x: X(W - 95 * s - 10 - sa.r) + (L ? 1 : -1) * 92 * s, y: H - 196 * s - 10 - sa.b, s, L };
+    this.gadgetBtn = { x: X(W - 290 * s - 10 - sa.r), y: H - 56 * s - 10 - sa.b, r: 27 * s };
     // idle move-stick hint: on short phones sit it lower so it clears the leaderboard
     this.moveHint = { x: X(110 + sa.l), y: (H < 430 ? H - STICK_R - 14 : H - 105) - sa.b };
   }
@@ -85,6 +90,8 @@ export class Input {
       if (hit) { hit.on(); continue; } // a HUD button, not a stick
       const sb = this.superBtn, wb = this.swapBtn;
       if (this.swapOn && wb && Math.hypot(x - wb.x, y - wb.y) < wb.r + 8) { this.actions.push({ type: 'swap' }); continue; }
+      const gb = this.gadgetBtn;
+      if (this.gadgetOn && gb && Math.hypot(x - gb.x, y - gb.y) < gb.r + 8) { this.actions.push({ type: 'gadget' }); continue; }
       const moveSide = SETTINGS.leftHanded ? x > this.W * 0.55 : x < this.W * 0.45;
       if (!this.aimT && Math.hypot(x - sb.x, y - sb.y) < sb.r + 14) {
         this.aimT = { id: t.identifier, kind: 'super', bx: sb.x, by: sb.y, x, y, t0: performance.now(), aiming: false };

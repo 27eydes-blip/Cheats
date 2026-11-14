@@ -11,7 +11,8 @@ import { setMusicVolume } from './music.js';
 import * as A from '../account.js';
 import { SKINS, KILL_FX, TITLES, TITLE_PRICE, PASS, PASS_TIERS, PASS_XP_PER_TIER, PREMIUM_PRICE, CURRENCY, passTier } from '../catalog.js';
 import { totalTrophies, roadReward, ROAD_STEP, missionState, msToReset, levelInfo, levelReward, weaponUnlocked } from '../progression.js';
-import { WEAPONS, WEAPON_IDS, WEAPON_CLASSES, weaponStats, withPerks, masteryInfo, MASTERY_SKINS, PERKS } from '../weapons.js';
+import { MAX_POWER, POWER_COST, GADGET_AT, STAR_AT, GADGETS, STARS, clampPower, powerMult } from '../power.js';
+import { WEAPONS, WEAPON_IDS, WEAPON_CLASSES, weaponStats, withPerks, masteryInfo, MASTERY_SKINS, perksFor } from '../weapons.js';
 import { EVENTS, EVENT_IDS } from '../events/index.js';
 
 const INK = '#1b1033';
@@ -412,10 +413,11 @@ export function openArmory(api, onDone) {
       <p class="hint" style="margin:4px 0">${esc(w.desc)}</p>
       <div class="stats">${bar('DAMAGE', st.bars.damage, Math.round(st.damage))}${bar('FIRE RATE', st.bars.fireRate, st.fireRate.toFixed(1) + '/s')}${bar('RANGE', st.bars.range, Math.round(st.range))}${bar('RELOAD', st.bars.reload, st.reload.toFixed(2) + 's')}${bar('SPREAD', st.bars.spread, Math.round(st.spread * 57.3) + '°')}</div>
       <div class="statrow" style="margin-top:6px"><span>MASTERY ${mi.level}/10</span><div class="bar shine"><i style="width:${mi.need ? Math.round((mi.into / mi.need) * 100) : 100}%;background:${skin ? skin.col : ''}"></i></div><b>${skin ? skin.name : '—'}</b></div>
-      <div class="perks">${Object.entries(PERKS).map(([tier, opts]) => `<div class="perkrow"><span>M${tier}</span>${opts.map((o) => `<button class="chipbtn ${mine.includes(o.id) ? 'on' : ''}" data-tier="${tier}" data-perk="${o.id}" ${mi.level < +tier ? 'disabled' : ''} title="${esc(o.desc)}">${esc(o.name)}</button>`).join('')}</div>`).join('')}</div>
+      <div class="perks">${Object.entries(perksFor(sel)).map(([tier, opts]) => `<div class="perkrow"><span>M${tier}</span>${opts.map((o) => `<button class="chipbtn ${mine.includes(o.id) ? 'on' : ''}" data-tier="${tier}" data-perk="${o.id}" ${mi.level < +tier ? 'disabled' : ''} title="${esc(o.desc)}">${esc(o.name)}</button>`).join('')}</div>`).join('')}</div>
       <p class="hint" style="margin:2px 0">Bronze at mastery 3, Silver 6, Gold 9, animated Hunter's Bane at 10. Mastery 7 adds a kill effect.</p>
-      ${ok ? (p.loadout?.w2 === sel ? '<button class="btn btn-md alt" id="arUn">UNEQUIP</button>' : '<button class="btn btn-md" id="arEq">EQUIP</button>') : `<button class="btn btn-md alt" disabled>${icon('lock')} REACH LEVEL ${w.unlock}</button>`}`;
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${ok ? (p.loadout?.w2 === sel ? '<button class="btn btn-md alt" id="arUn">UNEQUIP</button>' : '<button class="btn btn-md" id="arEq">EQUIP</button>') + '<button class="btn btn-md mint" id="arTry" data-sfx="play">TEST RANGE</button>' : `<button class="btn btn-md alt" disabled>${icon('lock')} REACH LEVEL ${w.unlock}</button>`}</div>`;
     $('arEq')?.addEventListener('click', () => guard(async () => { await A.shop({ action: 'loadout', w2: sel }); sfx('reward'); render(); }));
+    $('arTry')?.addEventListener('click', () => { S.close(); api.startRange(sel); });
     $('arUn')?.addEventListener('click', () => guard(async () => { await A.shop({ action: 'loadout', w2: null }); render(); }));
     for (const b of $('arInfo').querySelectorAll('[data-perk]')) b.onclick = () => guard(async () => { await A.shop({ action: 'perk', weapon: sel, tier: +b.dataset.tier, id: b.dataset.perk }); sfx('click'); render(); });
   };
@@ -430,4 +432,27 @@ export function openArmory(api, onDone) {
     R.drawShotTrail(c.g, sel, 32 + WEAPON_IDS.indexOf(sel), x, c.h * 0.85, 0, skin ? R.masteryTint(skin.id, t) : null);
     R.drawShot(c.g, sel, 32 + WEAPON_IDS.indexOf(sel), x, c.h * 0.85, 0, '#fff', t);
   });
+}
+
+// ======================================================================= BRAWLER POWER
+// Upgrade with coins earned by playing (test currency only: combat can never be bought with real
+// money). +4% HP and damage per level; Gadget at 7, Star Power at 9 (pick one of two each).
+export function openPower(api, onDone) {
+  let who = api.getBrawler();
+  const P = popup(`<div class="title" style="font-size:calc(var(--u)*3.2)">BRAWLER POWER</div><div class="chips" id="pwWho"></div><div id="pwBody"></div><button class="btn btn-md alt" data-close>CLOSE</button>`, { onClose: onDone });
+  const render = () => {
+    const p = A.progress(), L = clampPower(p.power?.[who] || 1), cost = POWER_COST[L];
+    P.card.querySelector('#pwWho').innerHTML = BRAWLER_IDS.map((b) => `<button class="chipbtn ${b === who ? 'on' : ''}" data-b="${b}">${BRAWLERS[b].name} ${clampPower(p.power?.[b] || 1)}</button>`).join('');
+    for (const c of P.card.querySelectorAll('[data-b]')) c.onclick = () => { who = c.dataset.b; render(); };
+    const B = BRAWLERS[who], pick = (list, mine, at, kind) => `<div class="pwpick"><div class="pwhead">${kind} <small>(Power ${at})</small></div>${list.map((g) => `<button class="chipbtn ${mine === g.id || (!mine && g === list[0] && L >= at) ? 'on' : ''}" data-k="${kind === 'GADGET' ? 'gadget' : 'star'}" data-id="${g.id}" ${L < at ? 'disabled' : ''}><b>${esc(g.name)}</b><br><small>${esc(g.desc)}</small></button>`).join('')}</div>`;
+    P.card.querySelector('#pwBody').innerHTML = `
+      <div class="pwlv"><span class="pwnum">${L}</span><div style="flex:1"><div class="bar shine"><i style="width:${Math.round((L / MAX_POWER) * 100)}%"></i></div>
+        <div class="hint" style="margin:2px 0">HP ${Math.round(B.hp * powerMult(L))} · damage +${Math.round((powerMult(L) - 1) * 100)}% · ${L >= MAX_POWER ? 'max power' : `next: +4% for ${cost} coins`}</div></div>
+        ${L < MAX_POWER ? `<button class="btn btn-md" id="pwUp" ${p.coins < cost ? 'disabled' : ''}>${icon('coin')} ${cost}</button>` : ''}</div>
+      ${pick(GADGETS[who], p.gadget?.[who], GADGET_AT, 'GADGET')}${pick(STARS[who], p.star?.[who], STAR_AT, 'STAR POWER')}
+      <p class="hint">You have ${p.coins} coins (test currency, earned by playing). Matches pair you with hunters of a similar power.</p>`;
+    P.card.querySelector('#pwUp')?.addEventListener('click', () => guard(async () => { await A.shop({ action: 'upgrade', brawler: who }); rewardBurst(); sfx('reward'); render(); }));
+    for (const b of P.card.querySelectorAll('[data-k]')) b.onclick = () => guard(async () => { await A.shop({ action: b.dataset.k, brawler: who, id: b.dataset.id }); sfx('click'); render(); });
+  };
+  render();
 }

@@ -7,7 +7,8 @@ import { Sim, newId } from './sim.js';
 import { QUICK_MODES, RANDOM_MODES, MODES, playersFor } from './modes.js';
 import { EVENTS } from '../public/events/index.js';
 import { handleApi, userFromToken, recordMatch } from './accounts.js';
-import { loadoutFor } from '../public/progression.js';
+import { loadoutFor, weaponUnlocked, normalize } from '../public/progression.js';
+import { powerBracket } from '../public/power.js';
 import { WEAPONS } from '../public/weapons.js';
 // local dev only (HUNT_DEV is in wrangler.jsonc, never the deploy config): ?wpn=id&mast=n hands
 // you a secondary for tests and screenshots without an account at that level
@@ -16,7 +17,9 @@ function devWeapon(env, url, sim, id) {
   if (!env.HUNT_DEV || !w || !WEAPONS[w]) return;
   const m = Math.max(0, Math.min(10, Number(url.searchParams.get('mast')) || 1));
   const badge = m >= 10 ? 'bane' : m >= 9 ? 'gold' : m >= 6 ? 'silver' : m >= 3 ? 'bronze' : null;
-  sim.setLoadout(id, { w2: w, perks: [], mastery: m, badge, emotes: [0, 1, 2, 3, 4, 5, 6, 7], dev: true });
+  const p = sim.players.get(id), pw = Math.max(1, Math.min(11, Number(url.searchParams.get('pw')) || 1));
+  const power = p ? { [p.brawler]: { power: pw, gadget: url.searchParams.get('gd') || null, star: url.searchParams.get('sp') || null } } : null;
+  sim.setLoadout(id, { w2: w, perks: [], mastery: m, badge, emotes: [0, 1, 2, 3, 4, 5, 6, 7], dev: true, ...(power ? { power } : {}) });
 }
 import {
   BRAWLERS, DT, WORLDS, ZONES, generateArena, generateWorld, zoneBounds, zoneAt, worldId,
@@ -46,7 +49,16 @@ export default {
       else {
         const mm = env.MATCHMAKER.get(env.MATCHMAKER.idFromName('global'));
         const want = QUICK_MODES.includes(url.searchParams.get('mode')) ? url.searchParams.get('mode') : 'any';
-        const r = await mm.fetch('https://mm/assign?mode=' + want + '&skip=' + encodeURIComponent(url.searchParams.get('skip') || ''));
+        // POWER MATCHMAKING: players meet others of a similar brawler power (read from the account)
+        let bracket = 1;
+        const token = url.searchParams.get('token');
+        if (token && env.DB) {
+          try {
+            const u = await userFromToken(env.DB, token);
+            if (u) bracket = powerBracket(JSON.parse(u.progress || '{}').power?.[url.searchParams.get('brawler')] || 1);
+          } catch {}
+        }
+        const r = await mm.fetch('https://mm/assign?mode=' + want + '&b=' + bracket + '&skip=' + encodeURIComponent(url.searchParams.get('skip') || ''));
         name = await r.text();
       }
       const fwd = new URL(req.url);
@@ -63,11 +75,12 @@ export class Matchmaker {
   constructor() { this.cur = {}; }
   async fetch(req) {
     const u = new URL(req.url), skip = u.searchParams.get('skip'), want = u.searchParams.get('mode') || 'any';
+    const key = want + '|' + (Number(u.searchParams.get('b')) || 1); // one filling match per mode AND power bracket
     const now = Date.now();
-    let c = this.cur[want];
+    let c = this.cur[key];
     if (!c || c.count >= c.max || now - c.created > 7000 || skip === c.id) {
       const mode = want === 'any' ? pick(RANDOM_MODES) : want;
-      c = this.cur[want] = { id: `qp:${mode}:${pick(arenaWorlds())}:${crypto.randomUUID()}`, created: now, count: 0, max: MODES[mode].maxPlayers || 10 };
+      c = this.cur[key] = { id: `qp:${mode}:${pick(arenaWorlds())}:${crypto.randomUUID()}`, created: now, count: 0, max: MODES[mode].maxPlayers || 10 };
     }
     c.count++;
     return new Response(c.id);
@@ -128,12 +141,12 @@ export class MatchRoom {
   async recordResults(rows, sockets) {
     if (!this.env.DB) return;
     for (const r of rows) {
-      if (!r.p.account || r.p.recorded) continue;
+      if (!r.p.account || r.p.recorded || this.sim?.mode?.noRewards) continue;
       r.p.recorded = true;
       try {
         const out = await recordMatch(this.env.DB, r.p.account, { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, won: r.won, assists: r.assists, steals: r.steals, wstat: r.wstat });
         const ws = sockets.get(r.p.id);
-        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, mastery: out.mastery });
+        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, mastery: out.mastery, wxp: out.wxp, coins: out.coins });
       } catch (e) { console.log('recordMatch failed', e && e.message); }
     }
   }
@@ -151,13 +164,13 @@ export class MatchRoom {
       let mode, world;
       if (isRoom) {
         const qm = url.searchParams.get('mode'), qw = url.searchParams.get('world');
-        mode = QUICK_MODES.includes(qm) ? qm : pick(RANDOM_MODES);
+        mode = QUICK_MODES.includes(qm) || qm === 'range' ? qm : pick(RANDOM_MODES);
         world = worldId(qw) >= 0 && WORLDS[worldId(qw)].arena ? qw : pick(arenaWorlds());
       } else [, mode, world] = mname.split(':');
       const lobby = isRoom ? Math.max(1.5, Math.min(12, Number(url.searchParams.get('lobby')) || 12)) : 8;
       const ev = isRoom && EVENTS[url.searchParams.get('ev')] ? url.searchParams.get('ev') : null;
       const events = !(isRoom && url.searchParams.get('events') === '0');
-      const open = isRoom && url.searchParams.get('testmap') === 'open'; // netcode tests: border walls only
+      const open = isRoom && (url.searchParams.get('testmap') === 'open' || mode === 'range'); // netcode tests + Test Range: border walls only
       this.newMatch({ mode, world, lobby, ev, events, open, bots: !(isRoom && url.searchParams.get('bots') === '0') });
     }
     const sim = this.sim, sockets = this.sockets;
@@ -169,7 +182,10 @@ export class MatchRoom {
       return new Response(null, { status: 101, webSocket: client });
     }
     const token = url.searchParams.get('token');
-    if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { const p = sim.players.get(id); if (u && p) { const pr = JSON.parse(u.progress || '{}'); p.account = u.id; p.trophies = pr.trophies?.[p.brawler] | 0; sim.setCosmetics(id, pr.equipped); sim.setLoadout(id, loadoutFor(pr)); } }).catch(() => {});
+    if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { const p = sim.players.get(id); if (u && p) { const pr = JSON.parse(u.progress || '{}'); p.account = u.id; p.trophies = pr.trophies?.[p.brawler] | 0; sim.setCosmetics(id, pr.equipped); sim.setLoadout(id, loadoutFor(pr));
+      const tw = url.searchParams.get('try'); // TEST RANGE weapon: only one this account has unlocked
+      if (sim.modeKey === 'range' && tw && weaponUnlocked(normalize(pr), tw)) { sim.setWeapon(p, tw, normalize(pr).perks[tw] || []); p.slot = 1; }
+    } }).catch(() => {});
     devWeapon(this.env, url, sim, id);
     const secret = crypto.randomUUID();
     sim.players.get(id).secret = secret;

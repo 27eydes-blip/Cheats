@@ -21,6 +21,7 @@ import { pickAimTarget, assistAngle } from './aim.js';
 import { HUNTER_PAL } from './art/hunters.js';
 import { ShotSim, PList, resetPart, resetText } from './shots.js';
 import { WEAPONS, WEAPON_IDS, WKIND, withPerks, shotAngles, SWAP_TIME } from './weapons.js';
+import { GADGETS } from './power.js';
 import { drawMiniMap, drawFullMap } from './minimap.js';
 import { envState, drawLandmarks, drawAtmosphere, drawCompass, ZONE_INFO, zoneLabel } from './world-fx.js';
 import { startTense, stopTense } from './ui/music.js';
@@ -52,6 +53,7 @@ const MODE_INFO = {
   hunted: { name: 'HUNTED', desc: 'Everyone hunts the target. Take them down to become it!' },
   crystals: { name: 'CRYSTAL GRAB', desc: 'Grab 10 crystals and hold them for 10 seconds!' },
   freeplay: { name: 'FREE PLAY', desc: '' },
+  range: { name: 'TEST RANGE', desc: 'Try your weapons on target dummies. Swap with R or the ⇄ button.' },
 };
 const worldName = (key) => WORLDS[worldId(key)]?.name || key;
 const bulletKind = (k) => (k === 20 ? 'cage' : k >= WKIND ? WEAPON_IDS[k - WKIND] : BRAWLER_IDS[k]);
@@ -258,6 +260,7 @@ function startQuick(opts = G.opts) {
   if (opts.skip) q.set('skip', opts.skip);
   if (room && !$('bots').checked && !opts.world) q.set('bots', '0');
   for (const k of ['world', 'mode', 'lobby', 'ev']) if (opts[k]) q.set(k, opts[k]);
+  if (opts.tryW) { q.set('try', opts.tryW); if (!q.get('wpn') && !A.ACC.token) q.set('wpn', opts.tryW); }
   openConn('main', '/ws?' + q, { primary: true });
   G.phase = 'waiting';
   show('waiting');
@@ -265,7 +268,7 @@ function startQuick(opts = G.opts) {
 }
 
 // ?wpn=&mast= are honoured only by a local dev server (HUNT_DEV), for tests and screenshots
-function devParams(q) { const u = new URLSearchParams(location.search); for (const k of ['wpn', 'mast']) if (u.get(k)) q.set(k, u.get(k)); }
+function devParams(q) { const u = new URLSearchParams(location.search); for (const k of ['wpn', 'mast', 'pw', 'gd', 'sp']) if (u.get(k)) q.set(k, u.get(k)); }
 function startFree() {
   closeAll();
   resetMatchState();
@@ -290,6 +293,7 @@ function toMenu() {
   clearTimeout(retryTimer);
   closeFullMap(); if (G.bloodOn) { G.bloodOn = false; stopTense(); }
   G.phase = 'menu';
+  $('rangeLeave').hidden = true;
   closeAll();
   input.enabled = false; input.reset();
   show('lobby');
@@ -349,6 +353,7 @@ function onMsg(c, m) {
       else { toast(m.reason + (G.room ? ' — try again when it ends' : '')); toMenu(); }
       break;
     case 'start':
+      $('rangeLeave').hidden = m.mode !== 'range';
       if (m.rejoin && G.map && G.phase !== 'menu') {
         // back in the same match after a reconnect: keep our map, HUD and effects
         G.myId = m.you;
@@ -362,7 +367,7 @@ function onMsg(c, m) {
       input.enabled = true; input.reset();
       show(null);
       UI.showIntro({ world: m.world, modeName: MODE_INFO[m.mode].name, brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null });
-      setTimeout(() => showBanner(MODE_INFO[m.mode].name, `${MODE_INFO[m.mode].desc} (${m.botLevel || 'normal'} bots)`, '#ffd23f', 2500), 2200);
+      setTimeout(() => showBanner(MODE_INFO[m.mode].name, m.mode === 'range' ? MODE_INFO.range.desc : `${MODE_INFO[m.mode].desc} (${m.botLevel || 'normal'} bots)`, '#ffd23f', 2500), 2200);
       break;
     case 'ro':
       if (m.add) Object.assign(G.roster, m.add);
@@ -535,7 +540,7 @@ function reconcile(m) {
   const np = { x: me.x, y: me.y, mvx: me.mvx, mvy: me.mvy };
   if (!me.al || me.fo) G.pending = [];
   else {
-    const st = moveStats(G.brawler, me.hp, me.mh, me.rs, me.sl);
+    const st = moveStats(G.brawler, me.hp, me.mh, me.rs, me.sl, me.sp || 1);
     for (const q of G.pending) applyMove(G.map, np, q.mx, q.my, st.speed, st.r, G.mods);
   }
   const dx = G.pred.x - np.x, dy = G.pred.y - np.y;
@@ -567,6 +572,7 @@ function sampleConn(c, out) {
       id, x, y, hp: e[3], mh: sv[1] || e[3], facing: ea[4] + da * f, fl: e[5], cu: sv[2], bt: sv[3], glow: sv[4], cr: sv[5], team: sv[6] || 0, zone: c.zone,
       name: r[0], brawler: r[1], moving: Math.hypot(e[1] - ea[1], e[2] - ea[2]) > 1, stun: e[5] & 2,
       skin: r[3]?.skin, title: r[3]?.title ? TITLES[r[3].title] : null, badge: r[3]?.badge || null,
+      wpn: sv[7] >= 0 ? WEAPON_IDS[sv[7]] : null, pw: sv[8] || 1,
     });
   }
   if (c.flares) for (const fl of c.flares) out.flares.push(fl);
@@ -576,7 +582,7 @@ function sampleConn(c, out) {
   if (b.wd) out.wdrops.push(...b.wd);
 }
 const bulletAng = new Map(); // (kept for resetMatchState)
-const EMPTY_MAP = new Map(), NO_STATIC = [0, 0, 0, 0, 0, 0, 0], NONE = [];
+const EMPTY_MAP = new Map(), NO_STATIC = [0, 0, 0, 0, 0, 0, 0, -1, 1], NONE = [];
 
 function sampleWorld() {
   const out = { others: new Map(), bullets: [], cubes: [], crystals: [], mines: [], flares: [], wdrops: [] };
@@ -658,6 +664,12 @@ function applyFx([type, x, y, v, id, extra]) {
     case 'arc': G.bolts.push({ x, y, x2: v, y2: id, life: 0.22, max: 0.22 }); sfx('zap', vol * 0.6); break;
     case 'flare': burst(x, y, '#ff7b5a', 10, 160, 5, 0.6); sfx('flarepop', vol); break;
     case 'emote': { const e = EMOTES[v]; if (!e) break; const tx = G.texts.add(); tx.x = x; tx.y = y - 120; tx.txt = e.text; tx.color = e.col; tx.life = tx.max = 2; tx.size = 24; tx.pop = true; } break;
+    case 'gadget': { // a gadget (or Second Wind) went off
+      const g = v >= 0 ? GADGETS[G.roster[id]?.[1] || G.brawler]?.[v] : { name: 'SECOND WIND' };
+      G.rings.push({ x, y, r0: 20, r1: 110, life: 0.4, max: 0.4, color: '#4be0c8', w: 6, ink: true });
+      if (g) { const tx = G.texts.add(); tx.x = x; tx.y = y - 100; tx.txt = g.name.toUpperCase(); tx.color = '#4be0c8'; tx.life = tx.max = 1.1; tx.size = 17; tx.pop = true; }
+      sfx('blink', vol * 0.7);
+    } break;
     case 'wpick': { const w = WEAPONS[WEAPON_IDS[v]]; if (id === G.myId && w) { const tx = G.texts.add(); tx.x = x; tx.y = y - 90; tx.txt = w.name.toUpperCase() + '!'; tx.color = '#5ff4ff'; tx.life = tx.max = 1.3; tx.size = 20; tx.pop = true; sfx('pickup'); } burst(x, y, '#5ff4ff', 10, 160, 5, 0.4); } break;
     case 'wall': burst(x, y, '#d8cfff', 4, 120, 4, 0.25); break;
     case 'crate':
@@ -858,11 +870,11 @@ function clientTick() {
   const B = BRAWLERS[G.brawler];
   const me = G.me;
   const mv = input.getMove();
-  let f = null, u = null, fd = 1, ch = 0;
+  let f = null, u = null, fd = 1, ch = 0, gd = 0;
   const safe = G.kind === 'free' && inHub(G.pred.x, G.pred.y);
   G.wantT -= DT;
   const h = holding();
-  input.swapOn = !!me.w2; input.mouse.charge = !h.sig && h.w.kind === 'charge';
+  input.swapOn = !!me.w2; input.gadgetOn = me.gu >= 0; input.mouse.charge = !h.sig && h.w.kind === 'charge';
   const seqNext = G.seq + 1;
   // one trigger pull per input; returns true if it fired
   const pull = (ang, mag, held) => {
@@ -893,6 +905,7 @@ function clientTick() {
     return true;
   };
   for (const a of input.takeActions()) {
+    if (a.type === 'gadget') { if (me.gu > 0 && me.al && !safe) { gd = 1; sfx('super', 0.6); } continue; }
     if (a.type === 'swap') {
       if (me.w2 && me.al) { G.wantSlot = (G.wantT > 0 && G.wantSlot != null ? G.wantSlot : me.ws || 0) === 1 ? 0 : 1; G.wantT = 1; G.localSwap = G.wantSlot === 1 ? withPerks(WEAPON_IDS[me.w2[0]], G.myPerks[WEAPON_IDS[me.w2[0]]] || []).swap : SWAP_TIME; G.localBurst = G.localBurst2 = null; sfx('swap', 0.7); }
       continue;
@@ -920,14 +933,14 @@ function clientTick() {
   G.prev = { x: G.pred.x, y: G.pred.y };
   G.mods = primaryMods();
   if (me.al && !me.fo) {
-    const st = moveStats(G.brawler, me.hp, me.mh, me.rs, me.sl);
+    const st = moveStats(G.brawler, me.hp, me.mh, me.rs, me.sl, me.sp || 1);
     applyMove(G.map, G.pred, mv.x, mv.y, st.speed, st.r, G.mods);
   }
   G.seq++;
   const ax = +Math.cos(G.facing).toFixed(3), ay = +Math.sin(G.facing).toFixed(3);
   const P = primary();
   const inp = {
-    t: 'in', s: G.seq, mx: +mv.x.toFixed(3), my: +mv.y.toFixed(3), ax, ay, f, u, ...(f != null && fd < 1 ? { fd: +fd.toFixed(2) } : {}),
+    t: 'in', s: G.seq, mx: +mv.x.toFixed(3), my: +mv.y.toFixed(3), ax, ay, f, u, ...(f != null && fd < 1 ? { fd: +fd.toFixed(2) } : {}), ...(gd ? { gd: 1 } : {}),
     ...(ch > 0 ? { ch: +ch.toFixed(2) } : {}),
     ...(f != null && P && P.rt != null ? { vt: +P.rt.toFixed(1) } : {}), // LAG COMPENSATION: the tick we were looking at
     ...(G.wantT > 0 && G.wantSlot != null && me.ws !== G.wantSlot ? { w: G.wantSlot } : {}),
@@ -1071,7 +1084,7 @@ function render(t) {
     const me = G.me;
     list.push({
       id: G.myId, x: mePos.x, y: mePos.y, hp: me.hp, mh: me.mh, cu: me.cu, facing: G.facing, fl: me.f, name: G.roster[G.myId]?.[0] || 'You',
-      brawler: G.brawler, moving: G.moving, stun: me.f & 2, me: true, skin: G.roster[G.myId]?.[3]?.skin, title: G.roster[G.myId]?.[3]?.title ? TITLES[G.roster[G.myId][3].title] : null, badge: G.roster[G.myId]?.[3]?.badge || null, bt: me.bt, glow: me.gl, cr: me.cr, size: moveStats(G.brawler, me.hp, me.mh).r / PLAYER_R,
+      brawler: G.brawler, moving: G.moving, stun: me.f & 2, me: true, skin: G.roster[G.myId]?.[3]?.skin, title: G.roster[G.myId]?.[3]?.title ? TITLES[G.roster[G.myId][3].title] : null, badge: G.roster[G.myId]?.[3]?.badge || null, pw: me.pw || 1, wpn: me.w2 ? WEAPON_IDS[me.w2[0]] : null, bt: me.bt, glow: me.gl, cr: me.cr, size: moveStats(G.brawler, me.hp, me.mh).r / PLAYER_R,
     });
   }
   list.sort((a, b) => a.y - b.y);
@@ -1225,14 +1238,14 @@ function render(t) {
   }
   // EMOTES: a small button under the map; tap it, then tap a call-out
   if (meAlive && G.phase === 'play') {
-    const ex = rcx, ey = rcy + radarR + 34, er = 19;
+    const ex = rcx + radarR + 30, ey = rcy - radarR + 22, er = 19; // (beside the minimap, clear of the leaderboard)
     input.taps.push({ x: ex, y: ey, r: er + 4, on: () => { G.emoteOpen = !G.emoteOpen; sfx('click', 0.6); } });
     ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI * 2); ctx.fillStyle = G.emoteOpen ? 'rgba(255,210,63,0.92)' : 'rgba(30,16,51,0.8)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = R.INK; ctx.stroke();
     R.outlinedText(ctx, '!?', ex, ey + 1, 14, G.emoteOpen ? R.INK : '#fff', G.emoteOpen ? '#ffd23f' : R.INK);
     if (G.emoteOpen) {
       const own = loadoutFor(A.progress()).emotes;
       own.forEach((i, k) => {
-        const e = EMOTES[i], y = ey + 40 + k * 32, w = 104, x = ex - er + w / 2;
+        const e = EMOTES[i], y = ey + 40 + k * 32, w = 104, x = ex - er + w / 2 + 4;
         ctx.fillStyle = 'rgba(30,16,51,0.88)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - w / 2, y - 13, w, 26, 9) : ctx.rect(x - w / 2, y - 13, w, 26); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = R.INK; ctx.stroke();
         R.outlinedText(ctx, e.text, x, y + 1, 12, e.col);
         input.taps.push({ x, y, r: 15, on: () => { send({ t: 'emote', e: i }); G.emoteOpen = false; } });
@@ -1244,10 +1257,14 @@ function render(t) {
   worldNotices(env);
   if (G.phase === 'play' && meAlive) {
     R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
-    if (G.me.w2) { // SWAP button: signature <-> secondary
-      const id = WEAPON_IDS[G.me.w2[0]], hh = holding();
+    const hh = holding();
+    if (G.me.w2) { // SWAP button (above the fire button): signature <-> secondary
+      const id = WEAPON_IDS[G.me.w2[0]];
       R.drawSwapButton(ctx, input.swapBtn, { active: hh.slot === 1, name: WEAPONS[id].name, sigName: BRAWLERS[G.brawler].name, swap: Math.max(0, G.localSwap || 0, G.me.sw || 0) }, t);
     }
+    // what you're holding, next to the fire button: icon, name, ammo
+    R.drawWeaponPanel(ctx, input.weaponPanel, hh.sig ? { weapon: null, name: BRAWLERS[G.brawler].name.toUpperCase(), ammo: G.me.am, max: 3, color: HUNTER_PAL[G.brawler]?.accent } : { weapon: hh.id, name: WEAPONS[hh.id].name.toUpperCase(), ammo: hh.ammo, max: hh.w.ammo }, t);
+    if (G.me.gu >= 0) R.drawGadgetButton(ctx, input.gadgetBtn, { uses: G.me.gu, name: GADGETS[G.brawler]?.[G.me.gi]?.name }, t);
   }
   if (!meAlive && G.phase !== 'play') {
     const o = G.view.others.find((p) => p.id === G.spectate);
@@ -1405,6 +1422,7 @@ function goFullscreen() {
   if (p && p.then) p.then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
 }
 $('leaveWorld').onclick = toMenu;
+$('rangeLeave').onclick = toMenu;
 $('spectate').onclick = () => { $('dead').hidden = true; $('hudAgain').hidden = false; };
 for (const [id, key] of [['setFlash', 'reduceFlash'], ['setLow', 'lowGfx'], ['setSound', 'sound']]) {
   $(id).checked = !!SETTINGS[key];
@@ -1422,6 +1440,8 @@ UI.lobby = createLobby({
   // lobby PLAY = public matchmaking for the chosen mode; Friends popup = the typed room code
   startQuick: (o = {}) => { goFullscreen(); startQuick(o.fromFriends ? {} : { mode: o.mode || '', room: '' }); },
   startFree: () => { goFullscreen(); startFree(); },
+  // TEST RANGE: a private room with target dummies, carrying the weapon picked in the Armory
+  startRange: (weapon) => { goFullscreen(); startQuick({ room: 'R' + Math.random().toString(36).slice(2, 9).toUpperCase(), mode: 'range', world: 'meadow', lobby: '1.5', tryW: weapon }); },
   getBrawler: () => selBrawler,
   setBrawler: (id) => { const changed = id !== selBrawler; selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); if (changed) sfx('growl_' + id, 0.9); }, // each hunter growls when picked
   prefs, saveName: () => { readForm(); UI.lobby?.refresh(); }, statRows,

@@ -120,20 +120,67 @@ export const MASTERY_SKINS = [
 export const masteryBadge = (lvl) => [...MASTERY_SKINS].reverse().find((s) => lvl >= s.lvl)?.id || null;
 // mastery 7 unlocks the class kill effect (see catalog KILL_FX)
 export const CLASS_FX = { rifle: 'tracer', shotgun: 'shrapnel', sniper: 'crosshair', smg: 'swarm', launcher: 'crater', melee: 'cleave', special: 'arcburst' };
-// PERKS: at mastery 2, 5 and 8 you pick ONE of two. Small, so mastery never decides a fight alone.
-export const PERKS = {
-  2: [{ id: 'quickhands', name: 'Quick Hands', desc: 'Swap to this weapon 40% faster.' }, { id: 'deeppockets', name: 'Deep Pockets', desc: '+1 magazine.' }],
-  5: [{ id: 'fastreload', name: 'Fast Reload', desc: 'Reload 12% faster.' }, { id: 'longbarrel', name: 'Long Barrel', desc: '+8% range.' }],
-  8: [{ id: 'hollowpoint', name: 'Hollow Point', desc: '+6% damage.' }, { id: 'steadyaim', name: 'Steady Aim', desc: '30% less spread.' }],
+// PERKS: at mastery 2, 5 and 8 you pick ONE of two, per weapon. Small (about 10% or less), so
+// mastery never decides a fight on its own. Tier 5 is each weapon's own pair (Stormline: faster
+// reload OR +1 round per burst); tiers 2 and 8 come from the weapon's class.
+// fx: multipliers (reload, range, damage, spread, cooldown, charge, fuse, blast, lunge, arc, speed,
+// swap, slow, flareTime, flareR, chainRange, poisonTime) or additions (burst, ammo, pellets)
+const P = (id, name, desc, fx) => ({ id, name, desc, fx });
+const QUICK = P('quickhands', 'Quick Hands', 'Swap to it 40% faster.', { swap: 0.6 });
+const CLASS_PERKS = {
+  rifle: { 2: [P('steadygrip', 'Steady Grip', '20% less spread.', { spread: 0.8 }), QUICK], 8: [P('hollowpoint', 'Hollow Point', '+7% damage.', { damage: 1.07 }), P('hairtrigger', 'Hair Trigger', 'Fires 8% faster.', { cooldown: 0.92 })] },
+  shotgun: { 2: [P('choke', 'Tight Choke', '12% narrower blast.', { arc: 0.88, spread: 0.85 }), QUICK], 8: [P('buckshot', 'Heavy Buckshot', '+7% damage.', { damage: 1.07 }), P('slamfire', 'Slam Fire', 'Fires 8% faster.', { cooldown: 0.92 })] },
+  sniper: { 2: [P('lightframe', 'Light Frame', 'Swap to it 40% faster.', { swap: 0.6 }), P('longbarrel', 'Long Barrel', '+8% range.', { range: 1.08 })], 8: [P('hollowpoint', 'Hollow Point', '+7% damage.', { damage: 1.07 }), P('boltoil', 'Oiled Bolt', 'Fires 8% faster.', { cooldown: 0.92 })] },
+  smg: { 2: [QUICK, P('deeppockets', 'Deep Pockets', '+2 rounds per magazine.', { ammo: 2 })], 8: [P('hotrounds', 'Hot Rounds', '+7% damage.', { damage: 1.07 }), P('steadygrip', 'Steady Grip', '20% less spread.', { spread: 0.8 })] },
+  launcher: { 2: [QUICK, P('lightshell', 'Light Shell', 'Flies 10% faster.', { speed: 1.1 })], 8: [P('bigbang', 'Big Bang', '+10% blast radius.', { blast: 1.1 }), P('autoloader', 'Autoloader', 'Reloads 10% faster.', { reload: 0.9 })] },
+  melee: { 2: [QUICK, P('lightfeet', 'Light Feet', 'Lunges 15% further.', { lunge: 1.15 })], 8: [P('keenedge', 'Keen Edge', '+7% damage.', { damage: 1.07 }), P('fasthands', 'Fast Hands', 'Swings 8% faster.', { cooldown: 0.92 })] },
+  special: { 2: [QUICK, P('longbarrel', 'Long Barrel', '+8% range.', { range: 1.08 })], 8: [P('overcharge', 'Overcharge', '+7% damage.', { damage: 1.07 }), P('quickcells', 'Quick Cells', 'Reloads 10% faster.', { reload: 0.9 })] },
 };
+const FAST = P('fastreload', 'Fast Reload', 'Reloads 10% faster.', { reload: 0.9 });
+const OWN_PERKS = {
+  stormline: [FAST, P('extraround', 'Extra Round', '+1 round per burst.', { burst: 1 })],
+  ratchet: [P('tightspread', 'Tight Spread', '15% less spread.', { spread: 0.85 }), P('bigmag', 'Big Magazine', '+2 rounds per magazine.', { ammo: 2 })],
+  breaker: [P('extrapellet', 'Extra Pellet', '+1 pellet per blast.', { pellets: 1 }), FAST],
+  slugger: [P('heavyslug', 'Heavy Slug', '+6% damage.', { damage: 1.06 }), P('longslug', 'Long Slug', '+10% range.', { range: 1.1 })],
+  longshot: [P('quickcharge', 'Quick Charge', 'Charges 10% faster.', { charge: 0.9 }), FAST],
+  needle: [FAST, P('speedrounds', 'Speed Rounds', 'Shots fly 10% faster.', { speed: 1.1 })],
+  hornet: [P('bigmag', 'Big Magazine', '+2 rounds per magazine.', { ammo: 2 }), P('tightspread', 'Tight Spread', '15% less spread.', { spread: 0.85 })],
+  viper: [P('lingering', 'Lingering Toxin', 'Poison lasts 10% longer.', { poisonTime: 1.1 }), FAST],
+  thumper: [P('shortfuse', 'Short Fuse', '15% shorter fuse.', { fuse: 0.85 }), P('wideblast', 'Wide Blast', '+10% blast radius.', { blast: 1.1 })],
+  rocketeer: [P('fastrocket', 'Fast Rocket', 'Flies 10% faster.', { speed: 1.1 }), P('wideblast', 'Wide Blast', '+10% blast radius.', { blast: 1.1 })],
+  cleaver: [P('wideswing', 'Wide Swing', '10% wider swing.', { arc: 1.1 }), FAST],
+  spear: [P('longlunge', 'Long Lunge', 'Lunges 15% further.', { lunge: 1.15 }), P('longreach', 'Long Reach', '+8% reach.', { range: 1.08 })],
+  arcgun: [P('longchain', 'Long Chain', 'Lightning jumps 15% further.', { chainRange: 1.15 }), FAST],
+  frost: [P('deepfreeze', 'Deep Freeze', 'Slows 10% longer.', { slow: 1.1 }), FAST],
+  flare: [P('longburn', 'Long Burn', 'Reveals 10% longer.', { flareTime: 1.1 }), P('widelight', 'Wide Light', '10% bigger light.', { flareR: 1.1 })],
+};
+export function perksFor(id) {
+  const w = WEAPONS[id];
+  if (!w) return {};
+  const c = CLASS_PERKS[w.cls];
+  return { 2: c[2], 5: OWN_PERKS[id], 8: c[8] };
+}
+// (kept for older callers: the class pairs, by tier)
+export const PERKS = { 2: CLASS_PERKS.rifle[2], 5: OWN_PERKS.stormline, 8: CLASS_PERKS.rifle[8] };
 // a weapon with its perks applied (server: authoritative; client: armory preview + prediction)
 export function withPerks(id, perks = []) {
   const w = { ...WEAPONS[id] };
-  if (perks.includes('deeppockets')) w.ammo += 1;
-  if (perks.includes('fastreload')) w.reload *= 0.88;
-  if (perks.includes('longbarrel')) w.range *= 1.08;
-  if (perks.includes('hollowpoint')) { w.damage *= 1.06; if (w.maxDamage) w.maxDamage *= 1.06; if (w.splash) w.splash *= 1.06; }
-  if (perks.includes('steadyaim')) { w.spread *= 0.7; if (w.arc && w.pellets) w.arc *= 0.85; }
-  w.swap = SWAP_TIME * (perks.includes('quickhands') ? 0.6 : 1);
+  w.swap = SWAP_TIME;
+  if (!perks.length) return w;
+  const table = perksFor(id), fx = {};
+  for (const tier of [2, 5, 8]) for (const p of table[tier] || []) if (perks.includes(p.id)) Object.assign(fx, p.fx);
+  const mul = (k, f) => { if (w[k] != null && f) w[k] *= f; };
+  mul('reload', fx.reload); mul('range', fx.range); mul('cooldown', fx.cooldown); mul('charge', fx.charge); mul('fuse', fx.fuse);
+  mul('blast', fx.blast); mul('lunge', fx.lunge); mul('speed', fx.speed); mul('swap', fx.swap);
+  if (fx.damage) { w.damage *= fx.damage; if (w.maxDamage) w.maxDamage *= fx.damage; if (w.splash) w.splash *= fx.damage; }
+  if (fx.spread) w.spread *= fx.spread;
+  if (fx.arc && w.arc) w.arc *= fx.arc;
+  if (fx.burst) w.burst = (w.burst || 1) + fx.burst;
+  if (fx.ammo) w.ammo += fx.ammo;
+  if (fx.pellets) w.pellets = (w.pellets || 1) + fx.pellets;
+  if (fx.slow && w.slow) w.slow *= fx.slow;
+  if (fx.poisonTime && w.poison) w.poison = { ...w.poison, time: w.poison.time * fx.poisonTime };
+  if (fx.chainRange && w.chain) w.chain = { ...w.chain, range: w.chain.range * fx.chainRange };
+  if (w.flare && (fx.flareTime || fx.flareR)) w.flare = { r: w.flare.r * (fx.flareR || 1), time: w.flare.time * (fx.flareTime || 1) };
   return w;
 }

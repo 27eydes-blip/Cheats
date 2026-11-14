@@ -1,7 +1,8 @@
 // Progression rules shared by the server (authoritative, D1) and the client (display).
 import { BRAWLER_IDS } from './shared.js';
-import { WEAPONS, WEAPON_IDS, PERKS, masteryInfo, masteryXp, masteryBadge, MASTERY_SKINS } from './weapons.js';
+import { WEAPONS, WEAPON_IDS, perksFor, masteryInfo, masteryXp, masteryBadge, MASTERY_SKINS } from './weapons.js';
 import { LEVEL_TITLES, EMOTES, SKINS } from './catalog.js';
+import { powerSetup } from './power.js';
 
 export const ROAD_STEP = 100;
 // Trophy road: a free reward every 100 total trophies. Item ids live in public/catalog.js.
@@ -26,6 +27,7 @@ export function normalize(p) {
   out.mastery = p.mastery && typeof p.mastery === 'object' ? p.mastery : {};
   out.perks = p.perks && typeof p.perks === 'object' ? p.perks : {};
   out.loadout = p.loadout && typeof p.loadout === 'object' ? p.loadout : { w2: null };
+  for (const k of ['power', 'gadget', 'star']) out[k] = p[k] && typeof p[k] === 'object' ? p[k] : {};
   // free skins (the Classic looks) are owned by everyone, old saves included
   for (const b of BRAWLER_IDS) if (!out.owned.includes(b + '_classic')) out.owned = [...out.owned, b + '_classic'];
   out.equipped = p.equipped && typeof p.equipped === 'object' ? p.equipped : {};
@@ -51,6 +53,7 @@ export function xpFor({ rank, players, kills, bounty, won, assists = 0, steals =
   return 40 + 10 * (kills | 0) + 4 * (assists | 0) + 15 * (steals | 0) + 2 * (bounty | 0) + place;
 }
 export const MISSION_XP = 40;
+export const matchCoins = ({ rank, players, kills = 0, won }) => 12 + 4 * Math.min(10, kills | 0) + (isWin({ rank, won }) ? 20 : rank <= 3 ? 10 : rank <= Math.ceil((players || 1) / 2) ? 4 : 0);
 // ACCOUNT LEVEL 1-100. Level L -> L+1 needs 80 + 12(L-1) XP: about 2 matches early on,
 // around level 40 after ~100 matches, level 100 after ~500.
 export const MAX_LEVEL = 100;
@@ -93,9 +96,9 @@ export function loadoutFor(p) {
   p = normalize(p);
   const w2 = p.loadout?.w2 && weaponUnlocked(p, p.loadout.w2) ? p.loadout.w2 : null;
   const mast = w2 ? masteryInfo(p.mastery[w2] || 0).level : 0;
-  const perks = w2 ? (p.perks[w2] || []).filter((id) => Object.entries(PERKS).some(([tier, o]) => mast >= +tier && o.some((x) => x.id === id))) : [];
+  const perks = w2 ? (p.perks[w2] || []).filter((id) => Object.entries(perksFor(w2)).some(([tier, o]) => mast >= +tier && o.some((x) => x.id === id))) : [];
   const emotes = EMOTES.map((e, i) => (e.level <= 1 || p.owned.includes(e.id) ? i : -1)).filter((i) => i >= 0);
-  return { w2, perks, mastery: mast, badge: w2 ? masteryBadge(mast) : null, emotes };
+  return { w2, perks, mastery: mast, badge: w2 ? masteryBadge(mast) : null, emotes, power: powerSetup(p) };
 }
 export { MASTERY_SKINS };
 
@@ -143,11 +146,15 @@ export function applyMatch(p, r) {
   const xp = xpFor(r), lvBefore = levelInfo(p.xp).level;
   p.xp += xp;
   const levels = grantLevels(p);
+  // COINS earned by playing (test currency; they buy brawler Power)
+  const coins = matchCoins(r);
+  p.coins += coins;
   // WEAPON MASTERY from damage + kills with each weapon this match
-  const mast = [];
+  const mast = [], wxp = [];
   for (const [id, s] of Object.entries(r.wstat || {})) {
     if (!WEAPONS[id] || !s) continue;
     const before = masteryInfo(p.mastery[id] || 0).level;
+    wxp.push({ id, xp0: p.mastery[id] || 0, xp1: (p.mastery[id] || 0) + masteryXp(+s.d || 0, +s.k || 0) });
     p.mastery[id] = (p.mastery[id] || 0) + masteryXp(+s.d || 0, +s.k || 0);
     const after = masteryInfo(p.mastery[id]).level;
     if (after > before) mast.push({ id, level: after });
@@ -160,5 +167,6 @@ export function applyMatch(p, r) {
   if (isWin(r)) add('win', 1);
   if (r.rank <= 3 && r.won !== false) add('top3', 1);
   d.prog.bestKills = Math.max(d.prog.bestKills || 0, r.kills | 0);
-  return { progress: p, delta: p.trophies[r.brawler] - before, xp, levels, mastery: mast, levelBefore: lvBefore };
+  wxp.sort((a, b) => b.xp1 - b.xp0 - (a.xp1 - a.xp0));
+  return { progress: p, delta: p.trophies[r.brawler] - before, xp, coins, levels, mastery: mast, wxp, levelBefore: lvBefore };
 }
