@@ -6,6 +6,7 @@ import { sonjuwon, sonjuwonBoard } from "./sonjuwonArt.js";
 import { DAWSON_SKINS, dawson, dawsonLook, miniButterfly } from "./dawsonArt.js";
 import { TUNG_SKINS, tung, tungLook } from "./tungArt.js";
 import { newbleizerBall } from "./newbleizerArt.js";
+import { wasplordFrames } from "./waspLordArt.js";
 import { addAtlas, addTexture, PixelCanvas } from "./px.js";
 
 const OUT = 0x07101e; // bold character outline
@@ -655,6 +656,10 @@ export function buildCommon(scene) {
   for (let f = 3; f < 8; f++) frames[`newbleizer_${f}`] = rim(SHOP_DRAW.newbleizer(f));
   frames.newbleizer_ball = newbleizerBall();
   HEAD_ANCHORS.newbleizer = headAnchor(frames.newbleizer_0);
+  // WASP LORD (waspLordArt.js): 8 poses already rimmed (his see-through wings go on after the
+  // rim), the locked silhouette and the armour plate his death throws off. Hats sit on his crown.
+  Object.assign(frames, wasplordFrames());
+  HEAD_ANCHORS.wasplord = { x: 7, y: -8, w: 26, h: 26 };
   // 손주원: the roar pose, the board on its own, and hats on the tiger's head
   frames.sonjuwon_3 = rim(sonjuwon(3));
   frames.sonjuwon_board = rim(sonjuwonBoard());
@@ -667,6 +672,8 @@ export function buildCommon(scene) {
   for (const id of Object.keys(heroes))
     addTexture(scene, `hero_${id}`, frames[`${id}_${PORTRAIT_FRAME[id] ?? 1}`], PORTRAIT_SCALE);
   addTexture(scene, "hero_yarms_flex", frames.yarms_3, PORTRAIT_SCALE);
+  addTexture(scene, "hero_wasplord", frames.wasplord_4, PORTRAIT_SCALE);
+  addTexture(scene, "hero_wasplord_locked", frames.wasplord_locked, PORTRAIT_SCALE);
   // DAWSON: a portrait per skin (shop cards, his editor) and the wings-level pose (the bow)
   for (const skin of Object.keys(DAWSON_SKINS))
     addTexture(scene, `hero_dawson_${skin}`, rim(dawson(4, dawsonLook(skin))), PORTRAIT_SCALE);
