@@ -24,8 +24,9 @@ const ctx = canvas.getContext('2d');
 const input = new Input(canvas);
 // wall/cover art cache; rebuilt from scratch if the canvas context is lost
 const art = new WallArt();
-canvas.addEventListener('contextlost', (e) => { e.preventDefault(); art.reset(); });
-canvas.addEventListener('contextrestored', () => art.reset());
+const resetArt = () => { art.reset(); R.resetGroundCache(G?.map); R.resetGroundCache(menuMap); };
+canvas.addEventListener('contextlost', (e) => { e.preventDefault(); resetArt(); });
+canvas.addEventListener('contextrestored', resetArt);
 window.__huntArt = { art, artFor };
 const TICK_MS = 1000 / TICK_RATE;
 const INTERP_MS = 110;
@@ -42,8 +43,17 @@ const bulletKind = (k) => (k === 20 ? 'cage' : BRAWLER_IDS[k]);
 const predicted = (k) => k !== 20 && PREDICTED_KINDS.includes(BRAWLERS[BRAWLER_IDS[k]]?.attack.kind);
 
 let W = 0, H = 0, DPR = 1;
+// Adaptive resolution: if frames get slow, render at a lower pixel ratio (and back up when there's room).
+const DPR_STEPS = [2, 1.5, 1.25, 1];
+let dprStep = 0, frameAvg = 16.7, slowFor = 0, fastFor = 0;
+function adaptResolution(dtMs) {
+  frameAvg += (dtMs - frameAvg) * 0.05;
+  if (frameAvg > 18.5) { slowFor += dtMs; fastFor = 0; } else if (frameAvg < 13) { fastFor += dtMs; slowFor = 0; } else { slowFor = fastFor = 0; }
+  if (slowFor > 1500 && dprStep < DPR_STEPS.length - 1) { dprStep++; slowFor = 0; resize(); }
+  else if (fastFor > 8000 && dprStep > 0) { dprStep--; fastFor = 0; resize(); }
+}
 function resize() {
-  DPR = SETTINGS.lowGfx ? 1 : Math.min(2, devicePixelRatio || 1);
+  DPR = SETTINGS.lowGfx ? 1 : Math.min(DPR_STEPS[dprStep], devicePixelRatio || 1);
   W = innerWidth; H = innerHeight;
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   input.layout(W, H);
@@ -341,13 +351,14 @@ function startPose(won) {
     const t = (now - t0) / 1000;
     c2.setTransform(d, 0, 0, d, 0, 0); c2.clearRect(0, 0, cv.width, cv.height);
     const w = cv.clientWidth, h = cv.clientHeight;
-    let y = h * 0.62, face = 0.3, sc = 1.6;
+    const fit = Math.min(1.6, h / 70); // brawler is ~70 units tall at scale 1
+    let y = h * 0.66, face = 0.3, sc = fit;
     if (won) {
       const k = Math.min(1, t / 1.2);
-      y -= Math.abs(Math.sin(t * 5)) * 18 * (1 - k * 0.5) + (k < 1 ? Math.sin(k * Math.PI) * 30 : 0);
+      y -= (Math.abs(Math.sin(t * 5)) * 18 * (1 - k * 0.5) + (k < 1 ? Math.sin(k * Math.PI) * 30 : 0)) * (fit / 1.6);
       face = t < 1.2 ? t * 6 : Math.sin(t * 2) * 0.6 - Math.PI / 2;
       if (!SETTINGS.reduceFlash) for (let i = 0; i < 8; i++) { const a = t * 2 + i; R.outlinedText(c2, '★', w / 2 + Math.cos(a) * 70, h * 0.45 + Math.sin(a * 1.3) * 30, 16, '#ffd23f'); }
-    } else { y += Math.sin(t * 2) * 2; face = Math.PI / 2 + Math.sin(t) * 0.3; sc = 1.4; }
+    } else { y += Math.sin(t * 2) * 2; face = Math.PI / 2 + Math.sin(t) * 0.3; sc = fit * 0.9; }
     R.drawBrawler(c2, G.brawler, w / 2, y, face, t, { scale: sc, skin, moving: won });
     requestAnimationFrame(loop);
   };
@@ -674,6 +685,7 @@ function frame(now) {
     if (G.map) updateLocalBullets(dt);
     updateEffects(dt);
     if (G.me && G.map) render(now / 1000);
+    adaptResolution(dt * 1000);
     updateHud(now);
   } else if (G.phase === 'mapview') drawMapView(now / 1000);
   else drawMenuBackdrop(now / 1000);
@@ -703,7 +715,7 @@ function render(t) {
   ctx.scale(s, s);
   ctx.translate(-cam.x, -cam.y);
 
-  R.drawGround(ctx, G.map, x0, y0, x1, y1, t);
+  R.drawGround(ctx, G.map, x0, y0, x1, y1, t, s * DPR);
   const helpers = R.eventHelpers(ctx, G.map, view);
   const evs = [...G.conns.values()].map((c) => c.ev).filter(Boolean);
   for (const e of evs) if (EVENTS[e.id].layer === 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
@@ -933,7 +945,7 @@ function drawMapView(t) {
   ctx.save();
   ctx.translate((W - Wm * s) / 2, (H - Hm * s) / 2); ctx.scale(s, s);
   const v = { x0: 0, y0: 0, x1: Wm, y1: Hm };
-  R.drawGround(ctx, m, 0, 0, Wm, Hm, t);
+  R.drawGround(ctx, m, 0, 0, Wm, Hm, t, s * DPR);
   art.drawShadows(ctx, m, v);
   art.draw(ctx, m, v, t, SETTINGS);
   R.drawBlocks(ctx, m, new Map(), 0, 0, Wm, Hm);
@@ -964,7 +976,7 @@ function drawMenuBackdrop(t) {
   const cx = 2000 + Math.cos(t * 0.04) * 1300, cy = 2000 + Math.sin(t * 0.04) * 1300;
   ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.translate(-cx, -cy);
   const hw = W / 2 / s, hh = H / 2 / s;
-  R.drawGround(ctx, menuMap, cx - hw, cy - hh, cx + hw, cy + hh, t);
+  R.drawGround(ctx, menuMap, cx - hw, cy - hh, cx + hw, cy + hh, t, s * DPR);
   const mv = { x0: cx - hw, y0: cy - hh - 60, x1: cx + hw, y1: cy + hh + 60 };
   art.drawShadows(ctx, menuMap, mv);
   art.draw(ctx, menuMap, mv, t, SETTINGS);
@@ -1010,4 +1022,5 @@ else if (qs.get('free')) startFree();
 
 // exposed for e2e tests
 window.__hunt = G;
+window.__huntPerf = () => ({ dpr: DPR, frameAvg, dprStep });
 window.__huntMsg = (m) => onMsg(primary() || { primary: true }, m); // e2e hook: inject server messages

@@ -183,3 +183,6 @@ h2 small { font-size: 16px; color: var(--gold); }
 #mvp { display: inline-block; background: linear-gradient(#ffe066, #ffb800); color: var(--ink); border: 4px solid var(--ink); border-radius: 14px; padding: 2px 14px; font-size: 18px; margin-bottom: 6px; box-shadow: 0 4px 0 var(--ink); }
 #mvp b { font-weight: 400; }
 @media (max-height: 430px) { #pose { height: 80px; width: 140px; } }
+/* overflow-safe centring: panels centre when they fit and scroll from the top when they don't */
+.screen { align-items: flex-start; }
+@media (max-height: 430px) { #pose { height: 64px; width: 120px; margin: -4px auto -6px; } .rank { font-size: 48px; } #results { gap: 2px 8px; font-size: 13px; } }
