@@ -10,6 +10,9 @@ import { Input } from './input.js';
 import * as R from './render.js';
 import { SETTINGS, setSetting } from './settings.js';
 import * as A from './account.js';
+import { createLobby } from './ui/lobby.js';
+import { createMatchmaking, createResults, showIntro } from './ui/flow.js';
+import './ui/fx.js';
 import { levelInfo } from './progression.js';
 import { TITLES } from './catalog.js';
 import { sfx, falloff } from './audio.js';
@@ -71,39 +74,20 @@ $('room').value = prefs.room || '';
 $('bots').checked = prefs.bots !== false;
 
 function stat(worldKey) { const id = worldId(worldKey); return (prefs.stats[id] ||= { games: 0, wins: 0, kills: 0, best: 0 }); }
-function renderStats() {
+function statRows() {
   const rows = worldsInDisplayOrder().map((w) => {
     const s = prefs.stats[w.id] || {};
     return `<tr><td>${w.name}</td><td>${s.games || 0}</td><td>${s.wins || 0}</td><td>${s.kills || 0}</td><td>★${s.best || 0}</td></tr>`;
   }).join('');
-  $('stats').innerHTML = `<tr><th>World</th><th>Games</th><th>Wins</th><th>KOs</th><th>Best</th></tr>${rows}`;
+  return `<tr><th>World</th><th>Games</th><th>Wins</th><th>KOs</th><th>Best</th></tr>${rows}`;
 }
-renderStats();
-
-function buildCards() {
-  const wrap = $('cards');
-  wrap.innerHTML = '';
-  for (const id of BRAWLER_IDS) {
-    const B = BRAWLERS[id];
-    const el = document.createElement('div');
-    el.className = 'card' + (id === selBrawler ? ' sel' : '');
-    el.innerHTML = `<span class="tro" data-tro="${id}"></span><canvas></canvas><div class="nm">${B.name}</div><div class="role">${B.role.toUpperCase()}</div>
-      <div class="stats">${B.hp} HP · ${B.speed > 260 ? 'Fast' : B.speed < 230 ? 'Slow' : 'Normal'} · ${B.attack.range > 800 ? 'Long' : B.attack.range < 400 ? 'Short' : 'Mid'} range<br>${B.blurb}</div>`;
-    el.onclick = () => { selBrawler = id; prefs.brawler = id; savePrefs(); for (const c of wrap.children) c.classList.remove('sel'); el.classList.add('sel'); };
-    wrap.appendChild(el);
-    R.drawPortrait(el.querySelector('canvas'), id);
-  }
-}
-document.fonts?.load(`20px ${R.FONT}`).finally(() => { buildCards(); showTrophies(); });
-function showTrophies() {
-  const t = A.progress().trophies;
-  for (const el of document.querySelectorAll('[data-tro]')) el.textContent = `🏆 ${t[el.dataset.tro] | 0}`;
-}
-A.onUser(showTrophies);
 const booted = A.boot();
 
 function show(screen) {
-  for (const id of ['lobby', 'waiting', 'dead', 'end']) $(id).hidden = id !== screen;
+  if (screen === 'lobby') UI.lobby.show(); else UI.lobby.hide();
+  if (screen !== 'waiting') UI.mm.hide();
+  if (screen !== 'end') UI.res.hide();
+  $('dead').hidden = screen !== 'dead';
   $('hud').hidden = !(G.phase === 'play' || G.phase === 'dead' || G.phase === 'end');
   if (screen) $('hudAgain').hidden = true;
   document.body.classList.toggle('ingame', G.phase !== 'menu');
@@ -180,9 +164,8 @@ function startQuick(opts = G.opts) {
   for (const k of ['world', 'mode', 'lobby', 'ev']) if (opts[k]) q.set(k, opts[k]);
   openConn('main', '/ws?' + q, { primary: true });
   G.phase = 'waiting';
-  $('countdown').textContent = '…'; $('plist').innerHTML = ''; $('waitMode').textContent = 'FINDING HUNTERS'; $('waitDesc').textContent = '';
-  $('roomLabel').textContent = room ? `Room ${room}` : 'Quick Hunt';
   show('waiting');
+  UI.mm.show({ brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null, label: room ? `ROOM ${room}` : (MODE_INFO[opts.mode]?.name || 'QUICK HUNT') });
 }
 
 function startFree() {
@@ -202,7 +185,6 @@ function toMenu() {
   G.phase = 'menu';
   closeAll();
   input.enabled = false; input.reset();
-  renderStats();
   show('lobby');
 }
 
@@ -240,15 +222,10 @@ function onMsg(c, m) {
       G.myId = m.id; G.retries = 0; G.botsOn = m.bots;
       if (m.mode) G.modeKey = m.mode;
       if (m.world) G.world = m.world;
-      if (G.phase === 'waiting') {
-        $('waitMode').textContent = `${MODE_INFO[m.mode]?.name || ''} · ${worldName(m.world)}`;
-        $('waitDesc').textContent = MODE_INFO[m.mode]?.desc || '';
-      }
+      if (G.phase === 'waiting') UI.mm.update({ players: 1, max: m.mode === 'squad' ? 6 : 10, mode: MODE_INFO[m.mode]?.name, world: m.world });
       break;
     case 'lobby':
-      $('countdown').textContent = m.startIn == null ? '…' : Math.ceil(m.startIn);
-      $('plist').innerHTML = m.players.map(([n, b]) => `<li>${esc(n)} · ${BRAWLERS[b].name}</li>`).join('') +
-        (m.bots ? `<li style="opacity:.6">+ ${10 - m.players.length} bots</li>` : '');
+      UI.mm.update({ players: m.players.length, max: m.mode === 'squad' ? 6 : 10, startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world });
       break;
     case 'retry':
       if (!G.room && G.retries++ < 5) setTimeout(() => startQuick({ ...G.opts, skip: m.match }), 150);
@@ -261,7 +238,8 @@ function onMsg(c, m) {
       G.phase = 'play';
       input.enabled = true; input.reset();
       show(null);
-      showBanner(MODE_INFO[m.mode].name, `${MODE_INFO[m.mode].desc} (${worldName(m.world)} · ${m.botLevel || 'normal'} bots)`, '#ffd23f', 3500);
+      UI.showIntro({ world: m.world, modeName: MODE_INFO[m.mode].name, brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null });
+      setTimeout(() => showBanner(MODE_INFO[m.mode].name, `${MODE_INFO[m.mode].desc} (${m.botLevel || 'normal'} bots)`, '#ffd23f', 2500), 2200);
       break;
     case 'ro':
       if (m.add) Object.assign(G.roster, m.add);
@@ -308,8 +286,7 @@ function onMsg(c, m) {
     case 'online': G.online = m.zones; break;
     case 'progress': {
       if (A.ACC.user) A.setUser({ ...A.ACC.user, progress: m.progress });
-      const L = levelInfo(m.progress.xp);
-      $('endProg').innerHTML = `🏆 <b>${m.delta >= 0 ? '+' : ''}${m.delta}</b> · +${m.xp} XP · LV ${L.level}`;
+      UI.res.progress(m);
       break;
     }
     case 'pong': if (c.primary) { G.ping = Math.round(performance.now() - m.c); $('ping').textContent = `${G.ping} ms`; } break;
@@ -328,16 +305,11 @@ function onEnd(m) {
   const s = stat(G.world);
   s.games++; if (won) s.wins++; s.kills += m.kills; s.best = Math.max(s.best, G.me?.bb || 0, m.bounty);
   savePrefs();
-  $('endRank').textContent = m.winTeam !== undefined ? (m.won ? 'WIN!' : m.winTeam === 0 ? 'DRAW' : 'LOSS') : '#' + m.rank;
-  $('endMsg').textContent = m.winTeam !== undefined ? `Team pot ★${m.pots[m.team]} vs ★${m.pots[3 - m.team]}` : won ? `VICTORY! ${MODE_INFO[m.mode].name} on ${worldName(G.world)}` : `${m.winner || 'Nobody'} won ${MODE_INFO[m.mode].name}.`;
-  $('endK').textContent = m.kills; $('endB').textContent = m.bounty; $('endProg').textContent = '';
+  const msg = m.winTeam !== undefined ? `Team pot ★${m.pots[m.team]} vs ★${m.pots[3 - m.team]}` : won ? `VICTORY! ${MODE_INFO[m.mode].name} on ${worldName(G.world)}` : `${m.winner || 'Nobody'} won ${MODE_INFO[m.mode].name}.`;
   const scoreLbl = { bounty: '★', hunted: 'pts', crystals: '💎' }[m.mode];
-  $('results').innerHTML = m.results.map(([n, b, r, k, bot, id, be, sc, tm]) =>
-    `<li class="${id === G.myId ? 'me' : ''} ${tm ? (tm === m.team ? 'mate' : 'foe') : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${scoreLbl ? `${sc} ${scoreLbl} · ` : ''}${k} KO · ★${be}</span></li>`).join('');
-  const mvp = m.results.reduce((b, r) => (!b || r[6] > b[6] ? r : b), null);
-  $('mvp').hidden = !mvp || mvp[6] <= 0;
-  if (mvp) $('mvp').innerHTML = `👑 TOP BOUNTY HUNTER <b>${esc(mvp[0])}</b> ★${mvp[6]}`;
-  setTimeout(() => { if (G.phase === 'end') { show('end'); sfx(won ? 'victory' : 'defeat'); startPose(won); } }, won ? 1800 : 600);
+  const rows = m.results.map(([n, b, r, k, bot, id, be, sc, tm]) =>
+    `<li class="${id === G.myId ? 'me' : ''} ${tm ? (tm === m.team ? 'mate' : 'foe') : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${scoreLbl ? `${sc} ${scoreLbl} · ` : ''}${k} KO</span></li>`).join('');
+  setTimeout(() => { if (G.phase === 'end') { show('end'); UI.res.show(m, { msg, rows, won }); sfx(won ? 'victory' : 'defeat'); startPose(won); } }, won ? 1600 : 600);
 }
 
 // short victory pose (or a sulk) on the end screen
@@ -347,7 +319,7 @@ function startPose(won) {
   cv.width = cv.clientWidth * d; cv.height = cv.clientHeight * d;
   const skin = G.roster[G.myId]?.[3]?.skin, t0 = performance.now();
   const loop = (now) => {
-    if (G.phase !== 'end' || $('end').hidden) return;
+    if (G.phase !== 'end' || UI.res.el.hidden) return;
     const t = (now - t0) / 1000;
     c2.setTransform(d, 0, 0, d, 0, 0); c2.clearRect(0, 0, cv.width, cv.height);
     const w = cv.clientWidth, h = cv.clientHeight;
@@ -688,7 +660,7 @@ function frame(now) {
     adaptResolution(dt * 1000);
     updateHud(now);
   } else if (G.phase === 'mapview') drawMapView(now / 1000);
-  else drawMenuBackdrop(now / 1000);
+
   requestAnimationFrame(frame);
 }
 
@@ -993,9 +965,6 @@ function goFullscreen() {
   const p = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : null;
   if (p && p.then) p.then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
 }
-$('play').onclick = () => { goFullscreen(); startQuick({}); };
-$('free').onclick = () => { goFullscreen(); startFree(); };
-$('cancel').onclick = toMenu;
 $('leaveWorld').onclick = toMenu;
 $('spectate').onclick = () => { $('dead').hidden = true; $('hudAgain').hidden = false; };
 for (const [id, key] of [['setFlash', 'reduceFlash'], ['setLow', 'lowGfx'], ['setSound', 'sound']]) {
@@ -1004,8 +973,24 @@ for (const [id, key] of [['setFlash', 'reduceFlash'], ['setLow', 'lowGfx'], ['se
 }
 function applySettings() { document.body.classList.toggle('reduce-flash', SETTINGS.reduceFlash); resize(); }
 applySettings();
-for (const b of document.querySelectorAll('.again')) b.onclick = () => startQuick(G.opts.world ? { ...G.opts, room: 'T' + Math.floor(Math.random() * 1e8) } : {});
-$('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('play').click(); });
+const playAgain = () => { goFullscreen(); startQuick(G.opts.world ? { ...G.opts, room: 'T' + Math.floor(Math.random() * 1e8) } : { mode: G.opts.mode, room: G.opts.room }); };
+$('hudAgain').onclick = playAgain;
+for (const b of document.querySelectorAll('#dead .again')) b.onclick = playAgain;
+
+// ------------------------------------------------------------------ menus / lobby UI
+const UI = {};
+UI.lobby = createLobby({
+  // lobby PLAY = public matchmaking for the chosen mode; Friends popup = the typed room code
+  startQuick: (o = {}) => { goFullscreen(); startQuick(o.fromFriends ? {} : { mode: o.mode || '', room: '' }); },
+  startFree: () => { goFullscreen(); startFree(); },
+  getBrawler: () => selBrawler,
+  setBrawler: (id) => { selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); },
+  prefs, saveName: () => { readForm(); UI.lobby?.refresh(); }, statRows,
+});
+UI.mm = createMatchmaking(() => toMenu());
+UI.res = createResults({ onAgain: playAgain, onLobby: () => toMenu() });
+UI.showIntro = showIntro;
+
 
 // Test flags: ?world=<key>[&mode=<mode>] drops you straight into that arena with bots; ?free=1 into Free Play.
 const qs = new URLSearchParams(location.search);
@@ -1014,6 +999,7 @@ if (qs.get('mapview')) {
   G.map = qs.get('free') ? generateWorld() : generateArena(+(qs.get('seed') || 7), qs.get('world') || 'meadow');
   show(null); $('hud').hidden = true; document.body.classList.add('ingame');
 }
+if (!qs.get('mapview') && !qs.get('world') && !qs.get('free')) show('lobby');
 booted.then(() => {
 if (qs.get('mapview')) return;
 if (qs.get('world')) startQuick({ world: qs.get('world'), mode: qs.get('mode') || '', ev: qs.get('ev') || '', lobby: '1.5', room: 'T' + Math.floor(Math.random() * 1e8) });

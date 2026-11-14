@@ -32,7 +32,8 @@ export default {
       if (room) name = 'room:' + room;
       else {
         const mm = env.MATCHMAKER.get(env.MATCHMAKER.idFromName('global'));
-        const r = await mm.fetch('https://mm/assign?skip=' + encodeURIComponent(url.searchParams.get('skip') || ''));
+        const want = QUICK_MODES.includes(url.searchParams.get('mode')) ? url.searchParams.get('mode') : 'any';
+        const r = await mm.fetch('https://mm/assign?mode=' + want + '&skip=' + encodeURIComponent(url.searchParams.get('skip') || ''));
         name = await r.text();
       }
       const fwd = new URL(req.url);
@@ -45,15 +46,18 @@ export default {
 
 // Hands out the currently-filling quick-play match: a random event mode on a random arena.
 export class Matchmaker {
-  constructor() { this.cur = null; }
+  // one filling match per requested mode ('any' = random event mode)
+  constructor() { this.cur = {}; }
   async fetch(req) {
-    const skip = new URL(req.url).searchParams.get('skip');
+    const u = new URL(req.url), skip = u.searchParams.get('skip'), want = u.searchParams.get('mode') || 'any';
     const now = Date.now();
-    if (!this.cur || this.cur.count >= 10 || now - this.cur.created > 7000 || skip === this.cur.id) {
-      this.cur = { id: `qp:${pick(QUICK_MODES)}:${pick(arenaWorlds())}:${crypto.randomUUID()}`, created: now, count: 0 };
+    let c = this.cur[want];
+    if (!c || c.count >= c.max || now - c.created > 7000 || skip === c.id) {
+      const mode = want === 'any' ? pick(QUICK_MODES) : want;
+      c = this.cur[want] = { id: `qp:${mode}:${pick(arenaWorlds())}:${crypto.randomUUID()}`, created: now, count: 0, max: MODES[mode].maxPlayers || 10 };
     }
-    this.cur.count++;
-    return new Response(this.cur.id);
+    c.count++;
+    return new Response(c.id);
   }
 }
 

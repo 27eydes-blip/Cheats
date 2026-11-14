@@ -40,6 +40,10 @@ export async function boot() {
   }
 }
 export async function refresh() { if (ACC.token) try { setSession(await api('/me')); } catch {} }
+export async function register(username, password) { setSession(await api('/register', { username, password })); }
+export async function login(username, password) { setSession(await api('/login', { username, password })); }
+export async function logout() { try { await api('/logout', {}); } catch {} ACC.token = null; try { localStorage.removeItem(TOKEN_KEY); } catch {} await boot(); }
+export async function claimRoad(at) { setSession(await api('/claim', { at })); }
 export async function shop(body) { const d = await api('/shop', body); setSession(d); return d; }
 // cloud sync: pick up changes made on another device whenever the game comes back to the front
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });

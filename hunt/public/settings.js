@@ -2,7 +2,7 @@
 // reduceFlash: no strobing/pulsing, no screen shake, steady glows instead.
 // lowGfx: no shadows, ambient particles, slime animation, ground clutter; 1x resolution.
 const KEY = 'hunt-settings';
-const defaults = { reduceFlash: false, lowGfx: false, sound: true };
+const defaults = { reduceFlash: false, lowGfx: false, sound: true, musicVol: 0.6, sfxVol: 0.9 };
 let saved = {};
 try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch {}
 export const SETTINGS = { ...defaults, ...saved };

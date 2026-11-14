@@ -6,11 +6,11 @@ test('Desert Mirage: listed in display order, saves keyed by stable ids', async 
   // an old save from before Mirage existed (keys = world ids 0..4)
   await page.evaluate(() => localStorage.setItem('hunt', JSON.stringify({ name: 'Old', stats: { 2: { games: 4, kills: 9 }, 4: { games: 1, best: 6 } } })));
   await page.reload();
-  await page.click('#statsBox summary');
-  const rows = await page.locator('#stats tr td:first-child').allTextContents();
+  await page.click('#profileCard .pname');
+  const rows = await page.locator('.stat-table tr td:first-child').allTextContents();
   expect(rows.indexOf('Desert Mirage')).toBe(rows.indexOf('Wildwood') + 1);
   expect(rows.indexOf('Frozen Lake')).toBeGreaterThan(rows.indexOf('Desert Mirage'));
-  const forest = await page.locator('#stats tr', { hasText: 'Wildwood' }).locator('td').allTextContents();
+  const forest = await page.locator('.stat-table tr', { hasText: 'Wildwood' }).locator('td').allTextContents();
   expect(forest[1]).toBe('4'); expect(forest[3]).toBe('9');
   await expect(page.locator('#name')).toHaveValue('Old');
 });

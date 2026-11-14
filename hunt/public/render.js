@@ -381,12 +381,14 @@ export function drawBushes(ctx, map, x0, y0, x1, y1, me, t) {
 }
 
 // ---------------------------------------------------------------- brawlers
+let blinkK = 1; // 1 = open, ~0.1 = closed (lobby idle blink)
 function eyes(ctx, facing, ox, oy, spread, size) {
   const fx = Math.cos(facing), fy = Math.sin(facing);
   for (const s of [-1, 1]) {
     const ex = ox + s * spread + fx * 5, ey = oy + fy * 3;
-    ctx.beginPath(); ctx.ellipse(ex, ey, size * 0.8, size, 0, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.ellipse(ex, ey, size * 0.8, Math.max(0.6, size * blinkK), 0, 0, Math.PI * 2);
     ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
+    if (blinkK < 0.5) continue;
     ctx.beginPath(); ctx.arc(ex + fx * size * 0.35, ey + fy * size * 0.4, size * 0.45, 0, Math.PI * 2);
     ctx.fillStyle = INK; ctx.fill();
   }
@@ -416,6 +418,7 @@ function drawAccessory(ctx, acc, t) {
 export function drawBrawler(ctx, id, x, y, facing, t, o = {}) {
   const sk = o.skin && SKINS[o.skin] && SKINS[o.skin].brawler === id ? SKINS[o.skin] : null;
   const B = sk ? { ...BRAWLERS[id], color: sk.color, dark: sk.dark, accent: sk.accent } : BRAWLERS[id];
+  blinkK = 1 - (o.blink || 0) * 0.9;
   ctx.save();
   ctx.translate(x, y);
   const sc = (o.scale || 1) * (o.size || 1);
@@ -489,14 +492,14 @@ export function drawBrawler(ctx, id, x, y, facing, t, o = {}) {
     ctx.beginPath(); ctx.ellipse(0, -10, 15, 11, 0, 0, 7); ctx.fillStyle = '#3d2614'; ctx.fill(); ctx.stroke(); // hood shadow
     const fx = Math.cos(facing) * 4, fy = Math.sin(facing) * 2;
     ctx.fillStyle = '#7ef9ff';
-    for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * 6 + fx, -10 + fy, 3.2, 0, 7); ctx.fill(); }
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 6 + fx, -10 + fy, 3.2, Math.max(0.5, 3.2 * blinkK), 0, 0, 7); ctx.fill(); }
   } else if (id === 'rook') {
     rr(ctx, -27, -24, 54, 50, 16); ctx.fillStyle = flash ? '#fff' : B.color; ctx.fill(); ctx.lineWidth = 4.5; ctx.stroke();
     rr(ctx, -20, 10, 40, 12, 5); ctx.fillStyle = B.dark; ctx.fill(); ctx.lineWidth = 3; ctx.stroke(); // belt
     for (const s of [-1, 0, 1]) { ctx.beginPath(); ctx.arc(s * 12, 16, 4, 0, 7); ctx.fillStyle = B.accent; ctx.fill(); ctx.stroke(); } // mines on the belt
     rr(ctx, -21, -16, 42, 16, 8); ctx.fillStyle = '#2b2b3a'; ctx.fill(); ctx.stroke(); // goggles strap
     const fx = Math.cos(facing) * 4, fy = Math.sin(facing) * 2;
-    for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * 9 + fx, -8 + fy, 6.5, 0, 7); ctx.fillStyle = '#ffd23f'; ctx.fill(); ctx.lineWidth = 3; ctx.stroke(); ctx.beginPath(); ctx.arc(s * 9 + fx * 1.4, -8 + fy * 1.4, 2.6, 0, 7); ctx.fillStyle = INK; ctx.fill(); }
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * 9 + fx, -8 + fy, 6.5, 0, 7); ctx.fillStyle = '#ffd23f'; ctx.fill(); ctx.lineWidth = 3; ctx.stroke(); if (blinkK > 0.5) { ctx.beginPath(); ctx.arc(s * 9 + fx * 1.4, -8 + fy * 1.4, 2.6, 0, 7); ctx.fillStyle = INK; ctx.fill(); } }
   } else if (id === 'flicker') {
     // sleek masked assassin with fox ears and a trailing scarf
     ctx.beginPath(); ctx.moveTo(-16, -18); ctx.lineTo(-12, -36); ctx.lineTo(-4, -22); ctx.moveTo(16, -18); ctx.lineTo(12, -36); ctx.lineTo(4, -22);
@@ -508,7 +511,7 @@ export function drawBrawler(ctx, id, x, y, facing, t, o = {}) {
     rr(ctx, -18, -10, 36, 12, 6); ctx.fillStyle = '#1b1033'; ctx.fill(); // mask band
     const fx = Math.cos(facing) * 4, fy = Math.sin(facing) * 2;
     ctx.fillStyle = '#ff5fa2';
-    for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 8 + fx, -4 + fy, 5, 3, s * 0.3, 0, 7); ctx.fill(); }
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 8 + fx, -4 + fy, 5, Math.max(0.5, 3 * blinkK), s * 0.3, 0, 7); ctx.fill(); }
   } else {
     ctx.beginPath();
     ctx.moveTo(-24, 4);
@@ -527,7 +530,7 @@ export function drawBrawler(ctx, id, x, y, facing, t, o = {}) {
     ctx.fillStyle = B.accent; ctx.fill(); ctx.stroke();
     const fx = Math.cos(facing) * 4, fy = Math.sin(facing) * 2;
     ctx.fillStyle = '#eaffff';
-    for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 8 + fx, -2 + fy, 4, 6, 0, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 2.5; ctx.stroke(); }
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 8 + fx, -2 + fy, 4, Math.max(0.6, 6 * blinkK), 0, 0, Math.PI * 2); ctx.fill(); ctx.lineWidth = 2.5; ctx.stroke(); }
   }
   if (!behind) gun();
   if (sk) drawAccessory(ctx, sk.acc, t);

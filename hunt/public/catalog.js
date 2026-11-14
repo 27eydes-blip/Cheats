@@ -59,8 +59,10 @@ function grant(p, r) {
 }
 
 // All progression-changing shop actions. Runs on the server for accounts (authoritative).
+import { claimMission } from './progression.js';
 export function applyPurchase(p, req) {
   switch (req.action) {
+    case 'mission': return claimMission(p, req.id);
     case 'equip': {
       const { slot, id } = req;
       if (!['title', 'fx'].includes(slot) && !/^skin:(volt|brick|wisp|dune|rook|flicker)$/.test(slot || '')) return { error: 'bad slot' };

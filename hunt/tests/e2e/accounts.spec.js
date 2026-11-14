@@ -47,12 +47,14 @@ test('guest -> upgrade keeps progress; login elsewhere syncs; match results appl
   expect((await api(request, '/claim', { at: 100 }, li.json.token)).status).toBe(400);
 });
 
-test('lobby shows profile bar and account modal', async ({ page }) => {
+test('lobby profile card: guest chip, account screen and trophy road', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('#profileBar .chip').first()).toBeVisible();
-  await page.click('#accBtn');
-  await expect(page.locator('#regForm')).toBeVisible();
-  await page.click('#modalClose');
-  await page.click('#roadBtn');
-  await expect(page.locator('.road li').first()).toBeVisible();
+  await expect(page.locator('#profileCard')).toBeVisible();
+  await expect(page.locator('#guestChip')).toBeVisible();
+  await page.click('#guestChip span');
+  await expect(page.locator('#regF')).toBeVisible();
+  await page.click('.ui-screen .back');
+  await page.click('#rail_road');
+  await expect(page.locator('.node').first()).toBeAttached();
+  await expect(page.locator('.marker')).toBeAttached();
 });

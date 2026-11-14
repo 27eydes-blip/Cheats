@@ -11,6 +11,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="ui/tokens.css">
+<link rel="stylesheet" href="ui/lobby.css">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -40,38 +42,15 @@
   <button id="hudAgain" class="big again" hidden>PLAY AGAIN</button>
 </div>
 
-<div id="lobby" class="screen">
-  <div class="panel">
-    <div id="profileBar"></div>
-    <h1 class="logo">HUNT</h1>
-    <div class="row">
-      <input id="name" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false">
-      <input id="room" maxlength="12" placeholder="Room code (optional)" autocomplete="off" spellcheck="false">
-    </div>
-    <div id="cards"></div>
-    <div class="modes">
-      <button id="play" class="big">QUICK HUNT<small>Random event · 10 players</small></button>
-      <button id="free" class="big alt">FREE PLAY<small>Open world · drop in anytime</small></button>
-    </div>
-    <label class="opt" id="botsOpt"><input type="checkbox" id="bots" checked> Fill empty slots with bots <small>(room code only)</small></label>
-    <div class="settings">
-      <label><input type="checkbox" id="setFlash"> Reduce Flashing</label>
-      <label><input type="checkbox" id="setLow"> Low Graphics</label>
-      <label><input type="checkbox" id="setSound"> Sound</label>
-    </div>
-    <details id="statsBox"><summary>Your stats by world</summary><table id="stats"></table></details>
-  </div>
-</div>
-
-<div id="waiting" class="screen" hidden>
-  <div class="panel small">
-    <h2 id="waitMode">FINDING HUNTERS</h2>
-    <p id="waitDesc" class="desc"></p>
-    <div class="count" id="countdown">…</div>
-    <div id="roomLabel"></div>
-    <ul id="plist"></ul>
-    <button id="cancel" class="ghost">CANCEL</button>
-  </div>
+<div id="lobby" hidden></div>
+<!-- form controls live here and are moved into Profile / Friends / Settings when those open -->
+<div id="formStash" hidden>
+  <input id="name" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false">
+  <input id="room" maxlength="12" placeholder="ROOM CODE" autocomplete="off" spellcheck="false">
+  <label class="opt"><input type="checkbox" id="bots" checked> Fill empty slots with bots</label>
+  <label class="opt"><input type="checkbox" id="setSound"> Sound</label>
+  <label class="opt"><input type="checkbox" id="setFlash"> Reduce Flashing</label>
+  <label class="opt"><input type="checkbox" id="setLow"> Low Graphics</label>
 </div>
 
 <div id="dead" class="screen dim" hidden>
@@ -85,19 +64,7 @@
   </div>
 </div>
 
-<div id="end" class="screen dim" hidden>
-  <div class="panel">
-    <canvas id="pose"></canvas>
-    <div class="rank" id="endRank">#1</div>
-    <p id="endMsg"></p>
-    <div id="mvp" hidden></div>
-    <div class="endStats"><span>KO <b id="endK">0</b></span><span>BOUNTY EARNED ★<b id="endB">0</b></span><span id="endProg"></span></div>
-    <ol id="results"></ol>
-    <button class="big again">PLAY AGAIN</button>
-  </div>
-</div>
-
-<div id="credit">Created by Sam Eyde III</div>
+<div id="creditGame">Created by Sam Eyde III</div>
 <div id="rotate"><div>↻</div><p>Rotate your phone to landscape</p></div>
 <div id="toast" hidden></div>
 

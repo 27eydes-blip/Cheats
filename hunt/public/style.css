@@ -186,3 +186,8 @@ h2 small { font-size: 16px; color: var(--gold); }
 /* overflow-safe centring: panels centre when they fit and scroll from the top when they don't */
 .screen { align-items: flex-start; }
 @media (max-height: 430px) { #pose { height: 64px; width: 120px; margin: -4px auto -6px; } .rank { font-size: 48px; } #results { gap: 2px 8px; font-size: 13px; } }
+
+#creditGame { position: fixed; z-index: 5; right: max(10px, env(safe-area-inset-right)); bottom: max(3px, env(safe-area-inset-bottom)); font: 400 10px "Lilita One", sans-serif; color: #ffd23f; opacity: .55; pointer-events: none; text-shadow: 0 1px 0 #1b1033; }
+body:not(.ingame) #creditGame { display: none; }
+#formStash { display: none; }
+.opt { color: #fff; font-family: var(--font); display: flex; gap: 8px; align-items: center; justify-content: flex-start; margin: 0; }
