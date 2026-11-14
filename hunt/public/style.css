@@ -135,3 +135,5 @@ body.reduce-flash * { animation: none !important; transition: none !important; }
 #cards { grid-template-columns: repeat(3, 1fr); }
 @media (min-width: 760px) { #cards { grid-template-columns: repeat(6, 1fr); } .card .stats { font-size: 10px; } }
 @media (max-height: 430px) { .card canvas { height: 46px; } .card .nm { font-size: 17px; } .card .stats { display: none; } #cards { grid-template-columns: repeat(6, 1fr); gap: 6px; } }
+#potPill .blue { color: #6cb8ff; } #potPill .red { color: #ff6b81; } #potPill b { color: inherit; margin: 0 2px; }
+#results li.mate { border-color: #3a86ff; } #results li.foe { border-color: #ff4d5e; }

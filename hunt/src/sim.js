@@ -26,6 +26,8 @@ export class Sim {
     this.send = o.send || (() => {});
     this.modeKey = o.mode || 'showdown';
     this.mode = MODES[this.modeKey];
+    this.maxPlayers = this.mode.maxPlayers || MAX_PLAYERS;
+    this.teamPot = { 1: 0, 2: 0 };
     this.hooks = o.hooks || {};
     this.zone = o.zone || null;
     this.hub = o.hub ? HUB : null;
@@ -175,12 +177,19 @@ export class Sim {
 
   // ---------------------------------------------------------------- arena lobby
   join(name, brawler) {
-    if (this.phase !== 'lobby' || this.players.size >= MAX_PLAYERS) return null;
+    if (this.phase !== 'lobby' || this.players.size >= this.maxPlayers) return null;
     const p = this.addPlayer({ name, brawler, bot: false });
+    if (this.mode.teams) p.team = this.smallerTeam();
     this.lobbyEnd = this.lobbyEnd == null ? this.clock + this.lobbyTime : Math.max(this.lobbyEnd, this.clock + 4);
-    if (this.humans().length >= MAX_PLAYERS) this.lobbyEnd = this.clock;
+    if (this.humans().length >= this.maxPlayers) this.lobbyEnd = this.clock;
     this.broadcastLobby();
     return p.id;
+  }
+
+  smallerTeam() {
+    let a = 0, b = 0;
+    for (const p of this.players.values()) { if (p.team === 1) a++; else if (p.team === 2) b++; }
+    return a <= b ? 1 : 2;
   }
 
   leave(id) {
@@ -203,12 +212,17 @@ export class Sim {
   start() {
     const taken = new Set([...this.players.values()].map((p) => p.name));
     const names = BOT_NAMES.filter((n) => !taken.has(n)).sort(() => Math.random() - 0.5);
-    const target = this.fillBots || this.players.size < 2 ? MAX_PLAYERS : 0;
-    while (this.players.size < target) this.addPlayer({ name: names.pop() || 'Bot', brawler: BRAWLER_IDS[Math.floor(Math.random() * BRAWLER_IDS.length)], bot: true });
+    const target = this.fillBots || this.players.size < 2 ? this.maxPlayers : 0;
+    while (this.players.size < target) {
+      const b = this.addPlayer({ name: names.pop() || 'Bot', brawler: BRAWLER_IDS[Math.floor(Math.random() * BRAWLER_IDS.length)], bot: true });
+      if (this.mode.teams) b.team = this.smallerTeam();
+    }
+    // teams spawn on opposite sides of the ring; FFA spawns are shuffled
     const spawns = SPAWNS.slice().sort(() => Math.random() - 0.5);
-    let i = 0;
+    const sideA = SPAWNS.filter((s) => s.x < this.center.x), sideB = SPAWNS.filter((s) => s.x >= this.center.x);
+    let i = 0, ia = 0, ib = 0;
     for (const p of this.players.values()) {
-      const s = spawns[i++ % spawns.length];
+      const s = !this.mode.teams ? spawns[i++ % spawns.length] : p.team === 1 ? sideA[ia++ % sideA.length] : sideB[ib++ % sideB.length];
       p.x = p.px = s.x; p.y = p.py = s.y;
       p.facing = Math.atan2(this.center.y - s.y, this.center.x - s.x);
     }
@@ -216,13 +230,14 @@ export class Sim {
     this.time = 0;
     for (const p of this.players.values()) {
       if (!p.connected) continue;
-      this.send(p.id, { t: 'start', you: p.id, mode: this.modeKey, world: this.map.world, seed: this.seed });
+      this.send(p.id, { t: 'start', you: p.id, mode: this.modeKey, world: this.map.world, seed: this.seed, open: !!this.map.open });
       this.send(p.id, this.rosterMsg());
     }
   }
 
   canSee(viewer, t) {
     if (viewer === t) return true;
+    if (viewer.team && viewer.team === t.team) return true; // teammates are always visible
     if (viewer.alive === false) return true;
     const d = Math.hypot(viewer.x - t.x, viewer.y - t.y);
     if (this.mods.vision && d > this.mods.vision) return false;
@@ -399,6 +414,11 @@ export class Sim {
     if (src && src !== t) {
       if (src.remote) this.hooks.credit?.(src.zone, { id: src.id, kill: 1, gain: 1 + stolen });
       else this.gainBounty(src, 1 + stolen);
+      // SQUAD HUNT: kills feed the shared team pot; the stolen bounty leaves the victim's pot
+      if (this.mode.teams && src.team && t.team && src.team !== t.team) {
+        this.teamPot[src.team] += 1 + stolen;
+        this.teamPot[t.team] = Math.max(0, this.teamPot[t.team] - stolen);
+      }
     }
     t.bounty = 0; t.bushT = 0; t.lowF = 0;
     this.mode.onKill?.(this, t, src && !src.remote ? src : null);
@@ -842,7 +862,7 @@ export class Sim {
         if (p === v || !p.alive || !this.canSee(v, p)) continue;
         if (Math.abs(p.x - v.x) > 1500 || Math.abs(p.y - v.y) > 1100) continue;
         others.push([p.id, Math.round(p.x), Math.round(p.y), Math.round(p.hp), p.maxHp, Math.round(p.facing * 100) / 100,
-          this.flags(p), p.cubes, p.bounty, this.glow(p), p.crystals]);
+          this.flags(p), p.cubes, p.bounty, this.glow(p), p.crystals, p.team]);
       }
       return others;
     };
@@ -850,6 +870,7 @@ export class Sim {
       if (!v.connected) continue;
       this.send(v.id, {
         ...common, ack: v.lastSeq, p: rows(v), mn: mineRows(v),
+        ...(v.team ? { mates: [...this.players.values()].filter((q) => q !== v && q.team === v.team && q.alive).map((q) => [q.id, Math.round(q.x), Math.round(q.y)]) } : {}),
         me: {
           x: r2(v.x), y: r2(v.y), mvx: r2(v.mvx), mvy: r2(v.mvy), hp: Math.round(v.hp), mh: v.maxHp, am: r2(v.ammo + v.reloadP),
           sc: r2(v.superC), cu: v.cubes, f: this.flags(v), al: v.alive ? 1 : 0, fo: v.dash || v.knock || v.stun > 0 ? 1 : 0,
@@ -876,12 +897,16 @@ export class Sim {
   finish() {
     this.phase = 'end';
     const ranked = this.mode.rank(this);
+    const winTeam = this.mode.teams ? (this.teamPot[1] === this.teamPot[2] ? 0 : this.teamPot[1] > this.teamPot[2] ? 1 : 2) : 0;
     ranked.forEach((p, i) => { p.rank = i + 1; });
     const score = this.mode.score || (() => 0);
-    const results = ranked.map((p) => [p.name, p.brawler, p.rank, p.kills, p.wasBot ? 1 : 0, p.id, p.bountyEarned, Math.floor(score(p))]);
+    const results = ranked.map((p) => [p.name, p.brawler, p.rank, p.kills, p.wasBot ? 1 : 0, p.id, p.bountyEarned, Math.floor(score(p)), p.team]);
     const winner = ranked[0];
     for (const p of this.players.values()) {
-      if (p.connected) this.send(p.id, { t: 'end', mode: this.modeKey, rank: p.rank, kills: p.kills, bounty: p.bountyEarned, winner: winner ? winner.name : null, results });
+      if (p.connected) {
+        this.send(p.id, { t: 'end', mode: this.modeKey, rank: p.rank, kills: p.kills, bounty: p.bountyEarned, winner: winner ? winner.name : null, results,
+          ...(this.mode.teams ? { team: p.team, winTeam, pots: this.teamPot, won: p.team === winTeam } : {}), n: this.players.size });
+      }
     }
   }
 }

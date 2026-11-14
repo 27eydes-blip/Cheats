@@ -66,7 +66,7 @@ export function botInput(m, p) {
     ai.retargetT = rand(0.3, 0.6);
     let best = null, bd = Infinity;
     for (const o of m.players.values()) {
-      if (o === p || !o.alive || !m.canSee(p, o)) continue;
+      if (o === p || !o.alive || !m.enemies(p, o) || !m.canSee(p, o)) continue;
       const d = Math.hypot(o.x - p.x, o.y - p.y);
       const score = d - (o.hp / o.maxHp) * 120;
       // early game: loot first, only fight what's close (or whoever is shooting us)
@@ -79,7 +79,7 @@ export function botInput(m, p) {
     ai.target = nt;
   }
   const goal = m.mode.botGoal?.(m, p) || null;
-  if (goal && goal.targetId) { const g = m.players.get(goal.targetId); if (g && g.alive && g.spawnProt <= 0) ai.target = g.id; }
+  if (goal && goal.targetId) { const g = m.players.get(goal.targetId); if (g && g.alive && g.spawnProt <= 0 && m.enemies(p, g)) ai.target = g.id; }
   let tgt = ai.target != null ? m.players.get(ai.target) : null;
   if (tgt && (!tgt.alive || tgt.spawnProt > 0 || m.isSafe(tgt.x, tgt.y))) tgt = null;
   // the hunted target can always be found (it pings the radar)

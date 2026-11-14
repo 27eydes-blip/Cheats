@@ -187,6 +187,13 @@ export function drawGrade(ctx, map, cam, W, H) {
 }
 
 // cool rim under players in rim themes (teal ring + long shadow)
+// SQUAD HUNT: blue ring for you/teammates, red for enemies (dark outline so it reads anywhere)
+export function drawTeamRing(ctx, p, mate) {
+  const s = p.size || 1;
+  ctx.beginPath(); ctx.arc(p.x, p.y + 2, 31 * s, 0, Math.PI * 2);
+  ctx.lineWidth = 10; ctx.strokeStyle = INK; ctx.stroke();
+  ctx.lineWidth = 5; ctx.strokeStyle = mate ? '#3a86ff' : '#ff2846'; ctx.stroke();
+}
 export function drawRim(ctx, map, p) {
   const th = theme(worldKeyAt(map, p.x, p.y));
   if (!th.rim) return;
@@ -692,14 +699,14 @@ export function drawAim(ctx, brawler, x, y, ang, kind, mag) {
   ctx.restore();
 }
 
-export function drawStatus(ctx, p, isMe, t) {
+export function drawStatus(ctx, p, isMe, t, side) {
   const y = p.y - 58 * (p.size || 1) - 4;
   const w = 74, h = 15;
   outlinedText(ctx, p.name, p.x, y - 16, 15, isMe ? '#b8ff6b' : (p.fl & 32) ? '#ff8a9a' : '#fff');
   rr(ctx, p.x - w / 2 - 2, y - h / 2 - 2, w + 4, h + 4, 7); ctx.fillStyle = INK; ctx.fill();
   const f = Math.max(0, Math.min(1, p.hp / p.mh));
   rr(ctx, p.x - w / 2, y - h / 2, w, h, 5); ctx.fillStyle = '#3a2a5e'; ctx.fill();
-  if (f > 0) { rr(ctx, p.x - w / 2, y - h / 2, Math.max(8, w * f), h, 5); ctx.fillStyle = isMe ? '#4be06e' : '#ff4d5e'; ctx.fill(); }
+  if (f > 0) { rr(ctx, p.x - w / 2, y - h / 2, Math.max(8, w * f), h, 5); ctx.fillStyle = isMe ? '#4be06e' : side === 'mate' ? '#3a86ff' : '#ff4d5e'; ctx.fill(); }
   outlinedText(ctx, String(Math.ceil(p.hp)), p.x, y + 1, 12);
   if (p.cu > 0) {
     rr(ctx, p.x - w / 2 - 24, y - 10, 20, 20, 5); ctx.fillStyle = '#5be35b'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
@@ -763,7 +770,7 @@ export function drawRadar(ctx, cx, cy, R, me, pings, extras, t) {
     const a = Math.max(0, 1 - p.age / 3);
     ctx.globalAlpha = a;
     ctx.beginPath(); ctx.arc(x, y, 4 + Math.min(5, p.bt) + (1 - a) * 6, 0, 7);
-    ctx.fillStyle = p.target ? '#ff2846' : '#ffd23f'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
+    ctx.fillStyle = p.mate ? '#3a86ff' : p.target ? '#ff2846' : '#ffd23f'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
   }
   ctx.globalAlpha = 1;
   ctx.beginPath(); ctx.arc(cx, cy, 5, 0, 7); ctx.fillStyle = '#b8ff6b'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();

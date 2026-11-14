@@ -84,6 +84,20 @@ export const MODES = {
     },
   },
 
+  squad: {
+    name: 'Squad Hunt', desc: '3v3! Kills fill your team pot. Highest pot after 3:00 wins.', respawn: true, quick: true, teams: true, maxPlayers: 6, timeLimit: 180,
+    score: (p) => p.bountyEarned,
+    // winning team first (by pot), then each player's bounty earned
+    rank: (sim) => [...sim.players.values()].sort((a, b) => (sim.teamPot[b.team] - sim.teamPot[a.team]) || (a.team - b.team) || (b.bountyEarned - a.bountyEarned) || (b.kills - a.kills)),
+    checkEnd: (sim) => sim.time >= 180,
+    hud: (sim) => ({ tl: Math.max(0, 180 - sim.time), pots: sim.teamPot }),
+    botGoal: (sim, bot) => {
+      let best = null;
+      for (const p of sim.players.values()) if (p.team !== bot.team && p.alive && p.bounty > (best?.bounty ?? 1)) best = p;
+      return best ? { targetId: best.id } : null;
+    },
+  },
+
   freeplay: {
     name: 'Free Play', desc: 'Drop-in open world.', respawn: true, hub: true,
     checkEnd: () => false,
