@@ -791,18 +791,19 @@ export class ObstacleManager {
         // two zap pairs stepped like stairs, firing in turn
         const D = r.range(260, 320);
         const up = r.chance(0.5);
+        const step = 220 * (this.lethalSpread || 1); // WASP LORD: same time between them at his speed
         for (let i = 0; i < 2; i++) {
           const c = up ? safeBot - D / 2 - i * 230 : safeTop + D / 2 + i * 230;
           const o = this.obtain("zap");
-          o.spawn(x + 40 + i * 220, {
+          o.spawn(x + 40 + i * step, {
             y1: c - D / 2,
             y2: c + D / 2,
             dx: 0,
             phase: (i * 0.5 + r.next() * 0.2) % 1,
           });
         }
-        this.coinLine(x + 60, x + 280, up ? safeTop + 60 : safeBot - 60, 4);
-        width = 300;
+        this.coinLine(x + 60, x + 60 + step, up ? safeTop + 60 : safeBot - 60, 4);
+        width = 80 + step;
         break;
       }
       case "gauntlet": {

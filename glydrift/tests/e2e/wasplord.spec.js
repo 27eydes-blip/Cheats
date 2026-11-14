@@ -442,6 +442,7 @@ test("WASP LORD: swapping heroes mid-session restores the other hero exactly (no
         ratio: +(s.speed / (s.course.speedAt(s.meters) * s.speedMul)).toFixed(3),
         phase: s.obstacles.phase,
         ward: s.obstacles.ward,
+        spread: s.obstacles.lethalSpread,
         dj: !!s.charDef.doubleJump,
       };
     });
@@ -469,18 +470,23 @@ test("WASP LORD: swapping heroes mid-session restores the other hero exactly (no
     expect(w.id).toBe("wasplord");
     expect(w.ratio).toBe(1.308);
     expect(w.phase).toEqual(["laser", "blaser", "eyebeam", "mlaser", "zap"]);
+    expect(w.spread).toBe(1.308);
     expect(w.sawKills).toBe(false);
     expect(w.phased).toBe(1);
   }
-  expect(volt).toMatchObject({ id: "volt", ratio: 1, phase: null, ward: null, sawKills: true, phased: 0 });
+  expect(volt).toMatchObject({ id: "volt", ratio: 1, phase: null, ward: null, spread: 1, sawKills: true, phased: 0 });
   // SXE: his own +25% and no phase outside the Glitch Realm
-  expect(sxe).toMatchObject({ id: "splice", ratio: 1.25, phase: null, ward: null, sawKills: true, phased: 0 });
+  expect(sxe).toMatchObject({ id: "splice", ratio: 1.25, phase: null, ward: null, spread: 1, sawKills: true, phased: 0 });
   expect(log.errors).toEqual([]);
 });
 
 test("WASP LORD: fair at his speed — a god-off autopilot flies every realm and dimension with the lethal hazards forced", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   test.setTimeout(900_000);
+  // the autopilot flies with the game's physics: they must still match src/config.js
+  const cfg = readFileSync(new URL("../../src/config.js", import.meta.url), "utf8");
+  for (const [k, v] of [["gravityUp", 2300], ["gravityDown", 2750], ["flapVelocity", -790], ["terminalFall", 1080], ["terminalRise", -980]])
+    expect(cfg, k).toMatch(new RegExp(`${k}: ${v}[,\\s]`));
   const log = await openGame(page, { flags: ["character=wasplord"] });
   const FORCE = {
     void: ["hlaser", "blade", "hlaser", "pulse", "hlaser", "bladeduo"],

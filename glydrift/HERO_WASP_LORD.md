@@ -39,11 +39,19 @@ phasing, metallic boom on double jump, deep buzz-roar on unlock (and on a new be
    - **No free points:** phasing through something never counts as a CLOSE! or PERFECT!.
 2. **SPEED ×1.308:** 30% above the average of the other 90 heroes (1.006, computed from the
    hero data at load). He's the fastest hero; SXE is 1.25.
-   - **Fairness check:** a bot with god mode off flew every realm and dimension at his speed,
-     including Sakura Skies and 12 forced Abyss double eye beams, with every laser and beam type
-     forced. It never died, and its closest pass was 8 px, still clear.
-   - **No spawning changes were needed:** the laser and eye-beam warnings are timed in seconds,
-     so they give the same reaction time at his speed.
+   - **One spacing change, for him only:** the Frozen **zap stairs** (two zap pairs, one after
+     the other) sit 1.308× further apart when he flies, so he gets the same time between them
+     as everyone else. At his speed the fixed 220 px gap was too tight: the test bot made it
+     through at normal speed but not at his. No other hero's spawning changes (a test checks
+     VOLT and SXE).
+   - The laser, eye-beam and zap warnings are timed in seconds, so they already give the same
+     reaction time at his speed.
+   - **Fairness check:** a bot with god mode off flew 3 laps: every realm and dimension once,
+     then to the end of the Abyss twice more. That included Sakura Skies, 12 forced Abyss double
+     eye beams and every laser and beam type forced. It never died, and its closest passes were
+     about 70 px from zaps, 90 px from lasers and 100 px from eye beams.
+     - The bot flies with real taps and the game's physics. It treats every laser as always on,
+       and a zap beam as live from its 0.75 s charge warning, with 0.2 s to spare either side.
 3. **DOUBLE JUMP:** a second tap within 0.25 s of a flap is a 1.45× boosted flap with the red
    shockwave. Once, then ready again only when he starts falling. MILZZZ's double jump is
    unchanged.
@@ -84,6 +92,7 @@ phasing, metallic boom on double jump, deep buzz-roar on unlock (and on a new be
   - memory: swapping onto him and off again leaves the same number of objects, textures and
     tweens;
   - the fairness bot through every realm and dimension (Sakura Skies, Abyss double eye beams);
+  - the zap-stairs spacing: his own, and normal for VOLT and SXE;
   - **a run still ends:** with no taps he hits the ground in under 5 s, and flying blind a zap beam
     got him at 1,852 m. He is not unkillable.
 - **Leaderboard and score rules:**

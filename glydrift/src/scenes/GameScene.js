@@ -1301,6 +1301,9 @@ export class GameScene extends Phaser.Scene {
     // end his run (no clamping), so a run can always end.
     this.obstacles.phase = this.charDef.perks?.phase?.lethal ?? null;
     this.obstacles.calmPhase = !!this.obstacles.phase && reduceFlashing();
+    // ...and hazards that still kill him, placed one after another (the Frozen zap stairs), sit
+    // further apart in step with his speed, so he gets the same time between them as anyone else
+    this.obstacles.lethalSpread = this.obstacles.phase ? Math.max(1, this.charDef.speed ?? 1) : 1;
     if (ward && !this.wardAura) {
       this.wardAura = this.add
         .image(0, 0, "glow")

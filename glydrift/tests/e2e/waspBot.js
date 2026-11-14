@@ -12,6 +12,17 @@ export function waspFly({ frames = 60 * 60, untilM = Infinity, force = null, ste
   const H = s.H;
   const lethal = new Set(s.charDef.perks?.phase?.lethal || []);
   const CLOCKED = new Set(["laser", "zap", "mlaser"]);
+  // the game's flight physics (src/config.js PHYSICS; the spec checks they still match)
+  const PH = { up: 2300, down: 2750, flap: -790, fall: 1080, rise: -980 };
+  const flapMul = Math.sqrt(s.charDef.perks?.jump ?? 1);
+  // hover in a band around the target (a flap rises ~135 px); far below it, climb like a
+  // player would, tapping again before the rise fades. Taps stay over 0.25 s apart, so a
+  // hover flap never turns into his boosted double jump.
+  const tapRule = (nearBottom, nearTop, vy, err, since) =>
+    since > 0.27 &&
+    ((nearBottom && vy > 0) || (!nearTop && err > 50 && vy > -100) || (!nearTop && err > 200 && vy > -420));
+  // look as far ahead in time as at normal speed (900 px at ×1): faster heroes see further
+  const LOOK = 900 * Math.max(1, s.charDef.speed ?? 1);
   const ON = { laser: "isOn", zap: "zapping", mlaser: "firing" };
   window.__T ??= performance.now();
   // Abyss: force every multi-hazard pattern, double eye beams most of all (like abyss-crash)
@@ -57,6 +68,8 @@ export function waspFly({ frames = 60 * 60, untilM = Infinity, force = null, ste
   };
   const p = s.player;
   const seen = new Map();
+  let lastTap = -99;
+  let plan = null;
   const phased0 = s.run.phased || 0;
   try {
     for (let i = 0; i < frames && s.state === "playing"; i++) {
@@ -67,7 +80,7 @@ export function waspFly({ frames = 60 * 60, untilM = Infinity, force = null, ste
       const px = p.x;
       const sc = Math.max(60, s.scroll);
       const near = om.active.filter(
-        (o) => o.active && lethal.has(o.type) && o.right > px - r - 20 && o.left < px + 900,
+        (o) => o.active && lethal.has(o.type) && o.right > px - r - 20 && o.left < px + LOOK,
       );
       // a lethal hazard counts once while it stays in view (pooled hazards come back later)
       for (const o of near) {
@@ -76,57 +89,114 @@ export function waspFly({ frames = 60 * 60, untilM = Infinity, force = null, ste
       }
       // the Mirror Realm's twin (reflected across the horizon) crashes too: mind it from just
       // before the border, since hazards already on screen carry into the realm
+      const down = p.gravityDir >= 0 ? 1 : -1;
       const twin = s.mirror || s.course.segAt(s.meters + 60).id === "mirror";
-      let target = H / 2;
-      if (steer && near.length) {
-        let best = -Infinity;
-        for (let y = r + 110; y <= H - r - 100; y += 16) {
-          let worst = 400;
-          for (const o of near) {
-            const ta = Math.max(0, (o.left - (px + r)) / sc);
-            const tb = Math.max(ta, (o.right - (px - r)) / sc);
-            const x0 = o.x;
-            const t0 = o.t;
-            const clocked = CLOCKED.has(o.type);
-            let c = 999;
-            const ts = [];
-            for (let tt = ta; tt <= tb + 0.1; tt += 0.05) ts.push(tt);
-            for (const tt of ts) {
-              o.x = x0 - sc * tt;
-              o.t = t0 + tt;
-              if (clocked) {
+      // (re-plan every other frame: half the work, and a plan 1/60 s old is still good)
+      let target = plan ?? H / 2;
+      if (steer && near.length && (i % 2 === 0 || plan === null)) {
+        // Look ahead 1.6 s: for each height he could aim for, fly him there with the same taps
+        // and physics the game uses, and keep the height whose whole flight stays clearest of
+        // every lethal hazard (as if every beam were on). Far-off clashes count for less: there
+        // is time to change plan once the near ones are passed.
+        const STEP = 3; // frames per look-ahead step
+        const N = 32;
+        const dt = STEP / 60;
+        const ys = [];
+        for (let y = r + 110; y <= H - r - 100; y += 16) ys.push(y);
+        const paths = ys.map((ty) => {
+          let y = p.y;
+          let v = p.vy;
+          let last = (i - lastTap) / 60;
+          const out = new Float64Array(N);
+          for (let k = 0; k < N; k++) {
+            for (let f = 0; f < STEP; f++) {
+              const vv = v * down;
+              const e = (y - ty) * down;
+              const nt = down > 0 ? y < r + 80 : y > H - r - 80;
+              const nb = down > 0 ? y > H - r - 80 : y < r + 80;
+              if (tapRule(nb, nt, vv, e, last)) {
+                v = PH.flap * flapMul * down;
+                last = 0;
+              }
+              last += 1 / 60;
+              const g = (v * down < 0 ? PH.up : PH.down) * down;
+              v += g / 60;
+              if (v * down > PH.fall) v = PH.fall * down;
+              if (v * down < PH.rise) v = PH.rise * down;
+              y += v / 60;
+            }
+            out[k] = y;
+          }
+          return out;
+        });
+        const worst = ys.map(() => 400);
+        const wOf = (c, tt) => (c >= 0 ? c * (1 + tt * 1.5) : c / (1 + tt * 1.5));
+        // the floor, the ceiling and the screen edges end his run too
+        paths.forEach((pa, j) => {
+          for (let k = 0; k < N; k++) {
+            const e = Math.min(pa[k] - r, H - r - pa[k]) - 12;
+            worst[j] = Math.min(worst[j], wOf(e, (k + 1) * dt));
+          }
+        });
+        for (const o of near) {
+          const x0 = o.x;
+          const t0 = o.t;
+          const clocked = CLOCKED.has(o.type);
+          for (let k = 0; k < N; k++) {
+            const tt = (k + 1) * dt;
+            o.x = x0 - sc * tt;
+            o.t = t0 + tt;
+            if (o.right < px - r - 20) break; // passed
+            if (o.left > px + r + 20) continue; // not reached yet
+            if (clocked) {
+              if (o.type === "zap") {
+                // zap beams flash a 0.75 s charge warning before they fire, and a careful pilot
+                // reads it: the beam counts as live while charging or firing, with 0.2 s to spare
+                // either side (the orbs are always solid)
+                let live = false;
+                for (const dtt of [-0.2, 0, 0.2]) {
+                  o.update(0, s.clock + tt + dtt);
+                  live ||= o.zapping || o.charging;
+                }
                 o.update(0, s.clock + tt);
-                // a careful pilot never counts on a beam being off: always on, where it will be
+                o.zapping = live;
+              } else {
+                o.update(0, s.clock + tt);
+                // lasers: never count on one being off; always on, where it will be
                 o[ON[o.type]] = true;
               }
-              const ys = twin ? [y, H - y] : [y];
-              for (const yy of ys)
-                c = Math.min(
-                  c,
-                  o.type === "eyebeam" && o.state !== "done" ? beamClear(o, o.x, yy, r) : o.clearance(px, yy, r),
-                );
             }
-            o.x = x0;
-            o.t = t0;
-            if (clocked) o.update(0, s.clock);
-            const w = 1 + Math.max(0, (o.left - px) / 300);
-            worst = Math.min(worst, c * w);
+            for (let j = 0; j < ys.length; j++) {
+              const y = paths[j][k];
+              let c = Infinity;
+              for (const yy of twin ? [y, H - y] : [y])
+                c = Math.min(c, o.type === "eyebeam" && o.state !== "done" ? beamClear(o, o.x, yy, r) : o.clearance(px, yy, r));
+              worst[j] = Math.min(worst[j], wOf(c, tt));
+            }
           }
-          const score = Math.min(worst, 120) - Math.abs(y - p.y) * 0.05 - Math.abs(y - H / 2) * 0.02;
+          o.x = x0;
+          o.t = t0;
+          if (clocked) o.update(0, s.clock);
+        }
+        let best = -Infinity;
+        ys.forEach((y, j) => {
+          const score = Math.min(worst[j], 120) - Math.abs(y - p.y) * 0.03 - Math.abs(y - H / 2) * 0.02;
           if (score > best) {
             best = score;
             target = y;
           }
-        }
-      }
-      // real flaps: hover in a band around the target (a flap rises ~135 px)
-      const down = p.gravityDir >= 0 ? 1 : -1;
+        });
+        plan = target;
+      } else if (!near.length) plan = null;
+      // real flaps, by the same rule the look-ahead flies him with
       const vy = p.vy * down;
       const err = (p.y - target) * down;
       const nearTop = down > 0 ? p.y < r + 80 : p.y > H - r - 80;
       const nearBottom = down > 0 ? p.y > H - r - 80 : p.y < r + 80;
-      if (nearBottom && vy > 0) s.onTap();
-      else if (!nearTop && err > 50 && vy > -100) s.onTap();
+      if (tapRule(nearBottom, nearTop, vy, err, (i - lastTap) / 60)) {
+        s.onTap();
+        lastTap = i;
+      }
       if (trace)
         (out.trace ||= []).push([
           i,
