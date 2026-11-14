@@ -32,6 +32,8 @@ const art = new WallArt();
 const resetArt = () => { art.reset(); R.resetGroundCache(G?.map); R.resetGroundCache(menuMap); };
 canvas.addEventListener('contextlost', (e) => { e.preventDefault(); resetArt(); });
 canvas.addEventListener('contextrestored', resetArt);
+// a GPU reset usually hits every canvas: the lobby backdrop rebuilds its own caches on its own event
+document.getElementById('lobbyBg')?.addEventListener('contextrestored', resetArt);
 window.__huntArt = { art, artFor };
 const TICK_MS = 1000 / TICK_RATE;
 const INTERP_MS = 110;

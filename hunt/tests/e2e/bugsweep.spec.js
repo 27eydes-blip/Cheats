@@ -108,3 +108,29 @@ test('wall art cache stays bounded across many arena layouts (no leak over many 
   });
   expect(n).toBeLessThanOrEqual(120);
 });
+
+test('GPU context loss rebuilds the in-game and lobby art caches', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/?world=mirage&mode=bounty');
+  await waitMe(page);
+  await page.waitForTimeout(500);
+  const before = await page.evaluate(() => ({ gen: window.__huntArt.art.stats().generation, ground: !!window.__hunt.map._ground }));
+  expect(before.ground).toBe(true);
+  await page.evaluate(() => { const c = document.getElementById('game'); c.dispatchEvent(new Event('contextlost', { cancelable: true })); c.dispatchEvent(new Event('contextrestored')); });
+  const mid = await page.evaluate(() => ({ gen: window.__huntArt.art.stats().generation }));
+  expect(mid.gen).toBeGreaterThan(before.gen);
+  await page.waitForTimeout(400); // next frames repaint everything from scratch
+  expect(await page.evaluate(() => window.__huntArt.art.stats().sprites)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => !!window.__hunt.map._ground)).toBe(true);
+  // lobby backdrop
+  await page.goto('/');
+  await page.waitForTimeout(800);
+  const lobbyRebuilt = await page.evaluate(() => new Promise((res) => {
+    const c = document.getElementById('lobbyBg');
+    const sky0 = c.__scene ? c.__scene.builds : null;
+    c.dispatchEvent(new Event('contextlost', { cancelable: true })); c.dispatchEvent(new Event('contextrestored'));
+    res({ sky0, sky1: c.__scene ? c.__scene.builds : null });
+  }));
+  expect(lobbyRebuilt.sky1).toBeGreaterThan(lobbyRebuilt.sky0);
+  expect(errors).toEqual([]);
+});
