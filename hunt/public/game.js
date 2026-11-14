@@ -114,7 +114,7 @@ const G = {
 
 function resetMatchState() {
   Object.assign(G, {
-    myId: 0, map: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
+    myId: 0, secret: null, matchName: null, map: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
     localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: [], rings: [], texts: [], slashes: [], worms: [], lastTp: 0, flash: {}, shake: 0, hurt: 0,
     spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, pings: [], handoff: null, online: {}, deadMsg: null, lastSk: 0,
   });
@@ -130,18 +130,80 @@ function openConn(key, path, o = {}) {
   const c = { key, ws, zone: o.zone || null, primary: !!o.primary, snaps: [], off: null, fxN: 0, ev: null, last: null, open: false };
   G.conns.set(key, c);
   ws.onopen = () => { c.open = true; if (G.handoff && G.handoff.zone === c.zone) claim(); };
-  ws.onmessage = (e) => { if (G.conns.get(key) === c) onMsg(c, JSON.parse(e.data)); };
+  ws.onmessage = (e) => { if (G.conns.get(key) === c) { c.lastMsg = performance.now(); onMsg(c, JSON.parse(e.data)); } };
   ws.onclose = () => {
     if (G.conns.get(key) !== c) return;
     G.conns.delete(key);
-    if ((c.primary || (G.handoff && G.handoff.zone === c.zone)) && G.phase !== 'menu' && G.phase !== 'end') { toast('Connection lost'); toMenu(); }
+    if (c.rejoin && !c.welcomed) return; // a reconnect attempt failed: reconnect() tries again
+    if ((c.primary || (G.handoff && G.handoff.zone === c.zone)) && G.phase !== 'menu' && G.phase !== 'end') lostConnection(c);
   };
   return c;
 }
-function closeAll() { const cs = [...G.conns.values()]; G.conns.clear(); for (const c of cs) { try { c.ws.close(); } catch {} } }
+// quitting on purpose: tell the server so it doesn't hold our spot for a reconnect
+function closeAll() {
+  const cs = [...G.conns.values()]; G.conns.clear();
+  for (const c of cs) { try { if (c.open) c.ws.send('{"t":"bye"}'); c.ws.close(); } catch {} }
+  stopReconnect();
+}
+
+// ------------------------------------------------------------------ reconnect (lost signal, app switch)
+const RECONNECT_MS = 22000; // a bit less than the server's grace period
+let rc = null;
+function stopReconnect() { if (rc) { clearTimeout(rc.timer); rc = null; } }
+function lostConnection(c) {
+  // still in the matchmaking lobby: just queue up again
+  if (G.phase === 'waiting' && G.kind === 'quick') { startQuick(G.opts); return; }
+  if (!G.secret || !G.myId) { toast('Connection lost'); toMenu(); return; }
+  if (rc) return;
+  rc = { t0: Date.now(), zone: c.zone, tries: 0, timer: 0 };
+  input.reset();
+  reconnectTry();
+}
+function reconnectTry() {
+  if (!rc) return;
+  if (Date.now() - rc.t0 > RECONNECT_MS) { rejoinFailed(); return; }
+  toast('Reconnecting…', 3000);
+  rc.tries++;
+  const q = new URLSearchParams({ rejoin: String(G.myId), secret: G.secret });
+  let c;
+  if (G.kind === 'free') {
+    G.handoff = null; // an interrupted zone transfer can't be resumed; the zone we lost tells us if we're still there
+    q.set('slot', rc.zone);
+    c = openConn(rc.zone, '/zone?' + q, { zone: rc.zone, primary: true });
+  } else {
+    q.set('match', G.matchName || '');
+    c = openConn('main', '/ws?' + q, { primary: true });
+  }
+  c.rejoin = true;
+  rc.timer = setTimeout(() => { if (rc && !c.welcomed) { G.conns.delete(c.key); try { c.ws.close(); } catch {} reconnectTry(); } }, Math.min(4000, 1000 + rc.tries * 700));
+}
+function rejoinFailed() {
+  const kind = G.kind;
+  stopReconnect();
+  if (kind === 'free') { toast('Connection lost — rejoining Free Play'); startFree(); } else { toast('Connection lost — the match is over'); toMenu(); }
+}
 const primary = () => { for (const c of G.conns.values()) if (c.primary) return c; return null; };
-function send(o) { const c = primary(); if (c && c.open && !G.handoff) c.ws.send(JSON.stringify(o)); }
-setInterval(() => { for (const c of G.conns.values()) if (c.open) c.ws.send(JSON.stringify({ t: 'ping', c: performance.now() })); }, 2000);
+const isOpen = (c) => c && c.open && c.ws.readyState === 1;
+function send(o) { const c = primary(); if (isOpen(c) && !G.handoff) c.ws.send(JSON.stringify(o)); }
+setInterval(() => { for (const c of G.conns.values()) if (isOpen(c)) c.ws.send(JSON.stringify({ t: 'ping', c: performance.now() })); }, 2000);
+// A socket on a phone that loses signal often never fires onclose. The server sends several
+// messages a second, so a few seconds of silence means the connection is gone: reconnect.
+const SILENT_MS = 3500;
+setInterval(() => {
+  if (G.phase === 'menu' || G.phase === 'end' || rc) return;
+  const c = primary();
+  if (!c || !c.open || !c.lastMsg || G.handoff) return;
+  if (performance.now() - c.lastMsg < SILENT_MS) return;
+  G.conns.delete(c.key);
+  try { c.ws.close(); } catch {}
+  lostConnection(c);
+}, 500);
+// coming back to the app: timers were frozen, so give the socket a moment to prove it's alive
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  const now = performance.now();
+  for (const c of G.conns.values()) if (c.lastMsg) c.lastMsg = Math.max(c.lastMsg, now - SILENT_MS + 1500);
+});
 
 function readForm() {
   const name = $('name').value.trim().slice(0, 14) || 'Hunter';
@@ -201,7 +263,7 @@ function manageZones() {
     if (!c && d < 950) openConn(z.slot, `/zone?slot=${z.slot}&x=${Math.round(p.x)}&y=${Math.round(p.y)}`, { zone: z.slot });
     else if (c && !keep && d > 1300) { G.conns.delete(z.slot); try { c.ws.close(); } catch {} }
   }
-  if (G.ticks % 5 === 0) for (const c of G.conns.values()) if (!c.primary && c.open) c.ws.send(JSON.stringify({ t: 'pos', x: Math.round(p.x), y: Math.round(p.y) }));
+  if (G.ticks % 5 === 0) for (const c of G.conns.values()) if (!c.primary && isOpen(c)) c.ws.send(JSON.stringify({ t: 'pos', x: Math.round(p.x), y: Math.round(p.y) }));
 }
 
 function claim() {
@@ -220,6 +282,14 @@ function onMsg(c, m) {
   switch (m.t) {
     case 'welcome':
       if (m.observer) break;
+      if (m.secret) G.secret = m.secret;
+      if (m.match) G.matchName = m.match;
+      if (m.rejoin) {
+        c.welcomed = true;
+        stopReconnect(); toast('Reconnected!', 1500);
+        G.pending = []; G.err = { x: 0, y: 0 };
+        if (G.kind === 'free') { G.myId = m.id; break; }
+      }
       G.myId = m.id; G.retries = 0; G.botsOn = m.bots;
       if (m.mode) G.modeKey = m.mode;
       if (m.world) G.world = m.world;
@@ -233,6 +303,12 @@ function onMsg(c, m) {
       else { toast(m.reason + (G.room ? ' — try again when it ends' : '')); toMenu(); }
       break;
     case 'start':
+      if (m.rejoin && G.map && G.phase !== 'menu') {
+        // back in the same match after a reconnect: keep our map, HUD and effects
+        G.myId = m.you;
+        if (G.phase !== 'dead') { G.phase = 'play'; input.enabled = true; input.reset(); show(null); }
+        break;
+      }
       G.myId = m.you; G.modeKey = m.mode; G.world = m.world;
       G.map = generateArena(m.seed, m.world);
       if (m.open) for (let y = 1; y < G.map.gh - 1; y++) for (let x = 1; x < G.map.gw - 1; x++) G.map.t[y * G.map.gw + x] = 0;
@@ -284,6 +360,7 @@ function onMsg(c, m) {
       G.handoff = null;
       break;
     case 'claimfail': toast('Zone transfer failed — rejoining'); startFree(); break;
+    case 'rejoinfail': if (rc) { G.conns.delete(c.key); rejoinFailed(); } break;
     case 'online': G.online = m.zones; break;
     case 'progress': {
       if (A.ACC.user) A.setUser({ ...A.ACC.user, progress: m.progress });

@@ -18,7 +18,7 @@ export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
 // fields carried across a zone handoff
 const CARRY = ['id', 'name', 'brawler', 'x', 'y', 'mvx', 'mvy', 'hp', 'maxHp', 'cubes', 'ammo', 'reloadP', 'atkCd', 'superC',
   'lastCombat', 'stun', 'cloak', 'reveal', 'facing', 'lastSeq', 'kills', 'bounty', 'bountyEarned', 'bestBounty', 'bushT',
-  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp', 'cos', 'equipped', 'account'];
+  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp', 'cos', 'equipped', 'account', 'secret'];
 
 export class Sim {
   constructor(o) {
@@ -209,7 +209,20 @@ export class Sim {
     if (!p) return;
     if (this.phase === 'lobby' || this.mode.hub) { this.removePlayer(id); if (this.phase === 'lobby') this.broadcastLobby(); return; }
     p.connected = false;
-    p.bot = true; // a bot takes over a disconnected player
+    // a bot takes over a disconnected player until they reconnect, unless bots are switched off
+    if (this.fillBots) p.bot = true;
+    else p.queue.length = 0;
+  }
+
+  // a dropped player reconnected (same match): hand control back
+  rejoin(id) {
+    const p = this.players.get(id);
+    if (!p) return null;
+    p.connected = true;
+    p.bot = p.wasBot;
+    p.queue.length = 0;
+    p.ai = null;
+    return p;
   }
 
   broadcastLobby() {

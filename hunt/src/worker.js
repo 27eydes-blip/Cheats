@@ -29,7 +29,9 @@ export default {
         return env.ZONE.get(env.ZONE.idFromName(name)).fetch(req);
       }
       const room = (url.searchParams.get('room') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
-      if (room) name = 'room:' + room;
+      const back = url.searchParams.get('rejoin') ? url.searchParams.get('match') || '' : '';
+      if (/^(room:[A-Z0-9]{1,12}|qp:[a-z]+:[a-z]+:[0-9a-f-]{36})$/.test(back)) name = back; // reconnect to the same match
+      else if (room) name = 'room:' + room;
       else {
         const mm = env.MATCHMAKER.get(env.MATCHMAKER.idFromName('global'));
         const want = QUICK_MODES.includes(url.searchParams.get('mode')) ? url.searchParams.get('mode') : 'any';
@@ -79,6 +81,8 @@ class Loop {
 }
 
 const sendJSON = (ws, msg) => { try { ws.send(JSON.stringify(msg)); } catch {} };
+// how long a dropped player's spot is kept for them to reconnect
+const REJOIN_GRACE_MS = 25000;
 
 // ------------------------------------------------------------------ Quick Hunt match
 export class MatchRoom {
@@ -87,6 +91,7 @@ export class MatchRoom {
     this.sim = null;
     this.sockets = null;
     this.endedAt = 0;
+    this.emptyAt = 0;
     this.loop = new Loop(() => this.step());
   }
 
@@ -127,6 +132,7 @@ export class MatchRoom {
     const [client, server] = Object.values(pair);
     server.accept();
 
+    if (url.searchParams.get('rejoin')) return this.rejoin(url, server, client);
     if (!this.sim || this.sim.phase === 'end' || (isRoom && this.sim.phase === 'play' && this.sockets.size === 0)) {
       let mode, world;
       if (isRoom) {
@@ -148,31 +154,71 @@ export class MatchRoom {
       server.close(1000, 'retry');
       return new Response(null, { status: 101, webSocket: client });
     }
-    sockets.set(id, server);
     const token = url.searchParams.get('token');
     if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { const p = sim.players.get(id); if (u && p) { const pr = JSON.parse(u.progress || '{}'); p.account = u.id; p.trophies = pr.trophies?.[p.brawler] | 0; sim.setCosmetics(id, pr.equipped); } }).catch(() => {});
-    sendJSON(server, { t: 'welcome', id, room: isRoom ? mname.slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world });
+    const secret = crypto.randomUUID();
+    sim.players.get(id).secret = secret;
+    sendJSON(server, { t: 'welcome', id, room: isRoom ? mname.slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: mname, secret });
     sim.broadcastLobby();
+    return this.attach(id, server, client);
+  }
 
+  // reconnect after a dropped connection: same player, same match, if it's still going
+  rejoin(url, server, client) {
+    const sim = this.sim, id = Number(url.searchParams.get('rejoin'));
+    const p = sim && sim.phase !== 'end' ? sim.players.get(id) : null;
+    if (!p || p.wasBot || !p.secret || p.secret !== url.searchParams.get('secret')) {
+      sendJSON(server, { t: 'rejoinfail' });
+      server.close(1000, 'rejoin failed');
+      return new Response(null, { status: 101, webSocket: client });
+    }
+    const old = this.sockets.get(id);
+    this.sockets.delete(id); // so the old socket's close handler is a no-op
+    if (old) { try { old.close(1000, 'replaced'); } catch {} }
+    sim.rejoin(id);
+    sendJSON(server, { t: 'welcome', id, rejoin: 1, room: url.searchParams.get('match').startsWith('room:') ? url.searchParams.get('match').slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: url.searchParams.get('match'), secret: p.secret });
+    if (sim.phase === 'play') {
+      sendJSON(server, { t: 'start', rejoin: 1, botLevel: sim.botLevel, you: id, mode: sim.modeKey, world: sim.map.world, seed: sim.seed, open: !!sim.map.open });
+      sendJSON(server, sim.rosterMsg());
+      sendJSON(server, sim.stateMsg());
+      if (!p.alive && !sim.mode.respawn) sendJSON(server, { t: 'dead', rank: p.rank, respawn: 0, killer: 'the Wild', killerId: 0, stolen: 0 });
+    }
+    const r = this.attach(id, server, client);
+    if (sim.phase === 'lobby') sim.broadcastLobby();
+    return r;
+  }
+
+  attach(id, server, client) {
+    const sim = this.sim, sockets = this.sockets;
+    sockets.set(id, server);
+    this.emptyAt = 0;
     server.addEventListener('message', (e) => {
       let m;
       try { m = JSON.parse(e.data); } catch { return; }
       if (m.t === 'ping') return sendJSON(server, { t: 'pong', c: m.c });
+      if (m.t === 'bye') { const p = sim.players.get(id); if (p) p.secret = null; onClose(true); try { server.close(1000, 'bye'); } catch {} return; }
       sim.input(id, m);
     });
-    const onClose = () => {
+    // bye = the player quit on purpose (no reconnect wanted); otherwise the connection dropped
+    const onClose = (bye) => {
       if (sockets.get(id) !== server) return;
       sockets.delete(id);
       sim.leave(id);
-      if (this.sockets === sockets && sockets.size === 0) this.stop();
+      // nobody left: keep the match alive for a short grace period so a dropped player can come back,
+      // then shut the room down (no Durable Object left ticking forever)
+      if (this.sockets === sockets && sockets.size === 0) {
+        if (sim.phase === 'play' && bye !== true) this.emptyAt = Date.now(); else this.stop();
+      }
     };
-    server.addEventListener('close', onClose);
-    server.addEventListener('error', onClose);
+    server.addEventListener('close', () => onClose(false));
+    server.addEventListener('error', () => onClose(false));
     this.loop.start();
     return new Response(null, { status: 101, webSocket: client });
   }
 
   step() {
+    if (!this.sim) return this.loop.stop();
+    if (this.emptyAt && this.sockets.size === 0 && Date.now() - this.emptyAt > REJOIN_GRACE_MS) return this.stop();
     this.sim.tick();
     if (this.sim.phase === 'end') {
       const now = Date.now();
@@ -201,6 +247,7 @@ export class ZoneRoom {
     this.sim = null;
     this.conns = new Map(); // key (player id | 'o:..') -> ws
     this.pending = new Map(); // token -> {state, exp}
+    this.dropped = new Map(); // player id -> time their socket dropped (kept for REJOIN_GRACE_MS)
     this.dirT = 0;
     this.online = {};
     this.loop = new Loop(() => this.step());
@@ -271,7 +318,21 @@ export class ZoneRoom {
     server.accept();
     const sim = this.ensureSim();
     const join = url.searchParams.get('join') === '1';
-    if (join) {
+    const back = Number(url.searchParams.get('rejoin')) || 0;
+    if (back) {
+      const p = sim.players.get(back);
+      if (!p || p.bot || !p.secret || p.secret !== url.searchParams.get('secret') || (this.conns.has(back) && !this.dropped.has(back))) {
+        sendJSON(server, { t: 'rejoinfail' });
+        server.close(1000, 'rejoin failed');
+        if (this.conns.size === 0 && this.dropped.size === 0) { this.loop.stop(); this.sim = null; }
+        return new Response(null, { status: 101, webSocket: client });
+      }
+      this.dropped.delete(back);
+      p.connected = true;
+      server.huntKey = back;
+      this.conns.set(back, server);
+      sendJSON(server, { t: 'welcome', id: back, zone: this.slot, mode: 'freeplay', rejoin: 1, secret: p.secret });
+    } else if (join) {
       const b = url.searchParams.get('brawler');
       const p = sim.addPlayer({ name: cleanName(url.searchParams.get('name')), brawler: BRAWLERS[b] ? b : 'volt' });
       p.alive = false;
@@ -280,7 +341,8 @@ export class ZoneRoom {
       if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { if (u && sim.players.has(p.id)) { p.account = u.id; sim.setCosmetics(p.id, JSON.parse(u.progress || '{}').equipped); } }).catch(() => {});
       server.huntKey = p.id;
       this.conns.set(p.id, server);
-      sendJSON(server, { t: 'welcome', id: p.id, zone: this.slot, mode: 'freeplay' });
+      p.secret = crypto.randomUUID();
+      sendJSON(server, { t: 'welcome', id: p.id, zone: this.slot, mode: 'freeplay', secret: p.secret });
     } else {
       const okey = 'o:' + crypto.randomUUID();
       server.huntKey = okey;
@@ -298,6 +360,7 @@ export class ZoneRoom {
       const key = server.huntKey;
       if (m.t === 'ping') return sendJSON(server, { t: 'pong', c: m.c, zone: this.slot });
       if (m.t === 'pos') { const o = sim.observers.get(key); if (o) { o.x = +m.x || 0; o.y = +m.y || 0; } return; }
+      if (m.t === 'bye') { onClose(true); try { server.close(1000, 'bye'); } catch {} return; }
       if (m.t === 'claim') {
         const pend = this.pending.get(m.token);
         if (!pend) return sendJSON(server, { t: 'claimfail' });
@@ -314,23 +377,33 @@ export class ZoneRoom {
       }
       if (typeof key === 'number') sim.input(key, m);
     });
-    const onClose = () => {
+    const onClose = (bye) => {
       const key = server.huntKey;
       if (this.conns.get(key) !== server) return;
       this.conns.delete(key);
-      if (typeof key === 'number') sim.leave(key); else sim.observers.delete(key);
-      if (this.conns.size === 0) { this.loop.stop(); this.sim = null; }
+      if (typeof key === 'number') {
+        // a dropped connection keeps its brawler (HP, bounty) for a short while in case they reconnect
+        const p = sim.players.get(key);
+        if (p && bye !== true) { p.connected = false; p.queue.length = 0; this.dropped.set(key, Date.now()); } else sim.leave(key);
+      } else sim.observers.delete(key);
+      if (this.conns.size === 0 && this.dropped.size === 0) { this.loop.stop(); this.sim = null; }
     };
-    server.addEventListener('close', onClose);
-    server.addEventListener('error', onClose);
+    server.addEventListener('close', () => onClose(false));
+    server.addEventListener('error', () => onClose(false));
     this.loop.start();
     return new Response(null, { status: 101, webSocket: client });
   }
 
   step() {
-    if (!this.sim) return;
-    this.sim.tick();
+    if (!this.sim) return this.loop.stop();
     const now = Date.now();
+    for (const [id, at] of this.dropped) {
+      if (now - at < REJOIN_GRACE_MS) continue;
+      this.dropped.delete(id);
+      this.sim.leave(id);
+    }
+    if (this.conns.size === 0 && this.dropped.size === 0) { this.loop.stop(); this.sim = null; return; }
+    this.sim.tick();
     for (const [k, v] of this.pending) if (v.exp < now) this.pending.delete(k);
     this.dirT -= DT;
     if (this.dirT <= 0) {
