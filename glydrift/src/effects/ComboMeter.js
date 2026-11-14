@@ -1,14 +1,17 @@
-// Combo multiplier label that rides next to the player: "x2", "x3", "x5", "x10" (SXE: "x13") with a
-// draining timer bar. Each label is rendered once up front (no text re-renders mid-run).
+// Combo multiplier label that rides next to the player: "x2", "x3", "x5", "x10" (SXE: "x13",
+// WASP LORD: a flaming red-and-black "x16") with a draining timer bar. Each label is rendered
+// once up front (no text re-renders mid-run).
 import { neonText } from "../ui/ui.js";
+import { FlameNumber } from "./FlameNumber.js";
 
-export const TIERS = [2, 3, 5, 10, 13]; // x13: SXE only (perks.comboMax)
+export const TIERS = [2, 3, 5, 10, 13, 16]; // x13: SXE, x16: WASP LORD (perks.comboMax)
 export const TIER_COLORS = {
   2: 0x3ef4ff,
   3: 0x39ff88,
   5: 0xff4fd8,
   10: 0xffd23f,
   13: 0xff5a1f,
+  16: 0xff1a2a,
 };
 
 export class ComboMeter {
@@ -16,6 +19,10 @@ export class ComboMeter {
     this.scene = scene;
     this.labels = {};
     for (const m of TIERS) {
+      if (m === 16) {
+        this.labels[m] = new FlameNumber(scene, 0, 0, "x16", 46, { depth }).setVisible(false);
+        continue;
+      }
       this.labels[m] = neonText(
         scene,
         0,
@@ -54,6 +61,7 @@ export class ComboMeter {
     const s = 1 + this.pop * this.pop * 0.6;
     const lx = Math.round(x + 66);
     const ly = Math.round(y - 70);
+    if (this.mult === 16) t.update(dt); // the x16 flames move
     t.setPosition(lx, ly)
       .setScale(s)
       .setAlpha(frac < 0.25 ? 0.55 + 0.45 * Math.sin(frac * 60) ** 2 : 1);

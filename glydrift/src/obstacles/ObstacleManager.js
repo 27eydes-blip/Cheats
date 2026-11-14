@@ -1450,9 +1450,12 @@ export class ObstacleManager {
         portal: null,
         coins: 0,
         warded: [],
+        phased: [],
       });
     ev.hit = null;
     ev.warded.length = 0;
+    ev.phased.length = 0;
+    ev.phasing = false; // WASP LORD is inside an obstacle this frame
     ev.near.length = 0;
     ev.perfect.length = 0;
     ev.passed.length = 0;
@@ -1527,18 +1530,28 @@ export class ObstacleManager {
           if (c < 0 && (this.ward === "all" || this.ward?.includes(o.type))) {
             if (!o.inWard) ev.warded.push(o);
             o.inWard = true;
+          } else if (c < 0 && this.phase && !this.phase.includes(o.type)) {
+            // WASP LORD phases through every obstacle except the lethal ones (lasers, eye
+            // beams): one event as he goes in; the pass earns no CLOSE! or PERFECT!
+            if (!o.inPhase) ev.phased.push(o);
+            o.inPhase = true;
+            o.phasedThrough = true;
           } else {
             if (c >= 0) o.inWard = false;
             if (c < 0 && !ev.hit) ev.hit = o;
           }
-        }
+          if (c >= 0) o.inPhase = false;
+        } else o.inPhase = false;
         // PERFECT: crossing a gap's centre line right in the middle of the opening
+        // (WASP LORD: only paid once he is clear of it, and never if he phased through it)
         if (!o.centerSeen && o.x <= px) {
           o.centerSeen = true;
           if (o.kind === "obstacle" && o.yb > o.yt) {
             const half = (o.yb - o.yt) / 2;
-            if (Math.abs(py - (o.yt + half)) <= Math.max(22, half * 0.16))
-              ev.perfect.push(o);
+            if (Math.abs(py - (o.yt + half)) <= Math.max(22, half * 0.16)) {
+              if (this.phase) o.perfectPending = true;
+              else ev.perfect.push(o);
+            }
           }
         }
         if (!o.passed && o.right < px - r) {
@@ -1547,9 +1560,17 @@ export class ObstacleManager {
             ev.passed.push(o);
             if (o.minClear > 0 && o.minClear < NEAR_MISS.threshold)
               ev.near.push(o);
+            if (o.perfectPending && !o.phasedThrough) ev.perfect.push(o);
           }
         }
-      }
+      } else o.inPhase = false;
+      // the obstacle he is inside flickers (Reduce Flashing: a steady dim instead)
+      if (o.inPhase) {
+        ev.phasing = true;
+        o.phaseFlicker(
+          this.calmPhase ? 0.45 : 0.3 + 0.45 * (0.5 + 0.5 * Math.sin(clock * 97 + o.x * 0.13)),
+        );
+      } else if (o.phaseAlpha) o.phaseClear();
 
       if (o.right < this.leftEdge - 80) {
         o.kill();

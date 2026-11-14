@@ -20,6 +20,7 @@ import {
 import { Save } from "../data/save.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { levelNameLine } from "../ui/levelName.js";
+import { FlameNumber } from "../effects/FlameNumber.js";
 
 /** Realm titles: drawn this much smaller than full size, centred this far below the HUD top. */
 const REALM_TITLE_SCALE = 0.68;
@@ -144,6 +145,8 @@ export class HudScene extends Phaser.Scene {
     this.banner.add([this.bannerSub, this.bannerText, this.bannerLine]);
 
     this.comboText = neonText(this, W / 2, top + 200, "", 28, 0xffffff, { blur: 12 }).setAlpha(0);
+    // WASP LORD's x16: "COMBO x16" as the flaming red-and-black number, its points under it
+    this.comboFlame = new FlameNumber(this, W / 2, top + 196, "COMBO x16", 26, { depth: 0 }).setAlpha(0);
     // keep the HUD below the notch / Dynamic Island if the safe-area inset arrives late
     const topElems = [
       this.scoreText,
@@ -154,6 +157,7 @@ export class HudScene extends Phaser.Scene {
       this.pauseBtn,
       this.statusText,
       this.comboText,
+      this.comboFlame.c,
     ];
     const onSafe = (_p, value) => {
       const nt = (value || 0) + 24;
@@ -226,11 +230,18 @@ export class HudScene extends Phaser.Scene {
   }
 
   onNearMiss(pts, combo) {
-    this.comboText.setText(combo > 1 ? `COMBO x${combo}  +${pts}` : `+${pts}`).setColor("#ffffff");
+    const flame = combo === 16; // WASP LORD's top combo: the flaming number, points under it
+    this.comboText
+      .setText(flame ? `+${pts}` : combo > 1 ? `COMBO x${combo}  +${pts}` : `+${pts}`)
+      .setColor(flame ? "#ff1a2a" : "#ffffff")
+      .setStroke(flame ? "#000000" : "#ffffff", flame ? 5 : 2);
+    this.comboText.y = this.comboFlame.c.y + (flame ? 40 : 4);
     this.comboText.setAlpha(1).setScale(0.5);
-    this.tweens.killTweensOf(this.comboText);
-    this.tweens.add({ targets: this.comboText, scale: 1, duration: 220, ease: "Back.easeOut" });
-    this.tweens.add({ targets: this.comboText, alpha: 0, delay: 900, duration: 400 });
+    const targets = flame ? [this.comboText, this.comboFlame.c] : [this.comboText];
+    this.tweens.killTweensOf([this.comboText, this.comboFlame.c]);
+    this.comboFlame.setAlpha(flame ? 1 : 0).setScale(0.5);
+    this.tweens.add({ targets, scale: 1, duration: 220, ease: "Back.easeOut" });
+    this.tweens.add({ targets, alpha: 0, delay: 900, duration: 400 });
   }
 
   onCoin(n) {
@@ -728,9 +739,10 @@ export class HudScene extends Phaser.Scene {
     if (!silent) this.scene.resume("Game");
   }
 
-  update() {
+  update(_t, delta) {
     const gs = this.gameScene;
     if (!gs || (!gs.sys.isActive() && !gs.sys.isPaused())) return;
+    if (this.comboFlame.c.alpha > 0) this.comboFlame.update((delta || 16) / 1000);
     if (gs.sys.isActive()) this.pops.update(this.time.now);
     if (this.hint.visible && gs.state !== "ready" && !this.hintFading) this.hint.setVisible(false);
     const s = gs.score;

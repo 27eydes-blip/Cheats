@@ -25,6 +25,7 @@ export class Player {
     this.t = 0;
     this.lastFlapT = -9;
     this.djReadyT = 0;
+    this.djUsed = false; // WASP LORD (resetOnFall): spent until he starts falling again
     this.rig.reset(this.x, this.y);
     this.rig.angle = 0;
   }
@@ -44,8 +45,17 @@ export class Player {
     // flap speed grows by the square root of that (height = v² / 2g).
     const mul = (this.mini ? PHYSICS.miniFlapMul : 1) * Math.sqrt(this.def.perks?.jump ?? 1);
     const dj = this.def.doubleJump;
-    const dbl = !!dj && this.t - this.lastFlapT < dj.window && this.t >= this.djReadyT;
-    if (dbl) this.djReadyT = this.t + dj.cooldown;
+    // (resetOnFall, WASP LORD: one double jump, then ready again only once he starts falling;
+    // MILZZZ and the cooldown heroes leave resetOnFall unset and use djReadyT alone)
+    const dbl =
+      !!dj &&
+      this.t - this.lastFlapT < dj.window &&
+      this.t >= this.djReadyT &&
+      !(dj.resetOnFall && this.djUsed);
+    if (dbl) {
+      this.djReadyT = this.t + dj.cooldown;
+      if (dj.resetOnFall) this.djUsed = true;
+    }
     this.lastFlapT = this.t;
     this.vy = PHYSICS.flapVelocity * mul * (dbl ? dj.boost : 1) * this.gravityDir;
     this.rig.gravityDir = this.gravityDir;
@@ -85,6 +95,8 @@ export class Player {
       // 30 fps, a hitch) flies exactly like two 60 fps frames: same jump height everywhere.
       const n = Math.max(1, Math.round(dt * 60));
       for (let i = 0; i < n; i++) this.integrate(dt / n);
+      // WASP LORD: his double jump comes back the moment he starts to fall
+      if (this.djUsed && this.vy * this.gravityDir > 0) this.djUsed = false;
 
       // tilt follows velocity, smoothed for buttery motion
       const target =

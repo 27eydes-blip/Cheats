@@ -1285,8 +1285,12 @@ export const CHARACTERS = [
     doubleJump: { window: 0.25, boost: 1.45, cooldown: 0, resetOnFall: true },
     perks: {
       // PHASE: passes through every obstacle except these (lasers and the Abyss eye beams);
-      // the ground, the ceiling and leaving the screen still end the run
-      phase: { lethal: ["laser", "blaser", "eyebeam", "mlaser"] },
+      // the ground, the ceiling and leaving the screen still end the run. (Obstacle types:
+      // "laser" = Neon Void side lasers and the Glitch broken laser, whose class reports
+      // "laser" too; "blaser" its spawn key; "mlaser" the Prism mirror laser; "zap" the Frozen
+      // zap orbs' beam, drawn as a laser between two emitters. Lightning bolts, the Neon Pulse
+      // ring and the Mirror sweep bar are not beams: he phases through them.)
+      phase: { lethal: ["laser", "blaser", "eyebeam", "mlaser", "zap"] },
       comboMax: 16,
       list: ["PHASES THROUGH WALLS", "+30% SPEED", "DOUBLE JUMP", "COMBO UP TO x16"],
     },

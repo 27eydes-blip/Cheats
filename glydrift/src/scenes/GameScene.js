@@ -260,6 +260,8 @@ export class GameScene extends Phaser.Scene {
     }
     this.state = "ready";
     this.respawnWait = false;
+    if (this.phasing) this.player?.rig?.phase?.(false); // (WASP LORD) a retry starts outside
+    this.phasing = false;
     this.distance = 0; // px
     this.meters = 0;
     this.clock = 0;
@@ -503,11 +505,14 @@ export class GameScene extends Phaser.Scene {
     this.chain++;
     this.chainT = COMBO_WINDOW;
     let m = 1;
-    // SXE (perks.comboMax 13) has one more tier above x10
+    // SXE (perks.comboMax 13) has one more tier above x10; WASP LORD (16) one more again
+    const cmax = this.charDef.perks?.comboMax ?? 10;
     const tiers =
-      this.charDef.perks?.comboMax >= 13
-        ? [COMBO.overdrive, ...COMBO_TIERS]
-        : COMBO_TIERS;
+      cmax >= 16
+        ? [COMBO.illegal, COMBO.overdrive, ...COMBO_TIERS]
+        : cmax >= 13
+          ? [COMBO.overdrive, ...COMBO_TIERS]
+          : COMBO_TIERS;
     for (const [c, mm] of tiers)
       if (this.chain >= c) {
         m = mm;
@@ -518,8 +523,8 @@ export class GameScene extends Phaser.Scene {
       if (this.player?.rig) this.player.rig.comboTier = m; // Combo Flame trail heats up
       this.run.bestCombo = Math.max(this.run.bestCombo, m);
       this.comboMeter.setTier(m);
-      Sfx.combo([2, 3, 5, 10, 13].indexOf(m) + 1);
-      this.player?.rig?.onCombo?.([2, 3, 5, 10, 13].indexOf(m) + 1);
+      Sfx.combo([2, 3, 5, 10, 13, 16].indexOf(m) + 1);
+      this.player?.rig?.onCombo?.([2, 3, 5, 10, 13, 16].indexOf(m) + 1);
       Haptics.light();
       const p = this.player;
       this.fx.ring(p.x, p.y, TIER_COLORS[m], { scale: 1.2, duration: 340 });
@@ -834,11 +839,32 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * WASP LORD's phase: the rig's phase look switches on as he enters an obstacle and off once
+   * he is clear of every one (with a buzz on each entry). The manager makes the hazard flicker.
+   */
+  updatePhase(ev) {
+    for (const o of ev.phased) {
+      Sfx.waspPhase?.();
+      this.run.phased = (this.run.phased || 0) + 1;
+      if (this.run.phased === 1)
+        Analytics.log("wasp_phased", { hazard: o.type, m: Math.round(this.meters) });
+    }
+    if (ev.phasing !== this.phasing) {
+      this.phasing = ev.phasing;
+      this.player.rig.phase?.(this.phasing);
+    }
+  }
+
   die() {
     if (this.state !== "playing" || DEBUG_GOD) return;
     if (this.revives > 0) return this.revive();
     this.state = "dying";
     this.deathT = 0;
+    if (this.phasing) {
+      this.phasing = false;
+      this.player.rig.phase?.(false);
+    }
     // what ended the run, and where (season challenge: "Die to every Abyss hazard")
     this.run.killedBy = this.obstacles.events?.hit?.type || "edge";
     this.run.killedIn = this.zoneId;
@@ -1270,6 +1296,11 @@ export class GameScene extends Phaser.Scene {
       : fireWard
         ? this.charDef.perks.fireWard
         : null;
+    // WASP LORD: a permanent phase through every obstacle except perks.phase.lethal (lasers,
+    // eye beams). Unlike SXE's Glitch ward, the ceiling, the ground and the screen edges still
+    // end his run (no clamping), so a run can always end.
+    this.obstacles.phase = this.charDef.perks?.phase?.lethal ?? null;
+    this.obstacles.calmPhase = !!this.obstacles.phase && reduceFlashing();
     if (ward && !this.wardAura) {
       this.wardAura = this.add
         .image(0, 0, "glow")
@@ -1420,6 +1451,7 @@ export class GameScene extends Phaser.Scene {
       if (ev.push) p.vy += ev.push * dt;
       if (ev.drag) p.vy *= Math.exp(-ev.drag * dt);
       for (const o of ev.warded) this.fireWardBlock(o);
+      this.updatePhase(ev);
       const r = p.radius;
       const shielded = this.boostT > 0 || this.boostGrace > 0; // boosting smashes through
       if (this.glitchProof) {
