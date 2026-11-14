@@ -378,9 +378,20 @@ export function drawBrawler(ctx, id, x, y, facing, t, o = {}) {
     } else if (id === 'brick') {
       rr(ctx, 12, -12, 36, 24, 5); ctx.fillStyle = '#4a4a5e'; ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(48, -4); ctx.lineTo(12, -4); ctx.moveTo(48, 4); ctx.lineTo(12, 4); ctx.lineWidth = 3; ctx.stroke();
-    } else {
+    } else if (id === 'wisp') {
       rr(ctx, 8, -5, 52, 10, 4); ctx.fillStyle = B.accent; ctx.fill(); ctx.stroke();
       rr(ctx, 18, -9, 14, 6, 2); ctx.fillStyle = '#d9c8ff'; ctx.fill(); ctx.stroke();
+    } else if (id === 'dune') { // carved staff with a turquoise stone
+      rr(ctx, 6, -4, 44, 8, 4); ctx.fillStyle = '#8a5a2b'; ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(52, 0, 8, 0, Math.PI * 2); ctx.fillStyle = B.accent; ctx.fill(); ctx.stroke();
+    } else if (id === 'rook') { // mine launcher with an orange muzzle
+      rr(ctx, 10, -9, 30, 18, 5); ctx.fillStyle = '#4a4a5e'; ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(42, 0, 9, 0, Math.PI * 2); ctx.fillStyle = B.accent; ctx.fill(); ctx.stroke();
+    } else { // twin curved blades
+      for (const s of [-1, 1]) {
+        ctx.beginPath(); ctx.moveTo(14, s * 10); ctx.quadraticCurveTo(34, s * 18, 46, s * 4); ctx.lineTo(40, s * 2); ctx.quadraticCurveTo(30, s * 10, 14, s * 4); ctx.closePath();
+        ctx.fillStyle = '#e8e4ff'; ctx.fill(); ctx.lineWidth = 3; ctx.stroke();
+      }
     }
     ctx.restore();
   };
@@ -407,6 +418,39 @@ export function drawBrawler(ctx, id, x, y, facing, t, o = {}) {
     eyes(ctx, facing, 0, 0, 11, 6);
     ctx.beginPath(); ctx.moveTo(-18, -9); ctx.lineTo(-5, -5); ctx.moveTo(18, -9); ctx.lineTo(5, -5); ctx.lineWidth = 4; ctx.stroke();
     ctx.beginPath(); ctx.moveTo(-8, 15); ctx.lineTo(8, 15); ctx.lineWidth = 3.5; ctx.stroke();
+  } else if (id === 'dune') {
+    // a sand spirit in a hooded cloak, swirling grains around it
+    for (let i = 0; i < 3; i++) {
+      const a = t * 2 + i * 2.1;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * 30, Math.sin(a) * 12 + 6, 3, 0, 7); ctx.fillStyle = '#f7d98a'; ctx.fill();
+    }
+    ctx.beginPath(); ctx.moveTo(-26, 22); ctx.quadraticCurveTo(-28, -16, 0, -30); ctx.quadraticCurveTo(28, -16, 26, 22); ctx.quadraticCurveTo(0, 30, -26, 22); ctx.closePath();
+    ctx.fillStyle = flash ? '#fff' : B.color; ctx.fill(); ctx.lineWidth = 4.5; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-20, 6); ctx.quadraticCurveTo(0, 16, 20, 6); ctx.lineTo(18, 14); ctx.quadraticCurveTo(0, 22, -18, 14); ctx.closePath();
+    ctx.fillStyle = B.accent; ctx.fill(); ctx.lineWidth = 3; ctx.stroke(); // scarf
+    ctx.beginPath(); ctx.ellipse(0, -10, 15, 11, 0, 0, 7); ctx.fillStyle = '#3d2614'; ctx.fill(); ctx.stroke(); // hood shadow
+    const fx = Math.cos(facing) * 4, fy = Math.sin(facing) * 2;
+    ctx.fillStyle = '#7ef9ff';
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * 6 + fx, -10 + fy, 3.2, 0, 7); ctx.fill(); }
+  } else if (id === 'rook') {
+    rr(ctx, -27, -24, 54, 50, 16); ctx.fillStyle = flash ? '#fff' : B.color; ctx.fill(); ctx.lineWidth = 4.5; ctx.stroke();
+    rr(ctx, -20, 10, 40, 12, 5); ctx.fillStyle = B.dark; ctx.fill(); ctx.lineWidth = 3; ctx.stroke(); // belt
+    for (const s of [-1, 0, 1]) { ctx.beginPath(); ctx.arc(s * 12, 16, 4, 0, 7); ctx.fillStyle = B.accent; ctx.fill(); ctx.stroke(); } // mines on the belt
+    rr(ctx, -21, -16, 42, 16, 8); ctx.fillStyle = '#2b2b3a'; ctx.fill(); ctx.stroke(); // goggles strap
+    const fx = Math.cos(facing) * 4, fy = Math.sin(facing) * 2;
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(s * 9 + fx, -8 + fy, 6.5, 0, 7); ctx.fillStyle = '#ffd23f'; ctx.fill(); ctx.lineWidth = 3; ctx.stroke(); ctx.beginPath(); ctx.arc(s * 9 + fx * 1.4, -8 + fy * 1.4, 2.6, 0, 7); ctx.fillStyle = INK; ctx.fill(); }
+  } else if (id === 'flicker') {
+    // sleek masked assassin with fox ears and a trailing scarf
+    ctx.beginPath(); ctx.moveTo(-16, -18); ctx.lineTo(-12, -36); ctx.lineTo(-4, -22); ctx.moveTo(16, -18); ctx.lineTo(12, -36); ctx.lineTo(4, -22);
+    ctx.fillStyle = B.dark; ctx.fill(); ctx.lineWidth = 3.5; ctx.stroke();
+    const sw = Math.sin(t * 9) * 4;
+    ctx.beginPath(); ctx.moveTo(-6, 8); ctx.quadraticCurveTo(-30 - Math.cos(facing) * 10, 12 + sw, -38 - Math.cos(facing) * 14, 4 + sw); ctx.lineTo(-34, 14 + sw); ctx.quadraticCurveTo(-20, 18, -4, 14); ctx.closePath();
+    ctx.fillStyle = B.accent; ctx.fill(); ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, 0, 21, 24, 0, 0, 7); ctx.fillStyle = flash ? '#fff' : B.color; ctx.fill(); ctx.lineWidth = 4.5; ctx.stroke();
+    rr(ctx, -18, -10, 36, 12, 6); ctx.fillStyle = '#1b1033'; ctx.fill(); // mask band
+    const fx = Math.cos(facing) * 4, fy = Math.sin(facing) * 2;
+    ctx.fillStyle = '#ff5fa2';
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(s * 8 + fx, -4 + fy, 5, 3, s * 0.3, 0, 7); ctx.fill(); }
   } else {
     ctx.beginPath();
     ctx.moveTo(-24, 4);
@@ -475,6 +519,39 @@ export function drawCube(ctx, x, y, t) {
   ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 1.5; ctx.stroke();
   ctx.restore();
 }
+export function drawMine(ctx, x, y, armed, mine, t) {
+  ctx.save(); ctx.translate(x, y);
+  ctx.globalAlpha = armed && !mine ? 0.9 : 1;
+  ctx.beginPath(); ctx.arc(0, 0, 14, 0, 7); ctx.fillStyle = '#4a4a5e'; ctx.fill(); ctx.lineWidth = 3.5; ctx.strokeStyle = INK; ctx.stroke();
+  for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + 0.6; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 14, Math.sin(a) * 14); ctx.lineTo(Math.cos(a) * 20, Math.sin(a) * 20); ctx.lineWidth = 4; ctx.stroke(); }
+  // light: amber while arming, then red (or teal for your own). Steady under Reduce Flashing.
+  const on = SETTINGS.reduceFlash ? 1 : (Math.sin(t * (armed ? 6 : 14)) > -0.2 ? 1 : 0.35);
+  ctx.beginPath(); ctx.arc(0, 0, 5, 0, 7); ctx.globalAlpha = on; ctx.fillStyle = !armed ? '#ffb347' : mine ? '#5ff4ff' : '#ff2846'; ctx.fill();
+  ctx.restore();
+}
+export function drawCage(ctx, x, y) {
+  ctx.save(); ctx.translate(x, y);
+  rr(ctx, -34, -40, 68, 70, 8); ctx.fillStyle = 'rgba(255,140,26,0.18)'; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = INK; ctx.stroke();
+  ctx.beginPath(); for (let k = -24; k <= 24; k += 12) { ctx.moveTo(k, -40); ctx.lineTo(k, 30); } ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = '#ff8c1a'; ctx.stroke();
+  ctx.restore();
+}
+export function drawSlowed(ctx, x, y, t) {
+  ctx.save(); ctx.fillStyle = 'rgba(232,176,74,0.8)';
+  for (let i = 0; i < 6; i++) { const a = i * 1.05 + t * 3; ctx.beginPath(); ctx.arc(x + Math.cos(a) * 24, y + 18 + Math.sin(a) * 6, 3, 0, 7); ctx.fill(); }
+  ctx.restore();
+}
+export function drawWorm(ctx, x, y, r, k) {
+  // k: 0..1 lifetime of the eruption. Teal/purple with dark outline so it reads on any ground.
+  const h = Math.sin(Math.min(1, k * 1.6) * Math.PI) * r * 0.9;
+  ctx.save(); ctx.translate(x, y);
+  ctx.beginPath(); ctx.ellipse(0, 10, r * 0.75, r * 0.3, 0, 0, 7); ctx.fillStyle = 'rgba(80,40,20,0.45)'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-24, 10); ctx.quadraticCurveTo(-30, -h * 0.6, -6, -h); ctx.quadraticCurveTo(14, -h - 6, 24, -h * 0.5); ctx.lineTo(24, 10); ctx.closePath();
+  ctx.fillStyle = '#2bc4cf'; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.stroke();
+  for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(-26 + i * 2, 10 - (h * i) / 4); ctx.lineTo(24, 10 - (h * i) / 4.4); ctx.lineWidth = 3; ctx.strokeStyle = '#3b1f78'; ctx.stroke(); }
+  ctx.beginPath(); ctx.arc(2, -h + 4, 9, 0, 7); ctx.fillStyle = '#3b1f78'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke(); // maw
+  ctx.restore();
+}
+
 export function drawCrystal(ctx, x, y, t) {
   const b = Math.sin(t * 3 + y) * 4;
   ctx.save(); ctx.translate(x, y);
@@ -486,13 +563,24 @@ export function drawCrystal(ctx, x, y, t) {
   ctx.restore();
 }
 
-const BULLET_COL = { volt: ['#bde0ff', '#3a86ff'], brick: ['#ffe066', '#ff7b39'], wisp: ['#f3e8ff', '#8f5cff'] };
+const BULLET_COL = { volt: ['#bde0ff', '#3a86ff'], brick: ['#ffe066', '#ff7b39'], wisp: ['#f3e8ff', '#8f5cff'], dune: ['#f7d98a', '#2a9d8f'], rook: ['#ffd23f', '#4a4a5e'], cage: ['#ffe066', '#ff8c1a'] };
 export function drawBullet(ctx, kind, x, y, ang, rim) {
   const [c1, c2] = BULLET_COL[kind] || BULLET_COL.volt;
   ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
   if (rim) { ctx.beginPath(); ctx.ellipse(-4, 0, 22, 12, 0, 0, Math.PI * 2); ctx.fillStyle = rim; ctx.globalAlpha = 0.55; ctx.fill(); ctx.globalAlpha = 1; }
   ctx.lineWidth = 3; ctx.strokeStyle = INK;
-  if (kind === 'wisp') {
+  if (kind === 'dune') { // sand crescent wave
+    ctx.beginPath(); ctx.arc(-18, 0, 30, -0.9, 0.9); ctx.arc(-26, 0, 30, 0.85, -0.85, true); ctx.closePath();
+    ctx.fillStyle = c1; ctx.fill(); ctx.lineWidth = 3.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(-18, 0, 24, -0.6, 0.6); ctx.strokeStyle = c2; ctx.lineWidth = 3; ctx.stroke();
+  } else if (kind === 'rook') { // thrown mine, spinning
+    ctx.rotate(x * 0.05);
+    ctx.beginPath(); ctx.arc(0, 0, 11, 0, 7); ctx.fillStyle = c2; ctx.fill(); ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, 4, 0, 7); ctx.fillStyle = c1; ctx.fill();
+  } else if (kind === 'cage') {
+    rr(ctx, -12, -12, 24, 24, 4); ctx.fillStyle = 'rgba(255,140,26,0.35)'; ctx.fill(); ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); for (const k of [-6, 0, 6]) { ctx.moveTo(k, -12); ctx.lineTo(k, 12); } ctx.strokeStyle = c2; ctx.lineWidth = 2.5; ctx.stroke();
+  } else if (kind === 'wisp') {
     rr(ctx, -22, -6, 36, 12, 6); ctx.fillStyle = c2; ctx.fill(); ctx.stroke();
     rr(ctx, -6, -3, 16, 6, 3); ctx.fillStyle = c1; ctx.fill();
   } else if (kind === 'brick') {
@@ -577,7 +665,7 @@ export function eventHelpers(ctx, map, view) {
   };
 }
 
-export function drawAim(ctx, brawler, x, y, ang, kind) {
+export function drawAim(ctx, brawler, x, y, ang, kind, mag) {
   const B = BRAWLERS[brawler];
   ctx.save();
   ctx.translate(x, y);
@@ -585,7 +673,8 @@ export function drawAim(ctx, brawler, x, y, ang, kind) {
     const a = B.attack;
     ctx.fillStyle = 'rgba(255,255,255,0.32)'; ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 2;
     ctx.beginPath();
-    if (a.kind === 'spread') { ctx.moveTo(0, 0); ctx.arc(0, 0, a.range, ang - a.arc / 2 - 0.04, ang + a.arc / 2 + 0.04); ctx.closePath(); }
+    if (a.kind === 'spread' || a.kind === 'slash') { ctx.moveTo(0, 0); ctx.arc(0, 0, a.range, ang - a.arc / 2 - 0.04, ang + a.arc / 2 + 0.04); ctx.closePath(); }
+    else if (a.kind === 'mine') { const d = a.range * Math.max(0.13, Math.min(1, mag ?? 1)); ctx.arc(Math.cos(ang) * d, Math.sin(ang) * d, a.blast, 0, Math.PI * 2); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(ang) * d, Math.sin(ang) * d); }
     else { ctx.rotate(ang); rr(ctx, PLAYER_R * 0.6, -a.radius - 4, a.range, (a.radius + 4) * 2, a.radius + 4); }
     ctx.fill(); ctx.stroke();
   } else {
@@ -594,6 +683,9 @@ export function drawAim(ctx, brawler, x, y, ang, kind) {
     ctx.beginPath();
     if (s.kind === 'dash') { ctx.rotate(ang); rr(ctx, 0, -s.radius * 0.7, s.dist, s.radius * 1.4, s.radius * 0.7); }
     else if (s.kind === 'slam') ctx.arc(0, 0, s.radius, 0, Math.PI * 2);
+    else if (s.kind === 'worm') { ctx.arc(Math.cos(ang) * s.range * 0.6, Math.sin(ang) * s.range * 0.6, s.radius, 0, Math.PI * 2); }
+    else if (s.kind === 'cage') { ctx.rotate(ang); rr(ctx, 0, -s.radius, s.range, s.radius * 2, s.radius); }
+    else if (s.kind === 'blink') ctx.arc(0, 0, s.range, 0, Math.PI * 2);
     else ctx.arc(0, 0, 60, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke();
   }

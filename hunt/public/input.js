@@ -99,7 +99,7 @@ export class Input {
         if (!a.aiming) {
           if (performance.now() - a.t0 < TAP_MS * 3) this.actions.push({ type: a.kind, mode: 'auto' });
         } else if (d > AIM_DEADZONE * 0.75) {
-          this.actions.push({ type: a.kind, mode: 'angle', ang: Math.atan2(dy, dx) });
+          this.actions.push({ type: a.kind, mode: 'angle', ang: Math.atan2(dy, dx), mag: Math.min(1, d / STICK_R) });
         } // dragged back to centre = cancel
       }
     }
