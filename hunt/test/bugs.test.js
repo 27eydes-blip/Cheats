@@ -27,4 +27,24 @@ const run = (sim, ticks) => { for (let i = 0; i < ticks; i++) sim.tick(); };
   assert.equal(sim.players.size, sim.maxPlayers, 'bots on: fills every slot');
 }
 
+
+
+// M-aim: tap-to-auto-aim picks the nearest enemy you can actually hit
+{
+  const { pickAimTarget } = await import('../public/aim.js');
+  const { WALL, TILE } = await import('../public/shared.js');
+  const map = generateArena(5); map.open = true;
+  for (let i = 0; i < map.t.length; i++) map.t[i] = 0;
+  // a wall column between me (x=400) and the close bot (x=700)
+  for (let y = 5; y < 15; y++) map.t[y * map.gw + 11] = WALL;
+  const me = { x: 400, y: 500 };
+  const walled = { id: 1, x: 700, y: 500, fl: 0, team: 0 };
+  const open = { id: 2, x: 400, y: 950, fl: 0, team: 0 };
+  const mate = { id: 3, x: 450, y: 520, fl: 0, team: 1 };
+  const prot = { id: 4, x: 420, y: 560, fl: 16, team: 0 };
+  assert.equal(pickAimTarget(map, me, [walled, open, mate, prot], { reach: 700, team: 1 }).id, 2, 'skips wall, teammate, spawn-protected');
+  assert.equal(pickAimTarget(map, me, [walled], { reach: 700 }), null, 'nobody hittable: keep facing');
+  assert.equal(pickAimTarget(map, me, [walled], { reach: 700, super: true }).id, 1, 'area supers may target behind walls');
+  assert.equal(TILE, 50);
+}
 console.log('bug-sweep regression tests passed');

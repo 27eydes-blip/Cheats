@@ -17,6 +17,7 @@ import { levelInfo } from './progression.js';
 import { TITLES } from './catalog.js';
 import { sfx, falloff } from './audio.js';
 import { setMusicVolume } from './ui/music.js';
+import { pickAimTarget } from './aim.js';
 import { WallArt } from './art/walls.js';
 import { artFor } from './art/themes.js';
 import { SPAWNS, spawnHasCover, SPAWN_COVER_DIST, blocksMove, TILE as TILE_ } from './shared.js';
@@ -671,13 +672,8 @@ function autoAngle(kind) {
   const B = BRAWLERS[G.brawler];
   const me = G.pred;
   const reach = kind === 'super' ? (B.super.dist || B.super.radius || 600) + 150 : B.attack.range * 1.15;
-  let best = null, bd = Infinity;
-  for (const o of G.view.others) {
-    if (o.fl & 16 || (o.team && o.team === G.me?.tm)) continue;
-    const d = Math.hypot(o.x - me.x, o.y - me.y);
-    if (d < bd) { bd = d; best = o; }
-  }
-  if (best && bd < Math.max(reach, 700)) return Math.atan2(best.y - me.y, best.x - me.x);
+  const best = pickAimTarget(G.map, me, G.view.others, { reach, team: G.me?.tm, super: kind === 'super', free: G.kind === 'free' });
+  if (best) return Math.atan2(best.y - me.y, best.x - me.x);
   return G.facing;
 }
 
