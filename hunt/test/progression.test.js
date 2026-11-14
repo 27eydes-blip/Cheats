@@ -26,3 +26,15 @@ assert.notEqual(h1.hash, h2.hash, 'random salt');
 assert.equal((await hashPassword('hunter22', h1.salt)).hash, h1.hash);
 assert(PBKDF2_ITER >= 100000);
 console.log('PROGRESSION OK');
+
+// bug sweep: a Squad DRAW (won === null) is not a win, even for the rank-1 player
+{
+  const { applyMatch: am, newProgress: np } = await import('../public/progression.js');
+  const out = am(np(), { rank: 1, players: 6, kills: 0, bounty: 0, brawler: 'volt', won: null, day: 5 });
+  assert.equal(out.progress.wins, 0, 'draw is not a win');
+  assert.equal(out.delta, 0, 'draw gives no trophies');
+  assert.equal(out.xp, 60, 'top-3 XP on a draw, not the +50 win bonus');
+  const ffa = am(np(), { rank: 1, players: 10, kills: 0, bounty: 0, brawler: 'volt', day: 5 });
+  assert.equal(ffa.progress.wins, 1, 'FFA rank 1 still wins');
+  console.log('squad draw is not a win: ok');
+}
