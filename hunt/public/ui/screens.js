@@ -11,6 +11,7 @@ import { setMusicVolume } from './music.js';
 import * as A from '../account.js';
 import { SKINS, KILL_FX, TITLES, TITLE_PRICE, PASS, PASS_TIERS, PASS_XP_PER_TIER, PREMIUM_PRICE, CURRENCY, passTier } from '../catalog.js';
 import { totalTrophies, roadReward, ROAD_STEP, missionState, msToReset, levelInfo, levelReward, weaponUnlocked } from '../progression.js';
+import { EMOTES } from '../catalog.js';
 import { MAX_POWER, POWER_COST, GADGET_AT, STAR_AT, GADGETS, STARS, clampPower, powerMult } from '../power.js';
 import { WEAPONS, WEAPON_IDS, WEAPON_CLASSES, weaponStats, withPerks, masteryInfo, MASTERY_SKINS, perksFor } from '../weapons.js';
 import { EVENTS, EVENT_IDS } from '../events/index.js';
@@ -179,9 +180,9 @@ export function openModePicker(current, onPick) {
 }
 
 // ======================================================================= LOCKER
-export function openLocker(api, onDone) {
+export function openLocker(api, onDone, startTab = 'skins', startWho = null) {
   const S = screen('LOCKER', `<div class="cur">${icon('coin')}<b id="lkCoins">0</b><small>TEST</small></div>`, onDone);
-  let tab = 'skins', who = api.getBrawler(), fxDemo = null;
+  let tab = startTab, who = startWho || api.getBrawler(), fxDemo = null;
   S.body.innerHTML = `<div class="locker"><div class="card-a preview"><canvas id="lkPrev"></canvas><div id="lkTitle" class="title" style="font-size:calc(var(--u)*2.2)"></div><button class="btn btn-sm mint" id="lkFx">PREVIEW KILL EFFECT</button></div>
     <div class="items"><div class="chips" id="lkTabs"></div><div class="chips" id="lkWho" style="margin-top:6px"></div><div class="pedestals" id="lkItems"></div></div></div>`;
   const render = () => {
@@ -455,4 +456,43 @@ export function openPower(api, onDone) {
     for (const b of P.card.querySelectorAll('[data-k]')) b.onclick = () => guard(async () => { await A.shop({ action: b.dataset.k, brawler: who, id: b.dataset.id }); sfx('click'); render(); });
   };
   render();
+}
+
+// ======================================================================= LOBBY TAB PAGES
+// PROFILE tab: your level, lifetime kills and wins, stats per mode, your hunters, Free Play by world
+const MODE_NAMES = { showdown: 'SHOWDOWN', bounty: 'BOUNTY RUSH', hunted: 'HUNTED', crystals: 'CRYSTAL GRAB', squad: 'SQUAD HUNT', bighunt: 'BIG HUNT' };
+const tile = (n, label) => `<div class="stile"><b>${n}</b><span>${label}</span></div>`;
+const ribbon = (txt, extra = '') => `<div class="ribbonhead" ${extra}>${txt}</div>`;
+export function renderProfilePage(el, api, onDone) {
+  const p = A.progress(), lv = levelInfo(p.xp), modes = p.modes || {};
+  const top3 = Object.values(modes).reduce((t, m) => t + (m.top3 || 0), 0);
+  const name = api.prefs.name || 'Hunter';
+  el.innerHTML = `
+    <div class="phead card-a"><div class="ph-name"><div class="pname title">${esc(name)}</div><div class="ph-lv">Level ${lv.level}</div></div>
+      <svg class="bigshield" viewBox="0 0 64 72"><path d="M32 3 L59 12 V36 C59 53 46 64 32 69 C18 64 5 53 5 36 V12 Z" fill="#ffc83d" stroke="#1b1033" stroke-width="4" stroke-linejoin="round"/><path d="M32 11 L51 17 V36 C51 48 42 56 32 60 C22 56 13 48 13 36 V17 Z" fill="#8e2a3a"/><path d="M32 11 V60 C22 56 13 48 13 36 V17 Z" fill="#b2423f"/><text x="32" y="45" text-anchor="middle" font-family="Lilita One" font-size="26" fill="#fff" stroke="#1b1033" stroke-width="4" paint-order="stroke">${lv.level}</text></svg>
+      <div class="ph-tot"><div><b>${p.kills | 0}</b><span>Kills</span></div><div><b>${p.wins | 0}</b><span>Wins</span></div></div></div>
+    ${ribbon('OVERALL')}<div class="stiles">${tile(p.wins | 0, 'Wins')}${tile(top3, 'Top 3s')}${tile(p.games | 0, 'Matches')}${tile(totalTrophies(p), 'Trophies')}</div>
+    ${Object.entries(MODE_NAMES).filter(([k]) => modes[k]?.games).map(([k, n]) => `${ribbon(n)}<div class="stiles">${tile(modes[k].wins, 'Wins')}${tile(modes[k].top3, 'Top 3s')}${tile(modes[k].games, 'Matches')}${tile(modes[k].kills, 'Kills')}</div>`).join('') || `<p class="hint">Play a match to fill in your stats for each mode.</p>`}
+    ${ribbon('HUNTERS')}<div class="stiles six">${BRAWLER_IDS.map((b) => `<div class="stile"><b>${p.trophies[b] | 0}</b><span>${BRAWLERS[b].name} · P${clampPower(p.power?.[b] || 1)}</span></div>`).join('')}</div>
+    ${ribbon('FREE PLAY BY WORLD')}<div class="card-a" style="padding:8px"><table class="stat-table">${api.statRows()}</table></div>
+    <div style="display:flex;justify-content:center;margin:10px 0 4px"><button class="btn btn-md alt" id="pgAccount">${icon('user')} NAME &amp; ACCOUNT</button></div>`;
+  el.querySelector('#pgAccount').onclick = () => openProfile(api, onDone);
+}
+// LOCKER tab: what you're wearing, by category; tap a category to change it
+export function renderLockerPage(el, api, onDone) {
+  const p = A.progress(), eq = p.equipped || {};
+  const emotes = EMOTES.filter((e) => e.level <= 1 || p.owned.includes(e.id));
+  const mastered = WEAPON_IDS.filter((w) => masteryInfo(p.mastery?.[w] || 0).level >= 3);
+  el.innerHTML = `<div class="lockgrid">
+    <div class="lsec" data-open="skins">${ribbon('SKINS')}<div class="ltiles">${BRAWLER_IDS.map((b) => `<div class="ltile tap" data-who="${b}"><canvas data-skin="${b}"></canvas></div>`).join('')}</div></div>
+    <div class="lsec" data-open="fx">${ribbon('KILL EFFECT')}<div class="ltiles one"><div class="ltile big tap">${icon('star')}<span>${esc(eq.fx ? KILL_FX[eq.fx]?.name || eq.fx : 'None')}</span></div></div></div>
+    <div class="lsec" data-open="titles">${ribbon('TITLE')}<div class="ltiles one"><div class="ltile big tap">${icon('pass')}<span>${esc(eq.title ? TITLES[eq.title] || eq.title : 'None')}</span></div></div></div>
+    <div class="lsec">${ribbon('EMOTES')}<div class="ltiles">${emotes.map((e) => `<div class="ltile emote" style="--ec:${e.col}"><span>${esc(e.text)}</span></div>`).join('')}</div></div>
+    <div class="lsec" data-armory="1">${ribbon('WEAPON SKINS')}${mastered.length ? `<div class="ltiles">${mastered.map((w) => `<div class="ltile tap"><canvas data-wpn="${w}"></canvas><span>${esc(WEAPONS[w].name)}</span></div>`).join('')}</div>` : '<p class="hint">Reach mastery 3 with a weapon to unlock its Bronze skin.</p>'}</div>
+    <div class="lsec" data-open="shop">${ribbon('SHOP')}<div class="ltiles one"><div class="ltile big tap">${icon('coin')}<span>${p.coins} coins · get skins</span></div></div></div>
+  </div>`;
+  for (const cv of el.querySelectorAll('canvas[data-skin]')) { const c = fitCanvas(cv); R.drawBrawler(c.g, cv.dataset.skin, c.w / 2, c.h * 0.62, 0.3, 0, { scale: Math.min(c.w, c.h) / 70, skin: eq['skin:' + cv.dataset.skin] || null }); }
+  for (const cv of el.querySelectorAll('canvas[data-wpn]')) { const c = fitCanvas(cv); R.drawWeaponDrop(c.g, c.w / 2, c.h / 2, cv.dataset.wpn, 1, 0); }
+  for (const sec of el.querySelectorAll('.lsec[data-open]')) sec.onclick = (e) => { const t = e.target.closest('[data-who]'); openLocker(api, onDone, sec.dataset.open === 'shop' ? 'skins' : sec.dataset.open, t ? t.dataset.who : null); };
+  el.querySelector('.lsec[data-armory]').onclick = () => openArmory(api, onDone);
 }

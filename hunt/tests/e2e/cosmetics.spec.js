@@ -8,6 +8,7 @@ test('locker + pass: buy and equip a title with test coins, shows in match roste
   await page.waitForSelector('#rail_locker');
   await expect(page.locator('#tbCoins')).toContainText('TEST');
   await page.click('#rail_locker');
+  await page.click('.lsec[data-open="titles"]');
   await page.click('#lkTabs [data-t="titles"]');
   await page.click('.ped[data-k="tracker"] [data-buy]');
   await page.click('.ped[data-k="tracker"] [data-eq]');

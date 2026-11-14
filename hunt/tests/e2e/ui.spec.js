@@ -35,12 +35,22 @@ test('screens slide in/out: brawler select, detail, mode picker, locker, pass, r
   await page.click('.detail [data-sel]');
   await page.click('.ui-screen .back');
   await expect(page.locator('#npName')).toHaveText('Rook');
-  await page.click('#modeCard');
-  await expect(page.locator('.mcard')).toHaveCount(5);
-  await expect(page.locator('.events-row .ico')).toHaveCount(9);
-  await page.click('.mcard[data-m="squad"]');
+  await expect(page.locator('.modebtn')).toHaveCount(5);
+  await page.click('.modebtn[data-m="squad"]');
   await expect(page.locator('#mcName')).toHaveText('SQUAD HUNT');
-  for (const [btn, sel] of [['#rail_locker', '.pedestals'], ['#rail_pass', '.track'], ['#rail_road', '.road-wrap'], ['#rail_settings', '#volMusic'], ['#profileCard .pname', '.stat-table']]) {
+  await expect(page.locator('.modebtn[data-m="squad"]')).toHaveClass(/sel/);
+  // tabs: profile (stats) and locker (categories)
+  await page.click('#profileCard .pname');
+  await expect(page.locator('.pg-profile .stat-table')).toBeVisible();
+  await expect(page.locator('.pg-profile .stile').first()).toBeVisible();
+  await page.click('#rail_locker');
+  await expect(page.locator('.lsec')).toHaveCount(6);
+  await page.click('#tab_play');
+  await expect(page.locator('#playBtn')).toBeVisible();
+  await page.click('#rail_locker'); await page.click('.lsec[data-open="fx"]');
+  await expect(page.locator('.pedestals')).toBeVisible();
+  await page.click('.ui-screen .back'); await page.click('#tab_play');
+  for (const [btn, sel] of [['#rail_pass', '.track'], ['#rail_road', '.road-wrap'], ['#rail_settings', '#volMusic']]) {
     await page.click(btn);
     await expect(page.locator(sel)).toBeVisible();
     await page.click('.ui-screen .back');
@@ -72,7 +82,7 @@ test('play flow: matchmaking radar -> VS intro -> match -> results', async ({ pa
 
 test('lobby music plays after a tap and ducks under popups; Low Graphics freezes the background', async ({ page }) => {
   await page.goto('/');
-  await page.click('#profileCard .ptro');
+  await page.click('#rail_settings');
   await page.click('.ui-screen .back');
   const playing = await page.evaluate(async () => (await import('/ui/music.js')).musicPlaying());
   expect(playing).toBe(true);
@@ -82,9 +92,6 @@ test('lobby music plays after a tap and ducks under popups; Low Graphics freezes
   await page.waitForTimeout(300);
   expect(await page.evaluate(async () => (await import('/ui/music.js')).isDucked())).toBe(false);
   await page.click('#rail_settings'); await page.check('#setLow'); await page.click('.ui-screen .back');
-  await page.waitForTimeout(500); // the static Low Graphics frame (at 1x) is drawn once
-  const a = await page.evaluate(() => document.getElementById('lobbyBg').toDataURL().length);
-  await page.waitForTimeout(600);
-  const b = await page.evaluate(() => document.getElementById('lobbyBg').toDataURL().length);
-  expect(a).toBe(b);
+  await page.waitForTimeout(500); // Low Graphics: the hunter card draws at 1x
+  expect(await page.evaluate(() => { const c = document.getElementById('stage'); return Math.abs(c.width - c.getBoundingClientRect().width) <= 1; })).toBe(true);
 });

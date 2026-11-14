@@ -144,7 +144,7 @@ export class MatchRoom {
       if (!r.p.account || r.p.recorded || this.sim?.mode?.noRewards) continue;
       r.p.recorded = true;
       try {
-        const out = await recordMatch(this.env.DB, r.p.account, { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, won: r.won, assists: r.assists, steals: r.steals, wstat: r.wstat });
+        const out = await recordMatch(this.env.DB, r.p.account, { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, mode: this.sim?.modeKey, won: r.won, assists: r.assists, steals: r.steals, wstat: r.wstat });
         const ws = sockets.get(r.p.id);
         if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, mastery: out.mastery, wxp: out.wxp, coins: out.coins });
       } catch (e) { console.log('recordMatch failed', e && e.message); }

@@ -21,6 +21,7 @@ export const ICONS = {
   target: S('<circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="5" fill="#fff"/><path d="M16 2v7M16 23v7M2 16h7M23 16h7" fill="none"/>', '#ff4d5e'),
   armory: S('<path d="M3 13h18l3-3h5v6h-5l-2 2h-4l-2 8H10l2-8H3z"/><path d="M8 13v4" fill="none"/>', '#ff9f43'),
   weapon: S('<path d="M3 13h18l3-3h5v6h-5l-2 2h-4l-2 8H10l2-8H3z"/><path d="M8 13v4" fill="none"/>', '#c9ccd4'),
+  battle: S('<circle cx="16" cy="16" r="11" fill="#ff4d5e"/><circle cx="16" cy="16" r="5" fill="#fff"/><path d="M16 2v6M16 24v6M2 16h6M24 16h6" fill="none"/>', '#ff4d5e'),
   skull: S('<path d="M16 4c-7 0-11 4.5-11 10 0 3.5 2 5.5 4 6.5V26h14v-5.5c2-1 4-3 4-6.5 0-5.5-4-10-11-10z"/><circle cx="11.5" cy="14" r="2.5" fill="#1b1033"/><circle cx="20.5" cy="14" r="2.5" fill="#1b1033"/>', '#fff'),
   music: S('<path d="M12 23V7l14-3v16" fill="none"/><circle cx="8.5" cy="23.5" r="4"/><circle cx="22.5" cy="20.5" r="4"/>', '#4be0c8'),
   speaker: S('<path d="M5 12h5l7-6v20l-7-6H5z"/><path d="M21 11c2 2 2 8 0 10M24.5 8c4 4 4 12 0 16" fill="none"/>', '#4be0c8'),
