@@ -106,5 +106,5 @@ test('wall art cache stays bounded across many arena layouts (no leak over many 
     a.get('meadow', 'P1999', () => { throw new Error('should be cached'); });
     return a.stats().sprites;
   });
-  expect(n).toBeLessThanOrEqual(600);
+  expect(n).toBeLessThanOrEqual(120);
 });

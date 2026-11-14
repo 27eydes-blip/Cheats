@@ -8,7 +8,7 @@ import { TILE, WALL, worldKeyAt } from '../shared.js';
 
 export const P = 16; // art pixels per cell
 const SIDE = 4; // side-face height in art pixels
-const MAX_SPRITES = 600; // per world: far more than one screen ever shows
+const MAX_SPRITES = 120; // per world: an arena has ~35 pieces, a screen shows far fewer
 const MAX_WORLDS = 4;
 
 const hash = (x, y) => (((x * 73856093) ^ (y * 19349663)) >>> 0);
