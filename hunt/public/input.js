@@ -44,11 +44,14 @@ export class Input {
     document.addEventListener('visibilitychange', () => { if (document.hidden) { this.keys.clear(); this.moveT = null; this.aimT = null; } });
   }
 
-  layout(W, H) {
+  layout(W, H, sa = { t: 0, r: 0, b: 0, l: 0 }) {
     this.W = W; this.H = H;
     const s = Math.min(1, H / 400);
-    this.superBtn = { x: W - 205 * s - 10, y: H - 70 * s - 10, r: 38 * s };
-    this.atkHint = { x: W - 95 * s - 10, y: H - 100 * s - 10, r: STICK_R };
+    // keep the buttons clear of the notch / home bar
+    this.superBtn = { x: W - 205 * s - 10 - sa.r, y: H - 70 * s - 10 - sa.b, r: 38 * s };
+    this.atkHint = { x: W - 95 * s - 10 - sa.r, y: H - 100 * s - 10 - sa.b, r: STICK_R };
+    // idle move-stick hint: on short phones sit it lower so it clears the leaderboard
+    this.moveHint = { x: 110 + sa.l, y: (H < 430 ? H - STICK_R - 14 : H - 105) - sa.b };
   }
 
   reset() { this.actions.length = 0; this.moveT = null; this.aimT = null; }

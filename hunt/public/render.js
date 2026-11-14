@@ -858,7 +858,8 @@ export function drawControls(ctx, input, superC, brawler, t, safe) {
     ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke();
   } else {
     ctx.globalAlpha = 0.35;
-    ctx.beginPath(); ctx.arc(110, input.H - 105, STICK_R, 0, Math.PI * 2); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+    const mh = input.moveHint || { x: 110, y: input.H - 105 };
+    ctx.beginPath(); ctx.arc(mh.x, mh.y, STICK_R, 0, Math.PI * 2); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
     ctx.globalAlpha = 1;
   }
   if (safe) ctx.globalAlpha = 0.35;

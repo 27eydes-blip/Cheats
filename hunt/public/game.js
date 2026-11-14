@@ -57,11 +57,21 @@ function adaptResolution(dtMs) {
   if (slowFor > 1500 && dprStep < DPR_STEPS.length - 1) { dprStep++; slowFor = 0; resize(); }
   else if (fastFor > 8000 && dprStep > 0) { dprStep--; fastFor = 0; resize(); }
 }
+// notch / home-bar insets, for things drawn on the canvas (CSS elements use env() directly)
+const saProbe = document.createElement('div');
+saProbe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+document.body.appendChild(saProbe);
+let SA = { t: 0, r: 0, b: 0, l: 0 };
+function readSafeArea() {
+  const cs = getComputedStyle(saProbe), n = (v) => parseFloat(v) || 0;
+  SA = { t: n(cs.paddingTop), r: n(cs.paddingRight), b: n(cs.paddingBottom), l: n(cs.paddingLeft) };
+}
 function resize() {
   DPR = SETTINGS.lowGfx ? 1 : Math.min(DPR_STEPS[dprStep], devicePixelRatio || 1);
   W = innerWidth; H = innerHeight;
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
-  input.layout(W, H);
+  readSafeArea();
+  input.layout(W, H, SA);
 }
 addEventListener('resize', resize);
 resize();
@@ -894,7 +904,7 @@ function render(t) {
   }
   const radarR = Math.min(64, H * 0.15);
   const now = performance.now();
-  R.drawRadar(ctx, 12 + radarR, 36 + radarR, radarR, { x: cam.x, y: cam.y },
+  R.drawRadar(ctx, 12 + SA.l + radarR, 36 + SA.t + radarR, radarR, { x: cam.x, y: cam.y },
     [...G.pings.map((p) => ({ ...p, age: (now - p.t0) / 1000 })), ...(G.mates || []).map(([id, x, y]) => ({ id, x, y, bt: 0, age: 0, mate: true }))],
     { poison: P?.last?.z ? { inset: P.last.z, size: ARENA_SIZE } : null, hub: G.kind === 'free', zones: G.kind === 'free', range: 1600 }, t);
   if (G.phase === 'play' && meAlive) R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
