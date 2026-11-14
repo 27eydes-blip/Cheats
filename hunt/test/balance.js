@@ -10,6 +10,11 @@ export function runBalance(N = 300, seed0 = 1) {
   const rnd = () => { s = (s * 1103515245 + 12345) >>> 0; return s / 2 ** 32; };
   const pool = WORLDS.filter((w) => w.arena).map((w) => w.key);
   let timeouts = 0;
+  // bots and ids also use Math.random: seed it for the run so the same seed gives the same result
+  let s2 = (seed0 ^ 0x9e3779b9) >>> 0;
+  const realRandom = Math.random;
+  Math.random = () => { s2 = (s2 + 0x6d2b79f5) >>> 0; let x = s2; x = Math.imul(x ^ (x >>> 15), x | 1); x ^= x + Math.imul(x ^ (x >>> 7), x | 61); return ((x ^ (x >>> 14)) >>> 0) / 2 ** 32; };
+  try {
   for (let i = 0; i < N; i++) {
     // balanced schedule: cycle through every ordered pair, with random arenas/spawns
     const ids = BRAWLER_IDS;
@@ -28,6 +33,7 @@ export function runBalance(N = 300, seed0 = 1) {
     wins[w]++;
     const key = [ba, bb].sort().join('-'); pair[key] ||= {}; pair[key][w] = (pair[key][w] || 0) + 1;
   }
+  } finally { Math.random = realRandom; }
   const rates = Object.fromEntries(BRAWLER_IDS.map((b) => [b, wins[b] / games[b]]));
   return { rates, games, wins, pair, timeouts };
 }
