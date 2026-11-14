@@ -178,3 +178,8 @@ body.reduce-flash * { animation: none !important; transition: none !important; }
 .pcell i { font-style: normal; }
 .prem.on { color: var(--gold); }
 h2 small { font-size: 16px; color: var(--gold); }
+
+#pose { width: 180px; height: 110px; display: block; margin: -6px auto -10px; }
+#mvp { display: inline-block; background: linear-gradient(#ffe066, #ffb800); color: var(--ink); border: 4px solid var(--ink); border-radius: 14px; padding: 2px 14px; font-size: 18px; margin-bottom: 6px; box-shadow: 0 4px 0 var(--ink); }
+#mvp b { font-weight: 400; }
+@media (max-height: 430px) { #pose { height: 80px; width: 140px; } }
