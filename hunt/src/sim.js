@@ -158,12 +158,15 @@ export class Sim {
   exportPlayer(p) {
     const s = {};
     for (const k of CARRY) s[k] = p[k];
+    // zones run on their own clocks: carry "seconds since last combat", not this zone's timestamp
+    s.lastCombat = p.lastCombat - this.time;
     if (p.dash) s.dash = { vx: p.dash.vx, vy: p.dash.vy, t: p.dash.t };
     if (p.knock) s.knock = { ...p.knock };
     return s;
   }
   importPlayer(state, name, connected) {
     const p = this.addPlayer({ name: state.name || name, brawler: state.brawler, state, connected });
+    if (typeof state.lastCombat === 'number') p.lastCombat = this.time + state.lastCombat;
     if (state.dash) p.dash = { ...state.dash, hit: new Set() };
     if (state.knock) p.knock = { ...state.knock };
     return p;

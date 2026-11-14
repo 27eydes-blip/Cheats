@@ -63,4 +63,18 @@ const run = (sim, ticks) => { for (let i = 0; i < ticks; i++) sim.tick(); };
   }
 }
 
+// M-regen: Free Play zones have separate clocks; a handoff must keep "time since combat", not a timestamp
+{
+  const { generateWorld, zoneBounds } = await import('../public/shared.js');
+  const mk = (slot) => new Sim({ map: generateWorld(), mode: 'freeplay', zone: slot, bounds: zoneBounds(slot), hub: true, phase: 'play', botTarget: 0, fillBots: false });
+  const A = mk('nw'), B = mk('ne');
+  A.time = 5000; B.time = 10;
+  const p = A.addPlayer({ name: 'Walker', brawler: 'brick' });
+  p.lastCombat = A.time - 1; // fought one second ago
+  const q = B.importPlayer(A.exportPlayer(p), 'Walker', true);
+  assert(Math.abs((B.time - q.lastCombat) - 1) < 1e-9, 'still "one second since combat" in the new zone');
+  const back = A.importPlayer(B.exportPlayer(q), 'Walker', true);
+  assert(Math.abs((A.time - back.lastCombat) - 1) < 1e-9, 'and back again');
+}
+
 console.log('bug-sweep regression tests passed');
