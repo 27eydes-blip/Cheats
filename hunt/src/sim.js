@@ -321,8 +321,7 @@ export class Sim {
       const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy);
       if (d > a.range + this.stats(e).r) continue;
       let da = Math.atan2(dy, dx) - ang;
-      while (da > Math.PI) da -= Math.PI * 2;
-      while (da < -Math.PI) da += Math.PI * 2;
+      da = Math.atan2(Math.sin(da), Math.cos(da));
       if (Math.abs(da) > a.arc / 2 + 0.2) continue;
       if (!lineOfSight(this.map, p.x, p.y, e.x, e.y)) continue;
       this.fx.push(['hit', Math.round(e.x), Math.round(e.y), BRAWLER_IDS.indexOf(p.brawler), e.id]);
@@ -558,7 +557,8 @@ export class Sim {
     if (m.t === 'pick') return this.pick(p, m.brawler);
     if (m.t !== 'in') return;
     const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0);
-    const ang = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+    // angles from the client are untrusted: wrap into (-PI, PI] (a huge value would hang the angle loops)
+    const ang = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.atan2(Math.sin(v), Math.cos(v)) : null);
     p.queue.push({ s: m.s | 0, mx: num(m.mx), my: num(m.my), ax: num(m.ax), ay: num(m.ay), f: ang(m.f), u: ang(m.u), fd: typeof m.fd === 'number' ? Math.max(0, Math.min(1, m.fd)) : 1 });
     if (p.queue.length > 12) p.queue.splice(0, p.queue.length - 12);
   }

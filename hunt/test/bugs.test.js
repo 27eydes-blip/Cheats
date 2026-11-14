@@ -47,4 +47,20 @@ const run = (sim, ticks) => { for (let i = 0; i < ticks; i++) sim.tick(); };
   assert.equal(pickAimTarget(map, me, [walled], { reach: 700, super: true }).id, 1, 'area supers may target behind walls');
   assert.equal(TILE, 50);
 }
+// C-angle: a tampered aim angle (1e20) must not hang the server or leak out in snapshots
+{
+  const msgs = [];
+  const sim = new Sim({ map: generateArena(9), mode: 'bounty', phase: 'play', fillBots: false, send: (id, m) => msgs.push(m) });
+  const a = sim.addPlayer({ name: 'Cheat', brawler: 'flicker' }), b = sim.addPlayer({ name: 'B', brawler: 'volt', bot: true });
+  b.x = a.x + 60; b.y = a.y;
+  for (const f of [1e20, -1e300, 1e15 + 0.5]) {
+    a.atkCd = 0; a.ammo = 3;
+    sim.input(a.id, { t: 'in', s: ++a.lastSeq + 1, mx: 0, my: 0, ax: 0, ay: 0, f, u: f });
+    const t0 = Date.now();
+    sim.tick();
+    assert(Date.now() - t0 < 500, 'tick finished');
+    assert(Math.abs(a.facing) <= Math.PI + 1e-9, 'facing normalized: ' + a.facing);
+  }
+}
+
 console.log('bug-sweep regression tests passed');

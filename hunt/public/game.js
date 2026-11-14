@@ -505,8 +505,7 @@ function sampleConn(c, out) {
     const ea = a.p.get(id) || e;
     const r = G.roster[id] || ['?', 'volt'];
     let da = e[5] - ea[5];
-    while (da > Math.PI) da -= Math.PI * 2;
-    while (da < -Math.PI) da += Math.PI * 2;
+    da = Math.atan2(Math.sin(da), Math.cos(da)); // never loop on a bad value
     const x = ea[1] + (e[1] - ea[1]) * f, y = ea[2] + (e[2] - ea[2]) * f;
     const prev = out.others.get(id);
     if (prev && G.kind === 'free' && zoneAt(prev.x, prev.y) === prev.zone) continue; // the owning zone's copy wins
