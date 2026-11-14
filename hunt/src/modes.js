@@ -15,6 +15,14 @@ export const MODES = {
     tieKey: (sim, p) => (p.alive ? 'alive' : 'r' + p.rank), // eliminated on the same tick = same place
   },
 
+  // BIG HUNT: 20-player Showdown on a 5000x5000 arena (picked from the mode list, never at random)
+  bighunt: {
+    name: 'Big Hunt', desc: '20 hunters, one huge arena. Last one standing wins!', respawn: false, poison: true, quick: true, noRandom: true, maxPlayers: 20,
+    checkEnd: (sim) => sim.aliveCount() <= 1,
+    rank: (sim) => [...sim.players.values()].sort((a, b) => (b.alive - a.alive) || (a.rank || 99) - (b.rank || 99)),
+    tieKey: (sim, p) => (p.alive ? 'alive' : 'r' + p.rank),
+  },
+
   bounty: {
     name: 'Bounty Rush', desc: 'Steal bounties! Highest bounty when time runs out wins.', respawn: true, quick: true, timeLimit: 120,
     score: (p) => p.bounty,
@@ -118,3 +126,6 @@ for (const m of Object.values(MODES)) {
   if (!m.tieKey && !m.teams) m.tieKey = (sim, p) => `${score(p)}|${p.kills}|${p.bounty}`;
 }
 export const QUICK_MODES = Object.keys(MODES).filter((k) => MODES[k].quick);
+// the "any mode" pool for Quick Hunt (Big Hunt is only played when picked)
+export const RANDOM_MODES = QUICK_MODES.filter((k) => !MODES[k].noRandom);
+export const playersFor = (mode) => (MODES[mode] && MODES[mode].maxPlayers) || 10;

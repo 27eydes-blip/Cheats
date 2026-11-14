@@ -3,7 +3,7 @@ import { Sim } from '../src/sim.js';
 import { generateArena, BRAWLERS, moveStats } from '../public/shared.js';
 import { runBalance } from './balance.js';
 
-const open = () => { const m = generateArena(3, 'meadow'); for (let y = 15; y < 25; y++) for (let x = 5; x < 35; x++) m.t[y * 40 + x] = 0; return m; };
+const open = () => { const m = generateArena(3, 'meadow', 2); for (let y = 15; y < 25; y++) for (let x = 5; x < 35; x++) m.t[y * m.gw + x] = 0; return m; };
 const duel = (a, b) => {
   const sim = new Sim({ map: open(), mode: 'showdown', phase: 'play', events: false, fillBots: false });
   const A = sim.addPlayer({ name: 'A', brawler: a }), B = sim.addPlayer({ name: 'B', brawler: b });

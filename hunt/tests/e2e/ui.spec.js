@@ -36,7 +36,7 @@ test('screens slide in/out: brawler select, detail, mode picker, locker, pass, r
   await page.click('.ui-screen .back');
   await expect(page.locator('#npName')).toHaveText('Rook');
   await page.click('#modeCard');
-  await expect(page.locator('.mcard')).toHaveCount(4);
+  await expect(page.locator('.mcard')).toHaveCount(5);
   await expect(page.locator('.events-row .ico')).toHaveCount(9);
   await page.click('.mcard[data-m="squad"]');
   await expect(page.locator('#mcName')).toHaveText('SQUAD HUNT');

@@ -1,7 +1,8 @@
 // Bot balance harness: N 1v1 duels between random pairs of different brawlers on random arenas.
 // usage: node test/balance.js [matches=300] [seed]
 import { Sim } from '../src/sim.js';
-import { BRAWLER_IDS, WORLDS, SPAWNS, generateArena } from '../public/shared.js';
+import { BRAWLER_IDS, WORLDS, arenaSpawns, generateArena } from '../public/shared.js';
+const SPAWNS = arenaSpawns(2000, 10); // 1v1 duels: the 2000 arena (2-4 players)
 
 export function runBalance(N = 300, seed0 = 1) {
   const wins = {}, games = {}, pair = {};
@@ -21,7 +22,7 @@ export function runBalance(N = 300, seed0 = 1) {
     const pairs = []; for (const a of ids) for (const b of ids) if (a !== b) pairs.push([a, b]);
     const [ba, bb] = pairs[i % pairs.length];
     const seed = Math.floor(rnd() * 2 ** 31);
-    const sim = new Sim({ map: generateArena(seed, pool[Math.floor(rnd() * pool.length)]), mode: 'showdown', phase: 'play', seed, events: false, fillBots: false });
+    const sim = new Sim({ map: generateArena(seed, pool[Math.floor(rnd() * pool.length)], 2), mode: 'showdown', phase: 'play', seed, events: false, fillBots: false });
     const A = sim.addPlayer({ name: 'A', brawler: ba, bot: true }), B = sim.addPlayer({ name: 'B', brawler: bb, bot: true });
     const k = Math.floor(rnd() * SPAWNS.length);
     Object.assign(A, SPAWNS[k]); Object.assign(B, SPAWNS[(k + 5) % SPAWNS.length]);

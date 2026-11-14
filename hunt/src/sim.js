@@ -263,8 +263,9 @@ export class Sim {
       if (this.mode.teams) b.team = this.smallerTeam();
     }
     // teams spawn on opposite sides of the ring; FFA spawns are shuffled
-    const spawns = SPAWNS.slice().sort(() => Math.random() - 0.5);
-    const sideA = SPAWNS.filter((s) => s.x < this.center.x), sideB = SPAWNS.filter((s) => s.x >= this.center.x);
+    const SP = this.map.spawns || SPAWNS;
+    const spawns = SP.slice().sort(() => Math.random() - 0.5);
+    const sideA = SP.filter((s) => s.x < this.center.x), sideB = SP.filter((s) => s.x >= this.center.x);
     let i = 0, ia = 0, ib = 0;
     for (const p of this.players.values()) {
       const s = !this.mode.teams ? spawns[i++ % spawns.length] : p.team === 1 ? sideA[ia++ % sideA.length] : sideB[ib++ % sideB.length];
@@ -278,7 +279,7 @@ export class Sim {
     if (hs.length) this.botLevel = levelForTrophies(hs.reduce((s, h) => s + (h.trophies || 0), 0) / hs.length);
     for (const p of this.players.values()) {
       if (!p.connected) continue;
-      this.send(p.id, { t: 'start', botLevel: this.botLevel, you: p.id, mode: this.modeKey, world: this.map.world, seed: this.seed, open: !!this.map.open });
+      this.send(p.id, { t: 'start', botLevel: this.botLevel, you: p.id, mode: this.modeKey, world: this.map.world, seed: this.seed, open: !!this.map.open, players: this.map.players || 10 });
       this.send(p.id, this.rosterMsg());
     }
   }
@@ -630,7 +631,7 @@ export class Sim {
 
     this.time += DT;
     this.tickN++;
-    this.zoneInset = this.mode.poison ? poisonInset(this.time) : 0;
+    this.zoneInset = this.mode.poison ? poisonInset(this.time, this.bounds.x1 - this.bounds.x0) : 0;
     this.updateEvent();
     if (this.wallsToRestore.length && this.tickN % 10 === 0) {
       this.wallsToRestore = this.wallsToRestore.filter((idx) => { if (this.map.t[idx] !== EMPTY || this.tileOccupied(idx)) return this.map.t[idx] === EMPTY; this.setTile(idx, WALL); return false; });

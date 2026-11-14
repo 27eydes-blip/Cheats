@@ -10,9 +10,10 @@ export const MAX_PLAYERS = 10;
 
 export const EMPTY = 0, WALL = 1, BUSH = 2, CRATE = 3, WATER = 4;
 
-// Quick Hunt arenas
-export const ARENA_SIZE = 2000;
-export const ARENA_GRID = ARENA_SIZE / TILE; // 40
+// Quick Hunt arenas: the size grows with the player count (10 players = 3000, Big Hunt's 20 = 5000)
+export const ARENA_SIZE = 3000; // the standard 10-player arena
+export const ARENA_GRID = ARENA_SIZE / TILE; // 60
+export function arenaSizeFor(players = MAX_PLAYERS) { return players >= 20 ? 5000 : players <= 4 ? 2000 : players <= 6 ? 2400 : ARENA_SIZE; }
 // Free Play world: 2x2 zones of 2000x2000, safe hub where they meet
 export const ZONE_SIZE = 2000;
 export const WORLD_SIZE = 4000;
@@ -27,7 +28,7 @@ export const REGEN_DELAY = 3; // seconds without dealing/taking damage
 export const REGEN_RATE = 0.13; // fraction of max HP per second
 export const POISON_START = 60;
 export const POISON_CLOSE_TIME = 80;
-export const POISON_MAX_INSET = 880;
+export const POISON_MAX_INSET = 880; // for a 2000 arena; scales with the arena (poisonInset)
 export const POISON_DPS = 700;
 export const BUSH_REVEAL_DIST = 170;
 export const CLOAK_REVEAL_DIST = 110;
@@ -106,13 +107,13 @@ export const BRAWLER_IDS = Object.keys(BRAWLERS);
 // IDs are the array index and are persisted in saves/stats: ONLY APPEND to this list.
 // `order` controls display order (lobby stats etc.).
 export const WORLDS = [
-  { key: 'meadow', name: 'Meadow', order: 0, arena: true, gen: { pieces: 8, shapes: ['s1', 's2', 's3', 'L3', 'sq', 'L4'], bushes: 2, crates: 4, water: 0 } },
-  { key: 'city', name: 'Neon City', order: 1, arena: true, gen: { pieces: 8, shapes: ['sq', 's3', 'L4', 's2', 'sq'], bushes: 2, crates: 5, water: 0 } },
-  { key: 'forest', name: 'Wildwood', order: 2, arena: true, gen: { pieces: 7, shapes: ['s1', 's2', 's3', 'L3', 's1'], bushes: 2, crates: 4, water: 1 } },
-  { key: 'desert', name: 'Dust Flats', order: 3, arena: true, gen: { pieces: 7, shapes: ['s2', 's3', 'L3', 'L4', 's1'], bushes: 2, crates: 4, water: 1 } },
-  { key: 'frozen', name: 'Frozen Lake', order: 4, arena: true, gen: { pieces: 8, shapes: ['s1', 's2', 'sq', 'L3', 's3'], bushes: 2, crates: 4, water: 1 } },
+  { key: 'meadow', name: 'Meadow', order: 0, arena: true, layouts: ['scatter', 'rings'], gen: { pieces: 8, shapes: ['s1', 's2', 's3', 'L3', 'sq', 'L4'], bushes: 2, crates: 4, water: 0 } },
+  { key: 'city', name: 'Neon City', order: 1, arena: true, layouts: ['lanes', 'keep'], gen: { pieces: 8, shapes: ['sq', 's3', 'L4', 's2', 'sq'], bushes: 2, crates: 5, water: 0 } },
+  { key: 'forest', name: 'Wildwood', order: 2, arena: true, layouts: ['scatter', 'keep'], gen: { pieces: 7, shapes: ['s1', 's2', 's3', 'L3', 's1'], bushes: 2, crates: 4, water: 1 } },
+  { key: 'desert', name: 'Dust Flats', order: 3, arena: true, layouts: ['rings', 'lanes'], gen: { pieces: 7, shapes: ['s2', 's3', 'L3', 'L4', 's1'], bushes: 2, crates: 4, water: 1 } },
+  { key: 'frozen', name: 'Frozen Lake', order: 4, arena: true, layouts: ['scatter', 'rings'], gen: { pieces: 8, shapes: ['s1', 's2', 'sq', 'L3', 's3'], bushes: 2, crates: 4, water: 1 } },
   // id 5 — appended (never reorder). Displayed between Wildwood and Frozen Lake.
-  { key: 'mirage', name: 'Desert Mirage', order: 2.5, arena: true, gen: { pieces: 8, shapes: ['s1', 's1', 's3', 'L4', 'L3', 's2'], bushes: 2, crates: 4, water: 1 } },
+  { key: 'mirage', name: 'Desert Mirage', order: 2.5, arena: true, layouts: ['keep', 'scatter'], gen: { pieces: 8, shapes: ['s1', 's1', 's3', 'L4', 'L3', 's2'], bushes: 2, crates: 4, water: 1 } },
 ];
 export const worldId = (key) => WORLDS.findIndex((w) => w.key === key);
 export const worldsInDisplayOrder = () => WORLDS.map((w, id) => ({ ...w, id })).sort((a, b) => a.order - b.order);
@@ -141,10 +142,14 @@ export function rng(seed) {
 }
 
 // ---------- Spawns ----------
-export const SPAWNS = Array.from({ length: MAX_PLAYERS }, (_, i) => {
-  const a = (i / MAX_PLAYERS) * Math.PI * 2 + 0.31;
-  return { x: ARENA_SIZE / 2 + Math.cos(a) * 780, y: ARENA_SIZE / 2 + Math.sin(a) * 780 };
-});
+// a ring of spawns at 39% of the arena size from the centre
+export function arenaSpawns(size = ARENA_SIZE, n = MAX_PLAYERS) {
+  return Array.from({ length: n }, (_, i) => {
+    const a = (i / n) * Math.PI * 2 + 0.31;
+    return { x: size / 2 + Math.cos(a) * size * 0.39, y: size / 2 + Math.sin(a) * size * 0.39 };
+  });
+}
+export const SPAWNS = arenaSpawns(ARENA_SIZE, MAX_PLAYERS);
 
 // ---------- Maps ----------
 // map = { gw, gh, t: Uint8Array (collision), base, kind: 'arena'|'world', world,
@@ -208,7 +213,7 @@ function layout(m, r, gen, rect, images, forbid) {
     && cells.every(([x, y]) => images(x, y).every(([ix, iy]) => !forbid(ix, iy)));
   const all = (cells) => cells.flatMap(([x, y]) => images(x, y));
   // water first (oasis / frozen holes), ringed by bushes
-  for (let i = 0; i < gen.water; i++) for (let tries = 0; tries < 30; tries++) {
+  for (let i = 0; i < gen.water; i++) for (let tries = 0; tries < 40; tries++) {
     const cx = x0 + 3 + Math.floor(r() * (x1 - x0 - 6)), cy = y0 + 3 + Math.floor(r() * (y1 - y0 - 6));
     const cells = []; for (let y = cy - 1; y <= cy + 1; y++) for (let x = cx - 1; x <= cx + 1; x++) if (Math.abs(x - cx) + Math.abs(y - cy) < 2 || r() < 0.4) cells.push([x, y]);
     if (!ok(cells) || !freeAround(m, all(cells), 1)) continue;
@@ -218,7 +223,7 @@ function layout(m, r, gen, rect, images, forbid) {
   // cover pieces
   const shapes = gen.shapes;
   let placed = 0;
-  for (let tries = 0; tries < 600 && placed < gen.pieces; tries++) {
+  for (let tries = 0, max = Math.max(600, gen.pieces * 60); tries < max && placed < gen.pieces; tries++) {
     const name = shapes[Math.floor(r() * shapes.length)];
     const cells = shapeCells(name, Math.floor(r() * 8), x0 + 1 + Math.floor(r() * (x1 - x0 - 2)), y0 + 1 + Math.floor(r() * (y1 - y0 - 2)));
     if (!ok(cells)) continue;
@@ -236,7 +241,7 @@ function layout(m, r, gen, rect, images, forbid) {
   }
   // bush patches (may hug cover: good hiding spots)
   let bushes = 0;
-  for (let tries = 0; tries < 200 && bushes < gen.bushes; tries++) {
+  for (let tries = 0, max = Math.max(200, gen.bushes * 60); tries < max && bushes < gen.bushes; tries++) {
     const w = 2 + Math.floor(r() * 2), h = 2 + Math.floor(r() * 2);
     const bx = x0 + 1 + Math.floor(r() * (x1 - x0 - w - 1)), by = y0 + 1 + Math.floor(r() * (y1 - y0 - h - 1));
     const cells = []; for (let y = by; y < by + h; y++) for (let x = bx; x < bx + w; x++) cells.push([x, y]);
@@ -246,7 +251,7 @@ function layout(m, r, gen, rect, images, forbid) {
     placeFeature(m, r, a, BUSH); bushes++;
   }
   let crates = 0;
-  for (let tries = 0; tries < 300 && crates < gen.crates; tries++) {
+  for (let tries = 0, max = Math.max(300, gen.crates * 60); tries < max && crates < gen.crates; tries++) {
     const x = x0 + 1 + Math.floor(r() * (x1 - x0 - 2)), y = y0 + 1 + Math.floor(r() * (y1 - y0 - 2));
     if (!ok([[x, y]])) continue;
     const a = all([[x, y]]);
@@ -276,18 +281,82 @@ function coverSpawns(m, spawns, r) {
 }
 
 // Quick Hunt arena: 4-fold mirrored so it's fair; open middle lanes; cover near every spawn.
-export function generateArena(seed, worldKey = 'meadow') {
+// Every world has (at least) two LAYOUTS; the match seed picks one, so server and clients agree.
+export const LAYOUTS = {
+  scatter: 'Crossfire', // mirrored cover scattered over the whole arena
+  keep: 'The Keep', // a walled keep in the middle with four gates
+  rings: 'Broken Rings', // two concentric rings of broken walls
+  lanes: 'Three Lanes', // long walls split the arena into lanes, with crossings
+};
+export function arenaLayout(seed, worldKey) {
+  const W = WORLDS[worldId(worldKey)] || WORLDS[0];
+  const L = W.layouts || ['scatter'];
+  return L[(seed >>> 0) % L.length];
+}
+export function generateArena(seed, worldKey = 'meadow', players = MAX_PLAYERS) {
   const W = WORLDS[worldId(worldKey)] || WORLDS[0];
   const r = rng(seed);
-  const G = ARENA_GRID, m = newMap(G, G, 'arena', W.key);
+  const size = arenaSizeFor(players), G = size / TILE, H = G / 2;
+  const m = newMap(G, G, 'arena', W.key);
+  m.size = size; m.players = players; m.spawns = arenaSpawns(size, players); m.layout = arenaLayout(seed, W.key);
   borderRing(m);
   const images = (x, y) => [[x, y], [G - 1 - x, y], [x, G - 1 - y], [G - 1 - x, G - 1 - y]];
-  const nearSpawn = (x, y) => SPAWNS.some((sp) => Math.hypot(x + 0.5 - sp.x / TILE, y + 0.5 - sp.y / TILE) < 2.6);
-  const lane = (x, y) => x === G / 2 - 1 || y === G / 2 - 1 || x === G / 2 || y === G / 2; // open cross lanes
-  layout(m, r, W.gen, [1, 1, G / 2 - 1, G / 2 - 1], images, (x, y) => nearSpawn(x, y) || lane(x, y));
+  const nearSpawn = (x, y) => m.spawns.some((sp) => Math.hypot(x + 0.5 - sp.x / TILE, y + 0.5 - sp.y / TILE) < 2.6);
+  const lane = (x, y) => x === H - 1 || y === H - 1 || x === H || y === H; // open cross lanes
+  const centre = (x, y) => Math.abs(x + 0.5 - H) < 3 && Math.abs(y + 0.5 - H) < 3;
+  const forbid = (x, y) => nearSpawn(x, y) || lane(x, y) || centre(x, y);
+  // a straight run of cells (in the top-left quadrant) -> wall pieces of up to 3 cells, mirrored 4 ways
+  const wallRun = (cells) => {
+    for (let i = 0; i < cells.length; i += 3) {
+      const seg = cells.slice(i, i + 3).filter(([x, y]) => !forbid(x, y) && m.t[y * G + x] === EMPTY);
+      if (!seg.length) continue;
+      const v = Math.floor(r() * 3), seen = new Set();
+      [0, 1, 2, 3].map((k) => seg.map(([x, y]) => images(x, y)[k])).forEach((c, k) => {
+        const key = c.map((q) => q.join(',')).sort().join(';');
+        if (seen.has(key)) return;
+        seen.add(key);
+        if (c.every(([x, y]) => m.t[y * G + x] === EMPTY)) addPiece(m, c, (v + k) % 3, null);
+      });
+    }
+  };
+  if (m.layout === 'keep') {
+    const k = Math.round(G * 0.16); // keep half-size in tiles; a 3-wide gate in the middle of each side
+    const top = [], side = [];
+    for (let i = H - k; i < H - 2; i++) top.push([i, H - k]);
+    for (let j = H - k + 1; j < H - 2; j++) side.push([H - k, j]);
+    wallRun(top); wallRun(side);
+  } else if (m.layout === 'rings') {
+    for (const [rad, gaps] of [[G * 0.15, 3], [G * 0.3, 4]]) {
+      const cells = [];
+      for (let a = 0; a <= Math.PI / 2; a += 0.35 / rad) {
+        if (Math.floor((a / (Math.PI / 2)) * gaps * 2 - 0.5) % 2) continue; // gaps
+        const x = Math.floor(H - Math.cos(a) * rad), y = Math.floor(H - Math.sin(a) * rad);
+        if (!cells.some((c) => c[0] === x && c[1] === y)) cells.push([x, y]);
+      }
+      // keep runs 4-connected so each piece is one solid shape
+      let run = [];
+      const flush = () => { if (run.length) wallRun(run); run = []; };
+      for (const c of cells) {
+        const last = run[run.length - 1];
+        if (last && Math.abs(last[0] - c[0]) + Math.abs(last[1] - c[1]) !== 1) flush();
+        run.push(c); if (run.length === 3) flush();
+      }
+      flush();
+    }
+  } else if (m.layout === 'lanes') {
+    const y = Math.round(G * 0.3), x = Math.round(G * 0.3);
+    const hr = [], vr = [];
+    for (let i = Math.round(G * 0.08); i < H - 3; i++) if (i % 10 < 7) hr.push([i, y]);
+    for (let j = Math.round(G * 0.08); j < H - 3; j++) if (j % 10 < 7 && Math.abs(j - y) > 2) vr.push([x, j]);
+    for (let i = 0; i < hr.length; i += 3) wallRun(hr.slice(i, i + 3).filter((c, k, a) => !k || c[0] - a[k - 1][0] === 1));
+    for (let i = 0; i < vr.length; i += 3) wallRun(vr.slice(i, i + 3).filter((c, k, a) => !k || c[1] - a[k - 1][1] === 1));
+  }
+  const area = (size / 2000) ** 2;
+  const gen = { ...W.gen, pieces: Math.round(W.gen.pieces * area * (m.layout === 'scatter' ? 1 : 0.6)), bushes: Math.round(W.gen.bushes * area), crates: Math.round(W.gen.crates * area), water: Math.round(W.gen.water * area) };
+  layout(m, r, gen, [1, 1, H - 1, H - 1], images, forbid);
   // central crate block (loot, not cover)
-  for (const [x, y] of [[19, 19], [20, 19], [19, 20], [20, 20]]) m.t[y * G + x] = CRATE;
-  coverSpawns(m, SPAWNS, r);
+  for (const [x, y] of [[H - 1, H - 1], [H, H - 1], [H - 1, H], [H, H]]) m.t[y * G + x] = CRATE;
+  coverSpawns(m, m.spawns, r);
   m.base = m.t.slice();
   return m;
 }
@@ -429,9 +498,11 @@ export function attackDirs(brawlerId, ang) {
   return [ang];
 }
 
-export function poisonInset(matchTime) {
+// poison closes in from the edges; bigger arenas close further and a little slower
+export function poisonInset(matchTime, size = 2000) {
   if (matchTime < POISON_START) return 0;
-  return Math.min(POISON_MAX_INSET, ((matchTime - POISON_START) / POISON_CLOSE_TIME) * POISON_MAX_INSET);
+  const k = size / 2000, max = POISON_MAX_INSET * k, close = POISON_CLOSE_TIME * Math.sqrt(k);
+  return Math.min(max, ((matchTime - POISON_START) / close) * max);
 }
 
 export const BOT_NAMES = ['Mossy', 'Pip', 'Glint', 'Rumble', 'Zest', 'Nox', 'Biscuit', 'Kestrel', 'Juno', 'Sprocket', 'Tumble', 'Pepper', 'Fizz', 'Odo', 'Quill', 'Ember', 'Rook', 'Sable', 'Tansy', 'Wren'];

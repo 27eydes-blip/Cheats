@@ -22,7 +22,8 @@ export const ROLE_COL = { Balanced: 'var(--role-balanced)', Tank: 'var(--role-ta
 export const MODES_UI = {
   quick: { name: 'QUICK HUNT', desc: 'A random event: Showdown, Bounty Rush, Hunted or Crystal Grab.', players: '10 players', mode: '', ribbon: null },
   squad: { name: 'SQUAD HUNT', desc: '3v3 — kills fill your team pot. Biggest pot wins.', players: '3v3', mode: 'squad', ribbon: 'NEW' },
-  free: { name: 'FREE PLAY', desc: 'Drop into the open world anytime. Four zones + a safe hub.', players: 'Open world', mode: 'free', ribbon: null },
+  bighunt: { name: 'BIG HUNT', desc: '20 hunters on a huge arena. Last one standing wins.', players: '20 players', mode: 'bighunt', ribbon: 'NEW' },
+  free: { name: 'FREE PLAY', desc: 'Drop into the open world anytime. Eight zones around a safe hub.', players: 'Open world', mode: 'free', ribbon: null },
   showdown: { name: 'SHOWDOWN', desc: 'Last hunter standing wins while the poison closes in.', players: '10 players', mode: 'showdown', ribbon: 'EVENT' },
 };
 export const powerLevel = (tro) => ({ level: Math.min(11, 1 + Math.floor(tro / 50)), frac: tro >= 500 ? 1 : (tro % 50) / 50 });

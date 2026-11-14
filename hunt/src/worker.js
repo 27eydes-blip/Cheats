@@ -4,7 +4,7 @@
 //              between zone DOs as they walk across borders.
 //   everything else: static client from ./public
 import { Sim, newId } from './sim.js';
-import { QUICK_MODES, MODES } from './modes.js';
+import { QUICK_MODES, RANDOM_MODES, MODES, playersFor } from './modes.js';
 import { EVENTS } from '../public/events/index.js';
 import { handleApi, userFromToken, recordMatch } from './accounts.js';
 import {
@@ -55,7 +55,7 @@ export class Matchmaker {
     const now = Date.now();
     let c = this.cur[want];
     if (!c || c.count >= c.max || now - c.created > 7000 || skip === c.id) {
-      const mode = want === 'any' ? pick(QUICK_MODES) : want;
+      const mode = want === 'any' ? pick(RANDOM_MODES) : want;
       c = this.cur[want] = { id: `qp:${mode}:${pick(arenaWorlds())}:${crypto.randomUUID()}`, created: now, count: 0, max: MODES[mode].maxPlayers || 10 };
     }
     c.count++;
@@ -103,7 +103,7 @@ export class MatchRoom {
     this.endedAt = 0;
     this.dropped = new Map(); // player id -> when their socket dropped mid-match
     const seed = (Math.random() * 2 ** 32) >>> 0;
-    const map = generateArena(seed, cfg.world);
+    const map = generateArena(seed, cfg.world, playersFor(cfg.mode));
     if (cfg.open) map.open = true;
     if (cfg.open) for (let y = 1; y < map.gh - 1; y++) for (let x = 1; x < map.gw - 1; x++) map.t[y * map.gw + x] = 0;
     this.sim = new Sim({
@@ -140,7 +140,7 @@ export class MatchRoom {
       let mode, world;
       if (isRoom) {
         const qm = url.searchParams.get('mode'), qw = url.searchParams.get('world');
-        mode = QUICK_MODES.includes(qm) ? qm : pick(QUICK_MODES);
+        mode = QUICK_MODES.includes(qm) ? qm : pick(RANDOM_MODES);
         world = worldId(qw) >= 0 && WORLDS[worldId(qw)].arena ? qw : pick(arenaWorlds());
       } else [, mode, world] = mname.split(':');
       const lobby = isRoom ? Math.max(1.5, Math.min(12, Number(url.searchParams.get('lobby')) || 12)) : 8;
@@ -182,7 +182,7 @@ export class MatchRoom {
     this.dropped.delete(id);
     sendJSON(server, { t: 'welcome', id, rejoin: 1, room: url.searchParams.get('match').startsWith('room:') ? url.searchParams.get('match').slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: url.searchParams.get('match'), secret: p.secret });
     if (sim.phase === 'play') {
-      sendJSON(server, { t: 'start', rejoin: 1, botLevel: sim.botLevel, you: id, mode: sim.modeKey, world: sim.map.world, seed: sim.seed, open: !!sim.map.open });
+      sendJSON(server, { t: 'start', rejoin: 1, botLevel: sim.botLevel, you: id, mode: sim.modeKey, world: sim.map.world, seed: sim.seed, open: !!sim.map.open, players: sim.map.players || 10 });
       sendJSON(server, sim.rosterMsg());
       sendJSON(server, sim.stateMsg());
       if (!p.alive && !sim.mode.respawn) sendJSON(server, { t: 'dead', rank: p.rank, respawn: 0, killer: 'the Wild', killerId: 0, stolen: 0 });

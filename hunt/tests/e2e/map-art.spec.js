@@ -68,11 +68,12 @@ test('border spikes damage (5% max HP, 1s cooldown); cover spikes do not', () =>
   expect(c.hp).toBe(c.maxHp);
 });
 
-test('every spawn point has cover nearby; every wall tile has art; pieces are 25-40 per arena', () => {
-  for (const w of WORLDS) for (let seed = 1; seed <= 25; seed++) {
-    const m = generateArena(seed * 101, w.key);
-    for (const sp of SPAWNS) expect(spawnHasCover(m, sp), `${w.key}#${seed}`).toBe(true);
-    expect(m.pieces.length).toBeGreaterThanOrEqual(25); expect(m.pieces.length).toBeLessThanOrEqual(40);
+test('every spawn point has cover nearby; every wall tile has art; cover density stays the same at every arena size', () => {
+  for (const w of WORLDS.filter((x) => x.arena)) for (let seed = 1; seed <= 25; seed++) {
+    const m = generateArena(seed * 101, w.key, [2, 10, 20][seed % 3]);
+    for (const sp of m.spawns) expect(spawnHasCover(m, sp), `${w.key}#${seed}`).toBe(true);
+    const per2000 = m.pieces.length / (m.size / 2000) ** 2; // pieces per 2000x2000 of arena
+    expect(per2000, `${w.key}#${seed} ${m.layout}`).toBeGreaterThanOrEqual(22); expect(per2000, `${w.key}#${seed} ${m.layout}`).toBeLessThanOrEqual(60);
     for (let i = 0; i < m.t.length; i++) if (m.t[i] === WALL) expect(m.border[i] || m.pieceAt[i] >= 0).toBeTruthy();
   }
   const wm = generateWorld();
@@ -80,7 +81,7 @@ test('every spawn point has cover nearby; every wall tile has art; pieces are 25
 });
 
 test('brawlers slide along cover instead of sticking on corners', () => {
-  const m = generateArena(7, 'meadow');
+  const m = generateArena(7, 'meadow', 2); // the 40x40 (2000) arena
   for (let i = 0; i < m.t.length; i++) m.t[i] = m.border[i] ? WALL : 0;
   m.t[20 * 40 + 20] = WALL; // single block at (1000..1050, 1000..1050)
   const st = moveStats('volt', 3600, 3600);

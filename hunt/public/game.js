@@ -37,8 +37,10 @@ document.getElementById('lobbyBg')?.addEventListener('contextrestored', resetArt
 window.__huntArt = { art, artFor };
 const TICK_MS = 1000 / TICK_RATE;
 const INTERP_MS = 110;
+const maxFor = (mode) => (mode === 'squad' ? 6 : mode === 'bighunt' ? 20 : 10);
 const MODE_INFO = {
   squad: { name: 'SQUAD HUNT', desc: '3v3! Kills fill your team pot. Highest pot after 3:00 wins.' },
+  bighunt: { name: 'BIG HUNT', desc: '20 hunters, one huge arena. Last one standing wins!' },
   showdown: { name: 'SHOWDOWN', desc: 'Last hunter standing wins. The poison closes in!' },
   bounty: { name: 'BOUNTY RUSH', desc: 'Steal bounties! Highest bounty after 2:00 wins.' },
   hunted: { name: 'HUNTED', desc: 'Everyone hunts the target. Take them down to become it!' },
@@ -312,10 +314,10 @@ function onMsg(c, m) {
       G.myId = m.id; G.retries = 0; G.botsOn = m.bots;
       if (m.mode) G.modeKey = m.mode;
       if (m.world) G.world = m.world;
-      if (G.phase === 'waiting') UI.mm.update({ players: 1, max: m.mode === 'squad' ? 6 : 10, mode: MODE_INFO[m.mode]?.name, world: m.world });
+      if (G.phase === 'waiting') UI.mm.update({ players: 1, max: maxFor(m.mode), mode: MODE_INFO[m.mode]?.name, world: m.world });
       break;
     case 'lobby':
-      UI.mm.update({ players: m.players.length, max: m.mode === 'squad' ? 6 : 10, startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world, bots: m.bots !== false });
+      UI.mm.update({ players: m.players.length, max: maxFor(m.mode), startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world, bots: m.bots !== false });
       break;
     case 'retry':
       G.conns.delete(c.key); // the server closes this socket next: that's expected, not a lost connection
@@ -330,7 +332,7 @@ function onMsg(c, m) {
         break;
       }
       G.myId = m.you; G.modeKey = m.mode; G.world = m.world;
-      G.map = generateArena(m.seed, m.world);
+      G.map = generateArena(m.seed, m.world, m.players || 10);
       if (m.open) for (let y = 1; y < G.map.gh - 1; y++) for (let x = 1; x < G.map.gw - 1; x++) G.map.t[y * G.map.gw + x] = 0;
       G.phase = 'play';
       input.enabled = true; input.reset();
@@ -846,7 +848,7 @@ function render(t) {
   for (const e of evs) if (EVENTS[e.id].layer !== 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
   if (!SETTINGS.lowGfx) R.drawAmbient(ctx, G.map, view, t, false);
   const P = primary();
-  if (P && P.last && P.last.z > 0) R.drawPoison(ctx, P.last.z, ARENA_SIZE, x0, y0, x1, y1, t);
+  if (P && P.last && P.last.z > 0) R.drawPoison(ctx, P.last.z, G.map.gw * TILE_, x0, y0, x1, y1, t);
 
   for (const r of G.rings) {
     const k = 1 - r.life / r.max;
@@ -888,7 +890,8 @@ function render(t) {
   }
   if (meAlive && P && P.last && P.last.z > 0) {
     const z = P.last.z;
-    if (mePos.x < z || mePos.y < z || mePos.x > ARENA_SIZE - z || mePos.y > ARENA_SIZE - z) { ctx.fillStyle = `rgba(80,220,90,${SETTINGS.reduceFlash ? 0.15 : 0.15 + Math.sin(t * 6) * 0.05})`; ctx.fillRect(0, 0, W, H); }
+    const AS = G.map.gw * TILE_;
+    if (mePos.x < z || mePos.y < z || mePos.x > AS - z || mePos.y > AS - z) { ctx.fillStyle = `rgba(80,220,90,${SETTINGS.reduceFlash ? 0.15 : 0.15 + Math.sin(t * 6) * 0.05})`; ctx.fillRect(0, 0, W, H); }
   }
   // hunted: arrow towards the target when it's off-screen
   const tg = P?.last?.md?.tg;
@@ -908,7 +911,7 @@ function render(t) {
   const now = performance.now();
   R.drawRadar(ctx, 12 + SA.l + radarR, 36 + SA.t + radarR, radarR, { x: cam.x, y: cam.y },
     [...G.pings.map((p) => ({ ...p, age: (now - p.t0) / 1000 })), ...(G.mates || []).map(([id, x, y]) => ({ id, x, y, bt: 0, age: 0, mate: true }))],
-    { poison: P?.last?.z ? { inset: P.last.z, size: ARENA_SIZE } : null, hub: G.kind === 'free', zones: G.kind === 'free', range: 1600 }, t);
+    { poison: P?.last?.z ? { inset: P.last.z, size: G.map.gw * TILE_ } : null, hub: G.kind === 'free', zones: G.kind === 'free', range: 1600 }, t);
   if (G.phase === 'play' && meAlive) R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
   if (!meAlive && G.phase !== 'play') {
     const o = G.view.others.find((p) => p.id === G.spectate);
@@ -1030,13 +1033,13 @@ function drawMapView(t) {
     ctx.strokeStyle = m.border[y * m.gw + x] ? 'rgba(255,150,40,0.9)' : tt === 1 ? 'rgba(255,40,70,0.9)' : 'rgba(80,170,255,0.9)';
     ctx.strokeRect(x * TILE_ + 2, y * TILE_ + 2, TILE_ - 4, TILE_ - 4);
   }
-  if (m.kind === 'arena') for (const sp of SPAWNS) {
+  if (m.kind === 'arena') for (const sp of m.spawns || SPAWNS) {
     ctx.beginPath(); ctx.arc(sp.x, sp.y, SPAWN_COVER_DIST, 0, Math.PI * 2); ctx.strokeStyle = spawnHasCover(m, sp) ? 'rgba(75,224,110,0.8)' : 'rgba(255,0,0,1)'; ctx.stroke();
     ctx.beginPath(); ctx.arc(sp.x, sp.y, 26, 0, Math.PI * 2); ctx.fillStyle = '#4be06e'; ctx.fill();
   }
   ctx.restore();
   const st = art.stats();
-  R.outlinedText(ctx, `MAPVIEW · ${m.kind === 'arena' ? m.world + ' arena' : 'Free Play world'} · ${m.pieces.length} cover pieces · art sprites ${st.sprites} · worlds cached ${st.worlds.join(',')}`, W / 2, 16, 14, '#fff', '#000');
+  R.outlinedText(ctx, `MAPVIEW · ${m.kind === 'arena' ? `${m.world} arena · ${m.layout} · ${m.size}px` : 'Free Play world'} · ${m.pieces.length} cover pieces · art sprites ${st.sprites} · worlds cached ${st.worlds.join(',')}`, W / 2, 16, 14, '#fff', '#000');
 }
 
 let menuMap = null;
@@ -1096,7 +1099,7 @@ UI.showIntro = showIntro;
 const qs = new URLSearchParams(location.search);
 if (qs.get('mapview')) {
   G.phase = 'mapview';
-  G.map = qs.get('free') ? generateWorld() : generateArena(+(qs.get('seed') || 7), qs.get('world') || 'meadow');
+  G.map = qs.get('free') ? generateWorld() : generateArena(+(qs.get('seed') || 7), qs.get('world') || 'meadow', +(qs.get('players') || 10));
   show(null); $('hud').hidden = true; document.body.classList.add('ingame');
 }
 if (!qs.get('mapview') && !qs.get('world') && !qs.get('free')) show('lobby');

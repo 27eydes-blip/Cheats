@@ -235,13 +235,13 @@ const pathPos = (t, i, w, h) => ({ x: w * (0.5 + Math.cos(t * 0.8 + i * 2.1) * 0
 export function drawModePreview(g, mode, w, h, t) {
   g.save();
   const grd = g.createLinearGradient(0, 0, 0, h);
-  const bg = { quick: ['#8ee05e', '#5fb84a'], squad: ['#5a6ea8', '#38406e'], free: ['#5fd1c0', '#2a8a80'], showdown: ['#b07ae0', '#6a3fb0'] }[mode] || ['#888', '#444'];
+  const bg = { quick: ['#8ee05e', '#5fb84a'], squad: ['#5a6ea8', '#38406e'], free: ['#5fd1c0', '#2a8a80'], showdown: ['#b07ae0', '#6a3fb0'], bighunt: ['#d0485a', '#6a1b2e'] }[mode] || ['#888', '#444'];
   grd.addColorStop(0, bg[0]); grd.addColorStop(1, bg[1]); g.fillStyle = grd; g.fillRect(0, 0, w, h);
   g.globalAlpha = 0.18; g.fillStyle = '#fff';
   for (let x = 0; x < w; x += 24) for (let y = (x / 24) % 2 ? 0 : 12; y < h; y += 24) g.fillRect(x, y, 12, 12);
   g.globalAlpha = 1;
   const sc = Math.min(w / 320, h / 200) * 1.1;
-  if (mode === 'showdown') { // the poison closing in
+  if (mode === 'showdown' || mode === 'bighunt') { // the poison closing in
     const inset = (Math.sin(t * 0.6) * 0.5 + 0.5) * Math.min(w, h) * 0.3;
     g.fillStyle = 'rgba(70,200,90,.45)'; g.beginPath(); g.rect(0, 0, w, h); g.rect(inset, inset, w - inset * 2, h - inset * 2); g.fill('evenodd');
     g.setLineDash([12, 8]); g.lineWidth = 4; g.strokeStyle = '#d4ff4f'; g.strokeRect(inset, inset, w - inset * 2, h - inset * 2); g.setLineDash([]);
@@ -251,13 +251,13 @@ export function drawModePreview(g, mode, w, h, t) {
     [[0, 0], [1, 0], [1, 1], [0, 1]].forEach(([i, j], k) => { g.globalAlpha = 0.55; g.fillStyle = cols[k]; g.fillRect(i * w / 2, j * h / 2, w / 2, h / 2); });
     g.globalAlpha = 1; g.beginPath(); g.arc(w / 2, h / 2, Math.min(w, h) * 0.16, 0, 7); g.fillStyle = '#c7b8ff'; g.fill(); g.lineWidth = 4; g.strokeStyle = INK; g.stroke();
   }
-  const ids = mode === 'squad' ? ['volt', 'brick', 'wisp', 'dune', 'rook', 'flicker'] : BRAWLER_IDS.slice(0, mode === 'quick' ? 4 : 3);
+  const ids = mode === 'squad' || mode === 'bighunt' ? (mode === 'bighunt' ? [...BRAWLER_IDS, ...BRAWLER_IDS.slice(0, 2)] : ['volt', 'brick', 'wisp', 'dune', 'rook', 'flicker']) : BRAWLER_IDS.slice(0, mode === 'quick' ? 4 : 3);
   ids.forEach((id, i) => {
     const p = pathPos(t, i, w, h);
     if (mode === 'squad') { g.beginPath(); g.arc(p.x, p.y + 2, 30 * sc, 0, 7); g.lineWidth = 6; g.strokeStyle = INK; g.stroke(); g.lineWidth = 3.5; g.strokeStyle = i < 3 ? '#3a86ff' : '#ff2846'; g.stroke(); }
     if (mode === 'quick' && i === 0) { g.font = `${22 * sc}px "Lilita One", sans-serif`; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = INK; g.strokeText('★5', p.x, p.y - 44 * sc); g.fillStyle = '#ffd23f'; g.fillText('★5', p.x, p.y - 44 * sc); }
     const q = pathPos(t + 0.05, i, w, h);
-    drawBrawler(g, id, p.x, p.y, Math.atan2(q.y - p.y, q.x - p.x), t, { scale: sc * 0.9, moving: true });
+    drawBrawler(g, id, p.x, p.y, Math.atan2(q.y - p.y, q.x - p.x), t, { scale: sc * (mode === 'bighunt' ? 0.6 : 0.9), moving: true });
   });
   // bullets streaking across
   for (let k = 0; k < 3; k++) {

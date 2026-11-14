@@ -162,14 +162,15 @@ function openDetail(api, id, onClose) {
 const MODE_CARDS = [
   ['quick', 'QUICK HUNT', 'A random event mode — something different every match.', '10 players', null],
   ['squad', 'SQUAD HUNT', '3v3. Kills fill your team pot. Biggest pot after 3:00 wins.', '3 v 3', 'NEW'],
-  ['free', 'FREE PLAY', 'Drop into the open world. Four zones around a safe hub.', 'Drop-in', null],
+  ['bighunt', 'BIG HUNT', '20 hunters, one huge arena. Last one standing while the poison closes in.', '20 players', 'NEW'],
+  ['free', 'FREE PLAY', 'Drop into the open world. Eight zones around a safe hub.', 'Drop-in', null],
   ['showdown', 'SHOWDOWN', 'Last hunter standing while the poison closes in.', '10 players', 'EVENT'],
 ];
 export function openModePicker(current, onPick) {
   const S = screen('CHOOSE A MODE');
   S.body.classList.add('modes');
   S.body.innerHTML = `<div class="modes-grid">${MODE_CARDS.map(([k, n, d, pl, rib]) =>
-    `<div class="card-b mcard tap ${k === current ? 'sel' : ''}" data-m="${k}" style="--card-col:${{ quick: '#5fb84a', squad: '#3a5aa8', free: '#2a9d8f', showdown: '#7a3fb0' }[k]}">${rib ? `<span class="ribbon ${rib === 'EVENT' ? 'event' : ''}">${rib}</span>` : ''}<canvas data-m="${k}"></canvas><div class="title mc-name">${n}</div><div class="mc-desc">${d}</div><div class="mc-meta"><span>${pl}</span><span>${k === current ? 'SELECTED' : 'TAP TO PICK'}</span></div></div>`).join('')}</div>
+    `<div class="card-b mcard tap ${k === current ? 'sel' : ''}" data-m="${k}" style="--card-col:${{ quick: '#5fb84a', squad: '#3a5aa8', free: '#2a9d8f', showdown: '#7a3fb0', bighunt: '#a8323e' }[k]}">${rib ? `<span class="ribbon ${rib === 'EVENT' ? 'event' : ''}">${rib}</span>` : ''}<canvas data-m="${k}"></canvas><div class="title mc-name">${n}</div><div class="mc-desc">${d}</div><div class="mc-meta"><span>${pl}</span><span>${k === current ? 'SELECTED' : 'TAP TO PICK'}</span></div></div>`).join('')}</div>
     <div class="events-row">WORLD EVENTS EVERY 30s: ${EVENT_IDS.map((e) => `<span title="${EVENTS[e].name}">${icon('ev_' + e)}</span>`).join('')}</div>`;
   for (const c of S.body.querySelectorAll('.mcard')) c.onclick = () => { onPick(c.dataset.m); S.close(); };
   S.loop((t) => { for (const cv of S.body.querySelectorAll('canvas[data-m]')) { const c = fitCanvas(cv); drawModePreview(c.g, cv.dataset.m, c.w, c.h, t); } });
