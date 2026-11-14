@@ -245,6 +245,8 @@ function startFree() {
   G.phase = 'play';
   input.enabled = true; input.reset();
   show(null);
+  const myConn = G.conns.get(slot);
+  setTimeout(() => { if (G.kind === 'free' && G.phase === 'play' && !G.me && !rc && G.conns.get(slot) === myConn) { toast('Could not reach Free Play — try again'); toMenu(); } }, 12000);
 }
 
 let retryTimer = 0;
@@ -742,6 +744,10 @@ function frameBody(now) {
     if (G.map) updateLocalBullets(dt);
     updateEffects(dt);
     if (G.me && G.map) render(now / 1000);
+    else if (G.phase === 'play') { // joining (Free Play) or reconnecting before the first snapshot: no stale frame
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.fillStyle = '#2b1d55'; ctx.fillRect(0, 0, W, H);
+      R.outlinedText(ctx, 'Connecting…', W / 2, H / 2, 28, '#fff');
+    }
     adaptResolution(dt * 1000);
     updateHud(now);
   } else if (G.phase === 'mapview') drawMapView(now / 1000);
