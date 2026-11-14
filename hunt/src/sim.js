@@ -1,0 +1,937 @@
+// Server-authoritative simulation shared by Quick Hunt arenas and Free Play zones.
+// Pure JS (no Workers APIs) so it runs in Node tests. Durable Objects own the sockets and
+// call tick() at 20 Hz.
+import {
+  BRAWLERS, BRAWLER_IDS, DT, TILE, MAX_PLAYERS, EMPTY, WALL, BUSH, CRATE,
+  CRATE_HP, SUPPLY_HP, CUBE_HP, CUBE_DMG, REGEN_DELAY, REGEN_RATE, POISON_DPS, BUSH_REVEAL_DIST,
+  CLOAK_REVEAL_DIST, SPAWNS, BOT_NAMES, EVENT_EVERY, EVENT_WARN, LOW_HP, RUSH_TIME, COMEBACK_DMG,
+  applyMove, moveCircle, inBush, attackDirs, poisonInset, moveStats, bountyGlow, pingInterval,
+  layLowFactor, rng, inHub, HUB, MINE_SEEN, PLAYER_R, touchingBorder, SPIKE_DMG, SPIKE_CD, lineOfSight, isSolidTile, tileAt, blocksMove,
+} from '../public/shared.js';
+import { EVENTS, pickEvent } from '../public/events/index.js';
+import { MODES } from './modes.js';
+import { botInput, levelForTrophies } from './bots.js';
+
+const r2 = (v) => Math.round(v * 100) / 100;
+export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
+
+// fields carried across a zone handoff
+const CARRY = ['id', 'name', 'brawler', 'x', 'y', 'mvx', 'mvy', 'hp', 'maxHp', 'cubes', 'ammo', 'reloadP', 'atkCd', 'superC',
+  'lastCombat', 'stun', 'cloak', 'reveal', 'facing', 'lastSeq', 'kills', 'bounty', 'bountyEarned', 'bestBounty', 'bushT',
+  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp', 'cos', 'equipped', 'account'];
+
+export class Sim {
+  constructor(o) {
+    this.map = o.map;
+    this.send = o.send || (() => {});
+    this.modeKey = o.mode || 'showdown';
+    this.mode = MODES[this.modeKey];
+    this.maxPlayers = this.mode.maxPlayers || MAX_PLAYERS;
+    this.teamPot = { 1: 0, 2: 0 };
+    this.hooks = o.hooks || {};
+    this.zone = o.zone || null;
+    this.hub = o.hub ? HUB : null;
+    const W = this.map.gw * TILE, H = this.map.gh * TILE;
+    this.bounds = o.bounds || { x0: 0, y0: 0, x1: W, y1: H };
+    this.center = { x: (this.bounds.x0 + this.bounds.x1) / 2, y: (this.bounds.y0 + this.bounds.y1) / 2 };
+    this.fillBots = o.fillBots ?? true;
+    this.botTarget = o.botTarget ?? MAX_PLAYERS;
+    this.lobbyTime = o.lobbyTime ?? 8;
+    this.eventsOn = o.events !== false;
+    this.forceEvent = o.forceEvent || null; // test flag: always run this event, starting at 8s
+    this.seed = o.seed ?? 0;
+    this.rand = rng((o.seed ?? Date.now()) ^ 0x5bd1e995);
+
+    this.players = new Map();
+    this.observers = new Map(); // key -> {x, y}
+    this.bullets = [];
+    this.cubes = [];
+    this.crystals = [];
+    this.mines = [];
+    this.delayed = []; // timed effects (sand-worm eruptions)
+    this.crates = new Map(); // idx -> {hp, supply}
+    for (const idx of this.tilesInBounds(CRATE, false)) this.crates.set(idx, { hp: CRATE_HP });
+    this.tileDirty = [];
+    this.crateDirty = [];
+    this.fx = [];
+    this.pings = [];
+    this.pingLog = []; // last tick's public radar pings (bots may use them, like humans)
+    this.botLevel = o.botLevel || 'normal';
+    this.feed = [];
+    this.nextEnt = 1;
+    this.phase = o.phase || 'lobby';
+    this.clock = 0;
+    this.lobbyEnd = null;
+    this.time = 0;
+    this.tickN = 0;
+    this.zoneInset = 0;
+    this.event = null; // {id, ph:'warn'|'on', t, params}
+    this.lastEvent = null;
+    this.nextEventAt = this.forceEvent ? 8 : EVENT_EVERY;
+    this.mods = {};
+    this.botSpawnT = 0;
+    this.mode.init?.(this);
+  }
+
+  // ---------------------------------------------------------------- helpers
+  humans() { return [...this.players.values()].filter((p) => !p.bot); }
+  aliveCount() { let n = 0; for (const p of this.players.values()) if (p.alive) n++; return n; }
+  inBounds(x, y, m = 0) { const b = this.bounds; return x >= b.x0 - m && y >= b.y0 - m && x < b.x1 + m && y < b.y1 + m; }
+  inBoundsIdx(idx) { return this.inBounds((idx % this.map.gw) * TILE + 1, Math.floor(idx / this.map.gw) * TILE + 1); }
+  isSafe(x, y) { return !!this.hub && inHub(x, y); }
+  areaScale(n) { const b = this.bounds; return Math.max(1, Math.round(n * ((b.x1 - b.x0) * (b.y1 - b.y0)) / 4e6)); }
+  tilesInBounds(type, interior = true) {
+    const out = [], gw = this.map.gw, b = this.bounds;
+    const tx0 = Math.floor(b.x0 / TILE), ty0 = Math.floor(b.y0 / TILE), tx1 = Math.floor(b.x1 / TILE), ty1 = Math.floor(b.y1 / TILE);
+    for (let y = ty0; y < ty1; y++) for (let x = tx0; x < tx1; x++) {
+      if (interior && (x <= 0 || y <= 0 || x >= gw - 1 || y >= this.map.gh - 1)) continue;
+      const idx = y * gw + x;
+      if (this.map.t[idx] === type && !(interior && this.isSafe(x * TILE + 25, y * TILE + 25))) out.push(idx);
+    }
+    return out;
+  }
+  tileOccupied(idx) {
+    const x = (idx % this.map.gw) * TILE + TILE / 2, y = Math.floor(idx / this.map.gw) * TILE + TILE / 2;
+    for (const p of this.players.values()) if (p.alive && Math.abs(p.x - x) < 60 && Math.abs(p.y - y) < 60) return true;
+    return this.isSafe(x, y);
+  }
+  setTile(idx, type) {
+    if (this.map.t[idx] === type) return;
+    if (this.map.t[idx] === CRATE) this.crates.delete(idx);
+    this.map.t[idx] = type;
+    this.tileDirty.push([idx, type]);
+  }
+  addCrate(idx, supply = false) {
+    this.setTile(idx, CRATE);
+    this.crates.set(idx, { hp: supply ? SUPPLY_HP : CRATE_HP, supply });
+    this.crateDirty.push([idx, supply ? -SUPPLY_HP : CRATE_HP]);
+  }
+  randomPoint(margin = 80) {
+    const b = this.bounds;
+    for (let i = 0; i < 40; i++) {
+      const x = b.x0 + margin + this.rand() * (b.x1 - b.x0 - margin * 2), y = b.y0 + margin + this.rand() * (b.y1 - b.y0 - margin * 2);
+      const t = this.map.t[Math.floor(y / TILE) * this.map.gw + Math.floor(x / TILE)];
+      if (t === EMPTY || t === BUSH) return { x, y };
+    }
+    return { ...this.center };
+  }
+  dmgMult(p) { return (1 + CUBE_DMG * p.cubes) * (p.hp / p.maxHp < LOW_HP ? COMEBACK_DMG : 1); }
+  stats(p) { return moveStats(p.brawler, p.hp, p.maxHp, p.rush, p.slowT); }
+  enemies(a, b) { return a !== b && (!a.team || a.team !== b.team); }
+
+  // ---------------------------------------------------------------- players
+  addPlayer({ name, brawler, bot = false, state = null, connected = !bot }) {
+    const b = BRAWLERS[brawler] ? brawler : 'volt';
+    const p = {
+      id: newId(), name, brawler: b, bot, wasBot: bot, connected,
+      x: this.center.x, y: this.center.y, mvx: 0, mvy: 0, px: 0, py: 0, vx: 0, vy: 0,
+      hp: BRAWLERS[b].hp, maxHp: BRAWLERS[b].hp, cubes: 0, alive: true,
+      ammo: 3, reloadP: 0, atkCd: 0, burst: null, superC: 0, lastCombat: -99, stun: 0, dash: null, knock: null,
+      cloak: 0, reveal: 0, poisonT: 0.5, facing: 0, queue: [], credits: 2, lastSeq: 0, kills: 0, rank: 0, ai: null,
+      bounty: 0, bountyEarned: 0, bestBounty: 0, bushT: 0, lowF: 0, rush: 0, rushArmed: true, pingT: 0,
+      spawnProt: 0, respawnT: 0, score: 0, crystals: 0, sessionKills: 0, hazAcc: 0, lastHitBy: 0,
+      slowT: 0, cageT: 0, tp: 0, team: 0,
+    };
+    if (state) for (const k of CARRY) if (state[k] !== undefined) p[k] = state[k];
+    while (this.players.has(p.id)) p.id = newId();
+    this.players.set(p.id, p);
+    this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
+    return p;
+  }
+
+  rosterRow(p) { return [p.name, p.brawler, p.wasBot ? 1 : 0, p.cos || null]; }
+  // cosmetics: drawn by clients only. Never read by the simulation.
+  setCosmetics(id, equipped) {
+    const p = this.players.get(id);
+    if (!p) return;
+    p.equipped = equipped || {};
+    p.cos = { skin: p.equipped['skin:' + p.brawler] || null, fx: p.equipped.fx || null, title: p.equipped.title || null };
+    this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
+  }
+
+  removePlayer(id) {
+    if (!this.players.delete(id)) return;
+    this.broadcast({ t: 'ro', del: [id] });
+    if (this.targetId === id) this.targetId = 0;
+  }
+
+  exportPlayer(p) {
+    const s = {};
+    for (const k of CARRY) s[k] = p[k];
+    if (p.dash) s.dash = { vx: p.dash.vx, vy: p.dash.vy, t: p.dash.t };
+    if (p.knock) s.knock = { ...p.knock };
+    return s;
+  }
+  importPlayer(state, name, connected) {
+    const p = this.addPlayer({ name: state.name || name, brawler: state.brawler, state, connected });
+    if (state.dash) p.dash = { ...state.dash, hit: new Set() };
+    if (state.knock) p.knock = { ...state.knock };
+    return p;
+  }
+
+  rosterMsg() {
+    const add = {};
+    for (const p of this.players.values()) add[p.id] = this.rosterRow(p);
+    return { t: 'ro', add, full: 1, zone: this.zone };
+  }
+  stateMsg() {
+    const td = [];
+    for (let i = 0; i < this.map.t.length; i++) if (this.map.t[i] !== this.map.base[i] && this.inBoundsIdx(i)) td.push([i, this.map.t[i]]);
+    const ch = [...this.crates].map(([i, c]) => [i, c.supply ? -c.hp : c.hp]);
+    return { t: 'st', zone: this.zone, mode: this.modeKey, td, ch, ev: this.event ? this.evMsg() : null };
+  }
+  evMsg() { const e = this.event; return { t: 'ev', zone: this.zone, id: e.id, ph: e.ph, tl: r2(e.t), p: e.params }; }
+
+  broadcast(msg) {
+    for (const p of this.players.values()) if (p.connected) this.send(p.id, msg);
+    for (const k of this.observers.keys()) this.send(k, msg);
+  }
+
+  // ---------------------------------------------------------------- arena lobby
+  join(name, brawler) {
+    if (this.phase !== 'lobby' || this.players.size >= this.maxPlayers) return null;
+    const p = this.addPlayer({ name, brawler, bot: false });
+    if (this.mode.teams) p.team = this.smallerTeam();
+    this.lobbyEnd = this.lobbyEnd == null ? this.clock + this.lobbyTime : Math.max(this.lobbyEnd, this.clock + 4);
+    if (this.humans().length >= this.maxPlayers) this.lobbyEnd = this.clock;
+    this.broadcastLobby();
+    return p.id;
+  }
+
+  smallerTeam() {
+    let a = 0, b = 0;
+    for (const p of this.players.values()) { if (p.team === 1) a++; else if (p.team === 2) b++; }
+    return a <= b ? 1 : 2;
+  }
+
+  leave(id) {
+    const p = this.players.get(id);
+    if (!p) return;
+    if (this.phase === 'lobby' || this.mode.hub) { this.removePlayer(id); if (this.phase === 'lobby') this.broadcastLobby(); return; }
+    p.connected = false;
+    p.bot = true; // a bot takes over a disconnected player
+  }
+
+  broadcastLobby() {
+    const msg = {
+      t: 'lobby', mode: this.modeKey, world: this.map.world,
+      players: this.humans().map((p) => [p.name, p.brawler]),
+      startIn: this.lobbyEnd == null ? null : Math.max(0, this.lobbyEnd - this.clock), bots: this.fillBots,
+    };
+    for (const p of this.players.values()) if (p.connected) this.send(p.id, msg);
+  }
+
+  start() {
+    const taken = new Set([...this.players.values()].map((p) => p.name));
+    const names = BOT_NAMES.filter((n) => !taken.has(n)).sort(() => Math.random() - 0.5);
+    const target = this.fillBots || this.players.size < 2 ? this.maxPlayers : 0;
+    while (this.players.size < target) {
+      const b = this.addPlayer({ name: names.pop() || 'Bot', brawler: BRAWLER_IDS[Math.floor(Math.random() * BRAWLER_IDS.length)], bot: true });
+      if (this.mode.teams) b.team = this.smallerTeam();
+    }
+    // teams spawn on opposite sides of the ring; FFA spawns are shuffled
+    const spawns = SPAWNS.slice().sort(() => Math.random() - 0.5);
+    const sideA = SPAWNS.filter((s) => s.x < this.center.x), sideB = SPAWNS.filter((s) => s.x >= this.center.x);
+    let i = 0, ia = 0, ib = 0;
+    for (const p of this.players.values()) {
+      const s = !this.mode.teams ? spawns[i++ % spawns.length] : p.team === 1 ? sideA[ia++ % sideA.length] : sideB[ib++ % sideB.length];
+      p.x = p.px = s.x; p.y = p.py = s.y;
+      p.facing = Math.atan2(this.center.y - s.y, this.center.x - s.x);
+    }
+    this.phase = 'play';
+    this.time = 0;
+    // bot difficulty follows the humans' trophies (guests/new players get easy bots)
+    const hs = this.humans();
+    if (hs.length) this.botLevel = levelForTrophies(hs.reduce((s, h) => s + (h.trophies || 0), 0) / hs.length);
+    for (const p of this.players.values()) {
+      if (!p.connected) continue;
+      this.send(p.id, { t: 'start', botLevel: this.botLevel, you: p.id, mode: this.modeKey, world: this.map.world, seed: this.seed, open: !!this.map.open });
+      this.send(p.id, this.rosterMsg());
+    }
+  }
+
+  canSee(viewer, t) {
+    if (viewer === t) return true;
+    if (viewer.team && viewer.team === t.team) return true; // teammates are always visible
+    if (viewer.alive === false) return true;
+    const d = Math.hypot(viewer.x - t.x, viewer.y - t.y);
+    if (this.mods.vision && d > this.mods.vision) return false;
+    if (t.cloak > 0 && d > CLOAK_REVEAL_DIST) return false;
+    if (t.reveal <= 0 && d > BUSH_REVEAL_DIST && inBush(this.map, t.x, t.y)) return false;
+    return true;
+  }
+
+  setTarget(p) {
+    this.targetId = p.id;
+    this.fx.push(['target', Math.round(p.x), Math.round(p.y), 0, p.id]);
+  }
+
+  // ---------------------------------------------------------------- combat
+  tryAttack(p, ang, fd = 1) {
+    const B = BRAWLERS[p.brawler], a = B.attack;
+    if (!p.alive || p.ammo < 1 || p.atkCd > 0 || p.stun > 0 || p.burst || p.dash || this.isSafe(p.x, p.y)) return;
+    p.ammo -= 1;
+    p.atkCd = a.cooldown;
+    p.reveal = 0.8;
+    p.cloak = 0;
+    p.spawnProt = 0;
+    p.facing = ang;
+    this.spawnShot(p, ang, fd);
+    if (a.kind === 'burst' || a.kind === 'slash') p.burst = { left: a.count - 1, t: a.interval, ang };
+  }
+
+  spawnShot(p, ang, fd = 1) {
+    const a = BRAWLERS[p.brawler].attack;
+    const dmg = a.damage * this.dmgMult(p);
+    if (a.kind === 'slash') return this.slash(p, ang, dmg);
+    const sp = a.speed * (this.mods.bulletSpeed || 1), range = a.range * (this.mods.bulletRange || 1);
+    for (const d of attackDirs(p.brawler, ang)) {
+      const c = Math.cos(d), s = Math.sin(d);
+      this.bullets.push({
+        id: this.nextEnt++, owner: p.id, oname: p.name, ozone: this.zone, kind: BRAWLER_IDS.indexOf(p.brawler),
+        x: p.x + c * 16, y: p.y + s * 16, vx: c * sp, vy: s * sp, dist: 0, range, dmg, r: a.radius, team: p.team,
+        ...(a.kind === 'wave' ? { pierce: true, hit: [], slow: a.slowTime } : {}),
+        ...(a.kind === 'mine' ? { mine: true, range: Math.max(80, range * Math.max(0, Math.min(1, fd))) } : {}),
+      });
+    }
+  }
+
+  // Flicker: melee arc, hits everything in front (players + one crate)
+  slash(p, ang, dmg) {
+    const a = BRAWLERS[p.brawler].attack;
+    this.fx.push(['slash', Math.round(p.x), Math.round(p.y), r2(ang), p.id]);
+    for (const e of this.players.values()) {
+      if (!this.enemies(p, e) || !e.alive) continue;
+      const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy);
+      if (d > a.range + this.stats(e).r) continue;
+      let da = Math.atan2(dy, dx) - ang;
+      while (da > Math.PI) da -= Math.PI * 2;
+      while (da < -Math.PI) da += Math.PI * 2;
+      if (Math.abs(da) > a.arc / 2 + 0.2) continue;
+      if (!lineOfSight(this.map, p.x, p.y, e.x, e.y)) continue;
+      this.fx.push(['hit', Math.round(e.x), Math.round(e.y), BRAWLER_IDS.indexOf(p.brawler), e.id]);
+      this.damage(p, e, dmg, true);
+    }
+    const cx = p.x + Math.cos(ang) * 70, cy = p.y + Math.sin(ang) * 70;
+    const idx = Math.floor(cy / TILE) * this.map.gw + Math.floor(cx / TILE);
+    if (this.map.t[idx] === CRATE) this.hitCrate(idx, dmg);
+  }
+
+  nearestEnemy(p, range) {
+    let best = null, bd = range;
+    for (const e of this.players.values()) {
+      if (!this.enemies(p, e) || !e.alive || e.spawnProt > 0 || this.isSafe(e.x, e.y) || !this.canSee(p, e)) continue;
+      const d = Math.hypot(e.x - p.x, e.y - p.y);
+      if (d < bd) { bd = d; best = e; }
+    }
+    return best;
+  }
+
+  trySuper(p, ang) {
+    if (!p.alive || p.superC < 1 || p.stun > 0 || p.dash || this.isSafe(p.x, p.y)) return;
+    const s = BRAWLERS[p.brawler].super;
+    p.superC = 0;
+    p.reveal = 0.8;
+    p.spawnProt = 0;
+    const mult = this.dmgMult(p);
+    if (s.kind === 'dash') {
+      p.cloak = 0; p.facing = ang; p.burst = null;
+      const sp = s.dist / s.time;
+      p.dash = { vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, t: s.time, hit: new Set() };
+      this.fx.push(['dash', r2(p.x), r2(p.y), r2(ang), p.id]);
+    } else if (s.kind === 'slam') {
+      p.cloak = 0;
+      this.fx.push(['slam', r2(p.x), r2(p.y), s.radius, p.id]);
+      for (const e of this.players.values()) {
+        if (!this.enemies(p, e) || !e.alive || e.spawnProt > 0 || this.isSafe(e.x, e.y)) continue;
+        if (Math.hypot(e.x - p.x, e.y - p.y) <= s.radius + this.stats(e).r) {
+          e.stun = Math.max(e.stun, s.stun); e.dash = null; e.burst = null;
+          this.damage(p, e, s.damage * mult, false);
+        }
+      }
+    } else if (s.kind === 'cloak') {
+      p.cloak = s.time; p.reveal = 0;
+      this.fx.push(['cloak', r2(p.x), r2(p.y), 0, p.id]);
+    } else if (s.kind === 'worm') {
+      // aim decides direction; lock on to the nearest visible enemy roughly in that direction
+      let best = null, bd = Infinity;
+      for (const e of this.players.values()) {
+        if (!this.enemies(p, e) || !e.alive || !this.canSee(p, e) || this.isSafe(e.x, e.y)) continue;
+        const d = Math.hypot(e.x - p.x, e.y - p.y);
+        let da = Math.abs(Math.atan2(e.y - p.y, e.x - p.x) - ang); if (da > Math.PI) da = Math.PI * 2 - da;
+        if (d < s.range && da < 0.8 && d + da * 300 < bd) { bd = d + da * 300; best = e; }
+      }
+      const tx = best ? best.x : p.x + Math.cos(ang) * s.range * 0.6, ty = best ? best.y : p.y + Math.sin(ang) * s.range * 0.6;
+      this.delayed.push({ kind: 'worm', x: tx, y: ty, t: s.delay, owner: p.id, dmg: s.damage * mult, r: s.radius, stun: s.stun });
+      this.fx.push(['wormwarn', Math.round(tx), Math.round(ty), s.radius, p.id]);
+    } else if (s.kind === 'cage') {
+      const c = Math.cos(ang), sn = Math.sin(ang);
+      this.bullets.push({ id: this.nextEnt++, owner: p.id, oname: p.name, ozone: this.zone, kind: 20, x: p.x + c * 16, y: p.y + sn * 16,
+        vx: c * s.speed, vy: sn * s.speed, dist: 0, range: s.range, dmg: s.damage * mult, r: s.radius, cage: s.time, team: p.team });
+    } else if (s.kind === 'blink') {
+      const e = this.nearestEnemy(p, s.range);
+      if (!e) { p.superC = 1; return; } // nothing to blink to: keep the charge
+      const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1;
+      const from = { x: p.x, y: p.y };
+      // behind = on the far side of the target; fall back to the sides, then our side
+      for (const off of [0, 0.9, -0.9, 1.8, -1.8, Math.PI]) {
+        const a = Math.atan2(dy, dx) + off;
+        const nx = e.x + Math.cos(a) * 62, ny = e.y + Math.sin(a) * 62;
+        if (!blocksMove(tileAt(this.map, nx, ny)) && !this.isSafe(nx, ny) && this.inBounds(nx, ny, -20)) {
+          p.x = nx; p.y = ny; moveCircle(this.map, p, 0, 0, this.stats(p).r);
+          break;
+        }
+      }
+      p.facing = Math.atan2(e.y - p.y, e.x - p.x);
+      p.tp++; p.burst = null; p.cloak = 0; p.atkCd = 0;
+      this.fx.push(['blink', Math.round(from.x), Math.round(from.y), 0, p.id]);
+      this.fx.push(['blink', Math.round(p.x), Math.round(p.y), 1, p.id]);
+    }
+  }
+
+  // environmental damage (lava, fire): accumulated so damage numbers stay readable
+  hazard(p, cause, amount) {
+    if (!p.alive || p.spawnProt > 0 || this.isSafe(p.x, p.y)) return;
+    p.hazAcc += amount;
+    if (p.hazAcc >= 200) { const d = p.hazAcc; p.hazAcc = 0; this.damage(null, p, d, false, cause); }
+  }
+
+  // src: local player | {remote:true, id, name, zone} | null
+  damage(src, t, amount, charge, cause = 'poison') {
+    if (!t.alive || t.spawnProt > 0 || this.isSafe(t.x, t.y)) return;
+    amount = Math.round(amount);
+    t.hp -= amount;
+    t.lastCombat = this.time;
+    t.reveal = Math.max(t.reveal, 0.5);
+    this.fx.push(['dmg', Math.round(t.x), Math.round(t.y), amount, t.id]);
+    if (src) {
+      t.lastHitBy = src.id;
+      if (src.remote) { if (charge) this.hooks.credit?.(src.zone, { id: src.id, charge: 1 }); }
+      else {
+        src.lastCombat = this.time;
+        if (charge && src.alive) src.superC = Math.min(1, src.superC + 1 / BRAWLERS[src.brawler].superHits);
+      }
+    }
+    if (t.hp <= 0) this.kill(t, src, cause);
+  }
+
+  gainBounty(p, gain) {
+    p.bounty += gain; p.bountyEarned += gain; p.kills++; p.sessionKills++;
+    p.bestBounty = Math.max(p.bestBounty, p.bounty);
+  }
+
+  kill(t, src, cause) {
+    t.alive = false;
+    t.hp = 0;
+    t.dash = t.knock = t.burst = null;
+    t.rank = this.aliveCount() + 1;
+    const stolen = t.bounty;
+    if (src && src !== t) {
+      if (src.remote) this.hooks.credit?.(src.zone, { id: src.id, kill: 1, gain: 1 + stolen });
+      else this.gainBounty(src, 1 + stolen);
+      // SQUAD HUNT: kills feed the shared team pot; the stolen bounty leaves the victim's pot
+      if (this.mode.teams && src.team && t.team && src.team !== t.team) {
+        this.teamPot[src.team] += 1 + stolen;
+        this.teamPot[t.team] = Math.max(0, this.teamPot[t.team] - stolen);
+      }
+    }
+    t.bounty = 0; t.bushT = 0; t.lowF = 0;
+    this.mode.onKill?.(this, t, src && !src.remote ? src : null);
+    const n = Math.max(1, t.cubes);
+    for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, d = n > 1 ? 30 : 0; this.dropCube(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d); }
+    for (let i = 0; i < t.crystals; i++) { const a = this.rand() * Math.PI * 2, d = 20 + this.rand() * 50; this.dropCrystal(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d); }
+    t.crystals = 0;
+    this.fx.push(['die', Math.round(t.x), Math.round(t.y), BRAWLER_IDS.indexOf(t.brawler), t.id, (src && !src.remote && src.cos && src.cos.fx) || 0]);
+    const causeName = { poison: 'Poison', lava: 'Lava', fire: 'Wildfire', spikes: 'Spikes' }[cause] || 'The Wild';
+    this.broadcast({ t: 'kill', k: src ? src.name : causeName, v: t.name, kid: src ? src.id : 0, vid: t.id, st: stolen });
+    if (this.mode.respawn) t.respawnT = 3;
+    if (t.connected) {
+      this.send(t.id, {
+        t: 'dead', rank: this.mode.respawn ? 0 : t.rank, respawn: this.mode.respawn ? t.respawnT : 0,
+        killer: src ? src.name : causeName.toLowerCase() === 'poison' ? 'the Poison' : causeName, killerId: src ? src.id : 0, stolen,
+      });
+    }
+  }
+
+  // credit from another zone (a bullet that crossed the border and hit/killed someone there)
+  credit(c) {
+    const p = this.players.get(c.id);
+    if (!p) return;
+    if (c.charge && p.alive) p.superC = Math.min(1, p.superC + 1 / BRAWLERS[p.brawler].superHits);
+    if (c.kill) this.gainBounty(p, c.gain || 1);
+  }
+
+  respawn(p) {
+    const B = BRAWLERS[p.brawler];
+    Object.assign(p, {
+      alive: true, hp: B.hp, maxHp: B.hp, cubes: 0, ammo: 3, reloadP: 0, stun: 0, cloak: 0, dash: null, knock: null, burst: null,
+      spawnProt: 2, respawnT: 0, mvx: 0, mvy: 0, rushArmed: true, rush: 0, lastCombat: -99, poisonT: 0.5, bushT: 0,
+    });
+    let pt;
+    if (this.hub && !p.bot) {
+      // somewhere in our slice of the hub
+      for (let i = 0; i < 30; i++) {
+        const a = this.rand() * Math.PI * 2, d = this.rand() * (HUB.r - 60);
+        const x = HUB.x + Math.cos(a) * d, y = HUB.y + Math.sin(a) * d;
+        if (this.inBounds(x, y, -30) && !blocksMove(tileAt(this.map, x, y)) && !blocksMove(tileAt(this.map, x + 30, y)) && !blocksMove(tileAt(this.map, x - 30, y))) { pt = { x, y }; break; }
+      }
+    }
+    if (!pt) {
+      let best = null, bd = -1;
+      for (let i = 0; i < 12; i++) {
+        const c = this.randomPoint(120);
+        if (this.isSafe(c.x, c.y) || (this.hub && Math.hypot(c.x - HUB.x, c.y - HUB.y) < HUB.r + 150)) continue;
+        let md = Infinity;
+        for (const o of this.players.values()) if (o !== p && o.alive) md = Math.min(md, Math.hypot(o.x - c.x, o.y - c.y));
+        if (md > bd) { bd = md; best = c; }
+      }
+      pt = best || this.randomPoint(120);
+    }
+    p.x = p.px = pt.x; p.y = p.py = pt.y;
+    this.fx.push(['spawn', Math.round(p.x), Math.round(p.y), 0, p.id]);
+  }
+
+  pick(p, brawler) {
+    if (!BRAWLERS[brawler] || !p.alive || !this.isSafe(p.x, p.y) || p.brawler === brawler) return;
+    p.brawler = brawler;
+    p.hp = p.maxHp = BRAWLERS[brawler].hp + p.cubes * CUBE_HP;
+    p.ammo = 3; p.superC = 0;
+    if (p.equipped) this.setCosmetics(p.id, p.equipped); else this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
+  }
+
+  dropCube(x, y) {
+    const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+    const t = this.map.t[ty * this.map.gw + tx];
+    if (t !== EMPTY && t !== BUSH) { x = tx * TILE + TILE / 2; y = ty * TILE + TILE / 2; }
+    this.cubes.push({ id: this.nextEnt++, x, y });
+  }
+  dropCrystal(x, y) {
+    const t = this.map.t[Math.floor(y / TILE) * this.map.gw + Math.floor(x / TILE)];
+    if (t !== EMPTY && t !== BUSH) { x = Math.floor(x / TILE) * TILE + 25; y = Math.floor(y / TILE) * TILE + 25; }
+    this.crystals.push({ id: this.nextEnt++, x, y });
+  }
+
+  hitCrate(idx, dmg) {
+    const c = this.crates.get(idx);
+    if (!c) return;
+    c.hp -= dmg;
+    if (c.hp <= 0) {
+      this.crates.delete(idx);
+      this.setTile(idx, EMPTY);
+      const x = (idx % this.map.gw) * TILE + TILE / 2, y = Math.floor(idx / this.map.gw) * TILE + TILE / 2;
+      this.fx.push(['crate', x, y, c.supply ? 1 : 0, 0]);
+      if (c.supply) for (let i = 0; i < 3; i++) this.dropCube(x + Math.cos(i * 2.1) * 30, y + Math.sin(i * 2.1) * 30);
+      else this.dropCube(x, y);
+    } else this.crateDirty.push([idx, c.supply ? -Math.round(c.hp) : Math.round(c.hp)]);
+  }
+
+  processInput(p, inp) {
+    if (inp.s) p.lastSeq = inp.s;
+    if (!p.alive) return;
+    const st = this.stats(p);
+    if (p.stun <= 0 && !p.dash && !p.knock) applyMove(this.map, p, inp.mx, inp.my, st.speed, st.r, this.mods);
+    if (Math.hypot(inp.ax, inp.ay) > 0.2) p.facing = Math.atan2(inp.ay, inp.ax);
+    else if (Math.hypot(inp.mx, inp.my) > 0.2) p.facing = Math.atan2(inp.my, inp.mx);
+    if (inp.f != null) this.tryAttack(p, inp.f, inp.fd ?? 1);
+    if (inp.u != null) this.trySuper(p, inp.u);
+  }
+
+  input(id, m) {
+    const p = this.players.get(id);
+    if (!p || p.bot) return;
+    if (m.t === 'pick') return this.pick(p, m.brawler);
+    if (m.t !== 'in') return;
+    const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0);
+    const ang = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+    p.queue.push({ s: m.s | 0, mx: num(m.mx), my: num(m.my), ax: num(m.ax), ay: num(m.ay), f: ang(m.f), u: ang(m.u), fd: typeof m.fd === 'number' ? Math.max(0, Math.min(1, m.fd)) : 1 });
+    if (p.queue.length > 12) p.queue.splice(0, p.queue.length - 12);
+  }
+
+  // ---------------------------------------------------------------- events
+  updateEvent() {
+    if (!this.eventsOn) return;
+    const e = this.event;
+    if (!e) {
+      if (this.time >= this.nextEventAt - EVENT_WARN) {
+        const id = this.forceEvent || pickEvent(this.rand, this.lastEvent);
+        this.lastEvent = id;
+        this.event = { id, ph: 'warn', t: EVENT_WARN, params: EVENTS[id].prepare?.(this) || {} };
+        this.broadcast(this.evMsg());
+      }
+      return;
+    }
+    const def = EVENTS[e.id];
+    e.t -= DT;
+    if (e.ph === 'warn' && e.t <= 0) {
+      e.ph = 'on'; e.t = def.duration;
+      def.start?.(this, e.params);
+      this.broadcast(this.evMsg());
+    } else if (e.ph === 'on') {
+      def.tick?.(this, e.params, DT);
+      if (e.t <= 0) {
+        def.end?.(this, e.params);
+        this.event = null;
+        this.nextEventAt += EVENT_EVERY;
+        this.broadcast({ t: 'ev', zone: this.zone, id: null });
+      }
+    }
+    this.mods = this.event && this.event.ph === 'on' ? (EVENTS[this.event.id].mods?.(this.event.params) || {}) : {};
+  }
+
+  // ---------------------------------------------------------------- tick
+  tick() {
+    this.clock += DT;
+    if (this.phase === 'lobby') {
+      if (this.lobbyEnd != null && this.clock >= this.lobbyEnd && this.humans().length > 0) this.start();
+      else if (Math.round(this.clock / DT) % 10 === 0) this.broadcastLobby();
+      return;
+    }
+    if (this.phase === 'end') return;
+
+    this.time += DT;
+    this.tickN++;
+    this.zoneInset = this.mode.poison ? poisonInset(this.time) : 0;
+    this.updateEvent();
+    this.mode.tick?.(this);
+    const mods = this.mods;
+
+    for (const p of this.players.values()) {
+      if (!p.alive) {
+        p.queue.length = 0;
+        if (p.respawnT > 0) { p.respawnT -= DT; if (p.respawnT <= 0) this.respawn(p); }
+        continue;
+      }
+      p.px = p.x; p.py = p.y;
+      p.atkCd -= DT; p.stun -= DT; p.cloak -= DT; p.reveal -= DT; p.rush -= DT; p.spawnProt -= DT; p.slowT -= DT; p.cageT -= DT;
+
+      if (p.bot) p.queue = [botInput(this, p)];
+      p.credits = Math.min(p.credits + 1, 4);
+      while (p.queue.length && p.credits >= 1) {
+        p.credits -= 1;
+        this.processInput(p, p.queue.shift());
+      }
+      if (p.bot && this.hub) this.keepBotInZone(p);
+
+      const B = BRAWLERS[p.brawler];
+      if (p.burst) {
+        p.burst.t -= DT;
+        if (p.burst.t <= 0) {
+          this.spawnShot(p, p.burst.ang);
+          p.burst.left--; p.burst.t += B.attack.interval;
+          if (p.burst.left <= 0) p.burst = null;
+        }
+      }
+      if (p.dash) this.updateDash(p);
+      if (p.knock) {
+        moveCircle(this.map, p, p.knock.vx * DT, p.knock.vy * DT, this.stats(p).r);
+        p.knock.t -= DT;
+        if (p.knock.t <= 0) p.knock = null;
+      }
+      if (p.ammo < 3) {
+        p.reloadP += DT / B.reload;
+        if (p.reloadP >= 1) { p.ammo++; p.reloadP = p.ammo >= 3 ? 0 : p.reloadP - 1; }
+      }
+      if (this.time - p.lastCombat > REGEN_DELAY && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * REGEN_RATE * DT);
+
+      // SHRINK & SPEED: dropping under 25% triggers a one-off speed rush
+      const f = p.hp / p.maxHp;
+      if (f < LOW_HP && p.rushArmed) { p.rushArmed = false; p.rush = RUSH_TIME; this.fx.push(['rush', Math.round(p.x), Math.round(p.y), 0, p.id]); }
+      else if (f > 0.4) p.rushArmed = true;
+      // LAY LOW
+      p.bushT = inBush(this.map, p.x, p.y) && p.reveal <= 0 ? p.bushT + DT : 0;
+      p.lowF = layLowFactor(p.bushT);
+
+      // spiked border walls
+      p.spikeCd = (p.spikeCd || 0) - DT;
+      if (p.spikeCd <= 0 && touchingBorder(this.map, p.x, p.y, this.stats(p).r) && !this.isSafe(p.x, p.y) && p.spawnProt <= 0) {
+        p.spikeCd = SPIKE_CD;
+        this.fx.push(['spike', Math.round(p.x), Math.round(p.y), 0, p.id]);
+        this.damage(null, p, p.maxHp * SPIKE_DMG, false, 'spikes');
+        if (!p.alive) continue;
+      }
+      const z = this.zoneInset;
+      if (z > 0 && (p.x < z || p.y < z || p.x > this.bounds.x1 - z || p.y > this.bounds.y1 - z)) {
+        p.poisonT -= DT;
+        if (p.poisonT <= 0) { p.poisonT = 1; this.damage(null, p, POISON_DPS, false, 'poison'); if (!p.alive) continue; }
+      } else p.poisonT = 0.5;
+
+      const pr = this.stats(p).r + 20;
+      for (let i = this.cubes.length - 1; i >= 0; i--) {
+        const c = this.cubes[i];
+        if (Math.hypot(c.x - p.x, c.y - p.y) < pr) {
+          this.cubes.splice(i, 1);
+          p.cubes++; p.maxHp += CUBE_HP; p.hp += CUBE_HP;
+          this.fx.push(['cube', Math.round(p.x), Math.round(p.y), p.cubes, p.id]);
+        }
+      }
+      for (let i = this.crystals.length - 1; i >= 0; i--) {
+        const c = this.crystals[i];
+        if (Math.hypot(c.x - p.x, c.y - p.y) < pr) {
+          this.crystals.splice(i, 1);
+          p.crystals++;
+          this.fx.push(['gem', Math.round(p.x), Math.round(p.y), p.crystals, p.id]);
+        }
+      }
+      // BOUNTY radar pings (hunted target always pings)
+      const isTarget = this.targetId === p.id;
+      let iv = pingInterval(p.bounty) * (1 + 3 * p.lowF);
+      if (isTarget) iv = Math.min(iv, 1.5);
+      p.pingT += DT;
+      if (p.pingT >= iv) { p.pingT = 0; this.pings.push([p.id, Math.round(p.x), Math.round(p.y), p.bounty]); }
+      p.vx = (p.x - p.px) / DT; p.vy = (p.y - p.py) / DT;
+    }
+
+    this.updateBullets();
+    this.updateMines();
+    this.updateDelayed();
+    if (this.hooks.handoff) this.checkHandoffs();
+    if (this.hub) this.maintainBots();
+    this.sendSnapshots();
+    this.pingLog = this.pings;
+    this.fx = []; this.tileDirty = []; this.crateDirty = []; this.pings = [];
+
+    if (this.mode.checkEnd(this)) this.finish();
+  }
+
+  keepBotInZone(p) {
+    const b = this.bounds, m = 40;
+    p.x = Math.max(b.x0 + m, Math.min(b.x1 - m, p.x));
+    p.y = Math.max(b.y0 + m, Math.min(b.y1 - m, p.y));
+    const d = Math.hypot(p.x - HUB.x, p.y - HUB.y), keep = HUB.r + 40;
+    if (d < keep) { p.x = HUB.x + ((p.x - HUB.x) / (d || 1)) * keep; p.y = HUB.y + ((p.y - HUB.y) / (d || 1)) * keep; }
+  }
+
+  updateDash(p) {
+    const s = BRAWLERS[p.brawler].super;
+    const mult = this.dmgMult(p);
+    moveCircle(this.map, p, p.dash.vx * DT, p.dash.vy * DT, this.stats(p).r);
+    const sp = Math.hypot(p.dash.vx, p.dash.vy), nx = p.dash.vx / sp, ny = p.dash.vy / sp;
+    const km = this.mods.knockMul || 1;
+    for (const e of this.players.values()) {
+      if (!this.enemies(p, e) || !e.alive || p.dash.hit.has(e.id) || e.spawnProt > 0 || this.isSafe(e.x, e.y)) continue;
+      if (Math.hypot(e.x - p.x, e.y - p.y) < s.radius + this.stats(e).r) {
+        p.dash.hit.add(e.id);
+        let kx = e.x - p.x, ky = e.y - p.y;
+        const kl = Math.hypot(kx, ky) || 1;
+        kx = nx * 0.6 + (kx / kl) * 0.4; ky = ny * 0.6 + (ky / kl) * 0.4;
+        const kn = Math.hypot(kx, ky) || 1;
+        e.knock = { vx: ((kx / kn) * s.knock * km) / 0.2, vy: ((ky / kn) * s.knock * km) / 0.2, t: 0.2 };
+        e.dash = null; e.burst = null;
+        e.stun = Math.max(e.stun, 0.3);
+        this.damage(p, e, s.damage * mult, false);
+      }
+    }
+    if (p.dash) { p.dash.t -= DT; if (p.dash.t <= 0) p.dash = null; }
+  }
+
+  mineVisible(v, m) {
+    if (v.id === m.owner || (m.team && v.team === m.team) || v.alive === false || m.arm > 0) return true;
+    return Math.hypot(v.x - m.x, v.y - m.y) < MINE_SEEN;
+  }
+
+  updateMines() {
+    if (!this.mines.length) return;
+    const keep = [];
+    for (const m of this.mines) {
+      m.arm -= DT; m.life -= DT;
+      let boom = m.life <= 0;
+      if (m.arm <= 0 && !boom) {
+        const owner = this.players.get(m.owner);
+        for (const e of this.players.values()) {
+          if (!e.alive || e.id === m.owner || (m.team && e.team === m.team)) continue;
+          if (Math.hypot(e.x - m.x, e.y - m.y) < m.trigger + this.stats(e).r) { boom = true; break; }
+        }
+        if (boom) {
+          this.fx.push(['boom', Math.round(m.x), Math.round(m.y), m.blast, m.owner]);
+          for (const e of this.players.values()) {
+            if (!e.alive || e.id === m.owner || (m.team && e.team === m.team)) continue;
+            if (Math.hypot(e.x - m.x, e.y - m.y) < m.blast + this.stats(e).r) {
+              const src = owner || (m.ozone && m.ozone !== this.zone ? { remote: true, id: m.owner, name: m.oname, zone: m.ozone } : null);
+              this.damage(src, e, m.dmg, true);
+            }
+          }
+          continue;
+        }
+      }
+      if (!boom) keep.push(m);
+    }
+    this.mines = keep;
+  }
+
+  updateDelayed() {
+    if (!this.delayed.length) return;
+    const keep = [];
+    for (const d of this.delayed) {
+      d.t -= DT;
+      if (d.t > 0) { keep.push(d); continue; }
+      if (d.kind === 'worm') {
+        this.fx.push(['worm', Math.round(d.x), Math.round(d.y), d.r, d.owner]);
+        const owner = this.players.get(d.owner);
+        for (const e of this.players.values()) {
+          if (!e.alive || e.id === d.owner || (owner && !this.enemies(owner, e)) || e.spawnProt > 0 || this.isSafe(e.x, e.y)) continue;
+          if (Math.hypot(e.x - d.x, e.y - d.y) < d.r + this.stats(e).r) {
+            e.stun = Math.max(e.stun, d.stun); e.dash = null; e.burst = null;
+            this.damage(owner || null, e, d.dmg, false);
+          }
+        }
+      }
+    }
+    this.delayed = keep;
+  }
+
+  placeMine(b) {
+    const a = BRAWLERS.rook.attack;
+    const mine = { id: this.nextEnt++, owner: b.owner, oname: b.oname, ozone: b.ozone, team: b.team, x: b.x, y: b.y, arm: a.arm, life: a.life, trigger: a.trigger, blast: a.blast, dmg: b.dmg };
+    const mine0 = this.mines.filter((m) => m.owner === b.owner);
+    if (mine0.length >= a.max) this.mines.splice(this.mines.indexOf(mine0[0]), 1);
+    this.mines.push(mine);
+  }
+
+  addBullets(list) { for (const b of list) this.bullets.push({ ...b, id: this.nextEnt++ }); }
+
+  updateBullets() {
+    const out = [], leaving = [];
+    const bw = this.mods.bulletWind || 0;
+    const wl = Math.hypot(this.mods.wx || 0, this.mods.wy || 0) || 1;
+    const wdx = bw ? ((this.mods.wx || 0) / wl) * bw : 0, wdy = bw ? ((this.mods.wy || 0) / wl) * bw : 0;
+    for (const b of this.bullets) {
+      if (bw) { b.vx += wdx * DT; b.vy += wdy * DT; }
+      const step = Math.hypot(b.vx, b.vy) * DT;
+      const n = Math.max(1, Math.ceil(step / 16));
+      let dead = false;
+      for (let i = 0; i < n && !dead; i++) {
+        b.x += (b.vx * DT) / n; b.y += (b.vy * DT) / n; b.dist += step / n;
+        const tx = Math.floor(b.x / TILE), ty = Math.floor(b.y / TILE);
+        const idx = ty * this.map.gw + tx;
+        const t = tx < 0 || ty < 0 || tx >= this.map.gw || ty >= this.map.gh ? WALL : this.map.t[idx];
+        if (b.mine && (t === WALL || t === CRATE || this.isSafe(b.x, b.y) || b.dist >= b.range)) {
+          // a thrown mine breaks crates on impact, otherwise lands just before whatever it hit
+          if (t === CRATE) { this.hitCrate(idx, b.dmg); this.fx.push(['boom', Math.round(b.x), Math.round(b.y), 60, b.owner]); dead = true; break; }
+          if (t === WALL) { b.x -= (b.vx * DT) / n; b.y -= (b.vy * DT) / n; }
+          if (!this.isSafe(b.x, b.y)) this.placeMine(b);
+          dead = true; break;
+        }
+        if (b.mine) continue;
+        if (t === WALL) { dead = true; this.fx.push(['wall', Math.round(b.x), Math.round(b.y), b.kind, 0]); break; }
+        if (t === CRATE) { this.hitCrate(idx, b.dmg); dead = true; this.fx.push(['hit', Math.round(b.x), Math.round(b.y), b.kind, 0]); break; }
+        if (this.isSafe(b.x, b.y)) { dead = true; break; }
+        for (const p of this.players.values()) {
+          if (!p.alive || p.id === b.owner || (b.team && p.team === b.team)) continue;
+          if (b.hit && b.hit.includes(p.id)) continue;
+          const rr = this.stats(p).r + b.r;
+          if ((p.x - b.x) ** 2 + (p.y - b.y) ** 2 < rr * rr) {
+            this.fx.push(['hit', Math.round(b.x), Math.round(b.y), b.kind, p.id]);
+            const src = this.players.get(b.owner) || (b.ozone && b.ozone !== this.zone ? { remote: true, id: b.owner, name: b.oname, zone: b.ozone } : null);
+            if (b.slow && p.spawnProt <= 0 && !this.isSafe(p.x, p.y)) p.slowT = Math.max(p.slowT, b.slow);
+            if (b.cage && p.spawnProt <= 0 && !this.isSafe(p.x, p.y)) { p.stun = Math.max(p.stun, b.cage); p.cageT = b.cage; p.dash = null; p.burst = null; this.fx.push(['cage', Math.round(p.x), Math.round(p.y), 0, p.id]); }
+            this.damage(src, p, b.dmg, !b.cage);
+            if (b.pierce) { b.hit.push(p.id); continue; }
+            dead = true;
+            break;
+          }
+        }
+        if (b.dist >= b.range) dead = true;
+      }
+      if (dead) continue;
+      if (!this.inBounds(b.x, b.y)) leaving.push(b); else out.push(b);
+    }
+    this.bullets = out;
+    if (leaving.length && this.hooks.bulletsOut) this.hooks.bulletsOut(leaving);
+  }
+
+  checkHandoffs() {
+    for (const p of [...this.players.values()]) {
+      if (p.bot || !p.alive || !p.connected) continue;
+      if (this.inBounds(p.x, p.y, -0.01)) continue;
+      const state = this.exportPlayer(p);
+      this.removePlayer(p.id);
+      this.hooks.handoff(p, state);
+    }
+  }
+
+  maintainBots() {
+    this.botSpawnT -= DT;
+    if (this.botSpawnT > 0) return;
+    this.botSpawnT = 2;
+    const bots = [...this.players.values()].filter((p) => p.wasBot);
+    if (bots.length >= this.botTarget) return;
+    const taken = new Set([...this.players.values()].map((p) => p.name));
+    const name = BOT_NAMES.filter((n) => !taken.has(n))[Math.floor(this.rand() * 10)] || 'Bot';
+    const p = this.addPlayer({ name, brawler: BRAWLER_IDS[Math.floor(this.rand() * BRAWLER_IDS.length)], bot: true });
+    p.alive = false;
+    this.respawn(p);
+  }
+
+  sendSnapshots() {
+    const bullets = this.bullets.map((b) => [b.id, Math.round(b.x), Math.round(b.y), b.owner, b.kind]);
+    const cubes = this.cubes.map((c) => [c.id, Math.round(c.x), Math.round(c.y)]);
+    const crystals = this.crystals.map((c) => [c.id, Math.round(c.x), Math.round(c.y)]);
+    const mineRows = (v) => this.mines.filter((m) => this.mineVisible(v, m)).map((m) => [m.id, Math.round(m.x), Math.round(m.y), m.arm <= 0 ? 1 : 0, m.owner]);
+    const alive = this.aliveCount();
+    let top = null;
+    for (const p of this.players.values()) if (p.bounty > 0 && (!top || p.bounty > top.bounty)) top = p;
+    const common = {
+      t: 's', zone: this.zone, n: this.tickN, tm: r2(this.time), b: bullets, cu: cubes, cy: crystals,
+      td: this.tileDirty, ch: this.crateDirty, z: Math.round(this.zoneInset), al: alive, fx: this.fx, pg: this.pings,
+      top: top ? [top.id, top.name, top.bounty] : null, ev: this.event ? [this.event.id, this.event.ph, r2(this.event.t)] : null,
+      md: this.mode.hud?.(this) || null,
+    };
+    if (this.mode.respawn && this.tickN % 10 === 0) {
+      common.lb = this.mode.rank(this).slice(0, 3).map((p) => [p.id, p.name, this.mode.score(p)]);
+    }
+    if (this.hub && this.tickN % 40 === 0) common.on = this.humans().length;
+    const rows = (v) => {
+      const others = [];
+      for (const p of this.players.values()) {
+        if (p === v || !p.alive || !this.canSee(v, p)) continue;
+        if (Math.abs(p.x - v.x) > 1500 || Math.abs(p.y - v.y) > 1100) continue;
+        others.push([p.id, Math.round(p.x), Math.round(p.y), Math.round(p.hp), p.maxHp, Math.round(p.facing * 100) / 100,
+          this.flags(p), p.cubes, p.bounty, this.glow(p), p.crystals, p.team]);
+      }
+      return others;
+    };
+    for (const v of this.players.values()) {
+      if (!v.connected) continue;
+      this.send(v.id, {
+        ...common, ack: v.lastSeq, p: rows(v), mn: mineRows(v),
+        ...(v.team ? { mates: [...this.players.values()].filter((q) => q !== v && q.team === v.team && q.alive).map((q) => [q.id, Math.round(q.x), Math.round(q.y)]) } : {}),
+        me: {
+          x: r2(v.x), y: r2(v.y), mvx: r2(v.mvx), mvy: r2(v.mvy), hp: Math.round(v.hp), mh: v.maxHp, am: r2(v.ammo + v.reloadP),
+          sc: r2(v.superC), cu: v.cubes, f: this.flags(v), al: v.alive ? 1 : 0, fo: v.dash || v.knock || v.stun > 0 ? 1 : 0,
+          cl: r2(Math.max(0, v.cloak)), bt: v.bounty, lo: r2(v.lowF), bt5: r2(Math.min(v.bushT, 5)), rs: r2(Math.max(0, v.rush)),
+          rt: r2(Math.max(0, v.respawnT)), cr: v.crystals, scr: Math.floor(this.mode.score ? this.mode.score(v) : 0),
+          k: v.kills, be: v.bountyEarned, sk: v.sessionKills, bb: v.bestBounty, gl: this.glow(v), id: v.id, br: v.brawler,
+          sl: v.slowT > 0 ? r2(v.slowT) : 0, tp: v.tp, tm: v.team,
+        },
+      });
+    }
+    if (this.observers.size && this.tickN % 2 === 0) {
+      for (const [k, o] of this.observers) { const v = { x: o.x, y: o.y, alive: true }; this.send(k, { ...common, p: rows(v), mn: mineRows(v) }); }
+    }
+  }
+
+  glow(p) { return Math.round(Math.max(bountyGlow(p.bounty), this.targetId === p.id ? 1 : 0) * (1 - 0.85 * p.lowF) * 100); }
+
+  flags(p) {
+    return (inBush(this.map, p.x, p.y) ? 1 : 0) | (p.stun > 0 ? 2 : 0) | (p.cloak > 0 ? 4 : 0) | (p.dash ? 8 : 0)
+      | (p.spawnProt > 0 ? 16 : 0) | (this.targetId === p.id ? 32 : 0) | (p.rush > 0 ? 64 : 0) | (p.lowF > 0 ? 128 : 0)
+      | (p.cageT > 0 ? 256 : 0) | (p.slowT > 0 ? 512 : 0);
+  }
+
+  finish() {
+    this.phase = 'end';
+    const ranked = this.mode.rank(this);
+    const winTeam = this.mode.teams ? (this.teamPot[1] === this.teamPot[2] ? 0 : this.teamPot[1] > this.teamPot[2] ? 1 : 2) : 0;
+    ranked.forEach((p, i) => { p.rank = i + 1; });
+    const score = this.mode.score || (() => 0);
+    const results = ranked.map((p) => [p.name, p.brawler, p.rank, p.kills, p.wasBot ? 1 : 0, p.id, p.bountyEarned, Math.floor(score(p)), p.team]);
+    const winner = ranked[0];
+    this.hooks.finished?.(ranked.filter((p) => !p.wasBot).map((p) => ({ p, rank: p.rank, players: this.players.size, won: this.mode.teams ? (winTeam === 0 ? null : p.team === winTeam) : undefined })));
+    for (const p of this.players.values()) {
+      if (p.connected) {
+        this.send(p.id, { t: 'end', mode: this.modeKey, rank: p.rank, kills: p.kills, bounty: p.bountyEarned, winner: winner ? winner.name : null, results,
+          ...(this.mode.teams ? { team: p.team, winTeam, pots: this.teamPot, won: p.team === winTeam } : {}), n: this.players.size });
+      }
+    }
+  }
+}

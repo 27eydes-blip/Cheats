@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hunt-preview",
+  "main": "src/worker.js",
+  "workers_dev": true,
+  "preview_urls": true,
+  "compatibility_date": "2025-10-01",
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  // PREVIEW deploy only (separate Worker + database). Never point this at the live site.
+  "d1_databases": [{ "binding": "DB", "database_name": "hunt-preview-db", "database_id": "cd603982-d837-4ab0-a694-8c027afd9904", "migrations_dir": "migrations" }],
+  "durable_objects": {
+    "bindings": [
+      { "name": "MATCH", "class_name": "MatchRoom" },
+      { "name": "MATCHMAKER", "class_name": "Matchmaker" },
+      { "name": "ZONE", "class_name": "ZoneRoom" },
+      { "name": "DIRECTORY", "class_name": "Directory" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["MatchRoom", "Matchmaker"] },
+    { "tag": "v2", "new_sqlite_classes": ["ZoneRoom", "Directory"] }
+  ]
+}

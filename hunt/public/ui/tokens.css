@@ -1,0 +1,124 @@
+/* =====================================================================
+   HUNT DESIGN SYSTEM — every out-of-match screen uses only these tokens.
+   3 button sizes · 2 card styles · 1 icon style · 1 outline · 1 shadow.
+   ===================================================================== */
+:root {
+  /* colour */
+  --ink: #1b1033;           /* the one outline colour */
+  --bg: #2b1d55;
+  --panel: #4b2f9a;
+  --panel-2: #3a2380;
+  --panel-hi: #7b52ff;
+  --gold: #ffd23f;
+  --gold-2: #ffb800;
+  --mint: #4be0c8;
+  --red: #ff4d5e;
+  --green: #4be06e;
+  --blue: #3a86ff;
+  --text: #ffffff;
+  --text-dim: #cfc3ff;
+  --role-balanced: #ffb000;
+  --role-tank: #ff7b39;
+  --role-sniper: #19b6a6;
+  --role-controller: #e0a03a;
+  --role-trapper: #6f9a3a;
+  --role-assassin: #9d4dff;
+  /* shape */
+  --line: 4px;               /* the one outline thickness */
+  --radius: 18px;
+  --radius-sm: 12px;
+  --drop: 0 5px 0 var(--ink);      /* the one shadow */
+  --drop-press: 0 1px 0 var(--ink);
+  /* type */
+  --font: "Lilita One", "Arial Black", system-ui, sans-serif;
+  --font-ui: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* motion */
+  --ease-out: cubic-bezier(.2, .9, .3, 1.15);
+  --t-screen: 260ms;
+  --t-press: 90ms;
+  /* safe areas (notch / home indicator) */
+  --sa-t: max(8px, env(safe-area-inset-top));
+  --sa-r: max(10px, env(safe-area-inset-right));
+  --sa-b: max(8px, env(safe-area-inset-bottom));
+  --sa-l: max(10px, env(safe-area-inset-left));
+  /* scale with the short side of the screen so phones and iPads both fit */
+  --u: clamp(5px, 1.35vh, 10px);
+}
+
+/* ---------- buttons: sm / md / lg ---------- */
+.btn {
+  font-family: var(--font); color: var(--ink); background: var(--gold);
+  border: var(--line) solid var(--ink); border-radius: var(--radius-sm); box-shadow: var(--drop);
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: .4em;
+  line-height: 1; user-select: none; -webkit-user-select: none; touch-action: manipulation;
+  transition: transform var(--t-press) ease-out, box-shadow var(--t-press) ease-out, filter .15s;
+  position: relative;
+}
+.btn-sm { font-size: calc(var(--u) * 1.6); padding: calc(var(--u) * .5) calc(var(--u) * 1.2); }
+.btn-md { font-size: calc(var(--u) * 2.2); padding: calc(var(--u) * .8) calc(var(--u) * 2); }
+.btn-lg { font-size: calc(var(--u) * 4.2); padding: calc(var(--u) * 1.1) calc(var(--u) * 4); border-radius: var(--radius); }
+.btn.alt { background: var(--panel-2); color: var(--text); }
+.btn.mint { background: var(--mint); }
+.btn.red { background: var(--red); color: var(--text); }
+.btn.pressed, .btn:active { transform: translateY(4px) scale(.96, .92); box-shadow: var(--drop-press); }
+.btn.released { animation: btn-bounce 260ms var(--ease-out); }
+.btn[disabled] { filter: grayscale(.8) brightness(.8); pointer-events: none; }
+@keyframes btn-bounce { 0% { transform: scale(.96, .92); } 55% { transform: scale(1.06, 1.04); } 100% { transform: none; } }
+
+/* ---------- cards: A (solid panel) / B (art card with coloured backdrop) ---------- */
+.card-a { background: var(--panel); border: var(--line) solid var(--ink); border-radius: var(--radius); box-shadow: var(--drop); }
+.card-b {
+  --card-col: var(--panel-hi);
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--card-col) 85%, #fff 15%), var(--card-col) 55%, color-mix(in srgb, var(--card-col) 60%, var(--ink) 40%));
+  border: var(--line) solid var(--ink); border-radius: var(--radius); box-shadow: var(--drop); position: relative; overflow: visible;
+}
+
+/* ---------- icon style: chunky filled shapes with the ink outline (see ui/icons.js) ---------- */
+.ico { width: 1.6em; height: 1.6em; display: inline-block; flex: none; }
+.ico svg { width: 100%; height: 100%; display: block; overflow: visible; }
+
+/* ---------- typography helpers ---------- */
+.title { font-family: var(--font); color: var(--gold); -webkit-text-stroke: calc(var(--line) * .8) var(--ink); paint-order: stroke fill; text-shadow: 0 4px 0 var(--ink); letter-spacing: 1px; }
+.outlined { font-family: var(--font); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; }
+.dot { position: absolute; top: -4px; right: -4px; width: 14px; height: 14px; border-radius: 50%; background: var(--red); border: 3px solid var(--ink); }
+.dot[hidden] { display: none; }
+
+/* ---------- screens: slide + scale in (no hard cuts) ---------- */
+.ui-screen { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; background: rgba(27, 16, 51, .82);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); }
+.ui-screen.enter { animation: screen-in var(--t-screen) var(--ease-out) both; }
+.ui-screen.leave { animation: screen-out 200ms ease-in both; }
+@keyframes screen-in { from { opacity: 0; transform: translateY(24px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes screen-out { to { opacity: 0; transform: translateY(16px) scale(.97); } }
+.ui-head { display: flex; align-items: center; gap: calc(var(--u) * 1.2); margin-bottom: calc(var(--u) * 1); }
+.ui-head .title { font-size: calc(var(--u) * 4); flex: 1; }
+.ui-body { flex: 1; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; }
+
+/* ---------- popups ---------- */
+.ui-pop { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: rgba(27, 16, 51, .6); padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); }
+.ui-pop > .card-a { width: min(560px, 100%); max-height: 100%; overflow: auto; padding: calc(var(--u) * 2); text-align: center; }
+.ui-pop.enter > .card-a { animation: pop-in 280ms var(--ease-out) both; }
+@keyframes pop-in { from { transform: scale(.7); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- reward burst ---------- */
+.rays { position: fixed; z-index: 60; pointer-events: none; width: 120vmin; height: 120vmin; left: 50%; top: 50%; margin: -60vmin 0 0 -60vmin;
+  background: repeating-conic-gradient(rgba(255, 230, 120, .55) 0 8deg, transparent 8deg 22deg);
+  -webkit-mask: radial-gradient(circle, #000 15%, transparent 65%); mask: radial-gradient(circle, #000 15%, transparent 65%);
+  animation: rays 1.1s ease-out both; }
+@keyframes rays { from { opacity: 0; transform: scale(.4) rotate(0); } 25% { opacity: 1; } to { opacity: 0; transform: scale(1.1) rotate(40deg); } }
+.confetti { position: fixed; z-index: 61; pointer-events: none; width: 10px; height: 14px; border: 2px solid var(--ink); border-radius: 3px; }
+.flycoin { position: fixed; z-index: 62; pointer-events: none; width: 26px; height: 26px; transition: transform .7s cubic-bezier(.5, 0, .7, 1), opacity .7s; }
+body.reduce-flash .rays { animation: fade-soft 1s ease-out both; background: radial-gradient(circle, rgba(255, 230, 120, .45), transparent 60%); }
+@keyframes fade-soft { from { opacity: 0; } 30% { opacity: 1; } to { opacity: 0; } }
+
+/* ---------- forms ---------- */
+.field { width: 100%; font: inherit; font-family: var(--font); font-size: calc(var(--u) * 2.2); padding: calc(var(--u) * 1) calc(var(--u) * 1.4); border-radius: var(--radius-sm); border: var(--line) solid var(--ink); background: #fff; color: var(--ink); outline: none; user-select: text; -webkit-user-select: text; }
+.slider { width: 100%; accent-color: var(--gold); }
+.chipbtn { font-family: var(--font); color: var(--text); background: var(--panel-2); border: 3px solid var(--ink); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
+.chipbtn.on { background: var(--gold); color: var(--ink); }
+/* chips: one size everywhere, one line, scroll sideways if they don't fit */
+.chipbtn { font-size: calc(var(--u) * 1.7); padding: calc(var(--u) * .3) calc(var(--u) * 1.2); white-space: nowrap; flex: none; }
+.chips { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.chips::-webkit-scrollbar { display: none; }
+.ui-head .chips { flex: 2; }

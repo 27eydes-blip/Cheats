@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2b1d55">
+<title>Hunt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="ui/tokens.css">
+<link rel="stylesheet" href="ui/lobby.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" hidden>
+  <div id="topbar">
+    <div class="pill" id="countPill"><span class="skull">☠</span><b id="aliveN">10</b><span id="countLbl">LEFT</span></div>
+    <div class="pill" id="potPill" hidden><span class="blue">US ★<b id="potUs">0</b></span> · <span class="red">THEM ★<b id="potThem">0</b></span></div>
+    <div class="pill" id="timerPill" hidden>⏱ <b id="timerT">2:00</b></div>
+    <div class="pill poison" id="poison" hidden>POISON IN <b id="poisonT">60</b></div>
+    <div class="pill" id="statsPill" hidden>KO <b id="sessK">0</b> · BEST ★<b id="sessB">0</b></div>
+  </div>
+  <div id="topBounty" hidden>👑 <span id="topName"></span> <b id="topVal"></b></div>
+  <div id="evBanner" hidden><div class="evName" id="evName"></div><div class="evDesc" id="evDesc"></div></div>
+  <div id="modeBanner" hidden></div>
+  <div id="leader" hidden></div>
+  <div id="feed"></div>
+  <div id="ping">-- ms</div>
+  <div id="respawn" hidden>Respawning in <b id="respawnT">3</b></div>
+  <div id="hubPanel" hidden>
+    <div class="hubTitle">SAFE HUB</div>
+    <div id="hubPick"></div>
+    <div class="hubOnline">ONLINE <b id="onlineN">1</b></div>
+    <ul id="onlineList"></ul>
+    <button id="leaveWorld" class="ghost small">LEAVE</button>
+  </div>
+  <button id="hudAgain" class="big again" hidden>PLAY AGAIN</button>
+</div>
+
+<div id="lobby" hidden></div>
+<!-- form controls live here and are moved into Profile / Friends / Settings when those open -->
+<div id="formStash" hidden>
+  <input id="name" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false">
+  <input id="room" maxlength="12" placeholder="ROOM CODE" autocomplete="off" spellcheck="false">
+  <label class="opt"><input type="checkbox" id="bots" checked> Fill empty slots with bots</label>
+  <label class="opt"><input type="checkbox" id="setSound"> Sound</label>
+  <label class="opt"><input type="checkbox" id="setFlash"> Reduce Flashing</label>
+  <label class="opt"><input type="checkbox" id="setLow"> Low Graphics</label>
+</div>
+
+<div id="dead" class="screen dim" hidden>
+  <div class="panel small">
+    <div class="rank" id="deadRank">#5</div>
+    <p id="deadBy">Eliminated</p>
+    <div class="btns">
+      <button id="spectate" class="ghost">SPECTATE</button>
+      <button class="big again">PLAY AGAIN</button>
+    </div>
+  </div>
+</div>
+
+<div id="creditGame">Created by Sam Eyde III</div>
+<div id="rotate"><div>↻</div><p>Rotate your phone to landscape</p></div>
+<div id="toast" hidden></div>
+
+<script type="module" src="game.js"></script>
+</body>
+</html>
