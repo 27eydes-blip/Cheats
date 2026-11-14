@@ -41,6 +41,7 @@ export class Input {
     });
     addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
     addEventListener('blur', () => { this.keys.clear(); this.moveT = null; this.aimT = null; });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { this.keys.clear(); this.moveT = null; this.aimT = null; } });
   }
 
   layout(W, H) {
@@ -56,6 +57,10 @@ export class Input {
     e.preventDefault();
     this.isTouch = true;
     if (!this.enabled) return;
+    // a lost touchend (notification shade, system gesture) must not leave a stick stuck down
+    const live = new Set([...e.touches].map((t) => t.identifier));
+    if (this.moveT && !live.has(this.moveT.id)) this.moveT = null;
+    if (this.aimT && !live.has(this.aimT.id)) this.aimT = null;
     for (const t of e.changedTouches) {
       const x = t.clientX, y = t.clientY;
       const sb = this.superBtn;
