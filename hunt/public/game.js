@@ -120,6 +120,7 @@ function resetMatchState() {
   });
   $('feed').innerHTML = '';
   $('hudAgain').hidden = true;
+  UI.res?.reset?.();
 }
 
 // ------------------------------------------------------------------ connections

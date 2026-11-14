@@ -101,9 +101,22 @@ export function createResults({ onAgain, onLobby }) {
     const step = (now) => { const k = Math.min(1, (now - t0) / ms); node.textContent = fmt(Math.round(from + (to - from) * (1 - (1 - k) ** 3))); if (k < 1) requestAnimationFrame(step); };
     requestAnimationFrame(step);
   };
+  let pendingProgress = null, shown = false;
+  const applyProgress = (m) => {
+    const L = levelInfo(m.progress.xp), before = levelInfo(Math.max(0, m.progress.xp - m.xp));
+    count($('rsTro'), 0, m.delta, 900, (v) => (v >= 0 ? '+' : '') + v);
+    $('rsLv').textContent = L.level; $('rsXpN').textContent = `+${m.xp} XP`;
+    const bar = $('rsXp');
+    bar.style.transition = 'none'; bar.style.width = `${L.level > before.level ? 0 : Math.round((before.into / before.need) * 100)}%`;
+    requestAnimationFrame(() => { bar.style.transition = 'width 1.2s cubic-bezier(.2,.8,.3,1)'; bar.style.width = `${Math.round((L.into / L.need) * 100)}%`; });
+    if (L.level > before.level) setTimeout(() => { rewardBurst(); }, 600);
+  };
   return {
     el,
+    // a new match is starting: forget any progress left over from the last one
+    reset() { pendingProgress = null; shown = false; },
     show(m, ctx) {
+      shown = true;
       el.hidden = false; el.classList.remove('leave'); void el.offsetWidth; el.classList.add('ui-screen', 'enter');
       const team = m.winTeam !== undefined;
       const rank = $('rsRank');
@@ -118,16 +131,10 @@ export function createResults({ onAgain, onLobby }) {
       if (mvp) $('mvp').innerHTML = `👑 TOP BOUNTY HUNTER <b>${esc(mvp[0])}</b> ★${mvp[6]}`;
       $('results').innerHTML = ctx.rows;
       if (ctx.won) setTimeout(() => rewardBurst(innerWidth * 0.25, innerHeight * 0.4), 450);
+      if (pendingProgress) { applyProgress(pendingProgress); pendingProgress = null; }
     },
-    progress(m) {
-      const L = levelInfo(m.progress.xp), before = levelInfo(Math.max(0, m.progress.xp - m.xp));
-      count($('rsTro'), 0, m.delta, 900, (v) => (v >= 0 ? '+' : '') + v);
-      $('rsLv').textContent = L.level; $('rsXpN').textContent = `+${m.xp} XP`;
-      const bar = $('rsXp');
-      bar.style.transition = 'none'; bar.style.width = `${L.level > before.level ? 0 : Math.round((before.into / before.need) * 100)}%`;
-      requestAnimationFrame(() => { bar.style.transition = 'width 1.2s cubic-bezier(.2,.8,.3,1)'; bar.style.width = `${Math.round((L.into / L.need) * 100)}%`; });
-      if (L.level > before.level) setTimeout(() => { rewardBurst(); }, 600);
-    },
-    hide() { el.hidden = true; },
+    // the server's trophy/XP result usually arrives BEFORE the results screen is shown
+    progress(m) { if (shown) applyProgress(m); else pendingProgress = m; },
+    hide() { el.hidden = true; shown = false; },
   };
 }
