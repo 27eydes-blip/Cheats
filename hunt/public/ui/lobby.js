@@ -5,7 +5,6 @@ import { drawBrawler } from '../render.js';
 import { SETTINGS } from '../settings.js';
 import { sfx, unlockAudio } from '../audio.js';
 import { icon, ICONS } from './icons.js';
-import { LobbyScene, featuredWorld, drawModePreview } from './scenes.js';
 import { startMusic, stopMusic } from './music.js';
 import { totalTrophies, levelInfo, missionState, msToReset, roadReward, ROAD_STEP } from '../progression.js';
 import { PASS, passTier } from '../catalog.js';
@@ -31,52 +30,63 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TAUNTS = ['The hunt is on.', 'I see you.', 'Run.', 'Your bounty is mine.', 'Nowhere to hide.', 'Ready.'];
 
+// The lobby: a player banner + currencies on top, a tab bar down the left (Profile, Locker, Play,
+// Armory, Pass, Friends) and the selected tab's page. PLAY: mode buttons, your party (your hunter +
+// invite slots), fill-with-bots, Hunt Pass and a big PLAY button.
+const MODE_BTNS = [
+  ['quick', 'QUICK HUNT', 'Random event · 10', 'target', '#4a7fe0'],
+  ['squad', 'SQUAD HUNT', '3 vs 3', 'friends', '#cf3a44'],
+  ['bighunt', 'BIG HUNT', '20 hunters', 'skull', '#7b45c9'],
+  ['free', 'FREE PLAY', 'Open world', 'road', '#2b9c6c'],
+  ['showdown', 'SHOWDOWN', 'Last one standing', 'trophy', '#d9822b'],
+];
+const TABS = [['profile', 'PROFILE', 'user'], ['locker', 'LOCKER', 'locker'], ['play', 'PLAY', 'battle'], ['armory', 'ARMORY', 'armory'], ['pass', 'HUNT PASS', 'pass'], ['friends', 'FRIENDS', 'friends']];
+// level shield (original): gold rim, deep red body, the level number
+const shield = (id) => `<svg class="shield" viewBox="0 0 64 72"><path d="M32 3 L59 12 V36 C59 53 46 64 32 69 C18 64 5 53 5 36 V12 Z" fill="#ffc83d" stroke="#1b1033" stroke-width="4" stroke-linejoin="round"/><path d="M32 11 L51 17 V36 C51 48 42 56 32 60 C22 56 13 48 13 36 V17 Z" fill="#8e2a3a"/><path d="M32 11 V60 C22 56 13 48 13 36 V17 Z" fill="#b2423f"/><text id="${id}" x="32" y="45" text-anchor="middle" font-family="Lilita One" font-size="26" fill="#fff" stroke="#1b1033" stroke-width="4" paint-order="stroke">1</text></svg>`;
+
 export function createLobby(api) {
   const root = $('lobby');
   root.className = 'lobby';
   root.innerHTML = `
-    <canvas id="lobbyBg"></canvas>
     <div class="lb-top">
-      <div class="cur" id="tbCoins">${icon('coin')}<b id="coinN">0</b><small>TEST</small><button class="plus tap" id="coinPlus" aria-label="Get coins">${icon('plus')}</button></div>
-      <div class="cur" id="tbGems">${icon('gem')}<b id="gemN">0</b><small>TEST</small><button class="plus tap" id="gemPlus" aria-label="Get gems">${icon('plus')}</button></div>
-      <div class="cur missions tap" id="tbMissions"><svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="#3a2380" stroke="#1b1033" stroke-width="4"/><circle id="misArc" cx="18" cy="18" r="14" fill="none" stroke="#4be06e" stroke-width="5" stroke-dasharray="0 88" transform="rotate(-90 18 18)" stroke-linecap="round"/><text x="18" y="23" text-anchor="middle" font-family="Lilita One" font-size="13" fill="#fff" stroke="#1b1033" stroke-width="3" paint-order="stroke" id="misN">0</text></svg><span class="mt">DAILY MISSIONS<small id="misT">--:--</small></span><span class="dot" id="dotMis" hidden></span></div>
-    </div>
-    <div class="lb-left">
-      <div class="card-a profile tap" id="profileCard">
-        <div class="avatar"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="none" stroke="#1b1033" stroke-width="6"/><circle cx="20" cy="20" r="17" fill="none" stroke="#3a2380" stroke-width="3"/><circle id="xpArc" cx="20" cy="20" r="17" fill="none" stroke="#ffd23f" stroke-width="3.4" stroke-dasharray="0 107" stroke-linecap="round"/></svg><canvas id="avatarCv" width="96" height="96"></canvas><span class="lv" id="lvN">1</span></div>
-        <div class="pname" id="pName">Hunter</div>
-        <div class="ptro">${icon('trophy')}<span id="pTro">0</span></div>
-        <div class="guestchip" id="guestChip" hidden><span>Guest · save progress</span><button id="guestX" aria-label="Dismiss">✕</button></div>
-      </div>
-      <div class="rail">
-        ${[['armory', 'ARMORY'], ['locker', 'LOCKER'], ['pass', 'HUNT PASS'], ['road', 'TROPHY ROAD'], ['friends', 'FRIENDS'], ['settings', 'SETTINGS']].map(([k, l]) =>
-          `<button class="btn btn-sm railbtn" id="rail_${k}">${icon(k)}<span>${l}</span><span class="dot" id="dot_${k}" hidden></span></button>`).join('')}
+      <div class="pbanner tap" id="profileCard">${shield('lvN')}<div class="pb-txt"><div class="pname" id="pName">Hunter</div><div class="xpbar"><i id="xpFill"></i></div><div class="ptro">${icon('trophy')}<span id="pTro">0</span></div></div></div>
+      <div class="guestchip" id="guestChip" hidden><span>Guest · save progress</span><button id="guestX" aria-label="Dismiss">✕</button></div>
+      <div class="lb-cur">
+        <div class="cur" id="tbGems">${icon('gem')}<b id="gemN">0</b><small>TEST</small><button class="plus tap" id="gemPlus" aria-label="Get gems">${icon('plus')}</button></div>
+        <div class="cur" id="tbCoins">${icon('coin')}<b id="coinN">0</b><small>TEST</small><button class="plus tap" id="coinPlus" aria-label="Get coins">${icon('plus')}</button></div>
+        <div class="cur missions tap" id="tbMissions"><svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="#3a2380" stroke="#1b1033" stroke-width="4"/><circle id="misArc" cx="18" cy="18" r="14" fill="none" stroke="#4be06e" stroke-width="5" stroke-dasharray="0 88" transform="rotate(-90 18 18)" stroke-linecap="round"/><text x="18" y="23" text-anchor="middle" font-family="Lilita One" font-size="13" fill="#fff" stroke="#1b1033" stroke-width="3" paint-order="stroke" id="misN">0</text></svg><span class="mt">MISSIONS<small id="misT">--:--</small></span><span class="dot" id="dotMis" hidden></span></div>
+        <button class="gear tap" id="rail_settings" aria-label="Settings">${icon('settings')}</button>
       </div>
     </div>
-    <div class="lb-stage">
-      <canvas id="stage" aria-label="Your brawler — tap to choose"></canvas>
-      <div class="card-a nameplate">
-        <div class="np-row"><span class="title np-name" id="npName">Volt</span><span class="role" id="npRole">BALANCED</span><span class="np-tro">${icon('trophy')}<span id="npTro">0</span></span></div>
-        <div class="power tap" id="npPower">POWER <b id="npPow">1</b><div class="bar shine"><i id="npBar" style="width:0%"></i></div><button class="btn btn-sm" id="npUp">UPGRADE</button></div>
-      </div>
-    </div>
-    <div class="lb-right">
-      <div class="card-b modecard tap" id="modeCard"><span class="ribbon" id="mcRibbon" hidden></span><canvas id="modeCv" width="320" height="200"></canvas><div class="title mc-name" id="mcName">QUICK HUNT</div><div class="mc-desc" id="mcDesc"></div><div class="mc-change">${icon('swap')} CHANGE MODE</div></div>
-    </div>
-    <button class="btn btn-lg play" id="playBtn" data-sfx="play">PLAY</button>
+    <nav class="lb-tabs">${TABS.map(([k, l, ic]) => `<button class="tabbtn tap" id="${k === 'locker' || k === 'armory' || k === 'pass' || k === 'friends' ? 'rail_' + k : 'tab_' + k}" data-tab="${k}">${icon(ic)}<span>${l}</span><span class="dot" id="dot_${k}" hidden></span>${k === 'play' ? '<span class="tabchip" id="playChip">READY</span>' : ''}</button>`).join('')}</nav>
+    <main class="lb-page">
+      <section class="pg pg-play" data-pg="play">
+        <div class="modelist" id="modeCard">${MODE_BTNS.map(([k, n, sub, ic, col]) => `<button class="modebtn tap" data-m="${k}" style="--mc:${col}"><span class="mi">${icon(ic)}</span><span class="mn"><b>${n}</b><small>${sub}</small></span><span class="go">▶</span></button>`).join('')}
+          <label class="fillbots"><span class="cb" id="fillCb"></span> FILL WITH BOTS</label></div>
+        <div class="party">
+          <div class="slots">
+            <div class="slot me nameplate tap" title="Change hunter"><canvas id="stage"></canvas><div class="np-row"><span class="np-name" id="npName">Volt</span><span class="role" id="npRole">BALANCED</span></div>
+              <div class="power tap" id="npPower">POWER <b id="npPow">1</b><div class="bar"><i id="npBar" style="width:0%"></i></div><button class="btn btn-sm" id="npUp">UPGRADE</button></div>
+              <div class="np-tro">${icon('trophy')}<span id="npTro">0</span><span class="np-mode" id="mcName">QUICK HUNT</span></div></div>
+            ${[1, 2, 3].map(() => `<button class="slot invite tap"><span class="plus">+</span><span>INVITE<br>FRIENDS</span></button>`).join('')}
+          </div>
+          <div class="actions"><button class="btn btn-md alt" id="rail_road">${icon('road')} TROPHY ROAD<span class="dot" id="dot_road" hidden></span></button>
+            <button class="btn btn-md gold" id="passBtn">${icon('pass')} HUNT PASS</button>
+            <button class="btn btn-lg play" id="playBtn" data-sfx="play">PLAY</button></div>
+        </div>
+      </section>
+      <section class="pg pg-profile" data-pg="profile" hidden></section>
+      <section class="pg pg-locker" data-pg="locker" hidden></section>
+    </main>
     <div id="credit">Created by Sam Eyde III</div>`;
 
   const L = {
-    mode: store.get('hunt-mode') || 'quick', t0: performance.now(), taunt: 0, twirl: 0, blinkAt: 2, raf: 0, visible: true,
+    mode: store.get('hunt-mode') || 'quick', tab: 'play', t0: performance.now(), taunt: 0, twirl: 0, blinkAt: 2, raf: 0, visible: true,
   };
   if (!MODES_UI[L.mode]) L.mode = 'quick';
-  const scene = new LobbyScene($('lobbyBg'));
-  scene.setWorld(featuredWorld());
-  const stage = $('stage'), sg = stage.getContext('2d'), mcv = $('modeCv'), mg = mcv.getContext('2d');
-  const av = $('avatarCv').getContext('2d');
+  const stage = $('stage'), sg = stage.getContext('2d');
 
-  // adaptive quality: slow frames step the backdrop/stage resolution down (soft backdrop upscales fine)
-  const Q = [{ bg: 1, st: 1.5 }, { bg: 0.75, st: 1.25 }, { bg: 0.5, st: 1 }];
+  const Q = [{ st: 1.5 }, { st: 1.25 }, { st: 1 }];
   L.q = 0; L.avg = 16.7; L.slow = 0; L.fast = 0;
   function adapt(dt) {
     L.avg += (dt - L.avg) * 0.08;
@@ -86,8 +96,6 @@ export function createLobby(api) {
   }
   function resize() {
     const dpr = SETTINGS.lowGfx ? 1 : Math.min(Q[L.q].st, devicePixelRatio || 1);
-    scene.maxDpr = SETTINGS.lowGfx ? 1 : Q[L.q].bg;
-    scene.resize(innerWidth, innerHeight, dpr);
     const r = stage.getBoundingClientRect();
     stage.width = Math.max(1, Math.round(r.width * dpr)); stage.height = Math.max(1, Math.round(r.height * dpr)); L.dpr = dpr;
   }
@@ -98,7 +106,7 @@ export function createLobby(api) {
     const w = stage.width / L.dpr, h = stage.height / L.dpr;
     sg.setTransform(L.dpr, 0, 0, L.dpr, 0, 0); sg.clearRect(0, 0, w, h);
     const id = api.getBrawler(), B = BRAWLERS[id];
-    const size = Math.min(innerHeight * 0.4, h * 0.82, w * 0.7);
+    const size = Math.min(h * 0.95, w * 1.05);
     const sc = size / 80, cx = w / 2, base = h - 16 * sc;
     // dramatic light from below: a warm cone rising off the pedestal
     const col = (L.colCache ||= {})[B.role] ||= getComputedStyle(document.documentElement).getPropertyValue(ROLE_COL[B.role].slice(4, -1)).trim() || '#ffd23f';
@@ -139,18 +147,13 @@ export function createLobby(api) {
       sg.restore();
     }
   }
-  function drawAvatar(t) {
-    av.setTransform(1, 0, 0, 1, 0, 0); av.clearRect(0, 0, 96, 96);
-    drawBrawler(av, api.getBrawler(), 48, 62, 0.3, t, { scale: 1.45, skin: A.progress().equipped['skin:' + api.getBrawler()] || null });
-  }
-
   // ---------- data -> UI ----------
   function refresh() {
     const p = A.progress(), id = api.getBrawler(), B = BRAWLERS[id];
     $('coinN').textContent = p.coins; $('gemN').textContent = p.gems ?? 0;
     const lv = levelInfo(p.xp);
     $('lvN').textContent = lv.level;
-    $('xpArc').setAttribute('stroke-dasharray', `${(lv.into / lv.need) * 107} 107`);
+    $('xpFill').style.width = `${Math.round((lv.into / lv.need) * 100)}%`;
     $('pName').textContent = api.prefs.name || 'Hunter';
     $('pTro').textContent = totalTrophies(p);
     const guest = !A.ACC.user || A.ACC.user.guest;
@@ -171,11 +174,17 @@ export function createLobby(api) {
     const passReady = PASS.some((r) => r.tier <= tier && (!p.pass.claimed.includes(`free:${r.tier}`) || (p.pass.premium && !p.pass.claimed.includes(`premium:${r.tier}`))));
     const seen = +(store.get('hunt-seen-owned') || 0);
     $('dot_road').hidden = !roadReady; $('dot_pass').hidden = !passReady; $('dot_locker').hidden = p.owned.length <= seen;
-    $('dot_friends').hidden = true; $('dot_settings').hidden = true;
-    // mode card
+    $('dot_friends').hidden = true; $('dot_profile').hidden = true; $('dot_play').hidden = true; $('dot_armory').hidden = true;
+    // mode buttons + party
     const M = MODES_UI[L.mode];
-    $('mcName').textContent = M.name; $('mcDesc').textContent = M.desc;
-    $('mcRibbon').hidden = !M.ribbon; $('mcRibbon').textContent = M.ribbon || ''; $('mcRibbon').className = 'ribbon' + (M.ribbon === 'EVENT' ? ' event' : '');
+    $('mcName').textContent = M.name;
+    for (const b of root.querySelectorAll('.modebtn')) b.classList.toggle('sel', b.dataset.m === L.mode);
+    const bots = $('bots'); $('fillCb').classList.toggle('on', !bots || bots.checked);
+    $('playChip').textContent = L.mode === 'free' ? 'FREE PLAY' : 'READY';
+    for (const b of root.querySelectorAll('.tabbtn')) b.classList.toggle('on', b.dataset.tab === L.tab);
+    for (const pg of root.querySelectorAll('.pg')) pg.hidden = pg.dataset.pg !== L.tab;
+    if (L.tab === 'profile') SC.renderProfilePage(root.querySelector('.pg-profile'), api, refresh);
+    if (L.tab === 'locker') SC.renderLockerPage(root.querySelector('.pg-locker'), api, refresh);
   }
   A.onUser(refresh);
 
@@ -186,41 +195,34 @@ export function createLobby(api) {
     const t = (now - L.t0) / 1000;
     if (L.lastNow) adapt(Math.min(100, now - L.lastNow));
     L.lastNow = now;
-    scene.draw(t);
-    drawStage(t);
-    drawModePreview(mg, L.mode === 'free' ? 'free' : L.mode, mcv.width, mcv.height, t);
-    if (Math.floor(t * 4) !== L.lastAv) { L.lastAv = Math.floor(t * 4); drawAvatar(t); $('misT').textContent = fmtReset(); }
+    if (L.tab === 'play') drawStage(t);
+    if (Math.floor(t) !== L.lastSec) { L.lastSec = Math.floor(t); $('misT').textContent = fmtReset(); }
     L.raf = requestAnimationFrame(loop);
   }
   const fmtReset = () => { const s = Math.floor(msToReset() / 1000); return `${String(Math.floor(s / 3600)).padStart(2, '0')}h ${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}m`; };
 
   // ---------- interactions ----------
-  stage.addEventListener('click', (e) => {
-    const r = stage.getBoundingClientRect(), y = (e.clientY - r.top) / r.height;
-    if (y > 0.25) { // tapping the brawler: short taunt, a second tap opens brawler select
-      const now = (performance.now() - L.t0) / 1000;
-      if (L.taunt && now - L.taunt < 1.2) { SC.openBrawlerSelect(api, refresh); return; }
-      L.taunt = now; sfx('super', 0.7);
-      const b = document.createElement('div'); b.className = 'taunt'; b.textContent = TAUNTS[Math.floor(Math.random() * TAUNTS.length)];
-      root.querySelector('.lb-stage').appendChild(b); setTimeout(() => b.remove(), 1100);
-    }
-  });
-  $('npName').closest('.nameplate').addEventListener('click', () => SC.openBrawlerSelect(api, refresh));
-  $('modeCard').addEventListener('click', () => SC.openModePicker(L.mode, (m) => { L.mode = m; store.set('hunt-mode', m); refresh(); }));
+  const tab = (k) => { L.tab = k; sfx('click', 0.6); refresh(); if (k === 'play') requestAnimationFrame(resize); };
+  root.querySelector('.slot.me').addEventListener('click', (e) => { if (!e.target.closest('#npPower')) SC.openBrawlerSelect(api, refresh); });
+  for (const b of root.querySelectorAll('.modebtn')) b.onclick = () => { L.mode = b.dataset.m; store.set('hunt-mode', L.mode); sfx('click'); refresh(); };
+  root.querySelector('.fillbots').onclick = (e) => { e.preventDefault(); const bx = $('bots'); if (bx) bx.checked = !bx.checked; refresh(); };
+  for (const b of root.querySelectorAll('.slot.invite')) b.onclick = () => SC.openFriends(api);
   $('playBtn').addEventListener('click', () => {
     unlockAudio();
     const M = MODES_UI[L.mode];
     if (L.mode === 'free') api.startFree(); else api.startQuick({ mode: M.mode || '' });
   });
+  $('tab_play').onclick = () => tab('play');
+  $('tab_profile').onclick = () => tab('profile');
+  $('rail_locker').onclick = () => { store.set('hunt-seen-owned', A.progress().owned.length); tab('locker'); };
   $('rail_armory').onclick = () => SC.openArmory(api, refresh);
   $('npPower').addEventListener('click', (e) => { e.stopPropagation(); SC.openPower(api, refresh); });
-  $('rail_locker').onclick = () => { store.set('hunt-seen-owned', A.progress().owned.length); SC.openLocker(api, refresh); };
-  $('rail_pass').onclick = () => SC.openPass(refresh);
+  $('rail_pass').onclick = $('passBtn').onclick = () => SC.openPass(refresh);
   $('rail_road').onclick = () => SC.openRoad(refresh);
   $('rail_friends').onclick = () => SC.openFriends(api);
   $('rail_settings').onclick = () => SC.openSettings(api, () => { resize(); refresh(); });
-  $('profileCard').addEventListener('click', (e) => { if (e.target.closest('#guestChip')) return; SC.openProfile(api, refresh); });
-  $('guestChip').addEventListener('click', (e) => { if (e.target.id === 'guestX') { store.set('hunt-guestchip', 'x'); refresh(); } else SC.openProfile(api, refresh, true); });
+  $('profileCard').addEventListener('click', (e) => { if (e.target.closest('#guestChip')) return; tab('profile'); });
+  $('guestChip').addEventListener('click', (e) => { e.stopPropagation(); if (e.target.id === 'guestX') { store.set('hunt-guestchip', 'x'); refresh(); } else SC.openProfile(api, refresh, true); });
   $('tbMissions').onclick = () => SC.openMissions(refresh);
   $('coinPlus').onclick = $('gemPlus').onclick = () => SC.openEarnInfo();
 

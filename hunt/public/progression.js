@@ -27,7 +27,8 @@ export function normalize(p) {
   out.mastery = p.mastery && typeof p.mastery === 'object' ? p.mastery : {};
   out.perks = p.perks && typeof p.perks === 'object' ? p.perks : {};
   out.loadout = p.loadout && typeof p.loadout === 'object' ? p.loadout : { w2: null };
-  for (const k of ['power', 'gadget', 'star']) out[k] = p[k] && typeof p[k] === 'object' ? p[k] : {};
+  for (const k of ['power', 'gadget', 'star', 'modes']) out[k] = p[k] && typeof p[k] === 'object' ? p[k] : {};
+  if (typeof out.kills !== 'number') out.kills = 0;
   // free skins (the Classic looks) are owned by everyone, old saves included
   for (const b of BRAWLER_IDS) if (!out.owned.includes(b + '_classic')) out.owned = [...out.owned, b + '_classic'];
   out.equipped = p.equipped && typeof p.equipped === 'object' ? p.equipped : {};
@@ -161,6 +162,10 @@ export function applyMatch(p, r) {
   }
   p.games++;
   if (isWin(r)) p.wins++;
+  // lifetime stats for the profile page: totals and per mode
+  p.kills = (p.kills | 0) + (r.kills | 0);
+  const md = (p.modes[r.mode || 'quick'] ||= { games: 0, wins: 0, top3: 0, kills: 0 });
+  md.games++; md.kills += r.kills | 0; if (isWin(r)) md.wins++; if (r.rank <= 3 && r.won !== false) md.top3++;
   p.pass.xp = (p.pass.xp || 0) + xp;
   const d = ensureDaily(p, r.day ?? dayIndex()), add = (k, v) => { d.prog[k] = (d.prog[k] || 0) + v; };
   add('play', 1); add('kills', r.kills | 0); add('bounty', r.bounty | 0);

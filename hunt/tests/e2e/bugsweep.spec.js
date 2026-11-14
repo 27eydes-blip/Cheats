@@ -36,6 +36,9 @@ test('Sound off silences lobby music at once; app switch suspends audio', async 
   await page.mouse.click(5, 5);
   await page.waitForFunction(async () => (await import('/ui/music.js')).musicPlaying(), null, { timeout: 5000 });
   await page.waitForTimeout(1500);
+  // a browser with no audio output (headless Firefox on a server) never starts its audio clock
+  const running = await page.evaluate(async () => (await import('/audio.js')).audioCtx().state === 'running');
+  test.skip(!running, 'this browser has no audio device here, so nothing can play');
   expect(await page.evaluate(async () => (await import('/ui/music.js')).musicLevel())).toBeGreaterThan(0.05);
   await page.click('#rail_settings');
   await page.locator('#setSound').uncheck({ force: true });
@@ -122,16 +125,9 @@ test('GPU context loss rebuilds the in-game and lobby art caches', async ({ page
   await page.waitForTimeout(400); // next frames repaint everything from scratch
   expect(await page.evaluate(() => window.__huntArt.art.stats().sprites)).toBeGreaterThan(0);
   expect(await page.evaluate(() => !!window.__hunt.map._ground)).toBe(true);
-  // lobby backdrop
+  // the lobby (CSS background + a hunter card redrawn every frame) comes back fine
   await page.goto('/');
-  await page.waitForTimeout(800);
-  const lobbyRebuilt = await page.evaluate(() => new Promise((res) => {
-    const c = document.getElementById('lobbyBg');
-    const sky0 = c.__scene ? c.__scene.builds : null;
-    c.dispatchEvent(new Event('contextlost', { cancelable: true })); c.dispatchEvent(new Event('contextrestored'));
-    res({ sky0, sky1: c.__scene ? c.__scene.builds : null });
-  }));
-  expect(lobbyRebuilt.sky1).toBeGreaterThan(lobbyRebuilt.sky0);
+  await page.waitForSelector('#playBtn', { state: 'visible' });
   expect(errors).toEqual([]);
 });
 
@@ -142,12 +138,14 @@ test('a full session (lobby screens, match, results, Free Play) logs no console 
   await page.goto('/');
   await page.waitForSelector('#playBtn', { state: 'visible' });
   await page.waitForTimeout(1000);
-  for (const id of ['rail_locker', 'rail_pass', 'rail_road', 'rail_friends', 'rail_settings', 'profileCard', 'tbMissions', 'modeCard']) {
+  for (const id of ['tab_profile', 'rail_locker', 'tab_play']) { await page.click('#' + id); await page.waitForTimeout(400); } // tabs
+  for (const id of ['rail_armory', 'rail_pass', 'rail_road', 'rail_friends', 'rail_settings', 'tbMissions']) {
     await page.click('#' + id); await page.waitForTimeout(500);
     const bk = page.locator('.ui-screen .back').last();
     if (await bk.count()) await bk.click(); else await page.locator('.ui-pop [data-close]').last().click();
     await page.waitForTimeout(350);
   }
+  await page.click('.modebtn[data-m="quick"]');
   await page.click('#playBtn');
   await page.waitForFunction(() => window.__hunt.phase === 'play' && window.__hunt.me, null, { timeout: 40000 });
   await page.keyboard.down('d'); await page.waitForTimeout(1200); await page.keyboard.up('d');
