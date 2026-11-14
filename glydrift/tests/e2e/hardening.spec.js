@@ -155,7 +155,11 @@ test("soak: a 50,000+ score run through every realm and dimension never piles an
   // (the count swings by up to ~120 with the realm on screen at the moment it's sampled; a leak
   // grows without end, so it would be thousands by the end of a 25 km run)
   expect(late.objs - mid.objs).toBeLessThanOrEqual(160);
-  expect(late.textures - mid.textures).toBeLessThanOrEqual(60);
+  // a realm's art (~55-65 textures, many with generated keys) is in memory only while that realm
+  // is near, so one more realm built at the late sample than at the mid one is not a leak; the
+  // number of realms built is capped separately below
+  const realmSwing = 70 * Math.max(0, late.built - mid.built);
+  expect(late.textures - mid.textures).toBeLessThanOrEqual(60 + realmSwing);
   expect(late.built).toBeLessThanOrEqual(4);
   expect(late.particles).toBeLessThan(600);
   expect(late.tweens).toBeLessThan(80);
