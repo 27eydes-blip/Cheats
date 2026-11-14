@@ -1028,11 +1028,12 @@ test("two leaderboards: score (the main one) and distance", async ({
   const plausible = await page.evaluate(() => {
     const { isPlausible } = window.__glyLb;
     return {
-      real: isPlausible({ score: 3000, distance: 1700, run_time_ms: 80_000 }),
+      real: isPlausible({ score: 3000, distance: 1700, run_time_ms: 80_000, character: "volt" }),
       teleport: isPlausible({
         score: 3000,
         distance: 9000,
         run_time_ms: 20_000,
+        character: "volt",
       }),
     };
   });
@@ -3956,7 +3957,8 @@ test("leaderboard reset: one notice per player, bests cleared, progress kept, st
   // the same limits as the server's glydrift_check_score
   const checks = await page.evaluate(() => {
     const { isPlausible } = window.__glyLb;
-    const t = (level, score, distance, run_time_ms) => isPlausible({ level, score, distance, run_time_ms });
+    const t = (level, score, distance, run_time_ms) =>
+      isPlausible({ level, score, distance, run_time_ms, character: "volt" });
     return {
       realTop: t("endless", 25191, 3826, 129000),
       noDistance: t("endless", 25191, 0, 129000),

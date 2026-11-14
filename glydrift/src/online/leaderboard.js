@@ -83,6 +83,9 @@ export class LeaderboardError extends Error {
 // The top speed is WORLD.maxSpeed times the fastest hero (WALLRUNNER ×1.2), the Abyss /
 // dimension spike (×1.1) and Chrono "fast" zones (×1.35): real runs must never be rejected.
 const MAX_SPEED_FACTOR = 1.8;
+// WASP LORD flies ×1.308 (30% above the roster average): 1.308 × 1.1 × 1.35 = 1.942, so his
+// rows (and only his: character = 'wasplord') get ×1.95
+const WASP_SPEED_FACTOR = 1.95;
 
 /**
  * Score = metres + bonuses (coins, close calls, dead-centre passes), each bonus times the
@@ -91,7 +94,14 @@ const MAX_SPEED_FACTOR = 1.8;
  * make 5–9. The same limits are checked on the server (glydrift_check_score).
  */
 export const MAX_POINTS_PER_METER = 30;
+/**
+ * WASP LORD's combo reaches x16: the same bonuses at x16 instead of x13 (30 × 16 / 13 = 36.9,
+ * and every coin, close call and dead-centre pass at once: 1 + 2.3 × 16 = 37.8), so 38.
+ */
+export const WASP_POINTS_PER_METER = 38;
 const POINTS_ALLOWANCE = 2000;
+/** The hero id a score row may carry (the server requires the same on new rows). */
+export const CHARACTER_ID = /^[a-z0-9_]{1,24}$/;
 
 /** Upper bounds a real run can't exceed. Same rules as the server's glydrift_check_score. */
 export function isPlausible(run) {
@@ -99,16 +109,21 @@ export function isPlausible(run) {
   const score = Math.round(run.score);
   const meters = Math.floor(run.distance ?? 0);
   const level = run.level || "";
+  const ch = run.character ?? run.char;
+  if (typeof ch !== "string" || !CHARACTER_ID.test(ch)) return false;
+  const wasp = ch === "wasplord";
   if (!Number.isFinite(score) || score <= 0 || score > 2_000_000) return false;
   if (!Number.isFinite(ms) || ms < 500) return false;
-  const maxMeters = ((MAX_SPEED_FACTOR * WORLD.maxSpeed) / WORLD.pxPerMeter) * (ms / 1000) + 40;
+  const speed = wasp ? WASP_SPEED_FACTOR : MAX_SPEED_FACTOR;
+  const maxMeters = ((speed * WORLD.maxSpeed) / WORLD.pxPerMeter) * (ms / 1000) + 40;
   if (!Number.isFinite(meters) || meters < 0 || meters > maxMeters) return false;
   // a level's board stores its time as a score: the two must agree
   if (Levels.isLevel(level)) return Math.abs(score - timeToScore(ms)) <= 1;
   // endless, daily and distance runs always carry the distance flown
   if (meters <= 0) return false;
   if (Levels.isDistance(level)) return score === meters;
-  return score >= meters - 2 && score <= meters * MAX_POINTS_PER_METER + POINTS_ALLOWANCE;
+  const ppm = wasp ? WASP_POINTS_PER_METER : MAX_POINTS_PER_METER;
+  return score >= meters - 2 && score <= meters * ppm + POINTS_ALLOWANCE;
 }
 
 /** The column a "no such column" error is about (PostgREST PGRST204 / Postgres 42703). */
@@ -207,11 +222,13 @@ function mockRows(level, period) {
     created_at: "2026-11-04T10:00:00Z",
   }));
 }
+/** ?lbmock: the hero of your last run (as the server would store it on your row). */
+let mockMyHero = null;
 function mockBoard(level, period, username) {
   const rows = mockRows(level, period);
   const me = {
     username: username || "YOU",
-    character: "volt",
+    character: mockMyHero || "volt",
     title: Titles.equippedId(),
     flair: myFlair(),
     created_at: "2026-11-04T11:00:00Z",
@@ -411,7 +428,10 @@ class LeaderboardService {
     if (!isPlausible(entry)) {
       return Promise.resolve({ rejected: true });
     }
-    if (TEST.lbmock) return Promise.resolve({ uploaded: 2, queued: 0, mock: true });
+    if (TEST.lbmock) {
+      mockMyHero = entry.character;
+      return Promise.resolve({ uploaded: 2, queued: 0, mock: true });
+    }
     this.enqueue(entry);
     // endless runs also go on the DISTANCE board (its "score" is the metres flown)
     if (run.mode !== "daily" && entry.distance > 0)

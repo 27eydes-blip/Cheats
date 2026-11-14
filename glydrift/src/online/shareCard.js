@@ -9,6 +9,7 @@ import { getCharacter } from "../player/characterDefs.js";
 import { dailyNumber } from "../data/rng.js";
 import { Save } from "../data/save.js";
 import { Titles } from "../data/titles.js";
+import { drawIllegalTagCanvas, isIllegalHero } from "../ui/illegalTag.js";
 
 const css = (c) => `#${c.toString(16).padStart(6, "0")}`;
 // (Galmuri11 covers Korean hero names like 손주원 in the game's own pixel font)
@@ -177,6 +178,8 @@ export function renderShareCard(game, run) {
   chip(`${Math.floor(run.distance)}m`, W / 2 - 250, 1135, css(biome.neon));
   chip(`${run.nearMiss} CLOSE`, W / 2, 1135, css(biome.neon));
   chip(`${ch.name}`, W / 2 + 250, 1135, css(ch.color));
+  // WASP LORD's runs carry the ILLEGAL tag (as on the leaderboard), under the hero's chip
+  if (isIllegalHero(run.char)) drawIllegalTagCanvas(c, W / 2 + 250, 1196, 1.7);
 
   c.font = `700 32px ${FONT}`;
   c.fillStyle = "rgba(255,255,255,0.75)";
