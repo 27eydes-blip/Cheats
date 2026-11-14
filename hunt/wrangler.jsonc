@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hunt",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-10-01",
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+  "durable_objects": {
+    "bindings": [
+      { "name": "MATCH", "class_name": "MatchRoom" },
+      { "name": "MATCHMAKER", "class_name": "Matchmaker" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MatchRoom", "Matchmaker"] }]
+}

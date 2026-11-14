@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2b1d55">
+<title>Hunt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" hidden>
+  <div id="topbar">
+    <div class="pill" id="alive"><span class="skull">☠</span><b id="aliveN">10</b> LEFT</div>
+    <div class="pill poison" id="poison">POISON IN <b id="poisonT">60</b></div>
+  </div>
+  <div id="feed"></div>
+  <div id="ping">-- ms</div>
+  <button id="hudAgain" class="big again" hidden>PLAY AGAIN</button>
+</div>
+
+<div id="lobby" class="screen">
+  <div class="panel">
+    <h1 class="logo">HUNT</h1>
+    <p class="tag">Last one standing wins.</p>
+    <div class="row">
+      <input id="name" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false">
+      <input id="room" maxlength="12" placeholder="Room code (optional)" autocomplete="off" spellcheck="false">
+    </div>
+    <div id="cards"></div>
+    <label class="opt" id="botsOpt"><input type="checkbox" id="bots" checked> Fill empty slots with bots <small>(room only)</small></label>
+    <button id="play" class="big">PLAY</button>
+    <p class="hint">Same room code on two phones = same match. Empty slots fill with bots.</p>
+  </div>
+</div>
+
+<div id="waiting" class="screen" hidden>
+  <div class="panel small">
+    <h2>FINDING HUNTERS</h2>
+    <div class="count" id="countdown">…</div>
+    <div id="roomLabel"></div>
+    <ul id="plist"></ul>
+    <button id="cancel" class="ghost">CANCEL</button>
+  </div>
+</div>
+
+<div id="dead" class="screen dim" hidden>
+  <div class="panel small">
+    <div class="rank" id="deadRank">#5</div>
+    <p id="deadBy">Eliminated</p>
+    <div class="btns">
+      <button id="spectate" class="ghost">SPECTATE</button>
+      <button class="big again">PLAY AGAIN</button>
+    </div>
+  </div>
+</div>
+
+<div id="end" class="screen dim" hidden>
+  <div class="panel">
+    <div class="rank" id="endRank">#1</div>
+    <p id="endMsg"></p>
+    <ol id="results"></ol>
+    <button class="big again">PLAY AGAIN</button>
+  </div>
+</div>
+
+<div id="rotate"><div>↻</div><p>Rotate your phone to landscape</p></div>
+<div id="toast" hidden></div>
+
+<script type="module" src="game.js"></script>
+</body>
+</html>
