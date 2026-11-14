@@ -4,7 +4,8 @@ import { STICK_R } from './input.js';
 import { SETTINGS, pulse } from './settings.js';
 import { SKINS } from './catalog.js';
 import { drawHunter, HUNTER_PAL, HEAD } from './art/hunters.js';
-import { WEAPON_IDS, WKIND } from './weapons.js';
+import { WEAPON_IDS, WKIND, WEAPONS } from './weapons.js';
+const WEAPON_STATS_LOOKUP = (id) => WEAPONS[id];
 
 export const INK = '#1b1033';
 export const FONT = '"Lilita One", "Arial Black", system-ui, sans-serif';
@@ -1175,16 +1176,25 @@ export function drawBadge(ctx, id, x, y, t = 0) {
   ctx.globalAlpha = glow; ctx.beginPath(); ctx.moveTo(0, -4.5); ctx.lineTo(3.5, 0); ctx.lineTo(0, 4.5); ctx.lineTo(-3.5, 0); ctx.closePath(); ctx.fillStyle = c[1]; ctx.fill();
   ctx.restore();
 }
-// a WEAPON lying on the ground (Free Play crate drop). Rare and epic ones glow.
+// a WEAPON lying on the ground (Free Play crate drop) and in the Armory. Each class has its own
+// silhouette; the weapon's colour marks the barrel. Rare and epic ones glow.
+const WSHAPE = {
+  rifle: (c) => { rr(c.g, -24, -5, 40, 10, 3); c.f('#3d4250'); rr(c.g, 14, -3, 16, 6, 2); c.f(c.c2); rr(c.g, -14, 3, 7, 11, 2); c.f('#2a2433'); rr(c.g, -2, 4, 6, 9, 2); c.f('#2a2433'); },
+  shotgun: (c) => { rr(c.g, -22, -7, 30, 14, 4); c.f('#5a3a2a'); rr(c.g, 6, -6, 22, 5, 2); c.f(c.c2); rr(c.g, 6, 1, 22, 5, 2); c.f(c.c2); rr(c.g, -16, 5, 8, 10, 2); c.f('#2a2433'); },
+  sniper: (c) => { rr(c.g, -26, -4, 38, 8, 3); c.f('#3d4250'); rr(c.g, 10, -2.5, 26, 5, 2); c.f(c.c2); rr(c.g, -10, -12, 18, 7, 3); c.f('#1b1033'); rr(c.g, -20, 3, 7, 10, 2); c.f('#2a2433'); },
+  smg: (c) => { rr(c.g, -16, -6, 26, 12, 3); c.f('#3d4250'); rr(c.g, 10, -3, 10, 6, 2); c.f(c.c2); rr(c.g, -4, 5, 7, 14, 2); c.f('#2a2433'); rr(c.g, -14, 5, 6, 9, 2); c.f('#2a2433'); },
+  launcher: (c) => { rr(c.g, -26, -9, 48, 18, 8); c.f('#4a5240'); rr(c.g, 18, -10, 8, 20, 4); c.f(c.c2); rr(c.g, -6, 8, 8, 10, 2); c.f('#2a2433'); },
+  melee: (c, id) => { if (id === 'spear') { rr(c.g, -30, -2.5, 46, 5, 2); c.f('#7a5a3a'); c.g.beginPath(); c.g.moveTo(16, -7); c.g.lineTo(32, 0); c.g.lineTo(16, 7); c.g.closePath(); c.f(c.c1); } else { rr(c.g, -24, -3, 14, 6, 2); c.f('#7a5a3a'); c.g.beginPath(); c.g.moveTo(-10, -8); c.g.lineTo(18, -10); c.g.quadraticCurveTo(28, 0, 18, 9); c.g.lineTo(-10, 6); c.g.closePath(); c.f(c.c1); } },
+  special: (c) => { rr(c.g, -20, -7, 30, 14, 6); c.f('#3a2f5a'); c.g.beginPath(); c.g.arc(14, 0, 8, 0, 7); c.f(c.c2); rr(c.g, -12, 5, 7, 10, 2); c.f('#2a2433'); },
+};
 export function drawWeaponDrop(ctx, x, y, id, rare, t) {
-  const look = WEAPON_LOOK[id] || WEAPON_LOOK.stormline, bob = Math.sin(t * 3 + x) * 3;
+  const look = WEAPON_LOOK[id] || WEAPON_LOOK.stormline, w = WEAPON_STATS_LOOKUP(id), bob = Math.sin(t * 3 + x) * 3;
   ctx.save(); ctx.translate(x, y + bob);
-  if (rare) { ctx.globalAlpha = SETTINGS.reduceFlash ? 0.35 : 0.25 + 0.15 * Math.sin(t * 4); ctx.beginPath(); ctx.arc(0, 0, 30, 0, 7); ctx.fillStyle = look.c2; ctx.fill(); ctx.globalAlpha = 1; }
-  ctx.beginPath(); ctx.ellipse(0, 16 - bob, 18, 5, 0, 0, 7); ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fill();
-  ctx.rotate(-0.25); ctx.lineWidth = 3; ctx.strokeStyle = INK;
-  rr(ctx, -18, -5, 30, 10, 3); ctx.fillStyle = '#3d4250'; ctx.fill(); ctx.stroke(); // body
-  rr(ctx, 10, -3, 12, 6, 2); ctx.fillStyle = look.c2; ctx.fill(); ctx.stroke(); // barrel
-  rr(ctx, -12, 3, 7, 10, 2); ctx.fillStyle = '#2a2433'; ctx.fill(); ctx.stroke(); // grip
+  if (rare) { ctx.globalAlpha = SETTINGS.reduceFlash ? 0.35 : 0.25 + 0.15 * Math.sin(t * 4); ctx.beginPath(); ctx.arc(0, 0, 32, 0, 7); ctx.fillStyle = look.c2; ctx.fill(); ctx.globalAlpha = 1; }
+  ctx.beginPath(); ctx.ellipse(0, 18 - bob, 22, 5, 0, 0, 7); ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fill();
+  ctx.rotate(-0.25); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+  const c = { g: ctx, c1: look.c1, c2: look.c2, f: (col) => { ctx.fillStyle = col; ctx.fill(); ctx.stroke(); } };
+  (WSHAPE[w ? w.cls : 'rifle'] || WSHAPE.rifle)(c, id);
   ctx.restore();
 }
 // mastery weapon skin tint for a bullet's trail (Bronze/Silver/Gold/Bane)

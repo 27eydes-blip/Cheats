@@ -117,7 +117,7 @@ console.log('every weapon fires + hits: OK');
   const { sim, a, b } = duo('stormline', 300, { send: (id, m) => { if (m.t === 's' && m.hm) sends.push([id, m.hm]); } });
   a.connected = true;
   const c = sim.addPlayer({ name: 'C', brawler: 'volt' }); c.x = 600; c.y = 1100;
-  b.hp = 900; b.bounty = 3;
+  b.hp = 400; b.bounty = 3;
   sim.damage(c, b, 100, true);
   fire(sim, a); run(sim, 15);
   assert(!b.alive, 'killed');

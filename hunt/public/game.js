@@ -132,7 +132,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const G = {
   phase: 'menu', kind: 'quick', conns: new Map(), myId: 0, brawler: 'volt', map: null, roster: {}, crateHp: new Map(),
   pending: [], seq: 0, pred: { x: 0, y: 0, mvx: 0, mvy: 0 }, prev: { x: 0, y: 0 }, err: { x: 0, y: 0 }, me: null, mods: {},
-  localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: new PList(resetPart), rings: [], texts: new PList(resetText), flash: {}, shake: 0, hurt: 0,
+  localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: new PList(resetPart, 260), rings: [], texts: new PList(resetText, 28), flash: {}, shake: 0, hurt: 0,
   shots: new ShotSim(), recoil: new Map(), nudge: { x: 0, y: 0 }, hitMark: null, wantSlot: null, wantT: 0, localCd2: 0, localBurst2: null, bolts: [], myPerks: {},
   spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, cam: { x: 1000, y: 1000 }, acc: 0, ping: 0,
   pings: [], handoff: null, online: {}, modeKey: 'showdown', world: 'meadow', retries: 0, room: '', botsOn: true, facing: 0,
@@ -490,7 +490,7 @@ function onSnap(c, m) {
   for (const e of m.p) p.set(e[0], e);
   const st = c.statics || (c.statics = new Map());
   if (m.px) for (const e of m.px) st.set(e[0], e); // slow player fields (sent when they change)
-  c.snaps.push({ n: m.n, p, cu: m.cu, cy: m.cy, fx: m.fx, mn: m.mn || [], wd: m.wd || null });
+  c.snaps.push({ n: m.n, p, cu: m.cu, cy: m.cy, fx: m.fx || NONE, mn: m.mn || NONE, wd: m.wd || null });
   // BULLETS: one 'fired' event each; we simulate them (own predicted shots are already flying)
   if (m.bn) for (const r of m.bn) {
     if (r[8] === G.myId && predictedKind(r[6])) continue;
@@ -504,12 +504,12 @@ function onSnap(c, m) {
     sfx(kind === 'kill' ? 'killmark' : kind === 'crit' ? 'critmark' : 'hitmark', 0.9);
   }
   if (c.snaps.length > 40) c.snaps.shift();
-  for (const [idx, type] of m.td) applyTile(idx, type);
-  for (const [idx, hp] of m.ch) G.crateHp.set(idx, hp);
+  if (m.td) for (const [idx, type] of m.td) applyTile(idx, type);
+  if (m.ch) for (const [idx, hp] of m.ch) G.crateHp.set(idx, hp);
   c.last = m;
   if (m.ev && c.ev && c.ev.id === m.ev[0]) { c.ev.ph = m.ev[1]; c.ev.tl = m.ev[2]; }
   if (G.pings.length > 200) G.pings = G.pings.filter((p) => now - p.t0 < 3000);
-  for (const [id, x, y, bt] of m.pg) G.pings.push({ id, x, y, bt, t0: now, target: !!(m.md && m.md.tg === id) });
+  if (m.pg) for (const [id, x, y, bt] of m.pg) G.pings.push({ id, x, y, bt, t0: now, target: !!(m.md && m.md.tg === id) });
   if (c.primary) G.mates = m.mates || [];
   if (c.primary && m.me) reconcile(m);
 }
@@ -576,16 +576,39 @@ function sampleConn(c, out) {
   if (b.wd) out.wdrops.push(...b.wd);
 }
 const bulletAng = new Map(); // (kept for resetMatchState)
-const EMPTY_MAP = new Map(), NO_STATIC = [0, 0, 0, 0, 0, 0, 0];
+const EMPTY_MAP = new Map(), NO_STATIC = [0, 0, 0, 0, 0, 0, 0], NONE = [];
 
 function sampleWorld() {
   const out = { others: new Map(), bullets: [], cubes: [], crystals: [], mines: [], flares: [], wdrops: [] };
   const list = [...G.conns.values()].sort((a, b) => b.primary - a.primary);
   for (const c of list) sampleConn(c, out);
   if (G.map) out.bullets = G.shots.sample((k) => G.conns.get(k)?.rt, G.map, G.mods, shotEnded);
+  if (STRESS && G.me) stressWorld(out);
   G.view = { others: [...out.others.values()].filter((o) => o.id !== G.myId), bullets: out.bullets, cubes: out.cubes, crystals: out.crystals, mines: out.mines, flares: out.flares, wdrops: out.wdrops };
   const now = performance.now();
   G.pings = G.pings.filter((p) => now - p.t0 < 3000);
+}
+
+// PERF CHECK (?stress=1, client only): 19 extra hunters around you, all firing nonstop, with bullets,
+// muzzle flashes, casings, hits and damage numbers. Measures the worst case on a phone.
+const STRESS = +(new URLSearchParams(location.search).get('stress') || 0); // 1: firing, 2: just standing there
+let stressN = 0;
+function stressWorld(out) {
+  const P = primary(); if (!P || P.rt == null) return;
+  const me = G.pred, tick = Math.floor(P.rt);
+  for (let i = 0; i < 19; i++) {
+    const a = (i / 19) * Math.PI * 2 + G.ticks * 0.002, r = 260 + (i % 3) * 90;
+    const x = me.x + Math.cos(a) * r, y = me.y + Math.sin(a) * r, face = a + Math.PI + Math.sin(G.ticks * 0.05 + i) * 0.5;
+    out.others.set(-1 - i, { id: -1 - i, x, y, hp: 3000, mh: 3600, facing: face, fl: 0, cu: 0, bt: i % 4, glow: 0, cr: 0, team: 0, name: 'Bot' + i, brawler: BRAWLER_IDS[i % 6], moving: true });
+    if (STRESS === 1 && stressN !== tick && (tick + i) % 3 === 0) {
+      const wi = i % WEAPON_IDS.length, w = WEAPONS[WEAPON_IDS[wi]], sp = w.speed || 1000;
+      for (const ang of shotAngles(w, face, tick * 31 + i)) G.shots.fired(P.key, [1e6 + tick * 64 + i * 3 + Math.round(ang * 100) % 3, x, y, Math.cos(ang) * sp, Math.sin(ang) * sp, w.range, WKIND + wi, tick, -1 - i, w.fuse || 0]);
+      shotFeel(-1 - i, x, y, face, WKIND + wi);
+      if (i % 2 === 0) applyFx(['dmg', Math.round(me.x + Math.cos(a) * 80), Math.round(me.y + Math.sin(a) * 80), 120 + i * 13, -1 - i, i % 5 === 0 ? 1 : 0]);
+      if (i % 3 === 0) applyFx(['hit', Math.round(x), Math.round(y), WKIND + wi, -1 - i]);
+    }
+  }
+  stressN = tick;
 }
 
 // ------------------------------------------------------------------ effects
@@ -740,11 +763,18 @@ function aimProfile(h) {
   return { range: w.range, width: (w.radius || 8) + 4 };
 }
 // FEEL: recoil kick, muzzle flash, a shell casing (yours instantly, others from their 'fired' event)
+const shotSfx = { t: 0, n: 0 };
 function shotFeel(id, x, y, ang, kind) {
   G.recoil.set(id, 1);
   const name = bulletKind(kind), w = WEAPONS[name];
   const cls = w ? w.cls : name;
-  if (G.me) sfx(w ? 'w_' + cls : 'shoot_' + name, id === G.myId ? 1 : falloff(Math.hypot(x - G.pred.x, y - G.pred.y)) * 0.5);
+  // gunfire: yours always; other players' at most 4 per 100ms (a 20-player firefight stays one sound, not 200)
+  if (G.me) {
+    const now = performance.now();
+    if (now - shotSfx.t > 100) { shotSfx.t = now; shotSfx.n = 0; }
+    const v = id === G.myId ? 1 : falloff(Math.hypot(x - G.pred.x, y - G.pred.y)) * 0.5;
+    if (id === G.myId || (v > 0.02 && shotSfx.n++ < 4)) sfx(w ? 'w_' + cls : 'shoot_' + name, v);
+  }
   if (!SETTINGS.reduceFlash) { // muzzle flash (skipped with Reduce Flashing; the sound stays)
     const f = G.parts.add(); f.kind = 'flash'; f.x = x + Math.cos(ang) * 46; f.y = y + Math.sin(ang) * 46; f.vx = 0; f.vy = 0; f.life = f.max = 0.07; f.color = '#fff3b0'; f.size = 12; f.rot = ang;
   }

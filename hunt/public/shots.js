@@ -56,8 +56,12 @@ export class ShotSim {
 // a list of pooled objects (particles, damage numbers): add() reuses a dead object;
 // update(fn) keeps the ones fn returns true for and recycles the rest (no per-frame garbage)
 export class PList {
-  constructor(reset) { this.items = []; this.pool = new Pool(() => ({})); this.reset = reset; }
-  add() { const o = this.pool.get(); this.reset(o); this.items.push(o); return o; }
+  // cap: at most this many alive at once; adding past it recycles the oldest (keeps the worst case cheap)
+  constructor(reset, cap = Infinity) { this.items = []; this.pool = new Pool(() => ({})); this.reset = reset; this.cap = cap; }
+  add() {
+    if (this.items.length >= this.cap) { const o = this.items.shift(); this.reset(o); this.items.push(o); return o; }
+    const o = this.pool.get(); this.reset(o); this.items.push(o); return o;
+  }
   push(src) { return Object.assign(this.add(), src); } // (rare effects)
   update(keep) {
     const it = this.items; let w = 0;

@@ -7,7 +7,7 @@ async function until(fn, ms, what) { const t0 = Date.now(); while (!fn()) { if (
 function client(url) {
   const ws = new WebSocket(url);
   const c = { ws, msgs: [], me: null, others: [], welcome: null, start: null, closed: false };
-  ws.onmessage = (e) => { const m = JSON.parse(e.data); c.msgs.push(m); if (m.t === 'welcome') c.welcome = m; if (m.t === 'start') c.start = m; if (m.t === 's') { c.me = m.me; c.others = m.p; } };
+  ws.onmessage = (e) => { const m = JSON.parse(e.data); c.msgs.push(m); if (m.t === 'welcome') c.welcome = m; if (m.t === 'start') c.start = m; if (m.t === 's') { if (m.me) c.me = Object.assign(c.me || {}, m.me); c.others = m.p; } };
   ws.onclose = () => { c.closed = true; };
   return c;
 }

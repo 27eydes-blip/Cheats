@@ -366,6 +366,7 @@ export class ZoneRoom {
       }
       this.dropped.delete(back);
       p.connected = true;
+      p.sentStatic = null; p.meSent = null; // a new socket knows nothing yet: resend everything
       server.huntKey = back;
       this.conns.set(back, server);
       sendJSON(server, { t: 'welcome', id: back, zone: this.slot, mode: 'freeplay', rejoin: 1, secret: p.secret });

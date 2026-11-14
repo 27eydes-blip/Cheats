@@ -1,0 +1,7 @@
+Server benchmark (test/bench.js): 20 hard bots in Big Hunt, 60 s, seeded, fastest of 3 per seed,
+old main and this branch run back to back on the same machine.
+              CPU per tick   snapshot bytes per player per second
+main (before)   0.262 ms       27,372
+upgrade/combat  0.274 ms       18,400   (-33%)
+Snapshot building alone: 0.167 ms before, 0.161 ms after. The extra ~0.012 ms is bot AI
+(bots now carry and manage a secondary weapon).

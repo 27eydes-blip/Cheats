@@ -406,7 +406,7 @@ export function openArmory(api, onDone) {
     // detail panel
     const w = WEAPONS[sel], st = weaponStats(sel), ok = weaponUnlocked(p, sel), mi = masteryInfo(p.mastery?.[sel] || 0), mine = p.perks?.[sel] || [];
     const skin = [...MASTERY_SKINS].reverse().find((s) => mi.level >= s.lvl);
-    $('arInfo').innerHTML = `<canvas id="arPrev" style="max-height:28%"></canvas>
+    $('arInfo').innerHTML = `<canvas id="arPrev" style="flex:none;width:100%;height:calc(var(--u) * 8)"></canvas>
       <div class="title" style="font-size:calc(var(--u)*2.6)">${esc(w.name)}</div>
       <div style="font-family:var(--font);color:${RAR_COL[w.rarity]};font-size:calc(var(--u)*1.5)">${WEAPON_CLASSES[w.cls].toUpperCase()} · ${w.rarity.toUpperCase()}</div>
       <p class="hint" style="margin:4px 0">${esc(w.desc)}</p>

@@ -16,17 +16,19 @@ import { WEAPONS, WEAPON_IDS, withPerks, shotAngles, stepShot, SWAP_TIME, MAX_SH
 
 const r2 = (v) => Math.round(v * 100) / 100;
 const W2C = new Map(); // weapon + perks -> stats (memo)
+export const clearWeaponCache = () => W2C.clear(); // (the balance tuner edits WEAPONS live)
 // your own state: only the fields that changed since the last snapshot (full every 2s)
 function meDelta(me, v, full) {
   const last = v.meSent || (v.meSent = {});
   if (full) { for (const k in me) last[k] = Array.isArray(me[k]) ? me[k].join(',') : me[k]; return me; }
-  const out = {};
+  let out = null;
   for (const k in me) {
-    const val = me[k], key = Array.isArray(val) ? val.join(',') : val;
-    if (last[k] !== key) { last[k] = key; out[k] = val; }
+    const val = me[k], key = val !== null && typeof val === 'object' ? val.join(',') : val;
+    if (last[k] !== key) { last[k] = key; (out ||= {})[k] = val; }
   }
-  return out;
+  return out || {};
 }
+const ne = (a) => (a.length ? a : undefined); // empty lists are left out of snapshots (less to send and to encode)
 const angDiff = (a, b) => { const d = a - b; return Math.atan2(Math.sin(d), Math.cos(d)); };
 // interest management: how far around a viewer the server sends things (half-extents, px)
 export const VIEW_X = 1500, VIEW_Y = 1100, RADAR_RANGE = 2600;
@@ -351,14 +353,19 @@ export class Sim {
     if (this.mods.vision && dist > this.mods.vision) return false;
     // darkness: caves, marsh fog and night shrink vision, but at night a high bounty glows and
     // can be spotted from further away (high-bounty hunters are easier to hunt after dark)
-    const vr = visionRange(this.map, viewer.x, viewer.y, this.dn);
+    // (vision range + high ground depend only on the viewer: computed once per viewer per tick)
+    let vc = viewer._vc;
+    if (!vc || vc.n !== this.tickN || vc.x !== viewer.x || vc.y !== viewer.y || vc.dn !== this.dn) {
+      vc = viewer._vc = { n: this.tickN, x: viewer.x, y: viewer.y, dn: this.dn, vr: visionRange(this.map, viewer.x, viewer.y, this.dn), high: !viewer.observer && onHigh(this.map, viewer.x, viewer.y) };
+    }
+    const vr = vc.vr;
     if (dist > vr && !(this.dn && this.dn.dark > 0 && t.bounty >= 3 && dist < Math.max(vr, 2000))) return false;
     // observer sockets (Free Play border views) send their own position, so it can't be trusted:
     // they never get the "close enough to reveal" exception for bushes, cloak or armed mines
     const d = viewer.observer ? Infinity : dist;
     if (t.flareT > 0) return true; // lit up by a flare
     if (t.cloak > 0 && d > CLOAK_REVEAL_DIST) return false;
-    const bushReveal = BUSH_REVEAL_DIST * (!viewer.observer && onHigh(this.map, viewer.x, viewer.y) ? HIGH_REVEAL : 1); // high ground sees into bushes
+    const bushReveal = BUSH_REVEAL_DIST * (vc.high ? HIGH_REVEAL : 1); // high ground sees into bushes
     if (t.reveal <= 0 && d > bushReveal && inBush(this.map, t.x, t.y)) return false;
     return true;
   }
@@ -1255,13 +1262,13 @@ export class Sim {
     const paths = shots.map(shotPath);
     const cubes = this.cubes.map((c) => [c.id, Math.round(c.x), Math.round(c.y)]);
     const crystals = this.crystals.map((c) => [c.id, Math.round(c.x), Math.round(c.y)]);
-    const mineRows = (v) => this.mines.filter((m) => this.mineVisible(v, m)).map((m) => [m.id, Math.round(m.x), Math.round(m.y), m.arm <= 0 ? 1 : 0, m.owner]);
+    const mineRows = (v) => (!this.mines.length ? undefined : ne(this.mines.filter((m) => this.mineVisible(v, m)).map((m) => [m.id, Math.round(m.x), Math.round(m.y), m.arm <= 0 ? 1 : 0, m.owner])));
     const alive = this.aliveCount();
     let top = null;
     for (const p of this.players.values()) if (p.bounty > 0 && (!top || p.bounty > top.bounty)) top = p;
     const common = {
       t: 's', zone: this.zone, n: this.tickN, tm: r2(this.time),
-      td: this.tileDirty, ch: this.crateDirty, z: Math.round(this.zoneInset), al: alive,
+      td: ne(this.tileDirty), ch: ne(this.crateDirty), z: Math.round(this.zoneInset), al: alive,
       top: top ? [top.id, top.name, top.bounty] : null, ev: this.event ? [this.event.id, this.event.ph, r2(this.event.t)] : null,
       md: this.mode.hud?.(this) || null,
     };
@@ -1277,17 +1284,23 @@ export class Sim {
       if (!p.alive) continue;
       fast.set(p.id, [p.id, Math.round(p.x), Math.round(p.y), Math.round(p.hp), Math.round(p.facing * 100) / 100, this.flags(p)]);
       const st = [p.id, p.maxHp, p.cubes, p.bounty, this.glow(p), p.crystals, p.team];
-      slow.set(p.id, [st, st.join(',')]);
+      slow.set(p.id, st);
     }
     const refresh = this.tickN % 40 === 0;
+    let hb = 0; // HEARTBEAT (set by rows): an enemy is close to the viewer but hidden from them
     const rows = (v, memo) => {
       const others = [], statics = [];
+      hb = 0;
       for (const p of this.players.values()) {
         if (p === v || !p.alive) continue;
-        if (Math.abs(p.x - v.x) > VIEW_X || Math.abs(p.y - v.y) > VIEW_Y || !this.canSee(v, p)) continue;
+        if (Math.abs(p.x - v.x) > VIEW_X || Math.abs(p.y - v.y) > VIEW_Y) continue;
+        if (!this.canSee(v, p)) {
+          if (!hb && v.alive && Math.abs(p.x - v.x) < HEARTBEAT_DIST && Math.abs(p.y - v.y) < HEARTBEAT_DIST && this.enemies(v, p) && Math.hypot(p.x - v.x, p.y - v.y) < HEARTBEAT_DIST) hb = 1;
+          continue;
+        }
         others.push(fast.get(p.id));
-        const [st, key] = slow.get(p.id);
-        if (refresh || memo.get(p.id) !== key) { memo.set(p.id, key); statics.push(st); }
+        const st = slow.get(p.id), was = memo.get(p.id);
+        if (refresh || !was || was[1] !== st[1] || was[2] !== st[2] || was[3] !== st[3] || was[4] !== st[4] || was[5] !== st[5] || was[6] !== st[6]) { memo.set(p.id, st); statics.push(st); }
       }
       return [others, statics];
     };
@@ -1299,25 +1312,15 @@ export class Sim {
       return x1 > v.x - VIEW_X - 300 && x0 < v.x + VIEW_X + 300 && y1 > v.y - VIEW_Y - 300 && y0 < v.y + VIEW_Y + 300;
     };
     const local = (v) => ({
-      bn: shots.filter((r, i) => seesPath(v, paths[i])),
-      bd: this.bdead.filter((r) => near(v, r[1], r[2], VIEW_X + 400, VIEW_Y + 400)),
+      bn: shots.length ? ne(shots.filter((r, i) => seesPath(v, paths[i]))) : undefined,
+      bd: this.bdead.length ? ne(this.bdead.filter((r) => near(v, r[1], r[2], VIEW_X + 400, VIEW_Y + 400))) : undefined,
       fl: this.flares.length ? this.flares.filter((f) => near(v, f.x, f.y, VIEW_X + f.r, VIEW_Y + f.r)).map((f) => [f.x, f.y, f.r, r2(f.t)]) : undefined,
-      cu: cubes.filter((r) => near(v, r[1], r[2], VIEW_X + 200, VIEW_Y + 200)),
+      cu: ne(cubes.filter((r) => near(v, r[1], r[2], VIEW_X + 200, VIEW_Y + 200))),
       wd: this.wdrops.length ? this.wdrops.filter((d) => near(v, d.x, d.y, VIEW_X + 200, VIEW_Y + 200)).map((d) => [d.id, Math.round(d.x), Math.round(d.y), weaponIndex(d.w), d.rare]) : undefined,
-      cy: crystals.filter((r) => near(v, r[1], r[2], VIEW_X + 200, VIEW_Y + 200)),
-      fx: this.fx.filter((f) => f[4] === v.id || near(v, f[1], f[2], VIEW_X + 200, VIEW_Y + 200)),
-      pg: this.pings.filter((g) => Math.hypot(g[1] - v.x, g[2] - v.y) < RADAR_RANGE),
+      cy: crystals.length ? ne(crystals.filter((r) => near(v, r[1], r[2], VIEW_X + 200, VIEW_Y + 200))) : undefined,
+      fx: this.fx.length ? ne(this.fx.filter((f) => f[4] === v.id || near(v, f[1], f[2], VIEW_X + 200, VIEW_Y + 200))) : undefined,
+      pg: this.pings.length ? ne(this.pings.filter((g) => Math.hypot(g[1] - v.x, g[2] - v.y) < RADAR_RANGE)) : undefined,
     });
-    // HEARTBEAT: an enemy is close but hidden from you (bush / cloak) -> the client plays a heartbeat
-    const lurking = (v) => {
-      if (!v.alive) return 0;
-      for (const p of this.players.values()) {
-        if (p === v || !p.alive || !this.enemies(v, p)) continue;
-        const d = Math.hypot(p.x - v.x, p.y - v.y);
-        if (d < HEARTBEAT_DIST && !this.canSee(v, p)) return 1;
-      }
-      return 0;
-    };
     for (const v of this.players.values()) {
       if (!v.connected) continue;
       const [pr, px] = rows(v, v.sentStatic ||= new Map());
@@ -1330,7 +1333,7 @@ export class Sim {
           cl: r2(Math.max(0, v.cloak)), bt: v.bounty, lo: r2(v.lowF), bt5: r2(Math.min(v.bushT, 5)), rs: r2(Math.max(0, v.rush)),
           rt: r2(Math.max(0, v.respawnT)), cr: v.crystals, scr: Math.floor(this.mode.score ? this.mode.score(v) : 0),
           k: v.kills, be: v.bountyEarned, sk: v.sessionKills, bb: v.bestBounty, gl: this.glow(v), id: v.id, br: v.brawler,
-          sl: v.slowT > 0 ? r2(v.slowT) : 0, tp: v.tp, tm: v.team, hb: lurking(v),
+          sl: v.slowT > 0 ? r2(v.slowT) : 0, tp: v.tp, tm: v.team, hb,
           ws: v.slot, sw: v.swapT > 0 ? r2(v.swapT) : 0, pz: v.poison ? 1 : 0,
           w2: v.w2 ? [weaponIndex(v.w2.id), r2(v.w2.ammo + v.w2.reloadP), r2(Math.max(0, v.w2.cd))] : null,
         }, v, refresh),
