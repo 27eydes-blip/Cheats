@@ -6,6 +6,7 @@
 import { Sim, newId } from './sim.js';
 import { QUICK_MODES, MODES } from './modes.js';
 import { EVENTS } from '../public/events/index.js';
+import { handleApi, userFromToken, recordMatch } from './accounts.js';
 import {
   BRAWLERS, DT, WORLDS, ZONES, generateArena, generateWorld, zoneBounds, zoneAt, worldId,
 } from '../public/shared.js';
@@ -17,6 +18,7 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    if (url.pathname.startsWith('/api/')) return handleApi(req, env);
     if (url.pathname === '/ws' || url.pathname === '/zone') {
       if (req.headers.get('Upgrade') !== 'websocket') return new Response('Expected WebSocket', { status: 426 });
       let name;
@@ -76,7 +78,8 @@ const sendJSON = (ws, msg) => { try { ws.send(JSON.stringify(msg)); } catch {} }
 
 // ------------------------------------------------------------------ Quick Hunt match
 export class MatchRoom {
-  constructor() {
+  constructor(state, env) {
+    this.env = env;
     this.sim = null;
     this.sockets = null;
     this.endedAt = 0;
@@ -95,7 +98,21 @@ export class MatchRoom {
     this.sim = new Sim({
       map, mode: cfg.mode, seed, lobbyTime: cfg.lobby, fillBots: cfg.bots, forceEvent: cfg.ev, events: cfg.events,
       send: (id, msg) => { const ws = sockets.get(id); if (ws) sendJSON(ws, msg); },
+      hooks: { finished: (rows) => this.recordResults(rows, sockets) },
     });
+  }
+
+  // trophies/XP are applied server-side for every player with an account (guests included)
+  async recordResults(rows, sockets) {
+    if (!this.env.DB) return;
+    for (const r of rows) {
+      if (!r.p.account) continue;
+      try {
+        const out = await recordMatch(this.env.DB, r.p.account, { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, won: r.won });
+        const ws = sockets.get(r.p.id);
+        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress });
+      } catch (e) { console.log('recordMatch failed', e && e.message); }
+    }
   }
 
   async fetch(req) {
@@ -128,6 +145,8 @@ export class MatchRoom {
       return new Response(null, { status: 101, webSocket: client });
     }
     sockets.set(id, server);
+    const token = url.searchParams.get('token');
+    if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { const p = sim.players.get(id); if (u && p) p.account = u.id; }).catch(() => {});
     sendJSON(server, { t: 'welcome', id, room: isRoom ? mname.slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world });
     sim.broadcastLobby();
 
