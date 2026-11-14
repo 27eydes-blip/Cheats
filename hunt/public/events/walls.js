@@ -18,6 +18,7 @@ export default {
   },
   end(sim, p) {
     for (const idx of p.risen || []) sim.setTile(idx, EMPTY);
-    for (const idx of p.sunk || []) if (!sim.tileOccupied(idx)) sim.setTile(idx, WALL);
+    // a sunk wall someone is standing on comes back once they step off (Free Play maps live on)
+    for (const idx of p.sunk || []) if (!sim.tileOccupied(idx)) sim.setTile(idx, WALL); else sim.wallsToRestore.push(idx);
   },
 };

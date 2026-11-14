@@ -36,8 +36,10 @@ export function trophyDelta({ rank, players, won }) {
   if (rank > players / 2) return -2;
   return 0;
 }
+// team modes say won true/false/null (null = draw); FFA modes leave it undefined and rank 1 wins
+export const isWin = ({ rank, won }) => won === true || (won === undefined && rank === 1);
 export function xpFor({ rank, players, kills, bounty, won }) {
-  return 40 + 10 * kills + 2 * bounty + (won || rank === 1 ? 50 : rank <= 3 ? 20 : 0) + (players > 1 ? 0 : 0);
+  return 40 + 10 * kills + 2 * bounty + (isWin({ rank, won }) ? 50 : rank <= 3 ? 20 : 0) + (players > 1 ? 0 : 0);
 }
 // level L needs 100*L more XP than level L-1
 export function levelInfo(xp) {
@@ -89,11 +91,11 @@ export function applyMatch(p, r) {
   const xp = xpFor(r);
   p.xp += xp;
   p.games++;
-  if (r.won || r.rank === 1) p.wins++;
+  if (isWin(r)) p.wins++;
   p.pass.xp = (p.pass.xp || 0) + xp;
   const d = ensureDaily(p, r.day ?? dayIndex()), add = (k, v) => { d.prog[k] = (d.prog[k] || 0) + v; };
   add('play', 1); add('kills', r.kills | 0); add('bounty', r.bounty | 0);
-  if (r.won || r.rank === 1) add('win', 1);
+  if (isWin(r)) add('win', 1);
   if (r.rank <= 3 && r.won !== false) add('top3', 1);
   d.prog.bestKills = Math.max(d.prog.bestKills || 0, r.kills | 0);
   return { progress: p, delta: p.trophies[r.brawler] - before, xp };

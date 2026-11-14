@@ -2,9 +2,11 @@
 // Respects the Sound setting; unlocked on the first user gesture (mobile requirement).
 import { SETTINGS } from './settings.js';
 
-let ac = null, master = null, noiseBuf = null;
+let ac = null, master = null, noiseBuf = null, gestured = false;
 function ctx() {
   if (!ac) {
+    // browsers refuse (and warn) to start audio before the first tap/key: wait for it
+    if (!gestured && !(navigator.userActivation && navigator.userActivation.hasBeenActive)) return null;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     ac = new AC();
@@ -15,7 +17,7 @@ function ctx() {
   }
   return ac;
 }
-export function unlockAudio() { const a = ctx(); if (a && a.state === 'suspended') a.resume(); }
+export function unlockAudio() { gestured = true; const a = ctx(); if (a && a.state !== 'running' && a.state !== 'closed') a.resume().catch(() => {}); }
 export const audioCtx = () => ctx();
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, unlockAudio, { once: false, passive: true });
 
@@ -61,7 +63,7 @@ const SOUNDS = {
   play: (t, v) => { [523, 784, 1047].forEach((f, i) => tone(t + i * 0.05, { type: 'square', f0: f, dur: 0.12, vol: 0.14 * v })); noise(t, { dur: 0.25, vol: 0.12 * v, f0: 2000, f1: 6000 }); },
   reward: (t, v) => [784, 988, 1175, 1568].forEach((f, i) => tone(t + i * 0.07, { type: 'triangle', f0: f, dur: 0.2, vol: 0.2 * v })),
   whoosh: (t, v) => noise(t, { dur: 0.22, vol: 0.12 * v, f0: 600, f1: 2400, q: 1.5 }),
-  slam: (t, v) => { tone(t, { type: 'sine', f0: 110, f1: 40, dur: 0.3, vol: 0.5 * v }); noise(t, { dur: 0.2, vol: 0.3 * v, f0: 900, f1: 120, type: 'lowpass' }); },
+  uislam: (t, v) => { tone(t, { type: 'sine', f0: 110, f1: 40, dur: 0.3, vol: 0.5 * v }); noise(t, { dur: 0.2, vol: 0.3 * v, f0: 900, f1: 120, type: 'lowpass' }); },
   victory: (t, v) => [523, 659, 784, 1047].forEach((f, i) => tone(t + i * 0.13, { type: 'square', f0: f, dur: i === 3 ? 0.45 : 0.14, vol: 0.2 * v })),
   defeat: (t, v) => [392, 330, 262].forEach((f, i) => tone(t + i * 0.18, { type: 'triangle', f0: f, dur: 0.22, vol: 0.2 * v })),
 };
@@ -81,3 +83,9 @@ export function sfx(id, vol = 1) {
 }
 // distance falloff for world sounds
 export const falloff = (d) => Math.max(0, 1 - d / 1100);
+
+// app switched away: silence everything (music + SFX); resume when we're back
+document.addEventListener('visibilitychange', () => {
+  if (!ac) return;
+  if (document.hidden) ac.suspend().catch(() => {}); else if (ac.state !== 'closed') ac.resume().catch(() => {});
+});

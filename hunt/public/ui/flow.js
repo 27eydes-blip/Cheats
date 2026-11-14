@@ -59,9 +59,9 @@ export function createMatchmaking(onCancel) {
       el.hidden = false; el.classList.remove('leave'); void el.offsetWidth; el.classList.add('ui-screen', 'enter');
       if (!st.raf) st.raf = requestAnimationFrame(loop);
     },
-    update({ players, max, startIn, mode, world }) {
+    update({ players, max, startIn, mode, world, bots = true }) {
       st.found = players;
-      $('mmCount').textContent = `${players}/${max} hunters found${startIn != null ? ` · starts in ${Math.ceil(startIn)}` : ''}`;
+      $('mmCount').textContent = `${players}/${max} hunters found${startIn != null ? ` · starts in ${Math.ceil(startIn)}` : !bots && players < 2 ? ' · waiting for another hunter (bots off)' : ''}`;
       if (mode) $('mmMode').textContent = `${mode} · ${worldName(world)}`;
     },
     hide() { el.hidden = true; },
@@ -75,7 +75,7 @@ export function showIntro({ world, modeName, brawler, skin }) {
   el.innerHTML = `<canvas style="position:absolute;left:3%;bottom:6%;width:48vh;height:34vh"></canvas><div class="title vs">VS</div>
     <div class="title entering">ENTERING <b>${esc(worldName(world).toUpperCase())}</b></div><div class="imode">${esc(modeName)}</div>`;
   document.body.appendChild(el);
-  sfx('slam', 0.8);
+  sfx('uislam', 0.8);
   const cv = el.querySelector('canvas'), d = Math.min(2, devicePixelRatio || 1);
   const r = cv.getBoundingClientRect(); cv.width = r.width * d; cv.height = r.height * d;
   const g = cv.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
@@ -101,15 +101,28 @@ export function createResults({ onAgain, onLobby }) {
     const step = (now) => { const k = Math.min(1, (now - t0) / ms); node.textContent = fmt(Math.round(from + (to - from) * (1 - (1 - k) ** 3))); if (k < 1) requestAnimationFrame(step); };
     requestAnimationFrame(step);
   };
+  let pendingProgress = null, shown = false;
+  const applyProgress = (m) => {
+    const L = levelInfo(m.progress.xp), before = levelInfo(Math.max(0, m.progress.xp - m.xp));
+    count($('rsTro'), 0, m.delta, 900, (v) => (v >= 0 ? '+' : '') + v);
+    $('rsLv').textContent = L.level; $('rsXpN').textContent = `+${m.xp} XP`;
+    const bar = $('rsXp');
+    bar.style.transition = 'none'; bar.style.width = `${L.level > before.level ? 0 : Math.round((before.into / before.need) * 100)}%`;
+    requestAnimationFrame(() => { bar.style.transition = 'width 1.2s cubic-bezier(.2,.8,.3,1)'; bar.style.width = `${Math.round((L.into / L.need) * 100)}%`; });
+    if (L.level > before.level) setTimeout(() => { rewardBurst(); }, 600);
+  };
   return {
     el,
+    // a new match is starting: forget any progress left over from the last one
+    reset() { pendingProgress = null; shown = false; },
     show(m, ctx) {
+      shown = true;
       el.hidden = false; el.classList.remove('leave'); void el.offsetWidth; el.classList.add('ui-screen', 'enter');
       const team = m.winTeam !== undefined;
       const rank = $('rsRank');
       rank.textContent = team ? (m.won ? 'WIN!' : m.winTeam === 0 ? 'DRAW' : 'LOSS') : '#' + m.rank;
       rank.classList.remove('slam'); void rank.offsetWidth; rank.classList.add('slam');
-      setTimeout(() => sfx('slam'), 120);
+      setTimeout(() => sfx('uislam'), 120);
       $('rsMsg').textContent = ctx.msg;
       count($('rsBounty'), 0, m.bounty, 900); count($('rsKo'), 0, m.kills, 700);
       $('rsTro').textContent = '…'; $('rsXpN').textContent = '';
@@ -118,16 +131,10 @@ export function createResults({ onAgain, onLobby }) {
       if (mvp) $('mvp').innerHTML = `👑 TOP BOUNTY HUNTER <b>${esc(mvp[0])}</b> ★${mvp[6]}`;
       $('results').innerHTML = ctx.rows;
       if (ctx.won) setTimeout(() => rewardBurst(innerWidth * 0.25, innerHeight * 0.4), 450);
+      if (pendingProgress) { applyProgress(pendingProgress); pendingProgress = null; }
     },
-    progress(m) {
-      const L = levelInfo(m.progress.xp), before = levelInfo(Math.max(0, m.progress.xp - m.xp));
-      count($('rsTro'), 0, m.delta, 900, (v) => (v >= 0 ? '+' : '') + v);
-      $('rsLv').textContent = L.level; $('rsXpN').textContent = `+${m.xp} XP`;
-      const bar = $('rsXp');
-      bar.style.transition = 'none'; bar.style.width = `${L.level > before.level ? 0 : Math.round((before.into / before.need) * 100)}%`;
-      requestAnimationFrame(() => { bar.style.transition = 'width 1.2s cubic-bezier(.2,.8,.3,1)'; bar.style.width = `${Math.round((L.into / L.need) * 100)}%`; });
-      if (L.level > before.level) setTimeout(() => { rewardBurst(); }, 600);
-    },
-    hide() { el.hidden = true; },
+    // the server's trophy/XP result usually arrives BEFORE the results screen is shown
+    progress(m) { if (shown) applyProgress(m); else pendingProgress = m; },
+    hide() { el.hidden = true; shown = false; },
   };
 }

@@ -123,7 +123,14 @@ function paintLayer(L, w, h, seed) {
 }
 
 export class LobbyScene {
-  constructor(canvas) { this.cv = canvas; this.g = canvas.getContext('2d'); this.world = null; this.layers = []; this.parts = []; this.staticDone = false; }
+  constructor(canvas) {
+    this.cv = canvas; this.g = canvas.getContext('2d'); this.world = null; this.layers = []; this.parts = []; this.staticDone = false;
+    this.builds = 0;
+    canvas.__scene = this; // tests
+    // GPU reset: the cached sky/layer/vignette canvases are blank now, so paint them again
+    canvas.addEventListener('contextlost', (e) => e.preventDefault());
+    canvas.addEventListener('contextrestored', () => this.build());
+  }
   // the backdrop is soft, so it renders at 1x (4x fewer pixels than 2x on phones)
   resize(w, h, dpr) { this.w = w; this.h = h; this.dpr = Math.min(this.maxDpr ?? 1, dpr); this.cv.width = Math.round(w * this.dpr); this.cv.height = Math.round(h * this.dpr); this.build(); }
   setWorld(k) { if (this.world !== k) { this.world = k; this.build(); } }
@@ -135,6 +142,7 @@ export class LobbyScene {
     this.sky = this.paintSky(W);
     this.vig = this.paintVignette();
     this.staticDone = false;
+    this.builds++;
   }
   paintVignette() {
     const { w, h } = this, cv = mkCanvas(Math.ceil(w), Math.ceil(h)), g = cv.getContext('2d');

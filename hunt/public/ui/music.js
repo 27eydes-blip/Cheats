@@ -33,6 +33,7 @@ function drum(t, kind) {
   s.connect(f); f.connect(g); g.connect(bus); s.start(t); s.stop(t + 0.2);
 }
 function schedule() {
+  if (nextT < ac.currentTime) nextT = ac.currentTime + 0.02; // timer was throttled (background tab): skip, don't burst
   while (nextT < ac.currentTime + 0.15) {
     const bar = Math.floor(step / 16) % 4, s = step % 16, t = nextT;
     if (s % 2 === 0) voice(t, 'triangle', n(BASS[bar] + (s % 8 === 6 ? 12 : 0)), STEP * 1.6, 0.32, bus);
@@ -69,3 +70,4 @@ export function setMusicVolume() { if (bus && timer) bus.gain.setTargetAtTime(Ma
 export const musicPlaying = () => !!timer;
 let ducked = false;
 export const isDucked = () => ducked;
+export const musicLevel = () => (bus && timer ? bus.gain.value : 0); // tests: current music volume

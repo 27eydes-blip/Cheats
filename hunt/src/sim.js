@@ -18,7 +18,7 @@ export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
 // fields carried across a zone handoff
 const CARRY = ['id', 'name', 'brawler', 'x', 'y', 'mvx', 'mvy', 'hp', 'maxHp', 'cubes', 'ammo', 'reloadP', 'atkCd', 'superC',
   'lastCombat', 'stun', 'cloak', 'reveal', 'facing', 'lastSeq', 'kills', 'bounty', 'bountyEarned', 'bestBounty', 'bushT',
-  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp', 'cos', 'equipped', 'account'];
+  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp', 'cos', 'equipped', 'account', 'secret', 'spikeCd', 'burst'];
 
 export class Sim {
   constructor(o) {
@@ -49,6 +49,7 @@ export class Sim {
     this.crystals = [];
     this.mines = [];
     this.delayed = []; // timed effects (sand-worm eruptions)
+    this.wallsToRestore = []; // Shifting Walls tiles that were occupied when the event ended
     this.crates = new Map(); // idx -> {hp, supply}
     for (const idx of this.tilesInBounds(CRATE, false)) this.crates.set(idx, { hp: CRATE_HP });
     this.tileDirty = [];
@@ -85,7 +86,10 @@ export class Sim {
     const tx0 = Math.floor(b.x0 / TILE), ty0 = Math.floor(b.y0 / TILE), tx1 = Math.floor(b.x1 / TILE), ty1 = Math.floor(b.y1 / TILE);
     for (let y = ty0; y < ty1; y++) for (let x = tx0; x < tx1; x++) {
       if (interior && (x <= 0 || y <= 0 || x >= gw - 1 || y >= this.map.gh - 1)) continue;
+      // never the spiked border walls, nor the tile band on a Free Play zone edge (the neighbour zone shares it)
+      if (interior && (x === tx0 || y === ty0 || x === tx1 - 1 || y === ty1 - 1)) continue;
       const idx = y * gw + x;
+      if (interior && this.map.border && this.map.border[idx]) continue;
       if (this.map.t[idx] === type && !(interior && this.isSafe(x * TILE + 25, y * TILE + 25))) out.push(idx);
     }
     return out;
@@ -158,12 +162,15 @@ export class Sim {
   exportPlayer(p) {
     const s = {};
     for (const k of CARRY) s[k] = p[k];
+    // zones run on their own clocks: carry "seconds since last combat", not this zone's timestamp
+    s.lastCombat = p.lastCombat - this.time;
     if (p.dash) s.dash = { vx: p.dash.vx, vy: p.dash.vy, t: p.dash.t };
     if (p.knock) s.knock = { ...p.knock };
     return s;
   }
   importPlayer(state, name, connected) {
     const p = this.addPlayer({ name: state.name || name, brawler: state.brawler, state, connected });
+    if (typeof state.lastCombat === 'number') p.lastCombat = this.time + state.lastCombat;
     if (state.dash) p.dash = { ...state.dash, hit: new Set() };
     if (state.knock) p.knock = { ...state.knock };
     return p;
@@ -209,22 +216,48 @@ export class Sim {
     if (!p) return;
     if (this.phase === 'lobby' || this.mode.hub) { this.removePlayer(id); if (this.phase === 'lobby') this.broadcastLobby(); return; }
     p.connected = false;
-    p.bot = true; // a bot takes over a disconnected player
+    // a bot takes over a disconnected player until they reconnect, unless bots are switched off
+    if (this.fillBots) p.bot = true;
+    else p.queue.length = 0;
+  }
+
+  // a human's leave became final mid-match (quit, or never came back): their result counts now,
+  // as a loss, and the bot that keeps their slot earns nothing for their account
+  abandon(id) {
+    const p = this.players.get(id);
+    if (!p || p.wasBot || p.left) return null;
+    p.left = true; p.secret = null;
+    if (this.phase !== 'play') return null;
+    return { p, rank: !p.alive && p.rank ? p.rank : this.players.size, players: this.players.size, won: this.mode.teams ? false : undefined };
+  }
+
+  // a dropped player reconnected (same match): hand control back
+  rejoin(id) {
+    const p = this.players.get(id);
+    if (!p) return null;
+    p.connected = true;
+    p.bot = p.wasBot;
+    p.queue.length = 0;
+    p.ai = null;
+    return p;
   }
 
   broadcastLobby() {
     const msg = {
       t: 'lobby', mode: this.modeKey, world: this.map.world,
       players: this.humans().map((p) => [p.name, p.brawler]),
-      startIn: this.lobbyEnd == null ? null : Math.max(0, this.lobbyEnd - this.clock), bots: this.fillBots,
+      startIn: this.lobbyEnd == null || !this.canStart() ? null : Math.max(0, this.lobbyEnd - this.clock), bots: this.fillBots,
     };
     for (const p of this.players.values()) if (p.connected) this.send(p.id, msg);
   }
 
+  // with "fill empty slots with bots" OFF, a match needs two humans: never add bots to fill it
+  canStart() { return this.humans().length >= (this.fillBots ? 1 : 2); }
+
   start() {
     const taken = new Set([...this.players.values()].map((p) => p.name));
     const names = BOT_NAMES.filter((n) => !taken.has(n)).sort(() => Math.random() - 0.5);
-    const target = this.fillBots || this.players.size < 2 ? this.maxPlayers : 0;
+    const target = this.fillBots ? this.maxPlayers : 0;
     while (this.players.size < target) {
       const b = this.addPlayer({ name: names.pop() || 'Bot', brawler: BRAWLER_IDS[Math.floor(Math.random() * BRAWLER_IDS.length)], bot: true });
       if (this.mode.teams) b.team = this.smallerTeam();
@@ -254,7 +287,9 @@ export class Sim {
     if (viewer === t) return true;
     if (viewer.team && viewer.team === t.team) return true; // teammates are always visible
     if (viewer.alive === false) return true;
-    const d = Math.hypot(viewer.x - t.x, viewer.y - t.y);
+    // observer sockets (Free Play border views) send their own position, so it can't be trusted:
+    // they never get the "close enough to reveal" exception for bushes, cloak or armed mines
+    const d = viewer.observer ? Infinity : Math.hypot(viewer.x - t.x, viewer.y - t.y);
     if (this.mods.vision && d > this.mods.vision) return false;
     if (t.cloak > 0 && d > CLOAK_REVEAL_DIST) return false;
     if (t.reveal <= 0 && d > BUSH_REVEAL_DIST && inBush(this.map, t.x, t.y)) return false;
@@ -305,8 +340,7 @@ export class Sim {
       const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy);
       if (d > a.range + this.stats(e).r) continue;
       let da = Math.atan2(dy, dx) - ang;
-      while (da > Math.PI) da -= Math.PI * 2;
-      while (da < -Math.PI) da += Math.PI * 2;
+      da = Math.atan2(Math.sin(da), Math.cos(da));
       if (Math.abs(da) > a.arc / 2 + 0.2) continue;
       if (!lineOfSight(this.map, p.x, p.y, e.x, e.y)) continue;
       this.fx.push(['hit', Math.round(e.x), Math.round(e.y), BRAWLER_IDS.indexOf(p.brawler), e.id]);
@@ -330,6 +364,7 @@ export class Sim {
   trySuper(p, ang) {
     if (!p.alive || p.superC < 1 || p.stun > 0 || p.dash || this.isSafe(p.x, p.y)) return;
     const s = BRAWLERS[p.brawler].super;
+    if (s.kind === 'blink' && !this.nearestEnemy(p, s.range)) return; // nothing to blink to: no charge spent, protection kept
     p.superC = 0;
     p.reveal = 0.8;
     p.spawnProt = 0;
@@ -424,7 +459,11 @@ export class Sim {
     t.alive = false;
     t.hp = 0;
     t.dash = t.knock = t.burst = null;
+    // everyone eliminated on the same tick shares the best of their places (a trade = a tie)
+    if (this.deathTick !== this.tickN) { this.deathTick = this.tickN; this.deathList = []; }
+    this.deathList.push(t);
     t.rank = this.aliveCount() + 1;
+    for (const v of this.deathList) v.rank = t.rank;
     const stolen = t.bounty;
     if (src && src !== t) {
       if (src.remote) this.hooks.credit?.(src.zone, { id: src.id, kill: 1, gain: 1 + stolen });
@@ -542,7 +581,8 @@ export class Sim {
     if (m.t === 'pick') return this.pick(p, m.brawler);
     if (m.t !== 'in') return;
     const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0);
-    const ang = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+    // angles from the client are untrusted: wrap into (-PI, PI] (a huge value would hang the angle loops)
+    const ang = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.atan2(Math.sin(v), Math.cos(v)) : null);
     p.queue.push({ s: m.s | 0, mx: num(m.mx), my: num(m.my), ax: num(m.ax), ay: num(m.ay), f: ang(m.f), u: ang(m.u), fd: typeof m.fd === 'number' ? Math.max(0, Math.min(1, m.fd)) : 1 });
     if (p.queue.length > 12) p.queue.splice(0, p.queue.length - 12);
   }
@@ -582,7 +622,7 @@ export class Sim {
   tick() {
     this.clock += DT;
     if (this.phase === 'lobby') {
-      if (this.lobbyEnd != null && this.clock >= this.lobbyEnd && this.humans().length > 0) this.start();
+      if (this.lobbyEnd != null && this.clock >= this.lobbyEnd && this.canStart()) this.start();
       else if (Math.round(this.clock / DT) % 10 === 0) this.broadcastLobby();
       return;
     }
@@ -592,6 +632,9 @@ export class Sim {
     this.tickN++;
     this.zoneInset = this.mode.poison ? poisonInset(this.time) : 0;
     this.updateEvent();
+    if (this.wallsToRestore.length && this.tickN % 10 === 0) {
+      this.wallsToRestore = this.wallsToRestore.filter((idx) => { if (this.map.t[idx] !== EMPTY || this.tileOccupied(idx)) return this.map.t[idx] === EMPTY; this.setTile(idx, WALL); return false; });
+    }
     this.mode.tick?.(this);
     const mods = this.mods;
 
@@ -726,7 +769,7 @@ export class Sim {
 
   mineVisible(v, m) {
     if (v.id === m.owner || (m.team && v.team === m.team) || v.alive === false || m.arm > 0) return true;
-    return Math.hypot(v.x - m.x, v.y - m.y) < MINE_SEEN;
+    return !v.observer && Math.hypot(v.x - m.x, v.y - m.y) < MINE_SEEN;
   }
 
   updateMines() {
@@ -906,7 +949,7 @@ export class Sim {
       });
     }
     if (this.observers.size && this.tickN % 2 === 0) {
-      for (const [k, o] of this.observers) { const v = { x: o.x, y: o.y, alive: true }; this.send(k, { ...common, p: rows(v), mn: mineRows(v) }); }
+      for (const [k, o] of this.observers) { const v = { x: o.x, y: o.y, alive: true, observer: true }; this.send(k, { ...common, p: rows(v), mn: mineRows(v) }); }
     }
   }
 
@@ -922,11 +965,12 @@ export class Sim {
     this.phase = 'end';
     const ranked = this.mode.rank(this);
     const winTeam = this.mode.teams ? (this.teamPot[1] === this.teamPot[2] ? 0 : this.teamPot[1] > this.teamPot[2] ? 1 : 2) : 0;
-    ranked.forEach((p, i) => { p.rank = i + 1; });
+    const key = this.mode.tieKey ? (p) => this.mode.tieKey(this, p) : null;
+    ranked.forEach((p, i) => { p.rank = i > 0 && key && key(p) === key(ranked[i - 1]) ? ranked[i - 1].rank : i + 1; });
     const score = this.mode.score || (() => 0);
     const results = ranked.map((p) => [p.name, p.brawler, p.rank, p.kills, p.wasBot ? 1 : 0, p.id, p.bountyEarned, Math.floor(score(p)), p.team]);
     const winner = ranked[0];
-    this.hooks.finished?.(ranked.filter((p) => !p.wasBot).map((p) => ({ p, rank: p.rank, players: this.players.size, won: this.mode.teams ? (winTeam === 0 ? null : p.team === winTeam) : undefined })));
+    this.hooks.finished?.(ranked.filter((p) => !p.wasBot && !p.left).map((p) => ({ p, rank: p.rank, players: this.players.size, won: this.mode.teams ? (winTeam === 0 ? null : p.team === winTeam) : undefined })));
     for (const p of this.players.values()) {
       if (p.connected) {
         this.send(p.id, { t: 'end', mode: this.modeKey, rank: p.rank, kills: p.kills, bounty: p.bountyEarned, winner: winner ? winner.name : null, results,

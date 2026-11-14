@@ -51,20 +51,28 @@ export async function userFromToken(db, token) {
 }
 const publicUser = (u) => ({ id: u.id, username: u.username || null, guest: !u.username, progress: normalize(JSON.parse(u.progress || '{}')) });
 
-async function saveProgress(db, id, progress) {
-  await db.prepare('UPDATE users SET progress = ?, updated = ? WHERE id = ?').bind(JSON.stringify(progress), now(), id).run();
+// Read-modify-write of a user's progress with compare-and-swap: the UPDATE only lands if nobody
+// else changed the row since we read it (a match result landing while you buy something, two
+// tabs/devices claiming at once); otherwise re-read and re-apply. fn(raw) -> {progress, ...} | {error}
+export async function mutateProgress(db, id, fn) {
+  for (let i = 0; i < 8; i++) {
+    const u = await db.prepare('SELECT progress FROM users WHERE id = ?').bind(id).first();
+    if (!u) return null;
+    const out = fn(u.progress || '{}');
+    if (!out || out.error) return out;
+    const r = await db.prepare('UPDATE users SET progress = ?, updated = ? WHERE id = ? AND progress = ?').bind(JSON.stringify(out.progress), now(), id, u.progress).run();
+    if (r.meta && r.meta.changes) return out;
+  }
+  throw new Error('Busy, please try again');
 }
 
 // Called by match DOs when a match ends. results: [{token-verified userId, rank, players, kills, bounty, brawler, won}]
 export async function recordMatch(db, userId, result) {
   await ensureSchema(db);
-  const u = await db.prepare('SELECT progress FROM users WHERE id = ?').bind(userId).first();
-  if (!u) return null;
-  const out = applyMatch(JSON.parse(u.progress || '{}'), result);
-  await saveProgress(db, userId, out.progress);
-  return out;
+  return mutateProgress(db, userId, (raw) => applyMatch(JSON.parse(raw), result));
 }
 
+const DUMMY_SALT = 'AAAAAAAAAAAAAAAAAAAAAA==';
 const validName = (n) => typeof n === 'string' && /^[A-Za-z0-9_]{3,16}$/.test(n);
 const validPass = (p) => typeof p === 'string' && p.length >= 6 && p.length <= 128;
 
@@ -90,15 +98,23 @@ export async function handleApi(req, env) {
     if (await db.prepare('SELECT 1 FROM users WHERE username = ?').bind(body.username).first()) return json({ error: 'That username is taken' }, 409);
     const { hash, salt } = await hashPassword(body.password);
     let id;
-    if (me && !me.username) { id = me.id; await db.prepare('UPDATE users SET username = ?, pass_hash = ?, salt = ?, updated = ? WHERE id = ?').bind(body.username, hash, salt, now(), id).run(); }
-    else { id = crypto.randomUUID(); await db.prepare('INSERT INTO users (id, username, pass_hash, salt, progress, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(id, body.username, hash, salt, JSON.stringify(newProgress()), now(), now()).run(); }
+    try {
+      if (me && !me.username) { id = me.id; await db.prepare('UPDATE users SET username = ?, pass_hash = ?, salt = ?, updated = ? WHERE id = ?').bind(body.username, hash, salt, now(), id).run(); }
+      else { id = crypto.randomUUID(); await db.prepare('INSERT INTO users (id, username, pass_hash, salt, progress, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(id, body.username, hash, salt, JSON.stringify(newProgress()), now(), now()).run(); }
+    } catch (e) {
+      // two sign-ups racing for the same name: the UNIQUE constraint catches the second one
+      if (/UNIQUE/i.test(String(e && e.message))) return json({ error: 'That username is taken' }, 409);
+      throw e;
+    }
     const token = await newSession(db, id);
     const u = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first();
     return json({ token, user: publicUser(u) });
   }
   if (path === '/login' && req.method === 'POST') {
     const u = typeof body.username === 'string' ? await db.prepare('SELECT * FROM users WHERE username = ?').bind(body.username).first() : null;
-    const ok = u && u.pass_hash && validPass(body.password) && safeEqual((await hashPassword(body.password, u.salt)).hash, u.pass_hash);
+    // always run the hash, so response time doesn't reveal whether a username exists
+    const h = await hashPassword(typeof body.password === 'string' ? body.password.slice(0, 128) : '', u && u.salt ? u.salt : DUMMY_SALT);
+    const ok = u && u.pass_hash && validPass(body.password) && safeEqual(h.hash, u.pass_hash);
     if (!ok) return json({ error: 'Wrong username or password' }, 401);
     return json({ token: await newSession(db, u.id), user: publicUser(u) });
   }
@@ -109,21 +125,22 @@ export async function handleApi(req, env) {
     return json({ ok: true });
   }
   if (path === '/claim' && req.method === 'POST') { // trophy road
-    const p = normalize(JSON.parse(me.progress || '{}'));
-    const at = body.at | 0, r = roadReward(at);
-    if (!r || totalTrophies(p) < at || p.claimed.includes(at)) return json({ error: 'Not available' }, 400);
-    p.claimed.push(at);
-    if (r.coins) p.coins += r.coins;
-    for (const k of ['title', 'fx', 'skin']) if (r[k] && !p.owned.includes(r[k])) p.owned.push(r[k]);
-    await saveProgress(db, me.id, p);
-    return json({ user: publicUser({ ...me, progress: JSON.stringify(p) }) });
+    const out = await mutateProgress(db, me.id, (raw) => {
+      const p = normalize(JSON.parse(raw));
+      const at = body.at | 0, r = roadReward(at);
+      if (!r || totalTrophies(p) < at || p.claimed.includes(at)) return { error: 'Not available' };
+      p.claimed.push(at);
+      if (r.coins) p.coins += r.coins;
+      for (const k of ['title', 'fx', 'skin']) if (r[k] && !p.owned.includes(r[k])) p.owned.push(r[k]);
+      return { progress: p };
+    });
+    if (!out || out.error) return json({ error: out ? out.error : 'not found' }, 400);
+    return json({ user: publicUser({ ...me, progress: JSON.stringify(out.progress) }) });
   }
   if (path === '/shop' && req.method === 'POST') { // equip / buy with TEST currency / pass claims (see catalog.js)
-    const p = normalize(JSON.parse(me.progress || '{}'));
-    const res = applyPurchase(p, body);
-    if (res.error) return json({ error: res.error }, 400);
-    await saveProgress(db, me.id, res.progress);
-    return json({ user: publicUser({ ...me, progress: JSON.stringify(res.progress) }) });
+    const out = await mutateProgress(db, me.id, (raw) => applyPurchase(normalize(JSON.parse(raw)), body));
+    if (!out || out.error) return json({ error: out ? out.error : 'not found' }, 400);
+    return json({ user: publicUser({ ...me, progress: JSON.stringify(out.progress) }) });
   }
   return json({ error: 'not found' }, 404);
 }

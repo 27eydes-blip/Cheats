@@ -8,7 +8,7 @@ import {
 import { EVENTS } from './events/index.js';
 import { Input } from './input.js';
 import * as R from './render.js';
-import { SETTINGS, setSetting } from './settings.js';
+import { SETTINGS, setSetting, pulse } from './settings.js';
 import * as A from './account.js';
 import { createLobby } from './ui/lobby.js';
 import { createMatchmaking, createResults, showIntro } from './ui/flow.js';
@@ -16,6 +16,8 @@ import './ui/fx.js';
 import { levelInfo } from './progression.js';
 import { TITLES } from './catalog.js';
 import { sfx, falloff } from './audio.js';
+import { setMusicVolume } from './ui/music.js';
+import { pickAimTarget } from './aim.js';
 import { WallArt } from './art/walls.js';
 import { artFor } from './art/themes.js';
 import { SPAWNS, spawnHasCover, SPAWN_COVER_DIST, blocksMove, TILE as TILE_ } from './shared.js';
@@ -30,6 +32,8 @@ const art = new WallArt();
 const resetArt = () => { art.reset(); R.resetGroundCache(G?.map); R.resetGroundCache(menuMap); };
 canvas.addEventListener('contextlost', (e) => { e.preventDefault(); resetArt(); });
 canvas.addEventListener('contextrestored', resetArt);
+// a GPU reset usually hits every canvas: the lobby backdrop rebuilds its own caches on its own event
+document.getElementById('lobbyBg')?.addEventListener('contextrestored', resetArt);
 window.__huntArt = { art, artFor };
 const TICK_MS = 1000 / TICK_RATE;
 const INTERP_MS = 110;
@@ -55,19 +59,29 @@ function adaptResolution(dtMs) {
   if (slowFor > 1500 && dprStep < DPR_STEPS.length - 1) { dprStep++; slowFor = 0; resize(); }
   else if (fastFor > 8000 && dprStep > 0) { dprStep--; fastFor = 0; resize(); }
 }
+// notch / home-bar insets, for things drawn on the canvas (CSS elements use env() directly)
+const saProbe = document.createElement('div');
+saProbe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+document.body.appendChild(saProbe);
+let SA = { t: 0, r: 0, b: 0, l: 0 };
+function readSafeArea() {
+  const cs = getComputedStyle(saProbe), n = (v) => parseFloat(v) || 0;
+  SA = { t: n(cs.paddingTop), r: n(cs.paddingRight), b: n(cs.paddingBottom), l: n(cs.paddingLeft) };
+}
 function resize() {
   DPR = SETTINGS.lowGfx ? 1 : Math.min(DPR_STEPS[dprStep], devicePixelRatio || 1);
   W = innerWidth; H = innerHeight;
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
-  input.layout(W, H);
+  readSafeArea();
+  input.layout(W, H, SA);
 }
 addEventListener('resize', resize);
 resize();
 
 // ------------------------------------------------------------------ prefs, stats, lobby
-const prefs = (() => { try { return JSON.parse(localStorage.getItem('hunt') || '{}'); } catch { return {}; } })();
+const prefs = (() => { try { const v = JSON.parse(localStorage.getItem('hunt') || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch { return {}; } })();
 const savePrefs = () => { try { localStorage.setItem('hunt', JSON.stringify(prefs)); } catch {} };
-prefs.stats ||= {}; // keyed by numeric world id (stable: WORLDS is append-only)
+if (!prefs.stats || typeof prefs.stats !== 'object') prefs.stats = {}; // keyed by numeric world id (stable: WORLDS is append-only)
 let selBrawler = BRAWLERS[prefs.brawler] ? prefs.brawler : 'volt';
 $('name').value = prefs.name || '';
 $('room').value = prefs.room || '';
@@ -114,12 +128,14 @@ const G = {
 
 function resetMatchState() {
   Object.assign(G, {
-    myId: 0, map: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
+    myId: 0, secret: null, matchName: null, map: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
     localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: [], rings: [], texts: [], slashes: [], worms: [], lastTp: 0, flash: {}, shake: 0, hurt: 0,
     spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, pings: [], handoff: null, online: {}, deadMsg: null, lastSk: 0,
   });
   $('feed').innerHTML = '';
   $('hudAgain').hidden = true;
+  UI.res?.reset?.();
+  bulletAng.clear();
 }
 
 // ------------------------------------------------------------------ connections
@@ -129,18 +145,80 @@ function openConn(key, path, o = {}) {
   const c = { key, ws, zone: o.zone || null, primary: !!o.primary, snaps: [], off: null, fxN: 0, ev: null, last: null, open: false };
   G.conns.set(key, c);
   ws.onopen = () => { c.open = true; if (G.handoff && G.handoff.zone === c.zone) claim(); };
-  ws.onmessage = (e) => { if (G.conns.get(key) === c) onMsg(c, JSON.parse(e.data)); };
+  ws.onmessage = (e) => { if (G.conns.get(key) === c) { c.lastMsg = performance.now(); onMsg(c, JSON.parse(e.data)); } };
   ws.onclose = () => {
     if (G.conns.get(key) !== c) return;
     G.conns.delete(key);
-    if ((c.primary || (G.handoff && G.handoff.zone === c.zone)) && G.phase !== 'menu' && G.phase !== 'end') { toast('Connection lost'); toMenu(); }
+    if (c.rejoin && !c.welcomed) return; // a reconnect attempt failed: reconnect() tries again
+    if ((c.primary || (G.handoff && G.handoff.zone === c.zone)) && G.phase !== 'menu' && G.phase !== 'end') lostConnection(c);
   };
   return c;
 }
-function closeAll() { const cs = [...G.conns.values()]; G.conns.clear(); for (const c of cs) { try { c.ws.close(); } catch {} } }
+// quitting on purpose: tell the server so it doesn't hold our spot for a reconnect
+function closeAll() {
+  const cs = [...G.conns.values()]; G.conns.clear();
+  for (const c of cs) { try { if (c.open) c.ws.send('{"t":"bye"}'); c.ws.close(); } catch {} }
+  stopReconnect();
+}
+
+// ------------------------------------------------------------------ reconnect (lost signal, app switch)
+const RECONNECT_MS = 22000; // a bit less than the server's grace period
+let rc = null;
+function stopReconnect() { if (rc) { clearTimeout(rc.timer); rc = null; } }
+function lostConnection(c) {
+  // still in the matchmaking lobby: just queue up again
+  if (G.phase === 'waiting' && G.kind === 'quick') { startQuick(G.opts); return; }
+  if (!G.secret || !G.myId) { toast('Connection lost'); toMenu(); return; }
+  if (rc) return;
+  rc = { t0: Date.now(), zone: c.zone, tries: 0, timer: 0 };
+  input.reset();
+  reconnectTry();
+}
+function reconnectTry() {
+  if (!rc) return;
+  if (Date.now() - rc.t0 > RECONNECT_MS) { rejoinFailed(); return; }
+  toast('Reconnecting…', 3000);
+  rc.tries++;
+  const q = new URLSearchParams({ rejoin: String(G.myId), secret: G.secret });
+  let c;
+  if (G.kind === 'free') {
+    G.handoff = null; // an interrupted zone transfer can't be resumed; the zone we lost tells us if we're still there
+    q.set('slot', rc.zone);
+    c = openConn(rc.zone, '/zone?' + q, { zone: rc.zone, primary: true });
+  } else {
+    q.set('match', G.matchName || '');
+    c = openConn('main', '/ws?' + q, { primary: true });
+  }
+  c.rejoin = true;
+  rc.timer = setTimeout(() => { if (rc && !c.welcomed) { G.conns.delete(c.key); try { c.ws.close(); } catch {} reconnectTry(); } }, Math.min(4000, 1000 + rc.tries * 700));
+}
+function rejoinFailed() {
+  const kind = G.kind;
+  stopReconnect();
+  if (kind === 'free') { toast('Connection lost — rejoining Free Play'); startFree(); } else { toast('Connection lost — the match is over'); toMenu(); }
+}
 const primary = () => { for (const c of G.conns.values()) if (c.primary) return c; return null; };
-function send(o) { const c = primary(); if (c && c.open && !G.handoff) c.ws.send(JSON.stringify(o)); }
-setInterval(() => { for (const c of G.conns.values()) if (c.open) c.ws.send(JSON.stringify({ t: 'ping', c: performance.now() })); }, 2000);
+const isOpen = (c) => c && c.open && c.ws.readyState === 1;
+function send(o) { const c = primary(); if (isOpen(c) && !G.handoff) c.ws.send(JSON.stringify(o)); }
+setInterval(() => { for (const c of G.conns.values()) if (isOpen(c)) c.ws.send(JSON.stringify({ t: 'ping', c: performance.now() })); }, 2000);
+// A socket on a phone that loses signal often never fires onclose. The server sends several
+// messages a second, so a few seconds of silence means the connection is gone: reconnect.
+const SILENT_MS = 3500;
+setInterval(() => {
+  if (G.phase === 'menu' || G.phase === 'end' || rc) return;
+  const c = primary();
+  if (!c || !c.open || !c.lastMsg || G.handoff) return;
+  if (performance.now() - c.lastMsg < SILENT_MS) return;
+  G.conns.delete(c.key);
+  try { c.ws.close(); } catch {}
+  lostConnection(c);
+}, 500);
+// coming back to the app: timers were frozen, so give the socket a moment to prove it's alive
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  const now = performance.now();
+  for (const c of G.conns.values()) if (c.lastMsg) c.lastMsg = Math.max(c.lastMsg, now - SILENT_MS + 1500);
+});
 
 function readForm() {
   const name = $('name').value.trim().slice(0, 14) || 'Hunter';
@@ -179,9 +257,13 @@ function startFree() {
   G.phase = 'play';
   input.enabled = true; input.reset();
   show(null);
+  const myConn = G.conns.get(slot);
+  setTimeout(() => { if (G.kind === 'free' && G.phase === 'play' && !G.me && !rc && G.conns.get(slot) === myConn) { toast('Could not reach Free Play — try again'); toMenu(); } }, 12000);
 }
 
+let retryTimer = 0;
 function toMenu() {
+  clearTimeout(retryTimer);
   G.phase = 'menu';
   closeAll();
   input.enabled = false; input.reset();
@@ -200,7 +282,7 @@ function manageZones() {
     if (!c && d < 950) openConn(z.slot, `/zone?slot=${z.slot}&x=${Math.round(p.x)}&y=${Math.round(p.y)}`, { zone: z.slot });
     else if (c && !keep && d > 1300) { G.conns.delete(z.slot); try { c.ws.close(); } catch {} }
   }
-  if (G.ticks % 5 === 0) for (const c of G.conns.values()) if (!c.primary && c.open) c.ws.send(JSON.stringify({ t: 'pos', x: Math.round(p.x), y: Math.round(p.y) }));
+  if (G.ticks % 5 === 0) for (const c of G.conns.values()) if (!c.primary && isOpen(c)) c.ws.send(JSON.stringify({ t: 'pos', x: Math.round(p.x), y: Math.round(p.y) }));
 }
 
 function claim() {
@@ -219,19 +301,34 @@ function onMsg(c, m) {
   switch (m.t) {
     case 'welcome':
       if (m.observer) break;
+      if (m.secret) G.secret = m.secret;
+      if (m.match) G.matchName = m.match;
+      if (m.rejoin) {
+        c.welcomed = true;
+        stopReconnect(); toast('Reconnected!', 1500);
+        G.pending = []; G.err = { x: 0, y: 0 };
+        if (G.kind === 'free') { G.myId = m.id; break; }
+      }
       G.myId = m.id; G.retries = 0; G.botsOn = m.bots;
       if (m.mode) G.modeKey = m.mode;
       if (m.world) G.world = m.world;
       if (G.phase === 'waiting') UI.mm.update({ players: 1, max: m.mode === 'squad' ? 6 : 10, mode: MODE_INFO[m.mode]?.name, world: m.world });
       break;
     case 'lobby':
-      UI.mm.update({ players: m.players.length, max: m.mode === 'squad' ? 6 : 10, startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world });
+      UI.mm.update({ players: m.players.length, max: m.mode === 'squad' ? 6 : 10, startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world, bots: m.bots !== false });
       break;
     case 'retry':
-      if (!G.room && G.retries++ < 5) setTimeout(() => startQuick({ ...G.opts, skip: m.match }), 150);
+      G.conns.delete(c.key); // the server closes this socket next: that's expected, not a lost connection
+      if (!G.room && G.retries++ < 5) { clearTimeout(retryTimer); retryTimer = setTimeout(() => { if (G.phase === 'waiting') startQuick({ ...G.opts, skip: m.match }); }, 150); }
       else { toast(m.reason + (G.room ? ' — try again when it ends' : '')); toMenu(); }
       break;
     case 'start':
+      if (m.rejoin && G.map && G.phase !== 'menu') {
+        // back in the same match after a reconnect: keep our map, HUD and effects
+        G.myId = m.you;
+        if (G.phase !== 'dead') { G.phase = 'play'; input.enabled = true; input.reset(); show(null); }
+        break;
+      }
       G.myId = m.you; G.modeKey = m.mode; G.world = m.world;
       G.map = generateArena(m.seed, m.world);
       if (m.open) for (let y = 1; y < G.map.gh - 1; y++) for (let x = 1; x < G.map.gw - 1; x++) G.map.t[y * G.map.gw + x] = 0;
@@ -247,9 +344,10 @@ function onMsg(c, m) {
     case 'st':
       for (const [idx, type] of m.td) applyTile(idx, type);
       for (const [idx, hp] of m.ch) G.crateHp.set(idx, hp);
-      if (m.ev) c.ev = { ...m.ev, at: performance.now() };
+      if (m.ev && EVENTS[m.ev.id]) c.ev = { ...m.ev, at: performance.now() };
       break;
     case 'ev':
+      if (m.id && !EVENTS[m.id]) break; // unknown event (client older than the server): ignore it
       c.ev = m.id ? { ...m, at: performance.now() } : null;
       if (c.primary && m.id) sfx(m.ph === 'warn' ? 'event_warn' : 'event_on', 0.8);
       if (c.primary && m.id && m.ph === 'on') { const def = EVENTS[m.id]; showBanner(def.name, def.desc, def.color, 2500); }
@@ -283,6 +381,7 @@ function onMsg(c, m) {
       G.handoff = null;
       break;
     case 'claimfail': toast('Zone transfer failed — rejoining'); startFree(); break;
+    case 'rejoinfail': if (rc) { G.conns.delete(c.key); rejoinFailed(); } break;
     case 'online': G.online = m.zones; break;
     case 'progress': {
       if (A.ACC.user) A.setUser({ ...A.ACC.user, progress: m.progress });
@@ -370,6 +469,7 @@ function onSnap(c, m) {
   for (const [idx, hp] of m.ch) G.crateHp.set(idx, hp);
   c.last = m;
   if (m.ev && c.ev && c.ev.id === m.ev[0]) { c.ev.ph = m.ev[1]; c.ev.tl = m.ev[2]; }
+  if (G.pings.length > 200) G.pings = G.pings.filter((p) => now - p.t0 < 3000);
   for (const [id, x, y, bt] of m.pg) G.pings.push({ id, x, y, bt, t0: now, target: !!(m.md && m.md.tg === id) });
   if (c.primary) G.mates = m.mates || [];
   if (c.primary && m.me) reconcile(m);
@@ -378,7 +478,7 @@ function onSnap(c, m) {
 function primaryMods() {
   const c = primary();
   const e = c && c.ev;
-  return e && e.ph === 'on' && EVENTS[e.id].mods ? EVENTS[e.id].mods(e.p) : {};
+  return e && e.ph === 'on' && EVENTS[e.id]?.mods ? EVENTS[e.id].mods(e.p) : {};
 }
 
 function reconcile(m) {
@@ -417,8 +517,7 @@ function sampleConn(c, out) {
     const ea = a.p.get(id) || e;
     const r = G.roster[id] || ['?', 'volt'];
     let da = e[5] - ea[5];
-    while (da > Math.PI) da -= Math.PI * 2;
-    while (da < -Math.PI) da += Math.PI * 2;
+    da = Math.atan2(Math.sin(da), Math.cos(da)); // never loop on a bad value
     const x = ea[1] + (e[1] - ea[1]) * f, y = ea[2] + (e[2] - ea[2]) * f;
     const prev = out.others.get(id);
     if (prev && G.kind === 'free' && zoneAt(prev.x, prev.y) === prev.zone) continue; // the owning zone's copy wins
@@ -588,13 +687,8 @@ function autoAngle(kind) {
   const B = BRAWLERS[G.brawler];
   const me = G.pred;
   const reach = kind === 'super' ? (B.super.dist || B.super.radius || 600) + 150 : B.attack.range * 1.15;
-  let best = null, bd = Infinity;
-  for (const o of G.view.others) {
-    if (o.fl & 16 || (o.team && o.team === G.me?.tm)) continue;
-    const d = Math.hypot(o.x - me.x, o.y - me.y);
-    if (d < bd) { bd = d; best = o; }
-  }
-  if (best && bd < Math.max(reach, 700)) return Math.atan2(best.y - me.y, best.x - me.x);
+  const best = pickAimTarget(G.map, me, G.view.others, { reach, team: G.me?.tm, super: kind === 'super', free: G.kind === 'free' });
+  if (best) return Math.atan2(best.y - me.y, best.x - me.x);
   return G.facing;
 }
 
@@ -646,6 +740,10 @@ function clientTick() {
 // ------------------------------------------------------------------ render
 let lastT = performance.now();
 function frame(now) {
+  requestAnimationFrame(frame); // first, so one bad frame can't freeze the game for good
+  try { frameBody(now); } catch (e) { console.warn('frame error', e); }
+}
+function frameBody(now) {
   const dt = Math.min(0.1, (now - lastT) / 1000);
   lastT = now;
   if (G.phase === 'play' || G.phase === 'dead' || G.phase === 'end') {
@@ -657,11 +755,13 @@ function frame(now) {
     if (G.map) updateLocalBullets(dt);
     updateEffects(dt);
     if (G.me && G.map) render(now / 1000);
+    else if (G.phase === 'play') { // joining (Free Play) or reconnecting before the first snapshot: no stale frame
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.fillStyle = '#2b1d55'; ctx.fillRect(0, 0, W, H);
+      R.outlinedText(ctx, 'Connecting…', W / 2, H / 2, 28, '#fff');
+    }
     adaptResolution(dt * 1000);
     updateHud(now);
   } else if (G.phase === 'mapview') drawMapView(now / 1000);
-
-  requestAnimationFrame(frame);
 }
 
 function render(t) {
@@ -689,7 +789,7 @@ function render(t) {
 
   R.drawGround(ctx, G.map, x0, y0, x1, y1, t, s * DPR);
   const helpers = R.eventHelpers(ctx, G.map, view);
-  const evs = [...G.conns.values()].map((c) => c.ev).filter(Boolean);
+  const evs = [...G.conns.values()].map((c) => c.ev).filter((e) => e && EVENTS[e.id]);
   for (const e of evs) if (EVENTS[e.id].layer === 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
 
   if (meAlive && G.phase === 'play') {
@@ -718,7 +818,7 @@ function render(t) {
   for (const p of list) R.drawAura(ctx, p, t);
   for (const p of list) {
     let alpha = 1;
-    if (p.fl & 4) alpha = p.me ? 0.45 + Math.sin(t * 8) * 0.08 : 0.35;
+    if (p.fl & 4) alpha = p.me ? 0.37 + pulse(t, 8, 0.5) * 0.16 : 0.35;
     else if (p.fl & 1) alpha = p.me ? 0.7 : 0.75;
     if (G.flash['dash' + p.id] > 0) {
       for (let i = 1; i <= 3; i++) R.drawBrawler(ctx, p.brawler, p.x - Math.cos(p.facing) * i * 22, p.y - Math.sin(p.facing) * i * 22, p.facing, t, { alpha: 0.18 * (4 - i), size: p.size });
@@ -780,7 +880,7 @@ function render(t) {
   // ---- screen space
   if (!SETTINGS.lowGfx) R.drawGrade(ctx, G.map, cam, W, H);
   const pe = P?.ev;
-  if (pe && EVENTS[pe.id].drawScreen) EVENTS[pe.id].drawScreen(ctx, pe.p, pe.ph, t, W, H, s);
+  if (pe && EVENTS[pe.id]?.drawScreen) EVENTS[pe.id].drawScreen(ctx, pe.p, pe.ph, t, W, H, s);
   if (G.hurt > 0) {
     const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.7);
     g.addColorStop(0, 'rgba(255,40,60,0)'); g.addColorStop(1, `rgba(255,40,60,${G.hurt})`);
@@ -806,7 +906,7 @@ function render(t) {
   }
   const radarR = Math.min(64, H * 0.15);
   const now = performance.now();
-  R.drawRadar(ctx, 12 + radarR, 36 + radarR, radarR, { x: cam.x, y: cam.y },
+  R.drawRadar(ctx, 12 + SA.l + radarR, 36 + SA.t + radarR, radarR, { x: cam.x, y: cam.y },
     [...G.pings.map((p) => ({ ...p, age: (now - p.t0) / 1000 })), ...(G.mates || []).map(([id, x, y]) => ({ id, x, y, bt: 0, age: 0, mate: true }))],
     { poison: P?.last?.z ? { inset: P.last.z, size: ARENA_SIZE } : null, hub: G.kind === 'free', zones: G.kind === 'free', range: 1600 }, t);
   if (G.phase === 'play' && meAlive) R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
@@ -971,7 +1071,7 @@ for (const [id, key] of [['setFlash', 'reduceFlash'], ['setLow', 'lowGfx'], ['se
   $(id).checked = !!SETTINGS[key];
   $(id).onchange = () => { setSetting(key, $(id).checked); applySettings(); };
 }
-function applySettings() { document.body.classList.toggle('reduce-flash', SETTINGS.reduceFlash); resize(); }
+function applySettings() { document.body.classList.toggle('reduce-flash', SETTINGS.reduceFlash); setMusicVolume(); resize(); }
 applySettings();
 const playAgain = () => { goFullscreen(); startQuick(G.opts.world ? { ...G.opts, room: 'T' + Math.floor(Math.random() * 1e8) } : { mode: G.opts.mode, room: G.opts.room }); };
 $('hudAgain').onclick = playAgain;
