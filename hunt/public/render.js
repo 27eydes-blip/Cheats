@@ -127,7 +127,7 @@ THEMES.ashlands = { // volcanic black rock, glowing cracks, lava rivers
   borderTop: '#2e282f', borderSide: '#151116', bush: '#5a3a2a', bushHi: '#b0602a', water: '#ff5a1f', waterHi: '#ffd23f', void: '#140c10',
   road: '#5b4c47', roadEdge: '#2a2226', lava: true, glow: 'rgba(255,90,20,0.35)',
   deco: (ctx, x, y, h) => {
-    if ((h & 7) === 1) { crack(ctx, x, y, h, 'rgba(40,10,10,0.8)', 5); crack(ctx, x, y, h, '#ff6a1f', 2); } // glowing crack
+    if ((h & 31) === 1) { crack(ctx, x, y, h, 'rgba(40,10,10,0.8)', 5); crack(ctx, x, y, h, '#ff6a1f', 2); } // glowing crack
     else if ((h & 31) === 2) { ctx.fillStyle = 'rgba(120,110,115,0.5)'; ctx.beginPath(); ctx.ellipse(x + 25, y + 30, 14, 6, 0, 0, 7); ctx.fill(); } // ash pile
   },
 };
@@ -279,6 +279,7 @@ function visRange(map, x0, y0, x1, y1) {
 // Ground is static, so it's painted once into chunk canvases (CHUNK x CHUNK tiles) at the current
 // render resolution and blitted each frame. Water ripples and the hub stay live.
 const CHUNK = 8;
+export const MAX_CHUNKS = 48; // ~2.5 screens of ground on a big iPad
 export function resetGroundCache(map) { if (map) map._ground = null; }
 export function drawGround(ctx, map, x0, y0, x1, y1, t, res = 1) {
   const th0 = theme(worldKeyAt(map, (x0 + x1) / 2, (y0 + y1) / 2));
@@ -289,17 +290,25 @@ export function drawGround(ctx, map, x0, y0, x1, y1, t, res = 1) {
   const G = map._ground, cs = CHUNK * TILE;
   const cx0 = Math.max(0, Math.floor(x0 / cs)), cy0 = Math.max(0, Math.floor(y0 / cs));
   const cx1 = Math.min(Math.ceil(map.gw / CHUNK) - 1, Math.floor(x1 / cs)), cy1 = Math.min(Math.ceil(map.gh / CHUNK) - 1, Math.floor(y1 / cs));
+  G.frame = (G.frame || 0) + 1;
   for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
     let c = G.chunks.get(cy * 1000 + cx);
+    if (c) c.used = G.frame;
     if (!c) {
       const px = Math.ceil(cs * res);
       c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(px, px) : Object.assign(document.createElement('canvas'), { width: px, height: px });
       const g = c.getContext('2d');
       g.scale(res, res); g.translate(-cx * cs, -cy * cs);
       paintGround(g, map, cx * cs, cy * cs, cx * cs + cs - 1, cy * cs + cs - 1);
+      c.used = G.frame;
       G.chunks.set(cy * 1000 + cx, c);
     }
     ctx.drawImage(c, cx * cs, cy * cs, cs, cs);
+  }
+  // only keep chunks near the camera: a 20000px world would otherwise fill the phone's memory
+  if (G.chunks.size > MAX_CHUNKS) {
+    const old = [...G.chunks].sort((a, b) => a[1].used - b[1].used);
+    for (let i = 0; i < old.length - MAX_CHUNKS; i++) G.chunks.delete(old[i][0]);
   }
   drawGroundLive(ctx, map, x0, y0, x1, y1, t);
 }
@@ -317,23 +326,13 @@ function paintGround(ctx, map, x0, y0, x1, y1) {
     const h = hash(x, y);
     const th = theme(worldKeyAt(map, x * TILE, y * TILE));
     const X = x * TILE, Y = y * TILE;
-    if (map.mud && at(map.mud, x, y)) { // sinking mud: dark sludge with lighter swirls
-      ctx.fillStyle = th.mud || '#3a2e20'; ctx.fillRect(X, Y, TILE + 0.5, TILE + 0.5);
+    if (map.mud && at(map.mud, x, y)) { // sinking mud: rounded blobs of dark sludge with lighter swirls
+      ctx.fillStyle = th.mud || '#3a2e20'; ctx.beginPath(); ctx.arc(X + 25, Y + 25, 36, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = th.mudHi || '#5a4630'; ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.arc(X + 18 + (h % 14), Y + 20 + ((h >>> 4) % 12), 6 + (h % 4), 0.4, 4.6); ctx.stroke(); ctx.lineWidth = 2.5;
       continue;
     }
-    if (map.road && at(map.road, x, y)) { // roads: paved paths (plank boardwalk in the marsh)
-      ctx.fillStyle = th.road || '#c9b07a'; ctx.fillRect(X, Y, TILE + 0.5, TILE + 0.5);
-      ctx.fillStyle = th.roadEdge || 'rgba(27,16,51,0.35)';
-      if (!at(map.road, x, y - 1)) ctx.fillRect(X, Y, TILE, 4);
-      if (!at(map.road, x, y + 1)) ctx.fillRect(X, Y + TILE - 4, TILE, 4);
-      if (!at(map.road, x - 1, y)) ctx.fillRect(X, Y, 4, TILE);
-      if (!at(map.road, x + 1, y)) ctx.fillRect(X + TILE - 4, Y, 4, TILE);
-      if (th.boards) { ctx.fillStyle = 'rgba(40,25,10,0.45)'; for (let k = 8; k < TILE; k += 12) ctx.fillRect(X, Y + k, TILE, 2); }
-      else if ((h & 7) === 0) { ctx.fillStyle = 'rgba(27,16,51,0.18)'; ctx.fillRect(X + 10 + (h % 20), Y + 14, 12, 8); }
-      continue;
-    }
+    if (map.road && at(map.road, x, y) && map.roads) continue; // roads are painted as smooth strokes below
     if (th.deco) th.deco(ctx, X, Y, h, t);
     if (map.high && at(map.high, x, y)) { // HIGH GROUND: raised, lighter, with a cliff edge
       ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.fillRect(X, Y, TILE + 0.5, TILE + 0.5);
@@ -349,6 +348,26 @@ function paintGround(ctx, map, x0, y0, x1, y1) {
     ctx.strokeStyle = th.tuft;
     ctx.beginPath(); ctx.moveTo(px - 4, py); ctx.lineTo(px - 6, py - 7); ctx.moveTo(px, py); ctx.lineTo(px, py - 9); ctx.moveTo(px + 4, py); ctx.lineTo(px + 6, py - 7); ctx.stroke();
   }
+  paintRoads(ctx, map, x0, y0, x1, y1);
+}
+// roads: smooth thick strokes along the generator's centre lines (edge, fill, then planks/paving)
+function paintRoads(ctx, map, x0, y0, x1, y1) {
+  if (!map.roads) return;
+  const pad = 200;
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  for (const pass of [0, 1, 2]) for (const pts of map.roads) {
+    for (let i = 1; i < pts.length; i++) {
+      const ax = pts[i - 1][0] * TILE, ay = pts[i - 1][1] * TILE, bx = pts[i][0] * TILE, by = pts[i][1] * TILE;
+      if (Math.max(ax, bx) < x0 - pad || Math.min(ax, bx) > x1 + pad || Math.max(ay, by) < y0 - pad || Math.min(ay, by) > y1 + pad) continue;
+      const th = theme(worldKeyAt(map, (ax + bx) / 2, (ay + by) / 2));
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by);
+      if (pass === 0) { ctx.lineWidth = 150; ctx.strokeStyle = th.roadEdge || 'rgba(27,16,51,0.35)'; }
+      else if (pass === 1) { ctx.lineWidth = 132; ctx.strokeStyle = th.road || '#c9b07a'; }
+      else { ctx.lineWidth = 132; ctx.setLineDash(th.boards ? [3, 11] : [26, 70]); ctx.strokeStyle = th.boards ? 'rgba(40,25,10,0.4)' : 'rgba(255,255,255,0.12)'; ctx.lineCap = 'butt'; }
+      ctx.stroke(); ctx.setLineDash([]); ctx.lineCap = 'round';
+    }
+  }
+  ctx.restore();
 }
 function drawGroundLive(ctx, map, x0, y0, x1, y1, t) {
   const [tx0, ty0, tx1, ty1] = visRange(map, x0, y0, x1, y1);
@@ -432,7 +451,7 @@ export function drawBlocks(ctx, map, crateHp, x0, y0, x1, y1) {
   }
 }
 
-export function drawBushes(ctx, map, x0, y0, x1, y1, me, t) {
+export function drawBushes(ctx, map, x0, y0, x1, y1, me, t, night = 0) {
   const [tx0, ty0, tx1, ty1] = visRange(map, x0, y0, x1, y1);
   const list = [];
   for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) if (map.t[ty * map.gw + tx] === BUSH) list.push([tx, ty]);
@@ -452,6 +471,10 @@ export function drawBushes(ctx, map, x0, y0, x1, y1, me, t) {
         ctx.arc(cx - 8, cy - 18, 9, 0, Math.PI * 2);
         ctx.moveTo(cx + 18, cy - 4); ctx.arc(cx + 12, cy - 4, 6, 0, Math.PI * 2);
         ctx.fillStyle = th.bushHi; ctx.fill();
+        if (night > 0) { // bushes get darker (and better to hide in) at night
+          ctx.beginPath(); ctx.arc(cx + sway, cy - 8, 30 + (h & 3), 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(8,10,30,${0.5 * night})`; ctx.fill();
+        }
       }
     }
   }
@@ -617,7 +640,14 @@ export function drawBrawler(ctx, id, x, y, facing, t, o = {}) {
 
 // BOUNTY glow / hunted target aura / spawn bubble / speed rush lines (drawn under the brawler)
 export function drawAura(ctx, p, t) {
-  const g = (p.glow || 0) / 100;
+  const g = Math.min(1.4, ((p.glow || 0) / 100) * (p.glowBoost || 1)); // bounties glow brighter at night
+  if (p.marked) { // MARKED: the top bounty holder gets a steady red aura
+    const r = 62 + pulse(t, 2.2, 0.5) * 8;
+    const grad = ctx.createRadialGradient(p.x, p.y, 16, p.x, p.y, r);
+    grad.addColorStop(0, 'rgba(255,30,60,0.55)'); grad.addColorStop(0.7, 'rgba(200,0,40,0.28)'); grad.addColorStop(1, 'rgba(200,0,40,0)');
+    ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x, p.y + 4, 36 * (p.size || 1), 0, Math.PI * 2); ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,40,70,0.9)'; ctx.stroke();
+  }
   if (p.fl & 32) { // hunted target
     ctx.beginPath(); ctx.arc(p.x, p.y, 42 + pulse(t) * 8, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,40,70,0.28)'; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = '#ff2846'; ctx.stroke();
@@ -865,7 +895,18 @@ export function drawStatus(ctx, p, isMe, t, side) {
     outlinedText(ctx, String(p.bt), bx, y + 1, 11, INK, '#ffd23f');
   }
   if (p.cr > 0) { drawCrystal(ctx, p.x - 52, y - 30, 0); outlinedText(ctx, String(p.cr), p.x - 38, y - 30, 14, '#f4b8ff'); }
+  if (p.marked) drawSkull(ctx, p.x, y - (p.title ? 50 : 36), 1); // MARKED: skull over their head
   if (p.stun) for (let i = 0; i < 3; i++) { const a = t * 5 + (i * Math.PI * 2) / 3; outlinedText(ctx, '★', p.x + Math.cos(a) * 20, p.y - 40 + Math.sin(a) * 6, 14, '#ffe066'); }
+}
+
+// the "Marked" skull (top bounty holder)
+export function drawSkull(ctx, x, y, s = 1) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.arc(0, -3, 10, Math.PI * 0.9, Math.PI * 2.1); ctx.lineTo(7, 6); ctx.lineTo(-7, 6); ctx.closePath();
+  ctx.fillStyle = '#fff4e8'; ctx.fill(); ctx.stroke();
+  ctx.fillStyle = INK; rr(ctx, -5, 6, 10, 6, 2); ctx.fill();
+  ctx.fillStyle = '#ff2846'; ctx.beginPath(); ctx.arc(-4, -3, 3, 0, 7); ctx.arc(4, -3, 3, 0, 7); ctx.fill();
+  ctx.restore();
 }
 
 export function drawAmmo(ctx, x, y, ammo, superReady, t) {

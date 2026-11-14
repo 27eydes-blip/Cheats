@@ -362,6 +362,9 @@ export class ZoneRoom {
       const p = sim.addPlayer({ name: cleanName(url.searchParams.get('name')), brawler: BRAWLERS[b] ? b : 'volt' });
       p.alive = false;
       sim.respawn(p);
+      // local dev only (HUNT_DEV is set in wrangler.jsonc, never in the deploy config): spawn at x,y
+      const at = this.env.HUNT_DEV && (url.searchParams.get('at') || '').split(',').map(Number);
+      if (at && at.length === 2 && sim.inBounds(at[0], at[1], -60)) { p.x = p.px = at[0]; p.y = p.py = at[1]; }
       const token = url.searchParams.get('token');
       if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { if (u && sim.players.has(p.id)) { p.account = u.id; sim.setCosmetics(p.id, JSON.parse(u.progress || '{}').equipped); } }).catch(() => {});
       server.huntKey = p.id;

@@ -71,3 +71,32 @@ export const musicPlaying = () => !!timer;
 let ducked = false;
 export const isDucked = () => ducked;
 export const musicLevel = () => (bus && timer ? bus.gain.value : 0); // tests: current music volume
+
+// ---------------------------------------------------------------- BLOOD MOON: tense in-match music
+// Original: a low detuned drone, a slow double-thump heartbeat and a high bell every few bars.
+let tense = null;
+export function startTense() {
+  const a = audioCtx(); if (!a || tense) return;
+  const out = a.createGain(); out.gain.value = 0.0001; out.connect(a.destination);
+  const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; lp.connect(out);
+  const oscs = [55, 55.6, 82.4].map((f) => { const o = a.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; const g = a.createGain(); g.gain.value = 0.12; o.connect(g); g.connect(lp); o.start(); return o; });
+  const lvl = () => (SETTINGS.sound === false ? 0.0001 : Math.max(0.0001, (SETTINGS.musicVol ?? 0.6) * 0.45));
+  out.gain.setTargetAtTime(lvl(), a.currentTime, 1.2);
+  let next = a.currentTime + 0.2, beat = 0;
+  const thump = (t, v) => { const o = a.createOscillator(), g = a.createGain(); o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.18); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25); o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.3); };
+  const bell = (t) => { const o = a.createOscillator(), g = a.createGain(); o.type = 'sine'; o.frequency.value = 659.3; g.gain.setValueAtTime(0.08, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.4); o.connect(g); g.connect(out); o.start(t); o.stop(t + 2.5); };
+  const timer = setInterval(() => {
+    if (a.state !== 'running') { next = a.currentTime + 0.2; return; }
+    out.gain.setTargetAtTime(lvl(), a.currentTime, 0.3);
+    while (next < a.currentTime + 0.3) { thump(next, 0.9); thump(next + 0.24, 0.55); if (beat % 8 === 6) bell(next + 0.6); next += 1.25; beat++; }
+  }, 100);
+  tense = { out, oscs, timer, a };
+}
+export function stopTense() {
+  if (!tense) return;
+  const { out, oscs, timer, a } = tense; tense = null;
+  clearInterval(timer);
+  out.gain.setTargetAtTime(0.0001, a.currentTime, 0.8);
+  setTimeout(() => { for (const o of oscs) { try { o.stop(); } catch {} } try { out.disconnect(); } catch {} }, 3000);
+}
+export const tensePlaying = () => !!tense;

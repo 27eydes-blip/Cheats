@@ -3,7 +3,7 @@ import { trackErrors } from './helpers.js';
 import { WORLDS, SPAWNS, generateArena, generateWorld, spawnHasCover, WALL, TILE, applyMove, moveStats } from '../../public/shared.js';
 import { Sim } from '../../src/sim.js';
 
-const EXPECT = { meadow: 'stone', city: 'metal', forest: 'wood', desert: 'sandstone', mirage: 'sandstone', frozen: 'ice' };
+const EXPECT = { meadow: 'stone', city: 'metal', forest: 'wood', desert: 'sandstone', mirage: 'sandstone', frozen: 'ice', ashlands: 'obsidian', marsh: 'deadwood', citadel: 'stone', hollow: 'crystal' };
 
 test('each world loads the right wall material and builds its art', async ({ page }) => {
   const errors = trackErrors(page);
@@ -74,10 +74,15 @@ test('every spawn point has cover nearby; every wall tile has art; cover density
     for (const sp of m.spawns) expect(spawnHasCover(m, sp), `${w.key}#${seed}`).toBe(true);
     const per2000 = m.pieces.length / (m.size / 2000) ** 2; // pieces per 2000x2000 of arena
     expect(per2000, `${w.key}#${seed} ${m.layout}`).toBeGreaterThanOrEqual(22); expect(per2000, `${w.key}#${seed} ${m.layout}`).toBeLessThanOrEqual(60);
-    for (let i = 0; i < m.t.length; i++) if (m.t[i] === WALL) expect(m.border[i] || m.pieceAt[i] >= 0).toBeTruthy();
+    let bare = 0;
+    for (let i = 0; i < m.t.length; i++) if (m.t[i] === WALL && !(m.border[i] || m.pieceAt[i] >= 0)) bare++;
+    expect(bare, `${w.key}#${seed}: wall tiles without art`).toBe(0);
   }
+  // the world: every wall is a piece, a spiked border, a rock mass (autotiled) or a landmark footprint
   const wm = generateWorld();
-  for (let i = 0; i < wm.t.length; i++) if (wm.t[i] === WALL) expect(wm.border[i] || wm.pieceAt[i] >= 0).toBeTruthy();
+  let bare = 0;
+  for (let i = 0; i < wm.t.length; i++) if (wm.t[i] === WALL && !(wm.border[i] || wm.pieceAt[i] >= 0 || wm.rock[i] || wm.lm[i])) bare++;
+  expect(bare, 'world wall tiles without art').toBe(0);
 });
 
 test('brawlers slide along cover instead of sticking on corners', () => {

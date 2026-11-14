@@ -3,7 +3,7 @@
 import {
   BRAWLERS, BRAWLER_IDS, DT, TICK_RATE, CRATE, PLAYER_R, ARENA_SIZE, ZONES, WORLDS,
   worldId, worldsInDisplayOrder, generateArena, generateWorld, applyMove, attackDirs, tileAt, isSolidTile,
-  moveStats, zoneAt, zoneBounds, inHub, worldKeyAt, PREDICTED_KINDS,
+  moveStats, zoneAt, zoneBounds, inHub, worldKeyAt, PREDICTED_KINDS, DAY_MS,
 } from './shared.js';
 import { EVENTS } from './events/index.js';
 import { Input } from './input.js';
@@ -18,6 +18,9 @@ import { TITLES } from './catalog.js';
 import { sfx, falloff } from './audio.js';
 import { setMusicVolume } from './ui/music.js';
 import { pickAimTarget } from './aim.js';
+import { drawMiniMap, drawFullMap } from './minimap.js';
+import { envState, drawLandmarks, drawAtmosphere, drawCompass, ZONE_INFO, zoneLabel } from './world-fx.js';
+import { startTense, stopTense } from './ui/music.js';
 import { WallArt } from './art/walls.js';
 import { artFor } from './art/themes.js';
 import { SPAWNS, spawnHasCover, SPAWN_COVER_DIST, blocksMove, TILE as TILE_ } from './shared.js';
@@ -130,7 +133,7 @@ const G = {
 
 function resetMatchState() {
   Object.assign(G, {
-    myId: 0, secret: null, matchName: null, map: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
+    myId: 0, secret: null, matchName: null, map: null, zoneSlot: null, nightOn: undefined, env: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
     localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: [], rings: [], texts: [], slashes: [], worms: [], lastTp: 0, flash: {}, shake: 0, hurt: 0,
     spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, pings: [], handoff: null, online: {}, deadMsg: null, lastSk: 0,
   });
@@ -138,6 +141,7 @@ function resetMatchState() {
   $('hudAgain').hidden = true;
   UI.res?.reset?.();
   bulletAng.clear();
+  closeFullMap(); if (G.bloodOn) { G.bloodOn = false; stopTense(); }
 }
 
 // ------------------------------------------------------------------ connections
@@ -254,8 +258,10 @@ function startFree() {
   const { name } = readForm();
   G.kind = 'free'; G.brawler = selBrawler; G.modeKey = 'freeplay';
   G.map = generateWorld();
-  const slot = ZONES[Math.floor(Math.random() * ZONES.length)].slot;
-  openConn(slot, `/zone?${new URLSearchParams({ slot, join: '1', name, brawler: selBrawler, ...(A.ACC.token ? { token: A.ACC.token } : {}) })}`, { zone: slot, primary: true });
+  // everyone arrives at the safe hub in the middle of the world (?at=x,y: local dev only)
+  const at = (new URLSearchParams(location.search).get('at') || '').split(',').map(Number);
+  const slot = at.length === 2 && at.every(Number.isFinite) ? zoneAt(at[0], at[1]) : 'c';
+  openConn(slot, `/zone?${new URLSearchParams({ slot, join: '1', name, brawler: selBrawler, ...(A.ACC.token ? { token: A.ACC.token } : {}), ...(at.length === 2 ? { at: at.join(',') } : {}) })}`, { zone: slot, primary: true });
   G.phase = 'play';
   input.enabled = true; input.reset();
   show(null);
@@ -266,6 +272,7 @@ function startFree() {
 let retryTimer = 0;
 function toMenu() {
   clearTimeout(retryTimer);
+  closeFullMap(); if (G.bloodOn) { G.bloodOn = false; stopTense(); }
   G.phase = 'menu';
   closeAll();
   input.enabled = false; input.reset();
@@ -304,6 +311,7 @@ function onMsg(c, m) {
     case 'welcome':
       if (m.observer) break;
       if (m.secret) G.secret = m.secret;
+      if (m.sv && G.clockForced == null) G.svOff = m.sv - Date.now();
       if (m.match) G.matchName = m.match;
       if (m.rejoin) {
         c.welcomed = true;
@@ -384,7 +392,7 @@ function onMsg(c, m) {
       break;
     case 'claimfail': toast('Zone transfer failed — rejoining'); startFree(); break;
     case 'rejoinfail': if (rc) { G.conns.delete(c.key); rejoinFailed(); } break;
-    case 'online': G.online = m.zones; break;
+    case 'online': G.online = m.zones; if (m.sv && G.clockForced == null) G.svOff = m.sv - Date.now(); break;
     case 'progress': {
       if (A.ACC.user) A.setUser({ ...A.ACC.user, progress: m.progress });
       UI.res.progress(m);
@@ -766,6 +774,49 @@ function frameBody(now) {
   } else if (G.phase === 'mapview') drawMapView(now / 1000);
 }
 
+const P0 = () => primary();
+// entering a zone, nightfall and the Blood Moon get a banner (and the Blood Moon its own music)
+function worldNotices(env) {
+  if (G.kind !== 'free') { if (G.bloodOn) { G.bloodOn = false; stopTense(); } return; }
+  if (env.zone && env.zone !== G.zoneSlot) {
+    if (G.zoneSlot) showBanner(zoneLabel(env.zone).toUpperCase(), ZONE_INFO[env.key] || '', '#ffd23f', 2200);
+    G.zoneSlot = env.zone;
+  }
+  const night = !!(env.dn && env.dn.night);
+  if (G.nightOn !== undefined && night !== G.nightOn) showBanner(night ? 'NIGHTFALL' : 'DAWN', night ? 'Vision shrinks. High bounties glow brighter.' : 'The sun is up.', night ? '#9fb3ff' : '#ffd23f', 2500);
+  G.nightOn = night;
+  const blood = env.blood > 0;
+  if (blood && !G.bloodOn) { showBanner('BLOOD MOON', 'Every kill is worth DOUBLE bounty for 2 minutes!', '#ff4d5e', 3200); startTense(); }
+  if (!blood && G.bloodOn) stopTense();
+  G.bloodOn = blood;
+}
+
+// FULL MAP: tap the minimap. Zones, roads, landmarks, you, the top bounty holder, events.
+let fullMap = null;
+function openFullMap() {
+  if (fullMap) return;
+  sfx('click');
+  input.reset();
+  const cv = document.createElement('canvas');
+  cv.id = 'fullmap';
+  Object.assign(cv.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', zIndex: 45, touchAction: 'none' });
+  document.body.appendChild(cv);
+  const draw = () => {
+    if (!fullMap) return;
+    const d = Math.min(2, devicePixelRatio || 1), w = innerWidth, h = innerHeight;
+    if (cv.width !== Math.round(w * d)) { cv.width = Math.round(w * d); cv.height = Math.round(h * d); }
+    const g = cv.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
+    const tops = Object.values(G.online || {}).map((z) => z.top).filter(Boolean).sort((a, b) => b[1] - a[1]);
+    drawFullMap(g, G.map, w, h, { me: G.me ? renderMe() : null, online: G.online, dn: G.env?.dn, top: tops[0] ? { name: tops[0][0], bounty: tops[0][1], x: tops[0][2], y: tops[0][3] } : null });
+  };
+  const close = (e) => { e?.preventDefault(); clearInterval(fullMap.timer); cv.remove(); fullMap = null; };
+  fullMap = { timer: setInterval(draw, 500), close };
+  cv.addEventListener('pointerdown', close);
+  draw();
+}
+const closeFullMap = () => { if (fullMap) fullMap.close(); };
+window.__huntMap = { open: () => openFullMap(), close: () => closeFullMap(), isOpen: () => !!fullMap };
+
 function render(t) {
   const s = worldScale();
   const mePos = renderMe();
@@ -805,6 +856,9 @@ function render(t) {
   if (!SETTINGS.lowGfx) art.drawShadows(ctx, G.map, view);
   art.draw(ctx, G.map, view, t, SETTINGS);
   R.drawBlocks(ctx, G.map, G.crateHp, x0, y0, x1, y1);
+  if (G.map.landmarks && G.map.landmarks.length) drawLandmarks(ctx, G.map, view, t);
+  const env = envState(G.map, cam, G.svOff || 0);
+  G.env = env;
 
   const list = G.view.others.map((o) => ({ ...o, me: false, size: sizeOf(o) }));
   if (meAlive) {
@@ -817,7 +871,8 @@ function render(t) {
   list.sort((a, b) => a.y - b.y);
   const myTeam = G.me.tm || 0;
   for (const p of list) { if (myTeam) R.drawTeamRing(ctx, p, p.me || p.team === myTeam); else R.drawRim(ctx, G.map, p); }
-  for (const p of list) R.drawAura(ctx, p, t);
+  const topId = P0()?.last?.top?.[0] || 0;
+  for (const p of list) { p.glowBoost = env.dn ? 1 + env.dn.dark * 0.8 : 1; p.marked = p.id === topId; R.drawAura(ctx, p, t); }
   for (const p of list) {
     let alpha = 1;
     if (p.fl & 4) alpha = p.me ? 0.37 + pulse(t, 8, 0.5) * 0.16 : 0.35;
@@ -844,7 +899,7 @@ function render(t) {
   for (const b of G.view.bullets) R.drawBullet(ctx, b.kind, b.x, b.y, b.ang, rimAt(b.x, b.y));
   for (const b of G.localBullets) R.drawBullet(ctx, G.brawler, b.x, b.y, b.ang, rimAt(b.x, b.y));
 
-  R.drawBushes(ctx, G.map, x0, y0, x1, y1, meAlive ? mePos : null, t);
+  R.drawBushes(ctx, G.map, x0, y0, x1, y1, meAlive ? mePos : null, t, Math.max(env.dn ? env.dn.dark : 0, env.cave ? 0.5 : 0));
   for (const e of evs) if (EVENTS[e.id].layer !== 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
   if (!SETTINGS.lowGfx) R.drawAmbient(ctx, G.map, view, t, false);
   const P = primary();
@@ -881,6 +936,8 @@ function render(t) {
 
   // ---- screen space
   if (!SETTINGS.lowGfx) R.drawGrade(ctx, G.map, cam, W, H);
+  drawAtmosphere(ctx, env, cam, W, H, s, t);
+  if (G.kind === 'free') drawCompass(ctx, G.map, cam, W, H, s);
   const pe = P?.ev;
   if (pe && EVENTS[pe.id]?.drawScreen) EVENTS[pe.id].drawScreen(ctx, pe.p, pe.ph, t, W, H, s);
   if (G.hurt > 0) {
@@ -909,9 +966,24 @@ function render(t) {
   }
   const radarR = Math.min(64, H * 0.15);
   const now = performance.now();
-  R.drawRadar(ctx, 12 + SA.l + radarR, 36 + SA.t + radarR, radarR, { x: cam.x, y: cam.y },
-    [...G.pings.map((p) => ({ ...p, age: (now - p.t0) / 1000 })), ...(G.mates || []).map(([id, x, y]) => ({ id, x, y, bt: 0, age: 0, mate: true }))],
-    { poison: P?.last?.z ? { inset: P.last.z, size: G.map.gw * TILE_ } : null, hub: G.kind === 'free', zones: G.kind === 'free', range: 1600 }, t);
+  const rcx = 12 + SA.l + radarR, rcy = 36 + SA.t + radarR;
+  if (G.kind === 'free') {
+    // MINIMAP (tap it for the full map): zone, landmarks, bounty pings, the top bounty holder
+    const tops = Object.values(G.online || {}).map((z) => z.top).filter(Boolean).sort((a, b) => b[1] - a[1]);
+    const top = tops[0] ? { name: tops[0][0], bounty: tops[0][1], x: tops[0][2], y: tops[0][3] } : null;
+    const clock = env.blood ? `BLOOD MOON ${Math.ceil(env.blood)}s` : env.dn && env.dn.night ? 'NIGHT' : env.dn && env.dn.dark > 0 ? 'DUSK' : '';
+    drawMiniMap(ctx, G.map, rcx, rcy, radarR, { x: cam.x, y: cam.y }, {
+      facing: G.facing, label: zoneLabel(env.zone).toUpperCase() + (clock ? ' · ' + clock : ''), hint: G.ticks < 400, top,
+      pings: [...G.pings.map((p) => ({ x: p.x, y: p.y })), ...(G.mates || []).map(([, x, y]) => ({ x, y, mate: true }))],
+    });
+    input.taps = [{ x: rcx, y: rcy, r: radarR + 6, on: openFullMap }];
+  } else {
+    input.taps = [];
+    R.drawRadar(ctx, rcx, rcy, radarR, { x: cam.x, y: cam.y },
+      [...G.pings.map((p) => ({ ...p, age: (now - p.t0) / 1000 })), ...(G.mates || []).map(([id, x, y]) => ({ id, x, y, bt: 0, age: 0, mate: true }))],
+      { poison: P?.last?.z ? { inset: P.last.z, size: G.map.gw * TILE_ } : null, hub: false, zones: false, range: 1600 }, t);
+  }
+  worldNotices(env);
   if (G.phase === 'play' && meAlive) R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
   if (!meAlive && G.phase !== 'play') {
     const o = G.view.others.find((p) => p.id === G.spectate);
@@ -1097,6 +1169,8 @@ UI.showIntro = showIntro;
 
 // Test flags: ?world=<key>[&mode=<mode>] drops you straight into that arena with bots; ?free=1 into Free Play.
 const qs = new URLSearchParams(location.search);
+// ?clock=<0..1>: show the day/night cycle at that point (screenshots; visual only, the server keeps real time)
+if (qs.get('clock') != null) { const ph = +qs.get('clock'); G.clockForced = ph; G.svOff = Math.floor(Date.now() / DAY_MS) * DAY_MS + ph * DAY_MS - Date.now(); }
 if (qs.get('mapview')) {
   G.phase = 'mapview';
   G.map = qs.get('free') ? generateWorld() : generateArena(+(qs.get('seed') || 7), qs.get('world') || 'meadow', +(qs.get('players') || 10));

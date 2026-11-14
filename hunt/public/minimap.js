@@ -77,7 +77,7 @@ export function drawMiniMap(ctx, map, cx, cy, R, me, o = {}) {
   ctx.save(); ctx.translate(cx, cy); ctx.rotate(o.facing || 0);
   ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-5, -5); ctx.lineTo(-2, 0); ctx.lineTo(-5, 5); ctx.closePath();
   ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke(); ctx.restore();
-  if (o.label) outlinedText(ctx, o.label, cx, cy + R + 11, 11, '#fff');
+  if (o.label) outlinedText(ctx, o.label, cx, cy + R - 9, 9, '#fff');
   if (o.hint) outlinedText(ctx, 'TAP FOR MAP', cx, cy - R + 9, 8, '#ffd23f');
 }
 

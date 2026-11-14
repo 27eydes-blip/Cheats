@@ -28,13 +28,18 @@ export function generateWorld() {
   // ------------------------------------------------------------------ roads
   const zc = (z) => [Math.floor((E[z.c] + E[z.c + 1]) / 2), Math.floor((E[z.r] + E[z.r + 1]) / 2)];
   const paint = (x, y, rad) => { for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) if (inMap(x + dx, y + dy) && dx * dx + dy * dy <= rad * rad + 1) m.road[I(x + dx, y + dy)] = 1; };
+  m.roads = []; // smooth centre lines (tile units) for drawing; m.road is the tile mask for logic
   const road = (a, b) => { // a gently curving road: two quadratic halves through a jittered midpoint
     const len = Math.hypot(b[0] - a[0], b[1] - a[1]), nx = -(b[1] - a[1]) / len, ny = (b[0] - a[0]) / len;
     const off = (R() - 0.5) * len * 0.25, mx = (a[0] + b[0]) / 2 + nx * off, my = (a[1] + b[1]) / 2 + ny * off;
+    const pts = [];
     for (let t = 0; t <= 1; t += 0.5 / len) {
       const x = (1 - t) ** 2 * a[0] + 2 * (1 - t) * t * mx + t * t * b[0], y = (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * my + t * t * b[1];
       paint(Math.round(x), Math.round(y), 1);
+      if (!pts.length || Math.hypot(x - pts[pts.length - 1][0], y - pts[pts.length - 1][1]) > 1.5) pts.push([x + 0.5, y + 0.5]);
     }
+    pts.push([b[0] + 0.5, b[1] + 0.5]);
+    m.roads.push(pts);
   };
   const outer = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map((s) => ZONES.find((z) => z.slot === s));
   for (const z of outer) road([hx, hy], zc(z));
