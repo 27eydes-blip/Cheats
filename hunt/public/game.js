@@ -328,9 +328,10 @@ function onMsg(c, m) {
     case 'st':
       for (const [idx, type] of m.td) applyTile(idx, type);
       for (const [idx, hp] of m.ch) G.crateHp.set(idx, hp);
-      if (m.ev) c.ev = { ...m.ev, at: performance.now() };
+      if (m.ev && EVENTS[m.ev.id]) c.ev = { ...m.ev, at: performance.now() };
       break;
     case 'ev':
+      if (m.id && !EVENTS[m.id]) break; // unknown event (client older than the server): ignore it
       c.ev = m.id ? { ...m, at: performance.now() } : null;
       if (c.primary && m.id) sfx(m.ph === 'warn' ? 'event_warn' : 'event_on', 0.8);
       if (c.primary && m.id && m.ph === 'on') { const def = EVENTS[m.id]; showBanner(def.name, def.desc, def.color, 2500); }
@@ -460,7 +461,7 @@ function onSnap(c, m) {
 function primaryMods() {
   const c = primary();
   const e = c && c.ev;
-  return e && e.ph === 'on' && EVENTS[e.id].mods ? EVENTS[e.id].mods(e.p) : {};
+  return e && e.ph === 'on' && EVENTS[e.id]?.mods ? EVENTS[e.id].mods(e.p) : {};
 }
 
 function reconcile(m) {
@@ -728,6 +729,10 @@ function clientTick() {
 // ------------------------------------------------------------------ render
 let lastT = performance.now();
 function frame(now) {
+  requestAnimationFrame(frame); // first, so one bad frame can't freeze the game for good
+  try { frameBody(now); } catch (e) { console.warn('frame error', e); }
+}
+function frameBody(now) {
   const dt = Math.min(0.1, (now - lastT) / 1000);
   lastT = now;
   if (G.phase === 'play' || G.phase === 'dead' || G.phase === 'end') {
@@ -742,8 +747,6 @@ function frame(now) {
     adaptResolution(dt * 1000);
     updateHud(now);
   } else if (G.phase === 'mapview') drawMapView(now / 1000);
-
-  requestAnimationFrame(frame);
 }
 
 function render(t) {
@@ -771,7 +774,7 @@ function render(t) {
 
   R.drawGround(ctx, G.map, x0, y0, x1, y1, t, s * DPR);
   const helpers = R.eventHelpers(ctx, G.map, view);
-  const evs = [...G.conns.values()].map((c) => c.ev).filter(Boolean);
+  const evs = [...G.conns.values()].map((c) => c.ev).filter((e) => e && EVENTS[e.id]);
   for (const e of evs) if (EVENTS[e.id].layer === 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
 
   if (meAlive && G.phase === 'play') {
@@ -862,7 +865,7 @@ function render(t) {
   // ---- screen space
   if (!SETTINGS.lowGfx) R.drawGrade(ctx, G.map, cam, W, H);
   const pe = P?.ev;
-  if (pe && EVENTS[pe.id].drawScreen) EVENTS[pe.id].drawScreen(ctx, pe.p, pe.ph, t, W, H, s);
+  if (pe && EVENTS[pe.id]?.drawScreen) EVENTS[pe.id].drawScreen(ctx, pe.p, pe.ph, t, W, H, s);
   if (G.hurt > 0) {
     const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.7);
     g.addColorStop(0, 'rgba(255,40,60,0)'); g.addColorStop(1, `rgba(255,40,60,${G.hurt})`);
