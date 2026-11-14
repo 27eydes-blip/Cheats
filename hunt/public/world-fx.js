@@ -53,9 +53,11 @@ function drawTower(ctx, t) { // the Giant Tower of the Ruined Citadel: rises far
   ctx.fillStyle = '#8a1a2a'; ctx.fill(); ctx.stroke();
 }
 function drawVolcano(ctx, t) { // the Ashlands volcano: smoking cone with a lava crater
-  const glow = ctx.createRadialGradient(0, -60, 40, 0, -60, 520);
-  glow.addColorStop(0, 'rgba(255,100,30,0.35)'); glow.addColorStop(1, 'rgba(255,100,30,0)');
-  ctx.fillStyle = glow; ctx.fillRect(-520, -580, 1040, 1040);
+  if (!SETTINGS.lowGfx) {
+    const glow = ctx.createRadialGradient(0, -60, 40, 0, -60, 460);
+    glow.addColorStop(0, 'rgba(255,100,30,0.32)'); glow.addColorStop(1, 'rgba(255,100,30,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(0, -60, 460, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.beginPath(); ctx.moveTo(-360, 120); ctx.lineTo(-110, -330); ctx.lineTo(110, -330); ctx.lineTo(360, 120); ctx.quadraticCurveTo(0, 190, -360, 120); ctx.closePath();
   ctx.fillStyle = '#2b2529'; ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#3d3539'; ctx.beginPath(); ctx.moveTo(-110, -330); ctx.lineTo(-40, -330); ctx.lineTo(-170, 130); ctx.lineTo(-330, 110); ctx.closePath(); ctx.fill();
@@ -66,8 +68,8 @@ function drawVolcano(ctx, t) { // the Ashlands volcano: smoking cone with a lava
   ctx.beginPath(); ctx.ellipse(0, -330, 110, 34, 0, 0, Math.PI * 2); ctx.fillStyle = '#ff6a1f'; ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.ellipse(0, -334, 70, 18, 0, 0, Math.PI * 2); ctx.fillStyle = '#ffd23f'; ctx.fill();
   // smoke plume rising (stateless puffs)
-  if (!SETTINGS.lowGfx) for (let i = 0; i < 9; i++) {
-    const k = SETTINGS.reduceFlash ? i / 9 : ((t * 0.12 + i / 9) % 1);
+  if (!SETTINGS.lowGfx) for (let i = 0; i < 6; i++) {
+    const k = SETTINGS.reduceFlash ? i / 6 : ((t * 0.12 + i / 6) % 1);
     const x = Math.sin(i * 1.7 + k * 3) * 40 + k * 120, y = -380 - k * 620, r = 50 + k * 110;
     ctx.globalAlpha = 0.5 * (1 - k); ctx.fillStyle = '#5b5359'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
   }
@@ -102,33 +104,41 @@ function fogPuff() {
   g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
   return (fogSprite = c);
 }
+// fog, darkness and the Blood Moon tint are all soft, so they're painted into ONE quarter-
+// resolution layer and blitted once: one full-screen fill instead of several (phones are fill-bound)
+let atm = null;
 export function drawAtmosphere(ctx, st, cam, W, H, s, t) {
+  const fogAmt = SETTINGS.lowGfx ? 0 : Math.max(st.fog ? 1 : 0, st.dn ? st.dn.dark * 0.6 : 0);
+  if (!(fogAmt > 0) && !(st.dark > 0.01) && !st.blood) return;
+  const q = 4, w = Math.max(1, Math.ceil(W / q)), h = Math.max(1, Math.ceil(H / q));
+  if (!atm) atm = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(w, h) : Object.assign(document.createElement('canvas'), { width: w, height: h });
+  if (atm.width !== w || atm.height !== h) { atm.width = w; atm.height = h; }
+  const g = atm.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h); g.scale(1 / q, 1 / q);
   // fog: soft banks drifting past (marsh always; everywhere at night)
-  const fogAmt = Math.max(st.fog ? 1 : 0, st.dn ? st.dn.dark * 0.6 : 0);
-  if (fogAmt > 0 && !SETTINGS.lowGfx) {
+  if (fogAmt > 0) {
     const sp = fogPuff(), drift = SETTINGS.reduceFlash ? 0 : t * 18;
-    ctx.save(); ctx.globalAlpha = Math.min(0.9, 0.55 * fogAmt + (st.fog ? 0.25 : 0));
-    for (let i = 0; i < 7; i++) {
+    g.globalAlpha = Math.min(0.9, 0.55 * fogAmt + (st.fog ? 0.25 : 0));
+    for (let i = 0; i < 6; i++) {
       const wx = ((i * 977 + drift - cam.x * 0.35) % (W + 600) + W + 600) % (W + 600) - 300;
       const wy = ((i * 613 - cam.y * 0.35) % (H + 500) + H + 500) % (H + 500) - 250;
       const r = 280 + (i % 3) * 120;
-      ctx.drawImage(sp, wx - r, wy - r, r * 2, r * 2);
+      g.drawImage(sp, wx - r, wy - r, r * 2, r * 2);
     }
-    ctx.restore();
+    g.globalAlpha = 1;
   }
-  // darkness outside your vision circle (night, caves, fog)
+  // darkness outside your vision circle (night, caves, fog). The light circle is tighter than the
+  // gameplay vision so night and caves read as dark on a phone too (dimmed, not hidden)
   if (st.dark > 0.01) {
-    // the light circle is tighter than the gameplay vision so night and caves read as dark on a
-    // phone too (what's out there is dimmed, not hidden)
     const R = Math.min(Math.min(st.vision, 2600) * s, Math.max(W, H) * (st.cave ? 0.3 : st.fog && !(st.dn && st.dn.dark) ? 0.45 : 0.34)), cx = W / 2, cy = H / 2;
     const col = st.cave ? '7,6,13' : st.blood ? '40,4,10' : '6,8,28';
-    const g = ctx.createRadialGradient(cx, cy, R * 0.5, cx, cy, Math.max(R * 1.25, 10));
-    g.addColorStop(0, `rgba(${col},0)`); g.addColorStop(1, `rgba(${col},${st.dark})`);
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    if (st.dn && st.dn.dark > 0) { ctx.fillStyle = `rgba(${col},${st.dn.dark * 0.3})`; ctx.fillRect(0, 0, W, H); } // the whole night is darker
+    const base = st.dn ? st.dn.dark * 0.3 : 0; // the whole night is a little darker, more so outside your light
+    const gr = g.createRadialGradient(cx, cy, R * 0.5, cx, cy, Math.max(R * 1.25, 10));
+    gr.addColorStop(0, `rgba(${col},${base})`); gr.addColorStop(1, `rgba(${col},${Math.min(0.92, st.dark + base * 0.5)})`);
+    g.fillStyle = gr; g.fillRect(0, 0, W, H);
   }
-  // BLOOD MOON: a steady red tint (no flashing)
-  if (st.blood) { ctx.fillStyle = 'rgba(150,0,25,0.17)'; ctx.fillRect(0, 0, W, H); }
+  if (st.blood) { g.fillStyle = 'rgba(150,0,25,0.17)'; g.fillRect(0, 0, W, H); } // BLOOD MOON: a steady red tint (no flashing)
+  ctx.save(); ctx.imageSmoothingEnabled = true; ctx.drawImage(atm, 0, 0, w * q, h * q); ctx.restore();
 }
 
 // ---------------------------------------------------------------- compass markers for far landmarks
