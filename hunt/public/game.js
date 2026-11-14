@@ -1,9 +1,11 @@
-// Client: lobby UI, WebSocket protocol, own-player prediction + reconciliation,
-// snapshot interpolation for everything else, local bullet prediction, effects.
+// Client: lobby, Quick Hunt + Free Play networking, own-player prediction/reconciliation,
+// per-connection snapshot interpolation, zone handoff, twists/events/mode HUD, effects.
 import {
-  BRAWLERS, BRAWLER_IDS, DT, TICK_RATE, EMPTY, PLAYER_R, MAP_SIZE, POISON_START,
-  generateMap, applyMove, attackDirs, tileAt, isSolidTile,
+  BRAWLERS, BRAWLER_IDS, DT, TICK_RATE, CRATE, PLAYER_R, ARENA_SIZE, ZONES, WORLDS,
+  worldId, worldsInDisplayOrder, generateArena, generateWorld, applyMove, attackDirs, tileAt, isSolidTile,
+  moveStats, zoneAt, zoneBounds, inHub, worldKeyAt,
 } from './shared.js';
+import { EVENTS } from './events/index.js';
 import { Input } from './input.js';
 import * as R from './render.js';
 
@@ -13,6 +15,14 @@ const ctx = canvas.getContext('2d');
 const input = new Input(canvas);
 const TICK_MS = 1000 / TICK_RATE;
 const INTERP_MS = 110;
+const MODE_INFO = {
+  showdown: { name: 'SHOWDOWN', desc: 'Last hunter standing wins. The poison closes in!' },
+  bounty: { name: 'BOUNTY RUSH', desc: 'Steal bounties! Highest bounty after 2:00 wins.' },
+  hunted: { name: 'HUNTED', desc: 'Everyone hunts the target. Take them down to become it!' },
+  crystals: { name: 'CRYSTAL GRAB', desc: 'Grab 10 crystals and hold them for 10 seconds!' },
+  freeplay: { name: 'FREE PLAY', desc: '' },
+};
+const worldName = (key) => WORLDS[worldId(key)]?.name || key;
 
 let W = 0, H = 0, DPR = 1;
 function resize() {
@@ -24,13 +34,24 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 
-// ------------------------------------------------------------------ prefs + lobby
+// ------------------------------------------------------------------ prefs, stats, lobby
 const prefs = (() => { try { return JSON.parse(localStorage.getItem('hunt') || '{}'); } catch { return {}; } })();
 const savePrefs = () => { try { localStorage.setItem('hunt', JSON.stringify(prefs)); } catch {} };
+prefs.stats ||= {}; // keyed by numeric world id (stable: WORLDS is append-only)
 let selBrawler = BRAWLERS[prefs.brawler] ? prefs.brawler : 'volt';
 $('name').value = prefs.name || '';
 $('room').value = prefs.room || '';
 $('bots').checked = prefs.bots !== false;
+
+function stat(worldKey) { const id = worldId(worldKey); return (prefs.stats[id] ||= { games: 0, wins: 0, kills: 0, best: 0 }); }
+function renderStats() {
+  const rows = worldsInDisplayOrder().map((w) => {
+    const s = prefs.stats[w.id] || {};
+    return `<tr><td>${w.name}</td><td>${s.games || 0}</td><td>${s.wins || 0}</td><td>${s.kills || 0}</td><td>★${s.best || 0}</td></tr>`;
+  }).join('');
+  $('stats').innerHTML = `<tr><th>World</th><th>Games</th><th>Wins</th><th>KOs</th><th>Best</th></tr>${rows}`;
+}
+renderStats();
 
 function buildCards() {
   const wrap = $('cards');
@@ -62,91 +83,167 @@ function toast(msg, ms = 2200) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.hidden = true; }, ms);
 }
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-// ------------------------------------------------------------------ game state
+// ------------------------------------------------------------------ state
 const G = {
-  phase: 'menu', ws: null, myId: 0, brawler: 'volt', tiles: null, roster: {}, snaps: [], crateHp: new Map(),
-  pending: [], seq: 0, pred: { x: 0, y: 0 }, prev: { x: 0, y: 0 }, err: { x: 0, y: 0 }, me: null,
-  inset: 0, alive: 10, tm: 0, localBullets: [], localBurst: null, localCd: 0, superCd: 0,
-  parts: [], rings: [], texts: [], flash: {}, shake: 0, hurt: 0, spectate: 0, timeOffset: null,
-  fxApplied: 0, room: '', retries: 0, facing: 0, moving: false, view: { others: [], bullets: [], cubes: [] },
-  cam: { x: MAP_SIZE / 2, y: MAP_SIZE / 2 }, acc: 0, results: null, ping: 0,
+  phase: 'menu', kind: 'quick', conns: new Map(), myId: 0, brawler: 'volt', map: null, roster: {}, crateHp: new Map(),
+  pending: [], seq: 0, pred: { x: 0, y: 0, mvx: 0, mvy: 0 }, prev: { x: 0, y: 0 }, err: { x: 0, y: 0 }, me: null, mods: {},
+  localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: [], rings: [], texts: [], flash: {}, shake: 0, hurt: 0,
+  spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, cam: { x: 1000, y: 1000 }, acc: 0, ping: 0,
+  pings: [], handoff: null, online: {}, modeKey: 'showdown', world: 'meadow', retries: 0, room: '', botsOn: true, facing: 0,
+  moving: false, lastSk: 0, deadMsg: null, ticks: 0, opts: {}, bannerUntil: 0,
 };
 
 function resetMatchState() {
   Object.assign(G, {
-    myId: 0, tiles: null, roster: {}, snaps: [], crateHp: new Map(), pending: [], seq: 0, me: null,
-    err: { x: 0, y: 0 }, inset: 0, alive: 10, tm: 0, localBullets: [], localBurst: null, localCd: 0, superCd: 0,
-    parts: [], rings: [], texts: [], flash: {}, shake: 0, hurt: 0, spectate: 0, timeOffset: null, fxApplied: 0, results: null,
+    myId: 0, map: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
+    localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: [], rings: [], texts: [], flash: {}, shake: 0, hurt: 0,
+    spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, pings: [], handoff: null, online: {}, deadMsg: null, lastSk: 0,
   });
   $('feed').innerHTML = '';
   $('hudAgain').hidden = true;
 }
 
-function connect(skip) {
-  if (G.ws) { const old = G.ws; G.ws = null; try { old.close(); } catch {} }
+// ------------------------------------------------------------------ connections
+const wsBase = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`;
+function openConn(key, path, o = {}) {
+  const ws = new WebSocket(wsBase() + path);
+  const c = { key, ws, zone: o.zone || null, primary: !!o.primary, snaps: [], off: null, fxN: 0, ev: null, last: null, open: false };
+  G.conns.set(key, c);
+  ws.onopen = () => { c.open = true; if (G.handoff && G.handoff.zone === c.zone) claim(); };
+  ws.onmessage = (e) => { if (G.conns.get(key) === c) onMsg(c, JSON.parse(e.data)); };
+  ws.onclose = () => {
+    if (G.conns.get(key) !== c) return;
+    G.conns.delete(key);
+    if ((c.primary || (G.handoff && G.handoff.zone === c.zone)) && G.phase !== 'menu' && G.phase !== 'end') { toast('Connection lost'); toMenu(); }
+  };
+  return c;
+}
+function closeAll() { const cs = [...G.conns.values()]; G.conns.clear(); for (const c of cs) { try { c.ws.close(); } catch {} } }
+const primary = () => { for (const c of G.conns.values()) if (c.primary) return c; return null; };
+function send(o) { const c = primary(); if (c && c.open && !G.handoff) c.ws.send(JSON.stringify(o)); }
+setInterval(() => { for (const c of G.conns.values()) if (c.open) c.ws.send(JSON.stringify({ t: 'ping', c: performance.now() })); }, 2000);
+
+function readForm() {
   const name = $('name').value.trim().slice(0, 14) || 'Hunter';
   const room = $('room').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-  prefs.name = name; prefs.room = room; savePrefs();
-  G.room = room;
-  G.brawler = selBrawler;
+  prefs.name = name; prefs.room = room; prefs.bots = $('bots').checked; savePrefs();
+  return { name, room };
+}
+
+function startQuick(opts = G.opts) {
+  G.opts = opts;
+  closeAll();
+  resetMatchState();
+  const { name, room: formRoom } = readForm();
+  const room = opts.room ?? formRoom;
+  G.kind = 'quick'; G.room = room; G.brawler = selBrawler;
   const q = new URLSearchParams({ name, brawler: selBrawler });
   if (room) q.set('room', room);
-  if (skip) q.set('skip', skip);
-  if (room && !$('bots').checked) q.set('bots', '0');
-  prefs.bots = $('bots').checked;
-  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?${q}`);
-  G.ws = ws;
-  resetMatchState();
+  if (opts.skip) q.set('skip', opts.skip);
+  if (room && !$('bots').checked && !opts.world) q.set('bots', '0');
+  for (const k of ['world', 'mode', 'lobby']) if (opts[k]) q.set(k, opts[k]);
+  openConn('main', '/ws?' + q, { primary: true });
   G.phase = 'waiting';
-  $('countdown').textContent = '…';
-  $('plist').innerHTML = '';
-  $('roomLabel').textContent = room ? `Room ${room}` : 'Quick play';
+  $('countdown').textContent = '…'; $('plist').innerHTML = ''; $('waitMode').textContent = 'FINDING HUNTERS'; $('waitDesc').textContent = '';
+  $('roomLabel').textContent = room ? `Room ${room}` : 'Quick Hunt';
   show('waiting');
-  ws.onmessage = (e) => { if (G.ws === ws) onMsg(JSON.parse(e.data)); };
-  ws.onclose = () => {
-    if (G.ws !== ws) return;
-    G.ws = null;
-    if (G.phase === 'waiting' || G.phase === 'play') { toast('Connection lost'); toMenu(); }
-  };
+}
+
+function startFree() {
+  closeAll();
+  resetMatchState();
+  const { name } = readForm();
+  G.kind = 'free'; G.brawler = selBrawler; G.modeKey = 'freeplay';
+  G.map = generateWorld();
+  const slot = ZONES[Math.floor(Math.random() * ZONES.length)].slot;
+  openConn(slot, `/zone?${new URLSearchParams({ slot, join: '1', name, brawler: selBrawler })}`, { zone: slot, primary: true });
+  G.phase = 'play';
+  input.enabled = true; input.reset();
+  show(null);
 }
 
 function toMenu() {
-  if (G.ws) { const old = G.ws; G.ws = null; try { old.close(); } catch {} }
   G.phase = 'menu';
-  input.enabled = false;
-  input.reset();
+  closeAll();
+  input.enabled = false; input.reset();
+  renderStats();
   show('lobby');
 }
 
-function send(o) { if (G.ws && G.ws.readyState === 1) G.ws.send(JSON.stringify(o)); }
-setInterval(() => send({ t: 'ping', c: performance.now() }), 2000);
+// Free Play: keep observer sockets to zones near us, so we see across borders.
+function manageZones() {
+  if (G.kind !== 'free' || !G.me) return;
+  const p = G.pred;
+  for (const z of ZONES) {
+    const b = zoneBounds(z.slot);
+    const dx = Math.max(b.x0 - p.x, 0, p.x - b.x1), dy = Math.max(b.y0 - p.y, 0, p.y - b.y1), d = Math.hypot(dx, dy);
+    const c = G.conns.get(z.slot);
+    const keep = c && (c.primary || (G.handoff && G.handoff.zone === z.slot));
+    if (!c && d < 950) openConn(z.slot, `/zone?slot=${z.slot}&x=${Math.round(p.x)}&y=${Math.round(p.y)}`, { zone: z.slot });
+    else if (c && !keep && d > 1300) { G.conns.delete(z.slot); try { c.ws.close(); } catch {} }
+  }
+  if (G.ticks % 5 === 0) for (const c of G.conns.values()) if (!c.primary && c.open) c.ws.send(JSON.stringify({ t: 'pos', x: Math.round(p.x), y: Math.round(p.y) }));
+}
 
-function onMsg(m) {
+function claim() {
+  const h = G.handoff;
+  if (!h || h.sent) return;
+  let c = G.conns.get(h.zone);
+  if (!c) c = openConn(h.zone, `/zone?slot=${h.zone}&x=${Math.round(G.pred.x)}&y=${Math.round(G.pred.y)}`, { zone: h.zone });
+  if (!c.open) return;
+  h.sent = true;
+  const pend = G.pending.filter((q) => q.s > h.ack).map(({ s, mx, my, ax, ay }) => ({ s, mx, my, ax, ay }));
+  c.ws.send(JSON.stringify({ t: 'claim', token: h.token, pend }));
+}
+
+// ------------------------------------------------------------------ messages
+function onMsg(c, m) {
   switch (m.t) {
-    case 'welcome': G.myId = m.id; G.retries = 0; G.botsOn = m.bots; break;
-    case 'lobby': {
+    case 'welcome':
+      if (m.observer) break;
+      G.myId = m.id; G.retries = 0; G.botsOn = m.bots;
+      if (m.mode) G.modeKey = m.mode;
+      if (m.world) G.world = m.world;
+      if (G.phase === 'waiting') {
+        $('waitMode').textContent = `${MODE_INFO[m.mode]?.name || ''} · ${worldName(m.world)}`;
+        $('waitDesc').textContent = MODE_INFO[m.mode]?.desc || '';
+      }
+      break;
+    case 'lobby':
       $('countdown').textContent = m.startIn == null ? '…' : Math.ceil(m.startIn);
       $('plist').innerHTML = m.players.map(([n, b]) => `<li>${esc(n)} · ${BRAWLERS[b].name}</li>`).join('') +
-        (G.botsOn ? `<li style="opacity:.6">+ ${10 - m.players.length} bots</li>` : '');
+        (m.bots ? `<li style="opacity:.6">+ ${10 - m.players.length} bots</li>` : '');
       break;
-    }
     case 'retry':
-      if (!G.room && G.retries++ < 5) setTimeout(() => connect(m.match), 150);
+      if (!G.room && G.retries++ < 5) setTimeout(() => startQuick({ ...G.opts, skip: m.match }), 150);
       else { toast(m.reason + (G.room ? ' — try again when it ends' : '')); toMenu(); }
       break;
     case 'start':
-      G.myId = m.you;
-      G.roster = m.roster;
-      G.tiles = generateMap(m.seed);
+      G.myId = m.you; G.modeKey = m.mode; G.world = m.world;
+      G.map = generateArena(m.seed, m.world);
       G.phase = 'play';
-      input.enabled = true;
-      input.reset();
+      input.enabled = true; input.reset();
       show(null);
+      showBanner(MODE_INFO[m.mode].name, `${MODE_INFO[m.mode].desc} (${worldName(m.world)})`, '#ffd23f', 3500);
       break;
-    case 's': onSnapshot(m); break;
+    case 'ro':
+      if (m.add) Object.assign(G.roster, m.add);
+      break;
+    case 'st':
+      for (const [idx, type] of m.td) applyTile(idx, type);
+      for (const [idx, hp] of m.ch) G.crateHp.set(idx, hp);
+      if (m.ev) c.ev = { ...m.ev, at: performance.now() };
+      break;
+    case 'ev':
+      c.ev = m.id ? { ...m, at: performance.now() } : null;
+      if (c.primary && m.id && m.ph === 'on') { const def = EVENTS[m.id]; showBanner(def.name, def.desc, def.color, 2500); }
+      break;
+    case 's': onSnap(c, m); break;
     case 'kill': addFeed(m); break;
     case 'dead':
+      if (m.respawn > 0) { G.deadMsg = m; G.spectate = m.killerId; break; }
       G.phase = 'dead';
       G.spectate = m.killerId;
       input.enabled = false; input.reset();
@@ -154,110 +251,155 @@ function onMsg(m) {
       $('deadBy').textContent = `Eliminated by ${m.killer}`;
       setTimeout(() => { if (G.phase === 'dead') show('dead'); }, 1200);
       break;
-    case 'end': {
-      const won = m.rank === 1;
-      G.phase = 'end';
-      input.enabled = false; input.reset();
-      $('endRank').textContent = '#' + m.rank;
-      $('endMsg').textContent = won ? 'VICTORY! Last hunter standing.' : `${m.winner || 'Nobody'} won the hunt.`;
-      $('results').innerHTML = m.results.map(([n, b, r, k, bot, id]) =>
-        `<li class="${id === G.myId ? 'me' : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${BRAWLERS[b].name} · ${k} KO</span></li>`).join('');
-      setTimeout(() => { if (G.phase === 'end') show('end'); }, won ? 1800 : 600);
+    case 'end': onEnd(m); break;
+    case 'handoff':
+      c.primary = false;
+      G.handoff = { zone: m.zone, token: m.token, ack: m.ack };
+      claim();
       break;
-    }
-    case 'pong': G.ping = Math.round(performance.now() - m.c); $('ping').textContent = `${G.ping} ms`; break;
+    case 'claimed':
+      c.primary = true;
+      G.handoff = null;
+      break;
+    case 'claimfail': toast('Zone transfer failed — rejoining'); startFree(); break;
+    case 'online': G.online = m.zones; break;
+    case 'pong': if (c.primary) { G.ping = Math.round(performance.now() - m.c); $('ping').textContent = `${G.ping} ms`; } break;
   }
 }
 
-const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function applyTile(idx, type) {
+  G.map.t[idx] = type;
+  if (type !== CRATE) G.crateHp.delete(idx);
+}
+
+function onEnd(m) {
+  const won = m.rank === 1;
+  G.phase = 'end';
+  input.enabled = false; input.reset();
+  const s = stat(G.world);
+  s.games++; if (won) s.wins++; s.kills += m.kills; s.best = Math.max(s.best, G.me?.bb || 0, m.bounty);
+  savePrefs();
+  $('endRank').textContent = '#' + m.rank;
+  $('endMsg').textContent = won ? `VICTORY! ${MODE_INFO[m.mode].name} on ${worldName(G.world)}` : `${m.winner || 'Nobody'} won ${MODE_INFO[m.mode].name}.`;
+  $('endK').textContent = m.kills; $('endB').textContent = m.bounty;
+  const scoreLbl = { bounty: '★', hunted: 'pts', crystals: '💎' }[m.mode];
+  $('results').innerHTML = m.results.map(([n, b, r, k, bot, id, be, sc]) =>
+    `<li class="${id === G.myId ? 'me' : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${scoreLbl ? `${sc} ${scoreLbl} · ` : ''}${k} KO · ★${be}</span></li>`).join('');
+  setTimeout(() => { if (G.phase === 'end') show('end'); }, won ? 1800 : 600);
+}
 
 function addFeed(m) {
   const el = document.createElement('div');
   el.className = 'kf';
   const cls = (id) => (id === G.myId ? 'me' : '');
-  el.innerHTML = `<span class="${cls(m.kid)}">${esc(m.k)}</span><span class="x">✖</span><span class="${cls(m.vid)}">${esc(m.v)}</span>`;
+  el.innerHTML = `<span class="${cls(m.kid)}">${esc(m.k)}</span><span class="x">✖</span><span class="${cls(m.vid)}">${esc(m.v)}</span>${m.st > 0 && m.kid ? ` <b style="color:#ffd23f">+★${m.st + 1}</b>` : ''}`;
   const feed = $('feed');
   feed.prepend(el);
   while (feed.children.length > 4) feed.lastChild.remove();
   setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 600); }, 4500);
 }
 
+function showBanner(name, desc, color, ms) {
+  const b = $('evBanner');
+  b.hidden = false; b.classList.remove('small');
+  $('evName').textContent = name; $('evName').style.color = color; $('evDesc').textContent = desc;
+  G.bannerUntil = performance.now() + ms;
+}
+
 // ------------------------------------------------------------------ snapshots
-function onSnapshot(m) {
-  if (!G.tiles) return;
+function onSnap(c, m) {
+  if (!G.map) return;
   const now = performance.now();
   const off = now - m.n * TICK_MS;
-  if (G.timeOffset == null || off < G.timeOffset) G.timeOffset = off;
-  else G.timeOffset += (off - G.timeOffset) * 0.02;
-
+  if (c.off == null || off < c.off) c.off = off; else c.off += (off - c.off) * 0.02;
   const p = new Map(), b = new Map();
   for (const e of m.p) p.set(e[0], e);
   for (const e of m.b) b.set(e[0], e);
-  G.snaps.push({ n: m.n, p, b, cu: m.cu, fx: m.fx });
-  if (G.snaps.length > 40) G.snaps.shift();
+  c.snaps.push({ n: m.n, p, b, cu: m.cu, cy: m.cy, fx: m.fx });
+  if (c.snaps.length > 40) c.snaps.shift();
+  for (const [idx, type] of m.td) applyTile(idx, type);
+  for (const [idx, hp] of m.ch) G.crateHp.set(idx, hp);
+  c.last = m;
+  if (m.ev && c.ev && c.ev.id === m.ev[0]) { c.ev.ph = m.ev[1]; c.ev.tl = m.ev[2]; }
+  for (const [id, x, y, bt] of m.pg) G.pings.push({ id, x, y, bt, t0: now, target: !!(m.md && m.md.tg === id) });
+  if (c.primary && m.me) reconcile(m);
+}
 
-  for (const [idx, hp] of m.cr) {
-    if (hp <= 0) { G.tiles[idx] = EMPTY; G.crateHp.delete(idx); } else G.crateHp.set(idx, hp);
-  }
-  G.inset = m.z; G.alive = m.al; G.tm = m.tm;
+function primaryMods() {
+  const c = primary();
+  const e = c && c.ev;
+  return e && e.ph === 'on' && EVENTS[e.id].mods ? EVENTS[e.id].mods(e.p) : {};
+}
 
+function reconcile(m) {
   const me = m.me;
   const first = !G.me;
-  G.me = me;
-  if (first) { G.pred = { x: me.x, y: me.y }; G.prev = { ...G.pred }; G.pending = []; return; }
-
-  // reconcile own prediction: start from server state, replay unacknowledged inputs
+  G.me = me; G.myId = me.id; G.brawler = me.br;
+  G.mods = primaryMods();
+  if (G.kind === 'free') {
+    const s = stat(worldKeyAt(G.map, me.x, me.y));
+    if (me.sk > G.lastSk) { s.kills += me.sk - G.lastSk; G.lastSk = me.sk; savePrefs(); }
+    if (me.bt > s.best) { s.best = me.bt; savePrefs(); }
+  }
+  if (first) { G.pred = { x: me.x, y: me.y, mvx: me.mvx, mvy: me.mvy }; G.prev = { x: me.x, y: me.y }; G.pending = []; return; }
   G.pending = G.pending.filter((q) => q.s > m.ack);
-  const np = { x: me.x, y: me.y };
+  const np = { x: me.x, y: me.y, mvx: me.mvx, mvy: me.mvy };
   if (!me.al || me.fo) G.pending = [];
-  else for (const q of G.pending) applyMove(G.tiles, np, q.mx, q.my, BRAWLERS[G.brawler].speed);
+  else {
+    const st = moveStats(G.brawler, me.hp, me.mh, me.rs);
+    for (const q of G.pending) applyMove(G.map, np, q.mx, q.my, st.speed, st.r, G.mods);
+  }
   const dx = G.pred.x - np.x, dy = G.pred.y - np.y;
-  if (Math.hypot(dx, dy) > 220) { G.err.x = G.err.y = 0; G.prev = { ...np }; }
+  if (Math.hypot(dx, dy) > 220) { G.err.x = G.err.y = 0; G.prev = { x: np.x, y: np.y }; }
   else { G.err.x += dx; G.err.y += dy; G.prev.x -= dx; G.prev.y -= dy; }
   G.pred = np;
 }
 
-// interpolated view of the world at (server time - INTERP_MS)
-function sampleWorld() {
-  const s = G.snaps;
-  if (!s.length || G.timeOffset == null) return;
-  const rt = (performance.now() - G.timeOffset - INTERP_MS) / TICK_MS; // in ticks
+function sampleConn(c, out) {
+  const s = c.snaps;
+  if (!s.length || c.off == null) return;
+  const rt = (performance.now() - c.off - INTERP_MS) / TICK_MS;
   let a = s[0], b = s[0], f = 0;
-  if (rt >= s[s.length - 1].n) { a = b = s[s.length - 1]; }
-  else {
-    for (let i = 0; i < s.length - 1; i++) {
-      if (s[i].n <= rt && rt < s[i + 1].n) { a = s[i]; b = s[i + 1]; f = (rt - a.n) / (b.n - a.n); break; }
-    }
-  }
-  // fire effects up to current render time
-  for (const snap of s) {
-    if (snap.n > G.fxApplied && snap.n <= Math.max(rt, a.n)) { G.fxApplied = snap.n; for (const e of snap.fx) applyFx(e); }
-  }
-  const others = [];
+  if (rt >= s[s.length - 1].n) a = b = s[s.length - 1];
+  else for (let i = 0; i < s.length - 1; i++) if (s[i].n <= rt && rt < s[i + 1].n) { a = s[i]; b = s[i + 1]; f = (rt - a.n) / (b.n - a.n); break; }
+  for (const snap of s) if (snap.n > c.fxN && snap.n <= Math.max(rt, a.n)) { c.fxN = snap.n; for (const e of snap.fx) applyFx(e); }
   for (const [id, e] of b.p) {
     const ea = a.p.get(id) || e;
     const r = G.roster[id] || ['?', 'volt'];
     let da = e[5] - ea[5];
     while (da > Math.PI) da -= Math.PI * 2;
     while (da < -Math.PI) da += Math.PI * 2;
-    others.push({
-      id, x: ea[1] + (e[1] - ea[1]) * f, y: ea[2] + (e[2] - ea[2]) * f, hp: e[3], mh: e[4], facing: ea[5] + da * f,
-      fl: e[6], cu: e[7], name: r[0], brawler: r[1], moving: Math.hypot(e[1] - ea[1], e[2] - ea[2]) > 1, stun: e[6] & 2,
+    const x = ea[1] + (e[1] - ea[1]) * f, y = ea[2] + (e[2] - ea[2]) * f;
+    const prev = out.others.get(id);
+    if (prev && G.kind === 'free' && zoneAt(prev.x, prev.y) === prev.zone) continue; // the owning zone's copy wins
+    out.others.set(id, {
+      id, x, y, hp: e[3], mh: e[4], facing: ea[5] + da * f, fl: e[6], cu: e[7], bt: e[8], glow: e[9], cr: e[10], zone: c.zone,
+      name: r[0], brawler: r[1], moving: Math.hypot(e[1] - ea[1], e[2] - ea[2]) > 1, stun: e[6] & 2,
     });
   }
-  const bullets = [];
   for (const [id, e] of b.b) {
     if (e[3] === G.myId) continue; // own bullets are predicted locally
     const ea = a.b.get(id);
+    const key = c.key + id;
     const x = ea ? ea[1] + (e[1] - ea[1]) * f : e[1], y = ea ? ea[2] + (e[2] - ea[2]) * f : e[2];
-    const ang = ea ? Math.atan2(e[2] - ea[2], e[1] - ea[1]) : (bulletAng.get(id) ?? 0);
-    if (ea) bulletAng.set(id, ang);
-    bullets.push({ x, y, ang, kind: BRAWLER_IDS[e[4]] });
+    const ang = ea ? Math.atan2(e[2] - ea[2], e[1] - ea[1]) : (bulletAng.get(key) ?? 0);
+    if (ea) bulletAng.set(key, ang);
+    out.bullets.push({ x, y, ang, kind: BRAWLER_IDS[e[4]] });
   }
-  if (bulletAng.size > 500) bulletAng.clear();
-  G.view = { others, bullets, cubes: b.cu };
+  out.cubes.push(...(b.cu || []));
+  out.crystals.push(...(b.cy || []));
 }
 const bulletAng = new Map();
+
+function sampleWorld() {
+  const out = { others: new Map(), bullets: [], cubes: [], crystals: [] };
+  const list = [...G.conns.values()].sort((a, b) => b.primary - a.primary);
+  for (const c of list) sampleConn(c, out);
+  if (bulletAng.size > 800) bulletAng.clear();
+  G.view = { others: [...out.others.values()].filter((o) => o.id !== G.myId), bullets: out.bullets, cubes: out.cubes, crystals: out.crystals };
+  const now = performance.now();
+  G.pings = G.pings.filter((p) => now - p.t0 < 3000);
+}
 
 // ------------------------------------------------------------------ effects
 function burst(x, y, color, n, speed = 180, size = 5, life = 0.45) {
@@ -277,7 +419,10 @@ function applyFx([type, x, y, v, id]) {
       break;
     case 'hit': burst(x, y, KIND_COL[v] || '#fff', 7, 200, 5, 0.3); break;
     case 'wall': burst(x, y, '#d8cfff', 4, 120, 4, 0.25); break;
-    case 'crate': burst(x, y, '#d98c3f', 16, 260, 7, 0.6); burst(x, y, '#8a4b1f', 8, 200, 6, 0.5); if (near) G.shake = Math.max(G.shake, 5); break;
+    case 'crate':
+      burst(x, y, v ? '#ffd23f' : '#d98c3f', 16, 260, 7, 0.6); burst(x, y, v ? '#1f6f8b' : '#8a4b1f', 8, 200, 6, 0.5);
+      if (near) G.shake = Math.max(G.shake, 5);
+      break;
     case 'die':
       burst(x, y, '#fff', 18, 300, 8, 0.7); burst(x, y, BRAWLERS[BRAWLER_IDS[v]]?.color || '#fff', 18, 240, 7, 0.8);
       G.rings.push({ x, y, r0: 10, r1: 110, life: 0.5, max: 0.5, color: '#fff', w: 8 });
@@ -289,11 +434,15 @@ function applyFx([type, x, y, v, id]) {
       if (near) G.shake = Math.max(G.shake, 14);
       break;
     case 'dash': G.rings.push({ x, y, r0: 10, r1: 60, life: 0.3, max: 0.3, color: '#7db8ff', w: 6 }); G.flash['dash' + id] = 0.3; break;
-    case 'cube':
-      G.texts.push({ x, y: y - 80, txt: '+POWER', color: '#7dff7a', life: 1, max: 1, size: 18 });
-      burst(x, y, '#7dff7a', 14, 200, 6, 0.5);
-      break;
+    case 'cube': G.texts.push({ x, y: y - 80, txt: '+POWER', color: '#7dff7a', life: 1, max: 1, size: 18 }); burst(x, y, '#7dff7a', 14, 200, 6, 0.5); break;
+    case 'gem': G.texts.push({ x, y: y - 80, txt: `💎${v}`, color: '#f4b8ff', life: 0.8, max: 0.8, size: 18 }); burst(x, y, '#d65cff', 10, 160, 5, 0.4); break;
     case 'cloak': burst(x, y, '#c9a6ff', 20, 160, 9, 0.6); break;
+    case 'rush': G.texts.push({ x, y: y - 90, txt: 'RUSH!', color: '#ffe066', life: 1, max: 1, size: 22 }); G.rings.push({ x, y, r0: 20, r1: 80, life: 0.35, max: 0.35, color: '#ffe066', w: 5 }); break;
+    case 'spawn': G.rings.push({ x, y, r0: 80, r1: 20, life: 0.4, max: 0.4, color: '#bde0ff', w: 6 }); break;
+    case 'target':
+      G.rings.push({ x, y, r0: 20, r1: 140, life: 0.6, max: 0.6, color: '#ff2846', w: 10 });
+      if (id === G.myId) showBanner('YOU ARE THE TARGET!', 'Everyone is hunting you. Survive!', '#ff6b81', 2500);
+      break;
   }
 }
 
@@ -314,11 +463,11 @@ function updateEffects(dt) {
 // ------------------------------------------------------------------ local bullets (prediction)
 function spawnLocalShot(x, y, ang) {
   const a = BRAWLERS[G.brawler].attack;
+  const sp = a.speed * (G.mods.bulletSpeed || 1), range = a.range * (G.mods.bulletRange || 1);
   for (const d of attackDirs(G.brawler, ang)) {
-    G.localBullets.push({ x: x + Math.cos(d) * PLAYER_R * 0.6, y: y + Math.sin(d) * PLAYER_R * 0.6, vx: Math.cos(d) * a.speed, vy: Math.sin(d) * a.speed, dist: 0, range: a.range, ang: d });
+    G.localBullets.push({ x: x + Math.cos(d) * 16, y: y + Math.sin(d) * 16, vx: Math.cos(d) * sp, vy: Math.sin(d) * sp, dist: 0, range, ang: d });
   }
 }
-
 function updateLocalBullets(dt) {
   const A = BRAWLERS[G.brawler].attack;
   if (G.localBurst) {
@@ -337,26 +486,23 @@ function updateLocalBullets(dt) {
     let dead = false;
     for (let i = 0; i < n && !dead; i++) {
       b.x += (b.vx * dt) / n; b.y += (b.vy * dt) / n; b.dist += step / n;
-      if (isSolidTile(tileAt(G.tiles, b.x, b.y))) dead = true;
-      for (const o of G.view.others) if (Math.hypot(o.x - b.x, o.y - b.y) < PLAYER_R + A.radius) dead = true;
+      if (isSolidTile(tileAt(G.map, b.x, b.y)) || (G.kind === 'free' && inHub(b.x, b.y))) dead = true;
+      for (const o of G.view.others) if (Math.hypot(o.x - b.x, o.y - b.y) < PLAYER_R * sizeOf(o) + A.radius) dead = true;
       if (b.dist >= b.range) dead = true;
     }
     if (!dead) out.push(b);
   }
   G.localBullets = out;
 }
+const sizeOf = (o) => moveStats(o.brawler || 'volt', o.hp, o.mh).r / PLAYER_R;
 
 // ------------------------------------------------------------------ input tick (20 Hz, same as server)
 function renderMe() {
   const a = Math.min(1, G.acc / DT);
   return { x: G.prev.x + (G.pred.x - G.prev.x) * a + G.err.x, y: G.prev.y + (G.pred.y - G.prev.y) * a + G.err.y };
 }
-
 function worldScale() { return Math.min(H / 680, W / 1150); }
-
-function mouseAngle() {
-  return Math.atan2(input.mouse.y - H / 2, input.mouse.x - W / 2); // camera is centred on me
-}
+function mouseAngle() { return Math.atan2(input.mouse.y - H / 2, input.mouse.x - W / 2); }
 
 function autoAngle(kind) {
   const B = BRAWLERS[G.brawler];
@@ -364,6 +510,7 @@ function autoAngle(kind) {
   const reach = kind === 'super' ? (B.super.dist || B.super.radius || 600) + 150 : B.attack.range * 1.15;
   let best = null, bd = Infinity;
   for (const o of G.view.others) {
+    if (o.fl & 16) continue;
     const d = Math.hypot(o.x - me.x, o.y - me.y);
     if (d < bd) { bd = d; best = o; }
   }
@@ -372,25 +519,25 @@ function autoAngle(kind) {
 }
 
 function clientTick() {
-  if (!G.me || !G.ws || G.phase !== 'play') return;
+  G.ticks++;
+  manageZones();
+  if (!G.me || G.phase !== 'play') return;
   const B = BRAWLERS[G.brawler];
   const me = G.me;
   const mv = input.getMove();
   let f = null, u = null;
+  const safe = G.kind === 'free' && inHub(G.pred.x, G.pred.y);
   for (const a of input.takeActions()) {
     const ang = a.mode === 'angle' ? a.ang : a.mode === 'mouse' ? mouseAngle() : autoAngle(a.type);
+    if (safe) continue;
     if (a.type === 'fire') {
       const shotsPending = G.pending.filter((q) => q.f).length;
-      if (me.al && !(me.f & 2) && !me.fo && G.localCd <= 0 && !G.localBurst && Math.floor(me.am) - shotsPending >= 1 && f == null) {
-        f = ang;
-        G.facing = ang;
-        G.localCd = B.attack.cooldown;
+      if (me.al && !(me.f & 2) && !me.fo && G.localCd <= 0 && !G.localBurst && Math.floor(me.am) - shotsPending >= 1 && f == null && !G.handoff) {
+        f = ang; G.facing = ang; G.localCd = B.attack.cooldown;
         spawnLocalShot(G.pred.x, G.pred.y, ang);
         if (B.attack.kind === 'burst') G.localBurst = { left: B.attack.count - 1, t: B.attack.interval, ang };
       }
-    } else if (me.sc >= 1 && G.superCd <= 0 && me.al) {
-      u = ang; G.superCd = 0.6; G.facing = ang;
-    }
+    } else if (me.sc >= 1 && G.superCd <= 0 && me.al) { u = ang; G.superCd = 0.6; G.facing = ang; }
   }
   const aim = input.getAim();
   if (aim) G.facing = aim.ang;
@@ -399,10 +546,17 @@ function clientTick() {
   G.moving = Math.hypot(mv.x, mv.y) > 0.1;
 
   G.prev = { x: G.pred.x, y: G.pred.y };
-  if (me.al && !me.fo) applyMove(G.tiles, G.pred, mv.x, mv.y, B.speed);
+  G.mods = primaryMods();
+  if (me.al && !me.fo) {
+    const st = moveStats(G.brawler, me.hp, me.mh, me.rs);
+    applyMove(G.map, G.pred, mv.x, mv.y, st.speed, st.r, G.mods);
+  }
   G.seq++;
-  G.pending.push({ s: G.seq, mx: mv.x, my: mv.y, f: f != null });
-  send({ t: 'in', s: G.seq, mx: +mv.x.toFixed(3), my: +mv.y.toFixed(3), ax: +Math.cos(G.facing).toFixed(3), ay: +Math.sin(G.facing).toFixed(3), f, u });
+  const ax = +Math.cos(G.facing).toFixed(3), ay = +Math.sin(G.facing).toFixed(3);
+  const inp = { t: 'in', s: G.seq, mx: +mv.x.toFixed(3), my: +mv.y.toFixed(3), ax, ay, f, u };
+  G.pending.push({ s: G.seq, mx: inp.mx, my: inp.my, ax, ay, f: f != null });
+  if (G.pending.length > 60) G.pending.shift();
+  send(inp);
   G.localCd -= DT; G.superCd -= DT;
 }
 
@@ -417,30 +571,28 @@ function frame(now) {
     while (G.acc >= DT && n++ < 5) { clientTick(); G.acc -= DT; }
     if (G.acc > DT) G.acc = DT;
     sampleWorld();
-    if (G.tiles) updateLocalBullets(dt);
+    if (G.map) updateLocalBullets(dt);
     updateEffects(dt);
-    if (G.me && G.tiles) render(now / 1000);
-    updateHud();
-  } else {
-    drawMenuBackdrop(now / 1000);
-  }
+    if (G.me && G.map) render(now / 1000);
+    updateHud(now);
+  } else drawMenuBackdrop(now / 1000);
   requestAnimationFrame(frame);
 }
 
 function render(t) {
   const s = worldScale();
   const mePos = renderMe();
-  const meAlive = G.me.al;
-  // camera: follow me, or spectate someone when dead
+  const meAlive = !!G.me.al;
   let target = mePos;
   if (!meAlive) {
-    const o = G.view.others.find((p) => p.id === G.spectate) || G.view.others.reduce((best, p) => (!best || Math.hypot(p.x - G.cam.x, p.y - G.cam.y) < Math.hypot(best.x - G.cam.x, best.y - G.cam.y) ? p : best), null);
+    const o = G.view.others.find((p) => p.id === G.spectate) || (G.kind === 'quick' && G.modeKey === 'showdown' ? G.view.others[0] : null);
     if (o) { target = o; G.spectate = o.id; } else target = G.cam;
     G.cam.x += (target.x - G.cam.x) * 0.12; G.cam.y += (target.y - G.cam.y) * 0.12;
   } else { G.cam.x = target.x; G.cam.y = target.y; }
   const cam = G.cam;
   const hw = W / 2 / s, hh = H / 2 / s;
   const x0 = cam.x - hw, y0 = cam.y - hh - 60, x1 = cam.x + hw, y1 = cam.y + hh + 60;
+  const view = { x0, y0, x1, y1 };
 
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.clearRect(0, 0, W, H);
@@ -450,45 +602,51 @@ function render(t) {
   ctx.scale(s, s);
   ctx.translate(-cam.x, -cam.y);
 
-  R.drawGround(ctx, x0, y0, x1, y1);
+  R.drawGround(ctx, G.map, x0, y0, x1, y1, t);
+  const helpers = R.eventHelpers(ctx, G.map, view);
+  const evs = [...G.conns.values()].map((c) => c.ev).filter(Boolean);
+  for (const e of evs) if (EVENTS[e.id].layer === 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
 
-  // aim indicators (under everything)
   if (meAlive && G.phase === 'play') {
     const aim = input.getAim();
     if (aim && !aim.cancel) R.drawAim(ctx, G.brawler, mePos.x, mePos.y, aim.ang, aim.kind);
-    else if (!input.isTouch && input.mouse.active) {
-      ctx.globalAlpha = 0.45; R.drawAim(ctx, G.brawler, mePos.x, mePos.y, mouseAngle(), 'fire'); ctx.globalAlpha = 1;
-    }
+    else if (!input.isTouch && input.mouse.active) { ctx.globalAlpha = 0.45; R.drawAim(ctx, G.brawler, mePos.x, mePos.y, mouseAngle(), 'fire'); ctx.globalAlpha = 1; }
   }
+  for (const c of G.view.cubes) R.drawCube(ctx, c[1], c[2], t);
+  for (const c of G.view.crystals) R.drawCrystal(ctx, c[1], c[2], t);
+  R.drawBlocks(ctx, G.map, G.crateHp, x0, y0, x1, y1);
 
-  for (const c of G.view.cubes || []) R.drawCube(ctx, c[1], c[2], t);
-  R.drawBlocks(ctx, G.tiles, G.crateHp, x0, y0, x1, y1);
-
-  // players sorted by y
-  const list = G.view.others.map((o) => ({ ...o, me: false }));
+  const list = G.view.others.map((o) => ({ ...o, me: false, size: sizeOf(o) }));
   if (meAlive) {
-    list.push({ id: G.myId, x: mePos.x, y: mePos.y, hp: G.me.hp, mh: G.me.mh, cu: G.me.cu, facing: G.facing, fl: G.me.f, name: G.roster[G.myId]?.[0] || 'You', brawler: G.brawler, moving: G.moving, stun: G.me.f & 2, me: true });
+    const me = G.me;
+    list.push({
+      id: G.myId, x: mePos.x, y: mePos.y, hp: me.hp, mh: me.mh, cu: me.cu, facing: G.facing, fl: me.f, name: G.roster[G.myId]?.[0] || 'You',
+      brawler: G.brawler, moving: G.moving, stun: me.f & 2, me: true, bt: me.bt, glow: me.gl, cr: me.cr, size: moveStats(G.brawler, me.hp, me.mh).r / PLAYER_R,
+    });
   }
   list.sort((a, b) => a.y - b.y);
+  for (const p of list) R.drawAura(ctx, p, t);
   for (const p of list) {
     let alpha = 1;
     if (p.fl & 4) alpha = p.me ? 0.45 + Math.sin(t * 8) * 0.08 : 0.35;
     else if (p.fl & 1) alpha = p.me ? 0.7 : 0.75;
     if (G.flash['dash' + p.id] > 0) {
-      for (let i = 1; i <= 3; i++) R.drawBrawler(ctx, p.brawler, p.x - Math.cos(p.facing) * i * 22, p.y - Math.sin(p.facing) * i * 22, p.facing, t, { alpha: 0.18 * (4 - i) });
+      for (let i = 1; i <= 3; i++) R.drawBrawler(ctx, p.brawler, p.x - Math.cos(p.facing) * i * 22, p.y - Math.sin(p.facing) * i * 22, p.facing, t, { alpha: 0.18 * (4 - i), size: p.size });
     }
-    R.drawBrawler(ctx, p.brawler, p.x, p.y, p.facing, t, { alpha, moving: p.moving, flash: G.flash[p.id] });
+    R.drawBrawler(ctx, p.brawler, p.x, p.y, p.facing, t, { alpha, moving: p.moving, flash: G.flash[p.id], size: p.size });
+    R.drawBubble(ctx, p, t);
   }
-
   for (const b of G.view.bullets) R.drawBullet(ctx, b.kind, b.x, b.y, b.ang);
   for (const b of G.localBullets) R.drawBullet(ctx, G.brawler, b.x, b.y, b.ang);
 
-  R.drawBushes(ctx, G.tiles, x0, y0, x1, y1, meAlive ? mePos : null, t);
-  R.drawPoison(ctx, G.inset, x0, y0, x1, y1, t);
+  R.drawBushes(ctx, G.map, x0, y0, x1, y1, meAlive ? mePos : null, t);
+  for (const e of evs) if (EVENTS[e.id].layer !== 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
+  const P = primary();
+  if (P && P.last && P.last.z > 0) R.drawPoison(ctx, P.last.z, ARENA_SIZE, x0, y0, x1, y1, t);
 
   for (const r of G.rings) {
     const k = 1 - r.life / r.max;
-    ctx.beginPath(); ctx.arc(r.x, r.y, r.r0 + (r.r1 - r.r0) * k, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(r.x, r.y, Math.max(1, r.r0 + (r.r1 - r.r0) * k), 0, Math.PI * 2);
     ctx.globalAlpha = 1 - k; ctx.lineWidth = r.w; ctx.strokeStyle = r.color; ctx.stroke(); ctx.globalAlpha = 1;
   }
   for (const p of G.parts) {
@@ -497,64 +655,162 @@ function render(t) {
     ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-
-  for (const p of list) {
-    if (p.fl & 4 && !p.me) continue;
-    R.drawStatus(ctx, p, p.me, t);
+  for (const p of list) { if (p.fl & 4 && !p.me) continue; R.drawStatus(ctx, p, p.me, t); }
+  if (meAlive) {
+    R.drawAmmo(ctx, mePos.x, mePos.y, G.me.am, G.me.sc >= 1, t);
+    // LAY LOW meter: fills while hiding, then "LAYING LOW"
+    if (G.me.f & 1) {
+      const k = G.me.bt5 / 5;
+      ctx.beginPath(); ctx.arc(mePos.x + 44, mePos.y + 40, 9, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k);
+      ctx.lineWidth = 5; ctx.strokeStyle = '#51cf66'; ctx.stroke();
+      if (G.me.lo > 0) { ctx.globalAlpha = 0.5 + G.me.lo * 0.5; R.outlinedText(ctx, 'LAYING LOW', mePos.x, mePos.y + 66, 13, '#9dffb0'); ctx.globalAlpha = 1; }
+    }
   }
-  if (meAlive) R.drawAmmo(ctx, mePos.x, mePos.y, G.me.am, G.me.sc >= 1, t);
-  for (const tx of G.texts) {
-    ctx.globalAlpha = Math.min(1, tx.life / tx.max * 2);
-    R.outlinedText(ctx, tx.txt, tx.x, tx.y, tx.size, tx.color);
-  }
+  for (const tx of G.texts) { ctx.globalAlpha = Math.min(1, (tx.life / tx.max) * 2); R.outlinedText(ctx, tx.txt, tx.x, tx.y, tx.size, tx.color); }
   ctx.globalAlpha = 1;
   ctx.restore();
 
-  // screen-space
+  // ---- screen space
+  const pe = P?.ev;
+  if (pe && EVENTS[pe.id].drawScreen) EVENTS[pe.id].drawScreen(ctx, pe.p, pe.ph, t, W, H, s);
   if (G.hurt > 0) {
     const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.7);
     g.addColorStop(0, 'rgba(255,40,60,0)'); g.addColorStop(1, `rgba(255,40,60,${G.hurt})`);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   }
-  if (G.me.al && G.inset > 0) {
-    const z = G.inset;
-    if (mePos.x < z || mePos.y < z || mePos.x > MAP_SIZE - z || mePos.y > MAP_SIZE - z) {
-      ctx.fillStyle = `rgba(80,220,90,${0.15 + Math.sin(t * 6) * 0.05})`; ctx.fillRect(0, 0, W, H);
+  if (meAlive && P && P.last && P.last.z > 0) {
+    const z = P.last.z;
+    if (mePos.x < z || mePos.y < z || mePos.x > ARENA_SIZE - z || mePos.y > ARENA_SIZE - z) { ctx.fillStyle = `rgba(80,220,90,${0.15 + Math.sin(t * 6) * 0.05})`; ctx.fillRect(0, 0, W, H); }
+  }
+  // hunted: arrow towards the target when it's off-screen
+  const tg = P?.last?.md?.tg;
+  if (tg && tg !== G.myId) {
+    const o = G.view.others.find((q) => q.id === tg) || G.pings.filter((q) => q.id === tg).pop();
+    if (o) {
+      const dx = (o.x - cam.x) * s, dy = (o.y - cam.y) * s;
+      if (Math.abs(dx) > W / 2 - 20 || Math.abs(dy) > H / 2 - 20) {
+        const a = Math.atan2(dy, dx), k = Math.min((W / 2 - 50) / Math.abs(Math.cos(a) || 1e-6), (H / 2 - 50) / Math.abs(Math.sin(a) || 1e-6));
+        ctx.save(); ctx.translate(W / 2 + Math.cos(a) * k, H / 2 + Math.sin(a) * k); ctx.rotate(a);
+        ctx.beginPath(); ctx.moveTo(22, 0); ctx.lineTo(-12, -16); ctx.lineTo(-12, 16); ctx.closePath();
+        ctx.fillStyle = '#ff2846'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = R.INK; ctx.stroke(); ctx.restore();
+      }
     }
   }
-  if (G.phase === 'play' && G.me.al) R.drawControls(ctx, input, G.me.sc, G.brawler, t);
-  if (!G.me.al && G.phase !== 'play') {
+  const radarR = Math.min(64, H * 0.15);
+  const now = performance.now();
+  R.drawRadar(ctx, 12 + radarR, 36 + radarR, radarR, { x: cam.x, y: cam.y },
+    G.pings.map((p) => ({ ...p, age: (now - p.t0) / 1000 })),
+    { poison: P?.last?.z ? { inset: P.last.z, size: ARENA_SIZE } : null, hub: G.kind === 'free', zones: G.kind === 'free', range: 1600 }, t);
+  if (G.phase === 'play' && meAlive) R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
+  if (!meAlive && G.phase !== 'play') {
     const o = G.view.others.find((p) => p.id === G.spectate);
     if (o) R.outlinedText(ctx, `Spectating ${o.name}`, W / 2, H - 30, 18);
   }
 }
 
+// ------------------------------------------------------------------ DOM HUD
 let hudT = 0;
-function updateHud() {
-  if (performance.now() - hudT < 150) return;
-  hudT = performance.now();
-  $('aliveN').textContent = G.alive;
-  const pt = $('poison');
-  if (G.tm < POISON_START) { pt.classList.remove('on'); pt.innerHTML = `POISON IN <b>${Math.ceil(POISON_START - G.tm)}</b>`; }
-  else { pt.classList.add('on'); pt.textContent = 'POISON CLOSING IN!'; }
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+function updateHud(now) {
+  const P = primary();
+  const e = P?.ev;
+  const banner = $('evBanner');
+  if (now < G.bannerUntil) { /* a big banner is showing */ }
+  else if (e) {
+    const def = EVENTS[e.id];
+    banner.hidden = false;
+    if (e.ph === 'warn') {
+      banner.classList.remove('small');
+      $('evName').textContent = `⚠ ${def.name} IN ${Math.max(1, Math.ceil(e.tl))}`; $('evName').style.color = def.color; $('evDesc').textContent = def.desc;
+    } else {
+      banner.classList.add('small');
+      $('evName').textContent = `${def.name} · ${Math.ceil(e.tl)}s`; $('evName').style.color = def.color;
+    }
+  } else banner.hidden = true;
+
+  if (now - hudT < 150) return;
+  hudT = now;
+  const last = P?.last;
+  const me = G.me;
+  if (G.kind === 'free') {
+    const humans = Object.values(G.online || {}).flatMap((z) => z.players);
+    $('countPill').hidden = false;
+    $('aliveN').textContent = Math.max(1, humans.length); $('countLbl').textContent = 'ONLINE';
+    $('statsPill').hidden = false;
+    if (me) { $('sessK').textContent = me.sk; $('sessB').textContent = me.bb; }
+    $('poison').hidden = true; $('timerPill').hidden = true;
+    const safe = me && me.al && inHub(G.pred.x, G.pred.y);
+    $('hubPanel').hidden = !safe;
+    if (safe) {
+      $('onlineN').textContent = Math.max(1, humans.length);
+      $('onlineList').innerHTML = ZONES.map((z) => (G.online[z.slot]?.players || []).map(([n, , bt]) =>
+        `<li>${esc(n)} <span>${worldName(z.world)}${bt ? ` ★${bt}` : ''}</span></li>`).join('')).join('') || '<li>Just you (and bots)</li>';
+      for (const b of $('hubPick').children) b.classList.toggle('sel', b.dataset.b === G.brawler);
+    }
+  } else if (last) {
+    $('statsPill').hidden = true; $('hubPanel').hidden = true;
+    const sd = G.modeKey === 'showdown';
+    $('countPill').hidden = !sd;
+    $('aliveN').textContent = last.al; $('countLbl').textContent = 'LEFT';
+    $('poison').hidden = !sd;
+    if (sd) {
+      const pt = $('poison');
+      if (last.tm < 60) { pt.classList.remove('on'); pt.innerHTML = `POISON IN <b>${Math.ceil(60 - last.tm)}</b>`; }
+      else { pt.classList.add('on'); pt.textContent = 'POISON CLOSING IN!'; }
+    }
+    $('timerPill').hidden = sd || !last.md;
+    if (last.md) $('timerT').textContent = fmt(last.md.tl);
+  }
+  const top = last?.top;
+  $('topBounty').hidden = !top;
+  if (top) { $('topName').textContent = top[0] === G.myId ? 'YOU' : top[1]; $('topVal').textContent = top[2]; }
+  const lb = last?.lb;
+  if (lb) {
+    const lbl = { bounty: '★', hunted: 'pts', crystals: '💎' }[G.modeKey] || '★';
+    $('leader').hidden = false;
+    $('leader').innerHTML = lb.map(([id, n, sc], i) => `<div>${i + 1}. ${id === G.myId ? '<b>YOU</b>' : esc(n)}<span>${sc} ${lbl}</span></div>`).join('');
+  }
+  const mb = $('modeBanner');
+  mb.className = '';
+  let txt = '';
+  if (G.modeKey === 'hunted' && last?.md) {
+    if (last.md.tg === G.myId) { txt = '🎯 YOU ARE THE TARGET — SURVIVE!'; mb.className = 'red'; }
+    else if (last.md.tg) { txt = `🎯 Hunt ${esc(G.roster[last.md.tg]?.[0] || '?')}!`; mb.className = 'red'; }
+  } else if (G.modeKey === 'crystals' && me) {
+    const h = last?.md?.hold;
+    mb.className = 'gem';
+    txt = `💎 ${me.cr}/10`;
+    if (h) txt += h[0] === G.myId ? ` · HOLD ON! ${Math.ceil(h[1])}s` : ` · ${esc(G.roster[h[0]]?.[0] || '?')} wins in ${Math.ceil(h[1])}s!`;
+  }
+  mb.hidden = !txt || G.phase !== 'play';
+  mb.innerHTML = txt;
+  const rs = me && !me.al && me.rt > 0;
+  $('respawn').hidden = !rs;
+  if (rs) $('respawnT').textContent = Math.ceil(me.rt);
 }
 
-// gentle animated backdrop behind the lobby
-let menuTiles = null;
+// hub brawler picker
+for (const id of BRAWLER_IDS) {
+  const b = document.createElement('button');
+  b.textContent = BRAWLERS[id].name; b.dataset.b = id;
+  b.onclick = () => { selBrawler = id; prefs.brawler = id; savePrefs(); send({ t: 'pick', brawler: id }); };
+  $('hubPick').appendChild(b);
+}
+
+let menuMap = null;
 function drawMenuBackdrop(t) {
-  if (!menuTiles) menuTiles = generateMap(7);
+  if (!menuMap) menuMap = generateWorld();
   const s = worldScale() * 0.9;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.save();
-  const cx = 1000 + Math.cos(t * 0.05) * 500, cy = 1000 + Math.sin(t * 0.05) * 500;
+  const cx = 2000 + Math.cos(t * 0.04) * 1300, cy = 2000 + Math.sin(t * 0.04) * 1300;
   ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.translate(-cx, -cy);
   const hw = W / 2 / s, hh = H / 2 / s;
-  R.drawGround(ctx, cx - hw, cy - hh, cx + hw, cy + hh);
-  R.drawBlocks(ctx, menuTiles, new Map(), cx - hw, cy - hh - 60, cx + hw, cy + hh + 60);
-  R.drawBushes(ctx, menuTiles, cx - hw, cy - hh, cx + hw, cy + hh, null, t);
+  R.drawGround(ctx, menuMap, cx - hw, cy - hh, cx + hw, cy + hh, t);
+  R.drawBlocks(ctx, menuMap, new Map(), cx - hw, cy - hh - 60, cx + hw, cy + hh + 60);
+  R.drawBushes(ctx, menuMap, cx - hw, cy - hh, cx + hw, cy + hh, null, t);
   ctx.restore();
 }
-
 requestAnimationFrame(frame);
 
 // ------------------------------------------------------------------ buttons
@@ -564,8 +820,18 @@ function goFullscreen() {
   const p = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : null;
   if (p && p.then) p.then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
 }
-$('play').onclick = () => { goFullscreen(); connect(); };
+$('play').onclick = () => { goFullscreen(); startQuick({}); };
+$('free').onclick = () => { goFullscreen(); startFree(); };
 $('cancel').onclick = toMenu;
+$('leaveWorld').onclick = toMenu;
 $('spectate').onclick = () => { $('dead').hidden = true; $('hudAgain').hidden = false; };
-for (const b of document.querySelectorAll('.again')) b.onclick = () => connect();
+for (const b of document.querySelectorAll('.again')) b.onclick = () => startQuick(G.opts.world ? { ...G.opts, room: 'T' + Math.floor(Math.random() * 1e8) } : {});
 $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('play').click(); });
+
+// Test flags: ?world=<key>[&mode=<mode>] drops you straight into that arena with bots; ?free=1 into Free Play.
+const qs = new URLSearchParams(location.search);
+if (qs.get('world')) startQuick({ world: qs.get('world'), mode: qs.get('mode') || '', lobby: '1.5', room: 'T' + Math.floor(Math.random() * 1e8) });
+else if (qs.get('free')) startFree();
+
+// exposed for e2e tests
+window.__hunt = G;

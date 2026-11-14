@@ -17,32 +17,49 @@
 
 <div id="hud" hidden>
   <div id="topbar">
-    <div class="pill" id="alive"><span class="skull">☠</span><b id="aliveN">10</b> LEFT</div>
-    <div class="pill poison" id="poison">POISON IN <b id="poisonT">60</b></div>
+    <div class="pill" id="countPill"><span class="skull">☠</span><b id="aliveN">10</b><span id="countLbl">LEFT</span></div>
+    <div class="pill" id="timerPill" hidden>⏱ <b id="timerT">2:00</b></div>
+    <div class="pill poison" id="poison" hidden>POISON IN <b id="poisonT">60</b></div>
+    <div class="pill" id="statsPill" hidden>KO <b id="sessK">0</b> · BEST ★<b id="sessB">0</b></div>
   </div>
+  <div id="topBounty" hidden>👑 <span id="topName"></span> <b id="topVal"></b></div>
+  <div id="evBanner" hidden><div class="evName" id="evName"></div><div class="evDesc" id="evDesc"></div></div>
+  <div id="modeBanner" hidden></div>
+  <div id="leader" hidden></div>
   <div id="feed"></div>
   <div id="ping">-- ms</div>
+  <div id="respawn" hidden>Respawning in <b id="respawnT">3</b></div>
+  <div id="hubPanel" hidden>
+    <div class="hubTitle">SAFE HUB</div>
+    <div id="hubPick"></div>
+    <div class="hubOnline">ONLINE <b id="onlineN">1</b></div>
+    <ul id="onlineList"></ul>
+    <button id="leaveWorld" class="ghost small">LEAVE</button>
+  </div>
   <button id="hudAgain" class="big again" hidden>PLAY AGAIN</button>
 </div>
 
 <div id="lobby" class="screen">
   <div class="panel">
     <h1 class="logo">HUNT</h1>
-    <p class="tag">Last one standing wins.</p>
     <div class="row">
       <input id="name" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false">
       <input id="room" maxlength="12" placeholder="Room code (optional)" autocomplete="off" spellcheck="false">
     </div>
     <div id="cards"></div>
-    <label class="opt" id="botsOpt"><input type="checkbox" id="bots" checked> Fill empty slots with bots <small>(room only)</small></label>
-    <button id="play" class="big">PLAY</button>
-    <p class="hint">Same room code on two phones = same match. Empty slots fill with bots.</p>
+    <div class="modes">
+      <button id="play" class="big">QUICK HUNT<small>Random event · 10 players</small></button>
+      <button id="free" class="big alt">FREE PLAY<small>Open world · drop in anytime</small></button>
+    </div>
+    <label class="opt" id="botsOpt"><input type="checkbox" id="bots" checked> Fill empty slots with bots <small>(room code only)</small></label>
+    <details id="statsBox"><summary>Your stats by world</summary><table id="stats"></table></details>
   </div>
 </div>
 
 <div id="waiting" class="screen" hidden>
   <div class="panel small">
-    <h2>FINDING HUNTERS</h2>
+    <h2 id="waitMode">FINDING HUNTERS</h2>
+    <p id="waitDesc" class="desc"></p>
     <div class="count" id="countdown">…</div>
     <div id="roomLabel"></div>
     <ul id="plist"></ul>
@@ -65,6 +82,7 @@
   <div class="panel">
     <div class="rank" id="endRank">#1</div>
     <p id="endMsg"></p>
+    <div class="endStats"><span>KO <b id="endK">0</b></span><span>BOUNTY EARNED ★<b id="endB">0</b></span></div>
     <ol id="results"></ol>
     <button class="big again">PLAY AGAIN</button>
   </div>

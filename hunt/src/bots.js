@@ -1,10 +1,17 @@
 // Simple bot brains. Returns one input per tick, same shape a human client sends.
-import { BRAWLERS, DT, MAP_SIZE, TILE, GRID, PLAYER_R, tileAt, isSolidTile, lineOfSight } from '../public/shared.js';
+import { BRAWLERS, DT, TILE, PLAYER_R, HUB, tileAt, blocksMove, lineOfSight } from '../public/shared.js';
+import { inCircles } from '../public/events/helpers.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
+// tiles, lava, burning bushes, the hub (bots stay out) and zone edges all count as blocked
 function blocked(m, x, y) {
-  return isSolidTile(tileAt(m.tiles, x, y));
+  if (blocksMove(tileAt(m.map, x, y))) return true;
+  if (m.hub && Math.hypot(x - HUB.x, y - HUB.y) < HUB.r + 30) return true;
+  if (m.hub && !m.inBounds(x, y, -30)) return true;
+  const e = m.event;
+  if (e && e.id === 'lava' && inCircles(e.params.pools, x, y)) return true;
+  return false;
 }
 
 // Rotate the wanted direction until the path ahead is clear.
@@ -28,13 +35,13 @@ function steer(m, p, mx, my) {
 }
 
 function randomSafePoint(m) {
-  const z = m.zoneInset + 120;
+  const z = m.zoneInset + 120, b = m.bounds;
   for (let i = 0; i < 20; i++) {
-    const x = rand(Math.max(80, z), Math.min(MAP_SIZE - 80, MAP_SIZE - z));
-    const y = rand(Math.max(80, z), Math.min(MAP_SIZE - 80, MAP_SIZE - z));
+    const x = rand(b.x0 + Math.max(80, z), b.x1 - Math.max(80, z));
+    const y = rand(b.y0 + Math.max(80, z), b.y1 - Math.max(80, z));
     if (!blocked(m, x, y)) return { x, y };
   }
-  return { x: MAP_SIZE / 2, y: MAP_SIZE / 2 };
+  return { ...m.center };
 }
 
 export function botInput(m, p) {
@@ -69,23 +76,34 @@ export function botInput(m, p) {
     if (nt !== ai.target && nt != null) ai.fireCd = Math.max(ai.fireCd, rand(0.4, 0.9)); // reaction time
     ai.target = nt;
   }
+  const goal = m.mode.botGoal?.(m, p) || null;
+  if (goal && goal.targetId) { const g = m.players.get(goal.targetId); if (g && g.alive && g.spawnProt <= 0) ai.target = g.id; }
   let tgt = ai.target != null ? m.players.get(ai.target) : null;
-  if (tgt && (!tgt.alive || !m.canSee(p, tgt))) tgt = null;
+  if (tgt && (!tgt.alive || tgt.spawnProt > 0 || m.isSafe(tgt.x, tgt.y))) tgt = null;
+  // the hunted target can always be found (it pings the radar)
+  if (tgt && !m.canSee(p, tgt) && !(goal && goal.targetId === tgt.id)) tgt = null;
+  const amTarget = m.targetId === p.id;
 
   const z = m.zoneInset;
-  const margin = z + 110;
-  const inDanger = z > 0 && (p.x < margin || p.y < margin || p.x > MAP_SIZE - margin || p.y > MAP_SIZE - margin);
+  const margin = z + 110, B0 = m.bounds;
+  const inDanger = z > 0 && (p.x < margin || p.y < margin || p.x > B0.x1 - margin || p.y > B0.y1 - margin);
+  const ev = m.event && m.event.ph === 'on' ? m.event : null;
+  const onFire = ev && ev.id === 'wildfire' && (ev.params.burnT ?? 0) < 4 && ev.params.burn.includes(Math.floor(p.y / TILE) * m.map.gw + Math.floor(p.x / TILE));
   let mx = 0, my = 0;
 
   if (inDanger && !(tgt && Math.hypot(tgt.x - p.x, tgt.y - p.y) < range * 0.6)) {
-    mx = MAP_SIZE / 2 - p.x; my = MAP_SIZE / 2 - p.y;
+    mx = m.center.x - p.x; my = m.center.y - p.y;
+  } else if (onFire) {
+    mx = Math.cos(p.facing + 2); my = Math.sin(p.facing + 2);
+  } else if (goal && goal.x != null && (!tgt || Math.hypot(tgt.x - p.x, tgt.y - p.y) > range * 0.7)) {
+    mx = goal.x - p.x; my = goal.y - p.y;
   } else if (tgt) {
     const dx = tgt.x - p.x, dy = tgt.y - p.y, d = Math.hypot(dx, dy) || 1;
     const nx = dx / d, ny = dy / d;
     const want = range * (p.brawler === 'brick' ? 0.55 : 0.72);
     let fwd = d > want + 60 ? 1 : d < want - 90 ? -1 : 0;
-    if (p.hp < p.maxHp * 0.3 && tgt.hp > p.hp && p.brawler !== 'brick') fwd = -1;
-    const los = lineOfSight(m.tiles, p.x, p.y, tgt.x, tgt.y);
+    if ((p.hp < p.maxHp * 0.3 && tgt.hp > p.hp && p.brawler !== 'brick') || (amTarget && d < range)) fwd = -1;
+    const los = lineOfSight(m.map, p.x, p.y, tgt.x, tgt.y);
     if (!los) { mx = nx; my = ny; } else {
       mx = nx * fwd - ny * ai.strafe * 0.75;
       my = ny * fwd + nx * ai.strafe * 0.75;
@@ -114,14 +132,14 @@ export function botInput(m, p) {
     else {
       let ci = null; gd = Infinity;
       for (const idx of m.crates.keys()) {
-        const x = (idx % GRID) * TILE + TILE / 2, y = Math.floor(idx / GRID) * TILE + TILE / 2;
+        const x = (idx % m.map.gw) * TILE + TILE / 2, y = Math.floor(idx / m.map.gw) * TILE + TILE / 2;
         const d = Math.hypot(x - p.x, y - p.y);
-        if (d < 650 && d < gd && x > margin && y > margin && x < MAP_SIZE - margin && y < MAP_SIZE - margin) { gd = d; ci = { x, y }; }
+        if (d < 650 && d < gd && x > B0.x0 + margin && y > B0.y0 + margin && x < B0.x1 - margin && y < B0.y1 - margin) { gd = d; ci = { x, y }; }
       }
       if (ci) {
         const dx = ci.x - p.x, dy = ci.y - p.y;
         if (gd > Math.min(range * 0.8, 300)) { mx = dx; my = dy; }
-        if (gd < range * 0.9 && p.ammo >= 1 && ai.fireCd <= 0 && lineOfSight(m.tiles, p.x, p.y, ci.x - Math.sign(dx) * 30, ci.y - Math.sign(dy) * 30)) {
+        if (gd < range * 0.9 && p.ammo >= 1 && ai.fireCd <= 0 && lineOfSight(m.map, p.x, p.y, ci.x - Math.sign(dx) * 30, ci.y - Math.sign(dy) * 30)) {
           inp.f = Math.atan2(dy, dx);
           ai.fireCd = rand(0.5, 1.0);
         }

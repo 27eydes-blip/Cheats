@@ -7,8 +7,13 @@
   "durable_objects": {
     "bindings": [
       { "name": "MATCH", "class_name": "MatchRoom" },
-      { "name": "MATCHMAKER", "class_name": "Matchmaker" }
+      { "name": "MATCHMAKER", "class_name": "Matchmaker" },
+      { "name": "ZONE", "class_name": "ZoneRoom" },
+      { "name": "DIRECTORY", "class_name": "Directory" }
     ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MatchRoom", "Matchmaker"] }]
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["MatchRoom", "Matchmaker"] },
+    { "tag": "v2", "new_sqlite_classes": ["ZoneRoom", "Directory"] }
+  ]
 }
