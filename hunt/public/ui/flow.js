@@ -75,7 +75,7 @@ export function showIntro({ world, modeName, brawler, skin }) {
   el.innerHTML = `<canvas style="position:absolute;left:3%;bottom:6%;width:48vh;height:34vh"></canvas><div class="title vs">VS</div>
     <div class="title entering">ENTERING <b>${esc(worldName(world).toUpperCase())}</b></div><div class="imode">${esc(modeName)}</div>`;
   document.body.appendChild(el);
-  sfx('slam', 0.8);
+  sfx('uislam', 0.8);
   const cv = el.querySelector('canvas'), d = Math.min(2, devicePixelRatio || 1);
   const r = cv.getBoundingClientRect(); cv.width = r.width * d; cv.height = r.height * d;
   const g = cv.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
@@ -122,7 +122,7 @@ export function createResults({ onAgain, onLobby }) {
       const rank = $('rsRank');
       rank.textContent = team ? (m.won ? 'WIN!' : m.winTeam === 0 ? 'DRAW' : 'LOSS') : '#' + m.rank;
       rank.classList.remove('slam'); void rank.offsetWidth; rank.classList.add('slam');
-      setTimeout(() => sfx('slam'), 120);
+      setTimeout(() => sfx('uislam'), 120);
       $('rsMsg').textContent = ctx.msg;
       count($('rsBounty'), 0, m.bounty, 900); count($('rsKo'), 0, m.kills, 700);
       $('rsTro').textContent = '…'; $('rsXpN').textContent = '';

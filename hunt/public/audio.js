@@ -61,7 +61,7 @@ const SOUNDS = {
   play: (t, v) => { [523, 784, 1047].forEach((f, i) => tone(t + i * 0.05, { type: 'square', f0: f, dur: 0.12, vol: 0.14 * v })); noise(t, { dur: 0.25, vol: 0.12 * v, f0: 2000, f1: 6000 }); },
   reward: (t, v) => [784, 988, 1175, 1568].forEach((f, i) => tone(t + i * 0.07, { type: 'triangle', f0: f, dur: 0.2, vol: 0.2 * v })),
   whoosh: (t, v) => noise(t, { dur: 0.22, vol: 0.12 * v, f0: 600, f1: 2400, q: 1.5 }),
-  slam: (t, v) => { tone(t, { type: 'sine', f0: 110, f1: 40, dur: 0.3, vol: 0.5 * v }); noise(t, { dur: 0.2, vol: 0.3 * v, f0: 900, f1: 120, type: 'lowpass' }); },
+  uislam: (t, v) => { tone(t, { type: 'sine', f0: 110, f1: 40, dur: 0.3, vol: 0.5 * v }); noise(t, { dur: 0.2, vol: 0.3 * v, f0: 900, f1: 120, type: 'lowpass' }); },
   victory: (t, v) => [523, 659, 784, 1047].forEach((f, i) => tone(t + i * 0.13, { type: 'square', f0: f, dur: i === 3 ? 0.45 : 0.14, vol: 0.2 * v })),
   defeat: (t, v) => [392, 330, 262].forEach((f, i) => tone(t + i * 0.18, { type: 'triangle', f0: f, dur: 0.22, vol: 0.2 * v })),
 };
