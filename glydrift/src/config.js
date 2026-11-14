@@ -191,6 +191,7 @@ export const RARITY = {
   legendary: { label: "LEGENDARY", color: 0xffc83d },
   mega: { label: "MEGA LEGENDARY", color: 0xff3a8a },
   ultra: { label: "ULTRA LEGENDARY", color: 0x39ff6a },
+  illegal: { label: "ILLEGAL LEGENDARY", color: 0xff1a2a },
 };
 
 export const FONT = '"Orbitron", "Galmuri11", "Avenir Next", system-ui, sans-serif';

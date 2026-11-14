@@ -1254,9 +1254,55 @@ export const CHARACTERS = [
     },
     desc: "Rides the storm.",
   },
+  {
+    // WASP LORD (ILLEGAL LEGENDARY, the rarest rarity): an armoured war-wasp king with glowing
+    // red eyes. The most overpowered hero in the game; every power is in perks below.
+    id: "wasplord",
+    name: "WASP LORD",
+    title: "War-Wasp King",
+    rarity: "illegal",
+    color: 0x2a2a34,
+    color2: 0xff1a2a,
+    texture: "hero_wasplord",
+    pixel: {
+      atlas: "pxc",
+      frames: Array.from({ length: 8 }, (_, i) => `wasplord_${i}`),
+      mode: "wasp", // buzz, phase, shockwave, armour break (waspLordFx.js)
+      trail: [0xffffff, 0xff6a6a, 0xff1a2a, 0x5a0a10],
+    },
+    fx: {
+      death: [
+        { kind: "shard", color: 0x3a3a46, n: 22 },
+        { kind: "pixel", color: 0xff1a2a, n: 14 },
+        { kind: "pixel", color: 0xffd23f, n: 8 },
+      ],
+    },
+    scale: 0.62,
+    cost: 55000, // coins only
+    // SPEED: 30% faster than the average of every other hero (set below from the roster)
+    speed: 1.3,
+    // DOUBLE JUMP: a second tap within 0.25 s of a flap; once, ready again when he falls
+    doubleJump: { window: 0.25, boost: 1.45, cooldown: 0, resetOnFall: true },
+    perks: {
+      // PHASE: passes through every obstacle except these (lasers and the Abyss eye beams);
+      // the ground, the ceiling and leaving the screen still end the run
+      phase: { lethal: ["laser", "blaser", "eyebeam", "mlaser"] },
+      comboMax: 16,
+      list: ["PHASES THROUGH WALLS", "+30% SPEED", "DOUBLE JUMP", "COMBO UP TO x16"],
+    },
+    desc: "Walls are a suggestion.",
+  },
   ...ANIMALS,
   ...PASS_HEROES,
 ];
+
+// WASP LORD flies 30% faster than the average hero (every other hero in the roster, the ones
+// without a speed at the standard 1.0)
+{
+  const others = CHARACTERS.filter((c) => c.id !== "wasplord");
+  const avg = others.reduce((a, c) => a + (c.speed ?? 1), 0) / others.length;
+  CHARACTERS.find((c) => c.id === "wasplord").speed = Math.round(avg * 1.3 * 1000) / 1000;
+}
 
 /** Heroes that can only be won from the Lucky Spin. */
 export const LOTTERY_HEROES = CHARACTERS.filter((c) => c.lottery);
