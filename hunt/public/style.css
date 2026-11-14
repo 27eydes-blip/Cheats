@@ -63,11 +63,11 @@ button.ghost { background: var(--panel2); }
 .kf .x { color: var(--red); margin: 0 6px; }
 .kf .me { color: #b8ff6b; }
 #ping { position: absolute; left: max(10px, env(safe-area-inset-left)); top: max(8px, env(safe-area-inset-top)); font-size: 12px; opacity: .6; font-family: system-ui, sans-serif; }
-#toast { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); background: var(--ink); padding: 8px 18px; border-radius: 14px; font-size: 20px; pointer-events: none; }
+#toast { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); background: var(--ink); padding: 8px 18px; border-radius: 14px; font-size: 20px; pointer-events: none; z-index: 100; }
 
 #rotate { display: none; }
 @media (orientation: portrait) and (pointer: coarse) {
-  body.ingame #rotate { display: flex; position: fixed; inset: 0; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); z-index: 10; font-size: 22px; text-align: center; }
+  body.ingame #rotate { display: flex; position: fixed; inset: 0; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); z-index: 90; font-size: 22px; text-align: center; }
   #rotate div { font-size: 80px; animation: spin 2s infinite ease-in-out; }
 }
 @keyframes spin { 50% { transform: rotate(90deg); } }
