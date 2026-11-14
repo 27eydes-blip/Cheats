@@ -2,7 +2,7 @@
 const base = process.env.HUNT_URL || 'ws://127.0.0.1:8787';
 const room = 'T' + Math.floor(Math.random() * 1e6);
 function client(name, brawler) {
-  const ws = new WebSocket(`${base}/ws?name=${name}&brawler=${brawler}&room=${room}&bots=${process.env.BOTS ?? 0}&mode=showdown`);
+  const ws = new WebSocket(`${base}/ws?name=${name}&brawler=${brawler}&room=${room}&bots=${process.env.BOTS ?? 0}&mode=showdown&events=0&lobby=1.5`);
   const c = { ws, name, me: null, msgs: [], id: 0, others: [] };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);

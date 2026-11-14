@@ -17,6 +17,7 @@ const input = new Input(canvas);
 const TICK_MS = 1000 / TICK_RATE;
 const INTERP_MS = 110;
 const MODE_INFO = {
+  squad: { name: 'SQUAD HUNT', desc: '3v3! Kills fill your team pot. Highest pot after 3:00 wins.' },
   showdown: { name: 'SHOWDOWN', desc: 'Last hunter standing wins. The poison closes in!' },
   bounty: { name: 'BOUNTY RUSH', desc: 'Steal bounties! Highest bounty after 2:00 wins.' },
   hunted: { name: 'HUNTED', desc: 'Everyone hunts the target. Take them down to become it!' },
@@ -226,6 +227,7 @@ function onMsg(c, m) {
     case 'start':
       G.myId = m.you; G.modeKey = m.mode; G.world = m.world;
       G.map = generateArena(m.seed, m.world);
+      if (m.open) for (let y = 1; y < G.map.gh - 1; y++) for (let x = 1; x < G.map.gw - 1; x++) G.map.t[y * G.map.gw + x] = 0;
       G.phase = 'play';
       input.enabled = true; input.reset();
       show(null);
@@ -276,18 +278,18 @@ function applyTile(idx, type) {
 }
 
 function onEnd(m) {
-  const won = m.rank === 1;
+  const won = m.winTeam !== undefined ? !!m.won : m.rank === 1;
   G.phase = 'end';
   input.enabled = false; input.reset();
   const s = stat(G.world);
   s.games++; if (won) s.wins++; s.kills += m.kills; s.best = Math.max(s.best, G.me?.bb || 0, m.bounty);
   savePrefs();
-  $('endRank').textContent = '#' + m.rank;
-  $('endMsg').textContent = won ? `VICTORY! ${MODE_INFO[m.mode].name} on ${worldName(G.world)}` : `${m.winner || 'Nobody'} won ${MODE_INFO[m.mode].name}.`;
+  $('endRank').textContent = m.winTeam !== undefined ? (m.won ? 'WIN!' : m.winTeam === 0 ? 'DRAW' : 'LOSS') : '#' + m.rank;
+  $('endMsg').textContent = m.winTeam !== undefined ? `Team pot ★${m.pots[m.team]} vs ★${m.pots[3 - m.team]}` : won ? `VICTORY! ${MODE_INFO[m.mode].name} on ${worldName(G.world)}` : `${m.winner || 'Nobody'} won ${MODE_INFO[m.mode].name}.`;
   $('endK').textContent = m.kills; $('endB').textContent = m.bounty;
   const scoreLbl = { bounty: '★', hunted: 'pts', crystals: '💎' }[m.mode];
-  $('results').innerHTML = m.results.map(([n, b, r, k, bot, id, be, sc]) =>
-    `<li class="${id === G.myId ? 'me' : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${scoreLbl ? `${sc} ${scoreLbl} · ` : ''}${k} KO · ★${be}</span></li>`).join('');
+  $('results').innerHTML = m.results.map(([n, b, r, k, bot, id, be, sc, tm]) =>
+    `<li class="${id === G.myId ? 'me' : ''} ${tm ? (tm === m.team ? 'mate' : 'foe') : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${scoreLbl ? `${sc} ${scoreLbl} · ` : ''}${k} KO · ★${be}</span></li>`).join('');
   setTimeout(() => { if (G.phase === 'end') show('end'); }, won ? 1800 : 600);
 }
 
@@ -325,6 +327,7 @@ function onSnap(c, m) {
   c.last = m;
   if (m.ev && c.ev && c.ev.id === m.ev[0]) { c.ev.ph = m.ev[1]; c.ev.tl = m.ev[2]; }
   for (const [id, x, y, bt] of m.pg) G.pings.push({ id, x, y, bt, t0: now, target: !!(m.md && m.md.tg === id) });
+  if (c.primary) G.mates = m.mates || [];
   if (c.primary && m.me) reconcile(m);
 }
 
@@ -376,7 +379,7 @@ function sampleConn(c, out) {
     const prev = out.others.get(id);
     if (prev && G.kind === 'free' && zoneAt(prev.x, prev.y) === prev.zone) continue; // the owning zone's copy wins
     out.others.set(id, {
-      id, x, y, hp: e[3], mh: e[4], facing: ea[5] + da * f, fl: e[6], cu: e[7], bt: e[8], glow: e[9], cr: e[10], zone: c.zone,
+      id, x, y, hp: e[3], mh: e[4], facing: ea[5] + da * f, fl: e[6], cu: e[7], bt: e[8], glow: e[9], cr: e[10], team: e[11] || 0, zone: c.zone,
       name: r[0], brawler: r[1], moving: Math.hypot(e[1] - ea[1], e[2] - ea[2]) > 1, stun: e[6] & 2,
     });
   }
@@ -502,7 +505,7 @@ function updateLocalBullets(dt) {
     for (let i = 0; i < n && !dead; i++) {
       b.x += (b.vx * dt) / n; b.y += (b.vy * dt) / n; b.dist += step / n;
       if (isSolidTile(tileAt(G.map, b.x, b.y)) || (G.kind === 'free' && inHub(b.x, b.y))) dead = true;
-      if (A.kind !== 'wave') for (const o of G.view.others) if (Math.hypot(o.x - b.x, o.y - b.y) < PLAYER_R * sizeOf(o) + A.radius) dead = true;
+      if (A.kind !== 'wave') for (const o of G.view.others) if ((!o.team || o.team !== G.me?.tm) && Math.hypot(o.x - b.x, o.y - b.y) < PLAYER_R * sizeOf(o) + A.radius) dead = true;
       if (b.dist >= b.range) dead = true;
     }
     if (!dead) out.push(b);
@@ -529,7 +532,7 @@ function autoAngle(kind) {
   const reach = kind === 'super' ? (B.super.dist || B.super.radius || 600) + 150 : B.attack.range * 1.15;
   let best = null, bd = Infinity;
   for (const o of G.view.others) {
-    if (o.fl & 16) continue;
+    if (o.fl & 16 || (o.team && o.team === G.me?.tm)) continue;
     const d = Math.hypot(o.x - me.x, o.y - me.y);
     if (d < bd) { bd = d; best = o; }
   }
@@ -648,7 +651,8 @@ function render(t) {
     });
   }
   list.sort((a, b) => a.y - b.y);
-  for (const p of list) R.drawRim(ctx, G.map, p);
+  const myTeam = G.me.tm || 0;
+  for (const p of list) { if (myTeam) R.drawTeamRing(ctx, p, p.me || p.team === myTeam); else R.drawRim(ctx, G.map, p); }
   for (const p of list) R.drawAura(ctx, p, t);
   for (const p of list) {
     let alpha = 1;
@@ -692,7 +696,7 @@ function render(t) {
     ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  for (const p of list) { if (p.fl & 4 && !p.me) continue; R.drawStatus(ctx, p, p.me, t); }
+  for (const p of list) { if (p.fl & 4 && !p.me && p.team !== myTeam) continue; R.drawStatus(ctx, p, p.me, t, myTeam ? (p.me || p.team === myTeam ? 'mate' : 'foe') : null); }
   if (meAlive) {
     R.drawAmmo(ctx, mePos.x, mePos.y, G.me.am, G.me.sc >= 1, t);
     // LAY LOW meter: fills while hiding, then "LAYING LOW"
@@ -737,7 +741,7 @@ function render(t) {
   const radarR = Math.min(64, H * 0.15);
   const now = performance.now();
   R.drawRadar(ctx, 12 + radarR, 36 + radarR, radarR, { x: cam.x, y: cam.y },
-    G.pings.map((p) => ({ ...p, age: (now - p.t0) / 1000 })),
+    [...G.pings.map((p) => ({ ...p, age: (now - p.t0) / 1000 })), ...(G.mates || []).map(([id, x, y]) => ({ id, x, y, bt: 0, age: 0, mate: true }))],
     { poison: P?.last?.z ? { inset: P.last.z, size: ARENA_SIZE } : null, hub: G.kind === 'free', zones: G.kind === 'free', range: 1600 }, t);
   if (G.phase === 'play' && meAlive) R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
   if (!meAlive && G.phase !== 'play') {
@@ -798,6 +802,9 @@ function updateHud(now) {
     }
     $('timerPill').hidden = sd || !last.md;
     if (last.md) $('timerT').textContent = fmt(last.md.tl);
+    const pots = last.md?.pots, mt = G.me?.tm;
+    $('potPill').hidden = !pots;
+    if (pots && mt) { $('potUs').textContent = pots[mt]; $('potThem').textContent = pots[3 - mt]; }
   }
   const top = last?.top;
   $('topBounty').hidden = !top;

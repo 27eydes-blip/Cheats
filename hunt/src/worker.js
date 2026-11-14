@@ -89,8 +89,11 @@ export class MatchRoom {
     this.sockets = sockets;
     this.endedAt = 0;
     const seed = (Math.random() * 2 ** 32) >>> 0;
+    const map = generateArena(seed, cfg.world);
+    if (cfg.open) map.open = true;
+    if (cfg.open) for (let y = 1; y < map.gh - 1; y++) for (let x = 1; x < map.gw - 1; x++) map.t[y * map.gw + x] = 0;
     this.sim = new Sim({
-      map: generateArena(seed, cfg.world), mode: cfg.mode, seed, lobbyTime: cfg.lobby, fillBots: cfg.bots, forceEvent: cfg.ev,
+      map, mode: cfg.mode, seed, lobbyTime: cfg.lobby, fillBots: cfg.bots, forceEvent: cfg.ev, events: cfg.events,
       send: (id, msg) => { const ws = sockets.get(id); if (ws) sendJSON(ws, msg); },
     });
   }
@@ -112,7 +115,9 @@ export class MatchRoom {
       } else [, mode, world] = mname.split(':');
       const lobby = isRoom ? Math.max(1.5, Math.min(12, Number(url.searchParams.get('lobby')) || 12)) : 8;
       const ev = isRoom && EVENTS[url.searchParams.get('ev')] ? url.searchParams.get('ev') : null;
-      this.newMatch({ mode, world, lobby, ev, bots: !(isRoom && url.searchParams.get('bots') === '0') });
+      const events = !(isRoom && url.searchParams.get('events') === '0');
+      const open = isRoom && url.searchParams.get('testmap') === 'open'; // netcode tests: border walls only
+      this.newMatch({ mode, world, lobby, ev, events, open, bots: !(isRoom && url.searchParams.get('bots') === '0') });
     }
     const sim = this.sim, sockets = this.sockets;
     const b = url.searchParams.get('brawler');

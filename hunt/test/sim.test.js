@@ -11,7 +11,7 @@ function runArena(mode, world, seed) {
   const sim = new Sim({ map: generateArena(seed, world), mode, seed, lobbyTime: 0.2, send: (id, m) => msgs.push(m) });
   const id = sim.join('Alice', 'volt');
   while (sim.phase === 'lobby') sim.tick();
-  assert.equal(sim.players.size, 10);
+  assert.equal(sim.players.size, sim.maxPlayers);
   sim.leave(id); // bot takes over
   let t = 0;
   while (sim.phase === 'play' && t < 20 * 400) {

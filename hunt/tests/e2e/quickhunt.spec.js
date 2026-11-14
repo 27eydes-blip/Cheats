@@ -15,7 +15,7 @@ test('two clients in one room: one eliminates the other', async ({ baseURL }) =>
   const base = baseURL.replace('http', 'ws');
   const room = 'E' + Math.floor(Math.random() * 1e8);
   const mk = (name, brawler) => {
-    const ws = new WebSocket(`${base}/ws?name=${name}&brawler=${brawler}&room=${room}&bots=0&mode=showdown&lobby=1.5`);
+    const ws = new WebSocket(`${base}/ws?name=${name}&brawler=${brawler}&room=${room}&bots=0&mode=showdown&lobby=1.5&events=0&testmap=open`);
     const c = { ws, me: null, others: [], dead: null, id: 0 };
     ws.onmessage = (e) => { const m = JSON.parse(e.data); if (m.t === 'start') c.id = m.you; if (m.t === 's') { c.me = m.me; c.others = m.p; } if (m.t === 'dead') c.dead = m; };
     return c;
