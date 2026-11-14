@@ -1,9 +1,10 @@
 import assert from 'node:assert';
 import { Sim } from '../src/sim.js';
 import { levelForTrophies } from '../src/bots.js';
-import { generateArena, BUSH, TILE, SPAWNS } from '../public/shared.js';
+import { generateArena, BUSH, TILE, arenaSpawns } from '../public/shared.js';
+const SPAWNS = arenaSpawns(2000, 10); // duel tests run on the 2000 arena (2-4 players)
 
-const openMap = () => { const m = generateArena(3, 'meadow'); for (let y = 1; y < 39; y++) for (let x = 1; x < 39; x++) m.t[y * 40 + x] = 0; return m; };
+const openMap = () => { const m = generateArena(3, 'meadow', 2); for (let y = 1; y < 39; y++) for (let x = 1; x < 39; x++) m.t[y * 40 + x] = 0; return m; };
 const run = (sim, n) => { for (let i = 0; i < n; i++) sim.tick(); };
 
 // 1) fair vision: a high-bounty enemy hiding in a bush is not chased until it pings the radar
@@ -62,7 +63,7 @@ assert.equal(levelForTrophies(0), 'easy'); assert.equal(levelForTrophies(300), '
 }
 let hardWins = 0;
 for (let i = 0; i < 60; i++) {
-  const sim = new Sim({ map: generateArena(100 + i), mode: 'showdown', phase: 'play', events: false, fillBots: false });
+  const sim = new Sim({ map: generateArena(100 + i, "meadow", 2), mode: 'showdown', phase: 'play', events: false, fillBots: false });
   const A = sim.addPlayer({ name: 'H', brawler: 'volt', bot: true }), B = sim.addPlayer({ name: 'E', brawler: 'volt', bot: true });
   A.botLevel = 'hard'; B.botLevel = 'easy';
   Object.assign(A, SPAWNS[i % 10]); Object.assign(B, SPAWNS[(i + 5) % 10]);

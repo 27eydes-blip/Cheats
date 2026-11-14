@@ -31,7 +31,7 @@
 .guestchip span { flex: 1; }
 .guestchip button { border: 0; background: none; color: #fff; font: inherit; cursor: pointer; padding: 0 4px; }
 .rail { display: flex; flex-direction: column; gap: calc(var(--u) * .7); overflow: auto; min-height: 0; padding: 4px 4px 8px 0; }
-.railbtn { justify-content: flex-start; width: 100%; background: rgba(58,35,128,.92); color: #fff; font-size: calc(var(--u) * 1.9); padding: calc(var(--u) * .45) calc(var(--u) * .9); }
+.railbtn { justify-content: flex-start; width: 100%; background: rgba(30,16,51,.92); color: #fff; font-size: calc(var(--u) * 1.9); padding: calc(var(--u) * .45) calc(var(--u) * .9); }
 .railbtn .ico { font-size: calc(var(--u) * 1.9); }
 
 /* centre stage */

@@ -6,7 +6,7 @@ import { QUICK_MODES } from '../src/modes.js';
 
 // IDs persisted in saves/stats must never move: Mirage is APPENDED.
 assert.deepEqual(WORLDS.slice(0, 5).map((w) => w.key), ['meadow', 'city', 'forest', 'desert', 'frozen']);
-assert.equal(worldId('mirage'), WORLDS.length - 1);
+assert.equal(worldId('mirage'), 5); // ids are append-only (new worlds come after it)
 // ...only display order changes: Wildwood -> Desert Mirage -> ... -> Frozen Lake
 const order = worldsInDisplayOrder().map((w) => w.key);
 assert(order.indexOf('forest') < order.indexOf('mirage') && order.indexOf('mirage') < order.indexOf('frozen'), order.join(','));
@@ -16,9 +16,9 @@ assert.equal(ZONES.find((z) => z.slot === 'ne').world, 'forest');
 assert.equal(ZONES.find((z) => z.slot === 'sw').world, 'frozen');
 assert(WORLDS[worldId('mirage')].arena, 'mirage is in the Quick Hunt arena pool');
 
-// Arena: 2000x2000 with oasis water and isolated ruin pillars
+// Arena: 3000x3000 with oasis water and isolated ruin pillars
 const a = generateArena(77, 'mirage');
-assert.equal(a.gw * TILE, 2000);
+assert.equal(a.gw * TILE, 3000); // 10-player arenas are 3000x3000
 let water = 0, pillars = 0;
 for (let y = 1; y < a.gh - 1; y++) for (let x = 1; x < a.gw - 1; x++) {
   const t = a.t[y * a.gw + x];

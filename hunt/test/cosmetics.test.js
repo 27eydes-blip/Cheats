@@ -5,7 +5,17 @@ import { Sim } from '../src/sim.js';
 import { generateArena, BRAWLER_IDS } from '../public/shared.js';
 
 assert.equal(PASS.length, PASS_TIERS); assert.equal(PASS_TIERS, 30);
-for (const b of BRAWLER_IDS) assert.equal(Object.values(SKINS).filter((s) => s.brawler === b).length, 2, `2 skins for ${b}`);
+for (const b of BRAWLER_IDS) assert.equal(Object.values(SKINS).filter((s) => s.brawler === b && !s.free).length, 2, `2 skins for ${b}`);
+// every brawler also has a free Classic skin (the original look), owned by everyone incl. old saves
+{
+  const { normalize } = await import('../public/progression.js');
+  for (const b of BRAWLER_IDS) assert(SKINS[b + '_classic'] && SKINS[b + '_classic'].classic, `${b} classic`);
+  const old = normalize({ coins: 10, owned: ['volt_storm'], equipped: { 'skin:volt': 'volt_storm' } }); // a pre-upgrade save
+  assert(old.owned.includes('volt_storm') && old.owned.includes('brick_classic'), 'old saves keep their skins and get the Classic looks');
+  assert.equal(old.equipped['skin:volt'], 'volt_storm', 'equipped skin kept (now drawn in the new style)');
+  const r = applyPurchase(old, { action: 'equip', slot: 'skin:wisp', id: 'wisp_classic' });
+  assert(!r.error && r.progress.equipped['skin:wisp'] === 'wisp_classic', 'equip Classic');
+}
 let p = newProgress();
 assert(applyPurchase(p, { action: 'buy', id: 'volt_storm' }).error, 'cannot afford');
 assert(applyPurchase(p, { action: 'equip', slot: 'title', id: 'apex' }).error, 'cannot equip unowned');

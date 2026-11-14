@@ -103,6 +103,56 @@ const MATERIAL = {
       for (let i = 0; i < P; i += 4) { px(g, x + i, y + 3, 3, P - 3, pal.border); tri(g, x + i, y + 3, x + i + 1.5, y, x + i + 3, y + 3, pal.border); px(g, x + i + 3, y + 3, 1, P - 3, INK); }
     },
   },
+  // ASHLANDS: black basalt with glowing magma veins
+  obsidian: {
+    top(g, x, y, h, v, pal, s, one) {
+      px(g, x + 1, y + 1, 5, 1, pal.topHi);
+      if (v === 0) { px(g, x + 3, y + 4, 1, 4, pal.detail); px(g, x + 4, y + 7, 4, 1, pal.detail); px(g, x + 8, y + 8, 1, 3, pal.detail); px(g, x + 9, y + 5, 3, 1, pal.detail); } // magma vein
+      else if (v === 1) { for (const [a, b] of [[3, 3], [9, 6], [5, 9]]) { px(g, x + a, y + b, 3, 2, pal.sideDk); px(g, x + a, y + b, 1, 1, pal.topHi); } } // pitted rock
+      else { tri(g, x + 2, y + h - 1, x + 8, y + 1, x + 14, y + h - 1, pal.side); px(g, x + 7, y + 4, 2, h - 6, pal.detail); } // jagged spire with a glowing core
+      if (one) px(g, x + 6, y + h - 4, 4, 1, pal.detail);
+    },
+    side(g, x, y, v, pal) { for (let i = 2; i < P; i += 5) px(g, x + i, y + 1, 2, 1, pal.detail); },
+    border(g, x, y, pal, s) { // basalt columns with a magma seam
+      px(g, x, y, P, P, pal.border);
+      for (let i = 0; i < P; i += 4) px(g, x + i, y, 1, P, pal.borderDk);
+      if (s & 1) { px(g, x + 5, y + 3, 1, 6, pal.detail); px(g, x + 6, y + 8, 3, 1, pal.detail); }
+      px(g, x + 2, y + 1, 1, 1, pal.topHi);
+    },
+  },
+  // DEAD MARSH: twisted dead trees and rotten logs
+  deadwood: {
+    top(g, x, y, h, v, pal, s, one) {
+      if (one || v === 2) { // a gnarled dead tree seen from above: dark trunk, crooked bare branches
+        px(g, x + 5, y + 5, 6, 6, pal.side); px(g, x + 6, y + 6, 4, 4, pal.top); px(g, x + 7, y + 7, 2, 2, pal.detail);
+        for (const [a, b, w, hh] of [[1, 2, 5, 1], [10, 1, 1, 5], [11, 9, 4, 1], [3, 11, 1, 4], [12, 12, 2, 1]]) px(g, x + a, y + b, w, hh, pal.side);
+        px(g, x + 1, y + 2, 2, 1, pal.moss);
+      } else if (v === 0) { for (let r = 1; r < h; r += 4) { px(g, x, y + r, P, 1, pal.detail); px(g, x + (s % 5) + 2, y + r + 1, 4, 1, pal.topHi); } } // rotten logs
+      else { px(g, x + 2, y + 2, 12, h - 4, pal.side); px(g, x + 3, y + 3, 10, h - 6, pal.top); px(g, x + 6, y + 5, 4, 1, pal.detail); px(g, x + 3, y + 3, 3, 2, pal.moss); } // stump
+    },
+    side(g, x, y, v, pal) { for (let i = 2; i < P; i += 6) px(g, x + i, y, 2, SIDE, pal.sideDk); },
+    border(g, x, y, pal, s) { // tangled roots
+      px(g, x, y, P, P, pal.borderDk);
+      for (let i = 0; i < 4; i++) { const yy = (i * 4 + (s & 3)) % P; px(g, x, y + yy, P, 2, pal.border); }
+      px(g, x + 6, y, 2, P, pal.border); px(g, x + 3 + (s & 7), y + 4, 1, 1, pal.moss);
+    },
+  },
+  // THE HOLLOW: dark cave rock studded with glowing crystals
+  crystal: {
+    top(g, x, y, h, v, pal, s, one) {
+      px(g, x + 1, y + 1, 4, 1, pal.topHi);
+      const shard = (a, hh) => { tri(g, x + a, y + h - 1, x + a + 2, y + h - 1 - hh, x + a + 4, y + h - 1, pal.detail); tri(g, x + a + 2, y + h - 1, x + a + 2, y + h - 1 - hh, x + a + 4, y + h - 1, pal.spike); };
+      if (v === 1 || one) { shard(3, 7); shard(7, 10); shard(10, 6); }
+      else if (v === 0) { px(g, x + 3, y + 4, 2, 2, pal.sideDk); px(g, x + 10, y + 7, 2, 2, pal.sideDk); shard(6, 5); }
+      else { px(g, x + 2, y + 3, 1, 1, pal.detail); px(g, x + 12, y + 5, 1, 1, pal.detail); px(g, x + 7, y + 10, 1, 1, pal.detail); }
+    },
+    side(g, x, y, v, pal) { px(g, x + 3, y + 1, 2, 1, pal.detail); },
+    border(g, x, y, pal, s) { // cave rock with a crystal vein
+      px(g, x, y, P, P, pal.border);
+      tri(g, x, y + P, x + 5, y + 4, x + 10, y + P, pal.borderDk); tri(g, x + 8, y, x + 13, y + 7, x + P, y, pal.borderDk);
+      if ((s & 3) === 0) { px(g, x + 6, y + 6, 2, 3, pal.detail); px(g, x + 7, y + 5, 1, 1, pal.topHi); }
+    },
+  },
 };
 
 // ---------------------------------------------------------------- piece sprite
@@ -164,7 +214,7 @@ function buildPiece(world, cells, variant, spike) {
 }
 
 // border tile: material + spiked inner edges (mask bits: n=1 e=2 s=4 w=8 → which sides face the map)
-function buildBorder(world, mask, variant, roof) {
+function buildBorder(world, mask, variant, roof, rock = false) {
   const A = artFor(world), pal = A.palette, M = MATERIAL[A.material];
   const cv = canvas(P, P), g = cv.getContext('2d');
   g.imageSmoothingEnabled = false;
@@ -172,6 +222,13 @@ function buildBorder(world, mask, variant, roof) {
     px(g, 0, 0, P, P, pal.roofDk);
     for (let r = 0; r < P; r += 5) for (let i = (r / 5) % 2 ? -2 : 0; i < P; i += 4) { px(g, i, r, 3, 4, pal.roof); px(g, i, r + 3, 3, 1, pal.roofDk); }
   } else M.border(g, 0, 0, pal, variant);
+  if (rock) { // a rock mass: outline + a lit rim on the open sides, never spikes
+    if (mask & 1) { px(g, 0, 0, P, 2, INK); px(g, 2, 2, P - 4, 1, pal.topHi); }
+    if (mask & 4) { px(g, 0, P - 4, P, 2, pal.sideDk); px(g, 0, P - 2, P, 2, INK); }
+    if (mask & 8) px(g, 0, 0, 2, P, INK);
+    if (mask & 2) px(g, P - 2, 0, 2, P, INK);
+    return { cv };
+  }
   if (!A.noSpikes) {
     if (mask & 1) edgeSpikes(g, 0, 0, P, 'n', pal, true);
     if (mask & 4) edgeSpikes(g, 0, P, P, 's', pal, true);
@@ -227,13 +284,16 @@ export class WallArt {
     const k = TILE / P, done = new Set();
     this.forVisibleWalls(map, view, (tx, ty) => {
       const i = ty * map.gw + tx, pid = map.pieceAt[i];
-      if (map.border[i]) {
+      if (map.lm && map.lm[i]) return; // landmark footprint: drawn by the landmark art
+      const rock = map.rock && map.rock[i];
+      if (map.border[i] || rock) {
+        // spiked borders, and rock masses (caves, basalt): autotiled by which sides face open ground
         const world = worldKeyAt(map, tx * TILE + 25, ty * TILE + 25);
-        const open = (x, y) => x >= 0 && y >= 0 && x < map.gw && y < map.gh && !map.border[y * map.gw + x];
-        const mask = (open(tx, ty - 1) ? 1 : 0) | (open(tx + 1, ty) ? 2 : 0) | (open(tx, ty + 1) ? 4 : 0) | (open(tx - 1, ty) ? 8 : 0);
-        const roof = artFor(world).northRoof && ty === 0;
+        const solid = (x, y) => x < 0 || y < 0 || x >= map.gw || y >= map.gh || (rock ? map.rock[y * map.gw + x] || map.border[y * map.gw + x] : map.border[y * map.gw + x]);
+        const mask = (solid(tx, ty - 1) ? 0 : 1) | (solid(tx + 1, ty) ? 0 : 2) | (solid(tx, ty + 1) ? 0 : 4) | (solid(tx - 1, ty) ? 0 : 8);
+        const roof = !rock && artFor(world).northRoof && ty === 0;
         const v = hash(tx, ty) % 3;
-        const s = this.get(world, `B${mask}|${v}|${roof ? 1 : 0}`, () => buildBorder(world, mask, v, roof));
+        const s = this.get(world, `${rock ? 'R' : 'B'}${mask}|${v}|${roof ? 1 : 0}`, () => buildBorder(world, mask, v, roof, rock));
         ctx.drawImage(s.cv, tx * TILE, ty * TILE, TILE, TILE);
         return;
       }

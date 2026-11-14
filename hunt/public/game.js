@@ -3,7 +3,7 @@
 import {
   BRAWLERS, BRAWLER_IDS, DT, TICK_RATE, CRATE, PLAYER_R, ARENA_SIZE, ZONES, WORLDS,
   worldId, worldsInDisplayOrder, generateArena, generateWorld, applyMove, attackDirs, tileAt, isSolidTile,
-  moveStats, zoneAt, zoneBounds, inHub, worldKeyAt, PREDICTED_KINDS,
+  moveStats, zoneAt, zoneBounds, inHub, worldKeyAt, PREDICTED_KINDS, DAY_MS,
 } from './shared.js';
 import { EVENTS } from './events/index.js';
 import { Input } from './input.js';
@@ -18,6 +18,10 @@ import { TITLES } from './catalog.js';
 import { sfx, falloff } from './audio.js';
 import { setMusicVolume } from './ui/music.js';
 import { pickAimTarget } from './aim.js';
+import { HUNTER_PAL } from './art/hunters.js';
+import { drawMiniMap, drawFullMap } from './minimap.js';
+import { envState, drawLandmarks, drawAtmosphere, drawCompass, ZONE_INFO, zoneLabel } from './world-fx.js';
+import { startTense, stopTense } from './ui/music.js';
 import { WallArt } from './art/walls.js';
 import { artFor } from './art/themes.js';
 import { SPAWNS, spawnHasCover, SPAWN_COVER_DIST, blocksMove, TILE as TILE_ } from './shared.js';
@@ -37,8 +41,10 @@ document.getElementById('lobbyBg')?.addEventListener('contextrestored', resetArt
 window.__huntArt = { art, artFor };
 const TICK_MS = 1000 / TICK_RATE;
 const INTERP_MS = 110;
+const maxFor = (mode) => (mode === 'squad' ? 6 : mode === 'bighunt' ? 20 : 10);
 const MODE_INFO = {
   squad: { name: 'SQUAD HUNT', desc: '3v3! Kills fill your team pot. Highest pot after 3:00 wins.' },
+  bighunt: { name: 'BIG HUNT', desc: '20 hunters, one huge arena. Last one standing wins!' },
   showdown: { name: 'SHOWDOWN', desc: 'Last hunter standing wins. The poison closes in!' },
   bounty: { name: 'BOUNTY RUSH', desc: 'Steal bounties! Highest bounty after 2:00 wins.' },
   hunted: { name: 'HUNTED', desc: 'Everyone hunts the target. Take them down to become it!' },
@@ -128,7 +134,7 @@ const G = {
 
 function resetMatchState() {
   Object.assign(G, {
-    myId: 0, secret: null, matchName: null, map: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
+    myId: 0, secret: null, matchName: null, map: null, zoneSlot: null, nightOn: undefined, env: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
     localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: [], rings: [], texts: [], slashes: [], worms: [], lastTp: 0, flash: {}, shake: 0, hurt: 0,
     spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, pings: [], handoff: null, online: {}, deadMsg: null, lastSk: 0,
   });
@@ -136,6 +142,7 @@ function resetMatchState() {
   $('hudAgain').hidden = true;
   UI.res?.reset?.();
   bulletAng.clear();
+  closeFullMap(); if (G.bloodOn) { G.bloodOn = false; stopTense(); }
 }
 
 // ------------------------------------------------------------------ connections
@@ -252,8 +259,10 @@ function startFree() {
   const { name } = readForm();
   G.kind = 'free'; G.brawler = selBrawler; G.modeKey = 'freeplay';
   G.map = generateWorld();
-  const slot = ZONES[Math.floor(Math.random() * ZONES.length)].slot;
-  openConn(slot, `/zone?${new URLSearchParams({ slot, join: '1', name, brawler: selBrawler, ...(A.ACC.token ? { token: A.ACC.token } : {}) })}`, { zone: slot, primary: true });
+  // everyone arrives at the safe hub in the middle of the world (?at=x,y: local dev only)
+  const at = (new URLSearchParams(location.search).get('at') || '').split(',').map(Number);
+  const slot = at.length === 2 && at.every(Number.isFinite) ? zoneAt(at[0], at[1]) : 'c';
+  openConn(slot, `/zone?${new URLSearchParams({ slot, join: '1', name, brawler: selBrawler, ...(A.ACC.token ? { token: A.ACC.token } : {}), ...(at.length === 2 ? { at: at.join(',') } : {}) })}`, { zone: slot, primary: true });
   G.phase = 'play';
   input.enabled = true; input.reset();
   show(null);
@@ -264,6 +273,7 @@ function startFree() {
 let retryTimer = 0;
 function toMenu() {
   clearTimeout(retryTimer);
+  closeFullMap(); if (G.bloodOn) { G.bloodOn = false; stopTense(); }
   G.phase = 'menu';
   closeAll();
   input.enabled = false; input.reset();
@@ -302,6 +312,7 @@ function onMsg(c, m) {
     case 'welcome':
       if (m.observer) break;
       if (m.secret) G.secret = m.secret;
+      if (m.sv && G.clockForced == null) G.svOff = m.sv - Date.now();
       if (m.match) G.matchName = m.match;
       if (m.rejoin) {
         c.welcomed = true;
@@ -312,10 +323,10 @@ function onMsg(c, m) {
       G.myId = m.id; G.retries = 0; G.botsOn = m.bots;
       if (m.mode) G.modeKey = m.mode;
       if (m.world) G.world = m.world;
-      if (G.phase === 'waiting') UI.mm.update({ players: 1, max: m.mode === 'squad' ? 6 : 10, mode: MODE_INFO[m.mode]?.name, world: m.world });
+      if (G.phase === 'waiting') UI.mm.update({ players: 1, max: maxFor(m.mode), mode: MODE_INFO[m.mode]?.name, world: m.world });
       break;
     case 'lobby':
-      UI.mm.update({ players: m.players.length, max: m.mode === 'squad' ? 6 : 10, startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world, bots: m.bots !== false });
+      UI.mm.update({ players: m.players.length, max: maxFor(m.mode), startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world, bots: m.bots !== false });
       break;
     case 'retry':
       G.conns.delete(c.key); // the server closes this socket next: that's expected, not a lost connection
@@ -330,7 +341,7 @@ function onMsg(c, m) {
         break;
       }
       G.myId = m.you; G.modeKey = m.mode; G.world = m.world;
-      G.map = generateArena(m.seed, m.world);
+      G.map = generateArena(m.seed, m.world, m.players || 10);
       if (m.open) for (let y = 1; y < G.map.gh - 1; y++) for (let x = 1; x < G.map.gw - 1; x++) G.map.t[y * G.map.gw + x] = 0;
       G.phase = 'play';
       input.enabled = true; input.reset();
@@ -382,7 +393,7 @@ function onMsg(c, m) {
       break;
     case 'claimfail': toast('Zone transfer failed — rejoining'); startFree(); break;
     case 'rejoinfail': if (rc) { G.conns.delete(c.key); rejoinFailed(); } break;
-    case 'online': G.online = m.zones; break;
+    case 'online': G.online = m.zones; if (m.sv && G.clockForced == null) G.svOff = m.sv - Date.now(); break;
     case 'progress': {
       if (A.ACC.user) A.setUser({ ...A.ACC.user, progress: m.progress });
       UI.res.progress(m);
@@ -554,6 +565,24 @@ function sampleWorld() {
 }
 
 // ------------------------------------------------------------------ effects
+// ELIMINATION: the hunter shatters into dark shards, rolling smoke and rising embers (no blood)
+function shatter(x, y, id) {
+  const low = SETTINGS.lowGfx, pal = HUNTER_PAL[id] || HUNTER_PAL.volt;
+  for (let i = 0; i < (low ? 6 : 14); i++) { // dark shards spinning out
+    const a = Math.random() * Math.PI * 2, v = 160 + Math.random() * 260;
+    G.parts.push({ kind: 'shard', x, y: y - 10, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, life: 0.9, max: 0.9, color: i % 3 ? pal.dark : pal.body, size: 5 + Math.random() * 7, rot: Math.random() * 6, spin: (Math.random() - 0.5) * 14 });
+  }
+  for (let i = 0; i < (low ? 4 : 10); i++) { // smoke billowing up
+    const a = Math.random() * Math.PI * 2, v = 30 + Math.random() * 70;
+    G.parts.push({ kind: 'smoke', x: x + Math.cos(a) * 10, y: y + Math.sin(a) * 8, vx: Math.cos(a) * v, vy: -40 - Math.random() * 40, life: 1.4 + Math.random() * 0.6, max: 2, color: i % 2 ? '#2b2433' : '#3d3546', size: 14 + Math.random() * 10, grow: 26 });
+  }
+  for (let i = 0; i < (low ? 6 : 18); i++) { // embers drifting upward
+    const a = Math.random() * Math.PI * 2, v = 60 + Math.random() * 160;
+    G.parts.push({ kind: 'ember', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.5 - 90, life: 1 + Math.random() * 0.8, max: 1.8, color: Math.random() < 0.5 ? '#ff7a1f' : pal.accent, size: 2 + Math.random() * 2.5 });
+  }
+  G.rings.push({ x, y, r0: 12, r1: 90, life: 0.45, max: 0.45, color: SETTINGS.reduceFlash ? 'rgba(80,60,90,0.6)' : '#3d3546', w: 7, ink: true });
+}
+
 function burst(x, y, color, n, speed = 180, size = 5, life = 0.45) {
   if (SETTINGS.lowGfx) n = Math.ceil(n / 3);
   for (let i = 0; i < n; i++) {
@@ -578,11 +607,7 @@ function applyFx([type, x, y, v, id, extra]) {
       burst(x, y, v ? '#ffd23f' : '#d98c3f', 16, 260, 7, 0.6); burst(x, y, v ? '#1f6f8b' : '#8a4b1f', 8, 200, 6, 0.5);
       if (near) G.shake = Math.max(G.shake, 5);
       break;
-    case 'die':
-      burst(x, y, '#fff', 18, 300, 8, 0.7); burst(x, y, BRAWLERS[BRAWLER_IDS[v]]?.color || '#fff', 18, 240, 7, 0.8);
-      G.rings.push({ x, y, r0: 10, r1: 110, life: 0.5, max: 0.5, color: '#fff', w: 8 });
-      if (extra) killFx(extra, x, y);
-      break;
+    case 'die': shatter(x, y, BRAWLER_IDS[v]); if (extra) killFx(extra, x, y); break;
     case 'slam':
       G.rings.push({ x, y, r0: 20, r1: v, life: 0.45, max: 0.45, color: '#ffd23f', w: 14 });
       G.rings.push({ x, y, r0: 10, r1: v * 0.7, life: 0.35, max: 0.35, color: '#ff7b39', w: 8 });
@@ -618,7 +643,12 @@ function killFx(id, x, y) {
 }
 
 function updateEffects(dt) {
-  for (const p of G.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.9; p.vy *= 0.9; p.life -= dt; }
+  for (const p of G.parts) {
+    p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+    if (p.kind === 'smoke') { p.vx *= 0.96; p.vy *= 0.97; p.size += p.grow * dt; }
+    else if (p.kind === 'ember') { p.vx *= 0.97; p.vy = p.vy * 0.97 - 30 * dt; }
+    else { p.vx *= 0.9; p.vy *= 0.9; if (p.kind === 'shard') { p.rot += p.spin * dt; p.vy += 260 * dt; } }
+  }
   G.parts = G.parts.filter((p) => p.life > 0);
   for (const r of G.rings) r.life -= dt;
   for (const s of G.slashes) s.life -= dt;
@@ -764,6 +794,49 @@ function frameBody(now) {
   } else if (G.phase === 'mapview') drawMapView(now / 1000);
 }
 
+const P0 = () => primary();
+// entering a zone, nightfall and the Blood Moon get a banner (and the Blood Moon its own music)
+function worldNotices(env) {
+  if (G.kind !== 'free') { if (G.bloodOn) { G.bloodOn = false; stopTense(); } return; }
+  if (env.zone && env.zone !== G.zoneSlot) {
+    if (G.zoneSlot) showBanner(zoneLabel(env.zone).toUpperCase(), ZONE_INFO[env.key] || '', '#ffd23f', 2200);
+    G.zoneSlot = env.zone;
+  }
+  const night = !!(env.dn && env.dn.night);
+  if (G.nightOn !== undefined && night !== G.nightOn) showBanner(night ? 'NIGHTFALL' : 'DAWN', night ? 'Vision shrinks. High bounties glow brighter.' : 'The sun is up.', night ? '#9fb3ff' : '#ffd23f', 2500);
+  G.nightOn = night;
+  const blood = env.blood > 0;
+  if (blood && !G.bloodOn) { showBanner('BLOOD MOON', 'Every kill is worth DOUBLE bounty for 2 minutes!', '#ff4d5e', 3200); startTense(); }
+  if (!blood && G.bloodOn) stopTense();
+  G.bloodOn = blood;
+}
+
+// FULL MAP: tap the minimap. Zones, roads, landmarks, you, the top bounty holder, events.
+let fullMap = null;
+function openFullMap() {
+  if (fullMap) return;
+  sfx('click');
+  input.reset();
+  const cv = document.createElement('canvas');
+  cv.id = 'fullmap';
+  Object.assign(cv.style, { position: 'fixed', inset: '0', width: '100%', height: '100%', zIndex: 45, touchAction: 'none' });
+  document.body.appendChild(cv);
+  const draw = () => {
+    if (!fullMap) return;
+    const d = Math.min(2, devicePixelRatio || 1), w = innerWidth, h = innerHeight;
+    if (cv.width !== Math.round(w * d)) { cv.width = Math.round(w * d); cv.height = Math.round(h * d); }
+    const g = cv.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
+    const tops = Object.values(G.online || {}).map((z) => z.top).filter(Boolean).sort((a, b) => b[1] - a[1]);
+    drawFullMap(g, G.map, w, h, { me: G.me ? renderMe() : null, online: G.online, dn: G.env?.dn, top: tops[0] ? { name: tops[0][0], bounty: tops[0][1], x: tops[0][2], y: tops[0][3] } : null });
+  };
+  const close = (e) => { e?.preventDefault(); clearInterval(fullMap.timer); cv.remove(); fullMap = null; };
+  fullMap = { timer: setInterval(draw, 500), close };
+  cv.addEventListener('pointerdown', close);
+  draw();
+}
+const closeFullMap = () => { if (fullMap) fullMap.close(); };
+window.__huntMap = { open: () => openFullMap(), close: () => closeFullMap(), isOpen: () => !!fullMap };
+
 function render(t) {
   const s = worldScale();
   const mePos = renderMe();
@@ -803,6 +876,9 @@ function render(t) {
   if (!SETTINGS.lowGfx) art.drawShadows(ctx, G.map, view);
   art.draw(ctx, G.map, view, t, SETTINGS);
   R.drawBlocks(ctx, G.map, G.crateHp, x0, y0, x1, y1);
+  if (G.map.landmarks && G.map.landmarks.length) drawLandmarks(ctx, G.map, view, t);
+  const env = envState(G.map, cam, G.svOff || 0);
+  G.env = env;
 
   const list = G.view.others.map((o) => ({ ...o, me: false, size: sizeOf(o) }));
   if (meAlive) {
@@ -815,7 +891,8 @@ function render(t) {
   list.sort((a, b) => a.y - b.y);
   const myTeam = G.me.tm || 0;
   for (const p of list) { if (myTeam) R.drawTeamRing(ctx, p, p.me || p.team === myTeam); else R.drawRim(ctx, G.map, p); }
-  for (const p of list) R.drawAura(ctx, p, t);
+  const topId = P0()?.last?.top?.[0] || 0;
+  for (const p of list) { p.glowBoost = env.dn ? 1 + env.dn.dark * 0.8 : 1; p.marked = p.id === topId; R.drawAura(ctx, p, t); }
   for (const p of list) {
     let alpha = 1;
     if (p.fl & 4) alpha = p.me ? 0.37 + pulse(t, 8, 0.5) * 0.16 : 0.35;
@@ -842,11 +919,11 @@ function render(t) {
   for (const b of G.view.bullets) R.drawBullet(ctx, b.kind, b.x, b.y, b.ang, rimAt(b.x, b.y));
   for (const b of G.localBullets) R.drawBullet(ctx, G.brawler, b.x, b.y, b.ang, rimAt(b.x, b.y));
 
-  R.drawBushes(ctx, G.map, x0, y0, x1, y1, meAlive ? mePos : null, t);
+  R.drawBushes(ctx, G.map, x0, y0, x1, y1, meAlive ? mePos : null, t, Math.max(env.dn ? env.dn.dark : 0, env.cave ? 0.5 : 0));
   for (const e of evs) if (EVENTS[e.id].layer !== 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
   if (!SETTINGS.lowGfx) R.drawAmbient(ctx, G.map, view, t, false);
   const P = primary();
-  if (P && P.last && P.last.z > 0) R.drawPoison(ctx, P.last.z, ARENA_SIZE, x0, y0, x1, y1, t);
+  if (P && P.last && P.last.z > 0) R.drawPoison(ctx, P.last.z, G.map.gw * TILE_, x0, y0, x1, y1, t);
 
   for (const r of G.rings) {
     const k = 1 - r.life / r.max;
@@ -854,9 +931,15 @@ function render(t) {
     ctx.globalAlpha = 1 - k; if (r.ink) { ctx.lineWidth = r.w + 5; ctx.strokeStyle = R.INK; ctx.stroke(); } ctx.lineWidth = r.w; ctx.strokeStyle = r.color; ctx.stroke(); ctx.globalAlpha = 1;
   }
   for (const p of G.parts) {
-    ctx.globalAlpha = Math.min(1, (p.life / p.max) * 1.5);
+    const k = p.life / p.max;
     ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+    if (p.kind === 'smoke') { ctx.globalAlpha = Math.min(0.55, k * 0.7); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); }
+    else if (p.kind === 'shard') {
+      ctx.globalAlpha = Math.min(1, k * 1.6); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.beginPath(); ctx.moveTo(-p.size, -p.size * 0.4); ctx.lineTo(p.size, 0); ctx.lineTo(-p.size * 0.3, p.size * 0.7); ctx.closePath(); ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = R.INK; ctx.stroke(); ctx.restore();
+    } else if (p.kind === 'ember') { ctx.globalAlpha = Math.min(1, k * 1.4) * (SETTINGS.reduceFlash ? 0.8 : 0.6 + Math.sin(p.life * 30) * 0.4); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); }
+    else { ctx.globalAlpha = Math.min(1, k * 1.5); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); }
   }
   ctx.globalAlpha = 1;
   for (const p of list) { if (p.fl & 4 && !p.me && p.team !== myTeam) continue; R.drawStatus(ctx, p, p.me, t, myTeam ? (p.me || p.team === myTeam ? 'mate' : 'foe') : null); }
@@ -879,8 +962,18 @@ function render(t) {
 
   // ---- screen space
   if (!SETTINGS.lowGfx) R.drawGrade(ctx, G.map, cam, W, H);
+  drawAtmosphere(ctx, env, cam, W, H, s, t);
+  if (G.kind === 'free') drawCompass(ctx, G.map, cam, W, H, s);
   const pe = P?.ev;
   if (pe && EVENTS[pe.id]?.drawScreen) EVENTS[pe.id].drawScreen(ctx, pe.p, pe.ph, t, W, H, s);
+  // HEARTBEAT: an enemy is hiding close by -> pounding heart + slightly darker screen edges (steady)
+  if (meAlive && G.me.hb) {
+    const now2 = performance.now();
+    if (!G.hbAt || now2 - G.hbAt > 900) { G.hbAt = now2; sfx('heartbeat', 0.8); }
+    const g2 = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.4, W / 2, H / 2, Math.max(W, H) * 0.72);
+    g2.addColorStop(0, 'rgba(10,4,16,0)'); g2.addColorStop(1, 'rgba(10,4,16,0.32)');
+    ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+  }
   if (G.hurt > 0) {
     const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.7);
     g.addColorStop(0, 'rgba(255,40,60,0)'); g.addColorStop(1, `rgba(255,40,60,${G.hurt})`);
@@ -888,7 +981,8 @@ function render(t) {
   }
   if (meAlive && P && P.last && P.last.z > 0) {
     const z = P.last.z;
-    if (mePos.x < z || mePos.y < z || mePos.x > ARENA_SIZE - z || mePos.y > ARENA_SIZE - z) { ctx.fillStyle = `rgba(80,220,90,${SETTINGS.reduceFlash ? 0.15 : 0.15 + Math.sin(t * 6) * 0.05})`; ctx.fillRect(0, 0, W, H); }
+    const AS = G.map.gw * TILE_;
+    if (mePos.x < z || mePos.y < z || mePos.x > AS - z || mePos.y > AS - z) { ctx.fillStyle = `rgba(80,220,90,${SETTINGS.reduceFlash ? 0.15 : 0.15 + Math.sin(t * 6) * 0.05})`; ctx.fillRect(0, 0, W, H); }
   }
   // hunted: arrow towards the target when it's off-screen
   const tg = P?.last?.md?.tg;
@@ -906,9 +1000,24 @@ function render(t) {
   }
   const radarR = Math.min(64, H * 0.15);
   const now = performance.now();
-  R.drawRadar(ctx, 12 + SA.l + radarR, 36 + SA.t + radarR, radarR, { x: cam.x, y: cam.y },
-    [...G.pings.map((p) => ({ ...p, age: (now - p.t0) / 1000 })), ...(G.mates || []).map(([id, x, y]) => ({ id, x, y, bt: 0, age: 0, mate: true }))],
-    { poison: P?.last?.z ? { inset: P.last.z, size: ARENA_SIZE } : null, hub: G.kind === 'free', zones: G.kind === 'free', range: 1600 }, t);
+  const rcx = 12 + SA.l + radarR, rcy = 36 + SA.t + radarR;
+  if (G.kind === 'free') {
+    // MINIMAP (tap it for the full map): zone, landmarks, bounty pings, the top bounty holder
+    const tops = Object.values(G.online || {}).map((z) => z.top).filter(Boolean).sort((a, b) => b[1] - a[1]);
+    const top = tops[0] ? { name: tops[0][0], bounty: tops[0][1], x: tops[0][2], y: tops[0][3] } : null;
+    const clock = env.blood ? `BLOOD MOON ${Math.ceil(env.blood)}s` : env.dn && env.dn.night ? 'NIGHT' : env.dn && env.dn.dark > 0 ? 'DUSK' : '';
+    drawMiniMap(ctx, G.map, rcx, rcy, radarR, { x: cam.x, y: cam.y }, {
+      facing: G.facing, label: zoneLabel(env.zone).toUpperCase() + (clock ? ' · ' + clock : ''), hint: G.ticks < 400, top,
+      pings: [...G.pings.map((p) => ({ x: p.x, y: p.y })), ...(G.mates || []).map(([, x, y]) => ({ x, y, mate: true }))],
+    });
+    input.taps = [{ x: rcx, y: rcy, r: radarR + 6, on: openFullMap }];
+  } else {
+    input.taps = [];
+    R.drawRadar(ctx, rcx, rcy, radarR, { x: cam.x, y: cam.y },
+      [...G.pings.map((p) => ({ ...p, age: (now - p.t0) / 1000 })), ...(G.mates || []).map(([id, x, y]) => ({ id, x, y, bt: 0, age: 0, mate: true }))],
+      { poison: P?.last?.z ? { inset: P.last.z, size: G.map.gw * TILE_ } : null, hub: false, zones: false, range: 1600 }, t);
+  }
+  worldNotices(env);
   if (G.phase === 'play' && meAlive) R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
   if (!meAlive && G.phase !== 'play') {
     const o = G.view.others.find((p) => p.id === G.spectate);
@@ -1030,13 +1139,13 @@ function drawMapView(t) {
     ctx.strokeStyle = m.border[y * m.gw + x] ? 'rgba(255,150,40,0.9)' : tt === 1 ? 'rgba(255,40,70,0.9)' : 'rgba(80,170,255,0.9)';
     ctx.strokeRect(x * TILE_ + 2, y * TILE_ + 2, TILE_ - 4, TILE_ - 4);
   }
-  if (m.kind === 'arena') for (const sp of SPAWNS) {
+  if (m.kind === 'arena') for (const sp of m.spawns || SPAWNS) {
     ctx.beginPath(); ctx.arc(sp.x, sp.y, SPAWN_COVER_DIST, 0, Math.PI * 2); ctx.strokeStyle = spawnHasCover(m, sp) ? 'rgba(75,224,110,0.8)' : 'rgba(255,0,0,1)'; ctx.stroke();
     ctx.beginPath(); ctx.arc(sp.x, sp.y, 26, 0, Math.PI * 2); ctx.fillStyle = '#4be06e'; ctx.fill();
   }
   ctx.restore();
   const st = art.stats();
-  R.outlinedText(ctx, `MAPVIEW · ${m.kind === 'arena' ? m.world + ' arena' : 'Free Play world'} · ${m.pieces.length} cover pieces · art sprites ${st.sprites} · worlds cached ${st.worlds.join(',')}`, W / 2, 16, 14, '#fff', '#000');
+  R.outlinedText(ctx, `MAPVIEW · ${m.kind === 'arena' ? `${m.world} arena · ${m.layout} · ${m.size}px` : 'Free Play world'} · ${m.pieces.length} cover pieces · art sprites ${st.sprites} · worlds cached ${st.worlds.join(',')}`, W / 2, 16, 14, '#fff', '#000');
 }
 
 let menuMap = null;
@@ -1084,7 +1193,7 @@ UI.lobby = createLobby({
   startQuick: (o = {}) => { goFullscreen(); startQuick(o.fromFriends ? {} : { mode: o.mode || '', room: '' }); },
   startFree: () => { goFullscreen(); startFree(); },
   getBrawler: () => selBrawler,
-  setBrawler: (id) => { selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); },
+  setBrawler: (id) => { const changed = id !== selBrawler; selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); if (changed) sfx('growl_' + id, 0.9); }, // each hunter growls when picked
   prefs, saveName: () => { readForm(); UI.lobby?.refresh(); }, statRows,
 });
 UI.mm = createMatchmaking(() => toMenu());
@@ -1094,9 +1203,11 @@ UI.showIntro = showIntro;
 
 // Test flags: ?world=<key>[&mode=<mode>] drops you straight into that arena with bots; ?free=1 into Free Play.
 const qs = new URLSearchParams(location.search);
+// ?clock=<0..1>: show the day/night cycle at that point (screenshots; visual only, the server keeps real time)
+if (qs.get('clock') != null) { const ph = +qs.get('clock'); G.clockForced = ph; G.svOff = Math.floor(Date.now() / DAY_MS) * DAY_MS + ph * DAY_MS - Date.now(); }
 if (qs.get('mapview')) {
   G.phase = 'mapview';
-  G.map = qs.get('free') ? generateWorld() : generateArena(+(qs.get('seed') || 7), qs.get('world') || 'meadow');
+  G.map = qs.get('free') ? generateWorld() : generateArena(+(qs.get('seed') || 7), qs.get('world') || 'meadow', +(qs.get('players') || 10));
   show(null); $('hud').hidden = true; document.body.classList.add('ingame');
 }
 if (!qs.get('mapview') && !qs.get('world') && !qs.get('free')) show('lobby');

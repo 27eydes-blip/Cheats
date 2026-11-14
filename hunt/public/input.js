@@ -15,6 +15,7 @@ export class Input {
     this.mouse = { x: 0, y: 0, active: false };
     this.isTouch = matchMedia('(pointer: coarse)').matches;
     this.enabled = false;
+    this.taps = []; // tappable HUD circles drawn on the canvas: {x, y, r, on()} (e.g. the minimap)
     this.layout(innerWidth, innerHeight);
 
     const opts = { passive: false };
@@ -26,6 +27,8 @@ export class Input {
     el.addEventListener('mousemove', (e) => { this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.mouse.active = true; });
     el.addEventListener('mousedown', (e) => {
       if (!this.enabled) return;
+      const hit = this.tapAt(e.clientX, e.clientY);
+      if (hit) { hit.on(); return; }
       this.mouse.active = true;
       if (e.button === 0) this.actions.push({ type: 'fire', mode: 'mouse' });
       if (e.button === 2) this.actions.push({ type: 'super', mode: 'mouse' });
@@ -55,6 +58,7 @@ export class Input {
   }
 
   reset() { this.actions.length = 0; this.moveT = null; this.aimT = null; }
+  tapAt(x, y) { return this.taps.find((b) => Math.hypot(x - b.x, y - b.y) <= b.r) || null; }
 
   onTouchStart(e) {
     e.preventDefault();
@@ -66,6 +70,8 @@ export class Input {
     if (this.aimT && !live.has(this.aimT.id)) this.aimT = null;
     for (const t of e.changedTouches) {
       const x = t.clientX, y = t.clientY;
+      const hit = this.tapAt(x, y);
+      if (hit) { hit.on(); continue; } // a HUD button, not a stick
       const sb = this.superBtn;
       if (!this.aimT && Math.hypot(x - sb.x, y - sb.y) < sb.r + 14) {
         this.aimT = { id: t.identifier, kind: 'super', bx: sb.x, by: sb.y, x, y, t0: performance.now(), aiming: false };

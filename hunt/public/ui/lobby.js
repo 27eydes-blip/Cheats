@@ -22,13 +22,14 @@ export const ROLE_COL = { Balanced: 'var(--role-balanced)', Tank: 'var(--role-ta
 export const MODES_UI = {
   quick: { name: 'QUICK HUNT', desc: 'A random event: Showdown, Bounty Rush, Hunted or Crystal Grab.', players: '10 players', mode: '', ribbon: null },
   squad: { name: 'SQUAD HUNT', desc: '3v3 — kills fill your team pot. Biggest pot wins.', players: '3v3', mode: 'squad', ribbon: 'NEW' },
-  free: { name: 'FREE PLAY', desc: 'Drop into the open world anytime. Four zones + a safe hub.', players: 'Open world', mode: 'free', ribbon: null },
+  bighunt: { name: 'BIG HUNT', desc: '20 hunters on a huge arena. Last one standing wins.', players: '20 players', mode: 'bighunt', ribbon: 'NEW' },
+  free: { name: 'FREE PLAY', desc: 'Drop into the open world anytime. Eight zones around a safe hub.', players: 'Open world', mode: 'free', ribbon: null },
   showdown: { name: 'SHOWDOWN', desc: 'Last hunter standing wins while the poison closes in.', players: '10 players', mode: 'showdown', ribbon: 'EVENT' },
 };
 export const powerLevel = (tro) => ({ level: Math.min(11, 1 + Math.floor(tro / 50)), frac: tro >= 500 ? 1 : (tro % 50) / 50 });
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const TAUNTS = ['Hunt’s on!', 'Catch me!', 'Too slow!', 'Bounty time!', 'Ready!', 'Let’s go!'];
+const TAUNTS = ['The hunt is on.', 'I see you.', 'Run.', 'Your bounty is mine.', 'Nowhere to hide.', 'Ready.'];
 
 export function createLobby(api) {
   const root = $('lobby');
@@ -99,15 +100,19 @@ export function createLobby(api) {
     const id = api.getBrawler(), B = BRAWLERS[id];
     const size = Math.min(innerHeight * 0.4, h * 0.82, w * 0.7);
     const sc = size / 80, cx = w / 2, base = h - 16 * sc;
-    // pedestal
+    // dramatic light from below: a warm cone rising off the pedestal
     const col = (L.colCache ||= {})[B.role] ||= getComputedStyle(document.documentElement).getPropertyValue(ROLE_COL[B.role].slice(4, -1)).trim() || '#ffd23f';
+    const flick = SETTINGS.reduceFlash ? 0.85 : 0.8 + Math.sin(t * 1.7) * 0.08 + Math.sin(t * 5.3) * 0.04;
+    const cone = sg.createLinearGradient(0, base, 0, base - 110 * sc);
+    cone.addColorStop(0, `rgba(255,120,50,${0.42 * flick})`); cone.addColorStop(1, 'rgba(255,120,50,0)');
+    sg.fillStyle = cone; sg.beginPath(); sg.moveTo(cx - 30 * sc, base); sg.lineTo(cx - 52 * sc, base - 110 * sc); sg.lineTo(cx + 52 * sc, base - 110 * sc); sg.lineTo(cx + 30 * sc, base); sg.closePath(); sg.fill();
     const gl = sg.createRadialGradient(cx, base, 4, cx, base, 46 * sc);
     gl.addColorStop(0, col); gl.addColorStop(1, 'rgba(0,0,0,0)');
-    sg.globalAlpha = SETTINGS.reduceFlash ? 0.5 : 0.45 + Math.sin(t * 2) * 0.15; sg.fillStyle = gl; sg.fillRect(cx - 50 * sc, base - 50 * sc, 100 * sc, 80 * sc); sg.globalAlpha = 1;
-    sg.lineWidth = 5; sg.strokeStyle = '#1b1033';
-    sg.beginPath(); sg.ellipse(cx, base + 6 * sc, 36 * sc, 11 * sc, 0, 0, Math.PI * 2); sg.fillStyle = '#2a1a5e'; sg.fill(); sg.stroke();
-    sg.beginPath(); sg.ellipse(cx, base, 36 * sc, 11 * sc, 0, 0, Math.PI * 2); sg.fillStyle = '#5b37b8'; sg.fill(); sg.stroke();
-    sg.beginPath(); sg.ellipse(cx, base, 28 * sc, 8 * sc, 0, 0, Math.PI * 2); sg.strokeStyle = col; sg.lineWidth = 3; sg.stroke();
+    sg.globalAlpha = 0.5 * flick; sg.fillStyle = gl; sg.fillRect(cx - 50 * sc, base - 50 * sc, 100 * sc, 80 * sc); sg.globalAlpha = 1;
+    sg.lineWidth = 5; sg.strokeStyle = '#0c0614';
+    sg.beginPath(); sg.ellipse(cx, base + 6 * sc, 36 * sc, 11 * sc, 0, 0, Math.PI * 2); sg.fillStyle = '#170d24'; sg.fill(); sg.stroke(); // dark stone pedestal
+    sg.beginPath(); sg.ellipse(cx, base, 36 * sc, 11 * sc, 0, 0, Math.PI * 2); sg.fillStyle = '#2c1d3c'; sg.fill(); sg.stroke();
+    sg.beginPath(); sg.ellipse(cx, base, 28 * sc, 8 * sc, 0, 0, Math.PI * 2); sg.strokeStyle = '#ff8a3d'; sg.lineWidth = 3; sg.stroke(); // glowing rune ring
     // idle: bob, blink, weapon twirl; taunt: hop + spin
     const blink = t > L.blinkAt && t < L.blinkAt + 0.12 ? 1 : 0;
     if (t > L.blinkAt + 0.12) L.blinkAt = t + 2 + Math.random() * 3;
@@ -117,6 +122,22 @@ export function createLobby(api) {
     if (L.taunt && t < L.taunt + 0.8) { const k = (t - L.taunt) / 0.8; hop = Math.sin(k * Math.PI) * 26 * sc; facing += k * Math.PI * 2; }
     const skin = A.progress().equipped['skin:' + id] || null;
     drawBrawler(sg, id, cx, base - 30 * sc - hop, facing, t, { scale: sc, blink, skin, moving: false });
+    // light it from below: warm on the lower half, shadow falling over the head
+    sg.save(); sg.globalCompositeOperation = 'source-atop';
+    const ul = sg.createLinearGradient(0, base - 80 * sc, 0, base);
+    ul.addColorStop(0, 'rgba(12,4,24,0.42)'); ul.addColorStop(0.5, 'rgba(12,4,24,0)'); ul.addColorStop(1, `rgba(255,110,40,${0.32 * flick})`);
+    sg.fillStyle = ul; sg.fillRect(0, 0, w, h); sg.restore();
+    // fog rolling over the pedestal
+    if (!SETTINGS.lowGfx) {
+      sg.save();
+      for (let i = 0; i < 6; i++) {
+        const d = SETTINGS.reduceFlash ? 0 : t * (8 + i * 3);
+        const fx2 = cx + (((i * 37 + d) % 120) - 60) * sc, fy2 = base + (i % 2 ? 4 : -2) * sc;
+        sg.globalAlpha = 0.18 + (i % 3) * 0.05; sg.fillStyle = '#b9a8d6';
+        sg.beginPath(); sg.ellipse(fx2, fy2, (22 + (i % 3) * 8) * sc, 6 * sc, 0, 0, Math.PI * 2); sg.fill();
+      }
+      sg.restore();
+    }
   }
   function drawAvatar(t) {
     av.setTransform(1, 0, 0, 1, 0, 0); av.clearRect(0, 0, 96, 96);

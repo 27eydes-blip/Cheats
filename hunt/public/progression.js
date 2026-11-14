@@ -21,6 +21,8 @@ export function normalize(p) {
   out.trophies = { ...n.trophies, ...(p.trophies || {}) };
   out.pass = { ...n.pass, ...(p.pass || {}) };
   for (const k of ['claimed', 'owned']) out[k] = Array.isArray(p[k]) ? p[k] : [];
+  // free skins (the Classic looks) are owned by everyone, old saves included
+  for (const b of BRAWLER_IDS) if (!out.owned.includes(b + '_classic')) out.owned = [...out.owned, b + '_classic'];
   out.equipped = p.equipped && typeof p.equipped === 'object' ? p.equipped : {};
   if (typeof out.gems !== 'number') out.gems = 20;
   return out;

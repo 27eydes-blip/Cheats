@@ -4,7 +4,7 @@
 //              between zone DOs as they walk across borders.
 //   everything else: static client from ./public
 import { Sim, newId } from './sim.js';
-import { QUICK_MODES, MODES } from './modes.js';
+import { QUICK_MODES, RANDOM_MODES, MODES, playersFor } from './modes.js';
 import { EVENTS } from '../public/events/index.js';
 import { handleApi, userFromToken, recordMatch } from './accounts.js';
 import {
@@ -55,7 +55,7 @@ export class Matchmaker {
     const now = Date.now();
     let c = this.cur[want];
     if (!c || c.count >= c.max || now - c.created > 7000 || skip === c.id) {
-      const mode = want === 'any' ? pick(QUICK_MODES) : want;
+      const mode = want === 'any' ? pick(RANDOM_MODES) : want;
       c = this.cur[want] = { id: `qp:${mode}:${pick(arenaWorlds())}:${crypto.randomUUID()}`, created: now, count: 0, max: MODES[mode].maxPlayers || 10 };
     }
     c.count++;
@@ -103,7 +103,7 @@ export class MatchRoom {
     this.endedAt = 0;
     this.dropped = new Map(); // player id -> when their socket dropped mid-match
     const seed = (Math.random() * 2 ** 32) >>> 0;
-    const map = generateArena(seed, cfg.world);
+    const map = generateArena(seed, cfg.world, playersFor(cfg.mode));
     if (cfg.open) map.open = true;
     if (cfg.open) for (let y = 1; y < map.gh - 1; y++) for (let x = 1; x < map.gw - 1; x++) map.t[y * map.gw + x] = 0;
     this.sim = new Sim({
@@ -140,7 +140,7 @@ export class MatchRoom {
       let mode, world;
       if (isRoom) {
         const qm = url.searchParams.get('mode'), qw = url.searchParams.get('world');
-        mode = QUICK_MODES.includes(qm) ? qm : pick(QUICK_MODES);
+        mode = QUICK_MODES.includes(qm) ? qm : pick(RANDOM_MODES);
         world = worldId(qw) >= 0 && WORLDS[worldId(qw)].arena ? qw : pick(arenaWorlds());
       } else [, mode, world] = mname.split(':');
       const lobby = isRoom ? Math.max(1.5, Math.min(12, Number(url.searchParams.get('lobby')) || 12)) : 8;
@@ -182,7 +182,7 @@ export class MatchRoom {
     this.dropped.delete(id);
     sendJSON(server, { t: 'welcome', id, rejoin: 1, room: url.searchParams.get('match').startsWith('room:') ? url.searchParams.get('match').slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: url.searchParams.get('match'), secret: p.secret });
     if (sim.phase === 'play') {
-      sendJSON(server, { t: 'start', rejoin: 1, botLevel: sim.botLevel, you: id, mode: sim.modeKey, world: sim.map.world, seed: sim.seed, open: !!sim.map.open });
+      sendJSON(server, { t: 'start', rejoin: 1, botLevel: sim.botLevel, you: id, mode: sim.modeKey, world: sim.map.world, seed: sim.seed, open: !!sim.map.open, players: sim.map.players || 10 });
       sendJSON(server, sim.rosterMsg());
       sendJSON(server, sim.stateMsg());
       if (!p.alive && !sim.mode.respawn) sendJSON(server, { t: 'dead', rank: p.rank, respawn: 0, killer: 'the Wild', killerId: 0, stolen: 0 });
@@ -275,7 +275,7 @@ export class ZoneRoom {
     const conns = this.conns;
     this.sim = new Sim({
       map: generateWorld(), mode: 'freeplay', zone: this.slot, bounds: zoneBounds(this.slot), hub: true, phase: 'play',
-      botTarget: 4, seed: (Math.random() * 2 ** 32) >>> 0,
+      botTarget: this.slot === 'c' ? 4 : 8, seed: (Math.random() * 2 ** 32) >>> 0,
       send: (id, msg) => { const ws = conns.get(id); if (ws) sendJSON(ws, msg); },
       hooks: {
         handoff: (p, state) => this.handoff(p, state),
@@ -362,12 +362,15 @@ export class ZoneRoom {
       const p = sim.addPlayer({ name: cleanName(url.searchParams.get('name')), brawler: BRAWLERS[b] ? b : 'volt' });
       p.alive = false;
       sim.respawn(p);
+      // local dev only (HUNT_DEV is set in wrangler.jsonc, never in the deploy config): spawn at x,y
+      const at = this.env.HUNT_DEV && (url.searchParams.get('at') || '').split(',').map(Number);
+      if (at && at.length === 2 && sim.inBounds(at[0], at[1], -60)) { p.x = p.px = at[0]; p.y = p.py = at[1]; }
       const token = url.searchParams.get('token');
       if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { if (u && sim.players.has(p.id)) { p.account = u.id; sim.setCosmetics(p.id, JSON.parse(u.progress || '{}').equipped); } }).catch(() => {});
       server.huntKey = p.id;
       this.conns.set(p.id, server);
       p.secret = crypto.randomUUID();
-      sendJSON(server, { t: 'welcome', id: p.id, zone: this.slot, mode: 'freeplay', secret: p.secret });
+      sendJSON(server, { t: 'welcome', id: p.id, zone: this.slot, mode: 'freeplay', secret: p.secret, sv: Date.now() });
     } else {
       const okey = 'o:' + crypto.randomUUID();
       server.huntKey = okey;
@@ -435,10 +438,14 @@ export class ZoneRoom {
     if (this.dirT <= 0) {
       this.dirT = 3;
       const players = this.sim.humans().map((p) => [p.name, p.brawler, p.bounty]);
+      // for the full map: this zone's top bounty holder and its running event
+      let top = null;
+      for (const p of this.sim.players.values()) if (p.alive && p.bounty > 0 && (!top || p.bounty > top.bounty)) top = p;
+      const ev = this.sim.event ? [this.sim.event.id, this.sim.event.ph] : null;
       const dir = this.env.DIRECTORY.get(this.env.DIRECTORY.idFromName('world'));
-      dir.fetch('https://d/report', { method: 'POST', body: JSON.stringify({ slot: this.slot, players, bots: this.sim.players.size - players.length }) })
+      dir.fetch('https://d/report', { method: 'POST', body: JSON.stringify({ slot: this.slot, players, bots: this.sim.players.size - players.length, top: top ? [top.name, top.bounty, Math.round(top.x), Math.round(top.y)] : null, ev }) })
         .then((r) => r.json())
-        .then((zones) => { this.online = zones; this.sim?.broadcast({ t: 'online', zones }); })
+        .then((zones) => { this.online = zones; this.sim?.broadcast({ t: 'online', zones, sv: Date.now() }); })
         .catch(() => {});
     }
   }
@@ -449,9 +456,9 @@ export class Directory {
   constructor() { this.zones = {}; }
   async fetch(req) {
     const r = await req.json();
-    this.zones[r.slot] = { players: r.players, bots: r.bots, at: Date.now() };
+    this.zones[r.slot] = { players: r.players, bots: r.bots, top: r.top || null, ev: r.ev || null, at: Date.now() };
     const out = {};
-    for (const [slot, z] of Object.entries(this.zones)) if (Date.now() - z.at < 10000) out[slot] = { players: z.players, bots: z.bots };
+    for (const [slot, z] of Object.entries(this.zones)) if (Date.now() - z.at < 10000) out[slot] = { players: z.players, bots: z.bots, top: z.top, ev: z.ev };
     return Response.json(out);
   }
 }

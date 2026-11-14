@@ -4,19 +4,19 @@
    ===================================================================== */
 :root {
   /* colour */
-  --ink: #1b1033;           /* the one outline colour */
-  --bg: #2b1d55;
-  --panel: #4b2f9a;
-  --panel-2: #3a2380;
-  --panel-hi: #7b52ff;
+  --ink: #12091e;           /* the one outline colour */
+  --bg: #150b24;            /* darker hunter theme: deep purples and blacks, gold + red accents */
+  --panel: #2c1846;
+  --panel-2: #1e1033;
+  --panel-hi: #6a2a6e;
   --gold: #ffd23f;
   --gold-2: #ffb800;
   --mint: #4be0c8;
-  --red: #ff4d5e;
+  --red: #e0283f;
   --green: #4be06e;
   --blue: #3a86ff;
   --text: #ffffff;
-  --text-dim: #cfc3ff;
+  --text-dim: #c4b4dc;
   --role-balanced: #ffb000;
   --role-tank: #ff7b39;
   --role-sniper: #19b6a6;
@@ -84,7 +84,7 @@
 .dot[hidden] { display: none; }
 
 /* ---------- screens: slide + scale in (no hard cuts) ---------- */
-.ui-screen { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; background: rgba(27, 16, 51, .82);
+.ui-screen { position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column; background: rgba(14, 7, 24, .86);
   backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
   padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); }
 .ui-screen.enter { animation: screen-in var(--t-screen) var(--ease-out) both; }

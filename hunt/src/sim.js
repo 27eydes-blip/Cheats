@@ -7,12 +7,16 @@ import {
   CLOAK_REVEAL_DIST, SPAWNS, BOT_NAMES, EVENT_EVERY, EVENT_WARN, LOW_HP, RUSH_TIME, COMEBACK_DMG,
   applyMove, moveCircle, inBush, attackDirs, poisonInset, moveStats, bountyGlow, pingInterval,
   layLowFactor, rng, inHub, HUB, MINE_SEEN, PLAYER_R, touchingBorder, SPIKE_DMG, SPIKE_CD, lineOfSight, isSolidTile, tileAt, blocksMove,
+  dayNight, visionRange, onHigh, HIGH_REVEAL,
 } from '../public/shared.js';
 import { EVENTS, pickEvent } from '../public/events/index.js';
 import { MODES } from './modes.js';
 import { botInput, levelForTrophies } from './bots.js';
 
 const r2 = (v) => Math.round(v * 100) / 100;
+// interest management: how far around a viewer the server sends things (half-extents, px)
+export const VIEW_X = 1500, VIEW_Y = 1100, RADAR_RANGE = 2600;
+export const HEARTBEAT_DIST = 330; // a hidden enemy this close makes your heart pound
 export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
 
 // fields carried across a zone handoff
@@ -71,6 +75,10 @@ export class Sim {
     this.nextEventAt = this.forceEvent ? 8 : EVENT_EVERY;
     this.mods = {};
     this.botSpawnT = 0;
+    // Free Play day/night runs on the wall clock (shared by every zone); tests can pass `now`
+    this.now = o.now || (() => Date.now());
+    this.dn = this.hub ? dayNight(this.now()) : null;
+    this.brokenCrates = new Map(); // Free Play: idx -> time broken (they come back)
     this.mode.init?.(this);
   }
 
@@ -263,8 +271,9 @@ export class Sim {
       if (this.mode.teams) b.team = this.smallerTeam();
     }
     // teams spawn on opposite sides of the ring; FFA spawns are shuffled
-    const spawns = SPAWNS.slice().sort(() => Math.random() - 0.5);
-    const sideA = SPAWNS.filter((s) => s.x < this.center.x), sideB = SPAWNS.filter((s) => s.x >= this.center.x);
+    const SP = this.map.spawns || SPAWNS;
+    const spawns = SP.slice().sort(() => Math.random() - 0.5);
+    const sideA = SP.filter((s) => s.x < this.center.x), sideB = SP.filter((s) => s.x >= this.center.x);
     let i = 0, ia = 0, ib = 0;
     for (const p of this.players.values()) {
       const s = !this.mode.teams ? spawns[i++ % spawns.length] : p.team === 1 ? sideA[ia++ % sideA.length] : sideB[ib++ % sideB.length];
@@ -278,7 +287,7 @@ export class Sim {
     if (hs.length) this.botLevel = levelForTrophies(hs.reduce((s, h) => s + (h.trophies || 0), 0) / hs.length);
     for (const p of this.players.values()) {
       if (!p.connected) continue;
-      this.send(p.id, { t: 'start', botLevel: this.botLevel, you: p.id, mode: this.modeKey, world: this.map.world, seed: this.seed, open: !!this.map.open });
+      this.send(p.id, { t: 'start', botLevel: this.botLevel, you: p.id, mode: this.modeKey, world: this.map.world, seed: this.seed, open: !!this.map.open, players: this.map.players || 10 });
       this.send(p.id, this.rosterMsg());
     }
   }
@@ -287,12 +296,18 @@ export class Sim {
     if (viewer === t) return true;
     if (viewer.team && viewer.team === t.team) return true; // teammates are always visible
     if (viewer.alive === false) return true;
+    const dist = Math.hypot(viewer.x - t.x, viewer.y - t.y);
+    if (this.mods.vision && dist > this.mods.vision) return false;
+    // darkness: caves, marsh fog and night shrink vision, but at night a high bounty glows and
+    // can be spotted from further away (high-bounty hunters are easier to hunt after dark)
+    const vr = visionRange(this.map, viewer.x, viewer.y, this.dn);
+    if (dist > vr && !(this.dn && this.dn.dark > 0 && t.bounty >= 3 && dist < Math.max(vr, 2000))) return false;
     // observer sockets (Free Play border views) send their own position, so it can't be trusted:
     // they never get the "close enough to reveal" exception for bushes, cloak or armed mines
-    const d = viewer.observer ? Infinity : Math.hypot(viewer.x - t.x, viewer.y - t.y);
-    if (this.mods.vision && d > this.mods.vision) return false;
+    const d = viewer.observer ? Infinity : dist;
     if (t.cloak > 0 && d > CLOAK_REVEAL_DIST) return false;
-    if (t.reveal <= 0 && d > BUSH_REVEAL_DIST && inBush(this.map, t.x, t.y)) return false;
+    const bushReveal = BUSH_REVEAL_DIST * (!viewer.observer && onHigh(this.map, viewer.x, viewer.y) ? HIGH_REVEAL : 1); // high ground sees into bushes
+    if (t.reveal <= 0 && d > bushReveal && inBush(this.map, t.x, t.y)) return false;
     return true;
   }
 
@@ -465,9 +480,10 @@ export class Sim {
     t.rank = this.aliveCount() + 1;
     for (const v of this.deathList) v.rank = t.rank;
     const stolen = t.bounty;
+    const moon = this.dn && this.dn.blood ? 2 : 1; // BLOOD MOON: double bounty for every kill
     if (src && src !== t) {
-      if (src.remote) this.hooks.credit?.(src.zone, { id: src.id, kill: 1, gain: 1 + stolen });
-      else this.gainBounty(src, 1 + stolen);
+      if (src.remote) this.hooks.credit?.(src.zone, { id: src.id, kill: 1, gain: (1 + stolen) * moon });
+      else this.gainBounty(src, (1 + stolen) * moon);
       // SQUAD HUNT: kills feed the shared team pot; the stolen bounty leaves the victim's pot
       if (this.mode.teams && src.team && t.team && src.team !== t.team) {
         this.teamPot[src.team] += 1 + stolen;
@@ -515,6 +531,17 @@ export class Sim {
         if (this.inBounds(x, y, -30) && !blocksMove(tileAt(this.map, x, y)) && !blocksMove(tileAt(this.map, x + 30, y)) && !blocksMove(tileAt(this.map, x - 30, y))) { pt = { x, y }; break; }
       }
     }
+    if (!pt && this.hub && p.bot) {
+      // Free Play zones are huge: bring bots to where the people are (but not on top of them)
+      const hs = this.humans().filter((h) => h.alive && h.connected && !this.isSafe(h.x, h.y));
+      if (hs.length) {
+        const h = hs[Math.floor(this.rand() * hs.length)];
+        for (let i = 0; i < 30 && !pt; i++) {
+          const a = this.rand() * Math.PI * 2, d = 900 + this.rand() * 900, x = h.x + Math.cos(a) * d, y = h.y + Math.sin(a) * d;
+          if (this.inBounds(x, y, -80) && !this.isSafe(x, y) && Math.hypot(x - HUB.x, y - HUB.y) > HUB.r + 150 && !blocksMove(tileAt(this.map, x, y)) && !blocksMove(tileAt(this.map, x + 28, y)) && !blocksMove(tileAt(this.map, x - 28, y)) && !blocksMove(tileAt(this.map, x, y + 28)) && !blocksMove(tileAt(this.map, x, y - 28))) pt = { x, y };
+        }
+      }
+    }
     if (!pt) {
       let best = null, bd = -1;
       for (let i = 0; i < 12; i++) {
@@ -557,6 +584,7 @@ export class Sim {
     if (c.hp <= 0) {
       this.crates.delete(idx);
       this.setTile(idx, EMPTY);
+      if (this.hub && this.map.base[idx] === CRATE) this.brokenCrates.set(idx, this.time);
       const x = (idx % this.map.gw) * TILE + TILE / 2, y = Math.floor(idx / this.map.gw) * TILE + TILE / 2;
       this.fx.push(['crate', x, y, c.supply ? 1 : 0, 0]);
       if (c.supply) for (let i = 0; i < 3; i++) this.dropCube(x + Math.cos(i * 2.1) * 30, y + Math.sin(i * 2.1) * 30);
@@ -630,7 +658,7 @@ export class Sim {
 
     this.time += DT;
     this.tickN++;
-    this.zoneInset = this.mode.poison ? poisonInset(this.time) : 0;
+    this.zoneInset = this.mode.poison ? poisonInset(this.time, this.bounds.x1 - this.bounds.x0) : 0;
     this.updateEvent();
     if (this.wallsToRestore.length && this.tickN % 10 === 0) {
       this.wallsToRestore = this.wallsToRestore.filter((idx) => { if (this.map.t[idx] !== EMPTY || this.tileOccupied(idx)) return this.map.t[idx] === EMPTY; this.setTile(idx, WALL); return false; });
@@ -729,6 +757,13 @@ export class Sim {
     this.updateDelayed();
     if (this.hooks.handoff) this.checkHandoffs();
     if (this.hub) this.maintainBots();
+    if (this.hub && this.tickN % 40 === 0) {
+      this.dn = dayNight(this.now());
+      for (const [idx, at] of this.brokenCrates) { // Free Play crates (vaults, caches) refill after 90s
+        if (this.time - at < 90 || this.map.t[idx] !== EMPTY || this.tileOccupied(idx)) continue;
+        this.brokenCrates.delete(idx); this.addCrate(idx);
+      }
+    }
     this.sendSnapshots();
     this.pingLog = this.pings;
     this.fx = []; this.tileDirty = []; this.crateDirty = []; this.pings = [];
@@ -914,8 +949,8 @@ export class Sim {
     let top = null;
     for (const p of this.players.values()) if (p.bounty > 0 && (!top || p.bounty > top.bounty)) top = p;
     const common = {
-      t: 's', zone: this.zone, n: this.tickN, tm: r2(this.time), b: bullets, cu: cubes, cy: crystals,
-      td: this.tileDirty, ch: this.crateDirty, z: Math.round(this.zoneInset), al: alive, fx: this.fx, pg: this.pings,
+      t: 's', zone: this.zone, n: this.tickN, tm: r2(this.time),
+      td: this.tileDirty, ch: this.crateDirty, z: Math.round(this.zoneInset), al: alive,
       top: top ? [top.id, top.name, top.bounty] : null, ev: this.event ? [this.event.id, this.event.ph, r2(this.event.t)] : null,
       md: this.mode.hud?.(this) || null,
     };
@@ -927,16 +962,36 @@ export class Sim {
       const others = [];
       for (const p of this.players.values()) {
         if (p === v || !p.alive || !this.canSee(v, p)) continue;
-        if (Math.abs(p.x - v.x) > 1500 || Math.abs(p.y - v.y) > 1100) continue;
+        if (Math.abs(p.x - v.x) > VIEW_X || Math.abs(p.y - v.y) > VIEW_Y) continue;
         others.push([p.id, Math.round(p.x), Math.round(p.y), Math.round(p.hp), p.maxHp, Math.round(p.facing * 100) / 100,
           this.flags(p), p.cubes, p.bounty, this.glow(p), p.crystals, p.team]);
       }
       return others;
     };
+    // INTEREST MANAGEMENT: each viewer only gets what's near them (bullets, pickups, effects,
+    // radar pings), so a snapshot's size doesn't grow with the map or the player count
+    const near = (v, x, y, mx, my) => Math.abs(x - v.x) < mx && Math.abs(y - v.y) < my;
+    const local = (v) => ({
+      b: bullets.filter((r) => near(v, r[1], r[2], VIEW_X + 300, VIEW_Y + 300)),
+      cu: cubes.filter((r) => near(v, r[1], r[2], VIEW_X + 200, VIEW_Y + 200)),
+      cy: crystals.filter((r) => near(v, r[1], r[2], VIEW_X + 200, VIEW_Y + 200)),
+      fx: this.fx.filter((f) => f[4] === v.id || near(v, f[1], f[2], VIEW_X + 200, VIEW_Y + 200)),
+      pg: this.pings.filter((g) => Math.hypot(g[1] - v.x, g[2] - v.y) < RADAR_RANGE),
+    });
+    // HEARTBEAT: an enemy is close but hidden from you (bush / cloak) -> the client plays a heartbeat
+    const lurking = (v) => {
+      if (!v.alive) return 0;
+      for (const p of this.players.values()) {
+        if (p === v || !p.alive || !this.enemies(v, p)) continue;
+        const d = Math.hypot(p.x - v.x, p.y - v.y);
+        if (d < HEARTBEAT_DIST && !this.canSee(v, p)) return 1;
+      }
+      return 0;
+    };
     for (const v of this.players.values()) {
       if (!v.connected) continue;
       this.send(v.id, {
-        ...common, ack: v.lastSeq, p: rows(v), mn: mineRows(v),
+        ...common, ...local(v), ack: v.lastSeq, p: rows(v), mn: mineRows(v),
         ...(v.team ? { mates: [...this.players.values()].filter((q) => q !== v && q.team === v.team && q.alive).map((q) => [q.id, Math.round(q.x), Math.round(q.y)]) } : {}),
         me: {
           x: r2(v.x), y: r2(v.y), mvx: r2(v.mvx), mvy: r2(v.mvy), hp: Math.round(v.hp), mh: v.maxHp, am: r2(v.ammo + v.reloadP),
@@ -944,12 +999,12 @@ export class Sim {
           cl: r2(Math.max(0, v.cloak)), bt: v.bounty, lo: r2(v.lowF), bt5: r2(Math.min(v.bushT, 5)), rs: r2(Math.max(0, v.rush)),
           rt: r2(Math.max(0, v.respawnT)), cr: v.crystals, scr: Math.floor(this.mode.score ? this.mode.score(v) : 0),
           k: v.kills, be: v.bountyEarned, sk: v.sessionKills, bb: v.bestBounty, gl: this.glow(v), id: v.id, br: v.brawler,
-          sl: v.slowT > 0 ? r2(v.slowT) : 0, tp: v.tp, tm: v.team,
+          sl: v.slowT > 0 ? r2(v.slowT) : 0, tp: v.tp, tm: v.team, hb: lurking(v),
         },
       });
     }
     if (this.observers.size && this.tickN % 2 === 0) {
-      for (const [k, o] of this.observers) { const v = { x: o.x, y: o.y, alive: true, observer: true }; this.send(k, { ...common, p: rows(v), mn: mineRows(v) }); }
+      for (const [k, o] of this.observers) { const v = { x: o.x, y: o.y, alive: true, observer: true }; this.send(k, { ...common, ...local(v), p: rows(v), mn: mineRows(v) }); }
     }
   }
 

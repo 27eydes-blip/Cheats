@@ -123,7 +123,7 @@ function demo(g, w, h, id, which, t) {
 function openDetail(api, id, onClose) {
   const B = BRAWLERS[id], p = A.progress();
   const el = document.createElement('div'); el.className = 'detail'; el.hidden = true;
-  const skins = [[null, 'Classic'], ...Object.entries(SKINS).filter(([, s]) => s.brawler === id).map(([k, s]) => [k, s.name])];
+  const skins = [[null, 'Hunter'], ...Object.entries(SKINS).filter(([, s]) => s.brawler === id).map(([k, s]) => [k, s.name])];
   el.innerHTML = `<div class="card-b" style="--card-col:${ROLE_COL[B.role]}">
     <div><canvas class="portrait"></canvas><div class="title" style="font-size:calc(var(--u)*4);text-align:center">${B.name}</div>
       <div style="text-align:center"><span class="role" style="--role-col:${ROLE_COL[B.role]}">${B.role.toUpperCase()}</span> <span class="np-tro">🏆 ${p.trophies[id] | 0}</span></div></div>
@@ -162,14 +162,15 @@ function openDetail(api, id, onClose) {
 const MODE_CARDS = [
   ['quick', 'QUICK HUNT', 'A random event mode — something different every match.', '10 players', null],
   ['squad', 'SQUAD HUNT', '3v3. Kills fill your team pot. Biggest pot after 3:00 wins.', '3 v 3', 'NEW'],
-  ['free', 'FREE PLAY', 'Drop into the open world. Four zones around a safe hub.', 'Drop-in', null],
+  ['bighunt', 'BIG HUNT', '20 hunters, one huge arena. Last one standing while the poison closes in.', '20 players', 'NEW'],
+  ['free', 'FREE PLAY', 'Drop into the open world. Eight zones around a safe hub.', 'Drop-in', null],
   ['showdown', 'SHOWDOWN', 'Last hunter standing while the poison closes in.', '10 players', 'EVENT'],
 ];
 export function openModePicker(current, onPick) {
   const S = screen('CHOOSE A MODE');
   S.body.classList.add('modes');
   S.body.innerHTML = `<div class="modes-grid">${MODE_CARDS.map(([k, n, d, pl, rib]) =>
-    `<div class="card-b mcard tap ${k === current ? 'sel' : ''}" data-m="${k}" style="--card-col:${{ quick: '#5fb84a', squad: '#3a5aa8', free: '#2a9d8f', showdown: '#7a3fb0' }[k]}">${rib ? `<span class="ribbon ${rib === 'EVENT' ? 'event' : ''}">${rib}</span>` : ''}<canvas data-m="${k}"></canvas><div class="title mc-name">${n}</div><div class="mc-desc">${d}</div><div class="mc-meta"><span>${pl}</span><span>${k === current ? 'SELECTED' : 'TAP TO PICK'}</span></div></div>`).join('')}</div>
+    `<div class="card-b mcard tap ${k === current ? 'sel' : ''}" data-m="${k}" style="--card-col:${{ quick: '#5fb84a', squad: '#3a5aa8', free: '#2a9d8f', showdown: '#7a3fb0', bighunt: '#a8323e' }[k]}">${rib ? `<span class="ribbon ${rib === 'EVENT' ? 'event' : ''}">${rib}</span>` : ''}<canvas data-m="${k}"></canvas><div class="title mc-name">${n}</div><div class="mc-desc">${d}</div><div class="mc-meta"><span>${pl}</span><span>${k === current ? 'SELECTED' : 'TAP TO PICK'}</span></div></div>`).join('')}</div>
     <div class="events-row">WORLD EVENTS EVERY 30s: ${EVENT_IDS.map((e) => `<span title="${EVENTS[e].name}">${icon('ev_' + e)}</span>`).join('')}</div>`;
   for (const c of S.body.querySelectorAll('.mcard')) c.onclick = () => { onPick(c.dataset.m); S.close(); };
   S.loop((t) => { for (const cv of S.body.querySelectorAll('canvas[data-m]')) { const c = fitCanvas(cv); drawModePreview(c.g, cv.dataset.m, c.w, c.h, t); } });
@@ -189,7 +190,7 @@ export function openLocker(api, onDone) {
     $('lkWho').innerHTML = tab === 'skins' ? BRAWLER_IDS.map((b) => `<button class="chipbtn ${b === who ? 'on' : ''}" data-w="${b}">${BRAWLERS[b].name}</button>`).join('') : '';
     for (const b of $('lkWho').children) b.onclick = () => { who = b.dataset.w; render(); };
     let items;
-    if (tab === 'skins') items = [[null, 'Classic', 0], ...Object.entries(SKINS).filter(([, s]) => s.brawler === who).map(([k, s]) => [k, s.name, s.price])].map(([k, n, price]) => ({ k, n, price, slot: 'skin:' + who, on: (p.equipped['skin:' + who] || null) === k }));
+    if (tab === 'skins') items = [[null, 'Hunter', 0], ...Object.entries(SKINS).filter(([, s]) => s.brawler === who).map(([k, s]) => [k, s.name, s.price])].map(([k, n, price]) => ({ k, n, price, slot: 'skin:' + who, on: (p.equipped['skin:' + who] || null) === k }));
     else if (tab === 'fx') items = [[null, 'None', 0], ...Object.entries(KILL_FX).map(([k, f]) => [k, f.name, f.price])].map(([k, n, price]) => ({ k, n, price, slot: 'fx', on: (p.equipped.fx || null) === k }));
     else items = [[null, 'None'], ...Object.entries(TITLES)].map(([k, n]) => ({ k, n, price: TITLE_PRICE, slot: 'title', on: (p.equipped.title || null) === k }));
     $('lkItems').innerHTML = items.map((it) => {
