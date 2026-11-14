@@ -17,7 +17,9 @@ const INK = '#1b1033';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ROLE_COL = { Balanced: '#ffb000', Tank: '#ff7b39', Sniper: '#19b6a6', Controller: '#e0a03a', Trapper: '#6f9a3a', Assassin: '#9d4dff' };
-const guard = async (fn) => { try { await fn(); } catch (e) { toastErr(e.message); } };
+// one shop/claim/login request at a time: a double tap must not send it twice
+let busy = false;
+const guard = async (fn) => { if (busy) return; busy = true; try { await fn(); } catch (e) { toastErr(e.message); } finally { busy = false; } };
 function toastErr(msg) { const t = $('toast'); if (!t) return; t.textContent = msg; t.hidden = false; setTimeout(() => { t.hidden = true; }, 2000); }
 const stash = (ids) => { const s = $('formStash'); for (const id of ids) { const el = $(id); if (el) s.appendChild(el.closest('label') && el.closest('label').parentElement !== s ? el.closest('label') : el); } };
 
