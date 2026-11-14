@@ -3,7 +3,7 @@
 import {
   BRAWLERS, BRAWLER_IDS, DT, TICK_RATE, CRATE, PLAYER_R, ARENA_SIZE, ZONES, WORLDS,
   worldId, worldsInDisplayOrder, generateArena, generateWorld, applyMove, attackDirs, tileAt, isSolidTile,
-  moveStats, zoneAt, zoneBounds, inHub, worldKeyAt,
+  moveStats, zoneAt, zoneBounds, inHub, worldKeyAt, PREDICTED_KINDS,
 } from './shared.js';
 import { EVENTS } from './events/index.js';
 import { Input } from './input.js';
@@ -24,6 +24,8 @@ const MODE_INFO = {
   freeplay: { name: 'FREE PLAY', desc: '' },
 };
 const worldName = (key) => WORLDS[worldId(key)]?.name || key;
+const bulletKind = (k) => (k === 20 ? 'cage' : BRAWLER_IDS[k]);
+const predicted = (k) => k !== 20 && PREDICTED_KINDS.includes(BRAWLERS[BRAWLER_IDS[k]]?.attack.kind);
 
 let W = 0, H = 0, DPR = 1;
 function resize() {
@@ -93,13 +95,13 @@ const G = {
   localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: [], rings: [], texts: [], flash: {}, shake: 0, hurt: 0,
   spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, cam: { x: 1000, y: 1000 }, acc: 0, ping: 0,
   pings: [], handoff: null, online: {}, modeKey: 'showdown', world: 'meadow', retries: 0, room: '', botsOn: true, facing: 0,
-  moving: false, lastSk: 0, deadMsg: null, ticks: 0, opts: {}, bannerUntil: 0,
+  moving: false, slashes: [], worms: [], slashFlip: false, lastTp: 0, lastSk: 0, deadMsg: null, ticks: 0, opts: {}, bannerUntil: 0,
 };
 
 function resetMatchState() {
   Object.assign(G, {
     myId: 0, map: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
-    localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: [], rings: [], texts: [], flash: {}, shake: 0, hurt: 0,
+    localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: [], rings: [], texts: [], slashes: [], worms: [], lastTp: 0, flash: {}, shake: 0, hurt: 0,
     spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, pings: [], handoff: null, online: {}, deadMsg: null, lastSk: 0,
   });
   $('feed').innerHTML = '';
@@ -316,7 +318,7 @@ function onSnap(c, m) {
   const p = new Map(), b = new Map();
   for (const e of m.p) p.set(e[0], e);
   for (const e of m.b) b.set(e[0], e);
-  c.snaps.push({ n: m.n, p, b, cu: m.cu, cy: m.cy, fx: m.fx });
+  c.snaps.push({ n: m.n, p, b, cu: m.cu, cy: m.cy, fx: m.fx, mn: m.mn || [] });
   if (c.snaps.length > 40) c.snaps.shift();
   for (const [idx, type] of m.td) applyTile(idx, type);
   for (const [idx, hp] of m.ch) G.crateHp.set(idx, hp);
@@ -342,12 +344,12 @@ function reconcile(m) {
     if (me.sk > G.lastSk) { s.kills += me.sk - G.lastSk; G.lastSk = me.sk; savePrefs(); }
     if (me.bt > s.best) { s.best = me.bt; savePrefs(); }
   }
-  if (first) { G.pred = { x: me.x, y: me.y, mvx: me.mvx, mvy: me.mvy }; G.prev = { x: me.x, y: me.y }; G.pending = []; return; }
+  if (first || me.tp !== G.lastTp) { G.lastTp = me.tp; G.pred = { x: me.x, y: me.y, mvx: me.mvx, mvy: me.mvy }; G.prev = { x: me.x, y: me.y }; G.err = { x: 0, y: 0 }; G.pending = G.pending.filter((q) => q.s > m.ack); if (first) return; }
   G.pending = G.pending.filter((q) => q.s > m.ack);
   const np = { x: me.x, y: me.y, mvx: me.mvx, mvy: me.mvy };
   if (!me.al || me.fo) G.pending = [];
   else {
-    const st = moveStats(G.brawler, me.hp, me.mh, me.rs);
+    const st = moveStats(G.brawler, me.hp, me.mh, me.rs, me.sl);
     for (const q of G.pending) applyMove(G.map, np, q.mx, q.my, st.speed, st.r, G.mods);
   }
   const dx = G.pred.x - np.x, dy = G.pred.y - np.y;
@@ -379,25 +381,26 @@ function sampleConn(c, out) {
     });
   }
   for (const [id, e] of b.b) {
-    if (e[3] === G.myId) continue; // own bullets are predicted locally
+    if (e[3] === G.myId && predicted(e[4])) continue; // own shots are predicted locally
     const ea = a.b.get(id);
     const key = c.key + id;
     const x = ea ? ea[1] + (e[1] - ea[1]) * f : e[1], y = ea ? ea[2] + (e[2] - ea[2]) * f : e[2];
     const ang = ea ? Math.atan2(e[2] - ea[2], e[1] - ea[1]) : (bulletAng.get(key) ?? 0);
     if (ea) bulletAng.set(key, ang);
-    out.bullets.push({ x, y, ang, kind: BRAWLER_IDS[e[4]] });
+    out.bullets.push({ x, y, ang, kind: bulletKind(e[4]) });
   }
   out.cubes.push(...(b.cu || []));
   out.crystals.push(...(b.cy || []));
+  out.mines.push(...(b.mn || []));
 }
 const bulletAng = new Map();
 
 function sampleWorld() {
-  const out = { others: new Map(), bullets: [], cubes: [], crystals: [] };
+  const out = { others: new Map(), bullets: [], cubes: [], crystals: [], mines: [] };
   const list = [...G.conns.values()].sort((a, b) => b.primary - a.primary);
   for (const c of list) sampleConn(c, out);
   if (bulletAng.size > 800) bulletAng.clear();
-  G.view = { others: [...out.others.values()].filter((o) => o.id !== G.myId), bullets: out.bullets, cubes: out.cubes, crystals: out.crystals };
+  G.view = { others: [...out.others.values()].filter((o) => o.id !== G.myId), bullets: out.bullets, cubes: out.cubes, crystals: out.crystals, mines: out.mines };
   const now = performance.now();
   G.pings = G.pings.filter((p) => now - p.t0 < 3000);
 }
@@ -440,6 +443,12 @@ function applyFx([type, x, y, v, id]) {
     case 'gem': G.texts.push({ x, y: y - 80, txt: `💎${v}`, color: '#f4b8ff', life: 0.8, max: 0.8, size: 18 }); burst(x, y, '#d65cff', 10, 160, 5, 0.4); break;
     case 'cloak': burst(x, y, '#c9a6ff', 20, 160, 9, 0.6); break;
     case 'rush': G.texts.push({ x, y: y - 90, txt: 'RUSH!', color: '#ffe066', life: 1, max: 1, size: 22 }); G.rings.push({ x, y, r0: 20, r1: 80, life: 0.35, max: 0.35, color: '#ffe066', w: 5 }); break;
+    case 'slash': if (id !== G.myId) G.slashes.push({ x, y, ang: v, life: 0.18, max: 0.18, flip: Math.random() < 0.5 }); break;
+    case 'blink': burst(x, y, '#c04dff', 14, 220, 7, 0.4); burst(x, y, '#ff5fa2', 6, 160, 5, 0.3); G.rings.push({ x, y, r0: v ? 60 : 10, r1: v ? 10 : 60, life: 0.25, max: 0.25, color: '#c04dff', w: 6 }); break;
+    case 'wormwarn': G.rings.push({ x, y, r0: v * 0.3, r1: v, life: 0.7, max: 0.7, color: '#2bc4cf', w: 7, ink: true }); G.rings.push({ x, y, r0: v * 0.15, r1: v * 0.7, life: 0.7, max: 0.7, color: '#3b1f78', w: 5 }); break;
+    case 'worm': G.worms.push({ x, y, r: v, life: 0.6, max: 0.6 }); burst(x, y, '#f7d98a', 22, 300, 7, 0.6); if (near) G.shake = Math.max(G.shake, 10); break;
+    case 'boom': G.rings.push({ x, y, r0: 10, r1: v, life: 0.35, max: 0.35, color: '#ff8c1a', w: 12 }); burst(x, y, '#ffd23f', 18, 320, 7, 0.5); burst(x, y, '#4a4a5e', 10, 200, 6, 0.5); if (near) G.shake = Math.max(G.shake, 9); break;
+    case 'cage': G.rings.push({ x, y, r0: 70, r1: 30, life: 0.3, max: 0.3, color: '#ff8c1a', w: 6 }); break;
     case 'spawn': G.rings.push({ x, y, r0: 80, r1: 20, life: 0.4, max: 0.4, color: '#bde0ff', w: 6 }); break;
     case 'target':
       G.rings.push({ x, y, r0: 20, r1: 140, life: 0.6, max: 0.6, color: '#ff2846', w: 10 });
@@ -452,6 +461,10 @@ function updateEffects(dt) {
   for (const p of G.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.9; p.vy *= 0.9; p.life -= dt; }
   G.parts = G.parts.filter((p) => p.life > 0);
   for (const r of G.rings) r.life -= dt;
+  for (const s of G.slashes) s.life -= dt;
+  G.slashes = G.slashes.filter((s) => s.life > 0);
+  for (const w of G.worms) w.life -= dt;
+  G.worms = G.worms.filter((w) => w.life > 0);
   G.rings = G.rings.filter((r) => r.life > 0);
   for (const t of G.texts) { t.life -= dt; t.y -= 40 * dt; }
   G.texts = G.texts.filter((t) => t.life > 0);
@@ -476,7 +489,7 @@ function updateLocalBullets(dt) {
     G.localBurst.t -= dt;
     if (G.localBurst.t <= 0) {
       const me = renderMe();
-      spawnLocalShot(me.x, me.y, G.localBurst.ang);
+      if (A.kind === 'slash') localSlash(G.localBurst.ang); else spawnLocalShot(me.x, me.y, G.localBurst.ang);
       G.localBurst.left--; G.localBurst.t += A.interval;
       if (G.localBurst.left <= 0) G.localBurst = null;
     }
@@ -489,12 +502,16 @@ function updateLocalBullets(dt) {
     for (let i = 0; i < n && !dead; i++) {
       b.x += (b.vx * dt) / n; b.y += (b.vy * dt) / n; b.dist += step / n;
       if (isSolidTile(tileAt(G.map, b.x, b.y)) || (G.kind === 'free' && inHub(b.x, b.y))) dead = true;
-      for (const o of G.view.others) if (Math.hypot(o.x - b.x, o.y - b.y) < PLAYER_R * sizeOf(o) + A.radius) dead = true;
+      if (A.kind !== 'wave') for (const o of G.view.others) if (Math.hypot(o.x - b.x, o.y - b.y) < PLAYER_R * sizeOf(o) + A.radius) dead = true;
       if (b.dist >= b.range) dead = true;
     }
     if (!dead) out.push(b);
   }
   G.localBullets = out;
+}
+function localSlash(ang) {
+  const me = renderMe();
+  G.slashes.push({ x: me.x, y: me.y, ang, life: 0.18, max: 0.18, follow: true, flip: (G.slashFlip = !G.slashFlip) });
 }
 const sizeOf = (o) => moveStats(o.brawler || 'volt', o.hp, o.mh).r / PLAYER_R;
 
@@ -527,7 +544,7 @@ function clientTick() {
   const B = BRAWLERS[G.brawler];
   const me = G.me;
   const mv = input.getMove();
-  let f = null, u = null;
+  let f = null, u = null, fd = 1;
   const safe = G.kind === 'free' && inHub(G.pred.x, G.pred.y);
   for (const a of input.takeActions()) {
     const ang = a.mode === 'angle' ? a.ang : a.mode === 'mouse' ? mouseAngle() : autoAngle(a.type);
@@ -536,8 +553,10 @@ function clientTick() {
       const shotsPending = G.pending.filter((q) => q.f).length;
       if (me.al && !(me.f & 2) && !me.fo && G.localCd <= 0 && !G.localBurst && Math.floor(me.am) - shotsPending >= 1 && f == null && !G.handoff) {
         f = ang; G.facing = ang; G.localCd = B.attack.cooldown;
-        spawnLocalShot(G.pred.x, G.pred.y, ang);
-        if (B.attack.kind === 'burst') G.localBurst = { left: B.attack.count - 1, t: B.attack.interval, ang };
+        fd = a.mag ?? (a.mode === 'mouse' ? Math.min(1, Math.hypot(input.mouse.x - W / 2, input.mouse.y - H / 2) / (B.attack.range * worldScale())) : 1);
+        if (PREDICTED_KINDS.includes(B.attack.kind)) spawnLocalShot(G.pred.x, G.pred.y, ang);
+        if (B.attack.kind === 'slash') localSlash(ang);
+        if (B.attack.kind === 'burst' || B.attack.kind === 'slash') G.localBurst = { left: B.attack.count - 1, t: B.attack.interval, ang };
       }
     } else if (me.sc >= 1 && G.superCd <= 0 && me.al) { u = ang; G.superCd = 0.6; G.facing = ang; }
   }
@@ -550,12 +569,12 @@ function clientTick() {
   G.prev = { x: G.pred.x, y: G.pred.y };
   G.mods = primaryMods();
   if (me.al && !me.fo) {
-    const st = moveStats(G.brawler, me.hp, me.mh, me.rs);
+    const st = moveStats(G.brawler, me.hp, me.mh, me.rs, me.sl);
     applyMove(G.map, G.pred, mv.x, mv.y, st.speed, st.r, G.mods);
   }
   G.seq++;
   const ax = +Math.cos(G.facing).toFixed(3), ay = +Math.sin(G.facing).toFixed(3);
-  const inp = { t: 'in', s: G.seq, mx: +mv.x.toFixed(3), my: +mv.y.toFixed(3), ax, ay, f, u };
+  const inp = { t: 'in', s: G.seq, mx: +mv.x.toFixed(3), my: +mv.y.toFixed(3), ax, ay, f, u, ...(f != null && fd < 1 ? { fd: +fd.toFixed(2) } : {}) };
   G.pending.push({ s: G.seq, mx: inp.mx, my: inp.my, ax, ay, f: f != null });
   if (G.pending.length > 60) G.pending.shift();
   send(inp);
@@ -611,11 +630,12 @@ function render(t) {
 
   if (meAlive && G.phase === 'play') {
     const aim = input.getAim();
-    if (aim && !aim.cancel) R.drawAim(ctx, G.brawler, mePos.x, mePos.y, aim.ang, aim.kind);
-    else if (!input.isTouch && input.mouse.active) { ctx.globalAlpha = 0.45; R.drawAim(ctx, G.brawler, mePos.x, mePos.y, mouseAngle(), 'fire'); ctx.globalAlpha = 1; }
+    if (aim && !aim.cancel) R.drawAim(ctx, G.brawler, mePos.x, mePos.y, aim.ang, aim.kind, aim.mag);
+    else if (!input.isTouch && input.mouse.active) { ctx.globalAlpha = 0.45; R.drawAim(ctx, G.brawler, mePos.x, mePos.y, mouseAngle(), 'fire', Math.hypot(input.mouse.x - W / 2, input.mouse.y - H / 2) / (BRAWLERS[G.brawler].attack.range * s)); ctx.globalAlpha = 1; }
   }
   for (const c of G.view.cubes) R.drawCube(ctx, c[1], c[2], t);
   for (const c of G.view.crystals) R.drawCrystal(ctx, c[1], c[2], t);
+  for (const mn of G.view.mines) R.drawMine(ctx, mn[1], mn[2], mn[3], mn[4] === G.myId, t);
   if (!SETTINGS.lowGfx) R.drawShadows(ctx, G.map, x0, y0, x1, y1);
   R.drawBlocks(ctx, G.map, G.crateHp, x0, y0, x1, y1);
 
@@ -639,6 +659,17 @@ function render(t) {
     }
     R.drawBrawler(ctx, p.brawler, p.x, p.y, p.facing, t, { alpha, moving: p.moving, flash: G.flash[p.id], size: p.size });
     R.drawBubble(ctx, p, t);
+    if (p.fl & 512) R.drawSlowed(ctx, p.x, p.y, t);
+    if (p.fl & 256) R.drawCage(ctx, p.x, p.y);
+  }
+  for (const w of G.worms) R.drawWorm(ctx, w.x, w.y, w.r, 1 - w.life / w.max);
+  for (const sl of G.slashes) {
+    const k = 1 - sl.life / sl.max, x = sl.follow ? mePos.x : sl.x, y = sl.follow ? mePos.y : sl.y;
+    const A = BRAWLERS.flicker.attack, a0 = sl.ang - A.arc / 2, sweep = A.arc * Math.min(1, k * 1.8);
+    ctx.save(); ctx.globalAlpha = 1 - k * 0.6; ctx.lineCap = 'round';
+    ctx.beginPath(); sl.flip ? ctx.arc(x, y, A.range * 0.85, a0 + A.arc - sweep, a0 + A.arc) : ctx.arc(x, y, A.range * 0.85, a0, a0 + sweep);
+    ctx.lineWidth = 16; ctx.strokeStyle = R.INK; ctx.stroke(); ctx.lineWidth = 9; ctx.strokeStyle = '#ff5fa2'; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+    ctx.restore();
   }
   const rimAt = (x, y) => R.theme(worldKeyAt(G.map, x, y)).bulletRim;
   for (const b of G.view.bullets) R.drawBullet(ctx, b.kind, b.x, b.y, b.ang, rimAt(b.x, b.y));
@@ -653,7 +684,7 @@ function render(t) {
   for (const r of G.rings) {
     const k = 1 - r.life / r.max;
     ctx.beginPath(); ctx.arc(r.x, r.y, Math.max(1, r.r0 + (r.r1 - r.r0) * k), 0, Math.PI * 2);
-    ctx.globalAlpha = 1 - k; ctx.lineWidth = r.w; ctx.strokeStyle = r.color; ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.globalAlpha = 1 - k; if (r.ink) { ctx.lineWidth = r.w + 5; ctx.strokeStyle = R.INK; ctx.stroke(); } ctx.lineWidth = r.w; ctx.strokeStyle = r.color; ctx.stroke(); ctx.globalAlpha = 1;
   }
   for (const p of G.parts) {
     ctx.globalAlpha = Math.min(1, (p.life / p.max) * 1.5);

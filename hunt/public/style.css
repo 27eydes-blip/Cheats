@@ -132,3 +132,6 @@ button.small { font-size: 14px; padding: 4px 12px; }
 #credit { position: fixed; bottom: max(4px, env(safe-area-inset-bottom)); right: max(10px, env(safe-area-inset-right)); font-size: 12px; opacity: .8; pointer-events: none; font-family: system-ui, sans-serif; font-weight: 700; z-index: 5; text-shadow: 0 1px 2px #000; }
 body.ingame #credit { opacity: .45; font-size: 10px; }
 body.reduce-flash * { animation: none !important; transition: none !important; }
+#cards { grid-template-columns: repeat(3, 1fr); }
+@media (min-width: 760px) { #cards { grid-template-columns: repeat(6, 1fr); } .card .stats { font-size: 10px; } }
+@media (max-height: 430px) { .card canvas { height: 46px; } .card .nm { font-size: 17px; } .card .stats { display: none; } #cards { grid-template-columns: repeat(6, 1fr); gap: 6px; } }

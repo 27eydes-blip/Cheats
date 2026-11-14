@@ -5,12 +5,14 @@ import { inCircles } from '../public/events/helpers.js';
 const rand = (a, b) => a + Math.random() * (b - a);
 
 // tiles, lava, burning bushes, the hub (bots stay out) and zone edges all count as blocked
-function blocked(m, x, y) {
+function blocked(m, x, y, self) {
   if (blocksMove(tileAt(m.map, x, y))) return true;
   if (m.hub && Math.hypot(x - HUB.x, y - HUB.y) < HUB.r + 30) return true;
   if (m.hub && !m.inBounds(x, y, -30)) return true;
   const e = m.event;
   if (e && e.id === 'lava' && inCircles(e.params.pools, x, y)) return true;
+  // armed enemy mines are visible to everyone: step around them
+  if (self) for (const mn of m.mines) if (mn.owner !== self.id && !m.mineVisible(self, mn) ? false : mn.owner !== self.id && mn.arm <= 0 && (!self.team || mn.team !== self.team) && Math.hypot(mn.x - x, mn.y - y) < 70) return true;
   return false;
 }
 
@@ -27,7 +29,7 @@ function steer(m, p, mx, my) {
     const look = PLAYER_R + 26;
     const px = -s * PLAYER_R * 0.8, py = c * PLAYER_R * 0.8;
     const fx = p.x + c * look, fy = p.y + s * look;
-    if (!blocked(m, fx, fy) && !blocked(m, fx + px, fy + py) && !blocked(m, fx - px, fy - py)) {
+    if (!blocked(m, fx, fy, p) && !blocked(m, fx + px, fy + py, p) && !blocked(m, fx - px, fy - py, p)) {
       return [c * Math.min(1, len), s * Math.min(1, len)];
     }
   }
@@ -100,7 +102,7 @@ export function botInput(m, p) {
   } else if (tgt) {
     const dx = tgt.x - p.x, dy = tgt.y - p.y, d = Math.hypot(dx, dy) || 1;
     const nx = dx / d, ny = dy / d;
-    const want = range * (p.brawler === 'brick' ? 0.55 : 0.72);
+    const want = range * ({ brick: 0.55, flicker: 0.45, rook: 0.75, dune: 0.7 }[p.brawler] ?? 0.72);
     let fwd = d > want + 60 ? 1 : d < want - 90 ? -1 : 0;
     if ((p.hp < p.maxHp * 0.3 && tgt.hp > p.hp && p.brawler !== 'brick') || (amTarget && d < range)) fwd = -1;
     const los = lineOfSight(m.map, p.x, p.y, tgt.x, tgt.y);
@@ -109,17 +111,30 @@ export function botInput(m, p) {
       my = ny * fwd + nx * ai.strafe * 0.75;
     }
     inp.ax = nx; inp.ay = ny;
-    if (los && d < range * 0.95 && p.ammo >= 1 && ai.fireCd <= 0) {
+    const myMines = B.attack.kind === 'mine' ? m.mines.filter((q) => q.owner === p.id).length : 0;
+    const mineOk = B.attack.kind !== 'mine' || myMines < B.attack.max || d < 260;
+    if (los && d < range * 0.95 && p.ammo >= 1 && ai.fireCd <= 0 && mineOk) {
       const lead = (d / B.attack.speed) * ai.skill;
       const aimX = tgt.x + tgt.vx * lead, aimY = tgt.y + tgt.vy * lead;
       inp.f = Math.atan2(aimY - p.y, aimX - p.x) + (Math.random() - 0.5) * 0.4 * (1.25 - ai.skill);
-      ai.fireCd = rand(0.5, 1.2) / ai.aggro;
+      if (B.attack.kind === 'mine') {
+        // lay it where they'll be once it arms (1s), between us when they're closing in
+        const fx = tgt.x + tgt.vx * B.attack.arm * ai.skill, fy = tgt.y + tgt.vy * B.attack.arm * ai.skill;
+        const mx2 = (fx + p.x * 0.25) / 1.25, my2 = (fy + p.y * 0.25) / 1.25;
+        inp.f = Math.atan2(my2 - p.y, mx2 - p.x) + (Math.random() - 0.5) * 0.2;
+        inp.fd = Math.min(1, Math.hypot(mx2 - p.x, my2 - p.y) / range);
+      }
+      if (B.attack.kind === 'slash') ai.fireCd = rand(0.15, 0.4);
+      else ai.fireCd = rand(0.5, 1.2) / ai.aggro;
     }
     if (p.superC >= 1) {
       const sk = B.super.kind;
       if (sk === 'dash' && los && d < B.super.dist + 20) inp.u = Math.atan2(dy, dx);
       else if (sk === 'slam' && d < B.super.radius * 0.9) inp.u = 0;
       else if (sk === 'cloak' && (p.hp < p.maxHp * 0.6 || d < 450)) inp.u = 0;
+      else if (sk === 'worm' && d < B.super.range * 0.9) inp.u = Math.atan2(dy, dx);
+      else if (sk === 'cage' && los && d < B.super.range * 0.8) inp.u = Math.atan2(dy + tgt.vy * d / B.super.speed, dx + tgt.vx * d / B.super.speed);
+      else if (sk === 'blink' && d > 160 && d < B.super.range && tgt.hp < tgt.maxHp * 0.8) inp.u = Math.atan2(dy, dx);
     }
   } else {
     // loot: nearest cube, then nearest crate, else wander

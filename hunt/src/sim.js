@@ -6,7 +6,7 @@ import {
   CRATE_HP, SUPPLY_HP, CUBE_HP, CUBE_DMG, REGEN_DELAY, REGEN_RATE, POISON_DPS, BUSH_REVEAL_DIST,
   CLOAK_REVEAL_DIST, SPAWNS, BOT_NAMES, EVENT_EVERY, EVENT_WARN, LOW_HP, RUSH_TIME, COMEBACK_DMG,
   applyMove, moveCircle, inBush, attackDirs, poisonInset, moveStats, bountyGlow, pingInterval,
-  layLowFactor, rng, inHub, HUB,
+  layLowFactor, rng, inHub, HUB, MINE_SEEN, PLAYER_R, lineOfSight, isSolidTile, tileAt, blocksMove,
 } from '../public/shared.js';
 import { EVENTS, pickEvent } from '../public/events/index.js';
 import { MODES } from './modes.js';
@@ -18,7 +18,7 @@ export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
 // fields carried across a zone handoff
 const CARRY = ['id', 'name', 'brawler', 'x', 'y', 'mvx', 'mvy', 'hp', 'maxHp', 'cubes', 'ammo', 'reloadP', 'atkCd', 'superC',
   'lastCombat', 'stun', 'cloak', 'reveal', 'facing', 'lastSeq', 'kills', 'bounty', 'bountyEarned', 'bestBounty', 'bushT',
-  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT'];
+  'rush', 'rushArmed', 'spawnProt', 'score', 'crystals', 'sessionKills', 'pingT', 'slowT', 'tp'];
 
 export class Sim {
   constructor(o) {
@@ -45,6 +45,8 @@ export class Sim {
     this.bullets = [];
     this.cubes = [];
     this.crystals = [];
+    this.mines = [];
+    this.delayed = []; // timed effects (sand-worm eruptions)
     this.crates = new Map(); // idx -> {hp, supply}
     for (const idx of this.tilesInBounds(CRATE, false)) this.crates.set(idx, { hp: CRATE_HP });
     this.tileDirty = [];
@@ -110,7 +112,8 @@ export class Sim {
     return { ...this.center };
   }
   dmgMult(p) { return (1 + CUBE_DMG * p.cubes) * (p.hp / p.maxHp < LOW_HP ? COMEBACK_DMG : 1); }
-  stats(p) { return moveStats(p.brawler, p.hp, p.maxHp, p.rush); }
+  stats(p) { return moveStats(p.brawler, p.hp, p.maxHp, p.rush, p.slowT); }
+  enemies(a, b) { return a !== b && (!a.team || a.team !== b.team); }
 
   // ---------------------------------------------------------------- players
   addPlayer({ name, brawler, bot = false, state = null, connected = !bot }) {
@@ -123,6 +126,7 @@ export class Sim {
       cloak: 0, reveal: 0, poisonT: 0.5, facing: 0, queue: [], credits: 2, lastSeq: 0, kills: 0, rank: 0, ai: null,
       bounty: 0, bountyEarned: 0, bestBounty: 0, bushT: 0, lowF: 0, rush: 0, rushArmed: true, pingT: 0,
       spawnProt: 0, respawnT: 0, score: 0, crystals: 0, sessionKills: 0, hazAcc: 0, lastHitBy: 0,
+      slowT: 0, cageT: 0, tp: 0, team: 0,
     };
     if (state) for (const k of CARRY) if (state[k] !== undefined) p[k] = state[k];
     while (this.players.has(p.id)) p.id = newId();
@@ -200,7 +204,7 @@ export class Sim {
     const taken = new Set([...this.players.values()].map((p) => p.name));
     const names = BOT_NAMES.filter((n) => !taken.has(n)).sort(() => Math.random() - 0.5);
     const target = this.fillBots || this.players.size < 2 ? MAX_PLAYERS : 0;
-    while (this.players.size < target) this.addPlayer({ name: names.pop() || 'Bot', brawler: BRAWLER_IDS[Math.floor(Math.random() * 3)], bot: true });
+    while (this.players.size < target) this.addPlayer({ name: names.pop() || 'Bot', brawler: BRAWLER_IDS[Math.floor(Math.random() * BRAWLER_IDS.length)], bot: true });
     const spawns = SPAWNS.slice().sort(() => Math.random() - 0.5);
     let i = 0;
     for (const p of this.players.values()) {
@@ -233,7 +237,7 @@ export class Sim {
   }
 
   // ---------------------------------------------------------------- combat
-  tryAttack(p, ang) {
+  tryAttack(p, ang, fd = 1) {
     const B = BRAWLERS[p.brawler], a = B.attack;
     if (!p.alive || p.ammo < 1 || p.atkCd > 0 || p.stun > 0 || p.burst || p.dash || this.isSafe(p.x, p.y)) return;
     p.ammo -= 1;
@@ -242,21 +246,55 @@ export class Sim {
     p.cloak = 0;
     p.spawnProt = 0;
     p.facing = ang;
-    this.spawnShot(p, ang);
-    if (a.kind === 'burst') p.burst = { left: a.count - 1, t: a.interval, ang };
+    this.spawnShot(p, ang, fd);
+    if (a.kind === 'burst' || a.kind === 'slash') p.burst = { left: a.count - 1, t: a.interval, ang };
   }
 
-  spawnShot(p, ang) {
+  spawnShot(p, ang, fd = 1) {
     const a = BRAWLERS[p.brawler].attack;
     const dmg = a.damage * this.dmgMult(p);
+    if (a.kind === 'slash') return this.slash(p, ang, dmg);
     const sp = a.speed * (this.mods.bulletSpeed || 1), range = a.range * (this.mods.bulletRange || 1);
     for (const d of attackDirs(p.brawler, ang)) {
       const c = Math.cos(d), s = Math.sin(d);
       this.bullets.push({
         id: this.nextEnt++, owner: p.id, oname: p.name, ozone: this.zone, kind: BRAWLER_IDS.indexOf(p.brawler),
-        x: p.x + c * 16, y: p.y + s * 16, vx: c * sp, vy: s * sp, dist: 0, range, dmg, r: a.radius,
+        x: p.x + c * 16, y: p.y + s * 16, vx: c * sp, vy: s * sp, dist: 0, range, dmg, r: a.radius, team: p.team,
+        ...(a.kind === 'wave' ? { pierce: true, hit: [], slow: a.slowTime } : {}),
+        ...(a.kind === 'mine' ? { mine: true, range: Math.max(80, range * Math.max(0, Math.min(1, fd))) } : {}),
       });
     }
+  }
+
+  // Flicker: melee arc, hits everything in front (players + one crate)
+  slash(p, ang, dmg) {
+    const a = BRAWLERS[p.brawler].attack;
+    this.fx.push(['slash', Math.round(p.x), Math.round(p.y), r2(ang), p.id]);
+    for (const e of this.players.values()) {
+      if (!this.enemies(p, e) || !e.alive) continue;
+      const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy);
+      if (d > a.range + this.stats(e).r) continue;
+      let da = Math.atan2(dy, dx) - ang;
+      while (da > Math.PI) da -= Math.PI * 2;
+      while (da < -Math.PI) da += Math.PI * 2;
+      if (Math.abs(da) > a.arc / 2 + 0.2) continue;
+      if (!lineOfSight(this.map, p.x, p.y, e.x, e.y)) continue;
+      this.fx.push(['hit', Math.round(e.x), Math.round(e.y), BRAWLER_IDS.indexOf(p.brawler), e.id]);
+      this.damage(p, e, dmg, true);
+    }
+    const cx = p.x + Math.cos(ang) * 70, cy = p.y + Math.sin(ang) * 70;
+    const idx = Math.floor(cy / TILE) * this.map.gw + Math.floor(cx / TILE);
+    if (this.map.t[idx] === CRATE) this.hitCrate(idx, dmg);
+  }
+
+  nearestEnemy(p, range) {
+    let best = null, bd = range;
+    for (const e of this.players.values()) {
+      if (!this.enemies(p, e) || !e.alive || e.spawnProt > 0 || this.isSafe(e.x, e.y) || !this.canSee(p, e)) continue;
+      const d = Math.hypot(e.x - p.x, e.y - p.y);
+      if (d < bd) { bd = d; best = e; }
+    }
+    return best;
   }
 
   trySuper(p, ang) {
@@ -275,7 +313,7 @@ export class Sim {
       p.cloak = 0;
       this.fx.push(['slam', r2(p.x), r2(p.y), s.radius, p.id]);
       for (const e of this.players.values()) {
-        if (e === p || !e.alive || e.spawnProt > 0 || this.isSafe(e.x, e.y)) continue;
+        if (!this.enemies(p, e) || !e.alive || e.spawnProt > 0 || this.isSafe(e.x, e.y)) continue;
         if (Math.hypot(e.x - p.x, e.y - p.y) <= s.radius + this.stats(e).r) {
           e.stun = Math.max(e.stun, s.stun); e.dash = null; e.burst = null;
           this.damage(p, e, s.damage * mult, false);
@@ -284,6 +322,40 @@ export class Sim {
     } else if (s.kind === 'cloak') {
       p.cloak = s.time; p.reveal = 0;
       this.fx.push(['cloak', r2(p.x), r2(p.y), 0, p.id]);
+    } else if (s.kind === 'worm') {
+      // aim decides direction; lock on to the nearest visible enemy roughly in that direction
+      let best = null, bd = Infinity;
+      for (const e of this.players.values()) {
+        if (!this.enemies(p, e) || !e.alive || !this.canSee(p, e) || this.isSafe(e.x, e.y)) continue;
+        const d = Math.hypot(e.x - p.x, e.y - p.y);
+        let da = Math.abs(Math.atan2(e.y - p.y, e.x - p.x) - ang); if (da > Math.PI) da = Math.PI * 2 - da;
+        if (d < s.range && da < 0.8 && d + da * 300 < bd) { bd = d + da * 300; best = e; }
+      }
+      const tx = best ? best.x : p.x + Math.cos(ang) * s.range * 0.6, ty = best ? best.y : p.y + Math.sin(ang) * s.range * 0.6;
+      this.delayed.push({ kind: 'worm', x: tx, y: ty, t: s.delay, owner: p.id, dmg: s.damage * mult, r: s.radius, stun: s.stun });
+      this.fx.push(['wormwarn', Math.round(tx), Math.round(ty), s.radius, p.id]);
+    } else if (s.kind === 'cage') {
+      const c = Math.cos(ang), sn = Math.sin(ang);
+      this.bullets.push({ id: this.nextEnt++, owner: p.id, oname: p.name, ozone: this.zone, kind: 20, x: p.x + c * 16, y: p.y + sn * 16,
+        vx: c * s.speed, vy: sn * s.speed, dist: 0, range: s.range, dmg: s.damage * mult, r: s.radius, cage: s.time, team: p.team });
+    } else if (s.kind === 'blink') {
+      const e = this.nearestEnemy(p, s.range);
+      if (!e) { p.superC = 1; return; } // nothing to blink to: keep the charge
+      const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1;
+      const from = { x: p.x, y: p.y };
+      // behind = on the far side of the target; fall back to the sides, then our side
+      for (const off of [0, 0.9, -0.9, 1.8, -1.8, Math.PI]) {
+        const a = Math.atan2(dy, dx) + off;
+        const nx = e.x + Math.cos(a) * 62, ny = e.y + Math.sin(a) * 62;
+        if (!blocksMove(tileAt(this.map, nx, ny)) && !this.isSafe(nx, ny) && this.inBounds(nx, ny, -20)) {
+          p.x = nx; p.y = ny; moveCircle(this.map, p, 0, 0, this.stats(p).r);
+          break;
+        }
+      }
+      p.facing = Math.atan2(e.y - p.y, e.x - p.x);
+      p.tp++; p.burst = null; p.cloak = 0; p.atkCd = 0;
+      this.fx.push(['blink', Math.round(from.x), Math.round(from.y), 0, p.id]);
+      this.fx.push(['blink', Math.round(p.x), Math.round(p.y), 1, p.id]);
     }
   }
 
@@ -425,7 +497,7 @@ export class Sim {
     if (p.stun <= 0 && !p.dash && !p.knock) applyMove(this.map, p, inp.mx, inp.my, st.speed, st.r, this.mods);
     if (Math.hypot(inp.ax, inp.ay) > 0.2) p.facing = Math.atan2(inp.ay, inp.ax);
     else if (Math.hypot(inp.mx, inp.my) > 0.2) p.facing = Math.atan2(inp.my, inp.mx);
-    if (inp.f != null) this.tryAttack(p, inp.f);
+    if (inp.f != null) this.tryAttack(p, inp.f, inp.fd ?? 1);
     if (inp.u != null) this.trySuper(p, inp.u);
   }
 
@@ -436,7 +508,7 @@ export class Sim {
     if (m.t !== 'in') return;
     const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0);
     const ang = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
-    p.queue.push({ s: m.s | 0, mx: num(m.mx), my: num(m.my), ax: num(m.ax), ay: num(m.ay), f: ang(m.f), u: ang(m.u) });
+    p.queue.push({ s: m.s | 0, mx: num(m.mx), my: num(m.my), ax: num(m.ax), ay: num(m.ay), f: ang(m.f), u: ang(m.u), fd: typeof m.fd === 'number' ? Math.max(0, Math.min(1, m.fd)) : 1 });
     if (p.queue.length > 12) p.queue.splice(0, p.queue.length - 12);
   }
 
@@ -495,7 +567,7 @@ export class Sim {
         continue;
       }
       p.px = p.x; p.py = p.y;
-      p.atkCd -= DT; p.stun -= DT; p.cloak -= DT; p.reveal -= DT; p.rush -= DT; p.spawnProt -= DT;
+      p.atkCd -= DT; p.stun -= DT; p.cloak -= DT; p.reveal -= DT; p.rush -= DT; p.spawnProt -= DT; p.slowT -= DT; p.cageT -= DT;
 
       if (p.bot) p.queue = [botInput(this, p)];
       p.credits = Math.min(p.credits + 1, 4);
@@ -567,6 +639,8 @@ export class Sim {
     }
 
     this.updateBullets();
+    this.updateMines();
+    this.updateDelayed();
     if (this.hooks.handoff) this.checkHandoffs();
     if (this.hub) this.maintainBots();
     this.sendSnapshots();
@@ -590,7 +664,7 @@ export class Sim {
     const sp = Math.hypot(p.dash.vx, p.dash.vy), nx = p.dash.vx / sp, ny = p.dash.vy / sp;
     const km = this.mods.knockMul || 1;
     for (const e of this.players.values()) {
-      if (e === p || !e.alive || p.dash.hit.has(e.id) || e.spawnProt > 0 || this.isSafe(e.x, e.y)) continue;
+      if (!this.enemies(p, e) || !e.alive || p.dash.hit.has(e.id) || e.spawnProt > 0 || this.isSafe(e.x, e.y)) continue;
       if (Math.hypot(e.x - p.x, e.y - p.y) < s.radius + this.stats(e).r) {
         p.dash.hit.add(e.id);
         let kx = e.x - p.x, ky = e.y - p.y;
@@ -604,6 +678,69 @@ export class Sim {
       }
     }
     if (p.dash) { p.dash.t -= DT; if (p.dash.t <= 0) p.dash = null; }
+  }
+
+  mineVisible(v, m) {
+    if (v.id === m.owner || (m.team && v.team === m.team) || v.alive === false || m.arm > 0) return true;
+    return Math.hypot(v.x - m.x, v.y - m.y) < MINE_SEEN;
+  }
+
+  updateMines() {
+    if (!this.mines.length) return;
+    const keep = [];
+    for (const m of this.mines) {
+      m.arm -= DT; m.life -= DT;
+      let boom = m.life <= 0;
+      if (m.arm <= 0 && !boom) {
+        const owner = this.players.get(m.owner);
+        for (const e of this.players.values()) {
+          if (!e.alive || e.id === m.owner || (m.team && e.team === m.team)) continue;
+          if (Math.hypot(e.x - m.x, e.y - m.y) < m.trigger + this.stats(e).r) { boom = true; break; }
+        }
+        if (boom) {
+          this.fx.push(['boom', Math.round(m.x), Math.round(m.y), m.blast, m.owner]);
+          for (const e of this.players.values()) {
+            if (!e.alive || e.id === m.owner || (m.team && e.team === m.team)) continue;
+            if (Math.hypot(e.x - m.x, e.y - m.y) < m.blast + this.stats(e).r) {
+              const src = owner || (m.ozone && m.ozone !== this.zone ? { remote: true, id: m.owner, name: m.oname, zone: m.ozone } : null);
+              this.damage(src, e, m.dmg, true);
+            }
+          }
+          continue;
+        }
+      }
+      if (!boom) keep.push(m);
+    }
+    this.mines = keep;
+  }
+
+  updateDelayed() {
+    if (!this.delayed.length) return;
+    const keep = [];
+    for (const d of this.delayed) {
+      d.t -= DT;
+      if (d.t > 0) { keep.push(d); continue; }
+      if (d.kind === 'worm') {
+        this.fx.push(['worm', Math.round(d.x), Math.round(d.y), d.r, d.owner]);
+        const owner = this.players.get(d.owner);
+        for (const e of this.players.values()) {
+          if (!e.alive || e.id === d.owner || (owner && !this.enemies(owner, e)) || e.spawnProt > 0 || this.isSafe(e.x, e.y)) continue;
+          if (Math.hypot(e.x - d.x, e.y - d.y) < d.r + this.stats(e).r) {
+            e.stun = Math.max(e.stun, d.stun); e.dash = null; e.burst = null;
+            this.damage(owner || null, e, d.dmg, false);
+          }
+        }
+      }
+    }
+    this.delayed = keep;
+  }
+
+  placeMine(b) {
+    const a = BRAWLERS.rook.attack;
+    const mine = { id: this.nextEnt++, owner: b.owner, oname: b.oname, ozone: b.ozone, team: b.team, x: b.x, y: b.y, arm: a.arm, life: a.life, trigger: a.trigger, blast: a.blast, dmg: b.dmg };
+    const mine0 = this.mines.filter((m) => m.owner === b.owner);
+    if (mine0.length >= a.max) this.mines.splice(this.mines.indexOf(mine0[0]), 1);
+    this.mines.push(mine);
   }
 
   addBullets(list) { for (const b of list) this.bullets.push({ ...b, id: this.nextEnt++ }); }
@@ -623,16 +760,28 @@ export class Sim {
         const tx = Math.floor(b.x / TILE), ty = Math.floor(b.y / TILE);
         const idx = ty * this.map.gw + tx;
         const t = tx < 0 || ty < 0 || tx >= this.map.gw || ty >= this.map.gh ? WALL : this.map.t[idx];
+        if (b.mine && (t === WALL || t === CRATE || this.isSafe(b.x, b.y) || b.dist >= b.range)) {
+          // a thrown mine breaks crates on impact, otherwise lands just before whatever it hit
+          if (t === CRATE) { this.hitCrate(idx, b.dmg); this.fx.push(['boom', Math.round(b.x), Math.round(b.y), 60, b.owner]); dead = true; break; }
+          if (t === WALL) { b.x -= (b.vx * DT) / n; b.y -= (b.vy * DT) / n; }
+          if (!this.isSafe(b.x, b.y)) this.placeMine(b);
+          dead = true; break;
+        }
+        if (b.mine) continue;
         if (t === WALL) { dead = true; this.fx.push(['wall', Math.round(b.x), Math.round(b.y), b.kind, 0]); break; }
         if (t === CRATE) { this.hitCrate(idx, b.dmg); dead = true; this.fx.push(['hit', Math.round(b.x), Math.round(b.y), b.kind, 0]); break; }
         if (this.isSafe(b.x, b.y)) { dead = true; break; }
         for (const p of this.players.values()) {
-          if (!p.alive || p.id === b.owner) continue;
+          if (!p.alive || p.id === b.owner || (b.team && p.team === b.team)) continue;
+          if (b.hit && b.hit.includes(p.id)) continue;
           const rr = this.stats(p).r + b.r;
           if ((p.x - b.x) ** 2 + (p.y - b.y) ** 2 < rr * rr) {
             this.fx.push(['hit', Math.round(b.x), Math.round(b.y), b.kind, p.id]);
             const src = this.players.get(b.owner) || (b.ozone && b.ozone !== this.zone ? { remote: true, id: b.owner, name: b.oname, zone: b.ozone } : null);
-            this.damage(src, p, b.dmg, true);
+            if (b.slow && p.spawnProt <= 0 && !this.isSafe(p.x, p.y)) p.slowT = Math.max(p.slowT, b.slow);
+            if (b.cage && p.spawnProt <= 0 && !this.isSafe(p.x, p.y)) { p.stun = Math.max(p.stun, b.cage); p.cageT = b.cage; p.dash = null; p.burst = null; this.fx.push(['cage', Math.round(p.x), Math.round(p.y), 0, p.id]); }
+            this.damage(src, p, b.dmg, !b.cage);
+            if (b.pierce) { b.hit.push(p.id); continue; }
             dead = true;
             break;
           }
@@ -664,7 +813,7 @@ export class Sim {
     if (bots.length >= this.botTarget) return;
     const taken = new Set([...this.players.values()].map((p) => p.name));
     const name = BOT_NAMES.filter((n) => !taken.has(n))[Math.floor(this.rand() * 10)] || 'Bot';
-    const p = this.addPlayer({ name, brawler: BRAWLER_IDS[Math.floor(this.rand() * 3)], bot: true });
+    const p = this.addPlayer({ name, brawler: BRAWLER_IDS[Math.floor(this.rand() * BRAWLER_IDS.length)], bot: true });
     p.alive = false;
     this.respawn(p);
   }
@@ -673,6 +822,7 @@ export class Sim {
     const bullets = this.bullets.map((b) => [b.id, Math.round(b.x), Math.round(b.y), b.owner, b.kind]);
     const cubes = this.cubes.map((c) => [c.id, Math.round(c.x), Math.round(c.y)]);
     const crystals = this.crystals.map((c) => [c.id, Math.round(c.x), Math.round(c.y)]);
+    const mineRows = (v) => this.mines.filter((m) => this.mineVisible(v, m)).map((m) => [m.id, Math.round(m.x), Math.round(m.y), m.arm <= 0 ? 1 : 0, m.owner]);
     const alive = this.aliveCount();
     let top = null;
     for (const p of this.players.values()) if (p.bounty > 0 && (!top || p.bounty > top.bounty)) top = p;
@@ -699,18 +849,19 @@ export class Sim {
     for (const v of this.players.values()) {
       if (!v.connected) continue;
       this.send(v.id, {
-        ...common, ack: v.lastSeq, p: rows(v),
+        ...common, ack: v.lastSeq, p: rows(v), mn: mineRows(v),
         me: {
           x: r2(v.x), y: r2(v.y), mvx: r2(v.mvx), mvy: r2(v.mvy), hp: Math.round(v.hp), mh: v.maxHp, am: r2(v.ammo + v.reloadP),
           sc: r2(v.superC), cu: v.cubes, f: this.flags(v), al: v.alive ? 1 : 0, fo: v.dash || v.knock || v.stun > 0 ? 1 : 0,
           cl: r2(Math.max(0, v.cloak)), bt: v.bounty, lo: r2(v.lowF), bt5: r2(Math.min(v.bushT, 5)), rs: r2(Math.max(0, v.rush)),
           rt: r2(Math.max(0, v.respawnT)), cr: v.crystals, scr: Math.floor(this.mode.score ? this.mode.score(v) : 0),
           k: v.kills, be: v.bountyEarned, sk: v.sessionKills, bb: v.bestBounty, gl: this.glow(v), id: v.id, br: v.brawler,
+          sl: v.slowT > 0 ? r2(v.slowT) : 0, tp: v.tp, tm: v.team,
         },
       });
     }
     if (this.observers.size && this.tickN % 2 === 0) {
-      for (const [k, o] of this.observers) this.send(k, { ...common, p: rows({ x: o.x, y: o.y, alive: true }) });
+      for (const [k, o] of this.observers) { const v = { x: o.x, y: o.y, alive: true }; this.send(k, { ...common, p: rows(v), mn: mineRows(v) }); }
     }
   }
 
@@ -718,7 +869,8 @@ export class Sim {
 
   flags(p) {
     return (inBush(this.map, p.x, p.y) ? 1 : 0) | (p.stun > 0 ? 2 : 0) | (p.cloak > 0 ? 4 : 0) | (p.dash ? 8 : 0)
-      | (p.spawnProt > 0 ? 16 : 0) | (this.targetId === p.id ? 32 : 0) | (p.rush > 0 ? 64 : 0) | (p.lowF > 0 ? 128 : 0);
+      | (p.spawnProt > 0 ? 16 : 0) | (this.targetId === p.id ? 32 : 0) | (p.rush > 0 ? 64 : 0) | (p.lowF > 0 ? 128 : 0)
+      | (p.cageT > 0 ? 256 : 0) | (p.slowT > 0 ? 512 : 0);
   }
 
   finish() {

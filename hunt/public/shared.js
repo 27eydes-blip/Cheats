@@ -43,35 +43,61 @@ export const LAY_LOW_START = 5, LAY_LOW_FULL = 10;
 export function layLowFactor(bushTime) { return Math.max(0, Math.min(1, (bushTime - LAY_LOW_START) / (LAY_LOW_FULL - LAY_LOW_START))); }
 // SHRINK & SPEED: lower HP = smaller + faster; below 25% = speed rush + 15% damage
 export const LOW_HP = 0.25, RUSH_TIME = 1.6, RUSH_BONUS = 0.4, COMEBACK_DMG = 1.15;
-export function moveStats(brawler, hp, maxHp, rush = 0) {
+export const SLOW_MUL = 0.6; // Dune's wave
+export function moveStats(brawler, hp, maxHp, rush = 0, slowed = 0) {
   const f = Math.max(0, Math.min(1, hp / maxHp));
   return {
     r: PLAYER_R * (0.7 + 0.3 * f),
-    speed: BRAWLERS[brawler].speed * (1 + 0.22 * (1 - f) + (rush > 0 ? RUSH_BONUS : 0)),
+    speed: BRAWLERS[brawler].speed * (1 + 0.22 * (1 - f) + (rush > 0 ? RUSH_BONUS : 0)) * (slowed > 0 ? SLOW_MUL : 1),
   };
 }
+// attacks the client draws instantly as predicted projectiles
+export const MINE_SEEN = 90; // armed enemy mines are only visible this close
+export const PREDICTED_KINDS = ['single', 'burst', 'spread', 'wave'];
 
+// Damage values tuned with test/tune.js + test/balance.js (1v1 bot duels, target 45-55% win rate).
 export const BRAWLERS = {
   volt: {
     name: 'Volt', role: 'Balanced', hp: 3600, speed: 250, reload: 1.3, superHits: 9,
     color: '#ffd23f', dark: '#c98f00', accent: '#3a86ff',
     blurb: 'Fires 3 fast bolts. Super: dash that knocks enemies back.',
-    attack: { kind: 'burst', count: 3, interval: 0.09, damage: 420, speed: 1150, range: 540, radius: 9, cooldown: 0.42 },
-    super: { kind: 'dash', dist: 360, time: 0.26, damage: 700, knock: 240, radius: 50 },
+    attack: { kind: 'burst', count: 3, interval: 0.09, damage: 320, speed: 1150, range: 540, radius: 9, cooldown: 0.42 },
+    super: { kind: 'dash', dist: 360, time: 0.26, damage: 540, knock: 240, radius: 50 },
   },
   brick: {
     name: 'Brick', role: 'Tank', hp: 6000, speed: 215, reload: 1.7, superHits: 14,
     color: '#ff7b39', dark: '#b8461a', accent: '#6b4226',
     blurb: 'Short-range shotgun blast. Super: ground slam that stuns.',
-    attack: { kind: 'spread', count: 5, arc: 0.55, damage: 330, speed: 950, range: 330, radius: 8, cooldown: 0.4 },
-    super: { kind: 'slam', radius: 210, damage: 900, stun: 1.4 },
+    attack: { kind: 'spread', count: 5, arc: 0.55, damage: 270, speed: 950, range: 330, radius: 8, cooldown: 0.4 },
+    super: { kind: 'slam', radius: 210, damage: 740, stun: 1.4 },
   },
   wisp: {
     name: 'Wisp', role: 'Sniper', hp: 2600, speed: 285, reload: 2.0, superHits: 3,
     color: '#5ef2c6', dark: '#1fa883', accent: '#8f5cff',
     blurb: 'One long-range heavy shot. Super: invisible for 3s.',
-    attack: { kind: 'single', count: 1, damage: 1450, speed: 1700, range: 960, radius: 10, cooldown: 0.4 },
+    attack: { kind: 'single', count: 1, damage: 1520, speed: 1700, range: 960, radius: 10, cooldown: 0.4 },
     super: { kind: 'cloak', time: 3 },
+  },
+  dune: {
+    name: 'Dune', role: 'Controller', hp: 3800, speed: 240, reload: 1.6, superHits: 6,
+    color: '#e8b04a', dark: '#a8702a', accent: '#2a9d8f',
+    blurb: 'Slow sand wave that slows enemies. Super: a sand-worm bursts up under the target.',
+    attack: { kind: 'wave', count: 1, damage: 1060, speed: 560, range: 620, radius: 24, cooldown: 0.5, slow: 0.4, slowTime: 1.5 },
+    super: { kind: 'worm', range: 750, delay: 0.7, radius: 95, damage: 1980, stun: 0.6 },
+  },
+  rook: {
+    name: 'Rook', role: 'Trapper', hp: 4400, speed: 245, reload: 1.5, superHits: 5,
+    color: '#7fa34a', dark: '#4d6a26', accent: '#ff8c1a',
+    blurb: 'Throws mines that arm after 1s. Super: a cage that traps one enemy for 2s.',
+    attack: { kind: 'mine', count: 1, damage: 1640, speed: 800, range: 620, radius: 10, cooldown: 0.45, arm: 1.0, trigger: 60, blast: 110, life: 12, max: 3 },
+    super: { kind: 'cage', speed: 1100, range: 700, radius: 16, time: 2, damage: 500 },
+  },
+  flicker: {
+    name: 'Flicker', role: 'Assassin', hp: 3000, speed: 310, reload: 1.1, superHits: 6,
+    color: '#c04dff', dark: '#7a1fb0', accent: '#ff5fa2',
+    blurb: 'Fastest hunter. Short double slash. Super: teleports behind the nearest enemy.',
+    attack: { kind: 'slash', count: 2, interval: 0.14, damage: 560, range: 125, arc: 1.7, radius: 0, cooldown: 0.35 },
+    super: { kind: 'blink', range: 750 },
   },
 };
 export const BRAWLER_IDS = Object.keys(BRAWLERS);
