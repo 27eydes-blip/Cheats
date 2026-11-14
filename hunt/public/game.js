@@ -13,11 +13,20 @@ import * as A from './account.js';
 import { levelInfo } from './progression.js';
 import { TITLES } from './catalog.js';
 import { sfx, falloff } from './audio.js';
+import { WallArt } from './art/walls.js';
+import { artFor } from './art/themes.js';
+import { SPAWNS, spawnHasCover, SPAWN_COVER_DIST, blocksMove, TILE as TILE_ } from './shared.js';
+
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
 const ctx = canvas.getContext('2d');
 const input = new Input(canvas);
+// wall/cover art cache; rebuilt from scratch if the canvas context is lost
+const art = new WallArt();
+canvas.addEventListener('contextlost', (e) => { e.preventDefault(); art.reset(); });
+canvas.addEventListener('contextrestored', () => art.reset());
+window.__huntArt = { art, artFor };
 const TICK_MS = 1000 / TICK_RATE;
 const INTERP_MS = 110;
 const MODE_INFO = {
@@ -666,7 +675,8 @@ function frame(now) {
     updateEffects(dt);
     if (G.me && G.map) render(now / 1000);
     updateHud(now);
-  } else drawMenuBackdrop(now / 1000);
+  } else if (G.phase === 'mapview') drawMapView(now / 1000);
+  else drawMenuBackdrop(now / 1000);
   requestAnimationFrame(frame);
 }
 
@@ -706,7 +716,8 @@ function render(t) {
   for (const c of G.view.cubes) R.drawCube(ctx, c[1], c[2], t);
   for (const c of G.view.crystals) R.drawCrystal(ctx, c[1], c[2], t);
   for (const mn of G.view.mines) R.drawMine(ctx, mn[1], mn[2], mn[3], mn[4] === G.myId, t);
-  if (!SETTINGS.lowGfx) R.drawShadows(ctx, G.map, x0, y0, x1, y1);
+  if (!SETTINGS.lowGfx) art.drawShadows(ctx, G.map, view);
+  art.draw(ctx, G.map, view, t, SETTINGS);
   R.drawBlocks(ctx, G.map, G.crateHp, x0, y0, x1, y1);
 
   const list = G.view.others.map((o) => ({ ...o, me: false, size: sizeOf(o) }));
@@ -913,6 +924,37 @@ for (const id of BRAWLER_IDS) {
   $('hubPick').appendChild(b);
 }
 
+// ?mapview=1 : whole map zoomed out with collision boxes (debug). &world=<key> for an arena, &free=1 for the world.
+function drawMapView(t) {
+  const m = G.map, Wm = m.gw * TILE_, Hm = m.gh * TILE_;
+  const s = Math.min(W / Wm, H / Hm) * 0.96;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#120a24'; ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate((W - Wm * s) / 2, (H - Hm * s) / 2); ctx.scale(s, s);
+  const v = { x0: 0, y0: 0, x1: Wm, y1: Hm };
+  R.drawGround(ctx, m, 0, 0, Wm, Hm, t);
+  art.drawShadows(ctx, m, v);
+  art.draw(ctx, m, v, t, SETTINGS);
+  R.drawBlocks(ctx, m, new Map(), 0, 0, Wm, Hm);
+  R.drawBushes(ctx, m, 0, 0, Wm, Hm, null, t);
+  // collision boxes: walls red, spiked border orange, water/crates blue
+  ctx.lineWidth = 3 / s * 1.2;
+  for (let y = 0; y < m.gh; y++) for (let x = 0; x < m.gw; x++) {
+    const tt = m.t[y * m.gw + x];
+    if (!blocksMove(tt)) continue;
+    ctx.strokeStyle = m.border[y * m.gw + x] ? 'rgba(255,150,40,0.9)' : tt === 1 ? 'rgba(255,40,70,0.9)' : 'rgba(80,170,255,0.9)';
+    ctx.strokeRect(x * TILE_ + 2, y * TILE_ + 2, TILE_ - 4, TILE_ - 4);
+  }
+  if (m.kind === 'arena') for (const sp of SPAWNS) {
+    ctx.beginPath(); ctx.arc(sp.x, sp.y, SPAWN_COVER_DIST, 0, Math.PI * 2); ctx.strokeStyle = spawnHasCover(m, sp) ? 'rgba(75,224,110,0.8)' : 'rgba(255,0,0,1)'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(sp.x, sp.y, 26, 0, Math.PI * 2); ctx.fillStyle = '#4be06e'; ctx.fill();
+  }
+  ctx.restore();
+  const st = art.stats();
+  R.outlinedText(ctx, `MAPVIEW · ${m.kind === 'arena' ? m.world + ' arena' : 'Free Play world'} · ${m.pieces.length} cover pieces · art sprites ${st.sprites} · worlds cached ${st.worlds.join(',')}`, W / 2, 16, 14, '#fff', '#000');
+}
+
 let menuMap = null;
 function drawMenuBackdrop(t) {
   if (!menuMap) menuMap = generateWorld();
@@ -923,8 +965,10 @@ function drawMenuBackdrop(t) {
   ctx.translate(W / 2, H / 2); ctx.scale(s, s); ctx.translate(-cx, -cy);
   const hw = W / 2 / s, hh = H / 2 / s;
   R.drawGround(ctx, menuMap, cx - hw, cy - hh, cx + hw, cy + hh, t);
-  R.drawShadows(ctx, menuMap, cx - hw, cy - hh, cx + hw, cy + hh);
-  R.drawBlocks(ctx, menuMap, new Map(), cx - hw, cy - hh - 60, cx + hw, cy + hh + 60);
+  const mv = { x0: cx - hw, y0: cy - hh - 60, x1: cx + hw, y1: cy + hh + 60 };
+  art.drawShadows(ctx, menuMap, mv);
+  art.draw(ctx, menuMap, mv, t, SETTINGS);
+  R.drawBlocks(ctx, menuMap, new Map(), mv.x0, mv.y0, mv.x1, mv.y1);
   R.drawBushes(ctx, menuMap, cx - hw, cy - hh, cx + hw, cy + hh, null, t);
   ctx.restore();
 }
@@ -953,7 +997,13 @@ $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('play').
 
 // Test flags: ?world=<key>[&mode=<mode>] drops you straight into that arena with bots; ?free=1 into Free Play.
 const qs = new URLSearchParams(location.search);
+if (qs.get('mapview')) {
+  G.phase = 'mapview';
+  G.map = qs.get('free') ? generateWorld() : generateArena(+(qs.get('seed') || 7), qs.get('world') || 'meadow');
+  show(null); $('hud').hidden = true; document.body.classList.add('ingame');
+}
 booted.then(() => {
+if (qs.get('mapview')) return;
 if (qs.get('world')) startQuick({ world: qs.get('world'), mode: qs.get('mode') || '', ev: qs.get('ev') || '', lobby: '1.5', room: 'T' + Math.floor(Math.random() * 1e8) });
 else if (qs.get('free')) startFree();
 });
