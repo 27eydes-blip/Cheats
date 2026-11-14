@@ -124,20 +124,28 @@ function paintLayer(L, w, h, seed) {
 
 export class LobbyScene {
   constructor(canvas) { this.cv = canvas; this.g = canvas.getContext('2d'); this.world = null; this.layers = []; this.parts = []; this.staticDone = false; }
-  resize(w, h, dpr) { this.w = w; this.h = h; this.dpr = dpr; this.cv.width = Math.round(w * dpr); this.cv.height = Math.round(h * dpr); this.build(); }
+  // the backdrop is soft, so it renders at 1x (4x fewer pixels than 2x on phones)
+  resize(w, h, dpr) { this.w = w; this.h = h; this.dpr = Math.min(this.maxDpr ?? 1, dpr); this.cv.width = Math.round(w * this.dpr); this.cv.height = Math.round(h * this.dpr); this.build(); }
   setWorld(k) { if (this.world !== k) { this.world = k; this.build(); } }
   build() {
     if (!this.w || !this.world) return;
     const W = WORLDS[this.world] || WORLDS.mirage;
     this.layers = W.layers.map((L, i) => ({ L, cv: paintLayer(L, this.w * 2, this.h, i * 31 + this.world.length) }));
     this.parts = Array.from({ length: W.particles.n }, (_, i) => ({ x: Math.random(), y: Math.random(), s: 0.5 + Math.random(), p: Math.random() * 6 }));
+    this.sky = this.paintSky(W);
+    this.vig = this.paintVignette();
     this.staticDone = false;
   }
-  draw(t) {
-    if (!this.layers.length) return;
-    if (SETTINGS.lowGfx) { if (this.staticDone) return; t = 0; this.staticDone = true; } else this.staticDone = false;
-    const { g, w, h } = this, W = WORLDS[this.world] || WORLDS.mirage;
-    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+  paintVignette() {
+    const { w, h } = this, cv = mkCanvas(Math.ceil(w), Math.ceil(h)), g = cv.getContext('2d');
+    const v = g.createRadialGradient(w / 2, h * 0.6, Math.min(w, h) * 0.45, w / 2, h * 0.6, Math.max(w, h) * 0.75);
+    v.addColorStop(0, 'rgba(27,16,51,0)'); v.addColorStop(1, 'rgba(27,16,51,.55)');
+    g.fillStyle = v; g.fillRect(0, 0, w, h);
+    return cv;
+  }
+  // sky gradient + sun + glow never move: paint them once per size/world
+  paintSky(W) {
+    const { w, h } = this, cv = mkCanvas(Math.ceil(w), Math.ceil(h)), g = cv.getContext('2d');
     const sky = g.createLinearGradient(0, 0, 0, h * 0.8);
     W.sky.forEach((c, i) => sky.addColorStop(i / (W.sky.length - 1), c));
     g.fillStyle = sky; g.fillRect(0, 0, w, h);
@@ -146,6 +154,15 @@ export class LobbyScene {
     glow.addColorStop(0, S.glow); glow.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = glow; g.fillRect(0, 0, w, h);
     g.beginPath(); g.arc(w * 0.62, S.y * h, sr, 0, Math.PI * 2); g.fillStyle = S.c; g.fill(); g.lineWidth = 4; g.strokeStyle = INK; g.stroke();
+    return cv;
+  }
+  draw(t) {
+    if (!this.layers.length) return;
+    if (SETTINGS.lowGfx) { if (this.staticDone) return; t = 0; this.staticDone = true; } else this.staticDone = false;
+    const { g, w, h } = this, W = WORLDS[this.world] || WORLDS.mirage;
+    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    g.drawImage(this.sky, 0, 0, w, h);
+    const S = W.sun, sr = S.r * h;
     if (this.world === 'mirage' && !SETTINGS.lowGfx) { // heat shimmer bands across the low sun
       g.save(); g.globalAlpha = 0.25; g.strokeStyle = '#fff3d0'; g.lineWidth = 3;
       for (let k = 0; k < 4; k++) { g.beginPath(); for (let x = w * 0.62 - sr * 1.4; x < w * 0.62 + sr * 1.4; x += 8) g.lineTo(x, S.y * h + sr * 0.2 + k * 10 + Math.sin(x * 0.05 + t * 3 + k) * 3); g.stroke(); }
@@ -157,6 +174,7 @@ export class LobbyScene {
     }
     this.prop(g, W.prop, t);
     if (!SETTINGS.lowGfx) this.particles(g, W.particles, t);
+    g.drawImage(this.vig, 0, 0, w, h);
   }
   prop(g, kind, t) {
     const { w, h } = this, sway = SETTINGS.reduceFlash ? 0 : Math.sin(t * 0.9) * 0.06;

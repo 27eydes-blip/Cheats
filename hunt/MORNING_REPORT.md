@@ -195,3 +195,131 @@ Debug flags:
 - `?world=<key>&mode=<mode>&ev=<event>` puts you straight into a match with bots.
 - `?mapview=1` shows the whole map with collision boxes.
 - `?free=1` goes straight to Free Play.
+
+---
+
+# UI overhaul (branch `ui/overhaul`)
+
+Every screen outside a match was rebuilt on one design system, in the same bold cartoon style. All art is drawn in code or SVG, the music is synthesized live, and there are no image or audio files.
+
+## Lobby: before / after
+
+| | iPhone SE | iPhone Pro Max | iPad |
+|---|---|---|---|
+| **Before** | ![](docs/ui/before-lobby-se.jpg) | ![](docs/ui/before-lobby-promax.jpg) | ![](docs/ui/before-lobby-ipad.jpg) |
+| **After** | ![](docs/ui/ui-lobby-se.jpg) | ![](docs/ui/ui-lobby-promax.jpg) | ![](docs/ui/ui-lobby-ipad.jpg) |
+
+## What's new
+
+**Design system**
+- `public/ui/tokens.css` is the single place for colours, the one outline thickness, the one shadow, 3 button sizes (`btn-sm`/`md`/`lg`), 2 card styles (`card-a` solid, `card-b` art card with a role-coloured backdrop), motion timing and safe-area padding.
+- Sizes scale from the screen's short side, so the same layout fits an iPhone SE and an iPad.
+- `public/ui/icons.js` holds one SVG icon style: chunky fill with the shared ink outline.
+
+**Lobby**
+- **Living background.** Parallax layers of the featured world: Desert Mirage has dunes, ruins, a low sun with heat shimmer, a swaying palm and drifting sand. It rotates to a different world each day, and `?featured=<world>` forces one.
+- **Centre stage.** Your brawler stands on a glowing pedestal at about 40% of screen height, and idles with a bob, blink and weapon twirl. Tapping it plays a taunt; tapping again opens brawler select. The name plate shows name, role, trophies and a power-level bar.
+- **Left rail.**
+  - Profile card: avatar, name, level ring with an XP arc, and trophies.
+  - The guest banner is now a small dismissible "Guest · save progress" chip on the card.
+  - Icon buttons for Locker, Hunt Pass, Trophy Road, Friends and Settings, each with a red dot when something is claimable or new.
+- **Top bar.** Test coins and test gems, each with a "+" chip; the "+" explains test currency, since there are no payments. A daily-missions chip shows a progress ring and the time until reset.
+- **Mode card.** An animated preview of the current mode, a ribbon, and a tap to open the mode picker.
+- **PLAY button.**
+  - Bottom-right, chunky yellow with a pulsing glow.
+  - Press-squash, release-bounce and a play sound.
+  - Tested to stay fully on screen on all three sizes, and never to overlap the mode card.
+- **Moved off the main screen.** Your name lives in Profile and the room code in a Play with Friends popup. "Created by Sam Eyde III" stays visible in gold, small, bottom-left.
+
+**Brawler select**
+- Large role-coloured cards, with the brawler drawn bursting out of the top of the frame.
+- Role filter chips.
+- Tapping a card flips open a detail panel:
+  - an animated portrait;
+  - Health / Damage / Speed / Range bars;
+  - looping demo animations for the Attack and the Super;
+  - the skin picker.
+
+**Mode picker**
+- Quick Hunt, Squad Hunt (NEW), Free Play and Showdown (EVENT), each with animated art, a one-line description and the player count.
+- The 9 world events are previewed as icons along the bottom.
+- Quick play can now queue for one specific mode: the matchmaker keeps a separate filling match per mode.
+
+**Locker**
+- Skins on rotating pedestals, plus Kill Effects and Titles tabs.
+- A big live preview of the equipped look, with a kill-effect preview button.
+
+**Hunt Pass**
+- A horizontally scrolling track: premium row on top, free row below.
+- A progress bar that fills with a shine.
+- Claiming pops the reward and flies coins into the top-bar counter, with light rays.
+
+**Trophy Road**
+- A winding vertical path with milestones and rewards on alternating sides.
+- It auto-scrolls to your position, marked with a glowing marker.
+
+**Match flow**
+- **Matchmaking:** your brawler runs in place on a spinning radar, with a players-found counter ("3/10 hunters found · starts in 6"), rotating tips and a cancel button.
+- **Match intro:** a 2-second VS splash with "ENTERING DESERT MIRAGE" and the mode name.
+- **Results:**
+  - the rank slams in, then your brawler's victory pose (or a sulk);
+  - trophies count up and the XP bar fills;
+  - bounty earned and KOs, plus the Top Bounty Hunter MVP banner;
+  - Play Again and Lobby buttons.
+
+**Motion and sound**
+- Every button squashes on press, bounces on release and plays a click.
+- Screens slide and scale in over about 260 ms with ease-out and fade out; popups pop in. There are no hard cuts.
+- Rewards fire light rays and confetti; under Reduce Flashing that becomes a soft fade only.
+- **Original lobby music:** an upbeat 4-bar loop at 116 BPM (bass bounce, plucky lead, pad, drums) synthesized live. It ducks under popups.
+- Settings has separate Music and SFX sliders.
+
+**Daily missions and gems (test currency)**
+- 3 missions a day, the same for every player, resetting at 00:00 UTC.
+- Progress is tracked on the server when a match is recorded; rewards are test coins or gems.
+
+## Every screen on 3 devices
+
+| Screen | | | |
+|---|---|---|---|
+| Lobby | [iPhone SE](docs/ui/ui-lobby-se.jpg) | [iPhone Pro Max](docs/ui/ui-lobby-promax.jpg) | [iPad](docs/ui/ui-lobby-ipad.jpg) |
+| Brawler select | [iPhone SE](docs/ui/ui-brawlers-se.jpg) | [iPhone Pro Max](docs/ui/ui-brawlers-promax.jpg) | [iPad](docs/ui/ui-brawlers-ipad.jpg) |
+| Brawler detail (flip panel) | [iPhone SE](docs/ui/ui-detail-se.jpg) | [iPhone Pro Max](docs/ui/ui-detail-promax.jpg) | [iPad](docs/ui/ui-detail-ipad.jpg) |
+| Mode picker | [iPhone SE](docs/ui/ui-modes-se.jpg) | [iPhone Pro Max](docs/ui/ui-modes-promax.jpg) | [iPad](docs/ui/ui-modes-ipad.jpg) |
+| Locker | [iPhone SE](docs/ui/ui-locker-se.jpg) | [iPhone Pro Max](docs/ui/ui-locker-promax.jpg) | [iPad](docs/ui/ui-locker-ipad.jpg) |
+| Hunt Pass | [iPhone SE](docs/ui/ui-pass-se.jpg) | [iPhone Pro Max](docs/ui/ui-pass-promax.jpg) | [iPad](docs/ui/ui-pass-ipad.jpg) |
+| Trophy Road | [iPhone SE](docs/ui/ui-road-se.jpg) | [iPhone Pro Max](docs/ui/ui-road-promax.jpg) | [iPad](docs/ui/ui-road-ipad.jpg) |
+| Matchmaking | [iPhone SE](docs/ui/ui-matchmaking-se.jpg) | [iPhone Pro Max](docs/ui/ui-matchmaking-promax.jpg) | [iPad](docs/ui/ui-matchmaking-ipad.jpg) |
+| Match intro (VS) | [iPhone SE](docs/ui/ui-intro-se.jpg) | [iPhone Pro Max](docs/ui/ui-intro-promax.jpg) | [iPad](docs/ui/ui-intro-ipad.jpg) |
+| Results | [iPhone SE](docs/ui/ui-results-se.jpg) | [iPhone Pro Max](docs/ui/ui-results-promax.jpg) | [iPad](docs/ui/ui-results-ipad.jpg) |
+| Profile | [iPhone SE](docs/ui/ui-profile-se.jpg) | [iPhone Pro Max](docs/ui/ui-profile-promax.jpg) | [iPad](docs/ui/ui-profile-ipad.jpg) |
+| Settings | [iPhone SE](docs/ui/ui-settings-se.jpg) | [iPhone Pro Max](docs/ui/ui-settings-promax.jpg) | [iPad](docs/ui/ui-settings-ipad.jpg) |
+| Play with Friends | [iPhone SE](docs/ui/ui-friends-se.jpg) | [iPhone Pro Max](docs/ui/ui-friends-promax.jpg) | [iPad](docs/ui/ui-friends-ipad.jpg) |
+| Daily missions | [iPhone SE](docs/ui/ui-missions-se.jpg) | [iPhone Pro Max](docs/ui/ui-missions-promax.jpg) | [iPad](docs/ui/ui-missions-ipad.jpg) |
+
+## Checks
+
+- **Tests:** 35 Playwright tests pass on Chromium. New in `tests/e2e/ui.spec.js`:
+  - For each of the 3 sizes, PLAY, the profile card, mode card, name plate, missions chip, Settings button and credit are all fully inside the screen, and PLAY never overlaps the mode card.
+  - Every screen opens and closes through its transition.
+  - The mode picker changes the mode card.
+  - Missions show 3 entries.
+  - The full PLAY → matchmaking radar → VS intro → match → results → lobby flow.
+  - Music starts after a tap and ducks under popups.
+  - Low Graphics freezes the background.
+- **Performance:** emulated iPhone SE (667×375 at 2×) with Chromium's CPU throttled 4× and **software rendering** (no GPU here). This is pessimistic; a real phone uses its GPU.
+
+  | Lobby | Before tuning | After |
+  |---|---|---|
+  | Full graphics | 13 fps | **47 fps** |
+  | Low Graphics | n/a | **60 fps** |
+
+  Tuning: the static sky, sun and vignette are cached; the PLAY glow animates only opacity; and adaptive resolution steps the soft backdrop and stage down when frames run long. **Needs confirming on a real iPhone SE.**
+- **Low Graphics** turns off the moving background and particles, drawing a single static frame. **Reduce Flashing** turns off strobing, pulsing and confetti, leaving steady glows and soft fades.
+
+## Notes and next decisions
+
+- **Friends list:** the Friends button opens Play with Friends (room code, a new-code generator, share/copy). A real friends list needs a social backend; it's marked "coming soon".
+- **The "+" chips** explain test currency rather than selling anything. When Apple payments are added, this is where a store would go.
+- **Power level** is cosmetic for now: it's derived from trophies (one level per 50, max 11). Decide whether you want a real upgrade system.
+- **Brawler locks:** the lock state is designed and drawn, but every brawler is unlocked today. Decide on unlock rules, such as trophy-road unlocks.

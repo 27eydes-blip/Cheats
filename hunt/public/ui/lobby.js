@@ -68,8 +68,18 @@ export function createLobby(api) {
   const stage = $('stage'), sg = stage.getContext('2d'), mcv = $('modeCv'), mg = mcv.getContext('2d');
   const av = $('avatarCv').getContext('2d');
 
+  // adaptive quality: slow frames step the backdrop/stage resolution down (soft backdrop upscales fine)
+  const Q = [{ bg: 1, st: 1.5 }, { bg: 0.75, st: 1.25 }, { bg: 0.5, st: 1 }];
+  L.q = 0; L.avg = 16.7; L.slow = 0; L.fast = 0;
+  function adapt(dt) {
+    L.avg += (dt - L.avg) * 0.08;
+    if (L.avg > 19) { L.slow += dt; L.fast = 0; } else if (L.avg < 14) { L.fast += dt; L.slow = 0; }
+    if (L.slow > 800 && L.q < Q.length - 1) { L.q++; L.slow = 0; resize(); }
+    else if (L.fast > 10000 && L.q > 0) { L.q--; L.fast = 0; resize(); }
+  }
   function resize() {
-    const dpr = SETTINGS.lowGfx ? 1 : Math.min(2, devicePixelRatio || 1);
+    const dpr = SETTINGS.lowGfx ? 1 : Math.min(Q[L.q].st, devicePixelRatio || 1);
+    scene.maxDpr = SETTINGS.lowGfx ? 1 : Q[L.q].bg;
     scene.resize(innerWidth, innerHeight, dpr);
     const r = stage.getBoundingClientRect();
     stage.width = Math.max(1, Math.round(r.width * dpr)); stage.height = Math.max(1, Math.round(r.height * dpr)); L.dpr = dpr;
@@ -146,6 +156,8 @@ export function createLobby(api) {
     L.raf = 0;
     if (root.hidden) return;
     const t = (now - L.t0) / 1000;
+    if (L.lastNow) adapt(Math.min(100, now - L.lastNow));
+    L.lastNow = now;
     scene.draw(t);
     drawStage(t);
     drawModePreview(mg, L.mode === 'free' ? 'free' : L.mode, mcv.width, mcv.height, t);
@@ -187,9 +199,9 @@ export function createLobby(api) {
     if (!L.raf) L.raf = requestAnimationFrame(loop);
     startMusic();
   }
-  function hide() { root.hidden = true; stopMusic(); }
+  function hide() { root.hidden = true; L.lastNow = 0; stopMusic(); }
   // music needs a user gesture on mobile: start on the first tap in the lobby
   root.addEventListener('pointerdown', () => { unlockAudio(); if (!root.hidden) startMusic(); }, { once: false });
-  return { show, hide, refresh, get mode() { return L.mode; } };
+  return { show, hide, refresh, get mode() { return L.mode; }, perf: () => ({ q: L.q, avg: L.avg }) };
 }
 export { ICONS };

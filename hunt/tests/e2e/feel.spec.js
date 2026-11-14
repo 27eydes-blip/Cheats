@@ -34,7 +34,9 @@ test('end screen: victory pose + Top Bounty Hunter MVP banner', async ({ page })
 
 test('Reduce Flashing: no screen shake', async ({ page }) => {
   await page.goto('/');
+  await page.click('#rail_settings');
   await page.check('#setFlash');
+  await page.click('.ui-screen .back');
   await page.goto('/?world=meadow&mode=bounty');
   await waitMe(page);
   const s = await page.evaluate(async () => { const G = window.__hunt; G.shake = 20; await new Promise((r) => setTimeout(r, 100)); return G.shake; });

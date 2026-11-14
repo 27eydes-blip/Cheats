@@ -5,7 +5,6 @@
   grid-template-areas: ". . . . ." ". left top top ." ". left stage right ." ". left stage play ." ". . . . ."; }
 #lobbyBg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
 .lobby > * { position: relative; z-index: 1; }
-.lobby::after { content: ''; position: absolute; inset: 0; background: radial-gradient(120% 90% at 50% 60%, transparent 55%, rgba(27,16,51,.55)); pointer-events: none; z-index: 0; }
 
 /* top bar */
 .lb-top { grid-area: top; display: flex; justify-content: flex-end; gap: calc(var(--u) * 1); align-items: center; flex-wrap: wrap; }
@@ -61,9 +60,11 @@
 .ribbon { position: absolute; top: 10px; right: -8px; background: var(--red); color: #fff; font-family: var(--font); font-size: calc(var(--u) * 1.4); border: 3px solid var(--ink); padding: 1px 10px; transform: rotate(8deg); box-shadow: var(--drop); z-index: 2; }
 .ribbon.event { background: var(--mint); color: var(--ink); }
 .play { grid-area: play; align-self: end; justify-self: stretch; margin-top: calc(var(--u) * 1); }
-.btn.play { font-size: calc(var(--u) * 5.6); padding: calc(var(--u) * 1.2) calc(var(--u) * 2); letter-spacing: 2px; animation: play-glow 2.4s ease-in-out infinite; }
-@keyframes play-glow { 0%, 100% { box-shadow: var(--drop), 0 0 0 0 rgba(255, 210, 63, 0); } 50% { box-shadow: var(--drop), 0 0 calc(var(--u) * 3) calc(var(--u) * .6) rgba(255, 210, 63, .55); } }
-body.reduce-flash .btn.play { animation: none; box-shadow: var(--drop), 0 0 calc(var(--u) * 2) rgba(255, 210, 63, .45); }
+.btn.play { font-size: calc(var(--u) * 5.6); padding: calc(var(--u) * 1.2) calc(var(--u) * 2); letter-spacing: 2px; }
+/* pulsing glow on a separate layer: only opacity animates, so the browser never repaints the button */
+.btn.play::before { content: ''; position: absolute; inset: calc(var(--u) * -1.2); border-radius: calc(var(--radius) + 10px); background: radial-gradient(closest-side, rgba(255, 210, 63, .7), rgba(255, 210, 63, 0)); z-index: -1; animation: play-glow 2.4s ease-in-out infinite; will-change: opacity; pointer-events: none; }
+@keyframes play-glow { 0%, 100% { opacity: .15; } 50% { opacity: .9; } }
+body.reduce-flash .btn.play::before { animation: none; opacity: .5; }
 #lobby #credit { position: absolute; z-index: 3; left: var(--sa-l); right: auto; bottom: max(2px, env(safe-area-inset-bottom)); color: var(--gold); font-family: var(--font); font-size: 11px; opacity: .9; text-shadow: 0 1px 0 var(--ink), 0 0 3px var(--ink); }
 
 /* portrait phones: stack it */

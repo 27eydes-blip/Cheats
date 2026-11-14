@@ -82,6 +82,7 @@ test('lobby music plays after a tap and ducks under popups; Low Graphics freezes
   await page.waitForTimeout(300);
   expect(await page.evaluate(async () => (await import('/ui/music.js')).isDucked())).toBe(false);
   await page.click('#rail_settings'); await page.check('#setLow'); await page.click('.ui-screen .back');
+  await page.waitForTimeout(500); // the static Low Graphics frame (at 1x) is drawn once
   const a = await page.evaluate(() => document.getElementById('lobbyBg').toDataURL().length);
   await page.waitForTimeout(600);
   const b = await page.evaluate(() => document.getElementById('lobbyBg').toDataURL().length);

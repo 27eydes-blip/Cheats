@@ -323,7 +323,7 @@ function startPose(won) {
     const t = (now - t0) / 1000;
     c2.setTransform(d, 0, 0, d, 0, 0); c2.clearRect(0, 0, cv.width, cv.height);
     const w = cv.clientWidth, h = cv.clientHeight;
-    const fit = Math.min(1.6, h / 70); // brawler is ~70 units tall at scale 1
+    const fit = Math.min(4, h / 80, w / 70); // brawler is ~70 units tall at scale 1
     let y = h * 0.66, face = 0.3, sc = fit;
     if (won) {
       const k = Math.min(1, t / 1.2);
