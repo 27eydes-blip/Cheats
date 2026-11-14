@@ -11,6 +11,7 @@ import * as R from './render.js';
 import { SETTINGS, setSetting } from './settings.js';
 import * as A from './account.js';
 import { levelInfo } from './progression.js';
+import { TITLES } from './catalog.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -171,7 +172,7 @@ function startFree() {
   G.kind = 'free'; G.brawler = selBrawler; G.modeKey = 'freeplay';
   G.map = generateWorld();
   const slot = ZONES[Math.floor(Math.random() * ZONES.length)].slot;
-  openConn(slot, `/zone?${new URLSearchParams({ slot, join: '1', name, brawler: selBrawler })}`, { zone: slot, primary: true });
+  openConn(slot, `/zone?${new URLSearchParams({ slot, join: '1', name, brawler: selBrawler, ...(A.ACC.token ? { token: A.ACC.token } : {}) })}`, { zone: slot, primary: true });
   G.phase = 'play';
   input.enabled = true; input.reset();
   show(null);
@@ -396,6 +397,7 @@ function sampleConn(c, out) {
     out.others.set(id, {
       id, x, y, hp: e[3], mh: e[4], facing: ea[5] + da * f, fl: e[6], cu: e[7], bt: e[8], glow: e[9], cr: e[10], team: e[11] || 0, zone: c.zone,
       name: r[0], brawler: r[1], moving: Math.hypot(e[1] - ea[1], e[2] - ea[2]) > 1, stun: e[6] & 2,
+      skin: r[3]?.skin, title: r[3]?.title ? TITLES[r[3].title] : null,
     });
   }
   for (const [id, e] of b.b) {
@@ -432,7 +434,7 @@ function burst(x, y, color, n, speed = 180, size = 5, life = 0.45) {
   }
 }
 const KIND_COL = ['#7db8ff', '#ffb347', '#c9a6ff'];
-function applyFx([type, x, y, v, id]) {
+function applyFx([type, x, y, v, id, extra]) {
   const near = G.me && Math.hypot(x - G.pred.x, y - G.pred.y) < 700;
   switch (type) {
     case 'dmg':
@@ -449,6 +451,7 @@ function applyFx([type, x, y, v, id]) {
     case 'die':
       burst(x, y, '#fff', 18, 300, 8, 0.7); burst(x, y, BRAWLERS[BRAWLER_IDS[v]]?.color || '#fff', 18, 240, 7, 0.8);
       G.rings.push({ x, y, r0: 10, r1: 110, life: 0.5, max: 0.5, color: '#fff', w: 8 });
+      if (extra) killFx(extra, x, y);
       break;
     case 'slam':
       G.rings.push({ x, y, r0: 20, r1: v, life: 0.45, max: 0.45, color: '#ffd23f', w: 14 });
@@ -473,6 +476,15 @@ function applyFx([type, x, y, v, id]) {
       if (id === G.myId) showBanner('YOU ARE THE TARGET!', 'Everyone is hunting you. Survive!', '#ff6b81', 2500);
       break;
   }
+}
+
+// cosmetic kill effects (the killer's equipped one)
+function killFx(id, x, y) {
+  if (id === 'sparks') burst(x, y, '#ffe066', 24, 380, 4, 0.6);
+  else if (id === 'stars') for (let i = 0; i < 6; i++) G.texts.push({ x: x + (Math.random() - 0.5) * 80, y: y - 30 - Math.random() * 50, txt: '★', color: '#ffd23f', life: 0.9, max: 0.9, size: 26 });
+  else if (id === 'confetti') for (const c of ['#ff4d5e', '#4be06e', '#3a86ff', '#ffd23f', '#c04dff']) burst(x, y - 20, c, 6, 260, 5, 0.9);
+  else if (id === 'ghost') G.texts.push({ x, y: y - 40, txt: '👻', color: '#fff', life: 1.4, max: 1.4, size: 34 });
+  else if (id === 'bolt') { G.rings.push({ x, y, r0: 120, r1: 10, life: 0.35, max: 0.35, color: '#5ff4ff', w: 10, ink: true }); G.texts.push({ x, y: y - 60, txt: '⚡', color: '#5ff4ff', life: 0.8, max: 0.8, size: 40 }); }
 }
 
 function updateEffects(dt) {
@@ -662,7 +674,7 @@ function render(t) {
     const me = G.me;
     list.push({
       id: G.myId, x: mePos.x, y: mePos.y, hp: me.hp, mh: me.mh, cu: me.cu, facing: G.facing, fl: me.f, name: G.roster[G.myId]?.[0] || 'You',
-      brawler: G.brawler, moving: G.moving, stun: me.f & 2, me: true, bt: me.bt, glow: me.gl, cr: me.cr, size: moveStats(G.brawler, me.hp, me.mh).r / PLAYER_R,
+      brawler: G.brawler, moving: G.moving, stun: me.f & 2, me: true, skin: G.roster[G.myId]?.[3]?.skin, title: G.roster[G.myId]?.[3]?.title ? TITLES[G.roster[G.myId][3].title] : null, bt: me.bt, glow: me.gl, cr: me.cr, size: moveStats(G.brawler, me.hp, me.mh).r / PLAYER_R,
     });
   }
   list.sort((a, b) => a.y - b.y);
@@ -676,7 +688,7 @@ function render(t) {
     if (G.flash['dash' + p.id] > 0) {
       for (let i = 1; i <= 3; i++) R.drawBrawler(ctx, p.brawler, p.x - Math.cos(p.facing) * i * 22, p.y - Math.sin(p.facing) * i * 22, p.facing, t, { alpha: 0.18 * (4 - i), size: p.size });
     }
-    R.drawBrawler(ctx, p.brawler, p.x, p.y, p.facing, t, { alpha, moving: p.moving, flash: G.flash[p.id], size: p.size });
+    R.drawBrawler(ctx, p.brawler, p.x, p.y, p.facing, t, { alpha, moving: p.moving, flash: G.flash[p.id], size: p.size, skin: p.skin });
     R.drawBubble(ctx, p, t);
     if (p.fl & 512) R.drawSlowed(ctx, p.x, p.y, t);
     if (p.fl & 256) R.drawCage(ctx, p.x, p.y);

@@ -51,9 +51,12 @@ function render() {
   const p = ACC.user.progress, L = levelInfo(p.xp);
   bar.innerHTML = `<span class="chip lvl" title="${L.into}/${L.need} XP">LV ${L.level}<i style="width:${Math.round((L.into / L.need) * 100)}%"></i></span>
     <span class="chip">🏆 ${totalTrophies(p)}</span><span class="chip">🪙 ${p.coins} <small>test</small></span>
+    <button class="chip btn" id="lockerBtn">LOCKER</button><button class="chip btn" id="passBtn">HUNT PASS</button>
     <button class="chip btn" id="roadBtn">TROPHY ROAD${roadClaimable(p) ? ' <b class="dot"></b>' : ''}</button>
     <button class="chip btn" id="accBtn">${ACC.user.guest ? 'GUEST · SAVE PROGRESS' : '👤 ' + esc(ACC.user.username)}</button>`;
   $('roadBtn').onclick = openRoad;
+  $('lockerBtn').onclick = () => import('./locker.js').then((m) => m.openLocker());
+  $('passBtn').onclick = () => import('./locker.js').then((m) => m.openPass());
   $('accBtn').onclick = openAccount;
 }
 const roadClaimable = (p) => { const tt = totalTrophies(p); for (let at = ROAD_STEP; at <= tt; at += ROAD_STEP) if (!p.claimed.includes(at)) return true; return false; };
