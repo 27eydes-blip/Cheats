@@ -67,9 +67,9 @@ addEventListener('resize', resize);
 resize();
 
 // ------------------------------------------------------------------ prefs, stats, lobby
-const prefs = (() => { try { return JSON.parse(localStorage.getItem('hunt') || '{}'); } catch { return {}; } })();
+const prefs = (() => { try { const v = JSON.parse(localStorage.getItem('hunt') || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch { return {}; } })();
 const savePrefs = () => { try { localStorage.setItem('hunt', JSON.stringify(prefs)); } catch {} };
-prefs.stats ||= {}; // keyed by numeric world id (stable: WORLDS is append-only)
+if (!prefs.stats || typeof prefs.stats !== 'object') prefs.stats = {}; // keyed by numeric world id (stable: WORLDS is append-only)
 let selBrawler = BRAWLERS[prefs.brawler] ? prefs.brawler : 'volt';
 $('name').value = prefs.name || '';
 $('room').value = prefs.room || '';

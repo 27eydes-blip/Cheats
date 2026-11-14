@@ -10,6 +10,12 @@ import { startMusic, stopMusic } from './music.js';
 import { totalTrophies, levelInfo, missionState, msToReset, roadReward, ROAD_STEP } from '../progression.js';
 import { PASS, passTier } from '../catalog.js';
 import * as A from '../account.js';
+
+// storage can throw (Safari with cookies blocked, sandboxed frames): never let that kill the lobby
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
 import * as SC from './screens.js';
 
 export const ROLE_COL = { Balanced: 'var(--role-balanced)', Tank: 'var(--role-tank)', Sniper: 'var(--role-sniper)', Controller: 'var(--role-controller)', Trapper: 'var(--role-trapper)', Assassin: 'var(--role-assassin)' };
@@ -60,7 +66,7 @@ export function createLobby(api) {
     <div id="credit">Created by Sam Eyde III</div>`;
 
   const L = {
-    mode: localStorage.getItem('hunt-mode') || 'quick', t0: performance.now(), taunt: 0, twirl: 0, blinkAt: 2, raf: 0, visible: true,
+    mode: store.get('hunt-mode') || 'quick', t0: performance.now(), taunt: 0, twirl: 0, blinkAt: 2, raf: 0, visible: true,
   };
   if (!MODES_UI[L.mode]) L.mode = 'quick';
   const scene = new LobbyScene($('lobbyBg'));
@@ -127,7 +133,7 @@ export function createLobby(api) {
     $('pName').textContent = api.prefs.name || 'Hunter';
     $('pTro').textContent = totalTrophies(p);
     const guest = !A.ACC.user || A.ACC.user.guest;
-    $('guestChip').hidden = !guest || localStorage.getItem('hunt-guestchip') === 'x';
+    $('guestChip').hidden = !guest || store.get('hunt-guestchip') === 'x';
     $('npName').textContent = B.name; $('npRole').textContent = B.role.toUpperCase(); $('npRole').style.setProperty('--role-col', ROLE_COL[B.role]);
     const tro = p.trophies[id] | 0, pw = powerLevel(tro);
     $('npTro').textContent = tro; $('npPow').textContent = pw.level; $('npBar').style.width = `${Math.round(pw.frac * 100)}%`;
@@ -141,7 +147,7 @@ export function createLobby(api) {
     let roadReady = false; for (let at = ROAD_STEP; at <= tt; at += ROAD_STEP) if (roadReward(at) && !p.claimed.includes(at)) roadReady = true;
     const tier = passTier(p.pass.xp);
     const passReady = PASS.some((r) => r.tier <= tier && (!p.pass.claimed.includes(`free:${r.tier}`) || (p.pass.premium && !p.pass.claimed.includes(`premium:${r.tier}`))));
-    const seen = +(localStorage.getItem('hunt-seen-owned') || 0);
+    const seen = +(store.get('hunt-seen-owned') || 0);
     $('dot_road').hidden = !roadReady; $('dot_pass').hidden = !passReady; $('dot_locker').hidden = p.owned.length <= seen;
     $('dot_friends').hidden = true; $('dot_settings').hidden = true;
     // mode card
@@ -178,19 +184,19 @@ export function createLobby(api) {
     }
   });
   $('npName').closest('.nameplate').addEventListener('click', () => SC.openBrawlerSelect(api, refresh));
-  $('modeCard').addEventListener('click', () => SC.openModePicker(L.mode, (m) => { L.mode = m; localStorage.setItem('hunt-mode', m); refresh(); }));
+  $('modeCard').addEventListener('click', () => SC.openModePicker(L.mode, (m) => { L.mode = m; store.set('hunt-mode', m); refresh(); }));
   $('playBtn').addEventListener('click', () => {
     unlockAudio();
     const M = MODES_UI[L.mode];
     if (L.mode === 'free') api.startFree(); else api.startQuick({ mode: M.mode || '' });
   });
-  $('rail_locker').onclick = () => { localStorage.setItem('hunt-seen-owned', A.progress().owned.length); SC.openLocker(api, refresh); };
+  $('rail_locker').onclick = () => { store.set('hunt-seen-owned', A.progress().owned.length); SC.openLocker(api, refresh); };
   $('rail_pass').onclick = () => SC.openPass(refresh);
   $('rail_road').onclick = () => SC.openRoad(refresh);
   $('rail_friends').onclick = () => SC.openFriends(api);
   $('rail_settings').onclick = () => SC.openSettings(api, () => { resize(); refresh(); });
   $('profileCard').addEventListener('click', (e) => { if (e.target.closest('#guestChip')) return; SC.openProfile(api, refresh); });
-  $('guestChip').addEventListener('click', (e) => { if (e.target.id === 'guestX') { localStorage.setItem('hunt-guestchip', 'x'); refresh(); } else SC.openProfile(api, refresh, true); });
+  $('guestChip').addEventListener('click', (e) => { if (e.target.id === 'guestX') { store.set('hunt-guestchip', 'x'); refresh(); } else SC.openProfile(api, refresh, true); });
   $('tbMissions').onclick = () => SC.openMissions(refresh);
   $('coinPlus').onclick = $('gemPlus').onclick = () => SC.openEarnInfo();
 
