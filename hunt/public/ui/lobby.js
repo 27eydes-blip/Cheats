@@ -49,7 +49,7 @@ export function createLobby(api) {
         <div class="guestchip" id="guestChip" hidden><span>Guest · save progress</span><button id="guestX" aria-label="Dismiss">✕</button></div>
       </div>
       <div class="rail">
-        ${[['locker', 'LOCKER'], ['pass', 'HUNT PASS'], ['road', 'TROPHY ROAD'], ['friends', 'FRIENDS'], ['settings', 'SETTINGS']].map(([k, l]) =>
+        ${[['armory', 'ARMORY'], ['locker', 'LOCKER'], ['pass', 'HUNT PASS'], ['road', 'TROPHY ROAD'], ['friends', 'FRIENDS'], ['settings', 'SETTINGS']].map(([k, l]) =>
           `<button class="btn btn-sm railbtn" id="rail_${k}">${icon(k)}<span>${l}</span><span class="dot" id="dot_${k}" hidden></span></button>`).join('')}
       </div>
     </div>
@@ -211,6 +211,7 @@ export function createLobby(api) {
     const M = MODES_UI[L.mode];
     if (L.mode === 'free') api.startFree(); else api.startQuick({ mode: M.mode || '' });
   });
+  $('rail_armory').onclick = () => SC.openArmory(api, refresh);
   $('rail_locker').onclick = () => { store.set('hunt-seen-owned', A.progress().owned.length); SC.openLocker(api, refresh); };
   $('rail_pass').onclick = () => SC.openPass(refresh);
   $('rail_road').onclick = () => SC.openRoad(refresh);

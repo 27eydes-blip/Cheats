@@ -6,6 +6,19 @@ import { sfx } from '../audio.js';
 import { icon } from './icons.js';
 import { rewardBurst } from './fx.js';
 import { levelInfo } from '../progression.js';
+import { WEAPONS } from '../weapons.js';
+import { SKINS, TITLES, EMOTES } from '../catalog.js';
+// what a level-up or a mastery-up gave you, in a line each
+function upsText(m) {
+  const out = [];
+  for (const r of m.levels || []) {
+    const bits = [`${r.coins} coins`, ...(r.weapons || []).map((w) => `weapon: ${WEAPONS[w].name}`), ...(r.emotes || []).map((e) => `emote: ${EMOTES.find((x) => x.id === e)?.text}`)];
+    if (r.skin) bits.push(`skin: ${SKINS[r.skin].name}`); if (r.title) bits.push(`title: ${TITLES[r.title]}`);
+    out.push(`<div><b>LEVEL ${r.level}!</b> ${bits.map(esc).join(' · ')}</div>`);
+  }
+  for (const x of m.mastery || []) out.push(`<div><b>${esc(WEAPONS[x.id]?.name || x.id)} MASTERY ${x.level}</b>${[2, 5, 8].includes(x.level) ? ' · pick a perk in the Armory' : ''}</div>`);
+  return out.slice(-4).join('');
+}
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -90,7 +103,7 @@ export function createResults({ onAgain, onLobby }) {
   el.innerHTML = `<div class="left"><div class="title rank" id="rsRank">#1</div><canvas class="posecv" id="pose"></canvas></div>
     <div class="right"><div class="rmsg" id="rsMsg"></div><div id="mvp" hidden></div>
       <div class="gain"><span class="cur">${icon('trophy')}<b id="rsTro">+0</b></span><span class="cur">${icon('star')}<b id="rsBounty">0</b><small>BOUNTY</small></span><span class="cur">${icon('skull')}<b id="rsKo">0</b><small>KO</small></span></div>
-      <div class="xp">LV <b id="rsLv">1</b><div class="bar shine"><i id="rsXp" style="width:0%"></i></div><span id="rsXpN">+0 XP</span></div>
+      <div class="xp">LV <b id="rsLv">1</b><div class="bar shine"><i id="rsXp" style="width:0%"></i></div><span id="rsXpN">+0 XP</span></div><div class="lvups" id="rsUps"></div>
       <ol class="rlist" id="results"></ol>
       <div class="btns"><button class="btn btn-md alt" id="rsLobby">LOBBY</button><button class="btn btn-lg again" id="rsAgain" data-sfx="play">PLAY AGAIN</button></div></div>`;
   document.body.appendChild(el);
@@ -106,6 +119,7 @@ export function createResults({ onAgain, onLobby }) {
     const L = levelInfo(m.progress.xp), before = levelInfo(Math.max(0, m.progress.xp - m.xp));
     count($('rsTro'), 0, m.delta, 900, (v) => (v >= 0 ? '+' : '') + v);
     $('rsLv').textContent = L.level; $('rsXpN').textContent = `+${m.xp} XP`;
+    $('rsUps').innerHTML = upsText(m);
     const bar = $('rsXp');
     bar.style.transition = 'none'; bar.style.width = `${L.level > before.level ? 0 : Math.round((before.into / before.need) * 100)}%`;
     requestAnimationFrame(() => { bar.style.transition = 'width 1.2s cubic-bezier(.2,.8,.3,1)'; bar.style.width = `${Math.round((L.into / L.need) * 100)}%`; });
@@ -125,7 +139,7 @@ export function createResults({ onAgain, onLobby }) {
       setTimeout(() => sfx('uislam'), 120);
       $('rsMsg').textContent = ctx.msg;
       count($('rsBounty'), 0, m.bounty, 900); count($('rsKo'), 0, m.kills, 700);
-      $('rsTro').textContent = '…'; $('rsXpN').textContent = '';
+      $('rsTro').textContent = '…'; $('rsXpN').textContent = ''; $('rsUps').innerHTML = '';
       const mvp = m.results.reduce((b, r) => (!b || r[6] > b[6] ? r : b), null);
       $('mvp').hidden = !mvp || mvp[6] <= 0;
       if (mvp) $('mvp').innerHTML = `👑 TOP BOUNTY HUNTER <b>${esc(mvp[0])}</b> ★${mvp[6]}`;

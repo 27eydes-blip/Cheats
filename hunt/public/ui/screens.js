@@ -10,7 +10,8 @@ import { drawModePreview } from './scenes.js';
 import { setMusicVolume } from './music.js';
 import * as A from '../account.js';
 import { SKINS, KILL_FX, TITLES, TITLE_PRICE, PASS, PASS_TIERS, PASS_XP_PER_TIER, PREMIUM_PRICE, CURRENCY, passTier } from '../catalog.js';
-import { totalTrophies, roadReward, ROAD_STEP, missionState, msToReset } from '../progression.js';
+import { totalTrophies, roadReward, ROAD_STEP, missionState, msToReset, levelInfo, levelReward, weaponUnlocked } from '../progression.js';
+import { WEAPONS, WEAPON_IDS, WEAPON_CLASSES, weaponStats, withPerks, masteryInfo, MASTERY_SKINS, PERKS } from '../weapons.js';
 import { EVENTS, EVENT_IDS } from '../events/index.js';
 
 const INK = '#1b1033';
@@ -332,14 +333,22 @@ export function openSettings(api, onDone) {
   S.body.innerHTML = `<div class="card-a" style="padding:16px;max-width:620px;margin:0 auto"><div class="settings-list">
     ${icon('music')}<label>MUSIC <input type="range" class="slider" id="volMusic" min="0" max="1" step="0.05"></label>
     ${icon('speaker')}<label>SOUND EFFECTS <input type="range" class="slider" id="volSfx" min="0" max="1" step="0.05"></label>
-    <span></span><div id="setSlot" style="display:flex;flex-direction:column;gap:10px"></div></div>
-    <p class="hint">Reduce Flashing removes flashes, strobes and screen shake. Low Graphics turns off the moving lobby background, particles, shadows and slime animation.</p>
+    <span></span><div id="setSlot" style="display:flex;flex-direction:column;gap:10px"></div>
+    ${icon('target')}<label>AIM SENSITIVITY <input type="range" class="slider" id="setSens" min="0.5" max="2" step="0.05"></label>
+    <span></span><div style="display:flex;flex-direction:column;gap:10px">
+      <label class="opt"><input type="checkbox" id="setLeft"> Left-handed controls (aim on the left)</label>
+      <label class="opt"><input type="checkbox" id="setHold"> Hold to fire (instead of fire on release)</label></div></div>
+    <p class="hint">Reduce Flashing removes flashes, strobes and screen shake. Low Graphics turns off the moving lobby background, particles, shadows and slime animation. Hold to fire keeps shooting while your thumb is on the aim stick.</p>
     <p style="color:var(--gold);font-family:var(--font)">Created by Sam Eyde III</p></div>`;
   for (const id of ['setSound', 'setFlash', 'setLow']) { const l = $(id).closest('label') || $(id); $('setSlot').appendChild(l); }
   $('volMusic').value = SETTINGS.musicVol ?? 0.6; $('volSfx').value = SETTINGS.sfxVol ?? 0.9;
   $('volMusic').oninput = (e) => { setSetting('musicVol', +e.target.value); setMusicVolume(); };
   $('volSfx').oninput = (e) => { setSetting('sfxVol', +e.target.value); };
   $('volSfx').onchange = () => sfx('click');
+  $('setSens').value = SETTINGS.aimSens ?? 1; $('setLeft').checked = !!SETTINGS.leftHanded; $('setHold').checked = !!SETTINGS.holdFire;
+  $('setSens').oninput = (e) => setSetting('aimSens', +e.target.value);
+  $('setLeft').onchange = (e) => { setSetting('leftHanded', e.target.checked); dispatchEvent(new Event('resize')); };
+  $('setHold').onchange = (e) => setSetting('holdFire', e.target.checked);
 }
 
 export function openFriends(api) {
@@ -373,4 +382,52 @@ export function openEarnInfo() {
   popup(`<div class="title" style="font-size:calc(var(--u)*3)">TEST CURRENCY</div>
     <p class="outlined" style="color:#fff;font-size:calc(var(--u)*1.8)">${icon('coin')} Coins and ${icon('gem')} gems are <b>test currency</b> — there are no real payments.</p>
     <p class="outlined" style="color:#fff;font-size:calc(var(--u)*1.6)">Earn them from daily missions, the Hunt Pass and the Trophy Road.</p><button class="btn btn-md" data-close>GOT IT</button>`);
+}
+
+// ======================================================================= ARMORY
+// Pick the ONE secondary weapon you carry next to your brawler's signature attack. Each weapon
+// shows its stats, mastery (skins, badge, kill effect) and the perk picks at mastery 2, 5 and 8.
+const RAR_COL = { common: '#cfc3ff', rare: '#5ff4ff', epic: '#ff6bd6' };
+export function openArmory(api, onDone) {
+  const S = screen('ARMORY', `<div class="cur">LV <b id="arLv">1</b></div>`, onDone);
+  let sel = A.progress().loadout?.w2 || 'stormline';
+  S.body.innerHTML = `<div class="locker armory"><div class="card-a preview" id="arInfo"></div><div class="items"><div class="chips" id="arHint"></div><div class="pedestals" id="arItems"></div></div></div>`;
+  const bar = (label, v, txt) => `<div class="statrow"><span>${label}</span><div class="bar shine"><i style="width:${Math.round(Math.max(0.04, v) * 100)}%"></i></div><b>${txt}</b></div>`;
+  const render = () => {
+    const p = A.progress(), lv = levelInfo(p.xp).level, eq = p.loadout?.w2 || null;
+    $('arLv').textContent = lv;
+    $('arHint').innerHTML = `<span class="hint" style="margin:0">Carry ONE secondary. Swap in a match with the ⇄ button (R / Tab on a keyboard). Free Play crates can drop more.</span>`;
+    $('arItems').innerHTML = WEAPON_IDS.map((id) => {
+      const w = WEAPONS[id], ok = weaponUnlocked(p, id), m = masteryInfo(p.mastery?.[id] || 0).level;
+      return `<div class="card-a ped tap ${id === sel ? 'on' : ''}" data-w="${id}"><canvas data-wpn="${id}"></canvas><span style="color:${RAR_COL[w.rarity]}">${esc(w.name)}</span>
+        <span class="tag" style="color:#fff">${ok ? (eq === id ? '★ EQUIPPED' : 'MASTERY ' + m) : icon('lock') + ' LEVEL ' + w.unlock}</span></div>`;
+    }).join('');
+    for (const c of $('arItems').children) c.onclick = () => { sel = c.dataset.w; sfx('click'); render(); };
+    // detail panel
+    const w = WEAPONS[sel], st = weaponStats(sel), ok = weaponUnlocked(p, sel), mi = masteryInfo(p.mastery?.[sel] || 0), mine = p.perks?.[sel] || [];
+    const skin = [...MASTERY_SKINS].reverse().find((s) => mi.level >= s.lvl);
+    $('arInfo').innerHTML = `<canvas id="arPrev" style="max-height:28%"></canvas>
+      <div class="title" style="font-size:calc(var(--u)*2.6)">${esc(w.name)}</div>
+      <div style="font-family:var(--font);color:${RAR_COL[w.rarity]};font-size:calc(var(--u)*1.5)">${WEAPON_CLASSES[w.cls].toUpperCase()} · ${w.rarity.toUpperCase()}</div>
+      <p class="hint" style="margin:4px 0">${esc(w.desc)}</p>
+      <div class="stats">${bar('DAMAGE', st.bars.damage, Math.round(st.damage))}${bar('FIRE RATE', st.bars.fireRate, st.fireRate.toFixed(1) + '/s')}${bar('RANGE', st.bars.range, Math.round(st.range))}${bar('RELOAD', st.bars.reload, st.reload.toFixed(2) + 's')}${bar('SPREAD', st.bars.spread, Math.round(st.spread * 57.3) + '°')}</div>
+      <div class="statrow" style="margin-top:6px"><span>MASTERY ${mi.level}/10</span><div class="bar shine"><i style="width:${mi.need ? Math.round((mi.into / mi.need) * 100) : 100}%;background:${skin ? skin.col : ''}"></i></div><b>${skin ? skin.name : '—'}</b></div>
+      <div class="perks">${Object.entries(PERKS).map(([tier, opts]) => `<div class="perkrow"><span>M${tier}</span>${opts.map((o) => `<button class="chipbtn ${mine.includes(o.id) ? 'on' : ''}" data-tier="${tier}" data-perk="${o.id}" ${mi.level < +tier ? 'disabled' : ''} title="${esc(o.desc)}">${esc(o.name)}</button>`).join('')}</div>`).join('')}</div>
+      <p class="hint" style="margin:2px 0">Bronze at mastery 3, Silver 6, Gold 9, animated Hunter's Bane at 10. Mastery 7 adds a kill effect.</p>
+      ${ok ? (p.loadout?.w2 === sel ? '<button class="btn btn-md alt" id="arUn">UNEQUIP</button>' : '<button class="btn btn-md" id="arEq">EQUIP</button>') : `<button class="btn btn-md alt" disabled>${icon('lock')} REACH LEVEL ${w.unlock}</button>`}`;
+    $('arEq')?.addEventListener('click', () => guard(async () => { await A.shop({ action: 'loadout', w2: sel }); sfx('reward'); render(); }));
+    $('arUn')?.addEventListener('click', () => guard(async () => { await A.shop({ action: 'loadout', w2: null }); render(); }));
+    for (const b of $('arInfo').querySelectorAll('[data-perk]')) b.onclick = () => guard(async () => { await A.shop({ action: 'perk', weapon: sel, tier: +b.dataset.tier, id: b.dataset.perk }); sfx('click'); render(); });
+  };
+  render();
+  S.loop((t) => {
+    for (const cv of S.el.querySelectorAll('canvas[data-wpn]')) { const c = fitCanvas(cv); R.drawWeaponDrop(c.g, c.w / 2, c.h / 2, cv.dataset.wpn, WEAPONS[cv.dataset.wpn].rarity !== 'common' ? 1 : 0, t); }
+    const pv = $('arPrev'); if (!pv) return;
+    const c = fitCanvas(pv), mi = masteryInfo(A.progress().mastery?.[sel] || 0), skin = [...MASTERY_SKINS].reverse().find((s) => mi.level >= s.lvl);
+    c.g.save(); c.g.translate(c.w / 2, c.h / 2); c.g.scale(1.8, 1.8); R.drawWeaponDrop(c.g, 0, 0, sel, 1, t); c.g.restore();
+    // a test shot across the preview, tinted by your mastery skin
+    const k = (t * 0.8) % 1, x = c.w * 0.1 + k * c.w * 0.8;
+    R.drawShotTrail(c.g, sel, 32 + WEAPON_IDS.indexOf(sel), x, c.h * 0.85, 0, skin ? R.masteryTint(skin.id, t) : null);
+    R.drawShot(c.g, sel, 32 + WEAPON_IDS.indexOf(sel), x, c.h * 0.85, 0, '#fff', t);
+  });
 }

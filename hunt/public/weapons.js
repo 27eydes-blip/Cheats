@@ -35,8 +35,8 @@ export const MAX_SHOTS_PER_SEC = 16; // server anti-cheat cap on trigger pulls
 export const AIM_ASSIST = 6 * Math.PI / 180; // bullets nudge toward an enemy within 6 degrees (never snipers)
 export const LAG_COMP_TICKS = 3; // the server rewinds targets up to 150ms (3 ticks) for hit checks
 export const weaponIndex = (id) => WEAPON_IDS.indexOf(id);
-// projectile kind ids sent to clients: 0..5 brawler signatures, 16+ weapons
-export const WKIND = 16;
+// projectile kind ids sent to clients: 0..5 brawler signatures, 20 cage, 32+ weapons
+export const WKIND = 32; // (20 is the cage from Rook's super)
 export const weaponOfKind = (k) => (k >= WKIND ? WEAPON_IDS[k - WKIND] : null);
 
 // stats shown in the armory (0..1 bars + readable numbers)

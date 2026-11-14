@@ -4,6 +4,7 @@ import { STICK_R } from './input.js';
 import { SETTINGS, pulse } from './settings.js';
 import { SKINS } from './catalog.js';
 import { drawHunter, HUNTER_PAL, HEAD } from './art/hunters.js';
+import { WEAPON_IDS, WKIND } from './weapons.js';
 
 export const INK = '#1b1033';
 export const FONT = '"Lilita One", "Arial Black", system-ui, sans-serif';
@@ -899,6 +900,7 @@ export function drawStatus(ctx, p, isMe, t, side) {
   const y = p.y - 58 * (p.size || 1) - 4;
   const w = 74, h = 15;
   outlinedText(ctx, p.name, p.x, y - (p.title ? 30 : 16), 15, isMe ? '#b8ff6b' : (p.fl & 32) ? '#ff8a9a' : '#fff');
+  if (p.badge) { ctx.font = '15px ' + FONT; drawBadge(ctx, p.badge, p.x - ctx.measureText(p.name).width / 2 - 11, y - (p.title ? 30 : 16) - 1, t); } // MASTERY badge
   if (p.title) outlinedText(ctx, p.title, p.x, y - 15, 11, '#ffd23f');
   rr(ctx, p.x - w / 2 - 2, y - h / 2 - 2, w + 4, h + 4, 7); ctx.fillStyle = INK; ctx.fill();
   const f = Math.max(0, Math.min(1, p.hp / p.mh));
@@ -1053,3 +1055,137 @@ export function drawPortrait(canvas, id) {
 }
 
 export { BRAWLER_IDS, attackDirs };
+
+// ================================================================ COMBAT UPGRADE: weapons on screen
+// projectile look + trail per weapon (no per-bullet gradients: cheap enough for 20 players firing)
+export const WEAPON_LOOK = {
+  stormline: { c1: '#fff3b0', c2: '#ffb000', shape: 'round', trail: ['#ffd23f', 40, 4] },
+  ratchet: { c1: '#ffe0a0', c2: '#ff7b39', shape: 'round', trail: ['#ff9b4a', 30, 3] },
+  breaker: { c1: '#fff', c2: '#c9ccd4', shape: 'pellet', trail: ['#e8e4ff', 16, 3] },
+  slugger: { c1: '#ffd9a0', c2: '#b0582a', shape: 'slug', trail: ['#ffb36b', 26, 7] },
+  longshot: { c1: '#ffffff', c2: '#5ff4ff', shape: 'needle', trail: ['#c9fbff', 130, 3] },
+  needle: { c1: '#f2f2ff', c2: '#9b6bff', shape: 'needle', trail: ['#c9a6ff', 80, 2] },
+  hornet: { c1: '#fff7c0', c2: '#ffd23f', shape: 'pellet', trail: ['#ffe066', 18, 2] },
+  viper: { c1: '#d4ff7a', c2: '#3fbf4a', shape: 'dart', trail: ['#7dff7a', 26, 3] },
+  thumper: { c1: '#9aa0b0', c2: '#3d4250', shape: 'grenade', trail: null },
+  rocketeer: { c1: '#ffd23f', c2: '#c44a3a', shape: 'rocket', trail: ['#8a8590', 46, 9] },
+  cleaver: { c1: '#eef', c2: '#8a8fa0', shape: 'round', trail: null },
+  spear: { c1: '#eef', c2: '#8a8fa0', shape: 'round', trail: null },
+  arcgun: { c1: '#ffffff', c2: '#5ff4ff', shape: 'bolt', trail: ['#5ff4ff', 50, 3] },
+  frost: { c1: '#ffffff', c2: '#8fd8ff', shape: 'frost', trail: ['#cdefff', 34, 8] },
+  flare: { c1: '#fff0a0', c2: '#ff3b2f', shape: 'flare', trail: ['#ff7b5a', 40, 5] },
+};
+const lookOf = (kind) => (kind >= WKIND ? WEAPON_LOOK[WEAPON_IDS[kind - WKIND]] : null);
+
+// trail behind any projectile (signature kinds by name, weapons by number)
+export function drawShotTrail(ctx, kindName, kindNum, x, y, ang, skin) {
+  const look = lookOf(kindNum);
+  const tr = look ? look.trail : TRAIL[kindName] ? [TRAIL[kindName][0], TRAIL[kindName][1], kindName === 'dune' ? 14 : 7] : null;
+  if (!tr) return;
+  const [col, len, w] = tr, cx = Math.cos(ang), cy = Math.sin(ang);
+  ctx.save(); ctx.lineCap = 'round'; ctx.strokeStyle = skin || col;
+  ctx.globalAlpha = 0.28; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x - cx * len, y - cy * len); ctx.lineTo(x, y); ctx.stroke();
+  ctx.globalAlpha = 0.7; ctx.lineWidth = Math.max(1.5, w * 0.6); ctx.beginPath(); ctx.moveTo(x - cx * len * 0.45, y - cy * len * 0.45); ctx.lineTo(x, y); ctx.stroke();
+  ctx.restore();
+}
+export function drawShot(ctx, kindName, kindNum, x, y, ang, rim, t = 0) {
+  const look = lookOf(kindNum);
+  if (!look) return drawBullet(ctx, kindName, x, y, ang, rim);
+  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.lineWidth = 2.5; ctx.strokeStyle = INK;
+  const { c1, c2, shape } = look;
+  if (shape === 'pellet') { ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, 7); ctx.fillStyle = c2; ctx.fill(); ctx.stroke(); }
+  else if (shape === 'slug') { rr(ctx, -10, -7, 18, 14, 6); ctx.fillStyle = c2; ctx.fill(); ctx.stroke(); rr(ctx, -2, -4, 8, 8, 3); ctx.fillStyle = c1; ctx.fill(); }
+  else if (shape === 'needle') { ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-14, -3); ctx.lineTo(-14, 3); ctx.closePath(); ctx.fillStyle = c1; ctx.fill(); ctx.stroke(); ctx.fillStyle = c2; ctx.fillRect(-14, -1.5, 18, 3); }
+  else if (shape === 'dart') { ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-8, -4); ctx.lineTo(-5, 0); ctx.lineTo(-8, 4); ctx.closePath(); ctx.fillStyle = c2; ctx.fill(); ctx.stroke(); }
+  else if (shape === 'grenade') { ctx.rotate(t * 9); ctx.beginPath(); ctx.arc(0, 0, 11, 0, 7); ctx.fillStyle = c2; ctx.fill(); ctx.stroke(); ctx.fillStyle = '#ff4d3a'; ctx.fillRect(-2, -13, 4, 5); ctx.strokeStyle = c1; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke(); }
+  else if (shape === 'rocket') { rr(ctx, -14, -6, 26, 12, 5); ctx.fillStyle = c2; ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(12, -6); ctx.lineTo(20, 0); ctx.lineTo(12, 6); ctx.closePath(); ctx.fillStyle = c1; ctx.fill(); ctx.stroke(); if (!SETTINGS.reduceFlash) { ctx.fillStyle = '#ffb000'; ctx.beginPath(); ctx.moveTo(-14, -4); ctx.lineTo(-24 - Math.random() * 6, 0); ctx.lineTo(-14, 4); ctx.fill(); } }
+  else if (shape === 'bolt') { ctx.strokeStyle = c2; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-6, -5); ctx.lineTo(0, 4); ctx.lineTo(8, -3); ctx.lineTo(14, 0); ctx.stroke(); ctx.strokeStyle = c1; ctx.lineWidth = 1.5; ctx.stroke(); }
+  else if (shape === 'frost') { ctx.beginPath(); ctx.arc(0, 0, 13, 0, 7); ctx.fillStyle = c2; ctx.fill(); ctx.stroke(); ctx.strokeStyle = c1; ctx.lineWidth = 2; ctx.beginPath(); for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; ctx.moveTo(Math.cos(a) * 9, Math.sin(a) * 9); ctx.lineTo(-Math.cos(a) * 9, -Math.sin(a) * 9); } ctx.stroke(); }
+  else if (shape === 'flare') { ctx.beginPath(); ctx.arc(0, 0, 8, 0, 7); ctx.fillStyle = c2; ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.arc(0, 0, 4, 0, 7); ctx.fillStyle = c1; ctx.fill(); }
+  else { rr(ctx, -9, -5, 16, 10, 5); ctx.fillStyle = c2; ctx.fill(); ctx.stroke(); rr(ctx, -3, -2.5, 8, 5, 2.5); ctx.fillStyle = c1; ctx.fill(); }
+  ctx.restore();
+}
+
+// AIM LINE with the exact range and spread of what you're holding:
+// a cone for shotguns and spread, a thin line for snipers, an arc for melee, a landing ring for throws
+// prof: { range, cone (half-angle), width, thin, melee:{arc,range}, land:{blast, dist} }
+export function drawAimProfile(ctx, prof, x, y, ang, mag) {
+  ctx.save(); ctx.translate(x, y);
+  ctx.fillStyle = 'rgba(255,255,255,0.26)'; ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  if (prof.melee) { ctx.moveTo(0, 0); ctx.arc(0, 0, prof.melee.range, ang - prof.melee.arc / 2, ang + prof.melee.arc / 2); ctx.closePath(); }
+  else if (prof.land) { const d = prof.range * Math.max(0.15, Math.min(1, mag ?? 1)); ctx.arc(Math.cos(ang) * d, Math.sin(ang) * d, prof.land.blast, 0, Math.PI * 2); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(ang) * d, Math.sin(ang) * d); }
+  else if (prof.cone > 0.02) { ctx.moveTo(0, 0); ctx.arc(0, 0, prof.range, ang - prof.cone, ang + prof.cone); ctx.closePath(); }
+  else { ctx.rotate(ang); const w = prof.thin ? 2.5 : prof.width; rr(ctx, PLAYER_R * 0.6, -w, prof.range, w * 2, w); }
+  ctx.fill(); ctx.stroke();
+  if (!prof.melee && !prof.land) { // the exact range: a tick at the end
+    ctx.beginPath();
+    const ex = Math.cos(ang) * prof.range, ey = Math.sin(ang) * prof.range, nx = -Math.sin(ang) * 10, ny = Math.cos(ang) * 10;
+    ctx.moveTo(ex - nx, ey - ny); ctx.lineTo(ex + nx, ey + ny); ctx.lineWidth = 3; ctx.strokeStyle = '#ffd23f'; ctx.stroke();
+  }
+  if (prof.charge) { ctx.beginPath(); ctx.arc(0, 0, 40, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * prof.charge); ctx.lineWidth = 5; ctx.strokeStyle = prof.charge >= 1 ? '#ff2d6a' : '#5ff4ff'; ctx.stroke(); }
+  ctx.restore();
+}
+
+// SWAP button (secondary weapon): name, ammo pips, swap progress
+export function drawSwapButton(ctx, btn, info, t) {
+  if (!btn || !info) return;
+  ctx.save();
+  ctx.beginPath(); ctx.arc(btn.x, btn.y, btn.r, 0, Math.PI * 2);
+  ctx.fillStyle = info.active ? 'rgba(255,210,63,0.92)' : 'rgba(30,16,51,0.85)'; ctx.fill();
+  ctx.lineWidth = 3.5; ctx.strokeStyle = INK; ctx.stroke();
+  if (info.swap > 0) { ctx.beginPath(); ctx.arc(btn.x, btn.y, btn.r - 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - info.swap / 0.4)); ctx.lineWidth = 4; ctx.strokeStyle = '#5ff4ff'; ctx.stroke(); }
+  outlinedText(ctx, info.active ? info.sigName : info.name, btn.x, btn.y - 2, 9.5, info.active ? INK : '#fff', info.active ? '#ffd23f' : INK);
+  outlinedText(ctx, '⇄', btn.x, btn.y + 11, 10, '#fff');
+  ctx.restore();
+}
+// weapon ammo pips under your brawler when the secondary is out
+export function drawWeaponAmmo(ctx, x, y, ammo, max) {
+  const n = Math.min(max, 16), w = Math.max(4, Math.min(14, 66 / n)), gap = 2, total = n * w + (n - 1) * gap;
+  for (let i = 0; i < n; i++) {
+    const f = Math.max(0, Math.min(1, ammo - i));
+    rr(ctx, x - total / 2 + i * (w + gap), y + 44, w, 6, 2); ctx.fillStyle = INK; ctx.fill();
+    if (f > 0) { rr(ctx, x - total / 2 + i * (w + gap), y + 44, w * f, 6, 2); ctx.fillStyle = f >= 1 ? '#5ff4ff' : '#2b7a8a'; ctx.fill(); }
+  }
+}
+// HIT MARKER: an X on the aim point (white hit, red kill, gold critical)
+export function drawHitMarker(ctx, x, y, k, kind) {
+  const s = 9 + (1 - k) * 6, col = kind === 'kill' ? '#ff2846' : kind === 'crit' ? '#ffd23f' : '#ffffff';
+  ctx.save(); ctx.globalAlpha = Math.min(1, k * 2); ctx.lineCap = 'round';
+  for (const [w, c] of [[6, INK], [3, col]]) { ctx.lineWidth = w; ctx.strokeStyle = c; ctx.beginPath(); for (const [a, b] of [[-1, -1], [1, -1]]) { ctx.moveTo(x + a * s, y + b * s); ctx.lineTo(x + a * s * 0.35, y + b * s * 0.35); ctx.moveTo(x - a * s, y - b * s); ctx.lineTo(x - a * s * 0.35, y - b * s * 0.35); } ctx.stroke(); }
+  ctx.restore();
+}
+// Flare Gun light: a warm circle on the ground (cuts through darkness, see world-fx)
+export function drawFlare(ctx, x, y, r, k) {
+  ctx.save(); ctx.globalAlpha = 0.18 + 0.12 * Math.min(1, k);
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = '#ff6a3a'; ctx.fill();
+  ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.fillStyle = '#fff0a0'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
+  ctx.restore();
+}
+
+// MASTERY BADGE next to a name: bronze / silver / gold, and the animated Hunter's Bane
+const BADGE_COL = { bronze: ['#c07a3a', '#f0b070'], silver: ['#a9b2c4', '#eef3ff'], gold: ['#e0a92a', '#fff0a0'], bane: ['#3a0f2a', '#ff2d6a'] };
+export function drawBadge(ctx, id, x, y, t = 0) {
+  const c = BADGE_COL[id];
+  if (!c) return;
+  ctx.save(); ctx.translate(x, y);
+  ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 - Math.PI / 2; ctx.lineTo(Math.cos(a) * 8, Math.sin(a) * 8); } ctx.closePath();
+  ctx.fillStyle = c[0]; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
+  const glow = id === 'bane' && !SETTINGS.reduceFlash ? 0.6 + 0.4 * Math.sin(t * 5) : 1;
+  ctx.globalAlpha = glow; ctx.beginPath(); ctx.moveTo(0, -4.5); ctx.lineTo(3.5, 0); ctx.lineTo(0, 4.5); ctx.lineTo(-3.5, 0); ctx.closePath(); ctx.fillStyle = c[1]; ctx.fill();
+  ctx.restore();
+}
+// a WEAPON lying on the ground (Free Play crate drop). Rare and epic ones glow.
+export function drawWeaponDrop(ctx, x, y, id, rare, t) {
+  const look = WEAPON_LOOK[id] || WEAPON_LOOK.stormline, bob = Math.sin(t * 3 + x) * 3;
+  ctx.save(); ctx.translate(x, y + bob);
+  if (rare) { ctx.globalAlpha = SETTINGS.reduceFlash ? 0.35 : 0.25 + 0.15 * Math.sin(t * 4); ctx.beginPath(); ctx.arc(0, 0, 30, 0, 7); ctx.fillStyle = look.c2; ctx.fill(); ctx.globalAlpha = 1; }
+  ctx.beginPath(); ctx.ellipse(0, 16 - bob, 18, 5, 0, 0, 7); ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fill();
+  ctx.rotate(-0.25); ctx.lineWidth = 3; ctx.strokeStyle = INK;
+  rr(ctx, -18, -5, 30, 10, 3); ctx.fillStyle = '#3d4250'; ctx.fill(); ctx.stroke(); // body
+  rr(ctx, 10, -3, 12, 6, 2); ctx.fillStyle = look.c2; ctx.fill(); ctx.stroke(); // barrel
+  rr(ctx, -12, 3, 7, 10, 2); ctx.fillStyle = '#2a2433'; ctx.fill(); ctx.stroke(); // grip
+  ctx.restore();
+}
+// mastery weapon skin tint for a bullet's trail (Bronze/Silver/Gold/Bane)
+export const masteryTint = (id, t) => (id === 'bane' ? (SETTINGS.reduceFlash || Math.sin(t * 8) > 0 ? '#ff2d6a' : '#9b1a4a') : BADGE_COL[id] ? BADGE_COL[id][1] : null);

@@ -12,7 +12,7 @@ import {
 import { EVENTS, pickEvent } from '../public/events/index.js';
 import { MODES } from './modes.js';
 import { botInput, levelForTrophies } from './bots.js';
-import { WEAPONS, WEAPON_IDS, withPerks, shotAngles, stepShot, SWAP_TIME, MAX_SHOTS_PER_SEC, AIM_ASSIST, LAG_COMP_TICKS, WKIND, weaponIndex, STARTER_WEAPONS } from '../public/weapons.js';
+import { WEAPONS, WEAPON_IDS, withPerks, shotAngles, stepShot, SWAP_TIME, MAX_SHOTS_PER_SEC, AIM_ASSIST, LAG_COMP_TICKS, WKIND, weaponIndex, STARTER_WEAPONS, CLASS_FX } from '../public/weapons.js';
 
 const r2 = (v) => Math.round(v * 100) / 100;
 const W2C = new Map(); // weapon + perks -> stats (memo)
@@ -68,6 +68,7 @@ export class Sim {
     this.flares = []; // Flare Gun reveals {x, y, r, t}
     this.cubes = [];
     this.crystals = [];
+    this.wdrops = []; // Free Play: weapons dropped by broken crates {id, x, y, w, rare, t}
     this.mines = [];
     this.delayed = []; // timed effects (sand-worm eruptions)
     this.wallsToRestore = []; // Shifting Walls tiles that were occupied when the event ended
@@ -163,7 +164,7 @@ export class Sim {
       // combat upgrade: secondary weapon (w2) + active slot (0 = signature), swap timer, lag
       // compensation rewind (ticks), position history, hit markers, assists, steals, per-weapon stats
       w2: null, slot: 0, swapT: 0, rw: 0, hx: new Float32Array(8), hy: new Float32Array(8), hm: 0,
-      assists: 0, steals: 0, wstat: {}, shotLog: [], poison: null, flareT: 0,
+      assists: 0, steals: 0, wstat: {}, shotLog: [], poison: null, flareT: 0, emotes: [0, 1],
     };
     if (state) for (const k of CARRY) if (state[k] !== undefined) p[k] = state[k];
     while (this.players.has(p.id)) p.id = newId();
@@ -181,6 +182,18 @@ export class Sim {
     p.w2 = { id, perks, ammo: w.ammo, reloadP: 0, cd: 0, lastFire: -99 };
     if (p.slot === 1) p.swapT = 0;
   }
+  // ACCOUNT LOADOUT (already validated against the account by progression.loadoutFor)
+  setLoadout(id, lo) {
+    const p = this.players.get(id);
+    if (!p || !lo || (p.devLo && !lo.dev)) return; // (a local-dev loadout isn't overwritten by the account)
+    if (lo.dev) p.devLo = true;
+    p.emotes = Array.isArray(lo.emotes) ? lo.emotes : [0, 1];
+    p.wmast = lo.mastery | 0;
+    p.lo = lo; // kept so a respawn gives your armory weapon back after a Free Play pick-up
+    if (lo.w2 && WEAPONS[lo.w2] && !(p.w2 && p.w2.dropped)) this.setWeapon(p, lo.w2, lo.perks || []);
+    p.cos = { ...(p.cos || {}), badge: lo.badge || null, wskin: lo.badge || null };
+    this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
+  }
   w2def(p) {
     if (!p.w2) return null;
     const key = p.w2.id + '|' + (p.w2.perks || []).join(',');
@@ -193,7 +206,7 @@ export class Sim {
     const p = this.players.get(id);
     if (!p) return;
     p.equipped = equipped || {};
-    p.cos = { skin: p.equipped['skin:' + p.brawler] || null, fx: p.equipped.fx || null, title: p.equipped.title || null };
+    p.cos = { ...(p.cos || {}), skin: p.equipped['skin:' + p.brawler] || null, fx: p.equipped.fx || null, title: p.equipped.title || null };
     this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
   }
 
@@ -432,7 +445,6 @@ export class Sim {
     st.lastFire = this.time;
     p.reveal = 0.8; p.cloak = 0; p.spawnProt = 0; p.facing = ang;
     const mult = this.dmgMult(p), wi = WKIND + weaponIndex(st.id);
-    this.fx.push(['shot', Math.round(p.x), Math.round(p.y), r2(ang), p.id, wi]);
     if (w.kind === 'melee') return this.weaponMelee(p, w, ang, mult);
     let sp = (w.speed || 1000) * (this.mods.bulletSpeed || 1);
     const range = w.range * (this.mods.bulletRange || 1);
@@ -571,7 +583,7 @@ export class Sim {
       this.fx.push(['wormwarn', Math.round(tx), Math.round(ty), s.radius, p.id]);
     } else if (s.kind === 'cage') {
       const c = Math.cos(ang), sn = Math.sin(ang);
-      this.bullets.push({ id: this.nextEnt++, owner: p.id, oname: p.name, ozone: this.zone, kind: 20, x: p.x + c * 16, y: p.y + sn * 16,
+      this.addShot({ owner: p.id, oname: p.name, ozone: this.zone, kind: 20, x: p.x + c * 16, y: p.y + sn * 16,
         vx: c * s.speed, vy: sn * s.speed, dist: 0, range: s.range, dmg: s.damage * mult, r: s.radius, cage: s.time, team: p.team });
     } else if (s.kind === 'blink') {
       const e = this.nearestEnemy(p, s.range);
@@ -669,7 +681,8 @@ export class Sim {
     for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, d = n > 1 ? 30 : 0; this.dropCube(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d); }
     for (let i = 0; i < t.crystals; i++) { const a = this.rand() * Math.PI * 2, d = 20 + this.rand() * 50; this.dropCrystal(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d); }
     t.crystals = 0;
-    this.fx.push(['die', Math.round(t.x), Math.round(t.y), BRAWLER_IDS.indexOf(t.brawler), t.id, (src && !src.remote && src.cos && src.cos.fx) || 0]);
+    const mfx = src && !src.remote && opt && opt.wid && WEAPONS[opt.wid] && src.w2 && src.w2.id === opt.wid && src.wmast >= 7 ? CLASS_FX[WEAPONS[opt.wid].cls] : 0;
+    this.fx.push(['die', Math.round(t.x), Math.round(t.y), BRAWLER_IDS.indexOf(t.brawler), t.id, mfx || (src && !src.remote && src.cos && src.cos.fx) || 0]);
     const causeName = { poison: 'Poison', lava: 'Lava', fire: 'Wildfire', spikes: 'Spikes' }[cause] || 'The Wild';
     this.broadcast({ t: 'kill', k: src ? src.name : causeName, v: t.name, kid: src ? src.id : 0, vid: t.id, st: stolen });
     if (this.mode.respawn) t.respawnT = 3;
@@ -695,6 +708,9 @@ export class Sim {
       alive: true, hp: B.hp, maxHp: B.hp, cubes: 0, ammo: 3, reloadP: 0, stun: 0, cloak: 0, dash: null, knock: null, burst: null,
       spawnProt: 2, respawnT: 0, mvx: 0, mvy: 0, rushArmed: true, rush: 0, lastCombat: -99, poisonT: 0.5, bushT: 0,
     });
+    if (p.w2 && p.w2.dropped) { if (p.lo && p.lo.w2) this.setWeapon(p, p.lo.w2, p.lo.perks || []); else this.setWeapon(p, null); }
+    else if (p.w2) { const w = this.w2def(p); p.w2.ammo = w.ammo; p.w2.reloadP = 0; p.w2.cd = 0; }
+    p.slot = 0; p.swapT = 0;
     let pt;
     if (this.hub && !p.bot) {
       // somewhere in our slice of the hub
@@ -762,6 +778,12 @@ export class Sim {
       this.fx.push(['crate', x, y, c.supply ? 1 : 0, 0]);
       if (c.supply) for (let i = 0; i < 3; i++) this.dropCube(x + Math.cos(i * 2.1) * 30, y + Math.sin(i * 2.1) * 30);
       else this.dropCube(x, y);
+      // FREE PLAY WEAPON DROPS: some crates hold a weapon; rare and epic ones are scarcer (and glow)
+      if (this.hub && this.rand() < (c.supply ? 0.5 : 0.2) && this.wdrops.length < 40) {
+        const pool = WEAPON_IDS.filter((id) => { const r = WEAPONS[id].rarity, k = this.rand(); return r === 'common' || (r === 'rare' && k < 0.45) || (r === 'epic' && k < 0.18); });
+        const id = pool[Math.floor(this.rand() * pool.length)] || 'stormline';
+        this.wdrops.push({ id: this.nextEnt++, x: x + 22, y: y - 10, w: id, rare: WEAPONS[id].rarity !== 'common' ? 1 : 0, t: this.time });
+      }
     } else this.crateDirty.push([idx, c.supply ? -Math.round(c.hp) : Math.round(c.hp)]);
   }
 
@@ -933,6 +955,16 @@ export class Sim {
           this.fx.push(['cube', Math.round(p.x), Math.round(p.y), p.cubes, p.id]);
         }
       }
+      for (let i = this.wdrops.length - 1; i >= 0; i--) { // walk over a dropped weapon to take it as your secondary
+        const d = this.wdrops[i];
+        if (Math.hypot(d.x - p.x, d.y - p.y) < pr && !(p.w2 && p.w2.id === d.w) && this.time - (p.dropT ?? -9) > 1.5) {
+          if (p.bot && p.w2) continue; // bots keep their own
+          this.wdrops.splice(i, 1);
+          this.setWeapon(p, d.w, p.lo && p.lo.w2 === d.w ? p.lo.perks || [] : []);
+          p.w2.dropped = true; p.dropT = this.time;
+          this.fx.push(['wpick', Math.round(d.x), Math.round(d.y), weaponIndex(d.w), p.id]);
+        }
+      }
       for (let i = this.crystals.length - 1; i >= 0; i--) {
         const c = this.crystals[i];
         if (Math.hypot(c.x - p.x, c.y - p.y) < pr) {
@@ -968,6 +1000,7 @@ export class Sim {
         if (this.time - at < 90 || this.map.t[idx] !== EMPTY || this.tileOccupied(idx)) continue;
         this.brokenCrates.delete(idx); this.addCrate(idx);
       }
+      if (this.wdrops.length) this.wdrops = this.wdrops.filter((d) => this.time - d.t < 75); // drops fade after 75s
     }
     this.sendSnapshots();
     this.pingLog = this.pings;
@@ -1270,6 +1303,7 @@ export class Sim {
       bd: this.bdead.filter((r) => near(v, r[1], r[2], VIEW_X + 400, VIEW_Y + 400)),
       fl: this.flares.length ? this.flares.filter((f) => near(v, f.x, f.y, VIEW_X + f.r, VIEW_Y + f.r)).map((f) => [f.x, f.y, f.r, r2(f.t)]) : undefined,
       cu: cubes.filter((r) => near(v, r[1], r[2], VIEW_X + 200, VIEW_Y + 200)),
+      wd: this.wdrops.length ? this.wdrops.filter((d) => near(v, d.x, d.y, VIEW_X + 200, VIEW_Y + 200)).map((d) => [d.id, Math.round(d.x), Math.round(d.y), weaponIndex(d.w), d.rare]) : undefined,
       cy: crystals.filter((r) => near(v, r[1], r[2], VIEW_X + 200, VIEW_Y + 200)),
       fx: this.fx.filter((f) => f[4] === v.id || near(v, f[1], f[2], VIEW_X + 200, VIEW_Y + 200)),
       pg: this.pings.filter((g) => Math.hypot(g[1] - v.x, g[2] - v.y) < RADAR_RANGE),

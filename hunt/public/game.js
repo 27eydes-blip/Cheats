@@ -13,12 +13,14 @@ import * as A from './account.js';
 import { createLobby } from './ui/lobby.js';
 import { createMatchmaking, createResults, showIntro } from './ui/flow.js';
 import './ui/fx.js';
-import { levelInfo } from './progression.js';
-import { TITLES } from './catalog.js';
+import { levelInfo, loadoutFor } from './progression.js';
+import { TITLES, EMOTES } from './catalog.js';
 import { sfx, falloff } from './audio.js';
 import { setMusicVolume } from './ui/music.js';
-import { pickAimTarget } from './aim.js';
+import { pickAimTarget, assistAngle } from './aim.js';
 import { HUNTER_PAL } from './art/hunters.js';
+import { ShotSim, PList, resetPart, resetText } from './shots.js';
+import { WEAPONS, WEAPON_IDS, WKIND, withPerks, shotAngles, SWAP_TIME } from './weapons.js';
 import { drawMiniMap, drawFullMap } from './minimap.js';
 import { envState, drawLandmarks, drawAtmosphere, drawCompass, ZONE_INFO, zoneLabel } from './world-fx.js';
 import { startTense, stopTense } from './ui/music.js';
@@ -52,8 +54,12 @@ const MODE_INFO = {
   freeplay: { name: 'FREE PLAY', desc: '' },
 };
 const worldName = (key) => WORLDS[worldId(key)]?.name || key;
-const bulletKind = (k) => (k === 20 ? 'cage' : BRAWLER_IDS[k]);
-const predicted = (k) => k !== 20 && PREDICTED_KINDS.includes(BRAWLERS[BRAWLER_IDS[k]]?.attack.kind);
+const bulletKind = (k) => (k === 20 ? 'cage' : k >= WKIND ? WEAPON_IDS[k - WKIND] : BRAWLER_IDS[k]);
+const predicted = (k) => k !== 20 && k < WKIND && PREDICTED_KINDS.includes(BRAWLERS[BRAWLER_IDS[k]]?.attack.kind);
+// own shots we draw instantly (client prediction): signature straight shots + weapon bullets
+const predictedKind = (k) => predicted(k) || (k >= WKIND && localPredicts(WEAPONS[WEAPON_IDS[k - WKIND]]));
+const localPredicts = (w) => !!w && (w.kind === 'shot' || w.kind === 'charge');
+const isSniper = (w, sig) => (sig ? G.brawler === 'wisp' : w.cls === 'sniper');
 
 let W = 0, H = 0, DPR = 1;
 // Adaptive resolution: if frames get slow, render at a lower pixel ratio (and back up when there's room).
@@ -126,7 +132,8 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const G = {
   phase: 'menu', kind: 'quick', conns: new Map(), myId: 0, brawler: 'volt', map: null, roster: {}, crateHp: new Map(),
   pending: [], seq: 0, pred: { x: 0, y: 0, mvx: 0, mvy: 0 }, prev: { x: 0, y: 0 }, err: { x: 0, y: 0 }, me: null, mods: {},
-  localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: [], rings: [], texts: [], flash: {}, shake: 0, hurt: 0,
+  localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: new PList(resetPart), rings: [], texts: new PList(resetText), flash: {}, shake: 0, hurt: 0,
+  shots: new ShotSim(), recoil: new Map(), nudge: { x: 0, y: 0 }, hitMark: null, wantSlot: null, wantT: 0, localCd2: 0, localBurst2: null, bolts: [], myPerks: {},
   spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, cam: { x: 1000, y: 1000 }, acc: 0, ping: 0,
   pings: [], handoff: null, online: {}, modeKey: 'showdown', world: 'meadow', retries: 0, room: '', botsOn: true, facing: 0,
   moving: false, slashes: [], worms: [], slashFlip: false, lastTp: 0, lastSk: 0, deadMsg: null, ticks: 0, opts: {}, bannerUntil: 0,
@@ -135,9 +142,12 @@ const G = {
 function resetMatchState() {
   Object.assign(G, {
     myId: 0, secret: null, matchName: null, map: null, zoneSlot: null, nightOn: undefined, env: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
-    localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: [], rings: [], texts: [], slashes: [], worms: [], lastTp: 0, flash: {}, shake: 0, hurt: 0,
+    localBullets: [], localBurst: null, localCd: 0, superCd: 0, rings: [], slashes: [], worms: [], lastTp: 0, flash: {}, shake: 0, hurt: 0,
+    hitMark: null, wantSlot: null, wantT: 0, localCd2: 0, localBurst2: null, bolts: [],
     spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, pings: [], handoff: null, online: {}, deadMsg: null, lastSk: 0,
   });
+  G.parts.clear(); G.texts.clear(); G.shots.clear(); G.recoil.clear();
+  { const lo = loadoutFor(A.progress()); G.myPerks = lo.w2 ? { [lo.w2]: lo.perks } : {}; } // (for predicting your own shots)
   $('feed').innerHTML = '';
   $('hudAgain').hidden = true;
   UI.res?.reset?.();
@@ -243,6 +253,7 @@ function startQuick(opts = G.opts) {
   G.kind = 'quick'; G.room = room; G.brawler = selBrawler;
   const q = new URLSearchParams({ name, brawler: selBrawler });
   if (A.ACC.token) q.set('token', A.ACC.token);
+  devParams(q);
   if (room) q.set('room', room);
   if (opts.skip) q.set('skip', opts.skip);
   if (room && !$('bots').checked && !opts.world) q.set('bots', '0');
@@ -253,6 +264,8 @@ function startQuick(opts = G.opts) {
   UI.mm.show({ brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null, label: room ? `ROOM ${room}` : (MODE_INFO[opts.mode]?.name || 'QUICK HUNT') });
 }
 
+// ?wpn=&mast= are honoured only by a local dev server (HUNT_DEV), for tests and screenshots
+function devParams(q) { const u = new URLSearchParams(location.search); for (const k of ['wpn', 'mast']) if (u.get(k)) q.set(k, u.get(k)); }
 function startFree() {
   closeAll();
   resetMatchState();
@@ -262,7 +275,9 @@ function startFree() {
   // everyone arrives at the safe hub in the middle of the world (?at=x,y: local dev only)
   const at = (new URLSearchParams(location.search).get('at') || '').split(',').map(Number);
   const slot = at.length === 2 && at.every(Number.isFinite) ? zoneAt(at[0], at[1]) : 'c';
-  openConn(slot, `/zone?${new URLSearchParams({ slot, join: '1', name, brawler: selBrawler, ...(A.ACC.token ? { token: A.ACC.token } : {}), ...(at.length === 2 ? { at: at.join(',') } : {}) })}`, { zone: slot, primary: true });
+  const zq = new URLSearchParams({ slot, join: '1', name, brawler: selBrawler, ...(A.ACC.token ? { token: A.ACC.token } : {}), ...(at.length === 2 ? { at: at.join(',') } : {}) });
+  devParams(zq);
+  openConn(slot, `/zone?${zq}`, { zone: slot, primary: true });
   G.phase = 'play';
   input.enabled = true; input.reset();
   show(null);
@@ -471,10 +486,23 @@ function onSnap(c, m) {
   const now = performance.now();
   const off = now - m.n * TICK_MS;
   if (c.off == null || off < c.off) c.off = off; else c.off += (off - c.off) * 0.02;
-  const p = new Map(), b = new Map();
+  const p = new Map();
   for (const e of m.p) p.set(e[0], e);
-  for (const e of m.b) b.set(e[0], e);
-  c.snaps.push({ n: m.n, p, b, cu: m.cu, cy: m.cy, fx: m.fx, mn: m.mn || [] });
+  const st = c.statics || (c.statics = new Map());
+  if (m.px) for (const e of m.px) st.set(e[0], e); // slow player fields (sent when they change)
+  c.snaps.push({ n: m.n, p, cu: m.cu, cy: m.cy, fx: m.fx, mn: m.mn || [], wd: m.wd || null });
+  // BULLETS: one 'fired' event each; we simulate them (own predicted shots are already flying)
+  if (m.bn) for (const r of m.bn) {
+    if (r[8] === G.myId && predictedKind(r[6])) continue;
+    if (G.shots.fired(c.key, r) && r[8] !== G.myId) shotFeel(r[8], r[1], r[2], Math.atan2(r[4], r[3]), r[6]);
+  }
+  if (m.bd) for (const r of m.bd) G.shots.ended(c.key, r, m.n);
+  c.flares = m.fl || null;
+  if (c.primary && m.hm) { // HIT MARKER from the server
+    const kind = m.hm & 2 ? 'kill' : m.hm & 4 ? 'crit' : 'hit';
+    G.hitMark = { t: 0.3, kind };
+    sfx(kind === 'kill' ? 'killmark' : kind === 'crit' ? 'critmark' : 'hitmark', 0.9);
+  }
   if (c.snaps.length > 40) c.snaps.shift();
   for (const [idx, type] of m.td) applyTile(idx, type);
   for (const [idx, hp] of m.ch) G.crateHp.set(idx, hp);
@@ -493,8 +521,8 @@ function primaryMods() {
 }
 
 function reconcile(m) {
-  const me = m.me;
   const first = !G.me;
+  const me = first ? { ...m.me } : Object.assign(G.me, m.me); // the server only sends what changed
   G.me = me; G.myId = me.id; G.brawler = me.br;
   G.mods = primaryMods();
   if (G.kind === 'free') {
@@ -524,42 +552,38 @@ function sampleConn(c, out) {
   if (rt >= s[s.length - 1].n) a = b = s[s.length - 1];
   else for (let i = 0; i < s.length - 1; i++) if (s[i].n <= rt && rt < s[i + 1].n) { a = s[i]; b = s[i + 1]; f = (rt - a.n) / (b.n - a.n); break; }
   for (const snap of s) if (snap.n > c.fxN && snap.n <= Math.max(rt, a.n)) { c.fxN = snap.n; for (const e of snap.fx) applyFx(e); }
-  for (const [id, e] of b.p) {
+  c.rt = rt;
+  const stc = c.statics || EMPTY_MAP;
+  for (const [id, e] of b.p) { // e: [id, x, y, hp, facing, flags]; st: [id, maxHp, cubes, bounty, glow, crystals, team]
     const ea = a.p.get(id) || e;
     const r = G.roster[id] || ['?', 'volt'];
-    let da = e[5] - ea[5];
+    const sv = stc.get(id) || NO_STATIC;
+    let da = e[4] - ea[4];
     da = Math.atan2(Math.sin(da), Math.cos(da)); // never loop on a bad value
     const x = ea[1] + (e[1] - ea[1]) * f, y = ea[2] + (e[2] - ea[2]) * f;
     const prev = out.others.get(id);
     if (prev && G.kind === 'free' && zoneAt(prev.x, prev.y) === prev.zone) continue; // the owning zone's copy wins
     out.others.set(id, {
-      id, x, y, hp: e[3], mh: e[4], facing: ea[5] + da * f, fl: e[6], cu: e[7], bt: e[8], glow: e[9], cr: e[10], team: e[11] || 0, zone: c.zone,
-      name: r[0], brawler: r[1], moving: Math.hypot(e[1] - ea[1], e[2] - ea[2]) > 1, stun: e[6] & 2,
-      skin: r[3]?.skin, title: r[3]?.title ? TITLES[r[3].title] : null,
+      id, x, y, hp: e[3], mh: sv[1] || e[3], facing: ea[4] + da * f, fl: e[5], cu: sv[2], bt: sv[3], glow: sv[4], cr: sv[5], team: sv[6] || 0, zone: c.zone,
+      name: r[0], brawler: r[1], moving: Math.hypot(e[1] - ea[1], e[2] - ea[2]) > 1, stun: e[5] & 2,
+      skin: r[3]?.skin, title: r[3]?.title ? TITLES[r[3].title] : null, badge: r[3]?.badge || null,
     });
   }
-  for (const [id, e] of b.b) {
-    if (e[3] === G.myId && predicted(e[4])) continue; // own shots are predicted locally
-    const ea = a.b.get(id);
-    const key = c.key + id;
-    const x = ea ? ea[1] + (e[1] - ea[1]) * f : e[1], y = ea ? ea[2] + (e[2] - ea[2]) * f : e[2];
-    const ang = ea ? Math.atan2(e[2] - ea[2], e[1] - ea[1]) : (bulletAng.get(key) ?? 0);
-    if (ea) bulletAng.set(key, ang);
-    else if (!bulletAng.has(key + 's') && G.me) { bulletAng.set(key + 's', 1); sfx('shoot_' + bulletKind(e[4]), falloff(Math.hypot(x - G.pred.x, y - G.pred.y)) * 0.5); }
-    out.bullets.push({ x, y, ang, kind: bulletKind(e[4]) });
-  }
+  if (c.flares) for (const fl of c.flares) out.flares.push(fl);
   out.cubes.push(...(b.cu || []));
   out.crystals.push(...(b.cy || []));
   out.mines.push(...(b.mn || []));
+  if (b.wd) out.wdrops.push(...b.wd);
 }
-const bulletAng = new Map();
+const bulletAng = new Map(); // (kept for resetMatchState)
+const EMPTY_MAP = new Map(), NO_STATIC = [0, 0, 0, 0, 0, 0, 0];
 
 function sampleWorld() {
-  const out = { others: new Map(), bullets: [], cubes: [], crystals: [], mines: [] };
+  const out = { others: new Map(), bullets: [], cubes: [], crystals: [], mines: [], flares: [], wdrops: [] };
   const list = [...G.conns.values()].sort((a, b) => b.primary - a.primary);
   for (const c of list) sampleConn(c, out);
-  if (bulletAng.size > 800) bulletAng.clear();
-  G.view = { others: [...out.others.values()].filter((o) => o.id !== G.myId), bullets: out.bullets, cubes: out.cubes, crystals: out.crystals, mines: out.mines };
+  if (G.map) out.bullets = G.shots.sample((k) => G.conns.get(k)?.rt, G.map, G.mods, shotEnded);
+  G.view = { others: [...out.others.values()].filter((o) => o.id !== G.myId), bullets: out.bullets, cubes: out.cubes, crystals: out.crystals, mines: out.mines, flares: out.flares, wdrops: out.wdrops };
   const now = performance.now();
   G.pings = G.pings.filter((p) => now - p.t0 < 3000);
 }
@@ -587,7 +611,7 @@ function burst(x, y, color, n, speed = 180, size = 5, life = 0.45) {
   if (SETTINGS.lowGfx) n = Math.ceil(n / 3);
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, v = speed * (0.4 + Math.random() * 0.8);
-    G.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life, max: life, color, size: size * (0.6 + Math.random() * 0.8) });
+    const p = G.parts.add(); p.x = x; p.y = y; p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v; p.life = p.max = life; p.color = color; p.size = size * (0.6 + Math.random() * 0.8);
   }
 }
 const KIND_COL = ['#7db8ff', '#ffb347', '#c9a6ff'];
@@ -597,11 +621,21 @@ function applyFx([type, x, y, v, id, extra]) {
   if (S && (type !== 'hit' || id)) sfx(S, type === 'hit' && id !== G.myId ? vol * 0.6 : vol);
   switch (type) {
     case 'dmg':
-      G.texts.push({ x: x + (Math.random() - 0.5) * 20, y: y - 70, txt: String(v), color: id === G.myId ? '#ff4d5e' : '#fff', life: 0.9, max: 0.9, size: v >= 1000 ? 26 : 20 });
+      { // DAMAGE NUMBER (pooled): critical hits are bigger and gold
+        const tx = G.texts.add(), crit = !!extra;
+        tx.x = x + (Math.random() - 0.5) * 20; tx.y = y - 70; tx.txt = crit ? v + '!' : String(v);
+        tx.color = id === G.myId ? '#ff4d5e' : crit ? '#ffd23f' : '#fff'; tx.life = tx.max = crit ? 1.1 : 0.9;
+        tx.size = (v >= 1000 ? 26 : 20) * (crit ? 1.45 : 1); tx.pop = crit; tx.crit = crit;
+      }
       if (!SETTINGS.reduceFlash) G.flash[id] = 0.12;
       if (id === G.myId) { G.hurt = SETTINGS.reduceFlash ? 0.18 : 0.35; G.shake = Math.max(G.shake, 6); }
       break;
-    case 'hit': burst(x, y, KIND_COL[v] || '#fff', 7, 200, 5, 0.3); break;
+    case 'hit': burst(x, y, KIND_COL[v] || (v >= WKIND ? R.WEAPON_LOOK[WEAPON_IDS[v - WKIND]]?.c2 : null) || '#fff', 7, 200, 5, 0.3); break;
+    case 'swing': if (id !== G.myId) { const w = WEAPONS[WEAPON_IDS[extra - WKIND]] || WEAPONS.cleaver; G.slashes.push({ x, y, ang: v, life: 0.2, max: 0.2, flip: Math.random() < 0.5, range: w.range, arc: w.arc }); } break;
+    case 'arc': G.bolts.push({ x, y, x2: v, y2: id, life: 0.22, max: 0.22 }); sfx('zap', vol * 0.6); break;
+    case 'flare': burst(x, y, '#ff7b5a', 10, 160, 5, 0.6); sfx('flarepop', vol); break;
+    case 'emote': { const e = EMOTES[v]; if (!e) break; const tx = G.texts.add(); tx.x = x; tx.y = y - 120; tx.txt = e.text; tx.color = e.col; tx.life = tx.max = 2; tx.size = 24; tx.pop = true; } break;
+    case 'wpick': { const w = WEAPONS[WEAPON_IDS[v]]; if (id === G.myId && w) { const tx = G.texts.add(); tx.x = x; tx.y = y - 90; tx.txt = w.name.toUpperCase() + '!'; tx.color = '#5ff4ff'; tx.life = tx.max = 1.3; tx.size = 20; tx.pop = true; sfx('pickup'); } burst(x, y, '#5ff4ff', 10, 160, 5, 0.4); } break;
     case 'wall': burst(x, y, '#d8cfff', 4, 120, 4, 0.25); break;
     case 'crate':
       burst(x, y, v ? '#ffd23f' : '#d98c3f', 16, 260, 7, 0.6); burst(x, y, v ? '#1f6f8b' : '#8a4b1f', 8, 200, 6, 0.5);
@@ -635,6 +669,14 @@ function applyFx([type, x, y, v, id, extra]) {
 
 // cosmetic kill effects (the killer's equipped one)
 function killFx(id, x, y) {
+  // weapon mastery 7+ kill effects (by weapon class)
+  if (id === 'tracer') { for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; G.rings.push({ x: x + Math.cos(a) * 30, y: y + Math.sin(a) * 30, r0: 4, r1: 18, life: 0.4, max: 0.4, color: '#ffd23f', w: 3 }); } burst(x, y, '#ffb000', 16, 420, 3, 0.4); return; }
+  if (id === 'shrapnel') { burst(x, y, '#c9ccd4', 22, 460, 4, 0.5); burst(x, y, '#ff7b39', 8, 260, 5, 0.4); return; }
+  if (id === 'crosshair') { G.rings.push({ x, y, r0: 90, r1: 24, life: 0.5, max: 0.5, color: '#5ff4ff', w: 4, ink: true }); const tx = G.texts.add(); tx.x = x; tx.y = y - 50; tx.txt = '+'; tx.color = '#5ff4ff'; tx.life = tx.max = 0.6; tx.size = 54; return; }
+  if (id === 'swarm') { for (let i = 0; i < 3; i++) burst(x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 40, '#ffe066', 8, 200, 3, 0.7); return; }
+  if (id === 'crater') { G.rings.push({ x, y, r0: 10, r1: 110, life: 0.5, max: 0.5, color: '#4a4a5e', w: 14, ink: true }); burst(x, y, '#8a8590', 18, 300, 8, 0.7); return; }
+  if (id === 'cleave') { G.slashes.push({ x, y, ang: Math.random() * 6, life: 0.3, max: 0.3, flip: false, range: 90, arc: 2.6 }); burst(x, y, '#eef', 12, 300, 4, 0.4); return; }
+  if (id === 'arcburst') { for (let i = 0; i < 5; i++) { const a = Math.random() * 6.28; G.bolts.push({ x, y, x2: x + Math.cos(a) * 90, y2: y + Math.sin(a) * 90, life: 0.3, max: 0.3 }); } return; }
   if (id === 'sparks') burst(x, y, '#ffe066', 24, 380, 4, 0.6);
   else if (id === 'stars') for (let i = 0; i < 6; i++) G.texts.push({ x: x + (Math.random() - 0.5) * 80, y: y - 30 - Math.random() * 50, txt: '★', color: '#ffd23f', life: 0.9, max: 0.9, size: 26 });
   else if (id === 'confetti') for (const c of ['#ff4d5e', '#4be06e', '#3a86ff', '#ffd23f', '#c04dff']) burst(x, y - 20, c, 6, 260, 5, 0.9);
@@ -643,13 +685,19 @@ function killFx(id, x, y) {
 }
 
 function updateEffects(dt) {
+  for (const [id, rk] of G.recoil) { const n = rk - dt * 9; if (n <= 0) G.recoil.delete(id); else G.recoil.set(id, n); }
+  const nk = Math.exp(-dt * 14); G.nudge.x *= nk; G.nudge.y *= nk;
+  if (G.hitMark && (G.hitMark.t -= dt) <= 0) G.hitMark = null;
+  for (const b of G.bolts) b.life -= dt;
+  if (G.bolts.length) G.bolts = G.bolts.filter((b) => b.life > 0);
   for (const p of G.parts) {
     p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
     if (p.kind === 'smoke') { p.vx *= 0.96; p.vy *= 0.97; p.size += p.grow * dt; }
     else if (p.kind === 'ember') { p.vx *= 0.97; p.vy = p.vy * 0.97 - 30 * dt; }
+    else if (p.kind === 'casing') { p.vx *= 0.92; p.vy = p.vy * 0.92 + 500 * dt; p.rot += p.spin * dt; }
     else { p.vx *= 0.9; p.vy *= 0.9; if (p.kind === 'shard') { p.rot += p.spin * dt; p.vy += 260 * dt; } }
   }
-  G.parts = G.parts.filter((p) => p.life > 0);
+  G.parts.update((p) => p.life > 0);
   for (const r of G.rings) r.life -= dt;
   for (const s of G.slashes) s.life -= dt;
   G.slashes = G.slashes.filter((s) => s.life > 0);
@@ -657,7 +705,7 @@ function updateEffects(dt) {
   G.worms = G.worms.filter((w) => w.life > 0);
   G.rings = G.rings.filter((r) => r.life > 0);
   for (const t of G.texts) { t.life -= dt; t.y -= 40 * dt; }
-  G.texts = G.texts.filter((t) => t.life > 0);
+  G.texts.update((t) => t.life > 0);
   for (const k in G.flash) { G.flash[k] -= dt; if (G.flash[k] <= 0) delete G.flash[k]; }
   G.shake = SETTINGS.reduceFlash ? 0 : Math.max(0, G.shake - dt * 30);
   G.hurt = Math.max(0, G.hurt - dt);
@@ -666,6 +714,52 @@ function updateEffects(dt) {
 }
 
 // ------------------------------------------------------------------ local bullets (prediction)
+// ---- what you're holding (predicted slot while a swap is pending)
+function holding() {
+  const me = G.me;
+  const slot = G.wantSlot != null && G.wantT > 0 ? G.wantSlot : me ? me.ws || 0 : 0;
+  if (me && slot === 1 && me.w2) {
+    const id = WEAPON_IDS[me.w2[0]];
+    return { sig: false, id, w: withPerks(id, G.myPerks[id] || []), ammo: me.w2[1], slot };
+  }
+  return { sig: true, id: G.brawler, w: BRAWLERS[G.brawler].attack, ammo: me ? me.am : 0, slot: 0 };
+}
+// the aim line for what you're holding: exact range + spread
+function aimProfile(h) {
+  const w = h.w;
+  if (h.sig) {
+    if (w.kind === 'spread' || w.kind === 'slash') return { range: w.range, cone: w.arc / 2 + 0.04 };
+    if (w.kind === 'mine') return { range: w.range, land: { blast: w.blast } };
+    return { range: w.range, width: w.radius + 4, thin: G.brawler === 'wisp' };
+  }
+  if (w.kind === 'melee') return { melee: { arc: w.arc, range: w.range }, range: w.range };
+  if (w.kind === 'grenade') return { range: w.range, land: { blast: w.blast } };
+  if (w.pellets > 1) return { range: w.range, cone: w.arc / 2 + 0.03 };
+  if (w.cls === 'sniper') return { range: w.range, thin: true };
+  if (w.spread > 0.05) return { range: w.range, cone: w.spread / 2 + 0.02 };
+  return { range: w.range, width: (w.radius || 8) + 4 };
+}
+// FEEL: recoil kick, muzzle flash, a shell casing (yours instantly, others from their 'fired' event)
+function shotFeel(id, x, y, ang, kind) {
+  G.recoil.set(id, 1);
+  const name = bulletKind(kind), w = WEAPONS[name];
+  const cls = w ? w.cls : name;
+  if (G.me) sfx(w ? 'w_' + cls : 'shoot_' + name, id === G.myId ? 1 : falloff(Math.hypot(x - G.pred.x, y - G.pred.y)) * 0.5);
+  if (!SETTINGS.reduceFlash) { // muzzle flash (skipped with Reduce Flashing; the sound stays)
+    const f = G.parts.add(); f.kind = 'flash'; f.x = x + Math.cos(ang) * 46; f.y = y + Math.sin(ang) * 46; f.vx = 0; f.vy = 0; f.life = f.max = 0.07; f.color = '#fff3b0'; f.size = 12; f.rot = ang;
+  }
+  if (!SETTINGS.lowGfx && (['rifle', 'smg', 'shotgun'].includes(cls) || name === 'volt' || name === 'brick')) {
+    const c = G.parts.add(), side = ang + Math.PI / 2 + (Math.random() - 0.5) * 0.6, v = 120 + Math.random() * 80;
+    c.kind = 'casing'; c.x = x + Math.cos(ang) * 20; c.y = y + Math.sin(ang) * 20; c.vx = Math.cos(side) * v; c.vy = Math.sin(side) * v - 60;
+    c.life = c.max = 0.6; c.color = cls === 'shotgun' || name === 'brick' ? '#d04a3a' : '#e0b040'; c.size = 3; c.rot = Math.random() * 6; c.spin = 18;
+  }
+}
+// a simulated projectile ended (hit a wall on our side, or the server said so)
+function shotEnded(b, x, y, server, why) {
+  const look = R.WEAPON_LOOK[bulletKind(b.kind)];
+  if (!server && (why === 'wall' || why === 'crate')) burst(x, y, look ? look.c2 : '#d8cfff', 4, 120, 4, 0.25);
+}
+
 function spawnLocalShot(x, y, ang) {
   const a = BRAWLERS[G.brawler].attack;
   const sp = a.speed * (G.mods.bulletSpeed || 1), range = a.range * (G.mods.bulletRange || 1);
@@ -675,6 +769,10 @@ function spawnLocalShot(x, y, ang) {
 }
 function updateLocalBullets(dt) {
   const A = BRAWLERS[G.brawler].attack;
+  if (G.localBurst2) {
+    const lb = G.localBurst2; lb.t -= dt;
+    if (lb.t <= 0) { if (localPredicts(lb.w)) spawnLocalWeaponShot(lb.w, lb.id, lb.ang, lb.seq, lb.k); shotFeel(G.myId, G.pred.x, G.pred.y, lb.ang, WKIND + WEAPON_IDS.indexOf(lb.id)); lb.k++; lb.left--; lb.t += lb.w.interval; if (lb.left <= 0) G.localBurst2 = null; }
+  }
   if (G.localBurst) {
     G.localBurst.t -= dt;
     if (G.localBurst.t <= 0) {
@@ -692,10 +790,11 @@ function updateLocalBullets(dt) {
     for (let i = 0; i < n && !dead; i++) {
       b.x += (b.vx * dt) / n; b.y += (b.vy * dt) / n; b.dist += step / n;
       if (isSolidTile(tileAt(G.map, b.x, b.y)) || (G.kind === 'free' && inHub(b.x, b.y))) dead = true;
-      if (A.kind !== 'wave') for (const o of G.view.others) if ((!o.team || o.team !== G.me?.tm) && Math.hypot(o.x - b.x, o.y - b.y) < PLAYER_R * sizeOf(o) + A.radius) dead = true;
+      if (b.kind != null ? !b.pierce : A.kind !== 'wave') for (const o of G.view.others) if ((!o.team || o.team !== G.me?.tm) && Math.hypot(o.x - b.x, o.y - b.y) < PLAYER_R * sizeOf(o) + (b.r || A.radius)) dead = true;
       if (b.dist >= b.range) dead = true;
     }
     if (!dead) out.push(b);
+    else if (b.dist < b.range && isSolidTile(tileAt(G.map, b.x, b.y))) burst(b.x, b.y, '#d8cfff', 4, 120, 4, 0.25); // wall impact
   }
   G.localBullets = out;
 }
@@ -729,22 +828,58 @@ function clientTick() {
   const B = BRAWLERS[G.brawler];
   const me = G.me;
   const mv = input.getMove();
-  let f = null, u = null, fd = 1;
+  let f = null, u = null, fd = 1, ch = 0;
   const safe = G.kind === 'free' && inHub(G.pred.x, G.pred.y);
+  G.wantT -= DT;
+  const h = holding();
+  input.swapOn = !!me.w2; input.mouse.charge = !h.sig && h.w.kind === 'charge';
+  const seqNext = G.seq + 1;
+  // one trigger pull per input; returns true if it fired
+  const pull = (ang, mag, held) => {
+    if (f != null || G.handoff || !me.al || (me.f & 2) || me.fo || (me.sw > 0 && G.wantT <= 0)) return false;
+    const shotsPending = G.pending.filter((q) => q.f).length;
+    if (Math.floor(h.ammo) - shotsPending < 1) return false;
+    if (h.sig) {
+      if (G.localCd > 0 || G.localBurst) return false;
+      f = ang; G.localCd = B.attack.cooldown;
+      if (PREDICTED_KINDS.includes(B.attack.kind)) spawnLocalShot(G.pred.x, G.pred.y, isSniper(null, true) ? ang : assistAngle(G.map, G.pred, ang, B.attack.range, G.view.others, G.me?.tm));
+      if (B.attack.kind === 'slash') localSlash(ang);
+      if (B.attack.kind === 'burst' || B.attack.kind === 'slash') G.localBurst = { left: B.attack.count - 1, t: B.attack.interval, ang };
+      shotFeel(G.myId, G.pred.x, G.pred.y, ang, BRAWLER_IDS.indexOf(G.brawler));
+    } else {
+      const w = h.w;
+      if (G.localCd2 > 0 || G.localBurst2 || G.localSwap > 0) return false;
+      f = ang; G.localCd2 = w.cooldown;
+      ch = w.kind === 'charge' ? Math.min(w.charge, held || 0) : 0;
+      const a2 = w.cls === 'sniper' || w.kind === 'melee' ? ang : assistAngle(G.map, G.pred, ang, w.range, G.view.others, G.me?.tm);
+      if (localPredicts(w)) spawnLocalWeaponShot(w, h.id, a2, seqNext, 0);
+      if (w.burst > 1) G.localBurst2 = { left: w.burst - 1, t: w.interval, ang: a2, k: 1, w, id: h.id, seq: seqNext };
+      if (w.kind === 'melee') G.slashes.push({ x: G.pred.x, y: G.pred.y, ang, life: 0.2, max: 0.2, follow: true, flip: (G.slashFlip = !G.slashFlip), range: w.range, arc: w.arc });
+      shotFeel(G.myId, G.pred.x, G.pred.y, ang, WKIND + WEAPON_IDS.indexOf(h.id));
+    }
+    G.facing = ang;
+    fd = mag ?? 1;
+    G.nudge.x += Math.cos(ang) * 10; G.nudge.y += Math.sin(ang) * 10; // camera nudge toward the shot
+    return true;
+  };
   for (const a of input.takeActions()) {
+    if (a.type === 'swap') {
+      if (me.w2 && me.al) { G.wantSlot = (G.wantT > 0 && G.wantSlot != null ? G.wantSlot : me.ws || 0) === 1 ? 0 : 1; G.wantT = 1; G.localSwap = G.wantSlot === 1 ? withPerks(WEAPON_IDS[me.w2[0]], G.myPerks[WEAPON_IDS[me.w2[0]]] || []).swap : SWAP_TIME; G.localBurst = G.localBurst2 = null; sfx('swap', 0.7); }
+      continue;
+    }
     const ang = a.mode === 'angle' ? a.ang : a.mode === 'mouse' ? mouseAngle() : autoAngle(a.type);
     if (safe) continue;
     if (a.type === 'fire') {
-      const shotsPending = G.pending.filter((q) => q.f).length;
-      if (me.al && !(me.f & 2) && !me.fo && G.localCd <= 0 && !G.localBurst && Math.floor(me.am) - shotsPending >= 1 && f == null && !G.handoff) {
-        f = ang; G.facing = ang; G.localCd = B.attack.cooldown;
-        fd = a.mag ?? (a.mode === 'mouse' ? Math.min(1, Math.hypot(input.mouse.x - W / 2, input.mouse.y - H / 2) / (B.attack.range * worldScale())) : 1);
-        sfx('shoot_' + G.brawler);
-        if (PREDICTED_KINDS.includes(B.attack.kind)) spawnLocalShot(G.pred.x, G.pred.y, ang);
-        if (B.attack.kind === 'slash') localSlash(ang);
-        if (B.attack.kind === 'burst' || B.attack.kind === 'slash') G.localBurst = { left: B.attack.count - 1, t: B.attack.interval, ang };
-      }
+      const mag = a.mag ?? (a.mode === 'mouse' ? Math.min(1, Math.hypot(input.mouse.x - W / 2, input.mouse.y - H / 2) / (h.w.range * worldScale())) : undefined);
+      pull(ang, mag, a.held);
     } else if (me.sc >= 1 && G.superCd <= 0 && me.al) { u = ang; G.superCd = 0.6; G.facing = ang; sfx('super'); }
+  }
+  // HOLD TO FIRE (setting) and full-auto weapons: keep firing while the aim stick / mouse is held
+  const autoFire = !h.sig && h.w.auto, holdMode = SETTINGS.holdFire && !(h.w.kind === 'charge') && h.w.kind !== 'mine';
+  const held = input.getAim();
+  if (!safe && (autoFire || holdMode)) {
+    if (held && held.kind === 'fire' && !held.cancel) { if (pull(held.ang, held.mag, 0)) held.touch.holdFired = true; }
+    else if (!input.isTouch && input.mouse.down && performance.now() - input.mouse.down > 120) { if (pull(mouseAngle(), undefined, 0)) input.mouse.holdFired = true; }
   }
   const aim = input.getAim();
   if (aim) G.facing = aim.ang;
@@ -760,11 +895,23 @@ function clientTick() {
   }
   G.seq++;
   const ax = +Math.cos(G.facing).toFixed(3), ay = +Math.sin(G.facing).toFixed(3);
-  const inp = { t: 'in', s: G.seq, mx: +mv.x.toFixed(3), my: +mv.y.toFixed(3), ax, ay, f, u, ...(f != null && fd < 1 ? { fd: +fd.toFixed(2) } : {}) };
+  const P = primary();
+  const inp = {
+    t: 'in', s: G.seq, mx: +mv.x.toFixed(3), my: +mv.y.toFixed(3), ax, ay, f, u, ...(f != null && fd < 1 ? { fd: +fd.toFixed(2) } : {}),
+    ...(ch > 0 ? { ch: +ch.toFixed(2) } : {}),
+    ...(f != null && P && P.rt != null ? { vt: +P.rt.toFixed(1) } : {}), // LAG COMPENSATION: the tick we were looking at
+    ...(G.wantT > 0 && G.wantSlot != null && me.ws !== G.wantSlot ? { w: G.wantSlot } : {}),
+  };
   G.pending.push({ s: G.seq, mx: inp.mx, my: inp.my, ax, ay, f: f != null });
   if (G.pending.length > 60) G.pending.shift();
   send(inp);
-  G.localCd -= DT; G.superCd -= DT;
+  G.localCd -= DT; G.superCd -= DT; G.localCd2 -= DT; G.localSwap = (G.localSwap || 0) - DT;
+  if (G.wantT > 0 && me.ws === G.wantSlot && !(me.sw > 0)) G.wantT = 0;
+}
+// own weapon shot, drawn instantly with the same spread the server uses (seeded by the input number)
+function spawnLocalWeaponShot(w, id, ang, seq, k) {
+  const me = renderMe(), sp = (w.speed || 1000) * (G.mods.bulletSpeed || 1), range = w.range * (G.mods.bulletRange || 1);
+  for (const a of shotAngles(w, ang, seq * 7 + k)) G.localBullets.push({ x: me.x + Math.cos(a) * 16, y: me.y + Math.sin(a) * 16, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, dist: 0, range, ang: a, kind: WKIND + WEAPON_IDS.indexOf(id), r: w.radius || 8, pierce: !!w.pierce });
 }
 
 // ------------------------------------------------------------------ render
@@ -846,7 +993,7 @@ function render(t) {
     const o = G.view.others.find((p) => p.id === G.spectate) || (G.kind === 'quick' && G.modeKey === 'showdown' ? G.view.others[0] : null);
     if (o) { target = o; G.spectate = o.id; } else target = G.cam;
     G.cam.x += (target.x - G.cam.x) * 0.12; G.cam.y += (target.y - G.cam.y) * 0.12;
-  } else { G.cam.x = target.x; G.cam.y = target.y; }
+  } else { G.cam.x = target.x + (SETTINGS.reduceFlash ? 0 : G.nudge.x); G.cam.y = target.y + (SETTINGS.reduceFlash ? 0 : G.nudge.y); }
   const cam = G.cam;
   const hw = W / 2 / s, hh = H / 2 / s;
   const x0 = cam.x - hw, y0 = cam.y - hh - 60, x1 = cam.x + hw, y1 = cam.y + hh + 60;
@@ -866,11 +1013,20 @@ function render(t) {
   for (const e of evs) if (EVENTS[e.id].layer === 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
 
   if (meAlive && G.phase === 'play') {
-    const aim = input.getAim();
-    if (aim && !aim.cancel) R.drawAim(ctx, G.brawler, mePos.x, mePos.y, aim.ang, aim.kind, aim.mag);
-    else if (!input.isTouch && input.mouse.active) { ctx.globalAlpha = 0.45; R.drawAim(ctx, G.brawler, mePos.x, mePos.y, mouseAngle(), 'fire', Math.hypot(input.mouse.x - W / 2, input.mouse.y - H / 2) / (BRAWLERS[G.brawler].attack.range * s)); ctx.globalAlpha = 1; }
+    const aim = input.getAim(), h = holding(), prof = aimProfile(h);
+    const chargeOf = (held) => (!h.sig && h.w.kind === 'charge' ? Math.min(1, held / h.w.charge) : 0);
+    if (aim && !aim.cancel) {
+      if (aim.kind === 'super') R.drawAim(ctx, G.brawler, mePos.x, mePos.y, aim.ang, aim.kind, aim.mag);
+      else R.drawAimProfile(ctx, { ...prof, charge: chargeOf(aim.held) }, mePos.x, mePos.y, aim.ang, aim.mag);
+    } else if (!input.isTouch && input.mouse.active) {
+      ctx.globalAlpha = 0.45;
+      R.drawAimProfile(ctx, { ...prof, charge: input.mouse.down && input.mouse.charge ? chargeOf((performance.now() - input.mouse.down) / 1000) : 0 }, mePos.x, mePos.y, mouseAngle(), Math.hypot(input.mouse.x - W / 2, input.mouse.y - H / 2) / (h.w.range * s));
+      ctx.globalAlpha = 1;
+    }
   }
+  for (const fl of G.view.flares) R.drawFlare(ctx, fl[0], fl[1], fl[2], fl[3]);
   for (const c of G.view.cubes) R.drawCube(ctx, c[1], c[2], t);
+  if (G.view.wdrops) for (const d of G.view.wdrops) R.drawWeaponDrop(ctx, d[1], d[2], WEAPON_IDS[d[3]], d[4], t);
   for (const c of G.view.crystals) R.drawCrystal(ctx, c[1], c[2], t);
   for (const mn of G.view.mines) R.drawMine(ctx, mn[1], mn[2], mn[3], mn[4] === G.myId, t);
   if (!SETTINGS.lowGfx) art.drawShadows(ctx, G.map, view);
@@ -885,7 +1041,7 @@ function render(t) {
     const me = G.me;
     list.push({
       id: G.myId, x: mePos.x, y: mePos.y, hp: me.hp, mh: me.mh, cu: me.cu, facing: G.facing, fl: me.f, name: G.roster[G.myId]?.[0] || 'You',
-      brawler: G.brawler, moving: G.moving, stun: me.f & 2, me: true, skin: G.roster[G.myId]?.[3]?.skin, title: G.roster[G.myId]?.[3]?.title ? TITLES[G.roster[G.myId][3].title] : null, bt: me.bt, glow: me.gl, cr: me.cr, size: moveStats(G.brawler, me.hp, me.mh).r / PLAYER_R,
+      brawler: G.brawler, moving: G.moving, stun: me.f & 2, me: true, skin: G.roster[G.myId]?.[3]?.skin, title: G.roster[G.myId]?.[3]?.title ? TITLES[G.roster[G.myId][3].title] : null, badge: G.roster[G.myId]?.[3]?.badge || null, bt: me.bt, glow: me.gl, cr: me.cr, size: moveStats(G.brawler, me.hp, me.mh).r / PLAYER_R,
     });
   }
   list.sort((a, b) => a.y - b.y);
@@ -900,7 +1056,8 @@ function render(t) {
     if (G.flash['dash' + p.id] > 0) {
       for (let i = 1; i <= 3; i++) R.drawBrawler(ctx, p.brawler, p.x - Math.cos(p.facing) * i * 22, p.y - Math.sin(p.facing) * i * 22, p.facing, t, { alpha: 0.18 * (4 - i), size: p.size });
     }
-    R.drawBrawler(ctx, p.brawler, p.x, p.y, p.facing, t, { alpha, moving: p.moving, flash: G.flash[p.id], size: p.size, skin: p.skin });
+    const rk = G.recoil.get(p.id) || 0, rx = p.x - Math.cos(p.facing) * rk * 5, ry = p.y - Math.sin(p.facing) * rk * 5;
+    R.drawBrawler(ctx, p.brawler, rx, ry, p.facing, t, { alpha, moving: p.moving, flash: G.flash[p.id], size: p.size, skin: p.skin });
     R.drawBubble(ctx, p, t);
     if (p.fl & 512) R.drawSlowed(ctx, p.x, p.y, t);
     if (p.fl & 256) R.drawCage(ctx, p.x, p.y);
@@ -908,16 +1065,27 @@ function render(t) {
   for (const w of G.worms) R.drawWorm(ctx, w.x, w.y, w.r, 1 - w.life / w.max);
   for (const sl of G.slashes) {
     const k = 1 - sl.life / sl.max, x = sl.follow ? mePos.x : sl.x, y = sl.follow ? mePos.y : sl.y;
-    const A = BRAWLERS.flicker.attack, a0 = sl.ang - A.arc / 2, sweep = A.arc * Math.min(1, k * 1.8);
+    const A = sl.range ? sl : BRAWLERS.flicker.attack, a0 = sl.ang - A.arc / 2, sweep = A.arc * Math.min(1, k * 1.8);
     ctx.save(); ctx.globalAlpha = 1 - k * 0.6; ctx.lineCap = 'round';
     ctx.beginPath(); sl.flip ? ctx.arc(x, y, A.range * 0.85, a0 + A.arc - sweep, a0 + A.arc) : ctx.arc(x, y, A.range * 0.85, a0, a0 + sweep);
-    ctx.lineWidth = 16; ctx.strokeStyle = R.INK; ctx.stroke(); ctx.lineWidth = 9; ctx.strokeStyle = '#ff5fa2'; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+    ctx.lineWidth = 16; ctx.strokeStyle = R.INK; ctx.stroke(); ctx.lineWidth = 9; ctx.strokeStyle = sl.range ? '#c9ccd4' : '#ff5fa2'; ctx.stroke(); ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
     ctx.restore();
   }
   const rimAt = (x, y) => R.theme(worldKeyAt(G.map, x, y)).bulletRim;
-  if (!SETTINGS.lowGfx) { for (const b of G.view.bullets) R.drawTrail(ctx, b.kind, b.x, b.y, b.ang); for (const b of G.localBullets) R.drawTrail(ctx, G.brawler, b.x, b.y, b.ang); }
-  for (const b of G.view.bullets) R.drawBullet(ctx, b.kind, b.x, b.y, b.ang, rimAt(b.x, b.y));
-  for (const b of G.localBullets) R.drawBullet(ctx, G.brawler, b.x, b.y, b.ang, rimAt(b.x, b.y));
+  const myKind = BRAWLER_IDS.indexOf(G.brawler);
+  if (!SETTINGS.lowGfx) {
+    for (const b of G.view.bullets) R.drawShotTrail(ctx, bulletKind(b.kind), b.kind, b.drawX, b.drawY, b.ang, b.kind >= WKIND ? R.masteryTint(G.roster[b.owner]?.[3]?.wskin, t) : null);
+    const myTint = R.masteryTint(G.roster[G.myId]?.[3]?.wskin, t);
+    for (const b of G.localBullets) R.drawShotTrail(ctx, G.brawler, b.kind ?? myKind, b.x, b.y, b.ang, b.kind != null ? myTint : null);
+  }
+  for (const b of G.view.bullets) R.drawShot(ctx, bulletKind(b.kind), b.kind, b.drawX, b.drawY, b.ang, rimAt(b.drawX, b.drawY), t);
+  for (const b of G.localBullets) R.drawShot(ctx, G.brawler, b.kind ?? myKind, b.x, b.y, b.ang, rimAt(b.x, b.y), t);
+  for (const bo of G.bolts) { // Arc Gun chain
+    ctx.save(); ctx.globalAlpha = bo.life / bo.max; ctx.lineCap = 'round';
+    const mx = (bo.x + bo.x2) / 2 + (Math.random() - 0.5) * 30, my = (bo.y + bo.y2) / 2 + (Math.random() - 0.5) * 30;
+    for (const [w, c] of [[7, R.INK], [4, '#5ff4ff'], [1.5, '#fff']]) { ctx.lineWidth = w; ctx.strokeStyle = c; ctx.beginPath(); ctx.moveTo(bo.x, bo.y); ctx.lineTo(mx, my); ctx.lineTo(bo.x2, bo.y2); ctx.stroke(); }
+    ctx.restore();
+  }
 
   R.drawBushes(ctx, G.map, x0, y0, x1, y1, meAlive ? mePos : null, t, Math.max(env.dn ? env.dn.dark : 0, env.cave ? 0.5 : 0));
   for (const e of evs) if (EVENTS[e.id].layer !== 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
@@ -938,13 +1106,17 @@ function render(t) {
       ctx.globalAlpha = Math.min(1, k * 1.6); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
       ctx.beginPath(); ctx.moveTo(-p.size, -p.size * 0.4); ctx.lineTo(p.size, 0); ctx.lineTo(-p.size * 0.3, p.size * 0.7); ctx.closePath(); ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = R.INK; ctx.stroke(); ctx.restore();
-    } else if (p.kind === 'ember') { ctx.globalAlpha = Math.min(1, k * 1.4) * (SETTINGS.reduceFlash ? 0.8 : 0.6 + Math.sin(p.life * 30) * 0.4); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); }
+    } else if (p.kind === 'flash') { ctx.globalAlpha = k; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.beginPath(); ctx.moveTo(-6, -p.size * 0.6); ctx.lineTo(p.size * 1.4, 0); ctx.lineTo(-6, p.size * 0.6); ctx.closePath(); ctx.fill(); ctx.restore(); }
+    else if (p.kind === 'casing') { ctx.globalAlpha = Math.min(1, k * 2); ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-p.size, -p.size / 2, p.size * 2, p.size); ctx.restore(); }
+    else if (p.kind === 'ember') { ctx.globalAlpha = Math.min(1, k * 1.4) * (SETTINGS.reduceFlash ? 0.8 : 0.6 + Math.sin(p.life * 30) * 0.4); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); }
     else { ctx.globalAlpha = Math.min(1, k * 1.5); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); }
   }
   ctx.globalAlpha = 1;
   for (const p of list) { if (p.fl & 4 && !p.me && p.team !== myTeam) continue; R.drawStatus(ctx, p, p.me, t, myTeam ? (p.me || p.team === myTeam ? 'mate' : 'foe') : null); }
   if (meAlive) {
-    R.drawAmmo(ctx, mePos.x, mePos.y, G.me.am, G.me.sc >= 1, t);
+    const hh = holding();
+    if (hh.sig) R.drawAmmo(ctx, mePos.x, mePos.y, G.me.am, G.me.sc >= 1, t);
+    else { R.drawWeaponAmmo(ctx, mePos.x, mePos.y, hh.ammo, hh.w.ammo); if (G.me.sc >= 1) R.drawAmmo(ctx, mePos.x, mePos.y + 999, 0, true, t); }
     // LAY LOW meter: fills while hiding, then "LAYING LOW"
     if (G.me.f & 1) {
       const k = G.me.bt5 / 5;
@@ -958,6 +1130,10 @@ function render(t) {
     ctx.globalAlpha = Math.min(1, (tx.life / tx.max) * 2); R.outlinedText(ctx, tx.txt, tx.x, tx.y, Math.round(tx.size * pop), tx.color);
   }
   ctx.globalAlpha = 1;
+  if (G.hitMark && !SETTINGS.reduceFlash && meAlive) { // HIT MARKER at the aim point (sound plays either way)
+    const hm = G.hitMark, a = G.facing, d = 90;
+    R.drawHitMarker(ctx, mePos.x + Math.cos(a) * d, mePos.y + Math.sin(a) * d, hm.t / 0.3, hm.kind);
+  }
   ctx.restore();
 
   // ---- screen space
@@ -1017,8 +1193,32 @@ function render(t) {
       [...G.pings.map((p) => ({ ...p, age: (now - p.t0) / 1000 })), ...(G.mates || []).map(([id, x, y]) => ({ id, x, y, bt: 0, age: 0, mate: true }))],
       { poison: P?.last?.z ? { inset: P.last.z, size: G.map.gw * TILE_ } : null, hub: false, zones: false, range: 1600 }, t);
   }
+  // EMOTES: a small button under the map; tap it, then tap a call-out
+  if (meAlive && G.phase === 'play') {
+    const ex = rcx, ey = rcy + radarR + 34, er = 19;
+    input.taps.push({ x: ex, y: ey, r: er + 4, on: () => { G.emoteOpen = !G.emoteOpen; sfx('click', 0.6); } });
+    ctx.beginPath(); ctx.arc(ex, ey, er, 0, Math.PI * 2); ctx.fillStyle = G.emoteOpen ? 'rgba(255,210,63,0.92)' : 'rgba(30,16,51,0.8)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = R.INK; ctx.stroke();
+    R.outlinedText(ctx, '!?', ex, ey + 1, 14, G.emoteOpen ? R.INK : '#fff', G.emoteOpen ? '#ffd23f' : R.INK);
+    if (G.emoteOpen) {
+      const own = loadoutFor(A.progress()).emotes;
+      own.forEach((i, k) => {
+        const e = EMOTES[i], y = ey + 40 + k * 32, w = 104, x = ex - er + w / 2;
+        ctx.fillStyle = 'rgba(30,16,51,0.88)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - w / 2, y - 13, w, 26, 9) : ctx.rect(x - w / 2, y - 13, w, 26); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = R.INK; ctx.stroke();
+        R.outlinedText(ctx, e.text, x, y + 1, 12, e.col);
+        input.taps.push({ x, y, r: 15, on: () => { send({ t: 'emote', e: i }); G.emoteOpen = false; } });
+        input.taps.push({ x: x - 32, y, r: 14, on: () => { send({ t: 'emote', e: i }); G.emoteOpen = false; } });
+        input.taps.push({ x: x + 32, y, r: 14, on: () => { send({ t: 'emote', e: i }); G.emoteOpen = false; } });
+      });
+    }
+  } else G.emoteOpen = false;
   worldNotices(env);
-  if (G.phase === 'play' && meAlive) R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
+  if (G.phase === 'play' && meAlive) {
+    R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
+    if (G.me.w2) { // SWAP button: signature <-> secondary
+      const id = WEAPON_IDS[G.me.w2[0]], hh = holding();
+      R.drawSwapButton(ctx, input.swapBtn, { active: hh.slot === 1, name: WEAPONS[id].name, sigName: BRAWLERS[G.brawler].name, swap: Math.max(0, G.localSwap || 0, G.me.sw || 0) }, t);
+    }
+  }
   if (!meAlive && G.phase !== 'play') {
     const o = G.view.others.find((p) => p.id === G.spectate);
     if (o) R.outlinedText(ctx, `Spectating ${o.name}`, W / 2, H - 30, 18);

@@ -1,9 +1,11 @@
 // Touch twin-stick + keyboard/mouse input.
+import { SETTINGS } from './settings.js';
 // Produces a move vector every tick and a queue of discrete actions (fire / super).
 
 const STICK_R = 62; // css px
 const AIM_DEADZONE = 16;
 const TAP_MS = 260;
+const sens = () => Math.max(0.5, Math.min(2, SETTINGS.aimSens || 1));
 
 export class Input {
   constructor(el) {
@@ -12,7 +14,7 @@ export class Input {
     this.actions = [];
     this.moveT = null; // {id, bx, by, x, y}
     this.aimT = null; // {id, kind, bx, by, x, y, t0, aiming}
-    this.mouse = { x: 0, y: 0, active: false };
+    this.mouse = { x: 0, y: 0, active: false, down: 0, holdFired: false, charge: false };
     this.isTouch = matchMedia('(pointer: coarse)').matches;
     this.enabled = false;
     this.taps = []; // tappable HUD circles drawn on the canvas: {x, y, r, on()} (e.g. the minimap)
@@ -25,12 +27,18 @@ export class Input {
     el.addEventListener('touchcancel', (e) => this.onTouchEnd(e, true), opts);
 
     el.addEventListener('mousemove', (e) => { this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.mouse.active = true; });
+    el.addEventListener('mouseup', (e) => {
+      if (e.button !== 0 || !this.mouse.down) return;
+      const held = (performance.now() - this.mouse.down) / 1000;
+      this.mouse.down = 0;
+      if (this.enabled && !this.mouse.holdFired && this.mouse.charge) this.actions.push({ type: 'fire', mode: 'mouse', held });
+    });
     el.addEventListener('mousedown', (e) => {
       if (!this.enabled) return;
       const hit = this.tapAt(e.clientX, e.clientY);
       if (hit) { hit.on(); return; }
       this.mouse.active = true;
-      if (e.button === 0) this.actions.push({ type: 'fire', mode: 'mouse' });
+      if (e.button === 0) { this.mouse.down = performance.now(); this.mouse.holdFired = false; if (!this.mouse.charge) this.actions.push({ type: 'fire', mode: 'mouse' }); }
       if (e.button === 2) this.actions.push({ type: 'super', mode: 'mouse' });
     });
     el.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -40,6 +48,7 @@ export class Input {
       this.keys.add(k);
       if (!this.enabled || e.repeat) return;
       if (k === 'e' || k === 'q') this.actions.push({ type: 'super', mode: 'mouse' });
+      if (k === 'r' || k === 'tab' || k === '2') { this.actions.push({ type: 'swap' }); e.preventDefault(); }
       if (k === ' ') { this.actions.push({ type: 'fire', mode: 'mouse' }); e.preventDefault(); }
     });
     addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
@@ -47,14 +56,16 @@ export class Input {
     document.addEventListener('visibilitychange', () => { if (document.hidden) { this.keys.clear(); this.moveT = null; this.aimT = null; } });
   }
 
-  layout(W, H, sa = { t: 0, r: 0, b: 0, l: 0 }) {
-    this.W = W; this.H = H;
+  layout(W, H, sa = this.sa || { t: 0, r: 0, b: 0, l: 0 }) {
+    this.W = W; this.H = H; this.sa = sa;
     const s = Math.min(1, H / 400);
-    // keep the buttons clear of the notch / home bar
-    this.superBtn = { x: W - 205 * s - 10 - sa.r, y: H - 70 * s - 10 - sa.b, r: 38 * s };
-    this.atkHint = { x: W - 95 * s - 10 - sa.r, y: H - 100 * s - 10 - sa.b, r: STICK_R };
+    // keep the buttons clear of the notch / home bar; left-handed mirrors the whole layout
+    const L = !!SETTINGS.leftHanded, X = (x) => (L ? W - x : x);
+    this.superBtn = { x: X(W - 205 * s - 10 - sa.r), y: H - 70 * s - 10 - sa.b, r: 38 * s };
+    this.atkHint = { x: X(W - 95 * s - 10 - sa.r), y: H - 100 * s - 10 - sa.b, r: STICK_R };
+    this.swapBtn = { x: X(W - 205 * s - 10 - sa.r), y: H - 155 * s - 10 - sa.b, r: 30 * s };
     // idle move-stick hint: on short phones sit it lower so it clears the leaderboard
-    this.moveHint = { x: 110 + sa.l, y: (H < 430 ? H - STICK_R - 14 : H - 105) - sa.b };
+    this.moveHint = { x: X(110 + sa.l), y: (H < 430 ? H - STICK_R - 14 : H - 105) - sa.b };
   }
 
   reset() { this.actions.length = 0; this.moveT = null; this.aimT = null; }
@@ -72,10 +83,12 @@ export class Input {
       const x = t.clientX, y = t.clientY;
       const hit = this.tapAt(x, y);
       if (hit) { hit.on(); continue; } // a HUD button, not a stick
-      const sb = this.superBtn;
+      const sb = this.superBtn, wb = this.swapBtn;
+      if (this.swapOn && wb && Math.hypot(x - wb.x, y - wb.y) < wb.r + 8) { this.actions.push({ type: 'swap' }); continue; }
+      const moveSide = SETTINGS.leftHanded ? x > this.W * 0.55 : x < this.W * 0.45;
       if (!this.aimT && Math.hypot(x - sb.x, y - sb.y) < sb.r + 14) {
         this.aimT = { id: t.identifier, kind: 'super', bx: sb.x, by: sb.y, x, y, t0: performance.now(), aiming: false };
-      } else if (x < this.W * 0.45) {
+      } else if (moveSide) {
         if (!this.moveT) this.moveT = { id: t.identifier, bx: x, by: y, x, y };
       } else if (!this.aimT) {
         this.aimT = { id: t.identifier, kind: 'fire', bx: x, by: y, x, y, t0: performance.now(), aiming: false };
@@ -96,7 +109,7 @@ export class Input {
       if (this.aimT && t.identifier === this.aimT.id) {
         const a = this.aimT;
         a.x = t.clientX; a.y = t.clientY;
-        if (Math.hypot(a.x - a.bx, a.y - a.by) > AIM_DEADZONE) a.aiming = true;
+        if (!a.aiming && Math.hypot(a.x - a.bx, a.y - a.by) > AIM_DEADZONE / sens()) { a.aiming = true; a.aimAt = performance.now(); }
       }
     }
   }
@@ -110,10 +123,12 @@ export class Input {
         this.aimT = null;
         if (cancel || !this.enabled) continue;
         const dx = a.x - a.bx, dy = a.y - a.by, d = Math.hypot(dx, dy);
+        const held = (performance.now() - (a.aimAt || a.t0)) / 1000; // how long it was aimed (charge shots)
+        if (a.holdFired) continue; // hold-to-fire already fired while it was held
         if (!a.aiming) {
-          if (performance.now() - a.t0 < TAP_MS * 3) this.actions.push({ type: a.kind, mode: 'auto' });
-        } else if (d > AIM_DEADZONE * 0.75) {
-          this.actions.push({ type: a.kind, mode: 'angle', ang: Math.atan2(dy, dx), mag: Math.min(1, d / STICK_R) });
+          if (performance.now() - a.t0 < TAP_MS * 3) this.actions.push({ type: a.kind, mode: 'auto', held: 0 });
+        } else if (d > AIM_DEADZONE * 0.75 / sens()) {
+          this.actions.push({ type: a.kind, mode: 'angle', ang: Math.atan2(dy, dx), mag: Math.min(1, d / (STICK_R / sens())), held });
         } // dragged back to centre = cancel
       }
     }
@@ -146,7 +161,7 @@ export class Input {
     const a = this.aimT;
     if (!a || !a.aiming) return null;
     const dx = a.x - a.bx, dy = a.y - a.by, d = Math.hypot(dx, dy);
-    return { kind: a.kind, ang: Math.atan2(dy, dx), mag: Math.min(1, d / STICK_R), cancel: d <= AIM_DEADZONE * 0.75 };
+    return { kind: a.kind, ang: Math.atan2(dy, dx), mag: Math.min(1, d / (STICK_R / sens())), cancel: d <= AIM_DEADZONE * 0.75 / sens(), held: (performance.now() - (a.aimAt || a.t0)) / 1000, touch: a };
   }
 
   takeActions() { const a = this.actions; this.actions = []; return a; }

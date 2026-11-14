@@ -5,7 +5,7 @@ import { Sim } from '../src/sim.js';
 import { generateArena, BRAWLER_IDS } from '../public/shared.js';
 
 assert.equal(PASS.length, PASS_TIERS); assert.equal(PASS_TIERS, 30);
-for (const b of BRAWLER_IDS) assert.equal(Object.values(SKINS).filter((s) => s.brawler === b && !s.free).length, 2, `2 skins for ${b}`);
+for (const b of BRAWLER_IDS) assert.equal(Object.values(SKINS).filter((s) => s.brawler === b && !s.free && !s.level).length, 2, `2 shop skins for ${b}`);
 // every brawler also has a free Classic skin (the original look), owned by everyone incl. old saves
 {
   const { normalize } = await import('../public/progression.js');

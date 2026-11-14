@@ -7,6 +7,17 @@ import { Sim, newId } from './sim.js';
 import { QUICK_MODES, RANDOM_MODES, MODES, playersFor } from './modes.js';
 import { EVENTS } from '../public/events/index.js';
 import { handleApi, userFromToken, recordMatch } from './accounts.js';
+import { loadoutFor } from '../public/progression.js';
+import { WEAPONS } from '../public/weapons.js';
+// local dev only (HUNT_DEV is in wrangler.jsonc, never the deploy config): ?wpn=id&mast=n hands
+// you a secondary for tests and screenshots without an account at that level
+function devWeapon(env, url, sim, id) {
+  const w = url.searchParams.get('wpn');
+  if (!env.HUNT_DEV || !w || !WEAPONS[w]) return;
+  const m = Math.max(0, Math.min(10, Number(url.searchParams.get('mast')) || 1));
+  const badge = m >= 10 ? 'bane' : m >= 9 ? 'gold' : m >= 6 ? 'silver' : m >= 3 ? 'bronze' : null;
+  sim.setLoadout(id, { w2: w, perks: [], mastery: m, badge, emotes: [0, 1, 2, 3, 4, 5, 6, 7], dev: true });
+}
 import {
   BRAWLERS, DT, WORLDS, ZONES, generateArena, generateWorld, zoneBounds, zoneAt, worldId,
 } from '../public/shared.js';
@@ -120,9 +131,9 @@ export class MatchRoom {
       if (!r.p.account || r.p.recorded) continue;
       r.p.recorded = true;
       try {
-        const out = await recordMatch(this.env.DB, r.p.account, { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, won: r.won });
+        const out = await recordMatch(this.env.DB, r.p.account, { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, won: r.won, assists: r.assists, steals: r.steals, wstat: r.wstat });
         const ws = sockets.get(r.p.id);
-        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress });
+        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, mastery: out.mastery });
       } catch (e) { console.log('recordMatch failed', e && e.message); }
     }
   }
@@ -158,7 +169,8 @@ export class MatchRoom {
       return new Response(null, { status: 101, webSocket: client });
     }
     const token = url.searchParams.get('token');
-    if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { const p = sim.players.get(id); if (u && p) { const pr = JSON.parse(u.progress || '{}'); p.account = u.id; p.trophies = pr.trophies?.[p.brawler] | 0; sim.setCosmetics(id, pr.equipped); } }).catch(() => {});
+    if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { const p = sim.players.get(id); if (u && p) { const pr = JSON.parse(u.progress || '{}'); p.account = u.id; p.trophies = pr.trophies?.[p.brawler] | 0; sim.setCosmetics(id, pr.equipped); sim.setLoadout(id, loadoutFor(pr)); } }).catch(() => {});
+    devWeapon(this.env, url, sim, id);
     const secret = crypto.randomUUID();
     sim.players.get(id).secret = secret;
     sendJSON(server, { t: 'welcome', id, room: isRoom ? mname.slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: mname, secret });
@@ -366,7 +378,8 @@ export class ZoneRoom {
       const at = this.env.HUNT_DEV && (url.searchParams.get('at') || '').split(',').map(Number);
       if (at && at.length === 2 && sim.inBounds(at[0], at[1], -60)) { p.x = p.px = at[0]; p.y = p.py = at[1]; }
       const token = url.searchParams.get('token');
-      if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { if (u && sim.players.has(p.id)) { p.account = u.id; sim.setCosmetics(p.id, JSON.parse(u.progress || '{}').equipped); } }).catch(() => {});
+      if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { if (u && sim.players.has(p.id)) { const pr = JSON.parse(u.progress || '{}'); p.account = u.id; sim.setCosmetics(p.id, pr.equipped); sim.setLoadout(p.id, loadoutFor(pr)); } }).catch(() => {});
+      devWeapon(this.env, url, sim, p.id);
       server.huntKey = p.id;
       this.conns.set(p.id, server);
       p.secret = crypto.randomUUID();
