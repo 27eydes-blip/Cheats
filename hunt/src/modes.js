@@ -71,7 +71,13 @@ export const MODES = {
       else { sim.holdId = 0; sim.holdT = 0; }
     },
     score: (p) => p.crystals,
-    checkEnd: (sim) => (sim.holdId && sim.holdT <= 0) || sim.time >= 180,
+    checkEnd: (sim) => {
+      const h = sim.holdId && sim.holdT <= 0 ? sim.players.get(sim.holdId) : null;
+      if (h && h.alive && h.crystals >= 10) { sim.crystalWinner = h.id; return true; }
+      return sim.time >= 180;
+    },
+    rank: (sim) => [...sim.players.values()].sort((a, b) => (b.id === sim.crystalWinner) - (a.id === sim.crystalWinner) || b.crystals - a.crystals || b.kills - a.kills || b.bounty - a.bounty),
+    tieKey: (sim, p) => `${p.id === sim.crystalWinner ? 'W' : ''}|${p.crystals}|${p.kills}|${p.bounty}`,
     hud: (sim) => ({ tl: Math.max(0, 180 - sim.time), hold: sim.holdId ? [sim.holdId, Math.max(0, sim.holdT)] : null }),
     botGoal: (sim, bot) => {
       if (bot.crystals >= 7) return null; // hold on: fight/hide normally
