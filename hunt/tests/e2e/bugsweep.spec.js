@@ -134,3 +134,28 @@ test('GPU context loss rebuilds the in-game and lobby art caches', async ({ page
   expect(lobbyRebuilt.sky1).toBeGreaterThan(lobbyRebuilt.sky0);
   expect(errors).toEqual([]);
 });
+
+test('a full session (lobby screens, match, results, Free Play) logs no console errors or warnings', async ({ page }) => {
+  const issues = [];
+  page.on('pageerror', (e) => issues.push(e.message));
+  page.on('console', (m) => { if (['error', 'warning'].includes(m.type()) && !/fonts\.g|Failed to load resource/.test(m.text())) issues.push(m.text()); });
+  await page.goto('/');
+  await page.waitForSelector('#playBtn', { state: 'visible' });
+  await page.waitForTimeout(1000);
+  for (const id of ['rail_locker', 'rail_pass', 'rail_road', 'rail_friends', 'rail_settings', 'profileCard', 'tbMissions', 'modeCard']) {
+    await page.click('#' + id); await page.waitForTimeout(500);
+    const bk = page.locator('.ui-screen .back').last();
+    if (await bk.count()) await bk.click(); else await page.locator('.ui-pop [data-close]').last().click();
+    await page.waitForTimeout(350);
+  }
+  await page.click('#playBtn');
+  await page.waitForFunction(() => window.__hunt.phase === 'play' && window.__hunt.me, null, { timeout: 40000 });
+  await page.keyboard.down('d'); await page.waitForTimeout(1200); await page.keyboard.up('d');
+  await page.evaluate(() => { const G = window.__hunt; window.__huntMsg({ t: 'end', mode: G.modeKey, rank: 3, kills: 0, bounty: 0, winner: 'X', results: [['Me', G.brawler, 3, 0, 0, G.myId, 0, 0]] }); });
+  await page.waitForSelector('#rsLobby', { state: 'visible', timeout: 8000 });
+  await page.click('#rsLobby');
+  await page.goto('/?free=1');
+  await page.waitForFunction(() => window.__hunt.me, null, { timeout: 30000 });
+  await page.waitForTimeout(1500);
+  expect(issues).toEqual([]);
+});

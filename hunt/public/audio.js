@@ -2,9 +2,11 @@
 // Respects the Sound setting; unlocked on the first user gesture (mobile requirement).
 import { SETTINGS } from './settings.js';
 
-let ac = null, master = null, noiseBuf = null;
+let ac = null, master = null, noiseBuf = null, gestured = false;
 function ctx() {
   if (!ac) {
+    // browsers refuse (and warn) to start audio before the first tap/key: wait for it
+    if (!gestured && !(navigator.userActivation && navigator.userActivation.hasBeenActive)) return null;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     ac = new AC();
@@ -15,7 +17,7 @@ function ctx() {
   }
   return ac;
 }
-export function unlockAudio() { const a = ctx(); if (a && a.state !== 'running' && a.state !== 'closed') a.resume().catch(() => {}); }
+export function unlockAudio() { gestured = true; const a = ctx(); if (a && a.state !== 'running' && a.state !== 'closed') a.resume().catch(() => {}); }
 export const audioCtx = () => ctx();
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, unlockAudio, { once: false, passive: true });
 
