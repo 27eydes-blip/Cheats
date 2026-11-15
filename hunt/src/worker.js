@@ -1,7 +1,7 @@
 // Cloudflare Worker entry.
 //   /ws        Quick Hunt: Matchmaker DO picks an open match (mode + arena) -> MatchRoom DO
-//   /zone      Free Play: one ZoneRoom DO per world zone (nw/ne/se/sw); players are handed off
-//              between zone DOs as they walk across borders.
+//   /zone      Free Play: one ZoneRoom DO per world zone (3x3 grid, ZONES in shared.js); players are
+//              handed off between zone DOs as they walk across borders.
 //   everything else: static client from ./public
 import { Sim, newId } from './sim.js';
 import { QUICK_MODES, RANDOM_MODES, MODES, playersFor } from './modes.js';
@@ -11,7 +11,8 @@ import { loadoutFor, weaponUnlocked, normalize } from '../public/progression.js'
 import { powerBracket } from '../public/power.js';
 import { WEAPONS } from '../public/weapons.js';
 import { VERSION } from '../public/version.js';
-// local dev only (HUNT_DEV is in wrangler.jsonc, never the deploy config): ?wpn=id&mast=n hands
+import { logError, guard } from './log.js';
+// local dev only (HUNT_DEV is in wrangler.jsonc, never in wrangler.preview.jsonc, which is what deploys): ?wpn=id&mast=n hands
 // you a secondary for tests and screenshots without an account at that level
 function devWeapon(env, url, sim, id) {
   const w = url.searchParams.get('wpn');
@@ -30,7 +31,7 @@ const cleanName = (s) => (s || '').replace(/[^\p{L}\p{N} _\-.!]/gu, '').trim().s
 const arenaWorlds = () => WORLDS.filter((w) => w.arena).map((w) => w.key);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
-export default {
+const app = {
   async fetch(req, env) {
     const url = new URL(req.url);
     // build id: an open client compares it with its own and offers a reload after a deploy
@@ -59,7 +60,7 @@ export default {
           try {
             const u = await userFromToken(env.DB, token);
             if (u) bracket = powerBracket(JSON.parse(u.progress || '{}').power?.[url.searchParams.get('brawler')] || 1);
-          } catch {}
+          } catch (e) { logError('power bracket', { where: '/ws' }, e); }
         }
         const r = await mm.fetch('https://mm/assign?mode=' + want + '&b=' + bracket + '&skip=' + encodeURIComponent(url.searchParams.get('skip') || ''));
         name = await r.text();
@@ -69,6 +70,17 @@ export default {
       return env.MATCH.get(env.MATCH.idFromName(name)).fetch(new Request(fwd, req));
     }
     return env.ASSETS.fetch(req);
+  },
+};
+// anything a route throws is logged (route only: the query can hold a token) before the 500 goes out
+export default {
+  async fetch(req, env) {
+    try { return await app.fetch(req, env); } catch (e) {
+      let where = '?';
+      try { where = new URL(req.url).pathname.split('/').slice(0, 3).join('/'); } catch {}
+      logError('request', { where }, e);
+      throw e;
+    }
   },
 };
 
@@ -92,7 +104,7 @@ export class Matchmaker {
 
 // Fixed-step loop helper shared by both DO kinds.
 class Loop {
-  constructor(step) { this.step = step; this.timer = null; }
+  constructor(step, ctx) { this.step = step; this.ctx = ctx; this.timer = null; }
   start() {
     if (this.timer) return;
     this.last = Date.now(); this.acc = 0;
@@ -100,7 +112,8 @@ class Loop {
       const now = Date.now();
       this.acc += (now - this.last) / 1000; this.last = now;
       let n = 0;
-      while (this.acc >= DT && n++ < 4) { this.acc -= DT; this.step(); }
+      // a throwing tick is logged (it used to vanish) and the loop carries on with the next one
+      try { while (this.acc >= DT && n++ < 4) { this.acc -= DT; this.step(); } } catch (e) { logError('tick', this.ctx(), e); }
       if (this.acc > DT * 4) this.acc = 0;
     }, 25);
   }
@@ -119,8 +132,10 @@ export class MatchRoom {
     this.sockets = null;
     this.endedAt = 0;
     this.emptyAt = 0;
-    this.loop = new Loop(() => this.step());
+    this.loop = new Loop(() => this.step(), () => this.logCtx());
   }
+
+  logCtx() { return { where: 'match', mode: this.sim?.modeKey }; }
 
   newMatch(cfg) {
     if (this.dropped) for (const id of [...this.dropped.keys()]) this.abandon(id); // previous match's leavers
@@ -150,7 +165,7 @@ export class MatchRoom {
         const out = await recordMatch(this.env.DB, r.p.account, { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, mode: this.sim?.modeKey, won: r.won, assists: r.assists, steals: r.steals, wstat: r.wstat });
         const ws = sockets.get(r.p.id);
         if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, mastery: out.mastery, wxp: out.wxp, coins: out.coins });
-      } catch (e) { console.log('recordMatch failed', e && e.message); }
+      } catch (e) { logError('recordMatch', this.logCtx(), e); }
     }
   }
 
@@ -188,7 +203,7 @@ export class MatchRoom {
     if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { const p = sim.players.get(id); if (u && p) { const pr = JSON.parse(u.progress || '{}'); p.account = u.id; p.trophies = pr.trophies?.[p.brawler] | 0; sim.setCosmetics(id, pr.equipped); sim.setLoadout(id, loadoutFor(pr));
       const tw = url.searchParams.get('try'); // TEST RANGE weapon: only one this account has unlocked
       if (sim.modeKey === 'range' && tw && weaponUnlocked(normalize(pr), tw)) { sim.setWeapon(p, tw, normalize(pr).perks[tw] || []); p.slot = 1; }
-    } }).catch(() => {});
+    } }).catch((e) => logError('account load', this.logCtx(), e));
     devWeapon(this.env, url, sim, id);
     const secret = crypto.randomUUID();
     sim.players.get(id).secret = secret;
@@ -227,13 +242,13 @@ export class MatchRoom {
     const sim = this.sim, sockets = this.sockets;
     sockets.set(id, server);
     this.emptyAt = 0;
-    server.addEventListener('message', (e) => {
+    server.addEventListener('message', guard((e) => {
       let m;
       try { m = JSON.parse(e.data); } catch { return; }
       if (m.t === 'ping') return sendJSON(server, { t: 'pong', c: m.c });
       if (m.t === 'bye') { this.abandon(id); onClose(true); try { server.close(1000, 'bye'); } catch {} return; }
       sim.input(id, m);
-    });
+    }, 'message', () => this.logCtx()));
     // bye = the player quit on purpose (no reconnect wanted); otherwise the connection dropped
     const onClose = (bye) => {
       if (sockets.get(id) !== server) return;
@@ -296,8 +311,10 @@ export class ZoneRoom {
     this.dropped = new Map(); // player id -> time their socket dropped (kept for REJOIN_GRACE_MS)
     this.dirT = 0;
     this.online = {};
-    this.loop = new Loop(() => this.step());
+    this.loop = new Loop(() => this.step(), () => this.logCtx());
   }
+
+  logCtx() { return { where: 'zone', zone: this.slot }; }
 
   zoneStub(slot) { return this.env.ZONE.get(this.env.ZONE.idFromName('zone:' + slot)); }
 
@@ -314,10 +331,10 @@ export class ZoneRoom {
           const by = {};
           for (const b of list) (by[zoneAt(b.x, b.y)] ||= []).push(b);
           for (const [slot, bl] of Object.entries(by)) {
-            if (slot !== this.slot) this.zoneStub(slot).fetch('https://z/bullets?slot=' + slot, { method: 'POST', body: JSON.stringify(bl) }).catch(() => {});
+            if (slot !== this.slot) this.zoneStub(slot).fetch('https://z/bullets?slot=' + slot, { method: 'POST', body: JSON.stringify(bl) }).catch((e) => logError('bullets handoff', this.logCtx(), e));
           }
         },
-        credit: (slot, c) => { if (slot && slot !== this.slot) this.zoneStub(slot).fetch('https://z/credit?slot=' + slot, { method: 'POST', body: JSON.stringify(c) }).catch(() => {}); },
+        credit: (slot, c) => { if (slot && slot !== this.slot) this.zoneStub(slot).fetch('https://z/credit?slot=' + slot, { method: 'POST', body: JSON.stringify(c) }).catch((e) => logError('credit handoff', this.logCtx(), e)); },
       },
     });
     return this.sim;
@@ -342,7 +359,8 @@ export class ZoneRoom {
       const r = await this.zoneStub(dest).fetch('https://z/handoff?slot=' + dest, { method: 'POST', body: JSON.stringify({ token, state }) });
       if (!r.ok) throw new Error('handoff refused');
       if (ws) sendJSON(ws, { t: 'handoff', zone: dest, token, ack: state.lastSeq });
-    } catch {
+    } catch (e) {
+      logError('player handoff', this.logCtx(), e);
       // the socket closed (or the zone emptied) while we waited: don't resurrect a ghost player
       if (!this.sim || !ws || ws.readyState !== 1 || this.conns.get(okey) !== ws) return;
       // put them back on our side of the border
@@ -398,7 +416,7 @@ export class ZoneRoom {
       const at = this.env.HUNT_DEV && (url.searchParams.get('at') || '').split(',').map(Number);
       if (at && at.length === 2 && sim.inBounds(at[0], at[1], -60)) { p.x = p.px = at[0]; p.y = p.py = at[1]; }
       const token = url.searchParams.get('token');
-      if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { if (u && sim.players.has(p.id)) { const pr = JSON.parse(u.progress || '{}'); p.account = u.id; sim.setCosmetics(p.id, pr.equipped); sim.setLoadout(p.id, loadoutFor(pr)); } }).catch(() => {});
+      if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { if (u && sim.players.has(p.id)) { const pr = JSON.parse(u.progress || '{}'); p.account = u.id; sim.setCosmetics(p.id, pr.equipped); sim.setLoadout(p.id, loadoutFor(pr)); } }).catch((e) => logError('account load', this.logCtx(), e));
       devWeapon(this.env, url, sim, p.id);
       server.huntKey = p.id;
       this.conns.set(p.id, server);
@@ -415,7 +433,7 @@ export class ZoneRoom {
     sendJSON(server, sim.stateMsg());
     if (Object.keys(this.online).length) sendJSON(server, { t: 'online', zones: this.online });
 
-    server.addEventListener('message', (e) => {
+    server.addEventListener('message', guard((e) => {
       let m;
       try { m = JSON.parse(e.data); } catch { return; }
       const key = server.huntKey;
@@ -438,7 +456,7 @@ export class ZoneRoom {
         return;
       }
       if (typeof key === 'number') sim.input(key, m);
-    });
+    }, 'message', () => this.logCtx()));
     const onClose = (bye) => {
       const key = server.huntKey;
       if (this.conns.get(key) !== server) return;
@@ -479,7 +497,7 @@ export class ZoneRoom {
       dir.fetch('https://d/report', { method: 'POST', body: JSON.stringify({ slot: this.slot, players, bots: this.sim.players.size - players.length, top: top ? [top.name, top.bounty, Math.round(top.x), Math.round(top.y)] : null, ev }) })
         .then((r) => r.json())
         .then((zones) => { this.online = zones; this.sim?.broadcast({ t: 'online', zones, sv: Date.now() }); })
-        .catch(() => {});
+        .catch((e) => logError('directory report', this.logCtx(), e));
     }
   }
 }
@@ -494,6 +512,14 @@ export class Directory {
     for (const [slot, z] of Object.entries(this.zones)) if (Date.now() - z.at < 10000) out[slot] = { players: z.players, bots: z.bots, top: z.top, ev: z.ev };
     return Response.json(out);
   }
+}
+
+// Anything a room's fetch throws is logged with its mode / zone before the caller gets the error.
+for (const C of [Matchmaker, MatchRoom, ZoneRoom, Directory]) {
+  const run = C.prototype.fetch;
+  C.prototype.fetch = async function (req) {
+    try { return await run.call(this, req); } catch (e) { logError('fetch', this.logCtx ? this.logCtx() : { where: C.name }, e); throw e; }
+  };
 }
 
 export { MODES };

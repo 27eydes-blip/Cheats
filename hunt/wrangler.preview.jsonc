@@ -5,6 +5,8 @@
   "workers_dev": true,
   "preview_urls": true,
   "compatibility_date": "2025-10-01",
+  // Workers Logs: keeps the server's log lines (see src/log.js) so a problem report can be looked up afterwards
+  "observability": { "enabled": true },
   "assets": { "directory": "./public", "binding": "ASSETS" },
   // stamps public/version.js with the build id before the bundle and the assets are read
   "build": { "command": "node scripts/stamp-version.mjs" },
