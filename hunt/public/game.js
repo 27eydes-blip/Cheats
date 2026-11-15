@@ -13,7 +13,7 @@ import * as A from './account.js';
 import { createLobby } from './ui/lobby.js';
 import { createMatchmaking, createResults, showIntro } from './ui/flow.js';
 import './ui/fx.js';
-import { levelInfo, loadoutFor } from './progression.js';
+import { levelInfo, loadoutFor, migrateLocalStats, arenaStat, freeStat, arenaStatRows, freeStatRows } from './progression.js';
 import { TITLES, EMOTES } from './catalog.js';
 import { sfx, falloff } from './audio.js';
 import { setMusicVolume } from './ui/music.js';
@@ -95,21 +95,15 @@ resize();
 // ------------------------------------------------------------------ prefs, stats, lobby
 const prefs = (() => { try { const v = JSON.parse(localStorage.getItem('hunt') || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch { return {}; } })();
 const savePrefs = () => { try { localStorage.setItem('hunt', JSON.stringify(prefs)); } catch {} };
-if (!prefs.stats || typeof prefs.stats !== 'object') prefs.stats = {}; // keyed by numeric world id (stable: WORLDS is append-only)
+// stats: arena matches keyed by numeric world id (stable: WORLDS is append-only); free: Free Play by zone
+if (migrateLocalStats(prefs)) savePrefs();
 let selBrawler = BRAWLERS[prefs.brawler] ? prefs.brawler : 'volt';
 $('name').value = prefs.name || '';
 $('room').value = prefs.room || '';
 $('bots').checked = prefs.bots !== false;
 $('bots').addEventListener('change', () => { prefs.bots = $('bots').checked; savePrefs(); }); // remembered right away, not only on PLAY
 
-function stat(worldKey) { const id = worldId(worldKey); return (prefs.stats[id] ||= { games: 0, wins: 0, kills: 0, best: 0 }); }
-function statRows() {
-  const rows = worldsInDisplayOrder().map((w) => {
-    const s = prefs.stats[w.id] || {};
-    return `<tr><td>${w.name}</td><td>${s.games || 0}</td><td>${s.wins || 0}</td><td>${s.kills || 0}</td><td>★${s.best || 0}</td></tr>`;
-  }).join('');
-  return `<tr><th>World</th><th>Games</th><th>Wins</th><th>KOs</th><th>Best</th></tr>${rows}`;
-}
+const statRows = (kind) => (kind === 'free' ? freeStatRows(prefs) : arenaStatRows(prefs));
 const booted = A.boot();
 
 function show(screen) {
@@ -434,7 +428,7 @@ function onEnd(m) {
   const won = m.winTeam !== undefined ? !!m.won : m.rank === 1;
   G.phase = 'end';
   input.enabled = false; input.reset();
-  const s = stat(G.world);
+  const s = arenaStat(prefs, G.world);
   s.games++; if (won) s.wins++; s.kills += m.kills; s.best = Math.max(s.best, G.me?.bb || 0, m.bounty);
   savePrefs();
   const msg = m.winTeam !== undefined ? `Team pot ★${m.pots[m.team]} vs ★${m.pots[3 - m.team]}` : won ? `VICTORY! ${MODE_INFO[m.mode].name} on ${worldName(G.world)}` : `${m.winner || 'Nobody'} won ${MODE_INFO[m.mode].name}.`;
@@ -533,7 +527,7 @@ function reconcile(m) {
   G.me = me; G.myId = me.id; G.brawler = me.br;
   G.mods = primaryMods();
   if (G.kind === 'free') {
-    const s = stat(worldKeyAt(G.map, me.x, me.y));
+    const s = freeStat(prefs, worldKeyAt(G.map, me.x, me.y));
     if (me.sk > G.lastSk) { s.kills += me.sk - G.lastSk; G.lastSk = me.sk; savePrefs(); }
     if (me.bt > s.best) { s.best = me.bt; savePrefs(); }
   }
@@ -1310,7 +1304,7 @@ function updateHud(now) {
     if (safe) {
       $('onlineN').textContent = Math.max(1, humans.length);
       $('onlineList').innerHTML = ZONES.map((z) => (G.online[z.slot]?.players || []).map(([n, , bt]) =>
-        `<li>${esc(n)} <span>${worldName(z.world)}${bt ? ` ★${bt}` : ''}</span></li>`).join('')).join('') || '<li>Just you (and bots)</li>';
+        `<li>${esc(n)} <span>${z.name}${bt ? ` ★${bt}` : ''}</span></li>`).join('')).join('') || '<li>Just you (and bots)</li>';
       for (const b of $('hubPick').children) b.classList.toggle('sel', b.dataset.b === G.brawler);
     }
   } else if (last) {

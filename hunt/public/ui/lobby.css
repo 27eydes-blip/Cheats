@@ -66,7 +66,7 @@
 .fillbots .cb { width: calc(var(--u) * 4); height: calc(var(--u) * 4); border-radius: 50%; border: 3px solid rgba(255,255,255,.8); display: grid; place-items: center; background: rgba(18,9,30,.3); }
 .fillbots .cb.on::after { content: '✓'; color: #fff; font-size: calc(var(--u) * 2.6); -webkit-text-stroke: 0; }
 .party { display: flex; flex-direction: column; gap: calc(var(--u) * 1.4); min-height: 0; padding: 4px 0 0 0; }
-.slots { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.25fr 1fr 1fr 1fr; gap: calc(var(--u) * 1.2); }
+.slots { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr)); gap: calc(var(--u) * 1.2); }
 .slot { position: relative; min-height: 0; border: var(--line) solid var(--ink); border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: var(--font); color: #fff; cursor: pointer; }
 .slot.me { background: linear-gradient(#2d2540, #1b1530); box-shadow: var(--drop); justify-content: flex-end; padding: 4px 4px 8px; gap: 3px; }
 .slot.me #stage { width: 100%; flex: 1; min-height: 0; touch-action: manipulation; }
@@ -217,9 +217,11 @@ body.reduce-flash .btn.play::before { animation: none; opacity: .5; }
 .events-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; font-family: var(--font); color: var(--text-dim); font-size: max(var(--t-xs), calc(var(--u) * 1.5)); padding: 4px; }
 .events-row .ico { font-size: max(var(--t-sm), calc(var(--u) * 1.8)); }
 
-.locker { display: grid; grid-template-columns: minmax(0, 34%) 1fr; gap: calc(var(--u) * 1.4); height: 100%; min-height: 0; }
-.locker .preview { display: flex; flex-direction: column; align-items: center; padding: 8px; }
-.locker .preview canvas { width: 100%; flex: 1; min-height: 0; }
+.locker { display: grid; grid-template-columns: minmax(0, 34%) 1fr; grid-template-rows: minmax(0, 1fr); gap: calc(var(--u) * 1.4); height: 100%; min-height: 0; }
+.locker .preview { display: flex; flex-direction: column; align-items: center; padding: 8px; min-height: 0; }
+/* the canvas takes what is left, so an equipped title never pushes the button out of the card */
+.locker .preview canvas { width: 100%; flex: 1 1 0; min-height: 0; }
+.locker:not(.armory) .preview { overflow: hidden; } #lkTitle { flex: none; min-height: 1.2em; } #lkFx { flex: none; }
 .locker .items { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .locker .items > .chips { flex: none; } .locker .items > .chips:empty { display: none; }
 .armory .items > .chips { overflow: visible; }
@@ -263,6 +265,8 @@ body.reduce-flash .marker { animation: none; }
 .settings-list input[type=checkbox] { flex: none; width: 26px; height: 26px; accent-color: var(--gold); }
 .stat-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-weight: 700; color: #fff; font-size: max(var(--t-xs), calc(var(--u) * 1.5)); }
 .stat-table th { font-family: var(--font); font-weight: 400; color: var(--gold); }
+.zone-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-weight: 700; color: #fff; font-size: max(var(--t-xs), calc(var(--u) * 1.5)); } /* Free Play table: same look */
+.zone-table th { font-family: var(--font); font-weight: 400; color: var(--gold); } .zone-table td, .zone-table th,
 .stat-table td, .stat-table th { padding: 3px 6px; border-bottom: 2px solid rgba(27,16,51,.4); }
 
 /* matchmaking + intro + results */
@@ -361,3 +365,18 @@ body.reduce-flash .marker { animation: none; }
   .res { grid-template-rows: minmax(0, 36%) minmax(0, 1fr); align-items: stretch; }
   .ui-head { flex-wrap: wrap; } .ui-head .chips { flex: 1 0 100%; order: 3; }
 }
+
+/* ---------- lobby behaviour (previews, NEW tags, earned-only items, focus) ---------- */
+.armory .ped { position: relative; }
+.newtag { position: absolute; top: 4px; left: 4px; z-index: 1; background: var(--red); color: #fff; border: 3px solid var(--ink); border-radius: 999px; padding: 1px 7px; font-family: var(--font); font-size: max(var(--t-xs), calc(var(--u) * 1.2)); }
+.ped.peek:not(.on) { outline: 3px dashed var(--gold); outline-offset: -3px; }
+.ped .tag.earn { color: #fff; opacity: .9; text-align: center; white-space: normal; }
+/* mode buttons only pick a mode (PLAY starts): a tick on the picked one, not a play arrow */
+.modebtn .go { clip-path: none; border-radius: 50%; padding: 0; background: rgba(18, 9, 30, .35); border-color: rgba(18, 9, 30, .6); color: var(--ink); font-size: calc(var(--u) * 2.2); }
+.modebtn.sel .go { background: #fff; border-color: var(--ink); }
+.modebtn.sel .go::after { content: '✓'; }
+/* keyboard focus: a clear white ring on every control, text fields included */
+:focus { outline: none; }
+:focus-visible, input:focus-visible, .field:focus-visible, textarea:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+input:focus-visible, .field:focus-visible { outline-offset: 1px; box-shadow: 0 0 0 6px var(--ink); }
+.ui-screen:focus-visible, .ui-pop:focus-visible, .detail:focus-visible { outline: none; }

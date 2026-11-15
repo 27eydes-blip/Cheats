@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { trackErrors, waitMe } from './helpers.js';
 
+// (tracker is a Trophy Road reward: the Locker shows where to earn it, so buy a shop title)
 test('locker + pass: buy and equip a title with test coins, shows in match roster', async ({ page }) => {
   const errors = trackErrors(page);
   page.on('dialog', (d) => d.dismiss());
@@ -10,9 +11,9 @@ test('locker + pass: buy and equip a title with test coins, shows in match roste
   await page.click('#rail_locker');
   await page.click('.lsec[data-open="titles"]');
   await page.click('#lkTabs [data-t="titles"]');
-  await page.click('.ped[data-k="tracker"] [data-buy]');
-  await page.click('.ped[data-k="tracker"] [data-eq]');
-  await expect(page.locator('.ped.on')).toContainText('Tracker');
+  await page.click('.ped[data-k="sharpshooter"] [data-buy]');
+  await page.click('.ped[data-k="sharpshooter"] [data-eq]');
+  await expect(page.locator('.ped.on')).toContainText('Sharpshooter');
   await page.click('.ui-screen .back');
   await page.click('#rail_pass');
   await expect(page.locator('.track .tier')).toHaveCount(30);
@@ -20,6 +21,6 @@ test('locker + pass: buy and equip a title with test coins, shows in match roste
   await page.click('.ui-screen .back');
   await page.goto('/?world=meadow&mode=bounty');
   await waitMe(page);
-  await page.waitForFunction(() => window.__hunt.roster[window.__hunt.myId]?.[3]?.title === 'tracker', null, { timeout: 10_000 });
+  await page.waitForFunction(() => window.__hunt.roster[window.__hunt.myId]?.[3]?.title === 'sharpshooter', null, { timeout: 10_000 });
   expect(errors).toEqual([]);
 });

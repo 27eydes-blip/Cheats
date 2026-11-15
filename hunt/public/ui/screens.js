@@ -10,7 +10,7 @@ import { drawModePreview } from './scenes.js';
 import { setMusicVolume } from './music.js';
 import * as A from '../account.js';
 import { SKINS, KILL_FX, TITLES, TITLE_PRICE, PASS, PASS_TIERS, PASS_XP_PER_TIER, PREMIUM_PRICE, CURRENCY, passTier } from '../catalog.js';
-import { totalTrophies, roadReward, ROAD_STEP, missionState, msToReset, levelInfo, levelReward, weaponUnlocked } from '../progression.js';
+import { totalTrophies, roadReward, ROAD_STEP, missionState, msToReset, levelInfo, levelReward, weaponUnlocked, earnTag, earnHint, armoryKeys, seenList } from '../progression.js';
 import { EMOTES } from '../catalog.js';
 import { MAX_POWER, POWER_COST, GADGET_AT, STAR_AT, GADGETS, STARS, clampPower, powerMult } from '../power.js';
 import { WEAPONS, WEAPON_IDS, WEAPON_CLASSES, weaponStats, withPerks, masteryInfo, MASTERY_SKINS, perksFor } from '../weapons.js';
@@ -74,10 +74,12 @@ export function openBrawlerSelect(api, onDone) {
   const draw = () => {
     chips.innerHTML = roles.map((r) => `<button class="chipbtn ${r === filter ? 'on' : ''}" data-r="${r}">${r}</button>`).join('');
     for (const c of chips.children) c.onclick = () => { filter = c.dataset.r; draw(); };
-    const p = A.progress();
+    const p = A.progress(), had = grid.contains(document.activeElement) ? document.activeElement.dataset.b : null;
     grid.innerHTML = BRAWLER_IDS.filter((b) => filter === 'ALL' || BRAWLERS[b].role.toUpperCase() === filter).map((b) =>
-      `<div class="card-b bcard tap ${b === api.getBrawler() ? 'sel' : ''}" data-b="${b}" style="--card-col:${ROLE_COL[BRAWLERS[b].role]}"><canvas data-b="${b}"></canvas><div class="title bc-name">${BRAWLERS[b].name}</div><div class="bc-tro">🏆 ${p.trophies[b] | 0}</div></div>`).join('');
-    for (const c of grid.querySelectorAll('.bcard')) c.onclick = () => { api.setBrawler(c.dataset.b); draw(); openDetail(api, c.dataset.b, () => draw()); };
+      `<div class="card-b bcard tap ${b === api.getBrawler() ? 'sel' : ''}" tabindex="0" role="button" aria-label="${BRAWLERS[b].name}" data-b="${b}" style="--card-col:${ROLE_COL[BRAWLERS[b].role]}"><canvas data-b="${b}"></canvas><div class="title bc-name">${BRAWLERS[b].name}</div><div class="bc-tro">🏆 ${p.trophies[b] | 0}</div></div>`).join('');
+    // a card opens a preview: only SELECT in the detail changes your hunter
+    for (const c of grid.querySelectorAll('.bcard')) c.onclick = () => openDetail(api, c.dataset.b, () => draw());
+    if (had) grid.querySelector(`[data-b="${had}"]`)?.focus({ preventScroll: true }); // keep keyboard focus across a redraw
   };
   draw();
   S.loop((t) => {
@@ -134,28 +136,38 @@ function openDetail(api, id, onClose) {
       <div class="stats">${statsOf(id).map(([n, f, v]) => `<span>${n}</span><div class="bar shine"><i style="width:${Math.round(Math.min(1, f) * 100)}%"></i></div><span class="num">${v}</span>`).join('')}</div>
       <div class="abil"><canvas data-demo="attack"></canvas><div><h4>ATTACK · ${ATTACK_TXT[id][0]}</h4><p>${ATTACK_TXT[id][1]}</p></div></div>
       <div class="abil"><canvas data-demo="super"></canvas><div><h4>SUPER · ${SUPER_TXT[id][0]}</h4><p>${SUPER_TXT[id][1]}</p></div></div>
-      <div class="skinrow">${skins.map(([k, n]) => { const own = !k || p.owned.includes(k), on = (p.equipped['skin:' + id] || null) === k; return `<div class="card-a sk tap ${on ? 'on' : ''}" data-skin="${k || ''}"><canvas data-skin="${k || ''}"></canvas>${esc(n)}${own ? '' : ` ${icon('lock')}`}</div>`; }).join('')}</div>
+      <div class="skinrow">${skins.map(([k, n]) => { const own = !k || p.owned.includes(k), on = (p.equipped['skin:' + id] || null) === k; return `<div class="card-a sk tap ${on ? 'on' : ''}" tabindex="0" role="button" aria-label="Preview ${esc(n)}" data-skin="${k || ''}"><canvas data-skin="${k || ''}"></canvas>${esc(n)}${own ? '' : ` ${icon('lock')}`}</div>`; }).join('')}</div>
       <div class="detail-actions"><button class="btn btn-md alt" data-x>CLOSE</button><button class="btn btn-md mint" data-power>${icon('star')} POWER ${clampPower(p.power?.[id] || 1)}</button><button class="btn btn-md" data-x data-sel>SELECT</button></div>
     </div></div>`;
   document.body.appendChild(el);
   openScreen(el);
   const close = async () => { await closeScreen(el); el.remove(); onClose?.(); };
-  for (const b of el.querySelectorAll('[data-x]')) b.onclick = () => { if (b.dataset.sel !== undefined) api.setBrawler(id); close(); };
+  // a preview: the skin you tap shows on the portrait; SELECT makes it your hunter (and wears the
+  // skin if you own it); CLOSE, a tap outside or Escape change nothing
+  let look = p.equipped['skin:' + id] || null;
+  for (const b of el.querySelectorAll('[data-x]')) b.onclick = () => guard(async () => {
+    if (b.dataset.sel !== undefined) {
+      const owned = !look || A.progress().owned.includes(look);
+      if (owned && look !== (A.progress().equipped['skin:' + id] || null)) await A.shop({ action: 'equip', slot: 'skin:' + id, id: look });
+      api.setBrawler(id);
+    }
+    await close();
+  });
   // POWER: upgrades, Gadget and Star Power for this hunter (the popup opens once the card is gone)
   el.querySelector('[data-power]').onclick = async () => { await closeScreen(el); el.remove(); openPower(api, onClose, id); };
   el.addEventListener('pointerdown', (e) => { if (e.target === el) close(); });
-  for (const s of el.querySelectorAll('.sk')) s.onclick = () => guard(async () => {
+  for (const s of el.querySelectorAll('.sk')) s.onclick = () => {
     const k = s.dataset.skin || null;
-    if (k && !A.progress().owned.includes(k)) { toastErr(`Unlock ${SKINS[k].name} in the Locker or Hunt Pass`); return; }
-    await A.shop({ action: 'equip', slot: 'skin:' + id, id: k });
+    look = k;
     for (const o of el.querySelectorAll('.sk')) o.classList.toggle('on', o === s);
-  });
+    if (k && !A.progress().owned.includes(k)) toastErr(earnTag(k) ? earnHint(k, SKINS[k].name) : `Buy ${SKINS[k].name} in the Locker`);
+  };
   const t0 = performance.now();
   const tick = (now) => {
     if (!el.isConnected) return;
     const t = (now - t0) / 1000;
     const pc = fitCanvas(el.querySelector('.portrait'));
-    R.drawBrawler(pc.g, id, pc.w / 2, pc.h * 0.62, Math.sin(t * 0.8) * 0.6 + 0.3, t, { scale: pc.h / 80, skin: A.progress().equipped['skin:' + id] || null, blink: (t % 3.2) < 0.12 ? 1 : 0 });
+    R.drawBrawler(pc.g, id, pc.w / 2, pc.h * 0.62, Math.sin(t * 0.8) * 0.6 + 0.3, t, { scale: pc.h / 80, skin: look, blink: (t % 3.2) < 0.12 ? 1 : 0 });
     for (const cv of el.querySelectorAll('canvas[data-demo]')) { const c = fitCanvas(cv); demo(c.g, c.w, c.h, id, cv.dataset.demo, t); }
     for (const cv of el.querySelectorAll('.sk canvas')) { const c = fitCanvas(cv); R.drawBrawler(c.g, id, c.w / 2, c.h * 0.62, 0.3, t, { scale: c.h / 80, skin: cv.dataset.skin || null }); }
     requestAnimationFrame(tick);
@@ -182,43 +194,59 @@ export function openModePicker(current, onPick) {
 }
 
 // ======================================================================= LOCKER
+// The Locker preview turns your hunter right round: fit its full reach (weapon included) in the canvas.
+const REACH = 68;
+export function lockerFit(w, h) {
+  const sc = Math.max(0.1, Math.min((w / 2 - 4) / REACH, (h - 8) / (REACH * 2 + 6)));
+  return { sc, x: w / 2, y: Math.max(REACH * sc + 4, Math.min(h * 0.52, h - (REACH + 6) * sc - 4)) };
+}
 export function openLocker(api, onDone, startTab = 'skins', startWho = null) {
   const S = screen('LOCKER', `<div class="cur">${icon('coin')}<b id="lkCoins">0</b><small>TEST</small></div>`, onDone);
-  let tab = startTab, who = startWho || api.getBrawler(), fxDemo = null;
+  // peek: the item you tapped, shown in the preview without equipping it (EQUIP / BUY commit)
+  let tab = startTab, who = startWho || api.getBrawler(), fxDemo = null, peek = null;
   S.body.innerHTML = `<div class="locker"><div class="card-a preview"><canvas id="lkPrev"></canvas><div id="lkTitle" class="title" style="font-size:max(var(--t-sm), calc(var(--u) * 2.2))"></div><button class="btn btn-sm mint" id="lkFx">PREVIEW KILL EFFECT</button></div>
     <div class="items"><div class="chips" id="lkTabs"></div><div class="chips" id="lkWho" style="margin-top:6px"></div><div class="pedestals" id="lkItems"></div></div></div>`;
   const render = () => {
     const p = A.progress();
     $('lkCoins').textContent = p.coins;
     $('lkTabs').innerHTML = [['skins', 'SKINS'], ['fx', 'KILL EFFECTS'], ['titles', 'TITLES']].map(([k, l]) => `<button class="chipbtn ${k === tab ? 'on' : ''}" data-t="${k}">${l}</button>`).join('');
-    for (const b of $('lkTabs').children) b.onclick = () => { tab = b.dataset.t; render(); };
+    for (const b of $('lkTabs').children) b.onclick = () => { tab = b.dataset.t; peek = null; render(); };
     $('lkWho').innerHTML = tab === 'skins' ? BRAWLER_IDS.map((b) => `<button class="chipbtn ${b === who ? 'on' : ''}" data-w="${b}">${BRAWLERS[b].name}</button>`).join('') : '';
-    for (const b of $('lkWho').children) b.onclick = () => { who = b.dataset.w; render(); };
+    for (const b of $('lkWho').children) b.onclick = () => { who = b.dataset.w; peek = null; render(); };
     let items;
     if (tab === 'skins') items = [[null, 'Hunter', 0], ...Object.entries(SKINS).filter(([, s]) => s.brawler === who).map(([k, s]) => [k, s.name, s.price])].map(([k, n, price]) => ({ k, n, price, slot: 'skin:' + who, on: (p.equipped['skin:' + who] || null) === k }));
     else if (tab === 'fx') items = [[null, 'None', 0], ...Object.entries(KILL_FX).map(([k, f]) => [k, f.name, f.price])].map(([k, n, price]) => ({ k, n, price, slot: 'fx', on: (p.equipped.fx || null) === k }));
     else items = [[null, 'None'], ...Object.entries(TITLES)].map(([k, n]) => ({ k, n, price: TITLE_PRICE, slot: 'title', on: (p.equipped.title || null) === k }));
     $('lkItems').innerHTML = items.map((it) => {
-      const own = !it.k || p.owned.includes(it.k);
-      return `<div class="card-a ped tap ${it.on ? 'on' : ''}" data-k="${it.k || ''}" data-slot="${it.slot}">${tab === 'skins' ? `<canvas data-skin="${it.k || ''}"></canvas>` : `<div class="ico" style="font-size:calc(var(--u)*5)">${icon(tab === 'fx' ? 'star' : 'pass')}</div>`}<span>${esc(it.n)}</span>
-        ${it.on ? '<span class="tag">EQUIPPED</span>' : own ? `<button class="btn btn-sm" data-eq>EQUIP</button>` : it.price == null ? `<span class="tag">${icon('lock')} LEVEL ${SKINS[it.k]?.level || '?'}</span>` : `<button class="btn btn-sm" data-buy>${icon('coin')} ${it.price}</button>`}</div>`;
+      const own = !it.k || p.owned.includes(it.k), earn = own ? null : earnTag(it.k);
+      // reward items (level / Trophy Road / Hunt Pass) are earned, never bought: a lock and where from
+      const act = it.on ? '<span class="tag">EQUIPPED</span>' : own ? `<button class="btn btn-sm" data-eq>EQUIP</button>`
+        : earn || it.price == null ? `<span class="tag earn">${icon('lock')} ${earn || 'LOCKED'}</span>` : `<button class="btn btn-sm" data-buy>${icon('coin')} ${it.price}</button>`;
+      return `<div class="card-a ped tap ${it.on ? 'on' : ''} ${peek && peek.slot === it.slot && peek.k === it.k ? 'peek' : ''}" tabindex="0" role="button" aria-label="Preview ${esc(it.n)}" data-k="${it.k || ''}" data-slot="${it.slot}">${tab === 'skins' ? `<canvas data-skin="${it.k || ''}"></canvas>` : `<div class="ico" style="font-size:calc(var(--u)*5)">${icon(tab === 'fx' ? 'star' : 'pass')}</div>`}<span>${esc(it.n)}</span>
+        ${act}</div>`;
     }).join('');
     for (const c of $('lkItems').children) {
       const k = c.dataset.k || null;
       c.querySelector('[data-eq]')?.addEventListener('click', (e) => { e.stopPropagation(); guard(async () => { await A.shop({ action: 'equip', slot: c.dataset.slot, id: k }); render(); }); });
       c.querySelector('[data-buy]')?.addEventListener('click', (e) => { e.stopPropagation(); guard(async () => { await A.shop({ action: 'buy', id: k }); rewardBurst(); render(); }); });
-      c.addEventListener('click', () => { if (tab === 'fx') fxDemo = { id: k, t0: performance.now() }; });
+      c.addEventListener('click', () => {
+        peek = { slot: c.dataset.slot, k };
+        for (const o of $('lkItems').children) o.classList.toggle('peek', o === c);
+        if (tab === 'fx') fxDemo = { id: k, t0: performance.now() };
+      });
     }
   };
   $('lkFx').onclick = () => { fxDemo = { id: A.progress().equipped.fx || 'sparks', t0: performance.now() }; sfx('elim'); };
   render();
   S.loop((t) => {
     const p = A.progress(), id = tab === 'skins' ? who : api.getBrawler();
+    const pk = (slot) => (peek && peek.slot === slot ? peek.k : p.equipped[slot] || null);
     const c = fitCanvas($('lkPrev'));
-    const base = c.h * 0.68;
-    c.g.beginPath(); c.g.ellipse(c.w / 2, base + 18, c.w * 0.3, 14, 0, 0, 7); c.g.fillStyle = '#5b37b8'; c.g.fill(); c.g.lineWidth = 4; c.g.strokeStyle = INK; c.g.stroke();
-    R.drawBrawler(c.g, id, c.w / 2, base - 10, t * 0.9, t, { scale: Math.min(c.h / 95, c.w / 70), skin: p.equipped['skin:' + id] || null });
-    $('lkTitle').textContent = p.equipped.title ? TITLES[p.equipped.title] : '';
+    const f = lockerFit(c.w, c.h), base = f.y + 10;
+    c.g.beginPath(); c.g.ellipse(f.x, f.y + 34 * f.sc, Math.min(c.w * 0.3, 40 * f.sc), Math.min(14, 11 * f.sc), 0, 0, 7); c.g.fillStyle = '#5b37b8'; c.g.fill(); c.g.lineWidth = 4; c.g.strokeStyle = INK; c.g.stroke();
+    R.drawBrawler(c.g, id, f.x, f.y, t * 0.9, t, { scale: f.sc, skin: pk('skin:' + id) });
+    const ti = pk('title'), tt = ti ? TITLES[ti] : '';
+    if ($('lkTitle').textContent !== tt) $('lkTitle').textContent = tt;
     if (fxDemo && fxDemo.id) {
       const k = (performance.now() - fxDemo.t0) / 1000;
       if (k > 1.2) fxDemo = null; else drawFxDemo(c.g, fxDemo.id, c.w / 2, base - 30, k);
@@ -247,7 +275,7 @@ function drawFxDemo(g, id, x, y, k) {
 const rewardIcon = (r) => (r.coins ? 'coin' : r.skin ? 'locker' : r.fx ? 'star' : 'pass');
 const rewardLabel = (r) => (r.coins ? `${r.coins}` : r.skin ? SKINS[r.skin].name : r.fx ? KILL_FX[r.fx].name : TITLES[r.title]);
 export function openPass(onDone) {
-  const S = screen('HUNT PASS', `<div class="cur" id="tbCoins">${icon('coin')}<b id="hpCoins">0</b><small>TEST</small></div>`, onDone);
+  const S = screen('HUNT PASS', `<div class="cur" id="hpCoinChip">${icon('coin')}<b id="hpCoins">0</b><small>TEST</small></div>`, onDone);
   const render = (keepScroll) => {
     const p = A.progress(), tier = passTier(p.pass.xp), into = (p.pass.xp || 0) % PASS_XP_PER_TIER;
     const sc = S.body.querySelector('.track')?.scrollLeft;
@@ -264,13 +292,20 @@ export function openPass(onDone) {
       <p class="hint" style="margin:0;text-align:center">${CURRENCY} — test currency only, no real money. Premium row on top, free row below.</p></div>`;
     const tr = S.body.querySelector('.track');
     if (keepScroll && sc != null) tr.scrollLeft = sc;
-    else requestAnimationFrame(() => { const el = tr.children[Math.max(0, tier - 2)]; if (el) tr.scrollLeft = el.offsetLeft - 8; });
+    else requestAnimationFrame(() => {
+      // open on the first reward waiting to be claimed, else one tier before the current one
+      const first = PASS.find((r) => r.tier <= tier && (!p.pass.claimed.includes(`free:${r.tier}`) || (p.pass.premium && !p.pass.claimed.includes(`premium:${r.tier}`))));
+      const el = tr.children[first ? first.tier - 1 : Math.max(0, tier - 2)];
+      if (el) { tr.style.scrollBehavior = 'auto'; tr.scrollLeft = el.offsetLeft - tr.offsetLeft - 8; tr.style.scrollBehavior = ''; }
+    });
     $('premBtn')?.addEventListener('click', () => guard(async () => { await A.shop({ action: 'premium' }); rewardBurst(); render(true); }));
     for (const b of S.body.querySelectorAll('.claim')) b.onclick = () => guard(async () => {
       const row = PASS[+b.dataset.t - 1], r = row[b.dataset.k], cellEl = b.closest('.rw');
       await A.shop({ action: 'passClaim', tier: +b.dataset.t, track: b.dataset.k });
       cellEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' });
-      if (r.coins) flyCoins(cellEl, '#tbCoins', 8, icon('coin')); else rewardBurst();
+      // fly to this screen's own coin counter (ids are unique: the lobby's #tbCoins is behind it)
+      if (r.coins) flyCoins(cellEl, '#hpCoinChip', 8, icon('coin')); else rewardBurst();
+      $('hpCoins').textContent = A.progress().coins;
       sfx('reward');
       setTimeout(() => render(true), 900);
     });
@@ -316,7 +351,7 @@ export function openProfile(api, onDone, upgradeFirst = false) {
   S.body.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
     <div class="card-a" style="padding:12px"><div class="title" style="font-size:calc(var(--u)*2.4)">NAME</div><div id="nameSlot" style="margin-top:6px"></div>
       <div class="title" style="font-size:calc(var(--u)*2.4);margin-top:12px">ACCOUNT</div><div id="accSlot"></div></div>
-    <div class="card-a" style="padding:12px"><div class="title" style="font-size:calc(var(--u)*2.4)">STATS BY WORLD</div><table class="stat-table">${api.statRows()}</table></div></div>`;
+    <div class="card-a" style="padding:12px"><div class="title" style="font-size:calc(var(--u)*2.4)">MATCHES BY WORLD</div><table class="stat-table">${api.statRows('arena')}</table><div class="title" style="font-size:calc(var(--u)*2.4);margin-top:8px">FREE PLAY BY ZONE</div><table class="zone-table">${api.statRows('free')}</table></div></div>`;
   const nm = $('name'); nm.classList.add('field'); $('nameSlot').appendChild(nm);
   const acc = $('accSlot');
   if (u && !u.guest) {
@@ -395,6 +430,11 @@ const RAR_COL = { common: '#cfc3ff', rare: '#5ff4ff', epic: '#ff6bd6' };
 export function openArmory(api, onDone) {
   const S = screen('ARMORY', `<div class="cur">LV <b id="arLv">1</b></div>`, onDone);
   let sel = A.progress().loadout?.w2 || 'stormline';
+  // what was new before this visit gets a NEW tag; opening the Armory counts as seeing it all
+  const keys0 = armoryKeys(A.progress());
+  let seen0 = keys0;
+  try { seen0 = seenList(localStorage.getItem('hunt-seen-armory'), keys0).list; localStorage.setItem('hunt-seen-armory', JSON.stringify(keys0)); } catch {}
+  const isNew = (k) => keys0.includes(k) && !seen0.includes(k);
   S.body.innerHTML = `<div class="locker armory"><div class="card-a preview" id="arInfo"></div><div class="items"><div class="chips" id="arHint"></div><div class="pedestals" id="arItems"></div></div></div>`;
   const bar = (label, v, txt) => `<div class="statrow"><span>${label}</span><div class="bar shine"><i style="width:${Math.round(Math.max(0.04, v) * 100)}%"></i></div><b>${txt}</b></div>`;
   const render = () => {
@@ -403,7 +443,8 @@ export function openArmory(api, onDone) {
     $('arHint').innerHTML = `<span class="hint" style="margin:0">Carry ONE secondary. Swap in a match with the ⇄ button (R / Tab on a keyboard). Free Play crates can drop more.</span>`;
     $('arItems').innerHTML = WEAPON_IDS.map((id) => {
       const w = WEAPONS[id], ok = weaponUnlocked(p, id), m = masteryInfo(p.mastery?.[id] || 0).level;
-      return `<div class="card-a ped tap ${id === sel ? 'on' : ''}" data-w="${id}"><canvas data-wpn="${id}"></canvas><span style="color:${RAR_COL[w.rarity]}">${esc(w.name)}</span>
+      const fresh = isNew('w:' + id) || Object.keys(perksFor(id)).some((tier) => isNew(`p:${id}:${tier}`));
+      return `<div class="card-a ped tap ${id === sel ? 'on' : ''}" tabindex="0" role="button" aria-label="${esc(w.name)}" data-w="${id}">${fresh ? '<span class="newtag">NEW</span>' : ''}<canvas data-wpn="${id}"></canvas><span style="color:${RAR_COL[w.rarity]}">${esc(w.name)}</span>
         <span class="tag" style="color:#fff">${ok ? (eq === id ? '★ EQUIPPED' : 'MASTERY ' + m) : icon('lock') + ' LEVEL ' + w.unlock}</span></div>`;
     }).join('');
     for (const c of $('arItems').children) c.onclick = () => { sel = c.dataset.w; sfx('click'); render(); };
@@ -476,7 +517,8 @@ export function renderProfilePage(el, api, onDone) {
     ${ribbon('OVERALL')}<div class="stiles">${tile(p.wins | 0, 'Wins')}${tile(top3, 'Top 3s')}${tile(p.games | 0, 'Matches')}${tile(totalTrophies(p), 'Trophies')}</div>
     ${Object.entries(MODE_NAMES).filter(([k]) => modes[k]?.games).map(([k, n]) => `${ribbon(n)}<div class="stiles">${tile(modes[k].wins, 'Wins')}${tile(modes[k].top3, 'Top 3s')}${tile(modes[k].games, 'Matches')}${tile(modes[k].kills, 'Kills')}</div>`).join('') || `<p class="hint">Play a match to fill in your stats for each mode.</p>`}
     ${ribbon('HUNTERS')}<div class="stiles six">${BRAWLER_IDS.map((b) => `<div class="stile tap" data-pw="${b}"><b>${p.trophies[b] | 0}</b><span>${BRAWLERS[b].name} · P${clampPower(p.power?.[b] || 1)}</span></div>`).join('')}</div>
-    ${ribbon('FREE PLAY BY WORLD')}<div class="card-a" style="padding:8px"><table class="stat-table">${api.statRows()}</table></div>
+    ${ribbon('MATCHES BY WORLD')}<div class="card-a" style="padding:8px"><table class="stat-table">${api.statRows('arena')}</table></div>
+    ${ribbon('FREE PLAY BY ZONE')}<div class="card-a" style="padding:8px"><table class="zone-table">${api.statRows('free')}</table></div>
     <div style="display:flex;justify-content:center;margin:10px 0 4px"><button class="btn btn-md alt" id="pgAccount">${icon('user')} NAME &amp; ACCOUNT</button></div>`;
   el.querySelector('#pgAccount').onclick = () => openProfile(api, onDone);
   for (const t of el.querySelectorAll('[data-pw]')) t.onclick = () => openPower(api, onDone, t.dataset.pw);
