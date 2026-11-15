@@ -56,6 +56,8 @@ const MODE_INFO = {
   range: { name: 'TEST RANGE', desc: 'Try your weapons on target dummies. Swap with R or the ⇄ button.' },
 };
 const worldName = (key) => WORLDS[worldId(key)]?.name || key;
+// a mode this client has never heard of (the server is newer): still gets a name
+const modeInfo = (mode) => MODE_INFO[mode] || { name: String(mode || 'match').toUpperCase(), desc: '' };
 const bulletKind = (k) => (k === 20 ? 'cage' : k >= WKIND ? WEAPON_IDS[k - WKIND] : BRAWLER_IDS[k]);
 const predicted = (k) => k !== 20 && k < WKIND && PREDICTED_KINDS.includes(BRAWLERS[BRAWLER_IDS[k]]?.attack.kind);
 // own shots we draw instantly (client prediction): signature straight shots + weapon bullets
@@ -366,8 +368,8 @@ function onMsg(c, m) {
       G.phase = 'play';
       input.enabled = true; input.reset();
       show(null);
-      UI.showIntro({ world: m.world, modeName: MODE_INFO[m.mode].name, brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null });
-      setTimeout(() => showBanner(MODE_INFO[m.mode].name, m.mode === 'range' ? MODE_INFO.range.desc : `${MODE_INFO[m.mode].desc} (${m.botLevel || 'normal'} bots)`, '#ffd23f', 2500), 2200);
+      UI.showIntro({ world: m.world, modeName: modeInfo(m.mode).name, brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null });
+      setTimeout(() => showBanner(modeInfo(m.mode).name, m.mode === 'range' ? MODE_INFO.range.desc : `${modeInfo(m.mode).desc} (${m.botLevel || 'normal'} bots)`, '#ffd23f', 2500), 2200);
       break;
     case 'ro':
       if (m.add) Object.assign(G.roster, m.add);
@@ -435,7 +437,7 @@ function onEnd(m) {
   const s = stat(G.world);
   s.games++; if (won) s.wins++; s.kills += m.kills; s.best = Math.max(s.best, G.me?.bb || 0, m.bounty);
   savePrefs();
-  const msg = m.winTeam !== undefined ? `Team pot ★${m.pots[m.team]} vs ★${m.pots[3 - m.team]}` : won ? `VICTORY! ${MODE_INFO[m.mode].name} on ${worldName(G.world)}` : `${m.winner || 'Nobody'} won ${MODE_INFO[m.mode].name}.`;
+  const msg = m.winTeam !== undefined ? `Team pot ★${m.pots[m.team]} vs ★${m.pots[3 - m.team]}` : won ? `VICTORY! ${modeInfo(m.mode).name} on ${worldName(G.world)}` : `${m.winner || 'Nobody'} won ${modeInfo(m.mode).name}.`;
   const scoreLbl = { bounty: '★', hunted: 'pts', crystals: '💎' }[m.mode];
   const rows = m.results.map(([n, b, r, k, bot, id, be, sc, tm]) =>
     `<li class="${id === G.myId ? 'me' : ''} ${tm ? (tm === m.team ? 'mate' : 'foe') : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${scoreLbl ? `${sc} ${scoreLbl} · ` : ''}${k} KO</span></li>`).join('');
@@ -528,7 +530,7 @@ function primaryMods() {
 function reconcile(m) {
   const first = !G.me;
   const me = first ? { ...m.me } : Object.assign(G.me, m.me); // the server only sends what changed
-  G.me = me; G.myId = me.id; G.brawler = me.br;
+  G.me = me; G.myId = me.id; if (BRAWLERS[me.br]) G.brawler = me.br;
   G.mods = primaryMods();
   if (G.kind === 'free') {
     const s = stat(worldKeyAt(G.map, me.x, me.y));
@@ -753,7 +755,7 @@ function updateEffects(dt) {
 function holding() {
   const me = G.me;
   const slot = G.wantSlot != null && G.wantT > 0 ? G.wantSlot : me ? me.ws || 0 : 0;
-  if (me && slot === 1 && me.w2) {
+  if (me && slot === 1 && me.w2 && WEAPON_IDS[me.w2[0]]) { // (a weapon we don't know: show the signature)
     const id = WEAPON_IDS[me.w2[0]];
     return { sig: false, id, w: withPerks(id, G.myPerks[id] || []), ammo: me.w2[1], slot };
   }
@@ -844,7 +846,7 @@ function localSlash(ang) {
   const me = renderMe();
   G.slashes.push({ x: me.x, y: me.y, ang, life: 0.18, max: 0.18, follow: true, flip: (G.slashFlip = !G.slashFlip) });
 }
-const sizeOf = (o) => moveStats(o.brawler || 'volt', o.hp, o.mh).r / PLAYER_R;
+const sizeOf = (o) => moveStats(BRAWLERS[o.brawler] ? o.brawler : 'volt', o.hp, o.mh).r / PLAYER_R; // (a brawler we don't know is drawn in a neutral look)
 
 // ------------------------------------------------------------------ input tick (20 Hz, same as server)
 function renderMe() {
@@ -961,7 +963,13 @@ function spawnLocalWeaponShot(w, id, ang, seq, k) {
 let lastT = performance.now();
 function frame(now) {
   requestAnimationFrame(frame); // first, so one bad frame can't freeze the game for good
-  try { frameBody(now); } catch (e) { console.warn('frame error', e); }
+  try { frameBody(now); } catch (e) { console.warn('frame error', e); unwindCanvas(); }
+}
+// a frame that threw part-way left saved states (clips, transforms, alpha) on the context: drop them,
+// so one bad frame can't pile up state or bleed into the next
+function unwindCanvas() {
+  for (let i = 0; i < 32; i++) ctx.restore(); // (a no-op once the stack is empty; what was drawn stays on screen)
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }
 function frameBody(now) {
   const dt = Math.min(0.1, (now - lastT) / 1000);
@@ -1258,7 +1266,7 @@ function render(t) {
   if (G.phase === 'play' && meAlive) {
     R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
     const hh = holding();
-    if (G.me.w2) { // SWAP button (above the fire button): signature <-> secondary
+    if (G.me.w2 && WEAPON_IDS[G.me.w2[0]]) { // SWAP button (above the fire button): signature <-> secondary
       const id = WEAPON_IDS[G.me.w2[0]];
       R.drawSwapButton(ctx, input.swapBtn, { active: hh.slot === 1, name: WEAPONS[id].name, sigName: BRAWLERS[G.brawler].name, swap: Math.max(0, G.localSwap || 0, G.me.sw || 0) }, t);
     }

@@ -14,10 +14,10 @@ function upsHtml(m) {
   const card = (kind, title, sub, col) => cards.push(`<div class="ucard" style="--uc:${col};animation-delay:${0.9 + cards.length * 0.35}s"><small>${esc(kind)}</small><b>${esc(title)}</b><span>${esc(sub)}</span></div>`);
   for (const r of m.levels || []) {
     card('LEVEL UP', `LEVEL ${r.level}`, `+${r.coins} coins`, '#ffd23f');
-    for (const w of r.weapons || []) card('NEW WEAPON', WEAPONS[w].name, 'in the Armory', '#5ff4ff');
+    for (const w of r.weapons || []) card('NEW WEAPON', WEAPONS[w]?.name || w, 'in the Armory', '#5ff4ff');
     for (const e of r.emotes || []) card('NEW EMOTE', EMOTES.find((x) => x.id === e)?.text || e, 'tap !? in a match', '#ff9f43');
-    if (r.skin) card('NEW SKIN', SKINS[r.skin].name, 'in the Locker', '#ff6bd6');
-    if (r.title) card('NEW TITLE', TITLES[r.title], 'in the Locker', '#c9a6ff');
+    if (r.skin) card('NEW SKIN', SKINS[r.skin]?.name || r.skin, 'in the Locker', '#ff6bd6');
+    if (r.title) card('NEW TITLE', TITLES[r.title] || r.title, 'in the Locker', '#c9a6ff');
   }
   for (const x of m.mastery || []) card('MASTERY UP', `${WEAPONS[x.id]?.name || x.id} ${x.level}`, [2, 5, 8].includes(x.level) ? 'pick a perk in the Armory' : x.level === 3 ? 'Bronze skin' : x.level === 6 ? 'Silver skin' : x.level === 7 ? 'kill effect' : x.level === 9 ? 'Gold skin' : x.level === 10 ? "Hunter's Bane!" : 'keep going', '#4be0c8');
   // weapon mastery progress for the weapon you used most

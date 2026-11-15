@@ -521,7 +521,20 @@ function drawAccessory(ctx, acc, t) {
 
 // The default look: the HUNTER designs (art/hunters.js). Skins recolour them; a Classic skin
 // brings back the original round look (drawClassic below). Same size and footprint either way.
+// a brawler this client doesn't know (the server is newer): a plain grey hunter, never an error
+const NEUTRAL_PAL = { body: '#6f6a80', dark: '#3a3648', accent: '#e9e4f5', metal: '#a8a3b8', trim: '#8a8499' };
 export function drawBrawler(ctx, id, x, y, facing, t, o = {}) {
+  if (!HUNTER_PAL[id]) {
+    ctx.save(); ctx.translate(x, y);
+    const sc0 = (o.scale || 1) * (o.size || 1);
+    if (sc0 !== 1) ctx.scale(sc0, sc0);
+    ctx.globalAlpha = o.alpha ?? 1;
+    ctx.beginPath(); ctx.ellipse(0, 22, 26, 9, 0, 0, Math.PI * 2); ctx.fillStyle = 'rgba(10,5,20,0.32)'; ctx.fill();
+    ctx.translate(0, Math.sin(t * (o.moving ? 14 : 2.2)) * (o.moving ? 2.2 : 0.8));
+    drawHunter(ctx, 'volt', facing, t, { flash: o.flash, moving: o.moving, blinkK: 1 - (o.blink || 0) * 0.9 }, NEUTRAL_PAL);
+    ctx.restore();
+    return;
+  }
   const sk = o.skin && SKINS[o.skin] && SKINS[o.skin].brawler === id ? SKINS[o.skin] : null;
   if (sk && sk.classic) return drawClassic(ctx, id, x, y, facing, t, { ...o, skin: null });
   ctx.save();
