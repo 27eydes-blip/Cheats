@@ -28,9 +28,10 @@ Open http://localhost:8787 on desktop. Controls: **WASD** to move, **mouse** to 
 4. On each phone, open `http://<that-ip>:8787`, for example `http://192.168.1.23:8787`.
    - If it doesn't load, allow incoming connections for `node`/`workerd` in your computer's firewall. macOS asks the first time.
 5. On **both** phones open **FRIENDS**, enter the **same room code** (for example `FRIENDS`), and tap **PLAY**. The first one in is the host: the room plays the mode they picked, and they press **START** when everyone is there. In Squad Hunt the friends play on the same team.
-   - To test phone vs phone without bots, the host switches **Fill with bots** off in the room before pressing START.
+   - To test phone vs phone without bots, the host switches **Fill with bots** off in the room before pressing START (the room starts with the host's **FILL WITH BOTS** choice from the PLAY page).
    - A friend who enters the code while the room is mid-match waits and joins the room's next match.
-   - With no room code you go into quick play: anyone who presses Play within about 7 seconds lands in the same match, and bots fill the empty slots.
+   - Without a room code, **FILL WITH BOTS** on the PLAY page works for public matches too: with it off, quick play puts you in a humans-only queue and the match waits until a second hunter joins (or you CANCEL).
+   - With no room code and bots on you go into quick play: anyone who presses Play within about 7 seconds lands in the same match, and bots fill the empty slots.
 6. Turn the phones sideways. Left thumb moves. Right thumb drags to aim and fires on release. A quick tap auto-aims at the nearest enemy. The **SUPER** button charges as your hits land; drag it to aim, or tap it to auto-aim.
 
 Tips:

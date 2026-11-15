@@ -6,7 +6,8 @@ import { SETTINGS } from '../settings.js';
 import { sfx, unlockAudio } from '../audio.js';
 import { icon, ICONS } from './icons.js';
 import { startMusic, stopMusic } from './music.js';
-import { totalTrophies, levelInfo, missionState, msToReset, roadReward, ROAD_STEP } from '../progression.js';
+import { makeFocusable } from './fx.js';
+import { totalTrophies, levelInfo, missionState, msToReset, roadReward, ROAD_STEP, armoryKeys, seenList, hasUnseen } from '../progression.js';
 import { PASS, passTier } from '../catalog.js';
 import * as A from '../account.js';
 
@@ -16,6 +17,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
 };
 import * as SC from './screens.js';
+import { initRotateHint } from './rotatehint.js';
 
 export const ROLE_COL = { Balanced: 'var(--role-balanced)', Tank: 'var(--role-tank)', Sniper: 'var(--role-sniper)', Controller: 'var(--role-controller)', Trapper: 'var(--role-trapper)', Assassin: 'var(--role-assassin)' };
 export const MODES_UI = {
@@ -44,13 +46,23 @@ const TABS = [['profile', 'PROFILE', 'user'], ['locker', 'LOCKER', 'locker'], ['
 // level shield (original): gold rim, deep red body, the level number
 const shield = (id) => `<svg class="shield" viewBox="0 0 64 72"><path d="M32 3 L59 12 V36 C59 53 46 64 32 69 C18 64 5 53 5 36 V12 Z" fill="#ffc83d" stroke="#1b1033" stroke-width="4" stroke-linejoin="round"/><path d="M32 11 L51 17 V36 C51 48 42 56 32 60 C22 56 13 48 13 36 V17 Z" fill="#8e2a3a"/><path d="M32 11 V60 C22 56 13 48 13 36 V17 Z" fill="#b2423f"/><text id="${id}" x="32" y="45" text-anchor="middle" font-family="Lilita One" font-size="26" fill="#fff" stroke="#1b1033" stroke-width="4" paint-order="stroke">1</text></svg>`;
 
+// Where the stage draws your hunter. A hunter with its weapon reaches up to ~68 units from its
+// centre at any facing (the idle twirl spins it right round), and the taunt hop lifts it 26 more,
+// so the scale is the largest at which all of that stays inside the canvas.
+export const HUNTER_REACH = 68;
+export function stageFit(w, h) {
+  const sc = Math.max(0.1, Math.min((w / 2 - 4) / HUNTER_REACH, (h - 6) / (HUNTER_REACH + 30 + 26 + 18)));
+  const base = h - 18 * sc; // pedestal along the bottom of the card
+  return { sc, cx: w / 2, base, y: base - 30 * sc };
+}
+
 export function createLobby(api) {
   const root = $('lobby');
   root.className = 'lobby';
   root.innerHTML = `
     <div class="lb-top">
-      <div class="pbanner tap" id="profileCard">${shield('lvN')}<div class="pb-txt"><div class="pname" id="pName">Hunter</div><div class="xpbar"><i id="xpFill"></i></div><div class="ptro">${icon('trophy')}<span id="pTro">0</span></div></div></div>
-      <div class="guestchip" id="guestChip" hidden><span>Guest · save progress</span><button id="guestX" aria-label="Dismiss">✕</button></div>
+      <div class="pbanner tap" id="profileCard">${shield('lvN')}<div class="pb-txt"><div class="pb-row"><div class="pname" id="pName">Hunter</div><div class="ptro">${icon('trophy')}<span id="pTro">0</span></div></div><div class="xpbar"><i id="xpFill"></i></div></div>
+        <div class="guestchip" id="guestChip" hidden><span><i>Guest · </i>save progress</span><button id="guestX" aria-label="Dismiss">✕</button></div></div>
       <div class="lb-cur">
         <div class="cur" id="tbGems">${icon('gem')}<b id="gemN">0</b><small>TEST</small><button class="plus tap" id="gemPlus" aria-label="Get gems">${icon('plus')}</button></div>
         <div class="cur" id="tbCoins">${icon('coin')}<b id="coinN">0</b><small>TEST</small><button class="plus tap" id="coinPlus" aria-label="Get coins">${icon('plus')}</button></div>
@@ -61,12 +73,12 @@ export function createLobby(api) {
     <nav class="lb-tabs">${TABS.map(([k, l, ic]) => `<button class="tabbtn tap" id="${k === 'locker' || k === 'armory' || k === 'pass' || k === 'friends' ? 'rail_' + k : 'tab_' + k}" data-tab="${k}">${icon(ic)}<span>${l}</span><span class="dot" id="dot_${k}" hidden></span>${k === 'play' ? '<span class="tabchip" id="playChip">READY</span>' : ''}</button>`).join('')}</nav>
     <main class="lb-page">
       <section class="pg pg-play" data-pg="play">
-        <div class="modelist" id="modeCard">${MODE_BTNS.map(([k, n, sub, ic, col]) => `<button class="modebtn tap" data-m="${k}" style="--mc:${col}"><span class="mi">${icon(ic)}</span><span class="mn"><b>${n}</b><small>${sub}</small></span><span class="go">▶</span></button>`).join('')}
-          <label class="fillbots"><span class="cb" id="fillCb"></span> FILL WITH BOTS</label></div>
+        <div class="modelist" id="modeCard">${MODE_BTNS.map(([k, n, sub, ic, col]) => `<button class="modebtn tap" data-m="${k}" style="--mc:${col}"><span class="mi">${icon(ic)}</span><span class="mn"><b>${n}</b><small>${sub}</small></span><span class="go" aria-hidden="true"></span></button>`).join('')}
+          <button type="button" class="fillbots" id="fillBots" role="switch" aria-checked="true"><span class="cb" id="fillCb"></span> FILL WITH BOTS</button></div>
         <div class="party">
           <div class="slots">
             <div class="slot me nameplate tap" title="Change hunter"><canvas id="stage"></canvas><div class="np-row"><span class="np-name" id="npName">Volt</span><span class="role" id="npRole">BALANCED</span></div>
-              <div class="power tap" id="npPower">POWER <b id="npPow">1</b><div class="bar"><i id="npBar" style="width:0%"></i></div><button class="btn btn-sm" id="npUp">UPGRADE</button></div>
+              <div class="power tap" id="npPower" data-notab>POWER <b id="npPow">1</b><div class="bar"><i id="npBar" style="width:0%"></i></div><button class="btn btn-sm" id="npUp">UPGRADE</button></div>
               <div class="np-tro">${icon('trophy')}<span id="npTro">0</span><span class="np-mode" id="mcName">QUICK HUNT</span></div></div>
             ${[1, 2, 3].map(() => `<button class="slot invite tap"><span class="plus">+</span><span>INVITE<br>FRIENDS</span></button>`).join('')}
           </div>
@@ -80,6 +92,7 @@ export function createLobby(api) {
     </main>
     <div id="credit">Created by Sam Eyde III</div>`;
 
+  initRotateHint();
   const L = {
     mode: store.get('hunt-mode') || 'quick', tab: 'play', t0: performance.now(), taunt: 0, twirl: 0, blinkAt: 2, raf: 0, visible: true,
   };
@@ -106,8 +119,7 @@ export function createLobby(api) {
     const w = stage.width / L.dpr, h = stage.height / L.dpr;
     sg.setTransform(L.dpr, 0, 0, L.dpr, 0, 0); sg.clearRect(0, 0, w, h);
     const id = api.getBrawler(), B = BRAWLERS[id];
-    const size = Math.min(h * 0.95, w * 1.05);
-    const sc = size / 80, cx = w / 2, base = h - 16 * sc;
+    const { sc, cx, base } = stageFit(w, h);
     // dramatic light from below: a warm cone rising off the pedestal
     const col = (L.colCache ||= {})[B.role] ||= getComputedStyle(document.documentElement).getPropertyValue(ROLE_COL[B.role].slice(4, -1)).trim() || '#ffd23f';
     const flick = SETTINGS.reduceFlash ? 0.85 : 0.8 + Math.sin(t * 1.7) * 0.08 + Math.sin(t * 5.3) * 0.04;
@@ -140,9 +152,10 @@ export function createLobby(api) {
       sg.save();
       for (let i = 0; i < 6; i++) {
         const d = SETTINGS.reduceFlash ? 0 : t * (8 + i * 3);
-        const fx2 = cx + (((i * 37 + d) % 120) - 60) * sc, fy2 = base + (i % 2 ? 4 : -2) * sc;
-        sg.globalAlpha = 0.18 + (i % 3) * 0.05; sg.fillStyle = '#b9a8d6';
-        sg.beginPath(); sg.ellipse(fx2, fy2, (22 + (i % 3) * 8) * sc, 6 * sc, 0, 0, Math.PI * 2); sg.fill();
+        // drifts within the canvas and fades out at the ends (no hard edges where the canvas clips)
+        const off = ((i * 37 + d) % 68) - 34, fx2 = cx + off * sc, fy2 = base + (i % 2 ? 4 : -2) * sc;
+        sg.globalAlpha = (0.18 + (i % 3) * 0.05) * (1 - (off / 34) ** 2); sg.fillStyle = '#b9a8d6';
+        sg.beginPath(); sg.ellipse(fx2, fy2, (20 + (i % 3) * 6) * sc, 6 * sc, 0, 0, Math.PI * 2); sg.fill();
       }
       sg.restore();
     }
@@ -172,19 +185,23 @@ export function createLobby(api) {
     let roadReady = false; for (let at = ROAD_STEP; at <= tt; at += ROAD_STEP) if (roadReward(at) && !p.claimed.includes(at)) roadReady = true;
     const tier = passTier(p.pass.xp);
     const passReady = PASS.some((r) => r.tier <= tier && (!p.pass.claimed.includes(`free:${r.tier}`) || (p.pass.premium && !p.pass.claimed.includes(`premium:${r.tier}`))));
-    const seen = +(store.get('hunt-seen-owned') || 0);
-    $('dot_road').hidden = !roadReady; $('dot_pass').hidden = !passReady; $('dot_locker').hidden = p.owned.length <= seen;
-    $('dot_friends').hidden = true; $('dot_profile').hidden = true; $('dot_play').hidden = true; $('dot_armory').hidden = true;
+    // Locker / Armory dots: only for things you have not looked at yet
+    const seen = (k, now) => { const r = seenList(store.get(k), now); if (r.fresh) store.set(k, JSON.stringify(now)); return r.list; };
+    const arm = armoryKeys(p);
+    $('dot_road').hidden = !roadReady; $('dot_pass').hidden = !passReady; $('dot_locker').hidden = !hasUnseen(p.owned, seen('hunt-seen-locker', p.owned));
+    $('dot_armory').hidden = !hasUnseen(arm, seen('hunt-seen-armory', arm));
+    $('dot_friends').hidden = true; $('dot_profile').hidden = true; $('dot_play').hidden = true;
     // mode buttons + party
     const M = MODES_UI[L.mode];
     $('mcName').textContent = M.name;
-    for (const b of root.querySelectorAll('.modebtn')) b.classList.toggle('sel', b.dataset.m === L.mode);
-    const bots = $('bots'); $('fillCb').classList.toggle('on', !bots || bots.checked);
+    for (const b of root.querySelectorAll('.modebtn')) { b.classList.toggle('sel', b.dataset.m === L.mode); b.setAttribute('aria-pressed', String(b.dataset.m === L.mode)); }
+    const bots = $('bots'), botsOn = !bots || bots.checked; $('fillCb').classList.toggle('on', botsOn); $('fillBots').setAttribute('aria-checked', String(botsOn));
     $('playChip').textContent = L.mode === 'free' ? 'FREE PLAY' : 'READY';
     for (const b of root.querySelectorAll('.tabbtn')) b.classList.toggle('on', b.dataset.tab === L.tab);
     for (const pg of root.querySelectorAll('.pg')) pg.hidden = pg.dataset.pg !== L.tab;
     if (L.tab === 'profile') SC.renderProfilePage(root.querySelector('.pg-profile'), api, refresh);
     if (L.tab === 'locker') SC.renderLockerPage(root.querySelector('.pg-locker'), api, refresh);
+    makeFocusable(root);
   }
   A.onUser(refresh);
 
@@ -205,7 +222,8 @@ export function createLobby(api) {
   const tab = (k) => { L.tab = k; sfx('click', 0.6); refresh(); if (k === 'play') requestAnimationFrame(resize); };
   root.querySelector('.slot.me').addEventListener('click', (e) => { if (!e.target.closest('#npPower')) SC.openBrawlerSelect(api, refresh); });
   for (const b of root.querySelectorAll('.modebtn')) b.onclick = () => { L.mode = b.dataset.m; store.set('hunt-mode', L.mode); sfx('click'); refresh(); };
-  root.querySelector('.fillbots').onclick = (e) => { e.preventDefault(); const bx = $('bots'); if (bx) bx.checked = !bx.checked; refresh(); };
+  // FILL WITH BOTS: off = humans-only matches (the game saves the choice on 'change')
+  $('fillBots').onclick = () => { const bx = $('bots'); if (bx) { bx.checked = !bx.checked; bx.dispatchEvent(new Event('change')); } sfx('click', 0.6); refresh(); };
   for (const b of root.querySelectorAll('.slot.invite')) b.onclick = () => SC.openFriends(api);
   $('playBtn').addEventListener('click', () => {
     unlockAudio();
@@ -214,7 +232,7 @@ export function createLobby(api) {
   });
   $('tab_play').onclick = () => tab('play');
   $('tab_profile').onclick = () => tab('profile');
-  $('rail_locker').onclick = () => { store.set('hunt-seen-owned', A.progress().owned.length); tab('locker'); };
+  $('rail_locker').onclick = () => { store.set('hunt-seen-locker', JSON.stringify(A.progress().owned)); tab('locker'); };
   $('rail_armory').onclick = () => SC.openArmory(api, refresh);
   $('npPower').addEventListener('click', (e) => { e.stopPropagation(); SC.openPower(api, refresh); });
   $('rail_pass').onclick = $('passBtn').onclick = () => SC.openPass(refresh);

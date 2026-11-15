@@ -98,7 +98,10 @@ export function createMatchmaking(onCancel, room = {}) {
       st.found = players;
       if (mode) $('mmMode').textContent = `${st.room ? `ROOM ${st.room} · ` : ''}${mode} · ${worldName(world)}`; // (the code stays on screen)
       if (!st.room || !ids) {
-        $('mmCount').textContent = `${players}/${max} hunters found${startIn != null ? ` · starts in ${Math.ceil(startIn)}` : !bots && players < 2 ? ' · waiting for another hunter (bots off)' : ''}`;
+        // bots off: nobody fills the empty seats, so say plainly that we're waiting for real players
+        const waiting = !bots && startIn == null;
+        $('mmFound').textContent = st.room ? 'FRIENDS ROOM' : waiting ? 'WAITING FOR MORE HUNTERS…' : 'FINDING HUNTERS';
+        $('mmCount').textContent = `${players}/${max} hunters found${startIn != null ? ` · starts in ${Math.ceil(startIn)}` : waiting ? ' · bots are off' : ''}`;
         return;
       }
       const hi = ids.indexOf(host), hostName = hi >= 0 && names ? names[hi][0] : 'the host', amHost = host === me;

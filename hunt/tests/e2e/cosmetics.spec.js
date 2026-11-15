@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { trackErrors, waitMe } from './helpers.js';
 
+// (tracker is a Trophy Road reward: the Locker shows where to earn it, so buy a shop title)
 test('locker + pass: buy and equip a title with test coins, shows in match roster', async ({ page }) => {
   const errors = trackErrors(page);
   page.on('dialog', (d) => d.dismiss());
@@ -10,9 +11,9 @@ test('locker + pass: buy and equip a title with test coins, shows in match roste
   await page.click('#rail_locker');
   await page.click('.lsec[data-open="titles"]');
   await page.click('#lkTabs [data-t="titles"]');
-  // Trophy Road titles are earned, not sold: the shop shows where to get them
+  // Trophy Road titles are earned, not sold: the shop shows a lock and where to get them
   await expect(page.locator('.ped[data-k="tracker"] [data-buy]')).toHaveCount(0);
-  await expect(page.locator('.ped[data-k="tracker"]')).toContainText('TROPHY ROAD 200');
+  await expect(page.locator('.ped[data-k="tracker"] .tag')).toContainText('ROAD 200');
   await page.click('.ped[data-k="sharpshooter"] [data-buy]');
   await page.click('.ped[data-k="sharpshooter"] [data-eq]');
   await expect(page.locator('.ped.on')).toContainText('Sharpshooter');

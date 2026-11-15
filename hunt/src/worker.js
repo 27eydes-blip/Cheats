@@ -59,7 +59,7 @@ const app = {
       }
       const room = (url.searchParams.get('room') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
       const back = url.searchParams.get('rejoin') ? url.searchParams.get('match') || '' : '';
-      if (/^(room:[A-Z0-9]{1,12}|qp:[a-z]+:[a-z]+:[0-9a-f-]{36})$/.test(back)) name = back; // reconnect to the same match
+      if (/^(room:[A-Z0-9]{1,12}|q[pn]:[a-z]+:[a-z]+:[0-9a-f-]{36})$/.test(back)) name = back; // reconnect to the same match
       else if (room) name = 'room:' + room;
       else {
         const mm = env.MATCHMAKER.get(env.MATCHMAKER.idFromName('global'));
@@ -68,7 +68,9 @@ const app = {
         let bracket = 1;
         const u = await userOf(env, url.searchParams.get('token'));
         if (u) bracket = powerBracket(own(progressOf(u).power || {}, brawlerId(url.searchParams.get('brawler'))) || 1);
-        const r = await mm.fetch('https://mm/assign?mode=' + want + '&b=' + bracket + '&skip=' + encodeURIComponent(url.searchParams.get('skip') || ''));
+        // "fill with bots" off: a separate queue of humans-only matches (never mixed with bot-filled ones)
+        const nb = url.searchParams.get('bots') === '0' ? '&nb=1' : '';
+        const r = await mm.fetch('https://mm/assign?mode=' + want + '&b=' + bracket + nb + '&skip=' + encodeURIComponent(url.searchParams.get('skip') || ''));
         name = await r.text();
       }
       const fwd = new URL(req.url);
@@ -96,12 +98,16 @@ export class Matchmaker {
   constructor() { this.cur = {}; }
   async fetch(req) {
     const u = new URL(req.url), skip = u.searchParams.get('skip'), want = u.searchParams.get('mode') || 'any';
-    const key = want + '|' + (Number(u.searchParams.get('b')) || 1); // one filling match per mode AND power bracket
+    const nb = u.searchParams.get('nb') === '1';
+    // one filling match per mode, power bracket AND bots on/off ('qn:' matches never get bots)
+    const key = want + '|' + (Number(u.searchParams.get('b')) || 1) + (nb ? '|nb' : '');
     const now = Date.now();
     let c = this.cur[key];
-    if (!c || c.count >= c.max || now - c.created > 7000 || skip === c.id) {
+    // a bot-filled match starts in seconds anyway; a humans-only one keeps collecting players for
+    // longer (once it has started, the room answers 'retry' and the client asks again with skip)
+    if (!c || c.count >= c.max || now - c.created > (nb ? 120000 : 7000) || skip === c.id) {
       const mode = want === 'any' ? pick(RANDOM_MODES) : want;
-      c = this.cur[key] = { id: `qp:${mode}:${pick(arenaWorlds())}:${crypto.randomUUID()}`, created: now, count: 0, max: MODES[mode].maxPlayers || 10 };
+      c = this.cur[key] = { id: `${nb ? 'qn' : 'qp'}:${mode}:${pick(arenaWorlds())}:${crypto.randomUUID()}`, created: now, count: 0, max: MODES[mode].maxPlayers || 10 };
     }
     c.count++;
     return new Response(c.id);
@@ -229,7 +235,8 @@ export class MatchRoom {
     if (url.searchParams.get('rejoin')) return this.rejoin(url, server, client);
     if (!this.sim || this.sim.phase === 'end' || (isRoom && this.sim.phase === 'play' && this.sockets.size === 0)) {
       if (isRoom) { this.newMatch(this.roomMatch(url, user)); this.seatWaiting(); }
-      else { const [, mode, world] = mname.split(':'); this.newMatch({ mode, world, lobby: 8, ev: null, events: true, open: false, bots: true }); }
+      // quick play: 'qn:' matches come from the humans-only queue ("fill with bots" off) and never get bots
+      else { const [, mode, world] = mname.split(':'); this.newMatch({ mode, world, lobby: 8, ev: null, events: true, open: false, bots: !mname.startsWith('qn:') }); }
     }
     const sim = this.sim;
     // a second connection from the same account takes over its seat (like a reconnect): an account

@@ -1,7 +1,7 @@
 // Progression rules shared by the server (authoritative, D1) and the client (display).
-import { BRAWLER_IDS, own } from './shared.js';
+import { BRAWLER_IDS, WORLDS, worldId, worldsInDisplayOrder, ZONES, own } from './shared.js';
 import { WEAPONS, WEAPON_IDS, perksFor, masteryInfo, masteryXp, masteryBadge, MASTERY_SKINS } from './weapons.js';
-import { LEVEL_TITLES, EMOTES, SKINS } from './catalog.js';
+import { LEVEL_TITLES, EMOTES, SKINS, rewardSource } from './catalog.js';
 import { powerSetup } from './power.js';
 
 export const ROAD_STEP = 100;
@@ -195,3 +195,77 @@ export function applyMatch(p, r) {
   wxp.sort((a, b) => b.xp1 - b.xp0 - (a.xp1 - a.xp0));
   return { progress: p, delta: tb ? p.trophies[tb] - before : 0, xp, coins, levels, mastery: mast, wxp, levelBefore: lvBefore };
 }
+
+// ---------------------------------------------------------------- client display helpers
+// Reward items (level road, Trophy Road, Hunt Pass) are earned, not bought: the Locker shows a lock
+// and where they come from. Returns a short tag ('LEVEL 15', 'ROAD 700', 'PASS 5', 'PREMIUM PASS 10')
+// or null for an item that is only sold.
+export function earnTag(id) {
+  // one rule with the server: catalog.rewardSource is what makes priceOf() refuse to sell an item
+  const src = rewardSource(id);
+  if (!src) return null;
+  return src.toUpperCase().replace(/^TROPHY ROAD /, 'ROAD ').replace(/^(HUNT|PREMIUM) PASS TIER /, (_, k) => (k === 'PREMIUM' ? 'PREMIUM PASS ' : 'PASS '));
+}
+// the same, as a sentence for a toast
+export function earnHint(id, name) {
+  const t = earnTag(id);
+  if (!t) return `Buy ${name} in the Locker`;
+  if (t.startsWith('LEVEL')) return `Reach level ${t.slice(6)} to unlock ${name}`;
+  if (t.startsWith('ROAD')) return `Reach ${t.slice(5)} trophies on the Trophy Road to unlock ${name}`;
+  return `${name} is a Hunt Pass reward (tier ${t.split(' ').pop()}${t.startsWith('PREMIUM') ? ', premium' : ''})`;
+}
+
+// This device's per-world stats (localStorage prefs). stats[worldId] = arena matches (Quick Hunt
+// etc.): games, wins, KOs, best bounty. free[zoneWorldKey] = Free Play KOs and best bounty, the Hub
+// included. Old saves wrote Hub kills to stats['-1'] (the Hub is not an arena world): move them over.
+export function migrateLocalStats(prefs) {
+  if (!prefs.stats || typeof prefs.stats !== 'object') prefs.stats = {};
+  if (!prefs.free || typeof prefs.free !== 'object') prefs.free = {};
+  const lost = prefs.stats['-1'];
+  if (lost) {
+    const h = freeStat(prefs, 'hub');
+    h.kills += lost.kills | 0; h.best = Math.max(h.best, lost.best | 0);
+    delete prefs.stats['-1'];
+    return true;
+  }
+  return false;
+}
+export function arenaStat(prefs, worldKey) {
+  const id = worldId(worldKey);
+  if (id < 0) return { games: 0, wins: 0, kills: 0, best: 0 }; // not an arena: nothing to keep
+  return (prefs.stats[id] ||= { games: 0, wins: 0, kills: 0, best: 0 });
+}
+export function freeStat(prefs, zoneWorldKey) { return (prefs.free[zoneWorldKey] ||= { kills: 0, best: 0 }); }
+export function arenaStatRows(prefs) {
+  const rows = worldsInDisplayOrder().map((w) => {
+    const s = prefs.stats?.[w.id] || {};
+    return `<tr><td>${w.name}</td><td>${s.games | 0}</td><td>${s.wins | 0}</td><td>${s.kills | 0}</td><td>★${s.best | 0}</td></tr>`;
+  }).join('');
+  return `<tr><th>World</th><th>Games</th><th>Wins</th><th>KOs</th><th>Best</th></tr>${rows}`;
+}
+export function freeStatRows(prefs) {
+  // Free Play zones, the Hub first, then the outer zones in world display order
+  const order = (k) => (k === 'hub' ? -1 : WORLDS[worldId(k)]?.order ?? 99);
+  const zones = [...ZONES].sort((a, b) => order(a.world) - order(b.world));
+  const rows = zones.map((z) => { const s = prefs.free?.[z.world] || {}; return `<tr><td>${z.name}</td><td>${s.kills | 0}</td><td>★${s.best | 0}</td></tr>`; }).join('');
+  return `<tr><th>Zone</th><th>KOs</th><th>Best</th></tr>${rows}`;
+}
+
+// "Something new" dots. Armory: every unlocked weapon and every perk pick it has reached (by key);
+// the lobby lights the dot while any key has not been seen in the Armory yet.
+export function armoryKeys(p) {
+  const out = [];
+  for (const id of WEAPON_IDS) {
+    if (!weaponUnlocked(p, id)) continue;
+    out.push('w:' + id);
+    const lv = masteryInfo(p.mastery?.[id] || 0).level;
+    for (const tier of Object.keys(perksFor(id))) if (lv >= +tier) out.push(`p:${id}:${tier}`);
+  }
+  return out;
+}
+// seen list from storage; the first time there is none, everything you have now counts as seen
+export function seenList(raw, now) {
+  if (raw == null) return { list: now, fresh: true };
+  try { const v = JSON.parse(raw); return { list: Array.isArray(v) ? v : now, fresh: !Array.isArray(v) }; } catch { return { list: now, fresh: true }; }
+}
+export const hasUnseen = (keys, seen) => { const s = new Set(seen); return keys.some((k) => !s.has(k)); };

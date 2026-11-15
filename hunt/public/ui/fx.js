@@ -27,17 +27,64 @@ const stack = [];
 export function openScreen(el, { pop = false } = {}) {
   el.hidden = false;
   el.classList.remove('leave'); void el.offsetWidth; el.classList.add('enter');
+  // keyboard: remember where focus was, and move it into the new screen
+  el._from = document.activeElement;
   stack.push(el);
+  makeFocusable(el);
+  // screens fill and re-render their content after opening: keep new cards focusable (batched)
+  if (!el._mo) { let q = false; el._mo = new MutationObserver(() => { if (q) return; q = true; queueMicrotask(() => { q = false; makeFocusable(el); }); }); }
+  el._mo.observe(el, { childList: true, subtree: true });
+  const first = focusables(el)[0];
+  (first || el).focus({ preventScroll: true });
   sfx('whoosh', 0.5);
   if (pop) duck(true);
 }
 export function closeScreen(el) {
   if (!el || el.hidden) return Promise.resolve();
   const i = stack.indexOf(el); if (i >= 0) stack.splice(i, 1);
+  el._mo?.disconnect();
   el.classList.remove('enter'); el.classList.add('leave');
   if (!stack.some((s) => s.classList.contains('ui-pop'))) duck(false);
+  // focus goes back to what opened it (or into whatever screen is now on top)
+  const back = el._from && el._from.isConnected && !el._from.closest('[hidden]') ? el._from : focusables(topScreen() || document.getElementById('lobby') || document.body)[0];
+  if (el.contains(document.activeElement)) back?.focus({ preventScroll: true });
   return new Promise((r) => setTimeout(() => { el.hidden = true; el.classList.remove('leave'); r(); }, 190));
 }
+
+// ---------- keyboard: everything tappable is focusable; Escape closes the top-most screen ----------
+const FOCUSABLE = 'button:not([disabled]), input:not([type="hidden"]):not([disabled]), select, textarea, summary, a[href], [tabindex="0"]';
+const focusables = (root) => (root ? [...root.querySelectorAll(FOCUSABLE)].filter((e) => !e.closest('[hidden]') && e.getClientRects().length) : []);
+// tappable divs (cards, tiles, the nameplate) get a tab stop and act like buttons
+export function makeFocusable(root) {
+  for (const e of root.querySelectorAll('.tap:not(button):not(a):not(input), .lsec[data-open], .lsec[data-armory]')) {
+    if (e.hasAttribute('tabindex') || e.dataset.notab != null) continue;
+    if (e.matches('.lsec') && e.querySelector('.tap')) continue; // its tiles are the tab stops
+    e.tabIndex = 0;
+    if (!e.getAttribute('role')) e.setAttribute('role', 'button');
+  }
+}
+addEventListener('keydown', (e) => {
+  const top = topScreen();
+  if (e.key === 'Escape') {
+    const mm = document.querySelector('.mm:not([hidden]) #mmCancel');
+    const close = top ? top.querySelector(':scope > .ui-head .back, :scope > .card-a > [data-close], [data-close], .detail-actions [data-x]:not([data-sel])') : mm;
+    if (close) { e.preventDefault(); close.click(); }
+    return;
+  }
+  const t = e.target;
+  if ((e.key === 'Enter' || e.key === ' ') && t && t.getAttribute?.('role') === 'button' && !/^(BUTTON|A|INPUT|SUMMARY)$/.test(t.tagName)) {
+    if (e.repeat) return;
+    e.preventDefault(); t.click();
+    return;
+  }
+  // Tab stays inside the top-most screen or popup while one is open
+  if (e.key === 'Tab' && top) {
+    const f = focusables(top);
+    if (!f.length) return;
+    const i = f.indexOf(document.activeElement);
+    if (i < 0 || (e.shiftKey && i === 0) || (!e.shiftKey && i === f.length - 1)) { e.preventDefault(); f[i < 0 ? 0 : e.shiftKey ? f.length - 1 : 0].focus(); }
+  }
+});
 export const topScreen = () => stack[stack.length - 1] || null;
 // generic popup: returns the card element
 export function popup(html, { onClose } = {}) {

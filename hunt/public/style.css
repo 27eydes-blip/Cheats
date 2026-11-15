@@ -65,11 +65,11 @@ button.ghost { background: var(--panel2); }
 #ping { position: absolute; left: max(10px, env(safe-area-inset-left)); top: max(8px, env(safe-area-inset-top)); font-size: 12px; opacity: .6; font-family: system-ui, sans-serif; }
 #toast { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); background: var(--ink); padding: 8px 18px; border-radius: 14px; font-size: 20px; pointer-events: none; z-index: 100; }
 
-#rotate { display: none; }
-@media (orientation: portrait) and (pointer: coarse) {
-  body.ingame #rotate { display: flex; position: fixed; inset: 0; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); z-index: 90; font-size: 22px; text-align: center; }
-  #rotate div { font-size: 80px; animation: spin 2s infinite ease-in-out; }
-}
+/* upright phone in a match: a small hint, never a wall. Tap it or turn the phone and it goes (ui/rotatehint.js) */
+#rotate { position: fixed; z-index: 20; left: 12px; right: 12px; margin: 0 auto; width: fit-content; top: calc(max(8px, env(safe-area-inset-top)) + 84px); display: flex; align-items: center; gap: 8px; min-height: 44px; box-sizing: border-box; padding: 6px 14px; background: rgba(27, 16, 51, .9); border: 3px solid var(--ink); border-radius: 14px; font-size: 14px; line-height: 1.15; text-align: left; cursor: pointer; }
+#rotate[hidden] { display: none; }
+#rotate div { font-size: 24px; line-height: 1; animation: spin 2s infinite ease-in-out; }
+#rotate p { margin: 0; }
 @keyframes spin { 50% { transform: rotate(90deg); } }
 @media (max-height: 430px) {
   .panel { padding: 8px 14px 12px; }

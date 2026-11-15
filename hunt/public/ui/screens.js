@@ -9,8 +9,8 @@ import { openScreen, closeScreen, popup, rewardBurst, flyCoins } from './fx.js';
 import { drawModePreview } from './scenes.js';
 import { setMusicVolume } from './music.js';
 import * as A from '../account.js';
-import { SKINS, KILL_FX, TITLES, PASS, PASS_TIERS, PASS_XP_PER_TIER, PREMIUM_PRICE, CURRENCY, passTier, priceOf, rewardSource, itemId, DUPE_COINS } from '../catalog.js';
-import { totalTrophies, roadReward, ROAD_STEP, missionState, msToReset, levelInfo, levelReward, weaponUnlocked } from '../progression.js';
+import { SKINS, KILL_FX, TITLES, PASS, PASS_TIERS, PASS_XP_PER_TIER, PREMIUM_PRICE, CURRENCY, passTier, priceOf, itemId, DUPE_COINS } from '../catalog.js';
+import { totalTrophies, roadReward, ROAD_STEP, missionState, msToReset, levelInfo, levelReward, weaponUnlocked, earnTag, earnHint, armoryKeys, seenList } from '../progression.js';
 import { EMOTES } from '../catalog.js';
 import { MAX_POWER, POWER_COST, GADGET_AT, STAR_AT, GADGETS, STARS, clampPower, powerMult } from '../power.js';
 import { WEAPONS, WEAPON_IDS, WEAPON_CLASSES, weaponStats, withPerks, masteryInfo, MASTERY_SKINS, perksFor } from '../weapons.js';
@@ -74,10 +74,12 @@ export function openBrawlerSelect(api, onDone) {
   const draw = () => {
     chips.innerHTML = roles.map((r) => `<button class="chipbtn ${r === filter ? 'on' : ''}" data-r="${r}">${r}</button>`).join('');
     for (const c of chips.children) c.onclick = () => { filter = c.dataset.r; draw(); };
-    const p = A.progress();
+    const p = A.progress(), had = grid.contains(document.activeElement) ? document.activeElement.dataset.b : null;
     grid.innerHTML = BRAWLER_IDS.filter((b) => filter === 'ALL' || BRAWLERS[b].role.toUpperCase() === filter).map((b) =>
-      `<div class="card-b bcard tap ${b === api.getBrawler() ? 'sel' : ''}" data-b="${b}" style="--card-col:${ROLE_COL[BRAWLERS[b].role]}"><canvas data-b="${b}"></canvas><div class="title bc-name">${BRAWLERS[b].name}</div><div class="bc-tro">🏆 ${p.trophies[b] | 0}</div></div>`).join('');
-    for (const c of grid.querySelectorAll('.bcard')) c.onclick = () => { api.setBrawler(c.dataset.b); draw(); openDetail(api, c.dataset.b, () => draw()); };
+      `<div class="card-b bcard tap ${b === api.getBrawler() ? 'sel' : ''}" tabindex="0" role="button" aria-label="${BRAWLERS[b].name}" data-b="${b}" style="--card-col:${ROLE_COL[BRAWLERS[b].role]}"><canvas data-b="${b}"></canvas><div class="title bc-name">${BRAWLERS[b].name}</div><div class="bc-tro">🏆 ${p.trophies[b] | 0}</div></div>`).join('');
+    // a card opens a preview: only SELECT in the detail changes your hunter
+    for (const c of grid.querySelectorAll('.bcard')) c.onclick = () => openDetail(api, c.dataset.b, () => draw());
+    if (had) grid.querySelector(`[data-b="${had}"]`)?.focus({ preventScroll: true }); // keep keyboard focus across a redraw
   };
   draw();
   S.loop((t) => {
@@ -134,26 +136,38 @@ function openDetail(api, id, onClose) {
       <div class="stats">${statsOf(id).map(([n, f, v]) => `<span>${n}</span><div class="bar shine"><i style="width:${Math.round(Math.min(1, f) * 100)}%"></i></div><span class="num">${v}</span>`).join('')}</div>
       <div class="abil"><canvas data-demo="attack"></canvas><div><h4>ATTACK · ${ATTACK_TXT[id][0]}</h4><p>${ATTACK_TXT[id][1]}</p></div></div>
       <div class="abil"><canvas data-demo="super"></canvas><div><h4>SUPER · ${SUPER_TXT[id][0]}</h4><p>${SUPER_TXT[id][1]}</p></div></div>
-      <div class="skinrow">${skins.map(([k, n]) => { const own = !k || p.owned.includes(k), on = (p.equipped['skin:' + id] || null) === k; return `<div class="card-a sk tap ${on ? 'on' : ''}" data-skin="${k || ''}"><canvas data-skin="${k || ''}"></canvas>${esc(n)}${own ? '' : ` ${icon('lock')}`}</div>`; }).join('')}</div>
-      <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-md alt" data-x>CLOSE</button><button class="btn btn-md" data-x data-sel>SELECT</button></div>
+      <div class="skinrow">${skins.map(([k, n]) => { const own = !k || p.owned.includes(k), on = (p.equipped['skin:' + id] || null) === k; return `<div class="card-a sk tap ${on ? 'on' : ''}" tabindex="0" role="button" aria-label="Preview ${esc(n)}" data-skin="${k || ''}"><canvas data-skin="${k || ''}"></canvas>${esc(n)}${own ? '' : ` ${icon('lock')}`}</div>`; }).join('')}</div>
+      <div class="detail-actions"><button class="btn btn-md alt" data-x>CLOSE</button><button class="btn btn-md mint" data-power>${icon('star')} POWER ${clampPower(p.power?.[id] || 1)}</button><button class="btn btn-md" data-x data-sel>SELECT</button></div>
     </div></div>`;
   document.body.appendChild(el);
   openScreen(el);
   const close = async () => { await closeScreen(el); el.remove(); onClose?.(); };
-  for (const b of el.querySelectorAll('[data-x]')) b.onclick = () => { if (b.dataset.sel !== undefined) api.setBrawler(id); close(); };
-  el.addEventListener('pointerdown', (e) => { if (e.target === el) close(); });
-  for (const s of el.querySelectorAll('.sk')) s.onclick = () => guard(async () => {
-    const k = s.dataset.skin || null;
-    if (k && !A.progress().owned.includes(k)) { toastErr(rewardSource(k) ? `Earn ${SKINS[k].name}: ${rewardSource(k)}` : `Unlock ${SKINS[k].name} in the Locker`); return; }
-    await A.shop({ action: 'equip', slot: 'skin:' + id, id: k });
-    for (const o of el.querySelectorAll('.sk')) o.classList.toggle('on', o === s);
+  // a preview: the skin you tap shows on the portrait; SELECT makes it your hunter (and wears the
+  // skin if you own it); CLOSE, a tap outside or Escape change nothing
+  let look = p.equipped['skin:' + id] || null;
+  for (const b of el.querySelectorAll('[data-x]')) b.onclick = () => guard(async () => {
+    if (b.dataset.sel !== undefined) {
+      const owned = !look || A.progress().owned.includes(look);
+      if (owned && look !== (A.progress().equipped['skin:' + id] || null)) await A.shop({ action: 'equip', slot: 'skin:' + id, id: look });
+      api.setBrawler(id);
+    }
+    await close();
   });
+  // POWER: upgrades, Gadget and Star Power for this hunter (the popup opens once the card is gone)
+  el.querySelector('[data-power]').onclick = async () => { await closeScreen(el); el.remove(); openPower(api, onClose, id); };
+  el.addEventListener('pointerdown', (e) => { if (e.target === el) close(); });
+  for (const s of el.querySelectorAll('.sk')) s.onclick = () => {
+    const k = s.dataset.skin || null;
+    look = k;
+    for (const o of el.querySelectorAll('.sk')) o.classList.toggle('on', o === s);
+    if (k && !A.progress().owned.includes(k)) toastErr(earnTag(k) ? earnHint(k, SKINS[k].name) : `Buy ${SKINS[k].name} in the Locker`);
+  };
   const t0 = performance.now();
   const tick = (now) => {
     if (!el.isConnected) return;
     const t = (now - t0) / 1000;
     const pc = fitCanvas(el.querySelector('.portrait'));
-    R.drawBrawler(pc.g, id, pc.w / 2, pc.h * 0.62, Math.sin(t * 0.8) * 0.6 + 0.3, t, { scale: pc.h / 80, skin: A.progress().equipped['skin:' + id] || null, blink: (t % 3.2) < 0.12 ? 1 : 0 });
+    R.drawBrawler(pc.g, id, pc.w / 2, pc.h * 0.62, Math.sin(t * 0.8) * 0.6 + 0.3, t, { scale: pc.h / 80, skin: look, blink: (t % 3.2) < 0.12 ? 1 : 0 });
     for (const cv of el.querySelectorAll('canvas[data-demo]')) { const c = fitCanvas(cv); demo(c.g, c.w, c.h, id, cv.dataset.demo, t); }
     for (const cv of el.querySelectorAll('.sk canvas')) { const c = fitCanvas(cv); R.drawBrawler(c.g, id, c.w / 2, c.h * 0.62, 0.3, t, { scale: c.h / 80, skin: cv.dataset.skin || null }); }
     requestAnimationFrame(tick);
@@ -180,44 +194,60 @@ export function openModePicker(current, onPick) {
 }
 
 // ======================================================================= LOCKER
+// The Locker preview turns your hunter right round: fit its full reach (weapon included) in the canvas.
+const REACH = 68;
+export function lockerFit(w, h) {
+  const sc = Math.max(0.1, Math.min((w / 2 - 4) / REACH, (h - 8) / (REACH * 2 + 6)));
+  return { sc, x: w / 2, y: Math.max(REACH * sc + 4, Math.min(h * 0.52, h - (REACH + 6) * sc - 4)) };
+}
 export function openLocker(api, onDone, startTab = 'skins', startWho = null) {
   const S = screen('LOCKER', `<div class="cur">${icon('coin')}<b id="lkCoins">0</b><small>TEST</small></div>`, onDone);
-  let tab = startTab, who = startWho || api.getBrawler(), fxDemo = null;
-  S.body.innerHTML = `<div class="locker"><div class="card-a preview"><canvas id="lkPrev"></canvas><div id="lkTitle" class="title" style="font-size:calc(var(--u)*2.2)"></div><button class="btn btn-sm mint" id="lkFx">PREVIEW KILL EFFECT</button></div>
+  // peek: the item you tapped, shown in the preview without equipping it (EQUIP / BUY commit)
+  let tab = startTab, who = startWho || api.getBrawler(), fxDemo = null, peek = null;
+  S.body.innerHTML = `<div class="locker"><div class="card-a preview"><canvas id="lkPrev"></canvas><div id="lkTitle" class="title" style="font-size:max(var(--t-sm), calc(var(--u) * 2.2))"></div><button class="btn btn-sm mint" id="lkFx">PREVIEW KILL EFFECT</button></div>
     <div class="items"><div class="chips" id="lkTabs"></div><div class="chips" id="lkWho" style="margin-top:6px"></div><div class="pedestals" id="lkItems"></div></div></div>`;
   const render = () => {
     const p = A.progress();
     $('lkCoins').textContent = p.coins;
     $('lkTabs').innerHTML = [['skins', 'SKINS'], ['fx', 'KILL EFFECTS'], ['titles', 'TITLES']].map(([k, l]) => `<button class="chipbtn ${k === tab ? 'on' : ''}" data-t="${k}">${l}</button>`).join('');
-    for (const b of $('lkTabs').children) b.onclick = () => { tab = b.dataset.t; render(); };
+    for (const b of $('lkTabs').children) b.onclick = () => { tab = b.dataset.t; peek = null; render(); };
     $('lkWho').innerHTML = tab === 'skins' ? BRAWLER_IDS.map((b) => `<button class="chipbtn ${b === who ? 'on' : ''}" data-w="${b}">${BRAWLERS[b].name}</button>`).join('') : '';
-    for (const b of $('lkWho').children) b.onclick = () => { who = b.dataset.w; render(); };
+    for (const b of $('lkWho').children) b.onclick = () => { who = b.dataset.w; peek = null; render(); };
     let items;
     // prices come from priceOf (the server's rule): rewards are never sold, they show where to earn them
     if (tab === 'skins') items = [[null, 'Hunter'], ...Object.entries(SKINS).filter(([, s]) => s.brawler === who).map(([k, s]) => [k, s.name])].map(([k, n]) => ({ k, n, slot: 'skin:' + who, on: (p.equipped['skin:' + who] || null) === k }));
     else if (tab === 'fx') items = [[null, 'None'], ...Object.entries(KILL_FX).map(([k, f]) => [k, f.name])].map(([k, n]) => ({ k, n, slot: 'fx', on: (p.equipped.fx || null) === k }));
     else items = [[null, 'None'], ...Object.entries(TITLES)].map(([k, n]) => ({ k, n, slot: 'title', on: (p.equipped.title || null) === k }));
     $('lkItems').innerHTML = items.map((it) => {
-      const own = !it.k || p.owned.includes(it.k), price = it.k ? priceOf(it.k) : null;
-      return `<div class="card-a ped tap ${it.on ? 'on' : ''}" data-k="${it.k || ''}" data-slot="${it.slot}">${tab === 'skins' ? `<canvas data-skin="${it.k || ''}"></canvas>` : `<div class="ico" style="font-size:calc(var(--u)*5)">${icon(tab === 'fx' ? 'star' : 'pass')}</div>`}<span>${esc(it.n)}</span>
-        ${it.on ? '<span class="tag">EQUIPPED</span>' : own ? `<button class="btn btn-sm" data-eq>EQUIP</button>` : price != null ? `<button class="btn btn-sm" data-buy>${icon('coin')} ${price}</button>` : `<span class="earn">${esc((rewardSource(it.k) || 'Not for sale').toUpperCase())}</span>`}</div>`;
+      const own = !it.k || p.owned.includes(it.k), earn = own ? null : earnTag(it.k), price = it.k ? priceOf(it.k) : null;
+      // reward items (level / Trophy Road / Hunt Pass) are earned, never bought: a lock and where from
+      const act = it.on ? '<span class="tag">EQUIPPED</span>' : own ? `<button class="btn btn-sm" data-eq>EQUIP</button>`
+        : earn || price == null ? `<span class="tag earn">${icon('lock')} ${earn || 'LOCKED'}</span>` : `<button class="btn btn-sm" data-buy>${icon('coin')} ${price}</button>`;
+      return `<div class="card-a ped tap ${it.on ? 'on' : ''} ${peek && peek.slot === it.slot && peek.k === it.k ? 'peek' : ''}" tabindex="0" role="button" aria-label="Preview ${esc(it.n)}" data-k="${it.k || ''}" data-slot="${it.slot}">${tab === 'skins' ? `<canvas data-skin="${it.k || ''}"></canvas>` : `<div class="ico" style="font-size:calc(var(--u)*5)">${icon(tab === 'fx' ? 'star' : 'pass')}</div>`}<span>${esc(it.n)}</span>
+        ${act}</div>`;
     }).join('');
     for (const c of $('lkItems').children) {
       const k = c.dataset.k || null;
       c.querySelector('[data-eq]')?.addEventListener('click', (e) => { e.stopPropagation(); guard(async () => { await A.shop({ action: 'equip', slot: c.dataset.slot, id: k }); render(); }); });
       c.querySelector('[data-buy]')?.addEventListener('click', (e) => { e.stopPropagation(); guard(async () => { await A.shop({ action: 'buy', id: k }); rewardBurst(); render(); }); });
-      c.addEventListener('click', () => { if (tab === 'fx') fxDemo = { id: k, t0: performance.now() }; });
+      c.addEventListener('click', () => {
+        peek = { slot: c.dataset.slot, k };
+        for (const o of $('lkItems').children) o.classList.toggle('peek', o === c);
+        if (tab === 'fx') fxDemo = { id: k, t0: performance.now() };
+      });
     }
   };
   $('lkFx').onclick = () => { fxDemo = { id: A.progress().equipped.fx || 'sparks', t0: performance.now() }; sfx('elim'); };
   render();
   S.loop((t) => {
     const p = A.progress(), id = tab === 'skins' ? who : api.getBrawler();
+    const pk = (slot) => (peek && peek.slot === slot ? peek.k : p.equipped[slot] || null);
     const c = fitCanvas($('lkPrev'));
-    const base = c.h * 0.68;
-    c.g.beginPath(); c.g.ellipse(c.w / 2, base + 18, c.w * 0.3, 14, 0, 0, 7); c.g.fillStyle = '#5b37b8'; c.g.fill(); c.g.lineWidth = 4; c.g.strokeStyle = INK; c.g.stroke();
-    R.drawBrawler(c.g, id, c.w / 2, base - 10, t * 0.9, t, { scale: Math.min(c.h / 95, c.w / 70), skin: p.equipped['skin:' + id] || null });
-    $('lkTitle').textContent = p.equipped.title ? TITLES[p.equipped.title] : '';
+    const f = lockerFit(c.w, c.h), base = f.y + 10;
+    c.g.beginPath(); c.g.ellipse(f.x, f.y + 34 * f.sc, Math.min(c.w * 0.3, 40 * f.sc), Math.min(14, 11 * f.sc), 0, 0, 7); c.g.fillStyle = '#5b37b8'; c.g.fill(); c.g.lineWidth = 4; c.g.strokeStyle = INK; c.g.stroke();
+    R.drawBrawler(c.g, id, f.x, f.y, t * 0.9, t, { scale: f.sc, skin: pk('skin:' + id) });
+    const ti = pk('title'), tt = ti ? TITLES[ti] : '';
+    if ($('lkTitle').textContent !== tt) $('lkTitle').textContent = tt;
     if (fxDemo && fxDemo.id) {
       const k = (performance.now() - fxDemo.t0) / 1000;
       if (k > 1.2) fxDemo = null; else drawFxDemo(c.g, fxDemo.id, c.w / 2, base - 30, k);
@@ -247,7 +277,7 @@ const rewardIcon = (r) => (r.coins ? 'coin' : r.skin ? 'locker' : r.fx ? 'star' 
 const rewardLabel = (r) => (r.coins ? `${r.coins}` : r.skin ? SKINS[r.skin].name : r.fx ? KILL_FX[r.fx].name : TITLES[r.title]);
 const dupeCoins = (r) => DUPE_COINS[r.skin ? 'skin' : r.fx ? 'fx' : 'title'];
 export function openPass(onDone) {
-  const S = screen('HUNT PASS', `<div class="cur" id="tbCoins">${icon('coin')}<b id="hpCoins">0</b><small>TEST</small></div>`, onDone);
+  const S = screen('HUNT PASS', `<div class="cur" id="hpCoinChip">${icon('coin')}<b id="hpCoins">0</b><small>TEST</small></div>`, onDone);
   const render = (keepScroll) => {
     const p = A.progress(), tier = passTier(p.pass.xp), into = (p.pass.xp || 0) % PASS_XP_PER_TIER;
     const sc = S.body.querySelector('.track')?.scrollLeft;
@@ -265,14 +295,21 @@ export function openPass(onDone) {
       <p class="hint" style="margin:0;text-align:center">${CURRENCY} — test currency only, no real money. Premium row on top, free row below.</p></div>`;
     const tr = S.body.querySelector('.track');
     if (keepScroll && sc != null) tr.scrollLeft = sc;
-    else requestAnimationFrame(() => { const el = tr.children[Math.max(0, tier - 2)]; if (el) tr.scrollLeft = el.offsetLeft - 8; });
+    else requestAnimationFrame(() => {
+      // open on the first reward waiting to be claimed, else one tier before the current one
+      const first = PASS.find((r) => r.tier <= tier && (!p.pass.claimed.includes(`free:${r.tier}`) || (p.pass.premium && !p.pass.claimed.includes(`premium:${r.tier}`))));
+      const el = tr.children[first ? first.tier - 1 : Math.max(0, tier - 2)];
+      if (el) { tr.style.scrollBehavior = 'auto'; tr.scrollLeft = el.offsetLeft - tr.offsetLeft - 8; tr.style.scrollBehavior = ''; }
+    });
     $('premBtn')?.addEventListener('click', () => guard(async () => { await A.shop({ action: 'premium' }); rewardBurst(); render(true); }));
     for (const b of S.body.querySelectorAll('.claim')) b.onclick = () => guard(async () => {
       const row = PASS[+b.dataset.t - 1], r = row[b.dataset.k], cellEl = b.closest('.rw');
       const d = await A.shop({ action: 'passClaim', tier: +b.dataset.t, track: b.dataset.k });
       cellEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' });
       if (d?.got?.dupe) toastErr(`You already own ${rewardLabel(r)}: +${d.got.dupe} coins instead`);
-      if (r.coins || d?.got?.dupe) flyCoins(cellEl, '#tbCoins', 8, icon('coin')); else rewardBurst();
+      // fly to this screen's own coin counter (ids are unique: the lobby's #tbCoins is behind it)
+      if (r.coins || d?.got?.dupe) flyCoins(cellEl, '#hpCoinChip', 8, icon('coin')); else rewardBurst();
+      $('hpCoins').textContent = A.progress().coins;
       sfx('reward');
       setTimeout(() => render(true), 900);
     });
@@ -320,14 +357,14 @@ export function openProfile(api, onDone, upgradeFirst = false) {
   S.body.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
     <div class="card-a" style="padding:12px"><div class="title" style="font-size:calc(var(--u)*2.4)">NAME</div><div id="nameSlot" style="margin-top:6px"></div>
       <div class="title" style="font-size:calc(var(--u)*2.4);margin-top:12px">ACCOUNT</div><div id="accSlot"></div></div>
-    <div class="card-a" style="padding:12px"><div class="title" style="font-size:calc(var(--u)*2.4)">STATS BY WORLD</div><table class="stat-table">${api.statRows()}</table></div></div>`;
+    <div class="card-a" style="padding:12px"><div class="title" style="font-size:calc(var(--u)*2.4)">MATCHES BY WORLD</div><table class="stat-table">${api.statRows('arena')}</table><div class="title" style="font-size:calc(var(--u)*2.4);margin-top:8px">FREE PLAY BY ZONE</div><table class="zone-table">${api.statRows('free')}</table></div></div>`;
   const nm = $('name'); nm.classList.add('field'); $('nameSlot').appendChild(nm);
   const acc = $('accSlot');
   if (u && !u.guest) {
     acc.innerHTML = `<p class="outlined" style="color:#fff">Signed in as ${esc(u.username)} — progress syncs to every device.</p><button class="btn btn-md alt" id="logout">LOG OUT</button>`;
     $('logout').onclick = () => guard(async () => { await A.logout(); S.close(); });
   } else {
-    acc.innerHTML = `<p class="outlined" style="color:#fff;font-size:calc(var(--u)*1.7)">You're a guest. Create an account to keep your progress and play on your iPad too.</p>
+    acc.innerHTML = `<p class="outlined" style="color:#fff;font-size:max(var(--t-sm), calc(var(--u) * 1.7))">You're a guest. Create an account to keep your progress and play on your iPad too.</p>
       <form id="regF" style="display:grid;gap:6px"><input class="field" name="username" placeholder="Username" maxlength="16" autocomplete="username"><input class="field" name="password" type="password" placeholder="Password (6+)" autocomplete="new-password"><button class="btn btn-md">SAVE PROGRESS</button></form>
       <details style="margin-top:8px;color:#fff;font-family:var(--font)"><summary>Already have an account? Log in</summary><form id="logF" style="display:grid;gap:6px;margin-top:6px"><input class="field" name="username" placeholder="Username"><input class="field" name="password" type="password" placeholder="Password"><button class="btn btn-md alt">LOG IN</button></form></details><p class="err" id="accE"></p>`;
     const go = (fn) => (e) => { e.preventDefault(); const f = new FormData(e.target); guard(async () => { try { await fn(f.get('username'), f.get('password')); rewardBurst(); S.close(); } catch (err) { $('accE').textContent = err.message; } }); };
@@ -366,7 +403,7 @@ export function openFriends(api) {
   let mode = api.roomMode?.() || '';
   if (!ROOM_MODES.some(([k]) => k === mode)) mode = '';
   const P = popup(`<div class="title" style="font-size:calc(var(--u)*3.4)">PLAY WITH FRIENDS</div>
-    <p class="outlined" style="color:#fff;font-size:calc(var(--u)*1.7)">Everyone types the same room code and presses play. The first one in is the host: they pick the mode and press START.</p>
+    <p class="outlined" style="color:#fff;font-size:max(var(--t-sm), calc(var(--u) * 1.7))">Everyone types the same room code and presses play. The first one in is the host: they pick the mode and press START.</p>
     <div id="roomSlot" style="display:flex;gap:8px;align-items:center"></div>
     <div class="chips" id="roomModes" style="margin:8px 0;justify-content:center"></div>
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn btn-md alt" id="newCode">NEW CODE</button><button class="btn btn-md alt" id="shareCode">${icon('share')} SHARE</button><button class="btn btn-md" id="roomPlay" data-sfx="play">PLAY</button></div>
@@ -394,8 +431,8 @@ export function openMissions(onDone) {
 
 export function openEarnInfo() {
   popup(`<div class="title" style="font-size:calc(var(--u)*3)">TEST CURRENCY</div>
-    <p class="outlined" style="color:#fff;font-size:calc(var(--u)*1.8)">${icon('coin')} Coins and ${icon('gem')} gems are <b>test currency</b> — there are no real payments.</p>
-    <p class="outlined" style="color:#fff;font-size:calc(var(--u)*1.6)">Earn them from daily missions, the Hunt Pass and the Trophy Road.</p><button class="btn btn-md" data-close>GOT IT</button>`);
+    <p class="outlined" style="color:#fff;font-size:max(var(--t-sm), calc(var(--u) * 1.8))">${icon('coin')} Coins and ${icon('gem')} gems are <b>test currency</b> — there are no real payments.</p>
+    <p class="outlined" style="color:#fff;font-size:max(var(--t-sm), calc(var(--u) * 1.6))">Earn them from daily missions, the Hunt Pass and the Trophy Road.</p><button class="btn btn-md" data-close>GOT IT</button>`);
 }
 
 // ======================================================================= ARMORY
@@ -405,6 +442,11 @@ const RAR_COL = { common: '#cfc3ff', rare: '#5ff4ff', epic: '#ff6bd6' };
 export function openArmory(api, onDone) {
   const S = screen('ARMORY', `<div class="cur">LV <b id="arLv">1</b></div>`, onDone);
   let sel = A.progress().loadout?.w2 || 'stormline';
+  // what was new before this visit gets a NEW tag; opening the Armory counts as seeing it all
+  const keys0 = armoryKeys(A.progress());
+  let seen0 = keys0;
+  try { seen0 = seenList(localStorage.getItem('hunt-seen-armory'), keys0).list; localStorage.setItem('hunt-seen-armory', JSON.stringify(keys0)); } catch {}
+  const isNew = (k) => keys0.includes(k) && !seen0.includes(k);
   S.body.innerHTML = `<div class="locker armory"><div class="card-a preview" id="arInfo"></div><div class="items"><div class="chips" id="arHint"></div><div class="pedestals" id="arItems"></div></div></div>`;
   const bar = (label, v, txt) => `<div class="statrow"><span>${label}</span><div class="bar shine"><i style="width:${Math.round(Math.max(0.04, v) * 100)}%"></i></div><b>${txt}</b></div>`;
   const render = () => {
@@ -413,7 +455,8 @@ export function openArmory(api, onDone) {
     $('arHint').innerHTML = `<span class="hint" style="margin:0">Carry ONE secondary. Swap in a match with the ⇄ button (R / Tab on a keyboard). Free Play crates can drop more.</span>`;
     $('arItems').innerHTML = WEAPON_IDS.map((id) => {
       const w = WEAPONS[id], ok = weaponUnlocked(p, id), m = masteryInfo(p.mastery?.[id] || 0).level;
-      return `<div class="card-a ped tap ${id === sel ? 'on' : ''}" data-w="${id}"><canvas data-wpn="${id}"></canvas><span style="color:${RAR_COL[w.rarity]}">${esc(w.name)}</span>
+      const fresh = isNew('w:' + id) || Object.keys(perksFor(id)).some((tier) => isNew(`p:${id}:${tier}`));
+      return `<div class="card-a ped tap ${id === sel ? 'on' : ''}" tabindex="0" role="button" aria-label="${esc(w.name)}" data-w="${id}">${fresh ? '<span class="newtag">NEW</span>' : ''}<canvas data-wpn="${id}"></canvas><span style="color:${RAR_COL[w.rarity]}">${esc(w.name)}</span>
         <span class="tag" style="color:#fff">${ok ? (eq === id ? '★ EQUIPPED' : 'MASTERY ' + m) : icon('lock') + ' LEVEL ' + w.unlock}</span></div>`;
     }).join('');
     for (const c of $('arItems').children) c.onclick = () => { sel = c.dataset.w; sfx('click'); render(); };
@@ -422,13 +465,13 @@ export function openArmory(api, onDone) {
     const skin = [...MASTERY_SKINS].reverse().find((s) => mi.level >= s.lvl);
     $('arInfo').innerHTML = `<canvas id="arPrev" style="flex:none;width:100%;height:calc(var(--u) * 8)"></canvas>
       <div class="title" style="font-size:calc(var(--u)*2.6)">${esc(w.name)}</div>
-      <div style="font-family:var(--font);color:${RAR_COL[w.rarity]};font-size:calc(var(--u)*1.5)">${WEAPON_CLASSES[w.cls].toUpperCase()} · ${w.rarity.toUpperCase()}</div>
+      <div style="font-family:var(--font);color:${RAR_COL[w.rarity]};font-size:max(var(--t-xs), calc(var(--u) * 1.5))">${WEAPON_CLASSES[w.cls].toUpperCase()} · ${w.rarity.toUpperCase()}</div>
       <p class="hint" style="margin:4px 0">${esc(w.desc)}</p>
       <div class="stats">${bar('DAMAGE', st.bars.damage, Math.round(st.damage))}${bar('FIRE RATE', st.bars.fireRate, st.fireRate.toFixed(1) + '/s')}${bar('RANGE', st.bars.range, Math.round(st.range))}${bar('RELOAD', st.bars.reload, st.reload.toFixed(2) + 's')}${bar('SPREAD', st.bars.spread, Math.round(st.spread * 57.3) + '°')}</div>
       <div class="statrow" style="margin-top:6px"><span>MASTERY ${mi.level}/10</span><div class="bar shine"><i style="width:${mi.need ? Math.round((mi.into / mi.need) * 100) : 100}%;background:${skin ? skin.col : ''}"></i></div><b>${skin ? skin.name : '—'}</b></div>
       <div class="perks">${Object.entries(perksFor(sel)).map(([tier, opts]) => `<div class="perkrow"><span>M${tier}</span>${opts.map((o) => `<button class="chipbtn ${mine.includes(o.id) ? 'on' : ''}" data-tier="${tier}" data-perk="${o.id}" ${mi.level < +tier ? 'disabled' : ''} title="${esc(o.desc)}">${esc(o.name)}</button>`).join('')}</div>`).join('')}</div>
       <p class="hint" style="margin:2px 0">Bronze at mastery 3, Silver 6, Gold 9, animated Hunter's Bane at 10. Mastery 7 adds a kill effect.</p>
-      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${ok ? (p.loadout?.w2 === sel ? '<button class="btn btn-md alt" id="arUn">UNEQUIP</button>' : '<button class="btn btn-md" id="arEq">EQUIP</button>') + '<button class="btn btn-md mint" id="arTry" data-sfx="play">TEST RANGE</button>' : `<button class="btn btn-md alt" disabled>${icon('lock')} REACH LEVEL ${w.unlock}</button>`}</div>`;
+      <div class="ar-actions">${ok ? (p.loadout?.w2 === sel ? '<button class="btn btn-md alt" id="arUn">UNEQUIP</button>' : '<button class="btn btn-md" id="arEq">EQUIP</button>') + '<button class="btn btn-md mint" id="arTry" data-sfx="play">TEST RANGE</button>' : `<button class="btn btn-md alt" disabled>${icon('lock')} REACH LEVEL ${w.unlock}</button>`}</div>`;
     $('arEq')?.addEventListener('click', () => guard(async () => { await A.shop({ action: 'loadout', w2: sel }); sfx('reward'); render(); }));
     $('arTry')?.addEventListener('click', () => { S.close(); api.startRange(sel); });
     $('arUn')?.addEventListener('click', () => guard(async () => { await A.shop({ action: 'loadout', w2: null }); render(); }));
@@ -450,8 +493,8 @@ export function openArmory(api, onDone) {
 // ======================================================================= BRAWLER POWER
 // Upgrade with coins earned by playing (test currency only: combat can never be bought with real
 // money). +4% HP and damage per level; Gadget at 7, Star Power at 9 (pick one of two each).
-export function openPower(api, onDone) {
-  let who = api.getBrawler();
+export function openPower(api, onDone, startWho = null) {
+  let who = startWho || api.getBrawler();
   const P = popup(`<div class="title" style="font-size:calc(var(--u)*3.2)">BRAWLER POWER</div><div class="chips" id="pwWho"></div><div id="pwBody"></div><button class="btn btn-md alt" data-close>CLOSE</button>`, { onClose: onDone });
   const render = () => {
     const p = A.progress(), L = clampPower(p.power?.[who] || 1), cost = POWER_COST[L];
@@ -485,10 +528,12 @@ export function renderProfilePage(el, api, onDone) {
       <div class="ph-tot"><div><b>${p.kills | 0}</b><span>Kills</span></div><div><b>${p.wins | 0}</b><span>Wins</span></div></div></div>
     ${ribbon('OVERALL')}<div class="stiles">${tile(p.wins | 0, 'Wins')}${tile(top3, 'Top 3s')}${tile(p.games | 0, 'Matches')}${tile(totalTrophies(p), 'Trophies')}</div>
     ${Object.entries(MODE_NAMES).filter(([k]) => modes[k]?.games).map(([k, n]) => `${ribbon(n)}<div class="stiles">${tile(modes[k].wins, 'Wins')}${tile(modes[k].top3, 'Top 3s')}${tile(modes[k].games, 'Matches')}${tile(modes[k].kills, 'Kills')}</div>`).join('') || `<p class="hint">Play a match to fill in your stats for each mode.</p>`}
-    ${ribbon('HUNTERS')}<div class="stiles six">${BRAWLER_IDS.map((b) => `<div class="stile"><b>${p.trophies[b] | 0}</b><span>${BRAWLERS[b].name} · P${clampPower(p.power?.[b] || 1)}</span></div>`).join('')}</div>
-    ${ribbon('FREE PLAY BY WORLD')}<div class="card-a" style="padding:8px"><table class="stat-table">${api.statRows()}</table></div>
+    ${ribbon('HUNTERS')}<div class="stiles six">${BRAWLER_IDS.map((b) => `<div class="stile tap" data-pw="${b}"><b>${p.trophies[b] | 0}</b><span>${BRAWLERS[b].name} · P${clampPower(p.power?.[b] || 1)}</span></div>`).join('')}</div>
+    ${ribbon('MATCHES BY WORLD')}<div class="card-a" style="padding:8px"><table class="stat-table">${api.statRows('arena')}</table></div>
+    ${ribbon('FREE PLAY BY ZONE')}<div class="card-a" style="padding:8px"><table class="zone-table">${api.statRows('free')}</table></div>
     <div style="display:flex;justify-content:center;margin:10px 0 4px"><button class="btn btn-md alt" id="pgAccount">${icon('user')} NAME &amp; ACCOUNT</button></div>`;
   el.querySelector('#pgAccount').onclick = () => openProfile(api, onDone);
+  for (const t of el.querySelectorAll('[data-pw]')) t.onclick = () => openPower(api, onDone, t.dataset.pw);
 }
 // LOCKER tab: what you're wearing, by category; tap a category to change it
 export function renderLockerPage(el, api, onDone) {
