@@ -490,7 +490,7 @@ function onEnd(m) {
   const rows = m.results.map(([n, b, r, k, bot, id, be, sc, tm]) =>
     `<li class="${id === G.myId ? 'me' : ''} ${tm ? (tm === m.team ? 'mate' : 'foe') : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${scoreLbl ? `${sc} ${scoreLbl} · ` : ''}${k} KO</span></li>`).join('');
   // (the results screen shows the rewards in full, unlock cards included: nothing left to carry over)
-  setTimeout(() => { if (G.phase === 'end') { show('end'); unseen = null; UI.res.show(m, { msg, rows, won }); sfx(won ? 'victory' : 'defeat'); startPose(won); } }, won ? 1600 : 600);
+  setTimeout(() => { if (G.phase === 'end') { show('end'); unseen = null; UI.res.show(m, { msg, rows, won, scoreLbl }); sfx(won ? 'victory' : 'defeat'); startPose(won); } }, won ? 1600 : 600);
 }
 
 // short victory pose (or a sulk) on the end screen

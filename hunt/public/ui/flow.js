@@ -197,9 +197,17 @@ export function createResults({ onAgain, onLobby }) {
       $('rsMsg').textContent = ctx.msg;
       count($('rsBounty'), 0, m.bounty, 900); count($('rsKo'), 0, m.kills, 700);
       $('rsTro').textContent = '…'; $('rsXpN').textContent = ''; $('rsUps').innerHTML = '';
-      const mvp = m.results.reduce((b, r) => (!b || r[6] > b[6] ? r : b), null);
-      $('mvp').hidden = !mvp || mvp[6] <= 0;
-      if (mvp) $('mvp').innerHTML = `👑 TOP BOUNTY HUNTER <b>${esc(mvp[0])}</b> ★${mvp[6]}`;
+      // the crown banner and the list below it tell the same story: in score modes it names whoever
+      // the list ranks #1, with the score the list shows; elsewhere it is the most bounty earned
+      if (ctx.scoreLbl && !team) {
+        const first = m.results.filter((r) => r[2] === 1);
+        $('mvp').hidden = !first.length;
+        if (first.length) $('mvp').innerHTML = `👑 ${first.length > 1 ? 'WINNERS' : 'WINNER'} <b>${first.slice(0, 3).map((r) => esc(r[0])).join(' & ')}</b> ${esc(first[0][7])} ${esc(ctx.scoreLbl)}`;
+      } else {
+        const mvp = m.results.reduce((b, r) => (!b || r[6] > b[6] ? r : b), null);
+        $('mvp').hidden = !mvp || mvp[6] <= 0;
+        if (mvp) $('mvp').innerHTML = `👑 MOST BOUNTY EARNED <b>${esc(mvp[0])}</b> ★${esc(mvp[6])}`;
+      }
       $('results').innerHTML = ctx.rows;
       if (ctx.won) setTimeout(() => rewardBurst(innerWidth * 0.25, innerHeight * 0.4), 450);
       if (pendingProgress) { applyProgress(pendingProgress); pendingProgress = null; }
