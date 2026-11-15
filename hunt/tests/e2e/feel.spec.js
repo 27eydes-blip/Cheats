@@ -39,6 +39,15 @@ test('Reduce Flashing: no screen shake', async ({ page }) => {
   await page.click('.ui-screen .back');
   await page.goto('/?world=meadow&mode=bounty');
   await waitMe(page);
-  const s = await page.evaluate(async () => { const G = window.__hunt; G.shake = 20; await new Promise((r) => setTimeout(r, 100)); return G.shake; });
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hunt-settings')).reduceFlash)).toBe(true);
+  // Wait for real frames, not for a fixed time: a busy machine may not draw one within 100 ms.
+  // The shake is far too big to fade out by itself in a frame or two (it fades at 30 a second),
+  // so 0 can only mean the setting cleared it.
+  const s = await page.evaluate(async () => {
+    const G = window.__hunt, frame = () => new Promise((r) => requestAnimationFrame(r));
+    G.shake = 5000;
+    await frame(); await frame(); await frame();
+    return G.shake;
+  });
   expect(s).toBe(0);
 });
