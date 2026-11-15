@@ -27,8 +27,9 @@ test('end screen: victory pose + Top Bounty Hunter MVP banner', async ({ page })
   await expect(page.locator('#mvp')).toBeVisible({ timeout: 5000 });
   await expect(page.locator('#mvp')).toContainText('TOP BOUNTY HUNTER');
   await expect(page.locator('#mvp')).toContainText('Rex');
-  const drawn = await page.evaluate(() => { const c = document.getElementById('pose'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n; });
-  expect(drawn).toBeGreaterThan(500);
+  // the pose is painted on the next animation frame: poll for it, a slow browser may not have drawn yet
+  const drawn = () => page.evaluate(() => { const c = document.getElementById('pose'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n; });
+  await expect.poll(drawn, { timeout: 10_000 }).toBeGreaterThan(500);
   expect(errors).toEqual([]);
 });
 
