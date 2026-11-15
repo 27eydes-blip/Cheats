@@ -188,6 +188,7 @@ body.reduce-flash .btn.play::before { animation: none; opacity: .5; }
 .ped canvas { width: 100%; aspect-ratio: 1; }
 .ped.on { outline: 4px solid var(--gold); }
 .ped .tag { font-size: .8em; color: var(--gold); }
+.ped .earn { font-size: .7em; line-height: 1.15; color: var(--text-dim); display: flex; align-items: center; gap: 3px; } /* a reward: where to earn it */
 
 .pass-wrap { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; }
 .pass-top { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }

@@ -43,12 +43,12 @@ db.users.set('u2', { progress: JSON.stringify({ ...newProgress(), coins: 450 }) 
 const { applyPurchase } = await import('../public/catalog.js');
 const { normalize } = await import('../public/progression.js');
 await Promise.all([
-  mutateProgress(db, 'u2', (raw) => applyPurchase(normalize(JSON.parse(raw)), { action: 'buy', id: 'volt_storm' })),
-  mutateProgress(db, 'u2', (raw) => applyPurchase(normalize(JSON.parse(raw)), { action: 'buy', id: 'volt_solar' })),
+  mutateProgress(db, 'u2', (raw) => applyPurchase(normalize(JSON.parse(raw)), { action: 'buy', id: 'brick_granite' })),
+  mutateProgress(db, 'u2', (raw) => applyPurchase(normalize(JSON.parse(raw)), { action: 'buy', id: 'wisp_frost' })),
   recordMatch(db, 'u2', { rank: 1, players: 10, kills: 0, bounty: 0, brawler: 'brick' }),
 ]);
 const q = JSON.parse(db.users.get('u2').progress);
 assert.equal(q.games, 1, 'match result kept');
-assert.equal(q.owned.filter((k) => k.startsWith('volt_') && !k.endsWith('_classic')).length, 1, 'only one 400-coin skin affordable from 450');
+assert.equal(q.owned.filter((k) => k === 'brick_granite' || k === 'wisp_frost').length, 1, 'only one 400-coin skin affordable from 450');
 assert(q.coins >= 0, 'coins never negative');
 console.log('accounts concurrency tests passed');

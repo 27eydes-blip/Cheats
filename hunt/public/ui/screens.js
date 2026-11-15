@@ -9,7 +9,7 @@ import { openScreen, closeScreen, popup, rewardBurst, flyCoins } from './fx.js';
 import { drawModePreview } from './scenes.js';
 import { setMusicVolume } from './music.js';
 import * as A from '../account.js';
-import { SKINS, KILL_FX, TITLES, TITLE_PRICE, PASS, PASS_TIERS, PASS_XP_PER_TIER, PREMIUM_PRICE, CURRENCY, passTier } from '../catalog.js';
+import { SKINS, KILL_FX, TITLES, PASS, PASS_TIERS, PASS_XP_PER_TIER, PREMIUM_PRICE, CURRENCY, passTier, priceOf, rewardSource, itemId, DUPE_COINS } from '../catalog.js';
 import { totalTrophies, roadReward, ROAD_STEP, missionState, msToReset, levelInfo, levelReward, weaponUnlocked } from '../progression.js';
 import { EMOTES } from '../catalog.js';
 import { MAX_POWER, POWER_COST, GADGET_AT, STAR_AT, GADGETS, STARS, clampPower, powerMult } from '../power.js';
@@ -144,7 +144,7 @@ function openDetail(api, id, onClose) {
   el.addEventListener('pointerdown', (e) => { if (e.target === el) close(); });
   for (const s of el.querySelectorAll('.sk')) s.onclick = () => guard(async () => {
     const k = s.dataset.skin || null;
-    if (k && !A.progress().owned.includes(k)) { toastErr(`Unlock ${SKINS[k].name} in the Locker or Hunt Pass`); return; }
+    if (k && !A.progress().owned.includes(k)) { toastErr(rewardSource(k) ? `Earn ${SKINS[k].name}: ${rewardSource(k)}` : `Unlock ${SKINS[k].name} in the Locker`); return; }
     await A.shop({ action: 'equip', slot: 'skin:' + id, id: k });
     for (const o of el.querySelectorAll('.sk')) o.classList.toggle('on', o === s);
   });
@@ -193,13 +193,14 @@ export function openLocker(api, onDone, startTab = 'skins', startWho = null) {
     $('lkWho').innerHTML = tab === 'skins' ? BRAWLER_IDS.map((b) => `<button class="chipbtn ${b === who ? 'on' : ''}" data-w="${b}">${BRAWLERS[b].name}</button>`).join('') : '';
     for (const b of $('lkWho').children) b.onclick = () => { who = b.dataset.w; render(); };
     let items;
-    if (tab === 'skins') items = [[null, 'Hunter', 0], ...Object.entries(SKINS).filter(([, s]) => s.brawler === who).map(([k, s]) => [k, s.name, s.price])].map(([k, n, price]) => ({ k, n, price, slot: 'skin:' + who, on: (p.equipped['skin:' + who] || null) === k }));
-    else if (tab === 'fx') items = [[null, 'None', 0], ...Object.entries(KILL_FX).map(([k, f]) => [k, f.name, f.price])].map(([k, n, price]) => ({ k, n, price, slot: 'fx', on: (p.equipped.fx || null) === k }));
-    else items = [[null, 'None'], ...Object.entries(TITLES)].map(([k, n]) => ({ k, n, price: TITLE_PRICE, slot: 'title', on: (p.equipped.title || null) === k }));
+    // prices come from priceOf (the server's rule): rewards are never sold, they show where to earn them
+    if (tab === 'skins') items = [[null, 'Hunter'], ...Object.entries(SKINS).filter(([, s]) => s.brawler === who).map(([k, s]) => [k, s.name])].map(([k, n]) => ({ k, n, slot: 'skin:' + who, on: (p.equipped['skin:' + who] || null) === k }));
+    else if (tab === 'fx') items = [[null, 'None'], ...Object.entries(KILL_FX).map(([k, f]) => [k, f.name])].map(([k, n]) => ({ k, n, slot: 'fx', on: (p.equipped.fx || null) === k }));
+    else items = [[null, 'None'], ...Object.entries(TITLES)].map(([k, n]) => ({ k, n, slot: 'title', on: (p.equipped.title || null) === k }));
     $('lkItems').innerHTML = items.map((it) => {
-      const own = !it.k || p.owned.includes(it.k);
+      const own = !it.k || p.owned.includes(it.k), price = it.k ? priceOf(it.k) : null;
       return `<div class="card-a ped tap ${it.on ? 'on' : ''}" data-k="${it.k || ''}" data-slot="${it.slot}">${tab === 'skins' ? `<canvas data-skin="${it.k || ''}"></canvas>` : `<div class="ico" style="font-size:calc(var(--u)*5)">${icon(tab === 'fx' ? 'star' : 'pass')}</div>`}<span>${esc(it.n)}</span>
-        ${it.on ? '<span class="tag">EQUIPPED</span>' : own ? `<button class="btn btn-sm" data-eq>EQUIP</button>` : `<button class="btn btn-sm" data-buy>${icon('coin')} ${it.price}</button>`}</div>`;
+        ${it.on ? '<span class="tag">EQUIPPED</span>' : own ? `<button class="btn btn-sm" data-eq>EQUIP</button>` : price != null ? `<button class="btn btn-sm" data-buy>${icon('coin')} ${price}</button>` : `<span class="earn">${esc((rewardSource(it.k) || 'Not for sale').toUpperCase())}</span>`}</div>`;
     }).join('');
     for (const c of $('lkItems').children) {
       const k = c.dataset.k || null;
@@ -244,6 +245,7 @@ function drawFxDemo(g, id, x, y, k) {
 // ======================================================================= HUNT PASS
 const rewardIcon = (r) => (r.coins ? 'coin' : r.skin ? 'locker' : r.fx ? 'star' : 'pass');
 const rewardLabel = (r) => (r.coins ? `${r.coins}` : r.skin ? SKINS[r.skin].name : r.fx ? KILL_FX[r.fx].name : TITLES[r.title]);
+const dupeCoins = (r) => DUPE_COINS[r.skin ? 'skin' : r.fx ? 'fx' : 'title'];
 export function openPass(onDone) {
   const S = screen('HUNT PASS', `<div class="cur" id="tbCoins">${icon('coin')}<b id="hpCoins">0</b><small>TEST</small></div>`, onDone);
   const render = (keepScroll) => {
@@ -252,7 +254,8 @@ export function openPass(onDone) {
     $('hpCoins').textContent = p.coins;
     const cell = (row, track) => {
       const key = `${track}:${row.tier}`, got = p.pass.claimed.includes(key), locked = row.tier > tier || (track === 'premium' && !p.pass.premium);
-      return `<div class="card-b rw ${track} ${got ? 'got' : ''} ${locked ? 'locked' : ''}">${icon(rewardIcon(row[track]))}<span>${esc(rewardLabel(row[track]))}</span>${got ? '✓' : locked ? icon('lock') : `<button class="btn btn-sm claim" data-t="${row.tier}" data-k="${track}">CLAIM</button>`}</div>`;
+      const r = row[track], dupe = !got && itemId(r) && p.owned.includes(itemId(r)) ? dupeCoins(r) : 0;
+      return `<div class="card-b rw ${track} ${got ? 'got' : ''} ${locked ? 'locked' : ''}">${icon(rewardIcon(r))}<span>${esc(rewardLabel(r))}${dupe ? `<small style="display:block;color:var(--gold)">Owned → +${dupe}</small>` : ''}</span>${got ? '✓' : locked ? icon('lock') : `<button class="btn btn-sm claim" data-t="${row.tier}" data-k="${track}">CLAIM</button>`}</div>`;
     };
     S.body.innerHTML = `<div class="pass-wrap">
       <div class="pass-top"><span class="title" style="font-size:calc(var(--u)*3)">TIER ${tier}/${PASS_TIERS}</span><div class="bar shine"><i style="width:${tier >= PASS_TIERS ? 100 : Math.round((into / PASS_XP_PER_TIER) * 100)}%"></i></div>
@@ -266,9 +269,10 @@ export function openPass(onDone) {
     $('premBtn')?.addEventListener('click', () => guard(async () => { await A.shop({ action: 'premium' }); rewardBurst(); render(true); }));
     for (const b of S.body.querySelectorAll('.claim')) b.onclick = () => guard(async () => {
       const row = PASS[+b.dataset.t - 1], r = row[b.dataset.k], cellEl = b.closest('.rw');
-      await A.shop({ action: 'passClaim', tier: +b.dataset.t, track: b.dataset.k });
+      const d = await A.shop({ action: 'passClaim', tier: +b.dataset.t, track: b.dataset.k });
       cellEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'ease-out' });
-      if (r.coins) flyCoins(cellEl, '#tbCoins', 8, icon('coin')); else rewardBurst();
+      if (d?.got?.dupe) toastErr(`You already own ${rewardLabel(r)}: +${d.got.dupe} coins instead`);
+      if (r.coins || d?.got?.dupe) flyCoins(cellEl, '#tbCoins', 8, icon('coin')); else rewardBurst();
       sfx('reward');
       setTimeout(() => render(true), 900);
     });
@@ -292,15 +296,17 @@ export function openRoad(onDone) {
       <svg class="road-svg" width="${W}" height="${H}"><path d="${d}" fill="none" stroke="${INK}" stroke-width="22" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#7b52ff" stroke-width="14" stroke-linecap="round"/>
       <path d="${d}" fill="none" stroke="#ffd23f" stroke-width="14" stroke-linecap="round" pathLength="${n}" stroke-dasharray="${Math.min(n, done)} ${n}"/></svg>
       ${Array.from({ length: n }, (_, k) => { const i = k + 1, at = i * ROAD_STEP, r = roadReward(at), q = pos(i), got = p.claimed.includes(at), ok = tt >= at;
-        return `<div class="node ${ok ? 'reached' : ''} ${i % 2 ? 'left' : ''}" style="left:${q.x}px;top:${q.y}px"><div class="disc">${at}</div><div class="rlabel">${icon(rewardIcon(r))}${esc(rewardLabel(r))}${got ? ' ✓' : ok ? ` <button class="btn btn-sm" data-at="${at}">CLAIM</button>` : ` ${icon('lock')}`}</div></div>`; }).join('')}
+        const dupe = !got && itemId(r) && p.owned.includes(itemId(r)) ? dupeCoins(r) : 0;
+        return `<div class="node ${ok ? 'reached' : ''} ${i % 2 ? 'left' : ''}" style="left:${q.x}px;top:${q.y}px"><div class="disc">${at}</div><div class="rlabel">${icon(rewardIcon(r))}${esc(rewardLabel(r))}${dupe ? ` (owned → +${dupe})` : ''}${got ? ' ✓' : ok ? ` <button class="btn btn-sm" data-at="${at}">CLAIM</button>` : ` ${icon('lock')}`}</div></div>`; }).join('')}
       <div class="marker" style="left:${m.x}px;top:${m.y}px"></div></div></div>`;
     const wrap = S.body.querySelector('.road-wrap');
     if (keep && wrapScroll != null) wrap.scrollTop = wrapScroll;
     else requestAnimationFrame(() => { wrap.scrollTop = m.y - wrap.clientHeight / 2; });
     for (const b of S.body.querySelectorAll('[data-at]')) b.onclick = () => guard(async () => {
       const r = roadReward(+b.dataset.at);
-      await A.claimRoad(+b.dataset.at);
-      if (r.coins) flyCoins(b, '#trN', 6, icon('coin')); rewardBurst();
+      const d = await A.claimRoad(+b.dataset.at);
+      if (d?.got?.dupe) toastErr(`You already own ${rewardLabel(r)}: +${d.got.dupe} coins instead`);
+      if (r.coins || d?.got?.dupe) flyCoins(b, '#trN', 6, icon('coin')); rewardBurst();
       setTimeout(() => render(true), 700);
     });
   };

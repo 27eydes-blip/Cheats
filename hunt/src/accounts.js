@@ -2,7 +2,7 @@
 // password; "upgrade" sets them on the same row, so progress carries over. Match results are
 // applied here by the match Durable Objects — clients can't write trophies or XP.
 import { newProgress, normalize, applyMatch, roadReward, totalTrophies } from '../public/progression.js';
-import { applyPurchase } from '../public/catalog.js';
+import { applyPurchase, grantReward } from '../public/catalog.js';
 
 const enc = new TextEncoder();
 const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
@@ -138,17 +138,15 @@ async function api(req, env) {
       const at = body.at | 0, r = roadReward(at);
       if (!r || totalTrophies(p) < at || p.claimed.includes(at)) return { error: 'Not available' };
       p.claimed.push(at);
-      if (r.coins) p.coins += r.coins;
-      for (const k of ['title', 'fx', 'skin']) if (r[k] && !p.owned.includes(r[k])) p.owned.push(r[k]);
-      return { progress: p };
+      return { progress: p, got: grantReward(p, r) };
     });
     if (!out || out.error) return json({ error: out ? out.error : 'not found' }, 400);
-    return json({ user: publicUser({ ...me, progress: JSON.stringify(out.progress) }) });
+    return json({ user: publicUser({ ...me, progress: JSON.stringify(out.progress) }), got: out.got });
   }
   if (path === '/shop' && req.method === 'POST') { // equip / buy with TEST currency / pass claims (see catalog.js)
     const out = await mutateProgress(db, me.id, (raw) => applyPurchase(normalize(JSON.parse(raw)), body));
     if (!out || out.error) return json({ error: out ? out.error : 'not found' }, 400);
-    return json({ user: publicUser({ ...me, progress: JSON.stringify(out.progress) }) });
+    return json({ user: publicUser({ ...me, progress: JSON.stringify(out.progress) }), ...(out.got ? { got: out.got } : {}) });
   }
   return json({ error: 'not found' }, 404);
 }

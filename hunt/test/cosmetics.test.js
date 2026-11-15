@@ -19,9 +19,9 @@ for (const b of BRAWLER_IDS) assert.equal(Object.values(SKINS).filter((s) => s.b
 let p = newProgress();
 assert(applyPurchase(p, { action: 'buy', id: 'volt_storm' }).error, 'cannot afford');
 assert(applyPurchase(p, { action: 'equip', slot: 'title', id: 'apex' }).error, 'cannot equip unowned');
-p = applyPurchase(p, { action: 'buy', id: 'tracker' }).progress; assert.equal(p.coins, 50); assert(p.owned.includes('tracker'));
-assert(applyPurchase(p, { action: 'buy', id: 'tracker' }).error, 'no double buy');
-p = applyPurchase(p, { action: 'equip', slot: 'title', id: 'tracker' }).progress; assert.equal(p.equipped.title, 'tracker');
+p = applyPurchase(p, { action: 'buy', id: 'sharpshooter' }).progress; assert.equal(p.coins, 50); assert(p.owned.includes('sharpshooter'));
+assert(applyPurchase(p, { action: 'buy', id: 'sharpshooter' }).error, 'no double buy');
+p = applyPurchase(p, { action: 'equip', slot: 'title', id: 'sharpshooter' }).progress; assert.equal(p.equipped.title, 'sharpshooter');
 p.coins = 5000; p = applyPurchase(p, { action: 'buy', id: 'rook_arctic' }).progress;
 assert(applyPurchase(structuredClone(p), { action: 'equip', slot: 'skin:volt', id: 'rook_arctic' }).error, 'skin must match brawler');
 p = applyPurchase(p, { action: 'equip', slot: 'skin:rook', id: 'rook_arctic' }).progress;
