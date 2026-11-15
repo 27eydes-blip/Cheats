@@ -10,7 +10,7 @@ const readme = readFileSync(join(dir, 'README.md'), 'utf8');
 const PUB = 'Gleyde Technologies, LLC';
 const checks = [
   ['splash screen shows the publisher', /id="splash"[^>]*>\s*<div>GLEYDE TECHNOLOGIES, LLC<\/div>/.test(html)],
-  ['home footer credit', html.includes(`<div class="credit-foot">${PUB} · Created by Sam Eyde III</div>`)],
+  ['home footer credit', (html.match(/<div class="credit-foot">(.*?)<\/div>/) || ['', ''])[1].replace(/<[^>]+>/g, '') === `${PUB} · Created by Sam Eyde III · Produced by Juwon Shon`],
   ['Settings: Published by', html.includes(`Published by <b>${PUB}</b>`)],
   ['Settings: Created by Sam Eyde III, Founder & CEO', html.includes('Created by <b>Sam Eyde III</b>, Founder &amp; CEO')],
   ['Settings: Produced by Juwon Shon, COO', html.includes('Produced by <b>Juwon Shon</b>, COO')],

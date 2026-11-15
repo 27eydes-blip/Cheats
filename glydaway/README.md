@@ -103,6 +103,6 @@ Glydaway uses Glydrift's art (source: `glydrift/` on the `feature/levels` branch
 - Created by **Sam Eyde III**, Founder & CEO
 - Produced by **Juwon Shon**, COO
 
-The publisher credit and the "Created by Sam Eyde III" line appear on the splash screen, the home screen footer and in Settings. Never remove them (`tests/credits.test.mjs` checks this).
+The publisher credit and the "Created by Sam Eyde III" line appear on the splash screen, the home screen footer (with "Produced by Juwon Shon") and in Settings. Never remove them (`tests/credits.test.mjs` checks this).
 
 © 2026 Gleyde Technologies, LLC. All rights reserved.

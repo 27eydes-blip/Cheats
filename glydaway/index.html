@@ -133,11 +133,16 @@
   .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
   .best { font: 700 16px var(--body); color: var(--lav); letter-spacing: 1.5px; margin-top: 18px; min-height: 20px; }
   /* ----- Credits (keep: the Gleyde Technologies, LLC credit and "Created by Sam Eyde III" must never be removed) ----- */
-  #splash { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; background: var(--bg); pointer-events: none; animation: splash 1.6s ease-in both; }
+  #splash { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; align-content: center; gap: 18px; background: var(--bg); animation: splash 3.2s ease-in both; cursor: pointer; }
+  #splash.gone { display: none; }
+  #splash i { display: block; width: min(180px, 50vw); height: 3px; border-radius: 3px; background: rgba(125, 255, 200, .18); overflow: hidden; }
+  #splash i::after { content: ''; display: block; height: 100%; width: 100%; background: var(--mint); box-shadow: 0 0 8px var(--mint); transform-origin: left; animation: splashbar 2.6s ease-out both; }
+  @keyframes splashbar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
   #splash div { font: 700 clamp(13px, 3.4vw, 18px) var(--pixel); letter-spacing: .14em; color: #eafff6; text-shadow: 0 0 8px var(--mint); text-align: center; padding: 0 16px; }
-  @keyframes splash { 0%, 65% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
-  @media (prefers-reduced-motion: reduce) { #splash { animation-duration: .6s; } }
+  @keyframes splash { 0%, 82% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+  @media (prefers-reduced-motion: reduce) { #splash, #splash i::after { animation-duration: 1.2s; } }
   .credit-foot { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 6px); text-align: center; font: 600 11px var(--body); letter-spacing: .5px; color: rgba(220, 214, 255, .6); pointer-events: none; padding: 0 12px; }
+  .credit-foot span { white-space: nowrap; }
   .credits { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(185, 168, 255, .25); font: 600 12px/1.45 var(--body); color: rgba(220, 214, 255, .75); letter-spacing: .3px; }
   .credits b { color: #fff; font-weight: 700; }
   .hint { font: 600 13px var(--body); color: rgba(220, 214, 255, .55); margin-top: 8px; letter-spacing: .5px; }
@@ -218,7 +223,7 @@
 </head>
 <body>
 <div id="game">
-  <div id="splash" aria-hidden="true"><div>GLEYDE TECHNOLOGIES, LLC</div></div>
+  <div id="splash" aria-hidden="true"><div>GLEYDE TECHNOLOGIES, LLC</div><i></i></div>
   <canvas id="c" aria-label="Glydaway game"></canvas>
 
   <div id="hud">
@@ -249,7 +254,7 @@
     <div class="row"><button class="neon-btn small cyan" id="lbBtn1">LEADERBOARD</button><button class="neon-btn small purple" id="setBtn1">SETTINGS</button></div>
     <div class="hint">Space / ↑ jump · hold to glide · P pause</div>
     <div class="hint portrait-tip">Turn your phone sideways to see further ahead</div>
-    <div class="credit-foot">Gleyde Technologies, LLC · Created by Sam Eyde III</div>
+    <div class="credit-foot"><span>Gleyde Technologies, LLC</span> · <span>Created by Sam Eyde III</span> · <span>Produced by Juwon Shon</span></div>
   </div>
 
   <div class="screen" id="pauseScreen">
@@ -1938,6 +1943,9 @@ function toggleMute() { muted = !muted; store.set('muted', muted); audio(); appl
 let setReturn = 'start', chimeT = 0;
 function openSettings() { setReturn = S.mode === 'paused' ? 'pause' : 'start'; audio(); renderVolumes(); showScreen('set'); }
 function closeSettings() { showScreen(setReturn); }
+// the splash screen lasts about 3 s; a tap skips it (and never starts a run by accident)
+$('splash').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); $('splash').classList.add('gone'); });
+$('splash').addEventListener('animationend', e => { if (e.animationName === 'splash') $('splash').classList.add('gone'); });
 $('setBtn1').addEventListener('click', openSettings);
 $('setBtn2').addEventListener('click', openSettings);
 $('setClose').addEventListener('click', closeSettings);
