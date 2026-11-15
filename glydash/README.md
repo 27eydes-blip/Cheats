@@ -1,6 +1,6 @@
 # Glydash
 
-*(Formerly Glydrunner. The folder keeps its old name so existing links still work.)*
+*(Formerly Glydrunner.)*
 
 An endless side-scrolling runner spin-off of **Glydrift**, starring Volt the Storm Bird. It's one self-contained file (`index.html`) with no build step and no image assets.
 
