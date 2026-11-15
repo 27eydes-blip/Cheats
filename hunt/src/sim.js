@@ -1053,6 +1053,12 @@ export class Sim {
     this.fx = []; this.tileDirty = []; this.crateDirty = []; this.pings = []; this.bnew = []; this.bdead = [];
     for (const p of this.players.values()) p.hm = 0;
 
+    // no respawn = an eliminated hunter's place is final: report it now (not at the end of the match),
+    // so they see what they earned on the death screen. After the tick, when same-tick ties are settled.
+    if (this.deathTick === this.tickN && !this.mode.respawn && this.phase === 'play' && this.hooks.eliminated) {
+      const rows = this.deathList.filter((p) => !p.wasBot && !p.left).map((p) => ({ p, rank: p.rank, players: this.players.size, assists: p.assists, steals: p.steals, wstat: p.wstat }));
+      if (rows.length) this.hooks.eliminated(rows);
+    }
     if (this.mode.checkEnd(this)) this.finish();
   }
 

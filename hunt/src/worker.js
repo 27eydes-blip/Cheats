@@ -133,7 +133,7 @@ export class MatchRoom {
     this.sim = new Sim({
       map, mode: cfg.mode, seed, lobbyTime: cfg.lobby, fillBots: cfg.bots, forceEvent: cfg.ev, events: cfg.events,
       send: (id, msg) => { const ws = sockets.get(id); if (ws) sendJSON(ws, msg); },
-      hooks: { finished: (rows) => this.recordResults(rows, sockets) },
+      hooks: { finished: (rows) => this.recordResults(rows, sockets), eliminated: (rows) => this.recordResults(rows, sockets) },
     });
   }
 
@@ -145,8 +145,11 @@ export class MatchRoom {
       r.p.recorded = true;
       try {
         const out = await recordMatch(this.env.DB, r.p.account, { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, mode: this.sim?.modeKey, won: r.won, assists: r.assists, steals: r.steals, wstat: r.wstat });
+        if (!out) continue;
+        // kept on the player: someone who was eliminated while disconnected gets it when they reconnect
+        r.p.earned = { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, mastery: out.mastery, wxp: out.wxp, coins: out.coins };
         const ws = sockets.get(r.p.id);
-        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, mastery: out.mastery, wxp: out.wxp, coins: out.coins });
+        if (ws) sendJSON(ws, r.p.earned);
       } catch (e) { console.log('recordMatch failed', e && e.message); }
     }
   }
@@ -214,6 +217,7 @@ export class MatchRoom {
       sendJSON(server, sim.rosterMsg());
       sendJSON(server, sim.stateMsg());
       if (!p.alive && !sim.mode.respawn) sendJSON(server, { t: 'dead', rank: p.rank, respawn: 0, killer: 'the Wild', killerId: 0, stolen: 0 });
+      if (p.earned) sendJSON(server, p.earned);
     }
     const r = this.attach(id, server, client);
     if (sim.phase === 'lobby') sim.broadcastLobby();
@@ -228,7 +232,13 @@ export class MatchRoom {
       let m;
       try { m = JSON.parse(e.data); } catch { return; }
       if (m.t === 'ping') return sendJSON(server, { t: 'pong', c: m.c });
-      if (m.t === 'bye') { this.abandon(id); onClose(true); try { server.close(1000, 'bye'); } catch {} return; }
+      if (m.t === 'bye') {
+        // the leaver is told what the match earned them before the socket closes (the client waits for it)
+        const told = this.abandon(id, server);
+        onClose(true);
+        Promise.resolve(told).finally(() => { try { server.close(1000, 'bye'); } catch {} });
+        return;
+      }
       sim.input(id, m);
     });
     // bye = the player quit on purpose (no reconnect wanted); otherwise the connection dropped
@@ -250,10 +260,10 @@ export class MatchRoom {
   }
 
   // a leave is final: record it now (a loss), so quitting can't dodge a trophy drop
-  abandon(id) {
+  abandon(id, ws) {
     this.dropped.delete(id);
     const row = this.sim && this.sim.abandon(id);
-    if (row) this.recordResults([row], this.sockets);
+    if (row) return this.recordResults([row], ws ? new Map([[id, ws]]) : this.sockets);
   }
 
   step() {
