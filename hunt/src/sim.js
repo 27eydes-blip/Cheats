@@ -34,6 +34,8 @@ const angDiff = (a, b) => { const d = a - b; return Math.atan2(Math.sin(d), Math
 // interest management: how far around a viewer the server sends things (half-extents, px)
 export const VIEW_X = 1500, VIEW_Y = 1100, RADAR_RANGE = 2600;
 export const HEARTBEAT_DIST = 330; // a hidden enemy this close makes your heart pound
+export const ROOM_IDLE_SECS = 300; // a friend room whose host never presses START starts by itself after 5 minutes
+export const IDLE_SECS = 30; // input gaps longer than this are idle time (it doesn't count for match pay)
 export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
 
 // fields carried across a zone handoff
@@ -304,7 +306,7 @@ export class Sim {
     if (!p || p.wasBot || p.left) return null;
     p.left = true; p.secret = null;
     if (this.phase !== 'play') return null;
-    return { p, rank: !p.alive && p.rank ? p.rank : this.players.size, players: this.players.size, won: this.mode.teams ? false : undefined, assists: p.assists, steals: p.steals, wstat: p.wstat };
+    return { p, rank: !p.alive && p.rank ? p.rank : this.players.size, players: this.players.size, won: this.mode.teams ? false : undefined, assists: p.assists, steals: p.steals, wstat: p.wstat, secs: this.secsOf(p) };
   }
 
   // a dropped player reconnected (same match): hand control back
@@ -712,6 +714,7 @@ export class Sim {
     this.deathList.push(t);
     t.rank = this.aliveCount() + 1;
     for (const v of this.deathList) v.rank = t.rank;
+    if (!this.mode.respawn) t.outAt = this.time; // match pay is per minute played
     const stolen = t.bounty;
     const moon = this.dn && this.dn.blood ? 2 : 1; // BLOOD MOON: double bounty for every kill
     if (src && src !== t) {
@@ -872,6 +875,12 @@ export class Sim {
       vt: typeof m.vt === 'number' && Number.isFinite(m.vt) ? m.vt : null, // the server tick the shooter was looking at
     });
     if (p.queue.length > 12) p.queue.splice(0, p.queue.length - 12);
+    const q = p.queue[p.queue.length - 1];
+    if (q.mx || q.my || q.f != null || q.u != null || q.gd || q.w != null) { // playing, not idle: time counts for match pay
+      const gap = this.time - (p.lastAct ?? -1e9);
+      if (gap > 0 && gap < IDLE_SECS) p.actT = (p.actT || 0) + gap;
+      p.lastAct = this.time;
+    }
   }
 
   // ---------------------------------------------------------------- events
@@ -1444,6 +1453,10 @@ export class Sim {
       | (p.cageT > 0 ? 256 : 0) | (p.slowT > 0 ? 512 : 0);
   }
 
+  // seconds this player was in the match (until knocked out when there are no respawns), counting
+  // only time they were playing: standing idle pays for IDLE_SECS at most
+  secsOf(p) { return Math.min(p.outAt != null && !this.mode.respawn ? p.outAt : this.time, (p.actT || 0) + IDLE_SECS); }
+
   finish() {
     this.phase = 'end';
     const ranked = this.mode.rank(this);
@@ -1453,7 +1466,7 @@ export class Sim {
     const score = this.mode.score || (() => 0);
     const results = ranked.map((p) => [p.name, p.brawler, p.rank, p.kills, p.wasBot ? 1 : 0, p.id, p.bountyEarned, Math.floor(score(p)), p.team]);
     const winner = ranked[0];
-    this.hooks.finished?.(ranked.filter((p) => !p.wasBot && !p.left).map((p) => ({ p, rank: p.rank, players: this.players.size, won: this.mode.teams ? (winTeam === 0 ? null : p.team === winTeam) : undefined, assists: p.assists, steals: p.steals, wstat: p.wstat })));
+    this.hooks.finished?.(ranked.filter((p) => !p.wasBot && !p.left).map((p) => ({ p, rank: p.rank, players: this.players.size, won: this.mode.teams ? (winTeam === 0 ? null : p.team === winTeam) : undefined, assists: p.assists, steals: p.steals, wstat: p.wstat, secs: this.secsOf(p) })));
     for (const p of this.players.values()) {
       if (p.connected) {
         this.send(p.id, { t: 'end', mode: this.modeKey, rank: p.rank, kills: p.kills, bounty: p.bountyEarned, winner: winner ? winner.name : null, results,

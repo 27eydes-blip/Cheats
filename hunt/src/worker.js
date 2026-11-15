@@ -153,7 +153,7 @@ export class MatchRoom {
       const acc = r.p.account;
       if (!acc || r.p.recorded || paid.has(acc)) continue;
       r.p.recorded = true; paid.add(acc);
-      jobs.push({ id: r.p.id, acc, result: { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, mode: sim.modeKey, won: r.won, assists: r.assists, steals: r.steals, wstat: structuredClone(r.wstat || {}) } });
+      jobs.push({ id: r.p.id, acc, result: { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, mode: sim.modeKey, won: r.won, assists: r.assists, steals: r.steals, secs: r.secs, wstat: structuredClone(r.wstat || {}) } });
     }
     for (const j of jobs) {
       try {

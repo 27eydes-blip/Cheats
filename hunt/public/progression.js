@@ -48,13 +48,29 @@ export function trophyDelta({ rank, players, won }) {
 }
 // team modes say won true/false/null (null = draw); FFA modes leave it undefined and rank 1 wins
 export const isWin = ({ rank, won }) => won === true || (won === undefined && rank === 1);
-// match XP: kills, assists, placement, bounty, bounty steals
-export function xpFor({ rank, players, kills, bounty, won, assists = 0, steals = 0 }) {
-  const place = isWin({ rank, won }) ? 50 : rank <= 3 ? 20 : rank <= Math.ceil((players || 1) / 2) ? 8 : 0;
-  return 40 + 10 * (kills | 0) + 4 * (assists | 0) + 15 * (steals | 0) + 2 * (bounty | 0) + place;
+// MATCH PAY, every number in one place. Most of it is per minute played (secs: until you were
+// knocked out in Showdown / Big Hunt, the whole match in respawn modes), so XP and coins per minute
+// come out about even in every mode (test/economy.test.js plays them all). Kills, assists and steals
+// are capped, and bounty itself pays nothing: it snowballs much faster in some modes than others.
+export const PAY = {
+  xp: { base: 10, perMin: 64, kill: 5, assist: 2, steal: 3, place: [40, 16, 6] },
+  coins: { base: 1, perMin: 13, kill: 1, place: [10, 5, 2] },
+  caps: { kill: 12, assist: 12, steal: 6 }, maxSecs: 600, defaultSecs: 120,
+};
+const minutes = (secs) => Math.max(0, Math.min(PAY.maxSecs, Number.isFinite(secs) ? secs : PAY.defaultSecs)) / 60;
+// [win, top 3, top half] -> index, or -1
+const placeOf = ({ rank, players, won }) => (isWin({ rank, won }) ? 0 : rank <= 3 ? 1 : rank <= Math.ceil((players || 1) / 2) ? 2 : -1);
+const cap = (v, k) => Math.max(0, Math.min(PAY.caps[k], v | 0));
+// match XP: time played, kills, assists, bounty steals, placement
+export function xpFor(r) {
+  const X = PAY.xp, pl = placeOf(r);
+  return Math.round(X.base + X.perMin * minutes(r.secs) + X.kill * cap(r.kills, 'kill') + X.assist * cap(r.assists, 'assist') + X.steal * cap(r.steals, 'steal') + (pl >= 0 ? X.place[pl] : 0));
 }
 export const MISSION_XP = 40;
-export const matchCoins = ({ rank, players, kills = 0, won }) => 12 + 4 * Math.min(10, kills | 0) + (isWin({ rank, won }) ? 20 : rank <= 3 ? 10 : rank <= Math.ceil((players || 1) / 2) ? 4 : 0);
+export function matchCoins(r) {
+  const C = PAY.coins, pl = placeOf(r);
+  return Math.round(C.base + C.perMin * minutes(r.secs) + C.kill * Math.min(10, cap(r.kills, 'kill')) + (pl >= 0 ? C.place[pl] : 0));
+}
 // ACCOUNT LEVEL 1-100. Level L -> L+1 needs 80 + 12(L-1) XP: about 2 matches early on,
 // around level 40 after ~100 matches, level 100 after ~500.
 export const MAX_LEVEL = 100;

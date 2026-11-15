@@ -4,6 +4,7 @@
 //   botGoal(sim, bot) -> {x,y} | {targetId} | null
 import { DT, TILE, EMPTY } from '../public/shared.js';
 
+export const HUNTED_KO = 1, HUNTED_TARGET_KO = 3;
 const byScore = (score) => (sim) => [...sim.players.values()]
   .sort((a, b) => score(b) - score(a) || b.kills - a.kills || b.bounty - a.bounty);
 
@@ -47,9 +48,11 @@ export const MODES = {
         sim.setTarget(alive[Math.floor(sim.rand() * alive.length)]);
       } else t.score += DT;
     },
+    // every KO scores a point; taking down the target scores 3 and makes you the target
     onKill: (sim, v, k) => {
-      if (v.id !== sim.targetId) return;
-      if (k && k !== v && k.alive) { k.score += 3; sim.setTarget(k); } else sim.targetId = 0;
+      const byHunter = k && k !== v && k.alive;
+      if (v.id !== sim.targetId) { if (byHunter) k.score += HUNTED_KO; return; }
+      if (byHunter) { k.score += HUNTED_TARGET_KO; sim.setTarget(k); } else sim.targetId = 0;
     },
     score: (p) => Math.floor(p.score),
     checkEnd: (sim) => sim.time >= 150,
