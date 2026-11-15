@@ -31,6 +31,47 @@ function upsHtml(m) {
   return bar + (m.coins ? `<div class="coinsline">+${m.coins} coins</div>` : '') + (cards.length ? `<div class="ucards">${cards.slice(0, 6).join('')}</div>` : '');
 }
 
+// EARNED: the short version (trophies, XP, coins, level-ups) for the death screen and the lobby card
+export function earnedHtml(m) {
+  const n = (v) => Math.round(Number(v) || 0);
+  const parts = [`<span><b>${n(m.delta) >= 0 ? '+' : ''}${n(m.delta)}</b> trophies</span>`, `<span><b>+${n(m.xp)}</b> XP</span>`];
+  if (n(m.coins) > 0) parts.push(`<span><b>+${n(m.coins)}</b> coins</span>`);
+  for (const r of m.levels || []) parts.push(`<span class="up">LEVEL ${esc(r.level)}!</span>`);
+  return parts.join('');
+}
+// does this result carry unlock cards (level-ups, new weapons, mastery-ups)?
+export const hasUnlocks = (m) => !!m && ((m.levels || []).length > 0 || (m.mastery || []).length > 0);
+// two results the player has not seen in full yet, as one
+export function mergeEarned(a, b) {
+  if (!a) return b;
+  return { ...b, delta: (a.delta || 0) + (b.delta || 0), xp: (a.xp || 0) + (b.xp || 0), coins: (a.coins || 0) + (b.coins || 0), levels: [...(a.levels || []), ...(b.levels || [])], mastery: [...(a.mastery || []), ...(b.mastery || [])] };
+}
+// A small card over the lobby: what the match you just left earned you. Tap it (or wait) to dismiss.
+export function createEarned() {
+  const el = document.createElement('div');
+  el.className = 'earnedCard'; el.id = 'earnedCard'; el.hidden = true;
+  document.body.appendChild(el);
+  let timer = 0, showing = null, since = 0;
+  const hide = () => { clearTimeout(timer); el.hidden = true; showing = null; };
+  el.onclick = hide;
+  return {
+    el,
+    show(m) {
+      m = showing = mergeEarned(showing, m); // a second result while the card is up adds to it (never replaces it)
+      const cards = hasUnlocks(m) ? upsHtml({ levels: m.levels, mastery: m.mastery }) : '';
+      el.innerHTML = `<small>MATCH REWARDS</small><div class="earned">${earnedHtml(m)}</div>${cards}<p class="hint">Tap to close</p>`;
+      if (el.hidden) since = performance.now();
+      el.hidden = false;
+      if (cards) sfx('reward');
+      clearTimeout(timer);
+      timer = setTimeout(hide, cards ? 14000 : 7000);
+    },
+    hide,
+    // another screen is taking over: hide, and hand back unlock cards that were up too briefly to read
+    take() { const m = showing && hasUnlocks(showing) && performance.now() - since < 3000 ? showing : null; hide(); return m; },
+  };
+}
+
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const worldName = (k) => WORLDS[worldId(k)]?.name || k;

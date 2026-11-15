@@ -11,7 +11,7 @@ import * as R from './render.js';
 import { SETTINGS, setSetting, pulse } from './settings.js';
 import * as A from './account.js';
 import { createLobby } from './ui/lobby.js';
-import { createMatchmaking, createResults, showIntro } from './ui/flow.js';
+import { createMatchmaking, createResults, showIntro, createEarned, earnedHtml, hasUnlocks, mergeEarned } from './ui/flow.js';
 import './ui/fx.js';
 import { levelInfo, loadoutFor } from './progression.js';
 import { TITLES, EMOTES } from './catalog.js';
@@ -119,7 +119,10 @@ function show(screen) {
   if (screen !== 'end') UI.res.hide();
   $('dead').hidden = screen !== 'dead';
   $('hud').hidden = !(G.phase === 'play' || G.phase === 'dead' || G.phase === 'end');
-  if (screen) $('hudAgain').hidden = true;
+  if (screen) $('specBar').hidden = true;
+  $('menuBtn').hidden = G.phase !== 'play';
+  if (G.phase !== 'play') closeMenu(); else if (menu.open) input.enabled = false; // (a reconnect re-enables input)
+  if (screen !== 'lobby' && screen !== 'waiting') { const back = UI.earned.take(); if (back) unseen = mergeEarned(back, unseen); }
   document.body.classList.toggle('ingame', G.phase !== 'menu');
 }
 
@@ -143,6 +146,7 @@ const G = {
   moving: false, slashes: [], worms: [], slashFlip: false, lastTp: 0, lastSk: 0, deadMsg: null, ticks: 0, opts: {}, bannerUntil: 0,
 };
 
+const menu = { open: false, timer: 0 }, STILL = { x: 0, y: 0 };
 function resetMatchState() {
   Object.assign(G, {
     myId: 0, secret: null, matchName: null, map: null, zoneSlot: null, nightOn: undefined, env: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
@@ -153,7 +157,7 @@ function resetMatchState() {
   G.parts.clear(); G.texts.clear(); G.shots.clear(); G.recoil.clear();
   { const lo = loadoutFor(A.progress()); G.myPerks = lo.w2 ? { [lo.w2]: lo.perks } : {}; } // (for predicting your own shots)
   $('feed').innerHTML = '';
-  $('hudAgain').hidden = true;
+  $('specBar').hidden = true; $('deadEarned').hidden = true;
   UI.res?.reset?.();
   bulletAng.clear();
   closeFullMap(); if (G.bloodOn) { G.bloodOn = false; stopTense(); }
@@ -178,8 +182,41 @@ function openConn(key, path, o = {}) {
 // quitting on purpose: tell the server so it doesn't hold our spot for a reconnect
 function closeAll() {
   const cs = [...G.conns.values()]; G.conns.clear();
-  for (const c of cs) { try { if (c.open) c.ws.send('{"t":"bye"}'); c.ws.close(); } catch {} }
+  // leaving a match that is still going: the server answers the bye with what the match earned us,
+  // so that one socket stays open a moment longer to hear it
+  const owed = G.kind === 'quick' && (G.phase === 'play' || G.phase === 'dead' || G.phase === 'end') && !!A.ACC.token;
+  for (const c of cs) {
+    try {
+      if (c.open) c.ws.send('{"t":"bye"}');
+      if (c.open && c.primary && owed) farewell(c.ws); else c.ws.close();
+    } catch {}
+  }
   stopReconnect();
+}
+function farewell(ws) {
+  const done = () => { clearTimeout(t); try { ws.close(); } catch {} };
+  const t = setTimeout(done, 5000);
+  ws.onclose = () => clearTimeout(t);
+  ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } if (m.t === 'progress') { done(); onProgress(m); } };
+}
+
+// ------------------------------------------------------------------ rewards the player has not seen yet
+// The results screen shows a match's rewards in full. A player who leaves before it (LOBBY or PLAY AGAIN
+// on the death screen, LEAVE MATCH) still gets told: a short line on the death screen, a card over the
+// lobby, and any level-up / unlock cards are kept for the next lobby visit.
+let unseen = null;
+function onProgress(m) {
+  if (A.ACC.user) A.setUser({ ...A.ACC.user, progress: m.progress });
+  UI.res.progress(m);
+  if (G.phase === 'end') return; // the results screen is about to show it (or already does)
+  unseen = mergeEarned(unseen, m);
+  if (G.phase === 'play' || G.phase === 'dead') { $('deadEarned').innerHTML = earnedHtml(m); $('deadEarned').hidden = false; }
+  else showUnseen();
+}
+function showUnseen() {
+  if (!unseen || (G.phase !== 'menu' && G.phase !== 'waiting')) return;
+  UI.earned.show(unseen);
+  unseen = null;
 }
 
 // ------------------------------------------------------------------ reconnect (lost signal, app switch)
@@ -260,6 +297,7 @@ function readForm() {
 function startQuick(opts = G.opts, retrying = false) {
   G.opts = opts;
   if (!retrying) mmFails = 0;
+  if (unseen && !$('deadEarned').hidden && !hasUnlocks(unseen)) unseen = null; // (already read on the death screen)
   closeAll();
   resetMatchState();
   const { name, room: formRoom } = readForm();
@@ -307,11 +345,12 @@ let retryTimer = 0;
 function toMenu() {
   clearTimeout(retryTimer);
   closeFullMap(); if (G.bloodOn) { G.bloodOn = false; stopTense(); }
+  closeAll(); // (before the phase changes: it looks at the phase to know if a result is still owed)
   G.phase = 'menu';
   $('rangeLeave').hidden = true;
-  closeAll();
   input.enabled = false; input.reset();
   show('lobby');
+  showUnseen();
 }
 
 // Free Play: keep observer sockets to zones near us, so we see across borders.
@@ -409,7 +448,7 @@ function onMsg(c, m) {
       break;
     case 'dead':
       if (m.respawn > 0) { G.deadMsg = m; G.spectate = m.killerId; break; }
-      G.phase = 'dead';
+      G.phase = 'dead'; closeMenu(); $('menuBtn').hidden = true;
       G.spectate = m.killerId;
       input.enabled = false; input.reset();
       $('deadRank').textContent = '#' + m.rank;
@@ -429,11 +468,7 @@ function onMsg(c, m) {
     case 'claimfail': toast('Zone transfer failed — rejoining'); startFree(); break;
     case 'rejoinfail': if (rc) { G.conns.delete(c.key); rejoinFailed(); } break;
     case 'online': G.online = m.zones; if (m.sv && G.clockForced == null) G.svOff = m.sv - Date.now(); break;
-    case 'progress': {
-      if (A.ACC.user) A.setUser({ ...A.ACC.user, progress: m.progress });
-      UI.res.progress(m);
-      break;
-    }
+    case 'progress': onProgress(m); break;
     case 'pong': if (c.primary) { G.ping = Math.round(performance.now() - m.c); $('ping').textContent = `${G.ping} ms`; } break;
   }
 }
@@ -445,7 +480,7 @@ function applyTile(idx, type) {
 
 function onEnd(m) {
   const won = m.winTeam !== undefined ? !!m.won : m.rank === 1;
-  G.phase = 'end';
+  G.phase = 'end'; closeMenu(); $('menuBtn').hidden = true;
   input.enabled = false; input.reset();
   const s = stat(G.world);
   s.games++; if (won) s.wins++; s.kills += m.kills; s.best = Math.max(s.best, G.me?.bb || 0, m.bounty);
@@ -454,7 +489,8 @@ function onEnd(m) {
   const scoreLbl = { bounty: '★', hunted: 'pts', crystals: '💎' }[m.mode];
   const rows = m.results.map(([n, b, r, k, bot, id, be, sc, tm]) =>
     `<li class="${id === G.myId ? 'me' : ''} ${tm ? (tm === m.team ? 'mate' : 'foe') : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${scoreLbl ? `${sc} ${scoreLbl} · ` : ''}${k} KO</span></li>`).join('');
-  setTimeout(() => { if (G.phase === 'end') { show('end'); UI.res.show(m, { msg, rows, won }); sfx(won ? 'victory' : 'defeat'); startPose(won); } }, won ? 1600 : 600);
+  // (the results screen shows the rewards in full, unlock cards included: nothing left to carry over)
+  setTimeout(() => { if (G.phase === 'end') { show('end'); unseen = null; UI.res.show(m, { msg, rows, won }); sfx(won ? 'victory' : 'defeat'); startPose(won); } }, won ? 1600 : 600);
 }
 
 // short victory pose (or a sulk) on the end screen
@@ -884,7 +920,7 @@ function clientTick() {
   if (!G.me || G.phase !== 'play') return;
   const B = BRAWLERS[G.brawler];
   const me = G.me;
-  const mv = input.getMove();
+  const mv = menu.open ? STILL : input.getMove(); // (menu open: held keys must not keep walking)
   let f = null, u = null, fd = 1, ch = 0, gd = 0;
   const safe = G.kind === 'free' && inHub(G.pred.x, G.pred.y);
   G.wantT -= DT;
@@ -1444,7 +1480,80 @@ function goFullscreen() {
 }
 $('leaveWorld').onclick = toMenu;
 $('rangeLeave').onclick = toMenu;
-$('spectate').onclick = () => { $('dead').hidden = true; $('hudAgain').hidden = false; };
+$('spectate').onclick = () => { $('dead').hidden = true; $('specBar').hidden = false; };
+// eliminated: your place is already final, so LOBBY needs no confirm
+$('deadLobby').onclick = toMenu;
+$('hudLobby').onclick = toMenu;
+
+// ------------------------------------------------------------------ in-match menu (button or Esc)
+// The match keeps running behind it. LEAVE uses the deliberate-quit path (bye), so the result is
+// recorded once. Free Play outside the safe hub: a 3 s countdown that taking damage cancels.
+const LEAVE_S = 3;
+function openMenu() {
+  if (menu.open || G.phase !== 'play') return;
+  menu.open = true;
+  closeFullMap();
+  input.enabled = false; input.reset();
+  const free = G.kind === 'free', range = G.modeKey === 'range';
+  $('gmNote').textContent = free ? 'Free Play keeps running' : range ? 'Test Range' : 'The match is still running';
+  $('gmLeave').textContent = free || range ? 'LEAVE' : 'LEAVE MATCH';
+  $('gmSound').checked = !!SETTINGS.sound; $('gmMusic').checked = SETTINGS.musicVol > 0;
+  menuPage('main');
+  $('gmenu').hidden = false;
+  sfx('click', 0.6);
+}
+function closeMenu() {
+  if (!menu.open) return;
+  menu.open = false;
+  clearInterval(menu.timer); menu.timer = 0;
+  $('gmenu').hidden = true;
+  if (G.phase === 'play') { input.enabled = true; input.reset(); }
+}
+function menuPage(page) {
+  clearInterval(menu.timer); menu.timer = 0;
+  $('gmMain').hidden = page !== 'main';
+  $('gmConfirm').hidden = page === 'main';
+  $('gmYes').hidden = page !== 'confirm';
+  $('gmStay').textContent = page === 'leaving' ? 'CANCEL' : 'STAY';
+}
+function leaveNow() { closeMenu(); toMenu(); }
+function askLeave() {
+  const me = G.me;
+  if (G.kind !== 'free') {
+    if (G.modeKey === 'range' || !me) return leaveNow(); // nothing at stake
+    $('gmAsk').textContent = G.modeKey === 'squad' ? 'Leave match? It counts as a loss.' : 'Leave match? You will be placed last.';
+    return menuPage('confirm');
+  }
+  // Free Play: instant in the safe hub (or while down); out in the wild you have to survive 3 seconds
+  if (!me || !me.al || inHub(G.pred.x, G.pred.y)) return leaveNow();
+  menuPage('leaving');
+  const hp0 = me.hp, t0 = performance.now();
+  const step = () => {
+    const left = LEAVE_S - (performance.now() - t0) / 1000;
+    if (!G.me || G.me.hp < hp0) { menuPage('main'); toast('You took damage. Leaving cancelled.'); return; }
+    if (left <= 0) return leaveNow();
+    $('gmAsk').textContent = `Leaving in ${Math.ceil(left)}... Taking damage cancels it.`;
+  };
+  step();
+  menu.timer = setInterval(step, 100);
+}
+$('menuBtn').onclick = openMenu;
+$('gmResume').onclick = closeMenu;
+$('gmLeave').onclick = askLeave;
+$('gmStay').onclick = () => menuPage('main');
+$('gmYes').onclick = leaveNow;
+$('gmSound').onchange = () => { setSetting('sound', $('gmSound').checked); $('setSound').checked = $('gmSound').checked; applySettings(); };
+// music off = volume 0; back on restores the volume it had (the lobby Settings slider still works)
+$('gmMusic').onchange = () => {
+  if ($('gmMusic').checked) setSetting('musicVol', prefs.musicWas > 0 ? prefs.musicWas : 0.6);
+  else { prefs.musicWas = SETTINGS.musicVol; savePrefs(); setSetting('musicVol', 0); }
+  applySettings();
+};
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || e.repeat || (e.target && e.target.tagName === 'INPUT')) return;
+  if (fullMap) return closeFullMap();
+  if (menu.open) closeMenu(); else openMenu();
+});
 for (const [id, key] of [['setFlash', 'reduceFlash'], ['setLow', 'lowGfx'], ['setSound', 'sound']]) {
   $(id).checked = !!SETTINGS[key];
   $(id).onchange = () => { setSetting(key, $(id).checked); applySettings(); };
@@ -1469,6 +1578,7 @@ UI.lobby = createLobby({
 });
 UI.mm = createMatchmaking(() => toMenu());
 UI.res = createResults({ onAgain: playAgain, onLobby: () => toMenu() });
+UI.earned = createEarned();
 UI.showIntro = showIntro;
 
 

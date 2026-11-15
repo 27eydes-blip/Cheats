@@ -39,7 +39,8 @@
     <ul id="onlineList"></ul>
     <button id="leaveWorld" class="ghost small">LEAVE</button>
   </div>
-  <button id="hudAgain" class="big again" hidden>PLAY AGAIN</button>
+  <div id="specBar" hidden><button id="hudLobby" class="ghost">LOBBY</button><button id="hudAgain" class="big again">PLAY AGAIN</button></div>
+  <button id="menuBtn" aria-label="Menu" hidden><i></i></button>
   <button id="rangeLeave" class="ghost small" hidden>LEAVE RANGE</button>
 </div>
 
@@ -58,9 +59,36 @@
   <div class="panel small">
     <div class="rank" id="deadRank">#5</div>
     <p id="deadBy">Eliminated</p>
+    <div id="deadEarned" class="earned" hidden></div>
     <div class="btns">
+      <button id="deadLobby" class="ghost">LOBBY</button>
       <button id="spectate" class="ghost">SPECTATE</button>
       <button class="big again">PLAY AGAIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- in-match menu: the match keeps running behind it -->
+<div id="gmenu" class="screen dim" hidden>
+  <div class="panel small">
+    <h2>MENU</h2>
+    <p class="desc" id="gmNote">The match is still running</p>
+    <div id="gmMain">
+      <div class="gmOpts">
+        <label class="opt"><input type="checkbox" id="gmSound"> Sound</label>
+        <label class="opt"><input type="checkbox" id="gmMusic"> Music</label>
+      </div>
+      <div class="btns">
+        <button id="gmLeave" class="ghost">LEAVE MATCH</button>
+        <button id="gmResume" class="big">RESUME</button>
+      </div>
+    </div>
+    <div id="gmConfirm" hidden>
+      <p id="gmAsk">Leave match? You will be placed last.</p>
+      <div class="btns">
+        <button id="gmStay" class="ghost">STAY</button>
+        <button id="gmYes" class="big leave">LEAVE</button>
+      </div>
     </div>
   </div>
 </div>
