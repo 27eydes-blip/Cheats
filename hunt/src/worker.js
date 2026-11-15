@@ -10,11 +10,12 @@ import { handleApi, userFromToken, recordMatch } from './accounts.js';
 import { loadoutFor, weaponUnlocked, normalize } from '../public/progression.js';
 import { powerBracket } from '../public/power.js';
 import { WEAPONS } from '../public/weapons.js';
+import { fault, parseMsg, ZONE_HUMANS } from './guard.js';
 // local dev only (HUNT_DEV is in wrangler.jsonc, never the deploy config): ?wpn=id&mast=n hands
 // you a secondary for tests and screenshots without an account at that level
 function devWeapon(env, url, sim, id) {
   const w = url.searchParams.get('wpn');
-  if (!env.HUNT_DEV || !w || !WEAPONS[w]) return;
+  if (!env.HUNT_DEV || !w || !own(WEAPONS, w)) return;
   const m = Math.max(0, Math.min(10, Number(url.searchParams.get('mast')) || 1));
   const badge = m >= 10 ? 'bane' : m >= 9 ? 'gold' : m >= 6 ? 'silver' : m >= 3 ? 'bronze' : null;
   const p = sim.players.get(id), pw = Math.max(1, Math.min(11, Number(url.searchParams.get('pw')) || 1));
@@ -22,19 +23,26 @@ function devWeapon(env, url, sim, id) {
   sim.setLoadout(id, { w2: w, perks: [], mastery: m, badge, emotes: [0, 1, 2, 3, 4, 5, 6, 7], dev: true, ...(power ? { power } : {}) });
 }
 import {
-  BRAWLERS, DT, WORLDS, ZONES, generateArena, generateWorld, zoneBounds, zoneAt, worldId,
+  BRAWLERS, DT, WORLDS, ZONES, generateArena, generateWorld, zoneBounds, zoneAt, worldId, own,
 } from '../public/shared.js';
 
 const cleanName = (s) => (s || '').replace(/[^\p{L}\p{N} _\-.!]/gu, '').trim().slice(0, 14) || 'Hunter';
 const arenaWorlds = () => WORLDS.filter((w) => w.arena).map((w) => w.key);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
-
+const brawlerId = (b) => (own(BRAWLERS, b) ? b : 'volt'); // a brawler id sent by a client
+// an account's saved progress (never throws: a broken row reads as a new account)
+const progressOf = (u) => { try { const p = JSON.parse(u.progress || '{}'); return p && typeof p === 'object' ? p : {}; } catch { return {}; } };
+// who a join belongs to (null for guests without a token, or when accounts are unavailable)
+async function userOf(env, token) {
+  if (!token || !env.DB) return null;
+  try { return await userFromToken(env.DB, token); } catch { return null; }
+}
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname.startsWith('/api/')) return handleApi(req, env);
     if (url.pathname === '/ws' || url.pathname === '/zone') {
-      if (req.headers.get('Upgrade') !== 'websocket') return new Response('Expected WebSocket', { status: 426 });
+      if (req.method !== 'GET' || req.headers.get('Upgrade') !== 'websocket') return new Response('Expected WebSocket', { status: 426 });
       let name;
       if (url.pathname === '/zone') {
         const slot = url.searchParams.get('slot');
@@ -51,13 +59,8 @@ export default {
         const want = QUICK_MODES.includes(url.searchParams.get('mode')) ? url.searchParams.get('mode') : 'any';
         // POWER MATCHMAKING: players meet others of a similar brawler power (read from the account)
         let bracket = 1;
-        const token = url.searchParams.get('token');
-        if (token && env.DB) {
-          try {
-            const u = await userFromToken(env.DB, token);
-            if (u) bracket = powerBracket(JSON.parse(u.progress || '{}').power?.[url.searchParams.get('brawler')] || 1);
-          } catch {}
-        }
+        const u = await userOf(env, url.searchParams.get('token'));
+        if (u) bracket = powerBracket(own(progressOf(u).power || {}, brawlerId(url.searchParams.get('brawler'))) || 1);
         const r = await mm.fetch('https://mm/assign?mode=' + want + '&b=' + bracket + '&skip=' + encodeURIComponent(url.searchParams.get('skip') || ''));
         name = await r.text();
       }
@@ -97,7 +100,7 @@ class Loop {
       const now = Date.now();
       this.acc += (now - this.last) / 1000; this.last = now;
       let n = 0;
-      while (this.acc >= DT && n++ < 4) { this.acc -= DT; this.step(); }
+      while (this.acc >= DT && n++ < 4) { this.acc -= DT; try { this.step(); } catch (e) { fault('step', e); } }
       if (this.acc > DT * 4) this.acc = 0;
     }, 25);
   }
@@ -107,6 +110,8 @@ class Loop {
 const sendJSON = (ws, msg) => { try { ws.send(JSON.stringify(msg)); } catch {} };
 // how long a dropped player's spot is kept for them to reconnect
 const REJOIN_GRACE_MS = 25000;
+// shown on a screen whose seat was taken by the same account joining from somewhere else
+const MOVED = 'Now playing on your other screen';
 
 // ------------------------------------------------------------------ Quick Hunt match
 export class MatchRoom {
@@ -130,31 +135,48 @@ export class MatchRoom {
     const map = generateArena(seed, cfg.world, playersFor(cfg.mode));
     if (cfg.open) map.open = true;
     if (cfg.open) for (let y = 1; y < map.gh - 1; y++) for (let x = 1; x < map.gw - 1; x++) map.t[y * map.gw + x] = 0;
-    this.sim = new Sim({
+    const sim = this.sim = new Sim({
       map, mode: cfg.mode, seed, lobbyTime: cfg.lobby, fillBots: cfg.bots, forceEvent: cfg.ev, events: cfg.events,
       send: (id, msg) => { const ws = sockets.get(id); if (ws) sendJSON(ws, msg); },
-      hooks: { finished: (rows) => this.recordResults(rows, sockets) },
+      hooks: { finished: (rows) => this.recordResults(rows, sockets, sim) },
     });
   }
 
-  // trophies/XP are applied server-side for every player with an account (guests included)
-  async recordResults(rows, sockets) {
-    if (!this.env.DB) return;
+  // trophies/XP are applied server-side for every player with an account (guests included).
+  // `sim` is the match the rows came from. Everything is read from it and from the rows right now:
+  // by the time D1 answers, this room may already be running its next match.
+  async recordResults(rows, sockets, sim) {
+    if (!this.env.DB || !sim || sim.mode.noRewards) return;
+    const paid = (sim.paid ||= new Set()); // one result per account per match, whatever happens
+    const jobs = [];
     for (const r of rows) {
-      if (!r.p.account || r.p.recorded || this.sim?.mode?.noRewards) continue;
-      r.p.recorded = true;
+      const acc = r.p.account;
+      if (!acc || r.p.recorded || paid.has(acc)) continue;
+      r.p.recorded = true; paid.add(acc);
+      jobs.push({ id: r.p.id, acc, result: { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, mode: sim.modeKey, won: r.won, assists: r.assists, steals: r.steals, wstat: structuredClone(r.wstat || {}) } });
+    }
+    for (const j of jobs) {
       try {
-        const out = await recordMatch(this.env.DB, r.p.account, { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, mode: this.sim?.modeKey, won: r.won, assists: r.assists, steals: r.steals, wstat: r.wstat });
-        const ws = sockets.get(r.p.id);
+        const out = await recordMatch(this.env.DB, j.acc, j.result);
+        const ws = sockets.get(j.id);
         if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, mastery: out.mastery, wxp: out.wxp, coins: out.coins });
       } catch (e) { console.log('recordMatch failed', e && e.message); }
     }
+  }
+
+  // ONE SEAT PER ACCOUNT: the seat this account already holds in the running match, if any
+  seatOf(sim, account) {
+    for (const p of sim.players.values()) if (p.account === account && !p.wasBot && !p.left) return p;
+    return null;
   }
 
   async fetch(req) {
     const url = new URL(req.url);
     const mname = url.searchParams.get('match') || '';
     const isRoom = mname.startsWith('room:');
+    // who is joining: looked up before the socket exists and before any room state is read
+    // (nothing after this line waits)
+    const user = url.searchParams.get('rejoin') ? null : await userOf(this.env, url.searchParams.get('token'));
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     server.accept();
@@ -168,30 +190,44 @@ export class MatchRoom {
         world = worldId(qw) >= 0 && WORLDS[worldId(qw)].arena ? qw : pick(arenaWorlds());
       } else [, mode, world] = mname.split(':');
       const lobby = isRoom ? Math.max(1.5, Math.min(12, Number(url.searchParams.get('lobby')) || 12)) : 8;
-      const ev = isRoom && EVENTS[url.searchParams.get('ev')] ? url.searchParams.get('ev') : null;
+      const ev = isRoom && own(EVENTS, url.searchParams.get('ev')) ? url.searchParams.get('ev') : null;
       const events = !(isRoom && url.searchParams.get('events') === '0');
       const open = isRoom && (url.searchParams.get('testmap') === 'open' || mode === 'range'); // netcode tests + Test Range: border walls only
       this.newMatch({ mode, world, lobby, ev, events, open, bots: !(isRoom && url.searchParams.get('bots') === '0') });
     }
     const sim = this.sim, sockets = this.sockets;
-    const b = url.searchParams.get('brawler');
-    const id = sim.join(cleanName(url.searchParams.get('name')), BRAWLERS[b] ? b : 'volt');
+    // a second connection from the same account takes over its seat (like a reconnect): an account
+    // never holds two seats in one match, so it can't be paid twice for it
+    const seat = user && this.seatOf(sim, user.id);
+    if (seat && sim.phase === 'play') return this.resume(seat, mname, server, client, true);
+    if (seat) this.unseat(seat.id); // still in the lobby: the old seat goes and this connection joins below
+    const id = sim.join(cleanName(url.searchParams.get('name')), brawlerId(url.searchParams.get('brawler')));
     if (id == null) {
       sendJSON(server, { t: 'retry', reason: sim.phase === 'play' ? 'Match already started' : 'Match full', match: mname });
       server.close(1000, 'retry');
       return new Response(null, { status: 101, webSocket: client });
     }
-    const token = url.searchParams.get('token');
-    if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { const p = sim.players.get(id); if (u && p) { const pr = JSON.parse(u.progress || '{}'); p.account = u.id; p.trophies = pr.trophies?.[p.brawler] | 0; sim.setCosmetics(id, pr.equipped); sim.setLoadout(id, loadoutFor(pr));
+    if (user) {
+      const p = sim.players.get(id), pr = progressOf(user);
+      p.account = user.id; p.trophies = pr.trophies?.[p.brawler] | 0; sim.setCosmetics(id, pr.equipped); sim.setLoadout(id, loadoutFor(pr));
       const tw = url.searchParams.get('try'); // TEST RANGE weapon: only one this account has unlocked
-      if (sim.modeKey === 'range' && tw && weaponUnlocked(normalize(pr), tw)) { sim.setWeapon(p, tw, normalize(pr).perks[tw] || []); p.slot = 1; }
-    } }).catch(() => {});
+      if (sim.modeKey === 'range' && tw && weaponUnlocked(normalize(pr), tw)) { const tp = normalize(pr).perks[tw]; sim.setWeapon(p, tw, Array.isArray(tp) ? tp : []); p.slot = 1; }
+    }
     devWeapon(this.env, url, sim, id);
     const secret = crypto.randomUUID();
     sim.players.get(id).secret = secret;
     sendJSON(server, { t: 'welcome', id, room: isRoom ? mname.slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: mname, secret });
     sim.broadcastLobby();
     return this.attach(id, server, client);
+  }
+
+  // the lobby seat of a connection that was replaced: its socket is told why, then the seat is freed
+  unseat(id) {
+    const old = this.sockets.get(id);
+    this.sockets.delete(id); // so the old socket's close handler is a no-op
+    if (old) { sendJSON(old, { t: 'kick', reason: MOVED }); try { old.close(1000, 'replaced'); } catch {} }
+    this.dropped.delete(id);
+    this.sim.leave(id);
   }
 
   // reconnect after a dropped connection: same player, same match, if it's still going
@@ -203,14 +239,22 @@ export class MatchRoom {
       server.close(1000, 'rejoin failed');
       return new Response(null, { status: 101, webSocket: client });
     }
+    return this.resume(p, url.searchParams.get('match') || '', server, client, false);
+  }
+
+  // hand a seat to a new socket. takeover = another screen signed in to the same account joined
+  // (a brand-new client: it gets the full start, and the old screen can't grab the seat back)
+  resume(p, mname, server, client, takeover) {
+    const sim = this.sim, id = p.id, rj = takeover ? {} : { rejoin: 1 };
     const old = this.sockets.get(id);
     this.sockets.delete(id); // so the old socket's close handler is a no-op
-    if (old) { try { old.close(1000, 'replaced'); } catch {} }
+    if (old) { if (takeover) sendJSON(old, { t: 'kick', reason: MOVED }); try { old.close(1000, 'replaced'); } catch {} }
+    if (takeover) p.secret = crypto.randomUUID();
     sim.rejoin(id);
     this.dropped.delete(id);
-    sendJSON(server, { t: 'welcome', id, rejoin: 1, room: url.searchParams.get('match').startsWith('room:') ? url.searchParams.get('match').slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: url.searchParams.get('match'), secret: p.secret });
+    sendJSON(server, { t: 'welcome', id, ...rj, room: mname.startsWith('room:') ? mname.slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: mname, secret: p.secret });
     if (sim.phase === 'play') {
-      sendJSON(server, { t: 'start', rejoin: 1, botLevel: sim.botLevel, you: id, mode: sim.modeKey, world: sim.map.world, seed: sim.seed, open: !!sim.map.open, players: sim.map.players || 10 });
+      sendJSON(server, { t: 'start', ...rj, botLevel: sim.botLevel, you: id, mode: sim.modeKey, world: sim.map.world, seed: sim.seed, open: !!sim.map.open, players: sim.map.players || 10 });
       sendJSON(server, sim.rosterMsg());
       sendJSON(server, sim.stateMsg());
       if (!p.alive && !sim.mode.respawn) sendJSON(server, { t: 'dead', rank: p.rank, respawn: 0, killer: 'the Wild', killerId: 0, stolen: 0 });
@@ -225,11 +269,13 @@ export class MatchRoom {
     sockets.set(id, server);
     this.emptyAt = 0;
     server.addEventListener('message', (e) => {
-      let m;
-      try { m = JSON.parse(e.data); } catch { return; }
-      if (m.t === 'ping') return sendJSON(server, { t: 'pong', c: m.c });
-      if (m.t === 'bye') { this.abandon(id); onClose(true); try { server.close(1000, 'bye'); } catch {} return; }
-      sim.input(id, m);
+      const m = parseMsg(e.data);
+      if (!m || sockets.get(id) !== server) return; // junk, or a socket that was replaced
+      try {
+        if (m.t === 'ping') return sendJSON(server, { t: 'pong', c: m.c });
+        if (m.t === 'bye') { this.abandon(id); onClose(true); try { server.close(1000, 'bye'); } catch {} return; }
+        sim.input(id, m);
+      } catch (err) { fault('match message', err); }
     });
     // bye = the player quit on purpose (no reconnect wanted); otherwise the connection dropped
     const onClose = (bye) => {
@@ -252,8 +298,8 @@ export class MatchRoom {
   // a leave is final: record it now (a loss), so quitting can't dodge a trophy drop
   abandon(id) {
     this.dropped.delete(id);
-    const row = this.sim && this.sim.abandon(id);
-    if (row) this.recordResults([row], this.sockets);
+    const sim = this.sim, row = sim && sim.abandon(id);
+    if (row) this.recordResults([row], this.sockets, sim);
   }
 
   step() {
@@ -261,7 +307,7 @@ export class MatchRoom {
     const now = Date.now();
     for (const [id, at] of this.dropped) if (now - at > REJOIN_GRACE_MS) this.abandon(id);
     if (this.emptyAt && this.sockets.size === 0 && Date.now() - this.emptyAt > REJOIN_GRACE_MS) return this.stop();
-    this.sim.tick();
+    this.sim.tickSafe((e) => fault('match tick', e));
     if (this.sim.phase === 'end') {
       const now = Date.now();
       if (!this.endedAt) this.endedAt = now;
@@ -366,36 +412,46 @@ export class ZoneRoom {
       return new Response('?', { status: 404 });
     }
 
+    const join = url.searchParams.get('join') === '1';
+    const back = Number(url.searchParams.get('rejoin')) || 0;
+    // looked up before any zone state is read (nothing after this line waits)
+    const user = join && !back ? await userOf(this.env, url.searchParams.get('token')) : null;
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     server.accept();
     const sim = this.ensureSim();
-    const join = url.searchParams.get('join') === '1';
-    const back = Number(url.searchParams.get('rejoin')) || 0;
+    let seat = null;
+    if (user) for (const q of sim.players.values()) if (q.account === user.id && !q.wasBot) { seat = q; break; }
     if (back) {
       const p = sim.players.get(back);
-      if (!p || p.bot || !p.secret || p.secret !== url.searchParams.get('secret') || (this.conns.has(back) && !this.dropped.has(back))) {
+      if (!p || p.bot || !p.secret || p.secret !== url.searchParams.get('secret')) {
         sendJSON(server, { t: 'rejoinfail' });
         server.close(1000, 'rejoin failed');
         if (this.conns.size === 0 && this.dropped.size === 0) { this.loop.stop(); this.sim = null; }
         return new Response(null, { status: 101, webSocket: client });
       }
-      this.dropped.delete(back);
-      p.connected = true;
-      p.sentStatic = null; p.meSent = null; // a new socket knows nothing yet: resend everything
-      server.huntKey = back;
-      this.conns.set(back, server);
+      // the right secret always wins, even while the old socket still looks open (a phone that
+      // lost signal never closes it): the stale socket is dropped and this one takes the seat
+      this.seat(p, server, false);
       sendJSON(server, { t: 'welcome', id: back, zone: this.slot, mode: 'freeplay', rejoin: 1, secret: p.secret });
+    } else if (seat) {
+      // ONE SEAT PER ACCOUNT: joining again from another screen takes over the brawler already here
+      this.seat(seat, server, true);
+      seat.secret = crypto.randomUUID(); // the old screen can't grab the seat back
+      sendJSON(server, { t: 'welcome', id: seat.id, zone: this.slot, mode: 'freeplay', secret: seat.secret, sv: Date.now() });
+    } else if (join && sim.humans().length >= ZONE_HUMANS) {
+      // a crowded zone gets slow for everyone in it: new arrivals wait (walking in from next door still works)
+      sendJSON(server, { t: 'kick', reason: 'Free Play is full right now. Try again in a minute.' });
+      server.close(1000, 'full');
+      return new Response(null, { status: 101, webSocket: client });
     } else if (join) {
-      const b = url.searchParams.get('brawler');
-      const p = sim.addPlayer({ name: cleanName(url.searchParams.get('name')), brawler: BRAWLERS[b] ? b : 'volt' });
+      const p = sim.addPlayer({ name: cleanName(url.searchParams.get('name')), brawler: brawlerId(url.searchParams.get('brawler')) });
       p.alive = false;
       sim.respawn(p);
       // local dev only (HUNT_DEV is set in wrangler.jsonc, never in the deploy config): spawn at x,y
       const at = this.env.HUNT_DEV && (url.searchParams.get('at') || '').split(',').map(Number);
       if (at && at.length === 2 && sim.inBounds(at[0], at[1], -60)) { p.x = p.px = at[0]; p.y = p.py = at[1]; }
-      const token = url.searchParams.get('token');
-      if (token && this.env.DB) userFromToken(this.env.DB, token).then((u) => { if (u && sim.players.has(p.id)) { const pr = JSON.parse(u.progress || '{}'); p.account = u.id; sim.setCosmetics(p.id, pr.equipped); sim.setLoadout(p.id, loadoutFor(pr)); } }).catch(() => {});
+      if (user) { const pr = progressOf(user); p.account = user.id; sim.setCosmetics(p.id, pr.equipped); sim.setLoadout(p.id, loadoutFor(pr)); }
       devWeapon(this.env, url, sim, p.id);
       server.huntKey = p.id;
       this.conns.set(p.id, server);
@@ -412,12 +468,11 @@ export class ZoneRoom {
     sendJSON(server, sim.stateMsg());
     if (Object.keys(this.online).length) sendJSON(server, { t: 'online', zones: this.online });
 
-    server.addEventListener('message', (e) => {
-      let m;
-      try { m = JSON.parse(e.data); } catch { return; }
+    const fin = (v) => (Number.isFinite(+v) ? +v : 0);
+    const onMessage = (m) => {
       const key = server.huntKey;
       if (m.t === 'ping') return sendJSON(server, { t: 'pong', c: m.c, zone: this.slot });
-      if (m.t === 'pos') { const o = sim.observers.get(key); if (o) { o.x = +m.x || 0; o.y = +m.y || 0; } return; }
+      if (m.t === 'pos') { const o = sim.observers.get(key); if (o) { o.x = fin(m.x); o.y = fin(m.y); } return; }
       if (m.t === 'bye') { onClose(true); try { server.close(1000, 'bye'); } catch {} return; }
       if (m.t === 'claim') {
         if (typeof key === 'number') return sendJSON(server, { t: 'claimfail' }); // already a player here
@@ -427,7 +482,7 @@ export class ZoneRoom {
         sim.observers.delete(key); this.conns.delete(key);
         const p = sim.importPlayer(pend.state, pend.state.name, true);
         // replay inputs the client sent while the handoff was in flight
-        if (Array.isArray(m.pend)) for (const inp of m.pend.slice(-12)) sim.input(p.id, { ...inp, t: 'in' });
+        if (Array.isArray(m.pend)) for (const inp of m.pend.slice(-12)) if (inp && typeof inp === 'object') sim.input(p.id, { ...inp, t: 'in' });
         p.credits = p.queue.length + 1;
         server.huntKey = p.id;
         this.conns.set(p.id, server);
@@ -435,6 +490,11 @@ export class ZoneRoom {
         return;
       }
       if (typeof key === 'number') sim.input(key, m);
+    };
+    server.addEventListener('message', (e) => {
+      const m = parseMsg(e.data);
+      if (!m || this.conns.get(server.huntKey) !== server) return; // junk, or a socket that was replaced
+      try { onMessage(m); } catch (err) { fault('zone message', err); }
     });
     const onClose = (bye) => {
       const key = server.huntKey;
@@ -453,6 +513,19 @@ export class ZoneRoom {
     return new Response(null, { status: 101, webSocket: client });
   }
 
+  // give a player's seat to this socket; a socket still holding it is stale (or another screen) and is closed
+  seat(p, server, moved) {
+    const old = this.conns.get(p.id);
+    this.conns.delete(p.id); // so the old socket's close handler is a no-op
+    if (old) { if (moved) sendJSON(old, { t: 'kick', reason: MOVED }); try { old.close(1000, 'replaced'); } catch {} }
+    this.dropped.delete(p.id);
+    p.connected = true;
+    p.queue.length = 0;
+    p.sentStatic = null; p.meSent = null; // a new socket knows nothing yet: resend everything
+    server.huntKey = p.id;
+    this.conns.set(p.id, server);
+  }
+
   step() {
     if (!this.sim) return this.loop.stop();
     const now = Date.now();
@@ -462,7 +535,7 @@ export class ZoneRoom {
       this.sim.leave(id);
     }
     if (this.conns.size === 0 && this.dropped.size === 0) { this.loop.stop(); this.sim = null; return; }
-    this.sim.tick();
+    this.sim.tickSafe((e) => fault('zone tick', e));
     for (const [k, v] of this.pending) if (v.exp < now) this.pending.delete(k);
     this.dirT -= DT;
     if (this.dirT <= 0) {

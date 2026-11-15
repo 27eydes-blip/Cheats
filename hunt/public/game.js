@@ -352,6 +352,7 @@ function onMsg(c, m) {
       if (!G.room && G.retries++ < 5) { clearTimeout(retryTimer); retryTimer = setTimeout(() => { if (G.phase === 'waiting') startQuick({ ...G.opts, skip: m.match }); }, 150); }
       else { toast(m.reason + (G.room ? ' — try again when it ends' : '')); toMenu(); }
       break;
+    case 'kick': G.conns.delete(c.key); toMenu(); toast(String(m.reason || 'Disconnected'), 4500); break; // the server gave our seat away (same account on another screen) and says why
     case 'start':
       $('rangeLeave').hidden = m.mode !== 'range';
       if (m.rejoin && G.map && G.phase !== 'menu') {
