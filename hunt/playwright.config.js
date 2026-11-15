@@ -12,12 +12,16 @@ const projects = [
 ].filter((p) => has(p.name));
 if (projects.length < 3) console.warn(`[e2e] browsers available: ${projects.map((p) => p.name).join(', ')} (others not installed — skipped)`);
 
+// HUNT_PORT lets several checkouts run the suite side by side (each on its own port).
+const PORT = Number(process.env.HUNT_PORT) || 8788;
+const BASE = `http://127.0.0.1:${PORT}`;
+
 export default defineConfig({
   testDir: 'tests/e2e',
   timeout: 90_000,
   workers: 2,
   reporter: [['list']],
-  use: { baseURL: 'http://127.0.0.1:8788', trace: 'off' },
+  use: { baseURL: BASE, trace: 'off' },
   projects,
-  webServer: { command: 'npx wrangler dev --port 8788 --ip 127.0.0.1', url: 'http://127.0.0.1:8788', reuseExistingServer: true, timeout: 60_000 },
+  webServer: { command: `npx wrangler dev --port ${PORT} --ip 127.0.0.1`, url: BASE, reuseExistingServer: true, timeout: 60_000 },
 });
