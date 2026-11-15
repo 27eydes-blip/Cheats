@@ -462,7 +462,7 @@ export class RaceSim {
         for (const q of this.enemies(p)) {
           const dx = q.car.x - c.x, dy = q.car.y - c.y, d = Math.hypot(dx, dy);
           if (d > W.r || q.car.airT > 0) continue;
-          if (this.damage(q, p, W.dmg, 'pulse', true) && q.alive) { q.car.vx += (dx / (d || 1)) * W.knock; q.car.vy += (dy / (d || 1)) * W.knock; q.ep++; }
+          if (this.damage(q, p, W.dmg, 'pulse', true) && q.alive) { q.car.vx += (dx / (d || 1)) * W.knock; q.car.vy += (dy / (d || 1)) * W.knock; }
         }
         break;
       }
@@ -600,7 +600,7 @@ export class RaceSim {
           if (q.id === e.owner && e.t < 1.2) continue;
           if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < ITEMS.oil.r + CAR_R * 0.6) {
             if (q.shieldT > 0) { q.shieldT = 0; this.events.push(['shield', q.id]); return false; }
-            q.car.spinT = ITEMS.oil.spin; q.car.spinDir = this.rand() < 0.5 ? -1 : 1; q.car.drift = 0; q.car.dc = 0; q.ep++;
+            q.car.spinT = ITEMS.oil.spin; q.car.spinDir = this.rand() < 0.5 ? -1 : 1; q.car.drift = 0; q.car.dc = 0;
             if (owner && owner !== q) q.lastHit = { id: owner.id, at: this.time };
             this.events.push(['spin', q.id, e.owner]);
             return false;
@@ -687,7 +687,7 @@ export class RaceSim {
         const dx = b.car.x - a.car.x, dy = b.car.y - a.car.y;
         if (dx * dx + dy * dy >= (CAR_R * 2) ** 2) continue;
         const imp = collideCars(a.car, b.car, a.st.mass, b.st.mass);
-        if (imp > 0) { a.ep++; b.ep++; if (imp > 250) this.events.push(['bump', a.id, b.id, Math.round(imp)]); }
+        if (imp > 250) this.events.push(['bump', a.id, b.id, Math.round(imp)]);
       }
     }
   }

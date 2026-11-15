@@ -17,11 +17,14 @@
       { "name": "MATCH", "class_name": "MatchRoom" },
       { "name": "MATCHMAKER", "class_name": "Matchmaker" },
       { "name": "ZONE", "class_name": "ZoneRoom" },
-      { "name": "DIRECTORY", "class_name": "Directory" }
+      { "name": "DIRECTORY", "class_name": "Directory" },
+      { "name": "RACE", "class_name": "RaceRoom" },
+      { "name": "RACEMM", "class_name": "RaceMatchmaker" }
     ]
   },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["MatchRoom", "Matchmaker"] },
-    { "tag": "v2", "new_sqlite_classes": ["ZoneRoom", "Directory"] }
+    { "tag": "v2", "new_sqlite_classes": ["ZoneRoom", "Directory"] },
+    { "tag": "v3", "new_sqlite_classes": ["RaceRoom", "RaceMatchmaker"] }
   ]
 }
