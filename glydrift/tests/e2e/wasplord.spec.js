@@ -574,21 +574,27 @@ test("WASP LORD: a run still ends — passive he hits the ground, flying blind a
   expect(log.errors).toEqual([]);
 });
 
-test("WASP LORD: the ILLEGAL tag on his leaderboard rows — podium, list, your row — also from another device's data @smoke", async ({ page, browser }, testInfo) => {
+test("WASP LORD: the ILLEGAL tag on his rows of the ILLEGAL board — podium, list, your row; the SCORE board never shows his run @smoke", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const log = await openGame(page, { flags: ["lbmock", "character=wasplord"] });
   // a finished run with him (the mock server remembers your row's hero, as the real one stores it)
   await page.evaluate(() =>
     window.__glyLb.Leaderboard.submitRun({ score: 1200, distance: 900, runTimeMs: 60_000, char: "wasplord", mode: "normal" }),
   );
-  await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Leaderboard"));
-  await settle(page, "Leaderboard", 1500);
+  const open = async (tab) => {
+    if (await page.evaluate(() => window.__glydrift.scene.isActive("Leaderboard"))) {
+      await page.evaluate(() => window.__glydrift.scene.getScene("Leaderboard").scene.start("Menu"));
+      await settle(page, "Menu", 600);
+    }
+    await page.evaluate((tab) => window.__glydrift.scene.getScene("Menu").scene.start("Leaderboard", { tab }), tab);
+    await settle(page, "Leaderboard", 1500);
+  };
   const count = (page, ids) =>
     page.evaluate((ids) => {
       const sc = window.__glydrift.scene.getScene("Leaderboard");
       if (ids) {
         const rows = sc.rows.map((r, i) => ({ ...r, character: ids[i % ids.length] }));
-        sc.list.removeAll(true);
+        sc.clearRows();
         sc.renderRows(rows, sc.userId);
       }
       let list = 0;
@@ -599,40 +605,25 @@ test("WASP LORD: the ILLEGAL tag on his leaderboard rows — podium, list, your 
       };
       walk(sc.list, () => list++);
       walk(sc.you, () => you++);
-      const rows = ids ? sc.rows.length : sc.rows.length;
-      return { list, you, rows, wasp: sc.rows.filter((r) => r.character === "wasplord").length };
+      return { list, you, rows: sc.rows.length, wasp: sc.rows.filter((r) => r.character === "wasplord").length, level: sc.level };
     }, ids);
+  await open("illegal");
   const mine = await count(page, null);
+  expect(mine.level).toBe("illegal-endless");
+  expect(mine.wasp).toBe(mine.rows); // every row of the ILLEGAL board is his
+  expect(mine.list).toBe(mine.rows); // ...and each shows the tag (podium and list)
   expect(mine.you).toBe(1); // your own row: you flew him
-  expect(mine.list).toBe(1); // your place in the list (#12)
   const half = await count(page, ["wasplord", "volt"]);
-  expect(half.list).toBe(Math.ceil(half.rows / 2)); // every one of his rows (podium included)
+  expect(half.list).toBe(Math.ceil(half.rows / 2)); // the tag follows the row's stored hero
   const none = await count(page, ["volt", "splice", "newbleizer"]);
   expect(none.list).toBe(0);
+  // the SCORE board: his run isn't there (your row there is your normal best)
+  await open("score");
+  const score = await count(page, null);
+  expect(score.level).toBe("endless");
+  expect(score.wasp).toBe(0);
+  expect(score.you).toBe(0);
   expect(log.errors).toEqual([]);
-
-  // another device (a second browser context): the board comes from the server's rows, where
-  // someone else's score was set with WASP LORD
-  const ctx = await browser.newContext({ ...testInfo.project.use });
-  const other = await ctx.newPage();
-  const log2 = await openGame(other, { flags: ["lbmock"] });
-  await other.evaluate(() => {
-    const lb = window.__glyLb.Leaderboard;
-    const real = lb.board.bind(lb);
-    lb.board = async (...a) => {
-      const b = await real(...a);
-      b.rows = b.rows.map((r, i) => (i === 0 || i === 7 ? { ...r, character: "wasplord" } : r));
-      return b;
-    };
-  });
-  await other.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Leaderboard"));
-  await settle(other, "Leaderboard", 1500);
-  const seen = await count(other, null);
-  expect(seen.wasp).toBe(2);
-  expect(seen.list).toBe(2); // the #1 podium place and #8 in the list
-  expect(seen.you).toBe(0); // this device flew VOLT
-  expect(log2.errors).toEqual([]);
-  await ctx.close();
 });
 
 test("WASP LORD: score checks allow his speed and x16 only on his rows (same rules as the server) @smoke", async ({ page }, testInfo) => {
@@ -678,12 +669,13 @@ test("WASP LORD: score checks allow his speed and x16 only on his rows (same rul
     longHero: false,
   });
   // the server's migration carries the same numbers and keeps a run's hero on a rename
-  const sql = readFileSync(new URL("../../supabase/migrations/20261114000001_wasp_lord_scores.sql", import.meta.url), "utf8");
+  // (20261115000001, the ILLEGAL board, replaces 20261114000001 and carries the same check)
+  const sql = readFileSync(new URL("../../supabase/migrations/20261115000001_illegal_leaderboard.sql", import.meta.url), "utf8");
   expect(sql).toContain("when is_wasp then 1.95 else 1.8 end");
   expect(sql).toContain("when is_wasp then 38 else 30 end");
   expect(sql).toContain("'^[a-z0-9_]{1,24}$'");
   expect(sql).toContain("new.character := old.character;");
   expect(sql).toMatch(/create or replace function public\.glydrift_check_score/);
   expect(sql).toMatch(/drop trigger if exists glydrift_check_score/);
-  expect(sql).toMatch(/BEFORE the game update with WASP LORD goes live/);
+  expect(sql).toMatch(/REPLACES 20261114000001_wasp_lord_scores\.sql/);
 });

@@ -17,6 +17,8 @@ import {
 } from "../online/leaderboard.js";
 import { nameText } from "../ui/nameplate.js";
 import { illegalTag, isIllegalHero } from "../ui/illegalTag.js";
+import { ILLEGAL_RED, tapeBand } from "../ui/illegal.js";
+import { ALL_MIGHTY } from "../data/titles.js";
 import { Sfx } from "../audio/sfx.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 import { button, fadeTo, neonText, plainText } from "../ui/ui.js";
@@ -46,7 +48,7 @@ const MEDALS = [0xffd23f, 0xdfe8f5, 0xd8894a];
 const ROW_H = 68;
 const CYAN = 0x3ef4ff;
 const STEEL = 0x2a6a88; // idle HUD lines
-const TAB_W = 212; // three tabs: SCORE · DISTANCE · DAILY
+const TAB_W = 212; // three tabs: SCORE · DISTANCE · ILLEGAL (WASP LORD's own board)
 const GOLD = 0xffd23f; // the SCORE board's colour: it's the one that counts
 
 /** A HUD panel: a rectangle with cut (chamfered) corners, a neon rim and an optional glow. */
@@ -117,7 +119,7 @@ export class LeaderboardScene extends Phaser.Scene {
   init(data) {
     // Score is the main board: it's where the leaderboard opens
     // (the Daily Challenge tab went with the Daily Challenge: level mode has per-level boards)
-    this.tab = ["score", "distance"].includes(data?.tab) ? data.tab : "score";
+    this.tab = ["score", "distance", "illegal"].includes(data?.tab) ? data.tab : "score";
     this.period = "all";
     this.returnTo = data?.from || "Menu";
   }
@@ -177,11 +179,16 @@ export class LeaderboardScene extends Phaser.Scene {
 
     // tabs
     this.tabY = top + 124;
-    this.tabs = [
+    // the ILLEGAL board's backdrop (red / black, warning tape), behind the list; shown on its tab
+    this.illegalG = this.add.graphics().setDepth(5);
+    const TABS = [
       { key: "score", label: "SCORE", main: true },
       { key: "distance", label: "DISTANCE" },
-    ].map((t, i) => {
-      const x = W / 2 + (i - 0.5) * TAB_W;
+      // WASP LORD's runs only: they never count on the other boards or for ALL MIGHTY
+      { key: "illegal", label: "ILLEGAL", illegal: true },
+    ];
+    this.tabs = TABS.map((t, i) => {
+      const x = W / 2 + (i - (TABS.length - 1) / 2) * TAB_W;
       const g = this.add.graphics().setDepth(50);
       const txt = neonText(
         this,
@@ -189,7 +196,7 @@ export class LeaderboardScene extends Phaser.Scene {
         this.tabY,
         t.label,
         t.main ? 24 : 18,
-        t.main ? GOLD : 0x3ef4ff,
+        t.main ? GOLD : t.illegal ? ILLEGAL_RED : 0x3ef4ff,
         {
           blur: t.main ? 9 : 6,
         },
@@ -389,11 +396,11 @@ export class LeaderboardScene extends Phaser.Scene {
   refreshChrome() {
     for (const t of this.tabs) {
       const on = t.key === this.tab;
-      const c = t.main ? GOLD : CYAN;
+      const c = t.main ? GOLD : t.illegal ? ILLEGAL_RED : CYAN;
       t.g.clear();
       hudPanel(t.g, t.x - TAB_W / 2 + 5, this.tabY - 32, TAB_W - 10, 64, {
-        color: on ? c : t.main ? 0x8a6a1a : STEEL,
-        fill: on ? (t.main ? 0x2a1f04 : 0x0b2a3a) : 0x050d18,
+        color: on ? c : t.main ? 0x8a6a1a : t.illegal ? 0x7a1018 : STEEL,
+        fill: on ? (t.main ? 0x2a1f04 : t.illegal ? 0x0a0204 : 0x0b2a3a) : 0x050d18,
         fillAlpha: 0.95,
         glow: on,
         width: on ? 3 : 2,
@@ -405,9 +412,12 @@ export class LeaderboardScene extends Phaser.Scene {
         for (const dx of [-62, 54])
           t.g.fillStyle(c, 0.6).fillRect(t.x + dx, this.tabY + 22, 8, 3);
       }
+      // the ILLEGAL tab: a strip of warning tape along its foot
+      if (t.illegal) tapeBand(t.g, t.x - TAB_W / 2 + 22, this.tabY + 26, TAB_W - 44, 6, { stripe: 6, alpha: on ? 1 : 0.5 });
       // the SCORE tab never fades as much: it's the main board
-      t.txt.setAlpha(on ? 1 : t.main ? 0.8 : 0.55);
+      t.txt.setAlpha(on ? 1 : t.main ? 0.8 : t.illegal ? 0.7 : 0.55);
     }
+    this.drawIllegalBackdrop();
     const showFilters = this.tab !== "daily";
     for (const f of this.filters) {
       const on = f.key === this.period;
@@ -427,7 +437,32 @@ export class LeaderboardScene extends Phaser.Scene {
     }
   }
 
+  /** On the ILLEGAL tab: a black and red wash behind the list, framed top and bottom by tape. */
+  drawIllegalBackdrop() {
+    const g = this.illegalG;
+    g.clear();
+    if (this.tab !== "illegal") return;
+    const W = this.W;
+    const y0 = this.listTop - 14;
+    const y1 = this.listBottom + 6;
+    g.fillStyle(0x000000, 0.72).fillRect(0, y0, W, y1 - y0);
+    g.fillStyle(0x3a0006, 0.45).fillRect(0, y0, W, y1 - y0);
+    tapeBand(g, 0, y0 - 10, W, 10, { stripe: 12 });
+    tapeBand(g, 0, y1, W, 10, { stripe: 12 });
+  }
+
+  get illegal() {
+    return this.tab === "illegal";
+  }
+
+  /** A row's title: never ALL MIGHTY on the ILLEGAL board (his runs don't count for it). */
+  rowTitle(r) {
+    const t = Titles.forRow(r);
+    return this.illegal && t === ALL_MIGHTY ? (r?.title !== ALL_MIGHTY ? r?.title || null : null) : t;
+  }
+
   get level() {
+    if (this.tab === "illegal") return Levels.illegal(Levels.endless());
     if (this.tab === "daily") return Levels.daily();
     return this.tab === "distance" ? Levels.distance() : Levels.endless();
   }
@@ -575,14 +610,16 @@ export class LeaderboardScene extends Phaser.Scene {
       );
     } else if (kind === "empty") {
       this.stateBox.add(
-        neonText(this, 0, -20, "BE THE FIRST!", 40, 0xffd23f, { blur: 14 }),
+        neonText(this, 0, -20, "BE THE FIRST!", 40, this.illegal ? ILLEGAL_RED : 0xffd23f, { blur: 14 }),
       );
       this.stateBox.add(
         plainText(
           this,
           0,
           36,
-          "No scores on this board yet — set the record.",
+          this.illegal
+            ? "No WASP LORD runs here yet — his scores go on this board only."
+            : "No scores on this board yet — set the record.",
           19,
           "#cfc6ff",
         ),
@@ -641,8 +678,10 @@ export class LeaderboardScene extends Phaser.Scene {
         ? "FARTHEST · TOP 5"
         : this.tab === "daily"
           ? "TODAY'S TOP 5"
-          : "TOP SCORES · WORLD TOP 5";
-    add(neonText(this, W / 2, 26, head, 30, 0xffd23f, { blur: 12 }));
+          : this.illegal
+            ? "ILLEGAL · WASP LORD ONLY"
+            : "TOP SCORES · WORLD TOP 5";
+    add(neonText(this, W / 2, 26, head, 30, this.illegal ? ILLEGAL_RED : 0xffd23f, { blur: 12 }));
     add(
       brackets(
         this.add.graphics(),
@@ -651,7 +690,7 @@ export class LeaderboardScene extends Phaser.Scene {
         460,
         46,
         14,
-        0xffd23f,
+        this.illegal ? ILLEGAL_RED : 0xffd23f,
         0.7,
         2,
       ),
@@ -661,7 +700,7 @@ export class LeaderboardScene extends Phaser.Scene {
     const rays = add(this.add.graphics({ x: cx1, y: base - 210 - 110 }));
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
-      rays.fillStyle(0xffd23f, i % 2 ? 0.07 : 0.13);
+      rays.fillStyle(this.illegal ? ILLEGAL_RED : 0xffd23f, i % 2 ? 0.07 : 0.13);
       rays.slice(0, 0, 330, a, a + 0.18, false).fillPath();
     }
     this.podium.rays = rays;
@@ -764,7 +803,7 @@ export class LeaderboardScene extends Phaser.Scene {
       // ALL MIGHTY on the holder's place (the server's answer). A former holder's place shows
       // the Former All Mighty badge instead of their title (a podium column fits only one)
       const former = AllMighty.formerRow(r, mine);
-      const ttl = titleLine(this, cx, top - 52, former ? null : Titles.forRow(r), {
+      const ttl = titleLine(this, cx, top - 52, former ? null : this.rowTitle(r), {
         size: 11,
         former,
       });
@@ -999,7 +1038,7 @@ export class LeaderboardScene extends Phaser.Scene {
           font: FONT,
         },
       );
-      const ttl = titleLine(this, 183, y + 10, Titles.forRow(r), {
+      const ttl = titleLine(this, 183, y + 10, this.rowTitle(r), {
         size: 12,
         ox: 0,
         former: AllMighty.formerRow(r, mine),
@@ -1043,7 +1082,9 @@ export class LeaderboardScene extends Phaser.Scene {
         ? "Your rank shows up when you're back online"
         : this.tab !== "daily" && this.period !== "all"
           ? `No best run ${this.period === "week" ? "this week" : "today"} yet — go fly!`
-          : "Not ranked yet — finish a run to get on the board";
+          : this.illegal
+            ? "Fly WASP LORD to get on the ILLEGAL board"
+            : "Not ranked yet — finish a run to get on the board";
       this.you.add(plainText(this, 56, -16, name, 22, "#3ef4ff", { ox: 0 }));
       this.you.add(plainText(this, 56, 16, msg, 17, "#cfc6ff", { ox: 0 }));
       return;

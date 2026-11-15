@@ -1,3 +1,6 @@
+-- SUPERSEDED by 20261115000001_illegal_leaderboard.sql (the ILLEGAL leaderboard), which does
+-- everything this file does and more. Run that one instead; you don't need to run this one.
+--
 -- Glydrift · WASP LORD's scores (replaces glydrift_check_score from 20261107000001).
 --
 -- WHEN TO RUN: BEFORE the game update with WASP LORD goes live. Until it has run, the old check

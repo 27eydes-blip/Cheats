@@ -34,7 +34,7 @@ import { PORTRAIT_K } from "../pixel/common.js";
 import { greyPortrait } from "../pixel/grayHero.js";
 import { canvasTexture, rebuild } from "../pixel/px.js";
 import { killTweensDeep, button, fadeTo, RollingCounter } from "../ui/ui.js";
-import { illegalStamp, isIllegal, warningTape } from "../ui/illegal.js";
+import { ILLEGAL_BOARD_NOTE, illegalStamp, isIllegal, warningTape } from "../ui/illegal.js";
 import { revealHero } from "../ui/reveal.js";
 import { WASP_EYE } from "../pixel/waspLordArt.js";
 
@@ -891,6 +891,8 @@ export class ShopScene extends Phaser.Scene {
         m.hidden = m.illegal && !Progression.isUnlocked(def.id);
         m.title = m.hidden ? "???" : def.name;
         m.sub = m.hidden ? "CLASSIFIED · coins only" : def.title;
+        // his runs go on the ILLEGAL board only (never the normal boards or ALL MIGHTY)
+        m.note = m.illegal ? ILLEGAL_BOARD_NOTE : null;
         if (!["common", "rare"].includes(def.rarity) && !m.illegal)
           m.ribbon = { text: RARITY[def.rarity].label.split(" ")[0], col: 0xe0203a };
         m.rigSpec = m.hidden ? null : { hero: def.id };
@@ -1081,8 +1083,22 @@ export class ShopScene extends Phaser.Scene {
       c.stamp = illegalStamp(this, w / 2 - 54, -h / 2 + 22, 16, { angle: 8 });
       add(c.stamp);
     }
+    // "Illegal leaderboard only." on a strip of black at the foot of the art
+    c.noteText = null;
+    if (m.note) {
+      const ny = -h / 2 + 12 + artH - 12;
+      const nt = this.add
+        .text(0, ny, m.note, this.priceStyle(15, "#ff3a4a"))
+        .setOrigin(0.5);
+      nt.setScale(Math.min(1, (w - 28) / nt.width));
+      const ng = this.add.graphics();
+      ng.fillStyle(0x0a0204, 0.92).fillRoundedRect(-nt.displayWidth / 2 - 10, ny - 14, nt.displayWidth + 20, 28, 8);
+      ng.lineStyle(2, 0xff1a2a, 0.9).strokeRoundedRect(-nt.displayWidth / 2 - 10, ny - 14, nt.displayWidth + 20, 28, 8);
+      add([ng, nt]);
+      c.noteText = nt;
+    }
     // what VoiceOver reads for the tile
-    c.a11yLabel = `${m.title}, ${c.price !== null ? `${c.price} coins` : m.cta?.label || m.sub}`;
+    c.a11yLabel = `${m.title}, ${c.price !== null ? `${c.price} coins` : m.cta?.label || m.sub}${m.note ? `, ${m.note}` : ""}`;
   }
 
   /** A buy that didn't go through (e.g. the daily deal changed at midnight): show the new price. */
@@ -1326,6 +1342,10 @@ export class ShopScene extends Phaser.Scene {
       warningTape(g, -W / 2 + 8, -H / 2 + 8, W - 16, H - 16, 10, { stripe: 12 });
       this.stageStamp = illegalStamp(this, W / 2 - 92, -H / 2 + 34, 24, { angle: 6 });
       this.stageInfo.add(this.stageStamp);
+      this.stageNote = this.add
+        .text(W / 2 - 26, -H / 2 + 74, ILLEGAL_BOARD_NOTE, this.priceStyle(18, "#ff3a4a"))
+        .setOrigin(1, 0.5);
+      this.stageInfo.add(this.stageNote);
     }
     // the art: a live hero rig for heroes and wearables, a picture for everything else
     const artH = artBot - artTop;

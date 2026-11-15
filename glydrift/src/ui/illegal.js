@@ -6,6 +6,10 @@ import { PIXEL_FONT, VIEW } from "../config.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
 
 export const ILLEGAL_RED = 0xff1a2a;
+/** On his shop card: his runs go on the ILLEGAL leaderboard only. */
+export const ILLEGAL_BOARD_NOTE = "Illegal leaderboard only.";
+/** Shown the first time someone flies him. */
+export const ILLEGAL_FIRST_PLAY = ["Wasp Lord is ILLEGAL —", "his scores go on the Illegal leaderboard."];
 const TAPE_DARK = 0x0a0204;
 
 /** Is this hero (or rarity key) the ILLEGAL LEGENDARY tier? */
