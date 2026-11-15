@@ -18,6 +18,7 @@
     "build:test": "GLY_TEST=1 vite build --outDir dist-test --emptyOutDir",
     "test:e2e": "playwright test",
     "test:all": "npm run build && npm run build:test && playwright test",
+    "export:art": "npm run build:test && node scripts/export-art.mjs art-export",
     "test:update": "npm run build && npm run build:test && playwright test --update-snapshots"
   },
   "dependencies": {

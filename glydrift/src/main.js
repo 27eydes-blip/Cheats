@@ -38,6 +38,8 @@ import { Leaderboard } from "./online/leaderboard.js";
 import { Seasons } from "./data/seasons.js";
 import { TEST } from "./systems/testFlags.js";
 import { CHARACTERS, setSeasonMonth } from "./player/characterDefs.js";
+import { ensureBiomeArt, releaseBiomeArt, THEMES } from "./pixel/themes.js";
+import * as Neon from "./pixel/neon.js";
 
 /** Hardware hints that a device can't hold 60 fps with the full effects. */
 function isWeakDevice() {
@@ -371,6 +373,9 @@ async function boot() {
     window.__music = Music;
     window.__glySave = Save;
     window.__glyCtx = ContextGuard;
+    // the art export script (scripts/export-art.mjs): build / free one realm's art at a time
+    // (stays inside the 4-realm memory budget) and draw the UI kit
+    window.__glyExport = { ensureBiomeArt, releaseBiomeArt, realms: Object.keys(THEMES), Neon };
   }
 }
 
