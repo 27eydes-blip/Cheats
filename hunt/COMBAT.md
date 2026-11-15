@@ -105,7 +105,7 @@ Branch `upgrade/combat`, merged into `main`. Only `hunt/` changed. Screenshots a
 | Check | Result |
 |---|---|
 | Tests | All Node tests pass. New tests cover lag compensation hits, the bullet cap, weapon swap, mastery and level saves, old saves loading, power, gadgets, star powers, matchmaking groups, the Test Range, and the weapon balance gate. **58/58** browser tests on Chromium. Firefox and WebKit still can't be installed here (the machine is missing their system libraries); run `npx playwright install firefox webkit && npm run e2e` on your computer. |
-| Server bandwidth | **18.4 KB/s per player, was 27.4 KB/s (−33%)** in the 20-bot Big Hunt benchmark. |
+| Server bandwidth | **18.4 KB/s per player, was 27.4 KB/s (−33%)** in the 20-bot Big Hunt benchmark. These are raw JSON bytes. The game's sockets compress (permessage-deflate), so about **4 KB/s per player** actually crosses the network; `node test/bench.js` now prints both, and the tick's p50 / p95 / p99 / max next to the mean (0.41 ms mean, 1.2 ms p99 on this machine). |
 | Server CPU | Snapshot work dropped slightly (0.161 ms vs 0.167 ms per tick). The whole tick is **0.274 ms vs 0.262 ms (+4.6%)**; all of that is bot AI managing a second weapon. Human players don't add it. |
 | Frame rate, iPhone SE size | **60 fps** with 24 hunters on screen all firing (76 bullets in the air). With the CPU slowed 4×: normal Big Hunt about 47–50 fps (same as before the upgrade). The 24-hunter worst case is about 23 fps, and it is the same with nobody firing, so the limit is drawing 24 detailed hunters in this software-rendering test browser, not combat. |
 
