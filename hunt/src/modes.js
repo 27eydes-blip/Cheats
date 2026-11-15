@@ -103,7 +103,8 @@ export const MODES = {
   },
 
   squad: {
-    name: 'Squad Hunt', desc: '3v3! Kills fill your team pot. Highest pot after 3:00 wins.', respawn: true, quick: true, teams: true, maxPlayers: 6, timeLimit: 180,
+    // noRandom: Quick Hunt is the 10-player free-for-all events; Squad is picked from the mode list
+    name: 'Squad Hunt', desc: '3v3! Kills fill your team pot. Highest pot after 3:00 wins.', respawn: true, quick: true, noRandom: true, teams: true, maxPlayers: 6, timeLimit: 180,
     score: (p) => p.bountyEarned,
     // winning team first (by pot), then each player's bounty earned
     rank: (sim) => [...sim.players.values()].sort((a, b) => (sim.teamPot[b.team] - sim.teamPot[a.team]) || (a.team - b.team) || (b.bountyEarned - a.bountyEarned) || (b.kills - a.kills)),
@@ -162,6 +163,6 @@ MODES.range = {
 };
 
 export const QUICK_MODES = Object.keys(MODES).filter((k) => MODES[k].quick);
-// the "any mode" pool for Quick Hunt (Big Hunt is only played when picked)
+// the "any mode" pool for Quick Hunt (Big Hunt and Squad Hunt are only played when picked)
 export const RANDOM_MODES = QUICK_MODES.filter((k) => !MODES[k].noRandom);
 export const playersFor = (mode) => (MODES[mode] && MODES[mode].maxPlayers) || 10;
