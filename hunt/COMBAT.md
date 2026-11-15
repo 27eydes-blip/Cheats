@@ -68,7 +68,7 @@ Branch `upgrade/combat`, merged into `main`. Only `hunt/` changed. Screenshots a
 
 ## Brawler Power
 - **Levels 1–11 for each brawler**, bought with coins you earn by playing: every match pays 12–72 coins, plus the level-up coins. Test currency only; nothing that affects combat can ever be bought with real money.
-- **Cost:** 40 coins for level 2, up to 1,000 coins for level 11 (4,100 in total).
+- **Cost:** 40 coins for level 2, up to 1,000 coins for level 11 (3,740 in total).
 - **Effect:** each level adds 4% HP and 4% damage, so Power 11 is +40%.
 - **Where:** tap POWER on the lobby nameplate.
 - **Gadget at Power 7:** an active ability with 3 uses per match. Use the GADGET button next to Super, or F on a keyboard. Two to choose from per brawler:
@@ -115,7 +115,7 @@ Branch `upgrade/combat`, merged into `main`. Only `hunt/` changed. Screenshots a
 - Effects drawing code had been placed in the update step (a frame error that hid behind the game's error guard). Browser tests now fail on any swallowed frame error.
 
 ## Needs Sam's decision
-1. **Power numbers:** the coin costs (4,100 to reach 11) and the four matchmaking groups are first guesses. When few people are online, a small group means longer waits, or more bots to fill matches.
+1. **Power numbers:** the coin costs (3,740 to reach 11) and the four matchmaking groups are first guesses. When few people are online, a small group means longer waits, or more bots to fill matches.
 2. **Bot CPU:** bots cost about 5% more server time because they juggle two weapons.
 3. **Weapon drops in Free Play** last until you die. Should a found weapon unlock permanently instead?
 4. **Mastery and coins** only count in Quick Hunt matches; Free Play has no match end to record. Should Free Play count too?

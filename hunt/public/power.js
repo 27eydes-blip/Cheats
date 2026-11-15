@@ -6,7 +6,7 @@ import { BRAWLER_IDS, own } from './shared.js';
 
 export const MAX_POWER = 11;
 export const GADGET_AT = 7, STAR_AT = 9, GADGET_USES = 3;
-// coins to go from level L to L+1 (index L); 4,100 coins from 1 to 11
+// coins to go from level L to L+1 (index L); 3,740 coins from 1 to 11
 export const POWER_COST = [0, 40, 70, 110, 160, 230, 320, 440, 590, 780, 1000];
 export const clampPower = (L) => Math.max(1, Math.min(MAX_POWER, L | 0 || 1));
 export const powerMult = (L) => 1 + 0.04 * (clampPower(L) - 1);
