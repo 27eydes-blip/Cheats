@@ -1,4 +1,4 @@
-// Credit check for Glydash: run with `node glydash/tests/credits.test.mjs`.
+// Credit check for Glydaway: run with `node glydaway/tests/credits.test.mjs`.
 // The Gleyde Technologies, LLC credit and the "Created by Sam Eyde III" line must never be removed.
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

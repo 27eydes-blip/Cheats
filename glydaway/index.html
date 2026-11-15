@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#05010f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Glydash</title>
+<title>Glydaway</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Same three faces Glydrift ships (@fontsource orbitron 700/900, rajdhani 600/700, silkscreen 700) -->
@@ -219,7 +219,7 @@
 <body>
 <div id="game">
   <div id="splash" aria-hidden="true"><div>GLEYDE TECHNOLOGIES, LLC</div></div>
-  <canvas id="c" aria-label="Glydash game"></canvas>
+  <canvas id="c" aria-label="Glydaway game"></canvas>
 
   <div id="hud">
     <div><button class="ring-btn" id="pauseBtn" aria-label="Pause">
@@ -232,8 +232,8 @@
   <div id="banner"><div class="k">ENTERING</div><div class="n" id="bannerName"></div></div>
 
   <div class="screen show" id="startScreen">
-    <h1 class="logo">GLYDASH</h1>
-    <div class="tagline">RUN THE NEON COSMOS</div>
+    <h1 class="logo">GLYDAWAY</h1>
+    <div class="tagline">GLIDE AWAY, CITY TO CITY</div>
     <div class="chips">
       <span class="chip"><b>TAP</b>jump</span>
       <span class="chip"><b>HOLD</b>glide</span>
@@ -1019,8 +1019,8 @@ resize();
 
 // ===== Storage =====
 const store = {
-  get(k, d) { try { const v = localStorage.getItem('glydash.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem('glydash.' + k, JSON.stringify(v)); } catch (e) {} },
+  get(k, d) { try { const v = localStorage.getItem('glydaway.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('glydaway.' + k, JSON.stringify(v)); } catch (e) {} },
 };
 let best = store.get('best', { m: 0, coins: 0 });
 let muted = store.get('muted', false); // the M key mutes everything
@@ -1083,7 +1083,7 @@ const sfx = {
 };
 
 // =====================================================================================
-//  Music: Glydash's own soundtrack, composed and played live in code (no music files).
+//  Music: Glydaway's own soundtrack, composed and played live in code (no music files).
 //  Each city has its own song in that city's style, played on small synthesized instruments
 //  (piano, accordion, plucked strings, oud, reed, flute, brass, bells, world percussion).
 //  A song change waits for the next bar so the music never breaks off mid-phrase.
@@ -1685,15 +1685,15 @@ function showBanner(i) {
 }
 
 // =====================================================================================
-//  Online leaderboard (Supabase, same project as Glydrift, own table: glydash_scores).
+//  Online leaderboard (Supabase, same project as Glydrift, own table: glydaway_scores).
 //  Anonymous sign-in gives each device a player id. Only personal bests are uploaded;
 //  they wait in a local queue while offline. Nothing here ever blocks the game.
-//  Setup: glydash/supabase/glydash_leaderboard.sql (run once in the SQL editor).
+//  Setup: glydaway/supabase/glydaway_leaderboard.sql (run once in the SQL editor).
 // =====================================================================================
 const LB_CONF = {
   url: 'https://cdjcvhywrbsdryagqxqg.supabase.co',
   key: 'sb_publishable_zZB05fEYY1eYhhmnzSuodg_QqpXF-dO', // public "publishable" key (Row Level Security protects the data)
-  table: 'glydash_scores',
+  table: 'glydaway_scores',
 };
 const BOARDS = { distance: { label: 'DISTANCE', unit: ' m' }, coins: { label: 'COINS', unit: '' } };
 // Username rules match Glydrift's: 3-12 letters/numbers and a light profanity filter.
@@ -1716,7 +1716,7 @@ function suggestName() {
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   return (pick(a) + pick(b) + Math.floor(Math.random() * 90 + 10)).slice(0, 12);
 }
-// The same limits the database checks (glydash_check_score): 28 m/s + 40 m; coins ≤ 1.5/m + 100.
+// The same limits the database checks (glydaway_check_score): 28 m/s + 40 m; coins ≤ 1.5/m + 100.
 const plausible = r => r.run_time_ms >= 500 && r.distance > 0 && r.distance <= 28 * (r.run_time_ms / 1000) + 40 && r.coins <= r.distance * 1.5 + 100;
 
 const LB = {

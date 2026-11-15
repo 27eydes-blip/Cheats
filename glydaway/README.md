@@ -1,6 +1,6 @@
-# Glydash
+# Glydaway
 
-*(Formerly Glydrunner.)*
+*(Formerly Glydrunner, then Glydash.)*
 
 An endless side-scrolling runner spin-off of **Glydrift**, starring Volt the Storm Bird. It's one self-contained file (`index.html`) with no build step and no image assets.
 
@@ -51,7 +51,7 @@ One sits on the ground in a clear stretch roughly every 280–460 m (the first a
 Active power-ups show under the coin counter.
 
 ## Music
-Glydash's soundtrack is composed and played live in code (no music files): one song per city, written in that city's style and played on small synthesized instruments. All melodies are original; the London chime is the public-domain Westminster Quarters.
+Glydaway's soundtrack is composed and played live in code (no music files): one song per city, written in that city's style and played on small synthesized instruments. All melodies are original; the London chime is the public-domain Westminster Quarters.
 | City | Style |
 |---|---|
 | Paris | Accordion musette waltz |
@@ -72,13 +72,13 @@ Glydash's soundtrack is composed and played live in code (no music files): one s
 
 ## Leaderboard
 Two online boards: **DISTANCE** (best metres in one run) and **COINS** (most coins in one run). Players pick a name (3–12 letters/numbers, same filter as Glydrift) the first time they open it.
-- Uses the same Supabase project as Glydrift but its **own table**, `glydash_scores`, so Glydrift's boards, checks and resets never touch it.
-- **Setup (once):** someone with access to the Supabase project runs `supabase/glydash_leaderboard.sql` in the SQL editor. Until then the board says "coming soon" and the game works normally.
+- Uses the same Supabase project as Glydrift but its **own table**, `glydaway_scores`, so Glydrift's boards, checks and resets never touch it.
+- **Setup (once):** someone with access to the Supabase project runs `supabase/glydaway_leaderboard.sql` in the SQL editor. Until then the board says "coming soon" and the game works normally.
 - Each device signs in anonymously. Only personal bests are uploaded, and they wait in a queue while offline. Impossible results (too far or too many coins for the run's length) are rejected by the game and by the database.
 - Autopilot runs (`?bot=1`) never count toward the best score or the leaderboard.
 
 ## Glydrift look
-Glydash uses Glydrift's art (source: `glydrift/` on the `feature/levels` branch, and the `gh-pages` build):
+Glydaway uses Glydrift's art (source: `glydrift/` on the `feature/levels` branch, and the `gh-pages` build):
 - **Volt sprite and coin sprite** are copied verbatim from `glydrift/src/pixel/common.js` and `px.js`, with the same `PixelCanvas`, dark outline and white rim.
 - **Fonts:** Orbitron (titles), Rajdhani (numbers and body text), Silkscreen (buttons).
 - **Colors:** Glydrift's UI tokens: cyan `#3ef4ff`, mint, lavender and gold `#ffc83d`. Hazards use the danger colors red `#ff2a3d`, orange `#ff6a1a` and pink `#ff2d78`.
@@ -96,7 +96,7 @@ Glydash uses Glydrift's art (source: `glydrift/` on the `feature/levels` branch,
 
 ## Development
 - `?bot=1` starts a run with the autopilot that also plays the attract mode.
-- The best score is kept in `localStorage` (`glydash.best`); the leaderboard name, sign-in and upload queue use `glydash.name`, `glydash.auth` and `glydash.lbQueue`.
+- The best score is kept in `localStorage` (`glydaway.best`); the leaderboard name, sign-in and upload queue use `glydaway.name`, `glydaway.auth` and `glydaway.lbQueue`.
 
 ## Credits
 - Published by **Gleyde Technologies, LLC**
