@@ -3,6 +3,7 @@ import Phaser from "phaser";
 import { buildTextures } from "../gfx/textures.js";
 import { buildPixelArt } from "../pixel/themes.js";
 import { Account } from "../online/account.js";
+import { Grants } from "../online/grants.js";
 import { Leaderboard } from "../online/leaderboard.js";
 import { refreshAllMighty } from "../online/allMighty.js";
 import { Store } from "../online/store.js";
@@ -32,7 +33,13 @@ export class BootScene extends Phaser.Scene {
     else setTimeout(() => refreshAllMighty(), 1600);
     // accounts + cloud save: restore the signed-in account and sync (in the background)
     // …then let the server confirm Drift Pass+ ownership (store.js recheck)
+    // (the cloud check never swaps the save in the middle of a run)
+    const inRun = () => this.game.scene.isActive("Game") && this.game.scene.getScene("Game").state === "playing";
+    Account.isBusy = inRun;
+    Grants.isBusy = inRun;
     setTimeout(() => Account.init().then(() => Store.recheck()), 1500);
+    // coins granted by the owner: claimed now, when the game is shown again and now and then
+    setTimeout(() => Grants.init(), 2500);
     this.scene.launch("Backdrop");
     // hidden music test page: ?music (test builds only)
     const q = new URLSearchParams(window.location.search);
