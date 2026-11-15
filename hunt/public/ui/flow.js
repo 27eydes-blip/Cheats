@@ -85,7 +85,10 @@ export function createMatchmaking(onCancel) {
     },
     update({ players, max, startIn, mode, world, bots = true }) {
       st.found = players;
-      $('mmCount').textContent = `${players}/${max} hunters found${startIn != null ? ` · starts in ${Math.ceil(startIn)}` : !bots && players < 2 ? ' · waiting for another hunter (bots off)' : ''}`;
+      // bots off: nobody fills the empty seats, so say plainly that we're waiting for real players
+      const waiting = !bots && startIn == null;
+      $('mmFound').textContent = waiting ? 'WAITING FOR MORE HUNTERS…' : 'FINDING HUNTERS';
+      $('mmCount').textContent = `${players}/${max} hunters found${startIn != null ? ` · starts in ${Math.ceil(startIn)}` : waiting ? ' · bots are off' : ''}`;
       if (mode) $('mmMode').textContent = `${mode} · ${worldName(world)}`;
     },
     hide() { el.hidden = true; },

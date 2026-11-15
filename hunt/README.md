@@ -28,8 +28,8 @@ Open http://localhost:8787 on desktop. Controls: **WASD** to move, **mouse** to 
 4. On each phone, open `http://<that-ip>:8787`, for example `http://192.168.1.23:8787`.
    - If it doesn't load, allow incoming connections for `node`/`workerd` in your computer's firewall. macOS asks the first time.
 5. On **both** phones, enter the **same room code** (for example `FRIENDS`), pick a brawler, and tap **PLAY**.
-   - To test the first milestone without bots (phone vs phone 1v1), **untick "Fill empty slots with bots"** before pressing Play.
-   - With no room code you go into quick play: anyone who presses Play within about 7 seconds lands in the same match, and bots fill the empty slots.
+   - To play without bots (phone vs phone 1v1), **untick "FILL WITH BOTS"** before pressing Play. It works with or without a room code: with it off, quick play puts you in a humans-only queue and the match waits until a second hunter joins.
+   - With no room code and bots on you go into quick play: anyone who presses Play within about 7 seconds lands in the same match, and bots fill the empty slots.
 6. Turn the phones sideways. Left thumb moves. Right thumb drags to aim and fires on release. A quick tap auto-aims at the nearest enemy. The **SUPER** button charges as your hits land; drag it to aim, or tap it to auto-aim.
 
 Tips:

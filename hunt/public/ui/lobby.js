@@ -63,7 +63,7 @@ export function createLobby(api) {
     <main class="lb-page">
       <section class="pg pg-play" data-pg="play">
         <div class="modelist" id="modeCard">${MODE_BTNS.map(([k, n, sub, ic, col]) => `<button class="modebtn tap" data-m="${k}" style="--mc:${col}"><span class="mi">${icon(ic)}</span><span class="mn"><b>${n}</b><small>${sub}</small></span><span class="go">▶</span></button>`).join('')}
-          <label class="fillbots"><span class="cb" id="fillCb"></span> FILL WITH BOTS</label></div>
+          <button type="button" class="fillbots" id="fillBots" role="switch" aria-checked="true"><span class="cb" id="fillCb"></span> FILL WITH BOTS</button></div>
         <div class="party">
           <div class="slots">
             <div class="slot me nameplate tap" title="Change hunter"><canvas id="stage"></canvas><div class="np-row"><span class="np-name" id="npName">Volt</span><span class="role" id="npRole">BALANCED</span></div>
@@ -181,7 +181,7 @@ export function createLobby(api) {
     const M = MODES_UI[L.mode];
     $('mcName').textContent = M.name;
     for (const b of root.querySelectorAll('.modebtn')) b.classList.toggle('sel', b.dataset.m === L.mode);
-    const bots = $('bots'); $('fillCb').classList.toggle('on', !bots || bots.checked);
+    const bots = $('bots'), botsOn = !bots || bots.checked; $('fillCb').classList.toggle('on', botsOn); $('fillBots').setAttribute('aria-checked', String(botsOn));
     $('playChip').textContent = L.mode === 'free' ? 'FREE PLAY' : 'READY';
     for (const b of root.querySelectorAll('.tabbtn')) b.classList.toggle('on', b.dataset.tab === L.tab);
     for (const pg of root.querySelectorAll('.pg')) pg.hidden = pg.dataset.pg !== L.tab;
@@ -207,7 +207,8 @@ export function createLobby(api) {
   const tab = (k) => { L.tab = k; sfx('click', 0.6); refresh(); if (k === 'play') requestAnimationFrame(resize); };
   root.querySelector('.slot.me').addEventListener('click', (e) => { if (!e.target.closest('#npPower')) SC.openBrawlerSelect(api, refresh); });
   for (const b of root.querySelectorAll('.modebtn')) b.onclick = () => { L.mode = b.dataset.m; store.set('hunt-mode', L.mode); sfx('click'); refresh(); };
-  root.querySelector('.fillbots').onclick = (e) => { e.preventDefault(); const bx = $('bots'); if (bx) bx.checked = !bx.checked; refresh(); };
+  // FILL WITH BOTS: off = humans-only matches (the game saves the choice on 'change')
+  $('fillBots').onclick = () => { const bx = $('bots'); if (bx) { bx.checked = !bx.checked; bx.dispatchEvent(new Event('change')); } sfx('click', 0.6); refresh(); };
   for (const b of root.querySelectorAll('.slot.invite')) b.onclick = () => SC.openFriends(api);
   $('playBtn').addEventListener('click', () => {
     unlockAudio();

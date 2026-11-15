@@ -100,6 +100,7 @@ let selBrawler = BRAWLERS[prefs.brawler] ? prefs.brawler : 'volt';
 $('name').value = prefs.name || '';
 $('room').value = prefs.room || '';
 $('bots').checked = prefs.bots !== false;
+$('bots').addEventListener('change', () => { prefs.bots = $('bots').checked; savePrefs(); }); // remembered right away, not only on PLAY
 
 function stat(worldKey) { const id = worldId(worldKey); return (prefs.stats[id] ||= { games: 0, wins: 0, kills: 0, best: 0 }); }
 function statRows() {
@@ -258,7 +259,8 @@ function startQuick(opts = G.opts) {
   devParams(q);
   if (room) q.set('room', room);
   if (opts.skip) q.set('skip', opts.skip);
-  if (room && !$('bots').checked && !opts.world) q.set('bots', '0');
+  // FILL WITH BOTS off: rooms play without bots, public PLAY joins the humans-only queue
+  if (!$('bots').checked && !opts.world) q.set('bots', '0');
   for (const k of ['world', 'mode', 'lobby', 'ev']) if (opts[k]) q.set(k, opts[k]);
   if (opts.tryW) { q.set('try', opts.tryW); if (!q.get('wpn') && !A.ACC.token) q.set('wpn', opts.tryW); }
   openConn('main', '/ws?' + q, { primary: true });
@@ -342,7 +344,7 @@ function onMsg(c, m) {
       G.myId = m.id; G.retries = 0; G.botsOn = m.bots;
       if (m.mode) G.modeKey = m.mode;
       if (m.world) G.world = m.world;
-      if (G.phase === 'waiting') UI.mm.update({ players: 1, max: maxFor(m.mode), mode: MODE_INFO[m.mode]?.name, world: m.world });
+      if (G.phase === 'waiting') UI.mm.update({ players: 1, max: maxFor(m.mode), mode: MODE_INFO[m.mode]?.name, world: m.world, bots: m.bots !== false });
       break;
     case 'lobby':
       UI.mm.update({ players: m.players.length, max: maxFor(m.mode), startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world, bots: m.bots !== false });
