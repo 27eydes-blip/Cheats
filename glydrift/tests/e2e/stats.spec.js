@@ -22,7 +22,10 @@ async function shortRun(page, first) {
     await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Game", { mode: "normal" }));
   else await page.evaluate(() => window.__glydrift.scene.getScene("GameOver").retry());
   await run(page, 800);
-  await reseed(page);
+  // a different seed per run: the test's seeded Math.random also names Phaser's text textures,
+  // and the same seed twice re-made a name still in use ("Texture key already in use"), so the
+  // second GAME OVER failed to draw (a test-only clash: real players' Math.random isn't seeded)
+  await reseed(page, first ? 12345 : 67890);
   await press(page, await fieldPoint(page));
   await run(page, 100);
   await step(page, 300);
@@ -36,7 +39,21 @@ async function shortRun(page, first) {
     }
     window.__glyGod(true);
   });
-  await settle(page, "GameOver", 300);
+  try {
+    await settle(page, "GameOver", 300);
+  } catch (e) {
+    // say why: which scenes are up, the run's state, anything the page logged
+    const why = await page.evaluate(() => {
+      const g = window.__glydrift;
+      const s = g.scene.getScene("Game");
+      return {
+        active: g.scene.getScenes(true).map((x) => x.sys.settings.key),
+        state: s?.state,
+        dead: s?.player?.dead,
+      };
+    });
+    throw new Error(`${e.message} — ${JSON.stringify(why)}`);
+  }
 }
 
 /** The values the Stats page drew: tile label → shown text, realm id → deaths shown. */

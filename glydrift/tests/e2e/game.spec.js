@@ -2859,13 +2859,20 @@ test("glydrift.com launch: portal pop-up, Founding Drifter reward, LATER returns
   // 4. finished: never again
   await launch();
   expect(await texts()).not.toContain("GLYDRIFT HAS A NEW HOME");
-  // 5. a signed-in player (here: the same one, reward reset): "You're all set!" + LET'S GO
+  // 5. a signed-in player (here: the same one, reward reset on this device AND in the cloud
+  // copy, which the game merges in at launch): "You're all set!" + LET'S GO
   await page.evaluate(() => {
+    const reset = (v) => {
+      v.moveNotice = { shown: 0, done: false };
+      delete v.cos.owned.trail_founder;
+      delete v.titles.owned.t_founder;
+    };
     const v = JSON.parse(localStorage.getItem("glydrift.save.v1"));
-    v.moveNotice = { shown: 0, done: false };
-    delete v.cos.owned.trail_founder;
-    delete v.titles.owned.t_founder;
+    reset(v);
     localStorage.setItem("glydrift.save.v1", JSON.stringify(v));
+    const db = JSON.parse(localStorage.getItem("glydrift.mockserver"));
+    reset(db.users["pilot@example.com"].save);
+    localStorage.setItem("glydrift.mockserver", JSON.stringify(db));
   });
   await launch();
   t = await texts();

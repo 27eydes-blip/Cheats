@@ -25,8 +25,6 @@ import { AllMighty } from "../data/allMighty.js";
 import { Titles } from "../data/titles.js";
 import { Account } from "../online/account.js";
 import { LbReset } from "../online/lbReset.js";
-import { WASP_REFUND_TEXT, WaspRefund } from "../data/waspRefund.js";
-import { WaspBest } from "../data/waspBest.js";
 import { CrashSafety } from "../systems/crashSafety.js";
 import { Updater } from "../systems/updater.js";
 import { isNativeApp, openMail, openSite, SUPPORT_EMAIL } from "../systems/platform.js";
@@ -1058,6 +1056,16 @@ export class MenuScene extends Phaser.Scene {
 
   /** WASP LORD was switched off: his buyers get 55,000 coins back, once, with a short note. */
   async maybeWaspRefund() {
+    // (loaded on demand, so the home screen's own start-up and module order stay as they were)
+    let WaspRefund, WaspBest, WASP_REFUND_TEXT;
+    try {
+      [{ WaspRefund, WASP_REFUND_TEXT }, { WaspBest }] = await Promise.all([
+        import("../data/waspRefund.js"),
+        import("../data/waspBest.js"),
+      ]);
+    } catch {
+      return false; // (a stale copy of the game that can't load them: next launch)
+    }
     // (in the background) a best set with WASP LORD goes back to the best non-Wasp Lord score
     if (WaspBest.pending())
       WaspBest.settle().then((changed) => {
@@ -1069,9 +1077,10 @@ export class MenuScene extends Phaser.Scene {
           this.bestText = null;
         }
       });
-    if (!WaspRefund.pending()) return;
+    // (nothing to show says false, so it doesn't hold up the next pop-up in the queue)
+    if (!WaspRefund.pending()) return false;
     const res = await WaspRefund.settle();
-    if (res !== "paid" || this.leaving || !this.scene.isActive()) return;
+    if (res !== "paid" || this.leaving || !this.scene.isActive()) return false;
     this.coinCounter?.to(Save.data.coins, 800);
     while (!this.popupFree()) {
       await new Promise((r) => this.time.delayedCall(250, r));
