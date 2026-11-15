@@ -11,6 +11,7 @@ import { GuardHooks, guardScenes } from "./systems/frameGuard.js";
 import { ContextGuard } from "./systems/contextGuard.js";
 import { CrashReport } from "./systems/crashReport.js";
 import { installA11y } from "./ui/a11y.js";
+import { installGleydeMark } from "./ui/gleydeMark.js";
 import { CrashSafety } from "./systems/crashSafety.js";
 import { Updater } from "./systems/updater.js";
 import { isNativeApp } from "./systems/platform.js";
@@ -223,6 +224,8 @@ async function boot() {
 
   // VoiceOver: an invisible, labelled button over every game button (ui/a11y.js)
   installA11y(game);
+  // the small Gleyde Technologies mark under the home screen (ui/gleydeMark.js)
+  installGleydeMark(game);
 
   // safe areas (notch / home indicator) converted into logical game units, including any
   // part of the canvas cropped off-screen by ENVELOP scaling

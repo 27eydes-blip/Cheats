@@ -41,6 +41,7 @@ import { claimSeasonTier, DriftPass } from "../data/driftPass.js";
 import { askUsername } from "../ui/nameModal.js";
 import { openStats } from "./StatsScene.js";
 import { openChest, revealHero } from "../ui/reveal.js";
+import { MARK_ROOM } from "../ui/gleydeMark.js";
 import {
   killTweensDeep,
   button,
@@ -739,6 +740,11 @@ export class MenuScene extends Phaser.Scene {
     }
   }
 
+  /** A pop-up, panel or reveal is over the home screen (they all sit at depth 300+). */
+  popupOpen() {
+    return this.sys.displayList.list.some((o) => o.visible && o.depth >= 300 && o.alpha > 0.05);
+  }
+
   // ------------------------------------------------------------------ layout
   /**
    * Centre Y of every home-screen block, top to bottom, with even gaps that fill the screen:
@@ -749,7 +755,10 @@ export class MenuScene extends Phaser.Scene {
     const H = this.H;
     const sb = this.registry.get("safeBottom") || 0;
     const tickerH = 48;
-    const bottom = H - sb - tickerH; // the ticker sits under everything
+    // the small Gleyde mark sits under the ticker (ui/gleydeMark.js): keep its room free
+    const ch = this.game.canvas?.getBoundingClientRect().height || H;
+    const markRoom = Math.ceil((MARK_ROOM * H) / ch);
+    const bottom = H - sb - markRoom - tickerH; // the ticker sits under everything but the mark
     const avail = bottom - top;
     const blocks = [
       ["bar", 70],
@@ -766,7 +775,7 @@ export class MenuScene extends Phaser.Scene {
     const n = blocks.length;
     const gap = Phaser.Math.Clamp((avail - fixed - 240) / n, 8, 34);
     const heroH = Math.max(150, avail - fixed - gap * n);
-    const L = { heroH, ticker: H - sb - tickerH / 2 };
+    const L = { heroH, ticker: H - sb - markRoom - tickerH / 2 };
     let y = top;
     for (const [name, h0] of blocks) {
       const h = name === "hero" ? heroH : h0;
