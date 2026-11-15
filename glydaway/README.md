@@ -117,13 +117,23 @@ Glydaway uses Glydrift's art (source: `glydrift/` on the `feature/levels` branch
 - Three parallax layers per biome (far sky, mid silhouettes, near details), crossfading between biomes, plus a biome banner.
 
 ## Development
-- `?bot=1` starts a run with the autopilot that also plays the attract mode.
+- `?bot=1` starts a run with the autopilot (it no longer plays behind the menu).
 - The best score is kept in `localStorage` (`glydaway.best`); the leaderboard name, sign-in and upload queue use `glydaway.name`, `glydaway.auth` and `glydaway.lbQueue`.
 
 ## Credits
 - Published by **Gleyde Technologies, LLC**
 - Created by **Sam Eyde III**, Founder & CEO
 - Produced by **Juwon Shon**, COO
+
+## Home screen
+An airport at night. It has:
+- your records in a top bar
+- a split-flap departures board showing the next flight, cities reached and the next new city
+- your hero hovering over the runway (tap it for the Locker Room)
+- PLAY, plus Leaderboard, Locker Room and Settings buttons
+- planes taking off every 10–15 s
+
+The first PLAY opens a short hands-on tutorial; **Settings → How to play** shows it again. In landscape the title and hero are on the left and the buttons on the right. See `HOME_REDESIGN.md` for before/after screenshots, and run `node glydaway/tests/home.test.cjs` after changing the home screen.
 
 The publisher credit and the "Created by Sam Eyde III" line appear on the splash screen, the home screen footer (with "Produced by Juwon Shon") and in Settings. Never remove them (`tests/credits.test.mjs` checks this).
 

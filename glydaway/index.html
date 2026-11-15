@@ -232,6 +232,117 @@
     .neon-btn { padding: 12px 48px; } .panel { padding: 14px 18px 16px; } .panel h2 { font-size: 26px; margin-bottom: 8px; }
     .best { margin-top: 10px; } .retry { margin-top: 8px; }
   }
+
+  /* ===================== Home: the airport at night ===================== */
+  :root { --sat: env(safe-area-inset-top, 0px); --sar: env(safe-area-inset-right, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); --amber: #ffb627; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  #startScreen.home {
+    display: grid; align-items: stretch; justify-items: center; text-align: center; gap: 8px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto auto auto;
+    grid-template-areas: "stats" "brand" "hero" "play" "nav" "note" "credit";
+    padding: calc(var(--sat) + 8px) calc(var(--sar) + 14px) calc(var(--sab) + 6px) calc(var(--sal) + 14px);
+    background: radial-gradient(ellipse 130% 90% at 50% 45%, transparent 60%, rgba(2, 1, 7, .4) 100%);
+  }
+  .home > * { min-width: 0; }
+  .home-stats { grid-area: stats; width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .stat-pill { display: flex; align-items: baseline; gap: 6px; padding: 5px 12px; border-radius: 999px; background: rgba(5, 2, 18, .62); border: 1.5px solid rgba(185, 168, 255, .28); font: 700 20px/1 var(--body); color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .stat-pill small { font: 700 10px var(--pixel); letter-spacing: 1px; color: var(--lav); }
+  .stat-pill.coins b { color: #fff4c8; text-shadow: 0 0 8px rgba(255, 200, 61, .8); }
+  .stat-pill.coins .gem { align-self: center; width: 13px; height: 16px; }
+  .stat-pill.dist b { text-shadow: 0 0 8px rgba(62, 244, 255, .8); }
+  .home-brand { grid-area: brand; display: grid; justify-items: center; gap: 6px; }
+  #startScreen.home .logo { position: relative; font-size: clamp(30px, 9vw, 60px); animation: none; text-shadow: 0 0 5px var(--mint), 0 0 16px rgba(125, 255, 200, .7); }
+  #startScreen.home .logo::after { content: attr(data-t); position: absolute; inset: 0; color: transparent; pointer-events: none;
+    text-shadow: 0 0 10px var(--mint), 0 0 28px var(--mint), 0 0 56px rgba(125, 255, 200, .55); opacity: .25; animation: titleGlow 5.5s ease-in-out infinite; }
+  @keyframes titleGlow { 50% { opacity: 1; } }
+  #startScreen.home .tagline { margin: 0; font-size: clamp(12px, 3.2vw, 16px); }
+  /* the departures board (split-flap) */
+  .board { display: flex; align-items: center; gap: 8px; margin-top: 4px; padding: 5px 8px; border-radius: 8px; background: linear-gradient(#0b0912, #050409); border: 1.5px solid rgba(255, 182, 39, .45); box-shadow: 0 0 14px rgba(255, 182, 39, .18), inset 0 0 10px rgba(0, 0, 0, .8); max-width: 100%; }
+  .board-k { font: 700 9px/1.1 var(--pixel); letter-spacing: 1px; color: var(--amber); width: 7.2em; text-align: left; transition: opacity .2s; }
+  .board-v { display: flex; gap: 2px; }
+  .board-v i { position: relative; display: block; width: clamp(13px, 3.9vw, 19px); height: clamp(19px, 5.4vw, 26px); border-radius: 2px; background: linear-gradient(#232030 0 49%, #08070d 49% 51%, #1a1724 51%); font: 700 clamp(11px, 3.3vw, 16px)/clamp(19px, 5.4vw, 26px) var(--pixel); font-style: normal; color: #ffe9b0; text-shadow: 0 0 6px rgba(255, 182, 39, .7); text-align: center; }
+  /* the hero, hovering over the runway (the canvas puts the runway right under .home-hero's bottom edge) */
+  .home-hero { grid-area: hero; position: relative; width: 100%; min-height: 72px; }
+  .hero-pad { position: absolute; left: 50%; bottom: 0; width: calc(var(--hs, 110px) * .9); height: 14px; margin-left: calc(var(--hs, 110px) * -.45); border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(62, 244, 255, .45), rgba(62, 244, 255, .12) 60%, transparent); animation: padPulse 2.6s ease-in-out infinite; }
+  @keyframes padPulse { 50% { transform: scaleX(.78); opacity: .7; } }
+  .hero-btn { position: absolute; left: 50%; bottom: 14px; width: var(--hs, 110px); height: var(--hs, 110px); margin-left: calc(var(--hs, 110px) / -2); padding: 0; border: 0; background: none; cursor: pointer; touch-action: manipulation; border-radius: 22%; }
+  .hero-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .hero-float { display: block; width: 100%; height: 100%; animation: hover 2.6s ease-in-out infinite; }
+  @keyframes hover { 50% { transform: translateY(-9%); } }
+  #heroCv { display: block; width: 100%; height: 100%; image-rendering: pixelated; transform-origin: 0 0; }
+  .home-play { grid-area: play; animation: playPulse 2.4s ease-in-out infinite; }
+  @keyframes playPulse { 50% { transform: scale(1.04); } }
+  #startScreen.home #playBtn { font-size: clamp(26px, 8vw, 36px); padding: 13px 0; width: min(300px, 78vw); border-radius: 20px; }
+  .home-nav { grid-area: nav; width: min(420px, 100%); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .nav-btn { display: grid; justify-items: center; align-content: center; gap: 5px; min-height: 58px; padding: 8px 4px 7px; border-radius: 14px; cursor: pointer; touch-action: manipulation;
+    color: #fff; background: linear-gradient(rgba(14, 10, 32, .9), rgba(6, 4, 16, .92)); border: 2px solid var(--c); box-shadow: 0 0 10px color-mix(in srgb, var(--c) 45%, transparent), inset 0 0 10px color-mix(in srgb, var(--c) 18%, transparent); }
+  .nav-btn svg { width: 22px; height: 22px; color: var(--c); filter: drop-shadow(0 0 4px var(--c)); }
+  .nav-btn span { font: 700 clamp(9px, 2.6vw, 11px)/1.1 var(--pixel); letter-spacing: .5px; overflow-wrap: anywhere; text-shadow: 0 0 6px var(--c); }
+  .nav-btn.cyan { --c: var(--cyan); } .nav-btn.gold { --c: var(--gold); } .nav-btn.purple { --c: var(--purple); }
+  .nav-btn:active { transform: scale(.95); }
+  .nav-btn:focus-visible, #playBtn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+  .home-note { grid-area: note; }
+  .home-note[hidden] { display: none; }
+  #startScreen.home .hint { margin: 0; }
+  .kb-hint { display: none; } body.has-kb #startScreen .kb-hint { display: block; }
+  .side-tip { display: none; } .side-tip.show { display: block; animation: tipIn .5s ease-out 3.2s both; } .side-tip.done { opacity: 0; transition: opacity .8s; }
+  @keyframes tipIn { from { opacity: 0; transform: translateY(6px); } }
+  #startScreen.home .credit-foot { grid-area: credit; position: static; padding: 0; font-size: 11.5px; color: rgba(225, 218, 255, .72); line-height: 1.3; }
+  /* pressing PLAY: everything but the hero fades while it dashes off down the runway */
+  .home.launching > :not(.home-hero), .home.launching .hero-pad { opacity: 0; transition: opacity .22s; pointer-events: none; }
+  .home.launching .hero-float, .home.launching .home-play { animation: none; }
+  /* landscape: title + hero on the left, PLAY + buttons on the right, both below the runway line */
+  @media (orientation: landscape) {
+    #startScreen.home {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 18px; row-gap: 8px;
+      grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+      grid-template-areas: "brand stats" "hero ." "note play" "note nav" "credit credit";
+    }
+    .home-stats { align-self: start; justify-content: flex-end; }
+    #startScreen.home .logo { font-size: clamp(28px, min(9vh, 6vw), 64px); }
+    .home-note { align-self: center; }
+    #startScreen.home #playBtn { width: min(340px, 100%); font-size: clamp(26px, 5.5vh, 44px); }
+    .board-v i { width: clamp(11px, 2.05vw, 22px); height: clamp(17px, 3.1vw, 30px); font-size: clamp(10px, 1.75vw, 18px); line-height: clamp(17px, 3.1vw, 30px); }
+    .home-nav { width: min(460px, 100%); }
+  }
+  @media (orientation: landscape) and (max-height: 500px) {
+    #startScreen.home { row-gap: 6px; padding-top: calc(var(--sat) + 6px); }
+    .home-brand { gap: 3px; } .board { margin-top: 2px; padding: 3px 6px; }
+    #startScreen.home #playBtn { padding: 10px 0; font-size: 28px; }
+    .nav-btn { min-height: 48px; padding: 5px 3px; gap: 3px; } .nav-btn svg { width: 18px; height: 18px; } .nav-btn span { font-size: 9px; letter-spacing: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #startScreen.home .logo::after, .home-play, .hero-float, .hero-pad { animation: none; }
+  }
+  /* ----- How to play ----- */
+  #tutScreen { background: rgba(2, 1, 7, .86); z-index: 5; }
+  .tut { width: min(440px, 100%); max-height: 100%; overflow: auto; }
+  .tut h2 { font-size: 28px; }
+  .tut-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 8px; }
+  .tut-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(185, 168, 255, .3); }
+  .tut-dots i.on { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+  .tut-dots i.done { background: var(--green); }
+  .tut-stage { position: relative; height: 150px; border-radius: 16px; overflow: hidden; cursor: pointer; touch-action: none;
+    background: linear-gradient(#120a2e, #1d1046 70%, #0c0820); border: 2px solid rgba(62, 244, 255, .35); }
+  .tut-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 26px; background: repeating-linear-gradient(90deg, #2a2e40 0 30px, #22263a 30px 34px); border-top: 2px solid #3a8aff; }
+  .tut-roof { position: absolute; left: 0; right: 0; top: 0; height: 18px; background: repeating-linear-gradient(90deg, #6a2aa8 0 14px, #c04bff 14px 18px); box-shadow: 0 0 12px #c04bff; opacity: 0; transition: opacity .3s; }
+  .tut-stage.flipzone .tut-roof { opacity: 1; }
+  .tut-hero { position: absolute; left: calc(50% - 32px); bottom: 26px; width: 64px; height: 64px; image-rendering: pixelated; transition: transform .25s ease-out; pointer-events: none; }
+  .tut-hero.jump { animation: tJump .55s cubic-bezier(.3, .8, .4, 1); }
+  @keyframes tJump { 45% { transform: translateY(-62px); } }
+  .tut-hero.glide { transform: translateY(-58px) rotate(-6deg); transition: transform .35s ease-out; }
+  .tut-hero.flipped { transform: translateY(-88px) scaleY(-1); transition: transform .3s ease-in-out; }
+  .tut-pus { position: absolute; inset: 0 0 26px; display: none; flex-wrap: wrap; gap: 6px; align-content: center; justify-content: center; padding: 8px; background: rgba(8, 4, 24, .55); }
+  .tut-stage.pus .tut-pus { display: flex; } .tut-stage.pus .tut-hero { opacity: .25; }
+  .tut-ok { position: absolute; top: 12px; right: 14px; font: 700 14px var(--pixel); color: var(--green); text-shadow: 0 0 8px var(--green); opacity: 0; transform: scale(.6); transition: opacity .2s, transform .25s cubic-bezier(.2, 1.6, .4, 1); }
+  .tut-ok.show { opacity: 1; transform: scale(1); }
+  .tut-say { margin: 12px 0 2px; font: 700 20px var(--body); color: #fff; }
+  .tut-say b { font: 700 16px var(--pixel); color: var(--cyan); letter-spacing: 1px; margin-right: 4px; }
+  .tut-sub { margin: 0; min-height: 18px; font: 600 14px var(--body); color: var(--lav); }
+  .tut-row { margin-top: 12px; align-items: center; }
+  @media (max-height: 430px) { .tut-stage { height: 110px; } .tut h2 { font-size: 22px; } .tut-say { margin-top: 6px; } .tut-row { margin-top: 6px; } }
 </style>
 </head>
 <body>
@@ -249,25 +360,56 @@
 
   <div id="banner"><div class="k">ENTERING</div><div class="n" id="bannerName"></div></div>
 
-  <div class="screen show" id="startScreen">
-    <h1 class="logo">GLYDAWAY</h1>
-    <div class="tagline">GLIDE AWAY, CITY TO CITY</div>
-    <div class="chips">
-      <span class="chip"><b>TAP</b>jump</span>
-      <span class="chip"><b>HOLD</b>glide</span>
-      <span class="chip"><b>2× TAP</b>flip gravity</span>
+  <div class="screen show home" id="startScreen">
+    <div class="home-stats" aria-label="Your records">
+      <div class="stat-pill coins" title="Most coins in one run"><span class="gem" aria-hidden="true"></span><b id="homeCoins">0</b><small>MOST COINS</small></div>
+      <div class="stat-pill dist" title="Best distance"><small>BEST</small><b id="homeBest">0</b><small>m</small></div>
     </div>
-    <div class="chips pu-tips">
-      <span class="chip"><i style="--c:#ffc83d"></i><b>MAGNET</b>pulls coins</span>
-      <span class="chip"><i style="--c:#3ef4ff"></i><b>SHIELD</b>saves a crash</span>
-      <span class="chip"><i style="--c:#7dffc8"></i><b>BOOST</b>fly fast</span>
+    <div class="home-brand">
+      <h1 class="logo" data-t="GLYDAWAY">GLYDAWAY</h1>
+      <div class="tagline">GLIDE AWAY, CITY TO CITY</div>
+      <div class="board" id="board" aria-label="Departures board">
+        <div class="board-k" id="boardK">NEXT FLIGHT</div>
+        <div class="board-v" id="boardV" aria-hidden="true"></div>
+        <span class="sr" id="boardSr" aria-live="polite"></span>
+      </div>
     </div>
-    <button class="neon-btn" id="playBtn">PLAY</button>
-    <div class="best" id="startBest"></div>
-    <div class="row"><button class="neon-btn small cyan" id="lbBtn1">LEADERBOARD</button><button class="neon-btn small gold" id="skinBtn">LOCKER ROOM</button><button class="neon-btn small purple" id="setBtn1">SETTINGS</button></div>
-    <div class="hint">Space / ↑ jump · hold to glide · P pause</div>
-    <div class="hint portrait-tip">Turn your phone sideways to see further ahead</div>
+    <div class="home-hero" id="homeHero">
+      <div class="hero-pad" aria-hidden="true"></div>
+      <button type="button" class="hero-btn" id="heroBtn" aria-label="Your hero. Open the Locker Room"><span class="hero-float"><canvas id="heroCv" width="104" height="104"></canvas></span></button>
+    </div>
+    <div class="home-play"><button class="neon-btn" id="playBtn">PLAY</button></div>
+    <nav class="home-nav" aria-label="Menu">
+      <button type="button" class="nav-btn cyan" id="lbBtn1"><svg viewBox="0 0 12 12" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M3 1h6v4H8v1H4V5H3zM1 2h2v1H2v2h1v1H2V5H1zM9 2h2v3h-1v1H9V5h1V3H9zM5 6h2v2H5zM3 8h6v1H3zM2 9h8v2H2z"/></svg><span>LEADERBOARD</span></button>
+      <button type="button" class="nav-btn gold" id="skinBtn"><svg viewBox="0 0 12 12" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M3 1h2v1h2V1h2v1h2v3H9v6H3V5H1V2h2z"/></svg><span>LOCKER ROOM</span></button>
+      <button type="button" class="nav-btn purple" id="setBtn1"><svg viewBox="0 0 12 12" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" fill-rule="evenodd" d="M5 0h2v2H5zM5 10h2v2H5zM0 5h2v2H0zM10 5h2v2h-2zM2 2h2v2H2zM8 2h2v2H8zM2 8h2v2H2zM8 8h2v2H8zM3 3h6v6H3zM5 5v2h2V5z"/></svg><span>SETTINGS</span></button>
+    </nav>
+    <div class="home-note">
+      <div class="hint kb-hint">Space / ↑ jump · hold to glide · P pause</div>
+      <div class="hint side-tip" id="sideTip">Turn your phone sideways to see further ahead</div>
+    </div>
     <div class="credit-foot"><span>Gleyde Technologies, LLC</span> · <span>Created by Sam Eyde III</span> · <span>Produced by Juwon Shon</span></div>
+  </div>
+
+  <div class="screen" id="tutScreen" role="dialog" aria-modal="true" aria-labelledby="tutTitle">
+    <div class="panel tut">
+      <div class="tut-dots" id="tutDots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <h2 id="tutTitle">HOW TO FLY</h2>
+      <div class="tut-stage" id="tutStage" aria-describedby="tutSay">
+        <div class="tut-roof"></div>
+        <img class="tut-hero" id="tutHero" alt="" draggable="false">
+        <div class="tut-ground"></div>
+        <div class="tut-pus" id="tutPus">
+          <span class="chip"><i style="--c:#ffc83d"></i><b>MAGNET</b>pulls coins</span>
+          <span class="chip"><i style="--c:#3ef4ff"></i><b>SHIELD</b>saves a crash</span>
+          <span class="chip"><i style="--c:#7dffc8"></i><b>BOOST</b>fly fast</span>
+        </div>
+        <div class="tut-ok" id="tutOk" aria-hidden="true">NICE!</div>
+      </div>
+      <p class="tut-say" id="tutSay" aria-live="polite"></p>
+      <p class="tut-sub" id="tutSub"></p>
+      <div class="row tut-row"><button class="linkish" type="button" id="tutSkip">Skip</button><button class="neon-btn small" type="button" id="tutNext" hidden>LET'S FLY</button></div>
+    </div>
   </div>
 
   <div class="screen" id="pauseScreen">
@@ -303,7 +445,7 @@
       </div>
       <div class="hint" id="muteNote"></div>
       <div class="credits" id="credits">Published by <b>Gleyde Technologies, LLC</b><br>Created by <b>Sam Eyde III</b>, Founder &amp; CEO<br>Produced by <b>Juwon Shon</b>, COO<br>© 2026 Gleyde Technologies, LLC. All rights reserved.</div>
-      <div class="row" style="margin-top:10px"><button class="neon-btn small cyan" type="button" id="setClose">BACK</button></div>
+      <div class="row" style="margin-top:10px"><button class="neon-btn small gold" type="button" id="howBtn">HOW TO PLAY</button><button class="neon-btn small cyan" type="button" id="setClose">BACK</button></div>
     </div>
   </div>
 
@@ -1191,6 +1333,7 @@ const sfx = {
   slam() { noise(0.18, 0.12, 900, 120, 'lowpass'); tone('sine', 110, 50, 0.16, 0.08); },
   crack() { noise(0.12, 0.05, 4000, 1500, 'highpass'); tone('triangle', 1800, 900, 0.1, 0.03); },
   thunk() { noise(0.1, 0.07, 1200, 300, 'lowpass'); tone('sine', 220, 90, 0.1, 0.05); },
+  takeoff() { noise(0.7, 0.07, 300, 2600); tone('sawtooth', 110, 420, 0.6, 0.025); tone('triangle', 520, 1040, 0.35, 0.03, 0.2); },
   biome() { [0, 4, 7, 12].forEach((s, i) => { const f = 523 * Math.pow(2, s / 12); tone('triangle', f, f, 0.22, 0.05, i * 0.08); }); },
 };
 
@@ -1749,12 +1892,18 @@ function dust(x, n, k = 1, roof = false) {
 // =====================================================================================
 //  Flow
 // =====================================================================================
-const screens = { start: $('startScreen'), pause: $('pauseScreen'), over: $('overScreen'), lb: $('lbScreen'), set: $('setScreen'), skin: $('skinScreen') };
-function showScreen(name) { for (const k in screens) screens[k].classList.toggle('show', k === name); }
-function updateStartBest() { $('startBest').textContent = best.m > 0 ? `BEST ${best.m} m · ${best.coins} coins` : ''; }
+const screens = { start: $('startScreen'), pause: $('pauseScreen'), over: $('overScreen'), lb: $('lbScreen'), set: $('setScreen'), skin: $('skinScreen'), tut: $('tutScreen') };
+function showScreen(name) { for (const k in screens) screens[k].classList.toggle('show', k === name); if (name === 'start') layoutHome(); }
+function updateStartBest() { updateHome(); }
 
-function goMenu() { S.mode = 'menu'; resetWorld(MENU_SPEED); showScreen('start'); $('hud').classList.remove('show'); updateStartBest(); if (actx) { Music.stop(0.05); Music.play('menu'); } }
+function goMenu() {
+  S.mode = 'menu'; resetWorld(MENU_SPEED); S.dist = -TAKEOFF_D; S.speed = 0; // parked at the start of the runway
+  home.launching = false; home.camT = 1; screens.start.classList.remove('launching');
+  showScreen('start'); $('hud').classList.remove('show'); updateStartBest(); layoutHome();
+  if (actx) { Music.stop(0.05); Music.play('menu'); }
+}
 function startGame() {
+  home.launching = false; home.camT = 0;
   setTimeout(() => { if (S.mode === 'play') unlockSkin(BIOMES[FIRST_LAP[0]].id); }, 900); // reaching the first stop
   audio();
   resetWorld(SPEED0); S.mode = 'play';
@@ -2001,6 +2150,242 @@ $('lbNameForm').addEventListener('submit', async e => {
   await LB.rename(n); loadBoard();
 });
 
+
+// =====================================================================================
+//  Home screen: the airport at night (departures board, the hero over the runway, planes
+//  taking off, runway lights, windsock). Pressing PLAY runs the hero down the runway into the run.
+// =====================================================================================
+const TAKEOFF_T = 0.62, TAKEOFF_D = SPEED0 * TAKEOFF_T / 2; // the runway speeds up to run speed exactly as the run starts
+const PLANE_T = 7.5;
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const home = { offY: 0, camT: 1, launching: false, lt: 0, plane: null, nextPlane: 3.5, heroF: -1, heroSpr: null, heroT: 0, boardT: 3, boardI: -1, stars: [] };
+{ const r = seeded(77); for (let i = 0; i < 28; i++) home.stars.push({ x: r(), y: r(), s: r() < 0.25 ? 2.4 : 1.4, sp: 0.6 + r() * 1.8, ph: r() * 6.28 }); }
+const heroCv = $('heroCv'), heroCtx = heroCv.getContext('2d');
+
+// Puts the runway under the hero's spot in the layout, and sizes the hero (3x its in-game size, as room allows).
+function layoutHome() {
+  if (!screens.start.classList.contains('show') || home.launching) return;
+  const area = $('homeHero').getBoundingClientRect();
+  if (!area.height) return;
+  const inGame = 26 * HERO_ART * view.scale;
+  const hs = Math.max(56, Math.floor(Math.min(inGame * 3, area.height - 22, area.width * 0.9)));
+  screens.start.style.setProperty('--hs', hs + 'px');
+  home.offY = area.bottom / view.scale - GROUND;
+}
+function updateHome() {
+  $('homeCoins').textContent = best.coins.toLocaleString('en-US');
+  $('homeBest').textContent = best.m.toLocaleString('en-US');
+  home.boardI = -1; home.boardT = 0; // refresh the board now
+}
+// ---- departures board ----
+const BOARD_N = 14, FLAPS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const boardCells = Array.from({ length: BOARD_N }, () => { const i = document.createElement('i'); i.textContent = ' '; $('boardV').append(i); return i; });
+function boardMessages() {
+  const route = FIRST_LAP.map(i => BIOMES[i]);
+  const reached = route.filter(b => skinsOwned.has(b.id)).length; // cities unlock as a run reaches them
+  const fresh = route.find(b => !skinsOwned.has(b.id));
+  const m = [['NEXT FLIGHT', route[1].name]]; // every trip leaves the airport for the first city
+  m.push(['CITIES REACHED', `${reached} OF ${route.length}`]);
+  if (reached && fresh) m.push(['NEXT NEW CITY', fresh.name]);
+  return m;
+}
+function flipBoard(label, text) {
+  $('boardK').textContent = label; $('boardSr').textContent = `${label}: ${text}`;
+  const pad = Math.max(0, Math.floor((BOARD_N - text.length) / 2)), t = (' '.repeat(pad) + text).padEnd(BOARD_N).slice(0, BOARD_N);
+  boardCells.forEach((c, i) => {
+    clearTimeout(c._t); const want = t[i];
+    if (c.textContent === want) return;
+    if (calm()) { c.textContent = want; return; }
+    let n = 2 + ((i * 7) % 4);
+    const tick = () => {
+      c.textContent = n-- > 0 ? FLAPS[Math.floor(Math.random() * FLAPS.length)] : want;
+      if (c.animate) c.animate([{ transform: 'scaleY(1)' }, { transform: 'scaleY(.15)' }, { transform: 'scaleY(1)' }], { duration: 90 });
+      if (n >= 0) c._t = setTimeout(tick, 70);
+    };
+    c._t = setTimeout(tick, i * 30);
+  });
+}
+// ---- the hero over the runway (a little canvas, redrawn only when its frame changes) ----
+function drawHomeHero(dt) {
+  home.heroT += dt;
+  const f = home.launching ? Math.floor(home.heroT * 14) % 3 : Math.floor(home.heroT * 3.2) % 2; // gliding wings / running
+  if (f === home.heroF && SPR_VOLT === home.heroSpr) return;
+  const src = SPR_VOLT[f];
+  if (heroCv.width !== src.width) { heroCv.width = src.width; heroCv.height = src.height; }
+  heroCtx.clearRect(0, 0, heroCv.width, heroCv.height); heroCtx.drawImage(src, 0, 0);
+  home.heroF = f; home.heroSpr = SPR_VOLT;
+}
+function menuStep(dt) {
+  S.time += dt;
+  if (home.launching) {
+    home.lt += dt; const k = Math.min(1, home.lt / TAKEOFF_T);
+    S.speed = SPEED0 * k; S.dist = -TAKEOFF_D + TAKEOFF_D * k * k; // ends at 0 at run speed: the run carries straight on
+    home.camT = 1 - k * k * (3 - 2 * k);
+    if (Math.random() < dt * 40) emit(S.dist + S.bx + rand(-10, 30), GROUND - rand(1, 6), -rand(60, 160), -rand(10, 60), 0.4, rand(2, 4), 'rgba(200,210,255,0.6)', 0, 120);
+    if (k >= 1) { startGame(); setTimeout(() => { screens.start.classList.remove('launching'); heroCv.getAnimations?.().forEach(a => a.cancel()); }, 260); }
+  }
+  if (!screens.start.classList.contains('show')) return;
+  drawHomeHero(dt);
+  // a plane takes off every 10-15 s
+  if (home.plane) { home.plane.t += dt; if (home.plane.t > PLANE_T) home.plane = null; }
+  else if ((home.nextPlane -= dt) <= 0 && !calm()) { home.plane = { t: 0 }; home.nextPlane = rand(10, 15) - PLANE_T; }
+  // the board flips to its next line every few seconds
+  if ((home.boardT -= dt) <= 0) {
+    const m = boardMessages(); home.boardI = (home.boardI + 1) % m.length; home.boardT = 4.5;
+    flipBoard(m[home.boardI][0], m[home.boardI][1]);
+  }
+}
+let planeArt = null;
+function makePlane() { // a little night airliner, facing right (1 art px = 1.4 units)
+  const pc = new PixelCanvas(56, 20), W = 0xe6ebf5, Ws = 0xaab4c8, D = 0x5a6478, B = 0x2a6ad8, G = 0x1a2030;
+  pc.rect(6, 8, 44, 6, W); pc.rect(8, 13, 40, 2, Ws); pc.rect(46, 9, 4, 4, W); pc.set(50, 10, W).set(50, 11, W).set(51, 11, Ws); // fuselage + nose
+  pc.rect(47, 9, 2, 1, G); pc.rect(4, 2, 6, 7, W); pc.rect(6, 1, 3, 1, W); pc.rect(5, 3, 4, 4, B); // cockpit, tail fin + livery
+  pc.rect(2, 9, 6, 2, Ws); pc.rect(20, 12, 16, 2, D); pc.rect(24, 14, 8, 2, D); pc.rect(25, 15, 6, 3, Ws); // tailplane, wing, engine
+  for (let x = 12; x < 44; x += 3) pc.set(x, 10, 0xffe9a0); // window lights
+  pc.rect(6, 12, 44, 1, B);
+  pc.set(14, 16, G).set(14, 17, G).set(38, 16, G).set(38, 17, G); // landing gear
+  return pc.toCanvas(1);
+}
+function drawHomeScene() {
+  const t = S.time, cm = calm();
+  // twinkling stars
+  ctx.fillStyle = '#ffffff';
+  for (const st of home.stars) {
+    const y = view.top + 12 + st.y * (GROUND - 150 - view.top);
+    if (y > GROUND - 140) continue;
+    ctx.globalAlpha = cm ? 0.7 : 0.25 + 0.75 * Math.abs(Math.sin(t * st.sp + st.ph));
+    const x = st.x * view.w; ctx.fillRect(x - st.s / 2, y - st.s / 2, st.s, st.s);
+    if (st.s > 2) { ctx.globalAlpha *= 0.5; ctx.fillRect(x - 0.5, y - st.s * 1.6, 1, st.s * 3.2); ctx.fillRect(x - st.s * 1.6, y - 0.5, st.s * 3.2, 1); }
+  }
+  ctx.globalAlpha = 1;
+  // a plane taking off down the runway
+  if (home.plane) {
+    planeArt = planeArt || makePlane();
+    const pt = home.plane.t, a = 2 * (view.w + 220) / (PLANE_T * PLANE_T), x = -110 + a * pt * pt / 2, lift = view.w * 0.42;
+    const up = Math.max(0, x - lift), y = GROUND - 2 - up * 0.3, rot = -Math.min(0.26, up * 0.004), sc = 1.4;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    if (up < 30) { ctx.globalAlpha = 0.16; ctx.fillStyle = '#fff6c8'; ctx.beginPath(); ctx.moveTo(70, -6); ctx.lineTo(170, -16); ctx.lineTo(170, 6); ctx.fill(); ctx.globalAlpha = 1; } // landing light
+    ctx.drawImage(planeArt, -40, -28, 56 * sc, 20 * sc);
+    if (Math.floor(t * 2.5) % 2) { ctx.fillStyle = '#ff2a3d'; ctx.fillRect(-32, -27, 3, 3); }
+    if (Math.floor(t * 1.7) % 3 === 0) { ctx.fillStyle = '#ffffff'; ctx.fillRect(10, -7, 3, 2); }
+    ctx.restore();
+  }
+  // runway lights blinking in sequence (a chase toward the end of the runway)
+  const gap = 22, n = Math.ceil(view.w / gap) + 1, head = (t * 9) % (n + 6);
+  for (let i = 0; i < n; i++) {
+    const x = 6 + i * gap, d = head - i, lit = cm ? 0.6 : d >= 0 && d < 4 ? 1 - d / 4 : 0.15;
+    ctx.globalAlpha = 0.25 * lit; ctx.fillStyle = '#ffd36a'; ctx.fillRect(x - 5, GROUND + 1, 13, 5);
+    ctx.globalAlpha = 0.35 + 0.65 * lit; ctx.fillStyle = lit > 0.5 ? '#fff4c8' : '#ffb627'; ctx.fillRect(x, GROUND + 2, 3, 2);
+  }
+  ctx.globalAlpha = 1;
+  // the windsock, swinging in the wind
+  const wx = view.w - 30, wy = GROUND - 44;
+  ctx.fillStyle = '#3a4058'; ctx.fillRect(wx - 1, wy, 2, 44); ctx.fillStyle = '#ff2a3d'; ctx.fillRect(wx - 1.5, wy - 2, 3, 3);
+  const ang = cm ? 0.25 : 0.25 + Math.sin(t * 0.8) * 0.18 + Math.sin(t * 2.3) * 0.06;
+  ctx.save(); ctx.translate(wx, wy + 1);
+  for (let i = 0; i < 5; i++) {
+    const r = ang + (cm ? 0 : Math.sin(t * 5 + i * 0.9) * 0.05 * i), sx = -Math.cos(r) * i * 6, sy = Math.sin(r) * i * 6 + i * 0.6;
+    ctx.fillStyle = i % 2 ? '#ffffff' : '#ff6a1a'; ctx.fillRect(sx - 6, sy - (6 - i) / 2, 6.5, 6 - i * 0.8);
+  }
+  ctx.restore();
+  // speed streaks while the hero takes off
+  if (home.launching) {
+    ctx.globalAlpha = 0.35 * (1 - home.camT); ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 7; i++) { const y = GROUND - 12 - ((i * 37) % 120), x = (view.w - ((t * 900 + i * 173) % (view.w + 80))); ctx.fillRect(x, y, 26, 1.5); }
+    ctx.globalAlpha = 1;
+  }
+}
+// ---- PLAY: the first time, the tutorial; then the hero dashes down the runway into the run ----
+function launch() {
+  if (S.mode !== 'menu' || home.launching || !screens.start.classList.contains('show')) return;
+  audio();
+  if (!store.get('tutDone', false) && !BOT_PLAY) { openTutorial('play'); return; }
+  if (calm()) { startGame(); return; }
+  home.launching = true; home.lt = 0; home.heroT = 0;
+  screens.start.classList.add('launching');
+  const r = heroCv.getBoundingClientRect(), sc = view.scale, w = 26 * HERO_ART * sc, bx = Math.min(120, view.w * 0.2);
+  const tx = (bx - 26 * HERO_ART / 2 - 2) * sc, ty = (GROUND - 25 * HERO_ART + view.offY) * sc;
+  if (heroCv.animate) heroCv.animate([{ transform: 'none' }, { transform: `translate(${tx - r.left}px, ${ty - r.top}px) scale(${w / r.width})` }],
+    { duration: TAKEOFF_T * 1000, easing: 'cubic-bezier(.45,0,.25,1)', fill: 'forwards' });
+  sfx.takeoff();
+}
+$('heroBtn').addEventListener('click', () => { audio(); renderSkins(); showScreen('skin'); });
+// ---- keyboard hint: only where there's a keyboard ----
+let kbUsed = false;
+const kbQ = matchMedia('(any-hover: hover) and (any-pointer: fine)');
+function noteRow() { const n = document.querySelector('.home-note'); n.hidden = !(document.body.classList.contains('has-kb') || $('sideTip').classList.contains('show')); layoutHome(); }
+function setKb() { document.body.classList.toggle('has-kb', kbUsed || kbQ.matches); noteRow(); }
+kbQ.addEventListener?.('change', setKb);
+window.addEventListener('keydown', () => { if (!kbUsed) { kbUsed = true; setKb(); } }, { capture: true });
+// ---- "turn your phone sideways": once, on the very first launch ----
+if (!store.get('sidewaysTold', false)) {
+  store.set('sidewaysTold', true);
+  if (matchMedia('(orientation: portrait) and (max-width: 600px)').matches) { $('sideTip').classList.add('show'); setTimeout(() => $('sideTip').classList.add('done'), 11000); }
+}
+setKb();
+if (window.ResizeObserver) new ResizeObserver(() => layoutHome()).observe(screens.start);
+window.addEventListener('resize', () => requestAnimationFrame(layoutHome));
+document.fonts?.ready.then(layoutHome);
+
+// =====================================================================================
+//  How to play: a short hands-on tutorial (first PLAY ever, and Settings > How to play)
+// =====================================================================================
+const TUT = [
+  { say: '<b>TAP</b> to jump', sub: 'Try it: tap the runway above', want: 'tap' },
+  { say: '<b>HOLD</b> to glide', sub: 'In the air, keep holding to float over gaps', want: 'hold' },
+  { say: '<b>2× TAP</b> to flip gravity', sub: 'Only in flip zones, under the purple roof track', want: 'double' },
+  { say: 'Grab <b>POWER-UPS</b>', sub: 'They float over the runway between hazards', want: 'done' },
+];
+const tut = { i: 0, from: 'play', downAt: 0, lastTap: -1, holdT: 0, busy: false };
+function openTutorial(from) {
+  tut.from = from; tut.i = 0; tut.busy = false;
+  $('tutHero').src = skinPreview(skinNow, false);
+  showScreen('tut'); tutStep(); setTimeout(() => $('tutStage').focus?.(), 50);
+}
+function tutStep() {
+  const st = TUT[tut.i], stage = $('tutStage'), hero = $('tutHero');
+  $('tutSay').innerHTML = st.say; $('tutSub').textContent = st.sub;
+  [...$('tutDots').children].forEach((d, i) => { d.className = i < tut.i ? 'done' : i === tut.i ? 'on' : ''; });
+  stage.classList.toggle('flipzone', st.want === 'double'); stage.classList.toggle('pus', st.want === 'done');
+  hero.className = 'tut-hero';
+  $('tutNext').hidden = st.want !== 'done'; $('tutNext').textContent = tut.from === 'play' ? "LET'S FLY" : 'GOT IT';
+  $('tutSkip').hidden = st.want === 'done';
+  if (st.want === 'done') setTimeout(() => $('tutNext').focus(), 30);
+}
+function tutPass() {
+  if (tut.busy) return; tut.busy = true;
+  sfx.best(); $('tutOk').classList.add('show');
+  setTimeout(() => { $('tutOk').classList.remove('show'); tut.i++; tut.busy = false; tutStep(); }, 900);
+}
+function tutDown() {
+  const st = TUT[tut.i]; if (tut.busy || st.want === 'done') return;
+  tut.downAt = performance.now(); audio();
+  if (st.want === 'hold') { clearTimeout(tut.holdT); tut.holdT = setTimeout(() => { $('tutHero').classList.add('glide'); sfx.glide(); }, 160); }
+}
+function tutUp() {
+  const st = TUT[tut.i]; if (tut.busy || !tut.downAt) return;
+  const now = performance.now(), held = now - tut.downAt; tut.downAt = 0; clearTimeout(tut.holdT);
+  const hero = $('tutHero');
+  if (st.want === 'tap') { hero.classList.remove('jump'); void hero.offsetWidth; hero.classList.add('jump'); sfx.jump(); if (held < 400) tutPass(); }
+  else if (st.want === 'hold') { hero.classList.remove('glide'); if (held >= 450) tutPass(); else { $('tutSub').textContent = 'Keep holding a little longer'; sfx.jump(); } }
+  else if (st.want === 'double') {
+    if (now - tut.lastTap < FLIP_DOUBLE * 1000 + 80) { tut.lastTap = -1; hero.classList.add('flipped'); sfx.flip(); setTimeout(() => hero.classList.remove('flipped'), 650); tutPass(); }
+    else { tut.lastTap = now; hero.classList.remove('jump'); void hero.offsetWidth; hero.classList.add('jump'); sfx.jump(); }
+  }
+}
+function closeTutorial() {
+  store.set('tutDone', true); clearTimeout(tut.holdT);
+  if (tut.from === 'play') { showScreen('start'); launch(); } else showScreen('set');
+}
+$('tutStage').tabIndex = 0;
+$('tutStage').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); try { $('tutStage').setPointerCapture(e.pointerId); } catch (_) {} tutDown(); });
+$('tutStage').addEventListener('pointerup', tutUp);
+$('tutStage').addEventListener('pointercancel', () => { tut.downAt = 0; clearTimeout(tut.holdT); $('tutHero').classList.remove('glide'); });
+screens.tut.addEventListener('pointerdown', e => e.stopPropagation());
+$('tutSkip').addEventListener('click', closeTutorial);
+$('tutNext').addEventListener('click', closeTutorial);
+$('howBtn').addEventListener('click', () => openTutorial('settings'));
+
 // =====================================================================================
 //  Input
 // =====================================================================================
@@ -2009,7 +2394,7 @@ $('lbNameForm').addEventListener('submit', async e => {
 const RETRY_LOCK = 0.6;
 const canRetry = () => S.mode === 'over' && performance.now() - S.overAt > RETRY_LOCK * 1000;
 function press() {
-  if (S.mode === 'menu') { startGame(); return; }
+  if (S.mode === 'menu') { launch(); return; }
   if (S.mode === 'dying' || S.mode === 'over') { if (canRetry()) startGame(); return; }
   if (S.mode === 'play') {
     const b = S.bird;
@@ -2028,7 +2413,7 @@ canvas.addEventListener('pointerup', release);
 canvas.addEventListener('pointercancel', release);
 canvas.addEventListener('lostpointercapture', release);
 canvas.addEventListener('contextmenu', e => e.preventDefault());
-screens.start.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; e.preventDefault(); startGame(); });
+screens.start.addEventListener('pointerdown', e => { if (e.target.closest('button')) return; e.preventDefault(); launch(); });
 screens.over.addEventListener('pointerdown', e => { if (e.target.closest('button, input, form')) return; e.preventDefault(); if (canRetry()) startGame(); });
 document.addEventListener('touchmove', e => { if (!e.target.closest || !e.target.closest('.lb-list, .skin-grid, input[type=range]')) e.preventDefault(); }, { passive: false });
 document.addEventListener('gesturestart', e => e.preventDefault());
@@ -2037,6 +2422,11 @@ const JUMP_KEYS = new Set(['Space', 'ArrowUp', 'KeyW', 'Enter']);
 window.addEventListener('keydown', e => {
   const splash = $('splash');
   if (!splash.classList.contains('gone')) { splash.classList.add('gone'); e.preventDefault(); return; } // a key during the splash only skips it
+  if (screens.tut.classList.contains('show')) { // How to play: Space / ↑ act like a tap or a hold, Esc skips
+    if (e.code === 'Escape') { e.preventDefault(); closeTutorial(); return; }
+    if (JUMP_KEYS.has(e.code) && !(e.code === 'Enter' && e.target.tagName === 'BUTTON')) { e.preventDefault(); if (!e.repeat) { tut.keyDown = true; tutDown(); } }
+    return;
+  }
   if (e.target && e.target.tagName === 'INPUT') { if (e.code === 'Escape' && screens.lb.classList.contains('show')) closeLeaderboard(); return; } // typing a name (Esc still closes)
   if (S.mode !== 'play' && screens.lb.classList.contains('show')) { if (e.code === 'Escape') closeLeaderboard(); return; }
   if (screens.set.classList.contains('show')) { if (e.code === 'Escape') closeSettings(); return; }
@@ -2053,7 +2443,7 @@ window.addEventListener('keydown', e => {
   if (S.mode === 'paused') { resume(); return; } // any jump key resumes
   input.keys.add(e.code); press();
 });
-window.addEventListener('keyup', e => input.keys.delete(e.code));
+window.addEventListener('keyup', e => { input.keys.delete(e.code); if (tut.keyDown && JUMP_KEYS.has(e.code)) { tut.keyDown = false; tutUp(); } });
 window.addEventListener('blur', () => { input.pointers.clear(); input.keys.clear(); pause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { pause(); Music.stop(0.05); } else if (S.mode === 'menu') Music.refresh(); });
 // browsers only allow sound after a tap or key press: start the menu music on the first one
@@ -2103,7 +2493,7 @@ $('musVol').addEventListener('input', e => { musicVol = e.target.value / 100; st
 $('pauseBtn').addEventListener('click', pause);
 $('resumeBtn').addEventListener('click', resume);
 $('quitBtn').addEventListener('click', goMenu);
-$('playBtn').addEventListener('click', startGame);
+$('playBtn').addEventListener('click', launch);
 $('menuBtn').addEventListener('click', goMenu);
 $('lbBtn1').addEventListener('click', openLeaderboard);
 $('lbBtn2').addEventListener('click', openLeaderboard);
@@ -2432,9 +2822,10 @@ function step(dt) {
 }
 
 function update(dt) {
-  if (S.mode !== 'paused' && S.mode !== 'over') {
+  if (S.mode === 'menu') menuStep(dt); // the home screen: an airport at night, no run behind it
+  else if (S.mode !== 'paused' && S.mode !== 'over') {
     const n = Math.ceil(dt / (1 / 120)), h = dt / n;
-    for (let i = 0; i < n && (S.mode === 'play' || S.mode === 'menu' || S.mode === 'dying'); i++) step(h);
+    for (let i = 0; i < n && (S.mode === 'play' || S.mode === 'dying'); i++) step(h);
   }
   if (S.mode !== 'paused') for (const p of particles) {
     if (p.life <= 0) continue;
@@ -2524,6 +2915,7 @@ function drawCelestial(bi, alpha) {
     ctx.fillStyle = '#ffe9a0'; ctx.fillRect(cx + 28, cy - 18, 3, 3);
   } else if (id === 'airport') { // a moon, and a jet crossing the sky with blinking lights
     moon(cx, cy, 22, '#e8f0ff', 'rgba(200,215,255,0.1)');
+    if (S.mode === 'menu') { ctx.globalAlpha = 1; return; }
     const px = ((S.time * 45) % (view.w + 260)) - 130, py = cy + 40 - px * 0.08;
     ctx.fillStyle = '#c8d0e0'; ctx.fillRect(px - 16, py - 1.5, 32, 3); ctx.fillRect(px - 4, py - 1, 10, 9); ctx.fillRect(px - 15, py - 6, 3, 5);
     if (Math.floor(S.time * 2) % 2) { ctx.fillStyle = '#ff2a3d'; ctx.fillRect(px - 1, py + 7, 2, 2); ctx.fillStyle = '#ffffff'; ctx.fillRect(px + 15, py - 1, 2, 2); }
@@ -2922,12 +3314,32 @@ function drawParticles() {
 }
 
 function render() {
+  // on the home screen the camera puts the runway right under the big hero; PLAY pans it to the run's framing
+  const baseOff = view.offY, camOff = baseOff + (home.offY - baseOff) * home.camT;
+  view.offY = camOff; view.top = -camOff; view.bottom = view.h - camOff;
+  try { renderWorld(); } finally { view.offY = baseOff; view.top = -baseOff; view.bottom = view.h - baseOff; }
+}
+function renderWorld() {
   const k = view.scale * view.dpr;
   let shx = 0, shy = 0;
   if (S.shake > 0) { const s = S.shake * S.shake * 14; shx = (Math.random() - 0.5) * s; shy = (Math.random() - 0.5) * s; }
   ctx.setTransform(k, 0, 0, k, shx * k, (view.offY + shy) * k);
   ctx.imageSmoothingEnabled = false;
 
+  // Home screen at rest: the sky, skyline and runway don't move, so they're painted once and reused
+  // (only the stars, plane, lights and windsock are drawn each frame). Cheap on older phones.
+  if (S.mode === 'menu' && !home.launching) {
+    const key = `${canvas.width}x${canvas.height}|${home.offY.toFixed(2)}|${S.dist}|${S.biome}`;
+    if (home.bgKey === key) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(home.bg, 0, 0); ctx.setTransform(k, 0, 0, k, 0, view.offY * k);
+    } else {
+      drawBiomeBack(S.biome, 1); drawGroundSeg(S.dist - 20, S.dist + view.w + 20);
+      home.bg = home.bg || document.createElement('canvas');
+      if (home.bg.width !== canvas.width || home.bg.height !== canvas.height) { home.bg.width = canvas.width; home.bg.height = canvas.height; }
+      home.bg.getContext('2d').drawImage(canvas, 0, 0); home.bgKey = key;
+    }
+    drawHomeScene(); drawParticles(); drawToasts(); return;
+  }
   if (S.biomeMix < 1) { drawBiomeBack(S.biomePrev, 1); drawBiomeBack(S.biome, S.biomeMix); }
   else drawBiomeBack(S.biome, 1);
   const wx = id => (BIOMES[S.biome].id === id ? S.biomeMix : 0) + (BIOMES[S.biomePrev].id === id && S.biomeMix < 1 ? 1 - S.biomeMix : 0);
@@ -2941,6 +3353,7 @@ function render() {
     drawPit(o); drawGroundSeg(seg, o.x); seg = o.x + o.w;
   }
   drawGroundSeg(seg, S.dist + view.w + 20);
+  if (S.mode === 'menu') { drawHomeScene(); drawParticles(); drawToasts(); return; }
 
   for (const o of S.obstacles) if (o.type === 'roof') drawRoof(o);
   for (const o of S.obstacles) {
@@ -2988,7 +3401,7 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
 }
 goMenu();
 if (BOT_PLAY) startGame();
-window.__glyd = { SKINS, spritesFor, ART, S, startGame, view, step, solidAt, BIOMES, grab, LB, Music, SONGS, botReset: () => { bot.target = null; } };
+window.__glyd = { home, layoutHome, launch, openTutorial, boardMessages, SKINS, spritesFor, ART, S, startGame, view, step, solidAt, BIOMES, grab, LB, Music, SONGS, botReset: () => { bot.target = null; } };
 requestAnimationFrame(frame);
 })();
 </script>
