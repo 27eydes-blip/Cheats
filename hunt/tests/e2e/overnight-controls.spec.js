@@ -47,6 +47,8 @@ async function phone(browser, { width = 667, height = 375, lefty = false, url = 
 const settle = (page) => page.waitForTimeout(250); // (a couple of 20 Hz input ticks)
 
 test.describe('touch controls at phone size', () => {
+  // real multi-touch goes through the Chrome DevTools Protocol, which only Chromium speaks
+  test.skip(({ browserName }) => browserName !== 'chromium', 'CDP Input.dispatchTouchEvent is Chromium-only');
   test('move + aim with two thumbs, tap to auto-fire, drag-release, long still press', async ({ browser }) => {
     const { ctx, page, T, errors } = await phone(browser);
     // move (left thumb) while aiming and firing (right thumb)
