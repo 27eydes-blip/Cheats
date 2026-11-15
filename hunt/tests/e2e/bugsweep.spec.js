@@ -1,6 +1,6 @@
 // Bug sweep regression tests (client). See BUG_LIST.md.
 import { test, expect } from '@playwright/test';
-import { trackErrors, waitMe } from './helpers.js';
+import { trackErrors, trackHttp, waitMe } from './helpers.js';
 
 test('error/disconnect toasts show above the lobby and menu screens', async ({ page }) => {
   await page.goto('/');
@@ -63,8 +63,8 @@ test('an unknown event id from the server cannot freeze the game loop', async ({
     const c = window.__hunt.conns.get('main'); c.ev = { id: 'from_the_future', ph: 'on', p: {}, at: performance.now() };
   });
   const t0 = await page.evaluate(() => window.__hunt.ticks);
-  await page.waitForTimeout(800);
-  expect(await page.evaluate(() => window.__hunt.ticks)).toBeGreaterThan(t0 + 5);
+  // wait for the loop to move on, not for a fixed time: a slow browser draws only a few frames a second
+  await page.waitForFunction((t) => window.__hunt.ticks > t + 5, t0, { timeout: 20_000 });
   expect(errors.filter((e) => !/frame error/.test(e))).toEqual([]);
 });
 
@@ -135,6 +135,7 @@ test('a full session (lobby screens, match, results, Free Play) logs no console 
   const issues = [];
   page.on('pageerror', (e) => issues.push(e.message));
   page.on('console', (m) => { if (['error', 'warning'].includes(m.type()) && !/fonts\.g|Failed to load resource/.test(m.text())) issues.push(m.text()); });
+  trackHttp(page, issues); // a failing asset or /api call is an issue too (its console line is filtered above)
   await page.goto('/');
   await page.waitForSelector('#playBtn', { state: 'visible' });
   await page.waitForTimeout(1000);

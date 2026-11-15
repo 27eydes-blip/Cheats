@@ -29,16 +29,40 @@ export function setUser(user) {
 export const progress = () => ACC.user?.progress || normalize({});
 export const onUser = (f) => ACC.listeners.push(f);
 
-export async function boot() {
-  try { ACC.token = localStorage.getItem(TOKEN_KEY); } catch {}
+// Guest bootstrap. A failed first request must not cost the player their session: it is retried
+// with backoff (and at once when the network or the tab comes back) until an account exists.
+const RETRY_MS = [1000, 2000, 4000, 8000, 15000, 30000];
+let retryTimer = 0, tries = 0, inFlight = null;
+const stateListeners = [];
+export const onState = (f) => stateListeners.push(f); // offline <-> online changes
+function setOffline(v) { if (ACC.offline !== v) { ACC.offline = v; for (const f of stateListeners) f(ACC); } }
+async function connect() {
   try {
     if (ACC.token) setSession(await api('/me'));
     else setSession(await api('/guest', {}));
   } catch (e) {
-    if (e.status === 401) { ACC.token = null; try { setSession(await api('/guest', {})); return; } catch {} }
-    ACC.offline = true; render();
+    if (e.status !== 401) throw e;
+    ACC.token = null; // the saved session is gone: start a fresh guest
+    setSession(await api('/guest', {}));
   }
 }
+export function boot() {
+  if (inFlight) return inFlight;
+  clearTimeout(retryTimer);
+  if (!ACC.token) try { ACC.token = localStorage.getItem(TOKEN_KEY); } catch {}
+  inFlight = connect().then(() => { tries = 0; setOffline(false); }, () => {
+    setOffline(true);
+    retryTimer = setTimeout(boot, RETRY_MS[Math.min(tries++, RETRY_MS.length - 1)]);
+  }).finally(() => { inFlight = null; });
+  return inFlight;
+}
+// PLAY waits here for the account, but never for long: true once a session exists
+export function ready(ms) {
+  if (ACC.token) return Promise.resolve(true);
+  return Promise.race([boot(), new Promise((r) => setTimeout(r, ms))]).then(() => !!ACC.token);
+}
+const retryNow = () => { if (ACC.offline || !ACC.user) boot(); };
+addEventListener('online', retryNow);
 export async function refresh() { if (ACC.token) try { setSession(await api('/me')); } catch {} }
 export async function register(username, password) { setSession(await api('/register', { username, password })); }
 export async function login(username, password) { setSession(await api('/login', { username, password })); }
@@ -46,23 +70,9 @@ export async function logout() { try { await api('/logout', {}); } catch {} ACC.
 export async function claimRoad(at) { const d = await api('/claim', { at }); setSession(d); return d; }
 export async function shop(body) { const d = await api('/shop', body); setSession(d); return d; }
 // cloud sync: pick up changes made on another device whenever the game comes back to the front
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') return; if (ACC.user) refresh(); else retryNow(); });
 
-function render() {
-  const bar = $('profileBar');
-  if (!bar) return;
-  if (ACC.offline || !ACC.user) { bar.innerHTML = '<span class="chip">Offline · progress not saved</span>'; return; }
-  const p = ACC.user.progress, L = levelInfo(p.xp);
-  bar.innerHTML = `<span class="chip lvl" title="${L.into}/${L.need} XP">LV ${L.level}<i style="width:${Math.round((L.into / L.need) * 100)}%"></i></span>
-    <span class="chip">🏆 ${totalTrophies(p)}</span><span class="chip">🪙 ${p.coins} <small>test</small></span>
-    <button class="chip btn" id="lockerBtn">LOCKER</button><button class="chip btn" id="passBtn">HUNT PASS</button>
-    <button class="chip btn" id="roadBtn">TROPHY ROAD${roadClaimable(p) ? ' <b class="dot"></b>' : ''}</button>
-    <button class="chip btn" id="accBtn">${ACC.user.guest ? 'GUEST · SAVE PROGRESS' : '👤 ' + esc(ACC.user.username)}</button>`;
-  $('roadBtn').onclick = openRoad;
-  $('lockerBtn').onclick = () => import('./locker.js').then((m) => m.openLocker());
-  $('passBtn').onclick = () => import('./locker.js').then((m) => m.openPass());
-  $('accBtn').onclick = openAccount;
-}
+function render() {} // the lobby draws the profile itself (it listens with onUser / onState)
 const roadClaimable = (p) => { const tt = totalTrophies(p); for (let at = ROAD_STEP; at <= tt; at += ROAD_STEP) if (!p.claimed.includes(at)) return true; return false; };
 
 function modal(html) {

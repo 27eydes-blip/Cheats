@@ -27,8 +27,9 @@ test('end screen: victory pose + Top Bounty Hunter MVP banner', async ({ page })
   await expect(page.locator('#mvp')).toBeVisible({ timeout: 5000 });
   await expect(page.locator('#mvp')).toContainText('TOP BOUNTY HUNTER');
   await expect(page.locator('#mvp')).toContainText('Rex');
-  const drawn = await page.evaluate(() => { const c = document.getElementById('pose'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n; });
-  expect(drawn).toBeGreaterThan(500);
+  // the pose is painted on the next animation frame: poll for it, a slow browser may not have drawn yet
+  const drawn = () => page.evaluate(() => { const c = document.getElementById('pose'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n; });
+  await expect.poll(drawn, { timeout: 10_000 }).toBeGreaterThan(500);
   expect(errors).toEqual([]);
 });
 
@@ -39,6 +40,15 @@ test('Reduce Flashing: no screen shake', async ({ page }) => {
   await page.click('.ui-screen .back');
   await page.goto('/?world=meadow&mode=bounty');
   await waitMe(page);
-  const s = await page.evaluate(async () => { const G = window.__hunt; G.shake = 20; await new Promise((r) => setTimeout(r, 100)); return G.shake; });
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('hunt-settings')).reduceFlash)).toBe(true);
+  // Wait for real frames, not for a fixed time: a busy machine may not draw one within 100 ms.
+  // The shake is far too big to fade out by itself in a frame or two (it fades at 30 a second),
+  // so 0 can only mean the setting cleared it.
+  const s = await page.evaluate(async () => {
+    const G = window.__hunt, frame = () => new Promise((r) => requestAnimationFrame(r));
+    G.shake = 5000;
+    await frame(); await frame(); await frame();
+    return G.shake;
+  });
   expect(s).toBe(0);
 });

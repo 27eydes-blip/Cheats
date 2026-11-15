@@ -28,6 +28,7 @@ import { startTense, stopTense } from './ui/music.js';
 import { WallArt } from './art/walls.js';
 import { artFor } from './art/themes.js';
 import { SPAWNS, spawnHasCover, SPAWN_COVER_DIST, blocksMove, TILE as TILE_ } from './shared.js';
+import { VERSION } from './version.js';
 
 
 const $ = (id) => document.getElementById(id);
@@ -110,6 +111,53 @@ function statRows() {
   return `<tr><th>World</th><th>Games</th><th>Wins</th><th>KOs</th><th>Best</th></tr>${rows}`;
 }
 const booted = A.boot();
+
+// ------------------------------------------------------------------ boot health: stale client, unsaved progress
+// The server tells us its build id (GET /api/version and every welcome). If ours differs, a deploy
+// happened while this page stayed open: offer a reload in the lobby (never in the middle of a match).
+const RELOADED_KEY = 'hunt-reloaded-for';
+let staleFor = null;
+function sawVersion(v) {
+  if (!v || typeof v !== 'string' || v === VERSION) return false;
+  // already reloaded for this exact server build and still differ: don't nag in a loop
+  try { if (sessionStorage.getItem(RELOADED_KEY) === v) return false; } catch {}
+  staleFor = v;
+  $('updateNote').hidden = false;
+  return true;
+}
+function checkVersion() {
+  fetch('/api/version', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (d) sawVersion(d.version); }).catch(() => {});
+}
+$('updateBtn').onclick = () => {
+  try { sessionStorage.setItem(RELOADED_KEY, staleFor || ''); } catch {}
+  if (window.__boot) window.__boot.reload(); else location.reload();
+};
+checkVersion();
+// a newer server can name things this client has never heard of: play on with a stand-in, never throw
+const modeInfo = (k) => MODE_INFO[k] || { name: String(k || 'HUNT').toUpperCase().slice(0, 16), desc: '' };
+
+// No account yet (first request failed or is slow): say so, and clear the notice once a retry lands.
+let playedUnsaved = false;
+function syncSaveNote() {
+  if (A.ACC.token) playedUnsaved = false;
+  $('saveNote').hidden = !(A.ACC.offline || playedUnsaved);
+}
+A.onState(syncSaveNote); A.onUser(syncSaveNote);
+// PLAY waits briefly for the guest account so a first match is recorded; if the server can't be
+// reached the player still gets in, with the notice showing.
+let gating = false;
+async function whenReady(start) {
+  if (A.ACC.token) { start(); return; }
+  if (gating) return;
+  gating = true;
+  const btn = $('playBtn'), label = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = 'Getting ready…'; btn.classList.add('busy'); }
+  const ok = await A.ready(A.ACC.offline ? 1500 : 4000);
+  gating = false;
+  if (btn) { btn.textContent = label; btn.classList.remove('busy'); }
+  if (!ok) { playedUnsaved = true; syncSaveNote(); }
+  if (G.phase === 'menu') start();
+}
 
 function show(screen) {
   if (screen === 'lobby') UI.lobby.show(); else UI.lobby.hide();
@@ -255,6 +303,7 @@ function startQuick(opts = G.opts) {
   G.kind = 'quick'; G.room = room; G.brawler = selBrawler;
   const q = new URLSearchParams({ name, brawler: selBrawler });
   if (A.ACC.token) q.set('token', A.ACC.token);
+  G.saved = !!A.ACC.token; // this match is tied to an account
   devParams(q);
   if (room) q.set('room', room);
   if (opts.skip) q.set('skip', opts.skip);
@@ -297,6 +346,7 @@ function toMenu() {
   closeAll();
   input.enabled = false; input.reset();
   show('lobby');
+  checkVersion();
 }
 
 // Free Play: keep observer sockets to zones near us, so we see across borders.
@@ -330,6 +380,8 @@ function onMsg(c, m) {
   switch (m.t) {
     case 'welcome':
       if (m.observer) break;
+      // the server runs a newer build: before a match starts, go back and offer the reload (a rejoin keeps playing)
+      if (sawVersion(m.v) && !m.rejoin && (G.phase === 'waiting' || G.kind === 'free')) { toMenu(); toast('New version ready'); break; }
       if (m.secret) G.secret = m.secret;
       if (m.sv && G.clockForced == null) G.svOff = m.sv - Date.now();
       if (m.match) G.matchName = m.match;
@@ -368,11 +420,15 @@ function onMsg(c, m) {
       G.phase = 'play';
       input.enabled = true; input.reset();
       show(null);
-      UI.showIntro({ world: m.world, modeName: MODE_INFO[m.mode].name, brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null });
-      setTimeout(() => showBanner(MODE_INFO[m.mode].name, m.mode === 'range' ? MODE_INFO.range.desc : `${MODE_INFO[m.mode].desc} (${m.botLevel || 'normal'} bots)`, '#ffd23f', 2500), 2200);
+      UI.showIntro({ world: m.world, modeName: modeInfo(m.mode).name, brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null });
+      setTimeout(() => showBanner(modeInfo(m.mode).name, m.mode === 'range' ? MODE_INFO.range.desc : `${modeInfo(m.mode).desc} (${m.botLevel || 'normal'} bots)`, '#ffd23f', 2500), 2200);
       break;
     case 'ro':
-      if (m.add) Object.assign(G.roster, m.add);
+      if (m.add) {
+        // a hunter this client doesn't know (the server is newer): draw a stand-in rather than break every frame
+        for (const k in m.add) if (Array.isArray(m.add[k]) && !BRAWLERS[m.add[k][1]]) m.add[k][1] = 'volt';
+        Object.assign(G.roster, m.add);
+      }
       break;
     case 'st':
       for (const [idx, type] of m.td) applyTile(idx, type);
@@ -437,11 +493,13 @@ function onEnd(m) {
   const s = stat(G.world);
   s.games++; if (won) s.wins++; s.kills += m.kills; s.best = Math.max(s.best, G.me?.bb || 0, m.bounty);
   savePrefs();
-  const msg = m.winTeam !== undefined ? `Team pot ★${m.pots[m.team]} vs ★${m.pots[3 - m.team]}` : won ? `VICTORY! ${MODE_INFO[m.mode].name} on ${worldName(G.world)}` : `${m.winner || 'Nobody'} won ${MODE_INFO[m.mode].name}.`;
+  const msg = m.winTeam !== undefined ? `Team pot ★${m.pots[m.team]} vs ★${m.pots[3 - m.team]}` : won ? `VICTORY! ${modeInfo(m.mode).name} on ${worldName(G.world)}` : `${m.winner || 'Nobody'} won ${modeInfo(m.mode).name}.`;
   const scoreLbl = { bounty: '★', hunted: 'pts', crystals: '💎' }[m.mode];
   const rows = m.results.map(([n, b, r, k, bot, id, be, sc, tm]) =>
     `<li class="${id === G.myId ? 'me' : ''} ${tm ? (tm === m.team ? 'mate' : 'foe') : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${scoreLbl ? `${sc} ${scoreLbl} · ` : ''}${k} KO</span></li>`).join('');
-  setTimeout(() => { if (G.phase === 'end') { show('end'); UI.res.show(m, { msg, rows, won }); sfx(won ? 'victory' : 'defeat'); startPose(won); } }, won ? 1600 : 600);
+  // no account on this match, or the result never came back: say it wasn't saved rather than wait forever
+  const notSaved = () => { const t = $('rsTro'); if (G.phase === 'end' && t && t.textContent === '…') t.textContent = 'Not saved'; };
+  setTimeout(() => { if (G.phase === 'end') { show('end'); UI.res.show(m, { msg, rows, won }); sfx(won ? 'victory' : 'defeat'); startPose(won); if (G.saved) setTimeout(notSaved, 6000); else notSaved(); } }, won ? 1600 : 600);
 }
 
 // short victory pose (or a sulk) on the end screen
@@ -1440,10 +1498,10 @@ for (const b of document.querySelectorAll('#dead .again')) b.onclick = playAgain
 const UI = {};
 UI.lobby = createLobby({
   // lobby PLAY = public matchmaking for the chosen mode; Friends popup = the typed room code
-  startQuick: (o = {}) => { goFullscreen(); startQuick(o.fromFriends ? { mode: o.mode || '' } : { mode: o.mode || '', room: '' }); },
+  startQuick: (o = {}) => { goFullscreen(); whenReady(() => startQuick(o.fromFriends ? { mode: o.mode || '' } : { mode: o.mode || '', room: '' })); },
   // the mode picked on the PLAY page (a friend room plays it; Free Play can't be a room)
   roomMode: () => { const k = UI.lobby?.mode; return k && k !== 'free' && k !== 'quick' ? k : ''; },
-  startFree: () => { goFullscreen(); startFree(); },
+  startFree: () => { goFullscreen(); whenReady(startFree); },
   // TEST RANGE: a private room with target dummies, carrying the weapon picked in the Armory
   startRange: (weapon) => { goFullscreen(); startQuick({ room: 'R' + Math.random().toString(36).slice(2, 9).toUpperCase(), mode: 'range', world: 'meadow', lobby: '1.5', tryW: weapon }); },
   getBrawler: () => selBrawler,
@@ -1470,6 +1528,8 @@ if (qs.get('mapview')) {
   show(null); $('hud').hidden = true; document.body.classList.add('ingame');
 }
 if (!qs.get('mapview') && !qs.get('world') && !qs.get('free')) show('lobby');
+// the page is up: take down the loading splash (index.html) and stop its boot watchdog
+window.__boot?.done();
 booted.then(() => {
 if (qs.get('mapview')) return;
 if (qs.get('world')) startQuick({ world: qs.get('world'), mode: qs.get('mode') || '', ev: qs.get('ev') || '', lobby: '1.5', room: 'T' + Math.floor(Math.random() * 1e8) });

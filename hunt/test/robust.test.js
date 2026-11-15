@@ -63,10 +63,10 @@ assert.equal(faults.n, 0, 'the handlers survived on their own (nothing had to be
   const sim = room.sim, real = sim.updateBullets;
   let boom = 3;
   sim.updateBullets = function () { if (boom-- > 0) throw new Error('injected tick failure'); return real.call(this); };
-  const log = console.log; console.log = () => {}; // (the fault log is expected here)
+  const log = console.log, err = console.error; console.log = console.error = () => {}; // (the fault log is expected here)
   const n0 = a.of('s').length;
   assert.doesNotThrow(() => steps(room, 10), 'a throwing tick never escapes the room');
-  console.log = log;
+  console.log = log; console.error = err;
   assert.equal(faults.n, 3, 'each failed tick was counted');
   assert.equal(sim.tickErrors, 3);
   assert.equal(a.of('s').length - n0, 7, 'snapshots resume as soon as the tick works again');
@@ -84,11 +84,11 @@ assert.equal(faults.n, 0, 'the handlers survived on their own (nothing had to be
   let calls = 0;
   room.step = () => { calls++; throw new Error('injected step failure'); };
   room.loop.step = () => room.step();
-  const log = console.log; console.log = () => {};
+  const log = console.log, err = console.error; console.log = console.error = () => {};
   room.loop.start();
   await new Promise((r) => setTimeout(r, 260));
   room.loop.stop();
-  console.log = log;
+  console.log = log; console.error = err;
   assert(calls >= 2, 'the loop kept calling step after it threw (' + calls + ')');
   assert.equal(faults.n - before, calls);
 }

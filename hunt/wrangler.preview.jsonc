@@ -5,7 +5,11 @@
   "workers_dev": true,
   "preview_urls": true,
   "compatibility_date": "2025-10-01",
+  // Workers Logs: keeps the server's log lines (see src/log.js) so a problem report can be looked up afterwards
+  "observability": { "enabled": true },
   "assets": { "directory": "./public", "binding": "ASSETS" },
+  // stamps public/version.js with the build id before the bundle and the assets are read
+  "build": { "command": "node scripts/stamp-version.mjs" },
   // Deploys to the "hunt" Worker (name must match the Cloudflare Worker for Workers Builds).
   "d1_databases": [{ "binding": "DB", "database_name": "hunt-preview-db", "database_id": "cd603982-d837-4ab0-a694-8c027afd9904", "migrations_dir": "migrations" }],
   "durable_objects": {

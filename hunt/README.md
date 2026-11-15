@@ -39,10 +39,17 @@ Tips:
 
 ## Deploy
 
+Production is the Cloudflare Worker named `hunt`. Its config is `wrangler.preview.jsonc` (real D1 database, Workers Logs on, no dev flags). Cloudflare Workers Builds deploys it on every push to `main` with `npx wrangler deploy -c wrangler.preview.jsonc`. To deploy by hand, run the same thing:
+
 ```bash
 npx wrangler login
-npm run deploy         # → https://hunt.<your-subdomain>.workers.dev
+npm run deploy                              # wrangler deploy -c wrangler.preview.jsonc
+npm run deploy -- --dry-run                 # build and check the config without uploading
 ```
+
+- `wrangler.jsonc` is for **local dev and tests only**. It sets `HUNT_DEV=1`, which turns on test-only URL flags (any weapon, power, gadget or spawn point), and points at a local placeholder database. Never deploy it: `test/deploy.test.js` fails if the dev flag ever reaches the production config or if the two configs drift apart.
+- A hand deploy does not stamp a build id (only Workers Builds sets `WORKERS_CI`). Run `node scripts/stamp-version.mjs --force` first so open tabs notice the new version, and do not commit the stamped `public/version.js`.
+- Server errors are logged as one line each, starting with `hunt-error` (what failed, where, mode or zone, build id; never names or tokens). Find them in the Cloudflare dashboard under the Worker's **Logs**, or live with `npx wrangler tail hunt`.
 
 Durable Objects are declared as SQLite-backed classes, so this works on the Workers free plan.
 
@@ -59,7 +66,7 @@ Durable Objects are declared as SQLite-backed classes, so this works on the Work
 
 **Rewards** (`public/progression.js` `PAY`): match XP and coins are mostly paid per minute played, so every mode earns about the same per minute. Trophy Road, Hunt Pass and level rewards are earned, never sold; claiming one you already own gives coins instead.
 
-**Free Play:** a 4000×4000 world made of 4 zones, each its own Durable Object: Neon City (NW), Wildwood (NE), **Desert Mirage (SE)** and Frozen Lake (SW). A safe hub where the zones meet is where you change brawler and see who's online. When you walk across a zone border, your player is handed off to the next zone's Durable Object. Your client already has that zone's socket open as an observer, and it gets promoted, so there's no loading screen. Bullets that cross a border carry on in the next zone, and kill and bounty credit is sent back to the shooter's zone.
+**Free Play:** a 20000×20000 world made of 9 zones in a 3×3 grid (`ZONES` in `public/shared.js`), each its own Durable Object: Neon City, Ruined Citadel, Wildwood, The Hollow, The Hub, Ashlands, Frozen Lake, Dead Marsh and **Desert Mirage**. The safe hub in the middle is where you change brawler and see who's online. When you walk across a zone border, your player is handed off to the next zone's Durable Object. Your client already has that zone's socket open as an observer, and it gets promoted, so there's no loading screen. Bullets that cross a border carry on in the next zone, and kill and bounty credit is sent back to the shooter's zone.
 
 **Worlds** (`WORLDS` in `public/shared.js`): a world's ID is its index in that list, and per-world stats are saved by ID. **Only ever append** to the list. `order` controls display order.
 
@@ -79,7 +86,10 @@ Durable Objects are declared as SQLite-backed classes, so this works on the Work
 ## Tests
 
 ```bash
-npm test                       # headless sims: every mode × every world, twists, zone handoff, cross-zone combat, Desert Mirage
+npm test                       # every test/*.test.js: sims for every mode and world, balance gates, accounts, deploy config
+npm run e2e                    # Playwright browser suite (starts its own wrangler dev on :8788) plus the same node suites
 npm run dev &                  # then, against the running worker:
 BOTS=0 node test/ws.test.js    # two WebSocket clients; one hunts the other until eliminated
 ```
+
+The browser suite runs on every Playwright browser that is installed (Chromium, Firefox, WebKit). WebKit is the closest stand-in for iPhone Safari: `npx playwright test --project=webkit`. CI (`.github/workflows/hunt.yml`) runs `npm test` and the suite on Chromium and WebKit for every push or pull request that touches `hunt/`.

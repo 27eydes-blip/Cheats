@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --ip 0.0.0.0 --port 8787",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy -c wrangler.preview.jsonc",
     "test": "node test/run-all.js",
     "e2e": "playwright test --trace off",
     "test:all": "npm test && npm run e2e"

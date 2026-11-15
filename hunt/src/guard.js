@@ -2,11 +2,14 @@
 // entry module may only export handlers and Durable Object classes.)
 
 // FAIL SAFE: whatever a client sends and whatever breaks, a room keeps ticking for everyone else.
-// Every caught error is counted and logged (the first few, then now and then), never swallowed.
+// Every caught error is counted (tests read faults) and logged as one scrubbed line with the room's
+// context (log.js: no names or tokens; a repeat inside its quiet window is counted, not logged).
+import { logError } from './log.js';
+
 export const faults = { n: 0, last: null };
-export function fault(what, e) {
+export function fault(what, e, ctx) {
   faults.n++; faults.last = e;
-  if (faults.n <= 10 || faults.n % 500 === 0) console.log(`hunt fault #${faults.n} in ${what}:`, e && (e.stack || e.message || e));
+  logError(what, ctx, e);
 }
 // a client frame -> a message object, or null (not text, not JSON, too big, or JSON that isn't an object)
 export function parseMsg(data) {
