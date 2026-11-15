@@ -1,0 +1,3252 @@
+<title>Skydrift Isles</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Seven strange questions a day. Rare answers fly higher.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+@property --sky-top { syntax: '<color>'; inherits: true; initial-value: #9fc4f0; }
+@property --sky-mid { syntax: '<color>'; inherits: true; initial-value: #c9dcf7; }
+@property --sky-bottom { syntax: '<color>'; inherits: true; initial-value: #ffe0ec; }
+
+:root {
+  transition: --sky-top 1.8s ease, --sky-mid 1.8s ease, --sky-bottom 1.8s ease;
+  --ink: #26305c;
+  --ink-soft: #55608f;
+  --gold: #e8b84a;
+  --gold-hi: #fff1b8;
+  --gold-lo: #b07d22;
+  --glass: rgba(255, 255, 255, 0.62);
+  --glass-edge: rgba(255, 255, 255, 0.85);
+  --night-glass: rgba(24, 30, 66, 0.55);
+  --radius: 22px;
+  --sky-top: #9fc4f0;
+  --sky-bottom: #ffe0ec;
+  --star-alpha: 0;
+  --aurora-alpha: 0;
+  --sun-alpha: 1;
+  --text-on-sky: #26305c;
+  --safe-b: 0px;
+  --safe-t: 0px;
+  --display: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --ui: 'Fredoka', 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: var(--ui);
+  color: var(--ink);
+  background: var(--sky-top);
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+[hidden] { display: none !important; }
+
+/* ---------- Sky ---------- */
+#sky { position: fixed; inset: 0; overflow: hidden; z-index: 0; }
+.sky-grad {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid, #c9dcf7) 55%, var(--sky-bottom) 100%);
+}
+body.no-sky-anim, body.no-sky-anim * { transition: none !important; }
+.stars {
+  position: absolute; inset: 0; opacity: var(--star-alpha); transition: opacity 2s ease;
+  background-image:
+    radial-gradient(1.6px 1.6px at 20px 30px, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 90px 120px, #fff8d6 50%, transparent 51%),
+    radial-gradient(1.8px 1.8px at 160px 60px, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 230px 170px, #fff 50%, transparent 51%),
+    radial-gradient(1.4px 1.4px at 60px 210px, #ffe9a8 50%, transparent 51%),
+    radial-gradient(1px 1px at 280px 90px, #fff 50%, transparent 51%);
+  background-size: 300px 240px;
+  animation: twinkle 5s ease-in-out infinite alternate;
+}
+@keyframes twinkle { to { filter: brightness(1.6); } }
+.aurora { position: absolute; inset: -10% -20% 40%; opacity: var(--aurora-alpha); transition: opacity 2s ease; filter: blur(18px); }
+.aurora i {
+  position: absolute; left: 0; right: 0; height: 26%; border-radius: 50%;
+  background: linear-gradient(90deg, transparent, #7dffcf 30%, #8fd3ff 55%, #c79bff 80%, transparent);
+  animation: aurora 12s ease-in-out infinite alternate;
+}
+.aurora i:nth-child(1) { top: 10%; }
+.aurora i:nth-child(2) { top: 30%; animation-duration: 16s; opacity: .7; }
+.aurora i:nth-child(3) { top: 48%; animation-duration: 20s; opacity: .45; }
+@keyframes aurora { from { transform: translateX(-12%) skewY(-4deg); } to { transform: translateX(12%) skewY(5deg); } }
+.sun {
+  position: absolute; top: 9%; right: 12%; width: 120px; height: 120px; border-radius: 50%;
+  background: radial-gradient(circle, #fff9e0 0 35%, rgba(255, 233, 170, .55) 50%, transparent 70%);
+  opacity: var(--sun-alpha); transition: opacity 2s ease;
+}
+
+.clouds {
+  position: absolute; inset: -40px 0; pointer-events: none;
+  background-repeat: repeat;
+  background-position-y: var(--cy, 0px);
+  transition: background-position-y 1.6s cubic-bezier(.3, .7, .2, 1);
+  animation: drift linear infinite;
+}
+.clouds-far {
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MjAiIGhlaWdodD0iNDIwIiB2aWV3Qm94PSIwIDAgNTIwIDQyMCI+PGRlZnM+PGZpbHRlciBpZD0iYiIgeD0iLTUwJSIgeT0iLTUwJSIgd2lkdGg9IjIwMCUiIGhlaWdodD0iMjAwJSI+PGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMyIvPjwvZmlsdGVyPjxsaW5lYXJHcmFkaWVudCBpZD0iZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2ZmZiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2VlZjBmZiIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxnIGZpbGw9InVybCgjZykiIGZpbHRlcj0idXJsKCNiKSI+PGcgb3BhY2l0eT0iMC45IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMTAgOTApIHNjYWxlKDAuNikiPjxjaXJjbGUgY3g9IjAiIGN5PSIwIiByPSI0MCIvPjxjaXJjbGUgY3g9Ii0zNiIgY3k9IjEwIiByPSIyOCIvPjxjaXJjbGUgY3g9IjM2IiBjeT0iOCIgcj0iMzAiLz48Y2lyY2xlIGN4PSItMTgiIGN5PSItMTQiIHI9IjMwIi8+PGNpcmNsZSBjeD0iMTYiIGN5PSItMTgiIHI9IjM0Ii8+PGNpcmNsZSBjeD0iNjQiIGN5PSIxNiIgcj0iMjAiLz48Y2lyY2xlIGN4PSItNjQiIGN5PSIxOCIgcj0iMTgiLz48cmVjdCB4PSItNzAiIHk9IjEwIiB3aWR0aD0iMTQwIiBoZWlnaHQ9IjI4IiByeD0iMTQiLz48L2c+PGcgb3BhY2l0eT0iMC44IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgzODAgMjUwKSBzY2FsZSgwLjUpIj48Y2lyY2xlIGN4PSIwIiBjeT0iMCIgcj0iNDAiLz48Y2lyY2xlIGN4PSItMzYiIGN5PSIxMCIgcj0iMjgiLz48Y2lyY2xlIGN4PSIzNiIgY3k9IjgiIHI9IjMwIi8+PGNpcmNsZSBjeD0iLTE4IiBjeT0iLTE0IiByPSIzMCIvPjxjaXJjbGUgY3g9IjE2IiBjeT0iLTE4IiByPSIzNCIvPjxjaXJjbGUgY3g9IjY0IiBjeT0iMTYiIHI9IjIwIi8+PGNpcmNsZSBjeD0iLTY0IiBjeT0iMTgiIHI9IjE4Ii8+PHJlY3QgeD0iLTcwIiB5PSIxMCIgd2lkdGg9IjE0MCIgaGVpZ2h0PSIyOCIgcng9IjE0Ii8+PC9nPjxnIG9wYWNpdHk9IjAuNyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjUwIDM3MCkgc2NhbGUoMC4zNSkiPjxjaXJjbGUgY3g9IjAiIGN5PSIwIiByPSI0MCIvPjxjaXJjbGUgY3g9Ii0zNiIgY3k9IjEwIiByPSIyOCIvPjxjaXJjbGUgY3g9IjM2IiBjeT0iOCIgcj0iMzAiLz48Y2lyY2xlIGN4PSItMTgiIGN5PSItMTQiIHI9IjMwIi8+PGNpcmNsZSBjeD0iMTYiIGN5PSItMTgiIHI9IjM0Ii8+PGNpcmNsZSBjeD0iNjQiIGN5PSIxNiIgcj0iMjAiLz48Y2lyY2xlIGN4PSItNjQiIGN5PSIxOCIgcj0iMTgiLz48cmVjdCB4PSItNzAiIHk9IjEwIiB3aWR0aD0iMTQwIiBoZWlnaHQ9IjI4IiByeD0iMTQiLz48L2c+PC9nPjwvc3ZnPg=='); background-size: 520px 420px; opacity: .55; animation-duration: 180s;
+}
+.clouds-mid {
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI3MDAiIGhlaWdodD0iNTYwIiB2aWV3Qm94PSIwIDAgNzAwIDU2MCI+PGRlZnM+PGZpbHRlciBpZD0iYiIgeD0iLTUwJSIgeT0iLTUwJSIgd2lkdGg9IjIwMCUiIGhlaWdodD0iMjAwJSI+PGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMi41Ii8+PC9maWx0ZXI+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmZmIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZWVmMGZmIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PGcgZmlsbD0idXJsKCNnKSIgZmlsdGVyPSJ1cmwoI2IpIj48ZyBvcGFjaXR5PSIwLjk1IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxNjAgMTQwKSBzY2FsZSgxKSI+PGNpcmNsZSBjeD0iMCIgY3k9IjAiIHI9IjQwIi8+PGNpcmNsZSBjeD0iLTM2IiBjeT0iMTAiIHI9IjI4Ii8+PGNpcmNsZSBjeD0iMzYiIGN5PSI4IiByPSIzMCIvPjxjaXJjbGUgY3g9Ii0xOCIgY3k9Ii0xNCIgcj0iMzAiLz48Y2lyY2xlIGN4PSIxNiIgY3k9Ii0xOCIgcj0iMzQiLz48Y2lyY2xlIGN4PSI2NCIgY3k9IjE2IiByPSIyMCIvPjxjaXJjbGUgY3g9Ii02NCIgY3k9IjE4IiByPSIxOCIvPjxyZWN0IHg9Ii03MCIgeT0iMTAiIHdpZHRoPSIxNDAiIGhlaWdodD0iMjgiIHJ4PSIxNCIvPjwvZz48ZyBvcGFjaXR5PSIwLjkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDUyMCAzODApIHNjYWxlKDAuOCkiPjxjaXJjbGUgY3g9IjAiIGN5PSIwIiByPSI0MCIvPjxjaXJjbGUgY3g9Ii0zNiIgY3k9IjEwIiByPSIyOCIvPjxjaXJjbGUgY3g9IjM2IiBjeT0iOCIgcj0iMzAiLz48Y2lyY2xlIGN4PSItMTgiIGN5PSItMTQiIHI9IjMwIi8+PGNpcmNsZSBjeD0iMTYiIGN5PSItMTgiIHI9IjM0Ii8+PGNpcmNsZSBjeD0iNjQiIGN5PSIxNiIgcj0iMjAiLz48Y2lyY2xlIGN4PSItNjQiIGN5PSIxOCIgcj0iMTgiLz48cmVjdCB4PSItNzAiIHk9IjEwIiB3aWR0aD0iMTQwIiBoZWlnaHQ9IjI4IiByeD0iMTQiLz48L2c+PC9nPjwvc3ZnPg=='); background-size: 700px 560px; opacity: .8; animation-duration: 110s;
+}
+.clouds-near {
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5MDAiIGhlaWdodD0iNzYwIiB2aWV3Qm94PSIwIDAgOTAwIDc2MCI+PGRlZnM+PGZpbHRlciBpZD0iYiIgeD0iLTUwJSIgeT0iLTUwJSIgd2lkdGg9IjIwMCUiIGhlaWdodD0iMjAwJSI+PGZlR2F1c3NpYW5CbHVyIHN0ZERldmlhdGlvbj0iMiIvPjwvZmlsdGVyPjxsaW5lYXJHcmFkaWVudCBpZD0iZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2ZmZiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2VlZjBmZiIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxnIGZpbGw9InVybCgjZykiIGZpbHRlcj0idXJsKCNiKSI+PGcgb3BhY2l0eT0iMC45NyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjAwIDUyMCkgc2NhbGUoMS41KSI+PGNpcmNsZSBjeD0iMCIgY3k9IjAiIHI9IjQwIi8+PGNpcmNsZSBjeD0iLTM2IiBjeT0iMTAiIHI9IjI4Ii8+PGNpcmNsZSBjeD0iMzYiIGN5PSI4IiByPSIzMCIvPjxjaXJjbGUgY3g9Ii0xOCIgY3k9Ii0xNCIgcj0iMzAiLz48Y2lyY2xlIGN4PSIxNiIgY3k9Ii0xOCIgcj0iMzQiLz48Y2lyY2xlIGN4PSI2NCIgY3k9IjE2IiByPSIyMCIvPjxjaXJjbGUgY3g9Ii02NCIgY3k9IjE4IiByPSIxOCIvPjxyZWN0IHg9Ii03MCIgeT0iMTAiIHdpZHRoPSIxNDAiIGhlaWdodD0iMjgiIHJ4PSIxNCIvPjwvZz48ZyBvcGFjaXR5PSIwLjkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDcwMCAyMDApIHNjYWxlKDEuMikiPjxjaXJjbGUgY3g9IjAiIGN5PSIwIiByPSI0MCIvPjxjaXJjbGUgY3g9Ii0zNiIgY3k9IjEwIiByPSIyOCIvPjxjaXJjbGUgY3g9IjM2IiBjeT0iOCIgcj0iMzAiLz48Y2lyY2xlIGN4PSItMTgiIGN5PSItMTQiIHI9IjMwIi8+PGNpcmNsZSBjeD0iMTYiIGN5PSItMTgiIHI9IjM0Ii8+PGNpcmNsZSBjeD0iNjQiIGN5PSIxNiIgcj0iMjAiLz48Y2lyY2xlIGN4PSItNjQiIGN5PSIxOCIgcj0iMTgiLz48cmVjdCB4PSItNzAiIHk9IjEwIiB3aWR0aD0iMTQwIiBoZWlnaHQ9IjI4IiByeD0iMTQiLz48L2c+PC9nPjwvc3ZnPg=='); background-size: 900px 760px; opacity: .9; animation-duration: 70s;
+  z-index: 3;
+}
+@keyframes drift { from { background-position-x: 0; } to { background-position-x: -1800px; } }
+
+#world {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 0;
+  transform: translateY(var(--world-y, 0px));
+  transition: transform 1.6s cubic-bezier(.3, .7, .2, 1);
+}
+.isle {
+  position: absolute; width: 170px; transform: translateX(-50%);
+  animation: bob 6s ease-in-out infinite alternate;
+}
+.isle svg { width: 100%; height: auto; display: block; filter: drop-shadow(0 12px 18px rgba(60, 70, 140, .18)); }
+.isle .isle-label {
+  position: absolute; left: 50%; top: -6px; transform: translate(-50%, -100%);
+  white-space: nowrap; font-size: 12px; font-weight: 600; letter-spacing: .02em;
+  color: var(--ink); background: rgba(255, 255, 255, .75); padding: 3px 10px; border-radius: 999px;
+  box-shadow: 0 2px 10px rgba(40, 50, 110, .12);
+}
+.isle .isle-label { opacity: 0; transition: opacity .6s ease; }
+.isle.passed .isle-label { background: linear-gradient(180deg, #fff6d2, #f3cf6d); }
+.isle.home { width: 260px; }
+@keyframes bob { from { margin-top: -6px; } to { margin-top: 6px; } }
+
+#glider-wrap {
+  position: absolute; left: 50%; top: 60%; z-index: 2;
+  transform: translate(-50%, -50%); transition: top 1s ease;
+}
+body.on-home #glider-wrap { top: 56%; }
+body.on-results #glider-wrap, body.on-collection #glider-wrap, body.on-practice #glider-wrap { top: 18%; opacity: .0; }
+#glider { width: 132px; animation: glide 3.4s ease-in-out infinite; transform-origin: 50% 60%; }
+#glider svg { width: 100%; display: block; overflow: visible; }
+#glider.climb { animation: climb 1.6s cubic-bezier(.3, .7, .2, 1); }
+@keyframes glide {
+  0%, 100% { transform: translate(-6px, 4px) rotate(-3deg); }
+  50% { transform: translate(6px, -6px) rotate(2deg); }
+}
+@keyframes climb {
+  0% { transform: rotate(0); }
+  25% { transform: translateY(-18px) rotate(-14deg); }
+  100% { transform: rotate(-2deg); }
+}
+#glider .scarf { animation: scarf .5s ease-in-out infinite alternate; transform-origin: 30% 50%; }
+@keyframes scarf { to { transform: skewY(8deg) scaleX(1.06); } }
+#trail { position: absolute; inset: 0; pointer-events: none; }
+.spark {
+  position: absolute; left: 30%; top: 55%; width: 8px; height: 8px; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 30%, var(--gold) 60%, transparent 70%);
+  animation: spark 1.2s ease-out forwards;
+}
+@keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(.2); opacity: 0; } }
+
+/* ---------- Layout ---------- */
+#app { position: relative; z-index: 4; height: 100%; }
+.screen {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  padding: 12px max(16px, env(safe-area-inset-left, 0px)) 14px max(16px, env(safe-area-inset-right, 0px));
+  max-width: 560px; margin: 0 auto;
+  animation: screen-in .45s ease both;
+}
+.screen.scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+@keyframes screen-in { from { opacity: 0; transform: translateY(14px); } }
+
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; }
+.topbar-right { display: flex; gap: 8px; }
+.topbar-spacer { width: 48px; }
+.screen-title { font-family: var(--display); font-size: 22px; margin: 0; letter-spacing: .04em; color: var(--text-on-sky); }
+
+.icon-btn {
+  width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--glass-edge);
+  background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  font-size: 20px; display: grid; place-items: center;
+  box-shadow: 0 4px 14px rgba(50, 60, 130, .12);
+  transition: transform .15s ease;
+}
+.icon-btn.small { width: 40px; height: 40px; font-size: 16px; }
+.icon-btn:active, .chip:active { transform: scale(.92); }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 16px; border-radius: 999px;
+  border: 1px solid var(--glass-edge); background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  font-size: 18px; box-shadow: 0 4px 14px rgba(50, 60, 130, .12);
+}
+.chip b { font-weight: 700; }
+.chip.cold .flame { filter: grayscale(1); opacity: .6; }
+
+.btn {
+  border: 0; border-radius: 999px; padding: 14px 22px; font-weight: 600; font-size: 17px;
+  transition: transform .15s ease, box-shadow .2s ease, filter .2s;
+  min-height: 52px;
+}
+.btn:active { transform: scale(.96); }
+.btn:focus { outline: none; }
+.btn:focus-visible { outline: 3px solid rgba(255, 255, 255, .9); outline-offset: 3px; }
+.btn-gold {
+  color: #4a3208;
+  background: linear-gradient(180deg, var(--gold-hi) 0%, #f6d27a 38%, var(--gold) 70%, #d29c34 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .9) inset, 0 -3px 0 rgba(150, 100, 20, .25) inset, 0 8px 22px rgba(196, 140, 40, .38);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .55);
+}
+.btn-gold:hover { filter: brightness(1.04); }
+.btn-xl { font-size: 22px; padding: 18px 30px; min-height: 64px; width: 100%; font-family: var(--display); font-weight: 700; letter-spacing: .06em; }
+.btn-glass {
+  background: var(--glass); border: 1px solid var(--glass-edge); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(50, 60, 130, .12); color: var(--ink);
+}
+.btn-premium { background: linear-gradient(135deg, rgba(255, 246, 214, .85), rgba(232, 214, 255, .8)); }
+
+.card {
+  background: var(--glass); border: 1px solid var(--glass-edge); border-radius: var(--radius);
+  backdrop-filter: blur(16px) saturate(1.2); -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  box-shadow: 0 10px 40px rgba(50, 60, 140, .16);
+  padding: 20px;
+}
+.kicker { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-soft); }
+
+/* ---------- Home ---------- */
+.home-hero { position: relative; text-align: center; margin-top: 2vh; }
+.home-hero::before {
+  content: ''; position: absolute; inset: -30px -10px -20px; z-index: -1; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, .7), rgba(255, 255, 255, 0));
+}
+body.night .home-hero::before { background: radial-gradient(closest-side, rgba(20, 26, 70, .55), rgba(20, 26, 70, 0)); }
+body.night .tagline { color: #f4f1ff; }
+body.night .tagline em { color: #ffd979; }
+body.night .kicker, body.night .home-note { color: #d9dcf5; }
+.title {
+  font-family: var(--display); font-weight: 800; margin: 4px 0 6px; line-height: .9;
+  font-size: clamp(46px, 14vw, 72px); letter-spacing: .04em;
+  background: linear-gradient(180deg, #fffbe8 0%, #f8dc8a 40%, #e2a93a 72%, #b47c1f 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(255, 255, 255, .6)) drop-shadow(0 6px 14px rgba(140, 90, 20, .35));
+}
+.title span, .title small { display: block; }
+.title small { font-size: .42em; letter-spacing: .5em; margin-top: 6px; padding-left: .5em; }
+.tagline { margin: 6px auto 0; font-size: 17px; max-width: 300px; color: var(--ink); }
+.tagline em { font-style: normal; font-weight: 600; color: #8a5a10; }
+.home-actions { margin-top: auto; display: flex; flex-direction: column; gap: 10px; align-items: stretch; padding-bottom: 6px; }
+.home-note { margin: 0; text-align: center; font-size: 14px; color: var(--ink-soft); font-weight: 500; }
+.home-row { display: flex; gap: 10px; }
+.home-row .btn { flex: 1; font-size: 15px; padding: 12px 10px; }
+.btn-xl .countdown { display: block; font-family: var(--ui); font-size: 14px; font-weight: 500; letter-spacing: 0; opacity: .75; }
+
+.se-logo {
+  position: absolute; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(8px + var(--safe-b));
+  width: 46px; padding: 6px; border: 0; background: transparent; opacity: .9; transition: transform .2s, opacity .2s;
+  filter: drop-shadow(0 1px 2px rgba(80, 50, 0, .35));
+}
+.se-logo img { width: 100%; display: block; }
+.se-logo:hover { opacity: 1; transform: scale(1.06); }
+
+/* ---------- Ads ---------- */
+.ad-slot {
+  margin: 10px auto 34px; width: 100%; max-width: 320px; height: 50px; border-radius: 10px;
+  border: 1px dashed rgba(60, 70, 130, .3); background: rgba(255, 255, 255, .35);
+  display: grid; place-items: center; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft);
+}
+.ad-slot::before { content: 'Advertisement'; }
+.ad-slot[data-size='rect'] { max-width: 300px; height: 250px; margin: 16px auto; }
+body.premium .ad-slot { display: none; }
+
+/* ---------- Play ---------- */
+.hud { display: flex; align-items: center; gap: 10px; min-height: 48px; }
+.hud-dots { flex: 1; display: flex; gap: 6px; justify-content: center; }
+.hud-dots i {
+  width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 255, 255, .55); border: 1px solid rgba(255, 255, 255, .9);
+  transition: transform .3s, background .3s;
+}
+.hud-dots i.now { transform: scale(1.35); background: #fff; box-shadow: 0 0 0 3px rgba(232, 184, 74, .45); }
+.hud-alt { text-align: right; line-height: 1; min-width: 84px; color: var(--text-on-sky); }
+.hud-alt b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.hud-alt span { font-size: 12px; margin-left: 2px; }
+.hud-alt small { display: block; font-size: 11px; opacity: .8; margin-top: 3px; font-weight: 500; }
+
+.timer {
+  position: relative; height: 14px; border-radius: 999px; margin: 8px 4px 14px;
+  background: rgba(255, 255, 255, .45); border: 1px solid rgba(255, 255, 255, .8); overflow: visible;
+}
+.timer-fill {
+  position: absolute; inset: 0; border-radius: inherit; transform-origin: left;
+  background: linear-gradient(90deg, #ffe6a0, var(--gold));
+  transition: background .4s;
+}
+.timer.low .timer-fill { background: linear-gradient(90deg, #ffc1c1, #ff7b8a); }
+.timer span {
+  position: absolute; right: -4px; top: 50%; transform: translate(0, -50%);
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  background: #fff; font-weight: 700; font-size: 18px; box-shadow: 0 4px 12px rgba(50, 60, 130, .2);
+  font-variant-numeric: tabular-nums;
+}
+.timer.low span { color: #d23c55; animation: pulse .5s ease-in-out infinite alternate; }
+@keyframes pulse { to { transform: translate(0, -50%) scale(1.12); } }
+
+.prompt-card { position: relative; text-align: center; padding: 22px 18px 18px; }
+.prompt-label { margin: 0 0 6px; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+.prompt-text { font-size: clamp(24px, 6.6vw, 32px); line-height: 1.18; margin: 0 0 18px; font-weight: 600; text-wrap: balance; }
+.prompt-card.enter .prompt-text { animation: prompt-in .55s cubic-bezier(.2, .9, .3, 1.2) both; }
+@keyframes prompt-in { from { opacity: 0; transform: translateY(10px) scale(.96); } }
+.answer-form { display: flex; gap: 8px; }
+.answer-form input {
+  flex: 1; min-width: 0; height: 58px; border-radius: 18px; border: 2px solid rgba(255, 255, 255, .9);
+  background: rgba(255, 255, 255, .92); padding: 0 18px; font: inherit; font-size: 20px; color: var(--ink);
+  box-shadow: 0 4px 14px rgba(50, 60, 130, .1) inset;
+  outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.answer-form input:focus { border-color: var(--gold); box-shadow: 0 0 0 4px rgba(232, 184, 74, .25); }
+.answer-form .send { width: 58px; min-height: 58px; padding: 0; font-size: 22px; border-radius: 18px; }
+.answer-form.shake { animation: shake .4s ease; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.answer-hint { margin: 10px 0 0; font-size: 14px; color: var(--ink-soft); min-height: 20px; }
+.answer-hint.bad { color: #c2405a; font-weight: 600; }
+
+.reveal { animation: reveal-in .5s cubic-bezier(.2, .9, .3, 1.2) both; }
+@keyframes reveal-in { from { opacity: 0; transform: scale(.9); } }
+.tier-badge {
+  display: inline-block; padding: 6px 16px; border-radius: 999px; font-weight: 700; font-size: 14px; letter-spacing: .12em; text-transform: uppercase;
+  background: var(--tier-bg, #eef2fa); color: var(--tier-ink, var(--ink));
+}
+.tier-legendary { --tier-bg: linear-gradient(90deg, #fff3c4, #f5c542, #fff3c4); --tier-ink: #6b4500; background-size: 200% 100%; animation: shimmer 2s linear infinite; }
+.tier-rare { --tier-bg: linear-gradient(90deg, #ead9ff, #c4a3ff); --tier-ink: #4b2591; }
+.tier-uncommon { --tier-bg: linear-gradient(90deg, #d7efff, #a6dbff); --tier-ink: #155b8c; }
+.tier-common { --tier-bg: #f1f4fb; --tier-ink: #4a557e; }
+.tier-miss { --tier-bg: #e3e7f0; --tier-ink: #6a7390; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.reveal-answer { font-size: 26px; font-weight: 600; margin: 12px 0 0; }
+.reveal-points { margin: 2px 0; font-family: var(--display); font-weight: 800; color: #b07d22; }
+.reveal-points b { font-size: 64px; line-height: 1; }
+.reveal-points span { font-size: 18px; margin-left: 4px; }
+.reveal-share { margin: 0 0 16px; color: var(--ink-soft); font-size: 15px; }
+.reveal .btn { width: 100%; }
+
+.landmark-toast {
+  position: absolute; left: 50%; bottom: calc(22% + var(--safe-b)); transform: translateX(-50%);
+  background: linear-gradient(180deg, #fffaf0, #fbe7b4); color: #5c3e08; border: 1px solid #f2d38a;
+  padding: 10px 18px; border-radius: 999px; font-weight: 600; font-size: 15px; white-space: nowrap;
+  box-shadow: 0 8px 26px rgba(160, 110, 20, .3);
+  animation: landmark 3.2s ease both;
+}
+.landmark-toast small { display: block; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; opacity: .7; text-align: center; }
+@keyframes landmark { 0% { opacity: 0; transform: translate(-50%, 16px); } 12%, 82% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -10px); } }
+
+/* ---------- Results ---------- */
+.results-head { text-align: center; padding-top: 8px; }
+.res-layer { font-family: var(--display); font-size: clamp(32px, 9vw, 44px); margin: 2px 0 2px; color: var(--text-on-sky); letter-spacing: .03em; }
+.res-alt { margin: 0 0 12px; font-size: 18px; color: var(--text-on-sky); }
+.res-emoji { font-size: 32px; letter-spacing: 4px; margin-bottom: 4px; }
+.res-streak { margin: 0 0 14px; font-weight: 600; color: var(--text-on-sky); }
+.share-done { margin: 8px 0 0; font-weight: 600; color: var(--text-on-sky); }
+.screen.scroll > * + * { margin-top: 14px; }
+.breakdown h3, .finds h3 { margin: 0 0 10px; font-family: var(--display); font-size: 18px; letter-spacing: .04em; }
+.breakdown ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.breakdown li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 12px; background: rgba(255, 255, 255, .55); border-radius: 14px; border-left: 5px solid var(--c, #ddd); }
+.breakdown .q { grid-column: 1 / -1; font-size: 13px; color: var(--ink-soft); }
+.breakdown .a { font-weight: 600; font-size: 17px; }
+.breakdown .p { font-weight: 700; font-size: 17px; color: #8a5a10; }
+.breakdown .m { grid-column: 1 / -1; font-size: 13px; color: var(--ink-soft); }
+.finds-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+.promo {
+  display: flex; align-items: center; gap: 14px; text-decoration: none; color: #fff; padding: 14px;
+  background: linear-gradient(120deg, #3b4ba8 0%, #6a5ad6 50%, #f08fb5 100%); border: 1px solid rgba(255, 255, 255, .5);
+}
+.promo-art {
+  width: 64px; height: 64px; border-radius: 16px; flex: none;
+  background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMjAgMTQwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0id2luZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2ZmZmFmMCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2YzZGNhZSIvPjwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9IndpbmdzdHJpcGUiIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIwIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmMDhmYjUiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNiNDhjZmYiLz48L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnb2xkIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmZmMWI4Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZDI5YzM0Ii8+PC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPCEtLSBzY2FyZiAtLT4KICA8cGF0aCBjbGFzcz0ic2NhcmYiIGQ9Ik04OCA3MCBDNzAgNjYgNTAgNzggMjYgNzAgQzQwIDgwIDYwIDgyIDg2IDc4IFoiIGZpbGw9IiNmZjdmOWYiLz4KICA8cGF0aCBjbGFzcz0ic2NhcmYiIGQ9Ik04NiA3NCBDNjYgNzggNDggOTIgMzAgODggQzQ2IDk2IDY2IDkyIDg4IDgwIFoiIGZpbGw9IiNmZjlmYjgiIG9wYWNpdHk9Ii45Ii8+CiAgPCEtLSBiYWNrIHdpbmcgLS0+CiAgPHBhdGggZD0iTTEwNCA2NCBMMTUwIDMwIEwxNzAgMzQgTDEyNCA3MCBaIiBmaWxsPSIjZTlkMmEyIi8+CiAgPCEtLSBib2R5IC0tPgogIDxwYXRoIGQ9Ik02MCA4MiBRMTEwIDcwIDE4MiA3NCBRMTk2IDc2IDE5OCA4MiBRMTg2IDkyIDEyMCA5NCBRNzggOTYgNjAgODIgWiIgZmlsbD0idXJsKCN3aW5nKSIgc3Ryb2tlPSIjYzk5YTRhIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8cGF0aCBkPSJNMTcwIDc2IFExOTAgNzcgMTk3IDgyIiBzdHJva2U9InVybCgjZ29sZCkiIHN0cm9rZS13aWR0aD0iNCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPCEtLSB0YWlsIC0tPgogIDxwYXRoIGQ9Ik02NCA4MiBMNDQgNTggTDU2IDU4IEw3OCA4MCBaIiBmaWxsPSJ1cmwoI3dpbmdzdHJpcGUpIi8+CiAgPCEtLSBwaWxvdCAtLT4KICA8Y2lyY2xlIGN4PSIxMTIiIGN5PSI2NiIgcj0iMTQiIGZpbGw9IiNmZmQ5YjgiLz4KICA8cGF0aCBkPSJNOTggNjQgUTEwMCA0OCAxMTQgNDggUTEyOCA0OCAxMjggNjIgUTEyMCA1NiAxMTIgNTcgUTEwNCA1OCA5OCA2NCBaIiBmaWxsPSIjN2E0YTJhIi8+CiAgPHJlY3QgeD0iMTAzIiB5PSI1OCIgd2lkdGg9IjIyIiBoZWlnaHQ9IjgiIHJ4PSI0IiBmaWxsPSIjM2I0YmE4Ii8+CiAgPGNpcmNsZSBjeD0iMTA4IiBjeT0iNjIiIHI9IjQuNSIgZmlsbD0iI2JmZTZmZiIgc3Ryb2tlPSJ1cmwoI2dvbGQpIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8Y2lyY2xlIGN4PSIxMjAiIGN5PSI2MiIgcj0iNC41IiBmaWxsPSIjYmZlNmZmIiBzdHJva2U9InVybCgjZ29sZCkiIHN0cm9rZS13aWR0aD0iMiIvPgogIDxwYXRoIGQ9Ik0xMTAgNzIgUTExNCA3NSAxMTggNzIiIHN0cm9rZT0iI2M0NmE1YSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8IS0tIGZyb250IHdpbmcgLS0+CiAgPHBhdGggZD0iTTk2IDg0IEwxNTAgMTEyIEwxNzYgMTEwIEwxMjggODIgWiIgZmlsbD0idXJsKCN3aW5nKSIgc3Ryb2tlPSIjYzk5YTRhIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8cGF0aCBkPSJNMTM4IDk2IEwxNjIgMTEwIiBzdHJva2U9InVybCgjd2luZ3N0cmlwZSkiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=') center / 80% no-repeat, radial-gradient(circle at 30% 30%, #ffe9a8, #f08fb5 70%);
+}
+.promo-copy { flex: 1; display: flex; flex-direction: column; line-height: 1.2; }
+.promo-copy small { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; opacity: .8; }
+.promo-copy b { font-family: var(--display); font-size: 20px; letter-spacing: .04em; }
+.promo-copy span { font-size: 13px; opacity: .9; }
+.promo-cta { background: #fff; color: #3b4ba8; font-weight: 700; padding: 10px 14px; border-radius: 999px; font-size: 14px; }
+.results-foot { text-align: center; color: var(--text-on-sky); padding-bottom: 24px; }
+.results-foot b { font-variant-numeric: tabular-nums; }
+
+/* ---------- Collection ---------- */
+.tabs { display: flex; gap: 6px; background: var(--glass); padding: 5px; border-radius: 999px; border: 1px solid var(--glass-edge); }
+.tab { flex: 1; border: 0; background: transparent; padding: 10px; border-radius: 999px; font-weight: 600; font-size: 14px; }
+.tab.active { background: #fff; box-shadow: 0 2px 10px rgba(50, 60, 130, .14); }
+.creature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.creature {
+  text-align: center; padding: 12px 6px 10px; border-radius: 18px; background: var(--glass); border: 1px solid var(--glass-edge);
+  font-size: 12px; line-height: 1.2; font-weight: 600;
+}
+.creature small { display: block; font-weight: 400; color: var(--ink-soft); font-size: 11px; margin-top: 2px; }
+.medal {
+  width: 64px; height: 64px; margin: 0 auto 8px; border-radius: 50%; display: grid; place-items: center; font-size: 34px;
+  background: radial-gradient(circle at 35% 30%, #fff, var(--m1, #cfe3ff) 55%, var(--m2, #8fb4f0));
+  box-shadow: 0 0 0 3px #f6d98a, 0 0 0 5px rgba(176, 125, 34, .4), 0 6px 14px rgba(60, 70, 140, .2);
+}
+.creature.locked .medal { filter: grayscale(1) brightness(.4) contrast(.6); box-shadow: 0 0 0 3px rgba(255, 255, 255, .6); }
+.creature.locked { color: var(--ink-soft); }
+.creature.legendary .medal { box-shadow: 0 0 0 3px #f5c542, 0 0 18px 4px rgba(245, 197, 66, .55); }
+.maps { display: grid; gap: 14px; }
+.map-card { padding: 14px; }
+.map-card h4 { margin: 0 0 8px; font-family: var(--display); letter-spacing: .04em; display: flex; justify-content: space-between; }
+.map-card h4 small { font-family: var(--ui); font-weight: 600; color: var(--ink-soft); }
+.map-frame { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 3 / 2; }
+.map-frame svg { width: 100%; height: 100%; display: block; }
+.map-fog { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); }
+.map-fog i { background: linear-gradient(135deg, rgba(220, 230, 250, .96), rgba(200, 210, 240, .96)); border: 1px dashed rgba(120, 130, 180, .35); display: grid; place-items: center; font-style: normal; color: rgba(90, 100, 150, .5); font-size: 20px; }
+.map-fog i.got { background: transparent; border-color: transparent; color: transparent; animation: unfog .9s ease; }
+@keyframes unfog { from { background: rgba(255, 245, 200, .9); } }
+.col-help { font-size: 13px; color: var(--text-on-sky); opacity: .85; text-align: center; padding: 0 10px 24px; }
+
+/* ---------- Practice ---------- */
+.practice-intro { color: var(--text-on-sky); text-align: center; font-size: 15px; margin: 6px 8px 0; }
+.pack-list { display: grid; gap: 12px; }
+.pack {
+  display: flex; align-items: center; gap: 14px; text-align: left; width: 100%; padding: 16px;
+  border-radius: var(--radius); border: 1px solid var(--glass-edge); background: var(--glass);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 6px 24px rgba(50, 60, 140, .12);
+}
+.pack .em { font-size: 36px; width: 56px; height: 56px; display: grid; place-items: center; border-radius: 16px; background: rgba(255, 255, 255, .7); }
+.pack b { display: block; font-size: 18px; }
+.pack span { font-size: 14px; color: var(--ink-soft); }
+
+/* ---------- Modal & toasts ---------- */
+.modal { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(30, 36, 80, .45); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: fade .25s ease; }
+@keyframes fade { from { opacity: 0; } }
+.modal-card {
+  position: relative; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto;
+  background: linear-gradient(180deg, #fffdf6, #fdf3df); border-radius: 26px; padding: 28px 22px 22px;
+  box-shadow: 0 30px 80px rgba(20, 20, 60, .4); border: 1px solid #f0dca8;
+  animation: pop .35s cubic-bezier(.2, .9, .3, 1.2);
+}
+@keyframes pop { from { opacity: 0; transform: scale(.92) translateY(10px); } }
+.modal-x { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .05); font-size: 16px; }
+.modal-card h2 { font-family: var(--display); margin: 0 0 12px; text-align: center; letter-spacing: .04em; }
+.modal-card .btn { width: 100%; margin-top: 12px; }
+
+.credits { text-align: center; padding: 6px 4px 4px; }
+.credits-logo { width: 120px; margin: 4px auto 6px; display: block; filter: drop-shadow(0 4px 10px rgba(150, 100, 20, .3)); }
+.credits-title { font-family: var(--display); font-size: 20px; letter-spacing: .14em; text-transform: uppercase; color: #8a5a10; margin: 4px 0 12px; }
+.credits p { margin: 6px 0; font-family: var(--display); font-size: 15px; letter-spacing: .02em; color: #3b2a10; }
+.credits-rule { display: flex; align-items: center; gap: 12px; color: var(--gold); margin: 12px 20px; }
+.credits-rule::before, .credits-rule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+
+.howto ol { padding-left: 20px; margin: 0; display: grid; gap: 10px; font-size: 16px; line-height: 1.35; }
+.howto-eg { margin: 16px 0 0; padding: 12px; background: rgba(232, 184, 74, .14); border-radius: 14px; text-align: center; font-weight: 600; }
+.howto-eg span { font-weight: 400; font-size: 14px; color: var(--ink-soft); }
+
+.premium-sheet .price { text-align: center; font-family: var(--display); font-size: 40px; font-weight: 800; color: #8a5a10; margin: 4px 0; }
+.premium-sheet .price small { font-family: var(--ui); font-size: 14px; font-weight: 500; color: var(--ink-soft); display: block; }
+.premium-sheet ul { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 10px; }
+.premium-sheet li { display: flex; gap: 10px; align-items: center; font-size: 16px; }
+.premium-sheet li span { width: 36px; height: 36px; flex: none; border-radius: 12px; display: grid; place-items: center; background: rgba(232, 184, 74, .2); }
+.stub-note { font-size: 12px; text-align: center; color: var(--ink-soft); margin: 10px 0 0; }
+.checkout { display: grid; gap: 10px; }
+.checkout .fake-field { height: 48px; border-radius: 12px; border: 1px solid #e3d6b5; background: #fff; display: flex; align-items: center; padding: 0 14px; color: #9a93a8; }
+
+.toast-stack { position: fixed; left: 0; right: 0; top: calc(64px + var(--safe-t)); z-index: 30; display: grid; justify-items: center; gap: 8px; pointer-events: none; }
+.toast {
+  display: flex; align-items: center; gap: 12px; padding: 10px 18px 10px 10px; border-radius: 999px;
+  background: linear-gradient(180deg, #fffdf6, #fbe9bc); border: 1px solid #f0d58e; color: #4a3208;
+  box-shadow: 0 10px 30px rgba(120, 80, 10, .3); font-weight: 600; font-size: 15px;
+  animation: toast 3.6s ease both;
+}
+.toast .medal { width: 42px; height: 42px; margin: 0; font-size: 22px; }
+.toast small { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+@keyframes toast { 0% { opacity: 0; transform: translateY(-14px) scale(.95); } 10%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-8px); } }
+
+/* Night layers: lighter text on the sky */
+body.night { --text-on-sky: #f4f1ff; }
+body.night .hud-alt, body.night .screen-title { text-shadow: 0 1px 8px rgba(0, 0, 0, .3); }
+
+@media (min-width: 720px) {
+  .screen { padding-top: 28px; }
+  #glider { width: 160px; }
+  .isle { width: 210px; }
+}
+@media (max-height: 640px) {
+  .home-hero { margin-top: 0; }
+  .title { font-size: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .2s !important; }
+}
+
+/* Keep the home title clean: the route of islands ahead sits back in the haze */
+body.on-home .isle[data-at] { opacity: .55; transition: opacity .8s; }
+
+/* Artifact build extras */
+html, body { height: 100%; background: #9fc4f0; }
+.home-shared { margin: 0; text-align: center; font-size: 12px; color: var(--ink-soft); }
+body.night .home-shared { color: #d9dcf5; }
+.editor-panel { display: grid; gap: 10px; }
+.editor-panel code { font-size: 12px; background: rgba(232, 184, 74, .18); padding: 1px 6px; border-radius: 6px; }
+.ed-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ed-row input { font: inherit; padding: 6px 10px; border-radius: 10px; border: 1px solid #e3d6b5; }
+.ed-src { font-size: 12px; color: var(--ink-soft); }
+.ed-prompt { display: grid; gap: 6px; padding: 10px; border-radius: 14px; background: rgba(255, 255, 255, .7); border: 1px solid #f0e2bd; }
+.ed-prompt label { font-weight: 600; font-size: 13px; }
+.ed-prompt label small { font-weight: 400; color: var(--ink-soft); }
+.ed-q { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 10px; border: 1px solid #e3d6b5; }
+.ed-a { font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; min-height: 140px; padding: 8px; border-radius: 10px; border: 1px solid #e3d6b5; white-space: pre; overflow-x: auto; resize: vertical; }
+.ed-miss { margin: 0; font-size: 12px; }
+.ed-miss button { border: 1px solid #e3d6b5; background: #fff; border-radius: 999px; padding: 2px 8px; font-size: 12px; margin: 2px; }
+.ed-msg { margin: 0; font-size: 14px; }
+.ed-msg.ok { color: #1b6b3a; font-weight: 600; }
+.ed-msg.err { color: #b8324c; font-weight: 600; }
+.modal-card:has(.editor-panel) { max-width: 640px; }
+
+</style>
+<!-- The sky: fixed behind every screen, climbs with your score -->
+  <div id="sky" aria-hidden="true">
+    <div class="sky-grad"></div>
+    <div class="stars"></div>
+    <div class="aurora"><i></i><i></i><i></i></div>
+    <div class="sun"></div>
+    <div class="clouds clouds-far"></div>
+    <div id="world"></div>
+    <div class="clouds clouds-mid"></div>
+    <div id="glider-wrap"><div id="glider"></div><div id="trail"></div></div>
+    <div class="clouds clouds-near"></div>
+  </div>
+
+  <main id="app">
+    <!-- HOME -->
+    <section class="screen" id="screen-home">
+      <header class="topbar">
+        <button class="chip" id="btn-streak" aria-label="Daily streak"><span class="flame">🔥</span><b id="streak-count">0</b></button>
+        <div class="topbar-right">
+          <button class="icon-btn" id="btn-editor" aria-label="Edit prompts" hidden>✎</button>
+          <button class="icon-btn" id="btn-collection" aria-label="Collection">🗺️</button>
+          <button class="icon-btn" id="btn-sound" aria-label="Sound on">🔊</button>
+        </div>
+      </header>
+
+      <div class="home-hero">
+        <p class="kicker" id="home-day">Day #1</p>
+        <h1 class="title"><span>Skydrift</span><small>Isles</small></h1>
+        <p class="tagline">Seven strange questions. <em>Rare answers fly higher.</em></p>
+      </div>
+
+      <div class="home-actions">
+        <button class="btn btn-gold btn-xl" id="btn-play"><span>Take off</span></button>
+        <p class="home-note" id="home-note">7 prompts · 25 seconds each</p>
+        <p class="home-shared" id="home-shared"></p>
+        <div class="home-row">
+          <button class="btn btn-glass" id="btn-howto">How to play</button>
+          <button class="btn btn-glass btn-premium" id="btn-unlimited">✦ Unlimited Skies</button>
+        </div>
+      </div>
+
+      <div class="ad-slot" data-slot="home-banner"></div>
+
+      <button class="se-logo" id="btn-credits" aria-label="Credits">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgNDYgMTcyIDEwMyIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJTRSBJSUkgbW9ub2dyYW0iPgogIDx0aXRsZT5TRSBJSUk8L3RpdGxlPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJzZUdvbGQiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmZmMWI4Ii8+PHN0b3Agb2Zmc2V0PSIuNDUiIHN0b3AtY29sb3I9IiNlOGI4NGEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNhODc2MWMiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bWFzayBpZD0ic2VLbm9jayIgbWFza1VuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeD0iMCIgeT0iMCIgd2lkdGg9IjE3MiIgaGVpZ2h0PSIxNzAiPgogICAgICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMTcyIiBoZWlnaHQ9IjE3MCIgZmlsbD0iI2ZmZiIvPgogICAgICA8cGF0aCBkPSJNNjEuMjQgMTE0LjA3TDYxLjI0IDgxLjkzUTYxLjE4IDgwLjQzIDYwLjExIDc5LjM1UTU5LjA0IDc4LjI4IDU3LjUzIDc4LjI4TDU2Ljc4IDc4LjI4TDU2Ljc4IDc3LjcwTDcyLjc4IDc3LjcwTDcyLjc4IDc4LjI4TDcyLjAzIDc4LjI4UTcwLjUyIDc4LjI4IDY5LjQ1IDc5LjM1UTY4LjM4IDgwLjQzIDY4LjMyIDgxLjkzTDY4LjMyIDExNC4wN1E2OC4zOCAxMTUuNTcgNjkuNDUgMTE2LjY1UTcwLjUyIDExNy43MiA3Mi4wMyAxMTcuNzJMNzIuNzggMTE3LjcyTDcyLjc4IDExOC4zMEw1Ni43OCAxMTguMzBMNTYuNzggMTE3LjcyTDU3LjUzIDExNy43MlE1OS4wNCAxMTcuNzIgNjAuMTEgMTE2LjY1UTYxLjE4IDExNS41NyA2MS4yNCAxMTQuMDcgTTgyLjI1IDExNC4wN0w4Mi4yNSA4MS45M1E4Mi4xOSA4MC40MyA4MS4xMiA3OS4zNVE4MC4wNSA3OC4yOCA3OC41NCA3OC4yOEw3Ny43OCA3OC4yOEw3Ny43OCA3Ny43MEw5My43OSA3Ny43MEw5My43OSA3OC4yOEw5My4wNCA3OC4yOFE5MS41MyA3OC4yOCA5MC40NiA3OS4zNVE4OS4zOCA4MC40MyA4OS4zMyA4MS45M0w4OS4zMyAxMTQuMDdRODkuMzggMTE1LjU3IDkwLjQ2IDExNi42NVE5MS41MyAxMTcuNzIgOTMuMDQgMTE3LjcyTDkzLjc5IDExNy43Mkw5My43OSAxMTguMzBMNzcuNzggMTE4LjMwTDc3Ljc4IDExNy43Mkw3OC41NCAxMTcuNzJRODAuMDUgMTE3LjcyIDgxLjEyIDExNi42NVE4Mi4xOSAxMTUuNTcgODIuMjUgMTE0LjA3IE0xMDMuMjYgMTE0LjA3TDEwMy4yNiA4MS45M1ExMDMuMjAgODAuNDMgMTAyLjEzIDc5LjM1UTEwMS4wNSA3OC4yOCA5OS41NSA3OC4yOEw5OC43OSA3OC4yOEw5OC43OSA3Ny43MEwxMTQuODAgNzcuNzBMMTE0LjgwIDc4LjI4TDExNC4wNSA3OC4yOFExMTIuNTQgNzguMjggMTExLjQ2IDc5LjM1UTExMC4zOSA4MC40MyAxMTAuMzMgODEuOTNMMTEwLjMzIDExNC4wN1ExMTAuMzkgMTE1LjU3IDExMS40NiAxMTYuNjVRMTEyLjU0IDExNy43MiAxMTQuMDUgMTE3LjcyTDExNC44MCAxMTcuNzJMMTE0LjgwIDExOC4zMEw5OC43OSAxMTguMzBMOTguNzkgMTE3LjcyTDk5LjU1IDExNy43MlExMDEuMDUgMTE3LjcyIDEwMi4xMyAxMTYuNjVRMTAzLjIwIDExNS41NyAxMDMuMjYgMTE0LjA3IiBmaWxsPSIjMDAwIiBzdHJva2U9IiMwMDAiIHZlY3Rvci1lZmZlY3Q9Im5vbmUiIHN0cm9rZS13aWR0aD0iOCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogICAgPC9tYXNrPgogIDwvZGVmcz4KICA8ZyBmaWxsPSJ1cmwoI3NlR29sZCkiPgogICAgPHBhdGggbWFzaz0idXJsKCNzZUtub2NrKSIgZD0iTTM3LjI1IDU0LjMyUTM5LjY1IDU0LjMyIDQzLjE5IDU0LjU2UTQ2LjczIDU0LjgwIDUwLjU3IDU1LjE2UTUxLjg5IDU1LjQwIDUzLjA5IDU1LjUyTDYxLjEzIDU1LjUyTDYxLjAxIDU2Ljk2UTYxLjAxIDU2Ljk2IDYxLjAxIDU2Ljk2TDU5LjU3IDczLjE2TDU4LjM3IDczLjE2UTU4LjM3IDY2LjkyIDUzLjc1IDYzLjE0UTQ5LjEzIDU5LjM2IDQxLjQ1IDU5LjM2UTM0LjQ5IDU5LjM2IDMwLjIzIDYyLjcyUTI1Ljk3IDY2LjA4IDI1LjczIDcwLjg4UTI1LjYxIDc0LjQ4IDI4LjAxIDc3LjEyUTMwLjQxIDc5Ljc2IDM0LjEzIDgyLjA0TDU3LjA1IDk2LjkyUTYyLjU3IDEwMC4wNCA2NS4zOSAxMDUuMDhRNjguMjEgMTEwLjEyIDY3Ljg1IDExNi44NFE2Ny4yNSAxMjguNjAgNTguODUgMTM1LjE0UTUwLjQ1IDE0MS42OCAzNi4wNSAxNDEuNjhRMzAuNzcgMTQxLjY4IDI1Ljc5IDE0MC43OFEyMC44MSAxMzkuODggMTYuOTcgMTM4LjI2UTEzLjEzIDEzNi42NCAxMC44NSAxMzQuMzZROS44OSAxMzEuNzIgMTAuMDEgMTI4UTEwLjEzIDEyNC4yOCAxMS4xNSAxMjAuNDRRMTIuMTcgMTE2LjYwIDEzLjczIDExNC4wOEwxNC44MSAxMTQuMDhRMTQuMzMgMTIwLjIwIDE3LjAzIDEyNS40MlExOS43MyAxMzAuNjQgMjQuOTUgMTMzLjcwUTMwLjE3IDEzNi43NiAzNy4zNyAxMzYuNjRRNDUuMjkgMTM2LjUyIDQ5LjYxIDEzMi42MlE1My45MyAxMjguNzIgNTMuOTMgMTIzLjIwUTUzLjkzIDExOS40OCA1MS43MSAxMTYuNDhRNDkuNDkgMTEzLjQ4IDQ0LjQ1IDExMC43MkwyMy40NSA5Ni44MFExNy4wOSA5My4yMCAxNC4yMSA4Ny41NlExMS4zMyA4MS45MiAxMS45MyA3NS4zMlExMi41MyA2OS4wOCAxNS42NSA2NC4zNFExOC43NyA1OS42MCAyNC4yMyA1Ni45NlEyOS42OSA1NC4zMiAzNy4yNSA1NC4zMiBNMTYwLjM3IDExNS40MEwxNjEuNTcgMTE1LjQwTDE1Ni4wNSAxNDBMOTMuODkgMTQwTDkzLjg5IDEzOC44MEw5NS40NSAxMzguODBROTguNTcgMTM4LjgwIDEwMC43OSAxMzYuNThRMTAzLjAxIDEzNC4zNiAxMDMuMTMgMTMxLjI0TDEwMy4xMyA2NC43NlExMDMuMDEgNjEuNjQgMTAwLjc5IDU5LjQyUTk4LjU3IDU3LjIwIDk1LjQ1IDU3LjIwTDkzLjg5IDU3LjIwTDkzLjg5IDU2TDEzOS42MSA1NlExNDIuMjUgNTYgMTQ1LjE5IDU1LjY0UTE0OC4xMyA1NS4yOCAxNTAuNjUgNTQuODBRMTUzLjE3IDU0LjMyIDE1NC4yNSA1My44NEwxNTQuMjUgNzQuODRMMTUzLjA1IDc0Ljg0TDE1My4wNSA3My40MFExNTMuMDUgNjcuODggMTQ5LjgxIDY0LjUyUTE0Ni45MyA2MS42NCAxNDIuNDkgNjEuMTZMMTIxLjEzIDYxLjE2TDEyMS4xMyA5Ni4wOEwxMzYuOTcgOTYuMDhRMTQxLjQxIDk1Ljk2IDE0NC4yOSA5My4wMlExNDcuMTcgOTAuMDggMTQ3LjE3IDg1LjY0TDE0Ny4xNyA4NC44MEwxNDguMzcgODQuODBMMTQ4LjM3IDExMi40MEwxNDcuMTcgMTEyLjQwTDE0Ny4xNyAxMTEuNDRRMTQ3LjE3IDEwNyAxNDQuMjkgMTA0LjEyUTE0MS40MSAxMDEuMjQgMTM2Ljk3IDEwMS4xMkwxMjEuMTMgMTAxLjEyTDEyMS4xMyAxMzQuODRMMTM2Ljg1IDEzNC44NFExNDIuODUgMTM0Ljg0IDE0Ny40MSAxMzIuNTBRMTUxLjk3IDEzMC4xNiAxNTUuMjEgMTI1Ljc4UTE1OC40NSAxMjEuNDAgMTYwLjM3IDExNS40MCIvPgogICAgPHBhdGggZD0iTTYxLjI0IDExNC4wN0w2MS4yNCA4MS45M1E2MS4xOCA4MC40MyA2MC4xMSA3OS4zNVE1OS4wNCA3OC4yOCA1Ny41MyA3OC4yOEw1Ni43OCA3OC4yOEw1Ni43OCA3Ny43MEw3Mi43OCA3Ny43MEw3Mi43OCA3OC4yOEw3Mi4wMyA3OC4yOFE3MC41MiA3OC4yOCA2OS40NSA3OS4zNVE2OC4zOCA4MC40MyA2OC4zMiA4MS45M0w2OC4zMiAxMTQuMDdRNjguMzggMTE1LjU3IDY5LjQ1IDExNi42NVE3MC41MiAxMTcuNzIgNzIuMDMgMTE3LjcyTDcyLjc4IDExNy43Mkw3Mi43OCAxMTguMzBMNTYuNzggMTE4LjMwTDU2Ljc4IDExNy43Mkw1Ny41MyAxMTcuNzJRNTkuMDQgMTE3LjcyIDYwLjExIDExNi42NVE2MS4xOCAxMTUuNTcgNjEuMjQgMTE0LjA3IE04Mi4yNSAxMTQuMDdMODIuMjUgODEuOTNRODIuMTkgODAuNDMgODEuMTIgNzkuMzVRODAuMDUgNzguMjggNzguNTQgNzguMjhMNzcuNzggNzguMjhMNzcuNzggNzcuNzBMOTMuNzkgNzcuNzBMOTMuNzkgNzguMjhMOTMuMDQgNzguMjhROTEuNTMgNzguMjggOTAuNDYgNzkuMzVRODkuMzggODAuNDMgODkuMzMgODEuOTNMODkuMzMgMTE0LjA3UTg5LjM4IDExNS41NyA5MC40NiAxMTYuNjVROTEuNTMgMTE3LjcyIDkzLjA0IDExNy43Mkw5My43OSAxMTcuNzJMOTMuNzkgMTE4LjMwTDc3Ljc4IDExOC4zMEw3Ny43OCAxMTcuNzJMNzguNTQgMTE3LjcyUTgwLjA1IDExNy43MiA4MS4xMiAxMTYuNjVRODIuMTkgMTE1LjU3IDgyLjI1IDExNC4wNyBNMTAzLjI2IDExNC4wN0wxMDMuMjYgODEuOTNRMTAzLjIwIDgwLjQzIDEwMi4xMyA3OS4zNVExMDEuMDUgNzguMjggOTkuNTUgNzguMjhMOTguNzkgNzguMjhMOTguNzkgNzcuNzBMMTE0LjgwIDc3LjcwTDExNC44MCA3OC4yOEwxMTQuMDUgNzguMjhRMTEyLjU0IDc4LjI4IDExMS40NiA3OS4zNVExMTAuMzkgODAuNDMgMTEwLjMzIDgxLjkzTDExMC4zMyAxMTQuMDdRMTEwLjM5IDExNS41NyAxMTEuNDYgMTE2LjY1UTExMi41NCAxMTcuNzIgMTE0LjA1IDExNy43MkwxMTQuODAgMTE3LjcyTDExNC44MCAxMTguMzBMOTguNzkgMTE4LjMwTDk4Ljc5IDExNy43Mkw5OS41NSAxMTcuNzJRMTAxLjA1IDExNy43MiAxMDIuMTMgMTE2LjY1UTEwMy4yMCAxMTUuNTcgMTAzLjI2IDExNC4wNyIvPgogIDwvZz4KPC9zdmc+" alt="SE III" />
+      </button>
+    </section>
+
+    <!-- PLAY -->
+    <section class="screen" id="screen-play" hidden>
+      <header class="hud">
+        <button class="icon-btn small" id="btn-quit" aria-label="Back to home">✕</button>
+        <div class="hud-dots" id="hud-dots"></div>
+        <div class="hud-alt"><b id="hud-feet">0</b><span>ft</span><small id="hud-layer">Cloud Meadows</small></div>
+      </header>
+
+      <div class="timer" id="timer"><div class="timer-fill" id="timer-fill"></div><span id="timer-num">25</span></div>
+
+      <div class="card prompt-card" id="prompt-card">
+        <p class="prompt-label" id="prompt-label">Prompt 1 of 7</p>
+        <h2 class="prompt-text" id="prompt-text">…</h2>
+
+        <form class="answer-form" id="answer-form" autocomplete="off">
+          <input id="answer-input" type="text" inputmode="text" enterkeyhint="send" maxlength="60"
+            placeholder="Type something rare…" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Your answer" />
+          <button class="btn btn-gold send" type="submit" aria-label="Send answer">➤</button>
+        </form>
+        <p class="answer-hint" id="answer-hint">Any real answer counts. Rarer answers score more.</p>
+
+        <div class="reveal" id="reveal" hidden>
+          <div class="tier-badge" id="reveal-tier">Rare</div>
+          <p class="reveal-answer" id="reveal-answer">Battery</p>
+          <p class="reveal-points"><b id="reveal-points">0</b><span>pts</span></p>
+          <p class="reveal-share" id="reveal-share"></p>
+          <button class="btn btn-gold" id="btn-next">Next ➜</button>
+        </div>
+      </div>
+
+      <div class="landmark-toast" id="landmark-toast" hidden></div>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="screen scroll" id="screen-results" hidden>
+      <div class="results-head">
+        <p class="kicker" id="res-day">Day #1</p>
+        <h2 class="res-layer" id="res-layer">Aurora Peaks</h2>
+        <p class="res-alt"><b id="res-feet">0</b> ft · <b id="res-score">0</b>/700</p>
+        <div class="res-emoji" id="res-emoji"></div>
+        <p class="res-streak" id="res-streak"></p>
+        <button class="btn btn-gold btn-xl" id="btn-share">Share my flight</button>
+        <p class="share-done" id="share-done" hidden>Copied! Paste it to your friends.</p>
+      </div>
+
+      <div class="card finds" id="res-finds" hidden>
+        <h3>New finds</h3>
+        <div class="finds-row" id="res-finds-row"></div>
+      </div>
+
+      <div class="card breakdown">
+        <h3>Your flight log</h3>
+        <ol id="res-list"></ol>
+      </div>
+
+      <a class="card promo" id="promo-glydrift" target="_blank" rel="noopener">
+        <div class="promo-art" aria-hidden="true"></div>
+        <div class="promo-copy">
+          <small>Keep flying</small>
+          <b>Play Glydrift</b>
+          <span>Soar, dive and race through the sky in our flying game.</span>
+        </div>
+        <span class="promo-cta">Play ➜</span>
+      </a>
+
+      <div class="ad-slot" data-slot="results-rect" data-size="rect"></div>
+
+      <div class="results-foot">
+        <p>Next skies in <b id="res-countdown">--:--:--</b></p>
+        <div class="home-row">
+          <button class="btn btn-glass" id="btn-res-collection">🗺️ Collection</button>
+          <button class="btn btn-glass" id="btn-res-home">Home</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- COLLECTION -->
+    <section class="screen scroll" id="screen-collection" hidden>
+      <header class="topbar">
+        <button class="icon-btn" id="btn-col-back" aria-label="Back">←</button>
+        <h2 class="screen-title">Collection</h2>
+        <span class="topbar-spacer"></span>
+      </header>
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="creatures" role="tab">Sky creatures <span id="col-creature-count"></span></button>
+        <button class="tab" data-tab="maps" role="tab">Map fragments <span id="col-fragment-count"></span></button>
+      </div>
+      <div id="col-creatures" class="creature-grid"></div>
+      <div id="col-maps" class="maps" hidden></div>
+      <p class="col-help">Rare answers (75+ pts) earn map fragments. Legendary answers (90+) befriend sky creatures. Some creatures only come to pilots with long streaks.</p>
+    </section>
+
+    <!-- PRACTICE PICKER -->
+    <section class="screen scroll" id="screen-practice" hidden>
+      <header class="topbar">
+        <button class="icon-btn" id="btn-pr-back" aria-label="Back">←</button>
+        <h2 class="screen-title">Unlimited Skies</h2>
+        <span class="topbar-spacer"></span>
+      </header>
+      <p class="practice-intro">Practice as much as you like. Scores here use rarity estimates and never touch the daily leaderboard.</p>
+      <div id="pack-list" class="pack-list"></div>
+    </section>
+  </main>
+
+  <!-- Modals -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <button class="modal-x" data-close aria-label="Close">✕</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div class="toast-stack" id="toasts"></div>
+
+  <template id="tpl-credits">
+    <div class="credits">
+      <img class="credits-logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgNDYgMTcyIDEwMyIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJTRSBJSUkgbW9ub2dyYW0iPgogIDx0aXRsZT5TRSBJSUk8L3RpdGxlPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJzZUdvbGQiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmZmMWI4Ii8+PHN0b3Agb2Zmc2V0PSIuNDUiIHN0b3AtY29sb3I9IiNlOGI4NGEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNhODc2MWMiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bWFzayBpZD0ic2VLbm9jayIgbWFza1VuaXRzPSJ1c2VyU3BhY2VPblVzZSIgeD0iMCIgeT0iMCIgd2lkdGg9IjE3MiIgaGVpZ2h0PSIxNzAiPgogICAgICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMTcyIiBoZWlnaHQ9IjE3MCIgZmlsbD0iI2ZmZiIvPgogICAgICA8cGF0aCBkPSJNNjEuMjQgMTE0LjA3TDYxLjI0IDgxLjkzUTYxLjE4IDgwLjQzIDYwLjExIDc5LjM1UTU5LjA0IDc4LjI4IDU3LjUzIDc4LjI4TDU2Ljc4IDc4LjI4TDU2Ljc4IDc3LjcwTDcyLjc4IDc3LjcwTDcyLjc4IDc4LjI4TDcyLjAzIDc4LjI4UTcwLjUyIDc4LjI4IDY5LjQ1IDc5LjM1UTY4LjM4IDgwLjQzIDY4LjMyIDgxLjkzTDY4LjMyIDExNC4wN1E2OC4zOCAxMTUuNTcgNjkuNDUgMTE2LjY1UTcwLjUyIDExNy43MiA3Mi4wMyAxMTcuNzJMNzIuNzggMTE3LjcyTDcyLjc4IDExOC4zMEw1Ni43OCAxMTguMzBMNTYuNzggMTE3LjcyTDU3LjUzIDExNy43MlE1OS4wNCAxMTcuNzIgNjAuMTEgMTE2LjY1UTYxLjE4IDExNS41NyA2MS4yNCAxMTQuMDcgTTgyLjI1IDExNC4wN0w4Mi4yNSA4MS45M1E4Mi4xOSA4MC40MyA4MS4xMiA3OS4zNVE4MC4wNSA3OC4yOCA3OC41NCA3OC4yOEw3Ny43OCA3OC4yOEw3Ny43OCA3Ny43MEw5My43OSA3Ny43MEw5My43OSA3OC4yOEw5My4wNCA3OC4yOFE5MS41MyA3OC4yOCA5MC40NiA3OS4zNVE4OS4zOCA4MC40MyA4OS4zMyA4MS45M0w4OS4zMyAxMTQuMDdRODkuMzggMTE1LjU3IDkwLjQ2IDExNi42NVE5MS41MyAxMTcuNzIgOTMuMDQgMTE3LjcyTDkzLjc5IDExNy43Mkw5My43OSAxMTguMzBMNzcuNzggMTE4LjMwTDc3Ljc4IDExNy43Mkw3OC41NCAxMTcuNzJRODAuMDUgMTE3LjcyIDgxLjEyIDExNi42NVE4Mi4xOSAxMTUuNTcgODIuMjUgMTE0LjA3IE0xMDMuMjYgMTE0LjA3TDEwMy4yNiA4MS45M1ExMDMuMjAgODAuNDMgMTAyLjEzIDc5LjM1UTEwMS4wNSA3OC4yOCA5OS41NSA3OC4yOEw5OC43OSA3OC4yOEw5OC43OSA3Ny43MEwxMTQuODAgNzcuNzBMMTE0LjgwIDc4LjI4TDExNC4wNSA3OC4yOFExMTIuNTQgNzguMjggMTExLjQ2IDc5LjM1UTExMC4zOSA4MC40MyAxMTAuMzMgODEuOTNMMTEwLjMzIDExNC4wN1ExMTAuMzkgMTE1LjU3IDExMS40NiAxMTYuNjVRMTEyLjU0IDExNy43MiAxMTQuMDUgMTE3LjcyTDExNC44MCAxMTcuNzJMMTE0LjgwIDExOC4zMEw5OC43OSAxMTguMzBMOTguNzkgMTE3LjcyTDk5LjU1IDExNy43MlExMDEuMDUgMTE3LjcyIDEwMi4xMyAxMTYuNjVRMTAzLjIwIDExNS41NyAxMDMuMjYgMTE0LjA3IiBmaWxsPSIjMDAwIiBzdHJva2U9IiMwMDAiIHZlY3Rvci1lZmZlY3Q9Im5vbmUiIHN0cm9rZS13aWR0aD0iOCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogICAgPC9tYXNrPgogIDwvZGVmcz4KICA8ZyBmaWxsPSJ1cmwoI3NlR29sZCkiPgogICAgPHBhdGggbWFzaz0idXJsKCNzZUtub2NrKSIgZD0iTTM3LjI1IDU0LjMyUTM5LjY1IDU0LjMyIDQzLjE5IDU0LjU2UTQ2LjczIDU0LjgwIDUwLjU3IDU1LjE2UTUxLjg5IDU1LjQwIDUzLjA5IDU1LjUyTDYxLjEzIDU1LjUyTDYxLjAxIDU2Ljk2UTYxLjAxIDU2Ljk2IDYxLjAxIDU2Ljk2TDU5LjU3IDczLjE2TDU4LjM3IDczLjE2UTU4LjM3IDY2LjkyIDUzLjc1IDYzLjE0UTQ5LjEzIDU5LjM2IDQxLjQ1IDU5LjM2UTM0LjQ5IDU5LjM2IDMwLjIzIDYyLjcyUTI1Ljk3IDY2LjA4IDI1LjczIDcwLjg4UTI1LjYxIDc0LjQ4IDI4LjAxIDc3LjEyUTMwLjQxIDc5Ljc2IDM0LjEzIDgyLjA0TDU3LjA1IDk2LjkyUTYyLjU3IDEwMC4wNCA2NS4zOSAxMDUuMDhRNjguMjEgMTEwLjEyIDY3Ljg1IDExNi44NFE2Ny4yNSAxMjguNjAgNTguODUgMTM1LjE0UTUwLjQ1IDE0MS42OCAzNi4wNSAxNDEuNjhRMzAuNzcgMTQxLjY4IDI1Ljc5IDE0MC43OFEyMC44MSAxMzkuODggMTYuOTcgMTM4LjI2UTEzLjEzIDEzNi42NCAxMC44NSAxMzQuMzZROS44OSAxMzEuNzIgMTAuMDEgMTI4UTEwLjEzIDEyNC4yOCAxMS4xNSAxMjAuNDRRMTIuMTcgMTE2LjYwIDEzLjczIDExNC4wOEwxNC44MSAxMTQuMDhRMTQuMzMgMTIwLjIwIDE3LjAzIDEyNS40MlExOS43MyAxMzAuNjQgMjQuOTUgMTMzLjcwUTMwLjE3IDEzNi43NiAzNy4zNyAxMzYuNjRRNDUuMjkgMTM2LjUyIDQ5LjYxIDEzMi42MlE1My45MyAxMjguNzIgNTMuOTMgMTIzLjIwUTUzLjkzIDExOS40OCA1MS43MSAxMTYuNDhRNDkuNDkgMTEzLjQ4IDQ0LjQ1IDExMC43MkwyMy40NSA5Ni44MFExNy4wOSA5My4yMCAxNC4yMSA4Ny41NlExMS4zMyA4MS45MiAxMS45MyA3NS4zMlExMi41MyA2OS4wOCAxNS42NSA2NC4zNFExOC43NyA1OS42MCAyNC4yMyA1Ni45NlEyOS42OSA1NC4zMiAzNy4yNSA1NC4zMiBNMTYwLjM3IDExNS40MEwxNjEuNTcgMTE1LjQwTDE1Ni4wNSAxNDBMOTMuODkgMTQwTDkzLjg5IDEzOC44MEw5NS40NSAxMzguODBROTguNTcgMTM4LjgwIDEwMC43OSAxMzYuNThRMTAzLjAxIDEzNC4zNiAxMDMuMTMgMTMxLjI0TDEwMy4xMyA2NC43NlExMDMuMDEgNjEuNjQgMTAwLjc5IDU5LjQyUTk4LjU3IDU3LjIwIDk1LjQ1IDU3LjIwTDkzLjg5IDU3LjIwTDkzLjg5IDU2TDEzOS42MSA1NlExNDIuMjUgNTYgMTQ1LjE5IDU1LjY0UTE0OC4xMyA1NS4yOCAxNTAuNjUgNTQuODBRMTUzLjE3IDU0LjMyIDE1NC4yNSA1My44NEwxNTQuMjUgNzQuODRMMTUzLjA1IDc0Ljg0TDE1My4wNSA3My40MFExNTMuMDUgNjcuODggMTQ5LjgxIDY0LjUyUTE0Ni45MyA2MS42NCAxNDIuNDkgNjEuMTZMMTIxLjEzIDYxLjE2TDEyMS4xMyA5Ni4wOEwxMzYuOTcgOTYuMDhRMTQxLjQxIDk1Ljk2IDE0NC4yOSA5My4wMlExNDcuMTcgOTAuMDggMTQ3LjE3IDg1LjY0TDE0Ny4xNyA4NC44MEwxNDguMzcgODQuODBMMTQ4LjM3IDExMi40MEwxNDcuMTcgMTEyLjQwTDE0Ny4xNyAxMTEuNDRRMTQ3LjE3IDEwNyAxNDQuMjkgMTA0LjEyUTE0MS40MSAxMDEuMjQgMTM2Ljk3IDEwMS4xMkwxMjEuMTMgMTAxLjEyTDEyMS4xMyAxMzQuODRMMTM2Ljg1IDEzNC44NFExNDIuODUgMTM0Ljg0IDE0Ny40MSAxMzIuNTBRMTUxLjk3IDEzMC4xNiAxNTUuMjEgMTI1Ljc4UTE1OC40NSAxMjEuNDAgMTYwLjM3IDExNS40MCIvPgogICAgPHBhdGggZD0iTTYxLjI0IDExNC4wN0w2MS4yNCA4MS45M1E2MS4xOCA4MC40MyA2MC4xMSA3OS4zNVE1OS4wNCA3OC4yOCA1Ny41MyA3OC4yOEw1Ni43OCA3OC4yOEw1Ni43OCA3Ny43MEw3Mi43OCA3Ny43MEw3Mi43OCA3OC4yOEw3Mi4wMyA3OC4yOFE3MC41MiA3OC4yOCA2OS40NSA3OS4zNVE2OC4zOCA4MC40MyA2OC4zMiA4MS45M0w2OC4zMiAxMTQuMDdRNjguMzggMTE1LjU3IDY5LjQ1IDExNi42NVE3MC41MiAxMTcuNzIgNzIuMDMgMTE3LjcyTDcyLjc4IDExNy43Mkw3Mi43OCAxMTguMzBMNTYuNzggMTE4LjMwTDU2Ljc4IDExNy43Mkw1Ny41MyAxMTcuNzJRNTkuMDQgMTE3LjcyIDYwLjExIDExNi42NVE2MS4xOCAxMTUuNTcgNjEuMjQgMTE0LjA3IE04Mi4yNSAxMTQuMDdMODIuMjUgODEuOTNRODIuMTkgODAuNDMgODEuMTIgNzkuMzVRODAuMDUgNzguMjggNzguNTQgNzguMjhMNzcuNzggNzguMjhMNzcuNzggNzcuNzBMOTMuNzkgNzcuNzBMOTMuNzkgNzguMjhMOTMuMDQgNzguMjhROTEuNTMgNzguMjggOTAuNDYgNzkuMzVRODkuMzggODAuNDMgODkuMzMgODEuOTNMODkuMzMgMTE0LjA3UTg5LjM4IDExNS41NyA5MC40NiAxMTYuNjVROTEuNTMgMTE3LjcyIDkzLjA0IDExNy43Mkw5My43OSAxMTcuNzJMOTMuNzkgMTE4LjMwTDc3Ljc4IDExOC4zMEw3Ny43OCAxMTcuNzJMNzguNTQgMTE3LjcyUTgwLjA1IDExNy43MiA4MS4xMiAxMTYuNjVRODIuMTkgMTE1LjU3IDgyLjI1IDExNC4wNyBNMTAzLjI2IDExNC4wN0wxMDMuMjYgODEuOTNRMTAzLjIwIDgwLjQzIDEwMi4xMyA3OS4zNVExMDEuMDUgNzguMjggOTkuNTUgNzguMjhMOTguNzkgNzguMjhMOTguNzkgNzcuNzBMMTE0LjgwIDc3LjcwTDExNC44MCA3OC4yOEwxMTQuMDUgNzguMjhRMTEyLjU0IDc4LjI4IDExMS40NiA3OS4zNVExMTAuMzkgODAuNDMgMTEwLjMzIDgxLjkzTDExMC4zMyAxMTQuMDdRMTEwLjM5IDExNS41NyAxMTEuNDYgMTE2LjY1UTExMi41NCAxMTcuNzIgMTE0LjA1IDExNy43MkwxMTQuODAgMTE3LjcyTDExNC44MCAxMTguMzBMOTguNzkgMTE4LjMwTDk4Ljc5IDExNy43Mkw5OS41NSAxMTcuNzJRMTAxLjA1IDExNy43MiAxMDIuMTMgMTE2LjY1UTEwMy4yMCAxMTUuNTcgMTAzLjI2IDExNC4wNyIvPgogIDwvZz4KPC9zdmc+" alt="SE III monogram" />
+      <div class="credits-rule"><span>✦</span></div>
+      <p class="credits-title">Skydrift Isles</p>
+      <p>© 2026 Sam Eyde III. All rights reserved.</p>
+      <p>A Gleyde Technologies, LLC game.</p>
+      <p>Produced by Juwon Shon, COO.</p>
+      <div class="credits-rule"><span>✦</span></div>
+    </div>
+  </template>
+
+  <template id="tpl-howto">
+    <div class="howto">
+      <h2>How to fly</h2>
+      <ol>
+        <li><b>7 prompts a day.</b> Everyone gets the same ones. You have 25 seconds each.</li>
+        <li><b>Any real answer counts</b>, but the fewer people who say it, the more points it’s worth (up to 100).</li>
+        <li><b>Points lift your glider</b> through Cloud Meadows, Storm Reefs, Aurora Peaks and, for the boldest, Star Harbor.</li>
+        <li><b>Rare answers</b> earn map fragments and befriend sky creatures. Come back daily to keep your streak.</li>
+      </ol>
+      <p class="howto-eg">“Name something you’d regret licking”<br /><span>Battery → 37 pts · Escalator handrail → 90 pts</span></p>
+      <button class="btn btn-gold" data-close>Got it</button>
+    </div>
+  </template>
+<script type="module">
+// ---- public/shared/score.js ----
+// Rarity + scoring rules. Shared by the Worker and the browser.
+
+const PROMPTS_PER_DAY = 7;
+const SECONDS_PER_PROMPT = 25;
+const MAX_POINTS = 100;
+const LAUNCH_DATE = '2026-11-15'; // Day #1
+
+// How many "virtual players" the seeded estimates are worth. Real answers gradually outvote them,
+// so Day 1 plays on estimates and the numbers turn real as players come in.
+const SEED_WEIGHT = 100;
+
+// share (0..1) of players who gave this answer, blending seed estimates with real counts.
+function blendedShare({ est, estTotal, count, total }) {
+  const seed = estTotal > 0 ? est / estTotal : 0;
+  // Estimates are written as "% of players", but lists don't always sum to 100: the remainder is spread
+  // across answers nobody listed. Normalise only if the list claims more than 100%.
+  const seedShare = estTotal > 100 ? seed : est / 100;
+  return (SEED_WEIGHT * seedShare + count) / (SEED_WEIGHT + total);
+}
+
+// 0% -> 100 pts, 1% -> 83, 3% -> 66, 7% -> 49, 15% -> 32, 31% -> 15. Valid answers always earn at least 5.
+function pointsForShare(share) {
+  const pct = Math.max(0, share * 100);
+  return Math.max(5, Math.min(MAX_POINTS, Math.round(100 - 17 * Math.log2(1 + pct))));
+}
+
+const TIERS = [
+  { id: 'legendary', min: 90, label: 'Legendary', emoji: '🌟', color: '#f5c542' },
+  { id: 'rare', min: 75, label: 'Rare', emoji: '🟪', color: '#b48cff' },
+  { id: 'uncommon', min: 50, label: 'Uncommon', emoji: '🟦', color: '#6cc3ff' },
+  { id: 'common', min: 1, label: 'Common', emoji: '🟩', color: '#9ee0a6' },
+  { id: 'miss', min: 0, label: 'Lost in the clouds', emoji: '☁️', color: '#9aa7bd' },
+];
+
+function tierFor(points) {
+  return TIERS.find((t) => points >= t.min) || TIERS[TIERS.length - 1];
+}
+
+// Sky layers the glider climbs through over a day (0-700 points).
+const LAYERS = [
+  { id: 'meadows', name: 'Cloud Meadows', from: 0 },
+  { id: 'reefs', name: 'Storm Reefs', from: 175 },
+  { id: 'aurora', name: 'Aurora Peaks', from: 350 },
+  { id: 'harbor', name: 'Star Harbor', from: 525 },
+];
+
+function layerFor(points) {
+  let l = LAYERS[0];
+  for (const x of LAYERS) if (points >= x.from) l = x;
+  return l;
+}
+
+const LANDMARKS = [
+  { at: 40, name: 'The Lost Balloon Graveyard', icon: '🎈' },
+  { at: 95, name: 'Highest kite ever flown', icon: '🪁' },
+  { at: 150, name: 'The Dandelion Ferry', icon: '🌼' },
+  { at: 210, name: 'The Lightning Bakery', icon: '⚡' },
+  { at: 270, name: 'Where the sky whales sleep', icon: '🐋' },
+  { at: 330, name: 'The Thundercloud Choir', icon: '🎶' },
+  { at: 400, name: 'Aurora laundry lines', icon: '🧣' },
+  { at: 460, name: 'The upside-down waterfall', icon: '💧' },
+  { at: 520, name: 'The Moon’s spare keys', icon: '🗝️' },
+  { at: 590, name: 'Lighthouse of Lost Wishes', icon: '🏮' },
+  { at: 650, name: 'The Comet Car Wash', icon: '☄️' },
+  { at: 700, name: 'The Edge of Everything', icon: '✨' },
+];
+
+const FEET_PER_POINT = 10;
+
+function dayNumber(date) {
+  const ms = Date.parse(date + 'T00:00:00Z') - Date.parse(LAUNCH_DATE + 'T00:00:00Z');
+  return Math.floor(ms / 86400000) + 1;
+}
+
+function addDays(date, n) {
+  const d = new Date(date + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+// ---- public/shared/match.js ----
+// Answer lists + fuzzy matching. Shared by the Worker (validation) and the admin page (preview).
+//
+// Answer list format, one answer per line:
+//   Canonical answer | alias one, alias two, common misspelling | 4.5
+// The last field is the estimated % of players who'd give it (used for rarity until real data arrives).
+// Aliases and the estimate are optional. Lines starting with # are comments.
+
+const ARTICLES = new Set(['a', 'an', 'the', 'my', 'your', 'some', 'his', 'her', 'their', 'our', 'one']);
+
+function normalize(text) {
+  let s = String(text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const words = s.split(' ').filter(Boolean);
+  while (words.length > 1 && ARTICLES.has(words[0])) words.shift();
+  return words.map(singular).join(' ');
+}
+
+function singular(w) {
+  if (w.length <= 3) return w;
+  if (w.endsWith('ies') && w.length > 4) return w.slice(0, -3) + 'y';
+  if (/(ches|shes|sses|xes|zes|oes)$/.test(w)) return w.slice(0, -2);
+  if (w.endsWith('s') && !w.endsWith('ss') && !w.endsWith('us') && !w.endsWith('is')) return w.slice(0, -1);
+  return w;
+}
+
+function parseAnswerList(text) {
+  const out = [];
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const parts = line.split('|').map((p) => p.trim());
+    const answer = parts[0];
+    if (!answer) continue;
+    const aliases = (parts[1] || '').split(',').map((a) => a.trim()).filter(Boolean);
+    const est = parts[2] !== undefined && parts[2] !== '' ? Math.max(0, Number(parts[2]) || 0) : 1;
+    out.push({ answer, aliases, est });
+  }
+  return out;
+}
+
+function formatAnswerList(list) {
+  return list.map((a) => [a.answer, a.aliases.join(', '), String(a.est)].join(' | ')).join('\n');
+}
+
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+function tolerance(len) {
+  if (len <= 4) return 0;
+  if (len <= 7) return 1;
+  if (len <= 12) return 2;
+  return 3;
+}
+
+// Build a lookup once per prompt: [{ index, forms: [normalized strings] }]
+function buildIndex(list) {
+  return list.map((a, index) => {
+    const forms = new Set([normalize(a.answer), ...a.aliases.map(normalize)]);
+    for (const f of [...forms]) forms.add(f.replace(/ /g, '')); // "sea weed" == "seaweed"
+    forms.delete('');
+    return { index, forms: [...forms] };
+  });
+}
+
+// Returns { index, how } or null. how: 'exact' | 'fuzzy' | 'contains'
+function matchAnswer(input, index) {
+  const n = normalize(input);
+  if (!n) return null;
+  const squashed = n.replace(/ /g, '');
+  for (const e of index) {
+    if (e.forms.includes(n) || e.forms.includes(squashed)) return { index: e.index, how: 'exact' };
+  }
+  let best = null;
+  for (const e of index) {
+    for (const f of e.forms) {
+      const tol = tolerance(Math.min(f.length, n.length));
+      if (!tol || Math.abs(f.length - n.length) > tol) continue;
+      const d = levenshtein(n, f);
+      if (d <= tol && (!best || d < best.d)) best = { index: e.index, d };
+    }
+  }
+  if (best) return { index: best.index, how: 'fuzzy' };
+  // "a really big cactus" -> "cactus": a listed answer appears as whole words, with few extra words around it.
+  const words = n.split(' ');
+  let contained = null;
+  for (const e of index) {
+    for (const f of e.forms) {
+      if (f.length < 4 || !f.includes(' ') && f.length < 4) continue;
+      const fw = f.split(' ');
+      if (words.length - fw.length > 3 || words.length <= fw.length) continue;
+      const hay = ` ${n} `;
+      if (hay.includes(` ${f} `) && (!contained || f.length > contained.len)) contained = { index: e.index, len: f.length };
+    }
+  }
+  return contained ? { index: contained.index, how: 'contains' } : null;
+}
+
+// ---- src/content/seed-days.js ----
+// The first three days of SKYDRIFT ISLES. Once the admin page saves a day to the database,
+// that version wins over anything here. Format of `answers`: see public/shared/match.js.
+// The last number on each line is an estimated % of players; the long tail is what makes rare answers rare.
+
+const SEED_DAYS = {
+  '2026-11-15': [
+    {
+      prompt: 'Name something you’d regret licking',
+      answers: `
+Battery | 9v battery, nine volt battery, aa battery, batteries | 12
+Cactus | cacti, cactuses | 10
+Frozen pole | flagpole, frozen flagpole, lamppost, frozen lamp post, metal pole | 9
+Toilet | toilet seat, toliet, toilet bowl | 8
+Doorknob | door handle, door knob | 4
+Subway pole | subway rail, bus pole, train pole | 3
+Floor | the floor, ground | 3
+Shoe | shoes, sneaker, boot | 3
+Electric fence | electrical fence | 2.5
+Toad | frog, poison dart frog, cane toad | 2.5
+Slug | snail, banana slug | 2
+Hot stove | stove, stovetop, hot pan, frying pan, iron | 2
+Knife | blade, razor, razor blade, sword | 2
+Light socket | outlet, power outlet, plug socket, electrical outlet | 2
+Gym mat | gym floor, yoga mat | 1.2
+Bowling ball | bowling ball holes | 1
+Keyboard | computer keyboard | 1
+Mailbox | post box | 0.8
+Hand sanitizer | sanitiser, hand sanitiser | 0.8
+Soap | bar of soap, dish soap | 1.5
+Jellyfish | jelly fish | 1
+Porcupine | hedgehog | 1
+Phone screen | phone, cell phone, smartphone | 1
+Shopping cart handle | trolley handle, cart handle, shopping trolley | 0.8
+Ice cube tray | ice tray | 0.4
+Ghost pepper | carolina reaper, hot pepper, chili pepper, habanero | 1.5
+Escalator handrail | escalator, escalator rail | 0.5
+Your cat | cat, a cat | 1
+Wasp nest | beehive, wasp, bee, bees nest, hornet nest | 1
+Mousetrap | mouse trap | 0.6
+Sea urchin | urchin | 0.5
+Glue stick | glue | 0.6
+Grandma’s cheek | grandma, aunt cheek | 0.3
+A wizard’s staff | wizard staff, magic staff | 0.2
+Lava lamp | lava | 0.6
+Dragon | dragon scale, dragon tongue | 0.4
+Thunderstorm cloud | storm cloud, cloud | 0.2
+Envelope glue | envelope, stamp, stamps | 1
+`,
+    },
+    {
+      prompt: 'Name a terrible name for a pet dragon',
+      answers: `
+Fluffy | fluffie | 12
+Puff | puff the magic dragon, puffy | 6
+Sparky | sparkles, sparkle | 6
+Steve | stevie | 5
+Bob | bobby | 4
+Kevin | kev | 4
+Princess | princess fluffy | 3
+Smokey | smoky, smokie | 3
+Snuggles | snuggle, snugglebug | 3
+Cupcake | muffin | 2.5
+Mr Whiskers | whiskers | 2
+Fireproof | fire proof | 0.8
+Matchstick | matches, match | 0.8
+Lizard | big lizard, liz | 1.5
+Wet Blanket | wet blanket | 0.4
+Ash | ashes | 1.5
+Toast | toasty | 2
+Marshmallow | marshmellow | 1.5
+Barbecue | bbq | 1
+Gary | garry | 1.5
+Karen | | 1.2
+Nugget | chicken nugget | 1.5
+Tiny | lil guy, little guy | 2
+Dave | david | 1
+Gerald | gerold | 0.6
+Extinguisher | fire extinguisher | 0.6
+Sir Burns-a-Lot | burns a lot, burnsalot | 0.5
+Insurance Claim | insurance, insurance claim | 0.2
+Kindling | | 0.4
+Puddle | | 0.3
+Cheddar | cheese | 0.6
+Linda | | 0.6
+Pickles | pickle | 1
+Doug | douglas | 0.8
+Lunch | dinner, breakfast, snack | 0.6
+Charcoal | coal | 0.8
+Hot Sauce | sriracha | 0.6
+Toaster | | 0.6
+Frank | frankie | 0.6
+Chimney | | 0.3
+`,
+    },
+    {
+      prompt: 'Name something a pirate would hide in a sandwich',
+      answers: `
+Gold coin | gold, coins, gold coins, doubloon, doubloons, coin | 18
+Treasure map | map | 14
+Treasure | | 8
+Parrot | parrot feather, bird | 5
+Key | treasure key, skeleton key | 5
+Rum | bottle of rum, rum bottle | 5
+Jewels | jewel, gems, gem, ruby, emerald, diamond, diamonds | 5
+Eyepatch | eye patch | 3
+Hook | hook hand | 3
+Fish | sardine, sardines, anchovy, anchovies, tuna | 3
+Compass | | 3
+Message in a bottle | bottle, note, secret message, letter | 2
+Wooden leg | peg leg, pegleg | 1.2
+Glass eye | eyeball | 0.8
+Sword | cutlass, dagger, knife | 1.5
+Pickle | pickles | 1.2
+Cannonball | cannon ball | 0.8
+Seaweed | sea weed, kelp | 1
+Lime | limes, lemon | 0.6
+Earring | gold earring, earrings | 0.5
+Spyglass | telescope | 0.7
+Black spot | the black spot | 0.2
+Crab | crab claw | 1
+Pearl | pearls | 1
+Hardtack | ship biscuit | 0.3
+Mutiny plans | mutiny, escape plan | 0.3
+Toenail | toenails, fingernail | 0.3
+Wanted poster | | 0.3
+Ship in a bottle | | 0.3
+Kraken tentacle | tentacle, kraken, squid, octopus | 0.5
+Bomb | gunpowder, dynamite | 0.8
+Lockpick | lock pick | 0.3
+Barnacles | barnacle | 0.3
+Cheese | | 0.5
+Sock | socks | 0.3
+`,
+    },
+    {
+      prompt: 'Name a snack that would survive a tornado',
+      answers: `
+Twinkie | twinkies, twinky | 14
+Beef jerky | jerky | 9
+Rice cake | rice cakes | 1.2
+Granola bar | granola, protein bar, energy bar, cereal bar | 5
+Pretzel | pretzels | 4
+Rock candy | | 2
+Fruitcake | fruit cake | 4
+Jawbreaker | jaw breaker, gobstopper | 4
+Hardtack | | 0.5
+Peanut | peanuts, nuts, almond, almonds, cashews, mixed nuts | 3
+Pringles | pringle, can of pringles | 4
+Canned beans | beans, can of beans, canned food, tin of beans | 2
+Honey | | 1.2
+Saltine | saltines, crackers, cracker | 2
+Popcorn | | 2
+Candy corn | | 1.2
+Gummy bears | gummies, gummy bear, gummi bears | 2.5
+Rock | rocks, a rock | 0.5
+Coconut | coconuts | 2
+Potato | potatoes, baked potato | 1
+Cheese wheel | wheel of cheese, parmesan | 1
+Stale bagel | bagel | 0.8
+Biscotti | | 0.6
+Peanut butter | pb | 1
+Marshmallow | marshmallows, marshmellow | 1
+Hot dog | hotdog | 0.4
+Frozen pizza | pizza | 0.6
+Space food | astronaut ice cream | 0.3
+Licorice | liquorice, twizzlers | 1
+Lollipop | lolly, sucker | 1
+Pemmican | | 0.2
+Cheese puff | cheetos, cheese puffs | 0.6
+Sunflower seeds | seeds | 0.6
+Brick of fudge | fudge | 0.5
+Dried mango | dried fruit, raisins, raisin | 0.8
+Moon pie | moonpie | 0.4
+Rice | uncooked rice | 0.3
+Taffy | salt water taffy | 0.6
+Anchor-shaped cookie | anchor, heavy cookie | 0.1
+`,
+    },
+    {
+      prompt: 'Name something a cloud would keep in its pocket',
+      answers: `
+Rain | raindrops, raindrop, rain drop | 16
+Lightning | lightning bolt, bolt | 10
+Snow | snowflake, snowflakes | 8
+Rainbow | | 7
+Thunder | | 4
+Hail | hailstones | 3
+Umbrella | | 4
+Sunglasses | shades | 2
+Bird | birds, a bird | 3
+Airplane | plane, jet | 2
+Kite | | 2
+Balloon | balloons | 2.5
+Sunshine | sun, sunbeam, sun beam | 3
+Wind | breeze, gust | 2.5
+Fog | mist | 1.5
+Feather | feathers | 1
+Mittens | gloves | 0.5
+Moon | moonbeam | 1
+Star | stars | 1.2
+Tissue | tissues, hanky, handkerchief | 0.6
+Weather report | forecast | 0.4
+Cotton candy | candy floss | 1
+Pillow | | 0.8
+Lost frisbee | frisbee | 0.3
+Drone | | 0.4
+Snack | snacks, lunch | 0.6
+Phone | cell phone | 0.6
+Map | | 0.3
+Sock | lost sock | 0.3
+Wishes | wish | 0.5
+Dandelion fluff | dandelion, dandelion seed | 0.3
+Chapstick | lip balm | 0.2
+Spare puddle | puddle | 0.3
+`,
+    },
+    {
+      prompt: 'Name something that would be weird to find in a lunchbox',
+      answers: `
+Frog | toad | 7
+Snake | | 4
+Rock | rocks, a rock, pebble | 5
+Shoe | sneaker, shoes, sock, socks | 5
+Money | cash, wad of cash, dollar | 4
+Phone | cell phone, iphone | 4
+Spider | spiders, tarantula | 4
+Worm | worms, gummy worm | 4
+Mouse | rat, hamster | 4
+Bug | bugs, insects, cockroach, roach, beetle | 4
+Fish | goldfish, live fish | 3
+Teeth | tooth, dentures, false teeth | 3
+Hair | wig, toupee | 2
+Homework | book, textbook | 2
+Love letter | note, letter, love note | 2
+Raw egg | egg | 1.5
+Key | keys, car keys | 1.5
+Bar of soap | soap | 1.5
+Brick | | 1
+Toilet paper | tp | 1.5
+Diamond ring | ring, engagement ring | 1
+Cat | kitten | 1
+Ransom note | | 0.4
+Live lobster | lobster | 0.6
+Skull | bone, bones | 1
+Glitter | | 0.6
+Tax return | taxes, tax forms | 0.3
+Baby tooth | | 0.3
+Treasure map | map | 0.4
+Grenade | bomb | 0.4
+Remote control | tv remote, remote | 0.6
+Tiny horse | pony, horse | 0.3
+Birthday candles | candle, candles | 0.4
+A smaller lunchbox | lunchbox, another lunchbox | 0.2
+Sand | | 0.6
+`,
+    },
+    {
+      prompt: 'Name a job a sky whale could have',
+      answers: `
+Taxi | taxi driver, cab driver, uber driver, uber, chauffeur | 10
+Airplane | plane, airline, flying bus, bus, bus driver | 10
+Pilot | | 4
+Mail carrier | mailman, postman, delivery, delivery driver, courier | 8
+Lifeguard | | 4
+Weather forecaster | meteorologist, weatherman, weather reporter | 5
+Rain maker | rainmaker, sprinkler, firefighter, fire fighter | 4
+Tour guide | tour bus, sightseeing | 4
+Singer | opera singer, choir, musician | 4
+Cloud cleaner | window washer, sky cleaner, janitor | 1.5
+Lighthouse | lighthouse keeper | 1
+Ferry | ferry captain, boat | 1.5
+Bouncer | | 1
+Babysitter | nanny | 2
+Blimp | advertising blimp, billboard | 2
+Teacher | | 1.5
+Garbage collector | garbage man, trash collector | 1
+Ice cream truck | | 0.5
+Architect | builder | 0.4
+Doctor | | 0.6
+Air traffic controller | | 0.6
+Night light | nightlight | 0.3
+Moon polisher | | 0.2
+Hot air balloon | | 0.6
+Umbrella | | 0.4
+Sky librarian | librarian | 0.3
+Therapist | counselor | 0.5
+Security guard | guard | 0.6
+DJ | disc jockey | 0.3
+Accountant | | 0.4
+Cloud shepherd | shepherd | 0.2
+`,
+    },
+  ],
+  '2026-11-16': [
+    {
+      prompt: 'Name something you should never microwave',
+      answers: `
+Metal | fork, spoon, aluminum foil, tin foil, foil, aluminium foil | 18
+Egg | eggs, hard boiled egg | 10
+Phone | cell phone, iphone | 6
+Cat | kitten, pet, dog | 6
+Grapes | grape | 4
+Fish | salmon | 4
+Baby | | 2
+Water | plain water | 2
+Microwave | another microwave | 1
+Styrofoam | polystyrene | 2
+Popcorn | | 2
+Laptop | computer | 1.5
+Battery | batteries | 2
+Soap | bar of soap, ivory soap | 1
+Light bulb | lightbulb | 1
+Marshmallow peeps | peeps | 1
+Hot dog | hotdog | 1
+Credit card | | 0.6
+Gold | gold ring, ring, jewelry | 1
+Shoes | shoe | 1
+Chili pepper | hot pepper, peppers | 0.6
+Ice cream | | 1
+Tamagotchi | | 0.3
+Glow stick | | 0.3
+Grandma’s fine china | fine china, china plates | 0.3
+Love letter | letter, mail | 0.3
+Breast milk | baby bottle | 0.3
+Ketchup packet | ketchup | 0.3
+Burrito | | 0.6
+Pizza | | 0.6
+Your homework | homework | 0.3
+Cd | dvd, cds | 0.6
+A snowman | snowman | 0.2
+Thermos | travel mug | 0.4
+Hand grenade | grenade, fireworks, firework | 0.4
+`,
+    },
+    {
+      prompt: 'Name something a wizard would buy at a gas station',
+      answers: `
+Snacks | snack, chips, candy, candy bar | 10
+Energy drink | red bull, monster, monster energy | 10
+Gas | fuel, gasoline, petrol | 6
+Map | road map | 4
+Lottery ticket | scratch off, lotto ticket, scratch card | 6
+Coffee | | 5
+Beef jerky | jerky | 4
+Sunglasses | | 2
+Hot dog | hotdog, roller hot dog | 3
+Batteries | battery | 2
+Lighter | matches | 2
+Cigarettes | cigars, cigar, tobacco, pipe tobacco | 2
+Slushie | slurpee, icee | 3
+Air freshener | | 1.5
+Gummy worms | gummies | 1.5
+Windshield wiper fluid | wiper fluid | 0.6
+Motor oil | oil | 1.5
+Ice | bag of ice | 1
+Phone charger | charger | 1
+Crystals | crystal, mood ring | 1
+Car wash | | 1
+Broom air freshener | broom | 0.5
+Toad jerky | | 0.1
+Tire pressure gauge | tire gauge | 0.3
+Mints | gum | 1.5
+Hat | beanie, trucker hat | 0.6
+Newt eyes | eye of newt | 0.4
+Gas station sushi | sushi | 0.6
+Novelty keychain | keychain | 0.4
+Fortune cookie | | 0.3
+Stamps | | 0.2
+Pickled egg | pickled eggs | 0.4
+Sandwich | | 0.6
+Postcard | | 0.3
+`,
+    },
+    {
+      prompt: 'Name something that sounds delicious but isn’t food',
+      answers: `
+Candle | scented candle, yankee candle | 6
+Play-Doh | playdough, play doh, playdoh | 8
+Soap | bubble bath, body wash | 6
+Lip balm | chapstick, lip gloss, lipstick | 4
+Toothpaste | | 5
+Cupcake perfume | perfume, cologne | 3
+Hot cocoa bath bomb | bath bomb | 2
+Crayon | crayons | 2
+Lava cake lamp | lava lamp | 0.5
+Brownie points | | 3
+Couch potato | | 3
+Hot tub | | 1
+Cheesy movie | cheesy pickup line, cheese | 1
+Jelly fish | jellyfish | 3
+Peanut gallery | | 0.6
+Butterfly | butter fly | 2.5
+Honey badger | | 1
+Pound cake hammer | | 0.1
+Cookie | browser cookie, cookies | 3
+Apple | apple computer, apple phone, mac | 2
+Blackberry | blackberry phone | 1
+Raspberry pi | raspberry pi computer | 0.8
+Gingerbread house | | 0.6
+Breadboard | | 0.3
+Sugarcane toad | cane toad | 0.2
+Caramel sauce hair dye | hair dye | 0.2
+Pumpkin spice | pumpkin spice latte | 1
+Salt lamp | | 0.4
+Marshmallow fluff pillow | pillow | 0.4
+Sweet pea | sweet peas | 0.4
+Toffee hammer | | 0.1
+Cotton candy clouds | clouds, cloud | 0.6
+Coconut sunscreen | sunscreen | 0.8
+Glue | glue stick | 1
+Sugar glider | | 0.4
+Muffin top | | 0.6
+`,
+    },
+    {
+      prompt: 'Name a thing that would make a terrible parachute',
+      answers: `
+Brick | bricks | 4
+Rock | a rock, boulder | 5
+Paper | paper towel, napkin, tissue, newspaper | 8
+Umbrella | | 10
+Anvil | | 4
+Plastic bag | grocery bag, trash bag | 6
+Blanket | sheet, bedsheet, bed sheet | 5
+Net | fishing net | 4
+Cheese | swiss cheese, slice of cheese | 3
+Pizza | pizza slice | 2
+Toilet paper | tp | 2
+Spaghetti | noodles, pasta | 2
+Lace | doily, lace curtain | 1.5
+Sock | socks | 2
+Tortilla | taco | 1.5
+Leaf | leaves | 2
+Bowling ball | | 2
+Piano | | 1
+Cloud | clouds | 1
+Feather | feathers | 1
+Underwear | boxers, undies | 2
+Sweater | hoodie, jacket | 1
+Hat | | 1
+Fishnet stockings | fishnets | 0.4
+Balloon | | 1
+Pancake | pancakes, waffle | 1
+Duct tape | tape | 0.4
+Lettuce | lettuce leaf, cabbage | 0.6
+Cake | | 0.6
+Kite | | 0.6
+Bubble wrap | bubble | 0.4
+Shower curtain | curtain | 0.6
+Toaster | | 0.4
+A cat | cat | 0.5
+Origami crane | origami | 0.3
+Spiderweb | spider web, cobweb | 0.4
+Wet tissue | wet napkin | 0.3
+Lasagna | | 0.3
+`,
+    },
+    {
+      prompt: 'Name something a robot would be scared of',
+      answers: `
+Water | rain, puddle, ocean, pool | 22
+Magnet | magnets | 12
+Virus | computer virus, malware, hacker, hackers | 8
+Rust | | 6
+Power outage | blackout, unplugged, being unplugged, dead battery, low battery | 6
+Lightning | thunderstorm, storm | 3
+Hammer | sledgehammer | 2
+Emp | electromagnetic pulse | 2
+Fire | | 2
+Humans | human, people | 3
+Update | software update, updates, reboot, restart | 2
+Bluescreen | blue screen of death | 1
+Captcha | recaptcha, i am not a robot | 1
+Static | static electricity | 1
+Soup | | 0.4
+Bath | bathtub, shower | 1
+Off switch | off button, power button | 1.5
+Toaster | | 0.6
+Cat | cats | 0.6
+Sand | | 0.6
+Vacuum | roomba | 0.5
+Recycling | recycling bin, junkyard, scrapyard, scrap metal | 1.5
+Feelings | emotions, love | 1
+Dust | dust bunny, dust bunnies | 0.5
+Pop up ads | ads | 0.3
+Spilled juice | juice, soda | 0.6
+Wi-fi outage | no wifi, bad wifi, wifi | 1
+Seagulls | seagull | 0.2
+Glitter | | 0.3
+Car wash | | 0.4
+Older model | old phone, flip phone | 0.3
+Typewriter | | 0.2
+Microwave | | 0.4
+A bigger robot | bigger robot | 0.3
+Grandma with a cardigan | grandma | 0.2
+`,
+    },
+    {
+      prompt: 'Name something that would be a bad thing to say at a wedding',
+      answers: `
+I object | objection, i do not, i don't | 14
+I'm pregnant | pregnant | 4
+I love you | i love the groom, i love the bride | 6
+Wrong name | wrong name in vows, calling the bride the wrong name | 5
+It won't last | this won't last, they'll divorce, divorce | 6
+Run | run away, run while you can | 3
+I slept with | cheating, they cheated | 3
+The food is bad | the food sucks, gross | 2
+Who are you | who invited you | 2
+Is there an open bar | open bar | 1
+Free at last | | 0.3
+Nice dress | ugly dress, is that a dress | 1.5
+When's the funeral | funeral | 0.6
+Congrats on the second marriage | second marriage | 0.4
+I'm the real father | | 0.4
+Good luck | good luck with that | 2
+Rip | rest in peace | 0.5
+Sorry for your loss | | 1
+Happy birthday | | 1.5
+Speak now | | 0.6
+Second time's the charm | | 0.4
+I kept the receipt | receipt | 0.3
+She said yes to me first | | 0.2
+The cake is a lie | | 0.2
+Wrong wedding | i'm at the wrong wedding | 0.4
+`,
+    },
+    {
+      prompt: 'Name something you’d pack for a trip to the moon',
+      answers: `
+Spacesuit | space suit, astronaut suit, suit | 14
+Oxygen | oxygen tank, air, air tank | 14
+Food | snacks, space food | 8
+Camera | | 4
+Water | | 5
+Flag | | 4
+Helmet | space helmet | 3
+Cheese | crackers | 4
+Phone | phone charger, charger | 2
+Toothbrush | | 2
+Sunscreen | | 2
+Blanket | jacket, coat, sweater | 2
+Pillow | | 1
+Telescope | binoculars | 1.5
+Golf club | golf ball | 1
+Book | | 1.5
+Rocket | spaceship, rocket fuel | 2
+Teddy bear | stuffed animal | 1
+Map | | 1
+Wine | | 0.6
+Ping pong paddle | | 0.2
+Trampoline | | 0.4
+Pogo stick | | 0.3
+Ziploc bags | ziploc, bags | 0.4
+Moon boots | boots | 1.5
+Lip balm | chapstick | 0.4
+Spare gravity | gravity | 0.2
+Dog | cat | 0.6
+Passport | | 0.6
+Wifi router | wifi | 0.4
+Duct tape | | 0.6
+Sombrero | | 0.1
+A friend | friend, buddy | 0.6
+`,
+    },
+  ],
+  '2026-11-17': [
+    {
+      prompt: 'Name something a ghost would get mad about',
+      answers: `
+Ghostbusters | ghost hunters, ghost hunter, exorcist | 10
+Vacuum | vacuum cleaner | 3
+Being ignored | ignored | 5
+Light | lights, flashlight, sunlight | 5
+People in their house | new owners, new tenants, renovations | 7
+Salt | | 3
+Sage | burning sage | 3
+Holy water | priest, exorcism | 4
+Bedsheet costume | costume, halloween costume, sheet | 3
+Not being scary | not scary, nobody scared | 3
+Walls | walking into walls | 0.6
+Chains | rusty chains | 1
+Proton pack | | 0.6
+Being called casper | casper | 1.5
+Wifi | no wifi | 1
+Can't eat | food, can't eat food | 1.5
+Halloween decorations | | 1
+Mirror | | 0.8
+Doorbell | | 0.4
+Ouija board | | 1
+Skeptics | nonbelievers, people who don't believe in ghosts | 1
+Dogs barking | dog, dogs | 1
+Lint roller | | 0.2
+Cold coffee | | 0.2
+Moving furniture | furniture | 0.6
+Wrong name on tombstone | tombstone, gravestone, headstone | 0.6
+Sleepovers | slumber party | 0.3
+Air conditioning | ac, air conditioner | 0.4
+Spider webs | cobwebs | 0.4
+Bed bugs | | 0.2
+`,
+    },
+    {
+      prompt: 'Name the worst thing to hear from your pilot',
+      answers: `
+Oops | uh oh, whoops, oh no | 14
+Brace for impact | brace yourselves, crash | 9
+We're going down | going down | 7
+First time flying | it's my first day, first flight, first time | 8
+Mayday | | 4
+Does anyone know how to fly | anyone know how to fly | 5
+We're out of fuel | out of fuel, no fuel, out of gas | 5
+I'm drunk | drunk, i'm tipsy | 3
+Where are we | i'm lost, we're lost | 4
+Hold my beer | | 2
+Engine failure | the engine fell off, engine fire | 3
+Snakes on the plane | snakes on a plane | 2
+Turbulence | | 1
+I forgot | i forgot how to land | 1.5
+Nice knowing you | goodbye, it was nice knowing you | 2
+Is that a mountain | mountain | 1
+Watch this | | 1
+Siri, how do I land | siri | 0.4
+Autopilot is broken | autopilot | 1
+Bermuda triangle | | 0.6
+We're landing in the ocean | water landing | 1
+I left the stove on | stove | 0.4
+The wings are just decorative | | 0.1
+Taking a nap | i'm going to sleep, zzz | 0.6
+We've been hijacked | hijacked | 1
+`,
+    },
+    {
+      prompt: 'Name something a raccoon would put on its birthday wishlist',
+      answers: `
+Trash | garbage, trash can, garbage can, dumpster | 25
+Food | snacks, pizza | 8
+Shiny things | shiny, shiny objects, jewelry | 5
+Mask | new mask, ski mask | 3
+Cat food | dog food, pet food | 4
+Gloves | mittens | 2
+Bread | | 1
+Cheese | | 1
+Grapes | fruit | 1
+Marshmallows | marshmallow | 1
+Corn | corn on the cob | 1
+Cotton candy | | 2
+Crayfish | crawfish | 0.3
+Lock pick | lockpick, crowbar | 1
+Flashlight | | 0.6
+Bigger trash can | bigger bin | 1
+Hamburger | burger | 0.6
+Burglar outfit | stripes, striped shirt | 0.6
+Night vision goggles | | 0.4
+Leftovers | | 1.5
+Mirror | | 0.3
+Bath towel | towel, soap | 0.4
+Stolen bike | bike | 0.3
+Tiny hat | hat | 0.4
+Hand sanitizer | | 0.4
+A sidekick | friend, possum, opossum | 0.6
+Pancakes | | 0.4
+Tax evasion | taxes | 0.1
+`,
+    },
+    {
+      prompt: 'Name a bad superpower',
+      answers: `
+Talking to fish | talk to fish | 3
+Invisible only when no one's looking | | 1
+Super sneezing | sneezing | 2
+Turning into a chair | | 0.2
+Flying at 1 mph | slow flying, flying slowly | 2
+Super slow | slow motion, super slowness, slowness | 4
+Making toast | toast | 1
+Glowing | glow in the dark | 2
+Super smell | super smelling | 2
+Knowing when milk expires | milk | 0.4
+Shrinking | shrinking forever | 2
+Bad luck | | 1
+Smelly feet | smelly | 2
+Laser eyes that only shoot glitter | glitter | 0.4
+Teleporting 1 inch | teleport 1 inch, teleportation one inch | 1.5
+Instant hiccups | hiccups | 1
+Mind reading pets | mind reading, read minds | 2
+Burping | super burp, burps | 2
+Invisible to cats | | 0.2
+Super farts | farting, farts, fart | 6
+Changing color | color changing, chameleon | 1
+Cold hands | | 0.4
+Turning invisible when naked | | 0.3
+Stretchy | stretching | 0.6
+Predicting rain | weather | 0.3
+Always knowing the time | knowing the time, time | 0.4
+Super hearing | hearing everything | 1.5
+Unlimited socks | socks | 0.3
+Talking to plants | | 1
+Summoning pigeons | pigeons | 0.4
+`,
+    },
+    {
+      prompt: 'Name something that would ruin a picnic',
+      answers: `
+Ants | ant | 20
+Rain | storm, thunderstorm | 18
+Bees | bee, wasps, wasp, hornets | 9
+Bear | bears, yogi bear | 6
+Wind | windy | 3
+Mosquitoes | bugs, flies, mosquito | 4
+Mud | | 1
+Forgot the food | no food, forgot food | 3
+Spilled drink | spilled juice, spilled wine | 1.5
+Seagulls | seagull, birds | 2
+Snake | snakes | 2
+Goose | geese | 1.5
+Dog | dogs | 2
+Raccoon | raccoons | 1
+Skunk | | 1
+Sunburn | | 1
+Food poisoning | | 1
+Ex | your ex, ex boyfriend, ex girlfriend | 0.6
+Tornado | | 1
+Sprinklers | sprinkler | 1.5
+Poison ivy | | 0.8
+Meteor | asteroid | 0.4
+Mime | | 0.2
+Soggy sandwich | soggy bread | 0.5
+Bagpipes | | 0.2
+Bird poop | | 1
+Lawnmower | | 0.3
+Sky whale sneeze | | 0.1
+`,
+    },
+    {
+      prompt: 'Name something you could find under a giant’s couch cushion',
+      answers: `
+Coins | coin, money, change, giant coin | 16
+Remote | remote control, tv remote | 12
+Crumbs | crumb, cheeto, chips | 8
+Human | person, people, a person, villager | 6
+Cow | cows, sheep, goat | 3
+Sword | knight, armor | 2
+Keys | key, giant keys | 3
+Phone | | 2
+Boulder | rock, rocks | 2
+Car | cars | 2
+Tree | trees | 2
+Jack | jack and the beanstalk, beanstalk | 2
+Sock | socks | 2
+Horse | | 1
+Pizza | pizza crust | 1.5
+Toenail | toenail clipping | 1
+Lost treasure | treasure | 1
+Popcorn | | 1
+Bone | bones | 1
+Golden egg | golden goose, goose | 1.5
+House | small house | 0.6
+Dragon | | 0.4
+Cat | kitten | 0.6
+Boat | ship | 0.4
+Lego | legos | 0.6
+Village | town, city | 0.4
+Bus | school bus | 0.4
+Hairball | hair | 0.6
+Map | | 0.3
+Lost kingdom | kingdom | 0.2
+`,
+    },
+    {
+      prompt: 'Name something you’d hear at a sky island farmer’s market',
+      answers: `
+Birds | bird song, chirping, birds singing | 8
+Wind | wind chimes, whoosh | 8
+Bargaining | haggling, how much | 6
+Thunder | | 5
+Cloud for sale | fresh clouds, clouds, cloud | 4
+Rain | raindrops | 3
+Music | fiddle, banjo, singing | 3
+Wings flapping | flapping | 3
+Airship | airplane, blimp | 2
+Rooster | chickens, chicken | 2
+Whale song | whales, sky whale | 2
+Fresh rainbows | rainbow, rainbows | 2
+Free samples | samples | 1.5
+Organic | organic lightning | 1
+Echo | echoes | 1
+Kids laughing | laughter | 1
+Bells | | 1
+Goats | goat | 1
+Dragon | dragons | 1
+Stars on sale | starlight | 0.5
+Someone falling | aaaaaah, screaming | 0.6
+Balloon pop | balloon | 0.4
+Moon cheese | cheese | 0.4
+Gravity tax | tax | 0.1
+Harp | | 0.5
+Cash register | ka ching | 0.4
+Feather dusters | feathers | 0.3
+Kite strings | kite | 0.4
+`,
+    },
+  ],
+};
+
+// ---- src/content/packs.js ----
+// Themed practice packs for "Unlimited Skies" owners. Practice rounds score from the estimates only
+// and are never recorded, so they don't affect the daily rarity numbers.
+
+const PACKS = [
+  {
+    id: 'dragon-daycare',
+    name: 'Dragon Daycare',
+    blurb: 'Tiny wings, big tantrums.',
+    emoji: '🐉',
+    prompts: [
+      { prompt: 'Name something a baby dragon would chew on', answers: `
+Bone | bones | 12
+Sword | swords, knight's sword | 8
+Rock | rocks, boulder | 6
+Gold | gold coin, coins, treasure | 10
+Teething ring | teether, pacifier | 4
+Shoe | shoes, boot | 5
+Armor | knight armor, helmet | 5
+Stick | sticks, branch | 4
+Chair leg | furniture, table leg | 2
+Castle | tower | 1.5
+Knight | knights | 3
+Charcoal | coal | 2
+Dinosaur toy | toy, stuffed animal, teddy bear | 3
+Fire hydrant | | 0.4
+Mailbox | | 0.3
+Lava rock | | 0.5
+Crown | | 0.6
+Bicycle | bike | 0.3
+` },
+      { prompt: 'Name a reason a dragon gets sent to time-out', answers: `
+Burning things | fire, setting fire, arson, burning the house | 18
+Biting | bit someone, bite | 10
+Eating the knight | ate a knight, eating people | 6
+Stealing treasure | stealing, stealing gold | 8
+Flying indoors | flying in the house | 5
+Smoking | smoke | 3
+Roaring | yelling, screaming | 5
+Breaking things | broke a vase, breaking stuff | 4
+Eating the cat | ate the cat | 1
+Toasting the teacher | | 0.3
+Sneezing fire | sneezing | 1.5
+Melting crayons | crayons | 0.4
+Hoarding toys | not sharing | 2
+Kidnapping a princess | princess | 1
+` },
+      { prompt: 'Name something on a dragon daycare snack menu', answers: `
+Goldfish crackers | goldfish | 4
+Sheep | lamb | 8
+Hot peppers | chili, jalapeno, hot sauce | 6
+Charcoal | coal | 6
+Knights | knight | 5
+Toast | | 3
+Marshmallows | s'mores, smores | 6
+Cow | cows, beef | 5
+Fire ants | ants | 1
+Lava cake | | 1.5
+Chicken nuggets | nuggets, chicken | 4
+Juice box | juice | 2
+Gold coins | gold | 2
+Spicy cheetos | flamin hot cheetos, hot cheetos | 2
+Apple slices | apple, apples | 2
+Rocks | rock | 1
+Volcano pudding | | 0.2
+` },
+      { prompt: 'Name a nap-time song for baby dragons', answers: `
+Twinkle Twinkle Little Star | twinkle twinkle | 12
+Rock-a-bye Baby | rockabye baby, rock a bye | 10
+Puff the Magic Dragon | puff | 10
+Fire and Rain | | 1
+Light My Fire | | 2
+Burning Love | | 2
+Ring of Fire | | 3
+We Didn't Start the Fire | | 3
+Girl on Fire | | 1.5
+Smoke on the Water | | 1.5
+Hush Little Baby | | 4
+Let It Go | | 2
+Great Balls of Fire | | 1.5
+Brahms Lullaby | lullaby | 3
+` },
+      { prompt: 'Name something a dragon parent would forget at pickup', answers: `
+Their kid | the baby, baby dragon, child | 16
+Keys | car keys | 6
+Backpack | bag, diaper bag | 6
+Lunchbox | | 4
+Fire extinguisher | | 1
+Treasure | gold, hoard | 4
+Wallet | money | 3
+Phone | | 3
+Wings | | 1
+Sunglasses | | 1
+Their name | name | 0.4
+Permission slip | | 0.6
+Spare scales | scales | 0.3
+` },
+    ],
+  },
+  {
+    id: 'pirate-kitchen',
+    name: 'Pirate Kitchen',
+    blurb: 'Arr-tisanal cooking.',
+    emoji: '🏴‍☠️',
+    prompts: [
+      { prompt: 'Name a dish on a pirate ship menu', answers: `
+Fish | fish and chips, fried fish | 12
+Fish sticks | fish fingers | 3
+Hardtack | ship biscuit, biscuits | 4
+Stew | fish stew | 6
+Rum cake | rum | 6
+Grog | | 3
+Crab | crab legs, crab cakes | 4
+Shrimp | prawns | 3
+Lobster | | 3
+Parrot pie | parrot | 1
+Seaweed salad | seaweed | 2
+Salted pork | salt pork | 2
+Lime | limes | 2
+Sea biscuit | | 1
+Kraken calamari | calamari, squid | 2
+Peg leg of lamb | leg of lamb | 0.4
+Treasure chest pizza | | 0.2
+` },
+      { prompt: 'Name a terrible pirate restaurant name', answers: `
+Arrby's | arrbys | 4
+The Rusty Hook | rusty hook | 2
+Long John Silver's | long john silvers | 8
+Captain's Galley | the galley | 2
+Walk the Plank | the plank | 3
+Davy Jones' Diner | davy jones | 2
+Sea Sick | seasick | 2
+Scurvy | scurvy shack | 2
+Peg Leg Pete's | peg leg | 2
+Treasure Chest | | 2
+The Black Pearl | black pearl | 3
+Shipwreck | the shipwreck | 2
+Barnacle Bistro | barnacles | 1
+Mutiny Muffins | | 0.3
+` },
+      { prompt: 'Name something a pirate cook would use as a spoon', answers: `
+Hook | hook hand | 18
+Sword | cutlass, dagger, knife | 10
+Shell | seashell, clam shell | 8
+Peg leg | wooden leg | 6
+Hand | hands, fingers | 5
+Bone | bones | 3
+Boot | shoe | 2
+Cannonball | | 0.6
+Coconut shell | coconut | 2
+Skull | | 2
+Oar | paddle | 3
+Eyepatch | | 1
+Parrot | | 1
+Compass | | 0.4
+Gold coin | coin | 1
+` },
+      { prompt: 'Name an ingredient you’d find in a sea monster smoothie', answers: `
+Seaweed | kelp, algae | 16
+Fish | sardines, tuna | 8
+Salt water | sea water, ocean | 8
+Ink | squid ink | 5
+Shrimp | krill | 4
+Sailors | sailor, pirate | 4
+Barnacles | barnacle | 2
+Coral | | 2
+Banana | | 2
+Jellyfish | | 2
+Sand | | 2
+Pearl | | 1
+Boat | ship, ship wreck | 1
+Mermaid hair | | 0.3
+Anchor | | 0.4
+` },
+      { prompt: 'Name something a parrot would complain about on deck', answers: `
+Crackers | no crackers, stale crackers | 16
+Wind | | 4
+Rain | storm | 4
+Cannons | cannon, noise, too loud | 6
+Captain | the captain | 4
+Seasick | seasickness | 4
+Food | | 3
+Cage | | 3
+Being called polly | polly | 4
+Sharks | | 1
+Seagulls | | 2
+Cats | ship's cat, cat | 2
+Being repeated | repeating | 1
+The cook | | 0.4
+Hats | | 0.3
+` },
+    ],
+  },
+  {
+    id: 'haunted-gift-shop',
+    name: 'Haunted Gift Shop',
+    blurb: 'Souvenirs from beyond.',
+    emoji: '👻',
+    prompts: [
+      { prompt: 'Name a souvenir sold at a haunted gift shop', answers: `
+Keychain | keychains | 8
+T-shirt | shirt, tee shirt | 8
+Ouija board | | 6
+Candle | candles | 5
+Skull | skulls | 5
+Mug | coffee mug | 5
+Ghost plushie | plushie, stuffed ghost, plush | 4
+Snow globe | | 3
+Postcard | postcards | 4
+Cursed doll | doll, creepy doll | 4
+Tarot cards | | 3
+Ectoplasm | slime | 2
+Haunted mirror | mirror | 1.5
+Bottled scream | scream in a jar | 0.3
+Spare chains | chains | 0.6
+` },
+      { prompt: 'Name something a ghost cashier would say', answers: `
+Boo | | 14
+Paper or plastic | | 6
+Next | next customer | 6
+Have a nice day | | 6
+Boo-ty please | | 0.2
+Cash or card | | 5
+Would you like a receipt | receipt | 4
+Find everything okay | | 4
+Ooooh | | 4
+No refunds | | 3
+Rest in peace | rip | 2
+I'll be haunting you | | 1
+Have a nice afterlife | afterlife | 1
+Spooky discount | | 0.4
+` },
+      { prompt: 'Name a bad thing to find in a haunted gift shop bag', answers: `
+Spider | spiders | 10
+Severed hand | hand, finger | 8
+Curse | a curse, cursed item | 8
+Ghost | | 6
+Skull | bones | 4
+Snake | | 3
+Blood | | 3
+Eyeball | eye | 3
+Rat | mouse | 3
+Your own photo | | 0.6
+Receipt for your soul | | 0.2
+Old tooth | tooth | 1
+Hair | | 2
+` },
+    ],
+  },
+];
+
+// ---- public/config.js ----
+// Site-wide settings you'll want to change before launch.
+const CONFIG = {
+  // Where the "Play Glydrift" card sends players. Replace with the real Glydrift link.
+  GLYDRIFT_URL: 'https://glydrift.com/?ref=skydrift',
+  // Public address used in the share card.
+  SHARE_URL: 'Play on Claude',
+  PRICE: '$4.99',
+};
+
+// ---- public/js/profile.js ----
+// Local player profile (collection, streak, history). Mirrored to the server, keyed by an anonymous id.
+const KEY = 'skydrift.profile.v1';
+
+function newId() {
+  const a = new Uint8Array(12);
+  crypto.getRandomValues(a);
+  return 'p_' + [...a].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function fresh() {
+  return {
+    id: newId(), created: Date.now(), muted: false, premium: false,
+    days: {}, creatures: {}, fragments: 0, stardust: 0, streak: 0, best: 0, lastDone: null,
+  };
+}
+
+function loadProfile() {
+  try {
+    const p = JSON.parse(localStorage.getItem(KEY));
+    if (p && p.id) return { ...fresh(), ...p };
+  } catch {}
+  const p = fresh();
+  saveProfile(p, false);
+  return p;
+}
+
+let syncTimer = null;
+function saveProfile(p, sync = true) {
+  try { localStorage.setItem(KEY, JSON.stringify(p)); } catch {}
+  if (!sync) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    const { id, ...rest } = p;
+    Promise.reject(`/api/profile?player=${encodeURIComponent(id)}`, {
+      method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ profile: rest }),
+    }).catch(() => {});
+  }, 800);
+}
+
+function localDate(d = new Date()) {
+  const z = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+}
+
+function yesterday(date) {
+  const d = new Date(date + 'T12:00:00');
+  d.setDate(d.getDate() - 1);
+  return localDate(d);
+}
+
+// The streak still counts if your last finished day was today or yesterday.
+function liveStreak(p, today) {
+  return p.lastDone === today || p.lastDone === yesterday(today) ? p.streak : 0;
+}
+
+function completeDay(p, date) {
+  if (p.lastDone === date) return;
+  p.streak = p.lastDone === yesterday(date) ? p.streak + 1 : 1;
+  p.best = Math.max(p.best, p.streak);
+  p.lastDone = date;
+}
+
+// ---- public/js/audio.js ----
+// Tiny synthesized sound kit (Web Audio, no files): chimes, whooshes, soft thuds.
+let ctx = null;
+let master = null;
+let muted = false;
+
+function ac() {
+  if (!ctx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    ctx = new AC();
+    master = ctx.createGain();
+    master.gain.value = 0.55;
+    const comp = ctx.createDynamicsCompressor();
+    master.connect(comp).connect(ctx.destination);
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  return ctx;
+}
+
+function setMuted(m) { muted = m; }
+function isMuted() { return muted; }
+function unlock() { ac(); }
+
+function tone(freq, { at = 0, dur = 0.5, type = 'sine', vol = 0.3, attack = 0.01, slideTo = null } = {}) {
+  const c = ac();
+  if (!c || muted) return;
+  const t = c.currentTime + at;
+  const o = c.createOscillator();
+  const g = c.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(master);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+}
+
+// bell = sine + quiet octave partial
+function bell(freq, at, vol = 0.22, dur = 1.1) {
+  tone(freq, { at, dur, vol });
+  tone(freq * 2.01, { at, dur: dur * 0.6, vol: vol * 0.25 });
+  tone(freq * 3.02, { at, dur: dur * 0.3, vol: vol * 0.08 });
+}
+
+function noise({ at = 0, dur = 0.8, from = 400, to = 2400, vol = 0.12 } = {}) {
+  const c = ac();
+  if (!c || muted) return;
+  const t = c.currentTime + at;
+  const len = Math.floor(c.sampleRate * dur);
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const f = c.createBiquadFilter();
+  f.type = 'bandpass';
+  f.Q.value = 1.2;
+  f.frequency.setValueAtTime(from, t);
+  f.frequency.exponentialRampToValueAtTime(to, t + dur * 0.7);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.3);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f).connect(g).connect(master);
+  src.start(t);
+}
+
+const PENTA = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1568];
+
+const sfx = {
+  tap() { tone(880, { dur: 0.08, vol: 0.08, type: 'triangle' }); },
+  // More notes the rarer the answer
+  valid(tierId) {
+    const n = { legendary: 7, rare: 5, uncommon: 4, common: 3 }[tierId] || 3;
+    for (let i = 0; i < n; i++) bell(PENTA[i + (tierId === 'legendary' ? 2 : 0)], i * 0.085, 0.2);
+    if (tierId === 'legendary' || tierId === 'rare') {
+      for (let i = 0; i < 6; i++) tone(2093 + Math.random() * 1200, { at: 0.5 + i * 0.06, dur: 0.25, vol: 0.05 });
+    }
+  },
+  invalid() {
+    tone(220, { dur: 0.18, vol: 0.18, type: 'triangle', slideTo: 180 });
+    tone(165, { at: 0.12, dur: 0.25, vol: 0.16, type: 'triangle', slideTo: 130 });
+  },
+  tick(last) { tone(last ? 1320 : 990, { dur: 0.05, vol: 0.07, type: 'square' }); },
+  timeout() { tone(660, { dur: 0.9, vol: 0.14, slideTo: 220 }); noise({ dur: 0.9, from: 1800, to: 300, vol: 0.06 }); },
+  whoosh() { noise({ dur: 1.1, from: 300, to: 2600, vol: 0.1 }); },
+  unlock() { [1046.5, 1318.5, 1568, 2093].forEach((f, i) => bell(f, i * 0.07, 0.16, 1.4)); },
+  start() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => bell(f, i * 0.11, 0.18)); noise({ at: 0.2, dur: 1.2, vol: 0.06 }); },
+  finish() { [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568].forEach((f, i) => bell(f, i * 0.12, 0.2, 1.6)); },
+};
+
+// ---- public/js/collection.js ----
+// Sky creatures and map fragments: what rare answers and streaks unlock.
+
+const CREATURES = [
+  // Befriended by legendary answers (90+ pts), in an order picked per answer
+  { id: 'moonmoth', name: 'Moonmoth', emoji: '🦋', via: 'legendary', blurb: 'Only flies on Tuesdays nobody remembers.', m: ['#e9e3ff', '#a990f0'] },
+  { id: 'thunder-otter', name: 'Thunder Otter', emoji: '🦦', via: 'legendary', blurb: 'Juggles lightning. Drops it a lot.', m: ['#ffe9b8', '#e8a64a'] },
+  { id: 'aurora-fox', name: 'Aurora Fox', emoji: '🦊', via: 'legendary', blurb: 'Its tail is where the colours come from.', m: ['#d4fff0', '#57d1a8'] },
+  { id: 'comet-koi', name: 'Comet Koi', emoji: '🐠', via: 'legendary', blurb: 'Swims upstream through meteor showers.', m: ['#ffe0d0', '#ff8f6a'] },
+  { id: 'hoot-of-stars', name: 'Starling Owl', emoji: '🦉', via: 'legendary', blurb: 'Counts the stars. Gets a different number every night.', m: ['#e2e6ff', '#7d89d6'] },
+  { id: 'nimbus-jelly', name: 'Nimbus Jelly', emoji: '🪼', via: 'legendary', blurb: 'A jellyfish made of drizzle.', m: ['#e0f4ff', '#7cc7f0'] },
+  { id: 'gale-dragonling', name: 'Gale Dragonling', emoji: '🐉', via: 'legendary', blurb: 'Sneezes breezes. Very polite about it.', m: ['#e6ffd6', '#7fcf6a'] },
+  { id: 'lantern-turtle', name: 'Lantern Turtle', emoji: '🐢', via: 'legendary', blurb: 'Carries a lighthouse on its shell.', m: ['#fff6cc', '#e8c24a'] },
+  { id: 'calf-whale', name: 'Sky Whale Calf', emoji: '🐋', via: 'legendary', blurb: 'Still learning which way is up.', m: ['#dfeaff', '#6f8fd6'] },
+  { id: 'hum-bee', name: 'Hum-Hum Bee', emoji: '🐝', via: 'legendary', blurb: 'Hums in the key of thunder.', m: ['#fff3c4', '#f5b842'] },
+  { id: 'prism-snail', name: 'Prism Snail', emoji: '🐌', via: 'legendary', blurb: 'Leaves rainbows instead of slime.', m: ['#ffe6f5', '#d68fd0'] },
+  { id: 'cirrus-crane', name: 'Cirrus Crane', emoji: '🕊️', via: 'legendary', blurb: 'Folds itself out of clouds each morning.', m: ['#ffffff', '#b9c6e6'] },
+  // Earned by showing up
+  { id: 'pip', name: 'Pip the Cloud Puff', emoji: '☁️', via: 'first', blurb: 'Joined you on your very first flight.', m: ['#ffffff', '#a9c8f5'] },
+  { id: 'ember-finch', name: 'Ember Finch', emoji: '🐤', via: 'streak', streak: 3, blurb: 'Follows pilots who fly 3 days running.', m: ['#fff0c4', '#ffb347'] },
+  { id: 'zephyr-seal', name: 'Zephyr Seal', emoji: '🦭', via: 'streak', streak: 7, blurb: 'Barks at the wind. A 7-day streak friend.', m: ['#e6f0ff', '#8aa7d6'] },
+  { id: 'tide-kite', name: 'Tidekite', emoji: '🪁', via: 'streak', streak: 14, blurb: 'A kite that flies itself. 14-day streak.', m: ['#ffe6d6', '#ff8f6a'] },
+  { id: 'grand-whale', name: 'The Grandmother Whale', emoji: '🐳', via: 'streak', streak: 30, blurb: 'She remembers every pilot. 30-day streak.', m: ['#d6e6ff', '#3b4ba8'] },
+];
+
+const FRAGMENTS_PER_MAP = 6;
+const MAPS = LAYERS.map((l, i) => ({ id: l.id, name: `${l.name} Chart`, index: i }));
+
+function hash(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+// Decide what a scored answer unlocks. Mutates profile; returns the list of new finds.
+function awardForAnswer(profile, { date, idx, points, practice }) {
+  const finds = [];
+  if (practice) return finds;
+  if (points >= 75) {
+    const total = MAPS.length * FRAGMENTS_PER_MAP;
+    if (profile.fragments < total) {
+      profile.fragments += 1;
+      const mapIdx = Math.floor((profile.fragments - 1) / FRAGMENTS_PER_MAP);
+      finds.push({ kind: 'fragment', map: MAPS[mapIdx], n: ((profile.fragments - 1) % FRAGMENTS_PER_MAP) + 1 });
+    } else {
+      profile.stardust = (profile.stardust || 0) + 1;
+    }
+  }
+  if (points >= 90) {
+    const pool = CREATURES.filter((c) => c.via === 'legendary' && !profile.creatures[c.id]);
+    if (pool.length) {
+      const c = pool[hash(`${date}#${idx}`) % pool.length];
+      profile.creatures[c.id] = date;
+      finds.push({ kind: 'creature', creature: c });
+    } else {
+      profile.stardust = (profile.stardust || 0) + 3;
+    }
+  }
+  return finds;
+}
+
+function awardForDay(profile, date) {
+  const finds = [];
+  const give = (id) => {
+    if (profile.creatures[id]) return;
+    profile.creatures[id] = date;
+    finds.push({ kind: 'creature', creature: CREATURES.find((c) => c.id === id) });
+  };
+  give('pip');
+  for (const c of CREATURES) if (c.via === 'streak' && profile.streak >= c.streak) give(c.id);
+  return finds;
+}
+
+function medalHTML(c, locked = false) {
+  return `<div class="medal" style="--m1:${c.m[0]};--m2:${c.m[1]}">${locked ? '?' : c.emoji}</div>`;
+}
+
+function renderCreatures(el, profile) {
+  el.innerHTML = CREATURES.map((c) => {
+    const got = !!profile.creatures[c.id];
+    const hint = c.via === 'streak' ? `${c.streak}-day streak` : c.via === 'first' ? 'First flight' : 'Legendary answer';
+    return `<div class="creature ${got ? '' : 'locked'} ${c.via === 'legendary' ? 'legendary' : ''}" title="${got ? c.blurb : hint}">
+      ${medalHTML(c, !got)}${got ? c.name : '???'}<small>${got ? c.blurb : hint}</small></div>`;
+  }).join('');
+}
+
+// Hand-drawn-ish treasure chart per sky layer, revealed tile by tile.
+function mapSVG(map) {
+  const pal = [
+    ['#fbf1d8', '#9be59b', '#5fbf7a'],
+    ['#f1ebfb', '#b9a6f0', '#7f71c9'],
+    ['#e4f6f1', '#8ff0d2', '#43b39c'],
+    ['#efeaf8', '#f6d98a', '#c79a3a'],
+  ][map.index];
+  let s = map.index * 9301 + 49297;
+  const r = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+  const isles = Array.from({ length: 6 }, (_, i) => {
+    const x = 40 + (i % 3) * 100 + r() * 30, y = 40 + Math.floor(i / 3) * 90 + r() * 26, rx = 22 + r() * 18;
+    return { x, y, rx };
+  });
+  const route = isles.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(0)} ${p.y.toFixed(0)}`).join(' ');
+  return `<svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg">
+    <rect width="360" height="240" fill="${pal[0]}"/>
+    <g stroke="rgba(120,90,40,.12)">${Array.from({ length: 8 }, (_, i) => `<line x1="${i * 50}" y1="0" x2="${i * 50}" y2="240"/>`).join('')}</g>
+    ${isles.map((p) => `<ellipse cx="${p.x}" cy="${p.y + 6}" rx="${p.rx}" ry="${p.rx * 0.45}" fill="${pal[2]}"/><ellipse cx="${p.x}" cy="${p.y}" rx="${p.rx}" ry="${p.rx * 0.45}" fill="${pal[1]}"/>`).join('')}
+    <path d="${route}" fill="none" stroke="#b0442c" stroke-width="2.5" stroke-dasharray="6 6"/>
+    <text x="${isles[5].x - 8}" y="${isles[5].y + 6}" font-size="22" font-weight="700" fill="#b0442c">✕</text>
+    <g transform="translate(322 200)"><circle r="20" fill="none" stroke="#8a5a10"/><path d="M0 -18 L5 0 L0 18 L-5 0 Z" fill="#8a5a10"/><text y="-23" text-anchor="middle" font-size="10" fill="#8a5a10">N</text></g>
+  </svg>`;
+}
+
+function renderMaps(el, profile) {
+  el.innerHTML = MAPS.map((m) => {
+    const got = Math.max(0, Math.min(FRAGMENTS_PER_MAP, profile.fragments - m.index * FRAGMENTS_PER_MAP));
+    const tiles = Array.from({ length: FRAGMENTS_PER_MAP }, (_, i) => `<i class="${i < got ? 'got' : ''}">${i < got ? '' : '?'}</i>`).join('');
+    return `<div class="card map-card"><h4>${m.name}<small>${got}/${FRAGMENTS_PER_MAP}</small></h4>
+      <div class="map-frame">${mapSVG(m)}<div class="map-fog">${tiles}</div></div></div>`;
+  }).join('');
+}
+
+// ---- public/js/sky.js ----
+// The sky behind every screen: gradient, clouds, islands and the glider all respond to altitude (points).
+
+const PX_PER_POINT = 2.7;
+const root = document.documentElement;
+const world = document.getElementById('world');
+
+// Colour stops by altitude in points: [top, mid, bottom]
+const PALETTE = [
+  [0, ['#9fc4f0', '#c9dcf7', '#ffe0ec']],
+  [175, ['#8798d6', '#b4bde6', '#f0cfe6']],
+  [350, ['#24447a', '#4a67a8', '#9b8bd3']],
+  [525, ['#0f1640', '#24306a', '#5a4a98']],
+  [700, ['#070a24', '#151d4a', '#43357d']],
+];
+
+function hex(c) { return [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); }
+function mix(a, b, t) {
+  const A = hex(a), B = hex(b);
+  return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('');
+}
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+
+function colorsAt(alt) {
+  for (let i = 0; i < PALETTE.length - 1; i++) {
+    const [a0, c0] = PALETTE[i], [a1, c1] = PALETTE[i + 1];
+    if (alt <= a1) {
+      const t = clamp01((alt - a0) / (a1 - a0));
+      return c0.map((c, k) => mix(c, c1[k], t));
+    }
+  }
+  return PALETTE[PALETTE.length - 1][1];
+}
+
+// --- islands ---
+const ISLE_COLORS = {
+  meadows: ['#9be59b', '#5fbf7a', '#c79a6a'],
+  reefs: ['#b9a6f0', '#7f71c9', '#8a7aa8'],
+  aurora: ['#8ff0d2', '#43b39c', '#6a6f9e'],
+  harbor: ['#f6d98a', '#c79a3a', '#4b4f86'],
+};
+
+function rand(seed) {
+  let s = seed;
+  return () => ((s = (s * 16807) % 2147483647) / 2147483647);
+}
+
+function islandSVG(seed, layerId, extras = '') {
+  const [grass, grassDark, rock] = ISLE_COLORS[layerId] || ISLE_COLORS.meadows;
+  const r = rand(seed * 977 + 13);
+  let rockPath = 'M10 40 ';
+  const n = 9;
+  for (let i = 1; i < n; i++) {
+    const x = 10 + (i * 180) / n;
+    const y = 40 + 18 + r() * 50 * Math.sin((i / n) * Math.PI);
+    rockPath += `L${x.toFixed(1)} ${y.toFixed(1)} `;
+  }
+  rockPath += 'L190 40 Z';
+  const trees = Array.from({ length: 2 + Math.floor(r() * 3) }, () => {
+    const x = 30 + r() * 140, h = 14 + r() * 14;
+    return `<g transform="translate(${x.toFixed(0)} 34)"><rect x="-1.5" y="${-h / 2}" width="3" height="${h / 2}" fill="${rock}"/><circle cy="${-h / 2}" r="${(h / 2.4).toFixed(1)}" fill="${grassDark}"/></g>`;
+  }).join('');
+  return `<svg viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg">
+    <path d="${rockPath}" fill="${rock}"/>
+    <path d="${rockPath}" fill="url(#rockshade)" opacity=".35"/>
+    <ellipse cx="100" cy="40" rx="92" ry="12" fill="${grassDark}"/>
+    <ellipse cx="100" cy="36" rx="90" ry="11" fill="${grass}"/>
+    ${trees}${extras}
+    <defs><linearGradient id="rockshade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient></defs>
+  </svg>`;
+}
+
+const ISLE_DECOR = {
+  '🎈': '<g transform="translate(140 0)"><line x1="0" y1="34" x2="4" y2="6" stroke="#888"/><circle cx="4" cy="0" r="9" fill="#ff8fb0"/><circle cx="-8" cy="6" r="7" fill="#9fd4ff"/><line x1="0" y1="34" x2="-8" y2="12" stroke="#888"/></g>',
+  '🪁': '<g transform="translate(150 -30)"><path d="M0 0 L12 14 L0 30 L-12 14 Z" fill="#ff9f5a"/><path d="M0 30 q-14 20 -40 64" stroke="#b07d22" fill="none"/></g>',
+  '🐋': '<g transform="translate(70 18)"><ellipse cx="30" cy="8" rx="32" ry="13" fill="#6f8fd6"/><path d="M58 6 L74 -6 L70 10 Z" fill="#6f8fd6"/><circle cx="12" cy="6" r="2" fill="#223"/><text x="44" y="-10" font-size="10" fill="#fff">z z</text></g>',
+  '🏮': '<g transform="translate(96 -40)"><rect x="-6" y="0" width="12" height="74" fill="#fff4dc"/><rect x="-9" y="-10" width="18" height="12" fill="#f5c542"/><circle cx="0" cy="-4" r="16" fill="#fff3b0" opacity=".45"/></g>',
+};
+
+function buildWorld() {
+  world.innerHTML = '';
+  const home = document.createElement('div');
+  home.className = 'isle home';
+  home.style.left = '50%';
+  home.style.bottom = 'calc(40vh - 215px)';
+  home.innerHTML = islandSVG(3, 'meadows', '<g transform="translate(86 10)"><rect x="0" y="0" width="28" height="22" fill="#fff6e6"/><path d="M-4 2 L14 -14 L32 2 Z" fill="#f08fb5"/><rect x="11" y="10" width="7" height="12" fill="#b07d22"/></g>');
+  world.appendChild(home);
+  LANDMARKS.forEach((lm, i) => {
+    const el = document.createElement('div');
+    el.className = 'isle';
+    el.dataset.at = lm.at;
+    el.style.left = i % 2 ? '76%' : '24%';
+    el.style.bottom = `calc(40vh + ${lm.at * PX_PER_POINT + 30}px)`;
+    el.style.animationDelay = `${-i * 1.3}s`;
+    const layer = layerFor(lm.at).id;
+    el.innerHTML = `<span class="isle-label">${lm.icon} ${lm.name}</span>` + islandSVG(i + 7, layer, ISLE_DECOR[lm.icon] || '');
+    world.appendChild(el);
+  });
+}
+
+let current = 0;
+function setAltitude(points, { instant = false } = {}) {
+  current = points;
+  if (instant) document.body.classList.add('no-sky-anim');
+  root.style.setProperty('--world-y', `${points * PX_PER_POINT}px`);
+  const [top, mid, bottom] = colorsAt(points);
+  root.style.setProperty('--sky-top', top);
+  root.style.setProperty('--sky-mid', mid);
+  root.style.setProperty('--sky-bottom', bottom);
+  root.style.setProperty('--star-alpha', clamp01((points - 260) / 260).toFixed(2));
+  root.style.setProperty('--aurora-alpha', (clamp01((points - 280) / 120) * (1 - clamp01((points - 600) / 100) * 0.6)).toFixed(2));
+  root.style.setProperty('--sun-alpha', (1 - clamp01(points / 300)).toFixed(2));
+  document.querySelectorAll('#sky .clouds').forEach((c, i) => {
+    c.style.setProperty('--cy', `${points * PX_PER_POINT * [0.25, 0.6, 1.4][i]}px`);
+  });
+  document.body.classList.toggle('night', points >= 330);
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', top);
+  world.querySelectorAll('.isle[data-at]').forEach((el) => {
+    el.classList.toggle('passed', points >= +el.dataset.at);
+    el.classList.toggle('near', Math.abs(points - el.dataset.at) <= 45);
+  });
+  if (instant) requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('no-sky-anim')));
+}
+
+function getAltitude() { return current; }
+
+function sparkle(count = 14) {
+  const trail = document.getElementById('trail');
+  for (let i = 0; i < count; i++) {
+    const s = document.createElement('i');
+    s.className = 'spark';
+    s.style.setProperty('--dx', `${-40 - Math.random() * 90}px`);
+    s.style.setProperty('--dy', `${30 + Math.random() * 80}px`);
+    s.style.animationDelay = `${i * 40}ms`;
+    trail.appendChild(s);
+    setTimeout(() => s.remove(), 1400 + i * 40);
+  }
+  const g = document.getElementById('glider');
+  g.classList.remove('climb');
+  void g.offsetWidth;
+  g.classList.add('climb');
+  setTimeout(() => g.classList.remove('climb'), 1700);
+}
+
+async function mountGlider() {
+  try {
+    const svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 140\">\n  <defs>\n    <linearGradient id=\"wing\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fffaf0\"/><stop offset=\"1\" stop-color=\"#f3dcae\"/></linearGradient>\n    <linearGradient id=\"wingstripe\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#f08fb5\"/><stop offset=\"1\" stop-color=\"#b48cff\"/></linearGradient>\n    <linearGradient id=\"gold\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff1b8\"/><stop offset=\"1\" stop-color=\"#d29c34\"/></linearGradient>\n  </defs>\n  <!-- scarf -->\n  <path class=\"scarf\" d=\"M88 70 C70 66 50 78 26 70 C40 80 60 82 86 78 Z\" fill=\"#ff7f9f\"/>\n  <path class=\"scarf\" d=\"M86 74 C66 78 48 92 30 88 C46 96 66 92 88 80 Z\" fill=\"#ff9fb8\" opacity=\".9\"/>\n  <!-- back wing -->\n  <path d=\"M104 64 L150 30 L170 34 L124 70 Z\" fill=\"#e9d2a2\"/>\n  <!-- body -->\n  <path d=\"M60 82 Q110 70 182 74 Q196 76 198 82 Q186 92 120 94 Q78 96 60 82 Z\" fill=\"url(#wing)\" stroke=\"#c99a4a\" stroke-width=\"2\"/>\n  <path d=\"M170 76 Q190 77 197 82\" stroke=\"url(#gold)\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/>\n  <!-- tail -->\n  <path d=\"M64 82 L44 58 L56 58 L78 80 Z\" fill=\"url(#wingstripe)\"/>\n  <!-- pilot -->\n  <circle cx=\"112\" cy=\"66\" r=\"14\" fill=\"#ffd9b8\"/>\n  <path d=\"M98 64 Q100 48 114 48 Q128 48 128 62 Q120 56 112 57 Q104 58 98 64 Z\" fill=\"#7a4a2a\"/>\n  <rect x=\"103\" y=\"58\" width=\"22\" height=\"8\" rx=\"4\" fill=\"#3b4ba8\"/>\n  <circle cx=\"108\" cy=\"62\" r=\"4.5\" fill=\"#bfe6ff\" stroke=\"url(#gold)\" stroke-width=\"2\"/>\n  <circle cx=\"120\" cy=\"62\" r=\"4.5\" fill=\"#bfe6ff\" stroke=\"url(#gold)\" stroke-width=\"2\"/>\n  <path d=\"M110 72 Q114 75 118 72\" stroke=\"#c46a5a\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\"/>\n  <!-- front wing -->\n  <path d=\"M96 84 L150 112 L176 110 L128 82 Z\" fill=\"url(#wing)\" stroke=\"#c99a4a\" stroke-width=\"2\"/>\n  <path d=\"M138 96 L162 110\" stroke=\"url(#wingstripe)\" stroke-width=\"5\" stroke-linecap=\"round\"/>\n</svg>\n";
+    document.getElementById('glider').innerHTML = svg;
+  } catch {
+    document.getElementById('glider').innerHTML = '<img src="art/glider.svg" alt="" style="width:100%">';
+  }
+}
+
+
+// ---- artifact/local-api.js ----
+// Artifact build only: stands in for src/worker.js. Same routes, answered in the page.
+// Shared rarity lives in the artifact's db: plays/<viewer id> = { date, picks: {idx: answerKey}, misses: {idx: [text]} }.
+// Admin-written days live in days/<date> = { prompts: [{prompt, answers}] } (editors only).
+
+const SKY = { db: null, user: null, uid: null, canEdit: false, plays: [], playsReady: false, dayCache: {} };
+const subsKey = (date) => `skydrift.subs.${date}`;
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+async function connectSky() {
+  try {
+    if (!window.claude?.use) return;
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    SKY.db = db;
+    SKY.user = user;
+    if (user) {
+      SKY.uid = await user.id();
+      SKY.canEdit = !!(await user.canEdit());
+    }
+    if (db) {
+      const date = localDate();
+      db.collection('plays').where('date', '==', date).onSnapshot(
+        (snap) => { SKY.plays = snap.docs.map((d) => d.data()); SKY.playsReady = true; },
+        () => { SKY.playsReady = false; },
+      );
+    }
+    document.dispatchEvent(new CustomEvent('sky-connected'));
+  } catch {}
+}
+
+async function dayContent(date) {
+  if (SKY.dayCache[date]) return SKY.dayCache[date];
+  let prompts = null;
+  if (SKY.db) {
+    try {
+      const snap = await Promise.race([SKY.db.doc(`days/${date}`).get(), new Promise((r) => setTimeout(() => r(null), 4000))]);
+      if (snap?.exists && Array.isArray(snap.data().prompts) && snap.data().prompts.length === PROMPTS_PER_DAY) prompts = snap.data().prompts;
+    } catch {}
+  }
+  let source = 'admin';
+  if (!prompts) {
+    if (SEED_DAYS[date]) { prompts = SEED_DAYS[date]; source = 'seed'; }
+    else {
+      const keys = Object.keys(SEED_DAYS).sort();
+      const n = dayNumber(date);
+      const pick = keys[(((n - 1) % keys.length) + keys.length) % keys.length];
+      prompts = SEED_DAYS[pick];
+      source = 'fallback:' + pick;
+    }
+  }
+  return (SKY.dayCache[date] = { prompts, source });
+}
+
+function compileP(prompt) {
+  const list = parseAnswerList(prompt.answers);
+  return { list, index: buildIndex(list), estTotal: list.reduce((s, a) => s + a.est, 0) };
+}
+
+// counts for one prompt from everyone else's shared picks today
+function sharedCounts(date, idx, excludeUid) {
+  const map = new Map();
+  let total = 0;
+  for (const p of SKY.plays) {
+    if (p.date !== date || p.uid === excludeUid) continue;
+    const k = p.picks?.[idx];
+    if (!k) continue;
+    map.set(k, (map.get(k) || 0) + 1);
+    total += 1;
+  }
+  return { map, total };
+}
+
+function shareFor(entry, compiled, counts) {
+  return blendedShare({ est: entry.est, estTotal: compiled.estTotal, count: counts.map.get(normalize(entry.answer)) || 0, total: counts.total });
+}
+
+let writeChain = Promise.resolve();
+function pushPlay(date, mutate) {
+  if (!SKY.db || !SKY.uid) return;
+  writeChain = writeChain.then(async () => {
+    const ref = SKY.db.doc(`plays/${SKY.uid}`);
+    const local = lsGet(`skydrift.play.${date}`, { uid: SKY.uid, date, picks: {}, misses: {} });
+    mutate(local);
+    lsSet(`skydrift.play.${date}`, local);
+    try { await ref.set(local); } catch {}
+  });
+}
+
+async function localApi(path, body) {
+  const url = new URL(path, 'https://sky.local');
+  const p = url.pathname;
+  const q = (k) => url.searchParams.get(k);
+
+  if (p === '/api/day') {
+    const date = q('date');
+    const day = await dayContent(date);
+    const subs = lsGet(subsKey(date), {});
+    const played = Object.entries(subs).map(([idx, s]) => ({
+      idx: +idx, points: s.points, raw: s.raw,
+      answer: s.answerIdx == null ? null : compileP(day.prompts[idx]).list[s.answerIdx]?.answer ?? s.raw,
+    })).sort((a, b) => a.idx - b.idx);
+    return { date, dayNumber: dayNumber(date), seconds: SECONDS_PER_PROMPT, prompts: day.prompts.map((x) => x.prompt), played };
+  }
+
+  if (p === '/api/answer') {
+    const { date, idx, text } = body;
+    const subs = lsGet(subsKey(date), {});
+    if (subs[idx]) return { already: true, points: subs[idx].points };
+    const raw = String(text || '').slice(0, 80).trim();
+    const day = await dayContent(date);
+    const compiled = compileP(day.prompts[idx]);
+    const m = matchAnswer(raw, compiled.index);
+    if (!m) {
+      pushPlay(date, (d) => { const arr = (d.misses[idx] ||= []); if (arr.length < 10) arr.push(normalize(raw).slice(0, 60)); });
+      return { valid: false };
+    }
+    const entry = compiled.list[m.index];
+    const counts = sharedCounts(date, idx, SKY.uid);
+    const share = shareFor(entry, compiled, counts);
+    const points = pointsForShare(share);
+    subs[idx] = { answerIdx: m.index, raw, points };
+    lsSet(subsKey(date), subs);
+    pushPlay(date, (d) => { d.picks[idx] = normalize(entry.answer); });
+    return { valid: true, answer: entry.answer, how: m.how, points, share, players: counts.total + 1 };
+  }
+
+  if (p === '/api/timeout') {
+    const { date, idx } = body;
+    const subs = lsGet(subsKey(date), {});
+    if (!subs[idx]) { subs[idx] = { answerIdx: null, raw: null, points: 0 }; lsSet(subsKey(date), subs); }
+    return { ok: true };
+  }
+
+  if (p === '/api/stats') {
+    const date = q('date');
+    const day = await dayContent(date);
+    const prompts = day.prompts.map((pr, i) => {
+      const compiled = compileP(pr);
+      const counts = sharedCounts(date, i, null);
+      const ranked = compiled.list.map((a) => ({ answer: a.answer, share: shareFor(a, compiled, counts) })).sort((a, b) => b.share - a.share);
+      return { top: ranked.slice(0, 3), players: counts.total, rarest: ranked[ranked.length - 1] };
+    });
+    return { date, prompts };
+  }
+
+  if (p === '/api/profile') return { profile: null, premium: !!lsGet('skydrift.premium', false) };
+
+  // STUB: no payment is taken in the artifact build.
+  if (p === '/api/purchase') { lsSet('skydrift.premium', true); return { ok: true, premium: true, stub: true }; }
+
+  if (p === '/api/packs') {
+    const premium = !!lsGet('skydrift.premium', false);
+    return {
+      premium,
+      packs: PACKS.map((x) => ({ id: x.id, name: x.name, blurb: x.blurb, emoji: x.emoji, count: x.prompts.length, prompts: premium ? x.prompts.map((y) => y.prompt) : undefined })),
+      past: premium ? Object.values(SEED_DAYS).flat().map((y) => y.prompt) : undefined,
+    };
+  }
+
+  if (p === '/api/practice') {
+    const { pack, idx, text } = body;
+    const prompts = pack === 'past' ? Object.values(SEED_DAYS).flat() : PACKS.find((x) => x.id === pack)?.prompts;
+    const prompt = prompts?.[idx];
+    if (!prompt) throw new Error('That prompt is missing.');
+    const compiled = compileP(prompt);
+    const m = matchAnswer(String(text || '').slice(0, 80), compiled.index);
+    if (!m) return { valid: false };
+    const entry = compiled.list[m.index];
+    const share = blendedShare({ est: entry.est, estTotal: compiled.estTotal, count: 0, total: 0 });
+    return { valid: true, answer: entry.answer, points: pointsForShare(share), share };
+  }
+  throw new Error('Unknown request');
+}
+
+// ---------- Editor panel (artifact owner and editors) ----------
+function openEditor() {
+  const today = localDate();
+  const body = openModal(`<div class="editor-panel">
+    <h2>Prompt editor</h2>
+    <p class="stub-note" style="margin-top:0">Write any day’s 7 prompts. One answer per line:<br><code>Answer | alias, misspelling | est%</code></p>
+    <div class="ed-row"><label for="ed-date">Date</label><input type="date" id="ed-date" value="${today}"><span class="ed-src" id="ed-src"></span></div>
+    <div id="ed-prompts"></div>
+    <p class="ed-msg" id="ed-msg"></p>
+    <button class="btn btn-gold" id="ed-save">Save day</button>
+  </div>`);
+  const load = async () => {
+    const date = body.querySelector('#ed-date').value;
+    delete SKY.dayCache[date];
+    const day = await dayContent(date);
+    body.querySelector('#ed-src').textContent = day.source === 'admin' ? 'saved' : day.source === 'seed' ? 'seed day' : `empty: replays ${day.source.split(':')[1]}`;
+    const misses = {};
+    for (const pl of SKY.plays) if (pl.date === date) for (const [i, arr] of Object.entries(pl.misses || {})) for (const t of arr) { (misses[i] ||= {}); misses[i][t] = (misses[i][t] || 0) + 1; }
+    body.querySelector('#ed-prompts').innerHTML = day.prompts.map((pr, i) => {
+      const counts = sharedCounts(date, i, null);
+      const ms = Object.entries(misses[i] || {}).sort((a, b) => b[1] - a[1]).slice(0, 12);
+      return `<div class="ed-prompt"><label for="ed-q${i}">Prompt ${i + 1} <small>${counts.total} players today</small></label>
+        <input id="ed-q${i}" class="ed-q" value="${esc(pr.prompt)}">
+        <textarea id="ed-a${i}" class="ed-a" wrap="off" spellcheck="false">${esc(String(pr.answers).trim())}</textarea>
+        ${ms.length ? `<p class="ed-miss">Not recognised: ${ms.map(([t, n]) => `<button type="button" data-i="${i}" data-t="${esc(t)}">+ ${esc(t)} ×${n}</button>`).join(' ')}</p>` : ''}</div>`;
+    }).join('');
+  };
+  body.querySelector('#ed-date').onchange = load;
+  body.querySelector('#ed-prompts').onclick = (e) => {
+    const b = e.target.closest('button[data-t]');
+    if (!b) return;
+    const ta = body.querySelector(`#ed-a${b.dataset.i}`);
+    ta.value = ta.value.replace(/\s*$/, '') + `\n${b.dataset.t} |  | 0.5`;
+    b.remove();
+  };
+  body.querySelector('#ed-save').onclick = async () => {
+    const msg = body.querySelector('#ed-msg');
+    const date = body.querySelector('#ed-date').value;
+    const prompts = [...body.querySelectorAll('.ed-prompt')].map((el) => ({ prompt: el.querySelector('.ed-q').value.trim(), answers: el.querySelector('.ed-a').value }));
+    const bad = prompts.findIndex((x) => !x.prompt || parseAnswerList(x.answers).length < 3);
+    if (bad >= 0) { msg.textContent = `Prompt ${bad + 1} needs text and at least 3 answers.`; msg.className = 'ed-msg err'; return; }
+    try {
+      await SKY.db.doc(`days/${date}`).set({ prompts, updatedAt: Date.now() });
+      SKY.dayCache[date] = { prompts, source: 'admin' };
+      msg.textContent = `Saved ${date}. Players get these prompts that day.`;
+      msg.className = 'ed-msg ok';
+    } catch (err) {
+      msg.textContent = `Couldn’t save: ${err.message || err.code}. Only the artifact’s owner and editors can save.`;
+      msg.className = 'ed-msg err';
+    }
+  };
+  load();
+}
+
+// ---- public/js/app.js ----
+const unlockAudio = unlock;
+// SKYDRIFT ISLES: screens and the daily game loop.
+
+
+
+
+
+
+const $ = (id) => document.getElementById(id);
+const profile = loadProfile();
+let state = null; // the flight in progress
+let timerRAF = 0;
+let countdownTimer = 0;
+
+// ---------- api ----------
+async function api(path, body) {
+  return localApi(path, body);
+  const res = await fetch(path, body
+    ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }
+    : undefined);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.error || res.statusText), { status: res.status });
+  return data;
+}
+
+// ---------- helpers ----------
+const fmt = (n) => Math.round(n).toLocaleString('en-US');
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function show(screen) {
+  for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== `screen-${screen}`;
+  document.body.className = document.body.className.replace(/\bon-\w+/g, '').trim() + ` on-${screen}`;
+  if (profile.premium) document.body.classList.add('premium');
+  document.body.classList.toggle('night', getAltitude() >= 330);
+}
+
+// One toast at a time, so unlocks don't pile up over the prompt.
+const toastQueue = [];
+let toastBusy = false;
+function toast(html, onShow) {
+  toastQueue.push({ html, onShow });
+  if (!toastBusy) nextToast();
+}
+function nextToast() {
+  const item = toastQueue.shift();
+  if (!item) { toastBusy = false; return; }
+  toastBusy = true;
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = item.html;
+  $('toasts').appendChild(t);
+  item.onShow?.();
+  setTimeout(() => t.remove(), 3700);
+  setTimeout(nextToast, 2600);
+}
+
+function openModal(content) {
+  const body = $('modal-body');
+  body.innerHTML = '';
+  if (content instanceof HTMLTemplateElement) body.appendChild(content.content.cloneNode(true));
+  else body.innerHTML = content;
+  $('modal').hidden = false;
+  return body;
+}
+function closeModal() { $('modal').hidden = true; }
+$('modal').addEventListener('click', (e) => { if (e.target.closest('[data-close]')) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('modal').hidden) closeModal(); });
+
+function msUntilMidnight() {
+  const now = new Date();
+  const next = new Date(now);
+  next.setHours(24, 0, 0, 0);
+  return next - now;
+}
+function hms(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60].map((n) => String(n).padStart(2, '0')).join(':');
+}
+
+function tierClass(points) { return `tier-${tierFor(points).id}`; }
+
+function shareLine(share, points) {
+  const pct = share * 100;
+  const p = pct < 0.1 ? '<0.1' : pct < 10 ? pct.toFixed(1) : Math.round(pct);
+  const flavor = { legendary: 'Almost nobody thought of this!', rare: 'A rare find.', uncommon: 'Off the beaten cloud.', common: 'A crowd favourite.' }[tierFor(points).id];
+  return `${p}% of pilots said this. ${flavor}`;
+}
+
+// ---------- home ----------
+function today() { return localDate(); }
+
+function renderHome() {
+  const t = today();
+  const day = profile.days[t];
+  const streak = liveStreak(profile, t);
+  $('streak-count').textContent = streak;
+  $('btn-streak').classList.toggle('cold', streak === 0);
+  $('home-day').textContent = `Day #${dayNumber(t)} · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  const btn = $('btn-play');
+  clearInterval(countdownTimer);
+  if (day?.done) {
+    btn.innerHTML = `<span>See today’s flight</span><span class="countdown" id="home-countdown"></span>`;
+    $('home-note').textContent = `You reached ${layerFor(day.total).name} · ${day.total}/700`;
+    const tick = () => { const el = $('home-countdown'); if (el) el.textContent = `Next skies in ${hms(msUntilMidnight())}`; if (msUntilMidnight() < 1000) setTimeout(renderHome, 1500); };
+    tick();
+    countdownTimer = setInterval(tick, 1000);
+    setAltitude(day.total);
+  } else {
+    const started = day?.results?.filter(Boolean).length || 0;
+    btn.innerHTML = started ? `<span>Keep flying (${started}/7)</span>` : '<span>Take off</span>';
+    $('home-note').textContent = '7 prompts · 25 seconds each';
+    setAltitude(sumPoints(day?.results || []));
+  }
+  show('home');
+}
+
+function sumPoints(results) { return results.reduce((s, r) => s + (r?.points || 0), 0); }
+
+// ---------- daily flight ----------
+async function startDaily() {
+  unlockAudio();
+  const date = today();
+  const day = profile.days[date];
+  if (day?.done) return showResults(date);
+  $('btn-play').disabled = true;
+  try {
+    const data = await api(`/api/day?date=${date}&player=${profile.id}`);
+    const results = Array(data.prompts.length).fill(null);
+    for (const r of data.played) results[r.idx] = { points: r.points, answer: r.answer, raw: r.raw };
+    profile.days[date] = { ...(profile.days[date] || {}), results, prompts: data.prompts, total: sumPoints(results) };
+    saveProfile(profile);
+    state = { mode: 'daily', date, prompts: data.prompts, results, seconds: data.seconds, idx: results.findIndex((r) => !r) };
+    if (state.idx === -1) return finishFlight();
+    sfx.start();
+    show('play');
+    setAltitude(sumPoints(results));
+    nextPrompt();
+  } catch (e) {
+    toast(`☁️ Couldn’t reach the sky server. ${esc(e.message)}`);
+  } finally {
+    $('btn-play').disabled = false;
+  }
+}
+
+function renderDots() {
+  $('hud-dots').innerHTML = state.prompts.map((_, i) => {
+    const r = state.results[i];
+    const style = r ? `style="background:${tierFor(r.points).color}"` : '';
+    return `<i class="${i === state.idx ? 'now' : ''}" ${style}></i>`;
+  }).join('');
+  const alt = sumPoints(state.results);
+  $('hud-feet').textContent = fmt(alt * FEET_PER_POINT);
+  $('hud-layer').textContent = layerFor(alt).name;
+}
+
+function startedKey() { return `skydrift.started.${state.mode}.${state.date}.${state.idx}`; }
+
+function nextPrompt() {
+  if (state.idx >= state.prompts.length) return finishFlight();
+  state.locked = false;
+  state.busy = false;
+  renderDots();
+  $('prompt-label').textContent = `Prompt ${state.idx + 1} of ${state.prompts.length}`;
+  $('prompt-text').textContent = state.prompts[state.idx];
+  const card = $('prompt-card');
+  card.classList.remove('enter'); void card.offsetWidth; card.classList.add('enter');
+  $('answer-form').hidden = false;
+  $('answer-hint').hidden = false;
+  $('answer-hint').className = 'answer-hint';
+  $('answer-hint').textContent = 'Any real answer counts. Rarer answers score more.';
+  $('reveal').hidden = true;
+  $('timer').hidden = false;
+  const input = $('answer-input');
+  input.value = '';
+  input.disabled = false;
+  setTimeout(() => input.focus({ preventScroll: true }), 60);
+
+  // The clock keeps running across reloads, so refreshing can't buy extra time.
+  let startedAt = Date.now();
+  if (state.mode === 'daily') {
+    const saved = Number(localStorage.getItem(startedKey()));
+    if (saved && Date.now() - saved < 60 * 60 * 1000) startedAt = saved;
+    else try { localStorage.setItem(startedKey(), String(startedAt)); } catch {}
+  }
+  runTimer(startedAt);
+}
+
+function runTimer(startedAt) {
+  cancelAnimationFrame(timerRAF);
+  const total = state.seconds * 1000;
+  let lastSec = null;
+  const frame = () => {
+    const left = Math.max(0, total - (Date.now() - startedAt));
+    const sec = Math.ceil(left / 1000);
+    $('timer-fill').style.transform = `scaleX(${left / total})`;
+    $('timer-num').textContent = sec;
+    $('timer').classList.toggle('low', sec <= 5);
+    if (sec !== lastSec && sec <= 5 && sec > 0 && lastSec !== null) sfx.tick(sec === 1);
+    lastSec = sec;
+    if (left <= 0) return timeUp();
+    timerRAF = requestAnimationFrame(frame);
+  };
+  frame();
+}
+
+async function timeUp() {
+  if (state.locked) return;
+  state.locked = true;
+  cancelAnimationFrame(timerRAF);
+  sfx.timeout();
+  $('answer-input').disabled = true;
+  if (state.mode === 'daily') api('/api/timeout', { date: state.date, idx: state.idx, player: profile.id }).catch(() => {});
+  recordResult({ points: 0, answer: null, raw: null });
+  showReveal({ points: 0, answer: 'Lost in the clouds', line: 'Time’s up. The wind carried that one away.' });
+}
+
+async function submitAnswer(e) {
+  e.preventDefault();
+  if (!state || state.locked || state.busy) return;
+  const input = $('answer-input');
+  const text = input.value.trim();
+  if (!text) return shakeForm();
+  state.busy = true;
+  sfx.tap();
+  try {
+    const res = state.mode === 'daily'
+      ? await api('/api/answer', { date: state.date, idx: state.idx, text, player: profile.id })
+      : await api('/api/practice', { player: profile.id, pack: state.pack, idx: state.order[state.idx], text });
+    if (state.locked) return;
+    if (res.already) {
+      state.locked = true;
+      cancelAnimationFrame(timerRAF);
+      recordResult({ points: res.points, answer: text, raw: text });
+      return showReveal({ points: res.points, answer: text, line: 'You already answered this one.' });
+    }
+    if (!res.valid) {
+      sfx.invalid();
+      shakeForm();
+      const hint = $('answer-hint');
+      hint.className = 'answer-hint bad';
+      hint.textContent = `The clouds don’t recognise “${text}”. Try another!`;
+      input.select();
+      return;
+    }
+    state.locked = true;
+    cancelAnimationFrame(timerRAF);
+    input.blur();
+    recordResult({ points: res.points, answer: res.answer, raw: text });
+    sfx.valid(tierFor(res.points).id);
+    showReveal({ points: res.points, answer: res.answer, line: shareLine(res.share, res.points) });
+  } catch (err) {
+    toast(`☁️ ${esc(err.message)}`);
+  } finally {
+    state.busy = false;
+  }
+}
+
+function shakeForm() {
+  const f = $('answer-form');
+  f.classList.remove('shake'); void f.offsetWidth; f.classList.add('shake');
+}
+
+function recordResult(r) {
+  const before = sumPoints(state.results);
+  state.results[state.idx] = r;
+  const after = before + r.points;
+  if (state.mode === 'daily') {
+    const day = profile.days[state.date];
+    day.results = state.results;
+    day.total = after;
+    const finds = awardForAnswer(profile, { date: state.date, idx: state.idx, points: r.points });
+    day.finds = [...(day.finds || []), ...finds];
+    saveProfile(profile);
+    setTimeout(() => announceFinds(finds), 900);
+  }
+  if (r.points > 0) {
+    setTimeout(() => {
+      setAltitude(after);
+      sparkle(r.points >= 75 ? 22 : 12);
+      sfx.whoosh();
+      renderDots();
+      const passed = LANDMARKS.filter((l) => l.at > before && l.at <= after).pop();
+      if (passed) showLandmark(passed);
+    }, 350);
+  } else {
+    renderDots();
+  }
+}
+
+function announceFinds(finds) {
+  for (const f of finds) {
+    if (f.kind === 'creature') toast(`${medalHTML(f.creature)}<div><small>New sky creature</small>${esc(f.creature.name)}</div>`, sfx.unlock);
+    else toast(`<div class="medal" style="--m1:#fff6d6;--m2:#e8b84a">🧩</div><div><small>Map fragment ${f.n}/${FRAGMENTS_PER_MAP}</small>${esc(f.map.name)}</div>`, sfx.unlock);
+  }
+}
+
+function showLandmark(lm) {
+  const el = $('landmark-toast');
+  el.hidden = false;
+  el.innerHTML = `<small>You flew past</small>${lm.icon} ${esc(lm.name)}`;
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  clearTimeout(showLandmark.t);
+  showLandmark.t = setTimeout(() => { el.hidden = true; }, 3300);
+}
+
+function showReveal({ points, answer, line }) {
+  $('answer-form').hidden = true;
+  $('answer-hint').hidden = true;
+  $('timer').hidden = true;
+  const tier = tierFor(points);
+  const badge = $('reveal-tier');
+  badge.className = `tier-badge ${tierClass(points)}`;
+  badge.textContent = tier.label;
+  $('reveal-answer').textContent = answer;
+  $('reveal-share').textContent = line;
+  $('btn-next').textContent = state.idx + 1 >= state.prompts.length ? 'Land & see results ➜' : 'Next ➜';
+  $('reveal').hidden = false;
+  // count the points up
+  const el = $('reveal-points');
+  const t0 = performance.now();
+  const step = (t) => {
+    const k = Math.min(1, (t - t0) / 700);
+    el.textContent = Math.round(points * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+  setTimeout(() => $('btn-next').focus({ preventScroll: true }), 50);
+}
+
+function advance() {
+  sfx.tap();
+  state.idx += 1;
+  if (state.idx >= state.prompts.length) finishFlight();
+  else nextPrompt();
+}
+
+function finishFlight() {
+  cancelAnimationFrame(timerRAF);
+  if (state.mode === 'practice') return finishPractice();
+  const date = state.date;
+  const day = profile.days[date];
+  day.total = sumPoints(state.results);
+  day.done = true;
+  completeDay(profile, date);
+  const finds = awardForDay(profile, date);
+  day.finds = [...(day.finds || []), ...finds];
+  saveProfile(profile);
+  sfx.finish();
+  state = null;
+  showResults(date);
+  if (finds.length) setTimeout(sfx.unlock, 900);
+}
+
+// ---------- results ----------
+function emojiRow(results) {
+  return results.map((r) => tierFor(r?.points || 0).emoji).join('');
+}
+
+function shareText(date) {
+  const day = profile.days[date];
+  const layer = layerFor(day.total);
+  const streak = liveStreak(profile, today());
+  return [
+    `SKYDRIFT ISLES #${dayNumber(date)} 🪂`,
+    emojiRow(day.results),
+    `${day.total}/700 · ${layer.name} · ${fmt(day.total * FEET_PER_POINT)} ft`,
+    streak > 1 ? `🔥 ${streak}-day streak` : null,
+    CONFIG.SHARE_URL,
+  ].filter(Boolean).join('\n');
+}
+
+async function showResults(date) {
+  const day = profile.days[date];
+  if (!day) return renderHome();
+  setAltitude(day.total);
+  show('results');
+  $('screen-results').scrollTop = 0;
+  $('res-day').textContent = `Day #${dayNumber(date)} · flight complete`;
+  $('res-layer').textContent = layerFor(day.total).name;
+  $('res-feet').textContent = fmt(day.total * FEET_PER_POINT);
+  $('res-score').textContent = day.total;
+  $('res-emoji').textContent = emojiRow(day.results);
+  const streak = liveStreak(profile, today());
+  $('res-streak').textContent = streak ? `🔥 ${streak}-day streak${profile.best > streak ? ` · best ${profile.best}` : ''}` : '';
+  $('share-done').hidden = true;
+
+  const finds = day.finds || [];
+  $('res-finds').hidden = !finds.length;
+  const frags = finds.filter((f) => f.kind === 'fragment');
+  $('res-finds-row').innerHTML = finds.filter((f) => f.kind === 'creature')
+    .map((f) => `<div class="creature">${medalHTML(f.creature)}${esc(f.creature.name)}<small>${esc(f.creature.blurb)}</small></div>`).join('')
+    + (frags.length ? `<div class="creature"><div class="medal" style="--m1:#fff6d6;--m2:#e8b84a">🧩</div>+${frags.length} map fragment${frags.length > 1 ? 's' : ''}<small>${esc(frags[frags.length - 1].map.name)}</small></div>` : '');
+
+  const list = $('res-list');
+  const renderList = (stats) => {
+    list.innerHTML = (day.prompts || []).map((q, i) => {
+      const r = day.results[i] || { points: 0 };
+      const top = stats?.prompts?.[i]?.top?.[0];
+      const most = top ? `Most said: ${esc(top.answer)} (${Math.round(top.share * 100)}%)` : '';
+      return `<li style="--c:${tierFor(r.points).color}"><span class="q">${esc(q)}</span>
+        <span class="a">${r.answer ? esc(r.answer) : '☁️ Lost in the clouds'}</span><span class="p">${r.points}</span>
+        <span class="m">${most}</span></li>`;
+    }).join('');
+  };
+  renderList(null);
+  api(`/api/stats?date=${date}&player=${profile.id}`).then(renderList).catch(() => {});
+
+  $('promo-glydrift').href = CONFIG.GLYDRIFT_URL;
+  clearInterval(countdownTimer);
+  const tick = () => { $('res-countdown').textContent = hms(msUntilMidnight()); };
+  tick();
+  countdownTimer = setInterval(tick, 1000);
+}
+
+async function share() {
+  sfx.tap();
+  const date = profile.days[today()]?.done ? today() : Object.keys(profile.days).filter((d) => profile.days[d].done).sort().pop();
+  if (!date) return;
+  const text = shareText(date);
+  try {
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+      await navigator.share({ text });
+      return;
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') return;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+  }
+  $('share-done').hidden = false;
+}
+
+// ---------- collection ----------
+function showCollection(tab = 'creatures') {
+  renderCreatures($('col-creatures'), profile);
+  renderMaps($('col-maps'), profile);
+  const got = CREATURES.filter((c) => profile.creatures[c.id]).length;
+  $('col-creature-count').textContent = `${got}/${CREATURES.length}`;
+  $('col-fragment-count').textContent = `${Math.min(profile.fragments, MAPS.length * FRAGMENTS_PER_MAP)}/${MAPS.length * FRAGMENTS_PER_MAP}`;
+  setTab(tab);
+  show('collection');
+}
+function setTab(tab) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
+  $('col-creatures').hidden = tab !== 'creatures';
+  $('col-maps').hidden = tab !== 'maps';
+}
+
+// ---------- Unlimited Skies (stub purchase) + practice ----------
+function openUnlimited() {
+  sfx.tap();
+  if (profile.premium) return showPractice();
+  const body = openModal(`<div class="premium-sheet">
+    <h2>✦ Unlimited Skies</h2>
+    <p class="price">${CONFIG.PRICE}<small>one-time · yours forever</small></p>
+    <ul>
+      <li><span>🪂</span>Practice mode: fly as often as you like</li>
+      <li><span>🐉</span>Themed packs: Dragon Daycare, Pirate Kitchen, Haunted Gift Shop</li>
+      <li><span>☁️</span>Past Skies: replay every earlier day</li>
+      <li><span>🚫</span>No ads, ever</li>
+    </ul>
+    <button class="btn btn-gold" id="btn-buy">Unlock for ${CONFIG.PRICE}</button>
+    <p class="stub-note">The daily game is always free.</p>
+  </div>`);
+  body.querySelector('#btn-buy').onclick = openCheckout;
+}
+
+function openCheckout() {
+  const body = openModal(`<div class="checkout">
+    <h2>Checkout</h2>
+    <p class="stub-note" style="margin-top:0">Test mode: payments aren’t connected yet. No card will be charged.</p>
+    <div class="fake-field">Unlimited Skies · ${CONFIG.PRICE}</div>
+    <div class="fake-field">•••• •••• •••• 4242</div>
+    <button class="btn btn-gold" id="btn-confirm">Confirm purchase</button>
+    <button class="btn btn-glass" data-close>Cancel</button>
+  </div>`);
+  body.querySelector('#btn-confirm').onclick = async (e) => {
+    e.target.disabled = true;
+    try {
+      await api('/api/purchase', { player: profile.id, sku: 'unlimited-skies' });
+      profile.premium = true;
+      saveProfile(profile);
+      document.body.classList.add('premium');
+      closeModal();
+      sfx.unlock();
+      toast('<div class="medal" style="--m1:#fff6d6;--m2:#e8b84a">✦</div><div><small>Unlocked</small>Unlimited Skies</div>');
+      showPractice();
+    } catch (err) {
+      e.target.disabled = false;
+      toast(`☁️ ${esc(err.message)}`);
+    }
+  };
+}
+
+let packsCache = null;
+async function showPractice() {
+  show('practice');
+  const list = $('pack-list');
+  list.innerHTML = '<p class="practice-intro">Loading packs…</p>';
+  try {
+    packsCache = await api(`/api/packs?player=${profile.id}`);
+    const items = [
+      { id: 'past', name: 'Past Skies', blurb: 'Seven random prompts from earlier days.', emoji: '🌤️', prompts: packsCache.past },
+      ...packsCache.packs,
+    ];
+    list.innerHTML = items.map((p) => `<button class="pack" data-pack="${p.id}"><span class="em">${p.emoji}</span>
+      <span><b>${esc(p.name)}</b><span>${esc(p.blurb)}</span></span></button>`).join('');
+    list.onclick = (e) => {
+      const b = e.target.closest('[data-pack]');
+      if (!b) return;
+      const pack = items.find((p) => p.id === b.dataset.pack);
+      startPractice(pack);
+    };
+  } catch (err) {
+    list.innerHTML = `<p class="practice-intro">Couldn’t load packs: ${esc(err.message)}</p>`;
+  }
+}
+
+function startPractice(pack) {
+  unlockAudio();
+  const all = pack.prompts.map((_, i) => i);
+  for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+  const order = all.slice(0, Math.min(PROMPTS_PER_DAY, all.length));
+  state = {
+    mode: 'practice', pack: pack.id, packName: pack.name, order, date: 'practice',
+    prompts: order.map((i) => pack.prompts[i]), results: Array(order.length).fill(null), seconds: 25, idx: 0,
+  };
+  sfx.start();
+  show('play');
+  setAltitude(0);
+  nextPrompt();
+}
+
+function finishPractice() {
+  const total = sumPoints(state.results);
+  const name = state.packName;
+  const row = emojiRow(state.results);
+  state = null;
+  sfx.finish();
+  const body = openModal(`<div style="text-align:center"><h2>${esc(name)}</h2>
+    <p class="res-emoji">${row}</p><p class="reveal-points"><b>${total}</b><span>pts</span></p>
+    <p class="stub-note">Practice flights don’t count toward rarity or your streak.</p>
+    <button class="btn btn-gold" id="btn-again">Fly another</button></div>`);
+  body.querySelector('#btn-again').onclick = () => { closeModal(); showPractice(); };
+}
+
+// ---------- wiring ----------
+function quitFlight() {
+  sfx.tap();
+  cancelAnimationFrame(timerRAF);
+  const wasPractice = state?.mode === 'practice';
+  state = null;
+  if (wasPractice) showPractice();
+  else renderHome();
+}
+
+function setSoundIcon() {
+  $('btn-sound').textContent = profile.muted ? '🔇' : '🔊';
+  $('btn-sound').setAttribute('aria-label', profile.muted ? 'Sound off' : 'Sound on');
+}
+
+function wire() {
+  $('btn-play').onclick = startDaily;
+  $('answer-form').addEventListener('submit', submitAnswer);
+  $('btn-next').onclick = advance;
+  $('btn-quit').onclick = quitFlight;
+  $('btn-share').onclick = share;
+  $('btn-res-home').onclick = () => { sfx.tap(); renderHome(); };
+  $('btn-res-collection').onclick = () => { sfx.tap(); showCollection(); };
+  $('btn-collection').onclick = () => { sfx.tap(); showCollection(); };
+  $('btn-col-back').onclick = () => { sfx.tap(); renderHome(); };
+  $('btn-pr-back').onclick = () => { sfx.tap(); renderHome(); };
+  document.querySelector('.tabs').onclick = (e) => { const t = e.target.closest('.tab'); if (t) { sfx.tap(); setTab(t.dataset.tab); } };
+  $('btn-howto').onclick = () => { sfx.tap(); openModal($('tpl-howto')); };
+  $('btn-credits').onclick = () => { sfx.tap(); openModal($('tpl-credits')); };
+  $('btn-unlimited').onclick = openUnlimited;
+  $('btn-streak').onclick = () => {
+    sfx.tap();
+    const s = liveStreak(profile, today());
+    openModal(`<div style="text-align:center"><h2>🔥 ${s}-day streak</h2>
+      <p>Best streak: <b>${profile.best}</b></p>
+      <p class="stub-note">Fly every day to keep it alive. Streak friends join you at 3, 7, 14 and 30 days.</p>
+      <button class="btn btn-gold" data-close>Keep flying</button></div>`);
+  };
+  $('btn-sound').onclick = () => {
+    profile.muted = !profile.muted;
+    setMuted(profile.muted);
+    saveProfile(profile, false);
+    setSoundIcon();
+    sfx.tap();
+  };
+  // Leaving the tab mid-prompt doesn't pause the clock (it's wall-clock based), but resume the frame loop.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && state && !state.locked && $('screen-play').hidden === false) {
+      const saved = Number(localStorage.getItem(startedKey()));
+      if (saved) runTimer(saved);
+    }
+  });
+}
+
+async function init() {
+  setMuted(profile.muted);
+  setSoundIcon();
+  buildWorld();
+  setAltitude(0, { instant: true });
+  mountGlider();
+  wire();
+  if (profile.premium) document.body.classList.add('premium');
+  renderHome();
+  if (!localStorage.getItem('skydrift.seenHowto')) {
+    try { localStorage.setItem('skydrift.seenHowto', '1'); } catch {}
+    setTimeout(() => openModal($('tpl-howto')), 600);
+  }
+  // Server knows about purchases (and is where a real payment webhook will flip the flag).
+  try {
+    const r = await api(`/api/profile?player=${profile.id}`);
+    if (r.premium && !profile.premium) { profile.premium = true; saveProfile(profile, false); document.body.classList.add('premium'); }
+  } catch {}
+}
+
+init();
+connectSky();
+document.addEventListener('sky-connected', () => {
+  if (SKY.canEdit && SKY.db) { const b = $('btn-editor'); b.hidden = false; b.onclick = () => { sfx.tap(); openEditor(); }; }
+  const n = $('home-shared');
+  if (n) n.textContent = SKY.db ? 'Rarity is live: every signed-in player’s answers count.' : '';
+});
+
+// Exposed for quick debugging in the console.
+window.skydrift = { profile, TIERS };
+
+</script>
