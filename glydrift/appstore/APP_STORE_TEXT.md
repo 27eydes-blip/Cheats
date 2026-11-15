@@ -54,7 +54,7 @@ Every season brings a free reward track with new heroes, coins and items, earned
 
 Drift Pass+ is an optional purchase for each season. It unlocks a second reward track with exclusive heroes, skins and titles, plus extra coins, shards and Mystery Pods. It doesn't change speed, hitbox, score or the leaderboards.
 
-Created by Sam Eyde III.
+Published by Gleyde Technologies, LLC. Created by Sam Eyde III.
 ```
 
 **Keywords** (max 100, comma-separated, no spaces) [97]
@@ -75,7 +75,7 @@ arcade,onetap,flyer,flying,neon,pixel,retro,endless,casual,reflex,levels,leaderb
 - Support URL: `https://glydrift.com/support`
 - Marketing URL: `https://glydrift.com`
 - Privacy Policy URL: `https://glydrift.com/privacy`
-- Copyright: `2026 Sam Eyde III`
+- Copyright: `2026 Gleyde Technologies, LLC`
 
 ## What the facts behind the text are
 
