@@ -363,13 +363,13 @@ export class HudScene extends Phaser.Scene {
    * Run banners (mission / new best / tips): slide in from the side below the score and
    * out again quickly; queued so two never overlap.
    */
-  hudBanner(text, color, sub) {
+  hudBanner(text, color, sub, { hold = 1700 } = {}) {
     const W = this.W;
     const y = this.top + 250;
     const q = (this.bannerQ ||= { t: 0 });
     const now = this.time.now;
     const delay = Math.max(0, q.t - now);
-    q.t = now + delay + 2000;
+    q.t = now + delay + hold + 300;
     // two reusable banners (alternating) — no text objects created mid-run
     this.runBanners ||= [0, 1].map(() => {
       const c = this.add
@@ -403,7 +403,7 @@ export class HudScene extends Phaser.Scene {
     this.tweens.add({
       targets: c,
       x: -320,
-      delay: delay + 1700,
+      delay: delay + hold,
       duration: 200,
       ease: "Cubic.easeIn",
       onComplete: () => c.setVisible(false),

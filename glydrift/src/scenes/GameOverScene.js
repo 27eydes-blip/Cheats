@@ -475,19 +475,24 @@ export class GameOverScene extends Phaser.Scene {
     Promise.resolve(R.upload)
       .then((up) => {
         if (!up || up.rejected) return null;
+        // (WASP LORD's runs: his own ILLEGAL boards)
+        const board = (level) => Levels.forHero(level, run.char);
+        const illegal = Levels.isIllegal(board(Levels.endless()));
         if (run.mode === "daily")
-          return Leaderboard.placementFor(Levels.daily(), run.score).then((daily) => ({ daily }));
+          return Leaderboard.placementFor(board(Levels.daily()), run.score).then((daily) => ({ daily, illegal }));
         return Promise.all([
-          Leaderboard.placementFor(Levels.distance(), Math.floor(run.distance)),
-          Leaderboard.placementFor(Levels.endless(), run.score),
-        ]).then(([distance, score]) => ({ distance, score }));
+          Leaderboard.placementFor(board(Levels.distance()), Math.floor(run.distance)),
+          Leaderboard.placementFor(board(Levels.endless()), run.score),
+        ]).then(([distance, score]) => ({ distance, score, illegal }));
       })
       .then((p) => {
         if (!p || !alive()) return;
         const rank = Math.min(p.daily ?? Infinity, p.distance ?? Infinity, p.score ?? Infinity);
-        const msg = p.daily
-          ? `You placed #${p.daily} on today's Daily!`
-          : `You placed #${p.score} in Score · #${p.distance} in Distance`;
+        const msg = p.illegal
+          ? `You placed #${p.daily ?? p.score} on the ILLEGAL board`
+          : p.daily
+            ? `You placed #${p.daily} on today's Daily!`
+            : `You placed #${p.score} in Score · #${p.distance} in Distance`;
         this.placementText = msg;
         const t = neonText(
           this,

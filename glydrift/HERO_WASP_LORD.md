@@ -58,29 +58,37 @@ phasing, metallic boom on double jump, deep buzz-roar on unlock (and on a new be
 4. **COMBO x16:** a new tier at a chain of 28 (x13 at 22, like SXE). It shows as the flaming
    number on the combo meter and the HUD. SXE still tops out at x13 and everyone else at x10.
 
-## Leaderboard and server
-- His runs count on the normal leaderboards and for the ALL MIGHTY crown, like every hero.
-- **Where the tag comes from:** the ILLEGAL tag is drawn from the hero stored with each score,
-  so every device sees it. A test checks it from a second browser.
-- **SQL to run:** `supabase/migrations/20261114000001_wasp_lord_scores.sql`.
-  - **Run it BEFORE the update with him goes live.** Until then, the server's score check
-    rejects his fastest and x16 runs, so his best scores wouldn't upload.
-  - It's safe to run early and safe to run twice. Paste it into Supabase → SQL Editor → Run.
-  - **What it changes:**
-    - Only rows marked `wasplord` get higher limits (top speed ×1.95 instead of ×1.8,
-      38 points per metre instead of 30), and only if the player **owns him**: their cloud save
-      on the server must have him unlocked. Every other hero's limits are unchanged.
-    - Guests (no account, so no cloud save) can still post his runs within the normal limits;
-      only their rare runs beyond those limits are refused. Make an account to get his full limits.
-    - New scores must carry a valid hero id.
-    - A rename can't change which hero a score was set with.
-  - **It deletes nothing and changes no existing score.** It only replaces the score check that
-    runs on new and updated scores.
+## Leaderboard and server: the ILLEGAL board
+- **His runs go on the ILLEGAL leaderboard only.** It's the third tab on the leaderboard (red and
+  black, warning tape), with ALL TIME / THIS WEEK / TODAY. His runs never count on SCORE,
+  DISTANCE, the Daily or level boards, or for the ALL MIGHTY crown. His powers are unchanged, and
+  players who bought him keep him.
+- **In the game:** the first time someone flies him, a banner says "Wasp Lord is ILLEGAL — his
+  scores go on the Illegal leaderboard." (once per save). His shop card and its stage say
+  "Illegal leaderboard only." After a run with him, the game over screen says where he placed
+  on the ILLEGAL board.
+- **On the server (so it can't be faked):** his rows live on boards of their own (the level gets an
+  `illegal-` prefix: `illegal-endless`, `illegal-endless-distance`, …). The server moves any row
+  with his hero there itself, whatever the game asks for, so an older app or a modified browser
+  can't put him on a normal board. An ILLEGAL row can't be moved back, an older app can't lower
+  his ILLEGAL best, no other hero can post on the ILLEGAL board, and a normal row can't be
+  relabelled as his. The game also leaves his rows out when it reads a normal board.
+- **SQL to run:** `supabase/migrations/20261115000001_illegal_leaderboard.sql`.
+  - **It replaces `20261114000001_wasp_lord_scores.sql`**: everything that file did is included
+    (his higher speed and x16 limits, only for players whose cloud save has him unlocked). You
+    don't need to run the old one; if you already did, that's fine.
+  - It **moves** his existing scores to the ILLEGAL board. **Nothing is deleted**; only the
+    board changes (score, name, time and hero stay).
+  - If the ALL MIGHTY crown is held with a Wasp Lord score, it goes to the best non-Wasp Lord
+    score at once. That reign doesn't count: a player whose only reign it was loses the "Former
+    All Mighty" badge it gave.
+  - Safe to run more than once. Paste it into Supabase → SQL Editor → Run. The last line shows a
+    one-row summary.
+  - **Until it's run:** the updated game already sends his runs to the ILLEGAL board and leaves
+    his rows off the normal boards it reads, but older apps and the crown check need the SQL.
   - **What it can't stop:** the cloud save is written by the player's own game, so a determined
-    cheater could edit their own save to claim him. Their row would still show the ILLEGAL tag
-    and stay capped at his real best case. Coins and unlocks are kept by the game, not the
-    server, so the server can't prove who bought him.
-  - The game checks the same rules before uploading.
+    cheater could edit their own save to claim him for his higher limits. Their rows still go on
+    the ILLEGAL board only.
 
 ## Tests (tests/e2e/wasplord.spec.js, tests/e2e/wasplord-art.spec.js)
 - **Phasing:**
@@ -101,8 +109,15 @@ phasing, metallic boom on double jump, deep buzz-roar on unlock (and on a new be
   - the zap-stairs spacing: his own, and normal for VOLT and SXE;
   - **a run still ends:** with no taps he hits the ground in under 5 s, and flying blind a zap beam
     got him at 1,852 m. He is not unkillable.
-- **Leaderboard and score rules:**
-  - the ILLEGAL tag on the podium, the list and your own row, including another device's data;
+- **Leaderboard and score rules** (also `tests/e2e/illegal-board.spec.js`):
+  - two devices on one (fake) server: his run shows on ILLEGAL and never on SCORE / DISTANCE,
+    even a row of his an older app left on a normal board; a VOLT run from the same device shows
+    on SCORE as normal;
+  - the migration on a real Postgres, run twice: his rows moved, nothing deleted, everyone
+    else's rows unchanged, the crown moved to the best non-Wasp Lord score; older apps and
+    doctored requests can't put him back on a normal board;
+  - the first-run message (once) and "Illegal leaderboard only." on his shop card;
+  - the ILLEGAL tag on the ILLEGAL board's podium, list and your own row;
   - score rules: his runs are accepted, and the same numbers for any other hero are rejected
     (the same rules as the SQL).
 - **Shop and art:**

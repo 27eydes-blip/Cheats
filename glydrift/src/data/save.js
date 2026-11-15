@@ -60,6 +60,7 @@ function defaults() {
     xpBoost: { mul: 1, runs: 0 }, // Drift Pass XP boost (runs left)
     seasons: {}, // per-season pass XP / claims, event progress, recap + new-hero flags
     revealed: {}, // hero id → its one-time cinematic unlock reveal has played (WASP LORD)
+    illegalNoticeSeen: false, // the one-time "Wasp Lord is ILLEGAL" message on his first run
     pass: { xp: 0, claimed: {} }, // Drift Pass (free track) XP + claimed tiers // unused boosts were refunded as coins when boosts were removed
     login: { last: "", streak: 0, claimed: "" },
     daily: { date: "", best: 0, attempts: 0, ghost: null, ghostChar: "volt", lastPlayed: "" },

@@ -30,6 +30,10 @@ const PREFIX =
     ? "test-"
     : "";
 
+/** The hero whose runs go on the ILLEGAL boards only (never the normal boards or ALL MIGHTY). */
+export const ILLEGAL_HERO = "wasplord";
+const ILLEGAL = "illegal-";
+
 export const Levels = {
   endless: () => `${PREFIX}endless`,
   distance: () => `${PREFIX}endless-distance`,
@@ -39,7 +43,24 @@ export const Levels = {
   /** LEVEL MODE best times: one board per level (score encodes the time, higher = faster). */
   level: (n) => `${PREFIX}lv-${n}`,
   isLevel: (level) => /lv-\d+$/.test(level),
+  /**
+   * WASP LORD's boards: the same board with an "illegal-" prefix ("illegal-endless", …). The
+   * server routes his rows there too (supabase/migrations/20261115000001), whatever an older
+   * game asks for, so the normal boards can never show him.
+   */
+  illegal: (level) => (level.startsWith(ILLEGAL) ? level : `${ILLEGAL}${level}`),
+  isIllegal: (level) => String(level || "").startsWith(ILLEGAL),
+  /** The board a run with this hero goes on. */
+  forHero: (level, char) => (char === ILLEGAL_HERO ? Levels.illegal(level) : level),
 };
+
+/**
+ * Normal boards never show a WASP LORD row, even one still on a normal board (a row from
+ * before the ILLEGAL board's migration ran). Rows with no hero stay.
+ */
+function normalOnly(q, level) {
+  return Levels.isIllegal(level) ? q : q.or(`character.is.null,character.neq.${ILLEGAL_HERO}`);
+}
 
 /** Level boards store a time as a score so the board's "higher is better" order still works. */
 const TIME_K = 5e8;
@@ -211,24 +232,30 @@ const MOCK_TITLES = [
 const MOCK_FLAIR = ["gold,s1", null, "s1", null, null, "gold,s1", null, null, null];
 function mockRows(level, period) {
   const dist = Levels.isDistance(level);
-  const top = (dist ? 9200 : 15800) * (period === "today" ? 0.42 : period === "week" ? 0.7 : 1);
-  return MOCK_NAMES.map((name, i) => ({
+  const illegal = Levels.isIllegal(level);
+  const top =
+    (dist ? 9200 : 15800) *
+    (illegal ? 1.6 : 1) *
+    (period === "today" ? 0.42 : period === "week" ? 0.7 : 1);
+  return MOCK_NAMES.slice(0, illegal ? 14 : MOCK_NAMES.length).map((name, i) => ({
     player_id: `mock-${i}`,
     username: name,
     score: Math.round(top * Math.pow(0.955, i) + (dist ? 0 : 7) * (i % 3)),
-    character: MOCK_HEROES[i % MOCK_HEROES.length],
+    character: illegal ? ILLEGAL_HERO : MOCK_HEROES[i % MOCK_HEROES.length],
     title: MOCK_TITLES[i % MOCK_TITLES.length],
     flair: MOCK_FLAIR[i % MOCK_FLAIR.length],
     created_at: "2026-11-04T10:00:00Z",
   }));
 }
-/** ?lbmock: the hero of your last run (as the server would store it on your row). */
-let mockMyHero = null;
+/** ?lbmock: the hero of your last run on each board (as the server would store it on your row). */
+const mockMyHero = {};
 function mockBoard(level, period, username) {
   const rows = mockRows(level, period);
+  // the ILLEGAL board: you're on it only once you've flown WASP LORD
+  if (Levels.isIllegal(level) && !mockMyHero[level]) return { rows, me: null, userId: "me" };
   const me = {
     username: username || "YOU",
-    character: mockMyHero || "volt",
+    character: mockMyHero[level] || "volt",
     title: Titles.equippedId(),
     flair: myFlair(),
     created_at: "2026-11-04T11:00:00Z",
@@ -236,7 +263,7 @@ function mockBoard(level, period, username) {
   // you: just inside the list on the all-time boards, outside the top 100 on daily
   // (?allmighty=me: the mock server says you're ALL MIGHTY, so you top the all-time Score board)
   const top = TEST.allmighty === "me" && level === Levels.endless() && period === "all";
-  const rank = level.includes("daily") ? 142 : top ? 1 : 12;
+  const rank = level.includes("daily") ? 142 : top ? 1 : Levels.isIllegal(level) ? 5 : 12;
   me.score = level.includes("daily")
     ? 420
     : top
@@ -418,7 +445,8 @@ class LeaderboardService {
     if (run.boosted) return Promise.resolve({ rejected: true, boosted: true });
     const entry = {
       type: "score",
-      level: Levels.forRun(run),
+      // WASP LORD's runs go on the ILLEGAL boards only
+      level: Levels.forHero(Levels.forRun(run), run.char),
       score: Math.round(run.score),
       character: run.char,
       run_time_ms: Math.round(run.runTimeMs ?? 0),
@@ -429,7 +457,8 @@ class LeaderboardService {
       return Promise.resolve({ rejected: true });
     }
     if (TEST.lbmock) {
-      mockMyHero = entry.character;
+      mockMyHero[entry.level] = entry.character;
+      if (run.mode !== "daily") mockMyHero[Levels.forHero(Levels.distance(), run.char)] = entry.character;
       return Promise.resolve({ uploaded: 2, queued: 0, mock: true });
     }
     this.enqueue(entry);
@@ -437,7 +466,7 @@ class LeaderboardService {
     if (run.mode !== "daily" && entry.distance > 0)
       this.enqueue({
         ...entry,
-        level: Levels.distance(),
+        level: Levels.forHero(Levels.distance(), run.char),
         score: entry.distance,
       });
     Save.write();
@@ -451,7 +480,7 @@ class LeaderboardService {
   submitLevelTime({ n, timeMs, distance, char }) {
     const entry = {
       type: "score",
-      level: Levels.level(n),
+      level: Levels.forHero(Levels.level(n), char),
       score: timeToScore(timeMs),
       character: char,
       run_time_ms: Math.round(timeMs),
@@ -611,10 +640,10 @@ class LeaderboardService {
     try {
       const sb = await this.session();
       const since = LeaderboardService.since(period);
-      let q = sb
-        .from("scores")
-        .select(`player_id,${this.readCols()}`)
-        .eq("level", level)
+      let q = normalOnly(
+        sb.from("scores").select(`player_id,${this.readCols()}`).eq("level", level),
+        level,
+      )
         .order("score", { ascending: false })
         .order("created_at", { ascending: true })
         .limit(100);
@@ -647,19 +676,16 @@ class LeaderboardService {
   }
 
   async myRank(sb, level, since) {
-    const { data: mine, error } = await sb
-      .from("scores")
-      .select(this.readCols())
-      .eq("player_id", this.userId)
-      .eq("level", level)
-      .maybeSingle();
+    const { data: mine, error } = await normalOnly(
+      sb.from("scores").select(this.readCols()).eq("player_id", this.userId).eq("level", level),
+      level,
+    ).maybeSingle();
     if (error) throw error;
     if (!mine || (since && mine.created_at < since)) return null;
-    let q = sb
-      .from("scores")
-      .select("id", { count: "exact", head: true })
-      .eq("level", level)
-      .gt("score", mine.score);
+    let q = normalOnly(
+      sb.from("scores").select("id", { count: "exact", head: true }).eq("level", level),
+      level,
+    ).gt("score", mine.score);
     if (since) q = q.gte("created_at", since);
     const { count, error: e2 } = await q;
     if (e2) throw e2;
@@ -670,10 +696,10 @@ class LeaderboardService {
   async placementFor(level, score) {
     if (TEST.lbmock) return mockRank(level, score);
     const sb = await this.session();
-    const { count, error } = await sb
-      .from("scores")
-      .select("id", { count: "exact", head: true })
-      .eq("level", level)
+    const { count, error } = await normalOnly(
+      sb.from("scores").select("id", { count: "exact", head: true }).eq("level", level),
+      level,
+    )
       .gt("score", score)
       .neq("player_id", this.userId);
     if (error) throw error;

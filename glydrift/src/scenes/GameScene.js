@@ -37,7 +37,8 @@ import { CrashSafety } from "../systems/crashSafety.js";
 import { getBoost, Shop } from "../data/cosmetics.js";
 import { Haptics } from "../systems/haptics.js";
 import { TEST } from "../systems/testFlags.js";
-import { Leaderboard } from "../online/leaderboard.js";
+import { ILLEGAL_HERO, Leaderboard } from "../online/leaderboard.js";
+import { ILLEGAL_FIRST_PLAY, ILLEGAL_RED } from "../ui/illegal.js";
 import { Music } from "../audio/music.js";
 import { BIOME_TRACKS } from "../audio/musicTracks.js";
 import { Progression } from "../data/progression.js";
@@ -420,6 +421,16 @@ export class GameScene extends Phaser.Scene {
           0xffd23f,
           "Golden trail · double coins",
         ),
+      );
+    }
+    // the first time anyone flies WASP LORD: his scores go on the ILLEGAL board only
+    if (this.charDef.id === ILLEGAL_HERO && !Save.data.illegalNoticeSeen) {
+      Save.data.illegalNoticeSeen = true;
+      Save.write();
+      this.time.delayedCall(250, () =>
+        this.hudReady?.hudBanner?.(ILLEGAL_FIRST_PLAY[0], ILLEGAL_RED, ILLEGAL_FIRST_PLAY[1], {
+          hold: 3600,
+        }),
       );
     }
     this.player.flap();
