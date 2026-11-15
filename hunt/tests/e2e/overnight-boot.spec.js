@@ -268,3 +268,28 @@ test('manifest, icons and iOS tags are served for installing to the home screen'
   expect(await page.getAttribute('meta[name="apple-mobile-web-app-capable"]', 'content')).toBe('yes');
   expect(await page.getAttribute('meta[name="apple-mobile-web-app-title"]', 'content')).toBe('Hunt');
 });
+
+test('lobby notices on a phone, portrait and landscape: on screen and clear of the lobby controls and the credit', async ({ page }) => {
+  await page.route('**/api/version', (r) => r.fulfill({ json: { version: 'next-build' } }));
+  await page.route('**/api/guest', (r) => r.fulfill({ status: 503, json: { error: 'down' } }));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await expect(page.locator('#updateNote')).toBeVisible();
+  await expect(page.locator('#saveNote')).toBeVisible();
+  const apart = (a, b) => a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+  for (const vp of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
+    await page.setViewportSize(vp);
+    for (const id of ['#saveNote', '#updateNote']) {
+      const n = await page.locator(id).boundingBox();
+      expect(n.x >= 0 && n.y >= 0 && n.x + n.width <= vp.width && n.y + n.height <= vp.height, `${id} fits ${vp.width}x${vp.height}`).toBe(true);
+      // the play page scrolls in portrait: check the controls wherever the scroll puts them
+      for (const scroll of [0, 10_000]) {
+        await page.evaluate((y) => { for (const e of document.querySelectorAll('#lobby *')) if (e.scrollHeight > e.clientHeight + 4) e.scrollTop = y; }, scroll);
+        for (const sel of ['#playBtn', '.fillbots', '#lobby #credit', '.lb-tabs']) {
+          const b = await page.locator(sel).first().boundingBox();
+          if (b && b.width && b.y < vp.height && b.y + b.height > 0) expect(apart(n, b), `${id} clear of ${sel} at ${vp.width}x${vp.height} (scroll ${scroll})`).toBe(true);
+        }
+      }
+    }
+  }
+});

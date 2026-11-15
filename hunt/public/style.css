@@ -197,7 +197,8 @@ body:not(.ingame) #creditGame { display: none; }
 
 /* ---- boot notices (lobby only): new version ready / progress not saved ---- */
 #notes { position: fixed; z-index: 6; right: max(10px, env(safe-area-inset-right)); top: calc(max(8px, env(safe-area-inset-top)) + max(56px, 12vh)); display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; max-width: calc(100vw - 20px); }
-@media (orientation: portrait) { #notes { top: auto; bottom: 24vh; right: 50%; transform: translateX(50%); align-items: center; } }
+/* portrait: the play page scrolls under a fixed note, so park the notes over the profile banner at the top, clear of the hunter badge */
+@media (orientation: portrait) { #notes { top: max(4px, env(safe-area-inset-top)); gap: 3px; max-width: calc(100vw - 96px); } }
 body.ingame #notes { display: none; }
 .note { pointer-events: auto; display: flex; align-items: center; gap: 10px; background: #2c1846; color: #fff; border: 3px solid #12091e; border-radius: 999px; box-shadow: 0 4px 0 #12091e; padding: 4px 6px 4px 14px; font-family: var(--font); font-size: clamp(13px, 2.2vh, 17px); line-height: 1.15; white-space: nowrap; }
 .note[hidden] { display: none; }
