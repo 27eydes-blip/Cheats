@@ -145,7 +145,7 @@ These were simulated devices in a browser. A real-device check in TestFlight is 
 3. Support URL `https://glydrift.com/support`, Marketing URL (optional) `https://glydrift.com`. Under **App Privacy**, add the Privacy Policy URL `https://glydrift.com/privacy`.
 4. **App Privacy**: answer as in `APP_STORE_TEXT.md` → "App Privacy".
 5. **Age rating**: answer as in `APP_STORE_TEXT.md` → "Age rating questionnaire".
-6. **Copyright** `2026 Sam Eyde III`. Category: **Games → Arcade**. Price: **Free**.
+6. **Copyright** `2026 Gleyde Technologies, LLC`. Category: **Games → Arcade**. Price: **Free**.
 7. **App Review Information**: your name, phone and email, the demo account, and the notes from `APP_STORE_TEXT.md` → "App Review Notes".
 8. **Build**: pick the TestFlight build (1.0.0, build 101 or higher). Under **In-App Purchases**, add Drift Pass+.
 9. **Add for Review → Submit**. Review usually takes 1–2 days.

@@ -175,7 +175,7 @@ test("iPhone app: the support address is in Settings and opens Mail; it fits abo
     "mailto:support@glydrift.com?subject=Glydrift%20support",
   ]);
   // the creator credit is still there
-  expect(await texts(page, "Menu")).toContain("© 2026 Sam Eyde III. All rights reserved.");
+  expect(await texts(page, "Menu")).toContain("© 2026 Gleyde Technologies, LLC. All rights reserved.");
   expect(log.errors).toEqual([]);
 });
 

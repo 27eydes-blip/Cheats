@@ -133,7 +133,7 @@ on conflict do nothing;
 - **Category:** Games → Arcade (secondary: Casual)
 - **Support URL:** `https://glydrift.com/support`
 - **Marketing URL:** `https://glydrift.com`
-- **Copyright:** `2026 Sam Eyde III`
+- **Copyright:** `2026 Gleyde Technologies, LLC`
 
 ## Screenshots
 

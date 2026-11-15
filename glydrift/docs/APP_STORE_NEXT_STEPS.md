@@ -53,7 +53,7 @@ your Apple account, your Supabase dashboard or a real device). Details for each 
 3. **Privacy Policy URL:** `https://glydrift.com/privacy` (live). **Support URL:**
    `https://glydrift.com/support` (live).
 4. **App Privacy** answers and the **age rating** answers: `glydrift/appstore/APP_STORE_TEXT.md`.
-5. **Copyright:** `2026 Sam Eyde III`. Category: Games → Arcade. Price: Free.
+5. **Copyright:** `2026 Gleyde Technologies, LLC`. Category: Games → Arcade. Price: Free.
 6. **App Review Information**: your contact details, the review notes and a demo account
    (`glydrift/appstore/APP_STORE_TEXT.md` → "App Review Notes"; fill in the demo account).
 7. Attach the Drift Pass+ in-app purchase to version 1.0.0, choose the TestFlight build,
