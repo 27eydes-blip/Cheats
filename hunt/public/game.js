@@ -19,6 +19,7 @@ import { sfx, falloff } from './audio.js';
 import { setMusicVolume } from './ui/music.js';
 import { pickAimTarget, assistAngle } from './aim.js';
 import { HUNTER_PAL } from './art/hunters.js';
+import { createAdapt, adaptFrame } from './adapt.js';
 import { ShotSim, PList, resetPart, resetText } from './shots.js';
 import { WEAPONS, WEAPON_IDS, WKIND, withPerks, shotAngles, SWAP_TIME } from './weapons.js';
 import { GADGETS } from './power.js';
@@ -68,14 +69,12 @@ const localPredicts = (w) => !!w && (w.kind === 'shot' || w.kind === 'charge');
 const isSniper = (w, sig) => (sig ? G.brawler === 'wisp' : w.cls === 'sniper');
 
 let W = 0, H = 0, DPR = 1;
-// Adaptive resolution: if frames get slow, render at a lower pixel ratio (and back up when there's room).
+// Adaptive resolution: if frames cost too much, render at a lower pixel ratio, and go back up once
+// they are cheap again (see adapt.js: driven by the frame's work time against the display's interval).
 const DPR_STEPS = [2, 1.5, 1.25, 1];
-let dprStep = 0, frameAvg = 16.7, slowFor = 0, fastFor = 0;
-function adaptResolution(dtMs) {
-  frameAvg += (dtMs - frameAvg) * 0.05;
-  if (frameAvg > 18.5) { slowFor += dtMs; fastFor = 0; } else if (frameAvg < 13) { fastFor += dtMs; slowFor = 0; } else { slowFor = fastFor = 0; }
-  if (slowFor > 1500 && dprStep < DPR_STEPS.length - 1) { dprStep++; slowFor = 0; resize(); }
-  else if (fastFor > 8000 && dprStep > 0) { dprStep--; fastFor = 0; resize(); }
+const adapt = createAdapt(DPR_STEPS.length);
+function adaptResolution(costMs, intervalMs) {
+  if (adaptFrame(adapt, costMs, intervalMs)) resize();
 }
 // notch / home-bar insets, for things drawn on the canvas (CSS elements use env() directly)
 const saProbe = document.createElement('div');
@@ -87,7 +86,7 @@ function readSafeArea() {
   SA = { t: n(cs.paddingTop), r: n(cs.paddingRight), b: n(cs.paddingBottom), l: n(cs.paddingLeft) };
 }
 function resize() {
-  DPR = SETTINGS.lowGfx ? 1 : Math.min(DPR_STEPS[dprStep], devicePixelRatio || 1);
+  DPR = SETTINGS.lowGfx ? 1 : Math.min(DPR_STEPS[adapt.step], devicePixelRatio || 1);
   W = innerWidth; H = innerHeight;
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   readSafeArea();
@@ -1024,7 +1023,8 @@ function unwindCanvas() {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }
 function frameBody(now) {
-  const dt = Math.min(0.1, (now - lastT) / 1000);
+  const t0 = performance.now(), interval = now - lastT;
+  const dt = Math.min(0.1, interval / 1000);
   lastT = now;
   if (G.phase === 'play' || G.phase === 'dead' || G.phase === 'end') {
     G.acc += dt;
@@ -1039,9 +1039,10 @@ function frameBody(now) {
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.fillStyle = '#2b1d55'; ctx.fillRect(0, 0, W, H);
       R.outlinedText(ctx, 'Connecting…', W / 2, H / 2, 28, '#fff');
     }
-    adaptResolution(dt * 1000);
     updateHud(now);
     updateAbilities();
+    // only while the match itself fills the screen (not under the death or results screens)
+    if (G.phase === 'play' || (G.phase === 'dead' && $('dead').hidden)) adaptResolution(performance.now() - t0, interval);
   } else if (G.phase === 'mapview') drawMapView(now / 1000);
 }
 
@@ -1639,5 +1640,5 @@ else if (qs.get('free')) startFree();
 
 // exposed for e2e tests
 window.__hunt = G;
-window.__huntPerf = () => ({ dpr: DPR, frameAvg, dprStep });
+window.__huntPerf = () => ({ dpr: DPR, frameAvg: adapt.cost, budget: adapt.budget, dprStep: adapt.step });
 window.__huntMsg = (m) => onMsg(primary() || { primary: true }, m); // e2e hook: inject server messages
