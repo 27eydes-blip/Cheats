@@ -4,13 +4,15 @@ These are the owner's standing rules. They apply to every Claude session on this
 whoever runs it.
 
 ## Credit (never break)
-- Never remove or hide the Sam Eyde III creator credit or copyright line.
-  It appears on the home screen ("Created by Sam Eyde III"), in Settings → CREDITS
-  ("Created by Sam Eyde III, Founder & CEO" and "© 2026 Sam Eyde III. All rights reserved."),
-  on the loading screen ("A Sam Eyde III game"), in the website footer, README and LICENSE.
+- Never remove or hide the Gleyde Technologies, LLC publisher credit, the "Created by Sam Eyde III"
+  creator credit, or the copyright line. They appear on the home screen ("Gleyde Technologies,
+  LLC · Created by Sam Eyde III"), in Settings → CREDITS ("Published by Gleyde Technologies, LLC",
+  "Created by Sam Eyde III, Founder & CEO" and "© 2026 Gleyde Technologies, LLC. All rights
+  reserved."), on the loading screen ("Gleyde Technologies, LLC"), in the website footer, README,
+  LICENSE, AUTHORSHIP.md and the App Store copyright ("2026 Gleyde Technologies, LLC").
   The text lives in src/legal.js; tests/e2e/credit.spec.js fails the build if any of it goes
   missing. Redesigns, cleanups and polish passes must keep it, readable, on every screen size.
-- Use exactly "Sam Eyde III".
+- Use exactly "Sam Eyde III" and "Gleyde Technologies, LLC".
 
 ## Secrets and accounts
 - Never paste, commit or ask for secret keys (Supabase service_role key, Apple keys, Cloudflare
