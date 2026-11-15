@@ -1,0 +1,77 @@
+# Glydaway (glydaway/): test, then publish glydaway.com (Cloudflare Pages project "glydaway").
+# Runs only when Glydaway changes; it never builds or deploys anything else in this repo.
+name: Glydaway
+
+on:
+  push:
+    branches: [main]
+    paths: ['glydaway/**', '.github/workflows/glydaway.yml']
+  pull_request:
+    paths: ['glydaway/**', '.github/workflows/glydaway.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: glydaway-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (WebKit, Chromium, Firefox)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: glydaway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright and its browsers
+        run: |
+          npm install --no-save --no-audit --no-fund --prefix . playwright@1.63.0
+          npx playwright install --with-deps webkit chromium firefox
+      - name: Credit checks
+        run: node tests/credits.test.mjs
+      - name: Home screen, tutorial and takeoff (phones, iPad, both orientations, 3 engines)
+        run: node tests/home.test.cjs
+
+  deploy:
+    name: Publish glydaway.com
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    concurrency:
+      group: glydaway-cloudflare
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    defaults:
+      run:
+        working-directory: glydaway
+    steps:
+      - uses: actions/checkout@v4
+      - name: Still the newest commit on main?
+        id: fresh
+        run: |
+          head=$(git ls-remote origin refs/heads/main | cut -f1)
+          if [ "$GITHUB_EVENT_NAME" != push ] || [ "$head" = "$GITHUB_SHA" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::main moved on to $head: that run publishes"; echo "ok=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-node@v4
+        if: steps.fresh.outputs.ok == 'true'
+        with:
+          node-version: 22
+      - name: Build (the game is one file)
+        if: steps.fresh.outputs.ok == 'true'
+        run: rm -rf dist && mkdir dist && cp index.html dist/
+      - name: Deploy to Cloudflare Pages
+        if: steps.fresh.outputs.ok == 'true'
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then echo "::error::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID repo secrets are not set"; exit 1; fi
+          npx --yes wrangler@3.114.0 pages project create glydaway --production-branch=main || echo "project already exists"
+          npx --yes wrangler@3.114.0 pages deploy dist --project-name=glydaway --branch=main --commit-dirty=true --commit-hash="$GITHUB_SHA"

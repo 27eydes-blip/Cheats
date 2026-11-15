@@ -1,0 +1,6 @@
+# Glydaway: notes for Claude
+
+- Never remove or reword the **Gleyde Technologies, LLC** publisher credit or the **"Created by Sam Eyde III"** line. They appear on the splash screen, the home screen footer, Settings > credits and the README. Spell the publisher exactly "Gleyde Technologies, LLC".
+- `node glydaway/tests/home.test.cjs` checks the home screen layout (phones, iPad, both orientations, safe areas), tutorial and takeoff on WebKit, Chromium and Firefox; run it after any home screen change.
+- `node glydaway/tests/credits.test.mjs` checks the credits; run it after any change to `index.html` or `README.md`.
+- Glydaway is self-contained in this folder. Don't change Glydrift's files, accounts, Supabase settings, the Drift Pass or payments unless asked.
