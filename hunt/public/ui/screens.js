@@ -135,12 +135,14 @@ function openDetail(api, id, onClose) {
       <div class="abil"><canvas data-demo="attack"></canvas><div><h4>ATTACK · ${ATTACK_TXT[id][0]}</h4><p>${ATTACK_TXT[id][1]}</p></div></div>
       <div class="abil"><canvas data-demo="super"></canvas><div><h4>SUPER · ${SUPER_TXT[id][0]}</h4><p>${SUPER_TXT[id][1]}</p></div></div>
       <div class="skinrow">${skins.map(([k, n]) => { const own = !k || p.owned.includes(k), on = (p.equipped['skin:' + id] || null) === k; return `<div class="card-a sk tap ${on ? 'on' : ''}" data-skin="${k || ''}"><canvas data-skin="${k || ''}"></canvas>${esc(n)}${own ? '' : ` ${icon('lock')}`}</div>`; }).join('')}</div>
-      <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn btn-md alt" data-x>CLOSE</button><button class="btn btn-md" data-x data-sel>SELECT</button></div>
+      <div class="detail-actions"><button class="btn btn-md alt" data-x>CLOSE</button><button class="btn btn-md mint" data-power>${icon('star')} POWER ${clampPower(p.power?.[id] || 1)}</button><button class="btn btn-md" data-x data-sel>SELECT</button></div>
     </div></div>`;
   document.body.appendChild(el);
   openScreen(el);
   const close = async () => { await closeScreen(el); el.remove(); onClose?.(); };
   for (const b of el.querySelectorAll('[data-x]')) b.onclick = () => { if (b.dataset.sel !== undefined) api.setBrawler(id); close(); };
+  // POWER: upgrades, Gadget and Star Power for this hunter (the popup opens once the card is gone)
+  el.querySelector('[data-power]').onclick = async () => { await closeScreen(el); el.remove(); openPower(api, onClose, id); };
   el.addEventListener('pointerdown', (e) => { if (e.target === el) close(); });
   for (const s of el.querySelectorAll('.sk')) s.onclick = () => guard(async () => {
     const k = s.dataset.skin || null;
@@ -183,7 +185,7 @@ export function openModePicker(current, onPick) {
 export function openLocker(api, onDone, startTab = 'skins', startWho = null) {
   const S = screen('LOCKER', `<div class="cur">${icon('coin')}<b id="lkCoins">0</b><small>TEST</small></div>`, onDone);
   let tab = startTab, who = startWho || api.getBrawler(), fxDemo = null;
-  S.body.innerHTML = `<div class="locker"><div class="card-a preview"><canvas id="lkPrev"></canvas><div id="lkTitle" class="title" style="font-size:calc(var(--u)*2.2)"></div><button class="btn btn-sm mint" id="lkFx">PREVIEW KILL EFFECT</button></div>
+  S.body.innerHTML = `<div class="locker"><div class="card-a preview"><canvas id="lkPrev"></canvas><div id="lkTitle" class="title" style="font-size:max(var(--t-sm), calc(var(--u) * 2.2))"></div><button class="btn btn-sm mint" id="lkFx">PREVIEW KILL EFFECT</button></div>
     <div class="items"><div class="chips" id="lkTabs"></div><div class="chips" id="lkWho" style="margin-top:6px"></div><div class="pedestals" id="lkItems"></div></div></div>`;
   const render = () => {
     const p = A.progress();
@@ -199,7 +201,7 @@ export function openLocker(api, onDone, startTab = 'skins', startWho = null) {
     $('lkItems').innerHTML = items.map((it) => {
       const own = !it.k || p.owned.includes(it.k);
       return `<div class="card-a ped tap ${it.on ? 'on' : ''}" data-k="${it.k || ''}" data-slot="${it.slot}">${tab === 'skins' ? `<canvas data-skin="${it.k || ''}"></canvas>` : `<div class="ico" style="font-size:calc(var(--u)*5)">${icon(tab === 'fx' ? 'star' : 'pass')}</div>`}<span>${esc(it.n)}</span>
-        ${it.on ? '<span class="tag">EQUIPPED</span>' : own ? `<button class="btn btn-sm" data-eq>EQUIP</button>` : `<button class="btn btn-sm" data-buy>${icon('coin')} ${it.price}</button>`}</div>`;
+        ${it.on ? '<span class="tag">EQUIPPED</span>' : own ? `<button class="btn btn-sm" data-eq>EQUIP</button>` : it.price == null ? `<span class="tag">${icon('lock')} LEVEL ${SKINS[it.k]?.level || '?'}</span>` : `<button class="btn btn-sm" data-buy>${icon('coin')} ${it.price}</button>`}</div>`;
     }).join('');
     for (const c of $('lkItems').children) {
       const k = c.dataset.k || null;
@@ -321,7 +323,7 @@ export function openProfile(api, onDone, upgradeFirst = false) {
     acc.innerHTML = `<p class="outlined" style="color:#fff">Signed in as ${esc(u.username)} — progress syncs to every device.</p><button class="btn btn-md alt" id="logout">LOG OUT</button>`;
     $('logout').onclick = () => guard(async () => { await A.logout(); S.close(); });
   } else {
-    acc.innerHTML = `<p class="outlined" style="color:#fff;font-size:calc(var(--u)*1.7)">You're a guest. Create an account to keep your progress and play on your iPad too.</p>
+    acc.innerHTML = `<p class="outlined" style="color:#fff;font-size:max(var(--t-sm), calc(var(--u) * 1.7))">You're a guest. Create an account to keep your progress and play on your iPad too.</p>
       <form id="regF" style="display:grid;gap:6px"><input class="field" name="username" placeholder="Username" maxlength="16" autocomplete="username"><input class="field" name="password" type="password" placeholder="Password (6+)" autocomplete="new-password"><button class="btn btn-md">SAVE PROGRESS</button></form>
       <details style="margin-top:8px;color:#fff;font-family:var(--font)"><summary>Already have an account? Log in</summary><form id="logF" style="display:grid;gap:6px;margin-top:6px"><input class="field" name="username" placeholder="Username"><input class="field" name="password" type="password" placeholder="Password"><button class="btn btn-md alt">LOG IN</button></form></details><p class="err" id="accE"></p>`;
     const go = (fn) => (e) => { e.preventDefault(); const f = new FormData(e.target); guard(async () => { try { await fn(f.get('username'), f.get('password')); rewardBurst(); S.close(); } catch (err) { $('accE').textContent = err.message; } }); };
@@ -356,7 +358,7 @@ export function openSettings(api, onDone) {
 export function openFriends(api) {
   const code = $('room').value || '';
   const P = popup(`<div class="title" style="font-size:calc(var(--u)*3.4)">PLAY WITH FRIENDS</div>
-    <p class="outlined" style="color:#fff;font-size:calc(var(--u)*1.7)">Everyone types the same room code and presses play.</p>
+    <p class="outlined" style="color:#fff;font-size:max(var(--t-sm), calc(var(--u) * 1.7))">Everyone types the same room code and presses play.</p>
     <div id="roomSlot" style="display:flex;gap:8px;align-items:center"></div><div id="botsSlot" style="margin:8px 0;color:#fff;font-family:var(--font)"></div>
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn btn-md alt" id="newCode">NEW CODE</button><button class="btn btn-md alt" id="shareCode">${icon('share')} SHARE</button><button class="btn btn-md" id="roomPlay" data-sfx="play">PLAY</button></div>
     <p class="hint">Friends list — coming soon.</p><button class="btn btn-sm alt" data-close>CLOSE</button>`, { onClose: () => stash(['room', 'bots']) });
@@ -382,8 +384,8 @@ export function openMissions(onDone) {
 
 export function openEarnInfo() {
   popup(`<div class="title" style="font-size:calc(var(--u)*3)">TEST CURRENCY</div>
-    <p class="outlined" style="color:#fff;font-size:calc(var(--u)*1.8)">${icon('coin')} Coins and ${icon('gem')} gems are <b>test currency</b> — there are no real payments.</p>
-    <p class="outlined" style="color:#fff;font-size:calc(var(--u)*1.6)">Earn them from daily missions, the Hunt Pass and the Trophy Road.</p><button class="btn btn-md" data-close>GOT IT</button>`);
+    <p class="outlined" style="color:#fff;font-size:max(var(--t-sm), calc(var(--u) * 1.8))">${icon('coin')} Coins and ${icon('gem')} gems are <b>test currency</b> — there are no real payments.</p>
+    <p class="outlined" style="color:#fff;font-size:max(var(--t-sm), calc(var(--u) * 1.6))">Earn them from daily missions, the Hunt Pass and the Trophy Road.</p><button class="btn btn-md" data-close>GOT IT</button>`);
 }
 
 // ======================================================================= ARMORY
@@ -410,13 +412,13 @@ export function openArmory(api, onDone) {
     const skin = [...MASTERY_SKINS].reverse().find((s) => mi.level >= s.lvl);
     $('arInfo').innerHTML = `<canvas id="arPrev" style="flex:none;width:100%;height:calc(var(--u) * 8)"></canvas>
       <div class="title" style="font-size:calc(var(--u)*2.6)">${esc(w.name)}</div>
-      <div style="font-family:var(--font);color:${RAR_COL[w.rarity]};font-size:calc(var(--u)*1.5)">${WEAPON_CLASSES[w.cls].toUpperCase()} · ${w.rarity.toUpperCase()}</div>
+      <div style="font-family:var(--font);color:${RAR_COL[w.rarity]};font-size:max(var(--t-xs), calc(var(--u) * 1.5))">${WEAPON_CLASSES[w.cls].toUpperCase()} · ${w.rarity.toUpperCase()}</div>
       <p class="hint" style="margin:4px 0">${esc(w.desc)}</p>
       <div class="stats">${bar('DAMAGE', st.bars.damage, Math.round(st.damage))}${bar('FIRE RATE', st.bars.fireRate, st.fireRate.toFixed(1) + '/s')}${bar('RANGE', st.bars.range, Math.round(st.range))}${bar('RELOAD', st.bars.reload, st.reload.toFixed(2) + 's')}${bar('SPREAD', st.bars.spread, Math.round(st.spread * 57.3) + '°')}</div>
       <div class="statrow" style="margin-top:6px"><span>MASTERY ${mi.level}/10</span><div class="bar shine"><i style="width:${mi.need ? Math.round((mi.into / mi.need) * 100) : 100}%;background:${skin ? skin.col : ''}"></i></div><b>${skin ? skin.name : '—'}</b></div>
       <div class="perks">${Object.entries(perksFor(sel)).map(([tier, opts]) => `<div class="perkrow"><span>M${tier}</span>${opts.map((o) => `<button class="chipbtn ${mine.includes(o.id) ? 'on' : ''}" data-tier="${tier}" data-perk="${o.id}" ${mi.level < +tier ? 'disabled' : ''} title="${esc(o.desc)}">${esc(o.name)}</button>`).join('')}</div>`).join('')}</div>
       <p class="hint" style="margin:2px 0">Bronze at mastery 3, Silver 6, Gold 9, animated Hunter's Bane at 10. Mastery 7 adds a kill effect.</p>
-      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${ok ? (p.loadout?.w2 === sel ? '<button class="btn btn-md alt" id="arUn">UNEQUIP</button>' : '<button class="btn btn-md" id="arEq">EQUIP</button>') + '<button class="btn btn-md mint" id="arTry" data-sfx="play">TEST RANGE</button>' : `<button class="btn btn-md alt" disabled>${icon('lock')} REACH LEVEL ${w.unlock}</button>`}</div>`;
+      <div class="ar-actions">${ok ? (p.loadout?.w2 === sel ? '<button class="btn btn-md alt" id="arUn">UNEQUIP</button>' : '<button class="btn btn-md" id="arEq">EQUIP</button>') + '<button class="btn btn-md mint" id="arTry" data-sfx="play">TEST RANGE</button>' : `<button class="btn btn-md alt" disabled>${icon('lock')} REACH LEVEL ${w.unlock}</button>`}</div>`;
     $('arEq')?.addEventListener('click', () => guard(async () => { await A.shop({ action: 'loadout', w2: sel }); sfx('reward'); render(); }));
     $('arTry')?.addEventListener('click', () => { S.close(); api.startRange(sel); });
     $('arUn')?.addEventListener('click', () => guard(async () => { await A.shop({ action: 'loadout', w2: null }); render(); }));
@@ -438,8 +440,8 @@ export function openArmory(api, onDone) {
 // ======================================================================= BRAWLER POWER
 // Upgrade with coins earned by playing (test currency only: combat can never be bought with real
 // money). +4% HP and damage per level; Gadget at 7, Star Power at 9 (pick one of two each).
-export function openPower(api, onDone) {
-  let who = api.getBrawler();
+export function openPower(api, onDone, startWho = null) {
+  let who = startWho || api.getBrawler();
   const P = popup(`<div class="title" style="font-size:calc(var(--u)*3.2)">BRAWLER POWER</div><div class="chips" id="pwWho"></div><div id="pwBody"></div><button class="btn btn-md alt" data-close>CLOSE</button>`, { onClose: onDone });
   const render = () => {
     const p = A.progress(), L = clampPower(p.power?.[who] || 1), cost = POWER_COST[L];
@@ -473,10 +475,11 @@ export function renderProfilePage(el, api, onDone) {
       <div class="ph-tot"><div><b>${p.kills | 0}</b><span>Kills</span></div><div><b>${p.wins | 0}</b><span>Wins</span></div></div></div>
     ${ribbon('OVERALL')}<div class="stiles">${tile(p.wins | 0, 'Wins')}${tile(top3, 'Top 3s')}${tile(p.games | 0, 'Matches')}${tile(totalTrophies(p), 'Trophies')}</div>
     ${Object.entries(MODE_NAMES).filter(([k]) => modes[k]?.games).map(([k, n]) => `${ribbon(n)}<div class="stiles">${tile(modes[k].wins, 'Wins')}${tile(modes[k].top3, 'Top 3s')}${tile(modes[k].games, 'Matches')}${tile(modes[k].kills, 'Kills')}</div>`).join('') || `<p class="hint">Play a match to fill in your stats for each mode.</p>`}
-    ${ribbon('HUNTERS')}<div class="stiles six">${BRAWLER_IDS.map((b) => `<div class="stile"><b>${p.trophies[b] | 0}</b><span>${BRAWLERS[b].name} · P${clampPower(p.power?.[b] || 1)}</span></div>`).join('')}</div>
+    ${ribbon('HUNTERS')}<div class="stiles six">${BRAWLER_IDS.map((b) => `<div class="stile tap" data-pw="${b}"><b>${p.trophies[b] | 0}</b><span>${BRAWLERS[b].name} · P${clampPower(p.power?.[b] || 1)}</span></div>`).join('')}</div>
     ${ribbon('FREE PLAY BY WORLD')}<div class="card-a" style="padding:8px"><table class="stat-table">${api.statRows()}</table></div>
     <div style="display:flex;justify-content:center;margin:10px 0 4px"><button class="btn btn-md alt" id="pgAccount">${icon('user')} NAME &amp; ACCOUNT</button></div>`;
   el.querySelector('#pgAccount').onclick = () => openProfile(api, onDone);
+  for (const t of el.querySelectorAll('[data-pw]')) t.onclick = () => openPower(api, onDone, t.dataset.pw);
 }
 // LOCKER tab: what you're wearing, by category; tap a category to change it
 export function renderLockerPage(el, api, onDone) {

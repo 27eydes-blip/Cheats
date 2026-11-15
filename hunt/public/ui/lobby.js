@@ -16,6 +16,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
 };
 import * as SC from './screens.js';
+import { initRotateHint } from './rotatehint.js';
 
 export const ROLE_COL = { Balanced: 'var(--role-balanced)', Tank: 'var(--role-tank)', Sniper: 'var(--role-sniper)', Controller: 'var(--role-controller)', Trapper: 'var(--role-trapper)', Assassin: 'var(--role-assassin)' };
 export const MODES_UI = {
@@ -49,8 +50,8 @@ export function createLobby(api) {
   root.className = 'lobby';
   root.innerHTML = `
     <div class="lb-top">
-      <div class="pbanner tap" id="profileCard">${shield('lvN')}<div class="pb-txt"><div class="pname" id="pName">Hunter</div><div class="xpbar"><i id="xpFill"></i></div><div class="ptro">${icon('trophy')}<span id="pTro">0</span></div></div></div>
-      <div class="guestchip" id="guestChip" hidden><span>Guest · save progress</span><button id="guestX" aria-label="Dismiss">✕</button></div>
+      <div class="pbanner tap" id="profileCard">${shield('lvN')}<div class="pb-txt"><div class="pb-row"><div class="pname" id="pName">Hunter</div><div class="ptro">${icon('trophy')}<span id="pTro">0</span></div></div><div class="xpbar"><i id="xpFill"></i></div></div>
+        <div class="guestchip" id="guestChip" hidden><span><i>Guest · </i>save progress</span><button id="guestX" aria-label="Dismiss">✕</button></div></div>
       <div class="lb-cur">
         <div class="cur" id="tbGems">${icon('gem')}<b id="gemN">0</b><small>TEST</small><button class="plus tap" id="gemPlus" aria-label="Get gems">${icon('plus')}</button></div>
         <div class="cur" id="tbCoins">${icon('coin')}<b id="coinN">0</b><small>TEST</small><button class="plus tap" id="coinPlus" aria-label="Get coins">${icon('plus')}</button></div>
@@ -80,6 +81,7 @@ export function createLobby(api) {
     </main>
     <div id="credit">Created by Sam Eyde III</div>`;
 
+  initRotateHint();
   const L = {
     mode: store.get('hunt-mode') || 'quick', tab: 'play', t0: performance.now(), taunt: 0, twirl: 0, blinkAt: 2, raf: 0, visible: true,
   };

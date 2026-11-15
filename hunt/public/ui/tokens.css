@@ -41,8 +41,14 @@
   --sa-r: max(10px, env(safe-area-inset-right));
   --sa-b: max(8px, env(safe-area-inset-bottom));
   --sa-l: max(10px, env(safe-area-inset-left));
-  /* scale with the short side of the screen so phones and iPads both fit */
-  --u: clamp(5px, 1.35vh, 10px);
+  /* scale with the short side of the screen so phones and iPads both fit
+     (2vw keeps upright phones from getting desktop-sized controls on a narrow screen) */
+  --u: clamp(5px, min(1.35vh, 2vw), 10px);
+  /* text never shrinks below these, however small --u gets: labels / things a player must read */
+  --t-xs: 11px;
+  --t-sm: 12px;
+  /* smallest touch target on phones and tablets */
+  --tap: 44px;
 }
 
 /* ---------- buttons: sm / md / lg ---------- */
@@ -54,8 +60,8 @@
   transition: transform var(--t-press) ease-out, box-shadow var(--t-press) ease-out, filter .15s;
   position: relative;
 }
-.btn-sm { font-size: calc(var(--u) * 1.6); padding: calc(var(--u) * .5) calc(var(--u) * 1.2); }
-.btn-md { font-size: calc(var(--u) * 2.2); padding: calc(var(--u) * .8) calc(var(--u) * 2); }
+.btn-sm { font-size: max(var(--t-sm), calc(var(--u) * 1.6)); padding: calc(var(--u) * .5) calc(var(--u) * 1.2); }
+.btn-md { font-size: max(var(--t-sm), calc(var(--u) * 2.2)); padding: calc(var(--u) * .8) calc(var(--u) * 2); }
 .btn-lg { font-size: calc(var(--u) * 4.2); padding: calc(var(--u) * 1.1) calc(var(--u) * 4); border-radius: var(--radius); }
 .btn.alt { background: var(--panel-2); color: var(--text); }
 .btn.mint { background: var(--mint); }
@@ -113,12 +119,21 @@ body.reduce-flash .rays { animation: fade-soft 1s ease-out both; background: rad
 @keyframes fade-soft { from { opacity: 0; } 30% { opacity: 1; } to { opacity: 0; } }
 
 /* ---------- forms ---------- */
-.field { width: 100%; font: inherit; font-family: var(--font); font-size: calc(var(--u) * 2.2); padding: calc(var(--u) * 1) calc(var(--u) * 1.4); border-radius: var(--radius-sm); border: var(--line) solid var(--ink); background: #fff; color: var(--ink); outline: none; user-select: text; -webkit-user-select: text; }
+.field { width: 100%; font: inherit; font-family: var(--font); font-size: max(var(--t-sm), calc(var(--u) * 2.2)); padding: calc(var(--u) * 1) calc(var(--u) * 1.4); border-radius: var(--radius-sm); border: var(--line) solid var(--ink); background: #fff; color: var(--ink); outline: none; user-select: text; -webkit-user-select: text; }
 .slider { width: 100%; accent-color: var(--gold); }
 .chipbtn { font-family: var(--font); color: var(--text); background: var(--panel-2); border: 3px solid var(--ink); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
 .chipbtn.on { background: var(--gold); color: var(--ink); }
 /* chips: one size everywhere, one line, scroll sideways if they don't fit */
-.chipbtn { font-size: calc(var(--u) * 1.7); padding: calc(var(--u) * .3) calc(var(--u) * 1.2); white-space: nowrap; flex: none; }
+.chipbtn { font-size: max(var(--t-sm), calc(var(--u) * 1.7)); padding: calc(var(--u) * .3) calc(var(--u) * 1.2); white-space: nowrap; flex: none; }
 .chips { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; min-width: 0; }
 .chips::-webkit-scrollbar { display: none; }
 .ui-head .chips { flex: 2; }
+
+/* ---------- touch: every control is at least a thumb wide and tall ---------- */
+@media (any-pointer: coarse) {
+  .btn, .chipbtn { min-height: var(--tap); min-width: var(--tap); }
+  .chips { gap: 8px; }
+  .field { min-height: var(--tap); }
+  .slider { min-height: var(--tap); }
+  .ui-head { gap: 8px; }
+}
