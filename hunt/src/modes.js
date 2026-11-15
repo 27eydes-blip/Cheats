@@ -74,7 +74,7 @@ export const MODES = {
       }
       // holder of 10+ (and the most) starts the countdown
       let best = null;
-      for (const p of sim.players.values()) if (p.alive && p.crystals >= 10 && (!best || p.crystals > best.crystals)) best = p;
+      for (const p of sim.players.values()) if (p.alive && p.crystals >= 10 && (!best || p.crystals > best.crystals || (p.crystals === best.crystals && p.id === sim.holdId))) best = p; // a tie keeps the current holder
       if (best && best.id === sim.holdId) sim.holdT -= DT;
       else if (best) { sim.holdId = best.id; sim.holdT = 10; }
       else { sim.holdId = 0; sim.holdT = 0; }
