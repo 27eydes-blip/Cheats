@@ -57,6 +57,8 @@ export const Grants = {
     Save.write(); // (signed in: the cloud sync uploads it)
     const notes = rows.map((r) => r.note).filter(Boolean);
     for (const fn of this.listeners) fn({ coins, notes });
+    // (the home screen listens for this: no import, so the scenes' load order stays as it was)
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("glydrift:grant", { detail: { coins, notes } }));
     return coins;
   },
 
