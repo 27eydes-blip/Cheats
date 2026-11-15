@@ -24,6 +24,7 @@ import { titleText } from "../ui/titleText.js";
 import { AllMighty } from "../data/allMighty.js";
 import { Titles } from "../data/titles.js";
 import { Account } from "../online/account.js";
+import { Grants } from "../online/grants.js";
 import { LbReset } from "../online/lbReset.js";
 import { CrashSafety } from "../systems/crashSafety.js";
 import { Updater } from "../systems/updater.js";
@@ -293,6 +294,14 @@ export class MenuScene extends Phaser.Scene {
       .image(W - 196, top + 40, "coin") // (the gear moved into the main row as SETTINGS)
       .setScale(0.8 / HI)
       .setDepth(100);
+    // coins granted by the owner (online/grants.js) roll in while the home screen is up
+    const offGrant = Grants.onGrant(({ coins }) => {
+      if (!this.sys.isActive() || !this.coinCounter) return;
+      this.coinCounter.to(Save.data.coins, 900);
+      const t = neonText(this, W - 170, top + 86, `+${coins} GIFT`, 22, COIN_COLOR, { blur: 8 }).setDepth(120);
+      this.tweens.add({ targets: t, y: t.y + 30, alpha: 0, delay: 1600, duration: 600, onComplete: () => t.destroy() });
+    });
+    this.events.once("shutdown", offGrant);
     this.coinText = neonText(this, W - 170, top + 40, `${s.coins}`, 28, COIN_COLOR, {
       ox: 0,
       blur: 8,

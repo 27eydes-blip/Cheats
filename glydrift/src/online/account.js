@@ -22,8 +22,48 @@ import { cloudPayload, mergeSaves, progressScore, spendable } from "./cloudSave.
 // signed in at once used to overwrite each other's progress).
 function syncState(uid) {
   const st = Save.data.cloudSync;
-  return st && st.uid === uid ? st : { uid, syncId: null, base: null };
+  return st && st.uid === uid ? st : { uid, syncId: null, base: null, hash: null };
 }
+
+/**
+ * A short fingerprint of a cloud copy's contents (keys sorted, so the database's own key order
+ * doesn't matter; the write id left out). Two different fingerprints mean the cloud copy was
+ * changed by something other than this device: another device, or an edit made by hand in
+ * Supabase (which keeps the write id, so the id alone can't tell).
+ */
+export function contentKey(save) {
+  const canon = (v) =>
+    Array.isArray(v)
+      ? `[${v.map(canon).join(",")}]`
+      : v && typeof v === "object"
+        ? `{${Object.keys(v)
+            .filter((k) => k !== "syncId" && v[k] !== undefined)
+            .sort()
+            .map((k) => `${JSON.stringify(k)}:${canon(v[k])}`)
+            .join(",")}}`
+        : JSON.stringify(v ?? null);
+  const str = canon(save || null);
+  let h1 = 0x811c9dc5;
+  let h2 = 0x01000193;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x01000193);
+    h2 = Math.imul(h2 ^ c, 0x85ebca6b);
+  }
+  return `${(h1 >>> 0).toString(36)}.${(h2 >>> 0).toString(36)}.${str.length}`;
+}
+
+/** Has the cloud copy changed since this device last wrote or merged it? */
+export function cloudChanged(cloud, st) {
+  if (!cloud) return false;
+  if ((cloud.syncId || null) !== st.syncId) return true; // another device saved
+  // (a sync point from before fingerprints: merge once to be safe; merging is idempotent)
+  if (!st.hash) return true;
+  return contentKey(cloud) !== st.hash; // edited by hand (or by the admin grant)
+}
+
+/** How often an open game looks for changes made to the cloud copy elsewhere. */
+const CLOUD_CHECK_MS = 120_000;
 function newSyncId() {
   const a = new Uint32Array(2);
   crypto.getRandomValues(a);
@@ -297,7 +337,9 @@ class AccountService {
       const flush = () => {
         if (this.signedIn && (this.pushTimer || this.dirty)) this.pushNow().catch(() => {});
       };
-      document.addEventListener("visibilitychange", () => document.hidden && flush());
+      document.addEventListener("visibilitychange", () => (document.hidden ? flush() : this.checkCloud()));
+      // (and now and then while it's open: a grant or another device's save shows up)
+      this.cloudTimer = setInterval(() => this.checkCloud(), CLOUD_CHECK_MS);
       window.addEventListener("pagehide", flush);
       window.addEventListener("online", () => {
         if (!this.signedIn) return;
@@ -354,7 +396,29 @@ class AccountService {
   mergeCloud(cloud) {
     const uid = this.user.id;
     Save.replace(mergeSaves(Save.data, cloud, syncState(uid).base));
-    this.setSyncState({ uid, syncId: cloud.syncId || null, base: spendable(cloud) });
+    this.setSyncState({ uid, syncId: cloud.syncId || null, base: spendable(cloud), hash: contentKey(cloud) });
+  }
+
+  /**
+   * While the game is open: look at the cloud copy, and if it changed elsewhere (another
+   * device, a grant from the owner), merge it in and upload the result. Never during a run
+   * (isBusy), never before this session's first merge, never while an upload is in flight.
+   */
+  async checkCloud() {
+    if (!this.signedIn || !this.merged || this.pushing || this.isBusy?.()) return false;
+    const uid = this.user.id;
+    try {
+      const cloud = await this.backend.loadSave(uid);
+      if (this.pushing || !this.signedIn || this.user?.id !== uid) return false;
+      if (!cloudChanged(cloud, syncState(uid))) return false;
+      this.mergeCloud(cloud);
+      this.mergedFromOther = (this.mergedFromOther || 0) + 1;
+      this.emit();
+      await this.pushNow();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Remember the sync point in the save (a write that doesn't start another upload). */
@@ -390,15 +454,17 @@ class AccountService {
       const uid = this.user.id;
       const st = syncState(uid);
       // another device saved since this one last did: merge its copy in, never overwrite it
+      // the cloud copy changed since this device last synced (another device saved, or it was
+      // edited in Supabase): merge it in first, never overwrite it with an older local save
       const cloud = await this.backend.loadSave(uid);
-      if (cloud && (cloud.syncId || null) !== st.syncId) {
+      if (cloudChanged(cloud, st)) {
         this.mergeCloud(cloud);
         this.mergedFromOther = (this.mergedFromOther || 0) + 1;
       }
       const save = cloudPayload(Save.data);
       save.syncId = newSyncId();
       await this.backend.storeSave(uid, save, progressScore(save));
-      this.setSyncState({ uid, syncId: save.syncId, base: spendable(save) });
+      this.setSyncState({ uid, syncId: save.syncId, base: spendable(save), hash: contentKey(save) });
       this.cloud = "synced";
       this.lastSync = Date.now();
     } catch (err) {
@@ -550,4 +616,5 @@ class AccountService {
 export const Account = new AccountService();
 
 // test builds only
-if (TEST.on && typeof window !== "undefined") window.__glyAccount = { Account, mergeSaves };
+if (TEST.on && typeof window !== "undefined")
+  window.__glyAccount = { Account, mergeSaves, contentKey, cloudChanged };
