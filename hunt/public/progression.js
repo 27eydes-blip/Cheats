@@ -1,5 +1,5 @@
 // Progression rules shared by the server (authoritative, D1) and the client (display).
-import { BRAWLER_IDS } from './shared.js';
+import { BRAWLER_IDS, own } from './shared.js';
 import { WEAPONS, WEAPON_IDS, perksFor, masteryInfo, masteryXp, masteryBadge, MASTERY_SKINS } from './weapons.js';
 import { LEVEL_TITLES, EMOTES, SKINS } from './catalog.js';
 import { powerSetup } from './power.js';
@@ -48,13 +48,29 @@ export function trophyDelta({ rank, players, won }) {
 }
 // team modes say won true/false/null (null = draw); FFA modes leave it undefined and rank 1 wins
 export const isWin = ({ rank, won }) => won === true || (won === undefined && rank === 1);
-// match XP: kills, assists, placement, bounty, bounty steals
-export function xpFor({ rank, players, kills, bounty, won, assists = 0, steals = 0 }) {
-  const place = isWin({ rank, won }) ? 50 : rank <= 3 ? 20 : rank <= Math.ceil((players || 1) / 2) ? 8 : 0;
-  return 40 + 10 * (kills | 0) + 4 * (assists | 0) + 15 * (steals | 0) + 2 * (bounty | 0) + place;
+// MATCH PAY, every number in one place. Most of it is per minute played (secs: until you were
+// knocked out in Showdown / Big Hunt, the whole match in respawn modes), so XP and coins per minute
+// come out about even in every mode (test/economy.test.js plays them all). Kills, assists and steals
+// are capped, and bounty itself pays nothing: it snowballs much faster in some modes than others.
+export const PAY = {
+  xp: { base: 10, perMin: 64, kill: 5, assist: 2, steal: 3, place: [40, 16, 6] },
+  coins: { base: 1, perMin: 13, kill: 1, place: [10, 5, 2] },
+  caps: { kill: 12, assist: 12, steal: 6 }, maxSecs: 600, defaultSecs: 120,
+};
+const minutes = (secs) => Math.max(0, Math.min(PAY.maxSecs, Number.isFinite(secs) ? secs : PAY.defaultSecs)) / 60;
+// [win, top 3, top half] -> index, or -1
+const placeOf = ({ rank, players, won }) => (isWin({ rank, won }) ? 0 : rank <= 3 ? 1 : rank <= Math.ceil((players || 1) / 2) ? 2 : -1);
+const cap = (v, k) => Math.max(0, Math.min(PAY.caps[k], v | 0));
+// match XP: time played, kills, assists, bounty steals, placement
+export function xpFor(r) {
+  const X = PAY.xp, pl = placeOf(r);
+  return Math.round(X.base + X.perMin * minutes(r.secs) + X.kill * cap(r.kills, 'kill') + X.assist * cap(r.assists, 'assist') + X.steal * cap(r.steals, 'steal') + (pl >= 0 ? X.place[pl] : 0));
 }
 export const MISSION_XP = 40;
-export const matchCoins = ({ rank, players, kills = 0, won }) => 12 + 4 * Math.min(10, kills | 0) + (isWin({ rank, won }) ? 20 : rank <= 3 ? 10 : rank <= Math.ceil((players || 1) / 2) ? 4 : 0);
+export function matchCoins(r) {
+  const C = PAY.coins, pl = placeOf(r);
+  return Math.round(C.base + C.perMin * minutes(r.secs) + C.kill * Math.min(10, cap(r.kills, 'kill')) + (pl >= 0 ? C.place[pl] : 0));
+}
 // ACCOUNT LEVEL 1-100. Level L -> L+1 needs 80 + 12(L-1) XP: about 2 matches early on,
 // around level 40 after ~100 matches, level 100 after ~500.
 export const MAX_LEVEL = 100;
@@ -78,7 +94,7 @@ export function levelReward(L) {
   if (LEVEL_TITLES[L]) r.title = LEVEL_TITLES[L];
   return r;
 }
-export const weaponUnlocked = (p, id) => !!WEAPONS[id] && (WEAPONS[id].unlock <= levelInfo(p.xp || 0).level);
+export const weaponUnlocked = (p, id) => !!own(WEAPONS, id) && (WEAPONS[id].unlock <= levelInfo(p.xp || 0).level);
 // grant every level reward up to the current level (also catches old saves up, once)
 export function grantLevels(p) {
   const L = levelInfo(p.xp).level, got = [];
@@ -96,8 +112,8 @@ export function grantLevels(p) {
 export function loadoutFor(p) {
   p = normalize(p);
   const w2 = p.loadout?.w2 && weaponUnlocked(p, p.loadout.w2) ? p.loadout.w2 : null;
-  const mast = w2 ? masteryInfo(p.mastery[w2] || 0).level : 0;
-  const perks = w2 ? (p.perks[w2] || []).filter((id) => Object.entries(perksFor(w2)).some(([tier, o]) => mast >= +tier && o.some((x) => x.id === id))) : [];
+  const mast = w2 ? masteryInfo(own(p.mastery, w2) || 0).level : 0;
+  const perks = w2 ? (Array.isArray(own(p.perks, w2)) ? p.perks[w2] : []).filter((id) => Object.entries(perksFor(w2)).some(([tier, o]) => mast >= +tier && o.some((x) => x.id === id))) : [];
   const emotes = EMOTES.map((e, i) => (e.level <= 1 || p.owned.includes(e.id) ? i : -1)).filter((i) => i >= 0);
   return { w2, perks, mastery: mast, badge: w2 ? masteryBadge(mast) : null, emotes, power: powerSetup(p) };
 }
@@ -141,9 +157,11 @@ export function claimMission(p, id, day = dayIndex()) {
 // apply one match result; returns {progress, delta, xp}
 export function applyMatch(p, r) {
   p = normalize(p);
-  const before = p.trophies[r.brawler] | 0;
-  const delta = trophyDelta(r);
-  p.trophies[r.brawler] = Math.max(0, before + delta);
+  // only real brawlers hold trophies (a made-up id must never become a trophy key)
+  const tb = BRAWLER_IDS.includes(r.brawler) ? r.brawler : null;
+  const before = tb ? p.trophies[tb] | 0 : 0;
+  const delta = tb ? trophyDelta(r) : 0;
+  if (tb) p.trophies[tb] = Math.max(0, before + delta);
   const xp = xpFor(r), lvBefore = levelInfo(p.xp).level;
   p.xp += xp;
   const levels = grantLevels(p);
@@ -153,7 +171,7 @@ export function applyMatch(p, r) {
   // WEAPON MASTERY from damage + kills with each weapon this match
   const mast = [], wxp = [];
   for (const [id, s] of Object.entries(r.wstat || {})) {
-    if (!WEAPONS[id] || !s) continue;
+    if (!own(WEAPONS, id) || !s) continue;
     const before = masteryInfo(p.mastery[id] || 0).level;
     wxp.push({ id, xp0: p.mastery[id] || 0, xp1: (p.mastery[id] || 0) + masteryXp(+s.d || 0, +s.k || 0) });
     p.mastery[id] = (p.mastery[id] || 0) + masteryXp(+s.d || 0, +s.k || 0);
@@ -164,7 +182,9 @@ export function applyMatch(p, r) {
   if (isWin(r)) p.wins++;
   // lifetime stats for the profile page: totals and per mode
   p.kills = (p.kills | 0) + (r.kills | 0);
-  const md = (p.modes[r.mode || 'quick'] ||= { games: 0, wins: 0, top3: 0, kills: 0 });
+  const mk = typeof r.mode === 'string' && r.mode ? r.mode : 'quick';
+  if (!own(p.modes, mk)) p.modes[mk] = { games: 0, wins: 0, top3: 0, kills: 0 };
+  const md = p.modes[mk];
   md.games++; md.kills += r.kills | 0; if (isWin(r)) md.wins++; if (r.rank <= 3 && r.won !== false) md.top3++;
   p.pass.xp = (p.pass.xp || 0) + xp;
   const d = ensureDaily(p, r.day ?? dayIndex()), add = (k, v) => { d.prog[k] = (d.prog[k] || 0) + v; };
@@ -173,5 +193,5 @@ export function applyMatch(p, r) {
   if (r.rank <= 3 && r.won !== false) add('top3', 1);
   d.prog.bestKills = Math.max(d.prog.bestKills || 0, r.kills | 0);
   wxp.sort((a, b) => b.xp1 - b.xp0 - (a.xp1 - a.xp0));
-  return { progress: p, delta: p.trophies[r.brawler] - before, xp, coins, levels, mastery: mast, wxp, levelBefore: lvBefore };
+  return { progress: p, delta: tb ? p.trophies[tb] - before : 0, xp, coins, levels, mastery: mast, wxp, levelBefore: lvBefore };
 }

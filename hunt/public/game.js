@@ -264,7 +264,7 @@ function startQuick(opts = G.opts) {
   openConn('main', '/ws?' + q, { primary: true });
   G.phase = 'waiting';
   show('waiting');
-  UI.mm.show({ brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null, label: room ? `ROOM ${room}` : (MODE_INFO[opts.mode]?.name || 'QUICK HUNT') });
+  UI.mm.show({ brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null, label: room ? `ROOM ${room}` : (MODE_INFO[opts.mode]?.name || 'QUICK HUNT'), room: room && !opts.world && opts.mode !== 'range' ? room : '' });
 }
 
 // ?wpn=&mast= are honoured only by a local dev server (HUNT_DEV), for tests and screenshots
@@ -345,13 +345,15 @@ function onMsg(c, m) {
       if (G.phase === 'waiting') UI.mm.update({ players: 1, max: maxFor(m.mode), mode: MODE_INFO[m.mode]?.name, world: m.world });
       break;
     case 'lobby':
-      UI.mm.update({ players: m.players.length, max: maxFor(m.mode), startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world, bots: m.bots !== false });
+      UI.mm.update({ players: m.players.length, max: maxFor(m.mode), startIn: m.startIn, mode: MODE_INFO[m.mode]?.name, world: m.world, bots: m.bots !== false, names: m.players, host: m.host, ids: m.ids || null, can: !!m.can, me: G.myId });
       break;
+    case 'roomwait': UI.mm.wait({ mode: MODE_INFO[m.mode]?.name, left: m.left }); break; // the friends' match is running: we join their next one
     case 'retry':
       G.conns.delete(c.key); // the server closes this socket next: that's expected, not a lost connection
       if (!G.room && G.retries++ < 5) { clearTimeout(retryTimer); retryTimer = setTimeout(() => { if (G.phase === 'waiting') startQuick({ ...G.opts, skip: m.match }); }, 150); }
       else { toast(m.reason + (G.room ? ' — try again when it ends' : '')); toMenu(); }
       break;
+    case 'kick': G.conns.delete(c.key); toMenu(); toast(String(m.reason || 'Disconnected'), 4500); break; // the server gave our seat away (same account on another screen) and says why
     case 'start':
       $('rangeLeave').hidden = m.mode !== 'range';
       if (m.rejoin && G.map && G.phase !== 'menu') {
@@ -1438,7 +1440,9 @@ for (const b of document.querySelectorAll('#dead .again')) b.onclick = playAgain
 const UI = {};
 UI.lobby = createLobby({
   // lobby PLAY = public matchmaking for the chosen mode; Friends popup = the typed room code
-  startQuick: (o = {}) => { goFullscreen(); startQuick(o.fromFriends ? {} : { mode: o.mode || '', room: '' }); },
+  startQuick: (o = {}) => { goFullscreen(); startQuick(o.fromFriends ? { mode: o.mode || '' } : { mode: o.mode || '', room: '' }); },
+  // the mode picked on the PLAY page (a friend room plays it; Free Play can't be a room)
+  roomMode: () => { const k = UI.lobby?.mode; return k && k !== 'free' && k !== 'quick' ? k : ''; },
   startFree: () => { goFullscreen(); startFree(); },
   // TEST RANGE: a private room with target dummies, carrying the weapon picked in the Armory
   startRange: (weapon) => { goFullscreen(); startQuick({ room: 'R' + Math.random().toString(36).slice(2, 9).toUpperCase(), mode: 'range', world: 'meadow', lobby: '1.5', tryW: weapon }); },
@@ -1446,7 +1450,12 @@ UI.lobby = createLobby({
   setBrawler: (id) => { const changed = id !== selBrawler; selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); if (changed) sfx('growl_' + id, 0.9); }, // each hunter growls when picked
   prefs, saveName: () => { readForm(); UI.lobby?.refresh(); }, statRows,
 });
-UI.mm = createMatchmaking(() => toMenu());
+UI.mm = createMatchmaking(() => toMenu(), {
+  onStart: () => send({ t: 'host', start: 1 }),
+  // the room host's bots switch (also remembered for the next room you host)
+  onBots: (on) => { send({ t: 'host', bots: on }); $('bots').checked = on; readForm(); },
+  toast: (msg) => toast(msg, 1500),
+});
 UI.res = createResults({ onAgain: playAgain, onLobby: () => toMenu() });
 UI.showIntro = showIntro;
 

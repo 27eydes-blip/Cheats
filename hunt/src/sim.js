@@ -7,7 +7,7 @@ import {
   CLOAK_REVEAL_DIST, SPAWNS, BOT_NAMES, EVENT_EVERY, EVENT_WARN, LOW_HP, RUSH_TIME, COMEBACK_DMG,
   applyMove, moveCircle, inBush, attackDirs, poisonInset, moveStats, bountyGlow, pingInterval,
   layLowFactor, rng, inHub, HUB, MINE_SEEN, PLAYER_R, touchingBorder, SPIKE_DMG, SPIKE_CD, lineOfSight, isSolidTile, tileAt, blocksMove,
-  dayNight, visionRange, onHigh, HIGH_REVEAL,
+  dayNight, visionRange, onHigh, HIGH_REVEAL, own,
 } from '../public/shared.js';
 import { EVENTS, pickEvent } from '../public/events/index.js';
 import { MODES } from './modes.js';
@@ -34,6 +34,8 @@ const angDiff = (a, b) => { const d = a - b; return Math.atan2(Math.sin(d), Math
 // interest management: how far around a viewer the server sends things (half-extents, px)
 export const VIEW_X = 1500, VIEW_Y = 1100, RADAR_RANGE = 2600;
 export const HEARTBEAT_DIST = 330; // a hidden enemy this close makes your heart pound
+export const ROOM_IDLE_SECS = 300; // a friend room whose host never presses START starts by itself after 5 minutes
+export const IDLE_SECS = 30; // input gaps longer than this are idle time (it doesn't count for match pay)
 export const newId = () => 1 + Math.floor(Math.random() * 2 ** 30);
 
 // fields carried across a zone handoff
@@ -45,7 +47,7 @@ export class Sim {
   constructor(o) {
     this.map = o.map;
     this.send = o.send || (() => {});
-    this.modeKey = o.mode || 'showdown';
+    this.modeKey = own(MODES, o.mode) ? o.mode : 'showdown';
     this.mode = MODES[this.modeKey];
     this.maxPlayers = this.mode.maxPlayers || MAX_PLAYERS;
     this.teamPot = { 1: 0, 2: 0 };
@@ -58,8 +60,13 @@ export class Sim {
     this.fillBots = o.fillBots ?? true;
     this.botTarget = o.botTarget ?? MAX_PLAYERS;
     this.lobbyTime = o.lobbyTime ?? 8;
+    // FRIEND ROOMS: the first one in is the host and starts the match (ROOM_IDLE_SECS is only a
+    // safety net); friends in a team mode play on the same side
+    this.hostStart = !!o.hostStart;
+    this.partyTeams = !!o.partyTeams;
+    this.hostId = 0;
     this.eventsOn = o.events !== false;
-    this.forceEvent = o.forceEvent || null; // test flag: always run this event, starting at 8s
+    this.forceEvent = own(EVENTS, o.forceEvent) ? o.forceEvent : null; // test flag: always run this event, starting at 8s
     this.seed = o.seed ?? 0;
     this.rand = rng((o.seed ?? Date.now()) ^ 0x5bd1e995);
 
@@ -167,7 +174,7 @@ export class Sim {
 
   // ---------------------------------------------------------------- players
   addPlayer({ name, brawler, bot = false, state = null, connected = !bot }) {
-    const b = BRAWLERS[brawler] ? brawler : 'volt';
+    const b = own(BRAWLERS, brawler) ? brawler : 'volt';
     const p = {
       id: newId(), name, brawler: b, bot, wasBot: bot, connected,
       x: this.center.x, y: this.center.y, mvx: 0, mvy: 0, px: 0, py: 0, vx: 0, vy: 0,
@@ -183,6 +190,7 @@ export class Sim {
       assists: 0, steals: 0, wstat: {}, shotLog: [], poison: null, flareT: 0, emotes: [0, 1],
     };
     if (state) for (const k of CARRY) if (state[k] !== undefined) p[k] = state[k];
+    p.brawler = b; // (carried state can't bring in an unknown brawler either)
     while (this.players.has(p.id)) p.id = newId();
     p.hx.fill(p.x); p.hy.fill(p.y);
     this.players.set(p.id, p);
@@ -193,7 +201,7 @@ export class Sim {
   rosterRow(p) { return [p.name, p.brawler, p.wasBot ? 1 : 0, p.cos || null]; }
   // give a player a secondary weapon (armory pick, a bot's random pick, or a Free Play drop)
   setWeapon(p, id, perks = []) {
-    if (!WEAPONS[id]) { p.w2 = null; p.slot = 0; return; }
+    if (!own(WEAPONS, id)) { p.w2 = null; p.slot = 0; return; }
     const w = withPerks(id, perks);
     p.w2 = { id, perks, ammo: w.ammo, reloadP: 0, cd: 0, lastFire: -99 };
     if (p.slot === 1) p.swapT = 0;
@@ -207,7 +215,7 @@ export class Sim {
     p.wmast = lo.mastery | 0;
     p.lo = lo; // kept so a respawn gives your armory weapon back after a Free Play pick-up
     if (lo.power) { p.pset = lo.power; this.applyPower(p, this.phase !== 'play' || !!this.hub); }
-    if (lo.w2 && WEAPONS[lo.w2] && !(p.w2 && p.w2.dropped)) this.setWeapon(p, lo.w2, lo.perks || []);
+    if (lo.w2 && own(WEAPONS, lo.w2) && !(p.w2 && p.w2.dropped)) this.setWeapon(p, lo.w2, lo.perks || []);
     p.cos = { ...(p.cos || {}), badge: lo.badge || null, wskin: lo.badge || null };
     this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
   }
@@ -229,6 +237,7 @@ export class Sim {
 
   removePlayer(id) {
     if (!this.players.delete(id)) return;
+    if (id === this.hostId) this.hostId = this.humans()[0]?.id || 0; // the host left: the next one in takes over
     this.broadcast({ t: 'ro', del: [id] });
     if (this.targetId === id) this.targetId = 0;
   }
@@ -274,7 +283,7 @@ export class Sim {
     if (this.phase !== 'lobby' || this.players.size >= this.maxPlayers) return null;
     const p = this.addPlayer({ name, brawler, bot: false });
     if (this.mode.teams) p.team = this.smallerTeam();
-    this.lobbyEnd = this.lobbyEnd == null ? this.clock + this.lobbyTime : Math.max(this.lobbyEnd, this.clock + 4);
+    if (this.hostStart) { if (!this.hostId) this.hostId = p.id; this.lobbyEnd = this.clock + ROOM_IDLE_SECS; } else this.lobbyEnd = this.lobbyEnd == null ? this.clock + this.lobbyTime : Math.max(this.lobbyEnd, this.clock + 4);
     if (this.humans().length >= this.maxPlayers) this.lobbyEnd = this.clock;
     this.broadcastLobby();
     return p.id;
@@ -303,7 +312,7 @@ export class Sim {
     if (!p || p.wasBot || p.left) return null;
     p.left = true; p.secret = null;
     if (this.phase !== 'play') return null;
-    return { p, rank: !p.alive && p.rank ? p.rank : this.players.size, players: this.players.size, won: this.mode.teams ? false : undefined, assists: p.assists, steals: p.steals, wstat: p.wstat };
+    return { p, rank: !p.alive && p.rank ? p.rank : this.players.size, players: this.players.size, won: this.mode.teams ? false : undefined, assists: p.assists, steals: p.steals, wstat: p.wstat, secs: this.secsOf(p) };
   }
 
   // a dropped player reconnected (same match): hand control back
@@ -319,10 +328,13 @@ export class Sim {
   }
 
   broadcastLobby() {
+    const hs = this.humans(), left = this.lobbyEnd == null || !this.canStart() ? null : Math.max(0, this.lobbyEnd - this.clock);
     const msg = {
       t: 'lobby', mode: this.modeKey, world: this.map.world,
-      players: this.humans().map((p) => [p.name, p.brawler]),
-      startIn: this.lobbyEnd == null || !this.canStart() ? null : Math.max(0, this.lobbyEnd - this.clock), bots: this.fillBots,
+      players: hs.map((p) => [p.name, p.brawler]),
+      // a host room only counts down in its last minute (the safety net), otherwise it waits for START
+      startIn: this.hostStart && left != null && left > 60 ? null : left, bots: this.fillBots,
+      ...(this.hostStart ? { host: this.hostId, ids: hs.map((p) => p.id), can: this.canStart() } : {}),
     };
     for (const p of this.players.values()) if (p.connected) this.send(p.id, msg);
   }
@@ -330,10 +342,23 @@ export class Sim {
   // with "fill empty slots with bots" OFF, a match needs two humans: never add bots to fill it
   canStart() { return this.humans().length >= (this.fillBots ? 1 : 2); }
 
+  // the room host's buttons: START, and fill with bots on/off. Anyone else is ignored.
+  hostCmd(p, m) {
+    if (!this.hostStart || this.phase !== 'lobby' || p.id !== this.hostId) return;
+    if (typeof m.bots === 'boolean' && m.bots !== this.fillBots) { this.fillBots = m.bots; this.broadcastLobby(); }
+    if (m.start === 1 && this.canStart()) this.start();
+  }
+
   start() {
     const taken = new Set([...this.players.values()].map((p) => p.name));
     const names = BOT_NAMES.filter((n) => !taken.has(n)).sort(() => Math.random() - 0.5);
     const target = this.fillBots ? this.maxPlayers : 0;
+    // a friend room in a team mode: with bots the friends are one squad against bots; without bots
+    // they split evenly to play each other
+    if (this.partyTeams && this.mode.teams) {
+      const half = Math.floor(this.maxPlayers / 2);
+      this.humans().forEach((p, i) => { p.team = this.fillBots ? (i < half ? 1 : 2) : 1 + (i % 2); });
+    }
     while (this.players.size < target) {
       const b = this.addPlayer({ name: names.pop() || 'Bot', brawler: BRAWLER_IDS[Math.floor(Math.random() * BRAWLER_IDS.length)], bot: true });
       if (this.mode.teams) b.team = this.smallerTeam();
@@ -668,8 +693,8 @@ export class Sim {
         if (opt && opt.wid) {
           const ws = (src.wstat[opt.wid] ||= { d: 0, k: 0 }); ws.d += amount;
           const a = BRAWLERS[src.brawler].attack;
-          if (charge && src.alive) src.superC = Math.min(1, src.superC + (amount / (a.damage * BRAWLERS[src.brawler].superHits)) * (src.star?.fx.charge || 1));
-        } else if (charge && src.alive) src.superC = Math.min(1, src.superC + (1 / BRAWLERS[src.brawler].superHits) * (src.star?.fx.charge || 1));
+          if (charge && src.alive) this.addCharge(src, (amount / (a.damage * BRAWLERS[src.brawler].superHits)) * (src.star?.fx.charge || 1));
+        } else if (charge && src.alive) this.addCharge(src, (1 / BRAWLERS[src.brawler].superHits) * (src.star?.fx.charge || 1));
       }
     }
     if (t.hp <= 0) this.kill(t, src, cause, opt);
@@ -677,6 +702,13 @@ export class Sim {
       t.lowHealUsed = true; t.hp = Math.min(t.maxHp, t.hp + t.maxHp * t.star.fx.lowHeal);
       this.fx.push(['gadget', Math.round(t.x), Math.round(t.y), -1, t.id]);
     }
+  }
+
+  // SUPER charge. 6 hits of 1/6 add up to 0.9999999999999999 in floating point: a hair short of
+  // full counts as full, so the documented number of hits always gives a super that fires.
+  addCharge(p, inc) {
+    const c = p.superC + inc;
+    p.superC = c > 1 - 1e-9 ? 1 : c;
   }
 
   gainBounty(p, gain) {
@@ -704,6 +736,7 @@ export class Sim {
     this.deathList.push(t);
     t.rank = this.aliveCount() + 1;
     for (const v of this.deathList) v.rank = t.rank;
+    if (!this.mode.respawn) t.outAt = this.time; // match pay is per minute played
     const stolen = t.bounty;
     const moon = this.dn && this.dn.blood ? 2 : 1; // BLOOD MOON: double bounty for every kill
     if (src && src !== t) {
@@ -717,7 +750,8 @@ export class Sim {
     }
     t.bounty = 0; t.bushT = 0; t.lowF = 0;
     this.mode.onKill?.(this, t, src && !src.remote ? src : null);
-    const n = Math.max(1, t.cubes);
+    // Showdown: every cube drops. Free Play (capped): most of them, so a kill can't hand over a full stack
+    const n = Math.max(1, this.mode.cubeCap ? Math.ceil(t.cubes * 0.7) : t.cubes);
     for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, d = n > 1 ? 30 : 0; this.dropCube(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d); }
     for (let i = 0; i < t.crystals; i++) { const a = this.rand() * Math.PI * 2, d = 20 + this.rand() * 50; this.dropCrystal(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d); }
     t.crystals = 0;
@@ -738,7 +772,7 @@ export class Sim {
   credit(c) {
     const p = this.players.get(c.id);
     if (!p) return;
-    if (c.charge && p.alive) p.superC = Math.min(1, p.superC + 1 / BRAWLERS[p.brawler].superHits);
+    if (c.charge && p.alive) this.addCharge(p, 1 / BRAWLERS[p.brawler].superHits);
     if (c.kill) this.gainBounty(p, c.gain || 1);
   }
 
@@ -788,7 +822,7 @@ export class Sim {
   }
 
   pick(p, brawler) {
-    if (!BRAWLERS[brawler] || !p.alive || !this.isSafe(p.x, p.y) || p.brawler === brawler) return;
+    if (!own(BRAWLERS, brawler) || !p.alive || !this.isSafe(p.x, p.y) || p.brawler === brawler) return;
     p.brawler = brawler;
     p.maxHp = 1; p.hp = 1; this.applyPower(p, true); p.hp = p.maxHp;
     p.ammo = 3; p.superC = 0;
@@ -799,7 +833,7 @@ export class Sim {
     const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
     const t = this.map.t[ty * this.map.gw + tx];
     if (t !== EMPTY && t !== BUSH) { x = tx * TILE + TILE / 2; y = ty * TILE + TILE / 2; }
-    this.cubes.push({ id: this.nextEnt++, x, y });
+    this.cubes.push({ id: this.nextEnt++, x, y, t: this.time });
   }
   dropCrystal(x, y) {
     const t = this.map.t[Math.floor(y / TILE) * this.map.gw + Math.floor(x / TILE)];
@@ -848,9 +882,10 @@ export class Sim {
 
   input(id, m) {
     const p = this.players.get(id);
-    if (!p || p.bot) return;
+    if (!p || p.bot || !m || typeof m !== 'object') return; // (any JSON value can arrive: null, 5, "x", [])
     if (m.t === 'pick') return this.pick(p, m.brawler);
     if (m.t === 'emote') return this.emote(p, m.e);
+    if (m.t === 'host') return this.hostCmd(p, m);
     if (m.t !== 'in') return;
     const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0);
     // angles from the client are untrusted: wrap into (-PI, PI] (a huge value would hang the angle loops)
@@ -863,6 +898,12 @@ export class Sim {
       vt: typeof m.vt === 'number' && Number.isFinite(m.vt) ? m.vt : null, // the server tick the shooter was looking at
     });
     if (p.queue.length > 12) p.queue.splice(0, p.queue.length - 12);
+    const q = p.queue[p.queue.length - 1];
+    if (q.mx || q.my || q.f != null || q.u != null || q.gd || q.w != null) { // playing, not idle: time counts for match pay
+      const gap = this.time - (p.lastAct ?? -1e9);
+      if (gap > 0 && gap < IDLE_SECS) p.actT = (p.actT || 0) + gap;
+      p.lastAct = this.time;
+    }
   }
 
   // ---------------------------------------------------------------- events
@@ -897,6 +938,18 @@ export class Sim {
   }
 
   // ---------------------------------------------------------------- tick
+  // What the Durable Objects call: one exception must never stop the match for everyone. The
+  // error is counted and handed to onError; this tick's one-shot buffers are dropped so they
+  // can't pile up. (Tests call tick() directly, so a bug still fails loudly there.)
+  tickSafe(onError) {
+    try { this.tick(); return true; } catch (e) {
+      this.tickErrors = (this.tickErrors || 0) + 1;
+      this.fx = []; this.tileDirty = []; this.crateDirty = []; this.pings = []; this.bnew = []; this.bdead = [];
+      onError?.(e, this.tickErrors);
+      return false;
+    }
+  }
+
   tick() {
     this.clock += DT;
     if (this.phase === 'lobby') {
@@ -993,9 +1046,10 @@ export class Sim {
       } else p.poisonT = 0.5;
 
       const pr = this.stats(p).r + 20;
+      const cubeCap = this.mode.cubeCap || Infinity; // Free Play: a full stack leaves cubes for others
       for (let i = this.cubes.length - 1; i >= 0; i--) {
         const c = this.cubes[i];
-        if (Math.hypot(c.x - p.x, c.y - p.y) < pr) {
+        if (p.cubes < cubeCap && Math.hypot(c.x - p.x, c.y - p.y) < pr) {
           this.cubes.splice(i, 1);
           p.cubes++; p.maxHp += CUBE_HP; p.hp += CUBE_HP;
           this.fx.push(['cube', Math.round(p.x), Math.round(p.y), p.cubes, p.id]);
@@ -1047,6 +1101,7 @@ export class Sim {
         this.brokenCrates.delete(idx); this.addCrate(idx);
       }
       if (this.wdrops.length) this.wdrops = this.wdrops.filter((d) => this.time - d.t < 75); // drops fade after 75s
+      if (this.cubes.length) this.cubes = this.cubes.filter((c) => this.time - (c.t || 0) < 90); // so do loose power cubes
     }
     this.sendSnapshots();
     this.pingLog = this.pings;
@@ -1394,7 +1449,7 @@ export class Sim {
         ...(v.team ? { mates: [...this.players.values()].filter((q) => q !== v && q.team === v.team && q.alive).map((q) => [q.id, Math.round(q.x), Math.round(q.y)]) } : {}),
         me: meDelta({
           x: r2(v.x), y: r2(v.y), mvx: r2(v.mvx), mvy: r2(v.mvy), hp: Math.round(v.hp), mh: v.maxHp, am: r2(v.ammo + v.reloadP),
-          sc: r2(v.superC), cu: v.cubes, f: this.flags(v), al: v.alive ? 1 : 0, fo: v.dash || v.knock || v.stun > 0 ? 1 : 0,
+          sc: v.superC >= 1 ? 1 : Math.min(0.99, r2(v.superC)), cu: v.cubes, f: this.flags(v), al: v.alive ? 1 : 0, fo: v.dash || v.knock || v.stun > 0 ? 1 : 0,
           cl: r2(Math.max(0, v.cloak)), bt: v.bounty, lo: r2(v.lowF), bt5: r2(Math.min(v.bushT, 5)), rs: r2(Math.max(0, v.rush)),
           rt: r2(Math.max(0, v.respawnT)), cr: v.crystals, scr: Math.floor(this.mode.score ? this.mode.score(v) : 0),
           k: v.kills, be: v.bountyEarned, sk: v.sessionKills, bb: v.bestBounty, gl: this.glow(v), id: v.id, br: v.brawler,
@@ -1421,6 +1476,10 @@ export class Sim {
       | (p.cageT > 0 ? 256 : 0) | (p.slowT > 0 ? 512 : 0);
   }
 
+  // seconds this player was in the match (until knocked out when there are no respawns), counting
+  // only time they were playing: standing idle pays for IDLE_SECS at most
+  secsOf(p) { return Math.min(p.outAt != null && !this.mode.respawn ? p.outAt : this.time, (p.actT || 0) + IDLE_SECS); }
+
   finish() {
     this.phase = 'end';
     const ranked = this.mode.rank(this);
@@ -1430,7 +1489,7 @@ export class Sim {
     const score = this.mode.score || (() => 0);
     const results = ranked.map((p) => [p.name, p.brawler, p.rank, p.kills, p.wasBot ? 1 : 0, p.id, p.bountyEarned, Math.floor(score(p)), p.team]);
     const winner = ranked[0];
-    this.hooks.finished?.(ranked.filter((p) => !p.wasBot && !p.left).map((p) => ({ p, rank: p.rank, players: this.players.size, won: this.mode.teams ? (winTeam === 0 ? null : p.team === winTeam) : undefined, assists: p.assists, steals: p.steals, wstat: p.wstat })));
+    this.hooks.finished?.(ranked.filter((p) => !p.wasBot && !p.left).map((p) => ({ p, rank: p.rank, players: this.players.size, won: this.mode.teams ? (winTeam === 0 ? null : p.team === winTeam) : undefined, assists: p.assists, steals: p.steals, wstat: p.wstat, secs: this.secsOf(p) })));
     for (const p of this.players.values()) {
       if (p.connected) {
         this.send(p.id, { t: 'end', mode: this.modeKey, rank: p.rank, kills: p.kills, bounty: p.bountyEarned, winner: winner ? winner.name : null, results,

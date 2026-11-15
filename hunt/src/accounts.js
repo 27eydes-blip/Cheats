@@ -2,7 +2,7 @@
 // password; "upgrade" sets them on the same row, so progress carries over. Match results are
 // applied here by the match Durable Objects — clients can't write trophies or XP.
 import { newProgress, normalize, applyMatch, roadReward, totalTrophies } from '../public/progression.js';
-import { applyPurchase } from '../public/catalog.js';
+import { applyPurchase, grantReward } from '../public/catalog.js';
 
 const enc = new TextEncoder();
 const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
@@ -76,13 +76,21 @@ const DUMMY_SALT = 'AAAAAAAAAAAAAAAAAAAAAA==';
 const validName = (n) => typeof n === 'string' && /^[A-Za-z0-9_]{3,16}$/.test(n);
 const validPass = (p) => typeof p === 'string' && p.length >= 6 && p.length <= 128;
 
+// Every API answer is JSON, even when something unexpected breaks (never the runtime's error page).
 export async function handleApi(req, env) {
+  try { return await api(req, env); } catch (e) {
+    console.log('api error', new URL(req.url).pathname, e && e.message);
+    return json({ error: 'Something went wrong. Please try again.' }, 500);
+  }
+}
+async function api(req, env) {
   const db = env.DB;
   if (!db) return json({ error: 'accounts unavailable' }, 503);
   await ensureSchema(db);
   const url = new URL(req.url);
   const path = url.pathname.replace(/^\/api/, '');
-  const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+  const sent = req.method === 'POST' ? await req.json().catch(() => null) : null;
+  const body = sent && typeof sent === 'object' && !Array.isArray(sent) ? sent : {}; // (null, 5, "x", [] are valid JSON too)
   const auth = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const me = await userFromToken(db, auth);
 
@@ -130,17 +138,15 @@ export async function handleApi(req, env) {
       const at = body.at | 0, r = roadReward(at);
       if (!r || totalTrophies(p) < at || p.claimed.includes(at)) return { error: 'Not available' };
       p.claimed.push(at);
-      if (r.coins) p.coins += r.coins;
-      for (const k of ['title', 'fx', 'skin']) if (r[k] && !p.owned.includes(r[k])) p.owned.push(r[k]);
-      return { progress: p };
+      return { progress: p, got: grantReward(p, r) };
     });
     if (!out || out.error) return json({ error: out ? out.error : 'not found' }, 400);
-    return json({ user: publicUser({ ...me, progress: JSON.stringify(out.progress) }) });
+    return json({ user: publicUser({ ...me, progress: JSON.stringify(out.progress) }), got: out.got });
   }
   if (path === '/shop' && req.method === 'POST') { // equip / buy with TEST currency / pass claims (see catalog.js)
     const out = await mutateProgress(db, me.id, (raw) => applyPurchase(normalize(JSON.parse(raw)), body));
     if (!out || out.error) return json({ error: out ? out.error : 'not found' }, 400);
-    return json({ user: publicUser({ ...me, progress: JSON.stringify(out.progress) }) });
+    return json({ user: publicUser({ ...me, progress: JSON.stringify(out.progress) }), ...(out.got ? { got: out.got } : {}) });
   }
   return json({ error: 'not found' }, 404);
 }

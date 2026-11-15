@@ -188,6 +188,7 @@ body.reduce-flash .btn.play::before { animation: none; opacity: .5; }
 .ped canvas { width: 100%; aspect-ratio: 1; }
 .ped.on { outline: 4px solid var(--gold); }
 .ped .tag { font-size: .8em; color: var(--gold); }
+.ped .earn { font-size: .7em; line-height: 1.15; color: var(--text-dim); display: flex; align-items: center; gap: 3px; } /* a reward: where to earn it */
 
 .pass-wrap { display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; }
 .pass-top { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
@@ -229,6 +230,18 @@ body.reduce-flash .marker { animation: none; }
 .mm .found { font-size: calc(var(--u) * 4); }
 .mm .tip { font-family: var(--font-ui); font-weight: 700; color: var(--text-dim); font-size: calc(var(--u) * 1.6); min-height: 1.4em; text-align: center; max-width: 80vw; transition: opacity .3s; }
 .mm .mmmode { font-family: var(--font); color: #fff; font-size: calc(var(--u) * 2.2); }
+/* friend room: the radar column moves left, the room card sits on the right */
+.mm.room { padding-right: calc(var(--sa-r) + min(36vw, 360px) + 24px); }
+.mmroom { position: absolute; right: calc(var(--sa-r) + 16px); top: 50%; transform: translateY(-50%); width: min(36vw, 360px); max-height: calc(100% - 32px); overflow: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; color: #fff; font-family: var(--font); }
+.mmroom > small { color: var(--text-dim); letter-spacing: .08em; }
+.mmcode { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mmcode b { font-size: calc(var(--u) * 5); letter-spacing: .08em; color: var(--gold); text-shadow: 0 3px 0 #1b1033; user-select: all; }
+.mmlist { margin: 0; padding: 0 0 0 1.4em; font-size: calc(var(--u) * 2); line-height: 1.5; }
+.mmlist small { font-size: .65em; color: var(--gold); }
+.mmhost { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.mmhost[hidden] { display: none; }
+.mmwait { font-size: calc(var(--u) * 1.8); color: var(--text-dim); }
+.mmcredit { position: absolute; right: max(10px, var(--sa-r)); bottom: max(3px, var(--sa-b)); font: 400 10px "Lilita One", sans-serif; color: #ffd23f; opacity: .55; pointer-events: none; }
 .intro { position: fixed; inset: 0; z-index: 36; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(105deg, rgba(58,134,255,.92) 0 48%, var(--ink) 48% 52%, rgba(255,40,70,.92) 52%); }
 .intro.enter { animation: intro-in 2.2s ease both; }
 @keyframes intro-in { 0% { clip-path: inset(0 50% 0 50%); } 15% { clip-path: inset(0 0 0 0); } 85% { clip-path: inset(0 0 0 0); opacity: 1; } 100% { opacity: 0; } }

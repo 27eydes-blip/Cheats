@@ -4,6 +4,7 @@
 //   botGoal(sim, bot) -> {x,y} | {targetId} | null
 import { DT, TILE, EMPTY } from '../public/shared.js';
 
+export const HUNTED_KO = 1, HUNTED_TARGET_KO = 3;
 const byScore = (score) => (sim) => [...sim.players.values()]
   .sort((a, b) => score(b) - score(a) || b.kills - a.kills || b.bounty - a.bounty);
 
@@ -47,9 +48,11 @@ export const MODES = {
         sim.setTarget(alive[Math.floor(sim.rand() * alive.length)]);
       } else t.score += DT;
     },
+    // every KO scores a point; taking down the target scores 3 and makes you the target
     onKill: (sim, v, k) => {
-      if (v.id !== sim.targetId) return;
-      if (k && k !== v && k.alive) { k.score += 3; sim.setTarget(k); } else sim.targetId = 0;
+      const byHunter = k && k !== v && k.alive;
+      if (v.id !== sim.targetId) { if (byHunter) k.score += HUNTED_KO; return; }
+      if (byHunter) { k.score += HUNTED_TARGET_KO; sim.setTarget(k); } else sim.targetId = 0;
     },
     score: (p) => Math.floor(p.score),
     checkEnd: (sim) => sim.time >= 150,
@@ -74,7 +77,7 @@ export const MODES = {
       }
       // holder of 10+ (and the most) starts the countdown
       let best = null;
-      for (const p of sim.players.values()) if (p.alive && p.crystals >= 10 && (!best || p.crystals > best.crystals)) best = p;
+      for (const p of sim.players.values()) if (p.alive && p.crystals >= 10 && (!best || p.crystals > best.crystals || (p.crystals === best.crystals && p.id === sim.holdId))) best = p; // a tie keeps the current holder
       if (best && best.id === sim.holdId) sim.holdT -= DT;
       else if (best) { sim.holdId = best.id; sim.holdT = 10; }
       else { sim.holdId = 0; sim.holdT = 0; }
@@ -100,7 +103,8 @@ export const MODES = {
   },
 
   squad: {
-    name: 'Squad Hunt', desc: '3v3! Kills fill your team pot. Highest pot after 3:00 wins.', respawn: true, quick: true, teams: true, maxPlayers: 6, timeLimit: 180,
+    // noRandom: Quick Hunt is the 10-player free-for-all events; Squad is picked from the mode list
+    name: 'Squad Hunt', desc: '3v3! Kills fill your team pot. Highest pot after 3:00 wins.', respawn: true, quick: true, noRandom: true, teams: true, maxPlayers: 6, timeLimit: 180,
     score: (p) => p.bountyEarned,
     // winning team first (by pot), then each player's bounty earned
     rank: (sim) => [...sim.players.values()].sort((a, b) => (sim.teamPot[b.team] - sim.teamPot[a.team]) || (a.team - b.team) || (b.bountyEarned - a.bountyEarned) || (b.kills - a.kills)),
@@ -115,6 +119,7 @@ export const MODES = {
 
   freeplay: {
     name: 'Free Play', desc: 'Drop-in open world.', respawn: true, hub: true,
+    cubeCap: 10, // a zone never ends, so power cubes are capped (about a long Showdown's worth)
     checkEnd: () => false,
     score: (p) => p.bounty,
   },
@@ -158,6 +163,6 @@ MODES.range = {
 };
 
 export const QUICK_MODES = Object.keys(MODES).filter((k) => MODES[k].quick);
-// the "any mode" pool for Quick Hunt (Big Hunt is only played when picked)
+// the "any mode" pool for Quick Hunt (Big Hunt and Squad Hunt are only played when picked)
 export const RANDOM_MODES = QUICK_MODES.filter((k) => !MODES[k].noRandom);
 export const playersFor = (mode) => (MODES[mode] && MODES[mode].maxPlayers) || 10;
