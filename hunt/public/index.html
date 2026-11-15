@@ -6,15 +6,119 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#2b1d55">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hunt">
+<meta name="application-name" content="Hunt">
+<meta name="description" content="Hunt: a fast top-down brawler. Pick a hunter and play in seconds.">
 <title>Hunt</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<!-- The splash is styled here, not in a stylesheet, so it paints at once and survives any failed download. -->
+<style>
+html, body { margin: 0; height: 100%; background: #150b24; }
+#splash { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: min(3vh, 18px); box-sizing: border-box;
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(34px, calc(env(safe-area-inset-bottom) + 30px)) max(16px, env(safe-area-inset-left));
+  background: radial-gradient(circle at 50% 42%, #3a2380 0%, #2c1846 38%, #150b24 78%); color: #fff; text-align: center;
+  font-family: "Lilita One", "Arial Black", "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif; -webkit-user-select: none; user-select: none; }
+#splash .sp-mark { width: min(34vmin, 190px); height: min(34vmin, 190px); display: block; }
+#splash .sp-word { margin: 0; font-weight: 400; font-size: min(22vmin, 120px); line-height: .9; letter-spacing: .06em; color: #ffd23f; -webkit-text-stroke: min(1.6vmin, 8px) #12091e; paint-order: stroke fill; text-shadow: 0 min(1.2vmin, 7px) 0 #12091e; }
+#splash .sp-dots { display: flex; gap: 10px; height: 16px; align-items: center; }
+#splash .sp-dots i { width: 12px; height: 12px; border-radius: 50%; background: #ffd23f; box-shadow: 0 0 0 3px #12091e; animation: sp-hop .9s ease-in-out infinite; }
+#splash .sp-dots i:nth-child(2) { animation-delay: .15s; }
+#splash .sp-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes sp-hop { 0%, 60%, 100% { transform: translateY(0); opacity: .55; } 30% { transform: translateY(-9px); opacity: 1; } }
+#splash .sp-ring { transform-origin: 60px 60px; animation: sp-turn 6s linear infinite; }
+@keyframes sp-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #splash .sp-dots i, #splash .sp-ring { animation: none; opacity: 1; } }
+#splash .sp-fail { display: none; flex-direction: column; align-items: center; gap: min(2.4vh, 14px); max-width: 30em; }
+#splash.fail .sp-fail, #splash.slow .sp-fail { display: flex; }
+#splash.fail .sp-dots { display: none; }
+#splash.fail .sp-mark, #splash.slow .sp-mark { width: min(18vmin, 96px); height: min(18vmin, 96px); }
+#splash.fail .sp-word, #splash.slow .sp-word { font-size: min(13vmin, 64px); }
+#splash .sp-title { margin: 0; font-weight: 400; font-size: clamp(20px, 5.2vmin, 30px); line-height: 1.1; -webkit-text-stroke: 4px #12091e; paint-order: stroke fill; }
+#splash .sp-hint { margin: 0; font: 700 clamp(13px, 3.4vmin, 16px)/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; color: #c4b4dc; }
+#splash .sp-t-slow, #splash.slow .sp-t-fail { display: none; }
+#splash.slow .sp-t-slow { display: inline; }
+#splashReload { font: inherit; font-size: clamp(22px, 6vmin, 32px); line-height: 1; color: #12091e; background: #ffd23f; border: 4px solid #12091e; border-radius: 18px; box-shadow: 0 5px 0 #12091e; padding: .45em 1.5em; min-height: 56px; cursor: pointer; touch-action: manipulation; }
+#splashReload:active { transform: translateY(4px); box-shadow: 0 1px 0 #12091e; }
+#splash .sp-credit { position: absolute; left: 0; right: 0; bottom: max(8px, env(safe-area-inset-bottom)); font-size: 13px; color: #ffd23f; text-shadow: 0 1px 0 #12091e, 0 0 3px #12091e; letter-spacing: .02em; }
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
+<!-- the web font must never hold up the first paint or the game: it loads on the side and swaps in -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap"></noscript>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="ui/tokens.css">
 <link rel="stylesheet" href="ui/lobby.css">
 </head>
 <body>
+<!-- Shown until game.js has drawn the lobby. Plain HTML + CSS: it needs no module to appear. -->
+<div id="splash" role="status" aria-live="polite">
+  <svg class="sp-mark" viewBox="0 0 120 120" aria-hidden="true">
+    <g class="sp-ring" fill="none" stroke-linecap="round">
+      <circle cx="60" cy="60" r="44" stroke="#12091e" stroke-width="15"/>
+      <circle cx="60" cy="60" r="44" stroke="#ffd23f" stroke-width="7" stroke-dasharray="52 17.1"/>
+      <path d="M60 4v22M60 94v22M4 60h22M94 60h22" stroke="#12091e" stroke-width="15"/>
+      <path d="M60 4v22M60 94v22M4 60h22M94 60h22" stroke="#ffd23f" stroke-width="7"/>
+    </g>
+    <path d="M60 30 82 46 74 80 60 90 46 80 38 46Z" fill="#e0283f" stroke="#12091e" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M48 54l9 5-2 6-9-4zM72 54l-9 5 2 6 9-4z" fill="#ffd23f" stroke="#12091e" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M52 74l4 7 4-6 4 6 4-7" fill="none" stroke="#12091e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <h1 class="sp-word">HUNT</h1>
+  <div class="sp-dots" aria-label="Loading"><i></i><i></i><i></i></div>
+  <div class="sp-fail" id="splashFail">
+    <p class="sp-title"><span class="sp-t-fail">Could not load the game</span><span class="sp-t-slow">Still loading…</span></p>
+    <p class="sp-hint"><span class="sp-t-fail">Check your connection, then tap Reload.</span><span class="sp-t-slow">This is taking a while. Check your connection, or tap Reload to try again.</span></p>
+    <button id="splashReload" type="button">RELOAD</button>
+  </div>
+  <div class="sp-credit">Created by Sam Eyde III</div>
+</div>
+<script>
+// Boot watchdog (a classic script on purpose: it must work when the game's modules do not).
+// If a module fails to load or link, or nothing has shown up after 10 seconds, the splash turns
+// into a panel with a RELOAD button. game.js calls __boot.done() once the lobby is up.
+(function () {
+  var done = false, state = '', RETRY = 'hunt-boot-retry';
+  var splash = document.getElementById('splash');
+  function reload() {
+    // a fresh query string makes the browser fetch the page again instead of reusing a cached copy
+    try { var u = new URL(location.href); u.searchParams.set('r', Date.now().toString(36)); location.replace(u.href); }
+    catch (e) { location.reload(); }
+  }
+  function fail(kind) {
+    if (done || state === 'fail' || state === kind) return;
+    state = kind;
+    if (kind === 'fail') {
+      // a broken load is often a deploy landing mid-download: try once more by itself, then ask
+      try {
+        var last = +sessionStorage.getItem(RETRY) || 0;
+        if (Date.now() - last > 60000) { sessionStorage.setItem(RETRY, String(Date.now())); reload(); return; }
+      } catch (e) {}
+    }
+    splash.classList.remove('slow'); splash.classList.add(kind);
+  }
+  var timer = setTimeout(function () { fail('slow'); }, 10000);
+  // capture phase: a module that cannot be fetched fires 'error' on its <script>, which does not bubble
+  addEventListener('error', function (e) {
+    var t = e.target;
+    if (t === window || (t && t.tagName === 'SCRIPT')) fail('fail');
+  }, true);
+  addEventListener('unhandledrejection', function () { fail('fail'); });
+  document.getElementById('splashReload').onclick = reload;
+  window.__boot = {
+    reload: reload,
+    done: function () {
+      if (done) return;
+      done = true; clearTimeout(timer);
+      try { sessionStorage.removeItem(RETRY); } catch (e) {}
+      if (splash.parentNode) splash.parentNode.removeChild(splash);
+    }
+  };
+})();
+</script>
 <canvas id="game"></canvas>
 
 <div id="hud" hidden>
@@ -68,6 +172,11 @@
 <div id="creditGame">Created by Sam Eyde III</div>
 <div id="rotate"><div>↻</div><p>Rotate your phone to landscape</p></div>
 <div id="toast" hidden></div>
+<!-- lobby notices: a newer version is live / progress can't be saved right now -->
+<div id="notes">
+  <div class="note warn" id="saveNote" role="status" hidden>Progress will not be saved right now</div>
+  <div class="note" id="updateNote" role="status" hidden><span>New version ready</span><button id="updateBtn" type="button">RELOAD</button></div>
+</div>
 
 <script type="module" src="game.js"></script>
 </body>
