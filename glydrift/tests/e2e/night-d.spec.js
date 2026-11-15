@@ -60,7 +60,7 @@ test("website footer: the copyright line stays beside the game, never over it @s
     return { right: c.right, left: r.left, legalRight: r.right, vw: innerWidth, text: e.textContent, shown: getComputedStyle(e).display !== "none" && r.width > 0 };
   });
   expect(f.shown).toBe(true);
-  expect(f.text).toContain("© 2026 Sam Eyde III. All rights reserved.");
+  expect(f.text).toContain("© 2026 Gleyde Technologies, LLC. All rights reserved.");
   expect(f.left).toBeGreaterThanOrEqual(f.right); // in the side area, right of the game frame
   expect(f.legalRight).toBeLessThanOrEqual(f.vw);
   expect(log.errors).toEqual([]);

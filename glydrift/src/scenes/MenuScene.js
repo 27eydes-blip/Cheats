@@ -1,7 +1,7 @@
 // Title screen: dimmed living background, the selected hero flying a figure-eight, a big
 // ENDLESS button, LEVELS (level mode, which replaced the Daily Challenge), four main buttons
 // (Heroes, Shop, Leaderboard, Settings) and one MORE sheet holding everything else.
-import { COPYRIGHT, CREATED_BY, CREATOR_ROLE } from "../legal.js";
+import { COPYRIGHT, CREATOR_ROLE, HOME_CREDIT, PUBLISHED_BY } from "../legal.js";
 import Phaser from "phaser";
 import { BIOMES, biomeIndex, biomeStateAt, blendPalette, CLASSIC } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, FONT, NUM_FONT, VIEW } from "../config.js";
@@ -410,8 +410,8 @@ export class MenuScene extends Phaser.Scene {
     });
     // the news ticker at the very bottom
     this.buildTicker(L.ticker);
-    // the creator credit: a small, quiet line under MORE (NEVER remove or hide it)
-    this.creditText = plainText(this, W / 2, L.credit, CREATED_BY, 14, "#a89ed8")
+    // the publisher + creator credit: a small, quiet line under MORE (NEVER remove or hide it)
+    this.creditText = plainText(this, W / 2, L.credit, HOME_CREDIT, 14, "#a89ed8")
       .setAlpha(0.85)
       .setDepth(100)
       .setName("creatorCredit");
@@ -769,7 +769,7 @@ export class MenuScene extends Phaser.Scene {
       ["daily", 86],
       ["row", 76],
       ["more", 58],
-      ["credit", 18], // "Created by Sam Eyde III" (never remove: tests/e2e/credit.spec.js)
+      ["credit", 18], // "Gleyde Technologies, LLC · Created by Sam Eyde III" (never remove: tests/e2e/credit.spec.js)
     ];
     const fixed = blocks.reduce((a, b) => a + b[1], 0);
     const n = blocks.length;
@@ -1871,21 +1871,23 @@ export class MenuScene extends Phaser.Scene {
         onClick: () => openSite("support"),
       }),
     ]);
-    // CREDITS: the creator and the copyright (NEVER remove or hide: tests/e2e/credit.spec.js)
+    // CREDITS: the publisher, the creator and the copyright (NEVER remove or hide:
+    // tests/e2e/credit.spec.js)
     const cy = linksY + 76;
     const credits = this.add.container(0, 0).setName("creditsSection");
     const cg = this.add.graphics();
-    cg.lineStyle(1, 0xbfb6e8, 0.35).lineBetween(W / 2 - 150, cy - 40, W / 2 + 150, cy - 40);
+    cg.lineStyle(1, 0xbfb6e8, 0.35).lineBetween(W / 2 - 150, cy - 48, W / 2 + 150, cy - 48);
     credits.add([
       cg,
-      plainText(this, W / 2, cy - 22, "Glydrift", 17, "#e8fdff"),
-      plainText(this, W / 2, cy, CREATOR_ROLE, 15, "#d8d0ff"),
-      plainText(this, W / 2, cy + 22, COPYRIGHT, 14, "#a89ed8"),
+      plainText(this, W / 2, cy - 32, "Glydrift", 17, "#e8fdff"),
+      plainText(this, W / 2, cy - 12, PUBLISHED_BY, 14, "#d8d0ff"),
+      plainText(this, W / 2, cy + 8, CREATOR_ROLE, 15, "#d8d0ff"),
+      plainText(this, W / 2, cy + 28, COPYRIGHT, 14, "#a89ed8"),
     ]);
     c.add(credits);
     // the support address, readable in the app itself (App Review: a way to reach the developer);
     // tapping it starts an email
-    const mail = plainText(this, W / 2, cy + 50, SUPPORT_EMAIL, 15, "#3ef4ff").setName("supportEmail");
+    const mail = plainText(this, W / 2, cy + 54, SUPPORT_EMAIL, 15, "#3ef4ff").setName("supportEmail");
     // (a roomier tap area than the text itself, still clear of DONE)
     mail
       .setInteractive({
