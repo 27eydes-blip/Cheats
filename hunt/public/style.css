@@ -256,3 +256,5 @@ button.big.leave { background: var(--red); color: #fff; }
    hub panel left (under the minimap): neither sits on a stick */
 body.lefty #leader { left: auto; right: max(10px, env(safe-area-inset-right)); }
 body.lefty #hubPanel { right: auto; left: max(10px, env(safe-area-inset-left)); top: calc(max(8px, env(safe-area-inset-top)) + 36px + min(128px, 30vh) + 12px); }
+/* short phones: the big event / mode banner stays one compact block above your hunter's nameplate */
+@media (max-height: 430px) { #evBanner:not(.small) { top: 19%; width: max-content; max-width: 94vw; } #evBanner:not(.small) .evName { font-size: 24px; } #evBanner:not(.small) .evDesc { font-size: 13px; } }
