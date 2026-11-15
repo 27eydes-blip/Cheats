@@ -42,6 +42,26 @@ Every city also has spikes, gaps, low ceilings, floating walls (glide over) and 
 - **Launch pads** (from New York): a spring pad in front of a tower too tall to jump. Run onto the pad and it throws you over; jump over the pad and you hit the tower.
 The level generator simulates the real jump and glide physics for every obstacle, including moving ones, so every layout can be cleared.
 
+## Skins
+Volt has a skin for every stop, plus the classic look. The first time you reach a stop in a real run, its skin unlocks ("NEW SKIN!"). Open the **LOCKER ROOM** in the lobby to see them all (locked ones show as shadows with where to unlock them) and tap one to wear it. The glide trail and crash feathers match the skin.
+| Stop | Skin |
+|---|---|
+| (start) | Volt, the classic blue |
+| The Airport | Jet Pilot: navy with a pilot's cap |
+| Paris | Café: lavender with a black beret |
+| New York | Taxi: yellow with a checker stripe |
+| Tokyo | Neon: pink and cyan with a headband |
+| London | Royal Guard: red with a tall black hat |
+| Seoul | K-Pop Star: lavender with pink headphones and a star |
+| Sydney | Surfer: teal with sunglasses |
+| Moscow | Frost: icy white with a fur hat |
+| Seattle | Rain Ranger: green with a yellow rain hat |
+| Cairo | Desert Sun: sand gold with sunglasses |
+| Venice | Gondolier: navy and white stripes with a straw boater |
+| Rio de Janeiro | Carnival: green with a feather crown |
+| Dubai | Golden: gold with a crown |
+Unlocked skins and the one you're wearing are saved on the device (`glydaway.skins`, `glydaway.skin`). Autopilot runs don't unlock skins; `?allskins` shows every skin for testing without saving them.
+
 ## Power-ups
 One sits on the ground in a clear stretch roughly every 280–460 m (the first at 140–220 m). Run into it.
 | Power-up | What it does |
