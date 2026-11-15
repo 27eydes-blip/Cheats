@@ -1,6 +1,7 @@
 # Glydrift: Authorship
 
-© 2026 Sam Eyde III. All rights reserved.
+© 2026 Gleyde Technologies, LLC. All rights reserved.
+Published by Gleyde Technologies, LLC. Created by Sam Eyde III.
 
 Glydrift was created by **Sam Eyde III**. Sam came up with the game, named it, designed its
 characters and worlds, and directed every feature, change and fix. The code and the pixel art
@@ -194,4 +195,4 @@ reggae soundtrack** that plays as one continuous mix.
 
 ---
 
-© 2026 Sam Eyde III. All rights reserved.
+© 2026 Gleyde Technologies, LLC. All rights reserved.
