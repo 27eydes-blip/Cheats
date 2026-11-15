@@ -1,5 +1,5 @@
 // E2E suite. Runs against `wrangler dev`. Browser projects are included only if that browser
-// is installed (this CI box ships Chromium only; Firefox/WebKit run wherever they're installed).
+// is installed. WebKit is the closest stand-in for iPhone Safari: `--project=webkit` runs it alone.
 import { defineConfig, devices } from '@playwright/test';
 import fs from 'node:fs';
 
