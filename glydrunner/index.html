@@ -486,7 +486,7 @@ const BIOME_MIX = {
   frozen: { icicle: 2.6 }, storm: { bolt: 2.6 }, solar: { vent: 2.6 }, tidal: { gap: 1.8, glideGap: 2.2, mesa: 1.6 },
   prism: { orb: 2, ball: 2 },
 };
-const unlockM = id => FIRST_LAP.indexOf(BIOMES.findIndex(b => b.id === id)) * BIOME_M; // a hazard appears once its biome has
+const unlockM = id => segStartM(FIRST_LAP.indexOf(BIOMES.findIndex(b => b.id === id))); // a hazard appears once its biome has
 
 // ===== World constants (virtual units; the world is 360 units tall) =====
 const WORLD_H = 360, GROUND = 290, MIN_VIEW_W = 420;
@@ -494,7 +494,12 @@ const G = 1900, JUMP_V = 620, MAX_FALL = 950;
 const GLIDE_FALL = 70, GLIDE_BRAKE = 2600, GLIDE_TIME = 1.3, GLIDE_REFILL = 0.7;
 const COYOTE = 0.09, BUFFER = 0.13;
 const SPEED0 = 280, SPEED_MAX = 600, SPEED_ACC = 3.5, MENU_SPEED = 320;
-const UNITS_PER_M = 40, BIOME_M = 500, BIOME_UNITS = BIOME_M * UNITS_PER_M;
+const UNITS_PER_M = 40;
+// Biome length: 350 m while the run is still speeding up (top speed arrives about 1000 m in),
+// then 500 m, so each biome lasts roughly 25-40 s whatever the speed.
+const BIOME_SLOW_M = 350, BIOME_FAST_M = 500, SLOW_SEGS = 3, SLOW_END_M = BIOME_SLOW_M * SLOW_SEGS;
+const segStartM = n => (n <= SLOW_SEGS ? n * BIOME_SLOW_M : SLOW_END_M + (n - SLOW_SEGS) * BIOME_FAST_M);
+const segAtM = m => (m < SLOW_END_M ? Math.floor(Math.max(0, m) / BIOME_SLOW_M) : SLOW_SEGS + Math.floor((m - SLOW_END_M) / BIOME_FAST_M));
 const HB = { w: 11, top: 24, bot: 2 };
 const SPIKE_W = 26, SPIKE_H = 30;
 const CEIL_HB = GROUND - 46, CEIL_ROCK = GROUND - 58;
@@ -1114,7 +1119,7 @@ function resetWorld(speed) {
   bot.hold = false; bot.target = null; coinChain = 0;
   for (const p of particles) p.life = 0;
 }
-// Biome of the n-th 500 m stretch: the fixed first lap, then shuffled laps (never the same
+// Biome of the n-th stretch: the fixed first lap, then shuffled laps (never the same
 // biome twice in a row).
 function seqBiome(n) {
   while (S.seq.length <= n) {
@@ -1125,7 +1130,7 @@ function seqBiome(n) {
   }
   return S.seq[n];
 }
-const segAt = x => Math.floor(Math.max(0, x - S.bx) / BIOME_UNITS);
+const segAt = x => segAtM((x - S.bx) / UNITS_PER_M);
 const biomeAtX = x => seqBiome(segAt(x));
 
 // Time (and speed) until the bird has run `dx` more units. Horizontal motion never depends
@@ -1385,7 +1390,7 @@ function gameOver() {
   if (!BOT_PLAY && m > 0) LB.submitRun({ distance: m, coins: S.coins, run_time_ms: Math.round(S.time * 1000) });
   $('overDist').textContent = m; $('overCoins').textContent = S.coins; $('overBest').textContent = best.m;
   $('newBest').innerHTML = isBest && m > 0 ? '<span class="newbest">NEW BEST!</span>' : '';
-  $('overBiome').textContent = 'Reached ' + BIOMES[seqBiome(Math.floor(m / BIOME_M))].name;
+  $('overBiome').textContent = 'Reached ' + BIOMES[seqBiome(segAtM(m))].name;
   $('hud').classList.remove('show');
   showScreen('over');
 }
@@ -1743,7 +1748,7 @@ function step(dt) {
   while (S.cursor < S.dist + view.w + 600) spawnNext();
 
   // the biome changes as the bird crosses each 1000 m line
-  const bIdx = seqBiome(Math.floor(S.dist / BIOME_UNITS));
+  const bIdx = seqBiome(segAtM(S.dist / UNITS_PER_M));
   if (bIdx !== S.biome) {
     S.biomePrev = S.biome; S.biome = bIdx; S.biomeMix = 0;
     if (S.mode === 'play') { showBanner(bIdx); sfx.biome(); S.flash = 0.25; Music.play(BIOMES[bIdx].id); }
@@ -2056,7 +2061,7 @@ function drawGroundSeg(x1, x2) {
   // split at biome boundaries so the terrain changes exactly at each 1000 m line
   while (x1 < x2) {
     const bi = biomeAtX(x1 + 0.01);
-    const bEnd = S.bx + (Math.floor((x1 + 0.01 - S.bx) / BIOME_UNITS) + 1) * BIOME_UNITS;
+    const bEnd = S.bx + segStartM(segAt(x1 + 0.01) + 1) * UNITS_PER_M;
     const e = Math.min(x2, Math.max(bEnd, x1 + 1));
     drawGroundPart(x1, e, bi); x1 = e;
   }

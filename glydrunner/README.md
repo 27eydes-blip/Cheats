@@ -13,8 +13,8 @@ An endless side-scrolling runner spin-off of **Glydrift**, starring Volt the Sto
 | Retry | Tap anywhere once the crash screen shows (taps in the first 0.6 s are ignored) | Space |
 | Mute | Pause menu | M |
 
-## Biomes (a new one every 500 m)
-The first lap visits all ten in this order, each adding its hazard. After The Void, every lap is a fresh shuffle (never the same biome twice in a row), so long runs don't repeat.
+## Biomes (a new one every 350 m while you speed up, then every 500 m)
+The first three biomes are 350 m long (the run reaches top speed about 1000 m in), every later one 500 m, so each lasts roughly 25–40 s. The first lap visits all ten in this order, each adding its hazard. After The Void, every lap is a fresh shuffle (never the same biome twice in a row), so long runs don't repeat.
 | Order | Biome | Signature hazard |
 |---|---|---|
 | 1 | Sky Meadow | **Thorn seeds** roll toward you. Jump them. |
