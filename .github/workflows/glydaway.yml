@@ -35,6 +35,8 @@ jobs:
           npx playwright install --with-deps webkit chromium firefox
       - name: Credit checks
         run: node tests/credits.test.mjs
+      - name: App icon checks
+        run: node tests/icon.test.mjs
       - name: Home screen, tutorial and takeoff (phones, iPad, both orientations, 3 engines)
         run: node tests/home.test.cjs
 
@@ -68,7 +70,7 @@ jobs:
           node-version: 22
       - name: Build (the game is one file)
         if: steps.fresh.outputs.ok == 'true'
-        run: rm -rf dist && mkdir dist && cp index.html dist/
+        run: rm -rf dist && mkdir -p dist/icons && cp index.html dist/ && cp icons/*.png dist/icons/
       - name: Deploy to Cloudflare Pages
         if: steps.fresh.outputs.ok == 'true'
         run: |

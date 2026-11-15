@@ -140,10 +140,20 @@ The publisher credit and the "Created by Sam Eyde III" line appear on the splash
 © 2026 Gleyde Technologies, LLC. All rights reserved.
 
 ## Deploying (glydaway.com)
-Glydaway is its own Cloudflare Pages project, `glydaway` (custom domain glydaway.com, also glydaway.pages.dev). It serves only `index.html`; the config is in `wrangler.jsonc`.
+Glydaway is its own Cloudflare Pages project, `glydaway` (custom domain glydaway.com, also glydaway.pages.dev). It serves `index.html` and the app icons in `icons/`; the config is in `wrangler.jsonc`.
 
-Every push to `main` that changes `glydaway/` runs `.github/workflows/glydaway.yml`. It runs the tests (`tests/credits.test.mjs` and `tests/home.test.cjs` on WebKit, Chromium and Firefox) and deploys only if they pass, using the repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. To deploy by hand from this folder:
+Every push to `main` that changes `glydaway/` runs `.github/workflows/glydaway.yml`. It runs the tests (`tests/credits.test.mjs`, `tests/icon.test.mjs` and `tests/home.test.cjs` on WebKit, Chromium and Firefox) and deploys only if they pass, using the repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. To deploy by hand from this folder:
 
 ```sh
-rm -rf dist && mkdir dist && cp index.html dist/ && npx wrangler pages deploy dist --project-name=glydaway --branch=main
+rm -rf dist && mkdir -p dist/icons && cp index.html dist/ && cp icons/*.png dist/icons/ && npx wrangler pages deploy dist --project-name=glydaway --branch=main
 ```
+
+## App icon
+`icons/` holds the app icon:
+- `icon-1024.png`: App Store, opaque, square corners (Apple rounds them)
+- `icon-180.png`, `icon-120.png` and `icon-60.png`
+- `favicon-512.png`: the website favicon
+
+The site uses `favicon-512.png` as its favicon and `icon-180.png` as the iPhone home-screen icon.
+
+The art is a 48x48 pixel grid. The bird is Glydrift's own Volt, taken from Glydrift's icon (`icons/source/volt-glydrift-32.png`) and tilted into a glide. To regenerate everything, run `python3 glydaway/scripts/make-icon.py` (needs Pillow and numpy).
