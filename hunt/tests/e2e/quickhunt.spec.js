@@ -5,8 +5,12 @@ test('?world= drops straight into an arena match with bots', async ({ page }) =>
   const errors = trackErrors(page);
   await page.goto('/?world=mirage&mode=bounty');
   await waitMe(page);
-  const s = await page.evaluate(() => ({ world: window.__hunt.world, mode: window.__hunt.modeKey, others: window.__hunt.view.others.length }));
+  const s = await page.evaluate(() => ({ world: window.__hunt.world, mode: window.__hunt.modeKey }));
   expect(s.world).toBe('mirage'); expect(s.mode).toBe('bounty');
+  // "with bots": the match starts by itself and the roster is the player plus bots
+  await page.waitForFunction(() => window.__hunt.phase === 'play', null, { timeout: 30_000 });
+  const roster = await page.evaluate(() => Object.keys(window.__hunt.roster).length);
+  expect(roster).toBeGreaterThan(1);
   await page.keyboard.down('d'); await page.waitForTimeout(1500); await page.keyboard.up('d');
   expect(errors).toEqual([]);
 });
@@ -37,5 +41,6 @@ test('two clients in one room: one eliminates the other', async ({ baseURL }) =>
   }
   A.ws.close(); B.ws.close();
   expect(B.dead).toBeTruthy();
-  expect(['Hunter', 'the Poison']).toContain(B.dead.killer);
+  // it must be A's shots that did it: dying to the poison would mean no shot ever landed
+  expect(B.dead.killer).toBe('Hunter');
 });
