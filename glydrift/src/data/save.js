@@ -1,6 +1,7 @@
 // Local persistence. Everything lives in one JSON blob in localStorage; when wrapped with
 // Capacitor this can be swapped for @capacitor/preferences without touching callers.
 import { SPIN_MAX } from "../tuning.js";
+import { stripSwitchedOff } from "./heroSwitch.js";
 
 const KEY = "glydrift.save.v1";
 
@@ -59,6 +60,7 @@ function defaults() {
     cloudSync: null, // device-only: this device's last cloud sync (online/account.js)
     xpBoost: { mul: 1, runs: 0 }, // Drift Pass XP boost (runs left)
     seasons: {}, // per-season pass XP / claims, event progress, recap + new-hero flags
+    waspRefund: { owed: false, paid: false }, // WASP LORD switched off: his 55,000 coins back, once (waspRefund.js)
     revealed: {}, // hero id → its one-time cinematic unlock reveal has played (WASP LORD)
     pass: { xp: 0, claimed: {} }, // Drift Pass (free track) XP + claimed tiers // unused boosts were refunded as coins when boosts were removed
     login: { last: "", streak: 0, claimed: "" },
@@ -135,6 +137,7 @@ function repair(d) {
   d.unlocked.volt = true; // the starter hero is always there
   if (typeof d.selected !== "string" || !d.selected) d.selected = "volt";
   d.lbQueue = d.lbQueue.filter((q) => q && typeof q === "object");
+  stripSwitchedOff(d); // switched-off heroes (WASP LORD) leave the save; never a blank hero
   return d;
 }
 

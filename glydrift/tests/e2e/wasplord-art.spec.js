@@ -14,7 +14,7 @@ const phone = (testInfo) => test.skip(profileOf(testInfo) !== "iphone-std", "onc
 
 async function fly(page, extra = {}) {
   const log = await openGame(page, {
-    flags: ["god", "character=wasplord"],
+    flags: ["wasplord", "god", "character=wasplord"],
     save: { ...SAVE, unlocked: { volt: true, wasplord: true }, selected: "wasplord", ...extra },
   });
   await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Game", { mode: "normal" }));
@@ -204,7 +204,7 @@ test("WASP LORD in the shop: locked as ??? at 55,000 coins, buying him plays the
 }, testInfo) => {
   test.skip(!["iphone-std", "ipad-portrait"].includes(profileOf(testInfo)), "phone + iPad layouts");
   test.setTimeout(240_000);
-  const log = await openGame(page, { save: { ...SAVE, coins: 60000 } });
+  const log = await openGame(page, { flags: ["wasplord"], save: { ...SAVE, coins: 60000 } });
   const locked = await shopOnHim(page);
   expect(locked.first).toBe(true);
   expect(locked.price).toBe(55000); // coins only (no shards, no challenge)
@@ -299,7 +299,7 @@ test("WASP LORD: swapping onto him and off again leaves no objects, textures or 
 }, testInfo) => {
   phone(testInfo);
   test.setTimeout(240_000);
-  const log = await openGame(page, { save: { ...SAVE, unlocked: { volt: true, ember: true, wasplord: true } } });
+  const log = await openGame(page, { flags: ["wasplord"], save: { ...SAVE, unlocked: { volt: true, ember: true, wasplord: true } } });
   await page.evaluate(() => window.__glydrift.scene.getScene("Menu").scene.start("Characters"));
   await settle(page, "Characters", 1000);
   const pick = (id) =>

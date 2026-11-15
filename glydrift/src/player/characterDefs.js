@@ -1,6 +1,47 @@
 // Pure data for the character roster (no Phaser imports, safe to use in systems).
 import { ANIMALS } from "./animalDefs.js";
 import { PASS_HEROES } from "./passHeroDefs.js";
+import { HERO_SWITCHES } from "../data/heroSwitch.js";
+import { TEST } from "../systems/testFlags.js";
+
+/**
+ * WASP LORD, kept for a rebalanced return. Switched OFF (data/heroSwitch.js): he is not in
+ * CHARACTERS, so no shop, Heroes screen, locker, spin, reward or reveal can show him, and
+ * getCharacter("wasplord") gives the default hero.
+ */
+export const WASP_LORD = {
+  // WASP LORD (ILLEGAL LEGENDARY, the rarest rarity): an armoured war-wasp king with glowing
+  // red eyes. The most overpowered hero in the game; every power is in perks below.
+  id: "wasplord",
+  name: "WASP LORD",
+  title: "War-Wasp King",
+  rarity: "illegal",
+  color: 0x2a2a34,
+  color2: 0xff1a2a,
+  texture: "hero_wasplord",
+  pixel: {
+    atlas: "pxc",
+    frames: Array.from({ length: 8 }, (_, i) => `wasplord_${i}`),
+    mode: "wasp", // buzz, phase, shockwave, armour break (waspLordFx.js)
+    trail: [0xffffff, 0xff6a6a, 0xff1a2a, 0x5a0a10],
+  },
+  fx: {
+    death: [
+      { kind: "shard", color: 0x3a3a46, n: 22 },
+      { kind: "pixel", color: 0xff1a2a, n: 14 },
+      { kind: "pixel", color: 0xffd23f, n: 8 },
+    ],
+  },
+  scale: 0.62,
+  cost: 55000, // coins only
+  // a normal hero (standard speed, combo up to x10, no phasing) with a DOUBLE JUMP: a second
+  // tap within 0.25 s of a flap; once, ready again when he falls
+  doubleJump: { window: 0.25, boost: 1.45, cooldown: 0, resetOnFall: true },
+  perks: {
+    list: ["DOUBLE JUMP"],
+  },
+  desc: "Two flaps, no mercy.",
+};
 
 export const CHARACTERS = [
   {
@@ -1254,39 +1295,8 @@ export const CHARACTERS = [
     },
     desc: "Rides the storm.",
   },
-  {
-    // WASP LORD (ILLEGAL LEGENDARY, the rarest rarity): an armoured war-wasp king with glowing
-    // red eyes. The most overpowered hero in the game; every power is in perks below.
-    id: "wasplord",
-    name: "WASP LORD",
-    title: "War-Wasp King",
-    rarity: "illegal",
-    color: 0x2a2a34,
-    color2: 0xff1a2a,
-    texture: "hero_wasplord",
-    pixel: {
-      atlas: "pxc",
-      frames: Array.from({ length: 8 }, (_, i) => `wasplord_${i}`),
-      mode: "wasp", // buzz, phase, shockwave, armour break (waspLordFx.js)
-      trail: [0xffffff, 0xff6a6a, 0xff1a2a, 0x5a0a10],
-    },
-    fx: {
-      death: [
-        { kind: "shard", color: 0x3a3a46, n: 22 },
-        { kind: "pixel", color: 0xff1a2a, n: 14 },
-        { kind: "pixel", color: 0xffd23f, n: 8 },
-      ],
-    },
-    scale: 0.62,
-    cost: 55000, // coins only
-    // a normal hero (standard speed, combo up to x10, no phasing) with a DOUBLE JUMP: a second
-    // tap within 0.25 s of a flap; once, ready again when he falls
-    doubleJump: { window: 0.25, boost: 1.45, cooldown: 0, resetOnFall: true },
-    perks: {
-      list: ["DOUBLE JUMP"],
-    },
-    desc: "Two flaps, no mercy.",
-  },
+  // WASP LORD is switched off (data/heroSwitch.js): only listed while his switch is on
+  ...(HERO_SWITCHES.wasplord ? [WASP_LORD] : []),
   ...ANIMALS,
   ...PASS_HEROES,
 ];
@@ -1345,3 +1355,13 @@ function seasonMonth(now) {
 export function getCharacter(id) {
   return CHARACTERS.find((c) => c.id === id) || CHARACTERS[0];
 }
+
+// automated tests: which heroes the roster, the shop and the Lucky Spin can show
+if (TEST.on && typeof window !== "undefined")
+  window.__glyRoster = {
+    ids: () => CHARACTERS.map((c) => c.id),
+    lottery: () => LOTTERY_HEROES.map((c) => c.id),
+    visible: (unlocked) => visibleCharacters(unlocked).map((c) => c.id),
+    get: (id) => getCharacter(id).id,
+    rarities: () => [...new Set(CHARACTERS.map((c) => c.rarity))],
+  };

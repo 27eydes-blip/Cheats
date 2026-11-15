@@ -158,6 +158,13 @@ const supabaseBackend = {
     if (error) throw error;
     return true;
   },
+  /** WASP LORD's refund, decided by the server: "granted" once per account, then "already". */
+  async claimWaspRefund() {
+    const sb = await this.sb();
+    const { data, error } = await sb.rpc("glydrift_wasp_refund");
+    if (error) throw error;
+    return data;
+  },
   async deleteAccount() {
     const sb = await this.sb();
     const { error } = await sb.rpc("delete_my_account");
@@ -233,6 +240,18 @@ const mockBackend = {
   },
   async serverReady() {
     return !localStorage.getItem("glydrift.mockserver.notready");
+  },
+  // (tests list the accounts that owned WASP LORD in db.waspOwners, as the migration does)
+  async claimWaspRefund() {
+    const db = this.db();
+    const uid = db.session?.id;
+    if (!uid || db.session.anon) return "none";
+    if (!(db.waspOwners || []).includes(uid)) return "not_owner";
+    db.waspRefunds ||= {};
+    if (db.waspRefunds[uid]) return "already";
+    db.waspRefunds[uid] = (db.waspRefunds[uid] || 0) + 1;
+    this.put(db);
+    return "granted";
   },
   async deleteAccount() {
     const db = this.db();
@@ -366,6 +385,12 @@ class AccountService {
     } finally {
       this.quietWrite = false;
     }
+  }
+
+  /** WASP LORD's one-time refund for this account (see data/waspRefund.js). */
+  async claimWaspRefund() {
+    if (!this.signedIn) throw new AccountError("Not signed in", "auth");
+    return this.backend.claimWaspRefund();
   }
 
   schedulePush() {

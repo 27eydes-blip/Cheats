@@ -25,6 +25,7 @@ import { AllMighty } from "../data/allMighty.js";
 import { Titles } from "../data/titles.js";
 import { Account } from "../online/account.js";
 import { LbReset } from "../online/lbReset.js";
+import { WASP_REFUND_TEXT, WaspRefund } from "../data/waspRefund.js";
 import { CrashSafety } from "../systems/crashSafety.js";
 import { Updater } from "../systems/updater.js";
 import { isNativeApp, openMail, openSite, SUPPORT_EMAIL } from "../systems/platform.js";
@@ -417,6 +418,7 @@ export class MenuScene extends Phaser.Scene {
     this.seasonQueue.unshift(
       () => (!Leaderboard.username ? this.promptName(true) : null),
       () => this.maybeLbResetNotice(),
+      () => this.maybeWaspRefund(),
       () => {
         const ls = Progression.loginStatus();
         if (ls.canClaim) this.openLogin(ls);
@@ -1051,6 +1053,45 @@ export class MenuScene extends Phaser.Scene {
       if (this.leaving || !this.scene.isActive()) return;
     }
     return this.openLbResetNotice();
+  }
+
+  /** WASP LORD was switched off: his buyers get 55,000 coins back, once, with a short note. */
+  async maybeWaspRefund() {
+    if (!WaspRefund.pending()) return;
+    const res = await WaspRefund.settle();
+    if (res !== "paid" || this.leaving || !this.scene.isActive()) return;
+    this.coinCounter?.to(Save.data.coins, 800);
+    while (!this.popupFree()) {
+      await new Promise((r) => this.time.delayedCall(250, r));
+      if (this.leaving || !this.scene.isActive()) return;
+    }
+    return new Promise((resolve) => {
+      const W = this.W;
+      const H = this.H;
+      const h = 460;
+      const y0 = H / 2 - h / 2;
+      const c = this.modalBase(h, COIN_COLOR);
+      c.name = "waspRefund";
+      c.add(neonText(this, W / 2, y0 + 82, "REFUND", 40, COIN_COLOR, { blur: 14 }));
+      c.add(
+        plainText(this, W / 2, y0 + 196, WASP_REFUND_TEXT, 26, "#f1ebff", {
+          wrap: W - 160,
+          lineSpacing: 8,
+        }).setName("waspRefundText"),
+      );
+      Sfx.combo(3);
+      Haptics.light();
+      c.add(
+        button(this, W / 2, y0 + h - 78, 280, 84, "OK", {
+          color: 0x39ff88,
+          size: 32,
+          onClick: () => {
+            this.closeModal();
+            resolve();
+          },
+        }),
+      );
+    });
   }
 
   openLbResetNotice() {

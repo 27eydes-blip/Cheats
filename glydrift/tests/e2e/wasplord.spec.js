@@ -141,7 +141,7 @@ const REALMS = {
 
 test("WASP LORD: a normal hero now — walls kill him, standard speed, combo up to x10; double jump is his one power @smoke", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  const log = await openGame(page, { flags: ["character=wasplord"] });
+  const log = await openGame(page, { flags: ["wasplord", "character=wasplord"] });
   await startRun(page);
   const def = await page.evaluate(() => {
     const s = window.__glydrift.scene.getScene("Game");
@@ -159,7 +159,7 @@ test("WASP LORD: a normal hero now — walls kill him, standard speed, combo up 
 test("WASP LORD: the ground, the ceiling and leaving the screen end the run; retry @smoke", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   test.setTimeout(180_000);
-  const log = await openGame(page, { flags: ["character=wasplord"] });
+  const log = await openGame(page, { flags: ["wasplord", "character=wasplord"] });
   const edge = async (y) => {
     await startRun(page);
     const r = await page.evaluate((y) => {
@@ -194,7 +194,7 @@ test("WASP LORD: the ground, the ceiling and leaving the screen end the run; ret
 test("WASP LORD: double jump inside 0.25 s, once until he falls; MILZZZ unchanged @smoke", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   const jumps = async (id) => {
-    await openGame(page, { flags: ["god", `character=${id}`] });
+    await openGame(page, { flags: ["wasplord", "god", `character=${id}`] });
     await startRun(page);
     return page.evaluate(() => {
       const s = window.__glydrift.scene.getScene("Game");
@@ -269,7 +269,7 @@ test("WASP LORD: double jump inside 0.25 s, once until he falls; MILZZZ unchange
 
 test("WASP LORD: the ILLEGAL tag on his leaderboard rows — podium, list, your row — also from another device's data @smoke", async ({ page, browser }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  const log = await openGame(page, { flags: ["lbmock", "character=wasplord"] });
+  const log = await openGame(page, { flags: ["wasplord", "lbmock", "character=wasplord"] });
   // a finished run with him (the mock server remembers your row's hero, as the real one stores it)
   await page.evaluate(() =>
     window.__glyLb.Leaderboard.submitRun({ score: 1200, distance: 900, runTimeMs: 60_000, char: "wasplord", mode: "normal" }),
@@ -308,7 +308,7 @@ test("WASP LORD: the ILLEGAL tag on his leaderboard rows — podium, list, your 
   // someone else's score was set with WASP LORD
   const ctx = await browser.newContext({ ...testInfo.project.use });
   const other = await ctx.newPage();
-  const log2 = await openGame(other, { flags: ["lbmock"] });
+  const log2 = await openGame(other, { flags: ["wasplord", "lbmock"] });
   await other.evaluate(() => {
     const lb = window.__glyLb.Leaderboard;
     const real = lb.board.bind(lb);
@@ -330,7 +330,7 @@ test("WASP LORD: the ILLEGAL tag on his leaderboard rows — podium, list, your 
 
 test("WASP LORD: score checks allow his speed and x16 only on his rows (same rules as the server) @smoke", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  await openGame(page);
+  await openGame(page, { flags: ["wasplord", "wasplord"] });
   const r = await page.evaluate(() => {
     const { isPlausible } = window.__glyLb;
     const t = (character, score, distance, ms, level = "endless") => isPlausible({ level, score, distance, run_time_ms: ms, character });

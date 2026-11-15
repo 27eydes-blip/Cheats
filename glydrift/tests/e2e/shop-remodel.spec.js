@@ -59,7 +59,7 @@ const BEFORE = {
     ["hero", "dewberry", 4000, "coins"],
     ["hero", "tung", 12000, "coins"],
     ["hero", "newbleizer", 12000, "coins"], // (added after this list was captured: THE NEWBLEIZER, live since)
-    ["hero", "wasplord", 55000, "coins"], // (added after this list was captured: WASP LORD, ILLEGAL LEGENDARY)
+    // (WASP LORD, 55,000 coins, was here: switched off 15 Nov 2026, see data/heroSwitch.js)
     ["hero", "wallrunner", 10000, "coins"],
     ["hero", "manny", 5000, "coins"],
     ["hero", "milzzz", null, "LOCKED"],

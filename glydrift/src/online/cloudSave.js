@@ -9,6 +9,7 @@
 import { mergeLevelProgress } from "../levels/merge.js";
 import { PLUS_S1_LAYOUT, migratePlusClaimsS1 } from "../data/seasonDefs.js";
 import { SPIN_MAX } from "../tuning.js";
+import { stripSwitchedOff } from "../data/heroSwitch.js";
 
 /**
  * Spendable amounts. When both sides changed since they last synced (two devices playing in
@@ -168,6 +169,13 @@ export function mergeSaves(local, cloud, synced = null) {
   base.dailyDrop = later(base.dailyDrop, other.dailyDrop);
   base.perkDaily = later(base.perkDaily, other.perkDaily); // a hero's daily coin perk, too
   if (!base.profile?.username && other.profile?.username) base.profile = { ...other.profile };
+  // WASP LORD's refund: paid on either side is paid (never twice), owed on either side is owed
+  base.waspRefund = {
+    owed: !!(base.waspRefund?.owed || other.waspRefund?.owed),
+    paid: !!(base.waspRefund?.paid || other.waspRefund?.paid),
+  };
+  // switched-off heroes (WASP LORD) can't come back through the other side's save
+  stripSwitchedOff(base);
   // a selected hero / equipped item the merged save doesn't own falls back safely
   if (!base.unlocked[base.selected]) base.selected = "volt";
   // device-only parts always stay this device's

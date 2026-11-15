@@ -25,6 +25,27 @@ in the game (above Ultra Legendary).
 Sounds (all made with the game's own synth): low buzz on each flap, distorted "zzzt" when
 phasing, metallic boom on double jump, deep buzz-roar on unlock (and on a new best).
 
+
+## SWITCHED OFF (16 Nov 2026)
+
+He's out of the live game; his code and art stay for a rebalanced return.
+
+- **The switch:** `src/data/heroSwitch.js` (`HERO_SWITCHES.wasplord`, off) and, on the server,
+  `glydrift_hero_switches` (off). Off means: not in the roster, shop, Heroes screen, locker,
+  Lucky Spin, rewards or reveals; no ILLEGAL LEGENDARY anywhere; `getCharacter("wasplord")`
+  gives VOLT, so nobody can fly as him; the server rejects any score with hero `wasplord`.
+  Test builds can switch him on with `?wasplord` (his own tests use it).
+- **Owners:** on load the game removes him from the save, moves the selection to the hero they
+  flew most (else VOLT) and pays 55,000 coins back ONCE with the message "Wasp Lord has been
+  removed. Your 55,000 coins were refunded." Accounts are paid by the server
+  (`glydrift_wasp_refund()`, one row per account), so reloads, logging out and in, and second
+  devices can't pay twice; guests are paid on their own device once.
+- **Scores:** `supabase/migrations/20261116000001_wasp_lord_off.sql` archives every Wasp Lord score
+  in `glydrift_wasp_lord_archive`, removes them from every board, moves the ALL MIGHTY crown if
+  he held it, and adds the refund tables / function.
+- **To bring him back:** set `wasplord: true` in heroSwitch.js and run
+  `update public.glydrift_hero_switches set enabled = true where hero = 'wasplord';`
+
 ## His power (changed 15 Nov 2026: he's now a normal hero)
 WASP LORD flies like every other hero: **standard speed, combo up to x10, no phasing** (walls,
 pillars and every hazard kill him as they kill anyone). His one power:
