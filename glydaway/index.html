@@ -461,6 +461,12 @@ const HERO_ART = 1.45; // world units per art pixel for the hero (26 art px → 
 const DANGER = { red: '#ff2a3d', orange: '#ff6a1a', pink: '#ff2d78' };
 const BIOMES = [
   {
+    id: 'airport', name: 'THE AIRPORT', glow: '#ffe14d',
+    sky: ['#050a18', '#101c3a', '#2e3a6a'], horizon: 'rgba(255,225,77,0.16)',
+    danger: DANGER.pink, hazBody: '#1c0614', pit: ['#10141e', '#020306'],
+    ground: { line: '#e8e8e8', top: '#34363e', topHi: '#e8e8e8', body: '#202228', body2: '#26282f', speck: '#ffe14d' },
+  },
+  {
     id: 'paris', name: 'PARIS', glow: '#ffc83d',
     sky: ['#070b26', '#1e2456', '#b05a86'], horizon: 'rgba(255,200,61,0.18)',
     danger: DANGER.pink, hazBody: '#1c0614', pit: ['#0a1a3a', '#01040a'],
@@ -535,10 +541,10 @@ const BIOMES = [
 ];
 // The first lap visits every city in this order (each one adds a hazard); after that each lap
 // is a fresh shuffle, so long runs never repeat the same way.
-const FIRST_LAP = ['paris', 'nyc', 'tokyo', 'london', 'seoul', 'sydney', 'moscow', 'seattle', 'cairo', 'venice', 'rio', 'dubai'].map(id => BIOMES.findIndex(b => b.id === id));
+const FIRST_LAP = ['airport', 'paris', 'nyc', 'tokyo', 'london', 'seoul', 'sydney', 'moscow', 'seattle', 'cairo', 'venice', 'rio', 'dubai'].map(id => BIOMES.findIndex(b => b.id === id));
 // Hazards each city leans on (multipliers for the hazard mix).
 const BIOME_MIX = {
-  paris: { ball: 2.2 }, nyc: { mesa: 2.6 }, tokyo: { orb: 2.6 }, london: { ceiling: 2.4, wall: 1.8, crusher: 2.2 },
+  airport: { ball: 1.6 }, paris: { ball: 2.2 }, nyc: { mesa: 2.6 }, tokyo: { orb: 2.6 }, london: { ceiling: 2.4, wall: 1.8, crusher: 2.2 },
   seoul: { orb: 1.6, pad: 1.8, crusher: 1.3 }, sydney: { flip: 4, crusher: 1.3 },
   moscow: { icicle: 2.6 }, seattle: { bolt: 2.6 }, cairo: { vent: 2.6, crusher: 1.6 }, venice: { gap: 1.8, glideGap: 2.2, mesa: 1.6 },
   rio: { orb: 2, ball: 2, pad: 2 },
@@ -672,6 +678,34 @@ function boat(g, c, x, y, w) { for (let i = 0; i < w; i++) { const d = Math.abs(
 
 // ---- each city: a far sky, a background skyline, 3 skyline stretches with different landmarks, 2 street variants ----
 const CITY = {
+  airport: {
+    far(g, rnd) { paintStars(g, TILE_W, 150, rnd, 70, ['#ffffff', '#c8d8ff']); for (let k = 0; k < 3; k++) { const y = 60 + Math.floor(rnd() * 70), x = Math.floor(rnd() * TILE_W), w = 30 + Math.floor(rnd() * 40); fr(g, 'rgba(200,210,255,0.12)', x, y, w, 2); fr(g, 'rgba(200,210,255,0.12)', x - TILE_W, y, w, 2); } },
+    back(g, rnd) { skyline(g, rnd, { base: 90, minH: 8, maxH: 20, minW: 14, maxW: 26, body: '#121628', top: '#242a48', win: ['#ffe9b0'], chance: 0.2, gap: 30 }); },
+    tiles: [
+      g => { fr(g, '#3a3f52', 66, 30, 9, 60); for (let y = 34; y < 88; y += 5) fr(g, '#ffe9b0', 69, y, 3, 1); // control tower + terminal
+        fr(g, '#2a3042', 56, 20, 29, 10); fr(g, '#9fd8ff', 58, 22, 25, 5); for (let x = 60; x < 83; x += 4) fr(g, '#2a3042', x, 22, 1, 5); fr(g, '#2a3042', 59, 17, 23, 3); fr(g, '#3a3f52', 70, 6, 1, 11); fr(g, '#ff2a3d', 69, 4, 3, 2);
+        fr(g, '#1e2234', 120, 60, 136, 30); for (let y = 63; y < 88; y += 4) for (let x = 122; x < 254; x += 5) fr(g, (x + y) % 3 ? '#4a7ab0' : '#ffe9b0', x, y, 3, 2);
+        for (let x = 120; x < 256; x++) fr(g, '#c8d0e0', x, 60 - Math.round(4 * Math.sin(((x - 120) / 136) * Math.PI)), 1, 2); },
+      g => { fr(g, '#1e2234', 200, 52, 56, 38); for (let y = 56; y < 88; y += 4) for (let x = 202; x < 254; x += 5) fr(g, '#4a7ab0', x, y, 3, 2); // a jet at the gate
+        fr(g, '#5a6072', 150, 62, 50, 7); fr(g, '#3a4052', 150, 69, 4, 21);
+        ellipseFill(g, '#e8ecf4', 92, 72, 58, 6); fr(g, '#e8ecf4', 36, 70, 20, 4); for (let y = 0; y < 18; y++) fr(g, '#e8ecf4', 38 + Math.round(y * 0.5), 52 + y, 10 - Math.round(y * 0.3), 1); fr(g, '#3ef4ff', 40, 56, 6, 3);
+        for (let x = 60; x < 140; x += 4) fr(g, '#2a3a5a', x, 70, 2, 2); fr(g, '#2a3a5a', 142, 69, 5, 2); fr(g, '#c8ccd8', 70, 75, 50, 2); fr(g, '#8a90a0', 84, 77, 14, 4); fr(g, '#ff2a3d', 66, 76, 2, 1); fr(g, '#3ac84a', 118, 76, 2, 1);
+        fr(g, '#2a2c34', 70, 78, 2, 12); fr(g, '#2a2c34', 126, 78, 2, 12); },
+      g => { fr(g, '#262a3a', 40, 50, 120, 40); for (let x = 40; x < 160; x++) fr(g, '#3a4058', x, 50 - Math.round(14 * Math.sin(((x - 40) / 120) * Math.PI)), 1, 15); // a hangar + a small plane
+        fr(g, '#14182a', 54, 64, 92, 26); for (let x = 54; x < 146; x += 8) fr(g, '#22283e', x, 64, 1, 26); fr(g, '#ffe9b0', 60, 60, 80, 1);
+        ellipseFill(g, '#e8ecf4', 205, 80, 30, 4); for (let y = 0; y < 10; y++) fr(g, '#e8ecf4', 178 + Math.round(y * 0.4), 66 + y, 6, 1); fr(g, '#ffd23a', 190, 79, 34, 1); fr(g, '#c8ccd8', 196, 82, 22, 2); fr(g, '#2a2c34', 200, 84, 2, 6); fr(g, '#2a2c34', 222, 84, 2, 6); },
+    ],
+    near(g, rnd, k) {
+      fr(g, '#0c0e16', 0, 56, TILE_W, 4);
+      for (let x = 6; x < TILE_W; x += 18) { fr(g, '#0c0e16', x, 52, 1, 4); fr(g, x % 36 < 18 ? '#3a8aff' : '#ffffff', x - 1, 50, 3, 2); } // runway edge lights
+      if (k === 0) { fr(g, '#ffd23a', 20, 42, 16, 8); fr(g, '#0c0e16', 24, 38, 6, 4); fr(g, '#0c0e16', 22, 50, 4, 3); fr(g, '#0c0e16', 30, 50, 4, 3); // a baggage tug and its carts
+        const BC = ['#ff6a6a', '#3ef4ff', '#7dffc8', '#ffd23a', '#ff9ad5', '#b9a8ff'];
+        for (let c = 0; c < 3; c++) { const cx = 40 + c * 26; fr(g, '#5a6072', cx, 46, 22, 3); fr(g, '#0c0e16', cx + 2, 49, 3, 3); fr(g, '#0c0e16', cx + 17, 49, 3, 3); for (let s = 0; s < 3; s++) fr(g, BC[(c * 3 + s) % 6], cx + 2 + s * 7, 38 + (s % 2) * 2, 6, 8 - (s % 2) * 2); }
+        for (let c = 0; c < 2; c++) { const sx = 160 + c * 50; fr(g, '#0c0e16', sx, 22, 2, 30); fr(g, '#ffd23a', sx - 8, 16, 18, 8); fr(g, '#0c0e16', sx - 6, 19, 6, 2); fr(g, '#0c0e16', sx + 2, 18, 2, 4); } } // gate signs
+      else { fr(g, '#0c0e16', 40, 20, 2, 36); for (let i = 0; i < 5; i++) fr(g, i % 2 ? '#ffffff' : '#ff6a1a', 42 + i * 4, 20 + Math.round(i * 0.6), 4, 6 - i); // a windsock and a stair truck
+        fr(g, '#e8e8e8', 130, 42, 26, 8); fr(g, '#0c0e16', 134, 50, 4, 3); fr(g, '#0c0e16', 148, 50, 4, 3); for (let s = 0; s < 8; s++) fr(g, '#c8ccd8', 152 + s * 3, 40 - s * 3, 4, 2); fr(g, '#c8ccd8', 152, 18, 1, 22); }
+    },
+  },
   paris: {
     far(g, rnd) { paintStars(g, TILE_W, 150, rnd, 90, ['#ffffff', '#ffe9a0', '#b9a8ff']); for (let k = 0; k < 4; k++) { const y = 70 + Math.floor(rnd() * 60), x = Math.floor(rnd() * TILE_W), w = 24 + Math.floor(rnd() * 40); fr(g, 'rgba(255,170,200,0.18)', x, y, w, 2); fr(g, 'rgba(255,170,200,0.18)', x - TILE_W, y, w, 2); } },
     back(g, rnd) { skyline(g, rnd, { base: 90, minH: 16, maxH: 26, minW: 14, maxW: 22, body: '#1c1a3c', top: '#2c2a5a', win: ['#ffd27a', '#ffe9b0'], chance: 0.35 }); for (let x = 0; x < TILE_W; x += 18) fr(g, '#12102a', x, 60 + ((x * 7) % 5), 18, 6); },
@@ -958,7 +992,11 @@ function buildGroundTile(b) {
   x.fillStyle = g.body; x.fillRect(0, 0, 32, 32);
   const top = (h = 5) => { x.fillStyle = g.top; x.fillRect(0, 1, 32, h); x.fillStyle = g.topHi; x.fillRect(0, 1, 32, 1); };
   const id = b.id;
-  if (id === 'paris') { // cobblestones
+  if (id === 'airport') { // runway tarmac with markings
+    top(3); x.fillStyle = '#e8e8e8'; x.fillRect(2, 14, 12, 2); x.fillRect(18, 14, 12, 2);
+    x.fillStyle = '#ffe14d'; x.fillRect(0, 24, 32, 1);
+    for (let i = 0; i < 8; i++) { x.fillStyle = '#18191e'; x.fillRect(Math.floor(rnd() * 30), 5 + Math.floor(rnd() * 26), 2, 1); }
+  } else if (id === 'paris') { // cobblestones
     top(3);
     for (let r = 0; r < 6; r++) for (let k = 0; k < 5; k++) { const sx = k * 7 + (r % 2 ? 3 : 0) - 2, sy = 5 + r * 5; x.fillStyle = r % 2 ? '#3a3a56' : '#444466'; x.fillRect(sx, sy, 6, 4); x.fillStyle = '#5a5a7a'; x.fillRect(sx, sy, 6, 1); }
   } else if (id === 'nyc') { // sidewalk, curb and the street with a yellow lane line
@@ -1109,6 +1147,12 @@ const SONGS = {
   menu: { bpm: 92, steps: 16, root: 60, mode: 'major', prog: [0, 5, 3, 4],
     lead: { inst: 'epiano', vol: 0.05, oct: 12, bars: ['4---2---4-5-7---', '5---4---2-------', '3---4---5-4-2---', '1-------4-------'] },
     bass: { inst: 'btri', vol: 0.14, pat: 'R.......R...F...' }, pad: { inst: 'pad', vol: 0.012 }, drums: { k: 'x.......x.......', h: '..h...h...h...h.' } },
+  airportChime: { bpm: 96, steps: 16, root: 60, mode: 'major', prog: [0, 0], then: 'airport', // the boarding chime, then lounge jazz
+    lead: { inst: 'bell', vol: 0.08, oct: 12, bars: ['0---2---4-------', '................'] } },
+  airport: { bpm: 96, steps: 16, swing: 0.1, root: 60, mode: 'major', ext: 7, prog: [1, 4, 0, 0], intro: 'airportChime',
+    lead: { inst: 'flute', vol: 0.045, oct: 12, bars: ['4-5-6-4-2-------', '1-2-3-5-4-------', '2---4---6-5-4---', '4---------------'] },
+    bass: { inst: 'bupright', vol: 0.15, pat: 'W...W...W...W...' }, comp: { inst: 'epiano', vol: 0.02, pat: '..x..x....x..x..' },
+    drums: { k: 'x.......x.......', p: 'p.pp.pp.p.pp.pp.' } },
   paris: { bpm: 176, steps: 12, root: 53, mode: 'major', prog: [0, 0, 4, 4, 0, 0, 3, 4], // an accordion musette waltz
     lead: { inst: 'accordion', vol: 0.045, oct: 12, bars: ['7---6-5-4---', '2-------4---', '8---7-6-5---', '4-------6---', '5---4-5-6-7-', '9-------7---', '8-7-6-5-4-3-', '4-------0---'] },
     bass: { inst: 'btri', vol: 0.16, pat: ['R...........', 'F...........'] }, comp: { inst: 'accordion', vol: 0.016, pat: '....x...x...' }, drums: { p: 'p...p...p...' } },
@@ -1213,7 +1257,7 @@ const Music = {
     }
     return a;
   },
-  start(id) { const s = SONGS[id]; return s.intro ? SONGS[s.intro] : s; }, // a song with an intro (London's chime) plays that first
+  start(id) { const s = SONGS[id]; return s.intro ? SONGS[s.intro] : s; }, // a song with an intro (London's chime, the airport's boarding chime) plays that first
   /** Play a city's song: starts it now, or queues it for the next bar if music is already running. */
   play(id) {
     this.want = id;
@@ -2376,6 +2420,11 @@ function drawCelestial(bi, alpha) {
     ctx.fillStyle = '#ffe9a0'; ctx.beginPath(); ctx.arc(cx, cy, 20, 0, 6.283); ctx.fill();
     ctx.fillStyle = BIOMES[bi].sky[1]; ctx.beginPath(); ctx.arc(cx + 9, cy - 4, 18, 0, 6.283); ctx.fill();
     ctx.fillStyle = '#ffe9a0'; ctx.fillRect(cx + 28, cy - 18, 3, 3);
+  } else if (id === 'airport') { // a moon, and a jet crossing the sky with blinking lights
+    moon(cx, cy, 22, '#e8f0ff', 'rgba(200,215,255,0.1)');
+    const px = ((S.time * 45) % (view.w + 260)) - 130, py = cy + 40 - px * 0.08;
+    ctx.fillStyle = '#c8d0e0'; ctx.fillRect(px - 16, py - 1.5, 32, 3); ctx.fillRect(px - 4, py - 1, 10, 9); ctx.fillRect(px - 15, py - 6, 3, 5);
+    if (Math.floor(S.time * 2) % 2) { ctx.fillStyle = '#ff2a3d'; ctx.fillRect(px - 1, py + 7, 2, 2); ctx.fillStyle = '#ffffff'; ctx.fillRect(px + 15, py - 1, 2, 2); }
   } else if (id === 'tokyo') {
     moon(cx, cy, 30, '#ffe0f0', 'rgba(255,160,220,0.1)');
   } else if (id === 'moscow') {

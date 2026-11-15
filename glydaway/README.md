@@ -15,28 +15,29 @@ An endless side-scrolling runner spin-off of **Glydrift**, starring Volt the Sto
 | Volume | SETTINGS (start or pause screen): Sound effects and Music sliders | M mutes everything |
 
 ## Cities (a new one every 250 m while you speed up, then every 350 m)
-Each "biome" is a famous city, drawn in Glydrift's pixel style with its landmarks. The first four are 250 m long (the run reaches top speed about 1000 m in), every later one 350 m, so a new city comes roughly every 20–30 s. The first lap visits all twelve in this order, each adding its hazard. After Dubai, every lap is a fresh shuffle (never the same city twice in a row), so long runs don't repeat.
+Each "biome" is a famous city, drawn in Glydrift's pixel style with its landmarks. The first four are 250 m long (the run reaches top speed about 1000 m in), every later one 350 m, so a new city comes roughly every 20–30 s. The first lap visits all thirteen stops in this order (the trip starts at the airport), each adding its hazard. After Dubai, every lap is a fresh shuffle (never the same city twice in a row), so long runs don't repeat.
 Each city's skyline rotates through three stretches with different landmarks, and its street has two looks, so a city doesn't repeat while you're in it.
 
 | Order | City | Landmarks and street life | Signature hazard |
 |---|---|---|---|
-| 1 | Paris | Eiffel Tower, Louvre pyramid, Arc de Triomphe, Notre-Dame, Sacré-Cœur; café awnings, Seine booksellers | **Thorn seeds** roll toward you. Jump them. |
-| 2 | New York | Empire State, Chrysler, Statue of Liberty, Brooklyn Bridge, One World Trade Center, Flatiron; Times Square billboards, cabs, subway globes | **Rooftop hops** and **launch pads**. |
-| 3 | Tokyo | Tokyo Tower, Skytree, five-story pagoda, torii gate, Mt Fuji; neon signs, cherry blossoms, vending machines | **Pulse orbs**: jump them low, run under them high. |
-| 4 | London | Big Ben, Parliament, Tower Bridge, London Eye, St Paul's, the Shard; double-deckers, black cabs, phone boxes | Low ceilings, floating walls and **crushers**. |
-| 5 | Seoul | N Seoul Tower, Lotte World Tower, Gwanghwamun gate, the DDP, Banpo rainbow bridge; palace roofs, street-food tents | Extra orbs, launch pads and crushers. |
-| 6 | Sydney | Opera House, Harbour Bridge, Sydney Tower, lighthouse, yachts; surfboards, beach huts | **Gravity flip zones**. Down Under, after all. |
-| 7 | Moscow | St Basil's, the Kremlin, Spasskaya clock tower, Ostankino tower, the Bolshoi; a tram, falling snow | **Icicles** drop and stick as ice spikes. |
-| 8 | Seattle | Space Needle, Mt Rainier, Great Wheel, Columbia Center, ferries; coffee carts, rain | **Lightning** strikes ahead and leaves a crackling patch. |
-| 9 | Cairo | Pyramids, Sphinx, Cairo Tower, a domed mosque, feluccas on the Nile; minarets, camels | **Flare vents**: jump lit ones, run over dark ones. |
-| 10 | Venice | St Mark's, Rialto Bridge, Doge's Palace, Santa Maria della Salute; gondolas, market stalls | **Canals**: more gaps and long glide gaps. |
-| 11 | Rio de Janeiro | Christ the Redeemer, Sugarloaf and its cable car, Maracanã, Selarón steps, Lapa arches; bunting, beach umbrellas | Extra **orbs, thorn seeds and launch pads**. |
-| 12 | Dubai | Burj Khalifa, Burj Al Arab, Dubai Frame, Museum of the Future, Ain Dubai; dunes, a gold supercar | The finale: every hazard, always at top difficulty. |
+| 1 | The Airport | Control tower, glass terminal, a jet at the gate, hangar, a plane crossing the sky; baggage carts, runway lights, windsock, stair truck | **Thorn seeds** roll toward you. Jump them. |
+| 2 | Paris | Eiffel Tower, Louvre pyramid, Arc de Triomphe, Notre-Dame, Sacré-Cœur; café awnings, Seine booksellers | **Thorn seeds** roll toward you. Jump them. |
+| 3 | New York | Empire State, Chrysler, Statue of Liberty, Brooklyn Bridge, One World Trade Center, Flatiron; Times Square billboards, cabs, subway globes | **Rooftop hops** and **launch pads**. |
+| 4 | Tokyo | Tokyo Tower, Skytree, five-story pagoda, torii gate, Mt Fuji; neon signs, cherry blossoms, vending machines | **Pulse orbs**: jump them low, run under them high. |
+| 5 | London | Big Ben, Parliament, Tower Bridge, London Eye, St Paul's, the Shard; double-deckers, black cabs, phone boxes | Low ceilings, floating walls and **crushers**. |
+| 6 | Seoul | N Seoul Tower, Lotte World Tower, Gwanghwamun gate, the DDP, Banpo rainbow bridge; palace roofs, street-food tents | Extra orbs, launch pads and crushers. |
+| 7 | Sydney | Opera House, Harbour Bridge, Sydney Tower, lighthouse, yachts; surfboards, beach huts | **Gravity flip zones**. Down Under, after all. |
+| 8 | Moscow | St Basil's, the Kremlin, Spasskaya clock tower, Ostankino tower, the Bolshoi; a tram, falling snow | **Icicles** drop and stick as ice spikes. |
+| 9 | Seattle | Space Needle, Mt Rainier, Great Wheel, Columbia Center, ferries; coffee carts, rain | **Lightning** strikes ahead and leaves a crackling patch. |
+| 10 | Cairo | Pyramids, Sphinx, Cairo Tower, a domed mosque, feluccas on the Nile; minarets, camels | **Flare vents**: jump lit ones, run over dark ones. |
+| 11 | Venice | St Mark's, Rialto Bridge, Doge's Palace, Santa Maria della Salute; gondolas, market stalls | **Canals**: more gaps and long glide gaps. |
+| 12 | Rio de Janeiro | Christ the Redeemer, Sugarloaf and its cable car, Maracanã, Selarón steps, Lapa arches; bunting, beach umbrellas | Extra **orbs, thorn seeds and launch pads**. |
+| 13 | Dubai | Burj Khalifa, Burj Al Arab, Dubai Frame, Museum of the Future, Ain Dubai; dunes, a gold supercar | The finale: every hazard, always at top difficulty. |
 
 Every city also has spikes, gaps, low ceilings, floating walls (glide over) and wide pits (glide across).
 
 ### Obstacles that play differently
-- **Gravity flip zones** (from Sydney, 1350 m, then now and then everywhere): a glowing ceiling track appears and the floor fills with a spike bed too long to jump or glide. **Double-tap** to flip gravity and run upside down on the ceiling, jumping (downward) over spikes that hang from it. Then the floor clears and the ceiling ends in spikes: **double-tap again** to drop back down. If the ceiling ends while you're upside down, gravity snaps back by itself. Double-tapping does nothing outside a flip zone, so fast jumping elsewhere is unchanged. The first zone of each run shows "DOUBLE TAP TO FLIP!".
+- **Gravity flip zones** (from Sydney, 1700 m, then now and then everywhere): a glowing ceiling track appears and the floor fills with a spike bed too long to jump or glide. **Double-tap** to flip gravity and run upside down on the ceiling, jumping (downward) over spikes that hang from it. Then the floor clears and the ceiling ends in spikes: **double-tap again** to drop back down. If the ceiling ends while you're upside down, gravity snaps back by itself. Double-tapping does nothing outside a flip zone, so fast jumping elsewhere is unchanged. The first zone of each run shows "DOUBLE TAP TO FLIP!".
 - **Crushers** (from London): a piston slams down on a rhythm and is fully up as you pass. Keep running; a jump hits it.
 - **Launch pads** (from New York): a spring pad in front of a tower too tall to jump. Run onto the pad and it throws you over; jump over the pad and you hit the tower.
 The level generator simulates the real jump and glide physics for every obstacle, including moving ones, so every layout can be cleared.
@@ -54,6 +55,7 @@ Active power-ups show under the coin counter.
 Glydaway's soundtrack is composed and played live in code (no music files): one song per city, written in that city's style and played on small synthesized instruments. All melodies are original; the London chime is the public-domain Westminster Quarters.
 | City | Style |
 |---|---|
+| The Airport | A boarding chime, then smooth lounge jazz |
 | Paris | Accordion musette waltz |
 | New York | Big piano chords and a brass hook over a boom-bap beat |
 | Tokyo | City pop: electric piano, slap bass, bright synth lead |
