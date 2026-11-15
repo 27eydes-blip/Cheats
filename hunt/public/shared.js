@@ -10,7 +10,9 @@ export const MAX_PLAYERS = 10;
 // Look up a key that came from a player (URL, socket message, request body) in a plain table.
 // Only the table's own string keys count: 'constructor', '__proto__', 'toString'... and non-string
 // keys give undefined instead of something inherited from Object.prototype.
-export const own = (table, key) => (typeof key === 'string' && Object.hasOwn(table, key) ? table[key] : undefined);
+// (hasOwnProperty.call, not Object.hasOwn: this file also runs on older phones)
+const hasOwn = Object.prototype.hasOwnProperty;
+export const own = (table, key) => (typeof key === 'string' && hasOwn.call(table, key) ? table[key] : undefined);
 
 export const EMPTY = 0, WALL = 1, BUSH = 2, CRATE = 3, WATER = 4;
 
