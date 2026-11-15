@@ -669,8 +669,8 @@ export class Sim {
         if (opt && opt.wid) {
           const ws = (src.wstat[opt.wid] ||= { d: 0, k: 0 }); ws.d += amount;
           const a = BRAWLERS[src.brawler].attack;
-          if (charge && src.alive) src.superC = Math.min(1, src.superC + (amount / (a.damage * BRAWLERS[src.brawler].superHits)) * (src.star?.fx.charge || 1));
-        } else if (charge && src.alive) src.superC = Math.min(1, src.superC + (1 / BRAWLERS[src.brawler].superHits) * (src.star?.fx.charge || 1));
+          if (charge && src.alive) this.addCharge(src, (amount / (a.damage * BRAWLERS[src.brawler].superHits)) * (src.star?.fx.charge || 1));
+        } else if (charge && src.alive) this.addCharge(src, (1 / BRAWLERS[src.brawler].superHits) * (src.star?.fx.charge || 1));
       }
     }
     if (t.hp <= 0) this.kill(t, src, cause, opt);
@@ -678,6 +678,13 @@ export class Sim {
       t.lowHealUsed = true; t.hp = Math.min(t.maxHp, t.hp + t.maxHp * t.star.fx.lowHeal);
       this.fx.push(['gadget', Math.round(t.x), Math.round(t.y), -1, t.id]);
     }
+  }
+
+  // SUPER charge. 6 hits of 1/6 add up to 0.9999999999999999 in floating point: a hair short of
+  // full counts as full, so the documented number of hits always gives a super that fires.
+  addCharge(p, inc) {
+    const c = p.superC + inc;
+    p.superC = c > 1 - 1e-9 ? 1 : c;
   }
 
   gainBounty(p, gain) {
@@ -739,7 +746,7 @@ export class Sim {
   credit(c) {
     const p = this.players.get(c.id);
     if (!p) return;
-    if (c.charge && p.alive) p.superC = Math.min(1, p.superC + 1 / BRAWLERS[p.brawler].superHits);
+    if (c.charge && p.alive) this.addCharge(p, 1 / BRAWLERS[p.brawler].superHits);
     if (c.kill) this.gainBounty(p, c.gain || 1);
   }
 
@@ -1407,7 +1414,7 @@ export class Sim {
         ...(v.team ? { mates: [...this.players.values()].filter((q) => q !== v && q.team === v.team && q.alive).map((q) => [q.id, Math.round(q.x), Math.round(q.y)]) } : {}),
         me: meDelta({
           x: r2(v.x), y: r2(v.y), mvx: r2(v.mvx), mvy: r2(v.mvy), hp: Math.round(v.hp), mh: v.maxHp, am: r2(v.ammo + v.reloadP),
-          sc: r2(v.superC), cu: v.cubes, f: this.flags(v), al: v.alive ? 1 : 0, fo: v.dash || v.knock || v.stun > 0 ? 1 : 0,
+          sc: v.superC >= 1 ? 1 : Math.min(0.99, r2(v.superC)), cu: v.cubes, f: this.flags(v), al: v.alive ? 1 : 0, fo: v.dash || v.knock || v.stun > 0 ? 1 : 0,
           cl: r2(Math.max(0, v.cloak)), bt: v.bounty, lo: r2(v.lowF), bt5: r2(Math.min(v.bushT, 5)), rs: r2(Math.max(0, v.rush)),
           rt: r2(Math.max(0, v.respawnT)), cr: v.crystals, scr: Math.floor(this.mode.score ? this.mode.score(v) : 0),
           k: v.kills, be: v.bountyEarned, sk: v.sessionKills, bb: v.bestBounty, gl: this.glow(v), id: v.id, br: v.brawler,
