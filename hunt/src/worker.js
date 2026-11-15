@@ -10,6 +10,7 @@ import { handleApi, userFromToken, recordMatch } from './accounts.js';
 import { loadoutFor, weaponUnlocked, normalize } from '../public/progression.js';
 import { powerBracket } from '../public/power.js';
 import { WEAPONS } from '../public/weapons.js';
+import { VERSION } from '../public/version.js';
 // local dev only (HUNT_DEV is in wrangler.jsonc, never the deploy config): ?wpn=id&mast=n hands
 // you a secondary for tests and screenshots without an account at that level
 function devWeapon(env, url, sim, id) {
@@ -32,6 +33,8 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    // build id: an open client compares it with its own and offers a reload after a deploy
+    if (url.pathname === '/api/version') return Response.json({ version: VERSION }, { headers: { 'cache-control': 'no-store' } });
     if (url.pathname.startsWith('/api/')) return handleApi(req, env);
     if (url.pathname === '/ws' || url.pathname === '/zone') {
       if (req.headers.get('Upgrade') !== 'websocket') return new Response('Expected WebSocket', { status: 426 });
@@ -189,7 +192,7 @@ export class MatchRoom {
     devWeapon(this.env, url, sim, id);
     const secret = crypto.randomUUID();
     sim.players.get(id).secret = secret;
-    sendJSON(server, { t: 'welcome', id, room: isRoom ? mname.slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: mname, secret });
+    sendJSON(server, { t: 'welcome', v: VERSION, id, room: isRoom ? mname.slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: mname, secret });
     sim.broadcastLobby();
     return this.attach(id, server, client);
   }
@@ -208,7 +211,7 @@ export class MatchRoom {
     if (old) { try { old.close(1000, 'replaced'); } catch {} }
     sim.rejoin(id);
     this.dropped.delete(id);
-    sendJSON(server, { t: 'welcome', id, rejoin: 1, room: url.searchParams.get('match').startsWith('room:') ? url.searchParams.get('match').slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: url.searchParams.get('match'), secret: p.secret });
+    sendJSON(server, { t: 'welcome', v: VERSION, id, rejoin: 1, room: url.searchParams.get('match').startsWith('room:') ? url.searchParams.get('match').slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: url.searchParams.get('match'), secret: p.secret });
     if (sim.phase === 'play') {
       sendJSON(server, { t: 'start', rejoin: 1, botLevel: sim.botLevel, you: id, mode: sim.modeKey, world: sim.map.world, seed: sim.seed, open: !!sim.map.open, players: sim.map.players || 10 });
       sendJSON(server, sim.rosterMsg());
@@ -385,7 +388,7 @@ export class ZoneRoom {
       p.sentStatic = null; p.meSent = null; // a new socket knows nothing yet: resend everything
       server.huntKey = back;
       this.conns.set(back, server);
-      sendJSON(server, { t: 'welcome', id: back, zone: this.slot, mode: 'freeplay', rejoin: 1, secret: p.secret });
+      sendJSON(server, { t: 'welcome', v: VERSION, id: back, zone: this.slot, mode: 'freeplay', rejoin: 1, secret: p.secret });
     } else if (join) {
       const b = url.searchParams.get('brawler');
       const p = sim.addPlayer({ name: cleanName(url.searchParams.get('name')), brawler: BRAWLERS[b] ? b : 'volt' });
@@ -400,13 +403,13 @@ export class ZoneRoom {
       server.huntKey = p.id;
       this.conns.set(p.id, server);
       p.secret = crypto.randomUUID();
-      sendJSON(server, { t: 'welcome', id: p.id, zone: this.slot, mode: 'freeplay', secret: p.secret, sv: Date.now() });
+      sendJSON(server, { t: 'welcome', v: VERSION, id: p.id, zone: this.slot, mode: 'freeplay', secret: p.secret, sv: Date.now() });
     } else {
       const okey = 'o:' + crypto.randomUUID();
       server.huntKey = okey;
       this.conns.set(okey, server);
       sim.observers.set(okey, { x: Number(url.searchParams.get('x')) || 0, y: Number(url.searchParams.get('y')) || 0 });
-      sendJSON(server, { t: 'welcome', zone: this.slot, observer: true });
+      sendJSON(server, { t: 'welcome', v: VERSION, zone: this.slot, observer: true });
     }
     sendJSON(server, sim.rosterMsg());
     sendJSON(server, sim.stateMsg());
