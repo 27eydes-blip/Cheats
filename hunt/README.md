@@ -27,8 +27,9 @@ Open http://localhost:8787 on desktop. Controls: **WASD** to move, **mouse** to 
    - Linux: `hostname -I`
 4. On each phone, open `http://<that-ip>:8787`, for example `http://192.168.1.23:8787`.
    - If it doesn't load, allow incoming connections for `node`/`workerd` in your computer's firewall. macOS asks the first time.
-5. On **both** phones, enter the **same room code** (for example `FRIENDS`), pick a brawler, and tap **PLAY**.
-   - To test the first milestone without bots (phone vs phone 1v1), **untick "Fill empty slots with bots"** before pressing Play.
+5. On **both** phones open **FRIENDS**, enter the **same room code** (for example `FRIENDS`), and tap **PLAY**. The first one in is the host: the room plays the mode they picked, and they press **START** when everyone is there. In Squad Hunt the friends play on the same team.
+   - To test phone vs phone without bots, the host switches **Fill with bots** off in the room before pressing START.
+   - A friend who enters the code while the room is mid-match waits and joins the room's next match.
    - With no room code you go into quick play: anyone who presses Play within about 7 seconds lands in the same match, and bots fill the empty slots.
 6. Turn the phones sideways. Left thumb moves. Right thumb drags to aim and fires on release. A quick tap auto-aims at the nearest enemy. The **SUPER** button charges as your hits land; drag it to aim, or tap it to auto-aim.
 
@@ -54,7 +55,9 @@ Durable Objects are declared as SQLite-backed classes, so this works on the Work
 
 **Environment events** (every 30s, with a 5s warning) live in `public/events/`, one file each: walls, overgrowth, wildfire, lava, ice, blackout, supply drop, low gravity, wind. To add one, create a module there and list it in `public/events/index.js`. The comment at the top of that file documents the hooks.
 
-**Quick Hunt modes** (`src/modes.js`): Showdown, Bounty Rush, Hunted, Crystal Grab, played on a random arena from the pool.
+**Quick Hunt modes** (`src/modes.js`): Showdown, Bounty Rush, Hunted, Crystal Grab, played on a random arena from the pool. Squad Hunt (3v3) and Big Hunt (20 players) are played only when you pick them.
+
+**Rewards** (`public/progression.js` `PAY`): match XP and coins are mostly paid per minute played, so every mode earns about the same per minute. Trophy Road, Hunt Pass and level rewards are earned, never sold; claiming one you already own gives coins instead.
 
 **Free Play:** a 4000×4000 world made of 4 zones, each its own Durable Object: Neon City (NW), Wildwood (NE), **Desert Mirage (SE)** and Frozen Lake (SW). A safe hub where the zones meet is where you change brawler and see who's online. When you walk across a zone border, your player is handed off to the next zone's Durable Object. Your client already has that zone's socket open as an observer, and it gets promoted, so there's no loading screen. Bullets that cross a border carry on in the next zone, and kill and bounty credit is sent back to the shooter's zone.
 

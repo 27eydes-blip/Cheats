@@ -13,9 +13,9 @@ const start = (room) => { steps(room, 20 * 13); assert.equal(room.sim.phase, 'pl
 {
   const db = fakeD1(), room = manual(new MatchRoom({}, fakeEnv(db)));
   db.addUser('u1', 'tok1');
-  const s1 = await connect(room, '/ws?match=room:FARM&name=Me1&brawler=volt&mode=bounty&token=tok1');
-  const s2 = await connect(room, '/ws?match=room:FARM&name=Me2&brawler=brick&mode=bounty&token=tok1');
-  const s3 = await connect(room, '/ws?match=room:FARM&name=Me3&brawler=wisp&mode=bounty&token=tok1');
+  const s1 = await connect(room, '/ws?match=room:FARM&name=Me1&brawler=volt&mode=bounty&lobby=12&token=tok1');
+  const s2 = await connect(room, '/ws?match=room:FARM&name=Me2&brawler=brick&mode=bounty&lobby=12&token=tok1');
+  const s3 = await connect(room, '/ws?match=room:FARM&name=Me3&brawler=wisp&mode=bounty&lobby=12&token=tok1');
   assert.equal(humans(room).length, 1, 'one account holds one seat');
   assert.equal(humans(room)[0].brawler, 'wisp', 'in the lobby the newest connection (and its pick) wins');
   assert.equal(humans(room)[0].account, 'u1');
@@ -33,12 +33,12 @@ const start = (room) => { steps(room, 20 * 13); assert.equal(room.sim.phase, 'pl
 {
   const db = fakeD1(), room = manual(new MatchRoom({}, fakeEnv(db)));
   db.addUser('u1', 'tok1');
-  const a1 = await connect(room, '/ws?match=room:TAKE&name=A&brawler=brick&mode=bounty&token=tok1');
-  const g = await connect(room, '/ws?match=room:TAKE&name=Guest&brawler=volt&mode=bounty');
+  const a1 = await connect(room, '/ws?match=room:TAKE&name=A&brawler=brick&mode=bounty&lobby=12&token=tok1');
+  const g = await connect(room, '/ws?match=room:TAKE&name=Guest&brawler=volt&mode=bounty&lobby=12');
   start(room);
   const w1 = a1.last('welcome'), seat = room.sim.players.get(w1.id);
   seat.bounty = 3; seat.kills = 2;
-  const a2 = await connect(room, '/ws?match=room:TAKE&name=Other&brawler=wisp&mode=bounty&token=tok1');
+  const a2 = await connect(room, '/ws?match=room:TAKE&name=Other&brawler=wisp&mode=bounty&lobby=12&token=tok1');
   const w2 = a2.last('welcome');
   assert.equal(w2.id, w1.id, 'same seat');
   assert.equal(room.sim.players.size, 10, 'no extra player');
@@ -61,8 +61,10 @@ const start = (room) => { steps(room, 20 * 13); assert.equal(room.sim.phase, 'pl
   a2.say({ t: 'bye' });
   await settle();
   assert.equal(db.progress('u1').games, 1, 'a quit is recorded');
-  const a3 = await connect(room, '/ws?match=room:TAKE&name=Again&brawler=volt&mode=bounty&token=tok1');
-  assert(a3.last('retry'), 'after quitting, the account cannot slip back into the same match');
+  const a3 = await connect(room, '/ws?match=room:TAKE&name=Again&brawler=volt&mode=bounty&lobby=12&token=tok1');
+  // (a friend room holds them for its next match instead)
+  assert(!a3.last('welcome') && a3.last('roomwait'), 'after quitting, the account cannot slip back into the same match');
+  a3.close(1000, 'cancel');
   await finish(room);
   assert.equal(db.progress('u1').games, 1, 'still one game');
   g.say({ t: 'bye' });
@@ -71,9 +73,9 @@ const start = (room) => { steps(room, 20 * 13); assert.equal(room.sim.phase, 'pl
 {
   const db = fakeD1(), room = manual(new MatchRoom({}, fakeEnv(db)));
   db.addUser('u1', 'tok1');
-  await connect(room, '/ws?match=room:TWICE&name=A&brawler=volt&mode=bounty');
-  await connect(room, '/ws?match=room:TWICE&name=B&brawler=volt&mode=bounty');
-  await connect(room, '/ws?match=room:TWICE&name=C&brawler=volt&mode=bounty');
+  await connect(room, '/ws?match=room:TWICE&name=A&brawler=volt&mode=bounty&lobby=12');
+  await connect(room, '/ws?match=room:TWICE&name=B&brawler=volt&mode=bounty&lobby=12');
+  await connect(room, '/ws?match=room:TWICE&name=C&brawler=volt&mode=bounty&lobby=12');
   for (const p of humans(room)) p.account = 'u1';
   start(room);
   await finish(room);
@@ -85,7 +87,7 @@ const start = (room) => { steps(room, 20 * 13); assert.equal(room.sim.phase, 'pl
   const db = fakeD1(), room = manual(new MatchRoom({}, fakeEnv(db)));
   db.addUser('u1', 'tok1'); db.addUser('u2', 'tok2');
   const cs = [];
-  for (const t of ['', '', '&token=tok1', '&token=tok2', '&token=not-a-token']) cs.push(await connect(room, '/ws?match=room:GUESTS&name=G&brawler=volt&mode=bounty' + t));
+  for (const t of ['', '', '&token=tok1', '&token=tok2', '&token=not-a-token']) cs.push(await connect(room, '/ws?match=room:GUESTS&name=G&brawler=volt&mode=bounty&lobby=12' + t));
   assert.equal(humans(room).length, 5, 'five people, five seats');
   assert(cs.every((c) => c.readyState === 1 && !c.last('kick')));
   start(room);
@@ -96,15 +98,15 @@ const start = (room) => { steps(room, 20 * 13); assert.equal(room.sim.phase, 'pl
 {
   const db = fakeD1(), room = manual(new MatchRoom({}, fakeEnv(db)));
   for (const u of ['u1', 'u2', 'u3']) db.addUser(u, 'tok-' + u);
-  const cs = [];
-  for (const u of ['u1', 'u2', 'u3']) cs.push(await connect(room, `/ws?match=room:RACE&name=${u}&brawler=volt&mode=bounty&token=tok-${u}`));
+  const cs = [await connect(room, '/ws?match=room:RACE&name=Host&brawler=volt&mode=bounty&lobby=12')]; // a guest hosts the room
+  for (const u of ['u1', 'u2', 'u3']) cs.push(await connect(room, `/ws?match=room:RACE&name=${u}&brawler=volt&mode=bounty&lobby=12&token=tok-${u}`));
   start(room);
   const first = room.sim;
   let open; db.gate = new Promise((r) => { open = r; }); // D1 is slow...
   first.time = 1e6; room.step();
   assert.equal(first.phase, 'end');
-  // ...and meanwhile someone restarts the room as a Test Range (no rewards) match
-  await connect(room, '/ws?match=room:RACE&name=New&brawler=volt&mode=range');
+  // ...and meanwhile the host restarts the room as a Test Range (no rewards) match
+  await connect(room, '/ws?match=room:RACE&name=Host&brawler=volt&mode=range');
   assert.notEqual(room.sim, first); assert.equal(room.sim.modeKey, 'range');
   db.gate = null; open();
   for (let i = 0; i < 20; i++) await settle();

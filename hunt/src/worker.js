@@ -26,6 +26,8 @@ import {
   BRAWLERS, DT, WORLDS, ZONES, generateArena, generateWorld, zoneBounds, zoneAt, worldId, own,
 } from '../public/shared.js';
 
+// is this joiner the room's last host? (signed-in players by account, guests without one by name)
+const isHost = (h, url, user) => (user ? h.account === user.id : !h.account && h.name === cleanName(url.searchParams.get('name')));
 const cleanName = (s) => (s || '').replace(/[^\p{L}\p{N} _\-.!]/gu, '').trim().slice(0, 14) || 'Hunter';
 const arenaWorlds = () => WORLDS.filter((w) => w.arena).map((w) => w.key);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
@@ -121,6 +123,8 @@ export class MatchRoom {
     this.sockets = null;
     this.endedAt = 0;
     this.emptyAt = 0;
+    this.waiting = new Map(); // FRIEND ROOM: socket -> a friend who came in mid-match, seated in the room's next match
+    this.roomCfg = null; // what the room plays (mode asked for, bots) and who hosted the last match
     this.loop = new Loop(() => this.step());
   }
 
@@ -137,9 +141,31 @@ export class MatchRoom {
     if (cfg.open) for (let y = 1; y < map.gh - 1; y++) for (let x = 1; x < map.gw - 1; x++) map.t[y * map.gw + x] = 0;
     const sim = this.sim = new Sim({
       map, mode: cfg.mode, seed, lobbyTime: cfg.lobby, fillBots: cfg.bots, forceEvent: cfg.ev, events: cfg.events,
+      hostStart: cfg.hostStart, partyTeams: cfg.partyTeams,
       send: (id, msg) => { const ws = sockets.get(id); if (ws) sendJSON(ws, msg); },
-      hooks: { finished: (rows) => this.recordResults(rows, sockets, sim) },
+      // (resultsIn: the next room match closes these sockets, so it waits until everyone got their rewards)
+      hooks: { finished: (rows) => { this.recordResults(rows, sockets, sim).finally(() => { sim.resultsIn = true; }); } },
     });
+  }
+
+  // FRIEND ROOM: the settings for a new match in this room. The room keeps its mode and bots
+  // between matches; only the last match's host (or a fresh room) chooses again.
+  roomMatch(url, user) {
+    const old = this.roomCfg && this.sim, h = old && old.players.get(old.hostId);
+    const prevHost = h ? { account: h.account || null, name: h.name } : null;
+    const prev = old ? { ask: this.roomCfg.ask, bots: old.fillBots } : null;
+    const mine = !prevHost || isHost(prevHost, url, user);
+    const qm = url.searchParams.get('mode'), qw = url.searchParams.get('world');
+    const ask = mine ? (QUICK_MODES.includes(qm) || qm === 'range' ? qm : '') : prev.ask;
+    const mode = ask || pick(RANDOM_MODES);
+    const world = mine && worldId(qw) >= 0 && WORLDS[worldId(qw)].arena ? qw : pick(arenaWorlds());
+    // ?lobby= is the old fixed countdown (tests, the Test Range): no host START needed
+    const timed = url.searchParams.has('lobby') || mode === 'range';
+    const lobby = Math.max(1.5, Math.min(12, Number(url.searchParams.get('lobby')) || 12));
+    const ev = own(EVENTS, url.searchParams.get('ev')) ? url.searchParams.get('ev') : null;
+    const bots = mine ? url.searchParams.get('bots') !== '0' : prev.bots;
+    this.roomCfg = { ask, bots, prevHost };
+    return { mode, world, lobby, ev, events: url.searchParams.get('events') !== '0', open: url.searchParams.get('testmap') === 'open' || mode === 'range', bots, hostStart: !timed, partyTeams: true };
   }
 
   // trophies/XP are applied server-side for every player with an account (guests included).
@@ -183,30 +209,37 @@ export class MatchRoom {
 
     if (url.searchParams.get('rejoin')) return this.rejoin(url, server, client);
     if (!this.sim || this.sim.phase === 'end' || (isRoom && this.sim.phase === 'play' && this.sockets.size === 0)) {
-      let mode, world;
-      if (isRoom) {
-        const qm = url.searchParams.get('mode'), qw = url.searchParams.get('world');
-        mode = QUICK_MODES.includes(qm) || qm === 'range' ? qm : pick(RANDOM_MODES);
-        world = worldId(qw) >= 0 && WORLDS[worldId(qw)].arena ? qw : pick(arenaWorlds());
-      } else [, mode, world] = mname.split(':');
-      const lobby = isRoom ? Math.max(1.5, Math.min(12, Number(url.searchParams.get('lobby')) || 12)) : 8;
-      const ev = isRoom && own(EVENTS, url.searchParams.get('ev')) ? url.searchParams.get('ev') : null;
-      const events = !(isRoom && url.searchParams.get('events') === '0');
-      const open = isRoom && (url.searchParams.get('testmap') === 'open' || mode === 'range'); // netcode tests + Test Range: border walls only
-      this.newMatch({ mode, world, lobby, ev, events, open, bots: !(isRoom && url.searchParams.get('bots') === '0') });
+      if (isRoom) { this.newMatch(this.roomMatch(url, user)); this.seatWaiting(); }
+      else { const [, mode, world] = mname.split(':'); this.newMatch({ mode, world, lobby: 8, ev: null, events: true, open: false, bots: true }); }
     }
-    const sim = this.sim, sockets = this.sockets;
+    const sim = this.sim;
     // a second connection from the same account takes over its seat (like a reconnect): an account
     // never holds two seats in one match, so it can't be paid twice for it
     const seat = user && this.seatOf(sim, user.id);
     if (seat && sim.phase === 'play') return this.resume(seat, mname, server, client, true);
-    if (seat) this.unseat(seat.id); // still in the lobby: the old seat goes and this connection joins below
-    const id = sim.join(cleanName(url.searchParams.get('name')), brawlerId(url.searchParams.get('brawler')));
+    // a friend who arrives while the room's match is running waits for the next one (or cancels)
+    if (isRoom && sim.phase === 'play') return this.wait(url, user, mname, server, client);
+    const id = this.seat(url, user, mname, server, seat);
     if (id == null) {
       sendJSON(server, { t: 'retry', reason: sim.phase === 'play' ? 'Match already started' : 'Match full', match: mname });
       server.close(1000, 'retry');
       return new Response(null, { status: 101, webSocket: client });
     }
+    const res = this.attach(id, server, client);
+    sim.broadcastLobby(); // (after attach, so the new player gets it too)
+    return res;
+  }
+
+  // put a joining socket into the lobby of the current match -> player id, or null when it's full
+  seat(url, user, mname, server, oldSeat = null) {
+    const sim = this.sim, isRoom = mname.startsWith('room:');
+    const wasHost = oldSeat && sim.hostId === oldSeat.id;
+    if (oldSeat) this.unseat(oldSeat.id); // still in the lobby: the old seat goes and this connection joins below
+    const id = sim.join(cleanName(url.searchParams.get('name')), brawlerId(url.searchParams.get('brawler')));
+    if (id == null) return null;
+    // the host keeps the room when they reconnect, and the last match's host gets it back
+    const rc = this.roomCfg;
+    if (sim.hostStart && (wasHost || (rc && rc.prevHost && isHost(rc.prevHost, url, user)))) sim.hostId = id;
     if (user) {
       const p = sim.players.get(id), pr = progressOf(user);
       p.account = user.id; p.trophies = pr.trophies?.[p.brawler] | 0; sim.setCosmetics(id, pr.equipped); sim.setLoadout(id, loadoutFor(pr));
@@ -217,8 +250,39 @@ export class MatchRoom {
     const secret = crypto.randomUUID();
     sim.players.get(id).secret = secret;
     sendJSON(server, { t: 'welcome', id, room: isRoom ? mname.slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: mname, secret });
-    sim.broadcastLobby();
-    return this.attach(id, server, client);
+    return id;
+  }
+
+  // FRIEND ROOM, match running: hold this socket and seat it in the room's next match
+  wait(url, user, mname, server, client) {
+    this.waiting.set(server, { url, user, mname });
+    this.tellWaiting(server);
+    server.addEventListener('message', (e) => { const m = parseMsg(e.data); if (m && m.t === 'ping' && this.waiting.has(server)) sendJSON(server, { t: 'pong', c: m.c }); });
+    const gone = () => { this.waiting.delete(server); };
+    server.addEventListener('close', gone);
+    server.addEventListener('error', gone);
+    return new Response(null, { status: 101, webSocket: client });
+  }
+  tellWaiting(ws) {
+    const sim = this.sim, tl = sim && sim.mode.timeLimit ? Math.max(0, Math.ceil(sim.mode.timeLimit - sim.time)) : null;
+    sendJSON(ws, { t: 'roomwait', mode: sim ? sim.modeKey : null, left: tl, players: sim ? sim.humans().filter((p) => !p.wasBot).length : 0 });
+  }
+  // the room's match is over (and everyone has their rewards): open the next lobby for the friends who waited
+  nextRoomMatch() {
+    const first = this.waiting.values().next().value;
+    this.newMatch(this.roomMatch(first.url, first.user));
+    this.seatWaiting();
+  }
+  seatWaiting() {
+    const list = [...this.waiting.entries()];
+    this.waiting.clear();
+    for (const [ws, w] of list) {
+      if (ws.readyState !== 1) continue;
+      const id = this.seat(w.url, w.user, w.mname, ws, w.user && this.seatOf(this.sim, w.user.id));
+      if (id == null) { sendJSON(ws, { t: 'retry', reason: 'Match full', match: w.mname }); try { ws.close(1000, 'retry'); } catch {} continue; }
+      this.attach(id, ws, null);
+    }
+    if (list.length) this.sim.broadcastLobby();
   }
 
   // the lobby seat of a connection that was replaced: its socket is told why, then the seat is freed
@@ -292,7 +356,7 @@ export class MatchRoom {
     server.addEventListener('close', () => onClose(false));
     server.addEventListener('error', () => onClose(false));
     this.loop.start();
-    return new Response(null, { status: 101, webSocket: client });
+    return client ? new Response(null, { status: 101, webSocket: client }) : null; // (no client: a waiting socket that was already answered)
   }
 
   // a leave is final: record it now (a loss), so quitting can't dodge a trophy drop
@@ -306,8 +370,12 @@ export class MatchRoom {
     if (!this.sim) return this.loop.stop();
     const now = Date.now();
     for (const [id, at] of this.dropped) if (now - at > REJOIN_GRACE_MS) this.abandon(id);
-    if (this.emptyAt && this.sockets.size === 0 && Date.now() - this.emptyAt > REJOIN_GRACE_MS) return this.stop();
+    if (this.emptyAt && this.sockets.size === 0 && Date.now() - this.emptyAt > REJOIN_GRACE_MS) return this.waiting.size ? this.nextRoomMatch() : this.stop();
     this.sim.tickSafe((e) => fault('match tick', e));
+    if (this.waiting.size) {
+      if (this.sim.phase === 'end' && this.sim.resultsIn) return this.nextRoomMatch();
+      if (this.sim.tickN % 20 === 0) for (const ws of this.waiting.keys()) this.tellWaiting(ws);
+    }
     if (this.sim.phase === 'end') {
       const now = Date.now();
       if (!this.endedAt) this.endedAt = now;

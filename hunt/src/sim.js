@@ -60,6 +60,11 @@ export class Sim {
     this.fillBots = o.fillBots ?? true;
     this.botTarget = o.botTarget ?? MAX_PLAYERS;
     this.lobbyTime = o.lobbyTime ?? 8;
+    // FRIEND ROOMS: the first one in is the host and starts the match (ROOM_IDLE_SECS is only a
+    // safety net); friends in a team mode play on the same side
+    this.hostStart = !!o.hostStart;
+    this.partyTeams = !!o.partyTeams;
+    this.hostId = 0;
     this.eventsOn = o.events !== false;
     this.forceEvent = own(EVENTS, o.forceEvent) ? o.forceEvent : null; // test flag: always run this event, starting at 8s
     this.seed = o.seed ?? 0;
@@ -232,6 +237,7 @@ export class Sim {
 
   removePlayer(id) {
     if (!this.players.delete(id)) return;
+    if (id === this.hostId) this.hostId = this.humans()[0]?.id || 0; // the host left: the next one in takes over
     this.broadcast({ t: 'ro', del: [id] });
     if (this.targetId === id) this.targetId = 0;
   }
@@ -277,7 +283,7 @@ export class Sim {
     if (this.phase !== 'lobby' || this.players.size >= this.maxPlayers) return null;
     const p = this.addPlayer({ name, brawler, bot: false });
     if (this.mode.teams) p.team = this.smallerTeam();
-    this.lobbyEnd = this.lobbyEnd == null ? this.clock + this.lobbyTime : Math.max(this.lobbyEnd, this.clock + 4);
+    if (this.hostStart) { if (!this.hostId) this.hostId = p.id; this.lobbyEnd = this.clock + ROOM_IDLE_SECS; } else this.lobbyEnd = this.lobbyEnd == null ? this.clock + this.lobbyTime : Math.max(this.lobbyEnd, this.clock + 4);
     if (this.humans().length >= this.maxPlayers) this.lobbyEnd = this.clock;
     this.broadcastLobby();
     return p.id;
@@ -322,10 +328,13 @@ export class Sim {
   }
 
   broadcastLobby() {
+    const hs = this.humans(), left = this.lobbyEnd == null || !this.canStart() ? null : Math.max(0, this.lobbyEnd - this.clock);
     const msg = {
       t: 'lobby', mode: this.modeKey, world: this.map.world,
-      players: this.humans().map((p) => [p.name, p.brawler]),
-      startIn: this.lobbyEnd == null || !this.canStart() ? null : Math.max(0, this.lobbyEnd - this.clock), bots: this.fillBots,
+      players: hs.map((p) => [p.name, p.brawler]),
+      // a host room only counts down in its last minute (the safety net), otherwise it waits for START
+      startIn: this.hostStart && left != null && left > 60 ? null : left, bots: this.fillBots,
+      ...(this.hostStart ? { host: this.hostId, ids: hs.map((p) => p.id), can: this.canStart() } : {}),
     };
     for (const p of this.players.values()) if (p.connected) this.send(p.id, msg);
   }
@@ -333,10 +342,23 @@ export class Sim {
   // with "fill empty slots with bots" OFF, a match needs two humans: never add bots to fill it
   canStart() { return this.humans().length >= (this.fillBots ? 1 : 2); }
 
+  // the room host's buttons: START, and fill with bots on/off. Anyone else is ignored.
+  hostCmd(p, m) {
+    if (!this.hostStart || this.phase !== 'lobby' || p.id !== this.hostId) return;
+    if (typeof m.bots === 'boolean' && m.bots !== this.fillBots) { this.fillBots = m.bots; this.broadcastLobby(); }
+    if (m.start === 1 && this.canStart()) this.start();
+  }
+
   start() {
     const taken = new Set([...this.players.values()].map((p) => p.name));
     const names = BOT_NAMES.filter((n) => !taken.has(n)).sort(() => Math.random() - 0.5);
     const target = this.fillBots ? this.maxPlayers : 0;
+    // a friend room in a team mode: with bots the friends are one squad against bots; without bots
+    // they split evenly to play each other
+    if (this.partyTeams && this.mode.teams) {
+      const half = Math.floor(this.maxPlayers / 2);
+      this.humans().forEach((p, i) => { p.team = this.fillBots ? (i < half ? 1 : 2) : 1 + (i % 2); });
+    }
     while (this.players.size < target) {
       const b = this.addPlayer({ name: names.pop() || 'Bot', brawler: BRAWLER_IDS[Math.floor(Math.random() * BRAWLER_IDS.length)], bot: true });
       if (this.mode.teams) b.team = this.smallerTeam();
@@ -863,6 +885,7 @@ export class Sim {
     if (!p || p.bot || !m || typeof m !== 'object') return; // (any JSON value can arrive: null, 5, "x", [])
     if (m.t === 'pick') return this.pick(p, m.brawler);
     if (m.t === 'emote') return this.emote(p, m.e);
+    if (m.t === 'host') return this.hostCmd(p, m);
     if (m.t !== 'in') return;
     const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0);
     // angles from the client are untrusted: wrap into (-PI, PI] (a huge value would hang the angle loops)

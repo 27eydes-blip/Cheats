@@ -359,18 +359,24 @@ export function openSettings(api, onDone) {
   $('setHold').onchange = (e) => setSetting('holdFire', e.target.checked);
 }
 
+// a friend room plays the mode its host picks here (the host also starts it and sets bots in the room)
+const ROOM_MODES = [['', 'QUICK HUNT'], ['squad', 'SQUAD HUNT'], ['bighunt', 'BIG HUNT'], ['showdown', 'SHOWDOWN']];
 export function openFriends(api) {
   const code = $('room').value || '';
+  let mode = api.roomMode?.() || '';
+  if (!ROOM_MODES.some(([k]) => k === mode)) mode = '';
   const P = popup(`<div class="title" style="font-size:calc(var(--u)*3.4)">PLAY WITH FRIENDS</div>
-    <p class="outlined" style="color:#fff;font-size:calc(var(--u)*1.7)">Everyone types the same room code and presses play.</p>
-    <div id="roomSlot" style="display:flex;gap:8px;align-items:center"></div><div id="botsSlot" style="margin:8px 0;color:#fff;font-family:var(--font)"></div>
+    <p class="outlined" style="color:#fff;font-size:calc(var(--u)*1.7)">Everyone types the same room code and presses play. The first one in is the host: they pick the mode and press START.</p>
+    <div id="roomSlot" style="display:flex;gap:8px;align-items:center"></div>
+    <div class="chips" id="roomModes" style="margin:8px 0;justify-content:center"></div>
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn btn-md alt" id="newCode">NEW CODE</button><button class="btn btn-md alt" id="shareCode">${icon('share')} SHARE</button><button class="btn btn-md" id="roomPlay" data-sfx="play">PLAY</button></div>
-    <p class="hint">Friends list — coming soon.</p><button class="btn btn-sm alt" data-close>CLOSE</button>`, { onClose: () => stash(['room', 'bots']) });
+    <p class="hint">Friends list — coming soon.</p><button class="btn btn-sm alt" data-close>CLOSE</button>`, { onClose: () => stash(['room']) });
   const room = $('room'); room.classList.add('field'); room.value = code; $('roomSlot').appendChild(room);
-  const bl = $('bots').closest('label'); $('botsSlot').appendChild(bl);
+  const modes = () => { $('roomModes').innerHTML = ROOM_MODES.map(([k, l]) => `<button class="chipbtn ${k === mode ? 'on' : ''}" data-m="${k}">${l}</button>`).join(''); for (const b of $('roomModes').children) b.onclick = () => { mode = b.dataset.m; modes(); }; };
+  modes();
   $('newCode').onclick = () => { room.value = Math.random().toString(36).slice(2, 7).toUpperCase(); };
   $('shareCode').onclick = async () => { const t = `Join my Hunt room: ${room.value} — ${location.origin}`; try { if (navigator.share) await navigator.share({ text: t }); else { await navigator.clipboard.writeText(t); toastErr('Copied!'); } } catch {} };
-  $('roomPlay').onclick = () => { if (!room.value.trim()) { room.value = Math.random().toString(36).slice(2, 7).toUpperCase(); } P.close(); api.startQuick({ fromFriends: true }); };
+  $('roomPlay').onclick = () => { if (!room.value.trim()) { room.value = Math.random().toString(36).slice(2, 7).toUpperCase(); } P.close(); api.startQuick({ fromFriends: true, mode }); };
 }
 
 export function openMissions(onDone) {

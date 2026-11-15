@@ -46,15 +46,24 @@ const TIPS = [
 ];
 
 // ---------------------------------------------------------------- matchmaking
-export function createMatchmaking(onCancel) {
+// FRIEND ROOM: the same screen plus a room card on the side: the code (big, with COPY), who has
+// joined, and for the host START + fill with bots. Everyone else waits for the host.
+export function createMatchmaking(onCancel, room = {}) {
   const el = document.createElement('div');
   el.className = 'mm'; el.hidden = true;
   el.innerHTML = `<div class="title found" id="mmFound">FINDING HUNTERS</div><div class="mmmode" id="mmMode"></div><canvas id="mmCv"></canvas>
     <div class="outlined" style="color:#fff;font-size:calc(var(--u)*2.4)" id="mmCount">1/10 · starting soon</div><div class="tip" id="mmTip"></div>
-    <button class="btn btn-md red" id="mmCancel">CANCEL</button>`;
+    <button class="btn btn-md red" id="mmCancel">CANCEL</button>
+    <div class="card-a mmroom" id="mmRoom" hidden><small>ROOM CODE</small><div class="mmcode"><b id="mmCode"></b><button class="btn btn-sm alt" id="mmCopy">COPY</button></div>
+      <ol class="mmlist" id="mmList"></ol><div class="mmhost" id="mmHost"><label class="opt"><input type="checkbox" id="mmBots"> Fill with bots</label><button class="btn btn-md" id="mmStart" data-sfx="play">START</button></div>
+      <div class="mmwait" id="mmWait"></div></div>
+    <div class="mmcredit">Created by Sam Eyde III</div>`;
   document.body.appendChild(el);
-  const st = { brawler: 'volt', raf: 0, t0: 0, tip: 0 };
+  const st = { brawler: 'volt', raf: 0, t0: 0, tip: 0, room: '' };
   el.querySelector('#mmCancel').onclick = () => onCancel();
+  $('mmCopy').onclick = async () => { try { await navigator.clipboard.writeText(st.room); room.toast?.('Room code copied'); } catch { room.toast?.(`Room code: ${st.room}`); } };
+  $('mmStart').onclick = () => room.onStart?.();
+  $('mmBots').onchange = (e) => room.onBots?.(e.target.checked);
   const loop = (now) => {
     st.raf = 0; if (el.hidden) return;
     const t = (now - st.t0) / 1000, cv = $('mmCv');
@@ -77,16 +86,36 @@ export function createMatchmaking(onCancel) {
     st.raf = requestAnimationFrame(loop);
   };
   return {
-    show({ brawler, skin, label }) {
-      Object.assign(st, { brawler, skin, found: 1, t0: performance.now(), tip: -1, tipBase: Math.floor(Math.random() * TIPS.length) });
-      $('mmFound').textContent = 'FINDING HUNTERS'; $('mmMode').textContent = label || ''; $('mmCount').textContent = '1 found · starting soon';
+    show({ brawler, skin, label, room: code = '' }) {
+      Object.assign(st, { brawler, skin, found: 1, t0: performance.now(), tip: -1, tipBase: Math.floor(Math.random() * TIPS.length), room: code });
+      $('mmFound').textContent = code ? 'FRIENDS ROOM' : 'FINDING HUNTERS'; $('mmMode').textContent = label || ''; $('mmCount').textContent = code ? 'Joining the room…' : '1 found · starting soon';
+      el.classList.toggle('room', !!code); $('mmRoom').hidden = !code; $('mmCode').textContent = code; $('mmList').innerHTML = ''; $('mmHost').hidden = true; $('mmWait').textContent = '';
       el.hidden = false; el.classList.remove('leave'); void el.offsetWidth; el.classList.add('ui-screen', 'enter');
       if (!st.raf) st.raf = requestAnimationFrame(loop);
     },
-    update({ players, max, startIn, mode, world, bots = true }) {
+    // lobby/welcome state. Room lobbies also carry names, host (id), ids, can (START ready), me (my id).
+    update({ players, max, startIn, mode, world, bots = true, names = null, host = 0, ids = null, can = false, me = 0 }) {
       st.found = players;
-      $('mmCount').textContent = `${players}/${max} hunters found${startIn != null ? ` · starts in ${Math.ceil(startIn)}` : !bots && players < 2 ? ' · waiting for another hunter (bots off)' : ''}`;
-      if (mode) $('mmMode').textContent = `${mode} · ${worldName(world)}`;
+      if (mode) $('mmMode').textContent = `${st.room ? `ROOM ${st.room} · ` : ''}${mode} · ${worldName(world)}`; // (the code stays on screen)
+      if (!st.room || !ids) {
+        $('mmCount').textContent = `${players}/${max} hunters found${startIn != null ? ` · starts in ${Math.ceil(startIn)}` : !bots && players < 2 ? ' · waiting for another hunter (bots off)' : ''}`;
+        return;
+      }
+      const hi = ids.indexOf(host), hostName = hi >= 0 && names ? names[hi][0] : 'the host', amHost = host === me;
+      $('mmFound').textContent = 'FRIENDS ROOM';
+      $('mmList').innerHTML = (names || []).map(([n], i) => `<li class="${ids[i] === host ? 'host' : ''}${ids[i] === me ? ' me' : ''}">${esc(n)}${ids[i] === host ? ' <small>HOST</small>' : ''}${ids[i] === me ? ' <small>YOU</small>' : ''}</li>`).join('');
+      $('mmHost').hidden = !amHost;
+      $('mmBots').checked = bots; $('mmStart').disabled = !can;
+      $('mmCount').textContent = `${players}/${max} hunters in the room${startIn != null ? ` · starts by itself in ${Math.ceil(startIn)}` : ''}`;
+      $('mmWait').textContent = amHost ? (can ? 'Press START when everyone is here.' : 'Bots are off: waiting for a friend to join.') : `Waiting for ${hostName} to start.`;
+    },
+    // a friend room that is mid-match: we're held for its next match
+    wait({ mode, left }) {
+      $('mmFound').textContent = 'FRIENDS ROOM';
+      $('mmMode').textContent = `ROOM ${st.room}${mode ? ` · ${mode}` : ''}`;
+      $('mmCount').textContent = `Your friends are mid-match${left != null ? ` (about ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} left)` : ''}`;
+      $('mmList').innerHTML = ''; $('mmHost').hidden = true;
+      $('mmWait').textContent = "You'll join their next match. Stay here, or CANCEL.";
     },
     hide() { el.hidden = true; },
   };
