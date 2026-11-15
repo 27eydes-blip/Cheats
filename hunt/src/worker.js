@@ -379,7 +379,7 @@ export class MatchRoom {
     if (this.sim.phase === 'end') {
       const now = Date.now();
       if (!this.endedAt) this.endedAt = now;
-      else if (now - this.endedAt > 20000) this.stop();
+      else if (now - this.endedAt > 20000) { if (this.waiting.size) this.nextRoomMatch(); else this.stop(); } // (results never came in: don't strand the friends who wait)
     }
   }
 

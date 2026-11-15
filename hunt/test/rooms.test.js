@@ -124,6 +124,17 @@ assert(!RANDOM_MODES.includes('squad') && !RANDOM_MODES.includes('bighunt'), 'no
   pal.close(1000, 'x');
   console.log('friend room: late friend waits for the next match: ok');
 }
+// ---- results that never arrive don't strand a waiting friend
+{
+  const r = room();
+  const a = await join(r, 'SLOW', 'name=A&mode=bounty');
+  a.say({ t: 'host', start: 1 });
+  const late = await join(r, 'SLOW', 'name=L');
+  r.sim.time = 1e6; r.step();
+  r.sim.resultsIn = false; // (as if D1 hangs)
+  r.step(); r.endedAt = Date.now() - 21000; r.step();
+  assert(late.last('welcome'), 'after 20 s the next match opens anyway');
+}
 // ---- the host reconnecting in the lobby (same account) stays host
 {
   const db = fakeD1(), r = manual(new MatchRoom({}, fakeEnv(db)));
