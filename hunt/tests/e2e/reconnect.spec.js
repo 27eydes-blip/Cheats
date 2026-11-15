@@ -45,7 +45,7 @@ test('room with bots OFF: two humans, no bots; a dropped player rejoins the same
   A2.ws.close(); B.ws.close();
 });
 
-test('a room that is full shows a message; a quit (bye) cannot be rejoined', async ({ baseURL }) => {
+test('a full room that is playing holds a late friend for its next match; a quit (bye) cannot be rejoined', async ({ baseURL }) => {
   const base = baseURL.replace('http', 'ws');
   const room = 'F' + Math.floor(Math.random() * 1e8);
   const q = `room=${room}&bots=0&mode=squad&lobby=12&events=0&testmap=open`;
@@ -53,8 +53,10 @@ test('a room that is full shows a message; a quit (bye) cannot be rejoined', asy
   for (let i = 0; i < 6; i++) { cs.push(client(`${base}/ws?name=P${i}&brawler=volt&${q}`)); await until(() => cs[i].welcome || cs[i].msgs.length, 10000, 'join ' + i); }
   await until(() => cs.every((c) => c.start), 15000, 'full room starts');
   const extra = client(`${base}/ws?name=Late&brawler=volt&${q}`);
-  await until(() => extra.msgs.some((m) => m.t === 'retry'), 10000, 'retry');
-  expect(extra.msgs.find((m) => m.t === 'retry').reason).toMatch(/started|full/i);
+  await until(() => extra.msgs.some((m) => m.t === 'roomwait'), 10000, 'roomwait');
+  expect(extra.msgs.find((m) => m.t === 'roomwait').mode).toBe('squad');
+  expect(extra.msgs.some((m) => m.t === 'retry' || m.t === 'welcome')).toBe(false);
+  extra.ws.close();
   const w = cs[0].welcome;
   cs[0].ws.send('{"t":"bye"}');
   await wait(500);
