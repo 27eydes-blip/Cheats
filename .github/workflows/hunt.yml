@@ -1,0 +1,97 @@
+# Hunt (hunt/): its own tests, separate from the rest of the repo's CI.
+# Cloudflare Workers Builds deploys hunt/ from main on every push, so this is the check to look at
+# before merging anything that touches the game.
+name: Hunt
+
+on:
+  pull_request:
+    paths:
+      - "hunt/**"
+      - ".github/workflows/hunt.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "hunt/**"
+      - ".github/workflows/hunt.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hunt-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: hunt
+
+jobs:
+  test:
+    name: Node suites, browser suite (Chromium), deploy dry run
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hunt/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Node suites (simulation, balance, accounts, deploy config)
+        run: npm test
+
+      - name: Production config builds (no upload)
+        run: npx wrangler deploy -c wrangler.preview.jsonc --dry-run
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # the node suites already ran above, so the browser run leaves its copy of them out
+      - name: Browser suite
+        run: npm run e2e -- --project=chromium --grep-invert "node test/"
+
+      - name: Upload failure details
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hunt-test-results
+          path: hunt/test-results/
+          if-no-files-found: ignore
+
+  webkit:
+    name: Browser suite on WebKit (closest to iPhone Safari)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hunt/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install WebKit
+        run: npx playwright install --with-deps webkit
+
+      - name: Browser suite
+        run: npm run e2e -- --project=webkit --grep-invert "node test/"
+
+      - name: Upload failure details
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hunt-test-results-webkit
+          path: hunt/test-results/
+          if-no-files-found: ignore

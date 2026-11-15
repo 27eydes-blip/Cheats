@@ -60,6 +60,19 @@ assert.ok(!/^0{8}-/.test(pdb.database_id), 'production must not point at the pla
 // --- logs are kept in production
 assert.equal(prod.observability?.enabled, true, 'Workers Logs must be on in the production config');
 
+// --- CI: Hunt's own workflow runs its tests, and the repo-wide linters leave hunt/ alone
+// (they follow another code style; with hunt/ included the repo's lint job failed on every push)
+const repo = (f) => fs.readFileSync(path.join(root, '..', f), 'utf8');
+const ci = repo('.github/workflows/hunt.yml');
+assert.match(ci, /paths:\s*\n\s*- "hunt\/\*\*"/, 'the Hunt workflow must run when hunt/ changes');
+for (const step of ['npm ci', 'npm test', 'npm run e2e', 'playwright install --with-deps chromium', 'wrangler deploy -c wrangler.preview.jsonc --dry-run']) {
+  assert.ok(ci.includes(step), `the Hunt workflow no longer runs "${step}"`);
+}
+assert.ok(!/continue-on-error/.test(ci), 'a failing Hunt test must fail the workflow');
+assert.ok(!/wrangler deploy(?!.*--dry-run)/.test(ci), 'CI must never do a real deploy');
+assert.ok(JSON.parse(repo('biome.json')).files.includes.includes('!hunt/**'), 'biome.json must keep ignoring hunt/');
+assert.match(repo('.stylelintignore'), /^hunt\/\*\*$/m, '.stylelintignore must keep ignoring hunt/');
+
 // --- the error log: one line, no personal data, not a flood
 const lines = [];
 const realError = console.error;
