@@ -81,14 +81,16 @@ class Loop {
   stop() { clearInterval(this.timer); this.timer = null; }
 }
 
-// config of a new race from the room name and (for rooms) the host's query
-export function raceConfig(name, q) {
+// config of a new race from the room name and (for rooms) the host's query. dev (HUNT_DEV, local
+// only): a room may ask for fewer laps (`laps=1`) so browser tests finish a race quickly.
+export function raceConfig(name, q, dev = false) {
   if (name.startsWith('rq:')) { const [, mode, track, bots] = name.split(':'); return { mode, track, bots: bots === '1', lobby: 8 }; }
   if (name.startsWith('solo:')) return { mode: 'trial', track: name.split(':')[1], bots: false, lobby: 0.5 };
   const mode = RACE_MODES[q.get('mode')] ? q.get('mode') : 'grand';
   const track = TRACK_IDS.includes(q.get('track')) ? q.get('track') : pick(TRACK_IDS);
   const lobby = Math.max(1.5, Math.min(30, Number(q.get('lobby')) || 12));
-  return { mode, track, bots: q.get('bots') !== '0', lobby };
+  const laps = dev && Number(q.get('laps')) >= 1 && Number(q.get('laps')) <= 3 ? Math.floor(Number(q.get('laps'))) : undefined;
+  return { mode, track, bots: q.get('bots') !== '0', lobby, ...(laps ? { laps } : {}) };
 }
 
 export class RaceRoom {
@@ -110,7 +112,7 @@ export class RaceRoom {
     this.dropped = new Map();
     this.endedAt = 0;
     this.sim = new RaceSim({
-      mode: cfg.mode, track: cfg.track, seed: (Math.random() * 2 ** 32) >>> 0, fillBots: cfg.bots, lobbyTime: cfg.lobby,
+      mode: cfg.mode, track: cfg.track, seed: (Math.random() * 2 ** 32) >>> 0, fillBots: cfg.bots, lobbyTime: cfg.lobby, laps: cfg.laps,
       send: (id, msg) => { const ws = sockets.get(id); if (ws) sendJSON(ws, msg); },
       hooks: { finished: (rows) => this.recordResults(rows, sockets) },
     });
@@ -140,7 +142,7 @@ export class RaceRoom {
     const [client, server] = Object.values(pair);
     server.accept();
     if (q.get('rejoin')) return this.rejoin(url, server, client);
-    if (!this.sim || this.sim.phase === 'end' || (isRoom && this.sim.phase === 'play' && this.sockets.size === 0)) this.newRace(raceConfig(mname, q));
+    if (!this.sim || this.sim.phase === 'end' || (isRoom && this.sim.phase === 'play' && this.sockets.size === 0)) this.newRace(raceConfig(mname, q, !!this.env.HUNT_DEV));
     const sim = this.sim;
     const d = q.get('driver') || q.get('brawler');
     const id = sim.join(cleanName(q.get('name')), DRIVERS[d] ? d : 'volt');
@@ -202,6 +204,7 @@ export class RaceRoom {
       try { m = JSON.parse(e.data); } catch { return; }
       if (!m || typeof m !== 'object') return;
       if (m.t === 'ping') return sendJSON(server, { t: 'pong', c: m.c });
+      if (m.t === 'dev') { if (this.env.HUNT_DEV) sim.dev(id, m); return; } // local test hooks only
       if (m.t === 'bye') { this.abandon(id); onClose(true); try { server.close(1000, 'bye'); } catch {} return; }
       sim.input(id, m);
     });

@@ -40,7 +40,7 @@ export class RaceSim {
     this.mode = RACE_MODES[this.modeKey];
     this.trackKey = TRACK_IDS.includes(o.track) ? o.track : TRACK_IDS[0];
     this.T = getTrack(this.trackKey, !!this.mode.arena);
-    this.laps = this.mode.laps || 0;
+    this.laps = this.mode.laps && o.laps >= 1 ? Math.min(this.mode.laps, o.laps | 0) : this.mode.laps || 0; // o.laps: dev short races
     this.send = o.send || (() => {});
     this.hooks = o.hooks || {};
     this.seed = o.seed ?? 1;
@@ -184,6 +184,15 @@ export class RaceSim {
     p.queue.push(inp);
     // too far behind: drop the oldest but keep their button presses
     while (p.queue.length > 6) { const o = p.queue.shift(); p.queue[0].f |= o.f; p.queue[0].i |= o.i; p.lastSeq = o.s; }
+  }
+
+  // local dev / browser-test hooks (the room only forwards these when HUNT_DEV is set):
+  // {k: 'wreck'} wrecks your car, {k: 'item', item} hands you an item
+  dev(id, m) {
+    const p = this.players.get(id);
+    if (!p || this.phase !== 'play' || this.time <= 0) return;
+    if (m.k === 'wreck') this.destroy(p, null, 'fall');
+    else if (m.k === 'item' && ITEM_IDS.includes(m.item) && !p.item) p.item = m.item;
   }
 
   // ------------------------------------------------------------------ main loop
