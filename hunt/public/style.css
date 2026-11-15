@@ -110,7 +110,7 @@ button.small { font-size: 14px; padding: 4px 12px; }
 #modeBanner { position: absolute; bottom: 22%; left: 50%; transform: translateX(-50%); font-size: 22px; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; white-space: nowrap; }
 #modeBanner.red { color: #ff6b81; }
 #modeBanner.gem { color: #f4b8ff; }
-#leader { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(max(8px, env(safe-area-inset-top)) + 150px); font-size: 13px; background: rgba(27,16,51,.7); border: 3px solid var(--ink); border-radius: 10px; padding: 3px 8px; }
+#leader { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(env(safe-area-inset-top) + 44px + min(128px, 30vh)); /* (just under the radar, whatever its size) */ font-size: 13px; background: rgba(27,16,51,.7); border: 3px solid var(--ink); border-radius: 10px; padding: 3px 8px; }
 #leader div span { color: var(--gold); margin-left: 6px; }
 #respawn { position: absolute; top: 40%; left: 50%; transform: translateX(-50%); font-size: 28px; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; }
 #respawn b { color: var(--gold); font-weight: 400; }
@@ -258,3 +258,5 @@ body.lefty #leader { left: auto; right: max(10px, env(safe-area-inset-right)); }
 body.lefty #hubPanel { right: auto; left: max(10px, env(safe-area-inset-left)); top: calc(max(8px, env(safe-area-inset-top)) + 36px + min(128px, 30vh) + 12px); }
 /* short phones: the big event / mode banner stays one compact block above your hunter's nameplate */
 @media (max-height: 430px) { #evBanner:not(.small) { top: 19%; width: max-content; max-width: 94vw; } #evBanner:not(.small) .evName { font-size: 24px; } #evBanner:not(.small) .evDesc { font-size: 13px; } }
+/* the results screen covers the whole match view: keep the creator credit on top of it */
+body.ingame:has(.res:not([hidden])) #creditGame { z-index: 35; }

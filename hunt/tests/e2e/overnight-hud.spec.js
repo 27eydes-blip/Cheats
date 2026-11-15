@@ -140,6 +140,9 @@ test.describe('Reduce Flashing', () => {
     const op = await page.locator('#rsUps .ucard').evaluateAll((els) => els.map((e) => getComputedStyle(e).opacity));
     expect(op).toEqual(['1', '1', '1']);
     for (const c of await page.locator('#rsUps .ucard').all()) await expect(c).toBeVisible();
+    // and the creator credit sits on top of the results screen
+    await expect(page.locator('#creditGame')).toBeVisible();
+    expect(await page.evaluate(() => +getComputedStyle(document.getElementById('creditGame')).zIndex > +getComputedStyle(document.querySelector('.res')).zIndex)).toBe(true);
     expect(errors).toEqual([]);
   });
 });
