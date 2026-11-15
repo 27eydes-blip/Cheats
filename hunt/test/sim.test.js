@@ -1,6 +1,6 @@
 // Headless simulation tests (Node, no Workers runtime needed).
 import { Sim } from '../src/sim.js';
-import { QUICK_MODES } from '../src/modes.js';
+import { QUICK_MODES, MODES } from '../src/modes.js';
 import { generateArena, generateWorld, zoneBounds, WORLDS, HUB, DT } from '../public/shared.js';
 import { EVENTS } from '../public/events/index.js';
 import assert from 'node:assert';
@@ -9,6 +9,8 @@ const seenEvents = new Set();
 function runArena(mode, world, seed) {
   const msgs = [];
   const sim = new Sim({ map: generateArena(seed, world), mode, seed, lobbyTime: 0.2, send: (id, m) => msgs.push(m) });
+  // a spectator socket, so broadcasts (the kill feed) are still captured once Alice has left
+  sim.observers.set('watch', { x: sim.center.x, y: sim.center.y });
   const id = sim.join('Alice', 'volt');
   while (sim.phase === 'lobby') sim.tick();
   assert.equal(sim.players.size, sim.maxPlayers);
@@ -19,7 +21,12 @@ function runArena(mode, world, seed) {
     if (sim.event) seenEvents.add(sim.event.id);
   }
   assert.equal(sim.phase, 'end', `${mode}/${world} did not end`);
-  const kills = msgs.filter((m) => m.t === 'kill').length;
+  // knockouts: what the kill feed announced, and what was credited to players, must agree
+  const feed = msgs.filter((m) => m.t === 'kill');
+  const kills = [...sim.players.values()].reduce((a, p) => a + p.kills, 0);
+  assert.equal(feed.filter((m) => m.kid).length, kills, `${mode}/${world}: every announced knockout was credited (feed ${feed.filter((m) => m.kid).length}, credited ${kills})`);
+  if (['showdown', 'bighunt', 'bounty'].includes(mode)) assert(kills > 0, `${mode}/${world}: bots knocked nobody out all match`);
+  if (!MODES[mode].respawn) assert(feed.length >= sim.players.size - 1, `${mode}/${world}: an elimination match ended with ${feed.length} knockouts for ${sim.players.size} players`);
   const top = [...sim.players.values()].sort((a, b) => b.bountyEarned - a.bountyEarned)[0];
   return `${mode.padEnd(9)} ${world.padEnd(7)} ${(t / 20).toFixed(0).padStart(4)}s  kills ${String(kills).padStart(3)}  top bounty earned ${top.name}:${top.bountyEarned}`;
 }
