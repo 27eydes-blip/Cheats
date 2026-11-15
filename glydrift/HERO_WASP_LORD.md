@@ -62,3 +62,5 @@ for a hero that has those perks, and no hero has them now.)
 - **New save field:** `revealed` remembers that his reveal has played. It works with old saves.
 - **Existing gap, unchanged:** SXE's theoretical top speed (1.856) is already a little above the
   general ×1.8 server limit. That's unrelated to Wasp Lord, but worth a look one day.
+- **Home screen pictures re-recorded (15 Nov 2026):** the saved home screenshots predated the
+  space kept at the bottom for the Gleyde Technologies mark, so they were recorded again.
