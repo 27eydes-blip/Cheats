@@ -121,3 +121,100 @@ test.describe('desktop ability buttons', () => {
     await ctx.close();
   });
 });
+
+test.describe('Reduce Flashing', () => {
+  test.use({ reducedMotion: 'reduce' });
+  test('unlock cards on the results screen are visible with animations off', async ({ page }) => {
+    const errors = trackErrors(page);
+    await page.goto('/?world=meadow&mode=bounty');
+    await waitMe(page);
+    expect(await page.evaluate(() => document.body.classList.contains('reduce-flash'))).toBe(true);
+    await page.evaluate(() => {
+      const G = window.__hunt;
+      window.__huntMsg({ t: 'progress', delta: 5, xp: 30, coins: 9, progress: { xp: 130, trophies: {}, owned: [], equipped: {} },
+        levels: [{ level: 6, coins: 50, weapons: ['ratchet'] }], mastery: [{ id: 'stormline', level: 3 }], wxp: [{ id: 'stormline', xp0: 0, xp1: 40 }] });
+      window.__huntMsg({ t: 'end', mode: 'bounty', rank: 1, kills: 1, bounty: 3, winner: 'Me', results: [['Me', 'volt', 1, 1, 0, G.myId, 3, 3]] });
+    });
+    await expect(page.locator('#rsUps .ucard')).toHaveCount(3, { timeout: 8000 });
+    await page.waitForTimeout(2500); // (longer than the last card's reveal delay)
+    const op = await page.locator('#rsUps .ucard').evaluateAll((els) => els.map((e) => getComputedStyle(e).opacity));
+    expect(op).toEqual(['1', '1', '1']);
+    for (const c of await page.locator('#rsUps .ucard').all()) await expect(c).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+});
+
+test('the event banner only touches the DOM when its text changes', async ({ page }) => {
+  await page.goto('/?world=meadow&mode=bounty&ev=wildfire&events=1');
+  await waitMe(page);
+  await page.evaluate(() => window.__huntMsg({ t: 'ev', id: 'wildfire', ph: 'warn', tl: 5, p: { burn: [] } }));
+  await page.waitForFunction(() => !document.getElementById('evBanner').hidden && performance.now() > window.__hunt.bannerUntil, null, { timeout: 10000 });
+  const n = await page.evaluate(() => new Promise((res) => {
+    let n = 0;
+    const mo = new MutationObserver((l) => { n += l.length; });
+    mo.observe(document.getElementById('evBanner'), { subtree: true, childList: true, characterData: true, attributes: true });
+    setTimeout(() => { mo.disconnect(); res(n); }, 2000);
+  }));
+  expect(n).toBeLessThan(12); // (the countdown changes once a second; it used to be rewritten every frame)
+});
+
+test('shots do not pile up while frames are paused (hidden tab)', async ({ page }) => {
+  await page.goto('/?world=meadow&mode=bounty');
+  await waitMe(page);
+  await page.waitForTimeout(2000);
+  await page.evaluate(() => { window.requestAnimationFrame = () => 0; }); // what a background tab does
+  await page.waitForTimeout(12000);
+  const n = await page.evaluate(() => window.__hunt.shots.live.size);
+  expect(n).toBeLessThan(60);
+});
+
+test.describe('Free Play map and hub', () => {
+  test.use({ viewport: { width: 844, height: 340 } });
+  test('the full map follows a height-only resize (phone toolbar)', async ({ page }) => {
+    await page.goto('/?free=1');
+    await waitMe(page);
+    await page.evaluate(() => window.__huntMap.open());
+    const size = () => page.evaluate(() => { const c = document.getElementById('fullmap'); return [c.width, c.height, Math.min(2, devicePixelRatio)]; });
+    let [w, h, d] = await size();
+    expect([w, h]).toEqual([844 * d, 340 * d]);
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect.poll(async () => (await size()).slice(0, 2), { timeout: 2000 }).toEqual([844 * d, 390 * d]);
+  });
+
+  test('world map: zone names and hunter counts are drawn over the icons', async ({ page }) => {
+    await page.goto('/?free=1');
+    await waitMe(page);
+    await page.evaluate(() => {
+      const P = CanvasRenderingContext2D.prototype, fill = P.fill, fillText = P.fillText;
+      window.__ops = [];
+      P.fill = function (...a) { if (this.canvas.id === 'fullmap') window.__ops.push('fill'); return fill.apply(this, a); };
+      P.fillText = function (t, ...a) { if (this.canvas.id === 'fullmap') window.__ops.push('text:' + t); return fillText.call(this, t, ...a); };
+      window.__huntMap.open();
+    });
+    const ops = await page.evaluate(() => window.__ops.slice());
+    const firstLabel = ops.findIndex((o) => o === 'text:RUINED CITADEL' || o === 'text:THE HUB');
+    const you = ops.indexOf('text:YOU');
+    expect(firstLabel).toBeGreaterThan(0);
+    expect(ops.slice(0, firstLabel).filter((o) => o === 'fill').length).toBeGreaterThan(5); // the icons came first
+    expect(ops.slice(firstLabel, you).filter((o) => o === 'fill').length).toBeLessThanOrEqual(3); // (only your own dot, and the Marked skull)
+  });
+});
+
+for (const vp of [{ width: 667, height: 375, touch: true }, { width: 932, height: 430, touch: true }, { width: 1180, height: 820, touch: true }, { width: 1440, height: 900, touch: false }]) {
+  test(`hub panel at ${vp.width}x${vp.height}: clear of the move stick side, the event banner and the credit`, async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.touch, isMobile: vp.touch });
+    const page = await ctx.newPage();
+    await page.goto('/?free=1');
+    await waitMe(page);
+    await expect(page.locator('#hubPanel')).toBeVisible({ timeout: 10000 });
+    await page.evaluate(() => window.__huntMsg({ t: 'ev', id: 'wildfire', ph: 'warn', tl: 5, p: { burn: [] } }));
+    await page.waitForFunction(() => !document.getElementById('evBanner').hidden && performance.now() > window.__hunt.bannerUntil, null, { timeout: 10000 });
+    const hub = await box(page, '#hubPanel');
+    expect(overlap(hub, await box(page, '#evBanner'))).toBe(false);
+    expect(overlap(hub, await box(page, '#creditGame'))).toBe(false);
+    expect(overlap(hub, await box(page, '#menuBtn'))).toBe(false);
+    expect(hub.x).toBeGreaterThan(vp.width * 0.45); // (touches left of 0.45 W start the move stick)
+    expect(hub.y + hub.height).toBeLessThanOrEqual(vp.height);
+    await ctx.close();
+  });
+}

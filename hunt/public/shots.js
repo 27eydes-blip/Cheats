@@ -13,7 +13,7 @@ export class Pool {
 const newShot = () => ({ key: '', id: 0, x: 0, y: 0, vx: 0, vy: 0, px: 0, py: 0, dist: 0, range: 0, kind: 0, t0: 0, steps: 0, owner: 0, fuse: null, bounce: 0, endN: -1, ex: 0, ey: 0, dead: false, ang: 0 });
 
 export class ShotSim {
-  constructor() { this.live = new Map(); this.pool = new Pool(newShot); this.out = []; }
+  constructor() { this.live = new Map(); this.pool = new Pool(newShot); this.out = []; this.sampledAt = 0; }
   clear() { for (const b of this.live.values()) this.pool.put(b); this.live.clear(); }
   // row: [id, x, y, vx, vy, range, kind, tick, owner, fuse]
   fired(connKey, row) {
@@ -27,8 +27,19 @@ export class ShotSim {
     return b;
   }
   ended(connKey, row, n) { const b = this.live.get(connKey + ':' + row[0]); if (b) { b.endN = n; b.ex = row[1]; b.ey = row[2]; } }
+  // Nothing is drawn while the tab is hidden (no animation frames), but snapshots keep adding shots.
+  // Called on every snapshot: if frames have stopped, drop what has already ended (or is far too old
+  // to still be flying), so a long background stay neither grows nor pays it all back in one frame.
+  prune(connKey, tick, now = performance.now()) {
+    if (now - this.sampledAt < 1000) return;
+    for (const [key, b] of this.live) {
+      if (b.ck !== connKey) continue;
+      if ((b.endN >= 0 && tick >= b.endN) || tick - b.t0 > 200) { this.live.delete(key); this.pool.put(b); }
+    }
+  }
   // advance every projectile to render tick rt (fractional) and return what to draw
   sample(rtOf, map, mods, onEnd) {
+    this.sampledAt = performance.now();
     const out = this.out; out.length = 0;
     for (const [key, b] of this.live) {
       const rt = typeof rtOf === 'number' ? rtOf : rtOf(b.ck);

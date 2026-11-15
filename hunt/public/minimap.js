@@ -89,17 +89,18 @@ export function drawFullMap(g, map, W, H, o = {}) {
   g.imageSmoothingEnabled = false;
   g.drawImage(mini, ox, oy, size, size);
   g.lineWidth = 3; g.strokeStyle = INK; g.strokeRect(ox, oy, size, size);
+  // landmark and POI icons first: the zone names, events and hunter counts go on top, so they stay readable
+  for (const lm of map.landmarks || []) { const [x, y] = P(lm.x, lm.y); drawLandmarkIcon(g, lm.kind, x, y, Math.max(0.9, size / 360)); }
+  for (const p of map.pois || []) if (p.kind === 'vault' || p.kind === 'high') { const [x, y] = P(p.x, p.y); drawLandmarkIcon(g, p.kind, x, y, Math.max(0.5, size / 700)); }
   // zone names + active events
   for (const z of ZONES) {
     const [x, y] = P((z.x0 + z.x1) / 2, z.y0 + (z.y1 - z.y0) * 0.16);
     outlinedText(g, z.name.toUpperCase(), x, y, Math.max(10, size / 36), '#fff');
     const ev = o.online && o.online[z.slot] && o.online[z.slot].ev;
-    if (ev && EVENTS[ev[0]]) outlinedText(g, `${ev[1] === 'warn' ? '⚠ ' : ''}${EVENTS[ev[0]].name}`, x, y + Math.max(12, size / 30), Math.max(9, size / 46), EVENTS[ev[0]].color);
+    if (ev && EVENTS[ev[0]]) outlinedText(g, `${ev[1] === 'warn' ? '⚠ ' : ''}${EVENTS[ev[0]].name}`, x, y + Math.max(12, size / 30), Math.max(10, size / 46), EVENTS[ev[0]].color);
     const n = o.online && o.online[z.slot] ? o.online[z.slot].players.length : 0;
-    if (n) outlinedText(g, `${n} hunter${n > 1 ? 's' : ''}`, x, y + Math.max(24, size / 15), Math.max(8, size / 52), '#cfc3ff');
+    if (n) outlinedText(g, `${n} hunter${n > 1 ? 's' : ''}`, x, y + Math.max(24, size / 15), Math.max(10, size / 52), '#cfc3ff');
   }
-  for (const lm of map.landmarks || []) { const [x, y] = P(lm.x, lm.y); drawLandmarkIcon(g, lm.kind, x, y, Math.max(0.9, size / 360)); }
-  for (const p of map.pois || []) if (p.kind === 'vault' || p.kind === 'high') { const [x, y] = P(p.x, p.y); drawLandmarkIcon(g, p.kind, x, y, Math.max(0.5, size / 700)); }
   // the top bounty holder (the "Marked" hunter)
   if (o.top) { const [x, y] = P(o.top.x, o.top.y); drawLandmarkIcon(g, 'skull', x, y, Math.max(0.9, size / 380)); outlinedText(g, `${o.top.name} ★${o.top.bounty}`, x, y - Math.max(14, size / 34), Math.max(9, size / 50), '#ff6b81'); }
   // you

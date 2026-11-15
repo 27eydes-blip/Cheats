@@ -6,6 +6,7 @@
 // They never read hidden players' live positions.
 import { BRAWLERS, DT, TILE, PLAYER_R, HUB, BUSH, tileAt, blocksMove, lineOfSight, touchingBorder } from '../public/shared.js';
 import { WEAPONS } from '../public/weapons.js';
+import { BURN_S } from '../public/events/wildfire.js';
 
 // what the bot is holding right now: its signature attack or its secondary weapon
 function activeWeapon(m, p) {
@@ -36,7 +37,7 @@ function hazardAt(m, x, y, L, self) {
   const e = m.event;
   if (e && (e.ph === 'on' || L.dodgeWarn)) {
     if (e.id === 'lava') for (const c of e.params.pools) { const d = Math.hypot(x - c.x, y - c.y); if (d < c.r + 30) { hx += (x - c.x) / (d || 1); hy += (y - c.y) / (d || 1); } }
-    if (e.id === 'wildfire' && (e.params.burnT ?? 0) < 4) {
+    if (e.id === 'wildfire' && (e.params.burnT ?? 0) < BURN_S) {
       const idx = Math.floor(y / TILE) * m.map.gw + Math.floor(x / TILE);
       if (e.params.burn.includes(idx)) { const cx = (idx % m.map.gw) * TILE + 25, cy = Math.floor(idx / m.map.gw) * TILE + 25; hx += x - cx + 0.1; hy += y - cy; }
     }

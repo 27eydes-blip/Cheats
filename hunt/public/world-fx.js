@@ -142,15 +142,27 @@ export function drawAtmosphere(ctx, st, cam, W, H, s, t) {
 }
 
 // ---------------------------------------------------------------- compass markers for far landmarks
-export function drawCompass(ctx, map, cam, W, H, s) {
+// where an off-screen pointer at angle a sits: on the edge of the SAFE area (never under a notch or
+// the home bar), m px in from it
+const NO_SA = { t: 0, r: 0, b: 0, l: 0 };
+export function edgePoint(a, W, H, sa = NO_SA, m = 34) {
+  const x0 = sa.l + m, x1 = W - sa.r - m, y0 = sa.t + m, y1 = H - sa.b - m;
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, c = Math.cos(a), sn = Math.sin(a);
+  const k = Math.min((x1 - x0) / 2 / Math.abs(c || 1e-6), (y1 - y0) / 2 / Math.abs(sn || 1e-6));
+  return { x: Math.max(x0, Math.min(x1, cx + c * k)), y: Math.max(y0, Math.min(y1, cy + sn * k)) };
+}
+
+export function drawCompass(ctx, map, cam, W, H, s, sa = NO_SA, avoid = null) {
   for (const lm of map.landmarks || []) {
     const dx = (lm.x - cam.x) * s, dy = (lm.y - cam.y) * s, d = Math.hypot(lm.x - cam.x, lm.y - cam.y);
     if ((Math.abs(dx) < W / 2 && Math.abs(dy) < H / 2) || d > 9000) continue;
-    const a = Math.atan2(dy, dx), k = Math.min((W / 2 - 34) / Math.abs(Math.cos(a) || 1e-6), (H / 2 - 34) / Math.abs(Math.sin(a) || 1e-6));
+    const e = edgePoint(Math.atan2(dy, dx), W, H, sa, 34);
     // keep clear of the top HUD pills and the bottom controls
-    const x = W / 2 + Math.cos(a) * k;
+    const x = e.x;
     const between = x > W * 0.3 && x < W * 0.64; // bottom edge between the stick and the buttons is free
-    const y = Math.max(96, Math.min(H - (between ? 44 : 140), H / 2 + Math.sin(a) * k));
+    let y = Math.max(96 + sa.t, Math.min(H - sa.b - (between ? 44 : 140), e.y));
+    // a DOM panel on that edge (the safe hub's): slide the marker just below it
+    if (avoid && x > avoid.left - 20 && x < avoid.right + 20 && y > avoid.top - 20 && y < avoid.bottom + 32) y = avoid.bottom + 32;
     ctx.save(); ctx.globalAlpha = 0.85;
     ctx.beginPath(); ctx.arc(x, y, 17, 0, Math.PI * 2); ctx.fillStyle = 'rgba(27,16,51,0.75)'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffd23f'; ctx.stroke();
     drawLandmarkIcon(ctx, lm.kind, x, y + 1, 1.1);

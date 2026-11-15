@@ -127,9 +127,13 @@ button.small { font-size: 14px; padding: 4px 12px; }
 .endStats b { color: var(--gold); font-weight: 400; margin-left: 4px; }
 #feed { top: calc(max(8px, env(safe-area-inset-top)) + 40px); }
 @media (max-height: 430px) { #hubPanel { top: 46px; width: 170px; } #onlineList { max-height: 60px; } .modes button { padding: 6px 20px; } }
-#hubPanel { right: auto; left: 50%; transform: translateX(-50%); top: calc(max(8px, env(safe-area-inset-top)) + 70px); }
-/* short phones: the centred panel would sit on top of your own brawler; dock it at the bottom middle */
-@media (max-height: 430px) { #hubPanel { top: auto; bottom: max(6px, env(safe-area-inset-bottom)); } }
+/* SAFE HUB panel: top-right, under the menu button. Clear of the event banner (centre), the creator
+   credit (bottom-right), the move stick (left half) and your own hunter. The kill feed steps aside
+   while it shows (nobody fights in the hub). */
+#hubPanel { top: calc(max(8px, env(safe-area-inset-top)) + 52px); }
+#hud:has(#hubPanel:not([hidden])) #feed { display: none; }
+#hubPick { flex-wrap: wrap; } #hubPick button { flex: 1 0 28%; } /* (every hunter fits: rows of three) */
+@media (max-height: 430px) { #hubPanel { top: calc(max(8px, env(safe-area-inset-top)) + 50px); padding: 4px 6px; } #onlineList { max-height: 44px; } }
 
 .settings { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; font-size: 14px; margin: 2px 0 4px; }
 .settings input { width: 18px; height: 18px; accent-color: var(--gold); vertical-align: middle; }

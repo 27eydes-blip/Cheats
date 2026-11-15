@@ -24,7 +24,7 @@ import { ShotSim, PList, resetPart, resetText } from './shots.js';
 import { WEAPONS, WEAPON_IDS, WKIND, withPerks, shotAngles, SWAP_TIME } from './weapons.js';
 import { GADGETS } from './power.js';
 import { drawMiniMap, drawFullMap } from './minimap.js';
-import { envState, drawLandmarks, drawAtmosphere, drawCompass, ZONE_INFO, zoneLabel } from './world-fx.js';
+import { envState, drawLandmarks, drawAtmosphere, drawCompass, edgePoint, ZONE_INFO, zoneLabel } from './world-fx.js';
 import { startTense, stopTense } from './ui/music.js';
 import { WallArt } from './art/walls.js';
 import { artFor } from './art/themes.js';
@@ -534,7 +534,7 @@ function addFeed(m) {
 function showBanner(name, desc, color, ms) {
   const b = $('evBanner');
   b.hidden = false; b.classList.remove('small');
-  $('evName').textContent = name; $('evName').style.color = color; $('evDesc').textContent = desc;
+  $('evName').textContent = name; $('evName').style.color = evColor = color; $('evDesc').textContent = desc;
   G.bannerUntil = performance.now() + ms;
 }
 
@@ -555,6 +555,7 @@ function onSnap(c, m) {
     if (G.shots.fired(c.key, r) && r[8] !== G.myId) shotFeel(r[8], r[1], r[2], Math.atan2(r[4], r[3]), r[6]);
   }
   if (m.bd) for (const r of m.bd) G.shots.ended(c.key, r, m.n);
+  G.shots.prune(c.key, m.n); // (no-op while frames are being drawn)
   c.flares = m.fl || null;
   if (c.primary && m.hm) { // HIT MARKER from the server
     const kind = m.hm & 2 ? 'kill' : m.hm & 4 ? 'crit' : 'hit';
@@ -565,6 +566,7 @@ function onSnap(c, m) {
   if (m.td) for (const [idx, type] of m.td) applyTile(idx, type);
   if (m.ch) for (const [idx, hp] of m.ch) G.crateHp.set(idx, hp);
   c.last = m;
+  if (m.lb) c.lb = m.lb; // (sent every 10th snapshot)
   if (m.ev && c.ev && c.ev.id === m.ev[0]) { c.ev.ph = m.ev[1]; c.ev.tl = m.ev[2]; }
   if (G.pings.length > 200) G.pings = G.pings.filter((p) => now - p.t0 < 3000);
   if (m.pg) for (const [id, x, y, bt] of m.pg) G.pings.push({ id, x, y, bt, t0: now, target: !!(m.md && m.md.tg === id) });
@@ -1075,14 +1077,17 @@ function openFullMap() {
   document.body.appendChild(cv);
   const draw = () => {
     if (!fullMap) return;
-    const d = Math.min(2, devicePixelRatio || 1), w = innerWidth, h = innerHeight;
-    if (cv.width !== Math.round(w * d)) { cv.width = Math.round(w * d); cv.height = Math.round(h * d); }
+    const d = Math.min(2, devicePixelRatio || 1), w = innerWidth, h = innerHeight, bw = Math.round(w * d), bh = Math.round(h * d);
+    // either side can change on its own (a phone's toolbar showing/hiding changes only the height)
+    if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
     const g = cv.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
     const tops = Object.values(G.online || {}).map((z) => z.top).filter(Boolean).sort((a, b) => b[1] - a[1]);
     drawFullMap(g, G.map, w, h, { me: G.me ? renderMe() : null, online: G.online, dn: G.env?.dn, top: tops[0] ? { name: tops[0][0], bounty: tops[0][1], x: tops[0][2], y: tops[0][3] } : null });
   };
-  const close = (e) => { e?.preventDefault(); clearInterval(fullMap.timer); cv.remove(); fullMap = null; };
+  const vv = window.visualViewport;
+  const close = (e) => { e?.preventDefault(); clearInterval(fullMap.timer); removeEventListener('resize', draw); vv?.removeEventListener('resize', draw); cv.remove(); fullMap = null; };
   fullMap = { timer: setInterval(draw, 500), close };
+  addEventListener('resize', draw); vv?.addEventListener('resize', draw); // (redraw at once, not on the next tick)
   cv.addEventListener('pointerdown', close);
   draw();
 }
@@ -1115,7 +1120,7 @@ function render(t) {
   R.drawGround(ctx, G.map, x0, y0, x1, y1, t, s * DPR);
   const helpers = R.eventHelpers(ctx, G.map, view);
   const evs = [...G.conns.values()].map((c) => c.ev).filter((e) => e && EVENTS[e.id]);
-  for (const e of evs) if (EVENTS[e.id].layer === 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
+  for (const e of evs) if (EVENTS[e.id].layer === 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers, e.tl);
 
   if (meAlive && G.phase === 'play') {
     const aim = input.getAim(), h = holding(), prof = aimProfile(h);
@@ -1193,7 +1198,7 @@ function render(t) {
   }
 
   R.drawBushes(ctx, G.map, x0, y0, x1, y1, meAlive ? mePos : null, t, Math.max(env.dn ? env.dn.dark : 0, env.cave ? 0.5 : 0));
-  for (const e of evs) if (EVENTS[e.id].layer !== 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
+  for (const e of evs) if (EVENTS[e.id].layer !== 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers, e.tl);
   if (!SETTINGS.lowGfx) R.drawAmbient(ctx, G.map, view, t, false);
   const P = primary();
   if (P && P.last && P.last.z > 0) R.drawPoison(ctx, P.last.z, G.map.gw * TILE_, x0, y0, x1, y1, t);
@@ -1244,7 +1249,7 @@ function render(t) {
   // ---- screen space
   if (!SETTINGS.lowGfx) R.drawGrade(ctx, G.map, cam, W, H);
   drawAtmosphere(ctx, env, cam, W, H, s, t);
-  if (G.kind === 'free') drawCompass(ctx, G.map, cam, W, H, s);
+  if (G.kind === 'free') drawCompass(ctx, G.map, cam, W, H, s, SA, hubRect);
   const pe = P?.ev;
   if (pe && EVENTS[pe.id]?.drawScreen) EVENTS[pe.id].drawScreen(ctx, pe.p, pe.ph, t, W, H, s);
   // HEARTBEAT: an enemy is hiding close by -> pounding heart + slightly darker screen edges (steady)
@@ -1272,8 +1277,8 @@ function render(t) {
     if (o) {
       const dx = (o.x - cam.x) * s, dy = (o.y - cam.y) * s;
       if (Math.abs(dx) > W / 2 - 20 || Math.abs(dy) > H / 2 - 20) {
-        const a = Math.atan2(dy, dx), k = Math.min((W / 2 - 50) / Math.abs(Math.cos(a) || 1e-6), (H / 2 - 50) / Math.abs(Math.sin(a) || 1e-6));
-        ctx.save(); ctx.translate(W / 2 + Math.cos(a) * k, H / 2 + Math.sin(a) * k); ctx.rotate(a);
+        const a = Math.atan2(dy, dx), e = edgePoint(a, W, H, SA, 50); // (inside the safe area: never under a notch)
+        ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(a);
         ctx.beginPath(); ctx.moveTo(22, 0); ctx.lineTo(-12, -16); ctx.lineTo(-12, 16); ctx.closePath();
         ctx.fillStyle = '#ff2846'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = R.INK; ctx.stroke(); ctx.restore();
       }
@@ -1339,6 +1344,10 @@ function render(t) {
 // its own controls on the canvas. Written only when something changed (no layout work per frame).
 const ab = { shown: null, swap: null, swapOn: null, gad: null, k: null, ready: null, keys: null };
 const setHidden = (el, v) => { if (el.hidden !== v) el.hidden = v; };
+const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
+const htmlOf = new WeakMap(); // (what we last wrote: innerHTML reads back normalised, so compare our own string)
+const setHtml = (el, v) => { if (htmlOf.get(el) !== v) { htmlOf.set(el, v); el.innerHTML = v; } };
+let evColor = '';
 function updateAbilities() {
   const me = G.me;
   const show = G.phase === 'play' && !!me && !!me.al && !input.isTouch;
@@ -1368,24 +1377,22 @@ $('abSuper').onclick = abPress({ type: 'super', mode: 'auto' });
 for (const id of ['abSwap', 'abGadget', 'abSuper']) $(id).addEventListener('mousedown', (e) => e.preventDefault()); // (keeps keyboard focus off the button)
 
 // ------------------------------------------------------------------ DOM HUD
-let hudT = 0;
+let hudT = 0, hubRect = null;
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 function updateHud(now) {
   const P = primary();
   const e = P?.ev;
   const banner = $('evBanner');
+  // (runs every frame: only touch the DOM when the text actually changes, about once a second)
   if (now < G.bannerUntil) { /* a big banner is showing */ }
-  else if (e) {
-    const def = EVENTS[e.id];
-    banner.hidden = false;
-    if (e.ph === 'warn') {
-      banner.classList.remove('small');
-      $('evName').textContent = `⚠ ${def.name} IN ${Math.max(1, Math.ceil(e.tl))}`; $('evName').style.color = def.color; $('evDesc').textContent = def.desc;
-    } else {
-      banner.classList.add('small');
-      $('evName').textContent = `${def.name} · ${Math.ceil(e.tl)}s`; $('evName').style.color = def.color;
-    }
-  } else banner.hidden = true;
+  else if (e && EVENTS[e.id]) {
+    const def = EVENTS[e.id], warn = e.ph === 'warn';
+    setHidden(banner, false);
+    if (banner.classList.contains('small') === warn) banner.classList.toggle('small', !warn);
+    setText($('evName'), warn ? `⚠ ${def.name} IN ${Math.max(1, Math.ceil(e.tl))}` : `${def.name} · ${Math.ceil(e.tl)}s`);
+    if (evColor !== def.color) { evColor = def.color; $('evName').style.color = def.color; }
+    if (warn) setText($('evDesc'), def.desc);
+  } else setHidden(banner, true);
 
   if (now - hudT < 150) return;
   hudT = now;
@@ -1399,7 +1406,10 @@ function updateHud(now) {
     if (me) { $('sessK').textContent = me.sk; $('sessB').textContent = me.bb; }
     $('poison').hidden = true; $('timerPill').hidden = true;
     const safe = me && me.al && inHub(G.pred.x, G.pred.y);
-    $('hubPanel').hidden = !safe;
+    setHidden($('hubPanel'), !safe);
+    // where it is, for the compass markers: read when it shows and after a resize, never per frame
+    if (!safe) hubRect = null;
+    else if (!hubRect || hubRect.w !== W || hubRect.h !== H) { const r = $('hubPanel').getBoundingClientRect(); hubRect = { left: r.left, right: r.right, top: r.top, bottom: r.bottom, w: W, h: H }; }
     if (safe) {
       $('onlineN').textContent = Math.max(1, humans.length);
       $('onlineList').innerHTML = ZONES.map((z) => (G.online[z.slot]?.players || []).map(([n, , bt]) =>
@@ -1428,26 +1438,26 @@ function updateHud(now) {
   const top = last?.top;
   $('topBounty').hidden = !top;
   if (top) { $('topName').textContent = top[0] === G.myId ? 'YOU' : top[1]; $('topVal').textContent = top[2]; }
-  const lb = last?.lb;
+  const lb = P?.lb;
   if (lb) {
     const lbl = { bounty: '★', hunted: 'pts', crystals: '💎' }[G.modeKey] || '★';
-    $('leader').hidden = false;
-    $('leader').innerHTML = lb.map(([id, n, sc], i) => `<div>${i + 1}. ${id === G.myId ? '<b>YOU</b>' : esc(n)}<span>${sc} ${lbl}</span></div>`).join('');
-  }
+    setHidden($('leader'), false);
+    setHtml($('leader'), lb.map(([id, n, sc], i) => `<div>${i + 1}. ${id === G.myId ? '<b>YOU</b>' : esc(n)}<span>${sc} ${lbl}</span></div>`).join(''));
+  } else setHidden($('leader'), true); // (a mode without a board: never the last match's)
   const mb = $('modeBanner');
-  mb.className = '';
-  let txt = '';
+  let txt = '', cls = '';
   if (G.modeKey === 'hunted' && last?.md) {
-    if (last.md.tg === G.myId) { txt = '🎯 YOU ARE THE TARGET — SURVIVE!'; mb.className = 'red'; }
-    else if (last.md.tg) { txt = `🎯 Hunt ${esc(G.roster[last.md.tg]?.[0] || '?')}!`; mb.className = 'red'; }
+    if (last.md.tg === G.myId) { txt = '🎯 YOU ARE THE TARGET — SURVIVE!'; cls = 'red'; }
+    else if (last.md.tg) { txt = `🎯 Hunt ${esc(G.roster[last.md.tg]?.[0] || '?')}!`; cls = 'red'; }
   } else if (G.modeKey === 'crystals' && me) {
     const h = last?.md?.hold;
-    mb.className = 'gem';
+    cls = 'gem';
     txt = `💎 ${me.cr}/10`;
     if (h) txt += h[0] === G.myId ? ` · HOLD ON! ${Math.ceil(h[1])}s` : ` · ${esc(G.roster[h[0]]?.[0] || '?')} wins in ${Math.ceil(h[1])}s!`;
   }
-  mb.hidden = !txt || G.phase !== 'play';
-  mb.innerHTML = txt;
+  if (mb.className !== cls) mb.className = cls;
+  setHidden(mb, !txt || G.phase !== 'play');
+  setHtml(mb, txt);
   const rs = me && !me.al && me.rt > 0;
   $('respawn').hidden = !rs;
   if (rs) $('respawnT').textContent = Math.ceil(me.rt);
