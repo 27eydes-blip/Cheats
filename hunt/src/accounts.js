@@ -76,13 +76,21 @@ const DUMMY_SALT = 'AAAAAAAAAAAAAAAAAAAAAA==';
 const validName = (n) => typeof n === 'string' && /^[A-Za-z0-9_]{3,16}$/.test(n);
 const validPass = (p) => typeof p === 'string' && p.length >= 6 && p.length <= 128;
 
+// Every API answer is JSON, even when something unexpected breaks (never the runtime's error page).
 export async function handleApi(req, env) {
+  try { return await api(req, env); } catch (e) {
+    console.log('api error', new URL(req.url).pathname, e && e.message);
+    return json({ error: 'Something went wrong. Please try again.' }, 500);
+  }
+}
+async function api(req, env) {
   const db = env.DB;
   if (!db) return json({ error: 'accounts unavailable' }, 503);
   await ensureSchema(db);
   const url = new URL(req.url);
   const path = url.pathname.replace(/^\/api/, '');
-  const body = req.method === 'POST' ? await req.json().catch(() => ({})) : {};
+  const sent = req.method === 'POST' ? await req.json().catch(() => null) : null;
+  const body = sent && typeof sent === 'object' && !Array.isArray(sent) ? sent : {}; // (null, 5, "x", [] are valid JSON too)
   const auth = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
   const me = await userFromToken(db, auth);
 

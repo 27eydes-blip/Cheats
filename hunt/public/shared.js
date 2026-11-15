@@ -7,6 +7,10 @@ export const DT = 1 / TICK_RATE;
 export const TILE = 50;
 export const PLAYER_R = 26;
 export const MAX_PLAYERS = 10;
+// Look up a key that came from a player (URL, socket message, request body) in a plain table.
+// Only the table's own string keys count: 'constructor', '__proto__', 'toString'... and non-string
+// keys give undefined instead of something inherited from Object.prototype.
+export const own = (table, key) => (typeof key === 'string' && Object.hasOwn(table, key) ? table[key] : undefined);
 
 export const EMPTY = 0, WALL = 1, BUSH = 2, CRATE = 3, WATER = 4;
 

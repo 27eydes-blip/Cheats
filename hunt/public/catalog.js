@@ -75,10 +75,10 @@ export const PASS = Array.from({ length: PASS_TIERS }, (_, i) => {
 export const passTier = (xp) => Math.min(PASS_TIERS, Math.floor((xp || 0) / PASS_XP_PER_TIER));
 export const itemId = (r) => r.skin || r.fx || r.title || null;
 export function priceOf(id) {
-  if (SKINS[id]) return SKINS[id].price ?? null;
+  if (own(SKINS, id)) return SKINS[id].price ?? null;
   if (Object.values(LEVEL_TITLES).includes(id)) return null;
-  if (KILL_FX[id]) return KILL_FX[id].price;
-  if (TITLES[id]) return TITLE_PRICE;
+  if (own(KILL_FX, id)) return KILL_FX[id].price;
+  if (own(TITLES, id)) return TITLE_PRICE;
   return null;
 }
 function grant(p, r) {
@@ -91,17 +91,19 @@ function grant(p, r) {
 import { claimMission, weaponUnlocked } from './progression.js';
 import { WEAPONS, perksFor, masteryInfo } from './weapons.js';
 import { powerAction } from './power.js';
+import { own } from './shared.js';
 export function applyPurchase(p, req) {
+  if (!req || typeof req !== 'object') return { error: 'unknown action' }; // (a body of null, 5, "x"...)
   switch (req.action) {
     case 'mission': return claimMission(p, req.id);
     case 'equip': {
       const { slot, id } = req;
-      if (!['title', 'fx'].includes(slot) && !/^skin:(volt|brick|wisp|dune|rook|flicker)$/.test(slot || '')) return { error: 'bad slot' };
+      if (typeof slot !== 'string' || (!['title', 'fx'].includes(slot) && !/^skin:(volt|brick|wisp|dune|rook|flicker)$/.test(slot))) return { error: 'bad slot' };
       if (id) {
-        if (!p.owned.includes(id)) return { error: 'not owned' };
-        if (slot === 'title' && !TITLES[id]) return { error: 'not a title' };
-        if (slot === 'fx' && !KILL_FX[id]) return { error: 'not an effect' };
-        if (slot.startsWith('skin:') && SKINS[id]?.brawler !== slot.slice(5)) return { error: 'wrong brawler' };
+        if (typeof id !== 'string' || !p.owned.includes(id)) return { error: 'not owned' };
+        if (slot === 'title' && !own(TITLES, id)) return { error: 'not a title' };
+        if (slot === 'fx' && !own(KILL_FX, id)) return { error: 'not an effect' };
+        if (slot.startsWith('skin:') && own(SKINS, id)?.brawler !== slot.slice(5)) return { error: 'wrong brawler' };
       }
       p.equipped[slot] = id || null;
       return { progress: p };
@@ -113,17 +115,18 @@ export function applyPurchase(p, req) {
       return { progress: p };
     }
     case 'perk': { // mastery 2/5/8: pick one of two (you can change your pick any time)
-      const tier = req.tier | 0, opts = WEAPONS[req.weapon] ? perksFor(req.weapon)[tier] : null;
+      if (!own(WEAPONS, req.weapon)) return { error: 'bad weapon' };
+      const tier = req.tier | 0, opts = own(perksFor(req.weapon), String(tier));
       if (!opts || !opts.some((o) => o.id === req.id)) return { error: 'bad perk' };
-      if (!WEAPONS[req.weapon]) return { error: 'bad weapon' };
       if (masteryInfo(p.mastery?.[req.weapon] || 0).level < tier) return { error: `Reach mastery ${tier} first` };
       p.perks = p.perks || {};
-      const cur = (p.perks[req.weapon] || []).filter((id) => !opts.some((o) => o.id === id));
+      const had = p.perks[req.weapon];
+      const cur = (Array.isArray(had) ? had : []).filter((id) => !opts.some((o) => o.id === id));
       p.perks[req.weapon] = [...cur, req.id];
       return { progress: p };
     }
     case 'buy': {
-      const price = priceOf(req.id);
+      const price = typeof req.id === 'string' ? priceOf(req.id) : null;
       if (price == null) return { error: 'not for sale' };
       if (p.owned.includes(req.id)) return { error: 'already owned' };
       if (p.coins < price) return { error: `Not enough ${CURRENCY}` };

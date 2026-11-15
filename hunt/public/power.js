@@ -2,7 +2,7 @@
 // that affects combat can ever be bought with real money). Each level adds 4% HP and damage.
 // Power 7 unlocks a GADGET (an active ability, 3 uses per match); Power 9 a STAR POWER (passive).
 // Each brawler has two of each to choose from. Shared by the server (authoritative) and the client.
-import { BRAWLER_IDS } from './shared.js';
+import { BRAWLER_IDS, own } from './shared.js';
 
 export const MAX_POWER = 11;
 export const GADGET_AT = 7, STAR_AT = 9, GADGET_USES = 3;
@@ -69,8 +69,8 @@ export const STARS = {
     { id: 'flicker_instinct', name: 'Killer Instinct', desc: 'Reload 10% faster.', fx: { reload: 1.1 } },
   ],
 };
-export const gadgetOf = (brawler, id) => (GADGETS[brawler] || []).find((g) => g.id === id) || null;
-export const starOf = (brawler, id) => (STARS[brawler] || []).find((g) => g.id === id) || null;
+export const gadgetOf = (brawler, id) => (own(GADGETS, brawler) || []).find((g) => g.id === id) || null;
+export const starOf = (brawler, id) => (own(STARS, brawler) || []).find((g) => g.id === id) || null;
 
 // the account's power setup for every brawler, validated (what the match server applies)
 export function powerSetup(p) {

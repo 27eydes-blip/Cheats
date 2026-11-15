@@ -1,7 +1,7 @@
 // WEAPONS: every brawler keeps its signature attack and can carry ONE secondary from the armory.
 // 15 original weapons in 7 classes. Shared by the server (authoritative) and the client (prediction,
 // bullet simulation, armory stats). Numbers tuned with test/weapons-balance.js (bot duels, 45-55%).
-import { TILE, WALL, CRATE, DT } from './shared.js';
+import { TILE, WALL, CRATE, DT, own } from './shared.js';
 
 // kind: how it fires
 //   shot    projectile(s): pellets > 1 = a spread blast; burst = rounds per trigger pull
@@ -155,7 +155,7 @@ const OWN_PERKS = {
   flare: [P('longburn', 'Long Burn', 'Reveals 10% longer.', { flareTime: 1.1 }), P('widelight', 'Wide Light', '10% bigger light.', { flareR: 1.1 })],
 };
 export function perksFor(id) {
-  const w = WEAPONS[id];
+  const w = own(WEAPONS, id);
   if (!w) return {};
   const c = CLASS_PERKS[w.cls];
   return { 2: c[2], 5: OWN_PERKS[id], 8: c[8] };

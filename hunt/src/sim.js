@@ -7,7 +7,7 @@ import {
   CLOAK_REVEAL_DIST, SPAWNS, BOT_NAMES, EVENT_EVERY, EVENT_WARN, LOW_HP, RUSH_TIME, COMEBACK_DMG,
   applyMove, moveCircle, inBush, attackDirs, poisonInset, moveStats, bountyGlow, pingInterval,
   layLowFactor, rng, inHub, HUB, MINE_SEEN, PLAYER_R, touchingBorder, SPIKE_DMG, SPIKE_CD, lineOfSight, isSolidTile, tileAt, blocksMove,
-  dayNight, visionRange, onHigh, HIGH_REVEAL,
+  dayNight, visionRange, onHigh, HIGH_REVEAL, own,
 } from '../public/shared.js';
 import { EVENTS, pickEvent } from '../public/events/index.js';
 import { MODES } from './modes.js';
@@ -45,7 +45,7 @@ export class Sim {
   constructor(o) {
     this.map = o.map;
     this.send = o.send || (() => {});
-    this.modeKey = o.mode || 'showdown';
+    this.modeKey = own(MODES, o.mode) ? o.mode : 'showdown';
     this.mode = MODES[this.modeKey];
     this.maxPlayers = this.mode.maxPlayers || MAX_PLAYERS;
     this.teamPot = { 1: 0, 2: 0 };
@@ -59,7 +59,7 @@ export class Sim {
     this.botTarget = o.botTarget ?? MAX_PLAYERS;
     this.lobbyTime = o.lobbyTime ?? 8;
     this.eventsOn = o.events !== false;
-    this.forceEvent = o.forceEvent || null; // test flag: always run this event, starting at 8s
+    this.forceEvent = own(EVENTS, o.forceEvent) ? o.forceEvent : null; // test flag: always run this event, starting at 8s
     this.seed = o.seed ?? 0;
     this.rand = rng((o.seed ?? Date.now()) ^ 0x5bd1e995);
 
@@ -167,7 +167,7 @@ export class Sim {
 
   // ---------------------------------------------------------------- players
   addPlayer({ name, brawler, bot = false, state = null, connected = !bot }) {
-    const b = BRAWLERS[brawler] ? brawler : 'volt';
+    const b = own(BRAWLERS, brawler) ? brawler : 'volt';
     const p = {
       id: newId(), name, brawler: b, bot, wasBot: bot, connected,
       x: this.center.x, y: this.center.y, mvx: 0, mvy: 0, px: 0, py: 0, vx: 0, vy: 0,
@@ -183,6 +183,7 @@ export class Sim {
       assists: 0, steals: 0, wstat: {}, shotLog: [], poison: null, flareT: 0, emotes: [0, 1],
     };
     if (state) for (const k of CARRY) if (state[k] !== undefined) p[k] = state[k];
+    p.brawler = b; // (carried state can't bring in an unknown brawler either)
     while (this.players.has(p.id)) p.id = newId();
     p.hx.fill(p.x); p.hy.fill(p.y);
     this.players.set(p.id, p);
@@ -193,7 +194,7 @@ export class Sim {
   rosterRow(p) { return [p.name, p.brawler, p.wasBot ? 1 : 0, p.cos || null]; }
   // give a player a secondary weapon (armory pick, a bot's random pick, or a Free Play drop)
   setWeapon(p, id, perks = []) {
-    if (!WEAPONS[id]) { p.w2 = null; p.slot = 0; return; }
+    if (!own(WEAPONS, id)) { p.w2 = null; p.slot = 0; return; }
     const w = withPerks(id, perks);
     p.w2 = { id, perks, ammo: w.ammo, reloadP: 0, cd: 0, lastFire: -99 };
     if (p.slot === 1) p.swapT = 0;
@@ -207,7 +208,7 @@ export class Sim {
     p.wmast = lo.mastery | 0;
     p.lo = lo; // kept so a respawn gives your armory weapon back after a Free Play pick-up
     if (lo.power) { p.pset = lo.power; this.applyPower(p, this.phase !== 'play' || !!this.hub); }
-    if (lo.w2 && WEAPONS[lo.w2] && !(p.w2 && p.w2.dropped)) this.setWeapon(p, lo.w2, lo.perks || []);
+    if (lo.w2 && own(WEAPONS, lo.w2) && !(p.w2 && p.w2.dropped)) this.setWeapon(p, lo.w2, lo.perks || []);
     p.cos = { ...(p.cos || {}), badge: lo.badge || null, wskin: lo.badge || null };
     this.broadcast({ t: 'ro', add: { [p.id]: this.rosterRow(p) } });
   }
@@ -788,7 +789,7 @@ export class Sim {
   }
 
   pick(p, brawler) {
-    if (!BRAWLERS[brawler] || !p.alive || !this.isSafe(p.x, p.y) || p.brawler === brawler) return;
+    if (!own(BRAWLERS, brawler) || !p.alive || !this.isSafe(p.x, p.y) || p.brawler === brawler) return;
     p.brawler = brawler;
     p.maxHp = 1; p.hp = 1; this.applyPower(p, true); p.hp = p.maxHp;
     p.ammo = 3; p.superC = 0;
@@ -848,7 +849,7 @@ export class Sim {
 
   input(id, m) {
     const p = this.players.get(id);
-    if (!p || p.bot) return;
+    if (!p || p.bot || !m || typeof m !== 'object') return; // (any JSON value can arrive: null, 5, "x", [])
     if (m.t === 'pick') return this.pick(p, m.brawler);
     if (m.t === 'emote') return this.emote(p, m.e);
     if (m.t !== 'in') return;
@@ -905,6 +906,18 @@ export class Sim {
       return;
     }
     if (this.phase === 'end') return;
+  // What the Durable Objects call: one exception must never stop the match for everyone. The
+  // error is counted and handed to onError; this tick's one-shot buffers are dropped so they
+  // can't pile up. (Tests call tick() directly, so a bug still fails loudly there.)
+  tickSafe(onError) {
+    try { this.tick(); return true; } catch (e) {
+      this.tickErrors = (this.tickErrors || 0) + 1;
+      this.fx = []; this.tileDirty = []; this.crateDirty = []; this.pings = []; this.bnew = []; this.bdead = [];
+      onError?.(e, this.tickErrors);
+      return false;
+    }
+  }
+
 
     this.time += DT;
     this.tickN++;

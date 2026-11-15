@@ -1,5 +1,5 @@
 // Progression rules shared by the server (authoritative, D1) and the client (display).
-import { BRAWLER_IDS } from './shared.js';
+import { BRAWLER_IDS, own } from './shared.js';
 import { WEAPONS, WEAPON_IDS, perksFor, masteryInfo, masteryXp, masteryBadge, MASTERY_SKINS } from './weapons.js';
 import { LEVEL_TITLES, EMOTES, SKINS } from './catalog.js';
 import { powerSetup } from './power.js';
@@ -78,7 +78,7 @@ export function levelReward(L) {
   if (LEVEL_TITLES[L]) r.title = LEVEL_TITLES[L];
   return r;
 }
-export const weaponUnlocked = (p, id) => !!WEAPONS[id] && (WEAPONS[id].unlock <= levelInfo(p.xp || 0).level);
+export const weaponUnlocked = (p, id) => !!own(WEAPONS, id) && (WEAPONS[id].unlock <= levelInfo(p.xp || 0).level);
 // grant every level reward up to the current level (also catches old saves up, once)
 export function grantLevels(p) {
   const L = levelInfo(p.xp).level, got = [];
@@ -96,8 +96,8 @@ export function grantLevels(p) {
 export function loadoutFor(p) {
   p = normalize(p);
   const w2 = p.loadout?.w2 && weaponUnlocked(p, p.loadout.w2) ? p.loadout.w2 : null;
-  const mast = w2 ? masteryInfo(p.mastery[w2] || 0).level : 0;
-  const perks = w2 ? (p.perks[w2] || []).filter((id) => Object.entries(perksFor(w2)).some(([tier, o]) => mast >= +tier && o.some((x) => x.id === id))) : [];
+  const mast = w2 ? masteryInfo(own(p.mastery, w2) || 0).level : 0;
+  const perks = w2 ? (Array.isArray(own(p.perks, w2)) ? p.perks[w2] : []).filter((id) => Object.entries(perksFor(w2)).some(([tier, o]) => mast >= +tier && o.some((x) => x.id === id))) : [];
   const emotes = EMOTES.map((e, i) => (e.level <= 1 || p.owned.includes(e.id) ? i : -1)).filter((i) => i >= 0);
   return { w2, perks, mastery: mast, badge: w2 ? masteryBadge(mast) : null, emotes, power: powerSetup(p) };
 }
@@ -141,9 +141,11 @@ export function claimMission(p, id, day = dayIndex()) {
 // apply one match result; returns {progress, delta, xp}
 export function applyMatch(p, r) {
   p = normalize(p);
-  const before = p.trophies[r.brawler] | 0;
-  const delta = trophyDelta(r);
-  p.trophies[r.brawler] = Math.max(0, before + delta);
+  // only real brawlers hold trophies (a made-up id must never become a trophy key)
+  const tb = BRAWLER_IDS.includes(r.brawler) ? r.brawler : null;
+  const before = tb ? p.trophies[tb] | 0 : 0;
+  const delta = tb ? trophyDelta(r) : 0;
+  if (tb) p.trophies[tb] = Math.max(0, before + delta);
   const xp = xpFor(r), lvBefore = levelInfo(p.xp).level;
   p.xp += xp;
   const levels = grantLevels(p);
@@ -153,7 +155,7 @@ export function applyMatch(p, r) {
   // WEAPON MASTERY from damage + kills with each weapon this match
   const mast = [], wxp = [];
   for (const [id, s] of Object.entries(r.wstat || {})) {
-    if (!WEAPONS[id] || !s) continue;
+    if (!own(WEAPONS, id) || !s) continue;
     const before = masteryInfo(p.mastery[id] || 0).level;
     wxp.push({ id, xp0: p.mastery[id] || 0, xp1: (p.mastery[id] || 0) + masteryXp(+s.d || 0, +s.k || 0) });
     p.mastery[id] = (p.mastery[id] || 0) + masteryXp(+s.d || 0, +s.k || 0);
@@ -164,7 +166,9 @@ export function applyMatch(p, r) {
   if (isWin(r)) p.wins++;
   // lifetime stats for the profile page: totals and per mode
   p.kills = (p.kills | 0) + (r.kills | 0);
-  const md = (p.modes[r.mode || 'quick'] ||= { games: 0, wins: 0, top3: 0, kills: 0 });
+  const mk = typeof r.mode === 'string' && r.mode ? r.mode : 'quick';
+  if (!own(p.modes, mk)) p.modes[mk] = { games: 0, wins: 0, top3: 0, kills: 0 };
+  const md = p.modes[mk];
   md.games++; md.kills += r.kills | 0; if (isWin(r)) md.wins++; if (r.rank <= 3 && r.won !== false) md.top3++;
   p.pass.xp = (p.pass.xp || 0) + xp;
   const d = ensureDaily(p, r.day ?? dayIndex()), add = (k, v) => { d.prog[k] = (d.prog[k] || 0) + v; };
@@ -173,5 +177,5 @@ export function applyMatch(p, r) {
   if (r.rank <= 3 && r.won !== false) add('top3', 1);
   d.prog.bestKills = Math.max(d.prog.bestKills || 0, r.kills | 0);
   wxp.sort((a, b) => b.xp1 - b.xp0 - (a.xp1 - a.xp0));
-  return { progress: p, delta: p.trophies[r.brawler] - before, xp, coins, levels, mastery: mast, wxp, levelBefore: lvBefore };
+  return { progress: p, delta: tb ? p.trophies[tb] - before : 0, xp, coins, levels, mastery: mast, wxp, levelBefore: lvBefore };
 }
