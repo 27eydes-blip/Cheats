@@ -140,7 +140,14 @@ export function mergeSaves(local, cloud, synced = null) {
       at: [base.allMighty?.at, other.allMighty?.at].filter(Boolean).sort()[0] || "",
     };
   base.shards = maxEach(base.shards, other.shards);
+  // WASP LORD switched off: a save whose best was reset (waspBest.js) keeps ITS best and distance
+  // best over a copy that hasn't been reset yet (an older device or app), so his best can't
+  // come back through a merge; otherwise the larger of the two, as always
+  const resetSide = base.waspBest?.reset && !other.waspBest?.done ? base
+    : other.waspBest?.reset && !base.waspBest?.done ? other : null;
+  const resetDist = resetSide ? Number(resetSide.stats?.maxDistance) || 0 : 0;
   base.stats = maxEach(base.stats, other.stats);
+  if (resetSide) base.stats.maxDistance = resetDist;
   // the per-hero / per-realm counters are maps: the larger count of each key
   for (const k of ["heroRuns", "realmDeaths"])
     base.stats[k] = maxEach(base.stats?.[k], other.stats?.[k]);
@@ -149,7 +156,9 @@ export function mergeSaves(local, cloud, synced = null) {
   const later = (x, y) => ((x || "") > (y || "") ? x : y) || "";
   const reset = later(base.lbReset, other.lbReset);
   const bestOf = (sv) => ((sv.lbReset || "") >= reset ? sv.best || 0 : 0);
-  base.best = Math.max(bestOf(base), bestOf(other));
+  base.best = resetSide ? bestOf(resetSide) : Math.max(bestOf(base), bestOf(other));
+  if (resetSide === other) base.ghost = null;
+  base.waspBest = base.waspBest?.done ? base.waspBest : other.waspBest?.done ? other.waspBest : { done: false };
   base.lbReset = reset;
   base.pass = {
     ...(base.pass || {}),

@@ -19,6 +19,12 @@
 --      game calls glydrift_wasp_refund(), which says "granted" the first time and "already" ever
 --      after (one row per account in glydrift_wasp_refunds), so a reload, a log-out / log-in or
 --      a second device can't pay it twice. Guests (no account) are refunded on their own device.
+--   5. Personal bests set with him: the game calls glydrift_wasp_best_reset() once per player.
+--      For a player with a Wasp Lord score on the endless or distance board (in the archive), it
+--      returns their highest remaining non-Wasp Lord score and distance on the leaderboard (0 if
+--      none), the same numbers every time, from every device (one row per player in
+--      glydrift_wasp_best_resets). The game sets its saved best and distance best to them once
+--      and the cloud save keeps them. Everyone else: {"reset": false}, nothing changes.
 --
 -- Nothing else changes: other heroes' scores, names, titles and score limits stay exactly as
 -- they are.
@@ -170,12 +176,64 @@ $$;
 revoke all on function public.glydrift_wasp_refund() from public, anon;
 grant execute on function public.glydrift_wasp_refund() to authenticated;
 
+-- ---------------------------------------------------------------- 5. bests set with him
+create table if not exists public.glydrift_wasp_best_resets (
+  player_id uuid primary key references auth.users (id) on delete cascade,
+  best      bigint not null,
+  distance  bigint not null,
+  reset_at  timestamptz not null default now()
+);
+alter table public.glydrift_wasp_best_resets enable row level security;
+revoke all on public.glydrift_wasp_best_resets from anon, authenticated;
+
+create or replace function public.glydrift_wasp_best_reset()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  r   record;
+begin
+  if uid is null then
+    return jsonb_build_object('reset', false);
+  end if;
+  -- only a player whose best on the endless or distance board was a Wasp Lord score
+  if not exists (
+    select 1 from public.glydrift_wasp_lord_archive w
+     where w.player_id = uid and w.level in ('endless', 'endless-distance')
+  ) then
+    return jsonb_build_object('reset', false);
+  end if;
+  -- worked out once (their highest remaining non-Wasp Lord rows, 0 if none), then the same
+  -- answer every time, from every device
+  insert into public.glydrift_wasp_best_resets (player_id, best, distance)
+  values (
+    uid,
+    coalesce((select max(s.score) from public.scores s
+               where s.player_id = uid and s.level = 'endless' and s.character is distinct from 'wasplord'), 0),
+    coalesce((select max(s.score) from public.scores s
+               where s.player_id = uid and s.level = 'endless-distance' and s.character is distinct from 'wasplord'), 0)
+  )
+  on conflict (player_id) do nothing;
+  select b.best, b.distance into r from public.glydrift_wasp_best_resets b where b.player_id = uid;
+  return jsonb_build_object('reset', true, 'best', r.best, 'distance', r.distance);
+end;
+$$;
+
+-- every player has a (possibly anonymous) sign-in: that's the "authenticated" role
+revoke all on function public.glydrift_wasp_best_reset() from public, anon;
+grant execute on function public.glydrift_wasp_best_reset() to authenticated;
+
 -- ---------------------------------------------------------------- summary (one row)
 select
   (select count(*) from public.glydrift_wasp_lord_archive) as archived_wasp_scores,
   (select count(*) from public.scores where character = 'wasplord') as wasp_scores_left_on_boards,
   (select count(*) from public.glydrift_wasp_owners) as wasp_owners_with_accounts,
   (select count(*) from public.glydrift_wasp_refunds) as refunds_paid_so_far,
+  (select count(distinct w.player_id) from public.glydrift_wasp_lord_archive w
+    where w.level in ('endless', 'endless-distance')) as players_whose_best_resets,
   (select case when enabled then 'ON' else 'OFF' end
      from public.glydrift_hero_switches where hero = 'wasplord') as wasp_lord_switch,
   (select a.username from public.all_mighty a where a.id = 1) as all_mighty_now,

@@ -26,6 +26,7 @@ import { Titles } from "../data/titles.js";
 import { Account } from "../online/account.js";
 import { LbReset } from "../online/lbReset.js";
 import { WASP_REFUND_TEXT, WaspRefund } from "../data/waspRefund.js";
+import { WaspBest } from "../data/waspBest.js";
 import { CrashSafety } from "../systems/crashSafety.js";
 import { Updater } from "../systems/updater.js";
 import { isNativeApp, openMail, openSite, SUPPORT_EMAIL } from "../systems/platform.js";
@@ -1057,6 +1058,17 @@ export class MenuScene extends Phaser.Scene {
 
   /** WASP LORD was switched off: his buyers get 55,000 coins back, once, with a short note. */
   async maybeWaspRefund() {
+    // (in the background) a best set with WASP LORD goes back to the best non-Wasp Lord score
+    if (WaspBest.pending())
+      WaspBest.settle().then((changed) => {
+        if (!changed || this.leaving || !this.scene.isActive()) return;
+        const b = Save.data.best;
+        if (b > 0) this.bestText?.setText(`BEAT YOUR BEST · ${b.toLocaleString("en-US")}`);
+        else {
+          this.bestText?.destroy();
+          this.bestText = null;
+        }
+      });
     if (!WaspRefund.pending()) return;
     const res = await WaspRefund.settle();
     if (res !== "paid" || this.leaving || !this.scene.isActive()) return;

@@ -43,6 +43,10 @@ He's out of the live game; his code and art stay for a rebalanced return.
 - **Scores:** `supabase/migrations/20261116000001_wasp_lord_off.sql` archives every Wasp Lord score
   in `glydrift_wasp_lord_archive`, removes them from every board, moves the ALL MIGHTY crown if
   he held it, and adds the refund tables / function.
+- **Bests set with him:** once per player, `glydrift_wasp_best_reset()` gives the highest
+  remaining non-Wasp Lord score and distance on the leaderboard (0 if none); the game sets its
+  best and distance best to them (`src/data/waspBest.js`), and the cloud merge keeps the reset
+  values over an older copy so his best can't come back.
 - **To bring him back:** set `wasplord: true` in heroSwitch.js and run
   `update public.glydrift_hero_switches set enabled = true where hero = 'wasplord';`
 
