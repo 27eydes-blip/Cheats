@@ -140,10 +140,10 @@ The publisher credit and the "Created by Sam Eyde III" line appear on the splash
 © 2026 Gleyde Technologies, LLC. All rights reserved.
 
 ## Deploying (glydaway.com)
-Glydaway is its own Cloudflare Worker, `glydaway`, serving only `index.html` (config: `wrangler.jsonc`). From this folder:
+Glydaway is its own Cloudflare Pages project, `glydaway` (custom domain glydaway.com, also glydaway.pages.dev). It serves only `index.html`; the config is in `wrangler.jsonc`.
+
+Every push to `main` that changes `glydaway/` runs `.github/workflows/glydaway.yml`. It runs the tests (`tests/credits.test.mjs` and `tests/home.test.cjs` on WebKit, Chromium and Firefox) and deploys only if they pass, using the repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. To deploy by hand from this folder:
 
 ```sh
-mkdir -p dist && cp index.html dist/ && npx wrangler deploy
+rm -rf dist && mkdir dist && cp index.html dist/ && npx wrangler pages deploy dist --project-name=glydaway --branch=main
 ```
-
-Run `node tests/home.test.cjs` and `node tests/credits.test.mjs` first. The Worker answers on glydaway.com (a custom domain, so the glydaway.com zone must be in the same Cloudflare account) and on its workers.dev address.
