@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 140">
+  <defs>
+    <linearGradient id="wing" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#f3dcae"/></linearGradient>
+    <linearGradient id="wingstripe" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f08fb5"/><stop offset="1" stop-color="#b48cff"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff1b8"/><stop offset="1" stop-color="#d29c34"/></linearGradient>
+  </defs>
+  <!-- scarf -->
+  <path class="scarf" d="M88 70 C70 66 50 78 26 70 C40 80 60 82 86 78 Z" fill="#ff7f9f"/>
+  <path class="scarf" d="M86 74 C66 78 48 92 30 88 C46 96 66 92 88 80 Z" fill="#ff9fb8" opacity=".9"/>
+  <!-- back wing -->
+  <path d="M104 64 L150 30 L170 34 L124 70 Z" fill="#e9d2a2"/>
+  <!-- body -->
+  <path d="M60 82 Q110 70 182 74 Q196 76 198 82 Q186 92 120 94 Q78 96 60 82 Z" fill="url(#wing)" stroke="#c99a4a" stroke-width="2"/>
+  <path d="M170 76 Q190 77 197 82" stroke="url(#gold)" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- tail -->
+  <path d="M64 82 L44 58 L56 58 L78 80 Z" fill="url(#wingstripe)"/>
+  <!-- pilot -->
+  <circle cx="112" cy="66" r="14" fill="#ffd9b8"/>
+  <path d="M98 64 Q100 48 114 48 Q128 48 128 62 Q120 56 112 57 Q104 58 98 64 Z" fill="#7a4a2a"/>
+  <rect x="103" y="58" width="22" height="8" rx="4" fill="#3b4ba8"/>
+  <circle cx="108" cy="62" r="4.5" fill="#bfe6ff" stroke="url(#gold)" stroke-width="2"/>
+  <circle cx="120" cy="62" r="4.5" fill="#bfe6ff" stroke="url(#gold)" stroke-width="2"/>
+  <path d="M110 72 Q114 75 118 72" stroke="#c46a5a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- front wing -->
+  <path d="M96 84 L150 112 L176 110 L128 82 Z" fill="url(#wing)" stroke="#c99a4a" stroke-width="2"/>
+  <path d="M138 96 L162 110" stroke="url(#wingstripe)" stroke-width="5" stroke-linecap="round"/>
+</svg>

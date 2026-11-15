@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Skydrift Admin</title>
+  <link rel="icon" href="art/icon.svg" type="image/svg+xml" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root { --ink: #26305c; --soft: #6a7399; --gold: #e8b84a; --line: #e3e6f2; --bg: #f6f7fc; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; font-family: Fredoka, system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+    header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: linear-gradient(90deg, #9fc4f0, #ffe0ec); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+    header h1 { font-family: Cinzel, serif; font-size: 20px; margin: 0; flex: 1; letter-spacing: .04em; }
+    input, textarea, select, button { font: inherit; color: inherit; }
+    input, textarea, select { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: #fff; }
+    button { border: 0; border-radius: 999px; padding: 8px 16px; background: #fff; cursor: pointer; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    button.gold { background: linear-gradient(180deg, #fff1b8, #e8b84a); color: #4a3208; }
+    button.danger { color: #b8324c; }
+    .wrap { display: grid; grid-template-columns: 240px 1fr; gap: 16px; padding: 16px; max-width: 1300px; margin: 0 auto; }
+    @media (max-width: 800px) { .wrap { grid-template-columns: 1fr; } }
+    .days { background: #fff; border-radius: 14px; padding: 8px; max-height: calc(100vh - 100px); overflow: auto; position: sticky; top: 76px; }
+    @media (max-width: 800px) { .days { position: static; max-height: 220px; } }
+    .day { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; box-shadow: none; border-radius: 10px; padding: 7px 10px; font-weight: 500; }
+    .day.active { background: #eef3ff; }
+    .day.today { outline: 2px solid var(--gold); }
+    .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #eee; color: #555; font-weight: 600; }
+    .tag.admin { background: #d8f5e2; color: #1b6b3a; }
+    .tag.seed { background: #e5ecff; color: #2d4a9a; }
+    .tag.empty { background: #ffe9e9; color: #a33; }
+    .editor { display: grid; gap: 14px; }
+    .bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: #fff; padding: 12px; border-radius: 14px; }
+    .bar .grow { flex: 1; }
+    .msg { font-size: 14px; color: var(--soft); }
+    .msg.err { color: #b8324c; font-weight: 600; }
+    .msg.ok { color: #1b6b3a; font-weight: 600; }
+    .prompt { background: #fff; border-radius: 14px; padding: 14px; display: grid; gap: 10px; }
+    .prompt-head { display: flex; gap: 10px; align-items: center; }
+    .prompt-head b { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: #4a3208; flex: none; }
+    .prompt-head input { flex: 1; font-size: 18px; font-weight: 500; }
+    .cols { display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px; }
+    @media (max-width: 1000px) { .cols { grid-template-columns: 1fr; } }
+    textarea { white-space: pre; overflow-x: auto; width: 100%; min-height: 260px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.5; resize: vertical; }
+    .side { display: grid; gap: 10px; align-content: start; font-size: 13px; }
+    .test { display: flex; gap: 6px; }
+    .test input { flex: 1; }
+    .result { min-height: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    td, th { padding: 3px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--soft); }
+    td.n { text-align: right; font-variant-numeric: tabular-nums; }
+    .scroll { max-height: 220px; overflow: auto; }
+    .miss { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 2px 0; }
+    .miss button { padding: 2px 10px; font-size: 12px; }
+    .help { background: #fffaf0; border: 1px solid #f2e2b3; border-radius: 14px; padding: 12px 14px; font-size: 14px; }
+    .help code { background: #fff; padding: 1px 6px; border-radius: 6px; }
+    .login { max-width: 360px; margin: 12vh auto; background: #fff; padding: 24px; border-radius: 18px; display: grid; gap: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Skydrift Isles · Admin</h1>
+    <span class="msg" id="who"></span>
+    <button id="logout">Sign out</button>
+  </header>
+
+  <form class="login" id="login" hidden>
+    <h2 style="margin:0;font-family:Cinzel,serif">Admin sign-in</h2>
+    <p class="msg">Enter the <code>ADMIN_TOKEN</code> set on the Worker (locally it's in <code>.dev.vars</code>).</p>
+    <input id="token" type="password" placeholder="Admin token" autocomplete="current-password" />
+    <button class="gold" type="submit">Sign in</button>
+    <p class="msg err" id="login-err"></p>
+  </form>
+
+  <div class="wrap" id="main" hidden>
+    <nav class="days" id="days"></nav>
+    <section class="editor">
+      <div class="bar">
+        <b id="ed-title">—</b>
+        <span class="tag" id="ed-source"></span>
+        <span class="grow"></span>
+        <span class="msg" id="ed-msg"></span>
+        <button class="danger" id="btn-revert" title="Remove the saved version so the seed/fallback is used">Revert to seed</button>
+        <button class="gold" id="btn-save">Save day</button>
+      </div>
+      <div class="help">
+        One answer per line: <code>Canonical answer | alias, alias, misspelling | est%</code>.
+        The est% is your guess of what share of players would say it (it drives rarity until real answers come in;
+        about 100 real players outweigh the estimate). Matching ignores case, punctuation, plurals, “a/the”, and small typos.
+        Unrecognised answers players typed appear under <b>Misses</b> so you can add good ones.
+      </div>
+      <div id="prompts"></div>
+    </section>
+  </div>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

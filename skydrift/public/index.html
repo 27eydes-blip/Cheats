@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <meta name="theme-color" content="#9fc4f0" />
+  <title>Skydrift Isles</title>
+  <meta name="description" content="Seven strange questions a day. Rare answers fly higher." />
+  <link rel="icon" href="art/icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- The sky: fixed behind every screen, climbs with your score -->
+  <div id="sky" aria-hidden="true">
+    <div class="sky-grad"></div>
+    <div class="stars"></div>
+    <div class="aurora"><i></i><i></i><i></i></div>
+    <div class="sun"></div>
+    <div class="clouds clouds-far"></div>
+    <div id="world"></div>
+    <div class="clouds clouds-mid"></div>
+    <div id="glider-wrap"><div id="glider"></div><div id="trail"></div></div>
+    <div class="clouds clouds-near"></div>
+  </div>
+
+  <main id="app">
+    <!-- HOME -->
+    <section class="screen" id="screen-home">
+      <header class="topbar">
+        <button class="chip" id="btn-streak" aria-label="Daily streak"><span class="flame">🔥</span><b id="streak-count">0</b></button>
+        <div class="topbar-right">
+          <button class="icon-btn" id="btn-collection" aria-label="Collection">🗺️</button>
+          <button class="icon-btn" id="btn-sound" aria-label="Sound on">🔊</button>
+        </div>
+      </header>
+
+      <div class="home-hero">
+        <p class="kicker" id="home-day">Day #1</p>
+        <h1 class="title"><span>Skydrift</span><small>Isles</small></h1>
+        <p class="tagline">Seven strange questions. <em>Rare answers fly higher.</em></p>
+      </div>
+
+      <div class="home-actions">
+        <button class="btn btn-gold btn-xl" id="btn-play"><span>Take off</span></button>
+        <p class="home-note" id="home-note">7 prompts · 25 seconds each</p>
+        <div class="home-row">
+          <button class="btn btn-glass" id="btn-howto">How to play</button>
+          <button class="btn btn-glass btn-premium" id="btn-unlimited">✦ Unlimited Skies</button>
+        </div>
+      </div>
+
+      <div class="ad-slot" data-slot="home-banner"></div>
+
+      <button class="se-logo" id="btn-credits" aria-label="Credits">
+        <img src="art/se3-logo.svg" alt="SE III" />
+      </button>
+    </section>
+
+    <!-- PLAY -->
+    <section class="screen" id="screen-play" hidden>
+      <header class="hud">
+        <button class="icon-btn small" id="btn-quit" aria-label="Back to home">✕</button>
+        <div class="hud-dots" id="hud-dots"></div>
+        <div class="hud-alt"><b id="hud-feet">0</b><span>ft</span><small id="hud-layer">Cloud Meadows</small></div>
+      </header>
+
+      <div class="timer" id="timer"><div class="timer-fill" id="timer-fill"></div><span id="timer-num">25</span></div>
+
+      <div class="card prompt-card" id="prompt-card">
+        <p class="prompt-label" id="prompt-label">Prompt 1 of 7</p>
+        <h2 class="prompt-text" id="prompt-text">…</h2>
+
+        <form class="answer-form" id="answer-form" autocomplete="off">
+          <input id="answer-input" type="text" inputmode="text" enterkeyhint="send" maxlength="60"
+            placeholder="Type something rare…" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Your answer" />
+          <button class="btn btn-gold send" type="submit" aria-label="Send answer">➤</button>
+        </form>
+        <p class="answer-hint" id="answer-hint">Any real answer counts. Rarer answers score more.</p>
+
+        <div class="reveal" id="reveal" hidden>
+          <div class="tier-badge" id="reveal-tier">Rare</div>
+          <p class="reveal-answer" id="reveal-answer">Battery</p>
+          <p class="reveal-points"><b id="reveal-points">0</b><span>pts</span></p>
+          <p class="reveal-share" id="reveal-share"></p>
+          <button class="btn btn-gold" id="btn-next">Next ➜</button>
+        </div>
+      </div>
+
+      <div class="landmark-toast" id="landmark-toast" hidden></div>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="screen scroll" id="screen-results" hidden>
+      <div class="results-head">
+        <p class="kicker" id="res-day">Day #1</p>
+        <h2 class="res-layer" id="res-layer">Aurora Peaks</h2>
+        <p class="res-alt"><b id="res-feet">0</b> ft · <b id="res-score">0</b>/700</p>
+        <div class="res-emoji" id="res-emoji"></div>
+        <p class="res-streak" id="res-streak"></p>
+        <button class="btn btn-gold btn-xl" id="btn-share">Share my flight</button>
+        <p class="share-done" id="share-done" hidden>Copied! Paste it to your friends.</p>
+      </div>
+
+      <div class="card finds" id="res-finds" hidden>
+        <h3>New finds</h3>
+        <div class="finds-row" id="res-finds-row"></div>
+      </div>
+
+      <div class="card breakdown">
+        <h3>Your flight log</h3>
+        <ol id="res-list"></ol>
+      </div>
+
+      <a class="card promo" id="promo-glydrift" target="_blank" rel="noopener">
+        <div class="promo-art" aria-hidden="true"></div>
+        <div class="promo-copy">
+          <small>Keep flying</small>
+          <b>Play Glydrift</b>
+          <span>Soar, dive and race through the sky in our flying game.</span>
+        </div>
+        <span class="promo-cta">Play ➜</span>
+      </a>
+
+      <div class="ad-slot" data-slot="results-rect" data-size="rect"></div>
+
+      <div class="results-foot">
+        <p>Next skies in <b id="res-countdown">--:--:--</b></p>
+        <div class="home-row">
+          <button class="btn btn-glass" id="btn-res-collection">🗺️ Collection</button>
+          <button class="btn btn-glass" id="btn-res-home">Home</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- COLLECTION -->
+    <section class="screen scroll" id="screen-collection" hidden>
+      <header class="topbar">
+        <button class="icon-btn" id="btn-col-back" aria-label="Back">←</button>
+        <h2 class="screen-title">Collection</h2>
+        <span class="topbar-spacer"></span>
+      </header>
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="creatures" role="tab">Sky creatures <span id="col-creature-count"></span></button>
+        <button class="tab" data-tab="maps" role="tab">Map fragments <span id="col-fragment-count"></span></button>
+      </div>
+      <div id="col-creatures" class="creature-grid"></div>
+      <div id="col-maps" class="maps" hidden></div>
+      <p class="col-help">Rare answers (75+ pts) earn map fragments. Legendary answers (90+) befriend sky creatures. Some creatures only come to pilots with long streaks.</p>
+    </section>
+
+    <!-- PRACTICE PICKER -->
+    <section class="screen scroll" id="screen-practice" hidden>
+      <header class="topbar">
+        <button class="icon-btn" id="btn-pr-back" aria-label="Back">←</button>
+        <h2 class="screen-title">Unlimited Skies</h2>
+        <span class="topbar-spacer"></span>
+      </header>
+      <p class="practice-intro">Practice as much as you like. Scores here use rarity estimates and never touch the daily leaderboard.</p>
+      <div id="pack-list" class="pack-list"></div>
+    </section>
+  </main>
+
+  <!-- Modals -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <button class="modal-x" data-close aria-label="Close">✕</button>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div class="toast-stack" id="toasts"></div>
+
+  <template id="tpl-credits">
+    <div class="credits">
+      <img class="credits-logo" src="art/se3-logo.svg" alt="SE III monogram" />
+      <div class="credits-rule"><span>✦</span></div>
+      <p class="credits-title">Skydrift Isles</p>
+      <p>© 2026 Sam Eyde III. All rights reserved.</p>
+      <p>A Gleyde Technologies, LLC game.</p>
+      <p>Produced by Juwon Shon, COO.</p>
+      <div class="credits-rule"><span>✦</span></div>
+    </div>
+  </template>
+
+  <template id="tpl-howto">
+    <div class="howto">
+      <h2>How to fly</h2>
+      <ol>
+        <li><b>7 prompts a day.</b> Everyone gets the same ones. You have 25 seconds each.</li>
+        <li><b>Any real answer counts</b>, but the fewer people who say it, the more points it’s worth (up to 100).</li>
+        <li><b>Points lift your glider</b> through Cloud Meadows, Storm Reefs, Aurora Peaks and, for the boldest, Star Harbor.</li>
+        <li><b>Rare answers</b> earn map fragments and befriend sky creatures. Come back daily to keep your streak.</li>
+      </ol>
+      <p class="howto-eg">“Name something you’d regret licking”<br /><span>Battery → 37 pts · Escalator handrail → 90 pts</span></p>
+      <button class="btn btn-gold" data-close>Got it</button>
+    </div>
+  </template>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

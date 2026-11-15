@@ -1,0 +1,13 @@
+{
+  "name": "skydrift-isles",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler d1 migrations apply skydrift-db --local && wrangler dev --ip 0.0.0.0 --port 8788",
+    "deploy": "wrangler d1 migrations apply skydrift-db --remote && wrangler deploy",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.40.0"
+  }
+}
