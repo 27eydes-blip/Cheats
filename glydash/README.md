@@ -9,26 +9,36 @@ An endless side-scrolling runner spin-off of **Glydrift**, starring Volt the Sto
 |---|---|---|
 | Jump | Tap | Space / ↑ / W |
 | Glide | Hold, in the air | Hold Space |
+| Flip gravity (in a flip zone) | Double-tap | Press Space twice |
 | Pause / resume | ⏸ button | P / Esc (Space, ↑, W or Enter also resume) |
 | Retry | Tap anywhere once the crash screen shows (taps in the first 0.6 s are ignored) | Space |
-| Mute | Pause menu | M |
+| Volume | SETTINGS (start or pause screen): Sound effects and Music sliders | M mutes everything |
 
-## Biomes (a new one every 350 m while you speed up, then every 500 m)
-The first three biomes are 350 m long (the run reaches top speed about 1000 m in), every later one 500 m, so each lasts roughly 25–40 s. The first lap visits all ten in this order, each adding its hazard. After The Void, every lap is a fresh shuffle (never the same biome twice in a row), so long runs don't repeat.
-| Order | Biome | Signature hazard |
-|---|---|---|
-| 1 | Sky Meadow | **Thorn seeds** roll toward you. Jump them. |
-| 2 | Sunset Canyon | **Mesa hops**: chains of 2–4 stepping stones over a chasm, with no rest between hops. |
-| 3 | Neon Night | **Pulse orbs** bob on a rail. Jump them when they're low, run under them when they're high. |
-| 4 | Crystal Cavern | Lots of **low ceilings** and floating walls. |
-| 5 | Frozen Peaks | **Icicles** shiver, drop as you get close and stick in the ground as ice spikes. Jump them. |
-| 6 | Storm Reach | **Lightning** strikes the ground ahead from a glowing storm cloud and leaves a crackling patch. Jump it. Rain falls. |
-| 7 | Solar Forge | **Flare vents.** A *lit* vent burns low, so jump it. A *dark* vent is safe to run over. Both burst tall just before you arrive and just after you pass. |
-| 8 | Tidal Ruins | **Sea gaps**: more pits and long glide gaps, filled with water. |
-| 9 | Prism Garden | Extra **orbs and thorn seeds**. |
-| 10 | The Void | No new hazard: every hazard is equally likely, always at top difficulty. |
+## Cities (a new one every 250 m while you speed up, then every 350 m)
+Each "biome" is a famous city, drawn in Glydrift's pixel style with its landmarks. The first four are 250 m long (the run reaches top speed about 1000 m in), every later one 350 m, so a new city comes roughly every 20–30 s. The first lap visits all twelve in this order, each adding its hazard. After Dubai, every lap is a fresh shuffle (never the same city twice in a row), so long runs don't repeat.
+Each city's skyline rotates through three stretches with different landmarks, and its street has two looks, so a city doesn't repeat while you're in it.
 
-Every biome also has spikes, gaps, low ceilings, floating walls (glide over) and wide pits (glide across).
+| Order | City | Landmarks and street life | Signature hazard |
+|---|---|---|---|
+| 1 | Paris | Eiffel Tower, Louvre pyramid, Arc de Triomphe, Notre-Dame, Sacré-Cœur; café awnings, Seine booksellers | **Thorn seeds** roll toward you. Jump them. |
+| 2 | New York | Empire State, Chrysler, Statue of Liberty, Brooklyn Bridge, One World Trade Center, Flatiron; Times Square billboards, cabs, subway globes | **Rooftop hops** and **launch pads**. |
+| 3 | Tokyo | Tokyo Tower, Skytree, five-story pagoda, torii gate, Mt Fuji; neon signs, cherry blossoms, vending machines | **Pulse orbs**: jump them low, run under them high. |
+| 4 | London | Big Ben, Parliament, Tower Bridge, London Eye, St Paul's, the Shard; double-deckers, black cabs, phone boxes | Low ceilings, floating walls and **crushers**. |
+| 5 | Seoul | N Seoul Tower, Lotte World Tower, Gwanghwamun gate, the DDP, Banpo rainbow bridge; palace roofs, street-food tents | Extra orbs, launch pads and crushers. |
+| 6 | Sydney | Opera House, Harbour Bridge, Sydney Tower, lighthouse, yachts; surfboards, beach huts | **Gravity flip zones**. Down Under, after all. |
+| 7 | Moscow | St Basil's, the Kremlin, Spasskaya clock tower, Ostankino tower, the Bolshoi; a tram, falling snow | **Icicles** drop and stick as ice spikes. |
+| 8 | Seattle | Space Needle, Mt Rainier, Great Wheel, Columbia Center, ferries; coffee carts, rain | **Lightning** strikes ahead and leaves a crackling patch. |
+| 9 | Cairo | Pyramids, Sphinx, Cairo Tower, a domed mosque, feluccas on the Nile; minarets, camels | **Flare vents**: jump lit ones, run over dark ones. |
+| 10 | Venice | St Mark's, Rialto Bridge, Doge's Palace, Santa Maria della Salute; gondolas, market stalls | **Canals**: more gaps and long glide gaps. |
+| 11 | Rio de Janeiro | Christ the Redeemer, Sugarloaf and its cable car, Maracanã, Selarón steps, Lapa arches; bunting, beach umbrellas | Extra **orbs, thorn seeds and launch pads**. |
+| 12 | Dubai | Burj Khalifa, Burj Al Arab, Dubai Frame, Museum of the Future, Ain Dubai; dunes, a gold supercar | The finale: every hazard, always at top difficulty. |
+
+Every city also has spikes, gaps, low ceilings, floating walls (glide over) and wide pits (glide across).
+
+### Obstacles that play differently
+- **Gravity flip zones** (from Sydney, 1350 m, then now and then everywhere): a glowing ceiling track appears and the floor fills with a spike bed too long to jump or glide. **Double-tap** to flip gravity and run upside down on the ceiling, jumping (downward) over spikes that hang from it. Then the floor clears and the ceiling ends in spikes: **double-tap again** to drop back down. If the ceiling ends while you're upside down, gravity snaps back by itself. Double-tapping does nothing outside a flip zone, so fast jumping elsewhere is unchanged. The first zone of each run shows "DOUBLE TAP TO FLIP!".
+- **Crushers** (from London): a piston slams down on a rhythm and is fully up as you pass. Keep running; a jump hits it.
+- **Launch pads** (from New York): a spring pad in front of a tower too tall to jump. Run onto the pad and it throws you over; jump over the pad and you hit the tower.
 The level generator simulates the real jump and glide physics for every obstacle, including moving ones, so every layout can be cleared.
 
 ## Power-ups
@@ -41,9 +51,23 @@ One sits on the ground in a clear stretch roughly every 280–460 m (the first a
 Active power-ups show under the coin counter.
 
 ## Music
-Glydash has its own chiptune soundtrack, composed and played live in code (no music files). There's one song for each of the ten biomes plus a calmer menu tune, each with its own tempo, key and drum groove.
-- Songs change on the next bar when you enter a new biome, and the hi-hats fill in as you speed up.
-- Music stops on pause and on a crash. **MUSIC ON/OFF** (start and pause screens) is separate from **SOUND ON/OFF**, which mutes everything.
+Glydash's soundtrack is composed and played live in code (no music files): one song per city, written in that city's style and played on small synthesized instruments. All melodies are original; the London chime is the public-domain Westminster Quarters.
+| City | Style |
+|---|---|
+| Paris | Accordion musette waltz |
+| New York | Big piano chords and a brass hook over a boom-bap beat |
+| Tokyo | City pop: electric piano, slap bass, bright synth lead |
+| London | The Big Ben chime, then Britpop guitars |
+| Seoul | K-pop: claps, synth stabs, a plucked gayageum-style lead |
+| Sydney | Didgeridoo drone, clapsticks and marimba |
+| Moscow | Balalaika folk tune in a minor key |
+| Seattle | Grunge: distorted power chords |
+| Cairo | Oud in maqam hijaz over a darbuka rhythm |
+| Venice | A gondolier's barcarolle on mandolin, in 6/8 |
+| Rio | Samba/bossa: flute, nylon guitar, surdo and shaker |
+| Dubai | Arabic pop: reed lead over a dance beat with darbuka |
+- Songs change on the next bar when you enter a new city, and the hi-hats fill in as you speed up.
+- Music stops on pause and on a crash. **SETTINGS** (start and pause screens) has separate **Sound effects** and **Music** volume sliders (0–100%, saved on the device); M mutes everything.
 - Browsers only allow sound after a first tap or key press, so the menu music starts then.
 
 ## Leaderboard
@@ -73,3 +97,12 @@ Glydash uses Glydrift's art (source: `glydrift/` on the `feature/levels` branch,
 ## Development
 - `?bot=1` starts a run with the autopilot that also plays the attract mode.
 - The best score is kept in `localStorage` (`glydash.best`); the leaderboard name, sign-in and upload queue use `glydash.name`, `glydash.auth` and `glydash.lbQueue`.
+
+## Credits
+- Published by **Gleyde Technologies, LLC**
+- Created by **Sam Eyde III**, Founder & CEO
+- Produced by **Juwon Shon**, COO
+
+The publisher credit and the "Created by Sam Eyde III" line appear on the splash screen, the home screen footer and in Settings. Never remove them (`tests/credits.test.mjs` checks this).
+
+© 2026 Gleyde Technologies, LLC. All rights reserved.
