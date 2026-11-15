@@ -5,8 +5,13 @@ import { trackErrors, waitMe } from './helpers.js';
 
 const roster = (page) => page.evaluate(() => ({ n: Object.keys(window.__hunt.roster).length, botsOn: window.__hunt.botsOn }));
 
-test('FILL WITH BOTS off: a lone hunter waits (and can cancel), two hunters get a match with zero bots', async ({ browser }) => {
+// each browser project queues for its own mode, so parallel runs (and the layout audit, which
+// waits in the default Quick Hunt queue with bots off) never meet in the same humans-only match
+const MODE = { chromium: 'bighunt', firefox: 'showdown', webkit: 'squad' };
+
+test('FILL WITH BOTS off: a lone hunter waits (and can cancel), two hunters get a match with zero bots', async ({ browser }, info) => {
   test.setTimeout(120_000);
+  const mode = MODE[info.project.name] || 'bighunt';
   const a = await (await browser.newContext()).newPage(), b = await (await browser.newContext()).newPage();
   const errors = [...[a, b].map(trackErrors)];
   for (const p of [a, b]) {
@@ -16,6 +21,7 @@ test('FILL WITH BOTS off: a lone hunter waits (and can cancel), two hunters get 
     await p.reload(); // remembered without pressing PLAY
     await expect(p.locator('#fillBots')).toHaveAttribute('aria-checked', 'false');
     await expect(p.locator('#fillCb')).not.toHaveClass(/\bon\b/);
+    await p.click(`.modebtn[data-m="${mode}"]`);
   }
   // alone: a clear waiting state that never turns into a bot match
   await a.click('#playBtn');

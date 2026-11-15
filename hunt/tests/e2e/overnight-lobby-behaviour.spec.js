@@ -47,6 +47,7 @@ test('every lobby screen: unique ids and never "undefined", "NaN" or "null" on s
 });
 
 test('brawler detail is a preview: CLOSE, Escape and a tap outside cancel; only SELECT changes your hunter', async ({ page }) => {
+  test.setTimeout(180_000); // headless WebKit draws these canvases slowly
   await page.goto('/'); await page.waitForSelector('#playBtn');
   const before = await selected(page);
   expect(before).toBe('volt');
