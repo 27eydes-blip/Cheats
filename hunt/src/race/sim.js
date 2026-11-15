@@ -5,16 +5,11 @@ import { DT, TICK_RATE, CAR_R, DRIVERS, DRIVER_IDS, newCar, stepCar, collideCars
 import { getTrack, TRACK_IDS } from '../../public/race/tracks.js';
 import { pointAt, hwAt } from '../../public/race/trackgeom.js';
 import { ITEMS, ITEM_IDS, rollItem, WEAPONS } from '../../public/race/items.js';
-import { FLAG, ENT, COUNTDOWN, RESPAWN_TIME } from '../../public/race/protocol.js';
+import { FLAG, ENT, COUNTDOWN, RESPAWN_TIME, RACE_MODES } from '../../public/race/protocol.js';
 import { BOT_NAMES, rng } from '../../public/shared.js';
 import { botInput, levelForTrophies } from './bots.js';
 
-export const RACE_MODES = {
-  grand: { name: 'Grand Race', desc: '3 laps. First across the line wins.', laps: 3, items: true, weapons: true },
-  elim: { name: 'Elimination Race', desc: 'Last place is knocked out every 18 seconds.', laps: 0, items: true, weapons: true, every: 18, first: 30 },
-  battle: { name: 'Battle Arena', desc: 'Most takedowns in 2 minutes wins.', arena: true, items: true, weapons: true, time: 120 },
-  trial: { name: 'Time Trial', desc: 'Just you and the clock. Beat your best time.', laps: 3, solo: true, items: false, weapons: false },
-};
+export { RACE_MODES };
 export const RACE_MAX = 10;
 export const RESPAWN_TICKS = Math.round(RESPAWN_TIME * TICK_RATE); // exactly 2 s
 export const GHOST_TIME = 1.5; // can't be hit / bumped right after respawning

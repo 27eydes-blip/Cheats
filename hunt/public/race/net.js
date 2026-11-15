@@ -1,0 +1,193 @@
+// Hunt Racers client netcode (no DOM, no rendering): connect, lobby, inputs at the server tick
+// rate, own-car prediction + reconciliation with the shared physics, ~100 ms interpolation of
+// everything else, events, results, reconnect. The renderer / HUD / touch layer reads view()
+// every frame and drains events. See PROTOCOL.md.
+import { DT, TICK_RATE, DRIVERS, newCar, stepCar, unpackState, packState, cleanInput } from './physics.js';
+import { getTrack } from './tracks.js';
+import { ITEM_IDS } from './items.js';
+import { ENT, FLAG } from './protocol.js';
+
+export const INTERP_TICKS = 3; // others are drawn 3 ticks (100 ms) in the past
+const MAX_PENDING = 90;
+const lerpA = (a, b, t) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * t; };
+
+export class RaceClient {
+  // o: { base: 'wss://host' (or ws://), params: {name, driver, token, room, mode, track, bots, lobby},
+  //      transport(url) -> WebSocket-like (or a Promise of one), now() -> ms }
+  constructor(o = {}) {
+    this.base = o.base || '';
+    this.params = { ...(o.params || {}) };
+    this.transport = o.transport || ((url) => new WebSocket(url));
+    this.now = o.now || (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
+    this.phase = 'idle'; // idle | connecting | lobby | race | end | failed
+    this.id = 0; this.secret = null; this.match = null; this.room = null;
+    this.mode = null; this.trackKey = null; this.arena = false; this.T = null;
+    this.roster = new Map(); // id -> {name, driver, bot}
+    this.lobby = null; // last lobby message
+    this.start = null; // start message
+    this.me = null; // last `me` from the server
+    this.car = null; // predicted own car
+    this.carEp = -1;
+    this.err = { x: 0, y: 0, a: 0 }; // visual smoothing of prediction corrections
+    this.pending = []; // inputs not yet acknowledged
+    this.seq = 0;
+    this.held = { st: 0, th: 1, dr: 0 }; // accelerate is on by default (touch layout)
+    this.press = { f: 0, i: 0 };
+    this.acc = 0; this.lastFrame = null;
+    this.snaps = []; // recent snapshots for interpolation
+    this.latest = null; this.latestAt = 0;
+    this.events = [];
+    this.results = null; this.progress = null;
+    this.ws = null; this.bye = false; this.tries = 0;
+    this.listeners = {};
+  }
+
+  on(type, fn) { (this.listeners[type] ||= []).push(fn); return this; }
+  emit(type, data) { for (const fn of this.listeners[type] || []) fn(data); }
+
+  url(extra = {}) {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries({ ...this.params, ...extra })) if (v != null && v !== '') q.set(k, String(v));
+    return `${this.base}/race?${q}`;
+  }
+  async connect(extra = {}) {
+    this.phase = this.phase === 'race' ? 'race' : 'connecting';
+    this.bye = false;
+    const ws = await this.transport(this.url(extra));
+    this.ws = ws;
+    this.outbox = [];
+    const onOpen = () => { for (const m of this.outbox.splice(0)) ws.send(m); };
+    if (ws.readyState === 0) ws.addEventListener('open', onOpen); else onOpen();
+    ws.addEventListener('message', (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } this.onMsg(m); });
+    ws.addEventListener('close', () => { if (this.ws === ws) this.onClose(); });
+    return this;
+  }
+  send(m) {
+    const s = JSON.stringify(m), ws = this.ws;
+    if (!ws) return;
+    if (ws.readyState === 1) { try { ws.send(s); } catch {} } else if (ws.readyState === 0) this.outbox.push(s);
+  }
+  // quit for good (the server records the result now)
+  leave() { this.bye = true; this.send({ t: 'bye' }); try { this.ws?.close(1000, 'bye'); } catch {} this.phase = 'idle'; }
+  pick(driver) { if (DRIVERS[driver]) { this.params.driver = driver; this.send({ t: 'pick', driver }); } }
+
+  // a dropped connection mid-race: rejoin the same car (3 tries)
+  async onClose() {
+    if (this.bye || this.phase === 'end' || this.phase === 'idle') return;
+    if (!this.secret || this.tries >= 3) { this.phase = 'failed'; this.emit('failed'); return; }
+    this.tries++;
+    await new Promise((r) => setTimeout(r, 300 * this.tries));
+    try { await this.connect({ rejoin: this.id, secret: this.secret, match: this.match }); } catch { this.onClose(); }
+  }
+
+  onMsg(m) {
+    switch (m.t) {
+      case 'welcome':
+        this.id = m.id; this.secret = m.secret; this.match = m.match; this.room = m.room; this.tries = 0;
+        this.mode = m.mode; this.trackKey = m.track; this.arena = !!m.arena; this.T = getTrack(m.track, this.arena);
+        if (!m.rejoin) this.phase = 'lobby';
+        break;
+      case 'lobby': this.lobby = m; this.phase = 'lobby'; break;
+      case 'ro': if (m.full) this.roster.clear(); for (const [id, r] of Object.entries(m.add)) this.roster.set(+id, { name: r[0], driver: r[1], bot: !!r[2] }); break;
+      case 'start':
+        this.start = m; this.phase = 'race'; this.mode = m.mode; this.trackKey = m.track; this.arena = !!m.arena; this.T = getTrack(m.track, this.arena);
+        this.pending = []; this.car = null; this.carEp = -1; this.snaps = [];
+        break;
+      case 's': this.onSnap(m); break;
+      case 'end': this.results = m; this.phase = 'end'; break;
+      case 'progress': this.progress = m; break;
+      case 'retry': case 'rejoinfail': this.phase = 'failed'; break;
+    }
+    this.emit(m.t, m);
+  }
+
+  onSnap(m) {
+    this.latest = m; this.latestAt = this.now();
+    this.snaps.push(m);
+    while (this.snaps.length > 12) this.snaps.shift();
+    if (m.ev) for (const e of m.ev) this.events.push(e);
+    const me = m.me;
+    this.me = me;
+    // drop acknowledged inputs; rebuild the prediction from the server's state + the rest
+    while (this.pending.length && this.pending[0].s <= me.ack) this.pending.shift();
+    if (!this.predicting()) { this.car = unpackState(me.s, this.car || newCar()); this.carEp = me.ep; return; }
+    const st = DRIVERS[this.myDriver()];
+    const before = this.car;
+    const car = unpackState(me.s, newCar());
+    stepCar(car, { st: 0, th: 0, dr: 0 }, st, this.T, 0); // settle surface / corridor
+    for (const p of this.pending) stepCar(car, p, st, this.T);
+    this.corr = before && me.ep === this.carEp ? Math.hypot(before.x - car.x, before.y - car.y) : 0; // last correction (px)
+    if (before && me.ep === this.carEp) { // same "epoch": smooth over the correction visually
+      this.err.x += before.x - car.x; this.err.y += before.y - car.y; this.err.a = lerpA(0, before.a - car.a, 1) + this.err.a;
+      if (Math.hypot(this.err.x, this.err.y) > 120) this.err.x = this.err.y = this.err.a = 0; // too far: snap
+    } else this.err.x = this.err.y = this.err.a = 0; // respawn / teleport / knock: snap
+    this.car = car; this.carEp = me.ep;
+  }
+  myDriver() { return this.roster.get(this.id)?.driver || this.params.driver || 'volt'; }
+  // own-car prediction runs only while we drive it ourselves
+  predicting() { const me = this.me; return !!me && this.latest && this.latest.tm > 0 && !me.rt && !me.auto && !me.out; }
+
+  // controls: held state (steer -1..1, throttle -1..1, drift 0|1) and one-shot presses
+  setInput(inp) { this.held = { ...this.held, ...cleanInput({ ...this.held, ...inp }) }; }
+  fire() { this.press.f = 1; }
+  useItem() { this.press.i = 1; }
+
+  // call every animation frame: sends inputs at the tick rate and advances the prediction
+  frame(now = this.now()) {
+    if (this.lastFrame == null) this.lastFrame = now;
+    this.acc = Math.min(this.acc + (now - this.lastFrame) / 1000, DT * 6);
+    this.lastFrame = now;
+    // corrections fade out over ~150 ms
+    const k = Math.exp(-((now - (this.errAt ?? now)) / 1000) * 14);
+    this.errAt = now;
+    this.err.x *= k; this.err.y *= k; this.err.a *= k;
+    while (this.acc >= DT) { this.acc -= DT; this.step(); }
+  }
+  // one input tick (also usable directly by tests / headless clients)
+  step() {
+    if (this.phase !== 'race' || !this.ws) return;
+    const inp = { t: 'in', s: ++this.seq, st: this.held.st, th: this.held.th, dr: this.held.dr ? 1 : 0, f: this.press.f, i: this.press.i };
+    this.press.f = this.press.i = 0;
+    this.send(inp);
+    const p = { s: inp.s, st: inp.st, th: inp.th, dr: inp.dr };
+    this.pending.push(p);
+    if (this.pending.length > MAX_PENDING) this.pending.shift();
+    if (this.car && this.predicting()) stepCar(this.car, p, DRIVERS[this.myDriver()], this.T);
+  }
+
+  // what to draw now. Cars: [{id, x, y, a, f (FLAG bits), hp (0-100), lap, spd, me}], own car predicted.
+  view(now = this.now()) {
+    const L = this.latest;
+    if (!L) return null;
+    // render time in server ticks: the newest tick + time since it arrived - the interpolation delay
+    const rt = L.n + ((now - this.latestAt) / 1000) * TICK_RATE - INTERP_TICKS;
+    let a = this.snaps[0], b = this.snaps[this.snaps.length - 1];
+    for (let i = this.snaps.length - 1; i > 0; i--) if (this.snaps[i - 1].n <= rt) { a = this.snaps[i - 1]; b = this.snaps[i]; break; }
+    const t = b.n > a.n ? Math.max(0, Math.min(1, (rt - a.n) / (b.n - a.n))) : 1;
+    const prev = new Map(a.c.map((r) => [r[0], r]));
+    const cars = b.c.map((r) => {
+      const o = prev.get(r[0]) || r;
+      const tele = Math.abs(o[1] - r[1]) + Math.abs(o[2] - r[2]) > 400; // respawn: don't slide across the map
+      return { id: r[0], x: tele ? r[1] : o[1] + (r[1] - o[1]) * t, y: tele ? r[2] : o[2] + (r[2] - o[2]) * t, a: lerpA(o[3] / 1000, r[3] / 1000, t), f: r[4], hp: r[5], lap: r[6], spd: r[7], me: r[0] === this.id };
+    });
+    const mine = cars.find((c) => c.me);
+    const myRow = L.c.find((r) => r[0] === this.id); // own state: newest, not delayed
+    if (mine && myRow) { mine.f = myRow[4]; mine.hp = myRow[5]; mine.lap = myRow[6]; }
+    if (mine && this.car && this.predicting()) {
+      mine.x = this.car.x + this.err.x; mine.y = this.car.y + this.err.y; mine.a = this.car.a + this.err.a;
+      mine.spd = Math.hypot(this.car.vx, this.car.vy); mine.drift = this.car.drift; mine.boost = this.car.boostT > 0; mine.air = this.car.airT > 0;
+      mine.predicted = true;
+    }
+    const pe = new Map(a.e.map((r) => [r[0], r]));
+    const ents = b.e.map((r) => { const o = pe.get(r[0]) || r; return { id: r[0], kind: ENT[r[1]], x: o[2] + (r[2] - o[2]) * t, y: o[3] + (r[3] - o[3]) * t, a: lerpA(o[4] / 1000, r[4] / 1000, t), owner: r[5], armed: !!r[6] }; });
+    const me = this.me;
+    return {
+      tick: L.n, time: L.tm, countdown: L.tm < 0 ? -L.tm : 0, cars, ents, boxesOff: L.bx, hazardsOn: L.hz, leader: L.ld, ranks: L.rk, hud: L.md,
+      me: me && { ...me, item: me.it >= 0 ? ITEM_IDS[me.it] : null, leader: L.ld === this.id },
+    };
+  }
+  drainEvents() { const e = this.events; this.events = []; return e; }
+  static flags = FLAG;
+}
+
+export { packState };

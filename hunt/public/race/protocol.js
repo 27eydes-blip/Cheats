@@ -7,6 +7,13 @@ export const FLAG = {
 export const driftTierOf = (f) => (f >> 12) & 3;
 // entity kinds in snapshot rows (index = wire id, append only)
 export const ENT = ['missile', 'rocket', 'oil', 'spikes', 'mine', 'turret', 'bolt'];
-export const RACE_MODE_IDS = ['grand', 'elim', 'battle', 'trial'];
+// the four modes (shown in the lobby; the server reads the rules from here too)
+export const RACE_MODES = {
+  grand: { name: 'Grand Race', desc: '3 laps. First across the line wins.', laps: 3, items: true, weapons: true },
+  elim: { name: 'Elimination Race', desc: 'Last place is knocked out every 18 seconds.', laps: 0, items: true, weapons: true, every: 18, first: 30 },
+  battle: { name: 'Battle Arena', desc: 'Most takedowns in 2 minutes wins.', arena: true, items: true, weapons: true, time: 120 },
+  trial: { name: 'Time Trial', desc: 'Just you and the clock. Beat your best time.', laps: 3, solo: true, items: false, weapons: false },
+};
+export const RACE_MODE_IDS = Object.keys(RACE_MODES);
 export const COUNTDOWN = 3; // seconds on the grid before GO
 export const RESPAWN_TIME = 2; // seconds from destroyed to back on track
