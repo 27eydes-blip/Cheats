@@ -213,7 +213,7 @@ export class MatchRoom {
     this.dropped.delete(id);
     sendJSON(server, { t: 'welcome', id, rejoin: 1, room: url.searchParams.get('match').startsWith('room:') ? url.searchParams.get('match').slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: url.searchParams.get('match'), secret: p.secret });
     if (sim.phase === 'play') {
-      sendJSON(server, { t: 'start', rejoin: 1, botLevel: sim.botLevel, you: id, mode: sim.modeKey, world: sim.map.world, seed: sim.seed, open: !!sim.map.open, players: sim.map.players || 10 });
+      sendJSON(server, { t: 'start', rejoin: 1, botLevel: sim.botLevel, you: id, mode: sim.modeKey, caps: sim.caps(), world: sim.map.world, seed: sim.seed, open: !!sim.map.open, players: sim.map.players || 10 });
       sendJSON(server, sim.rosterMsg());
       sendJSON(server, sim.stateMsg());
       if (!p.alive && !sim.mode.respawn) sendJSON(server, { t: 'dead', rank: p.rank, respawn: 0, killer: 'the Wild', killerId: 0, stolen: 0 });

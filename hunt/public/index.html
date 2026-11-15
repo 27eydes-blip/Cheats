@@ -41,6 +41,12 @@
   </div>
   <div id="specBar" hidden><button id="hudLobby" class="ghost">LOBBY</button><button id="hudAgain" class="big again">PLAY AGAIN</button></div>
   <button id="menuBtn" aria-label="Menu" hidden><i></i></button>
+  <!-- desktop (mouse + keyboard) abilities: each shows its key; touch draws its own controls on the canvas -->
+  <div id="abilities" hidden>
+    <button id="abSwap" class="ab" hidden><span class="abName" id="abSwapName"></span><span class="abIco">⇄</span><kbd id="abSwapKey">R</kbd></button>
+    <button id="abGadget" class="ab" hidden><span class="abName">GADGET</span><span class="abPips" id="abGadgetPips"></span><kbd id="abGadgetKey">F</kbd></button>
+    <button id="abSuper" class="ab"><span class="abName">SUPER</span><span class="abIco" id="abSuperState">0%</span><kbd id="abSuperKey">E</kbd></button>
+  </div>
   <button id="rangeLeave" class="ghost small" hidden>LEAVE RANGE</button>
 </div>
 

@@ -5,6 +5,7 @@ import { SETTINGS } from './settings.js';
 const STICK_R = 62; // css px
 const AIM_DEADZONE = 16;
 const TAP_MS = 260;
+const KEY_HINTS = { super: 'E', gadget: 'F', swap: 'R' };
 const sens = () => Math.max(0.5, Math.min(2, SETTINGS.aimSens || 1));
 
 export class Input {
@@ -69,16 +70,22 @@ export class Input {
     this.swapBtn = { x: X(W - 95 * s - 10 - sa.r), y: H - 196 * s - 10 - sa.b, r: 28 * s };
     this.weaponPanel = { x: X(W - 95 * s - 10 - sa.r) + (L ? 1 : -1) * 92 * s, y: H - 196 * s - 10 - sa.b, s, L };
     this.gadgetBtn = { x: X(W - 290 * s - 10 - sa.r), y: H - 56 * s - 10 - sa.b, r: 27 * s };
+    // mouse + keyboard: the abilities are DOM buttons in the bottom-right corner (#abilities);
+    // what you're holding sits right above them
+    if (!this.isTouch) this.weaponPanel = { x: W - 66 - sa.r, y: H - 142 - sa.b, s: 1, L: false };
     // idle move-stick hint: on short phones sit it lower so it clears the leaderboard
     this.moveHint = { x: X(110 + sa.l), y: (H < 430 ? H - STICK_R - 14 : H - 105) - sa.b };
   }
+
+  // the key shown on each desktop ability button
+  keyHints() { return KEY_HINTS; }
 
   reset() { this.actions.length = 0; this.moveT = null; this.aimT = null; }
   tapAt(x, y) { return this.taps.find((b) => Math.hypot(x - b.x, y - b.y) <= b.r) || null; }
 
   onTouchStart(e) {
     e.preventDefault();
-    this.isTouch = true;
+    if (!this.isTouch) { this.isTouch = true; this.layout(this.W, this.H); } // (a touch laptop: switch to the touch layout)
     if (!this.enabled) return;
     // a lost touchend (notification shade, system gesture) must not leave a stick stuck down
     const live = new Set([...e.touches].map((t) => t.identifier));

@@ -958,10 +958,12 @@ export function drawAmmo(ctx, x, y, ammo, superReady, t) {
     rr(ctx, sx + i * (w + gap), sy, w, h, 3); ctx.fillStyle = '#4a3a6e'; ctx.fill();
     if (f > 0) { rr(ctx, sx + i * (w + gap), sy, w * f, h, 3); ctx.fillStyle = f >= 1 ? '#ff9f1c' : '#b86f12'; ctx.fill(); }
   }
-  if (superReady) {
-    ctx.beginPath(); ctx.arc(x, y, 31 + pulse(t) * 6, 0, Math.PI * 2);
-    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,210,63,0.85)'; ctx.stroke();
-  }
+  if (superReady) drawSuperRing(ctx, x, y, t);
+}
+// SUPER READY: a pulsing gold ring around your hunter, whichever weapon is out
+export function drawSuperRing(ctx, x, y, t) {
+  ctx.beginPath(); ctx.arc(x, y, 31 + pulse(t) * 6, 0, Math.PI * 2);
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(255,210,63,0.85)'; ctx.stroke();
 }
 
 // ---------------------------------------------------------------- radar (screen space)

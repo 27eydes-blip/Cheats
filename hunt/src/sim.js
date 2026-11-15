@@ -366,10 +366,13 @@ export class Sim {
     if (hs.length) this.botLevel = levelForTrophies(hs.reduce((s, h) => s + (h.trophies || 0), 0) / hs.length);
     for (const p of this.players.values()) {
       if (!p.connected) continue;
-      this.send(p.id, { t: 'start', botLevel: this.botLevel, you: p.id, mode: this.modeKey, world: this.map.world, seed: this.seed, open: !!this.map.open, players: this.map.players || 10 });
+      this.send(p.id, { t: 'start', botLevel: this.botLevel, you: p.id, mode: this.modeKey, caps: this.caps(), world: this.map.world, seed: this.seed, open: !!this.map.open, players: this.map.players || 10 });
       this.send(p.id, this.rosterMsg());
     }
   }
+
+  // what the client HUD needs to know about the mode's rules (so it never special-cases mode names)
+  caps() { return { poison: !!this.mode.poison, respawn: !!this.mode.respawn }; }
 
   canSee(viewer, t) {
     if (viewer === t) return true;

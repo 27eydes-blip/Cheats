@@ -3,7 +3,7 @@
 import {
   BRAWLERS, BRAWLER_IDS, DT, TICK_RATE, CRATE, PLAYER_R, ARENA_SIZE, ZONES, WORLDS,
   worldId, worldsInDisplayOrder, generateArena, generateWorld, applyMove, attackDirs, tileAt, isSolidTile,
-  moveStats, zoneAt, zoneBounds, inHub, worldKeyAt, PREDICTED_KINDS, DAY_MS,
+  moveStats, zoneAt, zoneBounds, inHub, worldKeyAt, PREDICTED_KINDS, DAY_MS, POISON_START,
 } from './shared.js';
 import { EVENTS } from './events/index.js';
 import { Input } from './input.js';
@@ -55,6 +55,8 @@ const MODE_INFO = {
   freeplay: { name: 'FREE PLAY', desc: '' },
   range: { name: 'TEST RANGE', desc: 'Try your weapons on target dummies. Swap with R or the ⇄ button.' },
 };
+// a last-standing mode (Showdown, Big Hunt): poison, no respawns. Comes from the server's mode rules.
+const lastStanding = () => !!G.caps.poison && !G.caps.respawn;
 const worldName = (key) => WORLDS[worldId(key)]?.name || key;
 // a mode this client has never heard of (the server is newer): still gets a name
 const modeInfo = (mode) => MODE_INFO[mode] || { name: String(mode || 'match').toUpperCase(), desc: '' };
@@ -142,14 +144,14 @@ const G = {
   localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: new PList(resetPart, 260), rings: [], texts: new PList(resetText, 28), flash: {}, shake: 0, hurt: 0,
   shots: new ShotSim(), recoil: new Map(), nudge: { x: 0, y: 0 }, hitMark: null, wantSlot: null, wantT: 0, localCd2: 0, localBurst2: null, bolts: [], myPerks: {},
   spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, cam: { x: 1000, y: 1000 }, acc: 0, ping: 0,
-  pings: [], handoff: null, online: {}, modeKey: 'showdown', world: 'meadow', retries: 0, room: '', botsOn: true, facing: 0,
+  pings: [], handoff: null, online: {}, modeKey: 'showdown', caps: {}, world: 'meadow', retries: 0, room: '', botsOn: true, facing: 0,
   moving: false, slashes: [], worms: [], slashFlip: false, lastTp: 0, lastSk: 0, deadMsg: null, ticks: 0, opts: {}, bannerUntil: 0,
 };
 
 const menu = { open: false, timer: 0 }, STILL = { x: 0, y: 0 };
 function resetMatchState() {
   Object.assign(G, {
-    myId: 0, secret: null, matchName: null, map: null, zoneSlot: null, nightOn: undefined, env: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
+    myId: 0, caps: {}, secret: null, matchName: null, map: null, zoneSlot: null, nightOn: undefined, env: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
     localBullets: [], localBurst: null, localCd: 0, superCd: 0, rings: [], slashes: [], worms: [], lastTp: 0, flash: {}, shake: 0, hurt: 0,
     hitMark: null, wantSlot: null, wantT: 0, localCd2: 0, localBurst2: null, bolts: [],
     spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, pings: [], handoff: null, online: {}, deadMsg: null, lastSk: 0,
@@ -408,13 +410,14 @@ function onMsg(c, m) {
       break;
     case 'start':
       $('rangeLeave').hidden = m.mode !== 'range';
+      if (m.caps) G.caps = m.caps;
       if (m.rejoin && G.map && G.phase !== 'menu') {
         // back in the same match after a reconnect: keep our map, HUD and effects
         G.myId = m.you;
         if (G.phase !== 'dead') { G.phase = 'play'; input.enabled = true; input.reset(); show(null); }
         break;
       }
-      G.myId = m.you; G.modeKey = m.mode; G.world = m.world;
+      G.myId = m.you; G.modeKey = m.mode; G.world = m.world; G.caps = m.caps || {};
       G.map = generateArena(m.seed, m.world, m.players || 10);
       if (m.open) for (let y = 1; y < G.map.gh - 1; y++) for (let x = 1; x < G.map.gw - 1; x++) G.map.t[y * G.map.gw + x] = 0;
       G.phase = 'play';
@@ -1038,6 +1041,7 @@ function frameBody(now) {
     }
     adaptResolution(dt * 1000);
     updateHud(now);
+    updateAbilities();
   } else if (G.phase === 'mapview') drawMapView(now / 1000);
 }
 
@@ -1090,7 +1094,7 @@ function render(t) {
   const meAlive = !!G.me.al;
   let target = mePos;
   if (!meAlive) {
-    const o = G.view.others.find((p) => p.id === G.spectate) || (G.kind === 'quick' && G.modeKey === 'showdown' ? G.view.others[0] : null);
+    const o = G.view.others.find((p) => p.id === G.spectate) || (G.kind === 'quick' && lastStanding() ? G.view.others[0] : null);
     if (o) { target = o; G.spectate = o.id; } else target = G.cam;
     G.cam.x += (target.x - G.cam.x) * 0.12; G.cam.y += (target.y - G.cam.y) * 0.12;
   } else { G.cam.x = target.x + (SETTINGS.reduceFlash ? 0 : G.nudge.x); G.cam.y = target.y + (SETTINGS.reduceFlash ? 0 : G.nudge.y); }
@@ -1216,7 +1220,7 @@ function render(t) {
   if (meAlive) {
     const hh = holding();
     if (hh.sig) R.drawAmmo(ctx, mePos.x, mePos.y, G.me.am, G.me.sc >= 1, t);
-    else { R.drawWeaponAmmo(ctx, mePos.x, mePos.y, hh.ammo, hh.w.ammo); if (G.me.sc >= 1) R.drawAmmo(ctx, mePos.x, mePos.y + 999, 0, true, t); }
+    else { R.drawWeaponAmmo(ctx, mePos.x, mePos.y, hh.ammo, hh.w.ammo); if (G.me.sc >= 1) R.drawSuperRing(ctx, mePos.x, mePos.y, t); }
     // LAY LOW meter: fills while hiding, then "LAYING LOW"
     if (G.me.f & 1) {
       const k = G.me.bt5 / 5;
@@ -1315,19 +1319,52 @@ function render(t) {
   if (G.phase === 'play' && meAlive) {
     R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
     const hh = holding();
-    if (G.me.w2 && WEAPON_IDS[G.me.w2[0]]) { // SWAP button (above the fire button): signature <-> secondary
+    if (input.isTouch && G.me.w2 && WEAPON_IDS[G.me.w2[0]]) { // SWAP button (above the fire button): signature <-> secondary
       const id = WEAPON_IDS[G.me.w2[0]];
       R.drawSwapButton(ctx, input.swapBtn, { active: hh.slot === 1, name: WEAPONS[id].name, sigName: BRAWLERS[G.brawler].name, swap: Math.max(0, G.localSwap || 0, G.me.sw || 0) }, t);
     }
     // what you're holding, next to the fire button: icon, name, ammo
     R.drawWeaponPanel(ctx, input.weaponPanel, hh.sig ? { weapon: null, name: BRAWLERS[G.brawler].name.toUpperCase(), ammo: G.me.am, max: 3, color: HUNTER_PAL[G.brawler]?.accent } : { weapon: hh.id, name: WEAPONS[hh.id].name.toUpperCase(), ammo: hh.ammo, max: hh.w.ammo }, t);
-    if (G.me.gu >= 0) R.drawGadgetButton(ctx, input.gadgetBtn, { uses: G.me.gu, name: GADGETS[G.brawler]?.[G.me.gi]?.name }, t);
+    if (input.isTouch && G.me.gu >= 0) R.drawGadgetButton(ctx, input.gadgetBtn, { uses: G.me.gu, name: GADGETS[G.brawler]?.[G.me.gi]?.name }, t);
   }
   if (!meAlive && G.phase !== 'play') {
     const o = G.view.others.find((p) => p.id === G.spectate);
     if (o) R.outlinedText(ctx, `Spectating ${o.name}`, W / 2, H - 30, 18);
   }
 }
+
+// ------------------------------------------------------------------ desktop abilities (DOM buttons)
+// Mouse + keyboard players get real buttons for SWAP / GADGET / SUPER, each with its key. Touch draws
+// its own controls on the canvas. Written only when something changed (no layout work per frame).
+const ab = { shown: null, swap: null, swapOn: null, gad: null, k: null, ready: null, keys: null };
+const setHidden = (el, v) => { if (el.hidden !== v) el.hidden = v; };
+function updateAbilities() {
+  const me = G.me;
+  const show = G.phase === 'play' && !!me && !!me.al && !input.isTouch;
+  if (ab.shown !== show) { ab.shown = show; $('abilities').hidden = !show; }
+  if (!show) return;
+  const keys = input.keyHints();
+  if (ab.keys !== keys) { ab.keys = keys; $('abSuperKey').textContent = keys.super; $('abGadgetKey').textContent = keys.gadget; $('abSwapKey').textContent = keys.swap; }
+  const w2 = me.w2 && WEAPON_IDS[me.w2[0]] ? WEAPON_IDS[me.w2[0]] : null, hh = holding();
+  const swap = w2 ? (hh.slot === 1 ? BRAWLERS[G.brawler]?.name || '' : WEAPONS[w2].name) : null;
+  if (ab.swap !== swap) { ab.swap = swap; setHidden($('abSwap'), swap == null); if (swap != null) $('abSwapName').textContent = swap; }
+  const on = hh.slot === 1;
+  if (ab.swapOn !== on) { ab.swapOn = on; $('abSwap').classList.toggle('on', on); }
+  const gad = me.gu >= 0 ? me.gu : null;
+  if (ab.gad !== gad) {
+    ab.gad = gad; setHidden($('abGadget'), gad == null);
+    if (gad != null) { $('abGadgetPips').innerHTML = [0, 1, 2].map((i) => (i < gad ? '<i class="on"></i>' : '<i></i>')).join(''); $('abGadget').classList.toggle('ready', gad > 0); }
+  }
+  const sc = Math.max(0, Math.min(1, me.sc || 0)), k = Math.floor(sc * 50) / 50, ready = sc >= 1;
+  if (ab.k !== k) { ab.k = k; $('abSuper').style.setProperty('--k', k); $('abSuperState').textContent = ready ? 'READY' : `${Math.round(k * 100)}%`; }
+  if (ab.ready !== ready) { ab.ready = ready; $('abSuper').classList.toggle('ready', ready); }
+}
+// a click on a desktop ability button: the same action its key sends (never a shot: the canvas doesn't see it)
+const abPress = (a) => (e) => { e.preventDefault(); if (input.enabled) input.actions.push(a); };
+$('abSwap').onclick = abPress({ type: 'swap' });
+$('abGadget').onclick = abPress({ type: 'gadget' });
+$('abSuper').onclick = abPress({ type: 'super', mode: 'auto' });
+for (const id of ['abSwap', 'abGadget', 'abSuper']) $(id).addEventListener('mousedown', (e) => e.preventDefault()); // (keeps keyboard focus off the button)
 
 // ------------------------------------------------------------------ DOM HUD
 let hudT = 0;
@@ -1370,17 +1407,19 @@ function updateHud(now) {
     }
   } else if (last) {
     $('statsPill').hidden = true; $('hubPanel').hidden = true;
-    const sd = G.modeKey === 'showdown';
-    $('countPill').hidden = !sd;
+    // driven by the mode's rules (sent in 'start'), never by its name: Showdown and Big Hunt alike
+    const ls = lastStanding(), poison = !!G.caps.poison;
+    $('countPill').hidden = !ls;
     $('aliveN').textContent = last.al; $('countLbl').textContent = 'LEFT';
-    $('poison').hidden = !sd;
-    if (sd) {
+    $('poison').hidden = !poison;
+    if (poison) {
       const pt = $('poison');
-      if (last.tm < 60) { pt.classList.remove('on'); pt.innerHTML = `POISON IN <b>${Math.ceil(60 - last.tm)}</b>`; }
+      if (last.tm < POISON_START) { pt.classList.remove('on'); pt.innerHTML = `POISON IN <b>${Math.ceil(POISON_START - last.tm)}</b>`; }
       else { pt.classList.add('on'); pt.textContent = 'POISON CLOSING IN!'; }
     }
-    $('timerPill').hidden = sd || !last.md;
-    if (last.md) $('timerT').textContent = fmt(last.md.tl);
+    const tl = last.md?.tl;
+    $('timerPill').hidden = tl == null;
+    if (tl != null) $('timerT').textContent = fmt(tl);
     const pots = last.md?.pots, mt = G.me?.tm;
     $('potPill').hidden = !pots;
     if (pots && mt) { $('potUs').textContent = pots[mt]; $('potThem').textContent = pots[3 - mt]; }

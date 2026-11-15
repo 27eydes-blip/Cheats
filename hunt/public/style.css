@@ -223,3 +223,23 @@ button.big.leave { background: var(--red); color: #fff; }
 .earnedCard .earned { margin: 4px 0 2px; }
 .earnedCard .ucards { justify-content: center; }
 .earnedCard .hint { margin: 4px 0 0; }
+
+/* ---- desktop abilities (SWAP, GADGET, SUPER): bottom-right, above the creator credit ---- */
+#abilities { position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: calc(max(3px, env(safe-area-inset-bottom)) + 18px); display: flex; gap: 10px; align-items: flex-end; pointer-events: none; }
+.ab { position: relative; pointer-events: auto; width: 74px; height: 74px; padding: 0; border-radius: 50%; border-width: 4px; background: rgba(30, 16, 51, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; gap: 3px; }
+.ab .abName { font-size: 12px; max-width: 64px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ab .abIco { font-size: 14px; }
+.ab kbd { position: absolute; top: -8px; right: -6px; min-width: 24px; padding: 2px 5px; font: 400 13px var(--font); color: var(--ink); background: #fff; border: 3px solid var(--ink); border-radius: 8px; box-shadow: 0 2px 0 var(--ink); }
+.ab:hover { filter: brightness(1.15); }
+.ab:active { transform: translateY(2px); }
+#abSwap.on { background: rgba(255, 210, 63, 0.92); color: var(--ink); }
+#abGadget.ready { background: #4be0c8; }
+#abGadget:not(.ready) { color: #9f93c4; }
+.abPips { display: flex; gap: 4px; }
+.abPips i { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--ink); background: rgba(0, 0, 0, 0.4); }
+.abPips i.on { background: #fff; }
+/* SUPER: the charge fills as a ring (--k = 0..1); gold and pulsing when READY */
+#abSuper { width: 86px; height: 86px; --k: 0; background: radial-gradient(closest-side, rgba(60, 45, 100, 0.95) 76%, transparent 78% 100%), conic-gradient(#ffd23f calc(var(--k) * 360deg), rgba(30, 16, 51, 0.85) 0); color: #cfc3ff; }
+#abSuper .abName { font-size: 15px; }
+#abSuper.ready { background: #ffd23f; color: var(--ink); animation: abReady 0.9s ease-in-out infinite; }
+@keyframes abReady { 50% { box-shadow: 0 0 0 5px rgba(255, 230, 120, 0.7); } }
