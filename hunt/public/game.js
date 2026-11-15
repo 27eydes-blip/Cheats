@@ -1726,7 +1726,14 @@ if (qs.get('mapview')) {
   G.map = qs.get('free') ? generateWorld() : generateArena(+(qs.get('seed') || 7), qs.get('world') || 'meadow', +(qs.get('players') || 10));
   show(null); $('hud').hidden = true; document.body.classList.add('ingame');
 }
-if (!qs.get('mapview') && !qs.get('world') && !qs.get('free')) show('lobby');
+// TEMPORARY entry to the racing pivot until the new lobby lands: ?race=1[&mode=&track=&room=&bots=0|1&driver=]
+const raceFlag = qs.get('race');
+if (!qs.get('mapview') && !qs.get('world') && !qs.get('free') && !raceFlag) show('lobby');
+if (raceFlag) booted.then(() => import('./race/app.js')).then(({ startRace }) => startRace({
+  mode: qs.get('mode') || 'grand', track: qs.get('track') || 'any', room: qs.get('room') || '', bots: qs.get('bots') !== '0',
+  driver: qs.get('driver') || selBrawler, name: prefs.name || 'Racer', token: A.ACC.token || '', lobby: qs.get('lobby') || '', laps: qs.get('laps') || '',
+  onExit: () => { location.href = location.pathname; },
+}));
 // the page is up: take down the loading splash (index.html) and stop its boot watchdog
 window.__boot?.done();
 booted.then(() => {
