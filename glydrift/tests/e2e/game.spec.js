@@ -1008,7 +1008,7 @@ test("two leaderboards: score (the main one) and distance", async ({
   let v = await view();
   // Score is the main board: first, and where the leaderboard opens
   // (the Daily Challenge tab went with the Daily Challenge: levels have their own boards)
-  expect(v.tabs).toEqual(["SCORE", "DISTANCE"]);
+  expect(v.tabs).toEqual(["SCORE", "DISTANCE", "ILLEGAL"]); // (ILLEGAL: WASP LORD's own board)
   expect(v.tab).toBe("score");
   expect(v.filters).toEqual(["ALL TIME", "THIS WEEK", "TODAY"]);
   expect(v.rows.some((t) => / m$/.test(t))).toBe(false);
