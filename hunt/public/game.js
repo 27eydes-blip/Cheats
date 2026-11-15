@@ -929,7 +929,8 @@ function clientTick() {
   const safe = G.kind === 'free' && inHub(G.pred.x, G.pred.y);
   G.wantT -= DT;
   const h = holding();
-  input.swapOn = !!me.w2; input.gadgetOn = me.gu >= 0; input.mouse.charge = !h.sig && h.w.kind === 'charge';
+  input.swapOn = !!(me.w2 && WEAPON_IDS[me.w2[0]]); input.setGadget(me.gu >= 0); input.mouse.charge = !h.sig && h.w.kind === 'charge';
+  input.gadgetReady = me.gu > 0 && me.al && !safe; input.superReady = me.sc >= 1 && me.al && !safe;
   const seqNext = G.seq + 1;
   // one trigger pull per input; returns true if it fired
   const pull = (ang, mag, held) => {
@@ -960,6 +961,7 @@ function clientTick() {
     return true;
   };
   for (const a of input.takeActions()) {
+    if (a.type === 'notready') { G.notReady = { what: a.what, t: 0.8 }; sfx('click', 0.4); continue; }
     if (a.type === 'gadget') { if (me.gu > 0 && me.al && !safe) { gd = 1; sfx('super', 0.6); } continue; }
     if (a.type === 'swap') {
       if (me.w2 && me.al) { G.wantSlot = (G.wantT > 0 && G.wantSlot != null ? G.wantSlot : me.ws || 0) === 1 ? 0 : 1; G.wantT = 1; G.localSwap = G.wantSlot === 1 ? withPerks(WEAPON_IDS[me.w2[0]], G.myPerks[WEAPON_IDS[me.w2[0]]] || []).swap : SWAP_TIME; G.localBurst = G.localBurst2 = null; sfx('swap', 0.7); }
@@ -1003,6 +1005,7 @@ function clientTick() {
   G.pending.push({ s: G.seq, mx: inp.mx, my: inp.my, ax, ay, f: f != null });
   if (G.pending.length > 60) G.pending.shift();
   send(inp);
+  if (G.notReady) G.notReady.t -= DT;
   G.localCd -= DT; G.superCd -= DT; G.localCd2 -= DT; G.localSwap = (G.localSwap || 0) - DT;
   if (G.wantT > 0 && me.ws === G.wantSlot && !(me.sw > 0)) G.wantT = 0;
 }
@@ -1222,7 +1225,9 @@ function render(t) {
     else { ctx.globalAlpha = Math.min(1, k * 1.5); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); }
   }
   ctx.globalAlpha = 1;
-  for (const p of list) { if (p.fl & 4 && !p.me && p.team !== myTeam) continue; R.drawStatus(ctx, p, p.me, t, myTeam ? (p.me || p.team === myTeam ? 'mate' : 'foe') : null); }
+  // text in the world is drawn in world units: on a zoomed-out phone, scale it back up to a readable size
+  const ts = Math.max(1, 0.85 / s);
+  for (const p of list) { if (p.fl & 4 && !p.me && p.team !== myTeam) continue; R.drawStatus(ctx, p, p.me, t, myTeam ? (p.me || p.team === myTeam ? 'mate' : 'foe') : null, ts); }
   if (meAlive) {
     const hh = holding();
     if (hh.sig) R.drawAmmo(ctx, mePos.x, mePos.y, G.me.am, G.me.sc >= 1, t);
@@ -1232,12 +1237,12 @@ function render(t) {
       const k = G.me.bt5 / 5;
       ctx.beginPath(); ctx.arc(mePos.x + 44, mePos.y + 40, 9, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k);
       ctx.lineWidth = 5; ctx.strokeStyle = '#51cf66'; ctx.stroke();
-      if (G.me.lo > 0) { ctx.globalAlpha = 0.5 + G.me.lo * 0.5; R.outlinedText(ctx, 'LAYING LOW', mePos.x, mePos.y + 66, 13, '#9dffb0'); ctx.globalAlpha = 1; }
+      if (G.me.lo > 0) { ctx.globalAlpha = 0.5 + G.me.lo * 0.5; R.outlinedText(ctx, 'LAYING LOW', mePos.x, mePos.y + 66, 13 * ts, '#9dffb0'); ctx.globalAlpha = 1; }
     }
   }
   for (const tx of G.texts) {
     const k = 1 - tx.life / tx.max, pop = k < 0.15 ? 1 + (0.15 - k) * (tx.pop ? 6 : 3) : 1;
-    ctx.globalAlpha = Math.min(1, (tx.life / tx.max) * 2); R.outlinedText(ctx, tx.txt, tx.x, tx.y, Math.round(tx.size * pop), tx.color);
+    ctx.globalAlpha = Math.min(1, (tx.life / tx.max) * 2); R.outlinedText(ctx, tx.txt, tx.x, tx.y, Math.round(tx.size * pop * ts), tx.color);
   }
   ctx.globalAlpha = 1;
   if (G.hitMark && !SETTINGS.reduceFlash && meAlive) { // HIT MARKER at the aim point (sound plays either way)
@@ -1325,14 +1330,20 @@ function render(t) {
   if (G.phase === 'play' && meAlive) {
     R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
     const hh = holding();
-    if (input.isTouch && G.me.w2 && WEAPON_IDS[G.me.w2[0]]) { // SWAP button (above the fire button): signature <-> secondary
-      const id = WEAPON_IDS[G.me.w2[0]];
-      R.drawSwapButton(ctx, input.swapBtn, { active: hh.slot === 1, name: WEAPONS[id].name, sigName: BRAWLERS[G.brawler].name, swap: Math.max(0, G.localSwap || 0, G.me.sw || 0) }, t);
-    }
-    // what you're holding, next to the fire button: icon, name, ammo
-    R.drawWeaponPanel(ctx, input.weaponPanel, hh.sig ? { weapon: null, name: BRAWLERS[G.brawler].name.toUpperCase(), ammo: G.me.am, max: 3, color: HUNTER_PAL[G.brawler]?.accent } : { weapon: hh.id, name: WEAPONS[hh.id].name.toUpperCase(), ammo: hh.ammo, max: hh.w.ammo }, t);
+    // what you're holding: icon, name, ammo. With a second weapon it is the SWAP button too (touch:
+    // in the bottom row of the thumb cluster; desktop: above the ability buttons, which also swap)
+    const swap = input.swapOn ? Math.max(0, G.localSwap || 0, G.me.sw || 0) : null;
+    R.drawWeaponPanel(ctx, input.weaponPanel, hh.sig ? { weapon: null, name: BRAWLERS[G.brawler].name.toUpperCase(), ammo: G.me.am, max: 3, color: HUNTER_PAL[G.brawler]?.accent, swap } : { weapon: hh.id, name: WEAPONS[hh.id].name.toUpperCase(), ammo: hh.ammo, max: hh.w.ammo, active: true, swap }, t);
+    input.panelOn = true;
     if (input.isTouch && G.me.gu >= 0) R.drawGadgetButton(ctx, input.gadgetBtn, { uses: G.me.gu, name: GADGETS[G.brawler]?.[G.me.gi]?.name }, t);
-  }
+    // a press on SUPER / GADGET while it can't be used: say so on the button
+    if (G.notReady && G.notReady.t > 0) {
+      const b = G.notReady.what === 'super' ? input.superBtn : input.gadgetBtn;
+      ctx.globalAlpha = Math.min(1, G.notReady.t * 3);
+      R.outlinedText(ctx, 'NOT READY', b.x, b.y - b.r - 12, 13, '#ff8a9a');
+      ctx.globalAlpha = 1;
+    }
+  } else input.panelOn = false;
   if (!meAlive && G.phase !== 'play') {
     const o = G.view.others.find((p) => p.id === G.spectate);
     if (o) R.outlinedText(ctx, `Spectating ${o.name}`, W / 2, H - 30, 18);
@@ -1370,10 +1381,18 @@ function updateAbilities() {
   if (ab.ready !== ready) { ab.ready = ready; $('abSuper').classList.toggle('ready', ready); }
 }
 // a click on a desktop ability button: the same action its key sends (never a shot: the canvas doesn't see it)
-const abPress = (a) => (e) => { e.preventDefault(); if (input.enabled) input.actions.push(a); };
+// SUPER / GADGET that can't be used yet: the button shakes and says why instead of doing nothing
+const abPress = (a, ready = () => true) => (e) => {
+  e.preventDefault();
+  if (!input.enabled) return;
+  if (ready()) { input.actions.push(a); return; }
+  const b = e.currentTarget; b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope');
+  clearTimeout(b.nopeT); b.nopeT = setTimeout(() => b.classList.remove('nope'), 700);
+  sfx('click', 0.4);
+};
 $('abSwap').onclick = abPress({ type: 'swap' });
-$('abGadget').onclick = abPress({ type: 'gadget' });
-$('abSuper').onclick = abPress({ type: 'super', mode: 'auto' });
+$('abGadget').onclick = abPress({ type: 'gadget' }, () => input.gadgetReady);
+$('abSuper').onclick = abPress({ type: 'super', mode: 'auto' }, () => input.superReady);
 for (const id of ['abSwap', 'abGadget', 'abSuper']) $(id).addEventListener('mousedown', (e) => e.preventDefault()); // (keeps keyboard focus off the button)
 
 // ------------------------------------------------------------------ DOM HUD
@@ -1609,6 +1628,10 @@ for (const [id, key] of [['setFlash', 'reduceFlash'], ['setLow', 'lowGfx'], ['se
   $(id).onchange = () => { setSetting(key, $(id).checked); applySettings(); };
 }
 function applySettings() { document.body.classList.toggle('reduce-flash', SETTINGS.reduceFlash); setMusicVolume(); resize(); }
+// left-handed: the DOM HUD on the left (leaderboard, hub panel) moves across, away from the mirrored controls
+function applyHand() { document.body.classList.toggle('lefty', !!SETTINGS.leftHanded); }
+addEventListener('resize', applyHand); // (the Settings toggle fires a resize)
+applyHand();
 applySettings();
 const playAgain = () => { goFullscreen(); startQuick(G.opts.world ? { ...G.opts, room: 'T' + Math.floor(Math.random() * 1e8) } : { mode: G.opts.mode, room: G.opts.room }); };
 $('hudAgain').onclick = playAgain;
@@ -1650,5 +1673,6 @@ else if (qs.get('free')) startFree();
 
 // exposed for e2e tests
 window.__hunt = G;
+window.__huntInput = input;
 window.__huntPerf = () => ({ dpr: DPR, frameAvg: adapt.cost, budget: adapt.budget, dprStep: adapt.step });
 window.__huntMsg = (m) => onMsg(primary() || { primary: true }, m); // e2e hook: inject server messages

@@ -133,7 +133,8 @@ button.small { font-size: 14px; padding: 4px 12px; }
 #hubPanel { top: calc(max(8px, env(safe-area-inset-top)) + 52px); }
 #hud:has(#hubPanel:not([hidden])) #feed { display: none; }
 #hubPick { flex-wrap: wrap; } #hubPick button { flex: 1 0 28%; } /* (every hunter fits: rows of three) */
-@media (max-height: 430px) { #hubPanel { top: calc(max(8px, env(safe-area-inset-top)) + 50px); padding: 4px 6px; } #onlineList { max-height: 44px; } }
+/* short phones: no room for the name list (the count stays); the panel then ends above the fire stick */
+@media (max-height: 430px) { #hubPanel { top: calc(max(8px, env(safe-area-inset-top)) + 44px); padding: 4px 6px; } #onlineList { display: none; } }
 
 .settings { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; font-size: 14px; margin: 2px 0 4px; }
 .settings input { width: 18px; height: 18px; accent-color: var(--gold); vertical-align: middle; }
@@ -247,3 +248,11 @@ button.big.leave { background: var(--red); color: #fff; }
 #abSuper .abName { font-size: 15px; }
 #abSuper.ready { background: #ffd23f; color: var(--ink); animation: abReady 0.9s ease-in-out infinite; }
 @keyframes abReady { 50% { box-shadow: 0 0 0 5px rgba(255, 230, 120, 0.7); } }
+/* pressed while not ready: a short shake and a red ring (the ring alone with Reduce Flashing) */
+.ab.nope { border-color: var(--red); animation: abNope 0.3s; }
+@keyframes abNope { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+/* left-handed: the controls are mirrored to the left, so the leaderboard moves right and the safe
+   hub panel left (under the minimap): neither sits on a stick */
+body.lefty #leader { left: auto; right: max(10px, env(safe-area-inset-right)); }
+body.lefty #hubPanel { right: auto; left: max(10px, env(safe-area-inset-left)); top: calc(max(8px, env(safe-area-inset-top)) + 36px + min(128px, 30vh) + 12px); }

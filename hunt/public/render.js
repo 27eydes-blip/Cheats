@@ -910,9 +910,12 @@ export function drawAim(ctx, brawler, x, y, ang, kind, mag) {
   ctx.restore();
 }
 
-export function drawStatus(ctx, p, isMe, t, side) {
+// ts: nameplate scale. Phones zoom the world out (0.55x on a 667x375 screen), which shrank names to
+// 8 px and HP to 6.6 px; the game passes ts > 1 there so they stay readable on screen.
+export function drawStatus(ctx, p, isMe, t, side, ts = 1) {
   const y = p.y - 58 * (p.size || 1) - 4;
   const w = 74, h = 15;
+  if (ts !== 1) { ctx.save(); ctx.translate(p.x, y); ctx.scale(ts, ts); ctx.translate(-p.x, -y); }
   outlinedText(ctx, p.name, p.x, y - (p.title ? 30 : 16), 15, isMe ? '#b8ff6b' : (p.fl & 32) ? '#ff8a9a' : '#fff');
   if (p.badge) { ctx.font = '15px ' + FONT; drawBadge(ctx, p.badge, p.x - ctx.measureText(p.name).width / 2 - 11, y - (p.title ? 30 : 16) - 1, t); } // MASTERY badge
   if (p.title) outlinedText(ctx, p.title, p.x, y - 15, 11, '#ffd23f');
@@ -936,6 +939,7 @@ export function drawStatus(ctx, p, isMe, t, side) {
   }
   if (p.cr > 0) { drawCrystal(ctx, p.x - 52, y - 30, 0); outlinedText(ctx, String(p.cr), p.x - 38, y - 30, 14, '#f4b8ff'); }
   if (p.marked) drawSkull(ctx, p.x, y - (p.title ? 50 : 36), 1); // MARKED: skull over their head
+  if (ts !== 1) ctx.restore();
   if (p.stun) for (let i = 0; i < 3; i++) { const a = t * 5 + (i * Math.PI * 2) / 3; outlinedText(ctx, '★', p.x + Math.cos(a) * 20, p.y - 40 + Math.sin(a) * 6, 14, '#ffe066'); }
 }
 
@@ -1146,17 +1150,6 @@ export function drawAimProfile(ctx, prof, x, y, ang, mag) {
 }
 
 // SWAP button (secondary weapon): name, ammo pips, swap progress
-export function drawSwapButton(ctx, btn, info, t) {
-  if (!btn || !info) return;
-  ctx.save();
-  ctx.beginPath(); ctx.arc(btn.x, btn.y, btn.r, 0, Math.PI * 2);
-  ctx.fillStyle = info.active ? 'rgba(255,210,63,0.92)' : 'rgba(30,16,51,0.85)'; ctx.fill();
-  ctx.lineWidth = 3.5; ctx.strokeStyle = INK; ctx.stroke();
-  if (info.swap > 0) { ctx.beginPath(); ctx.arc(btn.x, btn.y, btn.r - 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - info.swap / 0.4)); ctx.lineWidth = 4; ctx.strokeStyle = '#5ff4ff'; ctx.stroke(); }
-  outlinedText(ctx, info.active ? info.sigName : info.name, btn.x, btn.y - 2, 9.5, info.active ? INK : '#fff', info.active ? '#ffd23f' : INK);
-  outlinedText(ctx, '⇄', btn.x, btn.y + 11, 10, '#fff');
-  ctx.restore();
-}
 // weapon ammo pips under your brawler when the secondary is out
 export function drawWeaponAmmo(ctx, x, y, ammo, max) {
   const n = Math.min(max, 16), w = Math.max(4, Math.min(14, 66 / n)), gap = 2, total = n * w + (n - 1) * gap;
@@ -1218,22 +1211,41 @@ export function drawWeaponDrop(ctx, x, y, id, rare, t) {
 export const masteryTint = (id, t) => (id === 'bane' ? (SETTINGS.reduceFlash || Math.sin(t * 8) > 0 ? '#ff2d6a' : '#9b1a4a') : BADGE_COL[id] ? BADGE_COL[id][1] : null);
 
 // CURRENT WEAPON next to the fire button: its icon, name and ammo
+// what you're holding (icon, name, ammo). With a second weapon it is also the SWAP button: a ⇄ badge,
+// cyan while the secondary is out. Compact on touch (it sits in the bottom row of the thumb cluster).
 export function drawWeaponPanel(ctx, panel, info, t) {
   if (!panel || !info) return;
-  const s = panel.s || 1, w = 104 * s, h = 46 * s, x = panel.x - w / 2, y = panel.y - h / 2;
+  const s = panel.s || 1, w = panel.w || 104 * s, h = panel.h || 46 * s, x = panel.x - w / 2, y = panel.y - h / 2, c = !!panel.compact;
   ctx.save();
-  rr(ctx, x, y, w, h, 12 * s); ctx.fillStyle = 'rgba(30,16,51,0.82)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
-  ctx.save(); ctx.translate(x + 24 * s, y + h / 2 - 2 * s); ctx.scale(0.62 * s, 0.62 * s);
-  if (info.weapon) drawWeaponDrop(ctx, 0, 0, info.weapon, 0, 0);
-  else { ctx.beginPath(); ctx.arc(0, 0, 16, 0, 7); ctx.fillStyle = info.color || '#ffd23f'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke(); outlinedText(ctx, '✦', 0, 1, 18); }
-  ctx.restore();
-  outlinedText(ctx, info.name, x + 70 * s, y + 15 * s, 11 * s, '#fff');
-  const n = Math.min(info.max, 12), pw = Math.max(3, Math.min(9, (52 * s) / n - 2)), gap = 2, total = n * pw + (n - 1) * gap;
+  rr(ctx, x, y, w, h, 12 * s); ctx.fillStyle = 'rgba(30,16,51,0.82)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = info.active ? '#5ff4ff' : INK; ctx.stroke();
+  // the name beside the icon if it fits; on a narrow phone panel a long name takes the full width
+  // instead (no icon), shrinking a little only if it must
+  let fs = Math.max(10, 11 * s), icon = true, tx = c ? x + 34 * s + (w - 34 * s) / 2 - 2 : x + 70 * s, tw = c ? w - 38 * s : 60 * s;
+  if (c) {
+    ctx.font = `${fs}px ${FONT}`;
+    const nw = ctx.measureText(info.name).width;
+    const bw = info.swap != null ? 10 : 0; // (room for the ⇄ badge on the outer corner)
+    if (nw > tw) { icon = false; tx = x + w / 2 + (panel.L ? -bw : bw) / 2; tw = w - 10 - bw; if (nw > tw) fs = Math.max(8, (fs * tw) / nw); }
+  }
+  if (icon) {
+    ctx.save(); ctx.translate(x + (c ? 17 : 24) * s, y + h / 2 - 2 * s); ctx.scale((c ? 0.5 : 0.62) * s, (c ? 0.5 : 0.62) * s);
+    if (info.weapon) drawWeaponDrop(ctx, 0, 0, info.weapon, 0, 0);
+    else { ctx.beginPath(); ctx.arc(0, 0, 16, 0, 7); ctx.fillStyle = info.color || '#ffd23f'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke(); outlinedText(ctx, '✦', 0, 1, 18); }
+    ctx.restore();
+  }
+  outlinedText(ctx, info.name, tx, y + h * 0.33, fs, '#fff');
+  const n = Math.min(info.max, 12), pw = Math.max(3, Math.min(9, tw / n - 2)), gap = 2, total = n * pw + (n - 1) * gap;
   for (let i = 0; i < n; i++) {
     const f = Math.max(0, Math.min(1, info.ammo * (n / info.max) - i));
-    const px = x + 70 * s - total / 2 + i * (pw + gap), py = y + 26 * s;
-    rr(ctx, px, py, pw, 8 * s, 2); ctx.fillStyle = INK; ctx.fill();
-    if (f > 0) { rr(ctx, px, py, pw * f, 8 * s, 2); ctx.fillStyle = f >= 1 ? (info.weapon ? '#5ff4ff' : '#ffb000') : '#7a6a9a'; ctx.fill(); }
+    const px = tx - total / 2 + i * (pw + gap), py = y + h * 0.58;
+    rr(ctx, px, py, pw, 7 * s + 1, 2); ctx.fillStyle = INK; ctx.fill();
+    if (f > 0) { rr(ctx, px, py, pw * f, 7 * s + 1, 2); ctx.fillStyle = f >= 1 ? (info.weapon ? '#5ff4ff' : '#ffb000') : '#7a6a9a'; ctx.fill(); }
+  }
+  if (info.swap != null) { // ⇄ badge (and the swap timer as a ring around it)
+    const bx = panel.L ? x + w : x, by = y, br = 11; // (outer corner: away from the gadget)
+    ctx.beginPath(); ctx.arc(bx, by, br, 0, 7); ctx.fillStyle = info.active ? '#5ff4ff' : '#ffd23f'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
+    if (info.swap > 0) { ctx.beginPath(); ctx.arc(bx, by, br + 3, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - Math.min(1, info.swap / 0.4))); ctx.lineWidth = 3; ctx.strokeStyle = '#5ff4ff'; ctx.stroke(); }
+    outlinedText(ctx, '⇄', bx, by + 1, 13, INK, '#fff');
   }
   ctx.restore();
 }
@@ -1244,7 +1256,7 @@ export function drawGadgetButton(ctx, btn, info, t) {
   ctx.save();
   ctx.beginPath(); ctx.arc(btn.x, btn.y, btn.r, 0, Math.PI * 2); ctx.fillStyle = ok ? '#4be0c8' : 'rgba(60,45,100,0.85)'; ctx.fill();
   ctx.lineWidth = 4; ctx.strokeStyle = INK; ctx.stroke();
-  outlinedText(ctx, 'GADGET', btn.x, btn.y - 3, 9, ok ? '#fff' : '#9f93c4');
+  outlinedText(ctx, 'GADGET', btn.x, btn.y - 3, 10.5, ok ? '#fff' : '#9f93c4');
   for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(btn.x - 9 + i * 9, btn.y + 9, 3.2, 0, 7); ctx.fillStyle = i < info.uses ? '#fff' : 'rgba(0,0,0,0.4)'; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = INK; ctx.stroke(); }
   ctx.restore();
 }
