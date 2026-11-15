@@ -115,6 +115,7 @@ export const MODES = {
 
   freeplay: {
     name: 'Free Play', desc: 'Drop-in open world.', respawn: true, hub: true,
+    cubeCap: 10, // a zone never ends, so power cubes are capped (about a long Showdown's worth)
     checkEnd: () => false,
     score: (p) => p.bounty,
   },

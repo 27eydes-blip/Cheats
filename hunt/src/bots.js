@@ -275,7 +275,8 @@ function useSuper(m, p, tgt, d, los, L) {
 
 function loot(m, p, ai, inp, range, B0, margin, move) {
   let goal = null, gd = Infinity;
-  for (const c of [...m.cubes, ...m.crystals]) {
+  const full = m.mode.cubeCap && p.cubes >= m.mode.cubeCap; // (can't pick up more: don't hover over cubes)
+  for (const c of [...(full ? [] : m.cubes), ...m.crystals]) {
     const d = Math.hypot(c.x - p.x, c.y - p.y);
     if (d < 700 && d < gd) { gd = d; goal = c; }
   }

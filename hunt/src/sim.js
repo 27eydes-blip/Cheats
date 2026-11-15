@@ -725,7 +725,8 @@ export class Sim {
     }
     t.bounty = 0; t.bushT = 0; t.lowF = 0;
     this.mode.onKill?.(this, t, src && !src.remote ? src : null);
-    const n = Math.max(1, t.cubes);
+    // Showdown: every cube drops. Free Play (capped): most of them, so a kill can't hand over a full stack
+    const n = Math.max(1, this.mode.cubeCap ? Math.ceil(t.cubes * 0.7) : t.cubes);
     for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, d = n > 1 ? 30 : 0; this.dropCube(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d); }
     for (let i = 0; i < t.crystals; i++) { const a = this.rand() * Math.PI * 2, d = 20 + this.rand() * 50; this.dropCrystal(t.x + Math.cos(a) * d, t.y + Math.sin(a) * d); }
     t.crystals = 0;
@@ -807,7 +808,7 @@ export class Sim {
     const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
     const t = this.map.t[ty * this.map.gw + tx];
     if (t !== EMPTY && t !== BUSH) { x = tx * TILE + TILE / 2; y = ty * TILE + TILE / 2; }
-    this.cubes.push({ id: this.nextEnt++, x, y });
+    this.cubes.push({ id: this.nextEnt++, x, y, t: this.time });
   }
   dropCrystal(x, y) {
     const t = this.map.t[Math.floor(y / TILE) * this.map.gw + Math.floor(x / TILE)];
@@ -905,14 +906,6 @@ export class Sim {
   }
 
   // ---------------------------------------------------------------- tick
-  tick() {
-    this.clock += DT;
-    if (this.phase === 'lobby') {
-      if (this.lobbyEnd != null && this.clock >= this.lobbyEnd && this.canStart()) this.start();
-      else if (Math.round(this.clock / DT) % 10 === 0) this.broadcastLobby();
-      return;
-    }
-    if (this.phase === 'end') return;
   // What the Durable Objects call: one exception must never stop the match for everyone. The
   // error is counted and handed to onError; this tick's one-shot buffers are dropped so they
   // can't pile up. (Tests call tick() directly, so a bug still fails loudly there.)
@@ -925,6 +918,14 @@ export class Sim {
     }
   }
 
+  tick() {
+    this.clock += DT;
+    if (this.phase === 'lobby') {
+      if (this.lobbyEnd != null && this.clock >= this.lobbyEnd && this.canStart()) this.start();
+      else if (Math.round(this.clock / DT) % 10 === 0) this.broadcastLobby();
+      return;
+    }
+    if (this.phase === 'end') return;
 
     this.time += DT;
     this.tickN++;
@@ -1013,9 +1014,10 @@ export class Sim {
       } else p.poisonT = 0.5;
 
       const pr = this.stats(p).r + 20;
+      const cubeCap = this.mode.cubeCap || Infinity; // Free Play: a full stack leaves cubes for others
       for (let i = this.cubes.length - 1; i >= 0; i--) {
         const c = this.cubes[i];
-        if (Math.hypot(c.x - p.x, c.y - p.y) < pr) {
+        if (p.cubes < cubeCap && Math.hypot(c.x - p.x, c.y - p.y) < pr) {
           this.cubes.splice(i, 1);
           p.cubes++; p.maxHp += CUBE_HP; p.hp += CUBE_HP;
           this.fx.push(['cube', Math.round(p.x), Math.round(p.y), p.cubes, p.id]);
@@ -1067,6 +1069,7 @@ export class Sim {
         this.brokenCrates.delete(idx); this.addCrate(idx);
       }
       if (this.wdrops.length) this.wdrops = this.wdrops.filter((d) => this.time - d.t < 75); // drops fade after 75s
+      if (this.cubes.length) this.cubes = this.cubes.filter((c) => this.time - (c.t || 0) < 90); // so do loose power cubes
     }
     this.sendSnapshots();
     this.pingLog = this.pings;
