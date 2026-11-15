@@ -227,6 +227,27 @@ revoke all on function public.glydrift_wasp_best_reset() from public, anon;
 grant execute on function public.glydrift_wasp_best_reset() to authenticated;
 
 -- ---------------------------------------------------------------- summary (one row)
+-- (the ALL MIGHTY column reads its table only if this project has it)
+create or replace function pg_temp.glydrift_crown()
+returns text
+language plpgsql
+as $$
+declare
+  r text;
+begin
+  if to_regclass('public.all_mighty') is null then
+    return 'not set up';
+  end if;
+  execute $q$
+    select coalesce(a.username, '(nobody)') || ' · ' || coalesce(
+             (select s.character from public.scores s
+               where s.player_id = a.player_id and s.level = 'endless'), '-')
+      from public.all_mighty a where a.id = 1
+  $q$ into r;
+  return coalesce(r, '(nobody)');
+end;
+$$;
+
 select
   (select count(*) from public.glydrift_wasp_lord_archive) as archived_wasp_scores,
   (select count(*) from public.scores where character = 'wasplord') as wasp_scores_left_on_boards,
@@ -236,7 +257,4 @@ select
     where w.level in ('endless', 'endless-distance')) as players_whose_best_resets,
   (select case when enabled then 'ON' else 'OFF' end
      from public.glydrift_hero_switches where hero = 'wasplord') as wasp_lord_switch,
-  (select a.username from public.all_mighty a where a.id = 1) as all_mighty_now,
-  (select s.character from public.all_mighty a
-     join public.scores s on s.player_id = a.player_id and s.level = 'endless'
-    where a.id = 1) as all_mighty_hero;
+  pg_temp.glydrift_crown() as all_mighty_now_and_hero;

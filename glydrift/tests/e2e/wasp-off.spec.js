@@ -254,7 +254,7 @@ test("WASP LORD off: the migration archives then removes his scores, moves the c
     const sum1 = psql(null, { file: FILE }).split("\n").at(-1);
     const sum2 = psql(null, { file: FILE }).split("\n").at(-1);
     // archived | left on boards | owners | refunds | players whose best resets | switch | all mighty | their hero
-    expect(sum1).toBe("4|0|1|0|1|OFF|Bravo|volt");
+    expect(sum1).toBe("4|0|1|0|1|OFF|Bravo · volt");
     expect(sum2).toBe(sum1);
     // archived first, every column kept; everyone else's rows are exactly as they were
     expect(
@@ -300,7 +300,7 @@ test("WASP LORD off: the migration archives then removes his scores, moves the c
     expect(asPlayer(C, "select public.glydrift_wasp_best_reset()::text")).toBe('{"reset": false}'); // (a level board only)
     expect(asPlayer(A, "select count(*) from public.glydrift_wasp_best_resets")).toMatch(/^ERROR permission denied/);
     // a re-run keeps the paid refund paid
-    expect(psql(null, { file: FILE }).split("\n").at(-1)).toBe("4|0|1|1|1|OFF|Bravo2|volt");
+    expect(psql(null, { file: FILE }).split("\n").at(-1)).toBe("4|0|1|1|1|OFF|Bravo2 · volt");
     expect(asPlayer(A, "select public.glydrift_wasp_refund()")).toBe("already");
   } finally {
     pg.stop();
@@ -345,4 +345,27 @@ test("WASP LORD off: a best set with him resets ONCE to the server's numbers, an
   expect(m.bothReset).toEqual({ best: 50000, dist: 1800, done: true, runs: 70 });
   expect(m.unaffected).toEqual({ best: 95000, dist: 3400, done: true, runs: 50 });
   expect(log.errors).toEqual([]);
+});
+
+test("WASP LORD off: the migration also runs on a project without ALL MIGHTY set up @smoke", async ({}, testInfo) => {
+  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser lane (no browser needed)");
+  test.skip(!pgAvailable(), "PostgreSQL isn't installed here");
+  test.setTimeout(120_000);
+  // (the live project: 20261109000001_all_mighty.sql was never run there)
+  const pg = startPg({ upTo: "20261109" });
+  const { psql } = pg;
+  try {
+    const A = "aaaaaaaa-0000-4000-8000-000000000001";
+    psql(`
+      insert into auth.users(id) values ('${A}');
+      insert into public.player_saves(user_id, save) values ('${A}', '{"unlocked":{"volt":true,"wasplord":true}}');
+      insert into public.scores(player_id, username, level, score, distance, run_time_ms, character) values
+        ('${A}', 'WaspKing', 'endless', 60000, 2400, 60000, 'wasplord');`);
+    expect(psql("select to_regclass('public.all_mighty') is null")).toBe("t");
+    const file = join(MIG, "20261116000001_wasp_lord_off.sql");
+    expect(psql(null, { file }).split("\n").at(-1)).toBe("1|0|1|0|1|OFF|not set up");
+    expect(psql(null, { file }).split("\n").at(-1)).toBe("1|0|1|0|1|OFF|not set up");
+  } finally {
+    pg.stop();
+  }
 });
