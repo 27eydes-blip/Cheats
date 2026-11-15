@@ -639,13 +639,19 @@ test("a very long run stays smooth and doesn't pile up objects", async ({
           if (s.player.y > s.H * 0.55 && s.player.vy > -50) s.onTap();
           s.__t = (s.__t || 1e6) + 1000 / 60;
           s.stepFrame(s.__t, 1000 / 60);
+          // how many frames in a row each coin has been held by the magnet
+          for (const c of s.obstacles.coins) {
+            c.__mf = c.active && c.magnet ? (c.__mf || 0) + 1 : 0;
+            s.__maxMf = Math.max(s.__maxMf || 0, c.__mf);
+          }
         }
         return {
           m: Math.floor(s.meters),
           state: s.state,
           coins: s.obstacles.coins.filter((c) => c.active).length,
           // a coin the magnet caught is collected within a few frames, never left hovering
-          caught: s.obstacles.coins.filter((c) => c.active && c.magnet).length,
+          // (a whole row can be caught at once, so this counts frames held, not coins)
+          heldFrames: s.__maxMf || 0,
         };
       }),
     );
@@ -656,7 +662,7 @@ test("a very long run stays smooth and doesn't pile up objects", async ({
   expect(last.m).toBeGreaterThan(8000);
   // live coins are only the ones on screen ahead of the bird
   expect(Math.max(...samples.map((x) => x.coins))).toBeLessThan(30);
-  expect(Math.max(...samples.map((x) => x.caught))).toBeLessThan(3);
+  expect(Math.max(...samples.map((x) => x.heldFrames))).toBeLessThan(30); // under 0.5 s
   expect(log.errors).toEqual([]);
 });
 
