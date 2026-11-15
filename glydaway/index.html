@@ -142,8 +142,65 @@
   #splash div { font: 700 clamp(13px, 3.4vw, 18px) var(--pixel); letter-spacing: .14em; color: #eafff6; text-shadow: 0 0 8px var(--mint); text-align: center; padding: 0 16px; }
   @keyframes splash { 0%, 82% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
   @media (prefers-reduced-motion: reduce) { #splash, #splash i::after { animation-duration: 1.2s; } }
-  .credit-foot { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 6px); text-align: center; font: 600 11px var(--body); letter-spacing: .5px; color: rgba(220, 214, 255, .6); pointer-events: none; padding: 0 12px; }
-  .credit-foot span { white-space: nowrap; }
+  /* the hidden Gleyde logo: tiny and faint at the foot of the home screen, tap for the credits */
+  /* the mark is the last thing in the home screen's column, pushed to the very bottom (the auto margins also keep the
+     rest centred above it), so it can never sit on top of a button or a hint */
+  #startScreen { padding-bottom: calc(env(safe-area-inset-bottom) + 2px); }
+  #startScreen > .logo { margin-top: auto; }
+  @media (pointer: coarse) { #startScreen .hint:not(.portrait-tip) { display: none; } } /* keyboard keys: not on a phone */
+  @media (orientation: portrait) and (max-height: 720px) {
+    #startScreen .tagline { margin-bottom: 14px; } #startScreen .pu-tips { margin-bottom: 14px; } #startScreen .best { margin-top: 10px; } #startScreen .row { gap: 8px; margin-top: 10px; }
+  }
+  @media (orientation: landscape) and (max-height: 500px) {
+    #startScreen .logo { font-size: clamp(28px, 10vh, 50px); } #startScreen .tagline { margin: 2px 0 8px; } #startScreen .chips { margin-bottom: 8px; } #startScreen .chips:has(+ .pu-tips) { margin-bottom: 4px; }
+    #startScreen #playBtn { padding: 8px 44px; } #startScreen .best { margin-top: 4px; } #startScreen .hint { display: none; } #startScreen .row { margin-top: 8px; } #startScreen .row .neon-btn.small { padding: 12px 14px; }
+  }
+  .gl-mark { position: relative; flex: none; width: 44px; height: 44px; margin: auto 0 0; padding: 0; border: 0; background: none; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; display: grid; place-items: center; border-radius: 50%; }
+  .gl-art { display: block; }
+  .gl-mark .gl-art { position: relative; width: 30px; height: 30px; opacity: .35; transition: opacity .35s, transform .35s; }
+  /* the tap glow is a soft gold light behind the mark (no CSS filter: animating one on this SVG crashes WebKit) */
+  .gl-mark::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(255, 214, 102, .55) 0%, rgba(255, 170, 40, .22) 45%, transparent 70%); opacity: 0; transition: opacity .35s; pointer-events: none; }
+  .gl-mark.lit::before { opacity: 1; }
+  .gl-mark:focus-visible::before { opacity: .6; }
+  .gl-mark svg { display: block; width: 100%; height: 100%; }
+  .gl-shine { display: none; }
+  /* one slow sweep, started every 7 s by a timer; between sweeps the highlight isn't drawn at all. It lives inside the
+     30px SVG (masked to the logo's own lines), so a sweep only repaints the logo */
+  .gl-mark.shine .gl-shine { display: inline; }
+  .gl-mark.shine .gl-sweep { animation: glShine 1.8s ease-in-out both; }
+  @keyframes glShine { from { transform: translateX(0) skewX(-18deg); } to { transform: translateX(52px) skewX(-18deg); } }
+  .gl-mark.lit { z-index: 31; } /* stays above the credits backdrop, glowing */
+  .gl-mark:focus-visible { outline: 2px solid rgba(255, 200, 61, .7); outline-offset: -4px; }
+  .gl-mark:focus-visible .gl-art, .gl-mark.lit .gl-art { opacity: 1; transform: scale(1.12); }
+  @media (hover: hover) { .gl-mark:hover .gl-art { opacity: .6; } }
+  @media (prefers-reduced-motion: reduce) { .gl-shine, .gl-mark.shine .gl-shine { display: none !important; } .gl-mark .gl-art, .gl-mark::before { transition: none; } }
+  body.reduce-flash .gl-shine, body.low-gfx .gl-shine { display: none !important; } /* Reduce Flashing / Low Graphics */
+
+  /* the credits card it opens: pixel style, gold Art Deco frame */
+  #creditsCard { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; padding: calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 12px); background: rgba(2, 1, 7, .72); opacity: 0; visibility: hidden; transition: opacity .22s ease-out, visibility 0s .22s; }
+  #creditsCard.show { opacity: 1; visibility: visible; transition: opacity .22s ease-out, visibility 0s; }
+  .deco { position: relative; width: min(360px, 100%); max-height: 100%; overflow: auto; padding: 26px 22px 20px; text-align: center; color: #f6e7b8;
+    background: linear-gradient(180deg, #171026 0%, #0b0716 100%); border: 3px solid var(--gold);
+    box-shadow: 0 0 0 3px #0b0716, 0 0 0 4px rgba(255, 200, 61, .55), 0 0 26px rgba(255, 200, 61, .35), inset 0 0 0 5px #0b0716, inset 0 0 0 6px rgba(255, 200, 61, .5);
+    image-rendering: pixelated; transform: scale(.88); transition: transform .26s cubic-bezier(.2, 1.4, .4, 1); }
+  #creditsCard.show .deco { transform: scale(1); }
+  .deco::before, .deco::after { content: ''; position: absolute; left: 50%; width: 14px; height: 14px; margin-left: -7px; background: var(--gold); transform: rotate(45deg); box-shadow: 0 0 0 3px #0b0716; }
+  .deco::before { top: -9px; } .deco::after { bottom: -9px; }
+  .deco i.c { position: absolute; width: 12px; height: 12px; border: 0 solid var(--gold); }
+  .deco i.c:nth-of-type(1) { top: 10px; left: 10px; border-top-width: 2px; border-left-width: 2px; }
+  .deco i.c:nth-of-type(2) { top: 10px; right: 10px; border-top-width: 2px; border-right-width: 2px; }
+  .deco i.c:nth-of-type(3) { bottom: 10px; left: 10px; border-bottom-width: 2px; border-left-width: 2px; }
+  .deco i.c:nth-of-type(4) { bottom: 10px; right: 10px; border-bottom-width: 2px; border-right-width: 2px; }
+  .deco .gl-art { width: 46px; height: 46px; margin: 0 auto 10px; background: radial-gradient(circle, rgba(255, 200, 61, .28), transparent 68%); }
+  .deco h3 { margin: 0; font: 700 clamp(15px, 4.4vw, 18px)/1.25 var(--pixel); letter-spacing: 2px; color: var(--gold); text-shadow: 0 0 8px rgba(255, 200, 61, .55); }
+  .deco .rule { height: 2px; width: 70%; margin: 12px auto; background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold) 80%, transparent); }
+  .deco p { margin: 6px 0; font: 700 16px/1.3 var(--body); letter-spacing: .5px; color: #f6e7b8; }
+  .deco p b { color: #fff; }
+  .deco small { display: block; margin-top: 12px; font: 600 12px/1.4 var(--body); color: rgba(246, 231, 184, .7); letter-spacing: .3px; }
+  .deco-x { position: absolute; z-index: 2; top: 4px; right: 4px; width: 44px; height: 44px; padding: 0; border: 0; background: none; color: var(--gold); font: 700 18px var(--pixel); cursor: pointer; touch-action: manipulation; }
+  .deco-x:focus-visible { outline: 2px solid var(--gold); outline-offset: -6px; }
+  @media (prefers-reduced-motion: reduce) { .deco, #creditsCard, #creditsCard.show { transition-duration: .01s; } }
+  @media (max-height: 430px) { .deco { padding: 16px 18px 14px; } .deco .gl-art { width: 34px; height: 34px; margin-bottom: 6px; } .deco .rule { margin: 8px auto; } .deco p { margin: 3px 0; font-size: 15px; } .deco small { margin-top: 8px; } }
   .credits { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(185, 168, 255, .25); font: 600 12px/1.45 var(--body); color: rgba(220, 214, 255, .75); letter-spacing: .3px; }
   .credits b { color: #fff; font-weight: 700; }
   .hint { font: 600 13px var(--body); color: rgba(220, 214, 255, .55); margin-top: 8px; letter-spacing: .5px; }
@@ -267,7 +324,22 @@
     <div class="row"><button class="neon-btn small cyan" id="lbBtn1">LEADERBOARD</button><button class="neon-btn small gold" id="skinBtn">LOCKER ROOM</button><button class="neon-btn small purple" id="setBtn1">SETTINGS</button></div>
     <div class="hint">Space / ↑ jump · hold to glide · P pause</div>
     <div class="hint portrait-tip">Turn your phone sideways to see further ahead</div>
-    <div class="credit-foot"><span>Gleyde Technologies, LLC</span> · <span>Created by Sam Eyde III</span> · <span>Produced by Juwon Shon</span></div>
+    <button type="button" class="gl-mark" id="glMark" aria-label="Gleyde Technologies, LLC: credits" aria-haspopup="dialog" aria-controls="creditsCard"><span class="gl-art"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><defs><linearGradient id="glGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4c9"/><stop offset=".3" stop-color="#e9bd55"/><stop offset=".55" stop-color="#a8721b"/><stop offset=".78" stop-color="#f6d77c"/><stop offset="1" stop-color="#8d5c14"/></linearGradient><g id="glLines" fill="none" stroke-linejoin="miter"><path d="M16 1.2 30.8 16 16 30.8 1.2 16Z" stroke-width="1.3"/><path d="M16 4.6 27.4 16 16 27.4 4.6 16Z" stroke-width=".6"/><path d="M16 1.2V4.6M30.8 16H27.4M16 30.8V27.4M1.2 16H4.6M12.4 5 16 8.6 19.6 5M12.4 27 16 23.4 19.6 27" stroke-width=".6"/><path d="M20.3 12.6A5 5 0 1 0 21 17.6V15.9H16.6" stroke-width="1.7" stroke-linecap="square"/></g><linearGradient id="glSheen" x1="0" x2="1"><stop offset="0" stop-color="#fff8d6" stop-opacity="0"/><stop offset=".5" stop-color="#fff8d6"/><stop offset="1" stop-color="#fff8d6" stop-opacity="0"/></linearGradient><mask id="glMask" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32"><use href="#glLines" stroke="#fff"/></mask></defs><use href="#glLines" stroke="url(#glGold)"/><g mask="url(#glMask)" class="gl-shine"><rect class="gl-sweep" x="-14" y="-6" width="10" height="44" fill="url(#glSheen)" transform="skewX(-18)"/></g></svg></span></button>
+  </div>
+
+  <div id="creditsCard" role="dialog" aria-modal="true" aria-labelledby="creditsTitle" aria-hidden="true">
+    <div class="deco">
+      <i class="c"></i><i class="c"></i><i class="c"></i><i class="c"></i>
+      <button type="button" class="deco-x" id="creditsX" aria-label="Close credits">✕</button>
+      <span class="gl-art"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><defs><linearGradient id="glGold2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4c9"/><stop offset=".3" stop-color="#e9bd55"/><stop offset=".55" stop-color="#a8721b"/><stop offset=".78" stop-color="#f6d77c"/><stop offset="1" stop-color="#8d5c14"/></linearGradient><g id="glLines2" fill="none" stroke-linejoin="miter"><path d="M16 1.2 30.8 16 16 30.8 1.2 16Z" stroke-width="1.3"/><path d="M16 4.6 27.4 16 16 27.4 4.6 16Z" stroke-width=".6"/><path d="M16 1.2V4.6M30.8 16H27.4M16 30.8V27.4M1.2 16H4.6M12.4 5 16 8.6 19.6 5M12.4 27 16 23.4 19.6 27" stroke-width=".6"/><path d="M20.3 12.6A5 5 0 1 0 21 17.6V15.9H16.6" stroke-width="1.7" stroke-linecap="square"/></g></defs><use href="#glLines2" stroke="url(#glGold2)"/></svg></span>
+      <h3 id="creditsTitle">GLEYDE TECHNOLOGIES, LLC</h3>
+      <div class="rule"></div>
+      <p>Created by <b>Sam Eyde III</b></p>
+      <p>Produced by <b>Juwon Shon</b>, COO</p>
+      <p>Finance: <b>Alex Go</b>, CFO</p>
+      <div class="rule"></div>
+      <small>© 2026 Gleyde Technologies, LLC. All rights reserved.</small>
+    </div>
   </div>
 
   <div class="screen" id="pauseScreen">
@@ -1191,6 +1263,10 @@ const sfx = {
   slam() { noise(0.18, 0.12, 900, 120, 'lowpass'); tone('sine', 110, 50, 0.16, 0.08); },
   crack() { noise(0.12, 0.05, 4000, 1500, 'highpass'); tone('triangle', 1800, 900, 0.1, 0.03); },
   thunk() { noise(0.1, 0.07, 1200, 300, 'lowpass'); tone('sine', 220, 90, 0.1, 0.05); },
+  sparkle() { // soft chime for the credits card
+    [0, 7, 12, 16, 19, 24].forEach((st, i) => { const f = 1047 * Math.pow(2, st / 12); tone('triangle', f, f * 1.002, 0.5, 0.022, i * 0.055); tone('sine', f * 2, f * 2, 0.3, 0.008, i * 0.055 + 0.02); });
+    noise(0.5, 0.012, 9000, 5000, 'highpass', 0.05);
+  },
   biome() { [0, 4, 7, 12].forEach((s, i) => { const f = 523 * Math.pow(2, s / 12); tone('triangle', f, f, 0.22, 0.05, i * 0.08); }); },
 };
 
@@ -2033,10 +2109,37 @@ screens.over.addEventListener('pointerdown', e => { if (e.target.closest('button
 document.addEventListener('touchmove', e => { if (!e.target.closest || !e.target.closest('.lb-list, .skin-grid, input[type=range]')) e.preventDefault(); }, { passive: false });
 document.addEventListener('gesturestart', e => e.preventDefault());
 
+// The hidden Gleyde logo and its credits card (home screen only; no effect on play)
+const glMark = $('glMark'), creditsCard = $('creditsCard');
+{ // the shimmer: one sweep every 7 s, only while the home screen is up (never during a run)
+  const calm = matchMedia('(prefers-reduced-motion: reduce)');
+  setInterval(() => {
+    if (document.hidden || calm.matches || document.body.classList.contains('reduce-flash') || document.body.classList.contains('low-gfx')) return;
+    if (!screens.start.classList.contains('show') || glMark.classList.contains('lit')) return;
+    glMark.classList.add('shine'); setTimeout(() => glMark.classList.remove('shine'), 1900);
+  }, 7000);
+}
+const creditsOpen = () => creditsCard.classList.contains('show');
+function openCredits() {
+  if (creditsOpen()) return;
+  glMark.classList.add('lit'); creditsCard.classList.add('show'); creditsCard.setAttribute('aria-hidden', 'false');
+  sfx.sparkle(); setTimeout(() => creditsOpen() && $('creditsX').focus({ preventScroll: true }), 60);
+}
+function closeCredits() {
+  if (!creditsOpen()) return;
+  creditsCard.classList.remove('show'); creditsCard.setAttribute('aria-hidden', 'true'); glMark.classList.remove('lit');
+  glMark.focus({ preventScroll: true }); setTimeout(() => document.activeElement === glMark && glMark.blur(), 0);
+}
+glMark.addEventListener('click', e => { e.stopPropagation(); audio(); if (creditsOpen()) closeCredits(); else openCredits(); });
+$('creditsX').addEventListener('click', e => { e.stopPropagation(); closeCredits(); });
+creditsCard.addEventListener('pointerdown', e => e.stopPropagation()); // taps here never start a run
+creditsCard.addEventListener('click', e => { if (!e.target.closest('.deco')) closeCredits(); });
+
 const JUMP_KEYS = new Set(['Space', 'ArrowUp', 'KeyW', 'Enter']);
 window.addEventListener('keydown', e => {
   const splash = $('splash');
   if (!splash.classList.contains('gone')) { splash.classList.add('gone'); e.preventDefault(); return; } // a key during the splash only skips it
+  if (creditsOpen()) { if (e.code === 'Escape') { e.preventDefault(); closeCredits(); } else if (e.code !== 'Tab') e.preventDefault(); return; } // credits card: only Esc / Tab
   if (e.target && e.target.tagName === 'INPUT') { if (e.code === 'Escape' && screens.lb.classList.contains('show')) closeLeaderboard(); return; } // typing a name (Esc still closes)
   if (S.mode !== 'play' && screens.lb.classList.contains('show')) { if (e.code === 'Escape') closeLeaderboard(); return; }
   if (screens.set.classList.contains('show')) { if (e.code === 'Escape') closeSettings(); return; }
