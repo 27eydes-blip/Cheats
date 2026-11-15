@@ -1,0 +1,10 @@
+// Glydaway's own Cloudflare Worker (static assets only: the game is one file).
+// Deploy: cd glydaway && mkdir -p dist && cp index.html dist/ && npx wrangler deploy
+// It is separate from every other project in this repo (Hunt has its own hunt/wrangler.jsonc).
+{
+  "name": "glydaway",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "./dist" },
+  "routes": [{ "pattern": "glydaway.com", "custom_domain": true }],
+  "workers_dev": true
+}

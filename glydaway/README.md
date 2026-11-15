@@ -138,3 +138,12 @@ The first PLAY opens a short hands-on tutorial; **Settings → How to play** sho
 The publisher credit and the "Created by Sam Eyde III" line appear on the splash screen, the home screen footer (with "Produced by Juwon Shon") and in Settings. Never remove them (`tests/credits.test.mjs` checks this).
 
 © 2026 Gleyde Technologies, LLC. All rights reserved.
+
+## Deploying (glydaway.com)
+Glydaway is its own Cloudflare Worker, `glydaway`, serving only `index.html` (config: `wrangler.jsonc`). From this folder:
+
+```sh
+mkdir -p dist && cp index.html dist/ && npx wrangler deploy
+```
+
+Run `node tests/home.test.cjs` and `node tests/credits.test.mjs` first. The Worker answers on glydaway.com (a custom domain, so the glydaway.com zone must be in the same Cloudflare account) and on its workers.dev address.
