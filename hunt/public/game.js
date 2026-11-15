@@ -186,9 +186,18 @@ function closeAll() {
 const RECONNECT_MS = 22000; // a bit less than the server's grace period
 let rc = null;
 function stopReconnect() { if (rc) { clearTimeout(rc.timer); rc = null; } }
+// the matchmaking socket dropped: queue up again, waiting longer each time (0.5 s doubling to 8 s),
+// and give up after MM_TRIES so a server that is down is never hammered
+const MM_TRIES = 5, MM_CONNECT_MS = 4000;
+let mmFails = 0;
 function lostConnection(c) {
-  // still in the matchmaking lobby: just queue up again
-  if (G.phase === 'waiting' && G.kind === 'quick') { startQuick(G.opts); return; }
+  if (G.phase === 'waiting' && G.kind === 'quick') {
+    clearTimeout(retryTimer);
+    if (++mmFails > MM_TRIES) { toMenu(); toast('Can\u2019t reach the server. Check your connection and try again.', 4500); return; }
+    UI.mm.lost();
+    retryTimer = setTimeout(() => { if (G.phase === 'waiting') startQuick(G.opts, true); }, Math.min(8000, 500 * 2 ** (mmFails - 1)));
+    return;
+  }
   if (!G.secret || !G.myId) { toast('Connection lost'); toMenu(); return; }
   if (rc) return;
   rc = { t0: Date.now(), zone: c.zone, tries: 0, timer: 0 };
@@ -248,8 +257,9 @@ function readForm() {
   return { name, room };
 }
 
-function startQuick(opts = G.opts) {
+function startQuick(opts = G.opts, retrying = false) {
   G.opts = opts;
+  if (!retrying) mmFails = 0;
   closeAll();
   resetMatchState();
   const { name, room: formRoom } = readForm();
@@ -263,10 +273,13 @@ function startQuick(opts = G.opts) {
   if (room && !$('bots').checked && !opts.world) q.set('bots', '0');
   for (const k of ['world', 'mode', 'lobby', 'ev']) if (opts[k]) q.set(k, opts[k]);
   if (opts.tryW) { q.set('try', opts.tryW); if (!q.get('wpn') && !A.ACC.token) q.set('wpn', opts.tryW); }
-  openConn('main', '/ws?' + q, { primary: true });
+  const c = openConn('main', '/ws?' + q, { primary: true });
+  // a phone with no signal can leave a connect hanging without ever failing: count that as lost too
+  setTimeout(() => { if (G.conns.get('main') === c && !c.open && G.phase === 'waiting') { G.conns.delete('main'); try { c.ws.close(); } catch {} lostConnection(c); } }, MM_CONNECT_MS);
   G.phase = 'waiting';
   show('waiting');
   UI.mm.show({ brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null, label: room ? `ROOM ${room}` : (MODE_INFO[opts.mode]?.name || 'QUICK HUNT') });
+  if (retrying) UI.mm.lost(); // still not through: keep saying so until the server answers
 }
 
 // ?wpn=&mast= are honoured only by a local dev server (HUNT_DEV), for tests and screenshots
@@ -341,7 +354,7 @@ function onMsg(c, m) {
         G.pending = []; G.err = { x: 0, y: 0 };
         if (G.kind === 'free') { G.myId = m.id; break; }
       }
-      G.myId = m.id; G.retries = 0; G.botsOn = m.bots;
+      G.myId = m.id; G.retries = 0; mmFails = 0; G.botsOn = m.bots;
       if (m.mode) G.modeKey = m.mode;
       if (m.world) G.world = m.world;
       if (G.phase === 'waiting') UI.mm.update({ players: 1, max: maxFor(m.mode), mode: MODE_INFO[m.mode]?.name, world: m.world });

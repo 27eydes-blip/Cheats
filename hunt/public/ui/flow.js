@@ -85,9 +85,12 @@ export function createMatchmaking(onCancel) {
     },
     update({ players, max, startIn, mode, world, bots = true }) {
       st.found = players;
+      $('mmFound').textContent = 'FINDING HUNTERS';
       $('mmCount').textContent = `${players}/${max} hunters found${startIn != null ? ` · starts in ${Math.ceil(startIn)}` : !bots && players < 2 ? ' · waiting for another hunter (bots off)' : ''}`;
       if (mode) $('mmMode').textContent = `${mode} · ${worldName(world)}`;
     },
+    // the connection dropped while searching: say so (CANCEL stays available) until update() is called again
+    lost() { st.found = 0; $('mmFound').textContent = 'CONNECTION LOST'; $('mmCount').textContent = 'Connection lost. Retrying...'; },
     hide() { el.hidden = true; },
   };
 }
