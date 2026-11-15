@@ -3,7 +3,10 @@
 -- WHEN TO RUN: BEFORE the game update with WASP LORD goes live. Until it has run, the old check
 -- rejects his fastest runs and his x16 runs (the game itself accepts them), so his best scores
 -- would silently fail to upload. Running it early is harmless: no other hero's limits change.
--- Safe to run more than once. Existing rows are not re-checked or changed.
+-- Safe to run more than once. It deletes nothing and changes no existing score: it only
+-- replaces the check function and its trigger, which run when a score is inserted or updated
+-- from now on. Existing rows are never re-checked. Needs the accounts migration
+-- (20261104000002, table player_saves), which is already live.
 -- Paste into Supabase → SQL Editor and run.
 --
 -- What it does:
@@ -16,8 +19,16 @@
 --                    every coin and close call at x13; at x16 that is 30 × 16 / 13 = 36.9, and
 --                    every coin, close call and dead-centre pass at once is 1 + 2.3 × 16 =
 --                    37.8, so 38 points per metre (+2000) instead of 30.
---      A doctored request can claim 'wasplord' to get these limits, but then the row shows the
---      ILLEGAL tag on every leaderboard, and it is still capped by his real best case.
+--      ONLY IF THE PLAYER OWNS HIM: the player's cloud save (public.player_saves, the row for
+--      the score's player_id) must have him unlocked (save -> unlocked -> wasplord = true).
+--      Otherwise the row gets the normal limits every hero has (×1.8, 30 per metre). That
+--      means:
+--        - guests (no account, so no cloud save) can still post his runs, but only within the
+--          normal limits; only their rare runs beyond them are refused;
+--        - a doctored request that just says 'wasplord' gets nothing extra.
+--      Limit: the cloud save is written by the player's own game (row-level security lets a
+--      player write only their own save), so a determined cheater could edit their own save to
+--      claim him. Even then the row shows the ILLEGAL tag and stays capped by his real best case.
 --   3. New results must name a well-formed hero id (^[a-z0-9_]{1,24}$, every hero id in the
 --      game fits), so a row can't carry an empty or made-up label.
 --   4. An update that keeps the result (a rename: same score, distance and run time) can't
@@ -51,7 +62,16 @@ begin
   if new.character is null or new.character !~ '^[a-z0-9_]{1,24}$' then
     raise exception 'glydrift: missing or malformed hero id' using errcode = '22023';
   end if;
-  is_wasp := new.character = 'wasplord';
+  -- his limits only for a player whose cloud save has him unlocked (read as the caller: the
+  -- row-level security on player_saves lets a player read only their own save, and a player
+  -- can only insert scores as themselves)
+  is_wasp := new.character = 'wasplord'
+    and exists (
+      select 1 from public.player_saves ps
+      where ps.user_id = new.player_id
+        and ps.user_id = auth.uid()
+        and ps.save #> '{unlocked,wasplord}' = 'true'::jsonb
+    );
   speed := case when is_wasp then 1.95 else 1.8 end;
   per_m := case when is_wasp then 38 else 30 end;
   if new.run_time_ms is null or new.run_time_ms < 500 then

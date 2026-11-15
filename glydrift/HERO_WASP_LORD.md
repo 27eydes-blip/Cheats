@@ -68,12 +68,18 @@ phasing, metallic boom on double jump, deep buzz-roar on unlock (and on a new be
   - It's safe to run early and safe to run twice. Paste it into Supabase → SQL Editor → Run.
   - **What it changes:**
     - Only rows marked `wasplord` get higher limits (top speed ×1.95 instead of ×1.8,
-      38 points per metre instead of 30). Every other hero's limits are unchanged.
+      38 points per metre instead of 30), and only if the player **owns him**: their cloud save
+      on the server must have him unlocked. Every other hero's limits are unchanged.
+    - Guests (no account, so no cloud save) can still post his runs within the normal limits;
+      only their rare runs beyond those limits are refused. Make an account to get his full limits.
     - New scores must carry a valid hero id.
     - A rename can't change which hero a score was set with.
-  - **What it can't stop:** the server can't check that a player owns him. A faked "wasplord"
-    score would get his limits, but it would also show the ILLEGAL tag and still be capped at his
-    real best case.
+  - **It deletes nothing and changes no existing score.** It only replaces the score check that
+    runs on new and updated scores.
+  - **What it can't stop:** the cloud save is written by the player's own game, so a determined
+    cheater could edit their own save to claim him. Their row would still show the ILLEGAL tag
+    and stay capped at his real best case. Coins and unlocks are kept by the game, not the
+    server, so the server can't prove who bought him.
   - The game checks the same rules before uploading.
 
 ## Tests (tests/e2e/wasplord.spec.js, tests/e2e/wasplord-art.spec.js)
