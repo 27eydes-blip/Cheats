@@ -10,7 +10,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { fieldPoint, openGame, press, profileOf, reseed, run, SAVE, settle, tap, waitFor } from "./helpers.js";
-import { waspFly } from "./waspBot.js";
 
 const SAVE_ALL = {
   ...SAVE,
@@ -140,54 +139,24 @@ const REALMS = {
   mirror: { phase: [["spire", "spire"], ["vorb", "vorb"], ["vbar", "vbar"]] },
 };
 
-test("WASP LORD: phases through every wall, pillar and block; lasers, eye beams and zap beams still kill", async ({ page }, testInfo) => {
+test("WASP LORD: a normal hero now — walls kill him, standard speed, combo up to x10; double jump is his one power @smoke", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  test.setTimeout(600_000);
-  const results = [];
-  let log;
-  for (const [realm, { phase, lethal = [] }] of Object.entries(REALMS)) {
-    log = await openGame(page, { flags: ["character=wasplord", `dimension=${realm}`] });
-    await startRun(page);
-    for (const [kind, type] of phase) results.push({ realm, kind, lethal: false, ...(await probe(page, kind, type)) });
-    expect(log.errors, realm).toEqual([]);
-    for (const [kind, type] of lethal) {
-      // each lethal hazard on a fresh run (the last one ended it)
-      const r = { realm, kind, lethal: true, ...(await probe(page, kind, type, 420)) };
-      results.push(r);
-      if (r.dead) {
-        await waitFor(page, () => window.__glydrift.scene.isActive("GameOver"), 15_000);
-        await run(page, 1500);
-        await page.evaluate(() => window.__glydrift.scene.getScene("GameOver").retry());
-        await settle(page, "Game", 600);
-        await press(page, await fieldPoint(page));
-        await run(page, 200);
-      }
-    }
-  }
-  console.log(JSON.stringify(results));
-  for (const r of results.filter((r) => !r.lethal)) {
-    const what = `${r.realm} ${r.kind}`;
-    expect(r.missing, what).toBeUndefined();
-    expect(r.minC, `${what}: he was inside it`).toBeLessThan(0);
-    expect(r.dead, `${what}: still flying`).toBe(false);
-    // (one phase each time he goes in: a swinging axe or a blinking block can leave him and
-    // come back while it sits on him)
-    expect(r.phased, `${what}: phased`).toBeGreaterThanOrEqual(1);
-    expect(r.calls.length, `${what}: rig.phase on, then off, each time`).toBe(r.phased * 2);
-    expect(r.calls.every((on, i) => on === (i % 2 === 0)), what).toBe(true);
-    expect(r.flicker, `${what}: it flickers while he is inside`).toBe(true);
-    expect(r.restored, `${what}: its art is back to normal after`).toBe(true);
-    expect(r.near, `${what}: no CLOSE! for phasing`).toBe(0);
-    expect(r.perfects, `${what}: no PERFECT! for phasing`).toBe(0);
-  }
-  for (const r of results.filter((r) => r.lethal)) {
-    expect(r.dead, `${r.realm} ${r.kind} kills him`).toBe(true);
-    expect(r.killedBy).toBe(r.type);
-  }
+  const log = await openGame(page, { flags: ["character=wasplord"] });
+  await startRun(page);
+  const def = await page.evaluate(() => {
+    const s = window.__glydrift.scene.getScene("Game");
+    const d = s.charDef;
+    return { speed: d.speed ?? 1, phase: !!d.perks?.phase, comboMax: d.perks?.comboMax ?? null, perks: d.perks?.list, dj: !!d.doubleJump, omPhase: !!s.obstacles.phase };
+  });
+  expect(def).toEqual({ speed: 1, phase: false, comboMax: null, perks: ["DOUBLE JUMP"], dj: true, omPhase: false });
+  // a saw right on him ends the run, like for any hero
+  const hit = await probe(page, "saw", "saw");
+  expect(hit.dead).toBe(true);
+  expect(hit.phased).toBe(0);
   expect(log.errors).toEqual([]);
 });
 
-test("WASP LORD: the ground, the ceiling and leaving the screen end the run; retry; Reduce Flashing dims steadily @smoke", async ({ page }, testInfo) => {
+test("WASP LORD: the ground, the ceiling and leaving the screen end the run; retry @smoke", async ({ page }, testInfo) => {
   test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
   test.setTimeout(180_000);
   const log = await openGame(page, { flags: ["character=wasplord"] });
@@ -206,7 +175,7 @@ test("WASP LORD: the ground, the ceiling and leaving the screen end the run; ret
     }, y);
     await waitFor(page, () => window.__glydrift.scene.isActive("GameOver"), 15_000);
     await run(page, 1500);
-    // RETRY: the same hero, still phasing, standard look again
+    // RETRY: the same hero again
     await page.evaluate(() => window.__glydrift.scene.getScene("GameOver").retry());
     await settle(page, "Game", 600);
     await page.evaluate(() => window.__glydrift.scene.getScene("Game").scene.start("Menu"));
@@ -219,85 +188,6 @@ test("WASP LORD: the ground, the ceiling and leaving the screen end the run; ret
   expect(floor.killedBy).toBe("edge");
   expect(ceiling.state).toBe("dying");
   expect(ceiling.killedBy).toBe("edge");
-  // after a retry he still phases (and nothing was left phasing from the last run)
-  await startRun(page);
-  const after = await probe(page, "saw", "saw");
-  expect(after.dead).toBe(false);
-  expect(after.phased).toBe(1);
-  // Reduce Flashing: a steady dim instead of the flicker
-  await page.evaluate(() => {
-    window.__glySave.data.settings.reduceFlash = true;
-  });
-  const calm = await page.evaluate(() => {
-    const s = window.__glydrift.scene.getScene("Game");
-    const om = s.obstacles;
-    const p = s.player;
-    window.__T ??= performance.now();
-    const step = () => {
-      window.__T += 1000 / 60;
-      window.__glydrift.step(window.__T, 1000 / 60);
-    };
-    for (const o of om.active) o.kill();
-    om.active.length = 0;
-    const saw = om.obtain("saw");
-    saw.spawn(p.x + 4, { y: p.y, R: 60 });
-    om.active.push(saw);
-    om.nextX = 1e8;
-    const ks = new Set();
-    for (let i = 0; i < 20; i++) {
-      saw.x = p.x + 4;
-      p.y = saw.y;
-      p.vy = 0;
-      step();
-      for (const [, a] of saw.phaseAlpha || []) ks.add(Math.round((a.out / a.base) * 100));
-    }
-    return { ks: [...ks], state: s.state };
-  });
-  expect(calm.state).toBe("playing");
-  expect(calm.ks).toEqual([45]);
-  expect(log.errors).toEqual([]);
-});
-
-test("WASP LORD: no CLOSE! or PERFECT! from phasing through a gate, a clean centre pass still counts @smoke", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  const log = await openGame(page, { flags: ["character=wasplord"] });
-  await startRun(page);
-  const pass = (phaseFirst) =>
-    page.evaluate((phaseFirst) => {
-      const s = window.__glydrift.scene.getScene("Game");
-      const om = s.obstacles;
-      const p = s.player;
-      window.__T ??= performance.now();
-      for (const o of om.active) o.kill();
-      om.active.length = 0;
-      om.nextX = p.x + 240;
-      const keep = om.level;
-      om.level = { i: 0, beats: [{ kind: "gate", d: 0.2, gap: 380 }], onBeat() {} };
-      om.spawnPattern(s.course.pace(s.meters), s.zoneId);
-      om.level = keep;
-      om.nextX = 1e8;
-      const gate = om.active.find((o) => o.type === "gate");
-      const near0 = s.run.nearMiss;
-      const perf0 = s.run.perfects;
-      for (let i = 0; i < 200 && !gate.passed && s.state === "playing"; i++) {
-        const mid = (gate.yt + gate.yb) / 2;
-        // phaseFirst: fly into the gate's wall, then slip to the dead centre at the centre line
-        const inWall = phaseFirst && gate.left - p.x < 30 && gate.x - p.x > 6;
-        p.y = inWall ? gate.yt - 40 : mid;
-        p.vy = 0;
-        window.__T += 1000 / 60;
-        window.__glydrift.step(window.__T, 1000 / 60);
-      }
-      return { phased: gate.phasedThrough, near: s.run.nearMiss - near0, perfects: s.run.perfects - perf0, state: s.state };
-    }, phaseFirst);
-  const cheat = await pass(true);
-  expect(cheat.phased).toBe(true);
-  expect(cheat.perfects).toBe(0);
-  expect(cheat.near).toBe(0);
-  const clean = await pass(false);
-  expect(clean.phased).toBe(false);
-  expect(clean.perfects).toBe(1);
-  expect(clean.state).toBe("playing");
   expect(log.errors).toEqual([]);
 });
 
@@ -375,203 +265,6 @@ test("WASP LORD: double jump inside 0.25 s, once until he falls; MILZZZ unchange
   expect(m.again2.dbl).toBe(false);
   expect(m.afterFall.dbl).toBe(true);
   expect(m.chain).toBeGreaterThanOrEqual(1); // his comes back on the clock, rising or not
-});
-
-test("WASP LORD: combo climbs to x16 (flaming number on the meter and the HUD); SXE x13, others x10 @smoke", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  const climb = async (id) => {
-    await openGame(page, { flags: ["god", `character=${id}`] });
-    await startRun(page);
-    return page.evaluate(() => {
-      const s = window.__glydrift.scene.getScene("Game");
-      const steps = [];
-      const at = {};
-      for (let i = 0; i < 34; i++) {
-        s.addChain();
-        if (steps.at(-1) !== s.mult) {
-          steps.push(s.mult);
-          at[s.mult] = s.chain;
-        }
-      }
-      window.__T ??= performance.now();
-      window.__T += 1000 / 60;
-      window.__glydrift.step(window.__T, 1000 / 60);
-      const label = s.comboMeter.labels[s.mult];
-      s.hudReady.onNearMiss(25 * s.mult, s.mult);
-      const hud = s.hudReady;
-      return {
-        steps,
-        at,
-        best: s.run.bestCombo,
-        shown: !!label?.visible,
-        flaming: !!label?.c?.flame,
-        hudFlame: hud.comboFlame.c.alpha,
-        hudText: hud.comboText.text,
-        rigTier: s.player.rig.comboTier,
-      };
-    });
-  };
-  const w = await climb("wasplord");
-  expect(w.steps).toEqual([1, 2, 3, 5, 10, 13, 16]);
-  expect(w.at[16]).toBe(28);
-  expect(w.best).toBe(16);
-  expect(w.shown).toBe(true);
-  expect(w.flaming).toBe(true);
-  expect(w.hudFlame).toBe(1);
-  expect(w.hudText).toBe("+400");
-  const sxe = await climb("splice");
-  expect(sxe.steps).toEqual([1, 2, 3, 5, 10, 13]);
-  expect(sxe.flaming).toBe(false);
-  expect(sxe.hudFlame).toBe(0);
-  expect(sxe.hudText).toBe("COMBO x13  +325");
-  const volt = await climb("volt");
-  expect(volt.steps).toEqual([1, 2, 3, 5, 10]);
-});
-
-test("WASP LORD: swapping heroes mid-session restores the other hero exactly (no phasing, standard speed)", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  test.setTimeout(240_000);
-  const log = await openGame(page, { save: SAVE_ALL });
-  const look = async () => {
-    await startRun(page);
-    const r = await page.evaluate(() => {
-      const s = window.__glydrift.scene.getScene("Game");
-      return {
-        id: s.charDef.id,
-        speedK: s.charDef.speed ?? 1,
-        ratio: +(s.speed / (s.course.speedAt(s.meters) * s.speedMul)).toFixed(3),
-        phase: s.obstacles.phase,
-        ward: s.obstacles.ward,
-        spread: s.obstacles.lethalSpread,
-        dj: !!s.charDef.doubleJump,
-      };
-    });
-    const saw = await probe(page, "saw", "saw", 120);
-    await page.evaluate(() => window.__glydrift.scene.getScene("Game").scene.start("Menu"));
-    await settle(page, "Menu", 800);
-    return { ...r, sawKills: saw.dead, phased: saw.phased };
-  };
-  const set = (id) =>
-    page.evaluate((id) => {
-      window.__glySave.data.selected = id;
-      window.__glydrift.scene.getScene("Menu").scene.restart();
-    }, id).then(() => run(page, 1500));
-  const wasp1 = await look();
-  await set("volt");
-  await settle(page, "Menu", 800);
-  const volt = await look();
-  await set("splice");
-  await settle(page, "Menu", 800);
-  const sxe = await look();
-  await set("wasplord");
-  await settle(page, "Menu", 800);
-  const wasp2 = await look();
-  for (const w of [wasp1, wasp2]) {
-    expect(w.id).toBe("wasplord");
-    expect(w.ratio).toBe(1.308);
-    expect(w.phase).toEqual(["laser", "blaser", "eyebeam", "mlaser", "zap"]);
-    expect(w.spread).toBe(1.308);
-    expect(w.sawKills).toBe(false);
-    expect(w.phased).toBe(1);
-  }
-  expect(volt).toMatchObject({ id: "volt", ratio: 1, phase: null, ward: null, spread: 1, sawKills: true, phased: 0 });
-  // SXE: his own +25% and no phase outside the Glitch Realm
-  expect(sxe).toMatchObject({ id: "splice", ratio: 1.25, phase: null, ward: null, spread: 1, sawKills: true, phased: 0 });
-  expect(log.errors).toEqual([]);
-});
-
-test("WASP LORD: fair at his speed — a god-off autopilot flies every realm and dimension with the lethal hazards forced", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  test.setTimeout(900_000);
-  // the autopilot flies with the game's physics: they must still match src/config.js
-  const cfg = readFileSync(new URL("../../src/config.js", import.meta.url), "utf8");
-  for (const [k, v] of [["gravityUp", 2300], ["gravityDown", 2750], ["flapVelocity", -790], ["terminalFall", 1080], ["terminalRise", -980]])
-    expect(cfg, k).toMatch(new RegExp(`${k}: ${v}[,\\s]`));
-  const log = await openGame(page, { flags: ["character=wasplord"] });
-  const FORCE = {
-    void: ["hlaser", "blade", "hlaser", "pulse", "hlaser", "bladeduo"],
-    frozen: ["zap", "zapstairs", "icicle", "zap", "gauntlet"],
-    // every multi-hazard Abyss pattern, double eye beams most of all (as abyss-crash.spec.js)
-    abyss: ["eyepair", "eyeslam", "eyepair", "eyepair", "tendrileye", "eyepair", "slammer", "eyepair", "walls", "eyepair"],
-    prism: ["mlaser", "glass", "mlaser", "mlaser", "rprism"],
-  };
-  const laps = [];
-  for (let lap = 0; lap < 3; lap++) {
-    await startRun(page, 9000 + lap * 7919);
-    // the full journey on the first lap: every classic realm, then the four dimensions in turn;
-    // later laps fly to the end of the Abyss again (more double eye beams)
-    const end = await page.evaluate((lap) => {
-      const s = window.__glydrift.scene.getScene("Game");
-      s.course.extend(8000);
-      const order = [["prism", 7], ["tidal", 8], ["chrono", 9], ["mirror", 10]];
-      let k = 0;
-      for (const g of s.course.segs)
-        if (g.dimension) {
-          const [id, b] = order[k++ % order.length];
-          Object.assign(g, { id, biome: b, firstVisit: k <= order.length });
-        }
-      const abyss = s.course.segs.find((g) => g.id === "abyss");
-      const mirror = s.course.segs.find((g) => g.id === "mirror");
-      return lap === 0 ? mirror.end + 20 : abyss.end + 20;
-    }, lap);
-    const r = await page.evaluate(waspFly, { frames: 60 * 60 * 12, untilM: end, force: FORCE });
-    r.end = end;
-    laps.push(r);
-    console.log(JSON.stringify(r));
-    if (r.state !== "playing") break;
-    await page.evaluate(() => window.__glydrift.scene.getScene("Game").scene.start("Menu"));
-    await settle(page, "Menu", 800);
-  }
-  for (const r of laps) {
-    expect(r.state, `lap died: ${r.killedBy} in ${r.killedIn} at ${r.m} m`).toBe("playing");
-    expect(r.m).toBeGreaterThanOrEqual(r.end);
-  }
-  const first = laps[0];
-  for (const z of ["void", "sakura", "solar", "frozen", "glitch", "abyss", "valley", "hurricane", "prism", "tidal", "chrono", "mirror"])
-    expect(first.zones[z] ?? 0, z).toBeGreaterThan(200);
-  const sum = (k) => laps.reduce((a, l) => a + (l.forced?.[k] || 0), 0);
-  expect(laps.reduce((a, l) => a + l.pairs, 0), "double eye beams").toBeGreaterThanOrEqual(10);
-  expect(sum("hlaser")).toBeGreaterThanOrEqual(6);
-  expect(sum("zap") + sum("zapstairs")).toBeGreaterThanOrEqual(6);
-  expect(sum("mlaser")).toBeGreaterThanOrEqual(5);
-  expect(first.phased).toBeGreaterThan(20); // and he flew through plenty of walls
-  expect(log.errors).toEqual([]);
-});
-
-test("WASP LORD: a run still ends — passive he hits the ground, flying blind a laser or beam gets him within 10 minutes", async ({ page }, testInfo) => {
-  test.skip(profileOf(testInfo) !== "iphone-std", "once per browser, at phone size");
-  test.setTimeout(600_000);
-  const log = await openGame(page, { flags: ["character=wasplord"] });
-  await startRun(page);
-  // no taps at all
-  const passive = await page.evaluate(() => {
-    const s = window.__glydrift.scene.getScene("Game");
-    window.__T ??= performance.now();
-    window.__glyNoRender = true;
-    let f = 0;
-    for (; f < 60 * 600 && s.state === "playing"; f++) {
-      window.__T += 1000 / 60;
-      window.__glydrift.step(window.__T, 1000 / 60);
-    }
-    window.__glyNoRender = false;
-    return { seconds: f / 60, killedBy: s.run.killedBy, state: s.state };
-  });
-  expect(passive.state).not.toBe("playing");
-  expect(passive.killedBy).toBe("edge");
-  expect(passive.seconds).toBeLessThan(5);
-  await waitFor(page, () => window.__glydrift.scene.isActive("GameOver"), 15_000);
-  await run(page, 1500);
-  await page.evaluate(() => window.__glydrift.scene.getScene("GameOver").retry());
-  await settle(page, "Game", 600);
-  await press(page, await fieldPoint(page));
-  await run(page, 200);
-  // holding the middle without looking: walls are nothing to him, but a laser or beam ends it
-  const blind = await page.evaluate(waspFly, { frames: 60 * 60 * 10, steer: false });
-  console.log(JSON.stringify(blind));
-  expect(blind.state).not.toBe("playing");
-  expect(["laser", "eyebeam", "mlaser", "zap", "edge"]).toContain(blind.killedBy);
-  expect(blind.frames).toBeLessThan(60 * 60 * 10);
-  expect(log.errors).toEqual([]);
 });
 
 test("WASP LORD: the ILLEGAL tag on his leaderboard rows — podium, list, your row — also from another device's data @smoke", async ({ page, browser }, testInfo) => {

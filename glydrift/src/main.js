@@ -4,6 +4,8 @@ import "@fontsource/orbitron/900.css";
 import "@fontsource/rajdhani/600.css";
 import "@fontsource/rajdhani/700.css";
 import "@fontsource/silkscreen/700.css";
+import "@fontsource/cinzel/400.css"; // the Gleyde Technologies card (ui/gleydeMark.js)
+import "@fontsource/cinzel/700.css";
 import "./fonts/galmuri.css"; // Hangul pixel font (손주원)
 import Phaser from "phaser";
 import "./gfx/tileSpriteFix.js";

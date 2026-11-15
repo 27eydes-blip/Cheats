@@ -25,100 +25,40 @@ in the game (above Ultra Legendary).
 Sounds (all made with the game's own synth): low buzz on each flap, distorted "zzzt" when
 phasing, metallic boom on double jump, deep buzz-roar on unlock (and on a new best).
 
-## His powers
-1. **PHASE:** he flies through every obstacle except lasers and beams.
-   - **Still kills him:** Neon Void lasers, the Glitch broken laser, Abyss eye beams, Prism mirror
-     lasers and Frozen **zap** beams; also the ground, the ceiling and leaving the screen.
-     - Zap was added because it's drawn with the same laser beam art: dying to Void lasers but
-       not to zap would look wrong. To let him phase through zap, take `"zap"` off
-       `perks.phase.lethal` in `characterDefs.js` and from the expected list in the test.
-   - **Phases through:** every other type. That's pillars, gates, walls, blocks, columns,
-     slammers, closing walls, glass, saws, axes, bells, bamboo, lanterns, meteors, icicles,
-     comets, mines, gears, pendulums and the rest, including the Hurricane lightning bolt, the
-     Neon Void pulse ring and the Mirror sweep bar (none of those are lasers).
-   - **No free points:** phasing through something never counts as a CLOSE! or PERFECT!.
-2. **SPEED ×1.308:** 30% above the average of the other 90 heroes (1.006, computed from the
-   hero data at load). He's the fastest hero; SXE is 1.25.
-   - **One spacing change, for him only:** the Frozen **zap stairs** (two zap pairs, one after
-     the other) sit 1.308× further apart when he flies, so he gets the same time between them
-     as everyone else. At his speed the fixed 220 px gap was too tight: the test bot made it
-     through at normal speed but not at his. No other hero's spawning changes (a test checks
-     VOLT and SXE).
-   - The laser, eye-beam and zap warnings are timed in seconds, so they already give the same
-     reaction time at his speed.
-   - **Fairness check:** a bot with god mode off flew 3 laps: every realm and dimension once,
-     then to the end of the Abyss twice more. That included Sakura Skies, 12 forced Abyss double
-     eye beams and every laser and beam type forced. It never died, and its closest passes were
-     about 70 px from zaps, 90 px from lasers and 100 px from eye beams.
-     - The bot flies with real taps and the game's physics. It treats every laser as always on,
-       and a zap beam as live from its 0.75 s charge warning, with 0.2 s to spare either side.
-3. **DOUBLE JUMP:** a second tap within 0.25 s of a flap is a 1.45× boosted flap with the red
-   shockwave. Once, then ready again only when he starts falling. MILZZZ's double jump is
-   unchanged.
-4. **COMBO x16:** a new tier at a chain of 28 (x13 at 22, like SXE). It shows as the flaming
-   number on the combo meter and the HUD. SXE still tops out at x13 and everyone else at x10.
+## His power (changed 15 Nov 2026: he's now a normal hero)
+WASP LORD flies like every other hero: **standard speed, combo up to x10, no phasing** (walls,
+pillars and every hazard kill him as they kill anyone). His one power:
+- **DOUBLE JUMP:** a second tap within 0.25 s of a flap is a 1.45× boosted flap with the red
+  shockwave. Once, then ready again only when he starts falling. MILZZZ's double jump is
+  unchanged.
+
+His runs count on the normal leaderboards and for ALL MIGHTY like any hero's. His look, sounds,
+shop card, reveal and price (55,000 coins) are unchanged, and players who bought him keep him.
+(The phasing, the extra speed and x16 code is still in the game but switched off: it only works
+for a hero that has those perks, and no hero has them now.)
 
 ## Leaderboard and server
 - His runs count on the normal leaderboards and for the ALL MIGHTY crown, like every hero.
-- **Where the tag comes from:** the ILLEGAL tag is drawn from the hero stored with each score,
-  so every device sees it. A test checks it from a second browser.
-- **SQL to run:** `supabase/migrations/20261114000001_wasp_lord_scores.sql`.
-  - **Run it BEFORE the update with him goes live.** Until then, the server's score check
-    rejects his fastest and x16 runs, so his best scores wouldn't upload.
-  - It's safe to run early and safe to run twice. Paste it into Supabase → SQL Editor → Run.
-  - **What it changes:**
-    - Only rows marked `wasplord` get higher limits (top speed ×1.95 instead of ×1.8,
-      38 points per metre instead of 30), and only if the player **owns him**: their cloud save
-      on the server must have him unlocked. Every other hero's limits are unchanged.
-    - Guests (no account, so no cloud save) can still post his runs within the normal limits;
-      only their rare runs beyond those limits are refused. Make an account to get his full limits.
-    - New scores must carry a valid hero id.
-    - A rename can't change which hero a score was set with.
-  - **It deletes nothing and changes no existing score.** It only replaces the score check that
-    runs on new and updated scores.
-  - **What it can't stop:** the cloud save is written by the player's own game, so a determined
-    cheater could edit their own save to claim him. Their row would still show the ILLEGAL tag
-    and stay capped at his real best case. Coins and unlocks are kept by the game, not the
-    server, so the server can't prove who bought him.
-  - The game checks the same rules before uploading.
+- His rows still show the small red ILLEGAL tag (drawn from the hero stored with each score).
+- **No SQL is needed for him any more.** He flies at normal speed with a normal x10 combo, so the
+  standard score check fits his runs. `supabase/migrations/20261114000001_wasp_lord_scores.sql`
+  is optional: if you already ran it, it's harmless (it only gives looser limits to his rows,
+  which a normal-speed hero never reaches); if you haven't, you don't need to.
+- The ILLEGAL leaderboard (a separate board for him) was built and then dropped before it went
+  live; nothing of it is in the game or the database.
 
 ## Tests (tests/e2e/wasplord.spec.js, tests/e2e/wasplord-art.spec.js)
-- **Phasing:**
-  - every obstacle type spawned on him, in its own realm: he goes through and survives, the
-    phase look turns on and off, and the obstacle flickers and is restored afterwards;
-  - every lethal type still kills him;
-  - the ground, ceiling and screen edges still end the run.
-- **Double jump and combo:**
-  - double-jump timing: inside 0.25 s, outside 0.25 s, once until he falls, MILZZZ unchanged;
-  - x16 reached and shown (SXE x13, others x10).
-- **Runs and heroes:**
-  - retry after death;
-  - swapping heroes mid-session (Wasp Lord → VOLT → SXE → Wasp Lord): the others get no phasing
-    and their normal speed back;
-  - memory: swapping onto him and off again leaves the same number of objects, textures and
-    tweens;
-  - the fairness bot through every realm and dimension (Sakura Skies, Abyss double eye beams);
-  - the zap-stairs spacing: his own, and normal for VOLT and SXE;
-  - **a run still ends:** with no taps he hits the ground in under 5 s, and flying blind a zap beam
-    got him at 1,852 m. He is not unkillable.
-- **Leaderboard and score rules:**
-  - the ILLEGAL tag on the podium, the list and your own row, including another device's data;
-  - score rules: his runs are accepted, and the same numbers for any other hero are rejected
-    (the same rules as the SQL).
-- **Shop and art:**
-  - the locked shop card, buying him, and the reveal playing once;
-  - the Heroes screen and locker;
-  - his art comes back after a lost GPU context;
-  - Reduce Flashing and Low Graphics: steady glows, no strobing.
-- **Existing tests:** abyss-crash (double beams), context-loss, credit, shop, locker and the
-  leaderboard tests were re-run and pass.
+- He's a normal hero: standard speed, no phasing, combo up to x10; a saw on him ends the run.
+- The ground, the ceiling and the screen edges end the run; retry works.
+- Double jump: inside 0.25 s, outside 0.25 s, once until he falls; MILZZZ unchanged.
+- The ILLEGAL tag on his leaderboard rows (podium, list, your own row, another device's data).
+- Shop and art: the locked card, buying him and the one-time reveal, the Heroes screen and
+  locker, his art after a lost GPU context, Reduce Flashing and Low Graphics, no leaks when
+  swapping heroes.
 
 ## Things to decide or know
-- **Zap beams kill him** (see above); changing that is one line.
 - **The Heroes screen shows his name and preview while he's still locked.** Only the shop hides
   him as "???".
 - **New save field:** `revealed` remembers that his reveal has played. It works with old saves.
 - **Existing gap, unchanged:** SXE's theoretical top speed (1.856) is already a little above the
   general ×1.8 server limit. That's unrelated to Wasp Lord, but worth a look one day.
-- **How to ship him later:** merge `hero/wasp-lord` into the live branch after the App Store
-  launch, run the SQL first, then deploy with the full test lane green on all three browsers.

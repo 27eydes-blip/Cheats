@@ -1279,34 +1279,17 @@ export const CHARACTERS = [
     },
     scale: 0.62,
     cost: 55000, // coins only
-    // SPEED: 30% faster than the average of every other hero (set below from the roster)
-    speed: 1.3,
-    // DOUBLE JUMP: a second tap within 0.25 s of a flap; once, ready again when he falls
+    // a normal hero (standard speed, combo up to x10, no phasing) with a DOUBLE JUMP: a second
+    // tap within 0.25 s of a flap; once, ready again when he falls
     doubleJump: { window: 0.25, boost: 1.45, cooldown: 0, resetOnFall: true },
     perks: {
-      // PHASE: passes through every obstacle except these (lasers and the Abyss eye beams);
-      // the ground, the ceiling and leaving the screen still end the run. (Obstacle types:
-      // "laser" = Neon Void side lasers and the Glitch broken laser, whose class reports
-      // "laser" too; "blaser" its spawn key; "mlaser" the Prism mirror laser; "zap" the Frozen
-      // zap orbs' beam, drawn as a laser between two emitters. Lightning bolts, the Neon Pulse
-      // ring and the Mirror sweep bar are not beams: he phases through them.)
-      phase: { lethal: ["laser", "blaser", "eyebeam", "mlaser", "zap"] },
-      comboMax: 16,
-      list: ["PHASES THROUGH WALLS", "+30% SPEED", "DOUBLE JUMP", "COMBO UP TO x16"],
+      list: ["DOUBLE JUMP"],
     },
-    desc: "Walls are a suggestion.",
+    desc: "Two flaps, no mercy.",
   },
   ...ANIMALS,
   ...PASS_HEROES,
 ];
-
-// WASP LORD flies 30% faster than the average hero (every other hero in the roster, the ones
-// without a speed at the standard 1.0)
-{
-  const others = CHARACTERS.filter((c) => c.id !== "wasplord");
-  const avg = others.reduce((a, c) => a + (c.speed ?? 1), 0) / others.length;
-  CHARACTERS.find((c) => c.id === "wasplord").speed = Math.round(avg * 1.3 * 1000) / 1000;
-}
 
 /** Heroes that can only be won from the Lucky Spin. */
 export const LOTTERY_HEROES = CHARACTERS.filter((c) => c.lottery);

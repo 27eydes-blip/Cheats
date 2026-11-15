@@ -29,6 +29,7 @@ import { CrashSafety } from "../systems/crashSafety.js";
 import { Updater } from "../systems/updater.js";
 import { isNativeApp, openMail, openSite, SUPPORT_EMAIL } from "../systems/platform.js";
 import { openAccount } from "../ui/accountModal.js";
+import { hideGleydeMark, placeGleydeMark } from "../ui/gleydeMark.js";
 import { getCosmetic, Shop } from "../data/cosmetics.js";
 import { lockerTotals } from "../data/locker.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
@@ -194,6 +195,8 @@ export class MenuScene extends Phaser.Scene {
     this.top = top;
     // ---- layout: one column top to bottom, spread evenly over the whole screen
     const L = this.layout(top);
+    this.markY = L.mark;
+    this.events.once("shutdown", () => hideGleydeMark());
     this.L = L;
     this.showIds = null; // re-pick the showcase worlds every visit (newly reached ones too)
     this.def = getCharacter(TEST.character || Progression.selectedHero());
@@ -749,7 +752,8 @@ export class MenuScene extends Phaser.Scene {
     const H = this.H;
     const sb = this.registry.get("safeBottom") || 0;
     const tickerH = 48;
-    const bottom = H - sb - tickerH; // the ticker sits under everything
+    const markH = 84; // the Gleyde Technologies mark (28 css px wide), under the ticker (ui/gleydeMark.js)
+    const bottom = H - sb - markH - tickerH; // the ticker sits under everything but the mark
     const avail = bottom - top;
     const blocks = [
       ["bar", 70],
@@ -766,7 +770,7 @@ export class MenuScene extends Phaser.Scene {
     const n = blocks.length;
     const gap = Phaser.Math.Clamp((avail - fixed - 240) / n, 8, 34);
     const heroH = Math.max(150, avail - fixed - gap * n);
-    const L = { heroH, ticker: H - sb - tickerH / 2 };
+    const L = { heroH, ticker: H - sb - markH - tickerH / 2, mark: H - sb - markH / 2 };
     let y = top;
     for (const [name, h0] of blocks) {
       const h = name === "hero" ? heroH : h0;
@@ -1906,6 +1910,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    // the Gleyde mark: only while the home screen shows nothing on top of it
+    placeGleydeMark(this, this.W / 2, this.markY, !(this.modal || this.naming || this.leaving || this.claiming));
     const dt = Math.min(delta / 1000, 1 / 30);
     this.t += dt;
     this.updateSeason(dt);
