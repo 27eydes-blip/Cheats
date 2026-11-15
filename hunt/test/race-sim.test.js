@@ -2,7 +2,8 @@
 import assert from 'node:assert';
 import { RESPAWN_TICKS, COINS } from '../src/race/sim.js';
 import { DT, TICK_RATE, BOOSTS, DRIVERS } from '../public/race/physics.js';
-import { ITEMS, WEAPONS } from '../public/race/items.js';
+import { ITEMS, WEAPONS, ITEM_IDS, rollItem } from '../public/race/items.js';
+import { rng } from '../public/shared.js';
 import { FLAG } from '../public/race/protocol.js';
 import { mkRace, ticks, startRace, toGo, place, drive, driver, collectEvents } from './race-helpers.js';
 
@@ -145,6 +146,16 @@ function itemDuel(item, setup) {
   const { sim, A } = itemDuel('turbo', (s, A) => place(s, A, 600));
   drive(sim, A, { i: 1, th: 1 }, 1);
   assert.ok(A.car.boostT > 1.5 && A.car.boostP === BOOSTS.turbo.p);
+}
+// position-weighted odds: the leader never gets a homing missile or EMP; the back gets catch-up items
+{
+  const R = rng(4), count = (place) => { const c = Object.fromEntries(ITEM_IDS.map((k) => [k, 0])); for (let i = 0; i < 4000; i++) c[rollItem(place, 10, R())]++; return c; };
+  const front = count(1), back = count(10);
+  assert.strictEqual(front.missile + front.emp, 0, 'no missiles / EMPs for the leader');
+  assert.ok(back.missile > 900 && back.turbo > 700, 'last place gets missiles and turbos');
+  assert.ok(front.shield + front.oil + front.spikes > 2800, 'the leader gets defensive items');
+  assert.ok(back.oil + back.spikes < 300);
+  assert.ok(ITEM_IDS.every((k) => count(5)[k] > 0), 'mid-pack can get anything');
 }
 // item boxes: picked up, respawn after a few seconds, odds favour the back of the pack
 {
