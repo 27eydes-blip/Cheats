@@ -214,11 +214,15 @@ test('a failed first guest request is retried: the notice shows, then clears, an
 test('PLAY pressed before the guest account exists waits for it ("Getting ready…"), so the first match is recorded', async ({ page }) => {
   const errors = trackErrors(page);
   const urls = wsUrls(page);
-  await page.route('**/api/guest', async (r) => { await new Promise((ok) => setTimeout(ok, 1500)); await r.continue(); });
+  // the account request is held until PLAY has been seen waiting (a fixed delay can run out before
+  // a slow browser even gets to the click)
+  let release; const held = new Promise((ok) => { release = ok; });
+  await page.route('**/api/guest', async (r) => { await held; await r.continue(); });
   await page.goto('/');
   await page.click('#playBtn');
   await expect(page.locator('#playBtn')).toHaveText('Getting ready…');
   expect(urls.filter((u) => u.includes('/ws?'))).toEqual([]); // not joined yet
+  release();
   await expect.poll(() => urls.find((u) => u.includes('/ws?')), { timeout: 8000 }).toBeTruthy();
   expect(urls.find((u) => u.includes('/ws?'))).toContain('token=');
   expect(urls.filter((u) => u.includes('/ws?')).length).toBe(1);
