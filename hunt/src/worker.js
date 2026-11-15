@@ -169,7 +169,8 @@ export class MatchRoom {
       hostStart: cfg.hostStart, partyTeams: cfg.partyTeams,
       send: (id, msg) => { const ws = sockets.get(id); if (ws) sendJSON(ws, msg); },
       // (resultsIn: the next room match closes these sockets, so it waits until everyone got their rewards)
-      hooks: { finished: (rows) => { this.recordResults(rows, sockets, sim).finally(() => { sim.resultsIn = true; }); } },
+      // eliminated: no-respawn modes report a final place at once, so the death screen shows the rewards
+      hooks: { finished: (rows) => { this.recordResults(rows, sockets, sim).finally(() => { sim.resultsIn = true; }); }, eliminated: (rows) => this.recordResults(rows, sockets, sim) },
     });
   }
 
@@ -204,13 +205,16 @@ export class MatchRoom {
       const acc = r.p.account;
       if (!acc || r.p.recorded || paid.has(acc)) continue;
       r.p.recorded = true; paid.add(acc);
-      jobs.push({ id: r.p.id, acc, result: { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, mode: sim.modeKey, won: r.won, assists: r.assists, steals: r.steals, secs: r.secs, wstat: structuredClone(r.wstat || {}) } });
+      jobs.push({ p: r.p, acc, result: { rank: r.rank, players: r.players, kills: r.p.kills, bounty: r.p.bountyEarned, brawler: r.p.brawler, mode: sim.modeKey, won: r.won, assists: r.assists, steals: r.steals, secs: r.secs, wstat: structuredClone(r.wstat || {}) } });
     }
     for (const j of jobs) {
       try {
         const out = await recordMatch(this.env.DB, j.acc, j.result);
-        const ws = sockets.get(j.id);
-        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, mastery: out.mastery, wxp: out.wxp, coins: out.coins });
+        if (!out) continue;
+        // kept on the player: someone who was eliminated while disconnected gets it when they reconnect
+        j.p.earned = { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, mastery: out.mastery, wxp: out.wxp, coins: out.coins };
+        const ws = sockets.get(j.p.id);
+        if (ws) sendJSON(ws, j.p.earned);
       } catch (e) { logError('recordMatch', this.logCtx(), e); }
     }
   }
@@ -344,10 +348,11 @@ export class MatchRoom {
     this.dropped.delete(id);
     sendJSON(server, { t: 'welcome', v: VERSION, id, ...rj, room: mname.startsWith('room:') ? mname.slice(5) : null, bots: sim.fillBots, mode: sim.modeKey, world: sim.map.world, match: mname, secret: p.secret });
     if (sim.phase === 'play') {
-      sendJSON(server, { t: 'start', ...rj, botLevel: sim.botLevel, you: id, mode: sim.modeKey, world: sim.map.world, seed: sim.seed, open: !!sim.map.open, players: sim.map.players || 10 });
+      sendJSON(server, { t: 'start', ...rj, botLevel: sim.botLevel, you: id, mode: sim.modeKey, caps: sim.caps(), world: sim.map.world, seed: sim.seed, open: !!sim.map.open, players: sim.map.players || 10 });
       sendJSON(server, sim.rosterMsg());
       sendJSON(server, sim.stateMsg());
       if (!p.alive && !sim.mode.respawn) sendJSON(server, { t: 'dead', rank: p.rank, respawn: 0, killer: 'the Wild', killerId: 0, stolen: 0 });
+      if (p.earned) sendJSON(server, p.earned);
     }
     const r = this.attach(id, server, client);
     if (sim.phase === 'lobby') sim.broadcastLobby();
@@ -363,7 +368,13 @@ export class MatchRoom {
       if (!m || sockets.get(id) !== server) return; // junk, or a socket that was replaced
       try {
         if (m.t === 'ping') return sendJSON(server, { t: 'pong', c: m.c });
-        if (m.t === 'bye') { this.abandon(id); onClose(true); try { server.close(1000, 'bye'); } catch {} return; }
+        if (m.t === 'bye') {
+          // the leaver is told what the match earned them before the socket closes (the client waits for it)
+          const told = this.abandon(id, server);
+          onClose(true);
+          Promise.resolve(told).finally(() => { try { server.close(1000, 'bye'); } catch {} });
+          return;
+        }
         sim.input(id, m);
       } catch (err) { fault('message', err, this.logCtx()); }
     });
@@ -386,10 +397,10 @@ export class MatchRoom {
   }
 
   // a leave is final: record it now (a loss), so quitting can't dodge a trophy drop
-  abandon(id) {
+  abandon(id, ws) {
     this.dropped.delete(id);
     const sim = this.sim, row = sim && sim.abandon(id);
-    if (row) this.recordResults([row], this.sockets, sim);
+    if (row) return this.recordResults([row], ws ? new Map([[id, ws]]) : this.sockets, sim);
   }
 
   step() {

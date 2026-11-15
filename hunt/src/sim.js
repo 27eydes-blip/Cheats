@@ -391,10 +391,13 @@ export class Sim {
     if (hs.length) this.botLevel = levelForTrophies(hs.reduce((s, h) => s + (h.trophies || 0), 0) / hs.length);
     for (const p of this.players.values()) {
       if (!p.connected) continue;
-      this.send(p.id, { t: 'start', botLevel: this.botLevel, you: p.id, mode: this.modeKey, world: this.map.world, seed: this.seed, open: !!this.map.open, players: this.map.players || 10 });
+      this.send(p.id, { t: 'start', botLevel: this.botLevel, you: p.id, mode: this.modeKey, caps: this.caps(), world: this.map.world, seed: this.seed, open: !!this.map.open, players: this.map.players || 10 });
       this.send(p.id, this.rosterMsg());
     }
   }
+
+  // what the client HUD needs to know about the mode's rules (so it never special-cases mode names)
+  caps() { return { poison: !!this.mode.poison, respawn: !!this.mode.respawn }; }
 
   canSee(viewer, t) {
     if (viewer === t) return true;
@@ -1108,6 +1111,12 @@ export class Sim {
     this.fx = []; this.tileDirty = []; this.crateDirty = []; this.pings = []; this.bnew = []; this.bdead = [];
     for (const p of this.players.values()) p.hm = 0;
 
+    // no respawn = an eliminated hunter's place is final: report it now (not at the end of the match),
+    // so they see what they earned on the death screen. After the tick, when same-tick ties are settled.
+    if (this.deathTick === this.tickN && !this.mode.respawn && this.phase === 'play' && this.hooks.eliminated) {
+      const rows = this.deathList.filter((p) => !p.wasBot && !p.left).map((p) => ({ p, rank: p.rank, players: this.players.size, assists: p.assists, steals: p.steals, wstat: p.wstat, secs: this.secsOf(p) }));
+      if (rows.length) this.hooks.eliminated(rows);
+    }
     if (this.mode.checkEnd(this)) this.finish();
   }
 

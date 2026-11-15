@@ -9,7 +9,8 @@
 //   end(sim, params)        server, when it ends (undo map changes here)
 //   mods(params)            SHARED: gameplay modifiers while active, used by server AND client prediction:
 //                           { speedMul, wx, wy, ice:[{x,y,r}], vision, bulletRange, bulletSpeed, knockMul }
-//   draw(ctx, params, phase, t, R)   client, world space (R = render helpers)
+//   draw(ctx, params, phase, t, R, tl)   client, world space (R = render helpers, tl = seconds left in
+//                           this phase: params are sent only at phase changes, so anything timed derives from tl)
 //   drawScreen(ctx, params, phase, t, W, H)  client, screen space
 import walls from './walls.js';
 import overgrowth from './overgrowth.js';

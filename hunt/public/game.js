@@ -3,7 +3,7 @@
 import {
   BRAWLERS, BRAWLER_IDS, DT, TICK_RATE, CRATE, PLAYER_R, ARENA_SIZE, ZONES, WORLDS,
   worldId, worldsInDisplayOrder, generateArena, generateWorld, applyMove, attackDirs, tileAt, isSolidTile,
-  moveStats, zoneAt, zoneBounds, inHub, worldKeyAt, PREDICTED_KINDS, DAY_MS,
+  moveStats, zoneAt, zoneBounds, inHub, worldKeyAt, PREDICTED_KINDS, DAY_MS, POISON_START,
 } from './shared.js';
 import { EVENTS } from './events/index.js';
 import { Input } from './input.js';
@@ -11,7 +11,7 @@ import * as R from './render.js';
 import { SETTINGS, setSetting, pulse } from './settings.js';
 import * as A from './account.js';
 import { createLobby } from './ui/lobby.js';
-import { createMatchmaking, createResults, showIntro } from './ui/flow.js';
+import { createMatchmaking, createResults, showIntro, createEarned, earnedHtml, hasUnlocks, mergeEarned } from './ui/flow.js';
 import './ui/fx.js';
 import { levelInfo, loadoutFor, migrateLocalStats, arenaStat, freeStat, arenaStatRows, freeStatRows } from './progression.js';
 import { TITLES, EMOTES } from './catalog.js';
@@ -19,11 +19,12 @@ import { sfx, falloff } from './audio.js';
 import { setMusicVolume } from './ui/music.js';
 import { pickAimTarget, assistAngle } from './aim.js';
 import { HUNTER_PAL } from './art/hunters.js';
+import { createAdapt, adaptFrame } from './adapt.js';
 import { ShotSim, PList, resetPart, resetText } from './shots.js';
 import { WEAPONS, WEAPON_IDS, WKIND, withPerks, shotAngles, SWAP_TIME } from './weapons.js';
 import { GADGETS } from './power.js';
 import { drawMiniMap, drawFullMap } from './minimap.js';
-import { envState, drawLandmarks, drawAtmosphere, drawCompass, ZONE_INFO, zoneLabel } from './world-fx.js';
+import { envState, drawLandmarks, drawAtmosphere, drawCompass, edgePoint, ZONE_INFO, zoneLabel } from './world-fx.js';
 import { startTense, stopTense } from './ui/music.js';
 import { WallArt } from './art/walls.js';
 import { artFor } from './art/themes.js';
@@ -56,7 +57,12 @@ const MODE_INFO = {
   freeplay: { name: 'FREE PLAY', desc: '' },
   range: { name: 'TEST RANGE', desc: 'Try your weapons on target dummies. Swap with R or the ⇄ button.' },
 };
+// a last-standing mode (Showdown, Big Hunt): poison, no respawns. Comes from the server's mode rules.
+const lastStanding = () => !!G.caps.poison && !G.caps.respawn;
 const worldName = (key) => WORLDS[worldId(key)]?.name || key;
+// a mode this client has never heard of (the server is newer): still gets a name
+// a newer server can name things this client has never heard of: play on with a stand-in, never throw
+const modeInfo = (k) => MODE_INFO[k] || { name: String(k || 'HUNT').toUpperCase().slice(0, 16), desc: '' };
 const bulletKind = (k) => (k === 20 ? 'cage' : k >= WKIND ? WEAPON_IDS[k - WKIND] : BRAWLER_IDS[k]);
 const predicted = (k) => k !== 20 && k < WKIND && PREDICTED_KINDS.includes(BRAWLERS[BRAWLER_IDS[k]]?.attack.kind);
 // own shots we draw instantly (client prediction): signature straight shots + weapon bullets
@@ -65,14 +71,12 @@ const localPredicts = (w) => !!w && (w.kind === 'shot' || w.kind === 'charge');
 const isSniper = (w, sig) => (sig ? G.brawler === 'wisp' : w.cls === 'sniper');
 
 let W = 0, H = 0, DPR = 1;
-// Adaptive resolution: if frames get slow, render at a lower pixel ratio (and back up when there's room).
+// Adaptive resolution: if frames cost too much, render at a lower pixel ratio, and go back up once
+// they are cheap again (see adapt.js: driven by the frame's work time against the display's interval).
 const DPR_STEPS = [2, 1.5, 1.25, 1];
-let dprStep = 0, frameAvg = 16.7, slowFor = 0, fastFor = 0;
-function adaptResolution(dtMs) {
-  frameAvg += (dtMs - frameAvg) * 0.05;
-  if (frameAvg > 18.5) { slowFor += dtMs; fastFor = 0; } else if (frameAvg < 13) { fastFor += dtMs; slowFor = 0; } else { slowFor = fastFor = 0; }
-  if (slowFor > 1500 && dprStep < DPR_STEPS.length - 1) { dprStep++; slowFor = 0; resize(); }
-  else if (fastFor > 8000 && dprStep > 0) { dprStep--; fastFor = 0; resize(); }
+const adapt = createAdapt(DPR_STEPS.length);
+function adaptResolution(costMs, intervalMs) {
+  if (adaptFrame(adapt, costMs, intervalMs)) resize();
 }
 // notch / home-bar insets, for things drawn on the canvas (CSS elements use env() directly)
 const saProbe = document.createElement('div');
@@ -84,7 +88,7 @@ function readSafeArea() {
   SA = { t: n(cs.paddingTop), r: n(cs.paddingRight), b: n(cs.paddingBottom), l: n(cs.paddingLeft) };
 }
 function resize() {
-  DPR = SETTINGS.lowGfx ? 1 : Math.min(DPR_STEPS[dprStep], devicePixelRatio || 1);
+  DPR = SETTINGS.lowGfx ? 1 : Math.min(DPR_STEPS[adapt.step], devicePixelRatio || 1);
   W = innerWidth; H = innerHeight;
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   readSafeArea();
@@ -128,8 +132,6 @@ $('updateBtn').onclick = () => {
   if (window.__boot) window.__boot.reload(); else location.reload();
 };
 checkVersion();
-// a newer server can name things this client has never heard of: play on with a stand-in, never throw
-const modeInfo = (k) => MODE_INFO[k] || { name: String(k || 'HUNT').toUpperCase().slice(0, 16), desc: '' };
 
 // No account yet (first request failed or is slow): say so, and clear the notice once a retry lands.
 let playedUnsaved = false;
@@ -160,7 +162,10 @@ function show(screen) {
   if (screen !== 'end') UI.res.hide();
   $('dead').hidden = screen !== 'dead';
   $('hud').hidden = !(G.phase === 'play' || G.phase === 'dead' || G.phase === 'end');
-  if (screen) $('hudAgain').hidden = true;
+  if (screen) $('specBar').hidden = true;
+  $('menuBtn').hidden = G.phase !== 'play';
+  if (G.phase !== 'play') closeMenu(); else if (menu.open) input.enabled = false; // (a reconnect re-enables input)
+  if (screen !== 'lobby' && screen !== 'waiting') { const back = UI.earned.take(); if (back) unseen = mergeEarned(back, unseen); }
   document.body.classList.toggle('ingame', G.phase !== 'menu');
 }
 
@@ -180,13 +185,14 @@ const G = {
   localBullets: [], localBurst: null, localCd: 0, superCd: 0, parts: new PList(resetPart, 260), rings: [], texts: new PList(resetText, 28), flash: {}, shake: 0, hurt: 0,
   shots: new ShotSim(), recoil: new Map(), nudge: { x: 0, y: 0 }, hitMark: null, wantSlot: null, wantT: 0, localCd2: 0, localBurst2: null, bolts: [], myPerks: {},
   spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, cam: { x: 1000, y: 1000 }, acc: 0, ping: 0,
-  pings: [], handoff: null, online: {}, modeKey: 'showdown', world: 'meadow', retries: 0, room: '', botsOn: true, facing: 0,
+  pings: [], handoff: null, online: {}, modeKey: 'showdown', caps: {}, world: 'meadow', retries: 0, room: '', botsOn: true, facing: 0,
   moving: false, slashes: [], worms: [], slashFlip: false, lastTp: 0, lastSk: 0, deadMsg: null, ticks: 0, opts: {}, bannerUntil: 0,
 };
 
+const menu = { open: false, timer: 0 }, STILL = { x: 0, y: 0 };
 function resetMatchState() {
   Object.assign(G, {
-    myId: 0, secret: null, matchName: null, map: null, zoneSlot: null, nightOn: undefined, env: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
+    myId: 0, caps: {}, secret: null, matchName: null, map: null, zoneSlot: null, nightOn: undefined, env: null, roster: {}, crateHp: new Map(), pending: [], seq: 0, me: null, mods: {}, err: { x: 0, y: 0 },
     localBullets: [], localBurst: null, localCd: 0, superCd: 0, rings: [], slashes: [], worms: [], lastTp: 0, flash: {}, shake: 0, hurt: 0,
     hitMark: null, wantSlot: null, wantT: 0, localCd2: 0, localBurst2: null, bolts: [],
     spectate: 0, view: { others: [], bullets: [], cubes: [], crystals: [] }, pings: [], handoff: null, online: {}, deadMsg: null, lastSk: 0,
@@ -194,7 +200,7 @@ function resetMatchState() {
   G.parts.clear(); G.texts.clear(); G.shots.clear(); G.recoil.clear();
   { const lo = loadoutFor(A.progress()); G.myPerks = lo.w2 ? { [lo.w2]: lo.perks } : {}; } // (for predicting your own shots)
   $('feed').innerHTML = '';
-  $('hudAgain').hidden = true;
+  $('specBar').hidden = true; $('deadEarned').hidden = true;
   UI.res?.reset?.();
   bulletAng.clear();
   closeFullMap(); if (G.bloodOn) { G.bloodOn = false; stopTense(); }
@@ -219,17 +225,59 @@ function openConn(key, path, o = {}) {
 // quitting on purpose: tell the server so it doesn't hold our spot for a reconnect
 function closeAll() {
   const cs = [...G.conns.values()]; G.conns.clear();
-  for (const c of cs) { try { if (c.open) c.ws.send('{"t":"bye"}'); c.ws.close(); } catch {} }
+  // leaving a match that is still going: the server answers the bye with what the match earned us,
+  // so that one socket stays open a moment longer to hear it
+  const owed = G.kind === 'quick' && (G.phase === 'play' || G.phase === 'dead' || G.phase === 'end') && !!A.ACC.token;
+  for (const c of cs) {
+    try {
+      if (c.open) c.ws.send('{"t":"bye"}');
+      if (c.open && c.primary && owed) farewell(c.ws); else c.ws.close();
+    } catch {}
+  }
   stopReconnect();
+}
+function farewell(ws) {
+  const done = () => { clearTimeout(t); try { ws.close(); } catch {} };
+  const t = setTimeout(done, 5000);
+  ws.onclose = () => clearTimeout(t);
+  ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } if (m.t === 'progress') { done(); onProgress(m); } };
+}
+
+// ------------------------------------------------------------------ rewards the player has not seen yet
+// The results screen shows a match's rewards in full. A player who leaves before it (LOBBY or PLAY AGAIN
+// on the death screen, LEAVE MATCH) still gets told: a short line on the death screen, a card over the
+// lobby, and any level-up / unlock cards are kept for the next lobby visit.
+let unseen = null;
+function onProgress(m) {
+  if (A.ACC.user) A.setUser({ ...A.ACC.user, progress: m.progress });
+  UI.res.progress(m);
+  if (G.phase === 'end') return; // the results screen is about to show it (or already does)
+  unseen = mergeEarned(unseen, m);
+  if (G.phase === 'play' || G.phase === 'dead') { $('deadEarned').innerHTML = earnedHtml(m); $('deadEarned').hidden = false; }
+  else showUnseen();
+}
+function showUnseen() {
+  if (!unseen || (G.phase !== 'menu' && G.phase !== 'waiting')) return;
+  UI.earned.show(unseen);
+  unseen = null;
 }
 
 // ------------------------------------------------------------------ reconnect (lost signal, app switch)
 const RECONNECT_MS = 22000; // a bit less than the server's grace period
 let rc = null;
 function stopReconnect() { if (rc) { clearTimeout(rc.timer); rc = null; } }
+// the matchmaking socket dropped: queue up again, waiting longer each time (0.5 s doubling to 8 s),
+// and give up after MM_TRIES so a server that is down is never hammered
+const MM_TRIES = 5, MM_CONNECT_MS = 4000;
+let mmFails = 0;
 function lostConnection(c) {
-  // still in the matchmaking lobby: just queue up again
-  if (G.phase === 'waiting' && G.kind === 'quick') { startQuick(G.opts); return; }
+  if (G.phase === 'waiting' && G.kind === 'quick') {
+    clearTimeout(retryTimer);
+    if (++mmFails > MM_TRIES) { toMenu(); toast('Can\u2019t reach the server. Check your connection and try again.', 4500); return; }
+    UI.mm.lost();
+    retryTimer = setTimeout(() => { if (G.phase === 'waiting') startQuick(G.opts, true); }, Math.min(8000, 500 * 2 ** (mmFails - 1)));
+    return;
+  }
   if (!G.secret || !G.myId) { toast('Connection lost'); toMenu(); return; }
   if (rc) return;
   rc = { t0: Date.now(), zone: c.zone, tries: 0, timer: 0 };
@@ -289,8 +337,10 @@ function readForm() {
   return { name, room };
 }
 
-function startQuick(opts = G.opts) {
+function startQuick(opts = G.opts, retrying = false) {
   G.opts = opts;
+  if (!retrying) mmFails = 0;
+  if (unseen && !$('deadEarned').hidden && !hasUnlocks(unseen)) unseen = null; // (already read on the death screen)
   closeAll();
   resetMatchState();
   const { name, room: formRoom } = readForm();
@@ -306,10 +356,13 @@ function startQuick(opts = G.opts) {
   if (!$('bots').checked && !opts.world) q.set('bots', '0');
   for (const k of ['world', 'mode', 'lobby', 'ev']) if (opts[k]) q.set(k, opts[k]);
   if (opts.tryW) { q.set('try', opts.tryW); if (!q.get('wpn') && !A.ACC.token) q.set('wpn', opts.tryW); }
-  openConn('main', '/ws?' + q, { primary: true });
+  const c = openConn('main', '/ws?' + q, { primary: true });
+  // a phone with no signal can leave a connect hanging without ever failing: count that as lost too
+  setTimeout(() => { if (G.conns.get('main') === c && !c.open && G.phase === 'waiting') { G.conns.delete('main'); try { c.ws.close(); } catch {} lostConnection(c); } }, MM_CONNECT_MS);
   G.phase = 'waiting';
   show('waiting');
   UI.mm.show({ brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null, label: room ? `ROOM ${room}` : (MODE_INFO[opts.mode]?.name || 'QUICK HUNT'), room: room && !opts.world && opts.mode !== 'range' ? room : '' });
+  if (retrying) UI.mm.lost(); // still not through: keep saying so until the server answers
 }
 
 // ?wpn=&mast= are honoured only by a local dev server (HUNT_DEV), for tests and screenshots
@@ -337,12 +390,13 @@ let retryTimer = 0;
 function toMenu() {
   clearTimeout(retryTimer);
   closeFullMap(); if (G.bloodOn) { G.bloodOn = false; stopTense(); }
+  closeAll(); // (before the phase changes: it looks at the phase to know if a result is still owed)
   G.phase = 'menu';
   $('rangeLeave').hidden = true;
-  closeAll();
   input.enabled = false; input.reset();
   show('lobby');
   checkVersion();
+  showUnseen();
 }
 
 // Free Play: keep observer sockets to zones near us, so we see across borders.
@@ -387,7 +441,7 @@ function onMsg(c, m) {
         G.pending = []; G.err = { x: 0, y: 0 };
         if (G.kind === 'free') { G.myId = m.id; break; }
       }
-      G.myId = m.id; G.retries = 0; G.botsOn = m.bots;
+      G.myId = m.id; G.retries = 0; mmFails = 0; G.botsOn = m.bots;
       if (m.mode) G.modeKey = m.mode;
       if (m.world) G.world = m.world;
       if (G.phase === 'waiting') UI.mm.update({ players: 1, max: maxFor(m.mode), mode: MODE_INFO[m.mode]?.name, world: m.world, bots: m.bots !== false });
@@ -404,13 +458,14 @@ function onMsg(c, m) {
     case 'kick': G.conns.delete(c.key); toMenu(); toast(String(m.reason || 'Disconnected'), 4500); break; // the server gave our seat away (same account on another screen) and says why
     case 'start':
       $('rangeLeave').hidden = m.mode !== 'range';
+      if (m.caps) G.caps = m.caps;
       if (m.rejoin && G.map && G.phase !== 'menu') {
         // back in the same match after a reconnect: keep our map, HUD and effects
         G.myId = m.you;
         if (G.phase !== 'dead') { G.phase = 'play'; input.enabled = true; input.reset(); show(null); }
         break;
       }
-      G.myId = m.you; G.modeKey = m.mode; G.world = m.world;
+      G.myId = m.you; G.modeKey = m.mode; G.world = m.world; G.caps = m.caps || {};
       G.map = generateArena(m.seed, m.world, m.players || 10);
       if (m.open) for (let y = 1; y < G.map.gh - 1; y++) for (let x = 1; x < G.map.gw - 1; x++) G.map.t[y * G.map.gw + x] = 0;
       G.phase = 'play';
@@ -448,7 +503,7 @@ function onMsg(c, m) {
       break;
     case 'dead':
       if (m.respawn > 0) { G.deadMsg = m; G.spectate = m.killerId; break; }
-      G.phase = 'dead';
+      G.phase = 'dead'; closeMenu(); $('menuBtn').hidden = true;
       G.spectate = m.killerId;
       input.enabled = false; input.reset();
       $('deadRank').textContent = '#' + m.rank;
@@ -468,11 +523,7 @@ function onMsg(c, m) {
     case 'claimfail': toast('Zone transfer failed — rejoining'); startFree(); break;
     case 'rejoinfail': if (rc) { G.conns.delete(c.key); rejoinFailed(); } break;
     case 'online': G.online = m.zones; if (m.sv && G.clockForced == null) G.svOff = m.sv - Date.now(); break;
-    case 'progress': {
-      if (A.ACC.user) A.setUser({ ...A.ACC.user, progress: m.progress });
-      UI.res.progress(m);
-      break;
-    }
+    case 'progress': onProgress(m); break;
     case 'pong': if (c.primary) { G.ping = Math.round(performance.now() - m.c); $('ping').textContent = `${G.ping} ms`; } break;
   }
 }
@@ -484,7 +535,7 @@ function applyTile(idx, type) {
 
 function onEnd(m) {
   const won = m.winTeam !== undefined ? !!m.won : m.rank === 1;
-  G.phase = 'end';
+  G.phase = 'end'; closeMenu(); $('menuBtn').hidden = true;
   input.enabled = false; input.reset();
   const s = arenaStat(prefs, G.world);
   s.games++; if (won) s.wins++; s.kills += m.kills; s.best = Math.max(s.best, G.me?.bb || 0, m.bounty);
@@ -495,7 +546,8 @@ function onEnd(m) {
     `<li class="${id === G.myId ? 'me' : ''} ${tm ? (tm === m.team ? 'mate' : 'foe') : ''}"><span class="r">#${r}</span>${esc(n)}${bot ? ' 🤖' : ''}<span class="k">${scoreLbl ? `${sc} ${scoreLbl} · ` : ''}${k} KO</span></li>`).join('');
   // no account on this match, or the result never came back: say it wasn't saved rather than wait forever
   const notSaved = () => { const t = $('rsTro'); if (G.phase === 'end' && t && t.textContent === '…') t.textContent = 'Not saved'; };
-  setTimeout(() => { if (G.phase === 'end') { show('end'); UI.res.show(m, { msg, rows, won }); sfx(won ? 'victory' : 'defeat'); startPose(won); if (G.saved) setTimeout(notSaved, 6000); else notSaved(); } }, won ? 1600 : 600);
+  // (the results screen shows the rewards in full, unlock cards included: nothing left to carry over)
+  setTimeout(() => { if (G.phase === 'end') { show('end'); unseen = null; UI.res.show(m, { msg, rows, won, scoreLbl }); sfx(won ? 'victory' : 'defeat'); startPose(won); if (G.saved) setTimeout(notSaved, 6000); else notSaved(); } }, won ? 1600 : 600);
 }
 
 // short victory pose (or a sulk) on the end screen
@@ -537,7 +589,7 @@ function addFeed(m) {
 function showBanner(name, desc, color, ms) {
   const b = $('evBanner');
   b.hidden = false; b.classList.remove('small');
-  $('evName').textContent = name; $('evName').style.color = color; $('evDesc').textContent = desc;
+  $('evName').textContent = name; $('evName').style.color = evColor = color; $('evDesc').textContent = desc;
   G.bannerUntil = performance.now() + ms;
 }
 
@@ -558,6 +610,7 @@ function onSnap(c, m) {
     if (G.shots.fired(c.key, r) && r[8] !== G.myId) shotFeel(r[8], r[1], r[2], Math.atan2(r[4], r[3]), r[6]);
   }
   if (m.bd) for (const r of m.bd) G.shots.ended(c.key, r, m.n);
+  G.shots.prune(c.key, m.n); // (no-op while frames are being drawn)
   c.flares = m.fl || null;
   if (c.primary && m.hm) { // HIT MARKER from the server
     const kind = m.hm & 2 ? 'kill' : m.hm & 4 ? 'crit' : 'hit';
@@ -568,6 +621,7 @@ function onSnap(c, m) {
   if (m.td) for (const [idx, type] of m.td) applyTile(idx, type);
   if (m.ch) for (const [idx, hp] of m.ch) G.crateHp.set(idx, hp);
   c.last = m;
+  if (m.lb) c.lb = m.lb; // (sent every 10th snapshot)
   if (m.ev && c.ev && c.ev.id === m.ev[0]) { c.ev.ph = m.ev[1]; c.ev.tl = m.ev[2]; }
   if (G.pings.length > 200) G.pings = G.pings.filter((p) => now - p.t0 < 3000);
   if (m.pg) for (const [id, x, y, bt] of m.pg) G.pings.push({ id, x, y, bt, t0: now, target: !!(m.md && m.md.tg === id) });
@@ -584,7 +638,7 @@ function primaryMods() {
 function reconcile(m) {
   const first = !G.me;
   const me = first ? { ...m.me } : Object.assign(G.me, m.me); // the server only sends what changed
-  G.me = me; G.myId = me.id; G.brawler = me.br;
+  G.me = me; G.myId = me.id; if (BRAWLERS[me.br]) G.brawler = me.br;
   G.mods = primaryMods();
   if (G.kind === 'free') {
     const s = freeStat(prefs, worldKeyAt(G.map, me.x, me.y));
@@ -809,7 +863,7 @@ function updateEffects(dt) {
 function holding() {
   const me = G.me;
   const slot = G.wantSlot != null && G.wantT > 0 ? G.wantSlot : me ? me.ws || 0 : 0;
-  if (me && slot === 1 && me.w2) {
+  if (me && slot === 1 && me.w2 && WEAPON_IDS[me.w2[0]]) { // (a weapon we don't know: show the signature)
     const id = WEAPON_IDS[me.w2[0]];
     return { sig: false, id, w: withPerks(id, G.myPerks[id] || []), ammo: me.w2[1], slot };
   }
@@ -900,7 +954,7 @@ function localSlash(ang) {
   const me = renderMe();
   G.slashes.push({ x: me.x, y: me.y, ang, life: 0.18, max: 0.18, follow: true, flip: (G.slashFlip = !G.slashFlip) });
 }
-const sizeOf = (o) => moveStats(o.brawler || 'volt', o.hp, o.mh).r / PLAYER_R;
+const sizeOf = (o) => moveStats(BRAWLERS[o.brawler] ? o.brawler : 'volt', o.hp, o.mh).r / PLAYER_R; // (a brawler we don't know is drawn in a neutral look)
 
 // ------------------------------------------------------------------ input tick (20 Hz, same as server)
 function renderMe() {
@@ -925,12 +979,13 @@ function clientTick() {
   if (!G.me || G.phase !== 'play') return;
   const B = BRAWLERS[G.brawler];
   const me = G.me;
-  const mv = input.getMove();
+  const mv = menu.open ? STILL : input.getMove(); // (menu open: held keys must not keep walking)
   let f = null, u = null, fd = 1, ch = 0, gd = 0;
   const safe = G.kind === 'free' && inHub(G.pred.x, G.pred.y);
   G.wantT -= DT;
   const h = holding();
-  input.swapOn = !!me.w2; input.gadgetOn = me.gu >= 0; input.mouse.charge = !h.sig && h.w.kind === 'charge';
+  input.swapOn = !!(me.w2 && WEAPON_IDS[me.w2[0]]); input.setGadget(me.gu >= 0); input.mouse.charge = !h.sig && h.w.kind === 'charge';
+  input.gadgetReady = me.gu > 0 && me.al && !safe; input.superReady = me.sc >= 1 && me.al && !safe;
   const seqNext = G.seq + 1;
   // one trigger pull per input; returns true if it fired
   const pull = (ang, mag, held) => {
@@ -961,6 +1016,7 @@ function clientTick() {
     return true;
   };
   for (const a of input.takeActions()) {
+    if (a.type === 'notready') { G.notReady = { what: a.what, t: 0.8 }; sfx('click', 0.4); continue; }
     if (a.type === 'gadget') { if (me.gu > 0 && me.al && !safe) { gd = 1; sfx('super', 0.6); } continue; }
     if (a.type === 'swap') {
       if (me.w2 && me.al) { G.wantSlot = (G.wantT > 0 && G.wantSlot != null ? G.wantSlot : me.ws || 0) === 1 ? 0 : 1; G.wantT = 1; G.localSwap = G.wantSlot === 1 ? withPerks(WEAPON_IDS[me.w2[0]], G.myPerks[WEAPON_IDS[me.w2[0]]] || []).swap : SWAP_TIME; G.localBurst = G.localBurst2 = null; sfx('swap', 0.7); }
@@ -1004,6 +1060,7 @@ function clientTick() {
   G.pending.push({ s: G.seq, mx: inp.mx, my: inp.my, ax, ay, f: f != null });
   if (G.pending.length > 60) G.pending.shift();
   send(inp);
+  if (G.notReady) G.notReady.t -= DT;
   G.localCd -= DT; G.superCd -= DT; G.localCd2 -= DT; G.localSwap = (G.localSwap || 0) - DT;
   if (G.wantT > 0 && me.ws === G.wantSlot && !(me.sw > 0)) G.wantT = 0;
 }
@@ -1017,10 +1074,17 @@ function spawnLocalWeaponShot(w, id, ang, seq, k) {
 let lastT = performance.now();
 function frame(now) {
   requestAnimationFrame(frame); // first, so one bad frame can't freeze the game for good
-  try { frameBody(now); } catch (e) { console.warn('frame error', e); }
+  try { frameBody(now); } catch (e) { console.warn('frame error', e); unwindCanvas(); }
+}
+// a frame that threw part-way left saved states (clips, transforms, alpha) on the context: drop them,
+// so one bad frame can't pile up state or bleed into the next
+function unwindCanvas() {
+  for (let i = 0; i < 32; i++) ctx.restore(); // (a no-op once the stack is empty; what was drawn stays on screen)
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
 }
 function frameBody(now) {
-  const dt = Math.min(0.1, (now - lastT) / 1000);
+  const t0 = performance.now(), interval = now - lastT;
+  const dt = Math.min(0.1, interval / 1000);
   lastT = now;
   if (G.phase === 'play' || G.phase === 'dead' || G.phase === 'end') {
     G.acc += dt;
@@ -1035,8 +1099,10 @@ function frameBody(now) {
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.fillStyle = '#2b1d55'; ctx.fillRect(0, 0, W, H);
       R.outlinedText(ctx, 'Connecting…', W / 2, H / 2, 28, '#fff');
     }
-    adaptResolution(dt * 1000);
     updateHud(now);
+    updateAbilities();
+    // only while the match itself fills the screen (not under the death or results screens)
+    if (G.phase === 'play' || (G.phase === 'dead' && $('dead').hidden)) adaptResolution(performance.now() - t0, interval);
   } else if (G.phase === 'mapview') drawMapView(now / 1000);
 }
 
@@ -1069,14 +1135,17 @@ function openFullMap() {
   document.body.appendChild(cv);
   const draw = () => {
     if (!fullMap) return;
-    const d = Math.min(2, devicePixelRatio || 1), w = innerWidth, h = innerHeight;
-    if (cv.width !== Math.round(w * d)) { cv.width = Math.round(w * d); cv.height = Math.round(h * d); }
+    const d = Math.min(2, devicePixelRatio || 1), w = innerWidth, h = innerHeight, bw = Math.round(w * d), bh = Math.round(h * d);
+    // either side can change on its own (a phone's toolbar showing/hiding changes only the height)
+    if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
     const g = cv.getContext('2d'); g.setTransform(d, 0, 0, d, 0, 0);
     const tops = Object.values(G.online || {}).map((z) => z.top).filter(Boolean).sort((a, b) => b[1] - a[1]);
     drawFullMap(g, G.map, w, h, { me: G.me ? renderMe() : null, online: G.online, dn: G.env?.dn, top: tops[0] ? { name: tops[0][0], bounty: tops[0][1], x: tops[0][2], y: tops[0][3] } : null });
   };
-  const close = (e) => { e?.preventDefault(); clearInterval(fullMap.timer); cv.remove(); fullMap = null; };
+  const vv = window.visualViewport;
+  const close = (e) => { e?.preventDefault(); clearInterval(fullMap.timer); removeEventListener('resize', draw); vv?.removeEventListener('resize', draw); cv.remove(); fullMap = null; };
   fullMap = { timer: setInterval(draw, 500), close };
+  addEventListener('resize', draw); vv?.addEventListener('resize', draw); // (redraw at once, not on the next tick)
   cv.addEventListener('pointerdown', close);
   draw();
 }
@@ -1089,7 +1158,7 @@ function render(t) {
   const meAlive = !!G.me.al;
   let target = mePos;
   if (!meAlive) {
-    const o = G.view.others.find((p) => p.id === G.spectate) || (G.kind === 'quick' && G.modeKey === 'showdown' ? G.view.others[0] : null);
+    const o = G.view.others.find((p) => p.id === G.spectate) || (G.kind === 'quick' && lastStanding() ? G.view.others[0] : null);
     if (o) { target = o; G.spectate = o.id; } else target = G.cam;
     G.cam.x += (target.x - G.cam.x) * 0.12; G.cam.y += (target.y - G.cam.y) * 0.12;
   } else { G.cam.x = target.x + (SETTINGS.reduceFlash ? 0 : G.nudge.x); G.cam.y = target.y + (SETTINGS.reduceFlash ? 0 : G.nudge.y); }
@@ -1109,7 +1178,7 @@ function render(t) {
   R.drawGround(ctx, G.map, x0, y0, x1, y1, t, s * DPR);
   const helpers = R.eventHelpers(ctx, G.map, view);
   const evs = [...G.conns.values()].map((c) => c.ev).filter((e) => e && EVENTS[e.id]);
-  for (const e of evs) if (EVENTS[e.id].layer === 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
+  for (const e of evs) if (EVENTS[e.id].layer === 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers, e.tl);
 
   if (meAlive && G.phase === 'play') {
     const aim = input.getAim(), h = holding(), prof = aimProfile(h);
@@ -1187,7 +1256,7 @@ function render(t) {
   }
 
   R.drawBushes(ctx, G.map, x0, y0, x1, y1, meAlive ? mePos : null, t, Math.max(env.dn ? env.dn.dark : 0, env.cave ? 0.5 : 0));
-  for (const e of evs) if (EVENTS[e.id].layer !== 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers);
+  for (const e of evs) if (EVENTS[e.id].layer !== 'ground') EVENTS[e.id].draw?.(ctx, e.p, e.ph, t, helpers, e.tl);
   if (!SETTINGS.lowGfx) R.drawAmbient(ctx, G.map, view, t, false);
   const P = primary();
   if (P && P.last && P.last.z > 0) R.drawPoison(ctx, P.last.z, G.map.gw * TILE_, x0, y0, x1, y1, t);
@@ -1211,22 +1280,24 @@ function render(t) {
     else { ctx.globalAlpha = Math.min(1, k * 1.5); ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); }
   }
   ctx.globalAlpha = 1;
-  for (const p of list) { if (p.fl & 4 && !p.me && p.team !== myTeam) continue; R.drawStatus(ctx, p, p.me, t, myTeam ? (p.me || p.team === myTeam ? 'mate' : 'foe') : null); }
+  // text in the world is drawn in world units: on a zoomed-out phone, scale it back up to a readable size
+  const ts = Math.max(1, 0.85 / s);
+  for (const p of list) { if (p.fl & 4 && !p.me && p.team !== myTeam) continue; R.drawStatus(ctx, p, p.me, t, myTeam ? (p.me || p.team === myTeam ? 'mate' : 'foe') : null, ts); }
   if (meAlive) {
     const hh = holding();
     if (hh.sig) R.drawAmmo(ctx, mePos.x, mePos.y, G.me.am, G.me.sc >= 1, t);
-    else { R.drawWeaponAmmo(ctx, mePos.x, mePos.y, hh.ammo, hh.w.ammo); if (G.me.sc >= 1) R.drawAmmo(ctx, mePos.x, mePos.y + 999, 0, true, t); }
+    else { R.drawWeaponAmmo(ctx, mePos.x, mePos.y, hh.ammo, hh.w.ammo); if (G.me.sc >= 1) R.drawSuperRing(ctx, mePos.x, mePos.y, t); }
     // LAY LOW meter: fills while hiding, then "LAYING LOW"
     if (G.me.f & 1) {
       const k = G.me.bt5 / 5;
       ctx.beginPath(); ctx.arc(mePos.x + 44, mePos.y + 40, 9, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k);
       ctx.lineWidth = 5; ctx.strokeStyle = '#51cf66'; ctx.stroke();
-      if (G.me.lo > 0) { ctx.globalAlpha = 0.5 + G.me.lo * 0.5; R.outlinedText(ctx, 'LAYING LOW', mePos.x, mePos.y + 66, 13, '#9dffb0'); ctx.globalAlpha = 1; }
+      if (G.me.lo > 0) { ctx.globalAlpha = 0.5 + G.me.lo * 0.5; R.outlinedText(ctx, 'LAYING LOW', mePos.x, mePos.y + 66, 13 * ts, '#9dffb0'); ctx.globalAlpha = 1; }
     }
   }
   for (const tx of G.texts) {
     const k = 1 - tx.life / tx.max, pop = k < 0.15 ? 1 + (0.15 - k) * (tx.pop ? 6 : 3) : 1;
-    ctx.globalAlpha = Math.min(1, (tx.life / tx.max) * 2); R.outlinedText(ctx, tx.txt, tx.x, tx.y, Math.round(tx.size * pop), tx.color);
+    ctx.globalAlpha = Math.min(1, (tx.life / tx.max) * 2); R.outlinedText(ctx, tx.txt, tx.x, tx.y, Math.round(tx.size * pop * ts), tx.color);
   }
   ctx.globalAlpha = 1;
   if (G.hitMark && !SETTINGS.reduceFlash && meAlive) { // HIT MARKER at the aim point (sound plays either way)
@@ -1238,7 +1309,7 @@ function render(t) {
   // ---- screen space
   if (!SETTINGS.lowGfx) R.drawGrade(ctx, G.map, cam, W, H);
   drawAtmosphere(ctx, env, cam, W, H, s, t);
-  if (G.kind === 'free') drawCompass(ctx, G.map, cam, W, H, s);
+  if (G.kind === 'free') drawCompass(ctx, G.map, cam, W, H, s, SA, hubRect);
   const pe = P?.ev;
   if (pe && EVENTS[pe.id]?.drawScreen) EVENTS[pe.id].drawScreen(ctx, pe.p, pe.ph, t, W, H, s);
   // HEARTBEAT: an enemy is hiding close by -> pounding heart + slightly darker screen edges (steady)
@@ -1266,8 +1337,8 @@ function render(t) {
     if (o) {
       const dx = (o.x - cam.x) * s, dy = (o.y - cam.y) * s;
       if (Math.abs(dx) > W / 2 - 20 || Math.abs(dy) > H / 2 - 20) {
-        const a = Math.atan2(dy, dx), k = Math.min((W / 2 - 50) / Math.abs(Math.cos(a) || 1e-6), (H / 2 - 50) / Math.abs(Math.sin(a) || 1e-6));
-        ctx.save(); ctx.translate(W / 2 + Math.cos(a) * k, H / 2 + Math.sin(a) * k); ctx.rotate(a);
+        const a = Math.atan2(dy, dx), e = edgePoint(a, W, H, SA, 50); // (inside the safe area: never under a notch)
+        ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(a);
         ctx.beginPath(); ctx.moveTo(22, 0); ctx.lineTo(-12, -16); ctx.lineTo(-12, 16); ctx.closePath();
         ctx.fillStyle = '#ff2846'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = R.INK; ctx.stroke(); ctx.restore();
       }
@@ -1314,39 +1385,88 @@ function render(t) {
   if (G.phase === 'play' && meAlive) {
     R.drawControls(ctx, input, G.me.sc, G.brawler, t, G.kind === 'free' && inHub(mePos.x, mePos.y));
     const hh = holding();
-    if (G.me.w2) { // SWAP button (above the fire button): signature <-> secondary
-      const id = WEAPON_IDS[G.me.w2[0]];
-      R.drawSwapButton(ctx, input.swapBtn, { active: hh.slot === 1, name: WEAPONS[id].name, sigName: BRAWLERS[G.brawler].name, swap: Math.max(0, G.localSwap || 0, G.me.sw || 0) }, t);
+    // what you're holding: icon, name, ammo. With a second weapon it is the SWAP button too (touch:
+    // in the bottom row of the thumb cluster; desktop: above the ability buttons, which also swap)
+    const swap = input.swapOn ? Math.max(0, G.localSwap || 0, G.me.sw || 0) : null;
+    R.drawWeaponPanel(ctx, input.weaponPanel, hh.sig ? { weapon: null, name: BRAWLERS[G.brawler].name.toUpperCase(), ammo: G.me.am, max: 3, color: HUNTER_PAL[G.brawler]?.accent, swap } : { weapon: hh.id, name: WEAPONS[hh.id].name.toUpperCase(), ammo: hh.ammo, max: hh.w.ammo, active: true, swap }, t);
+    input.panelOn = true;
+    if (input.isTouch && G.me.gu >= 0) R.drawGadgetButton(ctx, input.gadgetBtn, { uses: G.me.gu, name: GADGETS[G.brawler]?.[G.me.gi]?.name }, t);
+    // a press on SUPER / GADGET while it can't be used: say so on the button
+    if (G.notReady && G.notReady.t > 0) {
+      const b = G.notReady.what === 'super' ? input.superBtn : input.gadgetBtn;
+      ctx.globalAlpha = Math.min(1, G.notReady.t * 3);
+      R.outlinedText(ctx, 'NOT READY', b.x, b.y - b.r - 12, 13, '#ff8a9a');
+      ctx.globalAlpha = 1;
     }
-    // what you're holding, next to the fire button: icon, name, ammo
-    R.drawWeaponPanel(ctx, input.weaponPanel, hh.sig ? { weapon: null, name: BRAWLERS[G.brawler].name.toUpperCase(), ammo: G.me.am, max: 3, color: HUNTER_PAL[G.brawler]?.accent } : { weapon: hh.id, name: WEAPONS[hh.id].name.toUpperCase(), ammo: hh.ammo, max: hh.w.ammo }, t);
-    if (G.me.gu >= 0) R.drawGadgetButton(ctx, input.gadgetBtn, { uses: G.me.gu, name: GADGETS[G.brawler]?.[G.me.gi]?.name }, t);
-  }
+  } else input.panelOn = false;
   if (!meAlive && G.phase !== 'play') {
     const o = G.view.others.find((p) => p.id === G.spectate);
     if (o) R.outlinedText(ctx, `Spectating ${o.name}`, W / 2, H - 30, 18);
   }
 }
 
+// ------------------------------------------------------------------ desktop abilities (DOM buttons)
+// Mouse + keyboard players get real buttons for SWAP / GADGET / SUPER, each with its key. Touch draws
+// its own controls on the canvas. Written only when something changed (no layout work per frame).
+const ab = { shown: null, swap: null, swapOn: null, gad: null, k: null, ready: null, keys: null };
+const setHidden = (el, v) => { if (el.hidden !== v) el.hidden = v; };
+const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
+const htmlOf = new WeakMap(); // (what we last wrote: innerHTML reads back normalised, so compare our own string)
+const setHtml = (el, v) => { if (htmlOf.get(el) !== v) { htmlOf.set(el, v); el.innerHTML = v; } };
+let evColor = '';
+function updateAbilities() {
+  const me = G.me;
+  const show = G.phase === 'play' && !!me && !!me.al && !input.isTouch;
+  if (ab.shown !== show) { ab.shown = show; $('abilities').hidden = !show; }
+  if (!show) return;
+  const keys = input.keyHints();
+  if (ab.keys !== keys) { ab.keys = keys; $('abSuperKey').textContent = keys.super; $('abGadgetKey').textContent = keys.gadget; $('abSwapKey').textContent = keys.swap; }
+  const w2 = me.w2 && WEAPON_IDS[me.w2[0]] ? WEAPON_IDS[me.w2[0]] : null, hh = holding();
+  const swap = w2 ? (hh.slot === 1 ? BRAWLERS[G.brawler]?.name || '' : WEAPONS[w2].name) : null;
+  if (ab.swap !== swap) { ab.swap = swap; setHidden($('abSwap'), swap == null); if (swap != null) $('abSwapName').textContent = swap; }
+  const on = hh.slot === 1;
+  if (ab.swapOn !== on) { ab.swapOn = on; $('abSwap').classList.toggle('on', on); }
+  const gad = me.gu >= 0 ? me.gu : null;
+  if (ab.gad !== gad) {
+    ab.gad = gad; setHidden($('abGadget'), gad == null);
+    if (gad != null) { $('abGadgetPips').innerHTML = [0, 1, 2].map((i) => (i < gad ? '<i class="on"></i>' : '<i></i>')).join(''); $('abGadget').classList.toggle('ready', gad > 0); }
+  }
+  const sc = Math.max(0, Math.min(1, me.sc || 0)), k = Math.floor(sc * 50) / 50, ready = sc >= 1;
+  if (ab.k !== k) { ab.k = k; $('abSuper').style.setProperty('--k', k); $('abSuperState').textContent = ready ? 'READY' : `${Math.round(k * 100)}%`; }
+  if (ab.ready !== ready) { ab.ready = ready; $('abSuper').classList.toggle('ready', ready); }
+}
+// a click on a desktop ability button: the same action its key sends (never a shot: the canvas doesn't see it)
+// SUPER / GADGET that can't be used yet: the button shakes and says why instead of doing nothing
+const abPress = (a, ready = () => true) => (e) => {
+  e.preventDefault();
+  if (!input.enabled) return;
+  if (ready()) { input.actions.push(a); return; }
+  const b = e.currentTarget; b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope');
+  clearTimeout(b.nopeT); b.nopeT = setTimeout(() => b.classList.remove('nope'), 700);
+  sfx('click', 0.4);
+};
+$('abSwap').onclick = abPress({ type: 'swap' });
+$('abGadget').onclick = abPress({ type: 'gadget' }, () => input.gadgetReady);
+$('abSuper').onclick = abPress({ type: 'super', mode: 'auto' }, () => input.superReady);
+for (const id of ['abSwap', 'abGadget', 'abSuper']) $(id).addEventListener('mousedown', (e) => e.preventDefault()); // (keeps keyboard focus off the button)
+
 // ------------------------------------------------------------------ DOM HUD
-let hudT = 0;
+let hudT = 0, hubRect = null;
 const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 function updateHud(now) {
   const P = primary();
   const e = P?.ev;
   const banner = $('evBanner');
+  // (runs every frame: only touch the DOM when the text actually changes, about once a second)
   if (now < G.bannerUntil) { /* a big banner is showing */ }
-  else if (e) {
-    const def = EVENTS[e.id];
-    banner.hidden = false;
-    if (e.ph === 'warn') {
-      banner.classList.remove('small');
-      $('evName').textContent = `⚠ ${def.name} IN ${Math.max(1, Math.ceil(e.tl))}`; $('evName').style.color = def.color; $('evDesc').textContent = def.desc;
-    } else {
-      banner.classList.add('small');
-      $('evName').textContent = `${def.name} · ${Math.ceil(e.tl)}s`; $('evName').style.color = def.color;
-    }
-  } else banner.hidden = true;
+  else if (e && EVENTS[e.id]) {
+    const def = EVENTS[e.id], warn = e.ph === 'warn';
+    setHidden(banner, false);
+    if (banner.classList.contains('small') === warn) banner.classList.toggle('small', !warn);
+    setText($('evName'), warn ? `⚠ ${def.name} IN ${Math.max(1, Math.ceil(e.tl))}` : `${def.name} · ${Math.ceil(e.tl)}s`);
+    if (evColor !== def.color) { evColor = def.color; $('evName').style.color = def.color; }
+    if (warn) setText($('evDesc'), def.desc);
+  } else setHidden(banner, true);
 
   if (now - hudT < 150) return;
   hudT = now;
@@ -1360,7 +1480,10 @@ function updateHud(now) {
     if (me) { $('sessK').textContent = me.sk; $('sessB').textContent = me.bb; }
     $('poison').hidden = true; $('timerPill').hidden = true;
     const safe = me && me.al && inHub(G.pred.x, G.pred.y);
-    $('hubPanel').hidden = !safe;
+    setHidden($('hubPanel'), !safe);
+    // where it is, for the compass markers: read when it shows and after a resize, never per frame
+    if (!safe) hubRect = null;
+    else if (!hubRect || hubRect.w !== W || hubRect.h !== H) { const r = $('hubPanel').getBoundingClientRect(); hubRect = { left: r.left, right: r.right, top: r.top, bottom: r.bottom, w: W, h: H }; }
     if (safe) {
       $('onlineN').textContent = Math.max(1, humans.length);
       $('onlineList').innerHTML = ZONES.map((z) => (G.online[z.slot]?.players || []).map(([n, , bt]) =>
@@ -1369,17 +1492,19 @@ function updateHud(now) {
     }
   } else if (last) {
     $('statsPill').hidden = true; $('hubPanel').hidden = true;
-    const sd = G.modeKey === 'showdown';
-    $('countPill').hidden = !sd;
+    // driven by the mode's rules (sent in 'start'), never by its name: Showdown and Big Hunt alike
+    const ls = lastStanding(), poison = !!G.caps.poison;
+    $('countPill').hidden = !ls;
     $('aliveN').textContent = last.al; $('countLbl').textContent = 'LEFT';
-    $('poison').hidden = !sd;
-    if (sd) {
+    $('poison').hidden = !poison;
+    if (poison) {
       const pt = $('poison');
-      if (last.tm < 60) { pt.classList.remove('on'); pt.innerHTML = `POISON IN <b>${Math.ceil(60 - last.tm)}</b>`; }
+      if (last.tm < POISON_START) { pt.classList.remove('on'); pt.innerHTML = `POISON IN <b>${Math.ceil(POISON_START - last.tm)}</b>`; }
       else { pt.classList.add('on'); pt.textContent = 'POISON CLOSING IN!'; }
     }
-    $('timerPill').hidden = sd || !last.md;
-    if (last.md) $('timerT').textContent = fmt(last.md.tl);
+    const tl = last.md?.tl;
+    $('timerPill').hidden = tl == null;
+    if (tl != null) $('timerT').textContent = fmt(tl);
     const pots = last.md?.pots, mt = G.me?.tm;
     $('potPill').hidden = !pots;
     if (pots && mt) { $('potUs').textContent = pots[mt]; $('potThem').textContent = pots[3 - mt]; }
@@ -1387,26 +1512,26 @@ function updateHud(now) {
   const top = last?.top;
   $('topBounty').hidden = !top;
   if (top) { $('topName').textContent = top[0] === G.myId ? 'YOU' : top[1]; $('topVal').textContent = top[2]; }
-  const lb = last?.lb;
+  const lb = P?.lb;
   if (lb) {
     const lbl = { bounty: '★', hunted: 'pts', crystals: '💎' }[G.modeKey] || '★';
-    $('leader').hidden = false;
-    $('leader').innerHTML = lb.map(([id, n, sc], i) => `<div>${i + 1}. ${id === G.myId ? '<b>YOU</b>' : esc(n)}<span>${sc} ${lbl}</span></div>`).join('');
-  }
+    setHidden($('leader'), false);
+    setHtml($('leader'), lb.map(([id, n, sc], i) => `<div>${i + 1}. ${id === G.myId ? '<b>YOU</b>' : esc(n)}<span>${sc} ${lbl}</span></div>`).join(''));
+  } else setHidden($('leader'), true); // (a mode without a board: never the last match's)
   const mb = $('modeBanner');
-  mb.className = '';
-  let txt = '';
+  let txt = '', cls = '';
   if (G.modeKey === 'hunted' && last?.md) {
-    if (last.md.tg === G.myId) { txt = '🎯 YOU ARE THE TARGET — SURVIVE!'; mb.className = 'red'; }
-    else if (last.md.tg) { txt = `🎯 Hunt ${esc(G.roster[last.md.tg]?.[0] || '?')}!`; mb.className = 'red'; }
+    if (last.md.tg === G.myId) { txt = '🎯 YOU ARE THE TARGET — SURVIVE!'; cls = 'red'; }
+    else if (last.md.tg) { txt = `🎯 Hunt ${esc(G.roster[last.md.tg]?.[0] || '?')}!`; cls = 'red'; }
   } else if (G.modeKey === 'crystals' && me) {
     const h = last?.md?.hold;
-    mb.className = 'gem';
+    cls = 'gem';
     txt = `💎 ${me.cr}/10`;
     if (h) txt += h[0] === G.myId ? ` · HOLD ON! ${Math.ceil(h[1])}s` : ` · ${esc(G.roster[h[0]]?.[0] || '?')} wins in ${Math.ceil(h[1])}s!`;
   }
-  mb.hidden = !txt || G.phase !== 'play';
-  mb.innerHTML = txt;
+  if (mb.className !== cls) mb.className = cls;
+  setHidden(mb, !txt || G.phase !== 'play');
+  setHtml(mb, txt);
   const rs = me && !me.al && me.rt > 0;
   $('respawn').hidden = !rs;
   if (rs) $('respawnT').textContent = Math.ceil(me.rt);
@@ -1479,12 +1604,89 @@ function goFullscreen() {
 }
 $('leaveWorld').onclick = toMenu;
 $('rangeLeave').onclick = toMenu;
-$('spectate').onclick = () => { $('dead').hidden = true; $('hudAgain').hidden = false; };
+$('spectate').onclick = () => { $('dead').hidden = true; $('specBar').hidden = false; };
+// eliminated: your place is already final, so LOBBY needs no confirm
+$('deadLobby').onclick = toMenu;
+$('hudLobby').onclick = toMenu;
+
+// ------------------------------------------------------------------ in-match menu (button or Esc)
+// The match keeps running behind it. LEAVE uses the deliberate-quit path (bye), so the result is
+// recorded once. Free Play outside the safe hub: a 3 s countdown that taking damage cancels.
+const LEAVE_S = 3;
+function openMenu() {
+  if (menu.open || G.phase !== 'play') return;
+  menu.open = true;
+  closeFullMap();
+  input.enabled = false; input.reset();
+  const free = G.kind === 'free', range = G.modeKey === 'range';
+  $('gmNote').textContent = free ? 'Free Play keeps running' : range ? 'Test Range' : 'The match is still running';
+  $('gmLeave').textContent = free || range ? 'LEAVE' : 'LEAVE MATCH';
+  $('gmSound').checked = !!SETTINGS.sound; $('gmMusic').checked = SETTINGS.musicVol > 0;
+  menuPage('main');
+  $('gmenu').hidden = false;
+  sfx('click', 0.6);
+}
+function closeMenu() {
+  if (!menu.open) return;
+  menu.open = false;
+  clearInterval(menu.timer); menu.timer = 0;
+  $('gmenu').hidden = true;
+  if (G.phase === 'play') { input.enabled = true; input.reset(); }
+}
+function menuPage(page) {
+  clearInterval(menu.timer); menu.timer = 0;
+  $('gmMain').hidden = page !== 'main';
+  $('gmConfirm').hidden = page === 'main';
+  $('gmYes').hidden = page !== 'confirm';
+  $('gmStay').textContent = page === 'leaving' ? 'CANCEL' : 'STAY';
+}
+function leaveNow() { closeMenu(); toMenu(); }
+function askLeave() {
+  const me = G.me;
+  if (G.kind !== 'free') {
+    if (G.modeKey === 'range' || !me) return leaveNow(); // nothing at stake
+    $('gmAsk').textContent = G.modeKey === 'squad' ? 'Leave match? It counts as a loss.' : 'Leave match? You will be placed last.';
+    return menuPage('confirm');
+  }
+  // Free Play: instant in the safe hub (or while down); out in the wild you have to survive 3 seconds
+  if (!me || !me.al || inHub(G.pred.x, G.pred.y)) return leaveNow();
+  menuPage('leaving');
+  const hp0 = me.hp, t0 = performance.now();
+  const step = () => {
+    const left = LEAVE_S - (performance.now() - t0) / 1000;
+    if (!G.me || G.me.hp < hp0) { menuPage('main'); toast('You took damage. Leaving cancelled.'); return; }
+    if (left <= 0) return leaveNow();
+    $('gmAsk').textContent = `Leaving in ${Math.ceil(left)}... Taking damage cancels it.`;
+  };
+  step();
+  menu.timer = setInterval(step, 100);
+}
+$('menuBtn').onclick = openMenu;
+$('gmResume').onclick = closeMenu;
+$('gmLeave').onclick = askLeave;
+$('gmStay').onclick = () => menuPage('main');
+$('gmYes').onclick = leaveNow;
+$('gmSound').onchange = () => { setSetting('sound', $('gmSound').checked); $('setSound').checked = $('gmSound').checked; applySettings(); };
+// music off = volume 0; back on restores the volume it had (the lobby Settings slider still works)
+$('gmMusic').onchange = () => {
+  if ($('gmMusic').checked) setSetting('musicVol', prefs.musicWas > 0 ? prefs.musicWas : 0.6);
+  else { prefs.musicWas = SETTINGS.musicVol; savePrefs(); setSetting('musicVol', 0); }
+  applySettings();
+};
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || e.repeat || (e.target && e.target.tagName === 'INPUT')) return;
+  if (fullMap) return closeFullMap();
+  if (menu.open) closeMenu(); else openMenu();
+});
 for (const [id, key] of [['setFlash', 'reduceFlash'], ['setLow', 'lowGfx'], ['setSound', 'sound']]) {
   $(id).checked = !!SETTINGS[key];
   $(id).onchange = () => { setSetting(key, $(id).checked); applySettings(); };
 }
 function applySettings() { document.body.classList.toggle('reduce-flash', SETTINGS.reduceFlash); setMusicVolume(); resize(); }
+// left-handed: the DOM HUD on the left (leaderboard, hub panel) moves across, away from the mirrored controls
+function applyHand() { document.body.classList.toggle('lefty', !!SETTINGS.leftHanded); }
+addEventListener('resize', applyHand); // (the Settings toggle fires a resize)
+applyHand();
 applySettings();
 const playAgain = () => { goFullscreen(); startQuick(G.opts.world ? { ...G.opts, room: 'T' + Math.floor(Math.random() * 1e8) } : { mode: G.opts.mode, room: G.opts.room }); };
 $('hudAgain').onclick = playAgain;
@@ -1511,6 +1713,7 @@ UI.mm = createMatchmaking(() => toMenu(), {
   toast: (msg) => toast(msg, 1500),
 });
 UI.res = createResults({ onAgain: playAgain, onLobby: () => toMenu() });
+UI.earned = createEarned();
 UI.showIntro = showIntro;
 
 
@@ -1534,5 +1737,6 @@ else if (qs.get('free')) startFree();
 
 // exposed for e2e tests
 window.__hunt = G;
-window.__huntPerf = () => ({ dpr: DPR, frameAvg, dprStep });
+window.__huntInput = input;
+window.__huntPerf = () => ({ dpr: DPR, frameAvg: adapt.cost, budget: adapt.budget, dprStep: adapt.step });
 window.__huntMsg = (m) => onMsg(primary() || { primary: true }, m); // e2e hook: inject server messages

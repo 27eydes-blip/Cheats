@@ -14,10 +14,10 @@ function upsHtml(m) {
   const card = (kind, title, sub, col) => cards.push(`<div class="ucard" style="--uc:${col};animation-delay:${0.9 + cards.length * 0.35}s"><small>${esc(kind)}</small><b>${esc(title)}</b><span>${esc(sub)}</span></div>`);
   for (const r of m.levels || []) {
     card('LEVEL UP', `LEVEL ${r.level}`, `+${r.coins} coins`, '#ffd23f');
-    for (const w of r.weapons || []) card('NEW WEAPON', WEAPONS[w].name, 'in the Armory', '#5ff4ff');
+    for (const w of r.weapons || []) card('NEW WEAPON', WEAPONS[w]?.name || w, 'in the Armory', '#5ff4ff');
     for (const e of r.emotes || []) card('NEW EMOTE', EMOTES.find((x) => x.id === e)?.text || e, 'tap !? in a match', '#ff9f43');
-    if (r.skin) card('NEW SKIN', SKINS[r.skin].name, 'in the Locker', '#ff6bd6');
-    if (r.title) card('NEW TITLE', TITLES[r.title], 'in the Locker', '#c9a6ff');
+    if (r.skin) card('NEW SKIN', SKINS[r.skin]?.name || r.skin, 'in the Locker', '#ff6bd6');
+    if (r.title) card('NEW TITLE', TITLES[r.title] || r.title, 'in the Locker', '#c9a6ff');
   }
   for (const x of m.mastery || []) card('MASTERY UP', `${WEAPONS[x.id]?.name || x.id} ${x.level}`, [2, 5, 8].includes(x.level) ? 'pick a perk in the Armory' : x.level === 3 ? 'Bronze skin' : x.level === 6 ? 'Silver skin' : x.level === 7 ? 'kill effect' : x.level === 9 ? 'Gold skin' : x.level === 10 ? "Hunter's Bane!" : 'keep going', '#4be0c8');
   // weapon mastery progress for the weapon you used most
@@ -29,6 +29,47 @@ function upsHtml(m) {
     bar = `<div class="xp mxp">${esc(WEAPONS[w.id].name.toUpperCase())} <b>M${b2.level}</b><div class="bar shine"><i data-from="${Math.round(from * 100)}" data-to="${Math.round(to * 100)}" style="width:${Math.round(from * 100)}%;background:linear-gradient(#7dfff0,#2bc4cf)"></i></div><span>+${w.xp1 - w.xp0}</span></div>`;
   }
   return bar + (m.coins ? `<div class="coinsline">+${m.coins} coins</div>` : '') + (cards.length ? `<div class="ucards">${cards.slice(0, 6).join('')}</div>` : '');
+}
+
+// EARNED: the short version (trophies, XP, coins, level-ups) for the death screen and the lobby card
+export function earnedHtml(m) {
+  const n = (v) => Math.round(Number(v) || 0);
+  const parts = [`<span><b>${n(m.delta) >= 0 ? '+' : ''}${n(m.delta)}</b> trophies</span>`, `<span><b>+${n(m.xp)}</b> XP</span>`];
+  if (n(m.coins) > 0) parts.push(`<span><b>+${n(m.coins)}</b> coins</span>`);
+  for (const r of m.levels || []) parts.push(`<span class="up">LEVEL ${esc(r.level)}!</span>`);
+  return parts.join('');
+}
+// does this result carry unlock cards (level-ups, new weapons, mastery-ups)?
+export const hasUnlocks = (m) => !!m && ((m.levels || []).length > 0 || (m.mastery || []).length > 0);
+// two results the player has not seen in full yet, as one
+export function mergeEarned(a, b) {
+  if (!a) return b;
+  return { ...b, delta: (a.delta || 0) + (b.delta || 0), xp: (a.xp || 0) + (b.xp || 0), coins: (a.coins || 0) + (b.coins || 0), levels: [...(a.levels || []), ...(b.levels || [])], mastery: [...(a.mastery || []), ...(b.mastery || [])] };
+}
+// A small card over the lobby: what the match you just left earned you. Tap it (or wait) to dismiss.
+export function createEarned() {
+  const el = document.createElement('div');
+  el.className = 'earnedCard'; el.id = 'earnedCard'; el.hidden = true;
+  document.body.appendChild(el);
+  let timer = 0, showing = null, since = 0;
+  const hide = () => { clearTimeout(timer); el.hidden = true; showing = null; };
+  el.onclick = hide;
+  return {
+    el,
+    show(m) {
+      m = showing = mergeEarned(showing, m); // a second result while the card is up adds to it (never replaces it)
+      const cards = hasUnlocks(m) ? upsHtml({ levels: m.levels, mastery: m.mastery }) : '';
+      el.innerHTML = `<small>MATCH REWARDS</small><div class="earned">${earnedHtml(m)}</div>${cards}<p class="hint">Tap to close</p>`;
+      if (el.hidden) since = performance.now();
+      el.hidden = false;
+      if (cards) sfx('reward');
+      clearTimeout(timer);
+      timer = setTimeout(hide, cards ? 14000 : 7000);
+    },
+    hide,
+    // another screen is taking over: hide, and hand back unlock cards that were up too briefly to read
+    take() { const m = showing && hasUnlocks(showing) && performance.now() - since < 3000 ? showing : null; hide(); return m; },
+  };
 }
 
 const $ = (id) => document.getElementById(id);
@@ -120,6 +161,8 @@ export function createMatchmaking(onCancel, room = {}) {
       $('mmList').innerHTML = ''; $('mmHost').hidden = true;
       $('mmWait').textContent = "You'll join their next match. Stay here, or CANCEL.";
     },
+    // the connection dropped while searching: say so (CANCEL stays available) until update() is called again
+    lost() { st.found = 0; $('mmFound').textContent = 'CONNECTION LOST'; $('mmCount').textContent = 'Connection lost. Retrying...'; },
     hide() { el.hidden = true; },
   };
 }
@@ -185,9 +228,17 @@ export function createResults({ onAgain, onLobby }) {
       $('rsMsg').textContent = ctx.msg;
       count($('rsBounty'), 0, m.bounty, 900); count($('rsKo'), 0, m.kills, 700);
       $('rsTro').textContent = '…'; $('rsXpN').textContent = ''; $('rsUps').innerHTML = '';
-      const mvp = m.results.reduce((b, r) => (!b || r[6] > b[6] ? r : b), null);
-      $('mvp').hidden = !mvp || mvp[6] <= 0;
-      if (mvp) $('mvp').innerHTML = `👑 TOP BOUNTY HUNTER <b>${esc(mvp[0])}</b> ★${mvp[6]}`;
+      // the crown banner and the list below it tell the same story: in score modes it names whoever
+      // the list ranks #1, with the score the list shows; elsewhere it is the most bounty earned
+      if (ctx.scoreLbl && !team) {
+        const first = m.results.filter((r) => r[2] === 1);
+        $('mvp').hidden = !first.length;
+        if (first.length) $('mvp').innerHTML = `👑 ${first.length > 1 ? 'WINNERS' : 'WINNER'} <b>${first.slice(0, 3).map((r) => esc(r[0])).join(' & ')}</b> ${esc(first[0][7])} ${esc(ctx.scoreLbl)}`;
+      } else {
+        const mvp = m.results.reduce((b, r) => (!b || r[6] > b[6] ? r : b), null);
+        $('mvp').hidden = !mvp || mvp[6] <= 0;
+        if (mvp) $('mvp').innerHTML = `👑 MOST BOUNTY EARNED <b>${esc(mvp[0])}</b> ★${esc(mvp[6])}`;
+      }
       $('results').innerHTML = ctx.rows;
       if (ctx.won) setTimeout(() => rewardBurst(innerWidth * 0.25, innerHeight * 0.4), 450);
       if (pendingProgress) { applyProgress(pendingProgress); pendingProgress = null; }

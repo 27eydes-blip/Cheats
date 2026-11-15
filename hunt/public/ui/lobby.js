@@ -3,6 +3,7 @@
 import { BRAWLERS, BRAWLER_IDS, WORLDS, worldId } from '../shared.js';
 import { drawBrawler } from '../render.js';
 import { SETTINGS } from '../settings.js';
+import { createAdapt, adaptFrame } from '../adapt.js';
 import { sfx, unlockAudio } from '../audio.js';
 import { icon, ICONS } from './icons.js';
 import { startMusic, stopMusic } from './music.js';
@@ -100,15 +101,11 @@ export function createLobby(api) {
   const stage = $('stage'), sg = stage.getContext('2d');
 
   const Q = [{ st: 1.5 }, { st: 1.25 }, { st: 1 }];
-  L.q = 0; L.avg = 16.7; L.slow = 0; L.fast = 0;
-  function adapt(dt) {
-    L.avg += (dt - L.avg) * 0.08;
-    if (L.avg > 19) { L.slow += dt; L.fast = 0; } else if (L.avg < 14) { L.fast += dt; L.slow = 0; }
-    if (L.slow > 800 && L.q < Q.length - 1) { L.q++; L.slow = 0; resize(); }
-    else if (L.fast > 10000 && L.q > 0) { L.q--; L.fast = 0; resize(); }
-  }
+  // stage resolution follows what the frames cost (adapt.js), so it can come back up too
+  const AQ = createAdapt(Q.length);
+  function adapt(cost, interval) { if (adaptFrame(AQ, cost, interval)) resize(); }
   function resize() {
-    const dpr = SETTINGS.lowGfx ? 1 : Math.min(Q[L.q].st, devicePixelRatio || 1);
+    const dpr = SETTINGS.lowGfx ? 1 : Math.min(Q[AQ.step].st, devicePixelRatio || 1);
     const r = stage.getBoundingClientRect();
     stage.width = Math.max(1, Math.round(r.width * dpr)); stage.height = Math.max(1, Math.round(r.height * dpr)); L.dpr = dpr;
   }
@@ -209,11 +206,11 @@ export function createLobby(api) {
   function loop(now) {
     L.raf = 0;
     if (root.hidden) return;
-    const t = (now - L.t0) / 1000;
-    if (L.lastNow) adapt(Math.min(100, now - L.lastNow));
+    const t = (now - L.t0) / 1000, t0 = performance.now(), iv = L.lastNow ? now - L.lastNow : 0;
     L.lastNow = now;
     if (L.tab === 'play') drawStage(t);
     if (Math.floor(t) !== L.lastSec) { L.lastSec = Math.floor(t); $('misT').textContent = fmtReset(); }
+    if (iv) adapt(performance.now() - t0, iv);
     L.raf = requestAnimationFrame(loop);
   }
   const fmtReset = () => { const s = Math.floor(msToReset() / 1000); return `${String(Math.floor(s / 3600)).padStart(2, '0')}h ${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}m`; };
@@ -252,6 +249,6 @@ export function createLobby(api) {
   function hide() { root.hidden = true; L.lastNow = 0; stopMusic(); }
   // music needs a user gesture on mobile: start on the first tap in the lobby
   root.addEventListener('pointerdown', () => { unlockAudio(); if (!root.hidden) startMusic(); }, { once: false });
-  return { show, hide, refresh, get mode() { return L.mode; }, perf: () => ({ q: L.q, avg: L.avg }) };
+  return { show, hide, refresh, get mode() { return L.mode; }, perf: () => ({ q: AQ.step, avg: AQ.cost }) };
 }
 export { ICONS };

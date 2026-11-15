@@ -16,7 +16,7 @@ test('every original sound effect synthesizes without errors', async ({ page }) 
   expect(errors).toEqual([]);
 });
 
-test('end screen: victory pose + Top Bounty Hunter MVP banner', async ({ page }) => {
+test('end screen: victory pose + winner banner', async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto('/?world=meadow&mode=bounty');
   await waitMe(page);
@@ -25,8 +25,8 @@ test('end screen: victory pose + Top Bounty Hunter MVP banner', async ({ page })
     window.__huntMsg({ t: 'end', mode: 'bounty', rank: 1, kills: 4, bounty: 9, winner: 'Me', results: [['Me', G.brawler, 1, 4, 0, G.myId, 9, 9], ['Rex', 'brick', 2, 2, 1, 5, 12, 3]] });
   });
   await expect(page.locator('#mvp')).toBeVisible({ timeout: 5000 });
-  await expect(page.locator('#mvp')).toContainText('TOP BOUNTY HUNTER');
-  await expect(page.locator('#mvp')).toContainText('Rex');
+  // (the banner names whoever the list ranks #1, with the score the list shows)
+  await expect(page.locator('#mvp')).toHaveText('👑 WINNER Me 9 ★');
   // the pose is painted on the next animation frame: poll for it, a slow browser may not have drawn yet
   const drawn = () => page.evaluate(() => { const c = document.getElementById('pose'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n; });
   await expect.poll(drawn, { timeout: 10_000 }).toBeGreaterThan(500);
