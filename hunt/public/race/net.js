@@ -123,8 +123,12 @@ export class RaceClient {
   }
 
   onSnap(m) {
-    // (a WebSocket keeps order; anything older than what we have is only kept for its events)
-    if (this.latest && m.n <= this.latest.n && this.snaps.length) { if (m.ev) for (const e of m.ev) this.events.push(e); return; }
+    // (a WebSocket keeps order; anything a little older than what we have is only kept for its
+    // events; a tick count far back means the room restarted its clock: start over from it)
+    if (this.latest && m.n <= this.latest.n && this.snaps.length) {
+      if (this.latest.n - m.n < 60) { if (m.ev) for (const e of m.ev) this.events.push(e); return; }
+      this.snaps = []; this.offN = 0; this.off = null; this.rt = null;
+    }
     this.latest = m; this.latestAt = this.now();
     this.clockSample(m.n, this.latestAt);
     this.snaps.push(m);

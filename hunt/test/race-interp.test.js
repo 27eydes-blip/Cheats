@@ -86,5 +86,21 @@ for (const o of [{ jitter: 0 }, { jitter: 30 }, { jitter: 60 }, { jitter: 60, se
   const s = steps.slice(4), lo = Math.min(...s), hi = Math.max(...s);
   assert.ok(lo > hi * 0.6, `own car moves every frame (steps ${lo.toFixed(1)}..${hi.toFixed(1)} px)`);
 }
+// out of order by a tick or two: ignored (its events kept); a tick count far back (the room's clock
+// started over): taken, never frozen on the old one
+{
+  const rc = new RaceClient({ transport: () => ({ readyState: 1, send() {}, addEventListener() {}, close() {} }), now: () => 0 });
+  rc.onMsg({ t: 'welcome', id: 1, secret: 's', match: 'room:T', room: 'T', mode: 'grand', track: 'desert', arena: false, bots: 0, tick: 30 });
+  rc.onMsg({ t: 'start', you: 1, mode: 'grand', track: 'desert', arena: false, laps: 3, tick: 30, cd: 0, players: 1, tm: 0 });
+  const me = newCar(0, 0, 0);
+  const sn = (n, ev) => ({ t: 's', n, tm: n / 30, c: [[1, 0, 0, 0, 0, 100, 1, 0]], rk: [1], ld: 0, e: [], bx: [], hz: 0, md: {}, ...(ev ? { ev } : {}),
+    me: { s: packState(me), ack: 0, ep: 1, hp: 100, mh: 100, it: -1, wc: 0, sh: 0, em: 0, gh: 0, lap: 1, cp: 0, rk: 1, rt: 0, mc: 0, k: 0, d: 0, lt: 1, bl: null, fin: 0, out: 0, auto: 1 } });
+  rc.onMsg(sn(500)); rc.onMsg(sn(499, [['horn', 1]]));
+  assert.strictEqual(rc.latest.n, 500, 'a late, older snapshot does not replace the newest');
+  assert.strictEqual(rc.drainEvents().length, 1, 'its events still count');
+  rc.onMsg(sn(10));
+  assert.strictEqual(rc.latest.n, 10, 'a clock that started over is followed');
+  assert.ok(rc.view(0), 'and drawn');
+}
 assert.strictEqual(INTERP_TICKS, 3);
 console.log('race-interp: ok');
