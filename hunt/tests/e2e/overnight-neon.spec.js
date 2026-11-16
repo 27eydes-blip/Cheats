@@ -19,6 +19,8 @@ test('10 neon cars: looks per car, flat sprite caches, light trails', async ({ b
   const errs = trackErrors(page);
   await race(page, { driver: 'rook' });
   await page.waitForTimeout(3000);
+  // a trail needs a few drawn frames of a moving car: wait for them (a loaded machine draws fewer per second)
+  await page.waitForFunction(() => [...window.__race.session.renderer.vis.values()].some((v) => v.look && v.ltn > 2), null, { timeout: 20_000 }).catch(() => {});
   const r = await page.evaluate(() => {
     const R = window.__race.session.renderer, rc = window.__race.rc, out = { cars: 0, wrong: [], looks: new Set(), trails: 0 };
     for (const [id, v] of R.vis) {
