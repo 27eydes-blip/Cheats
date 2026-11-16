@@ -7,7 +7,8 @@ import { lookForRacer, NEON_GLOW } from './looks.js';
 const EDGE_A = Math.round(0x66 * NEON_GLOW).toString(16).padStart(2, '0'); // dusk edge lights (alpha hex)
 import { Particles, Skids, Effects, PK, C, TIER_C, FK, colorIdx } from './fx.js';
 import { FLAG, driftTierOf } from './protocol.js';
-import { ITEMS, WEAPONS } from './items.js';
+import { ITEMS, WEAPONS, ITEM_IDS, itemStat, COMBAT } from './items.js';
+import { armPulse, drawWell, drawDrone, drawSticky, drawTrap, drawGhostVeil } from './weapons-fx.js';
 import { driftTier } from './physics.js';
 import { SETTINGS } from '../settings.js';
 
@@ -16,6 +17,7 @@ const TAU = Math.PI * 2;
 const P = {}; // probe scratch
 const CAR_VIS = 1.18; // cars are drawn a bit bigger than their hitbox
 export const SAFE_BOX = 0.2;
+const DASH = [6, 6], NODASH = [];
 const LT = 10; // taillight trail points per light // the followed car stays within ±20% of the screen centre (0.3..0.7 of W and H)
 
 function glowSprite(col, size = 128) {
@@ -112,11 +114,13 @@ export class RaceRenderer {
     this.amb = new Float32Array(60 * 3); // screen-space ambience (snow / embers / rain)
     for (let i = 0; i < 60; i++) { this.amb[i * 3] = Math.random(); this.amb[i * 3 + 1] = Math.random(); this.amb[i * 3 + 2] = Math.random(); }
     this.threat = 0; // a missile is homing on us (0..1)
+    this.lockD = Infinity; this.lockK = ''; // the nearest missile / drone locked on to us: distance, kind
+    this.stickAt = new Map(); // sticky bomb id -> race time it stuck (for its fuse light)
     this.view = { x0: 0, y0: 0, x1: 0, y1: 0 };
   }
   setTrack(T) {
     if (this.T === T) return;
-    this.T = T; this.art = new TrackArt(T); this.vis.clear(); this.cam.init = false; this.dusk = null;
+    this.T = T; this.art = new TrackArt(T); this.vis.clear(); this.cam.init = false; this.dusk = null; this.stickAt.clear();
     this.skids = new Skids(900); this.parts.n = 0;
     this.art.setScale(this.chunkScale());
   }
@@ -194,7 +198,7 @@ export class RaceRenderer {
     switch (e[0]) {
       case 'ko': { const c = car(e[1]); if (c) { this.explode(c.x, c.y, 1.2); if (e[1] === meId) this.shake(1); else if (this.near(c, 600)) this.shake(0.4); } break; }
       case 'rs': { this.visOf(e[1]).respawnT = 0.7; break; }
-      case 'hit': { const c = car(e[1]); if (c) { for (let i = 0; i < 8; i++) { const a = Math.random() * TAU, s = 200 + Math.random() * 300; p.emit(PK.SPARK, c.x, c.y, Math.cos(a) * s, Math.sin(a) * s, 0.25, 3, C.GOLD, 0, 3); } this.visOf(e[1]).hitT = 0.25; if (e[1] === meId) this.shake(0.35); } break; }
+      case 'hit': { const c = car(e[1]); if (c) { if (e[5]) this.explode(c.x, c.y, 0.55); for (let i = 0; i < 8; i++) { const a = Math.random() * TAU, s = 200 + Math.random() * 300; p.emit(PK.SPARK, c.x, c.y, Math.cos(a) * s, Math.sin(a) * s, 0.25, 3, C.GOLD, 0, 3); } this.visOf(e[1]).hitT = 0.25; if (e[1] === meId) this.shake(0.35); } break; }
       case 'shield': { const c = car(e[1]); if (c) F.add(FK.RING, c.x, c.y, { r: 70, life: 0.35, col: '#5ff4ff', w: 8 }); break; }
       case 'steal': {
         const a = car(e[1]), b = car(e[2]);
@@ -204,18 +208,39 @@ export class RaceRenderer {
       case 'box': { const B = this.T.boxes[e[2]]; if (B) for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU; p.emit(PK.GLINT, B.x, B.y, Math.cos(a) * 260, Math.sin(a) * 260, 0.35, 4, i & 1 ? C.CYAN : C.PINK, 0, 4); } break; }
       case 'use': {
         const c = car(e[1]); if (!c) break;
-        const it = ['missile', 'oil', 'shield', 'rockets', 'emp', 'turbo', 'spikes'][e[2]];
+        const it = ITEM_IDS[e[2]];
         if (it === 'turbo') { const v = this.visOf(e[1]); v.flame = 1.6; v.flameC = -1; /* -1: the car's own flame look */ F.add(FK.RING, c.x, c.y, { r: 90, life: 0.3, col: '#5ff4ff', w: 6 }); }
         if (it === 'shield') F.add(FK.RING, c.x, c.y, { r: 60, life: 0.4, col: '#5ff4ff', w: 6 });
+        if (it === 'ghost') F.add(FK.RING, c.x, c.y, { r: 80, life: 0.45, col: '#dff0ff', w: 8 });
+        if (it === 'gravity') F.add(FK.RING, c.x, c.y, { r: 70, life: 0.35, col: '#b98cff', w: 6 });
         break;
       }
+      // WEAPONS: chain lightning hops, dodges, combos, sticky bombs, drones, ghosts
+      case 'chain': {
+        let a = car(e[1]);
+        if (!a) break;
+        for (let i = 2; i < e.length; i++) { const b = car(e[i]); if (!b) break; F.add(FK.ARC, a.x, a.y, { x1: b.x, y1: b.y, life: 0.4, id: a.id, id2: b.id, col: '#9fd8ff' }); a = b; }
+        if (e.length === 2) F.add(FK.RING, a.x, a.y, { r: 90, life: 0.3, col: '#9fd8ff', w: 5 }); // nobody in reach
+        break;
+      }
+      case 'dodge': { const c = car(e[1]); if (c) { F.add(FK.RING, c.x, c.y, { r: 80, life: 0.4, col: '#5ef2c6', w: 7 }); for (let i = 0; i < 8; i++) { const a = Math.random() * TAU; p.emit(PK.GLINT, c.x, c.y, Math.cos(a) * 240, Math.sin(a) * 240, 0.3, 3, C.CYAN, 0, 4); } } break; }
+      case 'combo': {
+        if (e[2] === 'trap') F.add(FK.RING, e[3], e[4], { r: ITEMS.oil.r * COMBAT.trapR * 1.6, life: 0.55, col: '#ffd23f', w: 10 });
+        else { const c = car(e[3]); if (c) { F.add(FK.RING, c.x, c.y, { r: 120, life: 0.45, col: '#5ff4ff', w: 10 }); F.add(FK.FLASH, c.x, c.y, { r: 140, life: 0.3, col: '#5ff4ff' }); } }
+        break;
+      }
+      case 'stick': { this.stickAt.set(e[3], view.time); const c = car(e[1]); if (c) for (let i = 0; i < 8; i++) { const a = Math.random() * TAU; p.emit(PK.DEBRIS, c.x, c.y, Math.cos(a) * 160, Math.sin(a) * 160, 0.35, 4, C.GREEN, 0, 4); } break; }
+      case 'pass': { const a = car(e[1]), b = car(e[2]); if (a && b) for (let i = 0; i < 8; i++) p.emit(PK.GLINT, a.x, a.y, (b.x - a.x) * 3 + (Math.random() - 0.5) * 120, (b.y - a.y) * 3 + (Math.random() - 0.5) * 120, 0.3, 3, C.GREEN, 0, 3); break; }
+      case 'fizzle': { this.stickAt.delete(e[1]); const c = car(e[2]); if (c) for (let i = 0; i < 8; i++) p.emit(PK.SMOKE, c.x, c.y, (Math.random() - 0.5) * 120, (Math.random() - 0.5) * 120, 0.6, 8, C.SMOKE, 20, 2); break; }
+      case 'swat': { const c = car(e[1]); if (c) F.add(FK.RING, c.x, c.y, { r: 70, life: 0.3, col: '#ff9f43', w: 6 }); break; }
+      case 'unghost': { const c = car(e[1]); if (c) F.add(FK.RING, c.x, c.y, { r: 70, life: 0.35, col: '#5ff4ff', w: 8 }); break; }
       case 'emp': { const c = car(e[1]); if (c) { F.add(FK.RING, c.x, c.y, { r: ITEMS.emp.r, life: 0.7, col: '#5ff4ff', w: 16 }); F.add(FK.FLASH, c.x, c.y, { r: 200, life: 0.3, col: '#5ff4ff' }); if (this.near(c, ITEMS.emp.r)) this.shake(0.3); } break; }
       case 'spin': { this.visOf(e[1]).spinT = 0.9; break; }
       case 'arc': { const a = car(e[1]), b = car(e[2]); if (a) F.add(FK.ARC, a.x, a.y, { x1: b ? b.x : a.x + 200, y1: b ? b.y : a.y, life: 0.32, id: e[1], id2: e[2], col: '#5ff4ff' }); break; }
       case 'pulse': { const c = car(e[1]); if (c) { F.add(FK.RING, c.x, c.y, { r: WEAPONS.brick.r + 30, life: 0.45, col: '#ff7b39', w: 14 }); F.add(FK.FLASH, c.x, c.y, { r: 130, life: 0.25, col: '#ffb347' }); if (this.near(c, 400)) this.shake(0.35); } break; }
       case 'rail': { F.add(FK.BEAM, e[2], e[3], { x1: e[4], y1: e[5], life: 0.45, col: '#5ef2c6', w: 12 }); if (e[6]) { for (let i = 0; i < 10; i++) { const a = Math.random() * TAU; p.emit(PK.SPARK, e[4], e[5], Math.cos(a) * 300, Math.sin(a) * 300, 0.3, 3, C.CYAN, 0, 3); } } break; }
       case 'blink': { F.add(FK.BLINK, e[2], e[3], { x1: e[4], y1: e[5], life: 0.4, col: '#c04dff', id: e[1] }); F.add(FK.SLASH, e[4], e[5], { a: Math.atan2(e[5] - e[3], e[4] - e[2]), life: 0.3, col: '#ff5fa2' }); break; }
-      case 'boom': { this.explode(e[1], e[2], e[3] === 'mine' || e[3] === 4 ? 0.8 : 0.6); if (this.near({ x: e[1], y: e[2] }, 350)) this.shake(0.25); break; }
+      case 'boom': { this.explode(e[1], e[2], e[3] === 'mine' || e[3] === 4 ? 0.8 : e[3] === 8 ? 1.1 : e[3] === 7 ? 0.9 : e[3] === 9 ? 0.5 : 0.6); if (this.near({ x: e[1], y: e[2] }, 350)) this.shake(0.25); break; }
       case 'mt': { const v = this.visOf(e[1]); v.flame = [0, 0.5, 0.85, 1.3][e[2]] || 0.5; v.flameC = TIER_C[e[2]] ?? C.BLUE; break; }
       case 'jump': { this.visOf(e[1]).air = 0.001; break; }
       case 'bump': { const a = car(e[1]), b = car(e[2]); if (a && b) { const x = (a.x + b.x) / 2, y = (a.y + b.y) / 2; for (let i = 0; i < 6; i++) { const an = Math.random() * TAU; p.emit(PK.SPARK, x, y, Math.cos(an) * 260, Math.sin(an) * 260, 0.22, 2.5, C.WHITE, 0, 4); } if (e[1] === meId || e[2] === meId) this.shake(clamp(e[3] / 900, 0.1, 0.4)); } break; }
@@ -382,22 +407,33 @@ export class RaceRenderer {
   // ground entities (low=true: oil, spikes, mines, turret bases) and flying ones
   ents(g, view, t, me, low) {
     const vw = this.view, steady = SETTINGS.reduceFlash, p = this.parts;
-    if (!low) this.threat = 0;
+    if (!low) { this.threat = 0; this.lockD = Infinity; this.lockK = ''; }
     for (const e of view.ents) {
+      // a sticky bomb rides on its carrier: draw it where the car is drawn (own car: predicted)
+      if (e.kind === 'sticky' && e.armed && e.tg) { const cc = this.carAt(view, e.tg); if (cc) { e.x = cc.x; e.y = cc.y; } }
       if (e.x < vw.x0 - 120 || e.x > vw.x1 + 120 || e.y < vw.y0 - 120 || e.y > vw.y1 + 120) {
-        if (!low && e.kind === 'missile' && me && e.owner !== me.id) this.missileThreat(e, me);
+        if (!low && (e.kind === 'missile' || e.kind === 'drone') && me && e.owner !== me.id) this.missileThreat(e, me);
         continue;
       }
       const k = e.kind;
       if (low) {
-        if (k === 'oil') { g.save(); g.translate(e.x, e.y); g.rotate(e.id * 1.7); g.drawImage(this.oil, -ITEMS.oil.r * 1.15, -ITEMS.oil.r * 1.15, ITEMS.oil.r * 2.3, ITEMS.oil.r * 2.3); g.restore(); }
-        else if (k === 'spikes') this.spikes(g, e);
+        if (k === 'oil') {
+          const r = itemStat('oil', e.lv).r;
+          if (!e.armed) g.globalAlpha = armPulse(t, e.id); // arming: blinks (breathes under Reduce Flashing)
+          g.save(); g.translate(e.x, e.y); g.rotate(e.id * 1.7); g.drawImage(this.oil, -r * 1.15, -r * 1.15, r * 2.3, r * 2.3); g.restore();
+          g.globalAlpha = 1;
+        } else if (k === 'spikes') { if (!e.armed) g.globalAlpha = armPulse(t, e.id); this.spikes(g, e); g.globalAlpha = 1; }
+        else if (k === 'trap') drawTrap(g, e, t, itemStat('oil', e.lv).r * COMBAT.trapR, this.oil, e.armed);
+        else if (k === 'well') drawWell(g, e, t, itemStat('gravity', e.lv).r, e.armed);
+        else if (k === 'sticky' && !e.armed) drawSticky(g, e, t, null);
         else if (k === 'mine') this.mine(g, e, t, steady);
         else if (k === 'turret') this.turret(g, e, t, view);
         continue;
       }
+      if ((k === 'missile' || k === 'drone') && me && e.owner !== me.id) this.missileThreat(e, me);
+      if (k === 'drone') { drawDrone(g, e, t, !!me && e.tg === me.id); continue; }
+      if (k === 'sticky') { if (e.armed) { const s0 = this.stickAt.get(e.id); drawSticky(g, e, t, s0 == null ? null : itemStat('sticky', e.lv).fuse - (view.time - s0)); } continue; }
       if (k === 'missile') {
-        if (me && e.owner !== me.id) this.missileThreat(e, me);
         g.save(); g.translate(e.x, e.y); g.rotate(e.a);
         g.globalCompositeOperation = 'lighter'; g.drawImage(this.glow.red, -40, -16, 32, 32); g.globalCompositeOperation = 'source-over';
         g.fillStyle = '#e8e2d2'; g.beginPath(); g.moveTo(16, 0); g.lineTo(8, -5); g.lineTo(-12, -5); g.lineTo(-12, 5); g.lineTo(8, 5); g.closePath(); g.fill(); g.lineWidth = 2.5; g.strokeStyle = INK; g.stroke();
@@ -419,14 +455,22 @@ export class RaceRenderer {
       }
     }
   }
+  // a sticky bomb on car `id`: {left: fuse seconds or null}
+  bombOn(view, id) {
+    const B = this.bomb || (this.bomb = { left: null });
+    for (const e of view.ents) if (e.kind === 'sticky' && e.armed && e.tg === id) { const s0 = this.stickAt.get(e.id); B.left = s0 == null ? null : itemStat('sticky', e.lv).fuse - (view.time - s0); return B; }
+    return null;
+  }
   missileThreat(e, me) {
     const dx = me.x - e.x, dy = me.y - e.y, d = Math.hypot(dx, dy);
-    if (d > 1300) return;
+    // the server names the target (lock-on): exact, wherever it is
+    if (e.tg) { if (e.tg === me.id) { this.threat = Math.max(this.threat, Math.max(0.35, 1 - d / 1600)); if (d < this.lockD) { this.lockD = d; this.lockK = e.kind; } } return; }
+    if (e.kind !== 'missile' || d > 1300) return;
     let da = Math.atan2(dy, dx) - e.a; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
     if (Math.abs(da) < 0.7) this.threat = Math.max(this.threat, 1 - d / 1300 + 0.2);
   }
   spikes(g, e) {
-    const half = ITEMS.spikes.half;
+    const half = itemStat('spikes', e.lv).half;
     g.save(); g.translate(e.x, e.y); g.rotate(e.a + Math.PI / 2);
     g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(-half + 4, -6, half * 2, 16);
     g.fillStyle = '#4a4d58'; g.fillRect(-half, -8, half * 2, 14); g.lineWidth = 3; g.strokeStyle = INK; g.strokeRect(-half, -8, half * 2, 14);
@@ -439,9 +483,10 @@ export class RaceRenderer {
     g.beginPath(); g.arc(3, 4, 17, 0, TAU); g.fillStyle = 'rgba(0,0,0,0.3)'; g.fill();
     g.beginPath(); g.arc(0, 0, 16, 0, TAU); g.fillStyle = '#c99a52'; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
     g.beginPath(); for (let k = 0; k < 6; k++) { const a = k * 1.047; g.moveTo(Math.cos(a) * 9, Math.sin(a) * 9); g.lineTo(Math.cos(a) * 15, Math.sin(a) * 15); } g.strokeStyle = '#7a5a34'; g.lineWidth = 2; g.stroke();
-    const blink = e.armed && (steady || Math.sin(t * 10 + e.id) > 0);
-    g.beginPath(); g.arc(0, 0, 5, 0, TAU); g.fillStyle = e.armed ? (blink ? '#ff3b3b' : '#7a1a1a') : '#ffd23f'; g.fill();
-    if (blink) { g.globalCompositeOperation = 'lighter'; g.drawImage(this.glow.red, -18, -18, 36, 36); g.globalCompositeOperation = 'source-over'; }
+    // arming: the light flashes a warning (breathes under Reduce Flashing); armed: a steady red glow
+    const k = e.armed ? 1 : armPulse(t, e.id);
+    g.beginPath(); g.arc(0, 0, 5, 0, TAU); g.fillStyle = e.armed ? '#ff3b3b' : k > 0.5 ? '#ffd23f' : '#7a5a1a'; g.fill();
+    g.globalCompositeOperation = 'lighter'; g.globalAlpha = e.armed ? 0.8 : k * 0.9; g.drawImage(e.armed ? this.glow.red : this.glow.gold, -18, -18, 36, 36); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     g.restore();
   }
   turret(g, e, t, view) {
@@ -580,8 +625,9 @@ export class RaceRenderer {
         if (Math.random() < 0.6) p.emit(PK.FLAME, c.x - cos * (30 + Lf * 0.6), c.y - sin * (30 + Lf * 0.6), -cos * 90, -sin * 90, 0.14, 6, tierC >= 0 ? tierC : lf.flame, -24, 2);
       }
       // the car
-      const ghost = c.f & FLAG.GHOST;
-      g.globalAlpha = ghost ? (steady ? 0.55 : 0.45 + 0.35 * (Math.sin(t * 22) > 0 ? 1 : 0)) : 1;
+      const ghost = c.f & FLAG.GHOST, phase = c.f & FLAG.PHASE;
+      if (phase) drawGhostVeil(g, c.x, c.y); // Ghost Mode item: see-through, steady
+      g.globalAlpha = phase ? 0.4 : ghost ? (steady ? 0.55 : 0.45 + 0.35 * (Math.sin(t * 22) > 0 ? 1 : 0)) : 1;
       const spr = this.cars.get(L, c.a);
       this.at(g, c.x, c.y - lift * 10, c.a - spr.ang, sc * CAR_VIS);
       blitCar(g, spr, t, steady);
@@ -595,6 +641,8 @@ export class RaceRenderer {
         g.beginPath(); g.arc(c.x, c.y, r, 0, TAU); g.lineWidth = 3; g.strokeStyle = 'rgba(200,255,255,0.9)'; g.stroke();
         g.beginPath(); g.arc(c.x, c.y, r - 5, -2.4, -1.4); g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,0.7)'; g.stroke();
       }
+      // hit protection (2 s after a rival's hit): a thin steady halo
+      if (c.f & FLAG.PROT && !phase) { g.globalAlpha = 0.5; g.beginPath(); g.arc(c.x, c.y, 34, 0, TAU); g.lineWidth = 2; g.strokeStyle = '#ffffff'; g.setLineDash(DASH); g.stroke(); g.setLineDash(NODASH); g.globalAlpha = 1; }
       // EMP'd: crackle
       if (c.f & FLAG.EMP && Math.random() < 0.5) { const a = Math.random() * TAU; p.emit(PK.SPARK, c.x + Math.cos(a) * 22, c.y + Math.sin(a) * 22, Math.cos(a) * 120, Math.sin(a) * 120, 0.15, 2, C.CYAN, 0, 2); }
       // spun out: swirl

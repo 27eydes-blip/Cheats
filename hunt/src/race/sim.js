@@ -239,7 +239,8 @@ export class RaceSim {
   }
 
   // local dev / browser-test hooks (the room only forwards these when HUNT_DEV is set):
-  // {k: 'wreck'} wrecks your car, {k: 'item', item} hands you an item
+  // {k: 'wreck'} wrecks your car, {k: 'item', item, lv} hands you an item (level 1-3),
+  // {k: 'aim', item, lv} makes the nearest other racer use that item now (aimed at you when it homes)
   // (queued and applied inside the next tick, so their events go out with that tick's snapshot)
   dev(id, m) { (this.devQ ||= []).push([id, m]); }
   applyDev() {
@@ -248,6 +249,17 @@ export class RaceSim {
       if (!p || this.phase !== 'play' || this.time <= 0) continue;
       if (m.k === 'wreck') this.destroy(p, null, 'fall');
       else if (m.k === 'item' && ITEM_IDS.includes(m.item) && !p.item) { p.item = m.item; p.il = Math.max(1, Math.min(MAX_LEVEL, m.lv | 0 || 1)); }
+      else if (m.k === 'aim' && ITEM_IDS.includes(m.item)) {
+        let q = null, bd = Infinity;
+        for (const o of this.players.values()) { if (o === p || !o.alive || o.out || o.finished) continue; const d = Math.hypot(o.car.x - p.car.x, o.car.y - p.car.y); if (d < bd) { bd = d; q = o; } }
+        if (!q) continue;
+        q.item = m.item; q.il = Math.max(1, Math.min(MAX_LEVEL, m.lv | 0 || 1)); q.empT = 0; q.phaseT = 0;
+        this.aimAt = () => p; // homing items lock on to you
+        this.useItem(q);
+        delete this.aimAt;
+        const sb = m.item === 'sticky' && this.ents.at(-1); // a sticky bomb goes straight onto you
+        if (sb && sb.kind === 'sticky') { sb.mode = 'stuck'; sb.carrier = p.id; sb.passCd = sb.st.pass; this.events.push(['stick', p.id, q.id, sb.id]); }
+      }
     }
   }
 

@@ -7,19 +7,19 @@
 // The top-level numbers are level 1; `lv[1]` / `lv[2]` override them for levels 2 and 3 (grab the
 // same item again while holding it: it levels up, up to 3). `up` says what each level adds.
 export const ITEMS = {
-  missile: { name: 'Homing Missile', desc: 'Locks on to the racer ahead. Drift at the last moment to shake it.', dmg: 26, speed: 1350, turn: 3.4, life: 4, spin: 0, dodgeR: 330, n: 1,
-    lv: [null, { dmg: 33, turn: 3.9, spin: 0.15, up: 'Hits harder, turns tighter, spins them' }, { dmg: 40, turn: 4.4, spin: 0.25, dodgeR: 250, n: 2, up: 'Twin missiles, harder to shake' }] },
+  missile: { name: 'Homing Missile', desc: 'Locks on to the racer ahead. Drift at the last moment to shake it.', dmg: 24, speed: 1350, turn: 3.4, life: 4, spin: 0, dodgeR: 330, n: 1,
+    lv: [null, { dmg: 33, turn: 3.9, spin: 0.1, up: 'Hits harder, turns tighter, spins them' }, { dmg: 40, turn: 4.4, spin: 0.25, dodgeR: 250, n: 2, up: 'Twin missiles, harder to shake' }] },
   oil: { name: 'Oil Slick', desc: 'Drop it behind you. Racers who hit it spin out.', r: 48, life: 20, spin: 0.5, arm: 0.45,
     lv: [null, { r: 60, spin: 0.58, up: 'Wider slick' }, { r: 72, spin: 0.66, up: 'Huge slick, longer spin' }] },
   shield: { name: 'Shield', desc: 'Blocks the next hit.', t: 2.5, hits: 1,
     lv: [null, { t: 3.5, up: 'Lasts longer' }, { t: 4.5, hits: 2, up: 'Blocks two hits' }] },
   rockets: { name: 'Rocket Volley', desc: 'Three rockets straight ahead.', n: 3, spread: 0.07, speed: 1700, dmg: 28, life: 1.1,
     lv: [null, { n: 4, dmg: 32, spread: 0.075, up: 'Four rockets' }, { n: 5, dmg: 36, spread: 0.08, up: 'Five rockets, more damage' }] },
-  emp: { name: 'EMP Blast', desc: 'Shuts down nearby racers\' items and weapons, cuts their boost and slows them.', r: 460, t: 2.5, slow: 0.6,
+  emp: { name: 'EMP Blast', desc: 'Shuts down nearby racers\' items and weapons, cuts their boost and slows them.', r: 460, t: 2.5, slow: 0.5,
     lv: [null, { r: 560, t: 3, slow: 0.75, up: 'Bigger blast' }, { r: 660, t: 3.5, slow: 0.9, up: 'Huge blast, longer shutdown' }] },
   turbo: { name: 'Turbo', desc: 'A big burst of speed.', t: 0.7, p: 1.3,
     lv: [null, { t: 0.9, p: 1.33, up: 'Longer burst' }, { t: 1.1, p: 1.36, up: 'Longest, fastest burst' }] },
-  spikes: { name: 'Spike Strip', desc: 'A strip of spikes behind you. Hurts and slows.', half: 78, life: 15, dmg: 22, slow: 1.4, hits: 3, arm: 0.45,
+  spikes: { name: 'Spike Strip', desc: 'A strip of spikes behind you. Hurts and slows.', half: 78, life: 15, dmg: 20, slow: 1.3, hits: 3, arm: 0.45,
     lv: [null, { half: 98, dmg: 26, slow: 1.6, hits: 4, up: 'Wider strip' }, { half: 118, dmg: 30, slow: 1.9, hits: 5, up: 'Widest strip, longer slow' }] },
   lightning: { name: 'Chain Lightning', desc: 'Zaps the nearest racer, then jumps to the racers near them.', range: 560, chain: 420, jumps: 2, dmg: 18, fall: 0.8, slow: 0.25,
     lv: [null, { range: 640, jumps: 3, dmg: 21, slow: 0.3, up: 'Longer reach, one more jump' }, { range: 720, jumps: 4, dmg: 24, slow: 0.4, up: 'Longest reach, four jumps' }] },

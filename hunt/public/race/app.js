@@ -11,7 +11,8 @@ import { play, engine, stopEngine } from './sound.js';
 import { DRIVERS, driftTier } from './physics.js';
 import { BASE_LOOKS, carName, drawCarPreview } from './looks.js';
 import { RACE_MODES, FLAG } from './protocol.js';
-import { ITEM_IDS } from './items.js';
+import { ITEM_IDS, itemLabel } from './items.js';
+import { combatBus, HIT_STOP } from './weapons-fx.js';
 import { trackName } from './tracks.js';
 import { SETTINGS } from '../settings.js';
 import { icon } from '../ui/icons.js';
@@ -108,6 +109,7 @@ class RaceSession {
     this.resize();
     this.prev = { cd: 99, boostT: 0, spd: 0, air: false, tier: 0, rt: 0 };
     this.wrongFor = 0; this.wrong = false;
+    this.stopT = 0; this.stopView = null; // hit-stop
     this.startedAt = 0; this.endShown = false; this.endAt = 0;
     this.connect();
     this.last = performance.now();
@@ -127,7 +129,8 @@ class RaceSession {
       hintOn: () => s.hintA > 0,
       // where your car is drawn on screen (CSS px), for the camera safe-box test
       carOnScreen: () => { const R = s.renderer, c = R.meCar; if (!c) return null; const M = R.M; return { x: (c.x * M.s + M.x) / R.dpr, y: (c.y * M.s + M.y) / R.dpr, f: c.f, W: R.W, H: R.H }; },
-      dev: (k, item) => s.rc?.send({ t: 'dev', k, item }),
+      dev: (k, item, lv) => s.rc?.send({ t: 'dev', k, item, ...(lv ? { lv } : {}) }),
+      hitStop: () => s.stopT || 0, bus: combatBus,
       perf: () => s.perfStats(), resetPerf: () => { s.perfN = 0; },
       dpr: () => s.dpr, finishShown: () => s.endShown, mine: s.mine = {},
       // screenshot / perf runs only: drive along the racing line (the touch tests drive for real)
@@ -397,7 +400,9 @@ class RaceSession {
       for (let i = 0; i < evs.length; i++) { const e = evRow(evs[i]); if (e) this.onEvent(e, v); }
       this.local(v, dt);
       this.guide(v, dt, inp);
-      R.draw(v, rc, dt, now);
+      // HIT-STOP: a hit you dealt or took freezes the world picture for 0.08 s (inputs and the
+      // network keep running underneath; the HUD keeps drawing)
+      if (this.stopT > 0) { this.stopT -= dt; R.draw(this.stopView || v, rc, 0, now); } else R.draw(v, rc, dt, now);
       this.hud.draw(R.g, { W: this.W, H: this.H, SA: this.SA, dpr: this.dpr, view: v, me: v.me, rc, ctrl: this.ctrl, dt, t: R.t, mode: rc.mode, art: R.art, renderer: R, wrong: this.wrong, bestTime: this.best,
         tut: !!this.tut, focus: this.focus, hint: this.hintA, canReset: this.resetOk && this.resetCd <= 0 });
       if (this.endAt && now >= this.endAt && !this.endShown) this.showEnd();
@@ -512,6 +517,7 @@ class RaceSession {
   }
   autopilot(dt) {
     const A = this.auto, out = this.pursuit(A), rc = this.rc;
+    if (A.stop) { out.th = -1; out.dr = 0; } // (tests: stand still, e.g. to let the other car get well ahead)
     if (A.fire && (A.fire -= dt) <= 0) { A.fire = A.every || 1.5; rc.fire(); if (rc.me && rc.me.it >= 0) rc.useItem(); }
     return out;
   }
@@ -525,6 +531,9 @@ class RaceSession {
       case 'ko': {
         if (e[1] === meId) play('wreck'); else play('boom', fall(e[1]));
         if (e[2] === meId && e[1] !== meId) { H.banner('TAKEDOWN!', this.name(e[1]), '#ff9f43', 1.4); }
+        // kill-cam callout: NAME TOOK OUT NAME
+        if (e[2] && e[2] !== e[1]) { H.callout(`${this.name(e[2]).toUpperCase()} TOOK OUT ${this.name(e[1]).toUpperCase()}`, e[1] === meId || e[2] === meId ? '#ffd23f' : '#ffffff'); combatBus.emit('takedown', { victim: e[1], by: e[2], me: e[1] === meId || e[2] === meId }); }
+        { const c = R.carAt(v, e[1]); if (c) combatBus.emit('explode', { x: c.x, y: c.y, r: 180 }); }
         H.log(e[2] && e[2] !== e[1] ? `${this.name(e[2])} wrecked ${this.name(e[1])}` : `${this.name(e[1])} wrecked`, e[1] === meId || e[2] === meId ? '#ffd23f' : '#ffffff');
         break;
       }
@@ -532,14 +541,41 @@ class RaceSession {
       case 'reset': if (e[1] === meId) { play('reset'); H.banner('BACK ON TRACK', '', '#5ff4ff', 1); } break;
       case 'nudge': if (e[1] === meId) play('reset', 0.4); break; // the server eased us off a wall
       case 'tut': if (this.tut) this.tut.event(tutStep(e)); break;
-      case 'hit': if (e[1] === meId) play('hit'); else if (e[2] === meId) play('hit', 0.5); break;
+      case 'hit': {
+        const mine = e[1] === meId || e[2] === meId;
+        if (e[1] === meId) play('hit'); else if (e[2] === meId) play('hit', 0.5);
+        if (e[5]) play('boom', e[1] === meId ? 0.9 : fall(e[1])); // a big hit
+        if (mine && this.stopT <= 0) { this.stopT = HIT_STOP; this.stopView = v; combatBus.emit('hitstop', { t: HIT_STOP }); }
+        combatBus.emit('hit', { id: e[1], src: e[2], kind: e[3], dmg: e[4], big: !!e[5], me: mine });
+        break;
+      }
+      // WEAPONS: lock-on, dodges, combos, sticky bombs, drones, ghosts
+      case 'lock': if (e[1] === meId) play('lock'); combatBus.emit('lockon', { target: e[1], src: e[2], kind: e[4], me: e[1] === meId }); break;
+      case 'dodge': if (e[1] === meId) { play('dodge'); H.banner('DODGED!', '', '#5ef2c6', 1); } else play('dodge', fall(e[1]) * 0.6); combatBus.emit('dodge', { id: e[1], me: e[1] === meId }); break;
+      case 'combo': {
+        play('combo', e[1] === meId || e[3] === meId ? 1 : 0.5);
+        if (e[1] === meId) H.banner('COMBO!', e[2] === 'trap' ? 'Oil + spikes: a bigger trap' : 'EMP + missile: bonus damage', '#ffd23f', 1.4);
+        break;
+      }
+      case 'stick': play('sticky', e[1] === meId ? 1 : fall(e[1])); if (e[1] === meId) H.banner('STICKY BOMB!', 'Bump someone to pass it on', '#7dff5a', 1.6); break;
+      case 'pass': play('pass', e[1] === meId || e[2] === meId ? 1 : fall(e[2])); if (e[2] === meId) H.banner('BOMB PASSED TO YOU!', 'Bump someone', '#7dff5a', 1.4); else if (e[1] === meId) H.banner('PASSED IT ON!', '', '#5ef2c6', 1); break;
+      case 'swat': play('swat', e[1] === meId ? 1 : fall(e[1])); if (e[1] === meId) H.banner('SWATTED!', '', '#5ef2c6', 1); break;
+      case 'unghost': if (e[1] === meId) { play('shieldpop'); H.banner('GHOST BROKEN', '', '#5ff4ff', 1); } break;
+      case 'fizzle': play('pass', 0.4); break;
       case 'shield': play('shieldpop', fall(e[1])); break;
       case 'steal':
         if (e[1] === meId) { H.banner('BOUNTY STOLEN!', `+${e[3]} coins and a boost`, '#ffd23f', 2); play('steal'); }
         else if (e[2] === meId) { H.banner('BOUNTY LOST', `${this.name(e[1])} took ${e[3]} coins`, '#ff5f5f', 2); play('out'); }
         else H.log(`${this.name(e[1])} stole the bounty`, '#ffd23f');
         break;
-      case 'box': if (e[1] === meId) { play('box'); if (e[3] >= 0) { H.roll = 0.55; play('roll'); } } break;
+      case 'box':
+        if (e[1] === meId) {
+          play('box');
+          if (e[5]) { play('levelup'); H.banner(`LEVEL ${e[4]}!`, itemLabel(ITEM_IDS[e[3]], e[4]), e[4] === 3 ? '#ffd23f' : '#5ff4ff', 1.2); } // the same item again
+          else if (e[3] >= 0) { H.roll = 0.55; play('roll'); }
+        }
+        if (e[3] >= 0) combatBus.emit('pickup', { id: e[1], item: ITEM_IDS[e[3]], lvl: e[4] || 1, up: !!e[5], me: e[1] === meId });
+        break;
       case 'use': { const it = ITEM_IDS[e[2]]; play(it === 'rockets' ? 'rockets' : it, e[1] === meId ? 1 : fall(e[1])); break; }
       case 'emp': play('emp', fall(e[1]) + 0.2); break;
       case 'spin': if (e[1] === meId) { play('spin'); H.banner('SPUN OUT!', '', '#c9b8ff', 1); } break;
@@ -547,7 +583,7 @@ class RaceSession {
       case 'pulse': play('pulse', e[1] === meId ? 1 : fall(e[1])); break;
       case 'rail': play('rail', e[1] === meId ? 1 : fall(e[1])); break;
       case 'blink': play('blink', e[1] === meId ? 1 : fall(e[1])); break;
-      case 'boom': play('boom', 0.6); break;
+      case 'boom': play('boom', 0.6); combatBus.emit('explode', { x: e[1], y: e[2], r: e[3] === 8 ? 200 : 120 }); break;
       case 'jump': if (e[1] === meId) play('jump'); break;
       case 'mt': if (e[1] === meId) { play('mt' + Math.min(3, Math.max(1, e[2]))); this.mtNow = true; } break;
       case 'bump': if (e[1] === meId || e[2] === meId) play('bump', Math.min(1, e[3] / 700)); break;

@@ -11,7 +11,8 @@ and lobby sit on top of `public/race/net.js` (`RaceClient`) and the shared data 
 | `public/race/trackgeom.js` | Track geometry: `buildTrack(def)` -> runtime track with `probe()`, corridors, racing line, gates, grid. |
 | `public/race/tracks.js` | Data: 4 clear tracks + 4 open battle arenas. `getTrack(key, arena)`, `TRACK_IDS`, `trackName()`. |
 | `public/race/trackcheck.js` | `validateTrack(T)`: proves a layout is raceable (use it while designing). |
-| `public/race/items.js` | `ITEMS` (7 pickups), `ITEM_IDS` (wire ids), `ODDS` + `rollItem`, `WEAPONS` (one per driver). |
+| `public/race/items.js` | `ITEMS` (12 pickups, levels 1-3: `itemStat(id, lvl)`), `ITEM_IDS` (wire ids), `ODDS` + `rollItem`, `WEAPONS` (one per driver), `COMBAT` (protection, combos, dodge). |
+| `public/race/weapons-fx.js` | Client: `combatBus` (hit / explode / pickup / lockon / dodge / takedown / hitstop hooks), item art, arming pulse. |
 | `public/race/protocol.js` | Wire constants: `FLAG` bits, `ENT` kinds, `COUNTDOWN`, `RESPAWN_TIME`. |
 | `public/race/net.js` | `RaceClient`: connection, lobby, inputs, prediction, interpolation, events, reconnect. |
 | `src/race/sim.js` | `RaceSim`: the authoritative race (modes, laps, combat, items, bounty, snapshots). |
@@ -78,8 +79,11 @@ All JSON. `t` is the type.
   - `c` cars: `[id, x, y, angle*1000, flags, hp% (0-100), lap, speed, stuck]` for every car still in the race
     (`stuck`: seconds this car has been stuck, 1 decimal, 0 when free: show RESET pulsing from ~1 s)
   - `rk` all ids in race order (position 1 first)
-  - `e` entities: `[id, kind (ENT index), x, y, angle*1000, ownerId, armed]`
-    kinds: `missile rocket oil spikes mine turret bolt`
+  - `e` entities: `[id, kind (ENT index), x, y, angle*1000, ownerId, armed, level (1-3), target]`
+    kinds: `missile rocket oil spikes mine turret bolt well sticky drone trap`. `armed`: mine / oil /
+    spikes / trap done arming (draw them blinking until then), well landed, sticky bomb stuck on a car.
+    `target`: who a missile / drone is locked on to (LOCK-ON warning when it is you), or who carries a
+    sticky bomb (draw it on that car); 0 = none
   - `bx` indices into `track.boxes` that are currently taken (respawn after 3 s)
   - `hz` bitmask of active hazards (bit i = `track.hazards[i]`)
   - `md` mode HUD: grand / trial `{laps, ft: seconds left after the winner finished | null}`,
@@ -89,7 +93,7 @@ All JSON. `t` is the type.
   - `me` your own state:
     `s` packed car state (`STATE_KEYS` order: x y a vx vy drift dc boostT boostP airT spinT spinDir slowT),
     `ack` last input seq applied, `ep` teleport epoch (changes on respawn / blink / rejoin: snap, don't smooth),
-    `hp`, `mh` max hp, `it` item (ITEM_IDS index, -1 none), `wc` weapon cooldown left (s),
+    `hp`, `mh` max hp, `it` item (ITEM_IDS index, -1 none), `il` its level (1-3, 0 none), `pr` hit protection left (s), `ph` Ghost Mode left (s), `wc` weapon cooldown left (s),
     `sh` shield left, `em` EMP left, `gh` ghost (respawn protection) left, `lap`, `cp` last checkpoint,
     `rk` position, `rt` respawn countdown (s, 0 = alive), `mc` match coins, `k` takedowns, `d` wrecks,
     `lt` current lap time, `bl` best lap, `fin` finishing place (0 = racing), `out` knocked-out place (elim),
@@ -106,12 +110,19 @@ All JSON. `t` is the type.
 | --- | --- |
 | `['ko', victim, attacker (0 = none), cause]` | wrecked (cause: `missile rocket arc pulse rail mine bolt blink spikes lava geyser arc fall`) |
 | `['rs', id]` | back on track after the 2 s wreck |
-| `['hit', target, src, kind, dmg]` | damage taken |
+| `['hit', target, src, kind, dmg, big]` | damage taken (`big` 1 = a big hit: the car spins out; show an explosion, hit-stop) |
 | `['shield', id]` | a shield blocked a hit and popped |
 | `['steal', attacker, leader, coins]` | BOUNTY: the leader was wrecked, coins stolen, attacker boosted |
 | `['lap', id, lapNumberNow, lapTime]`, `['fin', id, place, time]`, `['elim', id, place]` | race progress |
-| `['box', id, boxIndex, itemIdx]` | picked up a box (itemIdx -1 = already holding one) |
-| `['use', id, itemIdx]` | used an item; `['emp', id]` EMP burst; `['spin', victim, oilOwner]` |
+| `['box', id, boxIndex, itemIdx, level, up]` | picked up a box (itemIdx -1 = nothing new; `up` 1 = the held item levelled up to `level`) |
+| `['use', id, itemIdx, level]` | used an item; `['emp', id, level]` EMP burst; `['spin', victim, oilOwner]` |
+| `['lock', target, owner, entId, 'missile' \| 'drone']` | a homing missile / drone locked on (warn the target) |
+| `['dodge', id, entId]` | `id` pressed DRIFT in time and shook the missile |
+| `['chain', owner, id1, id2, ...]` | Chain Lightning, hop by hop (no ids = nobody in reach) |
+| `['combo', owner, 'emp', victim]`, `['combo', owner, 'trap', x, y]` | EMP + missile bonus damage; oil + spikes merged into a trap |
+| `['stick', carrier, owner, entId]`, `['pass', from, to, entId]`, `['fizzle', entId, carrierId]` | sticky bomb stuck, passed on by a bump, shaken off / gone |
+| `['swat', id, entId]` | `id` fired their weapon and swatted the drone chasing them |
+| `['unghost', id]` | an EMP knocked `id` out of Ghost Mode |
 | `['arc', id, targetId]` Volt, `['pulse', id]` Brick, `['rail', id, x0, y0, x1, y1, hitId]` Wisp, `['blink', id, x0, y0, x1, y1]` Flicker | weapon visuals (Dune / Rook show up as `mine` / `turret` entities) |
 | `['boom', x, y, entKind]` | projectile / mine explosion |
 | `['jump', id]`, `['mt', id, tier]`, `['bump', a, b, speed]` | ramp launch, mini-turbo fired (1 blue, 2 orange, 3 purple), hard car bump |
@@ -126,7 +137,7 @@ The rows above are arrays (`e[0]` is the kind); the `reset`, `nudge` and `tut` e
 ### Car flags (`FLAG` in protocol.js)
 
 `DRIFT 1, BOOST 2, AIR 4, SHIELD 8, LEADER 16, DEAD 32, SPIN 64, EMP 128, FINISHED 256, OUT 512,
-GHOST 1024, SLOW 2048, REVERSE 16384`; drift spark tier = `(f >> 12) & 3` (`driftTierOf(f)`).
+GHOST 1024, SLOW 2048, REVERSE 16384, PROT 32768 (2 s hit protection), PHASE 65536 (Ghost Mode item)`; drift spark tier = `(f >> 12) & 3` (`driftTierOf(f)`).
 
 ## Messages: client -> server
 
@@ -259,6 +270,11 @@ client's: leave (`rc.leave()`) and set a local flag.
   `LEADER`. Wrecking them steals half their match coins and gives you a boost.
 - Match coins: +1 item box, +2 lap, +3 takedown, + steals. Paid into the account at the end (capped at 40).
 - Items roll by position: leaders get defensive items, the back of the pack the catch-up ones.
+  Holding an item, a box that rolls the same item levels it up (max 3; the held item is 5x as likely).
+- WEAPONS (two slots: the built-in weapon on FIRE, one pickup on ITEM): 12 pickups with levels,
+  lock-on + drift dodge, arming traps, combos, big hits, 2 s protection after a rival's hit. Every
+  item and its counter: COMBAT.md "Oblivion GP weapons". Dev (HUNT_DEV): `{t:'dev', k:'item', item, lv}`,
+  `{t:'dev', k:'aim', item, lv}` (the nearest racer uses that item now, homing ones at you).
 - Grand Race ends 30 s after the winner crosses the line (5 s if only bots are still racing), or
   when everyone is in, or at 5 minutes.
 - Walls: hitting one takes away the speed into the wall and keeps the speed along it (the car
@@ -281,7 +297,8 @@ the steps in order, the one-time flag, joystick prediction end to end),
 weapons, bounty), `race-modes` (all 4 modes, bots on/off), `race-bots` (every driver laps every
 track, 10-bot races finish, 2 ms tick budget), `race-results` (progression), `race-room` (the
 Durable Objects end to end with two `RaceClient`s over a laggy link; harness in
-`test/race-harness.js`).
+`test/race-harness.js`). `race-weapons` (the 12 pickups, levels, counters, combos, protection,
+bots), `race-items-balance` (300 head-to-head 1v1 races per item, 45-55%).
 
 ## Race client (what the player sees): `public/race/app.js`
 

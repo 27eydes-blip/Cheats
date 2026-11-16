@@ -27,6 +27,14 @@ assert.strictEqual(mkRace().laps, 3);
   assert.strictEqual(A.item, 'shield');
   sim.dev(A.id, { k: 'item', item: 'nope' }); ticks(sim);
   assert.strictEqual(A.item, 'shield');
+  sim.dev(A.id, { k: 'item', item: 'missile', lv: 3 }); ticks(sim);
+  assert.strictEqual(A.il, 1, 'no second item while holding one');
+  // 'aim': the nearest other racer uses an item now, homing items locked on to you
+  const B = [...sim.players.values()].find((p) => p !== A);
+  sim.dev(A.id, { k: 'aim', item: 'drone', lv: 2 }); ticks(sim);
+  const dr = sim.ents.find((e) => e.kind === 'drone');
+  assert.ok(dr && dr.owner === B.id && dr.target === A.id && dr.lv === 2, 'a level 2 drone from B, locked on to A');
+  assert.strictEqual(typeof Object.getOwnPropertyDescriptor(sim, 'aimAt'), 'undefined', 'targeting restored');
   const sent = [];
   sim.send = (id, m) => { if (m.t === 's' && m.ev) sent.push(...m.ev); };
   sim.dev(A.id, { k: 'wreck' }); ticks(sim);

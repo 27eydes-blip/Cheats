@@ -73,6 +73,17 @@ const S = {
   finish: (t, v) => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(t + i * 0.1, 'square', f, f, i === 4 ? 0.5 : 0.12, 0.16 * v)),
   out: (t, v) => [392, 330, 262].forEach((f, i) => tone(t + i * 0.16, 'triangle', f, f, 0.2, 0.18 * v)),
   lock: (t, v) => tone(t, 'square', 1760, 1760, 0.05, 0.08 * v),
+  // the five newer pickups and the weapon moments (all synthesized here, original)
+  lightning: (t, v) => { for (let i = 0; i < 3; i++) { noise(t + i * 0.05, 0.12, 0.3 * v, 8000, 2000, 5); tone(t + i * 0.05, 'sawtooth', 2400 - i * 500, 400, 0.1, 0.07 * v); } },
+  gravity: (t, v) => { tone(t, 'sine', 220, 40, 0.9, 0.3 * v, 0.08); tone(t, 'triangle', 330, 60, 0.8, 0.08 * v, 0.1); noise(t, 0.8, 0.12 * v, 600, 90, 2, 'lowpass'); },
+  ghost: (t, v) => { tone(t, 'sine', 520, 780, 0.5, 0.12 * v, 0.1); tone(t + 0.05, 'sine', 780, 1170, 0.45, 0.07 * v, 0.1); },
+  sticky: (t, v) => { noise(t, 0.12, 0.3 * v, 500, 200, 2, 'lowpass'); tone(t, 'sine', 160, 90, 0.12, 0.25 * v); tone(t + 0.12, 'square', 1200, 1200, 0.03, 0.05 * v); },
+  drone: (t, v) => { tone(t, 'sawtooth', 300, 420, 0.5, 0.05 * v, 0.05); noise(t, 0.5, 0.12 * v, 2500, 3500, 6); },
+  dodge: (t, v) => { noise(t, 0.25, 0.3 * v, 900, 5000, 1.5, 'highpass'); tone(t, 'triangle', 900, 1600, 0.15, 0.1 * v); },
+  combo: (t, v) => { [784, 1047, 1568].forEach((f, i) => tone(t + i * 0.05, 'square', f, f, 0.1, 0.12 * v)); noise(t, 0.3, 0.2 * v, 3000, 800, 2); },
+  pass: (t, v) => { tone(t, 'sine', 600, 300, 0.12, 0.16 * v); tone(t + 0.05, 'square', 900, 900, 0.03, 0.05 * v); },
+  swat: (t, v) => { noise(t, 0.15, 0.35 * v, 3000, 600, 2); tone(t, 'square', 700, 200, 0.12, 0.1 * v); },
+  levelup: (t, v) => [880, 1109, 1319, 1760].forEach((f, i) => tone(t + i * 0.045, 'triangle', f, f, i === 3 ? 0.2 : 0.07, 0.15 * v)),
   click: (t, v) => tone(t, 'triangle', 900, 1300, 0.05, 0.1 * v),
   // a tutorial step done; RESET put you back on the road
   tut: (t, v) => [784, 988, 1319].forEach((f, i) => tone(t + i * 0.07, 'triangle', f, f, i === 2 ? 0.3 : 0.1, 0.16 * v)),

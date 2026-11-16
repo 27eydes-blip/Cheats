@@ -6,7 +6,8 @@
 import { FLAG } from './protocol.js';
 import { DRIVERS, driftTier } from './physics.js';
 import { BASE_LOOKS } from './looks.js';
-import { WEAPONS, ITEMS } from './items.js';
+import { WEAPONS, ITEMS, ITEM_IDS, itemStat } from './items.js';
+import { levelPips } from './weapons-fx.js';
 import { SETTINGS, pulse } from '../settings.js';
 import { INK } from './cars.js';
 
@@ -53,6 +54,7 @@ const rr = (g, x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x 
 const panel = (g, x, y, w, h, r = 10, fill = 'rgba(27,16,51,0.78)') => { rr(g, x, y, w, h, r); g.fillStyle = fill; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke(); };
 
 // small vector icons for the items (size ~ s px)
+const BOLT_ENDS = [[-14, -10], [14, 8]], ROTOR_XY = [[-11, -11], [11, -11], [-11, 11], [11, 11]];
 export function itemIcon(g, id, x, y, s) {
   g.save(); g.translate(x, y); g.scale(s / 40, s / 40); g.lineJoin = 'round'; g.lineCap = 'round'; g.lineWidth = 3; g.strokeStyle = INK;
   switch (id) {
@@ -62,6 +64,12 @@ export function itemIcon(g, id, x, y, s) {
     case 'rockets': for (const k of [-10, 0, 10]) { g.fillStyle = '#ffb347'; g.beginPath(); g.moveTo(k, -16); g.lineTo(k + 5, -7); g.lineTo(k + 5, 10); g.lineTo(k - 5, 10); g.lineTo(k - 5, -7); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#ff3b3b'; g.beginPath(); g.moveTo(k - 3, 11); g.lineTo(k, 17); g.lineTo(k + 3, 11); g.fill(); } break;
     case 'emp': g.fillStyle = '#3a86ff'; g.beginPath(); g.arc(0, 0, 15, 0, TAU); g.fill(); g.stroke(); g.strokeStyle = '#c9fbff'; g.lineWidth = 3; g.beginPath(); g.moveTo(3, -12); g.lineTo(-5, 1); g.lineTo(3, 1); g.lineTo(-3, 12); g.stroke(); break;
     case 'turbo': g.fillStyle = '#5ff4ff'; for (const k of [-9, 3]) { g.beginPath(); g.moveTo(k - 6, -14); g.lineTo(k + 8, 0); g.lineTo(k - 6, 14); g.lineTo(k - 1, 0); g.closePath(); g.fill(); g.stroke(); } break;
+    // the five newer pickups (original drawings)
+    case 'lightning': g.fillStyle = '#9fd8ff'; g.beginPath(); g.moveTo(6, -17); g.lineTo(-8, 1); g.lineTo(0, 1); g.lineTo(-6, 17); g.lineTo(9, -3); g.lineTo(1, -3); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#ffffff'; for (const [x, y] of BOLT_ENDS) { g.beginPath(); g.arc(x, y, 3.5, 0, TAU); g.fill(); g.stroke(); } break;
+    case 'gravity': g.fillStyle = '#12081e'; g.beginPath(); g.arc(0, 0, 15, 0, TAU); g.fill(); g.stroke(); g.strokeStyle = '#b98cff'; g.lineWidth = 3; for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(0, 0, 11 - k * 3.5, k * 2.1, k * 2.1 + 3.6); g.stroke(); } g.fillStyle = '#ffffff'; g.beginPath(); g.arc(0, 0, 2.5, 0, TAU); g.fill(); break;
+    case 'ghost': g.fillStyle = '#e8f2ff'; g.beginPath(); g.moveTo(-13, 15); g.lineTo(-13, -3); g.quadraticCurveTo(-13, -17, 0, -17); g.quadraticCurveTo(13, -17, 13, -3); g.lineTo(13, 15); g.lineTo(8, 10); g.lineTo(4, 15); g.lineTo(0, 10); g.lineTo(-4, 15); g.lineTo(-8, 10); g.closePath(); g.fill(); g.stroke(); g.fillStyle = INK; g.beginPath(); g.arc(-5, -4, 2.8, 0, TAU); g.arc(5, -4, 2.8, 0, TAU); g.fill(); break;
+    case 'sticky': g.fillStyle = '#7dff5a'; g.beginPath(); for (let k = 0; k < 8; k++) { const a = (k / 8) * TAU, r = 12 + (k % 2) * 4; k ? g.lineTo(Math.cos(a) * r, 3 + Math.sin(a) * r) : g.moveTo(Math.cos(a) * r, 3 + Math.sin(a) * r); } g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#26332a'; g.beginPath(); g.arc(0, 3, 7, 0, TAU); g.fill(); g.strokeStyle = '#ffb347'; g.beginPath(); g.moveTo(0, -10); g.quadraticCurveTo(6, -16, 10, -15); g.stroke(); g.fillStyle = '#ff3b3b'; g.beginPath(); g.arc(11, -15, 2.5, 0, TAU); g.fill(); break;
+    case 'drone': g.fillStyle = 'rgba(160,200,255,0.5)'; for (const [x, y] of ROTOR_XY) { g.beginPath(); g.arc(x, y, 6.5, 0, TAU); g.fill(); g.stroke(); } g.lineWidth = 3; g.beginPath(); g.moveTo(-11, -11); g.lineTo(11, 11); g.moveTo(11, -11); g.lineTo(-11, 11); g.stroke(); g.fillStyle = '#4a5466'; g.beginPath(); g.arc(0, 0, 7, 0, TAU); g.fill(); g.stroke(); g.fillStyle = '#ff3b3b'; g.beginPath(); g.arc(2, 0, 2.6, 0, TAU); g.fill(); break;
     case 'spikes': g.fillStyle = '#4a4d58'; g.fillRect(-17, -2, 34, 10); g.strokeRect(-17, -2, 34, 10); g.fillStyle = '#e8e2d2'; g.beginPath(); for (let k = -15; k < 14; k += 8) { g.moveTo(k, -2); g.lineTo(k + 4, -14); g.lineTo(k + 8, -2); } g.fill(); g.stroke(); break;
   }
   g.restore();
@@ -88,7 +96,10 @@ export class Hud {
     this.wrongT = 0;
     this.lastCount = 99;
     this.split = null; // {text, col, t}
+    this.call = null; // kill-cam callout {text, col, t}
   }
+  // the short kill-cam callout ('NAME TOOK OUT NAME') under the slots
+  callout(text, col = '#ffffff') { this.call = { text, col, t: 0 }; }
   banner(text, sub = '', col = '#ffd23f', life = 1.8) { this.banners.push({ text, sub, col, t: 0, life }); if (this.banners.length > 3) this.banners.shift(); }
   log(text, col = '#fff') { this.feed.push({ text, col, t: 0 }); if (this.feed.length > 4) this.feed.shift(); }
 
@@ -129,8 +140,8 @@ export class Hud {
     if (me && mode !== 'trial') {
       const ix = cx - slot - 6 * u, iy = Tp;
       panel(g, ix, iy, slot, slot, 12 * u, me.item || this.roll > 0 ? 'rgba(106,42,110,0.9)' : 'rgba(27,16,51,0.7)');
-      if (this.roll > 0) { this.roll -= dt; const ids = ['missile', 'oil', 'shield', 'rockets', 'emp', 'turbo', 'spikes']; itemIcon(g, ids[Math.floor(t * 18) % ids.length], ix + slot / 2, iy + slot / 2, slot * 0.66); }
-      else if (me.item) itemIcon(g, me.item, ix + slot / 2, iy + slot / 2, slot * 0.7);
+      if (this.roll > 0) { this.roll -= dt; itemIcon(g, ITEM_IDS[Math.floor(t * 18) % ITEM_IDS.length], ix + slot / 2, iy + slot / 2, slot * 0.66); }
+      else if (me.item) { itemIcon(g, me.item, ix + slot / 2, iy + slot / 2 - (me.il > 1 ? 3 * u : 0), slot * 0.66); levelPips(g, ix + slot / 2, iy + slot - 6 * u, me.il, u); }
       if (ctrl.mode !== 'touch') label(g, 'K', ix + slot - 6 * u, iy + slot - 6 * u, Math.round(11 * u), '#c9b8ff', 'center', S.dpr);
       // weapon with a cooldown sweep
       const wid = rc.myDriver(), w = WEAPONS[wid], wx = cx + 6 * u + slot / 2, wy = Tp + slot / 2, r = slot / 2;
@@ -251,7 +262,7 @@ export class Hud {
       if (cd > 0) { g.beginPath(); g.arc(b.fire.x, b.fire.y, b.fire.r - 2, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - cd)); g.lineWidth = 5; g.strokeStyle = '#ff9f43'; g.stroke(); }
     });
     btn(b.item, 'ITEM', me && me.item ? '#c04dff' : '#8a7aa8', () => {
-      if (me && me.item) itemIcon(g, me.item, b.item.x, b.item.y - b.item.r * 0.1, b.item.r * 1.05);
+      if (me && me.item) { itemIcon(g, me.item, b.item.x, b.item.y - b.item.r * 0.1, b.item.r * 1.05); levelPips(g, b.item.x, b.item.y + b.item.r * 0.62, me.il, u); }
       else label(g, 'ITEM', b.item.x, b.item.y, Math.round(Math.max(10, b.item.r * 0.36)), '#8a7aa8', 'center', S.dpr);
     });
     this.joystick(g, S, u);
@@ -383,11 +394,27 @@ export class Hud {
     }
     if (me && me.out) text(g, `KNOCKED OUT · ${me.out}${ORD(me.out).toLowerCase()}`, cx, H * 0.2, 22 * u, '#ff9f43', 'center');
     if (me && me.fin && view.cars.length) text(g, `FINISHED ${me.fin}${ORD(me.fin)}`, cx, H * 0.2, 26 * u, '#ffd23f', 'center');
-    // missile lock warning
+    // LOCK-ON warning (the server names the target): MISSILE LOCKED / DRONE ON YOU, and the counter
+    // once it is close: DRIFT NOW! (the dodge) / FIRE TO SWAT!
     if (renderer.threat > 0 && !(car && car.f & FLAG.DEAD)) {
-      const k = SETTINGS.reduceFlash ? 1 : Math.sin(t * 16) > 0 ? 1 : 0.4;
-      g.globalAlpha = k; text(g, '⚠ MISSILE LOCKED', cx, H * 0.3, 20 * u, '#ff3b3b', 'center', 5 * u); g.globalAlpha = 1;
+      const k = SETTINGS.reduceFlash ? 1 : Math.sin(t * 16) > 0 ? 1 : 0.4, drone = renderer.lockK === 'drone';
+      g.globalAlpha = k; text(g, drone ? '⚠ DRONE ON YOU' : '⚠ MISSILE LOCKED', cx, H * 0.3, 20 * u, '#ff3b3b', 'center', 5 * u); g.globalAlpha = 1;
+      const close = drone ? renderer.lockD < itemStat('drone').swat * 1.3 : renderer.lockD < itemStat('missile').dodgeR * 1.4;
+      if (close) text(g, drone ? 'FIRE TO SWAT!' : 'DRIFT NOW!', cx, H * 0.3 + 24 * u, 17 * u, '#5ef2c6', 'center', 5 * u);
       if (!SETTINGS.reduceFlash) { g.lineWidth = 10; g.strokeStyle = `rgba(255,40,40,${0.25 * k * clamp(renderer.threat, 0, 1)})`; g.strokeRect(5, 5, W - 10, H - 10); }
+      else { g.lineWidth = 6; g.strokeStyle = 'rgba(255,60,60,0.35)'; g.strokeRect(4, 4, W - 8, H - 8); } // a steady frame
+    }
+    // a sticky bomb on your car: pass it on
+    const bomb = me && renderer.bombOn(view, S.rc.id);
+    if (bomb) text(g, bomb.left != null ? str('bomb', Math.max(0, Math.ceil(bomb.left * 10)), (v) => `BOMB ${(v / 10).toFixed(1)} · BUMP SOMEONE!`) : 'BOMB · BUMP SOMEONE!', cx, H * 0.3 + 48 * u, 17 * u, '#7dff5a', 'center', 5 * u);
+    if (me && me.ph > 0) text(g, str('ghost', Math.ceil(me.ph * 10), (v) => `GHOST ${(v / 10).toFixed(1)}`), cx, H * 0.3 + 72 * u, 15 * u, '#dff0ff', 'center', 4 * u);
+    // kill-cam callout
+    if (this.call) {
+      const c = this.call; c.t += dt;
+      g.globalAlpha = clamp(Math.min(c.t * 8, (1.8 - c.t) * 4), 0, 1);
+      text(g, c.text, cx, H * 0.14 + 34 * u, 16 * u, c.col, 'center', 4 * u);
+      g.globalAlpha = 1;
+      if (c.t > 1.8) this.call = null;
     }
     // banners
     let by = S.tut ? H * 0.66 : H * 0.22; // (the tutorial's prompt card sits at the top)

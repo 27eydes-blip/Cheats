@@ -121,3 +121,78 @@ Branch `upgrade/combat`, merged into `main`. Only `hunt/` changed. Screenshots a
 4. **Mastery and coins** only count in Quick Hunt matches; Free Play has no match end to record. Should Free Play count too?
 5. **Level pace:** level 40 takes about 150 average matches.
 6. **Crowded screens on old phones:** with 24 hunters on screen, a slowed CPU drops to about 23 fps. That's the hunter drawing, not combat. Caching each hunter as a picture would fix it, but it's a bigger art-system change.
+
+## Oblivion GP weapons (racing)
+
+Server-authoritative (`src/race/sim.js`), data in `public/race/items.js`, wire format in
+`public/race/PROTOCOL.md`, client art in `public/race/weapons-fx.js`.
+
+**Two slots.** FIRE = the driver's built-in weapon (recharges on its cooldown). ITEM = one pickup from
+the item boxes. The HUD shows both (top centre, and on the ITEM / FIRE buttons), with the item's
+level as pips (2 cyan pips = level II, 3 gold pips = level III).
+
+**Level-up.** Drive through a box while holding an item: the box rolls as usual, with the held
+item 5x as likely; the same item again levels it up (max III), anything else leaves your item as
+it is. Every item has three levels; each level adds something clear (see `up` in items.js).
+
+**Odds by position.** The leader rolls weaker, defensive items (no missiles, EMPs or drones); the
+back of the pack rolls the catch-up items (missiles, turbos, drones, EMPs).
+
+**Protection.** For 2 s after another racer's hit lands on you (damage or a spin-out), no racer's
+item or weapon can damage or spin you (thin dashed halo on your car). Slows, EMP and gravity still
+work. Track damage still works.
+
+**Big hits** (Homing Missile II+, Sticky Bomb, the combo trap, the Gravity Well III crush) spin the
+car out on the server and blow up on screen. Any hit you deal or take freezes the picture for
+0.08 s (hit-stop, client only). A takedown shows a short callout: `NAME TOOK OUT NAME`.
+Reduce Flashing removes flashes and strobes (arming traps breathe slowly instead of blinking, the
+lock-on frame is steady); all sounds stay.
+
+### Every item and its counter
+
+| Item | What it does | Level II / III | Counter |
+| --- | --- | --- | --- |
+| Homing Missile | Locks on to the racer one place ahead (they get a LOCK-ON warning) | harder hit + spin-out / twin missiles, smaller dodge range | Press DRIFT when it is close (inside ~330 px; DRIFT NOW! shows): the lock breaks. A shield eats it. Ghost Mode. |
+| Rocket Volley | 3 rockets straight ahead | 4 / 5 rockets, more damage | Steer out of the line; shield. |
+| Oil Slick | Dropped behind; whoever drives in spins out | wider / widest, longer spin | It blinks while it arms (0.45 s): drive round it, jump it, shield, ghost. |
+| Spike Strip | Dropped behind; hurts and slows | wider, more hits | Blinks while arming: drive round, jump, shield, ghost. |
+| Shield | Blocks the next hit | lasts longer / blocks two hits | EMP pops it; a cheap rocket or bolt uses it up. |
+| EMP Blast | Shuts down nearby racers' items and weapons, cuts their boost, slows | bigger radius, longer | Keep your distance; a shield blocks it. |
+| Turbo | A burst of speed | longer / faster | EMP cuts a boost; traps behind the leader. |
+| Chain Lightning | Zaps the nearest racer in reach, then jumps racer to racer | reach + 1 jump / 4 jumps | Spread out from the pack; shield; ghost. |
+| Gravity Well | Lobbed onto the nearest racer in reach; pulls racers in and holds them | bigger pull / crushes at the centre | Drive round the rim or boost through; airborne and ghosts are immune. |
+| Ghost Mode | 3 s: pass through racers and every hit (no attacking while ghosted) | 3.6 s / 4.2 s | An EMP knocks a ghost back into the real world (and shuts it down). |
+| Sticky Bomb | Flies ahead, sticks to the first racer it touches; passes to whoever the carrier bumps; blows up when its fuse runs out | splash / bigger splash, shorter fuse | Bump someone to pass it on; Ghost Mode shakes it off; a shield eats the blast. |
+| Hunter Drone | Chases the racer ahead (LOCK-ON warning), hits and slows | faster / strikes twice | FIRE your weapon when it is close (FIRE TO SWAT!) to swat it; outrun it with a boost; shield; ghost. |
+| Built-in weapons | (one per driver) | | Sand Mines blink while arming; everything else: shield, ghost, distance. |
+
+**Combos.** An EMP-ed racer takes 1.5x missile damage (`COMBO!`). An oil slick and a spike strip
+dropped on top of each other merge into one bigger trap that spins, hurts and slows several racers.
+
+**Bots** use all 12 items (each with its own rule: missiles and drones from behind, traps with a
+racer close behind, lightning / gravity / sticky with someone in reach, ghost and shield against an
+incoming threat), steer into a rival to pass a sticky bomb, swat drones, and time a DRIFT press to
+dodge a missile sometimes (easy 15%, normal 35%, hard 60% of missiles).
+
+### Item balance (test/race-items-balance.test.js)
+
+Win rate "45-55%" is measured HEAD-TO-HEAD (the lead's definition): for each item, 300 1v1 bot
+races where racer A gets that item at every item box (holding it: it levels up) and racer B gets the
+normal position-weighted roll at the same boxes (the neutral baseline is the item pool itself, so
+the test asks "is this item worth about the same as an average item?"). Same car and bot level
+(normal) for both, all 4 tracks, all 6 drivers, 150 fixed seeds each raced twice with the two grid
+slots swapped. A's win rate must be within 45%-55% for every item. The full 3600 races run in the
+default `npm test` (about 20-30 s over 3 worker threads).
+
+Result (normal bots, 300 races per item, deterministic):
+
+| Item | A wins | Item | A wins | Item | A wins |
+| --- | --- | --- | --- | --- | --- |
+| Homing Missile | 54.3% | EMP Blast | 52.7% | Gravity Well | 47.0% |
+| Oil Slick | 53.0% | Turbo | 51.7% | Ghost Mode | 50.3% |
+| Shield | 53.3% | Spike Strip | 53.7% | Sticky Bomb | 51.7% |
+| Rocket Volley | 48.3% | Chain Lightning | 53.0% | Hunter Drone | 47.3% |
+
+Tuning notes: a spin-out is worth far more than damage in a race (a 0.3 s spin alone took the
+missile to 68%), so missiles only spin from level II and only briefly; any boost (including a
+"light" ghost boost) is strong because of the boost acceleration, so Ghost Mode has none.
