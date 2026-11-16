@@ -132,6 +132,14 @@ test('two phones in one race: your equipped underglow is in the other phone\'s r
   await B.page.goto(`/?race=1&room=${room}&lobby=3&laps=1&track=desert&driver=volt&bots=0`);
   await Promise.all([waitPhase(A.page, 'race', 60_000), waitPhase(B.page, 'race', 60_000)]);
   const aId = await A.page.evaluate(() => window.__race.rc.id);
+  // touch controls hold the throttle down, so both cars would drive off (and apart) while the
+  // checks below run, more so on a slow machine. A key press switches each phone to key
+  // controls (no key held = no throttle): wait until both cars sit still, next to each other.
+  for (const P of [A, B]) {
+    await P.page.keyboard.press('ArrowDown');
+    await expect.poll(() => P.page.evaluate(() => window.__race.session.ctrl.mode)).toBe('keys');
+  }
+  await expect.poll(() => B.page.evaluate(() => Math.max(...window.__race.session.view.cars.map((c) => Math.abs(c.spd || 0)))), { message: 'both cars stopped', timeout: 20_000 }).toBeLessThan(5);
   // B sees A's look from shared data: the roster row and the look it resolves to
   await expect.poll(() => B.page.evaluate((id) => window.__race.rc.roster.get(id)?.cos, aId)).toEqual([0, 'glow_lime', 0, 0, 0, 0]); // (SLOTS order: skin glow wheel flame trail horn)
   const look = await B.page.evaluate((id) => Promise.all([import('/ui/platform.js'), import('/race/garage.js')]).then(([P]) => {

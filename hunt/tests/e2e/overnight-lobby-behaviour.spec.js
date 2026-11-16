@@ -5,11 +5,16 @@ import { test, expect } from '@playwright/test';
 import { trackErrors } from './helpers.js';
 import { SCREENS } from './overnight-lobby-audit.lib.js';
 
-// set this client's progress (display only) the way a sync from the server would
-const setProgress = (page, patch) => page.evaluate(async (patch) => {
-  const A = await import('/account.js');
-  A.setUser({ ...A.ACC.user, progress: { ...A.progress(), ...patch } });
-}, patch);
+// set this client's progress (display only) the way a sync from the server would. It waits for
+// the guest account first: the lobby can show before that request answers (slow machines), and
+// its answer would then replace the patched progress.
+const setProgress = async (page, patch) => {
+  await page.waitForFunction(() => import('/account.js').then((A) => !!A.ACC.user));
+  await page.evaluate(async (patch) => {
+    const A = await import('/account.js');
+    A.setUser({ ...A.ACC.user, progress: { ...A.progress(), ...patch } });
+  }, patch);
+};
 const selected = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('hunt') || '{}').brawler || 'volt');
 
 test('every lobby screen: unique ids and never "undefined", "NaN" or "null" on screen', async ({ page }) => {

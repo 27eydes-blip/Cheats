@@ -89,6 +89,9 @@ test('a boot that takes over 10 seconds offers a reload, and still finishes by i
   await page.route('**/weapons.js', async (r) => { await held; await r.continue(); });
   await page.goto('/', { waitUntil: 'commit' });
   await expect(page.locator('#splash .sp-dots')).toBeVisible();
+  // the dots are parsed before the watchdog script runs: advancing the clock before it has armed
+  // its 10 s timer would start that timer late (polled with evaluate, which no fake timer delays)
+  await expect.poll(() => page.evaluate(() => !!window.__boot)).toBe(true);
   await page.clock.runFor(9000);
   await expect(page.locator('#splashFail')).toBeHidden();
   await page.clock.runFor(1500);

@@ -114,15 +114,16 @@ test('Settings: steering sensitivity, left-handed and joystick size reach the ne
   const F = new Fingers(P);
   await F.down(1, L.stick.cx, L.stick.cy);
   await F.move(1, L.stick.cx, L.stick.cy - L.stick.r * 0.3);
-  await page.waitForTimeout(150);
+  // the controls are read once a frame: wait for a frame that has seen the thumb (slow machines
+  // can go more than 150 ms between frames)
+  await expect.poll(() => page.evaluate(() => window.__race.input().out.hm)).toBeGreaterThan(0);
   const inp = await page.evaluate(() => window.__race.input());
   expect(inp.stickHeld).toBe(true);
   expect(inp.hm).toBeCloseTo(0.4, 2);
   expect(inp.out.hm).toBeCloseTo(0.56, 2);
   expect(inp.out.ha).toBeCloseTo(-Math.PI / 2, 2); // up on screen = up in the world
   await F.up(1);
-  await page.waitForTimeout(100);
-  expect(await page.evaluate(() => window.__race.input().out.hm)).toBe(0);
+  await expect.poll(() => page.evaluate(() => window.__race.input().out.hm), { message: 'letting go of the stick stops steering' }).toBe(0);
   await creditVisible(page);
   expect(errs).toEqual([]);
   await P.ctx.close();
