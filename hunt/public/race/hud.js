@@ -5,8 +5,8 @@
 // and the steering arrow on your car), the touch buttons and RESET. Safe-area aware.
 import { FLAG } from './protocol.js';
 import { DRIVERS, driftTier } from './physics.js';
-import { BASE_LOOKS } from './looks.js';
-import { WEAPONS, ITEMS, ITEM_IDS, itemStat } from './items.js';
+import { BASE_LOOKS } from './looks2.js'; // (every car's signature neon, the unlockable ones too)
+import { WEAPONS, ITEMS, ITEM_IDS, itemStat, weaponCd } from './items.js';
 import { levelPips } from './weapons-fx.js';
 import { SETTINGS, pulse } from '../settings.js';
 import { INK } from './cars.js';
@@ -75,9 +75,10 @@ export function itemIcon(g, id, x, y, s) {
   g.restore();
 }
 // the driver's weapon icon
+const WEAPON_ICON = { arc: 'volt', pulse: 'brick', rail: 'wisp', mine: 'dune', turret: 'rook', blink: 'flicker' };
 export function weaponIcon(g, id, x, y, s, col) {
   g.save(); g.translate(x, y); g.scale(s / 40, s / 40); g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 4;
-  switch (id) {
+  switch (WEAPON_ICON[(WEAPONS[id] || WEAPONS.volt).kind] || id) { // (the unlockable cars: the icon of their weapon's kind)
     case 'volt': g.beginPath(); g.moveTo(-14, -4); g.lineTo(-6, 6); g.lineTo(0, -6); g.lineTo(6, 6); g.lineTo(14, -4); g.stroke(); break;
     case 'brick': for (const r of [6, 12, 17]) { g.beginPath(); g.arc(0, 0, r, -1, 1); g.stroke(); } break;
     case 'wisp': g.beginPath(); g.moveTo(-16, 0); g.lineTo(16, 0); g.stroke(); g.beginPath(); g.moveTo(10, -6); g.lineTo(17, 0); g.lineTo(10, 6); g.stroke(); break;
@@ -145,7 +146,7 @@ export class Hud {
       if (ctrl.mode !== 'touch') label(g, 'K', ix + slot - 6 * u, iy + slot - 6 * u, Math.round(11 * u), '#c9b8ff', 'center', S.dpr);
       // weapon with a cooldown sweep
       const wid = rc.myDriver(), w = WEAPONS[wid], wx = cx + 6 * u + slot / 2, wy = Tp + slot / 2, r = slot / 2;
-      const cd = me.em > 0 ? 1 : w ? clamp(me.wc / w.cd, 0, 1) : 0;
+      const cd = me.em > 0 ? 1 : w ? clamp(me.wc / weaponCd(rc.myDriver(), DRIVERS[rc.myDriver()]), 0, 1) : 0;
       g.beginPath(); g.arc(wx, wy, r, 0, TAU); g.fillStyle = cd > 0 ? 'rgba(27,16,51,0.85)' : 'rgba(255,210,63,0.95)'; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
       if (cd > 0) { g.beginPath(); g.moveTo(wx, wy); g.arc(wx, wy, r - 3, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - cd)); g.closePath(); g.fillStyle = 'rgba(255,210,63,0.55)'; g.fill(); }
       weaponIcon(g, wid, wx, wy, slot * 0.6, cd > 0 ? '#c9b8ff' : INK);
@@ -255,7 +256,7 @@ export class Hud {
     btn(b.drift, 'DRIFT', rc.car && rc.car.drift ? TIER_COL[tier] : '#ffd23f');
     btn(b.brake, 'BRAKE', '#ff5f5f');
     // FIRE: weapon icon + cooldown sweep
-    const w = WEAPONS[rc.myDriver()], cd = me ? (me.em > 0 ? 1 : w ? clamp(me.wc / w.cd, 0, 1) : 0) : 0;
+    const w = WEAPONS[rc.myDriver()], cd = me ? (me.em > 0 ? 1 : w ? clamp(me.wc / weaponCd(rc.myDriver(), DRIVERS[rc.myDriver()]), 0, 1) : 0) : 0;
     btn(b.fire, 'FIRE', cd > 0 ? '#8a7aa8' : '#ff9f43', () => {
       weaponIcon(g, rc.myDriver(), b.fire.x, b.fire.y - b.fire.r * 0.18, b.fire.r * 0.8, cd > 0 ? '#8a7aa8' : '#ff9f43');
       label(g, 'FIRE', b.fire.x, b.fire.y + b.fire.r * 0.42, Math.round(Math.max(10, b.fire.r * 0.3)), cd > 0 ? '#8a7aa8' : '#ffffff', 'center', S.dpr);

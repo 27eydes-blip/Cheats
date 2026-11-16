@@ -36,14 +36,45 @@ export const SURF = {
 //   top: px/s   accel: px/s^2   handling: rad/s at speed   grip: sideways bleed /s   armor: HP
 //   mass: car-to-car shove weight   rough: off-road penalty scale (1 = normal, lower = shrugs it off)
 export const DRIVERS = {
-  volt: { name: 'Volt', car: 'Static Comet', role: 'All-rounder', top: 800, accel: 640, handling: 3.05, grip: 8.2, armor: 100, mass: 1.0, rough: 1, color: '#ffd23f', accent: '#3a86ff' },
-  brick: { name: 'Brick', car: 'Iron Mule', role: 'Heavy', top: 790, accel: 580, handling: 2.85, grip: 8.8, armor: 150, mass: 1.55, rough: 0.85, color: '#ff7b39', accent: '#6b4226' },
-  wisp: { name: 'Wisp', car: 'Ghostline', role: 'Speed', top: 840, accel: 590, handling: 2.98, grip: 7.8, armor: 80, mass: 0.8, rough: 1.1, color: '#5ef2c6', accent: '#8f5cff' },
-  dune: { name: 'Dune', car: 'Dust Strider', role: 'Off-road', top: 795, accel: 610, handling: 2.95, grip: 8.4, armor: 110, mass: 1.05, rough: 0.5, color: '#e8b04a', accent: '#2a9d8f' },
-  rook: { name: 'Rook', car: 'Bastion', role: 'Defender', top: 792, accel: 585, handling: 2.95, grip: 8.4, armor: 130, mass: 1.3, rough: 0.9, color: '#7fa34a', accent: '#ff8c1a' },
-  flicker: { name: 'Flicker', car: 'Quickstitch', role: 'Handling', top: 805, accel: 700, handling: 3.35, grip: 7.6, armor: 85, mass: 0.85, rough: 1, color: '#c04dff', accent: '#ff5fa2' },
+  volt: { name: 'Volt', car: 'Static Comet', role: 'All-rounder', top: 812, accel: 640, handling: 3.05, grip: 8.2, armor: 100, mass: 1.0, rough: 1, color: '#ffd23f', accent: '#3a86ff' },
+  brick: { name: 'Brick', car: 'Iron Mule', role: 'Heavy', top: 805, accel: 580, handling: 2.85, grip: 8.8, armor: 150, mass: 1.55, rough: 0.85, color: '#ff7b39', accent: '#6b4226' },
+  wisp: { name: 'Wisp', car: 'Ghostline', role: 'Speed', top: 807, accel: 590, handling: 2.98, grip: 7.8, armor: 80, mass: 0.8, rough: 1.1, color: '#5ef2c6', accent: '#8f5cff' },
+  dune: { name: 'Dune', car: 'Dust Strider', role: 'Off-road', top: 816, accel: 610, handling: 2.95, grip: 8.4, armor: 110, mass: 1.05, rough: 0.5, color: '#e8b04a', accent: '#2a9d8f' },
+  rook: { name: 'Rook', car: 'Bastion', role: 'Defender', top: 827, accel: 585, handling: 2.95, grip: 8.4, armor: 130, mass: 1.3, rough: 0.9, color: '#7fa34a', accent: '#ff8c1a' },
+  flicker: { name: 'Flicker', car: 'Quickstitch', role: 'Handling', top: 828, accel: 700, handling: 3.35, grip: 7.6, armor: 85, mass: 0.85, rough: 1, color: '#c04dff', accent: '#ff5fa2' },
 };
-export const DRIVER_IDS = Object.keys(DRIVERS);
+export const DRIVER_IDS = Object.keys(DRIVERS); // the six starter cars (bots drive these)
+
+// The 8 unlockable cars (Oblivion GP Part 4, unlocks: public/race/unlocks.js). Same stat budget as
+// the six above (head-to-head 1v1 bot races, every car 45-55%: test/race-cars-balance.test.js),
+// each with ONE small passive perk, read by stepCar (here) or the sim:
+//   dcMul     drift sparks charge this much faster (VOIDRUNNER)
+//   boostLen  every boost (pads, mini-turbos, Turbo, bursts) lasts this much longer (SOLAR FANG)
+//   iceGrip   ice drives like road and oil never spins it (FROSTBYTE)
+//   magnet    item boxes within this many px fly to the car (GRAVITON)
+//   phase     once per race, the first rival hit passes straight through (PHANTOM VX)
+//   wcdMul    the built-in weapon recharges this much faster (HELIX: 0.75 = 25% faster)
+//   REDLINE ZERO: the top speed leader that turns wide; OBLIVION PRIME: the best all-round stats.
+// hit: the hitbox as a capsule along the car, total length l x width w (px), sized to the art
+// (the six starters are the old round 2 x CAR_R). Walls use CAR_R for every car (soft guard walls).
+export const NEW_DRIVERS = {
+  void: { name: 'Voidrunner', car: 'Voidrunner', role: 'Drifter', top: 783, accel: 630, handling: 3.12, grip: 7.9, armor: 88, mass: 0.9, rough: 1, color: '#8a3dff', accent: '#dcbcff', perk: 'drift', dcMul: 1.2, hit: { l: 54, w: 36 } },
+  fang: { name: 'Solar Fang', car: 'Solar Fang', role: 'Booster', top: 803, accel: 620, handling: 3.0, grip: 8.2, armor: 100, mass: 1.0, rough: 1, color: '#ff8c14', accent: '#ffe27a', perk: 'boost', boostLen: 1.25, hit: { l: 54, w: 40 } },
+  frost: { name: 'Frostbyte', car: 'Frostbyte', role: 'Sure-footed', top: 810, accel: 615, handling: 3.0, grip: 8.4, armor: 105, mass: 1.05, rough: 0.9, color: '#56d6ff', accent: '#eafcff', perk: 'grip', iceGrip: 1, hit: { l: 52, w: 34 } },
+  grav: { name: 'Graviton', car: 'Graviton', role: 'Collector', top: 825, accel: 612, handling: 3.05, grip: 8.0, armor: 108, mass: 1.1, rough: 0.6, color: '#2bffb0', accent: '#d0fff0', perk: 'magnet', magnet: 120, hit: { l: 46, w: 46 } },
+  vx: { name: 'Phantom VX', car: 'Phantom VX', role: 'Phantom', top: 814, accel: 628, handling: 3.05, grip: 8.0, armor: 84, mass: 0.85, rough: 1, color: '#a9b6ff', accent: '#ffffff', perk: 'phase', phase: 1, hit: { l: 56, w: 36 } },
+  redline: { name: 'Redline Zero', car: 'Redline Zero', role: 'Top speed', top: 846, accel: 500, handling: 2.1, grip: 7.6, armor: 90, mass: 0.95, rough: 1.05, color: '#ff2438', accent: '#ffffff', perk: 'redline', hit: { l: 70, w: 28 } },
+  helix: { name: 'Helix', car: 'Helix', role: 'Gunner', top: 794, accel: 620, handling: 3.04, grip: 8.2, armor: 104, mass: 1.05, rough: 1, color: '#ff4fd8', accent: '#46f4ff', perk: 'recharge', wcdMul: 0.75, hit: { l: 52, w: 42 } },
+  prime: { name: 'Oblivion Prime', car: 'Oblivion Prime', role: 'All-rounder+', top: 826, accel: 690, handling: 3.3, grip: 7.8, armor: 64, mass: 0.8, rough: 1, color: '#e6e2ff', accent: '#ff5ad1', perk: 'prime', hit: { l: 54, w: 40 } },
+};
+export const NEW_DRIVER_IDS = Object.keys(NEW_DRIVERS);
+Object.assign(DRIVERS, NEW_DRIVERS);
+export const ALL_DRIVER_IDS = [...DRIVER_IDS, ...NEW_DRIVER_IDS]; // every car, starters first
+// hitbox capsule per driver: hr = radius, hs = half the straight part (0 = a circle of CAR_R)
+for (const d of ALL_DRIVER_IDS) {
+  const D = DRIVERS[d], h = D.hit;
+  D.hr = h ? h.w / 2 : CAR_R; D.hs = h ? Math.max(0, h.l / 2 - h.w / 2) : 0;
+}
 
 // drifting
 export const DRIFT_MIN_SPEED = 330; // need this much speed to start a drift
@@ -75,9 +106,10 @@ export function newCar(x = 0, y = 0, a = 0) {
 export const driftTier = (dc) => (dc >= DRIFT_TIERS[2] ? 3 : dc >= DRIFT_TIERS[1] ? 2 : dc >= DRIFT_TIERS[0] ? 1 : 0);
 
 // stack a boost: the longer and the stronger of the two win
-export function addBoost(car, b) {
+// (st: the driver: SOLAR FANG's boosts last st.boostLen times as long)
+export function addBoost(car, b, st = null) {
   car.boostP = car.boostT > 0 ? Math.max(car.boostP, b.p) : b.p;
-  car.boostT = Math.max(car.boostT, b.t);
+  car.boostT = Math.max(car.boostT, b.t * ((st && st.boostLen) || 1));
 }
 
 // sanitize a client input (untrusted) into {st, th, dr, ha, hm}; ha null = no heading steering
@@ -104,7 +136,8 @@ export function stepCar(car, inp, st, T, dt = DT, ev = null) {
     return car;
   }
   T.probe(car.x, car.y, CAR_R, PR); // the surface under us right now (no hidden state)
-  const S = SURF[PR.surf] || SURF.road;
+  let S = SURF[PR.surf] || SURF.road;
+  if (S === SURF.ice && st.iceGrip) S = SURF.road; // FROSTBYTE: ice drives like road
   const rough = S.rough ? st.rough : 1; // off-road penalty scaled by the driver
   const topMul = 1 - (1 - S.top) * rough, accMul = 1 - (1 - S.accel) * rough;
   let max = st.top * topMul * (car.slowT > 0 ? SLOW_MUL : 1);
@@ -135,7 +168,7 @@ export function stepCar(car, inp, st, T, dt = DT, ev = null) {
       const early = car.dg < DRIFT_GRACE;
       if (!inp.dr || (vf < DRIFT_KEEP_SPEED && !early)) {
         const tier = vf >= DRIFT_KEEP_SPEED ? driftTier(car.dc) : 0;
-        if (tier) { addBoost(car, MINI_TURBO[tier]); if (ev) ev.turbo = tier; }
+        if (tier) { addBoost(car, MINI_TURBO[tier], st); if (ev) ev.turbo = tier; }
         car.drift = 0; car.dc = 0; car.dg = 0;
       } else {
         // grace: a stick corrected hard the other way right after the start flips the drift
@@ -147,7 +180,7 @@ export function stepCar(car, inp, st, T, dt = DT, ev = null) {
         else rel = turn * (sd >= 0 ? DRIFT_BASE + (DRIFT_TIGHT - DRIFT_BASE) * sd : DRIFT_BASE + (DRIFT_BASE - DRIFT_WIDE) * sd);
         // the slide blends in from normal steering
         car.a = wrap(car.a + (car.drift * rel * ramp + s * turn * (1 - ramp)) * dt);
-        car.dc += dt * (0.75 + 0.5 * (head ? Math.min(1, inp.hm) : Math.abs(sd)));
+        car.dc += dt * (0.75 + 0.5 * (head ? Math.min(1, inp.hm) : Math.abs(sd))) * (st.dcMul || 1);
         grip *= 1 - 0.4 * ramp; drag = 0.12 * ramp;
       }
     }
@@ -196,7 +229,7 @@ export function stepCar(car, inp, st, T, dt = DT, ev = null) {
   }
   // ground effects of where we ended up
   if (car.airT <= 0) {
-    if (PR.pad) { addBoost(car, BOOSTS.pad); if (ev) ev.pad = 1; }
+    if (PR.pad) { addBoost(car, BOOSTS.pad, st); if (ev) ev.pad = 1; }
     if (PR.ramp) {
       const fv = car.vx * hx + car.vy * hy;
       if (fv > 200) { car.airT = clamp(fv * AIR_PER_SPEED * (PR.ramp.pow || 1), 0.25, 1.4); if (ev) ev.launch = 1; }
@@ -241,9 +274,33 @@ function move(car, T, dt, ev) {
   car.surf = PR.surf; car.pc = PR.c; car.ps = PR.s; car.pd = PR.d;
 }
 
+// closest points of two car hitbox capsules (axis segments): writes CP = {ax, ay, bx, by}
+const CP = { ax: 0, ay: 0, bx: 0, by: 0 };
+export function capsulePoints(a, ha, b, hb, out = CP) {
+  const ux = Math.cos(a.a) * ha, uy = Math.sin(a.a) * ha, vx = Math.cos(b.a) * hb, vy = Math.sin(b.a) * hb;
+  // segments a + s*u, b + t*v with s, t in [-1, 1]
+  const rx = a.x - b.x, ry = a.y - b.y, A = ux * ux + uy * uy, E = vx * vx + vy * vy, F = vx * rx + vy * ry;
+  let s = 0, t = 0;
+  if (A < 1e-9 && E < 1e-9) { s = t = 0; } else if (A < 1e-9) { t = clamp(F / E, -1, 1); } else {
+    const C = ux * rx + uy * ry;
+    if (E < 1e-9) s = clamp(-C / A, -1, 1);
+    else {
+      const B = ux * vx + uy * vy, den = A * E - B * B;
+      s = den > 1e-9 ? clamp((B * F - C * E) / den, -1, 1) : 0;
+      t = clamp((B * s + F) / E, -1, 1);
+      s = clamp((B * t - C) / A, -1, 1);
+    }
+  }
+  out.ax = a.x + ux * s; out.ay = a.y + uy * s; out.bx = b.x + vx * t; out.by = b.y + vy * t;
+  return out;
+}
 // car-to-car bump: push apart by mass, bounce along the contact normal. Returns impact speed.
-export function collideCars(a, b, ma, mb) {
-  const dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy, R = CAR_R * 2;
+// sa / sb: the drivers (hitbox capsules hr, hs); without them both are circles of CAR_R.
+export function collideCars(a, b, ma, mb, sa = null, sb = null) {
+  const ha = sa ? sa.hs : 0, hb = sb ? sb.hs : 0, R = (sa ? sa.hr : CAR_R) + (sb ? sb.hr : CAR_R);
+  let dx = b.x - a.x, dy = b.y - a.y;
+  if (ha || hb) { const P = capsulePoints(a, ha, b, hb); dx = P.bx - P.ax; dy = P.by - P.ay; }
+  const d2 = dx * dx + dy * dy;
   if (d2 >= R * R || d2 < 1e-9) return 0;
   const d = Math.sqrt(d2), nx = dx / d, ny = dy / d, pen = R - d, wa = mb / (ma + mb), wb = ma / (ma + mb);
   a.x -= nx * pen * wa; a.y -= ny * pen * wa; b.x += nx * pen * wb; b.y += ny * pen * wb;

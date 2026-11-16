@@ -7,22 +7,22 @@
 // The top-level numbers are level 1; `lv[1]` / `lv[2]` override them for levels 2 and 3 (grab the
 // same item again while holding it: it levels up, up to 3). `up` says what each level adds.
 export const ITEMS = {
-  missile: { name: 'Homing Missile', desc: 'Locks on to the racer ahead. Drift at the last moment to shake it.', dmg: 24, speed: 1350, turn: 3.4, life: 4, spin: 0, dodgeR: 330, n: 1,
-    lv: [null, { dmg: 33, turn: 3.9, spin: 0.1, up: 'Hits harder, turns tighter, spins them' }, { dmg: 40, turn: 4.4, spin: 0.25, dodgeR: 250, n: 2, up: 'Twin missiles, harder to shake' }] },
+  missile: { name: 'Homing Missile', desc: 'Locks on to the racer ahead. Drift at the last moment to shake it.', dmg: 18, speed: 1350, turn: 2.7, life: 4, spin: 0, dodgeR: 330, n: 1,
+    lv: [null, { dmg: 25, turn: 3.1, spin: 0.05, up: 'Hits harder, turns tighter, spins them' }, { dmg: 30, turn: 3.5, spin: 0.12, dodgeR: 250, n: 2, up: 'Twin missiles, harder to shake' }] },
   oil: { name: 'Oil Slick', desc: 'Drop it behind you. Racers who hit it spin out.', r: 48, life: 20, spin: 0.5, arm: 0.45,
     lv: [null, { r: 60, spin: 0.58, up: 'Wider slick' }, { r: 72, spin: 0.66, up: 'Huge slick, longer spin' }] },
-  shield: { name: 'Shield', desc: 'Blocks the next hit.', t: 2.5, hits: 1,
-    lv: [null, { t: 3.5, up: 'Lasts longer' }, { t: 4.5, hits: 2, up: 'Blocks two hits' }] },
+  shield: { name: 'Shield', desc: 'Blocks the next hit.', t: 2, hits: 1,
+    lv: [null, { t: 2.8, up: 'Lasts longer' }, { t: 3.6, hits: 2, up: 'Blocks two hits' }] },
   rockets: { name: 'Rocket Volley', desc: 'Three rockets straight ahead.', n: 3, spread: 0.07, speed: 1700, dmg: 28, life: 1.1,
     lv: [null, { n: 4, dmg: 32, spread: 0.075, up: 'Four rockets' }, { n: 5, dmg: 36, spread: 0.08, up: 'Five rockets, more damage' }] },
-  emp: { name: 'EMP Blast', desc: 'Shuts down nearby racers\' items and weapons, cuts their boost and slows them.', r: 460, t: 2.5, slow: 0.5,
-    lv: [null, { r: 560, t: 3, slow: 0.75, up: 'Bigger blast' }, { r: 660, t: 3.5, slow: 0.9, up: 'Huge blast, longer shutdown' }] },
-  turbo: { name: 'Turbo', desc: 'A big burst of speed.', t: 0.7, p: 1.3,
-    lv: [null, { t: 0.9, p: 1.33, up: 'Longer burst' }, { t: 1.1, p: 1.36, up: 'Longest, fastest burst' }] },
-  spikes: { name: 'Spike Strip', desc: 'A strip of spikes behind you. Hurts and slows.', half: 78, life: 15, dmg: 20, slow: 1.3, hits: 3, arm: 0.45,
-    lv: [null, { half: 98, dmg: 26, slow: 1.6, hits: 4, up: 'Wider strip' }, { half: 118, dmg: 30, slow: 1.9, hits: 5, up: 'Widest strip, longer slow' }] },
-  lightning: { name: 'Chain Lightning', desc: 'Zaps the nearest racer, then jumps to the racers near them.', range: 560, chain: 420, jumps: 2, dmg: 18, fall: 0.8, slow: 0.25,
-    lv: [null, { range: 640, jumps: 3, dmg: 21, slow: 0.3, up: 'Longer reach, one more jump' }, { range: 720, jumps: 4, dmg: 24, slow: 0.4, up: 'Longest reach, four jumps' }] },
+  emp: { name: 'EMP Blast', desc: 'Shuts down nearby racers\' items and weapons, cuts their boost and slows them.', r: 322, t: 1.25, slow: 0.3,
+    lv: [null, { r: 392, t: 1.5, slow: 0.45, up: 'Bigger blast' }, { r: 462, t: 1.75, slow: 0.54, up: 'Huge blast, longer shutdown' }] },
+  turbo: { name: 'Turbo', desc: 'A big burst of speed.', t: 0.49, p: 1.3,
+    lv: [null, { t: 0.63, p: 1.33, up: 'Longer burst' }, { t: 0.77, p: 1.36, up: 'Longest, fastest burst' }] },
+  spikes: { name: 'Spike Strip', desc: 'A strip of spikes behind you. Hurts and slows.', half: 78, life: 15, dmg: 17, slow: 1.1, hits: 3, arm: 0.45,
+    lv: [null, { half: 98, dmg: 22, slow: 1.4, hits: 4, up: 'Wider strip' }, { half: 118, dmg: 26, slow: 1.6, hits: 5, up: 'Widest strip, longer slow' }] },
+  lightning: { name: 'Chain Lightning', desc: 'Zaps the nearest racer, then jumps to the racers near them.', range: 476, chain: 420, jumps: 2, dmg: 11, fall: 0.8, slow: 0.25,
+    lv: [null, { range: 544, jumps: 3, dmg: 13, slow: 0.3, up: 'Longer reach, one more jump' }, { range: 612, jumps: 4, dmg: 14, slow: 0.4, up: 'Longest reach, four jumps' }] },
   gravity: { name: 'Gravity Well', desc: 'Throws a well ahead that pulls nearby racers to its centre.', r: 300, life: 3, pull: 650, drag: 1, throwT: 0.4, throwV: 900, reach: 900, crush: 0,
     lv: [null, { r: 360, pull: 700, life: 3.5, up: 'Bigger pull' }, { r: 420, pull: 800, life: 4, crush: 22, up: 'Crushes racers at the centre' }] },
   ghost: { name: 'Ghost Mode', desc: 'Pass through racers and hits for 3 seconds, a little lighter and faster (no attacking while ghosted).', t: 3,
@@ -82,14 +82,29 @@ export function rollItem(place, n, r, battle = false, held = null) {
 }
 
 // Built-in weapons, one per driver, on a cooldown (seconds). Fire = the FIRE button.
+// kind: how it works (the sim and the client effects go by kind): arc (zap the nearest racer in
+// front), pulse (a ring around you; knock < 0 drags racers in), rail (a beam ahead), mine (dropped
+// behind, up to max), turret (dropped, fires at racers near it), blink (jump ahead, slicing).
+// The 8 unlockable cars use variants of these six kinds with their own numbers.
 export const WEAPONS = {
-  volt: { name: 'Tesla Arc', desc: 'Zaps the nearest racer in front: damage and a short slow.', cd: 4, range: 340, cone: 0.75, dmg: 35, slow: 0.8 },
-  brick: { name: 'Shock Bumper', desc: 'A shockwave that shoves and hurts everyone close.', cd: 6, r: 190, dmg: 30, knock: 520 },
-  wisp: { name: 'Rail Lance', desc: 'A long-range beam straight ahead.', cd: 6, range: 1150, width: 26, dmg: 55 },
-  dune: { name: 'Sand Mines', desc: 'Drops a mine behind you (up to 3).', cd: 4.5, dmg: 40, slow: 1.3, max: 3, life: 25, r: 40, arm: 0.6 },
-  rook: { name: 'Sentry Turret', desc: 'Drops a turret that fires at racers near it.', cd: 9, life: 4, range: 420, rate: 0.8, dmg: 16, speed: 1100 },
-  flicker: { name: 'Blink Slash', desc: 'Blinks forward, slicing anyone in the way.', cd: 6, dist: 260, width: 46, dmg: 40 },
+  volt: { name: 'Tesla Arc', kind: 'arc', desc: 'Zaps the nearest racer in front: damage and a short slow.', cd: 4, range: 340, cone: 0.75, dmg: 35, slow: 0.8 },
+  brick: { name: 'Shock Bumper', kind: 'pulse', desc: 'A shockwave that shoves and hurts everyone close.', cd: 6, r: 190, dmg: 30, knock: 520 },
+  wisp: { name: 'Rail Lance', kind: 'rail', desc: 'A long-range beam straight ahead.', cd: 6, range: 760, width: 26, dmg: 40 },
+  dune: { name: 'Sand Mines', kind: 'mine', desc: 'Drops a mine behind you (up to 3).', cd: 4.5, dmg: 40, slow: 1.3, max: 3, life: 25, r: 40, arm: 0.6 },
+  rook: { name: 'Sentry Turret', kind: 'turret', desc: 'Drops a turret that fires at racers near it.', cd: 9, life: 4, range: 420, rate: 0.8, dmg: 20, speed: 1100 },
+  flicker: { name: 'Blink Slash', kind: 'blink', desc: 'Blinks forward, slicing anyone in the way.', cd: 6, dist: 260, width: 46, dmg: 40 },
+  // the unlockable cars
+  void: { name: 'Void Lance', kind: 'rail', desc: 'A dark beam straight ahead.', cd: 6, range: 950, width: 24, dmg: 40 },
+  fang: { name: 'Solar Flare', kind: 'pulse', desc: 'A burst of sunfire that shoves and burns everyone close.', cd: 6, r: 200, dmg: 30, knock: 480 },
+  frost: { name: 'Ice Mines', kind: 'mine', desc: 'Drops an ice mine behind you (up to 3): less damage, a long freeze.', cd: 4.5, dmg: 30, slow: 1.8, max: 3, life: 25, r: 40, arm: 0.6 },
+  grav: { name: 'Orbit Sentry', kind: 'turret', desc: 'Drops a sentry that fires at racers near it.', cd: 9, life: 4, range: 420, rate: 0.8, dmg: 19, speed: 1100 },
+  vx: { name: 'Phase Slash', kind: 'blink', desc: 'Phases forward, slicing anyone in the way.', cd: 6, dist: 250, width: 44, dmg: 38 },
+  redline: { name: 'Redline Rail', kind: 'rail', desc: 'The longest beam in the game, straight ahead.', cd: 7, range: 1350, width: 22, dmg: 42 },
+  helix: { name: 'Helix Arc', kind: 'arc', desc: 'Zaps the nearest racer in front: damage and a short slow.', cd: 4, range: 330, cone: 0.75, dmg: 30, slow: 0.7 },
+  prime: { name: 'Event Horizon', kind: 'pulse', desc: 'A pulse that drags everyone close toward you and hurts them.', cd: 5.5, r: 210, dmg: 34, knock: -150 },
 };
+// the weapon's real cooldown for a driver (HELIX recharges 25% faster: its driver's wcdMul)
+export const weaponCd = (id, st = null) => (WEAPONS[id] || WEAPONS.volt).cd * ((st && st.wcdMul) || 1);
 
 // Combat rules shared by the server and the client (timings the HUD shows).
 export const COMBAT = {

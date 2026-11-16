@@ -1,10 +1,10 @@
 // Hunt Racers authoritative race simulation (one per RaceRoom Durable Object), 30 ticks/s.
 // Phases: 'lobby' (waiting for racers) -> 'play' (time < 0 is the grid countdown) -> 'end'.
 // Every car is driven by public/race/physics.js stepCar(), the same code the client predicts with.
-import { DT, TICK_RATE, CAR_R, DRIVERS, DRIVER_IDS, newCar, stepCar, collideCars, addBoost, BOOSTS, cleanInput, cleanSens, packState, driftTier, SURF } from '../../public/race/physics.js';
+import { DT, TICK_RATE, CAR_R, DRIVERS, DRIVER_IDS, newCar, stepCar, collideCars, capsulePoints, addBoost, BOOSTS, cleanInput, cleanSens, packState, driftTier, SURF } from '../../public/race/physics.js';
 import { getTrack, TRACK_IDS } from '../../public/race/tracks.js';
 import { pointAt, hwAt, nearestS } from '../../public/race/trackgeom.js';
-import { ITEMS, ITEM_IDS, rollItem, WEAPONS, itemStat, MAX_LEVEL, COMBAT } from '../../public/race/items.js';
+import { ITEMS, ITEM_IDS, rollItem, WEAPONS, weaponCd, itemStat, MAX_LEVEL, COMBAT } from '../../public/race/items.js';
 import { FLAG, ENT, COUNTDOWN, RESPAWN_TIME, RACE_MODES, TUTORIAL_MODE, TUT_STEPS, RESET_COOLDOWN, STUCK_NUDGE, STUCK_RESET, ELIM, elimInterval, EMOTES } from '../../public/race/protocol.js';
 import { BOT_NAMES, rng } from '../../public/shared.js';
 import { botInput, levelForTrophies } from './bots.js';
@@ -42,6 +42,30 @@ const distToSeg = (px, py, x0, y0, x1, y1) => {
 };
 
 const IDLE = { st: 0, th: 0, dr: 0 };
+// HITBOXES (sized to each car's art, see DRIVERS.hit): every hit test below measures from the car's
+// capsule axis and subtracts its radius, then adds back CAR_R, so `hd(q, x, y) < CAR_R + r` reads as
+// it always did and the six starter cars (circles of CAR_R) get exactly the old numbers.
+const hd = (q, x, y) => {
+  const st = q.st, c = q.car;
+  if (!st.hs) { const d = Math.hypot(c.x - x, c.y - y); return st.hr === CAR_R ? d : d - st.hr + CAR_R; } // (exactly the old number)
+  const ux = Math.cos(c.a) * st.hs, uy = Math.sin(c.a) * st.hs;
+  return distToSeg(x, y, c.x - ux, c.y - uy, c.x + ux, c.y + uy) - st.hr + CAR_R;
+};
+// the same for a segment (beams, blinks, spike strips): the distance from the car's capsule to it
+const SP = { a: 0, x: 0, y: 0 }, CQ = { ax: 0, ay: 0, bx: 0, by: 0 };
+const sd = (q, x0, y0, x1, y1) => {
+  const st = q.st, c = q.car;
+  if (!st.hs) { const d = distToSeg(c.x, c.y, x0, y0, x1, y1); return st.hr === CAR_R ? d : d - st.hr + CAR_R; }
+  SP.x = (x0 + x1) / 2; SP.y = (y0 + y1) / 2; SP.a = Math.atan2(y1 - y0, x1 - x0);
+  const P = capsulePoints(c, st.hs, SP, Math.hypot(x1 - x0, y1 - y0) / 2, CQ);
+  return Math.hypot(P.bx - P.ax, P.by - P.ay) - st.hr + CAR_R;
+};
+// gap between two cars' hitboxes, plus 2 CAR_R (so `cd(a, b) < CAR_R * 2 + 10` reads as before)
+const cd2 = (a, b) => {
+  if (!a.st.hs && !b.st.hs) { const d = Math.hypot(a.car.x - b.car.x, a.car.y - b.car.y); return a.st.hr === CAR_R && b.st.hr === CAR_R ? d : d - a.st.hr - b.st.hr + 2 * CAR_R; }
+  const P = capsulePoints(a.car, a.st.hs, b.car, b.st.hs, CQ);
+  return Math.hypot(P.bx - P.ax, P.by - P.ay) - a.st.hr - b.st.hr + 2 * CAR_R;
+};
 
 export class RaceSim {
   // o: { mode, track, seed, fillBots, lobbyTime, hostStart, send(id, msg), hooks: {finished(rows)}, botLevel }
@@ -105,6 +129,8 @@ export class RaceSim {
       il: 0, protT: 0, phaseT: 0, shieldN: 0, drAt: -9, drAt0: -9, drPrev: 0, dodges: 0, combos: 0,
       // elimination: outAt race time knocked out, outBy 'cut' | 'hole' | 'left', bursts takedown boosts, emoAt last emote
       outAt: null, outBy: null, bursts: 0, emoAt: -1e9, emo: -1,
+      // perks: phased = PHANTOM VX's one pass-through used this race; perkN = times a perk fired (tests)
+      phased: false, perkN: 0,
     };
     this.players.set(id, p);
     return p;
@@ -135,8 +161,23 @@ export class RaceSim {
   }
   pick(p, driver) {
     if (this.phase !== 'lobby' || !DRIVERS[driver]) return;
+    // UNLOCKS: an unlockable car only when the account says it is unlocked (p.cars, set by the room)
+    if (!DRIVER_IDS.includes(driver) && !(p.cars && p.cars.has(driver))) { this.send(p.id, { t: 'car', driver: p.driver, want: driver, reason: 'locked' }); return; }
     p.driver = driver; p.st = DRIVERS[driver]; p.hp = p.maxHp = p.st.armor;
     this.broadcastLobby();
+  }
+  // UNLOCKS: this racer may not drive their car (locked, or unverified when the race starts): put
+  // them in `to` (the account's default car) and tell them ({t:'car', driver, want, reason}).
+  // ws: the socket to tell when it is not attached yet (a guest, right after the welcome)
+  swapCar(p, to, ws = null) {
+    const want = p.driver;
+    if (!DRIVERS[to]) to = DRIVER_IDS[0];
+    p.carOk = true;
+    if (want === to) return;
+    p.driver = to; p.st = DRIVERS[to]; p.hp = p.maxHp = p.st.armor;
+    const msg = { t: 'car', driver: to, want, reason: 'locked' };
+    if (ws) this.hooks.tell?.(ws, msg); else if (p.connected) this.send(p.id, msg);
+    if (this.phase === 'lobby') this.broadcastLobby();
   }
   leave(id) {
     const p = this.players.get(id);
@@ -189,6 +230,8 @@ export class RaceSim {
   }
 
   start() {
+    // UNLOCKS: an unlockable car nobody has vouched for yet (the account had not loaded) is not raced
+    for (const p of this.players.values()) if (p.carOk === false) this.swapCar(p, p.defCar || DRIVER_IDS[0]);
     // FILL WITH BOTS: only when on; never in Time Trial
     if (this.fillBots) {
       const taken = new Set([...this.players.values()].map((p) => p.name));
@@ -591,7 +634,7 @@ export class RaceSim {
   // TAKEDOWN BOOST (Elimination): knocking a car out or hitting the racer in danger
   burst(by, why) {
     if (this.modeKey !== 'elim' || !by || !by.alive || by.out) return;
-    addBoost(by.car, ELIM.burst); by.bursts++;
+    addBoost(by.car, ELIM.burst, by.st); by.bursts++;
     this.events.push(['burst', by.id, why]);
   }
 
@@ -605,6 +648,7 @@ export class RaceSim {
     if (rival && t.protT > 0) return false;
     // a shield takes one hit (not the lava you sit in)
     if (t.shieldT > 0 && kind !== 'lava') { this.popShield(t); return false; }
+    if (rival && this.phaseThrough(t)) return false;
     t.hp -= amount;
     if (rival) { t.lastHit = { id: src.id, at: this.time }; t.protT = COMBAT.protect; }
     if (rival && t.hp > 0 && t.id === this.dangerId) this.burst(src, 'danger');
@@ -612,6 +656,13 @@ export class RaceSim {
     if (kind !== 'lava') this.events.push(['hit', t.id, src ? src.id : 0, kind, Math.round(amount), big ? 1 : 0]);
     if (t.hp <= 0) this.destroy(t, src, kind);
     else if (big && kind !== 'lava') { t.car.spinT = Math.max(t.car.spinT, (o && o.spin) || COMBAT.bigSpin); t.car.spinDir = this.rand() < 0.5 ? -1 : 1; t.car.drift = 0; t.car.dc = 0; }
+    return true;
+  }
+  // PHANTOM VX: once per race the first rival hit (damage or a spin-out) passes straight through it
+  phaseThrough(t) {
+    if (!t.st.phase || t.phased) return false;
+    t.phased = true; t.perkN++;
+    this.events.push(['perk', t.id, 'phase']);
     return true;
   }
   popShield(t) {
@@ -624,6 +675,7 @@ export class RaceSim {
     const rival = !!owner && owner !== q;
     if (rival && q.protT > 0) return false;
     if (q.shieldT > 0) { this.popShield(q); return 'shield'; }
+    if (rival && this.phaseThrough(q)) return 'phase';
     q.car.spinT = Math.max(q.car.spinT, spin); q.car.spinDir = this.rand() < 0.5 ? -1 : 1; q.car.drift = 0; q.car.dc = 0;
     if (rival) { q.lastHit = { id: owner.id, at: this.time }; q.protT = COMBAT.protect; }
     if (rival && q.id === this.dangerId) this.burst(owner, 'danger');
@@ -647,7 +699,7 @@ export class RaceSim {
       if (this.leaderId === p.id) { // BOUNTY STEAL
         const stolen = Math.ceil(p.mc / 2);
         p.mc -= stolen; by.mc += stolen; by.steals++;
-        addBoost(by.car, BOOSTS.bounty);
+        addBoost(by.car, BOOSTS.bounty, by.st);
         this.events.push(['steal', by.id, p.id, stolen]);
       }
     }
@@ -696,14 +748,14 @@ export class RaceSim {
   enemies(p) { return [...this.players.values()].filter((q) => q !== p && q.alive && !q.out && !q.finished && q.ghostT <= 0); }
   fireWeapon(p) {
     if (!this.mode.weapons || p.wcd > 0 || p.empT > 0 || p.finished || p.phaseT > 0) return;
-    const W = WEAPONS[p.driver], c = p.car, hx = Math.cos(c.a), hy = Math.sin(c.a);
-    p.wcd = W.cd; p.fired = true;
+    const W = WEAPONS[p.driver] || WEAPONS.volt, c = p.car, hx = Math.cos(c.a), hy = Math.sin(c.a);
+    p.wcd = weaponCd(p.driver, p.st); p.fired = true; // (HELIX: 25% faster)
     // COUNTER: firing your weapon swats a Hunter Drone that is chasing you, when it is close
     for (const e of this.ents) if (e.kind === 'drone' && e.target === p.id && !e.dead && Math.hypot(e.x - c.x, e.y - c.y) < e.st.swat) {
       e.dead = true; this.events.push(['swat', p.id, e.id], ['boom', Math.round(e.x), Math.round(e.y), e.k]);
     }
-    switch (p.driver) {
-      case 'volt': {
+    switch (W.kind) {
+      case 'arc': {
         let best = null, bd = W.range;
         for (const q of this.enemies(p)) {
           const d = Math.hypot(q.car.x - c.x, q.car.y - c.y);
@@ -713,22 +765,22 @@ export class RaceSim {
         if (best && this.damage(best, p, W.dmg, 'arc')) best.car.slowT = Math.max(best.car.slowT, W.slow);
         break;
       }
-      case 'brick': {
+      case 'pulse': {
         this.events.push(['pulse', p.id]);
         for (const q of this.enemies(p)) {
           const dx = q.car.x - c.x, dy = q.car.y - c.y, d = Math.hypot(dx, dy);
-          if (d > W.r || q.car.airT > 0) continue;
+          if (hd(q, c.x, c.y) > W.r || q.car.airT > 0) continue; // (knock < 0: Event Horizon drags them in)
           if (this.damage(q, p, W.dmg, 'pulse', true) && q.alive) { q.car.vx += (dx / (d || 1)) * W.knock; q.car.vy += (dy / (d || 1)) * W.knock; }
         }
         break;
       }
-      case 'wisp': {
+      case 'rail': {
         const x0 = c.x + hx * CAR_R, y0 = c.y + hy * CAR_R;
         let len = 0;
         while (len < W.range && this.T.inside(x0 + hx * (len + 30), y0 + hy * (len + 30))) len += 30;
         let hit = null, hd = Infinity;
         for (const q of this.enemies(p)) {
-          const d = distToSeg(q.car.x, q.car.y, x0, y0, x0 + hx * len, y0 + hy * len), along = (q.car.x - x0) * hx + (q.car.y - y0) * hy;
+          const d = sd(q, x0, y0, x0 + hx * len, y0 + hy * len), along = (q.car.x - x0) * hx + (q.car.y - y0) * hy;
           if (d < W.width + CAR_R && along > 0 && along < hd) { hd = along; hit = q; }
         }
         const end = hit ? hd : len;
@@ -736,22 +788,22 @@ export class RaceSim {
         if (hit) this.damage(hit, p, W.dmg, 'rail');
         break;
       }
-      case 'dune': {
+      case 'mine': {
         const mine = this.ents.filter((e) => e.kind === 'mine' && e.owner === p.id);
         if (mine.length >= W.max) this.ents.splice(this.ents.indexOf(mine[0]), 1);
-        this.addEnt('mine', p, c.x - hx * 40, c.y - hy * 40, c.a, { life: W.life, arm: W.arm });
+        this.addEnt('mine', p, c.x - hx * 40, c.y - hy * 40, c.a, { life: W.life, arm: W.arm, w: W });
         break;
       }
-      case 'rook':
-        this.addEnt('turret', p, c.x - hx * 44, c.y - hy * 44, c.a, { life: W.life, reload: 0.3 });
+      case 'turret':
+        this.addEnt('turret', p, c.x - hx * 44, c.y - hy * 44, c.a, { life: W.life, reload: 0.3, w: W });
         break;
-      case 'flicker': {
+      case 'blink': {
         // blink forward (never through a wall), slicing grounded racers along the way
         const x0 = c.x, y0 = c.y;
         let d = 0;
         while (d < W.dist && this.T.inside(x0 + hx * (d + 20), y0 + hy * (d + 20), CAR_R)) d += 20;
         const x1 = x0 + hx * d, y1 = y0 + hy * d;
-        for (const q of this.enemies(p)) if (q.car.airT <= 0 && distToSeg(q.car.x, q.car.y, x0, y0, x1, y1) < W.width + CAR_R) this.damage(q, p, W.dmg, 'blink', true);
+        for (const q of this.enemies(p)) if (q.car.airT <= 0 && sd(q, x0, y0, x1, y1) < W.width + CAR_R) this.damage(q, p, W.dmg, 'blink', true);
         c.x = x1; c.y = y1; p.ep++;
         this.crossGates(p, x0, y0, x1, y1);
         stepCar(c, { st: 0, th: 0, dr: 0 }, p.st, this.T, 0); // settle on the new spot
@@ -800,7 +852,7 @@ export class RaceSim {
       case 'oil': this.placeTrap('oil', p, c.x - hx * 56, c.y - hy * 56, c.a, { life: I.life, st: I, lv }); break;
       case 'spikes': this.placeTrap('spikes', p, c.x - hx * 60, c.y - hy * 60, c.a + Math.PI / 2, { life: I.life, hits: I.hits, seen: [], st: I, lv }); break;
       case 'shield': p.shieldT = I.t; p.shieldN = I.hits; break;
-      case 'turbo': addBoost(c, I); break;
+      case 'turbo': addBoost(c, I, p.st); break;
       case 'emp':
         this.events.push(['emp', p.id, lv]);
         for (const q of this.players.values()) {
@@ -893,7 +945,7 @@ export class RaceSim {
         e.x += Math.cos(e.a) * e.speed * DT; e.y += Math.sin(e.a) * e.speed * DT;
         for (const q of others(false)) {
           if ((q.id === e.owner && e.t < 1) || q.id === e.ignore) continue;
-          if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < CAR_R + 18) {
+          if (hd(q, e.x, e.y) < CAR_R + 18) {
             this.events.push(['boom', Math.round(e.x), Math.round(e.y), e.k]);
             // COMBO: an EMP-ed racer takes extra missile damage
             const emp = q.empT > 0 && q.id !== e.owner;
@@ -907,12 +959,12 @@ export class RaceSim {
         return true;
       }
       case 'rocket': case 'bolt': {
-        const dmg = e.kind === 'rocket' ? (e.st || ITEMS.rockets).dmg : WEAPONS.rook.dmg;
+        const dmg = e.kind === 'rocket' ? (e.st || ITEMS.rockets).dmg : (e.w || WEAPONS.rook).dmg;
         e.x += Math.cos(e.a) * e.speed * DT; e.y += Math.sin(e.a) * e.speed * DT;
         if (!this.T.inside(e.x, e.y, 0)) { this.events.push(['boom', Math.round(e.x), Math.round(e.y), e.k]); return false; }
         for (const q of others(true)) {
           if (q.id === e.owner) continue;
-          if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < CAR_R + 10) {
+          if (hd(q, e.x, e.y) < CAR_R + 10) {
             this.events.push(['boom', Math.round(e.x), Math.round(e.y), e.k]);
             this.damage(q, owner, dmg, e.kind, true);
             return false;
@@ -925,8 +977,9 @@ export class RaceSim {
         if (e.t < (I.arm || 0)) return true; // arming: flashes, harmless
         for (const q of others(true)) {
           if (q.id === e.owner && e.t < 1.2) continue;
-          if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < I.r + CAR_R * 0.6) {
+          if (hd(q, e.x, e.y) < I.r + CAR_R * 0.6) {
             if (q.id !== e.owner && q.protT > 0) continue; // protected: rolls over it, the slick stays
+            if (q.st.iceGrip) { q.perkN++; this.events.push(['perk', q.id, 'grip']); return false; } // FROSTBYTE: drives through it, no slip
             this.spinHit(q, owner, I.spin);
             return false;
           }
@@ -939,7 +992,7 @@ export class RaceSim {
         const hx = Math.cos(e.a) * I.half, hy = Math.sin(e.a) * I.half;
         for (const q of others(true)) {
           if ((q.id === e.owner && e.t < 1.2) || e.seen.includes(q.id)) continue;
-          if (distToSeg(q.car.x, q.car.y, e.x - hx, e.y - hy, e.x + hx, e.y + hy) < CAR_R + 8) {
+          if (sd(q, e.x - hx, e.y - hy, e.x + hx, e.y + hy) < CAR_R + 8) {
             e.seen.push(q.id);
             if (this.damage(q, owner, I.dmg, 'spikes', true) && q.alive) q.car.slowT = Math.max(q.car.slowT, I.slow);
             if (--e.hits <= 0) return false;
@@ -951,10 +1004,11 @@ export class RaceSim {
         if (e.t < e.arm) return true;
         for (const q of others(true)) {
           if ((q.id === e.owner && e.t < 1.2) || e.seen.includes(q.id)) continue;
-          if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < e.r + CAR_R * 0.6) {
+          if (hd(q, e.x, e.y) < e.r + CAR_R * 0.6) {
             if (q.id !== e.owner && q.protT > 0) continue;
             e.seen.push(q.id);
-            if (this.damage(q, owner, COMBAT.trapDmg, 'trap', true, { big: true, spin: COMBAT.trapSpin }) && q.alive) q.car.slowT = Math.max(q.car.slowT, COMBAT.trapSlow);
+            // (FROSTBYTE: the oil in it never spins it; the spikes still bite)
+            if (this.damage(q, owner, COMBAT.trapDmg, 'trap', true, { big: !q.st.iceGrip, spin: COMBAT.trapSpin }) && q.alive) q.car.slowT = Math.max(q.car.slowT, COMBAT.trapSlow);
             if (--e.hits <= 0) return false;
           }
         }
@@ -962,10 +1016,10 @@ export class RaceSim {
       }
       case 'mine': {
         if (e.t < e.arm) return true;
-        const W = WEAPONS.dune;
+        const W = e.w || WEAPONS.dune;
         for (const q of others(true)) {
           if (q.id === e.owner) continue;
-          if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < W.r + CAR_R) {
+          if (hd(q, e.x, e.y) < W.r + CAR_R) {
             if (q.protT > 0) continue; // protected: drives over it, the mine stays
             this.events.push(['boom', Math.round(e.x), Math.round(e.y), e.k]);
             if (this.damage(q, owner, W.dmg, 'mine', true) && q.alive) q.car.slowT = Math.max(q.car.slowT, W.slow);
@@ -975,7 +1029,7 @@ export class RaceSim {
         return true;
       }
       case 'turret': {
-        const W = WEAPONS.rook;
+        const W = e.w || WEAPONS.rook;
         e.reload -= DT;
         if (e.reload > 0) return true;
         let best = null, bd = W.range;
@@ -989,7 +1043,7 @@ export class RaceSim {
           // lead the target a little
           const tt = bd / W.speed, ax = best.car.x + best.car.vx * tt, ay = best.car.y + best.car.vy * tt;
           e.a = Math.atan2(ay - e.y, ax - e.x);
-          this.addEnt('bolt', owner || { id: e.owner }, e.x + Math.cos(e.a) * 20, e.y + Math.sin(e.a) * 20, e.a, { life: 0.6, speed: W.speed });
+          this.addEnt('bolt', owner || { id: e.owner }, e.x + Math.cos(e.a) * 20, e.y + Math.sin(e.a) * 20, e.a, { life: 0.6, speed: W.speed, w: W });
         }
         return true;
       }
@@ -1020,7 +1074,7 @@ export class RaceSim {
         if (tgt) e.a += Math.max(-I.turn * DT, Math.min(I.turn * DT, angDiff(e.a, Math.atan2(tgt.car.y - e.y, tgt.car.x - e.x))));
         e.x += Math.cos(e.a) * I.speed * DT; e.y += Math.sin(e.a) * I.speed * DT;
         if (e.cool > 0) { e.cool -= DT; return true; }
-        if (tgt && Math.hypot(tgt.car.x - e.x, tgt.car.y - e.y) < CAR_R + 16) {
+        if (tgt && hd(tgt, e.x, e.y) < CAR_R + 16) {
           this.events.push(['boom', Math.round(e.x), Math.round(e.y), e.k]);
           if (this.damage(tgt, owner, I.dmg, 'drone') && tgt.alive) tgt.car.slowT = Math.max(tgt.car.slowT, I.slow);
           if (--e.strikes <= 0) return false;
@@ -1052,7 +1106,7 @@ export class RaceSim {
       if (!armed) return true;
       for (const q of others(e.mode === 'ground')) {
         if (q.id === e.owner && e.mode === 'fly') continue;
-        if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < CAR_R + 14) {
+        if (hd(q, e.x, e.y) < CAR_R + 14) {
           e.mode = 'stuck'; e.carrier = q.id; e.fuse = I.fuse; e.passCd = I.pass;
           this.events.push(['stick', q.id, e.owner, e.id]);
           break;
@@ -1068,7 +1122,7 @@ export class RaceSim {
     if (e.passCd <= 0) {
       for (const q of others(false)) {
         if (q === cq || (q.car.airT > 0) !== (cq.car.airT > 0)) continue;
-        if (Math.hypot(q.car.x - cq.car.x, q.car.y - cq.car.y) < CAR_R * 2 + 10) {
+        if (cd2(q, cq) < CAR_R * 2 + 10) {
           e.from = cq.id; e.carrier = q.id; e.passCd = I.pass;
           this.events.push(['pass', cq.id, q.id, e.id]);
           return true;
@@ -1095,8 +1149,10 @@ export class RaceSim {
       const b = B[k];
       for (const p of this.players.values()) {
         if (!p.alive || p.out || p.finished) continue;
-        const dx = p.car.x - b.x, dy = p.car.y - b.y;
-        if (dx * dx + dy * dy > (CAR_R + 22) ** 2) continue;
+        // (GRAVITON: boxes within its magnet reach fly to it; the client draws them pulled in)
+        const near = hd(p, b.x, b.y);
+        if (near > CAR_R + 22 && !(p.st.magnet && near < p.st.magnet)) continue;
+        if (near > CAR_R + 22) { p.perkN++; this.events.push(['perk', p.id, 'magnet', k]); }
         this.boxes[k] = this.tickN + Math.round(BOX_RESPAWN * TICK_RATE);
         p.mc += COINS.box;
         // empty slot: a new item. Holding one: the same item again levels it up (up to 3), else nothing
@@ -1121,10 +1177,10 @@ export class RaceSim {
       for (let j = i + 1; j < L.length; j++) {
         const b = L[j];
         if (!b.alive || b.out || b.ghostT > 0 || b.finished || (a.car.airT > 0) !== (b.car.airT > 0)) continue;
-        const dx = b.car.x - a.car.x, dy = b.car.y - a.car.y;
-        if (dx * dx + dy * dy >= (CAR_R * 2) ** 2) continue;
+        const dx = b.car.x - a.car.x, dy = b.car.y - a.car.y, R = a.st.hr + a.st.hs + b.st.hr + b.st.hs;
+        if (dx * dx + dy * dy >= R * R) continue;
         const ax = a.car.x, ay = a.car.y, bx = b.car.x, by = b.car.y;
-        const imp = collideCars(a.car, b.car, a.st.mass, b.st.mass);
+        const imp = collideCars(a.car, b.car, a.st.mass, b.st.mass, a.st, b.st);
         a.bumpN = b.bumpN = this.tickN; // (wedged against a car counts as stuck)
         // a shove can push a car over a checkpoint line: count it (else that car's lap and progress stall)
         this.crossGates(a, ax, ay, a.car.x, a.car.y); this.crossGates(b, bx, by, b.car.x, b.car.y);

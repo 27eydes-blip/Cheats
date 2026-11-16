@@ -193,7 +193,7 @@ weapon('volt', (s, A, B) => { place(s, A, 600); place(s, B, 850, 30); s.tick(); 
 weapon('brick', (s, A, B) => { place(s, A, 600); place(s, B, 600, 120); s.tick(); }, (s, A, B) => {
   assert.strictEqual(B.hp, B.maxHp - WEAPONS.brick.dmg); assert.ok(Math.hypot(B.car.vx, B.car.vy) > 300, 'shoved');
 });
-weapon('wisp', (s, A, B) => { place(s, A, 300); place(s, B, 1250, 10); s.tick(); A.car.a = Math.atan2(B.car.y - A.car.y, B.car.x - A.car.x); }, (s, A, B, ev) => {
+weapon('wisp', (s, A, B) => { place(s, A, 300); place(s, B, 1000, 10); s.tick(); A.car.a = Math.atan2(B.car.y - A.car.y, B.car.x - A.car.x); }, (s, A, B, ev) => {
   assert.strictEqual(B.hp, B.maxHp - WEAPONS.wisp.dmg); assert.ok(ev.some((e) => e[1] === 'rail' && e[7] === B.id));
 });
 weapon('dune', (s, A, B) => { place(s, A, 1200); place(s, B, 700, 0, 450); s.tick(); }, (s, A, B) => {

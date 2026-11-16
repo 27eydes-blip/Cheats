@@ -222,14 +222,14 @@ function behind(p, q, range) {
 }
 
 function wantWeapon(sim, p, L) {
-  const W = WEAPONS[p.driver], R = p.ai && p.ai.prey ? [p.ai.prey] : rivals(sim, p); // (Elimination: the racer in danger first)
-  switch (p.driver) {
-    case 'volt': return R.some((q) => inCone(p, q, W.range * 0.95, W.cone * L.aim));
-    case 'brick': return R.some((q) => q.car.airT <= 0 && Math.hypot(q.car.x - p.car.x, q.car.y - p.car.y) < W.r * 0.9);
-    case 'wisp': return R.some((q) => inCone(p, q, W.range * 0.9, 0.06 * L.aim + 0.02));
-    case 'dune': return R.some((q) => behind(p, q, 450));
-    case 'rook': return R.some((q) => behind(p, q, 380));
-    case 'flicker': return R.some((q) => inCone(p, q, W.dist, 0.25));
+  const W = WEAPONS[p.driver] || WEAPONS.volt, R = p.ai && p.ai.prey ? [p.ai.prey] : rivals(sim, p); // (Elimination: the racer in danger first)
+  switch (W.kind) { // (the unlockable cars' weapons are variants of the six kinds)
+    case 'arc': return R.some((q) => inCone(p, q, W.range * 0.95, W.cone * L.aim));
+    case 'pulse': return R.some((q) => q.car.airT <= 0 && Math.hypot(q.car.x - p.car.x, q.car.y - p.car.y) < W.r * 0.9);
+    case 'rail': return R.some((q) => inCone(p, q, W.range * 0.9, 0.06 * L.aim + 0.02));
+    case 'mine': return R.some((q) => behind(p, q, 450));
+    case 'turret': return R.some((q) => behind(p, q, 380));
+    case 'blink': return R.some((q) => inCone(p, q, W.dist, 0.25));
   }
   return false;
 }
