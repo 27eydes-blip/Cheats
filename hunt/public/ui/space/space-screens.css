@@ -11,7 +11,10 @@ body.sp-racing :is(#lobby, .ui-screen, .ui-pop, .detail) {
   --font: "Chakra Petch", "Eurostile", "Segoe UI", system-ui, sans-serif;
   --font-ui: "Barlow Semi Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
 }
-body.sp-racing :is(.ui-screen, .store-screen, .ui-screen.neon) { background: radial-gradient(ellipse at 75% 15%, rgba(122,44,255,.28), transparent 55%), radial-gradient(ellipse at 15% 85%, rgba(17,201,181,.18), transparent 50%), linear-gradient(#0a1033, #050816 70%); backdrop-filter: none; -webkit-backdrop-filter: none; }
+/* the lobby's sky behind every screen (the phone-size image the lobby already loaded), dimmed so
+   panels and text stay crisp; the gradient underneath shows until it arrives */
+body.sp-racing :is(.ui-screen, .store-screen, .ui-screen.neon) { background: linear-gradient(rgba(3,5,14,.42), rgba(3,5,14,.42)), url(sky/sky-l-s.webp) center / cover no-repeat, radial-gradient(ellipse at 25% 15%, rgba(122,44,255,.2), transparent 55%), linear-gradient(#0b1030, #050816 70%); backdrop-filter: none; -webkit-backdrop-filter: none; }
+@media (orientation: portrait) { body.sp-racing :is(.ui-screen, .store-screen, .ui-screen.neon) { background-image: linear-gradient(rgba(3,5,14,.42), rgba(3,5,14,.42)), url(sky/sky-p-s.webp), radial-gradient(ellipse at 25% 15%, rgba(122,44,255,.2), transparent 55%), linear-gradient(#0b1030, #050816 70%); } }
 body.sp-racing .ui-pop { background: rgba(3,5,14,.68); }
 /* same spot and look as the lobby's own credit line (#lobby.sp #credit), so it sits exactly over it */
 body.sp-racing .ov-credit { left: calc(env(safe-area-inset-left, 0px) + 8px); bottom: calc(env(safe-area-inset-bottom, 0px) + 3px); font: 600 11px/1 "Barlow Semi Condensed", "Roboto Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif; letter-spacing: .06em; color: #ffc84a; text-shadow: 0 0 4px #000, 0 1px 0 #000; }

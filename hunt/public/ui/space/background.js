@@ -1,9 +1,13 @@
-// Deep-space lobby background on ONE canvas: a navy-to-black sky, slow nebula clouds (violet,
-// teal, magenta), two parallax star layers, a few twinkling stars, a distant ringed planet and
-// the odd shooting star. Every layer is painted once into an offscreen canvas when the size
-// changes; a frame is a handful of drawImage blits, nothing allocated, at 30 Hz (60 for a shooting star).
-//   Low Graphics: no nebula, no shooting stars, no parallax or drift: one still frame.
-//   Reduce Flashing / motion: no drift, twinkle or shooting stars: one still frame (nebula kept).
+// Deep-space lobby background on ONE canvas. The art is painted ahead of time by
+// scripts/space-sky.mjs (domain-warped nebula, galactic band, thousands of stars, a ray-traced
+// ringed gas giant) into a few WebP layers in ui/space/sky/; a frame here just
+// composites them: the far sky (slow drift + parallax), a near star layer, a few dust motes, the
+// planet, some twinkling stars and the odd shooting star. Nothing is allocated per frame and the
+// sky redraws at 30 Hz (60 while a shooting star crosses).
+//   Until the images arrive the canvas shows a painted navy sky with near stars (never black);
+//   the phone set (< 600 KB) loads first, the large set only on big / high-density screens.
+//   Low Graphics: one still composite image, no parallax, motes or shooting stars.
+//   Reduce Flashing / motion: one still frame (no drift, twinkle or shooting stars).
 // The loop pauses with the page (see loop.js) and when stop() is called.
 import { onFrame } from './loop.js';
 import { quality } from './quality.js';
@@ -13,162 +17,195 @@ const TAU = Math.PI * 2;
 function rng(seed) { let s = seed >>> 0; return () => { s = (s + 0x6d2b79f5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const layer = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h)); return c; };
 
-export const SKY = { top: '#0a1033', mid: '#070a1f', bottom: '#03040c' };
-const NEB = ['rgba(122,44,255,A)', 'rgba(17,201,181,A)', 'rgba(255,47,160,A)'];
+export const SKY = { top: '#0b1030', mid: '#060920', bottom: '#03040c' };
+// sky/<name>.webp: sky-{l,p}-{s,l} (landscape / portrait, phone / large), planet-{s,l}
+export const skyUrl = (name) => new URL(`sky/${name}.webp`, import.meta.url).href;
+// which images a screen needs: orientation by aspect, the large set once the canvas is big
+export function skySet(pw, ph) {
+  const o = pw >= ph ? 'l' : 'p', big = Math.max(pw, ph) > 1800;
+  return { sky: `sky-${o}-${big ? 'l' : 's'}`, skySmall: `sky-${o}-s`, planet: big ? 'planet-l' : 'planet-s', planetSmall: 'planet-s', o };
+}
+// planet centre (fractions of the screen) and radius (fraction of the short side): low and to
+// the right, partly off screen, clear of the STORE button, the ticker and the LAUNCH column
+export const PLANET = { l: { x: 0.95, y: 0.93, r: 0.36 }, p: { x: 1.04, y: 0.79, r: 0.27 } };
+
+const cache = new Map(); // url -> Promise<HTMLImageElement> (shared by every SpaceBackground)
+export function loadSkyImage(name) {
+  const url = skyUrl(name);
+  if (!cache.has(url)) {
+    cache.set(url, new Promise((res, rej) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(() => res(img));
+      img.onerror = () => { cache.delete(url); rej(new Error('sky image ' + name)); };
+      img.src = url;
+    }));
+  }
+  return cache.get(url);
+}
 
 export class SpaceBackground {
-  // opts: {dprCap, low, calm, planet: {x, y, r} as fractions of the screen}
+  // opts: {dprCap, maxPx, low, calm, planet: {x, y, r}}
   constructor(canvas, opts = {}) {
     this.cv = canvas; this.g = canvas.getContext('2d', { alpha: false });
     this.opts = opts;
-    this.dprCap = opts.dprCap || 1; // a soft sky needs no retina pixels: 1x keeps the per-frame upload small
+    this.dprCap = opts.dprCap || 2;
+    this.maxPx = opts.maxPx || 2.4e6; // canvas pixel budget: big screens draw a little under native density
     this.px = 0; this.py = 0; this.tx = 0; this.ty = 0; // parallax (smoothed toward the target)
     this.drift = 0; this.shoot = null; this.nextShoot = 3; this.frames = 0;
     this.twk = null; this.W = 0; this.H = 0; this.dpr = 1; this.off = null;
+    this.img = { sky: null, planet: null }; this.ready = false; this.fade = 1; this.want = null;
     this.setQuality(opts.low != null || opts.calm != null ? { low: !!opts.low, calm: !!opts.calm } : quality());
   }
   setQuality(q) {
     this.q = q;
     this.still = q.low || q.calm;
-    if (this.W) { this.build(); this.draw(0, 0); }
+    if (this.W) { this.build(); this.draw(this.t || 0, 0); }
     if (this.off && this.still) { this.off(); this.off = null; }
     else if (!this.off && !this.still && this.running) this.off = onFrame((t, dt) => this.draw(t, dt));
   }
   // CSS size of the canvas box; call on resize
   resize(w, h, dpr = window.devicePixelRatio || 1) {
-    const d = Math.min(this.dprCap, dpr);
+    let d = Math.min(this.dprCap, dpr);
+    if (w * h * d * d > this.maxPx) d = Math.max(1, Math.sqrt(this.maxPx / (w * h)));
     if (w === this.W && h === this.H && d === this.dpr && this.base) return;
     this.W = w; this.H = h; this.dpr = d;
     this.cv.width = Math.max(1, Math.round(w * d)); this.cv.height = Math.max(1, Math.round(h * d));
+    this.load();
     this.build();
     this.draw(this.t || 0, 0);
   }
-  start() { this.running = true; if (!this.still && !this.off) this.off = onFrame((t, dt) => this.draw(t, dt)); else this.draw(0, 0); }
+  // fetch the layers this size needs: the phone set first (fast), then the large set if wanted
+  load() {
+    const set = skySet(this.cv.width, this.cv.height);
+    if (this.want && this.want.sky === set.sky && this.want.planet === set.planet) return;
+    this.want = set;
+    const apply = (sky, planet) => {
+      if (this.want !== set) return;
+      if (!this.ready && !this.still) this.fade = 0; // ease in over the painted sky
+      this.img = { sky, planet }; this.ready = true; this.src = sky.src;
+      this.build(); this.draw(this.t || 0, 0);
+    };
+    const pair = (a, b) => Promise.all([loadSkyImage(a), loadSkyImage(b)]);
+    pair(set.skySmall, set.planetSmall).then(([s, p]) => {
+      apply(s, p);
+      if (set.sky !== set.skySmall || set.planet !== set.planetSmall) return pair(set.sky, set.planet).then(([S, P]) => apply(S, P));
+    }).catch(() => {}); // offline / missing: the painted sky stays
+  }
+  start() { this.running = true; if (!this.still && !this.off) this.off = onFrame((t, dt) => this.draw(t, dt)); else this.draw(this.t || 0, 0); }
   stop() { this.running = false; if (this.off) { this.off(); this.off = null; } }
-  destroy() { this.stop(); this.base = this.far = this.near = this.planet = this.neb = null; }
+  destroy() { this.stop(); this.base = this.near = this.neb = this.comp = null; this.img = { sky: null, planet: null }; }
   // -1..1 each way (pointer, tilt); ignored on Low Graphics / Reduce Flashing
   setParallax(x, y) { this.tx = Math.max(-1, Math.min(1, x)); this.ty = Math.max(-1, Math.min(1, y)); }
+  setPlanet(p) { this.opts.planet = p; if (this.W) { this.build(); this.draw(this.t || 0, 0); } }
 
   build() {
-    const { W, H, dpr, q } = this, R = rng(7);
-    const pw = W * dpr, ph = H * dpr;
-    // sky gradient (+ stars baked in when nothing moves)
+    const { dpr, q } = this, R = rng(7);
+    const pw = this.cv.width, ph = this.cv.height;
+    // the painted sky: what shows before (or without) the images
     const base = this.base = layer(pw, ph), g = base.getContext('2d');
     const gr = g.createLinearGradient(0, 0, 0, ph);
     gr.addColorStop(0, SKY.top); gr.addColorStop(0.55, SKY.mid); gr.addColorStop(1, SKY.bottom);
     g.fillStyle = gr; g.fillRect(0, 0, pw, ph);
-    // nebula: painted small and scaled up (the scale-up is the blur), larger than the screen so it can drift
-    this.neb = null;
-    if (!q.low) {
-      const s = 0.22, nw = pw * 1.15 * s, nh = ph * 1.15 * s, n = this.neb = layer(nw, nh), ng = n.getContext('2d');
-      ng.globalCompositeOperation = 'lighter';
-      const blobs = [[0.18, 0.35, 0.42, 0, 0.30], [0.32, 0.62, 0.30, 1, 0.22], [0.72, 0.28, 0.36, 2, 0.20], [0.86, 0.72, 0.34, 0, 0.24], [0.52, 0.48, 0.5, 1, 0.12], [0.08, 0.85, 0.26, 2, 0.16], [0.62, 0.86, 0.28, 0, 0.14]];
-      for (const [x, y, r, c, a] of blobs) {
-        for (let k = 0; k < 3; k++) { // three offset puffs per cloud: lumpy, not round
-          const cx = (x + (R() - 0.5) * 0.12) * nw, cy = (y + (R() - 0.5) * 0.12) * nh, rr = r * Math.max(nw, nh) * (0.6 + R() * 0.5);
-          const rg = ng.createRadialGradient(cx, cy, 0, cx, cy, rr);
-          rg.addColorStop(0, NEB[c].replace('A', String(a))); rg.addColorStop(0.5, NEB[c].replace('A', String(a * 0.45))); rg.addColorStop(1, NEB[c].replace('A', '0'));
-          ng.fillStyle = rg; ng.fillRect(0, 0, nw, nh);
-        }
-      }
-      ng.globalCompositeOperation = 'source-over'; // dark dust lanes across the glow
-      for (let i = 0; i < 6; i++) {
-        const cx = R() * nw, cy = R() * nh, rr = (0.08 + R() * 0.14) * nw, rg = ng.createRadialGradient(cx, cy, 0, cx, cy, rr);
-        rg.addColorStop(0, 'rgba(4,6,18,0.55)'); rg.addColorStop(1, 'rgba(4,6,18,0)'); ng.fillStyle = rg; ng.fillRect(0, 0, nw, nh);
-      }
+    // near stars: a sparse layer of brighter stars (power-law brightness, warm to blue-white),
+    // each a tiny sprite from one atlas; they wrap round a field a bit larger than the screen.
+    // (A full-screen transparent tile cost a phone GPU a whole extra screen of blending.)
+    const TINT = ['190,215,255', '225,236,255', '255,255,255', '255,240,214', '255,214,170'];
+    const n = Math.round(30 * (pw * ph) / (420 * 420 * dpr * dpr)), cell = Math.ceil(8 * dpr), atlas = this.atlas = layer(cell * n, cell), ag = atlas.getContext('2d');
+    this.fw = pw + 60 * dpr; this.fh = ph + 60 * dpr;
+    this.near = [];
+    for (let i = 0; i < n; i++) {
+      const b = Math.min(1, 0.22 * Math.pow(1 - R() * 0.995, -1 / 1.6)), c = TINT[Math.floor(R() * TINT.length)], r = (0.45 + b * 0.75) * dpr, cx = i * cell + cell / 2, cy = cell / 2;
+      const rg = ag.createRadialGradient(cx, cy, 0, cx, cy, Math.min(cell / 2, r * 2.6));
+      rg.addColorStop(0, `rgba(${c},${b.toFixed(2)})`); rg.addColorStop(0.35, `rgba(${c},${(b * 0.45).toFixed(2)})`); rg.addColorStop(1, `rgba(${c},0)`);
+      ag.fillStyle = rg; ag.fillRect(i * cell, 0, cell, cell);
+      this.near.push({ x: R() * this.fw, y: R() * this.fh, sx: i * cell });
     }
-    // star tiles: far (many, faint, small) and near (fewer, brighter, a little colour)
-    const tile = (size, count, rMin, rMax, aMin, tint) => {
-      const t = layer(size * dpr, size * dpr), tg = t.getContext('2d');
-      for (let i = 0; i < count; i++) {
-        const x = R() * size * dpr, y = R() * size * dpr, r = (rMin + R() * (rMax - rMin)) * dpr, a = aMin + R() * (1 - aMin);
-        const c = tint && R() < 0.3 ? (R() < 0.5 ? '160,240,255' : '255,190,240') : '235,242,255';
-        tg.fillStyle = `rgba(${c},${a.toFixed(2)})`; tg.beginPath(); tg.arc(x, y, r, 0, TAU); tg.fill();
-        if (r > 1.2 * dpr) { tg.fillStyle = `rgba(${c},${(a * 0.18).toFixed(2)})`; tg.beginPath(); tg.arc(x, y, r * 3, 0, TAU); tg.fill(); }
-      }
-      return t;
-    };
-    this.far = tile(256, 70, 0.35, 0.8, 0.25, false);
-    this.near = tile(384, 22, 0.7, 1.6, 0.5, true);
-    // twinkling stars: fixed positions, alpha animated per frame
-    this.twk = Array.from({ length: q.low ? 0 : 14 }, () => ({ x: R() * pw, y: R() * ph * 0.8, r: (0.9 + R() * 1.1) * dpr, sp: 0.6 + R() * 1.6, ph: R() * TAU }));
-    // planet with a ring, top right
-    const P = this.opts.planet || { x: 0.8, y: 0.2, r: 0.11 };
-    const pr = Math.max(18, Math.min(W, H) * P.r * 1.6) * dpr;
-    this.pr = pr; this.planet = this.paintPlanet(pr);
-    this.pxy = [P.x * pw, P.y * ph];
+    this.cell = cell;
+    // twinkling stars: fixed positions, alpha animated per frame (sprite drawn once)
+    const sp = this.spark = layer(40 * dpr, 40 * dpr), sg = sp.getContext('2d'), m = 20 * dpr;
+    const glow = sg.createRadialGradient(m, m, 0, m, m, m * 0.5);
+    glow.addColorStop(0, 'rgba(255,255,255,1)'); glow.addColorStop(0.12, 'rgba(225,238,255,0.7)'); glow.addColorStop(0.4, 'rgba(170,200,255,0.12)'); glow.addColorStop(1, 'rgba(170,200,255,0)');
+    sg.fillStyle = glow; sg.fillRect(0, 0, m * 2, m * 2);
+    for (const ax of [1, 0]) {
+      const lg = ax ? sg.createLinearGradient(0, m, m * 2, m) : sg.createLinearGradient(m, 0, m, m * 2);
+      lg.addColorStop(0, 'rgba(210,228,255,0)'); lg.addColorStop(0.5, 'rgba(235,244,255,0.8)'); lg.addColorStop(1, 'rgba(210,228,255,0)');
+      sg.fillStyle = lg; if (ax) sg.fillRect(0, m - 0.5 * dpr, m * 2, dpr); else sg.fillRect(m - 0.5 * dpr, 0, dpr, m * 2);
+    }
+    this.twk = Array.from({ length: q.low ? 0 : 9 }, () => ({ x: R(), y: R() * 0.85, s: 0.16 + R() * 0.2, sp: 0.5 + R() * 1.4, ph: R() * TAU }));
+    // dust motes: a few big, soft, out-of-focus specks in the foreground
+    this.motes = q.low ? [] : Array.from({ length: 5 }, (_, i) => ({ x: R(), y: R(), r: (18 + R() * 40) * dpr, a: 0.035 + R() * 0.04, vx: (R() - 0.5) * 4, vy: (R() - 0.5) * 2, i }));
+    if (!this.mote) {
+      const mt = this.mote = layer(64, 64), mg = mt.getContext('2d'), rg = mg.createRadialGradient(32, 32, 0, 32, 32, 32);
+      rg.addColorStop(0, 'rgba(200,180,255,1)'); rg.addColorStop(0.6, 'rgba(170,200,255,0.35)'); rg.addColorStop(1, 'rgba(170,200,255,0)');
+      mg.fillStyle = rg; mg.fillRect(0, 0, 64, 64);
+    }
+    // planet placement
+    const P = this.opts.planet || PLANET[pw >= ph ? 'l' : 'p'];
+    this.pl = { x: P.x * pw, y: P.y * ph, r: P.r * Math.min(pw, ph) };
+    // sky + planet pre-composited once at canvas resolution, 6% larger for drift and parallax:
+    // a frame then blits one opaque image 1:1 (scaling the planet's alpha layer every frame cost
+    // a phone GPU far more)
+    this.comp = null;
+    if (this.ready) {
+      const cw = Math.round(pw * 1.06), ch = Math.round(ph * 1.06), c = this.comp = layer(cw, ch), cg = c.getContext('2d', { alpha: false });
+      const im = this.img.sky, k = Math.max(cw / im.width, ch / im.height), w = im.width * k, h = im.height * k;
+      cg.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h);
+      const pi = this.img.planet, { x, y, r } = this.pl, kp = r / (pi.width / 5); // the planet's radius is a fifth of its image width
+      cg.drawImage(pi, x + (cw - pw) / 2 - pi.width * kp / 2, y + (ch - ph) / 2 - pi.height * kp / 2, pi.width * kp, pi.height * kp);
+    }
+    // the moving sky layer (none on Low Graphics: the whole sky is one still image there)
+    this.neb = q.low ? null : this.comp;
     if (this.still) { // bake everything that never moves into the base
-      if (this.neb) g.drawImage(this.neb, 0, 0, this.neb.width, this.neb.height, -pw * 0.075, -ph * 0.075, pw * 1.15, ph * 1.15);
-      this.tileDraw(g, this.far, 0, 0, pw, ph); this.tileDraw(g, this.near, 0, 0, pw, ph);
-      g.drawImage(this.planet, this.pxy[0] - this.planet.width / 2, this.pxy[1] - this.planet.height / 2);
-      for (const s of this.twk) { g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.arc(s.x, s.y, s.r, 0, TAU); g.fill(); }
+      this.paintSky(g, 0, 0, 1);
+      this.nearDraw(g, 0, 0);
+      if (!q.low) for (const s of this.twk) this.paintSpark(g, s, 0.75);
     }
   }
-  paintPlanet(r) {
-    const s = r * 3.2, c = layer(s, s), g = c.getContext('2d'), m = s / 2, tilt = -0.32;
-    const ring = (front) => {
-      g.save(); g.translate(m, m); g.rotate(tilt);
-      g.beginPath(); // the half of the ring in front of / behind the planet
-      if (front) g.rect(-s, 0, s * 2, s); else g.rect(-s, -s, s * 2, s);
-      g.clip();
-      for (const [k, w, a] of [[1.55, 0.09, 0.55], [1.38, 0.05, 0.35], [1.75, 0.035, 0.3]]) {
-        g.strokeStyle = `rgba(150,220,255,${a})`; g.lineWidth = r * w;
-        g.beginPath(); g.ellipse(0, 0, r * k, r * k * 0.28, 0, 0, TAU); g.stroke();
-      }
-      g.restore();
-    };
-    // atmosphere glow
-    const glow = g.createRadialGradient(m, m, r * 0.9, m, m, r * 1.45);
-    glow.addColorStop(0, 'rgba(120,90,255,0.35)'); glow.addColorStop(1, 'rgba(120,90,255,0)');
-    g.fillStyle = glow; g.fillRect(0, 0, s, s);
-    ring(false);
-    g.save(); g.beginPath(); g.arc(m, m, r, 0, TAU); g.clip();
-    const body = g.createLinearGradient(m - r, m - r, m + r, m + r);
-    body.addColorStop(0, '#5a7dff'); body.addColorStop(0.45, '#6a3fc9'); body.addColorStop(1, '#2a0f55');
-    g.fillStyle = body; g.fillRect(m - r, m - r, r * 2, r * 2);
-    g.translate(m, m); g.rotate(tilt);
-    for (let i = -4; i <= 4; i++) { g.fillStyle = i % 2 ? 'rgba(40,230,220,0.13)' : 'rgba(255,90,200,0.10)'; g.fillRect(-r, i * r * 0.2 - r * 0.06, r * 2, r * (0.07 + (i & 1) * 0.05)); }
-    g.rotate(-tilt); g.translate(-m, -m);
-    const shade = g.createRadialGradient(m - r * 0.45, m - r * 0.45, r * 0.2, m, m, r * 1.05); // lit from the top left
-    shade.addColorStop(0, 'rgba(255,255,255,0.18)'); shade.addColorStop(0.55, 'rgba(0,0,0,0)'); shade.addColorStop(1, 'rgba(3,4,12,0.75)');
-    g.fillStyle = shade; g.fillRect(m - r, m - r, r * 2, r * 2);
-    g.restore();
-    g.strokeStyle = 'rgba(140,240,255,0.55)'; g.lineWidth = Math.max(1, r * 0.03); g.beginPath(); g.arc(m, m, r, Math.PI * 0.9, Math.PI * 1.6); g.stroke();
-    ring(true);
-    return c;
+  // the far sky (with the planet), centred on the canvas plus a drift / parallax offset
+  paintSky(g, ox, oy, a) {
+    const c = this.comp; if (!c) return;
+    g.globalAlpha = a; g.drawImage(c, Math.round((this.cv.width - c.width) / 2 + ox), Math.round((this.cv.height - c.height) / 2 + oy)); g.globalAlpha = 1;
   }
-  tileDraw(g, t, ox, oy, pw, ph) {
-    const tw = t.width, th = t.height;
-    let x0 = -(((ox % tw) + tw) % tw), y0 = -(((oy % th) + th) % th);
-    for (let y = y0; y < ph; y += th) for (let x = x0; x < pw; x += tw) g.drawImage(t, x, y);
+  paintSpark(g, s, a) {
+    const sz = this.spark.width * s.s * 2;
+    g.globalAlpha = a; g.drawImage(this.spark, s.x * this.cv.width - sz / 2, s.y * this.cv.height - sz / 2, sz, sz); g.globalAlpha = 1;
+  }
+  nearDraw(g, ox, oy) {
+    const { fw, fh, cell, atlas } = this, h = cell / 2, m = 30 * this.dpr;
+    for (const s of this.near) {
+      const x = (((s.x - ox) % fw) + fw) % fw - m, y = (((s.y - oy) % fh) + fh) % fh - m;
+      g.drawImage(atlas, s.sx, 0, cell, cell, x - h, y - h, cell, cell);
+    }
   }
   draw(t, dt) {
     if (!this.base) return;
     // the sky drifts slowly: 30 redraws a second is plenty (half the canvas uploads), except
-    // while a shooting star is crossing
+    // while a shooting star is crossing or the images fade in
     this.acc = (this.acc || 0) + dt;
-    if (!this.still && !this.shoot && this.nextShoot > 0.05 && (this.tick = (this.tick || 0) + 1) % 2) return;
+    if (!this.still && !this.shoot && this.fade >= 1 && this.nextShoot > 0.05 && (this.tick = (this.tick || 0) + 1) % 2) return;
     dt = this.acc; this.acc = 0;
     this.t = t;
     const g = this.g, { dpr } = this, pw = this.cv.width, ph = this.cv.height;
-    g.drawImage(this.base, 0, 0);
+    // the far sky is opaque and overscanned: once it has faded in, the painted base under it is never seen
+    if (this.still || !this.neb || this.fade < 1) g.drawImage(this.base, 0, 0);
     if (this.still) return;
     this.frames++;
     // parallax eases toward the pointer/tilt target
     const k = Math.min(1, dt * 3);
     this.px += (this.tx - this.px) * k; this.py += (this.ty - this.py) * k;
     this.drift += dt;
-    const d = this.drift, P = 14 * dpr;
-    if (this.neb) {
-      const nx = -pw * 0.075 + Math.sin(d * 0.03) * pw * 0.05 - this.px * P * 0.4, ny = -ph * 0.075 + Math.cos(d * 0.025) * ph * 0.04 - this.py * P * 0.4;
-      g.drawImage(this.neb, 0, 0, this.neb.width, this.neb.height, nx, ny, pw * 1.15, ph * 1.15);
+    if (this.fade < 1) this.fade = Math.min(1, this.fade + dt * 2.2);
+    const d = this.drift, P = 14 * dpr, f = this.fade;
+    if (this.neb) this.paintSky(g, Math.sin(d * 0.021) * pw * 0.016 - this.px * P * 0.5, Math.cos(d * 0.017) * ph * 0.012 - this.py * P * 0.5, f);
+    this.nearDraw(g, d * 5 * dpr + this.px * P * 1.2, this.py * P * 1.2);
+    // dust motes drift through the foreground
+    for (const m of this.motes) {
+      const sw = pw + m.r * 2, sh = ph + m.r * 2;
+      const x = (((m.x * pw + d * m.vx * dpr - this.px * P * 2.2) % sw) + sw) % sw - m.r, y = (((m.y * ph + d * m.vy * dpr - this.py * P * 2.2) % sh) + sh) % sh - m.r;
+      g.globalAlpha = m.a * f; g.drawImage(this.mote, x - m.r, y - m.r, m.r * 2, m.r * 2);
     }
-    this.tileDraw(g, this.far, d * 3 * dpr + this.px * P * 0.5, this.py * P * 0.5, pw, ph);
-    this.tileDraw(g, this.near, d * 8 * dpr + this.px * P * 1.2, this.py * P * 1.2, pw, ph);
-    g.drawImage(this.planet, this.pxy[0] - this.planet.width / 2 - this.px * P * 0.8, this.pxy[1] - this.planet.height / 2 - this.py * P * 0.8);
-    g.fillStyle = '#fff';
-    for (const s of this.twk) { g.globalAlpha = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * s.sp + s.ph)); g.fillRect(s.x - s.r, s.y - s.r * 0.25, s.r * 2, s.r * 0.5); g.fillRect(s.x - s.r * 0.25, s.y - s.r, s.r * 0.5, s.r * 2); }
-    g.globalAlpha = 1;
+    for (const s of this.twk) this.paintSpark(g, s, f * (0.25 + 0.75 * (0.5 + 0.5 * Math.sin(t * s.sp + s.ph)) ** 2));
     // shooting star: one at a time, every few seconds
     this.nextShoot -= dt;
     if (!this.shoot && this.nextShoot <= 0) {
@@ -179,12 +216,12 @@ export class SpaceBackground {
     const s = this.shoot;
     if (s) {
       s.life += dt;
-      const f = s.life / s.dur;
-      if (f >= 1) this.shoot = null;
+      const fr = s.life / s.dur;
+      if (fr >= 1) this.shoot = null;
       else {
         const cx = Math.cos(s.a), cy = Math.sin(s.a), hx = s.x + cx * s.sp * s.life, hy = s.y + cy * s.sp * s.life;
-        g.globalAlpha = Math.sin(f * Math.PI);
-        g.strokeStyle = '#bff6ff'; g.lineWidth = 1.6 * dpr; g.lineCap = 'round';
+        g.globalAlpha = Math.sin(fr * Math.PI);
+        g.strokeStyle = '#bff6ff'; g.lineWidth = 1.4 * dpr; g.lineCap = 'round';
         g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx - cx * s.len, hy - cy * s.len); g.stroke();
         g.globalAlpha = 1;
       }

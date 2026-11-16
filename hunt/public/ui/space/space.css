@@ -48,7 +48,7 @@
 @keyframes sp-flicker { 0%, 100% { opacity: 1; } 71% { opacity: .55; } 72% { opacity: 1; } 88% { opacity: .75; } 89% { opacity: 1; } }
 
 /* ---------------------------------------------------------------- background + credit */
-.sp-bg { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; background: #070a1f; }
+.sp-bg { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; background: #060920; }
 .sp-cred { position: fixed; left: calc(var(--sp-sa-l) + 8px); bottom: calc(var(--sp-sa-b) + 4px); z-index: 50; font: 600 11px/1 var(--sp-narrow); letter-spacing: .06em; color: var(--sp-gold); text-shadow: 0 0 4px #000, 0 1px 0 #000; pointer-events: none; }
 
 /* ---------------------------------------------------------------- lobby layout
