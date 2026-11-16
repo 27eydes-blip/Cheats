@@ -106,9 +106,9 @@ export class Controls {
     }
   }
   key(e, down) {
-    if (!this.enabled) return;
     const c = e.code;
-    if (down && c === 'Escape') { this.onMenu(); return; }
+    if (down && c === 'Escape') { this.onMenu(); return; } // also closes the menu again
+    if (!this.enabled) return;
     if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
     const used = c in STEER_KEYS || ['ArrowUp', 'KeyW', 'ArrowDown', 'KeyS', 'ShiftLeft', 'ShiftRight', 'Space', 'KeyJ', 'KeyK'].includes(c);
     if (!used) return;
@@ -121,7 +121,10 @@ export class Controls {
     } else this.keys.delete(c);
   }
   mouse(e) {
-    if (!this.enabled || this.mode === 'touch') return;
+    if (this.mode === 'touch') return;
+    const r = this.el.getBoundingClientRect(), b = this.btn.menu;
+    if (e.button === 0 && Math.hypot(e.clientX - r.left - b.x, e.clientY - r.top - b.y) < b.r * 1.2) { this.onMenu(); return; }
+    if (!this.enabled) return;
     if (e.button === 0) this.fireQ = 1;
     if (e.button === 2) this.itemQ = 1;
   }

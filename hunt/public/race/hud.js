@@ -15,11 +15,38 @@ const ORD = (n) => (n % 100 >= 11 && n % 100 <= 13 ? 'TH' : ['TH', 'ST', 'ND', '
 export const fmtTime = (s) => { if (s == null || !(s >= 0)) return '--:--.-'; const m = Math.floor(s / 60), r = s - m * 60; return `${m}:${r < 10 ? '0' : ''}${r.toFixed(2)}`; };
 const TIER_COL = ['#ffffff', '#3a86ff', '#ff9f1c', '#c04dff'];
 
+// font strings per size (setting ctx.font re-parses it, so only set it when it changes)
+const FONTS = new Map();
+const fontOf = (size) => { let f = FONTS.get(size); if (!f) FONTS.set(size, (f = `${size}px ${FONT}`)); return f; };
 export function text(g, s, x, y, size, col, align = 'left', lw = 0) {
-  g.font = `${size}px ${FONT}`; g.textAlign = align; g.textBaseline = 'middle';
+  const f = fontOf(size);
+  if (g.__font !== f) { g.font = f; g.__font = f; }
+  g.textAlign = align; g.textBaseline = 'middle';
   g.lineJoin = 'round'; g.lineWidth = lw || Math.max(3, size * 0.16); g.strokeStyle = INK;
   g.strokeText(s, x, y); g.fillStyle = col; g.fillText(s, x, y);
 }
+// outlined text pre-rendered once per (string, size, colour) and blitted: for labels that rarely change
+const SPR = new Map();
+export function label(g, s, x, y, size, col, align = 'left', dpr = 1) {
+  let a = SPR.get(s); if (!a) SPR.set(s, (a = new Map()));
+  const k = size * 1000 + dpr; let b = a.get(k); if (!b) a.set(k, (b = new Map()));
+  let cv = b.get(col);
+  if (!cv) {
+    if (SPR.size > 300) SPR.clear();
+    cv = document.createElement('canvas');
+    const m = cv.getContext('2d'); m.font = fontOf(size);
+    const w = Math.ceil(m.measureText(s).width + size * 0.5), h = Math.ceil(size * 1.5);
+    cv.width = Math.ceil(w * dpr); cv.height = Math.ceil(h * dpr); cv.w = w; cv.h = h;
+    const c = cv.getContext('2d'); c.scale(dpr, dpr); text(c, s, size * 0.25, h / 2, size, col);
+    b.set(col, cv);
+  }
+  const ox = align === 'center' ? cv.w / 2 : align === 'right' ? cv.w - size * 0.25 : size * 0.25;
+  g.drawImage(cv, x - ox, y - cv.h / 2, cv.w, cv.h);
+  return cv.w - size * 0.5;
+}
+// memoised strings for numbers that change rarely (no string building per frame)
+const memo = new Map();
+const str = (k, v, fn) => { let m = memo.get(k); if (!m) memo.set(k, (m = new Map())); let s = m.get(v); if (s === undefined) { if (m.size > 200) m.clear(); m.set(v, (s = fn(v))); } return s; };
 const rr = (g, x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
 const panel = (g, x, y, w, h, r = 10, fill = 'rgba(27,16,51,0.78)') => { rr(g, x, y, w, h, r); g.fillStyle = fill; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke(); };
 
@@ -74,19 +101,18 @@ export class Hud {
     const battle = mode === 'battle', trial = mode === 'trial';
     // -------- position + lap block (top left)
     if (me) {
-      const rk = me.out || me.fin || me.rk || 1;
-      text(g, String(rk), L, Tp + 24 * u, 46 * u, rk === 1 ? '#ffd23f' : '#ffffff', 'left', 6 * u);
-      const w1 = g.measureText(String(rk)).width;
-      text(g, ORD(rk), L + w1 + 2 * u, Tp + 14 * u, 18 * u, rk === 1 ? '#ffd23f' : '#ffffff');
-      text(g, `/${n}`, L + w1 + 2 * u, Tp + 34 * u, 15 * u, '#c9b8ff');
+      const rk = me.out || me.fin || me.rk || 1, d = S.dpr;
+      const w1 = label(g, str('n', rk, String), L, Tp + 24 * u, Math.round(46 * u), rk === 1 ? '#ffd23f' : '#ffffff', 'left', d);
+      label(g, ORD(rk), L + w1 + 2 * u, Tp + 14 * u, Math.round(18 * u), rk === 1 ? '#ffd23f' : '#ffffff', 'left', d);
+      label(g, str('of', n, (v) => '/' + v), L + w1 + 2 * u, Tp + 34 * u, Math.round(15 * u), '#c9b8ff', 'left', d);
       let y = Tp + 60 * u;
-      if (battle) { text(g, `TAKEDOWNS ${me.k}`, L, y, 17 * u, '#ff9f43'); y += 20 * u; }
+      if (battle) { label(g, str('td', me.k, (v) => 'TAKEDOWNS ' + v), L, y, Math.round(17 * u), '#ff9f43', 'left', d); y += 20 * u; }
       else if (view.hud && view.hud.laps) {
-        const lap = clamp(me.lap, 1, view.hud.laps);
-        text(g, `LAP ${lap}/${view.hud.laps}`, L, y, 18 * u, lap === view.hud.laps ? '#ff9f43' : '#ffffff'); y += 20 * u;
+        const laps = view.hud.laps, lap = clamp(me.lap, 1, laps);
+        label(g, str('lap', lap * 100 + laps, () => `LAP ${lap}/${laps}`), L, y, Math.round(18 * u), lap === laps ? '#ff9f43' : '#ffffff', 'left', d); y += 20 * u;
         text(g, fmtTime(me.lt), L, y, 15 * u, '#ffffff'); y += 17 * u;
-        text(g, `BEST ${me.bl ? fmtTime(me.bl) : '--'}`, L, y, 12 * u, '#c9b8ff'); y += 16 * u;
-      } else if (mode === 'elim') { text(g, `${view.hud?.left ?? n} LEFT`, L, y, 17 * u, '#ffffff'); y += 20 * u; }
+        label(g, str('bl', me.bl || 0, (v) => `BEST ${v ? fmtTime(v) : '--'}`), L, y, Math.round(12 * u), '#c9b8ff', 'left', d); y += 16 * u;
+      } else if (mode === 'elim') { label(g, str('left', view.hud?.left ?? n, (v) => v + ' LEFT'), L, y, Math.round(17 * u), '#ffffff', 'left', d); y += 20 * u; }
       // feed under the block
       for (let i = 0; i < this.feed.length; i++) {
         const f = this.feed[i]; f.t += dt;
@@ -103,7 +129,7 @@ export class Hud {
       panel(g, ix, iy, slot, slot, 12 * u, me.item || this.roll > 0 ? 'rgba(106,42,110,0.9)' : 'rgba(27,16,51,0.7)');
       if (this.roll > 0) { this.roll -= dt; const ids = ['missile', 'oil', 'shield', 'rockets', 'emp', 'turbo', 'spikes']; itemIcon(g, ids[Math.floor(t * 18) % ids.length], ix + slot / 2, iy + slot / 2, slot * 0.66); }
       else if (me.item) itemIcon(g, me.item, ix + slot / 2, iy + slot / 2, slot * 0.7);
-      if (ctrl.mode !== 'touch') text(g, 'K', ix + slot - 6 * u, iy + slot - 6 * u, 11 * u, '#c9b8ff', 'center');
+      if (ctrl.mode !== 'touch') label(g, 'K', ix + slot - 6 * u, iy + slot - 6 * u, Math.round(11 * u), '#c9b8ff', 'center', S.dpr);
       // weapon with a cooldown sweep
       const wid = rc.myDriver(), w = WEAPONS[wid], wx = cx + 6 * u + slot / 2, wy = Tp + slot / 2, r = slot / 2;
       const cd = me.em > 0 ? 1 : w ? clamp(me.wc / w.cd, 0, 1) : 0;
@@ -111,7 +137,7 @@ export class Hud {
       if (cd > 0) { g.beginPath(); g.moveTo(wx, wy); g.arc(wx, wy, r - 3, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - cd)); g.closePath(); g.fillStyle = 'rgba(255,210,63,0.55)'; g.fill(); }
       weaponIcon(g, wid, wx, wy, slot * 0.6, cd > 0 ? '#c9b8ff' : INK);
       if (me.em > 0) text(g, 'EMP', wx, wy + r + 8 * u, 11 * u, '#5ff4ff', 'center');
-      else if (ctrl.mode !== 'touch') text(g, 'J', wx + r - 4 * u, wy + r - 4 * u, 11 * u, '#c9b8ff', 'center');
+      else if (ctrl.mode !== 'touch') label(g, 'J', wx + r - 4 * u, wy + r - 4 * u, Math.round(11 * u), '#c9b8ff', 'center', S.dpr);
     }
     // -------- mode info pill (under the slots)
     let pill = null, pillCol = '#ffffff';
@@ -142,8 +168,8 @@ export class Hud {
       g.beginPath(); g.arc(gx, gy, R + 4 * u, Math.PI * 0.8, Math.PI * 2.2); g.lineWidth = 9 * u; g.strokeStyle = INK; g.lineCap = 'round'; g.stroke();
       g.beginPath(); g.arc(gx, gy, R + 4 * u, Math.PI * 0.8, Math.PI * 0.8 + Math.PI * 1.4 * clamp(spd / (top * 1.4), 0, 1)); g.lineWidth = 5 * u;
       g.strokeStyle = car.f & FLAG.BOOST ? '#5ff4ff' : spd > top * 0.95 ? '#ff9f43' : '#ffd23f'; g.stroke(); g.lineCap = 'butt';
-      text(g, String(Math.round(spd / 8)), gx, gy - 2 * u, 20 * u, '#ffffff', 'center');
-      text(g, 'KM/H', gx, gy + 13 * u, 8 * u, '#c9b8ff', 'center', 2.5);
+      label(g, str('kmh', Math.round(spd / 8), String), gx, gy - 2 * u, Math.round(20 * u), '#ffffff', 'center', S.dpr);
+      label(g, 'KM/H', gx, gy + 13 * u, Math.round(8 * u), '#c9b8ff', 'center', S.dpr);
       // drift charge (tier colours) or boost left
       const dc = rc.car && car.predicted ? rc.car.dc : 0, tier = driftTier(dc), bw = 92 * u, bh = 7 * u, bx = gx - bw / 2, by = gy + R * 0.9 + 2 * u;
       void by;
@@ -196,12 +222,12 @@ export class Hud {
 
   buttons(g, S, u) {
     const { ctrl, me, rc } = S, b = ctrl.btn;
-    const btn = (B, label, col, icon) => {
+    const btn = (B, name, col, icon) => {
       g.beginPath(); g.arc(B.x, B.y, B.r, 0, TAU);
       g.fillStyle = B.down ? col : 'rgba(27,16,51,0.55)'; g.fill();
       g.lineWidth = 4; g.strokeStyle = INK; g.stroke();
       g.beginPath(); g.arc(B.x, B.y, B.r - 4, 0, TAU); g.lineWidth = 2.5; g.strokeStyle = col; g.globalAlpha = 0.85; g.stroke(); g.globalAlpha = 1;
-      if (icon) icon(); else text(g, label, B.x, B.y, Math.max(12, B.r * 0.42), B.down ? INK === col ? '#fff' : '#ffffff' : col, 'center');
+      if (icon) icon(); else label(g, name, B.x, B.y, Math.round(Math.max(12, B.r * 0.42)), B.down ? '#ffffff' : col, 'center', S.dpr);
     };
     const tier = rc.car ? driftTier(rc.car.dc) : 0;
     btn(b.drift, 'DRIFT', rc.car && rc.car.drift ? TIER_COL[tier] : '#ffd23f');
@@ -210,12 +236,12 @@ export class Hud {
     const w = WEAPONS[rc.myDriver()], cd = me ? (me.em > 0 ? 1 : w ? clamp(me.wc / w.cd, 0, 1) : 0) : 0;
     btn(b.fire, 'FIRE', cd > 0 ? '#8a7aa8' : '#ff9f43', () => {
       weaponIcon(g, rc.myDriver(), b.fire.x, b.fire.y - b.fire.r * 0.18, b.fire.r * 0.8, cd > 0 ? '#8a7aa8' : '#ff9f43');
-      text(g, 'FIRE', b.fire.x, b.fire.y + b.fire.r * 0.42, Math.max(10, b.fire.r * 0.3), cd > 0 ? '#8a7aa8' : '#ffffff', 'center');
+      label(g, 'FIRE', b.fire.x, b.fire.y + b.fire.r * 0.42, Math.round(Math.max(10, b.fire.r * 0.3)), cd > 0 ? '#8a7aa8' : '#ffffff', 'center', S.dpr);
       if (cd > 0) { g.beginPath(); g.arc(b.fire.x, b.fire.y, b.fire.r - 2, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - cd)); g.lineWidth = 5; g.strokeStyle = '#ff9f43'; g.stroke(); }
     });
     btn(b.item, 'ITEM', me && me.item ? '#c04dff' : '#8a7aa8', () => {
       if (me && me.item) itemIcon(g, me.item, b.item.x, b.item.y - b.item.r * 0.1, b.item.r * 1.05);
-      else text(g, 'ITEM', b.item.x, b.item.y, Math.max(10, b.item.r * 0.36), '#8a7aa8', 'center');
+      else label(g, 'ITEM', b.item.x, b.item.y, Math.round(Math.max(10, b.item.r * 0.36)), '#8a7aa8', 'center', S.dpr);
     });
     // steer stick (where the thumb is) or a hint where to put it
     const s = ctrl.stick;
@@ -227,7 +253,7 @@ export class Hud {
       const x = SETTINGS.leftHanded ? S.W - S.SA.r - 110 * u : S.SA.l + 110 * u, y = S.H - S.SA.b - 70 * u;
       g.globalAlpha = 0.55;
       rr(g, x - 70 * u, y - 16 * u, 140 * u, 32 * u, 16 * u); g.fillStyle = 'rgba(27,16,51,0.5)'; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
-      text(g, '◀  STEER  ▶', x, y, 14 * u, '#ffffff', 'center');
+      label(g, '◀  STEER  ▶', x, y, Math.round(14 * u), '#ffffff', 'center', S.dpr);
       g.globalAlpha = 1;
     }
   }

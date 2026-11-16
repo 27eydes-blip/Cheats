@@ -188,11 +188,15 @@ export class RaceSim {
 
   // local dev / browser-test hooks (the room only forwards these when HUNT_DEV is set):
   // {k: 'wreck'} wrecks your car, {k: 'item', item} hands you an item
-  dev(id, m) {
-    const p = this.players.get(id);
-    if (!p || this.phase !== 'play' || this.time <= 0) return;
-    if (m.k === 'wreck') this.destroy(p, null, 'fall');
-    else if (m.k === 'item' && ITEM_IDS.includes(m.item) && !p.item) p.item = m.item;
+  // (queued and applied inside the next tick, so their events go out with that tick's snapshot)
+  dev(id, m) { (this.devQ ||= []).push([id, m]); }
+  applyDev() {
+    for (const [id, m] of this.devQ.splice(0)) {
+      const p = this.players.get(id);
+      if (!p || this.phase !== 'play' || this.time <= 0) continue;
+      if (m.k === 'wreck') this.destroy(p, null, 'fall');
+      else if (m.k === 'item' && ITEM_IDS.includes(m.item) && !p.item) p.item = m.item;
+    }
   }
 
   // ------------------------------------------------------------------ main loop
@@ -207,6 +211,7 @@ export class RaceSim {
     this.tickN++;
     this.time = r3(this.time + DT);
     this.events = [];
+    if (this.devQ && this.devQ.length) this.applyDev();
     const go = this.time > 0;
     for (const p of this.players.values()) this.drive(p, go);
     if (go) {

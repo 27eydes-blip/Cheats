@@ -43,31 +43,44 @@ export class Particles {
     }
     this.n = n;
   }
-  // draw every particle inside the view box (world coordinates; the context holds the camera)
+  // draw every particle inside the view box (world coordinates; the context holds the camera).
+  // Batched: particles are bucketed by (kind, colour, alpha band) with a counting sort, and each
+  // bucket is one path, so hundreds of particles cost a few dozen canvas calls.
   draw(g, x0, y0, x1, y1) {
-    const n = this.n;
-    for (let kind = 0; kind <= 7; kind++) {
-      g.globalCompositeOperation = ADDITIVE[kind] ? 'lighter' : 'source-over';
-      let lastC = -1;
-      for (let i = 0; i < n; i++) {
-        if (this.kind[i] !== kind) continue;
-        const x = this.x[i], y = this.y[i], s = this.size[i];
-        if (x + s < x0 || x - s > x1 || y + s < y0 || y - s > y1) continue;
-        const f = this.life[i] / this.max0[i];
-        if (this.col[i] !== lastC) { lastC = this.col[i]; g.fillStyle = PC[lastC]; g.strokeStyle = PC[lastC]; }
-        if (kind === PK.SPARK || kind === PK.GLINT) {
-          g.globalAlpha = Math.min(1, f * 1.6);
-          g.lineWidth = s;
-          g.beginPath(); g.moveTo(x, y); g.lineTo(x - this.vx[i] * 0.03, y - this.vy[i] * 0.03); g.stroke();
-        } else if (kind === PK.DEBRIS) {
-          g.globalAlpha = Math.min(1, f * 2);
-          const c = Math.cos(this.rot[i]) * s, sn = Math.sin(this.rot[i]) * s;
-          g.beginPath(); g.moveTo(x + c, y + sn); g.lineTo(x - sn, y + c); g.lineTo(x - c, y - sn); g.closePath(); g.fill();
-        } else {
-          g.globalAlpha = kind === PK.SMOKE || kind === PK.DUST ? f * 0.55 : kind === PK.SNOW ? 0.9 : f;
-          g.beginPath(); g.arc(x, y, s, 0, 6.2832); g.fill();
-        }
+    const n = this.n, NB = 4, NK = 8 * PC.length * NB;
+    const key = this.key || (this.key = new Uint16Array(this.max)), ord = this.ord || (this.ord = new Uint16Array(this.max));
+    const cnt = this.cnt || (this.cnt = new Uint16Array(NK + 1));
+    cnt.fill(0);
+    for (let i = 0; i < n; i++) {
+      const x = this.x[i], y = this.y[i], sz = this.size[i];
+      if (x + sz < x0 || x - sz > x1 || y + sz < y0 || y - sz > y1) { key[i] = 65535; continue; }
+      const kind = this.kind[i], f = this.life[i] / this.max0[i];
+      const al = kind === PK.SMOKE || kind === PK.DUST ? f * 0.55 : kind === PK.SNOW ? 0.9 : kind === PK.SPARK || kind === PK.GLINT ? Math.min(1, f * 1.6) : kind === PK.DEBRIS ? Math.min(1, f * 2) : f;
+      const k = (kind * PC.length + this.col[i]) * NB + Math.min(NB - 1, (al * NB) | 0);
+      key[i] = k; cnt[k + 1]++;
+    }
+    for (let k = 1; k <= NK; k++) cnt[k] += cnt[k - 1]; // bucket starts
+    const start = cnt;
+    for (let i = 0; i < n; i++) if (key[i] !== 65535) ord[start[key[i]]++] = i;
+    // start[k] is now the END of bucket k; walk them in order
+    let lastKind = -1, from = 0;
+    for (let k = 0; k < NK; k++) {
+      const to = start[k];
+      if (to === from) continue;
+      const kind = (k / (PC.length * NB)) | 0, col = ((k / NB) | 0) % PC.length, band = k % NB;
+      if (kind !== lastKind) { g.globalCompositeOperation = ADDITIVE[kind] ? 'lighter' : 'source-over'; lastKind = kind; }
+      const line = kind === PK.SPARK || kind === PK.GLINT;
+      g.globalAlpha = (band + 0.5) / NB;
+      g.beginPath();
+      let w = 0;
+      for (let q = from; q < to; q++) {
+        const i = ord[q], x = this.x[i], y = this.y[i], sz = this.size[i];
+        if (line) { g.moveTo(x, y); g.lineTo(x - this.vx[i] * 0.03, y - this.vy[i] * 0.03); if (sz > w) w = sz; }
+        else if (kind === PK.DEBRIS) { const c = Math.cos(this.rot[i]) * sz, sn = Math.sin(this.rot[i]) * sz; g.moveTo(x + c, y + sn); g.lineTo(x - sn, y + c); g.lineTo(x - c, y - sn); g.closePath(); }
+        else { g.moveTo(x + sz, y); g.arc(x, y, sz, 0, 6.2832); }
       }
+      if (line) { g.lineCap = 'round'; g.lineWidth = w; g.strokeStyle = PC[col]; g.stroke(); } else { g.fillStyle = PC[col]; g.fill(); }
+      from = to;
     }
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
   }

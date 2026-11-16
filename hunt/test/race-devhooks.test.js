@@ -20,15 +20,18 @@ assert.strictEqual(mkRace().laps, 3);
 {
   const sim = mkRace();
   const [A] = startRace(sim);
-  sim.dev(A.id, { k: 'wreck' });
+  sim.dev(A.id, { k: 'wreck' }); ticks(sim);
   assert.ok(A.alive, 'nothing before GO');
   toGo(sim); ticks(sim, 2);
-  sim.dev(A.id, { k: 'item', item: 'shield' });
+  sim.dev(A.id, { k: 'item', item: 'shield' }); ticks(sim);
   assert.strictEqual(A.item, 'shield');
-  sim.dev(A.id, { k: 'item', item: 'nope' });
+  sim.dev(A.id, { k: 'item', item: 'nope' }); ticks(sim);
   assert.strictEqual(A.item, 'shield');
-  sim.dev(A.id, { k: 'wreck' });
+  const sent = [];
+  sim.send = (id, m) => { if (m.t === 's' && m.ev) sent.push(...m.ev); };
+  sim.dev(A.id, { k: 'wreck' }); ticks(sim);
   assert.ok(!A.alive, 'wrecked');
+  assert.ok(sent.some((e) => e[0] === 'ko' && e[1] === A.id), 'the wreck goes out in the snapshot events');
   ticks(sim, RESPAWN_TICKS + 1);
   assert.ok(A.alive, 'back after the normal 2 s');
 }

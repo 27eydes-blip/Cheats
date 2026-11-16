@@ -81,6 +81,9 @@ export class RaceRenderer {
     if (this.art) this.art.setScale(s);
     this.cars.setScale(Math.round(this.baseZoom() * dpr * CAR_VIS * 8) / 8);
   }
+  // object transforms without save/restore: world (x, y), rotation a, scale k on top of the camera
+  at(g, x, y, a = 0, k = 1) { const M = this.M, c = Math.cos(a) * k * M.s, sn = Math.sin(a) * k * M.s; g.setTransform(c, sn, -sn, c, M.s * x + M.x, M.s * y + M.y); }
+  base(g) { const M = this.M; g.setTransform(M.s, 0, 0, M.s, M.x, M.y); }
   visOf(id) {
     let v = this.vis.get(id);
     if (!v) {
@@ -168,7 +171,9 @@ export class RaceRenderer {
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     g.fillStyle = (THEMES[T.world] || THEMES.desert).bg; g.fillRect(0, 0, this.cv.width, this.cv.height);
-    g.setTransform(dpr * z, 0, 0, dpr * z, dpr * (W / 2 - cx * z), dpr * (H / 2 - cy * z));
+    const M = this.M || (this.M = { s: 1, x: 0, y: 0 });
+    M.s = dpr * z; M.x = dpr * (W / 2 - cx * z); M.y = dpr * (H / 2 - cy * z);
+    this.base(g);
     // CHUNKS: everything visible now, plus one chunk ahead per frame
     const c0 = Math.floor(vw.x0 / CHUNK), c1 = Math.floor(vw.x1 / CHUNK), r0 = Math.floor(vw.y0 / CHUNK), r1 = Math.floor(vw.y1 / CHUNK);
     g.imageSmoothingEnabled = true;
@@ -204,7 +209,7 @@ export class RaceRenderer {
     for (const pd of art.pads) {
       if (pd.bx1 < vw.x0 - 40 || pd.bx0 > vw.x1 + 40 || pd.by1 < vw.y0 - 40 || pd.by0 > vw.y1 + 40) continue;
       const m = pd.mid, w = Math.min(pd.w, 150) * 0.42, len = pd.circle ? pd.w * 0.8 : 90;
-      g.save(); g.translate(m.x, m.y); g.rotate(m.a);
+      this.at(g, m.x, m.y, m.a);
       g.lineWidth = 7; g.lineJoin = 'round'; g.lineCap = 'round';
       for (let k = 0; k < 3; k++) {
         const ph = steady ? k / 3 : ((t * 1.8 + k / 3) % 1), x = -len / 2 + ph * len;
@@ -212,7 +217,7 @@ export class RaceRenderer {
         g.strokeStyle = k === 1 ? '#5ff4ff' : '#c9fbff';
         g.beginPath(); g.moveTo(x - 14, -w); g.lineTo(x + 10, 0); g.lineTo(x - 14, w); g.stroke();
       }
-      g.restore();
+      this.base(g);
     }
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     // hazards: lava geysers and neon arc emitters
@@ -234,7 +239,7 @@ export class RaceRenderer {
       if (taken) { g.globalAlpha = 0.25; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(b.x, b.y, 10, 0, TAU); g.stroke(); g.globalAlpha = 1; continue; }
       const bob = steady ? 1 : 1 + Math.sin(t * 3 + i) * 0.06, a = steady ? 0.4 : t * 1.6 + i * 0.7;
       g.globalAlpha = 0.3; g.fillStyle = '#000'; g.beginPath(); g.ellipse(b.x + 6, b.y + 9, 20, 14, 0, 0, TAU); g.fill(); g.globalAlpha = 1;
-      g.save(); g.translate(b.x, b.y); g.rotate(a); g.scale(bob, bob); g.drawImage(this.box, -24, -24, 48, 48); g.restore();
+      this.at(g, b.x, b.y, a, bob); g.drawImage(this.box, -24, -24, 48, 48); this.base(g);
     }
   }
   geyser(g, h, on, soon, t) {
@@ -407,7 +412,7 @@ export class RaceRenderer {
       // shadow (offset grows in the air: the height cue for jumps)
       g.globalAlpha = air ? 0.25 : 0.32; g.fillStyle = '#000';
       const so = 6 + lift * 34;
-      g.save(); g.translate(c.x + so, c.y + so * 1.2); g.rotate(c.a); g.beginPath(); g.ellipse(0, 0, 28 * (1 - lift * 0.15), 17 * (1 - lift * 0.15), 0, 0, TAU); g.fill(); g.restore();
+      g.beginPath(); g.ellipse(c.x + so, c.y + so * 1.2, 28 * (1 - lift * 0.15), 17 * (1 - lift * 0.15), c.a, 0, TAU); g.fill();
       g.globalAlpha = 1;
       // boost trail
       if (v.tn > 2) {
@@ -423,22 +428,22 @@ export class RaceRenderer {
       // boost / mini-turbo flames from the exhaust
       if (boost || v.flame > 0) {
         const L = (boost ? 26 : 16) + (steady ? 6 : Math.random() * 14), col = v.flame > 0 ? v.flameC : C.ORANGE;
-        g.save(); g.translate(c.x - cos * 26, c.y - sin * 26); g.rotate(c.a);
+        this.at(g, c.x - cos * 26, c.y - sin * 26, c.a);
         g.globalCompositeOperation = 'lighter';
         g.fillStyle = col === C.BLUE ? '#3a86ff' : col === C.PURPLE ? '#c04dff' : col === C.CYAN ? '#5ff4ff' : '#ff8c1a';
         g.beginPath(); g.moveTo(0, -8); g.quadraticCurveTo(-L * 0.6, -6, -L, 0); g.quadraticCurveTo(-L * 0.6, 6, 0, 8); g.closePath(); g.fill();
         g.fillStyle = '#fff3d0'; g.beginPath(); g.moveTo(0, -4); g.quadraticCurveTo(-L * 0.35, -3, -L * 0.55, 0); g.quadraticCurveTo(-L * 0.35, 3, 0, 4); g.closePath(); g.fill();
         g.globalCompositeOperation = 'source-over';
-        g.restore();
+        this.base(g);
         if (Math.random() < 0.6) p.emit(PK.FLAME, c.x - cos * (30 + L * 0.6), c.y - sin * (30 + L * 0.6), -cos * 90, -sin * 90, 0.14, 6, col === C.ORANGE ? C.ORANGE : col, -24, 2);
       }
       // the car
       const ghost = c.f & FLAG.GHOST;
       g.globalAlpha = ghost ? (steady ? 0.55 : 0.45 + 0.35 * (Math.sin(t * 22) > 0 ? 1 : 0)) : 1;
       const spr = this.cars.get(st, c.a), half = spr.half;
-      g.save(); g.translate(c.x, c.y - lift * 10); g.rotate(c.a - spr.ang); g.scale(sc * CAR_VIS, sc * CAR_VIS);
+      this.at(g, c.x, c.y - lift * 10, c.a - spr.ang, sc * CAR_VIS);
       g.drawImage(spr, -half, -half, half * 2, half * 2);
-      g.restore();
+      this.base(g);
       g.globalAlpha = 1;
       if (v.hitT > 0 && !steady) { g.globalAlpha = v.hitT * 2.4; g.globalCompositeOperation = 'lighter'; g.drawImage(this.glow.red, c.x - 40, c.y - 40, 80, 80); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; }
       // shield bubble

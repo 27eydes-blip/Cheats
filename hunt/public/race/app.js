@@ -87,9 +87,10 @@ class RaceSession {
       layout: () => ({ W: s.W, H: s.H, btn: s.ctrl.btn, mode: s.ctrl.mode }),
       dev: (k, item) => s.rc?.send({ t: 'dev', k, item }),
       perf: () => s.perfStats(), resetPerf: () => { s.perfN = 0; },
-      dpr: () => s.dpr, finishShown: () => s.endShown, log: s.log = [],
+      dpr: () => s.dpr, finishShown: () => s.endShown, mine: s.mine = {},
       // screenshot / perf runs only: drive along the racing line (the touch tests drive for real)
       auto: (on = true, o = {}) => { s.auto = on ? { i: -1, fire: 0, ...o } : null; },
+      hint: () => { const h = s.pursuit(s.hintS || (s.hintS = { i: -1 })); return { st: h.st, th: h.th, dr: h.dr, spd: h.spd }; },
     };
   }
 
@@ -301,19 +302,45 @@ class RaceSession {
     engine(mine ? mine.spd / top : 0, car && car.drift ? 1 : 0, p.tier, mine && mine.f & FLAG.BOOST ? 1 : 0, !!alive && rc.phase === 'race' && !this.endShown);
   }
 
-  autopilot(dt) {
-    const rc = this.rc, car = rc.car, A = this.auto, out = (A.out ||= { st: 0, th: 1, dr: 0 });
-    if (!car || !rc.T.corridors.length) { out.st = 0; return out; }
-    const c = rc.T.corridors[0], L = c.line || { x: c.px, y: c.py }, n = c.n;
+  // pure pursuit along the racing line (test/screenshot autopilot, and the steering hint the
+  // touch / keyboard browser tests turn into real finger and key input)
+  pursuit(A) {
+    const rc = this.rc, car = rc.car, out = A.out || (A.out = { st: 0, th: 1, dr: 0, spd: 0 });
+    if (!car || !rc.T || !rc.T.corridors.length) { out.st = 0; out.dr = 0; return out; }
+    const now = performance.now(), dt = Math.min(0.2, (now - (A.at || now)) / 1000); A.at = now;
+    const T = rc.T, c = T.corridors[0], L = c.line || { x: c.px, y: c.py, k: new Float64Array(c.n) }, n = c.n, st = DRIVERS[rc.myDriver()];
+    // corner speed per line sample (same rule of thumb the bots use), cached per track + driver
+    const key = 'vmax_' + rc.myDriver();
+    const vmax = T[key] || (T[key] = Float64Array.from(L.k, (k) => { let v = st.top; for (let it = 0; it < 4; it++) v = Math.min(st.top * 1.3, ((st.handling * (1 - 0.3 * Math.min(1, Math.max(0, (v - 450) / 450)))) / Math.max(k, 1e-5)) * 0.9); return Math.max(260, v); }));
     let best = Infinity, bi = A.i;
     const from = A.i < 0 ? 0 : A.i - 6, to = A.i < 0 ? n : A.i + 12;
     for (let k = from; k < to; k++) { const i = ((k % n) + n) % n, d = (L.x[i] - car.x) ** 2 + (L.y[i] - car.y) ** 2; if (d < best) { best = d; bi = i; } }
-    A.i = bi;
-    const spd = Math.hypot(car.vx, car.vy), j = (bi + 4 + Math.round(spd / 140)) % n;
+    A.i = best > 400 * 400 ? -1 : bi; // far off the line (respawn): search everything next time
+    const spd = Math.hypot(car.vx, car.vy), fwd = car.vx * Math.cos(car.a) + car.vy * Math.sin(car.a);
+    const j = (bi + Math.round((90 + Math.max(0, fwd) * 0.38) / 32)) % n;
     let da = Math.atan2(L.y[j] - car.y, L.x[j] - car.x) - car.a;
     while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
-    out.st = Math.max(-1, Math.min(1, da * 2.6)); out.th = Math.abs(da) > 1.2 && spd > 500 ? -0.4 : 1;
-    out.dr = A.drift !== false && Math.abs(da) > 0.32 && spd > 420 ? 1 : car.drift && Math.abs(da) > 0.12 ? 1 : 0;
+    out.st = Math.max(-1, Math.min(1, da * 2.6)); out.spd = spd; out.th = 1; out.dr = 0;
+    // brake for the slowest bend within braking distance
+    let target = st.top * (car.boostT > 0 ? car.boostP : 1);
+    for (let k = 0, dist = 0; dist < fwd * 1.2 + 260 && k < n; k++) { const i = (bi + k) % n, allow = Math.sqrt(vmax[i] ** 2 + 2 * 1050 * dist); if (allow < target) target = allow; dist += 32; }
+    if (fwd > target + 45) out.th = -1; else if (fwd > target) out.th = 0;
+    if (A.drift !== false && car.airT <= 0) {
+      // drift only through real bends (curvature ahead), let go once the nose is round
+      let kAhead = 0;
+      for (let k = 0; k < 14; k++) kAhead = Math.max(kAhead, L.k[(bi + k) % n]);
+      if (car.drift) out.dr = Math.abs(da) > 0.15 && Math.sign(da) === car.drift && kAhead > 1 / 1100 ? 1 : 0;
+      else if (fwd > 470 && Math.abs(da) > 0.4 && kAhead > 1 / 650) out.dr = 1;
+      if (out.dr) out.th = 1;
+    }
+    // stuck against something (or facing the wrong way): back off, steering the other way
+    if (A.rev > 0) { A.rev -= dt; out.th = -1; out.st = -out.st; out.dr = 0; return out; }
+    if (rc.latest && rc.latest.tm > 1 && (Math.abs(fwd) < 70 || (Math.abs(da) > 2.2 && fwd < 150)) && car.spinT <= 0) A.slow = (A.slow || 0) + dt; else A.slow = 0;
+    if (A.slow > 1.1) { A.slow = 0; A.rev = 0.9; }
+    return out;
+  }
+  autopilot(dt) {
+    const A = this.auto, out = this.pursuit(A), rc = this.rc;
     if (A.fire && (A.fire -= dt) <= 0) { A.fire = A.every || 1.5; rc.fire(); if (rc.me && rc.me.it >= 0) rc.useItem(); }
     return out;
   }
@@ -321,8 +348,7 @@ class RaceSession {
   onEvent(e, v) {
     const rc = this.rc, meId = rc.id, R = this.renderer, H = this.hud;
     R.fx(e, v, meId);
-    this.log.push(e[0] === 'ko' || e[0] === 'rs' ? [e[0], e[1], performance.now()] : [e[0], e[1]]);
-    if (this.log.length > 400) this.log.splice(0, 200);
+    if (e[1] === meId) (this.mine[e[0]] ||= []).push(performance.now()); // own events by kind (tests)
     const fall = (id) => { const c = R.carAt(v, id), m = R.meCar; if (!c || !m) return 0.3; return Math.max(0, 1 - Math.hypot(c.x - m.x, c.y - m.y) / 1300); };
     switch (e[0]) {
       case 'ko': {
