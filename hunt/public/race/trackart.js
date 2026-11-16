@@ -340,6 +340,7 @@ export class TrackArt {
     g.beginPath(); g.arc(cx, cy, Math.min(B.x1 - B.x0, B.y1 - B.y0) * 0.33, 0, 7); g.stroke();
     g.lineWidth = 2; g.beginPath(); for (let x = B.x0 + 200; x < B.x1; x += 200) { g.moveTo(x, B.y0); g.lineTo(x, B.y1); } for (let y = B.y0 + 200; y < B.y1; y += 200) { g.moveTo(B.x0, y); g.lineTo(B.x1, y); } g.stroke();
     g.globalAlpha = 1;
+    this.arenaPaint(g, B, cx, cy);
     for (const z of T.circles) {
       if (z.x + z.r < bx.x0 || z.x - z.r > bx.x1 || z.y + z.r < bx.y0 || z.y - z.r > bx.y1) continue;
       if (z.kind === 'pad') { this.padPlate(g, z.x, z.y, -Math.PI / 2, z.r * 2, z.r * 2, true); continue; }
@@ -348,6 +349,57 @@ export class TrackArt {
       this.surfDetail(g, z.surf, z.x, z.y, z.r, 0, 1);
     }
     for (const o of T.obstacles) if (o.x + o.r > bx.x0 && o.x - o.r < bx.x1 && o.y + o.r > bx.y0 && o.y - o.r < bx.y1) this.pillar(g, o);
+  }
+
+  // themed floor paint for the bare arenas (look only: it all drives as plain floor). Deterministic,
+  // painted into the cached chunks like the rest of the floor, so it costs nothing per frame.
+  arenaPaint(g, B, cx, cy) {
+    const w = this.T.world, R = Math.min(B.x1 - B.x0, B.y1 - B.y0);
+    // a striped warning band inside the walls (every arena)
+    const band = 34, inset = 18;
+    g.save();
+    g.beginPath(); g.rect(B.x0 + inset, B.y0 + inset, B.x1 - B.x0 - inset * 2, B.y1 - B.y0 - inset * 2); g.rect(B.x0 + inset + band, B.y0 + inset + band, B.x1 - B.x0 - (inset + band) * 2, B.y1 - B.y0 - (inset + band) * 2); g.clip('evenodd');
+    g.globalAlpha = 0.28; g.fillStyle = w === 'city' ? '#ff3fa4' : w === 'frozen' ? '#5fd0ff' : '#ffb03a';
+    for (let k = -R * 2; k < R * 4; k += 70) { g.beginPath(); g.moveTo(B.x0 + k, B.y0); g.lineTo(B.x0 + k + 34, B.y0); g.lineTo(B.x0 + k + 34 - (B.y1 - B.y0), B.y1); g.lineTo(B.x0 + k - (B.y1 - B.y0), B.y1); g.closePath(); g.fill(); }
+    g.restore();
+    if (w === 'ashlands') {
+      // CINDER PIT: glowing magma cracks running out from a scorched centre seal, cooled-rock rings
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      for (let i = 0; i < 16; i++) {
+        let a = (i / 16) * Math.PI * 2 + hash(i, 1, 41) * 0.3, x = cx + Math.cos(a) * R * 0.17, y = cy + Math.sin(a) * R * 0.17;
+        const pts = [[x, y]];
+        for (let k = 0; k < 9; k++) { a += (hash(i, k, 42) - 0.5) * 0.7; const st = R * (0.03 + hash(i, k, 43) * 0.035); x += Math.cos(a) * st; y += Math.sin(a) * st; pts.push([x, y]); }
+        for (const [lw, col, al] of [[16, '#1a0a08', 0.85], [8, '#c9360c', 0.75], [3, '#ffb347', 0.85]]) {
+          g.globalAlpha = al; g.lineWidth = lw * (1 - i % 3 * 0.18); g.strokeStyle = col;
+          g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let k = 1; k < pts.length; k++) g.lineTo(pts[k][0], pts[k][1]); g.stroke();
+        }
+      }
+      g.globalAlpha = 0.35; g.lineWidth = 10; g.strokeStyle = '#1a0a08';
+      for (const f of [0.42, 0.47]) { g.beginPath(); g.arc(cx, cy, R * f, 0, 7); g.stroke(); }
+      // the seal: a dark disc with an ember ring and eight spokes
+      g.globalAlpha = 0.9; g.fillStyle = '#1d1012'; g.beginPath(); g.arc(cx, cy, R * 0.16, 0, 7); g.fill();
+      g.lineWidth = 12; g.strokeStyle = '#ff6a1a'; g.globalAlpha = 0.7; g.stroke();
+      g.lineWidth = 6; g.strokeStyle = '#ffb347'; g.globalAlpha = 0.55;
+      g.beginPath(); for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2 + 0.2; g.moveTo(cx + Math.cos(a) * R * 0.05, cy + Math.sin(a) * R * 0.05); g.lineTo(cx + Math.cos(a) * R * 0.13, cy + Math.sin(a) * R * 0.13); } g.stroke();
+      g.globalAlpha = 1;
+    } else if (w === 'city') {
+      // ROOFTOP GRID: a landing pad in the middle (rings, a cross of chevrons), neon tile lines,
+      // corner parking bays
+      g.globalAlpha = 0.5; g.lineWidth = 3; g.strokeStyle = '#3ff5ff';
+      g.beginPath(); for (let x = B.x0 + 100; x < B.x1; x += 200) { g.moveTo(x, B.y0 + 60); g.lineTo(x, B.y1 - 60); } g.stroke();
+      g.strokeStyle = '#ff3fa4'; g.beginPath(); for (let y = B.y0 + 100; y < B.y1; y += 200) { g.moveTo(B.x0 + 60, y); g.lineTo(B.x1 - 60, y); } g.stroke();
+      g.globalAlpha = 0.85; g.fillStyle = '#14142a'; g.beginPath(); g.arc(cx, cy, R * 0.2, 0, 7); g.fill();
+      g.lineWidth = 10; g.strokeStyle = '#ffe14a'; g.stroke();
+      g.lineWidth = 4; g.strokeStyle = '#3ff5ff'; g.beginPath(); g.arc(cx, cy, R * 0.15, 0, 7); g.stroke();
+      g.fillStyle = '#ffe14a';
+      for (let k = 0; k < 4; k++) {
+        const a = (k * Math.PI) / 2;
+        for (let j = 0; j < 3; j++) { const d = R * (0.04 + j * 0.035), ca = Math.cos(a), sa = Math.sin(a), px = cx + ca * d, py = cy + sa * d, s2 = R * 0.018; g.beginPath(); g.moveTo(px + ca * s2, py + sa * s2); g.lineTo(px - sa * s2 * 1.4 - ca * s2 * 0.4, py + ca * s2 * 1.4 - sa * s2 * 0.4); g.lineTo(px - ca * s2 * 0.1, py - sa * s2 * 0.1); g.lineTo(px + sa * s2 * 1.4 - ca * s2 * 0.4, py - ca * s2 * 1.4 - sa * s2 * 0.4); g.closePath(); g.fill(); }
+      }
+      g.globalAlpha = 0.55; g.lineWidth = 5; g.strokeStyle = '#e8e8ff';
+      for (const [qx, qy] of [[B.x0 + 90, B.y0 + 90], [B.x1 - 330, B.y0 + 90], [B.x0 + 90, B.y1 - 250], [B.x1 - 330, B.y1 - 250]]) { g.beginPath(); for (let k = 0; k <= 4; k++) { g.moveTo(qx + k * 60, qy); g.lineTo(qx + k * 60, qy + 160); } g.stroke(); }
+      g.globalAlpha = 1;
+    }
   }
 
   surfFill(g, surf) {
