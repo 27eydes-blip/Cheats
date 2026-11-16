@@ -1,5 +1,6 @@
-// Full-screen menus: brawler select (+ detail flip panel), mode picker, locker, Hunt Pass,
+// Full-screen menus: brawler select (+ detail flip panel), mode picker, locker, GP Pass,
 // Trophy Road, profile, settings, friends, missions. All built from the design-system tokens.
+import { inviteText } from '../brand/name.js';
 import { BRAWLERS, BRAWLER_IDS, WORLDS, worldsInDisplayOrder } from '../shared.js';
 import * as R from '../render.js';
 import { SETTINGS, setSetting } from '../settings.js';
@@ -229,7 +230,7 @@ export function openLocker(api, onDone, startTab = 'skins', startWho = null) {
     else items = [[null, 'None'], ...Object.entries(TITLES)].map(([k, n]) => ({ k, n, slot: 'title', on: (p.equipped.title || null) === k }));
     $('lkItems').innerHTML = items.map((it) => {
       const own = !it.k || p.owned.includes(it.k), earn = own ? null : earnTag(it.k), price = it.k ? priceOf(it.k) : null;
-      // reward items (level / Trophy Road / Hunt Pass) are earned, never bought: a lock and where from
+      // reward items (level / Trophy Road / GP Pass) are earned, never bought: a lock and where from
       const act = it.on ? '<span class="tag">EQUIPPED</span>' : own ? `<button class="btn btn-sm" data-eq>EQUIP</button>`
         : earn || price == null ? `<span class="tag earn">${icon('lock')} ${earn || 'LOCKED'}</span>` : `<button class="btn btn-sm" data-buy>${icon('coin')} ${price}</button>`;
       return `<div class="card-a ped tap ${it.on ? 'on' : ''} ${peek && peek.slot === it.slot && peek.k === it.k ? 'peek' : ''}" tabindex="0" role="button" aria-label="Preview ${esc(it.n)}" data-k="${it.k || ''}" data-slot="${it.slot}">${tab === 'skins' ? `<canvas data-skin="${it.k || ''}"></canvas>` : `<div class="ico" style="font-size:calc(var(--u)*5)">${icon(tab === 'fx' ? 'star' : 'pass')}</div>`}<span>${esc(it.n)}</span>
@@ -281,12 +282,12 @@ function drawFxDemo(g, id, x, y, k) {
   g.restore();
 }
 
-// ======================================================================= HUNT PASS
+// ======================================================================= GP PASS
 const rewardIcon = (r) => (r.coins ? 'coin' : r.skin ? 'locker' : r.fx ? 'star' : 'pass');
 const rewardLabel = (r) => (r.coins ? `${r.coins}` : r.skin ? SKINS[r.skin].name : r.fx ? KILL_FX[r.fx].name : TITLES[r.title]);
 const dupeCoins = (r) => DUPE_COINS[r.skin ? 'skin' : r.fx ? 'fx' : 'title'];
 export function openPass(onDone) {
-  const S = screen('HUNT PASS', `<div class="cur" id="hpCoinChip">${icon('coin')}<b id="hpCoins">0</b><small>TEST</small></div>`, onDone);
+  const S = screen('GP PASS', `<div class="cur" id="hpCoinChip">${icon('coin')}<b id="hpCoins">0</b><small>TEST</small></div>`, onDone);
   if (document.getElementById('lobby')?.classList.contains('racing')) S.el.classList.add('neon'); // the neon racing look (store.css)
   const render = (keepScroll) => {
     const p = A.progress(), tier = passTier(p.pass.xp), into = (p.pass.xp || 0) % PASS_XP_PER_TIER;
@@ -438,7 +439,7 @@ export function openFriends(api) {
   const modes = () => { $('roomModes').innerHTML = ROOM_MODES.map(([k, l]) => `<button class="chipbtn ${k === mode ? 'on' : ''}" data-m="${k}">${l}</button>`).join(''); for (const b of $('roomModes').children) b.onclick = () => { mode = b.dataset.m; modes(); }; };
   modes();
   $('newCode').onclick = () => { room.value = Math.random().toString(36).slice(2, 7).toUpperCase(); };
-  $('shareCode').onclick = async () => { const t = `Join my Hunt room: ${room.value} — ${location.origin}`; try { if (navigator.share) await navigator.share({ text: t }); else { await navigator.clipboard.writeText(t); toastErr('Copied!'); } } catch {} };
+  $('shareCode').onclick = async () => { const t = `Join my Oblivion GP room: ${room.value} — ${location.origin}`; try { if (navigator.share) await navigator.share({ text: t }); else { await navigator.clipboard.writeText(t); toastErr('Copied!'); } } catch {} };
   $('roomPlay').onclick = () => { if (!room.value.trim()) { room.value = Math.random().toString(36).slice(2, 7).toUpperCase(); } P.close(); api.startQuick({ fromFriends: true, mode }); };
 }
 
@@ -458,7 +459,7 @@ export function openMissions(onDone) {
 export function openEarnInfo() {
   popup(`<div class="title" style="font-size:calc(var(--u)*3)">TEST CURRENCY</div>
     <p class="outlined" style="color:#fff;font-size:max(var(--t-sm), calc(var(--u) * 1.8))">${icon('coin')} Coins and ${icon('gem')} gems are <b>test currency</b> — there are no real payments.</p>
-    <p class="outlined" style="color:#fff;font-size:max(var(--t-sm), calc(var(--u) * 1.6))">Earn them from daily missions, the Hunt Pass and the Trophy Road.</p><button class="btn btn-md" data-close>GOT IT</button>`);
+    <p class="outlined" style="color:#fff;font-size:max(var(--t-sm), calc(var(--u) * 1.6))">Earn them from daily missions, the GP Pass and the Trophy Road.</p><button class="btn btn-md" data-close>GOT IT</button>`);
 }
 
 // ======================================================================= ARMORY
@@ -581,7 +582,7 @@ export function renderLockerPage(el, api, onDone) {
   el.querySelector('.lsec[data-armory]').onclick = () => openArmory(api, onDone);
 }
 
-// ======================================================================= HUNT RACERS
+// ======================================================================= RACING (Oblivion GP)
 const fmtT = (s) => (s == null ? '--' : `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, '0')}`);
 const TRACK_BLURB = { any: 'A different track every race', desert: 'Canyon jumps and sand traps', frozen: 'Slippery ice sections', ashlands: 'Lava, geysers and fire', neon: 'Tight corners under neon' };
 const ARENA_BLURB = { any: 'A different arena every match', desert: 'Open sand bowl', frozen: 'Ice rink, low grip', ashlands: 'Lava pits in the middle', neon: 'Pillars and arc towers' };
@@ -690,7 +691,7 @@ export function openRaceFriends(api) {
   $('newCode').onclick = () => { room.value = fresh(); };
   $('shareCode').onclick = async () => {
     if (!clean()) room.value = fresh();
-    const link = `${location.origin}/?room=${clean()}`, t = `Race me in Hunt! Room ${clean()}: ${link}`;
+    const link = `${location.origin}/?room=${clean()}`, t = inviteText(link);
     try { if (navigator.share) await navigator.share({ text: t }); else { await navigator.clipboard.writeText(t); toastErr('Invite copied'); } } catch {}
   };
   $('roomPlay').onclick = () => { if (!clean()) room.value = fresh(); room.value = clean(); const r = room.value; api.saveName?.(); P.close(); api.startRace({ room: r, mode, track }); };

@@ -1,9 +1,9 @@
-// Cosmetics catalog + Hunt Pass.
-// TEST CURRENCY ONLY: "Hunt Coins (test)". There are no real payments anywhere in the game.
+// Cosmetics catalog + GP Pass.
+// TEST CURRENCY ONLY: "GP Coins (test)". There are no real payments anywhere in the game.
 // Cosmetics never touch gameplay: the server only forwards ids to clients for drawing;
 // hitboxes and stats come from shared.js BRAWLERS + moveStats and ignore cosmetics.
 
-export const CURRENCY = 'Hunt Coins (test)';
+export const CURRENCY = 'GP Coins (test)';
 // PREMIUM is a choice, not free money: its coin tiers plus the coins for duplicates (worst case)
 // always add up to less than it costs (test/economy.test.js checks this)
 export const PREMIUM_PRICE = 1400;
@@ -49,7 +49,7 @@ export const TITLES = {
   tracker: 'Tracker', bounty_hunter: 'Bounty Hunter', apex: 'Apex Hunter', sharpshooter: 'Sharpshooter', night_owl: 'Night Owl',
   sand_strider: 'Sand Strider', crate_crusher: 'Crate Crusher', squad_leader: 'Squad Leader', unstoppable: 'Unstoppable', lay_low: 'Bush Whisperer',
   // level road titles (never sold)
-  marksman: 'Marksman', arsenal: 'Walking Arsenal', veteran: 'Veteran', warlord: 'Warlord', nightmare: 'Nightmare', legend: 'Legend of the Hunt',
+  marksman: 'Marksman', arsenal: 'Walking Arsenal', veteran: 'Veteran', warlord: 'Warlord', nightmare: 'Nightmare', legend: 'Legend of the Grid',
 };
 export const LEVEL_TITLES = { 10: 'marksman', 25: 'arsenal', 40: 'veteran', 60: 'warlord', 75: 'nightmare', 100: 'legend' };
 // EMOTES: short call-outs shown over your head in a match. The first two are free.
@@ -79,14 +79,14 @@ export const PASS = Array.from({ length: PASS_TIERS }, (_, i) => {
 });
 export const passTier = (xp) => Math.min(PASS_TIERS, Math.floor((xp || 0) / PASS_XP_PER_TIER));
 export const itemId = (r) => r.skin || r.fx || r.title || null;
-// REWARDS ARE EXCLUSIVE: anything on the Trophy Road, the Hunt Pass or the level road is earned,
+// REWARDS ARE EXCLUSIVE: anything on the Trophy Road, the GP Pass or the level road is earned,
 // never sold. id -> where it comes from (for the Locker tag), built on first use.
 let RS = null;
 export function rewardSource(id) {
   if (!RS) {
     RS = {};
     for (const r of ROAD) { const k = itemId(r); if (k) RS[k] = `Trophy Road ${r.at}`; }
-    for (const row of PASS) for (const tr of ['free', 'premium']) { const k = itemId(row[tr]); if (k && !RS[k]) RS[k] = `${tr === 'premium' ? 'Premium Pass' : 'Hunt Pass'} tier ${row.tier}`; }
+    for (const row of PASS) for (const tr of ['free', 'premium']) { const k = itemId(row[tr]); if (k && !RS[k]) RS[k] = `${tr === 'premium' ? 'Premium Pass' : 'GP Pass'} tier ${row.tier}`; }
     for (const [k, s] of Object.entries(SKINS)) if (s.level) RS[k] = `Level ${s.level}`;
     for (const [L, k] of Object.entries(LEVEL_TITLES)) RS[k] = `Level ${L}`;
   }

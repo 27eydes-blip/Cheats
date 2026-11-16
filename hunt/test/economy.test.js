@@ -26,7 +26,7 @@ for (const id of rewards) {
   assert.equal(p.coins, 99999);
 }
 assert.equal(rewardSource('apex'), 'Trophy Road 1000');
-assert.equal(rewardSource('ghost'), 'Hunt Pass tier 15');
+assert.equal(rewardSource('ghost'), 'GP Pass tier 15');
 assert.equal(rewardSource('dune_night'), 'Premium Pass tier 5');
 // ...and the shop still sells things
 const forSale = [...Object.keys(SKINS), ...Object.keys(KILL_FX), ...Object.keys(TITLES)].filter((id) => priceOf(id) > 0);

@@ -1,5 +1,5 @@
 /* Hunt Racers screens in the space look (body.sp-racing, set by ui/space/racelobby.js): the store,
-   Hunt Pass, Trophy Road, profile, settings, garage, friends and every popup get the lobby's
+   GP Pass, Trophy Road, profile, settings, garage, friends and every popup get the lobby's
    navy glass, thin neon rims, squared corners and the techno / narrow fonts. Their layout and
    logic are untouched: this re-points the design tokens (tokens.css) for those layers and swaps
    the chunky outlines and drop shadows for rims and glows. The race itself keeps its own look. */
@@ -34,7 +34,7 @@ body.sp-racing :is(.ui-screen, .ui-pop, .detail) .cur { border: 1px solid rgba(2
 /* store: the neon panels become glass with cut corners */
 body.sp-racing :is(.st-stage, .st-shop) { border: 1px solid rgba(52,231,255,.5); border-radius: 0; clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); background: linear-gradient(160deg, rgba(12,20,52,.92), rgba(22,16,58,.88)); box-shadow: none; }
 body.sp-racing .st-arrow, body.sp-racing .st-tab { border-radius: 3px; }
-/* Hunt Pass / Trophy Road tiers */
+/* GP Pass / Trophy Road tiers */
 body.sp-racing .ui-screen .tier { border-radius: 3px; }
 body.sp-racing .ui-screen .rw { border-radius: 3px; }
 /* the profile page inside the lobby */

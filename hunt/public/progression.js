@@ -203,14 +203,14 @@ export function applyMatch(p, r) {
 }
 
 // ---------------------------------------------------------------- client display helpers
-// Reward items (level road, Trophy Road, Hunt Pass) are earned, not bought: the Locker shows a lock
+// Reward items (level road, Trophy Road, GP Pass) are earned, not bought: the Locker shows a lock
 // and where they come from. Returns a short tag ('LEVEL 15', 'ROAD 700', 'PASS 5', 'PREMIUM PASS 10')
 // or null for an item that is only sold.
 export function earnTag(id) {
   // one rule with the server: catalog.rewardSource is what makes priceOf() refuse to sell an item
   const src = rewardSource(id);
   if (!src) return null;
-  return src.toUpperCase().replace(/^TROPHY ROAD /, 'ROAD ').replace(/^(HUNT|PREMIUM) PASS TIER /, (_, k) => (k === 'PREMIUM' ? 'PREMIUM PASS ' : 'PASS '));
+  return src.toUpperCase().replace(/^TROPHY ROAD /, 'ROAD ').replace(/^(GP|PREMIUM) PASS TIER /, (_, k) => (k === 'PREMIUM' ? 'PREMIUM PASS ' : 'PASS '));
 }
 // the same, as a sentence for a toast
 export function earnHint(id, name) {
@@ -218,7 +218,7 @@ export function earnHint(id, name) {
   if (!t) return `Buy ${name} in the Locker`;
   if (t.startsWith('LEVEL')) return `Reach level ${t.slice(6)} to unlock ${name}`;
   if (t.startsWith('ROAD')) return `Reach ${t.slice(5)} trophies on the Trophy Road to unlock ${name}`;
-  return `${name} is a Hunt Pass reward (tier ${t.split(' ').pop()}${t.startsWith('PREMIUM') ? ', premium' : ''})`;
+  return `${name} is a GP Pass reward (tier ${t.split(' ').pop()}${t.startsWith('PREMIUM') ? ', premium' : ''})`;
 }
 
 // This device's per-world stats (localStorage prefs). stats[worldId] = arena matches (Quick Hunt

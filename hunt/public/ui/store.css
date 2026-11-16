@@ -1,4 +1,4 @@
-/* Hunt Racers neon look: the STORE screen, the lobby's car platform card, the restyled Hunt Pass
+/* Hunt Racers neon look: the STORE screen, the lobby's car platform card, the restyled GP Pass
    and the race HORN button. Dark panels, glowing neon edges; rarity colours: common grey, rare
    blue, epic purple, legendary gold. Uses tokens.css. */
 :root { --neo-bg: #0b0816; --neo-panel: #140f26; --neo-panel-2: #1c1534; --neo-pink: #ff3fa4; --neo-cyan: #38f2ff; --neo-violet: #a64dff;
@@ -95,7 +95,7 @@ body.reduce-flash .st-svg.anim { animation: none; }
 .detail.driver .card-b { background: radial-gradient(ellipse at 30% 30%, #24124a, #0d0a1c 75%); box-shadow: var(--drop), inset 0 0 0 2px var(--card-col), 0 0 14px color-mix(in srgb, var(--card-col) 45%, transparent); }
 .ui-screen.neon .tier { padding: 4px; }
 
-/* ---------------------------------------------------------------- Hunt Pass, neon (racing) */
+/* ---------------------------------------------------------------- GP Pass, neon (racing) */
 .ui-screen.neon { background: radial-gradient(ellipse at 30% 20%, #2a1450 0%, #120a26 55%, #07050f 100%); }
 .ui-screen.neon .ui-head .title { color: #fff; text-shadow: 0 0 10px var(--r-legendary), 0 0 2px var(--r-legendary); }
 .ui-screen.neon .pass-top .bar { background: #140f26; border-color: #07050f; box-shadow: 0 0 10px rgba(255,196,46,.35); }

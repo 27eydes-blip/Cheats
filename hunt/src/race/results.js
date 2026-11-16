@@ -1,5 +1,5 @@
 // Race results -> the existing account progression (public/progression.js applyMatch), so trophies,
-// XP, coins, Hunt Pass XP, daily missions and lifetime stats all work for races. Races are tagged
+// XP, coins, GP Pass XP, daily missions and lifetime stats all work for races. Races are tagged
 // 'race_<mode>' in the per-mode stats. A race's match coins (item boxes, laps, takedowns, bounty
 // steals) are paid out on top, capped. Time Trial is solo: it never moves trophies (a solo "win"
 // every time would be free trophies); it saves your best time per track instead. The tutorial pays

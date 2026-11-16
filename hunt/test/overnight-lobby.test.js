@@ -49,5 +49,5 @@ for (const row of PASS) for (const tr of ['free', 'premium']) { const r = row[tr
 for (const id of [...Object.keys(SKINS), ...Object.keys(KILL_FX), ...Object.keys(TITLES)]) assert(earnTag(id) || priceOf(id) != null, id);
 assert.equal(earnHint('volt_static', 'Dead Static'), 'Reach level 15 to unlock Dead Static');
 assert.equal(earnHint('volt_storm', 'Stormcell'), 'Reach 700 trophies on the Trophy Road to unlock Stormcell');
-assert.equal(earnHint('dune_night', 'Night Dune'), 'Night Dune is a Hunt Pass reward (tier 5, premium)');
+assert.equal(earnHint('dune_night', 'Night Dune'), 'Night Dune is a GP Pass reward (tier 5, premium)');
 console.log('OVERNIGHT LOBBY OK');

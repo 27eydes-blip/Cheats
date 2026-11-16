@@ -1,6 +1,6 @@
-# Hunt
+# Oblivion GP
 
-**HUNT RACERS**: a real-time top-down combat racer for phones (landscape) and desktop. Up to 10
+**OBLIVION GP** (Grand Prix): a real-time top-down combat racer for phones (landscape) and desktop. Up to 10
 racers drive, drift and fight on the same track: pick a driver, grab item boxes, fire your car's
 own weapon, and wreck the leader to steal their bounty.
 
@@ -10,12 +10,19 @@ own weapon, and wreck the leader to steal their bounty.
 
 Created by Sam Eyde III.
 
+The game used to be called Hunt (then Hunt Racers). Players only ever see **Oblivion GP**; the
+internal names stay `hunt` on purpose: the Cloudflare Worker, the live link
+https://hunt.27eydes.workers.dev/, the D1 database and bindings, localStorage keys, account
+fields and URL parameters, so every save, account and link keeps working. The player-facing names
+live in `public/brand/name.js`; the wordmark and app icon are drawn in code
+(`public/brand/wordmark.js`, `scripts/brand-icon.mjs`, `scripts/brand-wordmark.mjs`).
+
 ## How to play
 
 1. Open the game. The **PLAY** page is the lobby: pick a **mode**, a **track** (or Random), and whether to **FILL WITH BOTS**.
 2. Tap your car to open **DRIVERS**: each driver has their own car (speed, acceleration, handling, armor) and a built-in weapon.
 3. Tap **PLAY**. With bots on you are racing within a few seconds; with bots off the race waits for a second human.
-4. Race! Three laps through every checkpoint in order. Your result pays out trophies, XP, coins, Hunt Pass XP and daily missions, and your best laps are saved on your **PROFILE**.
+4. Race! Three laps through every checkpoint in order. Your result pays out trophies, XP, coins, GP Pass XP and daily missions, and your best laps are saved on your **PROFILE**.
 
 ### Controls
 
@@ -131,7 +138,7 @@ Durable Objects are declared as SQLite-backed classes, so this works on the Work
 
 ## Classic mode (the shooter)
 
-Hunt started as a top-down brawler (Showdown, Bounty Rush, Hunted, Crystal Grab, Squad Hunt, Big
+The game started (as Hunt) as a top-down brawler (Showdown, Bounty Rush, Hunted, Crystal Grab, Squad Hunt, Big
 Hunt, Free Play, Test Range). Its code is still here (`src/sim.js`, `src/modes.js`, `public/game.js`
 and friends) and fully tested, but the lobby no longer offers it. It is reachable only by link:
 `/?shooter=1` opens the classic lobby, and the test flags below drop you straight into a match.
@@ -146,7 +153,7 @@ Classic controls: **WASD** to move, **mouse** to aim, **click or Space** to fire
 
 **Quick Hunt modes** (`src/modes.js`): Showdown, Bounty Rush, Hunted, Crystal Grab, played on a random arena from the pool. Squad Hunt (3v3) and Big Hunt (20 players) are played only when you pick them.
 
-**Rewards** (`public/progression.js` `PAY`): match XP and coins are mostly paid per minute played, so every mode earns about the same per minute. Trophy Road, Hunt Pass and level rewards are earned, never sold; claiming one you already own gives coins instead.
+**Rewards** (`public/progression.js` `PAY`): match XP and coins are mostly paid per minute played, so every mode earns about the same per minute. Trophy Road, GP Pass and level rewards are earned, never sold; claiming one you already own gives coins instead.
 
 **Free Play:** a 20000×20000 world made of 9 zones in a 3×3 grid (`ZONES` in `public/shared.js`), each its own Durable Object: Neon City, Ruined Citadel, Wildwood, The Hollow, The Hub, Ashlands, Frozen Lake, Dead Marsh and **Desert Mirage**. The safe hub in the middle is where you change brawler and see who's online. When you walk across a zone border, your player is handed off to the next zone's Durable Object. Your client already has that zone's socket open as an observer, and it gets promoted, so there's no loading screen. Bullets that cross a border carry on in the next zone, and kill and bounty credit is sent back to the shooter's zone.
 

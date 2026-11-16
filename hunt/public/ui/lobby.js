@@ -52,7 +52,7 @@ const TAUNTS = ['The hunt is on.', 'I see you.', 'Run.', 'Your bounty is mine.',
 
 // The lobby: a player banner + currencies on top, a tab bar down the left (Profile, Locker, Play,
 // Armory, Pass, Friends) and the selected tab's page. PLAY: mode buttons, your party (your hunter +
-// invite slots), fill-with-bots, Hunt Pass and a big PLAY button.
+// invite slots), fill-with-bots, GP Pass and a big PLAY button.
 const MODE_BTNS = [
   ['quick', 'QUICK HUNT', 'Random event · 10', 'target', '#4a7fe0'],
   ['squad', 'SQUAD HUNT', '3 vs 3', 'friends', '#cf3a44'],
@@ -60,7 +60,7 @@ const MODE_BTNS = [
   ['free', 'FREE PLAY', 'Open world', 'road', '#2b9c6c'],
   ['showdown', 'SHOWDOWN', 'Last one standing', 'trophy', '#d9822b'],
 ];
-const TABS = [['profile', 'PROFILE', 'user'], ['locker', 'LOCKER', 'locker'], ['play', 'PLAY', 'battle'], ['armory', 'ARMORY', 'armory'], ['pass', 'HUNT PASS', 'pass'], ['friends', 'FRIENDS', 'friends']];
+const TABS = [['profile', 'PROFILE', 'user'], ['locker', 'LOCKER', 'locker'], ['play', 'PLAY', 'battle'], ['armory', 'ARMORY', 'armory'], ['pass', 'GP PASS', 'pass'], ['friends', 'FRIENDS', 'friends']];
 // level shield (original): gold rim, deep red body, the level number
 const shield = (id) => `<svg class="shield" viewBox="0 0 64 72"><path d="M32 3 L59 12 V36 C59 53 46 64 32 69 C18 64 5 53 5 36 V12 Z" fill="#ffc83d" stroke="#1b1033" stroke-width="4" stroke-linejoin="round"/><path d="M32 11 L51 17 V36 C51 48 42 56 32 60 C22 56 13 48 13 36 V17 Z" fill="#8e2a3a"/><path d="M32 11 V60 C22 56 13 48 13 36 V17 Z" fill="#b2423f"/><text id="${id}" x="32" y="45" text-anchor="middle" font-family="Lilita One" font-size="26" fill="#fff" stroke="#1b1033" stroke-width="4" paint-order="stroke">1</text></svg>`;
 
@@ -75,7 +75,7 @@ export function stageFit(w, h) {
 }
 
 export function createLobby(api) {
-  if (api.racing) return createSpaceLobby(api); // HUNT RACERS: the space lobby (ui/space/racelobby.js)
+  if (api.racing) return createSpaceLobby(api); // racing: the space lobby (ui/space/racelobby.js)
   const RACE = !!api.racing;
   const root = $('lobby');
   root.className = 'lobby' + (RACE ? ' racing' : '');
@@ -96,7 +96,7 @@ export function createLobby(api) {
             ${[1, 2, 3].map(() => `<button class="slot invite tap"><span class="plus">+</span><span>INVITE<br>FRIENDS</span></button>`).join('')}
           </div>
           <div class="actions"><button class="btn btn-md alt" id="rail_road">${icon('road')} TROPHY ROAD<span class="dot" id="dot_road" hidden></span></button>
-            <button class="btn btn-md gold" id="passBtn">${icon('pass')} HUNT PASS</button>
+            <button class="btn btn-md gold" id="passBtn">${icon('pass')} GP PASS</button>
             <button class="btn btn-lg play" id="playBtn" data-sfx="play">PLAY</button></div>
         </div>
       </section>` : '';
@@ -124,7 +124,7 @@ export function createLobby(api) {
             ${[1, 2, 3].map(() => `<button class="slot invite tap"><span class="plus">+</span><span>INVITE<br>FRIENDS</span></button>`).join('')}
           </div>
           <div class="actions"><button class="btn btn-md alt" id="rail_road">${icon('road')} TROPHY ROAD<span class="dot" id="dot_road" hidden></span></button>
-            <button class="btn btn-md gold" id="passBtn">${icon('pass')} HUNT PASS</button>
+            <button class="btn btn-md gold" id="passBtn">${icon('pass')} GP PASS</button>
             <button class="btn btn-lg play" id="playBtn" data-sfx="play">PLAY</button></div>
         </div>
       </section>`}

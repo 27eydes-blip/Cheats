@@ -62,7 +62,7 @@ const lastStanding = () => !!G.caps.poison && !G.caps.respawn;
 const worldName = (key) => WORLDS[worldId(key)]?.name || key;
 // a mode this client has never heard of (the server is newer): still gets a name
 // a newer server can name things this client has never heard of: play on with a stand-in, never throw
-const modeInfo = (k) => MODE_INFO[k] || { name: String(k || 'HUNT').toUpperCase().slice(0, 16), desc: '' };
+const modeInfo = (k) => MODE_INFO[k] || { name: String(k || 'MATCH').toUpperCase().slice(0, 16), desc: '' };
 const bulletKind = (k) => (k === 20 ? 'cage' : k >= WKIND ? WEAPON_IDS[k - WKIND] : BRAWLER_IDS[k]);
 const predicted = (k) => k !== 20 && k < WKIND && PREDICTED_KINDS.includes(BRAWLERS[BRAWLER_IDS[k]]?.attack.kind);
 // own shots we draw instantly (client prediction): signature straight shots + weapon bullets
@@ -332,7 +332,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 function readForm() {
-  const name = $('name').value.trim().slice(0, 14) || 'Hunter';
+  const name = $('name').value.trim().slice(0, 14) || 'Racer';
   const room = $('room').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
   prefs.name = name; prefs.room = room; prefs.bots = $('bots').checked; savePrefs();
   return { name, room };
