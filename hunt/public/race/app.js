@@ -412,10 +412,11 @@ class RaceSession {
   // render at a lower pixel ratio when frames get slow, back up when there is room
   adapt(ms) {
     // (one long frame - a GC, a tab switch, the GPU catching up - is not slowness: counted as at
-    // most 50 ms, or a single hitch dropped the resolution, and the rebuild at the new size hitched again)
-    ms = Math.min(ms, 50);
-    this.frameAvg += (ms - this.frameAvg) * 0.05;
-    if (this.frameAvg > 18.5) { this.slowFor += ms; this.fastFor = 0; } else if (this.frameAvg < 13) { this.fastFor += ms; this.slowFor = 0; } else this.slowFor = this.fastFor = 0;
+    // most 50 ms in the average, or a single hitch dropped the resolution, and the rebuild at the new
+    // size hitched again)
+    // (the time spent slow counts up to 250 ms a frame: a really slow phone steps down as soon as before)
+    this.frameAvg += (Math.min(ms, 50) - this.frameAvg) * 0.05;
+    if (this.frameAvg > 18.5) { this.slowFor += Math.min(ms, 250); this.fastFor = 0; } else if (this.frameAvg < 13) { this.fastFor += ms; this.slowFor = 0; } else this.slowFor = this.fastFor = 0;
     const eff = (k) => (SETTINGS.lowGfx ? 1 : Math.min(DPR_STEPS[k], devicePixelRatio || 1));
     if (this.slowFor > 1500 && this.dprStep < DPR_STEPS.length - 1) {
       this.slowFor = 0;
