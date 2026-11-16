@@ -1701,6 +1701,13 @@ const bootQs = new URLSearchParams(location.search);
 const RACING = !['shooter', 'world', 'free', 'mapview'].some((k) => bootQs.get(k));
 // one race at a time, full screen over the lobby; back to the lobby (progress refreshed) on exit
 let raceOn = false;
+// Automated browsers (navigator.webdriver) only get the automatic tutorial with ?tut=1, so test
+// suites that press PLAY on a fresh profile reach the race they asked for.
+function needsTutorial(o, room, p) {
+  if (room || o.lobby || p.race?.tut) return false;
+  try { if (localStorage.getItem('hunt-race-tut') === '1') return false; } catch { return false; }
+  return !navigator.webdriver || bootQs.get('tut') === '1';
+}
 function launchRace(o = {}) {
   if (raceOn) return;
   readForm();
@@ -1711,7 +1718,7 @@ function launchRace(o = {}) {
   whenReady(() => import('./race/app.js').then(({ startRace }) => {
     show(null); $('hud').hidden = true;
     const p = A.progress();
-    startRace({
+    const ro = {
       mode, track, room, bots: $('bots').checked, driver: selBrawler, name: $('name').value.trim().slice(0, 14) || 'Racer', token: A.ACC.token || '',
       best: track !== 'any' ? p.race?.best?.[track] ?? null : null,
       // HUNT_DEV-only knobs for browser tests (a deployed server ignores them): short races, fixed countdown
@@ -1720,8 +1727,13 @@ function launchRace(o = {}) {
       onProgress: (m) => { if (A.ACC.user && m.progress) A.setUser({ ...A.ACC.user, progress: m.progress }); },
       // the room host's FILL WITH BOTS switch is remembered for the next room they host
       onBots: (on) => { $('bots').checked = on; readForm(); },
+      // the tutorial was finished or skipped (the server keeps progress.race.tut for accounts)
+      onTutorial: () => { A.refresh().catch(() => {}); },
       onExit: () => { raceOn = false; show('lobby'); A.refresh().then(() => UI.lobby?.refresh()); checkVersion(); },
-    });
+    };
+    // the very first race starts with the 20-second tutorial (then the race the player picked);
+    // never for a friend's room (they are waiting). Settings > HOW TO DRIVE replays it on its own.
+    startRace(o.tutorialOnly ? { ...ro, tutorial: true, next: null } : needsTutorial(o, room, p) ? { ...ro, tutorial: true, next: ro } : ro);
   }).catch(() => { raceOn = false; toast('Could not start the race. Check your connection.'); show('lobby'); }));
 }
 const UI = {};

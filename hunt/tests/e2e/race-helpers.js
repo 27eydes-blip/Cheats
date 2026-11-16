@@ -1,6 +1,6 @@
 // Helpers for the Hunt Racers browser tests (tests/e2e/race-*.spec.js).
 // Phones drive with REAL touch input through CDP (Input.dispatchTouchEvent): a steering thumb on
-// the left, taps / holds on the right-hand buttons, several fingers at once by identifier. The page
+// the left-hand joystick (pointing where the car should go), taps / holds on the right-hand buttons, several fingers at once by identifier. The page
 // only supplies a steering hint (where the racing line is); the input path is the real one.
 import { expect } from '@playwright/test';
 
@@ -34,29 +34,35 @@ export class Fingers {
   async up(id) { const p = this.active.get(id); if (!p) return; this.active.delete(id); await this.send('touchEnd', [{ x: p.x, y: p.y, id }]); }
   async tap(id, x, y) { await this.down(id, x, y); await this.up(id); }
 }
-export const layout = (page) => page.evaluate(() => { const l = window.__race.layout(); const b = {}; for (const k in l.btn) b[k] = { x: l.btn[k].x, y: l.btn[k].y, r: l.btn[k].r }; return { W: l.W, H: l.H, btn: b, mode: l.mode }; });
+export const layout = (page) => page.evaluate(() => { const l = window.__race.layout(); const b = {}; for (const k in l.btn) b[k] = { x: l.btn[k].x, y: l.btn[k].y, r: l.btn[k].r }; return { W: l.W, H: l.H, btn: b, mode: l.mode, stick: l.stick }; });
 
-// Drive one phone for a while: the steering thumb follows the page's racing-line hint, DRIFT is
-// held in corners, BRAKE/REVERSE for hairpins and to get unstuck. One page round trip per tick (the
+// Drive one phone for a while: the steering thumb holds the joystick and points it where the
+// page's racing-line hint wants to go (screen direction = world direction: the camera never
+// rotates), DRIFT is held in corners, BRAKE/REVERSE for hairpins and to get unstuck. One page round trip per tick (the
 // hint and a little state), so the thumb reacts quickly. onTick(F, L, state) runs extra fingers;
 // until(state) stops the loop.
 export async function drive(ph, { until, maxMs = 60_000, onTick } = {}) {
   const F = ph.fingers || (ph.fingers = new Fingers(ph));
   const L = await layout(ph.page);
-  const sx = L.W * 0.2, sy = L.H * 0.72, M = Math.min(70, Math.max(40, L.W * 0.08));
-  if (!F.active.has(1)) await F.down(1, sx, sy);
-  let drifting = false, braking = false, steer = 0, ticks = 0;
+  const { cx, cy, r } = L.stick;
+  let drifting = false, braking = false, heading = null, ticks = 0;
   const t0 = Date.now();
   while (Date.now() - t0 < maxMs) {
     const h = await ph.page.evaluate(() => {
       const r = window.__race, me = r.rc.me;
-      const s = r.rc.phase === 'race' && r.rc.car ? r.hint() : { st: 0, th: 1, dr: 0, spd: 0 };
-      return { st: s.st, th: s.th, dr: s.dr, spd: s.spd, phase: r.rc.phase, tm: r.rc.latest ? r.rc.latest.tm : -9, rt: me?.rt || 0, it: me?.it ?? -1, fin: me?.fin || 0, lap: me?.lap || 0 };
+      const s = r.rc.phase === 'race' && r.rc.car ? r.hint() : { st: 0, th: 1, dr: 0, spd: 0, ha: null, rev: false };
+      return { st: s.st, th: s.th, dr: s.dr, spd: s.spd, ha: s.ha ?? null, rev: !!s.rev, phase: r.rc.phase, tm: r.rc.latest ? r.rc.latest.tm : -9, rt: me?.rt || 0, it: me?.it ?? -1, fin: me?.fin || 0, lap: me?.lap || 0 };
     });
     ticks++;
     const brake = h.th < 0;
     if (brake !== braking) { braking = brake; if (brake) await F.down(5, L.btn.brake.x, L.btn.brake.y); else await F.up(5); }
-    if (Math.abs(h.st - steer) > 0.04) { steer = h.st; await F.move(1, sx + steer * M * 0.9 + Math.sign(steer) * 0.08 * M, sy); }
+    // the thumb lands on the stick, then slides to the rim in the hint's direction; it lets go to back off
+    const want = h.ha == null || h.rev ? null : h.ha;
+    if (want == null) { if (F.active.has(1)) { await F.up(1); heading = null; } }
+    else if (!F.active.has(1)) { await F.down(1, cx, cy); heading = null; }
+    if (want != null && (heading == null || Math.abs(Math.atan2(Math.sin(want - heading), Math.cos(want - heading))) > 0.03)) {
+      heading = want; await F.move(1, cx + Math.cos(want) * r * 0.9, cy + Math.sin(want) * r * 0.9);
+    }
     if (h.dr && !drifting && !brake) { drifting = true; await F.down(4, L.btn.drift.x, L.btn.drift.y); }
     else if ((!h.dr || brake) && drifting) { drifting = false; await F.up(4); }
     if (onTick) await onTick(F, L, h);
@@ -119,7 +125,8 @@ export const watchCar = (page) => page.evaluate(() => {
         const L = r.layout(), g = L.gauge;
         if (g && Math.hypot(s.x - g.x, s.y - g.y) < g.r) W.hud.push('speedometer');
         if (s.y > s.H - 18) W.hud.push('credit');
-        for (const k of ['drift', 'fire', 'item', 'brake']) { const b = L.btn[k]; if (L.mode === 'touch' && Math.hypot(s.x - b.x, s.y - b.y) < b.r) W.hud.push(k); }
+        for (const k of ['drift', 'fire', 'item', 'brake', 'reset']) { const b = L.btn[k]; if (L.mode === 'touch' && Math.hypot(s.x - b.x, s.y - b.y) < b.r) W.hud.push(k); }
+        if (L.mode === 'touch' && Math.hypot(s.x - L.stick.cx, s.y - L.stick.cy) < L.stick.r) W.hud.push('joystick');
       }
       if (dead) W.sawDead = true;
     }

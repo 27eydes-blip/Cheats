@@ -74,6 +74,9 @@ const S = {
   out: (t, v) => [392, 330, 262].forEach((f, i) => tone(t + i * 0.16, 'triangle', f, f, 0.2, 0.18 * v)),
   lock: (t, v) => tone(t, 'square', 1760, 1760, 0.05, 0.08 * v),
   click: (t, v) => tone(t, 'triangle', 900, 1300, 0.05, 0.1 * v),
+  // a tutorial step done; RESET put you back on the road
+  tut: (t, v) => [784, 988, 1319].forEach((f, i) => tone(t + i * 0.07, 'triangle', f, f, i === 2 ? 0.3 : 0.1, 0.16 * v)),
+  reset: (t, v) => { tone(t, 'sine', 300, 900, 0.22, 0.16 * v, 0.02); noise(t, 0.25, 0.15 * v, 1200, 5000, 2, 'highpass'); },
 };
 
 // a one-shot; vol 0..1 (distance falloff applied by the caller)
