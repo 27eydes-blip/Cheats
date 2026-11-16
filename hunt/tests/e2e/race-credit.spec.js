@@ -3,7 +3,7 @@
 // checks the canvas HUD never draws a button over it.
 import { test, expect } from '@playwright/test';
 import { trackErrors } from './helpers.js';
-import { roomCode, raceUrl, waitPhase, creditVisible } from './race-helpers.js';
+import { roomCode, waitPhase, creditVisible } from './race-helpers.js';
 
 for (const vp of [{ width: 667, height: 375, touch: true }, { width: 844, height: 390, touch: true }, { width: 1024, height: 768, touch: true }, { width: 1440, height: 900, touch: false }]) {
   test(`credit visible in a race at ${vp.width}x${vp.height}`, async ({ browser }) => {
@@ -11,11 +11,14 @@ for (const vp of [{ width: 667, height: 375, touch: true }, { width: 844, height
     const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, hasTouch: vp.touch, isMobile: vp.touch });
     const page = await ctx.newPage();
     const errs = trackErrors(page);
-    // a 12 s lobby (the longest): long enough to see the pre-race card even when the page is slow to load
-    await page.goto(raceUrl({ room: roomCode('C'), bots: '1', lobby: '12' }));
+    // a friend room you host (no ?lobby countdown): the pre-race card stays up until you press
+    // START, however slowly the page runs
+    await page.goto('/?race=1&' + new URLSearchParams({ room: roomCode('C'), bots: '1', laps: '1', track: 'desert', mode: 'grand' }));
     await waitPhase(page, 'lobby');
     await expect(page.locator('.rc-wait')).toBeVisible();
     await creditVisible(page);
+    await expect(page.locator('.rc-start')).toBeEnabled({ timeout: 30_000 });
+    await page.locator('.rc-start').click();
     await waitPhase(page, 'race');
     await creditVisible(page);
     // no thumb button overlaps the credit

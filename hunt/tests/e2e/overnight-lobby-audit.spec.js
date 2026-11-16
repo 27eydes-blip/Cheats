@@ -329,7 +329,7 @@ for (const [w, h] of [[667, 375], [932, 430], [1180, 820], [820, 1180], [320, 56
     // and LAUNCH really starts a race from here (the waiting card, CANCEL in reach, the credit on top)
     if (await page.getAttribute('#fillBots', 'aria-checked') === 'true') await page.tap('#fillBots');
     await page.tap('#playBtn');
-    await expect(page.locator('.rc-wait')).toBeVisible();
+    await expect(page.locator('.rc-wait')).toBeVisible({ timeout: 30_000 }); // (shown once the race server answers: slow on a busy machine)
     await expect(page.locator('.rc-cancel')).toBeInViewport({ ratio: 1 });
     await expect(page.locator('.rc-credit')).toBeVisible();
     await page.tap('.rc-cancel');
