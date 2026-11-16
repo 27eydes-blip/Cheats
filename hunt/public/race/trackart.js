@@ -127,7 +127,7 @@ export class TrackArt {
       const back = [];
       for (let s = z.s0; ; s += step) {
         const sv = Math.min(s, z.s1);
-        const pa = pointAt(c, sv, 0), i = pa.i, ww = z.kind === 'surf' ? c.ww[i] + 2 : c.hw[i];
+        const pa = pointAt(c, sv, 0), i = pa.i, ww = z.kind === 'surf' && (z.surf === 'lava' || z.surf === 'pit') ? c.ww[i] + 2 : c.hw[i]; // sand / ice / snow patches stay on the road
         const d0 = Math.max(dA, -ww), d1 = Math.min(dB, ww);
         const a = pointAt(c, sv, d0), bb = pointAt(c, sv, d1);
         pts.push(a.x, a.y); back.push(bb.x, bb.y);
@@ -315,8 +315,9 @@ export class TrackArt {
       g.strokeStyle = 'rgba(150,90,40,0.28)'; g.lineWidth = 3;
       g.beginPath(); for (let k = -1; k <= 1; k++) { const o = k * r * 0.45; g.moveTo(x - Math.sin(a) * o - Math.cos(a) * 14, y + Math.cos(a) * o - Math.sin(a) * 14); g.quadraticCurveTo(x - Math.sin(a) * (o + 8), y + Math.cos(a) * (o + 8), x - Math.sin(a) * o + Math.cos(a) * 14, y + Math.cos(a) * o + Math.sin(a) * 14); } g.stroke();
     } else if (surf === 'lava') {
-      g.strokeStyle = 'rgba(255,214,90,0.8)'; g.lineWidth = 3;
-      g.beginPath(); for (let k = 0; k < 3; k++) { const ox = (hash(i, k, 23) - 0.5) * r * 1.2, oy = (hash(i, k, 24) - 0.5) * r * 1.2; g.moveTo(x + ox, y + oy); g.lineTo(x + ox + 18, y + oy + 10); g.lineTo(x + ox + 30, y + oy - 4); } g.stroke();
+      // crusted plates floating on the lava
+      g.fillStyle = 'rgba(90,20,6,0.55)';
+      for (let k = 0; k < 2; k++) { const ox = (hash(i, k, 23) - 0.5) * r * 1.1, oy = (hash(i, k, 24) - 0.5) * r * 1.1; g.beginPath(); g.ellipse(x + ox, y + oy, 14 + hash(i, k, 25) * 12, 8 + hash(i, k, 26) * 6, a + k, 0, 7); g.fill(); }
     }
   }
 

@@ -306,7 +306,19 @@ class RaceSession {
   // touch / keyboard browser tests turn into real finger and key input)
   pursuit(A) {
     const rc = this.rc, car = rc.car, out = A.out || (A.out = { st: 0, th: 1, dr: 0, spd: 0 });
-    if (!car || !rc.T || !rc.T.corridors.length) { out.st = 0; out.dr = 0; return out; }
+    if (!car || !rc.T) { out.st = 0; out.dr = 0; return out; }
+    if (!rc.T.corridors.length) { // arena: chase the nearest car, keep off the walls
+      let tx = (rc.T.box.x0 + rc.T.box.x1) / 2, ty = (rc.T.box.y0 + rc.T.box.y1) / 2, bd = Infinity;
+      for (const c of this.view?.cars || []) { if (c.me || c.f & FLAG.DEAD) continue; const d = Math.hypot(c.x - car.x, c.y - car.y); if (d < bd) { bd = d; tx = c.x; ty = c.y; } }
+      let da = Math.atan2(ty - car.y, tx - car.x) - car.a;
+      while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+      const fwd = car.vx * Math.cos(car.a) + car.vy * Math.sin(car.a), dt = 1 / 60;
+      out.st = Math.max(-1, Math.min(1, da * 2.2)); out.th = 1; out.dr = 0; out.spd = Math.abs(fwd);
+      if (A.rev > 0) { A.rev -= dt; out.th = -1; out.st = -out.st; return out; }
+      A.slow = Math.abs(fwd) < 70 ? (A.slow || 0) + dt : 0;
+      if (A.slow > 1) { A.slow = 0; A.rev = 0.8; }
+      return out;
+    }
     const now = performance.now(), dt = Math.min(0.2, (now - (A.at || now)) / 1000); A.at = now;
     const T = rc.T, c = T.corridors[0], L = c.line || { x: c.px, y: c.py, k: new Float64Array(c.n) }, n = c.n, st = DRIVERS[rc.myDriver()];
     // corner speed per line sample (same rule of thumb the bots use), cached per track + driver

@@ -136,7 +136,7 @@ export class Hud {
       g.beginPath(); g.arc(wx, wy, r, 0, TAU); g.fillStyle = cd > 0 ? 'rgba(27,16,51,0.85)' : 'rgba(255,210,63,0.95)'; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
       if (cd > 0) { g.beginPath(); g.moveTo(wx, wy); g.arc(wx, wy, r - 3, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - cd)); g.closePath(); g.fillStyle = 'rgba(255,210,63,0.55)'; g.fill(); }
       weaponIcon(g, wid, wx, wy, slot * 0.6, cd > 0 ? '#c9b8ff' : INK);
-      if (me.em > 0) text(g, 'EMP', wx, wy + r + 8 * u, 11 * u, '#5ff4ff', 'center');
+      if (me.em > 0) label(g, 'EMP', wx, wy, Math.round(13 * u), '#5ff4ff', 'center', S.dpr); // shut down: shown on the slot itself
       else if (ctrl.mode !== 'touch') label(g, 'J', wx + r - 4 * u, wy + r - 4 * u, Math.round(11 * u), '#c9b8ff', 'center', S.dpr);
     }
     // -------- mode info pill (under the slots)
