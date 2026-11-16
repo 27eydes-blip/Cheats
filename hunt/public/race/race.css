@@ -7,11 +7,11 @@
 .rc-wait { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(var(--u) * 1.2); background: radial-gradient(circle at 50% 45%, rgba(91,55,184,.82), rgba(27,16,51,.94) 75%); padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); }
 .rc-wait[hidden], .rc-menu[hidden], .rc-fail[hidden], .rc-res[hidden] { display: none; }
 .rc-wt { font-size: calc(var(--u) * 5); }
-.rc-wm { font-family: var(--font); color: #fff; font-size: calc(var(--u) * 2.4); text-align: center; }
+.rc-wm { font-family: var(--font); color: #fff; font-size: max(var(--t-sm), calc(var(--u) * 2.4)); text-align: center; }
 .rc-wl { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 80vw; }
-.rc-chip { font-family: var(--font); color: #fff; font-size: calc(var(--u) * 1.7); background: var(--panel-2); border: 3px solid var(--ink); border-radius: 999px; padding: 1px 10px 1px 6px; display: inline-flex; align-items: center; gap: 6px; }
+.rc-chip { font-family: var(--font); color: #fff; font-size: max(var(--t-xs), calc(var(--u) * 1.7)); background: var(--panel-2); border: 3px solid var(--ink); border-radius: 999px; padding: 1px 10px 1px 6px; display: inline-flex; align-items: center; gap: 6px; }
 .rc-chip i { width: 12px; height: 12px; border-radius: 50%; background: var(--c); border: 2px solid var(--ink); }
-.rc-ws { font-family: var(--font-ui); font-weight: 700; color: #e6dcff; font-size: calc(var(--u) * 1.8); }
+.rc-ws { font-family: var(--font-ui); font-weight: 700; color: #e6dcff; font-size: max(var(--t-sm), calc(var(--u) * 1.8)); }
 .rc-tip { font-family: var(--font-ui); font-weight: 700; color: var(--text-dim); font-size: max(var(--t-sm), calc(var(--u) * 1.6)); min-height: 2.6em; text-align: center; max-width: min(80vw, 520px); }
 /* friend room: the info column moves left, the room card (code + COPY, players, host buttons) sits on the right */
 .rc-wait.room { padding-right: calc(var(--sa-r) + min(40vw, 360px) + 24px); }
@@ -44,7 +44,7 @@
 
 /* finish screen: the shared results look (.res in ui/lobby.css) with race rows */
 .rc-res { z-index: 30; position: absolute; padding-bottom: calc(var(--sa-b) + 14px); }
-.rc-res .rmsg small { font-size: .7em; color: #c9b8ff; margin-left: 6px; }
+.rc-res .rmsg small { font-size: max(var(--t-xs), .7em); color: #c9b8ff; margin-left: 6px; }
 .rc-res .rlist .rc-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--ink); align-self: center; flex: none; }
 .rc-res .rc-ups { font-family: var(--font); color: var(--gold); font-size: calc(var(--u) * 1.8); min-height: 1em; }
 .rc-res .gain .cur { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font); color: #fff; }
