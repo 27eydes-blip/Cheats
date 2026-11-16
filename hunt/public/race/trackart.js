@@ -149,7 +149,7 @@ export class TrackArt {
     }
     this.lightAt = new Map();
     for (const L of this.lights) {
-      const m = L.kind === 'pole' ? 240 : 60;
+      const m = L.kind === 'pole' ? 210 + Math.hypot(L.px - L.x, L.py - L.y) : 60; // a pole's glow pool sits toward the road
       for (let cy = Math.floor((L.y - m) / CHUNK); cy <= Math.floor((L.y + m) / CHUNK); cy++) for (let cx = Math.floor((L.x - m) / CHUNK); cx <= Math.floor((L.x + m) / CHUNK); cx++) {
         const k = cx + ',' + cy; let a = this.lightAt.get(k); if (!a) this.lightAt.set(k, (a = [])); a.push(L);
       }
