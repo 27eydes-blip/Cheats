@@ -1,0 +1,161 @@
+// Hunt Racers STORE (test currency): buy with test coins, try an item on in the big preview before
+// buying, equip it, see it on another player's screen in a 2-phone race (the race roster carries
+// it), the HORN goes out to the other racer, and the daily shop counts down to 00:00 UTC and
+// refreshes there. The credit stays on the store screen.
+import { test, expect } from '@playwright/test';
+import { trackErrors } from './helpers.js';
+import { phone, roomCode, waitPhase } from './race-helpers.js';
+
+const LIME = [0x7d, 0xff, 0x3a];
+// share of the store preview's pixels close to a colour (the underglow being tried on)
+const previewShare = (page, rgb) => page.evaluate((c) => {
+  const cv = document.querySelector('#stCv'), g = cv.getContext('2d'), d = g.getImageData(0, 0, cv.width, cv.height).data;
+  let n = 0;
+  for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 40 && Math.abs(d[i] - c[0]) < 50 && Math.abs(d[i + 1] - c[1]) < 50 && Math.abs(d[i + 2] - c[2]) < 50) n++;
+  return n / (d.length / 4);
+}, rgb);
+const progress = (page) => page.evaluate(() => import('/account.js').then((A) => JSON.parse(JSON.stringify(A.progress()))));
+
+test('store: try on, buy with test coins, equip; owned / equipped badges; not enough gems is refused', async ({ browser }) => {
+  const ph = await phone(browser, 844, 390);
+  const { page } = ph;
+  const errors = trackErrors(page, { allowHttp: /400 POST \/api\/shop/ });
+  await page.goto('/');
+  await page.waitForSelector('#playBtn');
+  await page.waitForFunction(() => import('/account.js').then((A) => !!A.ACC.user));
+  await expect(page.locator('#lobby #credit')).toHaveText('Created by Sam Eyde III');
+  await page.tap('#rail_store');
+  await expect(page.locator('.st-tab.on')).toHaveText(/DAILY/);
+  await expect(page.locator('.st-credit')).toHaveText('Created by Sam Eyde III');
+  await expect(page.locator('.st-credit')).toBeInViewport({ ratio: 1 });
+  await page.tap('.st-tab[data-t="glow"]');
+  const coins0 = (await progress(page)).coins;
+  expect(coins0).toBeGreaterThanOrEqual(150);
+  const before = await previewShare(page, LIME);
+  // TRY-ON: the preview wears it before it is bought
+  await page.tap('.st-card[data-id="glow_lime"]');
+  await expect(page.locator('#stTry')).toBeVisible();
+  await expect(page.locator('#stName')).toHaveText('Lime Light');
+  await expect(page.locator('#stRar')).toHaveText('COMMON');
+  await expect(page.locator('#stPrice')).toContainText('150');
+  await expect(page.locator('#stBuy')).toHaveText('BUY');
+  await expect(page.locator('#stBuy')).toBeInViewport({ ratio: 1 });
+  await expect.poll(() => previewShare(page, LIME), { message: 'the lime underglow shows in the preview' }).toBeGreaterThan(before + 0.004);
+  expect((await progress(page)).owned).not.toContain('glow_lime');
+  // BUY
+  await page.tap('#stBuy');
+  await expect(page.locator('#stBuy')).toHaveText('EQUIP');
+  await expect(page.locator('.st-card[data-id="glow_lime"] .st-badge')).toHaveText('OWNED');
+  let p = await progress(page);
+  expect(p.coins).toBe(coins0 - 150);
+  expect(p.owned).toContain('glow_lime');
+  await expect(page.locator('#stCoins')).toHaveText(String(coins0 - 150));
+  // EQUIP (on the car being dressed: your driver, ARCWIRE)
+  await expect(page.locator('#stCar')).toHaveText('ARCWIRE');
+  await page.tap('#stBuy');
+  await expect(page.locator('#stBuy')).toHaveText('EQUIPPED');
+  await expect(page.locator('.st-card[data-id="glow_lime"] .st-badge')).toHaveText('EQUIPPED');
+  await expect(page.locator('#stTry')).toBeHidden();
+  p = await progress(page);
+  expect(p.race.cos.volt.glow).toBe('glow_lime');
+  // another car keeps its own look; the stock card is the default there
+  await page.tap('#stNext');
+  await expect(page.locator('#stCar')).toHaveText('WARHOG');
+  await expect(page.locator('.st-card[data-id=""] .st-badge')).toHaveText('EQUIPPED');
+  await expect(page.locator('.st-card[data-id="glow_lime"] .st-badge')).toHaveText('OWNED');
+  // a legendary costs gems: a guest's 20 test gems are not enough, nothing is charged
+  await page.tap('.st-card[data-id="glow_goldrush"]');
+  await expect(page.locator('#stPrice')).toContainText('60');
+  await page.tap('#stBuy');
+  await expect(page.locator('#toast')).toHaveText(/Not enough gems/);
+  expect((await progress(page)).gems).toBe(p.gems);
+  // CARS: all six, owned, with their stats; DRIVE picks one
+  await page.tap('.st-tab[data-t="cars"]');
+  await expect(page.locator('.st-card[data-kind="car"]')).toHaveCount(6);
+  await expect(page.locator('.st-card[data-kind="car"] .st-nm')).toHaveText(['ARCWIRE', 'WARHOG', 'PHANTOM', 'SANDVIPER', 'COBRA', 'RAZOR']);
+  await expect(page.locator('.st-card[data-kind="car"] .st-badge')).toHaveText(['DRIVING', 'OWNED', 'OWNED', 'OWNED', 'OWNED', 'OWNED']);
+  await page.tap('.st-card[data-id="rook"]');
+  await page.tap('#stBuy');
+  await expect(page.locator('#stBuy')).toHaveText('DRIVING');
+  // SKINS: three per car, rarity-coloured, the legendary one animated
+  await page.tap('.st-tab[data-t="skin"]');
+  await expect(page.locator('.st-card[data-kind="skin"]')).toHaveCount(4); // stock + 3
+  await expect(page.locator('.st-card.r-legendary .st-tag')).toContainText('ANIMATED');
+  await page.tap('.ui-screen .back');
+  await expect(page.locator('#npName')).toHaveText('COBRA');
+  expect(errors).toEqual([]);
+  await ph.ctx.close();
+});
+
+test('daily shop: six deals, a live countdown to 00:00 UTC, a new set right after midnight', async ({ browser }) => {
+  const ph = await phone(browser, 844, 390);
+  const { page } = ph;
+  const errors = trackErrors(page);
+  // 23:59:56 UTC: the shop refreshes 4 s after it opens
+  await page.clock.install({ time: new Date(Date.UTC(2026, 10, 16, 23, 59, 56)) });
+  await page.goto('/');
+  await page.waitForSelector('#playBtn');
+  await page.tap('#rail_store');
+  const ids = () => page.locator('.st-grid .st-card').evaluateAll((els) => els.map((e) => e.dataset.id));
+  await expect(page.locator('.st-grid .st-card')).toHaveCount(6);
+  await expect(page.locator('.st-grid .st-card s')).toHaveCount(6); // each with its list price struck out
+  const day1 = await ids();
+  const want = await page.evaluate(() => import('/race/garage.js').then((m) => m.dailyShop(m.shopDay()).map((d) => d.id)));
+  expect(day1).toEqual(want);
+  await expect(page.locator('#stCount')).toHaveText(/^00:00:0[1-4]$/);
+  await page.clock.runFor(1000);
+  await expect(page.locator('#stCount')).toHaveText(/^00:00:0[0-3]$/);
+  await page.clock.runFor(4500);
+  await expect(page.locator('#stCount')).toHaveText(/^2[34]:(59|00):\d\d$/);
+  await expect.poll(ids).not.toEqual(day1);
+  const day2 = await ids();
+  expect(day2).toEqual(await page.evaluate(() => import('/race/garage.js').then((m) => m.dailyShop(m.shopDay(Date.UTC(2026, 10, 17, 0, 0, 1))).map((d) => d.id))));
+  expect(errors).toEqual([]);
+  await ph.ctx.close();
+});
+
+test('two phones in one race: your equipped underglow is in the other phone\'s roster, and your HORN reaches them', async ({ browser, browserName }) => {
+  test.skip(browserName !== 'chromium', 'CDP touch phones');
+  test.setTimeout(150_000);
+  const A = await phone(browser, 844, 390), B = await phone(browser, 667, 375);
+  const errs = [trackErrors(A.page, { allowHttp: /400 POST \/api\/shop/ }), trackErrors(B.page)];
+  await Promise.all([A.page.goto('/'), B.page.goto('/')]);
+  for (const P of [A, B]) await P.page.waitForFunction(() => import('/account.js').then((m) => !!m.ACC.user));
+  // A buys and equips the lime underglow on WARHOG in the store
+  await A.page.evaluate(async () => {
+    const m = await import('/account.js');
+    await m.shop({ action: 'gbuy', id: 'glow_lime' });
+    await m.shop({ action: 'gequip', car: 'brick', slot: 'glow', id: 'glow_lime' });
+  });
+  const room = roomCode('S');
+  await A.page.goto(`/?race=1&room=${room}&lobby=3&laps=1&track=desert&driver=brick&bots=0`);
+  await B.page.goto(`/?race=1&room=${room}&lobby=3&laps=1&track=desert&driver=volt&bots=0`);
+  await Promise.all([waitPhase(A.page, 'race', 60_000), waitPhase(B.page, 'race', 60_000)]);
+  const aId = await A.page.evaluate(() => window.__race.rc.id);
+  // B sees A's look from shared data: the roster row and the look it resolves to
+  await expect.poll(() => B.page.evaluate((id) => window.__race.rc.roster.get(id)?.cos, aId)).toEqual([0, 'glow_lime', 0, 0, 0, 0]); // (SLOTS order: skin glow wheel flame trail horn)
+  const look = await B.page.evaluate((id) => Promise.all([import('/ui/platform.js'), import('/race/garage.js')]).then(([P]) => {
+    const r = window.__race.rc.roster.get(id), L = P.lookOf(r.driver, Object.fromEntries(['skin', 'glow', 'wheel', 'flame', 'trail', 'horn'].map((s, i) => [s, r.cos[i] || null])));
+    return { name: L.name, glow: L.glow, driver: r.driver };
+  }), aId);
+  expect(look).toEqual({ name: 'WARHOG', glow: '#7dff3a', driver: 'brick' });
+  // B is a guest with nothing equipped: everyone sees the default look
+  const bId = await B.page.evaluate(() => window.__race.rc.id);
+  expect(await A.page.evaluate((id) => window.__race.rc.roster.get(id)?.cos, bId)).toEqual([0, 0, 0, 0, 0, 0]);
+  // HORN: A taps the button; B gets the horn event for A
+  await B.page.evaluate(() => { window.__horns = []; window.__race.rc.on('s', (m) => { for (const e of m.ev || []) if (e[0] === 'horn') window.__horns.push(e[1]); }); });
+  await expect(A.page.locator('.rc-horn')).toBeVisible();
+  const hb = await A.page.locator('.rc-horn').boundingBox();
+  expect(hb.width).toBeGreaterThanOrEqual(44);
+  await A.page.tap('.rc-horn');
+  await expect.poll(() => B.page.evaluate(() => window.__horns)).toEqual([aId]);
+  // a second press right away is ignored (1.5 s apart); the key works too
+  await A.page.tap('.rc-horn');
+  await A.page.waitForTimeout(1700);
+  await A.page.keyboard.press('KeyH');
+  await expect.poll(() => B.page.evaluate(() => window.__horns.length)).toBe(2);
+  // the credit is still on top in the race
+  await expect(A.page.locator('.rc-credit')).toBeVisible();
+  for (const e of errs) expect(e).toEqual([]);
+  await A.ctx.close(); await B.ctx.close();
+});

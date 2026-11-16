@@ -20,7 +20,8 @@ const ALLOW = [];
 const allowed = (msg) => ALLOW.some(([re]) => re.test(msg));
 
 // the racing lobby (the game, at /) and the classic shooter lobby (?shooter=1)
-for (const [w, h] of [[667, 375], [844, 390], [932, 430], [390, 844], [430, 932]]) for (const [kind, base, screens] of [['racing', '/', RACE_SCREENS], ['classic', '/?shooter=1', SCREENS]]) {
+// (iPads: the racing lobby, the game everyone plays)
+for (const [w, h, kinds] of [[667, 375, 2], [844, 390, 2], [932, 430, 2], [390, 844, 2], [430, 932, 2], [1180, 820, 1], [820, 1180, 1]]) for (const [kind, base, screens] of [['racing', '/', RACE_SCREENS], ['classic', '/?shooter=1', SCREENS]].slice(0, kinds)) {
   test(`phone audit ${w}x${h} (${kind} lobby): every menu screen has thumb-sized controls, readable text and its main buttons in view`, async ({ browser }) => {
     test.setTimeout(300_000);
     const ctx = await phone(browser, w, h);
@@ -149,10 +150,10 @@ test('armory on a short phone: EQUIP and TEST RANGE are in view at once and work
   await ctx.close();
 });
 
-test('locker on a short phone: the EQUIPPED tag and level-locked skins are labelled', async ({ browser }) => {
+test('locker on a short phone: the EQUIPPED tag and level-locked skins are labelled (classic lobby)', async ({ browser }) => {
   const ctx = await phone(browser, 667, 375);
   const page = await ctx.newPage();
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await needTouch(page);
   await page.tap('#rail_locker');
   await page.tap('.lsec[data-open="skins"] .ribbonhead');
@@ -270,7 +271,7 @@ for (const [w, h] of [[320, 568], [375, 667], [390, 844], [412, 915], [430, 932]
     expect(r.scrolls, 'the play page does not need scrolling').toBe(false);
     expect(r.creditOnScreen, 'credit line is on screen above the tab bar').toBe(true);
     expect(r.stage, 'your car is drawn').toBeGreaterThan(40);
-    expect(r.tabs, 'no Armory tab: it only held shooter weapons').toEqual(['profile', 'locker', 'play', 'pass', 'friends']);
+    expect(r.tabs, 'no Armory or Locker tab (shooter weapons and cosmetics): the STORE has the car cosmetics').toEqual(['profile', 'store', 'play', 'pass', 'friends']);
     for (const s of SEL) {
       expect(r[s].inView, `${s} fully in view above the tab bar`).toBe(true);
       expect(r[s].hitsCredit, `${s} clear of the credit`).toBe(false);
