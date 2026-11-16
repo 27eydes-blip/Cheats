@@ -1758,8 +1758,9 @@ UI.lobby = createLobby({
   setBrawler: (id) => { const changed = id !== selBrawler; selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); if (changed && BRAWLERS[id]) sfx('growl_' + id, 0.9); }, // each hunter growls when picked
   prefs, saveName: () => { readForm(); UI.lobby?.refresh(); }, statRows,
 });
-// a car won (or bought, or unlocked on another device): its NEW CAR UNLOCKED screen, once, in the lobby
-watchCarUnlocks({ inRace: () => raceOn, setBrawler: (id) => { selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); } });
+// a car won (or bought, or unlocked on another device): its NEW CAR UNLOCKED screen, once, in the
+// racing lobby (never over the classic shooter lobby or a shooter match: it waits for the racing lobby)
+watchCarUnlocks({ inRace: () => raceOn || !RACING, setBrawler: (id) => { selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); } });
 UI.mm = createMatchmaking(() => toMenu(), {
   onStart: () => send({ t: 'host', start: 1 }),
   // the room host's bots switch (also remembered for the next room you host)
