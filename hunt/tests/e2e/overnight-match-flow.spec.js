@@ -272,7 +272,13 @@ test('Free Play outside the hub: a 3 second countdown that CANCEL or damage stop
   // taking damage cancels it
   await page.click('#gmLeave');
   await expect(page.locator('#gmAsk')).toContainText('Leaving in');
-  await page.evaluate(() => { window.__hunt.me.hp -= 200; });
+  // a hit, as the client sees it: HP below where the countdown started. The server re-sends your
+  // full state every 2 s, which would undo a single local edit before the countdown's next check
+  // if that check runs late (slow machine), so hold the lowered HP until the countdown reacts.
+  await page.evaluate(() => {
+    const hp = window.__hunt.me.hp - 200;
+    const hold = setInterval(() => { if (!document.getElementById('gmMain').hidden) clearInterval(hold); else window.__hunt.me.hp = hp; }, 10);
+  });
   await expect(page.locator('#toast')).toHaveText('You took damage. Leaving cancelled.');
   await expect(page.locator('#gmLeave')).toBeVisible();
   await page.waitForTimeout(3300);

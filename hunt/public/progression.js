@@ -33,6 +33,12 @@ export function normalize(p) {
   for (const b of BRAWLER_IDS) if (!out.owned.includes(b + '_classic')) out.owned = [...out.owned, b + '_classic'];
   out.equipped = p.equipped && typeof p.equipped === 'object' ? p.equipped : {};
   if (typeof out.gems !== 'number') out.gems = 20;
+  // racing: stats + equipped store cosmetics per car (race.cos[car][slot] = id; the race cars share
+  // the brawler ids); a broken shape is reset, everything else kept as it is (unknown ids are ignored where they are used)
+  out.race = p.race && typeof p.race === 'object' && !Array.isArray(p.race) ? { ...p.race } : {};
+  const cos = out.race.cos && typeof out.race.cos === 'object' && !Array.isArray(out.race.cos) ? out.race.cos : {};
+  out.race.cos = {};
+  for (const [car, slots] of Object.entries(cos)) if (BRAWLER_IDS.includes(car) && slots && typeof slots === 'object' && !Array.isArray(slots)) out.race.cos[car] = Object.fromEntries(Object.entries(slots).filter(([, v]) => v === null || typeof v === 'string'));
   return out;
 }
 export const totalTrophies = (p) => Object.values(p.trophies || {}).reduce((s, v) => s + (v | 0), 0);
@@ -121,12 +127,12 @@ export { MASTERY_SKINS };
 
 // ---------- daily missions: 3 a day, same for everyone, reset at 00:00 UTC ----------
 export const MISSION_POOL = [
-  { id: 'play3', text: 'Play 3 matches', stat: 'play', goal: 3, reward: { coins: 60 } },
-  { id: 'win1', text: 'Win a match', stat: 'win', goal: 1, reward: { gems: 5 } },
-  { id: 'ko8', text: 'Get 8 knockouts', stat: 'kills', goal: 8, reward: { coins: 80 } },
+  { id: 'play3', text: 'Play 3 races', stat: 'play', goal: 3, reward: { coins: 60 } },
+  { id: 'win1', text: 'Win a race', stat: 'win', goal: 1, reward: { gems: 5 } },
+  { id: 'ko8', text: 'Get 8 takedowns', stat: 'kills', goal: 8, reward: { coins: 80 } },
   { id: 'bounty10', text: 'Earn 10 bounty', stat: 'bounty', goal: 10, reward: { gems: 4 } },
   { id: 'top3x2', text: 'Finish top 3 twice', stat: 'top3', goal: 2, reward: { coins: 70 } },
-  { id: 'ko3one', text: 'Get 3 KOs in one match', stat: 'bestKills', goal: 3, reward: { gems: 3 } },
+  { id: 'ko3one', text: 'Get 3 takedowns in one race', stat: 'bestKills', goal: 3, reward: { gems: 3 } },
 ];
 export const dayIndex = (now = Date.now()) => Math.floor(now / 864e5);
 export const msToReset = (now = Date.now()) => 864e5 - (now % 864e5);
@@ -197,14 +203,14 @@ export function applyMatch(p, r) {
 }
 
 // ---------------------------------------------------------------- client display helpers
-// Reward items (level road, Trophy Road, Hunt Pass) are earned, not bought: the Locker shows a lock
+// Reward items (level road, Trophy Road, GP Pass) are earned, not bought: the Locker shows a lock
 // and where they come from. Returns a short tag ('LEVEL 15', 'ROAD 700', 'PASS 5', 'PREMIUM PASS 10')
 // or null for an item that is only sold.
 export function earnTag(id) {
   // one rule with the server: catalog.rewardSource is what makes priceOf() refuse to sell an item
   const src = rewardSource(id);
   if (!src) return null;
-  return src.toUpperCase().replace(/^TROPHY ROAD /, 'ROAD ').replace(/^(HUNT|PREMIUM) PASS TIER /, (_, k) => (k === 'PREMIUM' ? 'PREMIUM PASS ' : 'PASS '));
+  return src.toUpperCase().replace(/^TROPHY ROAD /, 'ROAD ').replace(/^(GP|PREMIUM) PASS TIER /, (_, k) => (k === 'PREMIUM' ? 'PREMIUM PASS ' : 'PASS '));
 }
 // the same, as a sentence for a toast
 export function earnHint(id, name) {
@@ -212,7 +218,7 @@ export function earnHint(id, name) {
   if (!t) return `Buy ${name} in the Locker`;
   if (t.startsWith('LEVEL')) return `Reach level ${t.slice(6)} to unlock ${name}`;
   if (t.startsWith('ROAD')) return `Reach ${t.slice(5)} trophies on the Trophy Road to unlock ${name}`;
-  return `${name} is a Hunt Pass reward (tier ${t.split(' ').pop()}${t.startsWith('PREMIUM') ? ', premium' : ''})`;
+  return `${name} is a GP Pass reward (tier ${t.split(' ').pop()}${t.startsWith('PREMIUM') ? ', premium' : ''})`;
 }
 
 // This device's per-world stats (localStorage prefs). stats[worldId] = arena matches (Quick Hunt

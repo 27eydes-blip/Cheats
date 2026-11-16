@@ -4,7 +4,7 @@ import { trackErrors, waitMe } from './helpers.js';
 for (const b of ['dune', 'rook', 'flicker']) {
   test(`play as ${b}: attack + super without errors`, async ({ page }) => {
     const errors = trackErrors(page);
-    await page.goto('/');
+    await page.goto('/?shooter=1');
     await page.evaluate((b) => localStorage.setItem('hunt', JSON.stringify({ brawler: b, name: 'T' })), b);
     await page.goto('/?world=meadow&mode=bounty');
     await waitMe(page);

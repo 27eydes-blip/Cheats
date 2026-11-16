@@ -28,7 +28,12 @@ test('the splash is plain HTML: it shows (with the credit) while the game module
   let release; const held = new Promise((r) => { release = r; });
   await page.route('**/weapons.js', async (r) => { await held; await r.continue(); });
   await page.goto('/', { waitUntil: 'commit' });
-  await expect(page.locator('#splash .sp-word')).toHaveText('HUNT');
+  await expect(page.locator('#splash .sp-word')).toHaveAttribute('aria-label', 'Oblivion GP');
+  // the wordmark is inline SVG paths, drawn before any web font or module loads
+  await expect(page.locator('#splash .sp-word svg')).toBeVisible();
+  expect(await page.locator('#splash .sp-word svg > g path').count()).toBeGreaterThan(10);
+  expect((await page.locator('#splash .sp-word').boundingBox()).width).toBeGreaterThan(200);
+  await expect(page).toHaveTitle('Oblivion GP');
   await expect(page.locator('#splash .sp-credit')).toBeVisible();
   await expect(page.locator('#splash .sp-credit')).toHaveText(CREDIT);
   await expect(page.locator('#splash .sp-dots')).toBeVisible();
@@ -84,6 +89,9 @@ test('a boot that takes over 10 seconds offers a reload, and still finishes by i
   await page.route('**/weapons.js', async (r) => { await held; await r.continue(); });
   await page.goto('/', { waitUntil: 'commit' });
   await expect(page.locator('#splash .sp-dots')).toBeVisible();
+  // the dots are parsed before the watchdog script runs: advancing the clock before it has armed
+  // its 10 s timer would start that timer late (polled with evaluate, which no fake timer delays)
+  await expect.poll(() => page.evaluate(() => !!window.__boot)).toBe(true);
   await page.clock.runFor(9000);
   await expect(page.locator('#splashFail')).toBeHidden();
   await page.clock.runFor(1500);
@@ -149,7 +157,7 @@ test('a newer server build shows "New version ready" in the lobby; RELOAD reload
 test('a deploy while the page is open: the next match join goes back to the lobby with the reload banner', async ({ page }) => {
   const errors = trackErrors(page);
   await rewriteWs(page, (m) => { if (m.t === 'welcome') m.v = 'next-build'; return m; });
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await expect(page.locator('#updateNote')).toBeHidden();
   await page.click('#playBtn');
   await expect(page.locator('#updateNote')).toBeVisible();
@@ -197,7 +205,7 @@ test('a failed first guest request is retried: the notice shows, then clears, an
   const urls = wsUrls(page);
   let calls = 0, fail = true;
   await page.route('**/api/guest', (r) => { calls++; return fail ? r.abort('internetdisconnected') : r.continue(); });
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await expect(page.locator('#saveNote')).toBeVisible();
   await expect(page.locator('#saveNote')).toHaveText('Progress will not be saved right now');
   await expect(page.locator('#playBtn')).toBeVisible();
@@ -218,7 +226,7 @@ test('PLAY pressed before the guest account exists waits for it ("Getting readyâ
   // a slow browser even gets to the click)
   let release; const held = new Promise((ok) => { release = ok; });
   await page.route('**/api/guest', async (r) => { await held; await r.continue(); });
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.click('#playBtn');
   await expect(page.locator('#playBtn')).toHaveText('Getting readyâ€¦');
   expect(urls.filter((u) => u.includes('/ws?'))).toEqual([]); // not joined yet
@@ -234,7 +242,7 @@ test('accounts unreachable: PLAY lets the player in after a short wait, and both
   const urls = wsUrls(page);
   await page.route('**/api/guest', (r) => r.fulfill({ status: 503, json: { error: 'Accounts are not set up' } }));
   await page.route('**/api/me', (r) => r.fulfill({ status: 503, json: { error: 'Accounts are not set up' } }));
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await expect(page.locator('#saveNote')).toBeVisible();
   const t0 = Date.now();
   await page.click('#playBtn');
@@ -255,7 +263,7 @@ test('manifest, icons and iOS tags are served for installing to the home screen'
   expect(m.ok()).toBe(true);
   expect(m.headers()['content-type']).toContain('application/manifest+json');
   const man = await m.json();
-  expect(man).toMatchObject({ name: 'Hunt', display: 'fullscreen', orientation: 'landscape' });
+  expect(man).toMatchObject({ name: 'Oblivion GP', short_name: 'Oblivion GP', display: 'fullscreen', orientation: 'landscape' });
   for (const i of man.icons) {
     const r = await request.get('/' + i.src);
     expect(r.ok(), i.src).toBe(true);
@@ -266,7 +274,9 @@ test('manifest, icons and iOS tags are served for installing to the home screen'
   const touch = await page.getAttribute('link[rel="apple-touch-icon"]', 'href');
   expect((await request.get('/' + touch)).ok()).toBe(true);
   expect(await page.getAttribute('meta[name="apple-mobile-web-app-capable"]', 'content')).toBe('yes');
-  expect(await page.getAttribute('meta[name="apple-mobile-web-app-title"]', 'content')).toBe('Hunt');
+  expect(await page.getAttribute('meta[name="apple-mobile-web-app-title"]', 'content')).toBe('Oblivion GP');
+  expect(touch).toBe('icons/oblivion-180.png');
+  expect(man.icons.map((i) => `${i.sizes} ${i.purpose}`)).toEqual(expect.arrayContaining(['192x192 any', '512x512 any', '512x512 maskable']));
 });
 
 test('lobby notices on a phone, portrait and landscape: on screen and clear of the lobby controls and the credit', async ({ page }) => {
@@ -285,7 +295,7 @@ test('lobby notices on a phone, portrait and landscape: on screen and clear of t
       // the play page scrolls in portrait: check the controls wherever the scroll puts them
       for (const scroll of [0, 10_000]) {
         await page.evaluate((y) => { for (const e of document.querySelectorAll('#lobby *')) if (e.scrollHeight > e.clientHeight + 4) e.scrollTop = y; }, scroll);
-        for (const sel of ['#playBtn', '.fillbots', '#lobby #credit', '.lb-tabs']) {
+        for (const sel of ['#playBtn', '.fillbots', '#lobby #credit', '.sp-dock', '.sp-top']) { // (the racing lobby: the space dock and top bar)
           const b = await page.locator(sel).first().boundingBox();
           if (b && b.width && b.y < vp.height && b.y + b.height > 0) expect(apart(n, b), `${id} clear of ${sel} at ${vp.width}x${vp.height} (scroll ${scroll})`).toBe(true);
         }

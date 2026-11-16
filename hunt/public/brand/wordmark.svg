@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -40 1322.7 210" role="img" aria-label="Oblivion GP"><title>Oblivion GP</title>
+<defs>
+<linearGradient id="ogp-silver" x1="0" y1="0" x2="0" y2="100" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffffff"/><stop offset=".48" stop-color="#eef2fa"/><stop offset=".52" stop-color="#aeb8cc"/><stop offset="1" stop-color="#d9e0ee"/></linearGradient>
+<linearGradient id="ogp-streak" x1="-24" y1="0" x2="1262.674538575881" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#22e6ff" stop-opacity="0"/><stop offset=".25" stop-color="#22e6ff"/><stop offset=".6" stop-color="#ffffff"/><stop offset=".85" stop-color="#ff2fc8"/><stop offset="1" stop-color="#ff2fc8" stop-opacity="0"/></linearGradient>
+<pattern id="ogp-check" width="32" height="32" patternUnits="userSpaceOnUse" x="870" y="-16"><rect width="32" height="32" fill="#140a26"/><path d="M0 0h16v16H0zM16 16h16v16h-16z" fill="#ffffff" fill-opacity=".16"/></pattern>
+<filter id="ogp-glow" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="5"/></filter>
+<clipPath id="ogp-band"><rect x="-40" y="0" width="1314" height="100"/></clipPath>
+</defs>
+<g transform="skewX(-16) translate(28.674538575880792 0)">
+<g fill="none" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10">
+<g filter="url(#ogp-glow)" opacity=".8"><g stroke="#22e6ff" stroke-width="26" clip-path="url(#ogp-band)"><path transform="translate(0 0)" d="M39 9H85Q115 9 115 39V61Q115 91 85 91H39Q9 91 9 61V39Q9 9 39 9Z"/><path transform="translate(140 0)" d="M9 120V9H76Q98 9 98 30Q98 50 76 50H9M76 50Q103 50 103 70Q103 91 76 91H9"/><path transform="translate(268 0)" d="M9 -20V91H83"/><path transform="translate(376 0)" d="M9 -20V120"/><path transform="translate(410 0)" d="M9 -20L62 91L115 -20"/><path transform="translate(550 0)" d="M9 -20V120"/><path transform="translate(584 0)" d="M39 9H85Q115 9 115 39V61Q115 91 85 91H39Q9 91 9 61V39Q9 9 39 9Z"/><path transform="translate(724 0)" d="M9 120V9L103 91V-20"/></g></g>
+<g stroke="url(#ogp-silver)" stroke-width="18" clip-path="url(#ogp-band)"><path transform="translate(0 0)" d="M39 9H85Q115 9 115 39V61Q115 91 85 91H39Q9 91 9 61V39Q9 9 39 9Z"/><path transform="translate(140 0)" d="M9 120V9H76Q98 9 98 30Q98 50 76 50H9M76 50Q103 50 103 70Q103 91 76 91H9"/><path transform="translate(268 0)" d="M9 -20V91H83"/><path transform="translate(376 0)" d="M9 -20V120"/><path transform="translate(410 0)" d="M9 -20L62 91L115 -20"/><path transform="translate(550 0)" d="M9 -20V120"/><path transform="translate(584 0)" d="M39 9H85Q115 9 115 39V61Q115 91 85 91H39Q9 91 9 61V39Q9 9 39 9Z"/><path transform="translate(724 0)" d="M9 120V9L103 91V-20"/></g>
+</g>
+<path d="M870 -16H1200L1234 50L1200 116H870L904 50Z" fill="#ff2fc8" opacity=".55" filter="url(#ogp-glow)"/>
+<path d="M870 -16H1200L1234 50L1200 116H870L904 50Z" fill="url(#ogp-check)" stroke="#ff2fc8" stroke-width="5" stroke-linejoin="miter"/>
+<g transform="translate(920 0)" fill="none" stroke-linecap="square" stroke-linejoin="miter">
+<g filter="url(#ogp-glow)" opacity=".9"><g stroke="#ff2fc8" stroke-width="26" clip-path="url(#ogp-band)"><path transform="translate(0 0)" d="M103 33Q103 9 73 9H39Q9 9 9 39V61Q9 91 39 91H73Q103 91 103 61V52H60"/><path transform="translate(128 0)" d="M9 120V9H68Q95 9 95 35Q95 58 68 58H9"/></g></g>
+<g clip-path="url(#ogp-band)"><g stroke="#ff36cf" stroke-width="18"><path transform="translate(0 0)" d="M103 33Q103 9 73 9H39Q9 9 9 39V61Q9 91 39 91H73Q103 91 103 61V52H60"/><path transform="translate(128 0)" d="M9 120V9H68Q95 9 95 35Q95 58 68 58H9"/></g><g stroke="#ffc2f1" stroke-width="2.5" opacity=".55"><path transform="translate(0 0)" d="M103 33Q103 9 73 9H39Q9 9 9 39V61Q9 91 39 91H73Q103 91 103 61V52H60"/><path transform="translate(128 0)" d="M9 120V9H68Q95 9 95 35Q95 58 68 58H9"/></g></g>
+</g>
+</g>
+<g stroke-linecap="round">
+<path d="M-14 130H1252.674538575881" stroke="url(#ogp-streak)" stroke-width="3.5"/>
+<path d="M148.1 142H678.7" stroke="url(#ogp-streak)" stroke-width="1.8" opacity=".7"/>
+</g>
+</svg>

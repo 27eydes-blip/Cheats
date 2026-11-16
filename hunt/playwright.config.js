@@ -20,7 +20,11 @@ export default defineConfig({
   testDir: 'tests/e2e',
   timeout: 90_000,
   workers: 2,
-  reporter: [['list']],
+  // CI only: one retry, so a test that passes on the retry is reported as "flaky" (listed in the
+  // summary and annotated on the run) instead of hiding; a test that fails twice still fails the
+  // job. Local runs never retry.
+  retries: process.env.CI ? 1 : 0,
+  reporter: process.env.CI ? [['list'], ['github']] : [['list']],
   use: { baseURL: BASE, trace: 'off' },
   projects,
   webServer: { command: `npx wrangler dev --port ${PORT} --ip 127.0.0.1`, url: BASE, reuseExistingServer: true, timeout: 60_000 },

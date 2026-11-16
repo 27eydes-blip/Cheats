@@ -13,6 +13,9 @@ import { WEAPONS } from '../public/weapons.js';
 import { fault, parseMsg, ZONE_HUMANS } from './guard.js';
 import { VERSION } from '../public/version.js';
 import { logError } from './log.js';
+import { routeRace } from './race/room.js';
+import { handleSpaceFeed } from './space-feed.js'; // lobby ticker: players online, top racer
+export { RaceRoom, RaceMatchmaker } from './race/room.js';
 // local dev only (HUNT_DEV is in wrangler.jsonc, never in wrangler.preview.jsonc, which is what deploys): ?wpn=id&mast=n hands
 // you a secondary for tests and screenshots without an account at that level
 function devWeapon(env, url, sim, id) {
@@ -47,7 +50,9 @@ const app = {
     const url = new URL(req.url);
     // build id: an open client compares it with its own and offers a reload after a deploy
     if (url.pathname === '/api/version') return Response.json({ version: VERSION }, { headers: { 'cache-control': 'no-store' } });
+    if (url.pathname.startsWith('/api/space/')) return handleSpaceFeed(req, env);
     if (url.pathname.startsWith('/api/')) return handleApi(req, env);
+    if (url.pathname === '/race') return routeRace(req, env); // Hunt Racers (src/race/room.js)
     if (url.pathname === '/ws' || url.pathname === '/zone') {
       if (req.method !== 'GET' || req.headers.get('Upgrade') !== 'websocket') return new Response('Expected WebSocket', { status: 426 });
       let name;

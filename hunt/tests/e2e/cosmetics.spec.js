@@ -5,7 +5,7 @@ import { trackErrors, waitMe } from './helpers.js';
 test('locker + pass: buy and equip a title with test coins, shows in match roster', async ({ page }) => {
   const errors = trackErrors(page);
   page.on('dialog', (d) => d.dismiss());
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.waitForSelector('#rail_locker');
   await expect(page.locator('#tbCoins')).toContainText('TEST');
   await page.click('#rail_locker');

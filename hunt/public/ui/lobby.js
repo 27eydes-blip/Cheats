@@ -29,13 +29,30 @@ export const MODES_UI = {
   showdown: { name: 'SHOWDOWN', desc: 'Last hunter standing wins while the poison closes in.', players: '10 players', mode: 'showdown', ribbon: 'EVENT' },
 };
 import { clampPower, POWER_COST, MAX_POWER } from '../power.js';
+import { DRIVERS } from '../race/physics.js';
+import { RACE_MODES } from '../race/protocol.js';
+import { paintPreview, trackLabel, TRACK_CHOICES, weaponOf, driverStats } from '../race/preview.js';
+import { carName } from '../race/looks.js';
+import { shopDay } from '../race/garage.js';
+import { drawPlatform, equippedLook } from './platform.js';
+import { openStore } from './store.js';
+import { createSpaceLobby } from './space/racelobby.js';
+// HUNT RACERS (the main game): the PLAY page lists the racing modes; the shooter lobby above is the
+// classic one (?shooter=1)
+export const RACE_MODE_BTNS = [
+  ['grand', 'GRAND RACE', '3 laps · first past the flag', 'trophy', '#4a7fe0'],
+  ['elim', 'ELIMINATION', 'Last place out every 18 s', 'skull', '#cf3a44'],
+  ['battle', 'BATTLE ARENA', 'Most takedowns in 2:00', 'battle', '#7b45c9'],
+  ['trial', 'TIME TRIAL', 'Solo vs the clock', 'star', '#d9822b'],
+];
 const $ = (id) => document.getElementById(id);
+const fmtLap = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, '0')}`;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TAUNTS = ['The hunt is on.', 'I see you.', 'Run.', 'Your bounty is mine.', 'Nowhere to hide.', 'Ready.'];
 
 // The lobby: a player banner + currencies on top, a tab bar down the left (Profile, Locker, Play,
 // Armory, Pass, Friends) and the selected tab's page. PLAY: mode buttons, your party (your hunter +
-// invite slots), fill-with-bots, Hunt Pass and a big PLAY button.
+// invite slots), fill-with-bots, GP Pass and a big PLAY button.
 const MODE_BTNS = [
   ['quick', 'QUICK HUNT', 'Random event · 10', 'target', '#4a7fe0'],
   ['squad', 'SQUAD HUNT', '3 vs 3', 'friends', '#cf3a44'],
@@ -43,7 +60,7 @@ const MODE_BTNS = [
   ['free', 'FREE PLAY', 'Open world', 'road', '#2b9c6c'],
   ['showdown', 'SHOWDOWN', 'Last one standing', 'trophy', '#d9822b'],
 ];
-const TABS = [['profile', 'PROFILE', 'user'], ['locker', 'LOCKER', 'locker'], ['play', 'PLAY', 'battle'], ['armory', 'ARMORY', 'armory'], ['pass', 'HUNT PASS', 'pass'], ['friends', 'FRIENDS', 'friends']];
+const TABS = [['profile', 'PROFILE', 'user'], ['locker', 'LOCKER', 'locker'], ['play', 'PLAY', 'battle'], ['armory', 'ARMORY', 'armory'], ['pass', 'GP PASS', 'pass'], ['friends', 'FRIENDS', 'friends']];
 // level shield (original): gold rim, deep red body, the level number
 const shield = (id) => `<svg class="shield" viewBox="0 0 64 72"><path d="M32 3 L59 12 V36 C59 53 46 64 32 69 C18 64 5 53 5 36 V12 Z" fill="#ffc83d" stroke="#1b1033" stroke-width="4" stroke-linejoin="round"/><path d="M32 11 L51 17 V36 C51 48 42 56 32 60 C22 56 13 48 13 36 V17 Z" fill="#8e2a3a"/><path d="M32 11 V60 C22 56 13 48 13 36 V17 Z" fill="#b2423f"/><text id="${id}" x="32" y="45" text-anchor="middle" font-family="Lilita One" font-size="26" fill="#fff" stroke="#1b1033" stroke-width="4" paint-order="stroke">1</text></svg>`;
 
@@ -58,8 +75,31 @@ export function stageFit(w, h) {
 }
 
 export function createLobby(api) {
+  if (api.racing) return createSpaceLobby(api); // racing: the space lobby (ui/space/racelobby.js)
+  const RACE = !!api.racing;
   const root = $('lobby');
-  root.className = 'lobby';
+  root.className = 'lobby' + (RACE ? ' racing' : '');
+  // racing: the STORE (car cosmetics) takes the place of the Locker and the Armory, which only hold
+  // shooter cosmetics and weapons (both stay in the classic lobby)
+  const tabs = RACE ? [['profile', 'PROFILE', 'user'], ['store', 'STORE', 'coin'], ...TABS.filter(([k]) => ['play', 'pass', 'friends'].includes(k))] : TABS;
+  const playPage = RACE ? `
+      <section class="pg pg-play" data-pg="play">
+        <div class="modelist" id="modeCard">${RACE_MODE_BTNS.map(([k, n, sub, ic, col]) => `<button class="modebtn tap" data-m="${k}" style="--mc:${col}" title="${esc(RACE_MODES[k].desc)}"><span class="mi">${icon(ic)}</span><span class="mn"><b>${n}</b><small>${sub}</small></span><span class="go" aria-hidden="true"></span></button>`).join('')}
+          <button type="button" class="modebtn trackbtn tap" id="trackBtn" style="--mc:#2b9c6c" aria-label="Choose a track"><canvas class="tpv" id="trackPv" aria-hidden="true"></canvas><span class="mn"><b id="trackNm">RANDOM TRACK</b><small id="trackSub">TRACK · tap to change</small></span><span class="go" aria-hidden="true"></span></button>
+          <button type="button" class="fillbots" id="fillBots" role="switch" aria-checked="true"><span class="cb" id="fillCb"></span> FILL WITH BOTS</button></div>
+        <div class="party">
+          <div class="slots">
+            <div class="slot me nameplate tap" title="Change driver"><canvas id="stage"></canvas><div class="np-row"><span class="np-name" id="npName">Volt</span><span class="role" id="npRole">ALL-ROUNDER</span></div>
+              <div class="np-car" id="npCar"></div>
+              <div class="np-stats" id="npStats" aria-hidden="true"></div>
+              <div class="np-tro">${icon('trophy')}<span id="npTro">0</span><span class="np-mode" id="mcName">GRAND RACE</span></div></div>
+            ${[1, 2, 3].map(() => `<button class="slot invite tap"><span class="plus">+</span><span>INVITE<br>FRIENDS</span></button>`).join('')}
+          </div>
+          <div class="actions"><button class="btn btn-md alt" id="rail_road">${icon('road')} TROPHY ROAD<span class="dot" id="dot_road" hidden></span></button>
+            <button class="btn btn-md gold" id="passBtn">${icon('pass')} GP PASS</button>
+            <button class="btn btn-lg play" id="playBtn" data-sfx="play">PLAY</button></div>
+        </div>
+      </section>` : '';
   root.innerHTML = `
     <div class="lb-top">
       <div class="pbanner tap" id="profileCard">${shield('lvN')}<div class="pb-txt"><div class="pb-row"><div class="pname" id="pName">Hunter</div><div class="ptro">${icon('trophy')}<span id="pTro">0</span></div></div><div class="xpbar"><i id="xpFill"></i></div></div>
@@ -71,8 +111,8 @@ export function createLobby(api) {
         <button class="gear tap" id="rail_settings" aria-label="Settings">${icon('settings')}</button>
       </div>
     </div>
-    <nav class="lb-tabs">${TABS.map(([k, l, ic]) => `<button class="tabbtn tap" id="${k === 'locker' || k === 'armory' || k === 'pass' || k === 'friends' ? 'rail_' + k : 'tab_' + k}" data-tab="${k}">${icon(ic)}<span>${l}</span><span class="dot" id="dot_${k}" hidden></span>${k === 'play' ? '<span class="tabchip" id="playChip">READY</span>' : ''}</button>`).join('')}</nav>
-    <main class="lb-page">
+    <nav class="lb-tabs">${tabs.map(([k, l, ic]) => `<button class="tabbtn tap" id="${k === 'locker' || k === 'armory' || k === 'pass' || k === 'friends' || k === 'store' ? 'rail_' + k : 'tab_' + k}" data-tab="${k}">${icon(ic)}<span>${l}</span><span class="dot" id="dot_${k}" hidden></span>${k === 'play' ? '<span class="tabchip" id="playChip">READY</span>' : k === 'store' ? '<span class="tabchip" id="storeChip">DAILY</span>' : ''}</button>`).join('')}</nav>
+    <main class="lb-page">${RACE ? playPage : `
       <section class="pg pg-play" data-pg="play">
         <div class="modelist" id="modeCard">${MODE_BTNS.map(([k, n, sub, ic, col]) => `<button class="modebtn tap" data-m="${k}" style="--mc:${col}"><span class="mi">${icon(ic)}</span><span class="mn"><b>${n}</b><small>${sub}</small></span><span class="go" aria-hidden="true"></span></button>`).join('')}
           <button type="button" class="fillbots" id="fillBots" role="switch" aria-checked="true"><span class="cb" id="fillCb"></span> FILL WITH BOTS</button></div>
@@ -84,10 +124,10 @@ export function createLobby(api) {
             ${[1, 2, 3].map(() => `<button class="slot invite tap"><span class="plus">+</span><span>INVITE<br>FRIENDS</span></button>`).join('')}
           </div>
           <div class="actions"><button class="btn btn-md alt" id="rail_road">${icon('road')} TROPHY ROAD<span class="dot" id="dot_road" hidden></span></button>
-            <button class="btn btn-md gold" id="passBtn">${icon('pass')} HUNT PASS</button>
+            <button class="btn btn-md gold" id="passBtn">${icon('pass')} GP PASS</button>
             <button class="btn btn-lg play" id="playBtn" data-sfx="play">PLAY</button></div>
         </div>
-      </section>
+      </section>`}
       <section class="pg pg-profile" data-pg="profile" hidden></section>
       <section class="pg pg-locker" data-pg="locker" hidden></section>
     </main>
@@ -98,6 +138,10 @@ export function createLobby(api) {
     mode: store.get('hunt-mode') || 'quick', tab: 'play', t0: performance.now(), taunt: 0, twirl: 0, blinkAt: 2, raf: 0, visible: true,
   };
   if (!MODES_UI[L.mode]) L.mode = 'quick';
+  if (RACE) {
+    L.mode = store.get('hunt-race-mode') || 'grand'; if (!RACE_MODES[L.mode]) L.mode = 'grand';
+    L.track = store.get('hunt-race-track') || 'any'; if (!TRACK_CHOICES.includes(L.track)) L.track = 'any';
+  }
   const stage = $('stage'), sg = stage.getContext('2d');
 
   const Q = [{ st: 1.5 }, { st: 1.25 }, { st: 1 }];
@@ -109,12 +153,13 @@ export function createLobby(api) {
     const r = stage.getBoundingClientRect();
     stage.width = Math.max(1, Math.round(r.width * dpr)); stage.height = Math.max(1, Math.round(r.height * dpr)); L.dpr = dpr;
   }
-  addEventListener('resize', () => requestAnimationFrame(resize));
+  addEventListener('resize', () => requestAnimationFrame(() => { resize(); if (RACE && !root.hidden && L.tab === 'play') refresh(); })); // (the track preview follows its box)
 
   // ---------- stage: big brawler on a glowing pedestal ----------
   function drawStage(t) {
     const w = stage.width / L.dpr, h = stage.height / L.dpr;
     sg.setTransform(L.dpr, 0, 0, L.dpr, 0, 0); sg.clearRect(0, 0, w, h);
+    if (RACE) { drawPlatform(sg, w, h, api.getBrawler(), L.look, SETTINGS.reduceFlash ? t * 0.5 : t, { low: SETTINGS.lowGfx }); return; } // the car turning on its neon platform
     const id = api.getBrawler(), B = BRAWLERS[id];
     const { sc, cx, base } = stageFit(w, h);
     // dramatic light from below: a warm cone rising off the pedestal
@@ -159,6 +204,7 @@ export function createLobby(api) {
   }
   // ---------- data -> UI ----------
   function refresh() {
+    if (RACE) return refreshRace();
     const p = A.progress(), id = api.getBrawler(), B = BRAWLERS[id];
     $('coinN').textContent = p.coins; $('gemN').textContent = p.gems ?? 0;
     const lv = levelInfo(p.xp);
@@ -200,6 +246,58 @@ export function createLobby(api) {
     if (L.tab === 'locker') SC.renderLockerPage(root.querySelector('.pg-locker'), api, refresh);
     makeFocusable(root);
   }
+  // the parts every tab shows: banner, currencies, missions, notification dots, tabs
+  function refreshTop(p) {
+    $('coinN').textContent = p.coins; $('gemN').textContent = p.gems ?? 0;
+    const lv = levelInfo(p.xp);
+    $('lvN').textContent = lv.level;
+    $('xpFill').style.width = `${Math.round((lv.into / lv.need) * 100)}%`;
+    $('pName').textContent = api.prefs.name || 'Racer';
+    $('pTro').textContent = totalTrophies(p);
+    const guest = !A.ACC.user || A.ACC.user.guest;
+    $('guestChip').hidden = !guest || store.get('hunt-guestchip') === 'x';
+    const ms = missionState(p), done = ms.filter((m) => m.done).length, claimable = ms.some((m) => m.done && !m.claimed);
+    $('misN').textContent = `${done}/3`;
+    $('misArc').setAttribute('stroke-dasharray', `${(done / 3) * 88} 88`);
+    $('dotMis').hidden = !claimable;
+    const tt = totalTrophies(p);
+    let roadReady = false; for (let at = ROAD_STEP; at <= tt; at += ROAD_STEP) if (roadReward(at) && !p.claimed.includes(at)) roadReady = true;
+    const tier = passTier(p.pass.xp);
+    const passReady = PASS.some((r) => r.tier <= tier && (!p.pass.claimed.includes(`free:${r.tier}`) || (p.pass.premium && !p.pass.claimed.includes(`premium:${r.tier}`))));
+    const seen = (k, now) => { const r = seenList(store.get(k), now); if (r.fresh) store.set(k, JSON.stringify(now)); return r.list; };
+    $('dot_road').hidden = !roadReady; $('dot_pass').hidden = !passReady;
+    if ($('dot_locker')) $('dot_locker').hidden = !hasUnseen(p.owned, seen('hunt-seen-locker', p.owned));
+    if ($('dot_store')) $('dot_store').hidden = store.get('hunt-store-day') === String(shopDay()); // a new daily shop you have not seen
+    $('dot_friends').hidden = true; $('dot_profile').hidden = true; $('dot_play').hidden = true;
+    for (const b of root.querySelectorAll('.tabbtn')) b.classList.toggle('on', b.dataset.tab === L.tab);
+    for (const pg of root.querySelectorAll('.pg')) pg.hidden = pg.dataset.pg !== L.tab;
+    if (L.tab === 'profile') SC.renderProfilePage(root.querySelector('.pg-profile'), api, refresh);
+    if (L.tab === 'locker') SC.renderLockerPage(root.querySelector('.pg-locker'), api, refresh);
+  }
+  // HUNT RACERS play page: mode, track (with its preview), bots, your driver and their car
+  function refreshRace() {
+    const p = A.progress(), id = api.getBrawler(), D = DRIVERS[id] || DRIVERS.volt;
+    refreshTop(p);
+    L.look = equippedLook(p, id); // (the platform draws it every frame)
+    $('npName').textContent = carName(id); $('npRole').textContent = D.role.toUpperCase(); $('npRole').style.setProperty('--role-col', L.look.neon);
+    root.querySelector('.slot.me').style.setProperty('--car-neon', L.look.neon);
+    $('npCar').textContent = weaponOf(id).name;
+    if (L.statsFor !== id) { L.statsFor = id; $('npStats').innerHTML = driverStats(id).map((r) => `<span>${r.label}</span><i><b style="width:${Math.round(r.f * 100)}%"></b></i>`).join(''); }
+    $('npTro').textContent = p.trophies[id] | 0;
+    $('mcName').textContent = RACE_MODES[L.mode].name.toUpperCase();
+    for (const b of root.querySelectorAll('.modebtn[data-m]')) { b.classList.toggle('sel', b.dataset.m === L.mode); b.setAttribute('aria-pressed', String(b.dataset.m === L.mode)); }
+    const arena = !!RACE_MODES[L.mode].arena;
+    $('trackNm').textContent = trackLabel(L.track, arena).toUpperCase();
+    const best = L.mode === 'trial' && L.track !== 'any' ? p.race?.best?.[L.track] : null;
+    $('trackSub').textContent = best ? `BEST ${fmtLap(best)} · tap to change` : arena ? 'ARENA · tap to change' : 'TRACK · tap to change';
+    if (!$('trackPv').closest('[hidden]')) paintPreview($('trackPv'), L.track, arena);
+    // Time Trial is always solo: bots do not apply
+    const solo = L.mode === 'trial', bots = $('bots'), botsOn = !bots || bots.checked;
+    $('fillCb').classList.toggle('on', botsOn && !solo); $('fillBots').setAttribute('aria-checked', String(botsOn && !solo));
+    $('fillBots').classList.toggle('na', solo); $('fillBots').setAttribute('aria-disabled', String(solo));
+    $('playChip').textContent = 'READY';
+    makeFocusable(root);
+  }
   A.onUser(refresh);
 
   // ---------- loop (only while the lobby is visible) ----------
@@ -216,7 +314,27 @@ export function createLobby(api) {
   const fmtReset = () => { const s = Math.floor(msToReset() / 1000); return `${String(Math.floor(s / 3600)).padStart(2, '0')}h ${String(Math.floor((s % 3600) / 60)).padStart(2, '0')}m`; };
 
   // ---------- interactions ----------
-  const tab = (k) => { L.tab = k; sfx('click', 0.6); refresh(); if (k === 'play') requestAnimationFrame(resize); };
+  const tab = (k) => { L.tab = k; sfx('click', 0.6); refresh(); if (k === 'play') requestAnimationFrame(() => { resize(); if (RACE) refresh(); }); };
+  if (RACE) {
+    // ---------- HUNT RACERS play page ----------
+    root.querySelector('.slot.me').addEventListener('click', () => SC.openDriverSelect(api, refresh));
+    for (const b of root.querySelectorAll('.modebtn[data-m]')) b.onclick = () => { L.mode = b.dataset.m; store.set('hunt-race-mode', L.mode); sfx('click'); refresh(); };
+    $('trackBtn').onclick = () => SC.openTrackPicker({ track: L.track, arena: !!RACE_MODES[L.mode].arena, best: A.progress().race?.best || {}, trial: L.mode === 'trial' }, (k) => { L.track = k; store.set('hunt-race-track', k); refresh(); });
+    $('fillBots').onclick = () => { if (L.mode === 'trial') { SC.toastMsg('Time Trial is always just you'); return; } const bx = $('bots'); if (bx) { bx.checked = !bx.checked; bx.dispatchEvent(new Event('change')); } sfx('click', 0.6); refresh(); };
+    for (const b of root.querySelectorAll('.slot.invite')) b.onclick = () => SC.openRaceFriends(api);
+    $('playBtn').addEventListener('click', () => { unlockAudio(); api.startRace({ mode: L.mode, track: L.track }); });
+    $('tab_play').onclick = () => tab('play');
+    $('tab_profile').onclick = () => tab('profile');
+    $('rail_store').onclick = () => { store.set('hunt-store-day', String(shopDay())); sfx('click', 0.6); openStore(api, refresh); refresh(); };
+    $('rail_pass').onclick = $('passBtn').onclick = () => SC.openPass(refresh);
+    $('rail_road').onclick = () => SC.openRoad(refresh);
+    $('rail_friends').onclick = () => SC.openRaceFriends(api);
+    $('rail_settings').onclick = () => SC.openSettings(api, () => { resize(); refresh(); });
+    $('profileCard').addEventListener('click', (e) => { if (e.target.closest('#guestChip')) return; tab('profile'); });
+    $('guestChip').addEventListener('click', (e) => { e.stopPropagation(); if (e.target.id === 'guestX') { store.set('hunt-guestchip', 'x'); refresh(); } else SC.openProfile(api, refresh, true); });
+    $('tbMissions').onclick = () => SC.openMissions(refresh);
+    $('coinPlus').onclick = $('gemPlus').onclick = () => SC.openEarnInfo();
+  } else {
   root.querySelector('.slot.me').addEventListener('click', (e) => { if (!e.target.closest('#npPower')) SC.openBrawlerSelect(api, refresh); });
   for (const b of root.querySelectorAll('.modebtn')) b.onclick = () => { L.mode = b.dataset.m; store.set('hunt-mode', L.mode); sfx('click'); refresh(); };
   // FILL WITH BOTS: off = humans-only matches (the game saves the choice on 'change')
@@ -240,6 +358,7 @@ export function createLobby(api) {
   $('guestChip').addEventListener('click', (e) => { e.stopPropagation(); if (e.target.id === 'guestX') { store.set('hunt-guestchip', 'x'); refresh(); } else SC.openProfile(api, refresh, true); });
   $('tbMissions').onclick = () => SC.openMissions(refresh);
   $('coinPlus').onclick = $('gemPlus').onclick = () => SC.openEarnInfo();
+  }
 
   function show() {
     root.hidden = false; resize(); refresh();
@@ -249,6 +368,6 @@ export function createLobby(api) {
   function hide() { root.hidden = true; L.lastNow = 0; stopMusic(); }
   // music needs a user gesture on mobile: start on the first tap in the lobby
   root.addEventListener('pointerdown', () => { unlockAudio(); if (!root.hidden) startMusic(); }, { once: false });
-  return { show, hide, refresh, get mode() { return L.mode; }, perf: () => ({ q: AQ.step, avg: AQ.cost }) };
+  return { show, hide, refresh, get mode() { return L.mode; }, get track() { return L.track; }, get tab() { return L.tab; }, perf: () => ({ q: AQ.step, avg: AQ.cost }) };
 }
 export { ICONS };

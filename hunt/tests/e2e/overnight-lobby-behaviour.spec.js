@@ -5,11 +5,16 @@ import { test, expect } from '@playwright/test';
 import { trackErrors } from './helpers.js';
 import { SCREENS } from './overnight-lobby-audit.lib.js';
 
-// set this client's progress (display only) the way a sync from the server would
-const setProgress = (page, patch) => page.evaluate(async (patch) => {
-  const A = await import('/account.js');
-  A.setUser({ ...A.ACC.user, progress: { ...A.progress(), ...patch } });
-}, patch);
+// set this client's progress (display only) the way a sync from the server would. It waits for
+// the guest account first: the lobby can show before that request answers (slow machines), and
+// its answer would then replace the patched progress.
+const setProgress = async (page, patch) => {
+  await page.waitForFunction(() => import('/account.js').then((A) => !!A.ACC.user));
+  await page.evaluate(async (patch) => {
+    const A = await import('/account.js');
+    A.setUser({ ...A.ACC.user, progress: { ...A.progress(), ...patch } });
+  }, patch);
+};
 const selected = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('hunt') || '{}').brawler || 'volt');
 
 test('every lobby screen: unique ids and never "undefined", "NaN" or "null" on screen', async ({ page }) => {
@@ -28,14 +33,14 @@ test('every lobby screen: unique ids and never "undefined", "NaN" or "null" on s
     if (r.bad.length || r.attrs.length) problems.push(`[${name}] shows ${[...r.bad, ...r.attrs].join(', ')}`);
   };
   for (const s of SCREENS) {
-    await page.goto('/');
+    await page.goto('/?shooter=1');
     await page.waitForSelector('#playBtn');
     await s.open(page);
     await page.waitForTimeout(300);
     await check(s.name);
   }
   // every hunter's skins in the Locker (level / road / pass skins included)
-  await page.goto('/'); await page.waitForSelector('#playBtn');
+  await page.goto('/?shooter=1'); await page.waitForSelector('#playBtn');
   await page.click('#rail_locker'); await page.click('.lsec[data-open="skins"] .ribbonhead');
   for (const b of ['volt', 'brick', 'wisp', 'dune', 'rook', 'flicker']) { await page.click(`#lkWho [data-w="${b}"]`); await check(`locker skins ${b}`); }
   // a Hunt Pass with claimable rewards, and the Trophy Road with something to claim
@@ -48,7 +53,7 @@ test('every lobby screen: unique ids and never "undefined", "NaN" or "null" on s
 
 test('brawler detail is a preview: CLOSE, Escape and a tap outside cancel; only SELECT changes your hunter', async ({ page }) => {
   test.setTimeout(180_000); // headless WebKit draws these canvases slowly
-  await page.goto('/'); await page.waitForSelector('#playBtn');
+  await page.goto('/?shooter=1'); await page.waitForSelector('#playBtn');
   const before = await selected(page);
   expect(before).toBe('volt');
   await page.click('.nameplate #stage');
@@ -74,7 +79,7 @@ test('brawler detail is a preview: CLOSE, Escape and a tap outside cancel; only 
 });
 
 test('locker: tapping an item previews it; reward items show where they come from with a lock, never a price', async ({ page }) => {
-  await page.goto('/'); await page.waitForSelector('#playBtn');
+  await page.goto('/?shooter=1'); await page.waitForSelector('#playBtn');
   await page.click('#rail_locker'); await page.click('.lsec[data-open="skins"] .ribbonhead');
   await page.click('#lkWho [data-w="volt"]');
   const card = (k) => page.locator(`#lkItems .ped[data-k="${k}"]`);
@@ -99,7 +104,7 @@ test('locker: tapping an item previews it; reward items show where they come fro
 });
 
 test('hunt pass opens with the first claimable tier in view, and claimed coins fly to its own counter', async ({ page }) => {
-  await page.goto('/'); await page.waitForSelector('#playBtn');
+  await page.goto('/?shooter=1'); await page.waitForSelector('#playBtn');
   await setProgress(page, { pass: { xp: 12 * 120, premium: false, claimed: ['free:1', 'free:2'] } });
   await page.click('#rail_pass');
   await page.waitForSelector('.track .claim');
@@ -120,7 +125,7 @@ test('hunt pass opens with the first claimable tier in view, and claimed coins f
 });
 
 test('keyboard: every lobby control is a tab stop, rings are visible, Escape closes the top-most screen and focus returns', async ({ page }) => {
-  await page.goto('/'); await page.waitForSelector('#playBtn');
+  await page.goto('/?shooter=1'); await page.waitForSelector('#playBtn');
   const stops = new Set();
   for (let i = 0; i < 40; i++) {
     await page.keyboard.press('Tab');
@@ -191,7 +196,7 @@ for (const [w, h, touch] of [[1280, 720], [1366, 768], [1440, 900], [1920, 1080]
   test(`${w}x${h}: the hunter fits its frame, weapon included (lobby stage and Locker preview)`, async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, ...(touch ? { hasTouch: true } : {}) });
     const page = await ctx.newPage();
-    await page.goto('/'); await page.waitForSelector('#playBtn'); await page.waitForTimeout(200);
+    await page.goto('/?shooter=1'); await page.waitForSelector('#playBtn'); await page.waitForTimeout(200);
     const st = await hunterFits(page, 'stage');
     expect(st.bad, `stage ${st.w}x${st.h}`).toEqual([]);
     expect(st.scale * 80, 'still a big hunter').toBeGreaterThan(Math.min(st.w, st.h) * 0.4);
@@ -203,7 +208,7 @@ for (const [w, h, touch] of [[1280, 720], [1366, 768], [1440, 900], [1920, 1080]
 }
 
 test('armory and locker dots: lit only for something new, gone once seen; mode buttons only pick', async ({ page }) => {
-  await page.goto('/'); await page.waitForSelector('#playBtn');
+  await page.goto('/?shooter=1'); await page.waitForSelector('#playBtn');
   await expect(page.locator('#dot_locker')).toBeHidden(); // a fresh player has nothing new
   await expect(page.locator('#dot_armory')).toBeHidden();
   // level up: a new weapon unlocks -> Armory dot; a new item -> Locker dot

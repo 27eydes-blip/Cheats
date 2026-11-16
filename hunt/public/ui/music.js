@@ -2,6 +2,7 @@
 // 116 BPM, F major. Bass bounce + plucky lead + soft pad + drums. Ducks when popups open.
 import { SETTINGS } from '../settings.js';
 import { audioCtx } from '../audio.js';
+import { duckAmbient } from './space/ambient.js';
 
 const BPM = 116, STEP = 60 / BPM / 4; // 16th notes
 const n = (m) => 440 * 2 ** ((m - 69) / 12);
@@ -65,7 +66,10 @@ export function stopMusic() {
   b.gain.cancelScheduledValues(ac.currentTime); b.gain.setValueAtTime(b.gain.value, ac.currentTime); b.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.5);
   setTimeout(() => { try { d.disconnect(); } catch {} }, 700);
 }
-export function duck(on) { ducked = on; if (duckGain) duckGain.gain.setTargetAtTime(on ? 0.3 : 1, ac.currentTime, 0.12); }
+export function duck(on) { ducked = on; if (duckGain) duckGain.gain.setTargetAtTime(on ? 0.3 : 1, ac.currentTime, 0.12); duckAmbient(on); for (const fn of duckFns) fn(on); }
+// popups open / close (the space lobby's ticker pauses under them)
+const duckFns = new Set();
+export const onDuck = (fn) => { duckFns.add(fn); return () => duckFns.delete(fn); };
 export function setMusicVolume() { if (bus && timer) bus.gain.setTargetAtTime(Math.max(0.0001, vol()), ac.currentTime, 0.1); }
 export const musicPlaying = () => !!timer;
 let ducked = false;

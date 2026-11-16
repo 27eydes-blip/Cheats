@@ -3,11 +3,16 @@
 // was unreachable on landscape phones, PLAY sat under the tab bar in portrait, the guest chip
 // covered the XP bar, and Armory EQUIP started off-screen.
 import { test, expect } from '@playwright/test';
-import { trackErrors, waitMe } from './helpers.js';
-import { SCREENS, auditPage } from './overnight-lobby-audit.lib.js';
+import { trackErrors, waitMe, waitSettled, isolateRaces } from './helpers.js';
+import { SCREENS, RACE_SCREENS, auditPage } from './overnight-lobby-audit.lib.js';
 
 // A phone: touch screen, mobile viewport. Firefox has no mobile emulation switch, so it gets touch only.
-const phone = (browser, width, height) => browser.newContext({ viewport: { width, height }, hasTouch: true, ...(browser.browserType().name() === 'firefox' ? {} : { isMobile: true }) });
+// Its public races (LAUNCH, the bots-off waiting card) never meet another test's.
+const phone = async (browser, width, height) => {
+  const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: true, ...(browser.browserType().name() === 'firefox' ? {} : { isMobile: true }) });
+  await isolateRaces(ctx);
+  return ctx;
+};
 // The touch rules key off a coarse pointer. An engine that cannot emulate one cannot run these checks.
 async function needTouch(page) {
   const coarse = await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches);
@@ -19,21 +24,26 @@ async function needTouch(page) {
 const ALLOW = [];
 const allowed = (msg) => ALLOW.some(([re]) => re.test(msg));
 
-for (const [w, h] of [[667, 375], [844, 390], [932, 430], [390, 844], [430, 932]]) {
-  test(`phone audit ${w}x${h}: every menu screen has thumb-sized controls, readable text and its main buttons in view`, async ({ browser }) => {
+// the racing lobby (the game, at /) and the classic shooter lobby (?shooter=1)
+// (iPads: the racing lobby, the game everyone plays)
+for (const [w, h, kinds] of [[667, 375, 2], [844, 390, 2], [932, 430, 2], [390, 844, 2], [430, 932, 2], [1180, 820, 1], [820, 1180, 1]]) for (const [kind, base, screens] of [['racing', '/', RACE_SCREENS], ['classic', '/?shooter=1', SCREENS]].slice(0, kinds)) {
+  test(`phone audit ${w}x${h} (${kind} lobby): every menu screen has thumb-sized controls, readable text and its main buttons in view`, async ({ browser }) => {
     test.setTimeout(300_000);
     const ctx = await phone(browser, w, h);
     const page = await ctx.newPage();
     const errors = trackErrors(page);
     const problems = [];
-    await page.goto('/');
+    await page.goto(base);
     await needTouch(page);
-    for (const s of SCREENS) {
-      await page.goto('/');
+    for (const s of screens) {
+      await page.goto(base);
       await page.waitForSelector('#playBtn');
+      // the lobby shows before the guest account answers; its answer re-renders open screens
+      // (popups pop in again), so audit the settled state a player sees
+      await page.waitForFunction(() => import('/account.js').then((A) => !!A.ACC.user));
       await s.open(page);
       // let the slide-in finish so sizes and hit tests are the settled ones
-      await page.waitForFunction(() => !document.getAnimations().some((a) => ['screen-in', 'pop-in', 'flip-in'].includes(a.animationName) && a.playState !== 'finished'));
+      await waitSettled(page);
       for (const msg of await page.evaluate(auditPage, s.primary)) if (!allowed(msg)) problems.push(`[${s.name}] ${msg}`);
     }
     expect(problems).toEqual([]);
@@ -43,10 +53,10 @@ for (const [w, h] of [[667, 375], [844, 390], [932, 430], [390, 844], [430, 932]
 }
 
 for (const [w, h] of [[667, 375], [844, 390], [932, 430]]) {
-  test(`landscape phone ${w}x${h}: the POWER row is on the hunter card and opens Brawler Power`, async ({ browser }) => {
+  test(`landscape phone ${w}x${h}: the POWER row is on the hunter card and opens Brawler Power (classic lobby)`, async ({ browser }) => {
     const ctx = await phone(browser, w, h);
     const page = await ctx.newPage();
-    await page.goto('/');
+    await page.goto('/?shooter=1');
     await needTouch(page);
     await expect(page.locator('#npPower')).toBeVisible();
     await page.tap('#npPower');
@@ -65,11 +75,11 @@ for (const [w, h] of [[667, 375], [844, 390], [932, 430]]) {
 }
 
 for (const [w, h] of [[320, 568], [375, 667], [390, 844], [412, 915], [430, 932]]) {
-  test(`portrait ${w}x${h}: PLAY, Trophy Road and Hunt Pass are in view without scrolling, clear of the tabs and the credit`, async ({ browser }) => {
+  test(`portrait ${w}x${h}: PLAY, Trophy Road and Hunt Pass are in view without scrolling, clear of the tabs and the credit (classic lobby)`, async ({ browser }) => {
     const ctx = await phone(browser, w, h);
     const page = await ctx.newPage();
     const errors = trackErrors(page);
-    await page.goto('/');
+    await page.goto('/?shooter=1');
     await needTouch(page);
     await page.waitForSelector('#playBtn');
     const r = await page.evaluate(() => {
@@ -133,10 +143,10 @@ test('guest chip: sits beside the name (not on the XP bar) and its dismiss is a 
   }
 });
 
-test('armory on a short phone: EQUIP and TEST RANGE are in view at once and work', async ({ browser }) => {
+test('armory on a short phone: EQUIP and TEST RANGE are in view at once and work (classic lobby)', async ({ browser }) => {
   const ctx = await phone(browser, 667, 375);
   const page = await ctx.newPage();
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await needTouch(page);
   await page.tap('#rail_armory');
   await expect(page.locator('#arEq')).toBeInViewport({ ratio: 1 });
@@ -148,10 +158,10 @@ test('armory on a short phone: EQUIP and TEST RANGE are in view at once and work
   await ctx.close();
 });
 
-test('locker on a short phone: the EQUIPPED tag and level-locked skins are labelled', async ({ browser }) => {
+test('locker on a short phone: the EQUIPPED tag and level-locked skins are labelled (classic lobby)', async ({ browser }) => {
   const ctx = await phone(browser, 667, 375);
   const page = await ctx.newPage();
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await needTouch(page);
   await page.tap('#rail_locker');
   await page.tap('.lsec[data-open="skins"] .ribbonhead');
@@ -225,10 +235,10 @@ test('the turn-your-phone hint goes away when the phone is turned, and never sho
   await desk.close();
 });
 
-test('desktop keeps its layout: full-size text scale and the four-slot party', async ({ browser }) => {
+test('desktop keeps its layout: full-size text scale and the four-slot party (classic lobby)', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.waitForSelector('#playBtn');
   const r = await page.evaluate(() => ({
     u: parseFloat(getComputedStyle(document.querySelector('.tabbtn')).minHeight) / 7,
@@ -240,5 +250,112 @@ test('desktop keeps its layout: full-size text scale and the four-slot party', a
   expect(r.invites).toBe(3);
   expect(r.test).not.toBe('none');
   expect(r.power).toBeGreaterThan(20);
+  await ctx.close();
+});
+
+// ---------------------------------------------------------------- HUNT RACERS: the space lobby
+// Phones (landscape iPhone SE / Pro Max, portrait phones) and iPads: every main control of the play
+// view is fully on screen, on top, thumb-sized (its real hit area), clear of the credit line and
+// of the dock; the dock has its five orbs; the page never scrolls; LAUNCH starts a race.
+const SPACE_SEL = ['#playBtn', '#trackBtn', '#fillBots', '.nameplate #stage', '.modebtn[data-m="grand"]', '.modebtn[data-m="elim"]', '.modebtn[data-m="battle"]', '.modebtn[data-m="trial"]', '.sp-car-arrow.next', '#rail_store', '#rail_settings', '#rail_road', '#tbMissions', '#coinPlus', '#gemPlus'];
+for (const [w, h] of [[667, 375], [932, 430], [1180, 820], [820, 1180], [320, 568], [375, 667], [390, 844], [430, 932]]) {
+  test(`space lobby ${w}x${h} (racing): modes, track, bots, LAUNCH and the dock in view, thumb-sized, clear of the credit`, async ({ browser }) => {
+    const ctx = await phone(browser, w, h);
+    const page = await ctx.newPage();
+    const errors = trackErrors(page);
+    await page.goto('/');
+    await needTouch(page);
+    await page.waitForSelector('#playBtn');
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(300);
+    const r = await page.evaluate((SEL) => {
+      const box = (s) => document.querySelector(s).getBoundingClientRect();
+      const dock = box('.sp-dock'), credit = box('#lobby #credit');
+      const over = (a, b) => a.left < b.right - 0.5 && a.right > b.left + 0.5 && a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5;
+      const out = {
+        scrolls: document.scrollingElement.scrollHeight > innerHeight + 1 || document.scrollingElement.scrollWidth > innerWidth + 1,
+        creditOnScreen: credit.left >= 0 && credit.top >= 0 && credit.bottom <= innerHeight && credit.right <= innerWidth && credit.width > 50,
+        dockOnScreen: dock.left >= -0.5 && dock.right <= innerWidth + 0.5 && dock.bottom <= innerHeight + 0.5,
+        stage: box('#stage').height,
+        orbs: [...document.querySelectorAll('.sp-orb')].map((b) => b.dataset.k),
+        orbsDbg: [...document.querySelectorAll('.sp-orb')].map((b) => { const q = b.getBoundingClientRect(); return [q.width, q.height, q.bottom].map(Math.round).join('/'); }).join(' ') + ' credit ' + [credit.left, credit.top, credit.right].map(Math.round).join('/'),
+        orbsOk: [...document.querySelectorAll('.sp-orb')].every((b) => { const q = b.getBoundingClientRect(); return q.width >= 43.4 && q.height >= 43.4 && q.bottom <= innerHeight + 0.5 && !over(q, credit); }),
+      };
+      for (const s of SEL) {
+        const el = document.querySelector(s), b = el.getBoundingClientRect(), cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+        const hit = (x, y) => { const e = document.elementFromPoint(x, y); return !!e && el.contains(e); };
+        // the real hit area: a small control may reach further with an invisible padded edge
+        let up = 0, dn = 0; while (up < 30 && hit(cx, cy - up - 1)) up++; while (dn < 30 && hit(cx, cy + dn + 1)) dn++;
+        out[s + ':dbg'] = [up, dn, document.elementFromPoint(cx, cy - up - 1)?.className, document.elementFromPoint(cx, cy + dn + 1)?.className, b.height].join(' ');
+        out[s] = { inView: b.left >= -0.5 && b.top >= -0.5 && b.right <= innerWidth + 0.5 && b.bottom <= innerHeight + 0.5, hitsCredit: over(b, credit), hitsDock: s !== '#playBtn' && over(b, dock), onTop: hit(cx, cy), hitH: up + dn + 1, w: b.width };
+      }
+      // no visible label is cut off (clipped or ellipsed); the scrolling ticker is the one exception
+      const shownEl = (e) => { for (let x = e; x && x !== document.body; x = x.parentElement) { const st = getComputedStyle(x); if (x.hidden || st.display === 'none' || st.visibility === 'hidden' || +st.opacity < 0.05) return false; } return true; };
+      out.cut = [];
+      for (const el of document.querySelectorAll('#lobby *')) {
+        if (el.closest('.sp-ticker') || !shownEl(el) || ![...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim())) continue;
+        const st = getComputedStyle(el);
+        if ((st.overflowX !== 'visible' || st.textOverflow === 'ellipsis') && el.scrollWidth > el.clientWidth + 1) out.cut.push(`${el.id || el.className}: "${el.textContent.trim().slice(0, 30)}"`);
+      }
+      // the centred mode card never sits over a side card's visible text
+      const on = document.querySelector('.sp-card.on').getBoundingClientRect();
+      out.sideText = [...document.querySelectorAll('.sp-card:not(.on) :is(.sp-card-name, .sp-card-sub, .sp-card-tag)')].filter(shownEl).filter((t) => over(t.getBoundingClientRect(), on)).map((t) => t.textContent);
+      // the side cards stay inside the carousel (never over the pad or the track / crew column)
+      const car = box('.sp-carousel');
+      out.sideOut = [...document.querySelectorAll('.sp-card:not(.on)')].filter((c) => +getComputedStyle(c).opacity > 0.05).map((c) => c.getBoundingClientRect()).filter((q) => q.left < car.left - 1 || q.right > car.right + 1).length;
+      // the ticker's text is clipped at the LIVE tag's right edge
+      const live = box('.sp-tk-live'), view = document.querySelector('.sp-tk-view');
+      out.tickerClear = view.getBoundingClientRect().left >= live.right - 0.5 && getComputedStyle(view).overflowX === 'hidden';
+      return out;
+    }, SPACE_SEL);
+    expect(r.cut, 'no lobby label is cut off').toEqual([]);
+    expect(r.sideText, 'no side-card text under the centred card').toEqual([]);
+    expect(r.tickerClear, 'ticker text clipped at the LIVE tag').toBe(true);
+    expect(r.sideOut, 'side cards inside the carousel').toBe(0);
+    expect(r.scrolls, 'the lobby never scrolls').toBe(false);
+    expect(r.creditOnScreen, 'credit line on screen').toBe(true);
+    expect(r.dockOnScreen, 'dock on screen').toBe(true);
+    expect(r.stage, 'your car is drawn').toBeGreaterThan(40);
+    expect(r.orbs).toEqual(['profile', 'garage', 'race', 'pass', 'crew']);
+    expect(r.orbsOk, 'dock orbs thumb-sized, on screen, clear of the credit: ' + r.orbsDbg).toBe(true);
+    for (const s of SPACE_SEL) {
+      expect(r[s].inView, `${s} fully in view`).toBe(true);
+      expect(r[s].hitsCredit, `${s} clear of the credit`).toBe(false);
+      expect(r[s].hitsDock, `${s} clear of the dock`).toBe(false);
+      expect(r[s].onTop, `${s} not covered`).toBe(true);
+      expect(r[s].hitH, `${s} is thumb-sized: ${r[s + ':dbg']}`).toBeGreaterThanOrEqual(43);
+    }
+    expect(r['#playBtn'].w).toBeGreaterThanOrEqual(120);
+    // and LAUNCH really starts a race from here (the waiting card, CANCEL in reach, the credit on top)
+    if (await page.getAttribute('#fillBots', 'aria-checked') === 'true') await page.tap('#fillBots');
+    await page.tap('#playBtn');
+    await expect(page.locator('.rc-wait')).toBeVisible({ timeout: 30_000 }); // (shown once the race server answers: slow on a busy machine)
+    await expect(page.locator('.rc-cancel')).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('.rc-credit')).toBeVisible();
+    await page.tap('.rc-cancel');
+    await expect(page.locator('#lobby')).toBeVisible();
+    await expect(page.locator('.rc-root')).toHaveCount(0);
+    expect(errors).toEqual([]);
+    await ctx.close();
+  });
+}
+
+test('desktop (racing): the four modes as cards and strip, the track with its preview and three crew pods', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await ctx.newPage();
+  await page.goto('/');
+  await page.waitForSelector('#playBtn');
+  const r = await page.evaluate(() => ({
+    modes: [...document.querySelectorAll('.modebtn[data-m]')].map((b) => b.dataset.m),
+    cards: [...document.querySelectorAll('.sp-card')].map((c) => [c.dataset.id, !!c.querySelector('.sp-card-sub').textContent]),
+    pods: [...document.querySelectorAll('.sp-pod.empty')].filter((e) => e.getBoundingClientRect().width > 0).length,
+    preview: document.querySelector('#trackPv').width,
+    credit: document.querySelector('#lobby #credit').textContent,
+  }));
+  expect(r.modes).toEqual(['grand', 'elim', 'battle', 'trial']);
+  expect(r.cards).toEqual([['grand', true], ['elim', true], ['battle', true], ['trial', true]]); // each with its short description
+  expect(r.pods).toBe(3);
+  expect(r.preview).toBeGreaterThan(20);
+  expect(r.credit).toBe('Created by Sam Eyde III');
   await ctx.close();
 });

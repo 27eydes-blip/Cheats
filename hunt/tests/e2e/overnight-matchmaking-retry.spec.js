@@ -17,7 +17,7 @@ const outage = () => {
 };
 const queueUp = async (page) => {
   await page.addInitScript(outage);
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.click('#playBtn');
   await page.waitForFunction(() => window.__hunt.phase === 'waiting' && window.__hunt.myId > 0);
 };

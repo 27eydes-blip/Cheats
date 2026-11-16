@@ -24,7 +24,16 @@ addEventListener('pointercancel', release, { passive: true });
 
 // ---------- screens ----------
 const stack = [];
+// The creator credit sits above every menu screen, popup and detail card (they cover the lobby's
+// own credit line). CSS shows it only while one of them is open and keeps a strip free for it.
+function overlayCredit() {
+  if (document.getElementById('ovCredit')) return;
+  const c = document.createElement('div');
+  c.id = 'ovCredit'; c.className = 'ov-credit'; c.textContent = 'Created by Sam Eyde III';
+  document.body.appendChild(c);
+}
 export function openScreen(el, { pop = false } = {}) {
+  overlayCredit();
   el.hidden = false;
   el.classList.remove('leave'); void el.offsetWidth; el.classList.add('enter');
   // keyboard: remember where focus was, and move it into the new screen

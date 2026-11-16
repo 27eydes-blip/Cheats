@@ -1,4 +1,4 @@
-// Locker (skins / kill effects / titles) and Hunt Pass screens. Test currency only.
+// Locker (skins / kill effects / titles) and GP Pass screens. Test currency only.
 import { ACC, progress, shop } from './account.js';
 import { SKINS, KILL_FX, TITLES, TITLE_PRICE, PASS, PASS_TIERS, PASS_XP_PER_TIER, PREMIUM_PRICE, CURRENCY, passTier, itemId } from './catalog.js';
 import { BRAWLERS, BRAWLER_IDS } from './shared.js';
@@ -50,14 +50,14 @@ export function openLocker(tab = 'skins') {
 }
 
 export function openPass() {
-  if (!ACC.user) return alert('Offline — the Hunt Pass needs a connection.');
+  if (!ACC.user) return alert('Offline — the GP Pass needs a connection.');
   const p = progress(), tier = passTier(p.pass.xp), into = (p.pass.xp || 0) % PASS_XP_PER_TIER;
   const cell = (row, track) => {
     const key = `${track}:${row.tier}`, got = p.pass.claimed.includes(key);
     const locked = row.tier > tier || (track === 'premium' && !p.pass.premium);
     return `<div class="pcell ${track} ${got ? 'got' : ''} ${locked ? 'locked' : ''}">${label(row[track])}${got ? '<i>✓</i>' : locked ? '<i>🔒</i>' : `<button data-claim="${row.tier}" data-track="${track}">CLAIM</button>`}</div>`;
   };
-  modal(`<h2>HUNT PASS</h2>
+  modal(`<h2>GP PASS</h2>
     <p class="desc">Tier <b>${tier}</b> / ${PASS_TIERS} ${tier < PASS_TIERS ? `· ${into}/${PASS_XP_PER_TIER} XP to next` : '· complete!'} — earn XP by playing matches.</p>
     ${p.pass.premium ? '<p class="prem on">PREMIUM UNLOCKED</p>' : `<button class="big" id="buyPrem">UNLOCK PREMIUM · 🪙 ${PREMIUM_PRICE} (test)</button>`}
     <div class="pass"><div class="ptrack"><b>FREE</b><b>PREMIUM</b></div>${PASS.map((row) => `<div class="pcol"><span class="ptier ${row.tier <= tier ? 'reached' : ''}">${row.tier}</span>${cell(row, 'free')}${cell(row, 'premium')}</div>`).join('')}</div>`);

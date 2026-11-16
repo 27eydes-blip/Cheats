@@ -24,3 +24,23 @@ export function trackErrors(page, { allowHttp } = {}) {
 }
 export const G = (page, fn) => page.evaluate(fn);
 export async function waitMe(page) { await page.waitForFunction(() => window.__hunt && window.__hunt.me, null, { timeout: 30_000 }); }
+// Wait until the screen / popup / card entry animations are done. The check has to hold across a few
+// animation frames: on a busy machine WebKit can report no animations for a moment right after a
+// screen opens, before its entry animation is registered.
+export const ENTRY_ANIMS = ['screen-in', 'pop-in', 'flip-in'];
+export const waitSettled = async (page) => {
+  await page.evaluate(() => { window.__settled = 0; });
+  // polled once per animation frame: three frames in a row with no entry animation running
+  await page.waitForFunction((names) => {
+    const busy = document.getAnimations().some((a) => names.includes(a.animationName) && a.playState !== 'finished');
+    window.__settled = busy ? 0 : window.__settled + 1;
+    return window.__settled >= 3;
+  }, ENTRY_ANIMS);
+};
+// Public races (LAUNCH from the lobby) of this browser context get their own matchmaker (dev-only
+// ?mmpool, see src/race/room.js): two tests waiting in a bots-off public race at the same time
+// would otherwise be matched together and start racing.
+export const isolateRaces = (ctx) => ctx.addInitScript((pool) => {
+  const WS = window.WebSocket;
+  window.WebSocket = class extends WS { constructor(u, p) { super(/\/race\?/.test(String(u)) ? u + '&mmpool=' + pool : u, p); } };
+}, Math.random().toString(36).slice(2, 12));

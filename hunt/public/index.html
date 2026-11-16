@@ -5,43 +5,59 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#2b1d55">
+<meta name="theme-color" content="#0b0519">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Hunt">
-<meta name="application-name" content="Hunt">
-<meta name="description" content="Hunt: a fast top-down brawler. Pick a hunter and play in seconds.">
-<title>Hunt</title>
+<meta name="apple-mobile-web-app-title" content="Oblivion GP">
+<meta name="application-name" content="Oblivion GP">
+<meta name="description" content="Oblivion GP: top-down combat racing in deep space for up to 10 players. Pick a driver, drift, fight and race your friends.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Oblivion GP">
+<meta property="og:title" content="Oblivion GP">
+<meta property="og:description" content="Top-down combat racing in deep space. Drift, fight and race your friends.">
+<meta property="og:image" content="https://hunt.27eydes.workers.dev/icons/oblivion-512.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Oblivion GP">
+<meta name="twitter:description" content="Top-down combat racing in deep space. Drift, fight and race your friends.">
+<meta name="twitter:image" content="https://hunt.27eydes.workers.dev/icons/oblivion-512.png">
+<title>Oblivion GP</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/oblivion-32.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/oblivion-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/oblivion-180.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icons/oblivion-167.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/oblivion-152.png">
+<link rel="apple-touch-icon" sizes="120x120" href="icons/oblivion-120.png">
+<!-- iOS dark / tinted home-screen icons (icons/oblivion-dark-1024.png, -tinted-1024.png) cannot be
+     linked from a web page: Safari has no markup for them. They are ready for a native wrapper. -->
 <!-- The splash is styled here, not in a stylesheet, so it paints at once and survives any failed download. -->
 <style>
-html, body { margin: 0; height: 100%; background: #150b24; }
+html, body { margin: 0; height: 100%; background: #07040f; }
 #splash { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: min(3vh, 18px); box-sizing: border-box;
   padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(34px, calc(env(safe-area-inset-bottom) + 30px)) max(16px, env(safe-area-inset-left));
-  background: radial-gradient(circle at 50% 42%, #3a2380 0%, #2c1846 38%, #150b24 78%); color: #fff; text-align: center;
+  background: radial-gradient(circle at 50% 40%, #3a0f6e 0%, #1e0840 36%, #07040f 76%); color: #fff; text-align: center;
   font-family: "Lilita One", "Arial Black", "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif; -webkit-user-select: none; user-select: none; }
-#splash .sp-mark { width: min(34vmin, 190px); height: min(34vmin, 190px); display: block; }
-#splash .sp-word { margin: 0; font-weight: 400; font-size: min(22vmin, 120px); line-height: .9; letter-spacing: .06em; color: #ffd23f; -webkit-text-stroke: min(1.6vmin, 8px) #12091e; paint-order: stroke fill; text-shadow: 0 min(1.2vmin, 7px) 0 #12091e; }
+#splash .sp-mark { width: min(30vmin, 160px); height: min(30vmin, 160px); display: block; border-radius: 22%; box-shadow: 0 0 0 1px rgba(127,246,255,.35), 0 0 min(6vmin, 36px) rgba(255,47,200,.45); animation: splash-glow 2.4s ease-in-out infinite; }
+@keyframes splash-glow { 50% { box-shadow: 0 0 0 1px rgba(127,246,255,.6), 0 0 min(9vmin, 54px) rgba(34,230,255,.5); } }
+/* the wordmark is inline SVG paths: it shows at once, before any web font */
+#splash .sp-word { margin: 0; width: min(84vw, 96vmin, 600px); line-height: 0; }
+#splash .sp-word svg { display: block; width: 100%; height: auto; }
 #splash .sp-dots { display: flex; gap: 10px; height: 16px; align-items: center; }
-#splash .sp-dots i { width: 12px; height: 12px; border-radius: 50%; background: #ffd23f; box-shadow: 0 0 0 3px #12091e; animation: sp-hop .9s ease-in-out infinite; }
-#splash .sp-dots i:nth-child(2) { animation-delay: .15s; }
-#splash .sp-dots i:nth-child(3) { animation-delay: .3s; }
+#splash .sp-dots i { width: 12px; height: 12px; border-radius: 50%; background: #22e6ff; box-shadow: 0 0 8px #22e6ff; animation: sp-hop .9s ease-in-out infinite; }
+#splash .sp-dots i:nth-child(2) { animation-delay: .15s; background: #fff; box-shadow: 0 0 8px #fff; }
+#splash .sp-dots i:nth-child(3) { animation-delay: .3s; background: #ff2fc8; box-shadow: 0 0 8px #ff2fc8; }
 @keyframes sp-hop { 0%, 60%, 100% { transform: translateY(0); opacity: .55; } 30% { transform: translateY(-9px); opacity: 1; } }
-#splash .sp-ring { transform-origin: 60px 60px; animation: sp-turn 6s linear infinite; }
-@keyframes sp-turn { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { #splash .sp-dots i, #splash .sp-ring { animation: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #splash .sp-dots i, #splash .sp-mark { animation: none; opacity: 1; } }
 #splash .sp-fail { display: none; flex-direction: column; align-items: center; gap: min(2.4vh, 14px); max-width: 30em; }
 #splash.fail .sp-fail, #splash.slow .sp-fail { display: flex; }
 #splash.fail .sp-dots { display: none; }
 #splash.fail .sp-mark, #splash.slow .sp-mark { width: min(18vmin, 96px); height: min(18vmin, 96px); }
-#splash.fail .sp-word, #splash.slow .sp-word { font-size: min(13vmin, 64px); }
-#splash .sp-title { margin: 0; font-weight: 400; font-size: clamp(20px, 5.2vmin, 30px); line-height: 1.1; -webkit-text-stroke: 4px #12091e; paint-order: stroke fill; }
+#splash.fail .sp-word, #splash.slow .sp-word { width: min(60vw, 64vmin, 380px); }
+#splash .sp-title { margin: 0; font-weight: 400; font-size: clamp(20px, 5.2vmin, 30px); line-height: 1.1; -webkit-text-stroke: 4px #07040f; paint-order: stroke fill; }
 #splash .sp-hint { margin: 0; font: 700 clamp(13px, 3.4vmin, 16px)/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; color: #c4b4dc; }
 #splash .sp-t-slow, #splash.slow .sp-t-fail { display: none; }
 #splash.slow .sp-t-slow { display: inline; }
-#splashReload { font: inherit; font-size: clamp(22px, 6vmin, 32px); line-height: 1; color: #12091e; background: #ffd23f; border: 4px solid #12091e; border-radius: 18px; box-shadow: 0 5px 0 #12091e; padding: .45em 1.5em; min-height: 56px; cursor: pointer; touch-action: manipulation; }
-#splashReload:active { transform: translateY(4px); box-shadow: 0 1px 0 #12091e; }
+#splashReload { font: inherit; font-size: clamp(22px, 6vmin, 32px); line-height: 1; color: #07040f; background: linear-gradient(90deg, #7ff6ff, #22e6ff); border: 3px solid #07040f; border-radius: 18px; box-shadow: 0 5px 0 #07040f, 0 0 18px rgba(34,230,255,.45); padding: .45em 1.5em; min-height: 56px; cursor: pointer; touch-action: manipulation; }
+#splashReload:active { transform: translateY(4px); box-shadow: 0 1px 0 #07040f; }
 #splash .sp-credit { position: absolute; left: 0; right: 0; bottom: max(8px, env(safe-area-inset-bottom)); font-size: 13px; color: #ffd23f; text-shadow: 0 1px 0 #12091e, 0 0 3px #12091e; letter-spacing: .02em; }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -52,22 +68,15 @@ html, body { margin: 0; height: 100%; background: #150b24; }
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="ui/tokens.css">
 <link rel="stylesheet" href="ui/lobby.css">
+<link rel="stylesheet" href="ui/space/space.css">
+<link rel="stylesheet" href="ui/space/space-screens.css">
+<link rel="stylesheet" href="ui/store.css">
 </head>
 <body>
 <!-- Shown until game.js has drawn the lobby. Plain HTML + CSS: it needs no module to appear. -->
 <div id="splash" role="status" aria-live="polite">
-  <svg class="sp-mark" viewBox="0 0 120 120" aria-hidden="true">
-    <g class="sp-ring" fill="none" stroke-linecap="round">
-      <circle cx="60" cy="60" r="44" stroke="#12091e" stroke-width="15"/>
-      <circle cx="60" cy="60" r="44" stroke="#ffd23f" stroke-width="7" stroke-dasharray="52 17.1"/>
-      <path d="M60 4v22M60 94v22M4 60h22M94 60h22" stroke="#12091e" stroke-width="15"/>
-      <path d="M60 4v22M60 94v22M4 60h22M94 60h22" stroke="#ffd23f" stroke-width="7"/>
-    </g>
-    <path d="M60 30 82 46 74 80 60 90 46 80 38 46Z" fill="#e0283f" stroke="#12091e" stroke-width="6" stroke-linejoin="round"/>
-    <path d="M48 54l9 5-2 6-9-4zM72 54l-9 5 2 6 9-4z" fill="#ffd23f" stroke="#12091e" stroke-width="2.5" stroke-linejoin="round"/>
-    <path d="M52 74l4 7 4-6 4 6 4-7" fill="none" stroke="#12091e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-  <h1 class="sp-word">HUNT</h1>
+  <img class="sp-mark" src="icons/oblivion-180.png" width="180" height="180" alt="" aria-hidden="true">
+  <h1 class="sp-word" aria-label="Oblivion GP"><!-- wordmark:start (written by scripts/brand-wordmark.mjs) --><svg xmlns="http://www.w3.org/2000/svg" viewBox="-24 -40 1322.7 210" aria-hidden="true" focusable="false"><defs><linearGradient id="spwm-silver" x1="0" y1="0" x2="0" y2="100" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffffff"/><stop offset=".48" stop-color="#eef2fa"/><stop offset=".52" stop-color="#aeb8cc"/><stop offset="1" stop-color="#d9e0ee"/></linearGradient><linearGradient id="spwm-streak" x1="-24" y1="0" x2="1262.674538575881" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#22e6ff" stop-opacity="0"/><stop offset=".25" stop-color="#22e6ff"/><stop offset=".6" stop-color="#ffffff"/><stop offset=".85" stop-color="#ff2fc8"/><stop offset="1" stop-color="#ff2fc8" stop-opacity="0"/></linearGradient><pattern id="spwm-check" width="32" height="32" patternUnits="userSpaceOnUse" x="870" y="-16"><rect width="32" height="32" fill="#140a26"/><path d="M0 0h16v16H0zM16 16h16v16h-16z" fill="#ffffff" fill-opacity=".16"/></pattern><filter id="spwm-glow" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="5"/></filter><clipPath id="spwm-band"><rect x="-40" y="0" width="1314" height="100"/></clipPath></defs><g transform="skewX(-16) translate(28.674538575880792 0)"><g fill="none" stroke-linecap="square" stroke-linejoin="miter" stroke-miterlimit="10"><g filter="url(#spwm-glow)" opacity=".8"><g stroke="#22e6ff" stroke-width="26" clip-path="url(#spwm-band)"><path transform="translate(0 0)" d="M39 9H85Q115 9 115 39V61Q115 91 85 91H39Q9 91 9 61V39Q9 9 39 9Z"/><path transform="translate(140 0)" d="M9 120V9H76Q98 9 98 30Q98 50 76 50H9M76 50Q103 50 103 70Q103 91 76 91H9"/><path transform="translate(268 0)" d="M9 -20V91H83"/><path transform="translate(376 0)" d="M9 -20V120"/><path transform="translate(410 0)" d="M9 -20L62 91L115 -20"/><path transform="translate(550 0)" d="M9 -20V120"/><path transform="translate(584 0)" d="M39 9H85Q115 9 115 39V61Q115 91 85 91H39Q9 91 9 61V39Q9 9 39 9Z"/><path transform="translate(724 0)" d="M9 120V9L103 91V-20"/></g></g><g stroke="url(#spwm-silver)" stroke-width="18" clip-path="url(#spwm-band)"><path transform="translate(0 0)" d="M39 9H85Q115 9 115 39V61Q115 91 85 91H39Q9 91 9 61V39Q9 9 39 9Z"/><path transform="translate(140 0)" d="M9 120V9H76Q98 9 98 30Q98 50 76 50H9M76 50Q103 50 103 70Q103 91 76 91H9"/><path transform="translate(268 0)" d="M9 -20V91H83"/><path transform="translate(376 0)" d="M9 -20V120"/><path transform="translate(410 0)" d="M9 -20L62 91L115 -20"/><path transform="translate(550 0)" d="M9 -20V120"/><path transform="translate(584 0)" d="M39 9H85Q115 9 115 39V61Q115 91 85 91H39Q9 91 9 61V39Q9 9 39 9Z"/><path transform="translate(724 0)" d="M9 120V9L103 91V-20"/></g></g><path d="M870 -16H1200L1234 50L1200 116H870L904 50Z" fill="#ff2fc8" opacity=".55" filter="url(#spwm-glow)"/><path d="M870 -16H1200L1234 50L1200 116H870L904 50Z" fill="url(#spwm-check)" stroke="#ff2fc8" stroke-width="5" stroke-linejoin="miter"/><g transform="translate(920 0)" fill="none" stroke-linecap="square" stroke-linejoin="miter"><g filter="url(#spwm-glow)" opacity=".9"><g stroke="#ff2fc8" stroke-width="26" clip-path="url(#spwm-band)"><path transform="translate(0 0)" d="M103 33Q103 9 73 9H39Q9 9 9 39V61Q9 91 39 91H73Q103 91 103 61V52H60"/><path transform="translate(128 0)" d="M9 120V9H68Q95 9 95 35Q95 58 68 58H9"/></g></g><g clip-path="url(#spwm-band)"><g stroke="#ff36cf" stroke-width="18"><path transform="translate(0 0)" d="M103 33Q103 9 73 9H39Q9 9 9 39V61Q9 91 39 91H73Q103 91 103 61V52H60"/><path transform="translate(128 0)" d="M9 120V9H68Q95 9 95 35Q95 58 68 58H9"/></g><g stroke="#ffc2f1" stroke-width="2.5" opacity=".55"><path transform="translate(0 0)" d="M103 33Q103 9 73 9H39Q9 9 9 39V61Q9 91 39 91H73Q103 91 103 61V52H60"/><path transform="translate(128 0)" d="M9 120V9H68Q95 9 95 35Q95 58 68 58H9"/></g></g></g></g><g stroke-linecap="round"><path d="M-14 130H1252.674538575881" stroke="url(#spwm-streak)" stroke-width="3.5"/><path d="M148.1 142H678.7" stroke="url(#spwm-streak)" stroke-width="1.8" opacity=".7"/></g></svg><!-- wordmark:end --></h1>
   <div class="sp-dots" aria-label="Loading"><i></i><i></i><i></i></div>
   <div class="sp-fail" id="splashFail">
     <p class="sp-title"><span class="sp-t-fail">Could not load the game</span><span class="sp-t-slow">Still loading…</span></p>

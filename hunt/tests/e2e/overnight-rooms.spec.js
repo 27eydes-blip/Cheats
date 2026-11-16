@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 import { trackErrors, G } from './helpers.js';
 
 async function joinRoom(page, name, code, mode) {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.waitForSelector('#rail_friends');
   await page.evaluate((n) => { document.getElementById('name').value = n; }, name);
   await page.click('#rail_friends');
@@ -52,8 +52,10 @@ test('friend room: host picks Squad, presses START; friends are one squad; a lat
 
 test('locker and pass: rewards are not sold, and a reward you already own shows its coin value', async ({ page, request }) => {
   const errors = trackErrors(page);
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.waitForSelector('#rail_pass');
+  // the lobby shows before the guest account answers: wait for its token
+  await page.waitForFunction(() => import('/account.js').then((A) => !!A.ACC.user));
   const token = await page.evaluate(() => localStorage.getItem('hunt-token'));
   const buy = await (await request.post('/api/shop', { headers: { authorization: 'Bearer ' + token }, data: { action: 'buy', id: 'confetti' } })).json();
   expect(buy.error).toBe('not for sale');

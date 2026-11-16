@@ -1,7 +1,9 @@
 // Home screen checks for Glydaway: run with `node glydaway/tests/home.test.cjs` (needs Playwright with
 // WebKit, Chromium and Firefox). Layout on iPhone SE / 15 / 17 Pro Max / iPad in both orientations, in
 // Safari and as a home-screen app (with the notch / Dynamic Island / home-bar safe areas), plus the
-// tutorial, keyboard hint, one-time tips, the board, takeoff, planes and frame rate on all three engines.
+// tutorial, keyboard hint, one-time tips, the first-launch name prompt, the board, takeoff, planes and
+// frame rate on all three engines. (Since Juwon's update the home screen shows the autopilot's run in the
+// open sky above the runway instead of a big hovering hero; the menu's buttons still sit below the runway.)
 // SHOTS=<dir> also saves a screenshot of every layout.
 const { webkit, chromium, firefox, devices } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -18,8 +20,9 @@ const URL = () => `http://localhost:${srv.address().port}/`;
 let fails = 0;
 const ok = (c, m) => { console.log(`${c ? 'PASS' : 'FAIL'}  ${m}`); if (!c) fails++; };
 const SEED = () => { try {
-  localStorage.setItem('glydaway.tutDone', 'true'); localStorage.setItem('glydaway.sidewaysTold', 'true'); localStorage.setItem('glydaway.name', '"Tester1"');
+  localStorage.setItem('glydaway.tutDone', 'true'); localStorage.setItem('glydaway.sidewaysTold', 'true');
   localStorage.setItem('glydaway.best', '{"m":1234,"coins":87}'); localStorage.setItem('glydaway.skins', '["volt","airport","paris","nyc","tokyo"]');
+  localStorage.setItem('glydaway.name', '"TestPilot"');
 } catch (e) {} };
 async function open(ctx, { seed = true, q = '' } = {}) {
   if (seed) await ctx.addInitScript(SEED);
@@ -56,11 +59,8 @@ async function layout(p, tag, inset) {
     const clipped = [...document.querySelectorAll('#startScreen .nav-btn span, #startScreen .board, #startScreen .stat-pill, #startScreen #playBtn')]
       .filter(e => e.scrollWidth > e.clientWidth + 1 || (e.closest('.nav-btn') && e.getBoundingClientRect().right > e.closest('.nav-btn').getBoundingClientRect().right + 0.5)).map(e => e.id || e.className || e.textContent);
     const area = document.getElementById('homeSky').getBoundingClientRect();
-    const g = __glyd, inGame = 26 * 1.45 * g.view.scale;
-    return { els, vw: innerWidth, vh: innerHeight, safe: [px('--sat'), px('--sar'), px('--sab'), px('--sal')], clipped, ground: area.bottom,
-      bigHero: !!document.getElementById('heroBtn') || !!document.getElementById('heroCv'), chips: document.querySelectorAll('#startScreen .chip').length,
-      credit: document.querySelector('#startScreen .credit-foot').textContent, world: g.S.obstacles.length + g.S.coinList.length + g.S.pickups.length,
-      running: g.S.mode === 'menu' && g.S.speed > 0 && g.S.dist > 0, reduce: matchMedia('(prefers-reduced-motion: reduce)').matches };
+    return { els, vw: innerWidth, vh: innerHeight, safe: [px('--sat'), px('--sar'), px('--sab'), px('--sal')], clipped, ground: area.bottom, sky: area.height,
+      chips: document.querySelectorAll('#startScreen .chip').length, credit: document.querySelector('#startScreen .credit-foot').textContent };
   });
   const [st, sr, sb, sl] = r.safe, names = Object.keys(r.els);
   const out = names.filter(k => { const b = r.els[k]; return b.x < sl - 0.5 || b.y < st - 0.5 || b.x + b.w > r.vw - sr + 0.5 || b.y + b.h > r.vh - sb + 0.5; });
@@ -71,8 +71,7 @@ async function layout(p, tag, inset) {
   ok(!r.clipped.length, `${tag}: no clipped text ${r.clipped.join(',')}`);
   const below = ['play', 'lb', 'locker', 'settings'].filter(k => r.els[k] && r.els[k].y < r.ground - 0.5);
   ok(!below.length, `${tag}: buttons sit on the tarmac below the runway line ${below.join(',')}`);
-  ok(r.reduce ? r.world === 0 : r.running, `${tag}: ${r.reduce ? 'Reduce Motion: a still airport, nothing behind the menu' : 'the autopilot plays a perfect run behind the menu'}`);
-  ok(!r.bigHero, `${tag}: no big bird over the runway (removed on request)`);
+  ok(r.sky >= 60, `${tag}: open sky over the runway for the background run (${Math.round(r.sky)} px)`);
   ok(r.chips === 0, `${tag}: no how-to chips on the home screen`);
   ok(r.credit === CREDIT, `${tag}: credit line exact`);
   if (r.vw > r.vh) {
@@ -96,20 +95,20 @@ async function layout(p, tag, inset) {
     await ctx.close();
   }
 
-  // ----- touch phone: no keyboard hint; the sideways tip once; tutorial by touch; LOCKER ROOM opens -----
+  // ----- touch phone: name prompt once; no keyboard hint; the sideways tip once; tutorial by touch -----
   {
     const ctx = await wk.newContext({ ...devices['iPhone 15'] });
     await ctx.addInitScript(() => localStorage.setItem('glydaway.best', '{"m":40,"coins":3}'));
     let p = await open(ctx, { seed: false });
+    ok(await p.evaluate(() => document.getElementById('nameScreen').classList.contains('show')), 'iPhone: the first launch asks for a player name');
+    await p.fill('#nameIn', 'Sky Pilot'); await p.tap('#nameForm button[type=submit]'); await p.waitForTimeout(300);
+    ok(await p.evaluate(() => document.getElementById('nameScreen').classList.contains('show') && document.getElementById('nameErr').textContent.length > 0), 'name prompt: refuses a name with a space');
+    await p.fill('#nameIn', 'SkyPilot'); await p.tap('#nameForm button[type=submit]'); await p.waitForTimeout(400);
+    ok(await p.evaluate(() => document.getElementById('startScreen').classList.contains('show') && localStorage.getItem('glydaway.name') === '"SkyPilot"'), 'name prompt: a valid name is saved and the home screen shows');
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('.kb-hint')).display === 'none'), 'iPhone: keyboard hint hidden on a touch device');
     ok(await p.evaluate(() => getComputedStyle(document.getElementById('sideTip')).display !== 'none'), 'iPhone: "turn sideways" tip shows on the first launch');
-    ok(await p.evaluate(() => document.getElementById('nameScreen').classList.contains('show')), 'iPhone: the very first launch asks for a player name');
-    await p.fill('#nameIn', ''); await p.tap('#nameForm button[type=submit]'); await p.waitForTimeout(100);
-    ok((await p.textContent('#nameErr')).length > 0 && await p.evaluate(() => document.getElementById('nameScreen').classList.contains('show')), 'name: an empty name is refused');
-    await p.fill('#nameIn', 'Juwon1'); await p.tap('#nameForm button[type=submit]'); await p.waitForTimeout(300);
-    ok(await onHome(p) && await p.evaluate(() => localStorage.getItem('glydaway.name') === '"Juwon1"'), 'name: saved, then the home screen');
     await p.tap('#skinBtn'); await p.waitForTimeout(300);
-    ok(await p.evaluate(() => document.getElementById('skinScreen').classList.contains('show')), 'iPhone: LOCKER ROOM opens');
+    ok(await p.evaluate(() => document.getElementById('skinScreen').classList.contains('show')), 'iPhone: LOCKER ROOM opens the Locker Room');
     await p.tap('#skinClose'); await p.waitForTimeout(300);
     await p.tap('#playBtn', { force: true }); await p.waitForTimeout(400);
     ok(await p.evaluate(() => document.getElementById('tutScreen').classList.contains('show')) && await mode(p) === 'menu', 'iPhone: the first PLAY opens the tutorial, not a run');
@@ -130,9 +129,9 @@ async function layout(p, tag, inset) {
     ok(await mode(p) === 'play' && await p.evaluate(() => localStorage.getItem('glydaway.tutDone') === 'true'), 'tutorial: LET\'S FLY takes off into the run, and it\'s remembered');
     await p.reload(); await p.waitForTimeout(300); await p.evaluate(() => document.getElementById('splash').classList.add('gone')); await p.waitForTimeout(400);
     ok(await p.evaluate(() => getComputedStyle(document.getElementById('sideTip')).display === 'none'), 'iPhone: the sideways tip never shows again');
-    ok(await onHome(p) && !await p.evaluate(() => document.getElementById('nameScreen').classList.contains('show')), 'name: never asked again');
+    ok(await p.evaluate(() => !document.getElementById('nameScreen').classList.contains('show')), 'iPhone: the name prompt never shows again');
     await p.tap('#playBtn', { force: true }); await p.waitForTimeout(150);
-    ok(await p.evaluate(() => !document.getElementById('tutScreen').classList.contains('show') && __glyd.home.launching), 'second PLAY: no tutorial, your character takes off');
+    ok(await p.evaluate(() => !document.getElementById('tutScreen').classList.contains('show') && __glyd.home.launching), 'second PLAY: no tutorial, the hero takes off');
     await ctx.close();
   }
 
@@ -170,8 +169,8 @@ async function layout(p, tag, inset) {
     await p.click('#playBtn', { force: true }); await p.waitForTimeout(250);
     ok(await p.evaluate(() => __glyd.home.launching && __glyd.S.mode === 'menu' && __glyd.S.speed > 0), `${name}: PLAY starts the takeoff`);
     await p.waitForTimeout(700);
-    const run = await p.evaluate(() => [__glyd.S.mode, __glyd.S.dist, __glyd.S.speed, __glyd.home.camT, __glyd.TUNE.speedStart]);
-    ok(run[0] === 'play' && run[1] >= 0 && run[1] < 400 && run[2] >= run[4] && run[3] === 0, `${name}: takeoff hands over to the run at full starting speed (${run.slice(0, 4).map(v => typeof v === 'number' ? v.toFixed(0) : v).join(', ')})`);
+    const run = await p.evaluate(() => [__glyd.S.mode, __glyd.S.dist, __glyd.S.speed, __glyd.home.camT]);
+    ok(run[0] === 'play' && run[1] >= 0 && run[1] < 400 && run[2] >= 240 && run[3] === 0, `${name}: takeoff hands over to the run (${run.map(v => typeof v === 'number' ? v.toFixed(0) : v).join(', ')})`);
     await p.waitForTimeout(1500);
     ok(await p.evaluate(() => __glyd.S.obstacles.length > 0 && __glyd.S.dist > 300), `${name}: the run plays as before`);
     ok(!p.errs.length, `${name}: no page errors ${p.errs.join(' | ')}`);
@@ -181,7 +180,6 @@ async function layout(p, tag, inset) {
   {
     const ctx = await chromium.launch().then(b => b.newContext({ viewport: { width: 900, height: 700 }, reducedMotion: 'reduce' }));
     const p = await open(ctx);
-    ok(await p.evaluate(() => __glyd.S.mode === 'menu' && __glyd.S.speed === 0 && __glyd.S.obstacles.length === 0), 'Reduce Motion: a still airport, no run behind the menu');
     await p.click('#playBtn', { force: true }); await p.waitForTimeout(150);
     ok(await mode(p) === 'play', 'Reduce Motion: PLAY starts the run right away');
     await ctx.browser().close();

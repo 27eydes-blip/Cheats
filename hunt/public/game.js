@@ -62,7 +62,7 @@ const lastStanding = () => !!G.caps.poison && !G.caps.respawn;
 const worldName = (key) => WORLDS[worldId(key)]?.name || key;
 // a mode this client has never heard of (the server is newer): still gets a name
 // a newer server can name things this client has never heard of: play on with a stand-in, never throw
-const modeInfo = (k) => MODE_INFO[k] || { name: String(k || 'HUNT').toUpperCase().slice(0, 16), desc: '' };
+const modeInfo = (k) => MODE_INFO[k] || { name: String(k || 'MATCH').toUpperCase().slice(0, 16), desc: '' };
 const bulletKind = (k) => (k === 20 ? 'cage' : k >= WKIND ? WEAPON_IDS[k - WKIND] : BRAWLER_IDS[k]);
 const predicted = (k) => k !== 20 && k < WKIND && PREDICTED_KINDS.includes(BRAWLERS[BRAWLER_IDS[k]]?.attack.kind);
 // own shots we draw instantly (client prediction): signature straight shots + weapon bullets
@@ -102,7 +102,8 @@ const prefs = (() => { try { const v = JSON.parse(localStorage.getItem('hunt') |
 const savePrefs = () => { try { localStorage.setItem('hunt', JSON.stringify(prefs)); } catch {} };
 // stats: arena matches keyed by numeric world id (stable: WORLDS is append-only); free: Free Play by zone
 if (migrateLocalStats(prefs)) savePrefs();
-let selBrawler = BRAWLERS[prefs.brawler] ? prefs.brawler : 'volt';
+let selBrawler = BRAWLERS[prefs.brawler] ? prefs.brawler : 'volt'; // (also your HUNT RACERS driver: same six ids)
+const DRIVER_OK = (id) => !!id && Object.prototype.hasOwnProperty.call(BRAWLERS, id);
 $('name').value = prefs.name || '';
 $('room').value = prefs.room || '';
 $('bots').checked = prefs.bots !== false;
@@ -331,7 +332,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 function readForm() {
-  const name = $('name').value.trim().slice(0, 14) || 'Hunter';
+  const name = $('name').value.trim().slice(0, 14) || 'Racer';
   const room = $('room').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
   prefs.name = name; prefs.room = room; prefs.bots = $('bots').checked; savePrefs();
   return { name, room };
@@ -1693,8 +1694,54 @@ $('hudAgain').onclick = playAgain;
 for (const b of document.querySelectorAll('#dead .again')) b.onclick = playAgain;
 
 // ------------------------------------------------------------------ menus / lobby UI
+// HUNT RACERS is the game: the lobby offers the racing modes. The classic (shooter) lobby is only
+// reachable by its deep link (?shooter=1) and the shooter's own dev links (?world=, ?free=, ?mapview=),
+// so those keep working end to end.
+const bootQs = new URLSearchParams(location.search);
+const RACING = !['shooter', 'world', 'free', 'mapview'].some((k) => bootQs.get(k));
+// one race at a time, full screen over the lobby; back to the lobby (progress refreshed) on exit
+let raceOn = false;
+// Automated browsers (navigator.webdriver) only get the automatic tutorial with ?tut=1, so test
+// suites that press PLAY on a fresh profile reach the race they asked for.
+function needsTutorial(o, room, p) {
+  if (room || o.lobby || p.race?.tut) return false;
+  try { if (localStorage.getItem('hunt-race-tut') === '1') return false; } catch { return false; }
+  return !navigator.webdriver || bootQs.get('tut') === '1';
+}
+function launchRace(o = {}) {
+  if (raceOn) return;
+  readForm();
+  const mode = o.mode || UI.lobby?.mode || 'grand', track = o.track || UI.lobby?.track || 'any', room = (o.room || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  raceOn = true;
+  goFullscreen();
+  UI.earned.hide();
+  whenReady(() => import('./race/app.js').then(({ startRace }) => {
+    show(null); $('hud').hidden = true;
+    const p = A.progress();
+    const ro = {
+      mode, track, room, bots: $('bots').checked, driver: selBrawler, name: $('name').value.trim().slice(0, 14) || 'Racer', token: A.ACC.token || '',
+      best: track !== 'any' ? p.race?.best?.[track] ?? null : null,
+      // HUNT_DEV-only knobs for browser tests (a deployed server ignores them): short races, fixed countdown
+      laps: o.laps || bootQs.get('laps') || '', lobby: o.lobby || '',
+      // the server's result: the account's new progress (trophies, XP, coins, best times)
+      onProgress: (m) => { if (A.ACC.user && m.progress) A.setUser({ ...A.ACC.user, progress: m.progress }); },
+      // the room host's FILL WITH BOTS switch is remembered for the next room they host
+      onBots: (on) => { $('bots').checked = on; readForm(); },
+      // the tutorial was finished or skipped (the server keeps progress.race.tut for accounts)
+      onTutorial: () => { A.refresh().catch(() => {}); },
+      onExit: () => { raceOn = false; show('lobby'); A.refresh().then(() => UI.lobby?.refresh()); checkVersion(); },
+    };
+    // the very first race starts with the 20-second tutorial (then the race the player picked);
+    // never for a friend's room (they are waiting). Settings > HOW TO DRIVE replays it on its own.
+    startRace(o.tutorialOnly ? { ...ro, tutorial: true, next: null } : needsTutorial(o, room, p) ? { ...ro, tutorial: true, next: ro } : ro);
+  }).catch(() => { raceOn = false; toast('Could not start the race. Check your connection.'); show('lobby'); }));
+}
 const UI = {};
 UI.lobby = createLobby({
+  racing: RACING,
+  startRace: launchRace,
+  raceMode: () => UI.lobby?.mode, raceTrack: () => UI.lobby?.track,
+  refresh: () => UI.lobby?.refresh(),
   // lobby PLAY = public matchmaking for the chosen mode; Friends popup = the typed room code
   startQuick: (o = {}) => { goFullscreen(); whenReady(() => startQuick(o.fromFriends ? { mode: o.mode || '' } : { mode: o.mode || '', room: '' })); },
   // the mode picked on the PLAY page (a friend room plays it; Free Play can't be a room)
@@ -1726,7 +1773,20 @@ if (qs.get('mapview')) {
   G.map = qs.get('free') ? generateWorld() : generateArena(+(qs.get('seed') || 7), qs.get('world') || 'meadow', +(qs.get('players') || 10));
   show(null); $('hud').hidden = true; document.body.classList.add('ingame');
 }
+// Deep links into a race (the lobby comes back when you leave it):
+//   ?room=CODE  a friend's invite: straight into their race room
+//   ?race=1[&mode=&track=&room=&bots=0|1&driver=&lobby=&laps=]  a race with these options (dev / tests)
+const raceFlag = RACING && qs.get('race');
+const invite = RACING && !raceFlag && (qs.get('room') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
 if (!qs.get('mapview') && !qs.get('world') && !qs.get('free')) show('lobby');
+if (raceFlag) {
+  if (DRIVER_OK(qs.get('driver'))) { selBrawler = qs.get('driver'); }
+  if (qs.get('bots')) $('bots').checked = qs.get('bots') !== '0';
+  booted.then(() => launchRace({ mode: qs.get('mode') || 'grand', track: qs.get('track') || 'any', room: qs.get('room') || '', lobby: qs.get('lobby') || '', laps: qs.get('laps') || '' }));
+} else if (invite) {
+  $('room').value = invite;
+  booted.then(() => launchRace({ room: invite }));
+}
 // the page is up: take down the loading splash (index.html) and stop its boot watchdog
 window.__boot?.done();
 booted.then(() => {
