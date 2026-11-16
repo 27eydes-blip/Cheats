@@ -35,6 +35,11 @@ function segHit(ax, ay, bx, by, cx, cy, dx, dy) { // do segments AB and CD cross
   const d3 = (dx - cx) * (ay - cy) - (dy - cy) * (ax - cx), d4 = (dx - cx) * (by - cy) - (dy - cy) * (bx - cx);
   return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0)) && d1 !== 0 && d3 !== 0;
 }
+// how far along AB (0..1) it crosses the line through CD
+function segT(ax, ay, bx, by, cx, cy, dx, dy) {
+  const d3 = (dx - cx) * (ay - cy) - (dy - cy) * (ax - cx), d4 = (dx - cx) * (by - cy) - (dy - cy) * (bx - cx);
+  return d3 === d4 ? 0 : Math.max(0, Math.min(1, d3 / (d3 - d4)));
+}
 const distToSeg = (px, py, x0, y0, x1, y1) => {
   const dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy;
   const t = l2 ? Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / l2)) : 0;
@@ -101,6 +106,7 @@ export class RaceSim {
     this.order = []; // current ranking (player objects)
     this.finishAt = null; // when the race ends after the winner finished
     this.places = 0; // finishers so far
+    this.finQ = []; // [racer, when in the tick it crossed (0..1)]: placed together at the end of the tick
     this.elimNext = this.mode.every ? ELIM.first : null;
     this.outCount = 0;
     // ELIMINATION: cutIv = length of the running cut timer (s), cutN = racers when it was set, bh = the
@@ -350,6 +356,7 @@ export class RaceSim {
       this.updateEnts();
       this.updateBoxes();
     }
+    if (this.finQ.length) this.placeFinishers();
     this.rank();
     this.modeTick();
     this.snapshots();
@@ -393,14 +400,15 @@ export class RaceSim {
     }
     if (!go) { p.act.f = p.act.i = p.resetReq = 0; return; } // grid countdown: nothing moves
     const ev = {};
-    for (const inp of steps) {
+    for (let k = 0; k < steps.length; k++) {
+      const inp = steps[k];
       p.inp = { st: inp.st, th: inp.th, dr: inp.dr, ha: inp.ha ?? null, hm: inp.hm || 0, sens: p.sens };
       // DRIFT pressed (not held): the missile dodge. Presses closer than 0.8 s apart don't count (no spamming)
       if (inp.dr && !p.drPrev) { if (this.time - p.drAt0 >= 0.8) p.drAt = this.time; p.drAt0 = this.time; }
       p.drPrev = inp.dr ? 1 : 0;
       const x0 = p.car.x, y0 = p.car.y;
       stepCar(p.car, p.inp, p.st, this.T, DT, ev);
-      this.crossGates(p, x0, y0, p.car.x, p.car.y);
+      this.crossGates(p, x0, y0, p.car.x, p.car.y, k / steps.length, 1 / steps.length);
       if (!p.alive || p.finished) break;
     }
     if (ev.launch) this.events.push(['jump', p.id]);
@@ -496,12 +504,14 @@ export class RaceSim {
   hazardOn(h) { const t = ((this.time + h.phase) % h.period + h.period) % h.period; return this.time > 0 && t < h.on; }
 
   // ------------------------------------------------------------------ laps and checkpoints
-  crossGates(p, x0, y0, x1, y1) {
+  // at, span: when in this tick the move happened (driving steps split the tick; pushes and warps
+  // after driving count as its end), so cars crossing the line on the same tick are placed fairly
+  crossGates(p, x0, y0, x1, y1, at = 1, span = 0) {
     const G = this.T.gates, N = G.length;
     if (!N || p.finished) return;
     for (let guard = 0; guard < 2; guard++) {
       const nx = (p.cp + 1) % N, g = G[nx];
-      if (segHit(x0, y0, x1, y1, g.x0, g.y0, g.x1, g.y1) && (x1 - x0) * g.tx + (y1 - y0) * g.ty > 0) { this.passGate(p, nx); continue; }
+      if (segHit(x0, y0, x1, y1, g.x0, g.y0, g.x1, g.y1) && (x1 - x0) * g.tx + (y1 - y0) * g.ty > 0) { this.passGate(p, nx, at + span * segT(x0, y0, x1, y1, g.x0, g.y0, g.x1, g.y1)); continue; }
       const c = G[p.cp];
       // driving back over the last gate takes it back (no counting a lap twice)
       if (segHit(x0, y0, x1, y1, c.x0, c.y0, c.x1, c.y1) && (x1 - x0) * c.tx + (y1 - y0) * c.ty < 0) {
@@ -512,7 +522,7 @@ export class RaceSim {
       break;
     }
   }
-  passGate(p, k) {
+  passGate(p, k, at = 1) {
     p.cp = k;
     if (k !== 0) return;
     p.lap++;
@@ -527,16 +537,26 @@ export class RaceSim {
       p.maxLap = p.lap;
       p.lapStart = this.time;
     }
-    if (this.laps && p.lap > this.laps && !p.finished) this.finishRacer(p);
+    if (this.laps && p.lap > this.laps && !p.finished) this.finishRacer(p, at);
   }
-  finishRacer(p) {
+  finishRacer(p, at = 1) {
     p.finished = true;
-    p.place = ++this.places;
     p.finishTime = r3(this.time);
     p.lap = this.laps;
     p.ghostT = 0;
-    this.events.push(['fin', p.id, p.place, p.finishTime]);
-    if (p.place === 1) this.finishAt = Math.min(RACE_CAP, this.time + FINISH_TIMEOUT);
+    this.finQ.push([p, at]);
+  }
+  // SIMULTANEOUS FINISH: everyone who crossed the line this tick, in the order they crossed it (not
+  // the order the server happens to step them in); exactly level = the lower grid slot (id) first.
+  // They share the tick's finish time.
+  placeFinishers() {
+    this.finQ.sort((a, b) => a[1] - b[1] || a[0].id - b[0].id);
+    for (const [p] of this.finQ) {
+      p.place = ++this.places;
+      this.events.push(['fin', p.id, p.place, p.finishTime]);
+      if (p.place === 1) this.finishAt = Math.min(RACE_CAP, this.time + FINISH_TIMEOUT);
+    }
+    this.finQ.length = 0;
   }
 
   // race distance covered (for positions): laps * L + distance along the loop since the last gate
