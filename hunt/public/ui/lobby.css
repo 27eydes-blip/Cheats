@@ -460,3 +460,25 @@ input:focus-visible, .field:focus-visible { outline-offset: 1px; box-shadow: 0 0
   .lobby.racing .np-stats i { display: block; height: 7px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; }
   .lobby.racing .np-stats b { display: block; height: 100%; border-radius: 4px; background: var(--gold); }
 }
+
+/* GARAGE: the 8 unlockable cars (rarity glow: a slow breathe, steady under Reduce Flashing) and locked cars */
+.dcard { position: relative; }
+.dcard.rar { box-shadow: 0 0 0 2px var(--rar), 0 0 16px var(--rar); animation: rar-breathe 2.6s ease-in-out infinite; }
+@keyframes rar-breathe { 50% { box-shadow: 0 0 0 2px var(--rar), 0 0 26px var(--rar); } }
+body.reduce-flash .dcard.rar, body.reduce-flash .detail.rar > .card-b { animation: none; }
+.dcard.locked canvas { opacity: .55; filter: saturate(.6); }
+.dcard.locked .dc-rar::after { content: ' · LOCKED'; }
+.detail [data-locked] { opacity: .55; filter: grayscale(.7); cursor: default; }
+.dc-rar { display: inline-block; padding: 1px 8px; border-radius: 999px; font: 700 var(--t-xs)/1.3 var(--font-ui); letter-spacing: .14em; color: #06040c; background: var(--rar); box-shadow: 0 0 8px var(--rar); }
+.dcard .dc-rar { position: absolute; top: 6px; left: 6px; }
+.dc-lock { width: 100%; padding: 2px 8px 0; display: flex; flex-direction: column; gap: 3px; }
+.dc-need { font: 700 var(--t-xs)/1.2 var(--font-ui); color: #fff; text-align: center; }
+.dc-prog { display: block; height: 8px; border-radius: 4px; background: rgba(18,9,30,.7); border: 1px solid rgba(255,255,255,.25); overflow: hidden; }
+.dc-prog b { display: block; height: 100%; background: var(--rar, var(--gold)); border-radius: 3px; }
+.detail.rar > .card-b { box-shadow: 0 0 0 3px var(--rar), 0 0 30px var(--rar); }
+.detail .dd-perk { font: 700 var(--t-sm)/1.3 var(--font-ui); color: #fff; } .detail .dd-perk b { color: var(--rar, var(--gold)); letter-spacing: .1em; margin-right: 6px; }
+.detail .dd-lock { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border-radius: 10px; background: rgba(18,9,30,.55); }
+.detail .dd-lock h4 { margin: 0; font: 700 var(--t-sm)/1.2 var(--font-ui); letter-spacing: .12em; color: var(--rar, var(--gold)); }
+.detail .dd-need, .detail .dd-ch { display: grid; grid-template-columns: minmax(0, 1fr) 30% auto; align-items: center; gap: 8px; font: 700 var(--t-xs)/1.25 var(--font-ui); color: #fff; }
+.detail .dd-ch { grid-template-columns: minmax(0, 1fr) auto; color: #d9ccff; }
+.detail .dd-or { font: 700 var(--t-xs)/1.25 var(--font-ui); color: #d9ccff; }

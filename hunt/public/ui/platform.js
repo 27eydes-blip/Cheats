@@ -1,7 +1,7 @@
 // Menu car art for the neon store and lobby: a car turning on a dark platform with a neon rim and
 // its underglow pooled under it, drawn from a look (race/looks.js). Try-on in the store passes a
 // look with the item swapped in; `boost` shows the boost flame and trail.
-import { makeLook, drawCarPreview, setCosResolver, glowA } from '../race/looks.js';
+import { makeLook, drawCarPreview, setCosResolver, glowA } from '../race/looks2.js'; // (all 14 cars)
 import { resolveCos, equippedOf, SLOTS } from '../race/garage.js';
 import { DRIVERS } from '../race/physics.js';
 
@@ -42,6 +42,6 @@ export function drawPlatform(g, w, h, car, look, t, o = {}) {
   // little from the front: squashed like the platform
   g.save();
   g.translate(cx, cy); g.scale(s * 0.8, s * 0.64); // (a little smaller than the platform: its underglow shows round it)
-  drawCarPreview(g, car, L, ang, t, { steady: !!o.steady, boost: !!o.boost });
+  drawCarPreview(g, car, L, ang, t, { steady: !!o.steady, boost: !!o.boost, low: !!o.low });
   g.restore();
 }

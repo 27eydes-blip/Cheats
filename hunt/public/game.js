@@ -30,6 +30,8 @@ import { WallArt } from './art/walls.js';
 import { artFor } from './art/themes.js';
 import { SPAWNS, spawnHasCover, SPAWN_COVER_DIST, blocksMove, TILE as TILE_ } from './shared.js';
 import { VERSION } from './version.js';
+import { DRIVERS as RACE_DRIVERS } from './race/physics.js';
+import { watchCarUnlocks, checkCarUnlocks } from './ui/carunlock.js';
 
 
 const $ = (id) => document.getElementById(id);
@@ -102,8 +104,10 @@ const prefs = (() => { try { const v = JSON.parse(localStorage.getItem('hunt') |
 const savePrefs = () => { try { localStorage.setItem('hunt', JSON.stringify(prefs)); } catch {} };
 // stats: arena matches keyed by numeric world id (stable: WORLDS is append-only); free: Free Play by zone
 if (migrateLocalStats(prefs)) savePrefs();
-let selBrawler = BRAWLERS[prefs.brawler] ? prefs.brawler : 'volt'; // (also your HUNT RACERS driver: same six ids)
-const DRIVER_OK = (id) => !!id && Object.prototype.hasOwnProperty.call(BRAWLERS, id);
+// (also your HUNT RACERS car: the six starters share the brawler ids; the 8 unlockable cars are race-only)
+let selBrawler = BRAWLERS[prefs.brawler] || RACE_DRIVERS[prefs.brawler] ? prefs.brawler : 'volt';
+const DRIVER_OK = (id) => !!id && (Object.prototype.hasOwnProperty.call(BRAWLERS, id) || Object.prototype.hasOwnProperty.call(RACE_DRIVERS, id));
+const hb = () => (BRAWLERS[selBrawler] ? selBrawler : 'volt'); // the shooter modes: an unlockable race car plays as Volt
 $('name').value = prefs.name || '';
 $('room').value = prefs.room || '';
 $('bots').checked = prefs.bots !== false;
@@ -346,8 +350,8 @@ function startQuick(opts = G.opts, retrying = false) {
   resetMatchState();
   const { name, room: formRoom } = readForm();
   const room = opts.room ?? formRoom;
-  G.kind = 'quick'; G.room = room; G.brawler = selBrawler;
-  const q = new URLSearchParams({ name, brawler: selBrawler });
+  G.kind = 'quick'; G.room = room; G.brawler = hb();
+  const q = new URLSearchParams({ name, brawler: hb() });
   if (A.ACC.token) q.set('token', A.ACC.token);
   G.saved = !!A.ACC.token; // this match is tied to an account
   devParams(q);
@@ -362,7 +366,7 @@ function startQuick(opts = G.opts, retrying = false) {
   setTimeout(() => { if (G.conns.get('main') === c && !c.open && G.phase === 'waiting') { G.conns.delete('main'); try { c.ws.close(); } catch {} lostConnection(c); } }, MM_CONNECT_MS);
   G.phase = 'waiting';
   show('waiting');
-  UI.mm.show({ brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null, label: room ? `ROOM ${room}` : (MODE_INFO[opts.mode]?.name || 'QUICK HUNT'), room: room && !opts.world && opts.mode !== 'range' ? room : '' });
+  UI.mm.show({ brawler: hb(), skin: A.progress().equipped['skin:' + hb()] || null, label: room ? `ROOM ${room}` : (MODE_INFO[opts.mode]?.name || 'QUICK HUNT'), room: room && !opts.world && opts.mode !== 'range' ? room : '' });
   if (retrying) UI.mm.lost(); // still not through: keep saying so until the server answers
 }
 
@@ -372,12 +376,12 @@ function startFree() {
   closeAll();
   resetMatchState();
   const { name } = readForm();
-  G.kind = 'free'; G.brawler = selBrawler; G.modeKey = 'freeplay';
+  G.kind = 'free'; G.brawler = hb(); G.modeKey = 'freeplay';
   G.map = generateWorld();
   // everyone arrives at the safe hub in the middle of the world (?at=x,y: local dev only)
   const at = (new URLSearchParams(location.search).get('at') || '').split(',').map(Number);
   const slot = at.length === 2 && at.every(Number.isFinite) ? zoneAt(at[0], at[1]) : 'c';
-  const zq = new URLSearchParams({ slot, join: '1', name, brawler: selBrawler, ...(A.ACC.token ? { token: A.ACC.token } : {}), ...(at.length === 2 ? { at: at.join(',') } : {}) });
+  const zq = new URLSearchParams({ slot, join: '1', name, brawler: hb(), ...(A.ACC.token ? { token: A.ACC.token } : {}), ...(at.length === 2 ? { at: at.join(',') } : {}) });
   devParams(zq);
   openConn(slot, `/zone?${zq}`, { zone: slot, primary: true });
   G.phase = 'play';
@@ -472,7 +476,7 @@ function onMsg(c, m) {
       G.phase = 'play';
       input.enabled = true; input.reset();
       show(null);
-      UI.showIntro({ world: m.world, modeName: modeInfo(m.mode).name, brawler: selBrawler, skin: A.progress().equipped['skin:' + selBrawler] || null });
+      UI.showIntro({ world: m.world, modeName: modeInfo(m.mode).name, brawler: hb(), skin: A.progress().equipped['skin:' + hb()] || null });
       setTimeout(() => showBanner(modeInfo(m.mode).name, m.mode === 'range' ? MODE_INFO.range.desc : `${modeInfo(m.mode).desc} (${m.botLevel || 'normal'} bots)`, '#ffd23f', 2500), 2200);
       break;
     case 'ro':
@@ -1719,6 +1723,7 @@ function launchRace(o = {}) {
     show(null); $('hud').hidden = true;
     const p = A.progress();
     const ro = {
+      // (the server checks the car at the join: a locked one is swapped for the account's default car and we are told)
       mode, track, room, bots: $('bots').checked, driver: selBrawler, name: $('name').value.trim().slice(0, 14) || 'Racer', token: A.ACC.token || '',
       best: track !== 'any' ? p.race?.best?.[track] ?? null : null,
       // HUNT_DEV-only knobs for browser tests (a deployed server ignores them): short races, fixed countdown
@@ -1729,7 +1734,7 @@ function launchRace(o = {}) {
       onBots: (on) => { $('bots').checked = on; readForm(); },
       // the tutorial was finished or skipped (the server keeps progress.race.tut for accounts)
       onTutorial: () => { A.refresh().catch(() => {}); },
-      onExit: () => { raceOn = false; show('lobby'); A.refresh().then(() => UI.lobby?.refresh()); checkVersion(); },
+      onExit: () => { raceOn = false; show('lobby'); A.refresh().then(() => { UI.lobby?.refresh(); checkCarUnlocks(); }); checkVersion(); },
     };
     // the very first race starts with the 20-second tutorial (then the race the player picked);
     // never for a friend's room (they are waiting). Settings > HOW TO DRIVE replays it on its own.
@@ -1750,9 +1755,11 @@ UI.lobby = createLobby({
   // TEST RANGE: a private room with target dummies, carrying the weapon picked in the Armory
   startRange: (weapon) => { goFullscreen(); startQuick({ room: 'R' + Math.random().toString(36).slice(2, 9).toUpperCase(), mode: 'range', world: 'meadow', lobby: '1.5', tryW: weapon }); },
   getBrawler: () => selBrawler,
-  setBrawler: (id) => { const changed = id !== selBrawler; selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); if (changed) sfx('growl_' + id, 0.9); }, // each hunter growls when picked
+  setBrawler: (id) => { const changed = id !== selBrawler; selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); if (changed && BRAWLERS[id]) sfx('growl_' + id, 0.9); }, // each hunter growls when picked
   prefs, saveName: () => { readForm(); UI.lobby?.refresh(); }, statRows,
 });
+// a car won (or bought, or unlocked on another device): its NEW CAR UNLOCKED screen, once, in the lobby
+watchCarUnlocks({ inRace: () => raceOn, setBrawler: (id) => { selBrawler = id; prefs.brawler = id; savePrefs(); UI.lobby?.refresh(); } });
 UI.mm = createMatchmaking(() => toMenu(), {
   onStart: () => send({ t: 'host', start: 1 }),
   // the room host's bots switch (also remembered for the next room you host)

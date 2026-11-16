@@ -5,7 +5,7 @@
 import { horn } from './sound.js';
 import { resolveCos } from './garage.js';
 import { SETTINGS } from '../settings.js';
-import { setCosResolver } from './looks.js';
+import { setCosResolver } from './looks2.js'; // (registers for the starters and the unlockable cars)
 
 // race roster rows carry equipped ids: the renderer draws every racer's look through this
 setCosResolver(resolveCos);

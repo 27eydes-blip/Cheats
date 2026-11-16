@@ -2,8 +2,8 @@
 // chunks, animated track overlays, cars (cached sprites), items, weapons and effects. Draws from
 // RaceClient.view() and is fed race events by the app (fx()).
 import { TrackArt, CHUNK, THEMES } from './trackart.js';
-import { CarSprites, BUCKETS, INK, blitCar, drawUnderglow, glowDot, exhaustsOf, taillightsOf, headOf, mix } from './cars.js';
-import { lookForRacer, NEON_GLOW } from './looks.js';
+import { CarSprites, BUCKETS, INK, blitCar, drawUnderglow, drawBoostTrail, glowDot, exhaustsOf, taillightsOf, headOf, mix } from './cars2.js';
+import { lookForRacer, NEON_GLOW } from './looks2.js'; // (cars2 / looks2: the six starters + the 8 unlockable cars)
 const EDGE_A = Math.round(0x66 * NEON_GLOW).toString(16).padStart(2, '0'); // dusk edge lights (alpha hex)
 import { Particles, Skids, Effects, PK, C, TIER_C, FK, colorIdx } from './fx.js';
 import { FLAG, driftTierOf } from './protocol.js';
@@ -215,6 +215,14 @@ export class RaceRenderer {
       case 'rs': { this.visOf(e[1]).respawnT = 0.7; break; }
       case 'hit': { const c = car(e[1]); if (c) { if (e[5]) this.explode(c.x, c.y, 0.55); for (let i = 0; i < 8; i++) { const a = Math.random() * TAU, s = 200 + Math.random() * 300; p.emit(PK.SPARK, c.x, c.y, Math.cos(a) * s, Math.sin(a) * s, 0.25, 3, C.GOLD, 0, 3); } this.visOf(e[1]).hitT = 0.25; if (e[1] === meId) this.shake(0.35); } break; }
       case 'shield': { const c = car(e[1]); if (c) F.add(FK.RING, c.x, c.y, { r: 70, life: 0.35, col: '#5ff4ff', w: 8 }); break; }
+      // unlockable car perks: GRAVITON pulls a box in, PHANTOM VX phases through a hit, FROSTBYTE rolls over oil
+      case 'perk': {
+        const c = car(e[1]); if (!c) break;
+        if (e[2] === 'magnet') { const B = this.T.boxes[e[3]]; if (B) { F.add(FK.BEAM, B.x, B.y, { x1: c.x, y1: c.y, life: 0.3, col: '#2bffb0', w: 6 }); for (let i = 0; i < 8; i++) p.emit(PK.GLINT, B.x, B.y, (c.x - B.x) * 3 + (Math.random() - 0.5) * 120, (c.y - B.y) * 3 + (Math.random() - 0.5) * 120, 0.3, 4, C.CYAN, 0, 3); } }
+        else if (e[2] === 'phase') F.add(FK.RING, c.x, c.y, { r: 80, life: 0.5, col: '#c4ccff', w: 6 });
+        else if (e[2] === 'grip') F.add(FK.RING, c.x, c.y, { r: 60, life: 0.35, col: '#a8f0ff', w: 5 });
+        break;
+      }
       case 'steal': {
         const a = car(e[1]), b = car(e[2]);
         if (a && b) for (let i = 0; i < 12; i++) p.emit(PK.GLINT, b.x, b.y, (a.x - b.x) * 1.6 + (Math.random() - 0.5) * 300, (a.y - b.y) * 1.6 + (Math.random() - 0.5) * 300, 0.5 + i * 0.02, 5, C.GOLD, 0, 1.5);
@@ -661,7 +669,7 @@ export class RaceRenderer {
       }
       // underglow pool on the road (stays on the ground under a jump, fading with height)
       this.at(g, c.x + so * 0.5, c.y + so * 0.6, c.a, CAR_VIS * (1 + lift * 0.4));
-      drawUnderglow(g, L, t, 1 - lift * 0.6, steady);
+      drawUnderglow(g, L, t, 1 - lift * 0.6, steady, low);
       // headlight beams ahead, sweeping into the turn
       if (sweep) this.at(g, c.x + so * 0.5, c.y + so * 0.6, c.a + sweep, CAR_VIS * (1 + lift * 0.4));
       g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.3 * NEON_GLOW;
@@ -683,17 +691,11 @@ export class RaceRenderer {
         }
         g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
       }
-      // boost trail (look: line / ribbon / sparks)
+      // boost trail in the car's trail style (line / ribbon / sparks, and the unlockable cars' flame,
+      // void, crystal, ring, ghost, streak, helix, galaxy): cars2.js, at NEON_GLOW, steady under Reduce Flashing
       if (v.tn > 2) {
-        const ts = L.trail.style, wide = ts === 'ribbon' ? 1.6 : ts === 'sparks' ? 0.6 : 1;
-        g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
-        for (let k = 1; k < v.tn; k++) {
-          const i0 = ((v.ti - k + 16) % 16) * 2, i1 = ((v.ti - k - 1 + 16) % 16) * 2;
-          if (k + 1 >= v.tn || (low && k > 6)) break;
-          g.globalAlpha = (1 - k / v.tn) * 0.6 * NEON_GLOW; g.strokeStyle = k < 4 ? lf.trailCore : ts === 'ribbon' && k & 1 ? lf.ribbon : L.trail.color; g.lineWidth = (16 * (1 - k / v.tn) + 3) * wide;
-          g.beginPath(); g.moveTo(v.trail[i0], v.trail[i0 + 1]); g.lineTo(v.trail[i1], v.trail[i1 + 1]); g.stroke();
-        }
-        g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+        const ts = L.trail.style;
+        drawBoostTrail(g, L, v.trail, v.ti, v.tn, t, steady, low);
         if (ts === 'sparks' && boost && Math.random() < 0.7) { const a = c.a + Math.PI + (Math.random() - 0.5) * 0.8, s = 120 + Math.random() * 200; p.emit(PK.GLINT, c.x - cos * 26, c.y - sin * 26, Math.cos(a) * s, Math.sin(a) * s, 0.35, 3, lf.trail, 0, 3); }
       }
       // boost / mini-turbo flames from every exhaust (the car's flame look; mini-turbo tiers keep their colour)
@@ -719,7 +721,7 @@ export class RaceRenderer {
       g.globalAlpha = phase ? 0.4 : ghost ? (steady ? 0.55 : 0.45 + 0.35 * (Math.sin(t * 22) > 0 ? 1 : 0)) : 1;
       const spr = this.cars.get(L, c.a);
       this.at(g, c.x + rox, c.y + roy - lift * 10, c.a - spr.ang - roll * 0.05, sc * CAR_VIS);
-      blitCar(g, spr, t, steady);
+      blitCar(g, spr, t, steady, low);
       this.base(g);
       g.globalAlpha = 1;
       // brake lights: bright red at the tail while braking (rivals: the BRAKE flag; you: your BRAKE)

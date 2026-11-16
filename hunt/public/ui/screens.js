@@ -17,12 +17,15 @@ import { EMOTES } from '../catalog.js';
 import { MAX_POWER, POWER_COST, GADGET_AT, STAR_AT, GADGETS, STARS, clampPower, powerMult } from '../power.js';
 import { WEAPONS, WEAPON_IDS, WEAPON_CLASSES, weaponStats, withPerks, masteryInfo, MASTERY_SKINS, perksFor } from '../weapons.js';
 import { EVENTS, EVENT_IDS } from '../events/index.js';
-import { DRIVERS, DRIVER_IDS } from '../race/physics.js';
+import { DRIVERS, DRIVER_IDS, ALL_DRIVER_IDS } from '../race/physics.js';
+import { UNLOCKS, PERKS, carUnlocked, unlockProgress, challengeState } from '../race/unlocks.js';
+import { Showcase } from '../race/showcase2.js';
+import { RARITY as CAR_RARITY, rarityOf } from '../race/looks2.js';
 import { RACE_MODES } from '../race/protocol.js';
 import { TRACK_IDS } from '../race/tracks.js';
 import { paintPreview, driverStats, weaponOf, trackLabel, TRACK_CHOICES } from '../race/preview.js';
-import { drawCar } from '../race/cars.js';
-import { carName } from '../race/looks.js';
+import { drawCar } from '../race/cars2.js';
+import { carName } from '../race/looks2.js';
 import { drawPlatform, equippedLook } from './platform.js';
 
 const INK = '#1b1033';
@@ -595,25 +598,48 @@ const fmtT = (s) => (s == null ? '--' : `${Math.floor(s / 60)}:${(s % 60).toFixe
 const TRACK_BLURB = { any: 'A different track every race', desert: 'Canyon jumps and a sandy shortcut', frozen: 'Wide sweeps across a frozen lake', ashlands: 'A wide road through the lava fields', neon: 'Tight corners under neon' };
 const ARENA_BLURB = { any: 'A different arena every match', desert: 'Open sand bowl', frozen: 'Ice rink, low grip', ashlands: 'Lava pits in the middle', neon: 'Pillars and arc towers' };
 
-// DRIVER SELECT: every driver with their car, trophies; a card opens the driver's detail
+// GARAGE: all 14 cars (the six starters, then the 8 unlockable ones with their rarity glow). A
+// locked car shows what it takes and a progress bar; a card opens the car's detail.
+const rarityTag = (d) => { const r = rarityOf(d); return r ? `<span class="dc-rar r-${r}" style="--rar:${CAR_RARITY[r].color}">${CAR_RARITY[r].name}</span>` : ''; };
+const lockBar = (pr) => `<div class="dc-lock"><span class="dc-need">${esc(pr.text)}</span><i class="dc-prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pr.f * 100)}"><b style="width:${Math.round(pr.f * 100)}%"></b></i></div>`;
 export function openDriverSelect(api, onDone) {
-  const S = screen('DRIVERS', '', onDone);
+  const drop = () => { const i = A.ACC.listeners.indexOf(onUser); if (i >= 0) A.ACC.listeners.splice(i, 1); removeEventListener('resize', redo); };
+  const S = screen('GARAGE', '', () => { drop(); onDone?.(); });
+  S.el.classList.add('garage');
   const grid = document.createElement('div'); grid.className = 'grid-cards drivers'; S.body.appendChild(grid);
-  let looks = {};
+  let looks = {}, locked = {};
   const draw = () => {
     const p = A.progress(), had = grid.contains(document.activeElement) ? document.activeElement.dataset.b : null;
-    looks = Object.fromEntries(DRIVER_IDS.map((d) => [d, equippedLook(p, d)]));
-    grid.innerHTML = DRIVER_IDS.map((d) => { const D = DRIVERS[d], nm = carName(d); return `<div class="card-b bcard dcard tap ${d === api.getBrawler() ? 'sel' : ''}" tabindex="0" role="button" aria-label="${nm}, ${esc(D.role)}" data-b="${d}" style="--card-col:${looks[d].neon}"><canvas data-b="${d}"></canvas><div class="title bc-name">${nm}</div><div class="dc-car">${esc(D.role)}</div><div class="dc-stats">${driverStats(d).map((r) => `<span>${r.label}</span><i><b style="width:${Math.round(r.f * 100)}%"></b></i>`).join('')}</div><div class="dc-wpn">${esc(weaponOf(d).name)}</div><div class="bc-tro">🏆 ${p.trophies[d] | 0}</div></div>`; }).join('');
+    looks = Object.fromEntries(ALL_DRIVER_IDS.map((d) => [d, equippedLook(p, d)]));
+    locked = Object.fromEntries(ALL_DRIVER_IDS.map((d) => [d, !carUnlocked(p, d)]));
+    grid.innerHTML = ALL_DRIVER_IDS.map((d) => {
+      const D = DRIVERS[d], nm = carName(d), lk = locked[d], r = rarityOf(d);
+      return `<div class="card-b bcard dcard tap ${d === api.getBrawler() ? 'sel' : ''} ${r ? 'rar r-' + r : ''} ${lk ? 'locked' : ''}" tabindex="0" role="button" aria-label="${nm}, ${esc(D.role)}${lk ? ', locked' : ''}" data-b="${d}" style="--card-col:${looks[d].neon}${r ? ';--rar:' + CAR_RARITY[r].color : ''}"><canvas data-b="${d}"></canvas>${rarityTag(d)}<div class="title bc-name">${nm}</div><div class="dc-car">${esc(D.role)}</div><div class="dc-stats">${driverStats(d).map((r) => `<span>${r.label}</span><i><b style="width:${Math.round(r.f * 100)}%"></b></i>`).join('')}</div><div class="dc-wpn">${esc(weaponOf(d).name)}</div>${lk ? lockBar(unlockProgress(p, d)) : `<div class="bc-tro">🏆 ${p.trophies[d] | 0}</div>`}</div>`;
+    }).join('');
     for (const c of grid.querySelectorAll('.bcard')) c.onclick = () => openDriverDetail(api, c.dataset.b, () => draw());
     if (had) grid.querySelector(`[data-b="${had}"]`)?.focus({ preventScroll: true });
+    drawn.clear();
   };
+  const drawn = new Set(), redo = () => drawn.clear();
+  addEventListener('resize', redo);
   draw();
-  // every car on its spinning neon platform, wearing what you equipped for it in the store
-  S.loop((t) => { for (const cv of grid.querySelectorAll('canvas[data-b]')) { const { g, w, h } = fitCanvas(cv); drawPlatform(g, w, h, cv.dataset.b, looks[cv.dataset.b], (SETTINGS.reduceFlash ? t * 0.5 : t) + cv.dataset.b.length, { low: SETTINGS.lowGfx }); } });
+  const onUser = () => { if (S.el.isConnected) draw(); };
+  A.onUser(onUser);
+  // every car on its spinning neon platform, wearing what you equipped for it in the store; a locked
+  // car is parked (drawn once per size, not every frame)
+  S.loop((t) => {
+    for (const cv of grid.querySelectorAll('canvas[data-b]')) {
+      const d = cv.dataset.b;
+      if (locked[d] && drawn.has(d)) continue;
+      const { g, w, h } = fitCanvas(cv);
+      drawPlatform(g, w, h, d, looks[d], locked[d] ? 0 : (SETTINGS.reduceFlash ? t * 0.5 : t) + d.length, { low: SETTINGS.lowGfx, still: locked[d], steady: SETTINGS.reduceFlash });
+      if (locked[d]) drawn.add(d);
+    }
+  });
 }
 
 // a tiny looping picture of the built-in weapon going off
-function weaponDemo(g, w, h, id, t) {
+function weaponDemo(g, w, h, id, t, car = id) { // id: the weapon's demo (a starter's), car: the car to draw
   g.fillStyle = '#3b3550'; g.fillRect(0, 0, w, h);
   g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 2; g.setLineDash([10, 10]); g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke(); g.setLineDash([]);
   const k = (t % 1.6) / 1.6, s = h / 70, x = w * 0.22, y = h / 2;
@@ -625,37 +651,64 @@ function weaponDemo(g, w, h, id, t) {
   if (id === 'rook') { g.fillStyle = '#7fa34a'; g.strokeStyle = INK; g.lineWidth = 2; g.fillRect(w * 0.55, y + 10 * s, 14 * s, 14 * s); g.strokeRect(w * 0.55, y + 10 * s, 14 * s, 14 * s); if (k % 0.4 < 0.2) { g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(w * 0.55 + 7 * s + (k % 0.4) * 300 * s, y + 17 * s - (k % 0.4) * 120 * s, 3 * s, 0, 7); g.fill(); } }
   if (id === 'flicker' && k > 0.3) { g.strokeStyle = 'rgba(255,95,162,.8)'; g.lineWidth = 6; g.beginPath(); g.moveTo(x, y); g.lineTo(x + w * 0.45 * Math.min(1, (k - 0.3) * 4), y); g.stroke(); }
   const cx = id === 'flicker' && k > 0.35 ? x + w * 0.45 : x;
-  g.save(); g.translate(cx, y); g.scale(s * 0.9, s * 0.9); drawCar(g, id); g.restore();
+  g.save(); g.translate(cx, y); g.scale(s * 0.9, s * 0.9); drawCar(g, car); g.restore();
 }
 
+// the starter car whose weapon demo shows a weapon kind (the unlockable cars use variants of them)
+const DEMO_OF = { arc: 'volt', pulse: 'brick', rail: 'wisp', mine: 'dune', turret: 'rook', blink: 'flicker' };
 function openDriverDetail(api, id, onClose) {
-  const D = DRIVERS[id], p = A.progress(), W = weaponOf(id), look = equippedLook(p, id);
-  const el = document.createElement('div'); el.className = 'detail driver'; el.hidden = true;
-  el.innerHTML = `<div class="card-b" style="--card-col:${look.neon}">
+  const D = DRIVERS[id], W = weaponOf(id), rar = rarityOf(id), R = rar ? CAR_RARITY[rar] : null;
+  let p = A.progress(), look = equippedLook(p, id);
+  const el = document.createElement('div'); el.className = 'detail driver' + (rar ? ' rar r-' + rar : ''); el.hidden = true;
+  el.dataset.car = id;
+  const body = () => {
+    p = A.progress();
+    const lk = !carUnlocked(p, id), pr = lk ? unlockProgress(p, id) : null, U = UNLOCKS[id];
+    const lines = pr ? pr.lines.map((l) => `<div class="dd-need"><span>${esc(l.text)}</span><i class="dc-prog"><b style="width:${Math.round((l.have / l.need) * 100)}%"></b></i><span class="num">${l.have}/${l.need}</span></div>`).join('') : '';
+    const pieces = pr && U.pieces ? challengeState(p).map((c) => `<div class="dd-ch"><span>${c.kind === 'daily' ? 'TODAY' : 'THIS WEEK'}: ${esc(c.text)} (+${c.pieces} piece${c.pieces > 1 ? 's' : ''})</span><span class="num">${c.done ? 'DONE' : `${c.have}/${c.goal}`}</span></div>`).join('') : '';
+    const buy = lk && U && U.coins ? `<button class="btn btn-md gold" data-buy>${icon('coin')} BUY ${U.coins}</button>` : '';
+    return `<div class="card-b" style="--card-col:${look.neon}${R ? ';--rar:' + R.color : ''}">
     <div><canvas class="portrait"></canvas><div class="title" style="font-size:calc(var(--u)*4);text-align:center">${carName(id)}</div>
-      <div style="text-align:center"><span class="role" style="--role-col:${look.neon}">${esc(D.role.toUpperCase())}</span> <span class="np-tro">🏆 ${p.trophies[id] | 0}</span></div></div>
+      <div style="text-align:center">${rar ? `<span class="dc-rar r-${rar}" style="--rar:${R.color}">${R.name}</span> ` : ''}<span class="role" style="--role-col:${look.neon}">${esc(D.role.toUpperCase())}</span> <span class="np-tro">🏆 ${p.trophies[id] | 0}</span></div></div>
     <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
       <div class="dd-car">${esc(D.role.toUpperCase())} CAR</div>
+      ${PERKS[id] ? `<div class="dd-perk"><b>PERK</b> ${esc(PERKS[id])}</div>` : ''}
       <div class="stats">${driverStats(id).map((r) => `<span>${r.label}</span><div class="bar shine"><i style="width:${Math.round(r.f * 100)}%"></i></div><span class="num">${r.v}</span>`).join('')}</div>
-      <div class="abil"><canvas data-demo="weapon"></canvas><div><h4>WEAPON · ${esc(W.name)}</h4><p>${esc(W.desc)} Recharges in ${W.cd} s.</p></div></div>
-      <div class="detail-actions"><button class="btn btn-md alt" data-x>CLOSE</button><button class="btn btn-md" data-x data-sel>SELECT</button></div>
+      <div class="abil"><canvas data-demo="weapon"></canvas><div><h4>WEAPON · ${esc(W.name)}</h4><p>${esc(W.desc)} Recharges in ${+(W.cd * (D.wcdMul || 1)).toFixed(2)} s.</p></div></div>
+      ${lk ? `<div class="dd-lock"><h4>LOCKED · HOW TO UNLOCK</h4>${U.coins ? `<div class="dd-or">Buy it for ${U.coins} coins, or:</div>` : ''}${lines}${pieces}</div>` : ''}
+      <div class="detail-actions"><button class="btn btn-md alt" data-x>CLOSE</button>${lk ? buy || '<button class="btn btn-md off" aria-disabled="true" data-locked>LOCKED</button>' : '<button class="btn btn-md" data-x data-sel>SELECT</button>'}</div>
     </div></div>`;
+  };
+  el.innerHTML = body();
   document.body.appendChild(el);
   openScreen(el);
-  const close = async () => { await closeScreen(el); el.remove(); onClose?.(); };
-  for (const b of el.querySelectorAll('[data-x]')) b.onclick = async () => { if (b.dataset.sel !== undefined) api.setBrawler(id); await close(); };
+  let shown = performance.now();
+  const close = async () => { const i = A.ACC.listeners.indexOf(onUser); if (i >= 0) A.ACC.listeners.splice(i, 1); await closeScreen(el); el.remove(); onClose?.(); };
+  const wire = () => {
+    for (const b of el.querySelectorAll('[data-x]')) b.onclick = async () => { if (b.dataset.sel !== undefined) { api.setBrawler(id); if (rar) A.shop({ action: 'carset', car: id }).catch(() => {}); } await close(); };
+    const bb = el.querySelector('[data-buy]');
+    if (bb) bb.onclick = () => guard(async () => { await A.shop({ action: 'carbuy', car: id }); sfx('reward'); }); // the celebration follows (ui/carunlock.js)
+  };
+  wire();
+  // the account changed (bought here, unlocked on another device): redraw the panel
+  const onUser = () => { if (!el.isConnected) return; look = equippedLook(A.progress(), id); el.innerHTML = body(); wire(); };
+  A.onUser(onUser);
   el.addEventListener('pointerdown', (e) => { if (e.target === el) close(); });
+  // an unlockable car spins in onto its pad in its rarity glow (steady under Reduce Flashing)
+  const show = rar ? new Showcase() : null;
   const t0 = performance.now();
   const tick = (now) => {
     if (!el.isConnected) return;
     const t = SETTINGS.reduceFlash ? 0 : (now - t0) / 1000;
     const pc = fitCanvas(el.querySelector('.portrait'));
-    drawPlatform(pc.g, pc.w, pc.h, id, look, t, { low: SETTINGS.lowGfx });
+    if (show) { pc.g.save(); pc.g.translate(pc.w / 2, pc.h / 2); show.draw(pc.g, id, look, (now - shown) / 1000, (now - t0) / 1000, { size: Math.min(pc.w * 0.62, pc.h * 0.8), steady: !!SETTINGS.reduceFlash, low: !!SETTINGS.lowGfx, rarity: rar }); pc.g.restore(); }
+    else drawPlatform(pc.g, pc.w, pc.h, id, look, t, { low: SETTINGS.lowGfx });
     const c = fitCanvas(el.querySelector('canvas[data-demo]'));
-    weaponDemo(c.g, c.w, c.h, id, (now - t0) / 1000);
+    weaponDemo(c.g, c.w, c.h, DEMO_OF[W.kind] || id, (now - t0) / 1000, id);
     requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
+  return el;
 }
 
 // TRACK PICKER: the 4 tracks (or their battle arenas) + Random, each with a preview of the layout
@@ -718,7 +771,7 @@ function renderRaceProfile(el, api, onDone) {
     ${ribbon('RACING')}<div class="stiles">${tile(R.races | 0, 'Races')}${tile(R.wins | 0, 'Wins')}${tile(R.trials | 0, 'Time Trials')}${tile(Object.keys(RACE_MODE_TAGS).reduce((t, k) => t + (modes[k]?.kills | 0), 0), 'Takedowns')}</div>
     ${ribbon('BEST TIMES')}<div class="card-a" style="padding:8px"><table class="stat-table race-times"><tr><th>TRACK</th><th>BEST LAP</th><th>TIME TRIAL</th></tr>${rows}</table></div>
     ${Object.entries(RACE_MODE_TAGS).filter(([k]) => modes[k]?.games).map(([k, n]) => `${ribbon(n)}<div class="stiles">${tile(modes[k].wins | 0, 'Wins')}${tile(modes[k].top3 | 0, 'Top 3s')}${tile(modes[k].games | 0, 'Races')}${tile(modes[k].kills | 0, 'Takedowns')}</div>`).join('') || `<p class="hint">Race to fill in your stats for each mode.</p>`}
-    ${ribbon('DRIVERS')}<div class="stiles six">${DRIVER_IDS.map((d) => `<div class="stile"><b>${p.trophies[d] | 0}</b><span>${carName(d)} · ${esc(DRIVERS[d].role)}</span></div>`).join('')}</div>
+    ${ribbon('CARS')}<div class="stiles six">${ALL_DRIVER_IDS.filter((d) => carUnlocked(p, d)).map((d) => `<div class="stile"><b>${p.trophies[d] | 0}</b><span>${carName(d)} · ${esc(DRIVERS[d].role)}</span></div>`).join('')}</div>
     <div style="display:flex;justify-content:center;margin:10px 0 4px"><button class="btn btn-md alt" id="pgAccount">${icon('user')} NAME &amp; ACCOUNT</button></div>`;
   el.querySelector('#pgAccount').onclick = () => openProfile(api, onDone);
 }

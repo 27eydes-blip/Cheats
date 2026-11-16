@@ -9,7 +9,8 @@ import { Hud, fmtTime } from './hud.js';
 import { Controls } from './controls.js';
 import { play, engine, stopEngine } from './sound.js';
 import { DRIVERS, driftTier } from './physics.js';
-import { BASE_LOOKS, carName, drawCarPreview } from './looks.js';
+import { BASE_LOOKS, carName, drawCarPreview, isNewCar } from './looks2.js'; // (every car: the six starters + the 8 unlockable ones)
+import { engine2, stopEngine2 } from './sound2.js';
 import { RACE_MODES, FLAG, EMOTES } from './protocol.js';
 import { ElimFx } from './elim.js';
 import { ITEM_IDS, itemLabel } from './items.js';
@@ -201,6 +202,8 @@ class RaceSession {
     // counting it would hold them back for ages on a device that drops to a few frames a second)
     rc.on('end', () => { if (this.tut) this.tut.ready(); else this.endAt = performance.now() + 1600; setMusicIntensity(0); });
     rc.on('progress', (m) => { this.o.onProgress?.(m); this.applyProgress(m); });
+    // UNLOCKS: the car we asked for is locked on this account: the server put us in another one
+    rc.on('car', (m) => { this.o.driver = m.driver; this.o.onCar?.(m); this.toast(`${carName(m.want)} is locked. Racing in ${carName(m.driver)}.`); });
     rc.on('failed', () => this.fail('Lost the connection to the race.'));
     rc.on('retry', (m) => this.fail(m.reason === 'Race full' ? 'That race is full. Try another room code.' : 'That race already started. Try again in a moment.'));
     rc.on('rejoinfail', () => this.fail('Could not get back into the race.'));
@@ -343,7 +346,7 @@ class RaceSession {
     this.ctrl.destroy();
     this.horn.destroy();
     removeEventListener('resize', this.onResize);
-    stopEngine(); stopRaceMusic(); hapticsOff();
+    stopEngine(); stopEngine2(); stopRaceMusic(); hapticsOff();
     this.root.remove();
     if (current === this) current = null;
   }
@@ -589,7 +592,9 @@ class RaceSession {
     const top = DRIVERS[rc.myDriver()]?.top || 800;
     // on the grid the engine revs with the count (presentation only: no input is sent for it)
     const revs = v.countdown > 0 ? revCurve(v.countdown) : 0;
-    engine(revs || (mine ? mine.spd / top : 0), car && car.drift ? 1 : 0, p.tier, mine && mine.f & FLAG.BOOST ? 1 : 0, !!alive && rc.phase === 'race' && !this.endShown);
+    // the unlockable cars have their own engine voice (sound2.js); the starters keep sound.js
+    const eOn = !!alive && rc.phase === 'race' && !this.endShown, eSpd = revs || (mine ? mine.spd / top : 0), eBoost = mine && mine.f & FLAG.BOOST ? 1 : 0, eDrift = car && car.drift ? 1 : 0;
+    if (isNewCar(rc.myDriver())) { stopEngine(); engine2(rc.myDriver(), eSpd, eDrift, p.tier, eBoost, eOn); } else { stopEngine2(); engine(eSpd, eDrift, p.tier, eBoost, eOn); }
     // the music gets hotter on the final lap (Elimination: the last three; Battle: the last 30 s)
     const md = v.hud || {}, hot = me && !me.fin && !me.out && ((md.laps && me.lap >= md.laps) || (rc.mode === 'elim' && md.left <= 3) || (rc.mode === 'battle' && md.tl != null && md.tl < 30)) ? 1 : 0;
     if (hot !== p.hot) { setMusicIntensity(hot); p.hot = hot; }

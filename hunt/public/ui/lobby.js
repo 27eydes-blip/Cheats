@@ -32,7 +32,7 @@ import { clampPower, POWER_COST, MAX_POWER } from '../power.js';
 import { DRIVERS } from '../race/physics.js';
 import { RACE_MODES } from '../race/protocol.js';
 import { paintPreview, trackLabel, TRACK_CHOICES, weaponOf, driverStats } from '../race/preview.js';
-import { carName } from '../race/looks.js';
+import { carName } from '../race/looks2.js';
 import { shopDay } from '../race/garage.js';
 import { drawPlatform, equippedLook } from './platform.js';
 import { openStore } from './store.js';

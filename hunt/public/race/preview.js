@@ -1,12 +1,12 @@
 // Menu art for the racing lobby: small track previews (the real layout, in each world's colours),
 // a driver's car on a turntable, and the driver stat bars. Previews are drawn once per size and
 // cached, so the lobby only blits them.
-import { DRIVERS, DRIVER_IDS } from './physics.js';
-import { drawCarPreview, glowDot } from './cars.js';
-import { makeLook } from './looks.js';
+import { DRIVERS, ALL_DRIVER_IDS } from './physics.js';
+import { drawCarPreview, glowDot } from './cars2.js';
+import { makeLook } from './looks2.js';
 export { drawCarPreview };
 import { getTrack, TRACK_IDS, trackName } from './tracks.js';
-import { WEAPONS } from './items.js';
+import { WEAPONS, weaponCd } from './items.js';
 
 const INK = '#12091e';
 // world colours at night for the previews: ground, road, neon edge, accent (start line, hazards)
@@ -121,18 +121,34 @@ export function drawCarStage(g, w, h, id, t, { still = false, ring = true, look 
   g.restore();
 }
 
-// stat bars for the driver cards: each 0..1 across the six drivers (never empty, never quite full)
+// The 4 stat bars on every car card (Garage, store, lobby), each 0..1 across all 14 cars (never
+// empty, never quite full), from the real numbers:
+//   SPEED     top speed
+//   HANDLING  turn rate and grip
+//   BOOST     how fast it gets going and how much it gets from boosts: acceleration x drift charge
+//             (VOIDRUNNER) x boost length (SOLAR FANG)
+//   WEAPON    the built-in weapon's damage per second of recharge, weighted by how it lands
+//             (a pulse hits everyone close, a rail reaches far, mines wait to be driven over; a
+//             sentry fires a few bolts) and the driver's recharge (HELIX)
+const LANDS = { arc: 1, pulse: 1.3, rail: 1.1, mine: 0.75, turret: 0.55, blink: 1.1 };
+const SHOTS = (W) => (W.kind === 'turret' ? Math.max(1, Math.round(W.life / W.rate)) : 1);
+export const STAT_VAL = {
+  top: (D) => D.top,
+  handling: (D) => D.handling * (0.75 + 0.25 * D.grip / 8.2),
+  boost: (D) => D.accel * (D.dcMul || 1) * (D.boostLen || 1),
+  weapon: (D, id) => { const W = WEAPONS[id] || WEAPONS.volt; return (W.dmg * SHOTS(W) * (LANDS[W.kind] || 1)) / weaponCd(id, D); },
+};
 const RANGE = {};
-for (const k of ['top', 'accel', 'handling', 'armor']) {
-  const v = DRIVER_IDS.map((d) => DRIVERS[d][k]);
+for (const k of Object.keys(STAT_VAL)) {
+  const v = ALL_DRIVER_IDS.map((d) => STAT_VAL[k](DRIVERS[d], d));
   RANGE[k] = [Math.min(...v), Math.max(...v)];
 }
-export const STAT_ROWS = [['SPEED', 'top'], ['ACCEL', 'accel'], ['HANDLING', 'handling'], ['ARMOR', 'armor']];
+export const STAT_ROWS = [['SPEED', 'top'], ['HANDLING', 'handling'], ['BOOST', 'boost'], ['WEAPON', 'weapon']];
 export function driverStats(id) {
-  const D = DRIVERS[id] || DRIVERS.volt;
+  const D = DRIVERS[id] || DRIVERS.volt, d = DRIVERS[id] ? id : 'volt';
   return STAT_ROWS.map(([label, k]) => {
-    const [lo, hi] = RANGE[k], f = hi > lo ? (D[k] - lo) / (hi - lo) : 0.5;
-    return { label, k, f: 0.3 + f * 0.65, v: k === 'top' ? `${Math.round(D.top / 8)} km/h` : k === 'armor' ? String(D.armor) : k === 'handling' ? D.handling.toFixed(2) : String(D.accel) };
+    const [lo, hi] = RANGE[k], x = STAT_VAL[k](D, d), f = hi > lo ? (x - lo) / (hi - lo) : 0.5;
+    return { label, k, f: 0.3 + f * 0.65, v: k === 'top' ? `${Math.round(D.top / 8)} km/h` : (Math.round((0.3 + f * 0.65) * 100) / 10).toFixed(1) };
   });
 }
 export const weaponOf = (id) => WEAPONS[id] || WEAPONS.volt;

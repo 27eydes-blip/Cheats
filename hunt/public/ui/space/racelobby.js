@@ -19,7 +19,7 @@ import { DRIVERS } from '../../race/physics.js';
 import { RACE_MODES } from '../../race/protocol.js';
 import { paintPreview, trackLabel, TRACK_CHOICES, weaponOf, driverStats } from '../../race/preview.js';
 import { trackName } from '../../race/tracks.js';
-import { carName, drawCarPreview } from '../../race/looks.js';
+import { carName, drawCarPreview } from '../../race/looks2.js';
 import { shopDay, msToShopRefresh } from '../../race/garage.js';
 import { equippedLook } from '../platform.js';
 import { openStore } from '../store.js';
