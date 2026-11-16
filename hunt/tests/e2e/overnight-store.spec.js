@@ -91,8 +91,9 @@ test('daily shop: six deals, a live countdown to 00:00 UTC, a new set right afte
   const ph = await phone(browser, 844, 390);
   const { page } = ph;
   const errors = trackErrors(page);
-  // 23:59:56 UTC: the shop refreshes 4 s after it opens
-  await page.clock.install({ time: new Date(Date.UTC(2026, 10, 16, 23, 59, 56)) });
+  // the fake clock runs from 23:58 while the page loads and the store opens (a slow load must not
+  // cross midnight early), then the test sets the time: 23:59:56 UTC, the shop refreshes 4 s later
+  await page.clock.install({ time: new Date(Date.UTC(2026, 10, 16, 23, 58, 0)) });
   await page.goto('/');
   await page.waitForSelector('#playBtn');
   await page.tap('#rail_store');
@@ -102,10 +103,12 @@ test('daily shop: six deals, a live countdown to 00:00 UTC, a new set right afte
   const day1 = await ids();
   const want = await page.evaluate(() => import('/race/garage.js').then((m) => m.dailyShop(m.shopDay()).map((d) => d.id)));
   expect(day1).toEqual(want);
-  await expect(page.locator('#stCount')).toHaveText(/^00:00:0[1-4]$/);
-  await page.clock.runFor(1000);
-  await expect(page.locator('#stCount')).toHaveText(/^00:00:0[0-3]$/);
-  await page.clock.runFor(4500);
+  const at = (s) => page.clock.setFixedTime(new Date(Date.UTC(2026, 10, 16, 23, 59, 56) + s * 1000));
+  await at(0);
+  await expect(page.locator('#stCount')).toHaveText('00:00:04');
+  await at(1);
+  await expect(page.locator('#stCount')).toHaveText('00:00:03');
+  await at(5.5);
   await expect(page.locator('#stCount')).toHaveText(/^2[34]:(59|00):\d\d$/);
   await expect.poll(ids).not.toEqual(day1);
   const day2 = await ids();

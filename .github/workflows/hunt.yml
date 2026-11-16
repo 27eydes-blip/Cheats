@@ -103,13 +103,13 @@ jobs:
       - name: Install WebKit
         run: npx playwright install --with-deps webkit
 
-      # (the iPad-size audit of every racing screen is left to Chromium: on a shared runner WebKit
-      # draws a race at that size at well under one frame a second, so each one overran 5 minutes;
-      # the iPad credit check and the iPad space-lobby layout still run here)
+      # (the iPad-size walk through every racing screen, audit and credit check, is left to
+      # Chromium: on a shared runner WebKit draws a race at that size at well under one frame a
+      # second, so those overran 5 minutes; the iPad lobby layouts still run here)
       - name: Browser suite (iPhone Safari specs)
         run: >-
           npm run e2e -- --project=webkit --fully-parallel --shard=${{ matrix.shard }}/3
-          --grep-invert "phone audit (1180x820|820x1180)"
+          --grep-invert "phone audit (1180x820|820x1180)|every racing screen: iPad"
           tests/e2e/smoke.spec.js tests/e2e/ui.spec.js tests/e2e/overnight-boot.spec.js
           tests/e2e/overnight-lobby-audit.spec.js tests/e2e/overnight-credit-everywhere.spec.js
           tests/e2e/overnight-store.spec.js tests/e2e/race-credit.spec.js
