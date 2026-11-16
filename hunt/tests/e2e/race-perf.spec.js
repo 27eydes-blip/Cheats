@@ -26,13 +26,17 @@ const GPU_RASTER = ['--enable-gpu-rasterization', '--ignore-gpu-blocklist', '--e
 
 test('60 fps at 667x375 with 10 cars and 4x CPU throttle', async ({ browserName, baseURL }) => {
   test.skip(browserName !== 'chromium', 'CDP CPU throttling');
-  const browser = await chromium.launch({ args: GPU_RASTER });
+  // a fresh browser per track: closing a race page makes the software GPU process tear down its
+  // canvases for a minute or more, and a new page in the same browser waits for that (it ran the
+  // test out of time); a new browser starts at once and the old one is fully gone before we measure
+  let browser = null;
   test.setTimeout(300_000);
   const rows = [];
   // (closed on failure too: a browser left open holds up the worker's teardown)
   try {
     for (const track of ['desert', 'frozen', 'ashlands', 'neon']) {
       // a fresh phone per track
+      browser = await chromium.launch({ args: GPU_RASTER });
       const ctx = await browser.newContext({ baseURL, viewport: { width: 667, height: 375 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
       const page = await ctx.newPage();
       const cdp = await ctx.newCDPSession(page);
@@ -55,8 +59,8 @@ test('60 fps at 667x375 with 10 cars and 4x CPU throttle', async ({ browserName,
       expect(row.medianFps, `${track} median fps`).toBeGreaterThanOrEqual(55);
       if (SLOW_RUNNER) expect(row.p95Ms, `${track} 95th percentile frame (ms)`).toBeLessThanOrEqual(52);
       else expect(row.meanFps, `${track} mean fps`).toBeGreaterThanOrEqual(42);
-      await ctx.close();
+      await browser.close(); browser = null;
     }
-  } finally { await browser.close(); }
+  } finally { if (browser) await browser.close(); }
   await test.info().attach('fps.json', { body: JSON.stringify(rows, null, 2), contentType: 'application/json' });
 });

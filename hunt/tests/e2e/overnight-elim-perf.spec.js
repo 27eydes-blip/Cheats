@@ -11,10 +11,14 @@ const GPU_RASTER = ['--enable-gpu-rasterization', '--ignore-gpu-blocklist', '--e
 test('Elimination at 60 fps with the black hole on screen (667x375, 4x CPU throttle)', async ({ browserName, baseURL }) => {
   test.skip(browserName !== 'chromium', 'CDP CPU throttling');
   test.setTimeout(180_000);
-  const browser = await chromium.launch({ args: GPU_RASTER });
+  // a fresh browser per track: closing a race page makes the software GPU process tear down its
+  // canvases for a minute or more, and a new page in the same browser waits for that (it ran the
+  // test out of time); a new browser starts at once and the old one is fully gone before we measure
+  let browser = null;
   const rows = [];
   try {
     for (const track of ['desert', 'neon']) {
+      browser = await chromium.launch({ args: GPU_RASTER });
       const ctx = await browser.newContext({ baseURL, viewport: { width: 667, height: 375 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
       const page = await ctx.newPage();
       const cdp = await ctx.newCDPSession(page);
@@ -42,8 +46,8 @@ test('Elimination at 60 fps with the black hole on screen (667x375, 4x CPU throt
       expect(row.medianFps, `${track} median fps`).toBeGreaterThanOrEqual(55);
       if (SLOW_RUNNER) expect(row.p95Ms, `${track} 95th percentile frame (ms)`).toBeLessThanOrEqual(52);
       else expect(row.meanFps, `${track} mean fps`).toBeGreaterThanOrEqual(42);
-      await ctx.close();
+      await browser.close(); browser = null;
     }
-  } finally { await browser.close(); }
+  } finally { if (browser) await browser.close(); }
   await test.info().attach('elim-fps.json', { body: JSON.stringify(rows, null, 2), contentType: 'application/json' });
 });
