@@ -153,8 +153,14 @@ for (const e of rc.drainEvents()) ...  // effects, sounds, kill feed
 - A dropped socket mid-race reconnects automatically (3 tries) to the same car.
 
 Controls the spec asks for (map them to `setInput` / `fire` / `useItem`):
-touch (landscape) left-thumb horizontal stick -> `st`; accelerate is automatic (`th: 1`), the
-BRAKE/REVERSE button sets `th: -1`; DRIFT (hold) -> `dr: 1`; FIRE -> `fire()`; ITEM -> `useItem()`.
+touch (landscape): an always-drawn joystick under the left thumb points where the car should go
+(the camera never rotates, so its screen direction is the world heading) -> `ha` (radians) + `hm`
+(0..1, times the Steering sensitivity setting), plus the equivalent `st` for a server without `ha`
+steering; accelerate is automatic (`th: 1`), the BRAKE/REVERSE button sets `th: -1`; DRIFT (hold) ->
+`dr: 1`; FIRE -> `fire()`; ITEM -> `useItem()`; RESET (top right, pulses when `stuck` > 1 s; key R)
+-> `{t:'reset'}`. Left-handed (Settings) swaps the joystick and the thumb buttons. The race join
+sends `sens` (Settings, 0.5-1.5). The first race from the lobby runs `mode=tutorial` first
+(`public/race/tutorial.js` shows the step prompts from the server's `tut` events; SKIP always on screen).
 Desktop by `event.code`: ArrowLeft/KeyA, ArrowRight/KeyD steer; ArrowUp/KeyW throttle;
 ArrowDown/KeyS brake/reverse; ShiftLeft/ShiftRight/Space drift; KeyJ / mouse 0 fire; KeyK / mouse 2 item.
 
