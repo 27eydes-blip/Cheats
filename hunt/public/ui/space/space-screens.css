@@ -13,6 +13,8 @@ body.sp-racing :is(#lobby, .ui-screen, .ui-pop, .detail) {
 }
 body.sp-racing :is(.ui-screen, .store-screen, .ui-screen.neon) { background: radial-gradient(ellipse at 75% 15%, rgba(122,44,255,.28), transparent 55%), radial-gradient(ellipse at 15% 85%, rgba(17,201,181,.18), transparent 50%), linear-gradient(#0a1033, #050816 70%); backdrop-filter: none; -webkit-backdrop-filter: none; }
 body.sp-racing .ui-pop { background: rgba(3,5,14,.68); }
+/* same spot and look as the lobby's own credit line (#lobby.sp #credit), so it sits exactly over it */
+body.sp-racing .ov-credit { left: calc(env(safe-area-inset-left, 0px) + 8px); bottom: calc(env(safe-area-inset-bottom, 0px) + 3px); font: 600 11px/1 "Barlow Semi Condensed", "Roboto Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif; letter-spacing: .06em; color: #ffc84a; text-shadow: 0 0 4px #000, 0 1px 0 #000; }
 body.sp-racing .detail { background: rgba(3,5,14,.75); }
 /* titles: neon, no outline */
 body.sp-racing :is(.ui-screen, .ui-pop, .detail) .title { font-family: var(--font); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #fff; -webkit-text-stroke: 0; text-shadow: 0 0 10px rgba(52,231,255,.75), 0 0 2px #34e7ff; }

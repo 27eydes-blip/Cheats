@@ -101,6 +101,16 @@
 .ui-head .title { font-size: calc(var(--u) * 4); flex: 1; }
 .ui-body { flex: 1; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; }
 
+/* ---------- the creator credit over menus (ui/fx.js adds #ovCredit) ----------
+   Shown while a menu screen, popup or detail card is open (the store has its own line), above all of
+   them, in a bottom strip they leave free. A race shows its own credit, so this one steps aside. */
+.ov-credit { display: none; position: fixed; z-index: 120; left: calc(var(--sa-l) + 8px); bottom: max(3px, env(safe-area-inset-bottom)); font: 400 11px/1.2 var(--font); letter-spacing: .02em; color: var(--gold); text-shadow: 0 1px 0 var(--ink), 0 0 3px var(--ink); pointer-events: none; white-space: nowrap; }
+body:has(:is(.ui-screen:not(.store-screen), .ui-pop, .detail):not([hidden]):not(.leave)) .ov-credit { display: block; }
+body:has(.rc-root) .ov-credit { display: none; }
+/* the lobby's own line is under the dim then: hide it so the two never show doubled */
+body:has(:is(.ui-screen:not(.store-screen), .ui-pop, .detail):not([hidden]):not(.leave)):not(:has(.rc-root)) #lobby #credit { visibility: hidden; }
+html body :is(.ui-screen:not(.store-screen), .ui-pop, .detail) { padding-bottom: calc(max(3px, env(safe-area-inset-bottom)) + 17px); }
+
 /* ---------- popups ---------- */
 .ui-pop { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: rgba(27, 16, 51, .6); padding: var(--sa-t) var(--sa-r) var(--sa-b) var(--sa-l); }
 .ui-pop > .card-a { width: min(560px, 100%); max-height: 100%; overflow: auto; padding: calc(var(--u) * 2); text-align: center; }
