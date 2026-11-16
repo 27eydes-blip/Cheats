@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Hunt Racers: space lobby preview</title>
+<style>html, body { margin: 0; height: 100%; background: #070a1f; overflow: hidden; }</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="space.css">
+<style>
+/* preview-only bits: the demo tag and the stand-in popup */
+.pv-tag { position: fixed; right: calc(env(safe-area-inset-right, 0px) + 8px); bottom: calc(env(safe-area-inset-bottom, 0px) + 4px); z-index: 50; font: 600 10px/1 var(--sp-narrow); letter-spacing: .1em; color: var(--sp-dim); pointer-events: none; }
+.pv-pop { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; background: rgba(3,5,14,.6); }
+.pv-pop[hidden] { display: none; }
+.pv-card { width: min(86vw, 360px); padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.pv-card p { margin: 0; font-size: 14px; line-height: 1.35; color: var(--sp-dim); }
+.pv-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.pv-btn { padding: 8px 14px; font: 700 13px/1 var(--sp-display); letter-spacing: .1em; color: var(--sp-cyan); --c: 8px; }
+</style>
+</head>
+<body>
+<div class="sp" id="sp">
+  <canvas class="sp-bg" id="bg" aria-hidden="true"></canvas>
+  <div class="sp-lobby" id="lobby">
+    <header class="sp-top" id="top">
+      <div class="sp-who" id="who"><div class="sp-who-txt"><span class="sp-who-name">Racer</span><span class="sp-who-sub">LEVEL 7 · DEMO</span></div></div>
+      <div class="sp-top-right" id="topRight"><button type="button" class="sp-iconbtn sp-glass all" id="gear" aria-label="Settings"></button></div>
+    </header>
+  </div>
+  <div class="pv-pop" id="pop" hidden><div class="pv-card sp-glass all" role="dialog" aria-modal="true" aria-label="Preview popup">
+    <span class="sp-title">POPUP</span>
+    <p>While a popup is open the ticker pauses and the music ducks.</p>
+    <div class="pv-row"><button type="button" class="pv-btn sp-glass all" id="popLow">LOW GRAPHICS</button><button type="button" class="pv-btn sp-glass all" id="popCalm">REDUCE FLASHING</button><button type="button" class="pv-btn sp-glass all" id="popClose">CLOSE</button></div>
+  </div></div>
+  <div class="sp-credit">Created by Sam Eyde III</div>
+  <div class="pv-tag">DEV PREVIEW · DEMO DATA</div>
+</div>
+<script type="module" src="preview.js"></script>
+</body>
+</html>
