@@ -1,11 +1,12 @@
 // Hunt Racers HUD, drawn on the race canvas in screen space (no DOM layout work per frame):
 // position, lap + lap timer + best lap, speedometer + boost / drift meter, held item, weapon
 // cooldown, minimap (leader highlighted for everyone), mode info, countdown, wrong-way, wrecked,
-// banners, missile lock warning, feed, and the touch buttons. Safe-area aware.
+// banners, missile lock warning, feed, the steering joystick (+ the first-race SLIDE TO STEER hint
+// and the steering arrow on your car), the touch buttons and RESET. Safe-area aware.
 import { FLAG } from './protocol.js';
 import { DRIVERS, driftTier } from './physics.js';
 import { WEAPONS, ITEMS } from './items.js';
-import { SETTINGS } from '../settings.js';
+import { SETTINGS, pulse } from '../settings.js';
 import { INK } from './cars.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -99,8 +100,8 @@ export class Hud {
     const car = view.cars.find((c) => c.me);
     const n = view.ranks.length || view.cars.length;
     const battle = mode === 'battle', trial = mode === 'trial';
-    // -------- position + lap block (top left)
-    if (me) {
+    // -------- position + lap block (top left; the tutorial has SKIP there instead)
+    if (me && !S.tut) {
       const rk = me.out || me.fin || me.rk || 1, d = S.dpr;
       const w1 = label(g, str('n', rk, String), L, Tp + 24 * u, Math.round(46 * u), rk === 1 ? '#ffd23f' : '#ffffff', 'left', d);
       label(g, ORD(rk), L + w1 + 2 * u, Tp + 14 * u, Math.round(18 * u), rk === 1 ? '#ffd23f' : '#ffffff', 'left', d);
@@ -164,14 +165,18 @@ export class Hud {
     // -------- speedometer + boost / drift meter (bottom centre; the credit sits just below)
     if (car && !(car.f & FLAG.DEAD)) {
       const spd = car.spd, top = DRIVERS[rc.myDriver()]?.top || 800;
-      // (the ring's lowest point is 23u under its centre; the credit line takes the bottom 18 px)
-      const gx = cx, gy = H - SA.b - 22 - 26 * u, R = 27 * u;
-      this.gauge = { x: gx, y: gy, r: R + 9 * u, bottom: gy + 23 * u };
-      g.beginPath(); g.arc(gx, gy, R + 4 * u, Math.PI * 0.8, Math.PI * 2.2); g.lineWidth = 9 * u; g.strokeStyle = INK; g.lineCap = 'round'; g.stroke();
-      g.beginPath(); g.arc(gx, gy, R + 4 * u, Math.PI * 0.8, Math.PI * 0.8 + Math.PI * 1.4 * clamp(spd / (top * 1.4), 0, 1)); g.lineWidth = 5 * u;
-      g.strokeStyle = car.f & FLAG.BOOST ? '#5ff4ff' : spd > top * 0.95 ? '#ff9f43' : '#ffd23f'; g.stroke(); g.lineCap = 'butt';
-      label(g, str('kmh', Math.round(spd / 8), String), gx, gy - 2 * u, Math.round(20 * u), '#ffffff', 'center', S.dpr);
-      label(g, 'KM/H', gx, gy + 13 * u, Math.round(8 * u), '#c9b8ff', 'center', S.dpr);
+      // a dark dial with a thick speed arc and a big number. (The arc's lowest point is ~0.6 R under
+      // its centre; the credit line takes the bottom 18 px.)
+      const R = 31 * u, gx = cx, gy = H - SA.b - 20 - R * 0.75;
+      this.gauge = { x: gx, y: gy, r: R + 9 * u, bottom: gy + R * 0.75 };
+      g.beginPath(); g.arc(gx, gy, R, 0, TAU); g.fillStyle = 'rgba(27,16,51,0.72)'; g.fill();
+      g.beginPath(); g.arc(gx, gy, R + 2 * u, Math.PI * 0.8, Math.PI * 2.2); g.lineWidth = 11 * u; g.strokeStyle = INK; g.lineCap = 'round'; g.stroke();
+      g.beginPath(); g.arc(gx, gy, R + 2 * u, Math.PI * 0.8, Math.PI * 2.2); g.lineWidth = 6 * u; g.strokeStyle = 'rgba(255,255,255,0.14)'; g.stroke();
+      const kk = clamp(spd / (top * 1.4), 0, 1);
+      if (kk > 0.01) { g.beginPath(); g.arc(gx, gy, R + 2 * u, Math.PI * 0.8, Math.PI * 0.8 + Math.PI * 1.4 * kk); g.lineWidth = 6.5 * u; g.strokeStyle = car.f & FLAG.BOOST ? '#5ff4ff' : spd > top * 0.95 ? '#ff9f43' : '#ffd23f'; g.stroke(); }
+      g.lineCap = 'butt';
+      label(g, str('kmh', Math.round(spd / 8), String), gx, gy - 3 * u, Math.round(27 * u), '#ffffff', 'center', S.dpr);
+      label(g, 'KM/H', gx, gy + 16 * u, Math.round(10 * u), '#c9b8ff', 'center', S.dpr);
       // drift charge (tier colours) or boost left
       const dc = rc.car && car.predicted ? rc.car.dc : 0, tier = driftTier(dc), bw = 92 * u, bh = 7 * u, bx = gx - bw / 2, by = gy + R * 0.9 + 2 * u;
       void by;
@@ -183,9 +188,11 @@ export class Hud {
         if (rc.car.drift) for (const f of [0.7 / 2.2, 1.4 / 2.2]) { g.fillStyle = INK; g.fillRect(bx + bw * f - 1, yy, 2, bh); }
       }
     }
-    // -------- touch buttons
-    if (ctrl.mode === 'touch') this.buttons(g, S, u);
+    // -------- the steering arrow on your car, touch buttons, joystick, RESET
+    if (ctrl.mode === 'touch') { this.arrow(g, S, u, car); this.buttons(g, S, u); }
+    else if (S.hint > 0) this.keysHint(g, S, u);
     this.menuButton(g, S);
+    if (me && !me.fin && !me.out) this.resetButton(g, S, u);
     // -------- centre overlays
     this.center(g, S, u, car);
   }
@@ -193,7 +200,8 @@ export class Hud {
   minimap(g, S, u, car) {
     const { W, SA, dpr, view, art } = S;
     const size = Math.round(clamp(S.H * 0.34, 96, 180));
-    const m = art.minimap(size, dpr), x = W - SA.r - 56 - size, y = SA.t + 6;
+    // (the column right of it holds the pause and RESET buttons)
+    const m = art.minimap(size, dpr), x = W - SA.r - 32 - 2 * S.ctrl.btn.reset.r1 - size, y = SA.t + 6;
     g.drawImage(m.cv, x, y, size, size);
     const k = m.k, ox = x + m.ox, oy = y + m.oy;
     for (const c of view.cars) {
@@ -245,18 +253,94 @@ export class Hud {
       if (me && me.item) itemIcon(g, me.item, b.item.x, b.item.y - b.item.r * 0.1, b.item.r * 1.05);
       else label(g, 'ITEM', b.item.x, b.item.y, Math.round(Math.max(10, b.item.r * 0.36)), '#8a7aa8', 'center', S.dpr);
     });
-    // steer stick (where the thumb is) or a hint where to put it
-    const s = ctrl.stick;
-    if (s.id != null) {
-      const m = s.max;
-      rr(g, s.ox - m - 16, s.oy - 18, (m + 16) * 2, 36, 18); g.fillStyle = 'rgba(27,16,51,0.45)'; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
-      g.beginPath(); g.arc(s.ox + s.v * m, s.oy, 24, 0, TAU); g.fillStyle = '#ffd23f'; g.fill(); g.lineWidth = 4; g.strokeStyle = INK; g.stroke();
-    } else if (S.view.countdown > 0 || S.t < 8) {
-      const x = SETTINGS.leftHanded ? S.W - S.SA.r - 110 * u : S.SA.l + 110 * u, y = S.H - S.SA.b - 70 * u;
-      g.globalAlpha = 0.55;
-      rr(g, x - 70 * u, y - 16 * u, 140 * u, 32 * u, 16 * u); g.fillStyle = 'rgba(27,16,51,0.5)'; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
-      label(g, '◀  STEER  ▶', x, y, Math.round(14 * u), '#ffffff', 'center', S.dpr);
+    this.joystick(g, S, u);
+    // the tutorial points at the button its step needs
+    const fb = S.focus && b[S.focus];
+    if (fb) { const k = pulse(S.t, 7, 0.6); g.beginPath(); g.arc(fb.x, fb.y, fb.r + 7 + 6 * k, 0, TAU); g.lineWidth = 5; g.strokeStyle = `rgba(94,242,198,${0.55 + 0.45 * k})`; g.stroke(); }
+  }
+
+  // the steering joystick: always drawn, bright ring + knob; while held, where the thumb is
+  joystick(g, S, u) {
+    const s = S.ctrl.stick, held = s.id != null, R = s.r;
+    const ox = held ? s.ox : s.cx, oy = held ? s.oy : s.cy;
+    g.beginPath(); g.arc(ox, oy, R, 0, TAU); g.fillStyle = held ? 'rgba(27,16,51,0.42)' : 'rgba(27,16,51,0.32)'; g.fill();
+    g.lineWidth = 7; g.strokeStyle = INK; g.stroke();
+    g.beginPath(); g.arc(ox, oy, R - 4, 0, TAU); g.lineWidth = 4; g.strokeStyle = held ? '#5ff4ff' : 'rgba(95,244,255,0.85)'; g.stroke();
+    // four little chevrons on the rim: it goes every way
+    g.fillStyle = 'rgba(255,255,255,0.75)';
+    for (let i = 0; i < 4; i++) {
+      const a = (i * Math.PI) / 2, c = Math.cos(a), sn = Math.sin(a), d = R - 15, w = 7;
+      g.beginPath(); g.moveTo(ox + c * (d + 6), oy + sn * (d + 6)); g.lineTo(ox + c * d - sn * w, oy + sn * d + c * w); g.lineTo(ox + c * d + sn * w, oy + sn * d - c * w); g.closePath(); g.fill();
+    }
+    // the hint (first races, and the tutorial's steering step): a ghost thumb swipes the knob
+    let kx = held ? s.x : ox, ky = held ? s.y : oy;
+    if (!held && S.hint > 0) {
+      const t = S.t % 3, ph = t < 1.5 ? t / 1.5 : (3 - t) / 1.5, side = Math.floor(S.t / 3) % 2 ? -1 : 1;
+      const e = ph < 0.5 ? 2 * ph * ph : 1 - 2 * (1 - ph) * (1 - ph), a = -Math.PI / 2 + side * (0.35 + e * 1.0), d = R * 0.62 * Math.min(1, e * 1.6);
+      kx = ox + Math.cos(a) * d; ky = oy + Math.sin(a) * d;
+    }
+    const kr = R * 0.42;
+    g.beginPath(); g.arc(kx, ky, kr, 0, TAU); g.fillStyle = '#ffd23f'; g.fill(); g.lineWidth = 5; g.strokeStyle = INK; g.stroke();
+    g.beginPath(); g.arc(kx - kr * 0.25, ky - kr * 0.28, kr * 0.38, 0, TAU); g.fillStyle = 'rgba(255,255,255,0.45)'; g.fill();
+    if (!held && S.hint > 0) {
+      const al = clamp(S.hint, 0, 1);
+      g.globalAlpha = al;
+      // pulsing arrow from the centre toward the knob, the ghost thumb on it, and the words
+      const da = Math.atan2(ky - oy, kx - ox), dd = Math.hypot(kx - ox, ky - oy);
+      if (dd > 8) {
+        const k = pulse(S.t, 9, 0.8);
+        g.save(); g.translate(ox, oy); g.rotate(da);
+        g.beginPath(); g.moveTo(R + 6 + 10 * k, 0); g.lineTo(R - 12, -16); g.lineTo(R - 12, 16); g.closePath();
+        g.fillStyle = '#5ef2c6'; g.fill(); g.lineWidth = 4; g.strokeStyle = INK; g.stroke();
+        g.restore();
+      }
+      g.save(); g.translate(kx + kr * 0.35, ky + kr * 0.55); g.rotate(-0.5);
+      g.beginPath(); g.ellipse(0, 0, kr * 0.62, kr * 0.95, 0, 0, TAU); g.fillStyle = 'rgba(255,235,220,0.72)'; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
+      g.beginPath(); g.ellipse(0, -kr * 0.5, kr * 0.4, kr * 0.32, 0, 0, TAU); g.fillStyle = 'rgba(255,255,255,0.55)'; g.fill();
+      g.restore();
+      const sz = Math.round(clamp(R * 0.27, 20, 34)), ty = oy - R - sz * 1.45;
+      label(g, 'SLIDE TO STEER', ox, ty, sz, '#ffffff', 'center', S.dpr);
+      label(g, 'point where you want to go', ox, ty + sz * 0.95, Math.round(sz * 0.52), '#5ef2c6', 'center', S.dpr);
       g.globalAlpha = 1;
+    }
+  }
+  // where the stick is pointing, drawn on your car (stick direction = world direction on screen)
+  arrow(g, S, u, car) {
+    const s = S.ctrl.stick, R = S.renderer, c = R.meCar, M = R.M;
+    if (s.id == null || s.hm < 0.15 || !car || !c || !M || car.f & FLAG.DEAD) return;
+    const x = (c.x * M.s + M.x) / S.dpr, y = (c.y * M.s + M.y) / S.dpr, d = 46 * u + 10 * s.hm * u;
+    g.save(); g.translate(x, y); g.rotate(s.ha);
+    g.globalAlpha = 0.55 + 0.45 * s.hm;
+    g.beginPath(); g.moveTo(d + 22 * u, 0); g.lineTo(d, -14 * u); g.lineTo(d + 6 * u, 0); g.lineTo(d, 14 * u); g.closePath();
+    g.fillStyle = '#5ff4ff'; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
+    g.restore(); g.globalAlpha = 1;
+  }
+  // desktop first races: the keys
+  keysHint(g, S, u) {
+    g.globalAlpha = clamp(S.hint, 0, 1);
+    const y = S.H - S.SA.b - 128 * u;
+    label(g, '← →  or  A D  TO STEER', S.W / 2, y, Math.round(22 * u), '#ffffff', 'center', S.dpr);
+    label(g, 'SHIFT drift · J fire · K item · R reset', S.W / 2, y + 26 * u, Math.round(15 * u), '#c9b8ff', 'center', S.dpr);
+    g.globalAlpha = 1;
+  }
+  // RESET: small when you're free; big, pulsing and labelled once the server says you're stuck
+  resetButton(g, S, u) {
+    const b = S.ctrl.btn.reset, big = b.big, off = !S.canReset;
+    const k = big ? pulse(S.t, 8, 0.7) : 0, r = b.r * (1 + 0.1 * k);
+    g.globalAlpha = off ? 0.45 : 1;
+    if (big) { g.beginPath(); g.arc(b.x, b.y, r + 6 + 8 * k, 0, TAU); g.lineWidth = 5; g.strokeStyle = `rgba(255,159,67,${0.4 + 0.5 * k})`; g.stroke(); }
+    g.beginPath(); g.arc(b.x, b.y, r, 0, TAU); g.fillStyle = big ? '#ff9f43' : 'rgba(27,16,51,0.75)'; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
+    // a circular arrow
+    const ir = r * 0.42, col = big ? INK : '#ffffff';
+    g.beginPath(); g.arc(b.x, b.y - (big ? r * 0.12 : 0), ir, -Math.PI * 0.35, Math.PI * 1.25); g.lineWidth = Math.max(3, r * 0.13); g.strokeStyle = col; g.lineCap = 'round'; g.stroke(); g.lineCap = 'butt';
+    const ax = b.x + Math.cos(-Math.PI * 0.35) * ir, ay = b.y - (big ? r * 0.12 : 0) + Math.sin(-Math.PI * 0.35) * ir, hs = Math.max(5, r * 0.22);
+    g.beginPath(); g.moveTo(ax + hs, ay - hs * 0.2); g.lineTo(ax - hs * 0.3, ay - hs); g.lineTo(ax - hs * 0.2, ay + hs * 0.6); g.closePath(); g.fillStyle = col; g.fill();
+    if (big) label(g, 'RESET', b.x, b.y + r * 0.55, Math.round(Math.max(11, r * 0.3)), '#ffffff', 'center', S.dpr);
+    else if (S.ctrl.mode !== 'touch') label(g, 'R', b.x + r - 2, b.y + r - 2, 11, '#c9b8ff', 'center', S.dpr);
+    g.globalAlpha = 1;
+    if (big && !off) {
+      const msg = S.ctrl.mode === 'touch' ? 'STUCK? TAP RESET' : 'STUCK? PRESS R';
+      text(g, msg, S.W - S.SA.r - 8, b.y + r + 22 + 9 * u, 17 * u, '#ff9f43', 'right', 5);
     }
   }
 
@@ -267,9 +351,14 @@ export class Hud {
     const cd = view.countdown;
     if (cd > 0 || (view.time >= 0 && view.time < 0.8)) {
       const n = cd > 0 ? Math.ceil(cd) : 0, f = cd > 0 ? cd - Math.floor(cd) : 1 - view.time / 0.8;
-      const s = SETTINGS.reduceFlash ? 1 : 1 + (cd > 0 ? f * 0.5 : (1 - f) * 0.4);
-      g.globalAlpha = cd > 0 ? 1 : clamp(f * 1.4, 0, 1);
-      text(g, n ? String(n) : 'GO!', cx, cy, 92 * u * s, n ? '#ffffff' : '#5ef2c6', 'center', 10 * u);
+      const s = SETTINGS.reduceFlash ? 1 : 1 + (cd > 0 ? f * 0.45 : (1 - f) * 0.25);
+      g.globalAlpha = cd > 0 ? 1 : clamp(f * 1.6, 0, 1);
+      if (n) {
+        // a dark disc behind the number so it reads over any track
+        g.beginPath(); g.arc(cx, cy, 70 * u, 0, TAU); g.fillStyle = 'rgba(27,16,51,0.55)'; g.fill(); g.lineWidth = 6 * u; g.strokeStyle = INK; g.stroke();
+        g.beginPath(); g.arc(cx, cy, 64 * u, -Math.PI / 2, -Math.PI / 2 + TAU * f); g.lineWidth = 6 * u; g.strokeStyle = n === 1 ? '#ff9f43' : '#ffd23f'; g.stroke();
+        text(g, String(n), cx, cy + 4 * u, 104 * u * s, '#ffffff', 'center', 11 * u);
+      } else text(g, 'GO!', cx, cy, Math.min(170 * u * s, W * 0.3), '#5ef2c6', 'center', 14 * u);
       g.globalAlpha = 1;
     }
     // wrong way

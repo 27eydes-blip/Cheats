@@ -16,6 +16,7 @@ import { trackName } from './tracks.js';
 import { SETTINGS } from '../settings.js';
 import { icon } from '../ui/icons.js';
 import { levelInfo } from '../progression.js';
+import { Tutorial, flag, setFlag, evRow, tutStep, TUT_FLAG, STEER_FLAG } from './tutorial.js';
 
 const CREDIT = 'Created by Sam Eyde III';
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -70,12 +71,21 @@ class RaceSession {
       <div class="rc-credit">${CREDIT}</div>`;
     document.body.appendChild(root);
     const $ = (s) => root.querySelector(s);
-    this.$ = $;
+    this.$ = $; this.$$ = (s) => root.querySelectorAll(s);
     this.cv = $('.rc-cv');
     this.renderer = new RaceRenderer(this.cv);
     this.hud = new Hud();
     this.ctrl = new Controls(this.cv, { onMenu: () => this.toggleMenu() });
     $('.rc-cancel').onclick = () => this.exit();
+    // tutorial: SKIP is always on screen; LET'S RACE goes on to the race the player picked
+    this.tut = this.o.tutorial ? new Tutorial(root, {
+      next: !!this.o.next, onSkip: () => this.finishTut(true), onGo: () => this.finishTut(false),
+      onStep: (step, last) => { play('tut'); this.hud.banner(last ? 'GREAT!' : 'NICE!', '', '#5ef2c6', 1.1); },
+      onReady: () => { this.ctrl.enabled = false; this.ctrl.reset(); play('finish'); },
+    }) : null;
+    // first races: SLIDE TO STEER until the player has steered for a moment
+    this.hintOn = !flag(STEER_FLAG); this.hintA = this.hintOn ? 1 : 0; this.steerT = 0;
+    this.resetOk = false; this.resetCd = 0; this.stuck = 0;
     $('.rc-resume').onclick = () => this.toggleMenu(false);
     $('.rc-leave').onclick = () => this.exit();
     $('.rc-back').onclick = () => this.exit();
@@ -105,7 +115,12 @@ class RaceSession {
     const s = this;
     return {
       session: s, get rc() { return s.rc; }, get phase() { return s.rc?.phase; }, get view() { return s.view; },
-      layout: () => ({ W: s.W, H: s.H, btn: s.ctrl.btn, mode: s.ctrl.mode, gauge: s.hud.gauge || null }),
+      layout: () => ({ W: s.W, H: s.H, btn: s.ctrl.btn, mode: s.ctrl.mode, gauge: s.hud.gauge || null, stick: { cx: s.ctrl.stick.cx, cy: s.ctrl.stick.cy, r: s.ctrl.stick.r } }),
+      // what the controls hand to RaceClient.setInput this frame, and the tutorial / hint state
+      // (out: the last frame's; the rest: the fingers right now)
+      input: () => { const c = s.ctrl, k = c.stick; return { out: { ...c.out }, stickHeld: k.id != null, ha: k.ha, hm: k.hm, fire: c.btn.fire.down, drift: c.btn.drift.down }; },
+      tut: () => s.tut && s.tut.state(),
+      hintOn: () => s.hintA > 0,
       // where your car is drawn on screen (CSS px), for the camera safe-box test
       carOnScreen: () => { const R = s.renderer, c = R.meCar; if (!c) return null; const M = R.M; return { x: (c.x * M.s + M.x) / R.dpr, y: (c.y * M.s + M.y) / R.dpr, f: c.f, W: R.W, H: R.H }; },
       dev: (k, item) => s.rc?.send({ t: 'dev', k, item }),
@@ -113,13 +128,18 @@ class RaceSession {
       dpr: () => s.dpr, finishShown: () => s.endShown, mine: s.mine = {},
       // screenshot / perf runs only: drive along the racing line (the touch tests drive for real)
       auto: (on = true, o = {}) => { s.auto = on ? { i: -1, fire: 0, ...o } : null; },
-      hint: () => { const h = s.pursuit(s.hintS || (s.hintS = { i: -1 })); return { st: h.st, th: h.th, dr: h.dr, spd: h.spd }; },
+      // ha: the world heading the hint steers toward (the joystick direction), rev: backing off
+      hint: () => { const A = s.hintS || (s.hintS = { i: -1 }), h = s.pursuit(A); return { st: h.st, th: h.th, dr: h.dr, spd: h.spd, ha: h.ha, rev: A.rev > 0 }; },
     };
   }
 
   connect() {
     const o = this.o;
-    const params = { name: o.name, driver: o.driver, token: o.token || '', mode: o.mode, track: o.track && o.track !== 'any' ? o.track : '', bots: o.bots === false || o.bots === 0 ? 0 : 1, room: o.room || '', lobby: o.lobby || '', laps: o.laps || '' };
+    // sens: the steering sensitivity setting (the server scales the turn rate by it, like the prediction)
+    const sens = Math.min(1.5, Math.max(0.5, SETTINGS.raceSens ?? 1));
+    const params = o.tutorial
+      ? { name: o.name, driver: o.driver, token: o.token || '', mode: 'tutorial', bots: 0, sens }
+      : { name: o.name, driver: o.driver, token: o.token || '', mode: o.mode, track: o.track && o.track !== 'any' ? o.track : '', bots: o.bots === false || o.bots === 0 ? 0 : 1, room: o.room || '', lobby: o.lobby || '', laps: o.laps || '', sens };
     const rc = (this.rc = new RaceClient({ base: o.base || location.origin.replace(/^http/, 'ws'), params }));
     rc.on('welcome', () => { this.renderer.setTrack(rc.T); this.idleCam(); this.showWait(); });
     rc.on('lobby', (m) => this.updateWait(m));
@@ -134,7 +154,7 @@ class RaceSession {
       try { this.bestSplits = JSON.parse(localStorage.getItem('hunt-race-splits-' + rc.trackKey) || 'null'); } catch { this.bestSplits = null; }
       this.bestLapSeen = rc.mode === 'trial' ? this.bestSplits?.lap || null : null;
     });
-    rc.on('end', () => { this.endTimer = 1.6; });
+    rc.on('end', () => { if (this.tut) this.tut.ready(); else this.endTimer = 1.6; });
     rc.on('progress', (m) => { this.o.onProgress?.(m); this.applyProgress(m); });
     rc.on('failed', () => this.fail('Lost the connection to the race.'));
     rc.on('retry', (m) => this.fail(m.reason === 'Race full' ? 'That race is full. Try another room code.' : 'That race already started. Try again in a moment.'));
@@ -148,6 +168,12 @@ class RaceSession {
   showWait() {
     const rc = this.rc, w = this.$('.rc-wait');
     w.hidden = false;
+    if (this.tut) {
+      this.$('.rc-wt').textContent = 'HOW TO DRIVE';
+      this.$('.rc-wm').textContent = 'A 20-second drive to learn the controls';
+      this.roomCard('');
+      return;
+    }
     this.$('.rc-wt').textContent = rc.room ? 'FRIENDS ROOM' : rc.mode === 'trial' ? 'TIME TRIAL' : 'FINDING RACERS';
     this.$('.rc-wm').textContent = `${RACE_MODES[rc.mode]?.name || 'Race'} · ${trackName(rc.trackKey, rc.arena) || ''}`;
     this.roomCard(rc.room);
@@ -170,6 +196,7 @@ class RaceSession {
     if (this.rc.phase !== 'lobby') return;
     const rc = this.rc;
     this.$('.rc-wait').hidden = false;
+    if (this.tut) { this.$('.rc-ws').textContent = 'Starting…'; return; }
     this.$('.rc-wl').innerHTML = m.players.map(([n, d]) => `<span class="rc-chip" style="--c:${DRIVERS[d]?.color || '#fff'}"><i></i>${esc(n)}</span>`).join('');
     const n = `${m.players.length}/${m.max} racers`;
     if (rc.room && m.ids) {
@@ -234,6 +261,17 @@ class RaceSession {
     this.o.onExit?.({ left });
   }
   again() { const o = this.o; this.destroy(); startRace(o); }
+
+  // ---------------------------------------------------------------- tutorial
+  // done or skipped: remember it, then the race the player picked (or back to the lobby for a replay)
+  finishTut(skipped) {
+    if (!this.tut || this.dead) return;
+    setFlag(TUT_FLAG);
+    const next = this.o.next;
+    this.o.onTutorial?.({ skipped });
+    this.destroy();
+    if (next) startRace({ ...next, tutorial: false }); else this.o.onExit?.({ left: false });
+  }
   destroy() {
     if (this.dead) return;
     this.dead = true;
@@ -336,24 +374,46 @@ class RaceSession {
     if (rc.phase === 'race' || rc.phase === 'end') {
       this.perf[this.perfN++ % this.perf.length] = ms;
       this.adapt(ms);
-      const inp = this.auto ? this.autopilot(dt) : this.ctrl.poll(dt);
+      const inp = this.auto ? this.autopilot(dt) : this.ctrl.poll(dt, rc.car ? rc.car.a : null);
       rc.setInput(inp);
       if (this.ctrl.takeFire()) rc.fire();
       if (this.ctrl.takeItem()) rc.useItem();
+      if (this.ctrl.takeReset() && this.resetOk && this.resetCd <= 0 && rc.phase === 'race') { this.resetCd = 3; if (rc.reset) rc.reset(); else rc.send({ t: 'reset' }); play('click'); }
+      if (this.resetCd > 0) this.resetCd -= dt;
       rc.frame(now);
       const v = rc.view(now);
       if (!v) return;
       this.view = v;
       const evs = rc.drainEvents();
-      for (let i = 0; i < evs.length; i++) this.onEvent(evs[i], v);
+      for (let i = 0; i < evs.length; i++) { const e = evRow(evs[i]); if (e) this.onEvent(e, v); }
       this.local(v, dt);
+      this.guide(v, dt, inp);
       R.draw(v, rc, dt, now);
-      this.hud.draw(R.g, { W: this.W, H: this.H, SA: this.SA, dpr: this.dpr, view: v, me: v.me, rc, ctrl: this.ctrl, dt, t: R.t, mode: rc.mode, art: R.art, renderer: R, wrong: this.wrong, bestTime: this.best });
+      this.hud.draw(R.g, { W: this.W, H: this.H, SA: this.SA, dpr: this.dpr, view: v, me: v.me, rc, ctrl: this.ctrl, dt, t: R.t, mode: rc.mode, art: R.art, renderer: R, wrong: this.wrong, bestTime: this.best,
+        tut: !!this.tut, focus: this.focus, hint: this.hintA, canReset: this.resetOk && this.resetCd <= 0 });
       if (this.endTimer > 0 && (this.endTimer -= dt) <= 0 && !this.endShown) this.showEnd();
     } else {
       // pre-race: the track behind the lobby card (also warms the chunk cache around the grid)
       R.draw(IDLE_VIEW, rc, dt, now);
     }
+  }
+
+  // the first-race steering hint, the tutorial prompt and focus, and RESET (stuck seconds from the server)
+  guide(v, dt, inp) {
+    const rc = this.rc, me = v.me, c = this.ctrl, T = this.tut;
+    const racing = v.countdown <= 0 && rc.phase === 'race' && me && !me.rt;
+    const steering = c.mode === 'touch' ? c.stick.id != null && c.stick.hm > 0.35 : Math.abs(inp.st) > 0.3;
+    if (this.hintOn && racing && steering && (this.steerT += dt) > 1.2) { this.hintOn = false; setFlag(STEER_FLAG); }
+    const want = (this.hintOn || (T && T.step === 0)) && !(T && T.shown);
+    this.hintA = want ? Math.min(1, this.hintA + dt * 4) : Math.max(0, this.hintA - dt * 1.7);
+    if (T) { T.prompt(c.mode !== 'touch'); this.focus = T.focus(me); T.tick(dt); } else this.focus = null;
+    // stuck: the server's per-car `stuck` seconds (on `me`, or the 9th field of our car row)
+    const row = rc.latest && rc.latest.c.find((r) => r[0] === rc.id);
+    const st = me && me.stuck != null ? me.stuck : row && row.length > 8 ? row[8] : undefined;
+    if (st !== undefined) this.resetOk = true;
+    this.stuck = +st || 0;
+    const b = c.btn.reset, big = this.stuck > 1 && this.resetCd <= 0;
+    if (big !== !!b.big) { b.big = big; b.r = big ? b.r1 : b.r0; }
   }
 
   // own-car cues: countdown beeps, pads, walls, landings, drift tiers, wrong way, engine
@@ -398,7 +458,7 @@ class RaceSession {
       let da = Math.atan2(ty - car.y, tx - car.x) - car.a;
       while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
       const fwd = car.vx * Math.cos(car.a) + car.vy * Math.sin(car.a), dt = 1 / 60;
-      out.st = Math.max(-1, Math.min(1, da * 2.2)); out.th = 1; out.dr = 0; out.spd = Math.abs(fwd);
+      out.st = Math.max(-1, Math.min(1, da * 2.2)); out.th = 1; out.dr = 0; out.spd = Math.abs(fwd); out.ha = car.a + da;
       if (A.rev > 0) { A.rev -= dt; out.th = -1; out.st = -out.st; return out; }
       A.slow = Math.abs(fwd) < 70 ? (A.slow || 0) + dt : 0;
       if (A.slow > 1) { A.slow = 0; A.rev = 0.8; }
@@ -417,7 +477,7 @@ class RaceSession {
     const j = (bi + Math.round((90 + Math.max(0, fwd) * 0.38) / 32)) % n;
     let da = Math.atan2(L.y[j] - car.y, L.x[j] - car.x) - car.a;
     while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
-    out.st = Math.max(-1, Math.min(1, da * 2.6)); out.spd = spd; out.th = 1; out.dr = 0;
+    out.st = Math.max(-1, Math.min(1, da * 2.6)); out.spd = spd; out.th = 1; out.dr = 0; out.ha = car.a + da;
     // brake for the slowest bend within braking distance
     let target = st.top * (car.boostT > 0 ? car.boostP : 1);
     for (let k = 0, dist = 0; dist < fwd * 1.2 + 260 && k < n; k++) { const i = (bi + k) % n, allow = Math.sqrt(vmax[i] ** 2 + 2 * 1050 * dist); if (allow < target) target = allow; dist += 32; }
@@ -455,6 +515,8 @@ class RaceSession {
         break;
       }
       case 'rs': if (e[1] === meId) play('respawn'); break;
+      case 'reset': if (e[1] === meId) { play('reset'); H.banner('BACK ON TRACK', '', '#5ff4ff', 1); } break;
+      case 'tut': if (this.tut) this.tut.event(tutStep(e)); break;
       case 'hit': if (e[1] === meId) play('hit'); else if (e[2] === meId) play('hit', 0.5); break;
       case 'shield': play('shieldpop', fall(e[1])); break;
       case 'steal':
