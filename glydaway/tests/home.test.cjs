@@ -1,7 +1,9 @@
 // Home screen checks for Glydaway: run with `node glydaway/tests/home.test.cjs` (needs Playwright with
 // WebKit, Chromium and Firefox). Layout on iPhone SE / 15 / 17 Pro Max / iPad in both orientations, in
 // Safari and as a home-screen app (with the notch / Dynamic Island / home-bar safe areas), plus the
-// tutorial, keyboard hint, one-time tips, the board, takeoff, planes and frame rate on all three engines.
+// tutorial, keyboard hint, one-time tips, the first-launch name prompt, the board, takeoff, planes and
+// frame rate on all three engines. (Since Juwon's update the home screen shows the autopilot's run in the
+// open sky above the runway instead of a big hovering hero; the menu's buttons still sit below the runway.)
 // SHOTS=<dir> also saves a screenshot of every layout.
 const { webkit, chromium, firefox, devices } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path');
@@ -20,6 +22,7 @@ const ok = (c, m) => { console.log(`${c ? 'PASS' : 'FAIL'}  ${m}`); if (!c) fail
 const SEED = () => { try {
   localStorage.setItem('glydaway.tutDone', 'true'); localStorage.setItem('glydaway.sidewaysTold', 'true');
   localStorage.setItem('glydaway.best', '{"m":1234,"coins":87}'); localStorage.setItem('glydaway.skins', '["volt","airport","paris","nyc","tokyo"]');
+  localStorage.setItem('glydaway.name', '"TestPilot"');
 } catch (e) {} };
 async function open(ctx, { seed = true, q = '' } = {}) {
   if (seed) await ctx.addInitScript(SEED);
@@ -48,18 +51,16 @@ async function layout(p, tag, inset) {
   const r = await p.evaluate(() => {
     const box = el => { const b = el.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; };
     const vis = el => el && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().height > 0;
-    const pick = { coins: '.stat-pill.coins', best: '.stat-pill.dist', title: '.logo', tagline: '.tagline', board: '#board', hero: '#heroBtn',
+    const pick = { coins: '.stat-pill.coins', best: '.stat-pill.dist', title: '.logo', tagline: '.tagline', board: '#board',
       play: '#playBtn', lb: '#lbBtn1', locker: '#skinBtn', settings: '#setBtn1', kb: '.kb-hint', tip: '#sideTip', credit: '.credit-foot' };
     const els = {};
     for (const [k, sel] of Object.entries(pick)) { const el = document.querySelector('#startScreen ' + sel); if (vis(el)) els[k] = box(el); }
     const cs = getComputedStyle(document.documentElement), px = v => parseFloat(cs.getPropertyValue(v)) || 0;
     const clipped = [...document.querySelectorAll('#startScreen .nav-btn span, #startScreen .board, #startScreen .stat-pill, #startScreen #playBtn')]
       .filter(e => e.scrollWidth > e.clientWidth + 1 || (e.closest('.nav-btn') && e.getBoundingClientRect().right > e.closest('.nav-btn').getBoundingClientRect().right + 0.5)).map(e => e.id || e.className || e.textContent);
-    const area = document.getElementById('homeHero').getBoundingClientRect();
-    const g = __glyd, inGame = 26 * 1.45 * g.view.scale;
-    return { els, vw: innerWidth, vh: innerHeight, safe: [px('--sat'), px('--sar'), px('--sab'), px('--sal')], clipped, ground: area.bottom,
-      heroX: els.hero ? els.hero.w / inGame : 0, chips: document.querySelectorAll('#startScreen .chip').length,
-      credit: document.querySelector('#startScreen .credit-foot').textContent, world: g.S.obstacles.length + g.S.coinList.length + g.S.pickups.length };
+    const area = document.getElementById('homeSky').getBoundingClientRect();
+    return { els, vw: innerWidth, vh: innerHeight, safe: [px('--sat'), px('--sar'), px('--sab'), px('--sal')], clipped, ground: area.bottom, sky: area.height,
+      chips: document.querySelectorAll('#startScreen .chip').length, credit: document.querySelector('#startScreen .credit-foot').textContent };
   });
   const [st, sr, sb, sl] = r.safe, names = Object.keys(r.els);
   const out = names.filter(k => { const b = r.els[k]; return b.x < sl - 0.5 || b.y < st - 0.5 || b.x + b.w > r.vw - sr + 0.5 || b.y + b.h > r.vh - sb + 0.5; });
@@ -69,14 +70,13 @@ async function layout(p, tag, inset) {
   ok(!hits.length, `${tag}: nothing overlaps ${hits.join(' ')}`);
   ok(!r.clipped.length, `${tag}: no clipped text ${r.clipped.join(',')}`);
   const below = ['play', 'lb', 'locker', 'settings'].filter(k => r.els[k] && r.els[k].y < r.ground - 0.5);
-  ok(!below.length && r.els.hero.y + r.els.hero.h <= r.ground + 0.5, `${tag}: buttons sit on the tarmac below the runway line, the hero above it ${below.join(',')}`);
-  ok(r.world === 0, `${tag}: no hazards, coins or power-ups behind the menu`);
-  ok(r.heroX >= 2.2, `${tag}: hero is ${r.heroX.toFixed(1)}x its in-game size`);
+  ok(!below.length, `${tag}: buttons sit on the tarmac below the runway line ${below.join(',')}`);
+  ok(r.sky >= 60, `${tag}: open sky over the runway for the background run (${Math.round(r.sky)} px)`);
   ok(r.chips === 0, `${tag}: no how-to chips on the home screen`);
   ok(r.credit === CREDIT, `${tag}: credit line exact`);
   if (r.vw > r.vh) {
     const mid = r.vw / 2;
-    ok(['title', 'board', 'hero'].every(k => r.els[k].x + r.els[k].w <= mid + 1) && ['play', 'lb', 'locker', 'settings'].every(k => r.els[k].x >= mid - 1), `${tag}: title + hero on the left, PLAY + buttons on the right`);
+    ok(['title', 'board'].every(k => r.els[k].x + r.els[k].w <= mid + 1) && ['play', 'lb', 'locker', 'settings'].every(k => r.els[k].x >= mid - 1), `${tag}: title on the left, PLAY + buttons on the right`);
   }
   return r;
 }
@@ -95,15 +95,20 @@ async function layout(p, tag, inset) {
     await ctx.close();
   }
 
-  // ----- touch phone: no keyboard hint; the sideways tip once; tutorial by touch; hero opens the Locker Room -----
+  // ----- touch phone: name prompt once; no keyboard hint; the sideways tip once; tutorial by touch -----
   {
     const ctx = await wk.newContext({ ...devices['iPhone 15'] });
     await ctx.addInitScript(() => localStorage.setItem('glydaway.best', '{"m":40,"coins":3}'));
     let p = await open(ctx, { seed: false });
+    ok(await p.evaluate(() => document.getElementById('nameScreen').classList.contains('show')), 'iPhone: the first launch asks for a player name');
+    await p.fill('#nameIn', 'Sky Pilot'); await p.tap('#nameForm button[type=submit]'); await p.waitForTimeout(300);
+    ok(await p.evaluate(() => document.getElementById('nameScreen').classList.contains('show') && document.getElementById('nameErr').textContent.length > 0), 'name prompt: refuses a name with a space');
+    await p.fill('#nameIn', 'SkyPilot'); await p.tap('#nameForm button[type=submit]'); await p.waitForTimeout(400);
+    ok(await p.evaluate(() => document.getElementById('startScreen').classList.contains('show') && localStorage.getItem('glydaway.name') === '"SkyPilot"'), 'name prompt: a valid name is saved and the home screen shows');
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('.kb-hint')).display === 'none'), 'iPhone: keyboard hint hidden on a touch device');
     ok(await p.evaluate(() => getComputedStyle(document.getElementById('sideTip')).display !== 'none'), 'iPhone: "turn sideways" tip shows on the first launch');
-    await p.tap('#heroBtn'); await p.waitForTimeout(300);
-    ok(await p.evaluate(() => document.getElementById('skinScreen').classList.contains('show')), 'iPhone: tapping the hero opens the Locker Room');
+    await p.tap('#skinBtn'); await p.waitForTimeout(300);
+    ok(await p.evaluate(() => document.getElementById('skinScreen').classList.contains('show')), 'iPhone: LOCKER ROOM opens the Locker Room');
     await p.tap('#skinClose'); await p.waitForTimeout(300);
     await p.tap('#playBtn', { force: true }); await p.waitForTimeout(400);
     ok(await p.evaluate(() => document.getElementById('tutScreen').classList.contains('show')) && await mode(p) === 'menu', 'iPhone: the first PLAY opens the tutorial, not a run');
@@ -124,6 +129,7 @@ async function layout(p, tag, inset) {
     ok(await mode(p) === 'play' && await p.evaluate(() => localStorage.getItem('glydaway.tutDone') === 'true'), 'tutorial: LET\'S FLY takes off into the run, and it\'s remembered');
     await p.reload(); await p.waitForTimeout(300); await p.evaluate(() => document.getElementById('splash').classList.add('gone')); await p.waitForTimeout(400);
     ok(await p.evaluate(() => getComputedStyle(document.getElementById('sideTip')).display === 'none'), 'iPhone: the sideways tip never shows again');
+    ok(await p.evaluate(() => !document.getElementById('nameScreen').classList.contains('show')), 'iPhone: the name prompt never shows again');
     await p.tap('#playBtn', { force: true }); await p.waitForTimeout(150);
     ok(await p.evaluate(() => !document.getElementById('tutScreen').classList.contains('show') && __glyd.home.launching), 'second PLAY: no tutorial, the hero takes off');
     await ctx.close();
@@ -138,7 +144,7 @@ async function layout(p, tag, inset) {
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('.kb-hint')).display !== 'none'), `${name}: keyboard hint shows with a keyboard`);
     // the board shows real data
     const msgs = await p.evaluate(() => __glyd.boardMessages());
-    ok(JSON.stringify(msgs) === JSON.stringify([['NEXT FLIGHT', 'PARIS'], ['CITIES REACHED', '4 OF 13'], ['NEXT NEW CITY', 'LONDON']]), `${name}: board lines ${JSON.stringify(msgs)}`);
+    ok(JSON.stringify(msgs) === JSON.stringify([['NEXT FLIGHT', 'PARIS'], ['LEVELS REACHED', '4 OF 14'], ['NEXT NEW LEVEL', 'THE CLOUDS']]), `${name}: board lines ${JSON.stringify(msgs)}`);
     await p.waitForTimeout(900);
     ok(await p.evaluate(() => document.getElementById('boardV').textContent.includes('PARIS') && document.getElementById('boardK').textContent === 'NEXT FLIGHT'), `${name}: board flips to NEXT FLIGHT PARIS`);
     // a plane takes off, then the next one is 10-15 s later
@@ -164,7 +170,7 @@ async function layout(p, tag, inset) {
     ok(await p.evaluate(() => __glyd.home.launching && __glyd.S.mode === 'menu' && __glyd.S.speed > 0), `${name}: PLAY starts the takeoff`);
     await p.waitForTimeout(700);
     const run = await p.evaluate(() => [__glyd.S.mode, __glyd.S.dist, __glyd.S.speed, __glyd.home.camT]);
-    ok(run[0] === 'play' && run[1] >= 0 && run[1] < 400 && run[2] >= 280 && run[3] === 0, `${name}: takeoff hands over to the run (${run.map(v => typeof v === 'number' ? v.toFixed(0) : v).join(', ')})`);
+    ok(run[0] === 'play' && run[1] >= 0 && run[1] < 400 && run[2] >= 240 && run[3] === 0, `${name}: takeoff hands over to the run (${run.map(v => typeof v === 'number' ? v.toFixed(0) : v).join(', ')})`);
     await p.waitForTimeout(1500);
     ok(await p.evaluate(() => __glyd.S.obstacles.length > 0 && __glyd.S.dist > 300), `${name}: the run plays as before`);
     ok(!p.errs.length, `${name}: no page errors ${p.errs.join(' | ')}`);
