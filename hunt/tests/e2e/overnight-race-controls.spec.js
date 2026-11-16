@@ -52,13 +52,13 @@ test('tutorial overlay: one big prompt per step (touch and keys words), progress
     const feed = (e) => { const row = T.evRow(e); if (row && row[0] === 'tut') tut.event(T.tutStep(row)); };
     tut.prompt(false); out.push(tut.state());
     tut.prompt(true); out.push(tut.state()); // a keyboard player: keys in the words
-    feed({ k: 'tut', step: 'steer' }); tut.prompt(false); out.push(tut.state());
+    feed({ k: 'tut', id: 1, step: 'steer' }); tut.prompt(false); out.push(tut.state());
     feed(['tut', 'drift']); tut.prompt(false); out.push(tut.state());
     feed(['tut', 'drift']); // a repeat changes nothing
     feed(['tut', 7, 'item']); tut.prompt(true); out.push(tut.state());
     const skipBox = root.querySelector('.rc-skip').getBoundingClientRect(), card = root.querySelector('.rc-tc').getBoundingClientRect();
     root.querySelector('.rc-skip').click();
-    feed({ k: 'tut', step: 'fire' }); feed({ k: 'tut', step: 'done' });
+    feed({ k: 'tut', id: 1, step: 'fire' }); feed({ k: 'tut', id: 1, step: 'done' });
     out.push(tut.state());
     const ready = root.querySelector('.rc-ready');
     const readyShown = getComputedStyle(ready).display !== 'none', skipShown = getComputedStyle(root.querySelector('.rc-skip')).display !== 'none';

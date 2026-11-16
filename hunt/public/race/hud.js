@@ -263,15 +263,25 @@ export class Hud {
   joystick(g, S, u) {
     const s = S.ctrl.stick, held = s.id != null, R = s.r;
     const ox = held ? s.ox : s.cx, oy = held ? s.oy : s.cy;
-    g.beginPath(); g.arc(ox, oy, R, 0, TAU); g.fillStyle = held ? 'rgba(27,16,51,0.42)' : 'rgba(27,16,51,0.32)'; g.fill();
-    g.lineWidth = 7; g.strokeStyle = INK; g.stroke();
-    g.beginPath(); g.arc(ox, oy, R - 4, 0, TAU); g.lineWidth = 4; g.strokeStyle = held ? '#5ff4ff' : 'rgba(95,244,255,0.85)'; g.stroke();
-    // four little chevrons on the rim: it goes every way
-    g.fillStyle = 'rgba(255,255,255,0.75)';
-    for (let i = 0; i < 4; i++) {
-      const a = (i * Math.PI) / 2, c = Math.cos(a), sn = Math.sin(a), d = R - 15, w = 7;
-      g.beginPath(); g.moveTo(ox + c * (d + 6), oy + sn * (d + 6)); g.lineTo(ox + c * d - sn * w, oy + sn * d + c * w); g.lineTo(ox + c * d + sn * w, oy + sn * d - c * w); g.closePath(); g.fill();
+    // the ring and its chevrons never change shape: drawn once per size into a sprite
+    const key = R * 100 + S.dpr * 10 + (held ? 1 : 0);
+    let spr = this.ring && this.ring.get(key);
+    if (!spr) {
+      (this.ring ||= new Map()).set(key, (spr = document.createElement('canvas')));
+      const e = R + 6, d0 = S.dpr; spr.width = spr.height = Math.ceil(2 * e * d0); spr.e = e;
+      const c = spr.getContext('2d'); c.scale(d0, d0); c.translate(e, e);
+      c.beginPath(); c.arc(0, 0, R, 0, TAU); c.fillStyle = held ? 'rgba(27,16,51,0.42)' : 'rgba(27,16,51,0.32)'; c.fill();
+      c.lineWidth = 7; c.strokeStyle = INK; c.stroke();
+      c.beginPath(); c.arc(0, 0, R - 4, 0, TAU); c.lineWidth = 4; c.strokeStyle = held ? '#5ff4ff' : 'rgba(95,244,255,0.85)'; c.stroke();
+      // four little chevrons on the rim: it goes every way
+      c.fillStyle = 'rgba(255,255,255,0.75)';
+      for (let i = 0; i < 4; i++) {
+        const a = (i * Math.PI) / 2, co = Math.cos(a), sn = Math.sin(a), d = R - 15, w = 7;
+        c.beginPath(); c.moveTo(co * (d + 6), sn * (d + 6)); c.lineTo(co * d - sn * w, sn * d + co * w); c.lineTo(co * d + sn * w, sn * d - co * w); c.closePath(); c.fill();
+      }
+      if (this.ring.size > 8) this.ring.delete(this.ring.keys().next().value);
     }
+    g.drawImage(spr, ox - spr.e, oy - spr.e, spr.e * 2, spr.e * 2);
     // the hint (first races, and the tutorial's steering step): a ghost thumb swipes the knob
     let kx = held ? s.x : ox, ky = held ? s.y : oy;
     if (!held && S.hint > 0) {

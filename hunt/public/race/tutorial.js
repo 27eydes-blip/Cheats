@@ -14,7 +14,8 @@ export const TUT_TEXT = {
 export const TUT_FLAG = 'hunt-race-tut', STEER_FLAG = 'hunt-race-steered';
 export const flag = (k) => { try { return localStorage.getItem(k) === '1'; } catch { return false; } };
 export const setFlag = (k) => { try { localStorage.setItem(k, '1'); } catch {} };
-// snapshot events are rows ['kind', ...]; newer ones may come as {k, id, step}: one shape for both
+// snapshot events are rows ['kind', ...]; the newer ones are objects ({k:'reset', id, auto},
+// {k:'nudge', id}, {k:'tut', id, step}): one shape for both
 export const evRow = (e) => (Array.isArray(e) ? e : e && e.k ? [e.k, e.id ?? e.step, e.step] : null);
 // the step named by a 'tut' row: ['tut', step] or ['tut', id, step]
 export const tutStep = (e) => (typeof e[1] === 'string' ? e[1] : e[2]);
@@ -54,6 +55,12 @@ export class Tutorial {
     const last = this.step >= TUT_STEPS.length;
     this.o.onStep?.(step, last);
     if (last) this.readyAt = 1.2; // the server's 'done' normally comes with it
+  }
+  // the server's current step (md.tut): catches up if an event was missed (e.g. after a reconnect)
+  sync(name) {
+    if (name === 'done') { this.ready(); return; }
+    const i = TUT_STEPS.indexOf(name);
+    if (i > this.step && !this.shown) { this.step = i; this.key = ''; }
   }
   tick(dt) { if (this.readyAt > 0 && (this.readyAt -= dt) <= 0) this.ready(); }
   get id() { return TUT_STEPS[this.step] || null; }

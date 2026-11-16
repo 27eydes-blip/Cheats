@@ -25,7 +25,7 @@ export class Controls {
     this.stick = { id: null, cx: 0, cy: 0, r: 70, ox: 0, oy: 0, x: 0, y: 0, ha: 0, hm: 0, v: 0, held: false };
     this.touches = new Map(); // identifier -> role
     this.keys = new Set();
-    this.out = { st: 0, th: 1, dr: 0, ha: undefined, hm: 0 };
+    this.out = { st: 0, th: 1, dr: 0, ha: null, hm: 0 };
     this.fireQ = 0; this.itemQ = 0; this.resetQ = 0;
     this.mode = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window ? 'touch' : 'keys';
     this.kSteer = 0; this.pad = false; this.padPrev = 0; this.enabled = true;
@@ -164,7 +164,7 @@ export class Controls {
   // without ha steering still drives the same way.
   poll(dt, heading = null) {
     const o = this.out, k = this.keys, sens = clamp(SETTINGS.raceSens ?? 1, 0.5, 1.5);
-    o.ha = undefined; o.hm = 0;
+    o.ha = null; o.hm = 0; // ha null: no heading steering (keys, gamepad), st as always
     if (this.mode === 'touch') {
       const s = this.stick;
       if (s.id != null && s.hm > 0) {

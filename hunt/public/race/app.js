@@ -129,7 +129,7 @@ class RaceSession {
       // screenshot / perf runs only: drive along the racing line (the touch tests drive for real)
       auto: (on = true, o = {}) => { s.auto = on ? { i: -1, fire: 0, ...o } : null; },
       // ha: the world heading the hint steers toward (the joystick direction), rev: backing off
-      hint: () => { const A = s.hintS || (s.hintS = { i: -1 }), h = s.pursuit(A); return { st: h.st, th: h.th, dr: h.dr, spd: h.spd, ha: h.ha, rev: A.rev > 0 }; },
+      hint: () => { const A = s.hintS || (s.hintS = { i: -1 }), h = s.pursuit(A); return { st: h.st, th: h.th, dr: h.dr, spd: h.spd, ha: h.hd, rev: A.rev > 0 }; },
     };
   }
 
@@ -378,8 +378,9 @@ class RaceSession {
       rc.setInput(inp);
       if (this.ctrl.takeFire()) rc.fire();
       if (this.ctrl.takeItem()) rc.useItem();
-      if (this.ctrl.takeReset() && this.resetOk && this.resetCd <= 0 && rc.phase === 'race') { this.resetCd = 3; if (rc.reset) rc.reset(); else rc.send({ t: 'reset' }); play('click'); }
-      if (this.resetCd > 0) this.resetCd -= dt;
+      if (this.ctrl.takeReset() && this.resetOk && this.resetCd <= 0 && rc.phase === 'race') { this.resetCd = 3; rc.reset(); play('click'); }
+      // the server's reset cooldown (me.rcd) when it sends one, else our own 3 s
+      if (rc.me && rc.me.rcd != null) this.resetCd = rc.me.rcd; else if (this.resetCd > 0) this.resetCd -= dt;
       rc.frame(now);
       const v = rc.view(now);
       if (!v) return;
@@ -406,7 +407,7 @@ class RaceSession {
     if (this.hintOn && racing && steering && (this.steerT += dt) > 1.2) { this.hintOn = false; setFlag(STEER_FLAG); }
     const want = (this.hintOn || (T && T.step === 0)) && !(T && T.shown);
     this.hintA = want ? Math.min(1, this.hintA + dt * 4) : Math.max(0, this.hintA - dt * 1.7);
-    if (T) { T.prompt(c.mode !== 'touch'); this.focus = T.focus(me); T.tick(dt); } else this.focus = null;
+    if (T) { if (v.hud && v.hud.tut) T.sync(v.hud.tut); T.prompt(c.mode !== 'touch'); this.focus = T.focus(me); T.tick(dt); } else this.focus = null;
     // stuck: the server's per-car `stuck` seconds (on `me`, or the 9th field of our car row)
     const row = rc.latest && rc.latest.c.find((r) => r[0] === rc.id);
     const st = me && me.stuck != null ? me.stuck : row && row.length > 8 ? row[8] : undefined;
@@ -458,7 +459,7 @@ class RaceSession {
       let da = Math.atan2(ty - car.y, tx - car.x) - car.a;
       while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
       const fwd = car.vx * Math.cos(car.a) + car.vy * Math.sin(car.a), dt = 1 / 60;
-      out.st = Math.max(-1, Math.min(1, da * 2.2)); out.th = 1; out.dr = 0; out.spd = Math.abs(fwd); out.ha = car.a + da;
+      out.st = Math.max(-1, Math.min(1, da * 2.2)); out.th = 1; out.dr = 0; out.spd = Math.abs(fwd); out.hd = car.a + da;
       if (A.rev > 0) { A.rev -= dt; out.th = -1; out.st = -out.st; return out; }
       A.slow = Math.abs(fwd) < 70 ? (A.slow || 0) + dt : 0;
       if (A.slow > 1) { A.slow = 0; A.rev = 0.8; }
@@ -477,7 +478,7 @@ class RaceSession {
     const j = (bi + Math.round((90 + Math.max(0, fwd) * 0.38) / 32)) % n;
     let da = Math.atan2(L.y[j] - car.y, L.x[j] - car.x) - car.a;
     while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
-    out.st = Math.max(-1, Math.min(1, da * 2.6)); out.spd = spd; out.th = 1; out.dr = 0; out.ha = car.a + da;
+    out.st = Math.max(-1, Math.min(1, da * 2.6)); out.spd = spd; out.th = 1; out.dr = 0; out.hd = car.a + da;
     // brake for the slowest bend within braking distance
     let target = st.top * (car.boostT > 0 ? car.boostP : 1);
     for (let k = 0, dist = 0; dist < fwd * 1.2 + 260 && k < n; k++) { const i = (bi + k) % n, allow = Math.sqrt(vmax[i] ** 2 + 2 * 1050 * dist); if (allow < target) target = allow; dist += 32; }
@@ -516,6 +517,7 @@ class RaceSession {
       }
       case 'rs': if (e[1] === meId) play('respawn'); break;
       case 'reset': if (e[1] === meId) { play('reset'); H.banner('BACK ON TRACK', '', '#5ff4ff', 1); } break;
+      case 'nudge': if (e[1] === meId) play('reset', 0.4); break; // the server eased us off a wall
       case 'tut': if (this.tut) this.tut.event(tutStep(e)); break;
       case 'hit': if (e[1] === meId) play('hit'); else if (e[2] === meId) play('hit', 0.5); break;
       case 'shield': play('shieldpop', fall(e[1])); break;
