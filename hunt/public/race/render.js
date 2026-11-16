@@ -33,7 +33,7 @@ function beamSprite() {
   g.fillStyle = gr; g.beginPath(); g.moveTo(0, h / 2 - 7); g.lineTo(w, 0); g.lineTo(w, h); g.lineTo(0, h / 2 + 7); g.closePath(); g.fill();
   return cv;
 }
-// screen-edge dusk: a purple / pink / blue tint toward the edges with a few far-off city lights,
+// screen-edge dusk: a purple / pink / blue tint along the edges with a few far-off city lights,
 // painted once per size and theme at a quarter of the resolution (it is all soft gradients)
 const DUSK = {
   desert: ['rgba(60,20,70,0.55)', 'rgba(255,120,90,0.22)', ['#ff7a5a', '#ffb347', '#c04dff']],
@@ -45,9 +45,12 @@ function duskSprite(W, H, world) {
   const D = DUSK[world] || DUSK.desert, w = Math.max(8, Math.round(W / 4)), h = Math.max(8, Math.round(H / 4));
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   const g = cv.getContext('2d');
-  const r = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.hypot(w, h) * 0.56);
-  r.addColorStop(0, 'rgba(0,0,0,0)'); r.addColorStop(1, D[0]);
-  g.fillStyle = r; g.fillRect(0, 0, w, h);
+  // edge bands that fade out before the middle box (x 0.2-0.8, y 0.3-0.75), which stays clear and is never drawn
+  const band = (x0, y0, x1, y1, rx, ry, rw, rh) => { const gr = g.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, D[0]); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(rx, ry, rw, rh); };
+  band(0, 0, 0, h * 0.3, 0, 0, w, h * 0.3);
+  band(0, h, 0, h * 0.75, 0, h * 0.75, w, h * 0.25);
+  band(0, 0, w * 0.2, 0, 0, 0, w * 0.2, h);
+  band(w, 0, w * 0.8, 0, w * 0.8, 0, w * 0.2, h);
   const top = g.createLinearGradient(0, 0, 0, h * 0.3);
   top.addColorStop(0, D[1]); top.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = top; g.fillRect(0, 0, w, h * 0.3);
@@ -281,7 +284,12 @@ export class RaceRenderer {
     // dusk at the screen edges (one cached quarter-resolution image)
     g.setTransform(1, 0, 0, 1, 0, 0);
     if (!this.dusk) this.dusk = duskSprite(W, H, T.world);
-    g.drawImage(this.dusk, 0, 0, this.cv.width, this.cv.height);
+    // only the bands where the tint is visible (the middle of the screen stays clear): less fill
+    const dk = this.dusk, dw = dk.width, dh = dk.height, cw = this.cv.width, ch = this.cv.height;
+    g.drawImage(dk, 0, 0, dw, dh * 0.3, 0, 0, cw, ch * 0.3);
+    g.drawImage(dk, 0, dh * 0.75, dw, dh * 0.25, 0, ch * 0.75, cw, ch * 0.25);
+    g.drawImage(dk, 0, dh * 0.3, dw * 0.2, dh * 0.45, 0, ch * 0.3, cw * 0.2, ch * 0.45);
+    g.drawImage(dk, dw * 0.8, dh * 0.3, dw * 0.2, dh * 0.45, cw * 0.8, ch * 0.3, cw * 0.2, ch * 0.45);
   }
 
   // animated bits of the track: lava glow, neon flicker, pads, hazards, item boxes

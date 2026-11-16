@@ -282,62 +282,80 @@ export function drawCar(g, id, look = null, t = 0) {
   noGlow(g);
 }
 
-// cache: per look, per pixel scale, one canvas per angle bucket (built lazily); animated looks get
-// two pattern layers per bucket (.pa, .pb)
+// cache: per look and pixel scale, ONE atlas canvas with a cell per angle bucket (8 x 4 cells).
+// The car is drawn in full detail (neon glow baked with shadowBlur) only ONCE per look, into
+// unrotated master canvases (dark base, neon, pattern layers); a heading cell is then just the
+// masters rotated into place plus the top-left gloss: cheap enough to build while racing. One
+// texture per look instead of 32 keeps the GPU's work and memory flat.
+const COLS = 8, MS = 1.5; // masters are drawn 1.5x finer than the cells so rotating them stays crisp
 export class CarSprites {
   constructor() { this.scale = 0; this.map = new Map(); }
   setScale(s) { if (Math.abs(s - this.scale) > 0.01) { this.scale = s; this.map.clear(); } }
-  // look: a look object (looks.js) or a driver id
+  // look: a look object (looks.js) or a driver id. Returns a sprite {cv, sx, sy, px, ang, half, pa, pb}.
   get(look, a) {
     const L = asLook(look);
     let arr = this.map.get(L.sprite);
     if (!arr) {
       if (this.map.size >= 24) this.map.clear(); // more looks than a race can have: start over
-      arr = new Array(BUCKETS).fill(null); this.map.set(L.sprite, arr);
+      arr = this.masters(L); this.map.set(L.sprite, arr);
     }
     let b = Math.round((a / (Math.PI * 2)) * BUCKETS) % BUCKETS;
     if (b < 0) b += BUCKETS;
-    return arr[b] || (arr[b] = this.build(L, b));
+    return arr[b] || (arr[b] = this.build(b, arr));
   }
-  canvas(px) { const cv = document.createElement('canvas'); cv.width = cv.height = px; return cv; }
-  build(L, b) {
-    const s = this.scale, px = Math.ceil(HALF * 2 * s), cv = this.canvas(px);
-    const g = cv.getContext('2d'), ang = (b / BUCKETS) * Math.PI * 2;
-    SB = s;
-    g.setTransform(s, 0, 0, s, px / 2, px / 2);
-    g.save(); g.rotate(ang); drawLayers(g, L, true, false); g.restore();
-    // gloss lit from the top left, the same at every heading (that is why sprites are per bucket)
-    g.globalCompositeOperation = 'source-atop';
-    const gr = g.createLinearGradient(-HALF * 0.5, -HALF * 0.5, HALF * 0.4, HALF * 0.4);
-    gr.addColorStop(0, 'rgba(255,255,255,0.22)'); gr.addColorStop(0.42, 'rgba(255,255,255,0.03)'); gr.addColorStop(0.5, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,10,0.3)');
-    g.fillStyle = gr; g.fillRect(-HALF, -HALF, HALF * 2, HALF * 2);
-    g.globalCompositeOperation = 'source-over';
-    g.save(); g.rotate(ang); drawLayers(g, L, false, true); g.restore();
-    noGlow(g);
-    cv.ang = ang; cv.half = HALF; cv.pa = null; cv.pb = null;
+  canvas(w, h) { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; return cv; }
+  masters(L) {
+    const arr = new Array(BUCKETS).fill(null), px = Math.ceil(HALF * 2 * this.scale), m = Math.ceil(HALF * 2 * this.scale * MS), ms = this.scale * MS;
+    const layer = (fn) => { const cv = this.canvas(m, m), g = cv.getContext('2d'); SB = ms; g.setTransform(ms, 0, 0, ms, m / 2, m / 2); fn(g); noGlow(g); return cv; };
+    arr.base = layer((g) => drawLayers(g, L, true, false));
+    arr.neon = layer((g) => drawLayers(g, L, false, true));
+    arr.atlas = this.canvas(px * COLS, px * (BUCKETS / COLS));
     if (L.pattern !== 'none') {
       const def = carDef(L.driver);
-      for (const k of [0, 1]) {
-        const c2 = this.canvas(px), g2 = c2.getContext('2d');
-        g2.setTransform(s, 0, 0, s, px / 2, px / 2); g2.rotate(ang);
-        patternLayer(g2, def, L, k); noGlow(g2);
-        if (k) cv.pb = c2; else cv.pa = c2;
-      }
+      arr.mpa = layer((g) => patternLayer(g, def, L, 0)); arr.mpb = layer((g) => patternLayer(g, def, L, 1));
+      arr.pa = this.canvas(px * COLS, px * (BUCKETS / COLS)); arr.pb = this.canvas(px * COLS, px * (BUCKETS / COLS));
     }
-    return cv;
+    return arr;
+  }
+  build(b, arr) {
+    const s = this.scale, px = Math.ceil(HALF * 2 * s), sx = (b % COLS) * px, sy = Math.floor(b / COLS) * px, ang = (b / BUCKETS) * Math.PI * 2;
+    const put = (atlas, master, gloss) => {
+      const g = atlas.getContext('2d');
+      g.setTransform(1, 0, 0, 1, 0, 0); g.save(); g.beginPath(); g.rect(sx, sy, px, px); g.clip();
+      g.setTransform(s, 0, 0, s, sx + px / 2, sy + px / 2);
+      g.save(); g.rotate(ang); g.drawImage(master, -HALF, -HALF, HALF * 2, HALF * 2); g.restore();
+      if (gloss) {
+        // gloss lit from the top left, the same at every heading (that is why cells are per bucket)
+        g.globalCompositeOperation = 'source-atop';
+        g.fillStyle = gloss; g.fillRect(-HALF, -HALF, HALF * 2, HALF * 2);
+        g.globalCompositeOperation = 'source-over';
+        g.save(); g.rotate(ang); g.drawImage(arr.neon, -HALF, -HALF, HALF * 2, HALF * 2); g.restore();
+      }
+      g.restore();
+    };
+    put(arr.atlas, arr.base, glossOf(arr.atlas.getContext('2d')));
+    if (arr.pa) { put(arr.pa, arr.mpa, null); put(arr.pb, arr.mpb, null); }
+    return { cv: arr.atlas, sx, sy, px, ang, half: HALF, pa: arr.pa || null, pb: arr.pb || null };
   }
 }
+// the gloss gradient (car-centred coordinates), made once per context
+function glossOf(g) {
+  if (g.gloss) return g.gloss;
+  const gr = g.createLinearGradient(-HALF * 0.5, -HALF * 0.5, HALF * 0.4, HALF * 0.4);
+  gr.addColorStop(0, 'rgba(255,255,255,0.22)'); gr.addColorStop(0.42, 'rgba(255,255,255,0.03)'); gr.addColorStop(0.5, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,10,0.3)');
+  return (g.gloss = gr);
+}
 
-// draw a cached sprite with the car at the origin of the current transform, heading a, with its
-// animated pattern at time t (the caller's transform already holds the car position)
+// draw a cached sprite with the car at the origin of the current transform (the caller's
+// transform holds the car position and the leftover rotation), with its animated pattern at t
 export function blitCar(g, spr, t, steady) {
-  const half = spr.half;
-  g.drawImage(spr, -half, -half, half * 2, half * 2);
+  const h = spr.half, px = spr.px;
+  g.drawImage(spr.cv, spr.sx, spr.sy, px, px, -h, -h, h * 2, h * 2);
   if (spr.pa) {
     const ga = g.globalAlpha, m = patternMix(t, steady);
     g.globalCompositeOperation = 'lighter';
-    g.globalAlpha = ga * m; g.drawImage(spr.pa, -half, -half, half * 2, half * 2);
-    g.globalAlpha = ga * (1 - m); g.drawImage(spr.pb, -half, -half, half * 2, half * 2);
+    g.globalAlpha = ga * m; g.drawImage(spr.pa, spr.sx, spr.sy, px, px, -h, -h, h * 2, h * 2);
+    g.globalAlpha = ga * (1 - m); g.drawImage(spr.pb, spr.sx, spr.sy, px, px, -h, -h, h * 2, h * 2);
     g.globalAlpha = ga; g.globalCompositeOperation = 'source-over';
   }
 }
@@ -380,7 +398,7 @@ export function drawUnderglow(g, L, t, k = 1, steady = false) {
 // preview sprite caches per pixel scale (cards and the big store preview use different sizes)
 const previewSprites = new Map();
 function previewCache(px) {
-  const s = Math.max(1, Math.min(6, Math.ceil(px * 2) / 2));
+  const s = Math.max(1, Math.min(4, Math.ceil(px * 2) / 2)); // atlas width stays under 3000 px
   let c = previewSprites.get(s);
   if (!c) { if (previewSprites.size >= 4) previewSprites.clear(); c = new CarSprites(); c.setScale(s); previewSprites.set(s, c); }
   return c;
