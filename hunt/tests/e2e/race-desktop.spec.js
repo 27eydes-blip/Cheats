@@ -28,11 +28,11 @@ test('desktop keyboard race, menu and finish screen', async ({ page, browserName
   await page.mouse.click(640, 360);
   await page.waitForFunction(() => (window.__race.mine.arc || []).length > 0, null, { timeout: 5000 });
 
-  // drive: steer with arrows / A-D from the racing-line hint, W to throttle, S to brake, Shift to
-  // drift, J to fire, K for items
+  // drive: steer with arrows / A-D from the racing-line hint, W to throttle, S to brake, J to fire,
+  // K for items
   const held = new Set();
   const hold = async (code, on) => { if (on && !held.has(code)) { held.add(code); await page.keyboard.down(code); } else if (!on && held.has(code)) { held.delete(code); await page.keyboard.up(code); } };
-  let lastFire = 0, lastItem = 0, gave = false;
+  let lastFire = 0, lastItem = 0, gave = false, driftChecked = false;
   const t0 = Date.now();
   while (Date.now() - t0 < 120_000) {
     const h = await page.evaluate(() => { const r = window.__race, me = r.rc.me, s = r.rc.car ? r.hint() : { st: 0, th: 1, dr: 0 }; return { ...s, tm: r.rc.latest.tm, fin: me.fin, it: me.it, phase: r.rc.phase }; });
@@ -43,7 +43,14 @@ test('desktop keyboard race, menu and finish screen', async ({ page, browserName
     if (h.st >= -0.12) { await hold('ArrowLeft', false); await hold('KeyA', false); }
     await hold('KeyW', h.th > 0);
     await hold('KeyS', h.th < 0);
-    await hold('ShiftLeft', !!h.dr);
+    // Shift = drift: checked once on a straight (bang-bang arrow steering can't hold a drift well)
+    if (!driftChecked && h.tm > 3) {
+      await hold('ShiftLeft', true);
+      await expect.poll(() => page.evaluate(() => window.__race.rc.held.dr)).toBe(1);
+      await hold('ShiftLeft', false);
+      await expect.poll(() => page.evaluate(() => window.__race.rc.held.dr)).toBe(0);
+      driftChecked = true;
+    }
     if (h.tm - lastFire > 2) { await page.keyboard.press('KeyJ'); lastFire = h.tm; }
     if (h.tm > 4 && h.it < 0 && !gave) { await page.evaluate(() => window.__race.dev('item', 'shield')); gave = true; }
     if (h.it >= 0 && h.tm - lastItem > 1) { await page.keyboard.press('KeyK'); lastItem = h.tm; }
@@ -51,6 +58,7 @@ test('desktop keyboard race, menu and finish screen', async ({ page, browserName
   }
   for (const k of [...held]) await hold(k, false);
   const mine = await page.evaluate(() => Object.fromEntries(Object.entries(window.__race.mine).map(([k, v]) => [k, v.length])));
+  expect(driftChecked).toBe(true);
   expect(mine.lap, 'laps counted').toBeGreaterThanOrEqual(1);
   expect(mine.fin, 'finished').toBe(1);
   expect(mine.use, 'used an item with K').toBeGreaterThan(0);

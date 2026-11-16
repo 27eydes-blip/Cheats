@@ -210,3 +210,22 @@ weapons, bounty), `race-modes` (all 4 modes, bots on/off), `race-bots` (every dr
 track, 10-bot races finish, 2 ms tick budget), `race-results` (progression), `race-room` (the
 Durable Objects end to end with two `RaceClient`s over a laggy link; harness in
 `test/race-harness.js`).
+
+## Race client (what the player sees): `public/race/app.js`
+
+```js
+import { startRace } from './race/app.js';
+const race = startRace({ mode, track, driver, room, bots, token, name, lobby, best, onExit: ({ left }) => showLobby() });
+```
+
+One call opens a full-screen race layer (its own canvas, the pre-race card, pause menu, finish
+screen and the "Created by Sam Eyde III" credit on top of everything) and calls `onExit` when the
+player picks LOBBY / LEAVE RACE / CANCEL. RACE AGAIN restarts with the same options. `best` (optional)
+is the Time Trial best for the HUD. Files: `render.js` (camera, world), `trackart.js` (chunked track
+art, 4 themes), `cars.js` (6 vehicles, sprite cache), `fx.js` (particles, tire marks, effects),
+`hud.js`, `controls.js` (touch by identifier, keys by event.code, mouse, gamepad; left-handed
+mirror from the existing setting), `sound.js`, `race.css`.
+
+Temporary entry until the new lobby lands: `/?race=1[&mode=&track=&room=&bots=0|1&driver=]`.
+Local dev only (HUNT_DEV): `laps=1..3` for short room races, and `window.__race.dev('wreck' | 'item', id)`.
+`window.__race` also exposes `perf()`, `layout()`, `hint()` and `auto()` for the browser tests.

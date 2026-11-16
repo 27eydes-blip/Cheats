@@ -11,18 +11,19 @@
 // a looser mean (>= 42 fps): this box is shared with other test runs, and under that load the
 // software GPU process (SwiftShader) competes for the same cores, so the mean swings while the
 // median holds. On an idle box the mean is ~59 fps. Numbers are printed and attached.
-import { test, expect } from '@playwright/test';
+import { test, expect, chromium } from '@playwright/test';
 import { roomCode, raceUrl, waitPhase } from './race-helpers.js';
 
-test.use({ launchOptions: { args: ['--enable-gpu-rasterization', '--ignore-gpu-blocklist', '--enable-accelerated-2d-canvas', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } });
+const GPU_RASTER = ['--enable-gpu-rasterization', '--ignore-gpu-blocklist', '--enable-accelerated-2d-canvas', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
 
-test('60 fps at 667x375 with 10 cars and 4x CPU throttle', async ({ browser, browserName }) => {
+test('60 fps at 667x375 with 10 cars and 4x CPU throttle', async ({ browserName, baseURL }) => {
   test.skip(browserName !== 'chromium', 'CDP CPU throttling');
+  const browser = await chromium.launch({ args: GPU_RASTER });
   test.setTimeout(300_000);
   const rows = [];
   for (const track of ['desert', 'frozen', 'ashlands', 'neon']) {
     // a fresh phone per track
-    const ctx = await browser.newContext({ viewport: { width: 667, height: 375 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+    const ctx = await browser.newContext({ baseURL, viewport: { width: 667, height: 375 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
     const cdp = await ctx.newCDPSession(page);
     await page.goto(raceUrl({ room: roomCode('P'), bots: '1', track, laps: '3', lobby: '1.5' }));
@@ -45,5 +46,6 @@ test('60 fps at 667x375 with 10 cars and 4x CPU throttle', async ({ browser, bro
     expect(row.meanFps, `${track} mean fps`).toBeGreaterThanOrEqual(42);
     await ctx.close();
   }
+  await browser.close();
   await test.info().attach('fps.json', { body: JSON.stringify(rows, null, 2), contentType: 'application/json' });
 });
