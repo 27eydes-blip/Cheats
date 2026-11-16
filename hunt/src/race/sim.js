@@ -8,6 +8,7 @@ import { ITEMS, ITEM_IDS, rollItem, WEAPONS } from '../../public/race/items.js';
 import { FLAG, ENT, COUNTDOWN, RESPAWN_TIME, RACE_MODES } from '../../public/race/protocol.js';
 import { BOT_NAMES, rng } from '../../public/shared.js';
 import { botInput, levelForTrophies } from './bots.js';
+import { cosRow } from '../../public/race/garage.js';
 
 export { RACE_MODES };
 export const RACE_MAX = 10;
@@ -18,6 +19,7 @@ export const RACE_CAP = 300; // hard cap on a race (s)
 export const BOX_RESPAWN = 3;
 export const CREDIT_WINDOW = 4; // a wreck within 4 s of a hit is credited to the hitter
 export const COINS = { box: 1, lap: 2, takedown: 3 };
+export const HORN_GAP = 1.5; // seconds between two horns from one car
 export const ROOM_IDLE_SECS = 300; // a host-run friend room whose host never presses START starts by itself after 5 minutes
 const r2 = (v) => Math.round(v * 100) / 100;
 const r3 = (v) => Math.round(v * 1000) / 1000;
@@ -83,12 +85,22 @@ export class RaceSim {
       alive: true, respawnTick: 0, ghostT: 0, shieldT: 0, empT: 0, item: null, wcd: 0, lap: 0, cp: 0, maxLap: 0, prog: 0, rank: 0,
       finished: false, place: 0, finishTime: null, out: false, kills: 0, deaths: 0, steals: 0, mc: 0, lastHit: null,
       inp: { st: 0, th: 0, dr: 0 }, act: { f: 0, i: 0 }, queue: [], credits: 2, lastSeq: 0, lapStart: 0, lapTimes: [], bestLap: null,
-      ai: null, left: false, recorded: false, ep: 0, trophies: 0, account: null, secret: null,
+      ai: null, left: false, recorded: false, ep: 0, trophies: 0, account: null, secret: null, gar: null, honk: 0, hornAt: -1e9,
     };
     this.players.set(id, p);
     return p;
   }
-  rosterRow(p) { return [p.name, p.driver, p.wasBot ? 1 : 0]; }
+  // [name, driver, isBot, cosmetics]: the equipped store ids for the car they drive (garage.js
+  // cosRow, SLOTS order, 0 = default) so every client draws everyone's look. Draw-only data.
+  rosterRow(p) { return [p.name, p.driver, p.wasBot ? 1 : 0, p.gar ? cosRow(p.gar, p.driver) : 0]; }
+  // an account's saved cosmetics (owned + equipped per car), read by the room when the account loads
+  // (it can arrive after the race started: then everyone gets the updated roster row)
+  setGarage(id, prog) {
+    const p = this.players.get(id);
+    if (!p) return;
+    p.gar = { owned: Array.isArray(prog?.owned) ? prog.owned : [], race: { cos: prog?.race?.cos || {} } };
+    if (this.phase === 'play') this.broadcast({ t: 'ro', add: { [id]: this.rosterRow(p) } });
+  }
   rosterMsg() { const add = {}; for (const p of this.players.values()) add[p.id] = this.rosterRow(p); return { t: 'ro', add, full: 1 }; }
   broadcast(msg) { for (const p of this.players.values()) if (p.connected) this.send(p.id, msg); }
 
@@ -199,6 +211,7 @@ export class RaceSim {
     if (!p || !m) return;
     if (m.t === 'pick') return this.pick(p, m.driver);
     if (m.t === 'host') return this.hostCmd(p, m);
+    if (m.t === 'horn') { if (this.phase === 'play') p.honk = 1; return; } // applied in the next tick (rate-limited there)
     if (m.t !== 'in' || p.bot) return;
     const inp = cleanInput(m);
     inp.s = m.s >>> 0; inp.f = m.f ? 1 : 0; inp.i = m.i ? 1 : 0;
@@ -233,6 +246,11 @@ export class RaceSim {
     this.time = r3(this.time + DT);
     this.events = [];
     if (this.devQ && this.devQ.length) this.applyDev();
+    // HORN: an event for everyone (clients play it louder the closer they are), one per HORN_GAP
+    for (const p of this.players.values()) if (p.honk) {
+      p.honk = 0;
+      if (p.connected && !p.out && this.time - p.hornAt >= HORN_GAP) { p.hornAt = this.time; this.events.push(['horn', p.id]); }
+    }
     const go = this.time > 0;
     for (const p of this.players.values()) this.drive(p, go);
     if (go) {
