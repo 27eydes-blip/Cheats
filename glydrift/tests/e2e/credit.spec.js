@@ -66,7 +66,7 @@ test("credit: home screen shows \"Gleyde Technologies, LLC · Created by Sam Eyd
   expect(log.errors).toEqual([]);
 });
 
-test("creator credit: Settings has CREDITS with the creator and the copyright @smoke", async ({ page }, testInfo) => {
+test("creator credit: Settings has CREDITS with the creator, the producer and the copyright @smoke", async ({ page }, testInfo) => {
   test.skip(!PHONES.includes(profileOf(testInfo)), "every iPhone size");
   const log = await openGame(page);
   await settle(page, "Menu", 1200);
