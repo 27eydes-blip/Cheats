@@ -194,3 +194,22 @@ p { font-size: 16px; line-height: 1.35; margin: 6px 0; }
 .fade.on { opacity: 1; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--title); font-size: 26px; color: var(--cream); background: var(--ink); z-index: 60; text-align: center; }
 .loading small { display: block; margin-top: 10px; font-family: var(--head); font-size: 12px; letter-spacing: 1px; color: var(--cream2); }
+
+/* short screens (phones in landscape): compact intertitles so key content and credits fit */
+@media (max-height: 520px) {
+  .card { padding: 12px 18px; border-width: 24px; }
+  .title-logo { font-size: clamp(30px, 9vh, 52px); }
+  .title-logo span { margin-top: 2px; }
+  .subtitle { margin-top: 4px; font-size: 14px; }
+  .rule { margin: 6px auto; }
+  .menu { gap: 6px; margin-top: 8px; }
+  .btn { min-height: 40px; padding: 6px 14px; font-size: 15px; }
+  .btn .sub { display: none; }
+  .credits { margin-top: 8px; }
+  .screen.clear .card { width: min(100%, 720px); display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; align-items: center; }
+  .screen.clear .card > .title-logo, .screen.clear .card > .subtitle, .screen.clear .card > .rule { grid-column: 1; }
+  .screen.clear .card > .menu { grid-column: 2; grid-row: 1 / span 4; margin: 0; }
+  .screen.clear .card > div:not(.menu):not(.rule), .screen.clear .card > .credits { grid-column: 1 / span 2; }
+}
+.podium canvas { max-width: 96px; }
+.tile .t { padding-right: 52px; }
