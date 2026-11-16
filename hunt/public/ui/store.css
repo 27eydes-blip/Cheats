@@ -87,7 +87,13 @@ body.reduce-flash .st-svg.anim { animation: none; }
 #lobby.racing .tabbtn#rail_store .tabchip { background: var(--neo-cyan); }
 #lobby.racing .slot.me { background: radial-gradient(ellipse at 50% 70%, #24124a, #0d0a1c 75%); border-color: #07050f; box-shadow: var(--drop), inset 0 0 0 2px var(--car-neon, var(--neo-cyan)), 0 0 14px color-mix(in srgb, var(--car-neon, var(--neo-cyan)) 45%, transparent); }
 #lobby.racing .np-name { letter-spacing: .06em; text-shadow: 0 0 8px var(--car-neon, var(--neo-cyan)); }
-.dcard canvas { background: radial-gradient(ellipse at 50% 70%, #24124a, rgba(13,10,28,0) 75%); }
+/* driver select (racing): dark cards with a glowing edge in each car's neon, stat bars in that neon */
+.grid-cards.drivers .dcard { background: radial-gradient(ellipse at 50% 22%, #24124a, #0d0a1c 70%); border-color: #07050f; box-shadow: var(--drop), inset 0 0 0 2px var(--card-col), 0 0 12px color-mix(in srgb, var(--card-col) 45%, transparent); }
+.grid-cards.drivers .dcard .bc-name { color: #fff; text-shadow: 0 0 8px var(--card-col); }
+.grid-cards.drivers .dcard .dc-car { color: var(--card-col); }
+.grid-cards.drivers .dcard .dc-stats i { background: #2a2340; } .grid-cards.drivers .dcard .dc-stats b { background: var(--card-col); }
+.detail.driver .card-b { background: radial-gradient(ellipse at 30% 30%, #24124a, #0d0a1c 75%); box-shadow: var(--drop), inset 0 0 0 2px var(--card-col), 0 0 14px color-mix(in srgb, var(--card-col) 45%, transparent); }
+.ui-screen.neon .tier { padding: 4px; }
 
 /* ---------------------------------------------------------------- Hunt Pass, neon (racing) */
 .ui-screen.neon { background: radial-gradient(ellipse at 30% 20%, #2a1450 0%, #120a26 55%, #07050f 100%); }
