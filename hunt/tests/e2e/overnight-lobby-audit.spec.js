@@ -81,7 +81,6 @@ for (const [w, h] of [[320, 568], [375, 667], [390, 844], [412, 915], [430, 932]
       const out = { scrolls: pg.scrollHeight > pg.clientHeight + 1 || document.scrollingElement.scrollHeight > innerHeight + 1, creditOnScreen: credit.top >= 0 && credit.bottom <= tabs.top + 0.5 && credit.right <= innerWidth, stage: box('#stage').height };
       for (const s of ['#playBtn', '#rail_road', '#passBtn', '#npPower', '.slot.me']) {
         const b = box(s);
-        out[s + ':dbg'] = [up, dn, document.elementFromPoint(cx, cy - up - 1)?.className, document.elementFromPoint(cx, cy + dn + 1)?.className, b.height].join(' ');
         out[s] = { inView: b.left >= 0 && b.top >= 0 && b.right <= innerWidth + 0.5 && b.bottom <= tabs.top + 0.5, hitsCredit: over(b, credit), w: b.width, h: b.height };
         const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
         out[s].onTop = !!hit && document.querySelector(s).contains(hit);

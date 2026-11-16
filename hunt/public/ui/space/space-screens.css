@@ -39,3 +39,10 @@ body.sp-racing .ui-screen .tier { border-radius: 3px; }
 body.sp-racing .ui-screen .rw { border-radius: 3px; }
 /* the profile page inside the lobby */
 body.sp-racing #lobby .pg-profile { color: var(--sp-text, #e9f6ff); font-family: var(--font-ui); }
+/* lobby notices (new version / progress not saved): under the ticker, over the car pad, clear of
+   the top bar, the controls, the dock and the credit */
+body.sp-racing #notes { left: calc(env(safe-area-inset-left, 0px) + 8px); right: auto; top: calc(env(safe-area-inset-top, 0px) + 96px); align-items: flex-start; }
+@media (orientation: portrait) { body.sp-racing #notes { top: calc(env(safe-area-inset-top, 0px) + 152px); max-width: calc(100vw - 16px); } }
+body.sp-racing .note { font-family: var(--sp-display, "Chakra Petch", system-ui, sans-serif); font-weight: 700; letter-spacing: .04em; border: 1px solid rgba(52,231,255,.6); border-radius: 3px; box-shadow: 0 0 12px rgba(52,231,255,.25); background: rgba(12,20,52,.92); }
+body.sp-racing .note.warn { background: rgba(255,63,184,.92); border-color: #ffd0ea; }
+body.sp-racing .note button { border: 0; border-radius: 3px; background: #ffc84a; }

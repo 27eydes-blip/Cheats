@@ -402,3 +402,6 @@
 }
 @media (max-width: 360px) { #lobby.sp .sp-hex-val { min-width: 2.2em; padding-left: 14px; } #lobby.sp .sp-trophy { padding: 0 4px; } #lobby.sp .sp-storebtn { padding: 0 10px; } }
 #lobby.sp .sp-car-arrow { top: calc(50% - 23px); height: 48px; margin-top: -24px; } /* centred on the cards, not on cards + mode strip */
+#lobby.sp .sp-who-sub { display: flex; align-items: center; gap: 8px; }
+#lobby.sp .sp-who-sub .xpbar { display: block; width: 56px; height: 3px; border: 0; border-radius: 0; background: rgba(147,166,207,.3); overflow: hidden; }
+#lobby.sp .sp-who-sub .xpbar i { display: block; height: 100%; width: 0; background: var(--sp-cyan); box-shadow: 0 0 4px var(--sp-cyan); }

@@ -71,7 +71,7 @@ export function createSpaceLobby(api) {
       <header class="sp-top">
         <div class="sp-who" id="spWho">
           <div class="sp-who-txt tap" id="profileCard" role="button" aria-label="Profile"><span class="sp-who-row"><span class="sp-who-name" id="pName">Racer</span>
-            <span class="guestchip" id="guestChip" hidden><span><i>Guest · </i>save progress</span><button id="guestX" aria-label="Dismiss">✕</button></span></span><span class="sp-who-sub" id="pSub">LEVEL 1</span></div>
+            <span class="guestchip" id="guestChip" hidden><span><i>Guest · </i>save progress</span><button id="guestX" aria-label="Dismiss">✕</button></span></span><span class="sp-who-sub"><span id="pSub">LEVEL 1</span><span class="xpbar" aria-hidden="true"><i id="xpFill"></i></span></span></div>
         </div>
         <div class="sp-top-right" id="spTopR">
           <button type="button" class="sp-trophy" id="rail_road" aria-label="Trophy Road">${icon('trophy')}<b id="pTro">0</b><span class="dot" id="dot_road" hidden></span></button>
@@ -219,6 +219,7 @@ export function createSpaceLobby(api) {
     const lv = levelInfo(p.xp), tro = totalTrophies(p);
     $('pName').textContent = api.prefs.name || 'Racer';
     $('pSub').textContent = `LEVEL ${lv.level}`;
+    $('xpFill').style.width = `${Math.round((lv.into / lv.need) * 100)}%`;
     $('pTro').textContent = tro;
     coins.set(p.coins); gems.set(p.gems ?? 0);
     const guest = !A.ACC.user || A.ACC.user.guest;

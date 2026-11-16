@@ -285,7 +285,7 @@ test('lobby notices on a phone, portrait and landscape: on screen and clear of t
       // the play page scrolls in portrait: check the controls wherever the scroll puts them
       for (const scroll of [0, 10_000]) {
         await page.evaluate((y) => { for (const e of document.querySelectorAll('#lobby *')) if (e.scrollHeight > e.clientHeight + 4) e.scrollTop = y; }, scroll);
-        for (const sel of ['#playBtn', '.fillbots', '#lobby #credit', '.lb-tabs']) {
+        for (const sel of ['#playBtn', '.fillbots', '#lobby #credit', '.sp-dock', '.sp-top']) { // (the racing lobby: the space dock and top bar)
           const b = await page.locator(sel).first().boundingBox();
           if (b && b.width && b.y < vp.height && b.y + b.height > 0) expect(apart(n, b), `${id} clear of ${sel} at ${vp.width}x${vp.height} (scroll ${scroll})`).toBe(true);
         }
