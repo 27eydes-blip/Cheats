@@ -9,6 +9,7 @@
 //                                                a friend who arrives mid-race waits for the next one
 //        &lobby=<s>                              (rooms) a fixed countdown instead of the host's START
 // /race?mode=trial&track=                        Time Trial (always solo, never bots)
+//        &sens=0.5..1.5                          (any race) the player's steering sensitivity
 // /race?rejoin=<id>&secret=&match=<name>         reconnect to the same race
 import { RaceSim, RACE_MODES } from './sim.js';
 import { DT, DRIVERS } from '../../public/race/physics.js';
@@ -191,7 +192,7 @@ export class RaceRoom {
   seat(q, mname, server) {
     const sim = this.sim;
     const d = q.get('driver') || q.get('brawler'), name = cleanName(q.get('name'));
-    const id = sim.join(name, DRIVERS[d] ? d : 'volt');
+    const id = sim.join(name, DRIVERS[d] ? d : 'volt', { sens: q.has('sens') ? Number(q.get('sens')) : 1 });
     if (id == null) return null;
     const p = sim.players.get(id);
     p.who = whoOf(q);

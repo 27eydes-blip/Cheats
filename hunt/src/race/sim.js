@@ -1,11 +1,11 @@
 // Hunt Racers authoritative race simulation (one per RaceRoom Durable Object), 30 ticks/s.
 // Phases: 'lobby' (waiting for racers) -> 'play' (time < 0 is the grid countdown) -> 'end'.
 // Every car is driven by public/race/physics.js stepCar(), the same code the client predicts with.
-import { DT, TICK_RATE, CAR_R, DRIVERS, DRIVER_IDS, newCar, stepCar, collideCars, addBoost, BOOSTS, cleanInput, packState, driftTier, SURF } from '../../public/race/physics.js';
+import { DT, TICK_RATE, CAR_R, DRIVERS, DRIVER_IDS, newCar, stepCar, collideCars, addBoost, BOOSTS, cleanInput, cleanSens, packState, driftTier, SURF } from '../../public/race/physics.js';
 import { getTrack, TRACK_IDS } from '../../public/race/tracks.js';
-import { pointAt, hwAt } from '../../public/race/trackgeom.js';
+import { pointAt, hwAt, nearestS } from '../../public/race/trackgeom.js';
 import { ITEMS, ITEM_IDS, rollItem, WEAPONS } from '../../public/race/items.js';
-import { FLAG, ENT, COUNTDOWN, RESPAWN_TIME, RACE_MODES } from '../../public/race/protocol.js';
+import { FLAG, ENT, COUNTDOWN, RESPAWN_TIME, RACE_MODES, RESET_COOLDOWN, STUCK_NUDGE, STUCK_RESET } from '../../public/race/protocol.js';
 import { BOT_NAMES, rng } from '../../public/shared.js';
 import { botInput, levelForTrophies } from './bots.js';
 
@@ -19,6 +19,10 @@ export const BOX_RESPAWN = 3;
 export const CREDIT_WINDOW = 4; // a wreck within 4 s of a hit is credited to the hitter
 export const COINS = { box: 1, lap: 2, takedown: 3 };
 export const ROOM_IDLE_SECS = 300; // a host-run friend room whose host never presses START starts by itself after 5 minutes
+export const RESET_GHOST = 1; // s of ghosting after a reset (no hits, no bumps)
+export const STUCK_SPEED = 60; // px/s: slower than this against a wall with throttle on = stuck
+const NUDGE_DIST = 120, NUDGE_SPEED = 150; // the automatic nudge: px toward the racing line, px/s along the track
+const r1 = (v) => Math.round(v * 10) / 10;
 const r2 = (v) => Math.round(v * 100) / 100;
 const r3 = (v) => Math.round(v * 1000) / 1000;
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
@@ -33,6 +37,8 @@ const distToSeg = (px, py, x0, y0, x1, y1) => {
   const t = l2 ? Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / l2)) : 0;
   return Math.hypot(px - (x0 + dx * t), py - (y0 + dy * t));
 };
+
+const IDLE = { st: 0, th: 0, dr: 0 };
 
 export class RaceSim {
   // o: { mode, track, seed, fillBots, lobbyTime, hostStart, send(id, msg), hooks: {finished(rows)}, botLevel }
@@ -75,7 +81,7 @@ export class RaceSim {
 
   // ------------------------------------------------------------------ roster
   humans() { return [...this.players.values()].filter((p) => !p.wasBot); }
-  addPlayer({ name, driver, bot = false }) {
+  addPlayer({ name, driver, bot = false, sens }) {
     const id = this.nextId++;
     const st = DRIVERS[driver] ? driver : 'volt';
     const p = {
@@ -84,6 +90,8 @@ export class RaceSim {
       finished: false, place: 0, finishTime: null, out: false, kills: 0, deaths: 0, steals: 0, mc: 0, lastHit: null,
       inp: { st: 0, th: 0, dr: 0 }, act: { f: 0, i: 0 }, queue: [], credits: 2, lastSeq: 0, lapStart: 0, lapTimes: [], bestLap: null,
       ai: null, left: false, recorded: false, ep: 0, trophies: 0, account: null, secret: null,
+      // sens: steering sensitivity (heading steering); stuck: wall-pinned / no-progress timers, RESET cooldown
+      sens: cleanSens(sens), wallT: 0, noProgT: 0, bestProg: -Infinity, stuck: 0, nudged: false, resetCd: 0, resetReq: 0, bumpN: -9, resets: 0, nudges: 0,
     };
     this.players.set(id, p);
     return p;
@@ -92,9 +100,10 @@ export class RaceSim {
   rosterMsg() { const add = {}; for (const p of this.players.values()) add[p.id] = this.rosterRow(p); return { t: 'ro', add, full: 1 }; }
   broadcast(msg) { for (const p of this.players.values()) if (p.connected) this.send(p.id, msg); }
 
-  join(name, driver) {
+  // o.sens: the player's steering sensitivity (0.5..1.5, the `sens` join param)
+  join(name, driver, o = {}) {
     if (this.phase !== 'lobby' || this.players.size >= this.maxPlayers) return null;
-    const p = this.addPlayer({ name, driver });
+    const p = this.addPlayer({ name, driver, sens: o.sens });
     if (this.hostStart) { if (!this.hostId) this.hostId = p.id; this.lobbyEnd = this.clock + ROOM_IDLE_SECS; }
     else this.lobbyEnd = this.lobbyEnd == null ? this.clock + this.lobbyTime : Math.max(this.lobbyEnd, this.clock + 3);
     if (this.humans().length >= this.maxPlayers) this.lobbyEnd = this.clock;
@@ -199,6 +208,7 @@ export class RaceSim {
     if (!p || !m) return;
     if (m.t === 'pick') return this.pick(p, m.driver);
     if (m.t === 'host') return this.hostCmd(p, m);
+    if (m.t === 'reset') { if (!p.bot) p.resetReq = 1; return; } // applied inside the next tick
     if (m.t !== 'in' || p.bot) return;
     const inp = cleanInput(m);
     inp.s = m.s >>> 0; inp.f = m.f ? 1 : 0; inp.i = m.i ? 1 : 0;
@@ -277,10 +287,10 @@ export class RaceSim {
       // no input arrived in time: keep the last one going (the car can't just stop)
       if (!steps.length) { steps.push(p.inp); p.credits = Math.max(0, p.credits - 1); }
     }
-    if (!go) { p.act.f = p.act.i = 0; return; } // grid countdown: nothing moves
+    if (!go) { p.act.f = p.act.i = p.resetReq = 0; return; } // grid countdown: nothing moves
     const ev = {};
     for (const inp of steps) {
-      p.inp = { st: inp.st, th: inp.th, dr: inp.dr };
+      p.inp = { st: inp.st, th: inp.th, dr: inp.dr, ha: inp.ha ?? null, hm: inp.hm || 0, sens: p.sens };
       const x0 = p.car.x, y0 = p.car.y;
       stepCar(p.car, p.inp, p.st, this.T, DT, ev);
       this.crossGates(p, x0, y0, p.car.x, p.car.y);
@@ -292,6 +302,77 @@ export class RaceSim {
     if (p.act.f) { p.act.f = 0; this.fireWeapon(p); }
     if (p.act.i) { p.act.i = 0; this.useItem(p); }
     if (p.alive && p.car.airT <= 0) this.ground(p);
+    if (p.alive) this.unstick(p);
+  }
+
+  // ------------------------------------------------------------------ never stuck
+  // "Stuck" = against a wall (or wedged against a pillar / another car) and slower than STUCK_SPEED
+  // with throttle on, or no progress along the track for STUCK_RESET s. Pinned for STUCK_NUDGE s:
+  // a nudge toward the racing line, facing along the track. Stuck for STUCK_RESET s: a reset.
+  unstick(p) {
+    if (p.resetCd > 0) p.resetCd = Math.max(0, p.resetCd - DT);
+    if (p.resetReq) { p.resetReq = 0; if (this.resetCar(p, false)) return; }
+    const c = p.car;
+    if (p.finished || c.airT > 0) { p.wallT = 0; p.noProgT = 0; p.stuck = 0; p.bestProg = -Infinity; return; }
+    const wedged = c.wall || this.tickN - p.bumpN <= 1;
+    if (wedged && p.inp.th > 0 && Math.hypot(c.vx, c.vy) < STUCK_SPEED) p.wallT += DT; else { p.wallT = 0; p.nudged = false; }
+    if (!this.mode.arena) {
+      const pr = this.progress(p);
+      if (pr > p.bestProg + 40) { p.bestProg = pr; p.noProgT = 0; } else p.noProgT += DT;
+    }
+    p.stuck = Math.max(p.wallT, p.noProgT);
+    if (p.stuck >= STUCK_RESET - 1e-9) this.resetCar(p, true);
+    else if (p.wallT >= STUCK_NUDGE - 1e-9 && !p.nudged) this.nudge(p);
+  }
+  clearStuck(p) { p.wallT = 0; p.noProgT = 0; p.stuck = 0; p.nudged = false; p.bestProg = -Infinity; }
+  // the racing line point (and track direction) nearest the car on its corridor
+  lineNear(p) {
+    const T = this.T, c = p.car;
+    if (T.kind === 'arena') { const x = (T.box.x0 + T.box.x1) / 2, y = (T.box.y0 + T.box.y1) / 2; return { x, y, a: Math.atan2(y - c.y, x - c.x) }; }
+    const cor = T.corridors[c.pc >= 0 ? c.pc : 0], i = pointAt(cor, c.pc >= 0 ? c.ps : nearestS(cor, c.x, c.y)).i;
+    return { x: cor.line.x[i], y: cor.line.y[i], a: Math.atan2(cor.ty[i], cor.tx[i]) };
+  }
+  // pinned against a wall: slide the car toward the racing line, point it along the track, roll it
+  nudge(p) {
+    const c = p.car, L = this.lineNear(p), x0 = c.x, y0 = c.y;
+    const dx = L.x - c.x, dy = L.y - c.y, d = Math.hypot(dx, dy), k = d > 1 ? Math.min(1, NUDGE_DIST / d) : 0;
+    c.x += dx * k; c.y += dy * k; c.a = L.a;
+    c.vx = Math.cos(L.a) * NUDGE_SPEED; c.vy = Math.sin(L.a) * NUDGE_SPEED;
+    c.drift = 0; c.dc = 0; c.dg = 0;
+    stepCar(c, IDLE, p.st, this.T, 0); // settle (and push out of anything we landed on)
+    this.crossGates(p, x0, y0, c.x, c.y);
+    p.nudged = true; p.wallT = 0; p.nudges++; p.ep++; p.ai = null;
+    this.events.push({ k: 'nudge', id: p.id });
+  }
+  // RESET (the button, or stuck STUCK_RESET s): back on the racing line at the car's progress
+  // (never behind its last checkpoint), facing along the track, stopped, ghosted for a second
+  resetCar(p, auto) {
+    if (!p.alive || p.out || p.finished || this.time <= 0 || p.car.airT > 0) return false;
+    if (!auto && p.resetCd > 0) return false;
+    const spot = this.mode.arena ? this.arenaSpot(p) : this.resetSpot(p);
+    p.car = newCar(spot.x, spot.y, spot.a);
+    stepCar(p.car, IDLE, p.st, this.T, 0);
+    p.ghostT = Math.max(p.ghostT, RESET_GHOST); p.resetCd = RESET_COOLDOWN; p.resets++; p.ep++; p.ai = null;
+    this.clearStuck(p);
+    this.events.push({ k: 'reset', id: p.id, auto: auto ? 1 : 0 });
+    return true;
+  }
+  resetSpot(p) {
+    const T = this.T, main = T.corridors[0], G = T.gates, N = G.length, L = T.L, P = {};
+    const a = G[p.cp].s, span = (p.cp + 1 < N ? G[p.cp + 1].s : L) - a;
+    const u = Math.max(0, Math.min(span, this.progress(p) - (p.lap - 1) * L - a));
+    const s0 = a + (span > 160 ? Math.max(70, Math.min(span - 90, u)) : span / 2);
+    for (const ds of [0, 90, 180, 270, -60]) {
+      const s = s0 + ds, i = pointAt(main, s).i, hw = hwAt(main, s);
+      for (const d of [main.line.d[i], 0, -0.4 * hw, 0.4 * hw]) {
+        const pt = pointAt(main, s, d);
+        T.probe(pt.x, pt.y, CAR_R, P);
+        if (P.pen > 0 || P.c !== 0 || SURF[P.surf]?.fall || SURF[P.surf]?.dmg || P.ramp) continue;
+        if (T.hazards.some((h) => Math.hypot(pt.x - h.x, pt.y - h.y) < h.r + CAR_R * 2)) continue;
+        return pt;
+      }
+    }
+    return this.respawnSpot(p);
   }
 
   // lava, pits and timed hazards under a grounded car
@@ -439,21 +520,23 @@ export class RaceSim {
   }
   respawn(p) {
     const T = this.T;
-    let spot;
-    if (this.mode.arena) {
-      // the spawn farthest from everyone else
-      let best = -1;
-      for (const g of T.grid) {
-        let near = Infinity;
-        for (const q of this.players.values()) if (q !== p && q.alive && !q.out) near = Math.min(near, Math.hypot(q.car.x - g.x, q.car.y - g.y));
-        if (near > best) { best = near; spot = g; }
-      }
-    } else spot = this.respawnSpot(p);
+    const spot = this.mode.arena ? this.arenaSpot(p) : this.respawnSpot(p);
     p.car = newCar(spot.x, spot.y, spot.a);
     stepCar(p.car, { st: 0, th: 0, dr: 0 }, p.st, T, 0);
     p.alive = true; p.hp = p.maxHp; p.ghostT = GHOST_TIME; p.ep++;
     p.ai = null;
+    this.clearStuck(p);
     this.events.push(['rs', p.id]);
+  }
+  // arena: the spawn farthest from everyone else
+  arenaSpot(p) {
+    let best = -1, spot = this.T.grid[0];
+    for (const g of this.T.grid) {
+      let near = Infinity;
+      for (const q of this.players.values()) if (q !== p && q.alive && !q.out) near = Math.min(near, Math.hypot(q.car.x - g.x, q.car.y - g.y));
+      if (near > best) { best = near; spot = g; }
+    }
+    return spot;
   }
   // just past the last checkpoint, on plain road, spread out so wrecks don't stack
   respawnSpot(p) {
@@ -716,7 +799,11 @@ export class RaceSim {
         if (!b.alive || b.out || b.ghostT > 0 || b.finished || (a.car.airT > 0) !== (b.car.airT > 0)) continue;
         const dx = b.car.x - a.car.x, dy = b.car.y - a.car.y;
         if (dx * dx + dy * dy >= (CAR_R * 2) ** 2) continue;
+        const ax = a.car.x, ay = a.car.y, bx = b.car.x, by = b.car.y;
         const imp = collideCars(a.car, b.car, a.st.mass, b.st.mass);
+        a.bumpN = b.bumpN = this.tickN; // (wedged against a car counts as stuck)
+        // a shove can push a car over a checkpoint line: count it (else that car's lap and progress stall)
+        this.crossGates(a, ax, ay, a.car.x, a.car.y); this.crossGates(b, bx, by, b.car.x, b.car.y);
         if (imp > 250) this.events.push(['bump', a.id, b.id, Math.round(imp)]);
       }
     }
@@ -740,7 +827,7 @@ export class RaceSim {
     for (const p of this.players.values()) {
       if (p.out) continue;
       const c = p.car;
-      cars.push([p.id, Math.round(c.x), Math.round(c.y), Math.round(c.a * 1000), this.flags(p), Math.round((100 * Math.max(0, p.hp)) / p.maxHp), p.lap, Math.round(Math.hypot(c.vx, c.vy))]);
+      cars.push([p.id, Math.round(c.x), Math.round(c.y), Math.round(c.a * 1000), this.flags(p), Math.round((100 * Math.max(0, p.hp)) / p.maxHp), p.lap, Math.round(Math.hypot(c.vx, c.vy)), r1(p.stuck)]);
     }
     const ents = this.ents.map((e) => [e.id, e.k, Math.round(e.x), Math.round(e.y), Math.round(e.a * 1000), e.owner, e.kind === 'mine' ? (e.t >= e.arm ? 1 : 0) : 0]);
     const bx = [];
@@ -761,6 +848,7 @@ export class RaceSim {
       lap: p.lap, cp: p.cp, rk: p.rank, rt: p.alive ? 0 : r2(Math.max(0, (p.respawnTick - this.tickN) * DT)),
       mc: p.mc, k: p.kills, d: p.deaths, lt: p.maxLap >= 1 && !p.finished ? r2(this.time - p.lapStart) : 0, bl: p.bestLap,
       fin: p.place && p.finished ? p.place : 0, out: p.out ? p.place : 0, auto: p.finished ? 1 : 0,
+      stuck: r1(p.stuck), rcd: r2(p.resetCd),
     };
   }
 
