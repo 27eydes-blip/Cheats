@@ -154,7 +154,7 @@ export class RaceRenderer {
     let v = this.vis.get(id);
     if (!v) {
       // lt: taillight trail ring (LT points x 2 lights x xy); look: this car's look (from the roster)
-      v = { lt: new Float32Array(LT * 4), ltn: 0, lti: 0, ltT: 0, look: null, lookSrc: undefined, trail: new Float32Array(32), tn: 0, ti: 0, wx: new Float32Array(4), skid: false, flame: 0, flameC: 0, respawnT: 0, hitT: 0, puff: 0, dust: 0, tierPrev: 0, air: 0, airMax: 0.6, spinT: 0, lastX: 0, lastY: 0, pa: null, yaw: 0, bounce: 0, bT: 0, wasAir: false, scrape: 0 };
+      v = { lt: new Float32Array(LT * 4), ltn: 0, lti: 0, ltT: 0, look: null, lookSrc: undefined, trail: new Float32Array(32), tn: 0, ti: 0, wx: new Float32Array(4), skid: false, flame: 0, flameC: 0, respawnT: 0, hitT: 0, puff: 0, dust: 0, tierPrev: 0, air: 0, airMax: 0.6, spinT: 0, lastX: 0, lastY: 0, pa: null, yaw: 0, bounce: 0, bT: 0, wasAir: false, scrape: 0, brk: 0 };
       this.vis.set(id, v);
     }
     return v;
@@ -246,6 +246,7 @@ export class RaceRenderer {
     this.t += dt;
     const t = this.t;
     art.tick++;
+    this.cars.budget = 1; // (after a resolution step: one look's sprites rebuilt per frame)
     const me = view.cars.find((c) => c.me) || null;
     this.meCar = me;
     // CAMERA: follow (the leader once knocked out), look ahead in the driving direction, zoom out at speed
