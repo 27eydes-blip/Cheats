@@ -5,6 +5,7 @@
 // every time would be free trophies); it saves your best time per track instead. The tutorial pays
 // nothing: finishing it only sets the one-time flag progress.race.tut = 1.
 import { applyMatch, normalize } from '../../public/progression.js';
+import { applyRaceUnlocks } from '../../public/race/unlocks.js';
 
 export const MATCH_COIN_CAP = 40;
 // ELIMINATION extras on top of the usual placement pay (applyMatch: trophies and coins by place, XP
@@ -68,5 +69,10 @@ export function applyRace(prog, r) {
     }
     out.elim = { ko: b.ko, surv: b.surv, secs: Math.round(Number(r.surv) || 0), win: win ? 1 : 0, title, titleId: win ? ELIM_TITLE : null };
   }
+  // UNLOCKABLE CARS: takedowns, 1st places per track, the daily / weekly piece challenges, then
+  // every car whose goal is now met (race/unlocks.js); the progress message carries what was won
+  const u = applyRaceUnlocks(out.progress, r, r.day);
+  out.unlocked = u.unlocked; out.pieces = u.pieces;
+  if (u.pieces && u.pieces.coins) out.coins += u.pieces.coins;
   return out;
 }

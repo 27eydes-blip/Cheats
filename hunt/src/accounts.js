@@ -148,5 +148,19 @@ async function api(req, env) {
     if (!out || out.error) return json({ error: out ? out.error : 'not found' }, 400);
     return json({ user: publicUser({ ...me, progress: JSON.stringify(out.progress) }), ...(out.got ? { got: out.got } : {}) });
   }
+  // local dev / browser tests only (HUNT_DEV is in wrangler.jsonc, never in the deploy config):
+  // set test coins, trophies and race unlock counters on your own account to reach an unlock state
+  if (path === '/devgrant' && req.method === 'POST' && env.HUNT_DEV) {
+    const out = await mutateProgress(db, me.id, (raw) => {
+      const p = normalize(JSON.parse(raw)), n = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(1e6, Math.floor(v))) : null);
+      if (n(body.coins) != null) p.coins = n(body.coins);
+      if (body.trophies && typeof body.trophies === 'object') for (const [k, v] of Object.entries(body.trophies)) if (n(v) != null && /^[a-z]{2,10}$/.test(k)) p.trophies[k] = n(v);
+      if (body.race && typeof body.race === 'object') for (const k of ['elimWins', 'ko', 'wins']) if (n(body.race[k]) != null) p.race[k] = n(body.race[k]);
+      if (body.pieces && typeof body.pieces === 'object') for (const k of Object.keys(p.race.pieces)) if (n(body.pieces[k]) != null) p.race.pieces[k] = Math.min(10, n(body.pieces[k]));
+      if (body.firsts && typeof body.firsts === 'object') for (const [k, v] of Object.entries(body.firsts)) if (n(v) != null && /^[a-z]{2,10}$/.test(k)) p.race.firsts[k] = n(v);
+      return { progress: normalize(p) };
+    });
+    return json({ user: publicUser({ ...me, progress: JSON.stringify(out.progress) }) });
+  }
   return json({ error: 'not found' }, 404);
 }

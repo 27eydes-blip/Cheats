@@ -105,6 +105,7 @@ export class RaceClient {
       case 's': this.onSnap(m); break;
       case 'end': this.results = m; this.phase = 'end'; break;
       case 'progress': this.progress = m; break;
+      case 'car': if (DRIVERS[m.driver]) this.params.driver = m.driver; break; // the server put us in another car (the one asked for is locked)
       case 'retry': case 'rejoinfail': this.phase = 'failed'; break;
     }
     this.emit(m.t, m);

@@ -3,6 +3,8 @@ import { BRAWLER_IDS, WORLDS, worldId, worldsInDisplayOrder, ZONES, own } from '
 import { WEAPONS, WEAPON_IDS, perksFor, masteryInfo, masteryXp, masteryBadge, MASTERY_SKINS } from './weapons.js';
 import { LEVEL_TITLES, EMOTES, SKINS, rewardSource } from './catalog.js';
 import { powerSetup } from './power.js';
+import { ALL_DRIVER_IDS } from './race/physics.js';
+import { normalizeRace } from './race/unlocks.js';
 
 export const ROAD_STEP = 100;
 // Trophy road: a free reward every 100 total trophies. Item ids live in public/catalog.js.
@@ -38,7 +40,8 @@ export function normalize(p) {
   out.race = p.race && typeof p.race === 'object' && !Array.isArray(p.race) ? { ...p.race } : {};
   const cos = out.race.cos && typeof out.race.cos === 'object' && !Array.isArray(out.race.cos) ? out.race.cos : {};
   out.race.cos = {};
-  for (const [car, slots] of Object.entries(cos)) if (BRAWLER_IDS.includes(car) && slots && typeof slots === 'object' && !Array.isArray(slots)) out.race.cos[car] = Object.fromEntries(Object.entries(slots).filter(([, v]) => v === null || typeof v === 'string'));
+  for (const [car, slots] of Object.entries(cos)) if ((BRAWLER_IDS.includes(car) || ALL_DRIVER_IDS.includes(car)) && slots && typeof slots === 'object' && !Array.isArray(slots)) out.race.cos[car] = Object.fromEntries(Object.entries(slots).filter(([, v]) => v === null || typeof v === 'string'));
+  normalizeRace(out); // the unlockable cars: unlocked list, pieces, challenge and stat counters (race/unlocks.js)
   return out;
 }
 export const totalTrophies = (p) => Object.values(p.trophies || {}).reduce((s, v) => s + (v | 0), 0);
@@ -164,7 +167,7 @@ export function claimMission(p, id, day = dayIndex()) {
 export function applyMatch(p, r) {
   p = normalize(p);
   // only real brawlers hold trophies (a made-up id must never become a trophy key)
-  const tb = BRAWLER_IDS.includes(r.brawler) ? r.brawler : null;
+  const tb = BRAWLER_IDS.includes(r.brawler) || ALL_DRIVER_IDS.includes(r.brawler) ? r.brawler : null; // (race cars, the unlockable ones too)
   const before = tb ? p.trophies[tb] | 0 : 0;
   const delta = tb ? trophyDelta(r) : 0;
   if (tb) p.trophies[tb] = Math.max(0, before + delta);

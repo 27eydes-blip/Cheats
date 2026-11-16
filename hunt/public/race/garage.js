@@ -4,7 +4,7 @@
 // Cosmetics never touch the race: physics, stats, weapons and hitboxes ignore all of this; the race
 // server only forwards the equipped ids so every client can draw everyone's look.
 // Every option object (`opt`) uses the shapes makeLook() in looks.js reads.
-import { DRIVER_IDS } from './physics.js';
+import { DRIVER_IDS, ALL_DRIVER_IDS } from './physics.js';
 import { own } from '../shared.js';
 
 export const RARITIES = ['common', 'rare', 'epic', 'legendary'];
@@ -153,7 +153,7 @@ export function garageAction(p, req, now = Date.now()) {
   }
   if (req.action === 'gequip') {
     const { car, slot } = req, id = req.id || null;
-    if (!DRIVER_IDS.includes(car)) return { error: 'bad car' };
+    if (!ALL_DRIVER_IDS.includes(car)) return { error: 'bad car' }; // (the unlockable cars wear the shared cosmetics too)
     if (!SLOTS.includes(slot)) return { error: 'bad slot' };
     if (id) {
       const it = itemOf(id);

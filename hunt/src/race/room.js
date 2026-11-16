@@ -15,6 +15,8 @@
 // /race?rejoin=<id>&secret=&match=<name>         reconnect to the same race
 import { RaceSim, RACE_MODES } from './sim.js';
 import { DT, DRIVERS } from '../../public/race/physics.js';
+import { carUnlocked, unlockedCars, defaultCar, STARTER_CARS } from '../../public/race/unlocks.js';
+import { normalize } from '../../public/progression.js';
 import { TRACK_IDS } from '../../public/race/tracks.js';
 import { userFromToken, mutateProgress, ensureSchema } from '../accounts.js';
 import { applyRace, raceResult } from './results.js';
@@ -132,7 +134,7 @@ export class RaceRoom {
       mode: cfg.mode, track: cfg.track, seed: (Math.random() * 2 ** 32) >>> 0, fillBots: cfg.bots, lobbyTime: cfg.lobby, laps: cfg.laps, hostStart: cfg.hostStart,
       send: (id, msg) => { const ws = sockets.get(id); if (ws) sendJSON(ws, msg); },
       // (resultsIn: the next room race closes these sockets, so it waits until everyone got their rewards)
-      hooks: { finished: (rows) => { this.recordResults(rows, sockets).finally(() => { sim.resultsIn = true; }); } },
+      hooks: { finished: (rows) => { this.recordResults(rows, sockets).finally(() => { sim.resultsIn = true; }); }, tell: (ws, msg) => sendJSON(ws, msg) },
     });
   }
 
@@ -164,7 +166,7 @@ export class RaceRoom {
         const res = raceResult(r);
         const out = await mutateProgress(this.env.DB, r.p.account, (raw) => applyRace(JSON.parse(raw), res));
         const ws = sockets.get(r.p.id);
-        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, coins: out.coins, mcoins: out.matchCoins || 0, best: out.best ?? null, improved: !!out.improved, ...(out.tut != null ? { tut: out.tut } : {}), ...(out.elim ? { elim: out.elim } : {}) });
+        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, coins: out.coins, mcoins: out.matchCoins || 0, best: out.best ?? null, improved: !!out.improved, ...(out.tut != null ? { tut: out.tut } : {}), ...(out.elim ? { elim: out.elim } : {}), ...(out.unlocked && out.unlocked.length ? { unlocked: out.unlocked } : {}), ...(out.pieces ? { pieces: out.pieces } : {}) });
       } catch (e) { console.log('race record failed', e && e.message); }
     }
   }
@@ -199,24 +201,32 @@ export class RaceRoom {
   seat(q, mname, server) {
     const sim = this.sim;
     const d = q.get('driver') || q.get('brawler'), name = cleanName(q.get('name'));
-    const id = sim.join(name, DRIVERS[d] ? d : 'volt', { sens: q.has('sens') ? Number(q.get('sens')) : 1 });
+    const want = DRIVERS[d] ? d : 'volt';
+    const id = sim.join(name, want, { sens: q.has('sens') ? Number(q.get('sens')) : 1 });
     if (id == null) return null;
     const p = sim.players.get(id);
+    // UNLOCKS (server-authoritative): an unlockable car needs the account's progress to say it is
+    // unlocked. Until the account has loaded it is unverified (carOk false); a guest, an unknown
+    // token or a locked car gets the account's default car instead, and the client is told ('car').
+    p.carOk = STARTER_CARS.includes(want);
     p.who = whoOf(q);
     // the last race's host gets the room back when they come in for the next one
     if (sim.hostStart && this.prevHost && this.prevHost === p.who) { sim.hostId = id; this.prevHost = null; }
     p.secret = crypto.randomUUID();
     const token = q.get('token');
+    sendJSON(server, this.welcome(p, mname));
     if (token && this.env.DB) {
       userFromToken(this.env.DB, token).then((u) => {
-        if (!u || !sim.players.has(id)) return;
-        const pr = JSON.parse(u.progress || '{}');
+        if (!sim.players.has(id)) return;
+        if (!u) { if (!p.carOk) sim.swapCar(p, 'volt'); return; }
+        const pr = normalize(JSON.parse(u.progress || '{}'));
         p.account = u.id;
+        p.cars = new Set(unlockedCars(pr)); p.defCar = defaultCar(pr);
+        if (!p.carOk) { if (carUnlocked(pr, p.driver)) p.carOk = true; else sim.swapCar(p, p.defCar); }
         p.trophies = pr.trophies?.[p.driver] | 0;
         sim.setGarage(id, pr); // store cosmetics (draw-only), carried in the roster
-      }).catch(() => {});
-    }
-    sendJSON(server, this.welcome(p, mname));
+      }).catch(() => { if (sim.players.has(id) && !p.carOk) sim.swapCar(p, 'volt'); });
+    } else if (!p.carOk) sim.swapCar(p, 'volt', server); // a guest: the starter cars only
     return id;
   }
 

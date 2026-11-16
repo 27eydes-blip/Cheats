@@ -117,11 +117,13 @@ import { WEAPONS, perksFor, masteryInfo } from './weapons.js';
 import { powerAction } from './power.js';
 import { own } from './shared.js';
 import { garageAction } from './race/garage.js';
+import { carAction } from './race/unlocks.js';
 export function applyPurchase(p, req) {
   if (!req || typeof req !== 'object') return { error: 'unknown action' }; // (a body of null, 5, "x"...)
   switch (req.action) {
     case 'mission': return claimMission(p, req.id);
     case 'gbuy': case 'gequip': return garageAction(p, req); // Hunt Racers store (race/garage.js)
+    case 'carbuy': case 'carset': return carAction(p, req); // unlockable cars: buy a rare car, the default car (race/unlocks.js)
     case 'equip': {
       const { slot, id } = req;
       if (typeof slot !== 'string' || (!['title', 'fx'].includes(slot) && !/^skin:(volt|brick|wisp|dune|rook|flicker)$/.test(slot))) return { error: 'bad slot' };
