@@ -136,7 +136,7 @@ function itemDuel(item, setup) {
 { // EMP: nearby racers can't use items or weapons and slow down
   const { sim, A, B } = itemDuel('emp', (s, A, B) => { place(s, A, 600); place(s, B, 900, 40); B.item = 'turbo'; ticks(s); });
   drive(sim, A, { i: 1 }, 1);
-  assert.ok(B.empT > 2 && B.car.slowT > 1, 'B is disabled and slowed');
+  assert.ok(B.empT > 2 && B.car.slowT > ITEMS.emp.slow - 0.1, 'B is disabled and slowed');
   assert.strictEqual(A.empT, 0, 'not the user');
   drive(sim, B, { i: 1, f: 1 }, 1);
   assert.strictEqual(B.item, 'turbo', 'item use blocked');
@@ -145,15 +145,16 @@ function itemDuel(item, setup) {
 { // turbo
   const { sim, A } = itemDuel('turbo', (s, A) => place(s, A, 600));
   drive(sim, A, { i: 1, th: 1 }, 1);
-  assert.ok(A.car.boostT > 1.5 && A.car.boostP === BOOSTS.turbo.p);
+  assert.ok(A.car.boostT > ITEMS.turbo.t - 0.1 && A.car.boostP === ITEMS.turbo.p); // (the item's own numbers, by level, since the weapons upgrade)
 }
 // position-weighted odds: the leader never gets a homing missile or EMP; the back gets catch-up items
 {
   const R = rng(4), count = (place) => { const c = Object.fromEntries(ITEM_IDS.map((k) => [k, 0])); for (let i = 0; i < 4000; i++) c[rollItem(place, 10, R())]++; return c; };
   const front = count(1), back = count(10);
-  assert.strictEqual(front.missile + front.emp, 0, 'no missiles / EMPs for the leader');
-  assert.ok(back.missile > 900 && back.turbo > 700, 'last place gets missiles and turbos');
-  assert.ok(front.shield + front.oil + front.spikes > 2800, 'the leader gets defensive items');
+  assert.strictEqual(front.missile + front.emp + front.drone, 0, 'no missiles / EMPs / drones for the leader');
+  // (12 items since the weapons upgrade: each share is smaller than with 7)
+  assert.ok(back.missile > 600 && back.turbo > 600 && back.drone > 250, 'last place gets missiles, turbos and drones');
+  assert.ok(front.shield + front.oil + front.spikes + front.ghost > 2600, 'the leader gets defensive items');
   assert.ok(back.oil + back.spikes < 300);
   assert.ok(ITEM_IDS.every((k) => count(5)[k] > 0), 'mid-pack can get anything');
 }

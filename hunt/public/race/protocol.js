@@ -2,11 +2,11 @@
 export const FLAG = {
   DRIFT: 1, BOOST: 2, AIR: 4, SHIELD: 8, LEADER: 16, DEAD: 32, SPIN: 64, EMP: 128,
   FINISHED: 256, OUT: 512, GHOST: 1024, SLOW: 2048, TIER1: 4096, TIER2: 8192, // drift tier = (f >> 12) & 3
-  REVERSE: 16384,
+  REVERSE: 16384, PROT: 32768, PHASE: 65536, // PROT: 2 s hit protection after a rival's hit; PHASE: Ghost Mode item
 };
 export const driftTierOf = (f) => (f >> 12) & 3;
 // entity kinds in snapshot rows (index = wire id, append only)
-export const ENT = ['missile', 'rocket', 'oil', 'spikes', 'mine', 'turret', 'bolt'];
+export const ENT = ['missile', 'rocket', 'oil', 'spikes', 'mine', 'turret', 'bolt', 'well', 'sticky', 'drone', 'trap'];
 // the four modes (shown in the lobby; the server reads the rules from here too)
 export const RACE_MODES = {
   grand: { name: 'Grand Race', desc: '3 laps. First across the line wins.', laps: 3, items: true, weapons: true },

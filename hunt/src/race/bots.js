@@ -5,13 +5,14 @@
 // and their weapon when it makes sense. Only the room's FILL WITH BOTS setting ever adds them.
 import { DT, DRIVERS, CAR_R, SURF, AIR_PER_SPEED, driftTier } from '../../public/race/physics.js';
 import { trackS, nearestS } from '../../public/race/trackgeom.js';
-import { ITEMS, WEAPONS } from '../../public/race/items.js';
+import { ITEMS, WEAPONS, itemStat } from '../../public/race/items.js';
 
 export const RACE_BOT_LEVELS = {
   //       pace: share of top speed  drift: uses drifts  tier: spark tier it waits for  sc: shortcut chance
-  easy: { pace: 0.86, drift: false, tier: 1, sc: 0.15, react: 1.2, wobble: 0.35, aim: 0.55 },
-  normal: { pace: 0.95, drift: true, tier: 2, sc: 0.5, react: 0.6, wobble: 0.12, aim: 0.8 },
-  hard: { pace: 1, drift: true, tier: 3, sc: 0.85, react: 0.3, wobble: 0, aim: 1 },
+  // dodge: chance of timing a DRIFT press to shake a homing missile
+  easy: { pace: 0.86, drift: false, tier: 1, sc: 0.15, react: 1.2, wobble: 0.35, aim: 0.55, dodge: 0.15 },
+  normal: { pace: 0.95, drift: true, tier: 2, sc: 0.5, react: 0.6, wobble: 0.12, aim: 0.8, dodge: 0.35 },
+  hard: { pace: 1, drift: true, tier: 3, sc: 0.85, react: 0.3, wobble: 0, aim: 1, dodge: 0.6 },
 };
 // the humans' average trophies -> bot difficulty (same thresholds as the shooter)
 export function levelForTrophies(t) { return t < 150 ? 'easy' : t < 500 ? 'normal' : 'hard'; }
@@ -38,7 +39,7 @@ const idxAt = (c, s) => { let lo = 0, hi = c.segs - 1; s = c.closed ? ((s % c.le
 
 function newAi(sim, p) {
   const T = sim.T;
-  const ai = { c: 0, i: 0, slowT: 0, rev: 0, sc: {}, wait: 0, wob: sim.rand() * 6.28, itemHeld: 0 };
+  const ai = { c: 0, i: 0, slowT: 0, rev: 0, sc: {}, wait: 0, wob: sim.rand() * 6.28, itemHeld: 0, seen: 0, dodge: 0 };
   if (T.kind === 'track') ai.i = idxAt(T.corridors[0], nearestS(T.corridors[0], p.car.x, p.car.y));
   return ai;
 }
@@ -49,7 +50,9 @@ export function botInput(sim, p) {
   const out = sim.T.kind === 'arena' ? arenaDrive(sim, p, ai, L) : raceDrive(sim, p, ai, L);
   out.f = 0; out.i = 0;
   if (!p.finished && sim.time > 0) {
-    if (sim.mode.weapons && p.wcd <= 0 && p.empT <= 0 && wantWeapon(sim, p, L)) out.f = 1;
+    dodge(sim, p, ai, L, out);
+    carryBomb(sim, p, out);
+    if (sim.mode.weapons && p.wcd <= 0 && p.empT <= 0 && (wantWeapon(sim, p, L) || swat(sim, p))) out.f = 1;
     if (p.item && p.empT <= 0) {
       ai.itemHeld += DT;
       if (ai.itemHeld > L.react && wantItem(sim, p, ai)) { out.i = 1; ai.itemHeld = 0; }
@@ -214,15 +217,48 @@ function wantWeapon(sim, p, L) {
   return false;
 }
 
+// a missile locked on to us: once it is close, maybe (L.dodge) time a DRIFT press to shake it
+function dodge(sim, p, ai, L, out) {
+  const c = p.car;
+  for (const e of sim.ents) {
+    if (e.kind !== 'missile' || e.target !== p.id) continue;
+    const d = Math.hypot(e.x - c.x, e.y - c.y), R = (e.st && e.st.dodgeR) || 330;
+    if (ai.seen !== e.id && d < R * 1.6) { ai.seen = e.id; ai.dodge = sim.rand() < L.dodge ? 1 : 0; }
+    if (ai.seen === e.id && ai.dodge && d < R * 0.85) {
+      if (ai.dodge === 1) { out.dr = 0; ai.dodge = 2; } // let go first if already drifting, press next tick
+      else { out.dr = 1; ai.dodge = 0; }
+    }
+    return;
+  }
+}
+// carrying a sticky bomb: steer into a nearby rival to pass it on
+function carryBomb(sim, p, out) {
+  const bomb = sim.ents.find((e) => e.kind === 'sticky' && e.mode === 'stuck' && e.carrier === p.id);
+  if (!bomb) return;
+  const c = p.car;
+  let best = null, bd = 380;
+  for (const q of rivals(sim, p)) { const d = Math.hypot(q.car.x - c.x, q.car.y - c.y); if (d < bd && Math.abs(angDiff(c.a, Math.atan2(q.car.y - c.y, q.car.x - c.x))) < 1.1) { bd = d; best = q; } }
+  if (best) { out.st = clamp(angDiff(c.a, Math.atan2(best.car.y - c.y, best.car.x - c.x)) * 3, -1, 1); out.th = 1; out.dr = 0; }
+}
+// a Hunter Drone on us and close: fire the weapon to swat it
+function swat(sim, p) {
+  return sim.ents.some((e) => e.kind === 'drone' && e.target === p.id && Math.hypot(e.x - p.car.x, e.y - p.car.y) < e.st.swat * 0.9);
+}
+
 function wantItem(sim, p, ai) {
-  const R = rivals(sim, p), c = p.car;
-  const threat = sim.ents.some((e) => e.kind === 'missile' && e.target === p.id && Math.hypot(e.x - c.x, e.y - c.y) < 900);
+  const R = rivals(sim, p), c = p.car, I = itemStat(p.item, p.il || 1);
+  const threat = sim.ents.some((e) => ((e.kind === 'missile' || e.kind === 'drone') && e.target === p.id && Math.hypot(e.x - c.x, e.y - c.y) < 900) || (e.kind === 'sticky' && e.mode === 'stuck' && e.carrier === p.id && e.fuse < 1.5));
   switch (p.item) {
     case 'missile': return !sim.mode.arena ? (p.rank > 1 || ai.wait > 6) : R.some((q) => Math.hypot(q.car.x - c.x, q.car.y - c.y) < 1400);
-    case 'rockets': return R.some((q) => inCone(p, q, 900, 0.18));
+    case 'rockets': return R.some((q) => inCone(p, q, 900, 0.18) || (ai.itemHeld > 8 && inCone(p, q, 1500, 0.3)));
     case 'oil': case 'spikes': return R.some((q) => behind(p, q, 600)) || ai.itemHeld > 7;
     case 'shield': return threat || ai.itemHeld > 8 || (sim.leaderId === p.id && ai.itemHeld > 3);
-    case 'emp': return R.filter((q) => Math.hypot(q.car.x - c.x, q.car.y - c.y) < ITEMS.emp.r * 0.85).length >= 1;
+    case 'emp': return R.filter((q) => Math.hypot(q.car.x - c.x, q.car.y - c.y) < I.r * 0.85).length >= 1;
+    case 'lightning': return R.some((q) => Math.hypot(q.car.x - c.x, q.car.y - c.y) < I.range * 0.9);
+    case 'gravity': return R.some((q) => { const d = Math.hypot(q.car.x - c.x, q.car.y - c.y); return d < I.reach * 0.9 && d > 160; });
+    case 'ghost': return threat || ai.itemHeld > 10;
+    case 'sticky': return R.some((q) => inCone(p, q, 650, 0.35) || (ai.itemHeld > 8 && behind(p, q, 700)));
+    case 'drone': return !sim.mode.arena ? (p.rank > 1 || ai.itemHeld > 6) : R.some((q) => Math.hypot(q.car.x - c.x, q.car.y - c.y) < 1400);
     case 'turbo': {
       if (sim.T.kind === 'arena') return true;
       const sc = sim.T.corridors[ai.c];

@@ -4,7 +4,7 @@
 import { DT, TICK_RATE, CAR_R, DRIVERS, DRIVER_IDS, newCar, stepCar, collideCars, addBoost, BOOSTS, cleanInput, cleanSens, packState, driftTier, SURF } from '../../public/race/physics.js';
 import { getTrack, TRACK_IDS } from '../../public/race/tracks.js';
 import { pointAt, hwAt, nearestS } from '../../public/race/trackgeom.js';
-import { ITEMS, ITEM_IDS, rollItem, WEAPONS } from '../../public/race/items.js';
+import { ITEMS, ITEM_IDS, rollItem, WEAPONS, itemStat, MAX_LEVEL, COMBAT } from '../../public/race/items.js';
 import { FLAG, ENT, COUNTDOWN, RESPAWN_TIME, RACE_MODES, TUTORIAL_MODE, TUT_STEPS, RESET_COOLDOWN, STUCK_NUDGE, STUCK_RESET } from '../../public/race/protocol.js';
 import { BOT_NAMES, rng } from '../../public/shared.js';
 import { botInput, levelForTrophies } from './bots.js';
@@ -96,6 +96,9 @@ export class RaceSim {
       // sens: steering sensitivity (heading steering); stuck: wall-pinned / no-progress timers, RESET cooldown
       sens: cleanSens(sens), wallT: 0, noProgT: 0, bestProg: -Infinity, stuck: 0, nudged: false, resetCd: 0, resetReq: 0, bumpN: -9, resets: 0, nudges: 0,
       tut: 0, fired: false, dummy: false,
+      // weapons: il item level (1-3), protT hit protection, phaseT Ghost Mode, shieldN hits a shield still blocks,
+      // drAt when DRIFT was last pressed (missile dodge), dodges / combos (stats for tests and bots)
+      il: 0, protT: 0, phaseT: 0, shieldN: 0, drAt: -9, drAt0: -9, drPrev: 0, dodges: 0, combos: 0,
     };
     this.players.set(id, p);
     return p;
@@ -244,7 +247,7 @@ export class RaceSim {
       const p = this.players.get(id);
       if (!p || this.phase !== 'play' || this.time <= 0) continue;
       if (m.k === 'wreck') this.destroy(p, null, 'fall');
-      else if (m.k === 'item' && ITEM_IDS.includes(m.item) && !p.item) p.item = m.item;
+      else if (m.k === 'item' && ITEM_IDS.includes(m.item) && !p.item) { p.item = m.item; p.il = Math.max(1, Math.min(MAX_LEVEL, m.lv | 0 || 1)); }
     }
   }
 
@@ -290,6 +293,9 @@ export class RaceSim {
     if (p.ghostT > 0) p.ghostT = Math.max(0, p.ghostT - DT);
     if (p.shieldT > 0) p.shieldT = Math.max(0, p.shieldT - DT);
     if (p.empT > 0) p.empT = Math.max(0, p.empT - DT);
+    if (p.protT > 0) p.protT = Math.max(0, p.protT - DT);
+    if (p.phaseT > 0) p.phaseT = Math.max(0, p.phaseT - DT);
+    if (p.shieldT <= 0) p.shieldN = 0;
     if (p.wcd > 0) p.wcd = Math.max(0, p.wcd - DT);
     // inputs: one physics step per input; bots and finished racers get one from the autopilot
     const auto = p.bot || p.finished || (!p.connected && !p.wasBot && this.fillBots);
@@ -315,6 +321,9 @@ export class RaceSim {
     const ev = {};
     for (const inp of steps) {
       p.inp = { st: inp.st, th: inp.th, dr: inp.dr, ha: inp.ha ?? null, hm: inp.hm || 0, sens: p.sens };
+      // DRIFT pressed (not held): the missile dodge. Presses closer than 0.8 s apart don't count (no spamming)
+      if (inp.dr && !p.drPrev) { if (this.time - p.drAt0 >= 0.8) p.drAt = this.time; p.drAt0 = this.time; }
+      p.drPrev = inp.dr ? 1 : 0;
       const x0 = p.car.x, y0 = p.car.y;
       stepCar(p.car, p.inp, p.st, this.T, DT, ev);
       this.crossGates(p, x0, y0, p.car.x, p.car.y);
@@ -513,15 +522,36 @@ export class RaceSim {
   }
 
   // ------------------------------------------------------------------ combat
-  damage(t, src, amount, kind, ground = false) {
+  // o: { big (spin-out + explosion), spin (s of spin-out on a big hit) }. A rival's hit (src set, not
+  // yourself) starts COMBAT.protect s of protection: no rival can damage or spin you until it runs out.
+  damage(t, src, amount, kind, ground = false, o = null) {
     if (!t.alive || t.out || t.finished || t.ghostT > 0) return false;
     if (ground && t.car.airT > 0) return false;
+    const rival = !!src && src !== t;
+    if (rival && t.protT > 0) return false;
     // a shield takes one hit (not the lava you sit in)
-    if (t.shieldT > 0 && kind !== 'lava') { t.shieldT = 0; this.events.push(['shield', t.id]); return false; }
+    if (t.shieldT > 0 && kind !== 'lava') { this.popShield(t); return false; }
     t.hp -= amount;
-    if (src && src !== t) t.lastHit = { id: src.id, at: this.time };
-    if (kind !== 'lava') this.events.push(['hit', t.id, src ? src.id : 0, kind, Math.round(amount)]);
+    if (rival) { t.lastHit = { id: src.id, at: this.time }; t.protT = COMBAT.protect; }
+    const big = !!(o && o.big);
+    if (kind !== 'lava') this.events.push(['hit', t.id, src ? src.id : 0, kind, Math.round(amount), big ? 1 : 0]);
     if (t.hp <= 0) this.destroy(t, src, kind);
+    else if (big && kind !== 'lava') { t.car.spinT = Math.max(t.car.spinT, (o && o.spin) || COMBAT.bigSpin); t.car.spinDir = this.rand() < 0.5 ? -1 : 1; t.car.drift = 0; t.car.dc = 0; }
+    return true;
+  }
+  popShield(t) {
+    t.shieldN = (t.shieldN || 1) - 1;
+    if (t.shieldN <= 0) { t.shieldT = 0; t.shieldN = 0; }
+    this.events.push(['shield', t.id]);
+  }
+  // a spin-out from a rival's trap (oil): blocked by a shield or the hit protection; starts protection
+  spinHit(q, owner, spin) {
+    const rival = !!owner && owner !== q;
+    if (rival && q.protT > 0) return false;
+    if (q.shieldT > 0) { this.popShield(q); return 'shield'; }
+    q.car.spinT = Math.max(q.car.spinT, spin); q.car.spinDir = this.rand() < 0.5 ? -1 : 1; q.car.drift = 0; q.car.dc = 0;
+    if (rival) { q.lastHit = { id: owner.id, at: this.time }; q.protT = COMBAT.protect; }
+    this.events.push(['spin', q.id, owner ? owner.id : 0]);
     return true;
   }
   destroy(p, src, cause) {
@@ -531,6 +561,7 @@ export class RaceSim {
     p.deaths++;
     p.respawnTick = this.tickN + RESPAWN_TICKS;
     p.car.vx = p.car.vy = 0; p.car.drift = 0; p.car.dc = 0; p.car.boostT = 0; p.car.airT = 0; p.car.spinT = 0;
+    p.phaseT = 0; p.ghostT = 0; p.shieldT = 0; p.shieldN = 0;
     let by = src && src !== p ? src : null;
     if (!by && p.lastHit && this.time - p.lastHit.at <= CREDIT_WINDOW) by = this.players.get(p.lastHit.id) || null;
     if (by && by !== p) {
@@ -552,7 +583,7 @@ export class RaceSim {
     const spot = this.mode.arena ? this.arenaSpot(p) : this.respawnSpot(p);
     p.car = newCar(spot.x, spot.y, spot.a);
     stepCar(p.car, { st: 0, th: 0, dr: 0 }, p.st, T, 0);
-    p.alive = true; p.hp = p.maxHp; p.ghostT = GHOST_TIME; p.ep++;
+    p.alive = true; p.hp = p.maxHp; p.ghostT = GHOST_TIME; p.protT = 0; p.phaseT = 0; p.ep++;
     p.ai = null;
     this.clearStuck(p);
     this.events.push(['rs', p.id]);
@@ -585,9 +616,13 @@ export class RaceSim {
 
   enemies(p) { return [...this.players.values()].filter((q) => q !== p && q.alive && !q.out && !q.finished && q.ghostT <= 0); }
   fireWeapon(p) {
-    if (!this.mode.weapons || p.wcd > 0 || p.empT > 0 || p.finished) return;
+    if (!this.mode.weapons || p.wcd > 0 || p.empT > 0 || p.finished || p.phaseT > 0) return;
     const W = WEAPONS[p.driver], c = p.car, hx = Math.cos(c.a), hy = Math.sin(c.a);
     p.wcd = W.cd; p.fired = true;
+    // COUNTER: firing your weapon swats a Hunter Drone that is chasing you, when it is close
+    for (const e of this.ents) if (e.kind === 'drone' && e.target === p.id && !e.dead && Math.hypot(e.x - c.x, e.y - c.y) < e.st.swat) {
+      e.dead = true; this.events.push(['swat', p.id, e.id], ['boom', Math.round(e.x), Math.round(e.y), e.k]);
+    }
     switch (p.driver) {
       case 'volt': {
         let best = null, bd = W.range;
@@ -647,50 +682,107 @@ export class RaceSim {
     }
   }
 
+  // the racer a homing item locks on to: the one k places ahead (race modes), else the nearest in front
+  aimAt(p, k = 1) {
+    const c = p.car;
+    let tgt = !this.mode.arena && p.rank > k ? this.order[p.rank - 1 - k] : null;
+    if (tgt && (!tgt.alive || tgt.out || tgt.finished || tgt.ghostT > 0)) tgt = null;
+    if (!tgt) {
+      let bd = 2200;
+      for (const q of this.enemies(p)) {
+        const d = Math.hypot(q.car.x - c.x, q.car.y - c.y);
+        if (d < bd && Math.abs(angDiff(c.a, Math.atan2(q.car.y - c.y, q.car.x - c.x))) < 1.2) { bd = d; tgt = q; }
+      }
+    }
+    return tgt;
+  }
   useItem(p) {
-    if (!p.item || p.empT > 0 || p.finished) return;
-    const it = p.item, I = ITEMS[it], c = p.car, hx = Math.cos(c.a), hy = Math.sin(c.a);
-    p.item = null;
-    this.events.push(['use', p.id, ITEM_IDS.indexOf(it)]);
+    if (!p.item || p.empT > 0 || p.finished || p.phaseT > 0) return;
+    const it = p.item, lv = Math.max(1, p.il || 1), I = itemStat(it, lv), c = p.car, hx = Math.cos(c.a), hy = Math.sin(c.a);
+    p.item = null; p.il = 0;
+    this.events.push(['use', p.id, ITEM_IDS.indexOf(it), lv]);
     switch (it) {
       case 'missile': {
-        // locks on to the racer one place ahead, else the nearest in front
-        let tgt = !this.mode.arena && p.rank > 1 ? this.order[p.rank - 2] : null;
-        if (!tgt || !tgt.alive || tgt.out || tgt.finished) {
-          tgt = null;
-          let bd = 2200;
-          for (const q of this.enemies(p)) {
-            const d = Math.hypot(q.car.x - c.x, q.car.y - c.y);
-            if (d < bd && Math.abs(angDiff(c.a, Math.atan2(q.car.y - c.y, q.car.x - c.x))) < 1.2) { bd = d; tgt = q; }
-          }
+        // locks on to the racer one place ahead (level 3: a second one at the racer two ahead)
+        for (let k = 0; k < I.n; k++) {
+          const tgt = (k && this.aimAt(p, 2)) || this.aimAt(p, 1);
+          const a = c.a + (I.n > 1 ? (k ? 0.18 : -0.18) : 0);
+          const e = this.addEnt('missile', p, c.x + hx * 34, c.y + hy * 34, a, { life: I.life, target: tgt ? tgt.id : 0, speed: I.speed, st: I, lv });
+          if (tgt) this.events.push(['lock', tgt.id, p.id, e.id, 'missile']);
         }
-        this.addEnt('missile', p, c.x + hx * 34, c.y + hy * 34, c.a, { life: I.life, target: tgt ? tgt.id : 0, speed: I.speed });
         break;
       }
       case 'rockets':
         for (let k = 0; k < I.n; k++) {
           const a = c.a + (k - (I.n - 1) / 2) * I.spread;
-          this.addEnt('rocket', p, c.x + hx * 30, c.y + hy * 30, a, { life: I.life, speed: I.speed + Math.max(0, c.vx * hx + c.vy * hy) });
+          this.addEnt('rocket', p, c.x + hx * 30, c.y + hy * 30, a, { life: I.life, speed: I.speed + Math.max(0, c.vx * hx + c.vy * hy), st: I, lv });
         }
         break;
-      case 'oil': this.addEnt('oil', p, c.x - hx * 56, c.y - hy * 56, c.a, { life: I.life }); break;
-      case 'spikes': this.addEnt('spikes', p, c.x - hx * 60, c.y - hy * 60, c.a + Math.PI / 2, { life: I.life, hits: I.hits, seen: [] }); break;
-      case 'shield': p.shieldT = I.t; break;
-      case 'turbo': addBoost(c, BOOSTS.turbo); break;
+      case 'oil': this.placeTrap('oil', p, c.x - hx * 56, c.y - hy * 56, c.a, { life: I.life, st: I, lv }); break;
+      case 'spikes': this.placeTrap('spikes', p, c.x - hx * 60, c.y - hy * 60, c.a + Math.PI / 2, { life: I.life, hits: I.hits, seen: [], st: I, lv }); break;
+      case 'shield': p.shieldT = I.t; p.shieldN = I.hits; break;
+      case 'turbo': addBoost(c, I); break;
       case 'emp':
-        this.events.push(['emp', p.id]);
-        for (const q of this.enemies(p)) {
-          if (Math.hypot(q.car.x - c.x, q.car.y - c.y) > I.r) continue;
-          if (q.shieldT > 0) { q.shieldT = 0; this.events.push(['shield', q.id]); continue; }
+        this.events.push(['emp', p.id, lv]);
+        for (const q of this.players.values()) {
+          if (q === p || !q.alive || q.out || q.finished || Math.hypot(q.car.x - c.x, q.car.y - c.y) > I.r) continue;
+          // COUNTER to Ghost Mode: the blast knocks a ghost back into the real world
+          if (q.phaseT > 0) { q.phaseT = 0; q.ghostT = 0; this.events.push(['unghost', q.id]); }
+          if (q.ghostT > 0) continue;
+          if (q.shieldT > 0) { this.popShield(q); continue; }
           q.empT = Math.max(q.empT, I.t);
           q.car.slowT = Math.max(q.car.slowT, I.slow);
+          q.car.boostT = 0; // COUNTER to Turbo: the blast cuts a boost
         }
         break;
+      case 'lightning': {
+        // the nearest racer in reach, then jumps to the nearest racer not yet hit near the last one
+        const hit = [], R = this.enemies(p);
+        let from = c, reach = I.range, dmg = I.dmg;
+        for (let k = 0; k < I.jumps; k++) {
+          let best = null, bd = reach;
+          for (const q of R) { if (hit.includes(q)) continue; const d = Math.hypot(q.car.x - from.x, q.car.y - from.y); if (d < bd) { bd = d; best = q; } }
+          if (!best) break;
+          hit.push(best);
+          if (this.damage(best, p, dmg, 'chain') && best.alive) best.car.slowT = Math.max(best.car.slowT, I.slow);
+          from = best.car; reach = I.chain; dmg *= I.fall;
+        }
+        this.events.push(['chain', p.id, ...hit.map((q) => q.id)]);
+        break;
+      }
+      case 'gravity': {
+        // lobbed onto the nearest racer in reach (ahead or behind), else a short way ahead
+        let tgt = null, d = I.reach;
+        for (const q of this.enemies(p)) { const dq = Math.hypot(q.car.x - c.x, q.car.y - c.y); if (dq < d) { d = dq; tgt = q; } }
+        const far = tgt && d < I.reach ? d + 60 : I.throwT * I.throwV, a = tgt && d < I.reach ? Math.atan2(tgt.car.y - c.y, tgt.car.x - c.x) : c.a;
+        this.addEnt('well', p, c.x, c.y, a, { life: I.throwT + I.life + 0.1, end: I.throwT + I.life, v: far / I.throwT, st: I, lv });
+        break;
+      }
+      case 'ghost': p.phaseT = I.t; p.ghostT = Math.max(p.ghostT, I.t); break;
+      case 'sticky': this.addEnt('sticky', p, c.x + hx * 34, c.y + hy * 34, c.a, { life: 60, mode: 'fly', carrier: 0, fuse: I.fuse, passCd: 0, from: p.id, speed: I.speed + Math.max(0, c.vx * hx + c.vy * hy) * 0.5, st: I, lv }); break;
+      case 'drone': {
+        const tgt = this.aimAt(p, 1);
+        const e = this.addEnt('drone', p, c.x - hx * 20, c.y - hy * 20, c.a, { life: I.life, target: tgt ? tgt.id : 0, strikes: I.strikes, cool: 0.4, st: I, lv });
+        if (tgt) this.events.push(['lock', tgt.id, p.id, e.id, 'drone']);
+        break;
+      }
     }
+  }
+  // oil or spikes. COMBO: dropped onto the other kind, the two merge into one bigger trap
+  placeTrap(kind, p, x, y, a, o) {
+    const other = kind === 'oil' ? 'spikes' : 'oil', I = o.st;
+    const reach = kind === 'oil' ? I.r + ITEMS.spikes.half * 0.7 : I.half * 0.7 + ITEMS.oil.r;
+    const hit = this.ents.find((e) => e.kind === other && !e.dead && Math.hypot(e.x - x, e.y - y) < reach);
+    if (!hit) return this.addEnt(kind, p, x, y, a, o);
+    hit.dead = true;
+    const oil = kind === 'oil' ? I : hit.st, lv = Math.max(o.lv, hit.lv || 1), mx = (x + hit.x) / 2, my = (y + hit.y) / 2;
+    p.combos++;
+    this.events.push(['combo', p.id, 'trap', Math.round(mx), Math.round(my)]);
+    return this.addEnt('trap', p, mx, my, a, { life: COMBAT.trapLife, r: oil.r * COMBAT.trapR, hits: COMBAT.trapHits + lv - 1, seen: [], lv, arm: 0.3 });
   }
 
   addEnt(kind, owner, x, y, a, o) {
-    const e = { id: this.nextEnt++, kind, k: ENT.indexOf(kind), owner: owner.id, x, y, a, t: 0, ...o };
+    const e = { id: this.nextEnt++, kind, k: ENT.indexOf(kind), owner: owner.id, x, y, a, t: 0, lv: 1, ...o };
     this.ents.push(e);
     return e;
   }
@@ -700,7 +792,7 @@ export class RaceSim {
     for (const e of this.ents) {
       e.t += DT;
       if (e.t >= e.life || e.dead) continue;
-      if (this.updateEnt(e)) keep.push(e);
+      if (this.updateEnt(e) && !e.dead) keep.push(e);
     }
     this.ents = keep;
   }
@@ -710,21 +802,33 @@ export class RaceSim {
     const others = (ground) => [...this.players.values()].filter((q) => q.alive && !q.out && !q.finished && q.ghostT <= 0 && (!ground || q.car.airT <= 0));
     switch (e.kind) {
       case 'missile': {
-        const tgt = this.players.get(e.target);
-        if (tgt && tgt.alive && !tgt.out && !tgt.finished) e.a += Math.max(-ITEMS.missile.turn * DT, Math.min(ITEMS.missile.turn * DT, angDiff(e.a, Math.atan2(tgt.car.y - e.y, tgt.car.x - e.x))));
+        const I = e.st || ITEMS.missile, tgt = this.players.get(e.target);
+        if (tgt && tgt.alive && !tgt.out && !tgt.finished && tgt.ghostT <= 0) {
+          e.a += Math.max(-I.turn * DT, Math.min(I.turn * DT, angDiff(e.a, Math.atan2(tgt.car.y - e.y, tgt.car.x - e.x))));
+          // COUNTER: DRIFT pressed with the missile inside its dodge range shakes the lock
+          if (Math.hypot(tgt.car.x - e.x, tgt.car.y - e.y) < (I.dodgeR || 330) && this.time - tgt.drAt <= COMBAT.dodgeWin && tgt.car.airT <= 0) {
+            e.ignore = tgt.id; e.target = 0; tgt.dodges++;
+            this.events.push(['dodge', tgt.id, e.id]);
+          }
+        }
         e.x += Math.cos(e.a) * e.speed * DT; e.y += Math.sin(e.a) * e.speed * DT;
         for (const q of others(false)) {
-          if (q.id === e.owner && e.t < 1) continue;
+          if ((q.id === e.owner && e.t < 1) || q.id === e.ignore) continue;
           if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < CAR_R + 18) {
             this.events.push(['boom', Math.round(e.x), Math.round(e.y), e.k]);
-            if (this.damage(q, owner, ITEMS.missile.dmg, 'missile') && q.alive) { q.car.spinT = ITEMS.missile.spin; q.car.spinDir = this.rand() < 0.5 ? -1 : 1; }
+            // COMBO: an EMP-ed racer takes extra missile damage
+            const emp = q.empT > 0 && q.id !== e.owner;
+            if (this.damage(q, owner, I.dmg * (emp ? COMBAT.empMissile : 1), 'missile', false, { big: I.spin > 0, spin: I.spin }) && emp) {
+              if (owner) owner.combos++;
+              this.events.push(['combo', e.owner, 'emp', q.id]);
+            }
             return false;
           }
         }
         return true;
       }
       case 'rocket': case 'bolt': {
-        const dmg = e.kind === 'rocket' ? ITEMS.rockets.dmg : WEAPONS.rook.dmg;
+        const dmg = e.kind === 'rocket' ? (e.st || ITEMS.rockets).dmg : WEAPONS.rook.dmg;
         e.x += Math.cos(e.a) * e.speed * DT; e.y += Math.sin(e.a) * e.speed * DT;
         if (!this.T.inside(e.x, e.y, 0)) { this.events.push(['boom', Math.round(e.x), Math.round(e.y), e.k]); return false; }
         for (const q of others(true)) {
@@ -737,25 +841,41 @@ export class RaceSim {
         }
         return true;
       }
-      case 'oil':
+      case 'oil': {
+        const I = e.st || ITEMS.oil;
+        if (e.t < (I.arm || 0)) return true; // arming: flashes, harmless
         for (const q of others(true)) {
           if (q.id === e.owner && e.t < 1.2) continue;
-          if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < ITEMS.oil.r + CAR_R * 0.6) {
-            if (q.shieldT > 0) { q.shieldT = 0; this.events.push(['shield', q.id]); return false; }
-            q.car.spinT = ITEMS.oil.spin; q.car.spinDir = this.rand() < 0.5 ? -1 : 1; q.car.drift = 0; q.car.dc = 0;
-            if (owner && owner !== q) q.lastHit = { id: owner.id, at: this.time };
-            this.events.push(['spin', q.id, e.owner]);
+          if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < I.r + CAR_R * 0.6) {
+            if (q.id !== e.owner && q.protT > 0) continue; // protected: rolls over it, the slick stays
+            this.spinHit(q, owner, I.spin);
             return false;
           }
         }
         return true;
+      }
       case 'spikes': {
-        const hx = Math.cos(e.a) * ITEMS.spikes.half, hy = Math.sin(e.a) * ITEMS.spikes.half;
+        const I = e.st || ITEMS.spikes;
+        if (e.t < (I.arm || 0)) return true;
+        const hx = Math.cos(e.a) * I.half, hy = Math.sin(e.a) * I.half;
         for (const q of others(true)) {
           if ((q.id === e.owner && e.t < 1.2) || e.seen.includes(q.id)) continue;
           if (distToSeg(q.car.x, q.car.y, e.x - hx, e.y - hy, e.x + hx, e.y + hy) < CAR_R + 8) {
             e.seen.push(q.id);
-            if (this.damage(q, owner, ITEMS.spikes.dmg, 'spikes', true) && q.alive) q.car.slowT = Math.max(q.car.slowT, ITEMS.spikes.slow);
+            if (this.damage(q, owner, I.dmg, 'spikes', true) && q.alive) q.car.slowT = Math.max(q.car.slowT, I.slow);
+            if (--e.hits <= 0) return false;
+          }
+        }
+        return true;
+      }
+      case 'trap': { // COMBO oil + spikes: spins, hurts and slows everyone who drives in, a few times
+        if (e.t < e.arm) return true;
+        for (const q of others(true)) {
+          if ((q.id === e.owner && e.t < 1.2) || e.seen.includes(q.id)) continue;
+          if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < e.r + CAR_R * 0.6) {
+            if (q.id !== e.owner && q.protT > 0) continue;
+            e.seen.push(q.id);
+            if (this.damage(q, owner, COMBAT.trapDmg, 'trap', true, { big: true, spin: COMBAT.trapSpin }) && q.alive) q.car.slowT = Math.max(q.car.slowT, COMBAT.trapSlow);
             if (--e.hits <= 0) return false;
           }
         }
@@ -767,6 +887,7 @@ export class RaceSim {
         for (const q of others(true)) {
           if (q.id === e.owner) continue;
           if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < W.r + CAR_R) {
+            if (q.protT > 0) continue; // protected: drives over it, the mine stays
             this.events.push(['boom', Math.round(e.x), Math.round(e.y), e.k]);
             if (this.damage(q, owner, W.dmg, 'mine', true) && q.alive) q.car.slowT = Math.max(q.car.slowT, W.slow);
             return false;
@@ -793,6 +914,96 @@ export class RaceSim {
         }
         return true;
       }
+      case 'well': { // thrown ahead, then pulls grounded racers toward its centre
+        const I = e.st;
+        if (e.t < I.throwT) { e.x += Math.cos(e.a) * e.v * DT; e.y += Math.sin(e.a) * e.v * DT; return true; }
+        const end = e.t >= e.end;
+        for (const q of others(true)) {
+          if (q.id === e.owner) continue;
+          const dx = e.x - q.car.x, dy = e.y - q.car.y, d = Math.hypot(dx, dy);
+          if (d > I.r || d < 1) continue;
+          if (end && I.crush && d < I.r * 0.45) this.damage(q, owner, I.crush, 'crush', true, { big: true });
+          const k = I.pull * (0.4 + 0.6 * (1 - d / I.r)) * DT, drag = Math.exp(-I.drag * DT); // pulled in and held
+          q.car.vx = q.car.vx * drag + (dx / d) * k; q.car.vy = q.car.vy * drag + (dy / d) * k;
+        }
+        if (end) { this.events.push(['boom', Math.round(e.x), Math.round(e.y), e.k]); return false; }
+        return true;
+      }
+      case 'sticky': return this.updateSticky(e, owner, others);
+      case 'drone': {
+        const I = e.st;
+        let tgt = this.players.get(e.target);
+        if (!tgt || !tgt.alive || tgt.out || tgt.finished || tgt.ghostT > 0) {
+          tgt = null;
+          if (owner) { let bd = 1400; for (const q of this.enemies(owner)) { const d = Math.hypot(q.car.x - e.x, q.car.y - e.y); if (d < bd) { bd = d; tgt = q; } } }
+          if (tgt && tgt.id !== e.target) { e.target = tgt.id; this.events.push(['lock', tgt.id, e.owner, e.id, 'drone']); }
+        }
+        if (tgt) e.a += Math.max(-I.turn * DT, Math.min(I.turn * DT, angDiff(e.a, Math.atan2(tgt.car.y - e.y, tgt.car.x - e.x))));
+        e.x += Math.cos(e.a) * I.speed * DT; e.y += Math.sin(e.a) * I.speed * DT;
+        if (e.cool > 0) { e.cool -= DT; return true; }
+        if (tgt && Math.hypot(tgt.car.x - e.x, tgt.car.y - e.y) < CAR_R + 16) {
+          this.events.push(['boom', Math.round(e.x), Math.round(e.y), e.k]);
+          if (this.damage(tgt, owner, I.dmg, 'drone') && tgt.alive) tgt.car.slowT = Math.max(tgt.car.slowT, I.slow);
+          if (--e.strikes <= 0) return false;
+          e.cool = COMBAT.protect + 0.1; // strikes again once the protection is over
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+  // STICKY BOMB: flies ahead and sticks to the first racer it touches (or lies on the road and sticks to
+  // the next one over it). Stuck, it rides on that car and passes on to any racer the carrier touches;
+  // when the fuse runs out it blows up on whoever carries it. Ghost Mode shakes it off.
+  updateSticky(e, owner, others) {
+    const I = e.st;
+    if (e.mode !== 'stuck') {
+      if (e.mode === 'fly') {
+        if (e.t >= I.fly) { e.mode = 'ground'; e.t0 = e.t; }
+        else {
+          // a light homing toward the nearest racer in front
+          let best = null, bd = 600;
+          for (const q of others(false)) { if (q.id === e.owner) continue; const d = Math.hypot(q.car.x - e.x, q.car.y - e.y); if (d < bd && Math.abs(angDiff(e.a, Math.atan2(q.car.y - e.y, q.car.x - e.x))) < 0.9) { bd = d; best = q; } }
+          if (best) e.a += Math.max(-2.4 * DT, Math.min(2.4 * DT, angDiff(e.a, Math.atan2(best.car.y - e.y, best.car.x - e.x))));
+          const nx = e.x + Math.cos(e.a) * e.speed * DT, ny = e.y + Math.sin(e.a) * e.speed * DT;
+          if (this.T.inside(nx, ny, 0)) { e.x = nx; e.y = ny; } else { e.mode = 'ground'; e.t0 = e.t; }
+        }
+      } else if (e.t - e.t0 > I.ground) { this.events.push(['fizzle', e.id, 0]); return false; }
+      const armed = e.mode === 'fly' ? e.t > 0.25 : e.t - e.t0 > 0.5;
+      if (!armed) return true;
+      for (const q of others(e.mode === 'ground')) {
+        if (q.id === e.owner && e.mode === 'fly') continue;
+        if (Math.hypot(q.car.x - e.x, q.car.y - e.y) < CAR_R + 14) {
+          e.mode = 'stuck'; e.carrier = q.id; e.fuse = I.fuse; e.passCd = I.pass;
+          this.events.push(['stick', q.id, e.owner, e.id]);
+          break;
+        }
+      }
+      return true;
+    }
+    const cq = this.players.get(e.carrier);
+    if (!cq || !cq.alive || cq.out || cq.finished) { this.events.push(['fizzle', e.id, e.carrier]); return false; }
+    if (cq.phaseT > 0) { this.events.push(['fizzle', e.id, cq.id]); return false; } // COUNTER: Ghost Mode shakes it off
+    e.x = cq.car.x; e.y = cq.car.y; e.a = cq.car.a;
+    e.fuse -= DT; e.passCd -= DT;
+    if (e.passCd <= 0) {
+      for (const q of others(false)) {
+        if (q === cq || (q.car.airT > 0) !== (cq.car.airT > 0)) continue;
+        if (Math.hypot(q.car.x - cq.car.x, q.car.y - cq.car.y) < CAR_R * 2 + 10) {
+          e.from = cq.id; e.carrier = q.id; e.passCd = I.pass;
+          this.events.push(['pass', cq.id, q.id, e.id]);
+          return true;
+        }
+      }
+    }
+    if (e.fuse > 0) return true;
+    // BOOM: the carrier takes the blast; levels 2-3 splash the racers near them for half
+    const by = this.players.get(e.from) || owner || null;
+    this.events.push(['boom', Math.round(e.x), Math.round(e.y), e.k]);
+    this.damage(cq, by, I.dmg, 'sticky', false, { big: true, spin: I.spin });
+    if (I.splash) for (const q of others(false)) {
+      if (q === cq || q === by || Math.hypot(q.car.x - e.x, q.car.y - e.y) > I.splash) continue;
+      this.damage(q, by, I.dmg * 0.5, 'sticky');
     }
     return false;
   }
@@ -809,8 +1020,13 @@ export class RaceSim {
         if (dx * dx + dy * dy > (CAR_R + 22) ** 2) continue;
         this.boxes[k] = this.tickN + Math.round(BOX_RESPAWN * TICK_RATE);
         p.mc += COINS.box;
-        if (!p.item) p.item = rollItem(p.rank || 1, this.racers(), this.rand(), !!this.mode.arena);
-        this.events.push(['box', p.id, k, p.item ? ITEM_IDS.indexOf(p.item) : -1]);
+        // empty slot: a new item. Holding one: the same item again levels it up (up to 3), else nothing
+        // (itemFor(p): a test hook that fixes what a racer gets: an item id, null = nothing, undefined = the roll)
+        let got = -1, up = 0;
+        const f = this.itemFor ? this.itemFor(p) : undefined;
+        const r = f !== undefined ? f : rollItem(p.rank || 1, this.racers(), this.rand(), !!this.mode.arena, p.item);
+        if (r && !p.item) { p.item = r; p.il = 1; got = 1; } else if (r && r === p.item && p.il < MAX_LEVEL) { p.il++; got = up = 1; }
+        this.events.push(['box', p.id, k, got > 0 ? ITEM_IDS.indexOf(p.item) : -1, got > 0 ? p.il : 0, up]);
         break;
       }
     }
@@ -871,7 +1087,8 @@ export class RaceSim {
     return (c.drift ? FLAG.DRIFT : 0) | (c.boostT > 0 ? FLAG.BOOST : 0) | (c.airT > 0 ? FLAG.AIR : 0) | (p.shieldT > 0 ? FLAG.SHIELD : 0)
       | (this.leaderId === p.id ? FLAG.LEADER : 0) | (!p.alive ? FLAG.DEAD : 0) | (c.spinT > 0 ? FLAG.SPIN : 0) | (p.empT > 0 ? FLAG.EMP : 0)
       | (p.finished ? FLAG.FINISHED : 0) | (p.out ? FLAG.OUT : 0) | (p.ghostT > 0 ? FLAG.GHOST : 0) | (c.slowT > 0 ? FLAG.SLOW : 0)
-      | (driftTier(c.dc) << 12) | ((c.vx * Math.cos(c.a) + c.vy * Math.sin(c.a)) < -20 ? FLAG.REVERSE : 0);
+      | (driftTier(c.dc) << 12) | ((c.vx * Math.cos(c.a) + c.vy * Math.sin(c.a)) < -20 ? FLAG.REVERSE : 0)
+      | (p.protT > 0 ? FLAG.PROT : 0) | (p.phaseT > 0 ? FLAG.PHASE : 0);
   }
   hud() {
     if (this.modeKey === 'grand' || this.modeKey === 'trial') return { laps: this.laps, ft: this.finishAt != null ? r2(Math.max(0, this.finishAt - this.time)) : null };
@@ -886,7 +1103,9 @@ export class RaceSim {
       const c = p.car;
       cars.push([p.id, Math.round(c.x), Math.round(c.y), Math.round(c.a * 1000), this.flags(p), Math.round((100 * Math.max(0, p.hp)) / p.maxHp), p.lap, Math.round(Math.hypot(c.vx, c.vy)), r1(p.stuck)]);
     }
-    const ents = this.ents.map((e) => [e.id, e.k, Math.round(e.x), Math.round(e.y), Math.round(e.a * 1000), e.owner, e.kind === 'mine' ? (e.t >= e.arm ? 1 : 0) : 0]);
+    // [id, kind, x, y, a, owner, armed, level, target]: target = who a missile / drone is locked on to,
+    // or who carries a sticky bomb (0 = none)
+    const ents = this.ents.map((e) => [e.id, e.k, Math.round(e.x), Math.round(e.y), Math.round(e.a * 1000), e.owner, this.armed(e) ? 1 : 0, e.lv || 1, e.kind === 'sticky' ? e.carrier : e.target || 0]);
     const bx = [];
     for (let k = 0; k < this.boxes.length; k++) if (this.boxes[k] > this.tickN) bx.push(k);
     let hz = 0;
@@ -898,10 +1117,19 @@ export class RaceSim {
       this.send(p.id, { ...common, me: this.meMsg(p) });
     }
   }
+  armed(e) {
+    switch (e.kind) {
+      case 'mine': case 'trap': return e.t >= e.arm;
+      case 'oil': case 'spikes': return e.t >= (e.st?.arm || 0);
+      case 'well': return e.t >= e.st.throwT;
+      case 'sticky': return e.mode === 'stuck';
+    }
+    return false;
+  }
   meMsg(p) {
     return {
       s: packState(p.car), ack: p.lastSeq, ep: p.ep, hp: Math.max(0, Math.round(p.hp)), mh: p.maxHp,
-      it: p.item ? ITEM_IDS.indexOf(p.item) : -1, wc: r2(p.wcd), sh: r2(p.shieldT), em: r2(p.empT), gh: r2(p.ghostT),
+      it: p.item ? ITEM_IDS.indexOf(p.item) : -1, il: p.item ? p.il || 1 : 0, pr: r2(p.protT), ph: r2(p.phaseT), wc: r2(p.wcd), sh: r2(p.shieldT), em: r2(p.empT), gh: r2(p.ghostT),
       lap: p.lap, cp: p.cp, rk: p.rank, rt: p.alive ? 0 : r2(Math.max(0, (p.respawnTick - this.tickN) * DT)),
       mc: p.mc, k: p.kills, d: p.deaths, lt: p.maxLap >= 1 && !p.finished ? r2(this.time - p.lapStart) : 0, bl: p.bestLap,
       fin: p.place && p.finished ? p.place : 0, out: p.out ? p.place : 0, auto: p.finished ? 1 : 0,
