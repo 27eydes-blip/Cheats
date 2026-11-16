@@ -16,6 +16,7 @@ import { trackName } from './tracks.js';
 import { SETTINGS } from '../settings.js';
 import { icon } from '../ui/icons.js';
 import { levelInfo } from '../progression.js';
+import { mountHorn, hornEvent } from './horn.js';
 
 const CREDIT = 'Created by Sam Eyde III';
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -75,6 +76,7 @@ class RaceSession {
     this.renderer = new RaceRenderer(this.cv);
     this.hud = new Hud();
     this.ctrl = new Controls(this.cv, { onMenu: () => this.toggleMenu() });
+    this.horn = mountHorn(this);
     $('.rc-cancel').onclick = () => this.exit();
     $('.rc-resume').onclick = () => this.toggleMenu(false);
     $('.rc-leave').onclick = () => this.exit();
@@ -241,6 +243,7 @@ class RaceSession {
     clearInterval(this.tipTimer); clearTimeout(this.toastT);
     try { if (this.rc && this.rc.phase !== 'idle') this.rc.leave(); } catch {}
     this.ctrl.destroy();
+    this.horn.destroy();
     removeEventListener('resize', this.onResize);
     stopEngine();
     this.root.remove();
@@ -474,6 +477,7 @@ class RaceSession {
       case 'jump': if (e[1] === meId) play('jump'); break;
       case 'mt': if (e[1] === meId) { play('mt' + Math.min(3, Math.max(1, e[2]))); this.mtNow = true; } break;
       case 'bump': if (e[1] === meId || e[2] === meId) play('bump', Math.min(1, e[3] / 700)); break;
+      case 'horn': hornEvent(rc, e[1], fall(e[1])); break;
       case 'lap': {
         if (e[1] !== meId) break;
         const n = e[2], laps = v.hud?.laps || 0;

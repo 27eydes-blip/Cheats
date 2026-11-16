@@ -122,3 +122,17 @@ export function stopEngine() {
   try { eng.g.disconnect(); eng.sg.disconnect(); eng.wg.disconnect(); } catch {}
   eng = null;
 }
+
+// HORN: a store horn ({wave, notes: [[Hz, s], ...]}, Hz 0 = a rest) or the stock double toot.
+// Played for your own horn at once, for others' from the 'horn' event, quieter with distance.
+const STOCK_HORN = { wave: 'square', notes: [[440, 0.09], [0, 0.04], [440, 0.12]] };
+export function horn(opt, v = 1) {
+  v *= vol();
+  const h = opt && Array.isArray(opt.notes) ? opt : STOCK_HORN;
+  if (v <= 0.02 || !ready()) return;
+  let t = ac.currentTime + 0.005;
+  for (const [f, d] of h.notes) {
+    if (f > 0) { tone(t, h.wave || 'square', f, f, d, 0.12 * v, 0.01); tone(t, 'triangle', f * 2, f * 2, d, 0.04 * v, 0.01); }
+    t += d;
+  }
+}
