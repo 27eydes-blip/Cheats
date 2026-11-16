@@ -69,10 +69,11 @@ test('store: try on, buy with test coins, equip; owned / equipped badges; not en
   await page.tap('#stBuy');
   await expect(page.locator('#toast')).toHaveText(/Not enough gems/);
   expect((await progress(page)).gems).toBe(p.gems);
-  // CARS: all six, owned, with their stats; DRIVE picks one
+  // CARS: the six starters, owned, with their stats, then the 8 unlockable cars (locked: their price
+  // or progress, see overnight-cars-unlock.spec.js); DRIVE picks one
   await page.tap('.st-tab[data-t="cars"]');
-  await expect(page.locator('.st-card[data-kind="car"]')).toHaveCount(6);
-  await expect(page.locator('.st-card[data-kind="car"] .st-nm')).toHaveText(['ARCWIRE', 'WARHOG', 'PHANTOM', 'SANDVIPER', 'COBRA', 'RAZOR']);
+  await expect(page.locator('.st-card[data-kind="car"]')).toHaveCount(14);
+  await expect(page.locator('.st-card[data-kind="car"] .st-nm')).toHaveText(['ARCWIRE', 'WARHOG', 'PHANTOM', 'SANDVIPER', 'COBRA', 'RAZOR', 'VOIDRUNNER', 'SOLAR FANG', 'FROSTBYTE', 'GRAVITON', 'PHANTOM VX', 'REDLINE ZERO', 'HELIX', 'OBLIVION PRIME']);
   await expect(page.locator('.st-card[data-kind="car"] .st-badge')).toHaveText(['DRIVING', 'OWNED', 'OWNED', 'OWNED', 'OWNED', 'OWNED']);
   await page.tap('.st-card[data-id="rook"]');
   await page.tap('#stBuy');

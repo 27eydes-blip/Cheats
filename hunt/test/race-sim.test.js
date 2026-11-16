@@ -136,7 +136,7 @@ function itemDuel(item, setup) {
 { // EMP: nearby racers can't use items or weapons and slow down
   const { sim, A, B } = itemDuel('emp', (s, A, B) => { place(s, A, 600); place(s, B, 900, 40); B.item = 'turbo'; ticks(s); });
   drive(sim, A, { i: 1 }, 1);
-  assert.ok(B.empT > 2 && B.car.slowT > ITEMS.emp.slow - 0.1, 'B is disabled and slowed');
+  assert.ok(B.empT > ITEMS.emp.t - 0.1 && B.car.slowT > ITEMS.emp.slow - 0.1, 'B is disabled and slowed');
   assert.strictEqual(A.empT, 0, 'not the user');
   drive(sim, B, { i: 1, f: 1 }, 1);
   assert.strictEqual(B.item, 'turbo', 'item use blocked');

@@ -7,7 +7,8 @@ test('lobby renders with credit, brawlers and settings that persist', async ({ p
   await expect(page.locator('#lobby #credit')).toHaveText('Created by Sam Eyde III');
   await expect(page.locator('#lobby #credit')).toBeVisible();
   await page.click('.nameplate');
-  await expect(page.locator('.bcard')).toHaveCount(6);
+  await expect(page.locator('.bcard')).toHaveCount(14); // the six starters + the 8 unlockable cars
+  await expect(page.locator('.bcard.locked')).toHaveCount(8);
   await page.click('.ui-screen .back');
   await page.click('#rail_settings');
   await page.check('#setFlash'); await page.check('#setLow');
