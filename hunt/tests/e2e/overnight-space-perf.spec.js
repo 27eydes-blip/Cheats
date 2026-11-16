@@ -8,12 +8,15 @@
 // under that load), while the median holds at ~60.
 import { test, expect, chromium } from '@playwright/test';
 
+// closed after each test even when a check fails: a browser left open holds up the worker's teardown
+let launched = null;
+test.afterEach(async () => { await launched?.close(); launched = null; });
 const GPU_RASTER = ['--enable-gpu-rasterization', '--ignore-gpu-blocklist', '--enable-accelerated-2d-canvas', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
 
 test('space lobby: 60 fps at 667x375 with 4x CPU throttle', async ({ browserName, baseURL }) => {
   test.skip(browserName !== 'chromium', 'CDP CPU throttling');
   test.setTimeout(120_000);
-  const browser = await chromium.launch({ args: GPU_RASTER });
+  const browser = (launched = await chromium.launch({ args: GPU_RASTER }));
   const ctx = await browser.newContext({ baseURL, viewport: { width: 667, height: 375 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   const cdp = await ctx.newCDPSession(page);
@@ -44,7 +47,7 @@ test('space lobby: 60 fps at 667x375 with 4x CPU throttle', async ({ browserName
 test('space lobby (the real one at /): 60 fps at 667x375 with 4x CPU throttle; Low Graphics keeps the sky still', async ({ browserName, baseURL }) => {
   test.skip(browserName !== 'chromium', 'CDP CPU throttling');
   test.setTimeout(120_000);
-  const browser = await chromium.launch({ args: GPU_RASTER });
+  const browser = (launched = await chromium.launch({ args: GPU_RASTER }));
   const ctx = await browser.newContext({ baseURL, viewport: { width: 667, height: 375 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   const cdp = await ctx.newCDPSession(page);
