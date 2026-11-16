@@ -53,13 +53,19 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      # the node suites already ran above, so the browser run leaves its copy of them out.
-      # CI_SLOW_RUNNER: the frame-rate spec asserts what a shared runner can show (see race-perf.spec.js).
-      # In CI a failed test is retried once and reported as flaky if the retry passes (playwright.config.js).
+      # the node suites already ran above, so the browser run leaves its copy of them out; the
+      # frame-rate checks run in the next step, alone. In CI a failed test is retried once and
+      # reported as flaky if the retry passes (playwright.config.js).
       - name: Browser suite
+        run: npm run e2e -- --project=chromium --grep-invert "node test/|60 fps"
+
+      # One worker, so no other test competes with the throttled page for the runner's cores.
+      # CI_SLOW_RUNNER: race-perf asserts what a shared runner can show (see its header).
+      - name: Frame-rate checks (Chromium, alone on the runner)
+        if: ${{ !cancelled() }}
         env:
           CI_SLOW_RUNNER: "1"
-        run: npm run e2e -- --project=chromium --grep-invert "node test/"
+        run: npm run e2e -- --project=chromium --workers=1 --grep "60 fps"
 
       - name: Upload failure details
         if: failure()
@@ -97,9 +103,13 @@ jobs:
       - name: Install WebKit
         run: npx playwright install --with-deps webkit
 
+      # (the iPad-size audit of every racing screen is left to Chromium: on a shared runner WebKit
+      # draws a race at that size at well under one frame a second, so each one overran 5 minutes;
+      # the iPad credit check and the iPad space-lobby layout still run here)
       - name: Browser suite (iPhone Safari specs)
         run: >-
           npm run e2e -- --project=webkit --fully-parallel --shard=${{ matrix.shard }}/3
+          --grep-invert "phone audit (1180x820|820x1180)"
           tests/e2e/smoke.spec.js tests/e2e/ui.spec.js tests/e2e/overnight-boot.spec.js
           tests/e2e/overnight-lobby-audit.spec.js tests/e2e/overnight-credit-everywhere.spec.js
           tests/e2e/overnight-store.spec.js tests/e2e/race-credit.spec.js
