@@ -1,6 +1,6 @@
 // Oblivion GP speed feel, drawn every frame at almost no cost:
 //  - world(): glints on the road around your car, smeared along your speed (the road rushes by;
-//    Chase and Cockpit only)
+//    Cockpit only)
 //  - screen(): speed lines at the screen edges (no streaks over the middle of the view: they read
 //    as rain), an edge blur
 //    (one pre-rendered radial vignette + streak sprite faded in above ~70% of top speed, never a
@@ -91,8 +91,8 @@ export class SpeedFx {
   // smeared along your velocity, so the faster you go the longer they streak past
   world(g, R, view, rc, dt) {
     const car = R.meCar, c = rc.car;
-    // (Chase / Cockpit only: seen from straight above, streaks scattered over the road read as rain)
-    if (!car || !c || !car.predicted || SETTINGS.lowGfx || this.k < 0.12 || !R.cfg.rotate) return;
+    // (Cockpit only: seen from above, in Top-down and Chase, streaks scattered over the ground read as rain)
+    if (!car || !c || !car.predicted || SETTINGS.lowGfx || this.k < 0.12 || R.camName !== 'cockpit') return;
     const vx = c.vx, vy = c.vy, spd = Math.hypot(vx, vy);
     if (spd < 250) return;
     const D = this.D, ux = vx / spd, uy = vy / spd, k = this.k, smear = 0.045 * Math.min(1.6, k + 0.3);
