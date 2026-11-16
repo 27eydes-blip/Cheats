@@ -37,7 +37,7 @@ WebSocket: `wss://<host>/race?<params>`
 
 | Param | Meaning |
 | --- | --- |
-| `name`, `driver` | display name, driver id (`volt brick wisp dune rook flicker`) |
+| `name`, `driver` | display name, driver id (starters `volt brick wisp dune rook flicker`; unlockable `void fang frost grav vx redline helix prime`: the server checks the account's unlocks, see **Unlockable cars**) |
 | `token` | account session token (results are recorded server-side for that account) |
 | `mode` | `grand` (default), `elim`, `battle`, `trial`, `tutorial` (the first-race tutorial: see below) |
 | `track` | `desert frozen ashlands neon`, or omit / `any` for random |
@@ -104,6 +104,8 @@ All JSON. `t` is the type.
   results rows: `[id, name, driver, rank, finishTime|null, takedowns, matchCoins, isBot, bestLap, finished, wrecks]`, in final order.
 - `progress` (after `end`, accounts only) `{delta (trophies), xp, coins, mcoins (match coin payout), levels, progress, best (time trial best for this track), improved, tut? (tutorial: the account's flag, 1 = done)}`.
 - `retry` `{reason}` (race already started / full), `rejoinfail`, `pong {c}`.
+- `car` `{driver, want, reason: 'locked'}`: the car asked for (at the join or with `pick`) is locked on this account (or the account had not loaded when the race started): you race in `driver` (the account's default car).
+- `progress` also carries `unlocked: [car ids]` (cars this race unlocked) and `pieces: {pieces, to, coins}` (car pieces won).
 
 ### Events (`ev` rows)
 
@@ -131,6 +133,7 @@ All JSON. `t` is the type.
 | `['boom', x, y, entKind]` | projectile / mine explosion |
 | `['jump', id]`, `['mt', id, tier]`, `['bump', a, b, speed]` | ramp launch, mini-turbo fired (1 blue, 2 orange, 3 purple), hard car bump |
 | `['horn', id]` | a racer sounded their horn (play their equipped horn, quieter with distance) |
+| `['perk', id, 'magnet', boxIndex]`, `['perk', id, 'phase']`, `['perk', id, 'grip']` | unlockable car perks: GRAVITON pulled a box in, PHANTOM VX phased through a hit, FROSTBYTE rolled over oil |
 | `{k: 'reset', id, auto}` | the car was put back on the racing line (RESET button: `auto` 0; stuck 3 s: `auto` 1). Flash / sound it. |
 | `{k: 'nudge', id}` | the car was pinned against a wall for 1.5 s and got pushed back toward the racing line |
 | `{k: 'tut', id, step}` | tutorial: `step` (`steer` `drift` `item` `fire`) was just done; `done` follows the last one |
@@ -388,3 +391,27 @@ button): the world canvas is drawn rotated (car pointing up) and tilted with a C
 minimap (north-up, your arrow shows your heading), joystick and buttons are on a second, never-tilted canvas
 on top that takes the touches. No tilt / motion steering anywhere: the joystick is the only steering input
 and the game never listens to device motion or asks for that permission (`test/race-nomotion.test.js`).
+
+## Unlockable cars (Oblivion GP Part 4)
+
+`public/race/unlocks.js` (shared, server-authoritative): 8 new driver ids with stats and one perk
+each in `NEW_DRIVERS` (physics.js; `DRIVER_IDS` stays the six starters, `ALL_DRIVER_IDS` is all 14,
+bots drive the starters), built-in weapons in `WEAPONS` (items.js, `kind` = arc pulse rail mine
+turret blink), looks / engine voices in looks2.js / cars2.js / sound2.js.
+
+- Unlocks live in `progress.race`: `cars` (unlocked new cars), `car` (default car), `ko`, `firsts`
+  `{track: n}`, `pieces {helix, prime}`, `ch` (daily / weekly challenge progress); `elimWins`,
+  `wins` as before. `normalize()` fills them in for old saves (race takedowns start from the saved
+  race mode stats) and unlocks any goal already met.
+- Rare (VOIDRUNNER, SOLAR FANG, FROSTBYTE): 1500 coins (`/api/shop {action:'carbuy', car}`) or
+  150 / 300 / 450 total trophies. Epic: GRAVITON 5 Elimination wins, PHANTOM VX 10 race takedowns,
+  REDLINE ZERO 1st place on all 4 tracks (Grand or Elimination). Legendary: HELIX 25 race wins +
+  10 pieces, OBLIVION PRIME 1000 trophies + 10 pieces. Pieces: one daily challenge (1 piece) and one
+  weekly challenge (3 pieces), the same for everyone; they fill HELIX, then PRIME, then pay coins.
+- `/api/shop {action:'carset', car}` sets the default car (unlocked cars only).
+- Race join: an unlockable `driver` is unverified until the account loads; a guest, a bad token or
+  a locked car is swapped for the default car with a `car` message; a race that starts first
+  races the default car; `pick` of a locked car is refused (`car` again).
+- Client: GARAGE / store show all 14 cars with progress bars for locked ones; ui/carunlock.js plays
+  the NEW CAR UNLOCKED screen once per car per device (localStorage `hunt-cars-seen`).
+- Dev only (HUNT_DEV): `POST /api/devgrant {coins, trophies, race, pieces, firsts}`.

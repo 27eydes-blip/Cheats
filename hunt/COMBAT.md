@@ -184,15 +184,55 @@ the test asks "is this item worth about the same as an average item?"). Same car
 slots swapped. A's win rate must be within 45%-55% for every item. The full 3600 races run in the
 default `npm test` (about 20-30 s over 3 worker threads).
 
-Result (normal bots, 300 races per item, deterministic):
+Result (normal bots, 300 races per item, deterministic; re-tuned in Part 4 when the starter cars
+were re-balanced for the car test below: missile damage -25% / turn -20% / spin halved, EMP shorter
+and smaller, Turbo -30% length, Chain Lightning -40% damage, Spike Strip -15%, Shield -20% length):
 
 | Item | A wins | Item | A wins | Item | A wins |
 | --- | --- | --- | --- | --- | --- |
-| Homing Missile | 54.3% | EMP Blast | 52.7% | Gravity Well | 47.0% |
-| Oil Slick | 53.0% | Turbo | 51.7% | Ghost Mode | 50.3% |
-| Shield | 53.3% | Spike Strip | 53.7% | Sticky Bomb | 51.7% |
-| Rocket Volley | 48.3% | Chain Lightning | 53.0% | Hunter Drone | 47.3% |
+| Homing Missile | 52.0% | EMP Blast | 53.3% | Gravity Well | 48.7% |
+| Oil Slick | 52.3% | Turbo | 53.3% | Ghost Mode | 50.7% |
+| Shield | 53.7% | Spike Strip | 54.7% | Sticky Bomb | 54.3% |
+| Rocket Volley | 51.7% | Chain Lightning | 54.3% | Hunter Drone | 50.7% |
 
 Tuning notes: a spin-out is worth far more than damage in a race (a 0.3 s spin alone took the
 missile to 68%), so missiles only spin from level II and only briefly; any boost (including a
 "light" ghost boost) is strong because of the boost acceleration, so Ghost Mode has none.
+
+## Car balance (Oblivion GP Part 4, test/race-cars-balance.test.js)
+
+Win rate "45-55%" is measured HEAD-TO-HEAD (the lead's definition): every car (the 6 starters and
+the 8 unlockable cars) races 1v1 against a rotating field of the other 13 cars, both driven by the
+same bot brain at the same level (normal), weapons and items on as in a Grand Race, all 4 tracks,
+12 fixed seeds per pair, each raced twice with the grid slots swapped (mirrored). That is 24 races
+per pair and 13 x 24 = 312 races per car (2184 in all, ~20-30 s over 3 worker threads in
+`npm test`). Every car's win rate must be within 45%-55%.
+
+| Car | Wins | Car | Wins | Car | Wins |
+| --- | --- | --- | --- | --- | --- |
+| ARCWIRE (volt) | 53.8% | VOIDRUNNER (void) | 49.7% | REDLINE ZERO (redline) | 48.7% |
+| WARHOG (brick) | 48.4% | SOLAR FANG (fang) | 51.6% | HELIX (helix) | 51.3% |
+| PHANTOM (wisp) | 54.8% | FROSTBYTE (frost) | 50.3% | OBLIVION PRIME (prime) | 52.6% |
+| SANDVIPER (dune) | 51.0% | GRAVITON (grav) | 46.8% | | |
+| COBRA (rook) | 46.2% | PHANTOM VX (vx) | 49.0% | | |
+| RAZOR (flicker) | 45.8% | | | | |
+
+Before tuning the six starters alone ranged 19% (rook) to 76% (wisp): in a 1v1 race a few percent
+of pace decides almost everything. Tuning: the starters' top speeds were evened out (lap pace within
+about 1%), Rail Lance lost range (1150 -> 760) and damage (55 -> 40), Sentry Turret bolts gained
+damage (16 -> 20); then only the new cars were tuned (so the item test above is not disturbed).
+
+Perks are small tradeoffs paid for elsewhere: VOIDRUNNER (drift sparks charge 20% faster) has the
+lowest top speed; SOLAR FANG (boosts last 25% longer) a weak pulse; FROSTBYTE (ice drives like road,
+oil never spins it) weak mines; GRAVITON (item boxes within 120 px fly to it) a sentry; PHANTOM VX
+(the first rival hit of the race passes through) low armor; REDLINE ZERO is the top speed leader
+(846) with the worst handling (2.1) and acceleration; HELIX (built-in weapon recharges 25% faster)
+a low top speed; OBLIVION PRIME has the best all-round stat bars (highest average and highest weakest
+bar) but the lightest chassis (64 armor).
+
+Built-in weapons of the new cars (variants of the six kinds): VOIDRUNNER Void Lance (rail), SOLAR
+FANG Solar Flare (pulse), FROSTBYTE Ice Mines (mine, long slow), GRAVITON Orbit Sentry (turret),
+PHANTOM VX Phase Slash (blink), REDLINE ZERO Redline Rail (rail, longest), HELIX Helix Arc (arc,
+3 s with its perk), OBLIVION PRIME Event Horizon (pulse that drags racers in). Hitboxes are capsules
+sized to the art (REDLINE ZERO 70 x 28, HELIX 52 x 42; area within -10%..+30% of the starters'
+circle); walls use the same 22 px radius for every car.
