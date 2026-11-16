@@ -2,17 +2,19 @@
 // a driver's car on a turntable, and the driver stat bars. Previews are drawn once per size and
 // cached, so the lobby only blits them.
 import { DRIVERS, DRIVER_IDS } from './physics.js';
-import { drawCar } from './cars.js';
+import { drawCarPreview, glowDot } from './cars.js';
+import { makeLook } from './looks.js';
+export { drawCarPreview };
 import { getTrack, TRACK_IDS, trackName } from './tracks.js';
 import { WEAPONS } from './items.js';
 
 const INK = '#12091e';
-// world colours for the previews: ground, road, edge, accent (start line, hazards)
+// world colours at night for the previews: ground, road, neon edge, accent (start line, hazards)
 const PAL = {
-  desert: { bg: '#d9a35f', road: '#5d5452', edge: '#f7ead3', acc: '#d8432c', glow: '#ffcf7a' },
-  frozen: { bg: '#d6e4f3', road: '#56708f', edge: '#ffffff', acc: '#5fd0ff', glow: '#bfe9ff' },
-  ashlands: { bg: '#3a2224', road: '#4a3c3e', edge: '#ff7a2a', acc: '#ff3d1f', glow: '#ff9f43' },
-  neon: { bg: '#1d1340', road: '#2a2450', edge: '#ff4fd8', acc: '#38f2ff', glow: '#c04dff' },
+  desert: { bg: '#4c2e35', road: '#231c2c', edge: '#ff8a4a', acc: '#ff3d6a', glow: '#ffcf7a' },
+  frozen: { bg: '#2c3f6a', road: '#161e36', edge: '#5fd0ff', acc: '#bff4ff', glow: '#bfe9ff' },
+  ashlands: { bg: '#241418', road: '#2a2026', edge: '#ff6a1a', acc: '#ff3d1f', glow: '#ff9f43' },
+  neon: { bg: '#100c2a', road: '#1c1838', edge: '#ff3fa4', acc: '#38f2ff', glow: '#c04dff' },
 };
 export const TRACK_CHOICES = ['any', ...TRACK_IDS];
 export const trackLabel = (k, arena = false) => (k === 'any' ? (arena ? 'Random Arena' : 'Random Track') : trackName(k, arena) || k);
@@ -93,24 +95,29 @@ export function paintPreview(cv, key, arena = false) {
   g.drawImage(trackPreview(key, w, h, d, arena), 0, 0);
 }
 
-// a driver's car turning slowly on a lit turntable, filling a w x h box
+// a car spinning slowly on a neon platform with its underglow, filling a w x h box. look: a look
+// object from looks.js (default: the car's base look); t drives the spin and the animated skins
+// (callers pass t = 0 under Reduce Flashing for a still car).
 export const CAR_SPAN = 64; // track units a car needs at any heading (body + wheels + wings)
-export function drawCarStage(g, w, h, id, t, { still = false, ring = true } = {}) {
-  const D = DRIVERS[id] || DRIVERS.volt;
+export function drawCarStage(g, w, h, id, t, { still = false, ring = true, look = null } = {}) {
+  const L = look || makeLook(id);
   const s = Math.max(0.1, Math.min(w / (CAR_SPAN * 1.45), h / (CAR_SPAN * 1.1)));
   const cx = w / 2, cy = h / 2 + 4 * s;
   if (ring) {
-    g.fillStyle = 'rgba(18,9,30,0.55)'; g.beginPath(); g.ellipse(cx, cy + 6 * s, 34 * s, 12 * s, 0, 0, Math.PI * 2); g.fill();
-    g.lineWidth = Math.max(2, 2.5 * s); g.strokeStyle = D.color; g.globalAlpha = 0.85;
-    g.beginPath(); g.ellipse(cx, cy + 6 * s, 30 * s, 10 * s, 0, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
+    g.fillStyle = 'rgba(8,6,20,0.7)'; g.beginPath(); g.ellipse(cx, cy + 6 * s, 36 * s, 13 * s, 0, 0, Math.PI * 2); g.fill();
+    g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.5;
+    g.drawImage(glowDot(L.glow), cx - 40 * s, cy - 8 * s, 80 * s, 28 * s);
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    g.lineWidth = Math.max(2, 2.2 * s); g.strokeStyle = L.neon;
+    g.beginPath(); g.ellipse(cx, cy + 6 * s, 32 * s, 11 * s, 0, 0, Math.PI * 2); g.stroke();
+    g.lineWidth = Math.max(1, 0.8 * s); g.strokeStyle = L.neon2; g.globalAlpha = 0.7;
+    g.beginPath(); g.ellipse(cx, cy + 6 * s, 26 * s, 8.6 * s, 0, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
   }
-  const a = still ? -0.5 : -0.5 + Math.sin(t * 0.7) * 0.5;
+  const a = still ? -0.5 : -0.5 + t * 0.6;
   g.save();
-  g.translate(cx, cy - Math.abs(Math.sin(t * 2.2)) * (still ? 0 : 1.5 * s));
-  g.scale(s, s * 0.82); // seen from a little in front: the turntable is an ellipse
-  g.fillStyle = 'rgba(0,0,0,0.28)'; g.beginPath(); g.ellipse(3, 6, 28, 18, a, 0, Math.PI * 2); g.fill();
-  g.rotate(a);
-  drawCar(g, id);
+  g.translate(cx, cy - Math.abs(Math.sin(t * 2.2)) * (still ? 0 : 1.2 * s));
+  g.scale(s, s * 0.82); // seen from a little in front: the platform is an ellipse
+  drawCarPreview(g, L.driver, L, a, t, { steady: still || !t });
   g.restore();
 }
 
