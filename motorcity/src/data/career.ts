@@ -34,11 +34,20 @@ export const CUPS: Cup[] = [
   {
     id: 'grandprix', name: 'Grand Prix of 1915', subtitle: 'The greatest motor race the world has seen', prize: 4000, requires: 'empire',
     races: [
-      { track: 'belleisle', weather: 'fog', laps: 3, rivals: 6, difficulty: 1.07, chapter: 'X' },
-      { track: 'brooklyn', weather: 'night', laps: 3, rivals: 6, difficulty: 1.09, chapter: 'XI' },
-      { track: 'depot', weather: 'rain', laps: 4, rivals: 6, difficulty: 1.1, chapter: 'XII' },
+      { track: 'belleisle', weather: 'fog', laps: 3, rivals: 5, difficulty: 1.07, chapter: 'X' },
+      { track: 'brooklyn', weather: 'night', laps: 3, rivals: 5, difficulty: 1.09, chapter: 'XI' },
+      { track: 'depot', weather: 'rain', laps: 4, rivals: 5, difficulty: 1.1, chapter: 'XII' },
     ],
   },
 ];
 
-export const DIFFICULTY = { easy: 0.92, normal: 1, hard: 1.06 };
+import type { Level } from '../game/ai';
+export type LevelId = 'easy' | 'normal' | 'hard';
+/** Difficulty setting. Normal: the fastest rival matches your car's top speed (cup pace +15%);
+ *  Hard: rivals a touch quicker than your car and boost more; Easy: gentler on every count.
+ *  On every level a rival is never allowed more than ~8 s ahead of you. */
+export const LEVELS: Record<LevelId, Level> = {
+  easy: { cap: 0.93, cup: 0.94, maxLead: 6, catchUp: 0.03, boostMul: 0.6 },
+  normal: { cap: 1.0, cup: 1.0, maxLead: 8, catchUp: 0.06, boostMul: 1 },
+  hard: { cap: 1.03, cup: 1.05, maxLead: 8, catchUp: 0.08, boostMul: 1.4 },
+};

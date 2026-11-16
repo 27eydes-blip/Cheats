@@ -157,6 +157,38 @@ export class Sfx {
     ff2.exponentialRampToValueAtTime(1450, t + 0.78);
   }
 
+  /** The Gatsby's horn: a deep, mellow two-tone "HONK-hoonk" — two pitched horns a third apart,
+   *  sounded twice, the second note lower and longer. */
+  hornDeep(): void {
+    const t = this.admit('horn', 1.15, 0.25, true);
+    if (t < 0) return;
+    const { ctx } = this;
+    const bank = this.c.bank;
+    const out = this.out(0);
+    const g = out.gain;
+    const n1 = t, n2 = t + 0.5, end = t + 1.12;
+    g.setValueAtTime(0, n1);
+    g.linearRampToValueAtTime(0.42, n1 + 0.04);
+    g.setValueAtTime(0.42, n1 + 0.38);
+    g.linearRampToValueAtTime(0.0, n1 + 0.46);
+    g.setValueAtTime(0, n2);
+    g.linearRampToValueAtTime(0.46, n2 + 0.05);
+    g.setValueAtTime(0.46, n2 + 0.5);
+    g.linearRampToValueAtTime(0, end);
+    const lp = biquad(ctx, 'lowpass', 1600, 0.8, out);
+    const body = biquad(ctx, 'bandpass', 320, 1.1, gain(ctx, 0.9, lp));
+    const reed = biquad(ctx, 'bandpass', 640, 3, gain(ctx, 0.45, lp));
+    const sh = shaper(ctx, bank.hard);
+    sh.connect(body); sh.connect(reed);
+    const pre = gain(ctx, 1.2, sh);
+    // two horns a major third apart; the second blast a tone lower and longer
+    const notes: [number, number, number][] = [[131, n1, 0.47], [165, n1, 0.47], [117, n2, 0.64], [147, n2, 0.64]];
+    for (const [f, at, dur] of notes) {
+      const o = this.tone('sawtooth', f, at, dur, gain(ctx, 0.4, pre));
+      o.detune.value = rnd(-6, 6);
+    }
+  }
+
   backfire(): void {
     const t = this.admit('backfire', 0.6, 0.12, true);
     if (t < 0) return;

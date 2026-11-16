@@ -14,6 +14,15 @@ export function sheet(scale = 3): string {
     if (x + img.width * s > c.width) { x = 4; y += 62 * s / 1.5; }
     ctx.drawImage(img, x, y, img.width * s, img.height * s); x += img.width * s + 4;
   };
+  if (scale === 4) {
+    // Gatsby review sheet: three steering frames, brake lamps on, a wheel-spin phase, the front grille
+    for (const [yaw, brake, wheel] of [[-1, false, 0], [0, false, 1], [1, false, 2], [0, true, 3]] as const) put(carSprite(MODELS.gatsby, 'rear', { yaw, wheel, brake, scarf: wheel % 3, colour: true }), 2.6);
+    x = 4; y += 160;
+    put(carSprite(MODELS.gatsby, 'front', { yaw: 0, wheel: 0, brake: false, scarf: 0, colour: true }), 2.6);
+    put(carSprite(MODELS.special, 'rear', { yaw: 0, wheel: 0, brake: false, scarf: 0, colour: true, paint: '#a3242b' }), 2.6);
+    put(carSprite(MODELS.stutz, 'rear', { yaw: 0, wheel: 0, brake: false, scarf: 0, colour: false }), 2.6);
+    return c.toDataURL();
+  }
   put(carSprite(MODELS.special, 'rear', { yaw: -1, wheel: 0, brake: false, scarf: 0, colour: true, paint: '#a3242b' }), 2);
   put(carSprite(MODELS.runabout, 'rear', { yaw: 0, wheel: 1, brake: true, scarf: 1, colour: true, paint: '#2b4a8c' }), 2);
   put(carSprite(MODELS.mercer, 'rear', { yaw: 1, wheel: 2, brake: false, scarf: 2, colour: true, paint: '#d9b02a' }), 2);

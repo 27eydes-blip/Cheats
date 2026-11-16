@@ -42,6 +42,10 @@ jobs:
         run: node tests/feel.test.mjs
       - name: 'Collision audit (full lap of every course, every hit checked against what was drawn)'
         run: node tests/collisions.test.mjs
+      - name: 'Rival AI (10 bots-only races; Easy / Normal / Hard with a robot player)'
+        run: node tests/bots.test.mjs
+      - name: 'The Gatsby (garage, unlock, purchase, horn, sparkles)'
+        run: node tests/gatsby.test.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: motorcity-dist

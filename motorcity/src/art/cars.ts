@@ -2,7 +2,7 @@
  *  side view and front view for spin-outs. Player car is hand-tinted colour; rivals are sepia. */
 import { canvas, rect, px, hline, vline, S, hexToRgb, rgbToHex, shade, mix, text, type Ctx } from './pixel';
 
-export type ModelId = 'runabout' | 'modelT' | 'stutz' | 'mercer' | 'buick' | 'packard' | 'special' | 'truck' | 'carriage';
+export type ModelId = 'runabout' | 'modelT' | 'stutz' | 'mercer' | 'buick' | 'packard' | 'special' | 'gatsby' | 'truck' | 'carriage';
 
 export interface CarModel {
   id: ModelId;
@@ -22,6 +22,9 @@ export interface CarModel {
   /** Default paint (rivals use it in sepia). */
   paint: string;
   number: string;
+  /** Luxury touring car details (the Gatsby): nickel trim, whitewalls, long hood, running boards,
+   *  side-mounted spare, green leather, hat-boxes on a rear rack. Paint is fixed. */
+  luxe?: boolean;
 }
 
 export const MODELS: Record<string, CarModel> = {
@@ -32,6 +35,8 @@ export const MODELS: Record<string, CarModel> = {
   buick: { id: 'buick', name: 'Buick Bug', tail: 'boat', wheelX: 26, wheelRy: 14, wheelRx: 6, bodyW: 15, tall: -3, screen: 'none', mechanic: false, spare: false, paint: '#2e4a6b', number: '9' },
   packard: { id: 'packard', name: 'Packard Six', tail: 'touring', wheelX: 28, wheelRy: 16, wheelRx: 6, bodyW: 23, tall: 5, screen: 'upright', mechanic: true, spare: true, paint: '#3b4a33', number: '2' },
   special: { id: 'special', name: 'Motor City Special', tail: 'boat', wheelX: 27, wheelRy: 16, wheelRx: 7, bodyW: 17, tall: -3, screen: 'monocle', mechanic: false, spare: false, paint: '#a3242b', number: '1' },
+  // An original long touring car inspired by the novel's description: rich cream-yellow, nickel, green leather.
+  gatsby: { id: 'gatsby', name: 'Gatsby', tail: 'touring', wheelX: 29, wheelRy: 17, wheelRx: 7, bodyW: 22, tall: 3, screen: 'upright', mechanic: false, spare: false, paint: '#e8c458', number: '', luxe: true },
 };
 
 export const CAR_W = 80, CAR_H = 58;
@@ -79,6 +84,16 @@ function wheel(ctx: Ctx, cx: number, cy: number, rx: number, ry: number, phase: 
   for (let y = -ry + 2; y < ry - 2; y += 3) px(ctx, cx - rx, cy + y, c('#3a3530'));
 }
 
+/** A whitewall ring painted on the outer face of a tyre. */
+function whitewall(ctx: Ctx, cx: number, cy: number, rx: number, ry: number, c: Pal) {
+  ctx.fillStyle = c('#f4f0e4');
+  for (let yy = -(ry - 1); yy <= ry - 1; yy++) {
+    const w = Math.round((rx - 0.5) * Math.sqrt(Math.max(0, 1 - (yy / (ry - 0.5)) ** 2)));
+    ctx.fillRect(Math.round(cx - w), Math.round(cy + yy), 1, 1);
+    ctx.fillRect(Math.round(cx + w), Math.round(cy + yy), 1, 1);
+  }
+}
+
 export interface CarState { yaw: -1 | 0 | 1; wheel: number; brake: boolean; scarf: number; colour: boolean; paint?: string }
 
 export function drawRear(m: CarModel, st: CarState): HTMLCanvasElement {
@@ -86,8 +101,10 @@ export function drawRear(m: CarModel, st: CarState): HTMLCanvasElement {
   const c: Pal = st.colour ? tinted : toSepia;
   const paint = st.paint ?? m.paint;
   const P = c(paint), PD = c(shade(paint, 0.62)), PL = c(shade(paint, 1.35)), PDD = c(shade(paint, 0.4));
-  const brass = c('#c9a04a'), brassL = c('#f2d68a'), brassD = c('#7d5f26');
-  const leather = c('#5b3a22'), leatherL = c('#87603e');
+  const lx = !!m.luxe;
+  // polished nickel instead of brass, green leather instead of brown, on the Gatsby
+  const brass = c(lx ? '#c8ced2' : '#c9a04a'), brassL = c(lx ? '#f4f7f8' : '#f2d68a'), brassD = c(lx ? '#7c858c' : '#7d5f26');
+  const leather = c(lx ? '#2f5a3a' : '#5b3a22'), leatherL = c(lx ? '#4f8458' : '#87603e');
   const cx = 40 + st.yaw * 0; const gy = CAR_H - 1;
   const y = st.yaw;
   const t = m.tall;
@@ -98,9 +115,10 @@ export function drawRear(m: CarModel, st: CarState): HTMLCanvasElement {
   for (const s of [-1, 1]) {
     const fx = cx + s * (m.wheelX - 6) + y * 5;
     wheel(ctx, fx, fwY, Math.max(2, m.wheelRx - 2 + (s === y ? 1 : 0)), m.wheelRy - 6, st.wheel, c);
+    if (lx) whitewall(ctx, fx, fwY, Math.max(2, m.wheelRx - 2 + (s === y ? 1 : 0)), m.wheelRy - 6, c);
   }
   // --- hood stretching ahead, pointing into the turn
-  const hoodTop = gy - 36 - t, hoodBot = gy - 22 - t;
+  const hoodTop = gy - (lx ? 45 : 36) - t, hoodBot = gy - 22 - t;
   for (let yy = hoodTop; yy <= hoodBot; yy++) {
     const f = (yy - hoodTop) / (hoodBot - hoodTop);
     const half = Math.round(6 + f * 7);
@@ -112,11 +130,31 @@ export function drawRear(m: CarModel, st: CarState): HTMLCanvasElement {
   }
   // radiator cap + brass shell glimpsed at hood tip
   rect(ctx, cx - 4 + y * 6, hoodTop - 2, 9, 2, brass); px(ctx, cx + y * 6, hoodTop - 3, brassL);
+  if (lx) {
+    // small gold "G" hood ornament
+    const gx = cx - 1 + y * 6, gyy = hoodTop - 8;
+    const gold = c('#e8b830'), goldL = c('#fff0a0');
+    const G = ['###', '#..', '#.#', '#.#', '###'];
+    G.forEach((row, dy) => { for (let dx = 0; dx < 3; dx++) if (row[dx] === '#') px(ctx, gx + dx, gyy + dy, gold); });
+    px(ctx, gx, gyy, goldL);
+    px(ctx, gx + 1, gyy + 5, gold); // stem onto the radiator cap
+  }
   // front fenders
   for (const s of [-1, 1]) {
     const fx = cx + s * (m.wheelX - 6) + y * 5;
     hline(ctx, fx - 3, fwY - m.wheelRy + 5, 7, PD);
     hline(ctx, fx - 2, fwY - m.wheelRy + 4, 5, P);
+    if (lx) {
+      // long sweeping fender flowing back and down toward the running board
+      for (let i = 0; i < 12; i++) { const xx = fx + s * Math.round(i * 0.35), yy = fwY - m.wheelRy + 5 + i; hline(ctx, xx - 2, yy, 5, i % 3 ? P : PL); px(ctx, xx + s * 2, yy, PD); }
+    }
+  }
+  if (lx) {
+    // side-mounted spare wheel in the left fender well, nickel-ringed, with a whitewall
+    const sx = cx - m.wheelX + 3 + y * 3, sy = fwY + 5;
+    wheel(ctx, sx, sy, 3, 9, 0, c);
+    whitewall(ctx, sx, sy, 3, 9, c);
+    vline(ctx, sx, sy - 9, 18, brass);
   }
   // --- windscreen
   if (m.screen === 'upright') {
@@ -137,7 +175,18 @@ export function drawRear(m: CarModel, st: CarState): HTMLCanvasElement {
   if (m.mechanic) driver(ctx, cx + 7 + y, tubTop + 1, { ...st, scarf: (st.scarf + 1) % 3 }, c, true);
   // --- rear wheels (near), drawn before tail so tail overlaps their inner edge
   const rwY = gy - m.wheelRy;
-  for (const s of [-1, 1]) wheel(ctx, cx + s * m.wheelX, rwY, m.wheelRx + (s === -y ? 1 : 0), m.wheelRy, st.wheel + (s > 0 ? 0.13 : 0), c);
+  for (const s of [-1, 1]) {
+    wheel(ctx, cx + s * m.wheelX, rwY, m.wheelRx + (s === -y ? 1 : 0), m.wheelRy, st.wheel + (s > 0 ? 0.13 : 0), c);
+    if (lx) whitewall(ctx, cx + s * m.wheelX, rwY, m.wheelRx + (s === -y ? 1 : 0), m.wheelRy, c);
+  }
+  if (lx) {
+    // running boards: nickel-edged planks between the fenders
+    for (const s of [-1, 1]) {
+      const x0 = s < 0 ? cx - m.wheelX + m.wheelRx + 1 : cx + m.bodyW + 1;
+      const w = m.wheelX - m.wheelRx - m.bodyW - 1;
+      if (w > 0) { rect(ctx, x0, gy - 14, w, 2, c('#2a2622')); hline(ctx, x0, gy - 14, w, brass); }
+    }
+  }
   // --- rear fenders (mudguards)
   for (const s of [-1, 1]) {
     const fx = cx + s * m.wheelX;
@@ -180,8 +229,9 @@ export function drawRear(m: CarModel, st: CarState): HTMLCanvasElement {
     } else if (m.tail === 'touring') {
       rect(ctx, cx - m.bodyW + 2, tailTop - 7, m.bodyW * 2 - 3, 7, leather); // high rear seat back
       hline(ctx, cx - m.bodyW + 2, tailTop - 7, m.bodyW * 2 - 3, leatherL);
+      if (lx) { for (let x = cx - m.bodyW + 4; x < cx + m.bodyW - 2; x += 4) vline(ctx, x, tailTop - 6, 5, c('#25472e')); } // tufted pleats
       // folded top bundle
-      rect(ctx, cx - m.bodyW + 1, tailTop - 10, m.bodyW * 2 - 1, 3, c('#3a3632'));
+      rect(ctx, cx - m.bodyW + 1, tailTop - 10, m.bodyW * 2 - 1, 3, c(lx ? '#b8a27a' : '#3a3632'));
     } else if (m.id === 'modelT') {
       rect(ctx, cx - m.bodyW + 1, tailTop - 8, m.bodyW * 2 - 1, 4, c('#2b2825')); // folded top
       for (let x = cx - m.bodyW + 3; x < cx + m.bodyW - 1; x += 4) vline(ctx, x, tailTop - 8, 4, c('#45403a'));
@@ -191,10 +241,31 @@ export function drawRear(m: CarModel, st: CarState): HTMLCanvasElement {
       ellipseFill(ctx, cx + 10, tailTop + 9, 3, 4, c('#3a3530'));
     }
   }
+  if (lx) {
+    // nickel luggage rack across the back with hat-boxes strapped on
+    const ry = tailBot - 10;
+    rect(ctx, cx - 17, ry + 8, 35, 2, brassD); hline(ctx, cx - 17, ry + 8, 35, brass);
+    const boxes: [number, number, string, string][] = [[-11, 9, '#d8a6a0', '#8a4c48'], [1, 8, '#f0e6cc', '#7a5a3a'], [11, 7, '#9fb4c8', '#4a5a6e']];
+    for (const [bx, bh, col, band] of boxes) {
+      const x0 = cx + bx - 5, y0 = ry + 8 - bh;
+      rect(ctx, x0, y0, 10, bh, c(col));
+      hline(ctx, x0, y0, 10, c(shade(col, 1.15)));
+      hline(ctx, x0, y0 + Math.floor(bh / 2), 10, c(band)); // ribbon band
+      vline(ctx, x0, y0, bh, c(shade(col, 0.75)));
+      vline(ctx, x0 + 5, y0, bh, c('#3a2618')); // leather strap
+    }
+    // nickel rear bumper bar and a West Egg plate
+    rect(ctx, cx - m.bodyW - 3, tailBot + 1, (m.bodyW + 3) * 2 + 1, 2, brass);
+    hline(ctx, cx - m.bodyW - 3, tailBot + 1, (m.bodyW + 3) * 2 + 1, brassL);
+    // a small West Egg plate hung under the bumper
+    rect(ctx, cx - 10, tailBot + 3, 21, 6, c('#efe6cc'));
+    text(ctx, 'W EGG', cx - 9, tailBot + 4, c('#2a2018'));
+  } else {
   // --- number roundel
   const nx = m.spare ? cx - 9 : cx;
   ellipseFill(ctx, nx, tailBot - 7, 4, 4, c('#efe6cc'));
   text(ctx, m.number, nx - (m.number.length * 4 - 1) / 2, tailBot - 9, c('#1a1410'));
+  }
   // --- tail lamps (kerosene lamps with red lenses)
   for (const s of [-1, 1]) {
     const lx = cx + s * (m.bodyW - 3);
@@ -283,24 +354,45 @@ export function drawFront(m: CarModel, st: CarState): HTMLCanvasElement {
   const P = c(paint), PD = c(shade(paint, 0.6));
   const gy = CAR_H - 1, cx = 40;
   ctx.globalAlpha = 0.5; ellipseFill(ctx, cx, gy - 1, 34, 3, '#000'); ctx.globalAlpha = 1;
-  for (const s of [-1, 1]) wheel(ctx, cx + s * m.wheelX, gy - m.wheelRy, m.wheelRx, m.wheelRy, st.wheel, c);
+  for (const s of [-1, 1]) { wheel(ctx, cx + s * m.wheelX, gy - m.wheelRy, m.wheelRx, m.wheelRy, st.wheel, c); if (m.luxe) whitewall(ctx, cx + s * m.wheelX, gy - m.wheelRy, m.wheelRx, m.wheelRy, c); }
+  if (m.luxe) {
+    // the Gatsby's own grille: a tall nickel shell with a rounded (not peaked) top and fine horizontal
+    // bars, a gold "G" ornament above — deliberately unlike any real maker's grille
+    const top = gy - 40;
+    for (let yy = top; yy < gy - 14; yy++) {
+      const r = yy - top;
+      const half = r < 4 ? Math.round(Math.sqrt(16 - (4 - r) ** 2) * 2.2) : 9;
+      hline(ctx, cx - half, yy, half * 2 + 1, c('#c8ced2'));
+      if (r > 2 && yy < gy - 16) hline(ctx, cx - half + 2, yy, half * 2 - 3, (r % 2) ? c('#3a3f44') : c('#6c757c'));
+    }
+    vline(ctx, cx, top + 2, gy - 16 - top - 2, c('#e9eef0'));
+  } else {
   // radiator
   rect(ctx, cx - 8, gy - 34, 17, 20, c('#c9a04a'));
   rect(ctx, cx - 6, gy - 32, 13, 16, c('#2a2622'));
   for (let y = gy - 31; y < gy - 16; y += 2) hline(ctx, cx - 6, y, 13, c('#4a4640'));
+  }
   // headlamps
-  for (const s of [-1, 1]) { ellipseFill(ctx, cx + s * 15, gy - 30, 5, 5, c('#c9a04a')); ellipseFill(ctx, cx + s * 15, gy - 30, 3, 3, c('#f8f0d8')); }
+  for (const s of [-1, 1]) { ellipseFill(ctx, cx + s * 15, gy - 30, 5, 5, c(m.luxe ? '#c8ced2' : '#c9a04a')); ellipseFill(ctx, cx + s * 15, gy - 30, 3, 3, c('#f8f0d8')); }
   // fenders + driver
   for (const s of [-1, 1]) rect(ctx, cx + s * m.wheelX - 6, gy - m.wheelRy * 2 - 2, 13, 3, P);
   rect(ctx, cx - 6, gy - 44, 13, 10, c('#9b8358')); rect(ctx, cx - 3, gy - 51, 7, 7, c('#c9a57e'));
   rect(ctx, cx - 3, gy - 52, 7, 3, c('#4a2f1c')); rect(ctx, cx - 3, gy - 49, 3, 2, c('#d8e8e8')); rect(ctx, cx + 1, gy - 49, 3, 2, c('#d8e8e8'));
   rect(ctx, cx - 4, gy - 44, 9, 2, c('#d83a2e'));
   rect(ctx, cx - m.bodyW, gy - 16, m.bodyW * 2, 3, PD);
+  if (m.luxe) {
+    // gold "G" hood ornament standing on the radiator shell, in front of the driver
+    const top = gy - 40;
+    const G = ['###', '#..', '#.#', '#.#', '###'];
+    G.forEach((row, dy) => { for (let dx = 0; dx < 3; dx++) if (row[dx] === '#') px(ctx, cx - 1 + dx, top - 7 + dy, c('#e8b830')); });
+    px(ctx, cx, top - 2, c('#e8b830')); px(ctx, cx, top - 1, c('#e8b830'));
+  }
   return cv;
 }
 
 const cache = new Map<string, HTMLCanvasElement>();
 export function carSprite(m: CarModel, view: 'rear' | 'side' | 'front', st: CarState): HTMLCanvasElement {
+  if (m.luxe) st = { ...st, paint: m.paint }; // the Gatsby is always its own cream-yellow
   const key = `${m.id}|${view}|${st.yaw}|${st.wheel & 3}|${st.brake ? 1 : 0}|${st.scarf}|${st.colour ? 1 : 0}|${st.paint ?? ''}`;
   let cv = cache.get(key);
   if (!cv) {

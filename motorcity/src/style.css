@@ -228,3 +228,6 @@ p { font-size: 16px; line-height: 1.35; margin: 6px 0; }
   font: 10px/1.35 ui-monospace, Menlo, monospace; color: #fff; text-shadow: 0 1px 0 #000; }
 #hitlog > div { background: rgba(120, 0, 0, .55); padding: 2px 5px; margin-bottom: 2px; border-left: 3px solid #ff4040; }
 #hitlog[hidden] { display: none; }
+
+/* Legendary cars */
+.legendary { color: #f2d68a !important; text-shadow: 0 0 10px rgba(242, 214, 138, .45); }

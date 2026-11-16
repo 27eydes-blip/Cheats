@@ -8,6 +8,7 @@ import { startLoop } from './core/loop';
 import { trackById } from './track/tracks';
 import { sheet } from './art/sheet';
 import { input } from './core/input';
+import { audio } from './audio/audio';
 
 function boot() {
   buildProps();
@@ -15,7 +16,7 @@ function boot() {
   buildVehicles();
   const app = new App();
   const screens = new Screens(app);
-  (window as any).__mc = { app, screens, tracks: trackById, sheet, input };
+  (window as any).__mc = { app, screens, tracks: trackById, sheet, input, audio };
   screens.title();
   startLoop((dt) => app.update(dt), (dt, alpha) => app.render(dt, alpha));
 }

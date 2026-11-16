@@ -2,8 +2,8 @@
 import type { App } from '../app';
 import { h, btn, rule, credits, toast, ordinal, fmtTime, haptic } from './dom';
 import { TRACKS, trackById } from '../track/tracks';
-import { CUPS, POINTS, PRIZE, DIFFICULTY, type Cup } from '../data/career';
-import { CARS, PAINTS, UPGRADES, UPGRADE_MAX, statsFor, MPH, type UpgradeKind } from '../data/cars';
+import { CUPS, POINTS, PRIZE, type Cup } from '../data/career';
+import { CARS, PAINTS, UPGRADES, UPGRADE_MAX, statsFor, MPH, carTitle, type UpgradeKind } from '../data/cars';
 import { WEATHER } from '../data/weather';
 import { MODELS, carSprite, toSepia } from '../art/cars';
 import type { Race, Standing } from '../game/race';
@@ -128,8 +128,7 @@ export class Screens {
 
   private raceOpts(track: string, weather: keyof typeof WEATHER, laps: number, rivals: number, difficulty: number, mode: 'career' | 'trial' | 'quick') {
     const s = this.save;
-    const diff = difficulty * DIFFICULTY[s.settings.difficulty];
-    return { track: trackById(track), weather, mode, car: s.car, paint: this.app.paintHex(), upgrades: s.upgrades[s.car] ?? {}, rivals, difficulty: diff, laps, ghost: mode === 'trial' ? s.ghosts[track] ?? null : null } as const;
+    return { track: trackById(track), weather, mode, car: s.car, paint: this.app.paintHex(), upgrades: s.upgrades[s.car] ?? {}, rivals, difficulty, level: s.settings.difficulty, laps, ghost: mode === 'trial' ? s.ghosts[track] ?? null : null } as const;
   }
 
   private startCareerRace() {
@@ -180,6 +179,7 @@ export class Screens {
     prog.best = prog.best ? Math.min(prog.best, place) : place;
     this.save.cups[run.cup.id] = prog;
     this.save.coins += prize;
+    const gatsbyNow = this.app.grantGatsbyIfEarned();
     this.app.persist();
     if (prize) { audio.coin(); audio.cheer(); }
     this.app.music(place === 1 ? 'results' : 'garage');
@@ -195,6 +195,7 @@ export class Screens {
       prize ? h('p', { class: 'earned coins' }, `Cup prize: ${prize} coins`) : h('p', {}, 'Finish in the top three to advance.'),
       unlockedNow ? h('p', { style: { fontFamily: 'var(--head)', color: 'var(--brass)' } }, `${nextCup.name} is now open!`) : null,
       place === 1 && run.cup.id === 'grandprix' ? h('p', { class: 'subtitle' }, 'The greatest motorist of 1915. The End… or is it?') : null,
+      gatsbyNow ? h('p', { class: 'earned', style: { color: '#f2d68a', fontFamily: 'var(--title)' } }, 'Every cup is yours. The Gatsby — Legendary — awaits in the garage!') : null,
       h('div', { class: 'menu' }, btn('Continue', () => this.career(), { cls: 'primary' }), btn('Garage', () => this.garage())),
       credits(),
     )));
@@ -311,7 +312,9 @@ export class Screens {
       if (!preview.isConnected) { clearInterval(anim); return; }
       frame++;
       const yaw = ([0, 0, 1, 1, 0, 0, -1, -1] as const)[Math.floor(frame / 6) % 8];
-      const img = carSprite(MODELS[sel], 'rear', { yaw, wheel: frame, brake: Math.floor(frame / 12) % 5 === 0, scarf: Math.floor(frame / 3) % 3, colour: true, paint: paintHex });
+      // legendary cars also show off their front (the Gatsby's grille and gold "G") every few seconds
+      const showFront = !!MODELS[sel].luxe && Math.floor(frame / 48) % 3 === 2;
+      const img = carSprite(MODELS[sel], showFront ? 'front' : 'rear', { yaw: showFront ? 0 : yaw, wheel: frame, brake: Math.floor(frame / 12) % 5 === 0, scarf: Math.floor(frame / 3) % 3, colour: true, paint: paintHex });
       pctx.clearRect(0, 0, 80, 58); pctx.drawImage(img, 0, 0);
     }, 70);
     const bar = (label: string, v: number, b: number, max: number) => h('div', { class: 'stat' }, h('span', {}, label),
@@ -325,8 +328,8 @@ export class Screens {
       body = h('div', { class: 'grid' }, ...CARS.map((c) => {
         const have = s.owned.includes(c.id);
         return h('div', { class: `tile ${c.id === sel ? 'sel' : ''}`, onclick: () => { audio.click(); this.garage('cars', c.id); } },
-          h('div', { class: 'tag' }, have ? (s.car === c.id ? 'DRIVING' : 'OWNED') : `${c.price}c`),
-          h('div', { class: 't' }, c.name), h('div', { class: 'd' }, `${c.year} · ${c.top} mph`));
+          h('div', { class: 'tag' }, have ? (s.car === c.id ? 'DRIVING' : 'OWNED') : `${c.price.toLocaleString()}c`),
+          h('div', { class: `t ${c.tier ? 'legendary' : ''}` }, carTitle(c)), h('div', { class: 'd' }, `${c.year} · ${c.top} mph${c.unlockAllCups && !have ? ' · or win every cup' : ''}`));
       }));
     } else if (tab === 'tune') {
       body = h('div', {}, ...(Object.keys(UPGRADES) as UpgradeKind[]).map((k) => {
@@ -340,6 +343,8 @@ export class Screens {
             s.coins -= cost; (s.upgrades[sel] ??= {})[k] = lvl + 1; this.app.persist(); audio.coin(); haptic(20); this.garage('tune', sel);
           }, { cls: 'small', disabled: !owned || s.coins < cost }));
       }));
+    } else if (MODELS[sel].luxe) {
+      body = h('p', { class: 'subtitle' }, 'The Gatsby comes only in its own rich cream-yellow, hand-tinted against the sepia city.');
     } else {
       const cur = s.paints[sel] ?? 'carmine';
       body = h('div', {}, h('div', { class: 'swatches' }, ...PAINTS.map((p) => {
@@ -354,12 +359,12 @@ export class Screens {
     }
     const action = owned
       ? (s.car === sel ? h('p', { style: { fontFamily: 'var(--head)', color: 'var(--brass)' } }, 'Your current motor car') : btn('Drive This Car', () => { s.car = sel; this.app.persist(); this.app.attract = null; this.garage(tab, sel); }, { cls: 'primary' }))
-      : btn(`Buy for ${spec.price} coins`, () => {
+      : btn(`Buy for ${spec.price.toLocaleString()} coins`, () => {
         if (s.coins < spec.price) return toast('Not enough coins — win some races!');
-        s.coins -= spec.price; s.owned.push(sel); s.car = sel; s.paints[sel] ??= 'carmine'; this.app.persist(); audio.coin(); audio.backfire(); haptic(30); toast(`The ${spec.name} is yours!`); this.app.attract = null; this.garage(tab, sel);
-      }, { cls: 'primary', disabled: s.coins < spec.price });
+        s.coins -= spec.price; s.owned.push(sel); s.car = sel; s.paints[sel] ??= 'carmine'; this.app.persist(); audio.coin(); audio.backfire(); haptic(30); toast(`The ${carTitle(spec)} is yours!`); this.app.attract = null; this.garage(tab, sel);
+      }, { cls: 'primary', disabled: s.coins < spec.price, sub: spec.unlockAllCups ? 'or win every career cup to earn it free' : undefined });
     this.show(h('div', { class: 'screen' }, this.back(() => this.title()), h('div', { class: 'card wide' },
-      h('h3', {}, 'The Garage'), h('h2', {}, spec.name), this.coins(),
+      h('h3', {}, 'The Garage'), h('h2', { class: spec.tier ? 'legendary' : '' }, carTitle(spec)), this.coins(),
       h('div', { class: 'garage-view' }, preview),
       h('p', { class: 'subtitle' }, spec.blurb),
       stats, h('div', { class: 'menu' }, action), tabs, body,
@@ -391,7 +396,7 @@ export class Screens {
         if (v) { const ok = await input.requestTilt(); if (!ok) { toast('Tilt is not available on this device'); return; } }
         s.tilt = v; input.tiltEnabled = v; this.app.persist(); this.settings(back);
       }),
-      seg('Rivals', [['easy', 'Gentle'], ['normal', 'Fair'], ['hard', 'Fierce']], () => s.difficulty, (v) => (s.difficulty = v)),
+      seg('Difficulty', [['easy', 'Easy'], ['normal', 'Normal'], ['hard', 'Hard']], () => s.difficulty, (v) => (s.difficulty = v)),
       h('div', { class: 'menu' }, btn('Reset All Progress', () => {
         if (!confirm('Erase all progress, cars and coins?')) return;
         const keep = { ...s };

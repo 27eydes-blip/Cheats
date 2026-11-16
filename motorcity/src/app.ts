@@ -10,6 +10,8 @@ import { load, store, type SaveData } from './save/save';
 import { audio, type MusicId } from './audio/audio';
 import { trackById } from './track/tracks';
 import { PAINTS } from './data/cars';
+import { CUPS } from './data/career';
+import { MODELS } from './art/cars';
 import { setClickSound, toast } from './ui/dom';
 
 const OFF = { on: false, boost: false, offroad: false, spin: false };
@@ -48,6 +50,7 @@ export class App {
     window.addEventListener('keydown', first);
     document.getElementById('btn-pause')!.addEventListener('click', () => this.pause());
     input.tiltEnabled = this.save.settings.tilt;
+    if (this.grantGatsbyIfEarned()) setTimeout(() => toast('Every cup won: the Gatsby is yours!'), 1500);
     // Debug mode — press D, or tap the pause button 5 times: draws every hitbox, the kerb and the soft
     // walls, and logs each collision (type, position, lane, effect) on screen and to the console.
     input.anyKeyListeners.push((e) => { if (e.code === 'KeyD' && !e.repeat) this.toggleDebug(); });
@@ -100,11 +103,21 @@ export class App {
     while (this.hitLog.children.length > 6) this.hitLog.lastElementChild!.remove();
   }
 
+  /** The Gatsby is free once every career cup has been won. Returns true if it was just granted. */
+  grantGatsbyIfEarned(): boolean {
+    const s = this.save;
+    if (s.owned.includes('gatsby')) return false;
+    if (!CUPS.every((c) => s.cups[c.id]?.best === 1)) return false;
+    s.owned.push('gatsby');
+    this.persist();
+    return true;
+  }
+
   persist() { store(this.save); }
   applyVolumes() { const s = this.save.settings; audio.setVolumes(s.master, s.sfx, s.music); }
   music(id: MusicId | null) { audio.music(id); }
 
-  paintHex(car = this.save.car) { const id = this.save.paints[car] ?? 'carmine'; return (PAINTS.find((p) => p.id === id) ?? PAINTS[0]).hex; }
+  paintHex(car = this.save.car) { if (MODELS[car]?.luxe) return MODELS[car].paint; const id = this.save.paints[car] ?? 'carmine'; return (PAINTS.find((p) => p.id === id) ?? PAINTS[0]).hex; }
 
   startAttract() {
     const ids = ['woodward', 'depot', 'fifth', 'belleisle', 'brooklyn'];

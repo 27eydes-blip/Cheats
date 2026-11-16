@@ -13,6 +13,10 @@ export interface CarSpec {
   grip: number;     // 0.8..1.3
   handling: number; // 0.8..1.3
   blurb: string;
+  /** Shown after the name in the garage, e.g. "Gatsby — Legendary". */
+  tier?: 'Legendary';
+  /** Unlocked free by winning every career cup (or bought for `price`). */
+  unlockAllCups?: boolean;
 }
 
 export const CARS: CarSpec[] = [
@@ -23,6 +27,7 @@ export const CARS: CarSpec[] = [
   { id: 'mercer', name: 'Mercer Raceabout', year: 1913, price: 4400, top: 80, accel: 1.15, grip: 1.1, handling: 1.15, blurb: 'Light, nimble, and fast as rumour on Woodward.' },
   { id: 'buick', name: 'Buick Bug', year: 1910, price: 6000, top: 85, accel: 1.1, grip: 1.05, handling: 1.1, blurb: 'Boat-tailed brute built to break records.' },
   { id: 'special', name: 'Motor City Special', year: 1915, price: 9500, top: 92, accel: 1.25, grip: 1.2, handling: 1.2, blurb: 'One of a kind. Built in a Brush Park carriage house.' },
+  { id: 'gatsby', name: 'Gatsby', tier: 'Legendary', unlockAllCups: true, year: 1922, price: 25000, top: 98, accel: 1.2, grip: 1.12, handling: 1.02, blurb: 'A rich cream-yellow touring car, its nickel bright, its green leather deep. Fastest of all; a long hood to steer. Yours by winning every cup, or for a fortune.' },
 ];
 
 export type UpgradeKind = 'engine' | 'tires' | 'handling';
@@ -57,3 +62,6 @@ export function statsFor(id: ModelId, up: Partial<Record<UpgradeKind, number>> =
     handling: c.handling * (1 + h * 0.06),
   };
 }
+
+/** Display name, with the tier for special cars: "Gatsby — Legendary". */
+export const carTitle = (c: CarSpec) => (c.tier ? `${c.name} — ${c.tier}` : c.name);

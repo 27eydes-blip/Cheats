@@ -23,6 +23,8 @@ export interface Audio {
   rain(on: boolean): void;
   rivals(nearPct: number): void;
   horn(): void;
+  /** Deep two-tone horn (the Gatsby). */
+  hornDeep(): void;
   backfire(): void;
   crash(): void;
   bump(): void;
@@ -264,6 +266,7 @@ class AudioImpl implements Audio {
   }
 
   horn(): void { this.fx((s) => s.horn()); }
+  hornDeep(): void { this.fx((s) => s.hornDeep()); }
   backfire(): void { this.fx((s) => s.backfire()); }
   crash(): void { this.fx((s) => s.crash()); }
   bump(): void { this.fx((s) => s.bump()); }

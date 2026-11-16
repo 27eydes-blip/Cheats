@@ -5,7 +5,8 @@ import { SEG_LEN } from '../track/types';
 import { Player, MAX_V, CAR_HALF, CAR_HIT, WOBBLE, type SideLimits } from './player';
 import { FACADE_X, TUNNEL_X, RAIL_X, WALL_GAP, PROP_X } from '../track/types';
 import { portals } from '../art/portals';
-import { Rival, ROSTER, type Mover } from './ai';
+import { Rival, ROSTER, BUMPER, type Mover, type RaceCtx } from './ai';
+import { LEVELS, type LevelId } from '../data/career';
 import { TrafficManager, type Traffic } from './traffic';
 import { WEATHER, type WeatherId } from '../data/weather';
 import { statsFor, MPH, type UpgradeKind } from '../data/cars';
@@ -31,8 +32,12 @@ export interface RaceOpts {
   laps?: number;
   ghost?: GhostLap | null;
   traffic?: number;
-  /** Rival race pace in mph; defaults from difficulty. */
+  /** Rival field top speed in mph; defaults from the cup difficulty and level. */
   pace?: number;
+  /** Difficulty setting (default normal). */
+  level?: LevelId;
+  /** Bots-only race: the player sits out (used for simulations). */
+  spectate?: boolean;
 }
 
 export interface GhostLap { trackId: string; time: number; car: ModelId; paint: string; samples: number[] } // [z,x,yaw]*
@@ -100,6 +105,9 @@ export class Race {
   stats = { drifts: 0, boosts: 0, horns: 0, crashes: 0, overtakes: 0, topMph: 0, slipT: 0 };
   private prevPlace = 1;
   autopilot: boolean;
+  level: (typeof LEVELS)['normal'];
+  /** Top speed of the fastest rival, mph. */
+  fieldTop = 0;
   /** Debug mode: collisions are logged here (and to the console). */
   debug = false;
   hits: HitLog[] = [];
@@ -124,11 +132,16 @@ export class Race {
     const L = this.track.length;
     // grid: player starts at the back of a staggered grid
     const n = opts.rivals;
+    // the five named rivals, in a shuffled grid order
     const roster = [...ROSTER].sort(() => this.rng.next() - 0.5).slice(0, n);
+    this.level = LEVELS[opts.level ?? 'normal'];
+    // field pace: the cup's pace +15%, but the fastest rival never beats the player's car on a straight
+    // (Normal = equal; Hard = a touch quicker; Easy = slower)
+    const cupPace = (56 + (opts.difficulty - 0.9) * 160) * 1.15 * this.level.cup;
+    this.fieldTop = opts.pace ?? (opts.spectate ? cupPace : Math.min(cupPace, (stats.top / MPH) * this.level.cap));
     roster.forEach((def, i) => {
       const row = Math.floor(i / 2), col = i % 2;
-      const pace = opts.pace ?? 56 + (opts.difficulty - 0.9) * 160;
-      const r = new Rival(def, wrap(SEG_LEN * (6 + (n - i) * 5.5) - row, L), col ? 0.45 : -0.45, pace, 100 + i);
+      const r = new Rival(def, wrap(SEG_LEN * (6 + (n - i) * 5.5) - row, L), col ? 0.45 : -0.45, this.fieldTop, 100 + i);
       r.trackLen = L;
       this.rivals.push(r);
     });
@@ -183,6 +196,7 @@ export class Race {
       const ap = this.drive();
       steer = ap.steer; brake = ap.brake; boost = this.autopilot && p.boost >= 1 && Math.random() < 0.01;
     }
+    if (this.opts.spectate) p.started = false;
     const seg = this.segAt(p.z);
     p.update(dt, { steer, brake, boost }, seg, this.weather.grip, this.t, this.sideLimits(p.z));
     if (p.z >= L) {
@@ -200,15 +214,24 @@ export class Race {
     if (p.slip > 0.5) { p.boost = Math.min(3, p.boost + dt * 0.08); this.stats.slipT += dt; }
 
     // --- rivals + traffic
-    const movers: Mover[] = [...this.rivals, ...this.traffic.list, { z: p.z, x: p.x, speed: p.speed, half: CAR_HALF, len: 760 }];
+    const spectate = !!this.opts.spectate;
+    const movers: Mover[] = [...this.rivals, ...this.traffic.list];
+    if (!spectate) movers.push({ z: p.z, x: p.x, speed: p.speed, half: CAR_HALF, len: 760 });
     const pm = { z: p.z, x: p.x, speed: p.speed, half: CAR_HALF, len: 760, total: this.totalP };
+    const totals = this.rivals.map((r) => r.total).sort((a, b) => a - b);
+    const ctx: RaceCtx = { player: pm, t: this.t, started: racing, raceT: this.raceT, spectate, raceLen: this.laps * L, level: this.level, packTotal: totals[totals.length >> 1] ?? 0 };
     for (const r of this.rivals) {
       const before = r.z;
-      r.update(dt, this.track.segs, movers, pm, this.t, racing, this.raceT);
+      r.update(dt, this.track.segs, movers, ctx);
+      if (r.boosted) this.rivalBoost(r);
       if (r.z >= L) { r.z -= L; r.laps++; if (r.laps >= this.laps && !r.finished) { r.finished = true; r.finishTime = this.raceT; } }
       void before;
     }
-    this.traffic.update(dt, p.z, this.t, racing);
+    // traffic circulates around the player; in a bots-only race, around the middle of the pack
+    let anchor = p.z;
+    if (this.opts.spectate && this.rivals.length) { const zs = this.rivals.map((r) => r.total).sort((a, b) => a - b); anchor = wrap(zs[zs.length >> 1], L); }
+    this.traffic.update(dt, anchor, this.t, racing, this.opts.spectate ? this.rivals : [...this.rivals, p]);
+    if (this.opts.spectate && this.state === 'racing' && this.rivals.every((r) => r.finished)) { this.state = 'finished'; this.finishT = 0; }
 
     // --- horn
     if (this.hornCool > 0) this.hornCool -= dt;
@@ -331,7 +354,7 @@ export class Race {
     const p = this.player;
     this.hornCool = this.hornMax;
     this.stats.horns++;
-    audio.horn();
+    if (MODELS[this.opts.car]?.luxe) audio.hornDeep(); else audio.horn();
     const L = this.track.length;
     let swerved = 0;
     for (const r of this.rivals) {
@@ -414,6 +437,7 @@ export class Race {
     const p = this.player;
     const L = this.track.length;
     const t = this.t;
+    if (this.opts.spectate) { this.spaceRivals(dt); return; }
     // roadside objects
     for (let k = -1; k <= 2; k++) {
       const s = this.segAt(p.z + k * SEG_LEN);
@@ -467,18 +491,27 @@ export class Race {
     };
     for (const r of this.rivals) contact(r, true);
     for (const v of this.traffic.list) contact(v, false);
-    // rivals vs traffic and vs each other: spacing without overlap (same contact window, no teleports)
+    this.spaceRivals(dt);
+  }
+
+  /** Rivals vs traffic and vs each other: spacing without overlap (no teleports). */
+  private spaceRivals(dt: number) {
+    const L = this.track.length;
     for (let i = 0; i < this.rivals.length; i++) {
       const r = this.rivals[i];
       const others: Mover[] = [...this.traffic.list, ...this.rivals.slice(i + 1)];
       for (const o of others) {
-        // AI spacing is purely visual: keep a full car length between their sprites (no position jumps)
+        // AI spacing is purely visual (no position jumps): a car's length between rivals; with traffic,
+        // only the bumper gap behind it (positions are where each vehicle is drawn)
         const g = gapAlong(o.z, r.z, L);
-        const space = (o.len + r.len) / 2;
-        if (Math.abs(g) >= space || Math.abs(o.x - r.x) >= o.half + r.half) continue;
+        const isTraffic = (o as Mover & { vx?: number }).vx === undefined;
+        const space = isTraffic ? BUMPER : (o.len + r.len) / 2;
+        if ((isTraffic ? g <= 0 : false) || Math.abs(g) >= space || Math.abs(o.x - r.x) >= o.half + r.half) continue;
+        // a light overlap with traffic is just a nudge sideways; braking is the AI's own job (time to impact)
+        const deep = o.half + r.half - Math.abs(o.x - r.x) > 0.12;
         const side = sign(r.x - o.x) || 1;
         const lead = g > 0 ? o : r, trail = g > 0 ? r : o;
-        if (Math.abs(g) > space * 0.55) {
+        if (Math.abs(g) > space * 0.55 && (!isTraffic || deep)) {
           trail.speed = Math.min(trail.speed, lead.speed);
           if (r.def.personality === 'reckless' && trail === r && r.speed - o.speed > MAX_V * 0.3) r.spin(this.t);
         }
@@ -492,11 +525,19 @@ export class Race {
     }
   }
 
+  /** A rival's boost burst: a backfire bang (heard when near) and a flash from its exhaust. */
+  private rivalBoost(r: Rival) {
+    const d = Math.abs(gapAlong(r.z, this.player.z, this.track.length));
+    if (d < SEG_LEN * 18) audio.backfire();
+    for (let i = 0; i < 6; i++) this.spawn({ kind: 'spark', tone: i % 2 ? '#ffb040' : '#fff0a0', z: r.z - 150, x: r.x + 0.17, y: 90, vx: 0.3 + Math.random() * 0.3, vy: Math.random() * 300, vz: r.speed * 0.5, life: 0.25, size: 24, grow: 0 });
+  }
+
   private onEvent(e: string) {
     const p = this.player;
     switch (e) {
       case 'boost':
         audio.backfire(); this.stats.boosts++; this.shake = Math.max(this.shake, 0.6); this.msg('BOOST!');
+        if (MODELS[this.opts.car]?.luxe) this.goldSparkles(24);
         for (let i = 0; i < 8; i++) this.spawn({ kind: 'spark', tone: i % 2 ? '#ffb040' : '#fff0a0', z: p.z - 200, x: p.x + 0.17, y: 90, vx: 0.4 + Math.random() * 0.3, vy: Math.random() * 300, vz: -1500 + Math.random() * 600, life: 0.25, size: 26, grow: 0 });
         break;
       case 'crash': audio.crash(); this.stats.crashes++; this.msg('CRASH!'); this.shake = Math.max(this.shake, 0.8); break;
@@ -512,8 +553,18 @@ export class Race {
     this.parts.push({ ...q, alpha: 1, max: q.life });
   }
 
+  /** The Gatsby's boost: a shower of gold sparkles around the car. */
+  private goldSparkles(n: number) {
+    const p = this.player;
+    for (let i = 0; i < n; i++) {
+      const tone = ['#ffd860', '#fff2b0', '#e8b830', '#fffbe0'][i % 4];
+      this.spawn({ kind: 'spark', tone, z: p.z + Math.random() * 500 - 100, x: p.x + (Math.random() - 0.5) * 0.7, y: 60 + Math.random() * 380, vx: (Math.random() - 0.5) * 0.5, vy: 60 + Math.random() * 300, vz: p.speed * (0.75 + Math.random() * 0.2), life: 0.35 + Math.random() * 0.45, size: 22 + Math.random() * 20, grow: -14 });
+    }
+  }
+
   private emit(dt: number) {
     const p = this.player;
+    if (p.boostT > 0 && MODELS[this.opts.car]?.luxe && Math.random() < dt * 30) this.goldSparkles(2);
     // exhaust puffs
     if (p.started && Math.random() < dt * (6 + p.pct * 8)) this.spawn({ kind: 'smoke', tone: p.boostT > 0 ? '#3a3028' : '#cfc4b0', z: p.z - 120, x: p.x + 0.2, y: 50, vx: 0.15, vy: 260, vz: p.speed * 0.6, life: 0.7, size: 30, grow: 120 });
     // tyre smoke while drifting / spinning / offroad dust

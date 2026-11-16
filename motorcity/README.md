@@ -13,6 +13,14 @@ mighty **Ah-oo-gah** klaxon.
   Park Ford Plant, Wall Street, Flatiron & Fifth Avenue, Brooklyn Bridge.
 - **Time Trial**: three laps against the ghost of your best lap.
 - **Garage**: buy seven period cars, tune engine/tyres/steering, choose hand-tinted paint.
+- **Rivals**: Barney Oldham (fastest and cleanest), Ralph De Palmer (aggressive, blocks your line),
+  Louis Chevalier (steady), Ray Harlan (reckless and fast, sometimes crashes) and Cannonball Becker (slow
+  early, fast late). They boost on straights, corner cleanly and dodge trolleys and carriages.
+  **Difficulty** (Settings): Easy, Normal (the fastest rival matches your car's top speed) or Hard. On every
+  level a rival is never allowed to get more than about 8 seconds ahead of you.
+- **The Gatsby — Legendary**: an original long cream-yellow touring car (nickel trim, whitewalls, green
+  leather, hat-boxes, gold "G" ornament), the fastest car in the game. Win every career cup to earn it, or
+  buy it for 25,000 coins. Deep two-tone horn; gold sparkles when boosting.
 - Weather and time of day: fair, overcast, rain (wet cobbles, lamp reflections, less grip), fog, dusk, night.
 
 Controls: throttle is automatic. ◀ ▶ steer (or tilt). Hold **Brake** while steering hard at speed to
@@ -30,6 +38,8 @@ npm run build        # type-check + production build into dist/
 node tests/smoke.test.mjs --shots   # phone/desktop smoke + full menu flow (needs a build); screenshots in tests/out/
 node tests/feel.test.mjs --shots    # iPhone-portrait handling/collision/touch checks
 node tests/collisions.test.mjs      # drives every course; fails on any hit with nothing visibly touching (--verbose lists all)
+node tests/bots.test.mjs            # 10 bots-only races + Easy/Normal/Hard races with a robot player
+node tests/gatsby.test.mjs          # the Gatsby: garage, unlock, purchase, horn, sparkles
 ```
 
 Code map (`src/`): `core/` loop, input, maths · `track/` segment builder and course definitions ·
