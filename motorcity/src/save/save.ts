@@ -11,6 +11,8 @@ export interface Settings {
   haptics: boolean;
   difficulty: 'easy' | 'normal' | 'hard';
   showHelp: boolean;
+  /** Set once the film default moved to Light (polish pass). */
+  filmV2?: boolean;
 }
 
 export interface CupProgress { results: number[]; points: number; done: boolean; best: number }
@@ -37,7 +39,7 @@ const KEY = 'motorcity1915.save';
 export const defaults = (): SaveData => ({
   v: 1, coins: 250, owned: ['runabout'], car: 'runabout', paints: { runabout: 'carmine' }, paintsOwned: ['carmine'],
   upgrades: {}, cups: {}, ghosts: {}, bestLaps: {}, raced: [],
-  settings: { master: 0.9, sfx: 0.9, music: 0.6, film: 2, tilt: false, haptics: true, difficulty: 'normal', showHelp: true },
+  settings: { master: 0.9, sfx: 0.9, music: 0.6, film: 1, tilt: false, haptics: true, difficulty: 'normal', showHelp: true, filmV2: true },
   stats: { races: 0, wins: 0, drifts: 0, horns: 0 },
   seenIntro: false,
 });
@@ -49,7 +51,9 @@ export function load(): SaveData {
     if (!raw) return d;
     const s = JSON.parse(raw);
     if (!s || s.v !== 1) return d;
-    return { ...d, ...s, settings: { ...d.settings, ...(s.settings ?? {}) }, stats: { ...d.stats, ...(s.stats ?? {}) } };
+    const out: SaveData = { ...d, ...s, settings: { ...d.settings, ...(s.settings ?? {}) }, stats: { ...d.stats, ...(s.stats ?? {}) } };
+    if (!s.settings?.filmV2) { if (out.settings.film === 2) out.settings.film = 1; out.settings.filmV2 = true; }
+    return out;
   } catch { return d; }
 }
 

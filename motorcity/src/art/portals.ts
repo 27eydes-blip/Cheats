@@ -2,6 +2,7 @@
 import { canvas, rect, px, hline, vline, S, STONE, textCentered, textWidth, speckle, type Ctx } from './pixel';
 import { Rng } from '../core/rng';
 import { FPX } from './facades';
+import { TUNNEL_X } from '../track/types';
 
 export interface Portal { img: HTMLCanvasElement; night: HTMLCanvasElement; halfW: number; h: number; open: number; openH: number }
 
@@ -55,7 +56,7 @@ function nightOf(src: HTMLCanvasElement) {
 }
 
 function tunnel(rng: Rng): Portal {
-  const halfW = 7, h = 7200, open = 1.36, openH = 2600;
+  const halfW = 7, h = 7200, open = TUNNEL_X, openH = 2600;
   const W = PX(halfW * 2000), H = PX(h);
   const [c, ctx] = canvas(W, H);
   const cx = W / 2;
@@ -80,7 +81,7 @@ function tunnel(rng: Rng): Portal {
 }
 
 function tower(rng: Rng): Portal {
-  const halfW = 2.7, h = 10500, open = 1.25, openH = 5600;
+  const halfW = 3.0, h = 10500, open = 1.62, openH = 5600;
   const W = PX(halfW * 2000), H = PX(h);
   const [c, ctx] = canvas(W, H);
   const cx = W / 2;
@@ -107,7 +108,7 @@ function tower(rng: Rng): Portal {
 }
 
 function banner(rng: Rng, label: string): Portal {
-  const halfW = 1.32, h = 4200, open = 1.3, openH = 4200;
+  const halfW = 1.72, h = 4200, open = 1.7, openH = 4200;
   const W = PX(halfW * 2000), H = PX(h);
   const [c, ctx] = canvas(W, H);
   // poles
@@ -126,7 +127,7 @@ function banner(rng: Rng, label: string): Portal {
 }
 
 function memorialArch(rng: Rng): Portal {
-  const halfW = 2.3, h = 6800, open = 1.25, openH = 4400;
+  const halfW = 2.7, h = 6800, open = 1.62, openH = 4400;
   const W = PX(halfW * 2000), H = PX(h);
   const [c, ctx] = canvas(W, H);
   const cx = W / 2;
@@ -141,7 +142,7 @@ function memorialArch(rng: Rng): Portal {
 }
 
 function trestle(rng: Rng): Portal {
-  const halfW = 3.2, h = 4000, open = 1.48, openH = 2900;
+  const halfW = 3.4, h = 4000, open = 1.7, openH = 2900;
   const W = PX(halfW * 2000), H = PX(h);
   const [c, ctx] = canvas(W, H);
   // girder

@@ -17,7 +17,8 @@ mighty **Ah-oo-gah** klaxon.
 
 Controls: throttle is automatic. ◀ ▶ steer (or tilt). Hold **Brake** while steering hard at speed to
 powerslide, which fills the **Boost** gauge. Tuck in behind a rival to slipstream. The klaxon makes
-rivals swerve, horses shy and pedestrians leap. Keyboard: arrows, Space brake, Shift boost, H horn, Esc pause.
+rivals swerve, horses shy and pedestrians leap. Keyboard: arrows, Space brake, Shift boost, H horn, Esc pause. Press **D** in a race to show hitboxes,
+the kerb line (yellow), the clear zone (magenta) and the soft wall (cyan).
 
 ## Develop
 
@@ -26,6 +27,7 @@ npm install
 npm run dev          # Vite dev server
 npm run build        # type-check + production build into dist/
 node tests/smoke.test.mjs --shots   # phone/desktop smoke + full menu flow (needs a build); screenshots in tests/out/
+node tests/feel.test.mjs --shots    # iPhone-portrait handling/collision/touch checks
 ```
 
 Code map (`src/`): `core/` loop, input, maths · `track/` segment builder and course definitions ·

@@ -1,6 +1,18 @@
 export const SEG_LEN = 200;
 export const ROAD_W = 1000; // half-width of the carriageway in world units
-export const FACADE_X = 1.62; // facades start here (road half-widths from centre)
+// Lateral layout, in road half-widths from the centre line. The carriageway is ±1; the kerb runs to KERB;
+// nothing solid stands inside CLEAR, which leaves a clear sidewalk run-off strip between kerb and obstacles.
+export const KERB = 1.07;
+export const CLEAR = 1.6;
+/** Street furniture line (lamp posts, poles, hydrants). */
+export const PROP_X = 1.66;
+/** Building fronts. */
+export const FACADE_X = 2.0;
+/** Tunnel walls and the inside of bridge railings. */
+export const TUNNEL_X = 1.6;
+export const RAIL_X = 1.62;
+/** How far the car's centre may get from a wall: the soft invisible wall. */
+export const WALL_GAP = 0.27;
 
 export type Zone = 'city' | 'park' | 'bridge' | 'tunnel' | 'industrial' | 'river' | 'plaza';
 export type Ground = 'cobble' | 'park' | 'bridge' | 'tunnel' | 'brick' | 'finish';
@@ -25,7 +37,7 @@ export interface SpriteInst {
   x: number;
   /** Height above ground, world units. */
   y?: number;
-  /** Collision half-width in road units, or 0 for no collision. */
+  /** Solid: collides using the sprite's visible solid width (see art registry `solid`). */
   hit?: number;
   flip?: boolean;
   /** Index into the race's pedestrian list when animated. */

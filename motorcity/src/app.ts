@@ -10,7 +10,7 @@ import { load, store, type SaveData } from './save/save';
 import { audio, type MusicId } from './audio/audio';
 import { trackById } from './track/tracks';
 import { PAINTS } from './data/cars';
-import { setClickSound } from './ui/dom';
+import { setClickSound, toast } from './ui/dom';
 
 const OFF = { on: false, boost: false, offroad: false, spin: false };
 
@@ -29,7 +29,7 @@ export class App {
   onRaceEnd: ((r: Race) => void) | null = null;
   private endTimer = -1;
   private frameTimes: number[] = [];
-  safeTop = 0;
+  safeTop = 0; safeL = 0; safeR = 0;
 
   constructor() {
     this.cv = document.getElementById('game') as HTMLCanvasElement;
@@ -48,17 +48,25 @@ export class App {
     window.addEventListener('keydown', first);
     document.getElementById('btn-pause')!.addEventListener('click', () => this.pause());
     input.tiltEnabled = this.save.settings.tilt;
+    // D: debug overlay showing hitboxes, the kerb and the soft walls
+    input.anyKeyListeners.push((e) => {
+      if (e.code === 'KeyD' && !e.repeat) { this.renderer.debug = !this.renderer.debug; toast(this.renderer.debug ? 'Hitboxes: on' : 'Hitboxes: off'); }
+    });
     this.resize();
   }
 
   resize() {
     this.renderer.resize();
     const probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top,0px);width:1px;visibility:hidden';
+    probe.style.cssText = 'position:fixed;top:0;left:0;visibility:hidden;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)';
     document.body.append(probe);
-    const st = probe.getBoundingClientRect().height;
+    const cs = getComputedStyle(probe);
+    const st = parseFloat(cs.paddingTop) || 0, sl = parseFloat(cs.paddingLeft) || 0, sr = parseFloat(cs.paddingRight) || 0;
     probe.remove();
+    // safe-area insets in low-res canvas pixels, so the canvas HUD clears notches and the home indicator
     this.safeTop = Math.round((st / window.innerHeight) * this.renderer.H);
+    this.safeL = Math.round((sl / window.innerWidth) * this.renderer.W);
+    this.safeR = Math.round((sr / window.innerWidth) * this.renderer.W);
   }
 
   persist() { store(this.save); }
@@ -125,16 +133,16 @@ export class App {
     } else input.clearPressed();
   }
 
-  render(dt: number) {
+  render(dt: number, alpha = 1) {
     const t0 = performance.now();
     const r = this.race ?? this.attract;
     const ctx = this.renderer.ctx;
     if (r) {
-      this.renderer.render(r.scene());
+      this.renderer.render(r.scene(alpha));
       if (this.race) {
         const hs = this.race.hud();
         ctx.save(); ctx.translate(0, this.safeTop);
-        this.hud.draw(ctx, this.renderer.W, this.renderer.H, { ...hs, portrait: this.renderer.portrait });
+        this.hud.draw(ctx, this.renderer.W, this.renderer.H, { ...hs, portrait: this.renderer.portrait, dt, safeL: this.safeL, safeR: this.safeR });
         ctx.restore();
         this.hudDom.update(this.race);
         this.controls.cooldown('horn', this.race.hornCool / this.race.hornMax);
@@ -144,7 +152,7 @@ export class App {
     } else { ctx.fillStyle = '#0d0a07'; ctx.fillRect(0, 0, this.renderer.W, this.renderer.H); }
     this.film.apply(ctx, this.renderer.W, this.renderer.H, dt, this.save.settings.film);
     const wv = this.film.weave;
-    this.cv.style.transform = wv.x || wv.y ? `translate(${wv.x.toFixed(2)}px, ${wv.y.toFixed(2)}px) scale(1.01)` : '';
+    this.cv.style.transform = wv.x || wv.y ? `translate(${wv.x.toFixed(2)}px, ${wv.y.toFixed(2)}px) scale(1.005)` : 'none';
     // adaptive quality: shorten draw distance if frames are slow
     const ft = performance.now() - t0;
     this.frameTimes.push(ft);

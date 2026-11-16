@@ -38,6 +38,10 @@ export class Rival implements Mover {
   private wobble = 0;
   private laneT = 0;
   angry = 0;
+  /** Lateral velocity (road units/s): lane changes accelerate and settle smoothly. */
+  vx = 0;
+  private passSide = 0;
+  private passHold = 0;
   /** Distance (in race metres) used for standings. */
   get total() { return this.laps * this.trackLen + this.z; }
   trackLen = 1;
@@ -60,7 +64,7 @@ export class Rival implements Mover {
     if (!started) return;
     if (this.spinT > 0) {
       this.spinT -= dt;
-      this.speed = approach(this.speed, this.top * 0.2, dt * 9000);
+      this.speed = approach(this.speed, this.top * 0.5, dt * 6000);
       this.z += this.speed * dt;
       if (this.spinT <= 0) this.steamT = 3;
       return;
@@ -99,17 +103,42 @@ export class Rival implements Mover {
       if (d > 8 * SEG_LEN) continue;
       const gapX = Math.abs(o.x - target);
       if (gapX < o.half + this.half + 0.12 && d < aheadD && o.speed < this.speed + 300) { ahead = o; aheadD = d; }
-      if (Math.abs(o.x - this.x) < o.half + this.half + 0.02 && d < blockD) { block = o; blockD = d; }
+      if (Math.abs(o.x - this.x) < o.half + this.half + 0.04 && d < blockD) { block = o; blockD = d; }
     }
     let topNow = this.top * band;
+    if (this.passHold > 0) this.passHold -= dt;
     if (ahead) {
-      const room = ahead.half + this.half + 0.14;
+      const room = ahead.half + this.half + 0.16;
       const left = ahead.x - room, right = ahead.x + room;
       const okL = left > -0.9, okR = right < 0.9;
-      const pick = okL && (!okR || Math.abs(left - this.x) <= Math.abs(right - this.x)) ? left : right;
-      target = clamp(pick, -0.88, 0.88);
+      // commit to a passing side for a moment so the car doesn't twitch between lanes
+      let side = this.passHold > 0 && this.passSide ? this.passSide : okL && (!okR || Math.abs(left - this.x) <= Math.abs(right - this.x)) ? -1 : 1;
+      if ((side < 0 && !okL) || (side > 0 && !okR)) side = -side;
+      if (side !== this.passSide) { this.passSide = side; this.passHold = 0.9; }
+      target = clamp(side < 0 ? left : right, -0.88, 0.88);
+    } else if (this.passHold <= 0) this.passSide = 0;
+    // something directly ahead: brake early enough to never run into it (v² = 2·a·d, a ≈ 7000 u/s²)
+    // ...unless it will have changed lanes first: compare time to impact with time to get clear sideways
+    const maxLatNow = 1.0 * (this.speed / (SEG_LEN * 60)) + 0.3;
+    const needShift = block ? block.half + this.half + 0.04 - Math.abs(block.x - this.x) : 0;
+    const movingAway = block ? Math.sign(this.tx - this.x) === Math.sign(this.x - block.x) && Math.abs(this.tx - this.x) > 0.05 : false;
+    const tClear = movingAway ? needShift / Math.max(0.15, maxLatNow * 0.8) : Infinity;
+    const tHit = block ? Math.max(0, blockD - (block.len + this.len) / 2) / Math.max(1, this.speed - block.speed) : Infinity;
+    if (block && block.speed < this.speed && tHit < tClear * 1.3) {
+      const room = Math.max(0, blockD - (block.len + this.len) / 2 - 60);
+      const safe = Math.sqrt(block.speed * block.speed + 2 * 7000 * room);
+      if (safe < this.speed + 50) { topNow = Math.min(topNow, safe); this.speed = Math.min(this.speed, Math.max(safe, this.speed - 7000 * dt)); }
     }
-    if (block && blockD < 3 * SEG_LEN && block.speed < this.speed) topNow = Math.min(topNow, Math.max(block.speed * 0.97, this.speed - 4000 * dt));
+    // never steer into a car that is alongside
+    for (const o of all) {
+      if (o === this) continue;
+      const d = wrap(o.z - this.z + this.trackLen / 2, this.trackLen) - this.trackLen / 2;
+      if (Math.abs(d) > (o.len + this.len) * 0.6) continue;
+      const gap = o.half + this.half + 0.06;
+      if (o.x < this.x && target < o.x + gap) target = Math.max(target, o.x + gap);
+      if (o.x > this.x && target > o.x - gap) target = Math.min(target, o.x - gap);
+    }
+    target = clamp(target, -0.9, 0.9);
     // through portals stay central
     if (hazard > 0) target *= 1 - hazard * 0.7;
     // horn swerve
@@ -124,22 +153,24 @@ export class Rival implements Mover {
     else { this.speed = approach(this.speed, topNow, dt * 4000); this.braking = this.speed - topNow > 300; }
 
     // lateral
-    this.tx = approach(this.tx, target, dt * (ahead ? 2.4 : 1.2));
-    const lat = clamp(this.tx - this.x, -1, 1);
-    const maxLat = 1.1 * (this.speed / (SEG_LEN * 60)) + 0.35;
-    this.x += clamp(lat * 3, -maxLat, maxLat) * dt;
-    this.steer = approach(this.steer, clamp(lat * 4, -1, 1), dt * 6);
+    this.tx = approach(this.tx, target, dt * (ahead ? 1.8 : 0.9));
+    const maxLat = 1.0 * (this.speed / (SEG_LEN * 60)) + 0.3;
+    // critically damped lateral spring (gain 2, damping 8): lane changes glide in without overshoot
+    const want = clamp((this.tx - this.x) * 2, -maxLat, maxLat);
+    this.vx += (want - this.vx) * (1 - Math.exp(-dt * 8));
+    this.x += this.vx * dt;
+    this.steer = approach(this.steer, clamp(this.vx * 2.2, -1, 1), dt * 5);
     // reckless drivers occasionally overcook a hard corner
     if (pers === 'reckless' && ac > 3 && this.rng.chance(dt * 0.06)) this.spin(t);
     // hard limits
-    const lim = seg.tunnel ? 1.1 : seg.portal ? (portals()[seg.portal.kind]?.open ?? 1.2) - this.half : 0.92;
-    this.x = clamp(this.x, -lim, lim);
+    const lim = seg.tunnel ? 1.05 : seg.portal ? (portals()[seg.portal.kind]?.open ?? 1.2) - this.half : 0.92;
+    if (Math.abs(this.x) > lim) { this.x = clamp(this.x, -lim, lim); this.vx = 0; }
     this.z += this.speed * dt;
     this.wheel += this.speed * dt * 0.004;
     if (this.angry > 0) this.angry -= dt;
   }
 
-  spin(t: number) { if (this.spinT <= 0) { this.spinT = 1.3; this.spinDir = this.rng.chance(0.5) ? 1 : -1; } void t; }
+  spin(t: number) { if (this.spinT <= 0) { this.spinT = 0.9; this.spinDir = this.rng.chance(0.5) ? 1 : -1; } void t; }
 
   hornReact(px: number) {
     if (this.def.personality === 'blocker' && this.rng.chance(0.45)) { this.angry = 1.5; return false; }

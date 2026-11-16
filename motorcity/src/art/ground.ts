@@ -98,7 +98,7 @@ function paint(kind: Ground | 'cobbleRails', seed: number): HTMLCanvasElement {
       // grassy verge tufts
       for (let y = 0; y < GTEX_H; y += 2) { px(ctx, x0 + rng.int(0, 2), y, S[3]); px(ctx, x1 - 1 - rng.int(0, 2), y, S[3]); }
       // footpaths
-      for (const [a, b] of [[-1.5, -1.2], [1.2, 1.5]]) { const xa = U(a), xb = U(b); rect(ctx, xa, 0, xb - xa, GTEX_H, S[8]); for (let i = 0; i < 300; i++) px(ctx, rng.int(xa, xb - 1), rng.int(0, GTEX_H - 1), S[7]); }
+      for (const [a, b] of [[-1.85, -1.35], [1.35, 1.85]]) { const xa = U(a), xb = U(b); rect(ctx, xa, 0, xb - xa, GTEX_H, S[8]); for (let i = 0; i < 300; i++) px(ctx, rng.int(xa, xb - 1), rng.int(0, GTEX_H - 1), S[7]); }
       break;
     }
     case 'bridge': {
@@ -110,7 +110,7 @@ function paint(kind: Ground | 'cobbleRails', seed: number): HTMLCanvasElement {
         for (let x = x0 + rng.int(0, 30); x < x1; x += rng.int(30, 60)) vline(ctx, x, y, 2, S[3]);
       }
       // steel edge girders & promenade planks
-      for (const [a, b] of [[-1.62, -1.05], [1.05, 1.62]]) {
+      for (const [a, b] of [[-FACADE_X, -1.05], [1.05, FACADE_X]]) {
         const xa = U(a), xb = U(b);
         for (let y = 0; y < GTEX_H; y += 4) { rect(ctx, xa, y, xb - xa, 3, S[7]); hline(ctx, xa, y + 3, xb - xa, S[4]); }
       }

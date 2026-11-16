@@ -5,6 +5,8 @@ import type { BuiltTrack } from '../track/builder';
 export interface HudState {
   mph: number; maxMph: number; boost: number; boosting: boolean; slip: number;
   track: BuiltTrack; dots: { z: number; player?: boolean; ghost?: boolean }[]; portrait: boolean;
+  /** Frame time, for frame-rate independent needle smoothing. */
+  dt?: number; safeL?: number; safeR?: number;
 }
 
 const R = 21;
@@ -43,19 +45,19 @@ export class Hud {
   draw(ctx: CanvasRenderingContext2D, W: number, H: number, st: HudState) {
     if (!this.face || this.faceMax !== st.maxMph) { this.face = dialFace(Math.ceil(st.maxMph / 10) * 10); this.faceMax = st.maxMph; }
     const top = 4;
-    const dx = 4, dy = top + 18;
+    const dx = 4 + (st.safeL ?? 0), dy = top + 18;
     ctx.drawImage(this.face, dx, dy);
     const cx = dx + this.face.width / 2, cy = dy + this.face.height / 2;
-    this.needle += (st.mph - this.needle) * 0.25;
+    // critically-damped needle: smooth at any frame rate, no random jitter
+    this.needle += (st.mph - this.needle) * (1 - Math.exp(-(st.dt ?? 1 / 60) * 7));
     const maxV = Math.ceil(st.maxMph / 10) * 10;
-    const jitter = st.mph > 5 ? (Math.random() - 0.5) * 0.8 : 0;
-    const a = Math.PI * 0.75 + (Math.min(maxV * 1.08, this.needle + jitter) / maxV) * Math.PI * 1.5;
+    const a = Math.PI * 0.75 + (Math.min(maxV * 1.08, this.needle) / maxV) * Math.PI * 1.5;
     ctx.strokeStyle = '#8a1c10'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(cx - Math.cos(a) * 3, cy - Math.sin(a) * 3); ctx.lineTo(cx + Math.cos(a) * (R - 5), cy + Math.sin(a) * (R - 5)); ctx.stroke();
     ctx.lineWidth = 1;
     ctx.fillStyle = '#c99a3c'; ctx.fillRect(cx - 1.5, cy - 1.5, 3, 3);
     // digital-ish odometer drum
-    const v = String(Math.round(st.mph)).padStart(2, '0');
+    const v = String(Math.round(this.needle)).padStart(2, '0');
     ctx.fillStyle = '#1a120a'; ctx.fillRect(cx - 7, cy + 14, 15, 7);
     text(ctx, v, cx - 5, cy + 15, '#efe3c4');
 
@@ -79,7 +81,7 @@ export class Hud {
     // mini map (top-right)
     if (!this.map || this.mapTrack !== st.track) this.map = this.buildMap(st.track);
     const ms = this.map.width;
-    const mx = W - ms - 4, my = top + 18;
+    const mx = W - ms - 4 - (st.safeR ?? 0), my = top + 18;
     ctx.drawImage(this.map, mx, my);
     const pts = st.track.map;
     for (const d of st.dots) {

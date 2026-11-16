@@ -1,8 +1,8 @@
 import { SEG_LEN, ROAD_W, type Segment, type ProjPt, type WallPiece } from '../track/types';
 import type { BuiltTrack } from '../track/builder';
 import { groundTex, groundColor, WATER, GTEX_H, GTEX_LEN, GTEX_W } from '../art/ground';
-import { FACADE_X } from '../track/types';
-import { spr } from '../art/registry';
+import { FACADE_X, TUNNEL_X, RAIL_X, KERB, CLEAR, WALL_GAP } from '../track/types';
+import { spr, hitHalf } from '../art/registry';
 import { portals } from '../art/portals';
 import { skyline, SKY_LH, type SkylineKind } from '../art/sky';
 import { canvas, mix, S } from '../art/pixel';
@@ -11,6 +11,8 @@ import { clamp } from '../core/math';
 
 export interface DrawCar {
   z: number; x: number; img: HTMLCanvasElement; upp: number;
+  /** Collision half-width (road units), for the debug overlay. */
+  hit?: number;
   alpha?: number; rot?: number; lift?: number; brake?: boolean; head?: boolean; shadow?: boolean;
 }
 export interface Particle { z: number; x: number; y: number; size: number; alpha: number; tone: string; kind: 'smoke' | 'steam' | 'spark' | 'splash' | 'paper' }
@@ -54,6 +56,11 @@ export class Renderer {
   private glows: { x: number; y: number; r: number; a: number }[] = [];
   private rain: { x: number; y: number; l: number; v: number }[] = [];
   quality = 1;
+  /** Draw hitboxes and wall limits (toggle with D). */
+  debug = false;
+  private curDraw = 0;
+  /** 0..1 fade for sprites near the end of the draw distance, so nothing pops in. */
+  private edge = 1;
 
   constructor(cv: HTMLCanvasElement) {
     this.cv = cv;
@@ -154,14 +161,18 @@ export class Renderer {
     const playerY = pSeg.y1 + (pSeg.y2 - pSeg.y1) * pPct;
     const camY = playerY + CAM_H + sc.camBob;
     const camXw = sc.camX * ROAD_W;
-    const drawDist = Math.round(this.drawDist * w.view * this.quality);
+    // draw distance changes (adaptive quality) glide instead of jumping
+    const want = this.drawDist * w.view * this.quality;
+    this.curDraw = this.curDraw ? this.curDraw + Math.max(-1, Math.min(1, want - this.curDraw)) : want;
+    const drawDist = Math.round(this.curDraw);
     const night = w.id === 'night';
     const lampsOn = w.lamps;
     this.glows.length = 0;
 
     // shake: offset whole frame by a pixel or two
-    const shx = sc.shake > 0 ? Math.round((Math.random() - 0.5) * sc.shake * 4) : 0;
-    const shy = sc.shake > 0 ? Math.round((Math.random() - 0.5) * sc.shake * 3) : 0;
+    // smooth, decaying shake built from sines (no per-frame randomness)
+    const shx = sc.shake > 0 ? Math.round((Math.sin(sc.time * 53) * 0.6 + Math.sin(sc.time * 37 + 1.3) * 0.4) * sc.shake * 3) : 0;
+    const shy = sc.shake > 0 ? Math.round((Math.sin(sc.time * 47 + 0.7) * 0.6 + Math.sin(sc.time * 29) * 0.4) * sc.shake * 2) : 0;
     ctx.save();
     ctx.translate(shx, shy);
 
@@ -219,6 +230,8 @@ export class Renderer {
       if (!seg.vis) continue;
       const p1 = seg.p1, p2 = seg.p2;
       const backface = p2.y >= p1.y;
+      this.edge = clamp((drawDist - 1 - n) / 14, 0, 1);
+      if (this.edge < 1) ctx.globalAlpha = this.edge;
       // ground band (grass / water / cobble beyond sidewalks)
       if (!backface && p1.y > 0 && p2.y < H) {
         const y2 = Math.max(0, Math.floor(p2.y)), y1 = Math.min(H, Math.ceil(p1.y));
@@ -237,14 +250,26 @@ export class Renderer {
         }
         this.roadRows(seg, w);
       }
+      ctx.globalAlpha = 1;
       if (seg.tunnel) this.tunnelSeg(seg, w);
       // facades
       if (seg.wallL) this.wall(seg, seg.wallL, -1, night, w);
       if (seg.wallR) this.wall(seg, seg.wallR, 1, night, w);
+      // cars (player included) and particles inside this segment, far to near: they sit behind
+      // everything standing on the segment's near edge (sprites, portals) and in front of farther segments
+      const cs = carsBySeg.get(n) ?? [];
+      if (n === playerN) cs.push(sc.player);
+      if (cs.length) {
+        const rz = (c: DrawCar) => { let r = c.z - camZ; if (r < -SEG_LEN) r += loopLen; if (r > loopLen - SEG_LEN) r -= loopLen; return r; };
+        cs.sort((a, b) => rz(b) - rz(a));
+        for (const c of cs) this.car(c, seg, sc, w, c === sc.player);
+      }
+      const ps = parts.get(n);
+      if (ps) for (const p of ps) this.particle(p, seg);
       // bridge cables
       if (seg.cable && (seg.i & 1) === 0) {
         const yy = p1.y - seg.cable * p1.s;
-        const lxx = p1.x - 1.34 * p1.w, rxx = p1.x + 1.34 * p1.w;
+        const lxx = p1.x - RAIL_X * p1.w, rxx = p1.x + RAIL_X * p1.w;
         ctx.strokeStyle = night ? '#2a2420' : mix(S[2], w.fog, seg.fog); ctx.lineWidth = Math.max(1, p1.s * 60);
         if (lastCable && lastCable.n - n <= 3) {
           ctx.beginPath(); ctx.moveTo(lastCable.l, lastCable.y); ctx.lineTo(lxx, yy); ctx.moveTo(lastCable.r, lastCable.y); ctx.lineTo(rxx, yy); ctx.stroke();
@@ -272,6 +297,11 @@ export class Renderer {
         const sy = p1.y - (s.y ?? 0) * p1.s;
         const r = this.sprite(img, sp.upp, sx, sy, p1.s, seg.fog);
         if (!r) continue;
+        if (this.debug && s.hit) {
+          const hh = hitHalf(s.id, s.seed ?? 0);
+          ctx.strokeStyle = '#ff2020'; ctx.lineWidth = 1;
+          ctx.strokeRect(Math.round(sx - hh * p1.w) + 0.5, r.y + 0.5, Math.max(1, Math.round(hh * 2 * p1.w)), r.h);
+        }
         if (s.lamp && lampsOn) {
           const ty = r.y + (sp.topY ?? 2) * (r.h / img.height);
           const tops = sp.topX ?? [img.width / 2];
@@ -302,13 +332,9 @@ export class Renderer {
       }
       // portal
       if (seg.portal) this.portal(seg, night, w);
-      // cars + particles on this segment
-      const cs = carsBySeg.get(n);
-      if (cs) { cs.sort((a, b) => b.z - a.z); for (const c of cs) this.car(c, seg, sc, w); }
-      const ps = parts.get(n);
-      if (ps) for (const p of ps) this.particle(p, seg);
-      if (n === playerN) this.car(sc.player, seg, sc, w, true);
+      if (this.debug) this.debugSeg(seg, sc);
     }
+    if (this.debug) this.debugCar(sc.player, segs[Math.floor(sc.playerZ / SEG_LEN) % N], sc, true);
 
     // --- weather + light
     if (w.tint || pSeg.tunnel) {
@@ -362,10 +388,11 @@ export class Renderer {
       ctx.drawImage(tex, 0, v, GTEX_W, 1, Math.floor(cx - hw), y, Math.ceil(hw * 2) + 1, 1);
     }
     if (seg.fog > 0.02) {
-      ctx.globalAlpha = seg.fog;
+      const ga = ctx.globalAlpha;
+      ctx.globalAlpha = seg.fog * ga;
       ctx.fillStyle = w.fog;
       ctx.fillRect(0, yTop, this.W, yBot - yTop);
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = ga;
     }
     void GTEX_H;
   }
@@ -381,6 +408,7 @@ export class Renderer {
     const bA = p1.y, bB = p2.y;
     const lo = Math.max(0, Math.floor(Math.min(xA, xB))), hi = Math.min(W, Math.ceil(Math.max(xA, xB)));
     const span = xB - xA;
+    if (this.edge < 1) ctx.globalAlpha = this.edge;
     if (Math.abs(span) < 0.01 || hi <= lo) { /* still may draw cap */ }
     else {
       const iz1 = 1 / p1.z, iz2 = 1 / p2.z;
@@ -412,12 +440,13 @@ export class Renderer {
         ctx.fillRect(Math.floor(l), Math.floor(tA), Math.ceil(r - l), Math.ceil(bA - tA)); ctx.globalAlpha = 1;
       }
     }
+    ctx.globalAlpha = 1;
   }
 
   private tunnelSeg(seg: Segment, w: Weather) {
     const { ctx } = this;
     const p1 = seg.p1, p2 = seg.p2;
-    const hgt = 2600, X = 1.36;
+    const hgt = 2600, X = TUNNEL_X;
     for (const side of [-1, 1]) {
       const xA = p1.x + side * X * p1.w, xB = p2.x + side * X * p2.w;
       const tA = p1.y - hgt * p1.s, tB = p2.y - hgt * p2.s;
@@ -450,17 +479,39 @@ export class Renderer {
     const hpx = p.h * p1.s;
     const x = p1.x - wpx / 2, y = p1.y - hpx;
     if (x > this.W || x + wpx < 0) return;
-    this.ctx.globalAlpha = 1 - seg.fog * 0.9;
+    this.ctx.globalAlpha = (1 - seg.fog * 0.9) * this.edge;
     this.ctx.drawImage(night ? p.night : p.img, Math.floor(x), Math.floor(y), Math.ceil(wpx), Math.ceil(hpx));
     this.ctx.globalAlpha = 1;
     void w;
+  }
+
+  private box(cx: number, yb: number, half: number, h: number, col: string) {
+    const ctx = this.ctx;
+    ctx.strokeStyle = col; ctx.lineWidth = 1;
+    ctx.strokeRect(Math.round(cx - half) + 0.5, Math.round(yb - h) + 0.5, Math.max(1, Math.round(half * 2)), Math.round(h));
+  }
+  /** Debug overlay: kerb line (yellow) and the soft invisible wall (cyan) on each segment. */
+  private debugSeg(seg: Segment, sc: Scene) {
+    const ctx = this.ctx, p1 = seg.p1;
+    if (p1.y > this.H || p1.y < 0) return;
+    const wall = seg.tunnel ? TUNNEL_X : FACADE_X;
+    const marks: [number, string][] = [[-KERB, '#ffe040'], [KERB, '#ffe040'], [-(seg.waterL ? RAIL_X : wall) + WALL_GAP, '#20e0ff'], [(seg.waterR ? RAIL_X : wall) - WALL_GAP, '#20e0ff'], [-CLEAR, '#ff60ff'], [CLEAR, '#ff60ff']];
+    for (const [u, col] of marks) { ctx.fillStyle = col; ctx.fillRect(Math.round(p1.x + u * p1.w), Math.round(p1.y) - 1, 1, 2); }
+    void sc;
+  }
+  private debugCar(c: DrawCar, seg: Segment, sc: Scene, isPlayer: boolean) {
+    const pct = ((c.z % SEG_LEN) + SEG_LEN) % SEG_LEN / SEG_LEN;
+    const ww = seg.p1.w + (seg.p2.w - seg.p1.w) * pct;
+    const y = seg.p1.y + (seg.p2.y - seg.p1.y) * pct;
+    const x = isPlayer ? this.W / 2 + (c.x - sc.camX) * ww : seg.p1.x + c.x * ww;
+    this.box(x, y, (c.hit ?? 0.2) * ww, ww * 0.35, '#20ff60');
   }
 
   private bunting(seg: Segment, t: number) {
     const { ctx } = this;
     const p1 = seg.p1;
     const h = 3300;
-    const lx = p1.x - 1.55 * p1.w, rx = p1.x + 1.55 * p1.w, y = p1.y - h * p1.s;
+    const lx = p1.x - FACADE_X * p1.w, rx = p1.x + FACADE_X * p1.w, y = p1.y - h * p1.s;
     const sag = 500 * p1.s;
     ctx.strokeStyle = S[1]; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(lx, y); ctx.quadraticCurveTo((lx + rx) / 2, y + sag * 2, rx, y); ctx.stroke();
@@ -481,12 +532,14 @@ export class Renderer {
     if (dw < 0.5 || dh < 0.5) return null;
     const dx = x - dw / 2, dy = yb - dh;
     if (dx > this.W || dx + dw < 0 || dy > this.H || yb < 0) return null;
-    const a = 1 - fog * 0.92;
+    const a = (1 - fog * 0.92) * this.edge;
     if (a <= 0.02) return null;
     if (a < 1) this.ctx.globalAlpha = a;
-    this.ctx.drawImage(img, Math.floor(dx), Math.floor(dy), Math.max(1, Math.round(dw)), Math.max(1, Math.round(dh)));
+    // round the edges (not position and size separately) so sprites don't shimmer by a pixel as they scale
+    const x0 = Math.round(dx), x1 = Math.round(dx + dw), y0 = Math.round(dy), y1 = Math.round(yb);
+    this.ctx.drawImage(img, x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0));
     if (a < 1) this.ctx.globalAlpha = 1;
-    return { x: Math.floor(dx), y: Math.floor(dy), w: Math.round(dw), h: Math.round(dh) };
+    return { x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) };
   }
 
   private car(c: DrawCar, seg: Segment, sc: Scene, w: Weather, isPlayer = false) {
@@ -503,13 +556,14 @@ export class Renderer {
     const dw = c.img.width * c.upp * s, dh = c.img.height * c.upp * s;
     if (dw < 0.6) return;
     const fog = isPlayer ? 0 : seg.fog;
-    const a = (c.alpha ?? 1) * (1 - fog * 0.9);
+    const a = (c.alpha ?? 1) * (1 - fog * 0.9) * (isPlayer ? 1 : this.edge);
     if (a <= 0.02) return;
     ctx.globalAlpha = a;
     if (c.rot) {
       ctx.save(); ctx.translate(x, y - dh / 2); ctx.rotate(c.rot);
       ctx.drawImage(c.img, -dw / 2, -dh / 2, dw, dh); ctx.restore();
-    } else ctx.drawImage(c.img, Math.floor(x - dw / 2), Math.floor(y - dh), Math.round(dw), Math.round(dh));
+    } else { const x0 = Math.round(x - dw / 2), x1 = Math.round(x + dw / 2), y0 = Math.round(y - dh), y1 = Math.round(y); ctx.drawImage(c.img, x0, y0, x1 - x0, y1 - y0); }
+    if (this.debug && c.hit && !isPlayer) this.box(x, y, c.hit * ww, dh * 0.6, '#ffd000');
     ctx.globalAlpha = 1;
     if (c.brake || (w.lamps && !isPlayer)) {
       // tail lamp glow

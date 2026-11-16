@@ -386,7 +386,7 @@ export class Screens {
       h('h3', {}, 'Settings'), h('h2', {}, 'The Projection Booth'), rule(),
       slider('Master volume', 'master'), slider('Sound effects', 'sfx'), slider('Ragtime music', 'music'),
       seg('Music', [[true, 'On'], [false, 'Off']], () => audio.musicEnabled, (v) => { audio.musicEnabled = v; }),
-      seg('Film effects', [[2, 'Full'], [1, 'Less'], [0, 'Off']], () => s.film, (v) => (s.film = v)),
+      seg('Film grain & flicker', [[2, 'Full'], [1, 'Light'], [0, 'Off']], () => s.film, (v) => (s.film = v)),
       seg('Steering', [[false, 'Buttons'], [true, 'Tilt']], () => s.tilt, async (v) => {
         if (v) { const ok = await input.requestTilt(); if (!ok) { toast('Tilt is not available on this device'); return; } }
         s.tilt = v; input.tiltEnabled = v; this.app.persist(); this.settings(back);

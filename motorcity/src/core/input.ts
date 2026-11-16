@@ -16,7 +16,7 @@ class Input {
 
   constructor() {
     const map: Record<string, Btn> = {
-      ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
+      ArrowLeft: 'left', ArrowRight: 'right',
       ArrowDown: 'brake', KeyS: 'brake', Space: 'brake',
       ShiftLeft: 'boost', ShiftRight: 'boost', KeyX: 'boost', ArrowUp: 'boost', KeyW: 'boost',
       KeyH: 'horn', KeyZ: 'horn', KeyQ: 'horn',
@@ -34,9 +34,10 @@ class Input {
       const b = map[e.code];
       if (b) this.keyHeld[b] = false;
     });
-    window.addEventListener('blur', () => {
-      for (const k of Object.keys(this.keyHeld) as Btn[]) { this.keyHeld[k] = false; this.touchHeld[k] = 0; }
-    });
+    const releaseAll = () => { for (const k of Object.keys(this.keyHeld) as Btn[]) { this.keyHeld[k] = false; this.touchHeld[k] = 0; } };
+    window.addEventListener('blur', releaseAll);
+    window.addEventListener('pagehide', releaseAll);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
     window.addEventListener('deviceorientation', (e) => {
       if (!this.tiltEnabled) return;
       const landscape = Math.abs((window.screen.orientation?.angle ?? (window as any).orientation ?? 0)) === 90;

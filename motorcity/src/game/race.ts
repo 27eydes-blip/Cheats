@@ -2,13 +2,15 @@
 import { buildTrack, type BuiltTrack } from '../track/builder';
 import type { TrackDef } from '../track/types';
 import { SEG_LEN } from '../track/types';
-import { Player, MAX_V, CAR_HALF } from './player';
+import { Player, MAX_V, CAR_HALF, CAR_HIT, WOBBLE, type SideLimits } from './player';
+import { FACADE_X, TUNNEL_X, RAIL_X, WALL_GAP, PROP_X } from '../track/types';
+import { portals } from '../art/portals';
 import { Rival, ROSTER, type Mover } from './ai';
 import { TrafficManager } from './traffic';
 import { WEATHER, type WeatherId } from '../data/weather';
 import { statsFor, MPH, type UpgradeKind } from '../data/cars';
 import { MODELS, carSprite, CAR_UPP, type ModelId } from '../art/cars';
-import { spr } from '../art/registry';
+import { spr, hitHalf } from '../art/registry';
 import { PED_FRAMES, PED_VARIANTS } from '../art/people';
 import type { Scene, DrawCar, Particle, PedDraw } from '../render/renderer';
 import { clamp, wrap, approach, sign } from '../core/math';
@@ -110,7 +112,18 @@ export class Race {
 
   msg(text: string, big = false) { this.messages.push({ text, t: 0, big }); }
 
+  /** Positions at the start of the latest step, for interpolated rendering between fixed steps. */
+  private prev = { pz: 0, px: 0, camX: 0, skyX: 0, t: 0 };
+  private prevPos = new WeakMap<object, [number, number]>();
+  private snapshot() {
+    const p = this.player;
+    this.prev = { pz: p.z, px: p.x, camX: this.camX, skyX: this.skyX, t: this.t };
+    for (const r of this.rivals) this.prevPos.set(r, [r.z, r.x]);
+    for (const v of this.traffic.list) this.prevPos.set(v, [v.z, v.x]);
+  }
+
   update(dt: number, inp: { steer: number; brake: boolean; boost: boolean; horn: boolean }) {
+    this.snapshot();
     this.t += dt;
     const p = this.player;
     const L = this.track.length;
@@ -133,7 +146,7 @@ export class Race {
       steer = ap.steer; brake = ap.brake; boost = this.autopilot && p.boost >= 1 && Math.random() < 0.01;
     }
     const seg = this.segAt(p.z);
-    p.update(dt, { steer, brake, boost }, seg, this.weather.grip, this.t);
+    p.update(dt, { steer, brake, boost }, seg, this.weather.grip, this.t, this.sideLimits(p.z));
     if (p.z >= L) {
       p.z -= L;
       if (this.state === 'racing' && this.opts.mode !== 'attract') this.completeLap();
@@ -164,7 +177,7 @@ export class Race {
     if (inp.horn && this.hornCool <= 0 && !this.autopilot) this.horn();
 
     // --- collisions
-    this.collide();
+    this.collide(dt);
 
     // --- standings
     this.place = 1 + this.rivals.filter((r) => r.finished ? true : r.laps * L + r.z > this.totalP).length;
@@ -187,8 +200,9 @@ export class Race {
     // --- camera & background
     this.camX = approach(this.camX, p.x * 0.82, dt * 3);
     this.skyX += seg.curve * p.pct * dt * 60 * 1.6;
-    this.shake = Math.max(0, this.shake - dt * 2);
-    if (p.boostT > 0) this.shake = Math.max(this.shake, 0.25);
+    this.shake *= Math.exp(-dt * 4.5);
+    if (this.shake < 0.01) this.shake = 0;
+    if (p.boostT > 0) this.shake = Math.max(this.shake, 0.2);
     this.stats.topMph = Math.max(this.stats.topMph, p.speed / MPH);
 
     // --- ghost recording (time trial)
@@ -300,82 +314,113 @@ export class Race {
     if (swerved) this.msg(swerved > 1 ? 'OUT OF THE WAY!' : 'BEEP BEEP!');
   }
 
-  private collide() {
+  /** Furthest the car's centre may go on each side at z, looking ahead so walls narrow gradually
+   *  (e.g. into a tunnel mouth or a bridge arch) instead of appearing as a sudden edge. */
+  sideLimits(z: number): SideLimits {
+    let l = 9, r = 9;
+    for (let k = -1; k < 16; k++) {
+      const s = this.segAt(z + k * SEG_LEN);
+      const taper = Math.max(0, k - 1) * 0.045;
+      // on streets the soft wall sits just before the lamp/pole line, so the sidewalk is pure run-off
+      const hasProps = s.zone === 'city' || s.zone === 'plaza' || s.zone === 'industrial' || s.zone === 'park' || s.zone === 'river';
+      let wall = hasProps ? PROP_X + WALL_GAP - CAR_HALF - 0.04 : FACADE_X;
+      if (s.tunnel) wall = TUNNEL_X;
+      if (s.portal) { const pt = portals()[s.portal.kind]; if (pt) wall = Math.min(wall, pt.open); }
+      const wl = s.waterL ? Math.min(wall, RAIL_X) : wall;
+      const wr = s.waterR ? Math.min(wall, RAIL_X) : wall;
+      l = Math.min(l, wl - WALL_GAP + taper);
+      r = Math.min(r, wr - WALL_GAP + taper);
+      // and never close enough to touch street furniture: stop short of the nearest solid object's hitbox
+      for (const o of s.sprites) {
+        if (!o.hit) continue;
+        const reach = Math.abs(o.x) - hitHalf(o.id, o.seed ?? 0) - CAR_HALF - 0.04 + taper;
+        if (o.x < 0) l = Math.min(l, reach); else r = Math.min(r, reach);
+      }
+    }
+    return { l, r };
+  }
+
+  private collide(dt: number) {
     const p = this.player;
     const L = this.track.length;
     const t = this.t;
-    // roadside objects
-    if (p.spinT <= 0 && Math.abs(p.x) > 0.95) {
-      for (const dz of [0, 1]) {
+    // roadside objects: hitboxes are the visible solid part of the art (a lamp's pole, a tree's trunk)
+    if (Math.abs(p.x) > 1.2) {
+      outer: for (const dz of [0, 1]) {
         const s = this.segAt(p.z + dz * SEG_LEN);
         for (const o of s.sprites) {
           if (!o.hit) continue;
-          if (Math.abs(p.x - o.x) < o.hit + CAR_HALF * 0.8) {
-            if (p.pct > 0.35) { p.crash(t, sign(p.x - o.x)); this.shake = 1; }
-            else { p.speed *= 0.4; p.x += sign(p.x - o.x) * 0.05; audio.bump(); }
-            break;
-          }
+          const hh = hitHalf(o.id, o.seed ?? 0);
+          if (!hh || Math.abs(p.x - o.x) >= hh + CAR_HIT) continue;
+          const away = Math.sign(p.x - o.x) || -Math.sign(p.x);
+          if (p.spinT <= 0 && p.pct > 0.25) { p.crash(t, away); this.shake = Math.max(this.shake, 0.7); }
+          else p.bump(t, away * 1.2 * dt * 10, -p.speed * 0.5 * dt);
+          break outer;
         }
       }
     }
-    // cars
-    const hit = (o: Mover, onHit: (rel: number) => void) => {
-      let dz = wrap(o.z - p.z + L / 2, L) - L / 2;
-      if (Math.abs(dz) < (o.len + 760) / 2 && Math.abs(o.x - p.x) < o.half + CAR_HALF) onHit(dz);
+    // cars: smooth push-back and speed matching, never a positional snap
+    const contact = (o: Mover & { vx?: number; spin?: (t: number) => void; isRival?: boolean }) => {
+      const sep = (o.len + 760) / 2;
+      const dz = wrap(o.z - p.z + L / 2, L) - L / 2;
+      const dxAbs = Math.abs(o.x - p.x);
+      if (Math.abs(dz) >= sep || dxAbs >= o.half + CAR_HIT) return;
+      const side = sign(p.x - o.x) || 1;
+      const sideBySide = Math.abs(dz) < sep * 0.55;
+      if (dz > 0 && !sideBySide) {
+        // we are behind it
+        const rel = p.speed - o.speed;
+        if (rel > MAX_V * 0.3 && p.spinT <= 0) { p.crash(t, side); this.shake = Math.max(this.shake, 0.8); o.spin?.(t); if (!o.isRival) audio.whinny(); }
+        else if (rel > 0) { p.speed = approach(p.speed, o.speed * 0.97, dt * MAX_V * 2.5); if (o.isRival) o.speed += rel * 0.1; p.bump(t, 0, 0); }
+        p.z = Math.max(0, p.z - Math.min(sep - dz, 500 * dt));
+      } else if (dz < 0 && !sideBySide) {
+        // it is behind us: it eases off
+        o.speed = approach(o.speed, Math.min(o.speed, p.speed * 0.97), dt * MAX_V * 2.5);
+        if (o.isRival) o.z -= Math.min(sep + dz, 500 * dt);
+      } else {
+        // side by side: lean on each other
+        p.vx = approach(p.vx, side * 0.9, dt * 8);
+        if (o.vx !== undefined) o.vx = approach(o.vx, -side * 0.6, dt * 8);
+        p.bump(t, 0, -p.speed * 0.15 * dt);
+      }
     };
-    for (const r of this.rivals) {
-      if (r.spinT > 0) continue;
-      hit(r, (dz) => {
-        const rel = p.speed - r.speed;
-        const side = sign(p.x - r.x) || 1;
-        if (dz > 0 && rel > 0) {
-          // rear-ended a rival
-          if (rel > MAX_V * 0.28) { p.crash(t, side); r.spin(t); this.shake = 1; }
-          else { p.speed = r.speed * 0.92; r.speed += rel * 0.3; p.bump(t, side * 0.8, 0); }
-          this.pushBack(dz - (r.len + 760) / 2 - 2);
-        } else if (dz < 0 && rel < 0) {
-          r.speed = Math.min(r.speed, p.speed * 0.95);
-          p.bump(t, side * 0.5, 120);
-        } else {
-          p.bump(t, side * 1.1, -80); r.x -= side * 0.08;
+    for (const r of this.rivals) contact(Object.assign(r, { isRival: true }));
+    for (const v of this.traffic.list) contact(v);
+    // rivals vs traffic and vs each other: spacing without overlap
+    for (let i = 0; i < this.rivals.length; i++) {
+      const r = this.rivals[i];
+      const others: Mover[] = [...this.traffic.list, ...this.rivals.slice(i + 1)];
+      for (const o of others) {
+        const dz = wrap(o.z - r.z + L / 2, L) - L / 2;
+        const sep = (o.len + r.len) / 2;
+        if (Math.abs(dz) >= sep || Math.abs(o.x - r.x) >= o.half + r.half) continue;
+        const side = sign(r.x - o.x) || 1;
+        const lead = dz > 0 ? o : r, trail = dz > 0 ? r : o;
+        if (Math.abs(dz) > sep * 0.55) {
+          trail.speed = approach(trail.speed, Math.min(trail.speed, lead.speed * 0.98), dt * MAX_V * 2);
+          trail.z -= Math.min(sep - Math.abs(dz), 400 * dt);
+          if (r.def.personality === 'reckless' && trail === r && r.speed - o.speed > MAX_V * 0.3) r.spin(this.t);
         }
-      });
-    }
-    for (const v of this.traffic.list) {
-      hit(v, (dz) => {
-        const rel = p.speed - v.speed;
-        const side = sign(p.x - v.x) || 1;
-        if (dz > 0 && rel > MAX_V * 0.32) { p.crash(t, side); this.shake = 1; p.speed = v.speed; this.pushBack(dz - (v.len + 760) / 2 - 2); if (v.kind === 'carriage' || v.kind === 'wagon') audio.whinny(); }
-        else { p.bump(t, side * 1.2, dz > 0 ? -Math.max(0, rel) * 0.6 : 0); if (dz > 0) this.pushBack(dz - (v.len + 760) / 2 - 2); }
-      });
-    }
-    // rivals vs traffic (so AI isn't a ghost)
-    for (const r of this.rivals) {
-      for (const v of this.traffic.list) {
-        let dz = wrap(v.z - r.z + L / 2, L) - L / 2;
-        if (dz > 0 && dz < (v.len + r.len) / 2 && Math.abs(v.x - r.x) < v.half + r.half) {
-          if (r.speed - v.speed > MAX_V * 0.3 && r.def.personality === 'reckless') r.spin(t);
-          r.speed = Math.min(r.speed, v.speed); r.x += sign(r.x - v.x) * 0.02;
-        }
+        // ease apart sideways in proportion to the overlap: pushes from both sides add up and settle
+        // instead of flipping the car's direction every frame
+        const overlap = o.half + r.half - Math.abs(o.x - r.x);
+        const nudge = Math.min(overlap, 0.9 * dt);
+        const oIsRival = (o as Mover & { vx?: number }).vx !== undefined;
+        r.x = clamp(r.x + side * nudge * (oIsRival ? 0.5 : 1), -0.92, 0.92);
+        if (oIsRival) o.x = clamp(o.x - side * nudge * 0.5, -0.92, 0.92);
       }
     }
-  }
-
-  /** Moves the player back along the road (negative amount) without ever crossing the start line backwards. */
-  private pushBack(amount: number) {
-    if (amount >= 0) return;
-    this.player.z = Math.max(0, this.player.z + amount);
   }
 
   private onEvent(e: string) {
     const p = this.player;
     switch (e) {
       case 'boost':
-        audio.backfire(); this.stats.boosts++; this.shake = 0.8; this.msg('BOOST!');
+        audio.backfire(); this.stats.boosts++; this.shake = Math.max(this.shake, 0.6); this.msg('BOOST!');
         for (let i = 0; i < 8; i++) this.spawn({ kind: 'spark', tone: i % 2 ? '#ffb040' : '#fff0a0', z: p.z - 200, x: p.x + 0.17, y: 90, vx: 0.4 + Math.random() * 0.3, vy: Math.random() * 300, vz: -1500 + Math.random() * 600, life: 0.25, size: 26, grow: 0 });
         break;
-      case 'crash': audio.crash(); this.stats.crashes++; this.msg('CRASH!'); this.shake = 1; break;
-      case 'bump': audio.bump(); this.shake = Math.max(this.shake, 0.4); break;
+      case 'crash': audio.crash(); this.stats.crashes++; this.msg('CRASH!'); this.shake = Math.max(this.shake, 0.8); break;
+      case 'bump': audio.bump(); this.shake = Math.max(this.shake, 0.3); break;
       case 'scrape': audio.scrape(); for (let i = 0; i < 6; i++) this.spawn({ kind: 'spark', tone: '#ffe080', z: p.z + 100, x: p.x + sign(p.x) * 0.2, y: 60, vx: -sign(p.x) * Math.random(), vy: 400 * Math.random(), vz: -500, life: 0.3, size: 18, grow: 0 }); break;
       case 'steam': audio.steam(); break;
       case 'driftEnd': this.stats.drifts++; if (p.driftT > 1.2) this.msg(p.driftT > 2.2 ? 'GRAND POWERSLIDE!' : 'POWERSLIDE!'); break;
@@ -443,15 +488,21 @@ export class Race {
   finishRaceTime() { if (this.state === 'finished' && !this.finishTimeCache) this.finishTimeCache = this.lapTimes.reduce((a, b) => a + b, 0); return this.finishTimeCache; }
 
   // ---------- scene for the renderer ----------
-  scene(): Scene {
+  /** Builds the renderer's view, interpolated `alpha` (0..1) of the way from the previous step to this one. */
+  scene(alpha = 1): Scene {
     const p = this.player;
     const w = this.weather;
+    const L = this.track.length;
     const night = w.lamps;
+    const lz = (a: number, b: number) => { let d = b - a; if (d < -L / 2) d += L; if (d > L / 2) d -= L; return wrap(a + d * alpha, L); };
+    const lerpPos = (o: { z: number; x: number }) => { const pr = this.prevPos.get(o); return pr ? { z: lz(pr[0], o.z), x: pr[1] + (o.x - pr[1]) * alpha } : { z: o.z, x: o.x }; };
+    const ti = this.prev.t + (this.t - this.prev.t) * alpha;
     const cars: DrawCar[] = [];
-    for (const r of this.rivals) cars.push(this.rivalDraw(r));
+    for (const r of this.rivals) { const d = this.rivalDraw(r, ti); const q = lerpPos(r); d.z = q.z; d.x = q.x; d.hit = r.half; cars.push(d); }
     for (const v of this.traffic.list) {
       const s = spr(`${v.kind}:${v.variant}`, Math.floor(v.wheel) % 2);
-      if (s) cars.push({ z: v.z, x: v.x, img: s.img, upp: s.upp, lift: Math.abs(v.bob) * 10, head: night });
+      const q = lerpPos(v);
+      if (s) cars.push({ z: q.z, x: q.x, img: s.img, upp: s.upp, lift: Math.abs(v.bob) * 10, head: night, hit: v.half });
     }
     if (this.ghost && this.state === 'racing' && this.opts.mode === 'trial') {
       const lapT = this.raceT - this.lapStart;
@@ -459,60 +510,57 @@ export class Race {
       const smp = this.ghost.samples;
       if (i + 5 < smp.length) {
         const f = (lapT % 0.1) / 0.1;
-        let z0 = smp[i], z1 = smp[i + 3]; if (z1 < z0) z1 += this.track.length;
+        let z0 = smp[i], z1 = smp[i + 3]; if (z1 < z0) z1 += L;
         const yaw = smp[i + 2] as -1 | 0 | 1;
         const img = carSprite(MODELS[this.ghost.car] ?? MODELS.runabout, 'rear', { yaw, wheel: Math.floor(lapT * 20), brake: false, scarf: 0, colour: true, paint: this.ghost.paint });
-        cars.push({ z: wrap(z0 + (z1 - z0) * f, this.track.length), x: smp[i + 1] + (smp[i + 4] - smp[i + 1]) * f, img, upp: CAR_UPP, alpha: 0.45 });
+        cars.push({ z: wrap(z0 + (z1 - z0) * f, L), x: smp[i + 1] + (smp[i + 4] - smp[i + 1]) * f, img, upp: CAR_UPP, alpha: 0.45 });
       }
     }
     const model = MODELS[this.opts.car] ?? MODELS.runabout;
-    let view: 'rear' | 'side' | 'front' = 'rear';
-    let rot = 0;
     let yaw: -1 | 0 | 1 = p.drifting ? (p.driftDir as -1 | 1) : p.steer > 0.3 ? 1 : p.steer < -0.3 ? -1 : 0;
-    let flipSide = false;
+    // a small lean into turns, a drift angle, and a short decaying wobble after a knock
+    let rot = p.lean * 0.04 + (p.drifting ? -p.driftDir * 0.05 : 0);
     if (p.spinT > 0) {
-      const a = ((1.5 - p.spinT) / 1.5) * Math.PI * 4 * p.spinDir;
-      const ph = ((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-      const q = Math.round(ph / (Math.PI / 2)) % 4;
-      view = q === 0 ? 'rear' : q === 2 ? 'front' : 'side';
-      flipSide = q === 3;
-      rot = Math.sin(a * 2) * 0.08;
-      yaw = 0;
-    } else if (p.drifting) rot = -p.driftDir * 0.06;
-    let img = carSprite(model, view, { yaw, wheel: Math.floor(p.wheel), brake: p.braking || (p.drifting && p.pct > 0.3), scarf: p.scarf, colour: true, paint: this.opts.paint });
-    if (flipSide) img = flipped(img);
-    const bump = p.started ? (Math.sin(this.t * 38) * 0.5 + 0.5) * p.pct * 14 + (p.offroad ? Math.random() * 30 * p.pct : 0) : 0;
-    const player: DrawCar = { z: p.z, x: p.x, img, upp: CAR_UPP, rot, lift: bump, brake: p.braking };
+      const k = p.spinT / WOBBLE;
+      const wob = Math.sin((1 - k) * Math.PI * 3) * 0.3 * k * p.spinDir;
+      rot += wob;
+      yaw = wob > 0.08 ? 1 : wob < -0.08 ? -1 : 0;
+    }
+    const img = carSprite(model, 'rear', { yaw, wheel: Math.floor(p.wheel), brake: p.braking || (p.drifting && p.pct > 0.3), scarf: p.scarf, colour: true, paint: this.opts.paint });
+    // smooth, speed-scaled road rumble (no per-frame randomness)
+    const pct = p.started ? p.pct : 0;
+    const rum = p.rumble;
+    const lift = (Math.sin(ti * 38) * 0.5 + 0.5) * pct * 7 + rum * (Math.sin(ti * 61) * 0.5 + 0.5) * (6 + pct * 18);
+    const camBob = Math.sin(ti * 31) * 3.5 * pct + rum * (Math.sin(ti * 47) * 0.6 + Math.sin(ti * 23) * 0.4) * (4 + pct * 12);
+    const pz = lz(this.prev.pz, p.z);
+    const player: DrawCar = { z: pz, x: this.prev.px + (p.x - this.prev.px) * alpha, img, upp: CAR_UPP, rot, lift, brake: p.braking, hit: CAR_HIT };
     return {
       track: this.track,
-      playerZ: p.z,
-      camX: this.camX,
-      camBob: Math.sin(this.t * 31) * 5 * p.pct + (p.offroad ? (Math.random() - 0.5) * 30 * p.pct : 0),
+      playerZ: pz,
+      camX: this.prev.camX + (this.camX - this.prev.camX) * alpha,
+      camBob,
       player,
       cars,
       particles: this.parts,
       pedSprite: (i) => this.pedSprite(i),
       weather: w,
-      time: this.t,
-      skyX: this.skyX,
+      time: ti,
+      skyX: this.prev.skyX + (this.skyX - this.prev.skyX) * alpha,
       shake: this.shake,
       headlamps: w.id === 'night' || w.id === 'fog' || this.segAt(p.z).tunnel,
     };
   }
 
-  private rivalDraw(r: Rival): DrawCar {
-    let view: 'rear' | 'side' | 'front' = 'rear', rot = 0;
-    let flip = false;
+  private rivalDraw(r: Rival, ti: number): DrawCar {
+    let rot = r.steer * 0.03;
+    let yaw: -1 | 0 | 1 = r.steer > 0.35 ? 1 : r.steer < -0.35 ? -1 : 0;
     if (r.spinT > 0) {
-      const a = ((1.3 - r.spinT) / 1.3) * Math.PI * 4 * r.spinDir;
-      const ph = ((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-      const q = Math.round(ph / (Math.PI / 2)) % 4;
-      view = q === 0 ? 'rear' : q === 2 ? 'front' : 'side'; flip = q === 3; rot = Math.sin(a * 2) * 0.08;
+      const k = r.spinT / 0.9;
+      const wob = Math.sin((1 - k) * Math.PI * 3) * 0.3 * k * r.spinDir;
+      rot += wob; yaw = wob > 0.08 ? 1 : wob < -0.08 ? -1 : 0;
     }
-    const yaw: -1 | 0 | 1 = r.steer > 0.35 ? 1 : r.steer < -0.35 ? -1 : 0;
-    let img = carSprite(r.model, view, { yaw: view === 'rear' ? yaw : 0, wheel: Math.floor(r.wheel), brake: r.braking, scarf: Math.floor(this.t * 8) % 3, colour: false });
-    if (flip) img = flipped(img);
-    return { z: r.z, x: r.x, img, upp: CAR_UPP, rot, brake: r.braking, lift: (Math.sin(this.t * 36 + r.z) * 0.5 + 0.5) * 10 };
+    const img = carSprite(r.model, 'rear', { yaw, wheel: Math.floor(r.wheel), brake: r.braking, scarf: Math.floor(ti * 8) % 3, colour: false });
+    return { z: r.z, x: r.x, img, upp: CAR_UPP, rot, brake: r.braking, lift: (Math.sin(ti * 36 + r.z * 0.001) * 0.5 + 0.5) * 6 * (r.speed / MAX_V) };
   }
 
   private pedSprite(i: number): PedDraw | null {
@@ -530,15 +578,4 @@ export class Race {
     dots.push({ z: p.z, player: true });
     return { mph: p.speed / MPH, maxMph: Math.max(60, p.stats.top / MPH), boost: p.boost, boosting: p.boostT > 0, slip: p.slip, track: this.track, dots };
   }
-}
-
-const flipCache = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
-function flipped(c: HTMLCanvasElement) {
-  let f = flipCache.get(c);
-  if (!f) {
-    f = document.createElement('canvas'); f.width = c.width; f.height = c.height;
-    const x = f.getContext('2d')!; x.translate(c.width, 0); x.scale(-1, 1); x.drawImage(c, 0, 0);
-    flipCache.set(c, f);
-  }
-  return f;
 }

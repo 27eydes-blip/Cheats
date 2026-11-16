@@ -1,6 +1,6 @@
 import { Rng } from '../core/rng';
 import { easeIn, easeInOut } from '../core/math';
-import { SEG_LEN, FACADE_X, type Segment, type Section, type Track, type TrackDef, type Zone, type Ground, type SpriteInst, type Facade } from './types';
+import { SEG_LEN, FACADE_X, PROP_X, RAIL_X, TUNNEL_X, CLEAR, type Segment, type Section, type Track, type TrackDef, type Zone, type Ground, type SpriteInst, type Facade } from './types';
 import { makeFacade, type FacadeStyle } from '../art/facades';
 
 export interface PedDef { seg: number; x: number; kind: string; seed: number }
@@ -124,42 +124,42 @@ function decorate(def: TrackDef, segs: Segment[], rng: Rng, peds: PedDef[]) {
   segs.forEach((seg, i) => {
     const z = seg.zone;
     if (z === 'city' || z === 'plaza' || z === 'industrial') {
-      if (i % 12 === 0) { add(seg, { id: 'lamp', x: -1.2, hit: 0.07, lamp: true }); add(seg, { id: 'lamp', x: 1.2, hit: 0.07, lamp: true, flip: true }); }
+      if (i % 12 === 0) { add(seg, { id: 'lamp', x: -PROP_X, hit: 1, lamp: true }); add(seg, { id: 'lamp', x: PROP_X, hit: 1, lamp: true, flip: true }); }
       if (seg.rails) {
-        if (i % 16 === 6) { add(seg, { id: 'trolleyPole', x: -1.12, hit: 0.06, pole: 'trolley' }); add(seg, { id: 'trolleyPole', x: 1.12, hit: 0.06, pole: 'trolley', flip: true }); }
-      } else if (i % 18 === 6) add(seg, { id: 'telePole', x: 1.38, hit: 0.07, pole: 'tele' });
+        if (i % 16 === 6) { add(seg, { id: 'trolleyPole', x: -CLEAR - 0.02, hit: 1, pole: 'trolley' }); add(seg, { id: 'trolleyPole', x: CLEAR + 0.02, hit: 1, pole: 'trolley', flip: true }); }
+      } else if (i % 18 === 6) add(seg, { id: 'telePole', x: 1.74, hit: 1, pole: 'tele' });
       const hasL = !!seg.wallL, hasR = !!seg.wallR;
       if (rng.chance(z === 'industrial' ? 0.05 : 0.2)) {
         const side = rng.chance(0.5) ? -1 : 1;
         const kind = z === 'industrial' ? rng.pick(['worker', 'worker', 'gent']) : rng.pick(PED_KINDS);
-        const x = side * rng.range(1.26, 1.52);
+        const x = side * rng.range(1.64, 1.86);
         const ped = peds.length; peds.push({ seg: i, x, kind, seed: rng.int(1, 1e9) });
         add(seg, { id: 'ped', x, ped });
       }
-      if (rng.chance(0.03)) add(seg, { id: rng.pick(['hydrant', 'barrel', 'crates', 'mailbox', 'bench']), x: (rng.chance(0.5) ? -1 : 1) * rng.range(1.22, 1.45), hit: 0.06 });
+      if (rng.chance(0.03)) add(seg, { id: rng.pick(['hydrant', 'barrel', 'crates', 'mailbox', 'bench']), x: (rng.chance(0.5) ? -1 : 1) * rng.range(1.68, 1.82), hit: 1 });
       if ((!hasL || !hasR) && rng.chance(0.15) && z !== 'industrial') {
-        const x = !hasL ? -1.1 : 1.1;
+        const x = !hasL ? -CLEAR : CLEAR;
         const ped = peds.length; peds.push({ seg: i, x, kind: 'police', seed: rng.int(1, 1e9) });
         add(seg, { id: 'ped', x, ped });
       }
       if (z === 'industrial' && i % 40 === 20) add(seg, { id: 'smokestack', x: rng.chance(0.5) ? 3.2 : -3.4 });
       if (z === 'industrial' && i % 70 === 5) add(seg, { id: 'waterTower', x: -3.0 });
     } else if (z === 'park' || z === 'river') {
-      if (i % 5 === 0) add(seg, { id: rng.pick(['elm', 'elm', 'oak', 'poplar']), x: -rng.range(1.7, 3.6), hit: 0.25, seed: i });
-      if (z === 'park' && i % 5 === 2) add(seg, { id: rng.pick(['elm', 'oak', 'oak', 'poplar']), x: rng.range(1.7, 3.6), hit: 0.25, seed: i });
-      if (z === 'river' && i % 8 === 0) add(seg, { id: 'railing', x: 1.32 });
-      if (i % 14 === 0) { add(seg, { id: 'parkLamp', x: -1.22, hit: 0.06, lamp: true }); add(seg, { id: 'parkLamp', x: 1.22, hit: 0.06, lamp: true, flip: true }); }
+      if (i % 5 === 0) add(seg, { id: rng.pick(['elm', 'elm', 'oak', 'poplar']), x: -rng.range(2.0, 3.6), hit: 1, seed: i });
+      if (z === 'park' && i % 5 === 2) add(seg, { id: rng.pick(['elm', 'oak', 'oak', 'poplar']), x: rng.range(2.0, 3.6), hit: 1, seed: i });
+      if (z === 'river' && i % 8 === 0) add(seg, { id: 'railing', x: RAIL_X });
+      if (i % 14 === 0) { add(seg, { id: 'parkLamp', x: -PROP_X, hit: 1, lamp: true }); add(seg, { id: 'parkLamp', x: PROP_X, hit: 1, lamp: true, flip: true }); }
       if (rng.chance(0.1)) {
-        const x = (z === 'river' ? -1 : rng.chance(0.5) ? -1 : 1) * rng.range(1.25, 1.55);
+        const x = (z === 'river' ? -1 : rng.chance(0.5) ? -1 : 1) * rng.range(1.64, 1.9);
         const ped = peds.length; peds.push({ seg: i, x, kind: rng.pick(['lady', 'gent', 'lady', 'boy', 'parasol']), seed: rng.int(1, 1e9) });
         add(seg, { id: 'ped', x, ped });
       }
-      if (rng.chance(0.025)) add(seg, { id: 'bench', x: (rng.chance(0.5) ? -1 : 1) * 1.45, hit: 0.08 });
+      if (rng.chance(0.025)) add(seg, { id: 'bench', x: (rng.chance(0.5) ? -1 : 1) * 1.8, hit: 1 });
     } else if (z === 'bridge') {
-      if (i % 2 === 0) { add(seg, { id: 'railing', x: -1.32 }); add(seg, { id: 'railing', x: 1.32, flip: true }); }
-      if (i % 20 === 0) { add(seg, { id: 'bridgeLamp', x: -1.24, lamp: true, hit: 0.06 }); add(seg, { id: 'bridgeLamp', x: 1.24, lamp: true, flip: true, hit: 0.06 }); }
+      if (i % 2 === 0) { add(seg, { id: 'railing', x: -RAIL_X }); add(seg, { id: 'railing', x: RAIL_X, flip: true }); }
+      if (i % 20 === 0) { add(seg, { id: 'bridgeLamp', x: -RAIL_X, lamp: true, hit: 1 }); add(seg, { id: 'bridgeLamp', x: RAIL_X, lamp: true, flip: true, hit: 1 }); }
     } else if (z === 'tunnel') {
-      if (i % 8 === 0) { add(seg, { id: 'tunnelLamp', x: -1.38, y: 1500, lamp: true }); add(seg, { id: 'tunnelLamp', x: 1.38, y: 1500, lamp: true, flip: true }); }
+      if (i % 8 === 0) { add(seg, { id: 'tunnelLamp', x: -TUNNEL_X, y: 1500, lamp: true }); add(seg, { id: 'tunnelLamp', x: TUNNEL_X, y: 1500, lamp: true, flip: true }); }
     }
   });
   // tunnel mouths
@@ -204,7 +204,7 @@ function applyFeature(def: TrackDef, segs: Segment[], f: { at: number; len: numb
       const fac = makeFacade('depot', len, 9800, rng.int(1, 1e9));
       for (let k = 0; k < len; k++) segs[at + k].wallR = { f: fac, u0: (k / len) * fac.tex.width, u1: ((k + 1) / len) * fac.tex.width, start: k === 0, end: k === len - 1, x: FACADE_X + 0.5 };
       for (let k = 0; k < len; k += 4) {
-        const ped = peds.length; peds.push({ seg: at + k, x: rng.range(1.3, 1.9), kind: rng.pick(PED_KINDS), seed: rng.int(1, 1e9) });
+        const ped = peds.length; peds.push({ seg: at + k, x: rng.range(1.66, 2.3), kind: rng.pick(PED_KINDS), seed: rng.int(1, 1e9) });
         add(segs[at + k], { id: 'ped', x: peds[ped].x, ped });
       }
       break;
@@ -223,7 +223,7 @@ function applyFeature(def: TrackDef, segs: Segment[], f: { at: number; len: numb
       break;
     }
     case 'fountain':
-      add(segs[mid], { id: 'fountain', x: -2.4, hit: 0.6 });
+      add(segs[mid], { id: 'fountain', x: -2.9, hit: 1 });
       break;
     case 'stands':
       standsAt(segs, at, f.len, rng, peds);
@@ -242,11 +242,11 @@ function standsAt(segs: Segment[], at: number, len: number, rng: Rng, peds: PedD
     seg.wallL = piece(-1); seg.wallR = piece(1);
     if (k % 2 === 0) {
       for (const side of [-1, 1]) {
-        const ped = peds.length; peds.push({ seg: at + k, x: side * rng.range(1.22, 1.45), kind: rng.pick(['gent', 'lady', 'boy', 'newsboy', 'gent', 'worker']), seed: rng.int(1, 1e9) });
+        const ped = peds.length; peds.push({ seg: at + k, x: side * rng.range(1.64, 1.84), kind: rng.pick(['gent', 'lady', 'boy', 'newsboy', 'gent', 'worker']), seed: rng.int(1, 1e9) });
         add(seg, { id: 'ped', x: peds[ped].x, ped });
       }
     }
-    if (k % 10 === 0) { add(seg, { id: 'flagpole', x: -1.25, seed: k }); add(seg, { id: 'flagpole', x: 1.25, seed: k + 3, flip: true }); }
+    if (k % 10 === 0) { add(seg, { id: 'flagpole', x: -PROP_X, seed: k, hit: 1 }); add(seg, { id: 'flagpole', x: PROP_X, seed: k + 3, flip: true, hit: 1 }); }
   }
 }
 
@@ -259,10 +259,10 @@ function finishLine(segs: Segment[], rng: Rng, peds: PedDef[]) {
   for (let k = -16; k < 20; k += 2) {
     const i = (k + n) % n;
     for (const side of [-1, 1]) {
-      const x = side * rng.range(1.22, 1.36);
+      const x = side * rng.range(1.64, 1.82);
       const ped = peds.length; peds.push({ seg: i, x, kind: rng.pick(['gent', 'lady', 'boy', 'newsboy', 'worker']), seed: rng.int(1, 1e9) });
       add(segs[i], { id: 'ped', x, ped });
     }
   }
-  add(segs[4], { id: 'flagman', x: -1.18 });
+  add(segs[4], { id: 'flagman', x: -CLEAR - 0.04 });
 }

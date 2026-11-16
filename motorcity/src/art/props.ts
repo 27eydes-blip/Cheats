@@ -3,7 +3,7 @@ import { canvas, rect, px, hline, vline, S, STONE, shade, flipH, text, textCente
 import { register } from './registry';
 import { Rng } from '../core/rng';
 
-const reg = (id: string, c: HTMLCanvasElement, upp: number, extra: Partial<{ topY: number; topX: number[] }> = {}) =>
+const reg = (id: string, c: HTMLCanvasElement, upp: number, extra: Partial<{ topY: number; topX: number[]; solid: number }> = {}) =>
   ({ img: c, upp, flip: flipH(c), ...extra });
 
 function castIronLamp(): HTMLCanvasElement {
@@ -205,26 +205,26 @@ function fountain(): HTMLCanvasElement {
 }
 
 export function buildProps() {
-  register('lamp', reg('lamp', castIronLamp(), 24, { topY: 10, topX: [3, 17] }));
-  register('parkLamp', reg('parkLamp', parkLamp(), 24, { topY: 6 }));
-  register('bridgeLamp', reg('bridgeLamp', bridgeLamp(), 26, { topY: 4 }));
+  register('lamp', reg('lamp', castIronLamp(), 24, { topY: 10, topX: [3, 17], solid: 3 }));
+  register('parkLamp', reg('parkLamp', parkLamp(), 24, { topY: 6, solid: 3 }));
+  register('bridgeLamp', reg('bridgeLamp', bridgeLamp(), 26, { topY: 4, solid: 3 }));
   register('tunnelLamp', reg('tunnelLamp', tunnelLamp(), 30, { topY: 4 }));
-  register('telePole', reg('telePole', telePole(), 26, { topY: 6, topX: [1, 6, 18, 23] }));
-  register('trolleyPole', reg('trolleyPole', trolleyPole(), 30, { topY: 2 }));
-  register('elm', [0, 1, 2].map((i) => reg('elm', tree(i, 'elm'), 52)));
-  register('oak', [0, 1, 2].map((i) => reg('oak', tree(i + 5, 'oak'), 50)));
-  register('poplar', [0, 1].map((i) => reg('poplar', tree(i + 9, 'poplar'), 54)));
+  register('telePole', reg('telePole', telePole(), 26, { topY: 6, topX: [1, 6, 18, 23], solid: 3 }));
+  register('trolleyPole', reg('trolleyPole', trolleyPole(), 30, { topY: 2, solid: 3 }));
+  register('elm', [0, 1, 2].map((i) => reg('elm', tree(i, 'elm'), 52, { solid: 4 })));
+  register('oak', [0, 1, 2].map((i) => reg('oak', tree(i + 5, 'oak'), 50, { solid: 6 })));
+  register('poplar', [0, 1].map((i) => reg('poplar', tree(i + 9, 'poplar'), 54, { solid: 4 })));
   register('railing', reg('railing', railing(), 26));
   register('stands', [0, 1, 2].map((i) => reg('stands', stands(i), 30)));
-  register('flagpole', [0, 1].map((i) => reg('flagpole', flagpole(i), 32)));
+  register('flagpole', [0, 1].map((i) => reg('flagpole', flagpole(i), 32, { solid: 2 })));
   register('smokestack', reg('smokestack', smokestack(), 60));
   register('waterTower', reg('waterTower', waterTower(), 60));
-  register('fountain', reg('fountain', fountain(), 40));
-  register('hydrant', reg('hydrant', simple(7, 12, (ctx) => { rect(ctx, 1, 3, 5, 9, S[2]); rect(ctx, 0, 5, 7, 2, S[2]); rect(ctx, 2, 1, 3, 2, S[2]); vline(ctx, 2, 3, 8, S[5]); }), 26));
-  register('barrel', reg('barrel', simple(10, 14, (ctx) => { rect(ctx, 1, 0, 8, 14, S[4]); rect(ctx, 0, 2, 10, 10, S[4]); for (const y of [2, 7, 11]) hline(ctx, 0, y, 10, S[1]); vline(ctx, 3, 0, 14, S[6]); }), 26));
-  register('crates', reg('crates', simple(18, 16, (ctx) => { for (const [x, y, w] of [[0, 6, 10], [8, 6, 10], [3, 0, 10]]) { rect(ctx, x, y, w, w, S[6]); rect(ctx, x, y, w, 1, S[8]); rect(ctx, x, y + w - 1, w, 1, S[3]); vline(ctx, x, y, w, S[3]); px(ctx, x + w / 2, y + w / 2, S[3]); } }), 26));
-  register('mailbox', reg('mailbox', simple(8, 16, (ctx) => { vline(ctx, 3, 8, 8, S[1]); vline(ctx, 4, 8, 8, S[1]); rect(ctx, 0, 0, 8, 9, S[2]); rect(ctx, 1, 2, 6, 1, S[6]); text(ctx, '', 0, 0, S[1]); }), 26));
-  register('bench', reg('bench', simple(24, 11, (ctx) => { rect(ctx, 0, 0, 24, 2, S[5]); rect(ctx, 0, 4, 24, 2, S[5]); rect(ctx, 0, 6, 24, 1, S[3]); for (const x of [1, 21]) rect(ctx, x, 0, 2, 11, S[1]); }), 26));
+  register('fountain', reg('fountain', fountain(), 40, { solid: 70 }));
+  register('hydrant', reg('hydrant', simple(7, 12, (ctx) => { rect(ctx, 1, 3, 5, 9, S[2]); rect(ctx, 0, 5, 7, 2, S[2]); rect(ctx, 2, 1, 3, 2, S[2]); vline(ctx, 2, 3, 8, S[5]); }), 26, { solid: 5 }));
+  register('barrel', reg('barrel', simple(10, 14, (ctx) => { rect(ctx, 1, 0, 8, 14, S[4]); rect(ctx, 0, 2, 10, 10, S[4]); for (const y of [2, 7, 11]) hline(ctx, 0, y, 10, S[1]); vline(ctx, 3, 0, 14, S[6]); }), 26, { solid: 8 }));
+  register('crates', reg('crates', simple(18, 16, (ctx) => { for (const [x, y, w] of [[0, 6, 10], [8, 6, 10], [3, 0, 10]]) { rect(ctx, x, y, w, w, S[6]); rect(ctx, x, y, w, 1, S[8]); rect(ctx, x, y + w - 1, w, 1, S[3]); vline(ctx, x, y, w, S[3]); px(ctx, x + w / 2, y + w / 2, S[3]); } }), 26, { solid: 16 }));
+  register('mailbox', reg('mailbox', simple(8, 16, (ctx) => { vline(ctx, 3, 8, 8, S[1]); vline(ctx, 4, 8, 8, S[1]); rect(ctx, 0, 0, 8, 9, S[2]); rect(ctx, 1, 2, 6, 1, S[6]); text(ctx, '', 0, 0, S[1]); }), 26, { solid: 6 }));
+  register('bench', reg('bench', simple(24, 11, (ctx) => { rect(ctx, 0, 0, 24, 2, S[5]); rect(ctx, 0, 4, 24, 2, S[5]); rect(ctx, 0, 6, 24, 1, S[3]); for (const x of [1, 21]) rect(ctx, x, 0, 2, 11, S[1]); }), 26, { solid: 22 }));
   register('flagman', reg('flagman', simple(16, 26, (ctx) => {
     // starter with checkered flag
     rect(ctx, 5, 8, 5, 10, S[1]); rect(ctx, 6, 3, 3, 4, S[9]); rect(ctx, 4, 1, 7, 2, S[1]); rect(ctx, 5, 0, 5, 2, S[1]);
