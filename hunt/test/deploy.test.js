@@ -49,7 +49,8 @@ assert.deepEqual(prod.migrations.slice(0, dev.migrations.length), dev.migrations
 const created = new Set(prod.migrations.flatMap((m) => [...(m.new_sqlite_classes || []), ...(m.new_classes || [])]));
 for (const b of prod.durable_objects.bindings) {
   assert.ok(created.has(b.class_name), `no migration creates ${b.class_name}`);
-  assert.match(worker, new RegExp(`export class ${b.class_name}\\b`), `the worker does not export ${b.class_name}`);
+  // (declared in the worker, or re-exported from its own module, e.g. src/race/room.js)
+  assert.match(worker, new RegExp(`export class ${b.class_name}\\b|export \\{[^}]*\\b${b.class_name}\\b[^}]*\\} from`), `the worker does not export ${b.class_name}`);
 }
 // a real database, not the local placeholder; same binding and migrations folder
 const pdb = prod.d1_databases[0], ddb = dev.d1_databases[0];
@@ -107,6 +108,7 @@ try {
   // --- the rooms really use it: a tick that throws, a fetch that throws
   const mod = await import('../src/worker.js');
   const { MatchRoom, ZoneRoom } = mod;
+  for (const b of prod.durable_objects.bindings) assert.equal(typeof mod[b.class_name], 'function', `the worker module does not export ${b.class_name}`);
   lines.length = 0;
   const room = new MatchRoom({}, {});
   // (tickSafe as in Sim: the room ticks through it, so a throwing tick reaches the room's fault())
