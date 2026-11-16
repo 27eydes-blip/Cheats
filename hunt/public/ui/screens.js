@@ -3,6 +3,7 @@
 import { BRAWLERS, BRAWLER_IDS, WORLDS, worldsInDisplayOrder } from '../shared.js';
 import * as R from '../render.js';
 import { SETTINGS, setSetting } from '../settings.js';
+import { sensName } from '../race/controls.js';
 import { sfx } from '../audio.js';
 import { icon } from './icons.js';
 import { openScreen, closeScreen, popup, rewardBurst, flyCoins } from './fx.js';
@@ -385,11 +386,13 @@ export function openSettings(api, onDone) {
     ${icon('music')}<label>MUSIC <input type="range" class="slider" id="volMusic" min="0" max="1" step="0.05"></label>
     ${icon('speaker')}<label>SOUND EFFECTS <input type="range" class="slider" id="volSfx" min="0" max="1" step="0.05"></label>
     <span></span><div id="setSlot" style="display:flex;flex-direction:column;gap:10px"></div>
-    ${api.racing ? '' : `${icon('target')}<label>AIM SENSITIVITY <input type="range" class="slider" id="setSens" min="0.5" max="2" step="0.05"></label>`}
+    ${api.racing ? `${icon('target')}<label>STEERING SENSITIVITY <b id="sensName" style="color:var(--gold);margin-left:6px"></b><input type="range" class="slider" id="setSteer" min="0.5" max="1.5" step="0.05" aria-describedby="sensName"></label>
+    <span></span><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">JOYSTICK SIZE <div class="chips" id="setStick">${[['s', 'SMALL'], ['m', 'MEDIUM'], ['l', 'LARGE']].map(([k, n]) => `<button type="button" class="chipbtn" data-k="${k}">${n}</button>`).join('')}</div></div>` : `${icon('target')}<label>AIM SENSITIVITY <input type="range" class="slider" id="setSens" min="0.5" max="2" step="0.05"></label>`}
     <span></span><div style="display:flex;flex-direction:column;gap:10px">
       <label class="opt"><input type="checkbox" id="setLeft"> ${api.racing ? 'Left-handed controls (buttons on the left, steer on the right)' : 'Left-handed controls (aim on the left)'}</label>
-      ${api.racing ? '' : '<label class="opt"><input type="checkbox" id="setHold"> Hold to fire (instead of fire on release)</label>'}</div></div>
-    <p class="hint">${api.racing ? 'Reduce Flashing removes flashes and screen shake. Low Graphics turns off particles and moving backgrounds for a smoother race on older phones.' : 'Reduce Flashing removes flashes, strobes and screen shake. Low Graphics turns off the moving lobby background, particles, shadows and slime animation. Hold to fire keeps shooting while your thumb is on the aim stick.'}</p>
+      ${api.racing ? '' : '<label class="opt"><input type="checkbox" id="setHold"> Hold to fire (instead of fire on release)</label>'}</div>
+    ${api.racing ? `<span></span><button type="button" class="btn btn-md alt" id="setTut" style="justify-self:start">HOW TO DRIVE</button>` : ''}</div>
+    <p class="hint">${api.racing ? 'Steering sensitivity sets how quickly your car turns toward the stick. Reduce Flashing removes flashes and screen shake. Low Graphics turns off particles and moving backgrounds for a smoother race on older phones.' : 'Reduce Flashing removes flashes, strobes and screen shake. Low Graphics turns off the moving lobby background, particles, shadows and slime animation. Hold to fire keeps shooting while your thumb is on the aim stick.'}</p>
     <p style="color:var(--gold);font-family:var(--font)">Created by Sam Eyde III</p></div>`;
   for (const id of ['setSound', 'setFlash', 'setLow']) { const l = $(id).closest('label') || $(id); $('setSlot').appendChild(l); }
   $('volMusic').value = SETTINGS.musicVol ?? 0.6; $('volSfx').value = SETTINGS.sfxVol ?? 0.9;
@@ -398,6 +401,17 @@ export function openSettings(api, onDone) {
   $('volSfx').onchange = () => sfx('click');
   $('setLeft').checked = !!SETTINGS.leftHanded;
   $('setLeft').onchange = (e) => { setSetting('leftHanded', e.target.checked); dispatchEvent(new Event('resize')); };
+  if (api.racing) {
+    // steering sensitivity: live label, applied from the next race (the server is told at join)
+    const sl = $('setSteer'), nm = $('sensName');
+    const show = () => { nm.textContent = sensName(+sl.value); };
+    sl.value = SETTINGS.raceSens ?? 1; show();
+    sl.oninput = () => { setSetting('raceSens', +sl.value); show(); };
+    const chips = () => { for (const b of document.querySelectorAll('#setStick .chipbtn')) b.classList.toggle('on', b.dataset.k === (SETTINGS.raceStick || 'm')); };
+    for (const b of document.querySelectorAll('#setStick .chipbtn')) b.onclick = () => { setSetting('raceStick', b.dataset.k); chips(); sfx('click'); };
+    chips();
+    $('setTut').onclick = () => { S.close(); api.startRace?.({ tutorialOnly: true }); };
+  }
   if (!api.racing) {
     $('setSens').value = SETTINGS.aimSens ?? 1; $('setHold').checked = !!SETTINGS.holdFire;
     $('setSens').oninput = (e) => setSetting('aimSens', +e.target.value);
