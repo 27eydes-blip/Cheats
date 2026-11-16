@@ -1,8 +1,10 @@
-// Hunt Racers: two phones in the same friend room race, with FILL WITH BOTS on and off.
+// Hunt Racers: an iPhone SE (667x375) and an iPad (1180x820) in the same friend room race, with
+// FILL WITH BOTS on and off.
 // Both get there like players do: the lobby's driver select, RACE WITH FRIENDS with a room code
 // (the host picks mode, track and bots), and the host's START on the room card.
-// Both drive with real touch input (CDP touch events: steering thumb + DRIFT / FIRE / ITEM / BRAKE
-// fingers at once), fire their weapon, use an item, one gets wrecked and is back ~2 s later, laps
+// Both drive with real touch input (CDP touch events): the steering thumb on the joystick points
+// where the car should go (heading `ha` + magnitude `hm`), with DRIFT / FIRE / ITEM / BRAKE fingers
+// at the same time (two thumbs: steer + drift, steer + fire, checked on both devices), fire their weapon, use an item, one gets wrecked and is back ~2 s later, laps
 // count up, both finish, and the finish order agrees on both screens and with the server.
 // The camera keeps each phone's own car inside the safe box the whole race (respawn included).
 // Short races come from the HUNT_DEV-only `laps=1` option (`/?laps=1`); the wreck uses the HUNT_DEV-only
@@ -17,7 +19,7 @@ for (const bots of ['1', '0']) {
   test(`two phones race in one room (bots ${bots === '1' ? 'on' : 'off'})`, async ({ browser, browserName }) => {
     test.skip(browserName !== 'chromium', 'CDP touch input');
     test.setTimeout(240_000);
-    const A = await phone(browser, 667, 375), B = await phone(browser, 844, 390);
+    const A = await phone(browser, 667, 375), B = await phone(browser, 1180, 820);
     const errs = [trackErrors(A.page), trackErrors(B.page)];
     const room = roomCode();
     // brick and wisp: their weapons always go off (shockwave / rail), even with nobody near
@@ -48,12 +50,20 @@ for (const bots of ['1', '0']) {
     expect(nCars).toBe(bots === '1' ? 10 : 2);
 
     // both phones drive at once; along the way each fires, uses an item, and A gets wrecked
-    const done = { A: {}, B: {} };
+    const done = { A: { both: [] }, B: { both: [] } };
+    // two thumbs at once: what the controls hand to the race client while both are down
+    const both = (P) => P.page.evaluate(() => window.__race.input());
     const script = (P, me) => async (F, L, s) => {
       const d = done[me];
       // FIRE every couple of seconds (it is on a cooldown anyway); ITEM whenever we hold one. An
-      // item from a box if we drove through one, otherwise the test hands one over once.
-      if (s.tm > 1.5 && s.tm - (d.fired || 0) > 2) { await F.tap(2, L.btn.fire.x, L.btn.fire.y); d.fired = s.tm; }
+      // item from a box if we drove through one, otherwise the test hands one over once. The first
+      // FIRE is pressed and checked while the steering thumb holds the stick.
+      if (s.tm > 1.5 && s.tm - (d.fired || 0) > 2) {
+        if (!d.fireChecked && F.active.has(1)) { await F.down(2, L.btn.fire.x, L.btn.fire.y); d.both.push(['fire', await both(P)]); await F.up(2); d.fireChecked = true; }
+        else await F.tap(2, L.btn.fire.x, L.btn.fire.y);
+        d.fired = s.tm;
+      }
+      if (F.active.has(1) && F.active.has(4) && !d.driftChecked) { d.both.push(['drift', await both(P)]); d.driftChecked = true; }
       if (s.tm > 4 && s.it < 0 && !d.gave) { await P.page.evaluate(() => window.__race.dev('item', 'turbo')); d.gave = true; }
       if (s.it >= 0 && s.tm - (d.used || 0) > 1) { await F.tap(3, L.btn.item.x, L.btn.item.y); d.used = s.tm; }
       if (me === 'A' && s.tm > 7 && !d.wrecked) { await P.page.evaluate(() => window.__race.dev('wreck')); d.wrecked = true; }
@@ -84,6 +94,15 @@ for (const bots of ['1', '0']) {
     expect(sb.fin, 'B finished').toBeGreaterThan(0);
     expect(sa.fin).not.toBe(sb.fin);
 
+    // TWO THUMBS: the stick kept steering (heading + magnitude) while DRIFT was held and while FIRE was pressed
+    for (const [P, nm] of [[A, 'A'], [B, 'B']]) {
+      const d = done[nm], fire = d.both.find((x) => x[0] === 'fire'), drift = d.both.find((x) => x[0] === 'drift');
+      expect(fire, `${nm}: FIRE pressed while steering`).toBeTruthy();
+      expect(fire[1].stickHeld && fire[1].fire && fire[1].hm > 0.5 && typeof fire[1].ha === 'number', `${nm}: steer + fire ${JSON.stringify(fire[1])}`).toBe(true);
+      expect(drift, `${nm}: DRIFT held while steering`).toBeTruthy();
+      expect(drift[1].stickHeld && drift[1].drift && drift[1].hm > 0.5 && typeof drift[1].ha === 'number', `${nm}: steer + drift ${JSON.stringify(drift[1])}`).toBe(true);
+      void P;
+    }
     // weapon + item through the touch buttons: the server reported them
     const evs = (s, kind) => s.mine[kind] || [];
     expect(evs(sa, 'pulse').length, 'A fired (shock bumper)').toBeGreaterThan(0);
