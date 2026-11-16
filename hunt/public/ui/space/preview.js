@@ -3,6 +3,7 @@
 // /api/space/feed instead of demo ticker data) &mode=0..3 &driver=<id> &music=0
 // window.__space exposes the pieces and a frame-time meter for tests.
 import { SETTINGS } from '../../settings.js';
+import { audioCtx } from '../../audio.js';
 import { drawCarStage, driverStats } from '../../race/preview.js';
 import { DRIVERS, DRIVER_IDS } from '../../race/physics.js';
 import { trackName } from '../../race/tracks.js';
@@ -120,7 +121,7 @@ function meter(t) { if (lastT) deltas.push(t - lastT); lastT = t; if (deltas.len
 requestAnimationFrame(meter);
 window.__space = {
   bg, pad, carousel, crew, ticker, dock, launch, orbit, radar, lightSweep, chime,
-  ambient: { playing: ambientPlaying, ducked: ambientDucked, level: ambientLevel },
+  ambient: { playing: ambientPlaying, ducked: ambientDucked, level: ambientLevel, state: () => audioCtx()?.state || 'none' },
   quality: () => q,
   resetPerf() { deltas = []; lastT = 0; },
   perf() {

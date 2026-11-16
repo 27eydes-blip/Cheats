@@ -131,7 +131,7 @@ test('space preview: Low Graphics and Reduce Flashing', async ({ page }) => {
   // normal: the sky animates
   await page.goto(URL);
   await page.waitForFunction(() => window.__space);
-  await page.waitForTimeout(600);
+  await page.waitForFunction(() => window.__space.bg.frames > 5, null, { timeout: 15_000 }); // (WebKit headless can be slow to start painting)
   let s = await page.evaluate(() => ({ still: window.__space.bg.still, neb: !!window.__space.bg.neb, frames: window.__space.bg.frames, step: document.querySelector('.sp-ticker').classList.contains('step') }));
   expect(s.still).toBe(false);
   expect(s.neb).toBe(true);
@@ -167,4 +167,31 @@ test('space feed endpoint answers with honest data', async ({ request }) => {
   const p = await request.post('/api/space/ping', { headers: { authorization: 'Bearer ' + g.token } });
   expect((await p.json()).online).toBeGreaterThanOrEqual(1);
   expect((await request.post('/api/space/ping')).status()).toBe(401);
+});
+
+test('space preview: ambient track starts on the first tap and ducks under a popup; chimes play', async ({ page, browserName }) => {
+  const errs = trackErrors(page);
+  await page.setViewportSize({ width: 932, height: 430 });
+  await page.goto('/ui/space/preview.html');
+  await page.waitForFunction(() => window.__space);
+  expect(await page.evaluate(() => window.__space.ambient.playing())).toBe(false);
+  await page.mouse.click(300, 250); // empty sky
+  await page.waitForFunction(() => window.__space.ambient.playing());
+  await page.waitForTimeout(2600); // the fade-in
+  // the measured level reads AudioParam values under automation, which only Chromium reports live;
+  // sounds need a running audio context (headless Firefox keeps it suspended: no audio device)
+  const running = (await page.evaluate(() => window.__space.ambient.state())) === 'running';
+  const measure = browserName === 'chromium' && running;
+  const full = await page.evaluate(() => window.__space.ambient.level());
+  if (measure) expect(full).toBeGreaterThan(0.05);
+  await page.click('#gear');
+  expect(await page.evaluate(() => window.__space.ambient.ducked())).toBe(true);
+  await page.waitForTimeout(800);
+  if (measure) expect(await page.evaluate(() => window.__space.ambient.level())).toBeLessThan(full * 0.5);
+  await page.click('#popClose');
+  expect(await page.evaluate(() => window.__space.ambient.ducked())).toBe(false);
+  await page.waitForTimeout(200); // (closing just played 'back')
+  if (running) expect(await page.evaluate(() => ['tap', 'select', 'back', 'swipe', 'on', 'off', 'ready', 'launch', 'error'].map((id) => window.__space.chime(id)))).toEqual(Array(9).fill(true));
+  if (running) expect(await page.evaluate(() => window.__space.chime('tap')), 'a double tap never doubles the sound').toBe(false);
+  expect(errs).toEqual([]);
 });

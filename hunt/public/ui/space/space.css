@@ -125,8 +125,11 @@
 .sp-tk-live { flex: none; display: flex; align-items: center; gap: 4px; height: 100%; padding: 0 8px 0 6px; font: 700 10px/1 var(--sp-display); letter-spacing: .14em; color: #10081e; background: var(--sp-cyan); clip-path: polygon(0 0, 100% 0, calc(100% - 6px) 100%, 0 100%); }
 .sp-tk-live i { width: 6px; height: 6px; border-radius: 50%; background: var(--sp-magenta); animation: sp-pulse 1.6s ease-in-out infinite; }
 @keyframes sp-pulse { 50% { opacity: .35; } }
-.sp-tk-view { position: relative; flex: 1; min-width: 0; height: 100%; overflow: hidden;
-  -webkit-mask: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent); mask: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent); }
+.sp-tk-view { position: relative; flex: 1; min-width: 0; height: 100%; overflow: hidden; }
+/* soft edges as two small overlays (a CSS mask over a moving strip would cost a GPU pass a frame) */
+.sp-tk-view::before, .sp-tk-view::after { content: ""; position: absolute; top: 0; bottom: 0; width: 18px; z-index: 1; pointer-events: none; }
+.sp-tk-view::before { left: 0; background: linear-gradient(90deg, rgba(8,12,34,.85), transparent); }
+.sp-tk-view::after { right: 0; background: linear-gradient(270deg, rgba(8,12,34,.85), transparent); }
 .sp-tk-strip { position: absolute; left: 0; top: 0; height: 100%; display: flex; width: max-content; will-change: transform; animation: sp-tk var(--tk-dur, 30s) linear infinite; }
 .sp-ticker.paused .sp-tk-strip { animation-play-state: paused; }
 .sp-ticker.step .sp-tk-strip { animation: none; position: static; width: auto; }
@@ -172,7 +175,7 @@
 .sp-car-dots i { width: 14px; height: 3px; background: rgba(147,166,207,.35); transform: skewX(-30deg); transition: background .25s, width .25s; }
 .sp-car-dots i.on { width: 24px; background: var(--sp-cyan); }
 .sp-card { position: absolute; left: 50%; top: 0; bottom: 0; width: var(--cw); height: calc(var(--cw) * 1.04); max-height: 100%; margin: auto 0 auto calc(var(--cw) / -2);
-  display: flex; flex-direction: column; color: var(--hc); text-align: left; transition: transform .38s cubic-bezier(.2,.8,.2,1), opacity .3s; will-change: transform;
+  display: flex; flex-direction: column; color: var(--hc); text-align: left; transition: transform .38s cubic-bezier(.2,.8,.2,1), opacity .3s;
   --c: 14px; clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c));
   background: linear-gradient(color-mix(in srgb, var(--hc) 10%, transparent) 1px, transparent 1px) 0 0 / 12px 12px, linear-gradient(90deg, color-mix(in srgb, var(--hc) 10%, transparent) 1px, transparent 1px) 0 0 / 12px 12px,
     linear-gradient(170deg, color-mix(in srgb, var(--hc) 22%, rgba(10,14,40,.92)), rgba(8,10,30,.96) 70%); }
@@ -185,9 +188,6 @@
 .sp-carousel.dragging .sp-card { transition: none; }
 .sp-card-art { flex: 1 1 auto; min-height: 0; display: grid; place-items: center; padding: 10% 8% 0; }
 .sp-holo { width: 100%; height: 100%; stroke-width: 1.4; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--hc) 70%, transparent)); }
-.sp-card-art { will-change: transform; }
-.sp-card.on .sp-card-art { animation: sp-holo 3.2s ease-in-out infinite; }
-@keyframes sp-holo { 0%, 100% { opacity: 1; transform: translateY(0); } 50% { opacity: .85; transform: translateY(-2px); } }
 .sp-card-scan { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 1px, transparent 1px 3px); }
 .sp-card.on .sp-card-scan::after { content: ""; position: absolute; left: 0; right: 0; height: 30%; top: -30%; background: linear-gradient(transparent, color-mix(in srgb, var(--hc) 22%, transparent), transparent); animation: sp-scan 2.8s linear infinite; }
 @keyframes sp-scan { to { transform: translateY(440%); } }
@@ -291,7 +291,7 @@
 .sp-low .sp-car-glow, .sp-low .sp-card-scan::after, .sp-low .sp-launch::after { display: none; }
 .sp-low .sp-glass, .sp-low .sp-card { background-image: none; background-color: rgba(12,18,46,.9); }
 .sp-low .sp-card { background: rgba(12,18,46,.92); }
-.sp-calm .sp-flicker, .sp-calm .sp-card.on .sp-card-art, .sp-calm .sp-card.on .sp-card-scan::after, .sp-calm .sp-car-glow, .sp-calm .sp-launch-glow, .sp-calm .sp-launch::after,
+.sp-calm .sp-flicker,  .sp-calm .sp-card.on .sp-card-scan::after, .sp-calm .sp-car-glow, .sp-calm .sp-launch-glow, .sp-calm .sp-launch::after,
 .sp-calm .sp-orb.on .sp-orb-ball::after, .sp-calm .sp-radar-sweep, .sp-calm .sp-radar-blips i, .sp-calm .sp-orbit-sat, .sp-calm .sp-pod.ready .sp-pod-ring svg, .sp-calm .sp-tk-live i { animation: none !important; }
 .sp-calm .sp-radar-blips i { opacity: .8; }
 .sp-calm .sp-launch::after { display: none; }
@@ -299,5 +299,5 @@
 @keyframes sp-softglow { 0% { transform: scale(1.1); opacity: .5; } 100% { transform: scale(1.3); opacity: 0; } }
 .sp-calm .sp-card, .sp-calm .sp-enter { transition-duration: .15s; animation-duration: .01s; }
 @media (prefers-reduced-motion: reduce) {
-  .sp .sp-flicker, .sp .sp-radar-sweep, .sp .sp-orbit-sat, .sp .sp-card.on .sp-card-art, .sp .sp-car-glow { animation: none; }
+  .sp .sp-flicker, .sp .sp-radar-sweep, .sp .sp-orbit-sat,  .sp .sp-car-glow { animation: none; }
 }

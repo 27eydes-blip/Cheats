@@ -21,7 +21,7 @@ export class SpaceBackground {
   constructor(canvas, opts = {}) {
     this.cv = canvas; this.g = canvas.getContext('2d', { alpha: false });
     this.opts = opts;
-    this.dprCap = opts.dprCap || 1.5;
+    this.dprCap = opts.dprCap || 1; // a soft sky needs no retina pixels: 1x keeps the per-frame upload small
     this.px = 0; this.py = 0; this.tx = 0; this.ty = 0; // parallax (smoothed toward the target)
     this.drift = 0; this.shoot = null; this.nextShoot = 3; this.frames = 0;
     this.twk = null; this.W = 0; this.H = 0; this.dpr = 1; this.off = null;

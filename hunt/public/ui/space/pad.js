@@ -130,7 +130,7 @@ export function createHoloPad({ drawCar = null, stats = [], title = '', sub = ''
     },
     layout() {
       const r = el.getBoundingClientRect();
-      const d = Math.min(2, window.devicePixelRatio || 1);
+      const d = Math.min(1.5, window.devicePixelRatio || 1); // (hologram lines: 1.5x is crisp enough, cheaper to upload)
       if (!r.width || (r.width === W && r.height === H && d === dpr && disc)) return;
       W = r.width; H = r.height; dpr = d;
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
