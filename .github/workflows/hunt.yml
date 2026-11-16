@@ -53,8 +53,12 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      # the node suites already ran above, so the browser run leaves its copy of them out
+      # the node suites already ran above, so the browser run leaves its copy of them out.
+      # CI_SLOW_RUNNER: the frame-rate spec asserts what a shared runner can show (see race-perf.spec.js).
+      # In CI a failed test is retried once and reported as flaky if the retry passes (playwright.config.js).
       - name: Browser suite
+        env:
+          CI_SLOW_RUNNER: "1"
         run: npm run e2e -- --project=chromium --grep-invert "node test/"
 
       - name: Upload failure details
@@ -65,10 +69,18 @@ jobs:
           path: hunt/test-results/
           if-no-files-found: ignore
 
+  # WebKit is slow on a shared runner (a full run took ~30 minutes), so it runs the specs that matter
+  # most for iPhone Safari: boot / splash, lobby and every menu screen at phone sizes (layout, tap
+  # targets, the credit line), the store, and the race with its credit; split over three runners,
+  # test by test, so each shard finishes well inside its time limit.
   webkit:
-    name: Browser suite on WebKit (closest to iPhone Safari)
+    name: Browser suite on WebKit (closest to iPhone Safari), shard ${{ matrix.shard }}/3
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
 
     steps:
       - uses: actions/checkout@v6
@@ -85,13 +97,17 @@ jobs:
       - name: Install WebKit
         run: npx playwright install --with-deps webkit
 
-      - name: Browser suite
-        run: npm run e2e -- --project=webkit --grep-invert "node test/"
+      - name: Browser suite (iPhone Safari specs)
+        run: >-
+          npm run e2e -- --project=webkit --fully-parallel --shard=${{ matrix.shard }}/3
+          tests/e2e/smoke.spec.js tests/e2e/ui.spec.js tests/e2e/overnight-boot.spec.js
+          tests/e2e/overnight-lobby-audit.spec.js tests/e2e/overnight-credit-everywhere.spec.js
+          tests/e2e/overnight-store.spec.js tests/e2e/race-credit.spec.js
 
       - name: Upload failure details
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: hunt-test-results-webkit
+          name: hunt-test-results-webkit-${{ matrix.shard }}
           path: hunt/test-results/
           if-no-files-found: ignore

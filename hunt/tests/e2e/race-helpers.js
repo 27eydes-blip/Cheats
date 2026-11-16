@@ -10,7 +10,8 @@ export const raceUrl = (o) => '/?race=1&' + new URLSearchParams({ lobby: '3', la
 export async function phone(browser, width, height) {
   const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
-  const cdp = await ctx.newCDPSession(page);
+  // CDP (multi-touch through Fingers) is Chromium-only; on WebKit a phone still taps (page.tap)
+  const cdp = browser.browserType().name() === 'chromium' ? await ctx.newCDPSession(page) : null;
   return { ctx, page, cdp, W: width, H: height };
 }
 

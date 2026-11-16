@@ -181,6 +181,6 @@ npm run dev &                  # then, against the running worker:
 BOTS=0 node test/ws.test.js    # two WebSocket clients; one hunts the other until eliminated
 ```
 
-The browser suite runs on every Playwright browser that is installed (Chromium, Firefox, WebKit). WebKit is the closest stand-in for iPhone Safari: `npx playwright test --project=webkit`. CI (`.github/workflows/hunt.yml`) runs `npm test` and the suite on Chromium and WebKit for every push or pull request that touches `hunt/`.
+The browser suite runs on every Playwright browser that is installed (Chromium, Firefox, WebKit). WebKit is the closest stand-in for iPhone Safari: `npx playwright test --project=webkit`. CI (`.github/workflows/hunt.yml`) runs `npm test` and the whole suite on Chromium, plus the iPhone Safari specs (boot, lobby audit, credit, store, race credit, smoke, ui) on WebKit split over three runners, for every push or pull request that touches `hunt/`. In CI a failed test is retried once and shows up as flaky if the retry passes (never locally), and `CI_SLOW_RUNNER=1` makes `race-perf.spec.js` check what a shared runner can measure (its header says what).
 
 Racing browser specs: `tests/e2e/race-phones.spec.js` (two phones join one room through the lobby and race by touch, bots on and off), `race-perf.spec.js` (frame rate at 667×375 with 4× CPU throttle), `race-desktop.spec.js` (keys), `race-credit.spec.js`, and the phone layout audit `overnight-lobby-audit.spec.js` (every racing and classic lobby screen). Specs for the classic lobby open it with `/?shooter=1`.
