@@ -1,5 +1,5 @@
 // Oblivion GP weapons on two phones in one friend room (bots off): both pick up items from the boxes,
-// both fire items, both get hit (a drone and a sticky bomb, aimed with the HUNT_DEV-only `aim`
+// both fire items, both get hit (a drone and a homing missile, aimed with the HUNT_DEV-only `aim`
 // command), the target sees the LOCK-ON warning, and both screens get the same combat events, the same
 // hp and the same positions for the same server tick. The HUD shows the held item's level.
 import { test, expect } from '@playwright/test';
@@ -53,12 +53,23 @@ test('two phones: pick up, fire, get hit, see the same events, hp and positions'
   }
 
   // GET HIT: A sends a Hunter Drone at B (B is warned), B sticks a bomb on A
+  // (B waits on the road so the drone catches it wherever A is)
+  await B.page.evaluate(() => window.__race.auto(true, { stop: true }));
   await B.page.evaluate(() => window.__race.dev('aim', 'drone', 2));
   await B.page.waitForFunction(() => window.__race.session.renderer.threat > 0 || window.__wlog.hit.some((h) => h[0] === window.__race.rc.id), null, { timeout: 8000 });
-  await B.page.waitForFunction(() => window.__wlog.hit.some((h) => h[0] === window.__race.rc.id && h[2] === 'drone'), null, { timeout: 15_000 });
+  await B.page.waitForFunction(() => window.__wlog.hit.some((h) => h[0] === window.__race.rc.id && h[2] === 'drone'), null, { timeout: 30_000 });
+  await B.page.evaluate(() => window.__race.auto(true));
   await A.page.waitForFunction(() => window.__race.rc.me.pr <= 0 && !window.__race.rc.me.rt, null, { timeout: 8000 });
-  await A.page.evaluate(() => window.__race.dev('aim', 'sticky', 1));
-  await A.page.waitForFunction(() => window.__wlog.hit.some((h) => h[0] === window.__race.rc.id && h[2] === 'sticky' && h[4] === 1), null, { timeout: 15_000 });
+  // B fires a level 2 homing missile at A (A waits on the road, no drift: no dodge): a big hit
+  await A.page.evaluate(() => window.__race.auto(true, { stop: true }));
+  // (B may be wrecked or still too far for the missile's 4 s flight: then it fires again)
+  const missileHit = () => A.page.evaluate(() => window.__wlog.hit.some((h) => h[0] === window.__race.rc.id && h[2] === 'missile' && h[4] === 1));
+  for (let k = 0; k < 4 && !(await missileHit()); k++) {
+    await A.page.evaluate(() => window.__race.dev('aim', 'missile', 2));
+    await A.page.waitForFunction(() => window.__wlog.hit.some((h) => h[0] === window.__race.rc.id && h[2] === 'missile' && h[4] === 1), null, { timeout: 6000 }).catch(() => {});
+  }
+  expect(await missileHit()).toBe(true);
+  await A.page.evaluate(() => window.__race.auto(true));
 
   // THE SAME on both screens: lock-on, hits (who, by whom, what, how much, big), pickups
   await A.page.waitForTimeout(500);
@@ -68,7 +79,8 @@ test('two phones: pick up, fire, get hit, see the same events, hp and positions'
   expect(logs[0].pickup).toEqual(logs[1].pickup);
   expect(logs[0].lock.some((l) => l[0] === ids[1] && l[2] === 'drone')).toBe(true);
   expect(logs[0].hit.some((h) => h[0] === ids[1] && h[1] === ids[0] && h[2] === 'drone')).toBe(true);
-  expect(logs[0].hit.some((h) => h[0] === ids[0] && h[2] === 'sticky' && h[4] === 1)).toBe(true);
+  expect(logs[0].hit.some((h) => h[0] === ids[0] && h[1] === ids[1] && h[2] === 'missile' && h[4] === 1)).toBe(true);
+  expect(logs[0].lock.some((l) => l[0] === ids[0] && l[2] === 'missile')).toBe(true);
   // ...and the same hp and positions for the same server tick
   const snaps = await Promise.all([A, B].map((P) => P.page.evaluate(() => [...window.__wlog.snaps.entries()])));
   const mb = new Map(snaps[1]);

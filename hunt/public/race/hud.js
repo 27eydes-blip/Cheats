@@ -412,7 +412,7 @@ export class Hud {
     if (this.call) {
       const c = this.call; c.t += dt;
       g.globalAlpha = clamp(Math.min(c.t * 8, (1.8 - c.t) * 4), 0, 1);
-      text(g, c.text, cx, H * 0.14 + 34 * u, 16 * u, c.col, 'center', 4 * u);
+      text(g, c.text, cx, H * 0.14 + (this.split ? 56 : 34) * u, 16 * u, c.col, 'center', 4 * u); // (below a lap split)
       g.globalAlpha = 1;
       if (c.t > 1.8) this.call = null;
     }
