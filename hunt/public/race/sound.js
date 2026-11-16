@@ -95,7 +95,10 @@ export function play(id, v = 1, pan = 0) {
   const now = ac.currentTime;
   if (last[id] && now - last[id] < 0.05) return;
   last[id] = now;
-  if (pan && ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)) * 0.85; p.connect(out); dst = p; }
+  if (pan && ac.createStereoPanner) {
+    const p = ac.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)) * 0.85; p.connect(out); dst = p;
+    setTimeout(() => { try { p.disconnect(); } catch {} }, 1500); // (every one-shot is under 1 s: don't leave panners on the bus)
+  }
   try { S[id](now + 0.005, Math.min(1, v)); } finally { dst = out; }
 }
 
