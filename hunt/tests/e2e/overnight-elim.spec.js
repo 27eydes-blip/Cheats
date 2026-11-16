@@ -1,5 +1,5 @@
 // ELIMINATION in the browser. Two phones in one friend room (bots off): both see the same cuts, the
-// same racer in danger, the same black hole position, the same weapon hits and the same finish order
+// same racer in danger, the same cars, the same black hole position, the same weapon hits and the same finish order
 // for the same server ticks. One phone in a bots race: the danger tag, the dark edges when the black
 // hole is close, spectating after the cut (4 emotes, LEAVE, NEXT RACE, the credit still visible), the
 // FINAL DUEL and the results screen replaying the final cut.
@@ -17,6 +17,7 @@ test('two phones, one Elimination race: same cuts, danger, black hole, weapons a
   for (const P of [A, B]) await P.page.addInitScript(noTips);
   const url = '/?' + new URLSearchParams({ race: '1', room: roomCode('X'), lobby: '4', track: 'desert', mode: 'elim', bots: '0' });
   await A.page.goto(url); await waitPhase(A.page, 'lobby');
+  await A.page.evaluate(() => window.__race.rc.pick('wisp')); // A picks another car in the lobby (B keeps the default)
   await B.page.goto(url);
   await Promise.all([waitPhase(A.page, 'race', 40_000), waitPhase(B.page, 'race', 40_000)]);
   // every page logs, per server tick: the mode state (danger, black hole, timer, duel) and the cars;
@@ -32,6 +33,11 @@ test('two phones, one Elimination race: same cuts, danger, black hole, weapons a
     r.auto(true);
   });
   expect(await A.page.evaluate(() => window.__race.rc.roster.size)).toBe(2); // bots off: just the two phones
+  // the same cars on both phones: who drives what (and their cosmetics)
+  const rosters = await Promise.all([A, B].map((P) => P.page.evaluate(() => [...window.__race.rc.roster.entries()].sort((a, b) => a[0] - b[0]).map(([id, r]) => [id, r.name, r.driver, r.cos]))));
+  expect(rosters[0]).toEqual(rosters[1]);
+  expect(await A.page.evaluate(() => window.__race.rc.myDriver())).toBe('wisp');
+  expect(rosters[0].map((r) => r[2]).sort()).toEqual(['volt', 'wisp']);
   const ids = await Promise.all([A, B].map((P) => P.page.evaluate(() => window.__race.rc.id)));
   // two racers: the race opens as the FINAL DUEL, a racer is in danger, the black hole is on the track
   for (const P of [A, B]) await P.page.waitForFunction(() => { const e = window.__race.elim(); return e && e.duel === 1 && e.dg > 0 && e.hole != null && e.nx > 0; }, null, { timeout: 15_000 });
