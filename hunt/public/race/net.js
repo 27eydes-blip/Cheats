@@ -114,7 +114,7 @@ export class RaceClient {
     const st = DRIVERS[this.myDriver()];
     const before = this.car;
     const car = unpackState(me.s, newCar());
-    stepCar(car, { st: 0, th: 0, dr: 0 }, st, this.T, 0); // settle surface / corridor
+    stepCar(car, { st: 0, th: 0, dr: car.drift ? 1 : 0 }, st, this.T, 0); // settle surface / corridor (dt 0; keep a drift going)
     for (const p of this.pending) stepCar(car, p, st, this.T);
     this.corr = before && me.ep === this.carEp ? Math.hypot(before.x - car.x, before.y - car.y) : 0; // last correction (px)
     if (before && me.ep === this.carEp) { // same "epoch": smooth over the correction visually
