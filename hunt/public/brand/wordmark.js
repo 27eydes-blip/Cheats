@@ -84,3 +84,6 @@ export function wordmarkSvg({ id = 'ogp', title = 'Oblivion GP', className = '' 
 
 // Width / height ratio, for reserving layout space before the SVG is in the DOM.
 export const WORDMARK_ASPECT = VB_W / VB_H;
+
+// The copy inlined in index.html's splash: one line, decorative (the <h1> around it carries the name).
+export const splashWordmark = () => wordmarkSvg({ id: 'spwm' }).replace('role="img" aria-label="Oblivion GP"', 'aria-hidden="true" focusable="false"').replace(/<title>[^<]*<\/title>/, '').replace(/\n/g, '');

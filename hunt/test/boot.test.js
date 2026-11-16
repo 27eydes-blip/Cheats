@@ -61,15 +61,20 @@ assert.match(html, /<div id="creditGame">Created by Sam Eyde III<\/div>/, 'the i
 
 // --- install to home screen
 const man = JSON.parse(read('public/manifest.webmanifest'));
-assert.equal(man.name, 'Hunt'); assert.equal(man.display, 'fullscreen'); assert.equal(man.orientation, 'landscape');
+assert.equal(man.name, 'Oblivion GP'); assert.equal(man.short_name, 'Oblivion GP'); assert.equal(man.display, 'fullscreen'); assert.equal(man.orientation, 'landscape');
 const tokens = read('public/ui/tokens.css');
 assert.ok(tokens.includes(`--bg: ${man.background_color};`), 'background colour comes from tokens.css');
 assert.ok(html.includes(`<meta name="theme-color" content="${man.theme_color}">`), 'theme colour matches the page');
 const pngSize = (f) => { const b = fs.readFileSync(path.join(root, 'public', f)); assert.equal(b.toString('latin1', 1, 4), 'PNG', f); return `${b.readUInt32BE(16)}x${b.readUInt32BE(20)}`; };
 for (const i of man.icons) assert.equal(pngSize(i.src), i.sizes, i.src);
 for (const need of ['192x192 any', '512x512 any', '192x192 maskable', '512x512 maskable']) assert.ok(man.icons.some((i) => `${i.sizes} ${i.purpose}` === need), 'manifest icon ' + need);
-assert.equal(pngSize('icons/apple-touch-icon.png'), '180x180');
+assert.equal(pngSize('icons/oblivion-180.png'), '180x180');
 assert.match(html, /<link rel="manifest" href="manifest\.webmanifest">/);
-assert.match(html, /<link rel="apple-touch-icon"[^>]+href="icons\/apple-touch-icon\.png">/);
+assert.match(html, /<link rel="apple-touch-icon" sizes="180x180" href="icons\/oblivion-180\.png">/);
+// every icon the page links to exists at the size it claims
+for (const [, sz, f] of html.matchAll(/<link rel="(?:apple-touch-icon|icon)"[^>]*sizes="(\d+x\d+)" href="([^"]+)">/g)) assert.equal(pngSize(f), sz, f);
+assert.match(html, /<title>Oblivion GP<\/title>/);
+for (const m of ['apple-mobile-web-app-title', 'application-name']) assert.ok(html.includes(`<meta name="${m}" content="Oblivion GP">`), m);
+assert.ok(!/\bHunt\b/.test(html.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<!--[\s\S]*?-->/g, '')), 'no player-visible "Hunt" left in index.html');
 
 console.log('boot tests passed');

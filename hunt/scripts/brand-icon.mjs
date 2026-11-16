@@ -257,7 +257,9 @@ const ICONS = [
   ['oblivion-87.png', 87, {}, {}, false], // iPhone settings @3x
   ['oblivion-192.png', 192, { round: 200 }, {}, true], // manifest "any"
   ['oblivion-512.png', 512, { round: 200 }, {}, true], // favicon + manifest "any"
-  ['oblivion-maskable-512.png', 512, { pad: 0.72 }, {}, false], // launchers crop to the middle 80% circle
+  ['oblivion-32.png', 32, { round: 200 }, {}, true], // small browser-tab favicon
+  ['oblivion-maskable-192.png', 192, { pad: 0.72 }, {}, false], // launchers crop to the middle 80% circle
+  ['oblivion-maskable-512.png', 512, { pad: 0.72 }, {}, false],
   ['oblivion-dark-1024.png', 1024, { mode: 'dark' }, {}, false], // iOS dark appearance
   ['oblivion-tinted-1024.png', 1024, { mode: 'dark' }, { gray: true }, false], // iOS tinted appearance
 ];

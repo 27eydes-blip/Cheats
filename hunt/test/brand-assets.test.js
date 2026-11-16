@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { wordmarkSvg, WORDMARK_ASPECT } from '../public/brand/wordmark.js';
+import { wordmarkSvg, splashWordmark, WORDMARK_ASPECT } from '../public/brand/wordmark.js';
 
 const pub = (p) => fileURLToPath(new URL('../public/' + p, import.meta.url));
 
@@ -28,6 +28,8 @@ const ICONS = [
   ['oblivion-87.png', 87, true],
   ['oblivion-192.png', 192, false],
   ['oblivion-512.png', 512, false],
+  ['oblivion-32.png', 32, false],
+  ['oblivion-maskable-192.png', 192, true],
   ['oblivion-maskable-512.png', 512, true],
   ['oblivion-dark-1024.png', 1024, true],
   ['oblivion-tinted-1024.png', 1024, true],
@@ -58,5 +60,12 @@ const ids = (s) => [...s.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
 const a = ids(wordmarkSvg({ id: 'a' })), b = ids(wordmarkSvg({ id: 'b' }));
 assert.ok(a.length > 0 && a.every((x) => !b.includes(x)), 'wordmark ids must be unique per copy');
 assert.ok(WORDMARK_ASPECT > 4 && WORDMARK_ASPECT < 8, `wordmark aspect ${WORDMARK_ASPECT}`);
+
+// The splash's inline wordmark (index.html) is the module's art, so it can never drift either.
+const html = readFileSync(pub('index.html'), 'utf8');
+const m = html.match(/<!-- wordmark:start[^>]*-->([\s\S]*?)<!-- wordmark:end -->/);
+assert.ok(m, 'index.html splash has the wordmark markers');
+assert.equal(m[1], splashWordmark(), 'splash wordmark is stale: run node scripts/brand-wordmark.mjs');
+assert.match(html, /<h1 class="sp-word" aria-label="Oblivion GP">/);
 
 console.log('brand assets ok');

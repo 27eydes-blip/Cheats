@@ -1,16 +1,25 @@
-// Writes public/brand/wordmark.svg from public/brand/wordmark.js (the single source of the art) and
-// renders docs/brand/wordmark-preview.png: the wordmark on dark backgrounds at several widths.
+// Writes public/brand/wordmark.svg and the splash copy inside public/index.html (between the
+// wordmark:start / wordmark:end comments) from public/brand/wordmark.js, the single source of the
+// art, and renders docs/brand/wordmark-preview.png: the wordmark on dark backgrounds at several widths.
 // Run from hunt/: node scripts/brand-wordmark.mjs   (needs the Playwright Chromium that the e2e tests use)
 import { chromium } from 'playwright';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { wordmarkSvg } from '../public/brand/wordmark.js';
+import { wordmarkSvg, splashWordmark } from '../public/brand/wordmark.js';
 
 const svgOut = fileURLToPath(new URL('../public/brand/wordmark.svg', import.meta.url));
 const docs = fileURLToPath(new URL('../docs/brand/', import.meta.url));
 mkdirSync(docs, { recursive: true });
 writeFileSync(svgOut, wordmarkSvg() + '\n');
 console.log('wrote public/brand/wordmark.svg');
+
+// The splash paints before any module or font loads, so it carries its own inline copy.
+const htmlPath = fileURLToPath(new URL('../public/index.html', import.meta.url));
+const html = readFileSync(htmlPath, 'utf8');
+const re = /(<!-- wordmark:start[^>]*-->)[\s\S]*?(<!-- wordmark:end -->)/;
+if (!re.test(html)) throw new Error('index.html has no wordmark:start / wordmark:end markers');
+writeFileSync(htmlPath, html.replace(re, (_, a, b) => a + splashWordmark() + b));
+console.log('wrote the splash wordmark in public/index.html');
 
 const WIDTHS = [1100, 720, 420, 240, 140];
 const rows = (bg, label) => `<section style="background:${bg}"><h2>${label}</h2>${WIDTHS.map((w, i) =>

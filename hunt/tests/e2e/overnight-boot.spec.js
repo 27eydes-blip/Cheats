@@ -28,7 +28,12 @@ test('the splash is plain HTML: it shows (with the credit) while the game module
   let release; const held = new Promise((r) => { release = r; });
   await page.route('**/weapons.js', async (r) => { await held; await r.continue(); });
   await page.goto('/', { waitUntil: 'commit' });
-  await expect(page.locator('#splash .sp-word')).toHaveText('HUNT');
+  await expect(page.locator('#splash .sp-word')).toHaveAttribute('aria-label', 'Oblivion GP');
+  // the wordmark is inline SVG paths, drawn before any web font or module loads
+  await expect(page.locator('#splash .sp-word svg')).toBeVisible();
+  expect(await page.locator('#splash .sp-word svg > g path').count()).toBeGreaterThan(10);
+  expect((await page.locator('#splash .sp-word').boundingBox()).width).toBeGreaterThan(200);
+  await expect(page).toHaveTitle('Oblivion GP');
   await expect(page.locator('#splash .sp-credit')).toBeVisible();
   await expect(page.locator('#splash .sp-credit')).toHaveText(CREDIT);
   await expect(page.locator('#splash .sp-dots')).toBeVisible();
@@ -255,7 +260,7 @@ test('manifest, icons and iOS tags are served for installing to the home screen'
   expect(m.ok()).toBe(true);
   expect(m.headers()['content-type']).toContain('application/manifest+json');
   const man = await m.json();
-  expect(man).toMatchObject({ name: 'Hunt', display: 'fullscreen', orientation: 'landscape' });
+  expect(man).toMatchObject({ name: 'Oblivion GP', short_name: 'Oblivion GP', display: 'fullscreen', orientation: 'landscape' });
   for (const i of man.icons) {
     const r = await request.get('/' + i.src);
     expect(r.ok(), i.src).toBe(true);
@@ -266,7 +271,9 @@ test('manifest, icons and iOS tags are served for installing to the home screen'
   const touch = await page.getAttribute('link[rel="apple-touch-icon"]', 'href');
   expect((await request.get('/' + touch)).ok()).toBe(true);
   expect(await page.getAttribute('meta[name="apple-mobile-web-app-capable"]', 'content')).toBe('yes');
-  expect(await page.getAttribute('meta[name="apple-mobile-web-app-title"]', 'content')).toBe('Hunt');
+  expect(await page.getAttribute('meta[name="apple-mobile-web-app-title"]', 'content')).toBe('Oblivion GP');
+  expect(touch).toBe('icons/oblivion-180.png');
+  expect(man.icons.map((i) => `${i.sizes} ${i.purpose}`)).toEqual(expect.arrayContaining(['192x192 any', '512x512 any', '512x512 maskable']));
 });
 
 test('lobby notices on a phone, portrait and landscape: on screen and clear of the lobby controls and the credit', async ({ page }) => {
