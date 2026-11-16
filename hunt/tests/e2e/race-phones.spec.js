@@ -64,6 +64,8 @@ for (const bots of ['1', '0']) {
       drive(B, { until: finished, maxMs: 150_000, onTick: script(B, 'B') }),
     ]);
     console.log('touch input updates per second', rates.map((r) => r.toFixed(1)).join(' / '));
+    // (the snapshot that says we finished carries the lap / finish events: the next frame handles them)
+    await Promise.all([A, B].map((P) => P.page.waitForFunction(() => (window.__race.mine.fin || []).length > 0 || window.__race.rc.phase === 'end', null, { timeout: 10_000 })));
     const [sa, sb] = await Promise.all([raceState(A.page), raceState(B.page)]);
     // CAMERA: each phone's own car stayed in the middle of its screen the whole lap, A's after its
     // respawn too, and never under the speedometer, the credit or a thumb button

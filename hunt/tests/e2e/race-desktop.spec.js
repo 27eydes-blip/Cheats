@@ -25,6 +25,8 @@ test('desktop keyboard race, menu and finish screen', async ({ page, browserName
   await expect(page.locator('.rc-menu')).toBeHidden();
 
   // a left click fires the weapon (Volt's arc always goes off)
+  // (when it can: not wrecked, not hit by a bot's EMP, not cooling down)
+  await page.waitForFunction(() => { const me = window.__race.rc.me; return me && !me.rt && !me.em && !me.wc; }, null, { timeout: 15000 });
   await page.mouse.click(640, 360);
   await page.waitForFunction(() => (window.__race.mine.arc || []).length > 0, null, { timeout: 5000 });
 
@@ -57,6 +59,8 @@ test('desktop keyboard race, menu and finish screen', async ({ page, browserName
     await page.waitForTimeout(10);
   }
   for (const k of [...held]) await hold(k, false);
+  // the snapshot that says we finished also carries the lap / finish events: the next frame handles them
+  await page.waitForFunction(() => (window.__race.mine.fin || []).length > 0, null, { timeout: 5000 });
   const mine = await page.evaluate(() => Object.fromEntries(Object.entries(window.__race.mine).map(([k, v]) => [k, v.length])));
   expect(driftChecked).toBe(true);
   expect(mine.lap, 'laps counted').toBeGreaterThanOrEqual(1);
