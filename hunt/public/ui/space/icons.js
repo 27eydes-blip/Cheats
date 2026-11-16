@@ -11,7 +11,7 @@ const P = {
   // three linked pods
   crew: '<circle cx="12" cy="7" r="3"/><circle cx="5.5" cy="16" r="2.6"/><circle cx="18.5" cy="16" r="2.6"/><path d="M10.2 9.4 7 13.8M13.8 9.4l3.2 4.4M8.2 16h7.6"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/><circle cx="12" cy="12" r="6.2"/>',
-  coin: '<path d="M12 3.5 19.4 7.8v8.4L12 20.5l-7.4-4.3V7.8z"/><path d="M9.5 9v6M14.5 9v6M9.5 12h5"/>',
+  coin: '<path d="M12 3.5 19.4 7.8v8.4L12 20.5l-7.4-4.3V7.8z"/><path d="M9 9.2l3 2.8-3 2.8M12.5 9.2l3 2.8-3 2.8"/>',
   gem: '<path d="M7 4h10l4 5-9 11L3 9z"/><path d="M3 9h18M9.5 4 8 9l4 11 4-11-1.5-5"/>',
   left: '<path d="m14.5 5-7 7 7 7"/>',
   right: '<path d="m9.5 5 7 7-7 7"/>',

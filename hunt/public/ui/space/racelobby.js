@@ -1,4 +1,4 @@
-// The Hunt Racers lobby in the space look: deep-space sky, a top bar (missions orbit round your
+// The Oblivion GP lobby in the space look: deep-space sky, a top bar (missions orbit round your
 // level, radar, trophies, hex currency badges, STORE, settings), the live news ticker, your car on
 // the hologram pad (tap = Garage), the mode carousel with a mode strip, the track and crew panel
 // (invite pods + FILL WITH BOTS), LAUNCH and the curved dock (Profile, Garage, Race, Pass, Crew).
@@ -41,6 +41,7 @@ import { startPresence, fetchFeed } from './presence.js';
 import { loadSpaceFonts } from './fonts.js';
 import { applyQuality, quality } from './quality.js';
 import { spIcon } from './icons.js';
+import { wordmarkSvg } from '../../brand/wordmark.js';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -120,6 +121,10 @@ export function createSpaceLobby(api) {
 
   const ticker = createTicker({ onTap: (it) => tickerTap(it) });
   spLobby.insertBefore(ticker.el, $('spMid'));
+  const brand = document.createElement('div');
+  brand.className = 'sp-brand'; brand.id = 'spBrand';
+  brand.innerHTML = wordmarkSvg({ id: 'lbwm' });
+  spLobby.insertBefore(brand, $('spMid'));
 
   const pad = createHoloPad({ stats: [], title: '', sub: '' });
   pad.el.classList.add('nameplate', 'tap');

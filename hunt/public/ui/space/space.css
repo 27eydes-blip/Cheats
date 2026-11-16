@@ -57,7 +57,7 @@
 .sp-lobby { position: fixed; inset: 0; z-index: 1; display: grid; gap: calc(var(--sp-u) * 1.2) calc(var(--sp-u) * 2);
   grid-template-columns: minmax(0, 29fr) minmax(0, 46fr) minmax(0, 25fr);
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
-  grid-template-areas: "top top top" "tick tick tick" "pad modes crew" "pad launch crew" "pad dock crew";
+  grid-template-areas: "top top top" "tick tick brand" "pad modes crew" "pad launch crew" "pad dock crew";
   padding: calc(var(--sp-sa-t) + var(--sp-u) * 1.2) calc(var(--sp-sa-r) + var(--sp-u) * 2) var(--sp-sa-b) calc(var(--sp-sa-l) + var(--sp-u) * 2); }
 .sp-lobby > .sp-top { grid-area: top; }
 .sp-lobby > .sp-ticker { grid-area: tick; }
@@ -68,7 +68,7 @@
 .sp-lobby > .sp-crew { grid-area: crew; align-self: center; margin-bottom: calc(var(--sp-u) * 2); }
 @media (orientation: portrait) {
   .sp-lobby { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto minmax(0, .9fr) minmax(0, 1fr) auto auto;
-    grid-template-areas: "top top" "tick tick" "pad crew" "modes modes" "launch launch" "dock dock"; }
+    grid-template-areas: "top top" "tick brand" "pad crew" "modes modes" "launch launch" "dock dock"; }
   .sp-lobby > .sp-pad { margin-bottom: 0; }
   .sp-lobby > .sp-crew { margin-bottom: 0; align-self: center; }
   .sp-lobby { padding-bottom: calc(var(--sp-sa-b) + 18px); } /* the credit line sits under the dock */
@@ -309,7 +309,7 @@
 #lobby.sp { position: fixed; inset: 0; z-index: 2; overflow: hidden; background: #070a1f; }
 #lobby.sp[hidden] { display: none; }
 #lobby.sp .sp-lobby { grid-template-columns: minmax(0, 28fr) minmax(0, 45fr) minmax(0, 27fr); grid-template-rows: auto auto minmax(0, 1fr) auto auto;
-  grid-template-areas: "top top top" "tick tick tick" "pad mid side" "pad launch side" "pad dock side"; }
+  grid-template-areas: "top top top" "tick tick brand" "pad mid side" "pad launch side" "pad dock side"; }
 #lobby.sp .sp-lobby > .sp-mid { grid-area: mid; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
 #lobby.sp .sp-mid > .sp-carousel { flex: 1 1 auto; }
 #lobby.sp .sp-lobby > .sp-side { grid-area: side; min-height: 0; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: calc(var(--sp-u) * 1.6); margin-bottom: calc(var(--sp-u) * 2); }
@@ -376,7 +376,7 @@
 /* portrait: two rows of top bar, pad + side by side, then modes, LAUNCH, dock; credit under the dock */
 @media (orientation: portrait) {
   #lobby.sp .sp-lobby { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1.1fr) auto auto;
-    grid-template-areas: "top top" "tick tick" "pad side" "mid mid" "launch launch" "dock dock"; padding-bottom: calc(var(--sp-sa-b) + 18px); }
+    grid-template-areas: "top top" "tick brand" "pad side" "mid mid" "launch launch" "dock dock"; padding-bottom: calc(var(--sp-sa-b) + 18px); }
   #lobby.sp .sp-lobby > .sp-page { grid-area: 3 / 1 / 6 / 3; }
   #lobby.sp .sp-lobby > .sp-pad { margin-bottom: 0; }
   #lobby.sp .sp-lobby > .sp-side { margin-bottom: 0; justify-content: center; }
@@ -385,6 +385,11 @@
   #lobby.sp .sp-top-right .sp-storebtn { padding: 0 10px; }
 }
 @media (orientation: portrait) and (max-width: 400px) { #lobby.sp .sp-radar { display: none; } #lobby.sp .sp-hex-val { min-width: 2.6em; } #lobby.sp .sp-chip { display: none; } }
+/* the OBLIVION GP wordmark ends the ticker row (over the track / crew column): never crowds the top
+   bar on an iPhone SE, and stays in view on every lobby page */
+#lobby.sp .sp-lobby > .sp-brand { grid-area: brand; align-self: center; justify-self: end; width: 100%; max-width: 190px; line-height: 0; pointer-events: none; }
+#lobby.sp .sp-brand svg { display: block; width: 100%; height: auto; }
+@media (min-width: 900px) and (min-height: 600px) { #lobby.sp .sp-lobby > .sp-brand { max-width: 290px; } }
 #lobby.sp .sp-lobby > .sp-ticker { margin: 5px 0; } /* room for its 44 px tap band without touching the top bar or the pad */
 #lobby.sp .sp-side > * { flex: none; } /* never squeezed (the crew panel's cut corners would clip its switch) */
 @media (orientation: portrait) {

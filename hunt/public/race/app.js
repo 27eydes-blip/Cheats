@@ -1,4 +1,4 @@
-// Hunt Racers: everything a player sees and touches in a race, launched with one call:
+// Oblivion GP: everything a player sees and touches in a race, launched with one call:
 //   const race = startRace({ mode, track, driver, room, bots, token, name, onExit });
 // It opens its own full-screen layer (canvas + overlays + the creator credit), runs the
 // RaceClient, renderer, HUD, controls and sound, shows the pre-race lobby, the countdown and the
@@ -18,6 +18,8 @@ import { icon } from '../ui/icons.js';
 import { levelInfo } from '../progression.js';
 import { Tutorial, flag, setFlag, evRow, tutStep, TUT_FLAG, STEER_FLAG } from './tutorial.js';
 import { mountHorn, hornEvent } from './horn.js';
+import { wordmarkSvg } from '../brand/wordmark.js';
+import { inviteText } from '../brand/name.js';
 
 const CREDIT = 'Created by Sam Eyde III';
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -59,7 +61,7 @@ class RaceSession {
     const root = (this.root = document.createElement('div'));
     root.className = 'rc-root';
     root.innerHTML = `<canvas class="rc-cv"></canvas>
-      <div class="rc-wait" hidden><div class="rc-wt title">GET READY</div><div class="rc-wm"></div><div class="rc-wl"></div><div class="rc-ws"></div><div class="rc-tip"></div>
+      <div class="rc-wait" hidden><div class="rc-brand">${wordmarkSvg({ id: 'rcwm' })}</div><div class="rc-wt title">GET READY</div><div class="rc-wm"></div><div class="rc-wl"></div><div class="rc-ws"></div><div class="rc-tip"></div>
         <div class="card-a rc-room" hidden><small>ROOM CODE</small><div class="mmcode"><b class="rc-code"></b><button class="btn btn-sm alt rc-copy">COPY</button></div>
           <ol class="mmlist rc-list"></ol><div class="mmhost rc-host" hidden><button type="button" class="fillbots rc-bots" role="switch" aria-checked="true"><span class="cb"></span> FILL WITH BOTS</button><button class="btn btn-md rc-start" data-sfx="play">START</button></div>
           <div class="mmwait rc-hw"></div></div>
@@ -234,7 +236,7 @@ class RaceSession {
     if (!code) return;
     const link = `${location.origin}/?room=${encodeURIComponent(code)}`;
     let ok = false;
-    try { await navigator.clipboard.writeText(`Race me in Hunt! Room ${code}: ${link}`); ok = true; } catch {}
+    try { await navigator.clipboard.writeText(inviteText(link)); ok = true; } catch {}
     this.toast(ok ? 'Invite copied' : `Room code: ${code}`);
   }
   toast(msg) {
