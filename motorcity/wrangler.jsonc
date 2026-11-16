@@ -1,0 +1,9 @@
+// Motor City 1915 on Cloudflare Pages (project "motor-city-1915").
+// Build then deploy from this folder:
+//   npm run build && npx wrangler pages deploy dist --project-name=motor-city-1915 --branch=main
+// .github/workflows/motorcity.yml runs the tests and deploys on pushes to main that change motorcity/.
+{
+  "name": "motor-city-1915",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-11-01"
+}

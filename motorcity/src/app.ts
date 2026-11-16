@@ -12,6 +12,8 @@ import { trackById } from './track/tracks';
 import { PAINTS } from './data/cars';
 import { setClickSound } from './ui/dom';
 
+const OFF = { on: false, boost: false, offroad: false, spin: false };
+
 export class App {
   cv: HTMLCanvasElement;
   renderer: Renderer;
@@ -87,7 +89,7 @@ export class App {
     this.race = null;
     this.controls.show(false, false);
     this.hudDom.show(false, null);
-    audio.engine(0, { on: false, boost: false, offroad: false, spin: false });
+    audio.engine(0, OFF);
     audio.skid(0); audio.crowd(0); audio.rivals(0); audio.rain(false);
   }
 
@@ -96,7 +98,7 @@ export class App {
     if (!this.race || this.paused) return;
     this.paused = true;
     this.controls.show(false, false);
-    audio.engine(0, { on: false, boost: false, offroad: false, spin: false });
+    audio.engine(0, OFF);
     audio.skid(0);
     this.pauseHandler?.();
   }
@@ -118,7 +120,7 @@ export class App {
       if (this.endTimer > 0) { this.endTimer -= dt; if (this.endTimer <= 0) { const cb = this.onRaceEnd; this.endRace(); cb?.(r); } }
     } else if (this.attract) {
       this.attract.update(dt, { steer: 0, brake: false, boost: false, horn: false });
-      audio.engine(0, { on: false, boost: false, offroad: false, spin: false });
+      audio.engine(0, OFF);
       audio.crowd(0); audio.skid(0); audio.rivals(0);
     } else input.clearPressed();
   }

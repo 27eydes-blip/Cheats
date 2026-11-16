@@ -70,6 +70,7 @@ export class Race {
   stats = { drifts: 0, boosts: 0, horns: 0, crashes: 0, overtakes: 0, topMph: 0, slipT: 0 };
   private prevPlace = 1;
   autopilot: boolean;
+  private engineOpts = { on: true, boost: false, offroad: false, spin: false };
 
   constructor(opts: RaceOpts) {
     this.opts = opts;
@@ -199,7 +200,15 @@ export class Race {
     if (this.state === 'finished') this.finishT += dt;
 
     // --- audio continuous layers
-    audio.engine(p.pct, { on: true, boost: p.boostT > 0, offroad: p.offroad, spin: p.spinT > 0 });
+    const eo = this.engineOpts; eo.on = true; eo.boost = p.boostT > 0; eo.offroad = p.offroad; eo.spin = p.spinT > 0;
+    audio.engine(p.pct, eo);
+    // street ambience: hoof clops near carriages, the odd trolley bell
+    for (const v of this.traffic.list) {
+      const d = Math.abs(wrap(v.z - p.z + L / 2, L) - L / 2);
+      if (d > SEG_LEN * 12) continue;
+      if ((v.kind === 'carriage' || v.kind === 'wagon') && Math.random() < dt * 4 * (1 - d / (SEG_LEN * 12))) audio.clop();
+      if (v.kind === 'trolley' && Math.random() < dt * 0.25) audio.trolleyBell();
+    }
     audio.skid(p.drifting ? 0.8 : p.spinT > 0 ? 1 : 0);
     let near = 0;
     for (const r of this.rivals) { const d = Math.abs(wrap(r.z - p.z + L / 2, L) - L / 2); near = Math.max(near, 1 - d / (SEG_LEN * 14)); }
