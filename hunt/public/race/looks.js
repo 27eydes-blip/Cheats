@@ -68,3 +68,6 @@ export function lookForRacer(rd) {
   if (rd && rd.cos && cosResolver) { try { opts = cosResolver(rd.cos, d); } catch { opts = null; } }
   return makeLook(d, opts);
 }
+
+// the lobby / store preview lives with the car art; re-exported so UI code needs one import
+export { drawCarPreview } from './cars.js';

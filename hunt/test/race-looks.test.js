@@ -1,7 +1,7 @@
 // Hunt Racers neon looks: display names, one signature colour per car, look objects for cosmetics,
 // and the car art data the renderer reads (exhausts, taillights) for every driver.
 import assert from 'node:assert';
-import { BASE_LOOKS, makeLook, carName, lookForRacer, setCosResolver, PATTERNS } from '../public/race/looks.js';
+import { BASE_LOOKS, makeLook, carName, lookForRacer, setCosResolver, PATTERNS, drawCarPreview } from '../public/race/looks.js';
 import { CAR_IDS, exhaustsOf, taillightsOf, headOf, patternMix } from '../public/race/cars.js';
 import { DRIVER_IDS } from '../public/race/physics.js';
 import { PC, colorIdx } from '../public/race/fx.js';
@@ -10,6 +10,8 @@ import { PC, colorIdx } from '../public/race/fx.js';
 assert.deepStrictEqual(DRIVER_IDS.map(carName), ['ARCWIRE', 'WARHOG', 'PHANTOM', 'SANDVIPER', 'COBRA', 'RAZOR']);
 assert.strictEqual(carName('nope'), 'ARCWIRE', 'unknown ids fall back');
 assert.deepStrictEqual(Object.keys(BASE_LOOKS).sort(), [...DRIVER_IDS].sort());
+
+assert.strictEqual(typeof drawCarPreview, 'function', 'the store imports drawCarPreview from looks.js');
 
 // one signature neon colour per car, all different
 const neons = DRIVER_IDS.map((d) => BASE_LOOKS[d].neon);

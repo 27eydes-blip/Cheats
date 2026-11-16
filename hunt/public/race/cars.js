@@ -385,14 +385,39 @@ function previewCache(px) {
   if (!c) { if (previewSprites.size >= 4) previewSprites.clear(); c = new CarSprites(); c.setScale(s); previewSprites.set(s, c); }
   return c;
 }
+// boost trail and exhaust flames for previews (car frame, nose +x): the look's trail style and
+// flame colours, so store try-ons show them without the race renderer
+function previewBoost(g, L, t, steady) {
+  const def = carDef(L.driver), ex = def.exhaust, tx = Math.min(...ex.map((e) => e[0]));
+  const ga = g.globalAlpha;
+  g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+  const st = L.trail.style;
+  for (let k = 0; k < 4; k++) {
+    const x0 = tx - 6 - k * 16, x1 = x0 - 16;
+    g.globalAlpha = ga * (0.7 - k * 0.15);
+    if (st === 'sparks') { g.fillStyle = L.trail.color; for (let q = 0; q < 3; q++) { const y = ((k * 7 + q * 5 + (steady ? 0 : Math.floor(t * 12))) % 11) - 5; g.fillRect(x0 - q * 5, y, 2.2, 2.2); } continue; }
+    g.strokeStyle = L.trail.color; g.lineWidth = (st === 'ribbon' ? 14 : 9) * (1 - k * 0.2);
+    g.beginPath(); g.moveTo(x0, 0); g.lineTo(x1, 0); g.stroke();
+    g.strokeStyle = st === 'ribbon' ? L.neon2 : '#ffffff'; g.lineWidth *= 0.35; g.stroke();
+  }
+  const fl = 24 + (steady ? 6 : 8 * Math.abs(Math.sin(t * 17)));
+  for (const [x, y] of ex) {
+    const w = ex.length > 1 ? 0.75 : 1;
+    g.globalAlpha = ga;
+    g.fillStyle = L.flame.outer; g.beginPath(); g.moveTo(x, y - 8 * w); g.quadraticCurveTo(x - fl * 0.6 * w, y - 6 * w, x - fl * w, y); g.quadraticCurveTo(x - fl * 0.6 * w, y + 6 * w, x, y + 8 * w); g.closePath(); g.fill();
+    g.fillStyle = L.flame.core; g.beginPath(); g.moveTo(x, y - 4 * w); g.quadraticCurveTo(x - fl * 0.35 * w, y - 3 * w, x - fl * 0.55 * w, y); g.quadraticCurveTo(x - fl * 0.35 * w, y + 3 * w, x, y + 4 * w); g.closePath(); g.fill();
+  }
+  g.globalAlpha = ga; g.globalCompositeOperation = 'source-over';
+}
 // a car at the origin of the current transform (world units: a car is ~60 long), heading `angle`,
-// over its underglow; the animated skin pattern runs on `t`. The lobby and the store draw with this.
-export function drawCarPreview(ctx, driverId, look, angle = -0.5, t = 0, { glow: under = true, steady = false } = {}) {
+// over its underglow, with its rims, boost flames and boost trail (boost: false for a car at rest);
+// the animated skin pattern runs on `t`. The lobby and the store draw with this.
+export function drawCarPreview(ctx, driverId, look, angle = -0.5, t = 0, { glow: under = true, steady = false, boost = true } = {}) {
   const L = look && typeof look === 'object' ? look : makeLook(driverId);
   const m = ctx.getTransform(), px = Math.hypot(m.a, m.b) || 1;
   const spr = previewCache(px).get(L, angle), r = angle - spr.ang;
   ctx.save();
-  if (under) { ctx.save(); ctx.rotate(angle); drawUnderglow(ctx, L, t, 1, steady); ctx.restore(); }
+  if (under || boost) { ctx.save(); ctx.rotate(angle); if (under) drawUnderglow(ctx, L, t, 1, steady); if (boost) previewBoost(ctx, L, t, steady); ctx.restore(); }
   ctx.rotate(r);
   blitCar(ctx, spr, t, steady);
   ctx.restore();

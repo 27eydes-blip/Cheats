@@ -117,7 +117,7 @@ export function drawCarStage(g, w, h, id, t, { still = false, ring = true, look 
   g.save();
   g.translate(cx, cy - Math.abs(Math.sin(t * 2.2)) * (still ? 0 : 1.2 * s));
   g.scale(s, s * 0.82); // seen from a little in front: the platform is an ellipse
-  drawCarPreview(g, L.driver, L, a, t, { steady: still || !t });
+  drawCarPreview(g, L.driver, L, a, t, { steady: still || !t, boost: false }); // parked: no flames
   g.restore();
 }
 

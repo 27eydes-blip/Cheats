@@ -50,6 +50,19 @@ test('10 neon cars: looks per car, flat sprite caches, light trails', async ({ b
     return { neon: v.look.neon, pattern: v.look.pattern, glow: v.look.glowStyle, name: v.look.name };
   });
   expect(skin).toEqual({ neon: '#00ff88', pattern: 'flow', glow: 'twin', name: 'COBRA' });
+  // the app's look provider (renderer.lookOf): asked when a roster row changes; null = the car's own look
+  const prov = await page.evaluate(async () => {
+    const L = await import('/race/looks.js'), rc = window.__race.rc, R = window.__race.session.renderer, asked = [];
+    R.lookOf = (id) => { asked.push(id); return id === rc.id ? L.makeLook('rook', { skin: { neon: '#ffee00' }, trail: { style: 'sparks' } }) : null; };
+    rc.roster.set(rc.id, { ...rc.roster.get(rc.id) });
+    await new Promise((res) => setTimeout(res, 400));
+    const n = asked.length;
+    await new Promise((res) => setTimeout(res, 400));
+    const out = { neon: R.vis.get(rc.id).look.neon, trail: R.vis.get(rc.id).look.trail.style, cached: asked.length === n && n >= 1 };
+    R.lookOf = null;
+    return out;
+  });
+  expect(prov).toEqual({ neon: '#ffee00', trail: 'sparks', cached: true });
   await page.waitForTimeout(500);
   expect(errs).toEqual([]);
   await ctx.close();

@@ -87,7 +87,10 @@ function oilSprite() {
 }
 
 export class RaceRenderer {
-  constructor(canvas) {
+  // opts.lookOf(id) -> look | null: the app's per-car look provider (equipped cosmetics); null or
+  // no provider = the car's own look from the roster. Asked again only when the car's roster row changes.
+  constructor(canvas, { lookOf = null } = {}) {
+    this.lookOf = lookOf;
     this.cv = canvas; this.g = canvas.getContext('2d');
     this.W = 0; this.H = 0; this.dpr = 1;
     this.art = null; this.T = null;
@@ -146,9 +149,14 @@ export class RaceRenderer {
     }
     return f;
   }
-  lookOf(id, rc) {
+  carLook(id, rc) {
     const v = this.visOf(id), rd = rc.roster.get(id);
-    if (v.lookSrc !== rd || !v.look) { v.lookSrc = rd; v.look = lookForRacer(rd || { driver: 'volt' }); }
+    if (v.lookSrc !== rd || !v.look) {
+      v.lookSrc = rd;
+      let L = null;
+      if (this.lookOf) { try { L = this.lookOf(id); } catch { L = null; } }
+      v.look = L && typeof L === 'object' && L.sprite ? L : lookForRacer(rd || { driver: 'volt' });
+    }
     return v.look;
   }
 
@@ -446,7 +454,7 @@ export class RaceRenderer {
         continue;
       }
       const cos = Math.cos(c.a), sin = Math.sin(c.a);
-      const L = this.lookOf(c.id, rc), lf = this.fxOf(L), st = L.driver;
+      const L = this.carLook(c.id, rc), lf = this.fxOf(L), st = L.driver;
       const boost = c.f & FLAG.BOOST, drift = c.f & FLAG.DRIFT, tier = c.me && c.predicted && rc.car ? driftTier(rc.car.dc) : driftTierOf(c.f);
       // trail ring (world positions), sampled every frame while boosting
       if (boost && !air) { v.trail[v.ti * 2] = c.x - cos * 24; v.trail[v.ti * 2 + 1] = c.y - sin * 24; v.ti = (v.ti + 1) % 16; v.tn = Math.min(16, v.tn + 1); } else v.tn = Math.max(0, v.tn - 1);
