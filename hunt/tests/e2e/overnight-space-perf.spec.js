@@ -39,3 +39,38 @@ test('space lobby: 60 fps at 667x375 with 4x CPU throttle', async ({ browserName
   expect(row.medianFps).toBeGreaterThanOrEqual(55);
   await browser.close();
 });
+
+// the real racing lobby (/) with every space piece wired in, the ticker scrolling and the car on its pad
+test('space lobby (the real one at /): 60 fps at 667x375 with 4x CPU throttle; Low Graphics keeps the sky still', async ({ browserName, baseURL }) => {
+  test.skip(browserName !== 'chromium', 'CDP CPU throttling');
+  test.setTimeout(120_000);
+  const browser = await chromium.launch({ args: GPU_RASTER });
+  const ctx = await browser.newContext({ baseURL, viewport: { width: 667, height: 375 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage();
+  const cdp = await ctx.newCDPSession(page);
+  await page.goto('/');
+  await page.waitForSelector('#playBtn');
+  await page.waitForFunction(() => window.__spaceLobby);
+  await page.waitForTimeout(1000);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await page.waitForTimeout(2000);
+  await page.evaluate(() => { window.__fd = []; let l = 0; const f = (t) => { if (l) window.__fd.push(t - l); l = t; requestAnimationFrame(f); }; requestAnimationFrame(f); });
+  const f0 = await page.evaluate(() => window.__spaceLobby.bg.frames);
+  await page.evaluate(() => window.__spaceLobby.carousel.next());
+  await page.waitForTimeout(6000);
+  const r = await page.evaluate(() => { const s = window.__fd.slice().sort((a, b) => a - b); return { frames: s.length, med: s[s.length >> 1], p95: s[Math.floor(s.length * 0.95)], bg: window.__spaceLobby.bg.frames }; });
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  const row = { medianFps: +(1000 / r.med).toFixed(1), meanFps: +(r.frames / 6).toFixed(1), p95Ms: +r.p95.toFixed(1), skyFrames: r.bg - f0 };
+  console.log('space lobby (/) fps', JSON.stringify(row));
+  await test.info().attach('fps-lobby.json', { body: JSON.stringify(row, null, 2), contentType: 'application/json' });
+  expect(row.skyFrames, 'the sky is animating').toBeGreaterThan(60);
+  expect(row.medianFps).toBeGreaterThanOrEqual(55);
+  // Low Graphics: no nebula, no shooting stars, no parallax: the sky is one still frame
+  await page.evaluate(() => import('/settings.js').then((m) => m.setSetting('lowGfx', true)));
+  await page.reload();
+  await page.waitForFunction(() => window.__spaceLobby);
+  await page.waitForTimeout(800);
+  const low = await page.evaluate(() => ({ still: window.__spaceLobby.bg.still, neb: !!window.__spaceLobby.bg.neb, frames: window.__spaceLobby.bg.frames, cls: document.getElementById('lobby').classList.contains('sp-low') }));
+  expect(low).toEqual({ still: true, neb: false, frames: 0, cls: true });
+  await browser.close();
+});

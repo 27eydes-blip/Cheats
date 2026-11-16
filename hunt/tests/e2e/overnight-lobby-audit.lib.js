@@ -43,7 +43,9 @@ export const SCREENS = [
 // HUNT RACERS (the main lobby at /): every screen a racer can reach before and around a race.
 const roomCode = () => 'AU' + Math.random().toString(36).slice(2, 8).toUpperCase();
 export const RACE_SCREENS = [
-  { name: 'racing play', open: async () => {}, primary: ['#playBtn', '#rail_road', '#passBtn', '#trackBtn', '#fillBots', '.modebtn[data-m="grand"]', '.modebtn[data-m="trial"]', '#rail_settings', '#tab_profile', '#rail_friends', '#rail_store'] },
+  // the space lobby: LAUNCH, the dock (Profile, Garage, Race, Pass, Crew), the mode strip and carousel arrow, track, bots,
+  // your car (Garage), missions orbit, trophies, currencies, STORE and settings
+  { name: 'racing play', open: async () => {}, primary: ['#playBtn', '#rail_road', '#rail_pass', '#rail_garage', '#tab_play', '#trackBtn', '#fillBots', '.modebtn[data-m="grand"]', '.modebtn[data-m="trial"]', '.sp-car-arrow.next', '.nameplate #stage', '#tbMissions', '#coinPlus', '#rail_settings', '#tab_profile', '#rail_friends', '#rail_store'] },
   { name: 'racing play, time trial picked', open: async (p) => { await p.click('.modebtn[data-m="trial"]'); }, primary: ['#playBtn', '#trackBtn', '.modebtn[data-m="trial"]'] },
   { name: 'racing profile tab', open: async (p) => { await p.click('#tab_profile'); await p.waitForSelector('.pg-profile .race-times'); }, primary: ['#tab_play'] },
   // the STORE (it replaced the Locker in the racing lobby): every tab, a card tried on, BUY / EQUIP always in reach

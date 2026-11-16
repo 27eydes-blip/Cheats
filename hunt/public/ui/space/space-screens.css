@@ -1,0 +1,41 @@
+/* Hunt Racers screens in the space look (body.sp-racing, set by ui/space/racelobby.js): the store,
+   Hunt Pass, Trophy Road, profile, settings, garage, friends and every popup get the lobby's
+   navy glass, thin neon rims, squared corners and the techno / narrow fonts. Their layout and
+   logic are untouched: this re-points the design tokens (tokens.css) for those layers and swaps
+   the chunky outlines and drop shadows for rims and glows. The race itself keeps its own look. */
+body.sp-racing :is(#lobby, .ui-screen, .ui-pop, .detail) {
+  --ink: #050816; --bg: #070a1f; --panel: #101a44; --panel-2: #0b1233; --panel-hi: #3b2d8f;
+  --gold: #ffc84a; --gold-2: #ffa63a; --mint: #34e7ff; --text-dim: #93a6cf;
+  --line: 1.5px; --radius: 4px; --radius-sm: 3px;
+  --drop: 0 0 0 1px rgba(52,231,255,.45), 0 0 12px rgba(52,231,255,.18); --drop-press: 0 0 0 1px rgba(52,231,255,.8);
+  --font: "Chakra Petch", "Eurostile", "Segoe UI", system-ui, sans-serif;
+  --font-ui: "Barlow Semi Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+}
+body.sp-racing :is(.ui-screen, .store-screen, .ui-screen.neon) { background: radial-gradient(ellipse at 75% 15%, rgba(122,44,255,.28), transparent 55%), radial-gradient(ellipse at 15% 85%, rgba(17,201,181,.18), transparent 50%), linear-gradient(#0a1033, #050816 70%); backdrop-filter: none; -webkit-backdrop-filter: none; }
+body.sp-racing .ui-pop { background: rgba(3,5,14,.68); }
+body.sp-racing .detail { background: rgba(3,5,14,.75); }
+/* titles: neon, no outline */
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .title { font-family: var(--font); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #fff; -webkit-text-stroke: 0; text-shadow: 0 0 10px rgba(52,231,255,.75), 0 0 2px #34e7ff; }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .outlined { -webkit-text-stroke: 0; text-shadow: 0 0 6px rgba(0,0,0,.8); }
+/* buttons: glass with a cyan rim; the gold one is the main action */
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .btn { font-weight: 700; letter-spacing: .08em; border: 0; border-radius: 3px; box-shadow: var(--drop); color: #04101c; background: linear-gradient(100deg, #7ff3ff, #34e7ff 50%, #8f7bff); }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .btn.alt { color: #e9f6ff; background: rgba(16,26,68,.85); }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .btn.gold { color: #10081e; background: linear-gradient(100deg, #ffe08a, #ffc84a 55%, #ff9f43); }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .btn.red { color: #fff; background: linear-gradient(100deg, #ff6aa8, #ff3fb8); }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .btn.pressed, body.sp-racing :is(.ui-screen, .ui-pop, .detail) .btn:active { transform: scale(.97); }
+/* panels and cards: translucent navy glass, thin rims, square corners */
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) :is(.card-a, .card-b) { border: 1px solid rgba(52,231,255,.45); border-radius: 4px; box-shadow: 0 0 14px rgba(52,231,255,.12), inset 0 0 24px rgba(167,123,255,.08); }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .card-a { background: linear-gradient(160deg, rgba(16,26,68,.95), rgba(14,12,48,.95)); }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .chipbtn { border: 1px solid rgba(52,231,255,.4); border-radius: 3px; background: rgba(11,18,51,.85); }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .chipbtn.on { background: #34e7ff; color: #04101c; }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .field { border: 1px solid rgba(52,231,255,.55); border-radius: 3px; background: #0b1233; color: #e9f6ff; }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .slider { accent-color: #34e7ff; }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .cur { border: 1px solid rgba(255,200,74,.6); border-radius: 3px; background: rgba(11,18,51,.85); }
+/* store: the neon panels become glass with cut corners */
+body.sp-racing :is(.st-stage, .st-shop) { border: 1px solid rgba(52,231,255,.5); border-radius: 0; clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); background: linear-gradient(160deg, rgba(12,20,52,.92), rgba(22,16,58,.88)); box-shadow: none; }
+body.sp-racing .st-arrow, body.sp-racing .st-tab { border-radius: 3px; }
+/* Hunt Pass / Trophy Road tiers */
+body.sp-racing .ui-screen .tier { border-radius: 3px; }
+body.sp-racing .ui-screen .rw { border-radius: 3px; }
+/* the profile page inside the lobby */
+body.sp-racing #lobby .pg-profile { color: var(--sp-text, #e9f6ff); font-family: var(--font-ui); }

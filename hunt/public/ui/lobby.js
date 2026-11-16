@@ -36,6 +36,7 @@ import { carName } from '../race/looks.js';
 import { shopDay } from '../race/garage.js';
 import { drawPlatform, equippedLook } from './platform.js';
 import { openStore } from './store.js';
+import { createSpaceLobby } from './space/racelobby.js';
 // HUNT RACERS (the main game): the PLAY page lists the racing modes; the shooter lobby above is the
 // classic one (?shooter=1)
 export const RACE_MODE_BTNS = [
@@ -74,6 +75,7 @@ export function stageFit(w, h) {
 }
 
 export function createLobby(api) {
+  if (api.racing) return createSpaceLobby(api); // HUNT RACERS: the space lobby (ui/space/racelobby.js)
   const RACE = !!api.racing;
   const root = $('lobby');
   root.className = 'lobby' + (RACE ? ' racing' : '');

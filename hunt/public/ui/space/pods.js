@@ -14,7 +14,7 @@ export function createCrew({ slots = [], bots = true, onBots = () => {}, onPod =
   const el = document.createElement('section');
   el.className = 'sp-crew sp-glass';
   el.setAttribute('aria-label', 'Crew');
-  el.innerHTML = `<header class="sp-crew-head"><span class="sp-title">${esc(title)}</span><span class="sp-ticks" aria-hidden="true"></span></header>
+  el.innerHTML = `<header class="sp-crew-head"><span class="sp-head">${esc(title)}</span><span class="sp-ticks" aria-hidden="true"></span></header>
     <div class="sp-pods"></div>
     <button type="button" class="sp-switch" role="switch" aria-checked="false"><span class="sp-switch-label">FILL WITH BOTS</span><span class="sp-switch-track" aria-hidden="true"><span class="sp-switch-on">ON</span><span class="sp-switch-off">OFF</span><span class="sp-switch-knob"></span></span></button>`;
   const podsEl = el.querySelector('.sp-pods'), sw = el.querySelector('.sp-switch');

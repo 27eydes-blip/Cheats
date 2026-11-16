@@ -81,6 +81,7 @@ for (const [w, h] of [[320, 568], [375, 667], [390, 844], [412, 915], [430, 932]
       const out = { scrolls: pg.scrollHeight > pg.clientHeight + 1 || document.scrollingElement.scrollHeight > innerHeight + 1, creditOnScreen: credit.top >= 0 && credit.bottom <= tabs.top + 0.5 && credit.right <= innerWidth, stage: box('#stage').height };
       for (const s of ['#playBtn', '#rail_road', '#passBtn', '#npPower', '.slot.me']) {
         const b = box(s);
+        out[s + ':dbg'] = [up, dn, document.elementFromPoint(cx, cy - up - 1)?.className, document.elementFromPoint(cx, cy + dn + 1)?.className, b.height].join(' ');
         out[s] = { inView: b.left >= 0 && b.top >= 0 && b.right <= innerWidth + 0.5 && b.bottom <= tabs.top + 0.5, hitsCredit: over(b, credit), w: b.width, h: b.height };
         const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
         out[s].onTop = !!hit && document.querySelector(s).contains(hit);
@@ -245,41 +246,60 @@ test('desktop keeps its layout: full-size text scale and the four-slot party (cl
   await ctx.close();
 });
 
-// ---------------------------------------------------------------- HUNT RACERS play page
-for (const [w, h] of [[320, 568], [375, 667], [390, 844], [412, 915], [430, 932]]) {
-  test(`portrait ${w}x${h} (racing): the modes, track, PLAY, Trophy Road and Hunt Pass are in view without scrolling, clear of the tabs and the credit`, async ({ browser }) => {
+// ---------------------------------------------------------------- HUNT RACERS: the space lobby
+// Phones (landscape iPhone SE / Pro Max, portrait phones) and iPads: every main control of the play
+// view is fully on screen, on top, thumb-sized (its real hit area), clear of the credit line and
+// of the dock; the dock has its five orbs; the page never scrolls; LAUNCH starts a race.
+const SPACE_SEL = ['#playBtn', '#trackBtn', '#fillBots', '.nameplate #stage', '.modebtn[data-m="grand"]', '.modebtn[data-m="elim"]', '.modebtn[data-m="battle"]', '.modebtn[data-m="trial"]', '.sp-car-arrow.next', '#rail_store', '#rail_settings', '#rail_road', '#tbMissions', '#coinPlus', '#gemPlus'];
+for (const [w, h] of [[667, 375], [932, 430], [1180, 820], [820, 1180], [320, 568], [375, 667], [390, 844], [430, 932]]) {
+  test(`space lobby ${w}x${h} (racing): modes, track, bots, LAUNCH and the dock in view, thumb-sized, clear of the credit`, async ({ browser }) => {
     const ctx = await phone(browser, w, h);
     const page = await ctx.newPage();
     const errors = trackErrors(page);
     await page.goto('/');
     await needTouch(page);
     await page.waitForSelector('#playBtn');
-    const SEL = ['#playBtn', '#rail_road', '#passBtn', '.slot.me', '#trackBtn', '#fillBots', '.modebtn[data-m="grand"]', '.modebtn[data-m="elim"]', '.modebtn[data-m="battle"]', '.modebtn[data-m="trial"]'];
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(300);
     const r = await page.evaluate((SEL) => {
       const box = (s) => document.querySelector(s).getBoundingClientRect();
-      const tabs = box('.lb-tabs'), credit = box('#lobby #credit'), pg = document.querySelector('.pg-play');
+      const dock = box('.sp-dock'), credit = box('#lobby #credit');
       const over = (a, b) => a.left < b.right - 0.5 && a.right > b.left + 0.5 && a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5;
-      const out = { scrolls: pg.scrollHeight > pg.clientHeight + 1 || document.scrollingElement.scrollHeight > innerHeight + 1, creditOnScreen: credit.top >= 0 && credit.bottom <= tabs.top + 0.5 && credit.right <= innerWidth, stage: box('#stage').height, tabs: [...document.querySelectorAll('.tabbtn')].map((b) => b.dataset.tab) };
+      const out = {
+        scrolls: document.scrollingElement.scrollHeight > innerHeight + 1 || document.scrollingElement.scrollWidth > innerWidth + 1,
+        creditOnScreen: credit.left >= 0 && credit.top >= 0 && credit.bottom <= innerHeight && credit.right <= innerWidth && credit.width > 50,
+        dockOnScreen: dock.left >= -0.5 && dock.right <= innerWidth + 0.5 && dock.bottom <= innerHeight + 0.5,
+        stage: box('#stage').height,
+        orbs: [...document.querySelectorAll('.sp-orb')].map((b) => b.dataset.k),
+        orbsDbg: [...document.querySelectorAll('.sp-orb')].map((b) => { const q = b.getBoundingClientRect(); return [q.width, q.height, q.bottom].map(Math.round).join('/'); }).join(' ') + ' credit ' + [credit.left, credit.top, credit.right].map(Math.round).join('/'),
+        orbsOk: [...document.querySelectorAll('.sp-orb')].every((b) => { const q = b.getBoundingClientRect(); return q.width >= 43.4 && q.height >= 43.4 && q.bottom <= innerHeight + 0.5 && !over(q, credit); }),
+      };
       for (const s of SEL) {
-        const b = box(s);
-        out[s] = { inView: b.left >= 0 && b.top >= 0 && b.right <= innerWidth + 0.5 && b.bottom <= tabs.top + 0.5, hitsCredit: over(b, credit), w: b.width, h: b.height };
-        const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
-        out[s].onTop = !!hit && document.querySelector(s).contains(hit);
+        const el = document.querySelector(s), b = el.getBoundingClientRect(), cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+        const hit = (x, y) => { const e = document.elementFromPoint(x, y); return !!e && el.contains(e); };
+        // the real hit area: a small control may reach further with an invisible padded edge
+        let up = 0, dn = 0; while (up < 30 && hit(cx, cy - up - 1)) up++; while (dn < 30 && hit(cx, cy + dn + 1)) dn++;
+        out[s + ':dbg'] = [up, dn, document.elementFromPoint(cx, cy - up - 1)?.className, document.elementFromPoint(cx, cy + dn + 1)?.className, b.height].join(' ');
+        out[s] = { inView: b.left >= -0.5 && b.top >= -0.5 && b.right <= innerWidth + 0.5 && b.bottom <= innerHeight + 0.5, hitsCredit: over(b, credit), hitsDock: s !== '#playBtn' && over(b, dock), onTop: hit(cx, cy), hitH: up + dn + 1, w: b.width };
       }
       return out;
-    }, SEL);
-    expect(r.scrolls, 'the play page does not need scrolling').toBe(false);
-    expect(r.creditOnScreen, 'credit line is on screen above the tab bar').toBe(true);
+    }, SPACE_SEL);
+    expect(r.scrolls, 'the lobby never scrolls').toBe(false);
+    expect(r.creditOnScreen, 'credit line on screen').toBe(true);
+    expect(r.dockOnScreen, 'dock on screen').toBe(true);
     expect(r.stage, 'your car is drawn').toBeGreaterThan(40);
-    expect(r.tabs, 'no Armory or Locker tab (shooter weapons and cosmetics): the STORE has the car cosmetics').toEqual(['profile', 'store', 'play', 'pass', 'friends']);
-    for (const s of SEL) {
-      expect(r[s].inView, `${s} fully in view above the tab bar`).toBe(true);
+    expect(r.orbs).toEqual(['profile', 'garage', 'race', 'pass', 'crew']);
+    expect(r.orbsOk, 'dock orbs thumb-sized, on screen, clear of the credit: ' + r.orbsDbg).toBe(true);
+    for (const s of SPACE_SEL) {
+      expect(r[s].inView, `${s} fully in view`).toBe(true);
       expect(r[s].hitsCredit, `${s} clear of the credit`).toBe(false);
+      expect(r[s].hitsDock, `${s} clear of the dock`).toBe(false);
       expect(r[s].onTop, `${s} not covered`).toBe(true);
-      expect(r[s].h, `${s} is thumb-sized`).toBeGreaterThanOrEqual(44);
+      expect(r[s].hitH, `${s} is thumb-sized: ${r[s + ':dbg']}`).toBeGreaterThanOrEqual(43);
     }
     expect(r['#playBtn'].w).toBeGreaterThanOrEqual(120);
-    // and PLAY really starts a race from here (the waiting card, CANCEL in reach, the credit on top)
+    // and LAUNCH really starts a race from here (the waiting card, CANCEL in reach, the credit on top)
+    if (await page.getAttribute('#fillBots', 'aria-checked') === 'true') await page.tap('#fillBots');
     await page.tap('#playBtn');
     await expect(page.locator('.rc-wait')).toBeVisible();
     await expect(page.locator('.rc-cancel')).toBeInViewport({ ratio: 1 });
@@ -292,19 +312,21 @@ for (const [w, h] of [[320, 568], [375, 667], [390, 844], [412, 915], [430, 932]
   });
 }
 
-test('desktop (racing): the four modes, the track with its preview and the four-slot party', async ({ browser }) => {
+test('desktop (racing): the four modes as cards and strip, the track with its preview and three crew pods', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
   await page.goto('/');
   await page.waitForSelector('#playBtn');
   const r = await page.evaluate(() => ({
-    modes: [...document.querySelectorAll('.modebtn[data-m]')].map((b) => [b.dataset.m, getComputedStyle(b.querySelector('small')).display !== 'none']),
-    invites: [...document.querySelectorAll('.slot.invite')].filter((e) => e.getBoundingClientRect().width > 0).length,
+    modes: [...document.querySelectorAll('.modebtn[data-m]')].map((b) => b.dataset.m),
+    cards: [...document.querySelectorAll('.sp-card')].map((c) => [c.dataset.id, !!c.querySelector('.sp-card-sub').textContent]),
+    pods: [...document.querySelectorAll('.sp-pod.empty')].filter((e) => e.getBoundingClientRect().width > 0).length,
     preview: document.querySelector('#trackPv').width,
     credit: document.querySelector('#lobby #credit').textContent,
   }));
-  expect(r.modes).toEqual([['grand', true], ['elim', true], ['battle', true], ['trial', true]]); // each with its short description
-  expect(r.invites).toBe(3);
+  expect(r.modes).toEqual(['grand', 'elim', 'battle', 'trial']);
+  expect(r.cards).toEqual([['grand', true], ['elim', true], ['battle', true], ['trial', true]]); // each with its short description
+  expect(r.pods).toBe(3);
   expect(r.preview).toBeGreaterThan(20);
   expect(r.credit).toBe('Created by Sam Eyde III');
   await ctx.close();

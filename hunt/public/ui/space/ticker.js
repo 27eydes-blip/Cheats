@@ -26,7 +26,7 @@ export function createTicker({ items = [], onTap = () => {}, speed = TICKER_SPEE
   el.innerHTML = `<span class="sp-tk-live" aria-hidden="true"><i></i>LIVE</span><div class="sp-tk-view"><div class="sp-tk-strip"></div></div>`;
   const view = el.querySelector('.sp-tk-view'), strip = el.querySelector('.sp-tk-strip');
   const reasons = new Set();
-  let list = [], q = low != null || calm != null ? { low: !!low, calm: !!calm } : quality(), step = 0, stepTimer = 0, tickTimer = 0;
+  let list = [], reps = 1, q = low != null || calm != null ? { low: !!low, calm: !!calm } : quality(), step = 0, stepTimer = 0, tickTimer = 0;
   const stepMode = () => q.low || q.calm;
 
   function render() {
@@ -40,8 +40,10 @@ export function createTicker({ items = [], onTap = () => {}, speed = TICKER_SPEE
       return;
     }
     // two copies back to back: when the first has scrolled off, the loop restarts seamlessly
-    const run = list.map((it) => itemHtml(it, false)).join('<i class="sp-tk-sep" aria-hidden="true"></i>');
-    const copy = list.map((it) => itemHtml(it, true)).join('<i class="sp-tk-sep" aria-hidden="true"></i>');
+    // a short list is repeated so one run is at least as wide as the band (no long empty gap)
+    const sep = '<i class="sp-tk-sep" aria-hidden="true"></i>';
+    const run = list.map((it) => itemHtml(it, false)).join(sep) + (sep + list.map((it) => itemHtml(it, true)).join(sep)).repeat(reps - 1);
+    const copy = Array(reps).fill(list.map((it) => itemHtml(it, true)).join(sep)).join(sep);
     strip.innerHTML = `<div class="sp-tk-run">${run}<i class="sp-tk-sep" aria-hidden="true"></i></div><div class="sp-tk-run" aria-hidden="true">${copy}<i class="sp-tk-sep" aria-hidden="true"></i></div>`;
     api.layout();
   }
@@ -65,16 +67,18 @@ export function createTicker({ items = [], onTap = () => {}, speed = TICKER_SPEE
   const api = {
     el,
     items: () => list,
-    setItems(next) { list = Array.isArray(next) ? next.slice() : []; step = 0; render(); timers(); },
+    setItems(next) { list = Array.isArray(next) ? next.slice() : []; step = 0; reps = 1; render(); timers(); },
     // measure one run: distance and duration of the scroll (call on resize)
     layout() {
       if (stepMode() || !list.length) return;
       const run = strip.querySelector('.sp-tk-run');
       if (!run) return;
       const vw = view.clientWidth;
-      for (const r of strip.querySelectorAll('.sp-tk-run')) r.style.minWidth = vw + 'px';
-      const w = run.getBoundingClientRect().width;
+      for (const r of strip.querySelectorAll('.sp-tk-run')) r.style.minWidth = '';
+      let w = run.getBoundingClientRect().width;
       if (!w) return;
+      if (w < vw && reps < 8) { reps = Math.min(8, reps * Math.ceil(vw / w)); render(); return; }
+      if (w < vw) { for (const r of strip.querySelectorAll('.sp-tk-run')) r.style.minWidth = vw + 'px'; w = vw; }
       strip.style.setProperty('--tk-dist', `${-w}px`);
       strip.style.setProperty('--tk-dur', `${(w / speed).toFixed(1)}s`);
     },

@@ -21,7 +21,7 @@ for (const [name, width, height] of VIEWS) {
     await page.waitForTimeout(400);
     const res = await page.evaluate((parts) => {
       const box = (s) => { const r = document.querySelector(s).getBoundingClientRect(); return { s, l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; };
-      const B = parts.map(box), credit = box('.sp-credit');
+      const B = parts.map(box), credit = box('.sp-cred');
       const hit = (a, b) => a.l < b.r - 1 && b.l < a.r - 1 && a.t < b.b - 1 && b.t < a.b - 1;
       const overlaps = [];
       for (let i = 0; i < B.length; i++) for (let j = i + 1; j < B.length; j++) if (hit(B[i], B[j])) overlaps.push(B[i].s + ' x ' + B[j].s);
@@ -32,8 +32,8 @@ for (const [name, width, height] of VIEWS) {
       const cardIn = on.left >= car.l - 1 && on.right <= car.r + 1 && on.top >= car.t - 1 && on.bottom <= car.b + 1;
       // the five dock orbs are on screen and at least thumb-sized
       const orbs = [...document.querySelectorAll('.sp-orb-ball')].map((o) => o.getBoundingClientRect()).filter((r) => r.width >= 28 && r.bottom <= innerHeight && r.top >= 0).length;
-      const cs = getComputedStyle(document.querySelector('.sp-credit'));
-      return { overlaps, outside, onCredit, cardIn, bigger: on.width > side.width, orbs, credit: { text: document.querySelector('.sp-credit').textContent, w: credit.w, in: credit.l >= 0 && credit.b <= innerHeight, op: Number(cs.opacity), vis: cs.visibility, z: Number(cs.zIndex) } };
+      const cs = getComputedStyle(document.querySelector('.sp-cred'));
+      return { overlaps, outside, onCredit, cardIn, bigger: on.width > side.width, orbs, credit: { text: document.querySelector('.sp-cred').textContent, w: credit.w, in: credit.l >= 0 && credit.b <= innerHeight, op: Number(cs.opacity), vis: cs.visibility, z: Number(cs.zIndex) } };
     }, PARTS);
     expect(res.overlaps, 'no two pieces overlap').toEqual([]);
     expect(res.outside, 'every piece fully on screen').toEqual([]);
