@@ -80,7 +80,7 @@ export const RACE_SCREENS = [
       rc.onMsg({ t: 'end', mode: 'trial', track: rc.trackKey, rank: 1, you: rc.id, n: 1, time: 95.4, bestLap: 30.1, mc: 0, k: 0, results: [[rc.id, 'Racer', 'volt', 1, 95.4, 0, 0, 0, 30.1, 1, 0]] });
       rc.onMsg({ t: 'progress', delta: 0, xp: 0, coins: 0, levels: [], progress: null, best: 95.4, improved: true });
     });
-    await p.waitForFunction(() => window.__race.finishShown(), null, { timeout: 30_000 }); // (1.6 s of frames after the end: slow machines draw few)
+    await p.waitForFunction(() => window.__race.finishShown(), null, { timeout: 30_000 }); // (1.6 s after the end, on the next frame: slow machines draw few)
     await p.waitForTimeout(400);
   }, primary: ['.rc-again', '.rc-lobby'] },
 ];

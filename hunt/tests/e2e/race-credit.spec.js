@@ -38,7 +38,7 @@ for (const vp of [{ width: 667, height: 375, touch: true }, { width: 844, height
       const rc = window.__race.rc;
       rc.onMsg({ t: 'end', mode: 'grand', track: rc.trackKey, rank: 1, you: rc.id, n: 2, time: 61.2, bestLap: 20.1, mc: 7, k: 1, results: [[rc.id, 'You', 'volt', 1, 61.2, 1, 7, 0, 20.1, 1, 0], [99, 'Bot', 'brick', 2, 63, 0, 2, 1, 21, 1, 1]] });
     });
-    await page.waitForFunction(() => window.__race.finishShown(), null, { timeout: 30_000 }); // (1.6 s of frames after the end: slow machines draw few)
+    await page.waitForFunction(() => window.__race.finishShown(), null, { timeout: 30_000 }); // (1.6 s after the end, on the next frame: slow machines draw few)
     await expect(page.locator('.rc-res')).toBeVisible();
     await creditVisible(page);
     await page.evaluate(() => { window.__race.session.endShown = false; window.__race.session.fail('Lost the connection to the race.'); });

@@ -108,7 +108,7 @@ class RaceSession {
     this.resize();
     this.prev = { cd: 99, boostT: 0, spd: 0, air: false, tier: 0, rt: 0 };
     this.wrongFor = 0; this.wrong = false;
-    this.startedAt = 0; this.endShown = false; this.endTimer = 0;
+    this.startedAt = 0; this.endShown = false; this.endAt = 0;
     this.connect();
     this.last = performance.now();
     this.raf = requestAnimationFrame((t) => this.frame(t));
@@ -158,7 +158,9 @@ class RaceSession {
       try { this.bestSplits = JSON.parse(localStorage.getItem('hunt-race-splits-' + rc.trackKey) || 'null'); } catch { this.bestSplits = null; }
       this.bestLapSeen = rc.mode === 'trial' ? this.bestSplits?.lap || null : null;
     });
-    rc.on('end', () => { if (this.tut) this.tut.ready(); else this.endTimer = 1.6; });
+    // the results come up 1.6 s after the finish in real time (frame time is capped per frame, so
+    // counting it would hold them back for ages on a device that drops to a few frames a second)
+    rc.on('end', () => { if (this.tut) this.tut.ready(); else this.endAt = performance.now() + 1600; });
     rc.on('progress', (m) => { this.o.onProgress?.(m); this.applyProgress(m); });
     rc.on('failed', () => this.fail('Lost the connection to the race.'));
     rc.on('retry', (m) => this.fail(m.reason === 'Race full' ? 'That race is full. Try another room code.' : 'That race already started. Try again in a moment.'));
@@ -293,7 +295,7 @@ class RaceSession {
   // ---------------------------------------------------------------- finish screen (mirrors ui/flow.js results)
   showEnd() {
     const rc = this.rc, m = rc.results, el = this.$('.rc-res');
-    this.endShown = true;
+    this.endShown = true; this.endAt = 0;
     this.root.classList.remove('racing'); // (the finish screen works upright)
     this.$('.rc-menu').hidden = true;
     const me = m.results.find((r) => r[0] === m.you) || [];
@@ -398,7 +400,7 @@ class RaceSession {
       R.draw(v, rc, dt, now);
       this.hud.draw(R.g, { W: this.W, H: this.H, SA: this.SA, dpr: this.dpr, view: v, me: v.me, rc, ctrl: this.ctrl, dt, t: R.t, mode: rc.mode, art: R.art, renderer: R, wrong: this.wrong, bestTime: this.best,
         tut: !!this.tut, focus: this.focus, hint: this.hintA, canReset: this.resetOk && this.resetCd <= 0 });
-      if (this.endTimer > 0 && (this.endTimer -= dt) <= 0 && !this.endShown) this.showEnd();
+      if (this.endAt && now >= this.endAt && !this.endShown) this.showEnd();
     } else {
       // pre-race: the track behind the lobby card (also warms the chunk cache around the grid)
       R.draw(IDLE_VIEW, rc, dt, now);
