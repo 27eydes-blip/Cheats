@@ -5,9 +5,10 @@ whoever runs it.
 
 ## Credit (never break)
 - Never remove or hide the Gleyde Technologies, LLC publisher credit, the "Created by Sam Eyde III"
-  creator credit, or the copyright line. They appear on the home screen ("Gleyde Technologies,
-  LLC · Created by Sam Eyde III"), in Settings → CREDITS ("Published by Gleyde Technologies, LLC",
-  "Created by Sam Eyde III, Founder & CEO" and "© 2026 Gleyde Technologies, LLC. All rights
+  creator credit, the "Produced by Juwon Shon" producer credit, or the copyright line. They appear
+  on the home screen ("Gleyde Technologies, LLC · Created by Sam Eyde III · Produced by Juwon
+  Shon"), in Settings → CREDITS ("Published by Gleyde Technologies, LLC", "Created by Sam Eyde III,
+  Founder & CEO", "Produced by Juwon Shon, COO" and "© 2026 Gleyde Technologies, LLC. All rights
   reserved."), on the loading screen ("Gleyde Technologies, LLC"), in the website footer, README,
   LICENSE, AUTHORSHIP.md and the App Store copyright ("2026 Gleyde Technologies, LLC").
   The text lives in src/legal.js; tests/e2e/credit.spec.js fails the build if any of it goes

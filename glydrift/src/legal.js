@@ -8,6 +8,9 @@ export const PUBLISHED_BY = `Published by ${PUBLISHER}`;
 export const CREATOR = "Sam Eyde III";
 export const CREATED_BY = `Created by ${CREATOR}`;
 export const CREATOR_ROLE = `Created by ${CREATOR}, Founder & CEO`;
-/** The home screen footer: the publisher and the creator on one line. */
-export const HOME_CREDIT = `${PUBLISHER} · ${CREATED_BY}`;
+export const PRODUCER = "Juwon Shon";
+export const PRODUCED_BY = `Produced by ${PRODUCER}`;
+export const PRODUCER_ROLE = `Produced by ${PRODUCER}, COO`;
+/** The home screen footer: the publisher, the creator and the producer on one line. */
+export const HOME_CREDIT = `${PUBLISHER} · ${CREATED_BY} · ${PRODUCED_BY}`;
 export const COPYRIGHT = `© 2026 ${PUBLISHER}. All rights reserved.`;

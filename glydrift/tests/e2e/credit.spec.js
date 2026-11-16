@@ -1,19 +1,20 @@
 // The publisher credit (Gleyde Technologies, LLC), the creator credit (Sam Eyde III) and the
 // copyright must never disappear: no cleanup, polish pass or redesign may remove or hide them
 // (see CLAUDE.md). This test fails the build if any of them is missing:
-//   home screen     "Gleyde Technologies, LLC · Created by Sam Eyde III" — on screen, readable,
+//   home screen     "Gleyde Technologies, LLC · Created by Sam Eyde III · Produced by Juwon Shon" — on screen, readable,
 //                   not covered or cut off
 //   Settings        CREDITS: "Glydrift", "Published by Gleyde Technologies, LLC",
-//                   "Created by Sam Eyde III, Founder & CEO",
+//                   "Created by Sam Eyde III, Founder & CEO", "Produced by Juwon Shon, COO",
 //                   "© 2026 Gleyde Technologies, LLC. All rights reserved."
 //   loading screen  "Gleyde Technologies, LLC" under the GLYDRIFT logo
-//   website footer  the publisher, "Created by Sam Eyde III" and the © line
+//   website footer  the publisher, "Created by Sam Eyde III", "Produced by Juwon Shon" and the © line
 //   README, LICENSE "© 2026 Gleyde Technologies, LLC. All rights reserved."
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { openGame, profileOf, run, settle } from "./helpers.js";
 
 const NAME = "Sam Eyde III";
+const PRODUCER = "Juwon Shon";
 const COMPANY = "Gleyde Technologies, LLC"; // exactly this spelling, everywhere
 const COPYRIGHT = `© 2026 ${COMPANY}. All rights reserved.`;
 const PHONES = ["iphone-small", "iphone-std", "iphone-large"];
@@ -44,12 +45,12 @@ const texts = (page, key) =>
     return { list: out, W: sc.W ?? sc.scale.width, H: sc.H ?? sc.scale.height };
   }, key);
 
-test("credit: home screen shows \"Gleyde Technologies, LLC · Created by Sam Eyde III\", readable and on screen @smoke", async ({ page }, testInfo) => {
+test("credit: home screen shows \"Gleyde Technologies, LLC · Created by Sam Eyde III · Produced by Juwon Shon\", readable and on screen @smoke", async ({ page }, testInfo) => {
   test.skip(!PHONES.includes(profileOf(testInfo)), "every iPhone size");
   const log = await openGame(page);
   await settle(page, "Menu", 1500);
   const { list, W, H } = await texts(page, "Menu");
-  const line = list.find((t) => t.text === `${COMPANY} · Created by ${NAME}`);
+  const line = list.find((t) => t.text === `${COMPANY} · Created by ${NAME} · Produced by ${PRODUCER}`);
   expect(line, "the home screen credit line").toBeTruthy();
   expect(line.alpha).toBeGreaterThan(0.5);
   expect(line.size).toBeGreaterThanOrEqual(13);
@@ -72,7 +73,7 @@ test("creator credit: Settings has CREDITS with the creator and the copyright @s
   await page.evaluate(() => window.__glydrift.scene.getScene("Menu").openSettings());
   await run(page, 600);
   const { list, H } = await texts(page, "Menu");
-  for (const want of ["Glydrift", `Published by ${COMPANY}`, `Created by ${NAME}, Founder & CEO`, COPYRIGHT]) {
+  for (const want of ["Glydrift", `Published by ${COMPANY}`, `Created by ${NAME}, Founder & CEO`, `Produced by ${PRODUCER}, COO`, COPYRIGHT]) {
     const t = list.find((x) => x.text === want);
     expect(t, `Settings shows "${want}"`).toBeTruthy();
     expect(t.alpha).toBeGreaterThan(0.5);
@@ -97,6 +98,7 @@ test("creator credit: loading screen, website footer, README and LICENSE @smoke"
   const footerText = footer[1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ");
   expect(footerText).toContain(COMPANY);
   expect(footerText).toContain("Created by Sam Eyde III");
+  expect(footerText).toContain("Produced by Juwon Shon");
   expect(footerText).toContain(COPYRIGHT);
   // the repository files
   expect(readFileSync("README.md", "utf8")).toContain(COPYRIGHT);

@@ -1,6 +1,6 @@
 # Glydrift
 
-**Published by Gleyde Technologies, LLC. Created by Sam Eyde III, Founder & CEO.**
+**Published by Gleyde Technologies, LLC. Created by Sam Eyde III, Founder & CEO. Produced by Juwon Shon, COO.**
 © 2026 Gleyde Technologies, LLC. All rights reserved. Glydrift is not open source; see [LICENSE](LICENSE).
 
 A one-tap, portrait, neon-cosmos arcade flyer built with **Phaser 3 (WebGL)** and **Vite**,

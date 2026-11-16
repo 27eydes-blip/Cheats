@@ -1,7 +1,7 @@
 // Title screen: dimmed living background, the selected hero flying a figure-eight, a big
 // ENDLESS button, LEVELS (level mode, which replaced the Daily Challenge), four main buttons
 // (Heroes, Shop, Leaderboard, Settings) and one MORE sheet holding everything else.
-import { COPYRIGHT, CREATOR_ROLE, HOME_CREDIT, PUBLISHED_BY } from "../legal.js";
+import { COPYRIGHT, CREATOR_ROLE, HOME_CREDIT, PRODUCER_ROLE, PUBLISHED_BY } from "../legal.js";
 import Phaser from "phaser";
 import { BIOMES, biomeIndex, biomeStateAt, blendPalette, CLASSIC } from "../biomes/biomes.js";
 import { COIN_COLOR, fitCamera, FONT, NUM_FONT, VIEW } from "../config.js";
@@ -765,7 +765,7 @@ export class MenuScene extends Phaser.Scene {
       ["daily", 86],
       ["row", 76],
       ["more", 58],
-      ["credit", 18], // "Gleyde Technologies, LLC · Created by Sam Eyde III" (never remove: tests/e2e/credit.spec.js)
+      ["credit", 18], // "Gleyde Technologies, LLC · Created by Sam Eyde III · Produced by Juwon Shon" (never remove: tests/e2e/credit.spec.js)
     ];
     const fixed = blocks.reduce((a, b) => a + b[1], 0);
     const n = blocks.length;
@@ -1753,7 +1753,7 @@ export class MenuScene extends Phaser.Scene {
     const plusRow = hasGold || hasTheme;
     // + the privacy policy / support row (App Review needs the policy reachable in the app)
     // + CREDITS (the creator and copyright: never remove; tests/e2e/credit.spec.js)
-    const h = (Install.available ? 910 : 820) + (plusRow ? 90 : 0) + 76 + 92;
+    const h = (Install.available ? 910 : 820) + (plusRow ? 90 : 0) + 76 + 92 + 18;
     const c = this.modalBase(h, 0x3ef4ff);
     const y0 = H / 2 - h / 2;
     c.add(neonText(this, W / 2, y0 + 56, "SETTINGS", 40, 0x3ef4ff, { blur: 14 }));
@@ -1938,12 +1938,13 @@ export class MenuScene extends Phaser.Scene {
       plainText(this, W / 2, cy - 26, "Glydrift", 17, "#e8fdff"),
       plainText(this, W / 2, cy - 6, PUBLISHED_BY, 14, "#d8d0ff"),
       plainText(this, W / 2, cy + 12, CREATOR_ROLE, 14, "#d8d0ff"),
-      plainText(this, W / 2, cy + 30, COPYRIGHT, 13, "#a89ed8"),
+      plainText(this, W / 2, cy + 30, PRODUCER_ROLE, 14, "#d8d0ff"),
+      plainText(this, W / 2, cy + 48, COPYRIGHT, 13, "#a89ed8"),
     ]);
     c.add(credits);
     // the support address, readable in the app itself (App Review: a way to reach the developer);
     // tapping it starts an email
-    const mail = plainText(this, W / 2, cy + 56, SUPPORT_EMAIL, 15, "#3ef4ff").setName("supportEmail");
+    const mail = plainText(this, W / 2, cy + 74, SUPPORT_EMAIL, 15, "#3ef4ff").setName("supportEmail");
     // (a roomier tap area than the text itself, still clear of DONE)
     mail
       .setInteractive({
