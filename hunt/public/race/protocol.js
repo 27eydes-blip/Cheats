@@ -15,5 +15,12 @@ export const RACE_MODES = {
   trial: { name: 'Time Trial', desc: 'Just you and the clock. Beat your best time.', laps: 3, solo: true, items: false, weapons: false },
 };
 export const RACE_MODE_IDS = Object.keys(RACE_MODES);
+// the first-race tutorial: a private solo run on the training track (not in the lobby's mode list).
+// Steps in order; the server reports each one as a {k:'tut', step} event.
+export const TUTORIAL_MODE = { name: 'Tutorial', desc: 'Steer, drift, grab an item and fire.', laps: 0, solo: true, items: true, weapons: true, tutorial: true, time: 180 };
+export const TUT_STEPS = ['steer', 'drift', 'item', 'fire', 'done'];
+export const RESET_COOLDOWN = 3; // s between RESET presses
+export const STUCK_NUDGE = 1.5; // s pinned against a wall before the automatic nudge
+export const STUCK_RESET = 3; // s stuck before the automatic reset
 export const COUNTDOWN = 3; // seconds on the grid before GO
 export const RESPAWN_TIME = 2; // seconds from destroyed to back on track

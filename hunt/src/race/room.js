@@ -9,6 +9,9 @@
 //                                                a friend who arrives mid-race waits for the next one
 //        &lobby=<s>                              (rooms) a fixed countdown instead of the host's START
 // /race?mode=trial&track=                        Time Trial (always solo, never bots)
+// /race?mode=tutorial                            the first-race tutorial (solo, training track, no rewards
+//                                                but the one-time progress.race.tut flag)
+//        &sens=0.5..1.5                          (any race) the player's steering sensitivity
 // /race?rejoin=<id>&secret=&match=<name>         reconnect to the same race
 import { RaceSim, RACE_MODES } from './sim.js';
 import { DT, DRIVERS } from '../../public/race/physics.js';
@@ -23,7 +26,7 @@ const whoOf = (q) => (q.get('token') ? 't:' + q.get('token') : 'n:' + cleanName(
 const sendJSON = (ws, msg) => { try { ws.send(JSON.stringify(msg)); } catch {} };
 export const REJOIN_GRACE_MS = 25000;
 export const PUBLIC_MODES = ['grand', 'elim', 'battle'];
-const NAME_RE = /^(room:[A-Z0-9]{1,12}|rq:(grand|elim|battle):[a-z]+:[01]:[0-9a-f-]{36}|solo:[a-z]+:[0-9a-f-]{36})$/;
+const NAME_RE = /^(room:[A-Z0-9]{1,12}|rq:(grand|elim|battle):[a-z]+:[01]:[0-9a-f-]{36}|solo:[a-z]+:[0-9a-f-]{36}|tut:[0-9a-f-]{36})$/;
 
 export async function routeRace(req, env) {
   if (req.headers.get('Upgrade') !== 'websocket') return new Response('Expected WebSocket', { status: 426 });
@@ -33,6 +36,7 @@ export async function routeRace(req, env) {
   const track = TRACK_IDS.includes(q.get('track')) ? q.get('track') : null;
   let name;
   if (NAME_RE.test(back)) name = back; // reconnect to the same race
+  else if (q.get('mode') === 'tutorial') name = `tut:${crypto.randomUUID()}`; // (never a friend room)
   else if (room) name = 'room:' + room;
   else if (q.get('mode') === 'trial') name = `solo:${track || pick(TRACK_IDS)}:${crypto.randomUUID()}`;
   else {
@@ -91,6 +95,7 @@ class Loop {
 export function raceConfig(name, q, dev = false) {
   if (name.startsWith('rq:')) { const [, mode, track, bots] = name.split(':'); return { mode, track, bots: bots === '1', lobby: 8 }; }
   if (name.startsWith('solo:')) return { mode: 'trial', track: name.split(':')[1], bots: false, lobby: 0.5 };
+  if (name.startsWith('tut:')) return { mode: 'tutorial', track: 'tutorial', bots: false, lobby: 0.5 };
   const mode = RACE_MODES[q.get('mode')] ? q.get('mode') : 'grand';
   const track = TRACK_IDS.includes(q.get('track')) ? q.get('track') : pick(TRACK_IDS);
   const lobby = Math.max(1.5, Math.min(30, Number(q.get('lobby')) || 12));
@@ -156,7 +161,7 @@ export class RaceRoom {
         const res = raceResult(r);
         const out = await mutateProgress(this.env.DB, r.p.account, (raw) => applyRace(JSON.parse(raw), res));
         const ws = sockets.get(r.p.id);
-        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, coins: out.coins, mcoins: out.matchCoins || 0, best: out.best ?? null, improved: !!out.improved });
+        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, coins: out.coins, mcoins: out.matchCoins || 0, best: out.best ?? null, improved: !!out.improved, ...(out.tut != null ? { tut: out.tut } : {}) });
       } catch (e) { console.log('race record failed', e && e.message); }
     }
   }
@@ -191,7 +196,7 @@ export class RaceRoom {
   seat(q, mname, server) {
     const sim = this.sim;
     const d = q.get('driver') || q.get('brawler'), name = cleanName(q.get('name'));
-    const id = sim.join(name, DRIVERS[d] ? d : 'volt');
+    const id = sim.join(name, DRIVERS[d] ? d : 'volt', { sens: q.has('sens') ? Number(q.get('sens')) : 1 });
     if (id == null) return null;
     const p = sim.players.get(id);
     p.who = whoOf(q);

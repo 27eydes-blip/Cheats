@@ -37,17 +37,19 @@ WebSocket: `wss://<host>/race?<params>`
 | --- | --- |
 | `name`, `driver` | display name, driver id (`volt brick wisp dune rook flicker`) |
 | `token` | account session token (results are recorded server-side for that account) |
-| `mode` | `grand` (default), `elim`, `battle`, `trial` |
+| `mode` | `grand` (default), `elim`, `battle`, `trial`, `tutorial` (the first-race tutorial: see below) |
 | `track` | `desert frozen ashlands neon`, or omit / `any` for random |
 | `bots` | `0` = FILL WITH BOTS off (no bot ever joins), anything else = on |
 | `room` | friend room code (A-Z 0-9, up to 12). The FIRST player in creates the room and is its host: their `mode`, `track`, `bots` win (later joiners' choices are ignored) and they press START. The room keeps these between races; the last race's host (matched by `token`, else by name) gets the room back. A friend who joins mid-race gets `roomwait` and is seated in the next race. |
 | `lobby` | rooms only: a fixed lobby countdown in seconds (1.5-30) instead of the host's START (tests, scripts) |
 | `rejoin`, `secret`, `match` | reconnect to the same car (values from `welcome`) |
 | `skip` | public races: a match id not to be put back into |
+| `sens` | steering sensitivity 0.5..1.5 (default 1, the `raceSens` setting): scales the joystick heading turn rate on the server; the prediction uses the same value (`params.sens`) |
 
 Public races (no `room`) go through `RaceMatchmaker`: one filling race per (mode, track choice,
 bots on/off), so a bots-off player never lands in a race with bots. Bots-off races wait for a
-second human. `mode=trial` is always a private solo race (never bots).
+second human. `mode=trial` is always a private solo race (never bots). `mode=tutorial` is always a
+private solo run on the training track (`track` and `room` are ignored), see **Tutorial**.
 
 Page URLs (client side only, the server does not read them): `/?room=CODE` is a friend's invite
 (straight into that race room); `/?race=1&mode=&track=&room=&bots=0|1&driver=` opens a race with those options.
@@ -69,14 +71,16 @@ All JSON. `t` is the type.
   The race clock `tm` starts at `-cd`: negative = grid countdown (nothing moves), `GO` at 0.
 - `s` snapshot, every tick (30/s):
   - `n` server tick, `tm` race time (s), `ld` leader id (bounty target, 0 = none)
-  - `c` cars: `[id, x, y, angle*1000, flags, hp% (0-100), lap, speed]` for every car still in the race
+  - `c` cars: `[id, x, y, angle*1000, flags, hp% (0-100), lap, speed, stuck]` for every car still in the race
+    (`stuck`: seconds this car has been stuck, 1 decimal, 0 when free: show RESET pulsing from ~1 s)
   - `rk` all ids in race order (position 1 first)
   - `e` entities: `[id, kind (ENT index), x, y, angle*1000, ownerId, armed]`
     kinds: `missile rocket oil spikes mine turret bolt`
   - `bx` indices into `track.boxes` that are currently taken (respawn after 3 s)
   - `hz` bitmask of active hazards (bit i = `track.hazards[i]`)
   - `md` mode HUD: grand / trial `{laps, ft: seconds left after the winner finished | null}`,
-    elim `{nx: seconds to the next knock-out, left}`, battle `{tl: time left}`
+    elim `{nx: seconds to the next knock-out, left}`, battle `{tl: time left}`,
+    tutorial `{tut: the step to do now ('steer' 'drift' 'item' 'fire', 'done' at the end), tl: time left}`
   - `ev` events this tick (only present when there are any), see below
   - `me` your own state:
     `s` packed car state (`STATE_KEYS` order: x y a vx vy drift dc boostT boostP airT spinT spinDir slowT),
@@ -85,10 +89,11 @@ All JSON. `t` is the type.
     `sh` shield left, `em` EMP left, `gh` ghost (respawn protection) left, `lap`, `cp` last checkpoint,
     `rk` position, `rt` respawn countdown (s, 0 = alive), `mc` match coins, `k` takedowns, `d` wrecks,
     `lt` current lap time, `bl` best lap, `fin` finishing place (0 = racing), `out` knocked-out place (elim),
-    `auto` 1 = the autopilot drives your car (after you finish)
-- `end` `{mode, track, rank, you, n, time, bestLap, mc, k, results}`;
+    `auto` 1 = the autopilot drives your car (after you finish), `stuck` seconds stuck (as in `c`),
+    `rcd` RESET cooldown left (s, 0 = RESET works now)
+- `end` `{mode, track, rank, you, n, time, bestLap, mc, k, results, tut? (tutorial: 1 = completed)}`;
   results rows: `[id, name, driver, rank, finishTime|null, takedowns, matchCoins, isBot, bestLap, finished, wrecks]`, in final order.
-- `progress` (after `end`, accounts only) `{delta (trophies), xp, coins, mcoins (match coin payout), levels, progress, best (time trial best for this track), improved}`.
+- `progress` (after `end`, accounts only) `{delta (trophies), xp, coins, mcoins (match coin payout), levels, progress, best (time trial best for this track), improved, tut? (tutorial: the account's flag, 1 = done)}`.
 - `retry` `{reason}` (race already started / full), `rejoinfail`, `pong {c}`.
 
 ### Events (`ev` rows)
@@ -106,6 +111,12 @@ All JSON. `t` is the type.
 | `['arc', id, targetId]` Volt, `['pulse', id]` Brick, `['rail', id, x0, y0, x1, y1, hitId]` Wisp, `['blink', id, x0, y0, x1, y1]` Flicker | weapon visuals (Dune / Rook show up as `mine` / `turret` entities) |
 | `['boom', x, y, entKind]` | projectile / mine explosion |
 | `['jump', id]`, `['mt', id, tier]`, `['bump', a, b, speed]` | ramp launch, mini-turbo fired (1 blue, 2 orange, 3 purple), hard car bump |
+| `{k: 'reset', id, auto}` | the car was put back on the racing line (RESET button: `auto` 0; stuck 3 s: `auto` 1). Flash / sound it. |
+| `{k: 'nudge', id}` | the car was pinned against a wall for 1.5 s and got pushed back toward the racing line |
+| `{k: 'tut', id, step}` | tutorial: `step` (`steer` `drift` `item` `fire`) was just done; `done` follows the last one |
+
+The rows above are arrays (`e[0]` is the kind); the `reset`, `nudge` and `tut` events are objects with
+`k` (as agreed for the controls work), so test `Array.isArray(e) ? e[0] : e.k`.
 
 ### Car flags (`FLAG` in protocol.js)
 
@@ -114,9 +125,18 @@ GHOST 1024, SLOW 2048, REVERSE 16384`; drift spark tier = `(f >> 12) & 3` (`drif
 
 ## Messages: client -> server
 
-- `{t:'in', s: seq, st: steer -1..1, th: throttle -1..1 (negative = brake, then reverse), dr: 0|1 drift held, f: 1 fire pressed, i: 1 item pressed}`
+- `{t:'in', s: seq, st: steer -1..1, th: throttle -1..1 (negative = brake, then reverse), dr: 0|1 drift held, f: 1 fire pressed, i: 1 item pressed, ha?, hm?}`
   one per tick (30/s). `f` / `i` are one-shot presses (send 1 once). The server applies one
   physics step per input, in order, and acknowledges with `me.ack`.
+  Joystick steering: `ha` = target heading (radians, world frame, same convention as the car angle;
+  the camera never rotates, so the stick's screen direction is a world direction) and `hm` = stick
+  magnitude 0..1 (already multiplied by the sensitivity, clamped to 1). With `ha` present and
+  `hm > 0.15` the physics turns the nose toward `ha` (shortest way, rate proportional to the error so it
+  never overshoots, capped by `hm`, the speed-based turn rate and `sens`) and ignores `st`.
+  Without `ha` (keys, gamepad, bots) `st` steers exactly as before.
+- `{t:'reset'}` RESET: back on the racing line at your place in the race (never behind your last
+  checkpoint), facing along the track, stopped, ghosted for 1 s. One every 3 s (`me.rcd`); ignored
+  on the grid, in the air, wrecked or finished. The server also resets a car stuck for 3 s by itself.
 - `{t:'pick', driver}` change driver in the lobby.
 - `{t:'host', start: 1}` / `{t:'host', bots: true|false}` the room host's START and FILL WITH BOTS (`rc.host({start, bots})`); anyone else is ignored.
 - `{t:'ping', c}` -> `pong`. `{t:'bye'}` quit for good (the result is recorded as last place now).
@@ -132,6 +152,8 @@ rc.on('lobby', (m) => ...); rc.on('start', ...); rc.on('end', (m) => ...); rc.on
 
 // every animation frame:
 rc.setInput({ st, th, dr });          // held controls (th defaults to 1: auto-accelerate)
+rc.setInput({ ha, hm });              // joystick: target heading + magnitude (ha: null = back to st)
+if (resetPressed) rc.reset();         // RESET button (me.rcd = cooldown left, me.stuck = seconds stuck)
 if (firePressed) rc.fire();           // one-shot
 if (itemPressed) rc.useItem();
 rc.frame(now);                        // sends inputs at 30 Hz and predicts your car
@@ -151,6 +173,9 @@ for (const e of rc.drainEvents()) ...  // effects, sounds, kill feed
   `rc.results` (`end` message), `rc.progress`, `rc.phase` (`connecting lobby race end failed idle`).
 - `rc.pick(driver)` in the lobby, `rc.leave()` to quit.
 - A dropped socket mid-race reconnects automatically (3 tries) to the same car.
+
+`params.sens` (0.5..1.5) goes to the server as the `sens` join param and the prediction steers with
+it too, so pass the same value you scale `hm` with.
 
 Controls the spec asks for (map them to `setInput` / `fire` / `useItem`):
 touch (landscape) left-thumb horizontal stick -> `st`; accelerate is automatic (`th: 1`), the
@@ -175,7 +200,10 @@ ArrowDown/KeyS brake/reverse; ShiftLeft/ShiftRight/Space drift; KeyJ / mouse 0 f
 - `T.gates` checkpoints `{k, x0, y0, x1, y1, s, a}` (k = 0 is the start/finish line), `T.grid` (10 start
   slots `{x, y, a}`), `T.boxes` item boxes `{x, y}`, `T.hazards` timed dangers
   `{kind: 'geyser' | 'arc', x, y, r, period, on, phase}` (active per `hz`), `T.obstacles` pillars
-  `{x, y, r}`, `T.bounds`, `T.L` lap length (px).
+  `{x, y, r, cone?}` (`cone: 1` = a traffic cone on the training track: draw it as a cone), `T.bounds`,
+  `T.L` lap length (px).
+- The training track: `getTrack('tutorial')` (`TUTORIAL_DEF` in tracks.js, not in `TRACK_IDS`),
+  `trackName('tutorial')` = Training Track, world `desert`.
 - Arena (`T.kind === 'arena'`): `T.box` `{x0, y0, x1, y1}` walls, `T.surf`, `T.circles` round zones
   `{x, y, r, kind, surf}`, `T.obstacles`, `T.boxes`, `T.grid` spawns, `T.hazards`.
 - Minimap: main loop `px/py`, cars from `view().cars`, the leader (`view().leader`) highlighted
@@ -191,8 +219,19 @@ ArrowDown/KeyS brake/reverse; ShiftLeft/ShiftRight/Space drift; KeyJ / mouse 0 f
 - Drivers: `DRIVERS[id]` (`name, car, role, top, accel, handling, armor, color, accent`) and
   `WEAPONS[id]` (`name, desc, cd`). Items: `ITEMS[id]` (`name, desc`).
 - Account: `progress.race.best[track]` (best Time Trial time, s), `progress.race.bestLap[track]`,
-  `progress.race.races / wins / trials`; per-mode stats in `progress.modes.race_<mode>`.
+  `progress.race.races / wins / trials`, `progress.race.tut` (1 = tutorial completed); per-mode stats in `progress.modes.race_<mode>`.
 - The FILL WITH BOTS toggle maps to `bots=0|1`; the friend room code to `room=CODE`.
+
+## Tutorial (`mode=tutorial`)
+
+A private solo run on the training track (no bots; one parked target car named Target to shoot),
+3 s countdown, then the steps in order: `steer` (through the cone slalom on the first straight),
+`drift` (charge a drift to the first spark tier: the long curve after the cones is made for it),
+`item` (hold an item: drive through the row of boxes on the back straight), `fire` (fire your
+weapon), then `done` and the run ends (`end` with `tut: 1`). The current step is in `md.tut`; every
+step done is a `{k:'tut', id, step}` event. Time limit 3 minutes. No trophies, XP, coins or race
+stats: a completed run only sets `progress.race.tut = 1` on the account (once). SKIP is the
+client's: leave (`rc.leave()`) and set a local flag.
 
 ## Rules worth knowing (server-enforced)
 
@@ -205,11 +244,22 @@ ArrowDown/KeyS brake/reverse; ShiftLeft/ShiftRight/Space drift; KeyJ / mouse 0 f
 - Items roll by position: leaders get defensive items, the back of the pack the catch-up ones.
 - Grand Race ends 30 s after the winner crosses the line (5 s if only bots are still racing), or
   when everyone is in, or at 5 minutes.
+- Walls: hitting one takes away the speed into the wall and keeps the speed along it (the car
+  slides on); a hit costs at most 12% of that (once per hit, a scrape costs nothing more), and a car
+  pressed nose-first into a wall turns along it. Throttle is full again the moment the car is free.
+- Never stuck: "stuck" = touching a wall (or wedged against a pillar or a car), slower than 60 px/s,
+  throttle on; or no progress along the track for 3 s (not counted in the air, wrecked, finished or
+  on the grid). Pinned for 1.5 s: a nudge (`nudge` event) toward the racing line, facing along the
+  track, rolling. Stuck for 3 s: an automatic reset (`reset` event, `auto: 1`).
 - Remember the credit: "Created by Sam Eyde III" must stay visible in the race screens too.
 
 ## Tests
 
 `node test/race-physics.test.js` (determinism, drift tiers, surfaces, walls, ramps, bumps),
+`race-steer` (joystick heading steering, sensitivity, the unchanged `st` path, forgiving drifts),
+`race-walls` (every track's walls, pillars and corners: moving again within 2 s; scraping; nudge,
+auto-reset, RESET button; 10-bot races never stuck over 3 s), `race-tutorial` (the training track,
+the steps in order, the one-time flag, joystick prediction end to end),
 `race-tracks` (validator on every track and arena), `race-sim` (laps, anti-cut, respawn, items,
 weapons, bounty), `race-modes` (all 4 modes, bots on/off), `race-bots` (every driver laps every
 track, 10-bot races finish, 2 ms tick budget), `race-results` (progression), `race-room` (the

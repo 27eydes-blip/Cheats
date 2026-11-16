@@ -88,7 +88,7 @@ function projSeg(c, i, x, y, o) {
 export function buildTrack(def) {
   const T = { key: def.key, name: def.name, world: def.world, kind: def.arena ? 'arena' : 'track', laps: def.laps || 3, def };
   T.corridors = [];
-  T.obstacles = (def.obstacles || []).map((o) => ({ x: o.x, y: o.y, r: o.r }));
+  T.obstacles = (def.obstacles || []).map((o) => ({ x: o.x, y: o.y, r: o.r, ...(o.cone ? { cone: 1 } : {}) })); // cone: draw as a cone (tutorial)
   T.circles = (def.circles || []).map((z) => ({ ...z })); // world-space round zones (surf / pad / ramp)
   T.hazards = (def.hazards || []).map((h, i) => ({ id: i, period: 4, on: 1.2, phase: 0, ...h }));
   T.hazardsAt = T.hazards.filter((h) => h.s != null); // placed along a corridor: resolved below

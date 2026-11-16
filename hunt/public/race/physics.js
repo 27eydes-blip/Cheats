@@ -6,7 +6,14 @@
 // Model: arcade top-down car. Velocity is split into forward and sideways parts; grip bleeds off
 // the sideways part (low grip = slide). Drifting cuts grip and biases the turn; holding it charges
 // three spark tiers and letting go fires a mini-turbo. Boosts raise the speed cap for a while.
-// Ramps launch the car (airborne: no steering, no ground effects). Walls push out and bounce.
+// Ramps launch the car (airborne: no steering, no ground effects). Walls take away the speed into
+// the wall and keep the speed along it (the car slides along), turning a car that hit nose-first
+// toward the wall's direction so it can drive on.
+//
+// Steering comes two ways: `st` (-1..1, keys / gamepad / bots: a turn rate) or a target heading
+// `ha` (radians, world frame) with stick magnitude `hm` (0..1) from the touch joystick: the nose
+// turns toward ha at a rate proportional to the error (never past it), capped by hm, the speed
+// based turn rate and the player's sensitivity `sens` (0.5..1.5).
 
 export const TICK_RATE = 30; // see PROTOCOL.md: 30 Hz halves per-tick travel at racing speed vs 20 Hz
 export const DT = 1 / TICK_RATE;
@@ -47,13 +54,23 @@ export const BOOSTS = { pad: { t: 0.9, p: 1.32 }, turbo: { t: 1.6, p: 1.45 }, bo
 export const SLOW_MUL = 0.62;
 export const BOOST_ACCEL = 1500;
 export const AIR_PER_SPEED = 1 / 1150; // ramp air time = speed * this (s): jump length grows with speed^2
-const BRAKE = 1500, COAST = 140, REVERSE_TOP = 0.32, WALL_E = 0.35;
+export const DRIFT_RAMP = 0.2; // the slide builds in over this long (no snap into a drift)
+export const DRIFT_GRACE = 0.3; // early in a drift: the direction follows a corrected stick, a speed dip doesn't end it
+const DRIFT_TIGHT = 1.1, DRIFT_BASE = 0.7, DRIFT_WIDE = 0.4; // drift turn rate (x turn): full in / neutral / full against
+const DRIFT_CARRY = 0.35; // share of the slide speed grip takes off that a drift carries forward (drifts keep their pace)
+export const HM_DEAD = 0.15; // stick magnitude below this: no heading steering
+export const HEAD_K = 8; // heading steering: turn rate per radian of error (/s); HEAD_K * DT < 1 = no overshoot
+export const WALL_LOSS = 0.12; // speed lost along the wall on a full-on hit (less on a graze), once per hit
+const WALL_REHIT = 0.3; // s free of the wall before a touch counts as a new hit (scraping costs nothing more)
+const WALL_ALIGN = 4; // rad/s: how fast a car pressed nose-first into a wall turns along it
+const BRAKE = 1500, COAST = 140, REVERSE_TOP = 0.32;
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const wrap = (a) => (a > Math.PI ? a - 2 * Math.PI : a <= -Math.PI ? a + 2 * Math.PI : a);
 
 export function newCar(x = 0, y = 0, a = 0) {
-  return { x, y, a, vx: 0, vy: 0, drift: 0, dc: 0, boostT: 0, boostP: 1, airT: 0, spinT: 0, spinDir: 1, slowT: 0, surf: 'road', pc: -1, ps: 0, pd: 0 };
+  // dg: drift age (s), wh: time since the last wall touch (s, capped), wall: touching a wall this step
+  return { x, y, a, vx: 0, vy: 0, drift: 0, dc: 0, boostT: 0, boostP: 1, airT: 0, spinT: 0, spinDir: 1, slowT: 0, dg: 0, wh: 1, surf: 'road', pc: -1, ps: 0, pd: 0, wall: 0 };
 }
 export const driftTier = (dc) => (dc >= DRIFT_TIERS[2] ? 3 : dc >= DRIFT_TIERS[1] ? 2 : dc >= DRIFT_TIERS[0] ? 1 : 0);
 
@@ -63,11 +80,13 @@ export function addBoost(car, b) {
   car.boostT = Math.max(car.boostT, b.t);
 }
 
-// sanitize a client input (untrusted) into {st, th, dr}
+// sanitize a client input (untrusted) into {st, th, dr, ha, hm}; ha null = no heading steering
 export function cleanInput(m) {
   const n = (v) => (typeof v === 'number' && Number.isFinite(v) ? clamp(v, -1, 1) : 0);
-  return { st: n(m.st), th: n(m.th), dr: m.dr ? 1 : 0 };
+  const ha = typeof m.ha === 'number' && Number.isFinite(m.ha) && Math.abs(m.ha) < 100 ? wrap(Math.atan2(Math.sin(m.ha), Math.cos(m.ha))) : null;
+  return { st: n(m.st), th: n(m.th), dr: m.dr ? 1 : 0, ha, hm: ha == null ? 0 : clamp(n(m.hm), 0, 1) };
 }
+export const cleanSens = (v) => (typeof v === 'number' && Number.isFinite(v) ? clamp(v, 0.5, 1.5) : 1);
 
 const PR = {};
 // Advance one car by dt. ev (optional) collects what happened: wall impact speed, ramp launch,
@@ -100,23 +119,39 @@ export function stepCar(car, inp, st, T, dt = DT, ev = null) {
     grip *= 0.25; drag = 1.6;
     car.drift = 0; car.dc = 0;
   } else {
-    // STEERING: none at a standstill, a bit less at high speed
+    // STEERING: none at a standstill, a bit less at high speed (tighter circles slow, wider fast)
     const turn = st.handling * clamp(spd / 240, 0, 1) * (1 - 0.3 * clamp((spd - 450) / 450, 0, 1)) * S.turn;
+    // heading steering (joystick): s is the equivalent steer, from the error to the target heading
+    const head = inp.ha != null && inp.hm > HM_DEAD;
+    let s = inp.st, err = 0, cap = 1;
+    if (head) {
+      err = wrap(inp.ha - car.a);
+      cap = (0.35 + 0.65 * clamp((inp.hm - HM_DEAD) / 0.6, 0, 1)) * cleanSens(inp.sens);
+      s = clamp((err * HEAD_K) / Math.max(turn, 0.5), -cap, cap);
+    }
     // DRIFT: start by holding drift while steering at speed; release fires the mini-turbo
-    if (car.drift === 0 && inp.dr && Math.abs(inp.st) > 0.35 && vf > DRIFT_MIN_SPEED) { car.drift = inp.st > 0 ? 1 : -1; car.dc = 0; }
+    if (car.drift === 0 && inp.dr && Math.abs(s) > 0.35 && vf > DRIFT_MIN_SPEED) { car.drift = s > 0 ? 1 : -1; car.dc = 0; car.dg = 0; }
     if (car.drift !== 0) {
-      if (!inp.dr || vf < DRIFT_KEEP_SPEED) {
+      const early = car.dg < DRIFT_GRACE;
+      if (!inp.dr || (vf < DRIFT_KEEP_SPEED && !early)) {
         const tier = vf >= DRIFT_KEEP_SPEED ? driftTier(car.dc) : 0;
         if (tier) { addBoost(car, MINI_TURBO[tier]); if (ev) ev.turbo = tier; }
-        car.drift = 0; car.dc = 0;
+        car.drift = 0; car.dc = 0; car.dg = 0;
       } else {
-        // steering into the drift tightens it, against it widens it
-        car.a = wrap(car.a + car.drift * turn * (0.62 + 0.5 * inp.st * car.drift) * dt);
-        car.dc += dt * (0.75 + 0.5 * Math.abs(inp.st));
-        grip *= 0.6; drag = 0.12;
+        // grace: a stick corrected hard the other way right after the start flips the drift
+        if (early && s * car.drift < -0.5) car.drift = -car.drift;
+        car.dg = Math.min(1, car.dg + dt);
+        const ramp = clamp(car.dg / DRIFT_RAMP, 0, 1), sd = clamp(s * car.drift, -1, 1); // + into the drift, - against
+        let rel; // turn rate in the drift's direction
+        if (head) rel = clamp(err * car.drift * HEAD_K, -DRIFT_WIDE * turn, DRIFT_TIGHT * turn * Math.min(1, cap)); // the nose follows the stick, never past it
+        else rel = turn * (sd >= 0 ? DRIFT_BASE + (DRIFT_TIGHT - DRIFT_BASE) * sd : DRIFT_BASE + (DRIFT_BASE - DRIFT_WIDE) * sd);
+        // the slide blends in from normal steering
+        car.a = wrap(car.a + (car.drift * rel * ramp + s * turn * (1 - ramp)) * dt);
+        car.dc += dt * (0.75 + 0.5 * (head ? Math.min(1, inp.hm) : Math.abs(sd)));
+        grip *= 1 - 0.4 * ramp; drag = 0.12 * ramp;
       }
     }
-    if (car.drift === 0) car.a = wrap(car.a + inp.st * turn * dt * (vf < -5 ? -1 : 1));
+    if (car.drift === 0) car.a = wrap(car.a + s * turn * dt * (vf < -5 && !head ? -1 : 1));
   }
   // the velocity stays put while the nose turns: split it in the NEW heading's frame, so the
   // sideways part (the slide) is what grip bleeds off
@@ -137,11 +172,28 @@ export function stepCar(car, inp, st, T, dt = DT, ev = null) {
     }
   }
   if (drag) vf *= Math.exp(-drag * dt);
-  if (vf > max) vf = max + (vf - max) * Math.exp(-2.5 * dt); // over the cap (boost ended, rough ground)
+  const vl0 = vl;
+  if (car.wh < 0.07) grip *= 0.35; // against a wall: slide along it, grip would only steer the speed into it
   vl *= Math.exp(-grip * dt);
+  if (car.drift && vf > 0) vf = Math.min(Math.max(vf, max), vf + (Math.abs(vl0) - Math.abs(vl)) * DRIFT_CARRY * clamp(car.dg / DRIFT_RAMP, 0, 1));
+  if (vf > max) vf = max + (vf - max) * Math.exp(-2.5 * dt); // over the cap (boost ended, rough ground)
   car.vx = vf * hx - vl * hy;
   car.vy = vf * hy + vl * hx;
   move(car, T, dt, ev);
+  // nose-first into a wall: turn along it (the way the car already leans, else the way the track
+  // goes) so throttle drives the car on instead of pinning it
+  if (car.wall && car.spinT <= 0) {
+    hx = Math.cos(car.a); hy = Math.sin(car.a);
+    const into = -(hx * WN.nx + hy * WN.ny); // 1 = straight at the wall
+    if (into > -0.04 && car.vx * hx + car.vy * hy > -5) {
+      let tx = -WN.ny, ty = WN.nx, side = hx * tx + hy * ty;
+      if (Math.abs(side) < 0.15) side = WN.fx * tx + WN.fy * ty || 1; // head-on: the track's direction
+      if (side < 0) { tx = -tx; ty = -ty; }
+      // aim a touch away from the wall so the car leaves it instead of scraping forever
+      const da = wrap(Math.atan2(ty + WN.ny * 0.1, tx + WN.nx * 0.1) - car.a), r = WALL_ALIGN * Math.max(into, 0.35) * dt;
+      car.a = wrap(car.a + clamp(da, -r, r));
+    }
+  }
   // ground effects of where we ended up
   if (car.airT <= 0) {
     if (PR.pad) { addBoost(car, BOOSTS.pad); if (ev) ev.pad = 1; }
@@ -153,23 +205,36 @@ export function stepCar(car, inp, st, T, dt = DT, ev = null) {
   return car;
 }
 
-// move with substeps so a fast car never tunnels through a wall; bounce off what it hits
+// contact of the last wall touch in move(): normal (out of the wall) and the track's forward direction there
+const WN = { nx: 0, ny: 0, fx: 0, fy: 0 };
+// move with substeps (each well under a car radius) so a fast car never tunnels through a wall or
+// a pillar. A wall takes the speed into it (no bounce: a rebound would only carry the car off the
+// wall before it turns along it) and keeps the speed along it; a new hit (not every tick of a
+// scrape) costs up to WALL_LOSS of that.
 function move(car, T, dt, ev) {
-  const dx = car.vx * dt, dy = car.vy * dt;
-  const steps = Math.max(1, Math.ceil(Math.sqrt(dx * dx + dy * dy) / (CAR_R * 0.7)));
-  for (let k = 0; k < steps; k++) {
-    car.x += dx / steps; car.y += dy / steps;
-    for (let it = 0; it < 3; it++) {
+  car.wall = 0;
+  car.wh = Math.min(1, car.wh + dt);
+  for (let k = 0, steps = 1; k < steps; k++) {
+    // velocity can change on a hit: re-plan the rest of the move from the remaining time
+    const rem = dt * (1 - k / steps), dx = car.vx * rem, dy = car.vy * rem;
+    if (k === 0) steps = Math.max(1, Math.ceil(Math.sqrt(dx * dx + dy * dy) / (CAR_R * 0.6)));
+    const left = steps - k;
+    car.x += dx / left; car.y += dy / left;
+    for (let it = 0; it < 4; it++) {
       T.probe(car.x, car.y, CAR_R, PR);
       if (PR.pen <= 0) break;
       car.x += PR.nx * PR.pen; car.y += PR.ny * PR.pen;
+      car.wall = 1;
+      WN.nx = PR.nx; WN.ny = PR.ny;
+      if (PR.c >= 0) { const c = T.corridors[PR.c]; WN.fx = c.tx[PR.i]; WN.fy = c.ty[PR.i]; } else if (T.box) { WN.fx = (T.box.x1 + T.box.x0) / 2 - car.x; WN.fy = (T.box.y1 + T.box.y0) / 2 - car.y; } else { WN.fx = WN.fy = 0; }
       const vn = car.vx * PR.nx + car.vy * PR.ny;
       if (vn < 0) {
-        car.vx -= (1 + WALL_E) * vn * PR.nx; car.vy -= (1 + WALL_E) * vn * PR.ny;
-        if (-vn > 100) { car.vx *= 0.92; car.vy *= 0.92; }
-        if (-vn > 320) { car.drift = 0; car.dc = 0; }
+        car.vx -= vn * PR.nx; car.vy -= vn * PR.ny;
+        if (car.wh >= WALL_REHIT) { const keep = 1 - WALL_LOSS * clamp(-vn / 400, 0.15, 1); car.vx *= keep; car.vy *= keep; }
+        if (-vn > 320) { car.drift = 0; car.dc = 0; car.dg = 0; }
         if (ev && -vn > (ev.wall || 0)) ev.wall = -vn;
       }
+      car.wh = 0;
     }
   }
   T.probe(car.x, car.y, CAR_R, PR);
@@ -190,8 +255,8 @@ export function collideCars(a, b, ma, mb) {
 }
 
 // ---- wire format for the own-car state (prediction needs all of it)
-export const STATE_KEYS = ['x', 'y', 'a', 'vx', 'vy', 'drift', 'dc', 'boostT', 'boostP', 'airT', 'spinT', 'spinDir', 'slowT'];
-const SCALE = [100, 100, 10000, 100, 100, 1, 1000, 1000, 1000, 1000, 1000, 1, 1000];
+export const STATE_KEYS = ['x', 'y', 'a', 'vx', 'vy', 'drift', 'dc', 'boostT', 'boostP', 'airT', 'spinT', 'spinDir', 'slowT', 'dg', 'wh'];
+const SCALE = [100, 100, 10000, 100, 100, 1, 1000, 1000, 1000, 1000, 1000, 1, 1000, 1000, 1000];
 export function packState(car) { return STATE_KEYS.map((k, i) => Math.round(car[k] * SCALE[i]) / SCALE[i]); }
 export function unpackState(arr, car = newCar()) { STATE_KEYS.forEach((k, i) => { car[k] = arr[i]; }); return car; }
 export const speedOf = (car) => Math.hypot(car.vx, car.vy);

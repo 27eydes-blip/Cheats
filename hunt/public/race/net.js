@@ -2,7 +2,7 @@
 // rate, own-car prediction + reconciliation with the shared physics, ~100 ms interpolation of
 // everything else, events, results, reconnect. The renderer / HUD / touch layer reads view()
 // every frame and drains events. See PROTOCOL.md.
-import { DT, TICK_RATE, DRIVERS, newCar, stepCar, unpackState, packState, cleanInput } from './physics.js';
+import { DT, TICK_RATE, DRIVERS, newCar, stepCar, unpackState, packState, cleanInput, cleanSens } from './physics.js';
 import { getTrack } from './tracks.js';
 import { ITEM_IDS } from './items.js';
 import { ENT, FLAG } from './protocol.js';
@@ -12,7 +12,7 @@ const MAX_PENDING = 90;
 const lerpA = (a, b, t) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * t; };
 
 export class RaceClient {
-  // o: { base: 'wss://host' (or ws://), params: {name, driver, token, room, mode, track, bots, lobby},
+  // o: { base: 'wss://host' (or ws://), params: {name, driver, token, room, mode, track, bots, lobby, sens},
   //      transport(url) -> WebSocket-like (or a Promise of one), now() -> ms }
   constructor(o = {}) {
     this.base = o.base || '';
@@ -31,7 +31,7 @@ export class RaceClient {
     this.err = { x: 0, y: 0, a: 0 }; // visual smoothing of prediction corrections
     this.pending = []; // inputs not yet acknowledged
     this.seq = 0;
-    this.held = { st: 0, th: 1, dr: 0 }; // accelerate is on by default (touch layout)
+    this.held = { st: 0, th: 1, dr: 0, ha: null, hm: 0 }; // accelerate is on by default (touch layout)
     this.press = { f: 0, i: 0 };
     this.acc = 0; this.lastFrame = null;
     this.snaps = []; // recent snapshots for interpolation
@@ -72,6 +72,10 @@ export class RaceClient {
   pick(driver) { if (DRIVERS[driver]) { this.params.driver = driver; this.send({ t: 'pick', driver }); } }
   // friend room host: START, and FILL WITH BOTS on/off (the server ignores anyone else)
   host(o) { this.send({ t: 'host', ...(o.start ? { start: 1 } : {}), ...(typeof o.bots === 'boolean' ? { bots: o.bots } : {}) }); }
+  // RESET: back on the racing line facing forward (the server allows one every 3 s; see me.rcd)
+  reset() { this.send({ t: 'reset' }); }
+  // the steering sensitivity the server applies to this car (the `sens` join param), for the prediction
+  sens() { return cleanSens(this.params.sens == null ? 1 : Number(this.params.sens)); }
 
   // a dropped connection mid-race: rejoin the same car (3 tries)
   async onClose() {
@@ -130,7 +134,8 @@ export class RaceClient {
   // own-car prediction runs only while we drive it ourselves
   predicting() { const me = this.me; return !!me && this.latest && this.latest.tm > 0 && !me.rt && !me.auto && !me.out; }
 
-  // controls: held state (steer -1..1, throttle -1..1, drift 0|1) and one-shot presses
+  // controls: held state (steer -1..1, throttle -1..1, drift 0|1, target heading ha (rad, world;
+  // null = steer by st) + stick magnitude hm 0..1) and one-shot presses
   setInput(inp) { this.held = { ...this.held, ...cleanInput({ ...this.held, ...inp }) }; }
   fire() { this.press.f = 1; }
   useItem() { this.press.i = 1; }
@@ -149,10 +154,12 @@ export class RaceClient {
   // one input tick (also usable directly by tests / headless clients)
   step() {
     if (this.phase !== 'race' || !this.ws) return;
-    const inp = { t: 'in', s: ++this.seq, st: this.held.st, th: this.held.th, dr: this.held.dr ? 1 : 0, f: this.press.f, i: this.press.i };
+    const h = this.held, head = h.ha != null;
+    const inp = { t: 'in', s: ++this.seq, st: h.st, th: h.th, dr: h.dr ? 1 : 0, f: this.press.f, i: this.press.i, ...(head ? { ha: Math.round(h.ha * 1e4) / 1e4, hm: Math.round(h.hm * 1e3) / 1e3 } : {}) };
     this.press.f = this.press.i = 0;
     this.send(inp);
-    const p = { s: inp.s, st: inp.st, th: inp.th, dr: inp.dr };
+    // (the prediction uses exactly what the server will see: the rounded heading, our sensitivity)
+    const p = { ...cleanInput(inp), s: inp.s, sens: this.sens() };
     this.pending.push(p);
     if (this.pending.length > MAX_PENDING) this.pending.shift();
     if (this.car && this.predicting()) stepCar(this.car, p, DRIVERS[this.myDriver()], this.T);

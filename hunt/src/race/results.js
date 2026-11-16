@@ -2,7 +2,8 @@
 // XP, coins, Hunt Pass XP, daily missions and lifetime stats all work for races. Races are tagged
 // 'race_<mode>' in the per-mode stats. A race's match coins (item boxes, laps, takedowns, bounty
 // steals) are paid out on top, capped. Time Trial is solo: it never moves trophies (a solo "win"
-// every time would be free trophies); it saves your best time per track instead.
+// every time would be free trophies); it saves your best time per track instead. The tutorial pays
+// nothing: finishing it only sets the one-time flag progress.race.tut = 1.
 import { applyMatch, normalize } from '../../public/progression.js';
 
 export const MATCH_COIN_CAP = 40;
@@ -14,7 +15,7 @@ export function raceResult(row) {
   return {
     rank: row.rank, players: row.players, kills: row.kills | 0, bounty: row.steals | 0, brawler: row.driver,
     mode: raceTag(row.mode), won: undefined, assists: 0, steals: row.steals | 0, wstat: {},
-    raceMode: row.mode, track: row.track, mc: row.mc | 0, time: row.time ?? null, bestLap: row.bestLap ?? null,
+    raceMode: row.mode, track: row.track, mc: row.mc | 0, time: row.time ?? null, bestLap: row.bestLap ?? null, tut: row.tut ? 1 : 0,
   };
 }
 
@@ -23,6 +24,11 @@ export function applyRace(prog, r) {
   const race = (p.race = p.race && typeof p.race === 'object' ? p.race : {});
   race.best ||= {};
   race.bestLap ||= {};
+  if (r.raceMode === 'tutorial') {
+    const first = !!r.tut && race.tut !== 1;
+    if (r.tut) race.tut = 1;
+    return { progress: p, delta: 0, xp: 0, coins: 0, levels: [], mastery: [], wxp: [], tut: race.tut === 1 ? 1 : 0, first };
+  }
   if (r.raceMode === 'trial') {
     race.trials = (race.trials | 0) + 1;
     const cur = race.best[r.track];

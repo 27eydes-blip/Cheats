@@ -33,6 +33,7 @@ export function drive(sim, p, inp, n) { const d = driver(sim, p); for (let i = 0
 export function collectEvents(sim) {
   const all = [];
   const orig = sim.snapshots.bind(sim);
-  sim.snapshots = () => { for (const e of sim.events) all.push([sim.time, ...e]); orig(); };
+  // (array rows; the object events {k: 'reset' | 'nudge' | 'tut', ...} come as [time, k, event])
+  sim.snapshots = () => { for (const e of sim.events) all.push(Array.isArray(e) ? [sim.time, ...e] : [sim.time, e.k, e]); orig(); };
   return all;
 }

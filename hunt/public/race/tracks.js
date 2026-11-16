@@ -154,16 +154,36 @@ export const ARENA_DEFS = {
   },
 };
 
+// The training track for the first-race tutorial (mode `tutorial` only; not in TRACK_IDS, so never
+// in the track picker or a random pick): a cone slalom on the first straight, one long drift curve,
+// a row of item boxes and a parked target car on the back straight. `tut` marks the sections
+// (main-loop fractions) the server's step checks use; cones are small pillars flagged `cone`.
+const TUT_CONES = [1000, 1220, 1440, 1660, 1880].map((x, i) => ({ x, y: i % 2 ? 665 : 535, r: 18, cone: 1 }));
+export const TUTORIAL_DEF = {
+  key: 'tutorial', name: 'Training Track', world: 'desert', laps: 1,
+  main: {
+    hw: 175, sh: 60, surf: 'road', shoulder: 'sand',
+    pts: [[400, 600], [900, 600], [1400, 600], [1900, 600], [2400, 600], [2900, 700], [3150, 1050], [2950, 1450],
+      [2450, 1580], [1900, 1600], [1300, 1600], [800, 1580], [380, 1400], [230, 1000]],
+  },
+  zones: [],
+  obstacles: TUT_CONES,
+  hazards: [],
+  checkpoints: [0, 0.25, 0.5, 0.75],
+  boxes: [{ s: 0.6, n: 4 }],
+  tut: { cones: [900, 1990], drift: [2400, 2450], dummy: 0.72 }, // cones: x span on the first straight; drift: x where the curve starts / ends
+};
 export const TRACK_IDS = Object.keys(TRACK_DEFS);
 const cache = new Map();
-// built (runtime) track for a track key; arena = true gives that world's battle arena
+const defOf = (key, arena) => (arena ? ARENA_DEFS[key] : key === 'tutorial' ? TUTORIAL_DEF : TRACK_DEFS[key]);
+// built (runtime) track for a track key ('tutorial' = the training track); arena = true gives that world's battle arena
 export function getTrack(key, arena = false) {
   const k = (arena ? 'A:' : 'T:') + key;
   if (!cache.has(k)) {
-    const def = arena ? ARENA_DEFS[key] : TRACK_DEFS[key];
+    const def = defOf(key, arena);
     if (!def) return null;
     cache.set(k, buildTrack(def));
   }
   return cache.get(k);
 }
-export const trackName = (key, arena = false) => (arena ? ARENA_DEFS[key]?.name : TRACK_DEFS[key]?.name) || null;
+export const trackName = (key, arena = false) => defOf(key, arena)?.name || null;
