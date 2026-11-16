@@ -58,9 +58,12 @@ export const padStats = (id) => driverStats(id).map((r) => ({ label: r.label, f:
 // shrink a one-line label until it fits its box (never below 11 px): run on refresh / resize only
 export function fitText(el, min = 11) {
   if (!el || !el.clientWidth) return;
-  el.style.fontSize = '';
+  el.style.fontSize = ''; el.style.letterSpacing = '';
   let px = parseFloat(getComputedStyle(el).fontSize);
   while (el.scrollWidth > el.clientWidth + 0.5 && px > min) { px = Math.max(min, px - 1); el.style.fontSize = px + 'px'; }
+  // still too wide at the smallest size (a wider fallback font while the web font is slow or blocked):
+  // close up the letter spacing too
+  if (el.scrollWidth > el.clientWidth + 0.5) el.style.letterSpacing = '0';
 }
 const FEED_MS = 60_000;
 
@@ -298,6 +301,8 @@ export function createSpaceLobby(api) {
   let rz = 0;
   addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(layout); });
   document.fonts?.ready.then(() => requestAnimationFrame(layout));
+  // the space fonts arrive later (loaded on the side): fit the labels again for the real font
+  document.fonts?.addEventListener?.('loadingdone', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(layout); });
   addEventListener('pointermove', (e) => { if (L.visible) bg.setParallax((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1); }, { passive: true });
 
   let stopPresence = null, feedTimer = 0;
