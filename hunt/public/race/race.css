@@ -6,7 +6,8 @@
    canvas on top is never tilted and takes every touch. */
 .rc-root { background: var(--rc-bg, #1b1033); }
 .rc-world { position: absolute; inset: 0; overflow: hidden; pointer-events: none; } /* (clips the tilted canvas: nothing scrolls sideways) */
-.rc-root .rc-cv { pointer-events: none; will-change: transform; backface-visibility: hidden; }
+.rc-root .rc-cv { pointer-events: none; }
+.rc-root:not([data-cam="top"]) .rc-cv { will-change: transform; backface-visibility: hidden; } /* (only the tilted views need their own layer) */
 .rc-fog { position: absolute; left: 0; right: 0; top: 0; height: 0; pointer-events: none; background: linear-gradient(var(--rc-bg, #1b1033) 0 55%, transparent); }
 .rc-fog[hidden] { display: none; }
 .rc-hud { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }

@@ -8,6 +8,12 @@ import { ITEM_IDS } from './items.js';
 import { ENT, FLAG } from './protocol.js';
 
 export const INTERP_TICKS = 3; // others are drawn 3 ticks (100 ms) in the past
+// the render clock for everyone else (see view()): the server clock is estimated from the LEAST
+// late snapshot of the last ~2 s (network jitter only ever makes snapshots late), and the render
+// time glides toward it at most 8% faster or slower than real time, so a late or bunched-up
+// snapshot never moves the other cars backwards or makes them lurch; more than 4 ticks off (a
+// stalled tab, a server hiccup) snaps. Past the newest snapshot cars carry on for up to 2 ticks.
+export const CLOCK_WIN = 64, CLOCK_SNAP = 4, CLOCK_RATE = 0.08, EXTRAP_TICKS = 2;
 const MAX_PENDING = 90;
 const lerpA = (a, b, t) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * t; };
 
@@ -29,6 +35,10 @@ export class RaceClient {
     this.car = null; // predicted own car
     this.carEp = -1;
     this.err = { x: 0, y: 0, a: 0 }; // visual smoothing of prediction corrections
+    // the predicted car one tick earlier: the drawn car is blended between it and the newest tick by
+    // the time left over in the tick accumulator, so it moves every frame (60 / 120 Hz screens) and
+    // not in 30 Hz steps that make the camera, and with it the whole world, judder
+    this.pv = { x: 0, y: 0, a: 0 };
     this.pending = []; // inputs not yet acknowledged
     this.seq = 0;
     this.held = { st: 0, th: 1, dr: 0, ha: null, hm: 0 }; // accelerate is on by default (touch layout)
@@ -36,6 +46,8 @@ export class RaceClient {
     this.acc = 0; this.lastFrame = null;
     this.snaps = []; // recent snapshots for interpolation
     this.latest = null; this.latestAt = 0;
+    this.offS = new Float64Array(CLOCK_WIN); this.offT = new Float64Array(CLOCK_WIN); this.offN = 0; this.off = null; // server tick - local tick, per arrival
+    this.rt = null; this.rtAt = 0; // smoothed render time (server ticks) and when it was last stepped
     this.events = [];
     this.results = null; this.progress = null;
     this.ws = null; this.bye = false; this.tries = 0;
@@ -100,7 +112,7 @@ export class RaceClient {
       case 'ro': if (m.full) this.roster.clear(); for (const [id, r] of Object.entries(m.add)) this.roster.set(+id, { name: r[0], driver: r[1], bot: !!r[2], cos: Array.isArray(r[3]) ? r[3] : null }); break; // cos: store ids (race/garage.js SLOTS order)
       case 'start':
         this.start = m; this.phase = 'race'; this.mode = m.mode; this.trackKey = m.track; this.arena = !!m.arena; this.T = getTrack(m.track, this.arena);
-        this.pending = []; this.car = null; this.carEp = -1; this.snaps = [];
+        this.pending = []; this.car = null; this.carEp = -1; this.snaps = []; this.offN = 0; this.off = null; this.rt = null;
         break;
       case 's': this.onSnap(m); break;
       case 'end': this.results = m; this.phase = 'end'; break;
@@ -111,7 +123,14 @@ export class RaceClient {
   }
 
   onSnap(m) {
+    // (a WebSocket keeps order; anything a little older than what we have is only kept for its
+    // events; a tick count far back means the room restarted its clock: start over from it)
+    if (this.latest && m.n <= this.latest.n && this.snaps.length) {
+      if (this.latest.n - m.n < 60) { if (m.ev) for (const e of m.ev) this.events.push(e); return; }
+      this.snaps = []; this.offN = 0; this.off = null; this.rt = null;
+    }
     this.latest = m; this.latestAt = this.now();
+    this.clockSample(m.n, this.latestAt);
     this.snaps.push(m);
     while (this.snaps.length > 12) this.snaps.shift();
     if (m.ev) for (const e of m.ev) this.events.push(e);
@@ -119,7 +138,7 @@ export class RaceClient {
     this.me = me;
     // drop acknowledged inputs; rebuild the prediction from the server's state + the rest
     while (this.pending.length && this.pending[0].s <= me.ack) this.pending.shift();
-    if (!this.predicting()) { this.car = unpackState(me.s, this.car || newCar()); this.carEp = me.ep; return; }
+    if (!this.predicting()) { this.car = unpackState(me.s, this.car || newCar()); this.carEp = me.ep; this.prevAt(this.car); return; }
     const st = DRIVERS[this.myDriver()];
     const before = this.car;
     const car = unpackState(me.s, newCar());
@@ -128,10 +147,30 @@ export class RaceClient {
     this.corr = before && me.ep === this.carEp ? Math.hypot(before.x - car.x, before.y - car.y) : 0; // last correction (px)
     if (before && me.ep === this.carEp) { // same "epoch": smooth over the correction visually
       this.err.x += before.x - car.x; this.err.y += before.y - car.y; this.err.a = lerpA(0, before.a - car.a, 1) + this.err.a;
-      if (Math.hypot(this.err.x, this.err.y) > 120) this.err.x = this.err.y = this.err.a = 0; // too far: snap
-    } else this.err.x = this.err.y = this.err.a = 0; // respawn / teleport / knock: snap
+      // (the tick-earlier pose moves with the correction: the drawn blend stays where it was)
+      this.pv.x += car.x - before.x; this.pv.y += car.y - before.y; this.pv.a += lerpA(0, car.a - before.a, 1);
+      if (Math.hypot(this.err.x, this.err.y) > 120) { this.err.x = this.err.y = this.err.a = 0; this.prevAt(car); } // too far: snap
+    } else { this.err.x = this.err.y = this.err.a = 0; this.prevAt(car); } // respawn / teleport / knock: snap
     this.car = car; this.carEp = me.ep;
   }
+  // server clock estimate: the largest (= least delayed) tick offset seen in the last ~2 s
+  clockSample(n, at) {
+    const i = this.offN++ % CLOCK_WIN, s = n - (at / 1000) * TICK_RATE;
+    this.offS[i] = s; this.offT[i] = at;
+    let best = -Infinity;
+    for (let k = 0, m = Math.min(this.offN, CLOCK_WIN); k < m; k++) if (at - this.offT[k] <= 2000 && this.offS[k] > best) best = this.offS[k];
+    this.off = best;
+  }
+  // the render time (server ticks) for others at local time now: smooth, never backwards
+  renderTick(now) {
+    const target = (now / 1000) * TICK_RATE + this.off - INTERP_TICKS;
+    if (this.rt == null || Math.abs(target - this.rt) > CLOCK_SNAP || now < this.rtAt) { this.rt = target; this.rtAt = now; return this.rt; }
+    const d = ((now - this.rtAt) / 1000) * TICK_RATE;
+    this.rtAt = now;
+    this.rt += d * (1 + Math.max(-CLOCK_RATE, Math.min(CLOCK_RATE, (target - this.rt) * 0.5)));
+    return this.rt;
+  }
+  prevAt(c) { this.pv.x = c.x; this.pv.y = c.y; this.pv.a = c.a; }
   myDriver() { return this.roster.get(this.id)?.driver || this.params.driver || 'volt'; }
   // own-car prediction runs only while we drive it ourselves
   predicting() { const me = this.me; return !!me && this.latest && this.latest.tm > 0 && !me.rt && !me.auto && !me.out; }
@@ -164,18 +203,20 @@ export class RaceClient {
     const p = { ...cleanInput(inp), s: inp.s, sens: this.sens() };
     this.pending.push(p);
     if (this.pending.length > MAX_PENDING) this.pending.shift();
-    if (this.car && this.predicting()) stepCar(this.car, p, DRIVERS[this.myDriver()], this.T);
+    if (this.car && this.predicting()) { this.prevAt(this.car); stepCar(this.car, p, DRIVERS[this.myDriver()], this.T); }
   }
 
   // what to draw now. Cars: [{id, x, y, a, f (FLAG bits), hp (0-100), lap, spd, me}], own car predicted.
   view(now = this.now()) {
     const L = this.latest;
     if (!L) return null;
-    // render time in server ticks: the newest tick + time since it arrived - the interpolation delay
-    const rt = L.n + ((now - this.latestAt) / 1000) * TICK_RATE - INTERP_TICKS;
-    let a = this.snaps[0], b = this.snaps[this.snaps.length - 1];
-    for (let i = this.snaps.length - 1; i > 0; i--) if (this.snaps[i - 1].n <= rt) { a = this.snaps[i - 1]; b = this.snaps[i]; break; }
-    const t = b.n > a.n ? Math.max(0, Math.min(1, (rt - a.n) / (b.n - a.n))) : 1;
+    // render time in server ticks: the estimated server clock - the interpolation delay (renderTick)
+    if (this.off == null) this.clockSample(L.n, this.latestAt);
+    const rt = this.renderTick(now), sn = this.snaps, last = sn.length - 1;
+    let a = sn[0], b = sn[last];
+    for (let i = last; i > 0; i--) if (sn[i - 1].n <= rt) { a = sn[i - 1]; b = sn[i]; break; }
+    // (past the newest snapshot: carry on along the last step for a moment instead of stopping dead)
+    const t = b.n > a.n ? Math.max(0, Math.min(rt >= b.n ? 1 + EXTRAP_TICKS / (b.n - a.n) : 1, (rt - a.n) / (b.n - a.n))) : 1;
     const prev = new Map(a.c.map((r) => [r[0], r]));
     const cars = b.c.map((r) => {
       const o = prev.get(r[0]) || r;
@@ -186,7 +227,8 @@ export class RaceClient {
     const myRow = L.c.find((r) => r[0] === this.id); // own state: newest, not delayed
     if (mine && myRow) { mine.f = myRow[4]; mine.hp = myRow[5]; mine.lap = myRow[6]; }
     if (mine && this.car && this.predicting()) {
-      mine.x = this.car.x + this.err.x; mine.y = this.car.y + this.err.y; mine.a = this.car.a + this.err.a;
+      const c = this.car, pv = this.pv, f = Math.max(0, Math.min(1, this.acc / DT)), far = Math.abs(c.x - pv.x) + Math.abs(c.y - pv.y) > 200;
+      mine.x = (far ? c.x : pv.x + (c.x - pv.x) * f) + this.err.x; mine.y = (far ? c.y : pv.y + (c.y - pv.y) * f) + this.err.y; mine.a = (far ? c.a : lerpA(pv.a, c.a, f)) + this.err.a;
       mine.spd = Math.hypot(this.car.vx, this.car.vy); mine.drift = this.car.drift; mine.boost = this.car.boostT > 0; mine.air = this.car.airT > 0;
       mine.predicted = true;
     }

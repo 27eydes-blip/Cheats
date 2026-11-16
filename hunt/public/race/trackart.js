@@ -204,14 +204,21 @@ export class TrackArt {
   }
 
   // ---------------------------------------------------------------- chunks
-  setScale(s) { if (Math.abs(s - this.scale) > 0.01) { this.scale = s; this.chunks.clear(); } }
+  // a new pixel scale (the adaptive resolution stepped): chunks already built stay on screen at their
+  // old resolution and are redrawn one per frame (redrawing every visible chunk at once was a long
+  // frame in the middle of the race)
+  setScale(s) { if (Math.abs(s - this.scale) > 0.01) { this.scale = s; this.gen = (this.gen || 0) + 1; } }
   // the chunk canvas at (cx, cy), or null when not built yet (build=false)
   chunk(cx, cy, build = true) {
     const k = cx * 100003 + cy;
     let ch = this.chunks.get(k);
-    if (ch) { ch.used = this.tick; return ch.cv; }
+    if (ch) {
+      ch.used = this.tick;
+      if (ch.gen !== (this.gen || 0) && build && this.redo !== this.tick) { this.redo = this.tick; ch.cv = this.renderChunk(cx, cy); ch.gen = this.gen || 0; }
+      return ch.cv;
+    }
     if (!build) return null;
-    ch = { cv: this.renderChunk(cx, cy), used: this.tick };
+    ch = { cv: this.renderChunk(cx, cy), used: this.tick, gen: this.gen || 0 };
     this.chunks.set(k, ch);
     if (this.chunks.size > MAX_CHUNKS) {
       let oldK = null, old = Infinity;

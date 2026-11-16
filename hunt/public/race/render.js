@@ -143,7 +143,9 @@ export class RaceRenderer {
   resize(W, H, dpr) {
     if (W !== this.W || H !== this.H) this.dusk = null;
     this.W = W; this.H = H; this.dpr = dpr; this.tl = tiltOf(this.cfg, W, H);
-    this.cv.width = Math.round(W * dpr); this.cv.height = Math.round(H * dpr);
+    // (setting a canvas size, even the same one, throws its pixels away and reallocates it)
+    const cw = Math.round(W * dpr), chh = Math.round(H * dpr);
+    if (this.cv.width !== cw || this.cv.height !== chh) { this.cv.width = cw; this.cv.height = chh; }
     const s = this.chunkScale();
     if (this.art) this.art.setScale(s);
     this.cars.setScale(Math.round(this.baseZoom() * dpr * CAR_VIS * 8) / 8);
@@ -156,7 +158,7 @@ export class RaceRenderer {
     let v = this.vis.get(id);
     if (!v) {
       // lt: taillight trail ring (LT points x 2 lights x xy); look: this car's look (from the roster)
-      v = { lt: new Float32Array(LT * 4), ltn: 0, lti: 0, ltT: 0, look: null, lookSrc: undefined, trail: new Float32Array(32), tn: 0, ti: 0, wx: new Float32Array(4), skid: false, flame: 0, flameC: 0, respawnT: 0, hitT: 0, puff: 0, dust: 0, tierPrev: 0, air: 0, airMax: 0.6, spinT: 0, lastX: 0, lastY: 0, pa: null, yaw: 0, bounce: 0, bT: 0, wasAir: false, scrape: 0 };
+      v = { lt: new Float32Array(LT * 4), ltn: 0, lti: 0, ltT: 0, look: null, lookSrc: undefined, trail: new Float32Array(32), tn: 0, ti: 0, wx: new Float32Array(4), skid: false, flame: 0, flameC: 0, respawnT: 0, hitT: 0, puff: 0, dust: 0, tierPrev: 0, air: 0, airMax: 0.6, spinT: 0, lastX: 0, lastY: 0, pa: null, yaw: 0, bounce: 0, bT: 0, wasAir: false, scrape: 0, brk: 0 };
       this.vis.set(id, v);
     }
     return v;
@@ -269,6 +271,7 @@ export class RaceRenderer {
     this.t += dt;
     const t = this.t;
     art.tick++;
+    this.cars.budget = 1; // (after a resolution step: one look's sprites rebuilt per frame)
     const me = view.cars.find((c) => c.me) || null;
     this.meCar = me;
     // CAMERA: follow (the leader once knocked out), look ahead in the driving direction, zoom out at speed
@@ -308,7 +311,9 @@ export class RaceRenderer {
       const cm = this.cm;
       if (focus) {
         const pred = focus.me && rc.car && focus.predicted, spd = pred ? Math.hypot(rc.car.vx, rc.car.vy) : focus.spd;
-        const key = focus.id + ':' + (focus.me ? rc.carEp : 0), snap = key !== this.focusKey || this.visOf(focus.id).respawnT > 0.62;
+        // (a cut - respawn, another car to follow, a replay starting or ending - snaps the view instead of swinging it round)
+        const key = focus.id + ':' + (focus.me ? rc.carEp : 0), cut = Math.abs(focus.x - cam.x) + Math.abs(focus.y - cam.y) > 260;
+        const snap = key !== this.focusKey || this.visOf(focus.id).respawnT > 0.62 || cut;
         this.focusKey = key;
         const S = this.camIn || (this.camIn = { a: 0, spd: 0, top: 900, boost: 0, spin: 0, snap: 0 });
         S.a = focus.a; S.spd = spd; S.top = this.top || 900; S.boost = focus.f & FLAG.BOOST ? 1 : 0; S.spin = focus.f & FLAG.SPIN ? 1 : 0; S.snap = snap ? 1 : 0;
@@ -567,6 +572,10 @@ export class RaceRenderer {
       const c = cars[i], air = c.f & FLAG.AIR;
       if ((pass === 0 && (air || c.me)) || (pass === 1 && (air || !c.me)) || (pass === 2 && !air)) continue;
       const v = this.visOf(c.id);
+      // a jump across the map (respawn, RESET, a slow-mo replay starting or ending): no taillight
+      // streak or skid line across the road, no body-roll kick from the sudden heading
+      if (Math.abs(c.x - v.lastX) + Math.abs(c.y - v.lastY) > 260) { v.ltn = 0; v.tn = 0; v.skid = false; v.pa = null; v.yaw = 0; }
+      v.lastX = c.x; v.lastY = c.y;
       const dead = c.f & FLAG.DEAD;
       const inView = c.x > vw.x0 - 80 && c.x < vw.x1 + 80 && c.y > vw.y0 - 80 && c.y < vw.y1 + 80;
       v.respawnT = Math.max(0, v.respawnT - dt); v.hitT = Math.max(0, v.hitT - dt); v.flame = Math.max(0, v.flame - dt); v.spinT = Math.max(0, v.spinT - dt);
@@ -722,9 +731,12 @@ export class RaceRenderer {
       this.base(g);
       g.globalAlpha = 1;
       // brake lights: bright red at the tail while braking (rivals: the BRAKE flag; you: your BRAKE)
-      if (c.me ? this.meBrake && c.spd > 40 : c.f & FLAG.BRAKE) {
+      // (held a quarter second and faded: a bot taps the brake for a tick or two, ~2 times a second,
+      // and the lights blinked with every tap)
+      v.brk = (c.me ? this.meBrake && c.spd > 40 : c.f & FLAG.BRAKE) ? 0.25 : Math.max(0, v.brk - dt);
+      if (v.brk > 0) {
         const tl = taillightsOf(st);
-        g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.95;
+        g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.95 * Math.min(1, v.brk / 0.1);
         for (let q = 0; q < tl.length; q++) { const o = tl[q], bx = c.x + rox + (cos * o[0] - sin * o[1]) * CAR_VIS * sc, by = c.y + roy + (sin * o[0] + cos * o[1]) * CAR_VIS * sc; g.drawImage(this.glow.red, bx - 15, by - 15, 30, 30); }
         g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
       }

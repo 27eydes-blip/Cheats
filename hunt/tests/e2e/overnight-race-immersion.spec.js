@@ -67,9 +67,10 @@ for (const cam of ['chase', 'top', 'cockpit']) {
     expect(st.w.n).toBeGreaterThan(100);
     expect(st.w.off, `${cam}: own car on screen`).toBe(0);
     expect(st.w.upErr, `${cam}: stick up = forward`).toBeLessThan(1e-6);
-    // the minimap: drawn on the HUD canvas, top right, not blank (its track outline is bright)
+    // the minimap: drawn on the HUD canvas (Top-down: on the world canvas, there is no tilt to
+    // keep it off), top right, not blank (its track outline is bright)
     const map = await page.evaluate(() => {
-      const s = window.__race.session, g = s.hg, d = s.dpr, L = window.__race.layout(), size = Math.round(Math.max(96, Math.min(180, s.H * 0.34)));
+      const s = window.__race.session, g = s.flat ? s.renderer.g : s.hg, d = s.dpr, L = window.__race.layout(), size = Math.round(Math.max(96, Math.min(180, s.H * 0.34)));
       const x = (L.W - s.SA.r - 32 - 2 * s.ctrl.btn.reset.r1 - size) * d, y = (s.SA.t + 6) * d, px = g.getImageData(x, y, size * d, size * d).data;
       let bright = 0; for (let i = 0; i < px.length; i += 4) if (px[i + 3] > 200 && px[i] + px[i + 1] + px[i + 2] > 600) bright++;
       return bright;
