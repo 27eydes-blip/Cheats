@@ -5,6 +5,8 @@ import { buildVehicles } from './art/vehicles';
 import { App } from './app';
 import { Screens } from './ui/screens';
 import { startLoop } from './core/loop';
+import { trackById } from './track/tracks';
+import { sheet } from './art/sheet';
 
 function boot() {
   buildProps();
@@ -12,7 +14,7 @@ function boot() {
   buildVehicles();
   const app = new App();
   const screens = new Screens(app);
-  (window as any).__mc = { app, screens };
+  (window as any).__mc = { app, screens, tracks: trackById, sheet };
   screens.title();
   startLoop((dt) => app.update(dt), (dt) => app.render(dt));
 }

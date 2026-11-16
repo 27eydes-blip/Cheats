@@ -231,16 +231,25 @@ function driver(ctx: Ctx, x: number, seatY: number, st: CarState, c: Pal, mech: 
   px(ctx, x - 4, seatY - 13, c('#c9a04a')); px(ctx, x + 4, seatY - 13, c('#c9a04a'));
   rect(ctx, x - 4, seatY - 12, 2, 2, cap); rect(ctx, x + 3, seatY - 12, 2, 2, cap); // ear flaps
   if (mech) return;
-  // flapping scarf streaming back and to the side
-  const sc = c('#d83a2e'), scL = c('#f6efe0');
+  // long flapping scarf streaming back over the shoulder, red with cream stripes
+  const sc = c('#d83a2e'), scL = c('#f6efe0'), scD = c('#8a1e16');
   const ph = st.scarf;
-  const tailPts = [[0, 0], [2, 1], [4, 1 + (ph === 1 ? 1 : 0)], [6, 2 + (ph === 2 ? 1 : 0)], [8, 2 + ph], [10, 3 + (ph === 0 ? 1 : 0)], [12, 4 - (ph === 1 ? 2 : 0)], [14, 4 + (ph === 2 ? -1 : 1)]];
+  const dir = st.yaw > 0 ? -1 : 1;
   rect(ctx, x - 3, seatY - 9, 7, 2, sc);
-  for (let i = 0; i < tailPts.length; i++) {
-    const [dx, dy] = tailPts[i];
-    const col = (i >> 1) % 2 ? scL : sc;
-    rect(ctx, x + 3 + dx - (st.yaw > 0 ? 18 + dx * 0 : 0), seatY - 9 + dy - 1, 2, 2, col);
+  hline(ctx, x - 3, seatY - 8, 7, scD);
+  for (let i = 0; i < 20; i++) {
+    const f = i / 20;
+    const wave = Math.sin(i * 0.55 - ph * 2.1) * (1 + f * 3);
+    const sx = x + dir * (3 + i);
+    const sy = seatY - 9 - f * 7 + wave;
+    const w = Math.max(1, Math.round(3 - f * 2));
+    const col = Math.floor(i / 3) % 2 ? scL : sc;
+    rect(ctx, sx, Math.round(sy), 1, w, col);
+    px(ctx, sx, Math.round(sy) + w, scD);
   }
+  // fringe at the tip
+  const tx = x + dir * 23, ty = seatY - 16 + Math.round(Math.sin(20 * 0.55 - ph * 2.1) * 4);
+  px(ctx, tx, ty, scL); px(ctx, tx + dir, ty + 1, scL); px(ctx, tx, ty + 2, scL);
 }
 
 export function drawSide(m: CarModel, st: CarState): HTMLCanvasElement {

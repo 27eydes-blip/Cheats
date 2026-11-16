@@ -155,7 +155,8 @@ export class Renderer {
     const camY = playerY + CAM_H + sc.camBob;
     const camXw = sc.camX * ROAD_W;
     const drawDist = Math.round(this.drawDist * w.view * this.quality);
-    const night = w.lamps;
+    const night = w.id === 'night';
+    const lampsOn = w.lamps;
     this.glows.length = 0;
 
     // shake: offset whole frame by a pixel or two
@@ -191,7 +192,7 @@ export class Renderer {
       this.project(seg.p2, x + dx - camXw, seg.y2, z2, camY);
       x += dx; dx += seg.curve;
       const f = n / drawDist;
-      seg.fog = clamp(Math.pow(f, 1.6) * w.haze, 0, 1);
+      seg.fog = clamp(Math.pow(f, w.id === 'fog' ? 0.75 : 1.6) * w.haze, 0, 1);
     }
 
     // --- draw back to front
@@ -271,7 +272,7 @@ export class Renderer {
         const sy = p1.y - (s.y ?? 0) * p1.s;
         const r = this.sprite(img, sp.upp, sx, sy, p1.s, seg.fog);
         if (!r) continue;
-        if (s.lamp && night) {
+        if (s.lamp && lampsOn) {
           const ty = r.y + (sp.topY ?? 2) * (r.h / img.height);
           const tops = sp.topX ?? [img.width / 2];
           for (const tx of tops) this.glows.push({ x: r.x + (s.flip ? img.width - tx : tx) * (r.w / img.width), y: ty, r: Math.max(6, r.h * 0.45), a: 1 - seg.fog * 0.6 });
@@ -310,11 +311,13 @@ export class Renderer {
     }
 
     // --- weather + light
-    if (w.tint) {
+    if (w.tint || pSeg.tunnel) {
       ctx.globalCompositeOperation = 'multiply';
-      ctx.fillStyle = w.tint; ctx.fillRect(0, 0, W, H);
+      if (w.tint) { ctx.fillStyle = w.tint; ctx.fillRect(0, 0, W, H); }
+      if (pSeg.tunnel) { ctx.fillStyle = '#7a6e62'; ctx.fillRect(0, 0, W, H); }
       ctx.globalCompositeOperation = 'source-over';
     }
+    if (w.id === 'fog') { ctx.globalAlpha = 0.18; ctx.fillStyle = w.fog; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
     if (this.glows.length) {
       ctx.globalCompositeOperation = 'lighter';
       for (const g of this.glows) {
@@ -436,7 +439,6 @@ export class Renderer {
     const tA = p1.y - hgt * p1.s, tB = p2.y - hgt * p2.s;
     ctx.fillStyle = seg.i % 6 < 1 ? S[3] : S[1];
     ctx.beginPath(); ctx.moveTo(lA, tA); ctx.lineTo(rA, tA); ctx.lineTo(rB, tB); ctx.lineTo(lB, tB); ctx.fill();
-    ctx.fillStyle = '#0d0a08'; ctx.fillRect(0, 0, this.W, Math.max(0, Math.floor(Math.min(tA, tB))));
     void w;
   }
 
