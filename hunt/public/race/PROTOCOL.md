@@ -137,7 +137,7 @@ The rows above are arrays (`e[0]` is the kind); the `reset`, `nudge` and `tut` e
 ### Car flags (`FLAG` in protocol.js)
 
 `DRIFT 1, BOOST 2, AIR 4, SHIELD 8, LEADER 16, DEAD 32, SPIN 64, EMP 128, FINISHED 256, OUT 512,
-GHOST 1024, SLOW 2048, REVERSE 16384, PROT 32768 (2 s hit protection), PHASE 65536 (Ghost Mode item)`; drift spark tier = `(f >> 12) & 3` (`driftTierOf(f)`).
+GHOST 1024, SLOW 2048, REVERSE 16384, PHASE 65536 (Ghost Mode item), PROT 131072 (2 s hit protection)`; drift spark tier = `(f >> 12) & 3` (`driftTierOf(f)`).
 
 ## Messages: client -> server
 
