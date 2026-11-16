@@ -6,14 +6,14 @@ import { Player, MAX_V, CAR_HALF, CAR_HIT, WOBBLE, type SideLimits } from './pla
 import { FACADE_X, TUNNEL_X, RAIL_X, WALL_GAP, PROP_X } from '../track/types';
 import { portals } from '../art/portals';
 import { Rival, ROSTER, type Mover } from './ai';
-import { TrafficManager } from './traffic';
+import { TrafficManager, type Traffic } from './traffic';
 import { WEATHER, type WeatherId } from '../data/weather';
 import { statsFor, MPH, type UpgradeKind } from '../data/cars';
 import { MODELS, carSprite, CAR_UPP, type ModelId } from '../art/cars';
-import { spr, hitHalf } from '../art/registry';
+import { spr, hitBox } from '../art/registry';
 import { PED_FRAMES, PED_VARIANTS } from '../art/people';
 import type { Scene, DrawCar, Particle, PedDraw } from '../render/renderer';
-import { clamp, wrap, approach, sign } from '../core/math';
+import { clamp, wrap, approach, sign, gapAlong } from '../core/math';
 import { Rng, hash } from '../core/rng';
 import { audio } from '../audio/audio';
 
@@ -39,6 +39,34 @@ export interface GhostLap { trackId: string; time: number; car: ModelId; paint: 
 
 interface PedState { kind: string; variant: number; frame: number; t: number; react: number; reactKind: number; dx: number; dy: number; seg: number; x: number }
 interface Part extends Particle { vx: number; vy: number; vz: number; life: number; max: number; grow: number }
+
+/** One collision, as logged in debug mode (D, or tap pause 5 times). */
+export interface HitLog {
+  t: number; lap: number;
+  kind: 'prop' | 'rival' | 'traffic';
+  id: string;
+  /** Object position (world z, lateral x in road half-widths). */
+  objZ: number; objX: number;
+  /** Player position when it fired. */
+  playerZ: number; playerX: number;
+  /** Signed gap along the road (object minus player) and across it. */
+  dz: number; dx: number;
+  lane: string;
+  effect: string;
+  speedBefore: number; speedAfter: number;
+  /** The thing that was hit (for checking against what was drawn). */
+  ref: object;
+}
+
+/** How far along the road a vehicle or object counts as level with the player's car on screen
+ *  (its base inside the car's sprite). Calibrated against the renderer's projection: beyond this the
+ *  road between the two is visible. */
+export const CONTACT_AHEAD = 240;
+export const CONTACT_BEHIND = 160;
+/** Seconds of immunity to the same object after hitting it. */
+export const HIT_GRACE = 0.75;
+
+export const laneName = (x: number) => (x < -1.07 ? 'left sidewalk' : x < -0.33 ? 'left lane' : x <= 0.33 ? 'centre' : x <= 1.07 ? 'right lane' : 'right sidewalk');
 
 export interface Standing { name: string; player: boolean; total: number; finished: boolean; time: number; model: string }
 
@@ -72,6 +100,16 @@ export class Race {
   stats = { drifts: 0, boosts: 0, horns: 0, crashes: 0, overtakes: 0, topMph: 0, slipT: 0 };
   private prevPlace = 1;
   autopilot: boolean;
+  /** Debug mode: collisions are logged here (and to the console). */
+  debug = false;
+  hits: HitLog[] = [];
+  private pendingHits: HitLog[] = [];
+  private logHit(kind: HitLog['kind'], ref: object, id: string, objZ: number, objX: number, effect: string) {
+    const p = this.player, L = this.track.length;
+    const dz = wrap(objZ - p.z + L / 2, L) - L / 2;
+    const h: HitLog = { t: Math.round(this.t * 100) / 100, lap: this.lap, kind, id, objZ: Math.round(objZ), objX: Math.round(objX * 100) / 100, playerZ: Math.round(p.z), playerX: Math.round(p.x * 100) / 100, dz: Math.round(dz), dx: Math.round((objX - p.x) * 100) / 100, lane: laneName(objX), effect, speedBefore: Math.round(p.speed), speedAfter: 0, ref };
+    this.pendingHits.push(h);
+  }
   private engineOpts = { on: true, boost: false, offroad: false, spin: false };
 
   constructor(opts: RaceOpts) {
@@ -178,6 +216,13 @@ export class Race {
 
     // --- collisions
     this.collide(dt);
+    for (const h of this.pendingHits) {
+      h.speedAfter = Math.round(this.player.speed);
+      this.hits.push(h);
+      if (this.hits.length > 500) this.hits.shift();
+      if (this.debug) console.info(`[hit] ${h.kind} ${h.id} at z=${h.objZ} x=${h.objX} (${h.lane}); player z=${h.playerZ} x=${h.playerX}; gap dz=${h.dz} dx=${h.dx}; ${h.effect}; speed ${h.speedBefore}→${h.speedAfter}`);
+    }
+    this.pendingHits.length = 0;
 
     // --- standings
     this.place = 1 + this.rivals.filter((r) => r.finished ? true : r.laps * L + r.z > this.totalP).length;
@@ -333,76 +378,111 @@ export class Race {
       // and never close enough to touch street furniture: stop short of the nearest solid object's hitbox
       for (const o of s.sprites) {
         if (!o.hit) continue;
-        const reach = Math.abs(o.x) - hitHalf(o.id, o.seed ?? 0) - CAR_HALF - 0.04 + taper;
-        if (o.x < 0) l = Math.min(l, reach); else r = Math.min(r, reach);
+        const hb = hitBox(o.id, o.seed ?? 0, o.x, o.flip);
+        if (!hb) continue;
+        const reach = Math.abs(hb.cx) - hb.half - CAR_HALF - 0.04 + taper;
+        if (hb.cx < 0) l = Math.min(l, reach); else r = Math.min(r, reach);
       }
     }
     return { l, r };
   }
 
+  /** Per-object grace period after a hit: no further collisions with that same object for 0.75 s. */
+  private immuneUntil = new WeakMap<object, number>();
+  private immune(o: object) { return (this.immuneUntil.get(o) ?? -1) > this.t; }
+  private grace(o: object) { this.immuneUntil.set(o, this.t + HIT_GRACE); }
+
+  /**
+   * Collisions use exactly what is drawn:
+   *  - along the road, a thing touches the car only while its base (where its sprite meets the road) is
+   *    level with the car on screen: from CONTACT_BEHIND behind our rear to CONTACT_AHEAD ahead of it;
+   *  - across the road, hitboxes are the visible solid part of each sprite (shrunk 10%), mirrored with
+   *    the sprite when it is drawn flipped;
+   *  - distances use the same lap-wrapped measure (gapAlong) as the renderer.
+   * Only solid, drawn sprites count: wires, banners, bunting, shadows and pedestrians never collide.
+   * A hit costs at most ~40% of current speed, with a short wobble and a sidestep; never a dead stop.
+   */
   private collide(dt: number) {
+    const p = this.player;
+    const speedIn = p.speed;
+    this.collideAll(dt);
+    // however many things were touched this step, never lose more than 40% of speed at once
+    if (p.speed < speedIn * 0.6) p.speed = speedIn * 0.6;
+  }
+
+  private collideAll(dt: number) {
     const p = this.player;
     const L = this.track.length;
     const t = this.t;
-    // roadside objects: hitboxes are the visible solid part of the art (a lamp's pole, a tree's trunk)
-    if (Math.abs(p.x) > 1.2) {
-      outer: for (const dz of [0, 1]) {
-        const s = this.segAt(p.z + dz * SEG_LEN);
-        for (const o of s.sprites) {
-          if (!o.hit) continue;
-          const hh = hitHalf(o.id, o.seed ?? 0);
-          if (!hh || Math.abs(p.x - o.x) >= hh + CAR_HIT) continue;
-          const away = Math.sign(p.x - o.x) || -Math.sign(p.x);
-          if (p.spinT <= 0 && p.pct > 0.25) { p.crash(t, away); this.shake = Math.max(this.shake, 0.7); }
-          else p.bump(t, away * 1.2 * dt * 10, -p.speed * 0.5 * dt);
-          break outer;
-        }
+    // roadside objects
+    for (let k = -1; k <= 2; k++) {
+      const s = this.segAt(p.z + k * SEG_LEN);
+      const g = gapAlong(s.z1, p.z, L);
+      if (g < -CONTACT_BEHIND || g > CONTACT_AHEAD) continue;
+      for (const o of s.sprites) {
+        if (!o.hit || this.immune(o)) continue;
+        const hb = hitBox(o.id, o.seed ?? 0, o.x, o.flip);
+        if (!hb || Math.abs(p.x - hb.cx) >= hb.half + CAR_HIT) continue;
+        const away = Math.sign(p.x - hb.cx) || -Math.sign(p.x);
+        const hard = p.pct > 0.25;
+        this.logHit('prop', o, o.id, s.z1, hb.cx, hard ? 'crash (wobble, -38% speed)' : 'bump (-15% speed)');
+        if (hard) { p.crash(t, away); this.shake = Math.max(this.shake, 0.7); }
+        else { p.speed *= 0.85; p.vx = away * 0.8; audio.bump(); }
+        this.grace(o);
       }
     }
-    // cars: smooth push-back and speed matching, never a positional snap
-    const contact = (o: Mover & { vx?: number; spin?: (t: number) => void; isRival?: boolean }) => {
-      const sep = (o.len + 760) / 2;
-      const dz = wrap(o.z - p.z + L / 2, L) - L / 2;
-      const dxAbs = Math.abs(o.x - p.x);
-      if (Math.abs(dz) >= sep || dxAbs >= o.half + CAR_HIT) return;
-      const side = sign(p.x - o.x) || 1;
-      const sideBySide = Math.abs(dz) < sep * 0.55;
-      if (dz > 0 && !sideBySide) {
-        // we are behind it
-        const rel = p.speed - o.speed;
-        if (rel > MAX_V * 0.3 && p.spinT <= 0) { p.crash(t, side); this.shake = Math.max(this.shake, 0.8); o.spin?.(t); if (!o.isRival) audio.whinny(); }
-        else if (rel > 0) { p.speed = approach(p.speed, o.speed * 0.97, dt * MAX_V * 2.5); if (o.isRival) o.speed += rel * 0.1; p.bump(t, 0, 0); }
-        p.z = Math.max(0, p.z - Math.min(sep - dz, 500 * dt));
-      } else if (dz < 0 && !sideBySide) {
-        // it is behind us: it eases off
-        o.speed = approach(o.speed, Math.min(o.speed, p.speed * 0.97), dt * MAX_V * 2.5);
-        if (o.isRival) o.z -= Math.min(sep + dz, 500 * dt);
+    // other vehicles: only those level with us on screen; anything behind is the AI's job to avoid
+    const contact = (o: Mover & { vx?: number; spin?: (t: number) => void }, isRival: boolean) => {
+      if (this.immune(o)) return;
+      const g = gapAlong(o.z, p.z, L);
+      if (g <= -CONTACT_BEHIND || g >= CONTACT_AHEAD) return;
+      if (Math.abs(o.x - p.x) >= o.half + CAR_HIT) return;
+      const side = sign(p.x - o.x) || (p.x < 0 ? 1 : -1);
+      const name = isRival ? (o as unknown as Rival).def.name : (o as unknown as Traffic).kind;
+      const rel = p.speed - o.speed;
+      if (g > CONTACT_AHEAD * 0.4 && rel > 0) {
+        // we ran into its back
+        if (rel > MAX_V * 0.3 && p.spinT <= 0) {
+          this.logHit(isRival ? 'rival' : 'traffic', o, name, o.z, o.x, 'crash (wobble, -38% speed)');
+          p.crash(t, side); this.shake = Math.max(this.shake, 0.8);
+          o.spin?.(t);
+          if (!isRival) audio.whinny();
+        } else {
+          const loss = Math.min(p.speed * 0.4, Math.max(p.speed * 0.08, rel * 0.6));
+          this.logHit(isRival ? 'rival' : 'traffic', o, name, o.z, o.x, `rear bump (-${Math.round((loss / Math.max(1, p.speed)) * 100)}% speed)`);
+          p.speed -= loss;
+          p.bump(t, 0, 0);
+        }
+        p.vx = side * 1.1; // sidestep out from behind it rather than sitting in it
+        if (isRival) o.speed = Math.min(o.speed + rel * 0.15, o.speed * 1.08);
       } else {
-        // side by side: lean on each other
-        p.vx = approach(p.vx, side * 0.9, dt * 8);
-        if (o.vx !== undefined) o.vx = approach(o.vx, -side * 0.6, dt * 8);
-        p.bump(t, 0, -p.speed * 0.15 * dt);
+        // alongside: lean off each other
+        this.logHit(isRival ? 'rival' : 'traffic', o, name, o.z, o.x, 'side rub (-6% speed)');
+        p.vx = side * 1.1;
+        p.speed *= 0.94;
+        if (o.vx !== undefined) o.vx += (-side * 0.5 - o.vx) * 0.5; // a nudge, blended so it never snaps
+        p.bump(t, 0, 0);
       }
+      this.grace(o);
     };
-    for (const r of this.rivals) contact(Object.assign(r, { isRival: true }));
-    for (const v of this.traffic.list) contact(v);
-    // rivals vs traffic and vs each other: spacing without overlap
+    for (const r of this.rivals) contact(r, true);
+    for (const v of this.traffic.list) contact(v, false);
+    // rivals vs traffic and vs each other: spacing without overlap (same contact window, no teleports)
     for (let i = 0; i < this.rivals.length; i++) {
       const r = this.rivals[i];
       const others: Mover[] = [...this.traffic.list, ...this.rivals.slice(i + 1)];
       for (const o of others) {
-        const dz = wrap(o.z - r.z + L / 2, L) - L / 2;
-        const sep = (o.len + r.len) / 2;
-        if (Math.abs(dz) >= sep || Math.abs(o.x - r.x) >= o.half + r.half) continue;
+        // AI spacing is purely visual: keep a full car length between their sprites (no position jumps)
+        const g = gapAlong(o.z, r.z, L);
+        const space = (o.len + r.len) / 2;
+        if (Math.abs(g) >= space || Math.abs(o.x - r.x) >= o.half + r.half) continue;
         const side = sign(r.x - o.x) || 1;
-        const lead = dz > 0 ? o : r, trail = dz > 0 ? r : o;
-        if (Math.abs(dz) > sep * 0.55) {
-          trail.speed = approach(trail.speed, Math.min(trail.speed, lead.speed * 0.98), dt * MAX_V * 2);
-          trail.z -= Math.min(sep - Math.abs(dz), 400 * dt);
+        const lead = g > 0 ? o : r, trail = g > 0 ? r : o;
+        if (Math.abs(g) > space * 0.55) {
+          trail.speed = Math.min(trail.speed, lead.speed);
           if (r.def.personality === 'reckless' && trail === r && r.speed - o.speed > MAX_V * 0.3) r.spin(this.t);
         }
-        // ease apart sideways in proportion to the overlap: pushes from both sides add up and settle
-        // instead of flipping the car's direction every frame
+        // ease apart sideways in proportion to the overlap
         const overlap = o.half + r.half - Math.abs(o.x - r.x);
         const nudge = Math.min(overlap, 0.9 * dt);
         const oIsRival = (o as Mover & { vx?: number }).vx !== undefined;
@@ -498,11 +578,11 @@ export class Race {
     const lerpPos = (o: { z: number; x: number }) => { const pr = this.prevPos.get(o); return pr ? { z: lz(pr[0], o.z), x: pr[1] + (o.x - pr[1]) * alpha } : { z: o.z, x: o.x }; };
     const ti = this.prev.t + (this.t - this.prev.t) * alpha;
     const cars: DrawCar[] = [];
-    for (const r of this.rivals) { const d = this.rivalDraw(r, ti); const q = lerpPos(r); d.z = q.z; d.x = q.x; d.hit = r.half; cars.push(d); }
+    for (const r of this.rivals) { const d = this.rivalDraw(r, ti); const q = lerpPos(r); d.z = q.z; d.x = q.x; d.hit = r.half; d.ref = r; cars.push(d); }
     for (const v of this.traffic.list) {
       const s = spr(`${v.kind}:${v.variant}`, Math.floor(v.wheel) % 2);
       const q = lerpPos(v);
-      if (s) cars.push({ z: q.z, x: q.x, img: s.img, upp: s.upp, lift: Math.abs(v.bob) * 10, head: night, hit: v.half });
+      if (s) cars.push({ z: q.z, x: q.x, img: s.img, upp: s.upp, lift: Math.abs(v.bob) * 10, head: night, hit: v.half, ref: v });
     }
     if (this.ghost && this.state === 'racing' && this.opts.mode === 'trial') {
       const lapT = this.raceT - this.lapStart;
@@ -533,7 +613,7 @@ export class Race {
     const lift = (Math.sin(ti * 38) * 0.5 + 0.5) * pct * 7 + rum * (Math.sin(ti * 61) * 0.5 + 0.5) * (6 + pct * 18);
     const camBob = Math.sin(ti * 31) * 3.5 * pct + rum * (Math.sin(ti * 47) * 0.6 + Math.sin(ti * 23) * 0.4) * (4 + pct * 12);
     const pz = lz(this.prev.pz, p.z);
-    const player: DrawCar = { z: pz, x: this.prev.px + (p.x - this.prev.px) * alpha, img, upp: CAR_UPP, rot, lift, brake: p.braking, hit: CAR_HIT };
+    const player: DrawCar = { z: pz, x: this.prev.px + (p.x - this.prev.px) * alpha, img, upp: CAR_UPP, rot, lift, brake: p.braking, hit: CAR_HIT, ref: p };
     return {
       track: this.track,
       playerZ: pz,

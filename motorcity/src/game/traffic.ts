@@ -3,6 +3,7 @@ import { Rng } from '../core/rng';
 import { wrap, approach, clamp } from '../core/math';
 import { SEG_LEN, type Segment } from '../track/types';
 import type { Mover } from './ai';
+import { hitHalf } from '../art/registry';
 
 export type TrafficKind = 'carriage' | 'trolley' | 'truck' | 'wagon';
 
@@ -21,7 +22,8 @@ export class Traffic implements Mover {
     this.base = kind === 'trolley' ? 2600 : kind === 'truck' ? 3600 : kind === 'wagon' ? 2000 : 2400;
     this.base *= rng.range(0.9, 1.1);
     this.speed = this.base;
-    this.half = kind === 'trolley' ? 0.32 : kind === 'truck' ? 0.27 : 0.25;
+    // hitbox half-width from the drawn art (see art/vehicles.ts `solid`), a little smaller than the picture
+    this.half = hitHalf(`${kind}:${this.variant}`) || (kind === 'trolley' ? 0.3 : 0.18);
     this.len = kind === 'trolley' ? 2000 : kind === 'truck' ? 1000 : 1300;
   }
   update(dt: number, segs: Segment[], t: number) {
@@ -74,7 +76,7 @@ export class TrafficManager {
   update(dt: number, playerZ: number, t: number, active: boolean) {
     for (let i = 0; i < this.list.length; i++) {
       const v = this.list[i];
-      if (active) v.update(dt, this.segs, t);
+      if (active) { v.update(dt, this.segs, t); v.z = wrap(v.z, this.trackLen); }
       const behind = wrap(playerZ - v.z, this.trackLen);
       if (behind < this.trackLen / 2 && behind > 30 * SEG_LEN) {
         // recycle well ahead, out of sight

@@ -2,7 +2,7 @@
 import { clamp, approach, sign, wrap } from '../core/math';
 import { Rng } from '../core/rng';
 import { SEG_LEN, type Segment } from '../track/types';
-import { MODELS, type CarModel } from '../art/cars';
+import { MODELS, CAR_UPP, type CarModel } from '../art/cars';
 import { MPH } from '../data/cars';
 import { portals } from '../art/portals';
 
@@ -28,7 +28,7 @@ export class Rival implements Mover {
   z: number; x: number; speed = 0;
   tx: number; steer = 0;
   top: number; accel: number;
-  half = 0.21; len = 760;
+  half = ((64 * CAR_UPP) / 2 / 1000) * 0.9; len = 760;
   laps = 0; finished = false; finishTime = 0;
   spinT = 0; spinDir = 1; steamT = 0;
   swerveT = 0; swerveDir = 0;
@@ -114,7 +114,7 @@ export class Rival implements Mover {
       // commit to a passing side for a moment so the car doesn't twitch between lanes
       let side = this.passHold > 0 && this.passSide ? this.passSide : okL && (!okR || Math.abs(left - this.x) <= Math.abs(right - this.x)) ? -1 : 1;
       if ((side < 0 && !okL) || (side > 0 && !okR)) side = -side;
-      if (side !== this.passSide) { this.passSide = side; this.passHold = 0.9; }
+      if (side !== this.passSide) { this.passSide = side; this.passHold = 1.2; }
       target = clamp(side < 0 ? left : right, -0.88, 0.88);
     } else if (this.passHold <= 0) this.passSide = 0;
     // something directly ahead: brake early enough to never run into it (v² = 2·a·d, a ≈ 7000 u/s²)
@@ -153,7 +153,7 @@ export class Rival implements Mover {
     else { this.speed = approach(this.speed, topNow, dt * 4000); this.braking = this.speed - topNow > 300; }
 
     // lateral
-    this.tx = approach(this.tx, target, dt * (ahead ? 1.8 : 0.9));
+    this.tx = approach(this.tx, target, dt * (ahead ? 1.8 : 0.6)); // ease back to the racing line after a pass
     const maxLat = 1.0 * (this.speed / (SEG_LEN * 60)) + 0.3;
     // critically damped lateral spring (gain 2, damping 8): lane changes glide in without overshoot
     const want = clamp((this.tx - this.x) * 2, -maxLat, maxLat);

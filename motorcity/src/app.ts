@@ -48,9 +48,15 @@ export class App {
     window.addEventListener('keydown', first);
     document.getElementById('btn-pause')!.addEventListener('click', () => this.pause());
     input.tiltEnabled = this.save.settings.tilt;
-    // D: debug overlay showing hitboxes, the kerb and the soft walls
-    input.anyKeyListeners.push((e) => {
-      if (e.code === 'KeyD' && !e.repeat) { this.renderer.debug = !this.renderer.debug; toast(this.renderer.debug ? 'Hitboxes: on' : 'Hitboxes: off'); }
+    // Debug mode — press D, or tap the pause button 5 times: draws every hitbox, the kerb and the soft
+    // walls, and logs each collision (type, position, lane, effect) on screen and to the console.
+    input.anyKeyListeners.push((e) => { if (e.code === 'KeyD' && !e.repeat) this.toggleDebug(); });
+    const pauseBtn = document.getElementById('btn-pause')!;
+    let taps: number[] = [];
+    pauseBtn.addEventListener('pointerdown', () => {
+      const now = performance.now();
+      taps = taps.filter((x) => now - x < 2500); taps.push(now);
+      if (taps.length >= 5) { taps = []; this.toggleDebug(); }
     });
     this.resize();
   }
@@ -69,6 +75,31 @@ export class App {
     this.safeR = Math.round((sr / window.innerWidth) * this.renderer.W);
   }
 
+  debug = false;
+  private hitLog = document.getElementById('hitlog')!;
+  private hitsShown = 0;
+  toggleDebug() {
+    this.debug = !this.debug;
+    this.renderer.debug = this.debug;
+    if (this.race) this.race.debug = this.debug;
+    this.hitLog.hidden = !this.debug;
+    this.hitLog.innerHTML = '';
+    this.hitsShown = this.race?.hits.length ?? 0;
+    toast(this.debug ? 'Debug: hitboxes and collision log ON' : 'Debug: off');
+  }
+  /** Debug overlay: the latest collisions, newest first. */
+  private updateHitLog() {
+    const r = this.race;
+    if (!this.debug || !r || r.hits.length === this.hitsShown) return;
+    for (; this.hitsShown < r.hits.length; this.hitsShown++) {
+      const h = r.hits[this.hitsShown];
+      const row = document.createElement('div');
+      row.textContent = `${h.t.toFixed(1)}s  ${h.kind.toUpperCase()} ${h.id} · ${h.lane} · z ${h.objZ} x ${h.objX.toFixed(2)} · gap ${h.dz}/${h.dx.toFixed(2)} · ${h.effect} · ${h.speedBefore}→${h.speedAfter}`;
+      this.hitLog.prepend(row);
+    }
+    while (this.hitLog.children.length > 6) this.hitLog.lastElementChild!.remove();
+  }
+
   persist() { store(this.save); }
   applyVolumes() { const s = this.save.settings; audio.setVolumes(s.master, s.sfx, s.music); }
   music(id: MusicId | null) { audio.music(id); }
@@ -84,6 +115,8 @@ export class App {
 
   startRace(opts: RaceOpts, onEnd: (r: Race) => void) {
     this.race = new Race(opts);
+    this.race.debug = this.debug;
+    this.hitsShown = 0; this.hitLog.innerHTML = '';
     this.attract = null;
     this.onRaceEnd = onEnd;
     this.endTimer = -1;
@@ -145,6 +178,7 @@ export class App {
         this.hud.draw(ctx, this.renderer.W, this.renderer.H, { ...hs, portrait: this.renderer.portrait, dt, safeL: this.safeL, safeR: this.safeR });
         ctx.restore();
         this.hudDom.update(this.race);
+        this.updateHitLog();
         this.controls.cooldown('horn', this.race.hornCool / this.race.hornMax);
         const p = this.race.player;
         this.controls.cooldown('boost', p.boost >= 1 ? 0 : 1 - (p.boost % 1), p.boost >= 1 && p.boostT <= 0);

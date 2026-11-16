@@ -3,7 +3,7 @@ import { canvas, rect, px, hline, vline, S, STONE, shade, flipH, text, textCente
 import { register } from './registry';
 import { Rng } from '../core/rng';
 
-const reg = (id: string, c: HTMLCanvasElement, upp: number, extra: Partial<{ topY: number; topX: number[]; solid: number }> = {}) =>
+const reg = (id: string, c: HTMLCanvasElement, upp: number, extra: Partial<{ topY: number; topX: number[]; solid: number; solidOff: number }> = {}) =>
   ({ img: c, upp, flip: flipH(c), ...extra });
 
 function castIronLamp(): HTMLCanvasElement {
@@ -216,7 +216,7 @@ export function buildProps() {
   register('poplar', [0, 1].map((i) => reg('poplar', tree(i + 9, 'poplar'), 54, { solid: 4 })));
   register('railing', reg('railing', railing(), 26));
   register('stands', [0, 1, 2].map((i) => reg('stands', stands(i), 30)));
-  register('flagpole', [0, 1].map((i) => reg('flagpole', flagpole(i), 32, { solid: 2 })));
+  register('flagpole', [0, 1].map((i) => reg('flagpole', flagpole(i), 32, { solid: 2, solidOff: 3 - 13 })));
   register('smokestack', reg('smokestack', smokestack(), 60));
   register('waterTower', reg('waterTower', waterTower(), 60));
   register('fountain', reg('fountain', fountain(), 40, { solid: 70 }));

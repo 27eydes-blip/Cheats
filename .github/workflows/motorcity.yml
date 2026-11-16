@@ -1,11 +1,11 @@
 # Motor City 1915 (motorcity/): build + phone smoke tests, then publish to Cloudflare Pages
 # (project "motor-city-1915"). Pushes to main publish production; pushes to the
-# polish/motor-city-1915 and claude/motor-city-1915-* branches publish a preview deployment. Nothing else in this repo is touched.
+# polish/motor-city-1915, fix/motor-city-1915-* and claude/motor-city-1915-* branches publish a preview deployment. Nothing else in this repo is touched.
 name: Motor City 1915
 
 on:
   push:
-    branches: [main, 'polish/motor-city-1915', 'claude/motor-city-1915-*']
+    branches: [main, 'polish/motor-city-1915', 'fix/motor-city-1915-*', 'claude/motor-city-1915-*']
     paths: ['motorcity/**', '.github/workflows/motorcity.yml']
   pull_request:
     paths: ['motorcity/**', '.github/workflows/motorcity.yml']
@@ -40,6 +40,8 @@ jobs:
         run: node tests/smoke.test.mjs
       - name: 'Feel tests (iPhone portrait: run-off, soft walls, crashes, car contact, rivals, touch)'
         run: node tests/feel.test.mjs
+      - name: 'Collision audit (full lap of every course, every hit checked against what was drawn)'
+        run: node tests/collisions.test.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: motorcity-dist

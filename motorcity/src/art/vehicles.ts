@@ -112,9 +112,10 @@ function truck(frame: number, variant: number) {
 
 export function buildVehicles() {
   for (let v = 0; v < 3; v++) {
-    register(`carriage:${v}`, [0, 1].map((f) => ({ img: carriage(f, false, v), upp: 9 })));
-    register(`wagon:${v}`, [0, 1].map((f) => ({ img: carriage(f, true, v), upp: 9 })));
-    register(`truck:${v}`, [0, 1].map((f) => ({ img: truck(f, v), upp: 9 })));
-    register(`trolley:${v}`, [{ img: trolley(v), upp: 10 }]);
+    // `solid` = width in pixels of the vehicle's visible body / wheel track, so hitboxes match the art
+    register(`carriage:${v}`, [0, 1].map((f) => ({ img: carriage(f, false, v), upp: 9, solid: 42 })));
+    register(`wagon:${v}`, [0, 1].map((f) => ({ img: carriage(f, true, v), upp: 9, solid: 42 })));
+    register(`truck:${v}`, [0, 1].map((f) => ({ img: truck(f, v), upp: 9, solid: 52 })));
+    register(`trolley:${v}`, [{ img: trolley(v), upp: 10, solid: 72 }]);
   }
 }

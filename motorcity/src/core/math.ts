@@ -8,3 +8,5 @@ export const wrap = (v: number, max: number) => ((v % max) + max) % max;
 export const sign = (v: number) => (v > 0 ? 1 : v < 0 ? -1 : 0);
 /** Shortest forward distance from a to b on a loop of length len. */
 export const loopDist = (a: number, b: number, len: number) => wrap(b - a, len);
+/** Signed shortest distance along a loop from `from` to `to` (positive = ahead). Used by drawing and collisions alike. */
+export const gapAlong = (to: number, from: number, len: number) => wrap(to - from + len / 2, len) - len / 2;

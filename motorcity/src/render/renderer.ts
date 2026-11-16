@@ -2,17 +2,19 @@ import { SEG_LEN, ROAD_W, type Segment, type ProjPt, type WallPiece } from '../t
 import type { BuiltTrack } from '../track/builder';
 import { groundTex, groundColor, WATER, GTEX_H, GTEX_LEN, GTEX_W } from '../art/ground';
 import { FACADE_X, TUNNEL_X, RAIL_X, KERB, CLEAR, WALL_GAP } from '../track/types';
-import { spr, hitHalf } from '../art/registry';
+import { spr, hitBox } from '../art/registry';
 import { portals } from '../art/portals';
 import { skyline, SKY_LH, type SkylineKind } from '../art/sky';
 import { canvas, mix, S } from '../art/pixel';
 import type { Weather } from '../data/weather';
-import { clamp } from '../core/math';
+import { clamp, gapAlong } from '../core/math';
 
 export interface DrawCar {
   z: number; x: number; img: HTMLCanvasElement; upp: number;
   /** Collision half-width (road units), for the debug overlay. */
   hit?: number;
+  /** Game object this was drawn for (lets debug tools compare collisions with what was on screen). */
+  ref?: object;
   alpha?: number; rot?: number; lift?: number; brake?: boolean; head?: boolean; shadow?: boolean;
 }
 export interface Particle { z: number; x: number; y: number; size: number; alpha: number; tone: string; kind: 'smoke' | 'steam' | 'spark' | 'splash' | 'paper' }
@@ -33,6 +35,29 @@ export interface Scene {
   /** 0..1 how far the camera is shaking (crash / boost). */
   shake: number;
   headlamps: boolean;
+}
+
+/** Bounding box of a sprite's painted (opaque) pixels, as fractions of its canvas. Cached per image. */
+const bodyCache = new WeakMap<HTMLCanvasElement, { l: number; t: number; r: number; b: number }>();
+function opaqueBox(img: HTMLCanvasElement) {
+  let bb = bodyCache.get(img);
+  if (!bb) {
+    const d = img.getContext('2d')!.getImageData(0, 0, img.width, img.height).data;
+    let l = img.width, t = img.height, r = -1, b = -1;
+    for (let y = 0; y < img.height; y++) for (let x = 0; x < img.width; x++) {
+      // ignore the faint drop shadow (alpha < 0.6) so the box is the object itself
+      if (d[(y * img.width + x) * 4 + 3] < 150) continue;
+      if (x < l) l = x; if (x > r) r = x; if (y < t) t = y; if (y > b) b = y;
+    }
+    bb = r < 0 ? { l: 0, t: 0, r: 1, b: 1 } : { l: l / img.width, t: t / img.height, r: (r + 1) / img.width, b: (b + 1) / img.height };
+    bodyCache.set(img, bb);
+  }
+  return bb;
+}
+/** Screen rectangle of the painted part of a sprite drawn at (x, y, w, h). */
+export function bodyRect(img: HTMLCanvasElement, x: number, y: number, w: number, h: number) {
+  const bb = opaqueBox(img);
+  return { x: x + bb.l * w, y: y + bb.t * h, w: (bb.r - bb.l) * w, h: (bb.b - bb.t) * h };
 }
 
 export const CAM_H = 900;
@@ -59,6 +84,9 @@ export class Renderer {
   /** Draw hitboxes and wall limits (toggle with D). */
   debug = false;
   private curDraw = 0;
+  /** Screen rectangles of everything drawn last frame, keyed by game object (filled when `record` is on). */
+  record = false;
+  drawn = new Map<object, { x: number; y: number; w: number; h: number }>();
   /** 0..1 fade for sprites near the end of the draw distance, so nothing pops in. */
   private edge = 1;
 
@@ -168,6 +196,7 @@ export class Renderer {
     const night = w.id === 'night';
     const lampsOn = w.lamps;
     this.glows.length = 0;
+    if (this.record) this.drawn.clear();
 
     // shake: offset whole frame by a pixel or two
     // smooth, decaying shake built from sines (no per-frame randomness)
@@ -210,14 +239,14 @@ export class Renderer {
     const playerN = Math.floor((((sc.playerZ - camZ) % loopLen + loopLen) % loopLen) / SEG_LEN + basePct);
     const carsBySeg = new Map<number, DrawCar[]>();
     for (const c of sc.cars) {
-      let rel = c.z - camZ; if (rel < -SEG_LEN) rel += loopLen; if (rel > loopLen - SEG_LEN) rel -= loopLen;
+      const rel = gapAlong(c.z, camZ, loopLen); // same lap-wrapped measure as the collision code
       const n = Math.floor(rel / SEG_LEN + basePct);
       if (n < 0 || n >= drawDist) continue;
       (carsBySeg.get(n) ?? carsBySeg.set(n, []).get(n)!).push(c);
     }
     const parts = new Map<number, Particle[]>();
     for (const p of sc.particles) {
-      let rel = p.z - camZ; if (rel < -SEG_LEN) rel += loopLen; if (rel > loopLen - SEG_LEN) rel -= loopLen;
+      const rel = gapAlong(p.z, camZ, loopLen);
       const n = Math.floor(rel / SEG_LEN + basePct);
       if (n < 0 || n >= drawDist) continue;
       (parts.get(n) ?? parts.set(n, []).get(n)!).push(p);
@@ -260,7 +289,7 @@ export class Renderer {
       const cs = carsBySeg.get(n) ?? [];
       if (n === playerN) cs.push(sc.player);
       if (cs.length) {
-        const rz = (c: DrawCar) => { let r = c.z - camZ; if (r < -SEG_LEN) r += loopLen; if (r > loopLen - SEG_LEN) r -= loopLen; return r; };
+        const rz = (c: DrawCar) => gapAlong(c.z, camZ, loopLen);
         cs.sort((a, b) => rz(b) - rz(a));
         for (const c of cs) this.car(c, seg, sc, w, c === sc.player);
       }
@@ -297,10 +326,13 @@ export class Renderer {
         const sy = p1.y - (s.y ?? 0) * p1.s;
         const r = this.sprite(img, sp.upp, sx, sy, p1.s, seg.fog);
         if (!r) continue;
+        if (this.record && s.hit) this.drawn.set(s, bodyRect(img, r.x, r.y, r.w, r.h));
         if (this.debug && s.hit) {
-          const hh = hitHalf(s.id, s.seed ?? 0);
-          ctx.strokeStyle = '#ff2020'; ctx.lineWidth = 1;
-          ctx.strokeRect(Math.round(sx - hh * p1.w) + 0.5, r.y + 0.5, Math.max(1, Math.round(hh * 2 * p1.w)), r.h);
+          const hb = hitBox(s.id, s.seed ?? 0, s.x, s.flip);
+          if (hb) {
+            ctx.strokeStyle = '#ff2020'; ctx.lineWidth = 1;
+            ctx.strokeRect(Math.round(p1.x + (hb.cx - hb.half) * p1.w) + 0.5, r.y + 0.5, Math.max(1, Math.round(hb.half * 2 * p1.w)), r.h);
+          }
         }
         if (s.lamp && lampsOn) {
           const ty = r.y + (sp.topY ?? 2) * (r.h / img.height);
@@ -563,6 +595,7 @@ export class Renderer {
       ctx.save(); ctx.translate(x, y - dh / 2); ctx.rotate(c.rot);
       ctx.drawImage(c.img, -dw / 2, -dh / 2, dw, dh); ctx.restore();
     } else { const x0 = Math.round(x - dw / 2), x1 = Math.round(x + dw / 2), y0 = Math.round(y - dh), y1 = Math.round(y); ctx.drawImage(c.img, x0, y0, x1 - x0, y1 - y0); }
+    if (this.record && c.ref) this.drawn.set(c.ref, bodyRect(c.img, x - dw / 2, y - dh, dw, dh));
     if (this.debug && c.hit && !isPlayer) this.box(x, y, c.hit * ww, dh * 0.6, '#ffd000');
     ctx.globalAlpha = 1;
     if (c.brake || (w.lamps && !isPlayer)) {

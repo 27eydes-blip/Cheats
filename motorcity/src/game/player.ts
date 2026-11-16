@@ -144,7 +144,7 @@ export class Player {
 
   /** Hit something solid: a short wobble, some speed lost, a nudge away. Never a dead stop. */
   crash(t: number, dir: number) {
-    if (this.spinT > 0 || t - this.lastCrash < 1.2) return;
+    if (this.spinT > 0 || t - this.lastCrash < WOBBLE) return;
     this.lastCrash = t;
     this.spinT = WOBBLE; this.spinDir = dir || 1;
     this.drifting = false; this.boostT = 0;

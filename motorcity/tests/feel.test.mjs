@@ -92,7 +92,7 @@ const sim = (opts) => page.evaluate((o) => {
   check(end > 0.85, 'car recovers after the wobble', `back to ${(end * 100).toFixed(0)}% after 7 s`);
   check(maxWobble <= 0.8, 'wobble is short', `${maxWobble.toFixed(2)} s`);
 }
-// 4. Car contact: rear-end a slower rival. No backward teleports; speed matched smoothly.
+// 4. Car contact: rear-end a slower rival. No backward teleports; each hit costs at most ~40% and the car keeps going.
 {
   const { samples, L } = await sim({ track: 'woodward', rivals: 1, scenes: true, setup: `
     const v = r.rivals[0]; r.player.z = 200 * 100; r.player.x = 0; r.player.speed = r.player.stats.top;
@@ -101,10 +101,11 @@ const sim = (opts) => page.evaluate((o) => {
   for (let i = 1; i < samples.length; i++) {
     let dz = samples[i].z - samples[i - 1].z; if (dz < -L / 2) dz += L;
     worstBack = Math.min(worstBack, dz);
-    worstDv = Math.max(worstDv, samples[i - 1].v - samples[i].v);
+    worstDv = Math.max(worstDv, (samples[i - 1].v - samples[i].v) / Math.max(1, samples[i - 1].v));
   }
   check(worstBack > -10, 'no backward teleport on car contact', `worst step ${worstBack.toFixed(1)} units`);
-  check(worstDv < 700, 'speed matched smoothly, not snapped', `largest one-step drop ${worstDv.toFixed(0)} u/s`);
+  check(worstDv <= 0.401, 'a hit never costs more than 40% of speed', `largest one-step loss ${(worstDv * 100).toFixed(0)}%`);
+  check(Math.min(...samples.map((s) => s.v)) > 1000, 'the car never stops dead', `slowest ${Math.min(...samples.map((s) => s.v)).toFixed(0)} u/s`);
   let interpOk = true;
   for (const s of samples) { const [a, b, c] = s.interp; let d1 = b - a, d2 = c - b; if (d1 < -L / 2) d1 += L; if (d2 < -L / 2) d2 += L; if (d1 < -1 || d2 < -1) interpOk = false; }
   check(interpOk, 'interpolated camera moves forward smoothly between steps');
@@ -171,6 +172,28 @@ const sim = (opts) => page.evaluate((o) => {
   check(dbg === true, 'D toggles the hitbox overlay');
   if (shots) await page.screenshot({ path: join(out, 'feel-hitboxes.png') });
   await page.keyboard.press('KeyD');
+}
+// 7b. Five taps on the pause button toggle debug mode (hitboxes + collision log), even over the pause card.
+{
+  const r = await page.evaluate(async () => {
+    const { app, screens } = window.__mc; screens.clear();
+    if (app.debug) app.toggleDebug();
+    app.startRace({ track: window.__mc.tracks('woodward'), weather: 'clear', mode: 'quick', car: 'runabout', paint: '#a3242b', upgrades: {}, rivals: 3, difficulty: 1, laps: 3 }, () => {});
+    const b = document.getElementById('btn-pause').getBoundingClientRect();
+    const tap = () => {
+      const el = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
+      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }));
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    };
+    for (let i = 0; i < 5; i++) { tap(); await new Promise((res) => setTimeout(res, 60)); }
+    const on = app.debug && app.renderer.debug && app.race.debug && !document.getElementById('hitlog').hidden;
+    const paused = app.paused;
+    if (app.debug) app.toggleDebug();
+    screens.clear(); app.unpause();
+    return { on, paused };
+  });
+  check(r.on, 'tapping the pause button 5 times turns on debug mode');
+  check(r.paused, 'the first tap still pauses the race');
 }
 // 8. Two thumbs: hold steer and brake together via touch, then slide off the steer button: nothing sticks.
 {
