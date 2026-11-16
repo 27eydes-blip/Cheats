@@ -55,7 +55,7 @@ their match coins and get a boost.
 | Mode | Rules |
 |---|---|
 | **Grand Race** | 3 laps, finish order. |
-| **Elimination Race** | Last place is knocked out every 18 seconds (from 30 s) until one is left. |
+| **Elimination Race** | Last place is cut at 25 s, then every 18 s (every 12 s from 4 left, 8 s in the final duel) until one is left, while a black hole chases the pack: touch it and you are out. Knocked out? Spectate, cheer with emotes, or jump into the next race. A win earns the title *Last Racer Standing*. |
 | **Battle Arena** | A closed arena: most takedowns in 2 minutes wins. Items, weapons and respawns. |
 | **Time Trial** | Just you and the clock (never bots). Your best time per track is saved to your account. |
 

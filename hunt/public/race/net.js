@@ -194,8 +194,10 @@ export class RaceClient {
     // lv: item level (1-3), tg: who a missile / drone is locked on to, or who carries a sticky bomb
     const ents = b.e.map((r) => { const o = pe.get(r[0]) || r; return { id: r[0], kind: ENT[r[1]], x: o[2] + (r[2] - o[2]) * t, y: o[3] + (r[3] - o[3]) * t, a: lerpA(o[4] / 1000, r[4] / 1000, t), owner: r[5], armed: !!r[6], lv: r[7] || 1, tg: r[8] || 0 }; });
     const me = this.me;
+    // Elimination: the black hole's race distance, interpolated like the other cars
+    const ha = a.md && a.md.bh, hb = b.md && b.md.bh, hole = hb == null ? null : ha == null ? hb : ha + (hb - ha) * t;
     return {
-      tick: L.n, time: L.tm, countdown: L.tm < 0 ? -L.tm : 0, cars, ents, boxesOff: L.bx, hazardsOn: L.hz, leader: L.ld, ranks: L.rk, hud: L.md,
+      tick: L.n, time: L.tm, countdown: L.tm < 0 ? -L.tm : 0, cars, ents, boxesOff: L.bx, hazardsOn: L.hz, leader: L.ld, ranks: L.rk, hud: L.md, hole,
       me: me && { ...me, item: me.it >= 0 ? ITEM_IDS[me.it] : null, leader: L.ld === this.id },
     };
   }

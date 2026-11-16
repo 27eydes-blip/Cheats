@@ -10,7 +10,8 @@ import { Controls } from './controls.js';
 import { play, engine, stopEngine } from './sound.js';
 import { DRIVERS, driftTier } from './physics.js';
 import { BASE_LOOKS, carName, drawCarPreview } from './looks.js';
-import { RACE_MODES, FLAG } from './protocol.js';
+import { RACE_MODES, FLAG, EMOTES } from './protocol.js';
+import { ElimFx } from './elim.js';
 import { ITEM_IDS, itemLabel } from './items.js';
 import { combatBus, HIT_STOP } from './weapons-fx.js';
 import { trackName } from './tracks.js';
@@ -156,6 +157,9 @@ class RaceSession {
       audio: () => ({ engine: engineOn(), music: raceMusicState() }),
       dev: (k, item, lv) => s.rc?.send({ t: 'dev', k, item, ...(lv ? { lv } : {}) }),
       hitStop: () => s.stopT || 0, bus: combatBus,
+      // Elimination: what this phone shows (danger, hole, duel, spectating) and the emote buttons
+      elim: () => { const v = s.view, md = (v && v.hud) || {}; return v ? { dg: md.dg || 0, nx: md.nx, iv: md.iv, left: md.left, duel: md.duel || 0, bh: md.bh, hole: v.hole, bg: v.me ? v.me.bg : null, out: v.me ? v.me.out || 0 : 0, near: s.elim ? s.elim.near : 0, spec: !!(s.spec && !s.spec.hidden), ranks: v.ranks.slice(), cars: v.cars.length } : null; },
+      emote: (k) => s.emote(k),
       perf: () => s.perfStats(), resetPerf: () => { s.perfN = 0; },
       dpr: () => s.dpr, finishShown: () => s.endShown, mine: s.mine = {},
       // screenshot / perf runs only: drive along the racing line (the touch tests drive for real)
@@ -184,6 +188,9 @@ class RaceSession {
       this.hud = new Hud();
       this.startedAt = performance.now();
       this.renderer.top = DRIVERS[rc.myDriver()]?.top || 900;
+      // ELIMINATION: the black hole / danger layer, and the spectator bar (shown once you are out)
+      this.elim = this.renderer.elim = rc.mode === 'elim' ? new ElimFx() : null;
+      if (this.elim) this.specBar(); else this.spec = null;
       this.root.style.setProperty('--rc-bg', (THEMES[rc.T.world] || THEMES.desert).bg);
       if (!this.tut) startRaceMusic();
       this.best = o.best ?? null;
@@ -350,11 +357,12 @@ class RaceSession {
     const me = m.results.find((r) => r[0] === m.you) || [];
     const battle = m.mode === 'battle', out = rc.me?.out;
     const head = battle ? `#${m.rank}` : m.rank === 1 ? '1ST!' : ORD(m.rank).toUpperCase();
-    const msg = battle ? (m.rank === 1 ? 'Top of the arena!' : `${m.k} takedowns`) : m.rank === 1 ? 'You won the race!' : out ? `Knocked out in ${ORD(out)}` : me[9] ? `Finished ${ORD(m.rank)} · ${fmtTime(m.time)}` : `${ORD(m.rank)} place`;
+    const msg = battle ? (m.rank === 1 ? 'Top of the arena!' : `${m.k} takedowns`) : m.rank === 1 ? (m.mode === 'elim' ? 'Last Racer Standing!' : 'You won the race!') : out ? `Knocked out in ${ORD(out)}` : me[9] ? `Finished ${ORD(m.rank)} · ${fmtTime(m.time)}` : `${ORD(m.rank)} place`;
     const rows = m.results.map((r) => {
-      const right = battle ? `${r[5]} KO` : r[9] ? fmtTime(r[4]) : m.mode === 'elim' ? 'out' : 'DNF';
+      const right = battle ? `${r[5]} KO` : r[9] ? fmtTime(r[4]) : m.mode === 'elim' ? (r[3] === 1 ? 'WINNER' : 'out') : 'DNF';
       return `<li class="${r[0] === m.you ? 'me' : ''}"><span class="r">${r[3]}</span><i class="rc-dot" style="background:${(BASE_LOOKS[r[2]] || BASE_LOOKS.volt).neon}" title="${carName(r[2])}"></i>${esc(r[1])}<span class="k">${right}</span></li>`;
     }).join('');
+    if (m.mode === 'elim') { this.mom.flush(); if (this.spec) this.spec.hidden = true; }
     const clip = this.mom.best;
     el.innerHTML = `<div class="left"><div class="title rank slam">${head}</div><canvas class="posecv"${clip ? ' hidden' : ''}></canvas>${clip ? '<div class="rc-replay"></div>' : ''}</div>
       <div class="right"><div class="rmsg">${esc(msg)} <small>${esc(trackName(m.track, rc.arena) || '')}</small></div>
@@ -391,6 +399,12 @@ class RaceSession {
     for (const r of m.levels || []) ups.push(`LEVEL ${r.level}! +${r.coins} coins`);
     if (m.coins) ups.push(`+${m.coins} coins`);
     if (m.improved && m.best) ups.push(`NEW BEST ${fmtTime(m.best)}`);
+    // Elimination: the takedown and survival bonus, and the title for a win
+    if (m.elim) {
+      if (m.elim.ko) ups.push(`+${m.elim.ko} takedown bonus`);
+      if (m.elim.surv) ups.push(`+${m.elim.surv} survival bonus (${m.elim.secs} s)`);
+      if (m.elim.win) { const t = document.createElement('div'); t.className = 'rc-title'; t.textContent = m.elim.title ? 'NEW TITLE: LAST RACER STANDING' : 'LAST RACER STANDING'; el.querySelector('.rc-ups').after(t); }
+    }
     el.querySelector('.rc-ups').textContent = ups.join(' · ');
   }
 
@@ -453,6 +467,7 @@ class RaceSession {
       if (v.me) this.mom.place(v.me.fin || v.me.rk, v.time);
       this.local(v, dt);
       this.guide(v, dt, inp);
+      if (this.spec) this.spectate(v);
       R.meBrake = !!(inp && inp.th < 0);
       // (before any drawing: a drawing error can never hold the results back)
       if (this.endAt && now >= this.endAt && !this.endShown && !this.mom.slow) this.showEnd();
@@ -487,6 +502,33 @@ class RaceSession {
     if (R.hideMe && car && !(car.f & FLAG.DEAD)) drawHood(g, this.W, this.H, this.SA, R.carLook(car.id, rc), R.cm.sw, R.t);
     this.hud.draw(g, { W: this.W, H: this.H, SA: this.SA, dpr: this.dpr, view: v, me: v.me, rc, ctrl: this.ctrl, dt, t: R.t, mode: rc.mode, art: R.art, renderer: R, wrong: this.wrong, bestTime: this.best,
       tut: !!this.tut, focus: this.focus, hint: this.hintA, canReset: this.resetOk && this.resetCd <= 0 });
+    if (this.elim) this.elim.screen(g, { W: this.W, H: this.H, SA: this.SA, dpr: this.dpr, view: v, me: v.me, R, rc, dt, play, name: (id) => this.name(id) });
+  }
+  // ---------------------------------------------------------------- elimination: spectating
+  // knocked out: the camera follows the leader (render.js), four emotes, LEAVE and NEXT RACE
+  specBar() {
+    const el = (this.spec = document.createElement('div'));
+    el.className = 'rc-spec'; el.hidden = true;
+    el.innerHTML = `<div class="rc-emos">${EMOTES.map((t, i) => `<button class="btn btn-sm alt rc-emo" data-e="${i}">${esc(t)}</button>`).join('')}</div>
+      <div class="rc-sbtns"><button class="btn btn-md red rc-sleave">LEAVE</button><button class="btn btn-md rc-snext" data-sfx="play">NEXT RACE</button></div>`;
+    this.root.insertBefore(el, this.$('.rc-credit'));
+    for (const b of el.querySelectorAll('.rc-emo')) b.onclick = () => this.emote(+b.dataset.e);
+    el.querySelector('.rc-sleave').onclick = () => this.exit();
+    el.querySelector('.rc-snext').onclick = () => this.again();
+  }
+  emote(k) {
+    if (!this.rc || !this.rc.me || !this.rc.me.out || !(k >= 0 && k < EMOTES.length)) return;
+    if (performance.now() - (this.emoAt || 0) < 1500) return; // (the server allows one every 1.5 s too)
+    this.emoAt = performance.now();
+    this.rc.send({ t: 'emote', e: k });
+    play('click');
+  }
+  spectate(v) {
+    const out = !!(v.me && v.me.out) && this.rc.phase === 'race' && !this.endShown;
+    if (!this.spec || out === !this.spec.hidden) return;
+    this.spec.hidden = !out;
+    this.ctrl.enabled = !out; if (out) this.ctrl.reset();
+    this.root.classList.toggle('spectating', out);
   }
 
   // the first-race steering hint, the tutorial prompt and focus, and RESET (stuck seconds from the server)
@@ -624,7 +666,7 @@ class RaceSession {
     if (e[1] === meId) (this.mine[e[0]] ||= []).push(performance.now()); // own events by kind (tests)
     const fall = (id) => { const c = R.carAt(v, id), m = R.meCar; if (!c || !m) return 0.3; return Math.max(0, 1 - Math.hypot(c.x - m.x, c.y - m.y) / 1300); };
     const pan = (id) => (id === meId ? 0 : this.pan(id));
-    { const c = e[0] === 'ko' ? R.carAt(v, e[1]) : null; this.mom.event(e, meId, v.time, (e[0] === 'ko' || e[0] === 'bump') && fall(e[1]) > 0.55, c || (e[0] === 'boom' ? { x: e[1], y: e[2] } : null)); }
+    { const c = e[0] === 'ko' ? R.carAt(v, e[1]) : null; this.mom.event(e, meId, v.time, (e[0] === 'ko' || e[0] === 'bump') && fall(e[1]) > 0.55, c || (e[0] === 'boom' ? { x: e[1], y: e[2] } : e[0] === 'elim' && e[5] != null ? { x: e[5], y: e[6] } : null)); }
     switch (e[0]) {
       case 'ko': {
         if (e[1] === meId) { play('wreck'); play('thud'); haptic('crash'); duckRaceMusic(1.6); }
@@ -702,10 +744,25 @@ class RaceSession {
         }
         else H.log(`${this.name(e[1])} finished ${ORD(e[2])}`, '#c9b8ff');
         break;
-      case 'elim':
-        if (e[1] === meId) { H.banner('KNOCKED OUT', `${ORD(e[2])} place`, '#ff5f5f', 3); play('out'); }
-        else H.log(`${this.name(e[1])} knocked out`, '#ff9f43');
+      case 'elim': {
+        // e: ['elim', id, place, cause ('cut' | 'hole' | 'left'), x, y]
+        if (e[5] != null && this.elim) this.elim.implode(e[5], e[6]);
+        // (you: the HUD keeps KNOCKED OUT · place on screen; the feed says how)
+        if (e[1] === meId) { H.log(e[3] === 'hole' ? 'The black hole got you' : 'You were cut', '#ff5f5f'); play('out'); play('cut'); haptic('crash'); }
+        else { H.log(`${this.name(e[1])} ${e[3] === 'hole' ? 'fell into the black hole' : 'was cut'}`, '#ff9f43'); play('cut', fall(e[1]) * 0.6 + 0.3, pan(e[1])); }
+        if (e[2] === 2) this.mom.markCut(v.time, e[1]); // the final cut: replayed on the results screen
         break;
+      }
+      case 'duel':
+        H.banner('FINAL DUEL', `${this.name(e[1])} vs ${this.name(e[2])}`, '#ffd23f', 2.6); play('duel');
+        // slow-mo on the cut that made it (presentation only); a two-racer race starts as a duel
+        // (short for the two still driving: they keep steering underneath it)
+        if (v.time > 3 && !this.mom.slow) { const racing = e[1] === meId || e[2] === meId; this.mom.finish(v.time, true, racing ? 0.7 : 1.5, racing ? 0.1 : 0.35); }
+        break;
+      case 'burst':
+        if (e[1] === meId) { H.banner('TAKEDOWN BOOST!', e[2] === 'danger' ? 'You hit the racer in danger' : '2 s of speed', '#5ff4ff', 1.4); play('roar'); haptic('boost'); }
+        break;
+      case 'emo': H.log(`${this.name(e[1])}: ${EMOTES[e[2]] || ''}`, '#5ff4ff'); play('emote', e[1] === meId ? 1 : 0.6); break;
     }
   }
   // lap / Time Trial split vs the best lap

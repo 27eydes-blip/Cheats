@@ -12,6 +12,7 @@ and lobby sit on top of `public/race/net.js` (`RaceClient`) and the shared data 
 | `public/race/tracks.js` | Data: 4 clear tracks + 4 open battle arenas. `getTrack(key, arena)`, `TRACK_IDS`, `trackName()`. |
 | `public/race/trackcheck.js` | `validateTrack(T)`: proves a layout is raceable (use it while designing). |
 | `public/race/items.js` | `ITEMS` (12 pickups, levels 1-3: `itemStat(id, lvl)`), `ITEM_IDS` (wire ids), `ODDS` + `rollItem`, `WEAPONS` (one per driver), `COMBAT` (protection, combos, dodge). |
+| `public/race/elim.js` | Client: Elimination's black hole (cached sprites), the racer in danger (outline, ring, DANGER tag), dark edges + warning near the hole, spectator header. |
 | `public/race/weapons-fx.js` | Client: `combatBus` (hit / explode / pickup / lockon / dodge / takedown / hitstop hooks), item art, arming pulse. |
 | `public/race/protocol.js` | Wire constants: `FLAG` bits, `ENT` kinds, `COUNTDOWN`, `RESPAWN_TIME`. |
 | `public/race/net.js` | `RaceClient`: connection, lobby, inputs, prediction, interpolation, events, reconnect. |
@@ -87,7 +88,7 @@ All JSON. `t` is the type.
   - `bx` indices into `track.boxes` that are currently taken (respawn after 3 s)
   - `hz` bitmask of active hazards (bit i = `track.hazards[i]`)
   - `md` mode HUD: grand / trial `{laps, ft: seconds left after the winner finished | null}`,
-    elim `{nx: seconds to the next knock-out, left}`, battle `{tl: time left}`,
+    elim `{nx: seconds to the next cut, left, iv: the running timer's length (s), dg: the racer in danger (last place, 0 = none), bh: the black hole's race distance (px, the scale of race progress; draw it at that arc length mod `T.L` on the main loop), bv: its speed (px/s), duel: 1 = the final two}`, battle `{tl: time left}`,
     tutorial `{tut: the step to do now ('steer' 'drift' 'item' 'fire', 'done' at the end), tl: time left}`
   - `ev` events this tick (only present when there are any), see below
   - `me` your own state:
@@ -98,7 +99,7 @@ All JSON. `t` is the type.
     `rk` position, `rt` respawn countdown (s, 0 = alive), `mc` match coins, `k` takedowns, `d` wrecks,
     `lt` current lap time, `bl` best lap, `fin` finishing place (0 = racing), `out` knocked-out place (elim),
     `auto` 1 = the autopilot drives your car (after you finish), `stuck` seconds stuck (as in `c`),
-    `rcd` RESET cooldown left (s, 0 = RESET works now)
+    `rcd` RESET cooldown left (s, 0 = RESET works now), `bg` (Elimination) your lead on the black hole (px; the warning starts at 900)
 - `end` `{mode, track, rank, you, n, time, bestLap, mc, k, results, tut? (tutorial: 1 = completed)}`;
   results rows: `[id, name, driver, rank, finishTime|null, takedowns, matchCoins, isBot, bestLap, finished, wrecks]`, in final order.
 - `progress` (after `end`, accounts only) `{delta (trophies), xp, coins, mcoins (match coin payout), levels, progress, best (time trial best for this track), improved, tut? (tutorial: the account's flag, 1 = done)}`.
@@ -113,7 +114,10 @@ All JSON. `t` is the type.
 | `['hit', target, src, kind, dmg, big]` | damage taken (`big` 1 = a big hit: the car spins out; show an explosion, hit-stop) |
 | `['shield', id]` | a shield blocked a hit and popped |
 | `['steal', attacker, leader, coins]` | BOUNTY: the leader was wrecked, coins stolen, attacker boosted |
-| `['lap', id, lapNumberNow, lapTime]`, `['fin', id, place, time]`, `['elim', id, place]` | race progress |
+| `['lap', id, lapNumberNow, lapTime]`, `['fin', id, place, time]`, `['elim', id, place, cause, x, y]` | race progress (`elim` cause: `cut` `hole` `left`; x, y: where the car was, it leaves the snapshots now) |
+| `['duel', id1, id2]` | Elimination: two racers left, the FINAL DUEL (once) |
+| `['burst', id, 'ko' \| 'danger']` | Elimination: the 2 s takedown boost (a knock-out, or a hit on the racer in danger) |
+| `['emo', id, k]` | a spectator's emote (`EMOTES[k]` in protocol.js: GG, WOW, GO GO, SO CLOSE) |
 | `['box', id, boxIndex, itemIdx, level, up]` | picked up a box (itemIdx -1 = nothing new; `up` 1 = the held item levelled up to `level`) |
 | `['use', id, itemIdx, level]` | used an item; `['emp', id, level]` EMP burst; `['spin', victim, oilOwner]` |
 | `['lock', target, owner, entId, 'missile' \| 'drone']` | a homing missile / drone locked on (warn the target) |
@@ -159,6 +163,7 @@ for brake lights. A pure function of the input and the car state, so it is deter
   on the grid, in the air, wrecked or finished. The server also resets a car stuck for 3 s by itself.
 - `{t:'pick', driver}` change driver in the lobby.
 - `{t:'horn'}` sound your horn (races only; at most one every 1.5 s, `rc.horn()`).
+- `{t:'emote', e: 0..3}` Elimination spectators only (knocked out): an emote for everyone (one every 1.5 s).
 - `{t:'host', start: 1}` / `{t:'host', bots: true|false}` the room host's START and FILL WITH BOTS (`rc.host({start, bots})`); anyone else is ignored.
 - `{t:'ping', c}` -> `pong`. `{t:'bye'}` quit for good (the result is recorded as last place now).
 
@@ -246,7 +251,7 @@ ArrowDown/KeyS brake/reverse; ShiftLeft/ShiftRight/Space drift; KeyJ / mouse 0 f
 ## Lobby data
 
 - Modes: `RACE_MODES` / `RACE_MODE_IDS` in `protocol.js` (`name`, `desc`, rules):
-  Grand Race (3 laps, finish order), Elimination Race (last place out every 18 s from 30 s),
+  Grand Race (3 laps, finish order), Elimination Race (cuts from 25 s, a black hole: see Elimination),
   Battle Arena (most takedowns in 2 minutes, respawns), Time Trial (solo, best time saved).
 - Tracks: `TRACK_IDS`, `TRACK_DEFS[k].name`, `ARENA_DEFS[k].name` (`trackName(k, arena)`).
 - Drivers: `DRIVERS[id]` (`name, car, role, top, accel, handling, armor, color, accent`) and
@@ -254,6 +259,50 @@ ArrowDown/KeyS brake/reverse; ShiftLeft/ShiftRight/Space drift; KeyJ / mouse 0 f
 - Account: `progress.race.best[track]` (best Time Trial time, s), `progress.race.bestLap[track]`,
   `progress.race.races / wins / trials`, `progress.race.tut` (1 = tutorial completed); per-mode stats in `progress.modes.race_<mode>`.
 - The FILL WITH BOTS toggle maps to `bots=0|1`; the friend room code to `room=CODE`.
+
+## Elimination (`mode=elim`)
+
+Server-authoritative and deterministic (`src/race/sim.js` `elimTick`, numbers in `ELIM` in protocol.js;
+`test/race-elim.test.js`, `test/race-elim-client.test.js`, `tests/e2e/overnight-elim.spec.js`).
+
+- **Cuts**: last place is cut at 25 s, then every 18 s; from 4 racers left every 12 s; with 2 left (the
+  FINAL DUEL) every 8 s. The interval is picked at each cut for the racers left after it
+  (`elimInterval`, `elimSchedule(10)` = 25 43 61 79 97 115 127 139 147). When the black hole (or a
+  quitter) takes racers, the running timer is cut down to the interval for the field that is left. A
+  race that starts with 2 racers opens as the duel, but its first cut is still at 25 s.
+- **The racer in danger** (`md.dg`) is last place: red outline (pulsing, steady with Reduce Flashing),
+  a ring that empties to the cut (`md.nx / md.iv`) and a DANGER tag, until the cut.
+- **Black hole** (`md.bh`): it starts 1200 px behind the back of the grid, eases up to speed over the
+  first 4 s, moves at 430 px/s + 30 per cut (max 760), is never more than 1500 px behind the last racer
+  (it follows the pack), and swallows any car whose race distance is within 120 px of it, wrecked or not.
+  It never takes the last racer: if it reaches everyone left, the best placed survives and wins. Clients
+  darken the screen edges and play a warning pulse from 900 px (`me.bg`). In Elimination a wreck comes
+  back where it crashed (on the racing line), not at the last checkpoint behind the hole.
+- **Order inside a tick**: quitters (bots off) are out, worst first; then the hole moves and swallows,
+  worst first; then the cut takes last place; then the timer shrinks; then the danger and the duel.
+- **Tie at a cut**: positions compare race distance to the pixel; level racers are ordered by the
+  previous tick's order (the one who was behind stays behind), then the higher id (the later grid
+  slot) is behind. Two racers swallowed on the same tick get distinct places by the same order.
+- **Takedown boost**: knocking a car out, or landing a hit (damage or a spin-out) on the racer in danger,
+  gives a 2 s burst (`burst` event).
+- **Disconnects**: a dropped racer's car is driven by a bot when FILL WITH BOTS is on (it stops when bots
+  are off); the cuts run on time either way. Reconnecting after being cut = spectating (`me.out` = place).
+  Quitting for good (`bye`) with bots off puts you out at once; with bots on a bot drives on. A
+  spectator who leaves keeps their settled place. The race ends when one racer is left, or when every
+  human has left.
+- **Spectating**: the camera follows the leader; 4 emotes, LEAVE and NEXT RACE (a fresh race with the
+  same choices).
+- **Rewards** (`src/race/results.js`): the usual placement pay (trophies and coins by place, XP and coins
+  for the minutes survived), + 2 coins per takedown (max 8), + 1 coin per 10 s survived (max 15), and the
+  cosmetic title **Last Racer Standing** (`last_racer`, earned with a win, never sold) once; wins count in
+  `progress.race.elimWins`. The `progress` message carries `elim: {ko, surv, secs, win, title, titleId}`.
+- **Final duel**: FINAL DUEL banner and a short slow-mo of the cut that made it (presentation only:
+  shorter for the two still driving). The results screen replays the final cut (black hole included).
+- **Bots** (only with FILL WITH BOTS on): flat out when they are in the last two with a cut under 7 s
+  away or the hole within 1100 px (and use a turbo at once), take shortcuts more often then, and aim
+  their weapon and items at the racer in danger when within 1500 px.
+- Dev (HUNT_DEV): `{t:'dev', k:'cut'}` (knock yourself out), `k:'cutnow'` (the next cut now),
+  `k:'hole', gap` (the black hole `gap` px behind you).
 
 ## Tutorial (`mode=tutorial`)
 
@@ -331,7 +380,7 @@ RACE WITH FRIENDS) calls `startRace` through `launchRace` in `public/game.js`. D
 `/?race=1[&mode=&track=&room=&bots=0|1&driver=]`. `onProgress(m)` gets the server's `progress`
 message (the lobby stores the new account progress), `onBots(on)` the host's room switch.
 Local dev only (HUNT_DEV): `laps=1..3` for short races (also `/?laps=1` from the lobby), and `window.__race.dev('wreck' | 'item', id)`.
-`window.__race` also exposes `perf()`, `layout()`, `hint()` (`ha`: the stick's screen direction, `wha`: the world
+`window.__race` also exposes `elim()` (danger, timer, black hole, duel, spectating) and `emote(k)`, `perf()`, `layout()`, `hint()` (`ha`: the stick's screen direction, `wha`: the world
 heading), `camera()` / `setCamera()`, `moments()` / `slowmo()`, `audio()` and `auto()` for the browser tests.
 
 Camera views (Settings > Camera, `raceView`: `top` default, `chase`, `cockpit`; also the pause menu's CAMERA

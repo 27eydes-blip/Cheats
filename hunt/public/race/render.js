@@ -356,6 +356,7 @@ export class RaceRenderer {
     this.overlays(g, view, t);
     this.skids.draw(g, t, vw.x0 - 60, vw.y0 - 60, vw.x1 + 60, vw.y1 + 60, T.world === 'frozen' ? 'rgba(60,80,110,1)' : T.world === 'city' ? '#05050c' : '#1a1212');
     if (this.sfx) this.sfx.world(g, this, view, rc, dt);
+    if (this.elim) this.elim.world(g, this, view, rc, dt); // Elimination: the black hole, the racer in danger (elim.js)
     this.ents(g, view, t, me, true);
     this.drawCars(g, view, rc, dt, t);
     this.ents(g, view, t, me, false);

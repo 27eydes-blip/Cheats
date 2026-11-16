@@ -4,6 +4,7 @@
 // results screen is up (the race renderer stops drawing then).
 import { RaceRenderer } from './render.js';
 import { replayView } from './moments.js';
+import { ElimFx } from './elim.js';
 
 const RATE = 0.6, HOLD = 0.7;
 export class ReplayPlayer {
@@ -15,6 +16,7 @@ export class ReplayPlayer {
     this.cv = box.querySelector('canvas');
     this.R = new RaceRenderer(this.cv);
     this.R.setTrack(rc.T);
+    if (clip.cut) this.R.elim = new ElimFx(); // Elimination's final cut: the black hole and the red outline too
     this.rc = { roster: rc.roster, car: null, carEp: 0, T: rc.T, myDriver: () => rc.myDriver() };
     this.v = replayView();
     this.t0 = clip.first(); this.t1 = clip.last(); this.t = this.t0; this.hold = 0; this.bi = 0;
@@ -36,9 +38,10 @@ export class ReplayPlayer {
     if (this.t >= this.t1 && this.hold <= 0) { this.t = this.t1; this.hold = HOLD; }
     const v = c.viewAt(this.t, this.v);
     for (const car of v.cars) car.me = car.id === c.focus; // the camera follows the crash
+    if (c.cut) { v.hud.dg = c.focus; v.hud.nx = 0; v.hud.iv = 0; } // (the car about to be cut, outlined)
     // explosions at their moment
     const B = c.booms || [];
-    while (this.bi < B.length && B[this.bi].t <= this.t) { const b = B[this.bi++]; this.R.explode(b.x, b.y, b.big); }
+    while (this.bi < B.length && B[this.bi].t <= this.t) { const b = B[this.bi++]; if (b.cut && this.R.elim) this.R.elim.implode(b.x, b.y); else this.R.explode(b.x, b.y, b.big); }
     this.R.draw(v, this.rc, this.hold > 0 ? dt * 0.3 : dt * RATE, performance.now());
   }
 }

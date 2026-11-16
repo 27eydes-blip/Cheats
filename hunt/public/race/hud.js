@@ -137,7 +137,7 @@ export class Hud {
     }
     // -------- item + weapon (top centre)
     const cx = W / 2, slot = 46 * u;
-    if (me && mode !== 'trial') {
+    if (me && mode !== 'trial' && !me.out) { // (a spectator has no slots)
       const ix = cx - slot - 6 * u, iy = Tp;
       panel(g, ix, iy, slot, slot, 12 * u, me.item || this.roll > 0 ? 'rgba(106,42,110,0.9)' : 'rgba(27,16,51,0.7)');
       if (this.roll > 0) { this.roll -= dt; itemIcon(g, ITEM_IDS[Math.floor(t * 18) % ITEM_IDS.length], ix + slot / 2, iy + slot / 2, slot * 0.66); }
@@ -155,7 +155,7 @@ export class Hud {
     // -------- mode info pill (under the slots)
     let pill = null, pillCol = '#ffffff';
     const md = view.hud || {};
-    if (mode === 'elim' && md.nx != null && view.countdown <= 0) { pill = `KNOCKOUT IN ${Math.ceil(md.nx)}`; pillCol = md.nx < 5 ? '#ff5f5f' : '#ffffff'; }
+    if (mode === 'elim' && md.nx != null && view.countdown <= 0) { pill = str('cut', Math.ceil(md.nx), (v) => `CUT IN ${v}`); pillCol = md.nx < 5 || (me && md.dg === rc.id) ? '#ff5f5f' : '#ffffff'; }
     else if (battle && md.tl != null) { const s = Math.ceil(md.tl); pill = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; pillCol = md.tl < 15 ? '#ff5f5f' : '#ffffff'; }
     else if (md.ft != null) { pill = `FINISH CLOSES ${Math.ceil(md.ft)}`; pillCol = '#ff9f43'; }
     else if (trial && S.bestTime) { pill = `BEST ${fmtTime(S.bestTime)}`; pillCol = '#c9b8ff'; }
@@ -201,7 +201,7 @@ export class Hud {
       }
     }
     // -------- the steering arrow on your car, touch buttons, joystick, RESET
-    if (ctrl.mode === 'touch') { this.arrow(g, S, u, car); this.buttons(g, S, u); }
+    if (ctrl.mode === 'touch' && !(me && me.out)) { this.arrow(g, S, u, car); this.buttons(g, S, u); }
     else if (S.hint > 0) this.keysHint(g, S, u);
     this.menuButton(g, S);
     if (me && !me.fin && !me.out) this.resetButton(g, S, u);
@@ -392,7 +392,7 @@ export class Hud {
       text(g, 'WRECKED', cx, cy - 12 * u, 34 * u, '#ff5f5f', 'center', 6 * u);
       text(g, `back in ${Math.ceil(me.rt)}`, cx, cy + 20 * u, 18 * u, '#ffffff', 'center');
     }
-    if (me && me.out) text(g, `KNOCKED OUT · ${me.out}${ORD(me.out).toLowerCase()}`, cx, H * 0.2, 22 * u, '#ff9f43', 'center');
+    if (me && me.out && S.mode !== 'elim') text(g, `KNOCKED OUT · ${me.out}${ORD(me.out).toLowerCase()}`, cx, H * 0.2, 22 * u, '#ff9f43', 'center');
     if (me && me.fin && view.cars.length) text(g, `FINISHED ${me.fin}${ORD(me.fin)}`, cx, H * 0.2, 26 * u, '#ffd23f', 'center');
     // LOCK-ON warning (the server names the target): MISSILE LOCKED / DRONE ON YOU, and the counter
     // once it is close: DRIFT NOW! (the dodge) / FIRE TO SWAT!

@@ -94,6 +94,11 @@ const S = {
   whoosh: (t, v) => { noise(t, 0.42, 0.34 * v, 380, 2600, 1.1); noise(t + 0.16, 0.3, 0.2 * v, 2600, 500, 1.1); },
   // boost roar: a low growl rising under the boost whoosh
   roar: (t, v) => { tone(t, 'sawtooth', 70, 150, 0.6, 0.16 * v, 0.04); tone(t, 'square', 140, 300, 0.5, 0.06 * v, 0.04); noise(t, 0.6, 0.25 * v, 300, 1400, 0.9, 'lowpass'); },
+  // ELIMINATION: the black hole close behind you (a low throb), a car cut / swallowed, the final duel
+  holewarn: (t, v) => { tone(t, 'sine', 72, 48, 0.42, 0.42 * v, 0.04); noise(t, 0.4, 0.18 * v, 420, 90, 1.2, 'lowpass'); },
+  cut: (t, v) => { tone(t, 'sawtooth', 520, 38, 0.65, 0.14 * v, 0.01); noise(t, 0.6, 0.3 * v, 3200, 90, 1, 'lowpass'); tone(t + 0.05, 'sine', 160, 30, 0.6, 0.35 * v); },
+  duel: (t, v) => { tone(t, 'square', 196, 196, 0.22, 0.16 * v); tone(t + 0.26, 'square', 196, 196, 0.22, 0.16 * v); [392, 494, 587, 784].forEach((f, i) => tone(t + 0.55 + i * 0.08, 'square', f, f, i === 3 ? 0.4 : 0.1, 0.15 * v)); },
+  emote: (t, v) => { tone(t, 'triangle', 988, 1319, 0.1, 0.12 * v); },
   // grid revs: a quick blip of the engine
   rev: (t, v) => { tone(t, 'sawtooth', 60, 170, 0.22, 0.12 * v, 0.02); tone(t + 0.22, 'sawtooth', 170, 70, 0.4, 0.08 * v, 0.01); },
 };

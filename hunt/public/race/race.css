@@ -95,3 +95,9 @@
 @keyframes rc-pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes rc-blink { 50% { opacity: .45; } }
 @media (prefers-reduced-motion: reduce) { .rc-tp, .rc-ready .title, .rc-dots li.now { animation: none; } }
+/* ELIMINATION spectator bar: four emotes, LEAVE and NEXT RACE (above the credit line, which stays visible) */
+.rc-spec { position: absolute; z-index: 15; left: 50%; transform: translateX(-50%); bottom: calc(max(2px, env(safe-area-inset-bottom)) + 22px); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; }
+.rc-spec[hidden] { display: none; }
+.rc-spec .rc-emos, .rc-spec .rc-sbtns { display: flex; gap: 8px; }
+.rc-spec .rc-emo { min-width: 64px; }
+.rc-res .rc-title { font: 400 max(13px, calc(var(--u) * 1.9)) "Lilita One", sans-serif; color: #ffd23f; letter-spacing: .5px; text-shadow: 0 1px 0 #12091e, 0 0 6px rgba(255,210,63,.45); margin-top: 4px; }

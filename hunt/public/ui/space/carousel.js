@@ -9,7 +9,7 @@ import { spIcon } from './icons.js';
 
 export const MODE_CARDS = [
   { id: 'grand', name: 'GRAND RACE', sub: '3 laps · first past the flag', hue: '#34e7ff', tag: '01' },
-  { id: 'elim', name: 'ELIMINATION', sub: 'Last place out every 18 s', hue: '#ff3fb8', tag: '02' },
+  { id: 'elim', name: 'ELIMINATION', sub: 'Last place cut · black hole', hue: '#ff3fb8', tag: '02' },
   { id: 'battle', name: 'BATTLE ARENA', sub: 'Most takedowns in 2 min', hue: '#a77bff', tag: '03' },
   { id: 'trial', name: 'TIME TRIAL', sub: 'Just you and the clock', hue: '#ffc84a', tag: '04' },
 ];

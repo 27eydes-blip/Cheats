@@ -12,6 +12,7 @@ import { ENT } from './protocol.js';
 export const REC_HZ = 30, REC_SEC = 7, CF = 8, EF = 5; // car fields: id x y a f spd hp lap; ent fields: id kind x y a
 export const SLOW_RATE = 0.4, SLOW_BACK = 1.5, SLOW_AFTER = 0.35, OVERTAKE_WINDOW = 1.6;
 export const CLIP_BEFORE = 2.2, CLIP_AFTER = 1.2;
+export const CUT_BEFORE = 3.2, CUT_AFTER = 0.6, CUT_SCORE = 9; // Elimination: the final cut beats any crash
 const TAU = Math.PI * 2;
 
 export class Recorder {
@@ -20,6 +21,7 @@ export class Recorder {
     this.t = new Float64Array(this.cap); this.nc = new Uint8Array(this.cap); this.ne = new Uint8Array(this.cap);
     this.cars = new Float32Array(this.cap * maxCars * CF); this.ents = new Float32Array(this.cap * maxEnts * EF);
     this.lead = new Int32Array(this.cap);
+    this.hole = new Float32Array(this.cap); // Elimination: the black hole's race distance (NaN = none)
     this.head = 0; this.n = 0; this.lastT = -1e9;
   }
   // record a view (race time view.time, s); at most REC_HZ frames a second
@@ -28,7 +30,7 @@ export class Recorder {
     if (!(t > this.lastT + 1 / REC_HZ - 1e-3) && t >= this.lastT) return false;
     this.lastT = t;
     const i = this.head, cs = view.cars, es = view.ents || [];
-    this.t[i] = t; this.lead[i] = view.leader || 0;
+    this.t[i] = t; this.lead[i] = view.leader || 0; this.hole[i] = view.hole == null ? NaN : view.hole;
     const nc = Math.min(cs.length, this.mc), ne = Math.min(es.length, this.me);
     let o = i * this.mc * CF;
     for (let k = 0; k < nc; k++, o += CF) { const c = cs[k]; this.cars[o] = c.id; this.cars[o + 1] = c.x; this.cars[o + 2] = c.y; this.cars[o + 3] = c.a; this.cars[o + 4] = c.f; this.cars[o + 5] = c.spd; this.cars[o + 6] = c.hp; this.cars[o + 7] = c.me ? 1 : 0; }
@@ -49,7 +51,7 @@ export class Recorder {
     const c = new Recorder(this.mc, this.me, Math.max(1, ks.length) / REC_HZ + 0.1);
     for (const k of ks) {
       const s = this.slot(k), d = c.head;
-      c.t[d] = this.t[s]; c.nc[d] = this.nc[s]; c.ne[d] = this.ne[s]; c.lead[d] = this.lead[s];
+      c.t[d] = this.t[s]; c.nc[d] = this.nc[s]; c.ne[d] = this.ne[s]; c.lead[d] = this.lead[s]; c.hole[d] = this.hole[s];
       c.cars.set(this.cars.subarray(s * this.mc * CF, (s + 1) * this.mc * CF), d * this.mc * CF);
       c.ents.set(this.ents.subarray(s * this.me * EF, (s + 1) * this.me * EF), d * this.me * EF);
       c.head = (d + 1) % c.cap; c.n++;
@@ -88,6 +90,8 @@ export class Recorder {
       out.ents.push(e);
     }
     out.time = t; out.leader = this.lead[s1];
+    const h0 = this.hole[s0], h1 = this.hole[s1];
+    out.hole = h1 !== h1 ? null : h0 !== h0 ? h1 : h0 + (h1 - h0) * f; // (NaN check without allocation)
     return out;
   }
 }
@@ -118,14 +122,14 @@ export class Moments {
     if (!this.record) return;
     this.rec.push(view);
     const P = this.pending;
-    if (P && view.time >= P.t1) { this.keep(this.rec.clip(P.t0, P.t1, { score: P.score, focus: P.focus, label: P.label, booms: this.booms.filter((b) => b.t >= P.t0 && b.t <= P.t1) })); this.pending = null; }
+    if (P && view.time >= P.t1) { this.keep(this.rec.clip(P.t0, P.t1, { score: P.score, focus: P.focus, label: P.label, cut: P.cut || 0, booms: this.booms.filter((b) => b.t >= P.t0 && b.t <= P.t1) })); this.pending = null; }
   }
   // your race place now (1 = first): remember when it got better
   place(rk, t) { if (rk && this.rk && rk < this.rk) this.gainT = t; if (rk) this.rk = rk; }
   // a race event at race time t; near: it happened right by you; at: where (for explosions)
   event(e, meId, t, near, at = null) {
     if (!this.record) return;
-    if (at && (e[0] === 'ko' || e[0] === 'boom')) { this.booms.push({ t, x: at.x, y: at.y, big: e[0] === 'ko' ? 1.2 : 0.7 }); if (this.booms.length > 24) this.booms.shift(); }
+    if (at && (e[0] === 'ko' || e[0] === 'boom' || e[0] === 'elim')) { this.booms.push({ t, x: at.x, y: at.y, big: e[0] === 'ko' ? 1.2 : 0.7, cut: e[0] === 'elim' ? 1 : 0 }); if (this.booms.length > 24) this.booms.shift(); }
     const sc = crashScore(e, meId, near);
     if (!sc) return;
     const focus = e[0] === 'ko' ? e[1] : meId, label = e[0] === 'ko' ? (e[1] === meId ? 'YOUR WRECK' : e[2] === meId ? 'YOUR TAKEDOWN' : 'BIG CRASH') : 'BIG HIT';
@@ -133,11 +137,22 @@ export class Moments {
     if (this.best && this.best.score > sc) return;
     this.pending = { t0: t - CLIP_BEFORE, t1: t + CLIP_AFTER, score: sc, focus, label };
   }
+  // ELIMINATION: the final cut (the knock-out that decides the race), kept for the results replay
+  // over any crash; focus = the car that was cut
+  markCut(t, focus) { if (this.record) this.pending = { t0: t - CUT_BEFORE, t1: t + CUT_AFTER, score: CUT_SCORE, focus, label: 'FINAL CUT', cut: 1 }; }
+  // the race ended before a clip's tail was recorded (the final cut ends it): keep what there is
+  flush() {
+    const P = this.pending;
+    if (!P || !this.rec.n) return;
+    this.keep(this.rec.clip(P.t0, Math.min(P.t1, this.rec.last()), { score: P.score, focus: P.focus, label: P.label, cut: P.cut || 0, booms: this.booms.filter((b) => b.t >= P.t0 && b.t <= P.t1) }));
+    this.pending = null;
+  }
   keep(c) { if (c.n > REC_HZ && (!this.best || c.score >= this.best.score)) this.best = c; }
   // you crossed the line at race time t: slow-mo if you had just passed someone
-  finish(t, force = false) {
+  // (back / after: how much before and after t to replay, e.g. shorter for a racer still driving)
+  finish(t, force = false, back = SLOW_BACK, after = SLOW_AFTER) {
     if (!force && !(t - this.gainT < OVERTAKE_WINDOW)) return false;
-    this.slow = { t: t - SLOW_BACK, from: t - SLOW_BACK, to: t + SLOW_AFTER };
+    this.slow = { t: t - back, from: t - back, to: t + after };
     return true;
   }
   // the slow-mo view for this frame (dt: real seconds), or null when there is none (any more)

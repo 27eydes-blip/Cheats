@@ -41,7 +41,7 @@ import { createSpaceLobby } from './space/racelobby.js';
 // classic one (?shooter=1)
 export const RACE_MODE_BTNS = [
   ['grand', 'GRAND RACE', '3 laps · first past the flag', 'trophy', '#4a7fe0'],
-  ['elim', 'ELIMINATION', 'Last place out every 18 s', 'skull', '#cf3a44'],
+  ['elim', 'ELIMINATION', 'Last place cut · black hole', 'skull', '#cf3a44'],
   ['battle', 'BATTLE ARENA', 'Most takedowns in 2:00', 'battle', '#7b45c9'],
   ['trial', 'TIME TRIAL', 'Solo vs the clock', 'star', '#d9822b'],
 ];
