@@ -42,9 +42,20 @@ export class Tutorial {
     this.key = key;
     const id = TUT_STEPS[this.step], x = TUT_TEXT[id], c = this.$('.rc-tc');
     c.hidden = false; c.dataset.step = id;
-    this.$('.rc-tp').textContent = (keys && x.pk) || x.p;
+    const tp = this.$('.rc-tp');
+    tp.textContent = (keys && x.pk) || x.p;
+    tp.style.animation = 'none'; void tp.offsetWidth; tp.style.animation = ''; // pop in again for the new step
     this.$('.rc-ts').textContent = keys ? x.keys : x.touch;
     this.el.querySelectorAll('.rc-dots li').forEach((li, i) => { li.className = i < this.step ? 'ok' : i === this.step ? 'now' : ''; });
+    this.box = null; // measured again on the next see()
+  }
+  // fade the card while your car (screen CSS px) is behind it; measures the card once per step / resize
+  see(x, y) {
+    const c = this.$('.rc-tc');
+    if (c.hidden) return;
+    const b = this.box || (this.box = c.getBoundingClientRect());
+    const on = x > b.left - 30 && x < b.right + 30 && y > b.top - 30 && y < b.bottom + 30;
+    if (on !== !!this.seeOn) { this.seeOn = on; c.classList.toggle('see', on); }
   }
   // a 'tut' event from the server
   event(step) {

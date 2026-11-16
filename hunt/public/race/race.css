@@ -62,9 +62,10 @@
 .rc-tut { position: absolute; inset: 0; z-index: 15; pointer-events: none; }
 .rc-tut[hidden], .rc-tc[hidden], .rc-ready[hidden], .rc-skip[hidden] { display: none; }
 .rc-skip { position: absolute; pointer-events: auto; left: calc(var(--sa-l) + 12px); top: calc(var(--sa-t) + 10px); min-height: var(--tap); min-width: calc(var(--tap) * 1.8); font-size: max(var(--t-sm), 18px); }
-.rc-tc { position: absolute; left: 50%; transform: translateX(-50%); top: max(66px, 11.5vh); width: max-content; max-width: min(84vw, 680px); padding: 8px 20px 10px; text-align: center; background: rgba(27,16,51,.82); border: 4px solid var(--ink); border-radius: 18px; box-shadow: 0 5px 0 var(--ink); }
-.rc-tp { font: 400 clamp(22px, 6.2vh, 48px)/1.05 var(--font); color: #fff; text-shadow: 0 3px 0 var(--ink); letter-spacing: .5px; animation: rc-pop .35s cubic-bezier(.2,1.6,.4,1); }
-.rc-ts { margin-top: 4px; font: 700 clamp(13px, 3.4vh, 24px) var(--font-ui); color: #5ef2c6; }
+.rc-tc { position: absolute; left: 50%; transform: translateX(-50%); top: max(58px, 11vh); transition: opacity .2s; width: max-content; max-width: min(84vw, 680px); padding: 8px 20px 10px; text-align: center; background: rgba(27,16,51,.82); border: 4px solid var(--ink); border-radius: 18px; box-shadow: 0 5px 0 var(--ink); }
+.rc-tc.see { opacity: .45; } /* your car is behind it */
+.rc-tp { font: 400 clamp(20px, 5.6vh, 46px)/1.05 var(--font); color: #fff; text-shadow: 0 3px 0 var(--ink); letter-spacing: .5px; animation: rc-pop .35s cubic-bezier(.2,1.6,.4,1); }
+.rc-ts { margin-top: 2px; font: 700 clamp(13px, 3.4vh, 24px) var(--font-ui); color: #5ef2c6; }
 .rc-dots { list-style: none; margin: 0 0 6px; padding: 0; display: flex; justify-content: center; gap: 8px; }
 .rc-dots li { width: clamp(26px, 6vh, 44px); height: 10px; border-radius: 6px; background: rgba(255,255,255,.22); border: 2px solid var(--ink); }
 .rc-dots li.ok { background: #5ef2c6; }

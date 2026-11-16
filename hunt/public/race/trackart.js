@@ -411,6 +411,7 @@ export class TrackArt {
     void th;
   }
   pillar(g, o) {
+    if (o.cone) { this.cone(g, o); return; }
     const w = this.world;
     g.beginPath(); g.arc(o.x + 8, o.y + 10, o.r, 0, 7); g.fillStyle = 'rgba(0,0,0,0.3)'; g.fill();
     g.beginPath(); g.arc(o.x, o.y, o.r, 0, 7);
@@ -419,6 +420,15 @@ export class TrackArt {
     g.beginPath(); g.arc(o.x - o.r * 0.2, o.y - o.r * 0.2, o.r * 0.62, 0, 7);
     g.fillStyle = w === 'frozen' ? '#effaff' : w === 'ashlands' ? '#4a2c24' : w === 'city' ? '#4a4a7a' : '#d07a45'; g.fill();
     if (w === 'city' || w === 'ashlands') { g.beginPath(); g.arc(o.x, o.y, o.r - 6, 0, 7); g.lineWidth = 3; g.strokeStyle = w === 'city' ? '#3ff5ff' : '#ff6a1a'; g.stroke(); }
+  }
+  // a traffic cone seen from above (the tutorial's slalom: obstacles flagged `cone`)
+  cone(g, o) {
+    const r = o.r;
+    g.beginPath(); g.arc(o.x + 5, o.y + 7, r, 0, 7); g.fillStyle = 'rgba(0,0,0,0.3)'; g.fill();
+    g.fillStyle = '#ff7a1a'; g.fillRect(o.x - r, o.y - r, r * 2, r * 2); g.lineWidth = 4; g.strokeStyle = '#12091e'; g.strokeRect(o.x - r, o.y - r, r * 2, r * 2);
+    g.beginPath(); g.arc(o.x, o.y, r * 0.78, 0, 7); g.fillStyle = '#ff9a3c'; g.fill(); g.lineWidth = 3; g.stroke();
+    g.beginPath(); g.arc(o.x, o.y, r * 0.5, 0, 7); g.fillStyle = '#ffffff'; g.fill();
+    g.beginPath(); g.arc(o.x, o.y, r * 0.28, 0, 7); g.fillStyle = '#ff7a1a'; g.fill(); g.lineWidth = 2.5; g.stroke();
   }
   wetReflections(g, bx) {
     // blurred neon colour pooled on the asphalt next to the signs

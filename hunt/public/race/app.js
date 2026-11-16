@@ -343,6 +343,7 @@ class RaceSession {
     this.dpr = SETTINGS.lowGfx ? 1 : Math.min(DPR_STEPS[this.dprStep], devicePixelRatio || 1);
     this.renderer.resize(this.W, this.H, this.dpr);
     this.ctrl.layout(this.W, this.H, this.SA);
+    if (this.tut) this.tut.box = null;
   }
   // render at a lower pixel ratio when frames get slow, back up when there is room
   adapt(ms) {
@@ -407,7 +408,12 @@ class RaceSession {
     if (this.hintOn && racing && steering && (this.steerT += dt) > 1.2) { this.hintOn = false; setFlag(STEER_FLAG); }
     const want = (this.hintOn || (T && T.step === 0)) && !(T && T.shown);
     this.hintA = want ? Math.min(1, this.hintA + dt * 4) : Math.max(0, this.hintA - dt * 1.7);
-    if (T) { if (v.hud && v.hud.tut) T.sync(v.hud.tut); T.prompt(c.mode !== 'touch'); this.focus = T.focus(me); T.tick(dt); } else this.focus = null;
+    if (T) {
+      if (v.hud && v.hud.tut) T.sync(v.hud.tut);
+      T.prompt(c.mode !== 'touch'); this.focus = T.focus(me); T.tick(dt);
+      const R = this.renderer, mc = R.meCar, M = R.M;
+      if (mc && M) T.see((mc.x * M.s + M.x) / R.dpr, (mc.y * M.s + M.y) / R.dpr);
+    } else this.focus = null;
     // stuck: the server's per-car `stuck` seconds (on `me`, or the 9th field of our car row)
     const row = rc.latest && rc.latest.c.find((r) => r[0] === rc.id);
     const st = me && me.stuck != null ? me.stuck : row && row.length > 8 ? row[8] : undefined;

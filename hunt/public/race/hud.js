@@ -357,7 +357,8 @@ export class Hud {
   center(g, S, u, car) {
     const { W, H, view, me, dt, t, renderer } = S;
     const cx = W / 2, cy = H * 0.4;
-    // countdown 3-2-1-GO
+    // countdown 3-2-1-GO (lower in the tutorial: its prompt card is at the top)
+    const cy2 = S.tut ? H * 0.56 : cy;
     const cd = view.countdown;
     if (cd > 0 || (view.time >= 0 && view.time < 0.8)) {
       const n = cd > 0 ? Math.ceil(cd) : 0, f = cd > 0 ? cd - Math.floor(cd) : 1 - view.time / 0.8;
@@ -365,10 +366,10 @@ export class Hud {
       g.globalAlpha = cd > 0 ? 1 : clamp(f * 1.6, 0, 1);
       if (n) {
         // a dark disc behind the number so it reads over any track
-        g.beginPath(); g.arc(cx, cy, 70 * u, 0, TAU); g.fillStyle = 'rgba(27,16,51,0.55)'; g.fill(); g.lineWidth = 6 * u; g.strokeStyle = INK; g.stroke();
-        g.beginPath(); g.arc(cx, cy, 64 * u, -Math.PI / 2, -Math.PI / 2 + TAU * f); g.lineWidth = 6 * u; g.strokeStyle = n === 1 ? '#ff9f43' : '#ffd23f'; g.stroke();
-        text(g, String(n), cx, cy + 4 * u, 104 * u * s, '#ffffff', 'center', 11 * u);
-      } else text(g, 'GO!', cx, cy, Math.min(170 * u * s, W * 0.3), '#5ef2c6', 'center', 14 * u);
+        g.beginPath(); g.arc(cx, cy2, 70 * u, 0, TAU); g.fillStyle = 'rgba(27,16,51,0.55)'; g.fill(); g.lineWidth = 6 * u; g.strokeStyle = INK; g.stroke();
+        g.beginPath(); g.arc(cx, cy2, 64 * u, -Math.PI / 2, -Math.PI / 2 + TAU * f); g.lineWidth = 6 * u; g.strokeStyle = n === 1 ? '#ff9f43' : '#ffd23f'; g.stroke();
+        text(g, String(n), cx, cy2 + 4 * u, 104 * u * s, '#ffffff', 'center', 11 * u);
+      } else text(g, 'GO!', cx, cy2, Math.min(170 * u * s, W * 0.3), '#5ef2c6', 'center', 14 * u);
       g.globalAlpha = 1;
     }
     // wrong way
@@ -388,7 +389,7 @@ export class Hud {
       if (!SETTINGS.reduceFlash) { g.lineWidth = 10; g.strokeStyle = `rgba(255,40,40,${0.25 * k * clamp(renderer.threat, 0, 1)})`; g.strokeRect(5, 5, W - 10, H - 10); }
     }
     // banners
-    let by = H * 0.22;
+    let by = S.tut ? H * 0.66 : H * 0.22; // (the tutorial's prompt card sits at the top)
     for (let i = 0; i < this.banners.length; i++) {
       const b = this.banners[i]; b.t += dt;
       const f = b.t / b.life, k = clamp(Math.min(b.t * 6, (1 - f) * 4), 0, 1);
