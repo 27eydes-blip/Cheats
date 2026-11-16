@@ -317,7 +317,7 @@ Local dev only (HUNT_DEV): `laps=1..3` for short races (also `/?laps=1` from the
 `window.__race` also exposes `perf()`, `layout()`, `hint()` (`ha`: the stick's screen direction, `wha`: the world
 heading), `camera()` / `setCamera()`, `moments()` / `slowmo()`, `audio()` and `auto()` for the browser tests.
 
-Camera views (Settings > Camera, `raceCam`: `chase` default, `top`, `cockpit`; also the pause menu's CAMERA
+Camera views (Settings > Camera, `raceView`: `top` default, `chase`, `cockpit`; also the pause menu's CAMERA
 button): the world canvas is drawn rotated (car pointing up) and tilted with a CSS 3D transform; the HUD,
 minimap (north-up, your arrow shows your heading), joystick and buttons are on a second, never-tilted canvas
 on top that takes the touches. No tilt / motion steering anywhere: the joystick is the only steering input

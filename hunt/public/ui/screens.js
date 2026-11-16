@@ -417,8 +417,8 @@ export function openSettings(api, onDone) {
     for (const b of document.querySelectorAll('#setStick .chipbtn')) b.onclick = () => { setSetting('raceStick', b.dataset.k); chips(); sfx('click'); };
     chips();
     // camera view (race/camera.js) and haptics: both apply from the next frame / race
-    const cams = () => { for (const b of document.querySelectorAll('#setCam .chipbtn')) b.classList.toggle('on', b.dataset.k === (SETTINGS.raceCam || 'chase')); };
-    for (const b of document.querySelectorAll('#setCam .chipbtn')) b.onclick = () => { setSetting('raceCam', b.dataset.k); cams(); sfx('click'); };
+    const cams = () => { for (const b of document.querySelectorAll('#setCam .chipbtn')) b.classList.toggle('on', b.dataset.k === (SETTINGS.raceView || 'top')); };
+    for (const b of document.querySelectorAll('#setCam .chipbtn')) b.onclick = () => { setSetting('raceView', b.dataset.k); cams(); sfx('click'); };
     cams();
     $('setHaptics').checked = SETTINGS.haptics !== false;
     $('setHaptics').onchange = (e) => setSetting('haptics', e.target.checked);

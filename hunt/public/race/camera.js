@@ -29,7 +29,7 @@ export const CAM = {
   chase: { rotate: true, tilt: 29 * DEG, persp: 1.75, anchorY: 0.64, cover: 1.14, zoom: 1.02, speedZoom: 0.2, boostZoom: 0.13, swing: 0.085, kick: 0.045, lag: 5.5 },
   cockpit: { rotate: true, tilt: 38 * DEG, persp: 2, anchorY: 0.92, cover: 1.25, zoom: 1.1, speedZoom: 0.16, boostZoom: 0.08, swing: 0.05, kick: 0.03, lag: 9 },
 };
-export const camMode = (v) => (CAM[v] ? v : 'chase');
+export const camMode = (v) => (CAM[v] ? v : 'top');
 export const camCfg = (v) => CAM[camMode(v)];
 
 const TAU = Math.PI * 2;
