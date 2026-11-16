@@ -4,12 +4,12 @@
 import { SETTINGS } from '../settings.js';
 import { audioCtx } from '../audio.js';
 
-let ac = null, out = null, noiseBuf = null, eng = null, last = {};
+let ac = null, out = null, dst = null, noiseBuf = null, eng = null, last = {};
 function ready() {
   const a = audioCtx();
   if (!a || a.state !== 'running') return null;
   if (ac !== a) {
-    ac = a; out = ac.createGain(); out.gain.value = 0.45; out.connect(ac.destination);
+    ac = a; out = dst = ac.createGain(); out.gain.value = 0.45; out.connect(ac.destination);
     noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     eng = null;
@@ -22,14 +22,14 @@ function tone(t0, type, f0, f1, dur, v, attack = 0.005) {
   const o = ac.createOscillator(), g = ac.createGain();
   o.type = type; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t0 + dur);
   g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, v), t0 + attack); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + dur + 0.02);
+  o.connect(g); g.connect(dst); o.start(t0); o.stop(t0 + dur + 0.02);
 }
 function noise(t0, dur, v, f0, f1, q = 1, type = 'bandpass') {
   const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
   s.buffer = noiseBuf; f.type = type; f.Q.value = q;
   f.frequency.setValueAtTime(f0, t0); f.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t0 + dur);
   g.gain.setValueAtTime(v, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-  s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * 0.5); s.stop(t0 + dur + 0.02);
+  s.connect(f); f.connect(g); g.connect(dst); s.start(t0, Math.random() * 0.5); s.stop(t0 + dur + 0.02);
 }
 
 const S = {
@@ -77,16 +77,26 @@ const S = {
   // a tutorial step done; RESET put you back on the road
   tut: (t, v) => [784, 988, 1319].forEach((f, i) => tone(t + i * 0.07, 'triangle', f, f, i === 2 ? 0.3 : 0.1, 0.16 * v)),
   reset: (t, v) => { tone(t, 'sine', 300, 900, 0.22, 0.16 * v, 0.02); noise(t, 0.25, 0.15 * v, 1200, 5000, 2, 'highpass'); },
+  // a heavy crash: a deep thud with a crunch on top
+  thud: (t, v) => { tone(t, 'sine', 75, 30, 0.35, 0.65 * v); noise(t, 0.3, 0.5 * v, 900, 70, 0.7, 'lowpass'); noise(t + 0.02, 0.12, 0.2 * v, 3000, 900, 1.5); },
+  // a car rushing past (panned to its side)
+  whoosh: (t, v) => { noise(t, 0.42, 0.34 * v, 380, 2600, 1.1); noise(t + 0.16, 0.3, 0.2 * v, 2600, 500, 1.1); },
+  // boost roar: a low growl rising under the boost whoosh
+  roar: (t, v) => { tone(t, 'sawtooth', 70, 150, 0.6, 0.16 * v, 0.04); tone(t, 'square', 140, 300, 0.5, 0.06 * v, 0.04); noise(t, 0.6, 0.25 * v, 300, 1400, 0.9, 'lowpass'); },
+  // grid revs: a quick blip of the engine
+  rev: (t, v) => { tone(t, 'sawtooth', 60, 170, 0.22, 0.12 * v, 0.02); tone(t + 0.22, 'sawtooth', 170, 70, 0.4, 0.08 * v, 0.01); },
 };
 
-// a one-shot; vol 0..1 (distance falloff applied by the caller)
-export function play(id, v = 1) {
+// a one-shot; vol 0..1 (distance falloff applied by the caller); pan -1 (left) .. 1 (right): where
+// the sound is on screen (positional audio for other cars)
+export function play(id, v = 1, pan = 0) {
   v *= vol();
   if (v <= 0.02 || !ready() || !S[id]) return;
   const now = ac.currentTime;
   if (last[id] && now - last[id] < 0.05) return;
   last[id] = now;
-  S[id](now + 0.005, Math.min(1, v));
+  if (pan && ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)) * 0.85; p.connect(out); dst = p; }
+  try { S[id](now + 0.005, Math.min(1, v)); } finally { dst = out; }
 }
 
 // ENGINE + SCREECH: persistent voices, updated each frame with setTargetAtTime (no allocation)
@@ -102,11 +112,17 @@ function buildEngine() {
   const wh = ac.createBufferSource(), wf = ac.createBiquadFilter(), wg = ac.createGain();
   wh.buffer = noiseBuf; wh.loop = true; wf.type = 'bandpass'; wf.frequency.value = 1500; wf.Q.value = 0.8; wg.gain.value = 0;
   wh.connect(wf); wf.connect(wg); wg.connect(out);
-  o1.start(); o2.start(); sc.start(); wh.start();
-  eng = { o1, o2, lp, g, sc, bp, sg, wg, wf, nodes: [o1, o2, sc, wh] };
+  // boost roar: a low growl an octave under the engine
+  const ro = ac.createOscillator(), rf = ac.createBiquadFilter(), rg = ac.createGain();
+  ro.type = 'sawtooth'; rf.type = 'lowpass'; rf.frequency.value = 420; rf.Q.value = 2; rg.gain.value = 0;
+  ro.connect(rf); rf.connect(rg); rg.connect(out);
+  o1.start(); o2.start(); sc.start(); wh.start(); ro.start();
+  eng = { o1, o2, lp, g, sc, bp, sg, wg, wf, ro, rg, nodes: [o1, o2, sc, wh, ro] };
 }
 // speed 0..1+ of top, drift 0|1, tier 0..3, boost 0|1, on: the car is ours and alive
+// (Sound off: no engine voice exists at all, not a silent one)
 export function engine(speed, drift, tier, boost, on) {
+  if (!vol()) { stopEngine(); return; }
   if (!ready()) return;
   if (!eng) buildEngine();
   const t = ac.currentTime, v = vol() * (on ? 1 : 0);
@@ -114,15 +130,18 @@ export function engine(speed, drift, tier, boost, on) {
   eng.o1.frequency.setTargetAtTime(f, t, 0.06); eng.o2.frequency.setTargetAtTime(f * 2, t, 0.06);
   eng.lp.frequency.setTargetAtTime(380 + speed * 1300 + (boost ? 600 : 0), t, 0.08);
   eng.g.gain.setTargetAtTime(v * (0.05 + speed * 0.06), t, 0.08);
-  eng.sg.gain.setTargetAtTime(drift ? v * 0.07 : 0, t, 0.05);
+  eng.sg.gain.setTargetAtTime(drift ? v * (0.07 + Math.min(1, speed) * 0.05) : 0, t, 0.05); // the screech gets louder the faster you slide
   eng.bp.frequency.setTargetAtTime(1900 + tier * 450, t, 0.05);
   eng.wg.gain.setTargetAtTime(boost ? v * 0.09 : 0, t, 0.1);
   eng.wf.frequency.setTargetAtTime(1200 + speed * 1600, t, 0.1);
+  eng.ro.frequency.setTargetAtTime(f * 0.5, t, 0.08);
+  eng.rg.gain.setTargetAtTime(boost ? v * 0.12 : 0, t, boost ? 0.05 : 0.25);
 }
+export const engineOn = () => !!eng; // tests: is an engine voice running
 export function stopEngine() {
   if (!eng) return;
   for (const n of eng.nodes) { try { n.stop(); } catch {} }
-  try { eng.g.disconnect(); eng.sg.disconnect(); eng.wg.disconnect(); } catch {}
+  try { eng.g.disconnect(); eng.sg.disconnect(); eng.wg.disconnect(); eng.rg.disconnect(); } catch {}
   eng = null;
 }
 
