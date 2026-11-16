@@ -3,11 +3,16 @@
 // was unreachable on landscape phones, PLAY sat under the tab bar in portrait, the guest chip
 // covered the XP bar, and Armory EQUIP started off-screen.
 import { test, expect } from '@playwright/test';
-import { trackErrors, waitMe } from './helpers.js';
+import { trackErrors, waitMe, waitSettled, isolateRaces } from './helpers.js';
 import { SCREENS, RACE_SCREENS, auditPage } from './overnight-lobby-audit.lib.js';
 
 // A phone: touch screen, mobile viewport. Firefox has no mobile emulation switch, so it gets touch only.
-const phone = (browser, width, height) => browser.newContext({ viewport: { width, height }, hasTouch: true, ...(browser.browserType().name() === 'firefox' ? {} : { isMobile: true }) });
+// Its public races (LAUNCH, the bots-off waiting card) never meet another test's.
+const phone = async (browser, width, height) => {
+  const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: true, ...(browser.browserType().name() === 'firefox' ? {} : { isMobile: true }) });
+  await isolateRaces(ctx);
+  return ctx;
+};
 // The touch rules key off a coarse pointer. An engine that cannot emulate one cannot run these checks.
 async function needTouch(page) {
   const coarse = await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches);
@@ -33,9 +38,12 @@ for (const [w, h, kinds] of [[667, 375, 2], [844, 390, 2], [932, 430, 2], [390, 
     for (const s of screens) {
       await page.goto(base);
       await page.waitForSelector('#playBtn');
+      // the lobby shows before the guest account answers; its answer re-renders open screens
+      // (popups pop in again), so audit the settled state a player sees
+      await page.waitForFunction(() => import('/account.js').then((A) => !!A.ACC.user));
       await s.open(page);
       // let the slide-in finish so sizes and hit tests are the settled ones
-      await page.waitForFunction(() => !document.getAnimations().some((a) => ['screen-in', 'pop-in', 'flip-in'].includes(a.animationName) && a.playState !== 'finished'));
+      await waitSettled(page);
       for (const msg of await page.evaluate(auditPage, s.primary)) if (!allowed(msg)) problems.push(`[${s.name}] ${msg}`);
     }
     expect(problems).toEqual([]);

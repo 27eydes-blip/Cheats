@@ -4,7 +4,7 @@
 // SE (landscape), an iPhone Pro Max (portrait) and an iPad, the credit must be fully on screen, not
 // covered by anything, and clearly visible (opacity above 0.5).
 import { test, expect } from '@playwright/test';
-import { trackErrors } from './helpers.js';
+import { trackErrors, waitSettled, isolateRaces } from './helpers.js';
 import { RACE_SCREENS } from './overnight-lobby-audit.lib.js';
 
 const CREDIT = 'Created by Sam Eyde III';
@@ -45,6 +45,7 @@ for (const [label, w, h] of [['iPhone SE landscape', 667, 375], ['iPhone Pro Max
   test(`credit visible on every racing screen: ${label} ${w}x${h}`, async ({ browser }) => {
     test.setTimeout(300_000);
     const ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
+    await isolateRaces(ctx); // (its bots-off public race waits alone)
     const page = await ctx.newPage();
     await page.addInitScript(() => { try { localStorage.setItem('hunt-race-tut', '1'); } catch {} });
     const errors = trackErrors(page);
@@ -52,8 +53,9 @@ for (const [label, w, h] of [['iPhone SE landscape', 667, 375], ['iPhone Pro Max
     for (const s of SCREENS) {
       await page.goto('/');
       await page.waitForSelector('#playBtn');
+      await page.waitForFunction(() => import('/account.js').then((A) => !!A.ACC.user)); // (its answer re-renders the lobby)
       await s.open(page);
-      await page.waitForFunction(() => !document.getAnimations().some((a) => ['screen-in', 'pop-in', 'flip-in'].includes(a.animationName) && a.playState !== 'finished'));
+      await waitSettled(page);
       const r = await page.evaluate(creditCheck, CREDIT);
       if (r !== 'ok') problems.push(`[${s.name}] ${r}`);
     }

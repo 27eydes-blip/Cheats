@@ -41,7 +41,10 @@ export async function routeRace(req, env) {
   else if (q.get('mode') === 'trial') name = `solo:${track || pick(TRACK_IDS)}:${crypto.randomUUID()}`;
   else {
     const mode = PUBLIC_MODES.includes(q.get('mode')) ? q.get('mode') : 'grand';
-    const mm = env.RACEMM.get(env.RACEMM.idFromName('global'));
+    // local dev only (HUNT_DEV is in wrangler.jsonc, never in the deploy config): ?mmpool=x gives a
+    // browser test its own matchmaker, so parallel tests never land in each other's public race
+    const pool = env.HUNT_DEV && (q.get('mmpool') || '').replace(/[^a-z0-9]/gi, '').slice(0, 24);
+    const mm = env.RACEMM.get(env.RACEMM.idFromName(pool ? 'pool:' + pool : 'global'));
     const r = await mm.fetch(`https://mm/assign?mode=${mode}&track=${track || 'any'}&bots=${q.get('bots') === '0' ? 0 : 1}&skip=${encodeURIComponent(q.get('skip') || '')}`);
     name = await r.text();
   }
