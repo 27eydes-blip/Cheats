@@ -36,7 +36,7 @@ test('a car unlocked while the shooter is open waits for the racing lobby', asyn
   await setProgress(page, { trophies: { volt: 250 } });
   const ulk = page.locator('.ulk[data-car="void"]');
   await expect(ulk).toBeVisible();
-  await expect(ulk.locator('.ulk-cred')).toContainText('Created by Sam Eyde III');
+  await expect(ulk.locator('.ulk-cred')).toContainText('Made by Gleyde Technologies');
   expect(await seen(page)).toEqual(['void']);
   expect(errors).toEqual([]);
 });
