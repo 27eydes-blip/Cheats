@@ -109,6 +109,7 @@ for (let i = 0; i < 100 && ![...room.sim.players.values()].some((p) => p.account
 const me = () => room.sim.players.get(A.id);
 let n = 0;
 const corr = [];
+let played = 0; // ticks of the run itself (after the countdown, our car on the road)
 while (room.sim.phase !== 'play' && n++ < 200) { room.step(); await settle(0); }
 assert.strictEqual(me().sens, 1.3, 'the server steers with the sensitivity the phone joined with');
 let resetDone = false;
@@ -126,6 +127,7 @@ while (A.phase !== 'end' && n++ < 30 * 150) {
   A.step(); A.flush();
   room.step();
   for (const e of A.drainEvents()) if (!Array.isArray(e)) kinds.push(e.k + (e.step ? ':' + e.step : ''));
+  if (room.sim.time > 0 && me().alive) played++;
   if (A.corr != null && A.predicting()) corr.push(A.corr);
 }
 assert.strictEqual(A.phase, 'end', 'the tutorial run ended');
@@ -133,7 +135,8 @@ assert.ok(kinds.includes('reset'), 'the phone saw its reset');
 assert.deepStrictEqual(kinds.filter((k) => k.startsWith('tut:')), TUT_STEPS.map((s) => 'tut:' + s), 'the phone saw every step, in order');
 assert.strictEqual(A.results.tut, 1, 'end says the tutorial was completed');
 corr.sort((x, y) => x - y);
-assert.ok(corr.length > 200, `${corr.length} predicted ticks`);
+// the phone predicted its car through the whole run (the run is ~6 s, its exact length varies)
+assert.ok(corr.length >= 150 && corr.length >= 0.95 * played, `${corr.length} predicted ticks of ${played}`);
 assert.ok(corr[corr.length >> 1] < 1, `joystick steering: median prediction correction ${corr[corr.length >> 1]} px`);
 assert.ok(corr[Math.floor(corr.length * 0.95)] < 25, `95th percentile correction ${corr[Math.floor(corr.length * 0.95)]} px`);
 console.log(`joystick prediction: median ${corr[corr.length >> 1].toFixed(3)} px, p95 ${corr[Math.floor(corr.length * 0.95)].toFixed(3)} px over ${corr.length} ticks`);
