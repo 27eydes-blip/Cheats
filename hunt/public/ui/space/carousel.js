@@ -68,9 +68,11 @@ export function createCarousel({ cards = MODE_CARDS, index = 0, onChange = () =>
     layout() {
       const r = view.getBoundingClientRect();
       if (!r.width) return;
-      cw = Math.min(r.width / 2.1, r.height / 1.08, 280); // the side cards stay inside the view (under the arrows)
+      cw = Math.min(r.width / 2.3, r.height / 1.08, 280); // side cards (0.74 cw out, 0.76 scale) stay inside the view
       gap = cw * 0.74;
       el.style.setProperty('--cw', cw.toFixed(1) + 'px');
+      el.classList.toggle('small', cw < 130); // small cards: name only
+      el.classList.toggle('tiny', cw < 100); // tiny cards: art only (the mode strip names the mode)
       place();
     },
     destroy() { el.remove(); },

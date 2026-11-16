@@ -49,6 +49,18 @@ const store = {
 };
 const fmtLap = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, '0')}`;
 export const MODE_SHORT = { grand: 'GRAND', elim: 'ELIM', battle: 'BATTLE', trial: 'TRIAL' };
+// short track words for the LAUNCH line ("GRAND · ASHLANDS"): the world, never cut off
+export const TRACK_SHORT = { any: 'RANDOM', desert: 'DESERT', frozen: 'FROZEN', ashlands: 'ASHLANDS', neon: 'NEON CITY' };
+export const launchSub = (mode, track) => `${MODE_SHORT[mode] || 'GRAND'} · ${TRACK_SHORT[track] || String(track).toUpperCase()}${RACE_MODES[mode]?.arena ? ' ARENA' : ''}`;
+// pad readouts: the Garage's bar for each stat as a 0-10 score (the same scale for every car)
+export const padStats = (id) => driverStats(id).map((r) => ({ label: r.label, f: r.f, v: (r.f * 10).toFixed(1) }));
+// shrink a one-line label until it fits its box (never below 11 px): run on refresh / resize only
+export function fitText(el, min = 11) {
+  if (!el || !el.clientWidth) return;
+  el.style.fontSize = '';
+  let px = parseFloat(getComputedStyle(el).fontSize);
+  while (el.scrollWidth > el.clientWidth + 0.5 && px > min) { px = Math.max(min, px - 1); el.style.fontSize = px + 'px'; }
+}
 const FEED_MS = 60_000;
 
 // the car on the hologram pad: the equipped look, turning slowly (still under Reduce Flashing)
@@ -81,7 +93,7 @@ export function createSpaceLobby(api) {
       </header>
       <div class="sp-mid" id="spMid"></div>
       <aside class="sp-side" id="spSide">
-        <button type="button" class="sp-trackbtn sp-glass" id="trackBtn" aria-label="Choose a track"><canvas class="tpv" id="trackPv" aria-hidden="true"></canvas><span class="sp-track-txt"><small id="trackSub">TRACK · tap to change</small><b id="trackNm">RANDOM TRACK</b></span></button>
+        <button type="button" class="sp-trackbtn sp-glass" id="trackBtn" aria-label="Choose a track"><canvas class="tpv" id="trackPv" aria-hidden="true"></canvas><span class="sp-track-txt"><small id="trackSub">TRACK</small><b id="trackNm">RANDOM TRACK</b></span></button>
       </aside>
       <main class="sp-page" id="spPage"><section class="pg pg-profile sp-glass" data-pg="profile" hidden></section></main>
     </div>
@@ -236,7 +248,7 @@ export function createSpaceLobby(api) {
     // the car on the pad
     const look = equippedLook(p, id);
     if (L.look !== look || L.car !== id) { L.look = look; L.car = id; pad.setCar(padCar(id, look)); }
-    if (L.statsFor !== id) { L.statsFor = id; pad.setStats(driverStats(id)); }
+    if (L.statsFor !== id) { L.statsFor = id; pad.setStats(padStats(id)); }
     pad.setTitle(carName(id), `${D.role.toUpperCase()} · ${weaponOf(id).name.toUpperCase()}`);
     pad.el.style.setProperty('--car-neon', look.neon);
     // modes, track, bots
@@ -246,12 +258,13 @@ export function createSpaceLobby(api) {
     const arena = !!RACE_MODES[L.mode].arena;
     $('trackNm').textContent = trackLabel(L.track, arena).toUpperCase();
     const best = L.mode === 'trial' && L.track !== 'any' ? p.race?.best?.[L.track] : null;
-    $('trackSub').textContent = best ? `BEST ${fmtLap(best)}` : arena ? 'ARENA · tap to change' : 'TRACK · tap to change';
+    $('trackSub').textContent = best ? `BEST ${fmtLap(best)}` : arena ? 'ARENA' : 'TRACK';
     if (L.visible && L.tab === 'play') paintPreview($('trackPv'), L.track, arena);
     const solo = L.mode === 'trial';
     crew.setBots(botsOn() && !solo);
     sw.classList.toggle('na', solo); sw.setAttribute('aria-disabled', String(solo));
-    launch.setLabel('LAUNCH', `${RACE_MODES[L.mode].name.toUpperCase()} · ${trackLabel(L.track, arena).toUpperCase()}`);
+    launch.setLabel('LAUNCH', launchSub(L.mode, L.track));
+    fitLabels();
     // tabs: the play view or the profile page
     const prof = L.tab === 'profile';
     spLobby.classList.toggle('show-page', prof);
@@ -262,9 +275,15 @@ export function createSpaceLobby(api) {
   }
   A.onUser(refresh);
 
+  // one-line labels that must never be cut: shrink to fit (on refresh and resize, never per frame)
+  function fitLabels() {
+    if (root.hidden) return;
+    for (const el of root.querySelectorAll('.sp-launch-txt small, #npName, #npRole, .sp-who-name, .sp-card.on .sp-card-name')) fitText(el);
+  }
   // ---------- sizes: measured once per resize, never per frame
   function layout() {
     if (root.hidden) return;
+    fitLabels();
     bg.resize(innerWidth, innerHeight);
     carousel.layout(); pad.layout(); ticker.layout(); crew.layout();
     if (L.tab === 'play') paintPreview($('trackPv'), L.track, !!RACE_MODES[L.mode].arena);

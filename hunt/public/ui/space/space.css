@@ -361,6 +361,7 @@
 #lobby.sp .sp-track-txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.1; }
 #lobby.sp .sp-track-txt small { font: 600 11px/1.1 var(--sp-narrow); letter-spacing: .1em; color: var(--sp-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #lobby.sp .sp-track-txt b { font: 700 clamp(12px, calc(var(--sp-u) * 3.4), 16px)/1.15 var(--sp-display); letter-spacing: .06em; }
+#lobby.sp .sp-track-txt { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; } /* a long track name wraps, never cut */
 #lobby.sp .sp-crew { padding: 8px 10px; gap: 6px; }
 #lobby.sp .sp-pods { gap: 4px; }
 #lobby.sp .sp-pod { min-height: 44px; }
@@ -368,7 +369,9 @@
 #lobby.sp .fillbots.na { opacity: .45; }
 #lobby.sp .fillbots:focus-visible { outline: 2px solid var(--sp-cyan); }
 #lobby.sp .sp-launch { min-height: 44px; }
-#lobby.sp .sp-launch-txt small { max-width: 92%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#lobby.sp .sp-launch-txt { max-width: 88%; }
+#lobby.sp .sp-launch-txt small { max-width: 100%; white-space: nowrap; overflow: hidden; }
+#lobby.sp .sp-pad-title b, #lobby.sp .sp-pad-title small { max-width: 100%; white-space: nowrap; overflow: hidden; }
 #lobby.sp .sp-orb { min-height: 44px; min-width: 44px; }
 /* portrait: two rows of top bar, pad + side by side, then modes, LAUNCH, dock; credit under the dock */
 @media (orientation: portrait) {
@@ -405,3 +408,20 @@
 #lobby.sp .sp-who-sub { display: flex; align-items: center; gap: 8px; }
 #lobby.sp .sp-who-sub .xpbar { display: block; width: 56px; height: 3px; border: 0; border-radius: 0; background: rgba(147,166,207,.3); overflow: hidden; }
 #lobby.sp .sp-who-sub .xpbar i { display: block; height: 100%; width: 0; background: var(--sp-cyan); box-shadow: 0 0 4px var(--sp-cyan); }
+/* side cards: dimmed art only (their titles would sit half under the centred card) */
+.sp-card:not(.on) .sp-card-txt, .sp-card:not(.on) .sp-card-tag { opacity: 0; transition: opacity .2s; }
+/* ticker: the text runs out from under the LIVE tag through a short fade the height of the band */
+#lobby.sp .sp-tk-view::before, #lobby.sp .sp-tk-view::after { top: 7px; bottom: 7px; width: 26px; }
+#lobby.sp .sp-tk-view::before { background: linear-gradient(90deg, #0b1440, rgba(11,20,64,0)); }
+#lobby.sp .sp-tk-view::after { background: linear-gradient(270deg, #0b1440, rgba(11,20,64,0)); }
+#lobby.sp .sp-tk-live { position: relative; z-index: 2; }
+/* portrait: the carousel is as tall as its cards; the free height is shared evenly between rows */
+@media (orientation: portrait) {
+  #lobby.sp .sp-lobby { --mid-h: calc(min(100vw / 2.1, 280px) * 1.04 + 64px);
+    grid-template-rows: auto auto minmax(150px, auto) minmax(0, var(--mid-h)) auto auto; align-content: space-evenly; row-gap: 6px; }
+}
+.sp-carousel.small .sp-card-sub { display: none; }
+.sp-card-name { max-width: 100%; overflow: hidden; }
+/* very short portrait screens: the invite pods go (the Crew orb opens the same screen) so the cards keep their size */
+@media (orientation: portrait) and (max-height: 600px) { #lobby.sp .sp-pods { display: none; } }
+.sp-carousel.tiny .sp-card-txt { display: none; }

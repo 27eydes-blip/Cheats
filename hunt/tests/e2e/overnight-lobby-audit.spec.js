@@ -281,8 +281,29 @@ for (const [w, h] of [[667, 375], [932, 430], [1180, 820], [820, 1180], [320, 56
         out[s + ':dbg'] = [up, dn, document.elementFromPoint(cx, cy - up - 1)?.className, document.elementFromPoint(cx, cy + dn + 1)?.className, b.height].join(' ');
         out[s] = { inView: b.left >= -0.5 && b.top >= -0.5 && b.right <= innerWidth + 0.5 && b.bottom <= innerHeight + 0.5, hitsCredit: over(b, credit), hitsDock: s !== '#playBtn' && over(b, dock), onTop: hit(cx, cy), hitH: up + dn + 1, w: b.width };
       }
+      // no visible label is cut off (clipped or ellipsed); the scrolling ticker is the one exception
+      const shownEl = (e) => { for (let x = e; x && x !== document.body; x = x.parentElement) { const st = getComputedStyle(x); if (x.hidden || st.display === 'none' || st.visibility === 'hidden' || +st.opacity < 0.05) return false; } return true; };
+      out.cut = [];
+      for (const el of document.querySelectorAll('#lobby *')) {
+        if (el.closest('.sp-ticker') || !shownEl(el) || ![...el.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim())) continue;
+        const st = getComputedStyle(el);
+        if ((st.overflowX !== 'visible' || st.textOverflow === 'ellipsis') && el.scrollWidth > el.clientWidth + 1) out.cut.push(`${el.id || el.className}: "${el.textContent.trim().slice(0, 30)}"`);
+      }
+      // the centred mode card never sits over a side card's visible text
+      const on = document.querySelector('.sp-card.on').getBoundingClientRect();
+      out.sideText = [...document.querySelectorAll('.sp-card:not(.on) :is(.sp-card-name, .sp-card-sub, .sp-card-tag)')].filter(shownEl).filter((t) => over(t.getBoundingClientRect(), on)).map((t) => t.textContent);
+      // the side cards stay inside the carousel (never over the pad or the track / crew column)
+      const car = box('.sp-carousel');
+      out.sideOut = [...document.querySelectorAll('.sp-card:not(.on)')].filter((c) => +getComputedStyle(c).opacity > 0.05).map((c) => c.getBoundingClientRect()).filter((q) => q.left < car.left - 1 || q.right > car.right + 1).length;
+      // the ticker's text is clipped at the LIVE tag's right edge
+      const live = box('.sp-tk-live'), view = document.querySelector('.sp-tk-view');
+      out.tickerClear = view.getBoundingClientRect().left >= live.right - 0.5 && getComputedStyle(view).overflowX === 'hidden';
       return out;
     }, SPACE_SEL);
+    expect(r.cut, 'no lobby label is cut off').toEqual([]);
+    expect(r.sideText, 'no side-card text under the centred card').toEqual([]);
+    expect(r.tickerClear, 'ticker text clipped at the LIVE tag').toBe(true);
+    expect(r.sideOut, 'side cards inside the carousel').toBe(0);
     expect(r.scrolls, 'the lobby never scrolls').toBe(false);
     expect(r.creditOnScreen, 'credit line on screen').toBe(true);
     expect(r.dockOnScreen, 'dock on screen').toBe(true);
