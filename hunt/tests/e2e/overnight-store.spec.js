@@ -139,6 +139,24 @@ test('two phones in one race: your equipped underglow is in the other phone\'s r
     return { name: L.name, glow: L.glow, driver: r.driver };
   }), aId);
   expect(look).toEqual({ name: 'WARHOG', glow: '#7dff3a', driver: 'brick' });
+  // ...and B's renderer DRAWS it: lime-green pixels around A's car on B's canvas, none around B's own (blue) car
+  const greenNear = (id) => B.page.evaluate((id) => {
+    const s = window.__race.session, R = s.renderer, v = s.view, c = v && R.carAt(v, id), M = R.M;
+    if (!c || !M) return -1;
+    const cx = c.x * M.s + M.x, cy = c.y * M.s + M.y, rad = Math.round(70 * M.s);
+    const g = R.cv.getContext('2d'), x0 = Math.max(0, Math.round(cx - rad)), y0 = Math.max(0, Math.round(cy - rad));
+    const d = g.getImageData(x0, y0, Math.min(R.cv.width - x0, rad * 2), Math.min(R.cv.height - y0, rad * 2)).data;
+    // green dominance (night roads, the cars' own neons and the HUD are never green-dominant; lime light adds it)
+    let n = 0;
+    for (let i = 0; i < d.length; i += 4) n += Math.max(0, d[i + 1] - Math.max(d[i], d[i + 2]));
+    return n / (d.length / 4);
+  }, id);
+  await expect.poll(() => greenNear(aId), { message: "A's lime underglow drawn on B's screen", timeout: 15_000 }).toBeGreaterThan(0.15);
+  // control: on B, give A's roster row no cosmetics (a new row object, as when cosmetics change): the lime goes
+  await B.page.evaluate((id) => { const rc = window.__race.rc, r = rc.roster.get(id); window.__aRow = r; rc.roster.set(id, { ...r, cos: null }); }, aId);
+  await expect.poll(() => greenNear(aId), { message: 'default look: no lime', timeout: 10_000 }).toBeLessThan(0.05);
+  await B.page.evaluate((id) => window.__race.rc.roster.set(id, { ...window.__aRow }), aId);
+  await expect.poll(() => greenNear(aId), { timeout: 10_000 }).toBeGreaterThan(0.15);
   // B is a guest with nothing equipped: everyone sees the default look
   const bId = await B.page.evaluate(() => window.__race.rc.id);
   expect(await A.page.evaluate((id) => window.__race.rc.roster.get(id)?.cos, bId)).toEqual([0, 0, 0, 0, 0, 0]);
@@ -159,3 +177,33 @@ test('two phones in one race: your equipped underglow is in the other phone\'s r
   for (const e of errs) expect(e).toEqual([]);
   await A.ctx.close(); await B.ctx.close();
 });
+
+// The HORN sits beside pause, clear of RESET (even at its big "stuck" size), the minimap and the
+// thumb buttons, on small and big phones and an iPad, right- and left-handed.
+for (const [w, h] of [[667, 375], [932, 430], [1180, 820]]) for (const left of [false, true]) {
+  test(`horn button layout ${w}x${h}${left ? ' (left-handed)' : ''}: 44 px, clear of pause, RESET, minimap and the thumb buttons`, async ({ browser }) => {
+    const ph = await phone(browser, w, h);
+    const { page } = ph;
+    await page.addInitScript((l) => { try { localStorage.setItem('hunt-settings', JSON.stringify({ leftHanded: l })); } catch {} }, left);
+    await page.goto('/?race=1&mode=trial&track=neon&laps=1');
+    await waitPhase(page, 'race', 60_000);
+    await expect(page.locator('.rc-horn')).toBeVisible();
+    await page.waitForTimeout(400); // (placed a few times a second)
+    const r = await page.evaluate(() => {
+      const h = document.querySelector('.rc-horn').getBoundingClientRect(), L = window.__race.layout(), s = window.__race.session;
+      const size = Math.round(Math.min(180, Math.max(96, L.H * 0.34))), mm = { x0: L.W - s.SA.r - 32 - 2 * L.btn.reset.r1 - size, y0: s.SA.t + 6 }; mm.x1 = mm.x0 + size; mm.y1 = mm.y0 + size;
+      const hc = { x: h.left + h.width / 2, y: h.top + h.height / 2, r: h.width / 2 };
+      const gap = (b, r = b.r) => Math.hypot(b.x - hc.x, b.y - hc.y) - r - hc.r;
+      const out = { w: h.width, h: h.height, inView: h.left >= 0 && h.top >= 0 && h.right <= innerWidth && h.bottom <= innerHeight };
+      for (const k of ['menu', 'drift', 'fire', 'item', 'brake']) out[k] = gap(L.btn[k]);
+      out.resetBig = gap(L.btn.reset, L.btn.reset.r1);
+      out.minimap = !(h.right > mm.x0 && h.left < mm.x1 && h.bottom > mm.y0 && h.top < mm.y1);
+      return out;
+    });
+    expect(r.w).toBeGreaterThanOrEqual(44); expect(r.h).toBeGreaterThanOrEqual(44);
+    expect(r.inView).toBe(true);
+    for (const k of ['menu', 'resetBig', 'drift', 'fire', 'item', 'brake']) expect(r[k], `clear of ${k}`).toBeGreaterThanOrEqual(2);
+    expect(r.minimap, 'clear of the minimap').toBe(true);
+    await ph.ctx.close();
+  });
+}
