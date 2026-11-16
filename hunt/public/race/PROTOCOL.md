@@ -40,8 +40,8 @@ WebSocket: `wss://<host>/race?<params>`
 | `mode` | `grand` (default), `elim`, `battle`, `trial` |
 | `track` | `desert frozen ashlands neon`, or omit / `any` for random |
 | `bots` | `0` = FILL WITH BOTS off (no bot ever joins), anything else = on |
-| `room` | friend room code (A-Z 0-9, up to 12). The FIRST player in creates the room and their `mode`, `track`, `bots` and `lobby` win; later joiners' choices are ignored. |
-| `lobby` | rooms only: lobby countdown in seconds (1.5-30, default 12) |
+| `room` | friend room code (A-Z 0-9, up to 12). The FIRST player in creates the room and is its host: their `mode`, `track`, `bots` win (later joiners' choices are ignored) and they press START. The room keeps these between races; the last race's host (matched by `token`, else by name) gets the room back. A friend who joins mid-race gets `roomwait` and is seated in the next race. |
+| `lobby` | rooms only: a fixed lobby countdown in seconds (1.5-30) instead of the host's START (tests, scripts) |
 | `rejoin`, `secret`, `match` | reconnect to the same car (values from `welcome`) |
 | `skip` | public races: a match id not to be put back into |
 
@@ -49,8 +49,8 @@ Public races (no `room`) go through `RaceMatchmaker`: one filling race per (mode
 bots on/off), so a bots-off player never lands in a race with bots. Bots-off races wait for a
 second human. `mode=trial` is always a private solo race (never bots).
 
-Suggested page URLs for the lobby (client side only, the server does not read them):
-`/?race=1&room=CODE` to open the race lobby with a friend code.
+Page URLs (client side only, the server does not read them): `/?room=CODE` is a friend's invite
+(straight into that race room); `/?race=1&mode=&track=&room=&bots=0|1&driver=` opens a race with those options.
 
 ## Messages: server -> client
 
@@ -60,6 +60,10 @@ All JSON. `t` is the type.
   `secret`, `match` for reconnecting.
 - `lobby` `{mode, track, arena, players: [[name, driver]...], max, startIn (s or null = waiting), bots}`
   (every 0.5 s and on any change). `startIn` null with bots off means "waiting for another racer".
+  Host-run rooms add `host` (the host's id), `ids` (player ids, same order as `players`) and `can`
+  (START would work now); their `startIn` stays null until the last minute of the 5-minute idle safety net.
+- `roomwait` `{room, mode, track, left (s, battle only), players}`: a friend room is mid-race; this
+  socket is seated in its next race (a `welcome` + `lobby` follow). Every 2 s while waiting.
 - `ro` roster `{add: {id: [name, driver, isBot]}, full: 1}`.
 - `start` `{you, mode, track, arena, laps, seed, tick: 30, cd: 3, players, botLevel, tm, rejoin?}`.
   The race clock `tm` starts at `-cd`: negative = grid countdown (nothing moves), `GO` at 0.
@@ -114,6 +118,7 @@ GHOST 1024, SLOW 2048, REVERSE 16384`; drift spark tier = `(f >> 12) & 3` (`drif
   one per tick (30/s). `f` / `i` are one-shot presses (send 1 once). The server applies one
   physics step per input, in order, and acknowledges with `me.ack`.
 - `{t:'pick', driver}` change driver in the lobby.
+- `{t:'host', start: 1}` / `{t:'host', bots: true|false}` the room host's START and FILL WITH BOTS (`rc.host({start, bots})`); anyone else is ignored.
 - `{t:'ping', c}` -> `pong`. `{t:'bye'}` quit for good (the result is recorded as last place now).
 
 ## Client API (`public/race/net.js`)
@@ -226,6 +231,9 @@ art, 4 themes), `cars.js` (6 vehicles, sprite cache), `fx.js` (particles, tire m
 `hud.js`, `controls.js` (touch by identifier, keys by event.code, mouse, gamepad; left-handed
 mirror from the existing setting), `sound.js`, `race.css`.
 
-Temporary entry until the new lobby lands: `/?race=1[&mode=&track=&room=&bots=0|1&driver=]`.
-Local dev only (HUNT_DEV): `laps=1..3` for short room races, and `window.__race.dev('wreck' | 'item', id)`.
+The lobby (`public/ui/lobby.js`, PLAY page + `public/ui/screens.js` driver select, track picker,
+RACE WITH FRIENDS) calls `startRace` through `launchRace` in `public/game.js`. Deep link:
+`/?race=1[&mode=&track=&room=&bots=0|1&driver=]`. `onProgress(m)` gets the server's `progress`
+message (the lobby stores the new account progress), `onBots(on)` the host's room switch.
+Local dev only (HUNT_DEV): `laps=1..3` for short races (also `/?laps=1` from the lobby), and `window.__race.dev('wreck' | 'item', id)`.
 `window.__race` also exposes `perf()`, `layout()`, `hint()` and `auto()` for the browser tests.
