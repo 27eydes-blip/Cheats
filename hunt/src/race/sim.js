@@ -5,7 +5,7 @@ import { DT, TICK_RATE, CAR_R, DRIVERS, DRIVER_IDS, newCar, stepCar, collideCars
 import { getTrack, TRACK_IDS } from '../../public/race/tracks.js';
 import { pointAt, hwAt, nearestS } from '../../public/race/trackgeom.js';
 import { ITEMS, ITEM_IDS, rollItem, WEAPONS } from '../../public/race/items.js';
-import { FLAG, ENT, COUNTDOWN, RESPAWN_TIME, RACE_MODES, RESET_COOLDOWN, STUCK_NUDGE, STUCK_RESET } from '../../public/race/protocol.js';
+import { FLAG, ENT, COUNTDOWN, RESPAWN_TIME, RACE_MODES, TUTORIAL_MODE, TUT_STEPS, RESET_COOLDOWN, STUCK_NUDGE, STUCK_RESET } from '../../public/race/protocol.js';
 import { BOT_NAMES, rng } from '../../public/shared.js';
 import { botInput, levelForTrophies } from './bots.js';
 
@@ -22,6 +22,7 @@ export const ROOM_IDLE_SECS = 300; // a host-run friend room whose host never pr
 export const RESET_GHOST = 1; // s of ghosting after a reset (no hits, no bumps)
 export const STUCK_SPEED = 60; // px/s: slower than this against a wall with throttle on = stuck
 const NUDGE_DIST = 120, NUDGE_SPEED = 150; // the automatic nudge: px toward the racing line, px/s along the track
+const MODES = { ...RACE_MODES, tutorial: TUTORIAL_MODE };
 const r1 = (v) => Math.round(v * 10) / 10;
 const r2 = (v) => Math.round(v * 100) / 100;
 const r3 = (v) => Math.round(v * 1000) / 1000;
@@ -44,9 +45,9 @@ export class RaceSim {
   // o: { mode, track, seed, fillBots, lobbyTime, hostStart, send(id, msg), hooks: {finished(rows)}, botLevel }
   // hostStart (friend rooms): the first human in is the host and starts the race with START
   constructor(o = {}) {
-    this.modeKey = RACE_MODES[o.mode] ? o.mode : 'grand';
-    this.mode = RACE_MODES[this.modeKey];
-    this.trackKey = TRACK_IDS.includes(o.track) ? o.track : TRACK_IDS[0];
+    this.modeKey = MODES[o.mode] ? o.mode : 'grand';
+    this.mode = MODES[this.modeKey];
+    this.trackKey = this.mode.tutorial ? 'tutorial' : TRACK_IDS.includes(o.track) ? o.track : TRACK_IDS[0];
     this.T = getTrack(this.trackKey, !!this.mode.arena);
     this.laps = this.mode.laps && o.laps >= 1 ? Math.min(this.mode.laps, o.laps | 0) : this.mode.laps || 0; // o.laps: dev short races
     this.send = o.send || (() => {});
@@ -92,6 +93,7 @@ export class RaceSim {
       ai: null, left: false, recorded: false, ep: 0, trophies: 0, account: null, secret: null,
       // sens: steering sensitivity (heading steering); stuck: wall-pinned / no-progress timers, RESET cooldown
       sens: cleanSens(sens), wallT: 0, noProgT: 0, bestProg: -Infinity, stuck: 0, nudged: false, resetCd: 0, resetReq: 0, bumpN: -9, resets: 0, nudges: 0,
+      tut: 0, fired: false, dummy: false,
     };
     this.players.set(id, p);
     return p;
@@ -174,6 +176,8 @@ export class RaceSim {
         this.addPlayer({ name, driver: DRIVER_IDS[Math.floor(this.rand() * DRIVER_IDS.length)], bot: true });
       }
     }
+    // TUTORIAL: one parked target car to shoot (never drives, never in anyone's results)
+    if (this.mode.tutorial && !this.dummy) { this.dummy = this.addPlayer({ name: 'Target', driver: 'brick', bot: true }); this.dummy.dummy = true; }
     const hs = this.humans();
     if (!this.botLevel) this.botLevel = hs.length ? levelForTrophies(hs.reduce((s, h) => s + (h.trophies || 0), 0) / hs.length) : 'normal';
     // grid: humans and bots shuffled (deterministic per seed)
@@ -186,6 +190,7 @@ export class RaceSim {
       p.lap = 0; p.cp = this.T.gates.length ? this.T.gates.length - 1 : 0; p.hp = p.maxHp = p.st.armor;
       p.ep++;
     });
+    if (this.dummy) this.parkDummy();
     this.phase = 'play';
     this.time = -COUNTDOWN;
     this.tickN = 0;
@@ -271,7 +276,8 @@ export class RaceSim {
     // inputs: one physics step per input; bots and finished racers get one from the autopilot
     const auto = p.bot || p.finished || (!p.connected && !p.wasBot && this.fillBots);
     const steps = [];
-    if (auto) {
+    if (p.dummy) steps.push(IDLE);
+    else if (auto) {
       const inp = botInput(this, p);
       if (!p.finished) { p.act.f |= inp.f; p.act.i |= inp.i; }
       steps.push(inp);
@@ -303,6 +309,7 @@ export class RaceSim {
     if (p.act.i) { p.act.i = 0; this.useItem(p); }
     if (p.alive && p.car.airT <= 0) this.ground(p);
     if (p.alive) this.unstick(p);
+    if (this.mode.tutorial && !p.wasBot) this.tutorialStep(p);
   }
 
   // ------------------------------------------------------------------ never stuck
@@ -313,7 +320,7 @@ export class RaceSim {
     if (p.resetCd > 0) p.resetCd = Math.max(0, p.resetCd - DT);
     if (p.resetReq) { p.resetReq = 0; if (this.resetCar(p, false)) return; }
     const c = p.car;
-    if (p.finished || c.airT > 0) { p.wallT = 0; p.noProgT = 0; p.stuck = 0; p.bestProg = -Infinity; return; }
+    if (p.finished || p.dummy || c.airT > 0) { p.wallT = 0; p.noProgT = 0; p.stuck = 0; p.bestProg = -Infinity; return; }
     const wedged = c.wall || this.tickN - p.bumpN <= 1;
     if (wedged && p.inp.th > 0 && Math.hypot(c.vx, c.vy) < STUCK_SPEED) p.wallT += DT; else { p.wallT = 0; p.nudged = false; }
     if (!this.mode.arena) {
@@ -347,7 +354,7 @@ export class RaceSim {
   // RESET (the button, or stuck STUCK_RESET s): back on the racing line at the car's progress
   // (never behind its last checkpoint), facing along the track, stopped, ghosted for a second
   resetCar(p, auto) {
-    if (!p.alive || p.out || p.finished || this.time <= 0 || p.car.airT > 0) return false;
+    if (!p.alive || p.out || p.finished || p.dummy || this.time <= 0 || p.car.airT > 0) return false;
     if (!auto && p.resetCd > 0) return false;
     const spot = this.mode.arena ? this.arenaSpot(p) : this.resetSpot(p);
     p.car = newCar(spot.x, spot.y, spot.a);
@@ -453,7 +460,7 @@ export class RaceSim {
     this.order = list;
     // BOUNTY: the leader glows on everyone's map; wrecking them steals their match coins
     const lead = list[0];
-    this.leaderId = lead && !lead.out && !lead.finished && this.time > 0 && (!this.mode.arena || lead.kills > 0) ? lead.id : 0;
+    this.leaderId = lead && !lead.out && !lead.finished && this.time > 0 && !this.mode.tutorial && (!this.mode.arena || lead.kills > 0) ? lead.id : 0;
   }
 
   modeTick() {
@@ -468,6 +475,9 @@ export class RaceSim {
       if (this.racers() <= 1) return this.finish();
     } else if (this.modeKey === 'battle') {
       if (this.time >= this.mode.time) return this.finish();
+    } else if (this.mode.tutorial) {
+      // over when the steps are done, the clock runs out or the player is gone
+      if (this.humans().every((p) => p.tut >= TUT_STEPS.length - 1 || p.left) || this.time >= this.mode.time) return this.finish();
     } else {
       const running = active.filter((p) => !p.finished && !p.left);
       // everyone still racing is a bot: wrap up quickly
@@ -520,6 +530,7 @@ export class RaceSim {
   }
   respawn(p) {
     const T = this.T;
+    if (p.dummy) { p.alive = true; p.hp = p.maxHp; p.ep++; this.parkDummy(); this.events.push(['rs', p.id]); return; }
     const spot = this.mode.arena ? this.arenaSpot(p) : this.respawnSpot(p);
     p.car = newCar(spot.x, spot.y, spot.a);
     stepCar(p.car, { st: 0, th: 0, dr: 0 }, p.st, T, 0);
@@ -558,7 +569,7 @@ export class RaceSim {
   fireWeapon(p) {
     if (!this.mode.weapons || p.wcd > 0 || p.empT > 0 || p.finished) return;
     const W = WEAPONS[p.driver], c = p.car, hx = Math.cos(c.a), hy = Math.sin(c.a);
-    p.wcd = W.cd;
+    p.wcd = W.cd; p.fired = true;
     switch (p.driver) {
       case 'volt': {
         let best = null, bd = W.range;
@@ -809,6 +820,33 @@ export class RaceSim {
     }
   }
 
+  // ------------------------------------------------------------------ tutorial
+  // the target car: parked across the back straight, stopped
+  parkDummy() {
+    const main = this.T.corridors[0], pt = pointAt(main, this.T.def.tut.dummy * this.T.L, 0), d = this.dummy;
+    d.car = newCar(pt.x, pt.y, pt.a);
+    stepCar(d.car, IDLE, d.st, this.T, 0);
+    d.ghostT = 0;
+  }
+  // steps in order (TUT_STEPS): steer through the cones, drift (a spark tier charged), grab an item,
+  // fire the weapon; each one done sends {k:'tut', id, step}, then 'done' and the run ends
+  tutorialStep(p) {
+    if (p.tut >= TUT_STEPS.length - 1) return;
+    const c = p.car, tut = this.T.def.tut;
+    let ok = false;
+    switch (TUT_STEPS[p.tut]) {
+      case 'steer': ok = p.alive && c.pc === 0 && c.x > tut.cones[1] && c.x < tut.drift[0] + 300 && c.y < 1000 && p.lap >= 1; break;
+      case 'drift': ok = driftTier(c.dc) >= 1; break;
+      case 'item': ok = !!p.item; break;
+      case 'fire': ok = p.fired; break;
+    }
+    p.fired = false;
+    if (!ok) return;
+    this.events.push({ k: 'tut', id: p.id, step: TUT_STEPS[p.tut] });
+    p.tut++;
+    if (p.tut === TUT_STEPS.length - 1) this.events.push({ k: 'tut', id: p.id, step: 'done' });
+  }
+
   // ------------------------------------------------------------------ snapshots
   flags(p) {
     const c = p.car;
@@ -820,6 +858,7 @@ export class RaceSim {
   hud() {
     if (this.modeKey === 'grand' || this.modeKey === 'trial') return { laps: this.laps, ft: this.finishAt != null ? r2(Math.max(0, this.finishAt - this.time)) : null };
     if (this.modeKey === 'elim') return { nx: r2(Math.max(0, this.elimNext - this.time)), left: this.racers() };
+    if (this.mode.tutorial) { const h = this.humans()[0]; return { tut: TUT_STEPS[h ? h.tut : 0], tl: r2(Math.max(0, this.mode.time - this.time)) }; }
     return { tl: r2(Math.max(0, this.mode.time - this.time)) };
   }
   snapshots() {
@@ -856,7 +895,7 @@ export class RaceSim {
   resultRow(p, rank) {
     return {
       p, rank, players: this.players.size, mode: this.modeKey, track: this.trackKey, kills: p.kills, steals: p.steals, mc: p.mc,
-      time: p.finishTime, bestLap: p.bestLap, finished: !!p.finished, driver: p.driver,
+      time: p.finishTime, bestLap: p.bestLap, finished: !!p.finished, driver: p.driver, tut: p.tut >= TUT_STEPS.length - 1 ? 1 : 0,
     };
   }
   finish() {
@@ -869,7 +908,7 @@ export class RaceSim {
     this.hooks.finished?.(ranked.filter((p) => !p.wasBot && !p.left).map((p) => this.resultRow(p, p.rank)));
     for (const p of this.players.values()) {
       if (!p.connected) continue;
-      this.send(p.id, { t: 'end', mode: this.modeKey, track: this.trackKey, rank: p.rank, you: p.id, results, n: this.players.size, time: p.finishTime, bestLap: p.bestLap, mc: p.mc, k: p.kills });
+      this.send(p.id, { t: 'end', mode: this.modeKey, track: this.trackKey, rank: p.rank, you: p.id, results, n: this.players.size, time: p.finishTime, bestLap: p.bestLap, mc: p.mc, k: p.kills, ...(this.mode.tutorial ? { tut: p.tut >= TUT_STEPS.length - 1 ? 1 : 0 } : {}) });
     }
   }
 }
