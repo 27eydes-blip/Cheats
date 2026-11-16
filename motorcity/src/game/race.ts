@@ -29,6 +29,8 @@ export interface RaceOpts {
   laps?: number;
   ghost?: GhostLap | null;
   traffic?: number;
+  /** Rival race pace in mph; defaults from difficulty. */
+  pace?: number;
 }
 
 export interface GhostLap { trackId: string; time: number; car: ModelId; paint: string; samples: number[] } // [z,x,yaw]*
@@ -84,7 +86,8 @@ export class Race {
     const roster = [...ROSTER].sort(() => this.rng.next() - 0.5).slice(0, n);
     roster.forEach((def, i) => {
       const row = Math.floor(i / 2), col = i % 2;
-      const r = new Rival(def, wrap(SEG_LEN * (6 + (n - i) * 5.5) - row, L), col ? 0.45 : -0.45, opts.difficulty, 100 + i);
+      const pace = opts.pace ?? 56 + (opts.difficulty - 0.9) * 160;
+      const r = new Rival(def, wrap(SEG_LEN * (6 + (n - i) * 5.5) - row, L), col ? 0.45 : -0.45, pace, 100 + i);
       r.trackLen = L;
       this.rivals.push(r);
     });
@@ -125,17 +128,14 @@ export class Race {
     // --- player
     let steer = inp.steer, brake = inp.brake, boost = inp.boost;
     if (this.autopilot || this.state === 'finished') {
-      const seg = this.segAt(p.z + SEG_LEN * 6);
-      const want = clamp(sign(seg.curve) * 0.4, -0.5, 0.5);
-      steer = clamp((want - p.x) * 2.5 + seg.curve * 0.25, -1, 1);
-      brake = false; boost = false;
-      if (this.autopilot) this.avoid(p, (s) => (steer = s));
+      const ap = this.drive();
+      steer = ap.steer; brake = ap.brake; boost = this.autopilot && p.boost >= 1 && Math.random() < 0.01;
     }
     const seg = this.segAt(p.z);
     p.update(dt, { steer, brake, boost }, seg, this.weather.grip, this.t);
     if (p.z >= L) {
       p.z -= L;
-      if (this.state === 'racing' && !this.autopilot) this.completeLap();
+      if (this.state === 'racing' && this.opts.mode !== 'attract') this.completeLap();
     }
 
     // --- slipstream
@@ -208,11 +208,35 @@ export class Race {
     audio.crowd(this.autopilot ? 0 : crowdNear);
   }
 
-  private avoid(p: Player, set: (s: number) => void) {
+  /** A competent robot driver (title-screen attract mode, the lap after the flag, tests). */
+  private apLane = 0;
+  drive(): { steer: number; brake: boolean } {
+    const p = this.player, L = this.track.length;
+    let c = 0;
+    for (let i = 3; i < 14; i++) c += this.segAt(p.z + i * SEG_LEN).curve;
+    c /= 11;
+    let target = clamp(sign(c) * Math.min(1, Math.abs(c) / 3) * 0.5, -0.6, 0.6) + this.apLane;
+    let brake = false;
+    let blocked = false;
     for (const v of [...this.rivals, ...this.traffic.list]) {
-      const d = wrap(v.z - p.z, this.track.length);
-      if (d < SEG_LEN * 10 && Math.abs(v.x - p.x) < 0.5) set(v.x > p.x ? -1 : 1);
+      const d = wrap(v.z - p.z, L);
+      if (d > SEG_LEN * 30 || d < 0) continue;
+      if (Math.abs(v.x - target) < v.half + CAR_HALF + 0.12 && v.speed < p.speed + 300) {
+        blocked = true;
+        const left = v.x - (v.half + CAR_HALF + 0.2), right = v.x + (v.half + CAR_HALF + 0.2);
+        target = Math.abs(left - p.x) < Math.abs(right - p.x) && left > -0.9 ? left : right < 0.9 ? right : left;
+        if (d < SEG_LEN * 9 && Math.abs(v.x - p.x) < v.half + CAR_HALF + 0.05 && p.speed > v.speed + 500) brake = true;
+        break;
+      }
     }
+    if (!blocked) this.apLane *= 0.98;
+    for (let i = 0; i < 12; i++) { const s = this.segAt(p.z + i * SEG_LEN); if (s.portal || s.tunnel) { target *= 0.4; break; } }
+    target = clamp(target, -0.85, 0.85);
+    // corners too hard to hold at speed: lift via brake/drift
+    const need = Math.abs(c) * 0.42 * p.pct;
+    if (need > 0.85 && p.pct > 0.6) brake = true;
+    const steer = clamp((target - p.x) * 3 + c * 0.32 * p.pct * 1.4, -1, 1);
+    return { steer, brake };
   }
 
   private completeLap() {
@@ -299,7 +323,7 @@ export class Race {
           // rear-ended a rival
           if (rel > MAX_V * 0.28) { p.crash(t, side); r.spin(t); this.shake = 1; }
           else { p.speed = r.speed * 0.92; r.speed += rel * 0.3; p.bump(t, side * 0.8, 0); }
-          p.z = wrap(r.z - (r.len + 760) / 2 - 2, L);
+          this.pushBack(dz - (r.len + 760) / 2 - 2);
         } else if (dz < 0 && rel < 0) {
           r.speed = Math.min(r.speed, p.speed * 0.95);
           p.bump(t, side * 0.5, 120);
@@ -312,8 +336,8 @@ export class Race {
       hit(v, (dz) => {
         const rel = p.speed - v.speed;
         const side = sign(p.x - v.x) || 1;
-        if (dz > 0 && rel > MAX_V * 0.22) { p.crash(t, side); this.shake = 1; p.speed = v.speed; p.z = wrap(v.z - (v.len + 760) / 2 - 2, L); if (v.kind === 'carriage' || v.kind === 'wagon') audio.whinny(); }
-        else { p.bump(t, side * 1.2, dz > 0 ? -Math.max(0, rel) * 0.6 : 0); if (dz > 0) p.z = wrap(v.z - (v.len + 760) / 2 - 2, L); }
+        if (dz > 0 && rel > MAX_V * 0.32) { p.crash(t, side); this.shake = 1; p.speed = v.speed; this.pushBack(dz - (v.len + 760) / 2 - 2); if (v.kind === 'carriage' || v.kind === 'wagon') audio.whinny(); }
+        else { p.bump(t, side * 1.2, dz > 0 ? -Math.max(0, rel) * 0.6 : 0); if (dz > 0) this.pushBack(dz - (v.len + 760) / 2 - 2); }
       });
     }
     // rivals vs traffic (so AI isn't a ghost)
@@ -326,6 +350,12 @@ export class Race {
         }
       }
     }
+  }
+
+  /** Moves the player back along the road (negative amount) without ever crossing the start line backwards. */
+  private pushBack(amount: number) {
+    if (amount >= 0) return;
+    this.player.z = Math.max(0, this.player.z + amount);
   }
 
   private onEvent(e: string) {

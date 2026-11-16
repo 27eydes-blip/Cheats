@@ -12,9 +12,9 @@ export interface RivalDef { name: string; model: keyof typeof MODELS; personalit
 
 export const ROSTER: RivalDef[] = [
   { name: 'Barney "Cigar" Oldham', model: 'stutz', personality: 'blocker', skill: 1.0 },
-  { name: 'Louis Chevalier', model: 'buick', personality: 'reckless', skill: 1.02 },
+  { name: 'Louis Chevalier', model: 'buick', personality: 'reckless', skill: 1.04 },
   { name: 'Ralph De Palmer', model: 'mercer', personality: 'clean', skill: 1.01 },
-  { name: 'Tin Lizzie Tess', model: 'modelT', personality: 'reckless', skill: 0.95 },
+  { name: 'Tin Lizzie Tess', model: 'modelT', personality: 'reckless', skill: 0.92 },
   { name: 'Col. J. W. Packwood', model: 'packard', personality: 'blocker', skill: 0.97 },
   { name: 'Spider Huff', model: 'mercer', personality: 'clean', skill: 0.98 },
   { name: 'Bob Burman Jr.', model: 'buick', personality: 'clean', skill: 1.0 },
@@ -42,12 +42,12 @@ export class Rival implements Mover {
   get total() { return this.laps * this.trackLen + this.z; }
   trackLen = 1;
 
-  constructor(def: RivalDef, z: number, x: number, difficulty: number, seed: number) {
+  /** pace = race pace in mph for this event; each driver varies around it by skill. */
+  constructor(def: RivalDef, z: number, x: number, pace: number, seed: number) {
     this.def = def;
     this.model = MODELS[def.model];
     this.z = z; this.x = x; this.tx = x;
-    const baseTop = { modelT: 66, stutz: 76, mercer: 80, buick: 84, packard: 72 }[def.model as string] ?? 74;
-    this.top = baseTop * MPH * def.skill * difficulty * (def.personality === 'reckless' ? 1.03 : 1);
+    this.top = pace * MPH * def.skill * (def.personality === 'reckless' ? 1.03 : 1);
     this.accel = this.top * 0.3;
     this.rng = new Rng(seed);
   }
@@ -92,19 +92,24 @@ export class Rival implements Mover {
 
     // avoid slower things ahead
     let ahead: Mover | null = null, aheadD = 1e9;
+    let block: Mover | null = null, blockD = 1e9;
     for (const o of all) {
       if (o === this) continue;
-      let d = wrap(o.z - this.z, this.trackLen);
-      if (d > this.trackLen / 2) continue;
-      if (d < 6 * SEG_LEN && Math.abs(o.x - this.x) < (o.half + this.half) * 1.6 && d < aheadD) { ahead = o; aheadD = d; }
+      const d = wrap(o.z - this.z, this.trackLen);
+      if (d > 8 * SEG_LEN) continue;
+      const gapX = Math.abs(o.x - target);
+      if (gapX < o.half + this.half + 0.12 && d < aheadD && o.speed < this.speed + 300) { ahead = o; aheadD = d; }
+      if (Math.abs(o.x - this.x) < o.half + this.half + 0.02 && d < blockD) { block = o; blockD = d; }
     }
     let topNow = this.top * band;
-    if (ahead && ahead.speed < this.speed + 200) {
-      const left = ahead.x - 0.6, right = ahead.x + 0.6;
-      const pick = Math.abs(left - target) < Math.abs(right - target) ? left : right;
-      target = clamp(pick, -0.82, 0.82);
-      if (aheadD < 2.5 * SEG_LEN && pers !== 'reckless') topNow = Math.min(topNow, ahead.speed * 0.98);
+    if (ahead) {
+      const room = ahead.half + this.half + 0.14;
+      const left = ahead.x - room, right = ahead.x + room;
+      const okL = left > -0.9, okR = right < 0.9;
+      const pick = okL && (!okR || Math.abs(left - this.x) <= Math.abs(right - this.x)) ? left : right;
+      target = clamp(pick, -0.88, 0.88);
     }
+    if (block && blockD < 3 * SEG_LEN && block.speed < this.speed) topNow = Math.min(topNow, Math.max(block.speed * 0.97, this.speed - 4000 * dt));
     // through portals stay central
     if (hazard > 0) target *= 1 - hazard * 0.7;
     // horn swerve
@@ -119,15 +124,15 @@ export class Rival implements Mover {
     else { this.speed = approach(this.speed, topNow, dt * 4000); this.braking = this.speed - topNow > 300; }
 
     // lateral
-    this.tx = approach(this.tx, target, dt * 1.2);
+    this.tx = approach(this.tx, target, dt * (ahead ? 2.4 : 1.2));
     const lat = clamp(this.tx - this.x, -1, 1);
-    const maxLat = 0.9 * (this.speed / (SEG_LEN * 60)) + 0.15;
+    const maxLat = 1.1 * (this.speed / (SEG_LEN * 60)) + 0.35;
     this.x += clamp(lat * 3, -maxLat, maxLat) * dt;
     this.steer = approach(this.steer, clamp(lat * 4, -1, 1), dt * 6);
     // reckless drivers occasionally overcook a hard corner
     if (pers === 'reckless' && ac > 3 && this.rng.chance(dt * 0.06)) this.spin(t);
     // hard limits
-    const lim = seg.tunnel ? 1.1 : seg.portal ? (portals()[seg.portal.kind]?.open ?? 1.2) - this.half : 1.0;
+    const lim = seg.tunnel ? 1.1 : seg.portal ? (portals()[seg.portal.kind]?.open ?? 1.2) - this.half : 0.92;
     this.x = clamp(this.x, -lim, lim);
     this.z += this.speed * dt;
     this.wheel += this.speed * dt * 0.004;
