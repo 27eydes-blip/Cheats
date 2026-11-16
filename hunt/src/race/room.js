@@ -210,6 +210,7 @@ export class RaceRoom {
         const pr = JSON.parse(u.progress || '{}');
         p.account = u.id;
         p.trophies = pr.trophies?.[p.driver] | 0;
+        sim.setGarage(id, pr); // store cosmetics (draw-only), carried in the roster
       }).catch(() => {});
     }
     sendJSON(server, this.welcome(p, mname));

@@ -5,6 +5,7 @@
 // and the steering arrow on your car), the touch buttons and RESET. Safe-area aware.
 import { FLAG } from './protocol.js';
 import { DRIVERS, driftTier } from './physics.js';
+import { BASE_LOOKS } from './looks.js';
 import { WEAPONS, ITEMS } from './items.js';
 import { SETTINGS, pulse } from '../settings.js';
 import { INK } from './cars.js';
@@ -207,7 +208,7 @@ export class Hud {
     for (const c of view.cars) {
       if (c.f & FLAG.DEAD || c.me) continue;
       const px = ox + c.x * k, py = oy + c.y * k;
-      g.beginPath(); g.arc(px, py, 3.2, 0, TAU); g.fillStyle = DRIVERS[S.rc.roster.get(c.id)?.driver]?.color || '#fff'; g.fill(); g.lineWidth = 1.5; g.strokeStyle = INK; g.stroke();
+      g.beginPath(); g.arc(px, py, 3.2, 0, TAU); g.fillStyle = (BASE_LOOKS[S.rc.roster.get(c.id)?.driver] || BASE_LOOKS.volt).neon; g.fill(); g.lineWidth = 1.5; g.strokeStyle = INK; g.stroke(); // each car's signature neon
     }
     // the leader (bounty) is shown to everyone
     const ld = view.leader ? view.cars.find((c) => c.id === view.leader) : null;

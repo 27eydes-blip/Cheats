@@ -8,8 +8,8 @@ import { RaceRenderer } from './render.js';
 import { Hud, fmtTime } from './hud.js';
 import { Controls } from './controls.js';
 import { play, engine, stopEngine } from './sound.js';
-import { drawCar } from './cars.js';
 import { DRIVERS, driftTier } from './physics.js';
+import { BASE_LOOKS, carName, drawCarPreview } from './looks.js';
 import { RACE_MODES, FLAG } from './protocol.js';
 import { ITEM_IDS } from './items.js';
 import { trackName } from './tracks.js';
@@ -17,6 +17,7 @@ import { SETTINGS } from '../settings.js';
 import { icon } from '../ui/icons.js';
 import { levelInfo } from '../progression.js';
 import { Tutorial, flag, setFlag, evRow, tutStep, TUT_FLAG, STEER_FLAG } from './tutorial.js';
+import { mountHorn, hornEvent } from './horn.js';
 
 const CREDIT = 'Created by Sam Eyde III';
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -76,6 +77,7 @@ class RaceSession {
     this.renderer = new RaceRenderer(this.cv);
     this.hud = new Hud();
     this.ctrl = new Controls(this.cv, { onMenu: () => this.toggleMenu() });
+    this.horn = mountHorn(this);
     $('.rc-cancel').onclick = () => this.exit();
     // tutorial: SKIP is always on screen; LET'S RACE goes on to the race the player picked
     this.tut = this.o.tutorial ? new Tutorial(root, {
@@ -197,7 +199,7 @@ class RaceSession {
     const rc = this.rc;
     this.$('.rc-wait').hidden = false;
     if (this.tut) { this.$('.rc-ws').textContent = 'Starting…'; return; }
-    this.$('.rc-wl').innerHTML = m.players.map(([n, d]) => `<span class="rc-chip" style="--c:${DRIVERS[d]?.color || '#fff'}"><i></i>${esc(n)}</span>`).join('');
+    this.$('.rc-wl').innerHTML = m.players.map(([n, d]) => `<span class="rc-chip" style="--c:${(BASE_LOOKS[d] || BASE_LOOKS.volt).neon}" title="${carName(d)}"><i></i>${esc(n)}</span>`).join('');
     const n = `${m.players.length}/${m.max} racers`;
     if (rc.room && m.ids) {
       // host-run friend room
@@ -279,6 +281,7 @@ class RaceSession {
     clearInterval(this.tipTimer); clearTimeout(this.toastT);
     try { if (this.rc && this.rc.phase !== 'idle') this.rc.leave(); } catch {}
     this.ctrl.destroy();
+    this.horn.destroy();
     removeEventListener('resize', this.onResize);
     stopEngine();
     this.root.remove();
@@ -297,7 +300,7 @@ class RaceSession {
     const msg = battle ? (m.rank === 1 ? 'Top of the arena!' : `${m.k} takedowns`) : m.rank === 1 ? 'You won the race!' : out ? `Knocked out in ${ORD(out)}` : me[9] ? `Finished ${ORD(m.rank)} · ${fmtTime(m.time)}` : `${ORD(m.rank)} place`;
     const rows = m.results.map((r) => {
       const right = battle ? `${r[5]} KO` : r[9] ? fmtTime(r[4]) : m.mode === 'elim' ? 'out' : 'DNF';
-      return `<li class="${r[0] === m.you ? 'me' : ''}"><span class="r">${r[3]}</span><i class="rc-dot" style="background:${DRIVERS[r[2]]?.color || '#fff'}"></i>${esc(r[1])}<span class="k">${right}</span></li>`;
+      return `<li class="${r[0] === m.you ? 'me' : ''}"><span class="r">${r[3]}</span><i class="rc-dot" style="background:${(BASE_LOOKS[r[2]] || BASE_LOOKS.volt).neon}" title="${carName(r[2])}"></i>${esc(r[1])}<span class="k">${right}</span></li>`;
     }).join('');
     el.innerHTML = `<div class="left"><div class="title rank slam">${head}</div><canvas class="posecv"></canvas></div>
       <div class="right"><div class="rmsg">${esc(msg)} <small>${esc(trackName(m.track, rc.arena) || '')}</small></div>
@@ -315,7 +318,7 @@ class RaceSession {
     const g = cv.getContext('2d'), s = Math.min(r.width, r.height) / 70;
     g.setTransform(d * s, 0, 0, d * s, (r.width * d) / 2, (r.height * d) / 2);
     g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(4, 6, 30, 20, -0.5, 0, 7); g.fill();
-    g.rotate(-0.5); drawCar(g, rc.myDriver());
+    drawCarPreview(g, rc.myDriver(), this.renderer.carLook(rc.id, rc), -0.5, 0, { boost: false, steady: true }); // in your equipped look
     play(m.rank === 1 ? 'finish' : 'lap');
     if (rc.progress) this.applyProgress(rc.progress);
   }
@@ -544,6 +547,7 @@ class RaceSession {
       case 'jump': if (e[1] === meId) play('jump'); break;
       case 'mt': if (e[1] === meId) { play('mt' + Math.min(3, Math.max(1, e[2]))); this.mtNow = true; } break;
       case 'bump': if (e[1] === meId || e[2] === meId) play('bump', Math.min(1, e[3] / 700)); break;
+      case 'horn': hornEvent(rc, e[1], fall(e[1])); break;
       case 'lap': {
         if (e[1] !== meId) break;
         const n = e[2], laps = v.hud?.laps || 0;

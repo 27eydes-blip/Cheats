@@ -31,7 +31,11 @@ export const MODES_UI = {
 import { clampPower, POWER_COST, MAX_POWER } from '../power.js';
 import { DRIVERS } from '../race/physics.js';
 import { RACE_MODES } from '../race/protocol.js';
-import { drawCarStage, paintPreview, trackLabel, TRACK_CHOICES, weaponOf, driverStats } from '../race/preview.js';
+import { paintPreview, trackLabel, TRACK_CHOICES, weaponOf, driverStats } from '../race/preview.js';
+import { carName } from '../race/looks.js';
+import { shopDay } from '../race/garage.js';
+import { drawPlatform, equippedLook } from './platform.js';
+import { openStore } from './store.js';
 // HUNT RACERS (the main game): the PLAY page lists the racing modes; the shooter lobby above is the
 // classic one (?shooter=1)
 export const RACE_MODE_BTNS = [
@@ -73,7 +77,9 @@ export function createLobby(api) {
   const RACE = !!api.racing;
   const root = $('lobby');
   root.className = 'lobby' + (RACE ? ' racing' : '');
-  const tabs = RACE ? TABS.filter(([k]) => k !== 'armory') : TABS; // the Armory holds shooter weapons only
+  // racing: the STORE (car cosmetics) takes the place of the Locker and the Armory, which only hold
+  // shooter cosmetics and weapons (both stay in the classic lobby)
+  const tabs = RACE ? [['profile', 'PROFILE', 'user'], ['store', 'STORE', 'coin'], ...TABS.filter(([k]) => ['play', 'pass', 'friends'].includes(k))] : TABS;
   const playPage = RACE ? `
       <section class="pg pg-play" data-pg="play">
         <div class="modelist" id="modeCard">${RACE_MODE_BTNS.map(([k, n, sub, ic, col]) => `<button class="modebtn tap" data-m="${k}" style="--mc:${col}" title="${esc(RACE_MODES[k].desc)}"><span class="mi">${icon(ic)}</span><span class="mn"><b>${n}</b><small>${sub}</small></span><span class="go" aria-hidden="true"></span></button>`).join('')}
@@ -103,7 +109,7 @@ export function createLobby(api) {
         <button class="gear tap" id="rail_settings" aria-label="Settings">${icon('settings')}</button>
       </div>
     </div>
-    <nav class="lb-tabs">${tabs.map(([k, l, ic]) => `<button class="tabbtn tap" id="${k === 'locker' || k === 'armory' || k === 'pass' || k === 'friends' ? 'rail_' + k : 'tab_' + k}" data-tab="${k}">${icon(ic)}<span>${l}</span><span class="dot" id="dot_${k}" hidden></span>${k === 'play' ? '<span class="tabchip" id="playChip">READY</span>' : ''}</button>`).join('')}</nav>
+    <nav class="lb-tabs">${tabs.map(([k, l, ic]) => `<button class="tabbtn tap" id="${k === 'locker' || k === 'armory' || k === 'pass' || k === 'friends' || k === 'store' ? 'rail_' + k : 'tab_' + k}" data-tab="${k}">${icon(ic)}<span>${l}</span><span class="dot" id="dot_${k}" hidden></span>${k === 'play' ? '<span class="tabchip" id="playChip">READY</span>' : k === 'store' ? '<span class="tabchip" id="storeChip">DAILY</span>' : ''}</button>`).join('')}</nav>
     <main class="lb-page">${RACE ? playPage : `
       <section class="pg pg-play" data-pg="play">
         <div class="modelist" id="modeCard">${MODE_BTNS.map(([k, n, sub, ic, col]) => `<button class="modebtn tap" data-m="${k}" style="--mc:${col}"><span class="mi">${icon(ic)}</span><span class="mn"><b>${n}</b><small>${sub}</small></span><span class="go" aria-hidden="true"></span></button>`).join('')}
@@ -151,7 +157,7 @@ export function createLobby(api) {
   function drawStage(t) {
     const w = stage.width / L.dpr, h = stage.height / L.dpr;
     sg.setTransform(L.dpr, 0, 0, L.dpr, 0, 0); sg.clearRect(0, 0, w, h);
-    if (RACE) { drawCarStage(sg, w, h, api.getBrawler(), SETTINGS.reduceFlash ? 0 : t, { still: SETTINGS.lowGfx }); return; }
+    if (RACE) { drawPlatform(sg, w, h, api.getBrawler(), L.look, SETTINGS.reduceFlash ? t * 0.5 : t, { low: SETTINGS.lowGfx }); return; } // the car turning on its neon platform
     const id = api.getBrawler(), B = BRAWLERS[id];
     const { sc, cx, base } = stageFit(w, h);
     // dramatic light from below: a warm cone rising off the pedestal
@@ -257,7 +263,9 @@ export function createLobby(api) {
     const tier = passTier(p.pass.xp);
     const passReady = PASS.some((r) => r.tier <= tier && (!p.pass.claimed.includes(`free:${r.tier}`) || (p.pass.premium && !p.pass.claimed.includes(`premium:${r.tier}`))));
     const seen = (k, now) => { const r = seenList(store.get(k), now); if (r.fresh) store.set(k, JSON.stringify(now)); return r.list; };
-    $('dot_road').hidden = !roadReady; $('dot_pass').hidden = !passReady; $('dot_locker').hidden = !hasUnseen(p.owned, seen('hunt-seen-locker', p.owned));
+    $('dot_road').hidden = !roadReady; $('dot_pass').hidden = !passReady;
+    if ($('dot_locker')) $('dot_locker').hidden = !hasUnseen(p.owned, seen('hunt-seen-locker', p.owned));
+    if ($('dot_store')) $('dot_store').hidden = store.get('hunt-store-day') === String(shopDay()); // a new daily shop you have not seen
     $('dot_friends').hidden = true; $('dot_profile').hidden = true; $('dot_play').hidden = true;
     for (const b of root.querySelectorAll('.tabbtn')) b.classList.toggle('on', b.dataset.tab === L.tab);
     for (const pg of root.querySelectorAll('.pg')) pg.hidden = pg.dataset.pg !== L.tab;
@@ -268,8 +276,10 @@ export function createLobby(api) {
   function refreshRace() {
     const p = A.progress(), id = api.getBrawler(), D = DRIVERS[id] || DRIVERS.volt;
     refreshTop(p);
-    $('npName').textContent = D.name; $('npRole').textContent = D.role.toUpperCase(); $('npRole').style.setProperty('--role-col', D.color);
-    $('npCar').textContent = `${D.car} · ${weaponOf(id).name}`;
+    L.look = equippedLook(p, id); // (the platform draws it every frame)
+    $('npName').textContent = carName(id); $('npRole').textContent = D.role.toUpperCase(); $('npRole').style.setProperty('--role-col', L.look.neon);
+    root.querySelector('.slot.me').style.setProperty('--car-neon', L.look.neon);
+    $('npCar').textContent = weaponOf(id).name;
     if (L.statsFor !== id) { L.statsFor = id; $('npStats').innerHTML = driverStats(id).map((r) => `<span>${r.label}</span><i><b style="width:${Math.round(r.f * 100)}%"></b></i>`).join(''); }
     $('npTro').textContent = p.trophies[id] | 0;
     $('mcName').textContent = RACE_MODES[L.mode].name.toUpperCase();
@@ -313,7 +323,7 @@ export function createLobby(api) {
     $('playBtn').addEventListener('click', () => { unlockAudio(); api.startRace({ mode: L.mode, track: L.track }); });
     $('tab_play').onclick = () => tab('play');
     $('tab_profile').onclick = () => tab('profile');
-    $('rail_locker').onclick = () => { store.set('hunt-seen-locker', JSON.stringify(A.progress().owned)); tab('locker'); };
+    $('rail_store').onclick = () => { store.set('hunt-store-day', String(shopDay())); sfx('click', 0.6); openStore(api, refresh); refresh(); };
     $('rail_pass').onclick = $('passBtn').onclick = () => SC.openPass(refresh);
     $('rail_road').onclick = () => SC.openRoad(refresh);
     $('rail_friends').onclick = () => SC.openRaceFriends(api);

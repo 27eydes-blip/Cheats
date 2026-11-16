@@ -19,8 +19,10 @@ import { EVENTS, EVENT_IDS } from '../events/index.js';
 import { DRIVERS, DRIVER_IDS } from '../race/physics.js';
 import { RACE_MODES } from '../race/protocol.js';
 import { TRACK_IDS } from '../race/tracks.js';
-import { drawCarStage, paintPreview, driverStats, weaponOf, trackLabel, TRACK_CHOICES } from '../race/preview.js';
+import { paintPreview, driverStats, weaponOf, trackLabel, TRACK_CHOICES } from '../race/preview.js';
 import { drawCar } from '../race/cars.js';
+import { carName } from '../race/looks.js';
+import { drawPlatform, equippedLook } from './platform.js';
 
 const INK = '#1b1033';
 const $ = (id) => document.getElementById(id);
@@ -285,6 +287,7 @@ const rewardLabel = (r) => (r.coins ? `${r.coins}` : r.skin ? SKINS[r.skin].name
 const dupeCoins = (r) => DUPE_COINS[r.skin ? 'skin' : r.fx ? 'fx' : 'title'];
 export function openPass(onDone) {
   const S = screen('HUNT PASS', `<div class="cur" id="hpCoinChip">${icon('coin')}<b id="hpCoins">0</b><small>TEST</small></div>`, onDone);
+  if (document.getElementById('lobby')?.classList.contains('racing')) S.el.classList.add('neon'); // the neon racing look (store.css)
   const render = (keepScroll) => {
     const p = A.progress(), tier = passTier(p.pass.xp), into = (p.pass.xp || 0) % PASS_XP_PER_TIER;
     const sc = S.body.querySelector('.track')?.scrollLeft;
@@ -587,14 +590,17 @@ const ARENA_BLURB = { any: 'A different arena every match', desert: 'Open sand b
 export function openDriverSelect(api, onDone) {
   const S = screen('DRIVERS', '', onDone);
   const grid = document.createElement('div'); grid.className = 'grid-cards drivers'; S.body.appendChild(grid);
+  let looks = {};
   const draw = () => {
     const p = A.progress(), had = grid.contains(document.activeElement) ? document.activeElement.dataset.b : null;
-    grid.innerHTML = DRIVER_IDS.map((d) => { const D = DRIVERS[d]; return `<div class="card-b bcard dcard tap ${d === api.getBrawler() ? 'sel' : ''}" tabindex="0" role="button" aria-label="${D.name}, ${D.car}" data-b="${d}" style="--card-col:${D.color}"><canvas data-b="${d}"></canvas><div class="title bc-name">${D.name}</div><div class="dc-car">${esc(D.car)}</div><div class="dc-stats">${driverStats(d).map((r) => `<span>${r.label}</span><i><b style="width:${Math.round(r.f * 100)}%"></b></i>`).join('')}</div><div class="dc-wpn">${esc(weaponOf(d).name)}</div><div class="bc-tro">🏆 ${p.trophies[d] | 0}</div></div>`; }).join('');
+    looks = Object.fromEntries(DRIVER_IDS.map((d) => [d, equippedLook(p, d)]));
+    grid.innerHTML = DRIVER_IDS.map((d) => { const D = DRIVERS[d], nm = carName(d); return `<div class="card-b bcard dcard tap ${d === api.getBrawler() ? 'sel' : ''}" tabindex="0" role="button" aria-label="${nm}, ${esc(D.role)}" data-b="${d}" style="--card-col:${looks[d].neon}"><canvas data-b="${d}"></canvas><div class="title bc-name">${nm}</div><div class="dc-car">${esc(D.role)}</div><div class="dc-stats">${driverStats(d).map((r) => `<span>${r.label}</span><i><b style="width:${Math.round(r.f * 100)}%"></b></i>`).join('')}</div><div class="dc-wpn">${esc(weaponOf(d).name)}</div><div class="bc-tro">🏆 ${p.trophies[d] | 0}</div></div>`; }).join('');
     for (const c of grid.querySelectorAll('.bcard')) c.onclick = () => openDriverDetail(api, c.dataset.b, () => draw());
     if (had) grid.querySelector(`[data-b="${had}"]`)?.focus({ preventScroll: true });
   };
   draw();
-  S.loop((t) => { for (const cv of grid.querySelectorAll('canvas[data-b]')) { const { g, w, h } = fitCanvas(cv); drawCarStage(g, w, h, cv.dataset.b, SETTINGS.reduceFlash ? 0 : t + cv.dataset.b.length); } });
+  // every car on its spinning neon platform, wearing what you equipped for it in the store
+  S.loop((t) => { for (const cv of grid.querySelectorAll('canvas[data-b]')) { const { g, w, h } = fitCanvas(cv); drawPlatform(g, w, h, cv.dataset.b, looks[cv.dataset.b], (SETTINGS.reduceFlash ? t * 0.5 : t) + cv.dataset.b.length, { low: SETTINGS.lowGfx }); } });
 }
 
 // a tiny looping picture of the built-in weapon going off
@@ -614,13 +620,13 @@ function weaponDemo(g, w, h, id, t) {
 }
 
 function openDriverDetail(api, id, onClose) {
-  const D = DRIVERS[id], p = A.progress(), W = weaponOf(id);
+  const D = DRIVERS[id], p = A.progress(), W = weaponOf(id), look = equippedLook(p, id);
   const el = document.createElement('div'); el.className = 'detail driver'; el.hidden = true;
-  el.innerHTML = `<div class="card-b" style="--card-col:${D.color}">
-    <div><canvas class="portrait"></canvas><div class="title" style="font-size:calc(var(--u)*4);text-align:center">${D.name}</div>
-      <div style="text-align:center"><span class="role" style="--role-col:${D.color}">${esc(D.role.toUpperCase())}</span> <span class="np-tro">🏆 ${p.trophies[id] | 0}</span></div></div>
+  el.innerHTML = `<div class="card-b" style="--card-col:${look.neon}">
+    <div><canvas class="portrait"></canvas><div class="title" style="font-size:calc(var(--u)*4);text-align:center">${carName(id)}</div>
+      <div style="text-align:center"><span class="role" style="--role-col:${look.neon}">${esc(D.role.toUpperCase())}</span> <span class="np-tro">🏆 ${p.trophies[id] | 0}</span></div></div>
     <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
-      <div class="dd-car">${esc(D.car.toUpperCase())}</div>
+      <div class="dd-car">${esc(D.role.toUpperCase())} CAR</div>
       <div class="stats">${driverStats(id).map((r) => `<span>${r.label}</span><div class="bar shine"><i style="width:${Math.round(r.f * 100)}%"></i></div><span class="num">${r.v}</span>`).join('')}</div>
       <div class="abil"><canvas data-demo="weapon"></canvas><div><h4>WEAPON · ${esc(W.name)}</h4><p>${esc(W.desc)} Recharges in ${W.cd} s.</p></div></div>
       <div class="detail-actions"><button class="btn btn-md alt" data-x>CLOSE</button><button class="btn btn-md" data-x data-sel>SELECT</button></div>
@@ -635,7 +641,7 @@ function openDriverDetail(api, id, onClose) {
     if (!el.isConnected) return;
     const t = SETTINGS.reduceFlash ? 0 : (now - t0) / 1000;
     const pc = fitCanvas(el.querySelector('.portrait'));
-    drawCarStage(pc.g, pc.w, pc.h, id, t);
+    drawPlatform(pc.g, pc.w, pc.h, id, look, t, { low: SETTINGS.lowGfx });
     const c = fitCanvas(el.querySelector('canvas[data-demo]'));
     weaponDemo(c.g, c.w, c.h, id, (now - t0) / 1000);
     requestAnimationFrame(tick);
@@ -703,7 +709,7 @@ function renderRaceProfile(el, api, onDone) {
     ${ribbon('RACING')}<div class="stiles">${tile(R.races | 0, 'Races')}${tile(R.wins | 0, 'Wins')}${tile(R.trials | 0, 'Time Trials')}${tile(Object.keys(RACE_MODE_TAGS).reduce((t, k) => t + (modes[k]?.kills | 0), 0), 'Takedowns')}</div>
     ${ribbon('BEST TIMES')}<div class="card-a" style="padding:8px"><table class="stat-table race-times"><tr><th>TRACK</th><th>BEST LAP</th><th>TIME TRIAL</th></tr>${rows}</table></div>
     ${Object.entries(RACE_MODE_TAGS).filter(([k]) => modes[k]?.games).map(([k, n]) => `${ribbon(n)}<div class="stiles">${tile(modes[k].wins | 0, 'Wins')}${tile(modes[k].top3 | 0, 'Top 3s')}${tile(modes[k].games | 0, 'Races')}${tile(modes[k].kills | 0, 'Takedowns')}</div>`).join('') || `<p class="hint">Race to fill in your stats for each mode.</p>`}
-    ${ribbon('DRIVERS')}<div class="stiles six">${DRIVER_IDS.map((d) => `<div class="stile"><b>${p.trophies[d] | 0}</b><span>${DRIVERS[d].name} · ${esc(DRIVERS[d].car)}</span></div>`).join('')}</div>
+    ${ribbon('DRIVERS')}<div class="stiles six">${DRIVER_IDS.map((d) => `<div class="stile"><b>${p.trophies[d] | 0}</b><span>${carName(d)} · ${esc(DRIVERS[d].role)}</span></div>`).join('')}</div>
     <div style="display:flex;justify-content:center;margin:10px 0 4px"><button class="btn btn-md alt" id="pgAccount">${icon('user')} NAME &amp; ACCOUNT</button></div>`;
   el.querySelector('#pgAccount').onclick = () => openProfile(api, onDone);
 }

@@ -43,10 +43,17 @@ export const SCREENS = [
 // HUNT RACERS (the main lobby at /): every screen a racer can reach before and around a race.
 const roomCode = () => 'AU' + Math.random().toString(36).slice(2, 8).toUpperCase();
 export const RACE_SCREENS = [
-  { name: 'racing play', open: async () => {}, primary: ['#playBtn', '#rail_road', '#passBtn', '#trackBtn', '#fillBots', '.modebtn[data-m="grand"]', '.modebtn[data-m="trial"]', '#rail_settings', '#tab_profile', '#rail_friends'] },
+  { name: 'racing play', open: async () => {}, primary: ['#playBtn', '#rail_road', '#passBtn', '#trackBtn', '#fillBots', '.modebtn[data-m="grand"]', '.modebtn[data-m="trial"]', '#rail_settings', '#tab_profile', '#rail_friends', '#rail_store'] },
   { name: 'racing play, time trial picked', open: async (p) => { await p.click('.modebtn[data-m="trial"]'); }, primary: ['#playBtn', '#trackBtn', '.modebtn[data-m="trial"]'] },
   { name: 'racing profile tab', open: async (p) => { await p.click('#tab_profile'); await p.waitForSelector('.pg-profile .race-times'); }, primary: ['#tab_play'] },
-  { name: 'racing locker tab', open: async (p) => { await p.click('#rail_locker'); await p.waitForSelector('.lsec'); }, primary: ['#tab_play'] },
+  // the STORE (it replaced the Locker in the racing lobby): every tab, a card tried on, BUY / EQUIP always in reach
+  ...['daily', 'cars', 'skin', 'glow', 'wheel', 'flame', 'horn', 'trail'].map((t) => ({ name: `store ${t}`, open: async (p) => {
+    await p.click('#rail_store'); await p.waitForSelector('.st-card');
+    await p.click(`.st-tab[data-t="${t}"]`); await p.waitForSelector(`.st-grid[data-tab="${t}"] .st-card`);
+    await p.click('.st-grid .st-card >> nth=1'); await p.waitForSelector('.st-card.sel');
+  }, primary: ['.st-buy', '.ui-screen .back', '#stPrev', '#stNext', '.st-grid .st-card.sel'] })),
+  // the last card of the list scrolled into view: still nothing over the buy button
+  { name: 'store, scrolled to the end', open: async (p) => { await p.click('#rail_store'); await p.click('.st-tab[data-t="glow"]'); await p.locator('.st-grid .st-card').last().click(); }, primary: ['.st-buy', '.st-grid .st-card.sel', '.ui-screen .back'] },
   { name: 'drivers', open: async (p) => { await p.click('.nameplate #stage'); await p.waitForSelector('.dcard'); }, primary: ['.ui-screen .back', '.dcard[data-b="volt"]', '.dcard[data-b="flicker"]'] },
   { name: 'driver detail', open: async (p) => { await p.click('.nameplate #stage'); await p.click('.dcard[data-b="rook"]'); await p.waitForSelector('.detail [data-sel]'); }, primary: ['.detail [data-sel]', '.detail [data-x]:not([data-sel])'] },
   { name: 'track picker', open: async (p) => { await p.click('#trackBtn'); await p.waitForSelector('.tcard'); }, primary: ['.ui-screen .back', '.tcard[data-k="any"]', '.tcard[data-k="desert"]'] },
@@ -171,7 +178,7 @@ export function auditPage(primary) {
 
   // ---- the credit stays readable: on screen, nothing drawn over it
   // (the lobby's credit line, or the race layer's: it stays on top of every race screen)
-  const credit = root.id === 'lobby' ? root.querySelector('#credit') : root.classList.contains('rc-root') ? root.querySelector('.rc-credit') : null;
+  const credit = root.id === 'lobby' ? root.querySelector('#credit') : root.classList.contains('rc-root') ? root.querySelector('.rc-credit') : root.querySelector('.st-credit');
   if (credit || root.id === 'lobby') {
     if (!credit || !shown(credit)) out.push('credit line is hidden');
     else {

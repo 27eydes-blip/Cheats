@@ -66,7 +66,11 @@ All JSON. `t` is the type.
   (START would work now); their `startIn` stays null until the last minute of the 5-minute idle safety net.
 - `roomwait` `{room, mode, track, left (s, battle only), players}`: a friend room is mid-race; this
   socket is seated in its next race (a `welcome` + `lobby` follow). Every 2 s while waiting.
-- `ro` roster `{add: {id: [name, driver, isBot]}, full: 1}`.
+- `ro` roster `{add: {id: [name, driver, isBot, cos]}, full: 1}`. `cos` = the racer's equipped store
+  cosmetics for that car (`public/race/garage.js` `SLOTS` order: skin glow wheel flame trail horn; `0` = the
+  car's default; the whole field is `0` for guests and bots). Draw-only: resolve with `resolveCos(cos, driver)`
+  and `makeLook(driver, opts)` (looks.js). A row without `full` updates single racers (an account that loaded
+  after the start).
 - `start` `{you, mode, track, arena, laps, seed, tick: 30, cd: 3, players, botLevel, tm, rejoin?}`.
   The race clock `tm` starts at `-cd`: negative = grid countdown (nothing moves), `GO` at 0.
 - `s` snapshot, every tick (30/s):
@@ -111,6 +115,7 @@ All JSON. `t` is the type.
 | `['arc', id, targetId]` Volt, `['pulse', id]` Brick, `['rail', id, x0, y0, x1, y1, hitId]` Wisp, `['blink', id, x0, y0, x1, y1]` Flicker | weapon visuals (Dune / Rook show up as `mine` / `turret` entities) |
 | `['boom', x, y, entKind]` | projectile / mine explosion |
 | `['jump', id]`, `['mt', id, tier]`, `['bump', a, b, speed]` | ramp launch, mini-turbo fired (1 blue, 2 orange, 3 purple), hard car bump |
+| `['horn', id]` | a racer sounded their horn (play their equipped horn, quieter with distance) |
 | `{k: 'reset', id, auto}` | the car was put back on the racing line (RESET button: `auto` 0; stuck 3 s: `auto` 1). Flash / sound it. |
 | `{k: 'nudge', id}` | the car was pinned against a wall for 1.5 s and got pushed back toward the racing line |
 | `{k: 'tut', id, step}` | tutorial: `step` (`steer` `drift` `item` `fire`) was just done; `done` follows the last one |
@@ -138,6 +143,7 @@ GHOST 1024, SLOW 2048, REVERSE 16384`; drift spark tier = `(f >> 12) & 3` (`drif
   checkpoint), facing along the track, stopped, ghosted for 1 s. One every 3 s (`me.rcd`); ignored
   on the grid, in the air, wrecked or finished. The server also resets a car stuck for 3 s by itself.
 - `{t:'pick', driver}` change driver in the lobby.
+- `{t:'horn'}` sound your horn (races only; at most one every 1.5 s, `rc.horn()`).
 - `{t:'host', start: 1}` / `{t:'host', bots: true|false}` the room host's START and FILL WITH BOTS (`rc.host({start, bots})`); anyone else is ignored.
 - `{t:'ping', c}` -> `pong`. `{t:'bye'}` quit for good (the result is recorded as last place now).
 

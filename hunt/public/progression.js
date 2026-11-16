@@ -33,6 +33,12 @@ export function normalize(p) {
   for (const b of BRAWLER_IDS) if (!out.owned.includes(b + '_classic')) out.owned = [...out.owned, b + '_classic'];
   out.equipped = p.equipped && typeof p.equipped === 'object' ? p.equipped : {};
   if (typeof out.gems !== 'number') out.gems = 20;
+  // racing: stats + equipped store cosmetics per car (race.cos[car][slot] = id; the race cars share
+  // the brawler ids); a broken shape is reset, everything else kept as it is (unknown ids are ignored where they are used)
+  out.race = p.race && typeof p.race === 'object' && !Array.isArray(p.race) ? { ...p.race } : {};
+  const cos = out.race.cos && typeof out.race.cos === 'object' && !Array.isArray(out.race.cos) ? out.race.cos : {};
+  out.race.cos = {};
+  for (const [car, slots] of Object.entries(cos)) if (BRAWLER_IDS.includes(car) && slots && typeof slots === 'object' && !Array.isArray(slots)) out.race.cos[car] = Object.fromEntries(Object.entries(slots).filter(([, v]) => v === null || typeof v === 'string'));
   return out;
 }
 export const totalTrophies = (p) => Object.values(p.trophies || {}).reduce((s, v) => s + (v | 0), 0);
