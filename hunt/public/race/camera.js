@@ -1,0 +1,118 @@
+// Oblivion GP race camera: the three views (Settings > Camera) and the maths they share. Pure
+// functions and plain objects only (no DOM), so test/race-camera.test.js runs them in Node.
+//
+// CHASE (default): the world is drawn rotated so your car points up, a little below the middle of
+//   the screen, and the world canvas is tilted back with a CSS 3D transform (perspective +
+//   rotateX: the compositor does it, no per-pixel work for the page). It zooms out with speed,
+//   swings into turns (the heading lags a little and the view leans toward the inside of the
+//   bend), kicks back on boost, and shakes lightly on hits (never under Reduce Flashing).
+// TOP-DOWN: the classic north-up view (no rotation, no tilt).
+// COCKPIT: like Chase but low and close: your car sits at the bottom edge, a steeper tilt shows
+//   the road ahead to the horizon, and the HUD draws your bonnet under the speedometer.
+//
+// The HUD, minimap, joystick and buttons are on their own un-tilted canvas above the world.
+//
+// STEERING with a rotating view: the joystick still sends `ha` in the WORLD frame (the server
+// contract is unchanged). The stick's screen direction is turned into a world heading with the
+// camera's current rotation, so "stick up" is always "where the car is pointing" in Chase and
+// Cockpit, and "up the screen" in Top-down. The tilt foreshortens the ground vertically, so the
+// stick's vertical part is stretched back by 1 / cos(tilt) first: a diagonal stick points along
+// the diagonal you see on the road.
+export const CAM_MODES = ['chase', 'top', 'cockpit'];
+export const CAM_NAMES = { chase: 'CHASE', top: 'TOP-DOWN', cockpit: 'COCKPIT' };
+const DEG = Math.PI / 180;
+// tilt: rotateX angle; persp: CSS perspective distance (x screen height); anchorY: where the
+// followed car sits on screen (0 top .. 1 bottom); cover: CSS scale so the tilted canvas still
+// covers most of the screen (the rest is the theme's sky behind a fog band); zoom: x base zoom
+export const CAM = {
+  top: { rotate: false, tilt: 0, persp: 0, anchorY: 0.5, cover: 1, zoom: 1, speedZoom: 0.15, boostZoom: 0.05 },
+  chase: { rotate: true, tilt: 29 * DEG, persp: 1.75, anchorY: 0.64, cover: 1.14, zoom: 1.02, speedZoom: 0.2, boostZoom: 0.13, swing: 0.085, kick: 0.045, lag: 5.5 },
+  cockpit: { rotate: true, tilt: 38 * DEG, persp: 2, anchorY: 0.92, cover: 1.25, zoom: 1.1, speedZoom: 0.16, boostZoom: 0.08, swing: 0.05, kick: 0.03, lag: 9 },
+};
+export const camMode = (v) => (CAM[v] ? v : 'chase');
+export const camCfg = (v) => CAM[camMode(v)];
+
+const TAU = Math.PI * 2;
+export const wrap = (a) => { a = (a + Math.PI) % TAU; if (a < 0) a += TAU; return a - Math.PI; };
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+
+// canvas angle = world angle + rot (rotating views put the camera heading straight up)
+export const camRot = (cfg, heading) => (cfg.rotate ? -Math.PI / 2 - heading : 0);
+
+// the joystick's screen angle -> world heading (`ha` on the wire)
+export function stickToWorld(sa, cfg, heading) {
+  if (!cfg.rotate) return sa;
+  const gx = Math.cos(sa), gy = Math.sin(sa) / Math.cos(cfg.tilt); // undo the foreshortening
+  return wrap(Math.atan2(gy, gx) - camRot(cfg, heading));
+}
+// a world heading -> the screen angle the stick has to point at (the inverse; the steering hint)
+export function worldToStick(wa, cfg, heading) {
+  if (!cfg.rotate) return wa;
+  const ca = wa + camRot(cfg, heading);
+  return wrap(Math.atan2(Math.sin(ca) * Math.cos(cfg.tilt), Math.cos(ca)));
+}
+
+// the CSS transform for the world canvas (W x H CSS px screen) and what the projection needs
+export function tiltOf(cfg, W, H) {
+  if (!cfg.tilt) return { css: '', origin: '', P: 0, ox: W / 2, oy: H / 2, s: 1, tilt: 0 };
+  const P = Math.round(cfg.persp * H);
+  return {
+    css: `perspective(${P}px) rotateX(${(cfg.tilt / DEG).toFixed(2)}deg) scale(${cfg.cover})`,
+    origin: `50% ${(cfg.anchorY * 100).toFixed(1)}%`,
+    P, ox: W / 2, oy: H * cfg.anchorY, s: cfg.cover, tilt: cfg.tilt,
+  };
+}
+// canvas CSS point (x, y) -> where it ends up on screen after the tilt (out: {x, y, k: scale there})
+export function project(tl, x, y, out) {
+  if (!tl.tilt) { out.x = x; out.y = y; out.k = 1; return out; }
+  const u = (x - tl.ox) * tl.s, v = (y - tl.oy) * tl.s, w = 1 - (v * Math.sin(tl.tilt)) / tl.P;
+  out.x = tl.ox + u / w; out.y = tl.oy + (v * Math.cos(tl.tilt)) / w; out.k = tl.s / w;
+  return out;
+}
+// how much of the screen top the tilted canvas leaves to the sky (CSS px), for the fog band
+export function skyGap(tl) { if (!tl.tilt) return 0; const o = project(tl, tl.ox, 0, {}); return Math.max(0, o.y); }
+
+// ------------------------------------------------------------------ the moving camera
+// newCam() state, stepped every frame by stepCam(cam, cfg, s, dt):
+//   s = { a: car heading, spd, top: the car's top speed, boost: 0|1, spin: 0|1, snap: 1 = teleported,
+//         reduce: Reduce Flashing }
+// Out (all bounded): cam.h heading (radians), cam.sw sideways lean (-1..1 x cfg.swing of the screen
+// width), cam.kick boost kick 0..1, cam.zk zoom multiplier, cam.yaw smoothed turn rate (rad/s)
+export const newCam = () => ({ h: 0, init: false, sw: 0, kick: 0, zk: 1, yaw: 0, lastA: 0, boost: 0 });
+export const ZK_MIN = 0.7; // never zooms out more than this (cars stay readable)
+export function stepCam(cam, cfg, s, dt) {
+  if (!cam.init || s.snap) { cam.h = s.a; cam.lastA = s.a; cam.init = true; cam.yaw = 0; cam.sw = 0; }
+  dt = clamp(dt, 0, 0.1);
+  // turn rate of the car (rad/s), smoothed; spun out = ignored (no whirling view)
+  const raw = dt > 0 ? wrap(s.a - cam.lastA) / dt : 0;
+  cam.lastA = s.a;
+  cam.yaw += ((s.spin ? 0 : clamp(raw, -6, 6)) - cam.yaw) * (1 - Math.exp(-dt * 8));
+  if (cfg.rotate) {
+    // the heading follows the car with a short lag (that lag is the swing into a bend); while spun
+    // out it follows slowly, and never faster than 4.5 rad/s, so the world doesn't whirl around
+    const k = s.spin ? 1.4 : cfg.lag, err = wrap(s.a - cam.h), step = err * (1 - Math.exp(-dt * k));
+    cam.h = wrap(cam.h + clamp(step, -4.5 * dt, 4.5 * dt));
+    if (Math.abs(wrap(s.a - cam.h)) > 1.2 && !s.spin) cam.h = wrap(s.a - Math.sign(wrap(s.a - cam.h)) * 1.2); // never more than ~70 degrees behind
+    // lean toward the inside of the bend: the car slides toward the outside of the screen
+    const want = clamp((-cam.yaw * Math.min(1, s.spd / 600)) / 2.2, -1, 1);
+    cam.sw += (want - cam.sw) * (1 - Math.exp(-dt * 3));
+  } else { cam.h = 0; cam.sw = 0; }
+  // boost: a kick back (the car is pushed down the screen, the view widens), easing out
+  if (s.boost && !cam.boost) cam.kick = 1;
+  cam.boost = s.boost ? 1 : 0;
+  cam.kick = Math.max(0, cam.kick - dt * 1.6);
+  // zoom out with speed, more while boosting (the wider "FOV"); eased
+  const sp = clamp((s.spd - 300) / Math.max(200, (s.top || 900) * 1.1 - 300), 0, 1);
+  const tz = clamp(1 - cfg.speedZoom * sp - (s.boost ? cfg.boostZoom : 0) - (cfg.kick ? cam.kick * 0.04 : 0), ZK_MIN, 1);
+  cam.zk += (tz - cam.zk) * (1 - Math.exp(-dt * (tz < cam.zk ? 2.2 : 1.2)));
+  cam.zk = clamp(cam.zk, ZK_MIN, 1);
+  cam.sw = clamp(cam.sw, -1, 1); cam.kick = clamp(cam.kick, 0, 1);
+  return cam;
+}
+// where the followed car sits on the canvas (CSS px) for this camera state: bounded by the mode's
+// anchor, swing and kick (the safe box in Chase: x 0.5 +- 0.085, y 0.64 .. 0.685)
+export function anchorOf(cfg, cam, W, H, out) {
+  out.x = W * (0.5 + (cfg.rotate ? cam.sw * cfg.swing : 0));
+  out.y = H * (cfg.anchorY + (cfg.kick ? cam.kick * cfg.kick : 0));
+  return out;
+}

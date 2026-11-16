@@ -1095,11 +1095,11 @@ export class RaceSim {
 
   // ------------------------------------------------------------------ snapshots
   flags(p) {
-    const c = p.car;
+    const c = p.car, fwd = c.vx * Math.cos(c.a) + c.vy * Math.sin(c.a);
     return (c.drift ? FLAG.DRIFT : 0) | (c.boostT > 0 ? FLAG.BOOST : 0) | (c.airT > 0 ? FLAG.AIR : 0) | (p.shieldT > 0 ? FLAG.SHIELD : 0)
       | (this.leaderId === p.id ? FLAG.LEADER : 0) | (!p.alive ? FLAG.DEAD : 0) | (c.spinT > 0 ? FLAG.SPIN : 0) | (p.empT > 0 ? FLAG.EMP : 0)
       | (p.finished ? FLAG.FINISHED : 0) | (p.out ? FLAG.OUT : 0) | (p.ghostT > 0 ? FLAG.GHOST : 0) | (c.slowT > 0 ? FLAG.SLOW : 0)
-      | (driftTier(c.dc) << 12) | ((c.vx * Math.cos(c.a) + c.vy * Math.sin(c.a)) < -20 ? FLAG.REVERSE : 0)
+      | (driftTier(c.dc) << 12) | (fwd < -20 ? FLAG.REVERSE : 0) | (p.inp && p.inp.th < 0 && fwd > 40 && p.alive ? FLAG.BRAKE : 0)
       | (p.protT > 0 ? FLAG.PROT : 0) | (p.phaseT > 0 ? FLAG.PHASE : 0);
   }
   hud() {

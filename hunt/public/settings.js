@@ -5,7 +5,8 @@ const KEY = 'hunt-settings';
 // aimSens: aim stick sensitivity (less drag needed when higher); leftHanded: aim on the left thumb;
 // holdFire: keep firing while the aim stick is held (otherwise fire on release)
 // raceSens: racing steering sensitivity 0.5..1.5 (turn rate); raceStick: racing joystick size s / m / l
-const defaults = { reduceFlash: false, lowGfx: false, sound: true, musicVol: 0.6, sfxVol: 0.9, aimSens: 1, leftHanded: false, holdFire: false, raceSens: 1, raceStick: 'm' };
+// raceCam: race camera 'chase' | 'top' | 'cockpit' (race/camera.js); haptics: race vibrations (where the browser can)
+const defaults = { reduceFlash: false, lowGfx: false, sound: true, musicVol: 0.6, sfxVol: 0.9, aimSens: 1, leftHanded: false, holdFire: false, raceSens: 1, raceStick: 'm', raceCam: 'chase', haptics: true };
 let saved = {};
 try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch {}
 export const SETTINGS = { ...defaults, ...saved };

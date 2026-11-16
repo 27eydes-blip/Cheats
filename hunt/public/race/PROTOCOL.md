@@ -137,15 +137,19 @@ The rows above are arrays (`e[0]` is the kind); the `reset`, `nudge` and `tut` e
 ### Car flags (`FLAG` in protocol.js)
 
 `DRIFT 1, BOOST 2, AIR 4, SHIELD 8, LEADER 16, DEAD 32, SPIN 64, EMP 128, FINISHED 256, OUT 512,
-GHOST 1024, SLOW 2048, REVERSE 16384, PHASE 65536 (Ghost Mode item), PROT 131072 (2 s hit protection)`; drift spark tier = `(f >> 12) & 3` (`driftTierOf(f)`).
+GHOST 1024, SLOW 2048, REVERSE 16384, BRAKE 32768, PHASE 65536 (Ghost Mode item), PROT 131072 (2 s hit protection)`; drift spark tier = `(f >> 12) & 3` (`driftTierOf(f)`).
+`BRAKE`: the car's throttle input is on the brake (`th < 0`) while it still rolls forward (> 40 px/s): draw-only,
+for brake lights. A pure function of the input and the car state, so it is deterministic like the rest.
 
 ## Messages: client -> server
 
 - `{t:'in', s: seq, st: steer -1..1, th: throttle -1..1 (negative = brake, then reverse), dr: 0|1 drift held, f: 1 fire pressed, i: 1 item pressed, ha?, hm?}`
   one per tick (30/s). `f` / `i` are one-shot presses (send 1 once). The server applies one
   physics step per input, in order, and acknowledges with `me.ack`.
-  Joystick steering: `ha` = target heading (radians, world frame, same convention as the car angle;
-  the camera never rotates, so the stick's screen direction is a world direction) and `hm` = stick
+  Joystick steering: `ha` = target heading (radians, WORLD frame, same convention as the car angle;
+  in the Top-down camera the stick's screen direction is the world direction; the rotating Chase /
+  Cockpit cameras convert the stick's screen direction to the world with their current heading, see
+  `camera.js`, so the wire value is always world frame) and `hm` = stick
   magnitude 0..1 (already multiplied by the sensitivity, clamped to 1). With `ha` present and
   `hm > 0.15` the physics turns the nose toward `ha` (shortest way, rate proportional to the error so it
   never overshoots, capped by `hm`, the speed-based turn rate and `sens`) and ignores `st`.
@@ -196,7 +200,8 @@ it too, so pass the same value you scale `hm` with.
 
 Controls the spec asks for (map them to `setInput` / `fire` / `useItem`):
 touch (landscape): an always-drawn joystick under the left thumb points where the car should go
-(the camera never rotates, so its screen direction is the world heading) -> `ha` (radians) + `hm`
+on screen (stick up = forward in Chase / Cockpit; in Top-down its screen direction is the world heading)
+-> `ha` (radians, world frame after the camera conversion) + `hm`
 (0..1, times the Steering sensitivity setting), plus the equivalent `st` for a server without `ha`
 steering; accelerate is automatic (`th: 1`), the BRAKE/REVERSE button sets `th: -1`; DRIFT (hold) ->
 `dr: 1`; FIRE -> `fire()`; ITEM -> `useItem()`; RESET (top right, pulses when `stuck` > 1 s; key R)
@@ -310,7 +315,13 @@ const race = startRace({ mode, track, driver, room, bots, token, name, lobby, be
 One call opens a full-screen race layer (its own canvas, the pre-race card, pause menu, finish
 screen and the "Created by Sam Eyde III" credit on top of everything) and calls `onExit` when the
 player picks LOBBY / LEAVE RACE / CANCEL. RACE AGAIN restarts with the same options. `best` (optional)
-is the Time Trial best for the HUD. Files: `render.js` (camera, world), `trackart.js` (chunked track
+is the Time Trial best for the HUD. Files: `render.js` (world, camera transform), `camera.js` (the Chase /
+Top-down / Cockpit views: rotation, CSS tilt, lean, boost kick, speed zoom, stick -> world heading),
+`speedfx.js` (speed lines, edge blur, wind streaks, road glints, the cockpit bonnet), `haptics.js`
+(navigator.vibrate patterns, a no-op where the browser has none, e.g. iPhone Safari), `audio-mix.js` (race
+music: final-lap layer, crash duck), `moments.js` + `replay.js` (replay recorder, slow-mo after a
+last-second overtake, crash replay on the results screen, pass-by whooshes, grid revs: presentation
+only), `trackart.js` (chunked track
 art, 4 themes), `cars.js` (6 vehicles, sprite cache), `fx.js` (particles, tire marks, effects),
 `hud.js`, `controls.js` (touch by identifier, keys by event.code, mouse, gamepad; left-handed
 mirror from the existing setting), `sound.js`, `race.css`.
@@ -320,4 +331,11 @@ RACE WITH FRIENDS) calls `startRace` through `launchRace` in `public/game.js`. D
 `/?race=1[&mode=&track=&room=&bots=0|1&driver=]`. `onProgress(m)` gets the server's `progress`
 message (the lobby stores the new account progress), `onBots(on)` the host's room switch.
 Local dev only (HUNT_DEV): `laps=1..3` for short races (also `/?laps=1` from the lobby), and `window.__race.dev('wreck' | 'item', id)`.
-`window.__race` also exposes `perf()`, `layout()`, `hint()` and `auto()` for the browser tests.
+`window.__race` also exposes `perf()`, `layout()`, `hint()` (`ha`: the stick's screen direction, `wha`: the world
+heading), `camera()` / `setCamera()`, `moments()` / `slowmo()`, `audio()` and `auto()` for the browser tests.
+
+Camera views (Settings > Camera, `raceCam`: `chase` default, `top`, `cockpit`; also the pause menu's CAMERA
+button): the world canvas is drawn rotated (car pointing up) and tilted with a CSS 3D transform; the HUD,
+minimap (north-up, your arrow shows your heading), joystick and buttons are on a second, never-tilted canvas
+on top that takes the touches. No tilt / motion steering anywhere: the joystick is the only steering input
+and the game never listens to device motion or asks for that permission (`test/race-nomotion.test.js`).

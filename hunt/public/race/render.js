@@ -11,6 +11,7 @@ import { ITEMS, WEAPONS, ITEM_IDS, itemStat, COMBAT } from './items.js';
 import { armPulse, drawWell, drawDrone, drawSticky, drawTrap, drawGhostVeil } from './weapons-fx.js';
 import { driftTier } from './physics.js';
 import { SETTINGS } from '../settings.js';
+import { CAM, camRot, newCam, stepCam, anchorOf, tiltOf, project } from './camera.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const TAU = Math.PI * 2;
@@ -117,7 +118,20 @@ export class RaceRenderer {
     this.lockD = Infinity; this.lockK = ''; // the nearest missile / drone locked on to us: distance, kind
     this.stickAt = new Map(); // sticky bomb id -> race time it stuck (for its fuse light)
     this.view = { x0: 0, y0: 0, x1: 0, y1: 0 };
+    // camera view (camera.js): Top-down is the classic path below; Chase / Cockpit rotate the world
+    this.cfg = CAM.top; this.camName = 'top'; this.cm = newCam(); this.anc = { x: 0, y: 0 }; this.tl = tiltOf(CAM.top, 1, 1);
+    this.hideMe = false; this.meBrake = false; this.focusKey = ''; this.sfx = null; this.pt = { x: 0, y: 0, k: 1 };
   }
+  // the camera view ('chase' | 'top' | 'cockpit'); the app applies tl.css to the canvas element
+  setCamera(name) {
+    const cfg = CAM[name] || CAM.chase;
+    if (cfg !== this.cfg) { this.cm = newCam(); this.cam.init = false; }
+    this.cfg = cfg; this.camName = CAM[name] ? name : 'chase'; this.tl = tiltOf(cfg, this.W || 1, this.H || 1);
+    return this.tl;
+  }
+  // world point -> canvas CSS px (before the tilt) and -> screen CSS px (after it)
+  toCanvas(x, y, out = this.pt) { const M = this.M, d = this.dpr; if (!M) { out.x = out.y = 0; out.k = 1; return out; } out.x = (M.a * x + M.c * y + M.x) / d; out.y = (M.b * x + M.d * y + M.y) / d; out.k = 1; return out; }
+  toScreen(x, y, out = this.pt) { this.toCanvas(x, y, out); return project(this.tl, out.x, out.y, out); }
   setTrack(T) {
     if (this.T === T) return;
     this.T = T; this.art = new TrackArt(T); this.vis.clear(); this.cam.init = false; this.dusk = null; this.stickAt.clear();
@@ -128,20 +142,21 @@ export class RaceRenderer {
   chunkScale() { return Math.round(this.baseZoom() * this.dpr * 8) / 8; }
   resize(W, H, dpr) {
     if (W !== this.W || H !== this.H) this.dusk = null;
-    this.W = W; this.H = H; this.dpr = dpr;
+    this.W = W; this.H = H; this.dpr = dpr; this.tl = tiltOf(this.cfg, W, H);
     this.cv.width = Math.round(W * dpr); this.cv.height = Math.round(H * dpr);
     const s = this.chunkScale();
     if (this.art) this.art.setScale(s);
     this.cars.setScale(Math.round(this.baseZoom() * dpr * CAR_VIS * 8) / 8);
   }
   // object transforms without save/restore: world (x, y), rotation a, scale k on top of the camera
-  at(g, x, y, a = 0, k = 1) { const M = this.M, c = Math.cos(a) * k * M.s, sn = Math.sin(a) * k * M.s; g.setTransform(c, sn, -sn, c, M.s * x + M.x, M.s * y + M.y); }
-  base(g) { const M = this.M; g.setTransform(M.s, 0, 0, M.s, M.x, M.y); }
+  // (M is the camera's affine world -> canvas pixel matrix: a b c d, offset x y, scale s)
+  at(g, x, y, a = 0, k = 1) { const M = this.M, c = Math.cos(a) * k, sn = Math.sin(a) * k; g.setTransform(M.a * c + M.c * sn, M.b * c + M.d * sn, M.c * c - M.a * sn, M.d * c - M.b * sn, M.a * x + M.c * y + M.x, M.b * x + M.d * y + M.y); }
+  base(g) { const M = this.M; g.setTransform(M.a, M.b, M.c, M.d, M.x, M.y); }
   visOf(id) {
     let v = this.vis.get(id);
     if (!v) {
       // lt: taillight trail ring (LT points x 2 lights x xy); look: this car's look (from the roster)
-      v = { lt: new Float32Array(LT * 4), ltn: 0, lti: 0, ltT: 0, look: null, lookSrc: undefined, trail: new Float32Array(32), tn: 0, ti: 0, wx: new Float32Array(4), skid: false, flame: 0, flameC: 0, respawnT: 0, hitT: 0, puff: 0, dust: 0, tierPrev: 0, air: 0, airMax: 0.6, spinT: 0, lastX: 0, lastY: 0 };
+      v = { lt: new Float32Array(LT * 4), ltn: 0, lti: 0, ltT: 0, look: null, lookSrc: undefined, trail: new Float32Array(32), tn: 0, ti: 0, wx: new Float32Array(4), skid: false, flame: 0, flameC: 0, respawnT: 0, hitT: 0, puff: 0, dust: 0, tierPrev: 0, air: 0, airMax: 0.6, spinT: 0, lastX: 0, lastY: 0, pa: null, yaw: 0, bounce: 0, bT: 0, wasAir: false, scrape: 0 };
       this.vis.set(id, v);
     }
     return v;
@@ -259,47 +274,88 @@ export class RaceRenderer {
     // CAMERA: follow (the leader once knocked out), look ahead in the driving direction, zoom out at speed
     let focus = me;
     if (view.me && view.me.out) focus = this.carAt(view, view.leader) || view.cars[0] || me;
-    const cam = this.cam;
-    if (focus) {
-      let vx = 0, vy = 0;
-      if (focus.me && rc.car && focus.predicted) { vx = rc.car.vx; vy = rc.car.vy; } else { vx = Math.cos(focus.a) * focus.spd; vy = Math.sin(focus.a) * focus.spd; }
-      const spd = Math.hypot(vx, vy), la = clamp(spd / 900, 0, 1.2);
-      // keep the car in the middle third: look-ahead capped to a share of the half-screen
-      const zz = cam.z || this.baseZoom(), tlx = clamp(vx * 0.3, -this.W * 0.17 / zz, this.W * 0.17 / zz), tly = clamp(vy * 0.3, -this.H * 0.17 / zz, this.H * 0.17 / zz), kk = 1 - Math.exp(-dt * 3.2);
-      if (!cam.init) { cam.x = focus.x; cam.y = focus.y; cam.lx = tlx; cam.ly = tly; cam.z = this.baseZoom(); cam.init = true; }
-      cam.lx += (tlx - cam.lx) * kk; cam.ly += (tly - cam.ly) * kk;
-      cam.x = focus.x + cam.lx * (SETTINGS.reduceFlash ? 0.8 : 1); cam.y = focus.y + cam.ly * (SETTINGS.reduceFlash ? 0.8 : 1);
-      const tz = this.baseZoom() * (1 - 0.15 * clamp((spd - 350) / 650, 0, 1) * Math.min(1, la + 0.2));
-      cam.z += (tz - cam.z) * (1 - Math.exp(-dt * 1.6));
-    }
+    const cam = this.cam, cfg = this.cfg;
+    const M = this.M || (this.M = { s: 1, x: 0, y: 0, a: 1, b: 0, c: 0, d: 1 });
+    const vw = this.view;
+    let cx, cy, z;
     cam.shake = Math.max(0, cam.shake - dt * 2.6);
     if (cam.shake > 0 && !SETTINGS.reduceFlash) { const s = cam.shake * cam.shake * 14; cam.sx = (Math.random() - 0.5) * s; cam.sy = (Math.random() - 0.5) * s; } else { cam.sx = cam.sy = 0; }
-    const z = cam.z;
-    let cx = cam.x + cam.sx / z, cy = cam.y + cam.sy / z;
-    // SAFE BOX: whatever the look-ahead, shake, a respawn or a jump do, your car stays inside the
-    // middle 40% of the screen: clear of the HUD corners, the thumb buttons, the speedometer and the
-    // credit along the bottom
-    if (focus) { const mx = W * SAFE_BOX / z, my = H * SAFE_BOX / z; cx = clamp(cx, focus.x - mx, focus.x + mx); cy = clamp(cy, focus.y - my, focus.y + my); }
-    const vw = this.view;
-    vw.x0 = cx - W / 2 / z; vw.y0 = cy - H / 2 / z; vw.x1 = cx + W / 2 / z; vw.y1 = cy + H / 2 / z;
+    if (!cfg.rotate) {
+      if (focus) {
+        let vx = 0, vy = 0;
+        if (focus.me && rc.car && focus.predicted) { vx = rc.car.vx; vy = rc.car.vy; } else { vx = Math.cos(focus.a) * focus.spd; vy = Math.sin(focus.a) * focus.spd; }
+        const spd = Math.hypot(vx, vy), la = clamp(spd / 900, 0, 1.2);
+        // keep the car in the middle third: look-ahead capped to a share of the half-screen
+        const zz = cam.z || this.baseZoom(), tlx = clamp(vx * 0.3, -this.W * 0.17 / zz, this.W * 0.17 / zz), tly = clamp(vy * 0.3, -this.H * 0.17 / zz, this.H * 0.17 / zz), kk = 1 - Math.exp(-dt * 3.2);
+        if (!cam.init) { cam.x = focus.x; cam.y = focus.y; cam.lx = tlx; cam.ly = tly; cam.z = this.baseZoom(); cam.init = true; }
+        cam.lx += (tlx - cam.lx) * kk; cam.ly += (tly - cam.ly) * kk;
+        cam.x = focus.x + cam.lx * (SETTINGS.reduceFlash ? 0.8 : 1); cam.y = focus.y + cam.ly * (SETTINGS.reduceFlash ? 0.8 : 1);
+        // zoom out at speed, a little more on boost (the wider view)
+        const tz = this.baseZoom() * (1 - cfg.speedZoom * clamp((spd - 350) / 650, 0, 1) * Math.min(1, la + 0.2) - (focus.f & FLAG.BOOST ? cfg.boostZoom : 0));
+        cam.z += (tz - cam.z) * (1 - Math.exp(-dt * 1.6));
+      }
+      z = cam.z;
+      cx = cam.x + cam.sx / z; cy = cam.y + cam.sy / z;
+      // SAFE BOX: whatever the look-ahead, shake, a respawn or a jump do, your car stays inside the
+      // middle 40% of the screen: clear of the HUD corners, the thumb buttons, the speedometer and the
+      // credit along the bottom
+      if (focus) { const mx = W * SAFE_BOX / z, my = H * SAFE_BOX / z; cx = clamp(cx, focus.x - mx, focus.x + mx); cy = clamp(cy, focus.y - my, focus.y + my); }
+      vw.x0 = cx - W / 2 / z; vw.y0 = cy - H / 2 / z; vw.x1 = cx + W / 2 / z; vw.y1 = cy + H / 2 / z;
+      M.s = dpr * z; M.a = M.d = M.s; M.b = M.c = 0; M.x = dpr * (W / 2 - cx * z); M.y = dpr * (H / 2 - cy * z);
+    } else {
+      // CHASE / COCKPIT: the world turns so the car points up (camera.js does the heading, lean,
+      // boost kick and speed zoom, all bounded); the CSS tilt on the canvas does the rest
+      const cm = this.cm;
+      if (focus) {
+        const pred = focus.me && rc.car && focus.predicted, spd = pred ? Math.hypot(rc.car.vx, rc.car.vy) : focus.spd;
+        const key = focus.id + ':' + (focus.me ? rc.carEp : 0), snap = key !== this.focusKey || this.visOf(focus.id).respawnT > 0.62;
+        this.focusKey = key;
+        const S = this.camIn || (this.camIn = { a: 0, spd: 0, top: 900, boost: 0, spin: 0, snap: 0 });
+        S.a = focus.a; S.spd = spd; S.top = this.top || 900; S.boost = focus.f & FLAG.BOOST ? 1 : 0; S.spin = focus.f & FLAG.SPIN ? 1 : 0; S.snap = snap ? 1 : 0;
+        stepCam(cm, cfg, S, dt);
+        cam.x = focus.x; cam.y = focus.y; cam.lx = cam.ly = 0; cam.init = true;
+      }
+      z = cam.z = this.baseZoom() * cfg.zoom * cm.zk;
+      cx = cam.x; cy = cam.y;
+      const rot = camRot(cfg, cm.h), cr = Math.cos(rot), sr = Math.sin(rot), an = anchorOf(cfg, cm, W, H, this.anc);
+      this.downA = Math.atan2(cr, sr); // the world angle that points down the screen
+      const ax = an.x + cam.sx, ay = an.y + cam.sy;
+      M.s = dpr * z; M.a = M.s * cr; M.b = M.s * sr; M.c = -M.s * sr; M.d = M.s * cr;
+      M.x = dpr * (ax - z * (cr * cx - sr * cy)); M.y = dpr * (ay - z * (sr * cx + cr * cy));
+      // the world box the (rotated) canvas shows: its four corners back in the world
+      vw.x0 = vw.y0 = Infinity; vw.x1 = vw.y1 = -Infinity;
+      for (let k = 0; k < 4; k++) {
+        const px = ((k & 1 ? W : 0) - ax) / z, py = ((k & 2 ? H : 0) - ay) / z, wx = cx + cr * px + sr * py, wy = cy - sr * px + cr * py;
+        if (wx < vw.x0) vw.x0 = wx; if (wx > vw.x1) vw.x1 = wx; if (wy < vw.y0) vw.y0 = wy; if (wy > vw.y1) vw.y1 = wy;
+      }
+    }
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     g.fillStyle = (THEMES[T.world] || THEMES.desert).bg; g.fillRect(0, 0, this.cv.width, this.cv.height);
-    const M = this.M || (this.M = { s: 1, x: 0, y: 0 });
-    M.s = dpr * z; M.x = dpr * (W / 2 - cx * z); M.y = dpr * (H / 2 - cy * z);
     this.base(g);
     // CHUNKS: everything visible now, plus one chunk ahead per frame
     const c0 = Math.floor(vw.x0 / CHUNK), c1 = Math.floor(vw.x1 / CHUNK), r0 = Math.floor(vw.y0 / CHUNK), r1 = Math.floor(vw.y1 / CHUNK);
     g.imageSmoothingEnabled = true;
-    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) g.drawImage(art.chunk(c, r), c * CHUNK, r * CHUNK, CHUNK + 2, CHUNK + 2);
+    if (!cfg.rotate) { for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) g.drawImage(art.chunk(c, r), c * CHUNK, r * CHUNK, CHUNK + 2, CHUNK + 2); }
+    else {
+      // rotated view: only the chunks that reach the canvas (its world box holds many that don't)
+      const rad = CHUNK * 0.7072 * M.s, cw = this.cv.width, ch = this.cv.height, h2 = CHUNK / 2;
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+        const X = c * CHUNK + h2, Y = r * CHUNK + h2, px = M.a * X + M.c * Y + M.x, py = M.b * X + M.d * Y + M.y;
+        if (px < -rad || py < -rad || px > cw + rad || py > ch + rad) continue;
+        g.drawImage(art.chunk(c, r), c * CHUNK, r * CHUNK, CHUNK + 2, CHUNK + 2);
+      }
+    }
     if (focus) {
-      const ax = Math.floor((cx + cam.lx * 2.2) / CHUNK), ay = Math.floor((cy + cam.ly * 2.2) / CHUNK);
+      const hx = cfg.rotate ? Math.cos(this.cm.h) * H * 0.8 / z : cam.lx * 2.2, hy = cfg.rotate ? Math.sin(this.cm.h) * H * 0.8 / z : cam.ly * 2.2;
+      const ax = Math.floor((cx + hx) / CHUNK), ay = Math.floor((cy + hy) / CHUNK);
       let done = false;
       for (let dy = -1; dy <= 1 && !done; dy++) for (let dx = -1; dx <= 1 && !done; dx++) if (!art.has(ax + dx, ay + dy)) { art.chunk(ax + dx, ay + dy); done = true; }
     }
     this.warm(rc, view.countdown > 0 || !view.cars.length ? 12 : 1);
     this.overlays(g, view, t);
     this.skids.draw(g, t, vw.x0 - 60, vw.y0 - 60, vw.x1 + 60, vw.y1 + 60, T.world === 'frozen' ? 'rgba(60,80,110,1)' : T.world === 'city' ? '#05050c' : '#1a1212');
+    if (this.sfx) this.sfx.world(g, this, view, rc, dt);
     this.ents(g, view, t, me, true);
     this.drawCars(g, view, rc, dt, t);
     this.ents(g, view, t, me, false);
@@ -515,6 +571,11 @@ export class RaceRenderer {
       const inView = c.x > vw.x0 - 80 && c.x < vw.x1 + 80 && c.y > vw.y0 - 80 && c.y < vw.y1 + 80;
       v.respawnT = Math.max(0, v.respawnT - dt); v.hitT = Math.max(0, v.hitT - dt); v.flame = Math.max(0, v.flame - dt); v.spinT = Math.max(0, v.spinT - dt);
       if (air) v.air = Math.min(v.airMax, v.air + dt); else v.air = 0;
+      // CAR FEEL: turn rate (body roll, headlight sweep) and the suspension bounce after a landing
+      if (v.pa != null && dt > 0) { let da = c.a - v.pa; if (da > Math.PI) da -= TAU; else if (da < -Math.PI) da += TAU; v.yaw += (clamp(da / dt, -5, 5) - v.yaw) * Math.min(1, dt * 10); }
+      v.pa = c.a;
+      if (v.wasAir && !air && !dead) { v.bounce = 1; v.bT = 0; }
+      v.wasAir = !!air; v.bT += dt; v.bounce = Math.max(0, v.bounce - dt * 1.4);
       if (dead) {
         if (inView && Math.random() < 0.5) p.emit(PK.SMOKE, c.x + (Math.random() - 0.5) * 20, c.y + (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 40, -30, 1, 8, C.DARK, 20, 1);
         if (inView) { g.globalAlpha = 0.6; g.fillStyle = '#12091e'; g.beginPath(); g.ellipse(c.x, c.y, 30, 20, c.a, 0, TAU); g.fill(); g.globalAlpha = 1; }
@@ -548,6 +609,18 @@ export class RaceRenderer {
       }
       // drift smoke lit up in the car's neon colour
       if (drift && !air && Math.random() < (low ? 0.3 : 0.6)) { const k = Math.random() < 0.5; p.emit(PK.HAZE, k ? rlx : rrx, k ? rly : rry, -cos * 30, -sin * 30, 0.7, 8, lf.neon, 30, 1.2); }
+      // tyre smoke: pale clouds off the rear tyres in a hard drift or a spin
+      if (!air && (((drift && c.spd > 380) || c.f & FLAG.SPIN || v.spinT > 0)) && Math.random() < (low ? 0.15 : 0.45)) { const k = Math.random() < 0.5; p.emit(PK.SMOKE, k ? rlx : rrx, k ? rly : rry, -cos * 50 + (Math.random() - 0.5) * 50, -sin * 50 + (Math.random() - 0.5) * 50, 0.9 + Math.random() * 0.5, 10, C.SMOKE, 34, 1.4); }
+      // sparks scraping a guard wall (own car: the physics' wall contact; others: a probe now and then)
+      if (!air && c.spd > 160) {
+        let touch = false;
+        if (c.me && c.predicted && rc.car) { touch = rc.car.wh < 0.07; if (touch) { T.probe(c.x, c.y, 22, P); } }
+        else if ((v.scrape += dt) > 0.07) { v.scrape = 0; T.probe(c.x, c.y, 22, P); touch = P.pen > -3; }
+        if (touch) {
+          const wx = c.x - P.nx * 22, wy = c.y - P.ny * 22;
+          for (let k = 0; k < (low ? 2 : 4); k++) { const a = c.a + Math.PI + (Math.random() - 0.5) * 1.1, s = 180 + Math.random() * 320; p.emit(PK.SPARK, wx, wy, Math.cos(a) * s - P.nx * 60, Math.sin(a) * s - P.ny * 60, 0.2 + Math.random() * 0.15, 2.6, k & 1 ? C.GOLD : C.WHITE, 0, 3); }
+        }
+      }
       // ground dust from the shoulder / sand / snow
       if (!air && c.spd > 220 && (v.dust += dt) > 0.05) {
         v.dust = 0;
@@ -558,7 +631,16 @@ export class RaceRenderer {
       // exhaust puffs
       if ((v.puff += dt) > (boost ? 0.03 : 0.12)) { v.puff = 0; p.emit(PK.SMOKE, c.x - cos * 28, c.y - sin * 28, -cos * 40, -sin * 40, 0.5, 4, C.SMOKE, 14, 1.5); }
       const lift = air ? Math.sin(Math.min(1, v.air / v.airMax) * Math.PI * 0.5 + 0.0) : 0;
-      const sc = 1 + lift * 0.28;
+      const bob = v.bounce > 0 ? v.bounce * Math.cos(v.bT * 26) * 0.07 : 0;
+      const sc = (1 + lift * 0.28) * (1 + bob);
+      // body roll: the body leans out of the bend (shifted sideways off its shadow, turned a touch)
+      const roll = air ? 0 : clamp((v.yaw * c.spd) / 2600, -1, 1), rox = sin * roll * 3.4, roy = -cos * roll * 3.4;
+      const sweep = clamp(v.yaw * 0.13, -0.38, 0.38); // headlights lead into the turn
+      if (this.hideMe && c.me) { // cockpit: your own car is the bonnet on the HUD; its lights still reach ahead
+        this.at(g, c.x, c.y, c.a + sweep, CAR_VIS); g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.36 * NEON_GLOW;
+        g.drawImage(this.beam, headOf(st) - 4, -26, 150, 52); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; this.base(g);
+        continue;
+      }
       // leader glow (bounty) under the car
       if (c.f & FLAG.LEADER) {
         g.globalCompositeOperation = 'lighter'; g.globalAlpha = steady ? 0.7 : 0.55 + 0.25 * Math.sin(t * 4);
@@ -570,11 +652,17 @@ export class RaceRenderer {
       g.beginPath(); g.ellipse(c.x + so, c.y + so * 1.2, 28 * (1 - lift * 0.15), 17 * (1 - lift * 0.15), c.a, 0, TAU); g.fill();
       g.globalAlpha = 1;
       // wet road: the car's neon smeared down the asphalt (cheap fake reflection)
-      if (wet) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.28 * NEON_GLOW; g.drawImage(glowDot(L.neon), c.x - 18, c.y + 4, 36, 86); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+      if (wet) {
+        // (smeared down the SCREEN in every camera view: world direction of screen-down)
+        g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.28 * NEON_GLOW;
+        if (this.cfg.rotate) { this.at(g, c.x, c.y, this.downA); g.drawImage(glowDot(L.neon), 4, -18, 86, 36); this.base(g); } else g.drawImage(glowDot(L.neon), c.x - 18, c.y + 4, 36, 86);
+        g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+      }
       // underglow pool on the road (stays on the ground under a jump, fading with height)
       this.at(g, c.x + so * 0.5, c.y + so * 0.6, c.a, CAR_VIS * (1 + lift * 0.4));
       drawUnderglow(g, L, t, 1 - lift * 0.6, steady);
-      // headlight beams ahead
+      // headlight beams ahead, sweeping into the turn
+      if (sweep) this.at(g, c.x + so * 0.5, c.y + so * 0.6, c.a + sweep, CAR_VIS * (1 + lift * 0.4));
       g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.3 * NEON_GLOW;
       g.drawImage(this.beam, headOf(st) - 4, -22, 120, 44);
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
@@ -629,10 +717,17 @@ export class RaceRenderer {
       if (phase) drawGhostVeil(g, c.x, c.y); // Ghost Mode item: see-through, steady
       g.globalAlpha = phase ? 0.4 : ghost ? (steady ? 0.55 : 0.45 + 0.35 * (Math.sin(t * 22) > 0 ? 1 : 0)) : 1;
       const spr = this.cars.get(L, c.a);
-      this.at(g, c.x, c.y - lift * 10, c.a - spr.ang, sc * CAR_VIS);
+      this.at(g, c.x + rox, c.y + roy - lift * 10, c.a - spr.ang - roll * 0.05, sc * CAR_VIS);
       blitCar(g, spr, t, steady);
       this.base(g);
       g.globalAlpha = 1;
+      // brake lights: bright red at the tail while braking (rivals: the BRAKE flag; you: your BRAKE)
+      if (c.me ? this.meBrake && c.spd > 40 : c.f & FLAG.BRAKE) {
+        const tl = taillightsOf(st);
+        g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.95;
+        for (let q = 0; q < tl.length; q++) { const o = tl[q], bx = c.x + rox + (cos * o[0] - sin * o[1]) * CAR_VIS * sc, by = c.y + roy + (sin * o[0] + cos * o[1]) * CAR_VIS * sc; g.drawImage(this.glow.red, bx - 15, by - 15, 30, 30); }
+        g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+      }
       if (v.hitT > 0 && !steady) { g.globalAlpha = v.hitT * 2.4; g.globalCompositeOperation = 'lighter'; g.drawImage(this.glow.red, c.x - 40, c.y - 40, 80, 80); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; }
       // shield bubble
       if (c.f & FLAG.SHIELD) {

@@ -326,11 +326,11 @@ export class Hud {
       g.globalAlpha = 1;
     }
   }
-  // where the stick is pointing, drawn on your car (stick direction = world direction on screen)
+  // where the stick is pointing, drawn on your car (the stick's screen direction, in every camera view)
   arrow(g, S, u, car) {
-    const s = S.ctrl.stick, R = S.renderer, c = R.meCar, M = R.M;
-    if (s.id == null || s.hm < 0.15 || !car || !c || !M || car.f & FLAG.DEAD) return;
-    const x = (c.x * M.s + M.x) / S.dpr, y = (c.y * M.s + M.y) / S.dpr, d = 46 * u + 10 * s.hm * u;
+    const s = S.ctrl.stick, R = S.renderer, c = R.meCar;
+    if (s.id == null || s.hm < 0.15 || !car || !c || !R.M || car.f & FLAG.DEAD || R.hideMe) return;
+    const p = R.toScreen(c.x, c.y), x = p.x, y = p.y, d = 46 * u + 10 * s.hm * u; // (screen point: after the camera's tilt)
     g.save(); g.translate(x, y); g.rotate(s.ha);
     g.globalAlpha = 0.55 + 0.45 * s.hm;
     g.beginPath(); g.moveTo(d + 22 * u, 0); g.lineTo(d, -14 * u); g.lineTo(d + 6 * u, 0); g.lineTo(d, 14 * u); g.closePath();

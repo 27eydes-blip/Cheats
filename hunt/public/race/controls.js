@@ -1,6 +1,7 @@
 // Hunt Racers controls. Touch (landscape): a big always-drawn steering joystick on the left. It points
-// where the car should go: the camera never rotates, so the stick's screen direction is the world
-// heading `ha` and its deflection the magnitude `hm` (see PROTOCOL.md). Throttle is automatic; big
+// where the car should go on screen: in Top-down that is the world heading `ha`; in the rotating
+// Chase / Cockpit views `toWorld` (set by the app from camera.js) converts it, so stick up = the
+// car's forward direction. Its deflection is the magnitude `hm` (see PROTOCOL.md). Throttle is automatic; big
 // thumb buttons on the right (DRIFT hold, FIRE, ITEM, BRAKE / REVERSE) and a RESET under the pause
 // button. Mirrored for left-handed players. Every finger is tracked by its touch identifier, so steering,
 // drifting and firing at once all work. Desktop: keys by event.code, mouse buttons for weapon /
@@ -28,7 +29,7 @@ export class Controls {
     this.out = { st: 0, th: 1, dr: 0, ha: null, hm: 0 };
     this.fireQ = 0; this.itemQ = 0; this.resetQ = 0;
     this.mode = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window ? 'touch' : 'keys';
-    this.kSteer = 0; this.pad = false; this.padPrev = 0; this.enabled = true;
+    this.kSteer = 0; this.pad = false; this.padPrev = 0; this.enabled = true; this.toWorld = null;
     this.h = {
       ts: (e) => this.touch(e, 'start'), tm: (e) => this.touch(e, 'move'), te: (e) => this.touch(e, 'end'),
       kd: (e) => this.key(e, true), ku: (e) => this.key(e, false),
@@ -168,8 +169,9 @@ export class Controls {
     if (this.mode === 'touch') {
       const s = this.stick;
       if (s.id != null && s.hm > 0) {
-        o.ha = s.ha; o.hm = Math.min(1, s.hm * sens);
-        const d = heading == null ? 0 : wrap(s.ha - heading);
+        // toWorld: a rotating camera turns the stick's screen angle into the world heading (camera.js)
+        o.ha = this.toWorld ? this.toWorld(s.ha) : s.ha; o.hm = Math.min(1, s.hm * sens);
+        const d = heading == null ? 0 : wrap(o.ha - heading);
         s.v = o.hm < 0.15 ? 0 : clamp(d * 2.5, -1, 1) * Math.min(1, o.hm * 1.4);
       } else s.v = 0;
       o.st = s.v;
