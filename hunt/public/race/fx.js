@@ -3,12 +3,20 @@
 import { SETTINGS } from '../settings.js';
 
 // particle kinds (drawn in this order, so additive ones batch together)
-export const PK = { SMOKE: 0, DUST: 1, DEBRIS: 2, SPARK: 3, FLAME: 4, EMBER: 5, GLINT: 6, SNOW: 7 };
-const ADDITIVE = [false, false, false, true, true, true, true, false];
-// colour table (index into it from emit); strings built once
+// HAZE: glowing tinted smoke (drift smoke lit by the car's neon), drawn additively
+export const PK = { SMOKE: 0, DUST: 1, DEBRIS: 2, SPARK: 3, FLAME: 4, EMBER: 5, GLINT: 6, SNOW: 7, HAZE: 8 };
+const ADDITIVE = [false, false, false, true, true, true, true, false, true];
+const NKIND = ADDITIVE.length, PCMAX = 64;
+// colour table (index into it from emit); strings built once. Car looks add their neon colours
+// through colorIdx (once per look, never per frame); the table never grows past PCMAX.
 export const PC = ['#3a86ff', '#ff9f1c', '#c04dff', '#ffffff', '#ffd23f', '#ff5a1f', '#b0a8a0', '#6a5f5a', '#5ff4ff', '#e8c47f', '#f4f8ff', '#12091e', '#ff3fa4', '#7fa34a', '#ffb347', '#2a2024'];
 export const C = { BLUE: 0, ORANGE: 1, PURPLE: 2, WHITE: 3, GOLD: 4, LAVA: 5, SMOKE: 6, DARK: 7, CYAN: 8, SAND: 9, SNOW: 10, INK: 11, PINK: 12, GREEN: 13, AMBER: 14, ASH: 15 };
 export const TIER_C = [C.WHITE, C.BLUE, C.ORANGE, C.PURPLE];
+export function colorIdx(col) {
+  let i = PC.indexOf(col);
+  if (i < 0) { if (PC.length >= PCMAX) return C.WHITE; i = PC.push(col) - 1; }
+  return i;
+}
 
 export class Particles {
   constructor(max = 700) {
@@ -47,7 +55,7 @@ export class Particles {
   // Batched: particles are bucketed by (kind, colour, alpha band) with a counting sort, and each
   // bucket is one path, so hundreds of particles cost a few dozen canvas calls.
   draw(g, x0, y0, x1, y1) {
-    const n = this.n, NB = 4, NK = 8 * PC.length * NB;
+    const n = this.n, NB = 4, NK = NKIND * PCMAX * NB;
     const key = this.key || (this.key = new Uint16Array(this.max)), ord = this.ord || (this.ord = new Uint16Array(this.max));
     const cnt = this.cnt || (this.cnt = new Uint16Array(NK + 1));
     cnt.fill(0);
@@ -55,8 +63,8 @@ export class Particles {
       const x = this.x[i], y = this.y[i], sz = this.size[i];
       if (x + sz < x0 || x - sz > x1 || y + sz < y0 || y - sz > y1) { key[i] = 65535; continue; }
       const kind = this.kind[i], f = this.life[i] / this.max0[i];
-      const al = kind === PK.SMOKE || kind === PK.DUST ? f * 0.55 : kind === PK.SNOW ? 0.9 : kind === PK.SPARK || kind === PK.GLINT ? Math.min(1, f * 1.6) : kind === PK.DEBRIS ? Math.min(1, f * 2) : f;
-      const k = (kind * PC.length + this.col[i]) * NB + Math.min(NB - 1, (al * NB) | 0);
+      const al = kind === PK.HAZE ? f * 0.42 : kind === PK.SMOKE || kind === PK.DUST ? f * 0.55 : kind === PK.SNOW ? 0.9 : kind === PK.SPARK || kind === PK.GLINT ? Math.min(1, f * 1.6) : kind === PK.DEBRIS ? Math.min(1, f * 2) : f;
+      const k = (kind * PCMAX + this.col[i]) * NB + Math.min(NB - 1, (al * NB) | 0);
       key[i] = k; cnt[k + 1]++;
     }
     for (let k = 1; k <= NK; k++) cnt[k] += cnt[k - 1]; // bucket starts
@@ -67,7 +75,7 @@ export class Particles {
     for (let k = 0; k < NK; k++) {
       const to = start[k];
       if (to === from) continue;
-      const kind = (k / (PC.length * NB)) | 0, col = ((k / NB) | 0) % PC.length, band = k % NB;
+      const kind = (k / (PCMAX * NB)) | 0, col = ((k / NB) | 0) % PCMAX, band = k % NB;
       if (kind !== lastKind) { g.globalCompositeOperation = ADDITIVE[kind] ? 'lighter' : 'source-over'; lastKind = kind; }
       const line = kind === PK.SPARK || kind === PK.GLINT;
       g.globalAlpha = (band + 0.5) / NB;

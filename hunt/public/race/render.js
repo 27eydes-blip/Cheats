@@ -2,24 +2,66 @@
 // chunks, animated track overlays, cars (cached sprites), items, weapons and effects. Draws from
 // RaceClient.view() and is fed race events by the app (fx()).
 import { TrackArt, CHUNK, THEMES } from './trackart.js';
-import { CarSprites, INK } from './cars.js';
-import { Particles, Skids, Effects, PK, C, TIER_C, FK } from './fx.js';
+import { CarSprites, BUCKETS, INK, blitCar, drawUnderglow, glowDot, exhaustsOf, taillightsOf, headOf, mix } from './cars.js';
+import { lookForRacer } from './looks.js';
+import { Particles, Skids, Effects, PK, C, TIER_C, FK, colorIdx } from './fx.js';
 import { FLAG, driftTierOf } from './protocol.js';
 import { ITEMS, WEAPONS } from './items.js';
-import { DRIVERS, driftTier } from './physics.js';
+import { driftTier } from './physics.js';
 import { SETTINGS } from '../settings.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const TAU = Math.PI * 2;
 const P = {}; // probe scratch
 const CAR_VIS = 1.18; // cars are drawn a bit bigger than their hitbox
-export const SAFE_BOX = 0.2; // the followed car stays within ±20% of the screen centre (0.3..0.7 of W and H)
+export const SAFE_BOX = 0.2;
+const LT = 10; // taillight trail points per light // the followed car stays within ±20% of the screen centre (0.3..0.7 of W and H)
 
 function glowSprite(col, size = 128) {
   const cv = document.createElement('canvas'); cv.width = cv.height = size;
   const g = cv.getContext('2d'), gr = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
   gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = gr; g.fillRect(0, 0, size, size);
+  return cv;
+}
+// headlight beam: a soft cone along +x from the origin (drawn additively ahead of each car)
+function beamSprite() {
+  const w = 160, h = 80, cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const g = cv.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, w, 0);
+  gr.addColorStop(0, 'rgba(235,245,255,0.75)'); gr.addColorStop(0.5, 'rgba(210,230,255,0.25)'); gr.addColorStop(1, 'rgba(200,220,255,0)');
+  g.fillStyle = gr; g.beginPath(); g.moveTo(0, h / 2 - 7); g.lineTo(w, 0); g.lineTo(w, h); g.lineTo(0, h / 2 + 7); g.closePath(); g.fill();
+  return cv;
+}
+// screen-edge dusk: a purple / pink / blue tint along the edges with a few far-off city lights,
+// painted once per size and theme at a quarter of the resolution (it is all soft gradients)
+const DUSK = {
+  desert: ['rgba(60,20,70,0.55)', 'rgba(255,120,90,0.22)', ['#ff7a5a', '#ffb347', '#c04dff']],
+  frozen: ['rgba(14,30,80,0.55)', 'rgba(120,180,255,0.2)', ['#7fd8ff', '#b8a4ff', '#ffffff']],
+  ashlands: ['rgba(40,6,10,0.55)', 'rgba(255,90,30,0.22)', ['#ff6a1a', '#ffb347', '#ff3fa4']],
+  city: ['rgba(30,8,60,0.6)', 'rgba(255,63,164,0.22)', ['#ff3fa4', '#3ff5ff', '#a05cff', '#ffe14a']],
+};
+function duskSprite(W, H, world) {
+  const D = DUSK[world] || DUSK.desert, w = Math.max(8, Math.round(W / 4)), h = Math.max(8, Math.round(H / 4));
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const g = cv.getContext('2d');
+  // edge bands that fade out before the middle box (x 0.2-0.8, y 0.3-0.75), which stays clear and is never drawn
+  const band = (x0, y0, x1, y1, rx, ry, rw, rh) => { const gr = g.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, D[0]); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(rx, ry, rw, rh); };
+  band(0, 0, 0, h * 0.3, 0, 0, w, h * 0.3);
+  band(0, h, 0, h * 0.75, 0, h * 0.75, w, h * 0.25);
+  band(0, 0, w * 0.2, 0, 0, 0, w * 0.2, h);
+  band(w, 0, w * 0.8, 0, w * 0.8, 0, w * 0.2, h);
+  const top = g.createLinearGradient(0, 0, 0, h * 0.3);
+  top.addColorStop(0, D[1]); top.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = top; g.fillRect(0, 0, w, h * 0.3);
+  // far-off lights along the top edge and the corners
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 9; i++) {
+    const x = ((i * 0.618 + 0.11) % 1) * w, y = (i % 3) * h * 0.035 + h * 0.01, s = h * (0.05 + (i % 4) * 0.02), c = D[2][i % D[2].length];
+    const gr = g.createRadialGradient(x, y, 0, x, y, s);
+    gr.addColorStop(0, c + '66'); gr.addColorStop(1, c + '00');
+    g.fillStyle = gr; g.fillRect(x - s, y - s, s * 2, s * 2);
+  }
   return cv;
 }
 function boxSprite() {
@@ -48,7 +90,10 @@ function oilSprite() {
 }
 
 export class RaceRenderer {
-  constructor(canvas) {
+  // opts.lookOf(id) -> look | null: the app's per-car look provider (equipped cosmetics); null or
+  // no provider = the car's own look from the roster. Asked again only when the car's roster row changes.
+  constructor(canvas, { lookOf = null } = {}) {
+    this.lookOf = lookOf;
     this.cv = canvas; this.g = canvas.getContext('2d');
     this.W = 0; this.H = 0; this.dpr = 1;
     this.art = null; this.T = null;
@@ -61,7 +106,8 @@ export class RaceRenderer {
     this.t = 0;
     this.glow = { lava: glowSprite('rgba(255,120,30,0.9)'), ice: glowSprite('rgba(220,250,255,0.85)'), gold: glowSprite('rgba(255,210,63,0.95)'), cyan: glowSprite('rgba(95,244,255,0.9)'), red: glowSprite('rgba(255,60,60,0.9)') };
     for (const c of ['#ff3fa4', '#3ff5ff', '#a05cff', '#ffe14a', '#4bff9c']) this.glow[c] = glowSprite(c + 'cc');
-    this.box = boxSprite(); this.oil = oilSprite();
+    this.box = boxSprite(); this.oil = oilSprite(); this.beam = beamSprite();
+    this.dusk = null; this.lfx = new Map(); // look id -> derived colours (strings, particle colour slots)
     this.amb = new Float32Array(60 * 3); // screen-space ambience (snow / embers / rain)
     for (let i = 0; i < 60; i++) { this.amb[i * 3] = Math.random(); this.amb[i * 3 + 1] = Math.random(); this.amb[i * 3 + 2] = Math.random(); }
     this.threat = 0; // a missile is homing on us (0..1)
@@ -69,13 +115,14 @@ export class RaceRenderer {
   }
   setTrack(T) {
     if (this.T === T) return;
-    this.T = T; this.art = new TrackArt(T); this.vis.clear(); this.cam.init = false;
+    this.T = T; this.art = new TrackArt(T); this.vis.clear(); this.cam.init = false; this.dusk = null;
     this.skids = new Skids(900); this.parts.n = 0;
     this.art.setScale(this.chunkScale());
   }
   baseZoom() { return clamp(Math.min(this.W, this.H * 1.75) / 1000, 0.5, 1.3); }
   chunkScale() { return Math.round(this.baseZoom() * this.dpr * 8) / 8; }
   resize(W, H, dpr) {
+    if (W !== this.W || H !== this.H) this.dusk = null;
     this.W = W; this.H = H; this.dpr = dpr;
     this.cv.width = Math.round(W * dpr); this.cv.height = Math.round(H * dpr);
     const s = this.chunkScale();
@@ -88,10 +135,45 @@ export class RaceRenderer {
   visOf(id) {
     let v = this.vis.get(id);
     if (!v) {
-      v = { trail: new Float32Array(32), tn: 0, ti: 0, wx: new Float32Array(4), skid: false, flame: 0, flameC: 0, respawnT: 0, hitT: 0, puff: 0, dust: 0, tierPrev: 0, air: 0, airMax: 0.6, spinT: 0, lastX: 0, lastY: 0 };
+      // lt: taillight trail ring (LT points x 2 lights x xy); look: this car's look (from the roster)
+      v = { lt: new Float32Array(LT * 4), ltn: 0, lti: 0, ltT: 0, look: null, lookSrc: undefined, trail: new Float32Array(32), tn: 0, ti: 0, wx: new Float32Array(4), skid: false, flame: 0, flameC: 0, respawnT: 0, hitT: 0, puff: 0, dust: 0, tierPrev: 0, air: 0, airMax: 0.6, spinT: 0, lastX: 0, lastY: 0 };
       this.vis.set(id, v);
     }
     return v;
+  }
+
+  // colours derived from a look, computed once per look (no strings built per frame)
+  fxOf(L) {
+    let f = this.lfx.get(L.id);
+    if (!f) {
+      f = { neon: colorIdx(L.neon), trail: colorIdx(L.trail.color), flame: colorIdx(L.flame.outer), trailCore: mix(L.trail.color, '#ffffff', 0.6), ribbon: L.neon2 };
+      if (this.lfx.size > 64) this.lfx.clear();
+      this.lfx.set(L.id, f);
+    }
+    return f;
+  }
+  carLook(id, rc) {
+    const v = this.visOf(id), rd = rc.roster.get(id);
+    if (v.lookSrc !== rd || !v.look) {
+      v.lookSrc = rd;
+      let L = null;
+      if (this.lookOf) { try { L = this.lookOf(id); } catch { L = null; } }
+      v.look = L && typeof L === 'object' && L.sprite ? L : lookForRacer(rd || { driver: 'volt' });
+    }
+    return v.look;
+  }
+
+  // build every racer's car sprites ahead of time (lobby and countdown: many per frame; racing:
+  // one), so the first laps never pay for baking the glow
+  warm(rc, budget) {
+    if (this.warmN === rc.roster.size && this.warmS === this.cars.scale) return;
+    let left = budget;
+    for (const id of rc.roster.keys()) {
+      const L = this.carLook(id, rc), arr = this.cars.map.get(L.sprite);
+      for (let b = 0; b < BUCKETS && left > 0; b++) if (!arr || !arr[b]) { this.cars.get(L, (b / BUCKETS) * TAU); left--; }
+      if (left <= 0) return;
+    }
+    this.warmN = rc.roster.size; this.warmS = this.cars.scale; // all built for this roster and scale
   }
 
   // ------------------------------------------------------------------ events -> effects
@@ -122,7 +204,7 @@ export class RaceRenderer {
       case 'use': {
         const c = car(e[1]); if (!c) break;
         const it = ['missile', 'oil', 'shield', 'rockets', 'emp', 'turbo', 'spikes'][e[2]];
-        if (it === 'turbo') { const v = this.visOf(e[1]); v.flame = 1.6; v.flameC = C.CYAN; F.add(FK.RING, c.x, c.y, { r: 90, life: 0.3, col: '#5ff4ff', w: 6 }); }
+        if (it === 'turbo') { const v = this.visOf(e[1]); v.flame = 1.6; v.flameC = -1; /* -1: the car's own flame look */ F.add(FK.RING, c.x, c.y, { r: 90, life: 0.3, col: '#5ff4ff', w: 6 }); }
         if (it === 'shield') F.add(FK.RING, c.x, c.y, { r: 60, life: 0.4, col: '#5ff4ff', w: 6 });
         break;
       }
@@ -189,6 +271,7 @@ export class RaceRenderer {
       let done = false;
       for (let dy = -1; dy <= 1 && !done; dy++) for (let dx = -1; dx <= 1 && !done; dx++) if (!art.has(ax + dx, ay + dy)) { art.chunk(ax + dx, ay + dy); done = true; }
     }
+    this.warm(rc, view.countdown > 0 || !view.cars.length ? 12 : 1);
     this.overlays(g, view, t);
     this.skids.draw(g, t, vw.x0 - 60, vw.y0 - 60, vw.x1 + 60, vw.y1 + 60, T.world === 'frozen' ? 'rgba(60,80,110,1)' : T.world === 'city' ? '#05050c' : '#1a1212');
     this.ents(g, view, t, me, true);
@@ -198,6 +281,15 @@ export class RaceRenderer {
     this.parts.draw(g, vw.x0, vw.y0, vw.x1, vw.y1);
     this.effects(g, view, dt);
     this.ambience(g, dt, t);
+    // dusk at the screen edges (one cached quarter-resolution image)
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    if (!this.dusk) this.dusk = duskSprite(W, H, T.world);
+    // only the bands where the tint is visible (the middle of the screen stays clear): less fill
+    const dk = this.dusk, dw = dk.width, dh = dk.height, cw = this.cv.width, ch = this.cv.height;
+    g.drawImage(dk, 0, 0, dw, dh * 0.3, 0, 0, cw, ch * 0.3);
+    g.drawImage(dk, 0, dh * 0.75, dw, dh * 0.25, 0, ch * 0.75, cw, ch * 0.25);
+    g.drawImage(dk, 0, dh * 0.3, dw * 0.2, dh * 0.45, 0, ch * 0.3, cw * 0.2, ch * 0.45);
+    g.drawImage(dk, dw * 0.8, dh * 0.3, dw * 0.2, dh * 0.45, cw * 0.8, ch * 0.3, cw * 0.2, ch * 0.45);
   }
 
   // animated bits of the track: lava glow, neon flicker, pads, hazards, item boxes
@@ -215,6 +307,7 @@ export class RaceRenderer {
     for (const pd of art.pads) {
       if (pd.bx1 < vw.x0 - 40 || pd.bx0 > vw.x1 + 40 || pd.by1 < vw.y0 - 40 || pd.by0 > vw.y1 + 40) continue;
       const m = pd.mid, w = Math.min(pd.w, 150) * 0.42, len = pd.circle ? pd.w * 0.8 : 90;
+      g.globalAlpha = 0.55; g.drawImage(this.glow.cyan, m.x - len * 0.9, m.y - len * 0.9, len * 1.8, len * 1.8);
       this.at(g, m.x, m.y, m.a);
       g.lineWidth = 7; g.lineJoin = 'round'; g.lineCap = 'round';
       for (let k = 0; k < 3; k++) {
@@ -365,7 +458,8 @@ export class RaceRenderer {
   }
 
   drawCars(g, view, rc, dt, t) {
-    const vw = this.view, cars = view.cars, steady = SETTINGS.reduceFlash, p = this.parts, T = this.T;
+    const vw = this.view, cars = view.cars, steady = SETTINGS.reduceFlash, low = SETTINGS.lowGfx, p = this.parts, T = this.T;
+    const wet = T.world === 'city' && !low;
     // grounded cars first, airborne cars on top, own car last among equals
     for (let pass = 0; pass < 3; pass++) for (let i = 0; i < cars.length; i++) {
       const c = cars[i], air = c.f & FLAG.AIR;
@@ -378,14 +472,21 @@ export class RaceRenderer {
       if (dead) {
         if (inView && Math.random() < 0.5) p.emit(PK.SMOKE, c.x + (Math.random() - 0.5) * 20, c.y + (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 40, -30, 1, 8, C.DARK, 20, 1);
         if (inView) { g.globalAlpha = 0.6; g.fillStyle = '#12091e'; g.beginPath(); g.ellipse(c.x, c.y, 30, 20, c.a, 0, TAU); g.fill(); g.globalAlpha = 1; }
-        v.tn = 0;
+        v.tn = 0; v.ltn = 0;
         continue;
       }
       const cos = Math.cos(c.a), sin = Math.sin(c.a);
-      const rd = rc.roster.get(c.id), st = rd && DRIVERS[rd.driver] ? rd.driver : 'volt';
+      const L = this.carLook(c.id, rc), lf = this.fxOf(L), st = L.driver;
       const boost = c.f & FLAG.BOOST, drift = c.f & FLAG.DRIFT, tier = c.me && c.predicted && rc.car ? driftTier(rc.car.dc) : driftTierOf(c.f);
       // trail ring (world positions), sampled every frame while boosting
       if (boost && !air) { v.trail[v.ti * 2] = c.x - cos * 24; v.trail[v.ti * 2 + 1] = c.y - sin * 24; v.ti = (v.ti + 1) % 16; v.tn = Math.min(16, v.tn + 1); } else v.tn = Math.max(0, v.tn - 1);
+      // taillight trails: both rear lights sampled ~30 times a second
+      if (!low && (v.ltT += dt) > 0.033) {
+        v.ltT = 0;
+        const tl = taillightsOf(st), k = v.lti * 4;
+        for (let q = 0; q < 2; q++) { const o = tl[q] || tl[0]; v.lt[k + q * 2] = c.x + cos * o[0] * CAR_VIS - sin * o[1] * CAR_VIS; v.lt[k + q * 2 + 1] = c.y + sin * o[0] * CAR_VIS + cos * o[1] * CAR_VIS; }
+        v.lti = (v.lti + 1) % LT; v.ltn = Math.min(LT, v.ltn + 1);
+      }
       // rear wheels: skid marks and drift sparks
       const rlx = c.x - cos * 15 + sin * 13, rly = c.y - sin * 15 - cos * 13, rrx = c.x - cos * 15 - sin * 13, rry = c.y - sin * 15 + cos * 13;
       const skid = !air && (drift || (c.f & FLAG.SPIN) || v.spinT > 0);
@@ -394,11 +495,13 @@ export class RaceRenderer {
       if (!inView) continue;
       if (drift && !air && tier > 0) {
         const col = TIER_C[tier];
-        for (let k = 0; k < (SETTINGS.lowGfx ? 1 : 2); k++) {
+        for (let k = 0; k < (low ? 1 : 2); k++) {
           const wx = k ? rlx : rrx, wy = k ? rly : rry, a = c.a + Math.PI + (Math.random() - 0.5) * 1.4, s = 160 + Math.random() * 240;
           p.emit(PK.SPARK, wx, wy, Math.cos(a) * s, Math.sin(a) * s, 0.18 + Math.random() * 0.12, tier === 3 ? 3.5 : 2.6, col, 0, 3);
         }
-      } else if (drift && !air && Math.random() < 0.5) p.emit(PK.SMOKE, rlx, rly, 0, 0, 0.6, 7, C.SMOKE, 26, 1);
+      }
+      // drift smoke lit up in the car's neon colour
+      if (drift && !air && Math.random() < (low ? 0.3 : 0.6)) { const k = Math.random() < 0.5; p.emit(PK.HAZE, k ? rlx : rrx, k ? rly : rry, -cos * 30, -sin * 30, 0.7, 8, lf.neon, 30, 1.2); }
       // ground dust from the shoulder / sand / snow
       if (!air && c.spd > 220 && (v.dust += dt) > 0.05) {
         v.dust = 0;
@@ -420,35 +523,67 @@ export class RaceRenderer {
       const so = 6 + lift * 34;
       g.beginPath(); g.ellipse(c.x + so, c.y + so * 1.2, 28 * (1 - lift * 0.15), 17 * (1 - lift * 0.15), c.a, 0, TAU); g.fill();
       g.globalAlpha = 1;
-      // boost trail
-      if (v.tn > 2) {
-        g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
-        for (let k = 1; k < v.tn; k++) {
-          const i0 = ((v.ti - k + 16) % 16) * 2, i1 = ((v.ti - k - 1 + 16) % 16) * 2;
-          if (k + 1 >= v.tn) break;
-          g.globalAlpha = (1 - k / v.tn) * 0.6; g.strokeStyle = k < 4 ? '#c9fbff' : '#5ff4ff'; g.lineWidth = 16 * (1 - k / v.tn) + 3;
-          g.beginPath(); g.moveTo(v.trail[i0], v.trail[i0 + 1]); g.lineTo(v.trail[i1], v.trail[i1 + 1]); g.stroke();
+      // wet road: the car's neon smeared down the asphalt (cheap fake reflection)
+      if (wet) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.28; g.drawImage(glowDot(L.neon), c.x - 18, c.y + 4, 36, 86); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+      // underglow pool on the road (stays on the ground under a jump, fading with height)
+      this.at(g, c.x + so * 0.5, c.y + so * 0.6, c.a, CAR_VIS * (1 + lift * 0.4));
+      drawUnderglow(g, L, t, 1 - lift * 0.6, steady);
+      // headlight beams ahead
+      g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.3;
+      g.drawImage(this.beam, headOf(st) - 4, -22, 120, 44);
+      g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+      this.base(g);
+      // taillight light trails
+      if (!low && v.ltn > 2) {
+        g.globalCompositeOperation = 'lighter'; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#ff2a3a';
+        for (let band = 0; band < 2; band++) {
+          g.globalAlpha = band ? 0.16 : 0.38; g.lineWidth = band ? 3 : 4;
+          const k0 = band ? 4 : 0, k1 = band ? v.ltn - 1 : Math.min(5, v.ltn - 1);
+          g.beginPath();
+          for (let q = 0; q < 2; q++) for (let k = k0; k <= k1; k++) {
+            const j = ((v.lti - 1 - k + LT * 2) % LT) * 4 + q * 2;
+            if (k === k0) g.moveTo(v.lt[j], v.lt[j + 1]); else g.lineTo(v.lt[j], v.lt[j + 1]);
+          }
+          g.stroke();
         }
         g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
       }
-      // boost / mini-turbo flames from the exhaust
+      // boost trail (look: line / ribbon / sparks)
+      if (v.tn > 2) {
+        const ts = L.trail.style, wide = ts === 'ribbon' ? 1.6 : ts === 'sparks' ? 0.6 : 1;
+        g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+        for (let k = 1; k < v.tn; k++) {
+          const i0 = ((v.ti - k + 16) % 16) * 2, i1 = ((v.ti - k - 1 + 16) % 16) * 2;
+          if (k + 1 >= v.tn || (low && k > 6)) break;
+          g.globalAlpha = (1 - k / v.tn) * 0.6; g.strokeStyle = k < 4 ? lf.trailCore : ts === 'ribbon' && k & 1 ? lf.ribbon : L.trail.color; g.lineWidth = (16 * (1 - k / v.tn) + 3) * wide;
+          g.beginPath(); g.moveTo(v.trail[i0], v.trail[i0 + 1]); g.lineTo(v.trail[i1], v.trail[i1 + 1]); g.stroke();
+        }
+        g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+        if (ts === 'sparks' && boost && Math.random() < 0.7) { const a = c.a + Math.PI + (Math.random() - 0.5) * 0.8, s = 120 + Math.random() * 200; p.emit(PK.GLINT, c.x - cos * 26, c.y - sin * 26, Math.cos(a) * s, Math.sin(a) * s, 0.35, 3, lf.trail, 0, 3); }
+      }
+      // boost / mini-turbo flames from every exhaust (the car's flame look; mini-turbo tiers keep their colour)
       if (boost || v.flame > 0) {
-        const L = (boost ? 26 : 16) + (steady ? 6 : Math.random() * 14), col = v.flame > 0 ? v.flameC : C.ORANGE;
-        this.at(g, c.x - cos * 26, c.y - sin * 26, c.a);
+        const Lf = (boost ? 26 : 16) + (steady ? 6 : Math.random() * 14), tierC = v.flame > 0 && v.flameC >= 0 ? v.flameC : -1;
+        const outer = tierC === C.BLUE ? '#3a86ff' : tierC === C.PURPLE ? '#c04dff' : tierC === C.ORANGE ? '#ff8c1a' : tierC >= 0 ? '#ffffff' : L.flame.outer;
+        const ex = exhaustsOf(st), fw = ex.length > 1 ? 0.75 : 1;
         g.globalCompositeOperation = 'lighter';
-        g.fillStyle = col === C.BLUE ? '#3a86ff' : col === C.PURPLE ? '#c04dff' : col === C.CYAN ? '#5ff4ff' : '#ff8c1a';
-        g.beginPath(); g.moveTo(0, -8); g.quadraticCurveTo(-L * 0.6, -6, -L, 0); g.quadraticCurveTo(-L * 0.6, 6, 0, 8); g.closePath(); g.fill();
-        g.fillStyle = '#fff3d0'; g.beginPath(); g.moveTo(0, -4); g.quadraticCurveTo(-L * 0.35, -3, -L * 0.55, 0); g.quadraticCurveTo(-L * 0.35, 3, 0, 4); g.closePath(); g.fill();
+        for (let q = 0; q < ex.length; q++) {
+          const ox = ex[q][0] * CAR_VIS, oy = ex[q][1] * CAR_VIS;
+          this.at(g, c.x + cos * ox - sin * oy, c.y + sin * ox + cos * oy, c.a, fw);
+          g.fillStyle = outer;
+          g.beginPath(); g.moveTo(0, -8); g.quadraticCurveTo(-Lf * 0.6, -6, -Lf, 0); g.quadraticCurveTo(-Lf * 0.6, 6, 0, 8); g.closePath(); g.fill();
+          g.fillStyle = L.flame.core; g.beginPath(); g.moveTo(0, -4); g.quadraticCurveTo(-Lf * 0.35, -3, -Lf * 0.55, 0); g.quadraticCurveTo(-Lf * 0.35, 3, 0, 4); g.closePath(); g.fill();
+        }
         g.globalCompositeOperation = 'source-over';
         this.base(g);
-        if (Math.random() < 0.6) p.emit(PK.FLAME, c.x - cos * (30 + L * 0.6), c.y - sin * (30 + L * 0.6), -cos * 90, -sin * 90, 0.14, 6, col === C.ORANGE ? C.ORANGE : col, -24, 2);
+        if (Math.random() < 0.6) p.emit(PK.FLAME, c.x - cos * (30 + Lf * 0.6), c.y - sin * (30 + Lf * 0.6), -cos * 90, -sin * 90, 0.14, 6, tierC >= 0 ? tierC : lf.flame, -24, 2);
       }
       // the car
       const ghost = c.f & FLAG.GHOST;
       g.globalAlpha = ghost ? (steady ? 0.55 : 0.45 + 0.35 * (Math.sin(t * 22) > 0 ? 1 : 0)) : 1;
-      const spr = this.cars.get(st, c.a), half = spr.half;
+      const spr = this.cars.get(L, c.a);
       this.at(g, c.x, c.y - lift * 10, c.a - spr.ang, sc * CAR_VIS);
-      g.drawImage(spr, -half, -half, half * 2, half * 2);
+      blitCar(g, spr, t, steady);
       this.base(g);
       g.globalAlpha = 1;
       if (v.hitT > 0 && !steady) { g.globalAlpha = v.hitT * 2.4; g.globalCompositeOperation = 'lighter'; g.drawImage(this.glow.red, c.x - 40, c.y - 40, 80, 80); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; }
