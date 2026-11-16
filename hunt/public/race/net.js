@@ -19,7 +19,7 @@ export class RaceClient {
     this.params = { ...(o.params || {}) };
     this.transport = o.transport || ((url) => new WebSocket(url));
     this.now = o.now || (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
-    this.phase = 'idle'; // idle | connecting | lobby | race | end | failed
+    this.phase = 'idle'; // idle | connecting | wait (friend room mid-race) | lobby | race | end | failed
     this.id = 0; this.secret = null; this.match = null; this.room = null;
     this.mode = null; this.trackKey = null; this.arena = false; this.T = null;
     this.roster = new Map(); // id -> {name, driver, bot}
@@ -70,6 +70,8 @@ export class RaceClient {
   // quit for good (the server records the result now)
   leave() { this.bye = true; this.send({ t: 'bye' }); try { this.ws?.close(1000, 'bye'); } catch {} this.phase = 'idle'; }
   pick(driver) { if (DRIVERS[driver]) { this.params.driver = driver; this.send({ t: 'pick', driver }); } }
+  // friend room host: START, and FILL WITH BOTS on/off (the server ignores anyone else)
+  host(o) { this.send({ t: 'host', ...(o.start ? { start: 1 } : {}), ...(typeof o.bots === 'boolean' ? { bots: o.bots } : {}) }); }
 
   // a dropped connection mid-race: rejoin the same car (3 tries)
   async onClose() {
@@ -88,6 +90,7 @@ export class RaceClient {
         if (!m.rejoin) this.phase = 'lobby';
         break;
       case 'lobby': this.lobby = m; this.phase = 'lobby'; break;
+      case 'roomwait': this.phase = 'wait'; this.room = m.room || this.room; this.waitInfo = m; break;
       case 'ro': if (m.full) this.roster.clear(); for (const [id, r] of Object.entries(m.add)) this.roster.set(+id, { name: r[0], driver: r[1], bot: !!r[2] }); break;
       case 'start':
         this.start = m; this.phase = 'race'; this.mode = m.mode; this.trackKey = m.track; this.arena = !!m.arena; this.T = getTrack(m.track, this.arena);

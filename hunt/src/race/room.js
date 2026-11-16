@@ -4,7 +4,10 @@
 //
 // /race?name=&driver=&token=                     public race (matchmaker), mode=grand|elim|battle,
 //        &mode=&track=&bots=0|1                  track=<id>|any, bots=0 -> a queue with no bots ever
-// /race?room=CODE&mode=&track=&bots=&lobby=      friend room: the first player in (host) picks
+// /race?room=CODE&mode=&track=&bots=            friend room: the first player in (host) picks mode, track
+//                                                and bots and presses START ({t:'host', start:1, bots});
+//                                                a friend who arrives mid-race waits for the next one
+//        &lobby=<s>                              (rooms) a fixed countdown instead of the host's START
 // /race?mode=trial&track=                        Time Trial (always solo, never bots)
 // /race?rejoin=<id>&secret=&match=<name>         reconnect to the same race
 import { RaceSim, RACE_MODES } from './sim.js';
@@ -90,7 +93,9 @@ export function raceConfig(name, q, dev = false) {
   const track = TRACK_IDS.includes(q.get('track')) ? q.get('track') : pick(TRACK_IDS);
   const lobby = Math.max(1.5, Math.min(30, Number(q.get('lobby')) || 12));
   const laps = dev && Number(q.get('laps')) >= 1 && Number(q.get('laps')) <= 3 ? Math.floor(Number(q.get('laps'))) : undefined;
-  return { mode, track, bots: q.get('bots') !== '0', lobby, ...(laps ? { laps } : {}) };
+  // ?lobby= is a fixed countdown (tests, scripts); otherwise the host starts the race
+  const hostStart = !q.has('lobby') && mode !== 'trial';
+  return { mode, track, any: !TRACK_IDS.includes(q.get('track')), bots: q.get('bots') !== '0', lobby, hostStart, ...(laps ? { laps } : {}) };
 }
 
 export class RaceRoom {
@@ -101,6 +106,8 @@ export class RaceRoom {
     this.dropped = new Map();
     this.endedAt = 0;
     this.emptyAt = 0;
+    this.waiting = new Map(); // FRIEND ROOM: socket -> {q} a friend who came in mid-race, seated in the next race
+    this.roomCfg = null; // FRIEND ROOM: what the room plays (kept between races) and who hosted the last one
     this.loop = new Loop(() => this.step());
   }
 
@@ -111,11 +118,25 @@ export class RaceRoom {
     this.sockets = sockets;
     this.dropped = new Map();
     this.endedAt = 0;
-    this.sim = new RaceSim({
-      mode: cfg.mode, track: cfg.track, seed: (Math.random() * 2 ** 32) >>> 0, fillBots: cfg.bots, lobbyTime: cfg.lobby, laps: cfg.laps,
+    const sim = this.sim = new RaceSim({
+      mode: cfg.mode, track: cfg.track, seed: (Math.random() * 2 ** 32) >>> 0, fillBots: cfg.bots, lobbyTime: cfg.lobby, laps: cfg.laps, hostStart: cfg.hostStart,
       send: (id, msg) => { const ws = sockets.get(id); if (ws) sendJSON(ws, msg); },
-      hooks: { finished: (rows) => this.recordResults(rows, sockets) },
+      // (resultsIn: the next room race closes these sockets, so it waits until everyone got their rewards)
+      hooks: { finished: (rows) => { this.recordResults(rows, sockets).finally(() => { sim.resultsIn = true; }); } },
     });
+  }
+
+  // FRIEND ROOM: the settings of a new race. The room keeps its mode, track choice and bots between
+  // races; only the last race's host (or the first one into a fresh room) chooses again.
+  roomRace(mname, q) {
+    const rc = this.roomCfg, name = cleanName(q.get('name'));
+    let cfg;
+    if (!rc || rc.hostName === name) cfg = raceConfig(mname, q, !!this.env.HUNT_DEV);
+    else cfg = { ...rc.cfg, track: rc.cfg.any ? pick(TRACK_IDS) : rc.cfg.track };
+    // the host's bots switch in the room lobby carries over to the next race
+    if (rc && rc.hostName !== name && typeof rc.bots === 'boolean') cfg.bots = rc.bots;
+    this.roomCfg = { cfg, hostName: rc && rc.hostName !== name ? rc.hostName : name, bots: cfg.bots };
+    return cfg;
   }
 
   // trophies / XP / coins / missions / best times, server-side only
@@ -142,16 +163,33 @@ export class RaceRoom {
     const [client, server] = Object.values(pair);
     server.accept();
     if (q.get('rejoin')) return this.rejoin(url, server, client);
-    if (!this.sim || this.sim.phase === 'end' || (isRoom && this.sim.phase === 'play' && this.sockets.size === 0)) this.newRace(raceConfig(mname, q, !!this.env.HUNT_DEV));
-    const sim = this.sim;
-    const d = q.get('driver') || q.get('brawler');
-    const id = sim.join(cleanName(q.get('name')), DRIVERS[d] ? d : 'volt');
+    if (!this.sim || this.sim.phase === 'end' || (isRoom && this.sim.phase === 'play' && this.sockets.size === 0)) {
+      this.newRace(isRoom ? this.roomRace(mname, q) : raceConfig(mname, q, !!this.env.HUNT_DEV));
+      if (isRoom) this.seatWaiting();
+    }
+    // a friend who arrives while the room's race is running waits for the next one (or cancels)
+    if (isRoom && this.sim.phase === 'play') return this.wait(q, mname, server, client);
+    const id = this.seat(q, mname, server);
     if (id == null) {
+      const sim = this.sim;
       sendJSON(server, { t: 'retry', reason: sim.phase === 'play' ? 'Race already started' : 'Race full', match: mname });
       server.close(1000, 'retry');
       return new Response(null, { status: 101, webSocket: client });
     }
+    const r = this.attach(id, server, client);
+    this.sim.broadcastLobby();
+    return r;
+  }
+
+  // put a joining socket into the lobby of the current race -> player id, or null when it's full
+  seat(q, mname, server) {
+    const sim = this.sim;
+    const d = q.get('driver') || q.get('brawler'), name = cleanName(q.get('name'));
+    const id = sim.join(name, DRIVERS[d] ? d : 'volt');
+    if (id == null) return null;
     const p = sim.players.get(id);
+    // the last race's host gets the room back when they come in for the next one
+    if (sim.hostStart && this.roomCfg && this.roomCfg.hostName === name) sim.hostId = id;
     p.secret = crypto.randomUUID();
     const token = q.get('token');
     if (token && this.env.DB) {
@@ -163,8 +201,45 @@ export class RaceRoom {
       }).catch(() => {});
     }
     sendJSON(server, this.welcome(p, mname));
-    sim.broadcastLobby();
-    return this.attach(id, server, client);
+    return id;
+  }
+
+  // FRIEND ROOM, race running: hold this socket and seat it in the room's next race
+  wait(q, mname, server, client) {
+    this.waiting.set(server, { q, mname });
+    this.tellWaiting(server);
+    server.addEventListener('message', (e) => {
+      let m; try { m = JSON.parse(e.data); } catch { return; }
+      if (!m || !this.waiting.has(server)) return;
+      if (m.t === 'ping') sendJSON(server, { t: 'pong', c: m.c });
+      if (m.t === 'bye') { this.waiting.delete(server); try { server.close(1000, 'bye'); } catch {} }
+    });
+    const gone = () => { this.waiting.delete(server); };
+    server.addEventListener('close', gone);
+    server.addEventListener('error', gone);
+    return new Response(null, { status: 101, webSocket: client });
+  }
+  tellWaiting(ws) {
+    const sim = this.sim, tl = sim && sim.mode.timeLimit ? Math.max(0, Math.ceil(sim.mode.timeLimit - Math.max(0, sim.time))) : null;
+    const w = this.waiting.get(ws);
+    sendJSON(ws, { t: 'roomwait', room: w ? w.mname.slice(5) : null, mode: sim ? sim.modeKey : null, track: sim ? sim.trackKey : null, left: tl, players: sim ? sim.humans().filter((p) => !p.left).length : 0 });
+  }
+  // the room's race is over (and everyone has their rewards): open the next lobby for the friends who waited
+  nextRoomRace() {
+    const first = this.waiting.values().next().value;
+    this.newRace(this.roomRace(first.mname, first.q));
+    this.seatWaiting();
+  }
+  seatWaiting() {
+    const list = [...this.waiting.entries()];
+    this.waiting.clear();
+    for (const [ws, w] of list) {
+      if (ws.readyState !== 1) continue;
+      const id = this.seat(w.q, w.mname, ws);
+      if (id == null) { sendJSON(ws, { t: 'retry', reason: 'Race full', match: w.mname }); try { ws.close(1000, 'retry'); } catch {} continue; }
+      this.attach(id, ws, null);
+    }
+    if (list.length) this.sim.broadcastLobby();
   }
   welcome(p, mname, rejoin = false) {
     const sim = this.sim;
@@ -195,6 +270,7 @@ export class RaceRoom {
     return r;
   }
 
+  // (client null: a waiting socket that already has its Response)
   attach(id, server, client) {
     const sim = this.sim, sockets = this.sockets;
     sockets.set(id, server);
@@ -221,7 +297,7 @@ export class RaceRoom {
     server.addEventListener('close', () => onClose(false));
     server.addEventListener('error', () => onClose(false));
     this.loop.start();
-    return new Response(null, { status: 101, webSocket: client });
+    return client ? new Response(null, { status: 101, webSocket: client }) : null;
   }
 
   // leaving is final: record it now (last place) so quitting can't dodge a trophy drop
@@ -235,17 +311,21 @@ export class RaceRoom {
     if (!this.sim) return this.loop.stop();
     const now = Date.now();
     for (const [id, at] of this.dropped) if (now - at > REJOIN_GRACE_MS) this.abandon(id);
+    // every racer is gone but friends are waiting: their race starts now (like a fresh join would)
+    if (this.waiting.size && this.sockets.size === 0 && this.sim.phase !== 'lobby') return this.nextRoomRace();
     if (this.emptyAt && this.sockets.size === 0 && now - this.emptyAt > REJOIN_GRACE_MS) return this.stop();
     this.sim.tick();
     if (this.sim.phase === 'end') {
       if (!this.endedAt) this.endedAt = now;
-      else if (now - this.endedAt > 20000) this.stop();
-    }
+      // friends waited for this race to end: their lobby opens once the results are paid out
+      if (this.waiting.size && (this.sim.resultsIn || now - this.endedAt > 8000)) return this.nextRoomRace();
+      if (now - this.endedAt > 20000) this.stop();
+    } else if (this.waiting.size && this.waitTold !== (this.waitTold = Math.floor(now / 2000))) for (const ws of this.waiting.keys()) this.tellWaiting(ws); // every 2 s
   }
 
   stop() {
     this.loop.stop();
     for (const id of [...this.dropped.keys()]) this.abandon(id);
-    if (!this.sockets || this.sockets.size === 0) this.sim = null;
+    if ((!this.sockets || this.sockets.size === 0) && !this.waiting.size) this.sim = null;
   }
 }

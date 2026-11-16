@@ -18,6 +18,7 @@ export const RACE_CAP = 300; // hard cap on a race (s)
 export const BOX_RESPAWN = 3;
 export const CREDIT_WINDOW = 4; // a wreck within 4 s of a hit is credited to the hitter
 export const COINS = { box: 1, lap: 2, takedown: 3 };
+export const ROOM_IDLE_SECS = 300; // a host-run friend room whose host never presses START starts by itself after 5 minutes
 const r2 = (v) => Math.round(v * 100) / 100;
 const r3 = (v) => Math.round(v * 1000) / 1000;
 const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
@@ -34,7 +35,8 @@ const distToSeg = (px, py, x0, y0, x1, y1) => {
 };
 
 export class RaceSim {
-  // o: { mode, track, seed, fillBots, lobbyTime, send(id, msg), hooks: {finished(rows)}, botLevel }
+  // o: { mode, track, seed, fillBots, lobbyTime, hostStart, send(id, msg), hooks: {finished(rows)}, botLevel }
+  // hostStart (friend rooms): the first human in is the host and starts the race with START
   constructor(o = {}) {
     this.modeKey = RACE_MODES[o.mode] ? o.mode : 'grand';
     this.mode = RACE_MODES[this.modeKey];
@@ -48,6 +50,8 @@ export class RaceSim {
     this.fillBots = this.mode.solo ? false : (o.fillBots ?? true);
     this.maxPlayers = this.mode.solo ? 1 : RACE_MAX;
     this.lobbyTime = o.lobbyTime ?? 8;
+    this.hostStart = !!o.hostStart && !this.mode.solo;
+    this.hostId = 0;
     this.botLevel = o.botLevel || null; // null = follow the humans' trophies
     this.players = new Map();
     this.nextId = 1;
@@ -91,7 +95,8 @@ export class RaceSim {
   join(name, driver) {
     if (this.phase !== 'lobby' || this.players.size >= this.maxPlayers) return null;
     const p = this.addPlayer({ name, driver });
-    this.lobbyEnd = this.lobbyEnd == null ? this.clock + this.lobbyTime : Math.max(this.lobbyEnd, this.clock + 3);
+    if (this.hostStart) { if (!this.hostId) this.hostId = p.id; this.lobbyEnd = this.clock + ROOM_IDLE_SECS; }
+    else this.lobbyEnd = this.lobbyEnd == null ? this.clock + this.lobbyTime : Math.max(this.lobbyEnd, this.clock + 3);
     if (this.humans().length >= this.maxPlayers) this.lobbyEnd = this.clock;
     this.broadcastLobby();
     return p.id;
@@ -104,7 +109,12 @@ export class RaceSim {
   leave(id) {
     const p = this.players.get(id);
     if (!p) return;
-    if (this.phase === 'lobby') { this.players.delete(id); this.broadcastLobby(); return; }
+    if (this.phase === 'lobby') {
+      this.players.delete(id);
+      if (id === this.hostId) this.hostId = this.humans()[0]?.id || 0; // the host left: the next one in takes over
+      this.broadcastLobby();
+      return;
+    }
     p.connected = false;
     p.queue.length = 0;
     // a bot drives a dropped racer's car until they come back, unless bots are switched off
@@ -127,12 +137,22 @@ export class RaceSim {
   }
   canStart() { return this.humans().length >= (this.fillBots || this.mode.solo ? 1 : 2); }
   broadcastLobby() {
+    const hs = this.humans();
+    const left = this.lobbyEnd == null || !this.canStart() ? null : r2(Math.max(0, this.lobbyEnd - this.clock));
     const msg = {
       t: 'lobby', mode: this.modeKey, track: this.trackKey, arena: !!this.mode.arena,
-      players: this.humans().map((p) => [p.name, p.driver]), max: this.maxPlayers,
-      startIn: this.lobbyEnd == null || !this.canStart() ? null : r2(Math.max(0, this.lobbyEnd - this.clock)), bots: this.fillBots,
+      players: hs.map((p) => [p.name, p.driver]), max: this.maxPlayers,
+      // a host room only counts down in its last minute (the safety net), otherwise it waits for START
+      startIn: this.hostStart && left != null && left > 60 ? null : left, bots: this.fillBots,
+      ...(this.hostStart ? { host: this.hostId, ids: hs.map((p) => p.id), can: this.canStart() } : {}),
     };
     this.broadcast(msg);
+  }
+  // the room host's buttons: START, and FILL WITH BOTS on/off. Anyone else is ignored.
+  hostCmd(p, m) {
+    if (!this.hostStart || this.phase !== 'lobby' || p.id !== this.hostId) return;
+    if (typeof m.bots === 'boolean' && m.bots !== this.fillBots) { this.fillBots = m.bots; this.broadcastLobby(); }
+    if (m.start === 1 && this.canStart()) this.start();
   }
 
   start() {
@@ -178,6 +198,7 @@ export class RaceSim {
     const p = this.players.get(id);
     if (!p || !m) return;
     if (m.t === 'pick') return this.pick(p, m.driver);
+    if (m.t === 'host') return this.hostCmd(p, m);
     if (m.t !== 'in' || p.bot) return;
     const inp = cleanInput(m);
     inp.s = m.s >>> 0; inp.f = m.f ? 1 : 0; inp.i = m.i ? 1 : 0;
