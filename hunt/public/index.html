@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Hunt">
 <meta name="application-name" content="Hunt">
-<meta name="description" content="Hunt: a fast top-down brawler. Pick a hunter and play in seconds.">
+<meta name="description" content="Hunt Racers: top-down combat racing for up to 10 players. Pick a driver, drift, fight and race your friends.">
 <title>Hunt</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -23,6 +23,8 @@ html, body { margin: 0; height: 100%; background: #150b24; }
   font-family: "Lilita One", "Arial Black", "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif; -webkit-user-select: none; user-select: none; }
 #splash .sp-mark { width: min(34vmin, 190px); height: min(34vmin, 190px); display: block; }
 #splash .sp-word { margin: 0; font-weight: 400; font-size: min(22vmin, 120px); line-height: .9; letter-spacing: .06em; color: #ffd23f; -webkit-text-stroke: min(1.6vmin, 8px) #12091e; paint-order: stroke fill; text-shadow: 0 min(1.2vmin, 7px) 0 #12091e; }
+#splash .sp-sub { margin-top: calc(-1 * min(2vh, 12px)); font-size: min(7vmin, 34px); letter-spacing: .3em; color: #fff; -webkit-text-stroke: min(.9vmin, 5px) #12091e; paint-order: stroke fill; }
+#splash.fail .sp-sub, #splash.slow .sp-sub { font-size: min(5vmin, 22px); }
 #splash .sp-dots { display: flex; gap: 10px; height: 16px; align-items: center; }
 #splash .sp-dots i { width: 12px; height: 12px; border-radius: 50%; background: #ffd23f; box-shadow: 0 0 0 3px #12091e; animation: sp-hop .9s ease-in-out infinite; }
 #splash .sp-dots i:nth-child(2) { animation-delay: .15s; }
@@ -68,6 +70,7 @@ html, body { margin: 0; height: 100%; background: #150b24; }
     <path d="M52 74l4 7 4-6 4 6 4-7" fill="none" stroke="#12091e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
   <h1 class="sp-word">HUNT</h1>
+  <div class="sp-sub">RACERS</div>
   <div class="sp-dots" aria-label="Loading"><i></i><i></i><i></i></div>
   <div class="sp-fail" id="splashFail">
     <p class="sp-title"><span class="sp-t-fail">Could not load the game</span><span class="sp-t-slow">Still loading…</span></p>

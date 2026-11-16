@@ -443,3 +443,20 @@ input:focus-visible, .field:focus-visible { outline-offset: 1px; box-shadow: 0 0
 .racefriends #roomPlay { min-width: calc(var(--tap) * 2); }
 .grid-cards.drivers { grid-template-columns: repeat(auto-fit, minmax(calc(var(--u) * 17), 1fr)); }
 .dcard .dc-stats { padding: 2px 6px; letter-spacing: -.01em; }
+/* short landscape phones: four modes + track + FILL WITH BOTS fit without scrolling */
+@media (orientation: landscape) and (max-height: 430px) { .lobby.racing .modelist { gap: 3px; padding: 3px 8px 4px 4px; } }
+/* upright phones: three driver cards a row, so all six fit on one screen */
+@media (orientation: portrait) { .grid-cards.drivers { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-top: 12px; } }
+/* short upright phones: the track and FILL WITH BOTS share a row, so your car card keeps its room */
+@media (orientation: portrait) and (max-height: 740px) {
+  .lobby.racing .trackbtn { grid-column: auto; }
+  .lobby.racing .trackbtn .tpv { width: 40px; height: 28px; }
+  .lobby.racing .modelist .fillbots { padding: 0 4px; }
+}
+/* tall screens (tablets, desktop): your driver's stats on the car card */
+.np-stats { display: none; }
+@media (min-height: 700px) and (orientation: landscape) {
+  .lobby.racing .np-stats { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center; width: min(100%, 260px); padding: 4px 10px 6px; font: 700 max(var(--t-xs), calc(var(--u) * 1.4)) var(--font-ui); color: var(--text-dim); }
+  .lobby.racing .np-stats i { display: block; height: 7px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; }
+  .lobby.racing .np-stats b { display: block; height: 100%; border-radius: 4px; background: var(--gold); }
+}

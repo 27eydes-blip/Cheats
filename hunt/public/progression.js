@@ -121,12 +121,12 @@ export { MASTERY_SKINS };
 
 // ---------- daily missions: 3 a day, same for everyone, reset at 00:00 UTC ----------
 export const MISSION_POOL = [
-  { id: 'play3', text: 'Play 3 matches', stat: 'play', goal: 3, reward: { coins: 60 } },
-  { id: 'win1', text: 'Win a match', stat: 'win', goal: 1, reward: { gems: 5 } },
-  { id: 'ko8', text: 'Get 8 knockouts', stat: 'kills', goal: 8, reward: { coins: 80 } },
+  { id: 'play3', text: 'Play 3 races', stat: 'play', goal: 3, reward: { coins: 60 } },
+  { id: 'win1', text: 'Win a race', stat: 'win', goal: 1, reward: { gems: 5 } },
+  { id: 'ko8', text: 'Get 8 takedowns', stat: 'kills', goal: 8, reward: { coins: 80 } },
   { id: 'bounty10', text: 'Earn 10 bounty', stat: 'bounty', goal: 10, reward: { gems: 4 } },
   { id: 'top3x2', text: 'Finish top 3 twice', stat: 'top3', goal: 2, reward: { coins: 70 } },
-  { id: 'ko3one', text: 'Get 3 KOs in one match', stat: 'bestKills', goal: 3, reward: { gems: 3 } },
+  { id: 'ko3one', text: 'Get 3 takedowns in one race', stat: 'bestKills', goal: 3, reward: { gems: 3 } },
 ];
 export const dayIndex = (now = Date.now()) => Math.floor(now / 864e5);
 export const msToReset = (now = Date.now()) => 864e5 - (now % 864e5);

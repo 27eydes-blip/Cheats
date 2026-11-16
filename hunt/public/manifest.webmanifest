@@ -1,7 +1,7 @@
 {
   "name": "Hunt",
   "short_name": "Hunt",
-  "description": "A fast top-down brawler. Pick a hunter and play in seconds.",
+  "description": "Hunt Racers: top-down combat racing. Pick a driver, drift, fight and race your friends.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

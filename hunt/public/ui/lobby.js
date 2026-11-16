@@ -31,7 +31,7 @@ export const MODES_UI = {
 import { clampPower, POWER_COST, MAX_POWER } from '../power.js';
 import { DRIVERS } from '../race/physics.js';
 import { RACE_MODES } from '../race/protocol.js';
-import { drawCarStage, paintPreview, trackLabel, TRACK_CHOICES, weaponOf } from '../race/preview.js';
+import { drawCarStage, paintPreview, trackLabel, TRACK_CHOICES, weaponOf, driverStats } from '../race/preview.js';
 // HUNT RACERS (the main game): the PLAY page lists the racing modes; the shooter lobby above is the
 // classic one (?shooter=1)
 export const RACE_MODE_BTNS = [
@@ -83,6 +83,7 @@ export function createLobby(api) {
           <div class="slots">
             <div class="slot me nameplate tap" title="Change driver"><canvas id="stage"></canvas><div class="np-row"><span class="np-name" id="npName">Volt</span><span class="role" id="npRole">ALL-ROUNDER</span></div>
               <div class="np-car" id="npCar"></div>
+              <div class="np-stats" id="npStats" aria-hidden="true"></div>
               <div class="np-tro">${icon('trophy')}<span id="npTro">0</span><span class="np-mode" id="mcName">GRAND RACE</span></div></div>
             ${[1, 2, 3].map(() => `<button class="slot invite tap"><span class="plus">+</span><span>INVITE<br>FRIENDS</span></button>`).join('')}
           </div>
@@ -269,6 +270,7 @@ export function createLobby(api) {
     refreshTop(p);
     $('npName').textContent = D.name; $('npRole').textContent = D.role.toUpperCase(); $('npRole').style.setProperty('--role-col', D.color);
     $('npCar').textContent = `${D.car} · ${weaponOf(id).name}`;
+    if (L.statsFor !== id) { L.statsFor = id; $('npStats').innerHTML = driverStats(id).map((r) => `<span>${r.label}</span><i><b style="width:${Math.round(r.f * 100)}%"></b></i>`).join(''); }
     $('npTro').textContent = p.trophies[id] | 0;
     $('mcName').textContent = RACE_MODES[L.mode].name.toUpperCase();
     for (const b of root.querySelectorAll('.modebtn[data-m]')) { b.classList.toggle('sel', b.dataset.m === L.mode); b.setAttribute('aria-pressed', String(b.dataset.m === L.mode)); }
