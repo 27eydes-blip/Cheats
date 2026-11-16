@@ -2,7 +2,7 @@
 export const FLAG = {
   DRIFT: 1, BOOST: 2, AIR: 4, SHIELD: 8, LEADER: 16, DEAD: 32, SPIN: 64, EMP: 128,
   FINISHED: 256, OUT: 512, GHOST: 1024, SLOW: 2048, TIER1: 4096, TIER2: 8192, // drift tier = (f >> 12) & 3
-  REVERSE: 16384,
+  REVERSE: 16384, BRAKE: 32768, // BRAKE: throttle on brake while rolling forward (draw-only: brake lights)
 };
 export const driftTierOf = (f) => (f >> 12) & 3;
 // entity kinds in snapshot rows (index = wire id, append only)

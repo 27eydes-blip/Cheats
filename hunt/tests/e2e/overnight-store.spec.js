@@ -154,7 +154,7 @@ test('two phones in one race: your equipped underglow is in the other phone\'s r
   const greenNear = (id) => B.page.evaluate((id) => {
     const s = window.__race.session, R = s.renderer, v = s.view, c = v && R.carAt(v, id), M = R.M;
     if (!c || !M) return -1;
-    const cx = c.x * M.s + M.x, cy = c.y * M.s + M.y, rad = Math.round(70 * M.s);
+    const p = R.toCanvas(c.x, c.y, {}), cx = p.x * R.dpr, cy = p.y * R.dpr, rad = Math.round(70 * M.s); // (canvas pixels, any camera view)
     const g = R.cv.getContext('2d'), x0 = Math.max(0, Math.round(cx - rad)), y0 = Math.max(0, Math.round(cy - rad));
     const d = g.getImageData(x0, y0, Math.min(R.cv.width - x0, rad * 2), Math.min(R.cv.height - y0, rad * 2)).data;
     // green dominance (night roads, the cars' own neons and the HUD are never green-dominant; lime light adds it)

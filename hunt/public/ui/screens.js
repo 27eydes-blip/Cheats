@@ -391,12 +391,14 @@ export function openSettings(api, onDone) {
     ${icon('speaker')}<label>SOUND EFFECTS <input type="range" class="slider" id="volSfx" min="0" max="1" step="0.05"></label>
     <span></span><div id="setSlot" style="display:flex;flex-direction:column;gap:10px"></div>
     ${api.racing ? `${icon('target')}<label>STEERING SENSITIVITY <b id="sensName" style="color:var(--gold);margin-left:6px"></b><input type="range" class="slider" id="setSteer" min="0.5" max="1.5" step="0.05" aria-describedby="sensName"></label>
-    <span></span><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">JOYSTICK SIZE <div class="chips" id="setStick">${[['s', 'SMALL'], ['m', 'MEDIUM'], ['l', 'LARGE']].map(([k, n]) => `<button type="button" class="chipbtn" data-k="${k}">${n}</button>`).join('')}</div></div>` : `${icon('target')}<label>AIM SENSITIVITY <input type="range" class="slider" id="setSens" min="0.5" max="2" step="0.05"></label>`}
+    <span></span><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">JOYSTICK SIZE <div class="chips" id="setStick">${[['s', 'SMALL'], ['m', 'MEDIUM'], ['l', 'LARGE']].map(([k, n]) => `<button type="button" class="chipbtn" data-k="${k}">${n}</button>`).join('')}</div></div>
+    <span></span><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">CAMERA <div class="chips" id="setCam">${[['chase', 'CHASE'], ['top', 'TOP-DOWN'], ['cockpit', 'COCKPIT']].map(([k, n]) => `<button type="button" class="chipbtn" data-k="${k}">${n}</button>`).join('')}</div></div>
+    <span></span><label class="opt"><input type="checkbox" id="setHaptics"> Haptics (vibration on phones that support it)</label>` : `${icon('target')}<label>AIM SENSITIVITY <input type="range" class="slider" id="setSens" min="0.5" max="2" step="0.05"></label>`}
     <span></span><div style="display:flex;flex-direction:column;gap:10px">
       <label class="opt"><input type="checkbox" id="setLeft"> ${api.racing ? 'Left-handed controls (buttons on the left, steer on the right)' : 'Left-handed controls (aim on the left)'}</label>
       ${api.racing ? '' : '<label class="opt"><input type="checkbox" id="setHold"> Hold to fire (instead of fire on release)</label>'}</div>
     ${api.racing ? `<span></span><button type="button" class="btn btn-md alt" id="setTut" style="justify-self:start">HOW TO DRIVE</button>` : ''}</div>
-    <p class="hint">${api.racing ? 'Steering sensitivity sets how quickly your car turns toward the stick. Reduce Flashing removes flashes and screen shake. Low Graphics turns off particles and moving backgrounds for a smoother race on older phones.' : 'Reduce Flashing removes flashes, strobes and screen shake. Low Graphics turns off the moving lobby background, particles, shadows and slime animation. Hold to fire keeps shooting while your thumb is on the aim stick.'}</p>
+    <p class="hint">${api.racing ? 'Steering sensitivity sets how quickly your car turns toward the stick. Camera: Chase follows behind your car, Top-down is the map view, Cockpit puts you in the driver\'s seat; the stick always points where you want to go on screen. Haptics needs a phone with vibration (iPhone browsers have none). Reduce Flashing removes flashes and screen shake. Low Graphics turns off particles and moving backgrounds for a smoother race on older phones.' : 'Reduce Flashing removes flashes, strobes and screen shake. Low Graphics turns off the moving lobby background, particles, shadows and slime animation. Hold to fire keeps shooting while your thumb is on the aim stick.'}</p>
     <p style="color:var(--gold);font-family:var(--font)">Created by Sam Eyde III</p></div>`;
   for (const id of ['setSound', 'setFlash', 'setLow']) { const l = $(id).closest('label') || $(id); $('setSlot').appendChild(l); }
   $('volMusic').value = SETTINGS.musicVol ?? 0.6; $('volSfx').value = SETTINGS.sfxVol ?? 0.9;
@@ -414,6 +416,12 @@ export function openSettings(api, onDone) {
     const chips = () => { for (const b of document.querySelectorAll('#setStick .chipbtn')) b.classList.toggle('on', b.dataset.k === (SETTINGS.raceStick || 'm')); };
     for (const b of document.querySelectorAll('#setStick .chipbtn')) b.onclick = () => { setSetting('raceStick', b.dataset.k); chips(); sfx('click'); };
     chips();
+    // camera view (race/camera.js) and haptics: both apply from the next frame / race
+    const cams = () => { for (const b of document.querySelectorAll('#setCam .chipbtn')) b.classList.toggle('on', b.dataset.k === (SETTINGS.raceCam || 'chase')); };
+    for (const b of document.querySelectorAll('#setCam .chipbtn')) b.onclick = () => { setSetting('raceCam', b.dataset.k); cams(); sfx('click'); };
+    cams();
+    $('setHaptics').checked = SETTINGS.haptics !== false;
+    $('setHaptics').onchange = (e) => setSetting('haptics', e.target.checked);
     $('setTut').onclick = () => { S.close(); api.startRace?.({ tutorialOnly: true }); };
   }
   if (!api.racing) {
