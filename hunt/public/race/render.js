@@ -2,7 +2,7 @@
 // chunks, animated track overlays, cars (cached sprites), items, weapons and effects. Draws from
 // RaceClient.view() and is fed race events by the app (fx()).
 import { TrackArt, CHUNK, THEMES } from './trackart.js';
-import { CarSprites, INK, blitCar, drawUnderglow, glowDot, exhaustsOf, taillightsOf, headOf, mix } from './cars.js';
+import { CarSprites, BUCKETS, INK, blitCar, drawUnderglow, glowDot, exhaustsOf, taillightsOf, headOf, mix } from './cars.js';
 import { lookForRacer } from './looks.js';
 import { Particles, Skids, Effects, PK, C, TIER_C, FK, colorIdx } from './fx.js';
 import { FLAG, driftTierOf } from './protocol.js';
@@ -160,6 +160,19 @@ export class RaceRenderer {
     return v.look;
   }
 
+  // build every racer's car sprites ahead of time (lobby and countdown: many per frame; racing:
+  // one), so the first laps never pay for baking the glow
+  warm(rc, budget) {
+    if (this.warmN === rc.roster.size && this.warmS === this.cars.scale) return;
+    let left = budget;
+    for (const id of rc.roster.keys()) {
+      const L = this.carLook(id, rc), arr = this.cars.map.get(L.sprite);
+      for (let b = 0; b < BUCKETS && left > 0; b++) if (!arr || !arr[b]) { this.cars.get(L, (b / BUCKETS) * TAU); left--; }
+      if (left <= 0) return;
+    }
+    this.warmN = rc.roster.size; this.warmS = this.cars.scale; // all built for this roster and scale
+  }
+
   // ------------------------------------------------------------------ events -> effects
   carAt(view, id) { const cs = view.cars; for (let i = 0; i < cs.length; i++) if (cs[i].id === id) return cs[i]; return null; }
   explode(x, y, big = 1) {
@@ -255,6 +268,7 @@ export class RaceRenderer {
       let done = false;
       for (let dy = -1; dy <= 1 && !done; dy++) for (let dx = -1; dx <= 1 && !done; dx++) if (!art.has(ax + dx, ay + dy)) { art.chunk(ax + dx, ay + dy); done = true; }
     }
+    this.warm(rc, view.countdown > 0 || !view.cars.length ? 12 : 1);
     this.overlays(g, view, t);
     this.skids.draw(g, t, vw.x0 - 60, vw.y0 - 60, vw.x1 + 60, vw.y1 + 60, T.world === 'frozen' ? 'rgba(60,80,110,1)' : T.world === 'city' ? '#05050c' : '#1a1212');
     this.ents(g, view, t, me, true);
