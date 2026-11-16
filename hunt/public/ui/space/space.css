@@ -319,7 +319,7 @@
 #lobby.sp .sp-lobby.show-page > :is(.sp-pad, .sp-mid, .sp-side, .sp-launch-wrap) { visibility: hidden; }
 #lobby.sp .pg-profile { height: 100%; overflow: auto; padding: calc(var(--sp-u) * 2) calc(var(--sp-u) * 3); }
 #lobby.sp .pg-profile[hidden] { display: none; }
-#lobby.sp #credit { position: fixed; z-index: 50; left: calc(var(--sp-sa-l) + 8px); right: auto; bottom: calc(var(--sp-sa-b) + 3px); font: 600 11px/1 var(--sp-narrow); letter-spacing: .06em; color: var(--sp-gold); opacity: 1; text-shadow: 0 0 4px #000, 0 1px 0 #000; pointer-events: none; }
+#lobby.sp #credit { position: fixed; z-index: 50; left: calc(var(--sp-sa-l) + 8px); right: auto; bottom: calc(var(--sp-sa-b) + 3px); font: 600 11px/1 var(--sp-narrow); letter-spacing: .06em; color: var(--sp-gold); opacity: 1; text-shadow: 0 0 4px #000, 0 1px 0 #000; pointer-events: auto; }
 #lobby.sp .tap { cursor: pointer; }
 /* top bar */
 #lobby.sp .sp-top { min-height: 44px; }

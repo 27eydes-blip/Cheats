@@ -43,7 +43,7 @@ test('a save written with the old keys still loads: coins, unlocks, name and lob
   await expect(b.page.locator('#pName')).toHaveText('OldSave');
   await expect(b.page.locator('.modebtn[data-m="elim"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(b.page.locator('#trackNm')).toContainText(/FROZEN/i);
-  await expect(b.page.locator('#lobby #credit')).toHaveText('Created by Sam Eyde III');
+  await expect(b.page.locator('#lobby #credit')).toHaveText('Made by Gleyde Technologies');
   expect(errors).toEqual([]);
   await b.ctx.close();
 });

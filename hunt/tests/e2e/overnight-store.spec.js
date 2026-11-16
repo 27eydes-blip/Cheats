@@ -23,10 +23,10 @@ test('store: try on, buy with test coins, equip; owned / equipped badges; not en
   await page.goto('/');
   await page.waitForSelector('#playBtn');
   await page.waitForFunction(() => import('/account.js').then((A) => !!A.ACC.user));
-  await expect(page.locator('#lobby #credit')).toHaveText('Created by Sam Eyde III');
+  await expect(page.locator('#lobby #credit')).toHaveText('Made by Gleyde Technologies');
   await page.tap('#rail_store');
   await expect(page.locator('.st-tab.on')).toHaveText(/DAILY/);
-  await expect(page.locator('.st-credit')).toHaveText('Created by Sam Eyde III');
+  await expect(page.locator('.st-credit')).toHaveText('Made by Gleyde Technologies');
   await expect(page.locator('.st-credit')).toBeInViewport({ ratio: 1 });
   await page.tap('.st-tab[data-t="glow"]');
   const coins0 = (await progress(page)).coins;

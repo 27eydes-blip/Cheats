@@ -128,7 +128,7 @@ body.reduce-flash .btn.play::before { animation: none; opacity: .5; }
   #lobby.lobby { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto; grid-template-areas: "top" "page" "credit" "tabs"; }
   .lb-tabs { flex-direction: row; width: auto; border-right: 0; border-top: var(--line) solid var(--ink); padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); overflow: hidden; }
   .lb-page { padding: 8px var(--sa-r) 4px var(--sa-l); }
-  #lobby #credit { position: static; grid-area: credit; justify-self: end; padding: 0 var(--sa-r) 3px; line-height: 1.2; }
+  #lobby #credit { position: relative; grid-area: credit; justify-self: end; padding: 0 var(--sa-r) 3px; line-height: 1.2; }
   .lb-top { flex-direction: column; align-items: stretch; gap: 6px; padding-right: 0; } .pbanner { min-width: 0; clip-path: none; border-right: 0; padding-right: var(--sa-r); }
   .lb-cur { flex-wrap: nowrap; justify-content: space-between; padding: 0 var(--sa-r) 0 var(--sa-l); } .missions .mt { display: none; } .lb-cur .cur small { display: none; }
   .tabbtn { flex: 1 1 0; min-width: 0; padding: 4px 2px; min-height: max(var(--tap), calc(var(--u) * 8)); border-bottom: 0; border-right: 3px solid var(--ink); font-size: var(--t-xs); text-align: center; }

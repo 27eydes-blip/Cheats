@@ -1,4 +1,4 @@
-// "Created by Sam Eyde III" stays visible, on top, in every race state: the pre-race card, the
+// "Made by Gleyde Technologies" stays visible, on top, in every race state: the pre-race card, the
 // race HUD (phone and desktop), the pause menu, a connection error, and the finish screen. Also
 // checks the canvas HUD never draws a button over it.
 import { test, expect } from '@playwright/test';

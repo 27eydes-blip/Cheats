@@ -127,7 +127,7 @@ test('browser: the same account opening the game on a second screen moves there,
   await waitMe(two);
   await expect(one.locator('#toast')).toHaveText('Now playing on your other screen');
   await expect(one.locator('#lobby')).toBeVisible();
-  await expect(one.getByText('Created by Sam Eyde III').first()).toBeVisible();
+  await expect(one.getByText('Made by Gleyde Technologies').first()).toBeVisible();
   expect(await two.evaluate(() => window.__hunt.phase)).toBe('play');
   await two.waitForTimeout(1500);
   expect(await two.evaluate(() => window.__hunt.phase), 'no tug of war: the second screen keeps playing').toBe('play');

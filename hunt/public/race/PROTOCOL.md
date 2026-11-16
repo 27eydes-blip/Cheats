@@ -341,7 +341,7 @@ client's: leave (`rc.leave()`) and set a local flag.
   throttle on; or no progress along the track for 3 s (not counted in the air, wrecked, finished or
   on the grid). Pinned for 1.5 s: a nudge (`nudge` event) toward the racing line, facing along the
   track, rolling. Stuck for 3 s: an automatic reset (`reset` event, `auto: 1`).
-- Remember the credit: "Created by Sam Eyde III" must stay visible in the race screens too.
+- Remember the credit: "Made by Gleyde Technologies" must stay visible in the race screens too.
 
 ## Tests
 
@@ -365,7 +365,7 @@ const race = startRace({ mode, track, driver, room, bots, token, name, lobby, be
 ```
 
 One call opens a full-screen race layer (its own canvas, the pre-race card, pause menu, finish
-screen and the "Created by Sam Eyde III" credit on top of everything) and calls `onExit` when the
+screen and the "Made by Gleyde Technologies" credit on top of everything) and calls `onExit` when the
 player picks LOBBY / LEAVE RACE / CANCEL. RACE AGAIN restarts with the same options. `best` (optional)
 is the Time Trial best for the HUD. Files: `render.js` (world, camera transform), `camera.js` (the Chase /
 Top-down / Cockpit views: rotation, CSS tilt, lean, boost kick, speed zoom, stick -> world heading),

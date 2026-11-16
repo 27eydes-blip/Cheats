@@ -6,7 +6,7 @@
 import { test, expect } from '@playwright/test';
 import { trackErrors } from './helpers.js';
 
-const CREDIT = 'Created by Sam Eyde III';
+const CREDIT = 'Made by Gleyde Technologies';
 // (as in overnight-credit-everywhere.spec.js) is a credit line on screen, on top and clearly visible?
 function creditCheck(text) {
   const els = [...document.querySelectorAll('body *')].filter((e) => !e.children.length && e.textContent.trim() === text);

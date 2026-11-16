@@ -176,7 +176,7 @@ for (const vp of [{ width: 1280, height: 720 }, { width: 844, height: 390 }, { w
     await expect(page.locator('#dead')).toBeHidden();
     await expect(page.locator('#specBar button')).toHaveText(['LOBBY', 'PLAY AGAIN']);
     const credit = await box(page, '#creditGame');
-    await expect(page.locator('#creditGame')).toHaveText('Created by Sam Eyde III');
+    await expect(page.locator('#creditGame')).toHaveText('Made by Gleyde Technologies');
     for (const sel of ['#hudLobby', '#hudAgain']) {
       const b = await box(page, sel);
       // 5px is the button's drop shadow, which must clear the credit too

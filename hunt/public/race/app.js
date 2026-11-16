@@ -32,7 +32,7 @@ import { engineOn } from './sound.js';
 import { THEMES } from './trackart.js';
 import { ReplayPlayer } from './replay.js';
 
-const CREDIT = 'Created by Sam Eyde III';
+const CREDIT = 'Made by Gleyde Technologies';
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ORD = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
 const DPR_STEPS = [2, 1.5, 1.25, 1];

@@ -41,7 +41,7 @@ for (const [name, width, height] of VIEWS) {
     expect(res.cardIn).toBe(true);
     expect(res.bigger).toBe(true);
     expect(res.orbs).toBe(5);
-    expect(res.credit.text).toBe('Created by Sam Eyde III');
+    expect(res.credit.text).toBe('Made by Gleyde Technologies');
     expect(res.credit.w).toBeGreaterThan(50);
     expect(res.credit.in && res.credit.op >= 0.9 && res.credit.vis === 'visible' && res.credit.z >= 50).toBe(true);
     expect(errs).toEqual([]);

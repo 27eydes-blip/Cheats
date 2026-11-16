@@ -147,3 +147,30 @@ body.reduce-flash .rays { animation: fade-soft 1s ease-out both; background: rad
   .slider { min-height: var(--tap); }
   .ui-head { gap: 8px; }
 }
+
+/* ---------- the lobby's credit line is a button that opens Credits (ui/screens.js openCredits) ----------
+   It keeps the plain small-text look; on touch an invisible pad makes it a bigger target without
+   changing its box (so layout checks against the line still see the text). wireCredit
+   (ui/screens.js) sizes it (--cr-up, --cr-down, --cr-side) to 44px tall, or less where other
+   controls sit right above and below the line, so it never takes a tap meant for one of them. */
+#lobby #credit { -webkit-appearance: none; appearance: none; background: none; border: 0; border-radius: 2px; margin: 0; padding: 0; color: inherit; line-height: 1.2; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#lobby.sp #credit { color: var(--sp-gold); line-height: 1; }
+#lobby #credit:focus-visible { outline: 2px solid var(--mint, #34e7ff); outline-offset: 3px; }
+@media (pointer: coarse) {
+  #lobby #credit::before { content: ""; position: absolute; left: calc(-1 * var(--cr-side, 0px)); right: calc(-1 * var(--cr-side, 0px)); top: calc(-1 * var(--cr-up, 0px)); bottom: calc(-1 * var(--cr-down, 0px)); }
+}
+.set-credits { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: var(--tap, 44px); margin-top: 12px; padding: 8px 12px; border: 1px solid rgba(255, 255, 255, .18); border-radius: var(--radius-sm, 6px); background: rgba(255, 255, 255, .04); color: #fff; font: 700 15px/1.1 var(--font); letter-spacing: .1em; cursor: pointer; text-align: left; }
+.set-credits small { font: 600 12px/1.2 var(--font-ui, var(--font)); letter-spacing: .04em; color: var(--gold); text-align: right; }
+/* the Credits card: wordmark, then who made it */
+.cr-pop > .card-a { width: min(440px, 100%); display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 20px 16px; }
+.cr-pop.enter > .card-a { animation: cr-fade 220ms ease-out both; }
+@keyframes cr-fade { from { opacity: 0; } to { opacity: 1; } }
+.cr-brand { width: min(300px, 80%); }
+.cr-brand svg { display: block; width: 100%; height: auto; }
+.cr-h { margin: 2px 0 0; font: 700 13px/1 var(--font-ui, var(--font)); letter-spacing: .3em; color: var(--text-dim, #b9b0d8); }
+.cr-list { margin: 0; display: grid; gap: 10px; width: 100%; }
+.cr-list > div { display: grid; gap: 2px; }
+.cr-list dt { font: 600 12px/1.2 var(--font-ui, var(--font)); letter-spacing: .08em; color: var(--text-dim, #b9b0d8); }
+.cr-list dd { margin: 0; font: 700 20px/1.2 var(--font); letter-spacing: .04em; color: #fff; }
+.cr-list > div:first-child dd { color: var(--gold); }
+@media (max-height: 420px) { .cr-pop > .card-a { gap: 6px; padding: 12px 16px 10px; } .cr-brand { width: min(240px, 60%); } .cr-list { gap: 5px; } .cr-list dd { font-size: 17px; } }

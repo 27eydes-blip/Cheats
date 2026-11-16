@@ -159,12 +159,12 @@ test('a full session (lobby screens, match, results, Free Play) logs no console 
   expect(issues).toEqual([]);
 });
 
-test('"Created by Sam Eyde III" is visible in the lobby and in a match', async ({ page }) => {
+test('"Made by Gleyde Technologies" is visible in the lobby and in a match', async ({ page }) => {
   await page.goto('/?shooter=1');
   await expect(page.locator('#credit')).toBeVisible();
-  await expect(page.locator('#credit')).toHaveText('Created by Sam Eyde III');
+  await expect(page.locator('#credit')).toHaveText('Made by Gleyde Technologies');
   await page.goto('/?world=meadow&mode=bounty');
   await waitMe(page);
   await expect(page.locator('#creditGame')).toBeVisible();
-  await expect(page.locator('#creditGame')).toHaveText('Created by Sam Eyde III');
+  await expect(page.locator('#creditGame')).toHaveText('Made by Gleyde Technologies');
 });

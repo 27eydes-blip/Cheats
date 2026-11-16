@@ -58,7 +58,7 @@ export function showUnlock(opts = {}) {
   el.innerHTML = `<canvas class="ulk-cv" aria-hidden="true"></canvas><div class="ulk-kick">NEW CAR UNLOCKED!</div><div class="ulk-car" style="grid-area:car"></div>
     <div class="ulk-info"><span class="ulk-tag"></span><h2 class="ulk-name"></h2><p class="ulk-perk"></p>
     <div class="ulk-btns"><button type="button" class="ulk-btn go" data-act="equip">EQUIP</button><button type="button" class="ulk-btn" data-act="later">LATER</button></div></div>
-    <div class="ulk-cred">Created by Sam Eyde III</div>`;
+    <div class="ulk-cred">Made by Gleyde Technologies</div>`;
   el.querySelector('.ulk-tag').textContent = R.name;
   el.querySelector('.ulk-name').textContent = carName(L.driver);
   const perk = el.querySelector('.ulk-perk');

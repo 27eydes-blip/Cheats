@@ -80,7 +80,7 @@ export const finishRows = (page) => page.evaluate(() => [...document.querySelect
 
 export async function creditVisible(page) {
   const c = page.locator('.rc-credit');
-  await expect(c).toHaveText('Created by Sam Eyde III');
+  await expect(c).toHaveText('Made by Gleyde Technologies');
   await expect(c).toBeVisible();
   const ok = await page.evaluate(() => {
     const el = document.querySelector('.rc-credit'), r = el.getBoundingClientRect(), cs = getComputedStyle(el);

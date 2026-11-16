@@ -131,9 +131,10 @@ export function createLobby(api) {
       <section class="pg pg-profile" data-pg="profile" hidden></section>
       <section class="pg pg-locker" data-pg="locker" hidden></section>
     </main>
-    <div id="credit">Created by Sam Eyde III</div>`;
+    <button type="button" id="credit" aria-label="Made by Gleyde Technologies. Open credits">Made by Gleyde Technologies</button>`;
 
   initRotateHint();
+  const fitCredit = SC.wireCredit($('credit'), () => SC.openCredits());
   const L = {
     mode: store.get('hunt-mode') || 'quick', tab: 'play', t0: performance.now(), taunt: 0, twirl: 0, blinkAt: 2, raf: 0, visible: true,
   };
@@ -204,6 +205,7 @@ export function createLobby(api) {
   }
   // ---------- data -> UI ----------
   function refresh() {
+    fitCredit();
     if (RACE) return refreshRace();
     const p = A.progress(), id = api.getBrawler(), B = BRAWLERS[id];
     $('coinN').textContent = p.coins; $('gemN').textContent = p.gems ?? 0;

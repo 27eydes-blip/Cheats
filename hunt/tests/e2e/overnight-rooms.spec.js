@@ -30,7 +30,7 @@ test('friend room: host picks Squad, presses START; friends are one squad; a lat
   await expect(a.locator('#mmStart')).toBeVisible();
   await expect(b.locator('#mmStart')).toBeHidden();
   await expect(b.locator('#mmWait')).toHaveText('Waiting for Ann to start.');
-  await expect(a.locator('.mmcredit')).toHaveText('Created by Sam Eyde III');
+  await expect(a.locator('.mmcredit')).toHaveText('Made by Gleyde Technologies');
   // no countdown race: still waiting well past the old 12 seconds
   await a.waitForTimeout(13_000);
   expect(await G(b, () => window.__hunt.phase)).toBe('waiting');

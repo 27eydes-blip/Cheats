@@ -47,7 +47,7 @@ for (const w of welcomes) assert.match(w, /v: VERSION/, 'every welcome carries t
 const html = read('public/index.html');
 const splash = html.slice(html.indexOf('<div id="splash"'), html.indexOf('<canvas id="game">'));
 assert.ok(splash.length > 200, 'the splash comes before the game canvas');
-assert.match(splash, /Created by Sam Eyde III/, 'the credit is on the splash');
+assert.match(splash, /Made by Gleyde Technologies/, 'the credit is on the splash');
 assert.match(splash, /id="splashReload"/);
 assert.match(splash, /<script>(?![^<]*type="module")/, 'the watchdog is a classic inline script');
 assert.ok(html.indexOf('window.__boot') < html.indexOf('<script type="module"'), 'the watchdog is set up before the game module');
@@ -57,7 +57,7 @@ for (const link of html.match(/<link[^>]+fonts\.googleapis\.com\/css[^>]*>/g) ||
   assert.ok(/media="print"/.test(link) || inNoscript, 'web fonts must not be render-blocking: ' + link);
   assert.match(link, /display=swap/);
 }
-assert.match(html, /<div id="creditGame">Created by Sam Eyde III<\/div>/, 'the in-match credit is still there');
+assert.match(html, /<div id="creditGame">Made by Gleyde Technologies<\/div>/, 'the in-match credit is still there');
 
 // --- install to home screen
 const man = JSON.parse(read('public/manifest.webmanifest'));
@@ -75,6 +75,7 @@ assert.match(html, /<link rel="apple-touch-icon" sizes="180x180" href="icons\/ob
 for (const [, sz, f] of html.matchAll(/<link rel="(?:apple-touch-icon|icon)"[^>]*sizes="(\d+x\d+)" href="([^"]+)">/g)) assert.equal(pngSize(f), sz, f);
 assert.match(html, /<title>Oblivion GP<\/title>/);
 for (const m of ['apple-mobile-web-app-title', 'application-name']) assert.ok(html.includes(`<meta name="${m}" content="Oblivion GP">`), m);
+assert.ok(html.includes('<meta name="author" content="Gleyde Technologies">'), 'the page names Gleyde Technologies as its author');
 assert.ok(!/\bHunt\b/.test(html.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<!--[\s\S]*?-->/g, '')), 'no player-visible "Hunt" left in index.html');
 
 console.log('boot tests passed');

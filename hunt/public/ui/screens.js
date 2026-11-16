@@ -27,6 +27,7 @@ import { paintPreview, driverStats, weaponOf, trackLabel, TRACK_CHOICES } from '
 import { drawCar } from '../race/cars2.js';
 import { carName } from '../race/looks2.js';
 import { drawPlatform, equippedLook } from './platform.js';
+import { wordmarkSvg } from '../brand/wordmark.js';
 
 const INK = '#1b1033';
 const $ = (id) => document.getElementById(id);
@@ -402,8 +403,9 @@ export function openSettings(api, onDone) {
       ${api.racing ? '' : '<label class="opt"><input type="checkbox" id="setHold"> Hold to fire (instead of fire on release)</label>'}</div>
     ${api.racing ? `<span></span><button type="button" class="btn btn-md alt" id="setTut" style="justify-self:start">HOW TO DRIVE</button>` : ''}</div>
     <p class="hint">${api.racing ? 'Steering sensitivity sets how quickly your car turns toward the stick. Camera: Chase follows behind your car, Top-down is the map view, Cockpit puts you in the driver\'s seat; the stick always points where you want to go on screen. Haptics needs a phone with vibration (iPhone browsers have none). Reduce Flashing removes flashes and screen shake. Low Graphics turns off particles and moving backgrounds for a smoother race on older phones.' : 'Reduce Flashing removes flashes, strobes and screen shake. Low Graphics turns off the moving lobby background, particles, shadows and slime animation. Hold to fire keeps shooting while your thumb is on the aim stick.'}</p>
-    <p style="color:var(--gold);font-family:var(--font)">Created by Sam Eyde III</p></div>`;
+    <button type="button" class="set-credits" id="setCredits"><span>CREDITS</span><small>Made by Gleyde Technologies</small></button></div>`;
   for (const id of ['setSound', 'setFlash', 'setLow']) { const l = $(id).closest('label') || $(id); $('setSlot').appendChild(l); }
+  $('setCredits').onclick = () => openCredits();
   $('volMusic').value = SETTINGS.musicVol ?? 0.6; $('volSfx').value = SETTINGS.sfxVol ?? 0.9;
   $('volMusic').oninput = (e) => { setSetting('musicVol', +e.target.value); setMusicVolume(); };
   $('volSfx').oninput = (e) => { setSetting('sfxVol', +e.target.value); };
@@ -465,6 +467,58 @@ export function openMissions(onDone) {
   };
   const P = popup(`<div class="title" style="font-size:calc(var(--u)*3.4)">DAILY MISSIONS</div><div class="missionlist"></div><p class="hint reset"></p><button class="btn btn-md alt" data-close>CLOSE</button>`, { onClose: onDone });
   render(P);
+}
+
+// who made the game: opened from the lobby's credit line and the CREDITS row in Settings
+export function openCredits() {
+  const P = popup(`<div class="cr-brand" aria-hidden="true">${wordmarkSvg({ id: 'crwm' })}</div><h2 class="cr-h">CREDITS</h2>
+    <dl class="cr-list"><div><dt>Made by</dt><dd>Gleyde Technologies</dd></div><div><dt>Created by</dt><dd>Sammy Eyde</dd></div><div><dt>Produced by</dt><dd>COO Juwon Shon</dd></div></dl>
+    <button class="btn btn-md" data-close>CLOSE</button>`);
+  P.el.classList.add('cr-pop');
+  P.el.setAttribute('role', 'dialog'); P.el.setAttribute('aria-modal', 'true'); P.el.setAttribute('aria-label', 'Credits');
+  return P;
+}
+
+// The lobby's credit line opens Credits. On touch its invisible pad (tokens.css) grows up to a 44px
+// target without taking taps meant for the controls around it (PLAY, the dock, the tab bar). Only a
+// big panel (the car pad: 120px+ both ways) may lend the bottom strip of its edge (at most
+// BIG_LEND px), which leaves it a large target. Measured after layout changes (refresh, resize),
+// never per frame; fit() batches into the next animation frame.
+const CREDIT_CTRL = 'button, a[href], input, select, [role="button"], .tap';
+const BIG = 120, BIG_LEND = 30;
+export function wireCredit(btn, onTap) {
+  btn.onclick = onTap;
+  let raf = 0;
+  const measure = () => {
+    raf = 0;
+    if (!btn.isConnected || !btn.getClientRects().length) return;
+    const r = btn.getBoundingClientRect(), root = btn.closest('#lobby') || document.body;
+    const ctrls = [];
+    for (const e of root.querySelectorAll(CREDIT_CTRL)) {
+      if (e === btn || e.contains(btn) || !e.getClientRects().length || getComputedStyle(e).visibility === 'hidden') continue;
+      const q = e.getBoundingClientRect();
+      if (q.right <= r.left - 8 || q.left >= r.right + 8) continue;
+      const lend = q.width >= BIG && q.height >= BIG ? BIG_LEND : 0;
+      ctrls.push({ top: q.top, bottom: q.bottom - lend });
+    }
+    // down to the screen edge or the next control below (a tab bar), then up to 44px in all
+    let down = Math.max(0, innerHeight - r.bottom), side = 8;
+    for (const q of ctrls) if (q.top >= r.bottom - 0.5) down = Math.min(down, q.top - r.bottom);
+    let up = Math.max(0, 44 - r.height - down);
+    for (const q of ctrls) {
+      if (q.top >= r.bottom - 0.5 || q.bottom <= r.top - up) continue;
+      if (q.bottom <= r.top + 0.5) up = Math.min(up, r.top - q.bottom); // above the line: stop under it
+      else side = 0; // beside the line: no side pad
+    }
+    btn.style.setProperty('--cr-up', Math.max(0, Math.floor(up)) + 'px');
+    btn.style.setProperty('--cr-down', Math.max(0, Math.floor(down)) + 'px');
+    btn.style.setProperty('--cr-side', side + 'px');
+  };
+  const fit = () => { if (!raf) raf = requestAnimationFrame(measure); };
+  addEventListener('resize', fit);
+  document.fonts?.ready.then(fit);
+  fit();
+  return fit;
 }
 
 export function openEarnInfo() {

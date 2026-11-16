@@ -98,7 +98,7 @@ export function createMatchmaking(onCancel, room = {}) {
     <div class="card-a mmroom" id="mmRoom" hidden><small>ROOM CODE</small><div class="mmcode"><b id="mmCode"></b><button class="btn btn-sm alt" id="mmCopy">COPY</button></div>
       <ol class="mmlist" id="mmList"></ol><div class="mmhost" id="mmHost"><label class="opt"><input type="checkbox" id="mmBots"> Fill with bots</label><button class="btn btn-md" id="mmStart" data-sfx="play">START</button></div>
       <div class="mmwait" id="mmWait"></div></div>
-    <div class="mmcredit">Created by Sam Eyde III</div>`;
+    <div class="mmcredit">Made by Gleyde Technologies</div>`;
   document.body.appendChild(el);
   const st = { brawler: 'volt', raf: 0, t0: 0, tip: 0, room: '' };
   el.querySelector('#mmCancel').onclick = () => onCancel();

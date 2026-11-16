@@ -4,7 +4,7 @@
 import { test, expect } from '@playwright/test';
 import { trackErrors } from './helpers.js';
 
-const CREDIT = 'Created by Sam Eyde III';
+const CREDIT = 'Made by Gleyde Technologies';
 const ready = (page) => page.waitForFunction(() => window.__cars2 && window.__cars2.ready, null, { timeout: 20_000 });
 
 test.use({ viewport: { width: 844, height: 390 } });

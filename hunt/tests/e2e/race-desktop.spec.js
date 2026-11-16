@@ -79,6 +79,6 @@ test('desktop keyboard race, menu and finish screen', async ({ page, browserName
   await expect(page.locator('.rc-root')).toHaveCount(0);
   await expect(page.locator('#lobby')).toBeVisible();
   await expect(page.locator('#playBtn')).toBeVisible();
-  await expect(page.locator('#lobby #credit')).toHaveText('Created by Sam Eyde III');
+  await expect(page.locator('#lobby #credit')).toHaveText('Made by Gleyde Technologies');
   expect(errs).toEqual([]);
 });

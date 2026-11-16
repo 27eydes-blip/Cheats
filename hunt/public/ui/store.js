@@ -57,7 +57,7 @@ export function openStore(api, onDone, start = {}) {
         <div class="st-grid" id="stGrid"></div>
       </section>
     </div>
-    <div class="st-foot"><span class="st-note">Test currency only, no real money. Skins and parts are looks only: no effect on speed, handling or weapons.</span><span class="st-credit">Created by Sam Eyde III</span></div>`;
+    <div class="st-foot"><span class="st-note">Test currency only, no real money. Skins and parts are looks only: no effect on speed, handling or weapons.</span><span class="st-credit">Made by Gleyde Technologies</span></div>`;
   document.body.appendChild(el);
   // tab, the car being dressed, and the selected card (try-on): {kind, id} (id null = the car's stock part)
   const S = { tab: STORE_TABS.some(([k]) => k === start.tab) ? start.tab : 'daily', car: DRIVERS[start.car] ? start.car : api.getBrawler(), sel: null, day: shopDay(), shownSec: -1 };

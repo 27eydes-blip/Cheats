@@ -3,7 +3,7 @@
 import { test, expect } from '@playwright/test';
 import { trackErrors, waitMe } from './helpers.js';
 
-const CREDIT = 'Created by Sam Eyde III';
+const CREDIT = 'Made by Gleyde Technologies';
 const END = () => { const G = window.__hunt; window.__huntMsg({ t: 'end', mode: G.modeKey, rank: 3, kills: 0, bounty: 0, winner: 'X', results: [['Me', G.brawler, 3, 0, 0, G.myId, 0, 0]] }); };
 // forward a match socket, letting the test rewrite what the server says (a "newer server")
 const rewriteWs = (page, rewrite) => page.routeWebSocket(/\/ws\?/, (ws) => {

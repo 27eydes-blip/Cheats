@@ -97,7 +97,7 @@ File:line references point at the **original** code (`ca4ef2d0`).
 | **No leaks after 10 (and 30) matches in a row** | Window/document listeners, intervals, open sockets, canvases and DOM nodes stayed constant. One real leak was found and fixed: wall sprites (m18). After the caches fill, a heap-snapshot diff shows only the browser's own compiled code growing. |
 | **GPU context loss** | In-game wall art and ground chunks rebuild (already worked); the lobby backdrop now does too (m19). 🧪 |
 | **No console errors in a full session** | Lobby → every menu screen → public match → results → Free Play with a zone crossing → map view: **0 errors, 0 warnings** after m20. 🧪 |
-| **Credit** | "Created by Sam Eyde III" is visible in the lobby, in matches and in Settings. 🧪 |
+| **Credit** | "Made by Gleyde Technologies" is visible in the lobby, in matches and in Settings. 🧪 |
 
 ## Deploy config (`hunt/wrangler.preview.jsonc`)
 

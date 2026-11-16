@@ -4,7 +4,7 @@ import { trackErrors } from './helpers.js';
 test('lobby renders with credit, brawlers and settings that persist', async ({ page }) => {
   const errors = trackErrors(page);
   await page.goto('/');
-  await expect(page.locator('#lobby #credit')).toHaveText('Created by Sam Eyde III');
+  await expect(page.locator('#lobby #credit')).toHaveText('Made by Gleyde Technologies');
   await expect(page.locator('#lobby #credit')).toBeVisible();
   await page.click('.nameplate');
   await expect(page.locator('.bcard')).toHaveCount(14); // the six starters + the 8 unlockable cars

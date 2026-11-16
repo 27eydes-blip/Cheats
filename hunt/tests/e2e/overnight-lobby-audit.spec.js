@@ -19,9 +19,14 @@ async function needTouch(page) {
   test.skip(!coarse, 'this browser build does not emulate a touch (coarse) pointer');
 }
 
-// Nothing is exempt today. If a control ever has to stay small, list its exact message here with
+// If a control ever has to stay small, list its exact message here with
 // the reason, e.g. [/tap target button#foo /, 'why it cannot be bigger'].
-const ALLOW = [];
+const ALLOW = [
+  // the creator credit line is a button (it opens Credits); on a few layouts it sits between PLAY or
+  // the dock and the tab bar or screen edge, so its touch pad stops short of 44px rather than take
+  // taps from them (overnight-credits-card.spec.js checks the pad)
+  [/^tap target button#credit[ .]/, 'boxed in by PLAY / the dock; it never covers them'],
+];
 const allowed = (msg) => ALLOW.some(([re]) => re.test(msg));
 
 // the racing lobby (the game, at /) and the classic shooter lobby (?shooter=1)
@@ -356,6 +361,6 @@ test('desktop (racing): the four modes as cards and strip, the track with its pr
   expect(r.cards).toEqual([['grand', true], ['elim', true], ['battle', true], ['trial', true]]); // each with its short description
   expect(r.pods).toBe(3);
   expect(r.preview).toBeGreaterThan(20);
-  expect(r.credit).toBe('Created by Sam Eyde III');
+  expect(r.credit).toBe('Made by Gleyde Technologies');
   await ctx.close();
 });

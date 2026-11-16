@@ -98,8 +98,9 @@ export function createSpaceLobby(api) {
       </aside>
       <main class="sp-page" id="spPage"><section class="pg pg-profile sp-glass" data-pg="profile" hidden></section></main>
     </div>
-    <div id="credit" class="sp-cred">Created by Sam Eyde III</div>`;
+    <button type="button" id="credit" class="sp-cred" aria-label="Made by Gleyde Technologies. Open credits">Made by Gleyde Technologies</button>`;
   initRotateHint();
+  const fitCredit = SC.wireCredit($('credit'), () => { chime('tap'); SC.openCredits(); });
   const spLobby = $('spLobby');
   let q = applyQuality(root);
   const L = { tab: 'play', visible: false };
@@ -277,6 +278,7 @@ export function createSpaceLobby(api) {
     dock.setActive(prof ? 'profile' : 'race');
     if (prof) SC.renderProfilePage(root.querySelector('.pg-profile'), api, refresh);
     makeFocusable(root);
+    fitCredit();
   }
   A.onUser(refresh);
 

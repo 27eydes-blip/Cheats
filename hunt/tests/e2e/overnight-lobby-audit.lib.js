@@ -187,7 +187,7 @@ export function auditPage(primary) {
       const k = credit.getBoundingClientRect();
       if (k.left < 0 || k.top < 0 || k.right > innerWidth + EPS || k.bottom > innerHeight + EPS) out.push(`credit line is off screen (${fmt(k)})`);
       const over = (r) => r.left < k.right - 1 && r.right > k.left + 1 && r.top < k.bottom - 1 && r.bottom > k.top + 1;
-      for (const el of taps) { const c = clip(el); if (c.w > 0 && c.h > 0 && over(c)) out.push(`${name(el)} overlaps the credit line`); }
+      for (const el of taps) { const c = clip(el); if (el !== credit && c.w > 0 && c.h > 0 && over(c)) out.push(`${name(el)} overlaps the credit line`); }
       for (const { el, r } of textRects) if (el !== credit && over(r)) out.push(`text in ${name(el)} overlaps the credit line`);
       for (const [x, y] of [[k.left + 2, k.top + k.height / 2], [k.left + k.width / 2, k.top + k.height / 2], [k.right - 2, k.top + k.height / 2]]) {
         credit.style.pointerEvents = "auto";

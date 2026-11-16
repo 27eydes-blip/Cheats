@@ -29,7 +29,7 @@ const stack = [];
 function overlayCredit() {
   if (document.getElementById('ovCredit')) return;
   const c = document.createElement('div');
-  c.id = 'ovCredit'; c.className = 'ov-credit'; c.textContent = 'Created by Sam Eyde III';
+  c.id = 'ovCredit'; c.className = 'ov-credit'; c.textContent = 'Made by Gleyde Technologies';
   document.body.appendChild(c);
 }
 export function openScreen(el, { pop = false } = {}) {

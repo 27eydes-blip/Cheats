@@ -1,4 +1,4 @@
-// "Created by Sam Eyde III" is on every screen a racer can reach: the lobby, every store tab, the
+// "Made by Gleyde Technologies" is on every screen a racer can reach: the lobby, every store tab, the
 // GP Pass, Trophy Road, profile, settings, garage / drivers and a driver's detail, friends, the
 // missions popup, the pre-race card, a friend room and the finish screen. On each one, on an iPhone
 // SE (landscape), an iPhone Pro Max (portrait) and an iPad, the credit must be fully on screen, not
@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
 import { trackErrors, waitSettled, isolateRaces } from './helpers.js';
 import { RACE_SCREENS } from './overnight-lobby-audit.lib.js';
 
-const CREDIT = 'Created by Sam Eyde III';
+const CREDIT = 'Made by Gleyde Technologies';
 const SCREENS = [
   ...RACE_SCREENS,
   { name: 'garage (dock)', open: async (p) => { await p.click('#rail_garage'); await p.waitForSelector('.ui-screen:not([hidden])'); } },

@@ -8,7 +8,7 @@ own weapon, and wreck the leader to steal their bounty.
 - **Server:** Cloudflare Worker + one Durable Object per race (`RaceRoom`) and a matchmaker (`RaceMatchmaker`), WebSockets (`src/race/`)
 - **Netcode:** server-authoritative at 30 ticks/s. Clients send only inputs. Your own car is predicted with the same physics code the server runs (`public/race/physics.js`) and reconciled against the server. Other cars are interpolated about 100 ms behind. Details: `public/race/PROTOCOL.md`.
 
-Created by Sam Eyde III.
+Made by Gleyde Technologies. Created by Sammy Eyde, produced by COO Juwon Shon.
 
 The game used to be called Hunt (then Hunt Racers). Players only ever see **Oblivion GP**; the
 internal names stay `hunt` on purpose: the Cloudflare Worker, the live link
