@@ -420,7 +420,13 @@ export class Race {
 
   standings(): Standing[] {
     const L = this.track.length;
-    const list: Standing[] = this.rivals.map((r) => ({ name: r.def.name, player: false, total: r.finished ? 1e12 - r.finishTime : r.laps * L + r.z, finished: r.finished, time: r.finishTime, model: r.model.name }));
+    const done = this.state === 'finished';
+    const list: Standing[] = this.rivals.map((r) => {
+      const dist = r.laps * L + r.z;
+      // once the player has finished, project the others' finishing times from their pace
+      const est = r.finished ? r.finishTime : done ? this.finishRaceTime() + Math.max(0, this.laps * L - dist) / Math.max(2000, r.top * 0.85) : 0;
+      return { name: r.def.name, player: false, total: r.finished || done ? 1e12 - est : dist, finished: r.finished || done, time: est, model: r.model.name };
+    });
     list.push({ name: 'You', player: true, total: this.state === 'finished' ? 1e12 - this.finishRaceTime() : this.totalP, finished: this.state === 'finished', time: this.finishRaceTime(), model: MODELS[this.opts.car]?.name ?? '' });
     return list.sort((a, b) => b.total - a.total);
   }

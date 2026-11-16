@@ -83,12 +83,14 @@ button { font: inherit; color: inherit; }
 
 /* ---------- intertitle screens ---------- */
 .screen {
-  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
   padding: calc(var(--sat) + 18px) calc(var(--sar) + 16px) calc(var(--sab) + 18px) calc(var(--sal) + 16px);
   background: radial-gradient(ellipse at center, rgba(26,20,13,.82) 0%, rgba(8,6,4,.96) 75%);
   animation: iris .35s ease-out;
   overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y;
 }
+.screen > :first-child:not(.back), .screen > .back + * { margin-top: auto; }
+.screen > :last-child { margin-bottom: auto; }
 .screen.clear { background: radial-gradient(ellipse at center, rgba(13,10,7,0) 30%, rgba(8,6,4,.55) 90%); }
 @keyframes iris { from { clip-path: circle(0% at 50% 50%); } to { clip-path: circle(150% at 50% 50%); } }
 .card {
@@ -180,7 +182,7 @@ p { font-size: 16px; line-height: 1.35; margin: 6px 0; }
 .paper td { padding: 3px 4px; border-bottom: 1px dotted rgba(26,20,13,.5); text-align: left; }
 .paper td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 .paper tr.me td { font-weight: 700; background: rgba(184,52,42,.15); }
-.podium { display: flex; align-items: flex-end; justify-content: center; gap: 6px; margin: 10px 0 4px; }
+.podium { display: flex; align-items: flex-end; justify-content: center; gap: 6px; margin: 64px 0 4px; }
 .podium div { width: 30%; background: #1a140d; color: #e9dfc6; font-family: var(--title); padding-top: 4px; position: relative; }
 .podium canvas { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); width: 92%; image-rendering: pixelated; }
 .podium .p1 { height: 54px; } .podium .p2 { height: 38px; } .podium .p3 { height: 26px; }

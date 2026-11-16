@@ -64,6 +64,58 @@ await run('phone-portrait', { ...devices['iPhone 13'], isMobile: true, hasTouch:
 await run('phone-landscape', { ...devices['iPhone 13 landscape'], isMobile: true, hasTouch: true }, (p) => race(p, 'phone-landscape'));
 await run('desktop', { viewport: { width: 1280, height: 720 } }, (p) => race(p, 'desktop'));
 
+const clickText = async (page, t) => { await page.locator('button, .tile', { hasText: t }).first().click(); await page.waitForTimeout(350); };
+const finishRace = async (page) => {
+  await page.waitForFunction(() => window.__mc.app.race && window.__mc.app.race.state === 'racing', null, { timeout: 8000 });
+  await page.evaluate(() => { const r = window.__mc.app.race; r.lap = r.laps; r.player.z = r.track.length - 300; r.player.speed = 9000; });
+  await page.waitForFunction(() => !window.__mc.app.race, null, { timeout: 12000 });
+  await page.waitForTimeout(900);
+};
+async function flow(page, name) {
+  await page.evaluate(() => localStorage.clear()); await page.reload(); await page.waitForFunction(() => !!window.__mc);
+  await page.waitForTimeout(500);
+  await clickText(page, 'Career');
+  await snap(page, `${name}-howto`); await clickText(page, 'Onward');
+  await snap(page, `${name}-career`); await clickText(page, 'The Detroit Cup');
+  await snap(page, `${name}-cup`); await clickText(page, 'Begin');
+  await snap(page, `${name}-chapter`);
+  if (!(await page.textContent('body')).includes('CHAPTER I')) fail(`${name}: no chapter card`);
+  await page.click('.screen'); await page.waitForTimeout(300);
+  await finishRace(page);
+  await snap(page, `${name}-results`);
+  const body = await page.textContent('body');
+  if (!body.includes('Gleyde Technologies, LLC') || !body.includes('Created by Sam Eyde III')) fail(`${name}: credits missing on results`);
+  if (!/coins/.test(body)) fail(`${name}: no coins on results`);
+  const coins = await page.evaluate(() => window.__mc.app.save.coins);
+  if (coins <= 250) fail(`${name}: no coins earned (${coins})`);
+  await clickText(page, 'Next Chapter'); await snap(page, `${name}-chapter2`);
+  if (!(await page.textContent('body')).includes('CHAPTER II')) fail(`${name}: chapter II missing`);
+  // pause menu during a race
+  await page.click('.screen'); await page.waitForTimeout(1500);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400); await snap(page, `${name}-pause`);
+  if (!(await page.textContent('body')).includes('Intermission')) fail(`${name}: pause menu missing`);
+  await clickText(page, 'Quit Race');
+  // garage: buy and tune
+  await page.evaluate(() => { window.__mc.app.save.coins = 5000; });
+  await clickText(page, 'Garage'); await clickText(page, 'Stutz Bearcat'); await snap(page, `${name}-garage`);
+  await clickText(page, 'Buy for'); await clickText(page, 'Tuning'); await clickText(page, '300c'); await clickText(page, 'Paint'); await snap(page, `${name}-paint`);
+  const sv = await page.evaluate(() => JSON.parse(localStorage.getItem('motorcity1915.save')));
+  if (!sv.owned.includes('stutz') || sv.upgrades.stutz?.engine !== 1) fail(`${name}: purchase not saved ${JSON.stringify(sv.owned)}`);
+  await page.click('.back'); await page.waitForTimeout(300);
+  // settings
+  await clickText(page, 'Settings'); await snap(page, `${name}-settings`); await page.click('.back'); await page.waitForTimeout(300);
+  // time trial
+  await clickText(page, 'Time Trial'); await snap(page, `${name}-trial`); await clickText(page, 'Woodward');
+  await finishRace(page); await snap(page, `${name}-trialresult`);
+  if (!(await page.textContent('body')).includes('Record')) fail(`${name}: trial result missing`);
+  // reload keeps progress
+  await page.reload(); await page.waitForFunction(() => !!window.__mc);
+  const car = await page.evaluate(() => window.__mc.app.save.car);
+  if (car !== 'stutz') fail(`${name}: save not restored (${car})`);
+}
+await run('flow-portrait', { ...devices['iPhone 13'], isMobile: true, hasTouch: true }, (p) => flow(p, 'flow-portrait'));
+await run('flow-landscape', { ...devices['iPhone 13 landscape'], isMobile: true, hasTouch: true }, (p) => flow(p, 'flow-landscape'));
+
 await browser.close();
 server.close();
 if (failures) { console.error(`${failures} failure(s)`); process.exit(1); }
