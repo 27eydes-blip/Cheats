@@ -6,6 +6,7 @@
 - `*-go-countdown`, `*-reset-pulsing`, `*-settings`, `desktop-keys-hint`.
 - `*-tutorial-1..4`, `*-tutorial-5-ready`: the tutorial overlay and its four prompts.
 
-Taken before the engine branch was merged: the tutorial overlay is shown over a normal race with
-the server's `tut` step events fed by the screenshot script, and RESET pulses from a `stuck`
-value the script writes into the snapshot. After the merge the server provides both.
+The tutorial shots are a real tutorial run (cone slalom, drift curve, item boxes, target car),
+taken on a trial merge with the engine branch (fix/rc-steer), driven by touch. RESET pulsing is
+shown with a `stuck` value written into the snapshot by the screenshot script (being stuck on
+purpose is hard to stage); the server reports it for real.
