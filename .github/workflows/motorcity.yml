@@ -38,7 +38,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Smoke tests (iPhone portrait + landscape, desktop, full menu flow)
         run: node tests/smoke.test.mjs
-      - name: Feel tests (iPhone portrait: run-off, soft walls, crashes, car contact, rivals, touch)
+      - name: 'Feel tests (iPhone portrait: run-off, soft walls, crashes, car contact, rivals, touch)'
         run: node tests/feel.test.mjs
       - uses: actions/upload-artifact@v4
         with:
