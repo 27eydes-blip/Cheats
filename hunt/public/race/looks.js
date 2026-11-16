@@ -37,12 +37,12 @@ const memo = new Map();
 export function makeLook(driverId, opts = null) {
   const id = BASE_LOOKS[driverId] ? driverId : 'volt', B = BASE_LOOKS[id], o = obj(opts) || {};
   const skin = obj(o.skin) || {}, glow = obj(o.glow) || {}, wheel = obj(o.wheel) || {}, flame = obj(o.flame) || {}, trail = obj(o.trail) || {};
-  const neon = col(skin.neon, B.neon);
+  const own = col(skin.neon, null), neon = own || B.neon; // a valid skin colour also tints neon2 and the glow
   const L = {
     driver: id, name: B.name,
-    neon, neon2: col(skin.neon2, skin.neon && !skin.neon2 ? '#ffffff' : B.neon2), body: col(skin.body, B.body),
+    neon, neon2: col(skin.neon2, own ? '#ffffff' : B.neon2), body: col(skin.body, B.body),
     pattern: pick(skin.pattern, PATTERNS, B.pattern),
-    glow: col(glow.color, skin.neon ? neon : B.glow.color), glowStyle: pick(glow.style, GLOW_STYLES, B.glow.style),
+    glow: col(glow.color, own || B.glow.color), glowStyle: pick(glow.style, GLOW_STYLES, B.glow.style),
     rim: col(wheel.rim, B.wheel.rim), spokes: Math.max(2, Math.min(8, (wheel.spokes | 0) || B.wheel.spokes)),
     flame: { core: col(flame.core, B.flame.core), outer: col(flame.outer, B.flame.outer) },
     trail: { color: col(trail.color, B.trail.color), style: pick(trail.style, TRAIL_STYLES, B.trail.style) },
