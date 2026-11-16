@@ -61,11 +61,13 @@ their match coins and get a boost.
 
 ### Tracks
 
+All four tracks and their arenas are clear: wide roads with soft guard walls that slide you along, no obstacles or hazards on the road (only racers and dropped weapon items hit you). The themes are paint and scenery.
+
 | Track | Twist | Battle arena |
 |---|---|---|
-| **Desert Mirage Canyon** | sand traps, canyon jumps, the Canyon Cut shortcut | Mirage Bowl |
-| **Frozen Lake Circuit** | low-grip ice sections, the Thin Ice shortcut | Icebreak Rink |
-| **Ashlands Inferno** | lava edges and geysers, the Lava Leap (needs a boost) | Cinder Pit |
+| **Desert Mirage Canyon** | sand drifts, canyon jumps, the Canyon Cut shortcut | Mirage Bowl |
+| **Frozen Lake Circuit** | frozen-lake stretches, the Thin Ice shortcut | Icebreak Rink |
+| **Ashlands Inferno** | lava fields all around, the Lava Leap jump | Cinder Pit |
 | **Neon City Night** | tight neon corners, the Back Alley shortcut | Rooftop Grid |
 
 ### Drivers and items

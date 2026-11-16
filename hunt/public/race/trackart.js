@@ -191,13 +191,13 @@ export class TrackArt {
       this.zonePolys.push(zp);
       if (z.kind === 'pad') this.pads.push(zp);
       if (z.kind === 'surf' && z.surf === 'lava') this.lavas.push(zp);
-      if (z.kind === 'surf' && z.surf === 'ice') this.ices.push(zp);
+      if ((z.kind === 'surf' || z.kind === 'paint') && z.surf === 'ice') this.ices.push(zp);
     }
     for (const z of T.circles) {
       if (z.kind === 'pad') this.pads.push({ circle: z, mid: { x: z.x, y: z.y, a: -Math.PI / 2 }, w: z.r * 2, bx0: z.x - z.r, by0: z.y - z.r, bx1: z.x + z.r, by1: z.y + z.r });
       if (z.surf === 'lava') this.lavas.push({ circle: z, bx0: z.x - z.r, by0: z.y - z.r, bx1: z.x + z.r, by1: z.y + z.r, mid: { x: z.x, y: z.y } });
     }
-    for (const c of T.corridors) if (c.surf === 'ice') for (let i = 0; i < c.n; i += 8) this.glows.push({ x: c.px[i], y: c.py[i], r: c.hw[i] * 1.6, col: 'ice', ph: i * 0.7 });
+    for (const c of T.corridors) if (c.look === 'ice') for (let i = 0; i < c.n; i += 8) this.glows.push({ x: c.px[i], y: c.py[i], r: c.hw[i] * 1.6, col: 'ice', ph: i * 0.7 });
     for (const zp of this.ices) for (let s0 = zp.z.s0; s0 < zp.z.s1; s0 += 260) { const p = pointAt(zp.c, s0, 0); this.glows.push({ x: p.x, y: p.y, r: zp.w * 0.8, col: 'ice', ph: s0 * 0.01 }); }
     for (const z of T.circles) if (z.surf === 'ice') this.glows.push({ x: z.x, y: z.y, r: z.r, col: 'ice', ph: 0 });
     for (const L of this.lavas) this.glows.push({ x: L.mid.x, y: L.mid.y, r: Math.max(L.bx1 - L.bx0, L.by1 - L.by0) * 0.7, col: 'lava', ph: L.mid.x * 0.01 });
@@ -274,7 +274,7 @@ export class TrackArt {
       for (const i of lists[k]) {
         const j = (i + 1) % c.n, jj = (i + c.n - 1) % c.n;
         const bend = Math.abs(c.tx[jj] * c.ty[i] - c.ty[jj] * c.tx[i]) + Math.abs(c.tx[i] * c.ty[j] - c.ty[i] * c.tx[j]);
-        if (bend > 0.05 && c.surf === 'road') {
+        if (bend > 0.05 && c.look === 'road') {
           g.strokeStyle = th.curbB; g.setLineDash([]); stroke(c, i, 2 * c.hw[i] + 22);
           g.strokeStyle = th.curbA; g.setLineDash([26, 26]); g.lineDashOffset = -c.s[i]; g.lineCap = 'butt'; stroke(c, i, 2 * c.hw[i] + 22); g.lineCap = 'round';
           g.setLineDash([]);
@@ -284,11 +284,11 @@ export class TrackArt {
     // road surface
     const roadPat = g.createPattern(this.tRoad, 'repeat');
     T.corridors.forEach((c, k) => {
-      g.strokeStyle = c.surf === 'road' ? roadPat : c.surf === 'ice' ? th.ice || '#a9dcf5' : c.surf === 'sand' ? th.sand || th.shoulder : th.shoulder;
+      g.strokeStyle = c.look === 'road' ? roadPat : c.look === 'ice' ? th.ice || '#a9dcf5' : c.look === 'sand' ? th.sand || th.shoulder : th.shoulder;
       for (const i of lists[k]) stroke(c, i, 2 * c.hw[i]);
     });
     // texture on special corridors (sand ripples, ice streaks)
-    T.corridors.forEach((c, k) => { if (c.surf !== 'road') for (const i of lists[k]) this.surfDetail(g, c.surf, c.px[i], c.py[i], c.hw[i], Math.atan2(c.ty[i], c.tx[i]), i); });
+    T.corridors.forEach((c, k) => { if (c.look !== 'road') for (const i of lists[k]) this.surfDetail(g, c.look, c.px[i], c.py[i], c.hw[i], Math.atan2(c.ty[i], c.tx[i]), i); });
     // zones
     for (const zp of this.zonePolys) {
       if (zp.bx1 < bx.x0 + 290 || zp.bx0 > bx.x1 - 290 || zp.by1 < bx.y0 + 290 || zp.by0 > bx.y1 - 290) continue;
@@ -326,7 +326,7 @@ export class TrackArt {
     }
     for (const o of T.obstacles) if (o.x > bx.x0 && o.x < bx.x1 && o.y > bx.y0 && o.y < bx.y1) this.pillar(g, o);
   }
-  onZone(c, s) { for (const z of c.zones) if (z.kind !== 'surf' && s >= z.s0 - 40 && s <= z.s1 + 40) return true; return false; }
+  onZone(c, s) { for (const z of c.zones) if (z.kind !== 'surf' && z.kind !== 'paint' && s >= z.s0 - 40 && s <= z.s1 + 40) return true; return false; }
 
   paintArena(g, bx) {
     const T = this.T, th = this.th, B = T.box;
@@ -377,7 +377,7 @@ export class TrackArt {
   paintZone(g, zp) {
     const z = zp.z, pts = zp.pts;
     const path = () => { g.beginPath(); g.moveTo(pts[0], pts[1]); for (let k = 2; k < pts.length; k += 2) g.lineTo(pts[k], pts[k + 1]); g.closePath(); };
-    if (z.kind === 'surf') {
+    if (z.kind === 'surf' || z.kind === 'paint') { // paint: a themed patch that drives like road
       path(); this.surfFill(g, z.surf);
       if (z.surf === 'lava') {
         const gr = g.createRadialGradient(zp.mid.x, zp.mid.y, 10, zp.mid.x, zp.mid.y, Math.max(zp.bx1 - zp.bx0, zp.by1 - zp.by0) * 0.6);
@@ -675,12 +675,12 @@ export class TrackArt {
       // wall rims (both sides) and the road edges
       for (const side of [-1, 1]) {
         this.glowStroke(g, nt.wall, 2.5, () => { g.beginPath(); for (const i of L) this.neonSeg(g, c, i, (q) => side * (c.ww[q] + 4)); });
-        const edgeCol = c.surf === 'road' ? nt.edge : c.surf === 'ice' ? '#bff4ff' : nt.line;
-        this.glowStroke(g, edgeCol, 3, () => { g.beginPath(); for (const i of L) { if (this.bend(c, i) > 0.05 && c.surf === 'road') continue; this.neonSeg(g, c, i, (q) => side * (c.hw[q] + 2)); } });
+        const edgeCol = c.look === 'road' ? nt.edge : c.look === 'ice' ? '#bff4ff' : nt.line;
+        this.glowStroke(g, edgeCol, 3, () => { g.beginPath(); for (const i of L) { if (this.bend(c, i) > 0.05 && c.look === 'road') continue; this.neonSeg(g, c, i, (q) => side * (c.hw[q] + 2)); } });
         // curbs on the bends: neon dashes
         g.lineCap = 'butt';
         for (const i of L) {
-          if (!(this.bend(c, i) > 0.05 && c.surf === 'road')) continue;
+          if (!(this.bend(c, i) > 0.05 && c.look === 'road')) continue;
           const path = () => { g.beginPath(); this.neonSeg(g, c, i, (q) => side * (c.hw[q] + 6)); };
           this.glowStroke(g, nt.curbB, 6, path);
           this.glowStroke(g, nt.curbA, 6, path, [26, 26], -c.s[i]);

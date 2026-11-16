@@ -41,7 +41,7 @@ function buildCorridor(def, closed, idx) {
     idx, closed, n, main: idx === 0, name: def.name || null,
     px: new Float64Array(xs), py: new Float64Array(ys), hw: new Float64Array(ws), ww: new Float64Array(ws.map((w) => w + sh)),
     tx: new Float64Array(n), ty: new Float64Array(n), s: new Float64Array(n + 1),
-    surf: def.surf || 'road', shoulder: def.shoulder || 'offroad', zones: [], needsBoost: !!def.needsBoost,
+    surf: def.surf || 'road', look: def.look || def.surf || 'road', shoulder: def.shoulder || 'offroad', zones: [], needsBoost: !!def.needsBoost,
   };
   const segs = closed ? n : n - 1;
   for (let i = 0; i < segs; i++) {
@@ -212,7 +212,7 @@ function probe(T, x, y, r, out) {
   } else {
     const cx = Math.floor((x - b.x0) / CELL), cy = Math.floor((y - b.y0) / CELL);
     const list = cx >= 0 && cy >= 0 && cx < T.cells.gw && cy < T.cells.gh ? T.cells.segs[cy * T.cells.gw + cx] : null;
-    let bm = Infinity, bc = null, bi = 0;
+    let bm = Infinity, bc = null, bi = 0, rc = null;
     const o = P1;
     if (list && list.length) {
       for (let k = 0; k < list.length; k++) {
@@ -220,6 +220,7 @@ function probe(T, x, y, r, out) {
         projSeg(c, i, x, y, o);
         const m = o.dist - o.ww;
         if (m < bm) { bm = m; bc = c; bi = i; }
+        if (o.dist <= o.hw) rc = c; // on some corridor's road (where a shortcut meets the main road)
       }
     } else { // far outside everything (should not happen in play): brute force the main loop
       const c = T.corridors[0];
@@ -230,7 +231,7 @@ function probe(T, x, y, r, out) {
     out.pen = o.dist - o.ww + r;
     const inv = o.dist > 1e-6 ? 1 / o.dist : 0;
     out.nx = -(x - o.qx) * inv; out.ny = -(y - o.qy) * inv; // toward the centre line
-    out.surf = Math.abs(o.d) > o.hw ? bc.shoulder : bc.surf;
+    out.surf = Math.abs(o.d) <= o.hw ? bc.surf : rc ? rc.surf : bc.shoulder; // a road edge never reads as the other corridor's shoulder
     const zs = bc.zones;
     for (let k = 0; k < zs.length; k++) {
       const z = zs[k];
@@ -242,7 +243,7 @@ function probe(T, x, y, r, out) {
   for (let k = 0; k < T.circles.length; k++) {
     const z = T.circles[k], dx = x - z.x, dy = y - z.y;
     if (dx * dx + dy * dy > z.r * z.r) continue;
-    if (z.kind === 'pad') out.pad = z; else if (z.kind === 'ramp') out.ramp = z; else out.surf = z.surf;
+    if (z.kind === 'pad') out.pad = z; else if (z.kind === 'ramp') out.ramp = z; else if (z.kind === 'surf') out.surf = z.surf; // 'paint': looks only
   }
   // pillars: report whichever contact is deeper
   if (T.obstacles.length) {

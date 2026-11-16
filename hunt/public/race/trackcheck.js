@@ -1,7 +1,11 @@
 // Track validator: proves a track definition is raceable. Used by test/race-tracks.test.js and
 // handy while designing a layout (returns a list of problems; empty = good).
-import { CAR_R } from './physics.js';
-import { nearestS } from './trackgeom.js';
+import { CAR_R, SURF } from './physics.js';
+import { nearestS, pointAt } from './trackgeom.js';
+
+// CLEAR TRACKS: the minimum road half-width (px from the centre line to the road edge) of the main
+// loop and of a shortcut. A car is 48 px long and 28 px wide: the main road fits 7+ cars across.
+export const MIN_HW = 170, MIN_SC_HW = 110;
 
 const segDist = (px, py, x0, y0, x1, y1) => {
   const dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy;
@@ -10,8 +14,11 @@ const segDist = (px, py, x0, y0, x1, y1) => {
 };
 const inSpan = (s, a, span, L) => ((s - a) % L + L) % L < span;
 
-export function validateTrack(T) {
+// opts.clear (default: every track but the tutorial, whose slalom needs its cones): the clear-track
+// rules, see clearErrors()
+export function validateTrack(T, opts = {}) {
   const errs = [], P = {};
+  if (opts.clear ?? T.key !== 'tutorial') errs.push(...clearErrors(T));
   if (T.kind === 'arena') {
     for (const s of T.grid) if (T.probe(s.x, s.y, CAR_R, P).pen > 0) errs.push(`spawn ${Math.round(s.x)},${Math.round(s.y)} is in a wall`);
     for (const b of T.boxes) if (T.probe(b.x, b.y, CAR_R, P).pen > 0) errs.push(`item box ${b.x},${b.y} is in a wall`);
@@ -53,6 +60,40 @@ export function validateTrack(T) {
   //    touching exactly the region before and after it: you cannot reach a checkpoint without
   //    passing the previous one (no skipping, no cutting), and the loop is closed
   errs.push(...partition(T));
+  return errs;
+}
+
+// Nothing on the driving surface but racers and dropped weapon items: no obstacles, no timed
+// hazards, no hazard or slowing surfaces (only boost pads, ramps and look-only paint), roads at least
+// MIN_HW / MIN_SC_HW wide, and every point of the road (car-sized) is open road.
+export function clearErrors(T) {
+  const errs = [], P = {};
+  if (T.obstacles.length) errs.push(`${T.obstacles.length} obstacle(s) on the track`);
+  if (T.hazards.length) errs.push(`${T.hazards.length} hazard(s) on the track`);
+  for (const z of T.circles) if (z.kind !== 'pad' && z.kind !== 'ramp' && z.kind !== 'paint') errs.push(`a ${z.surf || z.kind} patch at ${z.x},${z.y} (only pads, ramps and paint)`);
+  if (T.kind === 'arena') { if (T.surf !== 'road') errs.push('arena floor is not road'); return errs; }
+  for (const c of T.corridors) {
+    const name = c.name || 'main road';
+    if (c.surf !== 'road') errs.push(`${name}: drives as ${c.surf} (use look for the theme)`);
+    const sh = SURF[c.shoulder];
+    if (!sh || sh.dmg || sh.fall) errs.push(`${name}: the ${c.shoulder} shoulder hurts`);
+    for (const z of c.zones) if (z.kind !== 'pad' && z.kind !== 'ramp' && z.kind !== 'paint') errs.push(`${name}: a ${z.surf || z.kind} zone on the road (only pads, ramps and paint)`);
+    const min = c.main ? MIN_HW : MIN_SC_HW;
+    let narrow = Infinity;
+    for (let i = 0; i < c.n; i++) narrow = Math.min(narrow, c.hw[i]);
+    if (narrow < min) errs.push(`${name}: road only ${Math.round(narrow * 2)} px wide (min ${min * 2})`);
+    // car-sized probes across the whole road, every 64 px along it
+    let bad = 0, at = null;
+    for (let s = 0; s < c.len && bad < 1; s += 64) {
+      const p0 = pointAt(c, s), hw = c.hw[p0.i] - CAR_R;
+      for (let d = -hw; d <= hw + 1e-6; d += hw / 4) {
+        const p = pointAt(c, s, d);
+        T.probe(p.x, p.y, CAR_R, P);
+        if (P.pen > 0 || P.surf !== 'road') { bad++; at = `${Math.round(p.x)},${Math.round(p.y)} (${P.pen > 0 ? 'blocked' : P.surf})`; break; }
+      }
+    }
+    if (bad) errs.push(`${name}: the road is not clear at ${at}`);
+  }
   return errs;
 }
 

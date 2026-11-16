@@ -9,7 +9,7 @@ and lobby sit on top of `public/race/net.js` (`RaceClient`) and the shared data 
 | --- | --- |
 | `public/race/physics.js` | Car physics shared by server and client: `stepCar`, `DRIVERS` (6 drivers + vehicles), surfaces, drift tiers, boosts, wire packing of the own-car state. |
 | `public/race/trackgeom.js` | Track geometry: `buildTrack(def)` -> runtime track with `probe()`, corridors, racing line, gates, grid. |
-| `public/race/tracks.js` | Data: 4 tracks + 4 battle arenas. `getTrack(key, arena)`, `TRACK_IDS`, `trackName()`. |
+| `public/race/tracks.js` | Data: 4 clear tracks + 4 open battle arenas. `getTrack(key, arena)`, `TRACK_IDS`, `trackName()`. |
 | `public/race/trackcheck.js` | `validateTrack(T)`: proves a layout is raceable (use it while designing). |
 | `public/race/items.js` | `ITEMS` (7 pickups), `ITEM_IDS` (wire ids), `ODDS` + `rollItem`, `WEAPONS` (one per driver). |
 | `public/race/protocol.js` | Wire constants: `FLAG` bits, `ENT` kinds, `COUNTDOWN`, `RESPAWN_TIME`. |
@@ -205,10 +205,15 @@ ArrowDown/KeyS brake/reverse; ShiftLeft/ShiftRight/Space drift; KeyJ / mouse 0 f
   Painter's order draws the union correctly: 1) every corridor as a thick stroke of width `2*ww + wall`
   in the wall colour, 2) every corridor at `2*ww` in its shoulder colour, 3) every corridor at `2*hw`
   in its surface colour, 4) zones on top. Pre-render this into chunked offscreen canvases once.
-- `zones`: `{kind: 'surf' | 'pad' | 'ramp', surf, s0, s1, d0, d1, x, y, a, c}`: a span along the
+- `zones`: `{kind: 'surf' | 'paint' | 'pad' | 'ramp', surf, s0, s1, d0, d1, x, y, a, c}`: a span along the
   corridor (`s0..s1` px) and across it (`d0..d1` px, + is right of the driving direction; full width
   when huge). Use `pointAt(corridor, s, d)` from trackgeom.js to outline them. `pit` = a gap
-  (falling in wrecks you), `lava` hurts fast, `ice` slides, `sand`/`snow`/`offroad` slow.
+  (falling in wrecks you), `lava` hurts fast, `ice` slides, `sand`/`snow`/`offroad` slow. `paint` = a
+  themed patch drawn as `surf` that drives like road; a corridor's `look` is how it is drawn (its `surf`
+  is how it drives). CLEAR TRACKS: the 4 tracks and their arenas have no obstacles, no hazards, no
+  `surf` zones or circles and roads at least `MIN_HW` (shortcuts `MIN_SC_HW`) half-wide; `validateTrack`
+  (trackcheck.js) enforces it and `test/race-cleartracks.test.js` laps every track with a bot and a
+  human-style joystick driver. The engine keeps hazards / obstacles (the tutorial's cones), so `hz` is 0.
 - `T.gates` checkpoints `{k, x0, y0, x1, y1, s, a}` (k = 0 is the start/finish line), `T.grid` (10 start
   slots `{x, y, a}`), `T.boxes` item boxes `{x, y}`, `T.hazards` timed dangers
   `{kind: 'geyser' | 'arc', x, y, r, period, on, phase}` (active per `hz`), `T.obstacles` pillars

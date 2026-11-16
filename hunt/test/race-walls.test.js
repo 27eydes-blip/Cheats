@@ -57,7 +57,7 @@ for (const key of TRACK_IDS) {
     worst[deg] = Math.max(worst[deg] || 0, max);
   }
 }
-// pillars (tracks and arenas) and the arenas' corners, from all round
+// pillars (any on tracks and arenas, the tutorial's cones) and the arenas' corners, from all round
 {
   const targets = [];
   for (const key of TRACK_IDS) {
@@ -65,6 +65,8 @@ for (const key of TRACK_IDS) {
     const A = getTrack(key, true), b = A.box;
     for (const [cx, cy] of [[b.x0, b.y0], [b.x1, b.y0], [b.x0, b.y1], [b.x1, b.y1]]) targets.push([A, cx, cy, 0, true]);
   }
+  // the race tracks are clear now (no pillars): the tutorial's slalom cones are the solid round obstacles left
+  { const T = getTrack('tutorial'); for (const o of T.obstacles) targets.push([T, o.x, o.y, o.r]); }
   let max = 0, n = 0;
   for (const [T, ox, oy, r, corner] of targets) for (let k = 0; k < 16; k++) {
     const dir = (k / 16) * Math.PI * 2, R = r + CAR_R + 200;

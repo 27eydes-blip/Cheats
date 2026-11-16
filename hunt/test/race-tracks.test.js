@@ -1,10 +1,10 @@
 // Hunt Racers tracks: every track and arena passes the validator (closed loop, checkpoints that
-// can't be skipped, grid of 10 on the road, shortcuts that really are shorter), and the validator
-// itself catches broken layouts.
+// can't be skipped, grid of 10 on the road, shortcuts that really are shorter, CLEAR: no obstacles,
+// hazards or hazard surfaces, roads at least MIN_HW wide), and the validator itself catches broken layouts.
 import assert from 'node:assert';
 import { TRACK_DEFS, ARENA_DEFS, TRACK_IDS, getTrack } from '../public/race/tracks.js';
 import { buildTrack } from '../public/race/trackgeom.js';
-import { validateTrack } from '../public/race/trackcheck.js';
+import { validateTrack, MIN_HW, MIN_SC_HW } from '../public/race/trackcheck.js';
 import { CAR_R } from '../public/race/physics.js';
 
 assert.deepStrictEqual(TRACK_IDS, ['desert', 'frozen', 'ashlands', 'neon']);
@@ -29,13 +29,19 @@ for (const k of TRACK_IDS) {
   assert.strictEqual(A.kind, 'arena');
   assert.ok(A.boxes.length >= 6 && A.grid.length >= 10);
 }
-// themes the owner asked for
-const surfs = (k) => new Set(getTrack(k).corridors.flatMap((c) => [c.surf, c.shoulder, ...c.zones.map((z) => z.surf)]));
-assert.ok(surfs('frozen').has('ice'), 'Frozen Lake has ice');
-assert.ok(surfs('ashlands').has('lava'), 'Ashlands has lava');
-assert.ok(surfs('desert').has('sand'), 'Desert has sand');
-assert.ok(getTrack('ashlands').corridors.some((c) => c.needsBoost && c.zones.some((z) => z.surf === 'pit')), 'Ashlands has a boost-gated jump');
-assert.ok(getTrack('ashlands').hazards.length && getTrack('neon').hazards.length, 'timed hazards');
+// clear tracks: nothing on the road, every road drives as road, wide roads; the themes stay as looks
+for (const k of TRACK_IDS) for (const T of [getTrack(k), getTrack(k, true)]) {
+  assert.strictEqual(T.obstacles.length, 0, `${T.key}: no obstacles`);
+  assert.strictEqual(T.hazards.length, 0, `${T.key}: no hazards`);
+  for (const c of T.corridors) {
+    assert.strictEqual(c.surf, 'road', `${T.key} ${c.name || 'main'}: drives as road`);
+    assert.ok(c.zones.every((z) => ['pad', 'ramp', 'paint'].includes(z.kind)), `${T.key}: only pads, ramps and paint on the road`);
+    assert.ok(Math.min(...c.hw) >= (c.main ? MIN_HW : MIN_SC_HW), `${T.key} ${c.name || 'main'}: wide road`);
+  }
+}
+const looks = (k) => new Set(getTrack(k).corridors.flatMap((c) => [c.look, ...c.zones.filter((z) => z.kind === 'paint').map((z) => z.surf)]));
+assert.ok(looks('frozen').has('ice'), 'Frozen Lake still looks icy (paint)');
+assert.ok(looks('desert').has('sand'), 'Desert still has sand drifts (paint)');
 assert.ok(Object.keys(ARENA_DEFS).length === 4);
 
 // the validator catches broken layouts
@@ -44,4 +50,16 @@ assert.ok(broken((d) => { d.checkpoints = [0, 0.14, 0.27, 0.36, 0.5, 0.8, 0.9]; 
 assert.ok(broken((d) => { d.shortcuts[0].pts = [[3720, 2795], [3600, 4300], [1000, 4300], [2170, 3150]]; }).some((e) => /not shorter|runs into/.test(e)), 'a longer "shortcut" is caught');
 assert.ok(broken((d) => { d.checkpoints = [0, 0.27, 0.14, 0.36]; }).some((e) => /order/.test(e)), 'out of order checkpoints');
 assert.ok(broken((d) => { d.main.pts[5] = [1200, 900]; }).length > 0, 'a self-overlapping loop is caught');
+assert.ok(broken((d) => { d.obstacles = [{ x: 2000, y: 640, r: 40 }]; }).some((e) => /obstacle/.test(e)), 'an obstacle on the road is caught');
+assert.ok(broken((d) => { d.hazards = [{ kind: 'geyser', s: 0.4, d: 0, r: 70 }]; }).some((e) => /hazard/.test(e)), 'a hazard is caught');
+assert.ok(broken((d) => { d.zones.push({ c: 0, s0: 0.36, s1: 0.4, kind: 'surf', surf: 'lava' }); }).some((e) => /lava zone|not clear/.test(e)), 'a lava strip is caught');
+assert.ok(broken((d) => { d.shortcuts[0].surf = 'sand'; }).some((e) => /drives as sand/.test(e)), 'a sand shortcut is caught');
+assert.ok(broken((d) => { d.main.hw = 140; }).some((e) => /wide/.test(e)), 'a narrow road is caught');
+assert.ok(broken((d) => { d.main.pts[3] = [3950, 860, 120]; }).some((e) => /wide/.test(e)), 'a narrow section is caught');
+{
+  const def = structuredClone(ARENA_DEFS.desert); def.key = 'xa';
+  def.obstacles = [{ x: 1300, y: 1300, r: 150 }]; def.circles.push({ x: 600, y: 600, r: 100, kind: 'surf', surf: 'lava' });
+  const errs = validateTrack(buildTrack(def));
+  assert.ok(errs.some((e) => /obstacle/.test(e)) && errs.some((e) => /lava patch/.test(e)), 'arena pillars and lava are caught');
+}
 console.log('race-tracks: ok');

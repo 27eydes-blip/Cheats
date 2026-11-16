@@ -584,7 +584,7 @@ export function renderLockerPage(el, api, onDone) {
 
 // ======================================================================= RACING (Oblivion GP)
 const fmtT = (s) => (s == null ? '--' : `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, '0')}`);
-const TRACK_BLURB = { any: 'A different track every race', desert: 'Canyon jumps and sand traps', frozen: 'Slippery ice sections', ashlands: 'Lava, geysers and fire', neon: 'Tight corners under neon' };
+const TRACK_BLURB = { any: 'A different track every race', desert: 'Canyon jumps and a sandy shortcut', frozen: 'Wide sweeps across a frozen lake', ashlands: 'A wide road through the lava fields', neon: 'Tight corners under neon' };
 const ARENA_BLURB = { any: 'A different arena every match', desert: 'Open sand bowl', frozen: 'Ice rink, low grip', ashlands: 'Lava pits in the middle', neon: 'Pillars and arc towers' };
 
 // DRIVER SELECT: every driver with their car, trophies; a card opens the driver's detail
