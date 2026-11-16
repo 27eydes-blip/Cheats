@@ -34,7 +34,7 @@ for (const cam of ['chase', 'top', 'cockpit']) {
     test.skip(browserName !== 'chromium', 'CDP touch input');
     test.setTimeout(180_000);
     const P = await phone(browser, 667, 375), page = P.page;
-    await settings(P.ctx, { raceCam: cam });
+    await settings(P.ctx, { raceView: cam });
     await P.ctx.addInitScript(NO_MOTION_SPY);
     const errs = trackErrors(page);
     await page.goto(raceUrl({ room: roomCode('I'), bots: '1', laps: '1', lobby: '1.5' }));
@@ -89,14 +89,17 @@ test('pause menu CAMERA button cycles the view and saves it; Settings has Camera
   await settings(P.ctx, {});
   await page.goto(raceUrl({ room: roomCode('M'), bots: '1', laps: '1', lobby: '1.5' }));
   await waitPhase(page, 'race');
-  expect((await page.evaluate(() => window.__race.camera())).mode, 'Chase is the default').toBe('chase');
+  expect((await page.evaluate(() => window.__race.camera())).mode, 'Top-down is the default').toBe('top');
   await page.evaluate(() => window.__race.session.toggleMenu(true));
+  await expect(page.locator('.rc-cam')).toHaveText('CAMERA: TOP-DOWN');
+  await page.tap('.rc-cam');
+  await expect(page.locator('.rc-cam')).toHaveText('CAMERA: COCKPIT');
+  expect(await page.evaluate(() => [window.__race.camera().mode, JSON.parse(localStorage.getItem('hunt-settings')).raceView])).toEqual(['cockpit', 'cockpit']);
+  await page.tap('.rc-cam');
   await expect(page.locator('.rc-cam')).toHaveText('CAMERA: CHASE');
   await page.tap('.rc-cam');
   await expect(page.locator('.rc-cam')).toHaveText('CAMERA: TOP-DOWN');
-  expect(await page.evaluate(() => [window.__race.camera().mode, window.__race.camera().css, JSON.parse(localStorage.getItem('hunt-settings')).raceCam])).toEqual(['top', '', 'top']);
-  await page.tap('.rc-cam');
-  await expect(page.locator('.rc-cam')).toHaveText('CAMERA: COCKPIT');
+  expect(await page.evaluate(() => [window.__race.camera().mode, window.__race.camera().css, JSON.parse(localStorage.getItem('hunt-settings')).raceView])).toEqual(['top', '', 'top']);
   await creditVisible(page);
   await P.ctx.close();
   // the lobby's Settings screen (racing): CAMERA chips and the Haptics switch
@@ -104,12 +107,12 @@ test('pause menu CAMERA button cycles the view and saves it; Settings has Camera
   await settings(Q.ctx, {});
   await q.goto('/');
   await q.tap('#rail_settings');
-  await expect(q.locator('#setCam [data-k="chase"]')).toHaveClass(/on/);
+  await expect(q.locator('#setCam [data-k="top"]')).toHaveClass(/on/);
   await q.tap('#setCam [data-k="cockpit"]');
   await expect(q.locator('#setCam [data-k="cockpit"]')).toHaveClass(/on/);
   await expect(q.locator('#setHaptics')).toBeChecked();
   await q.locator('#setHaptics').uncheck();
-  expect(await q.evaluate(() => JSON.parse(localStorage.getItem('hunt-settings')))).toMatchObject({ raceCam: 'cockpit', haptics: false });
+  expect(await q.evaluate(() => JSON.parse(localStorage.getItem('hunt-settings')))).toMatchObject({ raceView: 'cockpit', haptics: false });
   await Q.ctx.close();
 });
 

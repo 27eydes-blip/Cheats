@@ -121,11 +121,10 @@ test('Settings: steering sensitivity, left-handed and joystick size reach the ne
   expect(inp.stickHeld).toBe(true);
   expect(inp.hm).toBeCloseTo(0.4, 2);
   expect(inp.out.hm).toBeCloseTo(0.56, 2);
-  // stick up = the car's forward direction: the camera's heading in the default Chase view (camera.js;
-  // in Top-down that is straight up the world, -PI/2)
+  // stick up = the car's forward direction: the camera's heading (in the default Top-down view that is straight up the world, -PI/2)
   const cam = await page.evaluate(() => window.__race.camera());
-  expect(cam.mode).toBe('chase');
-  expect(Math.abs(Math.atan2(Math.sin(inp.out.ha - cam.h), Math.cos(inp.out.ha - cam.h))), 'stick up = where the camera looks').toBeLessThan(0.15);
+  expect(cam.mode).toBe('top');
+  expect(Math.abs(Math.atan2(Math.sin(inp.out.ha + Math.PI / 2), Math.cos(inp.out.ha + Math.PI / 2))), 'stick up = straight up the world in Top-down').toBeLessThan(0.15);
   await F.up(1);
   await expect.poll(() => page.evaluate(() => window.__race.input().out.hm), { message: 'letting go of the stick stops steering' }).toBe(0);
   await creditVisible(page);

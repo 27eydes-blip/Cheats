@@ -95,7 +95,7 @@ class RaceSession {
     this.ctrl = new Controls(this.hcv, { onMenu: () => this.toggleMenu() });
     // a rotating camera: the stick's screen direction -> world heading (camera.js)
     this.ctrl.toWorld = (sa) => stickToWorld(sa, this.renderer.cfg, this.renderer.cm.h);
-    this.camName = camMode(SETTINGS.raceCam);
+    this.camName = camMode(SETTINGS.raceView);
     $('.rc-cam').onclick = () => { const i = CAM_MODES.indexOf(this.camName); this.setCam(CAM_MODES[(i + 1) % CAM_MODES.length], true); play('click'); };
     this.seen = new Map(); this.pb = []; this.sp = { W: 0, H: 0, x: 0, y: 0, fx: 0, fy: -1, far: 0, world: 'desert' };
     this.horn = mountHorn(this);
@@ -282,7 +282,7 @@ class RaceSession {
   // the camera view (Settings > Camera, or the pause menu): the world canvas gets that view's tilt
   setCam(name, save) {
     this.camName = camMode(name);
-    if (save) setSetting('raceCam', this.camName);
+    if (save) setSetting('raceView', this.camName);
     const R = this.renderer, tl = R.setCamera(this.camName);
     this.cv.style.transform = tl.css; this.cv.style.transformOrigin = tl.origin;
     // the sky the tilt leaves at the top fades into the track through a fog band

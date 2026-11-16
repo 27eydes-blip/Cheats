@@ -11,8 +11,8 @@ const UP = -Math.PI / 2, RIGHT = 0, DOWN = Math.PI / 2, LEFT = Math.PI;
 
 // modes and the default
 assert.deepStrictEqual(CAM_MODES, ['chase', 'top', 'cockpit']);
-assert.strictEqual(camMode(undefined), 'chase', 'Chase is the default view');
-assert.strictEqual(camMode('nonsense'), 'chase');
+assert.strictEqual(camMode(undefined), 'top', 'Top-down is the default view');
+assert.strictEqual(camMode('nonsense'), 'top');
 assert.strictEqual(camMode('top'), 'top');
 
 // TOP-DOWN: the stick's screen direction IS the world heading (the old contract)
