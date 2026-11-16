@@ -164,6 +164,5 @@ export class ElimFx {
       if (lead !== this.leadId || me.out !== this.outN) { this.leadId = lead; this.outN = me.out; this.sub = `Out in ${ORD(me.out)} · following ${lead ? o.name(lead) : 'the leader'}`; }
       label(g, this.sub, W / 2, Tp + 32 * u, Math.round(12 * u), '#ffffff', 'center', dpr);
     }
-    if (md.duel) label(g, 'FINAL DUEL', W / 2, Tp + (me && me.out ? 88 : 98) * u, Math.round(13 * u), '#ffd23f', 'center', dpr);
   }
 }

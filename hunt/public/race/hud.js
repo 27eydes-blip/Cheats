@@ -155,7 +155,7 @@ export class Hud {
     // -------- mode info pill (under the slots)
     let pill = null, pillCol = '#ffffff';
     const md = view.hud || {};
-    if (mode === 'elim' && md.nx != null && view.countdown <= 0) { pill = str('cut', Math.ceil(md.nx), (v) => `CUT IN ${v}`); pillCol = md.nx < 5 || (me && md.dg === rc.id) ? '#ff5f5f' : '#ffffff'; }
+    if (mode === 'elim' && md.nx != null && view.countdown <= 0) { pill = str(md.duel ? 'duel' : 'cut', Math.ceil(md.nx), (v) => (md.duel ? `FINAL DUEL · CUT IN ${v}` : `CUT IN ${v}`)); pillCol = md.nx < 5 || (me && md.dg === rc.id) ? '#ff5f5f' : '#ffffff'; }
     else if (battle && md.tl != null) { const s = Math.ceil(md.tl); pill = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; pillCol = md.tl < 15 ? '#ff5f5f' : '#ffffff'; }
     else if (md.ft != null) { pill = `FINISH CLOSES ${Math.ceil(md.ft)}`; pillCol = '#ff9f43'; }
     else if (trial && S.bestTime) { pill = `BEST ${fmtTime(S.bestTime)}`; pillCol = '#c9b8ff'; }
