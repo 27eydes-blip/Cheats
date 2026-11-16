@@ -63,7 +63,13 @@ for (const bots of ['1', '0']) {
         else await F.tap(2, L.btn.fire.x, L.btn.fire.y);
         d.fired = s.tm;
       }
+      if (F.active.has(4)) d.drifts = (d.drifts || 0) + 1;
       if (F.active.has(1) && F.active.has(4) && !d.driftChecked) { d.both.push(['drift', await both(P)]); d.driftChecked = true; }
+      // the racing line only asks for DRIFT in a few fast bends (heading steering tracks it closely),
+      // so if none came up yet, the second thumb holds DRIFT itself for a moment while the first steers
+      else if (!d.driftChecked && s.tm > 8 && !s.rt && F.active.has(1) && !F.active.has(4)) {
+        await F.down(4, L.btn.drift.x, L.btn.drift.y); d.both.push(['drift', await both(P)]); await F.up(4); d.driftChecked = true;
+      }
       if (s.tm > 4 && s.it < 0 && !d.gave) { await P.page.evaluate(() => window.__race.dev('item', 'turbo')); d.gave = true; }
       if (s.it >= 0 && s.tm - (d.used || 0) > 1) { await F.tap(3, L.btn.item.x, L.btn.item.y); d.used = s.tm; }
       if (me === 'A' && s.tm > 7 && !d.wrecked) { await P.page.evaluate(() => window.__race.dev('wreck')); d.wrecked = true; }
@@ -73,6 +79,7 @@ for (const bots of ['1', '0']) {
       drive(A, { until: finished, maxMs: 150_000, onTick: script(A, 'A') }),
       drive(B, { until: finished, maxMs: 150_000, onTick: script(B, 'B') }),
     ]);
+    console.log('ticks with DRIFT held by the racing line', done.A.drifts || 0, '/', done.B.drifts || 0);
     console.log('touch input updates per second', rates.map((r) => r.toFixed(1)).join(' / '));
     // (the snapshot that says we finished carries the lap / finish events: the next frame handles them)
     await Promise.all([A, B].map((P) => P.page.waitForFunction(() => (window.__race.mine.fin || []).length > 0 || window.__race.rc.phase === 'end', null, { timeout: 10_000 })));
