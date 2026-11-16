@@ -5,6 +5,7 @@
    the sky above it is the track's own background colour, faded into the road by the fog band. The HUD
    canvas on top is never tilted and takes every touch. */
 .rc-root { background: var(--rc-bg, #1b1033); }
+.rc-world { position: absolute; inset: 0; overflow: hidden; pointer-events: none; } /* (clips the tilted canvas: nothing scrolls sideways) */
 .rc-root .rc-cv { pointer-events: none; will-change: transform; backface-visibility: hidden; }
 .rc-fog { position: absolute; left: 0; right: 0; top: 0; height: 0; pointer-events: none; background: linear-gradient(var(--rc-bg, #1b1033) 0 55%, transparent); }
 .rc-fog[hidden] { display: none; }

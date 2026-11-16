@@ -69,7 +69,7 @@ class RaceSession {
     this.dead = false;
     const root = (this.root = document.createElement('div'));
     root.className = 'rc-root';
-    root.innerHTML = `<canvas class="rc-cv"></canvas><div class="rc-fog"></div><canvas class="rc-hud"></canvas>
+    root.innerHTML = `<div class="rc-world"><canvas class="rc-cv"></canvas></div><div class="rc-fog"></div><canvas class="rc-hud"></canvas>
       <div class="rc-wait" hidden><div class="rc-brand">${wordmarkSvg({ id: 'rcwm' })}</div><div class="rc-wt title">GET READY</div><div class="rc-wm"></div><div class="rc-wl"></div><div class="rc-ws"></div><div class="rc-tip"></div>
         <div class="card-a rc-room" hidden><small>ROOM CODE</small><div class="mmcode"><b class="rc-code"></b><button class="btn btn-sm alt rc-copy">COPY</button></div>
           <ol class="mmlist rc-list"></ol><div class="mmhost rc-host" hidden><button type="button" class="fillbots rc-bots" role="switch" aria-checked="true"><span class="cb"></span> FILL WITH BOTS</button><button class="btn btn-md rc-start" data-sfx="play">START</button></div>
