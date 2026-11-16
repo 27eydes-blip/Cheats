@@ -685,9 +685,12 @@ export class RaceRenderer {
       this.base(g);
       g.globalAlpha = 1;
       // brake lights: bright red at the tail while braking (rivals: the BRAKE flag; you: your BRAKE)
-      if (c.me ? this.meBrake && c.spd > 40 : c.f & FLAG.BRAKE) {
+      // (held a quarter second and faded: a bot taps the brake for a tick or two, ~2 times a second,
+      // and the lights blinked with every tap)
+      v.brk = (c.me ? this.meBrake && c.spd > 40 : c.f & FLAG.BRAKE) ? 0.25 : Math.max(0, v.brk - dt);
+      if (v.brk > 0) {
         const tl = taillightsOf(st);
-        g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.95;
+        g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.95 * Math.min(1, v.brk / 0.1);
         for (let q = 0; q < tl.length; q++) { const o = tl[q], bx = c.x + rox + (cos * o[0] - sin * o[1]) * CAR_VIS * sc, by = c.y + roy + (sin * o[0] + cos * o[1]) * CAR_VIS * sc; g.drawImage(this.glow.red, bx - 15, by - 15, 30, 30); }
         g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
       }
