@@ -290,15 +290,25 @@ export function drawCar(g, id, look = null, t = 0) {
 // texture per look instead of 32 keeps the GPU's work and memory flat.
 const COLS = 8, MS = 1.5; // masters are drawn 1.5x finer than the cells so rotating them stays crisp
 export class CarSprites {
-  constructor() { this.scale = 0; this.map = new Map(); }
-  setScale(s) { if (Math.abs(s - this.scale) > 0.01) { this.scale = s; this.map.clear(); } }
+  // budget: how many looks may be (re)built now (the race renderer sets it every frame; unset = no limit)
+  constructor() { this.scale = 0; this.map = new Map(); this.old = null; this.budget = undefined; }
+  // a new pixel scale: the sprites at the old scale keep being drawn (a sprite blits at its world
+  // size whatever its pixels) until each look is rebuilt, one per frame, instead of every car's
+  // glow being baked again in the same frame
+  setScale(s) { if (Math.abs(s - this.scale) > 0.01) { this.scale = s; if (this.map.size) this.old = this.map; this.map = new Map(); } }
   // look: a look object (looks.js) or a driver id. Returns a sprite {cv, sx, sy, px, ang, half, pa, pb}.
   get(look, a) {
     const L = asLook(look);
     let arr = this.map.get(L.sprite);
     if (!arr) {
-      if (this.map.size >= 24) this.map.clear(); // more looks than a race can have: start over
-      arr = this.masters(L); this.map.set(L.sprite, arr);
+      const o = this.old && this.old.get(L.sprite);
+      if (o && this.budget === 0) arr = o;
+      else {
+        if (this.budget > 0) this.budget--;
+        if (this.map.size >= 24) this.map.clear(); // more looks than a race can have: start over
+        arr = this.masters(L); this.map.set(L.sprite, arr);
+        if (this.old && this.map.size >= this.old.size) this.old = null;
+      }
     }
     let b = Math.round((a / (Math.PI * 2)) * BUCKETS) % BUCKETS;
     if (b < 0) b += BUCKETS;
@@ -306,7 +316,8 @@ export class CarSprites {
   }
   canvas(w, h) { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; return cv; }
   masters(L) {
-    const arr = new Array(BUCKETS).fill(null), px = Math.ceil(HALF * 2 * this.scale), m = Math.ceil(HALF * 2 * this.scale * MS), ms = this.scale * MS;
+    const arr = new Array(BUCKETS).fill(null); arr.s = this.scale;
+    const px = Math.ceil(HALF * 2 * this.scale), m = Math.ceil(HALF * 2 * this.scale * MS), ms = this.scale * MS;
     const layer = (fn) => { const cv = this.canvas(m, m), g = cv.getContext('2d'); SB = ms; g.setTransform(ms, 0, 0, ms, m / 2, m / 2); fn(g); noGlow(g); return cv; };
     arr.base = layer((g) => drawLayers(g, L, true, false));
     arr.neon = layer((g) => drawLayers(g, L, false, true));
@@ -319,7 +330,7 @@ export class CarSprites {
     return arr;
   }
   build(b, arr) {
-    const s = this.scale, px = Math.ceil(HALF * 2 * s), sx = (b % COLS) * px, sy = Math.floor(b / COLS) * px, ang = (b / BUCKETS) * Math.PI * 2;
+    const s = arr.s, px = Math.ceil(HALF * 2 * s), sx = (b % COLS) * px, sy = Math.floor(b / COLS) * px, ang = (b / BUCKETS) * Math.PI * 2;
     const put = (atlas, master, gloss) => {
       const g = atlas.getContext('2d');
       g.setTransform(1, 0, 0, 1, 0, 0); g.save(); g.beginPath(); g.rect(sx, sy, px, px); g.clip();
