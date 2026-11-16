@@ -18,6 +18,8 @@ import { applyRace, raceResult } from './results.js';
 
 const cleanName = (s) => (s || '').replace(/[^\p{L}\p{N} _\-.!]/gu, '').trim().slice(0, 14) || 'Racer';
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+// who is this, across races of one room: their session token, or (no token) their name
+const whoOf = (q) => (q.get('token') ? 't:' + q.get('token') : 'n:' + cleanName(q.get('name')));
 const sendJSON = (ws, msg) => { try { ws.send(JSON.stringify(msg)); } catch {} };
 export const REJOIN_GRACE_MS = 25000;
 export const PUBLIC_MODES = ['grand', 'elim', 'battle'];
@@ -129,13 +131,17 @@ export class RaceRoom {
   // FRIEND ROOM: the settings of a new race. The room keeps its mode, track choice and bots between
   // races; only the last race's host (or the first one into a fresh room) chooses again.
   roomRace(mname, q) {
-    const rc = this.roomCfg, name = cleanName(q.get('name'));
+    const old = this.sim, oh = old && old.hostStart ? old.players.get(old.hostId) : null;
+    const prevHost = oh ? oh.who : null, mine = !this.roomCfg || !prevHost || prevHost === whoOf(q);
     let cfg;
-    if (!rc || rc.hostName === name) cfg = raceConfig(mname, q, !!this.env.HUNT_DEV);
-    else cfg = { ...rc.cfg, track: rc.cfg.any ? pick(TRACK_IDS) : rc.cfg.track };
-    // the host's bots switch in the room lobby carries over to the next race
-    if (rc && rc.hostName !== name && typeof rc.bots === 'boolean') cfg.bots = rc.bots;
-    this.roomCfg = { cfg, hostName: rc && rc.hostName !== name ? rc.hostName : name, bots: cfg.bots };
+    if (mine) cfg = raceConfig(mname, q, !!this.env.HUNT_DEV);
+    else {
+      const rc = this.roomCfg.cfg;
+      // same mode and track choice; the bots switch as the host left it in the last lobby
+      cfg = { ...rc, track: rc.any ? pick(TRACK_IDS) : rc.track, bots: old ? old.fillBots : rc.bots };
+    }
+    this.roomCfg = { cfg };
+    this.prevHost = prevHost; // they get the room back when they come in for this race
     return cfg;
   }
 
@@ -188,8 +194,9 @@ export class RaceRoom {
     const id = sim.join(name, DRIVERS[d] ? d : 'volt');
     if (id == null) return null;
     const p = sim.players.get(id);
+    p.who = whoOf(q);
     // the last race's host gets the room back when they come in for the next one
-    if (sim.hostStart && this.roomCfg && this.roomCfg.hostName === name) sim.hostId = id;
+    if (sim.hostStart && this.prevHost && this.prevHost === p.who) { sim.hostId = id; this.prevHost = null; }
     p.secret = crypto.randomUUID();
     const token = q.get('token');
     if (token && this.env.DB) {

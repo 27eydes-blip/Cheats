@@ -15,6 +15,11 @@ import { EMOTES } from '../catalog.js';
 import { MAX_POWER, POWER_COST, GADGET_AT, STAR_AT, GADGETS, STARS, clampPower, powerMult } from '../power.js';
 import { WEAPONS, WEAPON_IDS, WEAPON_CLASSES, weaponStats, withPerks, masteryInfo, MASTERY_SKINS, perksFor } from '../weapons.js';
 import { EVENTS, EVENT_IDS } from '../events/index.js';
+import { DRIVERS, DRIVER_IDS } from '../race/physics.js';
+import { RACE_MODES } from '../race/protocol.js';
+import { TRACK_IDS } from '../race/tracks.js';
+import { drawCarStage, paintPreview, driverStats, weaponOf, trackLabel, TRACK_CHOICES } from '../race/preview.js';
+import { drawCar } from '../race/cars.js';
 
 const INK = '#1b1033';
 const $ = (id) => document.getElementById(id);
@@ -23,6 +28,7 @@ const ROLE_COL = { Balanced: '#ffb000', Tank: '#ff7b39', Sniper: '#19b6a6', Cont
 // one shop/claim/login request at a time: a double tap must not send it twice
 let busy = false;
 const guard = async (fn) => { if (busy) return; busy = true; try { await fn(); } catch (e) { toastErr(e.message); } finally { busy = false; } };
+export const toastMsg = (msg) => toastErr(msg);
 function toastErr(msg) { const t = $('toast'); if (!t) return; t.textContent = msg; t.hidden = false; setTimeout(() => { t.hidden = true; }, 2000); }
 const stash = (ids) => { const s = $('formStash'); for (const id of ids) { const el = $(id); if (el) s.appendChild(el.closest('label') && el.closest('label').parentElement !== s ? el.closest('label') : el); } };
 
@@ -379,21 +385,24 @@ export function openSettings(api, onDone) {
     ${icon('music')}<label>MUSIC <input type="range" class="slider" id="volMusic" min="0" max="1" step="0.05"></label>
     ${icon('speaker')}<label>SOUND EFFECTS <input type="range" class="slider" id="volSfx" min="0" max="1" step="0.05"></label>
     <span></span><div id="setSlot" style="display:flex;flex-direction:column;gap:10px"></div>
-    ${icon('target')}<label>AIM SENSITIVITY <input type="range" class="slider" id="setSens" min="0.5" max="2" step="0.05"></label>
+    ${api.racing ? '' : `${icon('target')}<label>AIM SENSITIVITY <input type="range" class="slider" id="setSens" min="0.5" max="2" step="0.05"></label>`}
     <span></span><div style="display:flex;flex-direction:column;gap:10px">
-      <label class="opt"><input type="checkbox" id="setLeft"> Left-handed controls (aim on the left)</label>
-      <label class="opt"><input type="checkbox" id="setHold"> Hold to fire (instead of fire on release)</label></div></div>
-    <p class="hint">Reduce Flashing removes flashes, strobes and screen shake. Low Graphics turns off the moving lobby background, particles, shadows and slime animation. Hold to fire keeps shooting while your thumb is on the aim stick.</p>
+      <label class="opt"><input type="checkbox" id="setLeft"> ${api.racing ? 'Left-handed controls (buttons on the left, steer on the right)' : 'Left-handed controls (aim on the left)'}</label>
+      ${api.racing ? '' : '<label class="opt"><input type="checkbox" id="setHold"> Hold to fire (instead of fire on release)</label>'}</div></div>
+    <p class="hint">${api.racing ? 'Reduce Flashing removes flashes and screen shake. Low Graphics turns off particles and moving backgrounds for a smoother race on older phones.' : 'Reduce Flashing removes flashes, strobes and screen shake. Low Graphics turns off the moving lobby background, particles, shadows and slime animation. Hold to fire keeps shooting while your thumb is on the aim stick.'}</p>
     <p style="color:var(--gold);font-family:var(--font)">Created by Sam Eyde III</p></div>`;
   for (const id of ['setSound', 'setFlash', 'setLow']) { const l = $(id).closest('label') || $(id); $('setSlot').appendChild(l); }
   $('volMusic').value = SETTINGS.musicVol ?? 0.6; $('volSfx').value = SETTINGS.sfxVol ?? 0.9;
   $('volMusic').oninput = (e) => { setSetting('musicVol', +e.target.value); setMusicVolume(); };
   $('volSfx').oninput = (e) => { setSetting('sfxVol', +e.target.value); };
   $('volSfx').onchange = () => sfx('click');
-  $('setSens').value = SETTINGS.aimSens ?? 1; $('setLeft').checked = !!SETTINGS.leftHanded; $('setHold').checked = !!SETTINGS.holdFire;
-  $('setSens').oninput = (e) => setSetting('aimSens', +e.target.value);
+  $('setLeft').checked = !!SETTINGS.leftHanded;
   $('setLeft').onchange = (e) => { setSetting('leftHanded', e.target.checked); dispatchEvent(new Event('resize')); };
-  $('setHold').onchange = (e) => setSetting('holdFire', e.target.checked);
+  if (!api.racing) {
+    $('setSens').value = SETTINGS.aimSens ?? 1; $('setHold').checked = !!SETTINGS.holdFire;
+    $('setSens').oninput = (e) => setSetting('aimSens', +e.target.value);
+    $('setHold').onchange = (e) => setSetting('holdFire', e.target.checked);
+  }
 }
 
 // a friend room plays the mode its host picks here (the host also starts it and sets bots in the room)
@@ -519,6 +528,7 @@ const MODE_NAMES = { showdown: 'SHOWDOWN', bounty: 'BOUNTY RUSH', hunted: 'HUNTE
 const tile = (n, label) => `<div class="stile"><b>${n}</b><span>${label}</span></div>`;
 const ribbon = (txt, extra = '') => `<div class="ribbonhead" ${extra}>${txt}</div>`;
 export function renderProfilePage(el, api, onDone) {
+  if (api.racing) return renderRaceProfile(el, api, onDone);
   const p = A.progress(), lv = levelInfo(p.xp), modes = p.modes || {};
   const top3 = Object.values(modes).reduce((t, m) => t + (m.top3 || 0), 0);
   const name = api.prefs.name || 'Hunter';
@@ -552,4 +562,134 @@ export function renderLockerPage(el, api, onDone) {
   for (const cv of el.querySelectorAll('canvas[data-wpn]')) { const c = fitCanvas(cv); R.drawWeaponDrop(c.g, c.w / 2, c.h / 2, cv.dataset.wpn, 1, 0); }
   for (const sec of el.querySelectorAll('.lsec[data-open]')) sec.onclick = (e) => { const t = e.target.closest('[data-who]'); openLocker(api, onDone, sec.dataset.open === 'shop' ? 'skins' : sec.dataset.open, t ? t.dataset.who : null); };
   el.querySelector('.lsec[data-armory]').onclick = () => openArmory(api, onDone);
+}
+
+// ======================================================================= HUNT RACERS
+const fmtT = (s) => (s == null ? '--' : `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, '0')}`);
+const TRACK_BLURB = { any: 'A different track every race', desert: 'Canyon jumps and sand traps', frozen: 'Slippery ice sections', ashlands: 'Lava, geysers and fire', neon: 'Tight corners under neon' };
+const ARENA_BLURB = { any: 'A different arena every match', desert: 'Open sand bowl', frozen: 'Ice rink, low grip', ashlands: 'Lava pits in the middle', neon: 'Pillars and arc towers' };
+
+// DRIVER SELECT: every driver with their car, trophies; a card opens the driver's detail
+export function openDriverSelect(api, onDone) {
+  const S = screen('DRIVERS', '', onDone);
+  const grid = document.createElement('div'); grid.className = 'grid-cards drivers'; S.body.appendChild(grid);
+  const draw = () => {
+    const p = A.progress(), had = grid.contains(document.activeElement) ? document.activeElement.dataset.b : null;
+    grid.innerHTML = DRIVER_IDS.map((d) => { const D = DRIVERS[d]; return `<div class="card-b bcard dcard tap ${d === api.getBrawler() ? 'sel' : ''}" tabindex="0" role="button" aria-label="${D.name}, ${D.car}" data-b="${d}" style="--card-col:${D.color}"><canvas data-b="${d}"></canvas><div class="title bc-name">${D.name}</div><div class="dc-car">${esc(D.car)}</div><div class="dc-stats">${driverStats(d).map((r) => `<span>${r.label}</span><i><b style="width:${Math.round(r.f * 100)}%"></b></i>`).join('')}</div><div class="dc-wpn">${esc(weaponOf(d).name)}</div><div class="bc-tro">🏆 ${p.trophies[d] | 0}</div></div>`; }).join('');
+    for (const c of grid.querySelectorAll('.bcard')) c.onclick = () => openDriverDetail(api, c.dataset.b, () => draw());
+    if (had) grid.querySelector(`[data-b="${had}"]`)?.focus({ preventScroll: true });
+  };
+  draw();
+  S.loop((t) => { for (const cv of grid.querySelectorAll('canvas[data-b]')) { const { g, w, h } = fitCanvas(cv); drawCarStage(g, w, h, cv.dataset.b, SETTINGS.reduceFlash ? 0 : t + cv.dataset.b.length); } });
+}
+
+// a tiny looping picture of the built-in weapon going off
+function weaponDemo(g, w, h, id, t) {
+  g.fillStyle = '#3b3550'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(255,255,255,.25)'; g.lineWidth = 2; g.setLineDash([10, 10]); g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke(); g.setLineDash([]);
+  const k = (t % 1.6) / 1.6, s = h / 70, x = w * 0.22, y = h / 2;
+  g.lineCap = 'round';
+  if (id === 'volt' && k > 0.2) { g.strokeStyle = '#7fe8ff'; g.lineWidth = 3; g.beginPath(); g.moveTo(x + 20 * s, y); for (let i = 1; i <= 6; i++) g.lineTo(x + 20 * s + (w * 0.5 * i) / 6, y + (i % 2 ? -8 : 8) * s * (1 - k)); g.stroke(); }
+  if (id === 'brick' && k > 0.1) { g.strokeStyle = `rgba(255,170,80,${1 - k})`; g.lineWidth = 4; g.beginPath(); g.arc(x, y, k * 60 * s, 0, 7); g.stroke(); }
+  if (id === 'wisp' && k > 0.15 && k < 0.6) { g.strokeStyle = '#5ef2c6'; g.lineWidth = 5 * (0.6 - k) * 4; g.beginPath(); g.moveTo(x + 20 * s, y); g.lineTo(w, y); g.stroke(); }
+  if (id === 'dune') for (let i = 0; i < 3; i++) { const mx = x - 22 * s - i * 26 * s; if (k > i * 0.25) { g.fillStyle = '#e8b04a'; g.strokeStyle = INK; g.lineWidth = 2; g.beginPath(); g.arc(mx + w * 0.4, y + 14 * s, 6 * s, 0, 7); g.fill(); g.stroke(); } }
+  if (id === 'rook') { g.fillStyle = '#7fa34a'; g.strokeStyle = INK; g.lineWidth = 2; g.fillRect(w * 0.55, y + 10 * s, 14 * s, 14 * s); g.strokeRect(w * 0.55, y + 10 * s, 14 * s, 14 * s); if (k % 0.4 < 0.2) { g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(w * 0.55 + 7 * s + (k % 0.4) * 300 * s, y + 17 * s - (k % 0.4) * 120 * s, 3 * s, 0, 7); g.fill(); } }
+  if (id === 'flicker' && k > 0.3) { g.strokeStyle = 'rgba(255,95,162,.8)'; g.lineWidth = 6; g.beginPath(); g.moveTo(x, y); g.lineTo(x + w * 0.45 * Math.min(1, (k - 0.3) * 4), y); g.stroke(); }
+  const cx = id === 'flicker' && k > 0.35 ? x + w * 0.45 : x;
+  g.save(); g.translate(cx, y); g.scale(s * 0.9, s * 0.9); drawCar(g, id); g.restore();
+}
+
+function openDriverDetail(api, id, onClose) {
+  const D = DRIVERS[id], p = A.progress(), W = weaponOf(id);
+  const el = document.createElement('div'); el.className = 'detail driver'; el.hidden = true;
+  el.innerHTML = `<div class="card-b" style="--card-col:${D.color}">
+    <div><canvas class="portrait"></canvas><div class="title" style="font-size:calc(var(--u)*4);text-align:center">${D.name}</div>
+      <div style="text-align:center"><span class="role" style="--role-col:${D.color}">${esc(D.role.toUpperCase())}</span> <span class="np-tro">🏆 ${p.trophies[id] | 0}</span></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+      <div class="dd-car">${esc(D.car.toUpperCase())}</div>
+      <div class="stats">${driverStats(id).map((r) => `<span>${r.label}</span><div class="bar shine"><i style="width:${Math.round(r.f * 100)}%"></i></div><span class="num">${r.v}</span>`).join('')}</div>
+      <div class="abil"><canvas data-demo="weapon"></canvas><div><h4>WEAPON · ${esc(W.name)}</h4><p>${esc(W.desc)} Recharges in ${W.cd} s.</p></div></div>
+      <div class="detail-actions"><button class="btn btn-md alt" data-x>CLOSE</button><button class="btn btn-md" data-x data-sel>SELECT</button></div>
+    </div></div>`;
+  document.body.appendChild(el);
+  openScreen(el);
+  const close = async () => { await closeScreen(el); el.remove(); onClose?.(); };
+  for (const b of el.querySelectorAll('[data-x]')) b.onclick = async () => { if (b.dataset.sel !== undefined) api.setBrawler(id); await close(); };
+  el.addEventListener('pointerdown', (e) => { if (e.target === el) close(); });
+  const t0 = performance.now();
+  const tick = (now) => {
+    if (!el.isConnected) return;
+    const t = SETTINGS.reduceFlash ? 0 : (now - t0) / 1000;
+    const pc = fitCanvas(el.querySelector('.portrait'));
+    drawCarStage(pc.g, pc.w, pc.h, id, t);
+    const c = fitCanvas(el.querySelector('canvas[data-demo]'));
+    weaponDemo(c.g, c.w, c.h, id, (now - t0) / 1000);
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+// TRACK PICKER: the 4 tracks (or their battle arenas) + Random, each with a preview of the layout
+export function openTrackPicker({ track, arena, best = {}, trial = false }, onPick) {
+  const S = screen(arena ? 'CHOOSE AN ARENA' : 'CHOOSE A TRACK');
+  S.body.innerHTML = `<div class="track-grid">${TRACK_CHOICES.map((k) => `<button class="card-b tcard tap ${k === track ? 'sel' : ''}" data-k="${k}" aria-label="${esc(trackLabel(k, arena))}"><canvas data-k="${k}" aria-hidden="true"></canvas><span class="title tc-name">${esc(trackLabel(k, arena))}</span><span class="tc-sub">${esc((arena ? ARENA_BLURB : TRACK_BLURB)[k] || '')}${trial && best[k] ? ` · best ${fmtT(best[k])}` : ''}</span></button>`).join('')}</div>`;
+  for (const c of S.body.querySelectorAll('.tcard')) c.onclick = () => { sfx('click'); onPick(c.dataset.k); S.close(); };
+  requestAnimationFrame(() => requestAnimationFrame(() => { for (const cv of S.body.querySelectorAll('canvas[data-k]')) paintPreview(cv, cv.dataset.k, arena); }));
+  const re = () => { if (!S.el.isConnected) return removeEventListener('resize', re); for (const cv of S.body.querySelectorAll('canvas[data-k]')) paintPreview(cv, cv.dataset.k, arena); };
+  addEventListener('resize', re);
+}
+
+// PLAY WITH FRIENDS (races): everyone types the same code; the first one in is the host, whose
+// mode / track / bots the room plays, and who presses START. Late friends wait for the next race.
+const ROOM_RACE_MODES = ['grand', 'elim', 'battle']; // (Time Trial is solo)
+const SHORT_TRACK = { desert: 'DESERT', frozen: 'FROZEN LAKE', ashlands: 'ASHLANDS', neon: 'NEON CITY' };
+export function openRaceFriends(api) {
+  const code = $('room').value || '';
+  let mode = ROOM_RACE_MODES.includes(api.raceMode?.()) ? api.raceMode() : 'grand';
+  let track = TRACK_CHOICES.includes(api.raceTrack?.()) ? api.raceTrack() : 'any';
+  const P = popup(`<div class="title" style="font-size:calc(var(--u)*3.4)">RACE WITH FRIENDS</div>
+    <p class="outlined rf-help">Same code, same room. The first one in is the host: they pick the race and press START.</p>
+    <div id="roomSlot" class="rf-row"><button class="btn btn-md alt" id="newCode">NEW CODE</button></div>
+    <div class="chips rf-chips" id="roomModes"></div>
+    <div class="chips rf-chips" id="roomTracks"></div>
+    <div class="rf-row"><button type="button" class="fillbots" id="rfBots" role="switch"><span class="cb"></span> FILL WITH BOTS</button><button class="btn btn-md alt" id="shareCode">${icon('share')} COPY INVITE</button><button class="btn btn-md" id="roomPlay" data-sfx="play">GO</button></div>
+    <button class="btn btn-sm alt" data-close>CLOSE</button>`, { onClose: () => stash(['room']) });
+  P.el.classList.add('racefriends');
+  const room = $('room'); room.classList.add('field'); room.value = code; $('roomSlot').prepend(room);
+  const chips = (id, list, cur, label, set) => { $(id).innerHTML = list.map((k) => `<button class="chipbtn ${k === cur ? 'on' : ''}" data-k="${k}">${esc(label(k))}</button>`).join(''); for (const b of $(id).children) b.onclick = () => { set(b.dataset.k); draw(); }; };
+  const bots = () => !$('bots') || $('bots').checked;
+  const draw = () => {
+    chips('roomModes', ROOM_RACE_MODES, mode, (k) => RACE_MODES[k].name.toUpperCase(), (k) => { mode = k; });
+    chips('roomTracks', TRACK_CHOICES, track, (k) => (k === 'any' ? 'RANDOM' : SHORT_TRACK[k]), (k) => { track = k; });
+    $('rfBots').setAttribute('aria-checked', String(bots())); $('rfBots').querySelector('.cb').classList.toggle('on', bots());
+  };
+  draw();
+  $('rfBots').onclick = () => { const bx = $('bots'); if (bx) { bx.checked = !bx.checked; bx.dispatchEvent(new Event('change')); } sfx('click', 0.6); draw(); api.refresh?.(); };
+  const fresh = () => Math.random().toString(36).slice(2, 7).toUpperCase();
+  const clean = () => room.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  $('newCode').onclick = () => { room.value = fresh(); };
+  $('shareCode').onclick = async () => {
+    if (!clean()) room.value = fresh();
+    const link = `${location.origin}/?room=${clean()}`, t = `Race me in Hunt! Room ${clean()}: ${link}`;
+    try { if (navigator.share) await navigator.share({ text: t }); else { await navigator.clipboard.writeText(t); toastErr('Invite copied'); } } catch {}
+  };
+  $('roomPlay').onclick = () => { if (!clean()) room.value = fresh(); room.value = clean(); const r = room.value; api.saveName?.(); P.close(); api.startRace({ room: r, mode, track }); };
+}
+
+// PROFILE (racing): totals, race stats, best laps / Time Trial bests per track, drivers
+const RACE_MODE_TAGS = { race_grand: 'GRAND RACE', race_elim: 'ELIMINATION RACE', race_battle: 'BATTLE ARENA' };
+function renderRaceProfile(el, api, onDone) {
+  const p = A.progress(), lv = levelInfo(p.xp), modes = p.modes || {}, R = p.race || {};
+  const name = api.prefs.name || 'Racer';
+  const rows = TRACK_IDS.map((k) => `<tr><td>${esc(trackLabel(k))}</td><td>${fmtT(R.bestLap?.[k])}</td><td>${fmtT(R.best?.[k])}</td></tr>`).join('');
+  el.innerHTML = `
+    <div class="phead card-a"><div class="ph-name"><div class="pname title">${esc(name)}</div><div class="ph-lv">Level ${lv.level}</div></div>
+      <svg class="bigshield" viewBox="0 0 64 72"><path d="M32 3 L59 12 V36 C59 53 46 64 32 69 C18 64 5 53 5 36 V12 Z" fill="#ffc83d" stroke="#1b1033" stroke-width="4" stroke-linejoin="round"/><path d="M32 11 L51 17 V36 C51 48 42 56 32 60 C22 56 13 48 13 36 V17 Z" fill="#8e2a3a"/><path d="M32 11 V60 C22 56 13 48 13 36 V17 Z" fill="#b2423f"/><text x="32" y="45" text-anchor="middle" font-family="Lilita One" font-size="26" fill="#fff" stroke="#1b1033" stroke-width="4" paint-order="stroke">${lv.level}</text></svg>
+      <div class="ph-tot"><div><b>${R.wins | 0}</b><span>Race wins</span></div><div><b>${totalTrophies(p)}</b><span>Trophies</span></div></div></div>
+    ${ribbon('RACING')}<div class="stiles">${tile(R.races | 0, 'Races')}${tile(R.wins | 0, 'Wins')}${tile(R.trials | 0, 'Time Trials')}${tile(Object.keys(RACE_MODE_TAGS).reduce((t, k) => t + (modes[k]?.kills | 0), 0), 'Takedowns')}</div>
+    ${ribbon('BEST TIMES')}<div class="card-a" style="padding:8px"><table class="stat-table race-times"><tr><th>TRACK</th><th>BEST LAP</th><th>TIME TRIAL</th></tr>${rows}</table></div>
+    ${Object.entries(RACE_MODE_TAGS).filter(([k]) => modes[k]?.games).map(([k, n]) => `${ribbon(n)}<div class="stiles">${tile(modes[k].wins | 0, 'Wins')}${tile(modes[k].top3 | 0, 'Top 3s')}${tile(modes[k].games | 0, 'Races')}${tile(modes[k].kills | 0, 'Takedowns')}</div>`).join('') || `<p class="hint">Race to fill in your stats for each mode.</p>`}
+    ${ribbon('DRIVERS')}<div class="stiles six">${DRIVER_IDS.map((d) => `<div class="stile"><b>${p.trophies[d] | 0}</b><span>${DRIVERS[d].name} · ${esc(DRIVERS[d].car)}</span></div>`).join('')}</div>
+    <div style="display:flex;justify-content:center;margin:10px 0 4px"><button class="btn btn-md alt" id="pgAccount">${icon('user')} NAME &amp; ACCOUNT</button></div>`;
+  el.querySelector('#pgAccount').onclick = () => openProfile(api, onDone);
 }

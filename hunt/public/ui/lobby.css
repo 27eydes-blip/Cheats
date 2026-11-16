@@ -394,3 +394,52 @@ body.reduce-flash .ucard { opacity: 1; transform: none; }
 :focus-visible, input:focus-visible, .field:focus-visible, textarea:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 input:focus-visible, .field:focus-visible { outline-offset: 1px; box-shadow: 0 0 0 6px var(--ink); }
 .ui-screen:focus-visible, .ui-pop:focus-visible, .detail:focus-visible { outline: none; }
+
+/* ---------- HUNT RACERS: play page (modes, track with its preview, your driver's car), driver
+   select, track picker, race friends ---------- */
+.lobby.racing .trackbtn .tpv { flex: none; width: calc(var(--u) * 8); height: calc(var(--u) * 5); min-height: 26px; min-width: 40px; border: 3px solid var(--ink); border-radius: 6px; background: #12091e; pointer-events: none; }
+.lobby.racing .trackbtn { --mc: #2b9c6c; }
+.lobby.racing .fillbots.na { opacity: .45; }
+.np-car { font-family: var(--font-ui); font-weight: 700; color: var(--text-dim); font-size: max(var(--t-xs), calc(var(--u) * 1.35)); text-align: center; line-height: 1.15; }
+@media (orientation: portrait) {
+  .lobby.racing .trackbtn { grid-column: span 2; }
+  .lobby.racing .modelist { grid-auto-rows: minmax(var(--tap), auto); }
+}
+@media (orientation: portrait) and (max-height: 740px) {
+  .lobby.racing .slot.me .np-car { grid-area: 3 / 2; }
+}
+.grid-cards.drivers .dcard { aspect-ratio: auto; padding: calc(var(--u) * .8) 4px calc(var(--u) * .8); gap: 2px; }
+.dcard canvas { width: 100%; aspect-ratio: 4 / 3; margin: 0; }
+.dcard .bc-name { margin-top: 0; }
+.dcard .dc-car { font-family: var(--font-ui); font-weight: 700; color: #fff; font-size: max(var(--t-xs), calc(var(--u) * 1.4)); text-align: center; }
+.detail.driver .dd-car { font-family: var(--font); color: var(--gold); font-size: max(var(--t-sm), calc(var(--u) * 2.6)); -webkit-text-stroke: 1px var(--ink); paint-order: stroke; }
+.detail.driver .abil canvas { background: #3b3550; }
+.track-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(var(--u) * 24)), 1fr)); gap: calc(var(--u) * 1.6); padding: calc(var(--u) * 2) 4px; }
+.tcard { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 6px 6px 8px; cursor: pointer; color: #fff; font-family: var(--font); text-align: left; min-height: var(--tap); }
+.tcard canvas { width: 100%; aspect-ratio: 16 / 9; border: 3px solid var(--ink); border-radius: 8px; background: #12091e; pointer-events: none; }
+.tcard .tc-name { font-size: max(var(--t-sm), calc(var(--u) * 2.4)); }
+.tcard .tc-sub { font: 700 max(var(--t-xs), calc(var(--u) * 1.4)) var(--font-ui); color: var(--text-dim); }
+.tcard.sel { outline: 4px solid var(--gold); outline-offset: 3px; }
+@media (orientation: landscape) and (max-height: 430px) { .track-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); padding-top: 8px; } .tcard canvas { aspect-ratio: 2 / 1; } }
+.racefriends .rf-help { color: #fff; font-size: max(var(--t-sm), calc(var(--u) * 1.6)); margin: 2px 0 4px; max-width: 34em; }
+.racefriends .rf-row { display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 4px 0; }
+.racefriends .rf-chips { justify-content: center; margin: 4px 0; }
+.racefriends .fillbots { min-height: var(--tap); }
+.racefriends .rf-row .btn { min-height: var(--tap); }
+
+/* the racing lobby's tiled pattern: steering wheel, chequered flag, star, bolt */
+#lobby.lobby.racing { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='%232a1a6a' stroke-opacity='.28' stroke-width='5' stroke-linejoin='round' stroke-linecap='round'%3E%3Ccircle cx='40' cy='40' r='20'/%3E%3Ccircle cx='40' cy='40' r='5'/%3E%3Cpath d='M40 45v15M35 38l-14-4M45 38l14-4'/%3E%3Cpath d='M122 70V18h34v24h-34M133 18v24M144 18v24M122 30h34'/%3E%3Cpath d='M126 128l6 13 14 2-10 10 3 14-13-7-13 7 3-14-10-10 14-2z'/%3E%3Cpath d='M48 108l-14 24h13l-7 22 21-28H48l8-18z'/%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 60% 40%, #7a63dc 0%, #5a45b8 55%, #3d2c8a 100%); }
+.lobby.racing .modebtn.sel .mn small { display: block; } /* the picked mode always says what it is */
+@media (orientation: portrait) and (min-height: 741px) { .lobby.racing .modebtn .mn small { display: block; } }
+/* driver cards: the four car stats as small bars + the built-in weapon */
+.dcard .dc-stats { width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; padding: 2px 8px; font: 700 var(--t-xs)/1.15 var(--font-ui); color: #fff; }
+.dcard .dc-stats span { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dcard .dc-stats i { display: block; height: 6px; border-radius: 3px; background: rgba(18,9,30,.55); overflow: hidden; }
+.dcard .dc-stats b { display: block; height: 100%; background: #fff; border-radius: 3px; }
+.dcard .dc-wpn { font-family: var(--font); color: #fff; font-size: max(var(--t-xs), calc(var(--u) * 1.4)); -webkit-text-stroke: 1px var(--ink); paint-order: stroke; }
+.racefriends .rf-chips { flex-wrap: wrap; overflow: visible; }
+.racefriends .rf-chips .chipbtn { min-height: var(--tap); }
+.racefriends #roomPlay { min-width: calc(var(--tap) * 2); }
+.grid-cards.drivers { grid-template-columns: repeat(auto-fit, minmax(calc(var(--u) * 17), 1fr)); }
+.dcard .dc-stats { padding: 2px 6px; letter-spacing: -.01em; }

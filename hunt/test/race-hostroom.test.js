@@ -74,6 +74,15 @@ C.send({ t: 'host', start: 1 }); await settle(); tick(room);
 assert.strictEqual(room.sim.phase, 'play', 'bots on: Cid can start alone');
 assert.strictEqual(room.sim.players.size, 10, 'bots filled the grid');
 
+// ---------------------------------------------------------------- same names: the first one in hosts
+const S1 = client({ name: 'Racer', driver: 'volt', room: 'TWINS', token: 'tok-one' });
+await S1.connect(); await settle();
+const S2 = client({ name: 'Racer', driver: 'wisp', room: 'TWINS', token: 'tok-two' });
+await S2.connect(); await settle();
+const twins = env.rooms.get('room:TWINS');
+assert.strictEqual(twins.sim.hostId, S1.id, 'a second racer with the same name does not take the room');
+assert.strictEqual(S2.lobby.host, S1.id);
+
 // ---------------------------------------------------------------- safety net + timed rooms
 const D = client({ name: 'Dot', driver: 'rook', room: 'IDLE1', mode: 'grand', bots: 1 });
 await D.connect(); await settle();

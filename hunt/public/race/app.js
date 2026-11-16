@@ -21,6 +21,18 @@ const CREDIT = 'Created by Sam Eyde III';
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ORD = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
 const DPR_STEPS = [2, 1.5, 1.25, 1];
+// shown on the pre-race card while you wait
+export const RACE_TIPS = [
+  'Hold DRIFT through a bend: blue, then orange, then purple sparks. Let go for a turbo.',
+  'The leader glows gold. Wreck them to steal their coins and get a boost.',
+  'Further back = better items. A bad start is not the end.',
+  'Ramps launch you over hazards. Nothing on the ground can hit you mid-air.',
+  'Shortcuts are narrow. Some only work with a boost.',
+  'Wrecked? You are back on track in 2 seconds, laps kept.',
+  'FIRE is your car\'s own weapon. It recharges; use it often.',
+  'A shield blocks one hit. Save it for when someone is right behind you.',
+  'Ice slides, sand and snow slow you down, lava burns. Stay on the road.',
+];
 const IDLE_VIEW = { tick: 0, time: 0, countdown: 0, cars: [], ents: [], boxesOff: [], hazardsOn: 0, leader: 0, ranks: [], hud: {}, me: null };
 
 function ensureCss() {
@@ -45,7 +57,12 @@ class RaceSession {
     const root = (this.root = document.createElement('div'));
     root.className = 'rc-root';
     root.innerHTML = `<canvas class="rc-cv"></canvas>
-      <div class="rc-wait" hidden><div class="rc-wt title">GET READY</div><div class="rc-wm"></div><div class="rc-wl"></div><div class="rc-ws"></div><div class="rc-wr"></div><button class="btn btn-md red rc-cancel">CANCEL</button></div>
+      <div class="rc-wait" hidden><div class="rc-wt title">GET READY</div><div class="rc-wm"></div><div class="rc-wl"></div><div class="rc-ws"></div><div class="rc-tip"></div>
+        <div class="card-a rc-room" hidden><small>ROOM CODE</small><div class="mmcode"><b class="rc-code"></b><button class="btn btn-sm alt rc-copy">COPY</button></div>
+          <ol class="mmlist rc-list"></ol><div class="mmhost rc-host" hidden><button type="button" class="fillbots rc-bots" role="switch" aria-checked="true"><span class="cb"></span> FILL WITH BOTS</button><button class="btn btn-md rc-start" data-sfx="play">START</button></div>
+          <div class="mmwait rc-hw"></div></div>
+        <button class="btn btn-md red rc-cancel">CANCEL</button></div>
+      <div class="rc-toast" hidden></div>
       <div class="rc-menu" hidden><div class="rc-mp"><div class="title">PAUSED</div><p>The race keeps going!</p><button class="btn btn-lg rc-resume">RESUME</button><button class="btn btn-md red rc-leave">LEAVE RACE</button></div></div>
       <div class="rc-fail" hidden><div class="rc-mp"><div class="title">OOPS</div><p class="rc-fm"></p><button class="btn btn-md rc-back">BACK TO LOBBY</button></div></div>
       <div class="res rc-res" hidden></div>
@@ -62,6 +79,10 @@ class RaceSession {
     $('.rc-resume').onclick = () => this.toggleMenu(false);
     $('.rc-leave').onclick = () => this.exit();
     $('.rc-back').onclick = () => this.exit();
+    // friend room: COPY the invite, and the host's START / FILL WITH BOTS
+    $('.rc-copy').onclick = () => this.copyRoom();
+    $('.rc-start').onclick = () => { this.rc?.host({ start: 1 }); play('click'); };
+    $('.rc-bots').onclick = () => { const on = !(this.rc?.lobby?.bots); this.rc?.host({ bots: on }); this.o.onBots?.(on); play('click'); };
     // safe-area insets for canvas-drawn things (CSS uses env() directly)
     this.sa = document.createElement('div');
     this.sa.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
@@ -84,7 +105,9 @@ class RaceSession {
     const s = this;
     return {
       session: s, get rc() { return s.rc; }, get phase() { return s.rc?.phase; }, get view() { return s.view; },
-      layout: () => ({ W: s.W, H: s.H, btn: s.ctrl.btn, mode: s.ctrl.mode }),
+      layout: () => ({ W: s.W, H: s.H, btn: s.ctrl.btn, mode: s.ctrl.mode, gauge: s.hud.gauge || null }),
+      // where your car is drawn on screen (CSS px), for the camera safe-box test
+      carOnScreen: () => { const R = s.renderer, c = R.meCar; if (!c) return null; const M = R.M; return { x: (c.x * M.s + M.x) / R.dpr, y: (c.y * M.s + M.y) / R.dpr, f: c.f, W: R.W, H: R.H }; },
       dev: (k, item) => s.rc?.send({ t: 'dev', k, item }),
       perf: () => s.perfStats(), resetPerf: () => { s.perfN = 0; },
       dpr: () => s.dpr, finishShown: () => s.endShown, mine: s.mine = {},
@@ -100,8 +123,10 @@ class RaceSession {
     const rc = (this.rc = new RaceClient({ base: o.base || location.origin.replace(/^http/, 'ws'), params }));
     rc.on('welcome', () => { this.renderer.setTrack(rc.T); this.idleCam(); this.showWait(); });
     rc.on('lobby', (m) => this.updateWait(m));
+    rc.on('roomwait', (m) => this.showRoomWait(m));
     rc.on('start', () => {
       this.$('.rc-wait').hidden = true;
+      this.root.classList.add('racing');
       this.renderer.setTrack(rc.T);
       this.hud = new Hud();
       this.startedAt = performance.now();
@@ -110,7 +135,7 @@ class RaceSession {
       this.bestLapSeen = rc.mode === 'trial' ? this.bestSplits?.lap || null : null;
     });
     rc.on('end', () => { this.endTimer = 1.6; });
-    rc.on('progress', (m) => this.applyProgress(m));
+    rc.on('progress', (m) => { this.o.onProgress?.(m); this.applyProgress(m); });
     rc.on('failed', () => this.fail('Lost the connection to the race.'));
     rc.on('retry', (m) => this.fail(m.reason === 'Race full' ? 'That race is full. Try another room code.' : 'That race already started. Try again in a moment.'));
     rc.on('rejoinfail', () => this.fail('Could not get back into the race.'));
@@ -118,17 +143,75 @@ class RaceSession {
   }
 
   // ---------------------------------------------------------------- screens
+  // the pre-race card: mode + track, who is in, a rotating tip, and for a friend room the room card
+  // (code + COPY always on screen; the host gets FILL WITH BOTS and START)
   showWait() {
     const rc = this.rc, w = this.$('.rc-wait');
     w.hidden = false;
+    this.$('.rc-wt').textContent = rc.room ? 'FRIENDS ROOM' : rc.mode === 'trial' ? 'TIME TRIAL' : 'FINDING RACERS';
     this.$('.rc-wm').textContent = `${RACE_MODES[rc.mode]?.name || 'Race'} · ${trackName(rc.trackKey, rc.arena) || ''}`;
-    this.$('.rc-wr').textContent = rc.room ? `ROOM ${rc.room}` : '';
+    this.roomCard(rc.room);
+    this.tips();
+  }
+  roomCard(code) {
+    const w = this.$('.rc-wait');
+    w.classList.toggle('room', !!code);
+    this.$('.rc-room').hidden = !code;
+    this.$('.rc-code').textContent = code || '';
+  }
+  tips() {
+    if (this.tipTimer) return;
+    let i = Math.floor(Math.random() * RACE_TIPS.length);
+    const el = this.$('.rc-tip'), next = () => { el.textContent = RACE_TIPS[i++ % RACE_TIPS.length]; };
+    next();
+    this.tipTimer = setInterval(next, 4500);
   }
   updateWait(m) {
     if (this.rc.phase !== 'lobby') return;
+    const rc = this.rc;
     this.$('.rc-wait').hidden = false;
     this.$('.rc-wl').innerHTML = m.players.map(([n, d]) => `<span class="rc-chip" style="--c:${DRIVERS[d]?.color || '#fff'}"><i></i>${esc(n)}</span>`).join('');
-    this.$('.rc-ws').textContent = m.startIn != null ? `${m.players.length}/${m.max} racers · starts in ${Math.ceil(m.startIn)}` : !m.bots ? 'Waiting for another racer (bots off)' : `${m.players.length}/${m.max} racers · starting soon`;
+    const n = `${m.players.length}/${m.max} racers`;
+    if (rc.room && m.ids) {
+      // host-run friend room
+      const amHost = m.host === rc.id, hi = m.ids.indexOf(m.host), hostName = hi >= 0 ? m.players[hi][0] : 'the host';
+      this.$('.rc-wt').textContent = 'FRIENDS ROOM';
+      this.$('.rc-list').innerHTML = m.players.map(([nm], i) => `<li class="${m.ids[i] === m.host ? 'host' : ''}${m.ids[i] === rc.id ? ' me' : ''}">${esc(nm)}${m.ids[i] === m.host ? ' <small>HOST</small>' : ''}${m.ids[i] === rc.id ? ' <small>YOU</small>' : ''}</li>`).join('');
+      this.$('.rc-host').hidden = !amHost;
+      const bots = this.$('.rc-bots');
+      bots.setAttribute('aria-checked', String(!!m.bots)); bots.querySelector('.cb').classList.toggle('on', !!m.bots);
+      this.$('.rc-start').disabled = !m.can;
+      this.$('.rc-ws').textContent = `${n} in the room${m.startIn != null ? ` · starts by itself in ${Math.ceil(m.startIn)}` : ''}`;
+      this.$('.rc-hw').textContent = amHost ? (m.can ? 'Press START when everyone is here.' : 'Bots are off: waiting for a friend to join.') : `Waiting for ${hostName} to start.`;
+      return;
+    }
+    this.$('.rc-list').innerHTML = ''; this.$('.rc-host').hidden = true; this.$('.rc-hw').textContent = '';
+    this.$('.rc-ws').textContent = m.startIn != null ? `${n} · starts in ${Math.ceil(m.startIn)}` : !m.bots ? 'Waiting for another racer (bots are off)' : `${n} · starting soon`;
+  }
+  // a friend room that is mid-race: we are held for its next race
+  showRoomWait(m) {
+    this.$('.rc-wait').hidden = false;
+    this.$('.rc-wt').textContent = 'FRIENDS ROOM';
+    this.$('.rc-wm').textContent = `${RACE_MODES[m.mode]?.name || 'Race'}${m.track ? ` · ${trackName(m.track, RACE_MODES[m.mode]?.arena) || ''}` : ''}`;
+    this.roomCard(m.room || this.o.room || '');
+    this.$('.rc-wl').innerHTML = '';
+    this.$('.rc-list').innerHTML = ''; this.$('.rc-host').hidden = true;
+    this.$('.rc-ws').textContent = `Your friends are mid-race${m.left != null ? ` (about ${Math.floor(m.left / 60)}:${String(m.left % 60).padStart(2, '0')} left)` : ''}`;
+    this.$('.rc-hw').textContent = "You'll join their next race. Stay here, or CANCEL.";
+    this.tips();
+  }
+  async copyRoom() {
+    const code = this.rc?.room || this.o.room || '';
+    if (!code) return;
+    const link = `${location.origin}/?room=${encodeURIComponent(code)}`;
+    let ok = false;
+    try { await navigator.clipboard.writeText(`Race me in Hunt! Room ${code}: ${link}`); ok = true; } catch {}
+    this.toast(ok ? 'Invite copied' : `Room code: ${code}`);
+  }
+  toast(msg) {
+    const t = this.$('.rc-toast');
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(this.toastT); this.toastT = setTimeout(() => { t.hidden = true; }, 1800);
   }
   idleCam() { const g = this.rc.T.grid[0]; const c = this.renderer.cam; c.x = g.x; c.y = g.y; c.z = this.renderer.baseZoom(); c.lx = c.ly = 0; c.init = true; }
   toggleMenu(open) {
@@ -155,6 +238,7 @@ class RaceSession {
     if (this.dead) return;
     this.dead = true;
     cancelAnimationFrame(this.raf);
+    clearInterval(this.tipTimer); clearTimeout(this.toastT);
     try { if (this.rc && this.rc.phase !== 'idle') this.rc.leave(); } catch {}
     this.ctrl.destroy();
     removeEventListener('resize', this.onResize);
@@ -167,6 +251,7 @@ class RaceSession {
   showEnd() {
     const rc = this.rc, m = rc.results, el = this.$('.rc-res');
     this.endShown = true;
+    this.root.classList.remove('racing'); // (the finish screen works upright)
     this.$('.rc-menu').hidden = true;
     const me = m.results.find((r) => r[0] === m.you) || [];
     const battle = m.mode === 'battle', out = rc.me?.out;
