@@ -292,6 +292,13 @@ class RaceSession {
     if (save) setSetting('raceView', this.camName);
     const R = this.renderer, tl = R.setCamera(this.camName);
     this.cv.style.transform = tl.css; this.cv.style.transformOrigin = tl.origin;
+    // Top-down (no tilt): the HUD draws straight onto the world canvas like it always did, and the
+    // HUD canvas keeps a 1 px backing store (it still takes the touches): a second full-screen
+    // canvas to clear, redraw and composite every frame cost phones ~8 fps for nothing
+    this.flat = !tl.css;
+    const hw = this.flat ? 1 : Math.round(this.W * this.dpr), hh = this.flat ? 1 : Math.round(this.H * this.dpr);
+    if (this.hcv.width !== hw || this.hcv.height !== hh) { this.hcv.width = hw; this.hcv.height = hh; }
+    else if (this.flat) this.hg.clearRect(0, 0, 1, 1);
     // the sky the tilt leaves at the top fades into the track through a fog band
     const gap = Math.round(skyGap(tl));
     this.fog.style.height = tl.css ? `${gap + Math.round(this.H * 0.2)}px` : '0px';
@@ -415,15 +422,18 @@ class RaceSession {
     this.W = innerWidth; this.H = innerHeight;
     this.dpr = SETTINGS.lowGfx ? 1 : Math.min(DPR_STEPS[this.dprStep], devicePixelRatio || 1);
     this.renderer.resize(this.W, this.H, this.dpr);
-    this.hcv.width = Math.round(this.W * this.dpr); this.hcv.height = Math.round(this.H * this.dpr);
     this.setCam(this.camName, false);
     this.ctrl.layout(this.W, this.H, this.SA);
     if (this.tut) this.tut.box = null;
   }
   // render at a lower pixel ratio when frames get slow, back up when there is room
   adapt(ms) {
-    this.frameAvg += (ms - this.frameAvg) * 0.05;
-    if (this.frameAvg > 18.5) { this.slowFor += ms; this.fastFor = 0; } else if (this.frameAvg < 13) { this.fastFor += ms; this.slowFor = 0; } else this.slowFor = this.fastFor = 0;
+    // (one long frame - a GC, a tab switch, the GPU catching up - is not slowness: counted as at
+    // most 50 ms in the average, or a single hitch dropped the resolution, and the rebuild at the new
+    // size hitched again)
+    // (the time spent slow counts up to 250 ms a frame: a really slow phone steps down as soon as before)
+    this.frameAvg += (Math.min(ms, 50) - this.frameAvg) * 0.05;
+    if (this.frameAvg > 18.5) { this.slowFor += Math.min(ms, 250); this.fastFor = 0; } else if (this.frameAvg < 13) { this.fastFor += ms; this.slowFor = 0; } else this.slowFor = this.fastFor = 0;
     const eff = (k) => (SETTINGS.lowGfx ? 1 : Math.min(DPR_STEPS[k], devicePixelRatio || 1));
     if (this.slowFor > 1500 && this.dprStep < DPR_STEPS.length - 1) {
       this.slowFor = 0;
@@ -482,13 +492,14 @@ class RaceSession {
     } else {
       // pre-race: the track behind the lobby card (also warms the chunk cache around the grid)
       R.draw(IDLE_VIEW, rc, dt, now);
-      const hg = this.hg; hg.setTransform(1, 0, 0, 1, 0, 0); hg.clearRect(0, 0, this.hcv.width, this.hcv.height);
+      if (!this.flat) { const hg = this.hg; hg.setTransform(1, 0, 0, 1, 0, 0); hg.clearRect(0, 0, this.hcv.width, this.hcv.height); }
     }
   }
   // the un-tilted screen layer: speed lines / blur / streaks, the cockpit bonnet, then the HUD
   screenLayer(v, dt, slow) {
-    const rc = this.rc, R = this.renderer, g = this.hg, S = this.sp, car = R.meCar;
-    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, this.hcv.width, this.hcv.height);
+    const rc = this.rc, R = this.renderer, g = this.flat ? R.g : this.hg, S = this.sp, car = R.meCar;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    if (!this.flat) g.clearRect(0, 0, this.hcv.width, this.hcv.height);
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const c = rc.car, spd = car ? car.spd : 0;
     this.speed.level(car && !(car.f & FLAG.DEAD) && v.countdown <= 0 ? spd : 0, R.top || 900, car && car.f & FLAG.BOOST ? 1 : 0, dt);

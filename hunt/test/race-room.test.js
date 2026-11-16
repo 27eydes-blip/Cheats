@@ -93,12 +93,14 @@ for (const ev of [evA, evB]) {
 sp(A).item = 'turbo';
 A.useItem();
 for (let i = 0; i < 5; i++) tick();
-assert.strictEqual(sp(A).item, null);
-assert.ok(A.drainEvents().some((e) => e[0] === 'use' && e[1] === A.id));
+// (used: gone, unless the bot driving A ran through an item box in those ticks and got a new one)
+const evItem = A.drainEvents();
+assert.ok(evItem.some((e) => e[0] === 'use' && e[1] === A.id));
+assert.ok(sp(A).item === null || evItem.some((e) => e[0] === 'box' && e[1] === A.id && e[3] >= 0), 'the item was used up');
 
 // a wreck: B is destroyed, the server holds it for exactly 2 s, then B drives on with its lap
 while (!ready(B)) tick();
-sp(B).shieldT = 0; // (a shield from an item box would block the hit)
+sp(B).shieldT = 0; sp(B).protT = 0; // (a shield from an item box, or the after-hit protection, would block the hit)
 const lapB = sp(B).lap;
 room.sim.damage(sp(B), sp(A), 999, 'rail');
 tick();
