@@ -46,10 +46,13 @@ export class Screens {
           btn('Garage', () => this.garage()),
           h('div', { class: 'row' }, btn('Settings', () => this.settings(() => this.title()), { cls: 'small' }), btn('How to Drive', () => this.howTo(() => this.title()), { cls: 'small' })),
         ),
-        h('div', { style: { marginTop: '14px' } }, this.coins()),
-        credits(),
+        h('div', { style: { marginTop: '10px' } }, this.coins()),
       ),
     ));
+    // credits pinned to the bottom of the title screen so they are always on view
+    const foot = credits(); foot.classList.add('footer');
+    this.app.ui.append(foot);
+    this.app.ui.firstElementChild!.classList.add('titled');
   }
 
   howTo(next: () => void) {
@@ -239,7 +242,7 @@ export class Screens {
         podium,
         h('table', {}, ...rows),
         h('div', { class: 'earned coins', style: { color: '#7a5418' } }, `+${earned} coins`),
-        h('div', { class: 'credits', style: { color: '#3a2a10' } }, h('b', { style: { color: '#5a3d12' } }, 'Gleyde Technologies, LLC'), ' · Created by Sam Eyde III'),
+        h('div', { class: 'credits', style: { color: '#3a2a10' } }, h('b', { style: { color: '#5a3d12' } }, 'Gleyde Technologies, LLC'), ' · Created by Sam Eyde III', h('br', {}), 'Juwon Shon, COO'),
       ),
       h('div', { class: 'menu', style: { marginTop: '18px' } }, btn(o.label, o.next, { cls: 'primary' }), h('div', { class: 'row' }, btn('Race Again', o.retry, { cls: 'small' }), btn('Garage', () => this.garage(), { cls: 'small' }))),
     ));

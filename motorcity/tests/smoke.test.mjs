@@ -45,7 +45,7 @@ const snap = async (page, n) => { if (shots) await page.screenshot({ path: join(
 
 async function race(page, name) {
   const text = await page.textContent('body');
-  if (!text.includes('Gleyde Technologies, LLC') || !text.includes('Created by Sam Eyde III')) fail(`${name}: credits missing on title`);
+  if (!text.includes('Gleyde Technologies, LLC') || !text.includes('Created by Sam Eyde III') || !text.includes('Juwon Shon, COO')) fail(`${name}: credits missing on title`);
   await page.waitForTimeout(800);
   await snap(page, `${name}-title`);
   await page.evaluate(() => window.__mc.screens.quick());
@@ -84,7 +84,7 @@ async function flow(page, name) {
   await finishRace(page);
   await snap(page, `${name}-results`);
   const body = await page.textContent('body');
-  if (!body.includes('Gleyde Technologies, LLC') || !body.includes('Created by Sam Eyde III')) fail(`${name}: credits missing on results`);
+  if (!body.includes('Gleyde Technologies, LLC') || !body.includes('Created by Sam Eyde III') || !body.includes('Juwon Shon, COO')) fail(`${name}: credits missing on results`);
   if (!/coins/.test(body)) fail(`${name}: no coins on results`);
   const coins = await page.evaluate(() => window.__mc.app.save.coins);
   if (coins <= 250) fail(`${name}: no coins earned (${coins})`);

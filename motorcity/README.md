@@ -4,7 +4,7 @@ A mobile-first pseudo-3D racing game set in 1910s Detroit and New York, shot lik
 picture: sepia streets of cobblestones and brick, one hand-tinted motor car, ragtime piano and the
 mighty **Ah-oo-gah** klaxon.
 
-**Gleyde Technologies, LLC · Created by Sam Eyde III**
+**Gleyde Technologies, LLC · Created by Sam Eyde III · Juwon Shon, COO**
 
 ## Play
 

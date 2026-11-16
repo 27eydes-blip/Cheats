@@ -32,7 +32,7 @@ export function btn(label: string, onClick: () => void, opts: { cls?: string; su
 export function rule() { return h('div', { class: 'rule' }); }
 
 export function credits() {
-  return h('div', { class: 'credits' }, h('b', {}, 'Gleyde Technologies, LLC'), ' · Created by Sam Eyde III');
+  return h('div', { class: 'credits' }, h('b', {}, 'Gleyde Technologies, LLC'), ' · Created by Sam Eyde III', h('br', {}), 'Juwon Shon, COO');
 }
 
 export function toast(text: string) {
