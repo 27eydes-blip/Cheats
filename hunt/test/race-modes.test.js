@@ -3,6 +3,7 @@
 import assert from 'node:assert';
 import { RaceSim, FINISH_TIMEOUT, RACE_MODES } from '../src/race/sim.js';
 import { DT } from '../public/race/physics.js';
+import { elimSchedule } from '../public/race/protocol.js';
 import { mkRace, ticks, startRace, collectEvents } from './race-helpers.js';
 
 const runToEnd = (sim, max = 30 * 400) => { let n = 0; while (sim.phase !== 'end' && n++ < max) sim.tick(); return sim; };
@@ -47,9 +48,11 @@ assert.deepStrictEqual(Object.keys(RACE_MODES), ['grand', 'elim', 'battle', 'tri
   assert.ok(sim.order.filter((p) => !p.finished).every((p, i, arr) => i === 0 || arr[i - 1].prog >= p.prog), 'non-finishers by distance');
 }
 
-// ELIMINATION: last place out every 18 s from 30 s until one remains
+// ELIMINATION: last place cut on the schedule (25 s, then every 18 s, every 12 s from 4 left, the final
+// duel on 8 s) until one remains. (The black hole is off here: test/race-elim.test.js covers it.)
 {
   const sim = mkRace({ mode: 'elim', track: 'ashlands', fillBots: true, botLevel: 'normal' });
+  sim.bhOff = true;
   const [A] = startRace(sim, ['dune']);
   A.bot = true;
   const ev = collectEvents(sim);
@@ -59,7 +62,9 @@ assert.deepStrictEqual(Object.keys(RACE_MODES), ['grand', 'elim', 'battle', 'tri
   runToEnd(sim);
   const outs = ev.filter((e) => e[1] === 'elim');
   assert.strictEqual(outs.length, 9, 'nine knocked out');
-  outs.forEach((e, i) => assert.ok(Math.abs(e[0] - (30 + 18 * i)) < DT * 1.5, `elimination ${i + 1} at ${30 + 18 * i}s (was ${e[0]})`));
+  const at = elimSchedule(10);
+  assert.deepStrictEqual(at, [25, 43, 61, 79, 97, 115, 127, 139, 147]);
+  outs.forEach((e, i) => assert.ok(Math.abs(e[0] - at[i]) < DT * 1.5, `elimination ${i + 1} at ${at[i]}s (was ${e[0]})`));
   assert.ok(snapshots.every(Boolean), 'always the racer in last place');
   assert.deepStrictEqual(outs.map((e) => e[3]), [10, 9, 8, 7, 6, 5, 4, 3, 2], 'places from the back');
   const win = sim.order[0];

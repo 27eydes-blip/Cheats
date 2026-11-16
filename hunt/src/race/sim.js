@@ -5,7 +5,7 @@ import { DT, TICK_RATE, CAR_R, DRIVERS, DRIVER_IDS, newCar, stepCar, collideCars
 import { getTrack, TRACK_IDS } from '../../public/race/tracks.js';
 import { pointAt, hwAt, nearestS } from '../../public/race/trackgeom.js';
 import { ITEMS, ITEM_IDS, rollItem, WEAPONS, itemStat, MAX_LEVEL, COMBAT } from '../../public/race/items.js';
-import { FLAG, ENT, COUNTDOWN, RESPAWN_TIME, RACE_MODES, TUTORIAL_MODE, TUT_STEPS, RESET_COOLDOWN, STUCK_NUDGE, STUCK_RESET } from '../../public/race/protocol.js';
+import { FLAG, ENT, COUNTDOWN, RESPAWN_TIME, RACE_MODES, TUTORIAL_MODE, TUT_STEPS, RESET_COOLDOWN, STUCK_NUDGE, STUCK_RESET, ELIM, elimInterval, EMOTES } from '../../public/race/protocol.js';
 import { BOT_NAMES, rng } from '../../public/shared.js';
 import { botInput, levelForTrophies } from './bots.js';
 import { cosRow } from '../../public/race/garage.js';
@@ -77,8 +77,12 @@ export class RaceSim {
     this.order = []; // current ranking (player objects)
     this.finishAt = null; // when the race ends after the winner finished
     this.places = 0; // finishers so far
-    this.elimNext = this.mode.every ? this.mode.first : null;
+    this.elimNext = this.mode.every ? ELIM.first : null;
     this.outCount = 0;
+    // ELIMINATION: cutIv = length of the running cut timer (s), cutN = racers when it was set, bh = the
+    // black hole's race distance (px, same scale as p.prog), dangerId = the racer in last place (cut next)
+    this.cutIv = ELIM.first; this.cutN = 0; this.bh = null; this.dangerId = 0; this.duel = false; this.cuts = 0;
+    this.bhOff = false; // (tests: the cut schedule on its own)
     this.ended = false;
   }
 
@@ -99,6 +103,8 @@ export class RaceSim {
       // weapons: il item level (1-3), protT hit protection, phaseT Ghost Mode, shieldN hits a shield still blocks,
       // drAt when DRIFT was last pressed (missile dodge), dodges / combos (stats for tests and bots)
       il: 0, protT: 0, phaseT: 0, shieldN: 0, drAt: -9, drAt0: -9, drPrev: 0, dodges: 0, combos: 0,
+      // elimination: outAt race time knocked out, outBy 'cut' | 'hole' | 'left', bursts takedown boosts, emoAt last emote
+      outAt: null, outBy: null, bursts: 0, emoAt: -1e9, emo: -1,
     };
     this.players.set(id, p);
     return p;
@@ -153,7 +159,8 @@ export class RaceSim {
     if (!p || p.wasBot || p.left) return null;
     p.left = true; p.secret = null;
     if (this.phase !== 'play') return null;
-    return this.resultRow(p, this.players.size);
+    // knocked out already (an Elimination spectator leaving): their place is settled
+    return this.resultRow(p, p.out ? p.place : this.players.size);
   }
   rejoin(id) {
     const p = this.players.get(id);
@@ -210,6 +217,10 @@ export class RaceSim {
     this.time = -COUNTDOWN;
     this.tickN = 0;
     this.rank();
+    if (this.modeKey === 'elim') {
+      this.cutN = this.players.size;
+      this.bh = Math.min(...this.order.map((p) => p.prog)) - ELIM.hole.start; // behind the back of the grid
+    }
     for (const p of this.players.values()) {
       if (!p.connected) continue;
       this.send(p.id, this.startMsg(p));
@@ -230,6 +241,7 @@ export class RaceSim {
     if (m.t === 'host') return this.hostCmd(p, m);
     if (m.t === 'reset') { if (!p.bot) p.resetReq = 1; return; } // applied inside the next tick
     if (m.t === 'horn') { if (this.phase === 'play') p.honk = 1; return; } // applied in the next tick (rate-limited there)
+    if (m.t === 'emote') { if (this.phase === 'play' && p.out && Number.isInteger(m.e) && m.e >= 0 && m.e < EMOTES.length) p.emo = m.e; return; } // spectators only
     if (m.t !== 'in' || p.bot) return;
     const inp = cleanInput(m);
     inp.s = m.s >>> 0; inp.f = m.f ? 1 : 0; inp.i = m.i ? 1 : 0;
@@ -248,6 +260,9 @@ export class RaceSim {
       const p = this.players.get(id);
       if (!p || this.phase !== 'play' || this.time <= 0) continue;
       if (m.k === 'wreck') this.destroy(p, null, 'fall');
+      else if (m.k === 'cut' && this.modeKey === 'elim' && this.racers() > 1) { this.rank(); this.eliminate(p, 'cut'); this.rank(); } // knock yourself out (spectate)
+      else if (m.k === 'cutnow' && this.modeKey === 'elim') this.elimNext = this.time; // the next cut this tick
+      else if (m.k === 'hole' && this.modeKey === 'elim' && !p.out) this.bh = this.progress(p) - (Number(m.gap) > 0 ? Math.min(2000, Number(m.gap)) : 350); // the black hole right behind you
       else if (m.k === 'item' && ITEM_IDS.includes(m.item) && !p.item) { p.item = m.item; p.il = Math.max(1, Math.min(MAX_LEVEL, m.lv | 0 || 1)); }
       else if (m.k === 'aim' && ITEM_IDS.includes(m.item)) {
         let q = null, bd = Infinity;
@@ -280,6 +295,10 @@ export class RaceSim {
     for (const p of this.players.values()) if (p.honk) {
       p.honk = 0;
       if (p.connected && !p.out && this.time - p.hornAt >= HORN_GAP) { p.hornAt = this.time; this.events.push(['horn', p.id]); }
+    }
+    for (const p of this.players.values()) if (p.emo >= 0) {
+      if (this.time - p.emoAt >= ELIM.emoteGap) { p.emoAt = this.time; this.events.push(['emo', p.id, p.emo]); }
+      p.emo = -1;
     }
     const go = this.time > 0;
     for (const p of this.players.values()) this.drive(p, go);
@@ -493,6 +512,10 @@ export class RaceSim {
     const list = [...this.players.values()];
     for (const p of list) if (!p.finished && !p.out) p.prog = this.mode.arena ? 0 : this.progress(p);
     if (this.mode.arena) list.sort((a, b) => b.kills - a.kills || a.deaths - b.deaths || a.id - b.id);
+    // ELIMINATION tie-break (who is cut when two racers are level): distance to the pixel, then the
+    // racer who was behind on the previous tick, then the later grid slot (higher id) is behind
+    else if (this.modeKey === 'elim') list.sort((a, b) => (a.out - b.out) || (b.out && a.out ? a.place - b.place : 0)
+      || (Math.round(b.prog) - Math.round(a.prog)) || ((a.rank || 0) - (b.rank || 0)) || a.id - b.id);
     else list.sort((a, b) => (a.out - b.out) || (b.out && a.out ? a.place - b.place : 0)
       || (b.finished - a.finished) || (a.finished ? a.place - b.place : b.prog - a.prog) || a.id - b.id);
     list.forEach((p, i) => { p.rank = i + 1; });
@@ -506,12 +529,8 @@ export class RaceSim {
     if (this.time <= 0) return;
     const active = [...this.players.values()].filter((p) => !p.out);
     if (this.modeKey === 'elim') {
-      if (this.time >= this.elimNext && active.length > 1) {
-        const last = this.order.filter((p) => !p.out).pop();
-        this.eliminate(last);
-        this.elimNext += this.mode.every;
-      }
-      if (this.racers() <= 1) return this.finish();
+      this.elimTick();
+      if (this.racers() <= 1 || this.humans().every((p) => p.left)) return this.finish();
     } else if (this.modeKey === 'battle') {
       if (this.time >= this.mode.time) return this.finish();
     } else if (this.mode.tutorial) {
@@ -524,13 +543,56 @@ export class RaceSim {
       if (!running.length || (this.finishAt != null && this.time >= this.finishAt) || this.time >= RACE_CAP) return this.finish();
     }
   }
-  eliminate(p) {
+  // ELIMINATION, once a tick after GO. Order inside a tick (deterministic, see PROTOCOL.md):
+  // 1) racers who quit for good with bots off are out (worst first), 2) the black hole moves and
+  // swallows (worst first, never the last racer), 3) the cut takes last place, 4) the timer shrinks
+  // to the interval for the field that is left, 5) the racer in danger and the final duel.
+  elimTick() {
+    const H = ELIM.hole;
+    const live = () => this.order.filter((p) => !p.out);
+    if (!this.fillBots) for (const p of live().reverse()) if (p.left && this.racers() > 1) this.eliminate(p, 'left');
+    if (!this.bhOff && this.bh != null) {
+      const L = live(), last = L[L.length - 1];
+      this.bh += this.holeSpeed() * DT;
+      if (last && last.prog - this.bh > H.leash) this.bh = last.prog - H.leash; // never far behind the pack
+      // (live() is in race order, so a tie in distance goes to the racer ranked lower: see rank())
+      const eat = L.filter((p) => p.prog - this.bh < H.reach).reverse();
+      for (const p of eat) { if (this.racers() <= 1) break; this.eliminate(p, 'hole'); }
+    }
+    if (this.time >= this.elimNext - 1e-9 && this.racers() > 1) {
+      this.eliminate(live().pop(), 'cut');
+      this.cuts++;
+      this.cutIv = elimInterval(this.racers());
+      this.elimNext += this.cutIv;
+      this.cutN = this.racers();
+    }
+    // the hole (or a quitter) took racers: the running timer is never longer than the field's interval
+    if (this.racers() < this.cutN) {
+      const iv = elimInterval(this.racers());
+      if (this.elimNext - this.time > iv) { this.elimNext = this.time + iv; this.cutIv = iv; }
+      this.cutN = this.racers();
+    }
+    this.rank();
+    const L = live();
+    this.dangerId = L.length > 1 ? L[L.length - 1].id : 0;
+    if (L.length === 2 && !this.duel) { this.duel = true; this.events.push(['duel', L[0].id, L[1].id]); }
+  }
+  holeSpeed() { const H = ELIM.hole; return Math.min(H.max, H.base + H.step * this.cuts) * Math.min(1, Math.max(0, this.time) / H.ramp); }
+  // cause: 'cut' (last place when the timer ran out), 'hole' (the black hole), 'left' (quit, bots off)
+  eliminate(p, cause = 'cut') {
     if (!p || p.out) return;
     p.out = true;
     p.place = [...this.players.values()].filter((q) => !q.out).length + 1;
-    p.alive = false;
+    p.alive = false; p.outAt = r3(Math.max(0, this.time)); p.outBy = cause;
     this.outCount++;
-    this.events.push(['elim', p.id, p.place]);
+    // x, y: where the car was (it leaves the snapshots now), for the cut / swallow effect
+    this.events.push(['elim', p.id, p.place, cause, Math.round(p.car.x), Math.round(p.car.y)]);
+  }
+  // TAKEDOWN BOOST (Elimination): knocking a car out or hitting the racer in danger
+  burst(by, why) {
+    if (this.modeKey !== 'elim' || !by || !by.alive || by.out) return;
+    addBoost(by.car, ELIM.burst); by.bursts++;
+    this.events.push(['burst', by.id, why]);
   }
 
   // ------------------------------------------------------------------ combat
@@ -545,6 +607,7 @@ export class RaceSim {
     if (t.shieldT > 0 && kind !== 'lava') { this.popShield(t); return false; }
     t.hp -= amount;
     if (rival) { t.lastHit = { id: src.id, at: this.time }; t.protT = COMBAT.protect; }
+    if (rival && t.hp > 0 && t.id === this.dangerId) this.burst(src, 'danger');
     const big = !!(o && o.big);
     if (kind !== 'lava') this.events.push(['hit', t.id, src ? src.id : 0, kind, Math.round(amount), big ? 1 : 0]);
     if (t.hp <= 0) this.destroy(t, src, kind);
@@ -563,6 +626,7 @@ export class RaceSim {
     if (q.shieldT > 0) { this.popShield(q); return 'shield'; }
     q.car.spinT = Math.max(q.car.spinT, spin); q.car.spinDir = this.rand() < 0.5 ? -1 : 1; q.car.drift = 0; q.car.dc = 0;
     if (rival) { q.lastHit = { id: owner.id, at: this.time }; q.protT = COMBAT.protect; }
+    if (rival && q.id === this.dangerId) this.burst(owner, 'danger');
     this.events.push(['spin', q.id, owner ? owner.id : 0]);
     return true;
   }
@@ -579,6 +643,7 @@ export class RaceSim {
     if (by && by !== p) {
       by.kills++;
       by.mc += COINS.takedown;
+      this.burst(by, 'ko');
       if (this.leaderId === p.id) { // BOUNTY STEAL
         const stolen = Math.ceil(p.mc / 2);
         p.mc -= stolen; by.mc += stolen; by.steals++;
@@ -592,7 +657,9 @@ export class RaceSim {
   respawn(p) {
     const T = this.T;
     if (p.dummy) { p.alive = true; p.hp = p.maxHp; p.ep++; this.parkDummy(); this.events.push(['rs', p.id]); return; }
-    const spot = this.mode.arena ? this.arenaSpot(p) : this.respawnSpot(p);
+    // (Elimination: back where you crashed, on the racing line: the black hole is behind you, and a
+    // trip back to the last checkpoint would hand you to it)
+    const spot = this.mode.arena ? this.arenaSpot(p) : this.modeKey === 'elim' ? this.resetSpot(p) : this.respawnSpot(p);
     p.car = newCar(spot.x, spot.y, spot.a);
     stepCar(p.car, { st: 0, th: 0, dr: 0 }, p.st, T, 0);
     p.alive = true; p.hp = p.maxHp; p.ghostT = GHOST_TIME; p.protT = 0; p.phaseT = 0; p.ep++;
@@ -1104,7 +1171,9 @@ export class RaceSim {
   }
   hud() {
     if (this.modeKey === 'grand' || this.modeKey === 'trial') return { laps: this.laps, ft: this.finishAt != null ? r2(Math.max(0, this.finishAt - this.time)) : null };
-    if (this.modeKey === 'elim') return { nx: r2(Math.max(0, this.elimNext - this.time)), left: this.racers() };
+    // elim: nx s to the cut, iv the timer's length, dg the racer in danger, bh the black hole (race px),
+    // bv its speed, duel 1 = the final two
+    if (this.modeKey === 'elim') return { nx: r2(Math.max(0, this.elimNext - this.time)), left: this.racers(), iv: this.cutIv, dg: this.dangerId, bh: this.bh == null ? null : Math.round(this.bh), bv: Math.round(this.holeSpeed()), duel: this.duel ? 1 : 0 };
     if (this.mode.tutorial) { const h = this.humans()[0]; return { tut: TUT_STEPS[h ? h.tut : 0], tl: r2(Math.max(0, this.mode.time - this.time)) }; }
     return { tl: r2(Math.max(0, this.mode.time - this.time)) };
   }
@@ -1146,6 +1215,8 @@ export class RaceSim {
       mc: p.mc, k: p.kills, d: p.deaths, lt: p.maxLap >= 1 && !p.finished ? r2(this.time - p.lapStart) : 0, bl: p.bestLap,
       fin: p.place && p.finished ? p.place : 0, out: p.out ? p.place : 0, auto: p.finished ? 1 : 0,
       stuck: r1(p.stuck), rcd: r2(p.resetCd),
+      // elim: bg = your lead on the black hole (px; the warning and the dark edges come from it)
+      ...(this.modeKey === 'elim' && this.bh != null && !p.out ? { bg: Math.round(p.prog - this.bh) } : {}),
     };
   }
 
@@ -1154,6 +1225,8 @@ export class RaceSim {
     return {
       p, rank, players: this.players.size, mode: this.modeKey, track: this.trackKey, kills: p.kills, steals: p.steals, mc: p.mc,
       time: p.finishTime, bestLap: p.bestLap, finished: !!p.finished, driver: p.driver, tut: p.tut >= TUT_STEPS.length - 1 ? 1 : 0,
+      // elim: seconds survived (to the knock-out, or the whole race for the winner)
+      ...(this.modeKey === 'elim' ? { surv: r1(p.out ? p.outAt : Math.max(0, this.time)) } : {}),
     };
   }
   finish() {

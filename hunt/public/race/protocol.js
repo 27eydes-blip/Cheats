@@ -11,7 +11,7 @@ export const ENT = ['missile', 'rocket', 'oil', 'spikes', 'mine', 'turret', 'bol
 // the four modes (shown in the lobby; the server reads the rules from here too)
 export const RACE_MODES = {
   grand: { name: 'Grand Race', desc: '3 laps. First across the line wins.', laps: 3, items: true, weapons: true },
-  elim: { name: 'Elimination Race', desc: 'Last place is knocked out every 18 seconds.', laps: 0, items: true, weapons: true, every: 18, first: 30 },
+  elim: { name: 'Elimination Race', desc: 'Last place is cut every 18 seconds. Outrun the black hole.', laps: 0, items: true, weapons: true, every: 18, first: 25 },
   battle: { name: 'Battle Arena', desc: 'Most takedowns in 2 minutes wins.', arena: true, items: true, weapons: true, time: 120 },
   trial: { name: 'Time Trial', desc: 'Just you and the clock. Beat your best time.', laps: 3, solo: true, items: false, weapons: false },
 };
@@ -25,3 +25,25 @@ export const STUCK_NUDGE = 1.5; // s pinned against a wall before the automatic 
 export const STUCK_RESET = 3; // s stuck before the automatic reset
 export const COUNTDOWN = 3; // seconds on the grid before GO
 export const RESPAWN_TIME = 2; // seconds from destroyed to back on track
+// ELIMINATION (see PROTOCOL.md "Elimination"): the cut schedule, the black hole, the takedown boost.
+// Cuts: the first at `first` s, then every `every` s; once `lateAt` racers are left every `late` s; the
+// FINAL DUEL (2 left) runs on `duel` s. Black hole (px along the track, px/s): it starts `start` px behind
+// the last car, moves at `base` + `step` per cut (capped at `max`; it eases up to speed over the first
+// `ramp` s after GO), is never more than `leash` px behind
+// the last racer, and swallows any car whose race distance is within `reach` px of it.
+export const ELIM = {
+  first: 25, every: 18, late: 12, lateAt: 4, duel: 8,
+  hole: { start: 1200, ramp: 4, base: 430, step: 30, max: 760, leash: 1500, reach: 120, warn: 900, r: 210 },
+  burst: { t: 2, p: 1.3 }, // takedown boost: 2 s for knocking a car out or hitting the racer in danger
+  emoteGap: 1.5, // s between two emotes from one spectator
+};
+// the time to the next cut once `left` racers are in the race (after a cut, or when the hole took one)
+export const elimInterval = (left) => (left <= 2 ? ELIM.duel : left <= ELIM.lateAt ? ELIM.late : ELIM.every);
+// the cut times for a field of n racers when only the cuts remove anyone: [25, 43, ...]
+export function elimSchedule(n) {
+  const out = [];
+  for (let t = ELIM.first, left = n; left > 1; left--) { out.push(t); t += elimInterval(left - 1); }
+  return out;
+}
+// spectator emotes (index = wire id)
+export const EMOTES = ['GG', 'WOW', 'GO GO', 'SO CLOSE'];

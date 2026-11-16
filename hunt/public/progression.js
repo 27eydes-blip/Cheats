@@ -218,6 +218,7 @@ export function earnHint(id, name) {
   if (!t) return `Buy ${name} in the Locker`;
   if (t.startsWith('LEVEL')) return `Reach level ${t.slice(6)} to unlock ${name}`;
   if (t.startsWith('ROAD')) return `Reach ${t.slice(5)} trophies on the Trophy Road to unlock ${name}`;
+  if (t === 'ELIMINATION WIN') return `Win an Elimination race to earn ${name}`;
   return `${name} is a GP Pass reward (tier ${t.split(' ').pop()}${t.startsWith('PREMIUM') ? ', premium' : ''})`;
 }
 

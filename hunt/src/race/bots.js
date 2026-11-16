@@ -47,6 +47,7 @@ function newAi(sim, p) {
 export function botInput(sim, p) {
   const L = RACE_BOT_LEVELS[sim.botLevel] || RACE_BOT_LEVELS.normal;
   const ai = p.ai || (p.ai = newAi(sim, p));
+  if (sim.modeKey === 'elim') elimSense(sim, p, ai); else ai.push = 0;
   const out = sim.T.kind === 'arena' ? arenaDrive(sim, p, ai, L) : raceDrive(sim, p, ai, L);
   out.f = 0; out.i = 0;
   if (!p.finished && sim.time > 0) {
@@ -55,10 +56,26 @@ export function botInput(sim, p) {
     if (sim.mode.weapons && p.wcd <= 0 && p.empT <= 0 && (wantWeapon(sim, p, L) || swat(sim, p))) out.f = 1;
     if (p.item && p.empT <= 0) {
       ai.itemHeld += DT;
-      if (ai.itemHeld > L.react && wantItem(sim, p, ai)) { out.i = 1; ai.itemHeld = 0; }
+      if ((ai.itemHeld > L.react && wantItem(sim, p, ai)) || (ai.push && p.item === 'turbo' && ai.itemHeld > 0.2)) { out.i = 1; ai.itemHeld = 0; }
     } else ai.itemHeld = 0;
   }
   return out;
+}
+
+// ELIMINATION sense: flat out (ai.push) when near the back with a cut coming or the black hole
+// close; ai.prey = the racer in danger (weapons and items go for them first). Deterministic: only
+// the sim's state, no randomness.
+export const ELIM_BOT = { cutSoon: 7, backPlaces: 2, holeNear: 1100, preyR: 1500 };
+function elimSense(sim, p, ai) {
+  ai.push = 0; ai.prey = null;
+  if (sim.time <= 0 || p.out) return;
+  const live = sim.order.filter((q) => !q.out), pos = live.indexOf(p), n = live.length;
+  const cutSoon = sim.elimNext - sim.time < ELIM_BOT.cutSoon && pos >= n - ELIM_BOT.backPlaces;
+  const hole = sim.bh != null && !sim.bhOff && p.prog - sim.bh < ELIM_BOT.holeNear;
+  if (cutSoon || hole) ai.push = 1;
+  const d = sim.dangerId && sim.dangerId !== p.id ? sim.players.get(sim.dangerId) : null;
+  // (only when close: hold fire for them, else fight as usual)
+  if (d && d.alive && !d.out && d.ghostT <= 0 && d.protT <= 0 && Math.hypot(d.car.x - p.car.x, d.car.y - p.car.y) < ELIM_BOT.preyR) ai.prey = d;
 }
 
 function stuck(p, ai, sim, inp) {
@@ -98,7 +115,7 @@ function raceDrive(sim, p, ai, L) {
       const ahead = ((sc.entryS - s) % main.len + main.len) % main.len;
       if (ahead > 300 || ai.sc[sc.idx] === p.lap) continue;
       ai.sc[sc.idx] = p.lap;
-      let take = sim.rand() < L.sc;
+      let take = sim.rand() < (ai.push ? Math.max(L.sc, 0.85) : L.sc);
       if (take && sc.needsBoost) take = canJump(sc, p) || p.item === 'turbo';
       if (take) { ai.c = sc.idx; c = sc; tr = trackS(c, car.x, car.y, 0, 3); s = tr.s; ai.i = tr.i; }
       break;
@@ -119,7 +136,7 @@ function raceDrive(sim, p, ai, L) {
   const inp = { st: clamp(err * 2.6, -1, 1), th: 1, dr: 0 };
   // SPEED: the slowest bend ahead, given the braking distance to it (shortcut merges included)
   const look = spd * 1.2 + 260;
-  let target = p.st.top * L.pace * (car.boostT > 0 ? car.boostP : 1), kAhead = 0;
+  let target = p.st.top * (ai.push ? 1 : L.pace) * (car.boostT > 0 ? car.boostP : 1), kAhead = 0;
   const limit = (v, dist) => { const allow = Math.sqrt(v * v + 2 * BRAKE_PLAN * Math.max(0, dist)); if (allow < target) target = allow; };
   if (!c.main && s < 1) { // still on the main road, about to turn into the shortcut
     const m = idxAt(main, c.entryS), turn = Math.abs(angDiff(Math.atan2(main.ty[m], main.tx[m]), Math.atan2(c.ty[0], c.tx[0])));
@@ -205,7 +222,7 @@ function behind(p, q, range) {
 }
 
 function wantWeapon(sim, p, L) {
-  const W = WEAPONS[p.driver], R = rivals(sim, p);
+  const W = WEAPONS[p.driver], R = p.ai && p.ai.prey ? [p.ai.prey] : rivals(sim, p); // (Elimination: the racer in danger first)
   switch (p.driver) {
     case 'volt': return R.some((q) => inCone(p, q, W.range * 0.95, W.cone * L.aim));
     case 'brick': return R.some((q) => q.car.airT <= 0 && Math.hypot(q.car.x - p.car.x, q.car.y - p.car.y) < W.r * 0.9);
@@ -246,7 +263,7 @@ function swat(sim, p) {
 }
 
 function wantItem(sim, p, ai) {
-  const R = rivals(sim, p), c = p.car, I = itemStat(p.item, p.il || 1);
+  const R = ai.prey ? [ai.prey] : rivals(sim, p), c = p.car, I = itemStat(p.item, p.il || 1);
   const threat = sim.ents.some((e) => ((e.kind === 'missile' || e.kind === 'drone') && e.target === p.id && Math.hypot(e.x - c.x, e.y - c.y) < 900) || (e.kind === 'sticky' && e.mode === 'stuck' && e.carrier === p.id && e.fuse < 1.5));
   switch (p.item) {
     case 'missile': return !sim.mode.arena ? (p.rank > 1 || ai.wait > 6) : R.some((q) => Math.hypot(q.car.x - c.x, q.car.y - c.y) < 1400);

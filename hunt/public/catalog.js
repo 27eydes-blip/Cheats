@@ -50,6 +50,7 @@ export const TITLES = {
   sand_strider: 'Sand Strider', crate_crusher: 'Crate Crusher', squad_leader: 'Squad Leader', unstoppable: 'Unstoppable', lay_low: 'Bush Whisperer',
   // level road titles (never sold)
   marksman: 'Marksman', arsenal: 'Walking Arsenal', veteran: 'Veteran', warlord: 'Warlord', nightmare: 'Nightmare', legend: 'Legend of the Grid',
+  last_racer: 'Last Racer Standing', // won an Elimination race (never sold)
 };
 export const LEVEL_TITLES = { 10: 'marksman', 25: 'arsenal', 40: 'veteran', 60: 'warlord', 75: 'nightmare', 100: 'legend' };
 // EMOTES: short call-outs shown over your head in a match. The first two are free.
@@ -89,6 +90,7 @@ export function rewardSource(id) {
     for (const row of PASS) for (const tr of ['free', 'premium']) { const k = itemId(row[tr]); if (k && !RS[k]) RS[k] = `${tr === 'premium' ? 'Premium Pass' : 'GP Pass'} tier ${row.tier}`; }
     for (const [k, s] of Object.entries(SKINS)) if (s.level) RS[k] = `Level ${s.level}`;
     for (const [L, k] of Object.entries(LEVEL_TITLES)) RS[k] = `Level ${L}`;
+    RS.last_racer = 'Elimination win';
   }
   return typeof id === 'string' && own(RS, id) ? RS[id] : null;
 }

@@ -7,6 +7,16 @@
 import { applyMatch, normalize } from '../../public/progression.js';
 
 export const MATCH_COIN_CAP = 40;
+// ELIMINATION extras on top of the usual placement pay (applyMatch: trophies and coins by place, XP
+// and coins per minute survived): coins per takedown (capped), coins per 10 s survived (capped), and
+// the cosmetic title 'Last Racer Standing' for a win (earned once, never sold; shown on the results).
+export const ELIM_PAY = { ko: 2, koCap: 8, perTen: 1, survCap: 15 };
+export const ELIM_TITLE = 'last_racer';
+export function elimBonus(r) {
+  const ko = ELIM_PAY.ko * Math.max(0, Math.min(ELIM_PAY.koCap, r.kills | 0));
+  const surv = ELIM_PAY.perTen * Math.max(0, Math.min(ELIM_PAY.survCap, Math.floor((Number(r.surv) || 0) / 10)));
+  return { ko, surv };
+}
 export const raceTag = (mode) => 'race_' + mode;
 
 // a sim result row ({p, rank, players, mode, track, kills, steals, mc, time, bestLap, driver}) ->
@@ -16,6 +26,8 @@ export function raceResult(row) {
     rank: row.rank, players: row.players, kills: row.kills | 0, bounty: row.steals | 0, brawler: row.driver,
     mode: raceTag(row.mode), won: undefined, assists: 0, steals: row.steals | 0, wstat: {},
     raceMode: row.mode, track: row.track, mc: row.mc | 0, time: row.time ?? null, bestLap: row.bestLap ?? null, tut: row.tut ? 1 : 0,
+    // elim: pay per minute survived (to your knock-out), not a fixed match length
+    ...(row.surv != null ? { surv: row.surv, secs: row.surv } : {}),
   };
 }
 
@@ -46,5 +58,15 @@ export function applyRace(prog, r) {
   rr.races = (rr.races | 0) + 1;
   if (r.rank === 1) rr.wins = (rr.wins | 0) + 1;
   if (r.bestLap != null && (rr.bestLap[r.track] == null || r.bestLap < rr.bestLap[r.track])) rr.bestLap[r.track] = r.bestLap;
+  if (r.raceMode === 'elim') {
+    const b = elimBonus(r), win = r.rank === 1;
+    out.progress.coins += b.ko + b.surv; out.coins += b.ko + b.surv;
+    let title = 0;
+    if (win) {
+      rr.elimWins = (rr.elimWins | 0) + 1;
+      if (!out.progress.owned.includes(ELIM_TITLE)) { out.progress.owned.push(ELIM_TITLE); title = 1; }
+    }
+    out.elim = { ko: b.ko, surv: b.surv, secs: Math.round(Number(r.surv) || 0), win: win ? 1 : 0, title, titleId: win ? ELIM_TITLE : null };
+  }
   return out;
 }
