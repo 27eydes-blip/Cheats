@@ -13,6 +13,7 @@ const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const TAU = Math.PI * 2;
 const P = {}; // probe scratch
 const CAR_VIS = 1.18; // cars are drawn a bit bigger than their hitbox
+export const SAFE_BOX = 0.2; // the followed car stays within ±20% of the screen centre (0.3..0.7 of W and H)
 
 function glowSprite(col, size = 128) {
   const cv = document.createElement('canvas'); cv.width = cv.height = size;
@@ -156,7 +157,7 @@ export class RaceRenderer {
       if (focus.me && rc.car && focus.predicted) { vx = rc.car.vx; vy = rc.car.vy; } else { vx = Math.cos(focus.a) * focus.spd; vy = Math.sin(focus.a) * focus.spd; }
       const spd = Math.hypot(vx, vy), la = clamp(spd / 900, 0, 1.2);
       // keep the car in the middle third: look-ahead capped to a share of the half-screen
-      const zz = cam.z || this.baseZoom(), tlx = clamp(vx * 0.3, -this.W * 0.2 / zz, this.W * 0.2 / zz), tly = clamp(vy * 0.3, -this.H * 0.17 / zz, this.H * 0.17 / zz), kk = 1 - Math.exp(-dt * 3.2);
+      const zz = cam.z || this.baseZoom(), tlx = clamp(vx * 0.3, -this.W * 0.17 / zz, this.W * 0.17 / zz), tly = clamp(vy * 0.3, -this.H * 0.17 / zz, this.H * 0.17 / zz), kk = 1 - Math.exp(-dt * 3.2);
       if (!cam.init) { cam.x = focus.x; cam.y = focus.y; cam.lx = tlx; cam.ly = tly; cam.z = this.baseZoom(); cam.init = true; }
       cam.lx += (tlx - cam.lx) * kk; cam.ly += (tly - cam.ly) * kk;
       cam.x = focus.x + cam.lx * (SETTINGS.reduceFlash ? 0.8 : 1); cam.y = focus.y + cam.ly * (SETTINGS.reduceFlash ? 0.8 : 1);
@@ -165,7 +166,12 @@ export class RaceRenderer {
     }
     cam.shake = Math.max(0, cam.shake - dt * 2.6);
     if (cam.shake > 0 && !SETTINGS.reduceFlash) { const s = cam.shake * cam.shake * 14; cam.sx = (Math.random() - 0.5) * s; cam.sy = (Math.random() - 0.5) * s; } else { cam.sx = cam.sy = 0; }
-    const z = cam.z, cx = cam.x + cam.sx / z, cy = cam.y + cam.sy / z;
+    const z = cam.z;
+    let cx = cam.x + cam.sx / z, cy = cam.y + cam.sy / z;
+    // SAFE BOX: whatever the look-ahead, shake, a respawn or a jump do, your car stays inside the
+    // middle 40% of the screen: clear of the HUD corners, the thumb buttons, the speedometer and the
+    // credit along the bottom
+    if (focus) { const mx = W * SAFE_BOX / z, my = H * SAFE_BOX / z; cx = clamp(cx, focus.x - mx, focus.x + mx); cy = clamp(cy, focus.y - my, focus.y + my); }
     const vw = this.view;
     vw.x0 = cx - W / 2 / z; vw.y0 = cy - H / 2 / z; vw.x1 = cx + W / 2 / z; vw.y1 = cy + H / 2 / z;
     g.setTransform(1, 0, 0, 1, 0, 0);

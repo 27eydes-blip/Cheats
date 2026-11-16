@@ -164,7 +164,9 @@ export class Hud {
     // -------- speedometer + boost / drift meter (bottom centre; the credit sits just below)
     if (car && !(car.f & FLAG.DEAD)) {
       const spd = car.spd, top = DRIVERS[rc.myDriver()]?.top || 800;
-      const gx = cx, gy = H - SA.b - 40 * u, R = 27 * u;
+      // (the ring's lowest point is 23u under its centre; the credit line takes the bottom 18 px)
+      const gx = cx, gy = H - SA.b - 22 - 26 * u, R = 27 * u;
+      this.gauge = { x: gx, y: gy, r: R + 9 * u, bottom: gy + 23 * u };
       g.beginPath(); g.arc(gx, gy, R + 4 * u, Math.PI * 0.8, Math.PI * 2.2); g.lineWidth = 9 * u; g.strokeStyle = INK; g.lineCap = 'round'; g.stroke();
       g.beginPath(); g.arc(gx, gy, R + 4 * u, Math.PI * 0.8, Math.PI * 0.8 + Math.PI * 1.4 * clamp(spd / (top * 1.4), 0, 1)); g.lineWidth = 5 * u;
       g.strokeStyle = car.f & FLAG.BOOST ? '#5ff4ff' : spd > top * 0.95 ? '#ff9f43' : '#ffd23f'; g.stroke(); g.lineCap = 'butt';
