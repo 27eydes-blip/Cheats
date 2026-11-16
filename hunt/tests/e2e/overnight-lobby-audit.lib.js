@@ -40,6 +40,42 @@ export const SCREENS = [
   }, primary: ['#rsAgain', '#rsLobby'] },
 ];
 
+// HUNT RACERS (the main lobby at /): every screen a racer can reach before and around a race.
+const roomCode = () => 'AU' + Math.random().toString(36).slice(2, 8).toUpperCase();
+export const RACE_SCREENS = [
+  { name: 'racing play', open: async () => {}, primary: ['#playBtn', '#rail_road', '#passBtn', '#trackBtn', '#fillBots', '.modebtn[data-m="grand"]', '.modebtn[data-m="trial"]', '#rail_settings', '#tab_profile', '#rail_friends'] },
+  { name: 'racing play, time trial picked', open: async (p) => { await p.click('.modebtn[data-m="trial"]'); }, primary: ['#playBtn', '#trackBtn', '.modebtn[data-m="trial"]'] },
+  { name: 'racing profile tab', open: async (p) => { await p.click('#tab_profile'); await p.waitForSelector('.pg-profile .race-times'); }, primary: ['#tab_play'] },
+  { name: 'racing locker tab', open: async (p) => { await p.click('#rail_locker'); await p.waitForSelector('.lsec'); }, primary: ['#tab_play'] },
+  { name: 'drivers', open: async (p) => { await p.click('.nameplate #stage'); await p.waitForSelector('.dcard'); }, primary: ['.ui-screen .back', '.dcard[data-b="volt"]', '.dcard[data-b="flicker"]'] },
+  { name: 'driver detail', open: async (p) => { await p.click('.nameplate #stage'); await p.click('.dcard[data-b="rook"]'); await p.waitForSelector('.detail [data-sel]'); }, primary: ['.detail [data-sel]', '.detail [data-x]:not([data-sel])'] },
+  { name: 'track picker', open: async (p) => { await p.click('#trackBtn'); await p.waitForSelector('.tcard'); }, primary: ['.ui-screen .back', '.tcard[data-k="any"]', '.tcard[data-k="desert"]'] },
+  { name: 'arena picker', open: async (p) => { await p.click('.modebtn[data-m="battle"]'); await p.click('#trackBtn'); await p.waitForSelector('.tcard'); }, primary: ['.ui-screen .back', '.tcard[data-k="any"]'] },
+  { name: 'race friends', open: async (p) => { await p.click('#rail_friends'); await p.waitForSelector('#roomPlay'); }, primary: ['#roomPlay', '#shareCode', '#rfBots', '#newCode', '.ui-pop [data-close]'] },
+  { name: 'hunt pass', open: async (p) => { await p.click('#rail_pass'); await p.waitForSelector('.track .tier'); }, primary: ['.ui-screen .back', '#premBtn'] },
+  { name: 'trophy road', open: async (p) => { await p.click('#rail_road'); await p.waitForSelector('.road-wrap .node'); }, primary: ['.ui-screen .back'] },
+  { name: 'missions', open: async (p) => { await p.click('#tbMissions'); await p.waitForSelector('.mission'); }, primary: ['.ui-pop [data-close]'] },
+  { name: 'account', open: async (p) => { await p.click('#tab_profile'); await p.click('#pgAccount'); await p.waitForSelector('#regF'); }, primary: ['.ui-screen .back'] },
+  { name: 'settings', open: async (p) => { await p.click('#rail_settings'); await p.waitForSelector('#volMusic'); }, primary: ['.ui-screen .back'] },
+  { name: 'earn info', open: async (p) => { await p.click('#coinPlus'); await p.waitForSelector('.ui-pop [data-close]'); }, primary: ['.ui-pop [data-close]'] },
+  // bots off: the public race waits for a second racer, so the waiting card stays up
+  { name: 'race waiting (bots off)', open: async (p) => { await p.click('.fillbots'); await p.click('#playBtn'); await p.waitForSelector('.rc-wait:not([hidden]) .rc-cancel'); await p.waitForFunction(() => window.__race && window.__race.phase === 'lobby'); }, primary: ['.rc-cancel'] },
+  // a friend room you host: room code + COPY, FILL WITH BOTS, START, CANCEL
+  { name: 'race room (host)', open: async (p) => { if (await p.getAttribute('#fillBots', 'aria-checked') === 'false') await p.click('#fillBots'); await p.click('#rail_friends'); await p.fill('#room', roomCode()); await p.click('#roomPlay'); await p.waitForSelector('.rc-room:not([hidden]) .rc-start'); await p.waitForFunction(() => window.__race && window.__race.rc.lobby); }, primary: ['.rc-start', '.rc-copy', '.rc-bots', '.rc-cancel'] },
+  // the finish screen: a Time Trial with its end message pushed in the way the server sends it
+  { name: 'race results', open: async (p) => {
+    await p.click('.modebtn[data-m="trial"]'); await p.click('#playBtn');
+    await p.waitForFunction(() => window.__race && window.__race.phase === 'race', null, { timeout: 30_000 });
+    await p.evaluate(() => {
+      const rc = window.__race.rc;
+      rc.onMsg({ t: 'end', mode: 'trial', track: rc.trackKey, rank: 1, you: rc.id, n: 1, time: 95.4, bestLap: 30.1, mc: 0, k: 0, results: [[rc.id, 'Racer', 'volt', 1, 95.4, 0, 0, 0, 30.1, 1, 0]] });
+      rc.onMsg({ t: 'progress', delta: 0, xp: 0, coins: 0, levels: [], progress: null, best: 95.4, improved: true });
+    });
+    await p.waitForFunction(() => window.__race.finishShown(), null, { timeout: 10_000 });
+    await p.waitForTimeout(400);
+  }, primary: ['.rc-again', '.rc-lobby'] },
+];
+
 // Runs inside the page. Looks only at the top-most layer (popup > detail > screen > lobby), the
 // way a player does, and returns a list of problems (empty = clean).
 export function auditPage(primary) {
@@ -47,7 +83,7 @@ export function auditPage(primary) {
   const out = [];
   const vis = (el) => { const s = getComputedStyle(el); return s.visibility !== 'hidden' && s.display !== 'none' && +s.opacity > 0.05; };
   const shown = (el) => { for (let e = el; e && e !== document.documentElement; e = e.parentElement) { if (e.hidden || !vis(e)) return false; } return true; };
-  const layers = ['.ui-pop', '.detail', '.intro', '.res', '.mm', '.ui-screen', '#lobby'];
+  const layers = ['.ui-pop', '.detail', '.intro', '.res', '.mm', '.ui-screen', '#lobby', '.rc-root'];
   let root = null, rootZ = -1;
   for (const sel of layers) for (const el of document.querySelectorAll(sel)) {
     if (!shown(el) || el.classList.contains('leave')) continue;
@@ -134,8 +170,9 @@ export function auditPage(primary) {
   if (root.scrollWidth > root.clientWidth + 1) out.push(`${name(root)} scrolls sideways (${root.scrollWidth} > ${root.clientWidth})`);
 
   // ---- the credit stays readable: on screen, nothing drawn over it
-  const credit = root.id === 'lobby' ? root.querySelector('#credit') : null;
-  if (root.id === 'lobby') {
+  // (the lobby's credit line, or the race layer's: it stays on top of every race screen)
+  const credit = root.id === 'lobby' ? root.querySelector('#credit') : root.classList.contains('rc-root') ? root.querySelector('.rc-credit') : null;
+  if (credit || root.id === 'lobby') {
     if (!credit || !shown(credit)) out.push('credit line is hidden');
     else {
       const k = credit.getBoundingClientRect();

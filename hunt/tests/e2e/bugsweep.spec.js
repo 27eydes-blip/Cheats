@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 import { trackErrors, trackHttp, waitMe } from './helpers.js';
 
 test('error/disconnect toasts show above the lobby and menu screens', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await expect(page.locator('#lobby')).toBeVisible();
   await page.click('#rail_settings');
   await page.evaluate(() => { const t = document.getElementById('toast'); t.textContent = 'Match full'; t.hidden = false; });
@@ -32,7 +32,7 @@ test('results keep the trophy/XP result that arrived before the screen opened', 
 });
 
 test('Sound off silences lobby music at once; app switch suspends audio', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.mouse.click(5, 5);
   await page.waitForFunction(async () => (await import('/ui/music.js')).musicPlaying(), null, { timeout: 5000 });
   await page.waitForTimeout(1500);
@@ -74,14 +74,14 @@ test('the lobby still boots when storage is blocked (Safari, private frames)', a
     const boom = () => { throw new DOMException('blocked', 'SecurityError'); };
     Storage.prototype.getItem = boom; Storage.prototype.setItem = boom;
   });
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await expect(page.locator('#playBtn, .play').first()).toBeVisible();
   await page.click('#modeCard');
   expect(errors).toEqual([]);
 });
 
 test('public retry re-queues without flashing the lobby or "Connection lost"', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.evaluate(() => {
     window.__seen = [];
     const t = document.getElementById('toast');
@@ -101,7 +101,7 @@ test('public retry re-queues without flashing the lobby or "Connection lost"', a
 });
 
 test('wall art cache stays bounded across many arena layouts (no leak over many matches)', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   const n = await page.evaluate(async () => {
     const { WallArt } = await import('/art/walls.js');
     const a = new WallArt();
@@ -126,7 +126,7 @@ test('GPU context loss rebuilds the in-game and lobby art caches', async ({ page
   expect(await page.evaluate(() => window.__huntArt.art.stats().sprites)).toBeGreaterThan(0);
   expect(await page.evaluate(() => !!window.__hunt.map._ground)).toBe(true);
   // the lobby (CSS background + a hunter card redrawn every frame) comes back fine
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.waitForSelector('#playBtn', { state: 'visible' });
   expect(errors).toEqual([]);
 });
@@ -136,7 +136,7 @@ test('a full session (lobby screens, match, results, Free Play) logs no console 
   page.on('pageerror', (e) => issues.push(e.message));
   page.on('console', (m) => { if (['error', 'warning'].includes(m.type()) && !/fonts\.g|Failed to load resource/.test(m.text())) issues.push(m.text()); });
   trackHttp(page, issues); // a failing asset or /api call is an issue too (its console line is filtered above)
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.waitForSelector('#playBtn', { state: 'visible' });
   await page.waitForTimeout(1000);
   for (const id of ['tab_profile', 'rail_locker', 'tab_play']) { await page.click('#' + id); await page.waitForTimeout(400); } // tabs
@@ -160,7 +160,7 @@ test('a full session (lobby screens, match, results, Free Play) logs no console 
 });
 
 test('"Created by Sam Eyde III" is visible in the lobby and in a match', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await expect(page.locator('#credit')).toBeVisible();
   await expect(page.locator('#credit')).toHaveText('Created by Sam Eyde III');
   await page.goto('/?world=meadow&mode=bounty');

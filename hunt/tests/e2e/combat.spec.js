@@ -21,7 +21,7 @@ test('swap to a secondary, fire it, see bullets and the aim line; no frame error
 });
 
 test('settings: aim sensitivity, left-handed and hold-to-fire persist', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.click('#rail_settings');
   await page.check('#setLeft'); await page.check('#setHold');
   await page.locator('#setSens').fill('1.5');
@@ -34,7 +34,7 @@ test('settings: aim sensitivity, left-handed and hold-to-fire persist', async ({
 
 test('armory: 15 weapons, 3 open at level 1, equip a starter, locked ones say their level', async ({ page }) => {
   const errors = trackErrors(page);
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.click('#rail_armory');
   await expect(page.locator('#arItems .ped')).toHaveCount(15);
   await expect(page.locator('#arItems .ped', { hasText: 'LEVEL 40' })).toHaveCount(1);
@@ -49,7 +49,7 @@ test('armory: 15 weapons, 3 open at level 1, equip a starter, locked ones say th
 
 test('power screen: level, upgrade cost, gadgets and star powers locked until 7 / 9', async ({ page }) => {
   const errors = trackErrors(page);
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.click('#npUp');
   await expect(page.locator('.pwlv .pwnum')).toHaveText('1');
   await expect(page.locator('.pwpick')).toHaveCount(2);
@@ -60,7 +60,7 @@ test('power screen: level, upgrade cost, gadgets and star powers locked until 7 
 test('test range: armory TEST RANGE opens a private range with 6 dummies and the picked weapon', async ({ page }) => {
   const errors = trackErrors(page);
   await page.setViewportSize({ width: 667, height: 375 });
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.click('#rail_armory');
   await page.click('#arItems .ped[data-w="breaker"]');
   await page.click('#arTry');

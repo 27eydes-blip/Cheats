@@ -48,7 +48,7 @@ test('guest -> upgrade keeps progress; login elsewhere syncs; match results appl
 });
 
 test('lobby profile card: guest chip, account screen and trophy road', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await expect(page.locator('#profileCard')).toBeVisible();
   await expect(page.locator('#guestChip')).toBeVisible();
   await page.click('#guestChip span');

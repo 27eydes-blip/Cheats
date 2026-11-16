@@ -1,12 +1,15 @@
 // Hunt Racers: two phones in the same friend room race, with FILL WITH BOTS on and off.
+// Both get there like players do: the lobby's driver select, RACE WITH FRIENDS with a room code
+// (the host picks mode, track and bots), and the host's START on the room card.
 // Both drive with real touch input (CDP touch events: steering thumb + DRIFT / FIRE / ITEM / BRAKE
 // fingers at once), fire their weapon, use an item, one gets wrecked and is back ~2 s later, laps
 // count up, both finish, and the finish order agrees on both screens and with the server.
-// Short races come from the HUNT_DEV-only `laps=1` room option; the wreck uses the HUNT_DEV-only
+// The camera keeps each phone's own car inside the safe box the whole race (respawn included).
+// Short races come from the HUNT_DEV-only `laps=1` option (`/?laps=1`); the wreck uses the HUNT_DEV-only
 // test command (the deploy config never has HUNT_DEV).
 import { test, expect } from '@playwright/test';
 import { trackErrors } from './helpers.js';
-import { phone, roomCode, raceUrl, waitPhase, raceState, drive, layout, finishRows, creditVisible } from './race-helpers.js';
+import { phone, roomCode, waitPhase, raceState, drive, layout, finishRows, creditVisible, lobbyJoinRoom, watchCar, carWatch } from './race-helpers.js';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -18,10 +21,23 @@ for (const bots of ['1', '0']) {
     const errs = [trackErrors(A.page), trackErrors(B.page)];
     const room = roomCode();
     // brick and wisp: their weapons always go off (shockwave / rail), even with nobody near
-    await A.page.goto(raceUrl({ room, bots, driver: 'brick' }));
+    await Promise.all([A.page.goto('/?laps=1'), B.page.goto('/?laps=1')]);
+    await lobbyJoinRoom(A.page, { room, driver: 'brick', mode: 'grand', track: 'desert', bots: bots === '1' });
     await waitPhase(A.page, 'lobby');
-    await B.page.goto(raceUrl({ room, bots, driver: 'wisp' }));
+    // the guest asks for something else: the host's mode, track and bots win
+    await lobbyJoinRoom(B.page, { room, driver: 'wisp', mode: 'battle', track: 'neon', bots: bots !== '1' });
+    await waitPhase(B.page, 'lobby');
+    // the room card: code + COPY on both phones; START only for the host, once both are in
+    for (const P of [A, B]) { await expect(P.page.locator('.rc-code')).toHaveText(room); await expect(P.page.locator('.rc-copy')).toBeVisible(); }
+    await expect(B.page.locator('.rc-hw')).toContainText('to start');
+    await expect(B.page.locator('.rc-start')).toBeHidden();
+    await expect(A.page.locator('.rc-list li')).toHaveCount(2);
+    await expect(A.page.locator('.rc-start')).toBeEnabled();
+    await expect(A.page.locator('.rc-bots')).toHaveAttribute('aria-checked', bots === '1' ? 'true' : 'false');
+    await A.page.tap('.rc-start');
     await Promise.all([waitPhase(A.page, 'race'), waitPhase(B.page, 'race')]);
+    expect(await B.page.evaluate(() => [window.__race.rc.mode, window.__race.rc.trackKey])).toEqual(['grand', 'desert']);
+    await Promise.all([watchCar(A.page), watchCar(B.page)]);
     for (const P of [A, B]) {
       expect((await layout(P.page)).mode).toBe('touch');
       await creditVisible(P.page);
@@ -49,6 +65,19 @@ for (const bots of ['1', '0']) {
     ]);
     console.log('touch input updates per second', rates.map((r) => r.toFixed(1)).join(' / '));
     const [sa, sb] = await Promise.all([raceState(A.page), raceState(B.page)]);
+    // CAMERA: each phone's own car stayed in the middle of its screen the whole lap, A's after its
+    // respawn too, and never under the speedometer, the credit or a thumb button
+    for (const [P, nm] of [[A, 'A'], [B, 'B']]) {
+      const w = await carWatch(P.page);
+      console.log(`${nm} car on screen: x ${w.x0.toFixed(2)}..${w.x1.toFixed(2)} y ${w.y0.toFixed(2)}..${w.y1.toFixed(2)} (${w.n} frames, ${w.air} airborne, ${w.back} after a wreck)`);
+      expect(w.n, `${nm}: frames watched`).toBeGreaterThan(300);
+      expect(w.x0, `${nm}: car never near the left edge`).toBeGreaterThanOrEqual(0.25);
+      expect(w.x1, `${nm}: car never near the right edge`).toBeLessThanOrEqual(0.75);
+      expect(w.y0, `${nm}: car never near the top`).toBeGreaterThanOrEqual(0.25);
+      expect(w.y1, `${nm}: car at least 25% of the screen above the bottom`).toBeLessThanOrEqual(0.75);
+      expect(w.hud, `${nm}: car never under the HUD`).toEqual([]);
+    }
+    expect((await carWatch(A.page)).back, 'A watched after its respawn').toBeGreaterThan(30);
     expect(sa.fin, 'A finished').toBeGreaterThan(0);
     expect(sb.fin, 'B finished').toBeGreaterThan(0);
     expect(sa.fin).not.toBe(sb.fin);

@@ -34,7 +34,7 @@ test('end screen: victory pose + winner banner', async ({ page }) => {
 });
 
 test('Reduce Flashing: no screen shake', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.click('#rail_settings');
   await page.check('#setFlash');
   await page.click('.ui-screen .back');

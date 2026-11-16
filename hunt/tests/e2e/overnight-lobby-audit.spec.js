@@ -4,7 +4,7 @@
 // covered the XP bar, and Armory EQUIP started off-screen.
 import { test, expect } from '@playwright/test';
 import { trackErrors, waitMe } from './helpers.js';
-import { SCREENS, auditPage } from './overnight-lobby-audit.lib.js';
+import { SCREENS, RACE_SCREENS, auditPage } from './overnight-lobby-audit.lib.js';
 
 // A phone: touch screen, mobile viewport. Firefox has no mobile emulation switch, so it gets touch only.
 const phone = (browser, width, height) => browser.newContext({ viewport: { width, height }, hasTouch: true, ...(browser.browserType().name() === 'firefox' ? {} : { isMobile: true }) });
@@ -19,17 +19,18 @@ async function needTouch(page) {
 const ALLOW = [];
 const allowed = (msg) => ALLOW.some(([re]) => re.test(msg));
 
-for (const [w, h] of [[667, 375], [844, 390], [932, 430], [390, 844], [430, 932]]) {
-  test(`phone audit ${w}x${h}: every menu screen has thumb-sized controls, readable text and its main buttons in view`, async ({ browser }) => {
+// the racing lobby (the game, at /) and the classic shooter lobby (?shooter=1)
+for (const [w, h] of [[667, 375], [844, 390], [932, 430], [390, 844], [430, 932]]) for (const [kind, base, screens] of [['racing', '/', RACE_SCREENS], ['classic', '/?shooter=1', SCREENS]]) {
+  test(`phone audit ${w}x${h} (${kind} lobby): every menu screen has thumb-sized controls, readable text and its main buttons in view`, async ({ browser }) => {
     test.setTimeout(300_000);
     const ctx = await phone(browser, w, h);
     const page = await ctx.newPage();
     const errors = trackErrors(page);
     const problems = [];
-    await page.goto('/');
+    await page.goto(base);
     await needTouch(page);
-    for (const s of SCREENS) {
-      await page.goto('/');
+    for (const s of screens) {
+      await page.goto(base);
       await page.waitForSelector('#playBtn');
       await s.open(page);
       // let the slide-in finish so sizes and hit tests are the settled ones
@@ -43,10 +44,10 @@ for (const [w, h] of [[667, 375], [844, 390], [932, 430], [390, 844], [430, 932]
 }
 
 for (const [w, h] of [[667, 375], [844, 390], [932, 430]]) {
-  test(`landscape phone ${w}x${h}: the POWER row is on the hunter card and opens Brawler Power`, async ({ browser }) => {
+  test(`landscape phone ${w}x${h}: the POWER row is on the hunter card and opens Brawler Power (classic lobby)`, async ({ browser }) => {
     const ctx = await phone(browser, w, h);
     const page = await ctx.newPage();
-    await page.goto('/');
+    await page.goto('/?shooter=1');
     await needTouch(page);
     await expect(page.locator('#npPower')).toBeVisible();
     await page.tap('#npPower');
@@ -65,11 +66,11 @@ for (const [w, h] of [[667, 375], [844, 390], [932, 430]]) {
 }
 
 for (const [w, h] of [[320, 568], [375, 667], [390, 844], [412, 915], [430, 932]]) {
-  test(`portrait ${w}x${h}: PLAY, Trophy Road and Hunt Pass are in view without scrolling, clear of the tabs and the credit`, async ({ browser }) => {
+  test(`portrait ${w}x${h}: PLAY, Trophy Road and Hunt Pass are in view without scrolling, clear of the tabs and the credit (classic lobby)`, async ({ browser }) => {
     const ctx = await phone(browser, w, h);
     const page = await ctx.newPage();
     const errors = trackErrors(page);
-    await page.goto('/');
+    await page.goto('/?shooter=1');
     await needTouch(page);
     await page.waitForSelector('#playBtn');
     const r = await page.evaluate(() => {
@@ -133,10 +134,10 @@ test('guest chip: sits beside the name (not on the XP bar) and its dismiss is a 
   }
 });
 
-test('armory on a short phone: EQUIP and TEST RANGE are in view at once and work', async ({ browser }) => {
+test('armory on a short phone: EQUIP and TEST RANGE are in view at once and work (classic lobby)', async ({ browser }) => {
   const ctx = await phone(browser, 667, 375);
   const page = await ctx.newPage();
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await needTouch(page);
   await page.tap('#rail_armory');
   await expect(page.locator('#arEq')).toBeInViewport({ ratio: 1 });
@@ -225,10 +226,10 @@ test('the turn-your-phone hint goes away when the phone is turned, and never sho
   await desk.close();
 });
 
-test('desktop keeps its layout: full-size text scale and the four-slot party', async ({ browser }) => {
+test('desktop keeps its layout: full-size text scale and the four-slot party (classic lobby)', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.waitForSelector('#playBtn');
   const r = await page.evaluate(() => ({
     u: parseFloat(getComputedStyle(document.querySelector('.tabbtn')).minHeight) / 7,
@@ -240,5 +241,70 @@ test('desktop keeps its layout: full-size text scale and the four-slot party', a
   expect(r.invites).toBe(3);
   expect(r.test).not.toBe('none');
   expect(r.power).toBeGreaterThan(20);
+  await ctx.close();
+});
+
+// ---------------------------------------------------------------- HUNT RACERS play page
+for (const [w, h] of [[320, 568], [375, 667], [390, 844], [412, 915], [430, 932]]) {
+  test(`portrait ${w}x${h} (racing): the modes, track, PLAY, Trophy Road and Hunt Pass are in view without scrolling, clear of the tabs and the credit`, async ({ browser }) => {
+    const ctx = await phone(browser, w, h);
+    const page = await ctx.newPage();
+    const errors = trackErrors(page);
+    await page.goto('/');
+    await needTouch(page);
+    await page.waitForSelector('#playBtn');
+    const SEL = ['#playBtn', '#rail_road', '#passBtn', '.slot.me', '#trackBtn', '#fillBots', '.modebtn[data-m="grand"]', '.modebtn[data-m="elim"]', '.modebtn[data-m="battle"]', '.modebtn[data-m="trial"]'];
+    const r = await page.evaluate((SEL) => {
+      const box = (s) => document.querySelector(s).getBoundingClientRect();
+      const tabs = box('.lb-tabs'), credit = box('#lobby #credit'), pg = document.querySelector('.pg-play');
+      const over = (a, b) => a.left < b.right - 0.5 && a.right > b.left + 0.5 && a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5;
+      const out = { scrolls: pg.scrollHeight > pg.clientHeight + 1 || document.scrollingElement.scrollHeight > innerHeight + 1, creditOnScreen: credit.top >= 0 && credit.bottom <= tabs.top + 0.5 && credit.right <= innerWidth, stage: box('#stage').height, tabs: [...document.querySelectorAll('.tabbtn')].map((b) => b.dataset.tab) };
+      for (const s of SEL) {
+        const b = box(s);
+        out[s] = { inView: b.left >= 0 && b.top >= 0 && b.right <= innerWidth + 0.5 && b.bottom <= tabs.top + 0.5, hitsCredit: over(b, credit), w: b.width, h: b.height };
+        const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+        out[s].onTop = !!hit && document.querySelector(s).contains(hit);
+      }
+      return out;
+    }, SEL);
+    expect(r.scrolls, 'the play page does not need scrolling').toBe(false);
+    expect(r.creditOnScreen, 'credit line is on screen above the tab bar').toBe(true);
+    expect(r.stage, 'your car is drawn').toBeGreaterThan(40);
+    expect(r.tabs, 'no Armory tab: it only held shooter weapons').toEqual(['profile', 'locker', 'play', 'pass', 'friends']);
+    for (const s of SEL) {
+      expect(r[s].inView, `${s} fully in view above the tab bar`).toBe(true);
+      expect(r[s].hitsCredit, `${s} clear of the credit`).toBe(false);
+      expect(r[s].onTop, `${s} not covered`).toBe(true);
+      expect(r[s].h, `${s} is thumb-sized`).toBeGreaterThanOrEqual(44);
+    }
+    expect(r['#playBtn'].w).toBeGreaterThanOrEqual(120);
+    // and PLAY really starts a race from here (the waiting card, CANCEL in reach, the credit on top)
+    await page.tap('#playBtn');
+    await expect(page.locator('.rc-wait')).toBeVisible();
+    await expect(page.locator('.rc-cancel')).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('.rc-credit')).toBeVisible();
+    await page.tap('.rc-cancel');
+    await expect(page.locator('#lobby')).toBeVisible();
+    await expect(page.locator('.rc-root')).toHaveCount(0);
+    expect(errors).toEqual([]);
+    await ctx.close();
+  });
+}
+
+test('desktop (racing): the four modes, the track with its preview and the four-slot party', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await ctx.newPage();
+  await page.goto('/');
+  await page.waitForSelector('#playBtn');
+  const r = await page.evaluate(() => ({
+    modes: [...document.querySelectorAll('.modebtn[data-m]')].map((b) => [b.dataset.m, getComputedStyle(b.querySelector('small')).display !== 'none']),
+    invites: [...document.querySelectorAll('.slot.invite')].filter((e) => e.getBoundingClientRect().width > 0).length,
+    preview: document.querySelector('#trackPv').width,
+    credit: document.querySelector('#lobby #credit').textContent,
+  }));
+  expect(r.modes).toEqual([['grand', true], ['elim', true], ['battle', true], ['trial', true]]); // each with its short description
+  expect(r.invites).toBe(3);
+  expect(r.preview).toBeGreaterThan(20);
+  expect(r.credit).toBe('Created by Sam Eyde III');
   await ctx.close();
 });

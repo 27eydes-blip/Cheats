@@ -71,7 +71,10 @@ test('desktop keyboard race, menu and finish screen', async ({ page, browserName
   await page.screenshot({ path: test.info().outputPath('desktop-finish.png') });
   // LOBBY leaves the race layer
   await page.getByRole('button', { name: 'LOBBY' }).click();
-  await page.waitForURL((u) => !u.search.includes('race='));
+  // ... back to the lobby (no reload), with the account's progress refreshed
   await expect(page.locator('.rc-root')).toHaveCount(0);
+  await expect(page.locator('#lobby')).toBeVisible();
+  await expect(page.locator('#playBtn')).toBeVisible();
+  await expect(page.locator('#lobby #credit')).toHaveText('Created by Sam Eyde III');
   expect(errs).toEqual([]);
 });

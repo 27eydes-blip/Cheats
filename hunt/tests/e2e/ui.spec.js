@@ -8,7 +8,7 @@ for (const [name, vp] of Object.entries(SIZES)) {
     const ctx = await browser.newContext({ viewport: vp, hasTouch: true, isMobile: true });
     const page = await ctx.newPage();
     const errors = trackErrors(page);
-    await page.goto('/');
+    await page.goto('/?shooter=1');
     await page.waitForSelector('#playBtn');
     const r = await page.evaluate(() => {
       const box = (s) => document.querySelector(s).getBoundingClientRect().toJSON();
@@ -27,7 +27,7 @@ for (const [name, vp] of Object.entries(SIZES)) {
 
 test('screens slide in/out: brawler select, detail, mode picker, locker, pass, road, settings, profile', async ({ page }) => {
   const errors = trackErrors(page);
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.click('.nameplate');
   await expect(page.locator('.ui-screen.enter')).toBeVisible();
   await page.click('.bcard[data-b="rook"]');
@@ -64,7 +64,7 @@ test('screens slide in/out: brawler select, detail, mode picker, locker, pass, r
 
 test('play flow: matchmaking radar -> VS intro -> match -> results', async ({ page }) => {
   const errors = trackErrors(page);
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.click('#playBtn');
   await expect(page.locator('.mm')).toBeVisible();
   await expect(page.locator('#mmCount')).toContainText('hunters found');
@@ -81,7 +81,7 @@ test('play flow: matchmaking radar -> VS intro -> match -> results', async ({ pa
 });
 
 test('lobby music plays after a tap and ducks under popups; Low Graphics freezes the background', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.click('#rail_settings');
   await page.click('.ui-screen .back');
   const playing = await page.evaluate(async () => (await import('/ui/music.js')).musicPlaying());

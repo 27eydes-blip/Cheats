@@ -15,7 +15,7 @@ test('FILL WITH BOTS off: a lone hunter waits (and can cancel), two hunters get 
   const a = await (await browser.newContext()).newPage(), b = await (await browser.newContext()).newPage();
   const errors = [...[a, b].map(trackErrors)];
   for (const p of [a, b]) {
-    await p.goto('/');
+    await p.goto('/?shooter=1');
     await p.click('#fillBots');
     await expect(p.locator('#fillBots')).toHaveAttribute('aria-checked', 'false');
     await p.reload(); // remembered without pressing PLAY
@@ -44,7 +44,7 @@ test('FILL WITH BOTS off: a lone hunter waits (and can cancel), two hunters get 
 });
 
 test('FILL WITH BOTS on (the default): PLAY fills the match with bots', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await expect(page.locator('#fillBots')).toHaveAttribute('aria-checked', 'true');
   await page.click('#playBtn');
   await waitMe(page);
@@ -53,7 +53,7 @@ test('FILL WITH BOTS on (the default): PLAY fills the match with bots', async ({
 });
 
 test('room codes still honour bots=0', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.click('#fillBots');
   await page.click('#rail_friends');
   await page.fill('#room', 'NB' + Math.floor(Math.random() * 1e6));

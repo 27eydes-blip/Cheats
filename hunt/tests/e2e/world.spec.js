@@ -33,7 +33,7 @@ test('night falls (darkness + Blood Moon state) on the Free Play clock', async (
 });
 
 test('ground chunks: only the ones near the camera stay in memory', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   const n = await page.evaluate(async () => {
     const S = await import('/shared.js'); const R = await import('/render.js');
     const m = S.generateWorld(), c = document.createElement('canvas'); c.width = 400; c.height = 300;

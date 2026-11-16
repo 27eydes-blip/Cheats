@@ -149,7 +149,7 @@ test('a newer server build shows "New version ready" in the lobby; RELOAD reload
 test('a deploy while the page is open: the next match join goes back to the lobby with the reload banner', async ({ page }) => {
   const errors = trackErrors(page);
   await rewriteWs(page, (m) => { if (m.t === 'welcome') m.v = 'next-build'; return m; });
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await expect(page.locator('#updateNote')).toBeHidden();
   await page.click('#playBtn');
   await expect(page.locator('#updateNote')).toBeVisible();
@@ -197,7 +197,7 @@ test('a failed first guest request is retried: the notice shows, then clears, an
   const urls = wsUrls(page);
   let calls = 0, fail = true;
   await page.route('**/api/guest', (r) => { calls++; return fail ? r.abort('internetdisconnected') : r.continue(); });
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await expect(page.locator('#saveNote')).toBeVisible();
   await expect(page.locator('#saveNote')).toHaveText('Progress will not be saved right now');
   await expect(page.locator('#playBtn')).toBeVisible();
@@ -218,7 +218,7 @@ test('PLAY pressed before the guest account exists waits for it ("Getting readyâ
   // a slow browser even gets to the click)
   let release; const held = new Promise((ok) => { release = ok; });
   await page.route('**/api/guest', async (r) => { await held; await r.continue(); });
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await page.click('#playBtn');
   await expect(page.locator('#playBtn')).toHaveText('Getting readyâ€¦');
   expect(urls.filter((u) => u.includes('/ws?'))).toEqual([]); // not joined yet
@@ -234,7 +234,7 @@ test('accounts unreachable: PLAY lets the player in after a short wait, and both
   const urls = wsUrls(page);
   await page.route('**/api/guest', (r) => r.fulfill({ status: 503, json: { error: 'Accounts are not set up' } }));
   await page.route('**/api/me', (r) => r.fulfill({ status: 503, json: { error: 'Accounts are not set up' } }));
-  await page.goto('/');
+  await page.goto('/?shooter=1');
   await expect(page.locator('#saveNote')).toBeVisible();
   const t0 = Date.now();
   await page.click('#playBtn');

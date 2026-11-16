@@ -84,3 +84,47 @@ export async function creditVisible(page) {
   });
   expect(ok).toBe(true);
 }
+
+// Through the lobby like a player: pick a driver on the driver select, open RACE WITH FRIENDS,
+// type the room code, pick mode / track / bots there (the host's choices count) and tap GO.
+export async function lobbyJoinRoom(page, { room, driver, mode = 'grand', track = 'desert', bots = true }) {
+  await page.waitForSelector('#playBtn');
+  await page.tap('.nameplate #stage');
+  await page.tap(`.dcard[data-b="${driver}"]`);
+  await page.tap('.detail [data-sel]');
+  await expect(page.locator('.detail')).toHaveCount(0);
+  await page.tap('.ui-screen .back');
+  await expect(page.locator('.ui-screen')).toHaveCount(0);
+  await page.tap('#rail_friends');
+  await page.fill('#room', room);
+  await page.tap(`#roomModes [data-k="${mode}"]`);
+  await page.tap(`#roomTracks [data-k="${track}"]`);
+  if ((await page.getAttribute('#rfBots', 'aria-checked')) !== String(bots)) await page.tap('#rfBots');
+  await expect(page.locator('#rfBots')).toHaveAttribute('aria-checked', String(bots));
+  await page.tap('#roomPlay');
+}
+
+// CAMERA SAFE BOX: records where your own car is drawn, every frame, inside the page
+export const watchCar = (page) => page.evaluate(() => {
+  const W = (window.__carWatch = { n: 0, x0: 1, x1: 0, y0: 1, y1: 0, air: 0, back: 0, hud: [], sawDead: false });
+  const tick = () => {
+    const r = window.__race, s = r && r.carOnScreen && r.carOnScreen();
+    if (s && r.rc.phase === 'race' && r.rc.latest && r.rc.latest.tm > 0) {
+      const dead = !!(s.f & 32), fx = s.x / s.W, fy = s.y / s.H;
+      if (!dead) {
+        W.n++; W.x0 = Math.min(W.x0, fx); W.x1 = Math.max(W.x1, fx); W.y0 = Math.min(W.y0, fy); W.y1 = Math.max(W.y1, fy);
+        if (s.f & 4) W.air++;
+        if (W.sawDead) W.back++; // frames drawn after a wreck: the respawned car
+        // never under the speedometer, the credit line or a thumb button
+        const L = r.layout(), g = L.gauge;
+        if (g && Math.hypot(s.x - g.x, s.y - g.y) < g.r) W.hud.push('speedometer');
+        if (s.y > s.H - 18) W.hud.push('credit');
+        for (const k of ['drift', 'fire', 'item', 'brake']) { const b = L.btn[k]; if (L.mode === 'touch' && Math.hypot(s.x - b.x, s.y - b.y) < b.r) W.hud.push(k); }
+      }
+      if (dead) W.sawDead = true;
+    }
+    if (window.__carWatch === W) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+});
+export const carWatch = (page) => page.evaluate(() => ({ ...window.__carWatch, hud: [...new Set(window.__carWatch.hud)] }));
