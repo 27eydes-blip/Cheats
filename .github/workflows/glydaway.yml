@@ -39,6 +39,15 @@ jobs:
         run: node tests/icon.test.mjs
       - name: Home screen, tutorial and takeoff (phones, iPad, both orientations, 3 engines)
         run: node tests/home.test.cjs
+      - name: Gameplay (characters, skins and fair hitboxes, hazards with every look, the glide level, SKY DASH)
+        run: node tests/gameplay.test.cjs
+      - name: Online (accounts, leaderboard, progress) against a fake server
+        run: node tests/online.test.cjs
+      - name: Database rules and functions (real PostgreSQL with Supabase stand-ins)
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -q -X -t -f tests/db.test.sql | tee db.out
+          grep -q "FAIL" db.out && exit 1 || true
 
   deploy:
     name: Publish glydaway.com
@@ -68,9 +77,22 @@ jobs:
         if: steps.fresh.outputs.ok == 'true'
         with:
           node-version: 22
-      - name: Build (the game is one file)
+      - name: Build (the game is one file; the online server's address and PUBLIC key come from repository variables)
         if: steps.fresh.outputs.ok == 'true'
-        run: rm -rf dist && mkdir -p dist/icons && cp index.html dist/ && cp icons/*.png dist/icons/
+        env:
+          SB_URL: ${{ vars.GLYDAWAY_SUPABASE_URL }}
+          SB_KEY: ${{ vars.GLYDAWAY_SUPABASE_KEY }}
+        run: |
+          rm -rf dist && mkdir -p dist/icons && cp index.html dist/ && cp icons/*.png dist/icons/
+          if [ -z "$SB_URL" ] || [ -z "$SB_KEY" ]; then
+            echo "::warning::GLYDAWAY_SUPABASE_URL / GLYDAWAY_SUPABASE_KEY repository variables are not set: the world leaderboard and accounts are off"
+          else
+            # only the public key may ever ship in the page: refuse a secret / service_role key
+            case "$SB_KEY" in sb_secret_*) echo "::error::GLYDAWAY_SUPABASE_KEY is a SECRET key. Use the publishable (anon) key."; exit 1;; esac
+            if printf '%s' "$SB_KEY" | cut -d. -f2 | base64 -d 2>/dev/null | grep -q service_role; then echo "::error::GLYDAWAY_SUPABASE_KEY is the service_role key. Use the anon key."; exit 1; fi
+            case "$SB_URL" in https://*) ;; *) echo "::error::GLYDAWAY_SUPABASE_URL must start with https://"; exit 1;; esac
+            sed -i "s|__GLYDAWAY_SUPABASE_URL__|$SB_URL|; s|__GLYDAWAY_SUPABASE_KEY__|$SB_KEY|" dist/index.html
+          fi
       - name: Deploy to Cloudflare Pages
         if: steps.fresh.outputs.ok == 'true'
         run: |
