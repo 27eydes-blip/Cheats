@@ -44,7 +44,7 @@ const NEON = ['#ff3fa4', '#3ff5ff', '#a05cff', '#ffe14a', '#4bff9c'];
 const NIGHT = {
   desert: { night: '#5c4c9c', line: '#ffd27a', edge: '#ff8a4a', curbA: '#ff3d6a', curbB: '#ffe8c0', wall: '#ff6a3a', pole: '#ffb35a', pole2: '#ff5fa2', puddles: 0.3 },
   frozen: { night: '#4a5ca6', line: '#bff4ff', edge: '#5fd0ff', curbA: '#3f8bff', curbB: '#e8f8ff', wall: '#7fe0ff', pole: '#9fdcff', pole2: '#b38cff', puddles: 0.55 },
-  ashlands: { night: '#8a6a84', line: '#ffb05a', edge: '#ff6a1a', curbA: '#ff4a1a', curbB: '#ffd0a0', wall: '#ff5a1f', pole: '#ff8a3a', pole2: '#ffd23f', puddles: 0.25 },
+  ashlands: { night: '#b08c98', line: '#ffb05a', edge: '#ff6a1a', curbA: '#ff4a1a', curbB: '#ffd0a0', wall: '#ff5a1f', pole: '#ff8a3a', pole2: '#ffd23f', puddles: 0.25 },
   city: { night: '#9090cc', line: '#78faff', edge: '#ff3fa4', curbA: '#ff3fa4', curbB: '#e8e8ff', wall: '#3ff5ff', pole: '#ff3fa4', pole2: '#3ff5ff', puddles: 1 },
 };
 const mul = (a, b) => '#' + [1, 3, 5].map((i) => Math.round((parseInt(a.slice(i, i + 2), 16) * parseInt(b.slice(i, i + 2), 16)) / 255).toString(16).padStart(2, '0')).join('');
@@ -609,8 +609,8 @@ export class TrackArt {
     }
     g.globalCompositeOperation = 'source-over';
     if (T.box) this.arenaLights(g); else this.trackLights(g, bx);
-    // lava, signs and neon roofs keep their own light
-    if (w === 'ashlands') { for (const zp of this.zonePolys) if (zp.z.kind === 'surf' && (zp.z.surf === 'lava' || zp.z.surf === 'pit') && !(zp.bx1 < bx.x0 + 290 || zp.bx0 > bx.x1 - 290 || zp.by1 < bx.y0 + 290 || zp.by0 > bx.y1 - 290)) this.paintZone(g, zp); }
+    // lava pools, cracks, signs and neon roofs keep their own light (lava zones stay as painted under a
+    // light dusk: re-painting their big gradients per chunk cost too much, the renderer's lava glow lights them)
     for (const d of decor) if (d.kind === 'pool' || d.kind === 'crack' || d.kind === 'sign') this.drawDecor(g, d); else if (d.kind === 'block') this.blockNeon(g, d);
     if (w === 'city' && !T.box && !low) this.wetReflections(g, bx);
     for (const z of T.circles) if (z.surf === 'lava' && z.x + z.r > bx.x0 && z.x - z.r < bx.x1 && z.y + z.r > bx.y0 && z.y - z.r < bx.y1) { g.beginPath(); g.arc(z.x, z.y, z.r, 0, 7); this.surfFill(g, 'lava'); g.fill(); this.surfDetail(g, 'lava', z.x, z.y, z.r, 0, 1); }
