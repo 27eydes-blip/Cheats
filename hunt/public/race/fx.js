@@ -1,6 +1,7 @@
 // Hunt Racers effects: one pooled particle system (typed arrays, no per-frame allocation), tire
 // marks in a ring buffer, and timed world effects (rings, beams, arcs, flashes) in a fixed pool.
 import { SETTINGS } from '../settings.js';
+import { NEON_GLOW } from './looks.js';
 
 // particle kinds (drawn in this order, so additive ones batch together)
 // HAZE: glowing tinted smoke (drift smoke lit by the car's neon), drawn additively
@@ -78,7 +79,7 @@ export class Particles {
       const kind = (k / (PCMAX * NB)) | 0, col = ((k / NB) | 0) % PCMAX, band = k % NB;
       if (kind !== lastKind) { g.globalCompositeOperation = ADDITIVE[kind] ? 'lighter' : 'source-over'; lastKind = kind; }
       const line = kind === PK.SPARK || kind === PK.GLINT;
-      g.globalAlpha = (band + 0.5) / NB;
+      g.globalAlpha = ((band + 0.5) / NB) * (ADDITIVE[kind] ? NEON_GLOW : 1); // (additive = light: smoke glow, sparks, flames)
       g.beginPath();
       let w = 0;
       for (let q = from; q < to; q++) {

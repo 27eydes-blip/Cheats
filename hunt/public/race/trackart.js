@@ -5,6 +5,7 @@
 import { pointAt } from './trackgeom.js';
 import { CAR_R } from './physics.js';
 import { SETTINGS } from '../settings.js';
+import { NEON_GLOW } from './looks.js';
 
 export const CHUNK = 384; // world px per chunk side
 const MAX_CHUNKS = 40;
@@ -49,7 +50,8 @@ const NIGHT = {
 };
 const mul = (a, b) => '#' + [1, 3, 5].map((i) => Math.round((parseInt(a.slice(i, i + 2), 16) * parseInt(b.slice(i, i + 2), 16)) / 255).toString(16).padStart(2, '0')).join('');
 for (const w in THEMES) THEMES[w].bg = mul(THEMES[w].bg, NIGHT[w].night); // the clear colour beyond the chunks
-const a2 = (c, a) => c + Math.round(a * 255).toString(16).padStart(2, '0');
+// (only used for light: pole pools, lamp heads, puddles, neon glow underlays; scaled by NEON_GLOW)
+const a2 = (c, a) => c + Math.round(Math.min(1, a * NEON_GLOW) * 255).toString(16).padStart(2, '0');
 
 // small deterministic hash -> [0, 1)
 const hash = (x, y, k = 0) => { let h = (x * 374761393 + y * 668265263 + k * 2246822519) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
@@ -489,7 +491,7 @@ export class TrackArt {
       if (d.x < bx.x0 || d.x > bx.x1 || d.y < bx.y0 || d.y > bx.y1) continue;
       const col = NEON[Math.floor(d.v * 97) % NEON.length];
       const gr = g.createRadialGradient(d.x, d.y, 10, d.x, d.y, d.r * 2.6);
-      gr.addColorStop(0, col + '55'); gr.addColorStop(1, col + '00');
+      gr.addColorStop(0, a2(col, 0x55 / 255)); gr.addColorStop(1, col + '00');
       g.fillStyle = gr; g.beginPath(); g.ellipse(d.x, d.y, d.r * 2.6, d.r * 1.6, d.rot, 0, 7); g.fill();
     }
   }
@@ -632,7 +634,7 @@ export class TrackArt {
       if (!low) {
         g.clip();
         const gr = g.createLinearGradient(-L.rx, -L.ry, L.rx, L.ry);
-        gr.addColorStop(0, a2(L.col, 0.55)); gr.addColorStop(0.45, 'rgba(120,90,200,0.25)'); gr.addColorStop(1, 'rgba(40,30,90,0.1)');
+        gr.addColorStop(0, a2(L.col, 0.55)); gr.addColorStop(0.45, `rgba(120,90,200,${0.25 * NEON_GLOW})`); gr.addColorStop(1, `rgba(40,30,90,${0.1 * NEON_GLOW})`);
         g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(-L.rx, -L.ry, L.rx * 2, L.ry * 2);
         g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 2; g.beginPath(); g.moveTo(-L.rx * 0.5, -L.ry * 0.25); g.lineTo(L.rx * 0.3, -L.ry * 0.45); g.stroke();
         g.globalCompositeOperation = 'source-over';

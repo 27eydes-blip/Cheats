@@ -15,6 +15,13 @@ export const BASE_LOOKS = {
   flicker: { name: 'RAZOR', neon: '#ff2fa0', neon2: '#ffc4e8', body: '#1a0913', pattern: 'none', glow: { color: '#ff2fa0', style: 'twin' }, wheel: { rim: '#ff8acb', spokes: 3 }, flame: { core: '#fff0f8', outer: '#ff2fa0' }, trail: { color: '#ff4fb4', style: 'line' } },
 };
 export const LOOK_IDS = Object.keys(BASE_LOOKS);
+// NEON_GLOW: the brightness of every glow / light layer (soft neon halos, underglow pools, headlight
+// beams, taillights and trails, boost flames, additive drift smoke and sparks, light-pole pools, lane /
+// curb / wall glow, boost pad glow, sign glow, puddle and wet-road reflections, the dusk edge lights),
+// in the race, the lobby and the store. 1 = full; the crisp neon outline lines are never scaled.
+export const NEON_GLOW = 0.8;
+// a hex colour '#rrggbb' at alpha a (scaled by NEON_GLOW): for glow layers
+export const glowA = (c, a = 1) => (typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c + Math.round(Math.max(0, Math.min(1, a * NEON_GLOW)) * 255).toString(16).padStart(2, '0') : c);
 export const PATTERNS = ['none', 'pulse', 'scales', 'circuit', 'flow'];
 const GLOW_STYLES = ['pool', 'mist', 'twin'];
 const TRAIL_STYLES = ['line', 'ribbon', 'sparks'];

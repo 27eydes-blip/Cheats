@@ -13,7 +13,7 @@
 // heading) with the neon glow baked in at build time, so a frame only blits: no live shadowBlur.
 // Animated skin patterns are two extra cached layers cross-faded by time (steady when Reduce
 // Flashing is on).
-import { BASE_LOOKS, makeLook } from './looks.js';
+import { BASE_LOOKS, makeLook, NEON_GLOW, glowA } from './looks.js';
 
 export const INK = '#06040c';
 export const BUCKETS = 32;
@@ -31,7 +31,8 @@ export const rgba = (c, a) => { const [r, g, b] = hex(c); return `rgba(${r},${g}
 
 // glow strength scales with the pixel size of the sprite being built
 let SB = 1;
-const glow = (g, c, b) => { g.shadowColor = c; g.shadowBlur = b * SB; g.shadowOffsetX = 0; g.shadowOffsetY = 0; };
+// (glowA: the soft halo at NEON_GLOW; the neon line itself keeps its full colour)
+const glow = (g, c, b) => { g.shadowColor = glowA(c); g.shadowBlur = b * SB; g.shadowOffsetX = 0; g.shadowOffsetY = 0; };
 const noGlow = (g) => { g.shadowBlur = 0; g.shadowColor = 'rgba(0,0,0,0)'; };
 // a neon tube along the current path: coloured glow, then a hot pale core
 const tube = (g, c, w, core = null, b = 5) => {
@@ -379,6 +380,7 @@ export function glowDot(c, size = 64) {
 export function drawUnderglow(g, L, t, k = 1, steady = false) {
   const spr = glowDot(L.glow);
   const ga = g.globalAlpha;
+  k *= NEON_GLOW;
   g.globalCompositeOperation = 'lighter';
   if (L.glowStyle === 'twin') {
     g.globalAlpha = ga * 0.9 * k;
@@ -407,7 +409,7 @@ function previewCache(px) {
 // flame colours, so store try-ons show them without the race renderer
 function previewBoost(g, L, t, steady) {
   const def = carDef(L.driver), ex = def.exhaust, tx = Math.min(...ex.map((e) => e[0]));
-  const ga = g.globalAlpha;
+  const ga0 = g.globalAlpha, ga = ga0 * NEON_GLOW;
   g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
   const st = L.trail.style;
   for (let k = 0; k < 4; k++) {
@@ -425,7 +427,7 @@ function previewBoost(g, L, t, steady) {
     g.fillStyle = L.flame.outer; g.beginPath(); g.moveTo(x, y - 8 * w); g.quadraticCurveTo(x - fl * 0.6 * w, y - 6 * w, x - fl * w, y); g.quadraticCurveTo(x - fl * 0.6 * w, y + 6 * w, x, y + 8 * w); g.closePath(); g.fill();
     g.fillStyle = L.flame.core; g.beginPath(); g.moveTo(x, y - 4 * w); g.quadraticCurveTo(x - fl * 0.35 * w, y - 3 * w, x - fl * 0.55 * w, y); g.quadraticCurveTo(x - fl * 0.35 * w, y + 3 * w, x, y + 4 * w); g.closePath(); g.fill();
   }
-  g.globalAlpha = ga; g.globalCompositeOperation = 'source-over';
+  g.globalAlpha = ga0; g.globalCompositeOperation = 'source-over';
 }
 // a car at the origin of the current transform (world units: a car is ~60 long), heading `angle`,
 // over its underglow, with its rims, boost flames and boost trail (boost: false for a car at rest);

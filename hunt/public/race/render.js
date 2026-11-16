@@ -3,7 +3,8 @@
 // RaceClient.view() and is fed race events by the app (fx()).
 import { TrackArt, CHUNK, THEMES } from './trackart.js';
 import { CarSprites, BUCKETS, INK, blitCar, drawUnderglow, glowDot, exhaustsOf, taillightsOf, headOf, mix } from './cars.js';
-import { lookForRacer } from './looks.js';
+import { lookForRacer, NEON_GLOW } from './looks.js';
+const EDGE_A = Math.round(0x66 * NEON_GLOW).toString(16).padStart(2, '0'); // dusk edge lights (alpha hex)
 import { Particles, Skids, Effects, PK, C, TIER_C, FK, colorIdx } from './fx.js';
 import { FLAG, driftTierOf } from './protocol.js';
 import { ITEMS, WEAPONS } from './items.js';
@@ -59,7 +60,7 @@ function duskSprite(W, H, world) {
   for (let i = 0; i < 9; i++) {
     const x = ((i * 0.618 + 0.11) % 1) * w, y = (i % 3) * h * 0.035 + h * 0.01, s = h * (0.05 + (i % 4) * 0.02), c = D[2][i % D[2].length];
     const gr = g.createRadialGradient(x, y, 0, x, y, s);
-    gr.addColorStop(0, c + '66'); gr.addColorStop(1, c + '00');
+    gr.addColorStop(0, c + EDGE_A); gr.addColorStop(1, c + '00');
     g.fillStyle = gr; g.fillRect(x - s, y - s, s * 2, s * 2);
   }
   return cv;
@@ -299,7 +300,7 @@ export class RaceRenderer {
     for (const L of art.glows) {
       if (L.x + L.r < vw.x0 || L.x - L.r > vw.x1 || L.y + L.r < vw.y0 || L.y - L.r > vw.y1) continue;
       const slow = L.col === 'lava' || L.col === 'ice', k = steady ? 0.6 : 0.45 + 0.25 * Math.sin(t * (slow ? 1.8 : 7) + L.ph) + (!slow && Math.sin(t * 23 + L.ph * 5) > 0.96 ? -0.3 : 0);
-      g.globalAlpha = clamp(k, 0, 1) * (L.col === 'lava' ? 0.55 : L.col === 'ice' ? 0.22 : 0.5);
+      g.globalAlpha = clamp(k, 0, 1) * (L.col === 'lava' ? 0.55 : L.col === 'ice' ? 0.22 : 0.5) * NEON_GLOW;
       g.drawImage(this.glow[L.col] || this.glow.lava, L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
     }
     g.globalAlpha = 1;
@@ -307,7 +308,7 @@ export class RaceRenderer {
     for (const pd of art.pads) {
       if (pd.bx1 < vw.x0 - 40 || pd.bx0 > vw.x1 + 40 || pd.by1 < vw.y0 - 40 || pd.by0 > vw.y1 + 40) continue;
       const m = pd.mid, w = Math.min(pd.w, 150) * 0.42, len = pd.circle ? pd.w * 0.8 : 90;
-      g.globalAlpha = 0.55; g.drawImage(this.glow.cyan, m.x - len * 0.9, m.y - len * 0.9, len * 1.8, len * 1.8);
+      g.globalAlpha = 0.55 * NEON_GLOW; g.drawImage(this.glow.cyan, m.x - len * 0.9, m.y - len * 0.9, len * 1.8, len * 1.8);
       this.at(g, m.x, m.y, m.a);
       g.lineWidth = 7; g.lineJoin = 'round'; g.lineCap = 'round';
       for (let k = 0; k < 3; k++) {
@@ -524,12 +525,12 @@ export class RaceRenderer {
       g.beginPath(); g.ellipse(c.x + so, c.y + so * 1.2, 28 * (1 - lift * 0.15), 17 * (1 - lift * 0.15), c.a, 0, TAU); g.fill();
       g.globalAlpha = 1;
       // wet road: the car's neon smeared down the asphalt (cheap fake reflection)
-      if (wet) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.28; g.drawImage(glowDot(L.neon), c.x - 18, c.y + 4, 36, 86); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
+      if (wet) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.28 * NEON_GLOW; g.drawImage(glowDot(L.neon), c.x - 18, c.y + 4, 36, 86); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
       // underglow pool on the road (stays on the ground under a jump, fading with height)
       this.at(g, c.x + so * 0.5, c.y + so * 0.6, c.a, CAR_VIS * (1 + lift * 0.4));
       drawUnderglow(g, L, t, 1 - lift * 0.6, steady);
       // headlight beams ahead
-      g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.3;
+      g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.3 * NEON_GLOW;
       g.drawImage(this.beam, headOf(st) - 4, -22, 120, 44);
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
       this.base(g);
@@ -537,7 +538,7 @@ export class RaceRenderer {
       if (!low && v.ltn > 2) {
         g.globalCompositeOperation = 'lighter'; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#ff2a3a';
         for (let band = 0; band < 2; band++) {
-          g.globalAlpha = band ? 0.16 : 0.38; g.lineWidth = band ? 3 : 4;
+          g.globalAlpha = (band ? 0.16 : 0.38) * NEON_GLOW; g.lineWidth = band ? 3 : 4;
           const k0 = band ? 4 : 0, k1 = band ? v.ltn - 1 : Math.min(5, v.ltn - 1);
           g.beginPath();
           for (let q = 0; q < 2; q++) for (let k = k0; k <= k1; k++) {
@@ -555,7 +556,7 @@ export class RaceRenderer {
         for (let k = 1; k < v.tn; k++) {
           const i0 = ((v.ti - k + 16) % 16) * 2, i1 = ((v.ti - k - 1 + 16) % 16) * 2;
           if (k + 1 >= v.tn || (low && k > 6)) break;
-          g.globalAlpha = (1 - k / v.tn) * 0.6; g.strokeStyle = k < 4 ? lf.trailCore : ts === 'ribbon' && k & 1 ? lf.ribbon : L.trail.color; g.lineWidth = (16 * (1 - k / v.tn) + 3) * wide;
+          g.globalAlpha = (1 - k / v.tn) * 0.6 * NEON_GLOW; g.strokeStyle = k < 4 ? lf.trailCore : ts === 'ribbon' && k & 1 ? lf.ribbon : L.trail.color; g.lineWidth = (16 * (1 - k / v.tn) + 3) * wide;
           g.beginPath(); g.moveTo(v.trail[i0], v.trail[i0 + 1]); g.lineTo(v.trail[i1], v.trail[i1 + 1]); g.stroke();
         }
         g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
@@ -566,7 +567,7 @@ export class RaceRenderer {
         const Lf = (boost ? 26 : 16) + (steady ? 6 : Math.random() * 14), tierC = v.flame > 0 && v.flameC >= 0 ? v.flameC : -1;
         const outer = tierC === C.BLUE ? '#3a86ff' : tierC === C.PURPLE ? '#c04dff' : tierC === C.ORANGE ? '#ff8c1a' : tierC >= 0 ? '#ffffff' : L.flame.outer;
         const ex = exhaustsOf(st), fw = ex.length > 1 ? 0.75 : 1;
-        g.globalCompositeOperation = 'lighter';
+        g.globalCompositeOperation = 'lighter'; g.globalAlpha = NEON_GLOW;
         for (let q = 0; q < ex.length; q++) {
           const ox = ex[q][0] * CAR_VIS, oy = ex[q][1] * CAR_VIS;
           this.at(g, c.x + cos * ox - sin * oy, c.y + sin * ox + cos * oy, c.a, fw);
@@ -574,7 +575,7 @@ export class RaceRenderer {
           g.beginPath(); g.moveTo(0, -8); g.quadraticCurveTo(-Lf * 0.6, -6, -Lf, 0); g.quadraticCurveTo(-Lf * 0.6, 6, 0, 8); g.closePath(); g.fill();
           g.fillStyle = L.flame.core; g.beginPath(); g.moveTo(0, -4); g.quadraticCurveTo(-Lf * 0.35, -3, -Lf * 0.55, 0); g.quadraticCurveTo(-Lf * 0.35, 3, 0, 4); g.closePath(); g.fill();
         }
-        g.globalCompositeOperation = 'source-over';
+        g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
         this.base(g);
         if (Math.random() < 0.6) p.emit(PK.FLAME, c.x - cos * (30 + Lf * 0.6), c.y - sin * (30 + Lf * 0.6), -cos * 90, -sin * 90, 0.14, 6, tierC >= 0 ? tierC : lf.flame, -24, 2);
       }
@@ -658,7 +659,7 @@ export class RaceRenderer {
       g.globalCompositeOperation = 'lighter';
       for (let k = 0; k < 3; k++) {
         const y = ((t * 0.03 + k * 0.37) % 1) * H, x = W * (0.5 + Math.sin(t * 0.3 + k * 2) * 0.35);
-        g.globalAlpha = 0.07 + 0.04 * Math.sin(t * 2 + k);
+        g.globalAlpha = (0.07 + 0.04 * Math.sin(t * 2 + k)) * NEON_GLOW;
         g.drawImage(this.glow.gold, x - W * 0.45, y - 30, W * 0.9, 60);
       }
       g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';

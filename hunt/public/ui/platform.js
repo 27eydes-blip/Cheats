@@ -1,7 +1,7 @@
 // Menu car art for the neon store and lobby: a car turning on a dark platform with a neon rim and
 // its underglow pooled under it, drawn from a look (race/looks.js). Try-on in the store passes a
 // look with the item swapped in; `boost` shows the boost flame and trail.
-import { makeLook, drawCarPreview, setCosResolver } from '../race/looks.js';
+import { makeLook, drawCarPreview, setCosResolver, glowA } from '../race/looks.js';
 import { resolveCos, equippedOf, SLOTS } from '../race/garage.js';
 import { DRIVERS } from '../race/physics.js';
 
@@ -31,7 +31,7 @@ export function drawPlatform(g, w, h, car, look, t, o = {}) {
   g.translate(cx, cy + 10 * s); g.scale(1, 0.38);
   g.fillStyle = '#07050f'; g.beginPath(); g.arc(0, 8 * s, 40 * s, 0, TAU); g.fill();
   g.fillStyle = '#151027'; g.beginPath(); g.arc(0, 0, 40 * s, 0, TAU); g.fill();
-  if (!o.low) { g.shadowColor = L.neon; g.shadowBlur = 14; }
+  if (!o.low) { g.shadowColor = glowA(L.neon); g.shadowBlur = 14; } // (the same NEON_GLOW as the race)
   g.lineWidth = Math.max(2, 2.6 * s); g.strokeStyle = L.neon; g.beginPath(); g.arc(0, 0, 39 * s, 0, TAU); g.stroke();
   g.shadowBlur = 0;
   g.strokeStyle = rgba(L.neon, 0.45); g.lineWidth = Math.max(1, 1.2 * s); g.beginPath();
