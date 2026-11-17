@@ -421,8 +421,7 @@ export function drawTall(g, it, ox, oy, t, steady, low) {
     g.beginPath(); poly(g, x, y, pts, dx, dy);
     g.fillStyle = p.roof; g.fill();
     g.lineJoin = 'round';
-    if (!low) { g.globalAlpha = 0.3; g.strokeStyle = p.rim; g.lineWidth = 6; g.stroke(); g.globalAlpha = 1; }
-    g.strokeStyle = p.rim; g.lineWidth = p.glass ? 1.5 : 2; g.stroke();
+    g.strokeStyle = p.rim; g.lineWidth = p.glass ? 1.5 : 2.4; g.stroke();
     if (p.beacon) { // a red light on the top of the tower (blinks; steady under Reduce Flashing)
       const on = steady || (t * 1.3 + it.x * 0.01) % 1 < 0.5;
       if (on) { g.fillStyle = '#ff3b3b'; g.beginPath(); g.arc(x + dx, y + dy, 3.2, 0, TAU); g.fill(); }
