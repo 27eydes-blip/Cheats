@@ -108,7 +108,7 @@ test('Settings: steering sensitivity, left-handed and joystick size reach the ne
   const L = await layout(page);
   expect(L.stick.cx).toBeGreaterThan(L.W / 2);
   for (const k of ['drift', 'fire', 'item', 'brake']) expect(L.btn[k].x, k).toBeLessThan(L.W / 2);
-  expect(L.stick.r).toBe(Math.round(Math.min(L.W, L.H) * 0.21 * 1.18));
+  expect(L.stick.r).toBe(Math.round(Math.min(L.W, L.H) * 0.19 * 1.18));
   // the stick's magnitude is scaled by the sensitivity (capped at 1)
   await page.waitForFunction(() => window.__race.rc.latest && window.__race.rc.latest.tm > 0.3);
   const F = new Fingers(P);
@@ -156,7 +156,7 @@ for (const [W, H] of [[667, 375], [1180, 820]]) {
       expect(Math.hypot(A.x - r.gauge.x, A.y - r.gauge.y), `${a} clear of the speedometer`).toBeGreaterThan(A.r + r.gauge.r);
       for (const b of names) if (a < b) { const B = r.ctl[b]; expect(Math.hypot(A.x - B.x, A.y - B.y), `${a} / ${b} apart`).toBeGreaterThan(A.r + B.r); }
     }
-    // the joystick: about 160 px across on a small phone, larger on a tablet
+    // the joystick: about 145 px across on a small phone (a slim see-through ring), larger on a tablet
     expect(r.ctl.stick.r * 2).toBeGreaterThanOrEqual(W < 800 ? 140 : 220);
     expect(r.ctl.drift.r * 2).toBeGreaterThanOrEqual(64);
     await creditVisible(page);

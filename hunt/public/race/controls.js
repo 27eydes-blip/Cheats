@@ -1,7 +1,7 @@
-// Hunt Racers controls. Touch (landscape): a big always-drawn steering joystick on the left. It points
+// Oblivion GP controls. Touch (landscape): an always-drawn steering joystick on the left. It points
 // where the car should go on screen: in Top-down that is the world heading `ha`; in the rotating
 // Chase / Cockpit views `toWorld` (set by the app from camera.js) converts it, so stick up = the
-// car's forward direction. Its deflection is the magnitude `hm` (see PROTOCOL.md). Throttle is automatic; big
+// car's forward direction. Its deflection is the magnitude `hm` (see PROTOCOL.md). Throttle is automatic; slim
 // thumb buttons on the right (DRIFT hold, FIRE, ITEM, BRAKE / REVERSE) and a RESET under the pause
 // button. Mirrored for left-handed players. Every finger is tracked by its touch identifier, so steering,
 // drifting and firing at once all work. Desktop: keys by event.code, mouse buttons for weapon /
@@ -64,19 +64,22 @@ export class Controls {
   layout(W, H, SA) {
     this.W = W; this.H = H; this.SA = SA;
     const L = !!SETTINGS.leftHanded, X = (x) => (L ? W - x : x);
-    const r = clamp(H * 0.12, 32, 58), r2 = clamp(r * 0.8, 29, 48), R = W - SA.r, B = H - SA.b;
-    const b = this.btn;
-    Object.assign(b.drift, { x: X(R - r - 14), y: B - r - 14, r });
-    Object.assign(b.fire, { x: X(R - r2 - 12), y: B - 2 * r - r2 - 38, r: r2 });
-    Object.assign(b.item, { x: X(R - 2 * r - r2 - 36), y: B - 3 * r2 - 20, r: r2 }); // stacked over BRAKE with a gap at any size
-    Object.assign(b.brake, { x: X(R - 2 * r - r2 - 50), y: B - r2 - 8, r: r2 });
+    // slim thumb buttons (>= 44 px across even on a small phone; a touch counts up to 1.3 r away)
+    // in a tight arc around DRIFT in the corner: BRAKE to its left, FIRE above it, ITEM between
+    const r = clamp(H * 0.1, 30, 44), r2 = clamp(r * 0.74, 26, 34), R = W - SA.r, B = H - SA.b;
+    const b = this.btn, dx = R - r - 12, dy = B - r - 12, D = r + r2 + 14, D2 = D * 1.16 * Math.SQRT1_2;
+    Object.assign(b.drift, { x: X(dx), y: dy, r });
+    Object.assign(b.brake, { x: X(dx - D), y: B - r2 - 10, r: r2 });
+    Object.assign(b.fire, { x: X(R - r2 - 10), y: dy - D, r: r2 });
+    Object.assign(b.item, { x: X(dx - D2), y: dy - D2, r: r2 });
     Object.assign(b.menu, { x: W - SA.r - 24, y: SA.t + 24, r: 22 });
     const r1 = clamp(H * 0.09, 32, 44);
     Object.assign(b.reset, { x: W - SA.r - r1 - 14, y: SA.t + 54 + r1, r0: 22, r1, r: b.reset.big ? r1 : 22 });
-    // the joystick: ~160 px across on a small phone, up to ~280 on a tablet (Settings: size)
+    // the joystick: ~145 px across on a small phone, up to ~220 on a tablet (Settings: size); drawn
+    // as a slim see-through ring, so the road shows through it
     const s = this.stick, k = STICK_SIZES[SETTINGS.raceStick] || 1;
-    s.r = Math.round(clamp(Math.min(W, H) * 0.21, 70, 120) * k);
-    s.cx = X(SA.l + s.r + 26); s.cy = B - s.r - 22;
+    s.r = Math.round(clamp(Math.min(W, H) * 0.19, 64, 110) * k);
+    s.cx = X(SA.l + s.r + 22); s.cy = B - s.r - 18;
     if (s.id == null) { s.ox = s.x = s.cx; s.oy = s.y = s.cy; }
   }
   steerSide(x) { return SETTINGS.leftHanded ? x > this.W * 0.55 : x < this.W * 0.45; }
