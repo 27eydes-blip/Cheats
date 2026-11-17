@@ -14,7 +14,7 @@ const start = async (page, track, cam, extra = {}) => {
   await page.evaluate(() => window.__race.auto(true, {}));
 };
 
-for (const track of ['desert', 'frozen', 'ashlands', 'neon']) {
+for (const track of ['desert', 'frozen', 'ashlands', 'neon', 'skyline', 'starfall']) {
   test(`${track}: neon-night scenery in Chase and Top-down, sharp Chase, no errors`, async ({ browser }) => {
     test.setTimeout(150_000);
     const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });

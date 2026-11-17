@@ -612,10 +612,10 @@ export class TrackArt {
       if (!L.length) return;
       // wall rims (both sides) and the road edges
       for (const side of [-1, 1]) {
-        this.glowStroke(g, nt.wall, 2.5, () => { g.beginPath(); for (const i of L) this.neonSeg(g, c, i, (q) => side * (c.ww[q] + 4)); });
+        this.glowStroke(g, nt.wall, 2.5, () => { g.beginPath(); for (const i of L) if (!this.onOther(c, i, side * (c.ww[i] + 4))) this.neonSeg(g, c, i, (q) => side * (c.ww[q] + 4)); });
         this.reflectors(g, c, L, side);
         const edgeCol = c.look === 'road' ? nt.edge : c.look === 'ice' ? '#bff4ff' : nt.line;
-        this.glowStroke(g, edgeCol, 3, () => { g.beginPath(); for (const i of L) { if (this.bend(c, i) > 0.05 && c.look === 'road') continue; this.neonSeg(g, c, i, (q) => side * (c.hw[q] + 2)); } });
+        this.glowStroke(g, edgeCol, 3, () => { g.beginPath(); for (const i of L) { if ((this.bend(c, i) > 0.05 && c.look === 'road') || this.onOther(c, i, side * (c.hw[i] + 2))) continue; this.neonSeg(g, c, i, (q) => side * (c.hw[q] + 2)); } });
         // curbs on the bends: neon dashes
         g.lineCap = 'butt';
         for (const i of L) {
@@ -640,6 +640,25 @@ export class TrackArt {
     for (const c of T.corridors) { if (c.main) continue; const p = pointAt(c, 70, 0); if (p.x >= bx.x0 && p.x <= bx.x1 && p.y >= bx.y0 && p.y <= bx.y1) this.shortcutMark(g, c); }
     this.chevrons(g, bx);
   }
+  // is this wall point of corridor c (segment i, offset d) out on another corridor's road (a crossover
+  // or a shortcut mouth)? Its lights are left out there, so nothing glows across a road
+  onOther(c, i, d) {
+    const j = (i + 1) % c.n;
+    return this.inOther(c, (c.px[i] + c.px[j]) / 2 - c.ty[i] * d, (c.py[i] + c.py[j]) / 2 + c.tx[i] * d);
+  }
+  // is (x, y) on the road (or its shoulder) of a corridor other than c?
+  inOther(c, x, y) {
+    for (const o of this.T.corridors) {
+      if (o === c) continue;
+      for (let i = 0; i < o.segs; i++) {
+        const j = (i + 1) % o.n, ax = o.px[i], ay = o.py[i], dx = o.px[j] - ax, dy = o.py[j] - ay, w = o.ww[i];
+        if (Math.abs(x - ax) > w + 80 || Math.abs(y - ay) > w + 80) continue;
+        const L2 = dx * dx + dy * dy || 1; let t = ((x - ax) * dx + (y - ay) * dy) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
+        if (Math.hypot(x - ax - dx * t, y - ay - dy * t) < w) return true;
+      }
+    }
+    return false;
+  }
   // cat-eye reflectors along the top of the wall every 64 px: they stream past at speed
   reflectors(g, c, L, side) {
     const nt = this.nt, low = SETTINGS.lowGfx, STEP = 64;
@@ -649,6 +668,7 @@ export class TrackArt {
         const s0 = c.s[i], s1 = c.s[i + 1];
         for (let m = Math.ceil(s0 / STEP) * STEP; m < s1; m += STEP) {
           const t = m - s0, d = side * (c.ww[i] + WALL * 0.55), x = c.px[i] + c.tx[i] * t - c.ty[i] * d, y = c.py[i] + c.ty[i] * t + c.tx[i] * d;
+          if (this.inOther(c, x, y)) continue; // (where another road crosses this wall: no lights across it)
           g.moveTo(x + r, y); g.arc(x, y, r, 0, 7);
         }
       }
