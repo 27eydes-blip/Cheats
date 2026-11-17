@@ -8,7 +8,7 @@
 // Glows and lettering are pre-rendered into small sprites (once per string / size / colour): the
 // per-frame work is drawImage, a few arcs and lines.
 import { FLAG } from './protocol.js';
-import { DRIVERS, driftTier } from './physics.js';
+import { DRIVERS, driftTier, KMH } from './physics.js';
 import { BASE_LOOKS } from './looks2.js'; // (every car's signature neon, the unlockable ones too)
 import { WEAPONS, ITEMS, ITEM_IDS, itemStat, weaponCd } from './items.js';
 import { SETTINGS, pulse } from '../settings.js';
@@ -281,7 +281,7 @@ export class Hud {
       g.beginPath(); g.arc(gx + Math.cos(a1) * R, gy + Math.sin(a1) * R, 2.4 * u, 0, TAU); g.fillStyle = '#ffffff'; g.fill();
     }
     // (the speed changes every frame: drawn live, not as a new glow sprite per number)
-    text(g, str('kmh', Math.round(spd / 8), String), gx, gy - 3 * u, Math.round(24 * u), NEON.text, 'center', 0, 'd');
+    text(g, str('kmh', Math.round(spd * KMH), String), gx, gy - 3 * u, Math.round(24 * u), NEON.text, 'center', 0, 'd');
     label(g, 'KM/H', gx, gy + 14 * u, Math.round(9 * u), NEON.dim, 'center', dpr, 'n');
     // drift charge (tier colours, with the tier marks) or boost left: a thin bar over the dial
     const c = rc.car;

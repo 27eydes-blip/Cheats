@@ -1,7 +1,7 @@
 // Menu art for the racing lobby: small track previews (the real layout, in each world's colours),
 // a driver's car on a turntable, and the driver stat bars. Previews are drawn once per size and
 // cached, so the lobby only blits them.
-import { DRIVERS, ALL_DRIVER_IDS } from './physics.js';
+import { DRIVERS, ALL_DRIVER_IDS, KMH } from './physics.js';
 import { drawCarPreview, glowDot } from './cars2.js';
 import { makeLook } from './looks2.js';
 export { drawCarPreview };
@@ -148,7 +148,7 @@ export function driverStats(id) {
   const D = DRIVERS[id] || DRIVERS.volt, d = DRIVERS[id] ? id : 'volt';
   return STAT_ROWS.map(([label, k]) => {
     const [lo, hi] = RANGE[k], x = STAT_VAL[k](D, d), f = hi > lo ? (x - lo) / (hi - lo) : 0.5;
-    return { label, k, f: 0.3 + f * 0.65, v: k === 'top' ? `${Math.round(D.top / 8)} km/h` : (Math.round((0.3 + f * 0.65) * 100) / 10).toFixed(1) };
+    return { label, k, f: 0.3 + f * 0.65, v: k === 'top' ? `${Math.round(D.top * KMH)} km/h` : (Math.round((0.3 + f * 0.65) * 100) / 10).toFixed(1) };
   });
 }
 export const weaponOf = (id) => WEAPONS[id] || WEAPONS.volt;

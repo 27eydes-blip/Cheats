@@ -17,6 +17,8 @@
 
 export const TICK_RATE = 30; // see PROTOCOL.md: 30 Hz halves per-tick travel at racing speed vs 20 Hz
 export const DT = 1 / TICK_RATE;
+// what the speedometer and the garage show: px/s -> km/h (a car tops out at ~200 km/h, ~290 boosted)
+export const KMH = 1 / 4;
 export const CAR_R = 22; // collision radius (cars are ~48 x 28 px)
 
 // Surfaces: multipliers on grip / acceleration / top speed / steering.
