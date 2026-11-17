@@ -62,8 +62,9 @@ export function fitText(el, min = 11) {
   let px = parseFloat(getComputedStyle(el).fontSize);
   while (el.scrollWidth > el.clientWidth + 0.5 && px > min) { px = Math.max(min, px - 1); el.style.fontSize = px + 'px'; }
   // still too wide at the smallest size (a wider fallback font while the web font is slow or blocked):
-  // close up the letter spacing too
+  // close up the letter spacing, then go a little smaller (never below 9 px) rather than cut the label
   if (el.scrollWidth > el.clientWidth + 0.5) el.style.letterSpacing = '0';
+  while (el.scrollWidth > el.clientWidth + 0.5 && px > 9) { px -= 1; el.style.fontSize = px + 'px'; }
 }
 const FEED_MS = 60_000;
 

@@ -6,10 +6,13 @@ import { trackErrors } from './helpers.js';
 
 const LABELS = '.sp-launch-txt small, #npName, #npRole, .sp-who-name, .sp-card.on .sp-card-name';
 
-for (const [w, h] of [[320, 568], [667, 375]]) {
-  test(`${w}x${h}, web fonts blocked: no lobby label is cut off`, async ({ page }) => {
+// wide: the fallback a Linux box draws when the lobby's narrow fonts are missing (DejaVu Sans, as on
+// the CI runner); a phone's own fallback is narrower than this
+for (const [w, h, wide] of [[320, 568, false], [667, 375, false], [320, 568, true], [667, 375, true]]) {
+  test(`${w}x${h}, web fonts blocked${wide ? ', a wide fallback font' : ''}: no lobby label is cut off`, async ({ page }) => {
     const errors = trackErrors(page); // (font requests from other sites are not counted)
     await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    if (wide) await page.addInitScript(() => addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '#lobby.sp, #lobby.sp * { font-family: "DejaVu Sans", Verdana, sans-serif !important; }'; document.head.appendChild(st); }));
     await page.setViewportSize({ width: w, height: h });
     await page.goto('/'); await page.waitForSelector('#playBtn');
     await expect(page.locator('#npRole')).not.toBeEmpty();
