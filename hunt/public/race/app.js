@@ -563,7 +563,7 @@ class RaceSession {
       if (p.air && !air) { play('land', 0.8); haptic('land'); }
       const tier = car.drift ? driftTier(car.dc) : 0;
       if (car.drift && !p.drift) haptic('drift');
-      if (tier > p.tier) { play('tier', 0.7); haptic('tier'); }
+      if (tier > p.tier) { play('tier' + tier, 0.8); haptic('tier'); }
       p.tier = tier; p.air = air; p.spd = spd; p.vx = car.vx; p.vy = car.vy; p.boostT = car.boostT; p.drift = car.drift;
       // WRONG WAY: driving against the road direction for a moment (tracks only)
       const T = rc.T;
