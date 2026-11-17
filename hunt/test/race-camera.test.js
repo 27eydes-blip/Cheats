@@ -4,7 +4,7 @@
 // part of the camera (lean into turns, boost kick, speed zoom) stays inside its bounds whatever the
 // car does (so your car never leaves the safe box on screen).
 import assert from 'node:assert';
-import { CAM, CAM_MODES, camMode, stickToWorld, worldToStick, wrap, tiltOf, project, newCam, stepCam, anchorOf, skyGap, ZK_MIN } from '../public/race/camera.js';
+import { CAM, CAM_MODES, camMode, stickToWorld, worldToStick, wrap, tiltOf, project, newCam, stepCam, anchorOf, skyGap, ZK_MIN, baseZoomOf, lookAhead } from '../public/race/camera.js';
 
 const close = (a, b, eps = 1e-9, msg = '') => assert.ok(Math.abs(wrap(a - b)) < eps, `${msg} ${a} vs ${b}`);
 const UP = -Math.PI / 2, RIGHT = 0, DOWN = Math.PI / 2, LEFT = Math.PI;
@@ -98,5 +98,42 @@ for (const m of CAM_MODES) {
   // a teleport (respawn) snaps the heading at once
   stepCam(cam, cfg, { a: a + 2.5, spd: 0, top: 900, boost: 0, spin: 0, snap: 1 }, 1 / 60);
   close(cam.h, a + 2.5, 1e-9, 'snap');
+}
+// FRAMING (the big upgrade): a race camera, not a minimap. Your car (~48 px long, drawn x1.18) is
+// big on every screen, and stays big at full speed and on a boost
+{
+  const carPx = (W, H, zk = 1) => 48 * 1.18 * baseZoomOf(W, H) * zk;
+  assert.ok(carPx(844, 390) >= 60, `landscape phone: car ${carPx(844, 390).toFixed(0)} px (was ~38)`);
+  assert.ok(carPx(667, 375) >= 50, `small phone: car ${carPx(667, 375).toFixed(0)} px`);
+  assert.ok(carPx(1180, 820) >= 75 && carPx(1440, 900) >= 75, 'tablet / desktop');
+  assert.ok(carPx(844, 390, 1 - CAM.top.speedZoom - CAM.top.boostZoom) >= 45, 'still big at full speed on a boost');
+  for (const [W, H] of [[320, 568], [568, 320], [3000, 2000]]) { const z = baseZoomOf(W, H); assert.ok(z >= 0.8 && z <= 1.35, `${W}x${H} zoom bounded ${z}`); }
+}
+// TOP-DOWN LOOK-AHEAD: at speed the view runs ahead of the car, so the car sits back toward the side
+// it came from (more road ahead than behind); bounded by cfg.ahead of the screen (x1.25 on a boost
+// kick) in every direction; nothing at a standstill; a snap (respawn) jumps straight to it
+{
+  const cfg = CAM.top, W = 844, H = 390, z = baseZoomOf(W, H);
+  for (const a of [0, Math.PI / 2, Math.PI, -Math.PI / 2, 0.6, -2.4]) {
+    const cam = newCam(), vx = Math.cos(a) * 800, vy = Math.sin(a) * 800;
+    lookAhead(cam, cfg, vx, vy, 812, W, H, z, 1 / 60, true);
+    for (let i = 0; i < 240; i++) lookAhead(cam, cfg, vx, vy, 812, W, H, z, 1 / 60, false);
+    // the car's screen spot: the middle minus the look-ahead
+    const sx = 0.5 - (cam.lx * z) / W, sy = 0.5 - (cam.ly * z) / H;
+    const back = -(Math.cos(a) * (sx - 0.5) * W + Math.sin(a) * (sy - 0.5) * H);
+    assert.ok(back > 0.15 * Math.min(W, H), `heading ${a}: the car sits back (${back.toFixed(0)} px behind the middle)`);
+    assert.ok(Math.abs(sx - 0.5) <= cfg.ahead + 1e-9 && Math.abs(sy - 0.5) <= cfg.ahead + 1e-9, `heading ${a}: bounded (${sx.toFixed(3)}, ${sy.toFixed(3)})`);
+    cam.kick = 1; for (let i = 0; i < 240; i++) lookAhead(cam, cfg, vx, vy, 812, W, H, z, 1 / 60, false);
+    assert.ok(Math.abs(cam.lx * z / W) <= cfg.ahead * 1.25 + 1e-9 && Math.abs(cam.ly * z / H) <= cfg.ahead * 1.25 + 1e-9, 'kick bounded');
+  }
+  const cam = newCam(); lookAhead(cam, cfg, 0, 0, 812, W, H, z, 1 / 60, true);
+  assert.ok(cam.lx === 0 && cam.ly === 0, 'standing still: centred');
+  // top-down speeds up the "FOV": zooms out with speed, more on a boost, never below ZK_MIN
+  const c2 = newCam();
+  for (let i = 0; i < 300; i++) stepCam(c2, cfg, { a: 0, spd: 812, top: 900, boost: 0, spin: 0, snap: 0 }, 1 / 60);
+  const zs = c2.zk; assert.ok(zs < 0.92, `zooms out at speed (${zs})`);
+  stepCam(c2, cfg, { a: 0, spd: 1100, top: 900, boost: 1, spin: 0, snap: 0 }, 1 / 60); assert.ok(c2.kick > 0.9, 'top-down boost kick');
+  for (let i = 0; i < 60; i++) stepCam(c2, cfg, { a: 0, spd: 1100, top: 900, boost: 1, spin: 0, snap: 0 }, 1 / 60);
+  assert.ok(c2.zk < zs - 0.04 && c2.zk >= ZK_MIN, `wider on a boost (${zs} -> ${c2.zk})`);
 }
 console.log('race-camera: ok');

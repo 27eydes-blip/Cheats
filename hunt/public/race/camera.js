@@ -25,10 +25,17 @@ const DEG = Math.PI / 180;
 // followed car sits on screen (0 top .. 1 bottom); cover: CSS scale so the tilted canvas still
 // covers most of the screen (the rest is the theme's sky behind a fog band); zoom: x base zoom
 export const CAM = {
-  top: { rotate: false, tilt: 0, persp: 0, anchorY: 0.5, cover: 1, zoom: 1, speedZoom: 0.15, boostZoom: 0.05 },
-  chase: { rotate: true, tilt: 29 * DEG, persp: 1.75, anchorY: 0.64, cover: 1.14, zoom: 1.02, speedZoom: 0.2, boostZoom: 0.13, swing: 0.085, kick: 0.045, lag: 5.5 },
-  cockpit: { rotate: true, tilt: 38 * DEG, persp: 2, anchorY: 0.92, cover: 1.25, zoom: 1.1, speedZoom: 0.16, boostZoom: 0.08, swing: 0.05, kick: 0.03, lag: 9 },
+  // top: ahead = how far the view runs ahead of your car (share of the screen, each axis): your car
+  // sits back toward the edge you came from, so most of the screen is road you're driving into
+  top: { rotate: false, tilt: 0, persp: 0, anchorY: 0.5, cover: 1, zoom: 1, speedZoom: 0.2, boostZoom: 0.07, kick: 0.03, ahead: 0.22 },
+  chase: { rotate: true, tilt: 29 * DEG, persp: 1.75, anchorY: 0.64, cover: 1.14, zoom: 0.94, speedZoom: 0.2, boostZoom: 0.13, swing: 0.085, kick: 0.045, lag: 5.5 },
+  cockpit: { rotate: true, tilt: 38 * DEG, persp: 2, anchorY: 0.92, cover: 1.25, zoom: 1, speedZoom: 0.16, boostZoom: 0.08, swing: 0.05, kick: 0.03, lag: 9 },
 };
+// THE BASE ZOOM for a W x H (CSS px) screen: a race camera, not a minimap. On a landscape phone
+// (844 x 390) a car is ~63 px long (it was ~38), on a small phone (667 x 375) ~51 px, on a tablet
+// or desktop ~80 px. The height counts double-ish: a short landscape screen still shows road.
+// Speed then zooms out (up to speedZoom + boostZoom) for the rush and the extra road ahead.
+export const baseZoomOf = (W, H) => clamp(Math.min(W, H * 2.1) / 740, 0.8, 1.35);
 export const camMode = (v) => (CAM[v] ? v : 'top');
 export const camCfg = (v) => CAM[camMode(v)];
 
@@ -78,7 +85,7 @@ export function skyGap(tl) { if (!tl.tilt) return 0; const o = project(tl, tl.ox
 //         reduce: Reduce Flashing }
 // Out (all bounded): cam.h heading (radians), cam.sw sideways lean (-1..1 x cfg.swing of the screen
 // width), cam.kick boost kick 0..1, cam.zk zoom multiplier, cam.yaw smoothed turn rate (rad/s)
-export const newCam = () => ({ h: 0, init: false, sw: 0, kick: 0, zk: 1, yaw: 0, lastA: 0, boost: 0 });
+export const newCam = () => ({ h: 0, init: false, sw: 0, kick: 0, zk: 1, yaw: 0, lastA: 0, boost: 0, lx: 0, ly: 0, lInit: false });
 export const ZK_MIN = 0.7; // never zooms out more than this (cars stay readable)
 export function stepCam(cam, cfg, s, dt) {
   if (!cam.init || s.snap) { cam.h = s.a; cam.lastA = s.a; cam.init = true; cam.yaw = 0; cam.sw = 0; }
@@ -109,10 +116,25 @@ export function stepCam(cam, cfg, s, dt) {
   cam.sw = clamp(cam.sw, -1, 1); cam.kick = clamp(cam.kick, 0, 1);
   return cam;
 }
+// TOP-DOWN look-ahead (world px): the view runs ahead of the car along its velocity, so it sits back
+// toward the side it came from and you see the road coming. Capped per axis at cfg.ahead of the
+// screen, plus a short extra push on a boost kick (render.js's safe box still holds the car). cam.lx/ly
+// ease toward it (a drift's wobble doesn't shake the view). spd: your speed, top: top speed.
+export function lookAhead(cam, cfg, vx, vy, top, W, H, z, dt, snap) {
+  const mx = (W * cfg.ahead) / z, my = (H * cfg.ahead) / z;
+  const spd = Math.hypot(vx, vy), k = clamp(spd / Math.max(300, (top || 900) * 0.75), 0, 1);
+  // full look-ahead from ~75% of top speed; the kick shoves the view a little further ahead
+  const push = 1 + cam.kick * 0.25, f = (k * Math.max(mx, my) * push) / Math.max(1, spd);
+  const tx = clamp(vx * f, -mx * push, mx * push), ty = clamp(vy * f, -my * push, my * push);
+  if (snap || !cam.lInit) { cam.lx = tx; cam.ly = ty; cam.lInit = true; }
+  const e = 1 - Math.exp(-clamp(dt, 0, 0.1) * 3.2);
+  cam.lx += (tx - cam.lx) * e; cam.ly += (ty - cam.ly) * e;
+  return cam;
+}
 // where the followed car sits on the canvas (CSS px) for this camera state: bounded by the mode's
 // anchor, swing and kick (the safe box in Chase: x 0.5 +- 0.085, y 0.64 .. 0.685)
 export function anchorOf(cfg, cam, W, H, out) {
   out.x = W * (0.5 + (cfg.rotate ? cam.sw * cfg.swing : 0));
-  out.y = H * (cfg.anchorY + (cfg.kick ? cam.kick * cfg.kick : 0));
+  out.y = H * (cfg.anchorY + (cfg.rotate && cfg.kick ? cam.kick * cfg.kick : 0));
   return out;
 }

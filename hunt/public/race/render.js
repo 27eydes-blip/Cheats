@@ -11,13 +11,13 @@ import { ITEMS, WEAPONS, ITEM_IDS, itemStat, COMBAT } from './items.js';
 import { armPulse, drawWell, drawDrone, drawSticky, drawTrap, drawGhostVeil } from './weapons-fx.js';
 import { driftTier } from './physics.js';
 import { SETTINGS } from '../settings.js';
-import { CAM, camRot, newCam, stepCam, anchorOf, tiltOf, project } from './camera.js';
+import { CAM, camRot, newCam, stepCam, anchorOf, tiltOf, project, baseZoomOf, lookAhead } from './camera.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const TAU = Math.PI * 2;
 const P = {}; // probe scratch
 const CAR_VIS = 1.18; // cars are drawn a bit bigger than their hitbox
-export const SAFE_BOX = 0.2;
+export const SAFE_BOX = 0.22;
 const DASH = [6, 6], NODASH = [];
 const LT = 10; // taillight trail points per light // the followed car stays within ±20% of the screen centre (0.3..0.7 of W and H)
 
@@ -138,7 +138,7 @@ export class RaceRenderer {
     this.skids = new Skids(900); this.parts.n = 0;
     this.art.setScale(this.chunkScale());
   }
-  baseZoom() { return clamp(Math.min(this.W, this.H * 1.75) / 1000, 0.5, 1.3); }
+  baseZoom() { return baseZoomOf(this.W, this.H); }
   chunkScale() { return Math.round(this.baseZoom() * this.dpr * 8) / 8; }
   resize(W, H, dpr) {
     if (W !== this.W || H !== this.H) this.dusk = null;
@@ -293,17 +293,19 @@ export class RaceRenderer {
     if (cam.shake > 0 && !SETTINGS.reduceFlash) { const s = cam.shake * cam.shake * 14; cam.sx = (Math.random() - 0.5) * s; cam.sy = (Math.random() - 0.5) * s; } else { cam.sx = cam.sy = 0; }
     if (!cfg.rotate) {
       if (focus) {
+        // camera.js: the speed zoom + boost kick (stepCam) and the look-ahead (lookAhead)
         let vx = 0, vy = 0;
         if (focus.me && rc.car && focus.predicted) { vx = rc.car.vx; vy = rc.car.vy; } else { vx = Math.cos(focus.a) * focus.spd; vy = Math.sin(focus.a) * focus.spd; }
-        const spd = Math.hypot(vx, vy), la = clamp(spd / 900, 0, 1.2);
-        // keep the car in the middle third: look-ahead capped to a share of the half-screen
-        const zz = cam.z || this.baseZoom(), tlx = clamp(vx * 0.3, -this.W * 0.17 / zz, this.W * 0.17 / zz), tly = clamp(vy * 0.3, -this.H * 0.17 / zz, this.H * 0.17 / zz), kk = 1 - Math.exp(-dt * 3.2);
-        if (!cam.init) { cam.x = focus.x; cam.y = focus.y; cam.lx = tlx; cam.ly = tly; cam.z = this.baseZoom(); cam.init = true; }
-        cam.lx += (tlx - cam.lx) * kk; cam.ly += (tly - cam.ly) * kk;
-        cam.x = focus.x + cam.lx * (SETTINGS.reduceFlash ? 0.8 : 1); cam.y = focus.y + cam.ly * (SETTINGS.reduceFlash ? 0.8 : 1);
-        // zoom out at speed, a little more on boost (the wider view)
-        const tz = this.baseZoom() * (1 - cfg.speedZoom * clamp((spd - 350) / 650, 0, 1) * Math.min(1, la + 0.2) - (focus.f & FLAG.BOOST ? cfg.boostZoom : 0));
-        cam.z += (tz - cam.z) * (1 - Math.exp(-dt * 1.6));
+        const cm = this.cm, key = focus.id + ':' + (focus.me ? rc.carEp : 0), snap = !cam.init || key !== this.focusKey || this.visOf(focus.id).respawnT > 0.62;
+        this.focusKey = key;
+        const S = this.camIn || (this.camIn = { a: 0, spd: 0, top: 900, boost: 0, spin: 0, snap: 0 });
+        S.a = focus.a; S.spd = Math.hypot(vx, vy); S.top = this.top || 900; S.boost = focus.f & FLAG.BOOST ? 1 : 0; S.spin = focus.f & FLAG.SPIN ? 1 : 0; S.snap = snap ? 1 : 0;
+        stepCam(cm, cfg, S, dt);
+        cam.z = this.baseZoom() * cfg.zoom * cm.zk;
+        lookAhead(cm, cfg, vx, vy, S.top, W, H, cam.z, dt, snap);
+        cam.lx = cm.lx; cam.ly = cm.ly; cam.init = true;
+        const rf = SETTINGS.reduceFlash ? 0.8 : 1;
+        cam.x = focus.x + cam.lx * rf; cam.y = focus.y + cam.ly * rf;
       }
       z = cam.z;
       cx = cam.x + cam.sx / z; cy = cam.y + cam.sy / z;
