@@ -123,7 +123,9 @@
       const token = window.gleydeTurnstile?.token() || "";
       if (!token) {
         status.className = "form-status err";
-        status.textContent = "Please complete the quick verification above the button.";
+        status.textContent = window.gleydeTurnstile?.configured()
+          ? "Please complete the quick verification above the button."
+          : "The security check is still being set up and can't run checks yet. Please try again soon, or contact us and we'll run it for you.";
         return;
       }
 

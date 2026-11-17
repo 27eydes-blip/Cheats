@@ -27,7 +27,8 @@
       const res = await fetch("/api/config", { headers: { Accept: "application/json" } });
       if (res.ok) {
         siteKey = (await res.json()).turnstileSiteKey || null;
-        renderTurnstile();
+        if (siteKey) renderTurnstile();
+        else document.getElementById("turnstile-slot").hidden = true; // not configured yet: no empty gap
       }
     } catch {
       /* The server will report a missing challenge if this failed. */
@@ -35,6 +36,7 @@
   }
   /* Shared with security-check.js */
   window.gleydeTurnstile = {
+    configured: () => siteKey !== null,
     token: () => document.querySelector('[name="cf-turnstile-response"]')?.value || "",
     reset: () => {
       if (widgetId !== null && window.turnstile) window.turnstile.reset(widgetId);
@@ -191,7 +193,9 @@
       }
       if (!data["cf-turnstile-response"]) {
         status.className = "form-status err";
-        status.textContent = "Please complete the quick verification above the button.";
+        status.textContent = siteKey
+          ? "Please complete the quick verification above the button."
+          : "Our contact form is being set up and can't send messages yet. Please try again soon.";
         return;
       }
 
