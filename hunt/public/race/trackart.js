@@ -569,17 +569,15 @@ export class TrackArt {
     for (const L of lights) {
       if (L.kind !== 'puddle') continue;
       g.save(); g.translate(L.x, L.y); g.rotate(L.a);
-      g.beginPath(); g.ellipse(0, 0, L.rx, L.ry, 0, 0, 7); g.fillStyle = 'rgba(6,6,18,0.55)'; g.fill();
+      g.beginPath(); g.ellipse(0, 0, L.rx, L.ry, 0, 0, 7); g.fillStyle = 'rgba(6,6,18,0.3)'; g.fill();
       if (!low) {
         g.clip();
         const gr = g.createLinearGradient(-L.rx, -L.ry, L.rx, L.ry);
-        gr.addColorStop(0, a2(L.col, 0.55)); gr.addColorStop(0.45, `rgba(120,90,200,${0.25 * NEON_GLOW})`); gr.addColorStop(1, `rgba(40,30,90,${0.1 * NEON_GLOW})`);
+        gr.addColorStop(0, a2(L.col, 0.3)); gr.addColorStop(0.45, `rgba(120,90,200,${0.25 * NEON_GLOW})`); gr.addColorStop(1, `rgba(40,30,90,${0.1 * NEON_GLOW})`);
         g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(-L.rx, -L.ry, L.rx * 2, L.ry * 2);
-        g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 2; g.beginPath(); g.moveTo(-L.rx * 0.5, -L.ry * 0.25); g.lineTo(L.rx * 0.3, -L.ry * 0.45); g.stroke();
         g.globalCompositeOperation = 'source-over';
       }
       g.restore();
-      g.beginPath(); g.ellipse(L.x, L.y, L.rx, L.ry, L.a, 0, 7); g.lineWidth = 1.5; g.strokeStyle = 'rgba(200,210,255,0.22)'; g.stroke();
     }
     // the poles themselves: a dark mast with a bright lamp head
     for (const L of lights) {
@@ -743,16 +741,19 @@ export class TrackArt {
       g.fillStyle = this.th.miniRoad === '#0b0b1c' ? '#3a3a66' : '#6a5a6a'; g.fillRect(T.box.x0, T.box.y0, T.box.x1, T.box.y1);
       g.fillStyle = '#12091e'; for (const o of T.obstacles) { g.beginPath(); g.arc(o.x, o.y, o.r, 0, 7); g.fill(); }
     } else {
-      for (const [col, extra] of [['#12091e', 80 / k * 0.06 + 70], ['#f4ecff', 0]]) {
-        g.strokeStyle = col;
+      // the track in the world's neon: a dark casing, a soft glow, a bright core
+      const nt = this.nt;
+      for (const [col, extra, al] of [['#0a0614', 80 / k * 0.06 + 70, 1], [nt.edge, 120, 0.35], [nt.edge, 40, 1], ['#f4ecff', -25, 1]]) {
+        g.strokeStyle = col; g.globalAlpha = al;
         for (const c of T.corridors) {
-          g.lineWidth = (c.main ? 150 : 90) + extra; g.setLineDash(c.main ? [] : [60, 60]);
+          g.lineWidth = Math.max(20, (c.main ? 150 : 90) + extra); g.setLineDash(c.main ? [] : [60, 60]);
           g.beginPath(); for (let i = 0; i < c.n; i++) g.lineTo(c.px[i], c.py[i]); if (c.closed) g.closePath(); g.stroke();
         }
       }
-      g.setLineDash([]);
+      g.globalAlpha = 1; g.setLineDash([]);
       const G0 = T.gates[0];
-      g.strokeStyle = '#ffd23f'; g.lineWidth = 60; g.beginPath(); g.moveTo(G0.x0, G0.y0); g.lineTo(G0.x1, G0.y1); g.stroke();
+      g.strokeStyle = '#ffffff'; g.lineWidth = 70; g.beginPath(); g.moveTo(G0.x0, G0.y0); g.lineTo(G0.x1, G0.y1); g.stroke();
+      g.strokeStyle = nt.line; g.lineWidth = 36; g.stroke();
     }
     this.mini = { cv, size, dpr, k, ox, oy };
     return this.mini;

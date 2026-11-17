@@ -90,17 +90,19 @@ function scorchSprite() {
   g.stroke();
   return cv;
 }
+// the item box: a glass cube with a neon rim and a glowing '?' (the lobby's neon style, no ink outline)
 function boxSprite() {
-  const s = 64, cv = document.createElement('canvas'); cv.width = cv.height = s;
+  const s = 128, cv = document.createElement('canvas'); cv.width = cv.height = s; // (2x: crisp on the closer camera)
   const g = cv.getContext('2d');
-  g.translate(s / 2, s / 2);
+  g.translate(s / 2, s / 2); g.scale(2, 2);
+  const box = () => { g.beginPath(); g.moveTo(-14, -20); g.arcTo(20, -20, 20, 20, 6); g.arcTo(20, 20, -20, 20, 6); g.arcTo(-20, 20, -20, -20, 6); g.arcTo(-20, -20, 20, -20, 6); g.closePath(); };
   const gr = g.createLinearGradient(-20, -20, 20, 20);
-  gr.addColorStop(0, '#5ff4ff'); gr.addColorStop(0.5, '#c04dff'); gr.addColorStop(1, '#ff5fa2');
-  g.beginPath(); g.moveTo(-15, -20); g.arcTo(20, -20, 20, 20, 6); g.arcTo(20, 20, -20, 20, 6); g.arcTo(-20, 20, -20, -20, 6); g.arcTo(-20, -20, 20, -20, 6); g.closePath();
-  g.fillStyle = gr; g.fill(); g.lineWidth = 4; g.strokeStyle = INK; g.stroke();
-  g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(-14, -14, 12, 8);
-  g.fillStyle = '#fff'; g.font = '700 26px "Lilita One", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.lineWidth = 4; g.strokeStyle = INK; g.strokeText('?', 0, 2); g.fillText('?', 0, 2);
+  gr.addColorStop(0, 'rgba(95,244,255,0.55)'); gr.addColorStop(0.5, 'rgba(160,92,255,0.45)'); gr.addColorStop(1, 'rgba(255,63,164,0.6)');
+  box(); g.fillStyle = 'rgba(10,6,28,0.85)'; g.fill(); g.fillStyle = gr; g.fill();
+  g.shadowColor = '#5ff4ff'; g.shadowBlur = 16; g.lineWidth = 2.5; g.strokeStyle = '#bff9ff'; g.stroke(); g.shadowBlur = 0;
+  g.fillStyle = 'rgba(255,255,255,0.28)'; g.beginPath(); g.moveTo(-16, -16); g.lineTo(4, -16); g.lineTo(-16, 4); g.closePath(); g.fill(); // glass glint
+  g.font = '700 28px "Chakra Petch", "Barlow Semi Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.shadowColor = '#ff3fa4'; g.shadowBlur = 12; g.fillStyle = '#ffffff'; g.fillText('?', 0, 2); g.shadowBlur = 0;
   return cv;
 }
 function oilSprite() {
@@ -133,7 +135,7 @@ export class RaceRenderer {
     this.t = 0;
     this.glow = { lava: glowSprite('rgba(255,120,30,0.9)'), ice: glowSprite('rgba(220,250,255,0.85)'), gold: glowSprite('rgba(255,210,63,0.95)'), cyan: glowSprite('rgba(95,244,255,0.9)'), red: glowSprite('rgba(255,60,60,0.9)') };
     for (const c of ['#ff3fa4', '#3ff5ff', '#a05cff', '#ffe14a', '#4bff9c']) this.glow[c] = glowSprite(c + 'cc');
-    this.box = boxSprite(); this.oil = oilSprite(); this.beam = beamSprite(); this.shadow = shadowSprite(); this.burn = scorchSprite();
+    this.box = boxSprite(); try { document.fonts.ready.then(() => { this.box = boxSprite(); }); } catch {} this.oil = oilSprite(); this.beam = beamSprite(); this.shadow = shadowSprite(); this.burn = scorchSprite();
     this.scorch = new Float32Array(SCORCH_N * 4).fill(-1e9); // x, y, time, radius (a ring of recent blasts)
     this.dusk = null; this.lfx = new Map(); // look id -> derived colours (strings, particle colour slots)
     this.amb = new Float32Array(60 * 3); // screen-space ambience (snow / embers / rain)
@@ -272,7 +274,7 @@ export class RaceRenderer {
     switch (e[0]) {
       case 'ko': { const c = car(e[1]); if (c) { this.explode(c.x, c.y, 1.2); if (e[1] === meId) this.shake(1); else if (this.near(c, 600)) this.shakeFrom(0.4, c.x, c.y); } break; }
       case 'rs': { this.visOf(e[1]).respawnT = 0.7; break; }
-      case 'hit': { const c = car(e[1]); if (c) { if (e[5]) this.explode(c.x, c.y, 0.55); for (let i = 0; i < 8; i++) { const a = Math.random() * TAU, s = 200 + Math.random() * 300; p.emit(PK.SPARK, c.x, c.y, Math.cos(a) * s, Math.sin(a) * s, 0.25, 3, C.GOLD, 0, 3); } this.visOf(e[1]).hitT = 0.25; if (e[1] === meId) { const s = car(e[2]); if (s && e[2] !== meId) this.shakeFrom(e[5] ? 0.6 : 0.42, s.x, s.y); else this.shake(e[5] ? 0.6 : 0.42); } else if (e[2] === meId) this.shake(e[5] ? 0.22 : 0.1); } break; }
+      case 'hit': { const c = car(e[1]); if (c) { if (e[5]) this.explode(c.x, c.y, 0.55); else { F.add(FK.FLASH, c.x, c.y, { r: 70, life: 0.14, col: '#ffffff' }); F.add(FK.RING, c.x, c.y, { r: 64, life: 0.24, col: '#ffe6c8', w: 5 }); } for (let i = 0; i < 8; i++) { const a = Math.random() * TAU, s = 200 + Math.random() * 300; p.emit(PK.SPARK, c.x, c.y, Math.cos(a) * s, Math.sin(a) * s, 0.25, 3, C.GOLD, 0, 3); } this.visOf(e[1]).hitT = 0.25; if (e[1] === meId) { const s = car(e[2]); if (s && e[2] !== meId) this.shakeFrom(e[5] ? 0.6 : 0.42, s.x, s.y); else this.shake(e[5] ? 0.6 : 0.42); } else if (e[2] === meId) this.shake(e[5] ? 0.22 : 0.1); } break; }
       case 'shield': { const c = car(e[1]); if (c) F.add(FK.RING, c.x, c.y, { r: 70, life: 0.35, col: '#5ff4ff', w: 8 }); break; }
       // unlockable car perks: GRAVITON pulls a box in, PHANTOM VX phases through a hit, FROSTBYTE rolls over oil
       case 'perk': {
