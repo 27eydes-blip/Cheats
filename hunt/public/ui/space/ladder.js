@@ -31,7 +31,7 @@ function css() {
 .ld-card { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 44px; padding: 4px 10px 4px 10px; text-align: left; color: var(--sp-text, #e9f6ff); font: 600 12px/1.1 var(--sp-narrow, sans-serif); cursor: pointer; }
 .ld-card .ld-emb { flex: none; filter: drop-shadow(0 0 6px var(--tc)); }
 .ld-card .ld-txt { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 3px; }
-.ld-card small { color: var(--sp-dim, #93a6cf); font: 600 10px/1 var(--sp-narrow, sans-serif); letter-spacing: .12em; }
+.ld-card small { color: var(--sp-dim, #93a6cf); font: 600 11px/1 var(--sp-narrow, sans-serif); letter-spacing: .12em; }
 .ld-card b { font: 700 14px/1 var(--sp-display, sans-serif); letter-spacing: .06em; color: var(--tc); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ld-bar { position: relative; display: block; height: 4px; border-radius: 2px; background: rgba(147,166,207,.22); overflow: hidden; }
 .ld-bar > i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--tc), #fff); border-radius: 2px; }
