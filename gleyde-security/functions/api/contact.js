@@ -14,19 +14,19 @@
    Any unexpected error returns a generic 500 with security headers, never a stack trace.
 
    All secrets come from environment variables — see .dev.vars.example. */
-import { SECURITY_HEADERS, json } from "../../lib/http.js";
+import { SECURITY_HEADERS, bodyError, isSameOrigin, json, readBody } from "../../lib/http.js";
+import { rateLimitSubject } from "../../lib/ip.js";
+import { rateLimited } from "../../lib/ratelimit.js";
+import { verifyTurnstile } from "../../lib/turnstile.js";
+
+// Re-exported for the tests.
+export { rateLimitSubject } from "../../lib/ip.js";
+export { _resetRateLimitMemory } from "../../lib/ratelimit.js";
 
 const MAX_BODY_BYTES = 16 * 1024;
 const MIN_FILL_MS = 3000;
 const RATE_LIMIT = { max: 5, windowSec: 60 * 60 }; // 5 posts per IP (or IPv6 /64) per hour
 const LIMITS = { name: 100, email: 254, website: 200, message: 4000 };
-
-/* Cloudflare's published Turnstile test secrets (always pass, used in local dev). */
-const TURNSTILE_TEST_SECRETS = new Set([
-  "1x0000000000000000000000000000000AA",
-  "2x0000000000000000000000000000000AA",
-  "3x0000000000000000000000000000000AA",
-]);
 
 /* C0/C1 controls, DEL, zero-width chars, bidi overrides/isolates, line/paragraph
    separators, BOM. The message keeps \n and \t. */
@@ -87,165 +87,6 @@ export function validate(raw) {
   return { data, fields };
 }
 
-/* Reads the body with a hard byte cap, even when Content-Length is absent (chunked)
-   or wrong, so a huge upload can't exhaust memory. */
-async function readCapped(request) {
-  const declared = request.headers.get("Content-Length");
-  if (declared !== null && Number(declared) > MAX_BODY_BYTES) return null;
-  if (!request.body) return "";
-  const reader = request.body.getReader();
-  const chunks = [];
-  let size = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > MAX_BODY_BYTES) {
-      await reader.cancel().catch(() => {});
-      return null;
-    }
-    chunks.push(value);
-  }
-  const all = new Uint8Array(size);
-  let off = 0;
-  for (const c of chunks) {
-    all.set(c, off);
-    off += c.byteLength;
-  }
-  return new TextDecoder().decode(all);
-}
-
-async function readBody(request) {
-  const type = (request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
-  if (type !== "application/json" && type !== "application/x-www-form-urlencoded") return { error: 415 };
-
-  const text = await readCapped(request);
-  if (text === null) return { error: 413 };
-
-  if (type === "application/json") {
-    try {
-      const obj = JSON.parse(text);
-      return obj && typeof obj === "object" && !Array.isArray(obj) ? { body: obj } : { error: 400 };
-    } catch {
-      return { error: 400 };
-    }
-  }
-  return { body: Object.fromEntries(new URLSearchParams(text)) };
-}
-
-function allowedOrigins(request, env) {
-  return new Set([
-    new URL(request.url).origin,
-    ...String(env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean),
-  ]);
-}
-
-function isSameOrigin(request, env) {
-  const origin = request.headers.get("Origin");
-  if (origin) return allowedOrigins(request, env).has(origin);
-  // No Origin header: not a modern browser cross-site POST. Refuse if the browser says cross-site.
-  const site = request.headers.get("Sec-Fetch-Site");
-  return !site || site === "same-origin";
-}
-
-/* ----- Rate limiting ----- */
-
-/* Turns an IP into the unit we limit on: the full IPv4 address, or the /64 network for
-   IPv6 (one customer usually controls a whole /64). IPv4-mapped IPv6 maps back to IPv4. */
-export function rateLimitSubject(ip) {
-  const raw = String(ip || "").trim().toLowerCase();
-  if (!raw) return "unknown";
-  const mapped = raw.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
-  if (mapped) return mapped[1];
-  if (!raw.includes(":")) return raw;
-
-  let addr = raw.split("%")[0]; // drop zone id
-  // Embedded IPv4 tail (e.g. 64:ff9b::1.2.3.4) -> two hex groups
-  const v4 = addr.match(/(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (v4) {
-    const [a, b, c, d] = v4.slice(1).map(Number);
-    addr = addr.slice(0, v4.index) + ((a << 8) | b).toString(16) + ":" + ((c << 8) | d).toString(16);
-  }
-  const [head, tail] = addr.split("::");
-  const h = head ? head.split(":") : [];
-  const t = tail !== undefined && tail ? tail.split(":") : [];
-  const fill = tail !== undefined ? 8 - h.length - t.length : 0;
-  const groups = [...h, ...Array(Math.max(fill, 0)).fill("0"), ...t];
-  if (groups.length !== 8 || groups.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return `bad:${raw}`;
-  return `${groups.slice(0, 4).map((g) => g.padStart(4, "0")).join(":")}::/64`;
-}
-
-async function hashSubject(subject, salt) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${salt}:${subject}`));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
-}
-
-/* Per-isolate counter. JS is single-threaded inside an isolate, so increments here are
-   atomic and catch parallel bursts that would race past KV's read-then-write. */
-const memory = { windowId: -1, counts: new Map() };
-const MEMORY_MAX_KEYS = 10_000;
-export function _resetRateLimitMemory() {
-  memory.windowId = -1;
-  memory.counts.clear();
-}
-
-function memoryHit(key, windowId) {
-  if (memory.windowId !== windowId || memory.counts.size > MEMORY_MAX_KEYS) {
-    memory.windowId = windowId;
-    memory.counts.clear();
-  }
-  const n = (memory.counts.get(key) || 0) + 1;
-  memory.counts.set(key, n);
-  return n;
-}
-
-async function rateLimited(env, ip) {
-  const windowId = Math.floor(Date.now() / 1000 / RATE_LIMIT.windowSec);
-  const key = `rl:${await hashSubject(rateLimitSubject(ip), env.RATE_LIMIT_SALT || "gleyde")}:${windowId}`;
-
-  if (memoryHit(key, windowId) > RATE_LIMIT.max) return true;
-
-  if (!env.RATE_LIMIT_KV) return false;
-  try {
-    const count = Number((await env.RATE_LIMIT_KV.get(key)) || 0);
-    if (count >= RATE_LIMIT.max) return true;
-    await env.RATE_LIMIT_KV.put(key, String(count + 1), { expirationTtl: RATE_LIMIT.windowSec + 60 });
-  } catch (err) {
-    // KV outage: fail open (memory limit, WAF rule and Turnstile still apply) rather than take the form down.
-    console.error("Rate-limit KV error", err);
-  }
-  return false;
-}
-
-/* ----- Turnstile ----- */
-
-async function verifyTurnstile(env, request, token, ip) {
-  const secret = env.TURNSTILE_SECRET_KEY;
-  if (!secret) {
-    console.error("TURNSTILE_SECRET_KEY is not set");
-    return false;
-  }
-  if (typeof token !== "string" || !token || token.length > 2048) return false;
-  const form = new FormData();
-  form.append("secret", secret);
-  form.append("response", token);
-  if (ip) form.append("remoteip", ip);
-  try {
-    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: form });
-    const out = await res.json();
-    if (out.success !== true) return false;
-    if (TURNSTILE_TEST_SECRETS.has(secret)) return true; // test keys return placeholder hostname/action
-    // A token solved on another site, or for another widget, must not be accepted here.
-    const hosts = new Set([...allowedOrigins(request, env)].map((o) => {
-      try { return new URL(o).hostname; } catch { return ""; }
-    }));
-    return out.action === "contact" && hosts.has(out.hostname);
-  } catch (err) {
-    console.error("Turnstile verify failed", err);
-    return false;
-  }
-}
-
 /* ----- Email ----- */
 
 async function sendEmail(env, data, meta) {
@@ -295,7 +136,7 @@ async function handle(request, env) {
   if (!isSameOrigin(request, env)) return json({ ok: false, error: "Forbidden." }, 403);
 
   const ip = request.headers.get("CF-Connecting-IP") || "";
-  if (await rateLimited(env, ip)) {
+  if (await rateLimited(env, { name: "contact", subject: rateLimitSubject(ip), ...RATE_LIMIT })) {
     return json(
       { ok: false, error: "You have sent several messages recently. Please try again in an hour." },
       429,
@@ -303,10 +144,8 @@ async function handle(request, env) {
     );
   }
 
-  const { body, error } = await readBody(request);
-  if (error === 413) return json({ ok: false, error: "Message is too large." }, 413);
-  if (error === 415) return json({ ok: false, error: "Unsupported content type." }, 415);
-  if (error) return json({ ok: false, error: "Malformed request." }, 400);
+  const { body, error } = await readBody(request, { maxBytes: MAX_BODY_BYTES, allowForm: true });
+  if (error) return bodyError(error);
 
   // Bots: pretend success so they don't adapt. The fill-time stamp is required.
   const started = Number(str(body.started_at));
@@ -319,7 +158,7 @@ async function handle(request, env) {
     return respond(request, 422, { ok: false, error: "Please fix the highlighted fields.", fields });
   }
 
-  if (!(await verifyTurnstile(env, request, body["cf-turnstile-response"], ip))) {
+  if (!(await verifyTurnstile(env, request, body["cf-turnstile-response"], ip, "contact"))) {
     return respond(request, 403, { ok: false, error: "Verification failed. Please try the check again." });
   }
 

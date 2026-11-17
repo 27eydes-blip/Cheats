@@ -5,11 +5,12 @@
    it in production), so they are skipped unless BASE_URL is localhost. */
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 import { after, before, describe, test } from "node:test";
 
 const BASE = (process.env.BASE_URL || "http://localhost:8788").replace(/\/$/, "");
 const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)/.test(BASE);
-const PAGES = ["/", "/services", "/how-it-works", "/about", "/contact", "/does-not-exist", "/assets/css/site.css", "/assets/js/site.js"];
+const PAGES = ["/", "/services", "/how-it-works", "/about", "/contact", "/security-check", "/does-not-exist", "/assets/css/site.css", "/assets/js/site.js", "/assets/js/security-check.js"];
 const REQUIRED = {
   "content-security-policy": /script-src 'self' https:\/\/challenges\.cloudflare\.com[;]/,
   "strict-transport-security": /max-age=\d{8,}/,
@@ -182,6 +183,119 @@ describe("Browser: XSS cannot execute", () => {
     const frame = page.frames().find((f) => f.url().startsWith(BASE));
     const loaded = frame ? await frame.evaluate(() => !!document.querySelector("form")).catch(() => false) : false;
     assert.equal(loaded, false);
+    await page.close();
+  });
+});
+
+describe("Security Check API (live)", () => {
+  const scan = (domain, headers = {}) =>
+    fetch(`${BASE}/api/scan`, {
+      method: "POST",
+      body: JSON.stringify({ domain, consent: true, "cf-turnstile-response": "x" }),
+      headers: { "Content-Type": "application/json", Accept: "application/json", Origin: BASE,
+        ...(LOCAL ? { "CF-Connecting-IP": `2001:db8:${Math.floor(Math.random() * 65535).toString(16)}::1` } : {}), ...headers },
+    });
+
+  for (const d of ["127.0.0.1", "localhost", "[::1]", "169.254.169.254", "http://2130706433/", "0x7f.1", "example.com:22",
+    "db.internal", "printer.local", "user:pw@example.com", "file:///etc/passwd"]) {
+    test(`refuses ${d} before any network activity`, async () => {
+      const res = await scan(d);
+      assert.equal(res.status, 422, d);
+      assert.match((await res.json()).error, /domain|IP address|port|private|reserved|website address|username/i);
+    });
+  }
+
+  test("cross-origin scan request -> 403, no CORS grant", async () => {
+    const res = await scan("example.com", { Origin: "https://evil.test" });
+    assert.equal(res.status, 403);
+    assert.equal(res.headers.get("access-control-allow-origin"), null);
+  });
+
+  test("without a valid Turnstile token nothing is scanned", async () => {
+    assert.equal((await scan("example.com")).status, 403);
+  });
+});
+
+describe("Browser: Security Check page", () => {
+  let browser;
+  const XSS = `<img src=x onerror="window.__pwned=1"><script>window.__pwned=1</script>`;
+  const sample = JSON.parse(readFileSync(new URL("./sample-report.json", import.meta.url), "utf8"));
+
+  before(async () => {
+    const { chromium } = createRequire(import.meta.url)("playwright");
+    browser = await chromium.launch();
+  });
+  after(() => browser?.close());
+
+  async function runWith(report) {
+    const page = await browser.newPage();
+    const dialogs = [];
+    page.on("dialog", (d) => { dialogs.push(d.message()); d.dismiss(); });
+    await page.route("**/api/config", (r) => r.fulfill({ contentType: "application/json", body: '{"turnstileSiteKey":null}' }));
+    await page.route("**/api/scan", (r) => r.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true, cached: false, report }) }));
+    await page.goto(`${BASE}/security-check`);
+    await page.fill("#domain", "smithrealty.com");
+    await page.check('input[name="consent"]');
+    await page.evaluate(() => {
+      const i = document.createElement("input");
+      i.type = "hidden"; i.name = "cf-turnstile-response"; i.value = "tok";
+      document.getElementById("scan-form").append(i);
+    });
+    await page.click('#scan-form button[type="submit"]');
+    await page.waitForSelector("#scan-results:not([hidden]) .report-head");
+    return { page, dialogs };
+  }
+
+  test("renders score, sections, fixes and a book-an-audit link", async () => {
+    const { page } = await runWith(sample);
+    assert.equal(await page.locator(".grade-letter").textContent(), sample.grade);
+    assert.equal(await page.locator(".check").count(), sample.sections.reduce((n, s) => n + s.checks.length, 0));
+    assert.ok((await page.locator(".check .fix").count()) >= 6);
+    const href = await page.locator(".report-cta a").first().getAttribute("href");
+    assert.equal(href, `/contact?website=smithrealty.com&score=${sample.score}`);
+    await page.click(".report-cta a >> nth=0");
+    await page.waitForURL(/\/contact/);
+    assert.equal(await page.inputValue("#website"), "smithrealty.com");
+    assert.match(await page.inputValue("#message"), new RegExp(`score ${sample.score}/100`));
+    await page.close();
+  });
+
+  test("hostile report content renders as text only (no XSS)", async () => {
+    const evil = structuredClone(sample);
+    evil.domain = XSS;
+    evil.headline = XSS;
+    evil.checkedUrl = `javascript:${XSS}`;
+    evil.sections[0].title = XSS;
+    evil.sections[0].checks[0] = { ...evil.sections[0].checks[0], title: XSS, detail: XSS, fix: XSS, status: `fail" onmouseover="x` };
+    const { page, dialogs } = await runWith(evil);
+    await page.waitForTimeout(300);
+    assert.equal(await page.evaluate(() => window.__pwned), undefined);
+    assert.equal(await page.locator("#scan-results img[src=x], #scan-results script").count(), 0);
+    assert.equal(await page.locator(".report-head h2").textContent(), XSS);
+    const href = await page.locator(".report-cta a").first().getAttribute("href");
+    assert.ok(href.startsWith("/contact?website=%3Cimg"), href);
+    await page.locator(".report-cta a").first().click();
+    await page.waitForURL(/\/contact/);
+    assert.equal(await page.inputValue("#website"), "", "non-domain values are not prefilled");
+    assert.deepEqual(dialogs, []);
+    await page.close();
+  });
+
+  test("server error message is shown as text", async () => {
+    const page = await browser.newPage();
+    await page.route("**/api/config", (r) => r.fulfill({ contentType: "application/json", body: '{"turnstileSiteKey":null}' }));
+    await page.route("**/api/scan", (r) => r.fulfill({ status: 422, contentType: "application/json", body: JSON.stringify({ ok: false, error: XSS, fields: { domain: XSS } }) }));
+    await page.goto(`${BASE}/security-check`);
+    await page.fill("#domain", "smithrealty.com");
+    await page.check('input[name="consent"]');
+    await page.evaluate(() => {
+      const i = document.createElement("input"); i.type = "hidden"; i.name = "cf-turnstile-response"; i.value = "tok";
+      document.getElementById("scan-form").append(i);
+    });
+    await page.click('#scan-form button[type="submit"]');
+    await page.waitForFunction(() => document.getElementById("scan-status").textContent.length > 0);
+    assert.equal(await page.locator("#scan-status").textContent(), XSS);
+    assert.equal(await page.evaluate(() => window.__pwned), undefined);
     await page.close();
   });
 });

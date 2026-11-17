@@ -18,9 +18,28 @@
     widgetId = window.turnstile.render(slot, {
       sitekey: siteKey,
       theme: "dark",
-      action: "contact",
+      action: slot.dataset.action || "contact",
     });
   }
+  async function initTurnstile() {
+    if (!document.getElementById("turnstile-slot")) return;
+    try {
+      const res = await fetch("/api/config", { headers: { Accept: "application/json" } });
+      if (res.ok) {
+        siteKey = (await res.json()).turnstileSiteKey || null;
+        renderTurnstile();
+      }
+    } catch {
+      /* The server will report a missing challenge if this failed. */
+    }
+  }
+  /* Shared with security-check.js */
+  window.gleydeTurnstile = {
+    token: () => document.querySelector('[name="cf-turnstile-response"]')?.value || "",
+    reset: () => {
+      if (widgetId !== null && window.turnstile) window.turnstile.reset(widgetId);
+    },
+  };
   window.gleydeTurnstileReady = () => {
     turnstileReady = true;
     renderTurnstile();
@@ -78,6 +97,7 @@
       for (const el of items) el.classList.add("in");
     }
 
+    initTurnstile();
     initContactForm();
   }
 
@@ -136,15 +156,15 @@
       status.textContent = "Thank you. Your message was received and we will reply within one business day.";
     }
 
-    try {
-      const res = await fetch("/api/config", { headers: { Accept: "application/json" } });
-      if (res.ok) {
-        const cfg = await res.json();
-        siteKey = cfg.turnstileSiteKey || null;
-        renderTurnstile();
+    /* Arriving from a security check report: prefill the website and a short note. */
+    const site = params.get("website");
+    const score = Number(params.get("score"));
+    if (site && site.length <= 200 && /^[a-z0-9.-]+$/i.test(site)) {
+      form.elements.website.value = site;
+      if (Number.isInteger(score) && score >= 0 && score <= 100 && !form.elements.message.value) {
+        form.elements.message.value =
+          `I ran the free Website Security Check on ${site} (score ${score}/100) and would like to book a full security audit.`;
       }
-    } catch {
-      /* The server will report a missing challenge if this failed. */
     }
 
     form.addEventListener("submit", async (e) => {
