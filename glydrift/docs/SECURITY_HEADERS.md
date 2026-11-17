@@ -22,12 +22,12 @@ Cloudflare already adds `X-Content-Type-Options: nosniff` and
 | Directive | Allows | Because |
 | --- | --- | --- |
 | `default-src` | `'self'` | Anything not listed below: glydrift.com only. |
-| `script-src` | `'self'`, one `sha256-…` hash | The game's own files, plus the one small inline script in `index.html` (the "Couldn't load the game, tap to retry" splash), by its exact hash. No other inline script and no `eval`. If that script changes, update the hash; the test fails until you do. |
+| `script-src` | `'self'`, one `sha256-…` hash, `https://static.cloudflareinsights.com` | The game's own files, plus the one small inline script in `index.html` (the "Couldn't load the game, tap to retry" splash), by its exact hash. No other inline script and no `eval`. If that script changes, update the hash; the test fails until you do. Cloudflare Web Analytics adds its beacon script to the live page (it isn't in the build), so it's allowed too. |
 | `style-src` | `'self' 'unsafe-inline'` | The splash, the privacy and support pages' `<style>` blocks, and styles the game sets from code. Inline styles can't run code. |
 | `img-src` | `'self' data: blob:` | Textures the game draws for itself, and the share card picture. |
 | `font-src` | `'self' data:` | The game's bundled fonts. |
 | `media-src` | `'self' data: blob:` | The soundtrack and sound effects. |
-| `connect-src` | `'self'`, `https://cdjcvhywrbsdryagqxqg.supabase.co`, `wss://` of the same, `data:` | Leaderboard, accounts, cloud save and crash reports (Supabase), over https and its realtime socket; the share card reads its own picture back from a `data:` address. |
+| `connect-src` | `'self'`, `https://cdjcvhywrbsdryagqxqg.supabase.co`, `wss://` of the same, `https://cloudflareinsights.com`, `data:` | Leaderboard, accounts, cloud save and crash reports (Supabase), over https and its realtime socket; the share card reads its own picture back from a `data:` address; Cloudflare Web Analytics reports visits to cloudflareinsights.com. |
 | `worker-src` | `'self' blob:` | The offline service worker (`sw.js`) and Supabase's realtime helper worker, made from a `blob:`. |
 | `manifest-src` | `'self'` | The home-screen app manifest. |
 | `frame-ancestors` | `'none'` | Same as X-Frame-Options, the modern way. |
@@ -49,7 +49,9 @@ Not needed on the website:
 2. **Start from this file.** Copy the three headers word for word. Copy the CSP, but as
    `Content-Security-Policy-Report-Only:` with `default-src 'self'; frame-ancestors 'none';
    object-src 'none'; base-uri 'self'; form-action 'self'`.
-3. **Find what the site really loads.** Open it with DevTools → Console and use every screen.
+3. **Find what the site really loads, on the live site.** Cloudflare can add its own scripts at
+   delivery (Web Analytics adds `static.cloudflareinsights.com`, which reports to
+   `cloudflareinsights.com`), so a local build doesn't show everything. Open it with DevTools → Console and use every screen.
    Report-only mode prints a "[Report Only] Refused to …" line for everything the policy would
    block.
    - Another domain (an API, a font CDN, Supabase): add it to the matching directive (`connect-src`,
