@@ -3,7 +3,7 @@
 // RaceClient.view() and is fed race events by the app (fx()).
 import { TrackArt, CHUNK } from './trackart.js';
 import { drawTall, PARALLAX } from './scenery.js';
-import { CarSprites, BUCKETS, INK, blitCar, drawUnderglow, drawBoostTrail, glowDot, exhaustsOf, taillightsOf, headOf, tyresOf, mix } from './cars2.js';
+import { CarSprites, BUCKETS, blitCar, drawUnderglow, drawBoostTrail, glowDot, exhaustsOf, taillightsOf, headOf, tyresOf, mix } from './cars2.js';
 import { lookForRacer, NEON_GLOW } from './looks2.js'; // (cars2 / looks2: the six starters + the 8 unlockable cars)
 const EDGE_A = Math.round(0x66 * NEON_GLOW).toString(16).padStart(2, '0'); // dusk edge lights (alpha hex)
 import { Particles, Skids, Effects, PK, C, TIER_C, FK, colorIdx } from './fx.js';
@@ -600,15 +600,17 @@ export class RaceRenderer {
       if (k === 'missile') {
         g.save(); g.translate(e.x, e.y); g.rotate(e.a);
         g.globalCompositeOperation = 'lighter'; g.drawImage(this.glow.red, -40, -16, 32, 32); g.globalCompositeOperation = 'source-over';
-        g.fillStyle = '#e8e2d2'; g.beginPath(); g.moveTo(16, 0); g.lineTo(8, -5); g.lineTo(-12, -5); g.lineTo(-12, 5); g.lineTo(8, 5); g.closePath(); g.fill(); g.lineWidth = 2.5; g.strokeStyle = INK; g.stroke();
-        g.fillStyle = '#ff3b3b'; g.beginPath(); g.moveTo(16, 0); g.lineTo(9, -5); g.lineTo(9, 5); g.closePath(); g.fill();
+        // a gunmetal dart with a red neon nose and fins
+        g.fillStyle = '#2a2a3c'; g.beginPath(); g.moveTo(16, 0); g.lineTo(8, -5); g.lineTo(-12, -5); g.lineTo(-12, 5); g.lineTo(8, 5); g.closePath(); g.fill(); g.lineWidth = 1.6; g.strokeStyle = '#ff6a6a'; g.stroke();
+        g.fillStyle = '#ffd0d0'; g.beginPath(); g.moveTo(16, 0); g.lineTo(9, -5); g.lineTo(9, 5); g.closePath(); g.fill();
         g.fillStyle = '#ff3b3b'; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(-6, s * 5); g.lineTo(-13, s * 11); g.lineTo(-13, s * 5); g.closePath(); g.fill(); }
         g.restore();
         p.emit(PK.SMOKE, e.x - Math.cos(e.a) * 16, e.y - Math.sin(e.a) * 16, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30, 0.8, 6, C.SMOKE, 22, 1.5);
         p.emit(PK.FLAME, e.x - Math.cos(e.a) * 14, e.y - Math.sin(e.a) * 14, -Math.cos(e.a) * 120, -Math.sin(e.a) * 120, 0.12, 6, C.ORANGE, -20, 3);
       } else if (k === 'rocket') {
         g.save(); g.translate(e.x, e.y); g.rotate(e.a);
-        g.fillStyle = '#ffb347'; g.beginPath(); g.moveTo(12, 0); g.lineTo(-8, -4); g.lineTo(-8, 4); g.closePath(); g.fill(); g.lineWidth = 2; g.strokeStyle = INK; g.stroke();
+        g.globalCompositeOperation = 'lighter'; g.drawImage(this.glow.lava, -16, -10, 20, 20); g.globalCompositeOperation = 'source-over';
+        g.fillStyle = '#ffd9a0'; g.beginPath(); g.moveTo(12, 0); g.lineTo(-8, -4); g.lineTo(-8, 4); g.closePath(); g.fill(); g.lineWidth = 1.4; g.strokeStyle = '#ff8c1a'; g.stroke();
         g.restore();
         p.emit(PK.FLAME, e.x - Math.cos(e.a) * 10, e.y - Math.sin(e.a) * 10, -Math.cos(e.a) * 80, -Math.sin(e.a) * 80, 0.1, 5, C.GOLD, -20, 3);
         if (Math.random() < 0.5) p.emit(PK.SMOKE, e.x, e.y, 0, 0, 0.5, 4, C.SMOKE, 18, 1);
@@ -637,16 +639,16 @@ export class RaceRenderer {
     const half = itemStat('spikes', e.lv).half;
     g.save(); g.translate(e.x, e.y); g.rotate(e.a + Math.PI / 2);
     g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(-half + 4, -6, half * 2, 16);
-    g.fillStyle = '#4a4d58'; g.fillRect(-half, -8, half * 2, 14); g.lineWidth = 3; g.strokeStyle = INK; g.strokeRect(-half, -8, half * 2, 14);
-    g.fillStyle = '#e8e2d2';
+    g.fillStyle = '#1c1c28'; g.fillRect(-half, -8, half * 2, 14); g.lineWidth = 2; g.strokeStyle = '#ff4a5a'; g.strokeRect(-half, -8, half * 2, 14);
+    g.fillStyle = '#c8ccdc'; g.strokeStyle = '#0a0a12';
     g.beginPath(); for (let x = -half + 6; x < half - 4; x += 13) { g.moveTo(x, -8); g.lineTo(x + 5, -17); g.lineTo(x + 10, -8); g.moveTo(x, 6); g.lineTo(x + 5, 15); g.lineTo(x + 10, 6); } g.fill(); g.lineWidth = 1.5; g.stroke();
     g.restore();
   }
   mine(g, e, t, steady) {
     g.save(); g.translate(e.x, e.y);
     g.beginPath(); g.arc(3, 4, 17, 0, TAU); g.fillStyle = 'rgba(0,0,0,0.3)'; g.fill();
-    g.beginPath(); g.arc(0, 0, 16, 0, TAU); g.fillStyle = '#c99a52'; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
-    g.beginPath(); for (let k = 0; k < 6; k++) { const a = k * 1.047; g.moveTo(Math.cos(a) * 9, Math.sin(a) * 9); g.lineTo(Math.cos(a) * 15, Math.sin(a) * 15); } g.strokeStyle = '#7a5a34'; g.lineWidth = 2; g.stroke();
+    g.beginPath(); g.arc(0, 0, 16, 0, TAU); g.fillStyle = '#20202e'; g.fill(); g.lineWidth = 2; g.strokeStyle = e.armed ? '#ff4a5a' : '#ffb347'; g.stroke();
+    g.beginPath(); for (let k = 0; k < 6; k++) { const a = k * 1.047; g.moveTo(Math.cos(a) * 9, Math.sin(a) * 9); g.lineTo(Math.cos(a) * 15, Math.sin(a) * 15); } g.strokeStyle = '#4a4a62'; g.lineWidth = 2; g.stroke();
     // arming: the light flashes a warning (breathes under Reduce Flashing); armed: a steady red glow
     const k = e.armed ? 1 : armPulse(t, e.id);
     g.beginPath(); g.arc(0, 0, 5, 0, TAU); g.fillStyle = e.armed ? '#ff3b3b' : k > 0.5 ? '#ffd23f' : '#7a5a1a'; g.fill();
@@ -660,9 +662,9 @@ export class RaceRenderer {
     const a = best ? Math.atan2(best.y - e.y, best.x - e.x) : t * 1.5;
     g.save(); g.translate(e.x, e.y);
     g.beginPath(); g.arc(4, 5, 18, 0, TAU); g.fillStyle = 'rgba(0,0,0,0.3)'; g.fill();
-    g.beginPath(); for (let k = 0; k < 3; k++) { const an = k * 2.094 + 0.5; g.moveTo(0, 0); g.lineTo(Math.cos(an) * 20, Math.sin(an) * 20); } g.lineWidth = 5; g.strokeStyle = INK; g.stroke(); g.lineWidth = 3; g.strokeStyle = '#7d8290'; g.stroke();
-    g.beginPath(); g.arc(0, 0, 12, 0, TAU); g.fillStyle = '#5a6a3a'; g.fill(); g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
-    g.rotate(a); g.lineWidth = 6; g.strokeStyle = INK; g.beginPath(); g.moveTo(0, 0); g.lineTo(20, 0); g.stroke(); g.lineWidth = 3; g.strokeStyle = '#ff8c1a'; g.stroke();
+    g.beginPath(); for (let k = 0; k < 3; k++) { const an = k * 2.094 + 0.5; g.moveTo(0, 0); g.lineTo(Math.cos(an) * 20, Math.sin(an) * 20); } g.lineWidth = 4; g.strokeStyle = '#2a2a3a'; g.stroke();
+    g.beginPath(); g.arc(0, 0, 12, 0, TAU); g.fillStyle = '#20202e'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#ff8c1a'; g.stroke();
+    g.rotate(a); g.lineWidth = 5; g.strokeStyle = '#2a2a3a'; g.beginPath(); g.moveTo(0, 0); g.lineTo(20, 0); g.stroke(); g.lineWidth = 2; g.strokeStyle = '#ffb347'; g.stroke();
     g.beginPath(); g.arc(0, 0, 4, 0, TAU); g.fillStyle = '#ff8c1a'; g.fill();
     g.restore();
   }
