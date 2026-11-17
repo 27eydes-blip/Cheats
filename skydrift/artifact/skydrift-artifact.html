@@ -3,7 +3,7 @@
 <meta name="description" content="Seven strange questions a day. Rare answers fly higher.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Spectral:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 @property --sky-top { syntax: '<color>'; inherits: true; initial-value: #9fc4f0; }
 @property --sky-mid { syntax: '<color>'; inherits: true; initial-value: #c9dcf7; }
@@ -11,11 +11,14 @@
 
 :root {
   transition: --sky-top 1.8s ease, --sky-mid 1.8s ease, --sky-bottom 1.8s ease;
-  --ink: #26305c;
-  --ink-soft: #55608f;
-  --gold: #e8b84a;
-  --gold-hi: #fff1b8;
-  --gold-lo: #b07d22;
+  --ink: #2b1d12;
+  --ink-soft: #5a4430;
+  --gold: #d9a441;
+  --gold-hi: #fbe7b0;
+  --gold-lo: #8a5f1f;
+  --brass-edge: #6b4a1a;
+  --parchment: #f2e4c4;
+  --stone: #2a2338;
   --glass-a: .62;
   --glass: rgba(255, 255, 255, var(--glass-a));
   --glass-edge: rgba(255, 255, 255, 0.85);
@@ -26,11 +29,11 @@
   --star-alpha: 0;
   --aurora-alpha: 0;
   --sun-alpha: 1;
-  --text-on-sky: #26305c;
+  --text-on-sky: #2b1d12;
   --safe-b: 0px;
   --safe-t: 0px;
   --display: 'Cinzel', 'Trajan Pro', Georgia, serif;
-  --ui: 'Fredoka', 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ui: 'Spectral', Georgia, 'Times New Roman', serif;
   color-scheme: light;
 }
 
@@ -46,107 +49,31 @@ body {
 button { font: inherit; color: inherit; cursor: pointer; }
 [hidden] { display: none !important; }
 
-/* ---------- Sky (all colours and art come from the active theme in themes.js) ---------- */
-#sky { position: fixed; inset: 0; overflow: hidden; z-index: 0; background: var(--sky-mid); }
-.sky-grad {
-  position: absolute; inset: 0;
-  background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid, #c9dcf7) 55%, var(--sky-bottom) 100%);
+/* ---------- Sky: two canvases painted by js/sky.js (see themes.js for the variations) ---------- */
+#sky { position: fixed; inset: 0; overflow: hidden; z-index: 0; background: #0c0c2c; }
+.sky-canvas { position: absolute; left: 0; top: 0; display: block; pointer-events: none; }
+.sky-canvas.front { z-index: 3; }
+/* vignette: darkens the edges so the eye settles on the centre; a static layer, free to composite */
+.sky-vignette {
+  position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  background: radial-gradient(ellipse 85% 75% at 50% 48%, transparent 55%, var(--vignette, rgba(10, 5, 20, .6)) 100%);
 }
-body.no-sky-anim, body.no-sky-anim * { transition: none !important; }
-
-/* tiled, transform-scrolled layers (clouds, particles, debris, stars) */
-.sky-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.sky-alt { position: absolute; left: 0; top: 0; width: 100%; will-change: transform; }
-.sky-drift { position: absolute; left: 0; top: 0; background-repeat: repeat; will-change: transform; }
-@keyframes drift { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(var(--dx), var(--dy), 0); } }
-@keyframes twinkle { from { opacity: 1; } to { opacity: .25; } }
-
-.stars { position: absolute; inset: 0; opacity: var(--star-alpha); transition: opacity 2s ease; }
-.aurora {
-  position: absolute; inset: -6% -20% 45%; opacity: var(--aurora-alpha); transition: opacity 2s ease;
-  -webkit-mask-image: linear-gradient(180deg, #000 50%, transparent); mask-image: linear-gradient(180deg, #000 50%, transparent);
-}
-/* soft-edged ribbons without blur filters: a horizontal colour band masked to fade at top and bottom */
-.aurora i {
-  position: absolute; left: 0; right: 0; height: 22%;
-  background: linear-gradient(90deg, transparent, var(--a1) 28%, var(--a2) 55%, var(--a3) 80%, transparent);
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 45%, #000 55%, transparent);
-  mask-image: linear-gradient(180deg, transparent, #000 45%, #000 55%, transparent);
-  opacity: .55; will-change: transform;
-  animation: aurora 14s ease-in-out infinite alternate;
-}
-.aurora i:nth-child(1) { top: 12%; }
-.aurora i:nth-child(2) { top: 30%; animation-duration: 18s; opacity: .4; }
-.aurora i:nth-child(3) { top: 47%; animation-duration: 23s; opacity: .28; }
-@keyframes aurora { from { transform: translateX(-10%) skewY(-4deg); } to { transform: translateX(10%) skewY(4deg); } }
-
-.celestial { position: absolute; pointer-events: none; opacity: var(--celestial-alpha); transition: opacity 2s ease, transform 1.6s ease; }
-.c-sun {
-  top: 9%; right: 12%; width: 120px; height: 120px; border-radius: 50%;
-  background: radial-gradient(circle, #fff9e0 0 35%, rgba(255, 233, 170, .55) 50%, transparent 70%);
-}
-.c-sunset {
-  right: -18%; bottom: 12%; width: 360px; height: 360px; border-radius: 50%;
-  background: radial-gradient(circle, #fff3c8 0 18%, #ffd08a 26%, rgba(255, 170, 110, .55) 40%, rgba(255, 150, 120, .18) 58%, transparent 70%);
-  transform: translateY(var(--celestial-y));
-}
-.c-moon {
-  top: 7%; right: 8%; width: 200px; height: 200px; border-radius: 50%;
-  background:
-    radial-gradient(circle at 42% 38%, rgba(190, 180, 150, .5) 0 5%, transparent 6%),
-    radial-gradient(circle at 58% 60%, rgba(190, 180, 150, .45) 0 7%, transparent 8%),
-    radial-gradient(circle at 36% 62%, rgba(190, 180, 150, .35) 0 3.5%, transparent 4.5%),
-    radial-gradient(circle, #fbf5dc 0 30%, rgba(246, 238, 203, .28) 32%, rgba(200, 210, 255, .1) 50%, transparent 70%);
-}
-.c-rays {
-  inset: -20% -30% 20% -30%;
-  background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0) 0 70px, rgba(255, 255, 255, .16) 70px 120px, rgba(255, 255, 255, 0) 120px 210px);
-  -webkit-mask-image: radial-gradient(ellipse at 15% 0%, #000 10%, transparent 65%); mask-image: radial-gradient(ellipse at 15% 0%, #000 10%, transparent 65%);
-  animation: rays 9s ease-in-out infinite alternate;
-}
-@keyframes rays { from { opacity: calc(var(--celestial-alpha) * .55); } to { opacity: var(--celestial-alpha); } }
-
-.lightning {
-  position: absolute; inset: 0 0 45% 0; opacity: 0; pointer-events: none; z-index: 1;
-  background: radial-gradient(ellipse at var(--lx, 50%) 20%, rgba(225, 220, 255, .9), transparent 55%);
-}
-.lightning .bolt { position: absolute; left: var(--lx, 50%); top: 4%; width: 18px; opacity: .55; transform: translateX(-50%); }
-
-.birds { position: absolute; left: 0; top: 0; opacity: 0; pointer-events: none; will-change: transform; }
-.birds .wing { transform-box: fill-box; transform-origin: center; animation: flap .55s ease-in-out infinite alternate; }
-@keyframes flap { to { transform: scaleY(-.5); } }
-
-#world {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 0;
-  transform: translateY(var(--world-y, 0px));
-  transition: transform 1.6s cubic-bezier(.3, .7, .2, 1);
-}
-.isle { position: absolute; width: 170px; transform: translateX(-50%); }
-.isle-bob { animation: bob 6s ease-in-out infinite alternate; will-change: transform; }
-.isle svg { width: 100%; height: auto; display: block; overflow: visible; filter: drop-shadow(0 12px 16px var(--isle-shadow, rgba(60, 70, 140, .2))); }
-.isle .isle-label {
-  position: absolute; left: 50%; top: -6px; transform: translate(-50%, -100%);
-  white-space: nowrap; font-size: 12px; font-weight: 600; letter-spacing: .02em;
-  color: var(--ink); background: rgba(255, 255, 255, .75); padding: 3px 10px; border-radius: 999px;
-  box-shadow: 0 2px 10px rgba(40, 50, 110, .12);
-}
-.isle .isle-label { opacity: 0; transition: opacity .6s ease; }
-.isle.passed .isle-label { background: linear-gradient(180deg, #fff6d2, #f3cf6d); }
-.isle.home { width: 260px; }
-@keyframes bob { from { transform: translateY(-6px); } to { transform: translateY(6px); } }
 
 #glider-wrap {
   position: absolute; left: 50%; top: 60%; z-index: 2;
-  transform: translate(-50%, -50%); transition: top 1s ease;
+  transform: translate(-50%, -50%); transition: top 1s cubic-bezier(.4, 0, .2, 1), opacity .6s ease;
 }
 body.on-home #glider-wrap { top: 56%; }
-body.on-results #glider-wrap, body.on-collection #glider-wrap, body.on-practice #glider-wrap { top: 18%; opacity: .0; }
-#glider { width: 132px; animation: glide 3.4s ease-in-out infinite; transform-origin: 50% 60%; }
-/* two-tone outline: a dark line hugging the glider and a light edge outside it, so it reads on any sky */
+body.on-results #glider-wrap, body.on-collection #glider-wrap, body.on-practice #glider-wrap { top: 18%; opacity: 0; }
+#glider { width: 140px; animation: glide 3.4s ease-in-out infinite; transform-origin: 50% 60%; }
+/* the glider sits in the scene: a dark contour, a rim of the scene's light on the lit side, a soft cast shadow */
 #glider svg {
   width: 100%; display: block; overflow: visible;
-  filter: drop-shadow(1px 0 0 var(--g-dark)) drop-shadow(-1px 0 0 var(--g-dark)) drop-shadow(0 1px 0 var(--g-dark)) drop-shadow(0 -1px 0 var(--g-dark))
-    drop-shadow(0 0 1.5px var(--g-light)) drop-shadow(0 0 1.5px var(--g-light));
+  filter:
+    drop-shadow(1px 0 0 var(--g-dark)) drop-shadow(-1px 0 0 var(--g-dark)) drop-shadow(0 1px 0 var(--g-dark)) drop-shadow(0 -1px 0 var(--g-dark))
+    drop-shadow(calc(var(--g-shadow-x, 6px) / -4) -1px 0 var(--g-rim, #ffd38a))
+    drop-shadow(0 0 1.5px var(--g-light))
+    drop-shadow(var(--g-shadow-x, 6px) 12px 8px rgba(8, 4, 16, .35));
 }
 #glider.climb { animation: climb 1.6s cubic-bezier(.3, .7, .2, 1); }
 @keyframes glide {
@@ -161,14 +88,8 @@ body.on-results #glider-wrap, body.on-collection #glider-wrap, body.on-practice 
 #glider .scarf { animation: scarf .5s ease-in-out infinite alternate; transform-origin: 30% 50%; }
 @keyframes scarf { to { transform: skewY(8deg) scaleX(1.06); } }
 #trail { position: absolute; inset: 0; pointer-events: none; }
-.spark {
-  position: absolute; left: 30%; top: 55%; width: 8px; height: 8px; border-radius: 50%;
-  background: radial-gradient(circle, #fff 0 30%, var(--spark, var(--gold)) 60%, transparent 70%);
-  animation: spark 1.2s ease-out forwards;
-}
-@keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(.2); opacity: 0; } }
 
-/* Text drawn straight on the sky gets a soft halo in the opposite ink, for skies in the mid-brightness band */
+/* Text drawn straight on the sky gets a soft halo in the opposite ink */
 .hud-alt, .screen-title, .res-layer, .res-alt, .res-streak, .share-done, .results-foot, .col-help, .practice-intro,
 .kicker, .tagline, .home-note {
   text-shadow: 0 0 3px var(--sky-halo, transparent), 0 0 10px var(--sky-halo, transparent);
@@ -385,7 +306,7 @@ body.premium .ad-slot { display: none; }
 }
 .promo-art {
   width: 64px; height: 64px; border-radius: 16px; flex: none;
-  background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMjAgMTQwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0id2luZyIgeDE9IjAiIHkxPSIwIiB4Mj0iMCIgeTI9IjEiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2ZmZmFmMCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2YzZGNhZSIvPjwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9IndpbmdzdHJpcGUiIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIwIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNmMDhmYjUiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNiNDhjZmYiLz48L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJnb2xkIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmZmMWI4Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjZDI5YzM0Ii8+PC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPCEtLSBzY2FyZiAtLT4KICA8cGF0aCBjbGFzcz0ic2NhcmYiIGQ9Ik04OCA3MCBDNzAgNjYgNTAgNzggMjYgNzAgQzQwIDgwIDYwIDgyIDg2IDc4IFoiIGZpbGw9IiNmZjdmOWYiLz4KICA8cGF0aCBjbGFzcz0ic2NhcmYiIGQ9Ik04NiA3NCBDNjYgNzggNDggOTIgMzAgODggQzQ2IDk2IDY2IDkyIDg4IDgwIFoiIGZpbGw9IiNmZjlmYjgiIG9wYWNpdHk9Ii45Ii8+CiAgPCEtLSBiYWNrIHdpbmcgLS0+CiAgPHBhdGggZD0iTTEwNCA2NCBMMTUwIDMwIEwxNzAgMzQgTDEyNCA3MCBaIiBmaWxsPSIjZTlkMmEyIi8+CiAgPCEtLSBib2R5IC0tPgogIDxwYXRoIGQ9Ik02MCA4MiBRMTEwIDcwIDE4MiA3NCBRMTk2IDc2IDE5OCA4MiBRMTg2IDkyIDEyMCA5NCBRNzggOTYgNjAgODIgWiIgZmlsbD0idXJsKCN3aW5nKSIgc3Ryb2tlPSIjYzk5YTRhIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8cGF0aCBkPSJNMTcwIDc2IFExOTAgNzcgMTk3IDgyIiBzdHJva2U9InVybCgjZ29sZCkiIHN0cm9rZS13aWR0aD0iNCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPCEtLSB0YWlsIC0tPgogIDxwYXRoIGQ9Ik02NCA4MiBMNDQgNTggTDU2IDU4IEw3OCA4MCBaIiBmaWxsPSJ1cmwoI3dpbmdzdHJpcGUpIi8+CiAgPCEtLSBwaWxvdCAtLT4KICA8Y2lyY2xlIGN4PSIxMTIiIGN5PSI2NiIgcj0iMTQiIGZpbGw9IiNmZmQ5YjgiLz4KICA8cGF0aCBkPSJNOTggNjQgUTEwMCA0OCAxMTQgNDggUTEyOCA0OCAxMjggNjIgUTEyMCA1NiAxMTIgNTcgUTEwNCA1OCA5OCA2NCBaIiBmaWxsPSIjN2E0YTJhIi8+CiAgPHJlY3QgeD0iMTAzIiB5PSI1OCIgd2lkdGg9IjIyIiBoZWlnaHQ9IjgiIHJ4PSI0IiBmaWxsPSIjM2I0YmE4Ii8+CiAgPGNpcmNsZSBjeD0iMTA4IiBjeT0iNjIiIHI9IjQuNSIgZmlsbD0iI2JmZTZmZiIgc3Ryb2tlPSJ1cmwoI2dvbGQpIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8Y2lyY2xlIGN4PSIxMjAiIGN5PSI2MiIgcj0iNC41IiBmaWxsPSIjYmZlNmZmIiBzdHJva2U9InVybCgjZ29sZCkiIHN0cm9rZS13aWR0aD0iMiIvPgogIDxwYXRoIGQ9Ik0xMTAgNzIgUTExNCA3NSAxMTggNzIiIHN0cm9rZT0iI2M0NmE1YSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8IS0tIGZyb250IHdpbmcgLS0+CiAgPHBhdGggZD0iTTk2IDg0IEwxNTAgMTEyIEwxNzYgMTEwIEwxMjggODIgWiIgZmlsbD0idXJsKCN3aW5nKSIgc3Ryb2tlPSIjYzk5YTRhIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8cGF0aCBkPSJNMTM4IDk2IEwxNjIgMTEwIiBzdHJva2U9InVybCgjd2luZ3N0cmlwZSkiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=') center / 80% no-repeat, radial-gradient(circle at 30% 30%, #ffe9a8, #f08fb5 70%);
+  background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMjAgMTQwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iY2FudmFzVG9wIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmJmMWQ2Ii8+PHN0b3Agb2Zmc2V0PSIuNiIgc3RvcC1jb2xvcj0iI2U4ZDRhNiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2I4OWE2OCIvPjwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImNhbnZhc0JhY2siIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNkOWMwOGUiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM5YTdjNTAiLz48L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJ3b29kIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZDhhMDY0Ii8+PHN0b3Agb2Zmc2V0PSIuNSIgc3RvcC1jb2xvcj0iIzlhNjIzNCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzVjMzQxOCIvPjwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImJyYXNzIiB4MT0iMCIgeTE9IjAiIHgyPSIwIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZmZmMGMwIi8+PHN0b3Agb2Zmc2V0PSIuNDUiIHN0b3AtY29sb3I9IiNkOWE0NDEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM3YTUyMTgiLz48L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJzY2FyZiIgeDE9IjAiIHkxPSIwIiB4Mj0iMSIgeTI9IjAiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzdhMWExZSIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2QwNDYzYSIvPjwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImxlYXRoZXIiIHgxPSIwIiB5MT0iMCIgeDI9IjAiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiM4YTVhMzIiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM0YTJjMTYiLz48L2xpbmVhckdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJsZW5zIiBjeD0iLjM1IiBjeT0iLjM1IiByPSIuNyI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjZTRmNGZmIi8+PHN0b3Agb2Zmc2V0PSIuNSIgc3RvcC1jb2xvcj0iIzdhYThjOCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzJjNGE2NiIvPjwvcmFkaWFsR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InRhaWxGaW4iIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj48c3RvcCBvZmZzZXQ9IjAiIHN0b3AtY29sb3I9IiNjMjQ1M2EiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM2YTFlMjIiLz48L2xpbmVhckdyYWRpZW50PgogIDwvZGVmcz4KCiAgPCEtLSBzY2FyZiBzdHJlYW1pbmcgYmVoaW5kIC0tPgogIDxwYXRoIGNsYXNzPSJzY2FyZiIgZD0iTTkyIDcwIEM3NCA2NCA1MiA3NCAyNCA2NiBDMzggNzggNjAgODIgOTAgNzggWiIgZmlsbD0idXJsKCNzY2FyZikiLz4KICA8cGF0aCBjbGFzcz0ic2NhcmYiIGQ9Ik05MCA3NSBDNzAgODAgNTAgOTQgMzAgOTAgQzQ2IDk4IDY4IDk0IDkyIDgxIFoiIGZpbGw9IiM5YTJhMjgiLz4KCiAgPCEtLSBmYXIgd2luZzogY2FudmFzIG9uIGEgd29vZGVuIHNwYXIsIGluIHNoYWRvdyAtLT4KICA8cGF0aCBkPSJNMTA0IDY0IEwxNDggMjggTDE3MiAzMiBMMTI2IDcwIFoiIGZpbGw9InVybCgjY2FudmFzQmFjaykiIHN0cm9rZT0iIzVjMzQxOCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNMTE2IDU4IEwxNTYgMzAgTTEyOCA2NiBMMTY2IDMyIiBzdHJva2U9IiM3YTVhMzQiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iLjciLz4KCiAgPCEtLSBmdXNlbGFnZTogd29vZGVuIGh1bGwgd2l0aCBicmFzcyBiYW5kcyAtLT4KICA8cGF0aCBkPSJNNTggODIgUTEwOCA2OSAxODIgNzMgUTE5OCA3NSAyMDAgODIgUTE4OCA5MyAxMjAgOTUgUTc2IDk3IDU4IDgyIFoiIGZpbGw9InVybCgjd29vZCkiIHN0cm9rZT0iIzNhMjAwZSIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNNjYgODIgUTExMCA3NCAxODAgNzciIHN0cm9rZT0iI2YwYzQ4YSIgc3Ryb2tlLXdpZHRoPSIxLjYiIGZpbGw9Im5vbmUiIG9wYWNpdHk9Ii43NSIvPgogIDxwYXRoIGQ9Ik03MiA4OCBRMTIwIDkyIDE5MCA4NCIgc3Ryb2tlPSIjM2EyMDBlIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIG9wYWNpdHk9Ii41Ii8+CiAgPHJlY3QgeD0iMTQwIiB5PSI3MiIgd2lkdGg9IjQiIGhlaWdodD0iMjIiIHJ4PSIxIiBmaWxsPSJ1cmwoI2JyYXNzKSIvPgogIDxyZWN0IHg9Ijk2IiB5PSI3NCIgd2lkdGg9IjQiIGhlaWdodD0iMjIiIHJ4PSIxIiBmaWxsPSJ1cmwoI2JyYXNzKSIvPgogIDxwYXRoIGQ9Ik0xODIgNzMgUTE5OCA3NSAyMDAgODIgUTE5NCA4NyAxODQgODkgUTE5MCA4MSAxODIgNzMgWiIgZmlsbD0idXJsKCNicmFzcykiIHN0cm9rZT0iIzVhM2ExMCIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgPGNpcmNsZSBjeD0iMTQ4IiBjeT0iODQiIHI9IjEuNCIgZmlsbD0iI2ZmZjBjMCIvPjxjaXJjbGUgY3g9IjE2MCIgY3k9IjgzIiByPSIxLjQiIGZpbGw9IiNmZmYwYzAiLz48Y2lyY2xlIGN4PSIxNzIiIGN5PSI4MiIgcj0iMS40IiBmaWxsPSIjZmZmMGMwIi8+CgogIDwhLS0gdGFpbCBmaW4gLS0+CiAgPHBhdGggZD0iTTYyIDgyIEw0MiA1NiBMNTYgNTYgTDgwIDgwIFoiIGZpbGw9InVybCgjdGFpbEZpbikiIHN0cm9rZT0iIzNhMTIwZSIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KICA8cGF0aCBkPSJNNTIgNjAgTDcwIDc4IiBzdHJva2U9IiNmMGEwODAiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iLjYiLz4KCiAgPCEtLSBwaWxvdDogbGVhdGhlciBmbHlpbmcgY2FwLCBicmFzcyBnb2dnbGVzLCBhIGRldGVybWluZWQgbGl0dGxlIGZhY2UgLS0+CiAgPHBhdGggZD0iTTEwMCA3NCBRMTAwIDU4IDExMyA1NiBRMTI2IDU2IDEyNyA3MiBaIiBmaWxsPSIjM2EyMDBlIiBvcGFjaXR5PSIuMzUiLz4KICA8Y2lyY2xlIGN4PSIxMTMiIGN5PSI2NSIgcj0iMTMiIGZpbGw9IiNmMGM2YTAiLz4KICA8cGF0aCBkPSJNMTEzIDc4IFExMDYgNzcgMTAzIDcwIiBzdHJva2U9IiNjOThhNmEiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgb3BhY2l0eT0iLjYiLz4KICA8cGF0aCBkPSJNOTkgNjQgUTEwMCA0OSAxMTMgNDggUTEyNyA0OCAxMjggNjIgUTEyMCA1NSAxMTIgNTYgUTEwNCA1NyA5OSA2NCBaIiBmaWxsPSJ1cmwoI2xlYXRoZXIpIiBzdHJva2U9IiMyYTE2MGEiIHN0cm9rZS13aWR0aD0iMSIvPgogIDxwYXRoIGQ9Ik0xMDAgNjIgUTk5IDcwIDEwMyA3MyIgc3Ryb2tlPSJ1cmwoI2xlYXRoZXIpIiBzdHJva2Utd2lkdGg9IjQiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0xMDMgNjAgUTExNCA1NyAxMjYgNjAiIHN0cm9rZT0iIzJhMTYwYSIgc3Ryb2tlLXdpZHRoPSIyLjQiIGZpbGw9Im5vbmUiLz4KICA8Y2lyY2xlIGN4PSIxMDgiIGN5PSI2MC41IiByPSI0LjYiIGZpbGw9InVybCgjbGVucykiIHN0cm9rZT0idXJsKCNicmFzcykiIHN0cm9rZS13aWR0aD0iMiIvPgogIDxjaXJjbGUgY3g9IjEyMCIgY3k9IjYwLjUiIHI9IjQuNiIgZmlsbD0idXJsKCNsZW5zKSIgc3Ryb2tlPSJ1cmwoI2JyYXNzKSIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPGNpcmNsZSBjeD0iMTA2LjYiIGN5PSI1OSIgcj0iMS4yIiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIuOSIvPjxjaXJjbGUgY3g9IjExOC42IiBjeT0iNTkiIHI9IjEuMiIgZmlsbD0iI2ZmZiIgb3BhY2l0eT0iLjkiLz4KICA8cGF0aCBkPSJNMTEwIDcxIFExMTQgNzMuNSAxMTggNzEiIHN0cm9rZT0iIzhhM2EyYSIgc3Ryb2tlLXdpZHRoPSIxLjgiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxjaXJjbGUgY3g9IjEwNCIgY3k9IjY4IiByPSIyLjIiIGZpbGw9IiNlODhhN2EiIG9wYWNpdHk9Ii40NSIvPgoKICA8IS0tIG5lYXIgd2luZzogc3RpdGNoZWQgY2FudmFzLCB3b29kZW4gcmlicywgYSBjcmltc29uIHRpcCBzdHJpcGUgLS0+CiAgPHBhdGggZD0iTTk0IDg0IEwxNDggMTE0IEwxNzggMTEyIEwxMjggODIgWiIgZmlsbD0idXJsKCNjYW52YXNUb3ApIiBzdHJva2U9IiM1YzM0MTgiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CiAgPHBhdGggZD0iTTEwOCA4NiBMMTU2IDExMyBNMTIwIDg0IEwxNjYgMTEyIE0xMzQgODMgTDE3NCAxMTAiIHN0cm9rZT0iIzlhNjIzNCIgc3Ryb2tlLXdpZHRoPSIxLjIiIG9wYWNpdHk9Ii44Ii8+CiAgPHBhdGggZD0iTTEwMCA4NiBMMTUwIDExMyIgc3Ryb2tlPSIjZmZmYWYwIiBzdHJva2Utd2lkdGg9IjEiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMiIgb3BhY2l0eT0iLjgiLz4KICA8cGF0aCBkPSJNMTYwIDExMiBMMTc2IDExMSBMMTcwIDEwNSBaIiBmaWxsPSIjYjgzMjJlIiBzdHJva2U9IiM1YTE0MTAiIHN0cm9rZS13aWR0aD0iLjgiLz4KICA8cGF0aCBkPSJNMTI4IDgyIEwxNzggMTEyIiBzdHJva2U9InVybCgjd29vZCkiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPgo=') center / 80% no-repeat, radial-gradient(circle at 30% 30%, #ffe9a8, #f08fb5 70%);
 }
 .promo-copy { flex: 1; display: flex; flex-direction: column; line-height: 1.2; }
 .promo-copy small { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; opacity: .8; }
@@ -502,6 +423,141 @@ body.night { --text-on-sky: #f4f1ff; }
 /* Keep the home title clean: the route of islands ahead sits back in the haze */
 body.on-home .isle[data-at] { opacity: .55; transition: opacity .8s; }
 
+
+/* =====================================================================
+   MYTHIC UI SKIN: parchment panels, aged brass, engraved stone.
+   Panels are opaque (no backdrop blur) so text never depends on the sky,
+   and so the animated sky behind them costs nothing extra to composite.
+   ===================================================================== */
+body { background: #0c0c2c; }
+body.night { --text-on-sky: #f6ecd6; }
+
+.card, .modal-card, .pack, .creature, .tabs, .toast, .landmark-toast {
+  background: var(--paper, none) var(--parchment);
+  background-color: var(--parchment);
+  color: var(--ink);
+  border: 1px solid #8a6a32;
+  box-shadow: inset 0 0 0 3px var(--parchment), inset 0 0 0 4px rgba(138, 106, 50, .5), inset 0 0 28px rgba(120, 80, 30, .2),
+    0 16px 36px rgba(8, 4, 18, .45);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.card, .modal-card { border-radius: 12px; }
+.modal-card { background-image: var(--paper, none); }
+.modal-backdrop { background: rgba(8, 4, 18, .6); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.modal-x { background: rgba(43, 29, 18, .08); color: var(--ink); }
+
+.icon-btn, .chip {
+  background: radial-gradient(circle at 50% 35%, #463d5a, var(--stone) 70%);
+  color: #f6ecd6; border: 1.5px solid #b8893a;
+  box-shadow: inset 0 1px 0 rgba(255, 240, 200, .25), inset 0 -2px 4px rgba(0, 0, 0, .4), 0 4px 12px rgba(8, 4, 18, .45);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.chip b { font-family: var(--display); }
+
+.btn { font-family: var(--display); letter-spacing: .06em; border-radius: 10px; }
+.btn-gold {
+  color: #2b1606;
+  background: linear-gradient(180deg, #fdf0c8 0%, #ecc26a 30%, #c9923a 68%, #8a5f1f 100%);
+  border: 1px solid var(--brass-edge);
+  box-shadow: inset 0 1px 0 rgba(255, 250, 230, .9), inset 0 -3px 0 rgba(70, 40, 10, .35), 0 0 0 1px rgba(255, 220, 150, .25), 0 8px 20px rgba(8, 4, 18, .45);
+  text-shadow: 0 1px 0 rgba(255, 240, 200, .6);
+}
+.btn-glass, .btn-premium {
+  background: var(--paper, none) var(--parchment); color: var(--ink);
+  border: 1px solid #8a6a32; box-shadow: inset 0 0 0 2px var(--parchment), inset 0 0 0 3px rgba(138, 106, 50, .4), 0 6px 16px rgba(8, 4, 18, .4);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+
+.kicker, .prompt-label, .screen-title { font-family: var(--display); }
+.kicker { color: var(--text-on-sky); }
+.title { filter: drop-shadow(0 1px 0 rgba(60, 30, 0, .6)) drop-shadow(0 6px 16px rgba(20, 8, 30, .55)); }
+.tagline { color: var(--text-on-sky); font-style: italic; }
+.tagline em { color: inherit; font-weight: 700; }
+body.night .tagline em, body.night .kicker, body.night .home-note { color: #fbe7b0; }
+.home-hero::before { background: radial-gradient(closest-side, rgba(20, 10, 30, .35), rgba(20, 10, 30, 0)); }
+body.night .home-hero::before { background: radial-gradient(closest-side, rgba(10, 6, 24, .5), rgba(10, 6, 24, 0)); }
+
+.ad-slot { background: rgba(20, 14, 30, .5); border: 1px dashed rgba(216, 180, 106, .55); color: #e9dcbf; }
+
+/* in-level HUD */
+.hud-dots i { background: radial-gradient(circle at 40% 35%, #5a5070, #241d30); border: 1px solid #b8893a; }
+.hud-dots i.now { background: radial-gradient(circle at 40% 35%, #fff3c8, #d9a441); box-shadow: 0 0 0 3px rgba(217, 164, 65, .35), 0 0 10px rgba(255, 210, 120, .6); }
+.hud-alt b, .hud-alt small { font-family: var(--display); }
+.timer { background: linear-gradient(180deg, #17121f, #2e2638); border: 1px solid #b8893a; box-shadow: inset 0 2px 4px rgba(0, 0, 0, .5); height: 12px; }
+.timer-fill { background: linear-gradient(180deg, #fff3c8, #e6b450 50%, #a8742a); border-radius: inherit; }
+.timer.low .timer-fill { background: linear-gradient(180deg, #ffd0b0, #d2553a 50%, #8a2a1a); }
+.timer span {
+  background: radial-gradient(circle at 50% 35%, #fdf0c8, #d9a441 60%, #8a5f1f); color: #2b1606;
+  border: 1px solid var(--brass-edge); font-family: var(--display); font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 250, 230, .9), 0 4px 10px rgba(8, 4, 18, .5);
+}
+.timer.low span { color: #5a0a0a; }
+.prompt-label { color: var(--ink-soft); }
+.prompt-text { font-family: var(--ui); font-weight: 700; color: var(--ink); letter-spacing: -.005em; }
+.answer-form input {
+  background: #fbf4e2; border: 1.5px solid #a07c3c; color: var(--ink); font-family: var(--ui); border-radius: 10px;
+  box-shadow: inset 0 2px 5px rgba(90, 60, 20, .18);
+}
+.answer-form input:focus { border-color: #c9923a; box-shadow: 0 0 0 3px rgba(217, 164, 65, .3), inset 0 2px 5px rgba(90, 60, 20, .18); }
+.answer-form .send { border-radius: 10px; }
+.answer-hint { color: var(--ink-soft); font-style: italic; }
+.answer-hint.bad { color: #a32a2a; font-style: normal; }
+/* soft impact when an answer isn't recognised: the card shakes and its edge flushes red for a moment */
+.prompt-card.miss { animation: miss-flush .6s ease; }
+@keyframes miss-flush { 30% { box-shadow: inset 0 0 0 3px var(--parchment), inset 0 0 0 4px #a32a2a, inset 0 0 28px rgba(163, 42, 42, .25), 0 16px 36px rgba(8, 4, 18, .45); } }
+
+.tier-badge { font-family: var(--display); border-radius: 6px; border: 1px solid rgba(43, 29, 18, .35); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5); }
+.tier-legendary { --tier-bg: linear-gradient(90deg, #fbe7b0, #e6b450, #fbe7b0); --tier-ink: #4a2c00; }
+.tier-rare { --tier-bg: linear-gradient(90deg, #e2d2f4, #b896de); --tier-ink: #3a1a66; }
+.tier-uncommon { --tier-bg: linear-gradient(90deg, #d4e4f4, #92b6dc); --tier-ink: #163a66; }
+.tier-common { --tier-bg: linear-gradient(90deg, #dcead2, #a8c896); --tier-ink: #284a1a; }
+.tier-miss { --tier-bg: #d8d0c4; --tier-ink: #4a4038; }
+.reveal-answer { font-family: var(--ui); font-weight: 700; }
+.reveal-points { color: #8a5f1f; text-shadow: 0 1px 0 rgba(255, 245, 220, .8); }
+
+.landmark-toast { color: var(--ink); font-family: var(--display); border-radius: 8px; }
+.toast { border-radius: 10px; color: var(--ink); }
+
+/* results and collection */
+.breakdown li { background: rgba(255, 250, 235, .55); border-radius: 8px; }
+.breakdown .p { font-family: var(--display); color: #8a5f1f; }
+.breakdown h3, .finds h3, .map-card h4 { color: var(--ink); }
+.tab.active { background: #fbf4e2; box-shadow: inset 0 0 0 1px #a07c3c; }
+.tab { font-family: var(--display); border-radius: 8px; }
+.tabs { border-radius: 10px; }
+.promo {
+  background: linear-gradient(120deg, #1d1530 0%, #3a2440 60%, #5a2f30 100%); color: #f6ecd6;
+  border: 1px solid #b8893a; box-shadow: inset 0 0 0 3px rgba(29, 21, 48, 1), inset 0 0 0 4px rgba(216, 180, 106, .45), 0 16px 36px rgba(8, 4, 18, .45);
+}
+.promo-copy b { color: #fbe7b0; }
+.promo-cta { background: linear-gradient(180deg, #fdf0c8, #c9923a); color: #2b1606; font-family: var(--display); border-radius: 8px; }
+
+/* ---------- level intro title card ---------- */
+body.intro #prompt-card, body.intro .timer, body.intro .hud-dots { visibility: hidden; }
+.intro-card {
+  position: fixed; inset: 0; z-index: 15; display: grid; place-content: center; text-align: center; gap: 8px;
+  padding: 24px max(16px, env(safe-area-inset-left, 0px)); color: #f6ecd6; cursor: pointer;
+  background: radial-gradient(ellipse at center, rgba(10, 6, 24, .62), rgba(10, 6, 24, .15) 70%);
+  animation: intro 2.4s cubic-bezier(.4, 0, .2, 1) both;
+}
+.intro-card p { margin: 0; }
+.intro-kicker { font-family: var(--display); letter-spacing: .4em; font-size: 13px; color: #e9cf94; }
+.intro-card h2 {
+  margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(34px, 10vw, 54px); letter-spacing: .06em;
+  background: linear-gradient(180deg, #fffbe8 0%, #f8dc8a 40%, #e2a93a 72%, #b47c1f 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(60, 30, 0, .6)) drop-shadow(0 8px 20px rgba(0, 0, 0, .5));
+}
+.intro-rule { display: flex; align-items: center; gap: 10px; color: #d9a441; width: min(320px, 80vw); margin: 2px auto; }
+.intro-rule::before, .intro-rule::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, #d9a441, transparent); }
+.intro-sub { font-style: italic; font-size: 17px; text-shadow: 0 1px 8px rgba(0, 0, 0, .6); }
+@keyframes intro {
+  0% { opacity: 0; transform: scale(.96); letter-spacing: 0; }
+  22% { opacity: 1; transform: none; }
+  78% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.02); }
+}
+
 /* ---------- THEME PICKER (temporary: delete with js/theme-picker.js) ---------- */
 .tp-open {
   position: fixed; left: calc(10px + env(safe-area-inset-left, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); z-index: 40;
@@ -529,10 +585,8 @@ body.on-home .isle[data-at] { opacity: .55; transition: opacity .8s; }
 .tp-sw { display: flex; gap: 4px; align-items: center; }
 .tp-sw i { width: 18px; height: 18px; border-radius: 5px; border: 1px solid rgba(0, 0, 0, .15); }
 .tp-sw small { margin-left: auto; color: #6a7399; font-size: 11px; }
-.tp-alt, .tp-lightning { display: grid; gap: 4px; font-weight: 600; }
+.tp-alt { display: grid; gap: 4px; font-weight: 600; }
 .tp-alt output { font-weight: 500; color: #6a7399; margin-left: 6px; }
-.tp-lightning { display: flex; gap: 8px; align-items: center; }
-.tp-lightning.off { opacity: .45; }
 .tp-flash {
   position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 42; transform: translateX(-50%);
   background: #fffdf8; color: #26305c; padding: 8px 16px; border-radius: 999px; font-weight: 700; opacity: 0;
@@ -712,6 +766,13 @@ body.night .home-shared { color: #d9dcf5; }
       <button class="modal-x" data-close aria-label="Close">✕</button>
       <div id="modal-body"></div>
     </div>
+  </div>
+
+  <div class="intro-card" id="intro-card" hidden>
+    <p class="intro-kicker" id="intro-kicker">Day #1</p>
+    <h2 id="intro-title">The Ascent</h2>
+    <div class="intro-rule"><span>✦</span></div>
+    <p class="intro-sub">Seven questions stand between you and the stars.</p>
   </div>
 
   <div class="toast-stack" id="toasts"></div>
@@ -2284,244 +2345,112 @@ function renderMaps(el, profile) {
 }
 
 // ---- public/themes.js ----
-// Visual themes for the sky level (everything behind the UI: sky, clouds, islands, light, particles).
-// Visual only: nothing here touches scoring, timing or gameplay.
+// Visual variations for the sky level. Visual only: nothing here touches scoring, timing or gameplay.
 //
 // THE ONE SETTING: change ACTIVE_THEME to switch the game's look.
-// While comparing, you can also override it live: ?theme=night (or #theme-night), or press T in the game.
-const ACTIVE_THEME = 'classic';
+// While comparing, override it live with ?theme=ember (or #theme-ember), or press T in the game.
+const ACTIVE_THEME = 'golden';
 
-// Altitude is measured in points (0-700). Values written as [[points, value], ...] are interpolated between stops.
-// sky: [top, mid, bottom] gradient colours at each altitude stop.
-// clouds.layers: far/mid/near tiles; speed in px per second (parallax: far slowest), opacity, scale.
-// particles / debris: cheap tiled layers; kind names map to generators in js/sky.js.
+// All three share one art direction (mythic, painterly, one clear light source) and differ in palette,
+// light, sky feature, island culture and atmosphere.
+// sky: [[altitude, [zenith, mid, horizon]], ...]; colours are interpolated as you climb (0-700 points).
+// light.side: 1 = light comes from the right, -1 = from the left. Every painted sprite is shaded for it.
 const THEMES = {
-  classic: {
-    name: 'Original',
-    mood: 'The current look: bright pastel day climbing into a starry night.',
-    cost: 'light',
-    swatches: ['#9fc4f0', '#ffe0ec', '#24447a', '#e8b84a'],
-    sky: [
-      [0, ['#9fc4f0', '#c9dcf7', '#ffe0ec']],
-      [175, ['#8798d6', '#b4bde6', '#f0cfe6']],
-      [350, ['#24447a', '#4a67a8', '#9b8bd3']],
-      [525, ['#0f1640', '#24306a', '#5a4a98']],
-      [700, ['#070a24', '#151d4a', '#43357d']],
-    ],
-    celestial: { kind: 'sun', alpha: [[0, 1], [300, 0]] },
-    stars: [[0, 0], [260, 0], [520, 1]],
-    aurora: { colors: ['#7dffcf', '#8fd3ff', '#c79bff'], alpha: [[0, 0], [280, 0], [400, 0.85], [600, 0.85], [700, 0.4]] },
-    clouds: {
-      style: 'puffy', top: '#ffffff', bottom: '#e6eaff',
-      layers: { far: { speed: 10, opacity: 0.55, scale: 0.6 }, mid: { speed: 16, opacity: 0.8, scale: 1 }, near: { speed: 26, opacity: 0.9, scale: 1.4 } },
-    },
-    islands: {
-      style: 'meadow', waterfall: false,
-      layers: {
-        meadows: ['#9be59b', '#5fbf7a', '#c79a6a', '#9c7448'],
-        reefs: ['#b9a6f0', '#7f71c9', '#8a7aa8', '#655785'],
-        aurora: ['#8ff0d2', '#43b39c', '#6a6f9e', '#4a4f7c'],
-        harbor: ['#f6d98a', '#c79a3a', '#4b4f86', '#353863'],
-      },
-      shadow: 'rgba(60, 70, 140, .2)',
-    },
-    particles: { kind: 'none' },
-    debris: { kind: 'none' },
-    birds: false,
-    lightning: null,
-    glider: { outlineDark: '#26305c', outlineLight: '#fff8e6' },
-    spark: '#e8b84a',
-  },
-
   golden: {
-    name: 'Golden Hour',
-    mood: 'Warm and nostalgic: a long sunset that deepens into a rose-and-violet dusk as you climb.',
-    cost: 'light',
-    swatches: ['#ffb27e', '#ffd9a6', '#b0567c', '#5aa64e'],
+    name: 'Golden Ruins',
+    mood: 'Late afternoon over a fallen empire: a huge low sun, sandstone and marble ruins, gold-lit clouds over violet shadow.',
+    cost: 'normal',
+    swatches: ['#2c2a5a', '#8a5a7a', '#f2b46a', '#d9b48a', '#ffe2a0'],
     sky: [
-      [0, ['#ffb27e', '#ffc99a', '#ffe3b0']],
-      [175, ['#f2907c', '#f9ae8e', '#ffd09a']],
-      [350, ['#a6567e', '#d97578', '#ffad84']],
-      [525, ['#4b2f68', '#874677', '#df8169']],
-      [700, ['#1f1840', '#47295c', '#a95462']],
+      [0, ['#2c2a5c', '#8b5b7c', '#f3b56b']],
+      [175, ['#262558', '#7a4d79', '#e8a061']],
+      [350, ['#1e1d4c', '#5e3d70', '#c97f5c']],
+      [525, ['#15153e', '#3e2c60', '#9a5e5c']],
+      [700, ['#0c0c2c', '#251d4a', '#5e3f5c']],
     ],
-    celestial: { kind: 'sunset', alpha: [[0, 1], [420, 0.75], [700, 0.25]] },
-    stars: [[0, 0], [450, 0], [700, 0.7]],
-    aurora: null,
-    clouds: {
-      style: 'puffy', top: '#fff2dc', bottom: '#f3a58e',
-      layers: { far: { speed: 8, opacity: 0.5, scale: 0.7 }, mid: { speed: 13, opacity: 0.75, scale: 1.05 }, near: { speed: 21, opacity: 0.85, scale: 1.5 } },
-    },
-    islands: {
-      style: 'meadow', waterfall: true, water: '#ffe3a8', longShadow: true,
-      layers: {
-        meadows: ['#9edb6a', '#5ea84c', '#d08a58', '#9b5d3a'],
-        reefs: ['#b8d86a', '#78a04a', '#c7795c', '#8d4f42'],
-        aurora: ['#d8c86a', '#a08a44', '#a8606a', '#71404e'],
-        harbor: ['#f2c46a', '#b88838', '#6e4a6a', '#48304c'],
-      },
-      shadow: 'rgba(120, 50, 40, .25)',
-    },
-    particles: { kind: 'motes', color: '#fff0b8', opacity: 0.55, speed: 6 },
-    debris: { kind: 'none' },
-    birds: { color: '#5a2e3e' },
-    lightning: null,
-    glider: { outlineDark: '#3a2340', outlineLight: '#fff4dc' },
-    spark: '#ffd36b',
+    light: { side: 1, color: '#ffe2a0', rim: '#ffd38a', shadow: '#2a1636' },
+    celestial: { kind: 'sun', x: 0.8, y: 0.66, r: 70, core: '#fff3cf', color: '#ffd27a', glow: '#ff9f4a', alpha: [[0, 1], [700, 0.75]], sink: 0.22 },
+    rays: { color: '#ffd89a', alpha: 0.2 },
+    stars: [[0, 0], [380, 0], [700, 0.85]],
+    haze: '#e3a06e',
+    farTint: '#b88aa0',
+    feature: 'megaisland',
+    clouds: { lit: '#ffe4b4', mid: '#e3998a', shadow: '#5e4272', under: '#3a2c58' },
+    rock: { light: '#dcb68a', mid: '#a97c5c', dark: '#5b3f48', crevice: '#2e2030' },
+    top: { grass: '#a9b84c', grassDark: '#6c8638', moss: '#7f9c48', soil: '#7a5a3c' },
+    stone: { light: '#f1e2c4', mid: '#cdb48e', dark: '#7d6650', trim: '#d9a441' },
+    glow: '#ffd27a',
+    details: ['columns', 'arch', 'stairs', 'tree', 'columns', 'statue', 'tree'],
+    particles: [{ kind: 'mote', color: '#ffe6a8', count: 20 }, { kind: 'leaf', color: '#d29a44', count: 7 }],
+    creatures: { flock: '#3a2440', giant: null },
+    vignette: '#1a0c24',
+    glider: { outlineDark: '#24152e', outlineLight: '#ffe9c2' },
   },
 
-  crystal: {
-    name: 'Crystal Skies',
-    mood: 'Crisp and clean: icy teal air, faceted crystal islands, slow light rays and glinting shards.',
-    cost: 'light',
-    swatches: ['#bfe8f6', '#f1fbfb', '#2a8aa3', '#8fe3ff'],
+  twilight: {
+    name: 'Twilight Mythic',
+    mood: 'A hushed night of old magic: twin moons, slate islands carved with softly lit runes, lanterns, and a sky whale drifting far away.',
+    cost: 'normal',
+    swatches: ['#141433', '#3b2f6b', '#8f6fa6', '#efe6d2', '#ffcf7a'],
     sky: [
-      [0, ['#bfe8f6', '#d9f3f7', '#f1fbfb']],
-      [175, ['#93d4e8', '#bbe9f0', '#e2f7f4']],
-      [350, ['#52b2ca', '#8ad2de', '#cdeff0']],
-      [525, ['#2a7f96', '#4fa8ba', '#a6dfe2']],
-      [700, ['#0f4458', '#21728a', '#6cc2c9']],
+      [0, ['#151436', '#3c306d', '#9272a8']],
+      [175, ['#11112e', '#33285f', '#7a5e98']],
+      [350, ['#0d0c27', '#2a2154', '#64508a']],
+      [525, ['#09081f', '#201945', '#4c3d74']],
+      [700, ['#05040f', '#151034', '#352a5c']],
     ],
-    celestial: { kind: 'rays', alpha: [[0, 0.9], [525, 0.6], [700, 0.3]] },
-    stars: [[0, 0], [500, 0], [700, 0.5]],
-    aurora: null,
-    clouds: {
-      style: 'wisp', top: '#ffffff', bottom: '#d6f2f7',
-      layers: { far: { speed: 7, opacity: 0.6, scale: 0.7 }, mid: { speed: 12, opacity: 0.75, scale: 1 }, near: { speed: 20, opacity: 0.8, scale: 1.3 } },
-    },
-    islands: {
-      style: 'crystal', waterfall: false,
-      layers: {
-        meadows: ['#f4fdff', '#cdeef6', '#7fd0e4', '#3c95b3'],
-        reefs: ['#f0fbff', '#c4e6f6', '#86b8ee', '#4a74c0'],
-        aurora: ['#ecfffa', '#bff3e6', '#6fdcc4', '#2a9c8e'],
-        harbor: ['#fffaf0', '#f3e6c4', '#b9a7f0', '#6a5ac0'],
-      },
-      shadow: 'rgba(20, 90, 120, .22)',
-    },
-    particles: { kind: 'glints', color: '#ffffff', opacity: 0.6, speed: 3 },
-    debris: { kind: 'shards', color: '#9fe6f5', opacity: 0.45, speed: 5 },
-    birds: false,
-    lightning: null,
-    glider: { outlineDark: '#12304a', outlineLight: '#f4fdff' },
-    spark: '#8fe3ff',
+    light: { side: 1, color: '#e4defc', rim: '#d8d2ff', shadow: '#0c0a20' },
+    celestial: { kind: 'moons', x: 0.8, y: 0.3, r: 54, core: '#f3ead6', color: '#e7dcc4', glow: '#a99be0', second: { dx: -0.34, dy: -0.06, r: 20, color: '#e9aca2' }, alpha: [[0, 1], [700, 1]], sink: 0 },
+    rays: { color: '#cbc5ff', alpha: 0.1 },
+    stars: [[0, 0.55], [700, 1]],
+    haze: '#5c4f8a',
+    farTint: '#4a4278',
+    feature: 'whale',
+    clouds: { lit: '#d4cdf2', mid: '#7468aa', shadow: '#2d2654', under: '#1b1639' },
+    rock: { light: '#9395b6', mid: '#5b5b84', dark: '#2f2d4e', crevice: '#16142a' },
+    top: { grass: '#557f6e', grassDark: '#2f5248', moss: '#5f8f72', soil: '#3a3550' },
+    stone: { light: '#c9c6dc', mid: '#8e8bab', dark: '#46435f', trim: '#d9b46a' },
+    glow: '#ffcf7a',
+    details: ['stones', 'lantern', 'shrine', 'tree', 'stones', 'lantern', 'arch'],
+    particles: [{ kind: 'spore', color: '#a8ecd6', count: 16 }, { kind: 'spore', color: '#ffd98a', count: 9 }],
+    creatures: { flock: '#1c1838', giant: '#2c2756' },
+    vignette: '#05040f',
+    glider: { outlineDark: '#120f26', outlineLight: '#fff1d6' },
   },
 
-  storm: {
-    name: 'Storm Drift',
-    mood: 'Moody and dramatic: heavy violet-grey clouds, wind streaks, ruined islands and far-off lightning.',
-    cost: 'medium (one extra lightning layer; off by default for reduced-motion users)',
-    swatches: ['#7e7f9a', '#3e3860', '#141226', '#cfc6ff'],
+  ember: {
+    name: 'Ember Dusk',
+    mood: 'The last red light after a storm: a giant ringed world on the horizon, basalt islands, iron chains, braziers and drifting embers.',
+    cost: 'normal',
+    swatches: ['#2a0f2e', '#8a2f4a', '#f0794a', '#e8a27a', '#ffb25c'],
     sky: [
-      [0, ['#73748f', '#8f90a7', '#b9b7c4']],
-      [175, ['#56537a', '#6f6b94', '#9f99b2']],
-      [350, ['#3c365e', '#544d7c', '#857ba2']],
-      [525, ['#25213f', '#38325e', '#665a8a']],
-      [700, ['#141226', '#231f3f', '#4a3e6c']],
+      [0, ['#2b102f', '#8b304b', '#f17b4b']],
+      [175, ['#240d2a', '#762a46', '#d9643f']],
+      [350, ['#1d0a24', '#5c2240', '#b04a3a']],
+      [525, ['#150719', '#3e1834', '#7a3434']],
+      [700, ['#0c040f', '#261024', '#4a2030']],
     ],
-    celestial: { kind: 'none' },
-    stars: [[0, 0], [600, 0], [700, 0.3]],
-    aurora: null,
-    clouds: {
-      style: 'heavy', top: '#8e8aa6', bottom: '#4a4666',
-      layers: { far: { speed: 14, opacity: 0.6, scale: 0.8 }, mid: { speed: 24, opacity: 0.7, scale: 1.1 }, near: { speed: 40, opacity: 0.75, scale: 1.5 } },
-    },
-    islands: {
-      style: 'storm', waterfall: true, water: '#a8b4d6',
-      layers: {
-        meadows: ['#7f9a74', '#56704e', '#5e5a6e', '#3a3648'],
-        reefs: ['#768c78', '#4e644e', '#55506a', '#34304a'],
-        aurora: ['#6c7f80', '#465a5c', '#4a4564', '#2c2844'],
-        harbor: ['#7d7896', '#56506e', '#3e3858', '#24203a'],
-      },
-      shadow: 'rgba(10, 8, 30, .35)',
-    },
-    particles: { kind: 'wind', color: '#e6e2ff', opacity: 0.35, speed: 90 },
-    debris: { kind: 'rocks', color: '#3a3550', opacity: 0.6, speed: 10 },
-    birds: false,
-    // Distant and soft: at most a 12% brightening of the far sky, about once every 9-16 s. Toggle in the picker.
-    lightning: { enabled: true, maxOpacity: 0.12, minGap: 9, maxGap: 16 },
-    glider: { outlineDark: '#1b1830', outlineLight: '#fff4dc' },
-    spark: '#cfc6ff',
-  },
-
-  pastel: {
-    name: 'Dreamy Pastel',
-    mood: 'Soft and cosy: pink, lavender and mint all the way up, round candy islands and gentle sparkles.',
-    cost: 'light',
-    swatches: ['#ffd6e8', '#e6d4ff', '#d4f7ea', '#ff9cc6'],
-    sky: [
-      [0, ['#ffd6e8', '#f1e0ff', '#d6faee']],
-      [175, ['#efc8fb', '#f7d8f2', '#d2f4ea']],
-      [350, ['#d3c2ff', '#ead0f6', '#cbf0e6']],
-      [525, ['#bdb2f6', '#dcc6f2', '#c3ebe4']],
-      [700, ['#a99fe8', '#cdb8ec', '#bde6e6']],
-    ],
-    celestial: { kind: 'sun', alpha: [[0, 0.9], [700, 0.5]] },
-    stars: [[0, 0], [700, 0]],
-    aurora: null,
-    clouds: {
-      style: 'bubble', top: '#ffffff', bottom: '#fbe3f2',
-      layers: { far: { speed: 8, opacity: 0.6, scale: 0.65 }, mid: { speed: 12, opacity: 0.8, scale: 1 }, near: { speed: 19, opacity: 0.85, scale: 1.35 } },
-    },
-    islands: {
-      style: 'pastel', waterfall: true, water: '#bfefff',
-      layers: {
-        meadows: ['#b8f2d4', '#86dcb4', '#ffc4dc', '#f39cc0'],
-        reefs: ['#c6f0dc', '#94d8bc', '#e3c6ff', '#c19ef0'],
-        aurora: ['#bdeef0', '#8ad6dc', '#ffd3b8', '#f0aa8a'],
-        harbor: ['#fff0b8', '#f2d47e', '#cbc3ff', '#9f94ec'],
-      },
-      shadow: 'rgba(170, 110, 170, .2)',
-    },
-    particles: { kind: 'sparkles', color: '#ffffff', opacity: 0.6, speed: 4 },
-    debris: { kind: 'bubbles', color: '#ffffff', opacity: 0.35, speed: 6 },
-    birds: { color: '#8e5fa8' },
-    lightning: null,
-    glider: { outlineDark: '#4a2f63', outlineLight: '#ffffff' },
-    spark: '#ff9cc6',
-  },
-
-  night: {
-    name: 'Night Sky',
-    mood: 'Calm and magical: deep blue night from the first island, a big moon, aurora ribbons and glowing gardens.',
-    cost: 'light',
-    swatches: ['#1b2a5c', '#050a24', '#f6eecb', '#7dffcf'],
-    sky: [
-      [0, ['#1c2b5e', '#29417c', '#3d5c98']],
-      [175, ['#16245a', '#233a72', '#36528e']],
-      [350, ['#101b48', '#1c2e62', '#2d467c']],
-      [525, ['#0a1238', '#152150', '#243a6a']],
-      [700, ['#050a24', '#0c1438', '#1a2a55']],
-    ],
-    celestial: { kind: 'moon', alpha: [[0, 1], [700, 1]] },
-    stars: [[0, 0.65], [700, 1]],
-    aurora: { colors: ['#7dffcf', '#8fd3ff', '#c79bff'], alpha: [[0, 0.25], [200, 0.5], [450, 0.8], [700, 0.8]] },
-    clouds: {
-      style: 'thin', top: '#5d72ad', bottom: '#22305e',
-      layers: { far: { speed: 6, opacity: 0.5, scale: 0.7 }, mid: { speed: 10, opacity: 0.6, scale: 1 }, near: { speed: 16, opacity: 0.65, scale: 1.4 } },
-    },
-    islands: {
-      style: 'night', waterfall: true, water: '#9fd8ff',
-      layers: {
-        meadows: ['#3f8a86', '#2a6164', '#4a5478', '#2e3656'],
-        reefs: ['#4a7c9a', '#2f5878', '#46507a', '#2b3258'],
-        aurora: ['#3f9a88', '#296a62', '#3e4672', '#262c50'],
-        harbor: ['#6b6aa8', '#47467e', '#363a6a', '#20244a'],
-      },
-      shadow: 'rgba(0, 0, 10, .35)',
-      glow: ['#7dffcf', '#9fe6ff', '#ffe08a'],
-    },
-    particles: { kind: 'fireflies', color: '#e8ff9a', opacity: 0.6, speed: 4 },
-    debris: { kind: 'none' },
-    birds: false,
-    lightning: null,
-    glider: { outlineDark: '#0c1438', outlineLight: '#fff4dc' },
-    spark: '#ffe08a',
+    light: { side: 1, color: '#ffb27a', rim: '#ff9a5c', shadow: '#16060f' },
+    celestial: { kind: 'planet', x: 0.28, y: 0.34, r: 96, core: '#f1b48a', color: '#d98466', glow: '#ff8a5c', alpha: [[0, 1], [700, 0.85]], sink: 0.12 },
+    rays: { color: '#ff9f6a', alpha: 0.15 },
+    stars: [[0, 0.12], [700, 0.75]],
+    haze: '#b04a48',
+    farTint: '#7a2f42',
+    feature: 'spires',
+    clouds: { lit: '#ffb684', mid: '#b4505c', shadow: '#40193b', under: '#26102a' },
+    rock: { light: '#93605c', mid: '#4d3039', dark: '#27161f', crevice: '#12080e' },
+    top: { grass: '#a0813e', grassDark: '#6a4c2a', moss: '#6a6a34', soil: '#3a2420' },
+    stone: { light: '#8a7a80', mid: '#4a3f48', dark: '#221a22', trim: '#c9874a' },
+    glow: '#ffb25c',
+    details: ['pillar', 'brazier', 'chains', 'tree', 'pillar', 'bridge', 'brazier'],
+    particles: [{ kind: 'ember', color: '#ffb25c', count: 18 }, { kind: 'ash', color: '#cdbab2', count: 10 }],
+    creatures: { flock: '#2a0f22', giant: '#3a1430', winged: true },
+    vignette: '#0c0308',
+    glider: { outlineDark: '#1a0a14', outlineLight: '#ffe0c2' },
   },
 };
 
-const THEME_ORDER = ['classic', 'golden', 'crystal', 'storm', 'pastel', 'night'];
+const THEME_ORDER = ['golden', 'twilight', 'ember'];
 
 // ---------- colour helpers (also used by the contrast tests) ----------
 function hexToRgb(c) { return [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); }
@@ -2553,473 +2482,1441 @@ function at(stops, alt) {
   return stops[stops.length - 1][1];
 }
 
-const INK = '#26305c';
-const INK_SOFT = '#55608f';
-const INK_LIGHT = '#f4f1ff';
-const DANGER = '#c2405a';
+// UI palette (shared by all variations): parchment panels, iron-gall ink, aged brass.
+const INK = '#2b1d12';
+const INK_SOFT = '#5a4430';
+const INK_LIGHT = '#f6ecd6';
+const PARCHMENT = '#f2e4c4';
+const DANGER = '#a32a2a';
 
-// How readable the foreground is against the sky at this altitude.
-// - Text drawn straight on the sky (HUD altitude, results title) picks dark or light ink, whichever reads better,
-//   and carries a soft halo in the other colour for the mid-brightness band where neither alone reaches 4.5:1.
-// - The glider has a two-tone outline (dark line, light edge), so one of the two always stands out from the sky.
-// - Frosted UI cards get more opaque over dark sky, so card text and the red "wrong answer" hint stay readable.
+// How readable the foreground is at this altitude.
+// - Text drawn straight on the sky picks dark or light ink, whichever reads better, and carries a halo
+//   in the other colour.
+// - The glider has a two-tone outline (dark line, light edge), so one of the two always stands out.
+// - UI panels are opaque parchment, so their text and the red "wrong answer" hint never depend on the sky.
 function readability(theme, alt) {
   const colors = at(theme.sky, alt);
   const [top, mid, bottom] = colors;
   const worst = (ink) => Math.min(contrast(ink, top), contrast(ink, mid));
   const dark = worst(INK) >= worst(INK_LIGHT);
   const text = dark ? INK : INK_LIGHT;
-  const g = theme.glider;
-  const outlineContrast = Math.min(...[mid, bottom].map((bg) => Math.max(contrast(g.outlineDark, bg), contrast(g.outlineLight, bg))));
-  const glass = cardAlpha(colors);
-  const card = colors.map((c) => mixHex(c, '#ffffff', glass));
-  const cardContrast = Math.min(...card.map((c) => Math.min(contrast(DANGER, c), contrast(INK_SOFT, c))));
-  return { colors, night: !dark, text, halo: dark ? INK_LIGHT : INK, textContrast: worst(text), outlineContrast, glass, cardContrast };
+  const outlineContrast = Math.min(...[mid, bottom].map((bg) => gliderContrast(theme, bg)));
+  const cardContrast = Math.min(contrast(DANGER, PARCHMENT), contrast(INK_SOFT, PARCHMENT));
+  return { colors, night: !dark, text, halo: dark ? INK_LIGHT : INK, textContrast: worst(text), outlineContrast, cardContrast };
 }
 
-// Smallest card opacity (from the design's .62) that keeps danger red and secondary text at 4.5:1 over this sky.
-function cardAlpha(colors) {
-  for (let a = 0.62; a < 0.97; a += 0.02) {
-    const ok = colors.every((c) => { const bg = mixHex(c, '#ffffff', a); return contrast(DANGER, bg) >= 4.5 && contrast(INK_SOFT, bg) >= 4.5; });
-    if (ok) return +a.toFixed(2);
-  }
-  return 0.96;
+function gliderContrast(theme, bg) {
+  const g = theme.glider;
+  return Math.max(contrast(g.outlineDark, bg), contrast(g.outlineLight, bg));
 }
 
 function resolveThemeId(id) {
   return THEMES[id] ? id : ACTIVE_THEME;
 }
 
-// ---- public/js/sky.js ----
-// The sky behind every screen. Everything here is decoration driven by the active theme (../themes.js):
-// gradient, sun/moon/rays, stars, aurora, three parallax cloud layers, particles, drifting debris, birds,
-// distant lightning and the islands. Gameplay never reads anything from this file.
+// ---- public/js/paint.js ----
+// Procedural painting for the sky level. Every function here draws ONCE into an offscreen canvas
+// (a "sprite"), which the renderer in sky.js then reuses every frame. Nothing here runs per frame.
 //
-// Performance rules this file follows:
-// - Moving layers are composited: they move with transform only (one rAF loop), never background-position,
-//   filters or layout. Twinkles are opacity animations. No blur filters on anything that moves.
-// - Positions are snapped to whole device pixels so vector art stays crisp while it scrolls.
-// - The loop sleeps with the tab, and stops scrolling when the viewer prefers reduced motion.
+// Conventions: sizes are CSS pixels; each sprite is backed at devicePixelRatio for crisp edges.
+// Light comes from theme.light.side (1 = right, -1 = left) and slightly above; all shading follows it.
 
+let DPR = 1;
+function setPaintDpr(d) { DPR = d; }
 
-const PX_PER_POINT = 2.7;
-const root = document.documentElement;
-const sky = document.getElementById('sky');
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-
-let theme = null;
-let themeId = null;
-let world = null;
-let current = 0; // altitude in points
-let night = false;
-const layers = []; // scrolling tiled layers driven by the loop
-let birds = null;
-let lightningTimer = 0;
-let lightningOn = true;
-
-// ---------- small helpers ----------
-const svgUri = (svg) => `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`;
-function rand(seed) {
-  let s = seed % 2147483647;
-  if (s <= 0) s += 2147483646;
-  return () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+function sprite(w, h) {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(w * DPR));
+  c.height = Math.max(1, Math.ceil(h * DPR));
+  const x = c.getContext('2d');
+  x.scale(DPR, DPR);
+  return { c, x, w, h };
 }
-const el = (cls, parent = sky, tag = 'div') => { const e = document.createElement(tag); e.className = cls; parent.appendChild(e); return e; };
-const snap = (v) => { const d = window.devicePixelRatio || 1; return Math.round(v * d) / d; };
-const f1 = (n) => n.toFixed(1);
 
-// ---------- cloud tiles (one SVG per layer, generated per theme) ----------
-function cloudTile(style, depth, c, seed) {
-  const r = rand(seed);
-  const W = Math.round([520, 640, 760][depth] * c.scale), H = Math.round([420, 520, 640][depth] * c.scale);
-  const count = [3, 2, 2][depth];
-  const grad = `<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c.top}"/><stop offset="1" stop-color="${c.bottom}"/></linearGradient>`;
-  let shapes = '';
-  for (let i = 0; i < count; i++) {
-    // keep each cloud fully inside the tile so the tile repeats seamlessly
-    const s = (0.55 + r() * 0.45) * c.scale * (depth === 2 ? 1.25 : 1);
-    const x = W * (0.2 + 0.6 * ((i + r() * 0.5) / count)), y = H * (0.18 + 0.64 * r());
-    if (style === 'puffy') {
-      const puffs = [[0, 0, 1], [-0.9, 0.25, 0.7], [0.9, 0.2, 0.75], [-0.45, -0.35, 0.75], [0.4, -0.45, 0.85], [1.6, 0.4, 0.5], [-1.6, 0.45, 0.45]];
-      shapes += `<g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})">${puffs.map(([a, b, q]) => `<circle cx="${a * 40}" cy="${b * 40}" r="${q * 40}"/>`).join('')}<rect x="-72" y="8" width="144" height="30" rx="15"/></g>`;
-    } else if (style === 'wisp') {
-      const len = 160 + r() * 140;
-      shapes += `<g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})"><ellipse rx="${f1(len / 2)}" ry="7"/><ellipse cx="${f1(len * 0.15)}" cy="-9" rx="${f1(len * 0.32)}" ry="5"/><ellipse cx="${f1(-len * 0.2)}" cy="8" rx="${f1(len * 0.28)}" ry="4"/></g>`;
-    } else if (style === 'heavy') {
-      const w = 190 + r() * 80;
-      const bumps = Array.from({ length: 6 }, (_, k) => `<circle cx="${f1(-w / 2 + 20 + (k * (w - 40)) / 5)}" cy="${f1(-18 - r() * 26)}" r="${f1(28 + r() * 20)}"/>`).join('');
-      shapes += `<g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})">${bumps}<rect x="${f1(-w / 2)}" y="-30" width="${f1(w)}" height="42" rx="6"/></g>`;
-    } else if (style === 'bubble') {
-      const n = 4 + Math.floor(r() * 3);
-      shapes += `<g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})">${Array.from({ length: n }, (_, k) => `<circle cx="${f1((k - n / 2) * 30)}" cy="${f1(Math.sin(k * 1.3) * 10)}" r="${f1(26 + (k % 2) * 10)}"/>`).join('')}</g>`;
-    } else if (style === 'thin') {
-      const len = 200 + r() * 160;
-      shapes += `<g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})"><rect x="${f1(-len / 2)}" y="-8" width="${f1(len)}" height="16" rx="8"/><rect x="${f1(-len * 0.3)}" y="-20" width="${f1(len * 0.5)}" height="14" rx="7"/><rect x="${f1(-len * 0.32)}" y="-20" width="${f1(len * 0.5)}" height="2" rx="1" fill="#b9c8f0" opacity=".8"/></g>`;
+// ---------- randomness + noise ----------
+function rng(seed) {
+  let a = (seed * 2654435761) >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hexA(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+function mix(a, b, t) {
+  const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
+  const ch = (s) => Math.round(((A >> s) & 255) + ((((B >> s) & 255) - ((A >> s) & 255)) * t));
+  return '#' + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1);
+}
+
+// Tileable value-noise textures (fractal), made once and used as patterns for stone grain, cloud mottling, paper.
+const noiseCache = {};
+function noiseTexture(size = 128, octaves = 4, seed = 1, contrastBoost = 1.4) {
+  const key = `${size}:${octaves}:${seed}`;
+  if (noiseCache[key]) return noiseCache[key];
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const x = c.getContext('2d');
+  const img = x.createImageData(size, size);
+  const r = rng(seed);
+  const lattices = [];
+  for (let o = 0; o < octaves; o++) {
+    const n = 4 << o;
+    lattices.push({ n, v: Float32Array.from({ length: n * n }, () => r()) });
+  }
+  const smooth = (t) => t * t * (3 - 2 * t);
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      let v = 0, amp = 1, tot = 0;
+      for (const L of lattices) {
+        const fx = (px / size) * L.n, fy = (py / size) * L.n;
+        const x0 = Math.floor(fx), y0 = Math.floor(fy);
+        const tx = smooth(fx - x0), ty = smooth(fy - y0);
+        const g = (i, j) => L.v[((j % L.n) * L.n) + (i % L.n)];
+        const a = g(x0, y0), b = g(x0 + 1, y0), cc = g(x0, y0 + 1), d = g(x0 + 1, y0 + 1);
+        v += amp * (a + (b - a) * tx + (cc - a) * ty + (a - b - cc + d) * tx * ty);
+        tot += amp;
+        amp *= 0.55;
+      }
+      v = Math.max(0, Math.min(1, 0.5 + (v / tot - 0.5) * contrastBoost));
+      const i = (py * size + px) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v * 255;
+      img.data[i + 3] = 255;
     }
   }
-  return { uri: svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${grad}</defs><g fill="url(#g)">${shapes}</g></svg>`), W, H };
+  x.putImageData(img, 0, 0);
+  return (noiseCache[key] = c);
 }
 
-// ---------- particle tiles ----------
-function particleTile(kind, color, seed, variant) {
-  const r = rand(seed + variant * 101);
-  const W = 300, H = 300;
-  let s = '';
-  const N = { motes: 9, glints: 8, wind: 4, sparkles: 7, fireflies: 7, shards: 4, rocks: 4, bubbles: 5, stars: 22 }[kind] || 0;
-  for (let i = 0; i < N; i++) {
-    const x = 12 + r() * (W - 24), y = 12 + r() * (H - 24);
-    if (kind === 'motes') s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(1.4 + r() * 1.6)}" fill="${color}"/><circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(4 + r() * 2)}" fill="${color}" opacity=".18"/>`;
-    else if (kind === 'glints' || kind === 'sparkles') {
-      const q = 2.5 + r() * 3.5;
-      s += `<path d="M${f1(x)} ${f1(y - q)} L${f1(x + q * 0.28)} ${f1(y - q * 0.28)} L${f1(x + q)} ${f1(y)} L${f1(x + q * 0.28)} ${f1(y + q * 0.28)} L${f1(x)} ${f1(y + q)} L${f1(x - q * 0.28)} ${f1(y + q * 0.28)} L${f1(x - q)} ${f1(y)} L${f1(x - q * 0.28)} ${f1(y - q * 0.28)} Z" fill="${color}"/>`;
-    } else if (kind === 'wind') {
-      const len = 40 + r() * 70;
-      s += `<rect x="${f1(x - len / 2)}" y="${f1(y)}" width="${f1(len)}" height="1.4" rx=".7" fill="${color}"/>`;
-    } else if (kind === 'fireflies') s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(5 + r() * 2)}" fill="${color}" opacity=".22"/><circle cx="${f1(x)}" cy="${f1(y)}" r="1.8" fill="${color}"/>`;
-    else if (kind === 'shards') {
-      const q = 4 + r() * 5;
-      s += `<path d="M${f1(x)} ${f1(y - q * 1.6)} L${f1(x + q * 0.7)} ${f1(y)} L${f1(x)} ${f1(y + q * 1.6)} L${f1(x - q * 0.7)} ${f1(y)} Z" fill="${color}"/><path d="M${f1(x)} ${f1(y - q * 1.6)} L${f1(x + q * 0.7)} ${f1(y)} L${f1(x)} ${f1(y)} Z" fill="#fff" opacity=".6"/>`;
-    } else if (kind === 'rocks') {
-      const q = 3 + r() * 4;
-      s += `<path d="M${f1(x - q)} ${f1(y)} L${f1(x - q * 0.3)} ${f1(y - q)} L${f1(x + q)} ${f1(y - q * 0.4)} L${f1(x + q * 0.6)} ${f1(y + q * 0.8)} Z" fill="${color}"/>`;
-    } else if (kind === 'bubbles') s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(4 + r() * 6)}" fill="none" stroke="${color}" stroke-width="1.2"/>`;
-    else if (kind === 'stars') s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(0.6 + r() * 1.1)}" fill="${r() < 0.2 ? '#fff1c4' : '#ffffff'}"/>`;
-  }
-  return { uri: svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${s}</svg>`), W, H };
+// Lay a noise texture over whatever is already drawn, only where it is drawn (source-atop), using a blend.
+function texture(S, { alpha = 0.3, mode = 'overlay', seed = 1, size = 128, octaves = 4, scale = 1, ox = 0, oy = 0 } = {}) {
+  const { x } = S;
+  const pat = x.createPattern(noiseTexture(size, octaves, seed), 'repeat');
+  pat.setTransform?.(new DOMMatrix([scale / DPR * DPR, 0, 0, scale, ox, oy]));
+  x.save();
+  x.globalCompositeOperation = 'source-atop';
+  x.globalAlpha = alpha;
+  // emulate blend modes inside source-atop by drawing to a temp layer
+  const t = sprite(S.w, S.h);
+  t.x.fillStyle = pat;
+  t.x.fillRect(0, 0, S.w, S.h);
+  x.globalCompositeOperation = mode === 'multiply' ? 'multiply' : mode;
+  x.drawImage(t.c, 0, 0, S.w, S.h);
+  x.restore();
+  // re-clip to the shape's alpha (blend modes can paint outside it)
+  x.save();
+  x.globalCompositeOperation = 'destination-in';
+  x.drawImage(S.mask || S.c, 0, 0, S.w, S.h);
+  x.restore();
 }
 
-// A layer of one repeating tile. Three nested boxes, each one tile larger than the screen so it wraps seamlessly:
-//   .sky-layer   fixed to the screen
-//   .sky-alt     follows altitude (the loop sets its translateY, only while the sky is climbing)
-//   .sky-drift   drifts forever with a CSS animation stepped one CSS pixel at a time (compositor, no JS)
-function tiledLayer(cls, tile, { vx = 0, vy = 0, parallax = 0, opacity = 1, twinkle = 0, z = 0 } = {}) {
-  const wrap = el(`sky-layer ${cls}`);
-  wrap.style.zIndex = z;
-  wrap.style.opacity = opacity;
-  const alt = el('sky-alt', wrap);
-  alt.style.height = `calc(100% + ${tile.H}px)`;
-  const drift = el('sky-drift', alt);
-  drift.style.width = `calc(100% + ${tile.W}px)`;
-  drift.style.height = `calc(100% + ${tile.H}px)`;
-  drift.style.backgroundImage = tile.uri;
-  drift.style.backgroundSize = `${tile.W}px ${tile.H}px`;
-  const anims = [];
-  if (vx || vy) {
-    // whichever axis moves, one step per pixel; vertical drift goes up for negative vy
-    const dist = vx ? tile.W : tile.H;
-    const dur = dist / Math.abs(vx || vy);
-    drift.style.setProperty('--dx', vx ? `${-tile.W}px` : '0px');
-    drift.style.setProperty('--dy', vx ? `${vy ? (vy / vx) * tile.W : 0}px` : `${vy < 0 ? -tile.H : tile.H}px`);
-    anims.push(`drift ${dur.toFixed(2)}s steps(${dist}) ${(-Math.random() * dur).toFixed(2)}s infinite`);
-  }
-  if (twinkle) anims.push(`twinkle ${twinkle}s ease-in-out ${(-Math.random() * twinkle).toFixed(2)}s infinite alternate`);
-  drift.style.animation = anims.join(', ');
-  const L = { wrap, alt, H: tile.H, parallax, y: current * PX_PER_POINT * parallax };
-  layers.push(L);
-  placeLayer(L);
-  return L;
+function keepMask(S) {
+  const m = document.createElement('canvas');
+  m.width = S.c.width; m.height = S.c.height;
+  m.getContext('2d').drawImage(S.c, 0, 0);
+  S.mask = m;
 }
 
-function placeLayer(L) {
-  const oy = (((L.y % L.H) + L.H) % L.H) - L.H;
-  L.alt.style.transform = `translate3d(0, ${snap(oy)}px, 0)`;
+// Fade a finished sprite toward the atmosphere colour: further away = lighter, hazier, less contrast.
+function haze(S, color, amount) {
+  if (amount <= 0) return S;
+  const { x } = S;
+  x.save();
+  x.globalCompositeOperation = 'source-atop';
+  x.fillStyle = hexA(color, Math.min(0.92, amount));
+  x.fillRect(0, 0, S.w, S.h);
+  x.restore();
+  return S;
 }
 
 // ---------- islands ----------
-function islandSVG(seed, layerId, extras = '') {
-  const isl = theme.islands;
-  const [top, topDark, rock, rockDark] = isl.layers[layerId] || isl.layers.meadows;
-  const r = rand(seed * 977 + 13);
-  const id = `${themeId}${seed}`;
-  const defs = `<linearGradient id="rk${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${rock}"/><stop offset="1" stop-color="${rockDark}"/></linearGradient>`
-    + `<linearGradient id="wf${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${isl.water || '#cfeaff'}" stop-opacity=".95"/><stop offset="1" stop-color="${isl.water || '#cfeaff'}" stop-opacity="0"/></linearGradient>`;
-  const waterfall = (x, len = 70, w = 9) => isl.waterfall
-    ? `<rect x="${x}" y="38" width="${w}" height="${len}" rx="${w / 2}" fill="url(#wf${id})"/><rect x="${x + 2}" y="44" width="1.5" height="${len * 0.6}" fill="#fff" opacity=".7"/>` : '';
-  let body = '';
+// Returns { S, topY, cx } where topY is the walking surface height inside the sprite and cx its centre.
+function paintIsland(theme, { seed, width = 220, decor = null, landmark = null, distance = 0, home = false }) {
+  const r = rng(seed);
+  const L = theme.light;
+  const side = L.side;
+  const W = width;
+  const depth = W * (0.42 + r() * 0.28);
+  const pad = 30;
+  const H = depth + 120 + pad;
+  const topY = 92; // room above the surface for ruins, trees, towers
+  const S = sprite(W + pad * 2, H + 60);
+  const { x } = S;
+  const ox = pad;
+  const left = ox + 4, right = ox + W - 4;
 
-  if (isl.style === 'meadow' || isl.style === 'night') {
-    let rockPath = 'M10 40 ';
-    for (let i = 1; i < 9; i++) rockPath += `L${f1(10 + (i * 180) / 9)} ${f1(58 + r() * 50 * Math.sin((i / 9) * Math.PI))} `;
-    rockPath += 'L190 40 Z';
-    const trees = Array.from({ length: 2 + Math.floor(r() * 3) }, () => {
-      const x = 30 + r() * 140, h = 14 + r() * 14;
-      return isl.style === 'night'
-        ? `<g transform="translate(${f1(x)} 34)"><rect x="-1" y="${f1(-h / 2)}" width="2" height="${f1(h / 2)}" fill="${rockDark}"/><circle cy="${f1(-h / 2)}" r="${f1(h / 3)}" fill="${topDark}"/></g>`
-        : `<g transform="translate(${f1(x)} 34)"><rect x="-1.5" y="${f1(-h / 2)}" width="3" height="${f1(h / 2)}" fill="${rockDark}"/><circle cy="${f1(-h / 2)}" r="${f1(h / 2.4)}" fill="${topDark}"/></g>`;
-    }).join('');
-    const sideShade = isl.longShadow
-      ? `<path d="${rockPath}" fill="url(#ls${id})"/><linearGradient id="ls${id}" x1="1" y1="0" x2="0" y2="0"><stop offset=".35" stop-color="${rockDark}" stop-opacity="0"/><stop offset="1" stop-color="${rockDark}" stop-opacity=".75"/></linearGradient>` : '';
-    let glow = '';
-    if (isl.style === 'night') {
-      const g = isl.glow;
-      glow = Array.from({ length: 5 }, (_, k) => {
-        const x = 24 + r() * 152, c = g[k % 2];
-        return `<g transform="translate(${f1(x)} 32)"><rect x="-.6" y="-7" width="1.2" height="7" fill="${topDark}"/><circle cy="-8" r="5" fill="${c}" opacity=".25"/><circle cy="-8" r="1.8" fill="${c}"/></g>`;
-      }).join('') + `<g transform="translate(${f1(40 + r() * 120)} 18)"><rect x="-.8" y="0" width="1.6" height="18" fill="${rockDark}"/><circle cy="-2" r="10" fill="${g[2]}" opacity=".22"/><rect x="-3.5" y="-6" width="7" height="8" rx="1.5" fill="${g[2]}"/></g>`;
-    }
-    body = `<path d="${rockPath}" fill="url(#rk${id})"/>${sideShade}${waterfall(150)}
-      <ellipse cx="100" cy="40" rx="92" ry="12" fill="${topDark}"/><ellipse cx="100" cy="36" rx="90" ry="11" fill="${top}"/>${trees}${glow}`;
-  } else if (isl.style === 'crystal') {
-    let shards = '';
-    const n = 8;
-    for (let i = 0; i < n; i++) {
-      const x0 = 14 + (i * 172) / n, x1 = 14 + ((i + 1) * 172) / n, mid = (x0 + x1) / 2 + (r() - 0.5) * 6;
-      const len = 26 + r() * 60 * Math.sin(((i + 0.5) / n) * Math.PI) + 10;
-      shards += `<path d="M${f1(x0)} 40 L${f1(x1)} 40 L${f1(mid)} ${f1(40 + len)} Z" fill="url(#rk${id})"/><path d="M${f1(x0)} 40 L${f1((x0 + x1) / 2)} 40 L${f1(mid)} ${f1(40 + len)} Z" fill="#fff" opacity=".28"/>`;
-    }
-    const spires = Array.from({ length: 2 + Math.floor(r() * 2) }, () => {
-      const x = 30 + r() * 140, h = 16 + r() * 22, w = 5 + r() * 4;
-      return `<path d="M${f1(x - w)} 36 L${f1(x)} ${f1(36 - h)} L${f1(x + w)} 36 Z" fill="${rock}" stroke="#fff" stroke-opacity=".7" stroke-width=".8"/><path d="M${f1(x)} ${f1(36 - h)} L${f1(x + w)} 36 L${f1(x)} 36 Z" fill="${rockDark}" opacity=".5"/>`;
-    }).join('');
-    body = `${shards}<path d="M8 40 L30 30 L170 30 L192 40 L170 46 L30 46 Z" fill="${topDark}"/><path d="M12 38 L32 28 L168 28 L188 38 L168 42 L32 42 Z" fill="${top}" stroke="#fff" stroke-width=".8"/>${spires}`;
-  } else if (isl.style === 'storm') {
-    let p = 'M8 40 ';
-    for (let i = 1; i < 14; i++) p += `L${f1(8 + (i * 184) / 14)} ${f1(46 + (i % 2 ? 30 + r() * 46 : 8 + r() * 14) * Math.sin((i / 14) * Math.PI))} `;
-    p += 'L192 40 Z';
-    let topEdge = 'M10 40 ';
-    for (let i = 1; i < 10; i++) topEdge += `L${f1(10 + i * 18)} ${f1(31 + r() * 5)} `;
-    topEdge += 'L190 40 Z';
-    const px = 40 + r() * 60;
-    const ruins = `<g fill="${rock}" stroke="${rockDark}" stroke-width="1"><path d="M${f1(px)} 34 L${f1(px)} 10 L${f1(px + 4)} 6 L${f1(px + 8)} 12 L${f1(px + 8)} 34 Z"/><path d="M${f1(px + 26)} 34 L${f1(px + 26)} 18 L${f1(px + 34)} 22 L${f1(px + 34)} 34 Z"/><rect x="${f1(px - 4)}" y="8" width="18" height="3" transform="rotate(-8 ${f1(px)} 8)"/></g>`;
-    const tx = 130 + r() * 40;
-    const tree = `<path d="M${f1(tx)} 34 L${f1(tx)} 14 M${f1(tx)} 22 L${f1(tx - 8)} 14 M${f1(tx)} 18 L${f1(tx + 7)} 10 M${f1(tx - 8)} 14 L${f1(tx - 11)} 9" stroke="${rockDark}" stroke-width="2" stroke-linecap="round" fill="none"/>`;
-    body = `<path d="${p}" fill="url(#rk${id})"/>${waterfall(52, 60, 6)}<path d="${topEdge}" fill="${top}"/><path d="M10 40 L190 40 L190 43 L10 43 Z" fill="${topDark}"/>${ruins}${tree}`;
-  } else if (isl.style === 'pastel') {
-    const under = 'M14 40 C 14 74, 52 98, 100 100 C 148 98, 186 74, 186 40 Z';
-    const dots = Array.from({ length: 7 }, () => `<circle cx="${f1(40 + r() * 120)}" cy="${f1(50 + r() * 34)}" r="${f1(2 + r() * 3)}" fill="#fff" opacity=".45"/>`).join('');
-    const scallops = Array.from({ length: 9 }, (_, k) => `<circle cx="${f1(22 + k * 19.5)}" cy="42" r="9" fill="${topDark}"/>`).join('');
-    const trees = Array.from({ length: 2 + Math.floor(r() * 2) }, (_, k) => {
-      const x = 40 + r() * 120;
-      return k % 2
-        ? `<g transform="translate(${f1(x)} 34)"><rect x="-1.5" y="-18" width="3" height="18" rx="1.5" fill="#fff"/><circle cy="-22" r="8" fill="${rock}"/><path d="M-4 -22 a4 4 0 1 1 4 4" stroke="#fff" stroke-width="1.6" fill="none"/></g>`
-        : `<g transform="translate(${f1(x)} 34)"><rect x="-2.5" y="-8" width="5" height="8" rx="2" fill="#fff6ee"/><path d="M-11 -8 a11 9 0 0 1 22 0 Z" fill="${rock}"/><circle cx="-4" cy="-12" r="1.6" fill="#fff"/><circle cx="4" cy="-11" r="1.3" fill="#fff"/></g>`;
-    }).join('');
-    body = `<path d="${under}" fill="url(#rk${id})"/>${dots}${waterfall(140, 60, 10)}${scallops}<ellipse cx="100" cy="36" rx="88" ry="12" fill="${top}"/>${trees}`;
+  // --- silhouette: irregular lip, chunky jagged underside with 1-3 hanging spurs ---
+  const lip = [];
+  const nLip = 14;
+  for (let i = 0; i <= nLip; i++) {
+    const t = i / nLip;
+    lip.push([left + t * (right - left), topY + (r() - 0.5) * 4 + Math.sin(t * Math.PI) * -3]);
   }
-  return `<svg viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg" overflow="visible"><defs>${defs}</defs>${body}${extras}</svg>`;
+  const under = [];
+  const nU = 22;
+  const spurs = Array.from({ length: 1 + Math.floor(r() * 3) }, () => ({ t: 0.25 + r() * 0.5, d: 0.12 + r() * 0.3, w: 0.09 + r() * 0.08 }));
+  for (let i = nU; i >= 0; i--) {
+    const t = i / nU;
+    let d = Math.pow(Math.sin(t * Math.PI), 0.75) * depth * 0.62;
+    for (const s of spurs) d += Math.max(0, 1 - Math.abs(t - s.t) / s.w) * depth * s.d;
+    d += (i % 2 ? 1 : -1) * (3 + r() * 7) * Math.sin(t * Math.PI); // jagged teeth
+    // broken ledge: a notch near one edge
+    if (t > 0.86 && t < 0.92) d -= 10;
+    under.push([left + t * (right - left) + (r() - 0.5) * 6, topY + 10 + d]);
+  }
+  const body = new Path2D();
+  body.moveTo(lip[0][0], lip[0][1]);
+  for (const p of lip) body.lineTo(p[0], p[1]);
+  for (const p of under) body.lineTo(p[0], p[1]);
+  body.closePath();
+
+  // --- rock body ---
+  const R = theme.rock;
+  x.save();
+  x.clip(body);
+  const gx = x.createLinearGradient(side > 0 ? left : right, 0, side > 0 ? right : left, 0);
+  gx.addColorStop(0, R.dark);
+  gx.addColorStop(0.55, R.mid);
+  gx.addColorStop(1, R.light);
+  x.fillStyle = gx;
+  x.fillRect(0, 0, S.w, S.h);
+  // darker toward the hanging tips (ambient light comes from above)
+  const gy = x.createLinearGradient(0, topY, 0, topY + depth * 1.2);
+  gy.addColorStop(0, hexA(R.dark, 0));
+  gy.addColorStop(1, hexA(R.crevice, 0.85));
+  x.fillStyle = gy;
+  x.fillRect(0, 0, S.w, S.h);
+  // chiselled faces: a few planes catching or losing light
+  for (let i = 0; i < 9; i++) {
+    const cx = left + r() * (right - left), cy = topY + 14 + r() * depth * 0.6, s = 12 + r() * 26;
+    x.beginPath();
+    x.moveTo(cx - s, cy);
+    x.lineTo(cx - s * 0.2, cy - s * 0.5);
+    x.lineTo(cx + s * 0.9, cy + s * 0.1);
+    x.lineTo(cx + s * 0.1, cy + s * 0.9);
+    x.closePath();
+    const lit = (cx - (left + right) / 2) * side > 0;
+    x.fillStyle = lit ? hexA(R.light, 0.22) : hexA(R.crevice, 0.25);
+    x.fill();
+  }
+  // strata: carved horizontal bands with a lit lower edge
+  for (let i = 0; i < 6; i++) {
+    const y0 = topY + 16 + i * (depth * 0.11) + r() * 6;
+    x.beginPath();
+    x.moveTo(left - 5, y0);
+    for (let k = 0; k <= 10; k++) x.lineTo(left + (k / 10) * (right - left), y0 + Math.sin(k * 1.3 + i) * 3 + (r() - 0.5) * 3);
+    x.strokeStyle = hexA(R.crevice, 0.42);
+    x.lineWidth = 1.6;
+    x.stroke();
+    x.translate(0, 1.6);
+    x.strokeStyle = hexA(R.light, 0.16);
+    x.lineWidth = 1;
+    x.stroke();
+    x.translate(0, -1.6);
+  }
+  // cracks: random walks downward from the lip
+  for (let i = 0; i < 6; i++) {
+    let px = left + 15 + r() * (right - left - 30), py = topY + 8;
+    x.beginPath();
+    x.moveTo(px, py);
+    const steps = 4 + Math.floor(r() * 5);
+    for (let k = 0; k < steps; k++) { px += (r() - 0.5) * 12; py += 6 + r() * 10; x.lineTo(px, py); }
+    x.strokeStyle = hexA(R.crevice, 0.75);
+    x.lineWidth = 1.3;
+    x.stroke();
+    x.translate(side * 1.2, 0);
+    x.strokeStyle = hexA(R.light, 0.22);
+    x.lineWidth = 0.8;
+    x.stroke();
+    x.translate(-side * 1.2, 0);
+  }
+  // ambient occlusion right under the grass lip
+  const ao = x.createLinearGradient(0, topY, 0, topY + 22);
+  ao.addColorStop(0, hexA(R.crevice, 0.7));
+  ao.addColorStop(1, hexA(R.crevice, 0));
+  x.fillStyle = ao;
+  x.fillRect(0, topY, S.w, 22);
+  x.restore();
+
+  // rim light along the sunward edge (inside the silhouette only)
+  x.save();
+  x.clip(body);
+  const rg = x.createLinearGradient(side > 0 ? left : right, 0, side > 0 ? right : left, 0);
+  rg.addColorStop(0, hexA(L.rim, 0));
+  rg.addColorStop(0.7, hexA(L.rim, 0));
+  rg.addColorStop(1, hexA(L.rim, 0.9));
+  x.strokeStyle = rg;
+  x.lineWidth = 5;
+  x.stroke(body);
+  x.restore();
+
+  keepMask(S);
+  texture(S, { alpha: 0.55, mode: 'overlay', seed: 3 + (seed % 5), size: 128, octaves: 5, ox: r() * 128, oy: r() * 128 });
+  texture(S, { alpha: 0.18, mode: 'multiply', seed: 9, size: 64, octaves: 2, ox: r() * 64, oy: r() * 64 });
+  S.mask = null;
+
+  // --- hanging roots and vines ---
+  const T = theme.top;
+  for (let i = 0; i < 5 + Math.floor(r() * 5); i++) {
+    const p = under[2 + Math.floor(r() * (under.length - 4))];
+    let vx = p[0], vy = p[1] - 6;
+    const len = 18 + r() * 60;
+    const sway = (r() - 0.5) * 16;
+    const segs = 8;
+    for (let k = 0; k < segs; k++) {
+      const nx = vx + sway / segs + (r() - 0.5) * 3, ny = vy + len / segs;
+      x.beginPath();
+      x.moveTo(vx, vy);
+      x.lineTo(nx, ny);
+      x.strokeStyle = k < 2 ? R.crevice : mix(R.crevice, T.grassDark, 0.5);
+      x.lineWidth = 2.2 * (1 - k / segs) + 0.4;
+      x.lineCap = 'round';
+      x.stroke();
+      if (k > 2 && r() < 0.45) {
+        x.beginPath();
+        x.ellipse(nx + (r() < 0.5 ? -2.5 : 2.5), ny, 2.6, 1.4, r() * 3, 0, Math.PI * 2);
+        x.fillStyle = r() < 0.5 ? T.grassDark : T.moss;
+        x.fill();
+      }
+      vx = nx; vy = ny;
+    }
+  }
+
+  // --- waterfall from a notch in the lip ---
+  if (r() < 0.55 || landmark === 'waterfall') {
+    const wx = left + (side > 0 ? 0.15 + r() * 0.2 : 0.65 + r() * 0.2) * (right - left);
+    const wlen = depth + 40;
+    const wg = x.createLinearGradient(0, topY, 0, topY + wlen);
+    wg.addColorStop(0, 'rgba(235,245,255,.95)');
+    wg.addColorStop(0.6, 'rgba(220,235,255,.55)');
+    wg.addColorStop(1, 'rgba(220,235,255,0)');
+    x.fillStyle = wg;
+    x.beginPath();
+    x.moveTo(wx - 4, topY + 2);
+    x.quadraticCurveTo(wx - 6, topY + wlen * 0.5, wx - 9, topY + wlen);
+    x.lineTo(wx + 9, topY + wlen);
+    x.quadraticCurveTo(wx + 6, topY + wlen * 0.5, wx + 4, topY + 2);
+    x.fill();
+    for (let k = 0; k < 4; k++) {
+      x.beginPath();
+      const sx = wx - 3 + k * 2;
+      x.moveTo(sx, topY + 4);
+      x.lineTo(sx + (k - 1.5) * 1.5, topY + wlen * (0.5 + r() * 0.4));
+      x.strokeStyle = 'rgba(255,255,255,.6)';
+      x.lineWidth = 0.8;
+      x.stroke();
+    }
+    const mist = x.createRadialGradient(wx, topY + wlen * 0.85, 0, wx, topY + wlen * 0.85, 22);
+    mist.addColorStop(0, 'rgba(255,255,255,.35)');
+    mist.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = mist;
+    x.fillRect(wx - 24, topY + wlen * 0.85 - 24, 48, 48);
+  }
+
+  // --- the top: soil lip, grass bed, moss drips, tufts ---
+  x.beginPath();
+  x.moveTo(lip[0][0], lip[0][1] + 6);
+  for (const p of lip) x.lineTo(p[0], p[1] + 6);
+  for (let i = lip.length - 1; i >= 0; i--) x.lineTo(lip[i][0], lip[i][1] - 2);
+  x.closePath();
+  x.fillStyle = T.soil;
+  x.fill();
+  const bed = new Path2D();
+  bed.moveTo(lip[0][0] - 2, lip[0][1] + 1);
+  for (const p of lip) bed.lineTo(p[0], p[1] - 1);
+  bed.lineTo(lip.at(-1)[0] + 2, lip.at(-1)[1] + 1);
+  for (let i = lip.length - 1; i >= 0; i--) bed.lineTo(lip[i][0], lip[i][1] - 9 - Math.sin((i / nLip) * Math.PI) * 5);
+  bed.closePath();
+  const bg = x.createLinearGradient(side > 0 ? left : right, 0, side > 0 ? right : left, 0);
+  bg.addColorStop(0, T.grassDark);
+  bg.addColorStop(1, T.grass);
+  x.fillStyle = bg;
+  x.fill(bed);
+  // moss drips over the lip
+  for (let i = 0; i < 10; i++) {
+    const p = lip[1 + Math.floor(r() * (lip.length - 2))];
+    x.beginPath();
+    x.ellipse(p[0], p[1] + 3, 3 + r() * 5, 2 + r() * 5, 0, 0, Math.PI * 2);
+    x.fillStyle = r() < 0.5 ? T.moss : T.grassDark;
+    x.fill();
+  }
+  // tufts of grass blades, lighter on the sunward side
+  for (let i = 0; i < W * 0.7; i++) {
+    const t = r();
+    const bx = left + t * (right - left), by = topY - 3 - Math.sin(t * Math.PI) * 4 - r() * 6;
+    const h = 3 + r() * 6;
+    const lit = (t - 0.5) * side > 0;
+    x.beginPath();
+    x.moveTo(bx, by + 2);
+    x.quadraticCurveTo(bx + (r() - 0.5) * 3, by - h * 0.5, bx + (r() - 0.5) * 4, by - h);
+    x.strokeStyle = lit ? mix(T.grass, L.color, 0.35) : r() < 0.5 ? T.grassDark : T.grass;
+    x.lineWidth = 1.1;
+    x.stroke();
+  }
+
+  // --- story details on top, each shaded for the same light and casting a soft shadow ---
+  const top = (u) => topY - 6 - Math.sin(u * Math.PI) * 5;
+  const props = [];
+  if (home) props.push({ kind: 'tower', u: 0.62 }, { kind: 'stairs', u: 0.3 });
+  else if (landmark) props.push({ kind: landmark, u: 0.5 });
+  else {
+    const n = W > 200 ? 2 : 1;
+    for (let i = 0; i < n; i++) props.push({ kind: decor[(seed + i * 3) % decor.length], u: n === 1 ? 0.35 + r() * 0.3 : 0.22 + i * 0.5 + r() * 0.1 });
+  }
+  for (const p of props) paintProp(x, theme, p.kind, left + p.u * (right - left), top(p.u), r, W);
+
+  if (distance > 0) haze(S, theme.haze, distance);
+  return { S, topY, cx: ox + W / 2, padX: ox };
 }
 
-const ISLE_DECOR = {
-  '🎈': '<g transform="translate(140 0)"><line x1="0" y1="34" x2="4" y2="6" stroke="#888"/><circle cx="4" cy="0" r="9" fill="#ff8fb0"/><circle cx="-8" cy="6" r="7" fill="#9fd4ff"/><line x1="0" y1="34" x2="-8" y2="12" stroke="#888"/></g>',
-  '🪁': '<g transform="translate(150 -30)"><path d="M0 0 L12 14 L0 30 L-12 14 Z" fill="#ff9f5a"/><path d="M0 30 q-14 20 -40 64" stroke="#b07d22" fill="none"/></g>',
-  '🐋': '<g transform="translate(70 18)"><ellipse cx="30" cy="8" rx="32" ry="13" fill="#6f8fd6"/><path d="M58 6 L74 -6 L70 10 Z" fill="#6f8fd6"/><circle cx="12" cy="6" r="2" fill="#223"/></g>',
-  '🏮': '<g transform="translate(96 -40)"><rect x="-6" y="0" width="12" height="74" fill="#fff4dc"/><rect x="-9" y="-10" width="18" height="12" fill="#f5c542"/><circle cx="0" cy="-4" r="16" fill="#fff3b0" opacity=".45"/></g>',
-};
-const HOUSE = '<g transform="translate(86 10)"><rect x="0" y="0" width="28" height="22" fill="#fff6e6"/><path d="M-4 2 L14 -14 L32 2 Z" fill="#f08fb5"/><rect x="11" y="10" width="7" height="12" fill="#b07d22"/></g>';
+function castShadow(x, theme, cx, gy, w) {
+  const sx = cx - theme.light.side * w * 0.45;
+  const g = x.createRadialGradient(sx, gy, 0, sx, gy, w);
+  g.addColorStop(0, hexA(theme.light.shadow, 0.35));
+  g.addColorStop(1, hexA(theme.light.shadow, 0));
+  x.save();
+  x.scale(1, 0.3);
+  x.fillStyle = g;
+  x.fillRect(sx - w, gy / 0.3 - w, w * 2, w * 2);
+  x.restore();
+}
 
-function buildWorld() {
-  world.innerHTML = '';
-  const add = (cls, left, bottom, svg, delay = 0, label = '') => {
-    const e = el(cls, world);
-    e.style.left = left;
-    e.style.bottom = bottom;
-    const bob = el('isle-bob', e);
-    bob.style.animationDelay = `${delay}s`;
-    bob.innerHTML = label + svg;
-    return e;
+// shaded vertical block (column shaft, stone, tower) with lit side, shadow side and a rim line
+function shadedRect(x, theme, X, Y, w, h, base) {
+  const s = theme.light.side;
+  const g = x.createLinearGradient(X, 0, X + w, 0);
+  const lightC = mix(base, theme.light.color, 0.35), darkC = mix(base, theme.light.shadow, 0.55);
+  g.addColorStop(0, s > 0 ? darkC : lightC);
+  g.addColorStop(0.5, base);
+  g.addColorStop(1, s > 0 ? lightC : darkC);
+  x.fillStyle = g;
+  x.fillRect(X, Y, w, h);
+  x.fillStyle = hexA(theme.light.rim, 0.7);
+  x.fillRect(s > 0 ? X + w - 1 : X, Y, 1, h);
+}
+
+function paintProp(x, theme, kind, cx, gy, r, W) {
+  const St = theme.stone, s = theme.light.side;
+  castShadow(x, theme, cx, gy, 26);
+  if (kind === 'columns' || kind === 'pillar') {
+    const n = kind === 'columns' ? 2 + Math.floor(r() * 2) : 1;
+    for (let i = 0; i < n; i++) {
+      const X = cx - (n - 1) * 9 + i * 18, h = (kind === 'pillar' ? 46 : 30) + r() * 26 * (i === n - 1 ? 0.3 : 1);
+      shadedRect(x, theme, X - 4, gy - h, 8, h, St.mid);
+      for (let f = 1; f < 3; f++) { x.fillStyle = hexA(St.dark, 0.35); x.fillRect(X - 4 + f * 2.6, gy - h + 3, 0.8, h - 6); }
+      shadedRect(x, theme, X - 6, gy - 4, 12, 4, St.light);
+      // broken capital: jagged top
+      x.beginPath();
+      x.moveTo(X - 6, gy - h);
+      x.lineTo(X - 2, gy - h - 4 - r() * 4);
+      x.lineTo(X + 1, gy - h - 1);
+      x.lineTo(X + 6, gy - h - 3 - r() * 3);
+      x.lineTo(X + 6, gy - h + 3);
+      x.lineTo(X - 6, gy - h + 3);
+      x.closePath();
+      x.fillStyle = St.light;
+      x.fill();
+      if (kind === 'pillar') { // carved bands with a trim inlay
+        x.fillStyle = St.trim;
+        x.fillRect(X - 4, gy - h * 0.62, 8, 1.5);
+        x.fillRect(X - 4, gy - h * 0.3, 8, 1.5);
+      }
+    }
+  } else if (kind === 'arch') {
+    const w = 34, h = 34;
+    shadedRect(x, theme, cx - w / 2, gy - h, 7, h, St.mid);
+    shadedRect(x, theme, cx + w / 2 - 7, gy - h * 0.7, 7, h * 0.7, St.mid);
+    x.beginPath();
+    x.arc(cx, gy - h + 2, w / 2 - 3.5, Math.PI, Math.PI * 1.72);
+    x.strokeStyle = St.light;
+    x.lineWidth = 7;
+    x.stroke();
+    x.strokeStyle = hexA(St.dark, 0.5);
+    x.lineWidth = 1;
+    x.stroke();
+  } else if (kind === 'stairs') {
+    for (let i = 0; i < 5; i++) shadedRect(x, theme, cx - 16 + i * 4 * s, gy - 4 - i * 4, 22 - i * 2, 4, i % 2 ? St.mid : St.light);
+  } else if (kind === 'statue') {
+    shadedRect(x, theme, cx - 7, gy - 8, 14, 8, St.dark);
+    x.beginPath();
+    x.moveTo(cx - 5, gy - 8); x.lineTo(cx - 4, gy - 30); x.quadraticCurveTo(cx, gy - 40, cx + 4, gy - 30); x.lineTo(cx + 5, gy - 8); x.closePath();
+    x.fillStyle = mix(St.mid, theme.light.color, 0.2); x.fill();
+    x.beginPath(); x.arc(cx, gy - 36, 3.6, 0, Math.PI * 2); x.fillStyle = St.light; x.fill();
+    x.fillStyle = St.trim; x.fillRect(cx - 5, gy - 24, 10, 1.4);
+  } else if (kind === 'stones') {
+    for (let i = 0; i < 3; i++) {
+      const X = cx - 18 + i * 14, h = 18 + r() * 16;
+      x.beginPath();
+      x.moveTo(X - 5, gy); x.lineTo(X - 4, gy - h); x.quadraticCurveTo(X, gy - h - 5, X + 4, gy - h + 1); x.lineTo(X + 5, gy); x.closePath();
+      const g = x.createLinearGradient(X - 5, 0, X + 5, 0);
+      g.addColorStop(s > 0 ? 0 : 1, theme.stone.dark); g.addColorStop(s > 0 ? 1 : 0, theme.stone.light);
+      x.fillStyle = g; x.fill();
+      paintRune(x, theme, X, gy - h * 0.55, r);
+    }
+  } else if (kind === 'lantern' || kind === 'brazier') {
+    if (kind === 'lantern') {
+      x.fillStyle = theme.rock.crevice; x.fillRect(cx - 1, gy - 30, 2, 30); x.fillRect(cx - 1, gy - 30, 9 * s, 2);
+      glowDot(x, cx + 8 * s, gy - 22, theme.glow, 16);
+      x.fillStyle = theme.rock.crevice; x.fillRect(cx + 8 * s - 3, gy - 27, 6, 1.5);
+      x.fillStyle = theme.glow; x.fillRect(cx + 8 * s - 2.5, gy - 25, 5, 6);
+    } else {
+      x.fillStyle = theme.stone.dark; x.fillRect(cx - 2, gy - 14, 4, 14);
+      x.beginPath(); x.moveTo(cx - 9, gy - 16); x.lineTo(cx + 9, gy - 16); x.lineTo(cx + 5, gy - 11); x.lineTo(cx - 5, gy - 11); x.closePath();
+      x.fillStyle = theme.stone.mid; x.fill();
+      glowDot(x, cx, gy - 20, theme.glow, 20);
+      x.beginPath(); x.moveTo(cx - 6, gy - 16); x.quadraticCurveTo(cx - 3, gy - 28, cx, gy - 30); x.quadraticCurveTo(cx + 2, gy - 22, cx + 6, gy - 16); x.closePath();
+      x.fillStyle = theme.glow; x.fill();
+      x.beginPath(); x.moveTo(cx - 3, gy - 16); x.quadraticCurveTo(cx, gy - 24, cx + 3, gy - 16); x.fillStyle = '#fff2c8'; x.fill();
+    }
+  } else if (kind === 'shrine') {
+    shadedRect(x, theme, cx - 14, gy - 22, 28, 22, St.mid);
+    x.beginPath(); x.moveTo(cx - 18, gy - 22); x.lineTo(cx, gy - 34); x.lineTo(cx + 18, gy - 22); x.closePath();
+    x.fillStyle = St.dark; x.fill();
+    x.fillStyle = theme.rock.crevice; x.fillRect(cx - 5, gy - 16, 10, 16);
+    glowDot(x, cx, gy - 9, theme.glow, 12);
+    paintRune(x, theme, cx - 10, gy - 12, r);
+  } else if (kind === 'chains') {
+    paintProp(x, theme, 'pillar', cx, gy, r, W);
+    chain(x, theme, cx + 4 * s, gy - 30, cx + 40 * s, gy + 60);
+  } else if (kind === 'bridge') {
+    const dir = s > 0 ? -1 : 1;
+    const ex = cx + dir * W * 0.5;
+    x.fillStyle = theme.stone.dark; x.fillRect(cx - 2, gy - 18, 3, 18);
+    x.beginPath(); x.moveTo(cx, gy - 4);
+    for (let i = 1; i <= 6; i++) x.lineTo(cx + ((ex - cx) * i) / 6, gy - 4 + Math.sin((i / 6) * Math.PI) * 6 + (i === 6 ? 14 : 0));
+    x.strokeStyle = '#6b4a2a'; x.lineWidth = 2.4; x.stroke();
+    for (let i = 1; i < 6; i++) { const px = cx + ((ex - cx) * i) / 6; x.fillStyle = '#8a6238'; x.fillRect(px - 2, gy - 6 + Math.sin((i / 6) * Math.PI) * 6, 4, 3); }
+  } else if (kind === 'tree') {
+    paintTree(x, theme, cx, gy, r);
+  } else if (kind === 'tower') {
+    shadedRect(x, theme, cx - 12, gy - 54, 24, 54, theme.stone.mid);
+    for (let i = 0; i < 4; i++) { x.fillStyle = hexA(theme.stone.dark, 0.4); x.fillRect(cx - 12, gy - 12 - i * 12, 24, 1); }
+    x.beginPath(); x.moveTo(cx - 16, gy - 54); x.lineTo(cx, gy - 74); x.lineTo(cx + 16, gy - 54); x.closePath();
+    const rg = x.createLinearGradient(cx - 16, 0, cx + 16, 0);
+    rg.addColorStop(s > 0 ? 0 : 1, '#5a2a2a'); rg.addColorStop(s > 0 ? 1 : 0, '#b85a40');
+    x.fillStyle = rg; x.fill();
+    x.fillStyle = theme.rock.crevice; x.fillRect(cx - 4, gy - 40, 8, 10);
+    glowDot(x, cx, gy - 35, theme.glow, 10);
+    // windsock on a pole: where gliders launch from
+    x.fillStyle = theme.rock.crevice; x.fillRect(cx + 20 * s, gy - 46, 1.5, 46);
+    x.beginPath(); x.moveTo(cx + 21 * s, gy - 46); x.lineTo(cx + 36 * s, gy - 43); x.lineTo(cx + 21 * s, gy - 39); x.fillStyle = '#c2453a'; x.fill();
+  } else if (kind === 'lighthouse') {
+    shadedRect(x, theme, cx - 8, gy - 80, 16, 80, theme.stone.light);
+    for (let i = 0; i < 4; i++) { x.fillStyle = hexA('#8a2f2a', 0.8); x.fillRect(cx - 8, gy - 18 - i * 18, 16, 6); }
+    x.fillStyle = theme.rock.crevice; x.fillRect(cx - 10, gy - 88, 20, 8);
+    glowDot(x, cx, gy - 92, theme.glow, 34);
+    x.fillStyle = '#fff1c4'; x.fillRect(cx - 5, gy - 96, 10, 8);
+    x.beginPath(); x.moveTo(cx - 10, gy - 96); x.lineTo(cx, gy - 106); x.lineTo(cx + 10, gy - 96); x.closePath(); x.fillStyle = theme.rock.crevice; x.fill();
+  } else if (kind === 'kite') {
+    paintProp(x, theme, 'stones', cx - 10, gy, r, W);
+    x.beginPath(); x.moveTo(cx, gy - 18); x.quadraticCurveTo(cx + 30 * s, gy - 70, cx + 50 * s, gy - 86);
+    x.strokeStyle = 'rgba(60,40,30,.7)'; x.lineWidth = 0.8; x.stroke();
+    x.beginPath(); x.moveTo(cx + 50 * s, gy - 98); x.lineTo(cx + 58 * s, gy - 86); x.lineTo(cx + 50 * s, gy - 74); x.lineTo(cx + 42 * s, gy - 86); x.closePath();
+    x.fillStyle = '#c2453a'; x.fill();
+    x.beginPath(); x.moveTo(cx + 50 * s, gy - 98); x.lineTo(cx + 58 * s, gy - 86); x.lineTo(cx + 50 * s, gy - 86); x.closePath(); x.fillStyle = '#e8a441'; x.fill();
+  } else if (kind === 'balloon') {
+    // a wrecked old balloon: deflated canvas draped over its basket
+    x.fillStyle = '#7a5230'; x.fillRect(cx - 9, gy - 12, 18, 12);
+    x.strokeStyle = '#4a3020'; x.lineWidth = 0.8; for (let i = 0; i < 4; i++) { x.beginPath(); x.moveTo(cx - 9, gy - 10 + i * 3); x.lineTo(cx + 9, gy - 10 + i * 3); x.stroke(); }
+    x.beginPath(); x.moveTo(cx - 6, gy - 12); x.bezierCurveTo(cx - 40, gy - 50, cx + 10, gy - 70, cx + 34, gy - 6); x.lineTo(cx + 16, gy - 4);
+    x.bezierCurveTo(cx + 8, gy - 40, cx - 18, gy - 34, cx - 6, gy - 12);
+    const bg = x.createLinearGradient(cx - 30, 0, cx + 30, 0);
+    bg.addColorStop(s > 0 ? 0 : 1, '#6a2a3a'); bg.addColorStop(s > 0 ? 1 : 0, '#d0705a');
+    x.fillStyle = bg; x.fill();
+  } else if (kind === 'whale') {
+    // the sky whale asleep along the island, stone-grey with barnacles
+    const w = 70;
+    x.beginPath();
+    x.moveTo(cx - w * 0.5, gy - 4);
+    x.bezierCurveTo(cx - w * 0.5, gy - 30, cx + w * 0.3, gy - 32, cx + w * 0.45, gy - 10);
+    x.lineTo(cx + w * 0.62, gy - 22); x.lineTo(cx + w * 0.6, gy - 2); x.closePath();
+    const wg = x.createLinearGradient(0, gy - 32, 0, gy);
+    wg.addColorStop(0, mix('#6f7fa8', theme.light.color, 0.25)); wg.addColorStop(1, '#2e3656');
+    x.fillStyle = wg; x.fill();
+    for (let i = 0; i < 6; i++) { x.beginPath(); x.arc(cx - w * 0.2 + r() * w * 0.4, gy - 18 - r() * 8, 1.2 + r(), 0, Math.PI * 2); x.fillStyle = '#c9c2b0'; x.fill(); }
+    x.beginPath(); x.moveTo(cx - w * 0.36, gy - 12); x.quadraticCurveTo(cx - w * 0.3, gy - 10, cx - w * 0.24, gy - 12); x.strokeStyle = '#1c2038'; x.lineWidth = 1.2; x.stroke();
+  }
+}
+
+function paintRune(x, theme, X, Y, r) {
+  const glyphs = [[[0, -4], [0, 4], [3, 0]], [[-2, -4], [2, 0], [-2, 4]], [[-3, -3], [3, 3], [0, 0], [3, -3]], [[0, -4], [-3, 0], [0, 4], [3, 0], [0, -4]]];
+  const g = glyphs[Math.floor(r() * glyphs.length)];
+  glowDot(x, X, Y, theme.glow, 7, 0.35);
+  x.beginPath();
+  g.forEach(([a, b], i) => (i ? x.lineTo(X + a, Y + b) : x.moveTo(X + a, Y + b)));
+  x.strokeStyle = theme.glow;
+  x.lineWidth = 1;
+  x.stroke();
+}
+
+function glowDot(x, X, Y, color, rad, a = 0.45) {
+  const g = x.createRadialGradient(X, Y, 0, X, Y, rad);
+  g.addColorStop(0, hexA(color, a));
+  g.addColorStop(1, hexA(color, 0));
+  x.fillStyle = g;
+  x.fillRect(X - rad, Y - rad, rad * 2, rad * 2);
+}
+
+function chain(x, theme, x0, y0, x1, y1) {
+  const n = 16;
+  for (let i = 0; i < n; i++) {
+    const t = i / n;
+    const px = x0 + (x1 - x0) * t, py = y0 + (y1 - y0) * t + Math.sin(t * Math.PI) * 10;
+    x.beginPath();
+    x.ellipse(px, py, i % 2 ? 1.4 : 2.6, i % 2 ? 2.6 : 1.4, 0, 0, Math.PI * 2);
+    x.strokeStyle = '#2a2228';
+    x.lineWidth = 1.2;
+    x.stroke();
+    x.strokeStyle = hexA(theme.light.rim, 0.5);
+    x.lineWidth = 0.5;
+    x.stroke();
+  }
+}
+
+function paintTree(x, theme, cx, gy, r) {
+  const s = theme.light.side, T = theme.top;
+  const h = 26 + r() * 18;
+  const bend = (r() - 0.5) * 10;
+  x.beginPath();
+  x.moveTo(cx - 2.5, gy);
+  x.quadraticCurveTo(cx + bend, gy - h * 0.5, cx + bend * 0.6, gy - h);
+  x.lineTo(cx + bend * 0.6 + 2, gy - h);
+  x.quadraticCurveTo(cx + bend + 3, gy - h * 0.5, cx + 2.5, gy);
+  x.fillStyle = theme.rock.crevice;
+  x.fill();
+  // foliage: dark clusters first, then lit clusters offset toward the light
+  const fx = cx + bend * 0.6, fy = gy - h;
+  const clusters = Array.from({ length: 7 }, () => [fx + (r() - 0.5) * 26, fy + (r() - 0.6) * 16, 6 + r() * 6]);
+  for (const [a, b, q] of clusters) { x.beginPath(); x.arc(a, b, q, 0, Math.PI * 2); x.fillStyle = mix(T.grassDark, theme.light.shadow, 0.35); x.fill(); }
+  for (const [a, b, q] of clusters) { x.beginPath(); x.arc(a + s * q * 0.3, b - q * 0.3, q * 0.7, 0, Math.PI * 2); x.fillStyle = T.grassDark; x.fill(); }
+  for (const [a, b, q] of clusters) { x.beginPath(); x.arc(a + s * q * 0.5, b - q * 0.45, q * 0.38, 0, Math.PI * 2); x.fillStyle = mix(T.grass, theme.light.color, 0.3); x.fill(); }
+}
+
+// ---------- clouds: dense, sculpted, lit from one side, shadowed undersides ----------
+function paintCloud(theme, { seed, width = 300, distance = 0 }) {
+  const r = rng(seed);
+  const C = theme.clouds, s = theme.light.side;
+  const W = width, H = width * 0.48;
+  const S = sprite(W, H);
+  const { x } = S;
+  const base = H * 0.8;
+  const puffs = [];
+  const n = 9 + Math.floor(r() * 5);
+  for (let i = 0; i < n; i++) {
+    const t = (i + 0.5) / n;
+    const dome = Math.sin(t * Math.PI);
+    const rad = W * (0.07 + 0.1 * dome) * (0.8 + r() * 0.4);
+    puffs.push([W * 0.08 + t * W * 0.84 + (r() - 0.5) * 10, base - rad * 0.55 - dome * H * 0.32 * r(), rad]);
+  }
+  for (let i = 0; i < 5; i++) {
+    const t = 0.25 + r() * 0.5;
+    const rad = W * (0.1 + r() * 0.08);
+    puffs.push([W * t, base - H * 0.42 - r() * H * 0.12, rad]);
+  }
+  const silhouette = () => {
+    x.beginPath();
+    for (const [a, b, q] of puffs) { x.moveTo(a + q, b); x.arc(a, b, q, 0, Math.PI * 2); }
+    x.rect(W * 0.08, base - H * 0.12, W * 0.84, H * 0.12);
   };
-  add('isle home', '50%', 'calc(40vh - 215px)', islandSVG(3, 'meadows', HOUSE));
+  // 1. shadow mass
+  silhouette();
+  x.fillStyle = C.shadow;
+  x.fill();
+  // 2. mid tones, shifted up and toward the light
+  x.save();
+  silhouette();
+  x.clip();
+  for (const [a, b, q] of puffs) {
+    x.beginPath();
+    x.arc(a + s * q * 0.14, b - q * 0.2, q * 0.88, 0, Math.PI * 2);
+    x.fillStyle = C.mid;
+    x.fill();
+  }
+  // 3. lit crowns
+  for (const [a, b, q] of puffs) {
+    const lx = a + s * q * 0.35, ly = b - q * 0.42;
+    const g = x.createRadialGradient(lx, ly, 0, lx, ly, q * 0.78);
+    g.addColorStop(0, C.lit);
+    g.addColorStop(0.55, hexA(C.lit, 0.75));
+    g.addColorStop(1, hexA(C.lit, 0));
+    x.fillStyle = g;
+    x.fillRect(lx - q, ly - q, q * 2, q * 2);
+  }
+  // 4. heavy underside
+  const ug = x.createLinearGradient(0, base - H * 0.3, 0, base + 2);
+  ug.addColorStop(0, hexA(C.under, 0));
+  ug.addColorStop(1, hexA(C.under, 0.9));
+  x.fillStyle = ug;
+  x.fillRect(0, base - H * 0.3, W, H * 0.32);
+  x.restore();
+  keepMask(S);
+  texture(S, { alpha: 0.35, mode: 'soft-light', seed: 21, size: 128, octaves: 4, ox: r() * 128, oy: r() * 128 });
+  S.mask = null;
+  if (distance > 0) haze(S, theme.haze, distance);
+  return S;
+}
+
+// Long low bank of distant islands and spires: one horizontally tiling strip, very hazed.
+function paintFarStrip(theme, { seed, width = 900, height = 260, distance = 0.7, dark = false }) {
+  const r = rng(seed);
+  const S = sprite(width, height);
+  const { x } = S;
+  const color = mix(theme.farTint, dark ? theme.rock.dark : theme.haze, dark ? 0.35 : 0.2);
+  const shapes = 5 + Math.floor(r() * 3);
+  for (let i = 0; i < shapes; i++) {
+    const cx = ((i + r() * 0.6) / shapes) * width, w = 60 + r() * 140, y = height * (0.35 + r() * 0.35);
+    // keep shapes away from the tile edges so the strip repeats cleanly
+    if (cx - w / 2 < 8 || cx + w / 2 > width - 8) continue;
+    x.beginPath();
+    x.moveTo(cx - w / 2, y);
+    for (let k = 1; k < 8; k++) {
+      const t = k / 8;
+      x.lineTo(cx - w / 2 + t * w, y + Math.sin(t * Math.PI) * w * (0.35 + r() * 0.15) + (k % 2 ? 6 : -2));
+    }
+    x.lineTo(cx + w / 2, y);
+    // spires and ruins on top
+    const spires = Math.floor(r() * 3);
+    for (let k = 0; k < spires; k++) {
+      const sx = cx - w * 0.3 + r() * w * 0.6, sh = 14 + r() * 40;
+      x.lineTo(sx + 4, y); x.lineTo(sx + 2, y - sh); x.lineTo(sx - 2, y - sh); x.lineTo(sx - 4, y);
+    }
+    x.closePath();
+    const sg = x.createLinearGradient(0, y - 40, 0, y + w * 0.5);
+    sg.addColorStop(0, mix(color, theme.light.rim, 0.12));
+    sg.addColorStop(1, mix(color, theme.haze, 0.55));
+    x.fillStyle = sg;
+    x.fill();
+    // a lit top edge
+    x.beginPath();
+    x.moveTo(cx - w / 2, y);
+    x.lineTo(cx + w / 2, y);
+    x.strokeStyle = hexA(theme.light.rim, 0.35);
+    x.lineWidth = 1.2;
+    x.stroke();
+  }
+  if (distance > 0) haze(S, theme.haze, distance * 0.5);
+  return S;
+}
+
+// ---------- sky features ----------
+function paintCelestial(theme) {
+  const c = theme.celestial;
+  const size = c.r * 5;
+  const S = sprite(size, size);
+  const { x } = S;
+  const m = size / 2;
+  // bloom: only around the bright body
+  const bloom = x.createRadialGradient(m, m, c.r * 0.6, m, m, size / 2);
+  bloom.addColorStop(0, hexA(c.glow, 0.55));
+  bloom.addColorStop(0.35, hexA(c.glow, 0.18));
+  bloom.addColorStop(1, hexA(c.glow, 0));
+  x.fillStyle = bloom;
+  x.fillRect(0, 0, size, size);
+  if (c.kind === 'sun') {
+    const g = x.createRadialGradient(m, m, 0, m, m, c.r);
+    g.addColorStop(0, c.core);
+    g.addColorStop(0.75, c.color);
+    g.addColorStop(1, hexA(c.color, 0.85));
+    x.beginPath(); x.arc(m, m, c.r, 0, Math.PI * 2); x.fillStyle = g; x.fill();
+  } else if (c.kind === 'moons') {
+    moon(x, m, m, c.r, c.core, c.color, theme.light.shadow, theme.light.side, 31);
+    const s2 = c.second;
+    const sx = m + s2.dx * size * 0.5, sy = m + s2.dy * size * 0.5;
+    glowDot(x, sx, sy, s2.color, s2.r * 2.4, 0.35);
+    moon(x, sx, sy, s2.r, mix(s2.color, '#ffffff', 0.4), s2.color, theme.light.shadow, theme.light.side, 47);
+  } else if (c.kind === 'planet') {
+    const R = c.r;
+    // far half of the ring (behind the planet)
+    ring(x, m, m, R, theme, true);
+    x.save();
+    x.beginPath(); x.arc(m, m, R, 0, Math.PI * 2); x.clip();
+    const pg = x.createLinearGradient(m - R, 0, m + R, 0);
+    pg.addColorStop(0, mix(c.color, theme.light.shadow, 0.7));
+    pg.addColorStop(0.6, c.color);
+    pg.addColorStop(1, c.core);
+    x.fillStyle = pg; x.fillRect(m - R, m - R, R * 2, R * 2);
+    const r = rng(77);
+    for (let i = 0; i < 9; i++) {
+      x.fillStyle = hexA(i % 2 ? '#7a3a3a' : '#ffd2a8', 0.12 + r() * 0.12);
+      x.fillRect(m - R, m - R + (i / 9) * R * 2 + r() * 6, R * 2, 4 + r() * 10);
+    }
+    // night side terminator
+    const tg = x.createRadialGradient(m + R * 0.6, m - R * 0.2, R * 0.4, m + R * 0.2, m, R * 1.4);
+    tg.addColorStop(0, 'rgba(0,0,0,0)'); tg.addColorStop(1, hexA(theme.light.shadow, 0.7));
+    x.fillStyle = tg; x.fillRect(m - R, m - R, R * 2, R * 2);
+    // ring shadow across the planet
+    x.beginPath(); x.ellipse(m, m + R * 0.22, R * 1.9, R * 0.16, -0.18, 0, Math.PI * 2);
+    x.fillStyle = hexA(theme.light.shadow, 0.35); x.fill();
+    x.restore();
+    ring(x, m, m, R, theme, false);
+  }
+  return S;
+}
+
+function moon(x, X, Y, R, core, color, shadow, side, seed) {
+  x.save();
+  x.beginPath(); x.arc(X, Y, R, 0, Math.PI * 2); x.clip();
+  const g = x.createRadialGradient(X + side * R * 0.3, Y - R * 0.3, 0, X, Y, R * 1.1);
+  g.addColorStop(0, core); g.addColorStop(1, color);
+  x.fillStyle = g; x.fillRect(X - R, Y - R, R * 2, R * 2);
+  const r = rng(seed);
+  for (let i = 0; i < 9; i++) {
+    const cx = X + (r() - 0.5) * R * 1.5, cy = Y + (r() - 0.5) * R * 1.5, cr = R * (0.06 + r() * 0.14);
+    x.beginPath(); x.arc(cx, cy, cr, 0, Math.PI * 2); x.fillStyle = hexA(shadow, 0.12); x.fill();
+    x.beginPath(); x.arc(cx + side * cr * 0.25, cy - cr * 0.25, cr * 0.75, 0, Math.PI * 2); x.fillStyle = hexA('#ffffff', 0.08); x.fill();
+  }
+  const t = x.createLinearGradient(X + side * R, 0, X - side * R, 0);
+  t.addColorStop(0, 'rgba(0,0,0,0)'); t.addColorStop(0.6, 'rgba(0,0,0,0)'); t.addColorStop(1, hexA(shadow, 0.6));
+  x.fillStyle = t; x.fillRect(X - R, Y - R, R * 2, R * 2);
+  x.restore();
+}
+
+function ring(x, m, my, R, theme, back) {
+  x.save();
+  x.beginPath();
+  x.rect(0, back ? 0 : my, m * 2, back ? my : m * 2);
+  x.clip();
+  x.translate(m, my);
+  x.rotate(-0.18);
+  for (let i = 0; i < 4; i++) {
+    x.beginPath();
+    x.ellipse(0, 0, R * (1.45 + i * 0.13), R * (0.24 + i * 0.022), 0, 0, Math.PI * 2);
+    x.strokeStyle = hexA(i === 2 ? theme.light.shadow : '#f3c79a', i === 2 ? 0.25 : 0.55 - i * 0.08);
+    x.lineWidth = i === 2 ? 2 : 5;
+    x.stroke();
+  }
+  x.restore();
+}
+
+// Distant shapes that give the sky a story: a floating mega-island, a sky whale, black spires.
+function paintFeature(theme) {
+  const f = theme.feature;
+  if (f === 'megaisland') {
+    const S = sprite(420, 260);
+    const { x } = S;
+    const col = mix(theme.farTint, theme.haze, 0.25);
+    x.beginPath();
+    x.moveTo(40, 120);
+    x.bezierCurveTo(80, 230, 300, 250, 380, 120);
+    x.closePath();
+    x.fillStyle = col; x.fill();
+    // temple city on top: domes, colonnades, a tower
+    x.fillStyle = mix(col, theme.light.shadow, 0.12);
+    x.fillRect(120, 92, 160, 28);
+    for (let i = 0; i < 9; i++) x.fillRect(124 + i * 18, 78, 6, 16);
+    x.fillRect(118, 72, 166, 8);
+    x.beginPath(); x.arc(200, 72, 22, Math.PI, 0); x.fill();
+    x.fillRect(296, 40, 16, 80);
+    x.beginPath(); x.moveTo(292, 40); x.lineTo(304, 20); x.lineTo(316, 40); x.fill();
+    x.fillRect(70, 100, 40, 20);
+    // lit rim along the sunward edges
+    x.strokeStyle = hexA(theme.light.rim, 0.5); x.lineWidth = 1.5;
+    x.beginPath(); x.moveTo(118, 72); x.lineTo(284, 72); x.moveTo(312, 40); x.lineTo(312, 120); x.moveTo(222, 72); x.arc(200, 72, 22, 0, -0.9, true); x.stroke();
+    // twin waterfalls
+    for (const wx of [150, 260]) {
+      const g = x.createLinearGradient(0, 120, 0, 250);
+      g.addColorStop(0, 'rgba(255,240,220,.55)'); g.addColorStop(1, 'rgba(255,240,220,0)');
+      x.fillStyle = g; x.fillRect(wx, 118, 5, 130);
+    }
+    return haze(S, theme.haze, 0.25);
+  }
+  if (f === 'whale') return paintGiant(theme, 1.4);
+  if (f === 'spires') {
+    const S = sprite(300, 320);
+    const { x } = S;
+    const col = mix(theme.farTint, theme.rock.dark, 0.25);
+    const r = rng(5);
+    for (let i = 0; i < 5; i++) {
+      const cx = 40 + i * 52 + r() * 10, h = 120 + r() * 160, w = 18 + r() * 16;
+      x.beginPath();
+      x.moveTo(cx - w, 320); x.lineTo(cx - w * 0.5, 320 - h * 0.6); x.lineTo(cx - 3, 320 - h); x.lineTo(cx + 3, 320 - h); x.lineTo(cx + w * 0.5, 320 - h * 0.6); x.lineTo(cx + w, 320);
+      x.fillStyle = col; x.fill();
+      x.strokeStyle = hexA(theme.light.rim, 0.45); x.lineWidth = 1.2;
+      x.beginPath(); x.moveTo(cx + 3, 320 - h); x.lineTo(cx + w * 0.5, 320 - h * 0.6); x.stroke();
+    }
+    return haze(S, theme.haze, 0.2);
+  }
+  return null;
+}
+
+// A giant creature far away: sky whale (or winged drake for Ember). Silhouette with a faint lit edge.
+function paintGiant(theme, scale = 1) {
+  const S = sprite(260 * scale, 110 * scale);
+  const { x } = S;
+  x.scale(scale, scale);
+  const col = theme.creatures.giant || mix(theme.farTint, theme.light.shadow, 0.3);
+  if (theme.creatures.winged) {
+    x.beginPath();
+    x.moveTo(30, 60); x.quadraticCurveTo(90, 50, 130, 58); x.quadraticCurveTo(170, 50, 210, 54); x.lineTo(240, 46); x.lineTo(222, 60);
+    x.quadraticCurveTo(180, 70, 130, 66); x.quadraticCurveTo(80, 74, 30, 60);
+    x.moveTo(110, 58); x.lineTo(70, 6); x.lineTo(100, 30); x.lineTo(120, 10); x.lineTo(140, 58);
+    x.fillStyle = col; x.fill();
+  } else {
+    x.beginPath();
+    x.moveTo(20, 60);
+    x.bezierCurveTo(30, 20, 150, 18, 200, 48);
+    x.lineTo(240, 30); x.lineTo(232, 56); x.lineTo(246, 78); x.lineTo(204, 64);
+    x.bezierCurveTo(150, 92, 40, 92, 20, 60);
+    x.fillStyle = col; x.fill();
+    x.beginPath(); x.moveTo(80, 70); x.quadraticCurveTo(96, 100, 120, 94); x.quadraticCurveTo(108, 84, 104, 72); x.fill();
+    x.strokeStyle = hexA(theme.light.rim, 0.35); x.lineWidth = 1.2;
+    x.beginPath(); x.moveTo(26, 46); x.bezierCurveTo(40, 22, 150, 20, 198, 46); x.stroke();
+  }
+  return haze(S, theme.haze, 0.35);
+}
+
+// Light shafts falling from the light source. Drawn additively at low alpha.
+function paintRays(theme, w, h) {
+  const S = sprite(w, h);
+  const { x } = S;
+  const c = theme.celestial;
+  const sx = c.x * w, sy = c.y * h;
+  // shafts fan away from the light toward the open middle of the sky
+  const toward = Math.atan2(h * 0.35 - sy, w * 0.5 - sx);
+  const r = rng(13);
+  for (let i = 0; i < 6; i++) {
+    const a = toward + (i / 5 - 0.5) * 1.6 + (r() - 0.5) * 0.15;
+    const len = Math.max(w, h) * 1.3, spread = 0.035 + r() * 0.04;
+    // three nested wedges of falling strength give each shaft soft edges without any blur
+    for (const [k, alpha] of [[1, 0.18], [0.6, 0.22], [0.3, 0.3]]) {
+      const g = x.createLinearGradient(sx, sy, sx + Math.cos(a) * len, sy + Math.sin(a) * len);
+      g.addColorStop(0, hexA(theme.rays.color, alpha));
+      g.addColorStop(0.7, hexA(theme.rays.color, alpha * 0.25));
+      g.addColorStop(1, hexA(theme.rays.color, 0));
+      x.beginPath();
+      x.moveTo(sx, sy);
+      x.lineTo(sx + Math.cos(a - spread * k) * len, sy + Math.sin(a - spread * k) * len);
+      x.lineTo(sx + Math.cos(a + spread * k) * len, sy + Math.sin(a + spread * k) * len);
+      x.closePath();
+      x.fillStyle = g;
+      x.fill();
+    }
+  }
+  return S;
+}
+
+function paintStars(w, h, seed = 3) {
+  const S = sprite(w, h);
+  const { x } = S;
+  const r = rng(seed);
+  for (let i = 0; i < (w * h) / 2600; i++) {
+    const a = r();
+    x.fillStyle = a < 0.15 ? 'rgba(255,236,196,.95)' : `rgba(255,255,255,${0.35 + r() * 0.6})`;
+    const s = a < 0.06 ? 1.6 : 0.6 + r() * 0.7;
+    x.fillRect(r() * w, r() * h * 0.75, s, s);
+  }
+  return S;
+}
+
+// Tiny particle sprites (one each), and two wing frames for distant birds.
+function paintParticle(kind, color) {
+  const S = sprite(16, 16);
+  const { x } = S;
+  if (kind === 'leaf') {
+    x.translate(8, 8);
+    x.beginPath(); x.ellipse(0, 0, 5, 2.4, 0.4, 0, Math.PI * 2);
+    x.fillStyle = color; x.fill();
+    x.strokeStyle = 'rgba(60,30,10,.6)'; x.lineWidth = 0.6; x.beginPath(); x.moveTo(-4, -1.6); x.lineTo(4, 1.6); x.stroke();
+  } else if (kind === 'ash') {
+    x.fillStyle = hexA(color, 0.8); x.fillRect(6, 7, 3, 1.6);
+  } else {
+    // mote / spore / ember: bright core with a small soft halo (the only "bloom" particles get)
+    glowDot(x, 8, 8, color, 7, kind === 'ember' ? 0.6 : 0.4);
+    x.beginPath(); x.arc(8, 8, kind === 'mote' ? 1.3 : 1.6, 0, Math.PI * 2);
+    x.fillStyle = kind === 'ember' ? '#fff0c8' : color; x.fill();
+  }
+  return S;
+}
+
+function paintBird(color, frame) {
+  const S = sprite(16, 10);
+  const { x } = S;
+  x.beginPath();
+  if (frame === 0) { x.moveTo(1, 3); x.quadraticCurveTo(5, 1, 8, 6); x.quadraticCurveTo(11, 1, 15, 3); }
+  else { x.moveTo(1, 8); x.quadraticCurveTo(5, 4, 8, 6); x.quadraticCurveTo(11, 4, 15, 8); }
+  x.strokeStyle = color;
+  x.lineWidth = 1.5;
+  x.lineCap = 'round';
+  x.stroke();
+  return S;
+}
+
+// Soft mist wisp for the foreground (wind-blown mist).
+function paintWisp(theme, seed) {
+  const r = rng(seed);
+  const S = sprite(360, 90);
+  const { x } = S;
+  for (let i = 0; i < 6; i++) {
+    const cx = 60 + r() * 240, cy = 45 + (r() - 0.5) * 20, rx = 60 + r() * 80, ry = 10 + r() * 10;
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, rx);
+    g.addColorStop(0, hexA(theme.clouds.lit, 0.22));
+    g.addColorStop(1, hexA(theme.clouds.lit, 0));
+    x.save(); x.translate(cx, cy); x.scale(1, ry / rx); x.translate(-cx, -cy);
+    x.fillStyle = g; x.fillRect(cx - rx, cy - rx, rx * 2, rx * 2);
+    x.restore();
+  }
+  return S;
+}
+
+// Paper grain for the parchment UI panels (a small tile, used as a CSS background).
+function paperTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 160;
+  const x = c.getContext('2d');
+  x.fillStyle = '#f2e4c4';
+  x.fillRect(0, 0, 160, 160);
+  x.globalAlpha = 0.16;
+  x.globalCompositeOperation = 'multiply';
+  x.drawImage(noiseTexture(160, 5, 99, 1.6), 0, 0);
+  x.globalAlpha = 0.08;
+  x.drawImage(noiseTexture(80, 2, 7, 1.2), 0, 0, 160, 160);
+  return c.toDataURL('image/png');
+}
+
+// ---- public/js/sky.js ----
+// The sky level renderer. Purely visual: gameplay never reads anything from here.
+//
+// How it stays fast and crisp:
+// - Everything detailed (islands, clouds, moons, ruins) is painted ONCE into offscreen sprites by paint.js,
+//   lazily as it comes near the screen, then only blitted each frame.
+// - Canvases are backed at devicePixelRatio (capped at 2), sprites are blitted 1:1 at positions snapped to
+//   whole device pixels, so nothing is resampled or blurred while it scrolls.
+// - One rAF loop draws both canvases; it sleeps with the tab, and with reduced motion it only redraws
+//   when the altitude changes.
+//
+// Layers, back to front (parallax factor in brackets):
+//   sky gradient, stars (.04), sun/moons/planet + light shafts (.06), storied far feature (.08), giant creature,
+//   far island strips (.15, .25), atmospheric haze, far clouds (.3), mid islands (.55), mid clouds (.65),
+//   birds, landmark islands (1), particles   |   front canvas, above the glider: edge clouds + mist (1.35)
+
+
+
+const PX = 2.7; // screen pixels of climb per point (same as the original level)
+const root = document.documentElement;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+let back, front, bx, fx; // canvases + contexts
+let W = 0, H = 0, dpr = 1;
+let theme = null, themeId = null;
+let target = 0; // altitude in points the game asked for
+let cam = 0; // eased altitude the camera shows
+let night = false;
+const t0 = performance.now();
+let lastT = 0;
+let assets = null; // baked sprites for the current theme
+let scene = null; // placed objects
+const particles = [];
+const bursts = [];
+let flock = null;
+let giant = null;
+let dirty = true;
+
+const snap = (v) => Math.round(v * dpr) / dpr;
+function blit(ctx, S, x, y, alpha = 1) {
+  if (!S) return;
+  const w = S.c.width / dpr, h = S.c.height / dpr;
+  if (x > W || y > H || x + w < 0 || y + h < 0) return;
+  if (alpha !== 1) ctx.globalAlpha = alpha;
+  ctx.drawImage(S.c, snap(x), snap(y), w, h);
+  if (alpha !== 1) ctx.globalAlpha = 1;
+}
+
+// ---------- baking ----------
+const queue = [];
+function lazy(make) {
+  const job = { S: null, make };
+  queue.push(job);
+  return job;
+}
+function ensure(job) {
+  if (!job.S) job.S = job.make();
+  return job.S;
+}
+// Bake queued sprites in small slices while the browser is idle, so nothing stutters.
+function pump() {
+  const start = performance.now();
+  while (queue.length && performance.now() - start < 8) {
+    const j = queue.shift();
+    if (!j.S) j.S = j.make();
+  }
+  if (queue.length) (window.requestIdleCallback || setTimeout)(pump, { timeout: 200 });
+}
+
+function bakeTheme() {
+  setPaintDpr(dpr);
+  queue.length = 0;
+  const T = theme;
+  assets = {
+    celestial: paintCelestial(T),
+    stars: paintStars(Math.max(W, 420), Math.max(H, 900)),
+    rays: paintRays(T, Math.max(W, 420), Math.max(H, 900)),
+    feature: paintFeature(T),
+    particles: T.particles.map((p) => paintParticle(p.kind, p.color)),
+    burst: paintParticle('mote', T.glow),
+    birds: [paintBird(T.creatures.flock, 0), paintBird(T.creatures.flock, 1)],
+    farA: lazy(() => paintFarStrip(T, { seed: 3, width: 900, height: 240, distance: 0.75 })),
+    farB: lazy(() => paintFarStrip(T, { seed: 8, width: 1100, height: 280, distance: 0.45, dark: true })),
+    giant: T.creatures.giant && T.feature !== 'whale' ? lazy(() => paintGiant(T, 0.8)) : null,
+    clouds: [0, 1, 2].map((depth) => Array.from({ length: 3 }, (_, i) =>
+      lazy(() => paintCloud(T, { seed: 100 + depth * 10 + i, width: [190, 290, 420][depth] * (0.85 + (i % 2) * 0.3), distance: [0.55, 0.22, 0][depth] })))),
+    wisps: [lazy(() => paintWisp(T, 4)), lazy(() => paintWisp(T, 9))],
+  };
+}
+
+function placeScene() {
+  const T = theme;
+  const r = rng(4242);
+  const S = { landmarks: [], mid: [], clouds: [[], [], []], near: [] };
+  // landmark islands at the same altitudes and sides as the original level (gameplay landmarks unchanged)
+  const special = { '🎈': 'balloon', '🪁': 'kite', '🐋': 'whale', '🏮': 'lighthouse' };
+  S.home = lazy(() => paintIsland(T, { seed: 3, width: 250, home: true }));
   LANDMARKS.forEach((lm, i) => {
-    const e = add('isle', i % 2 ? '76%' : '24%', `calc(40vh + ${lm.at * PX_PER_POINT + 30}px)`,
-      islandSVG(i + 7, layerFor(lm.at).id, ISLE_DECOR[lm.icon] || ''), -i * 1.3,
-      `<span class="isle-label">${lm.icon} ${lm.name}</span>`);
-    e.dataset.at = lm.at;
+    S.landmarks.push({
+      at: lm.at, side: i % 2 ? 0.76 : 0.24, bob: i * 1.3,
+      job: lazy(() => paintIsland(T, { seed: 17 + i * 7, width: 150 + ((i * 37) % 70), decor: T.details, landmark: special[lm.icon] || null })),
+    });
   });
+  // smaller, hazier islands in the middle distance, spread over the whole climb
+  for (let i = 0; i < 8; i++) {
+    const w = 64 + r() * 56, dist = 0.5 + r() * 0.12;
+    S.mid.push({ at: -40 + i * 105 + r() * 40, x: r(), drift: 1.5 + r() * 2.5,
+      job: lazy(() => paintIsland(T, { seed: 300 + i * 11, width: w, decor: T.details, distance: dist })) });
+  }
+  // clouds per depth, placed in world space so you climb past them
+  // density is tuned per screen: each depth shows about 2-3 clouds at a time
+  const counts = [5, 8];
+  const spans = [1250, 950];
+  for (let d = 0; d < 2; d++) {
+    for (let i = 0; i < counts[d]; i++) {
+      S.clouds[d].push({ at: -120 + (i / counts[d]) * spans[d] + r() * 50, x: r(), v: [3, 6][d] * (0.7 + r() * 0.6), k: i % 3 });
+    }
+  }
+  // foreground clouds hug the screen edges, so the middle (where you read and play) stays calm
+  for (let i = 0; i < 7; i++) S.near.push({ at: i * 120 + 40 + r() * 40, left: i % 2 === 0, k: i % 3 });
+  scene = S;
+  particles.length = 0;
+  T.particles.forEach((p, pi) => {
+    for (let i = 0; i < (quality >= 2 ? Math.ceil(p.count / 2) : p.count); i++) particles.push(newParticle(p.kind, pi, true));
+  });
+  flock = { x: -999, y: 0, next: 4 + Math.random() * 6, n: 6, phase: 0 };
+  giant = { x: -999, y: 0, next: 8 + Math.random() * 10 };
 }
 
-// ---------- birds (an occasional small flock crossing the sky; one compositor animation per crossing) ----------
-let birdTimer = 0;
-function makeBirds(color) {
-  const b = el('birds');
-  const r = rand(Date.now() & 0xffff);
-  b.innerHTML = `<svg width="90" height="40" viewBox="0 0 90 40" xmlns="http://www.w3.org/2000/svg">${Array.from({ length: 4 }, (_, i) => {
-    const x = 8 + i * 20 + r() * 6, y = 10 + (i % 2) * 12 + r() * 5;
-    return `<path class="wing" style="animation-delay:${(-r()).toFixed(2)}s" d="M${f1(x - 6)} ${f1(y - 2)} Q${f1(x - 3)} ${f1(y - 5)} ${f1(x)} ${f1(y)} Q${f1(x + 3)} ${f1(y - 5)} ${f1(x + 6)} ${f1(y - 2)}" stroke="${color}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
-  }).join('')}</svg>`;
-  const fly = () => {
-    clearTimeout(birdTimer);
-    if (!b.isConnected) return;
-    if (!reduceMotion.matches && !document.hidden) {
-      const y = Math.round(innerHeight * (0.1 + Math.random() * 0.25));
-      const dist = innerWidth + 220;
-      b.animate([
-        { transform: `translate3d(${innerWidth + 40}px, ${y}px, 0)`, opacity: 1 },
-        { transform: `translate3d(${innerWidth / 2}px, ${y - 14}px, 0)`, opacity: 1, offset: 0.5 },
-        { transform: `translate3d(-180px, ${y + 6}px, 0)`, opacity: 1 },
-      ], { duration: (dist / 34) * 1000, easing: `steps(${Math.round(dist)})` });
-    }
-    birdTimer = setTimeout(fly, 20000 + Math.random() * 20000);
+function newParticle(kind, si, anywhere) {
+  return {
+    kind, si,
+    x: Math.random() * W, y: anywhere ? Math.random() * H : (kind === 'leaf' || kind === 'ash' ? -10 : H + 10),
+    vx: (Math.random() - 0.3) * 10, vy: { mote: -6, leaf: 22, spore: -5, ember: -18, ash: 12 }[kind] * (0.6 + Math.random() * 0.8),
+    a: 0.5 + Math.random() * 0.5, ph: Math.random() * 6.28, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 2,
   };
-  birdTimer = setTimeout(fly, 3000 + Math.random() * 6000);
-  return b;
 }
 
-// ---------- lightning (storm only; subtle, optional) ----------
-function scheduleLightning() {
-  clearTimeout(lightningTimer);
-  const cfg = theme.lightning;
-  const flash = sky.querySelector('.lightning');
-  if (!cfg || !flash || !lightningOn || reduceMotion.matches) return;
-  lightningTimer = setTimeout(() => {
-    if (!document.hidden) {
-      flash.style.setProperty('--lx', `${15 + Math.random() * 70}%`);
-      const m = cfg.maxOpacity;
-      flash.animate([{ opacity: 0 }, { opacity: m, offset: 0.12 }, { opacity: m * 0.3, offset: 0.3 }, { opacity: m * 0.75, offset: 0.42 }, { opacity: 0 }],
-        { duration: 900, easing: 'ease-out' });
-    }
-    scheduleLightning();
-  }, (cfg.minGap + Math.random() * (cfg.maxGap - cfg.minGap)) * 1000);
-}
-function setLightning(on) {
-  lightningOn = on;
-  try { localStorage.setItem('skydrift.lightning', on ? 'on' : 'off'); } catch {}
-  scheduleLightning();
-}
-function lightningEnabled() { return lightningOn; }
-
-// ---------- theme ----------
+// ---------- theme + altitude ----------
 function applyTheme(id) {
   themeId = resolveThemeId(id);
   theme = THEMES[themeId];
   document.body.dataset.theme = themeId;
-  layers.length = 0;
-  clearTimeout(lightningTimer);
-  const glider = document.getElementById('glider-wrap');
-  sky.innerHTML = '';
-
-  el('sky-grad');
-  if (theme.celestial.kind !== 'none') el(`celestial c-${theme.celestial.kind}`);
-  const stars = el('stars');
-  // two star fields twinkling out of step = cheap twinkle
-  [0, 1].forEach((v) => {
-    const L = tiledLayer('stars-field', particleTile('stars', '#fff', 7, v), { parallax: 0.06, twinkle: v ? 4.5 : 6 });
-    stars.appendChild(L.wrap);
-  });
-  if (theme.aurora) {
-    const a = el('aurora');
-    a.style.setProperty('--a1', theme.aurora.colors[0]);
-    a.style.setProperty('--a2', theme.aurora.colors[1]);
-    a.style.setProperty('--a3', theme.aurora.colors[2]);
-    for (let i = 0; i < 3; i++) el('', a, 'i');
-  }
-  const c = theme.clouds;
-  tiledLayer('clouds far', cloudTile(c.style, 0, { ...c, ...c.layers.far }, 11), { vx: c.layers.far.speed, parallax: 0.25, opacity: c.layers.far.opacity });
-  if (theme.debris.kind !== 'none') {
-    const d = theme.debris;
-    tiledLayer('debris', particleTile(d.kind, d.color, 23, 0), { vx: d.speed, vy: d.kind === 'bubbles' ? -d.speed : d.speed * 0.3, parallax: 0.45, opacity: d.opacity });
-  }
-  world = el('world');
-  world.id = 'world';
-  tiledLayer('clouds mid', cloudTile(c.style, 1, { ...c, ...c.layers.mid }, 29), { vx: c.layers.mid.speed, parallax: 0.6, opacity: c.layers.mid.opacity });
-  if (theme.particles.kind !== 'none') {
-    const p = theme.particles;
-    const motion = { motes: [p.speed * 0.4, -p.speed], glints: [p.speed, 0], wind: [p.speed, 0], sparkles: [p.speed * 0.3, p.speed], fireflies: [p.speed * 0.6, -p.speed * 0.4] }[p.kind] || [0, 0];
-    const tw = p.kind === 'wind' ? 0 : 3.5;
-    tiledLayer('particles', particleTile(p.kind, p.color, 41, 0), { vx: motion[0], vy: motion[1], parallax: 0.9, opacity: p.opacity, twinkle: tw });
-    if (tw) tiledLayer('particles', particleTile(p.kind, p.color, 41, 1), { vx: motion[0] * 0.8, vy: motion[1] * 0.8, parallax: 0.9, opacity: p.opacity, twinkle: tw * 1.3 });
-  }
-  if (glider) sky.appendChild(glider);
-  tiledLayer('clouds near', cloudTile(c.style, 2, { ...c, ...c.layers.near }, 47), { vx: c.layers.near.speed, parallax: 1.4, opacity: c.layers.near.opacity, z: 3 });
-  if (theme.lightning) {
-    const f = el('lightning');
-    f.innerHTML = '<svg viewBox="0 0 40 120" class="bolt"><path d="M22 0 L12 50 L22 52 L8 120 L30 44 L19 42 L28 0 Z" fill="#efeaff"/></svg>';
-  }
-  clearTimeout(birdTimer);
-  birds = theme.birds ? makeBirds(theme.birds.color) : null;
-
-  root.style.setProperty('--spark', theme.spark);
   root.style.setProperty('--g-dark', theme.glider.outlineDark);
   root.style.setProperty('--g-light', theme.glider.outlineLight);
-  root.style.setProperty('--isle-shadow', theme.islands.shadow);
-  buildWorld();
-  setAltitude(current, { instant: true });
-  try { lightningOn = localStorage.getItem('skydrift.lightning') !== 'off'; } catch {}
-  if (theme.lightning && !theme.lightning.enabled) lightningOn = false;
-  scheduleLightning();
+  root.style.setProperty('--g-rim', theme.light.rim);
+  root.style.setProperty('--g-shadow-x', `${-theme.light.side * 6}px`);
+  root.style.setProperty('--spark', theme.glow);
+  root.style.setProperty('--vignette', hexA(theme.vignette, 0.6));
+  if (W) { bakeTheme(); placeScene(); pump(); }
+  backdropDirty = true;
+  updateReadability();
+  dirty = true;
   document.dispatchEvent(new CustomEvent('sky-theme', { detail: { id: themeId } }));
 }
-
 function getThemeId() { return themeId; }
 
-// ---------- altitude ----------
-function setAltitude(points, { instant = false } = {}) {
-  current = points;
+function updateReadability() {
   if (!theme) return;
-  if (instant) document.body.classList.add('no-sky-anim');
-  root.style.setProperty('--world-y', `${points * PX_PER_POINT}px`);
-  const read = readability(theme, points);
-  const [top, mid, bottom] = read.colors;
-  root.style.setProperty('--sky-top', top);
-  root.style.setProperty('--sky-mid', mid);
-  root.style.setProperty('--sky-bottom', bottom);
-  root.style.setProperty('--star-alpha', at(theme.stars, points).toFixed(2));
-  root.style.setProperty('--aurora-alpha', theme.aurora ? at(theme.aurora.alpha, points).toFixed(2) : '0');
-  root.style.setProperty('--celestial-alpha', theme.celestial.alpha ? at(theme.celestial.alpha, points).toFixed(2) : '0');
-  root.style.setProperty('--celestial-y', `${(points * 0.18).toFixed(0)}px`);
-  root.style.setProperty('--sky-halo', read.halo + 'b3');
-  root.style.setProperty('--glass-a', read.glass);
+  const read = readability(theme, target);
   night = read.night;
   document.body.classList.toggle('night', night);
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', top);
-  for (const L of layers) if (instant || reduceMotion.matches) { L.y = points * PX_PER_POINT * L.parallax; placeLayer(L); }
-  wake();
-  world?.querySelectorAll('.isle[data-at]').forEach((e) => e.classList.toggle('passed', points >= +e.dataset.at));
-  if (instant) requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('no-sky-anim')));
+  root.style.setProperty('--sky-halo', read.halo + 'b3');
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', read.colors[0]);
 }
 
-function getAltitude() { return current; }
+function setAltitude(points, { instant = false } = {}) {
+  target = points;
+  if (instant || reduceMotion.matches) cam = points;
+  backdropDirty = true;
+  updateReadability();
+  dirty = true;
+}
+function getAltitude() { return target; }
 function isNight() { return night; }
 
-// ---------- the climb loop: runs only while layers are easing to a new altitude, then sleeps ----------
-let running = false;
-let last = 0;
-function wake() {
-  if (running) return;
-  running = true;
-  last = 0;
-  requestAnimationFrame(frame);
-}
-function frame(t) {
-  const dt = Math.min(0.1, (t - (last || t)) / 1000);
-  last = t;
-  const ease = 1 - Math.exp(-dt * 2.6);
-  let moving = false;
-  for (const L of layers) {
-    const target = current * PX_PER_POINT * L.parallax;
-    const d = target - L.y;
-    if (Math.abs(d) < 0.3) { if (d) { L.y = target; placeLayer(L); } continue; }
-    L.y += d * ease;
-    placeLayer(L);
-    moving = true;
+// ---------- drawing ----------
+let backdrop = null, bdx = null, bdCam = -1, bdT = -1, backdropDirty = true;
+function paintBackdrop(t) {
+  const T = theme, x = bdx;
+  const camPx = cam * PX;
+  const still = reduceMotion.matches;
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const [zen, mid, hor] = at(T.sky, cam);
+  const g = x.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, zen);
+  g.addColorStop(0.55, mid);
+  g.addColorStop(1, hor);
+  x.fillStyle = g;
+  x.fillRect(0, 0, W, H);
+  const starA = at(T.stars, cam);
+  if (starA > 0.01) blit(x, assets.stars, 0, ((camPx * 0.04) % 100) - 50, starA);
+  const c = T.celestial;
+  const cA = at(c.alpha, cam);
+  const cs = assets.celestial;
+  blit(x, cs, c.x * W - cs.w / 2, c.y * H - cs.h / 2 + camPx * c.sink, cA);
+  x.globalCompositeOperation = 'lighter';
+  const breathe = still ? 1 : 0.8 + 0.2 * Math.sin(t * 0.35);
+  blit(x, assets.rays, 0, camPx * c.sink, T.rays.alpha * breathe * cA);
+  x.globalCompositeOperation = 'source-over';
+  if (assets.feature) {
+    const F = assets.feature;
+    const fxp = T.feature === 'whale' ? W - ((t * 4) % (W + F.w + 200)) : T.feature === 'spires' ? -W * 0.08 : W * 0.02;
+    const fyp = (T.feature === 'spires' ? H * 0.42 : H * 0.22) + camPx * 0.08;
+    blit(x, F, fxp, fyp, 0.9);
   }
-  if (moving) requestAnimationFrame(frame);
-  else running = false;
+  // atmospheric haze: thickest low down, where the distance is greatest
+  const hz = x.createLinearGradient(0, H * 0.35, 0, H);
+  hz.addColorStop(0, hexA(T.haze, 0));
+  hz.addColorStop(1, hexA(T.haze, 0.38));
+  x.fillStyle = hz;
+  x.fillRect(0, H * 0.35, W, H * 0.65);
+}
+
+function drawBack(t, dt) {
+  const T = theme, x = bx;
+  const camPx = cam * PX;
+  const still = reduceMotion.matches;
+  const swayX = still ? 0 : Math.sin(t * 0.21) * 5, swayY = still ? 0 : Math.sin(t * 0.17) * 3;
+  // (the cached backdrop layers sit so far away that camera sway would move them by under half a pixel)
+  const sx = (p) => swayX * p, sy = (p) => swayY * p;
+
+  // sky, stars, light source, shafts and the storied far feature: cached, repainted only when the camera
+  // moves or ~7 times a second (for the slow breathing of the light), then copied in one draw
+  if (backdropDirty || Math.abs(cam - bdCam) > 0.3 || t - bdT > 0.15) paintBackdrop(t), bdCam = cam, bdT = t, backdropDirty = false;
+  x.drawImage(backdrop, 0, 0, W, H);
+
+  // a giant creature crossing very far away now and then
+  if (assets.giant && !still) {
+    const G = ensure(assets.giant);
+    if (giant.x < -900) { giant.next -= dt; if (giant.next <= 0) { giant.x = W + 40; giant.y = H * (0.18 + Math.random() * 0.2); } }
+    else {
+      giant.x -= 9 * dt;
+      blit(x, G, giant.x, giant.y + camPx * 0.1, 0.55);
+      if (giant.x < -G.w - 20) { giant.x = -999; giant.next = 45 + Math.random() * 40; }
+    }
+  }
+
+  // far island strips, tiled and drifting
+  const strip = (job, p, base, speed) => {
+    const S = ensure(job);
+    const y = base + camPx * p + sy(p);
+    if (y > H) return;
+    const off = still ? 0 : -((t * speed) % S.w);
+    for (let xx = off; xx < W; xx += S.w) blit(x, S, xx + sx(p), y);
+  };
+  strip(assets.farA, 0.15, H * 0.5, 3);
+  strip(assets.farB, 0.25, H * 0.66, 5);
+
+  // far clouds, mid islands, mid clouds
+  const clouds = (d, p) => {
+    for (const cl of scene.clouds[d]) {
+      const y = H * 0.6 - (cl.at - cam) * PX * p + sy(p);
+      if (y < -60 || y > H + 300) continue;
+      const S = ensure(assets.clouds[d][cl.k]);
+      const span = W + S.w;
+      const xx = ((((cl.x * span - (still ? 0 : t * cl.v)) % span) + span) % span) - S.w;
+      blit(x, S, xx + sx(p), y - S.h);
+    }
+  };
+  clouds(0, 0.3);
+  for (const m of scene.mid) {
+    const y = H * 0.6 - (m.at - cam) * PX * 0.55 + sy(0.55);
+    if (y < -200 || y > H + 200) continue;
+    const I = ensure(m.job);
+    const span = W + I.S.w;
+    const xx = ((((m.x * span - (still ? 0 : t * m.drift)) % span) + span) % span) - I.S.w;
+    blit(x, I.S, xx + sx(0.55), y - I.topY);
+  }
+  clouds(1, 0.65);
+
+  // distant flock
+  if (!still) {
+    const f = flock;
+    if (f.x < -900) { f.next -= dt; if (f.next <= 0) { f.x = W + 30; f.y = H * (0.12 + Math.random() * 0.22); f.phase = 0; } }
+    else {
+      f.x -= 26 * dt; f.phase += dt;
+      for (let i = 0; i < f.n; i++) {
+        const fr = Math.floor(f.phase * 5 + i) % 2;
+        blit(x, assets.birds[fr], f.x + i * 13 + (i % 2) * 6, f.y + (i % 3) * 7 + Math.sin(f.phase + i) * 2, 0.85);
+      }
+      if (f.x < -120) { f.x = -999; f.next = 20 + Math.random() * 25; }
+    }
+  }
+
+  // landmark islands (parallax 1, same altitudes and sides as the original level) and the home island
+  const bob = (k) => (still ? 0 : Math.sin(t * 0.55 + k) * 5);
+  const home = ensure(scene.home);
+  blit(x, home.S, W * 0.5 - home.cx + sx(1), H * 0.6 + 46 - home.topY + camPx + bob(0) + sy(1));
+  for (const L of scene.landmarks) {
+    const surfaceY = H * 0.6 - 30 - (L.at - cam) * PX - 50;
+    if (surfaceY < -260 || surfaceY > H + 160) continue;
+    const I = ensure(L.job);
+    blit(x, I.S, W * L.side - I.cx + sx(1), surfaceY - I.topY + bob(L.bob) + sy(1));
+  }
+
+  // particles: pollen, spores, leaves, embers, ash; plus answer bursts
+  if (!still) {
+    for (const p of particles) {
+      p.ph += dt;
+      p.x += (p.vx + (p.kind === 'leaf' ? Math.sin(p.ph * 1.6) * 18 : Math.sin(p.ph) * 4)) * dt;
+      p.y += p.vy * dt;
+      p.rot += p.vr * dt;
+      if (p.y < -20 || p.y > H + 20 || p.x < -20 || p.x > W + 20) Object.assign(p, newParticle(p.kind, p.si, false));
+      const S = assets.particles[p.si];
+      const a = p.a * (p.kind === 'spore' || p.kind === 'mote' ? 0.55 + 0.45 * Math.sin(p.ph * 1.3) : 1);
+      if (p.kind === 'leaf') {
+        x.save(); x.translate(snap(p.x), snap(p.y)); x.rotate(p.rot); x.globalAlpha = a;
+        x.drawImage(S.c, -8, -8, 16, 16); x.restore();
+      } else blit(x, S, p.x - 8, p.y - 8, a);
+    }
+  }
+  for (let i = bursts.length - 1; i >= 0; i--) {
+    const b = bursts[i];
+    b.life -= dt;
+    if (b.life <= 0) { bursts.splice(i, 1); continue; }
+    b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.96; b.vy = b.vy * 0.96 + 14 * dt;
+    blit(x, assets.burst, b.x - 8, b.y - 8, Math.min(1, b.life * 1.6));
+  }
+}
+
+function drawFront(t) {
+  const x = fx;
+  x.clearRect(0, 0, W, H);
+  const still = reduceMotion.matches;
+  // foreground clouds at the screen edges only, moving faster than everything behind them
+  for (const n of scene.near) {
+    const y = H * 0.75 - (n.at - cam) * PX * 1.35;
+    if (y < -200 || y > H + 300) continue;
+    const S = ensure(assets.clouds[2][n.k]);
+    const bobX = still ? 0 : Math.sin(t * 0.12 + n.at) * 14;
+    blit(x, S, (n.left ? -S.w * 0.6 : W - S.w * 0.4) + bobX, y - S.h, 0.95);
+  }
+  // wind-blown mist low on the screen
+  if (!still) {
+    for (let i = 0; i < 2; i++) {
+      const S = ensure(assets.wisps[i]);
+      const span = W + S.w;
+      const xx = ((((t * (14 + i * 8) + i * 300) % span) + span) % span) - S.w;
+      blit(x, S, W - xx - S.w, H * (0.72 + i * 0.12));
+    }
+  }
+}
+
+// Pacing: 60 fps while the sky is climbing or a burst is flying, 30 fps otherwise (everything else moves
+// slowly, so the difference can't be seen). If frames still run long, step the canvas resolution down.
+let quality = 0; // 0: up to 2x, 1: 1.5x, 2: 1.25x and half the particles
+let skip = false;
+let slowFor = 0;
+let lastDraw = 0;
+// read-only numbers for checking performance from the console: skyStats()
+const stats = { draws: 0, drawMs: 0 };
+function skyStats() { return { ...stats, quality, dpr, avgDrawMs: +(stats.drawMs / Math.max(1, stats.draws)).toFixed(2) }; }
+function frame(now) {
+  requestAnimationFrame(frame);
+  const t = (now - t0) / 1000;
+  const dt = Math.min(0.1, lastT ? t - lastT : 0.016);
+  lastT = t;
+  const still = reduceMotion.matches;
+  if (!still) {
+    const d = target - cam;
+    cam = Math.abs(d) < 0.05 ? target : cam + d * (1 - Math.exp(-dt * 2.4));
+  }
+  const busy = cam !== target || bursts.length > 0;
+  if (still ? !dirty : !busy && (skip = !skip)) return;
+  const gap = t - lastDraw;
+  lastDraw = t;
+  // adaptive quality: sustained frames much slower than the pace we asked for
+  if (!still && gap < 0.5) {
+    slowFor = gap > (busy ? 1 / 60 : 1 / 30) * 1.6 ? slowFor + gap : Math.max(0, slowFor - gap * 0.5);
+    if (slowFor > 2 && quality < 2) { quality += 1; slowFor = 0; W = 0; resize(); }
+  }
+  bx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const d0 = performance.now();
+  drawBack(t, busy || still ? dt : gap);
+  drawFront(t);
+  stats.draws += 1;
+  stats.drawMs += performance.now() - d0;
+  dirty = false;
+}
+
+function resize() {
+  const ndpr = Math.min([2, 1.5, 1.25][quality], window.devicePixelRatio || 1);
+  const nW = window.innerWidth, nH = window.innerHeight;
+  if (nW === W && nH === H && ndpr === dpr) return;
+  const rebake = ndpr !== dpr || !assets || Math.abs(nW - W) > 80 || Math.abs(nH - H) > 160;
+  W = nW; H = nH; dpr = ndpr;
+  for (const c of [back, front, backdrop]) {
+    c.width = Math.round(W * dpr);
+    c.height = Math.round(H * dpr);
+    c.style.width = `${W}px`;
+    c.style.height = `${H}px`;
+  }
+  if (rebake && theme) { bakeTheme(); placeScene(); pump(); }
+  backdropDirty = true;
+  dirty = true;
 }
 
 function initSky(id) {
-  const wrap = document.getElementById('glider-wrap');
-  if (wrap) wrap.remove();
-  const g = document.createElement('div');
-  g.id = 'glider-wrap';
-  g.innerHTML = '<div id="glider"></div><div id="trail"></div>';
-  sky.appendChild(g);
+  const sky = document.getElementById('sky');
+  sky.innerHTML = '';
+  back = document.createElement('canvas');
+  back.className = 'sky-canvas';
+  front = document.createElement('canvas');
+  front.className = 'sky-canvas front';
+  const wrap = document.createElement('div');
+  wrap.id = 'glider-wrap';
+  wrap.innerHTML = '<div id="glider"></div><div id="trail"></div>';
+  const vignette = document.createElement('div');
+  vignette.className = 'sky-vignette';
+  sky.append(back, wrap, front, vignette);
+  backdrop = document.createElement('canvas');
+  bdx = backdrop.getContext('2d', { alpha: false });
+  bx = back.getContext('2d', { alpha: false });
+  fx = front.getContext('2d');
   applyTheme(id);
-  reduceMotion.addEventListener?.('change', scheduleLightning);
+  resize();
+  window.addEventListener('resize', resize);
+  reduceMotion.addEventListener?.('change', () => { dirty = true; });
+  // parchment grain for the UI panels, painted once from the same noise as the islands
+  try { root.style.setProperty('--paper', `url(${paperTexture()})`); } catch {}
+  requestAnimationFrame(frame);
 }
 
 // ---------- glider ----------
+// A soft burst of motes from the glider when an answer lands (bigger for rarer answers).
 function sparkle(count = 14) {
-  const trail = document.getElementById('trail');
-  for (let i = 0; i < count; i++) {
-    const s = document.createElement('i');
-    s.className = 'spark';
-    s.style.setProperty('--dx', `${-40 - Math.random() * 90}px`);
-    s.style.setProperty('--dy', `${30 + Math.random() * 80}px`);
-    s.style.animationDelay = `${i * 40}ms`;
-    trail.appendChild(s);
-    setTimeout(() => s.remove(), 1400 + i * 40);
-  }
   const g = document.getElementById('glider');
+  const rect = g?.getBoundingClientRect();
+  if (rect && !reduceMotion.matches) {
+    const ox = rect.left + rect.width * 0.4, oy = rect.top + rect.height * 0.55;
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2, v = 30 + Math.random() * 70;
+      bursts.push({ x: ox, y: oy, vx: Math.cos(a) * v - 30, vy: Math.sin(a) * v, life: 0.8 + Math.random() * 0.7 });
+    }
+  }
+  if (!g) return;
   g.classList.remove('climb');
   void g.offsetWidth;
   g.classList.add('climb');
@@ -3028,7 +3925,7 @@ function sparkle(count = 14) {
 
 async function mountGlider() {
   try {
-    const svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 140\">\n  <defs>\n    <linearGradient id=\"wing\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fffaf0\"/><stop offset=\"1\" stop-color=\"#f3dcae\"/></linearGradient>\n    <linearGradient id=\"wingstripe\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#f08fb5\"/><stop offset=\"1\" stop-color=\"#b48cff\"/></linearGradient>\n    <linearGradient id=\"gold\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff1b8\"/><stop offset=\"1\" stop-color=\"#d29c34\"/></linearGradient>\n  </defs>\n  <!-- scarf -->\n  <path class=\"scarf\" d=\"M88 70 C70 66 50 78 26 70 C40 80 60 82 86 78 Z\" fill=\"#ff7f9f\"/>\n  <path class=\"scarf\" d=\"M86 74 C66 78 48 92 30 88 C46 96 66 92 88 80 Z\" fill=\"#ff9fb8\" opacity=\".9\"/>\n  <!-- back wing -->\n  <path d=\"M104 64 L150 30 L170 34 L124 70 Z\" fill=\"#e9d2a2\"/>\n  <!-- body -->\n  <path d=\"M60 82 Q110 70 182 74 Q196 76 198 82 Q186 92 120 94 Q78 96 60 82 Z\" fill=\"url(#wing)\" stroke=\"#c99a4a\" stroke-width=\"2\"/>\n  <path d=\"M170 76 Q190 77 197 82\" stroke=\"url(#gold)\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/>\n  <!-- tail -->\n  <path d=\"M64 82 L44 58 L56 58 L78 80 Z\" fill=\"url(#wingstripe)\"/>\n  <!-- pilot -->\n  <circle cx=\"112\" cy=\"66\" r=\"14\" fill=\"#ffd9b8\"/>\n  <path d=\"M98 64 Q100 48 114 48 Q128 48 128 62 Q120 56 112 57 Q104 58 98 64 Z\" fill=\"#7a4a2a\"/>\n  <rect x=\"103\" y=\"58\" width=\"22\" height=\"8\" rx=\"4\" fill=\"#3b4ba8\"/>\n  <circle cx=\"108\" cy=\"62\" r=\"4.5\" fill=\"#bfe6ff\" stroke=\"url(#gold)\" stroke-width=\"2\"/>\n  <circle cx=\"120\" cy=\"62\" r=\"4.5\" fill=\"#bfe6ff\" stroke=\"url(#gold)\" stroke-width=\"2\"/>\n  <path d=\"M110 72 Q114 75 118 72\" stroke=\"#c46a5a\" stroke-width=\"2\" fill=\"none\" stroke-linecap=\"round\"/>\n  <!-- front wing -->\n  <path d=\"M96 84 L150 112 L176 110 L128 82 Z\" fill=\"url(#wing)\" stroke=\"#c99a4a\" stroke-width=\"2\"/>\n  <path d=\"M138 96 L162 110\" stroke=\"url(#wingstripe)\" stroke-width=\"5\" stroke-linecap=\"round\"/>\n</svg>\n";
+    const svg = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 220 140\">\n  <defs>\n    <linearGradient id=\"canvasTop\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fbf1d6\"/><stop offset=\".6\" stop-color=\"#e8d4a6\"/><stop offset=\"1\" stop-color=\"#b89a68\"/></linearGradient>\n    <linearGradient id=\"canvasBack\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#d9c08e\"/><stop offset=\"1\" stop-color=\"#9a7c50\"/></linearGradient>\n    <linearGradient id=\"wood\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#d8a064\"/><stop offset=\".5\" stop-color=\"#9a6234\"/><stop offset=\"1\" stop-color=\"#5c3418\"/></linearGradient>\n    <linearGradient id=\"brass\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#fff0c0\"/><stop offset=\".45\" stop-color=\"#d9a441\"/><stop offset=\"1\" stop-color=\"#7a5218\"/></linearGradient>\n    <linearGradient id=\"scarf\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\"><stop offset=\"0\" stop-color=\"#7a1a1e\"/><stop offset=\"1\" stop-color=\"#d0463a\"/></linearGradient>\n    <linearGradient id=\"leather\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#8a5a32\"/><stop offset=\"1\" stop-color=\"#4a2c16\"/></linearGradient>\n    <radialGradient id=\"lens\" cx=\".35\" cy=\".35\" r=\".7\"><stop offset=\"0\" stop-color=\"#e4f4ff\"/><stop offset=\".5\" stop-color=\"#7aa8c8\"/><stop offset=\"1\" stop-color=\"#2c4a66\"/></radialGradient>\n    <linearGradient id=\"tailFin\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#c2453a\"/><stop offset=\"1\" stop-color=\"#6a1e22\"/></linearGradient>\n  </defs>\n\n  <!-- scarf streaming behind -->\n  <path class=\"scarf\" d=\"M92 70 C74 64 52 74 24 66 C38 78 60 82 90 78 Z\" fill=\"url(#scarf)\"/>\n  <path class=\"scarf\" d=\"M90 75 C70 80 50 94 30 90 C46 98 68 94 92 81 Z\" fill=\"#9a2a28\"/>\n\n  <!-- far wing: canvas on a wooden spar, in shadow -->\n  <path d=\"M104 64 L148 28 L172 32 L126 70 Z\" fill=\"url(#canvasBack)\" stroke=\"#5c3418\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/>\n  <path d=\"M116 58 L156 30 M128 66 L166 32\" stroke=\"#7a5a34\" stroke-width=\"1\" opacity=\".7\"/>\n\n  <!-- fuselage: wooden hull with brass bands -->\n  <path d=\"M58 82 Q108 69 182 73 Q198 75 200 82 Q188 93 120 95 Q76 97 58 82 Z\" fill=\"url(#wood)\" stroke=\"#3a200e\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/>\n  <path d=\"M66 82 Q110 74 180 77\" stroke=\"#f0c48a\" stroke-width=\"1.6\" fill=\"none\" opacity=\".75\"/>\n  <path d=\"M72 88 Q120 92 190 84\" stroke=\"#3a200e\" stroke-width=\"1\" fill=\"none\" opacity=\".5\"/>\n  <rect x=\"140\" y=\"72\" width=\"4\" height=\"22\" rx=\"1\" fill=\"url(#brass)\"/>\n  <rect x=\"96\" y=\"74\" width=\"4\" height=\"22\" rx=\"1\" fill=\"url(#brass)\"/>\n  <path d=\"M182 73 Q198 75 200 82 Q194 87 184 89 Q190 81 182 73 Z\" fill=\"url(#brass)\" stroke=\"#5a3a10\" stroke-width=\"1\"/>\n  <circle cx=\"148\" cy=\"84\" r=\"1.4\" fill=\"#fff0c0\"/><circle cx=\"160\" cy=\"83\" r=\"1.4\" fill=\"#fff0c0\"/><circle cx=\"172\" cy=\"82\" r=\"1.4\" fill=\"#fff0c0\"/>\n\n  <!-- tail fin -->\n  <path d=\"M62 82 L42 56 L56 56 L80 80 Z\" fill=\"url(#tailFin)\" stroke=\"#3a120e\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/>\n  <path d=\"M52 60 L70 78\" stroke=\"#f0a080\" stroke-width=\"1\" opacity=\".6\"/>\n\n  <!-- pilot: leather flying cap, brass goggles, a determined little face -->\n  <path d=\"M100 74 Q100 58 113 56 Q126 56 127 72 Z\" fill=\"#3a200e\" opacity=\".35\"/>\n  <circle cx=\"113\" cy=\"65\" r=\"13\" fill=\"#f0c6a0\"/>\n  <path d=\"M113 78 Q106 77 103 70\" stroke=\"#c98a6a\" stroke-width=\"2\" fill=\"none\" opacity=\".6\"/>\n  <path d=\"M99 64 Q100 49 113 48 Q127 48 128 62 Q120 55 112 56 Q104 57 99 64 Z\" fill=\"url(#leather)\" stroke=\"#2a160a\" stroke-width=\"1\"/>\n  <path d=\"M100 62 Q99 70 103 73\" stroke=\"url(#leather)\" stroke-width=\"4\" fill=\"none\" stroke-linecap=\"round\"/>\n  <path d=\"M103 60 Q114 57 126 60\" stroke=\"#2a160a\" stroke-width=\"2.4\" fill=\"none\"/>\n  <circle cx=\"108\" cy=\"60.5\" r=\"4.6\" fill=\"url(#lens)\" stroke=\"url(#brass)\" stroke-width=\"2\"/>\n  <circle cx=\"120\" cy=\"60.5\" r=\"4.6\" fill=\"url(#lens)\" stroke=\"url(#brass)\" stroke-width=\"2\"/>\n  <circle cx=\"106.6\" cy=\"59\" r=\"1.2\" fill=\"#fff\" opacity=\".9\"/><circle cx=\"118.6\" cy=\"59\" r=\"1.2\" fill=\"#fff\" opacity=\".9\"/>\n  <path d=\"M110 71 Q114 73.5 118 71\" stroke=\"#8a3a2a\" stroke-width=\"1.8\" fill=\"none\" stroke-linecap=\"round\"/>\n  <circle cx=\"104\" cy=\"68\" r=\"2.2\" fill=\"#e88a7a\" opacity=\".45\"/>\n\n  <!-- near wing: stitched canvas, wooden ribs, a crimson tip stripe -->\n  <path d=\"M94 84 L148 114 L178 112 L128 82 Z\" fill=\"url(#canvasTop)\" stroke=\"#5c3418\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/>\n  <path d=\"M108 86 L156 113 M120 84 L166 112 M134 83 L174 110\" stroke=\"#9a6234\" stroke-width=\"1.2\" opacity=\".8\"/>\n  <path d=\"M100 86 L150 113\" stroke=\"#fffaf0\" stroke-width=\"1\" stroke-dasharray=\"2 2\" opacity=\".8\"/>\n  <path d=\"M160 112 L176 111 L170 105 Z\" fill=\"#b8322e\" stroke=\"#5a1410\" stroke-width=\".8\"/>\n  <path d=\"M128 82 L178 112\" stroke=\"url(#wood)\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n</svg>\n";
     document.getElementById('glider').innerHTML = svg;
   } catch {
     document.getElementById('glider').innerHTML = '<img src="art/glider.svg" alt="" style="width:100%">';
@@ -3068,7 +3965,7 @@ function choose(id) {
 }
 
 function strip(theme) {
-  const stops = [0, 175, 350, 525, 700].map((a) => at(theme.sky, a)[1]);
+  const stops = [0, 175, 350, 525, 700].map((a) => at(theme.sky, a)[2]);
   return `linear-gradient(90deg, ${stops.join(', ')})`;
 }
 
@@ -3079,15 +3976,11 @@ function render() {
     const t = THEMES[id];
     return `<button class="tp-card ${id === cur ? 'on' : ''}" data-id="${id}" aria-pressed="${id === cur}">
       <span class="tp-strip" style="background:${strip(t)}"></span>
-      <span class="tp-name">${t.name}${id === 'classic' ? ' <em>current</em>' : ''}</span>
+      <span class="tp-name">${t.name}</span>
       <span class="tp-mood">${t.mood}</span>
       <span class="tp-sw">${t.swatches.map((c) => `<i style="background:${c}" title="${c}"></i>`).join('')}<small>cost: ${t.cost}</small></span>
     </button>`;
   }).join('');
-  const lt = panel.querySelector('#tp-lightning');
-  lt.disabled = !THEMES[cur].lightning;
-  lt.checked = !!THEMES[cur].lightning && lightningEnabled();
-  panel.querySelector('.tp-lightning').classList.toggle('off', lt.disabled);
 }
 
 function open() {
@@ -3096,11 +3989,10 @@ function open() {
   panel.className = 'theme-picker';
   panel.setAttribute('aria-label', 'Theme picker (temporary)');
   panel.innerHTML = `
-    <header><b>Sky themes</b><small>temporary picker · T / Shift+T to cycle</small><button class="tp-x" aria-label="Close theme picker">✕</button></header>
+    <header><b>Sky variations</b><small>temporary picker · T / Shift+T to cycle</small><button class="tp-x" aria-label="Close theme picker">✕</button></header>
     <div class="tp-list"></div>
     <label class="tp-alt" for="tp-alt">Preview altitude <output id="tp-alt-out">live</output>
-      <input id="tp-alt" type="range" min="0" max="700" step="5" value="${Math.round(getAltitude())}"></label>
-    <label class="tp-lightning" for="tp-lightning"><input id="tp-lightning" type="checkbox"> Distant lightning (Storm Drift)</label>`;
+      <input id="tp-alt" type="range" min="0" max="700" step="5" value="${Math.round(getAltitude())}"></label>`;
   document.body.appendChild(panel);
   panel.querySelector('.tp-list').onclick = (e) => { const b = e.target.closest('[data-id]'); if (b) choose(b.dataset.id); };
   panel.querySelector('.tp-x').onclick = () => { panel.hidden = true; endPreview(); };
@@ -3111,7 +4003,6 @@ function open() {
     panel.querySelector('#tp-alt-out').textContent = `${previewAlt} pts`;
     setAltitude(previewAlt);
   };
-  panel.querySelector('#tp-lightning').onchange = (e) => setLightning(e.target.checked);
   render();
 }
 
@@ -3523,12 +4414,30 @@ async function startDaily() {
     sfx.start();
     show('play');
     setAltitude(sumPoints(results));
+    // A short title card on a fresh flight. The 25-second clock only starts once the first prompt appears.
+    if (state.idx === 0 && !localStorage.getItem(startedKey())) await showIntro(date);
+    if (!state) return;
     nextPrompt();
   } catch (e) {
     toast(`☁️ Couldn’t reach the sky server. ${esc(e.message)}`);
   } finally {
     $('btn-play').disabled = false;
   }
+}
+
+function showIntro(date) {
+  const card = $('intro-card');
+  $('intro-kicker').textContent = `Day #${dayNumber(date)}`;
+  $('intro-title').textContent = 'The Ascent';
+  card.hidden = false;
+  document.body.classList.add('intro');
+  card.style.animation = 'none'; void card.offsetWidth; card.style.animation = '';
+  const ms = matchMedia('(prefers-reduced-motion: reduce)').matches ? 900 : 2400;
+  return new Promise((resolve) => {
+    const done = () => { clearTimeout(timer); card.hidden = true; card.onclick = null; document.body.classList.remove('intro'); resolve(); };
+    const timer = setTimeout(done, ms);
+    card.onclick = done;
+  });
 }
 
 function renderDots() {
@@ -3625,6 +4534,8 @@ async function submitAnswer(e) {
     if (!res.valid) {
       sfx.invalid();
       shakeForm();
+      const pc = $('prompt-card');
+      pc.classList.remove('miss'); void pc.offsetWidth; pc.classList.add('miss');
       const hint = $('answer-hint');
       hint.className = 'answer-hint bad';
       hint.textContent = `The clouds don’t recognise “${text}”. Try another!`;

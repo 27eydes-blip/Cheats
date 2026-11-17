@@ -1,433 +1,444 @@
-// The sky behind every screen. Everything here is decoration driven by the active theme (../themes.js):
-// gradient, sun/moon/rays, stars, aurora, three parallax cloud layers, particles, drifting debris, birds,
-// distant lightning and the islands. Gameplay never reads anything from this file.
+// The sky level renderer. Purely visual: gameplay never reads anything from here.
 //
-// Performance rules this file follows:
-// - Moving layers are composited: they move with transform only (one rAF loop), never background-position,
-//   filters or layout. Twinkles are opacity animations. No blur filters on anything that moves.
-// - Positions are snapped to whole device pixels so vector art stays crisp while it scrolls.
-// - The loop sleeps with the tab, and stops scrolling when the viewer prefers reduced motion.
-import { LANDMARKS, layerFor } from '../shared/score.js';
+// How it stays fast and crisp:
+// - Everything detailed (islands, clouds, moons, ruins) is painted ONCE into offscreen sprites by paint.js,
+//   lazily as it comes near the screen, then only blitted each frame.
+// - Canvases are backed at devicePixelRatio (capped at 2), sprites are blitted 1:1 at positions snapped to
+//   whole device pixels, so nothing is resampled or blurred while it scrolls.
+// - One rAF loop draws both canvases; it sleeps with the tab, and with reduced motion it only redraws
+//   when the altitude changes.
+//
+// Layers, back to front (parallax factor in brackets):
+//   sky gradient, stars (.04), sun/moons/planet + light shafts (.06), storied far feature (.08), giant creature,
+//   far island strips (.15, .25), atmospheric haze, far clouds (.3), mid islands (.55), mid clouds (.65),
+//   birds, landmark islands (1), particles   |   front canvas, above the glider: edge clouds + mist (1.35)
+import { LANDMARKS } from '../shared/score.js';
 import { THEMES, at, readability, resolveThemeId } from '../themes.js';
+import {
+  setPaintDpr, paintIsland, paintCloud, paintFarStrip, paintCelestial, paintFeature, paintGiant, paintRays,
+  paintStars, paintParticle, paintBird, paintWisp, paperTexture, rng, hexA,
+} from './paint.js';
 
-const PX_PER_POINT = 2.7;
+const PX = 2.7; // screen pixels of climb per point (same as the original level)
 const root = document.documentElement;
-const sky = document.getElementById('sky');
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
-let theme = null;
-let themeId = null;
-let world = null;
-let current = 0; // altitude in points
+let back, front, bx, fx; // canvases + contexts
+let W = 0, H = 0, dpr = 1;
+let theme = null, themeId = null;
+let target = 0; // altitude in points the game asked for
+let cam = 0; // eased altitude the camera shows
 let night = false;
-const layers = []; // scrolling tiled layers driven by the loop
-let birds = null;
-let lightningTimer = 0;
-let lightningOn = true;
+const t0 = performance.now();
+let lastT = 0;
+let assets = null; // baked sprites for the current theme
+let scene = null; // placed objects
+const particles = [];
+const bursts = [];
+let flock = null;
+let giant = null;
+let dirty = true;
 
-// ---------- small helpers ----------
-const svgUri = (svg) => `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`;
-function rand(seed) {
-  let s = seed % 2147483647;
-  if (s <= 0) s += 2147483646;
-  return () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+const snap = (v) => Math.round(v * dpr) / dpr;
+function blit(ctx, S, x, y, alpha = 1) {
+  if (!S) return;
+  const w = S.c.width / dpr, h = S.c.height / dpr;
+  if (x > W || y > H || x + w < 0 || y + h < 0) return;
+  if (alpha !== 1) ctx.globalAlpha = alpha;
+  ctx.drawImage(S.c, snap(x), snap(y), w, h);
+  if (alpha !== 1) ctx.globalAlpha = 1;
 }
-const el = (cls, parent = sky, tag = 'div') => { const e = document.createElement(tag); e.className = cls; parent.appendChild(e); return e; };
-const snap = (v) => { const d = window.devicePixelRatio || 1; return Math.round(v * d) / d; };
-const f1 = (n) => n.toFixed(1);
 
-// ---------- cloud tiles (one SVG per layer, generated per theme) ----------
-function cloudTile(style, depth, c, seed) {
-  const r = rand(seed);
-  const W = Math.round([520, 640, 760][depth] * c.scale), H = Math.round([420, 520, 640][depth] * c.scale);
-  const count = [3, 2, 2][depth];
-  const grad = `<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c.top}"/><stop offset="1" stop-color="${c.bottom}"/></linearGradient>`;
-  let shapes = '';
-  for (let i = 0; i < count; i++) {
-    // keep each cloud fully inside the tile so the tile repeats seamlessly
-    const s = (0.55 + r() * 0.45) * c.scale * (depth === 2 ? 1.25 : 1);
-    const x = W * (0.2 + 0.6 * ((i + r() * 0.5) / count)), y = H * (0.18 + 0.64 * r());
-    if (style === 'puffy') {
-      const puffs = [[0, 0, 1], [-0.9, 0.25, 0.7], [0.9, 0.2, 0.75], [-0.45, -0.35, 0.75], [0.4, -0.45, 0.85], [1.6, 0.4, 0.5], [-1.6, 0.45, 0.45]];
-      shapes += `<g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})">${puffs.map(([a, b, q]) => `<circle cx="${a * 40}" cy="${b * 40}" r="${q * 40}"/>`).join('')}<rect x="-72" y="8" width="144" height="30" rx="15"/></g>`;
-    } else if (style === 'wisp') {
-      const len = 160 + r() * 140;
-      shapes += `<g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})"><ellipse rx="${f1(len / 2)}" ry="7"/><ellipse cx="${f1(len * 0.15)}" cy="-9" rx="${f1(len * 0.32)}" ry="5"/><ellipse cx="${f1(-len * 0.2)}" cy="8" rx="${f1(len * 0.28)}" ry="4"/></g>`;
-    } else if (style === 'heavy') {
-      const w = 190 + r() * 80;
-      const bumps = Array.from({ length: 6 }, (_, k) => `<circle cx="${f1(-w / 2 + 20 + (k * (w - 40)) / 5)}" cy="${f1(-18 - r() * 26)}" r="${f1(28 + r() * 20)}"/>`).join('');
-      shapes += `<g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})">${bumps}<rect x="${f1(-w / 2)}" y="-30" width="${f1(w)}" height="42" rx="6"/></g>`;
-    } else if (style === 'bubble') {
-      const n = 4 + Math.floor(r() * 3);
-      shapes += `<g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})">${Array.from({ length: n }, (_, k) => `<circle cx="${f1((k - n / 2) * 30)}" cy="${f1(Math.sin(k * 1.3) * 10)}" r="${f1(26 + (k % 2) * 10)}"/>`).join('')}</g>`;
-    } else if (style === 'thin') {
-      const len = 200 + r() * 160;
-      shapes += `<g transform="translate(${f1(x)} ${f1(y)}) scale(${f1(s)})"><rect x="${f1(-len / 2)}" y="-8" width="${f1(len)}" height="16" rx="8"/><rect x="${f1(-len * 0.3)}" y="-20" width="${f1(len * 0.5)}" height="14" rx="7"/><rect x="${f1(-len * 0.32)}" y="-20" width="${f1(len * 0.5)}" height="2" rx="1" fill="#b9c8f0" opacity=".8"/></g>`;
-    }
+// ---------- baking ----------
+const queue = [];
+function lazy(make) {
+  const job = { S: null, make };
+  queue.push(job);
+  return job;
+}
+function ensure(job) {
+  if (!job.S) job.S = job.make();
+  return job.S;
+}
+// Bake queued sprites in small slices while the browser is idle, so nothing stutters.
+function pump() {
+  const start = performance.now();
+  while (queue.length && performance.now() - start < 8) {
+    const j = queue.shift();
+    if (!j.S) j.S = j.make();
   }
-  return { uri: svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${grad}</defs><g fill="url(#g)">${shapes}</g></svg>`), W, H };
+  if (queue.length) (window.requestIdleCallback || setTimeout)(pump, { timeout: 200 });
 }
 
-// ---------- particle tiles ----------
-function particleTile(kind, color, seed, variant) {
-  const r = rand(seed + variant * 101);
-  const W = 300, H = 300;
-  let s = '';
-  const N = { motes: 9, glints: 8, wind: 4, sparkles: 7, fireflies: 7, shards: 4, rocks: 4, bubbles: 5, stars: 22 }[kind] || 0;
-  for (let i = 0; i < N; i++) {
-    const x = 12 + r() * (W - 24), y = 12 + r() * (H - 24);
-    if (kind === 'motes') s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(1.4 + r() * 1.6)}" fill="${color}"/><circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(4 + r() * 2)}" fill="${color}" opacity=".18"/>`;
-    else if (kind === 'glints' || kind === 'sparkles') {
-      const q = 2.5 + r() * 3.5;
-      s += `<path d="M${f1(x)} ${f1(y - q)} L${f1(x + q * 0.28)} ${f1(y - q * 0.28)} L${f1(x + q)} ${f1(y)} L${f1(x + q * 0.28)} ${f1(y + q * 0.28)} L${f1(x)} ${f1(y + q)} L${f1(x - q * 0.28)} ${f1(y + q * 0.28)} L${f1(x - q)} ${f1(y)} L${f1(x - q * 0.28)} ${f1(y - q * 0.28)} Z" fill="${color}"/>`;
-    } else if (kind === 'wind') {
-      const len = 40 + r() * 70;
-      s += `<rect x="${f1(x - len / 2)}" y="${f1(y)}" width="${f1(len)}" height="1.4" rx=".7" fill="${color}"/>`;
-    } else if (kind === 'fireflies') s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(5 + r() * 2)}" fill="${color}" opacity=".22"/><circle cx="${f1(x)}" cy="${f1(y)}" r="1.8" fill="${color}"/>`;
-    else if (kind === 'shards') {
-      const q = 4 + r() * 5;
-      s += `<path d="M${f1(x)} ${f1(y - q * 1.6)} L${f1(x + q * 0.7)} ${f1(y)} L${f1(x)} ${f1(y + q * 1.6)} L${f1(x - q * 0.7)} ${f1(y)} Z" fill="${color}"/><path d="M${f1(x)} ${f1(y - q * 1.6)} L${f1(x + q * 0.7)} ${f1(y)} L${f1(x)} ${f1(y)} Z" fill="#fff" opacity=".6"/>`;
-    } else if (kind === 'rocks') {
-      const q = 3 + r() * 4;
-      s += `<path d="M${f1(x - q)} ${f1(y)} L${f1(x - q * 0.3)} ${f1(y - q)} L${f1(x + q)} ${f1(y - q * 0.4)} L${f1(x + q * 0.6)} ${f1(y + q * 0.8)} Z" fill="${color}"/>`;
-    } else if (kind === 'bubbles') s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(4 + r() * 6)}" fill="none" stroke="${color}" stroke-width="1.2"/>`;
-    else if (kind === 'stars') s += `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(0.6 + r() * 1.1)}" fill="${r() < 0.2 ? '#fff1c4' : '#ffffff'}"/>`;
-  }
-  return { uri: svgUri(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${s}</svg>`), W, H };
-}
-
-// A layer of one repeating tile. Three nested boxes, each one tile larger than the screen so it wraps seamlessly:
-//   .sky-layer   fixed to the screen
-//   .sky-alt     follows altitude (the loop sets its translateY, only while the sky is climbing)
-//   .sky-drift   drifts forever with a CSS animation stepped one CSS pixel at a time (compositor, no JS)
-function tiledLayer(cls, tile, { vx = 0, vy = 0, parallax = 0, opacity = 1, twinkle = 0, z = 0 } = {}) {
-  const wrap = el(`sky-layer ${cls}`);
-  wrap.style.zIndex = z;
-  wrap.style.opacity = opacity;
-  const alt = el('sky-alt', wrap);
-  alt.style.height = `calc(100% + ${tile.H}px)`;
-  const drift = el('sky-drift', alt);
-  drift.style.width = `calc(100% + ${tile.W}px)`;
-  drift.style.height = `calc(100% + ${tile.H}px)`;
-  drift.style.backgroundImage = tile.uri;
-  drift.style.backgroundSize = `${tile.W}px ${tile.H}px`;
-  const anims = [];
-  if (vx || vy) {
-    // whichever axis moves, one step per pixel; vertical drift goes up for negative vy
-    const dist = vx ? tile.W : tile.H;
-    const dur = dist / Math.abs(vx || vy);
-    drift.style.setProperty('--dx', vx ? `${-tile.W}px` : '0px');
-    drift.style.setProperty('--dy', vx ? `${vy ? (vy / vx) * tile.W : 0}px` : `${vy < 0 ? -tile.H : tile.H}px`);
-    anims.push(`drift ${dur.toFixed(2)}s steps(${dist}) ${(-Math.random() * dur).toFixed(2)}s infinite`);
-  }
-  if (twinkle) anims.push(`twinkle ${twinkle}s ease-in-out ${(-Math.random() * twinkle).toFixed(2)}s infinite alternate`);
-  drift.style.animation = anims.join(', ');
-  const L = { wrap, alt, H: tile.H, parallax, y: current * PX_PER_POINT * parallax };
-  layers.push(L);
-  placeLayer(L);
-  return L;
-}
-
-function placeLayer(L) {
-  const oy = (((L.y % L.H) + L.H) % L.H) - L.H;
-  L.alt.style.transform = `translate3d(0, ${snap(oy)}px, 0)`;
-}
-
-// ---------- islands ----------
-function islandSVG(seed, layerId, extras = '') {
-  const isl = theme.islands;
-  const [top, topDark, rock, rockDark] = isl.layers[layerId] || isl.layers.meadows;
-  const r = rand(seed * 977 + 13);
-  const id = `${themeId}${seed}`;
-  const defs = `<linearGradient id="rk${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${rock}"/><stop offset="1" stop-color="${rockDark}"/></linearGradient>`
-    + `<linearGradient id="wf${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${isl.water || '#cfeaff'}" stop-opacity=".95"/><stop offset="1" stop-color="${isl.water || '#cfeaff'}" stop-opacity="0"/></linearGradient>`;
-  const waterfall = (x, len = 70, w = 9) => isl.waterfall
-    ? `<rect x="${x}" y="38" width="${w}" height="${len}" rx="${w / 2}" fill="url(#wf${id})"/><rect x="${x + 2}" y="44" width="1.5" height="${len * 0.6}" fill="#fff" opacity=".7"/>` : '';
-  let body = '';
-
-  if (isl.style === 'meadow' || isl.style === 'night') {
-    let rockPath = 'M10 40 ';
-    for (let i = 1; i < 9; i++) rockPath += `L${f1(10 + (i * 180) / 9)} ${f1(58 + r() * 50 * Math.sin((i / 9) * Math.PI))} `;
-    rockPath += 'L190 40 Z';
-    const trees = Array.from({ length: 2 + Math.floor(r() * 3) }, () => {
-      const x = 30 + r() * 140, h = 14 + r() * 14;
-      return isl.style === 'night'
-        ? `<g transform="translate(${f1(x)} 34)"><rect x="-1" y="${f1(-h / 2)}" width="2" height="${f1(h / 2)}" fill="${rockDark}"/><circle cy="${f1(-h / 2)}" r="${f1(h / 3)}" fill="${topDark}"/></g>`
-        : `<g transform="translate(${f1(x)} 34)"><rect x="-1.5" y="${f1(-h / 2)}" width="3" height="${f1(h / 2)}" fill="${rockDark}"/><circle cy="${f1(-h / 2)}" r="${f1(h / 2.4)}" fill="${topDark}"/></g>`;
-    }).join('');
-    const sideShade = isl.longShadow
-      ? `<path d="${rockPath}" fill="url(#ls${id})"/><linearGradient id="ls${id}" x1="1" y1="0" x2="0" y2="0"><stop offset=".35" stop-color="${rockDark}" stop-opacity="0"/><stop offset="1" stop-color="${rockDark}" stop-opacity=".75"/></linearGradient>` : '';
-    let glow = '';
-    if (isl.style === 'night') {
-      const g = isl.glow;
-      glow = Array.from({ length: 5 }, (_, k) => {
-        const x = 24 + r() * 152, c = g[k % 2];
-        return `<g transform="translate(${f1(x)} 32)"><rect x="-.6" y="-7" width="1.2" height="7" fill="${topDark}"/><circle cy="-8" r="5" fill="${c}" opacity=".25"/><circle cy="-8" r="1.8" fill="${c}"/></g>`;
-      }).join('') + `<g transform="translate(${f1(40 + r() * 120)} 18)"><rect x="-.8" y="0" width="1.6" height="18" fill="${rockDark}"/><circle cy="-2" r="10" fill="${g[2]}" opacity=".22"/><rect x="-3.5" y="-6" width="7" height="8" rx="1.5" fill="${g[2]}"/></g>`;
-    }
-    body = `<path d="${rockPath}" fill="url(#rk${id})"/>${sideShade}${waterfall(150)}
-      <ellipse cx="100" cy="40" rx="92" ry="12" fill="${topDark}"/><ellipse cx="100" cy="36" rx="90" ry="11" fill="${top}"/>${trees}${glow}`;
-  } else if (isl.style === 'crystal') {
-    let shards = '';
-    const n = 8;
-    for (let i = 0; i < n; i++) {
-      const x0 = 14 + (i * 172) / n, x1 = 14 + ((i + 1) * 172) / n, mid = (x0 + x1) / 2 + (r() - 0.5) * 6;
-      const len = 26 + r() * 60 * Math.sin(((i + 0.5) / n) * Math.PI) + 10;
-      shards += `<path d="M${f1(x0)} 40 L${f1(x1)} 40 L${f1(mid)} ${f1(40 + len)} Z" fill="url(#rk${id})"/><path d="M${f1(x0)} 40 L${f1((x0 + x1) / 2)} 40 L${f1(mid)} ${f1(40 + len)} Z" fill="#fff" opacity=".28"/>`;
-    }
-    const spires = Array.from({ length: 2 + Math.floor(r() * 2) }, () => {
-      const x = 30 + r() * 140, h = 16 + r() * 22, w = 5 + r() * 4;
-      return `<path d="M${f1(x - w)} 36 L${f1(x)} ${f1(36 - h)} L${f1(x + w)} 36 Z" fill="${rock}" stroke="#fff" stroke-opacity=".7" stroke-width=".8"/><path d="M${f1(x)} ${f1(36 - h)} L${f1(x + w)} 36 L${f1(x)} 36 Z" fill="${rockDark}" opacity=".5"/>`;
-    }).join('');
-    body = `${shards}<path d="M8 40 L30 30 L170 30 L192 40 L170 46 L30 46 Z" fill="${topDark}"/><path d="M12 38 L32 28 L168 28 L188 38 L168 42 L32 42 Z" fill="${top}" stroke="#fff" stroke-width=".8"/>${spires}`;
-  } else if (isl.style === 'storm') {
-    let p = 'M8 40 ';
-    for (let i = 1; i < 14; i++) p += `L${f1(8 + (i * 184) / 14)} ${f1(46 + (i % 2 ? 30 + r() * 46 : 8 + r() * 14) * Math.sin((i / 14) * Math.PI))} `;
-    p += 'L192 40 Z';
-    let topEdge = 'M10 40 ';
-    for (let i = 1; i < 10; i++) topEdge += `L${f1(10 + i * 18)} ${f1(31 + r() * 5)} `;
-    topEdge += 'L190 40 Z';
-    const px = 40 + r() * 60;
-    const ruins = `<g fill="${rock}" stroke="${rockDark}" stroke-width="1"><path d="M${f1(px)} 34 L${f1(px)} 10 L${f1(px + 4)} 6 L${f1(px + 8)} 12 L${f1(px + 8)} 34 Z"/><path d="M${f1(px + 26)} 34 L${f1(px + 26)} 18 L${f1(px + 34)} 22 L${f1(px + 34)} 34 Z"/><rect x="${f1(px - 4)}" y="8" width="18" height="3" transform="rotate(-8 ${f1(px)} 8)"/></g>`;
-    const tx = 130 + r() * 40;
-    const tree = `<path d="M${f1(tx)} 34 L${f1(tx)} 14 M${f1(tx)} 22 L${f1(tx - 8)} 14 M${f1(tx)} 18 L${f1(tx + 7)} 10 M${f1(tx - 8)} 14 L${f1(tx - 11)} 9" stroke="${rockDark}" stroke-width="2" stroke-linecap="round" fill="none"/>`;
-    body = `<path d="${p}" fill="url(#rk${id})"/>${waterfall(52, 60, 6)}<path d="${topEdge}" fill="${top}"/><path d="M10 40 L190 40 L190 43 L10 43 Z" fill="${topDark}"/>${ruins}${tree}`;
-  } else if (isl.style === 'pastel') {
-    const under = 'M14 40 C 14 74, 52 98, 100 100 C 148 98, 186 74, 186 40 Z';
-    const dots = Array.from({ length: 7 }, () => `<circle cx="${f1(40 + r() * 120)}" cy="${f1(50 + r() * 34)}" r="${f1(2 + r() * 3)}" fill="#fff" opacity=".45"/>`).join('');
-    const scallops = Array.from({ length: 9 }, (_, k) => `<circle cx="${f1(22 + k * 19.5)}" cy="42" r="9" fill="${topDark}"/>`).join('');
-    const trees = Array.from({ length: 2 + Math.floor(r() * 2) }, (_, k) => {
-      const x = 40 + r() * 120;
-      return k % 2
-        ? `<g transform="translate(${f1(x)} 34)"><rect x="-1.5" y="-18" width="3" height="18" rx="1.5" fill="#fff"/><circle cy="-22" r="8" fill="${rock}"/><path d="M-4 -22 a4 4 0 1 1 4 4" stroke="#fff" stroke-width="1.6" fill="none"/></g>`
-        : `<g transform="translate(${f1(x)} 34)"><rect x="-2.5" y="-8" width="5" height="8" rx="2" fill="#fff6ee"/><path d="M-11 -8 a11 9 0 0 1 22 0 Z" fill="${rock}"/><circle cx="-4" cy="-12" r="1.6" fill="#fff"/><circle cx="4" cy="-11" r="1.3" fill="#fff"/></g>`;
-    }).join('');
-    body = `<path d="${under}" fill="url(#rk${id})"/>${dots}${waterfall(140, 60, 10)}${scallops}<ellipse cx="100" cy="36" rx="88" ry="12" fill="${top}"/>${trees}`;
-  }
-  return `<svg viewBox="0 0 200 130" xmlns="http://www.w3.org/2000/svg" overflow="visible"><defs>${defs}</defs>${body}${extras}</svg>`;
-}
-
-const ISLE_DECOR = {
-  '🎈': '<g transform="translate(140 0)"><line x1="0" y1="34" x2="4" y2="6" stroke="#888"/><circle cx="4" cy="0" r="9" fill="#ff8fb0"/><circle cx="-8" cy="6" r="7" fill="#9fd4ff"/><line x1="0" y1="34" x2="-8" y2="12" stroke="#888"/></g>',
-  '🪁': '<g transform="translate(150 -30)"><path d="M0 0 L12 14 L0 30 L-12 14 Z" fill="#ff9f5a"/><path d="M0 30 q-14 20 -40 64" stroke="#b07d22" fill="none"/></g>',
-  '🐋': '<g transform="translate(70 18)"><ellipse cx="30" cy="8" rx="32" ry="13" fill="#6f8fd6"/><path d="M58 6 L74 -6 L70 10 Z" fill="#6f8fd6"/><circle cx="12" cy="6" r="2" fill="#223"/></g>',
-  '🏮': '<g transform="translate(96 -40)"><rect x="-6" y="0" width="12" height="74" fill="#fff4dc"/><rect x="-9" y="-10" width="18" height="12" fill="#f5c542"/><circle cx="0" cy="-4" r="16" fill="#fff3b0" opacity=".45"/></g>',
-};
-const HOUSE = '<g transform="translate(86 10)"><rect x="0" y="0" width="28" height="22" fill="#fff6e6"/><path d="M-4 2 L14 -14 L32 2 Z" fill="#f08fb5"/><rect x="11" y="10" width="7" height="12" fill="#b07d22"/></g>';
-
-function buildWorld() {
-  world.innerHTML = '';
-  const add = (cls, left, bottom, svg, delay = 0, label = '') => {
-    const e = el(cls, world);
-    e.style.left = left;
-    e.style.bottom = bottom;
-    const bob = el('isle-bob', e);
-    bob.style.animationDelay = `${delay}s`;
-    bob.innerHTML = label + svg;
-    return e;
+function bakeTheme() {
+  setPaintDpr(dpr);
+  queue.length = 0;
+  const T = theme;
+  assets = {
+    celestial: paintCelestial(T),
+    stars: paintStars(Math.max(W, 420), Math.max(H, 900)),
+    rays: paintRays(T, Math.max(W, 420), Math.max(H, 900)),
+    feature: paintFeature(T),
+    particles: T.particles.map((p) => paintParticle(p.kind, p.color)),
+    burst: paintParticle('mote', T.glow),
+    birds: [paintBird(T.creatures.flock, 0), paintBird(T.creatures.flock, 1)],
+    farA: lazy(() => paintFarStrip(T, { seed: 3, width: 900, height: 240, distance: 0.75 })),
+    farB: lazy(() => paintFarStrip(T, { seed: 8, width: 1100, height: 280, distance: 0.45, dark: true })),
+    giant: T.creatures.giant && T.feature !== 'whale' ? lazy(() => paintGiant(T, 0.8)) : null,
+    clouds: [0, 1, 2].map((depth) => Array.from({ length: 3 }, (_, i) =>
+      lazy(() => paintCloud(T, { seed: 100 + depth * 10 + i, width: [190, 290, 420][depth] * (0.85 + (i % 2) * 0.3), distance: [0.55, 0.22, 0][depth] })))),
+    wisps: [lazy(() => paintWisp(T, 4)), lazy(() => paintWisp(T, 9))],
   };
-  add('isle home', '50%', 'calc(40vh - 215px)', islandSVG(3, 'meadows', HOUSE));
+}
+
+function placeScene() {
+  const T = theme;
+  const r = rng(4242);
+  const S = { landmarks: [], mid: [], clouds: [[], [], []], near: [] };
+  // landmark islands at the same altitudes and sides as the original level (gameplay landmarks unchanged)
+  const special = { '🎈': 'balloon', '🪁': 'kite', '🐋': 'whale', '🏮': 'lighthouse' };
+  S.home = lazy(() => paintIsland(T, { seed: 3, width: 250, home: true }));
   LANDMARKS.forEach((lm, i) => {
-    const e = add('isle', i % 2 ? '76%' : '24%', `calc(40vh + ${lm.at * PX_PER_POINT + 30}px)`,
-      islandSVG(i + 7, layerFor(lm.at).id, ISLE_DECOR[lm.icon] || ''), -i * 1.3,
-      `<span class="isle-label">${lm.icon} ${lm.name}</span>`);
-    e.dataset.at = lm.at;
+    S.landmarks.push({
+      at: lm.at, side: i % 2 ? 0.76 : 0.24, bob: i * 1.3,
+      job: lazy(() => paintIsland(T, { seed: 17 + i * 7, width: 150 + ((i * 37) % 70), decor: T.details, landmark: special[lm.icon] || null })),
+    });
   });
+  // smaller, hazier islands in the middle distance, spread over the whole climb
+  for (let i = 0; i < 8; i++) {
+    const w = 64 + r() * 56, dist = 0.5 + r() * 0.12;
+    S.mid.push({ at: -40 + i * 105 + r() * 40, x: r(), drift: 1.5 + r() * 2.5,
+      job: lazy(() => paintIsland(T, { seed: 300 + i * 11, width: w, decor: T.details, distance: dist })) });
+  }
+  // clouds per depth, placed in world space so you climb past them
+  // density is tuned per screen: each depth shows about 2-3 clouds at a time
+  const counts = [5, 8];
+  const spans = [1250, 950];
+  for (let d = 0; d < 2; d++) {
+    for (let i = 0; i < counts[d]; i++) {
+      S.clouds[d].push({ at: -120 + (i / counts[d]) * spans[d] + r() * 50, x: r(), v: [3, 6][d] * (0.7 + r() * 0.6), k: i % 3 });
+    }
+  }
+  // foreground clouds hug the screen edges, so the middle (where you read and play) stays calm
+  for (let i = 0; i < 7; i++) S.near.push({ at: i * 120 + 40 + r() * 40, left: i % 2 === 0, k: i % 3 });
+  scene = S;
+  particles.length = 0;
+  T.particles.forEach((p, pi) => {
+    for (let i = 0; i < (quality >= 2 ? Math.ceil(p.count / 2) : p.count); i++) particles.push(newParticle(p.kind, pi, true));
+  });
+  flock = { x: -999, y: 0, next: 4 + Math.random() * 6, n: 6, phase: 0 };
+  giant = { x: -999, y: 0, next: 8 + Math.random() * 10 };
 }
 
-// ---------- birds (an occasional small flock crossing the sky; one compositor animation per crossing) ----------
-let birdTimer = 0;
-function makeBirds(color) {
-  const b = el('birds');
-  const r = rand(Date.now() & 0xffff);
-  b.innerHTML = `<svg width="90" height="40" viewBox="0 0 90 40" xmlns="http://www.w3.org/2000/svg">${Array.from({ length: 4 }, (_, i) => {
-    const x = 8 + i * 20 + r() * 6, y = 10 + (i % 2) * 12 + r() * 5;
-    return `<path class="wing" style="animation-delay:${(-r()).toFixed(2)}s" d="M${f1(x - 6)} ${f1(y - 2)} Q${f1(x - 3)} ${f1(y - 5)} ${f1(x)} ${f1(y)} Q${f1(x + 3)} ${f1(y - 5)} ${f1(x + 6)} ${f1(y - 2)}" stroke="${color}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
-  }).join('')}</svg>`;
-  const fly = () => {
-    clearTimeout(birdTimer);
-    if (!b.isConnected) return;
-    if (!reduceMotion.matches && !document.hidden) {
-      const y = Math.round(innerHeight * (0.1 + Math.random() * 0.25));
-      const dist = innerWidth + 220;
-      b.animate([
-        { transform: `translate3d(${innerWidth + 40}px, ${y}px, 0)`, opacity: 1 },
-        { transform: `translate3d(${innerWidth / 2}px, ${y - 14}px, 0)`, opacity: 1, offset: 0.5 },
-        { transform: `translate3d(-180px, ${y + 6}px, 0)`, opacity: 1 },
-      ], { duration: (dist / 34) * 1000, easing: `steps(${Math.round(dist)})` });
-    }
-    birdTimer = setTimeout(fly, 20000 + Math.random() * 20000);
+function newParticle(kind, si, anywhere) {
+  return {
+    kind, si,
+    x: Math.random() * W, y: anywhere ? Math.random() * H : (kind === 'leaf' || kind === 'ash' ? -10 : H + 10),
+    vx: (Math.random() - 0.3) * 10, vy: { mote: -6, leaf: 22, spore: -5, ember: -18, ash: 12 }[kind] * (0.6 + Math.random() * 0.8),
+    a: 0.5 + Math.random() * 0.5, ph: Math.random() * 6.28, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 2,
   };
-  birdTimer = setTimeout(fly, 3000 + Math.random() * 6000);
-  return b;
 }
 
-// ---------- lightning (storm only; subtle, optional) ----------
-function scheduleLightning() {
-  clearTimeout(lightningTimer);
-  const cfg = theme.lightning;
-  const flash = sky.querySelector('.lightning');
-  if (!cfg || !flash || !lightningOn || reduceMotion.matches) return;
-  lightningTimer = setTimeout(() => {
-    if (!document.hidden) {
-      flash.style.setProperty('--lx', `${15 + Math.random() * 70}%`);
-      const m = cfg.maxOpacity;
-      flash.animate([{ opacity: 0 }, { opacity: m, offset: 0.12 }, { opacity: m * 0.3, offset: 0.3 }, { opacity: m * 0.75, offset: 0.42 }, { opacity: 0 }],
-        { duration: 900, easing: 'ease-out' });
-    }
-    scheduleLightning();
-  }, (cfg.minGap + Math.random() * (cfg.maxGap - cfg.minGap)) * 1000);
-}
-export function setLightning(on) {
-  lightningOn = on;
-  try { localStorage.setItem('skydrift.lightning', on ? 'on' : 'off'); } catch {}
-  scheduleLightning();
-}
-export function lightningEnabled() { return lightningOn; }
-
-// ---------- theme ----------
+// ---------- theme + altitude ----------
 export function applyTheme(id) {
   themeId = resolveThemeId(id);
   theme = THEMES[themeId];
   document.body.dataset.theme = themeId;
-  layers.length = 0;
-  clearTimeout(lightningTimer);
-  const glider = document.getElementById('glider-wrap');
-  sky.innerHTML = '';
-
-  el('sky-grad');
-  if (theme.celestial.kind !== 'none') el(`celestial c-${theme.celestial.kind}`);
-  const stars = el('stars');
-  // two star fields twinkling out of step = cheap twinkle
-  [0, 1].forEach((v) => {
-    const L = tiledLayer('stars-field', particleTile('stars', '#fff', 7, v), { parallax: 0.06, twinkle: v ? 4.5 : 6 });
-    stars.appendChild(L.wrap);
-  });
-  if (theme.aurora) {
-    const a = el('aurora');
-    a.style.setProperty('--a1', theme.aurora.colors[0]);
-    a.style.setProperty('--a2', theme.aurora.colors[1]);
-    a.style.setProperty('--a3', theme.aurora.colors[2]);
-    for (let i = 0; i < 3; i++) el('', a, 'i');
-  }
-  const c = theme.clouds;
-  tiledLayer('clouds far', cloudTile(c.style, 0, { ...c, ...c.layers.far }, 11), { vx: c.layers.far.speed, parallax: 0.25, opacity: c.layers.far.opacity });
-  if (theme.debris.kind !== 'none') {
-    const d = theme.debris;
-    tiledLayer('debris', particleTile(d.kind, d.color, 23, 0), { vx: d.speed, vy: d.kind === 'bubbles' ? -d.speed : d.speed * 0.3, parallax: 0.45, opacity: d.opacity });
-  }
-  world = el('world');
-  world.id = 'world';
-  tiledLayer('clouds mid', cloudTile(c.style, 1, { ...c, ...c.layers.mid }, 29), { vx: c.layers.mid.speed, parallax: 0.6, opacity: c.layers.mid.opacity });
-  if (theme.particles.kind !== 'none') {
-    const p = theme.particles;
-    const motion = { motes: [p.speed * 0.4, -p.speed], glints: [p.speed, 0], wind: [p.speed, 0], sparkles: [p.speed * 0.3, p.speed], fireflies: [p.speed * 0.6, -p.speed * 0.4] }[p.kind] || [0, 0];
-    const tw = p.kind === 'wind' ? 0 : 3.5;
-    tiledLayer('particles', particleTile(p.kind, p.color, 41, 0), { vx: motion[0], vy: motion[1], parallax: 0.9, opacity: p.opacity, twinkle: tw });
-    if (tw) tiledLayer('particles', particleTile(p.kind, p.color, 41, 1), { vx: motion[0] * 0.8, vy: motion[1] * 0.8, parallax: 0.9, opacity: p.opacity, twinkle: tw * 1.3 });
-  }
-  if (glider) sky.appendChild(glider);
-  tiledLayer('clouds near', cloudTile(c.style, 2, { ...c, ...c.layers.near }, 47), { vx: c.layers.near.speed, parallax: 1.4, opacity: c.layers.near.opacity, z: 3 });
-  if (theme.lightning) {
-    const f = el('lightning');
-    f.innerHTML = '<svg viewBox="0 0 40 120" class="bolt"><path d="M22 0 L12 50 L22 52 L8 120 L30 44 L19 42 L28 0 Z" fill="#efeaff"/></svg>';
-  }
-  clearTimeout(birdTimer);
-  birds = theme.birds ? makeBirds(theme.birds.color) : null;
-
-  root.style.setProperty('--spark', theme.spark);
   root.style.setProperty('--g-dark', theme.glider.outlineDark);
   root.style.setProperty('--g-light', theme.glider.outlineLight);
-  root.style.setProperty('--isle-shadow', theme.islands.shadow);
-  buildWorld();
-  setAltitude(current, { instant: true });
-  try { lightningOn = localStorage.getItem('skydrift.lightning') !== 'off'; } catch {}
-  if (theme.lightning && !theme.lightning.enabled) lightningOn = false;
-  scheduleLightning();
+  root.style.setProperty('--g-rim', theme.light.rim);
+  root.style.setProperty('--g-shadow-x', `${-theme.light.side * 6}px`);
+  root.style.setProperty('--spark', theme.glow);
+  root.style.setProperty('--vignette', hexA(theme.vignette, 0.6));
+  if (W) { bakeTheme(); placeScene(); pump(); }
+  backdropDirty = true;
+  updateReadability();
+  dirty = true;
   document.dispatchEvent(new CustomEvent('sky-theme', { detail: { id: themeId } }));
 }
-
 export function getThemeId() { return themeId; }
 
-// ---------- altitude ----------
-export function setAltitude(points, { instant = false } = {}) {
-  current = points;
+function updateReadability() {
   if (!theme) return;
-  if (instant) document.body.classList.add('no-sky-anim');
-  root.style.setProperty('--world-y', `${points * PX_PER_POINT}px`);
-  const read = readability(theme, points);
-  const [top, mid, bottom] = read.colors;
-  root.style.setProperty('--sky-top', top);
-  root.style.setProperty('--sky-mid', mid);
-  root.style.setProperty('--sky-bottom', bottom);
-  root.style.setProperty('--star-alpha', at(theme.stars, points).toFixed(2));
-  root.style.setProperty('--aurora-alpha', theme.aurora ? at(theme.aurora.alpha, points).toFixed(2) : '0');
-  root.style.setProperty('--celestial-alpha', theme.celestial.alpha ? at(theme.celestial.alpha, points).toFixed(2) : '0');
-  root.style.setProperty('--celestial-y', `${(points * 0.18).toFixed(0)}px`);
-  root.style.setProperty('--sky-halo', read.halo + 'b3');
-  root.style.setProperty('--glass-a', read.glass);
+  const read = readability(theme, target);
   night = read.night;
   document.body.classList.toggle('night', night);
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', top);
-  for (const L of layers) if (instant || reduceMotion.matches) { L.y = points * PX_PER_POINT * L.parallax; placeLayer(L); }
-  wake();
-  world?.querySelectorAll('.isle[data-at]').forEach((e) => e.classList.toggle('passed', points >= +e.dataset.at));
-  if (instant) requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('no-sky-anim')));
+  root.style.setProperty('--sky-halo', read.halo + 'b3');
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', read.colors[0]);
 }
 
-export function getAltitude() { return current; }
+export function setAltitude(points, { instant = false } = {}) {
+  target = points;
+  if (instant || reduceMotion.matches) cam = points;
+  backdropDirty = true;
+  updateReadability();
+  dirty = true;
+}
+export function getAltitude() { return target; }
 export function isNight() { return night; }
 
-// ---------- the climb loop: runs only while layers are easing to a new altitude, then sleeps ----------
-let running = false;
-let last = 0;
-function wake() {
-  if (running) return;
-  running = true;
-  last = 0;
-  requestAnimationFrame(frame);
-}
-function frame(t) {
-  const dt = Math.min(0.1, (t - (last || t)) / 1000);
-  last = t;
-  const ease = 1 - Math.exp(-dt * 2.6);
-  let moving = false;
-  for (const L of layers) {
-    const target = current * PX_PER_POINT * L.parallax;
-    const d = target - L.y;
-    if (Math.abs(d) < 0.3) { if (d) { L.y = target; placeLayer(L); } continue; }
-    L.y += d * ease;
-    placeLayer(L);
-    moving = true;
+// ---------- drawing ----------
+let backdrop = null, bdx = null, bdCam = -1, bdT = -1, backdropDirty = true;
+function paintBackdrop(t) {
+  const T = theme, x = bdx;
+  const camPx = cam * PX;
+  const still = reduceMotion.matches;
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const [zen, mid, hor] = at(T.sky, cam);
+  const g = x.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, zen);
+  g.addColorStop(0.55, mid);
+  g.addColorStop(1, hor);
+  x.fillStyle = g;
+  x.fillRect(0, 0, W, H);
+  const starA = at(T.stars, cam);
+  if (starA > 0.01) blit(x, assets.stars, 0, ((camPx * 0.04) % 100) - 50, starA);
+  const c = T.celestial;
+  const cA = at(c.alpha, cam);
+  const cs = assets.celestial;
+  blit(x, cs, c.x * W - cs.w / 2, c.y * H - cs.h / 2 + camPx * c.sink, cA);
+  x.globalCompositeOperation = 'lighter';
+  const breathe = still ? 1 : 0.8 + 0.2 * Math.sin(t * 0.35);
+  blit(x, assets.rays, 0, camPx * c.sink, T.rays.alpha * breathe * cA);
+  x.globalCompositeOperation = 'source-over';
+  if (assets.feature) {
+    const F = assets.feature;
+    const fxp = T.feature === 'whale' ? W - ((t * 4) % (W + F.w + 200)) : T.feature === 'spires' ? -W * 0.08 : W * 0.02;
+    const fyp = (T.feature === 'spires' ? H * 0.42 : H * 0.22) + camPx * 0.08;
+    blit(x, F, fxp, fyp, 0.9);
   }
-  if (moving) requestAnimationFrame(frame);
-  else running = false;
+  // atmospheric haze: thickest low down, where the distance is greatest
+  const hz = x.createLinearGradient(0, H * 0.35, 0, H);
+  hz.addColorStop(0, hexA(T.haze, 0));
+  hz.addColorStop(1, hexA(T.haze, 0.38));
+  x.fillStyle = hz;
+  x.fillRect(0, H * 0.35, W, H * 0.65);
+}
+
+function drawBack(t, dt) {
+  const T = theme, x = bx;
+  const camPx = cam * PX;
+  const still = reduceMotion.matches;
+  const swayX = still ? 0 : Math.sin(t * 0.21) * 5, swayY = still ? 0 : Math.sin(t * 0.17) * 3;
+  // (the cached backdrop layers sit so far away that camera sway would move them by under half a pixel)
+  const sx = (p) => swayX * p, sy = (p) => swayY * p;
+
+  // sky, stars, light source, shafts and the storied far feature: cached, repainted only when the camera
+  // moves or ~7 times a second (for the slow breathing of the light), then copied in one draw
+  if (backdropDirty || Math.abs(cam - bdCam) > 0.3 || t - bdT > 0.15) paintBackdrop(t), bdCam = cam, bdT = t, backdropDirty = false;
+  x.drawImage(backdrop, 0, 0, W, H);
+
+  // a giant creature crossing very far away now and then
+  if (assets.giant && !still) {
+    const G = ensure(assets.giant);
+    if (giant.x < -900) { giant.next -= dt; if (giant.next <= 0) { giant.x = W + 40; giant.y = H * (0.18 + Math.random() * 0.2); } }
+    else {
+      giant.x -= 9 * dt;
+      blit(x, G, giant.x, giant.y + camPx * 0.1, 0.55);
+      if (giant.x < -G.w - 20) { giant.x = -999; giant.next = 45 + Math.random() * 40; }
+    }
+  }
+
+  // far island strips, tiled and drifting
+  const strip = (job, p, base, speed) => {
+    const S = ensure(job);
+    const y = base + camPx * p + sy(p);
+    if (y > H) return;
+    const off = still ? 0 : -((t * speed) % S.w);
+    for (let xx = off; xx < W; xx += S.w) blit(x, S, xx + sx(p), y);
+  };
+  strip(assets.farA, 0.15, H * 0.5, 3);
+  strip(assets.farB, 0.25, H * 0.66, 5);
+
+  // far clouds, mid islands, mid clouds
+  const clouds = (d, p) => {
+    for (const cl of scene.clouds[d]) {
+      const y = H * 0.6 - (cl.at - cam) * PX * p + sy(p);
+      if (y < -60 || y > H + 300) continue;
+      const S = ensure(assets.clouds[d][cl.k]);
+      const span = W + S.w;
+      const xx = ((((cl.x * span - (still ? 0 : t * cl.v)) % span) + span) % span) - S.w;
+      blit(x, S, xx + sx(p), y - S.h);
+    }
+  };
+  clouds(0, 0.3);
+  for (const m of scene.mid) {
+    const y = H * 0.6 - (m.at - cam) * PX * 0.55 + sy(0.55);
+    if (y < -200 || y > H + 200) continue;
+    const I = ensure(m.job);
+    const span = W + I.S.w;
+    const xx = ((((m.x * span - (still ? 0 : t * m.drift)) % span) + span) % span) - I.S.w;
+    blit(x, I.S, xx + sx(0.55), y - I.topY);
+  }
+  clouds(1, 0.65);
+
+  // distant flock
+  if (!still) {
+    const f = flock;
+    if (f.x < -900) { f.next -= dt; if (f.next <= 0) { f.x = W + 30; f.y = H * (0.12 + Math.random() * 0.22); f.phase = 0; } }
+    else {
+      f.x -= 26 * dt; f.phase += dt;
+      for (let i = 0; i < f.n; i++) {
+        const fr = Math.floor(f.phase * 5 + i) % 2;
+        blit(x, assets.birds[fr], f.x + i * 13 + (i % 2) * 6, f.y + (i % 3) * 7 + Math.sin(f.phase + i) * 2, 0.85);
+      }
+      if (f.x < -120) { f.x = -999; f.next = 20 + Math.random() * 25; }
+    }
+  }
+
+  // landmark islands (parallax 1, same altitudes and sides as the original level) and the home island
+  const bob = (k) => (still ? 0 : Math.sin(t * 0.55 + k) * 5);
+  const home = ensure(scene.home);
+  blit(x, home.S, W * 0.5 - home.cx + sx(1), H * 0.6 + 46 - home.topY + camPx + bob(0) + sy(1));
+  for (const L of scene.landmarks) {
+    const surfaceY = H * 0.6 - 30 - (L.at - cam) * PX - 50;
+    if (surfaceY < -260 || surfaceY > H + 160) continue;
+    const I = ensure(L.job);
+    blit(x, I.S, W * L.side - I.cx + sx(1), surfaceY - I.topY + bob(L.bob) + sy(1));
+  }
+
+  // particles: pollen, spores, leaves, embers, ash; plus answer bursts
+  if (!still) {
+    for (const p of particles) {
+      p.ph += dt;
+      p.x += (p.vx + (p.kind === 'leaf' ? Math.sin(p.ph * 1.6) * 18 : Math.sin(p.ph) * 4)) * dt;
+      p.y += p.vy * dt;
+      p.rot += p.vr * dt;
+      if (p.y < -20 || p.y > H + 20 || p.x < -20 || p.x > W + 20) Object.assign(p, newParticle(p.kind, p.si, false));
+      const S = assets.particles[p.si];
+      const a = p.a * (p.kind === 'spore' || p.kind === 'mote' ? 0.55 + 0.45 * Math.sin(p.ph * 1.3) : 1);
+      if (p.kind === 'leaf') {
+        x.save(); x.translate(snap(p.x), snap(p.y)); x.rotate(p.rot); x.globalAlpha = a;
+        x.drawImage(S.c, -8, -8, 16, 16); x.restore();
+      } else blit(x, S, p.x - 8, p.y - 8, a);
+    }
+  }
+  for (let i = bursts.length - 1; i >= 0; i--) {
+    const b = bursts[i];
+    b.life -= dt;
+    if (b.life <= 0) { bursts.splice(i, 1); continue; }
+    b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.96; b.vy = b.vy * 0.96 + 14 * dt;
+    blit(x, assets.burst, b.x - 8, b.y - 8, Math.min(1, b.life * 1.6));
+  }
+}
+
+function drawFront(t) {
+  const x = fx;
+  x.clearRect(0, 0, W, H);
+  const still = reduceMotion.matches;
+  // foreground clouds at the screen edges only, moving faster than everything behind them
+  for (const n of scene.near) {
+    const y = H * 0.75 - (n.at - cam) * PX * 1.35;
+    if (y < -200 || y > H + 300) continue;
+    const S = ensure(assets.clouds[2][n.k]);
+    const bobX = still ? 0 : Math.sin(t * 0.12 + n.at) * 14;
+    blit(x, S, (n.left ? -S.w * 0.6 : W - S.w * 0.4) + bobX, y - S.h, 0.95);
+  }
+  // wind-blown mist low on the screen
+  if (!still) {
+    for (let i = 0; i < 2; i++) {
+      const S = ensure(assets.wisps[i]);
+      const span = W + S.w;
+      const xx = ((((t * (14 + i * 8) + i * 300) % span) + span) % span) - S.w;
+      blit(x, S, W - xx - S.w, H * (0.72 + i * 0.12));
+    }
+  }
+}
+
+// Pacing: 60 fps while the sky is climbing or a burst is flying, 30 fps otherwise (everything else moves
+// slowly, so the difference can't be seen). If frames still run long, step the canvas resolution down.
+let quality = 0; // 0: up to 2x, 1: 1.5x, 2: 1.25x and half the particles
+let skip = false;
+let slowFor = 0;
+let lastDraw = 0;
+// read-only numbers for checking performance from the console: skyStats()
+const stats = { draws: 0, drawMs: 0 };
+export function skyStats() { return { ...stats, quality, dpr, avgDrawMs: +(stats.drawMs / Math.max(1, stats.draws)).toFixed(2) }; }
+function frame(now) {
+  requestAnimationFrame(frame);
+  const t = (now - t0) / 1000;
+  const dt = Math.min(0.1, lastT ? t - lastT : 0.016);
+  lastT = t;
+  const still = reduceMotion.matches;
+  if (!still) {
+    const d = target - cam;
+    cam = Math.abs(d) < 0.05 ? target : cam + d * (1 - Math.exp(-dt * 2.4));
+  }
+  const busy = cam !== target || bursts.length > 0;
+  if (still ? !dirty : !busy && (skip = !skip)) return;
+  const gap = t - lastDraw;
+  lastDraw = t;
+  // adaptive quality: sustained frames much slower than the pace we asked for
+  if (!still && gap < 0.5) {
+    slowFor = gap > (busy ? 1 / 60 : 1 / 30) * 1.6 ? slowFor + gap : Math.max(0, slowFor - gap * 0.5);
+    if (slowFor > 2 && quality < 2) { quality += 1; slowFor = 0; W = 0; resize(); }
+  }
+  bx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  fx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const d0 = performance.now();
+  drawBack(t, busy || still ? dt : gap);
+  drawFront(t);
+  stats.draws += 1;
+  stats.drawMs += performance.now() - d0;
+  dirty = false;
+}
+
+function resize() {
+  const ndpr = Math.min([2, 1.5, 1.25][quality], window.devicePixelRatio || 1);
+  const nW = window.innerWidth, nH = window.innerHeight;
+  if (nW === W && nH === H && ndpr === dpr) return;
+  const rebake = ndpr !== dpr || !assets || Math.abs(nW - W) > 80 || Math.abs(nH - H) > 160;
+  W = nW; H = nH; dpr = ndpr;
+  for (const c of [back, front, backdrop]) {
+    c.width = Math.round(W * dpr);
+    c.height = Math.round(H * dpr);
+    c.style.width = `${W}px`;
+    c.style.height = `${H}px`;
+  }
+  if (rebake && theme) { bakeTheme(); placeScene(); pump(); }
+  backdropDirty = true;
+  dirty = true;
 }
 
 export function initSky(id) {
-  const wrap = document.getElementById('glider-wrap');
-  if (wrap) wrap.remove();
-  const g = document.createElement('div');
-  g.id = 'glider-wrap';
-  g.innerHTML = '<div id="glider"></div><div id="trail"></div>';
-  sky.appendChild(g);
+  const sky = document.getElementById('sky');
+  sky.innerHTML = '';
+  back = document.createElement('canvas');
+  back.className = 'sky-canvas';
+  front = document.createElement('canvas');
+  front.className = 'sky-canvas front';
+  const wrap = document.createElement('div');
+  wrap.id = 'glider-wrap';
+  wrap.innerHTML = '<div id="glider"></div><div id="trail"></div>';
+  const vignette = document.createElement('div');
+  vignette.className = 'sky-vignette';
+  sky.append(back, wrap, front, vignette);
+  backdrop = document.createElement('canvas');
+  bdx = backdrop.getContext('2d', { alpha: false });
+  bx = back.getContext('2d', { alpha: false });
+  fx = front.getContext('2d');
   applyTheme(id);
-  reduceMotion.addEventListener?.('change', scheduleLightning);
+  resize();
+  window.addEventListener('resize', resize);
+  reduceMotion.addEventListener?.('change', () => { dirty = true; });
+  // parchment grain for the UI panels, painted once from the same noise as the islands
+  try { root.style.setProperty('--paper', `url(${paperTexture()})`); } catch {}
+  requestAnimationFrame(frame);
 }
 
 // ---------- glider ----------
+// A soft burst of motes from the glider when an answer lands (bigger for rarer answers).
 export function sparkle(count = 14) {
-  const trail = document.getElementById('trail');
-  for (let i = 0; i < count; i++) {
-    const s = document.createElement('i');
-    s.className = 'spark';
-    s.style.setProperty('--dx', `${-40 - Math.random() * 90}px`);
-    s.style.setProperty('--dy', `${30 + Math.random() * 80}px`);
-    s.style.animationDelay = `${i * 40}ms`;
-    trail.appendChild(s);
-    setTimeout(() => s.remove(), 1400 + i * 40);
-  }
   const g = document.getElementById('glider');
+  const rect = g?.getBoundingClientRect();
+  if (rect && !reduceMotion.matches) {
+    const ox = rect.left + rect.width * 0.4, oy = rect.top + rect.height * 0.55;
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2, v = 30 + Math.random() * 70;
+      bursts.push({ x: ox, y: oy, vx: Math.cos(a) * v - 30, vy: Math.sin(a) * v, life: 0.8 + Math.random() * 0.7 });
+    }
+  }
+  if (!g) return;
   g.classList.remove('climb');
   void g.offsetWidth;
   g.classList.add('climb');

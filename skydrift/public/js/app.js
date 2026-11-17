@@ -140,12 +140,30 @@ async function startDaily() {
     sfx.start();
     show('play');
     setAltitude(sumPoints(results));
+    // A short title card on a fresh flight. The 25-second clock only starts once the first prompt appears.
+    if (state.idx === 0 && !localStorage.getItem(startedKey())) await showIntro(date);
+    if (!state) return;
     nextPrompt();
   } catch (e) {
     toast(`☁️ Couldn’t reach the sky server. ${esc(e.message)}`);
   } finally {
     $('btn-play').disabled = false;
   }
+}
+
+function showIntro(date) {
+  const card = $('intro-card');
+  $('intro-kicker').textContent = `Day #${dayNumber(date)}`;
+  $('intro-title').textContent = 'The Ascent';
+  card.hidden = false;
+  document.body.classList.add('intro');
+  card.style.animation = 'none'; void card.offsetWidth; card.style.animation = '';
+  const ms = matchMedia('(prefers-reduced-motion: reduce)').matches ? 900 : 2400;
+  return new Promise((resolve) => {
+    const done = () => { clearTimeout(timer); card.hidden = true; card.onclick = null; document.body.classList.remove('intro'); resolve(); };
+    const timer = setTimeout(done, ms);
+    card.onclick = done;
+  });
 }
 
 function renderDots() {
@@ -242,6 +260,8 @@ async function submitAnswer(e) {
     if (!res.valid) {
       sfx.invalid();
       shakeForm();
+      const pc = $('prompt-card');
+      pc.classList.remove('miss'); void pc.offsetWidth; pc.classList.add('miss');
       const hint = $('answer-hint');
       hint.className = 'answer-hint bad';
       hint.textContent = `The clouds don’t recognise “${text}”. Try another!`;

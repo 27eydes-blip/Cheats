@@ -7,7 +7,7 @@
 //   ?alt=350                          preview the sky at that altitude (0-700 points)
 //   T / Shift+T    next / previous theme (when not typing); P opens or closes the panel
 import { THEMES, THEME_ORDER, at } from '../themes.js';
-import { applyTheme, getThemeId, setAltitude, getAltitude, setLightning, lightningEnabled } from './sky.js';
+import { applyTheme, getThemeId, setAltitude, getAltitude } from './sky.js';
 
 const PICK_KEY = 'skydrift.themePreview';
 
@@ -31,7 +31,7 @@ function choose(id) {
 }
 
 function strip(theme) {
-  const stops = [0, 175, 350, 525, 700].map((a) => at(theme.sky, a)[1]);
+  const stops = [0, 175, 350, 525, 700].map((a) => at(theme.sky, a)[2]);
   return `linear-gradient(90deg, ${stops.join(', ')})`;
 }
 
@@ -42,15 +42,11 @@ function render() {
     const t = THEMES[id];
     return `<button class="tp-card ${id === cur ? 'on' : ''}" data-id="${id}" aria-pressed="${id === cur}">
       <span class="tp-strip" style="background:${strip(t)}"></span>
-      <span class="tp-name">${t.name}${id === 'classic' ? ' <em>current</em>' : ''}</span>
+      <span class="tp-name">${t.name}</span>
       <span class="tp-mood">${t.mood}</span>
       <span class="tp-sw">${t.swatches.map((c) => `<i style="background:${c}" title="${c}"></i>`).join('')}<small>cost: ${t.cost}</small></span>
     </button>`;
   }).join('');
-  const lt = panel.querySelector('#tp-lightning');
-  lt.disabled = !THEMES[cur].lightning;
-  lt.checked = !!THEMES[cur].lightning && lightningEnabled();
-  panel.querySelector('.tp-lightning').classList.toggle('off', lt.disabled);
 }
 
 function open() {
@@ -59,11 +55,10 @@ function open() {
   panel.className = 'theme-picker';
   panel.setAttribute('aria-label', 'Theme picker (temporary)');
   panel.innerHTML = `
-    <header><b>Sky themes</b><small>temporary picker · T / Shift+T to cycle</small><button class="tp-x" aria-label="Close theme picker">✕</button></header>
+    <header><b>Sky variations</b><small>temporary picker · T / Shift+T to cycle</small><button class="tp-x" aria-label="Close theme picker">✕</button></header>
     <div class="tp-list"></div>
     <label class="tp-alt" for="tp-alt">Preview altitude <output id="tp-alt-out">live</output>
-      <input id="tp-alt" type="range" min="0" max="700" step="5" value="${Math.round(getAltitude())}"></label>
-    <label class="tp-lightning" for="tp-lightning"><input id="tp-lightning" type="checkbox"> Distant lightning (Storm Drift)</label>`;
+      <input id="tp-alt" type="range" min="0" max="700" step="5" value="${Math.round(getAltitude())}"></label>`;
   document.body.appendChild(panel);
   panel.querySelector('.tp-list').onclick = (e) => { const b = e.target.closest('[data-id]'); if (b) choose(b.dataset.id); };
   panel.querySelector('.tp-x').onclick = () => { panel.hidden = true; endPreview(); };
@@ -74,7 +69,6 @@ function open() {
     panel.querySelector('#tp-alt-out').textContent = `${previewAlt} pts`;
     setAltitude(previewAlt);
   };
-  panel.querySelector('#tp-lightning').onchange = (e) => setLightning(e.target.checked);
   render();
 }
 

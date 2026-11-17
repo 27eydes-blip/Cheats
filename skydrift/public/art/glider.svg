@@ -1,27 +1,53 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 140">
   <defs>
-    <linearGradient id="wing" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#f3dcae"/></linearGradient>
-    <linearGradient id="wingstripe" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f08fb5"/><stop offset="1" stop-color="#b48cff"/></linearGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff1b8"/><stop offset="1" stop-color="#d29c34"/></linearGradient>
+    <linearGradient id="canvasTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf1d6"/><stop offset=".6" stop-color="#e8d4a6"/><stop offset="1" stop-color="#b89a68"/></linearGradient>
+    <linearGradient id="canvasBack" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9c08e"/><stop offset="1" stop-color="#9a7c50"/></linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d8a064"/><stop offset=".5" stop-color="#9a6234"/><stop offset="1" stop-color="#5c3418"/></linearGradient>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0c0"/><stop offset=".45" stop-color="#d9a441"/><stop offset="1" stop-color="#7a5218"/></linearGradient>
+    <linearGradient id="scarf" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7a1a1e"/><stop offset="1" stop-color="#d0463a"/></linearGradient>
+    <linearGradient id="leather" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a5a32"/><stop offset="1" stop-color="#4a2c16"/></linearGradient>
+    <radialGradient id="lens" cx=".35" cy=".35" r=".7"><stop offset="0" stop-color="#e4f4ff"/><stop offset=".5" stop-color="#7aa8c8"/><stop offset="1" stop-color="#2c4a66"/></radialGradient>
+    <linearGradient id="tailFin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c2453a"/><stop offset="1" stop-color="#6a1e22"/></linearGradient>
   </defs>
-  <!-- scarf -->
-  <path class="scarf" d="M88 70 C70 66 50 78 26 70 C40 80 60 82 86 78 Z" fill="#ff7f9f"/>
-  <path class="scarf" d="M86 74 C66 78 48 92 30 88 C46 96 66 92 88 80 Z" fill="#ff9fb8" opacity=".9"/>
-  <!-- back wing -->
-  <path d="M104 64 L150 30 L170 34 L124 70 Z" fill="#e9d2a2"/>
-  <!-- body -->
-  <path d="M60 82 Q110 70 182 74 Q196 76 198 82 Q186 92 120 94 Q78 96 60 82 Z" fill="url(#wing)" stroke="#c99a4a" stroke-width="2"/>
-  <path d="M170 76 Q190 77 197 82" stroke="url(#gold)" stroke-width="4" fill="none" stroke-linecap="round"/>
-  <!-- tail -->
-  <path d="M64 82 L44 58 L56 58 L78 80 Z" fill="url(#wingstripe)"/>
-  <!-- pilot -->
-  <circle cx="112" cy="66" r="14" fill="#ffd9b8"/>
-  <path d="M98 64 Q100 48 114 48 Q128 48 128 62 Q120 56 112 57 Q104 58 98 64 Z" fill="#7a4a2a"/>
-  <rect x="103" y="58" width="22" height="8" rx="4" fill="#3b4ba8"/>
-  <circle cx="108" cy="62" r="4.5" fill="#bfe6ff" stroke="url(#gold)" stroke-width="2"/>
-  <circle cx="120" cy="62" r="4.5" fill="#bfe6ff" stroke="url(#gold)" stroke-width="2"/>
-  <path d="M110 72 Q114 75 118 72" stroke="#c46a5a" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <!-- front wing -->
-  <path d="M96 84 L150 112 L176 110 L128 82 Z" fill="url(#wing)" stroke="#c99a4a" stroke-width="2"/>
-  <path d="M138 96 L162 110" stroke="url(#wingstripe)" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- scarf streaming behind -->
+  <path class="scarf" d="M92 70 C74 64 52 74 24 66 C38 78 60 82 90 78 Z" fill="url(#scarf)"/>
+  <path class="scarf" d="M90 75 C70 80 50 94 30 90 C46 98 68 94 92 81 Z" fill="#9a2a28"/>
+
+  <!-- far wing: canvas on a wooden spar, in shadow -->
+  <path d="M104 64 L148 28 L172 32 L126 70 Z" fill="url(#canvasBack)" stroke="#5c3418" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M116 58 L156 30 M128 66 L166 32" stroke="#7a5a34" stroke-width="1" opacity=".7"/>
+
+  <!-- fuselage: wooden hull with brass bands -->
+  <path d="M58 82 Q108 69 182 73 Q198 75 200 82 Q188 93 120 95 Q76 97 58 82 Z" fill="url(#wood)" stroke="#3a200e" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M66 82 Q110 74 180 77" stroke="#f0c48a" stroke-width="1.6" fill="none" opacity=".75"/>
+  <path d="M72 88 Q120 92 190 84" stroke="#3a200e" stroke-width="1" fill="none" opacity=".5"/>
+  <rect x="140" y="72" width="4" height="22" rx="1" fill="url(#brass)"/>
+  <rect x="96" y="74" width="4" height="22" rx="1" fill="url(#brass)"/>
+  <path d="M182 73 Q198 75 200 82 Q194 87 184 89 Q190 81 182 73 Z" fill="url(#brass)" stroke="#5a3a10" stroke-width="1"/>
+  <circle cx="148" cy="84" r="1.4" fill="#fff0c0"/><circle cx="160" cy="83" r="1.4" fill="#fff0c0"/><circle cx="172" cy="82" r="1.4" fill="#fff0c0"/>
+
+  <!-- tail fin -->
+  <path d="M62 82 L42 56 L56 56 L80 80 Z" fill="url(#tailFin)" stroke="#3a120e" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M52 60 L70 78" stroke="#f0a080" stroke-width="1" opacity=".6"/>
+
+  <!-- pilot: leather flying cap, brass goggles, a determined little face -->
+  <path d="M100 74 Q100 58 113 56 Q126 56 127 72 Z" fill="#3a200e" opacity=".35"/>
+  <circle cx="113" cy="65" r="13" fill="#f0c6a0"/>
+  <path d="M113 78 Q106 77 103 70" stroke="#c98a6a" stroke-width="2" fill="none" opacity=".6"/>
+  <path d="M99 64 Q100 49 113 48 Q127 48 128 62 Q120 55 112 56 Q104 57 99 64 Z" fill="url(#leather)" stroke="#2a160a" stroke-width="1"/>
+  <path d="M100 62 Q99 70 103 73" stroke="url(#leather)" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M103 60 Q114 57 126 60" stroke="#2a160a" stroke-width="2.4" fill="none"/>
+  <circle cx="108" cy="60.5" r="4.6" fill="url(#lens)" stroke="url(#brass)" stroke-width="2"/>
+  <circle cx="120" cy="60.5" r="4.6" fill="url(#lens)" stroke="url(#brass)" stroke-width="2"/>
+  <circle cx="106.6" cy="59" r="1.2" fill="#fff" opacity=".9"/><circle cx="118.6" cy="59" r="1.2" fill="#fff" opacity=".9"/>
+  <path d="M110 71 Q114 73.5 118 71" stroke="#8a3a2a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <circle cx="104" cy="68" r="2.2" fill="#e88a7a" opacity=".45"/>
+
+  <!-- near wing: stitched canvas, wooden ribs, a crimson tip stripe -->
+  <path d="M94 84 L148 114 L178 112 L128 82 Z" fill="url(#canvasTop)" stroke="#5c3418" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M108 86 L156 113 M120 84 L166 112 M134 83 L174 110" stroke="#9a6234" stroke-width="1.2" opacity=".8"/>
+  <path d="M100 86 L150 113" stroke="#fffaf0" stroke-width="1" stroke-dasharray="2 2" opacity=".8"/>
+  <path d="M160 112 L176 111 L170 105 Z" fill="#b8322e" stroke="#5a1410" stroke-width=".8"/>
+  <path d="M128 82 L178 112" stroke="url(#wood)" stroke-width="3" stroke-linecap="round"/>
 </svg>

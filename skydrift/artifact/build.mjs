@@ -19,6 +19,7 @@ const MODULES = [
   'public/js/audio.js',
   'public/js/collection.js',
   'public/themes.js',
+  'public/js/paint.js',
   'public/js/sky.js',
   'public/js/theme-picker.js',
   'artifact/local-api.js',
@@ -105,7 +106,7 @@ const out = `<title>Skydrift Isles</title>
 <meta name="description" content="Seven strange questions a day. Rare answers fly higher.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Spectral:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 ${css}
 </style>

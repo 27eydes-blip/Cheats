@@ -96,6 +96,40 @@ goes dark.
   It unlocks practice mode, 3 themed packs (`src/content/packs.js`), Past Skies replays, and removes ads.
 - **Glydrift promo** card after every daily result (`public/config.js` → `GLYDRIFT_URL`).
 
+## The sky level's look (variations)
+
+The sky behind every screen is painted on two `<canvas>` layers by `public/js/sky.js`, from procedurally painted
+sprites made by `public/js/paint.js`. There are no image files to supply: islands, clouds, ruins, moons and the
+ringed planet are all generated in code, painted once into offscreen canvases and reused every frame.
+
+**Three variations** live in `public/themes.js`. They share one art direction (mythic, painterly, one light source)
+and differ in palette, light, sky feature and island culture:
+
+| Variation | Light | Sky feature | Islands | Atmosphere |
+|---|---|---|---|---|
+| `golden` Golden Ruins | low sun, from the right | floating temple city with twin waterfalls | sandstone, marble ruins, arches, statues | pollen, falling leaves, a distant flock |
+| `twilight` Twilight Mythic | twin moons, from the right | a sky whale drifting far away | slate, rune stones, lanterns, shrines | glowing spores, a starry sky |
+| `ember` Ember Dusk | low red sun, from the right | a giant ringed planet, black spires | basalt, carved pillars, chains, braziers | embers and ash, winged drakes far off |
+
+**Switching:**
+- The one setting: `ACTIVE_THEME` at the top of `public/themes.js`.
+- To compare live (temporary): add `?theme=twilight` to the URL (`#theme-twilight` in the artifact), press **T** /
+  **Shift+T** to cycle, **P** or the 🎨 button for the picker panel, `?alt=500` to preview a point in the climb.
+
+**Readability rules** (checked by `test/themes.test.js`): the glider keeps 3:1 contrast against sky, clouds and rock
+in every variation at every altitude (two-tone outline, rim light, soft cast shadow); UI panels are opaque parchment
+(text and the red "wrong answer" hint at 4.5:1 or better); text drawn on the sky carries a halo; particle counts are
+capped and there are no flashing effects.
+
+**Performance:** sprites are baked lazily in idle time; canvases are backed at devicePixelRatio (capped at 2) and
+everything is blitted 1:1 at whole-device-pixel positions, so nothing blurs. The loop draws at 60 fps while the sky is
+climbing and 30 fps when idle, and steps the resolution down (2x, then 1.5x, then 1.25x with half the particles) if
+frames run long. `skyStats()` exported from `js/sky.js` reports draws and average draw time.
+
+**After choosing a variation:** delete `public/js/theme-picker.js`, its two lines in `public/js/app.js`
+(marked TEMPORARY) and the `THEME PICKER` block at the end of `public/style.css`, set `ACTIVE_THEME`, and either delete
+the other entries in `THEMES` or keep them as unlockable backgrounds.
+
 ## Project layout
 
 ```
@@ -111,11 +145,12 @@ skydrift/
 │  ├─ index.html, style.css  the game
 │  ├─ admin.html             prompt editor
 │  ├─ config.js              Glydrift link, share URL, price
+│  ├─ themes.js              sky variations + the ACTIVE_THEME setting
 │  ├─ shared/                match.js + score.js, used by both browser and Worker
-│  ├─ js/                    app.js (flow), sky.js (parallax world), audio.js (synth SFX),
-│  │                         collection.js (creatures + maps), profile.js, admin.js
-│  └─ art/                   SE III logo, glider, cloud tiles, icon (all SVG)
-└─ test/match.test.js
+│  ├─ js/                    app.js (flow), sky.js (canvas sky renderer), paint.js (procedural painting),
+│  │                         theme-picker.js (temporary), audio.js (synth SFX), collection.js, profile.js, admin.js
+│  └─ art/                   SE III logo, glider, icon (all SVG)
+└─ test/                     match.test.js, themes.test.js
 ```
 
 ## Credits

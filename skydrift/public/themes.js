@@ -1,241 +1,109 @@
-// Visual themes for the sky level (everything behind the UI: sky, clouds, islands, light, particles).
-// Visual only: nothing here touches scoring, timing or gameplay.
+// Visual variations for the sky level. Visual only: nothing here touches scoring, timing or gameplay.
 //
 // THE ONE SETTING: change ACTIVE_THEME to switch the game's look.
-// While comparing, you can also override it live: ?theme=night (or #theme-night), or press T in the game.
-export const ACTIVE_THEME = 'classic';
+// While comparing, override it live with ?theme=ember (or #theme-ember), or press T in the game.
+export const ACTIVE_THEME = 'golden';
 
-// Altitude is measured in points (0-700). Values written as [[points, value], ...] are interpolated between stops.
-// sky: [top, mid, bottom] gradient colours at each altitude stop.
-// clouds.layers: far/mid/near tiles; speed in px per second (parallax: far slowest), opacity, scale.
-// particles / debris: cheap tiled layers; kind names map to generators in js/sky.js.
+// All three share one art direction (mythic, painterly, one clear light source) and differ in palette,
+// light, sky feature, island culture and atmosphere.
+// sky: [[altitude, [zenith, mid, horizon]], ...]; colours are interpolated as you climb (0-700 points).
+// light.side: 1 = light comes from the right, -1 = from the left. Every painted sprite is shaded for it.
 export const THEMES = {
-  classic: {
-    name: 'Original',
-    mood: 'The current look: bright pastel day climbing into a starry night.',
-    cost: 'light',
-    swatches: ['#9fc4f0', '#ffe0ec', '#24447a', '#e8b84a'],
-    sky: [
-      [0, ['#9fc4f0', '#c9dcf7', '#ffe0ec']],
-      [175, ['#8798d6', '#b4bde6', '#f0cfe6']],
-      [350, ['#24447a', '#4a67a8', '#9b8bd3']],
-      [525, ['#0f1640', '#24306a', '#5a4a98']],
-      [700, ['#070a24', '#151d4a', '#43357d']],
-    ],
-    celestial: { kind: 'sun', alpha: [[0, 1], [300, 0]] },
-    stars: [[0, 0], [260, 0], [520, 1]],
-    aurora: { colors: ['#7dffcf', '#8fd3ff', '#c79bff'], alpha: [[0, 0], [280, 0], [400, 0.85], [600, 0.85], [700, 0.4]] },
-    clouds: {
-      style: 'puffy', top: '#ffffff', bottom: '#e6eaff',
-      layers: { far: { speed: 10, opacity: 0.55, scale: 0.6 }, mid: { speed: 16, opacity: 0.8, scale: 1 }, near: { speed: 26, opacity: 0.9, scale: 1.4 } },
-    },
-    islands: {
-      style: 'meadow', waterfall: false,
-      layers: {
-        meadows: ['#9be59b', '#5fbf7a', '#c79a6a', '#9c7448'],
-        reefs: ['#b9a6f0', '#7f71c9', '#8a7aa8', '#655785'],
-        aurora: ['#8ff0d2', '#43b39c', '#6a6f9e', '#4a4f7c'],
-        harbor: ['#f6d98a', '#c79a3a', '#4b4f86', '#353863'],
-      },
-      shadow: 'rgba(60, 70, 140, .2)',
-    },
-    particles: { kind: 'none' },
-    debris: { kind: 'none' },
-    birds: false,
-    lightning: null,
-    glider: { outlineDark: '#26305c', outlineLight: '#fff8e6' },
-    spark: '#e8b84a',
-  },
-
   golden: {
-    name: 'Golden Hour',
-    mood: 'Warm and nostalgic: a long sunset that deepens into a rose-and-violet dusk as you climb.',
-    cost: 'light',
-    swatches: ['#ffb27e', '#ffd9a6', '#b0567c', '#5aa64e'],
+    name: 'Golden Ruins',
+    mood: 'Late afternoon over a fallen empire: a huge low sun, sandstone and marble ruins, gold-lit clouds over violet shadow.',
+    cost: 'normal',
+    swatches: ['#2c2a5a', '#8a5a7a', '#f2b46a', '#d9b48a', '#ffe2a0'],
     sky: [
-      [0, ['#ffb27e', '#ffc99a', '#ffe3b0']],
-      [175, ['#f2907c', '#f9ae8e', '#ffd09a']],
-      [350, ['#a6567e', '#d97578', '#ffad84']],
-      [525, ['#4b2f68', '#874677', '#df8169']],
-      [700, ['#1f1840', '#47295c', '#a95462']],
+      [0, ['#2c2a5c', '#8b5b7c', '#f3b56b']],
+      [175, ['#262558', '#7a4d79', '#e8a061']],
+      [350, ['#1e1d4c', '#5e3d70', '#c97f5c']],
+      [525, ['#15153e', '#3e2c60', '#9a5e5c']],
+      [700, ['#0c0c2c', '#251d4a', '#5e3f5c']],
     ],
-    celestial: { kind: 'sunset', alpha: [[0, 1], [420, 0.75], [700, 0.25]] },
-    stars: [[0, 0], [450, 0], [700, 0.7]],
-    aurora: null,
-    clouds: {
-      style: 'puffy', top: '#fff2dc', bottom: '#f3a58e',
-      layers: { far: { speed: 8, opacity: 0.5, scale: 0.7 }, mid: { speed: 13, opacity: 0.75, scale: 1.05 }, near: { speed: 21, opacity: 0.85, scale: 1.5 } },
-    },
-    islands: {
-      style: 'meadow', waterfall: true, water: '#ffe3a8', longShadow: true,
-      layers: {
-        meadows: ['#9edb6a', '#5ea84c', '#d08a58', '#9b5d3a'],
-        reefs: ['#b8d86a', '#78a04a', '#c7795c', '#8d4f42'],
-        aurora: ['#d8c86a', '#a08a44', '#a8606a', '#71404e'],
-        harbor: ['#f2c46a', '#b88838', '#6e4a6a', '#48304c'],
-      },
-      shadow: 'rgba(120, 50, 40, .25)',
-    },
-    particles: { kind: 'motes', color: '#fff0b8', opacity: 0.55, speed: 6 },
-    debris: { kind: 'none' },
-    birds: { color: '#5a2e3e' },
-    lightning: null,
-    glider: { outlineDark: '#3a2340', outlineLight: '#fff4dc' },
-    spark: '#ffd36b',
+    light: { side: 1, color: '#ffe2a0', rim: '#ffd38a', shadow: '#2a1636' },
+    celestial: { kind: 'sun', x: 0.8, y: 0.66, r: 70, core: '#fff3cf', color: '#ffd27a', glow: '#ff9f4a', alpha: [[0, 1], [700, 0.75]], sink: 0.22 },
+    rays: { color: '#ffd89a', alpha: 0.2 },
+    stars: [[0, 0], [380, 0], [700, 0.85]],
+    haze: '#e3a06e',
+    farTint: '#b88aa0',
+    feature: 'megaisland',
+    clouds: { lit: '#ffe4b4', mid: '#e3998a', shadow: '#5e4272', under: '#3a2c58' },
+    rock: { light: '#dcb68a', mid: '#a97c5c', dark: '#5b3f48', crevice: '#2e2030' },
+    top: { grass: '#a9b84c', grassDark: '#6c8638', moss: '#7f9c48', soil: '#7a5a3c' },
+    stone: { light: '#f1e2c4', mid: '#cdb48e', dark: '#7d6650', trim: '#d9a441' },
+    glow: '#ffd27a',
+    details: ['columns', 'arch', 'stairs', 'tree', 'columns', 'statue', 'tree'],
+    particles: [{ kind: 'mote', color: '#ffe6a8', count: 20 }, { kind: 'leaf', color: '#d29a44', count: 7 }],
+    creatures: { flock: '#3a2440', giant: null },
+    vignette: '#1a0c24',
+    glider: { outlineDark: '#24152e', outlineLight: '#ffe9c2' },
   },
 
-  crystal: {
-    name: 'Crystal Skies',
-    mood: 'Crisp and clean: icy teal air, faceted crystal islands, slow light rays and glinting shards.',
-    cost: 'light',
-    swatches: ['#bfe8f6', '#f1fbfb', '#2a8aa3', '#8fe3ff'],
+  twilight: {
+    name: 'Twilight Mythic',
+    mood: 'A hushed night of old magic: twin moons, slate islands carved with softly lit runes, lanterns, and a sky whale drifting far away.',
+    cost: 'normal',
+    swatches: ['#141433', '#3b2f6b', '#8f6fa6', '#efe6d2', '#ffcf7a'],
     sky: [
-      [0, ['#bfe8f6', '#d9f3f7', '#f1fbfb']],
-      [175, ['#93d4e8', '#bbe9f0', '#e2f7f4']],
-      [350, ['#52b2ca', '#8ad2de', '#cdeff0']],
-      [525, ['#2a7f96', '#4fa8ba', '#a6dfe2']],
-      [700, ['#0f4458', '#21728a', '#6cc2c9']],
+      [0, ['#151436', '#3c306d', '#9272a8']],
+      [175, ['#11112e', '#33285f', '#7a5e98']],
+      [350, ['#0d0c27', '#2a2154', '#64508a']],
+      [525, ['#09081f', '#201945', '#4c3d74']],
+      [700, ['#05040f', '#151034', '#352a5c']],
     ],
-    celestial: { kind: 'rays', alpha: [[0, 0.9], [525, 0.6], [700, 0.3]] },
-    stars: [[0, 0], [500, 0], [700, 0.5]],
-    aurora: null,
-    clouds: {
-      style: 'wisp', top: '#ffffff', bottom: '#d6f2f7',
-      layers: { far: { speed: 7, opacity: 0.6, scale: 0.7 }, mid: { speed: 12, opacity: 0.75, scale: 1 }, near: { speed: 20, opacity: 0.8, scale: 1.3 } },
-    },
-    islands: {
-      style: 'crystal', waterfall: false,
-      layers: {
-        meadows: ['#f4fdff', '#cdeef6', '#7fd0e4', '#3c95b3'],
-        reefs: ['#f0fbff', '#c4e6f6', '#86b8ee', '#4a74c0'],
-        aurora: ['#ecfffa', '#bff3e6', '#6fdcc4', '#2a9c8e'],
-        harbor: ['#fffaf0', '#f3e6c4', '#b9a7f0', '#6a5ac0'],
-      },
-      shadow: 'rgba(20, 90, 120, .22)',
-    },
-    particles: { kind: 'glints', color: '#ffffff', opacity: 0.6, speed: 3 },
-    debris: { kind: 'shards', color: '#9fe6f5', opacity: 0.45, speed: 5 },
-    birds: false,
-    lightning: null,
-    glider: { outlineDark: '#12304a', outlineLight: '#f4fdff' },
-    spark: '#8fe3ff',
+    light: { side: 1, color: '#e4defc', rim: '#d8d2ff', shadow: '#0c0a20' },
+    celestial: { kind: 'moons', x: 0.8, y: 0.3, r: 54, core: '#f3ead6', color: '#e7dcc4', glow: '#a99be0', second: { dx: -0.34, dy: -0.06, r: 20, color: '#e9aca2' }, alpha: [[0, 1], [700, 1]], sink: 0 },
+    rays: { color: '#cbc5ff', alpha: 0.1 },
+    stars: [[0, 0.55], [700, 1]],
+    haze: '#5c4f8a',
+    farTint: '#4a4278',
+    feature: 'whale',
+    clouds: { lit: '#d4cdf2', mid: '#7468aa', shadow: '#2d2654', under: '#1b1639' },
+    rock: { light: '#9395b6', mid: '#5b5b84', dark: '#2f2d4e', crevice: '#16142a' },
+    top: { grass: '#557f6e', grassDark: '#2f5248', moss: '#5f8f72', soil: '#3a3550' },
+    stone: { light: '#c9c6dc', mid: '#8e8bab', dark: '#46435f', trim: '#d9b46a' },
+    glow: '#ffcf7a',
+    details: ['stones', 'lantern', 'shrine', 'tree', 'stones', 'lantern', 'arch'],
+    particles: [{ kind: 'spore', color: '#a8ecd6', count: 16 }, { kind: 'spore', color: '#ffd98a', count: 9 }],
+    creatures: { flock: '#1c1838', giant: '#2c2756' },
+    vignette: '#05040f',
+    glider: { outlineDark: '#120f26', outlineLight: '#fff1d6' },
   },
 
-  storm: {
-    name: 'Storm Drift',
-    mood: 'Moody and dramatic: heavy violet-grey clouds, wind streaks, ruined islands and far-off lightning.',
-    cost: 'medium (one extra lightning layer; off by default for reduced-motion users)',
-    swatches: ['#7e7f9a', '#3e3860', '#141226', '#cfc6ff'],
+  ember: {
+    name: 'Ember Dusk',
+    mood: 'The last red light after a storm: a giant ringed world on the horizon, basalt islands, iron chains, braziers and drifting embers.',
+    cost: 'normal',
+    swatches: ['#2a0f2e', '#8a2f4a', '#f0794a', '#e8a27a', '#ffb25c'],
     sky: [
-      [0, ['#73748f', '#8f90a7', '#b9b7c4']],
-      [175, ['#56537a', '#6f6b94', '#9f99b2']],
-      [350, ['#3c365e', '#544d7c', '#857ba2']],
-      [525, ['#25213f', '#38325e', '#665a8a']],
-      [700, ['#141226', '#231f3f', '#4a3e6c']],
+      [0, ['#2b102f', '#8b304b', '#f17b4b']],
+      [175, ['#240d2a', '#762a46', '#d9643f']],
+      [350, ['#1d0a24', '#5c2240', '#b04a3a']],
+      [525, ['#150719', '#3e1834', '#7a3434']],
+      [700, ['#0c040f', '#261024', '#4a2030']],
     ],
-    celestial: { kind: 'none' },
-    stars: [[0, 0], [600, 0], [700, 0.3]],
-    aurora: null,
-    clouds: {
-      style: 'heavy', top: '#8e8aa6', bottom: '#4a4666',
-      layers: { far: { speed: 14, opacity: 0.6, scale: 0.8 }, mid: { speed: 24, opacity: 0.7, scale: 1.1 }, near: { speed: 40, opacity: 0.75, scale: 1.5 } },
-    },
-    islands: {
-      style: 'storm', waterfall: true, water: '#a8b4d6',
-      layers: {
-        meadows: ['#7f9a74', '#56704e', '#5e5a6e', '#3a3648'],
-        reefs: ['#768c78', '#4e644e', '#55506a', '#34304a'],
-        aurora: ['#6c7f80', '#465a5c', '#4a4564', '#2c2844'],
-        harbor: ['#7d7896', '#56506e', '#3e3858', '#24203a'],
-      },
-      shadow: 'rgba(10, 8, 30, .35)',
-    },
-    particles: { kind: 'wind', color: '#e6e2ff', opacity: 0.35, speed: 90 },
-    debris: { kind: 'rocks', color: '#3a3550', opacity: 0.6, speed: 10 },
-    birds: false,
-    // Distant and soft: at most a 12% brightening of the far sky, about once every 9-16 s. Toggle in the picker.
-    lightning: { enabled: true, maxOpacity: 0.12, minGap: 9, maxGap: 16 },
-    glider: { outlineDark: '#1b1830', outlineLight: '#fff4dc' },
-    spark: '#cfc6ff',
-  },
-
-  pastel: {
-    name: 'Dreamy Pastel',
-    mood: 'Soft and cosy: pink, lavender and mint all the way up, round candy islands and gentle sparkles.',
-    cost: 'light',
-    swatches: ['#ffd6e8', '#e6d4ff', '#d4f7ea', '#ff9cc6'],
-    sky: [
-      [0, ['#ffd6e8', '#f1e0ff', '#d6faee']],
-      [175, ['#efc8fb', '#f7d8f2', '#d2f4ea']],
-      [350, ['#d3c2ff', '#ead0f6', '#cbf0e6']],
-      [525, ['#bdb2f6', '#dcc6f2', '#c3ebe4']],
-      [700, ['#a99fe8', '#cdb8ec', '#bde6e6']],
-    ],
-    celestial: { kind: 'sun', alpha: [[0, 0.9], [700, 0.5]] },
-    stars: [[0, 0], [700, 0]],
-    aurora: null,
-    clouds: {
-      style: 'bubble', top: '#ffffff', bottom: '#fbe3f2',
-      layers: { far: { speed: 8, opacity: 0.6, scale: 0.65 }, mid: { speed: 12, opacity: 0.8, scale: 1 }, near: { speed: 19, opacity: 0.85, scale: 1.35 } },
-    },
-    islands: {
-      style: 'pastel', waterfall: true, water: '#bfefff',
-      layers: {
-        meadows: ['#b8f2d4', '#86dcb4', '#ffc4dc', '#f39cc0'],
-        reefs: ['#c6f0dc', '#94d8bc', '#e3c6ff', '#c19ef0'],
-        aurora: ['#bdeef0', '#8ad6dc', '#ffd3b8', '#f0aa8a'],
-        harbor: ['#fff0b8', '#f2d47e', '#cbc3ff', '#9f94ec'],
-      },
-      shadow: 'rgba(170, 110, 170, .2)',
-    },
-    particles: { kind: 'sparkles', color: '#ffffff', opacity: 0.6, speed: 4 },
-    debris: { kind: 'bubbles', color: '#ffffff', opacity: 0.35, speed: 6 },
-    birds: { color: '#8e5fa8' },
-    lightning: null,
-    glider: { outlineDark: '#4a2f63', outlineLight: '#ffffff' },
-    spark: '#ff9cc6',
-  },
-
-  night: {
-    name: 'Night Sky',
-    mood: 'Calm and magical: deep blue night from the first island, a big moon, aurora ribbons and glowing gardens.',
-    cost: 'light',
-    swatches: ['#1b2a5c', '#050a24', '#f6eecb', '#7dffcf'],
-    sky: [
-      [0, ['#1c2b5e', '#29417c', '#3d5c98']],
-      [175, ['#16245a', '#233a72', '#36528e']],
-      [350, ['#101b48', '#1c2e62', '#2d467c']],
-      [525, ['#0a1238', '#152150', '#243a6a']],
-      [700, ['#050a24', '#0c1438', '#1a2a55']],
-    ],
-    celestial: { kind: 'moon', alpha: [[0, 1], [700, 1]] },
-    stars: [[0, 0.65], [700, 1]],
-    aurora: { colors: ['#7dffcf', '#8fd3ff', '#c79bff'], alpha: [[0, 0.25], [200, 0.5], [450, 0.8], [700, 0.8]] },
-    clouds: {
-      style: 'thin', top: '#5d72ad', bottom: '#22305e',
-      layers: { far: { speed: 6, opacity: 0.5, scale: 0.7 }, mid: { speed: 10, opacity: 0.6, scale: 1 }, near: { speed: 16, opacity: 0.65, scale: 1.4 } },
-    },
-    islands: {
-      style: 'night', waterfall: true, water: '#9fd8ff',
-      layers: {
-        meadows: ['#3f8a86', '#2a6164', '#4a5478', '#2e3656'],
-        reefs: ['#4a7c9a', '#2f5878', '#46507a', '#2b3258'],
-        aurora: ['#3f9a88', '#296a62', '#3e4672', '#262c50'],
-        harbor: ['#6b6aa8', '#47467e', '#363a6a', '#20244a'],
-      },
-      shadow: 'rgba(0, 0, 10, .35)',
-      glow: ['#7dffcf', '#9fe6ff', '#ffe08a'],
-    },
-    particles: { kind: 'fireflies', color: '#e8ff9a', opacity: 0.6, speed: 4 },
-    debris: { kind: 'none' },
-    birds: false,
-    lightning: null,
-    glider: { outlineDark: '#0c1438', outlineLight: '#fff4dc' },
-    spark: '#ffe08a',
+    light: { side: 1, color: '#ffb27a', rim: '#ff9a5c', shadow: '#16060f' },
+    celestial: { kind: 'planet', x: 0.28, y: 0.34, r: 96, core: '#f1b48a', color: '#d98466', glow: '#ff8a5c', alpha: [[0, 1], [700, 0.85]], sink: 0.12 },
+    rays: { color: '#ff9f6a', alpha: 0.15 },
+    stars: [[0, 0.12], [700, 0.75]],
+    haze: '#b04a48',
+    farTint: '#7a2f42',
+    feature: 'spires',
+    clouds: { lit: '#ffb684', mid: '#b4505c', shadow: '#40193b', under: '#26102a' },
+    rock: { light: '#93605c', mid: '#4d3039', dark: '#27161f', crevice: '#12080e' },
+    top: { grass: '#a0813e', grassDark: '#6a4c2a', moss: '#6a6a34', soil: '#3a2420' },
+    stone: { light: '#8a7a80', mid: '#4a3f48', dark: '#221a22', trim: '#c9874a' },
+    glow: '#ffb25c',
+    details: ['pillar', 'brazier', 'chains', 'tree', 'pillar', 'bridge', 'brazier'],
+    particles: [{ kind: 'ember', color: '#ffb25c', count: 18 }, { kind: 'ash', color: '#cdbab2', count: 10 }],
+    creatures: { flock: '#2a0f22', giant: '#3a1430', winged: true },
+    vignette: '#0c0308',
+    glider: { outlineDark: '#1a0a14', outlineLight: '#ffe0c2' },
   },
 };
 
-export const THEME_ORDER = ['classic', 'golden', 'crystal', 'storm', 'pastel', 'night'];
+export const THEME_ORDER = ['golden', 'twilight', 'ember'];
 
 // ---------- colour helpers (also used by the contrast tests) ----------
 export function hexToRgb(c) { return [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); }
@@ -267,37 +135,32 @@ export function at(stops, alt) {
   return stops[stops.length - 1][1];
 }
 
-export const INK = '#26305c';
-export const INK_SOFT = '#55608f';
-export const INK_LIGHT = '#f4f1ff';
-export const DANGER = '#c2405a';
+// UI palette (shared by all variations): parchment panels, iron-gall ink, aged brass.
+export const INK = '#2b1d12';
+export const INK_SOFT = '#5a4430';
+export const INK_LIGHT = '#f6ecd6';
+export const PARCHMENT = '#f2e4c4';
+export const DANGER = '#a32a2a';
 
-// How readable the foreground is against the sky at this altitude.
-// - Text drawn straight on the sky (HUD altitude, results title) picks dark or light ink, whichever reads better,
-//   and carries a soft halo in the other colour for the mid-brightness band where neither alone reaches 4.5:1.
-// - The glider has a two-tone outline (dark line, light edge), so one of the two always stands out from the sky.
-// - Frosted UI cards get more opaque over dark sky, so card text and the red "wrong answer" hint stay readable.
+// How readable the foreground is at this altitude.
+// - Text drawn straight on the sky picks dark or light ink, whichever reads better, and carries a halo
+//   in the other colour.
+// - The glider has a two-tone outline (dark line, light edge), so one of the two always stands out.
+// - UI panels are opaque parchment, so their text and the red "wrong answer" hint never depend on the sky.
 export function readability(theme, alt) {
   const colors = at(theme.sky, alt);
   const [top, mid, bottom] = colors;
   const worst = (ink) => Math.min(contrast(ink, top), contrast(ink, mid));
   const dark = worst(INK) >= worst(INK_LIGHT);
   const text = dark ? INK : INK_LIGHT;
-  const g = theme.glider;
-  const outlineContrast = Math.min(...[mid, bottom].map((bg) => Math.max(contrast(g.outlineDark, bg), contrast(g.outlineLight, bg))));
-  const glass = cardAlpha(colors);
-  const card = colors.map((c) => mixHex(c, '#ffffff', glass));
-  const cardContrast = Math.min(...card.map((c) => Math.min(contrast(DANGER, c), contrast(INK_SOFT, c))));
-  return { colors, night: !dark, text, halo: dark ? INK_LIGHT : INK, textContrast: worst(text), outlineContrast, glass, cardContrast };
+  const outlineContrast = Math.min(...[mid, bottom].map((bg) => gliderContrast(theme, bg)));
+  const cardContrast = Math.min(contrast(DANGER, PARCHMENT), contrast(INK_SOFT, PARCHMENT));
+  return { colors, night: !dark, text, halo: dark ? INK_LIGHT : INK, textContrast: worst(text), outlineContrast, cardContrast };
 }
 
-// Smallest card opacity (from the design's .62) that keeps danger red and secondary text at 4.5:1 over this sky.
-export function cardAlpha(colors) {
-  for (let a = 0.62; a < 0.97; a += 0.02) {
-    const ok = colors.every((c) => { const bg = mixHex(c, '#ffffff', a); return contrast(DANGER, bg) >= 4.5 && contrast(INK_SOFT, bg) >= 4.5; });
-    if (ok) return +a.toFixed(2);
-  }
-  return 0.96;
+export function gliderContrast(theme, bg) {
+  const g = theme.glider;
+  return Math.max(contrast(g.outlineDark, bg), contrast(g.outlineLight, bg));
 }
 
 export function resolveThemeId(id) {
