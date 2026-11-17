@@ -11,12 +11,14 @@ import { expect, test } from "@playwright/test";
 import { fieldPoint, openGame, press, reseed, run, SAVE, settle } from "./helpers.js";
 
 const MINUTES = Number(process.env.SOAK_MINUTES) || 10;
-// frame-time spikes, judged in two groups (measured: with drawing off the longest game frame is
-// ~10 ms; drawn frames take 1-13 s now and then on CI, which draws without a graphics card):
-//   game-logic frames (not drawn): longer than SPIKE_MS = a spike, on any device
-//   drawn frames: longer than DRAW_SPIKE_MS = a hang (software drawing is slow, not broken)
-// the slowest frames of each night are in the report, to tighten these once CI nights are known
-const SPIKE_MS = Number(process.env.SOAK_SPIKE_MS) || 1000;
+// frame-time spikes, judged in two groups. Measured: locally the longest game-logic frame is
+// ~17 ms; on GitHub's machines (no graphics card: drawing is done in software and its leftover
+// work lands on later frames) Chromium's reached 1.4-2.2 s on the first nights; drawn frames
+// take 1-13 s there now and then:
+//   game-logic frames (not drawn): longer than SPIKE_MS = a spike (about twice CI's normal worst)
+//   drawn frames: longer than DRAW_SPIKE_MS = a hang
+// the slowest frames of each night are in the report (soak-*.json)
+const SPIKE_MS = Number(process.env.SOAK_SPIKE_MS) || 4000;
 const DRAW_SPIKE_MS = Number(process.env.SOAK_DRAW_SPIKE_MS) || 20000;
 // home-screen memory may wander a little between visits; steady growth beyond this fails
 const HEAP_GROWTH_MB = 40; // Chromium: JS heap after a forced garbage collection
@@ -167,7 +169,16 @@ test("nightly soak: 10 minutes of scripted play (realms, retries, hero swaps, sh
     // 2. a god-mode run: every other lap a long one (6 minutes of game time: through every realm
     // and into the dimensions), the others a short one
     await startRun();
-    const r = await fly(60 * 60 * (laps % 2 ? 6 : 1), true);
+    // in pieces of 30 s of game time, so a slow browser stops at the deadline, not 8 min past it
+    const r = { state: "playing", m: 0, maxFrameMs: 0, maxDrawMs: 0, zones: [] };
+    for (let left = 60 * 60 * (laps % 2 ? 6 : 1); left > 0 && r.state === "playing" && Date.now() < deadline; left -= 1800) {
+      const part = await fly(Math.min(1800, left), true);
+      r.state = part.state;
+      r.m = part.m;
+      r.maxFrameMs = Math.max(r.maxFrameMs, part.maxFrameMs);
+      r.maxDrawMs = Math.max(r.maxDrawMs, part.maxDrawMs);
+      r.zones.push(...part.zones);
+    }
     maxFrameMs = Math.max(maxFrameMs, r.maxFrameMs);
     maxDrawMs = Math.max(maxDrawMs, r.maxDrawMs);
     farthest = Math.max(farthest, r.m);
