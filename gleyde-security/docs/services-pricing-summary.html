@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gleyde Services &amp; Pricing</title>
+<!-- One-page summary. Open in a browser and Print / Save as PDF (Letter, margins: none, background graphics: on).
+     TODO-EDIT: prices must match public/services.html -->
+<style>
+  @font-face { font-family: "Cormorant Garamond"; font-weight: 500; src: url("../public/assets/fonts/cormorant-garamond-latin-500-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Cormorant Garamond"; font-weight: 600; src: url("../public/assets/fonts/cormorant-garamond-latin-600-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Cormorant Garamond"; font-style: italic; font-weight: 500; src: url("../public/assets/fonts/cormorant-garamond-latin-500-italic.woff2") format("woff2"); }
+  @font-face { font-family: "Inter"; font-weight: 100 900; src: url("../public/assets/fonts/inter-latin-wght-normal.woff2") format("woff2"); }
+  @page { size: letter; margin: 0; }
+  :root { --gold: #c9a35c; --ink: #ece8e1; --muted: #a39e95; --line: rgba(212,175,106,.25); }
+  * { box-sizing: border-box; }
+  html { background: #0a0a0b; }
+  body { margin: 0; font-family: Inter, system-ui, sans-serif; color: var(--ink); background: #0a0a0b;
+         -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet { width: 8.5in; min-height: 11in; margin: 0 auto; padding: .6in .65in .5in; position: relative; overflow: hidden; }
+  .sheet::before { content: ""; position: absolute; width: 6in; height: 6in; right: -2.5in; top: -3in;
+                   background: radial-gradient(closest-side, rgba(212,175,106,.16), transparent 70%); }
+  header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+  .brand { display: flex; gap: 12px; align-items: center; }
+  .brand svg { width: 34px; height: 34px; }
+  .brand b { font-family: "Cormorant Garamond", serif; font-size: 22px; letter-spacing: .05em; font-weight: 600; display: block; }
+  .brand small { font-size: 8.5px; letter-spacing: .24em; text-transform: uppercase; color: var(--muted); }
+  header .tag { font-size: 9px; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); font-weight: 600; }
+  h1 { font-family: "Cormorant Garamond", serif; font-weight: 500; font-size: 38px; line-height: 1.05; margin: 26px 0 8px; }
+  h1 em { color: var(--gold); }
+  .intro { color: var(--muted); font-size: 11.5px; line-height: 1.6; max-width: 5.6in; margin: 0 0 22px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .svc { border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; background: #131315; }
+  .svc .n { font-family: "Cormorant Garamond", serif; font-style: italic; color: var(--gold); font-size: 13px; }
+  .svc h2 { font-family: "Cormorant Garamond", serif; font-weight: 600; font-size: 19px; margin: 2px 0 6px; }
+  .price { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+  .price span { font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .price b { font-family: "Cormorant Garamond", serif; font-size: 26px; font-weight: 600; }
+  .price i { font-style: normal; color: var(--muted); font-size: 10.5px; }
+  .label { font-size: 8px; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin: 8px 0 3px; }
+  .svc p { font-size: 10px; line-height: 1.5; color: var(--muted); margin: 0; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  li { font-size: 10px; line-height: 1.45; padding-left: 13px; position: relative; margin: 2px 0; }
+  li::before { content: ""; position: absolute; left: 1px; top: 5px; width: 6px; height: 3.5px; border-left: 1.2px solid var(--gold); border-bottom: 1.2px solid var(--gold); transform: rotate(-45deg); }
+  .process { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0 0; }
+  .process div { border-top: 1px solid var(--gold); padding-top: 8px; }
+  .process b { font-family: "Cormorant Garamond", serif; font-size: 14px; font-weight: 600; display: block; }
+  .process span { font-size: 9.5px; color: var(--muted); line-height: 1.45; display: block; }
+  footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 16px; font-size: 9px; color: var(--muted); }
+  footer b { color: var(--ink); }
+  .cta { color: var(--gold); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6 58 32 32 58 6 32Z" fill="none" stroke="#d4af6a" stroke-width="2.5"/><path d="M32 20 44 32 32 44 20 32Z" fill="#d4af6a"/></svg>
+      <div><b>GLEYDE</b><small>Cybersecurity &amp; Software</small></div>
+    </div>
+    <div class="tag">Services &amp; Pricing</div>
+  </header>
+
+  <h1>Security that fits <em>a small business.</em></h1>
+  <p class="intro">We find the weak spots in small-business websites and apps, fix them, and build new software that is secure from the first line of code. We serve real estate, lending and service companies. Every engagement starts with a written scope and your signed permission.</p>
+
+  <div class="grid">
+    <section class="svc">
+      <div class="n">01</div><h2>Website Security Audit</h2>
+      <div class="price"><span>From</span><b>$750</b><i>per site</i></div>
+      <p>For businesses that have never had a review, handle client data, or need proof of security for a lender, partner or insurer.</p>
+      <div class="label">Included</div>
+      <ul><li>OWASP Top 10 vulnerability testing</li><li>SSL/TLS, headers, DNS &amp; email (SPF/DKIM/DMARC)</li><li>Outdated software, plugins, admin exposure</li><li>Plain-English report + walkthrough call</li></ul>
+    </section>
+    <section class="svc">
+      <div class="n">02</div><h2>Security Hardening</h2>
+      <div class="price"><span>From</span><b>$1,200</b><i>per project</i></div>
+      <p>For businesses with a recent audit, an aging WordPress/Wix/custom site, or a recent scare.</p>
+      <div class="label">Included</div>
+      <ul><li>Fixes for audit findings, updates &amp; patches</li><li>Headers, HTTPS, two-factor, least privilege</li><li>Firewall &amp; bot protection, tested backups</li><li>Re-test with before/after summary</li></ul>
+    </section>
+    <section class="svc">
+      <div class="n">03</div><h2>Secure Website &amp; App Development</h2>
+      <div class="price"><span>From</span><b>$4,500</b><i>per project</i></div>
+      <p>For teams that need a professional site, secure intake or document upload, a client portal or a custom tool.</p>
+      <div class="label">Included</div>
+      <ul><li>Written scope, modern mobile-first design</li><li>Secure forms, encryption, safe data handling</li><li>Pre-launch security review</li><li>Launch support &amp; documentation</li></ul>
+    </section>
+    <section class="svc">
+      <div class="n">04</div><h2>Ongoing Monitoring &amp; Updates</h2>
+      <div class="price"><span>From</span><b>$149</b><i>per month, per site</i></div>
+      <p>For owners who want peace of mind without hiring IT staff.</p>
+      <div class="label">Included</div>
+      <ul><li>Uptime, SSL &amp; malware monitoring</li><li>Monthly updates and backups</li><li>Monthly report, quarterly check-in</li><li>Priority incident response</li></ul>
+    </section>
+  </div>
+
+  <div class="process">
+    <div><b>1. Consult</b><span>Free 20–30 min call about your business and risks.</span></div>
+    <div><b>2. Scope &amp; permission</b><span>Written agreement: what we test, when, and how.</span></div>
+    <div><b>3. Audit</b><span>Safe testing of authorized systems only.</span></div>
+    <div><b>4. Fix &amp; report</b><span>Prioritized report, fixes, and re-test.</span></div>
+  </div>
+
+  <footer>
+    <div><b>Starting prices.</b> You receive a fixed written quote before any work begins.<br>Gleyde Technologies, LLC · Sammy Eyde, Founder &amp; CEO</div>
+    <div class="cta">Free security check →<br><!-- TODO-EDIT -->www.example.com/contact</div>
+  </footer>
+</div>
+</body>
+</html>
