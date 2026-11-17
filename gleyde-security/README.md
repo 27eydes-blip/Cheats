@@ -47,7 +47,7 @@ Header and footer are repeated in each page. If you change the menu, change it i
 npm install
 cp .dev.vars.example .dev.vars     # test keys: Turnstile always passes
 npm run dev                         # http://localhost:8788
-npm test                            # validation, attack suites, scanner/SSRF, secret scan (217 tests)
+npm test                            # validation, attack suites, scanner/SSRF, advice, verification, secret scan
 npm run test:e2e                    # with dev running: headers, exposed files, browser XSS (needs Playwright)
 ```
 
@@ -88,35 +88,72 @@ Set these in **Cloudflare dashboard → Workers & Pages → your project → Set
 
 ## Free Website Security Check (`/security-check`)
 
-A visitor enters their domain and gets a score (A–F, out of 100) with plain-English fixes and a **Book a security audit** button. That button pre-fills the contact form with their website and score.
+A visitor enters their domain and gets:
+- a score (A–F, out of 100) and their **top 3 fixes**, each with impact, effort and who should do it
+- **step-by-step fixes for their platform**, with copy-paste snippets: Cloudflare Transform Rules, nginx, Apache/.htaccess, WordPress, and Wix/Squarespace/Shopify/Webflow/GoDaddy. Email fixes are tailored to Google Workspace or Microsoft 365.
+- **industry context** if they pick one: real estate (wire fraud), lending (FTC Safeguards Rule), legal, healthcare (HIPAA), home services, retail (PCI)
+- **Save as PDF** (a print layout), **Check again**, and progress since their last check (remembered in their browser)
+- **Email me this report** (optional): they get a plain-text report and **you get a lead notification** with their email, site, score, industry and top issues
+- **Book a security audit**, which pre-fills the contact form
 
-**What it checks.** All of these are passive, public information only:
-- HTTPS, the HTTP-to-HTTPS redirect and HSTS
-- Security headers: CSP, clickjacking protection, nosniff, Referrer-Policy and Permissions-Policy, plus whether the server reveals its software version
-- SPF and DMARC email records
-- Ten commonly leaked files, such as `.env`, `.git` and config backups. A file counts as exposed only if its content matches the real file type, and file contents are never shown.
+### Passive checks (anyone)
 
-**What it never does:**
+| Area | Checks |
+|---|---|
+| HTTPS | HTTPS, http→https redirect, HSTS, certificate expiry (from public Certificate Transparency logs) |
+| Headers | CSP, clickjacking, nosniff, Referrer-Policy, Permissions-Policy, software version leaks |
+| Software & content | Outdated WordPress (vs wordpress.org), end-of-life PHP, JavaScript libraries with known vulnerabilities (OSV database), cookie flags, mixed content, insecure forms, third-party scripts |
+| Email | SPF (including the 10-lookup limit), DKIM, DMARC, MTA-STS |
+| Domain & DNS | Domain expiry and transfer lock (RDAP), DNSSEC, CAA, and Google Safe Browsing if `GOOGLE_SAFE_BROWSING_KEY` is set |
+| Files | 10 commonly exposed files (`.env`, `.git`, config backups, …), plus security.txt |
+
+### Owner-verified checks (site owners only)
+
+The owner adds a DNS TXT record or a file containing a code we generate. The code is an HMAC of the domain with `VERIFY_SECRET` (falling back to `RATE_LIMIT_SALT`), so no database is needed. That unlocks:
+- login page exposure
+- the WordPress user list (`/wp-json/wp/v2/users`); only the count is reported, never the names
+- XML-RPC
+- open folder listings
+- 10 more sensitive files (debug logs, `.env` variants, database dumps, editor SFTP settings)
+- `readme.html`
+
+These are still read-only GET requests.
+
+### What it never does
+
 - log in, submit forms or send attack payloads
-- add query strings to requests
+- add query strings on the target site
 - scan ports
-- read more than 4 KB of any file
+- read more than 300 KB of the home page or 4 KB of any file
+- return the contents of exposed files
 
 Every request is a plain `GET` that identifies itself as `GleydeSecurityCheck/1.0 (passive; …)`.
 
-**Abuse and SSRF protection:**
-- Only public domain names are accepted. IP addresses, ports, credentials and reserved names (`localhost`, `.local`, `.internal`, `.corp`, …) are refused.
-- Every host the scanner touches, including every redirect hop, is resolved first. It's refused if *any* of its addresses is private, loopback, link-local, cloud-metadata, carrier-grade NAT, documentation, multicast, or an IPv6 form wrapping one of those.
-- Limits:
-  - 10 checks per hour per visitor (per IPv6 /64)
-  - at most 3 fresh checks of any one domain per 15 minutes
-  - results are cached for 15 minutes in the same KV namespace
-  - Turnstile, plus the "this is my website" checkbox
-- Each check makes at most 40 outbound requests, each with a 6-second timeout. That's within the Workers free plan's 50-subrequest limit.
+### Abuse and SSRF protection
 
-**Cloudflare plan note.** Checks spend most of their time waiting on the network, which doesn't count as CPU time. If you ever see "exceeded CPU" errors in the logs, the Workers Paid plan ($5/month) raises the limit.
+- Only public domain names are accepted. IP addresses, ports, credentials and reserved names are refused.
+- Every host on the target side, including every redirect hop, is resolved first, and refused if *any* address is private, loopback, link-local, cloud-metadata, carrier-grade NAT, documentation, multicast, or an IPv6 form wrapping one of those.
+- Rate limits:
+  - checks: 10 per hour per visitor; at most 3 fresh checks of one domain per 15 minutes; results cached for 15 minutes (needs KV)
+  - verified checks: 6 per hour per visitor and 4 per domain per 15 minutes
+  - report emails: 3 per address per day
+- Turnstile is required for checks and verified checks.
+- Each check stays within 48 outbound requests, under the Workers free plan's 50. A typical check uses about 25. If the budget runs out, checks are marked "not checked" instead of failing.
 
-**Firewall:** the WAF rate-limiting rule in the Cloudflare setup notes below covers both `/api/contact` and `/api/scan`.
+### Settings
+
+| Name | Needed for |
+|---|---|
+| `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | Running checks at all |
+| `RATE_LIMIT_SALT` | Rate limits; also the default verification secret |
+| `RESEND_API_KEY`, `CONTACT_FROM_EMAIL`, `CONTACT_TO_EMAIL` | Report emails, lead notifications and the contact form |
+| `VERIFY_SECRET` *(optional)* | A separate secret for ownership codes. If you change it, every issued code changes. |
+| `GOOGLE_SAFE_BROWSING_KEY` *(optional)* | The malware/phishing blocklist check (free key from Google Cloud) |
+| KV binding `RATE_LIMIT_KV` *(recommended)* | The 15-minute result cache and stronger rate limits |
+
+**Firewall:** the WAF rate-limiting rule in the Cloudflare setup notes below covers both `/api/contact` and `/api/scan`. Consider adding `/api/deep-scan` and `/api/verify` too.
+
+**Not built yet:** automatic weekly re-checks. They need a scheduled Worker plus storage, so the "Ongoing Monitoring" service covers that for now.
 
 ## Cloudflare setup notes
 

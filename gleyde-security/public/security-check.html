@@ -46,7 +46,7 @@
       <div class="wrap">
         <span class="eyebrow reveal">Free tool</span>
         <h1 class="reveal d1">Website <em class="gold">Security Check</em></h1>
-        <p class="lede reveal d2">Enter your website and get a scored report in about 10 seconds, with plain-English fixes. It&rsquo;s passive: we only look at what any browser or email provider can already see.</p>
+        <p class="lede reveal d2">Enter your website and get a scored report in about 15 seconds, with your top fixes and step-by-step instructions. It&rsquo;s passive: we only look at what any browser or email provider can already see.</p>
       </div>
     </section>
 
@@ -59,6 +59,26 @@
               <input id="domain" name="domain" type="text" inputmode="url" autocomplete="url" placeholder="yourbusiness.com" maxlength="300" required autocapitalize="off" spellcheck="false">
               <p class="field-error" data-error-for="domain" aria-live="polite"></p>
             </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="industry">Your industry <span class="opt">(optional)</span></label>
+                <select id="industry" name="industry">
+                  <option value="">Choose for tailored advice</option>
+                  <option value="realestate">Real estate</option>
+                  <option value="lending">Lending / mortgage / finance</option>
+                  <option value="legal">Legal</option>
+                  <option value="healthcare">Healthcare</option>
+                  <option value="homeservices">Home &amp; local services</option>
+                  <option value="retail">Retail / e-commerce</option>
+                  <option value="">Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="email">Email me the report <span class="opt">(optional)</span></label>
+                <input id="email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" placeholder="you@yourbusiness.com">
+                <p class="field-error" data-error-for="email" aria-live="polite"></p>
+              </div>
+            </div>
             <label class="consent">
               <input type="checkbox" name="consent" required>
               <span>This is my website, or I&rsquo;m allowed to check it.</span>
@@ -68,17 +88,19 @@
             <noscript><p class="note">This tool needs JavaScript. You can also <a href="/contact">ask us to run the check for you</a>.</p></noscript>
             <div class="form-status" id="scan-status" role="status" aria-live="polite" tabindex="-1"></div>
             <button class="btn btn-gold" type="submit"><span class="label">Check my website</span> <span class="arrow" aria-hidden="true">&rarr;</span></button>
-            <p class="small">Free, no sign-up. Limited to a few checks per hour. Results for a website are reused for 15 minutes.</p>
+            <p class="small">Free, no sign-up. If you add your email, we send you the report and may follow up once; we never share it. Limited to a few checks per hour.</p>
           </form>
 
           <div class="reveal d1">
             <h2>What we check</h2>
             <ul class="checks-included">
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg><div><strong>HTTPS &amp; encryption</strong>Your site loads securely, redirects http:// to https://, and tells browsers to always use HTTPS.</div></li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.3 7.5 9.5 4.4-1.2 7.5-4.9 7.5-9.5V6Z"/><path d="m8.8 12 2.2 2.2 4.4-4.4"/></svg><div><strong>Browser security headers</strong>Protection against injected code, clickjacking and data leaks, plus whether your server reveals its software version.</div></li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg><div><strong>Email spoofing protection</strong>SPF and DMARC records that stop scammers sending fake emails &ldquo;from&rdquo; your business.</div></li>
-              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/><path d="M8.5 11h5M11 8.5v5"/></svg><div><strong>Exposed files</strong>Ten files that are often left public by mistake, like .env, .git and config backups. We never download or show their contents.</div></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg><div><strong>HTTPS &amp; certificates</strong>Encryption, http-to-https redirect, HSTS, and when your certificate expires.</div></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.3 7.5 9.5 4.4-1.2 7.5-4.9 7.5-9.5V6Z"/><path d="m8.8 12 2.2 2.2 4.4-4.4"/></svg><div><strong>Security headers</strong>Protection against injected code, clickjacking and data leaks, plus software version leaks.</div></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 8.5h18"/><path d="m10 12.5-2.5 2.5 2.5 2.5M14 12.5l2.5 2.5-2.5 2.5"/></svg><div><strong>Software &amp; page content</strong>Outdated WordPress, PHP and JavaScript libraries with known vulnerabilities, cookie security, insecure forms, mixed content and third-party scripts.</div></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg><div><strong>Email &amp; domain</strong>SPF, DKIM and DMARC against spoofing, DNSSEC, domain renewal date and transfer lock.</div></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/><path d="M8.5 11h5M11 8.5v5"/></svg><div><strong>Exposed files</strong>Files often left public by mistake, like .env, .git and config backups. We never download or show their contents.</div></li>
             </ul>
+            <p class="small">You get a score, your top three fixes, and step-by-step instructions for your platform (WordPress, Wix, Squarespace, Shopify, Cloudflare&hellip;). Site owners can verify ownership to unlock deeper checks.</p>
             <p class="note"><strong>What we don&rsquo;t do.</strong> No logins, no form submissions, no attack payloads, no port scanning, and nothing that could slow down or change your site. Private and internal addresses are blocked.</p>
           </div>
         </div>

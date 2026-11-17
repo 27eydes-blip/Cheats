@@ -12,6 +12,8 @@ import { EXPOSED_FILES, SCAN, ScanError, normalizeDomain, runScan } from "../lib
 let dns; // name -> { A: [], AAAA: [], TXT: [] }
 let sites; // "https://host/path" -> { status, headers, body } | (signal) => Promise<Response>
 let requests;
+let apis; // hostname -> (url, init) => Response, for the fixed public APIs
+const API_HOSTS = new Set(["api.osv.dev", "api.wordpress.org", "rdap.org", "api.certspotter.com", "safebrowsing.googleapis.com"]);
 
 const GOOD_HEADERS = {
   "Content-Security-Policy": "default-src 'self'; frame-ancestors 'none'",
@@ -27,6 +29,7 @@ function installInternet() {
   dns = {};
   sites = {};
   requests = [];
+  apis = {};
   globalThis.fetch = async (input, init = {}) => {
     const url = new URL(String(input));
     if (url.hostname === "cloudflare-dns.com") {
@@ -34,12 +37,18 @@ function installInternet() {
       const type = url.searchParams.get("type");
       requests.push({ dns: `${type} ${name}` });
       const rec = dns[name];
-      const code = { A: 1, AAAA: 28, TXT: 16 }[type];
+      const code = { A: 1, AAAA: 28, TXT: 16, MX: 15, DS: 43, CAA: 257 }[type];
       const Answer = (rec?.[type] || []).map((data) => ({ name, type: code, data: type === "TXT" ? `"${data}"` : data }));
       return Response.json({ Status: rec ? 0 : 3, Answer });
     }
     if (url.hostname === "challenges.cloudflare.com") {
       return Response.json({ success: true, action: "scan", hostname: "site.test" });
+    }
+    if (API_HOSTS.has(url.hostname)) {
+      requests.push({ api: url.hostname, method: init.method || "GET", body: init.body });
+      const fake = apis[url.hostname];
+      if (typeof fake === "function") return fake(url, init);
+      return new Response("unavailable", { status: 503 });
     }
     requests.push({ method: init.method || "GET", url: url.href, ua: init.headers?.["User-Agent"], redirect: init.redirect });
     const key = url.origin + url.pathname;
@@ -50,14 +59,18 @@ function installInternet() {
   };
 }
 
-function publicSite(host, { headers = GOOD_HEADERS, ip = "93.184.216.34", spf = "v=spf1 include:_spf.google.com ~all", dmarc = "v=DMARC1; p=reject" } = {}) {
-  dns[host] = { A: [ip], AAAA: [] };
-  dns[host.replace(/^www\./, "")] = { ...(dns[host.replace(/^www\./, "")] || { A: [ip] }), TXT: spf ? [spf] : [] };
-  dns[`_dmarc.${host.replace(/^www\./, "")}`] = { TXT: dmarc ? [dmarc] : [] };
+function publicSite(host, { headers = GOOD_HEADERS, ip = "93.184.216.34", spf = "v=spf1 include:_spf.google.com ~all", dmarc = "v=DMARC1; p=reject", mx = "1 aspmx.l.google.com.", dkim = true, ds = true } = {}) {
+  const apex = host.split(".").slice(-2).join(".");
+  dns[host] = { ...(dns[host] || {}), A: [ip], AAAA: [] };
+  dns[apex] = { A: [ip], ...(dns[apex] || {}), TXT: spf ? [spf] : [], MX: mx ? [mx] : [], DS: ds ? ["2371 13 2 ABCDEF"] : [] };
+  dns[`_dmarc.${apex}`] = { TXT: dmarc ? [dmarc] : [] };
+  if (dkim) dns[`google._domainkey.${apex}`] = { TXT: ["v=DKIM1; k=rsa; p=MIIBIjANBg"] };
   sites[`https://${host}/`] = { headers };
   sites[`http://${host}/`] = { status: 301, headers: { Location: `https://${host}/` } };
 }
 
+const sec = (r, id) => r.sections.find((x) => x.id === id);
+const byId = (r) => Object.fromEntries(r.sections.flatMap((x) => x.checks).map((c) => [c.id, c]));
 const fetchedUrls = () => requests.filter((r) => r.url).map((r) => r.url);
 
 beforeEach(() => {
@@ -199,7 +212,7 @@ describe("Passive checks only", () => {
     }), { status: 200 });
     const report = await runScan("example.com");
     assert.ok(pulled < 5, `pulled ${pulled} chunks`);
-    assert.deepEqual(report.sections[3].checks[0].found, ["/backup.sql"]);
+    assert.deepEqual(sec(report, "files").checks[0].found, ["/backup.sql"]);
   });
 
   test("a server that never answers times out instead of hanging the check", async () => {
@@ -242,7 +255,7 @@ describe("Report and scoring", () => {
     const r = await runScan("leaky.example.com");
     assert.ok(r.score <= 40);
     assert.equal(r.grade, "F");
-    assert.deepEqual(r.sections[3].checks[0].found, ["/.env", "/.git/HEAD"]);
+    assert.deepEqual(sec(r, "files").checks[0].found, ["/.env", "/.git/HEAD"]);
     assert.ok(!JSON.stringify(r).includes("hunter2"), "secret content leaked into report");
     assert.match(r.headline, /Urgent/);
   });
@@ -251,7 +264,7 @@ describe("Report and scoring", () => {
     publicSite("spa.example.com");
     for (const f of EXPOSED_FILES) sites[`https://spa.example.com${f.path}`] = { body: "<!doctype html><html><body>Welcome</body></html>" };
     const r = await runScan("spa.example.com");
-    assert.equal(r.sections[3].checks[0].status, "pass");
+    assert.equal(sec(r, "files").checks[0].status, "pass");
   });
 
   test("SPF and DMARC variants", async () => {
@@ -264,8 +277,8 @@ describe("Report and scoring", () => {
     for (const [i, [spf, dmarc, s, d]] of cases.entries()) {
       installInternet();
       publicSite(`m${i}.example.com`, { spf, dmarc });
-      const email = (await runScan(`m${i}.example.com`)).sections[2].checks;
-      assert.deepEqual([email[0].status, email[1].status], [s, d], `case ${i}`);
+      const c = byId(await runScan(`m${i}.example.com`));
+      assert.deepEqual([c.spf.status, c.dmarc.status], [s, d], `case ${i}`);
     }
   });
 
