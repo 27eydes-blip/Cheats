@@ -157,6 +157,8 @@ async function api(req, env) {
       if (body.trophies && typeof body.trophies === 'object') for (const [k, v] of Object.entries(body.trophies)) if (n(v) != null && /^[a-z]{2,10}$/.test(k)) p.trophies[k] = n(v);
       if (body.race && typeof body.race === 'object') for (const k of ['elimWins', 'ko', 'wins']) if (n(body.race[k]) != null) p.race[k] = n(body.race[k]);
       if (body.pieces && typeof body.pieces === 'object') for (const k of Object.keys(p.race.pieces)) if (n(body.pieces[k]) != null) p.race.pieces[k] = Math.min(10, n(body.pieces[k]));
+      if (n(body.rp) != null) p.race.rk = { ...(p.race.rk || {}), rp: n(body.rp), best: Math.max(n(body.rp), (p.race.rk && p.race.rk.best) | 0) }; // ranked ladder points
+      if (body.laps && typeof body.laps === 'object') for (const [k, v] of Object.entries(body.laps)) if (typeof v === 'number' && v > 5 && v < 600 && /^[a-z]{2,10}$/.test(k)) (p.race.bestLap ||= {})[k] = v;
       if (body.firsts && typeof body.firsts === 'object') for (const [k, v] of Object.entries(body.firsts)) if (n(v) != null && /^[a-z]{2,10}$/.test(k)) p.race.firsts[k] = n(v);
       return { progress: normalize(p) };
     });
