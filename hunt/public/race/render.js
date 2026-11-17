@@ -24,7 +24,7 @@ export const SAFE_BOX = 0.22;
 // (a car look's atlas stays a few MB: ten looks in a race)
 const SCORCH_N = 12, SCORCH_LIFE = 7; // blast marks kept on the road, and how long they take to fade (s)
 const TALL_M = 220; // (a tall shape's roof may lean this far out of its box)
-const SHARP_MAX = 1.3, SHARP_DPR = 2.4, PX_MAX = 2.0, CAR_PX_MAX = 2.0;
+const SHARP_MAX = 1.3, SHARP_DPR = 2.4, PX_MAX = 2.0, CAR_PX_MAX = 2.4;
 const DASH = [6, 6], NODASH = [];
 const LT = 10; // taillight trail points per light // the followed car stays within ±20% of the screen centre (0.3..0.7 of W and H)
 

@@ -32,7 +32,7 @@ for (const track of ['desert', 'frozen', 'ashlands', 'neon']) {
     expect(r.stands + r.boards).toBeGreaterThan(2);
     expect(r.dpr).toBeGreaterThan(r.dpr0 * 1.05); // the tilted canvas is drawn finer than the screen
     expect(r.cw).toBe(Math.round(r.css * r.dpr));
-    expect(r.chunk).toBeGreaterThanOrEqual(r.z * 0.85); // chunks baked at (about) the zoom they are drawn at
+    expect(r.chunk).toBeGreaterThanOrEqual(Math.min(r.z, 2) * 0.85); // chunks baked at (about) the zoom they are drawn at (capped at 2 px per unit)
     expect(r.chunks).toBeLessThanOrEqual(r.max);
     // Top-down: the plain resolution again (its HUD shares the canvas)
     await page.evaluate(() => window.__race.setCamera('top'));
