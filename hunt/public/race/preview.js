@@ -5,7 +5,7 @@ import { DRIVERS, ALL_DRIVER_IDS, KMH } from './physics.js';
 import { drawCarPreview, glowDot } from './cars2.js';
 import { makeLook } from './looks2.js';
 export { drawCarPreview };
-import { getTrack, TRACK_IDS, trackName } from './tracks.js';
+import { getTrack, TRACK_IDS, ARENA_IDS, trackName } from './tracks.js';
 import { WEAPONS, weaponCd } from './items.js';
 
 const INK = '#12091e';
@@ -15,8 +15,11 @@ const PAL = {
   frozen: { bg: '#2c3f6a', road: '#161e36', edge: '#5fd0ff', acc: '#bff4ff', glow: '#bfe9ff' },
   ashlands: { bg: '#241418', road: '#2a2026', edge: '#ff6a1a', acc: '#ff3d1f', glow: '#ff9f43' },
   neon: { bg: '#100c2a', road: '#1c1838', edge: '#ff3fa4', acc: '#38f2ff', glow: '#c04dff' },
+  skyline: { bg: '#1c0b2c', road: '#22163a', edge: '#ff4fd8', acc: '#ffb04a', glow: '#ff8ae6' },
+  starfall: { bg: '#08182a', road: '#141e32', edge: '#3ff5ff', acc: '#5effc8', glow: '#7a5cff' },
 };
 export const TRACK_CHOICES = ['any', ...TRACK_IDS];
+export const ARENA_CHOICES = ['any', ...ARENA_IDS]; // (one arena per world: the new tracks share theirs)
 export const trackLabel = (k, arena = false) => (k === 'any' ? (arena ? 'Random Arena' : 'Random Track') : trackName(k, arena) || k);
 
 const cache = new Map();

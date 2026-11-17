@@ -17,12 +17,14 @@ import { RaceSim, RACE_MODES } from './sim.js';
 import { DT, DRIVERS } from '../../public/race/physics.js';
 import { carUnlocked, unlockedCars, defaultCar, STARTER_CARS } from '../../public/race/unlocks.js';
 import { normalize } from '../../public/progression.js';
-import { TRACK_IDS } from '../../public/race/tracks.js';
+import { TRACK_IDS, ARENA_IDS } from '../../public/race/tracks.js';
 import { userFromToken, mutateProgress, ensureSchema } from '../accounts.js';
 import { applyRace, raceResult } from './results.js';
 
 const cleanName = (s) => (s || '').replace(/[^\p{L}\p{N} _\-.!]/gu, '').trim().slice(0, 14) || 'Racer';
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+// a random track for a mode: arena modes pick one of the world arenas (each once), races any track
+const anyTrack = (mode) => pick(RACE_MODES[mode]?.arena ? ARENA_IDS : TRACK_IDS);
 // who is this, across races of one room: their session token, or (no token) their name
 const whoOf = (q) => (q.get('token') ? 't:' + q.get('token') : 'n:' + cleanName(q.get('name')));
 const sendJSON = (ws, msg) => { try { ws.send(JSON.stringify(msg)); } catch {} };
@@ -70,7 +72,7 @@ export class RaceMatchmaker {
     // filling them longer
     const fill = bots ? 7000 : 45000;
     if (!c || c.count >= c.max || now - c.created > fill || skip === c.id) {
-      const track = want === 'any' ? pick(TRACK_IDS) : want;
+      const track = want === 'any' ? anyTrack(mode) : want;
       c = this.cur[key] = { id: `rq:${mode}:${track}:${bots}:${crypto.randomUUID()}`, created: now, count: 0, max: 10 };
     }
     c.count++;
@@ -98,11 +100,11 @@ class Loop {
 // config of a new race from the room name and (for rooms) the host's query. dev (HUNT_DEV, local
 // only): a room may ask for fewer laps (`laps=1`) so browser tests finish a race quickly.
 export function raceConfig(name, q, dev = false) {
-  if (name.startsWith('rq:')) { const [, mode, track, bots] = name.split(':'); return { mode, track, bots: bots === '1', lobby: 8 }; }
+  if (name.startsWith('rq:')) { const [, mode, track, bots] = name.split(':'); return { mode, track, bots: bots === '1', lobby: 8, ranked: true }; } // public races count for the ranked ladder
   if (name.startsWith('solo:')) return { mode: 'trial', track: name.split(':')[1], bots: false, lobby: 0.5 };
   if (name.startsWith('tut:')) return { mode: 'tutorial', track: 'tutorial', bots: false, lobby: 0.5 };
   const mode = RACE_MODES[q.get('mode')] ? q.get('mode') : 'grand';
-  const track = TRACK_IDS.includes(q.get('track')) ? q.get('track') : pick(TRACK_IDS);
+  const track = TRACK_IDS.includes(q.get('track')) ? q.get('track') : anyTrack(mode);
   const lobby = Math.max(1.5, Math.min(30, Number(q.get('lobby')) || 12));
   const laps = dev && Number(q.get('laps')) >= 1 && Number(q.get('laps')) <= 3 ? Math.floor(Number(q.get('laps'))) : undefined;
   // ?lobby= is a fixed countdown (tests, scripts); otherwise the host starts the race
@@ -134,8 +136,9 @@ export class RaceRoom {
       mode: cfg.mode, track: cfg.track, seed: (Math.random() * 2 ** 32) >>> 0, fillBots: cfg.bots, lobbyTime: cfg.lobby, laps: cfg.laps, hostStart: cfg.hostStart,
       send: (id, msg) => { const ws = sockets.get(id); if (ws) sendJSON(ws, msg); },
       // (resultsIn: the next room race closes these sockets, so it waits until everyone got their rewards)
-      hooks: { finished: (rows) => { this.recordResults(rows, sockets).finally(() => { sim.resultsIn = true; }); }, tell: (ws, msg) => sendJSON(ws, msg) },
+      hooks: { finished: (rows) => { this.recordResults(rows, sockets, sim.ranked).finally(() => { sim.resultsIn = true; }); }, tell: (ws, msg) => sendJSON(ws, msg) },
     });
+    sim.ranked = !!cfg.ranked;
   }
 
   // FRIEND ROOM: the settings of a new race. The room keeps its mode, track choice and bots between
@@ -148,7 +151,7 @@ export class RaceRoom {
     else {
       const rc = this.roomCfg.cfg;
       // same mode and track choice; the bots switch as the host left it in the last lobby
-      cfg = { ...rc, track: rc.any ? pick(TRACK_IDS) : rc.track, bots: old ? old.fillBots : rc.bots };
+      cfg = { ...rc, track: rc.any ? anyTrack(rc.mode) : rc.track, bots: old ? old.fillBots : rc.bots };
     }
     this.roomCfg = { cfg };
     this.prevHost = prevHost; // they get the room back when they come in for this race
@@ -156,14 +159,15 @@ export class RaceRoom {
   }
 
   // trophies / XP / coins / missions / best times, server-side only
-  async recordResults(rows, sockets) {
+  // ranked: a public race (the ranked ladder moves; friend rooms and Time Trial never move it)
+  async recordResults(rows, sockets, ranked = false) {
     if (!this.env.DB) return;
     for (const r of rows) {
       if (!r.p.account || r.p.recorded) continue;
       r.p.recorded = true;
       try {
         await ensureSchema(this.env.DB);
-        const res = raceResult(r);
+        const res = { ...raceResult(r), ranked: !!ranked };
         const out = await mutateProgress(this.env.DB, r.p.account, (raw) => applyRace(JSON.parse(raw), res));
         const ws = sockets.get(r.p.id);
         if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, coins: out.coins, mcoins: out.matchCoins || 0, best: out.best ?? null, improved: !!out.improved, ...(out.tut != null ? { tut: out.tut } : {}), ...(out.elim ? { elim: out.elim } : {}), ...(out.unlocked && out.unlocked.length ? { unlocked: out.unlocked } : {}), ...(out.pieces ? { pieces: out.pieces } : {}) });
@@ -330,7 +334,7 @@ export class RaceRoom {
   abandon(id) {
     this.dropped.delete(id);
     const row = this.sim && this.sim.abandon(id);
-    if (row) this.recordResults([row], this.sockets);
+    if (row) this.recordResults([row], this.sockets, this.sim.ranked);
   }
 
   step() {

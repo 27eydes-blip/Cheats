@@ -25,7 +25,7 @@ const race = (p, o) => applyRace(p, { raceMode: 'grand', track: 'desert', rank: 
     assert.ok(PERKS[id], `${id}: a perk text`);
   }
   for (const id of ['void', 'fang', 'frost']) assert.ok(UNLOCKS[id].coins > 0 && UNLOCKS[id].goal.stat === 'trophies', `${id}: rare = coins or a trophy milestone`);
-  assert.deepStrictEqual(['grav', 'vx', 'redline'].map((id) => UNLOCKS[id].goal.text), ['Win 5 Elimination races', 'Get 10 takedowns in races', 'Finish 1st on all 4 tracks']);
+  assert.deepStrictEqual(['grav', 'vx', 'redline'].map((id) => UNLOCKS[id].goal.text), ['Win 5 Elimination races', 'Get 10 takedowns in races', 'Finish 1st on 4 different tracks']);
   for (const id of ['helix', 'prime']) assert.ok(UNLOCKS[id].pieces === PIECES_NEEDED && UNLOCKS[id].goal.n > 0, `${id}: legendary = a long-term goal + pieces`);
   // a new account drives the six starters and nothing else
   const p = normalize(newProgress());
@@ -105,7 +105,7 @@ const race = (p, o) => applyRace(p, { raceMode: 'grand', track: 'desert', rank: 
   p = race(p, { raceMode: 'trial', track: TRACK_IDS[3], rank: 1, time: 60 }).progress;
   assert.ok(!carUnlocked(p, 'redline'), 'a Time Trial is not a race win');
   r = race(p, { raceMode: 'elim', mode: 'race_elim', track: TRACK_IDS[3], rank: 1, surv: 100 });
-  assert.ok(carUnlocked(r.progress, 'redline') && r.unlocked.includes('redline'), '1st on all 4 tracks unlocks REDLINE ZERO');
+  assert.ok(carUnlocked(r.progress, 'redline') && r.unlocked.includes('redline'), '1st on 4 different tracks unlocks REDLINE ZERO');
   console.log('epic unlocks: ok');
 }
 

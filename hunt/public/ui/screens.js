@@ -23,7 +23,7 @@ import { Showcase } from '../race/showcase2.js';
 import { RARITY as CAR_RARITY, rarityOf } from '../race/looks2.js';
 import { RACE_MODES } from '../race/protocol.js';
 import { TRACK_IDS } from '../race/tracks.js';
-import { paintPreview, driverStats, weaponOf, trackLabel, TRACK_CHOICES } from '../race/preview.js';
+import { paintPreview, driverStats, weaponOf, trackLabel, TRACK_CHOICES, ARENA_CHOICES } from '../race/preview.js';
 import { drawCar } from '../race/cars2.js';
 import { carName } from '../race/looks2.js';
 import { drawPlatform, equippedLook } from './platform.js';
@@ -649,7 +649,7 @@ export function renderLockerPage(el, api, onDone) {
 
 // ======================================================================= RACING (Oblivion GP)
 const fmtT = (s) => (s == null ? '--' : `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, '0')}`);
-const TRACK_BLURB = { any: 'A different track every race', desert: 'Canyon jumps and a sandy shortcut', frozen: 'Wide sweeps across a frozen lake', ashlands: 'A wide road through the lava fields', neon: 'Tight corners under neon' };
+const TRACK_BLURB = { any: 'A different track every race', desert: 'Canyon jumps and a sandy shortcut', frozen: 'Wide sweeps across a frozen lake', ashlands: 'A wide road through the lava fields', neon: 'Tight corners under neon', skyline: 'A figure-8: jump the crossing', starfall: 'One huge loop and a jump shortcut' };
 const ARENA_BLURB = { any: 'A different arena every match', desert: 'Open sand bowl', frozen: 'Ice rink, low grip', ashlands: 'Lava pits in the middle', neon: 'Pillars and arc towers' };
 
 // GARAGE: all 14 cars (the six starters, then the 8 unlockable ones with their rarity glow). A
@@ -765,10 +765,11 @@ function openDriverDetail(api, id, onClose) {
   return el;
 }
 
-// TRACK PICKER: the 4 tracks (or their battle arenas) + Random, each with a preview of the layout
+// TRACK PICKER: the 6 tracks (or the 4 battle arenas) + Random, each with a preview of the layout
 export function openTrackPicker({ track, arena, best = {}, trial = false }, onPick) {
   const S = screen(arena ? 'CHOOSE AN ARENA' : 'CHOOSE A TRACK');
-  S.body.innerHTML = `<div class="track-grid">${TRACK_CHOICES.map((k) => `<button class="card-b tcard tap ${k === track ? 'sel' : ''}" data-k="${k}" aria-label="${esc(trackLabel(k, arena))}"><canvas data-k="${k}" aria-hidden="true"></canvas><span class="title tc-name">${esc(trackLabel(k, arena))}</span><span class="tc-sub">${esc((arena ? ARENA_BLURB : TRACK_BLURB)[k] || '')}${trial && best[k] ? ` · best ${fmtT(best[k])}` : ''}</span></button>`).join('')}</div>`;
+  const keys = arena ? ARENA_CHOICES : TRACK_CHOICES; // (the new tracks battle in their world's arena)
+  S.body.innerHTML = `<div class="track-grid">${keys.map((k) => `<button class="card-b tcard tap ${k === track ? 'sel' : ''}" data-k="${k}" aria-label="${esc(trackLabel(k, arena))}"><canvas data-k="${k}" aria-hidden="true"></canvas><span class="title tc-name">${esc(trackLabel(k, arena))}</span><span class="tc-sub">${esc((arena ? ARENA_BLURB : TRACK_BLURB)[k] || '')}${trial && best[k] ? ` · best ${fmtT(best[k])}` : ''}</span></button>`).join('')}</div>`;
   for (const c of S.body.querySelectorAll('.tcard')) c.onclick = () => { sfx('click'); onPick(c.dataset.k); S.close(); };
   requestAnimationFrame(() => requestAnimationFrame(() => { for (const cv of S.body.querySelectorAll('canvas[data-k]')) paintPreview(cv, cv.dataset.k, arena); }));
   const re = () => { if (!S.el.isConnected) return removeEventListener('resize', re); for (const cv of S.body.querySelectorAll('canvas[data-k]')) paintPreview(cv, cv.dataset.k, arena); };
@@ -778,7 +779,7 @@ export function openTrackPicker({ track, arena, best = {}, trial = false }, onPi
 // PLAY WITH FRIENDS (races): everyone types the same code; the first one in is the host, whose
 // mode / track / bots the room plays, and who presses START. Late friends wait for the next race.
 const ROOM_RACE_MODES = ['grand', 'elim', 'battle']; // (Time Trial is solo)
-const SHORT_TRACK = { desert: 'DESERT', frozen: 'FROZEN LAKE', ashlands: 'ASHLANDS', neon: 'NEON CITY' };
+const SHORT_TRACK = { desert: 'DESERT', frozen: 'FROZEN LAKE', ashlands: 'ASHLANDS', neon: 'NEON CITY', skyline: 'SKYLINE', starfall: 'STARFALL' };
 export function openRaceFriends(api) {
   const code = $('room').value || '';
   let mode = ROOM_RACE_MODES.includes(api.raceMode?.()) ? api.raceMode() : 'grand';

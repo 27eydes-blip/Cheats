@@ -1,4 +1,5 @@
 // Hunt Racers tracks and battle arenas (data). All layouts are original.
+// (6 tracks; 4 arenas, one per world: the new tracks use their world's arena)
 // Track def:
 //   main: closed loop {pts: [[x, y, halfWidth?]...], hw, sh (shoulder px), surf, shoulder}
 //   shortcuts: open paths that leave and rejoin the main road (first/last point on the main road)
@@ -9,9 +10,10 @@
 //   look: a corridor drawn as another surface (paint only: it drives as its `surf`)
 //   circles: world-space round zones {x, y, r, kind, surf}; obstacles: solid pillars {x, y, r}
 //   hazards: timed dangers {kind, x, y | c, s, d, r, period, on, phase}: active `on` s every `period`
-// The 4 tracks and their arenas are CLEAR: no obstacles, no hazards, no hazard surfaces on the road
+// The tracks and their arenas are CLEAR: no obstacles, no hazards, no hazard surfaces on the road
 // (lava, pits, ice, sand), roads at least MIN_HW wide; only racers and dropped weapon items are hit.
 // trackcheck.js enforces it. (The engine keeps obstacles for the tutorial's cones.)
+//   cross: [[x, y]] points where the main loop crosses itself (a figure-8; trackcheck checks them)
 //   checkpoints: fractions of the main loop (first = 0 = start/finish line)
 //   boxes: item box rows {c, s (fraction), n}
 // Arena def: {arena: true, w, h, obstacles, circles, hazards, boxes: [{x, y}], spawns?}
@@ -111,6 +113,59 @@ export const TRACK_DEFS = {
     hazards: [],
     checkpoints: [0, 0.12, 0.22, 0.33, 0.44, 0.72, 0.82, 0.92],
     boxes: [{ s: 0.05, n: 4 }, { s: 0.37, n: 4 }, { s: 0.68, n: 3 }, { c: 1, s: 0.3, n: 1 }],
+  },  // OBLIVION GP new tracks (neon night). `art`: the night palette trackart paints them in (on the
+  // city world's scenery); `arenaOf`: the world arena Battle uses when this track is picked.
+  // SKYLINE CROSSOVER: a figure-8. The loop crosses itself at one X: the first pass is flat (watch
+  // the cross traffic), the second jumps clean over it off a big ramp. Sky Drop cuts the right lobe.
+  // STARFALL SPEEDWAY: one huge sweeping loop round the city's core, a jump off the start, and the
+  // twisting Comet Jump shortcut across the inside of the loop.
+  skyline: {
+    key: 'skyline', name: 'Skyline Crossover', world: 'city', art: 'synth', arenaOf: 'neon', laps: 3,
+    cross: [[3500, 2100]], // the figure-8's X (see trackcheck crossErrors)
+    main: {
+      hw: 185, sh: 55, surf: 'road', shoulder: 'offroad',
+      pts: [[5220, 982], [5822, 1197], [6123, 1756], [6123, 2444], [5822, 3003], [5220, 3218], [4575, 3089], [4059, 2659], [3500, 2100], [2941, 1541], [2425, 1111], [1780, 982], [1178, 1197], [877, 1756], [877, 2444], [1178, 3003], [1780, 3218], [2425, 3089], [2941, 2659], [3500, 2100], [4059, 1541], [4575, 1111]],
+    },
+    shortcuts: [
+      { name: 'Sky Drop', hw: 115, sh: 22, surf: 'road', shoulder: 'offroad', pts: [[5480, 1040], [5560, 1600], [5560, 2600], [5400, 3170]] },
+    ],
+    zones: [
+      { c: 0, s0: 0.235, s1: 0.241, kind: 'pad', d0: -60, d1: 60 },
+      { c: 0, s0: 0.478, s1: 0.484, kind: 'pad', d0: -150, d1: -30 },
+      { c: 0, s0: 0.725, s1: 0.731, kind: 'pad', d0: 30, d1: 150 },
+      { c: 0, s0: 0.814, s1: 0.82, kind: 'ramp', pow: 1.8 },
+      { c: 0, s0: 0.6, s1: 0.606, kind: 'ramp' },
+      { c: 1, s0: 0.3, s1: 0.33, kind: 'pad' },
+      { c: 1, s0: 0.55, s1: 0.56, kind: 'ramp' },
+    ],
+    obstacles: [],
+    hazards: [],
+    checkpoints: [0, 0.25, 0.44, 0.56, 0.68, 0.78, 0.94],
+    boxes: [{ s: 0.1, n: 4 }, { s: 0.5, n: 4 }, { s: 0.66, n: 4 }, { s: 0.94, n: 4 }, { c: 1, s: 0.42, n: 1 }],
+  },
+  starfall: {
+    key: 'starfall', name: 'Starfall Speedway', world: 'city', art: 'aurora', arenaOf: 'neon', laps: 3,
+    main: {
+      hw: 190, sh: 55, surf: 'road', shoulder: 'offroad',
+      pts: [[1800, 3450], [2900, 3450], [4000, 3420], [4900, 3200, 245], [5500, 2600, 235], [5650, 1800], [5400, 1050], [4750, 560], [3900, 420], [3100, 620], [2650, 1150, 215], [2150, 1450, 225], [1450, 1250, 215], [850, 800, 225], [380, 1050, 215], [300, 1750], [700, 2250, 215], [1250, 2400, 215], [1450, 2850, 215], [1150, 3250]],
+    },
+    shortcuts: [
+      { name: 'Comet Jump', hw: 115, sh: 22, surf: 'road', shoulder: 'offroad', pts: [[4250, 3290], [4000, 2900], [3700, 2550], [3350, 2100], [3750, 1650], [3450, 1320], [2640, 1170]] },
+    ],
+    zones: [
+      { c: 0, s0: 0.1, s1: 0.106, kind: 'pad', d0: -60, d1: 60 },
+      { c: 0, s0: 0.04, s1: 0.046, kind: 'ramp' },
+      { c: 0, s0: 0.3, s1: 0.306, kind: 'pad', d0: -160, d1: -40 },
+      { c: 0, s0: 0.45, s1: 0.456, kind: 'pad', d0: -60, d1: 60 },
+      { c: 0, s0: 0.64, s1: 0.646, kind: 'ramp' },
+      { c: 0, s0: 0.78, s1: 0.786, kind: 'pad', d0: 30, d1: 150 },
+      { c: 1, s0: 0.12, s1: 0.15, kind: 'pad' },
+      { c: 1, s0: 0.2, s1: 0.21, kind: 'ramp' },
+    ],
+    obstacles: [],
+    hazards: [],
+    checkpoints: [0, 0.12, 0.62, 0.7, 0.78, 0.86, 0.93],
+    boxes: [{ s: 0.06, n: 4 }, { s: 0.36, n: 4 }, { s: 0.6, n: 4 }, { s: 0.84, n: 4 }, { c: 1, s: 0.5, n: 1 }],
   },
 };
 
@@ -169,8 +224,13 @@ export const TUTORIAL_DEF = {
   tut: { cones: [900, 1990], drift: [2400, 2450], dummy: 0.72 }, // cones: x span on the first straight; drift: x where the curve starts / ends
 };
 export const TRACK_IDS = Object.keys(TRACK_DEFS);
+// the four tracks the game launched with (goals written for "all 4 tracks" keep counting these)
+export const CLASSIC_TRACK_IDS = ['desert', 'frozen', 'ashlands', 'neon'];
+export const ARENA_IDS = Object.keys(ARENA_DEFS);
+// a track key -> the key of its world's battle arena (new tracks borrow their world's arena)
+export const arenaKey = (key) => (ARENA_DEFS[key] ? key : TRACK_DEFS[key]?.arenaOf && ARENA_DEFS[TRACK_DEFS[key].arenaOf] ? TRACK_DEFS[key].arenaOf : null);
 const cache = new Map();
-const defOf = (key, arena) => (arena ? ARENA_DEFS[key] : key === 'tutorial' ? TUTORIAL_DEF : TRACK_DEFS[key]);
+const defOf = (key, arena) => (arena ? ARENA_DEFS[arenaKey(key)] : key === 'tutorial' ? TUTORIAL_DEF : TRACK_DEFS[key]);
 // built (runtime) track for a track key ('tutorial' = the training track); arena = true gives that world's battle arena
 export function getTrack(key, arena = false) {
   const k = (arena ? 'A:' : 'T:') + key;

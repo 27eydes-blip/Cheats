@@ -27,7 +27,7 @@ export const UNLOCKS = {
   frost: { rarity: 'rare', coins: 1500, goal: { stat: 'trophies', n: 450, text: 'Reach 450 trophies' } },
   grav: { rarity: 'epic', goal: { stat: 'elimWins', n: 5, text: 'Win 5 Elimination races' } },
   vx: { rarity: 'epic', goal: { stat: 'ko', n: 10, text: 'Get 10 takedowns in races' } },
-  redline: { rarity: 'epic', goal: { stat: 'tracks1st', n: TRACK_IDS.length, text: 'Finish 1st on all 4 tracks' } },
+  redline: { rarity: 'epic', goal: { stat: 'tracks1st', n: 4, text: 'Finish 1st on 4 different tracks' } },
   helix: { rarity: 'legendary', pieces: PIECES_NEEDED, goal: { stat: 'wins', n: 25, text: 'Win 25 races' } },
   prime: { rarity: 'legendary', pieces: PIECES_NEEDED, goal: { stat: 'trophies', n: 1000, text: 'Reach 1000 trophies' } },
 };
@@ -73,7 +73,7 @@ export function statOf(p, stat) {
     case 'elimWins': return r.elimWins | 0;
     case 'ko': return r.ko | 0;
     case 'wins': return r.wins | 0;
-    case 'tracks1st': return TRACK_IDS.filter((t) => (own(r.firsts, t) | 0) > 0).length;
+    case 'tracks1st': return TRACK_IDS.filter((t) => (own(r.firsts, t) | 0) > 0).length; // (any 4 of the 6: never harder than the old 'all 4')
   }
   return 0;
 }

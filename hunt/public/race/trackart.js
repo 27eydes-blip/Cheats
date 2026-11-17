@@ -6,6 +6,7 @@ import { pointAt } from './trackgeom.js';
 import { CAR_R } from './physics.js';
 import { SETTINGS } from '../settings.js';
 import { NEON_GLOW } from './looks.js';
+import { artTheme } from './trackthemes.js';
 
 export const CHUNK = 384; // world px per chunk side
 const MAX_CHUNKS = 40;
@@ -75,7 +76,8 @@ function noiseTile(size, base, specks, n, dot, seed) {
 export class TrackArt {
   constructor(T) {
     this.T = T;
-    this.th = THEMES[T.world] || THEMES.desert;
+    this.art = artTheme(T); // the new tracks' own night palettes (trackthemes.js) on the city scenery
+    this.th = this.art ? this.art.th : THEMES[T.world] || THEMES.desert;
     this.world = T.world;
     this.scale = 0;
     this.chunks = new Map();
@@ -85,14 +87,14 @@ export class TrackArt {
     this.glows = []; // animated light spots: {x, y, r, col, ph}
     this.buildDecor();
     this.buildZones();
-    this.nt = NIGHT[this.world] || NIGHT.desert;
+    this.nt = this.art ? this.art.nt : NIGHT[this.world] || NIGHT.desert;
     this.buildLights();
     this.mini = null;
   }
 
   tiles() {
     const th = this.th, w = this.world;
-    const ground = w === 'frozen' ? ['#c8d9ee', '#ffffff'] : w === 'city' ? ['#24244e', '#0c0c22'] : w === 'ashlands' ? ['#1a1215', '#4a3434', '#ff5a1f'] : ['#b9773c', '#eabb7c', '#9a5c2c'];
+    const ground = this.art ? this.art.groundSpecks : w === 'frozen' ? ['#c8d9ee', '#ffffff'] : w === 'city' ? ['#24244e', '#0c0c22'] : w === 'ashlands' ? ['#1a1215', '#4a3434', '#ff5a1f'] : ['#b9773c', '#eabb7c', '#9a5c2c'];
     this.tGround = noiseTile(256, th.ground[0], ground, 220, 3.2, 3);
     this.tShoulder = noiseTile(128, th.shoulder, [th.shoulderSpeck, '#0003', '#fff2'], 90, 2, 5);
     this.tRoad = noiseTile(128, th.road, [th.roadSpeck, 'rgba(0,0,0,0.18)', 'rgba(255,255,255,0.05)'], 160, 1.4, 7);

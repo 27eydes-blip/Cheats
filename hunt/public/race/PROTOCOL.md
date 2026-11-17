@@ -405,7 +405,7 @@ turret blink), looks / engine voices in looks2.js / cars2.js / sound2.js.
   race mode stats) and unlocks any goal already met.
 - Rare (VOIDRUNNER, SOLAR FANG, FROSTBYTE): 1500 coins (`/api/shop {action:'carbuy', car}`) or
   150 / 300 / 450 total trophies. Epic: GRAVITON 5 Elimination wins, PHANTOM VX 10 race takedowns,
-  REDLINE ZERO 1st place on all 4 tracks (Grand or Elimination). Legendary: HELIX 25 race wins +
+  REDLINE ZERO 1st place on 4 different tracks (Grand or Elimination). Legendary: HELIX 25 race wins +
   10 pieces, OBLIVION PRIME 1000 trophies + 10 pieces. Pieces: one daily challenge (1 piece) and one
   weekly challenge (3 pieces), the same for everyone; they fill HELIX, then PRIME, then pay coins.
 - `/api/shop {action:'carset', car}` sets the default car (unlocked cars only).

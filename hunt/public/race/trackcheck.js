@@ -27,10 +27,13 @@ export function validateTrack(T, opts = {}) {
   }
   const main = T.corridors[0];
   if (!main.closed || main.len < 4000) errs.push('main loop must be closed and long enough');
-  // 1. the main road never touches itself (except neighbouring samples)
+  // 1. the main road never touches itself (except neighbouring samples, and at a declared crossover)
+  const nearX = (i) => T.cross && T.cross.some((x) => Math.hypot(main.px[i] - x.x, main.py[i] - x.y) < CROSS_R);
+  errs.push(...crossErrors(T));
   for (let i = 0; i < main.n; i += 2) for (let j = i + 2; j < main.n; j += 2) {
     const ds = Math.min(Math.abs(main.s[i] - main.s[j]), main.len - Math.abs(main.s[i] - main.s[j]));
     if (ds < (main.ww[i] + main.ww[j]) * 2.2) continue;
+    if (nearX(i) && nearX(j)) continue;
     if (Math.hypot(main.px[i] - main.px[j], main.py[i] - main.py[j]) < main.ww[i] + main.ww[j] + 20) { errs.push(`main road overlaps itself near ${Math.round(main.px[i])},${Math.round(main.py[i])}`); i = main.n; break; }
   }
   // 2. shortcuts: start and end on the main road, stay clear of it in between, and are shorter
@@ -97,6 +100,38 @@ export function clearErrors(T) {
   return errs;
 }
 
+// CROSSOVERS (figure-8): the loop may cross itself only at a declared point (def.cross), at a wide
+// angle (a clean X, not a long merge), with nothing on the road there (no pad, ramp or box: which
+// stretch you are on must not matter), a checkpoint on each lobe between the two passes (no
+// skipping a lobe by turning at the X) and no checkpoint gate in the crossing.
+export const CROSS_R = 640; // px around a crossover where the two stretches may overlap
+export function crossPasses(T, x) {
+  const main = T.corridors[0], out = [];
+  for (let i = 0; i < main.n; i++) {
+    const d = Math.hypot(main.px[i] - x.x, main.py[i] - x.y);
+    if (d > 120) continue;
+    const s = main.s[i], o = out.find((q) => Math.min(Math.abs(q.s - s), main.len - Math.abs(q.s - s)) < 600);
+    if (!o) out.push({ s, d, i }); else if (d < o.d) Object.assign(o, { s, d, i });
+  }
+  return out.sort((a, b) => a.s - b.s);
+}
+function crossErrors(T) {
+  const errs = [];
+  if (!T.cross) return errs;
+  const main = T.corridors[0], G = T.gates, gap = (s) => { let k = 0; while (k + 1 < G.length && G[k + 1].s <= s) k++; return k; };
+  for (const x of T.cross) {
+    const at = `crossover ${x.x},${x.y}`, ps = crossPasses(T, x);
+    if (ps.length !== 2) { errs.push(`${at}: the loop passes it ${ps.length} times (expected 2)`); continue; }
+    const [a, b] = ps, dot = Math.abs(main.tx[a.i] * main.tx[b.i] + main.ty[a.i] * main.ty[b.i]);
+    if (dot > 0.5) errs.push(`${at}: the roads meet at a shallow angle (need 60 degrees or more)`);
+    if (gap(a.s) === gap(b.s)) errs.push(`${at}: no checkpoint between the two passes (a lobe could be skipped)`);
+    for (const g of G) if (Math.hypot(g.cx - x.x, g.cy - x.y) < CROSS_R) errs.push(`${at}: checkpoint ${g.k} is in the crossing`);
+    for (const c of T.corridors) for (const z of c.zones) if (z.kind !== 'paint' && Math.hypot(z.x - x.x, z.y - x.y) < CROSS_R * 0.75) errs.push(`${at}: a ${z.kind} in the crossing`);
+    for (const bx of T.boxes) if (Math.hypot(bx.x - x.x, bx.y - x.y) < CROSS_R * 0.75) errs.push(`${at}: an item box in the crossing`);
+  }
+  return errs;
+}
+
 function nearestDist(c, x, y) {
   const s = nearestS(c, x, y);
   let best = Infinity;
@@ -133,7 +168,9 @@ function partition(T, S = 16) {
   }
   const big = sizes.map((n) => n > 60);
   const errs = [], nBig = big.filter(Boolean).length;
-  if (nBig !== T.gates.length) errs.push(`checkpoints split the track into ${nBig} regions, expected ${T.gates.length} (a gate does not span the whole road, or a path bypasses one)`);
+  // each crossover joins the two gaps between gates it lies in (crossErrors makes sure they differ)
+  const want = T.gates.length - (T.cross ? T.cross.length : 0);
+  if (nBig !== want) errs.push(`checkpoints split the track into ${nBig} regions, expected ${want} (a gate does not span the whole road, or a path bypasses one)`);
   for (const g of T.gates) {
     const touch = new Set();
     const len = Math.hypot(g.x1 - g.x0, g.y1 - g.y0);

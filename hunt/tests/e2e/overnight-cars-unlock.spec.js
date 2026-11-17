@@ -92,7 +92,7 @@ test('store: buy a rare car with test coins, NEW CAR UNLOCKED (credit on it, ste
     // an epic car is won, not bought: its progress, no BUY
     await page.tap('.st-card[data-id="redline"]');
     await expect(page.locator('#stBuy')).toHaveText('LOCKED');
-    await expect(page.locator('#stPrice')).toContainText('Finish 1st on all 4 tracks');
+    await expect(page.locator('#stPrice')).toContainText('Finish 1st on 4 different tracks');
     await page.tap('.st-card[data-id="frost"]');
     await page.tap('#stBuy');
     const u = page.locator('.ulk');

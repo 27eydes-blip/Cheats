@@ -137,6 +137,7 @@ export function stepCar(car, inp, st, T, dt = DT, ev = null) {
     move(car, T, dt, ev);
     return car;
   }
+  PR.hc = car.pc; PR.hs = car.ps; // crossover tracks: keep to the stretch of road we are on (trackgeom probe)
   T.probe(car.x, car.y, CAR_R, PR); // the surface under us right now (no hidden state)
   let S = SURF[PR.surf] || SURF.road;
   if (S === SURF.ice && st.iceGrip) S = SURF.road; // FROSTBYTE: ice drives like road
@@ -247,6 +248,7 @@ const WN = { nx: 0, ny: 0, fx: 0, fy: 0 };
 // wall before it turns along it) and keeps the speed along it; a new hit (not every tick of a
 // scrape) costs up to WALL_LOSS of that.
 function move(car, T, dt, ev) {
+  PR.hc = car.pc; PR.hs = car.ps;
   car.wall = 0;
   car.wh = Math.min(1, car.wh + dt);
   for (let k = 0, steps = 1; k < steps; k++) {

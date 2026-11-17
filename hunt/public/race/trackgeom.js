@@ -87,6 +87,8 @@ function projSeg(c, i, x, y, o) {
 // build the runtime object for a track or arena definition
 export function buildTrack(def) {
   const T = { key: def.key, name: def.name, world: def.world, kind: def.arena ? 'arena' : 'track', laps: def.laps || 3, def };
+  T.cross = (def.cross || []).map(([x, y]) => ({ x, y })); // where the main loop crosses itself (figure-8)
+  if (!T.cross.length) T.cross = null;
   T.corridors = [];
   T.obstacles = (def.obstacles || []).map((o) => ({ x: o.x, y: o.y, r: o.r, ...(o.cone ? { cone: 1 } : {}) })); // cone: draw as a cone (tutorial)
   T.circles = (def.circles || []).map((z) => ({ ...z })); // world-space round zones (surf / pad / ramp)
@@ -198,6 +200,7 @@ function buildGrid(T) {
 }
 
 const P1 = {}, P2 = {};
+const CROSS_KEEP = 600; // px along the corridor: farther than this from last step's spot is another stretch
 // One query per car per substep. out: { pen (>0 = overlapping a wall by that much), nx, ny (push
 // direction), c, i, s, d (corridor, segment, along, across), surf, pad, ramp }
 function probe(T, x, y, r, out) {
@@ -213,6 +216,12 @@ function probe(T, x, y, r, out) {
     const cx = Math.floor((x - b.x0) / CELL), cy = Math.floor((y - b.y0) / CELL);
     const list = cx >= 0 && cy >= 0 && cx < T.cells.gw && cy < T.cells.gh ? T.cells.segs[cy * T.cells.gw + cx] : null;
     let bm = Infinity, bc = null, bi = 0, rc = null;
+    // CROSSOVER tracks (def.cross: the loop crosses itself): where two stretches of one corridor
+    // overlap, the car stays on the stretch it was driving (out.hc / out.hs: its corridor and
+    // distance last step, set by the physics) instead of jumping to the other one. Walls, pushes
+    // and surfaces still come from the real geometry; only which stretch you are on is kept.
+    const hc = T.cross && out.hc >= 0 ? out.hc : -1, hs = out.hs;
+    let hb = Infinity, hcc = null, hci = 0;
     const o = P1;
     if (list && list.length) {
       for (let k = 0; k < list.length; k++) {
@@ -221,16 +230,22 @@ function probe(T, x, y, r, out) {
         const m = o.dist - o.ww;
         if (m < bm) { bm = m; bc = c; bi = i; }
         if (o.dist <= o.hw) rc = c; // on some corridor's road (where a shortcut meets the main road)
+        if (c.idx === hc && o.dist <= o.ww && o.dist < hb) {
+          let ds = Math.abs(c.s[i] + o.t - hs);
+          if (c.closed) ds = Math.min(ds, c.len - ds);
+          if (ds < CROSS_KEEP) { hb = o.dist; hcc = c; hci = i; }
+        }
       }
     } else { // far outside everything (should not happen in play): brute force the main loop
       const c = T.corridors[0];
       for (let i = 0; i < c.segs; i++) { projSeg(c, i, x, y, o); const m = o.dist - o.ww; if (m < bm) { bm = m; bc = c; bi = i; } }
     }
     projSeg(bc, bi, x, y, o);
-    out.c = bc.idx; out.i = bi; out.s = bc.s[bi] + o.t; out.d = o.d;
     out.pen = o.dist - o.ww + r;
     const inv = o.dist > 1e-6 ? 1 / o.dist : 0;
     out.nx = -(x - o.qx) * inv; out.ny = -(y - o.qy) * inv; // toward the centre line
+    if (hcc && (hcc !== bc || hci !== bi)) { bc = hcc; bi = hci; projSeg(bc, bi, x, y, o); } // the stretch we were on
+    out.c = bc.idx; out.i = bi; out.s = bc.s[bi] + o.t; out.d = o.d;
     out.surf = Math.abs(o.d) <= o.hw ? bc.surf : rc ? rc.surf : bc.shoulder; // a road edge never reads as the other corridor's shoulder
     const zs = bc.zones;
     for (let k = 0; k < zs.length; k++) {

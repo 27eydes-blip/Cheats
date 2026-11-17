@@ -51,7 +51,7 @@ const store = {
 const fmtLap = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(2).padStart(5, '0')}`;
 export const MODE_SHORT = { grand: 'GRAND', elim: 'ELIM', battle: 'BATTLE', trial: 'TRIAL' };
 // short track words for the LAUNCH line ("GRAND · ASHLANDS"): the world, never cut off
-export const TRACK_SHORT = { any: 'RANDOM', desert: 'DESERT', frozen: 'FROZEN', ashlands: 'ASHLANDS', neon: 'NEON CITY' };
+export const TRACK_SHORT = { any: 'RANDOM', desert: 'DESERT', frozen: 'FROZEN', ashlands: 'ASHLANDS', neon: 'NEON CITY', skyline: 'SKYLINE', starfall: 'STARFALL' };
 export const launchSub = (mode, track) => `${MODE_SHORT[mode] || 'GRAND'} · ${TRACK_SHORT[track] || String(track).toUpperCase()}${RACE_MODES[mode]?.arena ? ' ARENA' : ''}`;
 // pad readouts: the Garage's bar for each stat as a 0-10 score (the same scale for every car)
 export const padStats = (id) => driverStats(id).map((r) => ({ label: r.label, f: r.f, v: (r.f * 10).toFixed(1) }));

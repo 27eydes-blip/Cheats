@@ -7,8 +7,8 @@ import { buildTrack } from '../public/race/trackgeom.js';
 import { validateTrack, MIN_HW, MIN_SC_HW } from '../public/race/trackcheck.js';
 import { CAR_R } from '../public/race/physics.js';
 
-assert.deepStrictEqual(TRACK_IDS, ['desert', 'frozen', 'ashlands', 'neon']);
-assert.deepStrictEqual(TRACK_IDS.map((k) => TRACK_DEFS[k].name), ['Desert Mirage Canyon', 'Frozen Lake Circuit', 'Ashlands Inferno', 'Neon City Night']);
+assert.deepStrictEqual(TRACK_IDS, ['desert', 'frozen', 'ashlands', 'neon', 'skyline', 'starfall']);
+assert.deepStrictEqual(TRACK_IDS.map((k) => TRACK_DEFS[k].name), ['Desert Mirage Canyon', 'Frozen Lake Circuit', 'Ashlands Inferno', 'Neon City Night', 'Skyline Crossover', 'Starfall Speedway']);
 for (const k of TRACK_IDS) {
   const T = getTrack(k);
   assert.deepStrictEqual(validateTrack(T), [], `${k} validates`);
