@@ -56,8 +56,8 @@
           <form class="form scan-form reveal" id="scan-form" action="/api/scan" method="post" novalidate>
             <div class="field domain-row">
               <label for="domain">Your website</label>
-              <input id="domain" name="domain" type="text" inputmode="url" autocomplete="url" placeholder="yourbusiness.com" maxlength="300" required autocapitalize="off" spellcheck="false">
-              <p class="field-error" data-error-for="domain" aria-live="polite"></p>
+              <input id="domain" name="domain" aria-describedby="err-domain" type="text" inputmode="url" autocomplete="url" placeholder="yourbusiness.com" maxlength="300" required autocapitalize="off" spellcheck="false">
+              <p class="field-error" id="err-domain" data-error-for="domain" aria-live="polite"></p>
             </div>
             <div class="field-row">
               <div class="field">
@@ -75,15 +75,15 @@
               </div>
               <div class="field">
                 <label for="email">Email me the report <span class="opt">(optional)</span></label>
-                <input id="email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" placeholder="you@yourbusiness.com">
-                <p class="field-error" data-error-for="email" aria-live="polite"></p>
+                <input id="email" name="email" aria-describedby="err-email" type="email" autocomplete="email" inputmode="email" maxlength="254" placeholder="you@yourbusiness.com">
+                <p class="field-error" id="err-email" data-error-for="email" aria-live="polite"></p>
               </div>
             </div>
             <label class="consent">
-              <input type="checkbox" name="consent" required>
+              <input type="checkbox" name="consent" required aria-describedby="err-consent">
               <span>This is my website, or I&rsquo;m allowed to check it.</span>
             </label>
-            <p class="field-error" data-error-for="consent" aria-live="polite"></p>
+            <p class="field-error" id="err-consent" data-error-for="consent" aria-live="polite"></p>
             <div class="turnstile-slot" id="turnstile-slot" data-action="scan"></div>
             <noscript><p class="note">This tool needs JavaScript. You can also <a href="/contact">ask us to run the check for you</a>.</p></noscript>
             <div class="form-status" id="scan-status" role="status" aria-live="polite" tabindex="-1"></div>
@@ -122,7 +122,7 @@
           <p class="small">Secure software and website protection for local small businesses. A division of Gleyde Technologies, LLC.</p>
         </div>
         <div>
-          <h4>Services</h4>
+          <h2>Services</h2>
           <ul>
             <li><a href="/services#audit">Security Audit</a></li>
             <li><a href="/services#hardening">Security Hardening</a></li>
@@ -131,7 +131,7 @@
           </ul>
         </div>
         <div>
-          <h4>Company</h4>
+          <h2>Company</h2>
           <ul>
             <li><a href="/how-it-works">How It Works</a></li>
             <li><a href="/about">About</a></li>

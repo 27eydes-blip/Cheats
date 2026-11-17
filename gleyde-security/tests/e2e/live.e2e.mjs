@@ -426,3 +426,45 @@ describe("Browser: Security Check v2 features", () => {
     await ctx.close();
   });
 });
+
+describe("Accessibility (axe-core, WCAG 2.2 AA)", () => {
+  let browser;
+  const sample = JSON.parse(readFileSync(new URL("./sample-report.json", import.meta.url), "utf8"));
+  const axeSrc = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
+  before(async () => {
+    const { chromium } = createRequire(import.meta.url)("playwright");
+    browser = await chromium.launch();
+  });
+  after(() => browser?.close());
+
+  for (const [label, viewport] of [["phone", { width: 375, height: 667 }], ["desktop", { width: 1440, height: 900 }]]) {
+    for (const path of ["/", "/services", "/how-it-works", "/about", "/contact", "/security-check", "/does-not-exist"]) {
+      test(`${label} ${path}: no WCAG violations`, async () => {
+        // bypassCSP only so the test can inject axe; the site's own CSP is tested above.
+        const ctx = await browser.newContext({ viewport, bypassCSP: true });
+        const page = await ctx.newPage();
+        await page.route("**/api/config", (r) => r.fulfill({ contentType: "application/json", body: '{"turnstileSiteKey":null}' }));
+        await page.route("**/api/scan", (r) => r.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true, report: sample, verifyAvailable: true, emailed: "sent" }) }));
+        await page.goto(BASE + path, { waitUntil: "networkidle" });
+        if (path === "/security-check") {
+          await page.fill("#domain", "smithrealty.com");
+          await page.check('input[name="consent"]');
+          await page.evaluate(() => {
+            const i = document.createElement("input"); i.type = "hidden"; i.name = "cf-turnstile-response"; i.value = "t";
+            document.getElementById("scan-form").append(i);
+          });
+          await page.click('#scan-form button[type="submit"]');
+          await page.waitForSelector(".report-head");
+        }
+        await page.evaluate(() => document.querySelectorAll(".reveal").forEach((e) => e.classList.add("in")));
+        await page.waitForTimeout(1000); // let fade-ins finish so contrast is measured on final colors
+        await page.addScriptTag({ content: axeSrc });
+        const violations = await page.evaluate(async () =>
+          (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa", "best-practice"] } }))
+            .violations.map((v) => `${v.id}: ${v.nodes.slice(0, 2).map((n) => n.target.join(" ")).join(" | ")}`));
+        assert.deepEqual(violations, []);
+        await ctx.close();
+      });
+    }
+  }
+});

@@ -74,7 +74,7 @@
     btn.addEventListener("click", () => copy(btn, String(sn.code)));
     return el("div", { class: "snippet" },
       el("div", { class: "snippet-head" }, el("span", {}, String(sn.label)), btn),
-      el("pre", {}, code));
+      el("pre", { tabindex: "0", "aria-label": `Code: ${String(sn.label)}` }, code));
   }
 
   function checkItem(c) {
@@ -294,6 +294,7 @@
       status.className = "form-status";
       status.textContent = "";
       for (const n of ["domain", "consent", "email"]) if (err(n)) err(n).textContent = "";
+      form.elements.email?.setAttribute("aria-invalid", "false");
 
       const domain = form.elements.domain.value.trim();
       const consent = form.elements.consent.checked;
@@ -306,6 +307,7 @@
         bad = true;
       } else form.elements.domain.setAttribute("aria-invalid", "false");
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        form.elements.email.setAttribute("aria-invalid", "true");
         err("email").textContent = "Please enter a valid email address, or leave it blank.";
         bad = true;
       }
@@ -313,7 +315,10 @@
         err("consent").textContent = "Please confirm this is your website (or you're allowed to check it).";
         bad = true;
       }
-      if (bad) return;
+      if (bad) {
+        (form.querySelector('[aria-invalid="true"]') || (!consent && form.elements.consent))?.focus();
+        return;
+      }
 
       const token = window.gleydeTurnstile?.token() || "";
       if (!token) {
@@ -340,6 +345,8 @@
           renderReport(results, body.report, body);
         } else {
           for (const [k, v] of Object.entries(body.fields || {})) if (err(k)) err(k).textContent = String(v);
+          const firstBad = Object.keys(body.fields || {})[0];
+          if (firstBad && form.elements[firstBad]) form.elements[firstBad].focus();
           status.className = "form-status err";
           status.textContent = String(body.error || "Something went wrong. Please try again in a moment.");
         }

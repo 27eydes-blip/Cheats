@@ -64,23 +64,23 @@
         <form class="form reveal d1" id="contact-form" action="/api/contact" method="post" novalidate>
           <div class="field">
             <label for="name">Name</label>
-            <input id="name" name="name" type="text" autocomplete="name" required minlength="2" maxlength="100">
-            <p class="field-error" data-error-for="name" aria-live="polite"></p>
+            <input id="name" name="name" aria-describedby="err-name" type="text" autocomplete="name" required minlength="2" maxlength="100">
+            <p class="field-error" id="err-name" data-error-for="name" aria-live="polite"></p>
           </div>
           <div class="field">
             <label for="email">Email</label>
-            <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required maxlength="254">
-            <p class="field-error" data-error-for="email" aria-live="polite"></p>
+            <input id="email" name="email" aria-describedby="err-email" type="email" autocomplete="email" inputmode="email" required maxlength="254">
+            <p class="field-error" id="err-email" data-error-for="email" aria-live="polite"></p>
           </div>
           <div class="field">
             <label for="website">Website URL <span class="opt">(optional)</span></label>
-            <input id="website" name="website" type="text" inputmode="url" autocomplete="url" placeholder="yourbusiness.com" maxlength="200">
-            <p class="field-error" data-error-for="website" aria-live="polite"></p>
+            <input id="website" name="website" aria-describedby="err-website" type="text" inputmode="url" autocomplete="url" placeholder="yourbusiness.com" maxlength="200">
+            <p class="field-error" id="err-website" data-error-for="website" aria-live="polite"></p>
           </div>
           <div class="field">
             <label for="message">Message</label>
-            <textarea id="message" name="message" required minlength="10" maxlength="4000" placeholder="Tell us about your business and what you would like checked."></textarea>
-            <p class="field-error" data-error-for="message" aria-live="polite"></p>
+            <textarea id="message" name="message" aria-describedby="err-message" required minlength="10" maxlength="4000" placeholder="Tell us about your business and what you would like checked."></textarea>
+            <p class="field-error" id="err-message" data-error-for="message" aria-live="polite"></p>
           </div>
 
           <!-- Spam traps: hidden from people, filled by bots -->
@@ -91,10 +91,10 @@
           <input type="hidden" name="started_at" value="">
 
           <label class="consent">
-            <input type="checkbox" name="consent" required>
+            <input type="checkbox" name="consent" required aria-describedby="err-consent">
             <span>I&rsquo;m authorized to request a review of this website, and I agree to be contacted about my inquiry.</span>
           </label>
-          <p class="field-error" data-error-for="consent" aria-live="polite"></p>
+          <p class="field-error" id="err-consent" data-error-for="consent" aria-live="polite"></p>
 
           <div class="turnstile-slot" id="turnstile-slot"></div>
 
@@ -121,7 +121,7 @@
           <p class="small">Secure software and website protection for local small businesses. A division of Gleyde Technologies, LLC.</p>
         </div>
         <div>
-          <h4>Services</h4>
+          <h2>Services</h2>
           <ul>
             <li><a href="/services#audit">Security Audit</a></li>
             <li><a href="/services#hardening">Security Hardening</a></li>
@@ -130,7 +130,7 @@
           </ul>
         </div>
         <div>
-          <h4>Company</h4>
+          <h2>Company</h2>
           <ul>
             <li><a href="/how-it-works">How It Works</a></li>
             <li><a href="/about">About</a></li>
