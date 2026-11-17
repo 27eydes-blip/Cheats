@@ -146,6 +146,7 @@ export class Hud {
     this.lastCount = 99;
     this.split = null; // {text, col, t}
     this.call = null; // kill-cam callout {text, col, t}
+    this.rk = 0; this.rkT = 9; this.rkUp = false; // your place, and the pop when it changes
     this.spr = new Map(); // pre-rendered pieces: ring, gauge face, button bases, corner fade
   }
   // the short kill-cam callout ('NAME TOOK OUT NAME') under the slots
@@ -182,7 +183,12 @@ export class Hud {
         c.scale(1, fh / fw); c.fillStyle = gr; c.fillRect(0, 0, fw, fw);
       });
       g.drawImage(fade, SA.l, SA.t, fw, fh);
-      const w1 = label(g, str('n', rk, String), x - 3 * u, Tp + 22 * u, Math.round(40 * u), first ? NEON.mag : NEON.text, 'left', d, 'd');
+      // a place gained or lost: the number pops and a short ▲ / ▼ shows beside it
+      if (rk !== this.rk) { if (this.rk && view.countdown <= 0) { this.rkUp = rk < this.rk; this.rkT = 0; } this.rk = rk; }
+      let pop = 1;
+      if (this.rkT < 1.2) { this.rkT += dt; if (!SETTINGS.reduceFlash) pop = 1 + 0.28 * clamp(1 - this.rkT / 0.35, 0, 1); }
+      const w1 = label(g, str('n', rk, String), x - 3 * u, Tp + 22 * u, Math.round(40 * u), first ? NEON.mag : NEON.text, 'left', d, 'd', pop);
+      if (this.rkT < 1.2) { g.globalAlpha = clamp((1.2 - this.rkT) * 3, 0, 1); label(g, this.rkUp ? '▲' : '▼', x + w1 + 30 * u, Tp + 21 * u, Math.round(14 * u), this.rkUp ? NEON.lime : NEON.red, 'left', d, 'd'); g.globalAlpha = 1; }
       label(g, ORD(rk), x + w1 + 1 * u, Tp + 12 * u, Math.round(15 * u), first ? NEON.mag : NEON.cyan, 'left', d, 'd');
       label(g, str('of', n, (v) => '/' + v), x + w1 + 1 * u, Tp + 30 * u, Math.round(13 * u), NEON.dim, 'left', d, 'n');
       let y = Tp + 54 * u;

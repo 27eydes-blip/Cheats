@@ -49,6 +49,11 @@ test('neon HUD: space fonts, no ink outlines, no cartoon yellow on the controls'
   expect(r.fills['#ffd23f'] || 0, JSON.stringify(r.fills)).toBeLessThanOrEqual(20); // (<= 1 per frame)
   // touch: no item / weapon slots over the road (they are on the buttons)
   expect(r.fills['rgba(60,30,110,0.55)'] || 0).toBe(0);
+  // a place gained: the number pops and a ▲ shows for a moment
+  const pop = await page.evaluate(() => new Promise((ok) => { const h = window.__race.session.hud; h.rk = 99; requestAnimationFrame(() => requestAnimationFrame(() => ok({ up: h.rkUp, t: h.rkT, rk: h.rk }))); }));
+  expect(pop.up).toBe(true);
+  expect(pop.t).toBeLessThan(1.2);
+  expect(pop.rk).toBeLessThan(99);
   await creditVisible(page);
   expect(errs).toEqual([]);
   await P.ctx.close();
