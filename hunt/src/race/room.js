@@ -170,7 +170,7 @@ export class RaceRoom {
         const res = { ...raceResult(r), ranked: !!ranked };
         const out = await mutateProgress(this.env.DB, r.p.account, (raw) => applyRace(JSON.parse(raw), res));
         const ws = sockets.get(r.p.id);
-        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, coins: out.coins, mcoins: out.matchCoins || 0, best: out.best ?? null, improved: !!out.improved, ...(out.tut != null ? { tut: out.tut } : {}), ...(out.elim ? { elim: out.elim } : {}), ...(out.unlocked && out.unlocked.length ? { unlocked: out.unlocked } : {}), ...(out.pieces ? { pieces: out.pieces } : {}) });
+        if (out && ws) sendJSON(ws, { t: 'progress', delta: out.delta, xp: out.xp, progress: out.progress, levels: out.levels, coins: out.coins, mcoins: out.matchCoins || 0, best: out.best ?? null, improved: !!out.improved, ...(out.tut != null ? { tut: out.tut } : {}), ...(out.elim ? { elim: out.elim } : {}), ...(out.unlocked && out.unlocked.length ? { unlocked: out.unlocked } : {}), ...(out.pieces ? { pieces: out.pieces } : {}), ...(out.rank ? { rank: out.rank } : {}) });
       } catch (e) { console.log('race record failed', e && e.message); }
     }
   }

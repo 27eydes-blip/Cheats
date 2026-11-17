@@ -6,6 +6,7 @@
 // nothing: finishing it only sets the one-time flag progress.race.tut = 1.
 import { applyMatch, normalize } from '../../public/progression.js';
 import { applyRaceUnlocks } from '../../public/race/unlocks.js';
+import { applyRanked } from '../../public/race/ranked.js';
 
 export const MATCH_COIN_CAP = 40;
 // ELIMINATION extras on top of the usual placement pay (applyMatch: trophies and coins by place, XP
@@ -71,6 +72,9 @@ export function applyRace(prog, r) {
   }
   // UNLOCKABLE CARS: takedowns, 1st places per track, the daily / weekly piece challenges, then
   // every car whose goal is now met (race/unlocks.js); the progress message carries what was won
+  // RANKED LADDER: public Grand / Elimination races move your rank points (race/ranked.js)
+  const rank = applyRanked(out.progress, r);
+  if (rank) out.rank = rank;
   const u = applyRaceUnlocks(out.progress, r, r.day);
   out.unlocked = u.unlocked; out.pieces = u.pieces;
   if (u.pieces && u.pieces.coins) out.coins += u.pieces.coins;

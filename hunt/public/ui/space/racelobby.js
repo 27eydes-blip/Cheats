@@ -19,6 +19,7 @@ import { DRIVERS } from '../../race/physics.js';
 import { RACE_MODES } from '../../race/protocol.js';
 import { paintPreview, trackLabel, TRACK_CHOICES, weaponOf, driverStats } from '../../race/preview.js';
 import { trackName } from '../../race/tracks.js';
+import { createRankCard, openLadder } from './ladder.js';
 import { carName, drawCarPreview } from '../../race/looks2.js';
 import { shopDay, msToShopRefresh } from '../../race/garage.js';
 import { equippedLook } from '../platform.js';
@@ -223,6 +224,9 @@ export function createSpaceLobby(api) {
   $('guestChip').addEventListener('click', (e) => { e.stopPropagation(); if (e.target.id === 'guestX') { store.set('hunt-guestchip', 'x'); refresh(); } else SC.openProfile(api, refresh, true); });
   pad.el.addEventListener('click', () => { chime('select'); SC.openDriverSelect(api, refresh); });
   strip.addEventListener('click', (e) => { const b = e.target.closest('.modebtn'); if (!b) return; const i = MODE_CARDS.findIndex((c) => c.id === b.dataset.m); if (!carousel.setIndex(i)) { chime('tap'); setMode(b.dataset.m); } });
+  // the ranked ladder: your tier, the leaderboards and challenges (ui/space/ladder.js)
+  const rankCard = createRankCard(() => { chime('tap'); openLadder(); });
+  $('trackBtn').after(rankCard.el);
   $('trackBtn').onclick = () => { chime('tap'); SC.openTrackPicker({ track: L.track, arena: !!RACE_MODES[L.mode].arena, best: A.progress().race?.best || {}, trial: L.mode === 'trial' }, (k) => { L.track = k; store.set('hunt-race-track', k); refresh(); }); };
   // popups: the music ducks (music.js forwards it to the ambient track) and the ticker pauses
   onDuck((on) => { if (on) ticker.pause('popup'); else ticker.resume('popup'); });
@@ -266,6 +270,7 @@ export function createSpaceLobby(api) {
     if (carousel.index() !== i) carousel.setIndex(i, { silent: true });
     for (const b of strip.querySelectorAll('.modebtn')) { const on = b.dataset.m === L.mode; b.classList.toggle('sel', on); b.setAttribute('aria-pressed', String(on)); }
     const arena = !!RACE_MODES[L.mode].arena;
+    rankCard.set(p);
     $('trackNm').textContent = trackLabel(L.track, arena).toUpperCase();
     const best = L.mode === 'trial' && L.track !== 'any' ? p.race?.best?.[L.track] : null;
     $('trackSub').textContent = best ? `BEST ${fmtLap(best)}` : arena ? 'ARENA' : 'TRACK';

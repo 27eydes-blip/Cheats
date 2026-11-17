@@ -14,6 +14,7 @@ import { SETTINGS } from '../settings.js';
 import { icon } from '../ui/icons.js';
 import { spIcon } from '../ui/space/icons.js';
 import { levelInfo } from '../progression.js';
+import { rankResult } from '../ui/space/ladder.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ORD = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
@@ -120,4 +121,5 @@ export function resultsProgress(s, m) {
   const u = el.querySelector('.rc-ups');
   u.textContent = ups.join(' · ');
   u.classList.toggle('lvup', !!(m.levels && m.levels.length));
+  if (m.rank) rankResult(u, m.rank); // ranked ladder: RP won or lost (ui/space/ladder.js)
 }

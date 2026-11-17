@@ -7,6 +7,7 @@ import { Sim, newId } from './sim.js';
 import { QUICK_MODES, RANDOM_MODES, MODES, playersFor } from './modes.js';
 import { EVENTS } from '../public/events/index.js';
 import { handleApi, userFromToken, recordMatch } from './accounts.js';
+import { handleBoards } from './leaderboard.js';
 import { loadoutFor, weaponUnlocked, normalize } from '../public/progression.js';
 import { powerBracket } from '../public/power.js';
 import { WEAPONS } from '../public/weapons.js';
@@ -51,6 +52,7 @@ const app = {
     // build id: an open client compares it with its own and offers a reload after a deploy
     if (url.pathname === '/api/version') return Response.json({ version: VERSION }, { headers: { 'cache-control': 'no-store' } });
     if (url.pathname.startsWith('/api/space/')) return handleSpaceFeed(req, env);
+    if (url.pathname.startsWith('/api/race/')) return handleBoards(req, env); // leaderboards (src/leaderboard.js)
     if (url.pathname.startsWith('/api/')) return handleApi(req, env);
     if (url.pathname === '/race') return routeRace(req, env); // Hunt Racers (src/race/room.js)
     if (url.pathname === '/ws' || url.pathname === '/zone') {
