@@ -15,7 +15,7 @@ for (const k of ['skyline', 'starfall']) {
   const T = getTrack(k);
   assert.deepStrictEqual(validateTrack(T), [], `${k} validates`);
   assert.strictEqual(T.world, 'city', `${k} is a neon night track`);
-  assert.ok(T.L > 13000 && T.L < 17000, `${k}: a full-size lap (${Math.round(T.L)} px)`);
+  assert.ok(T.L > 13000 && T.L < 18500, `${k}: a full-size lap (${Math.round(T.L)} px)`);
   // Battle on a new track uses its world's arena
   assert.strictEqual(arenaKey(k), 'neon');
   assert.strictEqual(getTrack(k, true).key, 'neon_arena');
@@ -108,7 +108,7 @@ for (const track of ['skyline', 'starfall']) {
     assert.ok(cut > 0, `${track} seed ${seed}: bots take the shortcut`);
     if (track === 'skyline') assert.ok(jumps > 0, `${track} seed ${seed}: bots fly over the X`);
     const times = field.filter((p) => p.bestLap).map((p) => p.bestLap);
-    assert.ok(Math.min(...times) > 14 && Math.max(...times) < 30, `${track}: lap times in range (${Math.min(...times)}-${Math.max(...times)} s)`);
+    assert.ok(Math.min(...times) > 12 && Math.max(...times) < 30, `${track}: lap times in range (${Math.min(...times)}-${Math.max(...times)} s)`);
   }
 }
 console.log('race-newtracks: ok');

@@ -7,7 +7,9 @@
 // A's win rate = races A finished first / races. Fixed seeds: the same numbers every run.
 import { RaceSim } from '../src/race/sim.js';
 import { newCar, stepCar, DRIVER_IDS } from '../public/race/physics.js';
-import { TRACK_IDS } from '../public/race/tracks.js';
+// (the 4 classic tracks the balance was defined and tuned on: the same races and table as before the
+// new tracks; the new tracks' effect on car balance is measured separately, see the content report)
+import { CLASSIC_TRACK_IDS as TRACK_IDS } from '../public/race/tracks.js';
 import { ITEM_IDS } from '../public/race/items.js';
 
 const IDLE = { st: 0, th: 0, dr: 0 };

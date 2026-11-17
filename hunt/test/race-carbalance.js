@@ -8,7 +8,9 @@
 // same table every run.
 import { RaceSim } from '../src/race/sim.js';
 import { newCar, stepCar, ALL_DRIVER_IDS } from '../public/race/physics.js';
-import { TRACK_IDS } from '../public/race/tracks.js';
+// (the 4 classic tracks the balance was defined and tuned on: the same races and table as before the
+// new tracks; the new tracks' effect on car balance is measured separately, see the content report)
+import { CLASSIC_TRACK_IDS as TRACK_IDS } from '../public/race/tracks.js';
 
 export const BALANCE_CARS = ALL_DRIVER_IDS;
 export const SEEDS_PER_PAIR = 12; // x 2 mirrored slots = 24 races per pair
