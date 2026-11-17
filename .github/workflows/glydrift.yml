@@ -297,8 +297,9 @@ jobs:
       - uses: ./.github/actions/glydrift-setup
         with:
           engine: ${{ matrix.engine }}
-      - name: The live site loads with no errors
-        run: npx playwright test -g "release build loads"
+      - name: The live site loads with no errors; its security headers are on and block nothing
+        # (Cloudflare can add scripts to the live pages, e.g. Web Analytics: only the live site shows them)
+        run: npx playwright test -g "release build loads|security headers: all four|security headers: the release build"
       - name: Failed tests (summary)
         if: failure()
         run: |
