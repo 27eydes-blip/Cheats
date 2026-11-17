@@ -44,6 +44,20 @@ function newAi(sim, p) {
   return ai;
 }
 
+// THE PACK: bots race close to the humans. A bot well behind the leading human drives up to 6% nearer
+// its car's limit, one well ahead eases off up to 8%, so rivals stay in sight and fights happen.
+// Never above the bot's top speed; no humans (bot-only test races, balance runs): no change.
+const PACK_UP = 0.06, PACK_DOWN = 0.08;
+export function packPace(sim, p) {
+  if (sim._packT !== sim.time) { // once per tick: the leading unfinished human's race distance
+    sim._packT = sim.time; sim._packH = null;
+    for (const q of sim.players.values()) if (!q.wasBot && q.connected && !q.finished && !q.out) { const g = sim.progress(q); if (sim._packH == null || g > sim._packH) sim._packH = g; }
+  }
+  if (sim._packH == null || p.finished) return 1;
+  const gap = sim._packH - sim.progress(p); // > 0: the bot is behind the human
+  return gap > 0 ? 1 + PACK_UP * clamp((gap - 300) / 1500, 0, 1) : 1 - PACK_DOWN * clamp((-gap - 500) / 2000, 0, 1);
+}
+
 export function botInput(sim, p) {
   const L = RACE_BOT_LEVELS[sim.botLevel] || RACE_BOT_LEVELS.normal;
   const ai = p.ai || (p.ai = newAi(sim, p));
@@ -136,7 +150,7 @@ function raceDrive(sim, p, ai, L) {
   const inp = { st: clamp(err * 2.6, -1, 1), th: 1, dr: 0 };
   // SPEED: the slowest bend ahead, given the braking distance to it (shortcut merges included)
   const look = spd * 1.2 + 260;
-  let target = p.st.top * (ai.push ? 1 : L.pace) * (car.boostT > 0 ? car.boostP : 1), kAhead = 0;
+  let target = p.st.top * (ai.push ? 1 : Math.min(1, L.pace * packPace(sim, p))) * (car.boostT > 0 ? car.boostP : 1), kAhead = 0;
   const limit = (v, dist) => { const allow = Math.sqrt(v * v + 2 * BRAKE_PLAN * Math.max(0, dist)); if (allow < target) target = allow; };
   if (!c.main && s < 1) { // still on the main road, about to turn into the shortcut
     const m = idxAt(main, c.entryS), turn = Math.abs(angDiff(Math.atan2(main.ty[m], main.tx[m]), Math.atan2(c.ty[0], c.tx[0])));
