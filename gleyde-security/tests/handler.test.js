@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { onRequestPost } from "../functions/api/contact.js";
+import { _resetRateLimitMemory, onRequestPost } from "../functions/api/contact.js";
 
 function kv() {
   const m = new Map();
@@ -12,17 +12,18 @@ const env = () => ({
   RATE_LIMIT_KV: kv(), RATE_LIMIT_SALT: "salt",
 });
 const body = { name: "Jane Doe", email: "jane@example.com", website: "", message: "Please check my website.",
-  consent: true, company_fax: "", started_at: "1", "cf-turnstile-response": "tok" };
+  consent: true, company_fax: "", started_at: String(Date.now() - 10_000), "cf-turnstile-response": "tok" };
 const req = (b = body, ip = "203.0.113.9") => new Request("https://site.test/api/contact", {
   method: "POST", body: JSON.stringify(b),
   headers: { "Content-Type": "application/json", Accept: "application/json", Origin: "https://site.test", "CF-Connecting-IP": ip },
 });
 
 function mockFetch({ turnstile = true, resend = true } = {}) {
+  _resetRateLimitMemory();
   const calls = [];
   globalThis.fetch = async (url, init) => {
     calls.push({ url: String(url), init });
-    if (String(url).includes("turnstile")) return Response.json({ success: turnstile, action: "contact" });
+    if (String(url).includes("turnstile")) return Response.json({ success: turnstile, action: "contact", hostname: "site.test" });
     return new Response("{}", { status: resend ? 200 : 500 });
   };
   return calls;

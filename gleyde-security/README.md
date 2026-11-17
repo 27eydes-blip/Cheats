@@ -40,8 +40,11 @@ Header and footer are repeated in each page. If you change the menu, change it i
 npm install
 cp .dev.vars.example .dev.vars     # test keys: Turnstile always passes
 npm run dev                         # http://localhost:8788
-npm test                            # form validation + handler tests
+npm test                            # validation, attack suite, secret scan (97 tests)
+npm run test:e2e                    # with dev running: headers, exposed files, browser XSS (needs Playwright)
 ```
+
+See `docs/pentest-report.md` for what the attack suite covers and the results.
 
 Add `--kv RATE_LIMIT_KV` to the dev command to exercise rate limiting locally.
 
@@ -69,7 +72,9 @@ Set these in **Cloudflare dashboard → Workers & Pages → your project → Set
   - Server-side validation and normalization of every field, with control and bidi characters stripped.
   - A honeypot field and a minimum fill time quietly drop simple bots.
   - Cloudflare Turnstile is verified on the server with the secret key.
-  - Per-IP rate limit of 5 per hour in KV (IPs are salted and hashed). Back it with the WAF rule below.
+  - Every post counts toward a limit of 5 per hour per IP, or per /64 network for IPv6 (IPs are salted and hashed). An in-memory counter catches parallel bursts, and KV covers the rest. Back it with the WAF rule below.
+  - The body is read as a stream and cut off at 16 KB. Fields must be plain strings.
+  - Turnstile tokens are checked against this site's hostname and the form's action.
   - The email is plain text with a fixed subject. User input never goes into email headers, and only a validated address is used for `reply_to`.
   - Errors are generic to the visitor; the details go to Cloudflare logs.
 - **No third-party trackers, fonts or CDNs**, which keeps the attack surface small and the page fast. The whole site is about 130 KB before compression.
