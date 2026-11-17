@@ -2,7 +2,7 @@
 // Definition (the lead's, see COMBAT.md "Item balance"): HEAD-TO-HEAD. For each of the 12 items,
 // 300 1v1 bot races where racer A gets that item at every item box (holding it: it levels up) and
 // racer B gets the normal position-weighted roll at the same boxes (the neutral baseline is the
-// item pool itself). Same car and bot level for both, all 4 tracks, all 6 drivers, each fixed
+// item pool itself). Same car and bot level for both, all 6 tracks, all 6 drivers, each fixed
 // seed raced twice with the two grid slots swapped (mirrored). A's win rate must be 45%-55% for
 // every item. Deterministic: fixed seeds, the same table every run.
 // The full run (3600 races) takes well under a minute spread over a few worker threads.

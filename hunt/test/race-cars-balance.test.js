@@ -1,11 +1,11 @@
 // CAR BALANCE (Oblivion GP Part 4): no car wins more than 55% or less than 45%.
 // Definition (the lead's, see COMBAT.md "Car balance"): HEAD-TO-HEAD. Every car (the 6 starters
 // and the 8 unlockables) races 1v1 against a rotating field of the other 13 cars, both cars driven
-// by the same bot brain at the same level, weapons and items on, all 4 tracks, each fixed seed
-// raced twice with the grid slots swapped (mirrored). Every pair races 24 times, so each car gets
-// 13 x 24 = 312 races (at least the 300 asked for). Its win rate must be 45%-55%. Perks are small
+// by the same bot brain at the same level, weapons and items on, all 6 tracks, each fixed seed
+// raced twice with the grid slots swapped (mirrored). Every pair races 36 times, so each car gets
+// 13 x 36 = 468 races (at least the 300 asked for). Its win rate must be 45%-55%. Perks are small
 // tradeoffs inside that bound. Deterministic: fixed seeds, the same table every run.
-// The full run (2184 races) is spread over a few worker threads.
+// The full run (3276 races) is spread over a few worker threads.
 // CAR_BALANCE_SEEDS=n runs n mirrored seed pairs per car pair instead of 12 (the bound is only checked at 12+).
 import assert from 'node:assert';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';

@@ -2,18 +2,16 @@
 // HEAD-TO-HEAD, as the lead defined it: every car is raced 1v1 against a rotating field of the
 // other 13 cars (all 14 in the pool: the six starters and the eight unlockables), both driven by
 // the same bot brain at the same level, with weapons and items on as in a real Grand Race. Every
-// unordered pair of cars races RACES_PER_PAIR times: seeds cycle through all 4 tracks and each seed
+// unordered pair of cars races RACES_PER_PAIR times: seeds cycle through every track and each seed
 // is raced twice with the two cars swapping the two front grid slots (mirrored slots), so each car
-// gets 13 x 24 = 312 races. A car's win rate = races it finished first / races. Fixed seeds: the
+// gets 13 x 36 = 468 races. A car's win rate = races it finished first / races. Fixed seeds: the
 // same table every run.
 import { RaceSim } from '../src/race/sim.js';
 import { newCar, stepCar, ALL_DRIVER_IDS } from '../public/race/physics.js';
-// (the 4 classic tracks the balance was defined and tuned on: the same races and table as before the
-// new tracks; the new tracks' effect on car balance is measured separately, see the content report)
-import { CLASSIC_TRACK_IDS as TRACK_IDS } from '../public/race/tracks.js';
+import { TRACK_IDS } from '../public/race/tracks.js'; // every track in the game (the classic four and the new ones)
 
 export const BALANCE_CARS = ALL_DRIVER_IDS;
-export const SEEDS_PER_PAIR = 12; // x 2 mirrored slots = 24 races per pair
+export const SEEDS_PER_PAIR = 18; // 3 per track over the 6 tracks, x 2 mirrored slots = 36 races per pair
 const IDLE = { st: 0, th: 0, dr: 0 };
 // all unordered pairs [i, j], i < j, in a fixed order
 export const PAIRS = [];

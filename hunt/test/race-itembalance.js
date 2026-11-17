@@ -2,14 +2,12 @@
 // HEAD-TO-HEAD, as the lead defined it: for each item X, 1v1 bot races where racer A gets X at
 // every item box (an empty slot gets X, holding X levels it up) and racer B gets the normal
 // position-weighted roll at the same boxes (the neutral baseline: the item pool itself). Both
-// drive the same car at the same bot level. Races cycle through all 4 tracks and all 6 drivers;
+// drive the same car at the same bot level. Races cycle through every track and all 6 drivers;
 // each seed is raced twice with A and B swapping the two front grid slots (mirrored slots).
 // A's win rate = races A finished first / races. Fixed seeds: the same numbers every run.
 import { RaceSim } from '../src/race/sim.js';
 import { newCar, stepCar, DRIVER_IDS } from '../public/race/physics.js';
-// (the 4 classic tracks the balance was defined and tuned on: the same races and table as before the
-// new tracks; the new tracks' effect on car balance is measured separately, see the content report)
-import { CLASSIC_TRACK_IDS as TRACK_IDS } from '../public/race/tracks.js';
+import { TRACK_IDS } from '../public/race/tracks.js'; // every track in the game (the classic four and the new ones)
 import { ITEM_IDS } from '../public/race/items.js';
 
 const IDLE = { st: 0, th: 0, dr: 0 };

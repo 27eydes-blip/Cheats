@@ -27,7 +27,7 @@ export const ITEMS = {
     lv: [null, { r: 360, pull: 700, life: 3.5, up: 'Bigger pull' }, { r: 420, pull: 800, life: 4, crush: 22, up: 'Crushes racers at the centre' }] },
   ghost: { name: 'Ghost Mode', desc: 'Pass through racers and hits for 3 seconds, a little lighter and faster (no attacking while ghosted).', t: 3,
     lv: [null, { t: 3.6, up: 'Lasts longer' }, { t: 4.2, up: 'Lasts longest' }] },
-  sticky: { name: 'Sticky Bomb', desc: 'Sticks to a racer. Bump someone to pass it on before it blows.', fuse: 4, dmg: 50, spin: 0.8, splash: 0, speed: 1150, fly: 1.1, ground: 8, pass: 0.6,
+  sticky: { name: 'Sticky Bomb', desc: 'Sticks to a racer. Bump someone to pass it on before it blows.', fuse: 4, dmg: 40, spin: 0.8, splash: 0, speed: 1150, fly: 1.1, ground: 8, pass: 0.6,
     lv: [null, { fuse: 3.6, dmg: 55, splash: 150, up: 'Bigger blast' }, { fuse: 3.2, dmg: 62, splash: 210, up: 'Shorter fuse, huge blast' }] },
   drone: { name: 'Hunter Drone', desc: 'A drone that chases the racer ahead. Fire your weapon at it to swat it.', life: 6, speed: 790, turn: 4.5, dmg: 48, slow: 1.4, strikes: 1, swat: 230,
     lv: [null, { life: 7, speed: 850, dmg: 52, up: 'Faster drone' }, { life: 8, speed: 900, dmg: 56, strikes: 2, up: 'Strikes twice' }] },
@@ -89,12 +89,12 @@ export function rollItem(place, n, r, battle = false, held = null) {
 export const WEAPONS = {
   volt: { name: 'Tesla Arc', kind: 'arc', desc: 'Zaps the nearest racer in front: damage and a short slow.', cd: 4, range: 340, cone: 0.75, dmg: 35, slow: 0.8 },
   brick: { name: 'Shock Bumper', kind: 'pulse', desc: 'A shockwave that shoves and hurts everyone close.', cd: 6, r: 190, dmg: 30, knock: 520 },
-  wisp: { name: 'Rail Lance', kind: 'rail', desc: 'A long-range beam straight ahead.', cd: 6, range: 760, width: 26, dmg: 40 },
+  wisp: { name: 'Rail Lance', kind: 'rail', desc: 'A long-range beam straight ahead.', cd: 6, range: 760, width: 26, dmg: 38 },
   dune: { name: 'Sand Mines', kind: 'mine', desc: 'Drops a mine behind you (up to 3).', cd: 4.5, dmg: 40, slow: 1.3, max: 3, life: 25, r: 40, arm: 0.6 },
   rook: { name: 'Sentry Turret', kind: 'turret', desc: 'Drops a turret that fires at racers near it.', cd: 9, life: 4, range: 420, rate: 0.8, dmg: 20, speed: 1100 },
   flicker: { name: 'Blink Slash', kind: 'blink', desc: 'Blinks forward, slicing anyone in the way.', cd: 6, dist: 260, width: 46, dmg: 40 },
   // the unlockable cars
-  void: { name: 'Void Lance', kind: 'rail', desc: 'A dark beam straight ahead.', cd: 6, range: 950, width: 24, dmg: 40 },
+  void: { name: 'Void Lance', kind: 'rail', desc: 'A dark beam straight ahead.', cd: 6, range: 950, width: 24, dmg: 33 },
   fang: { name: 'Solar Flare', kind: 'pulse', desc: 'A burst of sunfire that shoves and burns everyone close.', cd: 6, r: 200, dmg: 30, knock: 480 },
   frost: { name: 'Ice Mines', kind: 'mine', desc: 'Drops an ice mine behind you (up to 3): less damage, a long freeze.', cd: 4.5, dmg: 30, slow: 1.8, max: 3, life: 25, r: 40, arm: 0.6 },
   grav: { name: 'Orbit Sentry', kind: 'turret', desc: 'Drops a sentry that fires at racers near it.', cd: 9, life: 4, range: 420, rate: 0.8, dmg: 19, speed: 1100 },

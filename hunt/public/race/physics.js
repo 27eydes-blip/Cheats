@@ -40,7 +40,7 @@ export const SURF = {
 export const DRIVERS = {
   volt: { name: 'Volt', car: 'Static Comet', role: 'All-rounder', top: 812, accel: 640, handling: 3.05, grip: 8.2, armor: 100, mass: 1.0, rough: 1, color: '#ffd23f', accent: '#3a86ff' },
   brick: { name: 'Brick', car: 'Iron Mule', role: 'Heavy', top: 805, accel: 580, handling: 2.85, grip: 8.8, armor: 150, mass: 1.55, rough: 0.85, color: '#ff7b39', accent: '#6b4226' },
-  wisp: { name: 'Wisp', car: 'Ghostline', role: 'Speed', top: 807, accel: 590, handling: 2.98, grip: 7.8, armor: 80, mass: 0.8, rough: 1.1, color: '#5ef2c6', accent: '#8f5cff' },
+  wisp: { name: 'Wisp', car: 'Ghostline', role: 'Speed', top: 812, accel: 590, handling: 2.98, grip: 7.8, armor: 80, mass: 0.8, rough: 1.1, color: '#5ef2c6', accent: '#8f5cff' },
   dune: { name: 'Dune', car: 'Dust Strider', role: 'Off-road', top: 816, accel: 610, handling: 2.95, grip: 8.4, armor: 110, mass: 1.05, rough: 0.5, color: '#e8b04a', accent: '#2a9d8f' },
   rook: { name: 'Rook', car: 'Bastion', role: 'Defender', top: 827, accel: 585, handling: 2.95, grip: 8.4, armor: 130, mass: 1.3, rough: 0.9, color: '#7fa34a', accent: '#ff8c1a' },
   flicker: { name: 'Flicker', car: 'Quickstitch', role: 'Handling', top: 828, accel: 700, handling: 3.35, grip: 7.6, armor: 85, mass: 0.85, rough: 1, color: '#c04dff', accent: '#ff5fa2' },
@@ -60,7 +60,7 @@ export const DRIVER_IDS = Object.keys(DRIVERS); // the six starter cars (bots dr
 // hit: the hitbox as a capsule along the car, total length l x width w (px), sized to the art
 // (the six starters are the old round 2 x CAR_R). Walls use CAR_R for every car (soft guard walls).
 export const NEW_DRIVERS = {
-  void: { name: 'Voidrunner', car: 'Voidrunner', role: 'Drifter', top: 783, accel: 630, handling: 3.12, grip: 7.9, armor: 88, mass: 0.9, rough: 1, color: '#8a3dff', accent: '#dcbcff', perk: 'drift', dcMul: 1.2, hit: { l: 54, w: 36 } },
+  void: { name: 'Voidrunner', car: 'Voidrunner', role: 'Drifter', top: 798, accel: 630, handling: 3.12, grip: 7.9, armor: 88, mass: 0.9, rough: 1, color: '#8a3dff', accent: '#dcbcff', perk: 'drift', dcMul: 1.2, hit: { l: 54, w: 36 } },
   fang: { name: 'Solar Fang', car: 'Solar Fang', role: 'Booster', top: 803, accel: 620, handling: 3.0, grip: 8.2, armor: 100, mass: 1.0, rough: 1, color: '#ff8c14', accent: '#ffe27a', perk: 'boost', boostLen: 1.25, hit: { l: 54, w: 40 } },
   frost: { name: 'Frostbyte', car: 'Frostbyte', role: 'Sure-footed', top: 810, accel: 615, handling: 3.0, grip: 8.4, armor: 105, mass: 1.05, rough: 0.9, color: '#56d6ff', accent: '#eafcff', perk: 'grip', iceGrip: 1, hit: { l: 52, w: 34 } },
   grav: { name: 'Graviton', car: 'Graviton', role: 'Collector', top: 825, accel: 612, handling: 3.05, grip: 8.0, armor: 108, mass: 1.1, rough: 0.6, color: '#2bffb0', accent: '#d0fff0', perk: 'magnet', magnet: 120, hit: { l: 46, w: 46 } },
