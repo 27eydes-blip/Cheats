@@ -4,7 +4,10 @@ import {
   tierFor, layerFor, LANDMARKS, FEET_PER_POINT, PROMPTS_PER_DAY, dayNumber, TIERS,
 } from '../shared/score.js';
 import { loadProfile, saveProfile, localDate, liveStreak, completeDay } from './profile.js';
-import { buildWorld, setAltitude, sparkle, mountGlider, getAltitude } from './sky.js';
+import { initSky, setAltitude, sparkle, mountGlider, isNight } from './sky.js';
+import { ACTIVE_THEME } from '../themes.js';
+// TEMPORARY: remove with the theme picker
+import { initialTheme, initThemePicker } from './theme-picker.js';
 import { sfx, setMuted, unlock as unlockAudio } from './audio.js';
 import {
   awardForAnswer, awardForDay, renderCreatures, renderMaps, medalHTML, CREATURES, MAPS, FRAGMENTS_PER_MAP,
@@ -34,7 +37,7 @@ function show(screen) {
   for (const s of document.querySelectorAll('.screen')) s.hidden = s.id !== `screen-${screen}`;
   document.body.className = document.body.className.replace(/\bon-\w+/g, '').trim() + ` on-${screen}`;
   if (profile.premium) document.body.classList.add('premium');
-  document.body.classList.toggle('night', getAltitude() >= 330);
+  document.body.classList.toggle('night', isNight());
 }
 
 // One toast at a time, so unlocks don't pile up over the prompt.
@@ -608,9 +611,9 @@ function wire() {
 async function init() {
   setMuted(profile.muted);
   setSoundIcon();
-  buildWorld();
-  setAltitude(0, { instant: true });
+  initSky(initialTheme(ACTIVE_THEME)); // TEMPORARY: after picking a theme this becomes initSky(ACTIVE_THEME)
   mountGlider();
+  initThemePicker(); // TEMPORARY
   wire();
   if (profile.premium) document.body.classList.add('premium');
   renderHome();

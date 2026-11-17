@@ -18,7 +18,9 @@ const MODULES = [
   'public/js/profile.js',
   'public/js/audio.js',
   'public/js/collection.js',
+  'public/themes.js',
   'public/js/sky.js',
+  'public/js/theme-picker.js',
   'artifact/local-api.js',
   'public/js/app.js',
 ];
@@ -58,9 +60,6 @@ document.addEventListener('sky-connected', () => {
 `);
 
 let css = read('public/style.css')
-  .replace("url('art/clouds-far.svg')", `url('${dataUri('public/art/clouds-far.svg')}')`)
-  .replace("url('art/clouds-mid.svg')", `url('${dataUri('public/art/clouds-mid.svg')}')`)
-  .replace("url('art/clouds-near.svg')", `url('${dataUri('public/art/clouds-near.svg')}')`)
   .replace("url('art/glider.svg')", `url('${dataUri('public/art/glider.svg')}')`)
   .replace('padding: calc(12px + var(--safe-t)) 16px calc(14px + var(--safe-b));',
     'padding: 12px max(16px, env(safe-area-inset-left, 0px)) 14px max(16px, env(safe-area-inset-right, 0px));')
