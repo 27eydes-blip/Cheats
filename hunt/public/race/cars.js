@@ -354,7 +354,7 @@ export class CarSprites {
 function glossOf(g) {
   if (g.gloss) return g.gloss;
   const gr = g.createLinearGradient(-HALF * 0.5, -HALF * 0.5, HALF * 0.4, HALF * 0.4);
-  gr.addColorStop(0, 'rgba(255,255,255,0.22)'); gr.addColorStop(0.42, 'rgba(255,255,255,0.03)'); gr.addColorStop(0.5, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,10,0.3)');
+  gr.addColorStop(0, 'rgba(255,255,255,0.34)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.08)'); gr.addColorStop(0.5, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,10,0.42)');
   return (g.gloss = gr);
 }
 

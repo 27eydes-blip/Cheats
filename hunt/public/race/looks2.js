@@ -7,7 +7,7 @@
 //   vx PHANTOM VX · redline REDLINE ZERO · helix HELIX · prime OBLIVION PRIME
 import * as L1 from './looks.js';
 
-export const { NEON_GLOW, glowA, PATTERNS } = L1;
+export const { NEON_GLOW, glowA, PATTERNS, solidBody } = L1;
 
 // rarity: tag colour, a lighter tint for text and a glow colour (garage cards, unlock screen)
 export const RARITY = {
@@ -62,7 +62,7 @@ export function makeLook(driverId, opts = null) {
   const own = col(skin.neon, null), neon = own || B.neon;
   const L = {
     driver: id, name: B.name, rarity: B.rarity, fx: B.fx, voice: B.voice,
-    neon, neon2: col(skin.neon2, own ? '#ffffff' : B.neon2), body: col(skin.body, B.body),
+    neon, neon2: col(skin.neon2, own ? '#ffffff' : B.neon2), body: L1.solidBody(col(skin.body, B.body), neon),
     pattern: 'none', // the new cars animate their own fx layers instead of skin patterns
     glow: col(glow.color, own || B.glow.color), glowStyle: pick(glow.style, GLOW_STYLES, B.glow.style),
     rim: col(wheel.rim, B.wheel.rim), spokes: Math.max(2, Math.min(8, (wheel.spokes | 0) || B.wheel.spokes)),

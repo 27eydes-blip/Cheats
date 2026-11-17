@@ -32,6 +32,14 @@ export function carName(id) {
 }
 
 const HEX = /^#[0-9a-f]{6}$/i;
+// SOLID bodies: the stored body colours are near black, which on a dark track left only the neon
+// outline visible (hollow-looking cars). Lift them toward the car's own neon so the paint reads as a
+// solid, lit shell; glass, tyres and ink edges stay dark for contrast.
+export function solidBody(body, neon, f = 0.5) {
+  const h = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  const A = h(body), B = h(neon);
+  return '#' + A.map((v, i) => Math.round(v + (B[i] * 0.78 - v) * f).toString(16).padStart(2, '0')).join('');
+}
 const col = (v, d) => (typeof v === 'string' && HEX.test(v) ? v.toLowerCase() : d);
 const pick = (v, list, d) => (list.includes(v) ? v : d);
 const obj = (o) => (o && typeof o === 'object' ? o : null);
@@ -47,7 +55,7 @@ export function makeLook(driverId, opts = null) {
   const own = col(skin.neon, null), neon = own || B.neon; // a valid skin colour also tints neon2 and the glow
   const L = {
     driver: id, name: B.name,
-    neon, neon2: col(skin.neon2, own ? '#ffffff' : B.neon2), body: col(skin.body, B.body),
+    neon, neon2: col(skin.neon2, own ? '#ffffff' : B.neon2), body: solidBody(col(skin.body, B.body), neon),
     pattern: pick(skin.pattern, PATTERNS, B.pattern),
     glow: col(glow.color, own || B.glow.color), glowStyle: pick(glow.style, GLOW_STYLES, B.glow.style),
     rim: col(wheel.rim, B.wheel.rim), spokes: Math.max(2, Math.min(8, (wheel.spokes | 0) || B.wheel.spokes)),
