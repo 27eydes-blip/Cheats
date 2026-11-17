@@ -6,51 +6,15 @@ import { pointAt } from './trackgeom.js';
 import { CAR_R } from './physics.js';
 import { SETTINGS } from '../settings.js';
 import { NEON_GLOW } from './looks.js';
+import { THEMES, artOf, placeScenery, drawFlat, drawTallBase, drawTall } from './scenery.js';
 import { artTheme } from './trackthemes.js';
 
 export const CHUNK = 384; // world px per chunk side
 const MAX_CHUNKS = 40;
-const WALL = 26; // wall band beyond the shoulder (px)
+const WALL = 26; // wall band beyond the shoulder (px) (as scenery.js)
 
-// colours per world (track.world)
-export const THEMES = {
-  desert: {
-    bg: '#d39a57', ground: ['#d9a35f', '#c98d4c', '#e4b673'], speck: 'rgba(120,60,20,0.18)',
-    wall: '#8a3f22', wallTop: '#c8683a', wallLine: '#f0a46a', shoulder: '#e6c07e', shoulderSpeck: 'rgba(150,90,40,0.25)',
-    road: '#5d5452', roadSpeck: 'rgba(255,230,200,0.06)', line: 'rgba(255,236,190,0.55)', curbA: '#d8432c', curbB: '#f7ead3',
-    sand: '#e8c47f', mini: '#e7b46a', miniRoad: '#3b2e2b', sky: 'rgba(255,200,120,0.08)',
-  },
-  frozen: {
-    bg: '#dfeaf6', ground: ['#e9f1fa', '#d6e4f3', '#f5f9fd'], speck: 'rgba(120,150,200,0.16)',
-    wall: '#8fa9cc', wallTop: '#fbfdff', wallLine: '#cfe0f3', shoulder: '#c9dcef', shoulderSpeck: 'rgba(130,160,200,0.22)',
-    road: '#4b5565', roadSpeck: 'rgba(220,240,255,0.07)', line: 'rgba(235,245,255,0.6)', curbA: '#2f7fe0', curbB: '#f4f8ff',
-    ice: '#a9dcf5', snow: '#eef4fb', mini: '#cfe0f2', miniRoad: '#3a4454', sky: 'rgba(200,230,255,0.06)',
-  },
-  ashlands: {
-    bg: '#2a2024', ground: ['#2d2327', '#241c20', '#372a2c'], speck: 'rgba(255,120,60,0.07)',
-    wall: '#140d10', wallTop: '#3d2a28', wallLine: '#ff6a2a', shoulder: '#4a3b37', shoulderSpeck: 'rgba(0,0,0,0.25)',
-    road: '#3a3335', roadSpeck: 'rgba(255,180,120,0.05)', line: 'rgba(255,170,90,0.45)', curbA: '#ff6a1a', curbB: '#1d1416',
-    lava: '#ff5212', mini: '#3a2a2a', miniRoad: '#151012', sky: 'rgba(255,80,20,0.05)',
-  },
-  city: {
-    bg: '#12122a', ground: ['#16163a', '#111130', '#1b1b44'], speck: 'rgba(160,160,255,0.06)',
-    wall: '#2b2b48', wallTop: '#4a4a6e', wallLine: '#ff3fa4', shoulder: '#2a2a46', shoulderSpeck: 'rgba(255,255,255,0.05)',
-    road: '#202036', roadSpeck: 'rgba(200,200,255,0.05)', line: 'rgba(120,250,255,0.55)', curbA: '#ff3fa4', curbB: '#e8e8ff',
-    mini: '#24244a', miniRoad: '#0b0b1c', sky: 'rgba(120,60,255,0.05)',
-  },
-};
-const NEON = ['#ff3fa4', '#3ff5ff', '#a05cff', '#ffe14a', '#4bff9c'];
-// NIGHT: every chunk is painted in its day colours, then multiplied by the world's dusk colour
-// (night), then the lights go on top: neon lane lines, edges and curbs, wall rims, light poles
-// with glow pools, wet puddles, boost pads (and lava, signs) at full brightness.
-const NIGHT = {
-  desert: { night: '#5c4c9c', line: '#ffd27a', edge: '#ff8a4a', curbA: '#ff3d6a', curbB: '#ffe8c0', wall: '#ff6a3a', pole: '#ffb35a', pole2: '#ff5fa2', puddles: 0.3 },
-  frozen: { night: '#4a5ca6', line: '#bff4ff', edge: '#5fd0ff', curbA: '#3f8bff', curbB: '#e8f8ff', wall: '#7fe0ff', pole: '#9fdcff', pole2: '#b38cff', puddles: 0.55 },
-  ashlands: { night: '#b08c98', line: '#ffb05a', edge: '#ff6a1a', curbA: '#ff4a1a', curbB: '#ffd0a0', wall: '#ff5a1f', pole: '#ff8a3a', pole2: '#ffd23f', puddles: 0.25 },
-  city: { night: '#9090cc', line: '#78faff', edge: '#ff3fa4', curbA: '#ff3fa4', curbB: '#e8e8ff', wall: '#3ff5ff', pole: '#ff3fa4', pole2: '#3ff5ff', puddles: 1 },
-};
-const mul = (a, b) => '#' + [1, 3, 5].map((i) => Math.round((parseInt(a.slice(i, i + 2), 16) * parseInt(b.slice(i, i + 2), 16)) / 255).toString(16).padStart(2, '0')).join('');
-for (const w in THEMES) THEMES[w].bg = mul(THEMES[w].bg, NIGHT[w].night); // the clear colour beyond the chunks
+// worlds (palettes, lights, scenery): scenery.js. THEMES[world] is the palette.
+export { THEMES };
 // (only used for light: pole pools, lamp heads, puddles, neon glow underlays; scaled by NEON_GLOW)
 const a2 = (c, a) => c + Math.round(Math.min(1, a * NEON_GLOW) * 255).toString(16).padStart(2, '0');
 
@@ -73,59 +37,63 @@ function noiseTile(size, base, specks, n, dot, seed) {
   return cv;
 }
 
+// a track's art: its world's (scenery.js), with a new track's own night palette from
+// trackthemes.js (`art` in the track def) laid over it; made once per palette
+const themed = new Map();
+export function trackArtOf(T) {
+  const base = artOf(T && T.world), ex = artTheme(T);
+  if (!ex) return base;
+  let a = themed.get(ex);
+  if (!a) {
+    const nt = ex.nt;
+    a = { ...base, pal: { ...base.pal, ...ex.th, tex: [...(ex.groundSpecks || []), ...base.pal.tex.slice(0, 2)] },
+      night: { ...base.night, ...nt, night: '#f2eeff' }, // (the palette is already night: only a light dusk over it)
+      neon: [nt.edge, nt.line, nt.curbA, nt.pole2], crowd: [nt.edge, nt.line, '#ffffff', nt.curbA],
+      dusk: [base.dusk[0], nt.edge + '38', [nt.edge, nt.line, nt.curbA]], horizon: base.horizon };
+    a.pal.bg = ex.th.bg;
+    themed.set(ex, a);
+  }
+  return a;
+}
 export class TrackArt {
   constructor(T) {
     this.T = T;
-    this.art = artTheme(T); // the new tracks' own night palettes (trackthemes.js) on the city scenery
-    this.th = this.art ? this.art.th : THEMES[T.world] || THEMES.desert;
+    this.art = trackArtOf(T); // the world's look, or a new track's own palette on its world's scenery
+    this.th = this.art.pal;
     this.world = T.world;
     this.scale = 0;
     this.chunks = new Map();
     this.tick = 0;
     this.tiles();
-    this.decor = [];
     this.glows = []; // animated light spots: {x, y, r, col, ph}
     this.buildDecor();
     this.buildZones();
-    this.nt = this.art ? this.art.nt : NIGHT[this.world] || NIGHT.desert;
+    this.nt = this.art.night;
     this.buildLights();
     this.mini = null;
   }
 
   tiles() {
-    const th = this.th, w = this.world;
-    const ground = this.art ? this.art.groundSpecks : w === 'frozen' ? ['#c8d9ee', '#ffffff'] : w === 'city' ? ['#24244e', '#0c0c22'] : w === 'ashlands' ? ['#1a1215', '#4a3434', '#ff5a1f'] : ['#b9773c', '#eabb7c', '#9a5c2c'];
-    this.tGround = noiseTile(256, th.ground[0], ground, 220, 3.2, 3);
-    this.tShoulder = noiseTile(128, th.shoulder, [th.shoulderSpeck, '#0003', '#fff2'], 90, 2, 5);
-    this.tRoad = noiseTile(128, th.road, [th.roadSpeck, 'rgba(0,0,0,0.18)', 'rgba(255,255,255,0.05)'], 160, 1.4, 7);
+    const th = this.th;
+    this.tGround = noiseTile(256, th.ground[0], th.tex, 260, 2.6, 3);
+    this.tRunoff = noiseTile(128, th.wall, [th.shoulderSpeck, 'rgba(255,255,255,0.05)', '#0005'], 160, 1.4, 9);
+    this.tShoulder = noiseTile(128, th.shoulder, [th.shoulderSpeck, '#0003', '#fff1'], 110, 1.6, 5);
+    this.tRoad = noiseTile(128, th.road, [th.roadSpeck, 'rgba(0,0,0,0.2)', 'rgba(255,255,255,0.04)'], 190, 1.1, 7);
   }
 
-  // scenery placed on a world grid, kept clear of the road and walls (deterministic)
+  // background scenery (scenery.js: placed clear of the road and walls, deterministic), indexed by chunk
   buildDecor() {
-    const T = this.T, b = T.bounds, P = {}, w = this.world, cell = w === 'city' ? 210 : 150;
-    const x0 = b.x0 - 600, y0 = b.y0 - 600, x1 = b.x1 + 600, y1 = b.y1 + 600;
-    for (let gy = Math.floor(y0 / cell); gy <= y1 / cell; gy++) for (let gx = Math.floor(x0 / cell); gx <= x1 / cell; gx++) {
-      const h = hash(gx, gy, 11);
-      const x = (gx + 0.15 + hash(gx, gy, 12) * 0.7) * cell, y = (gy + 0.15 + hash(gx, gy, 13) * 0.7) * cell;
-      let kind, r;
-      if (w === 'desert') { if (h < 0.11) { kind = 'mesa'; r = 90 + hash(gx, gy, 14) * 90; } else if (h < 0.3) { kind = 'rock'; r = 14 + hash(gx, gy, 14) * 22; } else if (h < 0.42) { kind = 'cactus'; r = 16 + hash(gx, gy, 14) * 10; } else if (h < 0.6) { kind = 'ripple'; r = 50 + hash(gx, gy, 14) * 40; } else continue; }
-      else if (w === 'frozen') { if (h < 0.3) { kind = 'pine'; r = 22 + hash(gx, gy, 14) * 18; } else if (h < 0.42) { kind = 'drift'; r = 40 + hash(gx, gy, 14) * 50; } else if (h < 0.5) { kind = 'pond'; r = 60 + hash(gx, gy, 14) * 70; } else if (h < 0.58) { kind = 'rock'; r = 12 + hash(gx, gy, 14) * 14; } else continue; }
-      else if (w === 'ashlands') { if (h < 0.16) { kind = 'pool'; r = 40 + hash(gx, gy, 14) * 60; } else if (h < 0.4) { kind = 'crag'; r = 18 + hash(gx, gy, 14) * 30; } else if (h < 0.55) { kind = 'crack'; r = 50 + hash(gx, gy, 14) * 50; } else if (h < 0.62) { kind = 'bones'; r = 18; } else continue; }
-      else { if (h < 0.55) { kind = 'block'; r = 60 + hash(gx, gy, 14) * 30; } else if (h < 0.8) { kind = 'sign'; r = 34; } else continue; }
-      const rot = hash(gx, gy, 15) * Math.PI * 2, v = hash(gx, gy, 16);
-      if (!this.clear(x, y, r + (kind === 'ripple' || kind === 'crack' || kind === 'drift' || kind === 'pond' ? 0 : 18), P)) continue;
-      this.decor.push({ kind, x, y, r, rot, v });
-      if (kind === 'pool') this.glows.push({ x, y, r: r * 1.6, col: 'lava', ph: v * 6 });
-      if (kind === 'sign') this.glows.push({ x, y, r: 130, col: NEON[Math.floor(v * NEON.length)], ph: v * 6 });
-    }
-    // index by chunk
-    this.decorAt = new Map();
-    for (const d of this.decor) {
-      const m = d.r + 40;
-      for (let cy = Math.floor((d.y - m) / CHUNK); cy <= Math.floor((d.y + m) / CHUNK); cy++) for (let cx = Math.floor((d.x - m) / CHUNK); cx <= Math.floor((d.x + m) / CHUNK); cx++) {
-        const k = cx + ',' + cy; let a = this.decorAt.get(k); if (!a) this.decorAt.set(k, (a = [])); a.push(d);
+    const S = placeScenery(this.T, this.art);
+    this.flat = S.flat; this.tall = S.tall;
+    for (const d of this.flat) if (d.glow) this.glows.push({ x: d.x, y: d.y, r: d.r * 1.7, col: 'lava', ph: d.v * 6 });
+    const index = (list, m) => {
+      const at = new Map();
+      for (const d of list) for (let cy = Math.floor((d.by0 - m) / CHUNK); cy <= Math.floor((d.by1 + m) / CHUNK); cy++) for (let cx = Math.floor((d.bx0 - m) / CHUNK); cx <= Math.floor((d.bx1 + m) / CHUNK); cx++) {
+        const k = cx + ',' + cy; let a = at.get(k); if (!a) at.set(k, (a = [])); a.push(d);
       }
-    }
+      return at;
+    };
+    this.decorAt = index(this.flat, 0); this.tallAt = index(this.tall, 12);
   }
   // light poles along the main road (alternating sides, outside the wall) and wet puddles on it
   buildLights() {
@@ -222,7 +190,7 @@ export class TrackArt {
     if (!build) return null;
     ch = { cv: this.renderChunk(cx, cy), used: this.tick, gen: this.gen || 0 };
     this.chunks.set(k, ch);
-    if (this.chunks.size > MAX_CHUNKS) {
+    if (this.chunks.size > this.maxChunks()) {
       let oldK = null, old = Infinity;
       for (const [kk, v] of this.chunks) if (v.used < old) { old = v.used; oldK = kk; }
       const dead = this.chunks.get(oldK); this.chunks.delete(oldK); this.spare = dead.cv;
@@ -230,27 +198,45 @@ export class TrackArt {
     return ch.cv;
   }
   has(cx, cy) { return this.chunks.has(cx * 100003 + cy); }
+  // the cache holds about 56 MB of chunk pixels whatever the bake scale (finer chunks: fewer of them;
+  // a closer camera also shows fewer at once)
+  maxChunks() { const px = Math.ceil((CHUNK + 2) * (this.scale || 1)); return Math.max(16, this.need || 0, Math.min(MAX_CHUNKS, Math.floor(56e6 / (px * px * 4)))); }
 
   renderChunk(cx, cy) {
     const s = this.scale, px = Math.ceil((CHUNK + 2) * s);
     let cv = this.spare; this.spare = null;
     if (!cv || cv.width !== px) { cv = document.createElement('canvas'); cv.width = cv.height = px; }
     const g = cv.getContext('2d');
-    const x0 = cx * CHUNK, y0 = cy * CHUNK;
+    const x0 = cx * CHUNK, y0 = cy * CHUNK, art = this.art, low = SETTINGS.lowGfx;
     g.setTransform(s, 0, 0, s, -x0 * s, -y0 * s);
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     const pat = (tile) => g.createPattern(tile, 'repeat');
     g.fillStyle = pat(this.tGround); g.fillRect(x0 - 1, y0 - 1, CHUNK + 4, CHUNK + 4);
-    const decor = this.decorAt.get(cx + ',' + cy) || [];
-    for (const d of decor) if (d.kind === 'ripple' || d.kind === 'crack' || d.kind === 'drift' || d.kind === 'pond' || d.kind === 'pool') this.drawDecor(g, d);
+    this.blotches(g, x0, y0);
+    const decor = this.decorAt.get(cx + ',' + cy) || [], tall = this.tallAt.get(cx + ',' + cy) || [];
+    for (const d of decor) drawFlat(g, d, art, false);
+    for (const d of tall) drawTallBase(g, d);
     const bx = { x0: x0 - 300, y0: y0 - 300, x1: x0 + CHUNK + 300, y1: y0 + CHUNK + 300 };
     if (this.T.box) this.paintArena(g, bx); else this.paintTrack(g, bx);
-    for (const d of decor) if (!(d.kind === 'ripple' || d.kind === 'crack' || d.kind === 'drift' || d.kind === 'pond' || d.kind === 'pool')) this.drawDecor(g, d);
-    // night falls, then the lights come on
+    // a light dusk over everything, then the lights come on
     g.globalCompositeOperation = 'multiply'; g.fillStyle = this.nt.night; g.fillRect(x0 - 1, y0 - 1, CHUNK + 4, CHUNK + 4);
     g.globalCompositeOperation = 'source-over';
     this.nightLights(g, bx, cx, cy, decor);
+    // Low Graphics: the tall scenery is baked here, leaning a fixed way, instead of drawn every frame
+    if (low) for (const d of tall) drawTall(g, d, 0.12, -0.2, 0, true, true);
     return cv;
+  }
+  // big soft light and dark patches across the ground (world grid, so they run on across chunks)
+  blotches(g, x0, y0) {
+    const B = this.th.blot, G = 300, R = 260;
+    if (!B) return;
+    for (let gy = Math.floor((y0 - R) / G); gy <= Math.floor((y0 + CHUNK + R) / G); gy++) for (let gx = Math.floor((x0 - R) / G); gx <= Math.floor((x0 + CHUNK + R) / G); gx++) {
+      const h = hash(gx, gy, 91), x = (gx + hash(gx, gy, 92)) * G, y = (gy + hash(gx, gy, 93)) * G, r = R * (0.6 + 0.4 * hash(gx, gy, 94));
+      if (x + r < x0 || x - r > x0 + CHUNK || y + r < y0 || y - r > y0 + CHUNK) continue;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r), col = B[Math.floor(h * B.length)];
+      gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
   }
 
   // segments of corridor c whose box (with margin m) meets the chunk
@@ -271,6 +257,8 @@ export class TrackArt {
     if (!lists.some((l) => l.length)) return;
     const stroke = (c, i, w) => { const j = (i + 1) % c.n; g.lineWidth = w; g.beginPath(); g.moveTo(c.px[i], c.py[i]); g.lineTo(c.px[j], c.py[j]); g.stroke(); };
     g.lineCap = 'round'; g.lineJoin = 'round';
+    // runoff: a gravel band just outside the walls (under them), so the track has a clean border
+    g.strokeStyle = g.createPattern(this.tRunoff, 'repeat'); T.corridors.forEach((c, k) => { for (const i of lists[k]) stroke(c, i, 2 * c.ww[i] + WALL * 2 + 44); });
     // walls: a dark base, a lit top, a bright rim line (theme)
     g.strokeStyle = th.wall; T.corridors.forEach((c, k) => { for (const i of lists[k]) stroke(c, i, 2 * c.ww[i] + WALL * 2); });
     g.strokeStyle = th.wallTop; T.corridors.forEach((c, k) => { for (const i of lists[k]) stroke(c, i, 2 * c.ww[i] + WALL * 1.1); });
@@ -546,125 +534,12 @@ export class TrackArt {
     g.beginPath(); g.arc(o.x, o.y, r * 0.28, 0, 7); g.fillStyle = '#ff7a1a'; g.fill(); g.lineWidth = 2.5; g.stroke();
   }
   wetReflections(g, bx) {
-    // blurred neon colour pooled on the asphalt next to the signs
-    for (const d of this.decor) {
-      if (d.kind !== 'sign' && !(d.kind === 'block' && d.v > 0.6)) continue;
-      if (d.x < bx.x0 || d.x > bx.x1 || d.y < bx.y0 || d.y > bx.y1) continue;
-      const col = NEON[Math.floor(d.v * 97) % NEON.length];
-      const gr = g.createRadialGradient(d.x, d.y, 10, d.x, d.y, d.r * 2.6);
-      gr.addColorStop(0, a2(col, 0x55 / 255)); gr.addColorStop(1, col + '00');
-      g.fillStyle = gr; g.beginPath(); g.ellipse(d.x, d.y, d.r * 2.6, d.r * 1.6, d.rot, 0, 7); g.fill();
-    }
-  }
-
-  drawDecor(g, d) {
-    const { x, y, r, rot, v } = d;
-    g.lineJoin = 'round';
-    switch (d.kind) {
-      case 'mesa': { // layered sandstone butte with a shadow
-        const n = 9, pts = [];
-        for (let k = 0; k < n; k++) { const a = rot + (k / n) * Math.PI * 2, rr2 = r * (0.78 + hash(k, Math.round(x), 31) * 0.3); pts.push(Math.cos(a) * rr2, Math.sin(a) * rr2); }
-        const shape = (sx, sy, k) => { g.beginPath(); g.moveTo(x + sx + pts[0] * k, y + sy + pts[1] * k); for (let i = 2; i < pts.length; i += 2) g.lineTo(x + sx + pts[i] * k, y + sy + pts[i + 1] * k); g.closePath(); };
-        shape(r * 0.22, r * 0.28, 1); g.fillStyle = 'rgba(90,40,10,0.35)'; g.fill();
-        shape(0, 0, 1); g.fillStyle = '#9c4a26'; g.fill(); g.lineWidth = 5; g.strokeStyle = '#12091e'; g.stroke();
-        shape(-r * 0.05, -r * 0.06, 0.8); g.fillStyle = '#c4693a'; g.fill();
-        shape(-r * 0.09, -r * 0.1, 0.6); g.fillStyle = '#e09456'; g.fill();
-        shape(-r * 0.11, -r * 0.13, 0.42); g.fillStyle = '#f0b878'; g.fill();
-        break;
-      }
-      case 'rock': {
-        g.beginPath(); g.ellipse(x + r * 0.3, y + r * 0.35, r, r * 0.8, rot, 0, 7); g.fillStyle = 'rgba(0,0,0,0.22)'; g.fill();
-        g.beginPath(); g.ellipse(x, y, r, r * 0.8, rot, 0, 7);
-        g.fillStyle = this.world === 'frozen' ? '#8d9db3' : '#a0603a'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#12091e'; g.stroke();
-        g.beginPath(); g.ellipse(x - r * 0.25, y - r * 0.25, r * 0.5, r * 0.35, rot, 0, 7); g.fillStyle = this.world === 'frozen' ? '#f4f8ff' : '#cf8752'; g.fill();
-        break;
-      }
-      case 'cactus': { // round barrel cactus from above, with spines
-        g.beginPath(); g.arc(x + 5, y + 6, r, 0, 7); g.fillStyle = 'rgba(80,40,10,0.3)'; g.fill();
-        g.beginPath(); g.arc(x, y, r, 0, 7); g.fillStyle = '#4f8a3a'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#12091e'; g.stroke();
-        g.strokeStyle = '#2f5a24'; g.lineWidth = 2; g.beginPath(); for (let k = 0; k < 6; k++) { const a = rot + k * 1.047; g.moveTo(x, y); g.lineTo(x + Math.cos(a) * r * 0.9, y + Math.sin(a) * r * 0.9); } g.stroke();
-        g.beginPath(); g.arc(x - r * 0.2, y - r * 0.2, r * 0.3, 0, 7); g.fillStyle = v > 0.5 ? '#ff6fae' : '#ffd23f'; g.fill(); // flower
-        break;
-      }
-      case 'ripple': {
-        g.strokeStyle = 'rgba(140,80,30,0.22)'; g.lineWidth = 4; g.lineCap = 'round';
-        g.beginPath(); for (let k = -2; k <= 2; k++) { const o = k * 16; g.moveTo(x - Math.cos(rot) * r - Math.sin(rot) * o, y - Math.sin(rot) * r + Math.cos(rot) * o); g.quadraticCurveTo(x - Math.sin(rot) * (o + 12), y + Math.cos(rot) * (o + 12), x + Math.cos(rot) * r - Math.sin(rot) * o, y + Math.sin(rot) * r + Math.cos(rot) * o); } g.stroke();
-        break;
-      }
-      case 'pine': { // a pine from above: layered star of needles, snow on top
-        g.beginPath(); g.arc(x + r * 0.35, y + r * 0.4, r, 0, 7); g.fillStyle = 'rgba(60,90,140,0.25)'; g.fill();
-        for (const [k, col] of [[1, '#1f4a3a'], [0.72, '#2c6a4c'], [0.45, '#3f8a5e']]) {
-          g.beginPath(); for (let i = 0; i < 16; i++) { const a = rot + (i / 16) * Math.PI * 2, rr2 = r * k * (i & 1 ? 0.62 : 1); g.lineTo(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2); } g.closePath();
-          g.fillStyle = col; g.fill(); if (k === 1) { g.lineWidth = 3; g.strokeStyle = '#12091e'; g.stroke(); }
-        }
-        g.beginPath(); g.arc(x - r * 0.15, y - r * 0.15, r * 0.22, 0, 7); g.fillStyle = '#f4f8ff'; g.fill();
-        break;
-      }
-      case 'drift': {
-        g.beginPath(); g.ellipse(x + 8, y + 8, r, r * 0.55, rot, 0, 7); g.fillStyle = 'rgba(120,150,200,0.22)'; g.fill();
-        g.beginPath(); g.ellipse(x, y, r, r * 0.55, rot, 0, 7); g.fillStyle = '#f8fbff'; g.fill();
-        break;
-      }
-      case 'pond': { // frozen pond with cracks
-        g.beginPath(); g.ellipse(x, y, r, r * 0.7, rot, 0, 7); g.fillStyle = '#a9dcf5'; g.fill(); g.lineWidth = 4; g.strokeStyle = '#8fbfe0'; g.stroke();
-        g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 2; g.beginPath();
-        for (let k = 0; k < 4; k++) { const a = rot + k * 1.7; g.moveTo(x, y); g.lineTo(x + Math.cos(a) * r * 0.5, y + Math.sin(a) * r * 0.35); g.lineTo(x + Math.cos(a + 0.4) * r * 0.85, y + Math.sin(a + 0.4) * r * 0.6); } g.stroke();
-        g.beginPath(); g.ellipse(x - r * 0.3, y - r * 0.25, r * 0.3, r * 0.1, -0.5, 0, 7); g.fillStyle = 'rgba(255,255,255,0.6)'; g.fill();
-        break;
-      }
-      case 'pool': { // lava pool (glow animates in the renderer)
-        g.beginPath(); g.ellipse(x, y, r * 1.15, r * 0.85, rot, 0, 7); g.fillStyle = '#140c0e'; g.fill();
-        const gr = g.createRadialGradient(x, y, 4, x, y, r); gr.addColorStop(0, '#ffe07a'); gr.addColorStop(0.4, '#ff7a1a'); gr.addColorStop(1, '#9a1a06');
-        g.beginPath(); g.ellipse(x, y, r, r * 0.72, rot, 0, 7); g.fillStyle = gr; g.fill();
-        g.strokeStyle = '#2a0c06'; g.lineWidth = 3; g.beginPath(); for (let k = 0; k < 4; k++) { const a = rot + k * 1.6; g.moveTo(x + Math.cos(a) * r * 0.3, y + Math.sin(a) * r * 0.2); g.lineTo(x + Math.cos(a + 0.5) * r * 0.7, y + Math.sin(a + 0.5) * r * 0.5); } g.stroke();
-        break;
-      }
-      case 'crag': {
-        const n = 6;
-        g.beginPath(); for (let k = 0; k < n; k++) { const a = rot + (k / n) * Math.PI * 2, rr2 = r * (0.7 + hash(k, Math.round(y), 33) * 0.4); g.lineTo(x + 6 + Math.cos(a) * rr2, y + 8 + Math.sin(a) * rr2); } g.closePath(); g.fillStyle = 'rgba(0,0,0,0.4)'; g.fill();
-        g.beginPath(); for (let k = 0; k < n; k++) { const a = rot + (k / n) * Math.PI * 2, rr2 = r * (0.7 + hash(k, Math.round(y), 33) * 0.4); g.lineTo(x + Math.cos(a) * rr2, y + Math.sin(a) * rr2); } g.closePath();
-        g.fillStyle = '#3a2a2a'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#0b0607'; g.stroke();
-        g.beginPath(); g.arc(x - r * 0.2, y - r * 0.2, r * 0.35, 0, 7); g.fillStyle = '#54403a'; g.fill();
-        break;
-      }
-      case 'crack': {
-        g.strokeStyle = '#ff5a1f'; g.lineWidth = 3; g.globalAlpha = 0.75; g.beginPath();
-        let px = x, py = y; g.moveTo(px, py);
-        for (let k = 0; k < 5; k++) { const a = rot + (hash(k, Math.round(x), 34) - 0.5) * 1.6; px += Math.cos(a) * r * 0.35; py += Math.sin(a) * r * 0.35; g.lineTo(px, py); }
-        g.stroke(); g.globalAlpha = 1;
-        break;
-      }
-      case 'bones': { // a burnt-out wreck of a car, half buried in ash
-        g.save(); g.translate(x, y); g.rotate(rot);
-        g.fillStyle = '#1a1214'; g.fillRect(-22, -12, 44, 24); g.strokeStyle = '#4a3434'; g.lineWidth = 3; g.strokeRect(-22, -12, 44, 24);
-        g.fillStyle = '#2d2124'; g.fillRect(-8, -8, 16, 16);
-        g.restore();
-        break;
-      }
-      case 'block': { // city block rooftop with a neon edge
-        const w = r * 1.5, h = r * (1 + v * 0.6), col = NEON[Math.floor(v * 97) % NEON.length];
-        g.save(); g.translate(x, y); g.rotate(Math.round(rot / 1.5708) * 1.5708);
-        g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(-w / 2 + 12, -h / 2 + 14, w, h);
-        g.fillStyle = '#1f1f3c'; g.fillRect(-w / 2, -h / 2, w, h);
-        g.lineWidth = 4; g.strokeStyle = '#0a0a18'; g.strokeRect(-w / 2, -h / 2, w, h);
-        g.lineWidth = 2.5; g.strokeStyle = col; g.globalAlpha = 0.85; g.strokeRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12); g.globalAlpha = 1;
-        g.fillStyle = '#2a2a52'; g.fillRect(-w * 0.2, -h * 0.2, w * 0.3, h * 0.25); // roof units
-        g.fillStyle = '#2f2f5a'; g.fillRect(w * 0.12, h * 0.05, w * 0.2, h * 0.2);
-        g.fillStyle = 'rgba(255,240,180,0.5)'; for (let k = 0; k < 4; k++) g.fillRect(-w / 2 + 12 + k * 14, h / 2 - 16, 6, 6);
-        g.restore();
-        break;
-      }
-      case 'sign': { // a neon sign on a post: an original glyph
-        const col = NEON[Math.floor(v * NEON.length)];
-        g.save(); g.translate(x, y);
-        g.fillStyle = '#0a0a18'; g.fillRect(-34, -16, 68, 32);
-        g.lineWidth = 4; g.strokeStyle = col; g.strokeRect(-30, -12, 60, 24);
-        g.lineWidth = 3; g.beginPath();
-        if (v < 0.33) { g.moveTo(-20, 6); g.lineTo(-8, -6); g.lineTo(4, 6); g.lineTo(16, -6); } else if (v < 0.66) { g.arc(-8, 0, 7, 0, 7); g.moveTo(8, -7); g.lineTo(18, 7); } else { g.moveTo(-18, 0); g.lineTo(18, 0); g.moveTo(10, -7); g.lineTo(18, 0); g.lineTo(10, 7); }
-        g.stroke();
-        g.restore();
-        break;
-      }
+    // blurred neon pooled on the wet ground in front of the billboards and under the towers
+    for (const d of this.flat) {
+      if (d.kind !== 'board' || d.bx1 < bx.x0 || d.bx0 > bx.x1 || d.by1 < bx.y0 || d.by0 > bx.y1) continue;
+      const gr = g.createRadialGradient(d.x, d.y, 10, d.x, d.y, d.w);
+      gr.addColorStop(0, a2(d.col, 0.3)); gr.addColorStop(1, d.col + '00');
+      g.fillStyle = gr; g.beginPath(); g.ellipse(d.x, d.y, d.w, d.w * 0.5, d.a, 0, 7); g.fill();
     }
   }
 
@@ -684,8 +559,10 @@ export class TrackArt {
     if (T.box) this.arenaLights(g); else this.trackLights(g, bx);
     // lava pools, cracks, signs and neon roofs keep their own light (lava zones stay as painted under a
     // light dusk: re-painting their big gradients per chunk cost too much, the renderer's lava glow lights them)
-    for (const d of decor) if (d.kind === 'pool' || d.kind === 'crack' || d.kind === 'sign') this.drawDecor(g, d); else if (d.kind === 'block') this.blockNeon(g, d);
+    g.globalCompositeOperation = 'lighter';
     if (w === 'city' && !T.box && !low) this.wetReflections(g, bx);
+    g.globalCompositeOperation = 'source-over';
+    for (const d of decor) drawFlat(g, d, this.art, true);
     for (const z of T.circles) if (z.surf === 'lava' && z.x + z.r > bx.x0 && z.x - z.r < bx.x1 && z.y + z.r > bx.y0 && z.y - z.r < bx.y1) { g.beginPath(); g.arc(z.x, z.y, z.r, 0, 7); this.surfFill(g, 'lava'); g.fill(); this.surfDetail(g, 'lava', z.x, z.y, z.r, 0, 1); }
     // puddles: a dark wet mirror with the nearby lights and the dusk sky in it
     for (const L of lights) {
@@ -736,6 +613,7 @@ export class TrackArt {
       // wall rims (both sides) and the road edges
       for (const side of [-1, 1]) {
         this.glowStroke(g, nt.wall, 2.5, () => { g.beginPath(); for (const i of L) this.neonSeg(g, c, i, (q) => side * (c.ww[q] + 4)); });
+        this.reflectors(g, c, L, side);
         const edgeCol = c.look === 'road' ? nt.edge : c.look === 'ice' ? '#bff4ff' : nt.line;
         this.glowStroke(g, edgeCol, 3, () => { g.beginPath(); for (const i of L) { if (this.bend(c, i) > 0.05 && c.look === 'road') continue; this.neonSeg(g, c, i, (q) => side * (c.hw[q] + 2)); } });
         // curbs on the bends: neon dashes
@@ -760,6 +638,40 @@ export class TrackArt {
     // boost pads glow, shortcut signs stay readable
     for (const zp of this.zonePolys) if (zp.z.kind === 'pad' && !(zp.bx1 < bx.x0 + 290 || zp.bx0 > bx.x1 - 290 || zp.by1 < bx.y0 + 290 || zp.by0 > bx.y1 - 290)) this.padPlate(g, zp.mid.x, zp.mid.y, zp.mid.a, Math.max(70, zp.z.s1 - zp.z.s0 + 40), zp.w, false, true);
     for (const c of T.corridors) { if (c.main) continue; const p = pointAt(c, 70, 0); if (p.x >= bx.x0 && p.x <= bx.x1 && p.y >= bx.y0 && p.y <= bx.y1) this.shortcutMark(g, c); }
+    this.chevrons(g, bx);
+  }
+  // cat-eye reflectors along the top of the wall every 64 px: they stream past at speed
+  reflectors(g, c, L, side) {
+    const nt = this.nt, low = SETTINGS.lowGfx, STEP = 64;
+    for (const [r, col] of low ? [[1.8, '#ffffff']] : [[4.5, a2(nt.wall, 0.35)], [1.8, '#ffffff']]) {
+      g.fillStyle = col; g.beginPath();
+      for (const i of L) {
+        const s0 = c.s[i], s1 = c.s[i + 1];
+        for (let m = Math.ceil(s0 / STEP) * STEP; m < s1; m += STEP) {
+          const t = m - s0, d = side * (c.ww[i] + WALL * 0.55), x = c.px[i] + c.tx[i] * t - c.ty[i] * d, y = c.py[i] + c.ty[i] * t + c.tx[i] * d;
+          g.moveTo(x + r, y); g.arc(x, y, r, 0, 7);
+        }
+      }
+      g.fill();
+    }
+  }
+  // lit chevron boards along the outside of the tight bends, pointing the way round
+  chevrons(g, bx) {
+    const T = this.T, nt = this.nt, P = this.P || (this.P = {});
+    for (const c of T.corridors) {
+      if (!c.main) continue;
+      for (let i = 0; i < c.segs; i += 2) {
+        if (this.bend(c, i) < 0.11 || c.px[i] < bx.x0 + 250 || c.px[i] > bx.x1 - 250 || c.py[i] < bx.y0 + 250 || c.py[i] > bx.y1 - 250) continue;
+        const j = (i + 1) % c.n, turn = c.tx[i] * c.ty[j] - c.ty[i] * c.tx[j], sd = turn > 0 ? -1 : 1, d = sd * (c.ww[i] + WALL + 14);
+        const x = c.px[i] - c.ty[i] * d, y = c.py[i] + c.tx[i] * d;
+        T.probe(x, y, 0, P); if (P.pen < WALL + 8) continue; // (would stand on another road's walls)
+        g.save(); g.translate(x, y); g.rotate(Math.atan2(c.ty[i], c.tx[i]));
+        g.fillStyle = '#07050c'; g.fillRect(-13, -9, 26, 18);
+        g.strokeStyle = a2(nt.curbA, 0.35); g.lineWidth = 6; g.lineJoin = 'miter'; g.beginPath(); g.moveTo(-6, -6); g.lineTo(4, 0); g.lineTo(-6, 6); g.stroke();
+        g.strokeStyle = nt.curbB; g.lineWidth = 2.5; g.stroke();
+        g.restore();
+      }
+    }
   }
   bend(c, i) { const j = (i + 1) % c.n, jj = (i + c.n - 1) % c.n; return Math.abs(c.tx[jj] * c.ty[i] - c.ty[jj] * c.tx[i]) + Math.abs(c.tx[i] * c.ty[j] - c.ty[i] * c.tx[j]); }
   arenaLights(g) {
@@ -767,14 +679,6 @@ export class TrackArt {
     this.glowStroke(g, nt.wall, 3, () => { g.beginPath(); g.rect(B.x0 - 3, B.y0 - 3, B.x1 - B.x0 + 6, B.y1 - B.y0 + 6); });
     for (const z of this.T.circles) if (z.kind === 'pad') this.padPlate(g, z.x, z.y, -Math.PI / 2, z.r * 2, z.r * 2, true, true);
   }
-  blockNeon(g, d) {
-    const { x, y, r, rot, v } = d, w = r * 1.5, h = r * (1 + v * 0.6), col = NEON[Math.floor(v * 97) % NEON.length];
-    g.save(); g.translate(x, y); g.rotate(Math.round(rot / 1.5708) * 1.5708);
-    this.glowStroke(g, col, 2.5, () => { g.beginPath(); g.rect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12); });
-    g.fillStyle = 'rgba(255,240,180,0.7)'; for (let k = 0; k < 4; k++) g.fillRect(-w / 2 + 12 + k * 14, h / 2 - 16, 6, 6);
-    g.restore();
-  }
-
   // ---------------------------------------------------------------- minimap
   // the track outline pre-rendered into a small canvas (size px), with the transform it used
   minimap(size, dpr) {

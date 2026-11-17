@@ -1,7 +1,8 @@
 // Hunt Racers world renderer (canvas 2D): camera with speed look-ahead and zoom, cached track
 // chunks, animated track overlays, cars (cached sprites), items, weapons and effects. Draws from
 // RaceClient.view() and is fed race events by the app (fx()).
-import { TrackArt, CHUNK, THEMES } from './trackart.js';
+import { TrackArt, CHUNK } from './trackart.js';
+import { drawTall, PARALLAX } from './scenery.js';
 import { CarSprites, BUCKETS, INK, blitCar, drawUnderglow, drawBoostTrail, glowDot, exhaustsOf, taillightsOf, headOf, mix } from './cars2.js';
 import { lookForRacer, NEON_GLOW } from './looks2.js'; // (cars2 / looks2: the six starters + the 8 unlockable cars)
 const EDGE_A = Math.round(0x66 * NEON_GLOW).toString(16).padStart(2, '0'); // dusk edge lights (alpha hex)
@@ -18,6 +19,12 @@ const TAU = Math.PI * 2;
 const P = {}; // probe scratch
 const CAR_VIS = 1.18; // cars are drawn a bit bigger than their hitbox
 export const SAFE_BOX = 0.22;
+// sharpness caps: the tilted views' extra resolution (x, and the canvas pixel ratio it may reach),
+// the chunk bake scale (a 384 world px chunk is at most ~770 px square) and the car sprite scale
+// (a car look's atlas stays a few MB: ten looks in a race)
+const SCORCH_N = 12, SCORCH_LIFE = 7; // blast marks kept on the road, and how long they take to fade (s)
+const TALL_M = 220; // (a tall shape's roof may lean this far out of its box)
+const SHARP_MAX = 1.3, SHARP_DPR = 2.4, PX_MAX = 2.0, CAR_PX_MAX = 2.0;
 const DASH = [6, 6], NODASH = [];
 const LT = 10; // taillight trail points per light // the followed car stays within ±20% of the screen centre (0.3..0.7 of W and H)
 
@@ -39,14 +46,8 @@ function beamSprite() {
 }
 // screen-edge dusk: a purple / pink / blue tint along the edges with a few far-off city lights,
 // painted once per size and theme at a quarter of the resolution (it is all soft gradients)
-const DUSK = {
-  desert: ['rgba(60,20,70,0.55)', 'rgba(255,120,90,0.22)', ['#ff7a5a', '#ffb347', '#c04dff']],
-  frozen: ['rgba(14,30,80,0.55)', 'rgba(120,180,255,0.2)', ['#7fd8ff', '#b8a4ff', '#ffffff']],
-  ashlands: ['rgba(40,6,10,0.55)', 'rgba(255,90,30,0.22)', ['#ff6a1a', '#ffb347', '#ff3fa4']],
-  city: ['rgba(30,8,60,0.6)', 'rgba(255,63,164,0.22)', ['#ff3fa4', '#3ff5ff', '#a05cff', '#ffe14a']],
-};
-function duskSprite(W, H, world) {
-  const D = DUSK[world] || DUSK.desert, w = Math.max(8, Math.round(W / 4)), h = Math.max(8, Math.round(H / 4));
+function duskSprite(W, H, A) {
+  const D = A.dusk, w = Math.max(8, Math.round(W / 4)), h = Math.max(8, Math.round(H / 4));
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   const g = cv.getContext('2d');
   // edge bands that fade out before the middle box (x 0.2-0.8, y 0.3-0.75), which stays clear and is never drawn
@@ -66,6 +67,27 @@ function duskSprite(W, H, world) {
     gr.addColorStop(0, c + EDGE_A); gr.addColorStop(1, c + '00');
     g.fillStyle = gr; g.fillRect(x - s, y - s, s * 2, s * 2);
   }
+  return cv;
+}
+// a car's soft contact shadow (dark in the middle, feathered edge), drawn stretched under the car
+function shadowSprite() {
+  const w = 128, h = 80, cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const g = cv.getContext('2d'); g.translate(w / 2, h / 2); g.scale(1, h / w);
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, w / 2);
+  gr.addColorStop(0, 'rgba(0,0,6,0.75)'); gr.addColorStop(0.55, 'rgba(0,0,6,0.55)'); gr.addColorStop(1, 'rgba(0,0,6,0)');
+  g.fillStyle = gr; g.fillRect(-w / 2, -w / 2, w, w);
+  return cv;
+}
+// a blast scorch on the asphalt: a sooty blot with a ragged rim
+function scorchSprite() {
+  const s = 128, cv = document.createElement('canvas'); cv.width = cv.height = s;
+  const g = cv.getContext('2d'); g.translate(s / 2, s / 2);
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, s / 2);
+  gr.addColorStop(0, 'rgba(4,2,6,0.85)'); gr.addColorStop(0.5, 'rgba(8,4,8,0.6)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(-s / 2, -s / 2, s, s);
+  g.strokeStyle = 'rgba(0,0,0,0.5)'; g.lineWidth = 3; g.lineCap = 'round'; g.beginPath();
+  for (let k = 0; k < 11; k++) { const a = k * 0.571 + (k % 3) * 0.2, r0 = s * 0.18, r1 = s * (0.32 + (k % 4) * 0.04); g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); g.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); }
+  g.stroke();
   return cv;
 }
 function boxSprite() {
@@ -111,7 +133,8 @@ export class RaceRenderer {
     this.t = 0;
     this.glow = { lava: glowSprite('rgba(255,120,30,0.9)'), ice: glowSprite('rgba(220,250,255,0.85)'), gold: glowSprite('rgba(255,210,63,0.95)'), cyan: glowSprite('rgba(95,244,255,0.9)'), red: glowSprite('rgba(255,60,60,0.9)') };
     for (const c of ['#ff3fa4', '#3ff5ff', '#a05cff', '#ffe14a', '#4bff9c']) this.glow[c] = glowSprite(c + 'cc');
-    this.box = boxSprite(); this.oil = oilSprite(); this.beam = beamSprite();
+    this.box = boxSprite(); this.oil = oilSprite(); this.beam = beamSprite(); this.shadow = shadowSprite(); this.burn = scorchSprite();
+    this.scorch = new Float32Array(SCORCH_N * 4).fill(-1e9); // x, y, time, radius (a ring of recent blasts)
     this.dusk = null; this.lfx = new Map(); // look id -> derived colours (strings, particle colour slots)
     this.amb = new Float32Array(60 * 3); // screen-space ambience (snow / embers / rain)
     for (let i = 0; i < 60; i++) { this.amb[i * 3] = Math.random(); this.amb[i * 3 + 1] = Math.random(); this.amb[i * 3 + 2] = Math.random(); }
@@ -128,7 +151,15 @@ export class RaceRenderer {
     const cfg = CAM[name] || CAM.chase;
     if (cfg !== this.cfg) { this.cm = newCam(); this.cam.init = false; }
     this.cfg = cfg; this.camName = CAM[name] ? name : 'chase'; this.tl = tiltOf(cfg, this.W || 1, this.H || 1);
+    if (this.W) this.resize(this.W, this.H, this.dpr0); // (the tilted views draw the canvas finer: sharpOf)
     return this.tl;
+  }
+  // SHARPNESS: the tilted views (Chase, Cockpit) are stretched by the compositor by about the cover
+  // scale around the car (more toward the bottom edge), which made them blurrier than Top-down: their
+  // canvas is drawn that much finer instead. Capped (fill rate and memory on phones); Low Graphics: off.
+  sharpOf(cfg, dpr) {
+    if (!cfg.tilt || SETTINGS.lowGfx) return 1;
+    return clamp(Math.min(cfg.cover || 1, SHARP_MAX), 1, Math.max(1, SHARP_DPR / dpr));
   }
   // world point -> canvas CSS px (before the tilt) and -> screen CSS px (after it)
   toCanvas(x, y, out = this.pt) { const M = this.M, d = this.dpr; if (!M) { out.x = out.y = 0; out.k = 1; return out; } out.x = (M.a * x + M.c * y + M.x) / d; out.y = (M.b * x + M.d * y + M.y) / d; out.k = 1; return out; }
@@ -136,20 +167,32 @@ export class RaceRenderer {
   setTrack(T) {
     if (this.T === T) return;
     this.T = T; this.art = new TrackArt(T); this.vis.clear(); this.cam.init = false; this.dusk = null; this.stickAt.clear();
-    this.skids = new Skids(900); this.parts.n = 0;
+    this.skids = new Skids(900); this.parts.n = 0; this.scorch.fill(-1e9);
     this.art.setScale(this.chunkScale());
   }
   baseZoom() { return baseZoomOf(this.W, this.H); }
-  chunkScale() { return Math.round(this.baseZoom() * this.dpr * 8) / 8; }
+  // pixels per world unit the chunks and car sprites are baked at: what the camera draws them at
+  // (base zoom x the view's zoom x the canvas resolution), so they are never stretched
+  pxScale() { return clamp(this.baseZoom() * (this.cfg.zoom || 1) * this.dpr, 0.25, PX_MAX); }
+  chunkScale() { return Math.round(this.pxScale() * 8) / 8; }
+  carScale() { return Math.round(Math.min(this.pxScale() * CAR_VIS, CAR_PX_MAX) * 8) / 8; }
   resize(W, H, dpr) {
     if (W !== this.W || H !== this.H) this.dusk = null;
-    this.W = W; this.H = H; this.dpr = dpr; this.tl = tiltOf(this.cfg, W, H);
+    this.W = W; this.H = H; this.dpr0 = dpr; this.dpr = dpr * this.sharpOf(this.cfg, dpr); this.tl = tiltOf(this.cfg, W, H);
+    dpr = this.dpr;
     // (setting a canvas size, even the same one, throws its pixels away and reallocates it)
     const cw = Math.round(W * dpr), chh = Math.round(H * dpr);
-    if (this.cv.width !== cw || this.cv.height !== chh) { this.cv.width = cw; this.cv.height = chh; }
-    const s = this.chunkScale();
-    if (this.art) this.art.setScale(s);
-    this.cars.setScale(Math.round(this.baseZoom() * dpr * CAR_VIS * 8) / 8);
+    if (this.cv.width !== cw || this.cv.height !== chh) { this.cv.width = cw; this.cv.height = chh; this.dusk = null; }
+    this.zPeak = 0;
+    if (this.art) this.art.setScale(this.chunkScale());
+    this.cars.setScale(this.carScale());
+  }
+  // the camera zoomed in further than the bake scale (a closer view, a zoom-in moment): bake finer,
+  // once it has held for a moment (chunks and sprites rebuild one per frame, the old ones show meanwhile)
+  keepSharp(dt) {
+    const need = Math.min(this.M.s, PX_MAX), art = this.art;
+    this.zPeak = need > (art.scale || 0) * 1.12 ? (this.zPeak || 0) + dt : 0;
+    if (this.zPeak > 0.5) { this.zPeak = 0; art.setScale(Math.round(need * 8) / 8); this.cars.setScale(Math.round(Math.min(need * CAR_VIS, CAR_PX_MAX) * 8) / 8); }
   }
   // object transforms without save/restore: world (x, y), rotation a, scale k on top of the camera
   // (M is the camera's affine world -> canvas pixel matrix: a b c d, offset x y, scale s)
@@ -204,7 +247,13 @@ export class RaceRenderer {
   explode(x, y, big = 1) {
     const p = this.parts, n = SETTINGS.lowGfx ? 0.5 : 1;
     this.fxs.add(FK.FLASH, x, y, { r: 120 * big, life: 0.35, col: '#ffd23f' });
+    this.fxs.add(FK.FLASH, x, y, { r: 60 * big, life: 0.16, col: '#ffffff' }); // the white-hot core
     this.fxs.add(FK.RING, x, y, { r: 150 * big, life: 0.45, col: '#ff9f1c', w: 10 });
+    this.fxs.add(FK.RING, x, y, { r: 230 * big, life: 0.28, col: '#fff3d0', w: 4 }); // the shock wave, fast and thin
+    for (let i = 0; i < 8 * n * big; i++) { const a = Math.random() * TAU, s = 80 + Math.random() * 200; p.emit(PK.EMBER, x, y, Math.cos(a) * s, Math.sin(a) * s, 0.8 + Math.random() * 0.6, 3 + Math.random() * 2, i & 1 ? C.GOLD : C.LAVA, -2, 1.2); }
+    // a scorch mark left on the road, fading over a few seconds
+    const S = this.scorch, k = (this.scorchI = ((this.scorchI || 0) + 1) % SCORCH_N) * 4;
+    S[k] = x; S[k + 1] = y; S[k + 2] = this.t; S[k + 3] = 46 * big;
     for (let i = 0; i < 14 * n * big; i++) { const a = Math.random() * TAU, s = 150 + Math.random() * 420; p.emit(PK.FLAME, x, y, Math.cos(a) * s, Math.sin(a) * s, 0.35 + Math.random() * 0.3, 10 + Math.random() * 10, i & 1 ? C.ORANGE : C.GOLD, -10, 4); }
     for (let i = 0; i < 10 * n * big; i++) { const a = Math.random() * TAU, s = 60 + Math.random() * 160; p.emit(PK.SMOKE, x, y, Math.cos(a) * s, Math.sin(a) * s, 0.9 + Math.random() * 0.8, 14, C.DARK, 30, 2); }
     for (let i = 0; i < 10 * n * big; i++) { const a = Math.random() * TAU, s = 240 + Math.random() * 380; p.emit(PK.DEBRIS, x, y, Math.cos(a) * s, Math.sin(a) * s, 0.6 + Math.random() * 0.5, 5 + Math.random() * 4, i & 1 ? C.INK : C.SMOKE, 0, 3); }
@@ -355,10 +404,11 @@ export class RaceRenderer {
     }
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
-    g.fillStyle = (THEMES[T.world] || THEMES.desert).bg; g.fillRect(0, 0, this.cv.width, this.cv.height);
+    g.fillStyle = art.art.pal.bg; g.fillRect(0, 0, this.cv.width, this.cv.height);
     this.base(g);
     // CHUNKS: everything visible now, plus one chunk ahead per frame
     const c0 = Math.floor(vw.x0 / CHUNK), c1 = Math.floor(vw.x1 / CHUNK), r0 = Math.floor(vw.y0 / CHUNK), r1 = Math.floor(vw.y1 / CHUNK);
+    art.need = (c1 - c0 + 2) * (r1 - r0 + 2); // (the cache never holds fewer chunks than a view needs)
     g.imageSmoothingEnabled = true;
     if (!cfg.rotate) { for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) g.drawImage(art.chunk(c, r), c * CHUNK, r * CHUNK, CHUNK + 2, CHUNK + 2); }
     else {
@@ -378,6 +428,11 @@ export class RaceRenderer {
     }
     this.warm(rc, view.countdown > 0 || !view.cars.length ? 12 : 1);
     this.overlays(g, view, t);
+    // the eye the tall scenery leans away from: the screen centre (Top-down), or a point behind the
+    // followed car (Chase / Cockpit: the camera sits back there)
+    if (cfg.rotate) { const back = H * 0.5 / z; this.tallLayer(g, t, cx - Math.cos(this.cm.h) * back, cy - Math.sin(this.cm.h) * back); }
+    else this.tallLayer(g, t, cx, cy);
+    this.scorches(g, t);
     this.skids.draw(g, t, vw.x0 - 60, vw.y0 - 60, vw.x1 + 60, vw.y1 + 60, T.world === 'frozen' ? 'rgba(60,80,110,1)' : T.world === 'city' ? '#05050c' : '#1a1212');
     if (this.sfx) this.sfx.world(g, this, view, rc, dt);
     if (this.elim) this.elim.world(g, this, view, rc, dt); // Elimination: the black hole, the racer in danger (elim.js)
@@ -388,9 +443,10 @@ export class RaceRenderer {
     this.parts.draw(g, vw.x0, vw.y0, vw.x1, vw.y1);
     this.effects(g, view, dt);
     this.ambience(g, dt, t);
+    this.keepSharp(dt);
     // dusk at the screen edges (one cached quarter-resolution image)
     g.setTransform(1, 0, 0, 1, 0, 0);
-    if (!this.dusk) this.dusk = duskSprite(W, H, T.world);
+    if (!this.dusk) this.dusk = duskSprite(W, H, art.art);
     // only the bands where the tint is visible (the middle of the screen stays clear): less fill
     const dk = this.dusk, dw = dk.width, dh = dk.height, cw = this.cv.width, ch = this.cv.height;
     g.drawImage(dk, 0, 0, dw, dh * 0.3, 0, 0, cw, ch * 0.3);
@@ -399,6 +455,30 @@ export class RaceRenderer {
     g.drawImage(dk, dw * 0.8, dh * 0.3, dw * 0.2, dh * 0.45, cw * 0.8, ch * 0.3, cw * 0.2, ch * 0.45);
   }
 
+  scorches(g, t) {
+    const S = this.scorch, vw = this.view;
+    for (let k = 0; k < S.length; k += 4) {
+      const age = t - S[k + 2], r = S[k + 3];
+      if (age > SCORCH_LIFE || age < 0 || S[k] + r < vw.x0 || S[k] - r > vw.x1 || S[k + 1] + r < vw.y0 || S[k + 1] - r > vw.y1) continue;
+      g.globalAlpha = Math.min(1, (SCORCH_LIFE - age) / 2);
+      g.drawImage(this.burn, S[k] - r, S[k + 1] - r, r * 2, r * 2);
+    }
+    g.globalAlpha = 1;
+  }
+  // the tall scenery (towers, mesas, spires, basalt): leaning away from the eye, only what is on
+  // screen (Low Graphics: baked flat into the chunks instead)
+  tallLayer(g, t, ex, ey) {
+    const art = this.art, vw = this.view, steady = SETTINGS.reduceFlash;
+    if (SETTINGS.lowGfx || !art.tall.length) return;
+    for (let i = 0; i < art.tall.length; i++) {
+      const it = art.tall[i];
+      if (it.bx1 + TALL_M < vw.x0 || it.bx0 - TALL_M > vw.x1 || it.by1 + TALL_M < vw.y0 || it.by0 - TALL_M > vw.y1) continue;
+      let ox = (it.x - ex) * PARALLAX, oy = (it.y - ey) * PARALLAX;
+      const L = Math.hypot(ox, oy) * it.hMax, cap = Math.max(0, it.clr * 0.8);
+      if (L > cap) { const k = cap / L; ox *= k; oy *= k; }
+      drawTall(g, it, ox, oy, t, steady, false);
+    }
+  }
   // animated bits of the track: lava glow, neon flicker, pads, hazards, item boxes
   overlays(g, view, t) {
     const art = this.art, vw = this.view, T = this.T, steady = SETTINGS.reduceFlash;
@@ -676,9 +756,10 @@ export class RaceRenderer {
         g.drawImage(this.glow.gold, c.x - 70, c.y - 70, 140, 140); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
       }
       // shadow (offset grows in the air: the height cue for jumps)
-      g.globalAlpha = air ? 0.25 : 0.32; g.fillStyle = '#000';
-      const so = 6 + lift * 34;
-      g.beginPath(); g.ellipse(c.x + so, c.y + so * 1.2, 28 * (1 - lift * 0.15), 17 * (1 - lift * 0.15), c.a, 0, TAU); g.fill();
+      // (a soft contact shadow: tight and dark on the road, wider and fainter in the air)
+      const so = 5 + lift * 34;
+      g.globalAlpha = air ? 0.45 - lift * 0.15 : 0.8;
+      this.at(g, c.x + so, c.y + so * 1.2, c.a, 1 + lift * 0.2); g.drawImage(this.shadow, -34, -21, 68, 42); this.base(g);
       g.globalAlpha = 1;
       // wet road: the car's neon smeared down the asphalt (cheap fake reflection)
       if (wet) {
@@ -787,7 +868,7 @@ export class RaceRenderer {
       } else if (f.k === FK.FLASH) {
         if (steady) continue;
         g.globalCompositeOperation = 'lighter'; g.globalAlpha = a * 0.9;
-        g.drawImage(f.col === '#5ff4ff' ? this.glow.cyan : this.glow.gold, f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
+        g.drawImage(f.col === '#5ff4ff' ? this.glow.cyan : f.col === '#ffffff' ? this.glow.ice : this.glow.gold, f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
         g.globalCompositeOperation = 'source-over';
       } else if (f.k === FK.BEAM) {
         g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
