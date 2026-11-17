@@ -31,6 +31,8 @@ import { Moments, passBys, revCurve } from './moments.js';
 import { engineOn } from './sound.js';
 import { THEMES } from './trackart.js';
 import { ReplayPlayer } from './replay.js';
+import { WaitFx } from './waitfx.js';
+import { loadSpaceFonts } from '../ui/space/fonts.js';
 
 const CREDIT = 'Made by Gleyde Technologies';
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -41,12 +43,12 @@ export const RACE_TIPS = [
   'Hold DRIFT through a bend: blue, then orange, then purple sparks. Let go for a turbo.',
   'The leader glows gold. Wreck them to steal their coins and get a boost.',
   'Further back = better items. A bad start is not the end.',
-  'Ramps launch you over hazards. Nothing on the ground can hit you mid-air.',
+  'Ramps launch you into the air. Nothing on the ground can hit you mid-air.',
   'Shortcuts are narrow. Some only work with a boost.',
   'Wrecked? You are back on track in 2 seconds, laps kept.',
   'FIRE is your car\'s own weapon. It recharges; use it often.',
   'A shield blocks one hit. Save it for when someone is right behind you.',
-  'Ice slides, sand and snow slow you down, lava burns. Stay on the road.',
+  'Hug the inside of a bend and hold DRIFT: the tightest line is the fastest.',
 ];
 const HORIZON = { desert: 'rgba(255,122,90,0.45)', frozen: 'rgba(127,216,255,0.4)', ashlands: 'rgba(255,106,26,0.5)', city: 'rgba(255,63,164,0.45)' }; // camera views: the far glow
 const IDLE_VIEW = { tick: 0, time: 0, countdown: 0, cars: [], ents: [], boxesOff: [], hazardsOn: 0, leader: 0, ranks: [], hud: {}, me: null };
@@ -66,18 +68,18 @@ export function startRace(opts = {}) {
 
 class RaceSession {
   constructor(o) {
-    ensureCss();
+    ensureCss(); loadSpaceFonts();
     this.o = { mode: 'grand', driver: 'volt', bots: true, name: 'Racer', ...o };
     if (!DRIVERS[this.o.driver]) this.o.driver = 'volt';
     this.dead = false;
     const root = (this.root = document.createElement('div'));
-    root.className = 'rc-root';
+    root.className = 'rc-root' + (SETTINGS.lowGfx ? ' rc-low' : '') + (SETTINGS.reduceFlash ? ' rc-calm' : '');
     root.innerHTML = `<div class="rc-world"><canvas class="rc-cv"></canvas></div><div class="rc-fog"></div><canvas class="rc-hud"></canvas>
-      <div class="rc-wait" hidden><div class="rc-brand">${wordmarkSvg({ id: 'rcwm' })}</div><div class="rc-wt title">GET READY</div><div class="rc-wm"></div><div class="rc-wl"></div><div class="rc-ws"></div><div class="rc-tip"></div>
+      <div class="rc-wait" hidden><canvas class="rc-wfx" aria-hidden="true"></canvas><div class="rc-brand">${wordmarkSvg({ id: 'rcwm' })}</div><div class="rc-wt">GET READY</div><div class="rc-wm"></div><div class="rc-slots" aria-hidden="true"></div><div class="rc-wl"></div><div class="rc-wrow"><div class="rc-cd" hidden><b></b><small>START</small></div><div class="rc-ws"></div></div><div class="rc-tip"></div>
         <div class="card-a rc-room" hidden><small>ROOM CODE</small><div class="mmcode"><b class="rc-code"></b><button class="btn btn-sm alt rc-copy">COPY</button></div>
           <ol class="mmlist rc-list"></ol><div class="mmhost rc-host" hidden><button type="button" class="fillbots rc-bots" role="switch" aria-checked="true"><span class="cb"></span> FILL WITH BOTS</button><button class="btn btn-md rc-start" data-sfx="play">START</button></div>
           <div class="mmwait rc-hw"></div></div>
-        <button class="btn btn-md red rc-cancel">CANCEL</button></div>
+        <button class="rc-cancel">CANCEL</button></div>
       <div class="rc-toast" hidden></div>
       <div class="rc-menu" hidden><div class="rc-mp"><div class="title">PAUSED</div><p>The race keeps going!</p><button class="btn btn-lg rc-resume">RESUME</button><button class="btn btn-md alt rc-cam"></button><button class="btn btn-md red rc-leave">LEAVE RACE</button></div></div>
       <div class="rc-fail" hidden><div class="rc-mp"><div class="title">OOPS</div><p class="rc-fm"></p><button class="btn btn-md rc-back">BACK TO LOBBY</button></div></div>
@@ -86,7 +88,8 @@ class RaceSession {
       <div class="rc-credit">${CREDIT}</div>`;
     document.body.appendChild(root);
     const $ = (s) => root.querySelector(s);
-    this.$ = $; this.$$ = (s) => root.querySelectorAll(s);
+    this.$ = $;
+    this.wfx = new WaitFx($('.rc-wfx'), { low: !!SETTINGS.lowGfx, calm: !!SETTINGS.reduceFlash }); this.$$ = (s) => root.querySelectorAll(s);
     this.cv = $('.rc-cv');
     // the HUD, minimap, joystick and buttons live on their own canvas over the (tilted) world
     this.hcv = $('.rc-hud'); this.hg = this.hcv.getContext('2d'); this.fog = $('.rc-fog');
@@ -215,7 +218,7 @@ class RaceSession {
   // (code + COPY always on screen; the host gets FILL WITH BOTS and START)
   showWait() {
     const rc = this.rc, w = this.$('.rc-wait');
-    w.hidden = false;
+    w.hidden = false; this.wfx.start();
     if (this.tut) {
       this.$('.rc-wt').textContent = 'HOW TO DRIVE';
       this.$('.rc-wm').textContent = 'A 20-second drive to learn the controls';
@@ -223,9 +226,27 @@ class RaceSession {
       return;
     }
     this.$('.rc-wt').textContent = rc.room ? 'FRIENDS ROOM' : rc.mode === 'trial' ? 'TIME TRIAL' : 'FINDING RACERS';
-    this.$('.rc-wm').textContent = `${RACE_MODES[rc.mode]?.name || 'Race'} · ${trackName(rc.trackKey, rc.arena) || ''}`;
+    this.$('.rc-wt').classList.toggle('scan', !rc.room);
+    this.modeLine(RACE_MODES[rc.mode]?.name || 'Race', trackName(rc.trackKey, rc.arena) || '');
     this.roomCard(rc.room);
     this.tips();
+  }
+  // "ELIMINATION RACE" tag + the track name
+  modeLine(mode, track) {
+    this.$('.rc-wm').innerHTML = `<span class="rc-mtag">${esc(mode)}</span>${track ? `<span class="rc-mtrack">${esc(track)}</span>` : ''}`;
+  }
+  // the racer slots (lit = found), the radar blips and the start countdown
+  waitMeter(n, max, startIn) {
+    const sl = this.$('.rc-slots');
+    if (sl.childElementCount !== max) sl.innerHTML = '<i></i>'.repeat(max);
+    [...sl.children].forEach((e, i) => e.classList.toggle('on', i < n));
+    if (this.lastN != null && n > this.lastN) play('pickup');
+    this.lastN = n;
+    const cd = this.$('.rc-cd');
+    cd.hidden = startIn == null;
+    if (startIn != null) { const s = String(Math.max(0, Math.ceil(startIn))); if (cd.firstChild.textContent !== s) { cd.firstChild.textContent = s; cd.classList.remove('tick'); void cd.offsetWidth; cd.classList.add('tick'); } }
+    this.wfx.set(n, max, startIn == null ? 0 : 1 - Math.min(1, startIn / 10));
+    this.wfx.start();
   }
   roomCard(code) {
     const w = this.$('.rc-wait');
@@ -245,8 +266,10 @@ class RaceSession {
     const rc = this.rc;
     this.$('.rc-wait').hidden = false;
     if (this.tut) { this.$('.rc-ws').textContent = 'Starting…'; return; }
-    this.$('.rc-wl').innerHTML = m.players.map(([n, d]) => `<span class="rc-chip" style="--c:${(BASE_LOOKS[d] || BASE_LOOKS.volt).neon}" title="${carName(d)}"><i></i>${esc(n)}</span>`).join('');
+    const chips = m.players.map(([n, d]) => `<span class="rc-chip" style="--c:${(BASE_LOOKS[d] || BASE_LOOKS.volt).neon}" title="${carName(d)}"><i></i>${esc(n)}<small>${esc(carName(d))}</small></span>`).join('');
+    if (chips !== this.chipsHtml) this.$('.rc-wl').innerHTML = this.chipsHtml = chips; // (only on a change: chips animate in)
     const n = `${m.players.length}/${m.max} racers`;
+    this.waitMeter(m.players.length, m.max, m.startIn);
     if (rc.room && m.ids) {
       // host-run friend room
       const amHost = m.host === rc.id, hi = m.ids.indexOf(m.host), hostName = hi >= 0 ? m.players[hi][0] : 'the host';
@@ -261,15 +284,15 @@ class RaceSession {
       return;
     }
     this.$('.rc-list').innerHTML = ''; this.$('.rc-host').hidden = true; this.$('.rc-hw').textContent = '';
-    this.$('.rc-ws').textContent = m.startIn != null ? `${n} · starts in ${Math.ceil(m.startIn)}` : !m.bots ? 'Waiting for another racer (bots are off)' : `${n} · starting soon`;
+    this.$('.rc-ws').textContent = m.startIn != null ? `${n} · starts in ${Math.ceil(m.startIn)}` : !m.bots ? `${n} · waiting for another racer (bots are off)` : `${n} · starting soon`;
   }
   // a friend room that is mid-race: we are held for its next race
   showRoomWait(m) {
-    this.$('.rc-wait').hidden = false;
-    this.$('.rc-wt').textContent = 'FRIENDS ROOM';
-    this.$('.rc-wm').textContent = `${RACE_MODES[m.mode]?.name || 'Race'}${m.track ? ` · ${trackName(m.track, RACE_MODES[m.mode]?.arena) || ''}` : ''}`;
+    this.$('.rc-wait').hidden = false; this.wfx.start();
+    this.$('.rc-wt').textContent = 'FRIENDS ROOM'; this.$('.rc-wt').classList.remove('scan');
+    this.modeLine(RACE_MODES[m.mode]?.name || 'Race', m.track ? trackName(m.track, RACE_MODES[m.mode]?.arena) || '' : '');
     this.roomCard(m.room || this.o.room || '');
-    this.$('.rc-wl').innerHTML = '';
+    this.$('.rc-wl').innerHTML = this.chipsHtml = '';
     this.$('.rc-list').innerHTML = ''; this.$('.rc-host').hidden = true;
     this.$('.rc-ws').textContent = `Your friends are mid-race${m.left != null ? ` (about ${Math.floor(m.left / 60)}:${String(m.left % 60).padStart(2, '0')} left)` : ''}`;
     this.$('.rc-hw').textContent = "You'll join their next race. Stay here, or CANCEL.";
@@ -348,7 +371,7 @@ class RaceSession {
     if (this.dead) return;
     this.dead = true;
     cancelAnimationFrame(this.raf);
-    clearInterval(this.tipTimer); clearTimeout(this.toastT);
+    clearInterval(this.tipTimer); clearTimeout(this.toastT); this.wfx.stop();
     try { if (this.rc && this.rc.phase !== 'idle') this.rc.leave(); } catch {}
     this.ctrl.destroy();
     this.horn.destroy();
