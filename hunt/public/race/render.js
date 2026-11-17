@@ -11,7 +11,7 @@ import { ITEMS, WEAPONS, ITEM_IDS, itemStat, COMBAT } from './items.js';
 import { armPulse, drawWell, drawDrone, drawSticky, drawTrap, drawGhostVeil } from './weapons-fx.js';
 import { driftTier } from './physics.js';
 import { SETTINGS } from '../settings.js';
-import { CAM, camRot, newCam, stepCam, anchorOf, tiltOf, project, baseZoomOf, lookAhead } from './camera.js';
+import { CAM, camRot, newCam, stepCam, anchorOf, tiltOf, project, baseZoomOf, lookAhead, newShake, shakeKick, stepShake } from './camera.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const TAU = Math.PI * 2;
@@ -107,6 +107,7 @@ export class RaceRenderer {
     this.fxs = new Effects(48);
     this.vis = new Map(); // per car visual state
     this.cam = { x: 0, y: 0, z: 1, lx: 0, ly: 0, shake: 0, sx: 0, sy: 0, init: false };
+    this.sh = newShake(); this.shNow = 0; // camera shake + punch (camera.js), on the real clock
     this.t = 0;
     this.glow = { lava: glowSprite('rgba(255,120,30,0.9)'), ice: glowSprite('rgba(220,250,255,0.85)'), gold: glowSprite('rgba(255,210,63,0.95)'), cyan: glowSprite('rgba(95,244,255,0.9)'), red: glowSprite('rgba(255,60,60,0.9)') };
     for (const c of ['#ff3fa4', '#3ff5ff', '#a05cff', '#ffe14a', '#4bff9c']) this.glow[c] = glowSprite(c + 'cc');
@@ -208,14 +209,21 @@ export class RaceRenderer {
     for (let i = 0; i < 10 * n * big; i++) { const a = Math.random() * TAU, s = 60 + Math.random() * 160; p.emit(PK.SMOKE, x, y, Math.cos(a) * s, Math.sin(a) * s, 0.9 + Math.random() * 0.8, 14, C.DARK, 30, 2); }
     for (let i = 0; i < 10 * n * big; i++) { const a = Math.random() * TAU, s = 240 + Math.random() * 380; p.emit(PK.DEBRIS, x, y, Math.cos(a) * s, Math.sin(a) * s, 0.6 + Math.random() * 0.5, 5 + Math.random() * 4, i & 1 ? C.INK : C.SMOKE, 0, 3); }
   }
-  shake(k) { if (!SETTINGS.reduceFlash) this.cam.shake = Math.min(1.4, this.cam.shake + k); }
+  // shake k (trauma), optionally punched along the world direction (dx, dy) of the force on your car
+  shake(k, dx = 0, dy = 0) {
+    if (SETTINGS.reduceFlash) return;
+    if (this.cfg.rotate && (dx || dy)) { const r = camRot(this.cfg, this.cm.h), c = Math.cos(r), s = Math.sin(r); const x = c * dx - s * dy; dy = s * dx + c * dy; dx = x; }
+    shakeKick(this.sh, k, dx, dy); this.cam.shake = this.sh.tr;
+  }
+  // a push on your car from (x, y) (a rival, a blast): punch the view away from it
+  shakeFrom(k, x, y) { const m = this.meCar; this.shake(k, m ? m.x - x : 0, m ? m.y - y : 0); }
   fx(e, view, meId) {
     const p = this.parts, F = this.fxs;
     const car = (id) => this.carAt(view, id);
     switch (e[0]) {
-      case 'ko': { const c = car(e[1]); if (c) { this.explode(c.x, c.y, 1.2); if (e[1] === meId) this.shake(1); else if (this.near(c, 600)) this.shake(0.4); } break; }
+      case 'ko': { const c = car(e[1]); if (c) { this.explode(c.x, c.y, 1.2); if (e[1] === meId) this.shake(1); else if (this.near(c, 600)) this.shakeFrom(0.4, c.x, c.y); } break; }
       case 'rs': { this.visOf(e[1]).respawnT = 0.7; break; }
-      case 'hit': { const c = car(e[1]); if (c) { if (e[5]) this.explode(c.x, c.y, 0.55); for (let i = 0; i < 8; i++) { const a = Math.random() * TAU, s = 200 + Math.random() * 300; p.emit(PK.SPARK, c.x, c.y, Math.cos(a) * s, Math.sin(a) * s, 0.25, 3, C.GOLD, 0, 3); } this.visOf(e[1]).hitT = 0.25; if (e[1] === meId) this.shake(0.35); } break; }
+      case 'hit': { const c = car(e[1]); if (c) { if (e[5]) this.explode(c.x, c.y, 0.55); for (let i = 0; i < 8; i++) { const a = Math.random() * TAU, s = 200 + Math.random() * 300; p.emit(PK.SPARK, c.x, c.y, Math.cos(a) * s, Math.sin(a) * s, 0.25, 3, C.GOLD, 0, 3); } this.visOf(e[1]).hitT = 0.25; if (e[1] === meId) { const s = car(e[2]); if (s && e[2] !== meId) this.shakeFrom(e[5] ? 0.6 : 0.42, s.x, s.y); else this.shake(e[5] ? 0.6 : 0.42); } else if (e[2] === meId) this.shake(e[5] ? 0.22 : 0.1); } break; }
       case 'shield': { const c = car(e[1]); if (c) F.add(FK.RING, c.x, c.y, { r: 70, life: 0.35, col: '#5ff4ff', w: 8 }); break; }
       // unlockable car perks: GRAVITON pulls a box in, PHANTOM VX phases through a hit, FROSTBYTE rolls over oil
       case 'perk': {
@@ -259,16 +267,16 @@ export class RaceRenderer {
       case 'fizzle': { this.stickAt.delete(e[1]); const c = car(e[2]); if (c) for (let i = 0; i < 8; i++) p.emit(PK.SMOKE, c.x, c.y, (Math.random() - 0.5) * 120, (Math.random() - 0.5) * 120, 0.6, 8, C.SMOKE, 20, 2); break; }
       case 'swat': { const c = car(e[1]); if (c) F.add(FK.RING, c.x, c.y, { r: 70, life: 0.3, col: '#ff9f43', w: 6 }); break; }
       case 'unghost': { const c = car(e[1]); if (c) F.add(FK.RING, c.x, c.y, { r: 70, life: 0.35, col: '#5ff4ff', w: 8 }); break; }
-      case 'emp': { const c = car(e[1]); if (c) { F.add(FK.RING, c.x, c.y, { r: ITEMS.emp.r, life: 0.7, col: '#5ff4ff', w: 16 }); F.add(FK.FLASH, c.x, c.y, { r: 200, life: 0.3, col: '#5ff4ff' }); if (this.near(c, ITEMS.emp.r)) this.shake(0.3); } break; }
+      case 'emp': { const c = car(e[1]); if (c) { F.add(FK.RING, c.x, c.y, { r: ITEMS.emp.r, life: 0.7, col: '#5ff4ff', w: 16 }); F.add(FK.FLASH, c.x, c.y, { r: 200, life: 0.3, col: '#5ff4ff' }); if (this.near(c, ITEMS.emp.r)) this.shakeFrom(0.3, c.x, c.y); } break; }
       case 'spin': { this.visOf(e[1]).spinT = 0.9; break; }
       case 'arc': { const a = car(e[1]), b = car(e[2]); if (a) F.add(FK.ARC, a.x, a.y, { x1: b ? b.x : a.x + 200, y1: b ? b.y : a.y, life: 0.32, id: e[1], id2: e[2], col: '#5ff4ff' }); break; }
-      case 'pulse': { const c = car(e[1]); if (c) { F.add(FK.RING, c.x, c.y, { r: WEAPONS.brick.r + 30, life: 0.45, col: '#ff7b39', w: 14 }); F.add(FK.FLASH, c.x, c.y, { r: 130, life: 0.25, col: '#ffb347' }); if (this.near(c, 400)) this.shake(0.35); } break; }
+      case 'pulse': { const c = car(e[1]); if (c) { F.add(FK.RING, c.x, c.y, { r: WEAPONS.brick.r + 30, life: 0.45, col: '#ff7b39', w: 14 }); F.add(FK.FLASH, c.x, c.y, { r: 130, life: 0.25, col: '#ffb347' }); if (this.near(c, 400)) this.shakeFrom(0.35, c.x, c.y); } break; }
       case 'rail': { F.add(FK.BEAM, e[2], e[3], { x1: e[4], y1: e[5], life: 0.45, col: '#5ef2c6', w: 12 }); if (e[6]) { for (let i = 0; i < 10; i++) { const a = Math.random() * TAU; p.emit(PK.SPARK, e[4], e[5], Math.cos(a) * 300, Math.sin(a) * 300, 0.3, 3, C.CYAN, 0, 3); } } break; }
       case 'blink': { F.add(FK.BLINK, e[2], e[3], { x1: e[4], y1: e[5], life: 0.4, col: '#c04dff', id: e[1] }); F.add(FK.SLASH, e[4], e[5], { a: Math.atan2(e[5] - e[3], e[4] - e[2]), life: 0.3, col: '#ff5fa2' }); break; }
-      case 'boom': { this.explode(e[1], e[2], e[3] === 'mine' || e[3] === 4 ? 0.8 : e[3] === 8 ? 1.1 : e[3] === 7 ? 0.9 : e[3] === 9 ? 0.5 : 0.6); if (this.near({ x: e[1], y: e[2] }, 350)) this.shake(0.25); break; }
+      case 'boom': { this.explode(e[1], e[2], e[3] === 'mine' || e[3] === 4 ? 0.8 : e[3] === 8 ? 1.1 : e[3] === 7 ? 0.9 : e[3] === 9 ? 0.5 : 0.6); if (this.near({ x: e[1], y: e[2] }, 350)) this.shakeFrom(0.3, e[1], e[2]); break; }
       case 'mt': { const v = this.visOf(e[1]); v.flame = [0, 0.5, 0.85, 1.3][e[2]] || 0.5; v.flameC = TIER_C[e[2]] ?? C.BLUE; break; }
       case 'jump': { this.visOf(e[1]).air = 0.001; break; }
-      case 'bump': { const a = car(e[1]), b = car(e[2]); if (a && b) { const x = (a.x + b.x) / 2, y = (a.y + b.y) / 2; for (let i = 0; i < 6; i++) { const an = Math.random() * TAU; p.emit(PK.SPARK, x, y, Math.cos(an) * 260, Math.sin(an) * 260, 0.22, 2.5, C.WHITE, 0, 4); } if (e[1] === meId || e[2] === meId) this.shake(clamp(e[3] / 900, 0.1, 0.4)); } break; }
+      case 'bump': { const a = car(e[1]), b = car(e[2]); if (a && b) { const x = (a.x + b.x) / 2, y = (a.y + b.y) / 2; for (let i = 0; i < 6; i++) { const an = Math.random() * TAU; p.emit(PK.SPARK, x, y, Math.cos(an) * 260, Math.sin(an) * 260, 0.22, 2.5, C.WHITE, 0, 4); } if (e[1] === meId || e[2] === meId) { const o = e[1] === meId ? b : a; this.shakeFrom(clamp(e[3] / 800, 0.12, 0.5), o.x, o.y); } } break; }
     }
   }
   near(c, r) { const me = this.meCar; return !!me && Math.hypot(me.x - c.x, me.y - c.y) < r; }
@@ -289,8 +297,9 @@ export class RaceRenderer {
     const M = this.M || (this.M = { s: 1, x: 0, y: 0, a: 1, b: 0, c: 0, d: 1 });
     const vw = this.view;
     let cx, cy, z;
-    cam.shake = Math.max(0, cam.shake - dt * 2.6);
-    if (cam.shake > 0 && !SETTINGS.reduceFlash) { const s = cam.shake * cam.shake * 14; cam.sx = (Math.random() - 0.5) * s; cam.sy = (Math.random() - 0.5) * s; } else { cam.sx = cam.sy = 0; }
+    { const sdt = this.shNow ? (now - this.shNow) / 1000 : dt; this.shNow = now; stepShake(this.sh, now ? sdt : dt); }
+    cam.shake = this.sh.tr;
+    if (!SETTINGS.reduceFlash) { cam.sx = this.sh.x; cam.sy = this.sh.y; } else { cam.sx = cam.sy = 0; }
     if (!cfg.rotate) {
       if (focus) {
         // camera.js: the speed zoom + boost kick (stepCam) and the look-ahead (lookAhead)
@@ -308,7 +317,7 @@ export class RaceRenderer {
         cam.x = focus.x + cam.lx * rf; cam.y = focus.y + cam.ly * rf;
       }
       z = cam.z;
-      cx = cam.x + cam.sx / z; cy = cam.y + cam.sy / z;
+      cx = cam.x - cam.sx / z; cy = cam.y - cam.sy / z; // (the world image moves by sx, sy)
       // SAFE BOX: whatever the look-ahead, shake, a respawn or a jump do, your car stays inside the
       // middle 40% of the screen: clear of the HUD corners, the thumb buttons, the speedometer and the
       // credit along the bottom

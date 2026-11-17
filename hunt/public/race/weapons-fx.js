@@ -16,8 +16,9 @@ const ROTORS = [[-14, -14], [14, -14], [-14, 14], [14, 14]];
 //   'lockon'  {target, src, kind, me}         a missile / drone locked on (me: on you)
 //   'dodge'   {id, me}                        a drift shook a missile
 //   'takedown'{victim, by, me}                a racer was wrecked by another
-//   'hitstop' {t}                             the 0.08 s freeze that sells a hit you dealt or took
-export const HIT_STOP = 0.08;
+//   'hitstop' {t}                             the short freeze that sells a hit you dealt or took
+//                                             (0.08 s; 0.12 s for a big hit or your takedown)
+export const HIT_STOP = 0.08, HIT_STOP_BIG = 0.12;
 const L = new Map();
 export const combatBus = {
   on(type, fn) { let a = L.get(type); if (!a) L.set(type, (a = [])); a.push(fn); return () => this.off(type, fn); },

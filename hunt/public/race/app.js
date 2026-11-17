@@ -14,7 +14,7 @@ import { engine2, stopEngine2 } from './sound2.js';
 import { RACE_MODES, FLAG, EMOTES } from './protocol.js';
 import { ElimFx } from './elim.js';
 import { ITEM_IDS, itemLabel } from './items.js';
-import { combatBus, HIT_STOP } from './weapons-fx.js';
+import { combatBus, HIT_STOP, HIT_STOP_BIG } from './weapons-fx.js';
 import { trackName } from './tracks.js';
 import { SETTINGS, setSetting } from '../settings.js';
 import { Tutorial, flag, setFlag, evRow, tutStep, TUT_FLAG, STEER_FLAG } from './tutorial.js';
@@ -556,7 +556,7 @@ class RaceSession {
       const spd = Math.hypot(car.vx, car.vy);
       if (p.spd - spd > 260 && !(mine.f & FLAG.AIR)) {
         const k = Math.min(1, (p.spd - spd) / 600);
-        play(k > 0.8 ? 'thud' : 'wall', k); haptic('wall', k); this.renderer.shake(Math.min(0.45, (p.spd - spd) / 1400));
+        play(k > 0.8 ? 'thud' : 'wall', k); haptic('wall', k); this.renderer.shake(Math.min(0.6, (p.spd - spd) / 1100), -(p.vx || 0), -(p.vy || 0)); // (the wall shoves the view back against your travel)
         if (k > 0.8) duckRaceMusic(0.8, 0.45);
       } else if (car.wh < 0.07 && spd > 150 && v.countdown <= 0) haptic('scrape', 0.5); // scraping a guard wall
       const air = car.airT > 0;
@@ -564,7 +564,7 @@ class RaceSession {
       const tier = car.drift ? driftTier(car.dc) : 0;
       if (car.drift && !p.drift) haptic('drift');
       if (tier > p.tier) { play('tier', 0.7); haptic('tier'); }
-      p.tier = tier; p.air = air; p.spd = spd; p.boostT = car.boostT; p.drift = car.drift;
+      p.tier = tier; p.air = air; p.spd = spd; p.vx = car.vx; p.vy = car.vy; p.boostT = car.boostT; p.drift = car.drift;
       // WRONG WAY: driving against the road direction for a moment (tracks only)
       const T = rc.T;
       if (T.kind === 'track' && car.pc >= 0 && spd > 150 && v.countdown <= 0) {
@@ -663,7 +663,7 @@ class RaceSession {
       case 'ko': {
         if (e[1] === meId) { play('wreck'); play('thud'); haptic('crash'); duckRaceMusic(1.6); }
         else { play('boom', fall(e[1]), pan(e[1])); if (fall(e[1]) > 0.6) { play('thud', fall(e[1]) * 0.7, pan(e[1])); duckRaceMusic(0.9, 0.5); } }
-        if (e[2] === meId && e[1] !== meId) { H.banner('TAKEDOWN!', this.name(e[1]), '#ff9f43', 1.4); }
+        if (e[2] === meId && e[1] !== meId) { H.banner('TAKEDOWN!', this.name(e[1]), '#ff9f43', 1.4); if (this.stopT <= 0) { this.stopT = HIT_STOP_BIG; this.stopView = v; combatBus.emit('hitstop', { t: HIT_STOP_BIG }); } }
         // kill-cam callout: NAME TOOK OUT NAME
         if (e[2] && e[2] !== e[1]) { H.callout(`${this.name(e[2]).toUpperCase()} TOOK OUT ${this.name(e[1]).toUpperCase()}`, e[1] === meId || e[2] === meId ? '#ffd23f' : '#ffffff'); combatBus.emit('takedown', { victim: e[1], by: e[2], me: e[1] === meId || e[2] === meId }); }
         { const c = R.carAt(v, e[1]); if (c) combatBus.emit('explode', { x: c.x, y: c.y, r: 180 }); }
@@ -678,7 +678,7 @@ class RaceSession {
         const mine = e[1] === meId || e[2] === meId;
         if (e[1] === meId) { play('hit'); haptic('hit'); } else if (e[2] === meId) play('hit', 0.5, pan(e[1]));
         if (e[5]) play('boom', e[1] === meId ? 0.9 : fall(e[1]), pan(e[1])); // a big hit
-        if (mine && this.stopT <= 0) { this.stopT = HIT_STOP; this.stopView = v; combatBus.emit('hitstop', { t: HIT_STOP }); }
+        if (mine && this.stopT <= 0) { const t = e[5] ? HIT_STOP_BIG : HIT_STOP; this.stopT = t; this.stopView = v; combatBus.emit('hitstop', { t }); }
         combatBus.emit('hit', { id: e[1], src: e[2], kind: e[3], dmg: e[4], big: !!e[5], me: mine });
         break;
       }

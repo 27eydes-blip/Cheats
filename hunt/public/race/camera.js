@@ -138,3 +138,37 @@ export function anchorOf(cfg, cam, W, H, out) {
   out.y = H * (cfg.anchorY + (cfg.rotate && cfg.kick ? cam.kick * cfg.kick : 0));
   return out;
 }
+
+// ------------------------------------------------------------------ shake
+// SHAKE = trauma + a punch. Trauma (0..1.4, fades in ~0.5 s) drives a smooth jitter (a sum of sines,
+// not white noise: it reads as a jolt, not a blur); the punch is a stiff, slightly bouncy spring
+// kicked along the force on your car (a wall pushes you back, a missile along its flight, a rival
+// away from them), so a hit shoves the whole view one way and it settles with one small rebound.
+// Out: sh.x, sh.y = how far the world image moves on screen (CSS px, bounded by SHAKE_MAX).
+// It runs on the real clock, so it keeps moving through a hit-stop freeze.
+export const SHAKE_MAX = 18;
+const SPRING_K = 520, SPRING_C = 22; // ~3.6 Hz, damping ratio ~0.5: one overshoot
+export const newShake = () => ({ tr: 0, t: 0, px: 0, py: 0, vx: 0, vy: 0, x: 0, y: 0 });
+export function shakeKick(sh, k, dx = 0, dy = 0) {
+  if (!(k > 0)) return sh;
+  sh.tr = Math.min(1.4, sh.tr + k);
+  const m = Math.hypot(dx, dy);
+  if (m > 1e-6) { const p = Math.min(1, k) * 560; sh.vx += (dx / m) * p; sh.vy += (dy / m) * p; }
+  return sh;
+}
+export function stepShake(sh, dt) {
+  dt = clamp(dt, 0, 0.1);
+  sh.t += dt; sh.tr = Math.max(0, sh.tr - dt * 2.4);
+  // the spring, in fixed small steps (stable at any frame time)
+  for (let left = dt; left > 1e-6; left -= 1 / 240) {
+    const h = Math.min(left, 1 / 240);
+    sh.vx += (-SPRING_K * sh.px - SPRING_C * sh.vx) * h; sh.vy += (-SPRING_K * sh.py - SPRING_C * sh.vy) * h;
+    sh.px += sh.vx * h; sh.py += sh.vy * h;
+  }
+  sh.px = clamp(sh.px, -SHAKE_MAX * 0.75, SHAKE_MAX * 0.75); sh.py = clamp(sh.py, -SHAKE_MAX * 0.75, SHAKE_MAX * 0.75);
+  if (Math.abs(sh.px) + Math.abs(sh.py) + Math.abs(sh.vx) + Math.abs(sh.vy) < 0.02) sh.px = sh.py = sh.vx = sh.vy = 0;
+  const a = sh.tr * sh.tr * 5.5, t = sh.t;
+  sh.x = clamp(sh.px + a * (Math.sin(t * 43) + 0.6 * Math.sin(t * 71 + 1.3)), -SHAKE_MAX, SHAKE_MAX);
+  sh.y = clamp(sh.py + a * (Math.sin(t * 37 + 2.1) + 0.6 * Math.sin(t * 89 + 0.4)), -SHAKE_MAX, SHAKE_MAX);
+  return sh;
+}

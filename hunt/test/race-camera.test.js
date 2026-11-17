@@ -4,7 +4,7 @@
 // part of the camera (lean into turns, boost kick, speed zoom) stays inside its bounds whatever the
 // car does (so your car never leaves the safe box on screen).
 import assert from 'node:assert';
-import { CAM, CAM_MODES, camMode, stickToWorld, worldToStick, wrap, tiltOf, project, newCam, stepCam, anchorOf, skyGap, ZK_MIN, baseZoomOf, lookAhead } from '../public/race/camera.js';
+import { CAM, CAM_MODES, camMode, stickToWorld, worldToStick, wrap, tiltOf, project, newCam, stepCam, anchorOf, skyGap, ZK_MIN, baseZoomOf, lookAhead, newShake, shakeKick, stepShake, SHAKE_MAX } from '../public/race/camera.js';
 
 const close = (a, b, eps = 1e-9, msg = '') => assert.ok(Math.abs(wrap(a - b)) < eps, `${msg} ${a} vs ${b}`);
 const UP = -Math.PI / 2, RIGHT = 0, DOWN = Math.PI / 2, LEFT = Math.PI;
@@ -135,5 +135,24 @@ for (const m of CAM_MODES) {
   stepCam(c2, cfg, { a: 0, spd: 1100, top: 900, boost: 1, spin: 0, snap: 0 }, 1 / 60); assert.ok(c2.kick > 0.9, 'top-down boost kick');
   for (let i = 0; i < 60; i++) stepCam(c2, cfg, { a: 0, spd: 1100, top: 900, boost: 1, spin: 0, snap: 0 }, 1 / 60);
   assert.ok(c2.zk < zs - 0.04 && c2.zk >= ZK_MIN, `wider on a boost (${zs} -> ${c2.zk})`);
+}
+// SHAKE + PUNCH: a hit shoves the view along the force (first move is that way), it rebounds at
+// most a little, settles to exactly zero within a second, and stays bounded whatever piles up
+{
+  const sh = newShake(); shakeKick(sh, 0.6, 1, 0);
+  let maxX = 0, minX = 0, firstSign = 0;
+  for (let i = 0; i < 90; i++) { stepShake(sh, 1 / 60); if (!firstSign && Math.abs(sh.px) > 0.5) firstSign = Math.sign(sh.px); maxX = Math.max(maxX, sh.px); minX = Math.min(minX, sh.px); }
+  assert.strictEqual(firstSign, 1, 'punched along the force');
+  assert.ok(maxX > 6, `a real shove (${maxX.toFixed(1)} px)`);
+  assert.ok(-minX < maxX * 0.45, `one small rebound (${minX.toFixed(1)})`);
+  for (let i = 0; i < 30; i++) stepShake(sh, 1 / 60);
+  assert.ok(sh.x === 0 && sh.y === 0 && sh.tr === 0, `settled after ~2 s (${sh.x}, ${sh.y}, ${sh.tr})`);
+  // smooth, not white noise: frame to frame it moves a little, not a full swing
+  const s2 = newShake(); shakeKick(s2, 1); let px = 0, jump = 0;
+  for (let i = 0; i < 20; i++) { stepShake(s2, 1 / 60); if (i) jump = Math.max(jump, Math.abs(s2.x - px)); px = s2.x; }
+  assert.ok(jump < 6, `smooth jitter (${jump.toFixed(2)} px per frame)`);
+  // a pile of hits, huge and zero frame times: bounded, finite
+  const s3 = newShake();
+  for (let i = 0; i < 2000; i++) { if (i % 7 === 0) shakeKick(s3, 1, Math.cos(i), Math.sin(i)); stepShake(s3, i % 100 === 0 ? 0.5 : i % 13 === 0 ? 0 : 1 / 60); assert.ok(Number.isFinite(s3.x) && Math.abs(s3.x) <= SHAKE_MAX && Math.abs(s3.y) <= SHAKE_MAX && s3.tr <= 1.4, 'bounded'); }
 }
 console.log('race-camera: ok');
