@@ -11,9 +11,16 @@ name: Glydrift tests
 # glydrift/scripts/ci-lane.sh picks the lane: [fast] or [full] in the commit message, else
 # what changed. Anything touching purchases, accounts, saving or the leaderboard is ALWAYS full.
 #
-# NIGHTLY: started by hand (or by the nightly scheduled task) with nightly=true: the full lane on
-# the live version (the release branch), plus the release build on the real glydrift.com.
-# Nothing is published; a failure opens (or updates) a GitHub issue, which emails the owner.
+# NIGHTLY BUG SWEEP (no AI, nothing is ever published): started every night at 08:00 UTC by
+# .github/workflows/glydrift-nightly-trigger.yml, or by hand ("Run workflow", nightly ticked):
+#   - the full suite on the live version, every browser on all 7 device profiles
+#   - a 10-minute scripted soak per browser and device profile (iPhones upright and sideways):
+#     every realm, retries, hero swaps, the shop; fails on console errors, crashes, WebGL context
+#     loss, steady memory growth or frame-time spikes (tests/e2e/nightly-soak.spec.js)
+#   - the real glydrift.com: the release build loads; every page, link and file answers
+#   - optional: a read-only digest of the last 24 h of crash reports (secret GLYDRIFT_READONLY_DB_URL)
+# All green: nothing happens. Any failure: ONE open issue labelled "nightly-bug" (a comment on it
+# if it's already open); the next green night closes it.
 on:
   push:
     paths:
@@ -173,7 +180,8 @@ jobs:
     needs: plan
     if: needs.plan.outputs.lane == 'full' && needs.plan.outputs.hit != 'true' && !(github.event_name == 'workflow_dispatch' && inputs.skip_tests)
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    # (the nightly sweep runs Chromium and Firefox on all 7 profiles: more than twice the work)
+    timeout-minutes: ${{ (github.event_name == 'workflow_dispatch' && inputs.nightly) && 200 || 90 }}
     strategy:
       fail-fast: false
       matrix:
@@ -199,13 +207,21 @@ jobs:
       # WebKit (Safari, every iPhone and iPad) runs all 7 device profiles. Chromium and Firefox
       # run 3: the tightest phone, the phone size where the once-per-browser checks run, and a
       # laptop. Layout code is shared by every engine, so WebKit's 7 sizes cover the rest.
-      PROFILES: ${{ matrix.engine != 'webkit' && 'iphone-small,iphone-std,laptop' || '' }}
+      # The nightly sweep runs all 7 on every engine.
+      PROFILES: ${{ (matrix.engine != 'webkit' && !(github.event_name == 'workflow_dispatch' && inputs.nightly)) && 'iphone-small,iphone-std,laptop' || '' }}
+      NIGHTLY_TRACE: ${{ (github.event_name == 'workflow_dispatch' && inputs.nightly) && '1' || '' }}
       # put "[update screenshots]" in a commit message to re-record the baseline screenshots
       UPDATE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[update screenshots]') }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ (github.event_name == 'workflow_dispatch' && inputs.nightly) && env.LIVE_BRANCH || '' }}
+      - name: Nightly sweep files (the live game, tested with this branch's nightly settings)
+        if: env.NIGHTLY == 'true'
+        working-directory: .
+        run: |
+          git fetch -q --depth=1 origin "$GITHUB_SHA"
+          git checkout FETCH_HEAD -- glydrift/playwright.config.js glydrift/tests/e2e/nightly-soak.spec.js
       - uses: ./.github/actions/glydrift-setup
         with:
           engine: ${{ matrix.engine }}
@@ -213,8 +229,12 @@ jobs:
         run: |
           # headless Firefox has no WebGL on Linux: run it headed in a virtual display
           RUN="npx playwright test --shard=${{ matrix.shard }}/${{ matrix.total }}"
-          # the heavy checks (weak phones, a 2-hour session, multi-hazard stress) run nightly only
-          if [ "$NIGHTLY" != "true" ]; then RUN="$RUN --grep-invert @nightly"; fi
+          # the heavy checks (weak phones, a 2-hour session, multi-hazard stress) run nightly only;
+          # the 10-minute soak runs in its own nightly job
+          if [ "$NIGHTLY" != "true" ]; then RUN="$RUN --grep-invert @nightly"; else RUN="$RUN --grep-invert @soak"; fi
+          # nightly, Chromium and Firefox also run the 4 profiles they have no baseline screenshots
+          # for: compare screenshots only where baselines exist (WebKit, and every push)
+          if [ "$NIGHTLY" = "true" ] && [ "$ENGINES" != "webkit" ]; then RUN="$RUN --ignore-snapshots"; fi
           if [ "$ENGINES" = "firefox" ]; then export FIREFOX_HEADED=1; RUN="xvfb-run -a $RUN"; fi
           # first run for this engine (no baselines yet) or "[update screenshots]": record them
           if [ "$UPDATE" = "true" ] || ! ls tests/e2e/__screenshots__ 2>/dev/null | grep -q "^${ENGINES}-"; then
@@ -247,6 +267,13 @@ jobs:
         run: |
           cat failures.txt || true
           { echo "### ${{ matrix.engine }} ${{ matrix.shard }}/${{ matrix.total }} failed"; echo '```'; cat failures.txt || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always() && env.NIGHTLY == 'true'
+        with:
+          name: failures-full-${{ matrix.engine }}-${{ matrix.shard }}
+          path: glydrift/failures.txt
+          if-no-files-found: ignore
+          retention-days: 14
 
   # nightly only: the release build as it is live on the real glydrift.com
   live:
@@ -276,6 +303,128 @@ jobs:
         if: failure()
         run: |
           { echo "### live glydrift.com (${{ matrix.engine }}) failed"; echo '```'; cat failures.txt || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: failures-live-${{ matrix.engine }}
+          path: glydrift/failures.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # nightly only: 10 minutes of scripted play per browser and device profile (no AI: a script)
+  soak:
+    name: Soak (${{ matrix.engine }} ${{ matrix.profile }})
+    if: github.event_name == 'workflow_dispatch' && inputs.nightly
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [chromium, firefox, webkit]
+        profile:
+          - iphone-small
+          - iphone-std
+          - iphone-large
+          - iphone-small-landscape
+          - iphone-std-landscape
+          - iphone-large-landscape
+          - ipad-portrait
+          - ipad-landscape
+          - laptop
+          - desktop
+    env:
+      CI: "true"
+      ENGINES: ${{ matrix.engine }}
+      PROFILES: ${{ matrix.profile }}
+      NIGHTLY_TRACE: "1"
+      SOAK_MINUTES: "10"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.LIVE_BRANCH }}
+      - name: Nightly sweep files (the live game, tested with this branch's soak)
+        working-directory: .
+        run: |
+          git fetch -q --depth=1 origin "$GITHUB_SHA"
+          git checkout FETCH_HEAD -- glydrift/playwright.config.js glydrift/tests/e2e/nightly-soak.spec.js
+      - uses: ./.github/actions/glydrift-setup
+        with:
+          engine: ${{ matrix.engine }}
+      - name: Soak (${{ env.SOAK_MINUTES }} minutes)
+        run: |
+          RUN="npx playwright test tests/e2e/nightly-soak.spec.js --retries=0"
+          if [ "$ENGINES" = "firefox" ]; then export FIREFOX_HEADED=1; RUN="xvfb-run -a $RUN"; fi
+          $RUN
+      - name: What the soak saw (summary)
+        if: always()
+        run: |
+          { echo "### Soak ${{ matrix.engine }} ${{ matrix.profile }}"; echo '```'
+            node -e 'const fs=require("fs");for(const f of fs.readdirSync(".").filter(f=>f.startsWith("soak-"))){const r=JSON.parse(fs.readFileSync(f));delete r.samples;delete r.slowFrames;console.log(JSON.stringify(r))}' || true
+            cat failures.txt 2>/dev/null || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: failures-soak-${{ matrix.engine }}-${{ matrix.profile }}
+          path: glydrift/failures.txt
+          if-no-files-found: ignore
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: soak-${{ matrix.engine }}-${{ matrix.profile }}
+          path: |
+            glydrift/soak-*.json
+            glydrift/playwright-report
+            glydrift/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # nightly only: every page, link and file of the real glydrift.com answers (no browser needed)
+  site:
+    name: Site check (glydrift.com links)
+    if: github.event_name == 'workflow_dispatch' && inputs.nightly
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Pages, privacy and support links, no 404s
+        run: |
+          node scripts/site-check.mjs https://glydrift.com > site.log; code=$?
+          cat site.log; { echo '```'; cat site.log; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          grep '^FAIL' site.log | sed 's/^FAIL /FAIL site › glydrift.com: /' > failures.txt || true
+          exit $code
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: failures-site
+          path: glydrift/failures.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # nightly only, optional: a READ-ONLY summary of the last 24 h of crash reports. Uses only the
+  # read-only role's secret (supabase/admin/nightly_readonly_role.sql); none set = skipped quietly.
+  # Never the service_role key. It reports; it never fails the night.
+  crash-digest:
+    name: Crash digest (read-only)
+    if: github.event_name == 'workflow_dispatch' && inputs.nightly
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Last 24 hours of crash reports
+        env:
+          GLYDRIFT_READONLY_DB_URL: ${{ secrets.GLYDRIFT_READONLY_DB_URL }}
+        run: |
+          bash scripts/crash-digest.sh > ../crash-digest.md || true
+          cat ../crash-digest.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crash-digest
+          path: crash-digest.md
+          retention-days: 14
 
   # ------------------------------------------------------------------ one green light per lane
   gate:
@@ -296,32 +445,89 @@ jobs:
           if [ "$LANE" = full ] && [ "$FULL" = success ]; then exit 0; fi
           echo "::error::the $LANE lane did not pass"; exit 1
 
-  # nightly only: tell the owner when something broke (a GitHub issue emails them)
+  # nightly only: tell the owner when something broke. ONE open issue labelled "nightly-bug":
+  # created on the first red night, commented on after that, closed by the next green night.
+  # All green with no open issue: nothing at all (no email).
   nightly-report:
     name: Nightly report
-    needs: [gate, live]
+    needs: [gate, live, soak, site, crash-digest]
     if: always() && github.event_name == 'workflow_dispatch' && inputs.nightly
     runs-on: ubuntu-24.04
     permissions:
       issues: write
+      actions: read
     steps:
-      - name: Open or update the issue on a failure
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: failures-*
+          path: failures
+      - uses: actions/download-artifact@v4
+        with:
+          name: crash-digest
+          path: digest
+        continue-on-error: true
+      - name: Open, update or close the nightly-bug issue
         working-directory: .
         env:
           GH_TOKEN: ${{ github.token }}
           GATE: ${{ needs.gate.result }}
           LIVE: ${{ needs.live.result }}
+          SOAK: ${{ needs.soak.result }}
+          SITE: ${{ needs.site.result }}
           URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          echo "full suite: $GATE, live site: $LIVE"
-          if [ "$GATE" = success ] && [ "$LIVE" = success ]; then
-            echo "Nightly check passed." >> "$GITHUB_STEP_SUMMARY"; exit 0
+          echo "full suite: $GATE, live site: $LIVE, soak: $SOAK, site check: $SITE"
+          day=$(date -u +%F)
+          open=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --label nightly-bug --json number --jq '.[0].number' 2>/dev/null)
+          ok() { [ "$1" = success ]; }
+          if ok "$GATE" && ok "$LIVE" && ok "$SOAK" && ok "$SITE"; then
+            echo "Nightly sweep passed ($day)." >> "$GITHUB_STEP_SUMMARY"
+            if [ -n "$open" ]; then
+              gh issue close "$open" -R "$GITHUB_REPOSITORY" --comment "Green night on $day: every check passed ($URL). Closing."
+            fi
+            exit 0
           fi
-          title="Glydrift nightly check failed"
-          body="The nightly check of the live version failed on $(date -u +%F). Full suite: $GATE. Live glydrift.com: $LIVE. Details: $URL"
-          n=$(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "$title in:title" --json number --jq '.[0].number')
-          if [ -n "$n" ]; then gh issue comment "$n" -R "$GITHUB_REPOSITORY" --body "$body"
-          else gh issue create -R "$GITHUB_REPOSITORY" --title "$title" --body "$body"; fi
+          # one line per failing test: what, which browser and device, the error (from failures.txt)
+          {
+            echo "The nightly bug sweep found problems on **$day** (UTC)."
+            echo
+            echo "| Check | Result |"
+            echo "| --- | --- |"
+            echo "| Full test suite (3 browsers, 7 devices) | $GATE |"
+            echo "| 10-minute soak per browser and device | $SOAK |"
+            echo "| Live glydrift.com loads | $LIVE |"
+            echo "| Site links (pages, privacy, support, files) | $SITE |"
+            echo
+            echo "### Failing tests"
+            echo
+            echo "| Browser | Device | Test | Error |"
+            echo "| --- | --- | --- | --- |"
+            # "FAIL <browser>-<device> › <test>: <error>" (a test name may hold ": " too: the error
+            # starts at the first ": " followed by an error's usual opening)
+            cat failures/*/failures.txt 2>/dev/null | grep '^FAIL ' | sort -u | head -60 | python3 -c '
+          import re, sys
+          for line in sys.stdin:
+              rest = line.rstrip("\n")[5:]
+              proj, _, rest = rest.partition(" › ")
+              m = re.search(r": (?=(?:[A-Za-z]*Error|expect|Test timeout|Timed out|page\.|locator|[0-9]{3} |no answer|failed|interrupted))", rest)
+              test, err = (rest[: m.start()], rest[m.end():]) if m else rest.partition(": ")[::2]
+              eng, _, dev = proj.partition("-") if proj.split("-")[0] in ("chromium", "firefox", "webkit") else ("-", "", proj)
+              cell = lambda x: x.replace("|", "\\|")[:300]
+              print(f"| {eng} | {dev} | {cell(test)} | {cell(err)} |")
+          '
+            echo
+            echo "**Screenshots, traces and soak reports:** the artifacts of [this run]($URL) (report-*, soak-*), kept 14 days."
+            if [ -s digest/crash-digest.md ]; then echo; cat digest/crash-digest.md; fi
+            echo
+            echo "_Generated by the nightly bug sweep (.github/workflows/glydrift.yml). No AI: scripted checks only._"
+          } > body.md
+          cat body.md >> "$GITHUB_STEP_SUMMARY"
+          gh label create nightly-bug -R "$GITHUB_REPOSITORY" --color B60205 --description "Found by the nightly bug sweep" 2>/dev/null || true
+          if [ -n "$open" ]; then
+            gh issue comment "$open" -R "$GITHUB_REPOSITORY" --body-file body.md
+          else
+            gh issue create -R "$GITHUB_REPOSITORY" --title "Nightly bug sweep failed: $day" --label nightly-bug --body-file body.md
+          fi
           exit 1
 
   # ------------------------------------------------------------------ baselines and publishing

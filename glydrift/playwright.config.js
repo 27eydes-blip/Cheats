@@ -45,6 +45,15 @@ export const PROFILES = {
   desktop: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1, touch: false },
 };
 
+// The iPhones turned sideways: only when PROFILES names them (the nightly sweep's soak does), so
+// every other test run keeps the seven profiles above.
+const LANDSCAPE = Object.fromEntries(
+  ["iphone-small", "iphone-std", "iphone-large"].map((n) => {
+    const p = PROFILES[n];
+    return [`${n}-landscape`, { ...p, viewport: { width: p.viewport.height, height: p.viewport.width } }];
+  }),
+);
+
 const ENGINES = { chromium, firefox, webkit };
 const CI = !!process.env.CI;
 // TEST_PORT=4417 serves the test build on 4417 and the release build on 4418 (so parallel
@@ -69,8 +78,8 @@ const onlyProfiles = process.env.PROFILES?.split(",").filter(Boolean);
 const projects = [];
 for (const engine of engines) {
   if (only && !only.includes(engine)) continue;
-  for (const [name, p] of Object.entries(PROFILES)) {
-    if (onlyProfiles?.length && !onlyProfiles.includes(name)) continue;
+  for (const [name, p] of Object.entries({ ...PROFILES, ...LANDSCAPE })) {
+    if (onlyProfiles?.length ? !onlyProfiles.includes(name) : name in LANDSCAPE) continue;
     projects.push({
       name: `${engine}-${name}`,
       use: {
@@ -116,7 +125,10 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     timezoneId: "UTC",
     locale: "en-US",
-    trace: CI ? "off" : "retain-on-failure", // CI artifacts stay small
+    // CI artifacts stay small; the nightly sweep (NIGHTLY_TRACE=1) keeps a trace and a
+    // screenshot of every failure for its bug report
+    trace: process.env.NIGHTLY_TRACE || !CI ? "retain-on-failure" : "off",
+    screenshot: process.env.NIGHTLY_TRACE ? "only-on-failure" : "off",
   },
   projects,
   webServer: [

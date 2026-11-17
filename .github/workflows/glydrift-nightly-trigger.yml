@@ -1,0 +1,33 @@
+name: Glydrift nightly bug sweep (trigger)
+
+# Starts the Glydrift nightly bug sweep every night at 08:00 UTC (3 AM in Detroit while it's on
+# Eastern Standard Time, 4 AM in summer), or by hand from this page's "Run workflow" button.
+# The sweep itself is the "nightly" mode of glydrift.yml (all the checks, the issue reporting).
+# No AI, no deploys: this file only presses "Run workflow" on that one.
+#
+# GitHub only runs schedules from the repository's DEFAULT branch (main), so this file has to be
+# on main to fire. To turn the sweep off: Actions → this workflow → "..." → Disable workflow
+# (or delete this file from main).
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  start:
+    name: Start the nightly sweep
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Run glydrift.yml with nightly=true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # the branch whose glydrift.yml holds the sweep (the game it tests is always the live one)
+          REF: ${{ vars.GLYDRIFT_NIGHTLY_REF || 'ci/nightly-sweep' }}
+        run: |
+          gh workflow run glydrift.yml -R "$GITHUB_REPOSITORY" --ref "$REF" -f nightly=true
+          echo "Started the Glydrift nightly sweep from $REF." >> "$GITHUB_STEP_SUMMARY"

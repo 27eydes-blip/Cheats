@@ -82,5 +82,5 @@ export function startPg({ upTo = "20261115" } = {}) {
     stop();
     throw new Error(`${e.message}\n${e.stderr || ""}`);
   }
-  return { psql, asPlayer, stop };
+  return { psql, asPlayer, stop, dir, port };
 }
