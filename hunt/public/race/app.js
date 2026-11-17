@@ -9,7 +9,7 @@ import { Hud, fmtTime } from './hud.js';
 import { Controls } from './controls.js';
 import { play, engine, stopEngine } from './sound.js';
 import { DRIVERS, driftTier } from './physics.js';
-import { BASE_LOOKS, carName, drawCarPreview, isNewCar } from './looks2.js'; // (every car: the six starters + the 8 unlockable ones)
+import { BASE_LOOKS, carName, isNewCar } from './looks2.js'; // (every car: the six starters + the 8 unlockable ones)
 import { engine2, stopEngine2 } from './sound2.js';
 import { RACE_MODES, FLAG, EMOTES } from './protocol.js';
 import { ElimFx } from './elim.js';
@@ -17,8 +17,6 @@ import { ITEM_IDS, itemLabel } from './items.js';
 import { combatBus, HIT_STOP } from './weapons-fx.js';
 import { trackName } from './tracks.js';
 import { SETTINGS, setSetting } from '../settings.js';
-import { icon } from '../ui/icons.js';
-import { levelInfo } from '../progression.js';
 import { Tutorial, flag, setFlag, evRow, tutStep, TUT_FLAG, STEER_FLAG } from './tutorial.js';
 import { mountHorn, hornEvent } from './horn.js';
 import { wordmarkSvg } from '../brand/wordmark.js';
@@ -30,9 +28,9 @@ import { startRaceMusic, stopRaceMusic, setMusicIntensity, duckRaceMusic, raceMu
 import { Moments, passBys, revCurve } from './moments.js';
 import { engineOn } from './sound.js';
 import { THEMES } from './trackart.js';
-import { ReplayPlayer } from './replay.js';
 import { WaitFx } from './waitfx.js';
 import { loadSpaceFonts } from '../ui/space/fonts.js';
+import { showResults, resultsProgress } from './results.js';
 
 const CREDIT = 'Made by Gleyde Technologies';
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -376,6 +374,7 @@ class RaceSession {
     this.ctrl.destroy();
     this.horn.destroy();
     removeEventListener('resize', this.onResize);
+    if (this.resKey) removeEventListener('keydown', this.resKey);
     stopEngine(); stopEngine2(); stopRaceMusic(); hapticsOff();
     this.root.remove();
     if (current === this) current = null;
@@ -383,62 +382,16 @@ class RaceSession {
 
   // ---------------------------------------------------------------- finish screen (mirrors ui/flow.js results)
   showEnd() {
-    const rc = this.rc, m = rc.results, el = this.$('.rc-res');
     this.endShown = true; this.endAt = 0;
     this.root.classList.remove('racing'); // (the finish screen works upright)
     this.$('.rc-menu').hidden = true;
-    const me = m.results.find((r) => r[0] === m.you) || [];
-    const battle = m.mode === 'battle', out = rc.me?.out;
-    const head = battle ? `#${m.rank}` : m.rank === 1 ? '1ST!' : ORD(m.rank).toUpperCase();
-    const msg = battle ? (m.rank === 1 ? 'Top of the arena!' : `${m.k} takedowns`) : m.rank === 1 ? (m.mode === 'elim' ? 'Last Racer Standing!' : 'You won the race!') : out ? `Knocked out in ${ORD(out)}` : me[9] ? `Finished ${ORD(m.rank)} · ${fmtTime(m.time)}` : `${ORD(m.rank)} place`;
-    const rows = m.results.map((r) => {
-      const right = battle ? `${r[5]} KO` : r[9] ? fmtTime(r[4]) : m.mode === 'elim' ? (r[3] === 1 ? 'WINNER' : 'out') : 'DNF';
-      return `<li class="${r[0] === m.you ? 'me' : ''}"><span class="r">${r[3]}</span><i class="rc-dot" style="background:${(BASE_LOOKS[r[2]] || BASE_LOOKS.volt).neon}" title="${carName(r[2])}"></i>${esc(r[1])}<span class="k">${right}</span></li>`;
-    }).join('');
-    if (m.mode === 'elim') { this.mom.flush(); if (this.spec) this.spec.hidden = true; }
-    const clip = this.mom.best;
-    el.innerHTML = `<div class="left"><div class="title rank slam">${head}</div><canvas class="posecv"${clip ? ' hidden' : ''}></canvas>${clip ? '<div class="rc-replay"></div>' : ''}</div>
-      <div class="right"><div class="rmsg">${esc(msg)} <small>${esc(trackName(m.track, rc.arena) || '')}</small></div>
-        <div class="gain"><span class="cur">${icon('trophy')}<b class="rc-tro">…</b></span><span class="cur">${icon('coin')}<b>${m.mc}</b><small>COINS</small></span><span class="cur">${icon('skull')}<b>${m.k}</b><small>KO</small></span>${m.bestLap ? `<span class="cur">⏱<b>${fmtTime(m.bestLap)}</b><small>BEST LAP</small></span>` : ''}</div>
-        <div class="xp">LV <b class="rc-lv">-</b><div class="bar shine"><i class="rc-xp" style="width:0%"></i></div><span class="rc-xpn"></span></div><div class="rc-ups"></div>
-        <ol class="rlist rc-list">${rows}</ol>
-        <div class="btns"><button class="btn btn-md alt rc-lobby">LOBBY</button><button class="btn btn-lg again rc-again">RACE AGAIN</button></div></div>`;
-    el.hidden = false; el.classList.add('ui-screen', 'enter');
-    el.querySelector('.rc-lobby').onclick = () => this.exit();
-    el.querySelector('.rc-again').onclick = () => this.again();
-    if (!rc.progress) el.querySelector('.rc-tro').textContent = this.o.token ? '…' : '+0';
-    // the car on the podium
-    const cv = el.querySelector('.posecv'), r = cv.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1);
-    cv.width = Math.max(1, r.width * d); cv.height = Math.max(1, r.height * d);
-    const g = cv.getContext('2d'), s = Math.min(r.width, r.height) / 70;
-    g.setTransform(d * s, 0, 0, d * s, (r.width * d) / 2, (r.height * d) / 2);
-    g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.ellipse(4, 6, 30, 20, -0.5, 0, 7); g.fill();
-    drawCarPreview(g, rc.myDriver(), this.renderer.carLook(rc.id, rc), -0.5, 0, { boost: false, steady: true }); // in your equipped look
-    // the biggest crash of the race, replayed (instead of the podium car)
-    if (clip) { try { this.replay = new ReplayPlayer(el.querySelector('.rc-replay'), clip, rc); } catch (e) { console.warn('replay', e); this.replay = null; } }
-    play(m.rank === 1 ? 'finish' : 'lap');
-    if (rc.progress) this.applyProgress(rc.progress);
+    if (this.rc.results.mode === 'elim') { this.mom.flush(); if (this.spec) this.spec.hidden = true; }
+    showResults(this); // (race/results.js)
+    if (this.rc.progress) this.applyProgress(this.rc.progress);
   }
   applyProgress(m) {
     if (!this.endShown) return; // shown with the finish screen
-    const el = this.$('.rc-res');
-    const tro = el.querySelector('.rc-tro'); if (tro) tro.textContent = (m.delta >= 0 ? '+' : '') + m.delta;
-    if (!m.progress) return;
-    const L = levelInfo(m.progress.xp);
-    el.querySelector('.rc-lv').textContent = L.level;
-    el.querySelector('.rc-xpn').textContent = `+${m.xp} XP`;
-    requestAnimationFrame(() => { const b = el.querySelector('.rc-xp'); if (b) { b.style.transition = 'width 1.2s cubic-bezier(.2,.8,.3,1)'; b.style.width = `${Math.round((L.into / L.need) * 100)}%`; } });
-    const ups = [];
-    for (const r of m.levels || []) ups.push(`LEVEL ${r.level}! +${r.coins} coins`);
-    if (m.coins) ups.push(`+${m.coins} coins`);
-    if (m.improved && m.best) ups.push(`NEW BEST ${fmtTime(m.best)}`);
-    // Elimination: the takedown and survival bonus, and the title for a win
-    if (m.elim) {
-      if (m.elim.ko) ups.push(`+${m.elim.ko} takedown bonus`);
-      if (m.elim.surv) ups.push(`+${m.elim.surv} survival bonus (${m.elim.secs} s)`);
-      if (m.elim.win) { const t = document.createElement('div'); t.className = 'rc-title'; t.textContent = m.elim.title ? 'NEW TITLE: LAST RACER STANDING' : 'LAST RACER STANDING'; el.querySelector('.rc-ups').after(t); }
-    }
-    el.querySelector('.rc-ups').textContent = ups.join(' · ');
+    resultsProgress(this, m);
   }
 
   // ---------------------------------------------------------------- frame
