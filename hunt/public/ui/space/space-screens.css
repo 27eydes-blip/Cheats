@@ -51,3 +51,33 @@ body.sp-racing #notes { left: calc(env(safe-area-inset-left, 0px) + 8px); right:
 body.sp-racing .note { font-family: var(--sp-display, "Chakra Petch", system-ui, sans-serif); font-weight: 700; letter-spacing: .04em; border: 1px solid rgba(52,231,255,.6); border-radius: 3px; box-shadow: 0 0 12px rgba(52,231,255,.25); background: rgba(12,20,52,.92); }
 body.sp-racing .note.warn { background: rgba(255,63,184,.92); border-color: #ffd0ea; }
 body.sp-racing .note button { border: 0; border-radius: 3px; background: #ffc84a; }
+
+/* ---- polish to match the lobby (no cartoon yellow): the picked card, currency chips, the main
+   buy action, the credit line, the GP Pass tiers and the store's daily heading ---- */
+body.sp-racing :is(#lobby, .ui-screen, .ui-pop, .detail) { --gold: #7ff3ff; --gold-2: #34e7ff; }
+body.sp-racing .ov-credit { color: #cfe3ff; text-shadow: 0 0 6px rgba(52,231,255,.45), 0 1px 2px #050816; }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .btn.gold { color: #fff; background: linear-gradient(100deg, #ff8fdc, #ff3fb8 50%, #a77bff); box-shadow: 0 0 16px rgba(255,63,184,.45); text-shadow: 0 1px 2px rgba(40,0,30,.5); }
+body.sp-racing .note button { background: #34e7ff; color: #04101c; }
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) .cur { border-color: rgba(52,231,255,.5); box-shadow: inset 0 0 10px rgba(52,231,255,.12); }
+/* the picked car / mode / track: a cyan neon rim, not a gold outline */
+body.sp-racing :is(.ui-screen, .ui-pop, .detail) :is(.bcard, .mcard, .tcard).sel { outline: 2px solid #34e7ff; outline-offset: 3px; box-shadow: 0 0 0 1px #b9fbff, 0 0 22px rgba(52,231,255,.55); }
+/* garage cards: dark glass with the car's own colour as a soft top light */
+body.sp-racing .ui-screen .dcard.card-b { background: linear-gradient(180deg, color-mix(in srgb, var(--card-col) 26%, rgba(10,16,44,.92)) 0%, rgba(8,12,36,.94) 55%); border: 1px solid color-mix(in srgb, var(--card-col) 60%, transparent); border-radius: 2px; }
+body.sp-racing .ui-screen .dcard .dc-stats { font-family: var(--font-ui); letter-spacing: .06em; }
+body.sp-racing .ui-screen .dcard .dc-stats i { height: 4px; border-radius: 0; background: rgba(147,166,207,.18); transform: skewX(-20deg); }
+body.sp-racing .ui-screen .dcard .dc-stats b { border-radius: 0; box-shadow: 0 0 6px currentColor; }
+body.sp-racing .ui-screen .dcard .dc-wpn { font-family: var(--font-ui); font-weight: 700; letter-spacing: .06em; -webkit-text-stroke: 0; color: #cfe3ff; }
+/* GP Pass: glass reward tiles (premium violet on top, free cyan below), reached tiers lit */
+body.sp-racing .ui-screen .rw.card-b { border-radius: 0; border: 1px solid color-mix(in srgb, var(--card-col) 70%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--card-col) 30%, rgba(10,16,44,.9)), rgba(8,12,36,.92)); box-shadow: inset 0 0 16px color-mix(in srgb, var(--card-col) 18%, transparent);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); font-family: var(--font-ui); font-weight: 700; letter-spacing: .04em; }
+body.sp-racing .ui-screen .rw.premium { --card-col: #a77bff; }
+body.sp-racing .ui-screen .rw.free { --card-col: #34e7ff; }
+body.sp-racing .ui-screen .rw.locked { filter: saturate(.5) brightness(.75); }
+body.sp-racing .ui-screen .tier .num { font-family: var(--font); font-weight: 700; color: var(--text-dim); }
+body.sp-racing .ui-screen .tier.reached .num { color: #7ff3ff; text-shadow: 0 0 8px rgba(52,231,255,.7); }
+body.sp-racing .ui-screen .tier.reached .rw:not(.locked):not(.got) { box-shadow: inset 0 0 16px color-mix(in srgb, var(--card-col) 30%, transparent), 0 0 12px color-mix(in srgb, var(--card-col) 40%, transparent); }
+/* store: the daily heading and timer in the lobby's magenta / cyan */
+body.sp-racing .st-dhead b { font-family: var(--font); font-weight: 700; letter-spacing: .14em; color: #ff8fdc; text-shadow: 0 0 10px rgba(255,63,184,.6); }
+body.sp-racing .st-card { border-width: 1px; border-radius: 0; clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+body.sp-racing .st-card.sel { outline: 0; box-shadow: inset 0 0 0 2px #fff, 0 0 18px var(--rc); }
+body.sp-racing .ui-screen.neon .ui-head .title { text-shadow: 0 0 10px rgba(52,231,255,.75), 0 0 2px #34e7ff; }

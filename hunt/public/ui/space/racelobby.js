@@ -319,6 +319,15 @@ export function createSpaceLobby(api) {
     // the ping answers with the live count (you included): the ticker shows it at once
     if (!stopPresence) stopPresence = startPresence(() => A.ACC.token, { onOnline: (n) => { if (!feed || feed.online !== n) { feed = { ...(feed || {}), online: n }; fillTicker(); } } });
     startAmbient();
+    warmRace();
+  }
+  // LAUNCH starts the race at once: the race code is fetched while the player looks at the lobby
+  // (once, when the browser is idle), not after the tap
+  let warmed = false;
+  function warmRace() {
+    if (warmed) return; warmed = true;
+    const go = () => import('../../race/app.js').catch(() => { warmed = false; });
+    if (window.requestIdleCallback) requestIdleCallback(go, { timeout: 4000 }); else setTimeout(go, 1500);
   }
   function hide() {
     root.hidden = true; L.visible = false;
@@ -327,6 +336,14 @@ export function createSpaceLobby(api) {
     if (stopPresence) { stopPresence(); stopPresence = null; }
     stopAmbient(); duckAmbient(false);
   }
+  // a keyboard: Enter launches from the lobby (when nothing else has the focus and no screen is open)
+  addEventListener('keydown', (e) => {
+    if (e.code !== 'Enter' || e.repeat || root.hidden || L.tab !== 'play') return;
+    const a = document.activeElement;
+    if (a && a !== document.body && a !== root) return;
+    if (document.querySelector('.ui-screen:not([hidden]), .ui-pop, .detail, .rc-root')) return;
+    e.preventDefault(); launch.burst(); go();
+  });
   // music needs a user gesture on mobile: start on the first tap in the lobby
   root.addEventListener('pointerdown', () => { unlockAudio(); if (!root.hidden) startAmbient(); });
 
