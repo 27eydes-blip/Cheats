@@ -3063,6 +3063,7 @@ const LB = {
       try {
         if (!NET_CONF || !LB.name) return;
         await LB.syncName();
+        let resent = false;
         while (LB.queue.length) {
           const run = LB.queue[0];
           try { await LB.rpc('glydaway_submit_run', { p_distance: run.distance, p_coins: run.coins, p_run_ms: run.run_time_ms }); LB.queue.shift(); }
@@ -3070,6 +3071,7 @@ const LB = {
             const c = LB.code(e);
             if (c === 'too_fast') { clearTimeout(LB.retryT); LB.retryT = setTimeout(() => LB.flush(), 6000); break; } // the server's rate limit: try again shortly
             if (c === 'impossible_score') { LB.queue.shift(); continue; }                                            // never accepted: drop it
+            if (c === 'no_username' && !resent) { resent = true; LB.nameSynced = ''; store.set('nameSynced', ''); await LB.syncName(); continue; } // the server lost the name: send it again, once
             throw e;
           }
         }
@@ -3165,7 +3167,7 @@ async function acctSend(email) {
   email = String(email || '').trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 254) return 'Please enter a valid email address.';
   const wait = 60 - Math.floor((Date.now() - ACCT.sentAt) / 1000);
-  if (ACCT.email === email && wait > 0) return `Please wait ${wait} s before asking for another code.`; // (the server limits codes too)
+  if (ACCT.sentAt && wait > 0) return `Please wait ${wait} s before asking for another code.`; // any email (the server limits codes too)
   try {
     await LB.session(); await LB.syncName().catch(() => {});
     try { // a new email: link it to this player (keeps your id, scores and progress)
