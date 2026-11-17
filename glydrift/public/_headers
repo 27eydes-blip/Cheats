@@ -1,5 +1,33 @@
-# Cloudflare Pages response headers (glydrift.com). Pages already revalidates HTML, sw.js and
-# seasons.json on every visit; the build's hashed files never change, so they cache for a year.
+# Cloudflare Pages response headers (glydrift.com). Vite copies public/ into the build, so this
+# ends up as dist/_headers. The test server (tests/serve.mjs) applies the same file, so every
+# automated test runs under these exact headers (tests/e2e/security-headers.spec.js checks them).
+#
+# Security (every page and file):
+#   Strict-Transport-Security  HTTPS only for a year, subdomains too (no "preload": that list is
+#                              hard to leave)
+#   X-Frame-Options            no other site may show glydrift.com inside a frame
+#   Permissions-Policy         no camera, microphone or location; sound, vibration, fullscreen and
+#                              orientation (all the game uses) are untouched
+#   Content-Security-Policy    only what the game uses (see docs/SECURITY_HEADERS.md):
+#     script-src  the game's own files + the one inline script in index.html (the "couldn't load,
+#                 tap to retry" splash), by its hash. Change that script and its hash here too
+#                 (the security-headers test fails until you do)
+#     style-src   own files + inline styles (the splash, the pages' <style>, styles set by code)
+#     img-src     own files + data:/blob: (textures the game draws, the share card)
+#     font-src    own files + data:
+#     media-src   own files + data:/blob: (the soundtrack, sound effects)
+#     connect-src own files, the game's Supabase project over https and wss (leaderboard,
+#                 accounts, cloud save, crash reports), data: (the share card)
+#     worker-src  own files (the offline service worker) + blob: (Supabase's realtime worker)
+#     frame-ancestors/object-src/base-uri/form-action locked down
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-7xgHdg0WSRtmAAmZmhWLX8Tu9EthYzgEMp9t5cyBZWo='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' data: blob:; connect-src 'self' https://cdjcvhywrbsdryagqxqg.supabase.co wss://cdjcvhywrbsdryagqxqg.supabase.co data:; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'
+
+# Caching: Pages already revalidates HTML, sw.js and seasons.json on every visit; the build's
+# hashed files never change, so they cache for a year.
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 /version.json
