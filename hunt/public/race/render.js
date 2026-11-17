@@ -3,7 +3,7 @@
 // RaceClient.view() and is fed race events by the app (fx()).
 import { TrackArt, CHUNK } from './trackart.js';
 import { drawTall, PARALLAX } from './scenery.js';
-import { CarSprites, BUCKETS, INK, blitCar, drawUnderglow, drawBoostTrail, glowDot, exhaustsOf, taillightsOf, headOf, mix } from './cars2.js';
+import { CarSprites, BUCKETS, INK, blitCar, drawUnderglow, drawBoostTrail, glowDot, exhaustsOf, taillightsOf, headOf, tyresOf, mix } from './cars2.js';
 import { lookForRacer, NEON_GLOW } from './looks2.js'; // (cars2 / looks2: the six starters + the 8 unlockable cars)
 const EDGE_A = Math.round(0x66 * NEON_GLOW).toString(16).padStart(2, '0'); // dusk edge lights (alpha hex)
 import { Particles, Skids, Effects, PK, C, TIER_C, FK, colorIdx } from './fx.js';
@@ -202,7 +202,7 @@ export class RaceRenderer {
     let v = this.vis.get(id);
     if (!v) {
       // lt: taillight trail ring (LT points x 2 lights x xy); look: this car's look (from the roster)
-      v = { lt: new Float32Array(LT * 4), ltn: 0, lti: 0, ltT: 0, look: null, lookSrc: undefined, trail: new Float32Array(32), tn: 0, ti: 0, wx: new Float32Array(4), skid: false, flame: 0, flameC: 0, respawnT: 0, hitT: 0, puff: 0, dust: 0, tierPrev: 0, air: 0, airMax: 0.6, spinT: 0, lastX: 0, lastY: 0, pa: null, yaw: 0, bounce: 0, bT: 0, wasAir: false, scrape: 0, brk: 0 };
+      v = { lt: new Float32Array(LT * 4), ltn: 0, lti: 0, ltT: 0, look: null, lookSrc: undefined, trail: new Float32Array(32), tn: 0, ti: 0, wx: new Float32Array(4), skid: false, flame: 0, flameC: 0, respawnT: 0, hitT: 0, puff: 0, dust: 0, tierPrev: 0, air: 0, airMax: 0.6, spinT: 0, lastX: 0, lastY: 0, pa: null, yaw: 0, roll: 0, bounce: 0, bT: 0, wasAir: false, scrape: 0, brk: 0 };
       this.vis.set(id, v);
     }
     return v;
@@ -469,7 +469,8 @@ export class RaceRenderer {
   // screen (Low Graphics: baked flat into the chunks instead)
   tallLayer(g, t, ex, ey) {
     const art = this.art, vw = this.view, steady = SETTINGS.reduceFlash;
-    if (SETTINGS.lowGfx || !art.tall.length) return;
+    if (SETTINGS.lowGfx) return;
+    art.poleLayer(g, ex, ey, vw, PARALLAX);
     for (let i = 0; i < art.tall.length; i++) {
       const it = art.tall[i];
       if (it.bx1 + TALL_M < vw.x0 || it.bx0 - TALL_M > vw.x1 || it.by1 + TALL_M < vw.y0 || it.by0 - TALL_M > vw.y1) continue;
@@ -823,6 +824,11 @@ export class RaceRenderer {
       const spr = this.cars.get(L, c.a);
       this.at(g, c.x + rox, c.y + roy - lift * 10, c.a - spr.ang - roll * 0.05, sc * CAR_VIS);
       blitCar(g, spr, t, steady, low);
+      // WHEELS: tread lines roll round the outer half of each tyre at the car's speed (big enough on screen only)
+      if (!low && !air && this.M.s * CAR_VIS > 1.3) {
+        v.roll = (v.roll + c.spd * dt * 0.7) % 1e4;
+        g.rotate(spr.ang); this.treads(g, tyresOf(st), v.roll); g.rotate(-spr.ang);
+      }
       this.base(g);
       g.globalAlpha = 1;
       // brake lights: bright red at the tail while braking (rivals: the BRAKE flag; you: your BRAKE)
@@ -856,6 +862,14 @@ export class RaceRenderer {
     }
   }
 
+  treads(g, ty, roll) {
+    g.beginPath();
+    for (let k = 0; k < ty.length; k++) {
+      const [x, y, w, h] = ty[k], s = y < 0 ? -1 : 1, y0 = y, y1 = y + s * (h / 2 - 0.8), sp = w / 3;
+      for (let j = 0; j < 3; j++) { const xx = x + w / 2 - 1 - ((roll + j * sp) % (w - 2)); g.moveTo(xx, y0); g.lineTo(xx, y1); }
+    }
+    g.strokeStyle = 'rgba(205,215,255,0.32)'; g.lineWidth = 1.1; g.stroke();
+  }
   effects(g, view, dt) {
     const steady = SETTINGS.reduceFlash;
     this.fxs.update(dt);

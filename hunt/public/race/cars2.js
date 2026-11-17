@@ -390,6 +390,7 @@ function nebula(g, L, seed, a) {
 export const CAR2_IDS = Object.keys(CARS);
 export const CAR_IDS = [...C1.CAR_IDS, ...CAR2_IDS];
 const def2 = (id) => CARS[id] || null;
+export const tyresOf = (id) => (def2(id) ? CARS[id].tyres : C1.tyresOf(id));
 export const exhaustsOf = (id) => (def2(id) ? CARS[id].exhaust : C1.exhaustsOf(id));
 export const taillightsOf = (id) => (def2(id) ? CARS[id].tail : C1.taillightsOf(id));
 export const headOf = (id) => (def2(id) ? CARS[id].head : C1.headOf(id));

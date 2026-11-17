@@ -11,6 +11,7 @@ import { artTheme } from './trackthemes.js';
 
 export const CHUNK = 384; // world px per chunk side
 const MAX_CHUNKS = 40;
+const POLE_H = 110; // a light pole's height (for its lean with the camera)
 const WALL = 26; // wall band beyond the shoulder (px) (as scenery.js)
 
 // worlds (palettes, lights, scenery): scenery.js. THEMES[world] is the palette.
@@ -584,6 +585,7 @@ export class TrackArt {
     for (const L of lights) {
       if (L.kind !== 'pole') continue;
       g.beginPath(); g.arc(L.x, L.y, 7, 0, 7); g.fillStyle = '#0c0a14'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#2a2638'; g.stroke();
+      if (!low) continue; // (the mast and lamp are drawn each frame, leaning with the camera: poleLayer)
       const hx = L.x + (L.px - L.x) * 0.18, hy = L.y + (L.py - L.y) * 0.18;
       g.beginPath(); g.moveTo(L.x, L.y); g.lineTo(hx, hy); g.lineWidth = 4; g.strokeStyle = '#1a1726'; g.stroke();
       const gr = g.createRadialGradient(hx, hy, 0, hx, hy, 26); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.2, a2(L.col, 0.9)); gr.addColorStop(1, a2(L.col, 0));
@@ -639,6 +641,31 @@ export class TrackArt {
     for (const zp of this.zonePolys) if (zp.z.kind === 'pad' && !(zp.bx1 < bx.x0 + 290 || zp.bx0 > bx.x1 - 290 || zp.by1 < bx.y0 + 290 || zp.by0 > bx.y1 - 290)) this.padPlate(g, zp.mid.x, zp.mid.y, zp.mid.a, Math.max(70, zp.z.s1 - zp.z.s0 + 40), zp.w, false, true);
     for (const c of T.corridors) { if (c.main) continue; const p = pointAt(c, 70, 0); if (p.x >= bx.x0 && p.x <= bx.x1 && p.y >= bx.y0 && p.y <= bx.y1) this.shortcutMark(g, c); }
     this.chevrons(g, bx);
+  }
+  // the light poles' masts and lamps, leaning away from the eye (ex, ey) like the tall scenery
+  poleLayer(g, ex, ey, vw, k) {
+    const P = this.poles || (this.poles = this.lights.filter((L) => L.kind === 'pole'));
+    g.lineCap = 'round';
+    for (let i = 0; i < P.length; i++) {
+      const L = P[i];
+      if (L.x < vw.x0 - 120 || L.x > vw.x1 + 120 || L.y < vw.y0 - 120 || L.y > vw.y1 + 120) continue;
+      let ox = (L.x - ex) * k * POLE_H, oy = (L.y - ey) * k * POLE_H; const m = Math.hypot(ox, oy);
+      if (m > 70) { ox *= 70 / m; oy *= 70 / m; }
+      const tx = L.x + ox, ty = L.y + oy, hx = tx + (L.px - L.x) * 0.16, hy = ty + (L.py - L.y) * 0.16;
+      g.beginPath(); g.moveTo(L.x, L.y); g.lineTo(tx, ty); g.lineTo(hx, hy); g.lineWidth = 4; g.strokeStyle = '#1c1828'; g.stroke();
+      g.globalCompositeOperation = 'lighter'; g.drawImage(this.lamp(L.col), hx - 26, hy - 26, 52, 52); g.globalCompositeOperation = 'source-over';
+    }
+  }
+  lamp(col) {
+    const C = this.lamps || (this.lamps = new Map());
+    let cv = C.get(col);
+    if (!cv) {
+      cv = document.createElement('canvas'); cv.width = cv.height = 64;
+      const g = cv.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.2, a2(col, 0.9)); gr.addColorStop(1, a2(col, 0));
+      g.fillStyle = gr; g.fillRect(0, 0, 64, 64); C.set(col, cv);
+    }
+    return cv;
   }
   // is this wall point of corridor c (segment i, offset d) out on another corridor's road (a crossover
   // or a shortcut mouth)? Its lights are left out there, so nothing glows across a road

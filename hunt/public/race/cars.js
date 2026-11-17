@@ -235,6 +235,7 @@ const CARS = {
 export const CAR_IDS = Object.keys(CARS);
 const carDef = (id) => CARS[id] || CARS.volt;
 // attachment points in the car frame (nose +x) for the renderer: exhausts, taillights, headlights
+export const tyresOf = (id) => carDef(id).tyres; // [[x, y, w, h]] in the car frame (nose +x)
 export const exhaustsOf = (id) => carDef(id).exhaust;
 export const taillightsOf = (id) => carDef(id).tail;
 export const headOf = (id) => carDef(id).head;
