@@ -196,7 +196,7 @@ export function placeScenery(T, art = artOf(T.world)) {
 // a tall shape: { kind, x, y, r, foot (footprint pts, relative), prisms: [{pts, h, ...}] }
 function tallAt(kind, x, y, rot, v, h, c0, art) {
   if (kind === 'tower') { // city tower: one or two stacked blocks, lit windows, neon crown
-    if (h > 0.72 || c0 < 110) return null;
+    if (h > 0.5 || c0 < 110) return null;
     const w = 90 + v * 70, d = 80 + hash(Math.round(x), Math.round(y), 71) * 70, a = Math.round(rot / (Math.PI / 2)) * (Math.PI / 2) + (hash(Math.round(x), 3, 72) - 0.5) * 0.3, foot = rect(w, d, a);
     const col = art.neon[Math.floor(v * 97) % art.neon.length], hh = 70 + hash(Math.round(y), 5, 73) * 160;
     const prisms = [{ pts: foot, h: hh, wall: ['#232346', '#14142c'], roof: '#1c1c3a', rim: col, win: hash(Math.round(x), 9, 74) < 0.5 ? '#ffe9a8' : '#9fe8ff' }];
@@ -212,8 +212,8 @@ function tallAt(kind, x, y, rot, v, h, c0, art) {
     ] };
   }
   if (kind === 'spire') { // ice spires: a cluster of crystal prisms, lit from inside
-    if (h > 0.34 || c0 < 90) return null;
-    const n = 3 + Math.floor(v * 3), prisms = [], all = [];
+    if (h > 0.24 || c0 < 90) return null;
+    const n = 2 + Math.floor(v * 3), prisms = [], all = [];
     for (let k = 0; k < n; k++) {
       const a = rot + k * 2.1, d = k ? 18 + hash(k, Math.round(x), 75) * 22 : 0, rr = 14 + hash(k, Math.round(y), 76) * 14, px = Math.cos(a) * d, py = Math.sin(a) * d;
       const pts = ngon(5, rr, a, 0.2, k + Math.round(x)).map((q, i) => q + (i & 1 ? py : px));
@@ -222,8 +222,8 @@ function tallAt(kind, x, y, rot, v, h, c0, art) {
     return { kind, x, y, r: polyR(all) + 6, foot: all, prisms };
   }
   if (kind === 'basalt') { // basalt columns: hexagonal pillars with a magma seam between them
-    if (h > 0.42 || c0 < 100) return null;
-    const n = 4 + Math.floor(v * 4), prisms = [], all = [];
+    if (h > 0.32 || c0 < 100) return null;
+    const n = 3 + Math.floor(v * 3), prisms = [], all = [];
     for (let k = 0; k < n; k++) {
       const a = rot + k * 1.9, d = k ? 22 + hash(k, Math.round(x), 78) * 30 : 0, rr = 16 + hash(k, Math.round(y), 79) * 12, px = Math.cos(a) * d, py = Math.sin(a) * d;
       const pts = ngon(6, rr, 0.5, 0.05, k).map((q, i) => q + (i & 1 ? py : px));
@@ -263,10 +263,14 @@ export function drawFlat(g, it, art, lit) {
       if (lit) return;
       g.lineCap = 'round'; g.lineWidth = 3;
       const c = Math.cos(it.rot), s = Math.sin(it.rot);
-      for (let k = -3; k <= 3; k++) {
-        const o = k * 15, L = it.r * (1 - Math.abs(k) * 0.18);
-        g.strokeStyle = k & 1 ? 'rgba(255,140,110,0.07)' : 'rgba(10,0,20,0.22)';
-        g.beginPath(); g.moveTo(x - c * L - s * o, y - s * L + c * o); g.quadraticCurveTo(x - s * (o + 14), y + c * (o + 14), x + c * L - s * o, y + s * L + c * o); g.stroke();
+      for (const odd of [0, 1]) { // (two strokes: the lit crests and the shaded troughs)
+        g.strokeStyle = odd ? 'rgba(255,140,110,0.07)' : 'rgba(10,0,20,0.22)'; g.beginPath();
+        for (let k = -3; k <= 3; k++) {
+          if ((k & 1) !== odd) continue;
+          const o = k * 15, L = it.r * (1 - Math.abs(k) * 0.18);
+          g.moveTo(x - c * L - s * o, y - s * L + c * o); g.quadraticCurveTo(x - s * (o + 14), y + c * (o + 14), x + c * L - s * o, y + s * L + c * o);
+        }
+        g.stroke();
       }
       return;
     }
@@ -274,10 +278,14 @@ export function drawFlat(g, it, art, lit) {
       if (lit) return;
       g.lineCap = 'round'; g.lineWidth = 3;
       const c = Math.cos(it.rot), s = Math.sin(it.rot);
-      for (let k = -3; k <= 3; k++) {
-        const o = k * 16, L = it.r * (1 - Math.abs(k) * 0.18);
-        g.strokeStyle = k & 1 ? 'rgba(190,225,255,0.1)' : 'rgba(0,6,20,0.25)';
-        g.beginPath(); g.moveTo(x - c * L - s * o, y - s * L + c * o); g.quadraticCurveTo(x - s * (o + 16), y + c * (o + 16), x + c * L - s * o, y + s * L + c * o); g.stroke();
+      for (const odd of [0, 1]) {
+        g.strokeStyle = odd ? 'rgba(190,225,255,0.1)' : 'rgba(0,6,20,0.25)'; g.beginPath();
+        for (let k = -3; k <= 3; k++) {
+          if ((k & 1) !== odd) continue;
+          const o = k * 16, L = it.r * (1 - Math.abs(k) * 0.18);
+          g.moveTo(x - c * L - s * o, y - s * L + c * o); g.quadraticCurveTo(x - s * (o + 16), y + c * (o + 16), x + c * L - s * o, y + s * L + c * o);
+        }
+        g.stroke();
       }
       return;
     }
@@ -428,6 +436,55 @@ export function drawTall(g, it, ox, oy, t, steady, low) {
     }
   }
 }
+// drawTallList: the same as drawTall for n visible items at once (offsets in offs: ox, oy per item),
+// batched: per tier (prism index; tiers stack inside an item, items never overlap each other) one
+// path per colour for the dark walls, the lit walls, the windows, the roofs and the rims, so the
+// whole layer is a few dozen fills and strokes however many shapes are on screen
+const GK = []; // (scratch: the distinct colours of one batch)
+export function drawTallList(g, list, n, offs, t, steady) {
+  let tiers = 0;
+  for (let i = 0; i < n; i++) tiers = Math.max(tiers, list[i].prisms.length);
+  g.lineJoin = 'round';
+  for (let k = 0; k < tiers; k++) {
+    for (const what of WHAT) {
+      // the distinct colours of this tier and part
+      GK.length = 0;
+      for (let i = 0; i < n; i++) { const p = list[i].prisms[k]; if (!p) continue; const c = colOf(p, what); if (c && GK.indexOf(c) < 0) GK.push(c); }
+      for (let q = 0; q < GK.length; q++) {
+        const col = GK[q];
+        g.beginPath();
+        for (let i = 0; i < n; i++) {
+          const it = list[i], p = it.prisms[k];
+          if (!p || colOf(p, what) !== col) continue;
+          const pts = p.pts, m = pts.length, dx = offs[i * 2] * p.h, dy = offs[i * 2 + 1] * p.h, x = it.x, y = it.y;
+          if (what === 3 || what === 4) { poly(g, x, y, pts, dx, dy); continue; } // roof / rim
+          for (let e = 0; e < m; e += 2) {
+            const j = (e + 2) % m, ex = pts[j] - pts[e], ey = pts[j + 1] - pts[e + 1], nx = ey * p.cw, ny = -ex * p.cw;
+            if (nx * dx + ny * dy >= 0) continue; // a face turned away from the eye
+            const lit = nx - ny <= 0;
+            if (what === 0 && lit) continue; if (what === 1 && !lit) continue;
+            const ax = x + pts[e], ay = y + pts[e + 1], bx = x + pts[j], by = y + pts[j + 1];
+            if (what === 2) { for (let f = 0.2; f < 0.95; f += 0.19) { g.moveTo(ax + dx * f, ay + dy * f); g.lineTo(bx + dx * f, by + dy * f); } }
+            else { g.moveTo(ax, ay); g.lineTo(bx, by); g.lineTo(bx + dx, by + dy); g.lineTo(ax + dx, ay + dy); g.closePath(); }
+          }
+        }
+        if (what === 2) { g.strokeStyle = col; g.lineWidth = 1.4; g.globalAlpha = 0.55; g.stroke(); g.globalAlpha = 1; }
+        else if (what === 4) { g.strokeStyle = col; g.lineWidth = 2.2; g.stroke(); }
+        else { g.fillStyle = col; g.fill(); }
+      }
+    }
+    // tower beacons (blink; steady under Reduce Flashing)
+    g.beginPath(); let any = false;
+    for (let i = 0; i < n; i++) {
+      const it = list[i], p = it.prisms[k];
+      if (!p || !p.beacon || !(steady || (t * 1.3 + it.x * 0.01) % 1 < 0.5)) continue;
+      const bx = it.x + offs[i * 2] * p.h, by = it.y + offs[i * 2 + 1] * p.h; g.moveTo(bx + 3.2, by); g.arc(bx, by, 3.2, 0, TAU); any = true;
+    }
+    if (any) { g.fillStyle = '#ff3b3b'; g.fill(); }
+  }
+}
+const WHAT = [0, 1, 2, 3, 4]; // dark walls, lit walls, windows, roofs, rims
+const colOf = (p, what) => (what === 0 ? p.wall[1] : what === 1 ? p.wall[0] : what === 2 ? p.win : what === 3 ? p.roof : p.rim);
 // winding of each prism (so wall culling works whatever order the points were made in)
 export function prepTall(it) {
   it.hMax = 0;

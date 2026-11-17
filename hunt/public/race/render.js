@@ -2,7 +2,7 @@
 // chunks, animated track overlays, cars (cached sprites), items, weapons and effects. Draws from
 // RaceClient.view() and is fed race events by the app (fx()).
 import { TrackArt, CHUNK } from './trackart.js';
-import { drawTall, PARALLAX } from './scenery.js';
+import { drawTallList, PARALLAX } from './scenery.js';
 import { CarSprites, BUCKETS, blitCar, drawUnderglow, drawBoostTrail, glowDot, exhaustsOf, taillightsOf, headOf, tyresOf, mix } from './cars2.js';
 import { lookForRacer, NEON_GLOW } from './looks2.js'; // (cars2 / looks2: the six starters + the 8 unlockable cars)
 const EDGE_A = Math.round(0x66 * NEON_GLOW).toString(16).padStart(2, '0'); // dusk edge lights (alpha hex)
@@ -426,7 +426,12 @@ export class RaceRenderer {
       const hx = cfg.rotate ? Math.cos(this.cm.h) * H * 0.8 / z : cam.lx * 2.2, hy = cfg.rotate ? Math.sin(this.cm.h) * H * 0.8 / z : cam.ly * 2.2;
       const ax = Math.floor((cx + hx) / CHUNK), ay = Math.floor((cy + hy) / CHUNK);
       let done = false;
-      for (let dy = -1; dy <= 1 && !done; dy++) for (let dx = -1; dx <= 1 && !done; dx++) if (!art.has(ax + dx, ay + dy)) { art.chunk(ax + dx, ay + dy); done = true; }
+      // (one chunk per frame, nearest the look-ahead point first, from two rings out: the road ahead is
+      // baked before it comes into view, instead of several chunks in the frame it appears)
+      for (let ring = 0; ring <= 2 && !done; ring++) for (let dy = -ring; dy <= ring && !done; dy++) for (let dx = -ring; dx <= ring && !done; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring || art.has(ax + dx, ay + dy)) continue;
+        art.chunk(ax + dx, ay + dy); done = true;
+      }
     }
     this.warm(rc, view.countdown > 0 || !view.cars.length ? 12 : 1);
     this.overlays(g, view, t);
@@ -473,14 +478,17 @@ export class RaceRenderer {
     const art = this.art, vw = this.view, steady = SETTINGS.reduceFlash;
     if (SETTINGS.lowGfx) return;
     art.poleLayer(g, ex, ey, vw, PARALLAX);
-    for (let i = 0; i < art.tall.length; i++) {
+    const list = this.tallVis || (this.tallVis = []), offs = this.tallOff || (this.tallOff = new Float32Array(512));
+    let n = 0;
+    for (let i = 0; i < art.tall.length && n < 256; i++) {
       const it = art.tall[i];
       if (it.bx1 + TALL_M < vw.x0 || it.bx0 - TALL_M > vw.x1 || it.by1 + TALL_M < vw.y0 || it.by0 - TALL_M > vw.y1) continue;
       let ox = (it.x - ex) * PARALLAX, oy = (it.y - ey) * PARALLAX;
       const L = Math.hypot(ox, oy) * it.hMax, cap = Math.max(0, it.clr * 0.8);
       if (L > cap) { const k = cap / L; ox *= k; oy *= k; }
-      drawTall(g, it, ox, oy, t, steady, false);
+      list[n] = it; offs[n * 2] = ox; offs[n * 2 + 1] = oy; n++;
     }
+    if (n) drawTallList(g, list, n, offs, t, steady);
   }
   // animated bits of the track: lava glow, neon flicker, pads, hazards, item boxes
   overlays(g, view, t) {

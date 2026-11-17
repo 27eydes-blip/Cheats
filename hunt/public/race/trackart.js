@@ -76,7 +76,17 @@ export class TrackArt {
 
   tiles() {
     const th = this.th;
-    this.tGround = noiseTile(256, th.ground[0], th.tex, 260, 2.6, 3);
+    this.tGround = noiseTile(512, th.ground[0], th.tex, 1040, 2.6, 3);
+    // big soft light and dark patches, baked into the (seamless) ground tile: free per chunk
+    if (th.blot) {
+      const g = this.tGround.getContext('2d'), S = 512;
+      for (let i = 0; i < 7; i++) {
+        const x = hash(i, 1, 95) * S, y = hash(i, 2, 95) * S, r = 90 + hash(i, 3, 95) * 110, gr = g.createRadialGradient(0, 0, 0, 0, 0, r);
+        gr.addColorStop(0, th.blot[i % th.blot.length]); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr;
+        for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) { g.setTransform(1, 0, 0, 1, x + ox, y + oy); g.fillRect(-r, -r, r * 2, r * 2); }
+      }
+      g.setTransform(1, 0, 0, 1, 0, 0);
+    }
     this.tRunoff = noiseTile(128, th.wall, [th.shoulderSpeck, 'rgba(255,255,255,0.05)', '#0005'], 160, 1.4, 9);
     this.tShoulder = noiseTile(128, th.shoulder, [th.shoulderSpeck, '#0003', '#fff1'], 110, 1.6, 5);
     this.tRoad = noiseTile(128, th.road, [th.roadSpeck, 'rgba(0,0,0,0.2)', 'rgba(255,255,255,0.04)'], 190, 1.1, 7);
@@ -199,9 +209,9 @@ export class TrackArt {
     return ch.cv;
   }
   has(cx, cy) { return this.chunks.has(cx * 100003 + cy); }
-  // the cache holds about 56 MB of chunk pixels whatever the bake scale (finer chunks: fewer of them;
+  // the cache holds about 80 MB of chunk pixels whatever the bake scale (finer chunks: fewer of them;
   // a closer camera also shows fewer at once)
-  maxChunks() { const px = Math.ceil((CHUNK + 2) * (this.scale || 1)); return Math.max(16, this.need || 0, Math.min(MAX_CHUNKS, Math.floor(56e6 / (px * px * 4)))); }
+  maxChunks() { const px = Math.ceil((CHUNK + 2) * (this.scale || 1)); return Math.max(16, this.need || 0, Math.min(MAX_CHUNKS, Math.floor(80e6 / (px * px * 4)))); }
 
   renderChunk(cx, cy) {
     const s = this.scale, px = Math.ceil((CHUNK + 2) * s);
@@ -213,7 +223,6 @@ export class TrackArt {
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     const pat = (tile) => g.createPattern(tile, 'repeat');
     g.fillStyle = pat(this.tGround); g.fillRect(x0 - 1, y0 - 1, CHUNK + 4, CHUNK + 4);
-    this.blotches(g, x0, y0);
     const decor = this.decorAt.get(cx + ',' + cy) || [], tall = this.tallAt.get(cx + ',' + cy) || [];
     for (const d of decor) drawFlat(g, d, art, false);
     for (const d of tall) drawTallBase(g, d);
@@ -227,19 +236,6 @@ export class TrackArt {
     if (low) for (const d of tall) drawTall(g, d, 0.12, -0.2, 0, true, true);
     return cv;
   }
-  // big soft light and dark patches across the ground (world grid, so they run on across chunks)
-  blotches(g, x0, y0) {
-    const B = this.th.blot, G = 300, R = 260;
-    if (!B) return;
-    for (let gy = Math.floor((y0 - R) / G); gy <= Math.floor((y0 + CHUNK + R) / G); gy++) for (let gx = Math.floor((x0 - R) / G); gx <= Math.floor((x0 + CHUNK + R) / G); gx++) {
-      const h = hash(gx, gy, 91), x = (gx + hash(gx, gy, 92)) * G, y = (gy + hash(gx, gy, 93)) * G, r = R * (0.6 + 0.4 * hash(gx, gy, 94));
-      if (x + r < x0 || x - r > x0 + CHUNK || y + r < y0 || y - r > y0 + CHUNK) continue;
-      const gr = g.createRadialGradient(x, y, 0, x, y, r), col = B[Math.floor(h * B.length)];
-      gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
-    }
-  }
-
   // segments of corridor c whose box (with margin m) meets the chunk
   segsIn(c, bx) {
     const out = [];
@@ -259,7 +255,12 @@ export class TrackArt {
     const stroke = (c, i, w) => { const j = (i + 1) % c.n; g.lineWidth = w; g.beginPath(); g.moveTo(c.px[i], c.py[i]); g.lineTo(c.px[j], c.py[j]); g.stroke(); };
     g.lineCap = 'round'; g.lineJoin = 'round';
     // runoff: a gravel band just outside the walls (under them), so the track has a clean border
-    g.strokeStyle = g.createPattern(this.tRunoff, 'repeat'); T.corridors.forEach((c, k) => { for (const i of lists[k]) stroke(c, i, 2 * c.ww[i] + WALL * 2 + 44); });
+    g.strokeStyle = g.createPattern(this.tRunoff, 'repeat'); T.corridors.forEach((c, k) => { // (one stroke per corridor)
+      const L = lists[k]; if (!L.length) return;
+      g.lineWidth = 2 * Math.max(...L.map((i) => c.ww[i])) + WALL * 2 + 44; g.beginPath();
+      for (const i of L) { const j = (i + 1) % c.n; g.moveTo(c.px[i], c.py[i]); g.lineTo(c.px[j], c.py[j]); }
+      g.stroke();
+    });
     // walls: a dark base, a lit top, a bright rim line (theme)
     g.strokeStyle = th.wall; T.corridors.forEach((c, k) => { for (const i of lists[k]) stroke(c, i, 2 * c.ww[i] + WALL * 2); });
     g.strokeStyle = th.wallTop; T.corridors.forEach((c, k) => { for (const i of lists[k]) stroke(c, i, 2 * c.ww[i] + WALL * 1.1); });
@@ -668,11 +669,15 @@ export class TrackArt {
   // is this wall point of corridor c (segment i, offset d) out on another corridor's road (a crossover
   // or a shortcut mouth)? Its lights are left out there, so nothing glows across a road
   onOther(c, i, d) {
-    const j = (i + 1) % c.n;
-    return this.inOther(c, (c.px[i] + c.px[j]) / 2 - c.ty[i] * d, (c.py[i] + c.py[j]) / 2 + c.tx[i] * d);
+    if (this.T.corridors.length < 2) return false;
+    const M = this.otherMemo || (this.otherMemo = new Map()), key = (c.idx * 100003 + i) * 2 + (d > 0 ? 1 : 0) + (Math.abs(d) > c.hw[i] + 3 ? 1e9 : 0);
+    let r = M.get(key);
+    if (r === undefined) { const j = (i + 1) % c.n; r = this.inOther(c, (c.px[i] + c.px[j]) / 2 - c.ty[i] * d, (c.py[i] + c.py[j]) / 2 + c.tx[i] * d); M.set(key, r); }
+    return r;
   }
   // is (x, y) on the road (or its shoulder) of a corridor other than c?
   inOther(c, x, y) {
+    if (this.T.corridors.length < 2) return false;
     for (const o of this.T.corridors) {
       if (o === c) continue;
       for (let i = 0; i < o.segs; i++) {
@@ -687,14 +692,14 @@ export class TrackArt {
   // cat-eye reflectors along the top of the wall every 64 px: they stream past at speed
   reflectors(g, c, L, side) {
     const nt = this.nt, low = SETTINGS.lowGfx, STEP = 64;
-    for (const [r, col] of low ? [[1.8, '#ffffff']] : [[4.5, a2(nt.wall, 0.35)], [1.8, '#ffffff']]) {
+    for (const [r, col] of low ? [[1.6, '#ffffff']] : [[3.2, a2(nt.wall, 0.4)], [1.5, '#ffffff']]) {
       g.fillStyle = col; g.beginPath();
       for (const i of L) {
         const s0 = c.s[i], s1 = c.s[i + 1];
         for (let m = Math.ceil(s0 / STEP) * STEP; m < s1; m += STEP) {
           const t = m - s0, d = side * (c.ww[i] + WALL * 0.55), x = c.px[i] + c.tx[i] * t - c.ty[i] * d, y = c.py[i] + c.ty[i] * t + c.tx[i] * d;
           if (this.inOther(c, x, y)) continue; // (where another road crosses this wall: no lights across it)
-          g.moveTo(x + r, y); g.arc(x, y, r, 0, 7);
+          g.rect(x - r, y - r, r * 2, r * 2); // (squares: far cheaper to fill than arcs, and too small to tell)
         }
       }
       g.fill();
