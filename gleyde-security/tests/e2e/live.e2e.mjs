@@ -769,16 +769,24 @@ describe("Browser: site quality", () => {
   });
 
   test("pages only talk to this site (plus Cloudflare's human check on form pages)", async () => {
-    const page = await browser.newPage();
-    const outside = [];
-    page.on("request", (r) => {
-      const u = new URL(r.url());
-      if (u.origin !== new URL(BASE).origin && !u.protocol.startsWith("data")) outside.push(`${page.url()} → ${u.origin}`);
-    });
-    for (const p of ALL) await page.goto(BASE + p, { waitUntil: "networkidle" });
-    const unexpected = outside.filter((x) => !(/challenges\.cloudflare\.com$/.test(x) && /\/(contact|security-check)$/.test(x.split(" → ")[0])));
-    assert.deepEqual(unexpected, []);
-    await page.close();
+    // One fresh tab per page, so a late request can't be blamed on the next page. Wait for "load"
+    // plus a short window rather than "network idle": the real Turnstile widget (which loads in CI,
+    // where the internet is reachable) keeps a connection open, so the network never goes idle.
+    const unexpected = [];
+    for (const p of ALL) {
+      const page = await browser.newPage();
+      const formPage = p === "/contact" || p === "/security-check";
+      page.on("request", (r) => {
+        const u = new URL(r.url());
+        if (u.protocol === "data:" || u.protocol === "blob:" || u.origin === new URL(BASE).origin) return;
+        if (formPage && u.hostname === "challenges.cloudflare.com") return;
+        unexpected.push(`${p} → ${u.origin}`);
+      });
+      await page.goto(BASE + p, { waitUntil: "load" });
+      await page.waitForTimeout(2500);
+      await page.close();
+    }
+    assert.deepEqual([...new Set(unexpected)], []);
   });
 
   test("unknown pages return a real 404 with the branded page", async () => {
