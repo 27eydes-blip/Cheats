@@ -11,6 +11,12 @@
   let turnstileReady = false;
   let siteKey = null;
   let widgetId = null;
+  /* loading | unavailable | pending | passed | expired | error */
+  let tsState = "loading";
+  function setTsState(state) {
+    tsState = state;
+    document.dispatchEvent(new CustomEvent("gleyde:turnstile", { detail: { state } }));
+  }
 
   function renderTurnstile() {
     const slot = document.getElementById("turnstile-slot");
@@ -19,7 +25,15 @@
       sitekey: siteKey,
       theme: "dark",
       action: slot.dataset.action || "contact",
+      callback: () => setTsState("passed"),
+      "expired-callback": () => setTsState("expired"),
+      "timeout-callback": () => setTsState("expired"),
+      "error-callback": () => {
+        setTsState("error");
+        return false; // let Turnstile show and retry its own error state
+      },
     });
+    setTsState("pending");
   }
   async function initTurnstile() {
     if (!document.getElementById("turnstile-slot")) return;
@@ -27,19 +41,28 @@
       const res = await fetch("/api/config", { headers: { Accept: "application/json" } });
       if (res.ok) {
         siteKey = (await res.json()).turnstileSiteKey || null;
-        if (siteKey) renderTurnstile();
-        else document.getElementById("turnstile-slot").hidden = true; // not configured yet: no empty gap
-      }
+        if (siteKey) {
+          if (tsState === "loading") setTsState("pending");
+          renderTurnstile();
+        } else {
+          document.getElementById("turnstile-slot").hidden = true; // not configured yet: no empty gap
+          setTsState("unavailable");
+        }
+      } else setTsState("unavailable");
     } catch {
-      /* The server will report a missing challenge if this failed. */
+      setTsState("unavailable"); // the server also refuses requests without a valid check
     }
   }
   /* Shared with security-check.js */
   window.gleydeTurnstile = {
     configured: () => siteKey !== null,
+    state: () => tsState,
     token: () => document.querySelector('[name="cf-turnstile-response"]')?.value || "",
     reset: () => {
-      if (widgetId !== null && window.turnstile) window.turnstile.reset(widgetId);
+      if (widgetId !== null && window.turnstile) {
+        window.turnstile.reset(widgetId);
+        setTsState("pending");
+      }
     },
   };
   window.gleydeTurnstileReady = () => {

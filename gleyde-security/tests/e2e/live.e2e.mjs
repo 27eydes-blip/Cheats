@@ -10,7 +10,7 @@ import { after, before, describe, test } from "node:test";
 
 const BASE = (process.env.BASE_URL || "http://localhost:8788").replace(/\/$/, "");
 const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)/.test(BASE);
-const PAGES = ["/", "/services", "/how-it-works", "/about", "/contact", "/security-check", "/does-not-exist", "/assets/css/site.css", "/assets/js/site.js", "/assets/js/security-check.js"];
+const PAGES = ["/", "/services", "/how-it-works", "/about", "/contact", "/security-check", "/privacy", "/does-not-exist", "/assets/css/site.css", "/assets/js/site.js", "/assets/js/security-check.js"];
 const REQUIRED = {
   "content-security-policy": /script-src 'self' https:\/\/challenges\.cloudflare\.com[;]/,
   "strict-transport-security": /max-age=\d{8,}/,
@@ -240,7 +240,7 @@ describe("Browser: Security Check page", () => {
     await page.evaluate(() => {
       const i = document.createElement("input");
       i.type = "hidden"; i.name = "cf-turnstile-response"; i.value = "tok";
-      document.getElementById("scan-form").append(i);
+      document.getElementById("scan-form").append(i); document.dispatchEvent(new CustomEvent("gleyde:turnstile", { detail: { state: "passed" } }));
     });
     await page.click('#scan-form button[type="submit"]');
     await page.waitForSelector("#scan-results:not([hidden]) .report-head");
@@ -291,7 +291,7 @@ describe("Browser: Security Check page", () => {
     await page.check('input[name="consent"]');
     await page.evaluate(() => {
       const i = document.createElement("input"); i.type = "hidden"; i.name = "cf-turnstile-response"; i.value = "tok";
-      document.getElementById("scan-form").append(i);
+      document.getElementById("scan-form").append(i); document.dispatchEvent(new CustomEvent("gleyde:turnstile", { detail: { state: "passed" } }));
     });
     await page.click('#scan-form button[type="submit"]');
     await page.waitForFunction(() => document.getElementById("scan-status").textContent.length > 0);
@@ -327,7 +327,7 @@ describe("Browser: Security Check v2 features", () => {
     await page.check('input[name="consent"]');
     await page.evaluate(() => {
       const i = document.createElement("input"); i.type = "hidden"; i.name = "cf-turnstile-response"; i.value = "tok";
-      document.getElementById("scan-form").append(i);
+      document.getElementById("scan-form").append(i); document.dispatchEvent(new CustomEvent("gleyde:turnstile", { detail: { state: "passed" } }));
     });
     await page.click('#scan-form button[type="submit"]');
     await page.waitForSelector("#scan-results:not([hidden]) .report-head");
@@ -438,7 +438,7 @@ describe("Accessibility (axe-core, WCAG 2.2 AA)", () => {
   after(() => browser?.close());
 
   for (const [label, viewport] of [["phone", { width: 375, height: 667 }], ["desktop", { width: 1440, height: 900 }]]) {
-    for (const path of ["/", "/services", "/how-it-works", "/about", "/contact", "/security-check", "/does-not-exist"]) {
+    for (const path of ["/", "/services", "/how-it-works", "/about", "/contact", "/security-check", "/privacy", "/does-not-exist"]) {
       test(`${label} ${path}: no WCAG violations`, async () => {
         // bypassCSP only so the test can inject axe; the site's own CSP is tested above.
         const ctx = await browser.newContext({ viewport, bypassCSP: true });
@@ -451,7 +451,7 @@ describe("Accessibility (axe-core, WCAG 2.2 AA)", () => {
           await page.check('input[name="consent"]');
           await page.evaluate(() => {
             const i = document.createElement("input"); i.type = "hidden"; i.name = "cf-turnstile-response"; i.value = "t";
-            document.getElementById("scan-form").append(i);
+            document.getElementById("scan-form").append(i); document.dispatchEvent(new CustomEvent("gleyde:turnstile", { detail: { state: "passed" } }));
           });
           await page.click('#scan-form button[type="submit"]');
           await page.waitForSelector(".report-head");
@@ -467,4 +467,209 @@ describe("Accessibility (axe-core, WCAG 2.2 AA)", () => {
       });
     }
   }
+});
+
+describe("Browser: Security Check page UX", () => {
+  let browser;
+  const sample = JSON.parse(readFileSync(new URL("./sample-report.json", import.meta.url), "utf8"));
+  // Stand-in for Cloudflare's Turnstile script: renders a hidden token field and exposes the
+  // callbacks so tests can pass, expire or fail the human check like the real widget would.
+  const TURNSTILE_STUB = `window.turnstile = {
+    render(slot, opts) {
+      window.__ts = opts;
+      const i = document.createElement("input"); i.type = "hidden"; i.name = "cf-turnstile-response"; i.value = "";
+      slot.append(i);
+      window.__tsPass = () => { i.value = "tok"; opts.callback("tok"); };
+      window.__tsExpire = () => { i.value = ""; opts["expired-callback"](); };
+      return "w1";
+    },
+    reset() { const i = document.querySelector('[name="cf-turnstile-response"]'); if (i) i.value = ""; },
+  };
+  window.gleydeTurnstileReady && window.gleydeTurnstileReady();`;
+
+  before(async () => {
+    const { chromium } = createRequire(import.meta.url)("playwright");
+    browser = await chromium.launch();
+  });
+  after(() => browser?.close());
+
+  async function open({ siteKey = "1x00000000000000000000AA", scan } = {}) {
+    const ctx = await browser.newContext({ viewport: { width: 375, height: 740 } });
+    const page = await ctx.newPage();
+    await page.route("**/api/config", (r) => r.fulfill({ contentType: "application/json", body: JSON.stringify({ turnstileSiteKey: siteKey }) }));
+    await page.route("https://challenges.cloudflare.com/**", (r) => r.fulfill({ contentType: "text/javascript", body: TURNSTILE_STUB }));
+    if (scan) await page.route("**/api/scan", scan);
+    await page.goto(`${BASE}/security-check`, { waitUntil: "networkidle" });
+    return { page, ctx };
+  }
+  const statusText = (page) => page.locator("#scan-status").textContent();
+
+  test("website field has the right mobile keyboard and no autocorrect", async () => {
+    const { page, ctx } = await open();
+    const a = await page.locator("#domain").evaluate((e) => [e.inputMode, e.getAttribute("autocapitalize"), e.getAttribute("autocorrect"), e.spellcheck]);
+    assert.deepEqual(a, ["url", "off", "off", false]);
+    await ctx.close();
+  });
+
+  for (const [typed, cleaned] of [
+    ["https://www.Example-Shop.com/about?x=1#team", "example-shop.com"],
+    ["WWW.shop.co.uk/", "shop.co.uk"],
+    ["http://shop.com.", "shop.com"],
+    ["  bakery.com/menu  ", "bakery.com"],
+  ]) {
+    test(`pasted "${typed.trim()}" becomes "${cleaned}"`, async () => {
+      const { page, ctx } = await open();
+      await page.locator("#domain").evaluate((el, v) => {
+        el.value = v;
+        el.dispatchEvent(new Event("paste"));
+      }, typed);
+      await page.waitForFunction((v) => document.getElementById("domain").value === v, cleaned);
+      await ctx.close();
+    });
+  }
+
+  test("intro line, Example card, read-only note and privacy link are shown", async () => {
+    const { page, ctx } = await open();
+    const facts = (await page.locator(".scan-facts li").allTextContents()).join(" ");
+    assert.equal(facts, "Free. About 15 seconds. 20+ checks. Public information only, no login.");
+    assert.equal((await page.locator(".example-tag").textContent()).trim(), "Example");
+    assert.match(await page.locator(".scan-trust").textContent(), /Read-only checks\. We never log in or change anything\./);
+    const href = await page.locator(".scan-trust a").getAttribute("href");
+    assert.equal(href, "/privacy");
+    assert.equal((await fetch(BASE + href)).status, 200);
+    await ctx.close();
+  });
+
+  test("button stays disabled until domain, tick and human check are all done", async () => {
+    const { page, ctx } = await open();
+    const btn = page.locator("#scan-submit");
+    assert.equal(await btn.getAttribute("aria-disabled"), "true");
+    await btn.click({ force: true }); // tapping early
+    assert.equal(await statusText(page), "Almost there. Still needed: your website address, a tick in the box confirming it's your site and the quick human check (it usually completes by itself in a moment).");
+    await page.fill("#domain", "smithrealty.com");
+    await page.check("#consent");
+    await btn.click({ force: true });
+    assert.equal(await statusText(page), "Almost there. Still needed: the quick human check (it usually completes by itself in a moment).");
+    assert.equal(await btn.getAttribute("aria-disabled"), "true");
+    await page.evaluate(() => window.__tsPass());
+    assert.equal(await btn.getAttribute("aria-disabled"), "false");
+    await page.evaluate(() => window.__tsExpire());
+    assert.equal(await btn.getAttribute("aria-disabled"), "true", "an expired check disables it again");
+    await ctx.close();
+  });
+
+  test("a bad domain gets one specific message at the field", async () => {
+    const { page, ctx } = await open();
+    for (const [v, re] of [["me@bakery.com", /email address/], ["192.168.1.10", /IP address/], ["bakery", /ending/], ["printer.local", /private or test/], ["shop.com:8080", /port/]]) {
+      await page.fill("#domain", v);
+      await page.locator("#domain").blur();
+      assert.match(await page.locator("#err-domain").textContent(), re, v);
+      assert.equal(await page.locator("#domain").getAttribute("aria-invalid"), "true");
+    }
+    await ctx.close();
+  });
+
+  test("when the human check isn't available, the message says so plainly", async () => {
+    const { page, ctx } = await open({ siteKey: null });
+    await page.fill("#domain", "smithrealty.com");
+    await page.check("#consent");
+    await page.locator("#scan-submit").click({ force: true });
+    assert.match(await statusText(page), /isn't available right now/);
+    await ctx.close();
+  });
+
+  async function ready(page) {
+    await page.fill("#domain", "smithrealty.com");
+    await page.check("#consent");
+    await page.evaluate(() => window.__tsPass());
+  }
+
+  test("progress list with a live region while scanning, then results", async () => {
+    const { page, ctx } = await open({
+      scan: async (r) => { await new Promise((ok) => setTimeout(ok, 3500)); r.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true, report: sample }) }); },
+    });
+    await ready(page);
+    await page.click("#scan-submit");
+    await page.waitForSelector("#scan-progress:not([hidden])");
+    assert.equal(await page.locator("#scan-form").isVisible(), false);
+    assert.equal(await page.locator('.progress-steps li[data-step="encryption"]').getAttribute("data-state"), "active");
+    assert.equal(await page.locator("#progress-live").getAttribute("aria-live"), "polite");
+    assert.match(await page.locator("#progress-live").textContent(), /Checking encryption & certificate \(1 of 5\)/);
+    await page.waitForFunction(() => document.querySelector('.progress-steps li[data-step="email"]').dataset.state === "active");
+    assert.equal(await page.locator('.progress-steps li[data-step="encryption"]').getAttribute("data-state"), "done");
+    await page.waitForSelector("#scan-results:not([hidden]) .report-head");
+    assert.equal(await page.locator("#scan-progress").isVisible(), false);
+    await ctx.close();
+  });
+
+  test("results: big grade, top 3 fixes before the full list, clear audit button", async () => {
+    const { page, ctx } = await open({ scan: (r) => r.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true, report: sample }) }) });
+    await ready(page);
+    await page.click("#scan-submit");
+    await page.waitForSelector(".report-head");
+    const box = await page.locator(".grade-ring.grade-big").boundingBox();
+    assert.ok(box.width >= 160, `grade ring ${box.width}px`);
+    const order = await page.evaluate(() => {
+      const all = [...document.querySelectorAll("#scan-results > *")];
+      return { fixes: all.findIndex((e) => e.classList.contains("top-fixes")), cta: all.findIndex((e) => e.classList.contains("report-cta")), firstSection: all.findIndex((e) => e.classList.contains("report-section")) };
+    });
+    assert.ok(order.fixes === 1 && order.fixes < order.cta && order.cta < order.firstSection, JSON.stringify(order));
+    assert.equal(await page.locator(".top-fixes li").count(), 3);
+    assert.match(await page.locator(".report-cta a").first().textContent(), /Book a full audit/);
+    const cta = await page.locator(".report-cta a").first().boundingBox();
+    assert.ok(cta.height >= 44);
+    await ctx.close();
+  });
+
+  for (const [label, status, body, re] of [
+    ["rate limit", 429, { ok: false, error: "You've run several checks recently. Please try again in an hour." }, /try again in an hour/],
+    ["failed human check", 403, { ok: false, error: "Verification failed. Please try the check again." }, /quick human check didn't go through/],
+    ["domain not found", 422, { ok: false, error: "We couldn't find that domain. Please check the spelling.", fields: { domain: "We couldn't find that domain. Please check the spelling." } }, /couldn't find that domain/],
+    ["server down", 500, { ok: false, error: "x" }, /Something went wrong on our side/],
+  ]) {
+    test(`friendly error: ${label}`, async () => {
+      const { page, ctx } = await open({ scan: (r) => r.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) }) });
+      await ready(page);
+      await page.click("#scan-submit");
+      await page.waitForFunction(() => document.getElementById("scan-status").textContent.length > 0);
+      assert.match(await statusText(page), re);
+      assert.equal(await page.locator("#scan-form").isVisible(), true, "form is back so they can try again");
+      assert.equal(await page.locator("#scan-progress").isVisible(), false);
+      if (status === 422) assert.match(await page.locator("#err-domain").textContent(), /couldn't find/);
+      await ctx.close();
+    });
+  }
+
+  test("tap targets on the form are at least 44px tall", async () => {
+    const { page, ctx } = await open();
+    for (const sel of ["#domain", "#industry", "#email", ".consent", "#scan-submit"]) {
+      const b = await page.locator(sel).boundingBox();
+      assert.ok(b.height >= 44, `${sel} ${b.height}`);
+    }
+    await ctx.close();
+  });
+
+  test("no WCAG violations while scanning and when errors are showing", async () => {
+    const axeSrc = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
+    const ctx = await browser.newContext({ viewport: { width: 375, height: 740 }, bypassCSP: true });
+    const page = await ctx.newPage();
+    await page.route("**/api/config", (r) => r.fulfill({ contentType: "application/json", body: '{"turnstileSiteKey":"k"}' }));
+    await page.route("https://challenges.cloudflare.com/**", (r) => r.fulfill({ contentType: "text/javascript", body: TURNSTILE_STUB }));
+    await page.route("**/api/scan", () => {}); // never answers: stays in the scanning state
+    await page.goto(`${BASE}/security-check`, { waitUntil: "networkidle" });
+    await page.evaluate(() => document.querySelectorAll(".reveal").forEach((e) => e.classList.add("in")));
+    await page.waitForTimeout(1000);
+    await page.addScriptTag({ content: axeSrc });
+    const run = () => page.evaluate(async () => (await window.axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa", "best-practice"] } })).violations.map((v) => v.id));
+    await page.fill("#domain", "bakery");
+    await page.locator("#scan-submit").click({ force: true });
+    assert.deepEqual(await run(), [], "with errors showing");
+    await page.fill("#domain", "smithrealty.com");
+    await page.check("#consent");
+    await page.evaluate(() => window.__tsPass());
+    await page.click("#scan-submit");
+    await page.waitForSelector("#scan-progress:not([hidden])");
+    assert.deepEqual(await run(), [], "while scanning");
+    await ctx.close();
+  });
 });

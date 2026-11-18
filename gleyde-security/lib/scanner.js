@@ -33,7 +33,15 @@ const getSetCookies = (h) => {
 export async function runScan(host, { userAgent = "GleydeSecurityCheck/1.0 (passive)", industry = "", safeBrowsingKey = "" } = {}) {
   const ctx = new Ctx(userAgent);
 
-  const first = await resolvePublic(ctx, host);
+  let first = await resolvePublic(ctx, host);
+  // People often type (or the page trims to) the bare domain of a site that only exists at www.
+  if (!first.ok && first.reason === "nxdomain" && !host.startsWith("www.")) {
+    const www = await resolvePublic(ctx, `www.${host}`);
+    if (www.ok || www.reason === "private") {
+      first = www;
+      host = `www.${host}`;
+    }
+  }
   if (!first.ok) {
     if (first.reason === "private") {
       throw new ScanError("private", "That domain points to a private or internal network address, so we don't check it.");
