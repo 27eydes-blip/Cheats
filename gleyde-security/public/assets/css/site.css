@@ -2025,6 +2025,8 @@ main p {
   min-height: 52px;
   padding-inline: 30px;
   font-size: 1rem;
+}
+
 /* Team photos inside the round avatar */
 .avatar-photo {
   overflow: hidden;
@@ -2040,4 +2042,338 @@ main p {
 .avatar-photo img {
   object-fit: cover;
   border-radius: 50%;
+}
+
+/* ---------- Site polish v4: home hero, industries, practise, chooser, FAQ ---------- */
+/* calmer vertical rhythm */
+@media (min-width: 900px) {
+  .section {
+    padding: 104px 0;
+  }
+  .hero {
+    padding: 112px 0 96px;
+  }
+}
+.section-head h2 em.gold {
+  font-style: italic;
+}
+
+/* Hero: copy left, example report right */
+.hero-grid {
+  display: grid;
+  gap: 48px;
+  align-items: center;
+}
+@media (min-width: 1000px) {
+  .hero-grid {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 64px;
+  }
+}
+.hero-copy {
+  min-width: 0;
+}
+.hero .trust-row {
+  margin-top: 48px;
+}
+.hero-report {
+  margin: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse at top right, rgba(212, 175, 106, 0.12), transparent 60%),
+    var(--bg-card);
+  box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  animation: rise 0.9s var(--ease) both;
+}
+@media (min-width: 1000px) {
+  .hero-report {
+    padding: 28px;
+    transform: rotate(-0.6deg);
+  }
+}
+.hr-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.hr-head figcaption {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.hr-summary {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.hr-grade {
+  flex: 0 0 92px;
+  height: 92px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  background:
+    radial-gradient(closest-side, var(--bg-card) 80%, transparent 81%),
+    conic-gradient(#e3b766 74%, rgba(255, 255, 255, 0.08) 0);
+}
+.hr-grade span {
+  font-family: var(--serif);
+  font-size: 2.5rem;
+  line-height: 1;
+  color: #f6f2ea;
+}
+.hr-grade small {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.hr-domain {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  color: var(--text);
+}
+.hr-counts {
+  margin: 2px 0 0;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+}
+.hr-checks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.hr-checks li {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.94rem;
+  color: var(--text);
+  animation: rise 0.7s var(--ease) both;
+}
+.hr-checks li:nth-child(1) { animation-delay: 0.25s; }
+.hr-checks li:nth-child(2) { animation-delay: 0.35s; }
+.hr-checks li:nth-child(3) { animation-delay: 0.45s; }
+.hr-checks li:nth-child(4) { animation-delay: 0.55s; }
+.hr-checks li:nth-child(5) { animation-delay: 0.65s; }
+.hr-checks .badge {
+  justify-self: start;
+  font-size: 0.7rem;
+  padding: 3px 9px;
+}
+.hr-foot {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+}
+@keyframes rise {
+  from {
+    opacity: 0.001;
+    transform: translateY(10px);
+  }
+}
+
+/* Who we help */
+.industry-grid {
+  display: grid;
+  gap: 20px;
+}
+@media (min-width: 900px) {
+  .industry-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.industry {
+  position: relative;
+  padding: 28px 26px 30px;
+  border-top: 1px solid var(--line-strong);
+  background: linear-gradient(180deg, rgba(212, 175, 106, 0.05), transparent 70%);
+  border-radius: 0 0 14px 14px;
+}
+.industry::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 56px;
+  height: 2px;
+  background: var(--gold);
+}
+.industry-kicker {
+  margin: 0 0 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.industry h3 {
+  font-size: 1.55rem;
+  margin-bottom: 10px;
+}
+.industry p:last-child {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* We practise what we sell */
+.practise-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 720px) {
+  .practise-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1100px) {
+  .practise-list {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.practise-list li {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+.practise-list svg {
+  width: 26px;
+  height: 26px;
+  color: var(--gold);
+}
+.practise-list strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 1.02rem;
+  color: var(--text);
+}
+
+/* Services: which one do I need? */
+.chooser-title {
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+  margin-bottom: 20px;
+}
+.chooser {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+@media (min-width: 720px) {
+  .chooser {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1100px) {
+  .chooser {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.chooser a {
+  display: grid;
+  gap: 10px;
+  height: 100%;
+  min-height: 44px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  text-decoration: none;
+  transition: border-color 0.25s var(--ease), transform 0.25s var(--ease);
+}
+.chooser a:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
+.chooser-q {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.25rem;
+  line-height: 1.3;
+  color: var(--text);
+}
+.chooser-a {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--gold);
+}
+.chooser-a::after {
+  content: " \2192";
+}
+
+/* FAQ */
+.faq-wrap {
+  max-width: 880px;
+}
+.faq {
+  display: grid;
+  border-top: 1px solid var(--line);
+}
+.faq details {
+  border-bottom: 1px solid var(--line);
+}
+.faq summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  min-height: 56px;
+  padding: 18px 0;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+.faq summary::after {
+  content: "+";
+  flex: 0 0 auto;
+  font-family: var(--serif);
+  font-size: 1.8rem;
+  line-height: 1;
+  color: var(--gold);
+  transition: transform 0.25s var(--ease);
+}
+.faq details[open] summary::after {
+  transform: rotate(45deg);
+}
+.faq summary:hover {
+  color: var(--gold-bright);
+}
+.faq details p {
+  margin: 0 0 22px;
+  color: var(--text-muted);
+  max-width: 70ch;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-report,
+  .hr-checks li {
+    animation: none;
+  }
+  .hero-report {
+    transform: none;
+  }
 }

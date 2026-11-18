@@ -673,3 +673,155 @@ describe("Browser: Security Check page UX", () => {
     await ctx.close();
   });
 });
+
+describe("Browser: site quality", () => {
+  let browser;
+  const ALL = ["/", "/services", "/how-it-works", "/about", "/contact", "/security-check", "/privacy"];
+  before(async () => {
+    const { chromium } = createRequire(import.meta.url)("playwright");
+    browser = await chromium.launch();
+  });
+  after(() => browser?.close());
+  const mockConfig = (page) => page.route("**/api/config", (r) => r.fulfill({ contentType: "application/json", body: '{"turnstileSiteKey":null}' }));
+
+  for (const width of [320, 768, 1024, 1440]) {
+    test(`no sideways scrolling or cut-off content at ${width}px on any page`, async () => {
+      const page = await browser.newPage({ viewport: { width, height: 900 } });
+      await mockConfig(page);
+      for (const p of ALL) {
+        await page.goto(BASE + p, { waitUntil: "networkidle" });
+        const bad = await page.evaluate(() => {
+          const out = [];
+          if (document.documentElement.scrollWidth > innerWidth) out.push(`page ${document.documentElement.scrollWidth}px wide`);
+          for (const el of document.querySelectorAll("main *")) {
+            const r = el.getBoundingClientRect();
+            const s = getComputedStyle(el);
+            if (r.width && r.right > innerWidth + 1 && s.position !== "fixed" && !el.closest("pre, .snippet, [aria-hidden=true]")) out.push(`${el.tagName}.${el.className} overflows`);
+          }
+          return out.slice(0, 3);
+        });
+        assert.deepEqual(bad, [], `${p} at ${width}px`);
+      }
+      await page.close();
+    });
+  }
+
+  test("keyboard: skip link first, then main navigation; focus is always visible", async () => {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(BASE + "/services");
+    await page.keyboard.press("Tab");
+    assert.equal(await page.evaluate(() => document.activeElement.className), "skip-link");
+    assert.ok(await page.locator(".skip-link").isVisible(), "skip link appears when focused");
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Tab");
+    assert.ok(await page.evaluate(() => !!document.activeElement.closest("main")), "after skipping, focus is in the main content");
+    await page.goto(BASE + "/services");
+    const seen = [];
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press("Tab");
+      seen.push(await page.evaluate(() => {
+        const a = document.activeElement;
+        const s = getComputedStyle(a);
+        return { text: (a.textContent || "").trim().slice(0, 30), outline: s.outlineStyle !== "none" && parseFloat(s.outlineWidth) >= 2 };
+      }));
+    }
+    assert.ok(seen.every((x) => x.outline), `focus ring missing on: ${seen.filter((x) => !x.outline).map((x) => x.text)}`);
+    const texts = seen.map((x) => x.text);
+    for (const t of ["Home", "Services", "How It Works", "About", "Contact", "Free security check"]) assert.ok(texts.includes(t), `nav link ${t} reachable by keyboard`);
+    await page.close();
+  });
+
+  test("mobile menu opens, closes, and reports its state to screen readers", async () => {
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.goto(BASE + "/");
+    const t = page.locator(".nav-toggle");
+    assert.equal(await t.getAttribute("aria-expanded"), "false");
+    assert.equal(await page.locator("#nav-menu").isVisible(), false);
+    await t.click();
+    assert.equal(await t.getAttribute("aria-expanded"), "true");
+    assert.equal(await page.locator("#nav-menu a", { hasText: "Services" }).isVisible(), true);
+    await page.keyboard.press("Escape");
+    assert.equal(await t.getAttribute("aria-expanded"), "false");
+    assert.equal(await page.locator("#nav-menu").isVisible(), false);
+    await page.close();
+  });
+
+  test("reduced motion: content is visible immediately and nothing animates", async () => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" });
+    const page = await ctx.newPage();
+    await page.goto(BASE + "/", { waitUntil: "networkidle" });
+    const state = await page.evaluate(() => ({
+      hidden: [...document.querySelectorAll(".reveal")].filter((e) => parseFloat(getComputedStyle(e).opacity) < 0.99).length,
+      animating: document.getAnimations().filter((a) => a.playState === "running" && (a.effect?.getComputedTiming?.().duration || 0) > 50).length,
+    }));
+    assert.deepEqual(state, { hidden: 0, animating: 0 });
+    await ctx.close();
+  });
+
+  test("the hero example report is complete at first paint (no scrolling needed)", async () => {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await page.goto(BASE + "/", { waitUntil: "networkidle" });
+    await page.waitForTimeout(1500);
+    const vis = await page.evaluate(() => [...document.querySelectorAll(".hero-report, .hero-report li")].every((e) => parseFloat(getComputedStyle(e).opacity) > 0.99));
+    assert.ok(vis);
+    assert.match(await page.locator(".hero-report .example-tag").textContent(), /Example/);
+    await page.close();
+  });
+
+  test("pages only talk to this site (plus Cloudflare's human check on form pages)", async () => {
+    const page = await browser.newPage();
+    const outside = [];
+    page.on("request", (r) => {
+      const u = new URL(r.url());
+      if (u.origin !== new URL(BASE).origin && !u.protocol.startsWith("data")) outside.push(`${page.url()} → ${u.origin}`);
+    });
+    for (const p of ALL) await page.goto(BASE + p, { waitUntil: "networkidle" });
+    const unexpected = outside.filter((x) => !(/challenges\.cloudflare\.com$/.test(x) && /\/(contact|security-check)$/.test(x.split(" → ")[0])));
+    assert.deepEqual(unexpected, []);
+    await page.close();
+  });
+
+  test("unknown pages return a real 404 with the branded page", async () => {
+    const res = await fetch(BASE + "/no-such-page-xyz");
+    assert.equal(res.status, 404);
+    assert.match(await res.text(), /Page not found/);
+  });
+
+  test("services: 'Which one do I need?' links land on the section, clear of the sticky header", async () => {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    await page.goto(BASE + "/services");
+    await page.click('.chooser a[href="#monitoring"]');
+    await page.waitForTimeout(900);
+    const { top, header } = await page.evaluate(() => ({
+      top: document.getElementById("monitoring").getBoundingClientRect().top,
+      header: document.querySelector(".site-header").getBoundingClientRect().height,
+    }));
+    assert.ok(top >= header - 1 && top < 250, `section top ${top}, header ${header}`);
+    await page.close();
+  });
+
+  test("FAQ answers open and close with the keyboard", async () => {
+    const page = await browser.newPage();
+    await page.goto(BASE + "/services");
+    const first = page.locator(".faq details").first();
+    assert.equal(await first.evaluate((d) => d.open), false);
+    await first.locator("summary").focus();
+    await page.keyboard.press("Enter");
+    assert.equal(await first.evaluate((d) => d.open), true);
+    assert.ok(await first.locator("p").isVisible());
+    await page.keyboard.press("Enter");
+    assert.equal(await first.evaluate((d) => d.open), false);
+    await page.close();
+  });
+
+  test("every page shows the same header and footer, and marks the current page", async () => {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    for (const p of ["/services", "/about", "/contact"]) {
+      await page.goto(BASE + p);
+      assert.equal(await page.locator(".site-header .brand").count(), 1);
+      assert.equal(await page.locator(".site-footer").count(), 1);
+      assert.equal(await page.locator(`.nav-menu a[aria-current="page"]`).getAttribute("href"), p);
+    }
+    await page.close();
+  });
+});
