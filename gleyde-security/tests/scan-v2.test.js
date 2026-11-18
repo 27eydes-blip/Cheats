@@ -176,6 +176,22 @@ describe("Deeper checks", () => {
   });
 });
 
+describe("www fallback", () => {
+  test("a bare domain with no address falls back to www.", async () => {
+    publicSite("www.onlywww.com");
+    delete net.dns["onlywww.com"].A;
+    const r = await runScan("onlywww.com");
+    assert.equal(r.domain, "www.onlywww.com");
+    assert.ok(targetUrls().every((u) => new URL(u).hostname === "www.onlywww.com"));
+  });
+
+  test("the fallback still refuses a www. that points to a private address", async () => {
+    net.dns["www.sneaky.com"] = { A: ["10.0.0.9"] };
+    await assert.rejects(runScan("sneaky.com"), (e) => e.code === "private");
+    assert.deepEqual(targetUrls(), []);
+  });
+});
+
 describe("Advice", () => {
   test("top 3 priorities: exposed files always first, never more than 3", async () => {
     publicSite("example.com", { headers: { "Content-Type": "text/html" }, dmarc: null });
