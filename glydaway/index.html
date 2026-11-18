@@ -52,6 +52,9 @@
     opacity: 0; transition: opacity .2s;
   }
   #hud.show { opacity: 1; }
+  /* (spacing and colours that used to be inline style attributes: the CSP allows no inline styles) */
+  .row[data-mt="4"] { margin-top: 4px; } .row[data-mt="8"] { margin-top: 8px; } .row[data-mt="10"] { margin-top: 10px; }
+  .c-gold { --c: #ffc83d; } .c-cyan { --c: #3ef4ff; } .c-mint { --c: #7dffc8; }
   /* a new level's character: a card slides in for a few seconds (the run keeps going) */
   #unlock { position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + 74px); z-index: 4; display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 10px;
     border-radius: 16px; background: rgba(8, 4, 24, .9); border: 2px solid var(--gold); box-shadow: 0 0 22px rgba(255, 200, 61, .6); pointer-events: none;
@@ -454,9 +457,9 @@
         <img class="tut-hero" id="tutHero" alt="" draggable="false">
         <div class="tut-ground"></div>
         <div class="tut-pus" id="tutPus">
-          <span class="chip"><i style="--c:#ffc83d"></i><b>MAGNET</b>pulls coins</span>
-          <span class="chip"><i style="--c:#3ef4ff"></i><b>SHIELD</b>saves a crash</span>
-          <span class="chip"><i style="--c:#7dffc8"></i><b>BOOST</b>fly fast</span>
+          <span class="chip"><i class="c-gold"></i><b>MAGNET</b>pulls coins</span>
+          <span class="chip"><i class="c-cyan"></i><b>SHIELD</b>saves a crash</span>
+          <span class="chip"><i class="c-mint"></i><b>BOOST</b>fly fast</span>
         </div>
         <div class="tut-ok" id="tutOk" aria-hidden="true">NICE!</div>
       </div>
@@ -469,7 +472,7 @@
   <div class="screen" id="pauseScreen">
     <div class="panel">
       <h2>PAUSED</h2>
-      <div class="row" style="margin-top:4px">
+      <div class="row" data-mt="4">
         <button class="neon-btn small" id="resumeBtn">RESUME</button>
         <button class="neon-btn small purple" id="setBtn2">SETTINGS</button>
         <button class="neon-btn small cyan" id="quitBtn">MENU</button>
@@ -487,7 +490,7 @@
       <div class="skin-count"><span class="gem"></span> <span id="skinGold">0</span> GOLD · <span id="skinCount"></span></div>
       <div class="skin-grid" id="skinGrid"></div>
       <div class="hint" id="skinMsg" aria-live="polite">Every skin is its own creature. Coins you collect become gold.</div>
-      <div class="row" style="margin-top:8px"><button class="neon-btn small cyan" type="button" id="skinClose">BACK</button></div>
+      <div class="row" data-mt="8"><button class="neon-btn small cyan" type="button" id="skinClose">BACK</button></div>
     </div>
   </div>
 
@@ -510,7 +513,7 @@
       <div id="acctStep1">
         <p class="hint">Sign in with your email to claim <b id="acctName"></b> so nobody else can use it, and keep your gold, characters and skins on any device. No password: we email you a one-time code.</p>
         <form class="lb-name" id="acctEmailForm" novalidate><label for="acctEmail">YOUR EMAIL</label>
-          <div class="inrow"><input id="acctEmail" type="email" autocomplete="email" inputmode="email" maxlength="254" autocapitalize="off" spellcheck="false" placeholder="you@example.com"><button class="neon-btn small" type="submit" id="acctSend">SEND CODE</button></div></form>
+          <div class="inrow"><input id="acctEmail" type="email" autocomplete="email" inputmode="email" maxlength="254" autocapitalize="off" spellcheck="false" placeholder="Your email"><button class="neon-btn small" type="submit" id="acctSend">SEND CODE</button></div></form>
       </div>
       <div id="acctStep2" hidden>
         <p class="hint" id="acctSentTo"></p>
@@ -527,7 +530,7 @@
       <div id="acctStep4" hidden><p class="hint acct-done" id="acctDone"></p></div>
       <div class="lb-err" id="acctErr" aria-live="polite"></div>
       <p class="privacy"><b>Privacy:</b> we keep your email (only to sign you in; other players never see it), your player name, your scores and your game progress (gold, characters, skins, best run), and nothing else. Settings → Delete my data removes all of it, including your email.</p>
-      <div class="row" style="margin-top:8px"><button class="neon-btn small cyan" type="button" id="acctClose">BACK</button></div>
+      <div class="row" data-mt="8"><button class="neon-btn small cyan" type="button" id="acctClose">BACK</button></div>
     </div>
   </div>
 
@@ -553,7 +556,7 @@
       <label class="calm-row" for="calmFx"><input type="checkbox" id="calmFx"> Reduce flashing &amp; screen shake</label>
       <div class="hint" id="muteNote"></div>
       <div class="credits" id="credits">Published by <b>Gleyde Technologies, LLC</b><br>Created by <b>Sam Eyde III</b>, Founder &amp; CEO<br>Produced by <b>Juwon Shon</b>, COO<br>© 2026 Gleyde Technologies, LLC. All rights reserved.</div>
-      <div class="row" style="margin-top:10px"><button class="neon-btn small gold" type="button" id="howBtn">HOW TO PLAY</button><button class="neon-btn small cyan" type="button" id="setClose">BACK</button></div>
+      <div class="row" data-mt="10"><button class="neon-btn small gold" type="button" id="howBtn">HOW TO PLAY</button><button class="neon-btn small cyan" type="button" id="setClose">BACK</button></div>
     </div>
   </div>
 
@@ -571,7 +574,7 @@
       <div class="lb-status" id="lbStatus" role="status" aria-live="polite"></div>
       <button class="neon-btn small cyan" type="button" id="lbRetry" hidden>TRY AGAIN</button>
       <div class="hint" id="lbWho"></div>
-      <div class="row" style="margin-top:10px">
+      <div class="row" data-mt="10">
         <button class="neon-btn small cyan" type="button" id="lbClose">BACK</button>
       </div>
     </div>
