@@ -4,7 +4,7 @@ Work top to bottom. Items marked ⚖️ deserve a professional's input (attorney
 
 ## 1. Business & legal
 - [ ] Confirm Gleyde Technologies, LLC is **in good standing** with your state, and that the annual report and fees are current.
-- [ ] Check that the **operating agreement** covers the officer roles (CEO, COO) and who can sign contracts. ⚖️
+- [ ] Check that the **operating agreement** covers the officer roles (CEO, COO, CFO) and who can sign contracts. ⚖️
 - [ ] If the division will use its own name, file a **DBA / assumed name**. ⚖️
 - [ ] **EIN** from the IRS, if you don't already have one.
 - [ ] **Business bank account**, separate from personal accounts.
