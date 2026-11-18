@@ -39,6 +39,17 @@ jobs:
         run: node tests/icon.test.mjs
       - name: Home screen, tutorial and takeoff (phones, iPad, both orientations, 3 engines)
         run: node tests/home.test.cjs
+      - name: Gameplay (characters, skins and fair hitboxes, hazards with every look, the glide level, SKY DASH)
+        run: node tests/gameplay.test.cjs
+      - name: Online (accounts, leaderboard, progress) against a fake server
+        run: node tests/online.test.cjs
+      - name: Security headers, and a play-through under the enforcing Content Security Policy
+        run: node tests/headers.test.cjs
+      - name: Database rules and functions (real PostgreSQL with Supabase stand-ins)
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -q -X -t -f tests/db.test.sql | tee db.out
+          grep -q "FAIL" db.out && exit 1 || true
 
   deploy:
     name: Publish glydaway.com
@@ -68,12 +79,42 @@ jobs:
         if: steps.fresh.outputs.ok == 'true'
         with:
           node-version: 22
-      - name: Build (the game is one file)
+      - name: Build (the game is one file; the online server's address and PUBLIC key come from repository variables)
         if: steps.fresh.outputs.ok == 'true'
-        run: rm -rf dist && mkdir -p dist/icons && cp index.html dist/ && cp icons/*.png dist/icons/
+        env:
+          SB_URL: ${{ vars.GLYDAWAY_SUPABASE_URL }}
+          SB_KEY: ${{ vars.GLYDAWAY_SUPABASE_KEY }}
+          CSP_ENFORCE: ${{ vars.GLYDAWAY_CSP_ENFORCE }}         # "1" once the report-only CSP has shown no problems
+          HSTS_SUBDOMAINS: ${{ vars.GLYDAWAY_HSTS_SUBDOMAINS }} # "1" once no subdomain uses plain HTTP
+        run: |
+          rm -rf dist && mkdir -p dist/icons && cp index.html dist/ && cp icons/*.png dist/icons/
+          if [ -z "$SB_URL" ] || [ -z "$SB_KEY" ]; then
+            echo "::warning::GLYDAWAY_SUPABASE_URL / GLYDAWAY_SUPABASE_KEY repository variables are not set: the world leaderboard and accounts are off"
+          else
+            # only the public key may ever ship in the page: refuse a secret / service_role key
+            case "$SB_KEY" in sb_secret_*) echo "::error::GLYDAWAY_SUPABASE_KEY is a SECRET key. Use the publishable (anon) key."; exit 1;; esac
+            if printf '%s' "$SB_KEY" | cut -d. -f2 | base64 -d 2>/dev/null | grep -q service_role; then echo "::error::GLYDAWAY_SUPABASE_KEY is the service_role key. Use the anon key."; exit 1; fi
+            case "$SB_URL" in https://*) ;; *) echo "::error::GLYDAWAY_SUPABASE_URL must start with https://"; exit 1;; esac
+            sed -i "s|__GLYDAWAY_SUPABASE_URL__|$SB_URL|; s|__GLYDAWAY_SUPABASE_KEY__|$SB_KEY|" dist/index.html
+          fi
+          node scripts/build-headers.mjs dist   # dist/_headers: the security headers Cloudflare Pages sends (CSP hashes of the final page)
+          cat dist/_headers
       - name: Deploy to Cloudflare Pages
         if: steps.fresh.outputs.ok == 'true'
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then echo "::error::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID repo secrets are not set"; exit 1; fi
           npx --yes wrangler@3.114.0 pages project create glydaway --production-branch=main || echo "project already exists"
           npx --yes wrangler@3.114.0 pages deploy dist --project-name=glydaway --branch=main --commit-dirty=true --commit-hash="$GITHUB_SHA"
+      - name: Check the live security headers on glydaway.com
+        if: steps.fresh.outputs.ok == 'true'
+        run: |
+          # give the new deployment a moment, then compare the live headers with dist/_headers
+          for i in 1 2 3 4 5 6; do curl -sSI https://glydaway.com/ -o live.txt && grep -qi '^content-security-policy' live.txt && break; sleep 10; done
+          tr -d '\r' < live.txt | grep -iE '^(strict-transport-security|content-security-policy|content-security-policy-report-only|x-frame-options|permissions-policy|x-content-type-options|referrer-policy):'
+          missing=0
+          while IFS= read -r line; do
+            name=$(printf '%s' "$line" | sed -E 's/^ +//; s/:.*//'); value=$(printf '%s' "$line" | sed -E 's/^ +[^:]+: //')
+            [ -z "$name" ] || [ "$name" = "/*" ] && continue
+            if ! tr -d '\r' < live.txt | grep -qiF "$name: $value"; then echo "::error::glydaway.com is missing or has a different $name"; missing=1; fi
+          done < dist/_headers
+          [ "$missing" = 0 ] && echo "All security headers are live." || exit 1

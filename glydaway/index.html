@@ -52,6 +52,9 @@
     opacity: 0; transition: opacity .2s;
   }
   #hud.show { opacity: 1; }
+  /* (spacing and colours that used to be inline style attributes: the CSP allows no inline styles) */
+  .row[data-mt="4"] { margin-top: 4px; } .row[data-mt="8"] { margin-top: 8px; } .row[data-mt="10"] { margin-top: 10px; }
+  .c-gold { --c: #ffc83d; } .c-cyan { --c: #3ef4ff; } .c-mint { --c: #7dffc8; }
   /* a new level's character: a card slides in for a few seconds (the run keeps going) */
   #unlock { position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + 74px); z-index: 4; display: flex; align-items: center; gap: 10px; padding: 8px 16px 8px 10px;
     border-radius: 16px; background: rgba(8, 4, 24, .9); border: 2px solid var(--gold); box-shadow: 0 0 22px rgba(255, 200, 61, .6); pointer-events: none;
@@ -268,6 +271,14 @@
   .lb-name[hidden], #lbRetry[hidden] { display: none; }
   .set-name { display: flex; align-items: baseline; gap: 10px; margin: 10px 0 2px; font: 700 12px var(--pixel); letter-spacing: 1px; color: var(--lav); }
   .set-name b { font: 700 18px var(--body); color: #fff; letter-spacing: 0; }
+  .linkish.danger { color: #ff8a96; }
+  #acctScreen { background: rgba(2, 1, 7, .9); z-index: 6; }
+  #acctScreen .panel { width: min(460px, 100%); max-height: 100%; overflow-y: auto; }
+  .acct-choice { display: grid; gap: 8px; margin: 8px 0; }
+  #acctScreen .inrow { flex-wrap: wrap; } #acctScreen .inrow input { flex: 1 1 100%; } #acctScreen .inrow .neon-btn { flex: 1 1 auto; }
+  .acct-done { font-size: 17px; color: #effeff; }
+  .privacy { font: 600 12px/1.4 var(--body); color: rgba(220, 214, 255, .7); margin: 10px 0 0; text-align: left; }
+  .lb-row .claimed { font-style: normal; color: var(--mint); margin-left: 4px; font-size: .85em; }
   #nameScreen { background: rgba(2, 1, 7, .9); z-index: 6; }
   #nameScreen .panel { width: min(420px, 100%); }
   #lbRetry { margin-top: 8px; }
@@ -446,9 +457,9 @@
         <img class="tut-hero" id="tutHero" alt="" draggable="false">
         <div class="tut-ground"></div>
         <div class="tut-pus" id="tutPus">
-          <span class="chip"><i style="--c:#ffc83d"></i><b>MAGNET</b>pulls coins</span>
-          <span class="chip"><i style="--c:#3ef4ff"></i><b>SHIELD</b>saves a crash</span>
-          <span class="chip"><i style="--c:#7dffc8"></i><b>BOOST</b>fly fast</span>
+          <span class="chip"><i class="c-gold"></i><b>MAGNET</b>pulls coins</span>
+          <span class="chip"><i class="c-cyan"></i><b>SHIELD</b>saves a crash</span>
+          <span class="chip"><i class="c-mint"></i><b>BOOST</b>fly fast</span>
         </div>
         <div class="tut-ok" id="tutOk" aria-hidden="true">NICE!</div>
       </div>
@@ -461,7 +472,7 @@
   <div class="screen" id="pauseScreen">
     <div class="panel">
       <h2>PAUSED</h2>
-      <div class="row" style="margin-top:4px">
+      <div class="row" data-mt="4">
         <button class="neon-btn small" id="resumeBtn">RESUME</button>
         <button class="neon-btn small purple" id="setBtn2">SETTINGS</button>
         <button class="neon-btn small cyan" id="quitBtn">MENU</button>
@@ -479,7 +490,7 @@
       <div class="skin-count"><span class="gem"></span> <span id="skinGold">0</span> GOLD · <span id="skinCount"></span></div>
       <div class="skin-grid" id="skinGrid"></div>
       <div class="hint" id="skinMsg" aria-live="polite">Every skin is its own creature. Coins you collect become gold.</div>
-      <div class="row" style="margin-top:8px"><button class="neon-btn small cyan" type="button" id="skinClose">BACK</button></div>
+      <div class="row" data-mt="8"><button class="neon-btn small cyan" type="button" id="skinClose">BACK</button></div>
     </div>
   </div>
 
@@ -493,6 +504,33 @@
       </form>
       <button class="linkish" type="button" id="nameSuggest">Suggest a name</button>
       <div class="hint">3–12 letters or numbers. It's saved on this device and used for all your scores. You can change it any time in Settings.</div>
+    </div>
+  </div>
+
+  <div class="screen" id="acctScreen">
+    <div class="panel">
+      <h2>YOUR ACCOUNT</h2>
+      <div id="acctStep1">
+        <p class="hint">Sign in with your email to claim <b id="acctName"></b> so nobody else can use it, and keep your gold, characters and skins on any device. No password: we email you a one-time code.</p>
+        <form class="lb-name" id="acctEmailForm" novalidate><label for="acctEmail">YOUR EMAIL</label>
+          <div class="inrow"><input id="acctEmail" type="email" autocomplete="email" inputmode="email" maxlength="254" autocapitalize="off" spellcheck="false" placeholder="Your email"><button class="neon-btn small" type="submit" id="acctSend">SEND CODE</button></div></form>
+      </div>
+      <div id="acctStep2" hidden>
+        <p class="hint" id="acctSentTo"></p>
+        <form class="lb-name" id="acctCodeForm"><label for="acctCode">CODE FROM THE EMAIL</label>
+          <div class="inrow"><input id="acctCode" inputmode="numeric" autocomplete="one-time-code" maxlength="10"><button class="neon-btn small" type="submit">VERIFY</button></div></form>
+        <div class="row"><button class="linkish" type="button" id="acctResend">Send a new code</button><button class="linkish" type="button" id="acctBack">Use another email</button></div>
+      </div>
+      <div id="acctStep3" hidden>
+        <p class="hint">This email already has a Glydaway account. Which progress do you want to keep? (Your scores from this device are added to the account either way; on each board the better one counts.)</p>
+        <div class="hint" id="acctCompare"></div>
+        <div class="acct-choice"><button class="neon-btn small green" type="button" id="keepBoth">COMBINE BOTH</button><button class="neon-btn small cyan" type="button" id="keepAccount">KEEP THE ACCOUNT'S</button><button class="neon-btn small purple" type="button" id="keepDevice">KEEP THIS DEVICE'S</button></div>
+        <p class="hint">Combine: all characters and skins from both, the higher best, and the higher gold (gold isn't added together).</p>
+      </div>
+      <div id="acctStep4" hidden><p class="hint acct-done" id="acctDone"></p></div>
+      <div class="lb-err" id="acctErr" aria-live="polite"></div>
+      <p class="privacy"><b>Privacy:</b> we keep your email (only to sign you in; other players never see it), your player name, your scores and your game progress (gold, characters, skins, best run), and nothing else. Settings → Delete my data removes all of it, including your email.</p>
+      <div class="row" data-mt="8"><button class="neon-btn small cyan" type="button" id="acctClose">BACK</button></div>
     </div>
   </div>
 
@@ -512,10 +550,13 @@
         <div class="inrow"><input id="setNameIn" maxlength="12" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="New player name"><button class="neon-btn small" type="submit">SAVE</button></div>
         <div class="lb-err" id="setNameErr" aria-live="polite"></div>
       </form>
+      <div class="set-name"><span>ACCOUNT</span><b id="acctState"></b><button class="linkish" type="button" id="acctOpen">Save my account</button><button class="linkish" type="button" id="acctSignOut" hidden>Sign out</button></div>
+      <div class="set-name"><button class="linkish danger" type="button" id="acctDelete">Delete my data</button></div>
+      <div class="lb-err" id="setAcctErr" aria-live="polite"></div>
       <label class="calm-row" for="calmFx"><input type="checkbox" id="calmFx"> Reduce flashing &amp; screen shake</label>
       <div class="hint" id="muteNote"></div>
       <div class="credits" id="credits">Published by <b>Gleyde Technologies, LLC</b><br>Created by <b>Sam Eyde III</b>, Founder &amp; CEO<br>Produced by <b>Juwon Shon</b>, COO<br>© 2026 Gleyde Technologies, LLC. All rights reserved.</div>
-      <div class="row" style="margin-top:10px"><button class="neon-btn small gold" type="button" id="howBtn">HOW TO PLAY</button><button class="neon-btn small cyan" type="button" id="setClose">BACK</button></div>
+      <div class="row" data-mt="10"><button class="neon-btn small gold" type="button" id="howBtn">HOW TO PLAY</button><button class="neon-btn small cyan" type="button" id="setClose">BACK</button></div>
     </div>
   </div>
 
@@ -525,6 +566,7 @@
       <div class="lb-tabs" role="group" aria-label="Board">
         <button type="button" id="lbTabDevice" aria-pressed="true">THIS DEVICE</button>
         <button type="button" id="lbTabDist" aria-pressed="false">WORLD</button>
+        <button type="button" id="lbTabWeek" aria-pressed="false">THIS WEEK</button>
         <button type="button" id="lbTabCoins" aria-pressed="false">COINS</button>
       </div>
       <ol class="lb-list" id="lbList"></ol>
@@ -532,7 +574,7 @@
       <div class="lb-status" id="lbStatus" role="status" aria-live="polite"></div>
       <button class="neon-btn small cyan" type="button" id="lbRetry" hidden>TRY AGAIN</button>
       <div class="hint" id="lbWho"></div>
-      <div class="row" style="margin-top:10px">
+      <div class="row" data-mt="10">
         <button class="neon-btn small cyan" type="button" id="lbClose">BACK</button>
       </div>
     </div>
@@ -1788,7 +1830,8 @@ resize();
 // ===== Storage =====
 const store = {
   get(k, d) { try { const v = localStorage.getItem('glydaway.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
-  set(k, v) { try { localStorage.setItem('glydaway.' + k, JSON.stringify(v)); } catch (e) {} },
+  set(k, v) { try { localStorage.setItem('glydaway.' + k, JSON.stringify(v)); } catch (e) {} if (store.onChange) store.onChange(k); },
+  onChange: null, // set by the online code: progress changes are saved to a signed-in player's account
 };
 let best = store.get('best', { m: 0, coins: 0 });
 // ---- skins, gold, cities reached and the on-device top 10 (all saved in localStorage) ----
@@ -2827,7 +2870,7 @@ function dust(x, n, k = 1, roof = false) {
 // =====================================================================================
 //  Flow
 // =====================================================================================
-const screens = { start: $('startScreen'), pause: $('pauseScreen'), over: $('overScreen'), lb: $('lbScreen'), set: $('setScreen'), name: $('nameScreen'), skin: $('skinScreen'), tut: $('tutScreen') };
+const screens = { start: $('startScreen'), pause: $('pauseScreen'), over: $('overScreen'), lb: $('lbScreen'), set: $('setScreen'), name: $('nameScreen'), acct: $('acctScreen'), skin: $('skinScreen'), tut: $('tutScreen') };
 function showScreen(name) { for (const k in screens) screens[k].classList.toggle('show', k === name); if (name === 'start') layoutHome(); }
 function updateStartBest() { updateHome(); }
 let overEntry = null;
@@ -2897,18 +2940,23 @@ function showBanner(i) {
 }
 
 // =====================================================================================
-//  Online leaderboard (Supabase, same project as Glydrift, own table: glydaway_scores).
-//  Anonymous sign-in gives each device a player id. Only personal bests are uploaded;
-//  they wait in a local queue while offline. Nothing here ever blocks the game.
-//  Setup: glydaway/supabase/glydaway_leaderboard.sql (run once in the SQL editor).
+//  Online: player identity, accounts, the world leaderboard and cloud progress (Supabase).
+//  * First launch: an anonymous player is created (Supabase anonymous sign-in) and you pick a
+//    name once. Scores post under it automatically. Anonymous names aren't protected yet.
+//  * "Save my account": sign in with your email and a one-time code (no password). Your name is
+//    then claimed (unique, any letter case), and your progress follows you to other devices.
+//  * Every score goes through a database function that checks it (glydaway/supabase/schema.sql).
+//  * The server address and its public key are filled in when the site is deployed (GitHub
+//    variables GLYDAWAY_SUPABASE_URL / GLYDAWAY_SUPABASE_KEY). Without them the game runs offline.
+//  Nothing here ever blocks the game.
 // =====================================================================================
-const LB_CONF = {
-  url: 'https://cdjcvhywrbsdryagqxqg.supabase.co',
-  key: 'sb_publishable_zZB05fEYY1eYhhmnzSuodg_QqpXF-dO', // public "publishable" key (Row Level Security protects the data)
-  table: 'glydaway_scores',
-};
-const BOARDS = { distance: { label: 'DISTANCE', unit: ' m' }, coins: { label: 'COINS', unit: '' } }; // the world boards (Supabase)
-// Username rules match Glydrift's: 3-12 letters/numbers and a light profanity filter.
+const NET_CONF = (() => {
+  const c = window.GLYDAWAY_CONFIG || { url: '__GLYDAWAY_SUPABASE_URL__', key: '__GLYDAWAY_SUPABASE_KEY__' };
+  return /^https:\/\/[A-Za-z0-9.-]+(:\d+)?$/.test(c.url || '') && c.key && !String(c.key).startsWith('__') ? c : null;
+})();
+// a random player id for this device, made on the first launch (the server identity is the anonymous sign-in)
+const PLAYER_ID = store.get('playerId', '') || (() => { const id = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now().toString(36)); store.set('playerId', id); return id; })();
+// Username rules (the database checks the same): 3-12 letters/numbers and a light profanity filter.
 const NAME_BLOCK = ['fuck', 'fuk', 'fck', 'shit', 'bitch', 'cunt', 'nigg', 'faggot', 'retard', 'whore', 'slut', 'pussy', 'dildo', 'jizz', 'nazi', 'hitler', 'porn', 'penis', 'vagina', 'wank', 'twat', 'tranny', 'kike', 'chink', 'asshole', 'bastard', 'horny', 'nude', 'milf'];
 const NAME_EDGE = ['fag', 'rape', 'cum', 'anal', 'sex', 'hoe', 'tits', 'boob', 'cock', 'dick', 'piss', 'spic', 'kkk', 'arse'];
 const LEET = { 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't', 8: 'b', 9: 'g', $: 's', '@': 'a', '!': 'i' };
@@ -2928,166 +2976,334 @@ function suggestName() {
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
   return (pick(a) + pick(b) + Math.floor(Math.random() * 90 + 10)).slice(0, 12);
 }
-// Anti-cheat, client side: the same limits the database checks (glydaway_check_score). The fastest
-// anything in the game moves is top speed × the boost; the database allows 28 m/s, a little more.
+// The same limits the database checks: the fastest anything moves is top speed × the boost.
 const MAX_MPS = (SPEED_MAX * Math.max(BOOST_MUL, FLY.speedMul)) / UNITS_PER_M;
 const plausible = r => Number.isInteger(r.distance) && Number.isInteger(r.coins) && r.run_time_ms >= 500 && r.run_time_ms <= 3 * 3600 * 1000 &&
   r.distance > 0 && r.distance <= Math.min(28, MAX_MPS + 1) * (r.run_time_ms / 1000) + 40 && r.coins >= 0 && r.coins <= r.distance * 1.5 + 100;
+const isoWeek = (d = new Date()) => { // the week the database files a score under (ISO week, UTC)
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())), day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day); const y = t.getUTCFullYear(), w = Math.ceil(((t - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7);
+  return `${y}-W${String(w).padStart(2, '0')}`;
+};
+const ERR_TEXT = {
+  name_taken: 'That name belongs to a signed-in player. Pick another one.',
+  name_invalid: 'Please pick a different name (3–12 letters or numbers).',
+  rename_too_soon: 'A saved name can change once a week. Try again later.',
+  offline: 'You seem to be offline. Try again when you’re connected.',
+  off: 'Online features aren’t connected on this copy of the game.',
+};
 
 const LB = {
-  auth: store.get('auth', null), name: store.get('name', ''), queue: store.get('lbQueue', {}),
-  state: 'idle', // 'idle' | 'offline' | 'notReady' (table missing) | 'authOff' (anonymous sign-in off) | 'refused' (server said no)
+  auth: store.get('auth', null), name: store.get('name', ''), nameSynced: store.get('nameSynced', ''),
+  queue: (store.get('runQueue', []) || []).filter(plausible).slice(-20), // runs waiting to post
+  state: NET_CONF ? 'idle' : 'off', // 'idle' | 'off' | 'offline' | 'notReady' | 'authOff' | 'refused' | 'nameTaken'
+  lastError: '',
+  get claimed() { return !!(LB.auth && LB.auth.email && !LB.auth.anon); },
   async req(path, opts = {}, withAuth = false) {
-    const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 8000);
-    const headers = { apikey: LB_CONF.key, 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if (!NET_CONF) { const e = new Error('off'); e.off = true; throw e; }
+    const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 9000);
+    const headers = { apikey: NET_CONF.key, 'Content-Type': 'application/json', ...(opts.headers || {}) };
     if (withAuth) headers.Authorization = 'Bearer ' + (await LB.session()).access_token;
     try {
-      const r = await fetch(LB_CONF.url + path, { ...opts, headers, signal: ctrl.signal });
+      const r = await fetch(NET_CONF.url + path, { ...opts, headers, signal: ctrl.signal });
       if (!r.ok) { const e = new Error('HTTP ' + r.status); e.status = r.status; try { e.body = await r.json(); } catch (_) {} throw e; }
       return r;
     } finally { clearTimeout(timer); }
   },
-  // One sign-in or token refresh at a time: two at once would spend the same refresh token
-  // twice (Supabase can then revoke it) or create two anonymous players.
-  session() {
+  async rpc(fn, args = {}) { const r = await LB.req('/rest/v1/rpc/' + fn, { method: 'POST', body: JSON.stringify(args) }, true); const t = await r.text(); return t ? JSON.parse(t) : null; },
+  code: e => (e && e.body && (e.body.message || e.body.error_code || e.body.code)) || (e && e.off ? 'off' : e && (!e.status || e.name === 'AbortError') ? 'offline' : ''),
+  setSession(r) {
+    if (!r || !r.access_token) return;
+    LB.auth = { access_token: r.access_token, refresh_token: r.refresh_token, expires_at: r.expires_at || Math.floor(Date.now() / 1000) + (r.expires_in || 3600),
+      uid: r.user.id, email: r.user.email || null, anon: !!r.user.is_anonymous };
+    store.set('auth', LB.auth);
+  },
+  // One sign-in or token refresh at a time (two at once can spend the same refresh token twice).
+  session(force) {
     const a = LB.auth;
-    if (a && a.expires_at * 1000 > Date.now() + 60000) return Promise.resolve(a);
+    if (!force && a && a.expires_at * 1000 > Date.now() + 60000) return Promise.resolve(a);
     return LB.signing || (LB.signing = LB.renew().finally(() => { LB.signing = null; }));
   },
   async renew() {
     const a = LB.auth;
-    let r = null;
     if (a && a.refresh_token) {
-      try { r = await (await LB.req('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: JSON.stringify({ refresh_token: a.refresh_token }) })).json(); }
-      catch (e) { if (!e.status || e.status >= 500) throw e; } // a dead refresh token: sign in again below
+      try { LB.setSession(await (await LB.req('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: JSON.stringify({ refresh_token: a.refresh_token }) })).json()); return LB.auth; }
+      catch (e) { if (!e.status || e.status >= 500) throw e; if (a.email && !a.anon) { LB.auth = null; store.set('auth', null); updateAcctUI(); throw Object.assign(new Error('signed_out'), { status: 401, body: { message: 'signed_out' } }); } }
     }
-    if (!r) { // anonymous sign-in; a 4xx here means it is switched off in the Supabase project
-      try { r = await (await LB.req('/auth/v1/signup', { method: 'POST', body: JSON.stringify({ data: {} }) })).json(); }
-      catch (e) { if (e.status >= 400 && e.status < 500) e.authOff = true; throw e; }
-    }
-    LB.auth = { access_token: r.access_token, refresh_token: r.refresh_token, expires_at: r.expires_at || Math.floor(Date.now() / 1000) + (r.expires_in || 3600), uid: r.user.id };
-    store.set('auth', LB.auth);
+    try { LB.setSession(await (await LB.req('/auth/v1/signup', { method: 'POST', body: JSON.stringify({ data: {} }) })).json()); } // a new anonymous player
+    catch (e) { if (e.status >= 400 && e.status < 500) e.authOff = true; throw e; }
+    LB.nameSynced = ''; store.set('nameSynced', '');
     return LB.auth;
   },
   noteError(e) {
-    LB.lastError = e ? (e.status ? 'HTTP ' + e.status + (e.body && (e.body.code || e.body.error_code) ? ' ' + (e.body.code || e.body.error_code) : '') : e.name || String(e)) : '';
-    if (e && e.authOff) LB.state = 'authOff';
-    else if (e && (e.status === 404 || (e.body && /PGRST205|42P01/.test(e.body.code || '')))) LB.state = 'notReady';
+    LB.lastError = e ? (e.status ? 'HTTP ' + e.status + (LB.code(e) ? ' ' + LB.code(e) : '') : e.name || String(e)) : '';
+    const c = LB.code(e);
+    if (e && e.off) LB.state = 'off';
+    else if (e && e.authOff) LB.state = 'authOff';
+    else if (c === 'name_taken') LB.state = 'nameTaken';
+    else if (e && (e.status === 404 || /PGRST20[25]|42P01|42883/.test(c))) LB.state = 'notReady';
     else if (!e || !e.status || e.status >= 500 || e.name === 'AbortError') LB.state = 'offline';
-    else if (e.status === 401 || e.status === 403) LB.state = 'refused'; // e.g. row-level security or a bad key
-    if (LB.lastError) console.warn('[glydaway leaderboard]', LB.state, LB.lastError);
+    else if (e.status === 401 || e.status === 403) LB.state = 'refused';
+    if (LB.lastError && !(e && e.off)) console.warn('[glydaway online]', LB.state, LB.lastError);
   },
-  // the database's plausibility check (22023) or a column check (23514): this score will never be accepted
-  badScore: e => e && e.status === 400 && e.body && /^(22023|23514|22P02)$/.test(e.body.code || ''),
-  /** Queue a finished run's personal bests and try to upload them. */
+  /** Queue a finished run and try to post it (the server keeps each player's best per board). */
   submitRun(run) {
     if (!plausible(run)) return;
-    for (const board of Object.keys(BOARDS)) {
-      const score = run[board]; if (!(score > 0)) continue;
-      const cur = LB.queue[board];
-      if (!cur || score > cur.score) LB.queue[board] = { ...run, score, tries: 0 };
-    }
-    store.set('lbQueue', LB.queue);
+    LB.queue.push({ distance: run.distance, coins: run.coins, run_time_ms: run.run_time_ms });
+    LB.queue = LB.queue.slice(-20); store.set('runQueue', LB.queue);
     LB.flush().then(renderOverRank);
+  },
+  async syncName() { // make sure the server has this player's name
+    if (LB.nameSynced === LB.name) return;
+    await LB.rpc('glydaway_set_username', { p_name: LB.name });
+    LB.nameSynced = LB.name; store.set('nameSynced', LB.name);
   },
   flushing: null,
   flush() {
     if (LB.flushing) return LB.flushing;
     LB.flushing = (async () => {
-      await null; // let LB.flushing be assigned before the finally below clears it
+      await null;
       try {
-        if (!LB.name) return;
-        for (const board of Object.keys(LB.queue)) {
-          const op = LB.queue[board];
-          try {
-            const uid = (await LB.session()).uid;
-            const mine = await (await LB.req(`/rest/v1/${LB_CONF.table}?select=score&player_id=eq.${uid}&board=eq.${board}`, {}, true)).json();
-            if (!mine.length || mine[0].score < op.score) {
-              const row = { player_id: uid, username: LB.name, board, score: op.score, distance: op.distance, coins: op.coins, run_time_ms: op.run_time_ms, created_at: new Date().toISOString() };
-              await LB.req(`/rest/v1/${LB_CONF.table}?on_conflict=player_id,board`, { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(row) }, true);
-            }
-            delete LB.queue[board]; LB.state = 'idle';
-          } catch (e) {
-            LB.noteError(e);
-            // only a score the database says is impossible is dropped; anything else (offline, setup
-            // missing, sign-in off, a permissions problem) keeps it queued to post later
-            if (LB.badScore(e)) { delete LB.queue[board]; continue; }
-            if (LB.state === 'idle') LB.state = 'refused';
-            break;
+        if (!NET_CONF || !LB.name) return;
+        await LB.syncName();
+        let resent = false;
+        while (LB.queue.length) {
+          const run = LB.queue[0];
+          try { await LB.rpc('glydaway_submit_run', { p_distance: run.distance, p_coins: run.coins, p_run_ms: run.run_time_ms }); LB.queue.shift(); }
+          catch (e) {
+            const c = LB.code(e);
+            if (c === 'too_fast') { clearTimeout(LB.retryT); LB.retryT = setTimeout(() => LB.flush(), 6000); break; } // the server's rate limit: try again shortly
+            if (c === 'impossible_score') { LB.queue.shift(); continue; }                                            // never accepted: drop it
+            if (c === 'no_username' && !resent) { resent = true; LB.nameSynced = ''; store.set('nameSynced', ''); await LB.syncName(); continue; } // the server lost the name: send it again, once
+            throw e;
           }
         }
-        store.set('lbQueue', LB.queue);
-      } finally { LB.flushing = null; }
+        LB.state = 'idle';
+      } catch (e) { LB.noteError(e); }
+      finally { store.set('runQueue', LB.queue); LB.flushing = null; }
     })();
     return LB.flushing;
   },
+  /** Change the name. Returns null when done, or an error code (name_taken, rename_too_soon, …). */
   async rename(name) {
-    LB.name = name; store.set('name', name);
-    if (LB.auth) {
-      try { await LB.req(`/rest/v1/${LB_CONF.table}?player_id=eq.${LB.auth.uid}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ username: name }) }, true); }
-      catch (e) { LB.noteError(e); }
+    if (!NET_CONF) { LB.name = name; store.set('name', name); return null; }
+    try { await LB.rpc('glydaway_set_username', { p_name: name }); }
+    catch (e) {
+      const c = LB.code(e);
+      if (c === 'offline' && !LB.claimed) { LB.name = name; store.set('name', name); return null; } // offline and not signed in: sync later
+      if (['name_taken', 'rename_too_soon', 'name_invalid', 'offline'].includes(c)) return c;
+      LB.noteError(e); return 'offline';
     }
-    return LB.flush();
+    LB.name = name; LB.nameSynced = name; store.set('name', name); store.set('nameSynced', name);
+    if (LB.state === 'nameTaken') LB.state = 'idle';
+    LB.flush(); return null;
   },
-  /** Top 50 for a board, plus this player's row and rank. */
-  async board(board) {
-    const top = await (await LB.req(`/rest/v1/${LB_CONF.table}?select=player_id,username,score&board=eq.${board}&order=score.desc,created_at.asc&limit=50`)).json();
+  /** Top 50 for a board and period ('all' or a week), plus this player's rank. */
+  async board(board, period) {
+    const q = `/rest/v1/glydaway_leaderboard?select=username,score,claimed,me&board=eq.${board}&period=eq.${period}&order=score.desc,achieved_at.asc&limit=50`;
+    const top = await (await LB.req(q, {}, !!LB.auth)).json();
     let me = null;
-    if (LB.auth) {
-      const mine = await (await LB.req(`/rest/v1/${LB_CONF.table}?select=username,score&player_id=eq.${LB.auth.uid}&board=eq.${board}`)).json();
-      if (mine.length) {
-        const r = await LB.req(`/rest/v1/${LB_CONF.table}?select=id&board=eq.${board}&score=gt.${mine[0].score}`, { method: 'HEAD', headers: { Prefer: 'count=exact' } });
-        const total = Number(((r.headers.get('content-range') || '').split('/')[1]) || NaN);
-        me = { ...mine[0], rank: Number.isFinite(total) ? total + 1 : null };
-      }
-    }
-    LB.state = 'idle';
+    if (LB.auth) { const r = await LB.rpc('glydaway_my_rank', { p_board: board, p_period: period }); if (r) me = { rank: r.rank, score: r.score, username: LB.name, claimed: LB.claimed }; }
+    if (LB.state !== 'nameTaken') LB.state = 'idle';
     return { top, me };
   },
 };
+
+// ---- cloud progress (for signed-in players): gold, unlocked characters, bought skins, what you wear, best ----
+const SYNC_KEYS = new Set(['gold', 'skinsOwned', 'chars', 'wearing', 'best']);
+function collectProgress() { return { gold, skinsOwned: [...skinsOwned], chars: [...citiesReached], wearing: skinNow, best: { m: best.m | 0, coins: best.coins | 0 } }; }
+function progressSummary(p) { return `${p.gold | 0} gold · ${(p.skinsOwned || []).length} skins · ${(p.chars || []).length} levels reached · best ${(p.best && p.best.m) | 0} m`; }
+const progressEmpty = p => !p || (!(p.gold > 0) && !(p.skinsOwned || []).length && (p.chars || []).length <= 1 && !((p.best && p.best.m) > 0));
+function mergeProgress(a, b, goldRule) { // unlocks and skins are combined; gold is never added together (no duplicating it)
+  const u = (x, y) => [...new Set([...(x || []), ...(y || [])])];
+  return { gold: goldRule === 'a' ? a.gold | 0 : goldRule === 'b' ? b.gold | 0 : Math.max(a.gold | 0, b.gold | 0), skinsOwned: u(a.skinsOwned, b.skinsOwned), chars: u(a.chars, b.chars),
+    wearing: a.wearing || b.wearing || 'volt', best: { m: Math.max((a.best && a.best.m) | 0, (b.best && b.best.m) | 0), coins: Math.max((a.best && a.best.coins) | 0, (b.best && b.best.coins) | 0) } };
+}
+let applying = false;
+function applyProgress(p) {
+  if (!p) return;
+  applying = true;
+  try {
+    setGold(Math.max(0, p.gold | 0));
+    skinsOwned.clear(); for (const id of p.skinsOwned || []) if (SKINS.some(s => s.id === id)) skinsOwned.add(id); store.set('skinsOwned', [...skinsOwned]);
+    citiesReached.clear(); citiesReached.add('airport'); for (const id of p.chars || []) if (BIOMES.some(b => b.id === id)) citiesReached.add(id); store.set('chars', [...citiesReached]);
+    best = { m: Math.max(0, (p.best && p.best.m) | 0), coins: Math.max(0, (p.best && p.best.coins) | 0) }; store.set('best', best);
+    skinNow = ownsLook(p.wearing) ? p.wearing : 'volt'; store.set('wearing', skinNow); wearLook(skinNow);
+  } finally { applying = false; }
+  updateStartBest();
+}
+async function pullProgress() {
+  const rows = await (await LB.req(`/rest/v1/glydaway_progress?select=data,updated_at&id=eq.${LB.auth.uid}`, {}, true)).json();
+  return rows.length ? { ...rows[0].data, at: Date.parse(rows[0].updated_at) || 0 } : null;
+}
+async function pushProgress() {
+  if (!LB.claimed) return;
+  const data = collectProgress();
+  await LB.req('/rest/v1/glydaway_progress?on_conflict=id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ id: LB.auth.uid, data }) }, true);
+  store.set('progressAt', Date.now());
+}
+let pushT = 0;
+store.onChange = k => { if (!applying && SYNC_KEYS.has(k)) { store.set('progressLocalAt', Date.now()); if (LB.claimed) { clearTimeout(pushT); pushT = setTimeout(() => pushProgress().catch(e => LB.noteError(e)), 2000); } } };
+document.addEventListener('visibilitychange', () => { if (document.hidden && LB.claimed && pushT) { clearTimeout(pushT); pushT = 0; pushProgress().catch(() => {}); } });
+// a signed-in player opening the game: bring in what other devices saved (newer gold wins, unlocks combine)
+async function syncOnStart() {
+  if (!LB.claimed) return;
+  try {
+    const remote = await pullProgress(), local = collectProgress();
+    if (remote) applyProgress(mergeProgress(local, remote, (remote.at || 0) > (store.get('progressLocalAt', 0) || 0) ? 'b' : 'a'));
+    await pushProgress();
+  } catch (e) { LB.noteError(e); }
+}
+
+// ---- "Save my account" / sign in with an email code ----
+const ACCT = { email: '', mode: '', transfer: null, sentAt: 0, tries: 0, remote: null };
+const maskEmail = e => { const [u, d] = String(e || '').split('@'); return d ? `${u.slice(0, 2)}${'•'.repeat(Math.max(1, Math.min(6, u.length - 2)))}@${d}` : ''; };
+function acctStep(n) { for (const k of [1, 2, 3, 4]) $('acctStep' + k).hidden = k !== n; $('acctErr').textContent = ''; }
+function openAccount() {
+  audio(); acctStep(LB.claimed ? 4 : 1);
+  $('acctName').textContent = LB.name || 'your name';
+  $('acctDone').textContent = LB.claimed ? `Signed in as ${maskEmail(LB.auth.email)}. ${LB.name} is yours, and your progress is saved to your account.` : '';
+  if (!NET_CONF) $('acctErr').textContent = ERR_TEXT.off;
+  showScreen('acct');
+}
+async function acctSend(email) {
+  email = String(email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 254) return 'Please enter a valid email address.';
+  const wait = 60 - Math.floor((Date.now() - ACCT.sentAt) / 1000);
+  if (ACCT.sentAt && wait > 0) return `Please wait ${wait} s before asking for another code.`; // any email (the server limits codes too)
+  try {
+    await LB.session(); await LB.syncName().catch(() => {});
+    try { // a new email: link it to this player (keeps your id, scores and progress)
+      await LB.req('/auth/v1/user', { method: 'PUT', body: JSON.stringify({ email }) }, true); ACCT.mode = 'link';
+    } catch (e) {
+      if (!(e.status === 422 || e.status === 400) || !/exist|registered|already/i.test(JSON.stringify(e.body || ''))) throw e;
+      // this email already has an account: sign in to it; this device's scores will be moved over
+      ACCT.transfer = await LB.rpc('glydaway_make_transfer').catch(() => null);
+      await LB.req('/auth/v1/otp', { method: 'POST', body: JSON.stringify({ email, create_user: false }) }); ACCT.mode = 'signin';
+    }
+  } catch (e) { const c = LB.code(e); return c === 'offline' || c === 'off' ? ERR_TEXT[c] : /rate|limit|429/i.test(c + e.status) ? 'Too many codes asked for. Please wait a few minutes.' : 'Couldn’t send a code (' + (c || e.message) + ').'; }
+  ACCT.email = email; ACCT.sentAt = Date.now(); ACCT.tries = 0;
+  $('acctSentTo').textContent = `We sent a 6-digit code to ${maskEmail(email)}. It can take a minute; check spam too.`;
+  acctStep(2); return null;
+}
+async function acctVerify(code) {
+  code = String(code || '').replace(/\s/g, '');
+  if (!/^\d{6,10}$/.test(code)) return 'Enter the code from the email.';
+  if (++ACCT.tries > 5) return 'Too many tries. Ask for a new code.';
+  try {
+    const r = await (await LB.req('/auth/v1/verify', { method: 'POST', body: JSON.stringify({ type: ACCT.mode === 'link' ? 'email_change' : 'email', email: ACCT.email, token: code }) }, ACCT.mode === 'link')).json();
+    if (r && r.access_token) LB.setSession(r); else await LB.session(true);
+    if (LB.auth) { LB.auth.anon = false; LB.auth.email = LB.auth.email || ACCT.email; store.set('auth', LB.auth); }
+  } catch (e) { const c = LB.code(e); return c === 'offline' ? ERR_TEXT.offline : 'That code didn’t work. Check it, or ask for a new one.'; }
+  if (ACCT.mode === 'link') { // same player, now with an email: claim the name and save progress to the account
+    try { await LB.rpc('glydaway_claim'); } catch (e) { if (LB.code(e) === 'name_taken') { LB.state = 'nameTaken'; acctFinish('Account saved! But someone already owns the name ' + LB.name + ': pick a new one in Settings.'); return null; } }
+    await pushProgress().catch(() => {}); acctFinish(`Account saved! ${LB.name} is now yours on every device.`); return null;
+  }
+  // signed in to an account that already existed: bring this device's scores, then settle the progress
+  if (ACCT.transfer) await LB.rpc('glydaway_merge', { p_code: ACCT.transfer }).catch(() => {});
+  ACCT.transfer = null;
+  try {
+    const prof = await (await LB.req(`/rest/v1/glydaway_profiles?select=username,claimed&id=eq.${LB.auth.uid}`, {}, true)).json();
+    if (prof.length) { LB.name = prof[0].username; LB.nameSynced = prof[0].username; store.set('name', LB.name); store.set('nameSynced', LB.name); }
+    else { LB.nameSynced = ''; await LB.syncName().catch(() => {}); }
+    ACCT.remote = await pullProgress();
+  } catch (e) { ACCT.remote = null; }
+  const local = collectProgress();
+  if (!ACCT.remote || progressEmpty(local) || progressEmpty(ACCT.remote)) { await acctResolve(!ACCT.remote ? 'device' : progressEmpty(local) ? 'account' : 'both'); return null; }
+  $('acctCompare').innerHTML = '';
+  for (const [k, p] of [['This device', local], ['Your account', ACCT.remote]]) { const d = document.createElement('div'); d.textContent = `${k}: ${progressSummary(p)}`; $('acctCompare').append(d); }
+  acctStep(3); return null;
+}
+async function acctResolve(choice) { // never silently overwrite: the player picks
+  const local = collectProgress(), remote = ACCT.remote || {};
+  applyProgress(choice === 'device' ? local : choice === 'account' ? mergeProgress(remote, {}, 'a') : mergeProgress(local, remote));
+  await pushProgress().catch(e => LB.noteError(e));
+  acctFinish(`Signed in! Playing as ${LB.name}.` + (choice === 'both' ? ' Your progress was combined.' : choice === 'account' ? ' Your account’s progress is loaded.' : ' This device’s progress is saved to your account.'));
+}
+function acctFinish(msg) { acctStep(4); $('acctDone').textContent = msg; updateAcctUI(); updateNameUI(); LB.flush(); }
+function resetDevice() { // back to a brand-new player on this device (settings are kept)
+  const keep = ['sfxVol', 'musicVol', 'muted', 'calm', 'tutDone', 'sidewaysTold', 'paintRefund'];
+  try { for (const k of Object.keys(localStorage)) if (k.startsWith('glydaway.') && !keep.includes(k.slice(9))) localStorage.removeItem(k); } catch (e) {}
+  location.reload();
+}
+async function acctSignOut() {
+  try { await LB.req('/auth/v1/logout?scope=local', { method: 'POST' }, true); } catch (e) {}
+  resetDevice();
+}
+async function acctDelete() {
+  if (NET_CONF && LB.auth) { try { await LB.rpc('glydaway_delete_me'); } catch (e) { const c = LB.code(e); return c === 'offline' ? ERR_TEXT.offline : 'Couldn’t delete it right now (' + (c || e.message) + '). Nothing was changed.'; } }
+  resetDevice(); return null;
+}
+function updateAcctUI() {
+  $('acctState').textContent = !NET_CONF ? 'Offline copy' : LB.claimed ? `Saved · ${maskEmail(LB.auth.email)}` : 'Not saved';
+  $('acctOpen').textContent = LB.claimed ? 'Account' : 'Save my account';
+  $('acctSignOut').hidden = !LB.claimed;
+}
+const twoTap = (btn, first, run) => { // a second tap within 4 s confirms
+  btn.addEventListener('click', async () => {
+    if (btn.dataset.armed !== '1') { btn.dataset.armed = '1'; btn.dataset.label = btn.textContent; btn.textContent = first; setTimeout(() => { btn.dataset.armed = ''; btn.textContent = btn.dataset.label; }, 4000); return; }
+    btn.dataset.armed = ''; btn.textContent = 'Working…'; const err = await run(); if (err) { btn.textContent = btn.dataset.label; $('setAcctErr').textContent = err; }
+  });
+};
+$('acctOpen').addEventListener('click', openAccount);
+$('acctClose').addEventListener('click', () => { updateAcctUI(); showScreen('set'); });
+$('acctEmailForm').addEventListener('submit', async e => { e.preventDefault(); $('acctSend').disabled = true; const err = await acctSend($('acctEmail').value); $('acctSend').disabled = false; if (err) $('acctErr').textContent = err; });
+$('acctCodeForm').addEventListener('submit', async e => { e.preventDefault(); const err = await acctVerify($('acctCode').value); if (err) $('acctErr').textContent = err; });
+$('acctResend').addEventListener('click', async () => { const err = await acctSend(ACCT.email); if (err) $('acctErr').textContent = err; });
+$('acctBack').addEventListener('click', () => acctStep(1));
+$('keepBoth').addEventListener('click', () => acctResolve('both'));
+$('keepAccount').addEventListener('click', () => acctResolve('account'));
+$('keepDevice').addEventListener('click', () => acctResolve('device'));
+twoTap($('acctSignOut'), 'Tap again to sign out', async () => { await acctSignOut(); return null; });
+twoTap($('acctDelete'), 'Tap again: delete everything', acctDelete);
+updateAcctUI();
+
 window.addEventListener('online', () => LB.flush());
-if (LB.name && Object.keys(LB.queue).length) setTimeout(() => LB.flush(), 1500);
+if (NET_CONF && !BOT_PLAY) setTimeout(() => { // first launch: make the anonymous player right away; then post anything waiting, and sync
+  LB.session().then(() => { if (LB.name) LB.flush(); return syncOnStart(); }).catch(e => LB.noteError(e)).finally(updateAcctUI);
+}, 1200);
 
 // ----- leaderboard screen -----
 let lbBoard = 'device', lbReturn = 'start', lbSeq = 0;
+const LB_TABS = { device: 'lbTabDevice', distance: 'lbTabDist', week: 'lbTabWeek', coins: 'lbTabCoins' };
 function lbMessage() {
-  const waiting = Object.keys(LB.queue).length ? ' Your best is saved and will post automatically.' : '';
-  if (LB.state === 'notReady') return 'The world leaderboard isn’t switched on yet (its database table is missing).' + waiting;
+  const waiting = LB.queue.length ? ' Your runs are saved and will post automatically.' : '';
+  if (LB.state === 'off') return 'The world leaderboard isn’t connected on this copy of the game. Your scores are kept on this device.';
+  if (LB.state === 'notReady') return 'The world leaderboard isn’t switched on yet (its database isn’t set up).' + waiting;
   if (LB.state === 'authOff') return 'The world leaderboard can’t sign players in yet (anonymous sign-in is off).' + waiting;
+  if (LB.state === 'nameTaken') return `Someone has claimed the name ${LB.name}. Pick a new name in Settings to post your scores.`;
   if (LB.state === 'refused') return 'The leaderboard server refused the request (' + (LB.lastError || 'permissions') + ').' + waiting;
-  return 'Can’t reach the world leaderboard. Check your connection and try again.' + waiting;
+  return 'You’re offline, or the leaderboard can’t be reached. Check your connection and try again.' + waiting;
 }
-function lbRow(rank, name, score, isMe) {
+function lbRow(rank, name, score, isMe, claimed) {
   const li = document.createElement('li'); li.className = 'lb-row' + (rank === 1 ? ' top1' : '') + (isMe ? ' me' : '');
   for (const [cls, txt] of [['rk', rank ? '#' + rank : '—'], ['nm', name], ['sc', score + (lbBoard === 'coins' ? '' : ' m')]]) { const s = document.createElement('span'); s.className = cls; s.textContent = txt; li.append(s); }
+  if (claimed) { const v = document.createElement('i'); v.className = 'claimed'; v.title = 'A saved account: this name is protected'; v.textContent = '✓'; li.querySelector('.nm').append(v); }
   return li;
 }
 async function loadBoard() {
   const seq = ++lbSeq, list = $('lbList'), meBox = $('lbMe');
-  $('lbTabDevice').setAttribute('aria-pressed', String(lbBoard === 'device'));
-  $('lbTabDist').setAttribute('aria-pressed', String(lbBoard === 'distance'));
-  $('lbTabCoins').setAttribute('aria-pressed', String(lbBoard === 'coins'));
+  for (const [b, id] of Object.entries(LB_TABS)) $(id).setAttribute('aria-pressed', String(lbBoard === b));
   list.textContent = ''; meBox.textContent = ''; $('lbRetry').hidden = true;
-  const device = lbBoard === 'device';
   updateNameUI();
-  if (device) { // this device's top 10 (saved in localStorage, works offline)
+  if (lbBoard === 'device') { // this device's top 10 (saved in localStorage, works offline)
     topScores.forEach((e, i) => list.append(lbRow(i + 1, e.name, e.m, overEntry && e.id === overEntry.id)));
     $('lbStatus').textContent = topScores.length ? 'Saved on this device only.' : 'No runs yet. Play one to get on the board!';
     return;
   }
+  if (!NET_CONF) { $('lbStatus').textContent = lbMessage(); return; }
   $('lbStatus').textContent = 'Loading…';
+  const board = lbBoard === 'coins' ? 'coins' : 'distance', period = lbBoard === 'week' ? isoWeek() : 'all';
   try {
     await LB.flush();
-    const flushState = LB.state; // reading can work while posting doesn't (e.g. sign-in off): keep that problem visible
-    const { top, me } = await LB.board(lbBoard);
-    if (flushState !== 'idle' && Object.keys(LB.queue).length) LB.state = flushState;
+    const flushState = LB.state;
+    const { top, me } = await LB.board(board, period);
+    if (flushState !== 'idle') LB.state = flushState;
     if (seq !== lbSeq) return;
-    const uid = LB.auth && LB.auth.uid;
-    top.forEach((r, i) => list.append(lbRow(i + 1, r.username, r.score, r.player_id === uid)));
-    if (me && !top.some(r => r.player_id === uid)) meBox.append(lbRow(me.rank, me.username, me.score, true));
-    const q = LB.queue[lbBoard];
-    $('lbStatus').textContent = q && LB.name ? `Posting your best (${q.score}${lbBoard === 'coins' ? ' coins' : ' m'})…` : !LB.name ? 'Set your player name in Settings to post your scores.' : top.length ? (me ? '' : 'Finish a run to get on the board.') : 'No scores yet. Be the first!';
-    if (LB.state !== 'idle') { $('lbStatus').textContent = lbMessage(); $('lbRetry').hidden = false; }
+    top.forEach((r, i) => list.append(lbRow(i + 1, r.username, r.score, r.me, r.claimed)));
+    if (me && !top.some(r => r.me)) meBox.append(lbRow(me.rank, me.username, me.score, true, me.claimed));
+    $('lbStatus').textContent = LB.queue.length ? 'Posting your latest runs…' : top.length ? (me ? '' : 'Finish a run to get on this board.') : lbBoard === 'week' ? 'No scores this week yet. Be the first!' : 'No scores yet. Be the first!';
+    if (LB.state !== 'idle') { $('lbStatus').textContent = lbMessage(); $('lbRetry').hidden = LB.state === 'nameTaken'; }
   } catch (e) {
     if (seq !== lbSeq) return;
     LB.noteError(e); $('lbStatus').textContent = lbMessage(); $('lbRetry').hidden = false;
@@ -3101,19 +3317,16 @@ function closeLeaderboard() { showScreen(lbReturn); if (lbReturn === 'over') ren
 async function renderOverRank() {
   if (S.mode !== 'over') return;
   const el = $('overRank');
-  if (BOT_PLAY) { el.textContent = ''; return; }
-  if (!LB.name) { el.textContent = ''; return; }
+  if (BOT_PLAY || !NET_CONF || !LB.name) { el.textContent = ''; return; }
   if (LB.flushing) await LB.flushing;
-  if (LB.state !== 'idle') { el.textContent = Object.keys(LB.queue).length ? (LB.state === 'offline' ? 'Offline: your best will post when you reconnect' : 'World board unavailable: your best is saved and will post later') : ''; return; }
+  if (LB.state !== 'idle') { el.textContent = LB.state === 'nameTaken' ? 'Your name was claimed by someone else: pick a new one in Settings' : LB.queue.length ? (LB.state === 'offline' ? 'Offline: your run will post when you reconnect' : 'World board unavailable: your run is saved and will post later') : ''; return; }
   try {
-    const { me } = await LB.board('distance');
-    if (S.mode === 'over' && me && me.rank) el.textContent = `You're #${me.rank} on the distance board`;
+    const all = await LB.rpc('glydaway_my_rank', { p_board: 'distance', p_period: 'all' }), wk = await LB.rpc('glydaway_my_rank', { p_board: 'distance', p_period: isoWeek() });
+    if (S.mode === 'over' && all && all.rank) el.textContent = `World #${all.rank}` + (wk && wk.rank ? ` · this week #${wk.rank}` : '');
   } catch (e) { LB.noteError(e); }
 }
-$('lbTabDevice').addEventListener('click', () => { lbBoard = 'device'; loadBoard(); });
-$('lbTabDist').addEventListener('click', () => { lbBoard = 'distance'; loadBoard(); });
-$('lbTabCoins').addEventListener('click', () => { lbBoard = 'coins'; loadBoard(); });
-$('lbRetry').addEventListener('click', () => { LB.state = 'idle'; loadBoard(); });
+for (const [b, id] of Object.entries(LB_TABS)) $(id).addEventListener('click', () => { lbBoard = b; loadBoard(); });
+$('lbRetry').addEventListener('click', () => { if (LB.state !== 'off') LB.state = 'idle'; loadBoard(); });
 $('lbClose').addEventListener('click', closeLeaderboard);
 
 
@@ -3385,6 +3598,8 @@ window.addEventListener('keydown', e => {
   }
   if (e.target && e.target.tagName === 'INPUT') { if (e.code === 'Escape' && screens.lb.classList.contains('show')) closeLeaderboard(); return; } // typing a name (Esc still closes)
   if (S.mode !== 'play' && screens.lb.classList.contains('show')) { if (e.code === 'Escape') closeLeaderboard(); return; }
+  if (screens.acct.classList.contains('show')) { if (e.code === 'Escape') { updateAcctUI(); showScreen('set'); } return; }
+  if (screens.name.classList.contains('show')) return; // the first-launch name prompt
   if (screens.set.classList.contains('show')) { if (e.code === 'Escape') closeSettings(); return; }
   if (screens.skin.classList.contains('show')) { if (e.code === 'Escape') closeLocker(); return; }
   if (e.code === 'KeyP' || e.code === 'Escape') {
@@ -3410,7 +3625,7 @@ window.addEventListener('keydown', firstTouch, { once: true, capture: true });
 
 function toggleMute() { muted = !muted; store.set('muted', muted); audio(); applyVolumes(); renderVolumes(); toast(muted ? 'MUTED' : 'SOUND ON', '#b9a8ff'); }
 let setReturn = 'start', chimeT = 0;
-function openSettings() { setReturn = S.mode === 'paused' ? 'pause' : 'start'; audio(); renderVolumes(); $('setNameForm').hidden = true; updateNameUI(); showScreen('set'); }
+function openSettings() { setReturn = S.mode === 'paused' ? 'pause' : 'start'; audio(); renderVolumes(); $('setNameForm').hidden = true; $('setAcctErr').textContent = ''; updateNameUI(); updateAcctUI(); showScreen('set'); }
 function closeSettings() { showScreen(setReturn); }
 // the splash screen lasts about 3 s; a tap skips it (and never starts a run by accident)
 $('splash').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); $('splash').classList.add('gone'); });
@@ -3499,24 +3714,24 @@ $('skinBtn').addEventListener('click', () => openLocker());
 $('skinClose').addEventListener('click', closeLocker);
 // ---- the player name: asked once, the first time the game opens; changed in Settings ----
 // (There are no accounts: the name and an anonymous sign-in are saved on this device only.)
-function saveName(n, errEl) {
+async function saveName(n, errEl) { // checks here, then on the server (claimed names, the weekly limit for saved accounts)
   n = String(n || '').trim();
   const err = n ? validateName(n) : 'Please type a name';
   if (err) { errEl.textContent = err; return false; }
-  errEl.textContent = '';
-  if (n !== LB.name) LB.rename(n).then(() => renderOverRank()); // renames this player's existing rows: never a second entry
-  updateNameUI(); return true;
+  errEl.textContent = n !== LB.name ? 'Saving…' : '';
+  if (n !== LB.name) { const c = await LB.rename(n); if (c) { errEl.textContent = ERR_TEXT[c] || 'Couldn’t save that name.'; return false; } } // renames this player's own rows: never a second entry
+  errEl.textContent = ''; updateNameUI(); renderOverRank(); return true;
 }
-function updateNameUI() { $('setNameV').textContent = LB.name || '—'; $('lbWho').textContent = LB.name ? `Playing as ${LB.name} · change it in Settings` : ''; }
+function updateNameUI() { $('setNameV').textContent = (LB.name || '—') + (LB.claimed ? ' ✓' : ''); $('lbWho').textContent = LB.name ? `Playing as ${LB.name}${LB.claimed ? ' (saved account)' : ''} · change it in Settings` : ''; }
 function askNameIfNeeded() {
   if (BOT_PLAY || (LB.name && !validateName(LB.name))) return false;
   $('nameIn').value = suggestName(); $('nameErr').textContent = ''; showScreen('name');
   return true;
 }
-$('nameForm').addEventListener('submit', e => { e.preventDefault(); if (saveName($('nameIn').value, $('nameErr'))) { $('nameIn').blur(); updateStartBest(); showScreen('start'); } });
+$('nameForm').addEventListener('submit', async e => { e.preventDefault(); if (await saveName($('nameIn').value, $('nameErr'))) { $('nameIn').blur(); updateStartBest(); showScreen('start'); } });
 $('nameSuggest').addEventListener('click', () => { $('nameIn').value = suggestName(); $('nameErr').textContent = ''; });
 $('setNameBtn').addEventListener('click', () => { $('setNameForm').hidden = false; $('setNameIn').value = LB.name; $('setNameErr').textContent = ''; $('setNameIn').focus(); });
-$('setNameForm').addEventListener('submit', e => { e.preventDefault(); if (saveName($('setNameIn').value, $('setNameErr'))) { $('setNameIn').blur(); $('setNameForm').hidden = true; } });
+$('setNameForm').addEventListener('submit', async e => { e.preventDefault(); if (await saveName($('setNameIn').value, $('setNameErr'))) { $('setNameIn').blur(); $('setNameForm').hidden = true; } });
 updateNameUI(); // (the first-open name prompt is shown at start-up, after the home screen is set up)
 $('setBtn1').addEventListener('click', openSettings);
 $('setBtn2').addEventListener('click', openSettings);
