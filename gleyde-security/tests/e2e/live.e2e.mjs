@@ -10,7 +10,7 @@ import { after, before, describe, test } from "node:test";
 
 const BASE = (process.env.BASE_URL || "http://localhost:8788").replace(/\/$/, "");
 const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)/.test(BASE);
-const PAGES = ["/", "/services", "/how-it-works", "/about", "/contact", "/security-check", "/does-not-exist", "/assets/css/site.css", "/assets/js/site.js", "/assets/js/security-check.js"];
+const PAGES = ["/", "/services", "/how-it-works", "/about", "/contact", "/security-check", "/privacy", "/does-not-exist", "/assets/css/site.css", "/assets/js/site.js", "/assets/js/security-check.js"];
 const REQUIRED = {
   "content-security-policy": /script-src 'self' https:\/\/challenges\.cloudflare\.com[;]/,
   "strict-transport-security": /max-age=\d{8,}/,
@@ -438,7 +438,7 @@ describe("Accessibility (axe-core, WCAG 2.2 AA)", () => {
   after(() => browser?.close());
 
   for (const [label, viewport] of [["phone", { width: 375, height: 667 }], ["desktop", { width: 1440, height: 900 }]]) {
-    for (const path of ["/", "/services", "/how-it-works", "/about", "/contact", "/security-check", "/does-not-exist"]) {
+    for (const path of ["/", "/services", "/how-it-works", "/about", "/contact", "/security-check", "/privacy", "/does-not-exist"]) {
       test(`${label} ${path}: no WCAG violations`, async () => {
         // bypassCSP only so the test can inject axe; the site's own CSP is tested above.
         const ctx = await browser.newContext({ viewport, bypassCSP: true });

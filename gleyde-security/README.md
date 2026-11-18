@@ -10,6 +10,7 @@ public/                 The website (deployed as-is)
   about.html            Story & team            ← story/bios live here
   contact.html          Contact form
   security-check.html   Free Website Security Check tool
+  privacy.html          Privacy policy           ← legal review needed (TODO-EDIT)
   404.html
   _headers              Security headers for all pages
   .well-known/security.txt
@@ -37,9 +38,10 @@ Search the project for **`TODO-EDIT`** to find every placeholder:
 | Starting prices | `public/services.html` (4 places) and `docs/services-pricing-summary.html` |
 | Company story, team bios | `public/about.html` |
 | Fallback email in the no-JavaScript notice | `public/contact.html` |
+| Privacy policy: legal address, effective date, retention, jurisdiction wording, privacy email | `public/privacy.html` |
 | Domain | `public/robots.txt`, `public/sitemap.xml`, `public/.well-known/security.txt` |
 
-Header and footer are repeated in each page. If you change the menu, change it in all six HTML files.
+Header and footer are repeated in each page. If you change the menu or footer, change it in every HTML file in `public/`.
 
 ## Run locally
 
