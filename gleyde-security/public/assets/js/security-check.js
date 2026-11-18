@@ -12,6 +12,19 @@
     skip: { label: "Not checked", cls: "info" },
   };
   const IMPACT = { critical: "Critical", high: "High impact", medium: "Medium impact", low: "Low impact" };
+  /* Plain-English verdict per grade. Colour is never the only signal: each has a text label. */
+  const VERDICT = {
+    A: { label: "Strong", cls: "pass", text: "Strong protection. Only small improvements left." },
+    B: { label: "Good", cls: "pass", text: "Good overall, with a few gaps worth closing." },
+    C: { label: "Fair", cls: "warn", text: "Fair. A few fixes would make a real difference." },
+    D: { label: "Weak", cls: "warn", text: "Weak. Important protections are missing." },
+    F: { label: "At risk", cls: "fail", text: "At risk. Start with the fixes below as soon as you can." },
+  };
+  /* Anchor id for a check, from its id (letters, digits and dashes only). */
+  const checkAnchor = (id) => {
+    const safe = String(id || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 40);
+    return safe ? `check-${safe}` : null;
+  };
 
   /* el("div", { class: "x" }, "text", child) — text children become text nodes. */
   function el(tag, attrs = {}, ...children) {
@@ -86,7 +99,7 @@
           c.effort ? el("span", { class: "tag" }, `⏱ ${c.effort}`) : null,
           c.who ? el("span", { class: "tag" }, String(c.who)) : null)
       : null;
-    return el("li", { class: `check ${st.cls}` },
+    return el("li", { class: `check ${st.cls}`, id: checkAnchor(c.id) },
       el("span", { class: `badge ${st.cls}` }, st.label),
       el("div", {},
         el("h4", {}, String(c.title || "")),
@@ -202,22 +215,26 @@
     container.replaceChildren();
     const score = Number(report.score) || 0;
     const grade = String(report.grade || "F").slice(0, 1);
-    const gradeCls = { A: "pass", B: "pass", C: "warn", D: "warn" }[grade] || "fail";
+    const verdict = VERDICT[grade] || VERDICT.F;
     const prev = recordScan(report);
 
-    const ring = el("div", { class: `grade-ring ${gradeCls}`, role: "img", "aria-label": `Grade ${grade}, score ${score} out of 100` },
-      el("span", { class: "grade-letter" }, grade),
-      el("span", { class: "grade-score" }, `${score}/100`));
-    ring.style.setProperty("--pct", String(score)); // CSSOM, allowed under style-src 'self'
+    const ring = el("div", { class: `grade-ring ${verdict.cls}`, role: "img",
+      "aria-label": `Grade ${grade}, score ${score} out of 100: ${verdict.label}` },
+      el("span", { class: "grade-letter", "aria-hidden": "true" }, grade),
+      el("span", { class: "grade-score", "aria-hidden": "true" }, `${score}/100`));
+    ring.style.setProperty("--pct", String(Math.max(0, Math.min(100, score)))); // CSSOM, allowed under style-src 'self'
 
     const s = report.summary || {};
     const delta = prev ? score - Number(prev.score) : 0;
     container.append(el("div", { class: "report-head" },
-      ring,
+      el("div", { class: "grade-block" },
+        ring,
+        el("p", { class: `verdict-label ${verdict.cls}` }, verdict.label)),
       el("div", {},
         el("p", { class: "eyebrow" }, "Your results"),
         el("h2", {}, String(report.domain || "")),
-        el("p", { class: "lede" }, String(report.headline || "")),
+        el("p", { class: "verdict" }, verdict.text),
+        report.headline ? el("p", { class: "lede" }, String(report.headline)) : null,
         prev ? el("p", { class: `progress ${delta > 0 ? "up" : delta < 0 ? "down" : ""}` },
           delta > 0 ? `▲ Up ${delta} points` : delta < 0 ? `▼ Down ${-delta} points` : "No change",
           ` since your last check (${prev.grade}, ${Number(prev.score)}/100 on ${new Date(prev.at).toLocaleDateString()})`) : null,
@@ -232,6 +249,29 @@
         el("p", { class: "small" },
           `Checked ${new Date(report.scannedAt).toLocaleString()}${meta.cached ? " (recent result)" : ""}`,
           report.checkedUrl ? ` · ${report.checkedUrl}` : ""))));
+
+    /* Top 3 fixes first, each with its one-line fix and a link to the step-by-step detail. */
+    const checksById = new Map();
+    for (const section of report.sections || []) for (const c of section.checks || []) checksById.set(String(c.id), c);
+    const top = (report.priorities || []).slice(0, 3);
+    if (top.length) {
+      container.append(el("section", { class: "top-fixes", "aria-labelledby": "top-fixes-title" },
+        el("h3", { id: "top-fixes-title" }, top.length === 1 ? "Fix this first" : `Fix these ${top.length} things first`),
+        el("p", {}, "Ranked by risk. Full results and copy-paste instructions are further down."),
+        el("ol", {}, top.map((p) => {
+          const c = checksById.get(String(p.id));
+          const anchor = c ? checkAnchor(c.id) : null;
+          return el("li", {},
+            el("h4", {}, String(p.title)),
+            el("p", { class: "tags" },
+              el("span", { class: `tag impact-${p.impact}` }, IMPACT[p.impact] || p.impact),
+              p.effort ? el("span", { class: "tag" }, `⏱ ${p.effort}`) : null,
+              p.who ? el("span", { class: "tag" }, String(p.who)) : null),
+            el("p", {}, String(p.why)),
+            c?.fix ? el("p", { class: "fix" }, el("strong", {}, "How to fix: "), String(c.fix)) : null,
+            anchor ? el("a", { class: "more", href: `#${anchor}` }, "Step-by-step instructions ", el("span", { "aria-hidden": "true" }, "↓")) : null);
+        }))));
+    }
 
     const toolbar = el("div", { class: "report-toolbar no-print" });
     const printBtn = el("button", { class: "btn btn-ghost", type: "button" }, "Save as PDF");
@@ -252,23 +292,12 @@
     if (meta.emailed && EMAILED[meta.emailed]) toolbar.append(el("p", { class: `small email-note ${meta.emailed}` }, EMAILED[meta.emailed]));
     container.append(toolbar);
 
-    if (report.priorities?.length) {
-      container.append(el("section", { class: "top-fixes" },
-        el("h3", {}, "Your top fixes"),
-        el("ol", {}, report.priorities.map((p) => el("li", {},
-          el("h4", {}, String(p.title)),
-          el("p", { class: "tags" },
-            el("span", { class: `tag impact-${p.impact}` }, IMPACT[p.impact] || p.impact),
-            p.effort ? el("span", { class: "tag" }, `⏱ ${p.effort}`) : null,
-            p.who ? el("span", { class: "tag" }, String(p.who)) : null),
-          el("p", {}, String(p.why)))))));
-    }
-
     if (report.industry?.note) {
       container.append(el("p", { class: "note industry-note" }, el("strong", {}, `For ${report.industry.label} businesses: `), String(report.industry.note)));
     }
 
     container.append(ctaBlock(report));
+    container.append(el("h3", { class: "report-detail-title" }, "Full results"));
     for (const section of report.sections || []) container.append(sectionBlock(section));
     if (meta.verifyAvailable) container.append(verifyPanel(report, container));
     container.append(el("p", { class: "note" }, el("strong", {}, "About this check. "), String(report.disclaimer || "")));

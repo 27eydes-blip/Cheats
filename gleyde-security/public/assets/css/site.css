@@ -1578,8 +1578,10 @@ em.gold,
   border: 1px solid var(--line-strong);
   display: grid;
   place-items: center;
-  font-family: var(--serif);
-  font-size: 1.25rem;
+  font-family: var(--sans);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  font-variant-numeric: lining-nums;
   color: var(--gold);
 }
 .top-fixes li:first-child::before {
@@ -1611,8 +1613,10 @@ em.gold,
   text-decoration: none;
 }
 .report-detail-title {
-  font-size: clamp(1.6rem, 4vw, 2rem);
+  font-size: clamp(1.9rem, 5vw, 2.4rem);
   margin: var(--space-4) 0 calc(var(--space-2) * -1);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line-strong);
 }
 
 .report-section h3 {
