@@ -105,15 +105,33 @@
 
   /* ---------- Contact form ---------- */
   const LIMITS = { name: 100, email: 254, website: 200, message: 4000 };
+  const FIELDS = ["name", "email", "website", "message", "consent"];
+  /* Same wording as the server (functions/api/contact.js). */
+  const MSG = {
+    nameShort: "Please enter your name (at least 2 characters).",
+    nameLong: `Please shorten your name to ${LIMITS.name} characters or fewer.`,
+    email: "Please enter a valid email address, like name@yourbusiness.com.",
+    emailMissing: "Please enter your email so we can reply.",
+    website: "Please enter a valid website address, like yourbusiness.com, or leave it blank.",
+    messageShort: "Please tell us a little more (at least 10 characters).",
+    messageLong: `Please keep your message under ${LIMITS.message} characters.`,
+    consent: "Please tick this box so we can reply to you.",
+  };
+  /* Used only when the server gives no message of its own. */
+  const STATUS_FALLBACK = {
+    403: "We couldn't confirm you're not a bot. Please complete the verification above the button again, then press Send.",
+    429: "You've sent several messages in the past hour. Please wait an hour and try again.",
+    500: "Something went wrong on our side. Please try again in a few minutes.",
+  };
+  const SENT = ["Message sent.", "Thank you. We'll reply within one business day, usually by email."];
 
   function validate(data) {
     const errors = {};
-    if (!data.name || data.name.length < 2) errors.name = "Please enter your name.";
-    else if (data.name.length > LIMITS.name) errors.name = "Name is too long.";
+    if (!data.name || data.name.length < 2) errors.name = MSG.nameShort;
+    else if (data.name.length > LIMITS.name) errors.name = MSG.nameLong;
 
-    if (!data.email) errors.email = "Please enter your email.";
-    else if (data.email.length > LIMITS.email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.email))
-      errors.email = "Please enter a valid email address.";
+    if (!data.email) errors.email = MSG.emailMissing;
+    else if (data.email.length > LIMITS.email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.email)) errors.email = MSG.email;
 
     if (data.website) {
       let ok = false;
@@ -123,24 +141,50 @@
       } catch {
         ok = false;
       }
-      if (!ok || data.website.length > LIMITS.website) errors.website = "Please enter a valid website address.";
+      if (!ok || data.website.length > LIMITS.website) errors.website = MSG.website;
     }
 
-    if (!data.message || data.message.length < 10) errors.message = "Please tell us a little more (10+ characters).";
-    else if (data.message.length > LIMITS.message) errors.message = `Please keep it under ${LIMITS.message} characters.`;
+    if (!data.message || data.message.length < 10) errors.message = MSG.messageShort;
+    else if (data.message.length > LIMITS.message) errors.message = MSG.messageLong;
 
-    if (!data.consent) errors.consent = "Please confirm so we can reply to you.";
+    if (!data.consent) errors.consent = MSG.consent;
     return errors;
   }
 
-  function showErrors(form, errors) {
-    for (const name of ["name", "email", "website", "message", "consent"]) {
+  function showErrors(form, errors, only) {
+    for (const name of only || FIELDS) {
       const input = form.elements[name];
       const slot = form.querySelector(`[data-error-for="${name}"]`);
-      const msg = errors[name] || "";
+      const msg = errors[name] ? String(errors[name]) : "";
       if (input) input.setAttribute("aria-invalid", msg ? "true" : "false");
-      if (slot) slot.textContent = msg;
+      if (slot && slot.textContent !== msg) slot.textContent = msg;
     }
+  }
+
+  /* Status box: text only (never HTML). A title line is optional. */
+  function setStatus(status, kind, text, title) {
+    status.className = kind ? `form-status ${kind}` : "form-status";
+    status.replaceChildren();
+    if (title) {
+      const strong = document.createElement("strong");
+      strong.className = "status-title";
+      strong.textContent = title;
+      status.append(strong, document.createTextNode(" "));
+    }
+    if (text) status.append(document.createTextNode(text));
+  }
+
+  function readForm(form) {
+    return {
+      name: form.elements.name.value.trim(),
+      email: form.elements.email.value.trim(),
+      website: form.elements.website.value.trim(),
+      message: form.elements.message.value.trim(),
+      consent: form.elements.consent.checked,
+      company_fax: form.elements.company_fax.value,
+      started_at: form.elements.started_at.value,
+      "cf-turnstile-response": form.elements["cf-turnstile-response"]?.value || "",
+    };
   }
 
   async function initContactForm() {
@@ -149,13 +193,16 @@
 
     const status = document.getElementById("form-status");
     const button = form.querySelector('button[type="submit"]');
+    const label = button.querySelector(".label");
+    const idleLabel = label.textContent;
     form.elements.started_at.value = String(Date.now());
+    let attempted = false;
 
-    /* Non-JS fallback redirects back with ?status= */
+    /* Non-JS fallback redirects back with ?status= (only these fixed values are used). */
     const params = new URLSearchParams(window.location.search);
-    if (params.get("status") === "sent") {
-      status.className = "form-status ok";
-      status.textContent = "Thank you. Your message was received and we will reply within one business day.";
+    if (params.get("status") === "sent") setStatus(status, "ok", SENT[1], SENT[0]);
+    else if (params.get("status") === "error") {
+      setStatus(status, "err", "Please check the form and try again. If it keeps happening, try again in a few minutes.", "Your message wasn't sent.");
     }
 
     /* Arriving from a security check report: prefill the website and a short note. */
@@ -169,41 +216,48 @@
       }
     }
 
+    /* After a first attempt, update each field's message as it is corrected. */
+    const recheck = (e) => {
+      const name = e.target.name;
+      if (!attempted || !FIELDS.includes(name)) return;
+      if (e.type === "input" && e.target.getAttribute("aria-invalid") !== "true") return; // don't nag while typing
+      showErrors(form, validate(readForm(form)), [name]);
+    };
+    form.addEventListener("input", recheck);
+    form.addEventListener("change", recheck);
+    form.addEventListener("focusout", recheck);
+
+    const setBusy = (busy) => {
+      button.disabled = busy;
+      button.classList.toggle("is-busy", busy);
+      form.setAttribute("aria-busy", String(busy));
+      label.textContent = busy ? "Sending…" : idleLabel;
+    };
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      status.className = "form-status";
-      status.textContent = "";
+      if (button.disabled) return;
+      attempted = true;
+      setStatus(status, "", "");
 
-      const data = {
-        name: form.elements.name.value.trim(),
-        email: form.elements.email.value.trim(),
-        website: form.elements.website.value.trim(),
-        message: form.elements.message.value.trim(),
-        consent: form.elements.consent.checked,
-        company_fax: form.elements.company_fax.value,
-        started_at: form.elements.started_at.value,
-        "cf-turnstile-response": form.elements["cf-turnstile-response"]?.value || "",
-      };
-
+      const data = readForm(form);
       const errors = validate(data);
       showErrors(form, errors);
-      if (Object.keys(errors).length) {
+      const count = Object.keys(errors).length;
+      if (count) {
+        setStatus(status, "err", count === 1 ? "Please fix the highlighted field." : `Please fix the ${count} highlighted fields.`);
         form.querySelector('[aria-invalid="true"]')?.focus();
         return;
       }
       if (!data["cf-turnstile-response"]) {
-        status.className = "form-status err";
-        status.textContent = siteKey
-          ? "Please complete the quick verification above the button."
-          : "Our contact form is being set up and can't send messages yet. Please try again soon.";
+        setStatus(status, "err", siteKey
+          ? "Please complete the quick verification above the Send button, then press Send again."
+          : "Our contact form is being set up and can't send messages yet. Please try again soon.");
+        status.focus();
         return;
       }
 
-      button.disabled = true;
-      const label = button.querySelector(".label");
-      const original = label.textContent;
-      label.textContent = "Sending…";
-
+      setBusy(true);
       try {
         const res = await fetch("/api/contact", {
           method: "POST",
@@ -213,23 +267,22 @@
         const body = await res.json().catch(() => ({}));
         if (res.ok && body.ok) {
           form.reset();
+          showErrors(form, {});
+          attempted = false;
           form.elements.started_at.value = String(Date.now());
-          status.className = "form-status ok";
-          status.textContent =
-            "Thank you. Your message was received and we will reply within one business day.";
+          setStatus(status, "ok", SENT[1], SENT[0]);
         } else {
-          if (body.fields) showErrors(form, body.fields);
-          status.className = "form-status err";
-          status.textContent = body.error || "Something went wrong. Please try again in a moment.";
+          if (body.fields && typeof body.fields === "object") showErrors(form, body.fields);
+          const fallback = STATUS_FALLBACK[res.status] || (res.status >= 500 ? STATUS_FALLBACK[500] : "Something went wrong. Please try again in a moment.");
+          setStatus(status, "err", typeof body.error === "string" && body.error ? body.error : fallback);
         }
       } catch {
-        status.className = "form-status err";
-        status.textContent = "We could not reach the server. Please check your connection and try again.";
+        setStatus(status, "err", "We couldn't reach our server. Please check your internet connection and try again.");
       } finally {
-        button.disabled = false;
-        label.textContent = original;
+        setBusy(false);
         if (widgetId !== null && window.turnstile) window.turnstile.reset(widgetId);
-        status.focus();
+        // Field errors from the server: go to the first one. Otherwise: go to the message.
+        (form.querySelector('[aria-invalid="true"]') || status).focus();
       }
     });
   }

@@ -467,8 +467,30 @@ em.gold,
 }
 .btn[disabled] {
   opacity: 0.6;
-  cursor: wait;
+  cursor: not-allowed;
   transform: none;
+}
+/* Busy (sending / checking): stays readable, spinner replaces the arrow */
+.btn.is-busy {
+  opacity: 0.85;
+  cursor: progress;
+}
+.btn.is-busy .arrow {
+  display: none;
+}
+.btn.is-busy::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ---------- Hero ---------- */
@@ -1141,6 +1163,13 @@ em.gold,
   cursor: pointer;
   transition: background 0.2s;
 }
+.consent + .field-error {
+  margin-top: calc(var(--stack) * -1 + 4px);
+}
+.consent input[aria-invalid="true"] {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
 .consent:hover {
   background: rgba(255, 255, 255, 0.03);
 }
@@ -1159,6 +1188,11 @@ em.gold,
 }
 .form-status:empty {
   display: none;
+}
+.form-status .status-title {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 2px;
 }
 .form-status.ok {
   background: rgba(184, 207, 154, 0.08);

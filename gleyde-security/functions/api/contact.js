@@ -52,14 +52,14 @@ export function validate(raw) {
   };
   const fields = {};
 
-  if (data.name.length < 2) fields.name = "Please enter your name.";
-  else if (data.name.length > LIMITS.name) fields.name = "Name is too long.";
+  if (data.name.length < 2) fields.name = "Please enter your name (at least 2 characters).";
+  else if (data.name.length > LIMITS.name) fields.name = `Please shorten your name to ${LIMITS.name} characters or fewer.`;
 
   if (
     data.email.length > LIMITS.email ||
     !/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(data.email)
   ) {
-    fields.email = "Please enter a valid email address.";
+    fields.email = "Please enter a valid email address, like name@yourbusiness.com.";
   }
 
   if (data.website) {
@@ -76,13 +76,13 @@ export function validate(raw) {
     }
     // The URL is only ever printed as text in an email; the server never fetches it (no SSRF).
     if (normalized) data.website = normalized;
-    else fields.website = "Please enter a valid website address.";
+    else fields.website = "Please enter a valid website address, like yourbusiness.com, or leave it blank.";
   }
 
-  if (data.message.length < 10) fields.message = "Please tell us a little more (10+ characters).";
-  else if (data.message.length > LIMITS.message) fields.message = `Please keep it under ${LIMITS.message} characters.`;
+  if (data.message.length < 10) fields.message = "Please tell us a little more (at least 10 characters).";
+  else if (data.message.length > LIMITS.message) fields.message = `Please keep your message under ${LIMITS.message} characters.`;
 
-  if (!data.consent) fields.consent = "Please confirm so we can reply to you.";
+  if (!data.consent) fields.consent = "Please tick this box so we can reply to you.";
 
   return { data, fields };
 }
@@ -138,7 +138,7 @@ async function handle(request, env) {
   const ip = request.headers.get("CF-Connecting-IP") || "";
   if (await rateLimited(env, { name: "contact", subject: rateLimitSubject(ip), ...RATE_LIMIT })) {
     return json(
-      { ok: false, error: "You have sent several messages recently. Please try again in an hour." },
+      { ok: false, error: "You've sent several messages in the past hour. Please wait an hour and try again." },
       429,
       { "Retry-After": String(RATE_LIMIT.windowSec) },
     );
@@ -155,16 +155,16 @@ async function handle(request, env) {
 
   const { data, fields } = validate(body);
   if (Object.keys(fields).length) {
-    return respond(request, 422, { ok: false, error: "Please fix the highlighted fields.", fields });
+    return respond(request, 422, { ok: false, error: "Please fix the highlighted fields and try again.", fields });
   }
 
   if (!(await verifyTurnstile(env, request, body["cf-turnstile-response"], ip, "contact"))) {
-    return respond(request, 403, { ok: false, error: "Verification failed. Please try the check again." });
+    return respond(request, 403, { ok: false, error: "We couldn't confirm you're not a bot. Please complete the verification above the button again, then press Send." });
   }
 
   const sent = await sendEmail(env, data, { time: new Date().toISOString(), country: request.cf?.country });
   if (!sent) {
-    return respond(request, 502, { ok: false, error: "We could not send your message right now. Please try again shortly." });
+    return respond(request, 502, { ok: false, error: "We couldn't send your message just now. Please try again in a few minutes." });
   }
   return respond(request, 200, { ok: true });
 }
@@ -174,7 +174,7 @@ export async function onRequestPost({ request, env }) {
     return await handle(request, env);
   } catch (err) {
     console.error("Unhandled contact error", err);
-    return json({ ok: false, error: "Something went wrong. Please try again later." }, 500);
+    return json({ ok: false, error: "Something went wrong on our side. Please try again in a few minutes." }, 500);
   }
 }
 

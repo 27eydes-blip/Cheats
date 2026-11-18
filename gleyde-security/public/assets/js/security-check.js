@@ -359,6 +359,8 @@
       }
 
       button.disabled = true;
+      button.classList.add("is-busy");
+      form.setAttribute("aria-busy", "true");
       const original = label.textContent;
       label.textContent = "Checking… (about 15 seconds)";
       results.hidden = true;
@@ -384,6 +386,8 @@
         status.textContent = "We could not reach the server. Please check your connection and try again.";
       } finally {
         button.disabled = false;
+        button.classList.remove("is-busy");
+        form.setAttribute("aria-busy", "false");
         label.textContent = original;
         window.gleydeTurnstile?.reset();
       }
