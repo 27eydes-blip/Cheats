@@ -64,6 +64,11 @@ runs:
           sudo pkill -f "apt-get|/usr/bin/dpkg" 2>/dev/null || true
           sleep 5
           sudo dpkg --configure -a || true
+          # the runner's own Ubuntu mirror is the usual culprit: retry from the main archive
+          # (playwright's install runs apt-get update itself)
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            printf 'http://archive.ubuntu.com/ubuntu/\n' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+          fi
           sleep 5
         done
         [ -n "$ok" ] || { echo "::error::could not install $ENGINE"; exit 1; }
