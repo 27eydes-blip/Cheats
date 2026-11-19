@@ -38,6 +38,10 @@ import {
 
 const TAP_GUARD = 500; // ms before "tap anywhere" retries
 const ANIM_END = 950; // ms — every intro animation finishes before this
+// every outline on this screen: the same light blue, with a strong glow
+const EDGE = 0x3ef4ff;
+const EDGE_GLOW = 2.2;
+const edge = { outline: EDGE, glow: EDGE_GLOW };
 
 export class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -136,7 +140,7 @@ export class GameOverScene extends Phaser.Scene {
       bestLine = this.add.container(W / 2, bestY);
       const g = this.add.graphics();
       g.fillStyle(0x0c2a1a, 0.95).fillRoundedRect(-190, -22, 380, 44, 22);
-      g.lineStyle(2, 0x39ff88, 1).strokeRoundedRect(-190, -22, 380, 44, 22);
+      drawNeonRect(g, -190, -22, 380, 44, 22, EDGE, { fill: 0x0c2a1a, fillAlpha: 0, width: 2, glow: EDGE_GLOW });
       g.fillStyle(0x39ff88, 1).fillPoints(
         [
           { x: -160, y: -12 },
@@ -207,7 +211,7 @@ export class GameOverScene extends Phaser.Scene {
     const rewardsH = 238;
     const rewards = this.add.container(0, 0);
     const rg = this.add.graphics();
-    drawNeonRect(rg, cardX, y, cardW, rewardsH, 24, 0x3ef4ff, { fillAlpha: 0.55, width: 2 });
+    drawNeonRect(rg, cardX, y, cardW, rewardsH, 24, EDGE, { fillAlpha: 0.55, width: 2, glow: EDGE_GLOW });
     rewards.add([rg, plainText(this, cardX + 30, y + 30, "REWARDS", 17, "#8f86c0", { ox: 0 })]);
     if (run.lucky) rewards.add(plainText(this, cardX + cardW - 30, y + 30, "LUCKY RUN · x2 COINS", 17, "#ffd23f", { ox: 1 }));
     const tileW = (cardW - 60 - 2 * 16) / 3;
@@ -222,8 +226,7 @@ export class GameOverScene extends Phaser.Scene {
     tiles.forEach((t, i) => {
       const cx = cardX + 30 + tileW / 2 + i * (tileW + 16);
       const tg = this.add.graphics();
-      tg.fillStyle(0x0b0620, 0.9).fillRoundedRect(cx - tileW / 2, tileY - 46, tileW, 92, 16);
-      tg.lineStyle(2, t.color, 0.55).strokeRoundedRect(cx - tileW / 2, tileY - 46, tileW, 92, 16);
+      drawNeonRect(tg, cx - tileW / 2, tileY - 46, tileW, 92, 16, EDGE, { fill: 0x0b0620, fillAlpha: 0.9, width: 2, glow: EDGE_GLOW });
       const big = neonText(this, cx + (t.icon ? 14 : 0), tileY - 10, t.text ?? t.fmt(0), 36, t.color, { blur: 10 });
       const parts = [tg, big, plainText(this, cx, tileY + 28, t.label, 14, "#cfc6ff")];
       if (t.icon) parts.push(this.add.image(cx - 14 - big.width / 2 - 8, tileY - 10, "coin").setScale(0.62 / HI));
@@ -271,7 +274,7 @@ export class GameOverScene extends Phaser.Scene {
       const next = this.add.container(0, 0);
       const ng = this.add.graphics();
       const c = goal ? goal.color : 0xff4fd8;
-      drawNeonRect(ng, cardX, y, cardW, nextH, 24, 0xb45cff, { fillAlpha: 0.55, width: 2 });
+      drawNeonRect(ng, cardX, y, cardW, nextH, 24, EDGE, { fillAlpha: 0.55, width: 2, glow: EDGE_GLOW });
       next.add([ng, plainText(this, cardX + 30, y + 28, goal ? "NEXT UP" : "LUCKY SPIN", 17, "#8f86c0", { ox: 0 })]);
       const textW = cardW - 60 - (showSpin ? 170 : 0);
       if (goal) {
@@ -288,6 +291,7 @@ export class GameOverScene extends Phaser.Scene {
       if (showSpin) {
         const spinBtn = button(this, cardX + cardW - 105, y + nextH / 2, 160, 70, `SPIN ×${spins}`, {
           color: 0xff4fd8,
+          ...edge,
           size: 22,
           fill: 0x3a0a33,
           onClick: () => this.goto("Spin"),
@@ -344,12 +348,13 @@ export class GameOverScene extends Phaser.Scene {
     const retry = button(this, W / 2, by, 600, 156, "RETRY", {
       color: 0x39ff88,
       size: 68,
+      ...edge,
       fill: 0x138a42, // a lit green fill (the other buttons are dark): the eye lands here first
       onClick: () => this.retry(),
     });
     this.retryBtn = retry;
     const rowY = by + 78 + 22 + 32;
-    const small = { size: 17 };
+    const small = { size: 17, ...edge };
     const share = button(this, 94, rowY, 140, 64, "SHARE", {
       ...small,
       color: 0xffd23f,
