@@ -155,6 +155,23 @@ Every request is a plain `GET` that identifies itself as `GleydeSecurityCheck/1.
 
 **Not built yet:** automatic weekly re-checks. They need a scheduled Worker plus storage, so the "Ongoing Monitoring" service covers that for now.
 
+## AI chat assistant
+
+A chat bubble on every page (`public/assets/js/chat.js`) talks only to this site's own `/api/chat`.
+
+- **Server:** `functions/api/chat/` (chat, contact, delete). Reply logic is in `lib/chat/reply.js`; logging is separate in `lib/chat/log.js` and can never break a reply.
+- **Safety:** rate limits of 20 messages per IP per 10 minutes (the IP is only hashed), 40 per chat and a daily site-wide cap (`CHAT_DAILY_CAP`, default 500). Messages are capped at 500 characters and replies at 1,200. Secrets are redacted before they are saved or sent to the model (`lib/chat/redact.js`). Replies are shown as plain text only.
+- **Storage:** D1 database `gleyde-chat` (binding `CHAT_DB`, schema `migrations/0001_chat.sql`). No IP addresses are stored.
+- **Emails and retention:** the separate Worker `workers/chat-mailer` runs two schedules. Every 15 minutes it emails each chat that has been idle for 15+ minutes, through Resend. Once a day it deletes chats older than 30 days, unless the visitor asked for follow-up.
+
+Setup:
+
+1. Pages secret: `npx wrangler pages secret put ANTHROPIC_API_KEY --project-name=gleyde-security`
+2. Database (already created; schema already applied): to re-apply, run `npx wrangler d1 migrations apply gleyde-chat --remote`
+3. Mailer Worker, from `workers/chat-mailer/`:
+   `npx wrangler secret put RESEND_API_KEY`, then `npx wrangler secret put OWNER_EMAIL`, then `npx wrangler deploy`
+   Set `MAIL_FROM` in its `wrangler.toml` to an address on a domain verified in Resend.
+
 ## Cloudflare setup notes
 
 1. **Create the Pages project**

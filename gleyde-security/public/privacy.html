@@ -15,6 +15,7 @@
   <link rel="preload" href="/assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/assets/css/site.css">
   <script src="/assets/js/site.js"></script>
+  <script src="/assets/js/chat.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -54,6 +55,7 @@
         <ul>
           <li><strong>Contact form:</strong> your name, email, optional website address and message. We use them only to reply to you.</li>
           <li><strong>Website Security Check:</strong> the domain you enter, and optionally your industry and email address. If you add your email, we send you the report and may follow up once.</li>
+          <li><strong>AI chat assistant:</strong> the messages you and the assistant exchange, when they were sent, and which page you started on. Your name and email only if you choose to share them. See <a href="#chat">AI chat</a> below.</li>
           <li><strong>Abuse protection:</strong> to limit how often the forms can be used, we count requests per visitor. Your IP address is scrambled (hashed) before counting and is never stored as-is. Counters expire within about a day.</li>
         </ul>
         <h2>What we don&rsquo;t do</h2>
@@ -61,15 +63,28 @@
           <li>No advertising or analytics trackers, and no selling or sharing of your information.</li>
           <li>The Security Check only reads public information about the domain you enter. It never logs in or changes anything.</li>
         </ul>
+        <h2 id="chat">AI chat assistant</h2>
+        <p>The chat bubble on this site connects you to an AI assistant, not a person. Before you start, the chat tells you that conversations are saved, and you choose &ldquo;Start chat&rdquo; to continue.</p>
+        <ul>
+          <li><strong>What is saved:</strong> a random chat ID, the time of each message, who sent it (you or the assistant), the message text, the page you started on, and whether you shared contact details. Your name and email are saved only if you tap &ldquo;Share my contact info&rdquo; and tick the consent box.</li>
+          <li><strong>What is not saved:</strong> your IP address. To stop abuse we count messages per visitor using a scrambled (salted hash) version of it, and those counters expire within about a day.</li>
+          <li><strong>Secrets are removed first:</strong> anything that looks like a password, API key, token or card number is replaced with [redacted] before the message is saved or sent to the AI. Please still don&rsquo;t share them.</li>
+          <li><strong>Why:</strong> so the Gleyde team can follow up when you ask us to, and to improve the assistant&rsquo;s answers.</li>
+          <li><strong>Who can see it:</strong> only the Gleyde team. Chats are stored in a private Cloudflare database that is not publicly readable, and a copy of each finished chat is emailed to the team. Your messages are processed by Anthropic, the company that provides the AI model, to generate replies.</li>
+          <li><strong>How long:</strong> chats are deleted automatically after 30 days, unless you shared your contact details and asked us to follow up. Those are kept until we have finished helping you.</li>
+          <li><strong>Delete it yourself:</strong> tap &ldquo;Delete my chat&rdquo; under the chat box at any time to delete that conversation from our database. For anything already emailed to the team, ask us on the contact page and we&rsquo;ll delete it.</li>
+        </ul>
         <h2>Services we use</h2>
         <ul>
           <li><strong>Cloudflare</strong> hosts the site and provides Turnstile, which checks that you&rsquo;re a person.</li>
           <li><strong>Resend</strong> delivers our emails.</li>
+          <li><strong>Anthropic</strong> provides the AI model behind the chat assistant.</li>
           <li>The Security Check looks up public records (DNS, domain registration, certificate logs and public vulnerability databases) for the domain you enter.</li>
         </ul>
         <h2>How long we keep it</h2>
         <ul>
           <li>Security Check results are cached for up to 15 minutes, then deleted.</li>
+          <li>AI chats are deleted after 30 days unless you asked us to follow up.</li>
           <li>Messages and report requests stay in our email until we no longer need them.</li>
         </ul>
         <h2>Your choices</h2>
