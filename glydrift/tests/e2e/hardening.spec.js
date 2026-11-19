@@ -459,6 +459,7 @@ test("monkey: random rapid taps, double taps and spam on every screen", async ({
         await page.evaluate(() => {
           for (const id of ["account-modal", "name-modal", "install-modal", "share-modal"])
             document.getElementById(id)?.classList.remove("open");
+          document.getElementById("gleyde-card-wrap")?.click(); // the About card: tap outside it
         });
     }
     await run(page, 1500);

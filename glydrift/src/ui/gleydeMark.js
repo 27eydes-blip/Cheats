@@ -46,8 +46,13 @@ const CSS = `
 #gleyde-mark {
   position: fixed; z-index: 6; margin: 0; padding: 2px 6px; border: 0; background: none;
   line-height: 0; cursor: pointer; opacity: 0.35; transition: opacity 200ms ease;
-  min-width: 44px; min-height: 44px; /* Apple's smallest comfortable tap target */
   transform: translate(-50%, -50%); -webkit-tap-highlight-color: transparent;
+}
+/* an invisible 44 pt tap area (Apple's smallest comfortable target) around the small logo; the
+   logo's own box stays small, so it never pokes past the bottom of the screen */
+#gleyde-mark::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px;
+  transform: translate(-50%, -50%);
 }
 #gleyde-mark:hover, #gleyde-mark:focus-visible { opacity: 1; }
 #gleyde-mark:focus-visible { outline: 1px solid #B8934A; outline-offset: 2px; }
