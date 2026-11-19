@@ -45,7 +45,8 @@ test("game over: a long results list never pushes the buttons off a short screen
         .map((c) => ({ label: c.label.text, bottom: c.getBounds().bottom })),
     };
   });
-  expect(r.buttons.map((b) => b.label).sort()).toEqual(["HEROES", "HOME", "LEADERBOARD", "RETRY", "SHARE"]);
+  // (plus SPIN ×N in the NEXT UP card when Lucky Spins are waiting)
+  expect(r.buttons.map((b) => b.label).filter((l) => !/^SPIN ×\d$/.test(l)).sort()).toEqual(["HEROES", "HOME", "LEADERBOARD", "RETRY", "SHARE"]);
   for (const b of r.buttons) expect(b.bottom, `${b.label} above the bottom edge / home indicator`).toBeLessThanOrEqual(r.limit);
   expect(log.errors).toEqual([]);
 });
