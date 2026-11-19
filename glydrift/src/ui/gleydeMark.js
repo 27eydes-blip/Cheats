@@ -46,6 +46,7 @@ const CSS = `
 #gleyde-mark {
   position: fixed; z-index: 6; margin: 0; padding: 2px 6px; border: 0; background: none;
   line-height: 0; cursor: pointer; opacity: 0.35; transition: opacity 200ms ease;
+  min-width: 44px; min-height: 44px; /* Apple's smallest comfortable tap target */
   transform: translate(-50%, -50%); -webkit-tap-highlight-color: transparent;
 }
 #gleyde-mark:hover, #gleyde-mark:focus-visible { opacity: 1; }
@@ -126,10 +127,10 @@ export function openCard() {
 }
 
 function onKey(e) {
-  if (e.key === "Escape" && wrap) {
-    e.stopPropagation();
-    closeCard();
-  }
+  if (!wrap) return;
+  // while the card is open no key reaches the game behind it (Space would start a run)
+  e.stopPropagation();
+  if (e.key === "Escape") closeCard();
 }
 
 export function closeCard() {
@@ -153,6 +154,7 @@ export function placeGleydeMark(scene, x, y, show) {
   if (!btn) return;
   if (!show) {
     if (!btn.hidden) btn.hidden = true;
+    closeCard(); // (a pop-up opening over the home screen closes the card too)
     return;
   }
   const canvas = scene.game.canvas.getBoundingClientRect();

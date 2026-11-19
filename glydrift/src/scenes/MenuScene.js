@@ -29,7 +29,7 @@ import { CrashSafety } from "../systems/crashSafety.js";
 import { Updater } from "../systems/updater.js";
 import { isNativeApp, openMail, openSite, SUPPORT_EMAIL } from "../systems/platform.js";
 import { openAccount } from "../ui/accountModal.js";
-import { hideGleydeMark, placeGleydeMark } from "../ui/gleydeMark.js";
+import { hideGleydeMark, isCardOpen, placeGleydeMark } from "../ui/gleydeMark.js";
 import { getCosmetic, Shop } from "../data/cosmetics.js";
 import { lockerTotals } from "../data/locker.js";
 import { reduceFlashing } from "../effects/ScreenFlash.js";
@@ -1567,7 +1567,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   startGame(mode) {
-    if (this.leaving || this.modal || this.naming) return;
+    if (this.leaving || this.modal || this.naming || isCardOpen()) return;
     this.leaving = true;
     Sfx.unlock();
     fadeTo(this, "Game", { mode }, { rgb: [2, 1, 7] });
