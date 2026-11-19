@@ -26,8 +26,11 @@ export const WaspBest = {
       Save.write();
       return false;
     }
-    const best = Math.max(0, Math.floor(Number(res.best) || 0));
-    const dist = Math.max(0, Math.floor(Number(res.distance) || 0));
+    // the server's numbers, or a non-Wasp Lord run still waiting to upload (offline) if higher
+    const queued = (level) =>
+      Math.max(0, ...(s.lbQueue || []).filter((q) => q?.type === "score" && q.level === level && q.character !== "wasplord").map((q) => Number(q.score) || 0));
+    const best = Math.max(0, Math.floor(Number(res.best) || 0), queued("endless"));
+    const dist = Math.max(0, Math.floor(Number(res.distance) || 0), queued("endless-distance"));
     s.best = best;
     s.stats.maxDistance = dist;
     s.ghost = null; // the ghost of the best run was his flight

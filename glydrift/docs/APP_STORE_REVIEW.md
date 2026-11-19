@@ -1,5 +1,8 @@
 # App Store review: answers, notes and listing
 
+> **Superseded for App Store Connect (19 Nov 2026):** copy the App Privacy answers, age rating, review notes and listing text from `appstore/APP_STORE_TEXT.md` only. Parts of this file are older and disagree with it: Pass+ isn't cosmetic-only; the loot-box answer is Yes; scores are User Content → Gameplay Content and usernames Other User Content; Crash Data is collected; the Pass is reached from home → MORE or Shop → SEASON 1 PASS; spins come from points, not coins. Deleting an account also deletes its crash and name reports.
+
+
 Everything to type into App Store Connect for Glydrift (bundle ID `com.glydrift.game`).
 Pass/fail checks are in the review-readiness report; this page holds the answers.
 

@@ -92,6 +92,7 @@ export async function openAccount({ view } = {}) {
           <h2>DELETE ACCOUNT</h2>
           <p>This permanently deletes your account and all its data: progress, coins, heroes,
           items, titles, Drift Pass progress, purchases and leaderboard entries. It can't be undone.</p>
+          ${Account.user?.apple ? `<p>You signed in with Apple: Apple will ask you to confirm, and Glydrift is then removed from your Apple ID.</p>` : ""}
           <form class="stack" data-form="delete">
             <input name="confirm" autocomplete="off" autocapitalize="characters" placeholder="Type DELETE to confirm" />
             <button type="submit" class="danger">DELETE FOREVER</button>

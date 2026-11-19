@@ -42,7 +42,7 @@ runs:
       run: |
         # The browser itself comes from the cache when it can; its system packages are always
         # installed (apt). The download / apt occasionally hang on GitHub's machines: give each
-        # attempt 4 minutes (a good install takes under 1) and retry. A timed-out attempt can leave apt-get holding the package
+        # attempt 8 minutes (a good install takes under 1) and retry. A timed-out attempt can leave apt-get holding the package
         # lock: wait for the lock to come free before trying again.
         wait_for_apt() {
           for _ in $(seq 120); do
@@ -56,9 +56,20 @@ runs:
         ok=""
         for attempt in 1 2 3 4; do
           wait_for_apt
-          if timeout 240 $CMD; then ok=1; break; fi
+          # 8 minutes: a slow package mirror (~100 KB/s) still finishes; a real hang doesn't
+          if timeout 480 $CMD; then ok=1; break; fi
           echo "::warning::browser install attempt $attempt failed or hung - retrying"
-          sleep 10
+          # timeout stops npx, not the sudo apt-get it started, which then holds the package
+          # lock for the next attempt: stop it, and finish any half-done package setup
+          sudo pkill -f "apt-get|/usr/bin/dpkg" 2>/dev/null || true
+          sleep 5
+          sudo dpkg --configure -a || true
+          # the runner's own Ubuntu mirror is the usual culprit: retry from the main archive
+          # (playwright's install runs apt-get update itself)
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            printf 'http://archive.ubuntu.com/ubuntu/\n' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+          fi
+          sleep 5
         done
         [ -n "$ok" ] || { echo "::error::could not install $ENGINE"; exit 1; }
         # software OpenGL (Mesa) for headless WebGL

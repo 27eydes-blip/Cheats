@@ -38,6 +38,10 @@ import {
 
 const TAP_GUARD = 500; // ms before "tap anywhere" retries
 const ANIM_END = 950; // ms — every intro animation finishes before this
+// every outline on this screen: the same light blue, with a strong glow
+const EDGE = 0x3ef4ff;
+const EDGE_GLOW = 2.2;
+const edge = { outline: EDGE, glow: EDGE_GLOW };
 
 export class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -136,7 +140,7 @@ export class GameOverScene extends Phaser.Scene {
       bestLine = this.add.container(W / 2, bestY);
       const g = this.add.graphics();
       g.fillStyle(0x0c2a1a, 0.95).fillRoundedRect(-190, -22, 380, 44, 22);
-      g.lineStyle(2, 0x39ff88, 1).strokeRoundedRect(-190, -22, 380, 44, 22);
+      drawNeonRect(g, -190, -22, 380, 44, 22, EDGE, { fill: 0x0c2a1a, fillAlpha: 0, width: 2, glow: EDGE_GLOW });
       g.fillStyle(0x39ff88, 1).fillPoints(
         [
           { x: -160, y: -12 },
@@ -157,152 +161,149 @@ export class GameOverScene extends Phaser.Scene {
     }
     popIn(this, bestLine, 450, { duration: 300 });
 
-    // ---- stat chips (numbers use the clean numeric font)
-    const chipY = Math.max(H * 0.36, bestY + 92);
-    const chips = [
-      [`${run.distance}m`, "DISTANCE", col],
-      [biomeName(run.biome).split(" ")[0], "BIOME", biome.accent],
-      [`${run.nearMiss}`, "CLOSE CALLS", 0xffffff],
-    ].map(([v, l, c], i) => {
-      const cont = this.add.container(W / 2 + (i - 1) * 220, chipY);
-      const g = this.add.graphics();
-      drawNeonRect(g, -100, -46, 200, 92, 18, c, { fillAlpha: 0.6, width: 2 });
-      cont.add([
-        g,
-        neonText(this, 0, -10, v, 30, c, { blur: 8 }),
-        plainText(this, 0, 26, l, 15, "#cfc6ff"),
-      ]);
-      return cont;
-    });
-    slideIn(this, chips, 200, 30);
+    // ---- the middle of the screen (run facts, REWARDS, missions, NEXT UP) is laid out as one
+    // block, centred in the space between the score (and its placement line) and RETRY
+    const spins = Save.data.spins || 0;
+    const best = Math.max(R.prevBest, run.score);
+    const closeToBest = !R.newBest && !run.boosted && best > 0 && run.score >= best * 0.75;
+    const goal = closeToBest
+      ? { text: `SO CLOSE! ${num(best - run.score)} to beat your best`, frac: run.score / best, color: 0xffd23f }
+      : Progression.nearestGoal();
+    const showSpin = spins > 0;
+    const middleH =
+      52 + 238 + 22 + (R.missions.length ? R.missions.length * 30 + 8 : 0) + (goal || showSpin ? 132 : 0);
+    const middleTop = bestY + 92; // (the placement line sits at bestY + 46)
+    const sbot0 = this.registry.get("safeBottom") || 0;
+    const retryAt = Math.min(H * 0.79, H - sbot0 - 150);
+    const room = retryAt - 110 - middleTop;
+    // ---- the run in one quiet line: distance · realm · close calls (the score above is the star)
+    const factsY = middleTop + Math.max(0, Math.floor((room - middleH) / 2));
+    {
+      const facts = this.add.container(W / 2, factsY);
+      const bits = [
+        [`${run.distance}m`, hex(col)],
+        [biomeName(run.biome).toUpperCase(), hex(biome.accent)],
+        [`${run.nearMiss} CLOSE CALL${run.nearMiss === 1 ? "" : "S"}`, "#ffffff"],
+      ];
+      let x = 0;
+      const parts = [];
+      bits.forEach(([t, c], i) => {
+        if (i) parts.push(plainText(this, 0, 0, "·", 22, "#6f6699"));
+        parts.push(plainText(this, 0, 0, t, 22, c));
+      });
+      for (const p of parts) {
+        p.setOrigin(0, 0.5).setX(x);
+        x += p.width + 14;
+      }
+      for (const p of parts) p.x -= (x - 14) / 2;
+      facts.add(parts).setScale(Math.min(1, (W - 60) / Math.max(1, x)));
+      slideIn(this, facts, 200, 20);
+    }
 
-    let y = chipY + H * 0.068;
-    // coins line — only when something was earned
+    // ---- REWARDS: what this run gave you, three big tiles that count up (coins · XP · spins),
+    // with the level bar under them
     const missionCoins = R.missions.reduce((a, m) => a + m.reward.coins, 0);
     const earned =
       run.coins + missionCoins + (run.perkBonus?.total || 0) + (run.heroPerk?.coins || 0);
-    if (earned > 0) {
-      const coinRow = this.add.container(W / 2, y);
-      const coinIcon = this.add.image(-60, 0, "coin").setScale(0.8 / HI);
-      const coinTxt = neonText(this, -32, 0, "+0", 32, COIN_COLOR, { ox: 0, blur: 8 });
-      coinRow.add([coinIcon, coinTxt]);
-      if (run.lucky)
-        coinRow.add(plainText(this, 150, 0, "LUCKY RUN · x2", 18, "#ffd23f", { ox: 0 }));
-      new RollingCounter(this, coinTxt, {
-        format: (v) => `+${num(v)}`,
-        onTick: Sfx.tick,
-      }).to(earned, 400, 450);
-      slideIn(this, coinRow, 400, 20);
-      // RONIN's perk (or a DRIFT PASS+ hero's coin perk): a small gold pop under the coins
+    let y = factsY + 52;
+    const cardX = 40;
+    const cardW = W - 80;
+    const rewardsH = 238;
+    const rewards = this.add.container(0, 0);
+    const rg = this.add.graphics();
+    drawNeonRect(rg, cardX, y, cardW, rewardsH, 24, EDGE, { fillAlpha: 0.55, width: 2, glow: EDGE_GLOW });
+    rewards.add([rg, plainText(this, cardX + 30, y + 30, "REWARDS", 17, "#8f86c0", { ox: 0 })]);
+    if (run.lucky) rewards.add(plainText(this, cardX + cardW - 30, y + 30, "LUCKY RUN · x2 COINS", 17, "#ffd23f", { ox: 1 }));
+    const tileW = (cardW - 60 - 2 * 16) / 3;
+    const tileY = y + 98;
+    const tiles = [
+      { label: "COINS", color: COIN_COLOR, value: earned, fmt: (v) => `+${num(v)}`, icon: "coin" },
+      { label: "XP", color: 0x3ef4ff, value: R.xpGained, fmt: (v) => `+${num(v)}` },
+      R.spinsEarned
+        ? { label: "LUCKY SPIN", color: 0xff4fd8, value: R.spinsEarned, fmt: (v) => `+${v}` }
+        : { label: spins ? "SPINS READY" : "NEXT SPIN", color: 0xff4fd8, text: spins ? `${spins}/${SPIN_MAX}` : `${Math.round((100 * (R.spinPts ?? 0)) / SPIN_EVERY)}%` },
+    ];
+    tiles.forEach((t, i) => {
+      const cx = cardX + 30 + tileW / 2 + i * (tileW + 16);
+      const tg = this.add.graphics();
+      drawNeonRect(tg, cx - tileW / 2, tileY - 46, tileW, 92, 16, EDGE, { fill: 0x0b0620, fillAlpha: 0.9, width: 2, glow: EDGE_GLOW });
+      const big = neonText(this, cx + (t.icon ? 14 : 0), tileY - 10, t.text ?? t.fmt(0), 36, t.color, { blur: 10 });
+      const parts = [tg, big, plainText(this, cx, tileY + 28, t.label, 14, "#cfc6ff")];
+      if (t.icon) parts.push(this.add.image(cx - 14 - big.width / 2 - 8, tileY - 10, "coin").setScale(0.62 / HI));
+      rewards.add(parts);
+      if (t.text == null)
+        new RollingCounter(this, big, { format: t.fmt, onTick: Sfx.tick }).to(t.value, 500, 450 + i * 120);
+      if (t.label === "LUCKY SPIN") this.time.delayedCall(900, () => Sfx.reward());
+    });
+    // the level bar (the XP whoosh and LEVEL UP play on it)
+    const barY = y + rewardsH - 44;
+    const lvlText = neonText(this, cardX + 30, barY, `LV ${R.levelBefore}`, 24, 0x3ef4ff, { ox: 0, blur: 8 });
+    const xpBar = new ProgressBar(this, cardX + 130, barY - 8, cardW - 160, 16, 0x3ef4ff);
+    xpBar.set(R.xpBefore / Progression.xpToNext(R.levelBefore));
+    rewards.add([lvlText, xpBar.g]);
+    slideIn(this, rewards, 300, 25);
+    this.animateXp(xpBar, lvlText, R, 550);
+    // RONIN's perk (or a DRIFT PASS+ hero's coin perk): a gold pop over the coins tile
+    {
       const pb = run.perkBonus;
       const hp = run.heroPerk?.coins > 0 ? run.heroPerk : null;
       if (pb || hp) {
         const label = pb
           ? `+${pb.total} ${getCharacter(run.char).name} BONUS${pb.mul > 1 ? ` (x${pb.mul})` : ""}`
           : `+${hp.coins} ${getCharacter(run.char).name} PERK${hp.daily ? " · DAILY" : ""}`;
-        const pop = neonText(
-          this,
-          W / 2,
-          y + 44,
-          label,
-          22,
-          0xffd23f,
-          { blur: 8 },
-        ).setScale(0);
-        this.tweens.add({
-          targets: pop,
-          scale: 1,
-          duration: 360,
-          delay: 900,
-          ease: "Back.easeOut",
-        });
+        const pop = neonText(this, W / 2, y - 6, label, 20, 0xffd23f, { blur: 8 }).setScale(0);
+        this.tweens.add({ targets: pop, scale: 1, duration: 360, delay: 900, ease: "Back.easeOut" });
         this.time.delayedCall(900, () => Sfx.coin(6));
-        y += 40;
       }
-      y += H * 0.065;
-    } else {
-      y += H * 0.01;
     }
+    y += rewardsH + 22;
 
-    // ---- best + nearest goal
-    const panelH = 150;
-    const gy = y;
-    const goals = this.add.container(0, 0);
-    const gg = this.add.graphics();
-    drawNeonRect(gg, 40, gy, W - 80, panelH, 22, 0xb45cff, { fillAlpha: 0.55, width: 2 });
-    goals.add(gg);
-    const best = Math.max(R.prevBest, run.score);
-    const bestTxt = R.newBest
-      ? R.prevBest > 0
-        ? `NEW BEST ${num(run.score)} · beat it by ${num(run.score - R.prevBest)}`
-        : `NEW BEST ${num(run.score)} · your first record`
-      : `BEST ${num(best)} · ${num(best - run.score)} to beat it`;
-    goals.add(plainText(this, 76, gy + 30, bestTxt, 21, "#ffffff", { ox: 0 }));
-    const bar1 = new ProgressBar(this, 76, gy + 52, W - 152, 12, 0xffd23f);
-    goals.add(bar1.g);
-    bar1.to(best > 0 ? Math.min(1, run.score / best) : 1, 350, 500);
-    const goal = Progression.nearestGoal();
-    if (goal) {
-      goals.add(
-        plainText(
-          this,
-          76,
-          gy + 94,
-          goal.kind === "mission" ? `MISSION · ${goal.text}` : goal.text,
-          19,
-          hex(goal.color),
-          { ox: 0 },
-        ),
-      );
-      const bar2 = new ProgressBar(this, 76, gy + 116, W - 152, 12, goal.color);
-      goals.add(bar2.g);
-      bar2.to(goal.frac, 350, 550);
-    }
-    slideIn(this, goals, 350, 25);
-    y = gy + panelH + 24;
-
-    // ---- XP / level
-    const lvl = this.add.container(0, 0);
-    const lg = this.add.graphics();
-    drawNeonRect(lg, 40, y, W - 80, 100, 22, 0x3ef4ff, { fillAlpha: 0.55, width: 2 });
-    const lvlText = neonText(this, 74, y + 32, `LV ${R.levelBefore}`, 26, 0x3ef4ff, {
-      ox: 0,
-      blur: 8,
-    });
-    const xpText = plainText(this, W - 74, y + 32, `+${R.xpGained} XP`, 22, "#bdf9ff", { ox: 1 });
-    const xpBar = new ProgressBar(this, 74, y + 64, W - 148, 16, 0x3ef4ff);
-    xpBar.set(R.xpBefore / Progression.xpToNext(R.levelBefore));
-    lvl.add([lg, lvlText, xpText, xpBar.g]);
-    slideIn(this, lvl, 400, 25);
-    this.animateXp(xpBar, lvlText, R, 550);
-    y += 124;
-
-    // ---- missions completed this run
+    // ---- missions completed this run: green ticks with their coins
     for (const m of R.missions) {
       const t = plainText(this, W / 2, y, `✓ ${m.text}   +${m.reward.coins}`, 19, "#39ff88");
       slideIn(this, t, 600, 15);
       y += 30;
     }
-    // ---- Lucky Spin progress
-    {
-      const earned = R.spinsEarned || 0;
-      const txt = earned
-        ? `LUCKY SPIN +${earned}!  spin it from the menu`
-        : R.spinsFull
-          ? `Lucky Spins full (${SPIN_MAX}/${SPIN_MAX})  ·  spin them from the menu`
-          : `Lucky Spin: ${num(R.spinPts ?? 0)} / ${num(SPIN_EVERY)} points`;
-      const t = plainText(
-        this,
-        W / 2,
-        y + 4,
-        txt,
-        earned ? 21 : 18,
-        earned ? "#ffd23f" : "#c8b8ff",
-      );
-      slideIn(this, t, 650, 15);
-      if (earned) this.time.delayedCall(900, () => Sfx.reward());
-      y += 34;
+    if (R.missions.length) y += 8;
+
+    // ---- NEXT: one goal to chase, never a reminder of how far away the best is. Close to your
+    // best (within 25%): that's the goal; otherwise the nearest unlock or mission. Spins waiting:
+    // a SPIN button right here (it used to be a line of text saying to go back to the menu).
+    if (goal || showSpin) {
+      const nextH = 112;
+      const next = this.add.container(0, 0);
+      const ng = this.add.graphics();
+      const c = goal ? goal.color : 0xff4fd8;
+      drawNeonRect(ng, cardX, y, cardW, nextH, 24, EDGE, { fillAlpha: 0.55, width: 2, glow: EDGE_GLOW });
+      next.add([ng, plainText(this, cardX + 30, y + 28, goal ? "NEXT UP" : "LUCKY SPIN", 17, "#8f86c0", { ox: 0 })]);
+      const textW = cardW - 60 - (showSpin ? 170 : 0);
+      if (goal) {
+        const label = goal.kind === "mission" ? `MISSION · ${goal.text}` : goal.text;
+        const gt = plainText(this, cardX + 30, y + 60, label, 21, hex(c), { ox: 0 });
+        gt.setScale(Math.min(1, textW / Math.max(1, gt.width)));
+        const gb = new ProgressBar(this, cardX + 30, y + 80, textW, 12, c);
+        next.add([gt, gb.g]);
+        gb.to(Math.min(1, goal.frac), 350, 600);
+      } else {
+        next.add(plainText(this, cardX + 30, y + 68, `${spins} spin${spins === 1 ? "" : "s"} waiting`, 22, "#ffd6f5", { ox: 0 }));
+      }
+      slideIn(this, next, 450, 25);
+      if (showSpin) {
+        const spinBtn = button(this, cardX + cardW - 105, y + nextH / 2, 160, 70, `SPIN ×${spins}`, {
+          color: 0xff4fd8,
+          ...edge,
+          size: 22,
+          fill: 0x3a0a33,
+          onClick: () => this.goto("Spin"),
+        });
+        spinBtn.setName("spinNow");
+        popIn(this, spinBtn, 700, { duration: 350 });
+        // a soft pulse so the eye finds it after RETRY
+        this.tweens.add({ targets: spinBtn, scale: 1.06, duration: 520, yoyo: true, repeat: -1, delay: 1400, ease: "Sine.easeInOut" });
+      }
+      y += nextH + 20;
     }
+
     // unlock / achievement banners: in the band just above RETRY, sliding in from the side
     // (they used to drop from the top onto the score). Always clear of the button: after a long
     // results list (big runs) `y + 46` used to win and put the 92 px banner on top of RETRY;
@@ -347,12 +348,13 @@ export class GameOverScene extends Phaser.Scene {
     const retry = button(this, W / 2, by, 600, 156, "RETRY", {
       color: 0x39ff88,
       size: 68,
+      ...edge,
       fill: 0x138a42, // a lit green fill (the other buttons are dark): the eye lands here first
       onClick: () => this.retry(),
     });
     this.retryBtn = retry;
     const rowY = by + 78 + 22 + 32;
-    const small = { size: 15 };
+    const small = { size: 17, ...edge };
     const share = button(this, 94, rowY, 140, 64, "SHARE", {
       ...small,
       color: 0xffd23f,
@@ -360,7 +362,7 @@ export class GameOverScene extends Phaser.Scene {
     });
     const ranks = button(this, 283, rowY, 210, 64, "LEADERBOARD", {
       ...small,
-      size: 14,
+      size: 16,
       color: 0x3ef4ff,
       onClick: () => this.goto("Leaderboard", { tab: run.mode === "daily" ? "daily" : "score" }),
     });
@@ -374,7 +376,7 @@ export class GameOverScene extends Phaser.Scene {
       color: 0xff4fd8,
       onClick: () => this.goto("Menu"),
     });
-    for (const b of [share, ranks, heroes, home]) b.setAlpha(0.82);
+    for (const b of [share, ranks, heroes, home]) b.setAlpha(0.95);
     popIn(this, [retry, share, ranks, heroes, home], 250, { duration: 350 });
 
     // ---- Drift Pass: a "TIER UP!" pop with a shortcut to the pass
@@ -489,6 +491,13 @@ export class GameOverScene extends Phaser.Scene {
           ? `You placed #${p.daily} on today's Daily!`
           : `You placed #${p.score} in Score · #${p.distance} in Distance`;
         this.placementText = msg;
+        // a great placement (or a new best) celebrates; a low one is just a quiet fact
+        if (!R.newBest && rank > 100) {
+          const q = plainText(this, W / 2, y, msg, 19, "#8f86c0").setAlpha(0);
+          q.setScale(Math.min(1, (W - 40) / Math.max(1, q.width)));
+          this.tweens.add({ targets: q, alpha: 1, duration: 300 });
+          return;
+        }
         const t = neonText(
           this,
           W / 2,

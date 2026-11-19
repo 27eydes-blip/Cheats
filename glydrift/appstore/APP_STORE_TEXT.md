@@ -20,13 +20,13 @@ Glydrift
 Neon one-tap arcade flyer
 ```
 
-**Promotional text** (max 170) [153]
+**Promotional text** (max 170) [158]
 
 ```
-Tap to fly through neon gaps! Drift across 8 realms from Sakura Skies to the Abyss, beat 50 handmade levels and unlock 30+ heroes. How far can you glide?
+Tap to fly through neon gaps! Drift across 8 realms from the Neon Void to the Hurricane, beat 50 handmade levels and unlock 30+ heroes. How far can you glide?
 ```
 
-**Description** [1457 of 4000]
+**Description** [1555 of 4000]
 
 ```
 Tap to fly. Thread the gaps. Don't stop.
@@ -34,13 +34,13 @@ Tap to fly. Thread the gaps. Don't stop.
 Glydrift is a fast, one-tap pixel-art arcade game. Every tap is a flap: slip between pillars, dodge saws, lasers and eye beams, and drift through glowing realms as the world speeds up around you.
 
 ENDLESS
-One run, every realm. Start in the Neon Void, glide through Sakura Skies, Solar Storm, Frozen Nebula and the Glitch Realm, and try to survive the Abyss. Hidden rifts lead to 4 secret dimensions. Chain close calls and coins into big combos.
+One run, every realm. Start in the Neon Void, glide through Sakura Skies, Solar Storm, Frozen Nebula and the Glitch Realm, survive the Abyss, then on to Peaceful Valley and the Hurricane. Hidden rifts lead to 4 secret dimensions. Chain close calls and coins into big combos.
 
 50 HANDMADE LEVELS
 Five realms of hand-built courses, each with three stars to earn: finish it, grab all three star coins, and fly it without a crash.
 
 HEROES
-Unlock 30+ heroes with coins, challenges and the Lucky Spin: a storm bird, a baby dragon, a living star, a sky koi and many more, each with its own trail and sound.
+Unlock 30+ heroes with coins, challenges and the Lucky Spin: a fox spirit, a baby dragon, a living star, a sky koi and many more, each with its own trail and sound.
 
 LEADERBOARDS
 Score and distance boards for all time, this week and today. Pick a username and climb.
@@ -54,7 +54,7 @@ Every season brings a free reward track with new heroes, coins and items, earned
 
 Drift Pass+ is an optional purchase for each season. It unlocks a second reward track with exclusive heroes, skins and titles, plus extra coins, shards and Mystery Pods. It doesn't change speed, hitbox, score or the leaderboards.
 
-Published by Gleyde Technologies, LLC. Created by Sam Eyde III.
+Published by Gleyde Technologies, LLC. Created by Sam Eyde III. Produced by Juwon Shon.
 ```
 
 **Keywords** (max 100, comma-separated, no spaces) [97]
@@ -84,7 +84,7 @@ arcade,onetap,flyer,flying,neon,pixel,retro,endless,casual,reflex,levels,leaderb
 | 8 realms | `ENDLESS_IDS` in `src/biomes/biomes.js`: Neon Void, Sakura Skies, Solar Storm, Frozen Nebula, Glitch Realm, Abyss, Peaceful Valley, Hurricane |
 | 4 hidden dimensions | `DIMENSION_IDS`: Prism Rift, Tidal, Chrono, Mirror (reached through rifts during an endless run) |
 | 50 handmade levels, 3 stars each | `LEVEL_DEFS` (50 levels, 5 realms of 10; 150 stars) |
-| 30+ heroes to unlock | 90 hero definitions. Always available: 45 (the starter VOLT + 12 coin heroes + 22 coin-or-challenge heroes + 10 Lucky Spin heroes), plus limited-time heroes. Season 1 adds 10 free Drift Pass heroes and 10 Drift Pass+ heroes. 30+ is true without counting anything seasonal or paid. |
+| 30+ heroes to unlock | 90 hero definitions. Always available: 45 (the starter VOLT + 12 coin heroes + 22 coin-or-challenge heroes + 10 Lucky Spin heroes), plus limited-time heroes. Season 1 adds 10 free Drift Pass heroes and 14 Drift Pass+ heroes (10, plus RIFTLING's 4 forms). 30+ is true without counting anything seasonal or paid. |
 | Leaderboards: score and distance; all time, this week, today | `src/online/leaderboard.js` |
 | No ads, no tracking | no ad SDK, no advertising ID; `Analytics` keeps its event log on the device and never sends it (`endpoint: null`) |
 | Plays offline | all game content is bundled; online features (leaderboard, accounts, cloud save, Pass+) need a connection |
@@ -131,7 +131,7 @@ arcade,onetap,flyer,flying,neon,pixel,retro,endless,casual,reflex,levels,leaderb
 | Simulated Gambling | None | Lucky Spin spins are earned by scoring (1 per 2,500 points) and Mystery Pods are bought with in-game coins/shards earned by playing; neither can be bought with real money, neither pays out money, odds are shown |
 | Contests | None | |
 | Gambling (real money) | No | |
-| Loot boxes | See note | Mystery Pods can't be bought directly with money. But the paid Drift Pass+ track has 6 Mystery Pods among its 50 rewards (earned by playing after buying). The cautious answer is **Yes**; answering No is defensible because no random item is sold. Odds are shown on every pod. |
+| Loot boxes | See note | Mystery Pods can't be bought directly with money. But the paid Drift Pass+ track has 2 Mystery Pods among its 50 rewards (earned by playing after buying). The cautious answer is **Yes**; answering No is defensible because no random item is sold. Odds are shown on every pod. |
 | Unrestricted Web Access | No | links open only the game's own privacy/support pages |
 | User-Generated Content | Yes | usernames (and titles) on the public leaderboards; filter + REPORT A NAME + removal |
 | Messaging and Chat | No | |
@@ -154,7 +154,7 @@ Sign in from Settings → ACCOUNT → SIGN IN.
 In-app purchase: Drift Pass+ (non-consumable, one per season).
 - Product ID: com.glydrift.game.driftpassplus.s1 (Season 1, $3.99 US).
 - It unlocks a second reward track in that season's Drift Pass: exclusive heroes, skins, titles and a banner, plus coins, shards and Mystery Pods, earned by playing. It gives no gameplay advantage: speed, hitbox, scoring and leaderboards are the same for everyone. (Some Pass+ heroes add a small coin/XP bonus to what a run pays, never to its score.)
-- Where: home screen → MORE → SEASON 1 · ABYSS RISING (the Drift Pass), or Shop → SEASON 1 PASS → GET PASS+ $3.99 → BUY.
+- Where: home screen → MORE → SEASON 1 · ABYSS RISING (the Drift Pass), or Shop → SEASON 1 PASS → VIEW PASS → GET PASS+ → BUY.
 - RESTORE PURCHASES is at the top of the Drift Pass screen (next to GET PASS+) and next to the BUY button on the Pass+ offer.
 - Purchases are verified on our server with the App Store Server API before anything unlocks. A guest (no account) can buy; signing in keeps the purchase on the account.
 
@@ -162,7 +162,7 @@ How to test it in the sandbox: sign in to a Sandbox Apple Account (Settings → 
 
 Lucky Spin and Mystery Pods use only spins/coins earned by playing; they can't be bought with real money. Odds are shown (ODDS on the Lucky Spin screen; on each pod in the Shop).
 
-Account deletion: Settings → ACCOUNT → DELETE MY ACCOUNT (deletes the account, cloud save, leaderboard entries and purchase records immediately).
+Account deletion: Settings → ACCOUNT → DELETE MY ACCOUNT (deletes the account, cloud save, leaderboard entries and purchase records immediately; for a Sign in with Apple account, Apple asks the player to confirm and the app is then removed from their Apple ID, as required by guideline 5.1.1(v)).
 Report an offensive name: Leaderboard → REPORT A NAME.
 Privacy policy and support: Settings → PRIVACY POLICY / SUPPORT (https://glydrift.com/privacy, https://glydrift.com/support).
 

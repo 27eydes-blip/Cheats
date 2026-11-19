@@ -69,9 +69,22 @@ export function drawNeonRect(
   g.fillStyle(fill, fillAlpha);
   g.fillRoundedRect(x, y, w, h, r);
   if (glow) {
-    for (let i = 3; i >= 1; i--) {
-      g.lineStyle(width + i * 5, color, 0.06 * (4 - i));
-      g.strokeRoundedRect(x, y, w, h, r);
+    // glow: true = the standard soft halo; a number > 1 = a brighter, wider halo (4 rings)
+    if (glow === true) {
+      for (let i = 3; i >= 1; i--) {
+        g.lineStyle(width + i * 5, color, 0.06 * (4 - i));
+        g.strokeRoundedRect(x, y, w, h, r);
+      }
+    } else {
+      // a soft halo: thin rings stepping outwards (each with its own rounder corner, so the
+      // corners stay clean), bright at the line and fading smoothly; one faint ring inside
+      g.lineStyle(3, color, Math.min(1, 0.12 * glow));
+      g.strokeRoundedRect(x + 3, y + 3, w - 6, h - 6, Math.max(0, r - 3));
+      for (let i = 9; i >= 1; i--) {
+        const o = i * 2;
+        g.lineStyle(3, color, Math.min(1, 0.14 * glow * (1 - i / 10)));
+        g.strokeRoundedRect(x - o, y - o, w + 2 * o, h + 2 * o, r + o);
+      }
     }
   }
   g.lineStyle(width, color, 1);
@@ -89,13 +102,14 @@ export function button(
   w,
   h,
   label,
-  { color = 0x3ef4ff, size = 30, onClick, sub, fill = 0x0a0418 } = {},
+  { color = 0x3ef4ff, size = 30, onClick, sub, fill = 0x0a0418, outline, glow = true } = {},
 ) {
   const c = scene.add.container(x, y);
   const g = scene.add.graphics();
   const draw = (col) => {
     g.clear();
-    drawNeonRect(g, -w / 2, -h / 2, w, h, Math.min(22, h / 2), col, { fill });
+    // `outline` colours the border only (the label keeps `color`); `glow` as in drawNeonRect
+    drawNeonRect(g, -w / 2, -h / 2, w, h, Math.min(22, h / 2), outline ?? col, { fill, glow });
     // glossy highlight
     g.fillStyle(0xffffff, 0.06);
     g.fillRoundedRect(-w / 2 + 6, -h / 2 + 5, w - 12, h * 0.38, Math.min(16, h / 3));
