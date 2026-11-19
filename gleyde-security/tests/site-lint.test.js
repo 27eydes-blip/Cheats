@@ -2,6 +2,7 @@
    They guard the security rules and basic quality of every page so a design change
    can't quietly loosen them. */
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, test } from "node:test";
@@ -49,6 +50,18 @@ describe("Security rules in the markup (what the CSP relies on)", () => {
       }
       assert.ok(!/\sstyle\s*=/i.test(src), "no style= attributes");
       assert.ok(!/<[a-z][^>]*\son[a-z]+\s*=/i.test(src), "no onclick=/onload= style handlers");
+    });
+
+    test(`${f}: CSS/JS links carry an up-to-date content fingerprint (cache busting)`, () => {
+      // /assets is cached for a day; without a fresh ?v= a returning visitor can get new
+      // HTML with an old stylesheet. Re-run the page generator after editing CSS or JS.
+      const links = [...src.matchAll(/(?:href|src)="(\/assets\/(?:css|js)\/[^"]+)"/g)].map((m) => m[1]);
+      assert.ok(links.length > 0);
+      for (const link of links) {
+        const [file, v] = link.split("?v=");
+        const want = createHash("sha256").update(readFileSync(path.join(PUB, file))).digest("hex").slice(0, 10);
+        assert.equal(v, want, `${link} should be ${file}?v=${want}`);
+      }
     });
 
     test(`${f}: only allowed outside resources are loaded`, () => {

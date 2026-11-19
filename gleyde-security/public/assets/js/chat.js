@@ -401,6 +401,12 @@
   /* ---------- mount ---------- */
   const mount = () => {
     document.body.append(root);
+    // Safety net: only show the chat once its styles are really loaded (e.g. never with an
+    // old cached stylesheet), so it can't appear as unstyled buttons and text.
+    if (getComputedStyle(root).position !== "fixed") {
+      root.remove();
+      return;
+    }
     // Reopen on the next page only on larger screens; on phones the panel covers the page.
     if (state.open && window.matchMedia("(min-width: 561px)").matches) {
       panel.hidden = false;

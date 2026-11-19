@@ -245,6 +245,24 @@ describe("Browser: AI chat assistant", () => {
     });
   }
 
+  test("with an old cached stylesheet the chat stays hidden instead of showing unstyled", async () => {
+    // Reproduces a returning phone visitor whose browser kept the pre-chat site.css.
+    const oldCss = readFileSync(new URL("./old-site.css", import.meta.url), "utf8");
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await ctx.newPage();
+    await page.route("**/assets/css/site.css*", (r) => r.fulfill({ contentType: "text/css", body: oldCss }));
+    await page.goto(BASE + "/", { waitUntil: "load" });
+    await page.waitForTimeout(500);
+    assert.equal(await page.locator(".chat-root").count(), 0);
+    await ctx.close();
+  });
+
+  test("pages link CSS/JS with a fingerprint, so a returning visitor gets the new files", async () => {
+    const res = await fetch(BASE + "/");
+    const body = await res.text();
+    for (const f of ["site.css", "site.js", "chat.js"]) assert.match(body, new RegExp(`/assets/(css|js)/${f.replace(".", "\\.")}\\?v=[0-9a-f]{10}"`), f);
+  });
+
   test("the real endpoint answers with a friendly message when the chat isn't configured", async () => {
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
