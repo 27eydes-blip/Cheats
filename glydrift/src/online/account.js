@@ -71,7 +71,14 @@ const supabaseBackend = {
     } = await sb.auth.getSession();
     const u = session?.user;
     return u
-      ? { id: u.id, email: u.email || null, newEmail: u.new_email || null, anon: !!u.is_anonymous }
+      ? {
+          id: u.id,
+          email: u.email || null,
+          newEmail: u.new_email || null,
+          anon: !!u.is_anonymous,
+          // signed in with Apple: deleting the account also revokes the Apple sign-in
+          apple: (u.app_metadata?.providers || []).includes("apple"),
+        }
       : null;
   },
   async createAccount(email, password) {
@@ -165,6 +172,34 @@ const supabaseBackend = {
     if (error) throw error;
     return data;
   },
+  /**
+   * Revoke this player's Sign in with Apple (App Store guideline 5.1.1(v)), just before the
+   * account is deleted: Apple's sheet gives a fresh one-time code, the apple-revoke Edge Function
+   * trades it for the player's token and revokes it. "cancelled" when the player closes the sheet.
+   */
+  async revokeApple() {
+    const { Capacitor, registerPlugin } = await import("@capacitor/core");
+    if (Capacitor.getPlatform() !== "ios") return "not-ios";
+    appleSignIn ||= registerPlugin("SignInWithApple");
+    let res;
+    try {
+      res = await appleSignIn.authorize({
+        clientId: "com.glydrift.game",
+        redirectURI: "https://glydrift.com/",
+        scopes: "",
+      });
+    } catch (err) {
+      // the player closed Apple's sheet (ASAuthorizationError 1001): keep the account
+      if (/cancel|1001/i.test(String(err?.message || err?.code || err))) return "cancelled";
+      throw err;
+    }
+    const sb = await this.sb();
+    const { data, error } = await sb.functions.invoke("apple-revoke", {
+      body: { authorizationCode: res?.response?.authorizationCode || "" },
+    });
+    if (error) throw error;
+    return data?.revoked ? "revoked" : data?.reason || "not-revoked";
+  },
   async deleteAccount() {
     const sb = await this.sb();
     const { error } = await sb.rpc("delete_my_account");
@@ -196,6 +231,14 @@ const mockBackend = {
       this.put(db);
     }
     return { ...db.session, newEmail: null };
+  },
+  // (tests: db.appleRevoke = "revoked" | "cancelled" | "fail"; every call is listed in db.appleCalls)
+  async revokeApple() {
+    const db = this.db();
+    db.appleCalls = (db.appleCalls || 0) + 1;
+    this.put(db);
+    if (db.appleRevoke === "fail") throw new Error("Apple can't be reached");
+    return db.appleRevoke || "revoked";
   },
   async createAccount(email, password) {
     const db = this.db();
@@ -542,6 +585,20 @@ class AccountService {
 
   /** Delete the account and every piece of its data, here and on the server. */
   async deleteAccount() {
+    // Sign in with Apple accounts: revoke the Apple sign-in first (Apple asks the player to
+    // confirm on its own sheet). Closing that sheet keeps the account; anything else going
+    // wrong (offline, the server function not set up yet) never blocks the deletion itself.
+    if (this.user?.apple) {
+      let apple = null;
+      try {
+        apple = await this.backend.revokeApple();
+      } catch {
+        apple = "failed";
+      }
+      if (apple === "cancelled")
+        throw new AccountError("Cancelled: your account wasn't deleted.", "apple-cancelled");
+      this.appleRevoke = apple; // (shown in tests; the deletion goes on either way)
+    }
     try {
       clearTimeout(this.pushTimer);
       await this.backend.deleteAccount();
