@@ -1,3 +1,4 @@
+import { seedFromBeats } from "./interests";
 import { z } from "zod";
 import { AppError } from "./errors";
 import { all, get, newId, now, run, tx } from "./db";
@@ -268,7 +269,7 @@ export function assertCanAct(u: UserRow) {
 }
 
 export const INTERESTS = [
-  "Elections", "Politics", "World", "Business", "Sports", "Tech", "Science", "Health",
+  "Politics", "Markets", "Sports", "Tech", "World", "Elections", "Science", "Health",
   "Entertainment", "Music", "Books", "Food", "Faith", "Outdoors", "Gaming", "Cars",
 ] as const;
 
@@ -277,4 +278,5 @@ export function saveOnboarding(userId: string, input: { interests: string[]; tow
   const interests = input.interests.filter((i): i is (typeof INTERESTS)[number] => (INTERESTS as readonly string[]).includes(i)).slice(0, 16);
   const town = input.town.replace(/[\u0000-\u001F]/g, "").trim().slice(0, 60) || null;
   run("UPDATE users SET interests = ?, town = ?, onboarded = 1 WHERE id = ?", [JSON.stringify(interests), town, userId]);
+  seedFromBeats(userId, interests);
 }

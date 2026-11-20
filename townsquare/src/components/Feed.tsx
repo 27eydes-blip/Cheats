@@ -2,14 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FeedPage } from "@/lib/feed";
+import type { ForYouItem } from "@/lib/foryou";
 import type { FeedItem, PostView } from "@/lib/posts";
+import { ForYouFrame } from "./feed/ForYou";
+import { StoryTile } from "./front/StoryCard";
 import { PostCard } from "./PostCard";
 import { POSTED_EVENT } from "./providers";
 import { ArrowUpIcon } from "./icons";
 import { ErrorState } from "./ui/States";
 import { FeedSkeleton, PostSkeleton } from "./ui/Skeleton";
 
-type Source = { tab: string; handle?: string; ptab?: string; q?: string };
+type Source = { tab: string; handle?: string; ptab?: string; q?: string; exclude?: string };
 
 const qs = (s: Source, extra: Record<string, string>) => new URLSearchParams({ ...(s as Record<string, string>), ...extra }).toString();
 
@@ -20,8 +23,12 @@ export { PostSkeleton };
  * posts" pill, and pull-to-refresh use /api/feed. Offscreen cards skip layout
  * and paint (content-visibility), which keeps long sessions smooth.
  */
-export function Feed({ initial, source, empty, live, prependOwn }: { initial: FeedPage; source: Source; empty: React.ReactNode; live?: boolean; prependOwn?: boolean }) {
-  const [items, setItems] = useState<FeedItem[]>(initial.items);
+type Item = FeedItem | ForYouItem;
+type Page = { items: Item[]; nextCursor: string | null };
+const itemId = (it: Item) => ("story" in it ? `story:${it.story.key}` : `post:${it.post.id}`);
+
+export function Feed({ initial, source, empty, live, prependOwn }: { initial: FeedPage | Page; source: Source; empty: React.ReactNode; live?: boolean; prependOwn?: boolean }) {
+  const [items, setItems] = useState<Item[]>(initial.items);
   const [cursor, setCursor] = useState(initial.nextCursor);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,10 +54,10 @@ export function Feed({ initial, source, empty, live, prependOwn }: { initial: Fe
     try {
       const res = await fetch(`/api/feed?${qs(source, { cursor })}`);
       if (!res.ok) throw new Error();
-      const page = (await res.json()) as FeedPage;
+      const page = (await res.json()) as Page;
       setItems((cur) => {
-        const seen = new Set(cur.map((i) => i.post.id));
-        return [...cur, ...page.items.filter((i) => !seen.has(i.post.id))];
+        const seen = new Set(cur.map(itemId));
+        return [...cur, ...page.items.filter((i) => !seen.has(itemId(i)))];
       });
       setCursor(page.nextCursor);
       setError(false);
@@ -67,7 +74,7 @@ export function Feed({ initial, source, empty, live, prependOwn }: { initial: Fe
     try {
       const res = await fetch(`/api/feed?${qs(source, {})}`);
       if (!res.ok) throw new Error();
-      const page = (await res.json()) as FeedPage;
+      const page = (await res.json()) as Page;
       setItems(page.items);
       setCursor(page.nextCursor);
       loadedAt.current = Date.now();
@@ -154,9 +161,16 @@ export function Feed({ initial, source, empty, live, prependOwn }: { initial: Fe
         empty
       ) : (
         <div role="feed" aria-busy={loading}>
-          {items.map((it, i) => (
-            <PostCard key={it.key} post={it.post} repostedBy={it.repostedBy} index={i} onGone={(id) => setItems((c) => c.filter((x) => x.post.id !== id))} />
-          ))}
+          {items.map((it, i) => {
+            const drop = () => setItems((c) => c.filter((x) => itemId(x) !== itemId(it)));
+            const body =
+              "story" in it ? (
+                <div className="px-3 pb-3 sm:px-4"><StoryTile s={it.story} big /></div>
+              ) : (
+                <PostCard post={it.post} repostedBy={it.repostedBy} index={i} onGone={(id) => setItems((c) => c.filter((x) => "story" in x || x.post.id !== id))} />
+              );
+            return "kind" in it ? <ForYouFrame key={it.key} item={it} onDismiss={drop}>{body}</ForYouFrame> : <div key={it.key}>{body}</div>;
+          })}
         </div>
       )}
       <div ref={sentinel} />

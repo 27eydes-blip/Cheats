@@ -2,6 +2,7 @@ import { AppError } from "./errors";
 import { all, get, now, run } from "./db";
 import { rateLimit } from "./ratelimit";
 import { publish } from "./realtime";
+import { recordSignal } from "./interests";
 import { assertCanAct, type UserRow } from "./users";
 
 export type StanceValue = "agree" | "disagree" | "unsure";
@@ -71,6 +72,7 @@ export function castStance(user: UserRow, type: StanceTarget, id: string, value:
     run("DELETE FROM stances WHERE user_id = ? AND target_type = ? AND target_id = ?", [user.id, type, id]);
   }
   const split = splitFor(type, id, user.id);
+  if (value === "agree") try { recordSignal(user.id, { type, id }, "react"); } catch { /* best effort */ }
   publish({ type: "stance", target: type, id, agree: split.agree, disagree: split.disagree, unsure: split.unsure, total: split.total });
   return split;
 }

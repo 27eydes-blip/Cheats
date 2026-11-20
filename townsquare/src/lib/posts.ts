@@ -1,5 +1,6 @@
 import { LIMITS } from "@/config";
 import { publish } from "./realtime";
+import { recordSignal } from "./interests";
 import { AppError } from "./errors";
 import { all, get, newId, now, run, tx } from "./db";
 import { rateLimit } from "./ratelimit";
@@ -314,6 +315,10 @@ export function createPost(author: UserRow, input: NewPost): string {
     }
   });
   if (storyKey && !parent && !communityId) publish({ type: "take", storyKey, postId: id });
+  try {
+    if (parent) recordSignal(author.id, { type: "post", id: parent.id }, "reply");
+    else if (storyKey) recordSignal(author.id, { type: "story", id: storyKey }, "reply");
+  } catch { /* best effort */ }
   return id;
 }
 

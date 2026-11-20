@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { SCHEMA } from "./schema";
+import { runMigrations } from "./migrations";
 
 /**
  * The single database handle. Everything that touches storage goes through
@@ -20,6 +21,7 @@ function open(): DatabaseSync {
   db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
   db.exec(SCHEMA);
   migrate(db);
+  runMigrations(db);
   return db;
 }
 

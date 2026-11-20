@@ -1,6 +1,8 @@
 import { Frame } from "@/components/ui/Frame";
 import Link from "next/link";
 import { requireViewerPage } from "@/lib/session";
+import { mutedTopics } from "@/lib/interests";
+import { TopicMutes } from "./TopicMutes";
 import { mediaUrl } from "@/lib/users";
 import { PageHeader } from "@/components/PageHeader";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
@@ -43,8 +45,13 @@ export default async function Settings() {
             </li>
           ))}
         </ul>
+        <section aria-labelledby="feedprefs" className="card mt-4 p-4">
+          <h2 id="feedprefs" className="font-semibold">Your feed</h2>
+          <p className="mb-3 text-[13.5px] text-ink-3">Tap a topic to mute it in For You. Use &ldquo;Not interested&rdquo; and &ldquo;Show more like this&rdquo; on any item to tune the rest.</p>
+          <TopicMutes initial={mutedTopics(viewer.id)} />
+        </section>
         <div className="card mt-4 flex flex-wrap items-center justify-between gap-3 p-4">
-          <span><span className="block font-semibold">Appearance</span><span className="text-[13.5px] text-ink-3">Auto follows your device</span></span>
+          <span><span className="block font-semibold">Appearance</span><span className="text-[13.5px] text-ink-3">Dark is the house look; Auto follows your device</span></span>
           <ThemeToggle />
         </div>
         <div className="card mt-4 hidden items-center gap-3 p-4 sm:flex">

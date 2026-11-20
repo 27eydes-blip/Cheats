@@ -376,3 +376,22 @@ create policy "own watchlist" on watchlist for all using (user_id = auth.uid()) 
 -- Story photos (editor-uploaded, credited).
 alter table public.stories add column if not exists image_media_id uuid references media(id) on delete set null;
 alter table public.stories add column if not exists image_credit text check (char_length(image_credit) <= 80);
+
+-- For You (migration 1): interests, engagement events, dismissals, muted topics; promoted flag.
+create table public.interests (user_id uuid references profiles(id) on delete cascade, kind text not null check (kind in ('topic','author','tag')), key text not null, weight real not null default 0, updated_at timestamptz not null default now(), primary key (user_id, kind, key));
+create table public.engagement_events (id bigserial primary key, user_id uuid references profiles(id) on delete cascade, target_type text not null check (target_type in ('post','story')), target_id text not null, kind text not null check (kind in ('view','click','dwell','share')), ms int not null default 0, created_at timestamptz not null default now());
+create table public.feed_dismissals (user_id uuid references profiles(id) on delete cascade, target_type text not null, target_id text not null, created_at timestamptz not null default now(), primary key (user_id, target_type, target_id));
+create table public.muted_topics (user_id uuid references profiles(id) on delete cascade, topic text not null, created_at timestamptz not null default now(), primary key (user_id, topic));
+alter table public.posts add column if not exists promoted boolean not null default false;
+alter table interests enable row level security; alter table engagement_events enable row level security; alter table feed_dismissals enable row level security; alter table muted_topics enable row level security;
+create policy "own interests" on interests for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "insert own events" on engagement_events for insert with check (user_id is null or user_id = auth.uid());
+create policy "own dismissals" on feed_dismissals for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "own muted topics" on muted_topics for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Migration 2: reactions and private accounts.
+create table public.reactions (user_id uuid references profiles(id) on delete cascade, post_id uuid references posts(id) on delete cascade, kind text not null check (kind in ('fire','mindblown','respect','facepalm','facts')), created_at timestamptz not null default now(), primary key (user_id, post_id));
+alter table reactions enable row level security;
+create policy "reactions readable" on reactions for select using (true);
+create policy "own reactions" on reactions for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+alter table public.profiles add column if not exists is_private boolean not null default false;

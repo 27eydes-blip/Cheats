@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { bookmarksFeed, followingFeed, forYouFeed, profileFeed, searchPosts, type ProfileTab } from "@/lib/feed";
+import { bookmarksFeed, followingFeed, profileFeed, searchPosts, type ProfileTab } from "@/lib/feed";
 import { getViewer } from "@/lib/session";
+import { forYou } from "@/lib/foryou";
 import { userByHandle } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
     case "following":
       return NextResponse.json(viewer ? followingFeed(viewer.id, cursor) : empty);
     case "foryou":
-      return NextResponse.json(forYouFeed(viewer?.id ?? null, cursor));
+      return NextResponse.json(forYou(viewer?.id ?? null, cursor, undefined, { excludeStory: p.get("exclude") ?? undefined }));
     case "bookmarks":
       return NextResponse.json(viewer ? bookmarksFeed(viewer.id, cursor) : empty);
     case "search":

@@ -1,3 +1,4 @@
+import { recordSignal, signalAuthor } from "./interests";
 import { AppError } from "./errors";
 import { all, get, now, run, tx } from "./db";
 import { notify, unnotify } from "./notifications";
@@ -9,6 +10,11 @@ function interactable(postId: string, userId: string) {
   if (!p) throw new AppError("That post is no longer available.", "not_found");
   if (isBlockedEitherWay(p.author_id, userId)) throw new AppError("You can't interact with this account.", "blocked");
   return p;
+}
+
+/** Interest signals must never break the action they ride on. */
+function safeSignal(fn: () => void) {
+  try { fn(); } catch { /* ignore */ }
 }
 
 export function isBlockedEitherWay(a: string, b: string) {
@@ -49,6 +55,7 @@ export function setRepost(user: UserRow, postId: string, on: boolean): boolean {
       unnotify(p.author_id, user.id, "repost", postId);
     }
   });
+  if (on) safeSignal(() => recordSignal(user.id, { type: "post", id: postId }, "share"));
   return on;
 }
 
@@ -57,6 +64,7 @@ export function setBookmark(user: UserRow, postId: string, on: boolean): boolean
     interactable(postId, user.id);
     run("INSERT OR IGNORE INTO bookmarks (user_id, post_id, created_at) VALUES (?, ?, ?)", [user.id, postId, now()]);
   } else run("DELETE FROM bookmarks WHERE user_id = ? AND post_id = ?", [user.id, postId]);
+  if (on) safeSignal(() => recordSignal(user.id, { type: "post", id: postId }, "save"));
   return on;
 }
 
@@ -75,6 +83,7 @@ export function setFollow(user: UserRow, targetId: string, on: boolean): boolean
     run("DELETE FROM follows WHERE follower_id = ? AND followee_id = ?", [user.id, targetId]);
     unnotify(targetId, user.id, "follow", null);
   }
+  if (on) safeSignal(() => signalAuthor(user.id, targetId, "follow"));
   return on;
 }
 

@@ -3,6 +3,10 @@ import { all } from "@/lib/db";
 import { latestNews, liveEvents, listStories } from "@/lib/news";
 import { getPostView } from "@/lib/posts";
 import { getViewer } from "@/lib/session";
+import { followingFeed } from "@/lib/feed";
+import { forYou } from "@/lib/foryou";
+import { Feed } from "@/components/Feed";
+import { HomeTabs } from "@/components/feed/HomeTabs";
 import { debates, latestTakes, voices } from "@/lib/takes";
 import { CHANNELS } from "@/components/shell/channels";
 import { BriefingPromo, DebateTile, HotStories, LeadTile, LiveNowTile, MoreStories, PollTile, QuickTakes, StoryTile, VoicesTile, WireTile } from "@/components/front/Tiles";
@@ -17,8 +21,9 @@ export const dynamic = "force-dynamic";
 
 const FRONT_CHANNELS = CHANNELS.filter((c) => c.href.startsWith("/?") || c.href === "/");
 
-export default async function FrontPage({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
-  const c = (await searchParams).c;
+export default async function FrontPage({ searchParams }: { searchParams: Promise<{ c?: string; tab?: string }> }) {
+  const sp = await searchParams;
+  const c = sp.c;
   const channel = FRONT_CHANNELS.find((x) => x.key === c && x.key !== "front");
   const viewer = await getViewer();
   const vid = viewer?.id ?? null;
@@ -41,6 +46,52 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
 
   const [lead, ...rest] = stories;
   const latest = all<{ body: string }>("SELECT body FROM story_updates WHERE story_key = ? ORDER BY created_at DESC LIMIT 2", [lead.key]).map((r) => r.body);
+  if (!channel) {
+    const tab = sp.tab === "following" ? "following" : "foryou";
+    const initial = tab === "following" ? (vid ? followingFeed(vid) : { items: [], nextCursor: null }) : forYou(vid, null, undefined, { excludeStory: lead.key });
+    return (
+      <div className="mx-auto max-w-[1320px] px-4 pt-5 lg:px-8 lg:pt-8">
+        <h1 className="sr-only">{APP_NAME} Front Page</h1>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
+          <div className="min-w-0 space-y-5">
+            <LeadTile s={lead} latest={latest} />
+            <div className="lg:hidden"><HotStories stories={hot} row /></div>
+            <MarketStrip initial={indexQuotes} mode={marketMode()} label={marketStatus().label} />
+            <HomeTabs tab={tab} />
+            <div className="card overflow-hidden">
+              <Feed
+                key={tab}
+                initial={initial}
+                source={{ tab, ...(tab === "foryou" ? { exclude: lead.key } : {}) }}
+                live={tab === "following"}
+                prependOwn
+                empty={
+                  tab === "following" ? (
+                    vid ? (
+                      <EmptyState art="community" title="Your Following feed is quiet" body="Follow a few Voices and their dispatches land here, newest first. Try one of these:" action={{ label: "Find people", href: "/explore" }} />
+                    ) : (
+                      <EmptyState art="community" title="Log in to see who you follow" body="Following shows dispatches from people you follow, newest first." action={{ label: "Log in", href: "/login?next=/?tab=following" }} />
+                    )
+                  ) : (
+                    <EmptyState art="news" title="Nothing new yet" body="Check back soon, or open a story and start the conversation." action={{ label: "Trending", href: "/explore" }} />
+                  )
+                }
+              />
+            </div>
+          </div>
+          <aside className="hidden min-w-0 lg:block">
+            <div className="sticky top-[calc(var(--dial-h)+var(--wire-h)+16px)] space-y-5">
+              <HotStories stories={hot} />
+              {events.some((e) => e.isLive) && <LiveNowTile events={events} />}
+              <BriefingPromo minutes={Math.max(4, Math.round((stories.slice(0, 10).reduce((n, s) => n + s.title.split(" ").length + s.summary.split(" ").length, 0) + 600) / 230))} count={Math.min(10, stories.length)} />
+              <VoicesTile voices={people} />
+            </div>
+          </aside>
+        </div>
+      </div>
+    );
+  }
+
   const grid = rest.slice(0, 6);
   const more = rest.slice(6);
   const words = stories.slice(0, 10).reduce((n, s) => n + s.title.split(" ").length + s.summary.split(" ").length, 0) + 600;
