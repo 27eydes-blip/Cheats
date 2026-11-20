@@ -16,6 +16,7 @@ import { LocalDate, Time } from "@/components/Time";
 import { StoryActions } from "./StoryActions";
 import { StoryTickers } from "@/components/markets/LiveQuotes";
 import { TeamChips } from "@/components/sports/TeamChips";
+import { TrackOpen } from "@/components/feed/ForYou";
 import { getQuotes, marketMode } from "@/lib/markets/provider";
 import { storyTickers } from "@/lib/markets/storyTickers";
 
@@ -40,6 +41,7 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
 
   return (
     <article className="mx-auto max-w-[1320px]">
+      <TrackOpen type="story" id={key} />
       <header className="px-4 pt-5 lg:px-8 lg:pt-8">
         <div className="hero-glow">
           <div className="relative overflow-hidden rounded-[var(--r-xl)] ring-1 ring-[var(--wn-glass-border)]">

@@ -14,7 +14,8 @@ import { Feed } from "@/components/Feed";
 import { FollowButton } from "@/components/FollowButton";
 import { PostCard } from "@/components/PostCard";
 import { DebateCard } from "@/components/front/DebateCard";
-import { CalendarIcon, LinkIcon, MapPinIcon, PinIcon } from "@/components/icons";
+import { CalendarIcon, LinkIcon, MapPinIcon, MessageIcon, PinIcon } from "@/components/icons";
+import { canMessage } from "@/lib/messages";
 import { CredibilityMeter } from "@/components/profile/CredibilityMeter";
 import { Avatar } from "@/components/ui/Avatar";
 import { LiveBadge, VerifiedSeal } from "@/components/ui/Badge";
@@ -71,7 +72,7 @@ export default async function Profile({ params, searchParams }: { params: Promis
       <div className="mx-auto grid max-w-[1200px] gap-6 px-4 lg:grid-cols-[340px_minmax(0,1fr)] lg:px-8">
         {/* Left identity panel */}
         <aside className="-mt-16 min-w-0 lg:-mt-24">
-          <div className="card space-y-4 p-5 lg:sticky lg:top-[calc(var(--dial-h)+var(--wire-h)+16px)]" style={{ boxShadow: `0 0 0 1px ${accent.color}55, 0 20px 50px -20px ${accent.color}88` }}>
+          <div className="card space-y-4 p-5 lg:sticky lg:top-[calc(var(--sub-top)+16px)]" style={{ boxShadow: `0 0 0 1px ${accent.color}55, 0 20px 50px -20px ${accent.color}88` }}>
             <div className="flex items-start justify-between gap-3">
               <span className="rounded-[22px] p-1" style={{ background: `linear-gradient(135deg, ${accent.color}, rgb(34 211 238 / 0.6))` }}>
                 <Avatar url={p.avatarUrl} name={p.displayName} handle={p.handle} size={96} live={live} />
@@ -106,7 +107,12 @@ export default async function Profile({ params, searchParams }: { params: Promis
               {p.viewer.isSelf ? (
                 <Link href="/settings/profile" className="btn-outline w-full">Edit profile</Link>
               ) : viewer ? (
-                !p.viewer.blocked && <span className="w-full [&>button]:w-full"><FollowButton userId={p.id} following={p.viewer.follows} requested={p.viewer.requested} /></span>
+                !p.viewer.blocked && (
+                  <>
+                    <span className="min-w-0 flex-1 [&>button]:w-full"><FollowButton userId={p.id} following={p.viewer.follows} requested={p.viewer.requested} /></span>
+                    {canMessage(viewer.id, p.id).ok && <Link href={`/messages/${p.handle}`} className="btn-outline" aria-label={`Message ${p.displayName}`}><MessageIcon size={18} /> Message</Link>}
+                  </>
+                )
               ) : (
                 <Link href={`/login?next=/u/${p.handle}`} className="btn-primary w-full">Follow</Link>
               )}
@@ -172,7 +178,7 @@ export default async function Profile({ params, searchParams }: { params: Promis
                   </div>
                 </section>
               )}
-              <nav role="tablist" aria-label="Profile" className="card scrollbar-none sticky top-[calc(var(--dial-h)+var(--wire-h)+8px)] z-20 flex gap-1 overflow-x-auto p-1">
+              <nav role="tablist" aria-label="Profile" className="card scrollbar-none sticky top-[calc(var(--sub-top)+8px)] z-20 flex gap-1 overflow-x-auto p-1">
                 {TABS.map((t) => (
                   <Link key={t.key} role="tab" aria-selected={t.key === tab.key} href={t.key === "dispatches" ? `/u/${p.handle}` : `/u/${p.handle}?tab=${t.key}`} scroll={false}
                     className={`flex h-10 min-w-[96px] flex-1 items-center justify-center rounded-[10px] px-3 text-[13px] font-bold tracking-[0.04em] uppercase transition-all ${t.key === tab.key ? "text-white" : "text-ink-2 hover:bg-white/[0.05] hover:text-ink-1"}`}
@@ -181,12 +187,13 @@ export default async function Profile({ params, searchParams }: { params: Promis
                   </Link>
                 ))}
               </nav>
-              <div className="card mt-3 overflow-hidden">
+              <div className="mt-3">
                 {tab.key === "debates" ? (
-                  fights.length ? <div className="grid gap-6 p-4">{fights.map((d) => <DebateCard key={d.left.id} d={d} />)}</div> : <EmptyState art="community" title="No debates yet" body="When someone responds to a dispatch with the opposite stance, the exchange lands here." />
+                  <div className="card overflow-hidden">{fights.length ? <div className="grid gap-6 p-4">{fights.map((d) => <DebateCard key={d.left.id} d={d} />)}</div> : <EmptyState art="community" title="No debates yet" body="When someone responds to a dispatch with the opposite stance, the exchange lands here." />}</div>
                 ) : (
                   <Feed
                     key={tab.key}
+                    pad={false}
                     initial={firstPage}
                     source={{ tab: "profile", handle: p.handle, ptab: tab.ptab! }}
                     prependOwn={p.viewer.isSelf && tab.key === "dispatches"}

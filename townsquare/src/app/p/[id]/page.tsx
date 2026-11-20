@@ -1,4 +1,5 @@
 import { Frame } from "@/components/ui/Frame";
+import { TrackOpen } from "@/components/feed/ForYou";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getThread, getPostView } from "@/lib/posts";
@@ -25,7 +26,8 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
   const { post, ancestors, replies } = thread;
   return (
     <Frame>
-      <PageHeader title={post.replyTo ? "Thread" : "Post"} back compact />
+      <TrackOpen type="post" id={post.id} />
+      <PageHeader title={post.replyTo ? "Thread" : "Dispatch"} back compact />
       {ancestors.map((a) => <PostCard key={a.id} post={a} threadLine />)}
       <PostCard key={post.id} post={post} focus />
       {viewer && !post.gone && (
