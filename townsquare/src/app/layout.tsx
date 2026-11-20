@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { APP_NAME, TAGLINE } from "@/config";
-import { getBanner } from "@/lib/moderation";
-import { liveEvents, listStories } from "@/lib/news";
-import { all, get } from "@/lib/db";
+import { liveEvents } from "@/lib/news";
+import { wireItems } from "@/lib/wire";
+import { get } from "@/lib/db";
 import { unreadCount } from "@/lib/notifications";
 import { getViewer } from "@/lib/session";
 import { mediaUrl } from "@/lib/users";
@@ -62,22 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const textSize = jar.get("textsize")?.value;
   const unread = viewer ? unreadCount(viewer.id) : 0;
   const liveCount = liveEvents().filter((e) => e.isLive).length;
-  const banner = getBanner();
-  // Live Wire: the admin's breaking item first, then the latest key updates from live stories.
-  const live = listStories(8).filter((x) => x.status === "live");
-  const updates = live.length
-    ? all<{ body: string; story_key: string; created_at: number }>(
-        `SELECT body, story_key, created_at FROM story_updates WHERE story_key IN (${live.map(() => "?").join(",")}) ORDER BY created_at DESC LIMIT 6`,
-        live.map((x) => x.key),
-      )
-    : [];
-  const wire: WireItem[] = [
-    ...(banner ? [{ text: banner.text, href: banner.url, at: banner.setAt, label: banner.level === "info" ? "Update" : banner.level === "alert" ? "Alert" : "Breaking" }] : []),
-    ...updates.map((u) => {
-      const st = live.find((x) => x.key === u.story_key);
-      return { text: u.body, href: `/news/story/${u.story_key}`, at: u.created_at, label: st?.section ?? "Live", teams: st?.teams.slice(0, 2) };
-    }),
-  ];
+  const wire: WireItem[] = wireItems();
   // Market moves for the ticker (index ETFs + a few bellwethers).
   const tape = (await getQuotes(["SPY", "QQQ", "DIA", "IWM", "AAPL", "NVDA", "MSFT", "TSLA"])).map((q) => ({ symbol: q.symbol, name: q.name, price: q.price, changePct: q.changePct }));
   const clientViewer = viewer
@@ -120,7 +105,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <ChannelDial liveCount={liveCount} />
               </Suspense>
             </div>
-            <LiveWire items={wire} quotes={tape} demo={marketMode() === "demo"} />
+            <LiveWire items={wire} quotes={tape} demo={marketMode() === "demo"} slot="layout" />
           </div>
           <main id="main" className="pb-tabbar relative min-h-[70dvh]" style={{ ["--avatar-gap" as string]: "var(--paper)" }}>
             {viewer?.status === "suspended" && (

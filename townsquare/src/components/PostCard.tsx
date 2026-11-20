@@ -106,13 +106,14 @@ function Expandable({ children, long, big }: { children: React.ReactNode; long: 
   );
 }
 
-type Props = { post: PostView; repostedBy?: UserMini | null; focus?: boolean; compact?: boolean; onGone?: (id: string) => void; threadLine?: boolean; index?: number; hideStory?: boolean };
+type Props = { post: PostView; repostedBy?: UserMini | null; focus?: boolean; compact?: boolean; onGone?: (id: string) => void; threadLine?: boolean; index?: number; hideStory?: boolean; /** inside a feed card: no divider line or row hover */ flat?: boolean; /** feed controls (Show more / Not interested / Mute topic) added to the ••• menu */ extraMenu?: MenuItem[] };
 
 /**
- * A Take. The author's stance chip and the Story it belongs to sit above the
- * text; readers respond with the stance meter, Answer, Amplify, or Save.
+ * A Dispatch. The author's stance chip and the Story it belongs to sit above
+ * the text; readers use the stance meter and the action row: Respond, Relay,
+ * Boost (tap; hold for the five reactions), Vault and Share.
  */
-export function PostCard({ post: initial, repostedBy, focus, compact, onGone, threadLine, index, hideStory }: Props) {
+export function PostCard({ post: initial, repostedBy, focus, compact, onGone, threadLine, index, hideStory, flat, extraMenu }: Props) {
   const viewer = useViewer();
   const router = useRouter();
   const toast = useToast();
@@ -221,6 +222,8 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
     );
   }
 
+  if (extraMenu?.length) menu.unshift(...extraMenu, "divider");
+
   const go = (e: React.MouseEvent) => {
     if (focus || editing) return;
     const el = e.target as HTMLElement;
@@ -228,7 +231,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
     router.push(`/p/${post.id}`);
   };
 
-  const action = "inline-flex h-9 items-center gap-1.5 rounded-[10px] px-2 text-[12.5px] font-semibold transition-colors active:translate-y-px";
+  const action = "inline-flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-[12px] px-2 text-[12.5px] font-semibold text-ink-2 transition-all duration-150 active:scale-90";
   const size = compact ? 36 : focus ? 48 : 42;
 
   return (
@@ -237,8 +240,8 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
       tabIndex={-1}
       onClick={go}
       aria-labelledby={`post-${post.id}-author`}
-      className={`relative outline-none ${compact ? "py-3" : "px-4 sm:px-5"} ${focus ? "pt-5 pb-2" : compact ? "" : "cv-auto cursor-pointer border-b border-rule py-4 transition-colors duration-150 hover:bg-paper-2/60 focus-visible:bg-gold-soft focus-visible:shadow-[inset_3px_0_0_var(--gold)]"}`}
-      style={index !== undefined && index < 8 ? { animation: `enter 380ms var(--ease-out) ${index * 35}ms both` } : undefined}
+      className={`relative outline-none ${compact ? "py-3" : "px-4 sm:px-5"} ${focus ? "pt-5 pb-2" : compact ? "" : flat ? "cursor-pointer pt-3.5 pb-2 focus-visible:shadow-[inset_3px_0_0_var(--wn-cyan)]" : "cv-auto cursor-pointer border-b border-rule py-4 transition-colors duration-150 hover:bg-paper-2/60 focus-visible:bg-gold-soft focus-visible:shadow-[inset_3px_0_0_var(--gold)]"}`}
+      style={!flat && index !== undefined && index < 8 ? { animation: `enter 380ms var(--ease-out) ${index * 35}ms both` } : undefined}
     >
       {repostedBy && (
         <p className="folio mb-2 flex items-center gap-1.5 !text-[10px] text-ink-3">
@@ -258,7 +261,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
             <div id={`post-${post.id}-author`} className="min-w-0 leading-tight">
               <AuthorLine author={post.author} createdAt={post.createdAt} editedAt={post.editedAt} big={focus} />
             </div>
-            {!post.gone && !compact && <div className="-mt-1 -mr-2"><Menu label="Dispatch options" items={menu} button={<MoreIcon size={18} />} buttonClassName="flex h-8 w-8 items-center justify-center rounded-[10px] text-ink-3 hover:bg-paper-2 hover:text-ink-1" /></div>}
+            {!post.gone && !compact && <div className="-mt-2.5 -mr-2.5"><Menu label="Dispatch options" items={menu} button={<MoreIcon size={18} />} buttonClassName="flex h-11 w-11 items-center justify-center rounded-[12px] text-ink-3 hover:bg-white/[0.06] hover:text-ink-1" /></div>}
           </div>
 
           {(post.stance || (post.story && !hideStory) || post.replyTo || post.flashExpiresAt) && (
@@ -319,26 +322,27 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
           )}
 
           {!post.gone && !compact && (
-            <div className={`flex flex-wrap items-center gap-x-1 gap-y-2 ${focus ? "border-b border-rule py-3" : "mt-3"}`}>
+            <div className={focus ? "border-b border-rule py-2" : "mt-2.5"}>
               <StanceMeter type="post" id={post.id} initial={post.split} />
-              <Reactions postId={post.id} counts={post.reactions} mine={post.viewer.reaction} />
-              <span className="flex-1" />
-              <button type="button" data-action="reply" onClick={(e) => (e.stopPropagation(), !needLogin() && openComposer({ replyTo: post }))} className={`${action} text-ink-2 hover:bg-navy-soft hover:text-navy-ink`}>
-                <AnswerIcon size={17} /> <span className="hidden sm:inline">Respond</span><AnimatedNumber value={post.counts.replies} hideZero className="mono text-[11.5px]" />
-                <span className="sr-only sm:hidden">Respond</span>
-              </button>
-              <button type="button" onClick={(e) => (e.stopPropagation(), toggle("reposted"))} aria-pressed={post.viewer.reposted} className={`${action} ${post.viewer.reposted ? "text-gold-ink" : "text-ink-2"} hover:bg-gold-soft hover:text-gold-ink`} title="Relay to your followers">
-                <span key={String(post.viewer.reposted)} className={post.viewer.reposted ? "animate-pop" : ""}><AmplifyIcon size={17} /></span>
-                <span className="sr-only">{post.viewer.reposted ? "Relayed" : "Relay"}</span>
-                <AnimatedNumber value={post.counts.reposts} hideZero className="mono text-[11.5px]" />
-              </button>
-              <button type="button" onClick={(e) => (e.stopPropagation(), toggle("bookmarked"))} aria-pressed={post.viewer.bookmarked} className={`${action} ${post.viewer.bookmarked ? "text-navy-ink" : "text-ink-2"} hover:bg-navy-soft hover:text-navy-ink`} title="Add to Vault">
-                <span key={String(post.viewer.bookmarked)} className={post.viewer.bookmarked ? "animate-pop" : ""}><SaveIcon size={17} filled={post.viewer.bookmarked} /></span>
-                <span className="sr-only">{post.viewer.bookmarked ? "Saved" : "Add to Vault"}</span>
-              </button>
-              <button type="button" onClick={(e) => (e.stopPropagation(), share())} className={`${action} text-ink-2 hover:bg-paper-2 hover:text-ink-1`}>
-                <ShareIcon size={17} /><span className="sr-only">Share</span>
-              </button>
+              {/* Actions: Respond · Relay · Boost · Vault · Share */}
+              <div className="-mx-2 mt-1 flex items-center justify-between">
+                <button type="button" data-action="reply" onClick={(e) => (e.stopPropagation(), !needLogin() && openComposer({ replyTo: post }))} className={`${action} hover:bg-navy-soft hover:text-navy-ink`} aria-label={`Respond${post.counts.replies ? `, ${post.counts.replies} responses` : ""}`}>
+                  <AnswerIcon size={19} /><span className="hidden min-[420px]:inline">Respond</span><AnimatedNumber value={post.counts.replies} hideZero className="mono text-[12px]" />
+                </button>
+                <button type="button" data-action="relay" onClick={(e) => (e.stopPropagation(), toggle("reposted"))} aria-pressed={post.viewer.reposted} className={`${action} ${post.viewer.reposted ? "text-[var(--wn-cyan-ink)]" : ""} hover:bg-[rgb(34_211_238/0.1)] hover:text-[var(--wn-cyan-ink)]`} aria-label={`${post.viewer.reposted ? "Relayed" : "Relay"}${post.counts.reposts ? `, ${post.counts.reposts} relays` : ""}`} title="Relay to your followers">
+                  <span key={String(post.viewer.reposted)} className={post.viewer.reposted ? "animate-pop" : ""}><AmplifyIcon size={19} /></span>
+                  <span className="hidden min-[420px]:inline">Relay</span>
+                  <AnimatedNumber value={post.counts.reposts} hideZero className="mono text-[12px]" />
+                </button>
+                <Reactions postId={post.id} counts={post.reactions} mine={post.viewer.reaction} />
+                <button type="button" data-action="vault" onClick={(e) => (e.stopPropagation(), toggle("bookmarked"))} aria-pressed={post.viewer.bookmarked} className={`${action} ${post.viewer.bookmarked ? "text-navy-ink" : ""} hover:bg-navy-soft hover:text-navy-ink`} aria-label={post.viewer.bookmarked ? "In your Vault. Remove" : "Add to Vault"} title="Vault">
+                  <span key={String(post.viewer.bookmarked)} className={post.viewer.bookmarked ? "animate-pop" : ""}><SaveIcon size={19} filled={post.viewer.bookmarked} /></span>
+                  <span className="hidden min-[420px]:inline">Vault</span>
+                </button>
+                <button type="button" data-action="share" onClick={(e) => (e.stopPropagation(), share())} className={`${action} hover:bg-white/[0.06] hover:text-ink-1`} aria-label="Share">
+                  <ShareIcon size={19} /><span className="hidden min-[420px]:inline">Share</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { reactAction } from "@/actions/social";
 import { REACTIONS, type ReactionKind } from "@/lib/reactions-meta";
 import { SparkIcon } from "../icons";
+import { AnimatedNumber } from "../ui/AnimatedNumber";
 import { useToast, useViewer } from "../providers";
 import { celebrate } from "../Celebrate";
 import { FloatingPortal, useFloating } from "../ui/useFloating";
@@ -12,8 +13,9 @@ import { FloatingPortal, useFloating } from "../ui/useFloating";
 type Counts = Record<ReactionKind, number>;
 
 /**
- * Boost: five news-native reactions. Tap opens the palette (hover on desktop);
- * picking one pops it with a small burst. One reaction per person per dispatch.
+ * Boost: tap for a quick 🔥 (tap again to undo). Hold (or hover, right-click,
+ * or press Up) for the five reactions; picking one pops it with a small burst.
+ * One reaction per person per dispatch.
  */
 export function Reactions({ postId, counts: initialCounts, mine: initialMine }: { postId: string; counts: Counts; mine: ReactionKind | null }) {
   const viewer = useViewer();
@@ -26,6 +28,12 @@ export function Reactions({ postId, counts: initialCounts, mine: initialMine }: 
   const [, start] = useTransition();
   const wrap = useRef<HTMLDivElement>(null);
   const hoverT = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const press = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const held = useRef(false);
+  const clearPress = () => {
+    if (press.current) clearTimeout(press.current);
+    if (hoverT.current) clearTimeout(hoverT.current);
+  };
   const btn = useRef<HTMLButtonElement>(null);
   const pos = useFloating(btn, open, { w: 268, h: 64 });
   useEffect(() => setCounts(initialCounts), [initialCounts]);
@@ -64,26 +72,40 @@ export function Reactions({ postId, counts: initialCounts, mine: initialMine }: 
   };
 
   return (
-    <div
-      ref={wrap}
-      className="relative"
-      onPointerEnter={(e) => e.pointerType === "mouse" && (hoverT.current = setTimeout(() => setOpen(true), 380))}
-      onPointerLeave={() => {
-        if (hoverT.current) clearTimeout(hoverT.current);
-      }}
-    >
+    <div ref={wrap} className="relative">
       <button
         ref={btn}
         type="button"
-        onClick={(e) => (e.stopPropagation(), setOpen((o) => !o))}
+        data-action="boost"
+        onPointerDown={(e) => {
+          held.current = false;
+          if (e.pointerType === "mouse" && e.button !== 0) return;
+          press.current = setTimeout(() => ((held.current = true), navigator.vibrate?.(10), setOpen(true)), 420);
+        }}
+        onPointerUp={clearPress}
+        onPointerLeave={clearPress}
+        onPointerCancel={clearPress}
+        onPointerEnter={(e) => e.pointerType === "mouse" && (hoverT.current = setTimeout(() => setOpen(true), 550))}
+        onContextMenu={(e) => (e.preventDefault(), setOpen(true))}
+        onKeyDown={(e) => (e.key === "ArrowUp" || (e.key === "Enter" && e.shiftKey)) && (e.preventDefault(), setOpen(true))}
+        onClick={(e) => {
+          e.stopPropagation();
+          clearPress();
+          if (held.current) return void (held.current = false);
+          if (open) return setOpen(false);
+          pick(mine ?? "fire"); // tap = quick Boost (or undo)
+        }}
         aria-haspopup="true"
         aria-expanded={open}
-        aria-label={mine ? `Your reaction: ${mineMeta?.label}. Change reaction` : "Boost: react"}
-        className={`relative inline-flex h-9 min-w-9 items-center justify-center gap-1 rounded-[10px] px-2 text-[12.5px] font-semibold transition-colors ${mine ? "amber-ink bg-[rgb(245_158_11/0.12)]" : "text-ink-2 hover:bg-[rgb(245_158_11/0.1)]"}`}
+        aria-pressed={!!mine}
+        aria-label={`${mine ? `Boosted with ${mineMeta?.label}. Tap to remove` : "Boost"}${total ? `, ${total} reactions` : ""}. Hold, or press Up, for more reactions`}
+        title="Boost (hold for reactions)"
+        className={`relative inline-flex h-11 min-w-11 select-none items-center justify-center gap-1.5 rounded-[12px] px-2 text-[12.5px] font-semibold transition-all duration-150 active:scale-90 [-webkit-touch-callout:none] ${mine ? "amber-ink bg-[rgb(245_158_11/0.12)]" : "text-ink-2 hover:bg-[rgb(245_158_11/0.1)]"}`}
       >
-        <span key={`${mine}-${burst}`} className={mine ? "animate-pop text-[16px] leading-none" : "leading-none"}>{mineMeta ? mineMeta.emoji : <SparkIcon size={17} />}</span>
+        <span key={`${mine}-${burst}`} className={mine ? "animate-pop text-[17px] leading-none" : "leading-none"}>{mineMeta ? mineMeta.emoji : <SparkIcon size={19} />}</span>
         {!mine && top.length > 0 && <span aria-hidden="true" className="-ml-0.5 flex text-[13px] leading-none">{top.map((r) => <span key={r.key}>{r.emoji}</span>)}</span>}
-        {total > 0 && <span className="mono text-[11.5px]">{total}</span>}
+        <span className="hidden min-[420px]:inline">{mine ? mineMeta?.label === "Mind Blown" ? "Wow" : mineMeta?.label : "Boost"}</span>
+        <AnimatedNumber value={total} hideZero className="mono text-[12px]" />
         {burst > 0 && <Burst key={burst} />}
       </button>
       {open && (

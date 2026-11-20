@@ -1,14 +1,14 @@
 /** Loading placeholders shaped like the real layouts, so nothing jumps when data arrives. */
 export function PostSkeleton({ media }: { media?: boolean }) {
   return (
-    <div className="flex gap-3 px-4 py-4 sm:px-5" aria-hidden="true">
+    <div className="card flex gap-3 px-4 py-4" aria-hidden="true">
       <div className="skeleton h-11 w-11 shrink-0" />
       <div className="flex-1 space-y-2.5 pt-1">
         <div className="flex gap-2"><div className="skeleton h-3.5 w-28" /><div className="skeleton h-3.5 w-16" /></div>
         <div className="skeleton h-3.5 w-full" />
         <div className="skeleton h-3.5 w-4/5" />
         {media && <div className="skeleton mt-2 aspect-[16/9] w-full !rounded-[var(--r-lg)]" />}
-        <div className="flex justify-between pt-1.5 pr-10">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-4 w-8" />)}</div>
+        <div className="flex justify-between pt-2">{[0, 1, 2, 3, 4].map((i) => <div key={i} className="skeleton h-5 w-9" />)}</div>
       </div>
     </div>
   );
@@ -16,7 +16,7 @@ export function PostSkeleton({ media }: { media?: boolean }) {
 
 export function FeedSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div role="status" aria-label="Loading posts">
+    <div role="status" aria-label="Loading dispatches" className="space-y-3">
       {Array.from({ length: count }, (_, i) => <PostSkeleton key={i} media={i === 1} />)}
     </div>
   );

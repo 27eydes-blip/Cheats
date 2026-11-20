@@ -6,7 +6,13 @@ import { getViewer } from "@/lib/session";
 import { followingFeed } from "@/lib/feed";
 import { forYou } from "@/lib/foryou";
 import { Feed } from "@/components/Feed";
-import { HomeTabs } from "@/components/feed/HomeTabs";
+import { FeedTabs } from "@/components/feed/FeedTabs";
+import { LiveWire } from "@/components/shell/LiveWire";
+import { wireItems } from "@/lib/wire";
+import { getFeedTabs } from "@/lib/feedtabs";
+import { parseHomeTab, tabParam, TOPIC_LABEL } from "@/lib/feedtabs-meta";
+import { getTeam } from "@/lib/sports/teams";
+import { TeamLogo } from "@/components/sports/TeamLogo";
 import { Suggestions } from "@/components/social/Suggestions";
 import { suggestFriends } from "@/lib/social";
 import { debates, latestTakes, voices } from "@/lib/takes";
@@ -49,46 +55,81 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
   const [lead, ...rest] = stories;
   const latest = all<{ body: string }>("SELECT body FROM story_updates WHERE story_key = ? ORDER BY created_at DESC LIMIT 2", [lead.key]).map((r) => r.body);
   if (!channel) {
-    const tab = sp.tab === "following" ? "following" : "foryou";
-    const initial = tab === "following" ? (vid ? followingFeed(vid) : { items: [], nextCursor: null }) : forYou(vid, null, undefined, { excludeStory: lead.key });
+    const tab = parseHomeTab(sp.tab);
+    const tabs = getFeedTabs(vid);
+    const team = tab.kind === "team" ? getTeam(tab.key) : null;
     const suggestions = vid ? suggestFriends(vid, 4) : [];
+    const initial =
+      tab.kind === "friends" ? (vid ? followingFeed(vid) : { items: [], nextCursor: null })
+      : tab.kind === "topic" ? forYou(vid, null, undefined, { topic: tab.key })
+      : tab.kind === "team" ? forYou(vid, null, undefined, { teamId: tab.key })
+      : forYou(vid, null, undefined, { excludeStory: lead.key });
+    const source =
+      tab.kind === "friends" ? { tab: "following" }
+      : tab.kind === "topic" ? { tab: "foryou", topic: tab.key }
+      : tab.kind === "team" ? { tab: "foryou", team: tab.key }
+      : { tab: "foryou", exclude: lead.key };
+    const pinned = tab.kind === "topic" || tab.kind === "team" ? tabs.some((t) => t.kind === tab.kind && t.key === tab.key) : true;
     return (
-      <div className="mx-auto max-w-[1320px] px-4 pt-5 lg:px-8 lg:pt-8">
-        <h1 className="sr-only">{APP_NAME} Front Page</h1>
+      <div className="mx-auto max-w-[1320px] px-4 lg:px-8 lg:pt-6">
+        <h1 className="sr-only">{APP_NAME} home</h1>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
-          <div className="min-w-0 space-y-5">
-            <LeadTile s={lead} latest={latest} />
-            <div className="lg:hidden"><HotStories stories={hot} row /></div>
-            <MarketStrip initial={indexQuotes} mode={marketMode()} label={marketStatus().label} />
-            <HomeTabs tab={tab} />
-            <div className="card overflow-hidden">
-              <Feed
-                key={tab}
-                initial={initial}
-                source={{ tab, ...(tab === "foryou" ? { exclude: lead.key } : {}) }}
-                live={tab === "following"}
-                prependOwn
-                interleave={suggestions.length && tab === "foryou" ? { at: 5, node: <Suggestions people={suggestions.slice(0, 3)} compact /> } : undefined}
-                empty={
-                  tab === "following" ? (
-                    vid ? (
-                      <div className="pb-4">
-                        <EmptyState art="community" title="Your Following feed is quiet" body="Follow a few people and their dispatches land here, newest first. Here are some to start with:" />
-                        <div className="px-4"><Suggestions people={suggestions.length ? suggestions : []} compact /></div>
-                        {!suggestions.length && <p className="px-4 text-center text-[14px] text-ink-3">Try <Link href="/explore" className="font-semibold text-[var(--wn-blue-ink)]">Trending</Link> to find voices.</p>}
-                      </div>
-                    ) : (
-                      <EmptyState art="community" title="Log in to see who you follow" body="Following shows dispatches from people you follow, newest first." action={{ label: "Log in", href: "/login?next=/?tab=following" }} />
-                    )
+          <div id="home-feed" className="min-w-0 space-y-4">
+            <FeedTabs tabs={tabs} active={tab} />
+            <div className="!mt-0"><LiveWire items={wireItems()} slot="home" /></div>
+            {tab.kind === "foryou" && (
+              <>
+                <LeadTile s={lead} latest={latest} />
+                <div className="lg:hidden"><HotStories stories={hot} row /></div>
+                <div className="hidden lg:block"><MarketStrip initial={indexQuotes} mode={marketMode()} label={marketStatus().label} /></div>
+              </>
+            )}
+            {tab.kind === "topic" && (
+              <header className="flex items-center justify-between gap-3 pt-1">
+                <h2 className="font-display text-[clamp(1.8rem,1.4rem+1.6vw,2.4rem)] leading-none font-extrabold uppercase">{TOPIC_LABEL[tab.key]}</h2>
+                {!pinned && vid && <span className="text-[12.5px] text-ink-3">Tap + to pin this tab</span>}
+              </header>
+            )}
+            {tab.kind === "team" && team && (
+              <header className="flex items-center gap-3 pt-1">
+                <TeamLogo team={team} size="lg" />
+                <div className="min-w-0">
+                  <h2 className="truncate font-display text-[clamp(1.6rem,1.3rem+1.4vw,2.2rem)] leading-none font-extrabold uppercase">{team.fullName}</h2>
+                  <Link href={`/sports/${team.id}`} className="inline-flex min-h-9 items-center text-[13px] font-semibold text-[var(--wn-blue-ink)] hover:text-[var(--wn-cyan-ink)]">Team page →</Link>
+                </div>
+              </header>
+            )}
+            <Feed
+              key={tabParam(tab)}
+              pad={false}
+              initial={initial}
+              source={source}
+              live={tab.kind === "foryou" || tab.kind === "friends"}
+              prependOwn={tab.kind === "foryou" || tab.kind === "friends"}
+              interleave={suggestions.length && tab.kind === "foryou" ? { at: 5, node: <Suggestions people={suggestions.slice(0, 3)} compact /> } : undefined}
+              empty={
+                tab.kind === "friends" ? (
+                  vid ? (
+                    <div className="pb-4">
+                      <EmptyState art="community" title="Your Friends feed is quiet" body="Follow a few people and their dispatches land here, newest first. Here are some to start with:" />
+                      <div className="px-4"><Suggestions people={suggestions} compact /></div>
+                      {!suggestions.length && <p className="px-4 text-center text-[14px] text-ink-3">Try <Link href="/explore" className="font-semibold text-[var(--wn-blue-ink)]">Discover</Link> to find voices.</p>}
+                    </div>
                   ) : (
-                    <EmptyState art="news" title="Nothing new yet" body="Check back soon, or open a story and start the conversation." action={{ label: "Trending", href: "/explore" }} />
+                    <EmptyState art="community" title="Log in to see your Friends feed" body="Friends shows dispatches from the people you follow, newest first." action={{ label: "Log in", href: "/login?next=/?tab=friends" }} />
                   )
-                }
-              />
-            </div>
+                ) : tab.kind === "team" ? (
+                  <EmptyState art="news" title={`No ${team?.name ?? "team"} stories yet`} body="When a story mentions this team, it shows up here automatically. Meanwhile, the Sports tab has the rest." action={{ label: "Sports", href: "/?tab=t-sports" }} />
+                ) : tab.kind === "topic" ? (
+                  <EmptyState art="news" title={`Quiet in ${TOPIC_LABEL[tab.key]}`} body="Nothing new on this topic yet. For You has the latest across everything." action={{ label: "For You", href: "/" }} />
+                ) : (
+                  <EmptyState art="news" title="Nothing new yet" body="Check back soon, or open a story and start the conversation." action={{ label: "Discover", href: "/explore" }} />
+                )
+              }
+            />
           </div>
           <aside className="hidden min-w-0 lg:block">
-            <div className="sticky top-[calc(var(--dial-h)+var(--wire-h)+16px)] space-y-5">
+            <div className="sticky top-[calc(var(--sub-top)+16px)] space-y-5">
               <HotStories stories={hot} />
               {events.some((e) => e.isLive) && <LiveNowTile events={events} />}
               <BriefingPromo minutes={Math.max(4, Math.round((stories.slice(0, 10).reduce((n, s) => n + s.title.split(" ").length + s.summary.split(" ").length, 0) + 600) / 230))} count={Math.min(10, stories.length)} />
@@ -135,7 +176,7 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
         </div>
         {/* Desktop: Trending + Live in a sticky sidebar */}
         <aside className="hidden min-w-0 lg:block">
-          <div className="sticky top-[calc(var(--dial-h)+var(--wire-h)+16px)] space-y-5">
+          <div className="sticky top-[calc(var(--sub-top)+16px)] space-y-5">
             <HotStories stories={hot} />
             {events.some((e) => e.isLive) && <LiveNowTile events={events} />}
           </div>

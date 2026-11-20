@@ -1,18 +1,20 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FeedPage } from "@/lib/feed";
 import type { ForYouItem } from "@/lib/foryou";
 import type { FeedItem, PostView } from "@/lib/posts";
-import { ForYouFrame } from "./feed/ForYou";
+import { ForYouFrame, SponsoredCard } from "./feed/ForYou";
 import { StoryTile } from "./front/StoryCard";
 import { PostCard } from "./PostCard";
 import { POSTED_EVENT } from "./providers";
 import { ArrowUpIcon } from "./icons";
+import { LogoMark } from "./ui/Logo";
+import type { MenuItem } from "./ui/Menu";
 import { ErrorState } from "./ui/States";
 import { FeedSkeleton, PostSkeleton } from "./ui/Skeleton";
 
-type Source = { tab: string; handle?: string; ptab?: string; q?: string; exclude?: string };
+type Source = { tab: string; handle?: string; ptab?: string; q?: string; exclude?: string; topic?: string; team?: string; list?: string };
 
 const qs = (s: Source, extra: Record<string, string>) => new URLSearchParams({ ...(s as Record<string, string>), ...extra }).toString();
 
@@ -25,9 +27,9 @@ export { PostSkeleton };
  */
 type Item = FeedItem | ForYouItem;
 type Page = { items: Item[]; nextCursor: string | null };
-const itemId = (it: Item) => ("story" in it ? `story:${it.story.key}` : `post:${it.post.id}`);
+const itemId = (it: Item) => ("ad" in it ? `ad:${it.key}` : "story" in it ? `story:${it.story.key}` : `post:${it.post.id}`);
 
-export function Feed({ initial, source, empty, live, prependOwn, interleave }: { initial: FeedPage | Page; source: Source; empty: React.ReactNode; live?: boolean; prependOwn?: boolean; /** a block shown after the Nth item (e.g. friend suggestions) */ interleave?: { at: number; node: React.ReactNode } }) {
+export function Feed({ initial, source, empty, live, prependOwn, interleave, pad = true }: { initial: FeedPage | Page; source: Source; empty: React.ReactNode; live?: boolean; prependOwn?: boolean; /** a block shown after the Nth item (e.g. friend suggestions) */ interleave?: { at: number; node: React.ReactNode }; /** side padding (off when the page already pads) */ pad?: boolean }) {
   const [items, setItems] = useState<Item[]>(initial.items);
   const [cursor, setCursor] = useState(initial.nextCursor);
   const [loading, setLoading] = useState(false);
@@ -36,6 +38,7 @@ export function Feed({ initial, source, empty, live, prependOwn, interleave }: {
   const [fresh, setFresh] = useState(0);
   const [pull, setPull] = useState(0);
   const loadedAt = useRef(Date.now());
+  const firstCount = useRef(initial.items.length);
   const sentinel = useRef<HTMLDivElement>(null);
   const busy = useRef(false);
 
@@ -44,6 +47,7 @@ export function Feed({ initial, source, empty, live, prependOwn, interleave }: {
     setItems(initial.items);
     setCursor(initial.nextCursor);
     loadedAt.current = Date.now();
+    firstCount.current = initial.items.length;
     setFresh(0);
   }, [key, initial]);
 
@@ -78,9 +82,10 @@ export function Feed({ initial, source, empty, live, prependOwn, interleave }: {
       setItems(page.items);
       setCursor(page.nextCursor);
       loadedAt.current = Date.now();
+      firstCount.current = 0;
       setFresh(0);
       setError(false);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     } catch {
       setError(true);
     } finally {
@@ -96,15 +101,16 @@ export function Feed({ initial, source, empty, live, prependOwn, interleave }: {
     return () => io.disconnect();
   }, [loadMore]);
 
+  // "New dispatches" pill: check quietly; never move the feed under the reader.
   useEffect(() => {
     if (!live) return;
     const t = setInterval(async () => {
       if (document.hidden) return;
-      const r = await fetch(`/api/feed/new?${qs(source, { since: String(loadedAt.current) })}`).catch(() => null);
+      const r = await fetch(`/api/feed/new?${qs({ tab: source.tab === "following" ? "following" : "foryou" }, { since: String(loadedAt.current) })}`).catch(() => null);
       if (r?.ok) setFresh(((await r.json()) as { count: number }).count);
     }, 30_000);
     return () => clearInterval(t);
-  }, [live, source]);
+  }, [live, source.tab]);
 
   useEffect(() => {
     if (!prependOwn) return;
@@ -133,50 +139,55 @@ export function Feed({ initial, source, empty, live, prependOwn, interleave }: {
     startY.current = null;
   };
   const showSpinner = pull > 0 || refreshing;
+  const ready = pull > 64;
 
   return (
-    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-      <div
-        aria-hidden={!refreshing}
-        className="flex items-center justify-center overflow-hidden"
-        style={{ height: refreshing ? 52 : pull, transition: startY.current === null ? "height 300ms var(--ease-out)" : "none" }}
-      >
+    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} className={pad ? "px-3 sm:px-4" : ""}>
+      {/* Pull to refresh: the WorldNet mark winds up, then spins with a cyan ring */}
+      <div aria-hidden={!refreshing} className="flex items-center justify-center overflow-hidden" style={{ height: refreshing ? 60 : pull, transition: startY.current === null ? "height 300ms var(--ease-out)" : "none" }}>
         {showSpinner && (
-          <svg width="26" height="26" viewBox="0 0 26 26" className={refreshing ? "animate-spin" : ""} style={{ transform: refreshing ? undefined : `rotate(${pull * 4}deg)` }} role={refreshing ? "status" : undefined} aria-label={refreshing ? "Refreshing" : undefined}>
-            <circle cx="13" cy="13" r="10" fill="none" stroke="var(--line-strong)" strokeWidth="3" />
-            <circle cx="13" cy="13" r="10" fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${refreshing ? 20 : Math.min(62, (pull / 64) * 62)} 63`} />
-          </svg>
+          <span role={refreshing ? "status" : undefined} aria-label={refreshing ? "Refreshing" : undefined} className="relative flex h-11 w-11 items-center justify-center" style={{ opacity: refreshing ? 1 : Math.min(1, pull / 40) }}>
+            <span className={`absolute inset-0 rounded-[15px] ring-2 transition-colors ${ready || refreshing ? "ring-[var(--wn-cyan)] shadow-[0_0_18px_rgb(34_211_238/0.6)]" : "ring-[var(--rule-strong)]"} ${refreshing ? "motion-safe:animate-ping" : ""}`} />
+            <span className={refreshing ? "motion-safe:animate-spin" : ""} style={refreshing ? { animationDuration: "0.9s" } : { transform: `rotate(${pull * 4}deg) scale(${0.7 + Math.min(0.3, pull / 220)})` }}><LogoMark size={30} /></span>
+          </span>
         )}
       </div>
 
       {fresh > 0 && (
-        <div className="pointer-events-none sticky top-[calc(var(--sub-top)+60px)] z-20 flex h-0 justify-center">
-          <button type="button" onClick={refresh} className="btn-primary pointer-events-auto mt-2 !min-h-10 animate-slide-down !px-4 !text-[14px] shadow-glow">
-            <ArrowUpIcon size={16} strokeWidth={2.4} /> {fresh} new post{fresh === 1 ? "" : "s"}
+        <div className="pointer-events-none sticky top-[calc(var(--sub-top)+64px)] z-20 flex h-0 justify-center">
+          <button type="button" onClick={refresh} className="btn-primary pointer-events-auto mt-1 !min-h-11 animate-slide-down !rounded-full !px-5 !text-[14px] shadow-glow">
+            <ArrowUpIcon size={16} strokeWidth={2.4} /> {fresh} new dispatch{fresh === 1 ? "" : "es"}
           </button>
         </div>
       )}
 
       {items.length === 0 && !cursor ? (
-        empty
+        <div className="card overflow-hidden">{empty}</div>
       ) : (
-        <div role="feed" aria-busy={loading}>
+        <div role="feed" aria-busy={loading} className="space-y-3">
           {items.map((it, i) => {
             const drop = () => setItems((c) => c.filter((x) => itemId(x) !== itemId(it)));
-            const body =
-              "story" in it ? (
-                <div className="px-3 pb-3 sm:px-4"><StoryTile s={it.story} big /></div>
-              ) : (
-                <PostCard post={it.post} repostedBy={it.repostedBy} index={i} onGone={(id) => setItems((c) => c.filter((x) => "story" in x || x.post.id !== id))} />
+            // Cards fade and rise in: staggered on first paint, immediate for pages loaded later.
+            const anim = { animationDelay: i < firstCount.current ? `${Math.min(i, 6) * 45}ms` : "0ms" };
+            let row: React.ReactNode;
+            if ("ad" in it) {
+              row = <div key={it.key} role="article" aria-label="Sponsored" className="animate-rise" style={anim}><SponsoredCard ad={it.ad} /></div>;
+            } else {
+              const post = (extra?: MenuItem[]) => "post" in it && <PostCard flat post={it.post} repostedBy={it.repostedBy} index={i} extraMenu={extra} onGone={(id) => setItems((c) => c.filter((x) => !("post" in x) || x.post.id !== id))} />;
+              const story = "story" in it && <StoryTile s={it.story} big flat rising={"rising" in it && it.rising} />;
+              row = (
+                <div key={it.key} role={"kind" in it ? undefined : "story" in it ? "article" : undefined} className="card feed-card animate-rise overflow-hidden" style={anim}>
+                  {"kind" in it ? <ForYouFrame item={it} onDismiss={drop}>{"story" in it ? story : post}</ForYouFrame> : "story" in it ? story : post()}
+                </div>
               );
-            const row = "kind" in it ? <ForYouFrame key={it.key} item={it} onDismiss={drop}>{body}</ForYouFrame> : "story" in it ? <div key={it.key} role="article">{body}</div> : <Fragment key={it.key}>{body}</Fragment>;
-            return interleave && i === interleave.at - 1 ? [row, <div key="interleave" role="article" aria-label="People you may know" className="border-y border-rule bg-white/[0.015] px-4 py-2">{interleave.node}</div>] : row;
+            }
+            return interleave && i === interleave.at - 1 ? [row, <div key="interleave" role="article" aria-label="People you may know" className="card animate-rise p-4">{interleave.node}</div>] : row;
           })}
         </div>
       )}
       <div ref={sentinel} />
-      {loading && <FeedSkeleton count={2} />}
-      {error && <ErrorState message="Couldn't load more posts." onRetry={loadMore} />}
+      {loading && <div className="mt-3"><FeedSkeleton count={2} /></div>}
+      {error && <ErrorState message="Couldn't load more dispatches." onRetry={loadMore} />}
       {!cursor && items.length > 0 && (
         <div className="flex items-center gap-3 px-6 py-10 text-[13px] text-ink-3">
           <span className="h-px flex-1 bg-line" />

@@ -36,8 +36,8 @@ export function StoryArt({ seed, section, className = "", photo, width = 1200, p
     const near = nodes.map((m, j) => ({ j, d: (m.x - n.x) ** 2 + (m.y - n.y) ** 2 })).filter((x) => x.j !== i).sort((a, b) => a.d - b.d).slice(0, 2);
     near.forEach(({ j }) => i < j && links.push([i, j]));
   });
-  const iconX = 432 + rnd() * 24; // inside the crop from 1:1 phones to 21:9 desktops
-  const iconY = hero ? 118 : 132 + rnd() * 16;
+  const iconX = hero ? 452 : 432 + rnd() * 24; // inside the crop from 1:1 phones to 21:9 desktops
+  const iconY = hero ? 84 : 132 + rnd() * 16;
   const W = "rgb(255 255 255 / 0.9)";
 
   return (

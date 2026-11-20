@@ -3,7 +3,7 @@ import type { StorySummary } from "@/lib/news";
 import { Time } from "../Time";
 import { CategoryTag, LiveBadge } from "../ui/Badge";
 import { MiniSplit } from "../ui/Stance";
-import { ClockIcon } from "../icons";
+import { ClockIcon, FlameIcon } from "../icons";
 import { StoryArt } from "./StoryArt";
 import { TeamChips } from "../sports/TeamChips";
 
@@ -30,14 +30,19 @@ export function Meta({ s, className = "" }: { s: StorySummary; className?: strin
 }
 
 /** Story card: large image, category tag, headline, time and source. */
-export function StoryTile({ s, big }: { s: StorySummary; big?: boolean }) {
+export function StoryTile({ s, big, flat, rising }: { s: StorySummary; big?: boolean; /** inside another card */ flat?: boolean; /** show the trending flame */ rising?: boolean }) {
   return (
-    <article className="card card-hover group min-w-0 overflow-hidden">
+    <article className={`group min-w-0 overflow-hidden ${flat ? "" : "card card-hover"}`}>
       <Link href={`/news/story/${s.key}`} className="block">
         <div className="relative aspect-[16/10] overflow-hidden">
           <StoryArt seed={s.key} section={s.section} photo={s.photo} width={640} className="transition-transform duration-700 ease-out group-hover:scale-[1.05]" />
           <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[rgb(7_11_20/0.7)] via-transparent to-transparent" />
           <span className="absolute top-3 left-3"><StatusTags s={s} /></span>
+          {rising && (
+            <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-[6px] bg-[rgb(7_11_20/0.72)] px-2 py-[4px] text-[10.5px] leading-none font-extrabold tracking-[0.1em] text-[#fbbf24] uppercase ring-1 ring-[#fbbf24]/50 backdrop-blur-sm">
+              <FlameIcon size={12} className="motion-safe:animate-pulse" /> Rising
+            </span>
+          )}
           {s.teams.length > 0 && <span className="absolute bottom-3 left-3"><TeamChips teams={s.teams} onImage linked={false} /></span>}
         </div>
         <div className="p-4">

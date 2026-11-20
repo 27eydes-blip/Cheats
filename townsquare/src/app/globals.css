@@ -397,3 +397,6 @@ dialog.side-menu::backdrop { background: rgb(3 6 12 / 0.55); backdrop-filter: bl
 .fab { box-shadow: 0 0 0 4px rgb(47 107 255 / 0.18), 0 10px 30px rgb(47 107 255 / 0.65), 0 0 40px rgb(34 211 238 / 0.25); animation: fab-glow 3.2s ease-in-out infinite; }
 @keyframes fab-glow { 50% { box-shadow: 0 0 0 7px rgb(47 107 255 / 0.1), 0 10px 36px rgb(47 107 255 / 0.8), 0 0 54px rgb(34 211 238 / 0.4); } }
 @media (max-width: 1023.98px) { :root { --sub-top: var(--header-h); } }
+/* Feed cards: glass panels that light up, without the lift (they hold buttons) */
+.feed-card { transition: border-color var(--dur-std), box-shadow var(--dur-std); }
+.feed-card:hover, .feed-card:focus-within { border-color: color-mix(in srgb, var(--wn-cyan) 45%, transparent); box-shadow: 0 0 0 1px rgb(34 211 238 / 0.12), 0 12px 36px -18px rgb(47 107 255 / 0.55); }
