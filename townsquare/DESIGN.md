@@ -111,7 +111,13 @@ meter), and the floating "+" (now Take it, docked in its own slot).
 - **New screens:** Story page (timeline rail, coverage strip, split, Agree | Disagree takes, context notes), Byline, Morning Edition (offline save), Live Studio (monitors, schedule grid), Desks with an Editor toolbar, Newsdesk grouped by Story, Control Room, sign-up with a sample Front Page.
 - **Brand:** navy/gold/white tokens, Newsreader + Inter + JetBrains Mono, a stamp mark and serif wordmark, icons, splash.
 
-## 8. Next five improvements
+## 8. Markets board (`/markets`)
+
+The one always-dark screen: a terminal grid (navy-black, 32 px grid lines, navy and gold glows) under a gold-ruled ticker tape.
+Gains are mint `#2EE6A6`, losses coral `#FF5C7A`, both with a soft glow; gold marks the selected symbol, the day-range marker and labels.
+Prices flash on every tick; the tape pauses on hover and stops under reduced motion. A DEMO / LIVE badge always says where prices come from.
+
+## 9. Next five improvements
 
 1. **Real content pipeline:** RSS ingest that clusters headlines into Stories automatically (the "How it is covered" strip then fills itself), plus an editor tool to write timeline updates.
 2. **Context notes with cross-viewpoint rating:** only show a Context take as a "note" once readers who usually disagree both rate it helpful (the stance history already gives the signal).

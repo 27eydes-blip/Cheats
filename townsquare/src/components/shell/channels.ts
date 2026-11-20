@@ -7,6 +7,7 @@ export const CHANNELS = [
   { key: "Tech", label: "Tech", href: "/?c=Tech" },
   { key: "Sports", label: "Sports", href: "/?c=Sports" },
   { key: "Culture", label: "Culture", href: "/?c=Culture" },
+  { key: "markets", label: "Markets", href: "/markets" },
   { key: "live", label: "Live", href: "/live" },
   { key: "desks", label: "Desks", href: "/communities" },
 ] as const;
@@ -16,6 +17,7 @@ export const CHANNEL_KEYS = CHANNELS.map((c) => c.key);
 export function activeChannel(path: string, c: string | null) {
   if (path === "/") return c && CHANNELS.some((x) => x.key === c) ? c : "front";
   if (path.startsWith("/live")) return "live";
+  if (path.startsWith("/markets")) return "markets";
   if (path.startsWith("/communities") || path.startsWith("/c/")) return "desks";
   return null;
 }

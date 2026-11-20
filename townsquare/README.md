@@ -13,9 +13,10 @@ state is on the live **`/design`** page in light and dark.
 
 | Area | Included |
 |---|---|
-| Front Page | Masthead + channel dial (Front Page, Politics, World, Business, Tech, Sports, Culture, Live, Desks) + Live Wire. Desktop: bento tiles sized by importance (Lead Story, stories, Live Studio, Hot Stories, Hot Debate, Poll of the Day, Morning Edition, Quick Takes, Voices, outlets). Phone: a full-height story deck — swipe up through Stories, sideways between channels |
+| Front Page | Masthead + channel dial (Front Page, Politics, World, Business, Tech, Sports, Culture, Markets, Live, Desks) + Live Wire. Desktop: bento tiles sized by importance (Lead Story, stories, Live Studio, Hot Stories, Hot Debate, Poll of the Day, Morning Edition, Quick Takes, Voices, outlets). Phone: a full-height story deck — swipe up through Stories, sideways between channels |
 | Stories | Giant headline, timeline rail, "How it is covered" outlet strip, large stance meter, Takes split Agree \| Disagree (toggle on phones), Context notes as inline cards, head-to-head debates |
 | Takes | 500 characters, stance chip, Story picker, images (alt text, EXIF stripped), polls, link cards, quote; Answer (reply), Amplify (to your Rundown), Save to Rundown, share, edit within 15 min, delete |
+| Markets | `/markets`: an always-dark trading board with a scrolling ticker tape (S&P 500, Nasdaq-100, Dow, Russell 2000 via SPY/QQQ/DIA/IWM, your watchlist, top movers), market clock and countdown, index cards with intraday charts, a big interactive chart, your saved watchlist (add/remove), a sector heatmap, top gainers/losers, and Business stories. Real quotes with `FINNHUB_API_KEY`; otherwise **DEMO** mode with clearly labeled simulated prices. Not investment advice |
 | Stance meter | On every Story and Take: agree / unsure / disagree split, tap to cast or change, optimistic and animated |
 | Rundown | Your lineup as a TV rundown — Now, Next, Later today, Earlier — as a page and a drawer |
 | Byline | Editorial name, credibility record (verified, tenure, context notes, takes, followers), pinned take as a pull-quote, tabs Takes / Debates / Rundown |

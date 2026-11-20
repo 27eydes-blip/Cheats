@@ -274,6 +274,15 @@ CREATE TABLE IF NOT EXISTS stances (
 );
 CREATE INDEX IF NOT EXISTS stances_target ON stances(target_type, target_id);
 
+-- Markets watchlists (one row per ticker per person).
+CREATE TABLE IF NOT EXISTS watchlist (
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  symbol     TEXT NOT NULL,
+  position   INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, symbol)
+);
+
 -- Live story pages: one row per developing story, with a timeline of updates.
 CREATE TABLE IF NOT EXISTS stories (
   key        TEXT PRIMARY KEY,

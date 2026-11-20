@@ -64,6 +64,7 @@ export function Masthead({ unread }: { unread: number }) {
         </p>
         <nav aria-label="Sections" className="flex items-center gap-5 text-[12px] font-semibold text-ink-2">
           <Link href="/briefing" className="hover:text-navy-ink">Morning Edition</Link>
+          <Link href="/markets" className="hover:text-navy-ink">Markets</Link>
           <Link href="/live" className="hover:text-navy-ink">Live Studio</Link>
           <Link href="/explore" className="hover:text-navy-ink">Hot Stories</Link>
           {viewer?.isAdmin && <Link href="/admin" className="text-gold-ink hover:underline">Control Room</Link>}

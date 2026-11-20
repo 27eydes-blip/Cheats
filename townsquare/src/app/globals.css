@@ -305,3 +305,23 @@ dialog[open] { animation: scale-in var(--dur-std) var(--ease-out); }
 :root { --sub-top: calc(var(--dial-h) + var(--wire-h)); }
 .sticky-sub { position: sticky; top: var(--sub-top); }
 .appbar { transition: transform var(--dur-emph) var(--ease-out); }
+
+/* ---------- Markets terminal ---------- */
+@keyframes flash-up { 0% { background-color: rgb(46 230 166 / 0.35); } 100% { background-color: transparent; } }
+@keyframes flash-down { 0% { background-color: rgb(255 92 122 / 0.35); } 100% { background-color: transparent; } }
+@keyframes scan { from { transform: translateY(-100%); } to { transform: translateY(100%); } }
+@keyframes blink { 50% { opacity: 0.25; } }
+.flash-up { animation: flash-up 900ms ease-out; }
+.flash-down { animation: flash-down 900ms ease-out; }
+.terminal-grid {
+  background-color: #040915;
+  background-image:
+    radial-gradient(1200px 500px at 15% -10%, rgb(26 53 112 / 0.55), transparent 60%),
+    radial-gradient(900px 400px at 100% 0%, rgb(200 162 74 / 0.12), transparent 60%),
+    linear-gradient(rgb(120 150 220 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(120 150 220 / 0.06) 1px, transparent 1px);
+  background-size: auto, auto, 32px 32px, 32px 32px;
+}
+.glow-up { color: #2ee6a6; text-shadow: 0 0 18px rgb(46 230 166 / 0.45); }
+.glow-down { color: #ff5c7a; text-shadow: 0 0 18px rgb(255 92 122 / 0.45); }
+.glow-gold { color: #e3c773; text-shadow: 0 0 16px rgb(227 199 115 / 0.4); }

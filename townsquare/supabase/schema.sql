@@ -361,3 +361,14 @@ language sql stable security definer set search_path = public as $$
 $$;
 create policy "editors pin stories" on communities for update using (is_desk_editor(id)) with check (is_desk_editor(id));
 create policy "editors remove desk posts" on posts for update using (community_id is not null and is_desk_editor(community_id));
+
+-- Markets: each user's stock watchlist (owner-only).
+create table public.watchlist (
+  user_id uuid references profiles(id) on delete cascade,
+  symbol text not null check (symbol ~ '^[A-Z]{1,5}(\.[A-Z])?$'),
+  position int not null default 0,
+  created_at timestamptz not null default now(),
+  primary key (user_id, symbol)
+);
+alter table watchlist enable row level security;
+create policy "own watchlist" on watchlist for all using (user_id = auth.uid()) with check (user_id = auth.uid());

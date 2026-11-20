@@ -1,0 +1,336 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import type { Quote } from "@/lib/markets/provider";
+import { addWatchAction, removeWatchAction } from "@/actions/markets";
+import { ALL_TICKERS, INDEX_ETFS, STOCKS } from "@/lib/markets/universe";
+import { CloseIcon, PlusIcon } from "../icons";
+import { useToast, useViewer } from "../providers";
+import { AreaChart, MiniLine } from "./Charts";
+import { fmtChg, fmtPct, fmtPrice, useMarket } from "./MarketData";
+
+const up = (q: Quote) => q.change >= 0;
+const tone = (q: Quote) => (up(q) ? "text-[#2ee6a6]" : "text-[#ff5c7a]");
+const Arrow = ({ q }: { q: Quote }) => <span aria-hidden="true">{up(q) ? "▲" : "▼"}</span>;
+
+/** Flashes green/red each time a symbol ticks. */
+function useFlash(symbol: string) {
+  const { ticks } = useMarket();
+  const t = ticks[symbol];
+  return t ? { key: t.n, cls: t.dir > 0 ? "flash-up" : "flash-down" } : { key: 0, cls: "" };
+}
+
+/** Full-width scrolling tape: index ETFs, your watchlist, and the day's biggest movers. */
+export function TickerTape() {
+  const { quotes, watchlist } = useMarket();
+  const [paused, setPaused] = useState(false);
+  const symbols = useMemo(() => {
+    const movers = STOCKS.map((t) => quotes[t.symbol]).filter(Boolean).sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct)).slice(0, 6).map((q) => q.symbol);
+    return [...new Set([...INDEX_ETFS.map((t) => t.symbol), ...watchlist, ...movers])];
+  }, [quotes, watchlist]);
+  const items = symbols.map((s) => quotes[s]).filter(Boolean);
+  if (!items.length) return null;
+  const row = (hidden: boolean) => (
+    <ul className="flex shrink-0 items-center" aria-hidden={hidden || undefined}>
+      {items.map((q) => (
+        <li key={q.symbol} className="flex items-center gap-2 border-r border-white/10 px-5">
+          <span className="text-[12px] font-bold tracking-wide text-white">{INDEX_ETFS.some((t) => t.symbol === q.symbol) ? q.name : q.symbol}</span>
+          <TapePrice q={q} />
+          <span className={`text-[12px] font-semibold ${tone(q)}`}><Arrow q={q} /> {fmtPct(q.changePct)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+  const seconds = Math.max(30, items.length * 4.5);
+  return (
+    <div
+      role="region"
+      aria-label="Stock ticker"
+      className="mono relative overflow-hidden border-y border-[#c8a24a]/40 bg-black/60"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div className="flex h-10 w-max items-center motion-reduce:!animate-none" style={{ animation: `marquee ${seconds}s linear infinite`, animationPlayState: paused ? "paused" : "running" }}>
+        {row(false)}
+        {row(true)}
+      </div>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#040915] to-transparent" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#040915] to-transparent" />
+    </div>
+  );
+}
+
+function TapePrice({ q }: { q: Quote }) {
+  const f = useFlash(q.symbol);
+  return <span key={f.key} className={`rounded-[2px] px-1 text-[12px] text-white/90 ${f.cls}`}>{fmtPrice(q.price)}</span>;
+}
+
+/** Market status: open/closed, countdown, Eastern time, and which data source is in use. */
+export function StatusBar() {
+  const { status, mode } = useMarket();
+  const [now, setNow] = useState<number | null>(null);
+  const [anchor] = useState(() => ({ at: Date.now(), left: status.nextChangeMs }));
+  useEffect(() => {
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const left = now ? Math.max(0, status.nextChangeMs - (now - anchor.at) + (anchor.left - status.nextChangeMs)) : status.nextChangeMs;
+  const h = Math.floor(left / 3_600_000);
+  const m = Math.floor((left % 3_600_000) / 60_000);
+  const s = Math.floor((left % 60_000) / 1000);
+  const et = now ? new Date(now).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", second: "2-digit" }) : "";
+  return (
+    <div className="mono flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px]">
+      <span className={`flex items-center gap-2 rounded-[2px] px-2 py-1 font-bold tracking-wider uppercase ${status.open ? "bg-[#2ee6a6]/15 text-[#2ee6a6]" : "bg-white/10 text-white/80"}`}>
+        <span className={`h-2 w-2 rounded-full ${status.open ? "bg-[#2ee6a6] shadow-[0_0_10px_#2ee6a6]" : "bg-white/50"}`} style={status.open ? { animation: "blink 1.6s infinite" } : undefined} />
+        {status.label}
+      </span>
+      <span className="text-white/70" suppressHydrationWarning>{status.open ? "Closes in" : "Opens in"} <b className="text-white">{h}h {String(m).padStart(2, "0")}m {String(s).padStart(2, "0")}s</b></span>
+      <span className="text-white/70" suppressHydrationWarning>NEW YORK <b className="text-white">{et}</b></span>
+      <span className={`ml-auto rounded-[2px] px-2 py-1 font-bold tracking-wider ${mode === "live" ? "bg-[#2ee6a6]/15 text-[#2ee6a6]" : "bg-[#c8a24a]/20 text-[#e3c773]"}`} title={mode === "demo" ? "No market-data key is configured, so prices are simulated." : "Quotes from Finnhub"}>
+        {mode === "live" ? "LIVE DATA · FINNHUB" : "DEMO DATA · SIMULATED PRICES"}
+      </span>
+    </div>
+  );
+}
+
+/** One index card: S&P 500 (SPY), Nasdaq-100 (QQQ), Dow (DIA), Russell 2000 (IWM). */
+export function IndexCard({ symbol }: { symbol: string }) {
+  const { quotes, select, selected } = useMarket();
+  const q = quotes[symbol];
+  const f = useFlash(symbol);
+  if (!q) return <div className="h-[210px] animate-pulse rounded-[4px] bg-white/5" />;
+  const range = q.high - q.low || 1;
+  return (
+    <button
+      type="button"
+      onClick={() => select(symbol)}
+      aria-pressed={selected === symbol}
+      className={`group relative overflow-hidden rounded-[4px] border bg-[#081226]/80 p-4 text-left backdrop-blur transition-all duration-300 hover:-translate-y-0.5 ${selected === symbol ? "border-[#c8a24a] shadow-[0_0_0_1px_#c8a24a,0_10px_40px_rgb(200_162_74/0.18)]" : "border-white/10 hover:border-white/25"}`}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-[13px] font-bold text-white">{q.name}</p>
+          <p className="mono text-[10.5px] tracking-wider text-white/50">{symbol} · ETF PROXY</p>
+        </div>
+        <span className={`mono rounded-[2px] px-1.5 py-0.5 text-[11px] font-bold ${up(q) ? "bg-[#2ee6a6]/12 text-[#2ee6a6]" : "bg-[#ff5c7a]/12 text-[#ff5c7a]"}`}><Arrow q={q} /> {fmtPct(q.changePct)}</span>
+      </div>
+      <p key={f.key} className={`mono mt-3 inline-block rounded-[2px] px-1 -ml-1 text-[30px] leading-none font-semibold ${up(q) ? "glow-up" : "glow-down"} ${f.cls}`}>{fmtPrice(q.price)}</p>
+      <p className={`mono mt-1 text-[12px] ${tone(q)}`}>{fmtChg(q.change)} today</p>
+      <div className="mt-3"><AreaChart values={q.series} prevClose={q.prevClose} height={64} label={`${q.name} intraday`} /></div>
+      <div className="mt-3">
+        <div className="relative h-1 rounded-full bg-white/10">
+          <span className="absolute top-1/2 h-2.5 w-[3px] -translate-y-1/2 rounded-full bg-[#e3c773] shadow-[0_0_8px_#e3c773]" style={{ left: `${((q.price - q.low) / range) * 100}%` }} />
+        </div>
+        <div className="mono mt-1 flex justify-between text-[10px] text-white/45"><span>L {fmtPrice(q.low)}</span><span>DAY RANGE</span><span>H {fmtPrice(q.high)}</span></div>
+      </div>
+    </button>
+  );
+}
+
+/** Big interactive chart for the selected symbol, with key stats. */
+export function FocusChart() {
+  const { quotes, selected } = useMarket();
+  const q = quotes[selected];
+  const f = useFlash(selected);
+  if (!q) return <div className="h-[420px] animate-pulse rounded-[4px] bg-white/5" />;
+  const stats: [string, string][] = [["Open", fmtPrice(q.open)], ["Prev close", fmtPrice(q.prevClose)], ["Day high", fmtPrice(q.high)], ["Day low", fmtPrice(q.low)]];
+  return (
+    <section aria-label={`${q.symbol} chart`} className="relative overflow-hidden rounded-[4px] border border-white/10 bg-[#081226]/80 p-5 backdrop-blur">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 h-24 bg-gradient-to-b from-white/[0.04] to-transparent" style={{ animation: "scan 6s linear infinite" }} />
+      <div className="relative flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="folio !text-[10px] text-[#e3c773]">Now watching</p>
+          <h2 className="mt-1 flex items-baseline gap-3 font-display text-[clamp(1.8rem,1.3rem+1.6vw,2.6rem)] leading-none font-semibold text-white">
+            {q.symbol}<span className="font-sans text-[15px] font-medium text-white/60">{q.name}</span>
+          </h2>
+        </div>
+        <div className="text-right">
+          <p key={f.key} className={`mono inline-block rounded-[2px] px-1 text-[clamp(2rem,1.4rem+2vw,3rem)] leading-none font-semibold ${up(q) ? "glow-up" : "glow-down"} ${f.cls}`}>{fmtPrice(q.price)}</p>
+          <p className={`mono mt-1 text-[14px] font-semibold ${tone(q)}`}><Arrow q={q} /> {fmtChg(q.change)} ({fmtPct(q.changePct)})</p>
+        </div>
+      </div>
+      <div className="relative mt-5"><AreaChart values={q.series} prevClose={q.prevClose} height={240} interactive label={`${q.symbol} intraday price`} /></div>
+      <div className="mono relative mt-2 flex justify-between text-[10.5px] text-white/40"><span>9:30 AM ET</span><span>12:00</span><span>4:00 PM</span></div>
+      <dl className="relative mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-[2px] bg-white/10 sm:grid-cols-4">
+        {stats.map(([k, v]) => (
+          <div key={k} className="bg-[#081226] px-3 py-2.5"><dt className="folio !text-[9.5px] text-white/50">{k}</dt><dd className="mono mt-0.5 text-[15px] text-white">{v}</dd></div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+/** Your watchlist: live rows with sparklines; add or remove tickers (saved to your account). */
+export function Watchlist() {
+  const { quotes, watchlist, setWatchlist, select, selected } = useMarket();
+  const viewer = useViewer();
+  const toast = useToast();
+  const [sym, setSym] = useState("");
+  const [, start] = useTransition();
+  const add = () => {
+    const s = sym.trim().toUpperCase();
+    if (!s) return;
+    if (!viewer) return (window.location.href = "/login?next=/markets");
+    const prev = watchlist;
+    if (!watchlist.includes(s)) setWatchlist([...watchlist, s]);
+    setSym("");
+    start(async () => {
+      const r = await addWatchAction(s);
+      if (r.ok) (setWatchlist(r.data), select(s));
+      else (setWatchlist(prev), toast(r.error, "error"));
+    });
+  };
+  const remove = (s: string) => {
+    const prev = watchlist;
+    setWatchlist(watchlist.filter((x) => x !== s));
+    start(async () => {
+      const r = await removeWatchAction(s);
+      if (!r.ok) (setWatchlist(prev), toast(r.error, "error"));
+    });
+  };
+  return (
+    <section aria-labelledby="wl" className="flex flex-col overflow-hidden rounded-[4px] border border-white/10 bg-[#081226]/80 backdrop-blur">
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <h2 id="wl" className="folio text-[#e3c773]">Your watchlist</h2>
+        <span className="mono text-[11px] text-white/50">{watchlist.length} TICKERS</span>
+      </div>
+      <form onSubmit={(e) => (e.preventDefault(), add())} className="flex gap-2 border-b border-white/10 p-3">
+        <label className="sr-only" htmlFor="wl-add">Add a ticker</label>
+        <input id="wl-add" list="tickers" value={sym} onChange={(e) => setSym(e.target.value.toUpperCase())} placeholder={viewer ? "Add ticker, e.g. NFLX" : "Log in to edit your watchlist"} className="mono min-w-0 flex-1 rounded-[3px] border border-white/15 bg-black/40 px-3 py-2 text-[14px] text-white placeholder:text-white/35 focus:border-[#c8a24a] focus:outline-none" autoCapitalize="characters" autoComplete="off" />
+        <datalist id="tickers">{ALL_TICKERS.map((t) => <option key={t.symbol} value={t.symbol}>{t.name}</option>)}</datalist>
+        <button type="submit" className="inline-flex h-10 items-center gap-1 rounded-[3px] bg-[#c8a24a] px-3 text-[13px] font-bold text-[#0b1f4b]"><PlusIcon size={15} strokeWidth={2.4} /> Add</button>
+      </form>
+      <ul className="max-h-[440px] flex-1 overflow-y-auto">
+        {watchlist.map((s) => {
+          const q = quotes[s];
+          return (
+            <li key={s} className={`group flex items-center gap-3 border-b border-white/[0.06] px-4 py-2.5 transition-colors ${selected === s ? "bg-[#c8a24a]/10 shadow-[inset_3px_0_0_#c8a24a]" : "hover:bg-white/[0.04]"}`}>
+              <button type="button" onClick={() => select(s)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                <span className="min-w-0 flex-1">
+                  <span className="mono block text-[14px] font-bold text-white">{s}</span>
+                  <span className="block truncate text-[11.5px] text-white/50">{q?.name ?? "Loading…"}</span>
+                </span>
+                {q && <MiniLine values={q.series} prevClose={q.prevClose} />}
+                <span className="w-[86px] text-right">{q ? <WatchPrice q={q} /> : <span className="mono text-[12px] text-white/40">—</span>}</span>
+              </button>
+              {viewer && (
+                <button type="button" onClick={() => remove(s)} className="inline-flex h-7 w-7 items-center justify-center rounded-[3px] text-white/40 opacity-60 hover:bg-white/10 hover:text-white group-hover:opacity-100" aria-label={`Remove ${s} from watchlist`}>
+                  <CloseIcon size={14} />
+                </button>
+              )}
+            </li>
+          );
+        })}
+        {watchlist.length === 0 && <li className="px-4 py-8 text-center text-[13px] text-white/50">Add a ticker to start tracking it.</li>}
+      </ul>
+      {!viewer && <p className="px-4 py-2.5 text-[12px] text-white/50"><Link href="/login?next=/markets" className="font-semibold text-[#e3c773] hover:underline">Log in</Link> to save your own watchlist.</p>}
+    </section>
+  );
+}
+
+function WatchPrice({ q }: { q: Quote }) {
+  const f = useFlash(q.symbol);
+  return (
+    <>
+      <span key={f.key} className={`mono block rounded-[2px] text-[14px] text-white ${f.cls}`}>{fmtPrice(q.price)}</span>
+      <span className={`mono block text-[11.5px] font-semibold ${tone(q)}`}>{fmtPct(q.changePct)}</span>
+    </>
+  );
+}
+
+/** Sector heatmap: tile size by company size, color by today's move. */
+export function Heatmap() {
+  const { quotes, select } = useMarket();
+  const sectors = [...new Set(STOCKS.map((t) => t.sector))];
+  const color = (p: number) => {
+    const a = Math.min(1, Math.abs(p) / 3);
+    return p >= 0 ? `rgb(${Math.round(10 + 10 * a)} ${Math.round(70 + 140 * a)} ${Math.round(60 + 70 * a)})` : `rgb(${Math.round(90 + 150 * a)} ${Math.round(40 + 20 * a)} ${Math.round(60 + 20 * a)})`;
+  };
+  return (
+    <section aria-labelledby="heat" className="rounded-[4px] border border-white/10 bg-[#081226]/80 p-4 backdrop-blur">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 id="heat" className="folio text-[#e3c773]">Sector heatmap</h2>
+        <span className="mono flex items-center gap-1.5 text-[10px] text-white/50">−3% <span className="h-2 w-16 rounded-full" style={{ background: `linear-gradient(90deg, ${color(-3)}, #1b2840, ${color(3)})` }} /> +3%</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {sectors.map((sec) => {
+          const list = STOCKS.filter((t) => t.sector === sec);
+          return (
+            <div key={sec}>
+              <p className="mono mb-1 text-[10px] tracking-wider text-white/50 uppercase">{sec}</p>
+              <div className="grid grid-flow-dense auto-rows-[44px] grid-cols-4 gap-[3px]">
+                {list.map((t) => {
+                  const q = quotes[t.symbol];
+                  const p = q?.changePct ?? 0;
+                  return (
+                    <button
+                      key={t.symbol}
+                      type="button"
+                      onClick={() => select(t.symbol)}
+                      title={`${t.name} ${fmtPct(p)}`}
+                      className={`flex flex-col items-center justify-center rounded-[2px] text-white transition-transform hover:z-10 hover:scale-105 hover:ring-1 hover:ring-[#e3c773] ${t.size === 3 ? "col-span-2 row-span-2" : t.size === 2 ? "col-span-2" : ""}`}
+                      style={{ background: color(p) }}
+                    >
+                      <span className={`mono font-bold ${t.size === 3 ? "text-[15px]" : "text-[11px]"}`}>{t.symbol}</span>
+                      <span className="mono text-[10px] opacity-85">{fmtPct(p)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/** Biggest gainers and losers among the tracked large caps. */
+export function Movers() {
+  const { quotes, select } = useMarket();
+  const list = STOCKS.map((t) => quotes[t.symbol]).filter(Boolean);
+  const gain = [...list].sort((a, b) => b.changePct - a.changePct).slice(0, 5);
+  const lose = [...list].sort((a, b) => a.changePct - b.changePct).slice(0, 5);
+  const col = (title: string, rows: Quote[]) => (
+    <div>
+      <h3 className="folio mb-2 !text-[10px] text-white/60">{title}</h3>
+      <ul className="space-y-1">
+        {rows.map((q, i) => (
+          <li key={q.symbol}>
+            <button type="button" onClick={() => select(q.symbol)} className="flex w-full items-center gap-3 rounded-[3px] px-2 py-1.5 text-left hover:bg-white/[0.05]">
+              <span className="mono w-4 text-[11px] text-white/40">{i + 1}</span>
+              <span className="mono w-14 text-[13px] font-bold text-white">{q.symbol}</span>
+              <span className="min-w-0 flex-1 truncate text-[12px] text-white/50">{q.name}</span>
+              <span className="mono text-[12.5px] text-white/85">{fmtPrice(q.price)}</span>
+              <span className={`mono w-[68px] rounded-[2px] px-1.5 py-0.5 text-right text-[12px] font-bold ${up(q) ? "bg-[#2ee6a6]/12 text-[#2ee6a6]" : "bg-[#ff5c7a]/12 text-[#ff5c7a]"}`}>{fmtPct(q.changePct)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+  return (
+    <section aria-labelledby="movers" className="rounded-[4px] border border-white/10 bg-[#081226]/80 p-4 backdrop-blur">
+      <h2 id="movers" className="folio mb-3 text-[#e3c773]">Top movers</h2>
+      <div className="grid gap-5 sm:grid-cols-2">{col("Gainers", gain)}{col("Losers", lose)}</div>
+    </section>
+  );
+}
+
+/** Market breadth: how many tracked stocks are up vs down, as a single bar. */
+export function Breadth() {
+  const { quotes } = useMarket();
+  const list = STOCKS.map((t) => quotes[t.symbol]).filter(Boolean);
+  const upN = list.filter((q) => q.change >= 0).length;
+  const pct = list.length ? Math.round((upN / list.length) * 100) : 50;
+  return (
+    <div className="mono flex items-center gap-3 text-[11.5px] text-white/70">
+      <span className="text-[#2ee6a6]">{upN} ADVANCING</span>
+      <span className="relative h-1.5 w-40 overflow-hidden rounded-full bg-[#ff5c7a]/70"><span className="absolute inset-y-0 left-0 bg-[#2ee6a6] transition-[width] duration-700" style={{ width: `${pct}%` }} /></span>
+      <span className="text-[#ff5c7a]">{list.length - upN} DECLINING</span>
+    </div>
+  );
+}
