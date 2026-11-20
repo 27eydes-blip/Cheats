@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { FloatingPortal, useFloating } from "../ui/useFloating";
 
 const SETS: [string, string[]][] = [
   ["News", ["📰", "🗳️", "📈", "📉", "🏛️", "⚖️", "🌎", "🔥", "⚡", "🚨", "🧾", "🔗"]],
@@ -13,9 +14,11 @@ const SETS: [string, string[]][] = [
 export function EmojiPicker({ onPick, disabled }: { onPick: (e: string) => void; disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+  const pos = useFloating(btn, open, { w: 296, h: 330 });
   useEffect(() => {
     if (!open) return;
-    const close = (e: Event) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const close = (e: Event) => !ref.current?.contains(e.target as Node) && !(e.target as Element).closest?.("[role=dialog][aria-label=Emoji]") && setOpen(false);
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("pointerdown", close);
     document.addEventListener("keydown", esc);
@@ -23,9 +26,10 @@ export function EmojiPicker({ onPick, disabled }: { onPick: (e: string) => void;
   }, [open]);
   return (
     <div ref={ref} className="relative">
-      <button type="button" disabled={disabled} onClick={() => setOpen((o) => !o)} aria-label="Add emoji" aria-expanded={open} title="Emoji" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-[19px] hover:bg-navy-soft disabled:opacity-40">😊</button>
+      <button ref={btn} type="button" disabled={disabled} onClick={() => setOpen((o) => !o)} aria-label="Add emoji" aria-expanded={open} title="Emoji" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-[19px] hover:bg-navy-soft disabled:opacity-40">😊</button>
       {open && (
-        <div role="dialog" aria-label="Emoji" className="glass-strong absolute bottom-full left-0 z-40 mb-2 w-[296px] animate-scale-in rounded-[16px] p-2 shadow-3 ring-1 ring-[var(--wn-glass-border)]">
+        <FloatingPortal anchor={btn}>
+        <div role="dialog" aria-label="Emoji" style={pos} className="glass-strong animate-scale-in rounded-[16px] p-2 shadow-3 ring-1 ring-[var(--wn-glass-border)]">
           {SETS.map(([name, list]) => (
             <div key={name} className="mb-1">
               <p className="px-1 pt-1 text-[10px] font-extrabold tracking-[0.12em] text-ink-3 uppercase">{name}</p>
@@ -37,6 +41,7 @@ export function EmojiPicker({ onPick, disabled }: { onPick: (e: string) => void;
             </div>
           ))}
         </div>
+        </FloatingPortal>
       )}
     </div>
   );

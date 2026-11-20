@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { FeedPage } from "@/lib/feed";
 import type { ForYouItem } from "@/lib/foryou";
 import type { FeedItem, PostView } from "@/lib/posts";
@@ -169,8 +169,8 @@ export function Feed({ initial, source, empty, live, prependOwn, interleave }: {
               ) : (
                 <PostCard post={it.post} repostedBy={it.repostedBy} index={i} onGone={(id) => setItems((c) => c.filter((x) => "story" in x || x.post.id !== id))} />
               );
-            const row = "kind" in it ? <ForYouFrame key={it.key} item={it} onDismiss={drop}>{body}</ForYouFrame> : <div key={it.key}>{body}</div>;
-            return interleave && i === interleave.at - 1 ? [row, <div key="interleave" className="border-y border-rule bg-white/[0.015] px-4 py-2">{interleave.node}</div>] : row;
+            const row = "kind" in it ? <ForYouFrame key={it.key} item={it} onDismiss={drop}>{body}</ForYouFrame> : "story" in it ? <div key={it.key} role="article">{body}</div> : <Fragment key={it.key}>{body}</Fragment>;
+            return interleave && i === interleave.at - 1 ? [row, <div key="interleave" role="article" aria-label="People you may know" className="border-y border-rule bg-white/[0.015] px-4 py-2">{interleave.node}</div>] : row;
           })}
         </div>
       )}

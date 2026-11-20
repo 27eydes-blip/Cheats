@@ -90,7 +90,7 @@ export function ForYouFrame({ item, onDismiss, children }: { item: ForYouItem; o
   ];
 
   return (
-    <div ref={ref} onClickCapture={(e) => (e.target as Element).closest("a") && enqueue({ ...target, kind: "click" })} className="relative">
+    <div ref={ref} role="article" aria-label={item.kind === "story" ? item.story.title : `Dispatch by ${item.post.author.displayName}`} onClickCapture={(e) => (e.target as Element).closest("a") && enqueue({ ...target, kind: "click" })} className="relative">
       <div className="flex min-h-9 items-center justify-between gap-2 px-1 pt-1">
         <span className="flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold text-ink-3">
           {item.kind === "post" && item.promoted ? (

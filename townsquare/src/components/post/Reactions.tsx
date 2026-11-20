@@ -7,6 +7,7 @@ import { REACTIONS, type ReactionKind } from "@/lib/reactions-meta";
 import { SparkIcon } from "../icons";
 import { useToast, useViewer } from "../providers";
 import { celebrate } from "../Celebrate";
+import { FloatingPortal, useFloating } from "../ui/useFloating";
 
 type Counts = Record<ReactionKind, number>;
 
@@ -25,11 +26,13 @@ export function Reactions({ postId, counts: initialCounts, mine: initialMine }: 
   const [, start] = useTransition();
   const wrap = useRef<HTMLDivElement>(null);
   const hoverT = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+  const pos = useFloating(btn, open, { w: 268, h: 64 });
   useEffect(() => setCounts(initialCounts), [initialCounts]);
   useEffect(() => setMine(initialMine), [initialMine]);
   useEffect(() => {
     if (!open) return;
-    const close = (e: Event) => !wrap.current?.contains(e.target as Node) && setOpen(false);
+    const close = (e: Event) => !wrap.current?.contains(e.target as Node) && !(e.target as Element).closest?.("[aria-label=Reactions][role=menu]") && setOpen(false);
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("pointerdown", close);
     document.addEventListener("keydown", esc);
@@ -70,6 +73,7 @@ export function Reactions({ postId, counts: initialCounts, mine: initialMine }: 
       }}
     >
       <button
+        ref={btn}
         type="button"
         onClick={(e) => (e.stopPropagation(), setOpen((o) => !o))}
         aria-haspopup="true"
@@ -83,7 +87,8 @@ export function Reactions({ postId, counts: initialCounts, mine: initialMine }: 
         {burst > 0 && <Burst key={burst} />}
       </button>
       {open && (
-        <div role="menu" aria-label="Reactions" className="glass-strong absolute bottom-full left-1/2 z-30 mb-2 flex -translate-x-1/2 animate-scale-in gap-0.5 rounded-[16px] p-1.5 shadow-3 ring-1 ring-[var(--wn-glass-border)]" onClick={(e) => e.stopPropagation()}>
+        <FloatingPortal anchor={btn}>
+        <div role="menu" aria-label="Reactions" style={pos} className="glass-strong flex animate-scale-in justify-between gap-0.5 rounded-[16px] p-1.5 shadow-3 ring-1 ring-[var(--wn-glass-border)]" onClick={(e) => e.stopPropagation()}>
           {REACTIONS.map((r, i) => (
             <button
               key={r.key}
@@ -100,6 +105,7 @@ export function Reactions({ postId, counts: initialCounts, mine: initialMine }: 
             </button>
           ))}
         </div>
+        </FloatingPortal>
       )}
     </div>
   );

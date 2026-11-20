@@ -23,7 +23,7 @@ export function PageHeader({
         {kicker && <div className="mb-1.5">{kicker}</div>}
         <div className="flex items-end gap-3">
           <div className="min-w-0 flex-1">
-            <h1 className={`font-display font-semibold ${compact ? "text-h1" : "text-display"}`}>{title}</h1>
+            <h1 className={`font-display font-extrabold uppercase ${compact ? "text-h1" : "text-display"}`}>{title}</h1>
             {subtitle && <p className="mt-1.5 text-[15px] text-ink-2">{subtitle}</p>}
           </div>
           {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

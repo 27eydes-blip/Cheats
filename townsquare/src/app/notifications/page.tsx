@@ -7,6 +7,8 @@ import { ChipLink, ChipRow } from "@/components/ui/Chip";
 import { EmptyState } from "@/components/ui/States";
 import { AgreeIcon, AmplifyIcon, AnswerIcon, FlameIcon, QuoteIcon, ShieldIcon, SparkIcon, UserIcon } from "@/components/icons";
 import { RequestButtons } from "./RequestButtons";
+import { Suggestions } from "@/components/social/Suggestions";
+import { suggestFriends } from "@/lib/social";
 import { FollowerCelebrate } from "./FollowerCelebrate";
 import { Kicker } from "@/components/ui/Badge";
 import { Frame, PageTitle } from "@/components/ui/Frame";
@@ -127,7 +129,10 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
         </ChipRow>
       </div>
       {groups.length === 0 ? (
-        <EmptyState art="notifications" title="Quiet on the desk" body="When people respond to you, side with your dispatches, or follow your byline, it lands here, filed by story." />
+        <div className="pb-6">
+          <EmptyState art="notifications" title="Quiet on the desk" body="When people follow you, react, respond or mention you, it lands here, filed by story. Following a few people is the fastest way to get the conversation going:" />
+          <div className="mx-4 sm:mx-6"><Suggestions people={suggestFriends(viewer.id, 3)} /></div>
+        </div>
       ) : (
         [...desks.values()].map((d) => (
           <section key={d.key ?? "byline"} aria-label={d.title} className="mt-6">

@@ -56,6 +56,14 @@ Seeded logins:
 `npm run reset` wipes `./data` and seeds again. To make your own account an admin, put your email in
 `ADMIN_EMAILS` in `.env.local` before signing up.
 
+## Sports logos (optional)
+
+Teams show generated badges in their colors until you connect a **licensed** logo source:
+
+1. Get access from a sports-data vendor whose license covers displaying team logos.
+2. Set `SPORTS_LOGO_PROVIDER=manifest`, `SPORTS_API_KEY=<your key>` and `SPORTS_LOGO_MANIFEST_URL=<your vendor's JSON of team id → logo URL>` as environment variables (never in code). For a vendor with its own API, add one class in `src/lib/sports/logo-provider.ts`.
+3. Run `npm run teams:refresh` (add `-- --force` to re-fetch). Logos are cached on disk; uploads made in the Control Room always win.
+
 ## Deploy on Railway
 
 | Setting | Value |
