@@ -395,3 +395,12 @@ alter table reactions enable row level security;
 create policy "reactions readable" on reactions for select using (true);
 create policy "own reactions" on reactions for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 alter table public.profiles add column if not exists is_private boolean not null default false;
+
+-- Migration 3: sports teams (reference data), cached licensed logos, story ↔ team tags.
+create table public.teams (id text primary key, league text not null, abbr text not null, city text not null, name text not null, full_name text not null, primary_color text not null, secondary_color text not null, logo_path text, logo_source text check (logo_source in ('provider','manual')), logo_status text not null default 'none' check (logo_status in ('none','ok','missing','error')), logo_checked_at timestamptz, provider text, updated_at timestamptz not null default now());
+create table public.story_teams (story_key text references stories(key) on delete cascade, team_id text references teams(id) on delete cascade, primary key (story_key, team_id));
+alter table public.stories add column if not exists teams_tagged_at timestamptz;
+alter table teams enable row level security; alter table story_teams enable row level security;
+create policy "teams readable" on teams for select using (true);
+create policy "story teams readable" on story_teams for select using (true);
+-- writes to teams/story_teams happen server-side with the service role only.

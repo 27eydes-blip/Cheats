@@ -60,6 +60,43 @@ CREATE INDEX IF NOT EXISTS reactions_post ON reactions(post_id, kind);
 ALTER TABLE users ADD COLUMN is_private INTEGER NOT NULL DEFAULT 0;
 `,
   },
+  {
+    id: 3,
+    name: "sports_teams_and_logos",
+    sql: `
+CREATE TABLE IF NOT EXISTS teams (
+  id              TEXT PRIMARY KEY,
+  league          TEXT NOT NULL,
+  abbr            TEXT NOT NULL,
+  city            TEXT NOT NULL,
+  name            TEXT NOT NULL,
+  full_name       TEXT NOT NULL,
+  primary_color   TEXT NOT NULL,
+  secondary_color TEXT NOT NULL,
+  logo_path       TEXT,
+  logo_source     TEXT CHECK (logo_source IN ('provider','manual')),
+  logo_status     TEXT NOT NULL DEFAULT 'none' CHECK (logo_status IN ('none','ok','missing','error')),
+  logo_checked_at INTEGER,
+  provider        TEXT,
+  updated_at      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS teams_league ON teams(league, full_name);
+CREATE TABLE IF NOT EXISTS story_teams (
+  story_key TEXT NOT NULL REFERENCES stories(key) ON DELETE CASCADE,
+  team_id   TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  PRIMARY KEY (story_key, team_id)
+);
+ALTER TABLE stories ADD COLUMN teams_tagged_at INTEGER;
+`,
+  },
+  {
+    id: 4,
+    name: "retag_story_teams_case_sensitive_nicknames",
+    sql: `
+DELETE FROM story_teams;
+UPDATE stories SET teams_tagged_at = NULL;
+`,
+  },
 ];
 
 export function runMigrations(db: DatabaseSync) {

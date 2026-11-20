@@ -14,6 +14,7 @@ import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { get, newId, run, tx } from "../src/lib/db";
+import { seedTeams } from "../src/lib/sports/teams";
 import { hashPassword } from "../src/lib/passwords";
 import { extractHashtags, extractMentions } from "../src/lib/text";
 import { blurPlaceholder, uploadDir } from "../src/lib/media";
@@ -534,7 +535,8 @@ async function main() {
     ]);
   });
 
-  const counts = Object.fromEntries(["users", "stories", "story_updates", "posts", "stances", "communities", "news_items", "live_events"].map((t) => [t, get<{ n: number }>(`SELECT count(*) n FROM ${t}`)!.n]));
+  seedTeams();
+  const counts = Object.fromEntries(["users", "stories", "story_updates", "posts", "stances", "communities", "news_items", "live_events", "teams"].map((t) => [t, get<{ n: number }>(`SELECT count(*) n FROM ${t}`)!.n]));
   console.log("Done:", counts);
   if (prod) console.log("\nSample accounts have private passwords. Sign up with an email listed in ADMIN_EMAILS to get the Control Room.");
   else console.log("\nLog in with:\n  admin@worldnet.test / worldnet-admin  (Control Room)\n  demo@worldnet.test  / worldnet-demo\n  any other seeded user: <handle>@worldnet.test / worldnet-user");

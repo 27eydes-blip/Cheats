@@ -70,7 +70,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     : [];
   const wire: WireItem[] = [
     ...(banner ? [{ text: banner.text, href: banner.url, at: banner.setAt, label: banner.level === "info" ? "Update" : banner.level === "alert" ? "Alert" : "Breaking" }] : []),
-    ...updates.map((u) => ({ text: u.body, href: `/news/story/${u.story_key}`, at: u.created_at, label: live.find((x) => x.key === u.story_key)?.section ?? "Live" })),
+    ...updates.map((u) => {
+      const st = live.find((x) => x.key === u.story_key);
+      return { text: u.body, href: `/news/story/${u.story_key}`, at: u.created_at, label: st?.section ?? "Live", teams: st?.teams.slice(0, 2) };
+    }),
   ];
   // Market moves for the ticker (index ETFs + a few bellwethers).
   const tape = (await getQuotes(["SPY", "QQQ", "DIA", "IWM", "AAPL", "NVDA", "MSFT", "TSLA"])).map((q) => ({ symbol: q.symbol, name: q.name, price: q.price, changePct: q.changePct }));

@@ -360,3 +360,7 @@ dialog[open] { animation: scale-in var(--dur-std) var(--ease-out); }
 .glow-up { color: #2ee6a6; text-shadow: 0 0 18px rgb(46 230 166 / 0.45); }
 .glow-down { color: #ff5c7a; text-shadow: 0 0 18px rgb(255 92 122 / 0.45); }
 .glow-gold { color: var(--wn-cyan); text-shadow: 0 0 16px rgb(34 211 238 / 0.45); }
+
+/* Team badge outline: visible on both themes */
+.team-badge-ring { stroke: var(--ring-d); }
+html.light .team-badge-ring { stroke: var(--ring-l); }

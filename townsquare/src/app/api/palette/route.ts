@@ -3,6 +3,7 @@ import { all } from "@/lib/db";
 import { searchPosts, searchUsers } from "@/lib/feed";
 import { listStories } from "@/lib/news";
 import { getViewer } from "@/lib/session";
+import { searchTeams } from "@/lib/sports/teams";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export async function GET(req: NextRequest) {
     .map((s) => ({ key: s.key, title: s.title, section: s.section, status: s.status, takes: s.takes, split: s.split }));
   return NextResponse.json({
     stories,
+    teams: q ? searchTeams(q, 5) : [],
     voices: q ? searchUsers(q, viewer?.id ?? null, 5).map((u) => ({ handle: u.handle, displayName: u.displayName, avatarUrl: u.avatarUrl, verified: u.verified, bio: u.bio })) : [],
     desks: all<{ slug: string; name: string; description: string }>(
       "SELECT slug, name, description FROM communities WHERE visibility = 'public' AND (? = '' OR name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\') LIMIT 4",

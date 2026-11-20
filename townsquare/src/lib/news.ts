@@ -1,6 +1,7 @@
 import { all, get, now, run } from "./db";
 import { AppError } from "./errors";
 import { saveImage } from "./media";
+import { teamsForStories, type TeamView } from "./sports/teams";
 import { splits, EMPTY_SPLIT, type Split } from "./stance";
 import { toMini, type UserMini } from "./users";
 
@@ -33,6 +34,8 @@ export type StorySummary = {
   split: Split;
   /** Editor-supplied photo (with credit and alt text); null means use generated art. */
   photo: StoryPhoto | null;
+  /** Sports teams the story mentions (tagged automatically). */
+  teams: TeamView[];
 };
 
 export type StoryPhoto = { url: string; alt: string; credit: string; blur: string | null };
@@ -65,9 +68,11 @@ export function listStories(limit = 10, opts: { section?: string; order?: "hot" 
       [...keys, t - 24 * 3_600_000],
     )) series.get(r.story_key)![Math.min(11, Math.floor((r.created_at - (t - 24 * 3_600_000)) / 7_200_000))]++;
   }
+  const teamMap = teamsForStories(keys);
   return rows.map((r) => ({
     key: r.key, title: r.title, summary: r.summary, section: r.section, tag: r.tag, status: r.status, updatedAt: r.updated_at,
     updates: r.updates, outlets: r.outlets, source: r.lead_source, takes: r.takes, velocity: r.velocity, series: series.get(r.key)!, split: sp.get(r.key) ?? { ...EMPTY_SPLIT },
+    teams: teamMap.get(r.key) ?? [],
     photo: r.image_media_id ? { url: `/api/media/${r.image_media_id}`, alt: r.photo_alt ?? "", credit: r.image_credit ?? "", blur: r.photo_blur } : null,
   }));
 }

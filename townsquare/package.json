@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:visual": "playwright test --trace off",
     "test:visual:update": "playwright test --trace off --update-snapshots",
-    "start:server": "tsx scripts/seed.ts && npm start"
+    "start:server": "tsx scripts/seed.ts && npm start",
+    "teams:refresh": "tsx scripts/refresh-team-logos.ts"
   },
   "engines": {
     "node": ">=22.13"
@@ -33,9 +34,11 @@
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.1.17",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "jsdom": "^25.0.1",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"

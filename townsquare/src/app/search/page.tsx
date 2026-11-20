@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { all } from "@/lib/db";
 import { searchPosts, searchUsers } from "@/lib/feed";
+import { searchTeams } from "@/lib/sports/teams";
+import { LEAGUE_NAME } from "@/lib/sports/teams-data";
+import { TeamLogo } from "@/components/sports/TeamLogo";
 import { listStories } from "@/lib/news";
 import { getViewer } from "@/lib/session";
 import { Feed } from "@/components/Feed";
@@ -29,6 +32,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const like = `%${ql.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
   const desks = q ? all<{ slug: string; name: string; description: string }>("SELECT slug, name, description FROM communities WHERE visibility = 'public' AND (name LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')", [like, like]).map((d) => ({ ...d })) : [];
   const people = q ? searchUsers(q, vid, type === "voices" ? 30 : 5) : [];
+  const teams = q && (type === "all" || type === "stories") ? searchTeams(q, 8) : [];
   const takes = q ? searchPosts(q, vid) : null;
   const enc = encodeURIComponent(q);
   const want = (t: string) => type === "all" || type === t;
@@ -60,6 +64,16 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
               ))}</ul>
             </section>
           )}
+          {teams.length > 0 && (
+            <section className="pt-6" aria-label="Teams">
+              <h2 className="folio mx-4 border-b border-[var(--wn-glass-border)] pb-1.5 text-[var(--wn-blue-ink)] sm:mx-6">Teams</h2>
+              <ul className="grid gap-2 px-4 pt-3 sm:grid-cols-2 sm:px-6">
+                {teams.map((t) => (
+                  <li key={t.id}><Link href={`/sports/${t.id}`} className="card card-hover flex items-center gap-3 p-3"><TeamLogo team={t} size="md" label={false} /><span><span className="block font-semibold">{t.fullName}</span><span className="block text-[12.5px] text-ink-3">{LEAGUE_NAME[t.league]}</span></span></Link></li>
+                ))}
+              </ul>
+            </section>
+          )}
           {want("voices") && people.length > 0 && (
             <section className="pt-6" aria-label="Voices"><h2 className="folio mx-4 border-b-2 border-navy-ink pb-1.5 text-navy-ink sm:mx-6">Voices</h2><UserList users={people} /></section>
           )}
@@ -75,7 +89,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
               <Feed initial={takes} source={{ tab: "search", q }} empty={<p className="px-6 py-8 text-center text-ink-3">No takes match.</p>} />
             </section>
           )}
-          {!stories.length && !people.length && !desks.length && !takes?.items.length && <EmptyState art="search" title="Nothing on the wire" body={`No stories, Voices, Desks, or takes match “${q}”.`} />}
+          {!stories.length && !teams.length && !people.length && !desks.length && !takes?.items.length && <EmptyState art="search" title="Nothing on the wire" body={`No stories, Voices, Desks, or takes match “${q}”.`} />}
         </div>
       )}
     </Frame>

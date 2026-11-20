@@ -4,8 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useLiveEvents } from "../live";
+import type { TeamView } from "@/lib/sports/teams";
+import { TeamLogo } from "../sports/TeamLogo";
 
-export type WireItem = { text: string; href: string | null; at: number; label?: string };
+export type WireItem = { text: string; href: string | null; at: number; label?: string; teams?: TeamView[] };
 export type WireQuote = { symbol: string; name: string; price: number; changePct: number };
 
 const INDEX: Record<string, string> = { SPY: "S&P 500", QQQ: "NASDAQ", DIA: "DOW", IWM: "RUSSELL" };
@@ -51,6 +53,7 @@ export function LiveWire({ items, quotes: initialQuotes = [], demo }: { items: W
               {it.label}
             </span>
           )}
+          {it.teams?.map((t) => <TeamLogo key={t.id} team={t} size="sm" label={false} />)}
           {it.href ? (
             <Link href={it.href} tabIndex={hidden ? -1 : undefined} className="text-[13px] font-semibold whitespace-nowrap text-white hover:text-[#67e8f9] hover:underline">{it.text}</Link>
           ) : (

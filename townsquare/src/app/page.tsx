@@ -102,7 +102,10 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
       {channel && (
         <div className="mb-5 flex items-end justify-between gap-3">
           <h2 className="font-display text-display font-extrabold uppercase">{channel.label}</h2>
-          <Link href="/" className="inline-flex min-h-10 items-center text-[12px] font-bold tracking-[0.06em] text-navy-ink uppercase hover:text-[var(--wn-cyan-ink)]">← Front Page</Link>
+          <span className="flex items-center gap-2">
+            {channel.key === "Sports" && <Link href="/sports" className="btn-outline !min-h-10 !text-[13px]">All teams →</Link>}
+            <Link href="/" className="inline-flex min-h-10 items-center text-[12px] font-bold tracking-[0.06em] text-navy-ink uppercase hover:text-[var(--wn-cyan-ink)]">← Front Page</Link>
+          </span>
         </div>
       )}
 

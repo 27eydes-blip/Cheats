@@ -1,5 +1,6 @@
 import { resetDbForTests } from "@/lib/db";
 import { createUser } from "@/lib/users";
+import { resetTeamsCache } from "@/lib/sports/teams";
 
 let n = 0;
 export async function makeUser(handle?: string) {
@@ -10,4 +11,5 @@ export async function makeUser(handle?: string) {
 
 export function freshDb() {
   resetDbForTests();
+  resetTeamsCache();
 }

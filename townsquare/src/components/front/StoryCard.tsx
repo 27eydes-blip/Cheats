@@ -5,6 +5,7 @@ import { CategoryTag, LiveBadge } from "../ui/Badge";
 import { MiniSplit } from "../ui/Stance";
 import { ClockIcon } from "../icons";
 import { StoryArt } from "./StoryArt";
+import { TeamChips } from "../sports/TeamChips";
 
 export const sectionName = (s: StorySummary) => (s.section === "Top Stories" ? "National" : s.section);
 
@@ -37,6 +38,7 @@ export function StoryTile({ s, big }: { s: StorySummary; big?: boolean }) {
           <StoryArt seed={s.key} section={s.section} photo={s.photo} width={640} className="transition-transform duration-700 ease-out group-hover:scale-[1.05]" />
           <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[rgb(7_11_20/0.7)] via-transparent to-transparent" />
           <span className="absolute top-3 left-3"><StatusTags s={s} /></span>
+          {s.teams.length > 0 && <span className="absolute bottom-3 left-3"><TeamChips teams={s.teams} onImage linked={false} /></span>}
         </div>
         <div className="p-4">
           <h3 className={`font-display leading-[1.04] font-bold text-balance text-ink-1 transition-colors group-hover:text-[var(--wn-cyan-ink)] ${big ? "text-[clamp(1.5rem,1.2rem+0.9vw,2rem)]" : "text-[clamp(1.3rem,1.15rem+0.5vw,1.6rem)]"}`}>{s.title}</h3>

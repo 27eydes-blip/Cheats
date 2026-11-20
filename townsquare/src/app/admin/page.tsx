@@ -9,6 +9,9 @@ import { ShieldIcon } from "@/components/icons";
 import { Time } from "@/components/Time";
 import { BannerComposer, ReportCard, StoryPhotos } from "./AdminClient";
 import { listStories } from "@/lib/news";
+import { listTeams } from "@/lib/sports/teams";
+import { logoProvider } from "@/lib/sports/logo-provider";
+import { TeamLogos } from "./TeamLogos";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -86,6 +89,12 @@ export default async function Admin() {
         <h2 id="photos" className="font-display text-h1 font-semibold">Story photos</h2>
         <p className="text-[13.5px] text-ink-3">Stories without a photo use generated cover art in the house colors.</p>
         <StoryPhotos stories={listStories(60).map(({ key, title, section, photo }) => ({ key, title, section, photo }))} />
+      </section>
+
+      <section aria-labelledby="teamlogos" className="mt-8 border-t border-line px-4 pt-6 sm:px-6">
+        <h2 id="teamlogos" className="font-display text-h1 font-semibold">Team logos</h2>
+        <p className="text-[13.5px] text-ink-3">Teams without a licensed logo show a badge in their colors. Upload a logo only if you have the rights to it.</p>
+        <TeamLogos teams={listTeams()} provider={logoProvider()?.name ?? "none (generated badges)"} />
       </section>
 
       <section aria-labelledby="log" className="mt-8 border-t border-line px-4 pt-6 pb-8 sm:px-6">

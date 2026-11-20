@@ -9,12 +9,16 @@ import { MiniSplit, StanceChip, type TakeStance } from "../ui/Stance";
 import { CloseIcon, DeskIcon, EditionIcon, RundownIcon, SearchIcon, StudioIcon, TakeIcon } from "../icons";
 import { useViewer } from "../providers";
 import { CHANNELS } from "./channels";
+import type { TeamView } from "@/lib/sports/teams";
+import { LEAGUE_NAME } from "@/lib/sports/teams-data";
+import { TeamLogo } from "../sports/TeamLogo";
 
 type Results = {
   stories: { key: string; title: string; section: string; status: string; takes: number; split: Split }[];
   voices: { handle: string; displayName: string; avatarUrl: string | null; verified: boolean; bio: string }[];
   desks: { slug: string; name: string; description: string }[];
   takes: { id: string; body: string; author: string; stance: TakeStance | null }[];
+  teams: TeamView[];
 };
 type Filter = "all" | "stories" | "voices" | "desks" | "takes";
 type Row = { id: string; group: string; node: React.ReactNode; href: string };
@@ -80,6 +84,12 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
               <MiniSplit split={s.split} />
             </span>
           ),
+        });
+    if (res && (filter === "all" || filter === "stories"))
+      for (const t of res.teams ?? [])
+        out.push({
+          id: `tm-${t.id}`, group: "Teams", href: `/sports/${t.id}`,
+          node: <span className="flex items-center gap-3"><TeamLogo team={t} size="md" label={false} /><span className="min-w-0"><span className="block font-semibold">{t.fullName}</span><span className="block text-[12.5px] text-ink-3">{LEAGUE_NAME[t.league]}</span></span></span>,
         });
     if (res && want("voices"))
       for (const v of res.voices)

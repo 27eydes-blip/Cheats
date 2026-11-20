@@ -15,6 +15,7 @@ import { StanceMeter } from "@/components/ui/Stance";
 import { LocalDate, Time } from "@/components/Time";
 import { StoryActions } from "./StoryActions";
 import { StoryTickers } from "@/components/markets/LiveQuotes";
+import { TeamChips } from "@/components/sports/TeamChips";
 import { getQuotes, marketMode } from "@/lib/markets/provider";
 import { storyTickers } from "@/lib/markets/storyTickers";
 
@@ -48,6 +49,7 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
               <div className="flex flex-wrap items-center gap-2">
                 {story.status === "live" ? <LiveBadge label="LIVE UPDATES" /> : <CategoryTag className="!bg-[rgb(7_11_20/0.72)] !text-[#67e8f9] !ring-[rgb(34_211_238/0.45)]">{story.status === "developing" ? "Developing" : "Final"}</CategoryTag>}
                 <Link href={`/?c=${encodeURIComponent(story.section)}`} className="inline-flex min-h-8 items-center"><CategoryTag solid>{section}</CategoryTag></Link>
+                <TeamChips teams={story.teams} onImage names />
               </div>
               <h1 className="mt-3 max-w-[24ch] font-display text-[clamp(2.2rem,1.3rem+3.6vw,4.8rem)] leading-[0.95] font-extrabold text-balance text-white uppercase [text-shadow:0_2px_24px_rgb(0_0_0/0.5)]">{story.title}</h1>
             </div>

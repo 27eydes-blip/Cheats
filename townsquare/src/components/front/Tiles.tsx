@@ -13,6 +13,7 @@ import { DebateCard } from "./DebateCard";
 import { Poll } from "../post/Poll";
 import { StoryArt } from "./StoryArt";
 import { Meta, StatusTags, StoryTile } from "./StoryCard";
+import { TeamChips } from "../sports/TeamChips";
 export { StoryTile };
 import { ArrowRightIcon, ClockIcon, DownloadIcon, EditionIcon, FlameIcon } from "../icons";
 
@@ -41,7 +42,7 @@ export function LeadTile({ s, latest }: { s: StorySummary; latest: string[] }) {
           <StoryArt seed={s.key} section={s.section} photo={s.photo} priority hero className="transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03]" />
           <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgb(7_11_20/0)_25%,rgb(7_11_20/0.55)_55%,rgb(7_11_20/0.96)_100%)]" />
           <div className="absolute inset-x-0 bottom-0 p-4 sm:p-7">
-            <StatusTags s={s} />
+            <span className="flex flex-wrap items-center gap-2"><StatusTags s={s} /><TeamChips teams={s.teams} onImage names linked={false} /></span>
             <h2 className="mt-3 max-w-[22ch] font-display text-[clamp(2.1rem,1.2rem+3.6vw,4.4rem)] leading-[0.95] font-extrabold tracking-[-0.01em] text-balance text-white uppercase [text-shadow:0_2px_24px_rgb(0_0_0/0.5)]">
               {s.title}
             </h2>
