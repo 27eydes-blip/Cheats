@@ -35,6 +35,15 @@ All of this is on the `design-v2` branch. Every earlier feature still works.
 ## 6. One palette
 - Removed the multi-colored decoration: avatars, topic badges, Beat chips, story art, reply-depth lines, confetti and amber accents are now all blue/cyan. Red stays for LIVE/BREAKING, and green/red stay where they mean up/down or agree/disagree.
 
+## 7. Dense timeline
+- **Flat rows instead of cards.** Dispatches sit directly on the dark background, separated by one faint hairline. No glass, glow, gradients, shadows or gaps.
+- **Compact dispatches:** 40px avatar, name/handle/time on one line, 15px text, small gray action icons with tiny counts, "Show more" after six lines, small images and link previews with 12px corners.
+- **Actions:** Respond, Relay, Boost, Agree, Disagree, Vault, Share. Gray until pressed; only Boost and Relay turn blue. Reactions appear on press-and-hold only.
+- **Stories** are rows with a small side thumbnail; the giant hero is now a "Top story" row.
+- **Calmer look:** no pulsing, neon or odds-style numbers on the home page; blue is the one accent; red is only the small BREAKING tag. Sponsored rows and polls are labeled and quieter than dispatches.
+- **Slim chrome:** thin dark top bar, text tab strip with a small underline, thin gray ticker, thin icon-only bottom bar, smaller compose button without the glow.
+- **Fast long feeds:** the list is virtualized past 30 rows, and rows keep their state when they scroll away and back.
+
 ## Quality
 - 107 unit tests (feed tabs, sponsored slots, messages, lists, history, the side-menu drawer, ranking, For You, teams and badges, the logo fallback component, profiles and privacy, follows, reactions, Flash, streaks, achievements, suggestions), 25/25 end-to-end steps, 44/44 visual regression screenshots, accessibility 100 on audited pages.
 - Database changes are numbered migrations (`src/lib/db/migrations.ts`, 1–7), mirrored in `supabase/schema.sql`.

@@ -30,8 +30,8 @@ const PUBLIC = [
 for (const [name, path] of PUBLIC) {
   test(name, async ({ page }) => {
     await page.goto(path, { waitUntil: "networkidle" });
-    // The profile's feed order depends on seeded timestamps that can tie; mask it and check the layout.
-    const extra = name === "byline" ? [page.locator("[role=feed]")] : [];
+    // Feed order depends on seeded timestamps and ranking that can tie; mask the rows and check the layout around them.
+    const extra = name === "byline" || name === "front-page" ? [page.locator("[role=feed]")] : [];
     await expect(page).toHaveScreenshot(`${name}.png`, { mask: [...mask(page), ...extra] });
   });
 }

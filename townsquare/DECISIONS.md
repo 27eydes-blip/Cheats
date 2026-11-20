@@ -81,3 +81,23 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **Sponsored cards** are still clearly different: a cyan tint with a dashed border and the "Sponsored" label.
 - **Profile accents** keep their six slots so saved profiles still load, but the four colorful ones became blues: Sky, Ice, Deep blue, Steel.
 - **Kept on purpose, because the color carries meaning:** hot red for LIVE/BREAKING; green/red for market up/down and for Agree/Disagree; real team colors on team badges; emoji in reactions; the Google sign-in mark (its required brand colors); the yellow warning tone for error-adjacent notices.
+
+## Part G — Dense timeline (flat rows, quiet chrome)
+
+- **Target:** the density of a mainstream social timeline, in our own skin. No one else's logo, icons, wording or artwork; our names stay (Respond, Relay, Boost, Vault, Share).
+- **Dispatches are flat rows**, not cards: no glass, glow, gradient, shadow or rounded panel. One 1px divider between rows at about 8% white (`--hairline`; a matching dark tint in light mode). No gaps.
+- **Row layout:** 40px avatar; name, handle and time on one line (long names truncate, the time never does); a quiet gray line for the author's stance and the story ("Disagrees on …"); 15px text; small gray action icons with tiny counts. Vertical padding is 10px.
+- **"Show more"** appears after six lines (126px). It expands in place.
+- **Action row:** Respond, Relay, Boost, Agree, Disagree, Vault, Share. Icons are gray until pressed. Only a pressed Boost or Relay turns blue; a pressed Agree/Disagree or Vault turns white, not green/red. Text labels were dropped from the row (they remain as screen-reader labels and tooltips).
+- **Stance buttons:** the feed had a row of green/red Agree/Disagree buttons under every dispatch. They are now two small gray icons in the action row, so the feature still works (and the `a` / `d` keyboard shortcuts) without a second row. The full meter stays on the dispatch's own page and on story pages.
+- **Reactions** show only on press-and-hold (or right-click, or Arrow Up). The emoji summary next to Boost and the open-on-hover behavior were removed; the count stays.
+- **Images and link previews** are capped at 520px wide with 12px corners, no zoom-on-hover, no overlay. Link previews became a one-line row with a 56px thumbnail.
+- **Stories in the feed** are rows with a small thumbnail on the right (76px on phones). The giant hero card at the top of For You is now a "Top story" row. The phone "Trending" carousel was removed from the home feed (Trending lives on Discover, and in the sidebar on desktop).
+- **No "betting" feel:** removed pulsing dots, the glowing compose button, neon shadows, big glowing rank numerals, and the green/red "61/35" and "+16 / 6h" figures from the home page. Blue is the one accent. Red appears only as a small BREAKING tag in the ticker; "Live" and "Rising" are plain gray text in the feed.
+- **Ticker:** 28px tall, 12px gray text. Market moves keep a small green/red arrow because that is what the color means there.
+- **Sponsored rows** are quieter than dispatches on purpose: no avatar, image or color, gray text, a bordered "Sponsored" label. Polls (the closest thing we have to a "prediction" item) now carry a small "Poll" label and lost their pulsing "Live" dot.
+- **Chrome:** the blue header bar became a thin dark bar (48px on phones, 56px on desktop) with a hairline; the tab strip is plain text with a 2px blue underline; the bottom bar is 50px and icon-only (labels are still announced to screen readers); the compose button is 48px with a plain shadow.
+- **Front-page market strip** was removed from the home page (it is still on the Business channel and the Market Board; the top bar and ticker still show market moves).
+- **Virtualized list:** once a feed has more than 30 rows, only the rows within about 1,400px of the screen stay mounted; measured spacers keep the scroll height, so nothing jumps. Each row reports its optimistic changes (boost, relay, stance, vault) back to the list, so a row that scrolls away and comes back keeps its state. The first page still renders on the server in full.
+- **Tap targets:** small icons keep a 44px touch area through an invisible pseudo-element (`.tap`); the visible boxes are at least 24px.
+- **Desktop:** the feed is a single 640px column with hairline side borders and a quiet sidebar (plain Trending list; other panels without glass or glow).
