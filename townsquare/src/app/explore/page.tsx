@@ -9,9 +9,11 @@ import { Kicker, LiveBadge, VerifiedSeal } from "@/components/ui/Badge";
 import { Frame, PageTitle } from "@/components/ui/Frame";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { MiniSplit } from "@/components/ui/Stance";
+import { CHANNELS } from "@/components/shell/channels";
+import { DiscoverSearch } from "./DiscoverSearch";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Hot Stories" };
+export const metadata = { title: "Discover" };
 
 /** Hot Stories: ranked by take velocity, plus Voices and the hottest debates. */
 export default async function HotStoriesPage() {
@@ -22,8 +24,18 @@ export default async function HotStoriesPage() {
   const fights = debates(vid, 2);
   return (
     <Frame width="wide">
-      <PageTitle folio={<Kicker tone="gold">Ranked by dispatch velocity</Kicker>} title="Hot Stories" dek="Where the argument is happening right now: new dispatches in the last six hours, the split, and the trend." />
-      <div className="grid gap-10 px-4 pt-6 sm:px-6 lg:grid-cols-12">
+      <PageTitle folio={<Kicker tone="gold">What&apos;s moving now</Kicker>} title="Discover" dek="Search, browse channels, and see where the argument is happening right now." />
+      <div className="space-y-3 px-4 pt-4 sm:px-6">
+        <DiscoverSearch />
+        <nav aria-label="Channels" className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0" data-no-swipe>
+          {CHANNELS.filter((c) => c.key !== "front").map((c) => (
+            <Link key={c.key} href={c.href} className="inline-flex min-h-11 shrink-0 items-center rounded-[12px] px-3.5 text-[13px] font-bold tracking-[0.04em] text-ink-2 uppercase ring-1 ring-rule transition-all hover:text-[var(--wn-cyan-ink)] hover:ring-[var(--wn-glass-border-hot)] active:scale-95">{c.label}</Link>
+          ))}
+          <Link href="/sports" className="inline-flex min-h-11 shrink-0 items-center rounded-[12px] px-3.5 text-[13px] font-bold tracking-[0.04em] text-ink-2 uppercase ring-1 ring-rule transition-all hover:text-[var(--wn-cyan-ink)] active:scale-95">Teams</Link>
+        </nav>
+        <h2 className="pt-2 font-display text-[22px] font-extrabold tracking-[0.03em] uppercase">Hot stories</h2>
+      </div>
+      <div className="grid gap-10 px-4 pt-1 sm:px-6 lg:grid-cols-12">
         <ol className="lg:col-span-8">
           {hot.map((s, i) => (
             <li key={s.key} className="border-b border-rule">
@@ -32,7 +44,7 @@ export default async function HotStoriesPage() {
                 <span className="min-w-0">
                   <span className="flex items-center gap-2">{s.status === "live" && <LiveBadge label="LIVE" />}<Kicker tone="muted">{s.section === "Top Stories" ? "National" : s.section}</Kicker></span>
                   <span className="mt-1 block font-display text-[clamp(1.3rem,1.1rem+0.8vw,1.75rem)] leading-snug font-semibold group-hover:underline">{s.title}</span>
-                  <span className="mt-2 flex flex-wrap items-center gap-4"><MiniSplit split={s.split} /><span className="mono text-[11.5px] text-ink-3">{s.takes} TAKES · +{s.velocity} IN 6H</span></span>
+                  <span className="mt-2 flex flex-wrap items-center gap-4"><MiniSplit split={s.split} /><span className="mono text-[11.5px] text-ink-3">{s.takes} DISPATCHES · +{s.velocity} IN 6H</span></span>
                 </span>
                 <span className="col-start-2 sm:col-start-3"><Sparkline values={s.series} width={120} height={40} color="var(--gold)" label={`Take trend for ${s.title}`} /></span>
               </Link>

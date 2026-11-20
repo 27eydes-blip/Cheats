@@ -12,6 +12,8 @@ import { listStories } from "@/lib/news";
 import { listTeams } from "@/lib/sports/teams";
 import { logoProvider } from "@/lib/sports/logo-provider";
 import { TeamLogos } from "./TeamLogos";
+import { getAds } from "@/lib/ads";
+import { AdsControl } from "./AdsControl";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Admin" };
@@ -89,6 +91,12 @@ export default async function Admin() {
         <h2 id="photos" className="font-display text-h1 font-semibold">Story photos</h2>
         <p className="text-[13.5px] text-ink-3">Stories without a photo use generated cover art in the house colors.</p>
         <StoryPhotos stories={listStories(60).map(({ key, title, section, photo }) => ({ key, title, section, photo }))} />
+      </section>
+
+      <section aria-labelledby="ads" className="mt-8 border-t border-line px-4 pt-6 sm:px-6">
+        <h2 id="ads" className="font-display text-h1 font-semibold">Sponsored cards</h2>
+        <p className="text-[13.5px] text-ink-3">Off by default. When on, cards carry a &ldquo;Sponsored&rdquo; label and a tinted border, are never ranked or boosted, and only appear in For You.</p>
+        <AdsControl config={getAds()} />
       </section>
 
       <section aria-labelledby="teamlogos" className="mt-8 border-t border-line px-4 pt-6 sm:px-6">
