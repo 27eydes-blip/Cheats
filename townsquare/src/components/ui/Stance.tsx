@@ -19,8 +19,9 @@ const CHIP: Record<TakeStance, { label: string; cls: string; Icon: typeof AgreeI
 };
 
 /** The stance a Take's author took, as a small square-cornered label. */
-export function StanceChip({ stance, size = "sm" }: { stance: TakeStance; size?: "sm" | "md" }) {
+export function StanceChip({ stance, size = "sm", quiet }: { stance: TakeStance; size?: "sm" | "md"; /** plain gray text, for timeline rows */ quiet?: boolean }) {
   const c = CHIP[stance];
+  if (quiet) return <span className="shrink-0 text-[13px] text-ink-3">{c.label}</span>;
   return (
     <span className={`inline-flex items-center gap-1 rounded-[8px] ring-1 ${c.cls} ${size === "md" ? "px-2 py-1 text-[11.5px]" : "px-1.5 py-[2px] text-[10.5px]"} font-bold tracking-[0.1em] uppercase`}>
       <c.Icon size={size === "md" ? 13 : 12} strokeWidth={2} />
@@ -59,7 +60,7 @@ export function SplitBar({ split, height = 6, className = "" }: { split: Split; 
  *  - `compact`: one line, used on Take cards
  *  - `large`: headline numbers and big buttons, used on Story pages and the deck
  */
-export function StanceMeter({ type, id, initial, variant = "compact", onChange }: { type: StanceTarget; id: string; initial: Split; variant?: "compact" | "large" | "tile"; onChange?: (s: Split) => void }) {
+export function StanceMeter({ type, id, initial, variant = "compact", onChange }: { type: StanceTarget; id: string; initial: Split; variant?: "compact" | "large" | "tile" | "mini"; onChange?: (s: Split) => void }) {
   const viewer = useViewer();
   const router = useRouter();
   const toast = useToast();
@@ -106,6 +107,30 @@ export function StanceMeter({ type, id, initial, variant = "compact", onChange }
       {label}
     </button>
   );
+
+  // Timeline rows: two small gray icon buttons with counts; a pressed one turns white (not green/red).
+  if (variant === "mini") {
+    const mini = (v: "agree" | "disagree", Icon: typeof AgreeIcon, n: number) => (
+      <button
+        type="button"
+        data-action={v}
+        onClick={(e) => (e.stopPropagation(), cast(v))}
+        aria-pressed={split.mine === v}
+        aria-label={`${v === "agree" ? "Agree" : "Disagree"}${n ? `, ${n}` : ""}`}
+        title={v === "agree" ? "Agree" : "Disagree"}
+        className={`tap inline-flex h-8 min-w-8 items-center gap-1 px-1.5 text-[12px] transition-colors active:scale-90 ${split.mine === v ? "font-semibold text-ink-1" : "text-ink-3 hover:text-ink-1"}`}
+      >
+        <Icon size={17} strokeWidth={split.mine === v ? 2.4 : 1.7} />
+        {n > 0 && <span className="mono">{n}</span>}
+      </button>
+    );
+    return (
+      <>
+        {mini("agree", AgreeIcon, split.agree)}
+        {mini("disagree", DisagreeIcon, split.disagree)}
+      </>
+    );
+  }
 
   if (variant === "compact") {
     return (

@@ -32,11 +32,11 @@ export function MediaGrid({ media }: { media: PostView["media"] }) {
   const [open, setOpen] = useState<number | null>(null);
   const n = media.length;
   const single = n === 1 ? media[0] : null;
-  const ratio = single?.width && single.height ? Math.min(1.25, Math.max(0.56, single.height / single.width)) : 0.66;
+  const ratio = single?.width && single.height ? Math.min(0.75, Math.max(0.5, single.height / single.width)) : 0.56;
   return (
     <>
       <div
-        className={`mt-3 grid gap-[3px] overflow-hidden rounded-[var(--r-lg)] ring-1 ring-line ${n === 1 ? "grid-cols-1" : "grid-cols-2"} ${n > 2 ? "grid-rows-2" : ""}`}
+        className={`mt-2 grid max-w-[520px] gap-[2px] overflow-hidden rounded-[12px] ring-1 ring-[var(--hairline)] ${n === 1 ? "grid-cols-1" : "grid-cols-2"} ${n > 2 ? "grid-rows-2" : ""}`}
         style={{ aspectRatio: n === 1 ? `1 / ${ratio}` : n === 2 ? "16 / 10" : "16 / 11" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -48,9 +48,9 @@ export function MediaGrid({ media }: { media: PostView["media"] }) {
             title={`Open image ${i + 1} of ${n}`}
             className={`group relative block overflow-hidden bg-surface-2 ${n === 3 && i === 0 ? "row-span-2" : ""}`}
           >
-            <MediaImg m={m} className="transition-transform duration-500 group-hover:scale-[1.03]" sizes={n === 1 ? "(max-width: 640px) 100vw, 600px" : "(max-width: 640px) 50vw, 300px"} />
+            <MediaImg m={m} sizes={n === 1 ? "(max-width: 640px) 100vw, 600px" : "(max-width: 640px) 50vw, 300px"} />
             <span className="sr-only">Open image {i + 1} of {n}</span>
-            {m.alt && <span className="absolute bottom-2 left-2 rounded-md bg-black/65 px-1.5 py-0.5 text-[10.5px] font-bold text-white backdrop-blur">ALT</span>}
+            {m.alt && <span className="absolute bottom-1.5 left-1.5 rounded-[4px] bg-black/60 px-1 py-px text-[10px] font-semibold text-white">ALT</span>}
           </button>
         ))}
       </div>

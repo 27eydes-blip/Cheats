@@ -52,7 +52,8 @@ export function Poll({ poll, postId, isAuthor, createdAt }: { poll: PollView; po
   };
 
   return (
-    <div className="mt-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+    <div className="mt-2 max-w-[520px] space-y-1.5" onClick={(e) => e.stopPropagation()}>
+      <p className="text-[12.5px] text-ink-3"><span className="rounded-[4px] px-1 py-px font-semibold ring-1 ring-[var(--hairline)]">Poll</span></p>
       {p.options.map((o, i) => {
         const pct = p.total ? Math.round((o.votes / p.total) * 100) : 0;
         const winner = showResults && o.votes === max && max > 0;
@@ -94,7 +95,7 @@ export function Poll({ poll, postId, isAuthor, createdAt }: { poll: PollView; po
         <span className="num">{p.total.toLocaleString("en-US")} vote{p.total === 1 ? "" : "s"}</span>
         <span aria-hidden="true">·</span>
         <span suppressHydrationWarning>{now ? left(remaining) : p.closed ? "Final results" : " "}</span>
-        {!p.closed && showResults && <span className="ml-auto flex items-center gap-1.5 text-[12px]"><span className="h-1.5 w-1.5 animate-live rounded-full bg-live" /> Live</span>}
+        {!p.closed && showResults && <span className="ml-auto text-[12px]">Open</span>}
       </p>
     </div>
   );
