@@ -22,7 +22,17 @@ All of this is on the `design-v2` branch. Every earlier feature still works.
 - Safety: block, mute and report (existing) plus tighter rate limits on follows and reactions.
 - A polish pass across phone and desktop, dark and light.
 
+## 5. For You feed and side menu upgrade
+- **Top bar (phones):** your avatar on the left opens the side menu, the WorldNet logo sits in the center, and a small live market ticker on the right opens the Market Board.
+- **Tab strip:** For You, Friends, then your own topics and teams, each with a small badge. Swipe the feed to change tabs; "+" pins topics and teams (up to 12).
+- **Cards:** dispatches and stories are soft glass panels. The action row is Respond, Relay, Boost (hold for five reactions), Vault and Share, with counts that pop when they change. Story cards have a large image, category tag, headline, source and a "Rising" flame when a story is gaining fast.
+- **Sponsored cards:** clearly labeled, amber-bordered, and **off unless switched on in the Control Room**.
+- **Feel:** floating glowing compose button with a bottom-sheet composer, skeleton loaders, branded pull-to-refresh, infinite scroll, fade-in, and a "new dispatches" pill.
+- **Bottom tab bar:** Home, Discover, Markets, Alerts, Messages, with a sliding indicator and unread badges.
+- **Side menu:** profile card (avatar, name, handle, Followers / Following / Friends, theme button), then Profile, Vault, History, Lists, Rooms, Groups, Markets, Creator Hub, Settings, Help, plus Switch account and a Dark / Light / Auto toggle. It slides in with blur and dim, and closes on swipe, outside tap or Escape. On desktop it is a persistent left rail that collapses to icons.
+- **New pages:** Messages (private, followers-only), History, Lists, Creator Hub, Help, and a Wallet placeholder that stays hidden unless `NEXT_PUBLIC_FEATURE_WALLET=1`.
+
 ## Quality
-- 91 unit tests (ranking, For You, teams and badges, the logo fallback component, profiles and privacy, follows, reactions, Flash, streaks, achievements, suggestions), 24/24 end-to-end steps, 44/44 visual regression screenshots, accessibility 100 on audited pages.
-- Database changes are numbered migrations (`src/lib/db/migrations.ts`, 1–6), mirrored in `supabase/schema.sql`.
+- 107 unit tests (feed tabs, sponsored slots, messages, lists, history, the side-menu drawer, ranking, For You, teams and badges, the logo fallback component, profiles and privacy, follows, reactions, Flash, streaks, achievements, suggestions), 25/25 end-to-end steps, 44/44 visual regression screenshots, accessibility 100 on audited pages.
+- Database changes are numbered migrations (`src/lib/db/migrations.ts`, 1–7), mirrored in `supabase/schema.sql`.
 - Decisions made along the way: see `DECISIONS.md`.
