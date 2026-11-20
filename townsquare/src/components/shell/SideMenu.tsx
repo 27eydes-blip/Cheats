@@ -109,11 +109,11 @@ export function SideMenu({ open, onClose, viewer, stats, wallet = FEATURES.walle
                 <p className="mt-3 flex items-center gap-1.5 font-display text-[24px] leading-none font-extrabold">{viewer.displayName}{viewer.verified && <VerifiedSeal size={18} />}</p>
                 <p className="mono mt-1 text-[13px] text-ink-2">@{viewer.handle}</p>
                 {stats && (
-                  <ul className="mt-3 flex flex-wrap gap-1.5">
+                  <ul className="mt-3 grid grid-cols-3 gap-1.5">
                     {([["Followers", stats.followers, "followers"], ["Following", stats.following, "following"], ["Friends", stats.friends, "friends"]] as const).map(([label, n, seg]) => (
                       <li key={seg}>
-                        <Link href={`/u/${viewer.handle}/${seg}`} onClick={onClose} className="inline-flex min-h-11 items-center gap-1.5 rounded-[12px] bg-[rgb(7_11_20/0.35)] px-3 text-[13px] ring-1 ring-white/10 transition-all hover:ring-[var(--wn-cyan)] active:scale-95 [html.light_&]:bg-white/70">
-                          <b className="mono text-[14px]">{n.toLocaleString("en-US")}</b><span className="text-ink-2">{label}</span>
+                        <Link href={`/u/${viewer.handle}/${seg}`} onClick={onClose} className="flex min-h-[52px] flex-col items-start justify-center rounded-[12px] bg-[rgb(7_11_20/0.35)] px-3 text-[12px] leading-tight ring-1 ring-white/10 transition-all hover:ring-[var(--wn-cyan)] active:scale-95 [html.light_&]:bg-white/70">
+                          <b className="mono text-[15px]">{n.toLocaleString("en-US")}</b><span className="text-ink-2">{label}</span>
                         </Link>
                       </li>
                     ))}

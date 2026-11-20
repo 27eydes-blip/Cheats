@@ -430,3 +430,19 @@ create table public.achievements (user_id uuid references profiles(id) on delete
 alter table achievements enable row level security;
 create policy "achievements readable" on achievements for select using (true);
 -- achievements are awarded server-side only (service role).
+
+-- Migration 7: pinned home-feed tabs, private messages, private lists.
+create table public.feed_tabs (user_id uuid references profiles(id) on delete cascade, kind text not null check (kind in ('topic','team')), key text not null, position int not null default 0, created_at timestamptz not null default now(), primary key (user_id, kind, key));
+create table public.messages (id uuid primary key default gen_random_uuid(), sender_id uuid not null references profiles(id) on delete cascade, recipient_id uuid not null references profiles(id) on delete cascade, body text not null check (char_length(body) between 1 and 1000), created_at timestamptz not null default now(), read_at timestamptz);
+create index messages_inbox on public.messages(recipient_id, read_at, created_at desc);
+create index messages_pair on public.messages(sender_id, recipient_id, created_at desc);
+create table public.lists (id uuid primary key default gen_random_uuid(), owner_id uuid not null references profiles(id) on delete cascade, name text not null check (char_length(name) between 1 and 40), created_at timestamptz not null default now());
+create table public.list_members (list_id uuid references lists(id) on delete cascade, user_id uuid references profiles(id) on delete cascade, created_at timestamptz not null default now(), primary key (list_id, user_id));
+alter table feed_tabs enable row level security; alter table messages enable row level security; alter table lists enable row level security; alter table list_members enable row level security;
+create policy "own feed tabs" on feed_tabs for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "read own messages" on messages for select using (sender_id = auth.uid() or recipient_id = auth.uid());
+-- Sending is checked server-side too (the recipient must follow the sender or have written first; blocks stop everything).
+create policy "send as self" on messages for insert with check (sender_id = auth.uid());
+create policy "mark own inbox read" on messages for update using (recipient_id = auth.uid()) with check (recipient_id = auth.uid());
+create policy "own lists" on lists for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+create policy "own list members" on list_members for all using (exists (select 1 from lists l where l.id = list_id and l.owner_id = auth.uid())) with check (exists (select 1 from lists l where l.id = list_id and l.owner_id = auth.uid()));

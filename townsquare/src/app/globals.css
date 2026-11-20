@@ -381,7 +381,7 @@ dialog.side-menu[open] { animation: drawer-in 280ms var(--ease-out); }
 @keyframes drawer-in { from { transform: translateX(-100%); } to { transform: none; } }
 dialog.side-menu::backdrop { background: rgb(3 6 12 / 0.55); backdrop-filter: blur(6px); animation: fade-in 220ms ease-out; }
 
-:root { --rail-w: 0px; }
+html { --rail-w: 0px; }
 @media (min-width: 1024px) {
   html { --rail-w: 76px; }
   html[data-rail="open"] { --rail-w: 244px; }

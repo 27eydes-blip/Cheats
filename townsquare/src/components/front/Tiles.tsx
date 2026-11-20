@@ -36,14 +36,14 @@ export function Tile({ label, action, children, className = "", tone }: { label:
 /** The hero lead story: full-width image, dark gradient overlay, headline on the image, a glow behind it. */
 export function LeadTile({ s, latest }: { s: StorySummary; latest: string[] }) {
   return (
-    <article className="hero-glow min-w-0">
+    <article className="hero-glow @container min-w-0">
       <Link href={`/news/story/${s.key}`} className="group relative block overflow-hidden rounded-[var(--r-xl)] ring-1 ring-[var(--wn-glass-border)] transition-shadow duration-300 hover:ring-[var(--wn-glass-border-hot)] hover:shadow-[var(--glow)]">
         <div className="relative aspect-square sm:aspect-[16/10] lg:aspect-[16/9]">
           <StoryArt seed={s.key} section={s.section} photo={s.photo} priority hero className="transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03]" />
           <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgb(7_11_20/0)_25%,rgb(7_11_20/0.55)_55%,rgb(7_11_20/0.96)_100%)]" />
           <div className="absolute inset-x-0 bottom-0 p-4 sm:p-7">
             <span className="flex flex-wrap items-center gap-2"><StatusTags s={s} /><TeamChips teams={s.teams} onImage names linked={false} /></span>
-            <h2 className="mt-3 max-w-[22ch] font-display text-[clamp(2.1rem,1.2rem+3.6vw,4.4rem)] leading-[0.95] font-extrabold tracking-[-0.01em] text-balance text-white uppercase [text-shadow:0_2px_24px_rgb(0_0_0/0.5)]">
+            <h2 className="mt-3 max-w-[22ch] font-display text-[clamp(2.05rem,0.95rem+4.6cqw,4.4rem)] leading-[0.95] font-extrabold tracking-[-0.01em] text-balance text-white uppercase [text-shadow:0_2px_24px_rgb(0_0_0/0.5)]">
               {s.title}
             </h2>
             <p className="mt-3 line-clamp-2 max-w-[62ch] text-[15px] text-[#d6dcea] sm:text-[16.5px]">{s.summary}</p>
