@@ -81,7 +81,7 @@ export function Avatar({ url, name, handle, size = 44, live, ring, stance, class
       </span>
       {live && <span aria-hidden="true" className="absolute inset-[-4px] animate-[live-ring_1.6s_ease-in-out_infinite]" style={{ borderRadius: radius + 4, boxShadow: "0 0 0 2px var(--live)" }} />}
       {live && size >= 40 && (
-        <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-[2px] bg-live-bg px-1 text-[8.5px] leading-[13px] font-black tracking-[0.12em] text-white">ON AIR</span>
+        <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-[6px] bg-live-bg px-1 text-[8.5px] leading-[13px] font-black tracking-[0.12em] text-white">ON AIR</span>
       )}
     </span>
   );

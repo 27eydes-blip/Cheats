@@ -162,7 +162,7 @@ export function Providers({ viewer, children }: { viewer: ClientViewer; children
                   <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 px-6 pt-2 pb-6">
                     {SHORTCUTS.map(([k, v]) => (
                       <div key={k} className="contents">
-                        <dt><kbd className="mono rounded-[3px] bg-paper-2 px-2 py-1 text-[12.5px] ring-1 ring-rule">{k}</kbd></dt>
+                        <dt><kbd className="mono rounded-[8px] bg-paper-2 px-2 py-1 text-[12.5px] ring-1 ring-rule">{k}</kbd></dt>
                         <dd className="text-[15px] text-ink-2">{v}</dd>
                       </div>
                     ))}
@@ -173,13 +173,13 @@ export function Providers({ viewer, children }: { viewer: ClientViewer; children
                     <div
                       key={t.id}
                       role="status"
-                      className={`pointer-events-auto flex animate-scale-in items-center gap-3 rounded-[4px] py-2.5 pr-3 pl-4 text-[14px] font-semibold shadow-3 ${
+                      className={`pointer-events-auto flex animate-scale-in items-center gap-3 rounded-[10px] py-2.5 pr-3 pl-4 text-[14px] font-semibold shadow-3 ${
                         t.tone === "error" ? "bg-disagree text-white" : "border-l-[3px] border-gold bg-navy text-white"
                       }`}
                     >
                       <span>{t.text}</span>
                       {t.href && (
-                        <a href={t.href} className="rounded-[3px] bg-white/15 px-2 py-0.5 text-[12.5px]">
+                        <a href={t.href} className="rounded-[8px] bg-white/15 px-2 py-0.5 text-[12.5px]">
                           View
                         </a>
                       )}

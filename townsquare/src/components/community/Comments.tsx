@@ -45,7 +45,7 @@ function Comment({ node }: { node: CommentNode }) {
             {node.author.verified && <VerifiedSeal size={13} />}
             <span className="text-ink-3">· <Time ms={node.createdAt} /></span>
             {!open && (
-              <button type="button" onClick={() => setOpen(true)} className="ml-1 rounded-[3px] bg-gold-soft px-2 py-0.5 text-[12px] font-semibold text-gold-ink">
+              <button type="button" onClick={() => setOpen(true)} className="ml-1 rounded-[8px] bg-gold-soft px-2 py-0.5 text-[12px] font-semibold text-gold-ink">
                 + {hidden} more
               </button>
             )}
@@ -58,7 +58,7 @@ function Comment({ node }: { node: CommentNode }) {
           {!node.gone && (
             <div className="mt-1 flex items-center gap-2">
               <Vote postId={node.id} score={node.score} myVote={node.myVote} horizontal />
-              <button type="button" onClick={() => openComposer({ replyTo: node })} className="inline-flex h-8 items-center gap-1.5 rounded-[4px] px-2.5 text-[13px] font-semibold text-ink-3 hover:bg-surface-2 hover:text-ink-1">
+              <button type="button" onClick={() => openComposer({ replyTo: node })} className="inline-flex h-8 items-center gap-1.5 rounded-[10px] px-2.5 text-[13px] font-semibold text-ink-3 hover:bg-surface-2 hover:text-ink-1">
                 <ReplyIcon size={15} /> Reply
               </button>
             </div>

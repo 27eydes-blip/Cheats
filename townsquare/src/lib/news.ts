@@ -24,6 +24,8 @@ export function latestNews(section?: string, limit = 50): NewsItemView[] {
 export type StorySummary = {
   key: string; title: string; summary: string; section: string; tag: string | null;
   status: "live" | "developing" | "ended"; updatedAt: number; updates: number; outlets: number;
+  /** The most recent outlet covering the story (shown as the card's source line). */
+  source: string | null;
   /** Takes attached to the story, and how many arrived in the last 6 hours (velocity). */
   takes: number; velocity: number;
   /** Takes per 2-hour bucket over the last 24 hours (sparkline). */
@@ -35,7 +37,7 @@ export type StorySummary = {
 
 export type StoryPhoto = { url: string; alt: string; credit: string; blur: string | null };
 
-type StoryRow = { image_media_id: string | null; image_credit: string | null; photo_alt: string | null; photo_blur: string | null; key: string; title: string; summary: string; section: string; tag: string | null; status: StorySummary["status"]; updated_at: number; updates: number; outlets: number; takes: number; velocity: number };
+type StoryRow = { lead_source: string | null; image_media_id: string | null; image_credit: string | null; photo_alt: string | null; photo_blur: string | null; key: string; title: string; summary: string; section: string; tag: string | null; status: StorySummary["status"]; updated_at: number; updates: number; outlets: number; takes: number; velocity: number };
 
 /**
  * Stories for the Front Page. `order: "hot"` ranks by take velocity (the
@@ -48,6 +50,7 @@ export function listStories(limit = 10, opts: { section?: string; order?: "hot" 
   const rows = all<StoryRow>(
     `SELECT s.*, (SELECT alt FROM media m WHERE m.id = s.image_media_id) photo_alt, (SELECT blur FROM media m WHERE m.id = s.image_media_id) photo_blur, (SELECT count(*) FROM story_updates u WHERE u.story_key = s.key) updates,
        (SELECT count(DISTINCT source_id) FROM news_items n WHERE n.story_key = s.key) outlets,
+       (SELECT src.name FROM news_items n JOIN news_sources src ON src.id = n.source_id WHERE n.story_key = s.key ORDER BY n.published_at DESC LIMIT 1) lead_source,
        (SELECT count(*) FROM posts p WHERE p.story_key = s.key AND p.deleted_at IS NULL AND p.removed_at IS NULL) takes,
        (SELECT count(*) FROM posts p WHERE p.story_key = s.key AND p.deleted_at IS NULL AND p.removed_at IS NULL AND p.created_at > ?) velocity
      FROM stories s ${where} ORDER BY ${order} LIMIT ?`,
@@ -64,7 +67,7 @@ export function listStories(limit = 10, opts: { section?: string; order?: "hot" 
   }
   return rows.map((r) => ({
     key: r.key, title: r.title, summary: r.summary, section: r.section, tag: r.tag, status: r.status, updatedAt: r.updated_at,
-    updates: r.updates, outlets: r.outlets, takes: r.takes, velocity: r.velocity, series: series.get(r.key)!, split: sp.get(r.key) ?? { ...EMPTY_SPLIT },
+    updates: r.updates, outlets: r.outlets, source: r.lead_source, takes: r.takes, velocity: r.velocity, series: series.get(r.key)!, split: sp.get(r.key) ?? { ...EMPTY_SPLIT },
     photo: r.image_media_id ? { url: `/api/media/${r.image_media_id}`, alt: r.photo_alt ?? "", credit: r.image_credit ?? "", blur: r.photo_blur } : null,
   }));
 }

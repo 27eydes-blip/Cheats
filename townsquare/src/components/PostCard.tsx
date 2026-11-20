@@ -66,9 +66,9 @@ export function QuoteEmbed({ post }: { post: PostView }) {
           <Avatar url={post.author.avatarUrl} name={post.author.displayName} handle={post.author.handle} size={20} />
           <AuthorLine author={post.author} createdAt={post.createdAt} />
         </div>
-        {post.body && <p className="mt-1 line-clamp-3 font-display text-[16px] leading-snug break-words whitespace-pre-wrap text-ink-1 italic">{post.body}</p>}
+        {post.body && <p className="mt-1 line-clamp-3 text-[15px] leading-snug break-words whitespace-pre-wrap text-ink-1">{post.body}</p>}
       </div>
-      {post.media[0] && <div className="h-[68px] w-[68px] shrink-0 overflow-hidden rounded-[3px]"><MediaImg m={post.media[0]} sizes="72px" /></div>}
+      {post.media[0] && <div className="h-[68px] w-[68px] shrink-0 overflow-hidden rounded-[8px]"><MediaImg m={post.media[0]} sizes="72px" /></div>}
     </div>
   );
 }
@@ -223,7 +223,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
     router.push(`/p/${post.id}`);
   };
 
-  const action = "inline-flex h-9 items-center gap-1.5 rounded-[4px] px-2 text-[12.5px] font-semibold transition-colors active:translate-y-px";
+  const action = "inline-flex h-9 items-center gap-1.5 rounded-[10px] px-2 text-[12.5px] font-semibold transition-colors active:translate-y-px";
   const size = compact ? 36 : focus ? 48 : 42;
 
   return (
@@ -253,7 +253,7 @@ export function PostCard({ post: initial, repostedBy, focus, compact, onGone, th
             <div id={`post-${post.id}-author`} className="min-w-0 leading-tight">
               <AuthorLine author={post.author} createdAt={post.createdAt} editedAt={post.editedAt} big={focus} />
             </div>
-            {!post.gone && !compact && <div className="-mt-1 -mr-2"><Menu label="Take options" items={menu} button={<MoreIcon size={18} />} buttonClassName="flex h-8 w-8 items-center justify-center rounded-[4px] text-ink-3 hover:bg-paper-2 hover:text-ink-1" /></div>}
+            {!post.gone && !compact && <div className="-mt-1 -mr-2"><Menu label="Take options" items={menu} button={<MoreIcon size={18} />} buttonClassName="flex h-8 w-8 items-center justify-center rounded-[10px] text-ink-3 hover:bg-paper-2 hover:text-ink-1" /></div>}
           </div>
 
           {(post.stance || (post.story && !hideStory) || post.replyTo) && (

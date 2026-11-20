@@ -80,7 +80,7 @@ export function DebateCard({ d, compact }: { d: Debate; compact?: boolean }) {
         {side_(d.right, "b")}
       </div>
       <div className="mt-4">
-        <div className="flex h-2.5 gap-[2px] overflow-hidden rounded-[2px]" aria-hidden="true">
+        <div className="flex h-2.5 gap-[2px] overflow-hidden rounded-[6px]" aria-hidden="true">
           <span className="bg-navy transition-[width] duration-700 ease-[var(--ease-spring)] dark:bg-navy-ink" style={{ width: `${pa}%` }} />
           <span className="flex-1 bg-gold" />
         </div>

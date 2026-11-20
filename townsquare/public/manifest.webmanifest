@@ -1,13 +1,13 @@
 {
-  "name": "World Net News",
-  "short_name": "World Net",
+  "name": "WorldNet News",
+  "short_name": "WorldNet",
   "description": "The national front page where you take a side. Say it. Read it. Debate it.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0b1f4b",
-  "theme_color": "#0b1f4b",
+  "background_color": "#070b14",
+  "theme_color": "#2f6bff",
   "icons": [
     {
       "src": "/icon-192.png",

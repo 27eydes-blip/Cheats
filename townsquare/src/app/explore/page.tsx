@@ -40,7 +40,7 @@ export default async function HotStoriesPage() {
           ))}
         </ol>
         <aside className="space-y-10 lg:col-span-4">
-          <section aria-labelledby="voices" className="border-t-2 border-navy-ink pt-3">
+          <section aria-labelledby="voices" className="border-t border-[var(--wn-glass-border)] pt-3">
             <h2 id="voices" className="folio text-navy-ink">Voices</h2>
             <ul className="divide-y divide-rule">
               {people.map((v) => (
@@ -59,7 +59,7 @@ export default async function HotStoriesPage() {
             </ul>
           </section>
           {fights.map((d) => (
-            <section key={d.left.id} aria-label="Debate" className="border-t-2 border-navy-ink pt-3">
+            <section key={d.left.id} aria-label="Debate" className="border-t border-[var(--wn-glass-border)] pt-3">
               <h2 className="folio mb-3 text-navy-ink">Hot debate</h2>
               <DebateCard d={d} compact />
             </section>

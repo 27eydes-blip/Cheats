@@ -45,7 +45,7 @@ export function MediaGrid({ media }: { media: PostView["media"] }) {
             key={m.id}
             type="button"
             onClick={() => setOpen(i)}
-            aria-label={`Open image ${i + 1} of ${n}${m.alt ? `: ${m.alt}` : ""}`}
+            aria-label={`Open image ${i + 1} of ${n}${m.alt ? ` (ALT): ${m.alt}` : ""}`}
             className={`group relative block overflow-hidden bg-surface-2 ${n === 3 && i === 0 ? "row-span-2" : ""}`}
           >
             <MediaImg m={m} className="transition-transform duration-500 group-hover:scale-[1.03]" sizes={n === 1 ? "(max-width: 640px) 100vw, 600px" : "(max-width: 640px) 50vw, 300px"} />

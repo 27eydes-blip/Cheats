@@ -2,7 +2,7 @@ import Link from "next/link";
 
 /** Square-ish chips for filters and sections (no pills). */
 export function chipClass(active: boolean, extra = "") {
-  return `inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-[4px] px-3 text-[13px] font-semibold transition-[background-color,color,box-shadow] duration-200 ${
+  return `inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-[10px] px-3 text-[13px] font-semibold transition-[background-color,color,box-shadow] duration-200 ${
     active ? "bg-navy text-white shadow-[inset_0_-2px_0_var(--gold)]" : "bg-paper text-ink-2 ring-1 ring-rule hover:text-ink-1 hover:ring-rule-strong"
   } ${extra}`;
 }
@@ -26,7 +26,7 @@ export function ChipRow({ children, label }: { children: React.ReactNode; label:
 /** A topic link styled as a dateline tag. */
 export function TopicChip({ tag, href, count }: { tag: string; href: string; count?: number }) {
   return (
-    <Link href={href} className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-[4px] border-l-2 border-gold bg-paper-2 px-3 text-[13px] font-semibold text-ink-1 transition-colors hover:bg-gold-soft">
+    <Link href={href} className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-[10px] border-l-2 border-gold bg-paper-2 px-3 text-[13px] font-semibold text-ink-1 transition-colors hover:bg-gold-soft">
       {tag}
       {count !== undefined && <span className="mono text-[11.5px] text-ink-3">{count}</span>}
     </Link>

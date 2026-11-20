@@ -1,4 +1,44 @@
-# World Net News design system: "The Front Page" (national edition)
+# WorldNet News design system v2: "Signal"
+
+Premium, high-tech, bold. Dark by default with an optional light edition (Settings → Appearance).
+
+## Palette (CSS variables in `src/styles/tokens.css`)
+
+| Variable | Value | Use |
+|---|---|---|
+| `--wn-bg` | #070B14 | page background (near-black navy) |
+| `--wn-panel-0…3` | #05080F → #17233D | layered panels, darker to lighter |
+| `--wn-blue` | #2F6BFF | primary: glows, borders, big color blocks, active indicators |
+| `--wn-blue-fill` | #2C68FA | the same blue a hair deeper, under white text (4.7:1; #2F6BFF is 4.49:1) |
+| `--wn-blue-ink` | #7FA3FF | blue as text/links on dark (8:1) |
+| `--wn-red` / `--wn-red-fill` | #FF2D4A / #E3163A | BREAKING and LIVE only (fill carries white text at 4.7:1) |
+| `--wn-cyan` / `--wn-cyan-ink` | #22D3EE / #67E8F9 | glows, hover, focus rings |
+| `--wn-text`, `-2`, `-3` | #FFFFFF, #B8C2D9, #8893AD | text (all ≥ 5:1 on every panel) |
+
+Older names (`--paper`, `--navy`, `--gold`, …) map onto these, so every screen follows the palette.
+
+## Type
+Barlow Condensed (700/800, SIL OFL, self-hosted) for headlines and labels, often uppercase; Inter for body; JetBrains Mono for numbers.
+
+## Surfaces and motion
+- **Glass cards** (`card`): frosted panel, 1px blue hairline border, 16px radius; `card-hover` adds a cyan glow and a 2px lift. Buttons scale to 0.97 on press.
+- **Hero glow** (`hero-glow`): blue/cyan/red radial light behind the lead story.
+- Page grid backdrop, cards rise in on load, shimmer skeletons with a blue sweep, a light sweep across the header bar. All motion stops under reduced motion.
+
+## Structure
+Electric-blue header bar (logo, section links, search, Newsdesk, Take it, account) → channel tabs (active tab is a solid blue pill) → the **ticker**: breaking news and market moves scrolling in one band (pauses on hover; still and swipeable under reduced motion). Phones get a glass bottom tab bar (Front, Markets, Take it, Live, Rundown).
+
+Homepage: full-width hero (image, dark gradient, headline on the image, glow behind) → 6 story cards (image, category tag, headline, time, source) → Trending (sticky sidebar on desktop, swipe row on phones) → markets strip, Morning Edition block, debate, poll, takes, voices, outlets, more stories.
+
+## Pictures
+`StoryArt` is the single image slot. An editor's photo from the Control Room always wins (responsive `srcset`, lazy, blur placeholder, credit). Otherwise it draws original art in code: gradient mesh in blue/cyan with the section's accent, halftone field, node network, scanlines, and a large section icon. No external or copyrighted images, never a gray box. Aspect ratios are fixed per slot (hero 1:1 → 16:10 → 16:9, cards 16:10).
+
+## Brand
+A globe wired as a network (white nodes, cyan hub) on an electric-blue tile; wordmark WORLDNET + a NEWS chip. Same drawing for the header, favicon, app icons and splash screens. The owner's personal mark goes in `PERSONAL_LOGO` (`src/config.ts`) and shows small and faded in the footer.
+
+---
+
+# Previous design: "The Front Page" (national edition)
 
 ## 1. Audit: what looked like Twitter/X (before this remodel)
 
@@ -22,12 +62,12 @@ Screenshots: 20 routes × 390 / 768 / 1440 px × light / dark (120 images).
 
 ## 2. The big idea
 
-World Net News is organized around **Stories**, not a stream of posts. Every national event is a Story.
+WorldNet News is organized around **Stories**, not a stream of posts. Every national event is a Story.
 People add **Takes** to a Story and pick a **stance** (Agree, Disagree, Context, Question).
 Readers cast their own stance on Stories and Takes; the **stance meter** replaces likes.
 The home screen is a **front page** (bento tiles sized by importance), not a timeline.
 
-| Twitter primitive | World Net News replacement |
+| Twitter primitive | WorldNet News replacement |
 |---|---|
 | Post | **Take** (with a stance chip, optionally attached to a Story) |
 | Like ♥ | **Stance meter**: agree / unsure / disagree split, tap to cast |
@@ -85,7 +125,7 @@ StoryTile · DeckCard · Sheet · Menu · Confirm · Skeletons (bento-shaped) ·
 
 Final screenshots were compared against Twitter/X, Threads, Bluesky, Reddit, and Truth Social:
 
-| Piece | Them | World Net News now |
+| Piece | Them | WorldNet News now |
 |---|---|---|
 | Shell | Left icon sidebar + center stream + right rail | Newspaper masthead, channel dial, Live Wire; full-width bento; no sidebars |
 | Home | Reverse-chron stream of identical cards | Front Page bento sized by importance; phone story deck with snap |

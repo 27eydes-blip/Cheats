@@ -40,7 +40,7 @@ function group(items: NotificationView[]): Group[] {
 const VERB: Partial<Record<NotificationView["type"], string>> = { like: "sided with your take", repost: "amplified your take", follow: "started following your byline", reply: "answered you", quote: "quoted your take", mention: "mentioned you" };
 
 function Icon({ type }: { type: NotificationView["type"] }) {
-  const wrap = (cls: string, node: React.ReactNode) => <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] ${cls}`}>{node}</span>;
+  const wrap = (cls: string, node: React.ReactNode) => <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${cls}`}>{node}</span>;
   if (type === "like") return wrap("bg-agree/10 text-agree", <AgreeIcon size={18} />);
   if (type === "repost") return wrap("bg-gold-soft text-gold-ink", <AmplifyIcon size={18} />);
   if (type === "follow") return wrap("bg-navy-soft text-navy-ink", <UserIcon size={18} />);

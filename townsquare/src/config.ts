@@ -1,7 +1,7 @@
 /** Product-wide settings. Change the name here and it updates everywhere. */
-export const APP_NAME = "World Net News";
-/** Short form for tight spots (phone masthead, home-screen label, "on World Net"). */
-export const APP_SHORT = "World Net";
+export const APP_NAME = "WorldNet News";
+/** Short form for tight spots (phone masthead, home-screen label, "on WorldNet"). */
+export const APP_SHORT = "WorldNet";
 export const COMPANY = "Gleyde Technologies, LLC";
 export const TAGLINE = "Say it. Read it. Debate it.";
 
@@ -29,3 +29,10 @@ export const RATE_LIMITS = {
   follow: [[60, 60 * 60_000]],
   like: [[300, 60 * 60_000]],
 } as const satisfies Record<string, readonly (readonly [number, number])[]>;
+
+/**
+ * Your personal logo, shown small and subtle in the site footer (a quiet
+ * maker's mark). Put the file in /public/brand/ and set its path here,
+ * e.g. "/brand/personal-logo.svg". null hides it.
+ */
+export const PERSONAL_LOGO: { src: string; alt: string; href?: string } | null = null;

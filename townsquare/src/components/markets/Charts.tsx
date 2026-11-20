@@ -60,7 +60,7 @@ export function AreaChart({ values, prevClose, height = 120, interactive, label 
       {/* pulsing last-price dot (outside the stretched SVG so it stays round) */}
       <span className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ left: `${(lastX / W) * 100}%`, top: `${(lastY / H) * 100}%`, background: c, boxShadow: `0 0 0 4px ${c}33, 0 0 16px ${c}` }} />
       {hv !== null && hover !== null && (
-        <span className="mono pointer-events-none absolute -top-1 rounded-[2px] bg-[#0b1f4b] px-1.5 py-0.5 text-[11px] text-white ring-1 ring-[#c8a24a]/60" style={{ left: `clamp(0px, calc(${(x(hover) / W) * 100}% - 34px), calc(100% - 72px))` }}>
+        <span className="mono pointer-events-none absolute -top-1 rounded-[6px] bg-[#101a2e] px-1.5 py-0.5 text-[11px] text-white ring-1 ring-[#22d3ee]/60" style={{ left: `clamp(0px, calc(${(x(hover) / W) * 100}% - 34px), calc(100% - 72px))` }}>
           {hv.toFixed(2)}
         </span>
       )}
@@ -185,11 +185,11 @@ export function PriceChart({ bars: raw, kind, range, baseline, height = 300 }: {
           {hb && <line x1="0" x2={W} y1={y(hb.c)} y2={y(hb.c)} stroke="rgb(227 199 115 / 0.35)" strokeDasharray="2 4" vectorEffect="non-scaling-stroke" />}
         </svg>
         {/* price labels on the right */}
-        {grid.map((g) => <span key={g} className="mono pointer-events-none absolute right-0 -translate-y-1/2 bg-[#081226]/70 px-1 text-[10px] text-white/45" style={{ top: `${(y(g) / height) * 100}%` }}>{g.toFixed(2)}</span>)}
+        {grid.map((g) => <span key={g} className="mono pointer-events-none absolute right-0 -translate-y-1/2 bg-[#0b1220]/70 px-1 text-[10px] text-white/45" style={{ top: `${(y(g) / height) * 100}%` }}>{g.toFixed(2)}</span>)}
         {kind === "line" && hover === null && <span className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ left: `${(x(n - 1) / W) * 100}%`, top: `${(y(bars[n - 1].c) / height) * 100}%`, background: col, boxShadow: `0 0 0 4px ${col}33, 0 0 16px ${col}` }} />}
         {hb && (
-          <div className="mono pointer-events-none absolute top-0 z-10 rounded-[3px] bg-[#0b1f4b]/95 px-2.5 py-1.5 text-[11px] leading-[1.55] text-white shadow-lg ring-1 ring-[#c8a24a]/60" style={{ left: hover! > n / 2 ? 8 : undefined, right: hover! <= n / 2 ? 8 : undefined }}>
-            <p className="text-[#e3c773]">{when(hb.t)}</p>
+          <div className="mono pointer-events-none absolute top-0 z-10 rounded-[8px] bg-[#101a2e]/95 px-2.5 py-1.5 text-[11px] leading-[1.55] text-white shadow-lg ring-1 ring-[#22d3ee]/60" style={{ left: hover! > n / 2 ? 8 : undefined, right: hover! <= n / 2 ? 8 : undefined }}>
+            <p className="text-[var(--wn-cyan-ink)]">{when(hb.t)}</p>
             <p>O {hb.o.toFixed(2)} &nbsp;H {hb.h.toFixed(2)}</p>
             <p>L {hb.l.toFixed(2)} &nbsp;C <b className={hb.c >= hb.o ? "text-[#2ee6a6]" : "text-[#ff5c7a]"}>{hb.c.toFixed(2)}</b></p>
             <p className="text-white/60">VOL {fmtVol(hb.v)}</p>

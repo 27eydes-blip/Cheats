@@ -84,7 +84,7 @@ export function voices(viewerId: string | null, limit = 4, section?: string): Vo
   }));
 }
 
-/** One-line credibility note for a Voice ("Verified · 2 yrs on World Net · 14 context notes"). */
+/** One-line credibility note for a Voice ("Verified · 2 yrs on WorldNet · 14 context notes"). */
 export function credibility(v: { verified: boolean; joinedAt: number; contextNotes: number; takes: number }) {
   const years = (now() - v.joinedAt) / (365 * 86_400_000);
   const age = years >= 1 ? `${Math.floor(years)} yr${years >= 2 ? "s" : ""}` : `${Math.max(1, Math.round(years * 12))} mo`;

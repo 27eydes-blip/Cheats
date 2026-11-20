@@ -22,7 +22,7 @@ export default async function Desks() {
         {list.map((c) => {
           const pin = stories.get(pinnedStoryKey(c.id) ?? "");
           return (
-            <li key={c.id} className="border-t-2 border-navy-ink py-4">
+            <li key={c.id} className="border-t border-[var(--wn-glass-border)] py-4">
               <Link href={`/c/${c.slug}`} className="group flex items-start gap-3">
                 <CommunityIconTile slug={c.slug} name={c.name} size={52} />
                 <span className="min-w-0 flex-1">

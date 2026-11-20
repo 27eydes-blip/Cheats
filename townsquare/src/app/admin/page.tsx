@@ -44,7 +44,7 @@ export default async function Admin() {
 
       <section aria-label="Key metrics" className="grid grid-cols-2 gap-x-6 gap-y-6 px-4 sm:px-6 lg:grid-cols-4">
         {kpis.map((k) => (
-          <div key={k.label} className="border-t-2 border-navy-ink pt-3">
+          <div key={k.label} className="border-t border-[var(--wn-glass-border)] pt-3">
             <p className="folio !text-[10px] text-ink-3">{k.label}</p>
             <div className="mt-1 flex items-end justify-between gap-2">
               <p className="mono text-[34px] leading-none font-semibold">{k.value}</p>
@@ -63,7 +63,7 @@ export default async function Admin() {
           </div>
           <div className="flex gap-1.5 text-[12px] font-bold">
             {(["critical", "high", "medium", "low"] as const).map((s) => (
-              <span key={s} className={`mono rounded-[2px] px-2 py-1 uppercase ${s === "critical" ? "bg-live-bg text-white" : s === "high" ? "bg-danger-soft text-disagree" : s === "medium" ? "bg-warning-bg text-warning" : "bg-paper-2 text-ink-2"}`}>
+              <span key={s} className={`mono rounded-[6px] px-2 py-1 uppercase ${s === "critical" ? "bg-live-bg text-white" : s === "high" ? "bg-danger-soft text-disagree" : s === "medium" ? "bg-warning-bg text-warning" : "bg-paper-2 text-ink-2"}`}>
                 {counts[s]} {s}
               </span>
             ))}

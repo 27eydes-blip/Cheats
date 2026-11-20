@@ -6,61 +6,86 @@ import { FollowButton } from "../FollowButton";
 import { PostCard } from "../PostCard";
 import { Time } from "../Time";
 import { Avatar } from "../ui/Avatar";
-import { Kicker, LiveBadge, SourceLabel, VerifiedSeal } from "../ui/Badge";
+import { CategoryTag, Kicker, LiveBadge, SourceLabel, VerifiedSeal } from "../ui/Badge";
 import { Sparkline } from "../ui/Sparkline";
 import { MiniSplit, StanceMeter } from "../ui/Stance";
 import { DebateCard } from "./DebateCard";
 import { Poll } from "../post/Poll";
 import { StoryArt } from "./StoryArt";
-import { ArrowRightIcon, DownloadIcon, EditionIcon } from "../icons";
+import { ArrowRightIcon, ClockIcon, DownloadIcon, EditionIcon, FlameIcon } from "../icons";
 
-/** A tile: a folio label over a 2px navy rule, newspaper style. */
+/** A glass panel with a bold label and an optional "more" link. */
 export function Tile({ label, action, children, className = "", tone }: { label: string; action?: { href: string; text: string }; children: React.ReactNode; className?: string; tone?: "live" }) {
   return (
-    <section aria-label={label} className={`min-w-0 border-t-2 pt-3 ${tone === "live" ? "border-live-bg" : "border-navy-ink"} ${className}`}>
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 className={`folio flex items-center gap-2 ${tone === "live" ? "text-live-bg dark:text-live" : "text-navy-ink"}`}>
-          {tone === "live" && <span className="h-1.5 w-1.5 animate-live rounded-full bg-live" />}
+    <section aria-label={label} className={`card min-w-0 p-4 sm:p-5 ${className}`}>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 font-display text-[19px] leading-none font-extrabold tracking-[0.04em] uppercase">
+          <span aria-hidden="true" className={`h-4 w-1 rounded-full ${tone === "live" ? "bg-live shadow-[0_0_10px_var(--wn-red)]" : "bg-[var(--wn-blue-fill)] shadow-[0_0_10px_var(--wn-blue)]"}`} />
           {label}
         </h2>
-        {action && <Link href={action.href} className="folio !text-[10px] text-ink-3 hover:text-navy-ink">{action.text} →</Link>}
+        {action && <Link href={action.href} className="inline-flex min-h-9 items-center rounded-[8px] px-2 text-[12px] font-bold tracking-[0.06em] text-navy-ink uppercase hover:bg-white/5 hover:text-[var(--wn-cyan-ink)]">{action.text} →</Link>}
       </div>
       {children}
     </section>
   );
 }
 
-function StatusKicker({ s }: { s: StorySummary }) {
+const sectionName = (s: StorySummary) => (s.section === "Top Stories" ? "National" : s.section);
+
+function StatusTags({ s }: { s: StorySummary }) {
   return (
-    <span className="flex items-center gap-2">
-      {s.status === "live" ? <LiveBadge label="LIVE" /> : s.status === "developing" ? <Kicker tone="gold">Developing</Kicker> : <Kicker tone="muted">Final</Kicker>}
-      <Kicker tone="muted">{s.section === "Top Stories" ? "National" : s.section}</Kicker>
+    <span className="flex flex-wrap items-center gap-1.5">
+      {s.status === "live" && <LiveBadge label="LIVE" />}
+      <CategoryTag solid>{sectionName(s)}</CategoryTag>
+      {s.status === "developing" && <CategoryTag className="!bg-[rgb(7_11_20/0.72)] !text-[#67e8f9] !ring-[rgb(34_211_238/0.45)]">Developing</CategoryTag>}
     </span>
   );
 }
 
-/** The Lead Story: the biggest tile on the page. */
+/** "2h ago · Harbor & Main" */
+function Meta({ s, className = "" }: { s: StorySummary; className?: string }) {
+  return (
+    <span className={`flex min-w-0 items-center gap-1.5 text-[12.5px] text-ink-3 ${className}`}>
+      <ClockIcon size={13} /> <Time ms={s.updatedAt} /> ago
+      {s.source && <><span aria-hidden="true">·</span><span className="truncate font-semibold text-ink-2">{s.source}</span></>}
+    </span>
+  );
+}
+
+/** The hero lead story: full-width image, dark gradient overlay, headline on the image, a glow behind it. */
 export function LeadTile({ s, latest }: { s: StorySummary; latest: string[] }) {
   return (
-    <article className="min-w-0 border-t-[3px] border-navy-ink pt-3">
-      <Link href={`/news/story/${s.key}`} className="group block">
-        <div className="relative aspect-[16/7] overflow-hidden">
-          <StoryArt seed={s.key} section={s.section} photo={s.photo} priority className="transition-transform duration-700 group-hover:scale-[1.02]" />
-          <span className="mono absolute right-3 bottom-3 bg-navy/85 px-2 py-1 text-[11px] text-white">{s.takes} takes · {s.outlets} outlets</span>
+    <article className="hero-glow min-w-0">
+      <Link href={`/news/story/${s.key}`} className="group relative block overflow-hidden rounded-[var(--r-xl)] ring-1 ring-[var(--wn-glass-border)] transition-shadow duration-300 hover:ring-[var(--wn-glass-border-hot)] hover:shadow-[var(--glow)]">
+        <div className="relative aspect-square sm:aspect-[16/10] lg:aspect-[16/9]">
+          <StoryArt seed={s.key} section={s.section} photo={s.photo} priority hero className="transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03]" />
+          <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgb(7_11_20/0)_25%,rgb(7_11_20/0.55)_55%,rgb(7_11_20/0.96)_100%)]" />
+          <div className="absolute inset-x-0 bottom-0 p-4 sm:p-7">
+            <StatusTags s={s} />
+            <h2 className="mt-3 max-w-[22ch] font-display text-[clamp(2.1rem,1.2rem+3.6vw,4.4rem)] leading-[0.95] font-extrabold tracking-[-0.01em] text-balance text-white uppercase [text-shadow:0_2px_24px_rgb(0_0_0/0.5)]">
+              {s.title}
+            </h2>
+            <p className="mt-3 line-clamp-2 max-w-[62ch] text-[15px] text-[#d6dcea] sm:text-[16.5px]">{s.summary}</p>
+            <span className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-[#c4cbe0]">
+              <span className="flex items-center gap-1.5"><ClockIcon size={13} /> Updated <Time ms={s.updatedAt} /> ago</span>
+              {s.source && <span className="font-semibold text-white">{s.source}</span>}
+              <span className="mono">{s.takes} takes · {s.outlets} outlets</span>
+            </span>
+          </div>
         </div>
-        <div className="mt-4"><StatusKicker s={s} /></div>
-        <h2 className="mt-2 font-display text-[clamp(2.2rem,1.4rem+2.6vw,3.6rem)] leading-[1.02] font-semibold text-balance group-hover:underline decoration-gold decoration-2 underline-offset-[6px]">{s.title}</h2>
       </Link>
-      <div className="mt-4 grid gap-6 xl:grid-cols-[1fr_300px]">
-        <div>
-          <p className="drop-cap text-[17px] leading-relaxed text-ink-2">{s.summary}</p>
-          {latest.length > 0 && (
-            <ul className="mt-4 space-y-2 border-l-2 border-gold pl-4">
-              {latest.map((u, i) => <li key={i} className="text-[14.5px] leading-snug"><span className="mono mr-2 text-[11px] text-ink-3">{i === 0 ? "LATEST" : "EARLIER"}</span>{u}</li>)}
-            </ul>
-          )}
-        </div>
-        <div className="border-t border-rule pt-3 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
+      <div className="card mt-3 grid gap-4 p-4 sm:p-5 xl:grid-cols-[1fr_320px]">
+        {latest.length > 0 ? (
+          <ul className="space-y-2.5">
+            {latest.map((u, i) => (
+              <li key={i} className="flex gap-3 text-[14.5px] leading-snug text-ink-2">
+                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${i === 0 ? "bg-[var(--wn-cyan)] shadow-[0_0_8px_var(--wn-cyan)]" : "bg-ink-3"}`} />
+                <span><span className="mono mr-2 text-[11px] font-bold text-ink-3">{i === 0 ? "LATEST" : "EARLIER"}</span>{u}</span>
+              </li>
+            ))}
+          </ul>
+        ) : <span />}
+        <div className="xl:border-l xl:border-rule xl:pl-5">
           <p className="folio mb-3 text-ink-3">What&apos;s the split?</p>
           <StanceMeter type="story" id={s.key} initial={s.split} variant="large" />
         </div>
@@ -69,17 +94,23 @@ export function LeadTile({ s, latest }: { s: StorySummary; latest: string[] }) {
   );
 }
 
-/** Medium story tile. */
+/** Story card: large image, category tag, headline, time and source. */
 export function StoryTile({ s, big }: { s: StorySummary; big?: boolean }) {
   return (
-    <article className="min-w-0 border-t-2 border-navy-ink pt-3">
-      <Link href={`/news/story/${s.key}`} className="group block">
-        <div className={`overflow-hidden ${big ? "aspect-[16/9]" : "aspect-[3/2]"}`}><StoryArt seed={s.key} section={s.section} photo={s.photo} className="transition-transform duration-700 group-hover:scale-[1.03]" /></div>
-        <div className="mt-3"><StatusKicker s={s} /></div>
-        <h3 className={`mt-1.5 font-display font-semibold text-balance group-hover:underline decoration-gold decoration-2 underline-offset-4 ${big ? "text-h1" : "text-h2"}`}>{s.title}</h3>
-        {big && <p className="mt-2 line-clamp-2 text-[15px] text-ink-2">{s.summary}</p>}
+    <article className="card card-hover group min-w-0 overflow-hidden">
+      <Link href={`/news/story/${s.key}`} className="block">
+        <div className="relative aspect-[16/10] overflow-hidden">
+          <StoryArt seed={s.key} section={s.section} photo={s.photo} width={640} className="transition-transform duration-700 ease-out group-hover:scale-[1.05]" />
+          <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[rgb(7_11_20/0.7)] via-transparent to-transparent" />
+          <span className="absolute top-3 left-3"><StatusTags s={s} /></span>
+        </div>
+        <div className="p-4">
+          <h3 className={`font-display leading-[1.04] font-bold text-balance text-ink-1 transition-colors group-hover:text-[var(--wn-cyan-ink)] ${big ? "text-[clamp(1.5rem,1.2rem+0.9vw,2rem)]" : "text-[clamp(1.3rem,1.15rem+0.5vw,1.6rem)]"}`}>{s.title}</h3>
+          {big && <p className="mt-2 line-clamp-2 text-[14.5px] text-ink-2">{s.summary}</p>}
+          <Meta s={s} className="mt-3" />
+        </div>
       </Link>
-      <div className="mt-3 flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 border-t border-rule px-4 py-2.5">
         <MiniSplit split={s.split} />
         <span className="mono text-[11.5px] text-ink-3">{s.takes} takes</span>
       </div>
@@ -87,20 +118,43 @@ export function StoryTile({ s, big }: { s: StorySummary; big?: boolean }) {
   );
 }
 
-/** Hot Stories: ranked by take velocity, with sparkline and split. */
-export function HotStories({ stories }: { stories: StorySummary[] }) {
+/** Trending: a sidebar list on desktop; a horizontal swipe row on phones (`row`). */
+export function HotStories({ stories, row }: { stories: StorySummary[]; row?: boolean }) {
+  if (row) {
+    return (
+      <section aria-label="Trending" className="min-w-0">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 font-display text-[19px] font-extrabold tracking-[0.04em] uppercase"><FlameIcon size={18} className="text-[var(--wn-cyan)]" /> Trending</h2>
+          <Link href="/explore" className="inline-flex min-h-10 items-center px-2 text-[12px] font-bold tracking-[0.06em] text-navy-ink uppercase">All →</Link>
+        </div>
+        <ol className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1" data-no-swipe>
+          {stories.map((s, i) => (
+            <li key={s.key} className="w-[78%] max-w-[300px] shrink-0 snap-start">
+              <Link href={`/news/story/${s.key}`} className="card card-hover flex h-full gap-3 overflow-hidden p-3">
+                <span className="font-display text-[34px] leading-none font-extrabold text-[var(--wn-blue)] [text-shadow:0_0_18px_rgb(47_107_255/0.6)]">{i + 1}</span>
+                <span className="min-w-0">
+                  <span className="line-clamp-3 text-[14px] leading-snug font-semibold">{s.title}</span>
+                  <span className="mono mt-1.5 block text-[10.5px] text-ink-3">+{s.velocity} takes / 6h</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </section>
+    );
+  }
   return (
-    <Tile label="Hot Stories" action={{ href: "/explore", text: "All" }}>
+    <Tile label="Trending" action={{ href: "/explore", text: "All" }}>
       <ol className="divide-y divide-rule">
         {stories.map((s, i) => (
           <li key={s.key}>
-            <Link href={`/news/story/${s.key}`} className="group grid grid-cols-[28px_1fr_auto] items-center gap-3 py-2.5">
-              <span className="font-display text-[26px] leading-none font-semibold text-gold-ink">{i + 1}</span>
+            <Link href={`/news/story/${s.key}`} className="group grid grid-cols-[34px_1fr_auto] items-center gap-3 rounded-[10px] py-3 transition-colors hover:bg-white/[0.03]">
+              <span className="font-display text-[30px] leading-none font-extrabold text-[var(--wn-blue)] [text-shadow:0_0_18px_rgb(47_107_255/0.55)]">{i + 1}</span>
               <span className="min-w-0">
-                <span className="line-clamp-2 text-[14.5px] leading-snug font-semibold group-hover:underline">{s.title}</span>
+                <span className="line-clamp-2 text-[14.5px] leading-snug font-semibold group-hover:text-[var(--wn-cyan-ink)]">{s.title}</span>
                 <span className="mt-1 flex items-center gap-3"><MiniSplit split={s.split} /><span className="mono text-[10.5px] text-ink-3">+{s.velocity} / 6h</span></span>
               </span>
-              <Sparkline values={s.series} width={56} height={26} color="var(--gold)" label={`${s.takes} takes, trend`} />
+              <Sparkline values={s.series} width={56} height={26} color="var(--wn-cyan)" label={`${s.takes} takes, trend`} />
             </Link>
           </li>
         ))}
@@ -118,11 +172,11 @@ export function LiveNowTile({ events }: { events: LiveEventView[] }) {
       <ul className="space-y-2.5">
         {on.map((e) => (
           <li key={e.id}>
-            <Link href={`/live/${e.id}`} className="group flex items-center gap-3 bg-navy p-2.5 text-white">
-              <span className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-[2px]"><StoryArt seed={e.title} section="Top Stories" /><span className="absolute top-1 left-1"><LiveBadge label="ON AIR" className="!px-1 !text-[8.5px]" /></span></span>
+            <Link href={`/live/${e.id}`} className="group flex items-center gap-3 rounded-[12px] bg-white/[0.03] p-2.5 ring-1 ring-[var(--wn-glass-border)] transition-all hover:ring-[var(--wn-red)]/60 hover:shadow-[0_0_20px_rgb(255_45_74/0.2)]">
+              <span className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-[8px]"><StoryArt seed={e.title} section="Top Stories" /><span className="absolute top-1 left-1"><LiveBadge label="ON AIR" className="!px-1 !text-[8.5px]" /></span></span>
               <span className="min-w-0">
                 <span className="line-clamp-2 text-[13.5px] leading-snug font-semibold group-hover:underline">{e.title}</span>
-                <span className="mono text-[11px] text-white/70">{e.viewers.toLocaleString("en-US")} watching</span>
+                <span className="mono text-[11px] text-ink-3">{e.viewers.toLocaleString("en-US")} watching</span>
               </span>
             </Link>
           </li>
@@ -150,7 +204,7 @@ export function VoicesTile({ voices }: { voices: Voice[] }) {
             <Link href={`/u/${v.handle}`} className="flex min-w-0 flex-1 gap-3">
               <Avatar url={v.avatarUrl} name={v.displayName} handle={v.handle} size={42} />
               <span className="min-w-0">
-                <span className="flex items-center gap-1 font-display text-[17px] font-semibold">{v.displayName}{v.verified && <VerifiedSeal size={14} />}</span>
+                <span className="flex items-center gap-1 text-[15px] font-bold">{v.displayName}{v.verified && <VerifiedSeal size={14} />}</span>
                 <span className="line-clamp-1 block text-[13px] text-ink-2">{v.bio}</span>
                 <span className="mono mt-0.5 block text-[10.5px] text-gold-ink">{credibility(v)}</span>
               </span>
@@ -171,7 +225,7 @@ export function WireTile({ items }: { items: NewsItemView[] }) {
           <li key={n.id}>
             <a href={n.url} target="_blank" rel="noopener noreferrer" className="group block py-2.5">
               <span className="flex items-center gap-2"><SourceLabel name={n.source} /><span className="mono text-[10.5px] text-ink-3"><Time ms={n.publishedAt} /></span></span>
-              <span className="mt-1 block font-display text-[16.5px] leading-snug font-semibold group-hover:underline">{n.title}</span>
+              <span className="mt-1 block font-display text-[18px] leading-snug font-bold group-hover:text-[var(--wn-cyan-ink)]">{n.title}</span>
             </a>
           </li>
         ))}
@@ -203,12 +257,14 @@ function PollOnly({ post }: { post: PostView }) {
 
 export function BriefingPromo({ minutes, count }: { minutes: number; count: number }) {
   return (
-    <Link href="/briefing" className="group flex min-h-[200px] flex-col justify-between bg-navy p-5 text-white">
-      <span className="folio flex items-center gap-2 text-gold"><EditionIcon size={16} /> Morning Edition</span>
-      <span className="mt-6 block font-display text-[26px] leading-tight font-semibold">{count} stories, 3 debates, one coffee.</span>
-      <span className="mt-4 flex items-center justify-between text-[13px] text-white/75">
+    <Link href="/briefing" className="group relative flex min-h-[220px] flex-col justify-between overflow-hidden rounded-[var(--r-xl)] bg-[var(--wn-blue-fill)] p-6 text-white shadow-[var(--glow-blue)] transition-transform duration-300 hover:-translate-y-0.5">
+      <span aria-hidden="true" className="absolute -top-16 -right-16 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgb(34_211_238/0.55),transparent_65%)]" />
+      <span aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(rgb(255_255_255/0.06)_1px,transparent_1px),linear-gradient(90deg,rgb(255_255_255/0.06)_1px,transparent_1px)] bg-[size:28px_28px]" />
+      <span className="relative flex items-center gap-2 text-[12px] font-extrabold tracking-[0.14em] uppercase"><EditionIcon size={16} /> Morning Edition</span>
+      <span className="relative mt-6 block font-display text-[clamp(1.9rem,1.5rem+1vw,2.4rem)] leading-[0.98] font-extrabold uppercase">{count} stories, 3 debates, one coffee.</span>
+      <span className="relative mt-4 flex items-center justify-between text-[13px] text-white">
         <span className="mono">{minutes} min read · <DownloadIcon size={13} className="inline" /> offline</span>
-        <ArrowRightIcon size={18} className="text-gold transition-transform group-hover:translate-x-1" />
+        <ArrowRightIcon size={20} className="transition-transform group-hover:translate-x-1" />
       </span>
     </Link>
   );
@@ -217,13 +273,16 @@ export function BriefingPromo({ minutes, count }: { minutes: number; count: numb
 /** Small headline list for the rest of the stories. */
 export function MoreStories({ stories }: { stories: StorySummary[] }) {
   return (
-    <ul className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-4">
+    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {stories.map((s) => (
-        <li key={s.key} className="border-t border-rule py-3">
-          <Link href={`/news/story/${s.key}`} className="group block">
-            <StatusKicker s={s} />
-            <span className="mt-1 block font-display text-[18px] leading-snug font-semibold group-hover:underline">{s.title}</span>
+        <li key={s.key}>
+          <Link href={`/news/story/${s.key}`} className="card card-hover group flex h-full gap-3 overflow-hidden p-3">
+            <span className="block aspect-square w-20 shrink-0 overflow-hidden rounded-[10px]"><StoryArt seed={s.key} section={s.section} photo={s.photo} width={320} /></span>
+            <span className="min-w-0">
+            <StatusTags s={s} />
+            <span className="mt-1.5 block font-display text-[18px] leading-tight font-bold group-hover:text-[var(--wn-cyan-ink)]">{s.title}</span>
             <MiniSplit split={s.split} className="mt-2" />
+            </span>
           </Link>
         </li>
       ))}

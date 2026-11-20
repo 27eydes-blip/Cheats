@@ -10,8 +10,8 @@ export function Illustration({ art, size = 132 }: { art: Art; size?: number }) {
     <svg width={size} height={size * 0.78} viewBox="0 0 160 124" aria-hidden="true" className="mx-auto">
       <defs>
         <linearGradient id={g} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#1a3570" />
-          <stop offset="1" stopColor="#0b1f4b" />
+          <stop offset="0" stopColor="#2f6bff" />
+          <stop offset="1" stopColor="#101a2e" />
         </linearGradient>
       </defs>
       <ellipse cx="80" cy="112" rx="58" ry="8" fill="var(--line)" />

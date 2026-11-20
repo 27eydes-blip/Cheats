@@ -60,7 +60,7 @@ export function Onboarding({ name, interests, initialInterests, initialTown, peo
                   type="button"
                   aria-pressed={on}
                   onClick={() => setPicked(on ? picked.filter((x) => x !== i) : [...picked, i])}
-                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-[4px] px-4 text-[15px] font-semibold transition-all duration-200 active:translate-y-px ${on ? "bg-navy text-white shadow-[inset_0_-2px_0_var(--gold)]" : "bg-paper text-ink-1 ring-1 ring-rule-strong hover:ring-navy-ink"}`}
+                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-[10px] px-4 text-[15px] font-semibold transition-all duration-200 active:translate-y-px ${on ? "bg-navy text-white shadow-[inset_0_-2px_0_var(--gold)]" : "bg-paper text-ink-1 ring-1 ring-rule-strong hover:ring-navy-ink"}`}
                 >
                   {on && <CheckIcon size={15} strokeWidth={3} className="animate-pop" />}
                   {i}

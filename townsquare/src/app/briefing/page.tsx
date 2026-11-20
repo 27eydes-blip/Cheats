@@ -47,7 +47,7 @@ export default async function Briefing() {
         </Link>
       )}
 
-      <section aria-label="The rest of the edition" className="mt-10 columns-1 gap-8 border-t-2 border-navy-ink pt-6 md:columns-2 lg:columns-3 [column-rule:1px_solid_var(--rule)]">
+      <section aria-label="The rest of the edition" className="mt-10 columns-1 gap-8 border-t border-[var(--wn-glass-border)] pt-6 md:columns-2 lg:columns-3 [column-rule:1px_solid_var(--rule)]">
         {rest.map((s, i) => (
           <Link key={s.key} href={`/news/story/${s.key}`} className="group mb-6 block break-inside-avoid">
             <span className="mono text-[11px] text-gold-ink">{String(i + 2).padStart(2, "0")}</span>
@@ -60,12 +60,12 @@ export default async function Briefing() {
       </section>
 
       {fights.length > 0 && (
-        <section aria-labelledby="debates" className="mt-6 border-t-2 border-navy-ink pt-6">
+        <section aria-labelledby="debates" className="mt-6 border-t border-[var(--wn-glass-border)] pt-6">
           <h2 id="debates" className="folio text-navy-ink">Three debates worth settling</h2>
           <div className="mt-4 grid gap-6 lg:grid-cols-3">{fights.map((d) => <DebateCard key={d.left.id} d={d} compact />)}</div>
         </section>
       )}
-      <p className="mt-10 border-t border-rule pt-4 pb-6 text-center font-display text-[17px] text-ink-3 italic">That&apos;s the edition. Go have a good day.</p>
+      <p className="mt-10 border-t border-rule pt-4 pb-6 text-center font-display text-[19px] font-bold tracking-[0.04em] text-ink-3 uppercase">That&apos;s the edition. Go have a good day.</p>
     </div>
   );
 }

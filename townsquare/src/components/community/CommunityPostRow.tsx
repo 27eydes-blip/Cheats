@@ -45,7 +45,7 @@ export function CommunityPostRow({ post, slug, editor }: { post: CommunityPost; 
               router.refresh();
             });
           }}
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center self-start rounded-[4px] text-ink-3 hover:bg-danger-soft hover:text-disagree"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center self-start rounded-[10px] text-ink-3 hover:bg-danger-soft hover:text-disagree"
           aria-label="Remove (editor)"
           title="Remove (editor)"
         >

@@ -4,17 +4,17 @@ export function Frame({ children, width = "narrow", className = "" }: { children
   return <div className={`mx-auto w-full ${w} ${className}`}>{children}</div>;
 }
 
-/** Editorial page heading: folio, big serif title, dek, double rule. */
+/** Page heading: kicker, big condensed title, dek, and a glowing rule. */
 export function PageTitle({ folio, title, dek, children }: { folio?: React.ReactNode; title: string; dek?: React.ReactNode; children?: React.ReactNode }) {
   return (
     <header className="px-4 pt-6 sm:px-6 lg:pt-10">
       {folio && <div className="mb-2">{folio}</div>}
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="font-display text-display font-semibold">{title}</h1>
+        <h1 className="font-display text-display font-extrabold tracking-tight uppercase">{title}</h1>
         {children}
       </div>
       {dek && <p className="mt-2 max-w-[640px] text-[15.5px] text-ink-2">{dek}</p>}
-      <div aria-hidden="true" className="double-rule mt-4" />
+      <div aria-hidden="true" className="mt-4 h-px bg-gradient-to-r from-[var(--wn-blue)] via-[var(--wn-cyan)]/60 to-transparent shadow-[0_0_12px_rgb(47_107_255/0.8)]" />
     </header>
   );
 }

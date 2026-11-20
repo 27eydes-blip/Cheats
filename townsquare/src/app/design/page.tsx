@@ -35,7 +35,7 @@ const SWATCHES = [
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="border-t-2 border-navy-ink px-4 pt-3 pb-8 sm:px-6">
+    <section className="border-t border-[var(--wn-glass-border)] px-4 pt-3 pb-8 sm:px-6">
       <h3 className="folio mb-4 text-navy-ink">{title}</h3>
       {children}
     </section>
@@ -73,7 +73,7 @@ function Gallery({ viewerId }: { viewerId: string | null }) {
         <p className="font-display text-mega font-semibold">Mega headline</p>
         <p className="font-display text-display font-semibold">Display — Newsreader</p>
         <p className="font-display text-h1 font-semibold">Heading 1</p>
-        <p className="font-display text-[22px] italic text-ink-2">Dek and pull-quote italic</p>
+        <p className="font-display text-[22px] font-bold uppercase text-ink-2">Condensed label / kicker</p>
         <p className="mt-2 text-[16px]">Take text and UI — Inter. Plain, fast, readable.</p>
         <p className="mono mt-1 text-[12.5px] text-ink-3">MONO · TIMESTAMPS 1:56 AM · STANCES 61/35</p>
         <p className="folio mt-2 text-navy-ink">Folio · small caps section label</p>

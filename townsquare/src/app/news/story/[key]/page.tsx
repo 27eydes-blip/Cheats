@@ -9,7 +9,7 @@ import { StoryArt } from "@/components/front/StoryArt";
 import { TakesBoard } from "@/components/story/TakesBoard";
 import { NewTakes } from "@/components/story/NewTakes";
 import { Avatar } from "@/components/ui/Avatar";
-import { Kicker, LiveBadge, SourceLabel, VerifiedSeal } from "@/components/ui/Badge";
+import { CategoryTag, Kicker, LiveBadge, SourceLabel, VerifiedSeal } from "@/components/ui/Badge";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { StanceMeter } from "@/components/ui/Stance";
 import { LocalDate, Time } from "@/components/Time";
@@ -39,26 +39,33 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
 
   return (
     <article className="mx-auto max-w-[1320px]">
-      <header className="px-4 pt-6 lg:px-8 lg:pt-10">
-        <div className="flex flex-wrap items-center gap-2">
-          {story.status === "live" ? <LiveBadge label="LIVE UPDATES" /> : <Kicker tone={story.status === "developing" ? "gold" : "muted"}>{story.status === "developing" ? "Developing" : "Final"}</Kicker>}
-          <Link href={`/?c=${encodeURIComponent(story.section)}`} className="folio text-ink-3 hover:text-navy-ink">{section}</Link>
+      <header className="px-4 pt-5 lg:px-8 lg:pt-8">
+        <div className="hero-glow">
+          <div className="relative overflow-hidden rounded-[var(--r-xl)] ring-1 ring-[var(--wn-glass-border)]">
+            <div className="aspect-square sm:aspect-[16/9] lg:aspect-[21/9]"><StoryArt seed={story.key} section={story.section} photo={story.photo} priority hero /></div>
+            <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(180deg,rgb(7_11_20/0)_30%,rgb(7_11_20/0.6)_60%,rgb(7_11_20/0.97)_100%)]" />
+            <div className="absolute inset-x-0 bottom-0 p-4 sm:p-8">
+              <div className="flex flex-wrap items-center gap-2">
+                {story.status === "live" ? <LiveBadge label="LIVE UPDATES" /> : <CategoryTag className="!bg-[rgb(7_11_20/0.72)] !text-[#67e8f9] !ring-[rgb(34_211_238/0.45)]">{story.status === "developing" ? "Developing" : "Final"}</CategoryTag>}
+                <Link href={`/?c=${encodeURIComponent(story.section)}`} className="inline-flex min-h-8 items-center"><CategoryTag solid>{section}</CategoryTag></Link>
+              </div>
+              <h1 className="mt-3 max-w-[24ch] font-display text-[clamp(2.2rem,1.3rem+3.6vw,4.8rem)] leading-[0.95] font-extrabold text-balance text-white uppercase [text-shadow:0_2px_24px_rgb(0_0_0/0.5)]">{story.title}</h1>
+            </div>
+          </div>
         </div>
-        <h1 className="mt-3 max-w-[1040px] font-display text-mega font-semibold text-balance">{story.title}</h1>
-        <p className="mt-4 max-w-[760px] font-display text-[clamp(1.15rem,1rem+0.6vw,1.45rem)] leading-snug text-ink-2 italic">{story.summary}</p>
-        <p className="mono mt-4 flex flex-wrap gap-x-4 gap-y-1 border-y border-rule py-2 text-[11.5px] text-ink-3">
-          <span>UPDATED <Time ms={story.updatedAt} /> AGO</span><span>{story.updates.length} UPDATES</span><span>{story.outlets} OUTLETS</span><span>{story.takes} TAKES</span><span>+{story.velocity} IN 6H</span>
+        <p className="mt-5 max-w-[760px] text-[clamp(1.1rem,1rem+0.4vw,1.3rem)] leading-snug font-medium text-ink-2">{story.summary}</p>
+        <p className="mono mt-4 flex flex-wrap gap-x-4 gap-y-1 rounded-[12px] border border-[var(--wn-glass-border)] bg-white/[0.02] px-3 py-2 text-[11.5px] text-ink-3">
+          <span>UPDATED <Time ms={story.updatedAt} /> AGO</span><span>{story.updates.length} UPDATES</span><span>{story.outlets} OUTLETS</span><span>{story.takes} TAKES</span><span className="text-[var(--wn-cyan-ink)]">+{story.velocity} IN 6H</span>
         </p>
       </header>
 
       <div className="grid gap-10 px-4 pt-6 lg:grid-cols-12 lg:px-8">
         <div className="min-w-0 lg:col-span-8">
-          <div className="aspect-[16/8] overflow-hidden"><StoryArt seed={story.key} section={story.section} photo={story.photo} priority /></div>
           {tickerQuotes.length > 0 && <StoryTickers initial={tickerQuotes} mode={marketMode()} />}
 
           {/* Timeline rail */}
           <section aria-labelledby="timeline" className="mt-8">
-            <h2 id="timeline" className="folio border-t-2 border-navy-ink pt-3 text-navy-ink">Timeline</h2>
+            <h2 id="timeline" className="folio border-t border-[var(--wn-glass-border)] pt-3 text-[var(--wn-blue-ink)]">Timeline</h2>
             <ol className="mt-4">
               {story.updates.map((u, i) => (
                 <li key={u.id} className="grid grid-cols-[72px_1fr] gap-4 sm:grid-cols-[96px_1fr]">
@@ -69,7 +76,7 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
                   <div className="relative border-l-2 border-rule pb-6 pl-5">
                     <span aria-hidden="true" className={`absolute top-1.5 -left-[7px] h-3 w-3 ${i === 0 && story.status === "live" ? "animate-live rounded-full bg-live" : u.kind === "key" ? "bg-gold" : "rounded-full border-2 border-rule-strong bg-paper"}`} />
                     {u.kind === "quote" ? (
-                      <blockquote className="font-display text-[clamp(1.3rem,1.1rem+0.8vw,1.75rem)] leading-snug text-navy-ink italic">{u.body}</blockquote>
+                      <blockquote className="border-l-2 border-[var(--wn-cyan)] pl-4 font-display text-[clamp(1.4rem,1.2rem+0.8vw,1.9rem)] leading-tight font-bold text-ink-1">{u.body}</blockquote>
                     ) : (
                       <p className={`leading-relaxed ${u.kind === "key" ? "font-display text-[20px] font-semibold" : "text-[16px] text-ink-2"}`}>{u.body}</p>
                     )}
@@ -90,7 +97,7 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
           {/* How it is covered */}
           {story.coverage.length > 0 && (
             <section aria-labelledby="coverage" className="mt-6">
-              <div className="flex items-baseline justify-between border-t-2 border-navy-ink pt-3">
+              <div className="flex items-baseline justify-between border-t border-[var(--wn-glass-border)] pt-3">
                 <h2 id="coverage" className="folio text-navy-ink">How it is covered</h2>
                 <span className="mono text-[11px] text-ink-3">{new Set(story.coverage.map((c) => c.source)).size} OUTLETS, SIDE BY SIDE</span>
               </div>
@@ -123,7 +130,7 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
               <StoryActions storyKey={story.key} title={story.title} />
             </section>
             {voices.length > 0 && (
-              <section aria-labelledby="sv" className="mt-6 border-t-2 border-navy-ink pt-3">
+              <section aria-labelledby="sv" className="mt-6 border-t border-[var(--wn-glass-border)] pt-3">
                 <h2 id="sv" className="folio text-navy-ink">Voices on this story</h2>
                 <ul className="mt-2 divide-y divide-rule">
                   {voices.map((v) => (
@@ -138,7 +145,7 @@ export default async function StoryPage({ params }: { params: Promise<{ key: str
 
       {fights.length > 0 && (
         <section aria-labelledby="debates" className="mt-12 px-4 lg:px-8">
-          <h2 id="debates" className="folio border-t-2 border-navy-ink pt-3 text-navy-ink">Head to head</h2>
+          <h2 id="debates" className="folio border-t border-[var(--wn-glass-border)] pt-3 text-[var(--wn-blue-ink)]">Head to head</h2>
           <div className="mt-4 grid gap-6 lg:grid-cols-2">{fights.map((d) => <DebateCard key={d.left.id} d={d} />)}</div>
         </section>
       )}

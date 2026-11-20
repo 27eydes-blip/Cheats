@@ -67,10 +67,10 @@ export function StorySkeleton() {
 
 /** Markets board placeholder (always dark, like the board itself). */
 export function MarketsSkeleton() {
-  const b = "animate-pulse rounded-[4px] bg-white/[0.06]";
+  const b = "animate-pulse rounded-[var(--r-lg)] bg-white/[0.06]";
   return (
     <div role="status" aria-label="Loading markets" className="dark terminal-grid min-h-screen">
-      <div className="h-10 border-y border-[#c8a24a]/40 bg-black/60" />
+      <div className="h-10 border-y border-[#22d3ee]/40 bg-black/60" />
       <div className="mx-auto max-w-[1440px] space-y-6 px-4 pt-6 sm:px-6">
         <div className={`${b} h-14 w-80`} />
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className={`${b} h-[230px]`} />)}</div>

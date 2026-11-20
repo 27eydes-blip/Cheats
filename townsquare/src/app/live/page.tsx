@@ -26,7 +26,7 @@ export default function LiveStudio() {
       )}
       {later.length > 0 && (
         <section aria-labelledby="later" className="mt-10 sm:px-2">
-          <h2 id="later" className="folio mx-4 border-t-2 border-navy-ink pt-3 text-navy-ink sm:mx-4">Schedule</h2>
+          <h2 id="later" className="folio mx-4 border-t border-[var(--wn-glass-border)] pt-3 text-[var(--wn-blue-ink)] sm:mx-4">Schedule</h2>
           <ul>{later.map((e) => <ScheduledRow key={e.id} e={e} />)}</ul>
         </section>
       )}

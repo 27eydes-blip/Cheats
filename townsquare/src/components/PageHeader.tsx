@@ -29,7 +29,7 @@ export function PageHeader({
           {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
         </div>
         {!compact && <div aria-hidden="true" className="double-rule mt-4" />}
-        {compact && <div aria-hidden="true" className="mt-3 border-t-2 border-navy-ink" />}
+        {compact && <div aria-hidden="true" className="mt-3 border-t border-[var(--wn-glass-border)]" />}
       </div>
       {children && <div className="sticky-sub z-20 mt-1 border-b border-rule bg-paper">{children}</div>}
     </>

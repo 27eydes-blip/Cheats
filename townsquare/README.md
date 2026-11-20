@@ -1,9 +1,9 @@
-# World Net News
+# WorldNet News
 
 A national social + news platform by **Gleyde Technologies, LLC**, organized around **Stories**,
 not a stream of posts. Every national event is a Story; people add **Takes** with a stance
 (Agree, Disagree, Context, Question); readers cast their own stance on a live **stance meter**.
-*World Net News* is a working name — change `APP_NAME` in `src/config.ts`.
+*WorldNet News* is a working name — change `APP_NAME` in `src/config.ts`.
 
 See [DESIGN.md](DESIGN.md) for the design system ("The Front Page": navy, gold, white), the
 originality check, and what's next; [PLAN.md](PLAN.md) for the architecture. Every component and
@@ -77,7 +77,7 @@ Node 22.13+ is required (`.nvmrc` and `engines` say so).
    - Windows: run `ipconfig` and look for "IPv4 Address"
 3. With your phone on the **same Wi-Fi**, open `http://<that-ip>:3000` (for example `http://192.168.1.23:3000`).
 4. Add it to your home screen: Safari → Share → **Add to Home Screen**; Chrome → ⋮ → **Add to Home screen**.
-   It opens full-screen with the World Net News icon and a dark splash screen, and respects the notch and home indicator.
+   It opens full-screen with the WorldNet News icon and a dark splash screen, and respects the notch and home indicator.
 
 If the page doesn't load, allow Node through your computer's firewall. For the full installable
 app experience (service worker) and to test away from home Wi-Fi, the site needs HTTPS: deploy it

@@ -132,11 +132,11 @@ export function SearchOverlay({ open, onClose, onCompose }: { open: boolean; onC
               aria-activedescendant={rows[sel] ? `sr-${rows[sel].id}` : undefined}
               enterKeyHint="search"
             />
-            <button type="button" onClick={onClose} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[4px] text-ink-2 hover:bg-paper-2" aria-label="Close search"><CloseIcon size={22} /></button>
+            <button type="button" onClick={onClose} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-ink-2 hover:bg-paper-2" aria-label="Close search"><CloseIcon size={22} /></button>
           </div>
           <div className="scrollbar-none flex gap-2 overflow-x-auto py-3" role="radiogroup" aria-label="Filter results">
             {FILTERS.map(([f, l]) => (
-              <button key={f} type="button" role="radio" aria-checked={filter === f} onClick={() => setFilter(f)} className={`inline-flex min-h-9 shrink-0 items-center rounded-[4px] px-3 text-[13px] font-semibold ${filter === f ? "bg-navy text-white shadow-[inset_0_-2px_0_var(--gold)]" : "text-ink-2 ring-1 ring-rule hover:ring-rule-strong"}`}>{l}</button>
+              <button key={f} type="button" role="radio" aria-checked={filter === f} onClick={() => setFilter(f)} className={`inline-flex min-h-9 shrink-0 items-center rounded-[10px] px-3 text-[13px] font-semibold ${filter === f ? "bg-navy text-white shadow-[inset_0_-2px_0_var(--gold)]" : "text-ink-2 ring-1 ring-rule hover:ring-rule-strong"}`}>{l}</button>
             ))}
             {viewer && (
               <button type="button" onClick={() => (onClose(), onCompose())} className="btn-gold ml-auto !min-h-9 !px-3 !text-[13px]"><TakeIcon size={15} /> Take it</button>

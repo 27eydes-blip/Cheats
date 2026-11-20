@@ -67,7 +67,7 @@ export const LayersIcon = (p: P) => <Svg {...p}><path d="m12 3 9 5-9 5-9-5z" /><
 export const FlameIcon = (p: P) => <Svg {...p}><path d="M12 22c4 0 7-2.8 7-7 0-4.5-3.5-6.5-4.5-10C11 7 9.5 9 9.5 11.5 8 10.8 7.4 9.6 7.3 8.5 5.8 10.2 5 12.3 5 15c0 4.2 3 7 7 7z" /></Svg>;
 export const ExpandIcon = (p: P) => <Svg {...p}><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></Svg>;
 
-/* ---- World Net News glyphs (no hearts, no retweet arrows) ---- */
+/* ---- WorldNet News glyphs (no hearts, no retweet arrows) ---- */
 /** Amplify: a broadcast mast with signal arcs. */
 export const AmplifyIcon = (p: P) => <Svg {...p}><path d="M12 13v8M9 21h6" /><circle cx="12" cy="11" r="2" /><path d="M8.5 7.5a5 5 0 0 0 0 7M15.5 7.5a5 5 0 0 1 0 7M5.6 4.6a9 9 0 0 0 0 12.8M18.4 4.6a9 9 0 0 1 0 12.8" /></Svg>;
 /** Answer: two facing brackets, a take and its reply side by side. */

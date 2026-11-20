@@ -38,28 +38,28 @@ const INDEX_LABEL: Record<string, string> = { SPY: "S&P 500", QQQ: "Nasdaq", DIA
 export function MarketStrip({ initial, mode, label }: { initial: Quote[]; mode: MarketMode; label: string }) {
   const { quotes, flash } = useLiveQuotes(initial);
   return (
-    <Link href="/markets" className="group mb-8 flex items-stretch overflow-hidden rounded-[4px] bg-navy text-white shadow-[inset_0_-2px_0_var(--gold)] transition-shadow hover:shadow-[inset_0_-3px_0_var(--gold),0_8px_30px_rgb(11_31_75/0.25)]" aria-label="Markets: open the Market Board">
-      <span className="flex shrink-0 flex-col justify-center border-r border-white/15 px-4 py-2">
-        <span className="folio !text-[10px] text-[#e3c773]">Markets</span>
-        <span className="mono text-[10px] text-white/60">{label}{mode === "demo" ? " · DEMO" : ""}</span>
+    <Link href="/markets" data-market-strip className="card card-hover group mb-8 flex items-stretch overflow-hidden text-white">
+      <span className="flex shrink-0 flex-col justify-center bg-[var(--wn-blue-fill)] px-4 py-2.5">
+        <span className="font-display text-[18px] leading-none font-extrabold tracking-[0.06em] uppercase">Markets</span>
+        <span className="mono mt-1 text-[10.5px] text-white">{label}{mode === "demo" ? " · DEMO" : ""}</span>
       </span>
       <ul className="flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
         {quotes.map((q) => {
           const up = q.change >= 0;
           const f = flash[q.symbol];
           return (
-            <li key={q.symbol} className="flex shrink-0 items-center gap-3 border-r border-white/10 px-4 py-2 last:border-r-0 lg:flex-1">
+            <li key={q.symbol} className="flex shrink-0 items-center gap-3 border-r border-[var(--wn-glass-border)] px-4 py-2 last:border-r-0 lg:flex-1">
               <span>
-                <span className="block text-[12px] font-bold">{INDEX_LABEL[q.symbol] ?? q.symbol}</span>
-                <span key={f?.n} className={`mono block rounded-[2px] text-[13px] ${f ? (f.dir > 0 ? "flash-up" : "flash-down") : ""}`}>{fmtPrice(q.price)}</span>
+                <span className="block text-[12px] font-bold text-ink-2">{INDEX_LABEL[q.symbol] ?? q.symbol}</span>
+                <span key={f?.n} className={`mono block rounded-[6px] text-[13px] ${f ? (f.dir > 0 ? "flash-up" : "flash-down") : ""}`}>{fmtPrice(q.price)}</span>
               </span>
-              <span className={`mono text-[12px] font-bold ${up ? "text-[#2ee6a6]" : "text-[#ff8a9e]"}`}>{up ? "▲" : "▼"} {fmtPct(q.changePct)}</span>
+              <span className={`mono text-[12px] font-bold ${up ? "text-[#34d399]" : "text-[#ff6b81]"}`}>{up ? "▲" : "▼"} {fmtPct(q.changePct)}</span>
               <span className="hidden xl:block"><MiniLine values={q.series} prevClose={q.prevClose} width={70} height={24} /></span>
             </li>
           );
         })}
       </ul>
-      <span className="hidden shrink-0 items-center px-4 text-[12px] font-semibold text-[#e3c773] group-hover:underline sm:flex">Market Board →</span>
+      <span className="hidden shrink-0 items-center px-4 text-[12px] font-semibold text-[var(--wn-cyan-ink)] group-hover:underline sm:flex">Market Board →</span>
     </Link>
   );
 }
@@ -69,7 +69,7 @@ export function StoryTickers({ initial, mode }: { initial: Quote[]; mode: Market
   const { quotes, flash } = useLiveQuotes(initial);
   return (
     <section aria-labelledby="mkt" className="mt-6">
-      <div className="flex items-baseline justify-between border-t-2 border-navy-ink pt-3">
+      <div className="flex items-baseline justify-between border-t border-[var(--wn-glass-border)] pt-3">
         <h2 id="mkt" className="folio text-navy-ink">Market reaction</h2>
         <Link href="/markets" className="mono text-[10.5px] text-ink-3 hover:text-navy-ink">{mode === "demo" ? "SIMULATED PRICES · " : ""}MARKET BOARD →</Link>
       </div>
@@ -79,10 +79,10 @@ export function StoryTickers({ initial, mode }: { initial: Quote[]; mode: Market
           const f = flash[q.symbol];
           return (
             <li key={q.symbol}>
-              <Link href={`/markets?s=${q.symbol}`} className="flex items-center justify-between gap-2 rounded-[4px] border border-rule bg-paper-2 px-3 py-2 transition-colors hover:border-navy-ink">
+              <Link href={`/markets?s=${q.symbol}`} className="flex items-center justify-between gap-2 rounded-[var(--r-lg)] border border-rule bg-paper-2 px-3 py-2 transition-colors hover:border-navy-ink">
                 <span className="min-w-0">
                   <span className="mono block text-[13px] font-bold text-ink-1">{q.symbol}</span>
-                  <span key={f?.n} className={`mono block rounded-[2px] text-[12px] text-ink-2 ${f ? (f.dir > 0 ? "flash-up" : "flash-down") : ""}`}>{fmtPrice(q.price)}</span>
+                  <span key={f?.n} className={`mono block rounded-[6px] text-[12px] text-ink-2 ${f ? (f.dir > 0 ? "flash-up" : "flash-down") : ""}`}>{fmtPrice(q.price)}</span>
                 </span>
                 <span className={`mono text-[12px] font-bold ${up ? "text-agree" : "text-disagree"}`}>{up ? "▲" : "▼"} {fmtPct(q.changePct)}</span>
               </Link>

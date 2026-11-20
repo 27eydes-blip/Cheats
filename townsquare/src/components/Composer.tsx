@@ -151,7 +151,7 @@ export function Composer({
                 type="button"
                 aria-pressed={stance === v}
                 onClick={() => setStance(stance === v ? null : v)}
-                className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded-[4px] text-[11.5px] font-bold tracking-wide transition-all active:translate-y-px sm:flex-row sm:gap-1.5 sm:text-[13px] ${stance === v ? `${on} text-white` : "text-ink-2 ring-1 ring-rule hover:ring-rule-strong"}`}
+                className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded-[10px] text-[11.5px] font-bold tracking-wide transition-all active:translate-y-px sm:flex-row sm:gap-1.5 sm:text-[13px] ${stance === v ? `${on} text-white` : "text-ink-2 ring-1 ring-rule hover:ring-rule-strong"}`}
               >
                 <Icon size={16} strokeWidth={1.9} /> {label}
               </button>
@@ -180,10 +180,10 @@ export function Composer({
           {pics.length > 0 && (
             <ul className={`mt-2 grid gap-2 ${pics.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
               {pics.map((p, i) => (
-                <li key={p.url} className="relative animate-scale-in overflow-hidden rounded-[4px] ring-1 ring-rule">
+                <li key={p.url} className="relative animate-scale-in overflow-hidden rounded-[10px] ring-1 ring-rule">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.url} alt={p.alt || `Attachment ${i + 1}`} className="aspect-[4/3] w-full object-cover" />
-                  <button type="button" onClick={() => (URL.revokeObjectURL(p.url), setPics((all) => all.filter((x) => x !== p)))} className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-[4px] bg-black/65 text-white" aria-label={`Remove image ${i + 1}`}><CloseIcon size={16} /></button>
+                  <button type="button" onClick={() => (URL.revokeObjectURL(p.url), setPics((all) => all.filter((x) => x !== p)))} className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-[10px] bg-black/65 text-white" aria-label={`Remove image ${i + 1}`}><CloseIcon size={16} /></button>
                   <label className="block bg-paper">
                     <span className="sr-only">Alt text for image {i + 1}</span>
                     <input value={p.alt} maxLength={LIMITS.altChars} onChange={(e) => setPics((all) => all.map((x) => (x === p ? { ...x, alt: e.target.value } : x)))} placeholder="+ Describe this image (alt text)" className="w-full bg-transparent px-3 py-2 text-[13.5px] placeholder:text-ink-3 focus:outline-none" />
@@ -218,8 +218,8 @@ export function Composer({
             <div className="min-h-0 overflow-hidden">
               <div className="mt-2 flex items-center gap-0.5 border-t border-rule pt-2.5">
                 <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden onChange={(e) => (addFiles(e.target.files), (e.target.value = ""))} />
-                <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[4px] text-navy-ink hover:bg-navy-soft disabled:opacity-40" onClick={() => fileRef.current?.click()} disabled={pics.length >= LIMITS.imagesPerPost || !!poll} aria-label="Add images" title="Add images" tabIndex={expanded ? 0 : -1}><ImageIcon size={20} /></button>
-                {!replyTo && <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[4px] text-navy-ink hover:bg-navy-soft disabled:opacity-40" onClick={() => setPoll(poll ? null : ["", ""])} disabled={pics.length > 0} aria-label="Add a poll" aria-pressed={!!poll} title="Add a poll" tabIndex={expanded ? 0 : -1}><PollIcon size={20} /></button>}
+                <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-navy-ink hover:bg-navy-soft disabled:opacity-40" onClick={() => fileRef.current?.click()} disabled={pics.length >= LIMITS.imagesPerPost || !!poll} aria-label="Add images" title="Add images" tabIndex={expanded ? 0 : -1}><ImageIcon size={20} /></button>
+                {!replyTo && <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-navy-ink hover:bg-navy-soft disabled:opacity-40" onClick={() => setPoll(poll ? null : ["", ""])} disabled={pics.length > 0} aria-label="Add a poll" aria-pressed={!!poll} title="Add a poll" tabIndex={expanded ? 0 : -1}><PollIcon size={20} /></button>}
                 <div className="ml-auto flex items-center gap-3">
                   {needsStance && !stance && <span className="text-[12.5px] text-ink-3">Pick a stance</span>}
                   {used > 0 && (

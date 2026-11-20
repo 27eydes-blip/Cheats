@@ -50,9 +50,9 @@ export function ReportCard({ group: g }: { group: ReportGroup }) {
       <div className="p-4 pl-5">
         <div className="flex flex-wrap items-center gap-1.5">
           <SeverityTag level={g.severity} />
-          <span className="mono rounded-[2px] bg-paper-2 px-1.5 py-0.5 text-[10.5px] font-bold text-ink-2 uppercase">{g.targetType}</span>
+          <span className="mono rounded-[6px] bg-paper-2 px-1.5 py-0.5 text-[10.5px] font-bold text-ink-2 uppercase">{g.targetType}</span>
           {g.reasons.map((r) => (
-            <span key={r.reason} className="rounded-[2px] bg-paper-2 px-2 py-0.5 text-[12px] font-semibold text-ink-2">
+            <span key={r.reason} className="rounded-[6px] bg-paper-2 px-2 py-0.5 text-[12px] font-semibold text-ink-2">
               {r.label} <span className="num text-ink-3">×{r.count}</span>
             </span>
           ))}
@@ -92,7 +92,7 @@ export function ReportCard({ group: g }: { group: ReportGroup }) {
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {g.targetType === "post" && <Button variant="danger" size="sm" disabled={pending} onClick={() => act("remove")}>Remove post</Button>}
               <Button variant="secondary" size="sm" disabled={pending} onClick={() => act("warn")}>Warn</Button>
-              <span className="flex items-center rounded-[4px] ring-1 ring-rule-strong">
+              <span className="flex items-center rounded-[10px] ring-1 ring-rule-strong">
                 <select value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Suspension length" className="h-9 bg-transparent pr-1 pl-3 text-[13px] font-semibold focus:outline-none">
                   <option value={1}>1 day</option>
                   <option value={7}>7 days</option>
@@ -151,9 +151,9 @@ export function BannerComposer({ current }: { current: Banner | null }) {
         </label>
         <fieldset>
           <legend className="label">Style</legend>
-          <div className="flex rounded-[4px] bg-paper-2 p-1">
+          <div className="flex rounded-[10px] bg-paper-2 p-1">
             {(["breaking", "alert", "info"] as const).map((l) => (
-              <button key={l} type="button" aria-pressed={level === l} onClick={() => setLevel(l)} className={`h-9 rounded-[3px] px-3 text-[13px] font-semibold capitalize transition-all ${level === l ? "bg-paper shadow-1 ring-1 ring-rule" : "text-ink-3"}`}>
+              <button key={l} type="button" aria-pressed={level === l} onClick={() => setLevel(l)} className={`h-9 rounded-[8px] px-3 text-[13px] font-semibold capitalize transition-all ${level === l ? "bg-paper shadow-1 ring-1 ring-rule" : "text-ink-3"}`}>
                 {l === "info" ? "Update" : l}
               </button>
             ))}

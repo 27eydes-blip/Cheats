@@ -26,7 +26,7 @@ export default async function News({ searchParams }: { searchParams: Promise<{ s
       {!lead ? <EmptyState art="news" title={`No ${section} headlines yet`} /> : (
         <div className="grid gap-10 px-4 pt-6 sm:px-6 lg:grid-cols-12">
           <div className="lg:col-span-8">
-            <a href={lead.url} target="_blank" rel="noopener noreferrer" className="group block border-t-[3px] border-navy-ink pt-3">
+            <a href={lead.url} target="_blank" rel="noopener noreferrer" className="group block border-t border-[var(--wn-glass-border)] pt-3">
               <div className="aspect-[16/8] overflow-hidden"><StoryArt seed={lead.url} section={lead.section} /></div>
               <div className="mt-3 flex items-center gap-2"><SourceLabel name={lead.source} size="md" /><span className="mono text-[11px] text-ink-3"><Time ms={lead.publishedAt} /></span></div>
               <h2 className="mt-2 font-display text-display font-semibold text-balance group-hover:underline">{lead.title}</h2>

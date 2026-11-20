@@ -32,9 +32,9 @@ export default async function MarketsPage({ searchParams }: { searchParams: Prom
         <div className="mx-auto max-w-[1440px] px-4 pt-6 pb-16 sm:px-6">
           <header className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="folio text-[#e3c773]">Markets desk</p>
+              <p className="folio text-[var(--wn-cyan-ink)]">Markets desk</p>
               <h1 className="mt-1 font-display text-[clamp(2.2rem,1.6rem+2.4vw,3.6rem)] leading-[0.95] font-semibold tracking-tight">
-                The Market Board<span className="text-[#c8a24a]">.</span>
+                The Market Board<span className="text-[#22d3ee]">.</span>
               </h1>
             </div>
             <Breadth />
@@ -54,12 +54,12 @@ export default async function MarketsPage({ searchParams }: { searchParams: Prom
             <Heatmap />
             <div className="flex flex-col gap-6">
               <Movers />
-              <section aria-labelledby="mnews" className="rounded-[4px] border border-white/10 bg-[#081226]/80 p-4">
-                <h2 id="mnews" className="folio mb-2 text-[#e3c773]">Business stories</h2>
+              <section aria-labelledby="mnews" className="rounded-[var(--r-lg)] border border-white/10 bg-[#0b1220]/80 p-4">
+                <h2 id="mnews" className="folio mb-2 text-[var(--wn-cyan-ink)]">Business stories</h2>
                 <ul className="divide-y divide-white/10">
                   {stories.map((s) => (
                     <li key={s.key}>
-                      <Link href={`/news/story/${s.key}`} className="block py-2.5 hover:text-[#e3c773]">
+                      <Link href={`/news/story/${s.key}`} className="block py-2.5 hover:text-[var(--wn-cyan-ink)]">
                         <span className="font-display text-[16px] leading-snug font-semibold">{s.title}</span>
                         <span className="mono mt-0.5 block text-[10.5px] text-white/50">{s.takes} TAKES{s.split.total ? ` · ${Math.round((s.split.agree / s.split.total) * 100)}% AGREE` : ""}</span>
                       </Link>

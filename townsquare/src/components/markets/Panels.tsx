@@ -50,7 +50,7 @@ export function TickerTape() {
     <div
       role="region"
       aria-label="Stock ticker"
-      className="mono relative overflow-hidden border-y border-[#c8a24a]/40 bg-black/60"
+      className="mono relative overflow-hidden border-y border-[#22d3ee]/40 bg-black/60"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -58,15 +58,15 @@ export function TickerTape() {
         {row(false)}
         {row(true)}
       </div>
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#040915] to-transparent" />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#040915] to-transparent" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#070b14] to-transparent" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#070b14] to-transparent" />
     </div>
   );
 }
 
 function TapePrice({ q }: { q: Quote }) {
   const f = useFlash(q.symbol);
-  return <span key={f.key} className={`rounded-[2px] px-1 text-[12px] text-white/90 ${f.cls}`}>{fmtPrice(q.price)}</span>;
+  return <span key={f.key} className={`rounded-[6px] px-1 text-[12px] text-white/90 ${f.cls}`}>{fmtPrice(q.price)}</span>;
 }
 
 /** Market status: open/closed, countdown, Eastern time, and which data source is in use. */
@@ -86,13 +86,13 @@ export function StatusBar() {
   const et = now ? new Date(now).toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", second: "2-digit" }) : "";
   return (
     <div className="mono flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px]">
-      <span className={`flex items-center gap-2 rounded-[2px] px-2 py-1 font-bold tracking-wider uppercase ${status.open ? "bg-[#2ee6a6]/15 text-[#2ee6a6]" : "bg-white/10 text-white/80"}`}>
+      <span className={`flex items-center gap-2 rounded-[6px] px-2 py-1 font-bold tracking-wider uppercase ${status.open ? "bg-[#2ee6a6]/15 text-[#2ee6a6]" : "bg-white/10 text-white/80"}`}>
         <span className={`h-2 w-2 rounded-full ${status.open ? "bg-[#2ee6a6] shadow-[0_0_10px_#2ee6a6]" : "bg-white/50"}`} style={status.open ? { animation: "blink 1.6s infinite" } : undefined} />
         {status.label}
       </span>
       <span className="text-white/70" suppressHydrationWarning>{status.open ? "Closes in" : "Opens in"} <b className="text-white">{h}h {String(m).padStart(2, "0")}m {String(s).padStart(2, "0")}s</b></span>
       <span className="text-white/70" suppressHydrationWarning>NEW YORK <b className="inline-block min-w-[11ch] text-white">{et || "--:--:-- --"}</b></span>
-      <span className={`ml-auto rounded-[2px] px-2 py-1 font-bold tracking-wider ${mode === "live" ? "bg-[#2ee6a6]/15 text-[#2ee6a6]" : "bg-[#c8a24a]/20 text-[#e3c773]"}`} title={mode === "demo" ? "No market-data key is configured, so prices are simulated." : "Quotes from Finnhub"}>
+      <span className={`ml-auto rounded-[6px] px-2 py-1 font-bold tracking-wider ${mode === "live" ? "bg-[#2ee6a6]/15 text-[#2ee6a6]" : "bg-[var(--wn-blue-fill)]/20 text-[var(--wn-cyan-ink)]"}`} title={mode === "demo" ? "No market-data key is configured, so prices are simulated." : "Quotes from Finnhub"}>
         {mode === "live" ? "LIVE DATA · FINNHUB" : "DEMO DATA · SIMULATED PRICES"}
       </span>
     </div>
@@ -104,28 +104,28 @@ export function IndexCard({ symbol }: { symbol: string }) {
   const { quotes, select, selected, status } = useMarket();
   const q = quotes[symbol];
   const f = useFlash(symbol);
-  if (!q) return <div className="h-[210px] animate-pulse rounded-[4px] bg-white/5" />;
+  if (!q) return <div className="h-[210px] animate-pulse rounded-[var(--r-lg)] bg-white/5" />;
   const range = q.high - q.low || 1;
   return (
     <button
       type="button"
       onClick={() => select(symbol)}
       aria-pressed={selected === symbol}
-      className={`group relative overflow-hidden rounded-[4px] border bg-[#081226]/80 p-4 text-left transition-all duration-300 hover:-translate-y-0.5 ${selected === symbol ? "border-[#c8a24a] shadow-[0_0_0_1px_#c8a24a,0_10px_40px_rgb(200_162_74/0.18)]" : "border-white/10 hover:border-white/25"}`}
+      className={`group relative overflow-hidden rounded-[var(--r-lg)] border bg-[#0b1220]/80 p-4 text-left transition-all duration-300 hover:-translate-y-0.5 ${selected === symbol ? "border-[#22d3ee] shadow-[0_0_0_1px_#22d3ee,0_10px_40px_rgb(34_211_238/0.18)]" : "border-white/10 hover:border-white/25"}`}
     >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-[13px] font-bold text-white">{q.name}</p>
           <p className="mono text-[10.5px] tracking-wider text-white/50">{symbol} · ETF PROXY</p>
         </div>
-        <span className={`mono rounded-[2px] px-1.5 py-0.5 text-[11px] font-bold ${up(q) ? "bg-[#2ee6a6]/12 text-[#2ee6a6]" : "bg-[#ff5c7a]/12 text-[#ff5c7a]"}`}><Arrow q={q} /> {fmtPct(q.changePct)}</span>
+        <span className={`mono rounded-[6px] px-1.5 py-0.5 text-[11px] font-bold ${up(q) ? "bg-[#2ee6a6]/12 text-[#2ee6a6]" : "bg-[#ff5c7a]/12 text-[#ff5c7a]"}`}><Arrow q={q} /> {fmtPct(q.changePct)}</span>
       </div>
-      <p key={f.key} className={`mono mt-3 inline-block rounded-[2px] px-1 -ml-1 text-[30px] leading-none font-semibold ${up(q) ? "glow-up" : "glow-down"} ${f.cls}`}>{fmtPrice(q.price)}</p>
+      <p key={f.key} className={`mono mt-3 inline-block rounded-[6px] px-1 -ml-1 text-[30px] leading-none font-semibold ${up(q) ? "glow-up" : "glow-down"} ${f.cls}`}>{fmtPrice(q.price)}</p>
       <p className={`mono mt-1 text-[12px] ${tone(q)}`}>{fmtChg(q.change)} {status.open ? "today" : "last session"}</p>
       <div className="mt-3"><AreaChart values={q.series} prevClose={q.prevClose} height={64} label={`${q.name} intraday`} /></div>
       <div className="mt-3">
         <div className="relative h-1 rounded-full bg-white/10">
-          <span className="absolute top-1/2 h-2.5 w-[3px] -translate-y-1/2 rounded-full bg-[#e3c773] shadow-[0_0_8px_#e3c773]" style={{ left: `${((q.price - q.low) / range) * 100}%` }} />
+          <span className="absolute top-1/2 h-2.5 w-[3px] -translate-y-1/2 rounded-full bg-[#22d3ee] shadow-[0_0_8px_#22d3ee]" style={{ left: `${((q.price - q.low) / range) * 100}%` }} />
         </div>
         <div className="mono mt-1 flex justify-between text-[10px] text-white/45"><span>L {fmtPrice(q.low)}</span><span>DAY RANGE</span><span>H {fmtPrice(q.high)}</span></div>
       </div>
@@ -171,48 +171,48 @@ export function FocusChart() {
     return b;
   }, [hist, key, q, range]);
 
-  if (!q) return <div className="h-[460px] animate-pulse rounded-[4px] bg-white/5" />;
+  if (!q) return <div className="h-[460px] animate-pulse rounded-[var(--r-lg)] bg-white/5" />;
   const first = range === "1D" ? q.prevClose : bars?.[0]?.o;
   const rangeChg = first ? q.price - first : 0;
   const rangePct = first ? (rangeChg / first) * 100 : 0;
   const rUp = rangeChg >= 0;
   const stats: [string, string][] = [["Open", fmtPrice(q.open)], ["Prev close", fmtPrice(q.prevClose)], ["Day high", fmtPrice(q.high)], ["Day low", fmtPrice(q.low)]];
-  const seg = "rounded-[3px] px-2.5 py-1 text-[11.5px] font-bold transition-colors";
+  const seg = "rounded-[8px] px-2.5 py-1 text-[11.5px] font-bold transition-colors";
   return (
-    <section aria-label={`${q.symbol} chart`} className="relative overflow-hidden rounded-[4px] border border-white/10 bg-[#081226]/80 p-5">
+    <section aria-label={`${q.symbol} chart`} className="relative overflow-hidden rounded-[var(--r-lg)] border border-white/10 bg-[#0b1220]/80 p-5">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 h-24 bg-gradient-to-b from-white/[0.04] to-transparent" style={{ animation: "scan 6s linear infinite" }} />
       <div className="relative flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="folio !text-[10px] text-[#e3c773]">Now watching</p>
+          <p className="folio !text-[10px] text-[var(--wn-cyan-ink)]">Now watching</p>
           <h2 className="mt-1 flex items-baseline gap-3 font-display text-[clamp(1.8rem,1.3rem+1.6vw,2.6rem)] leading-none font-semibold text-white">
             {q.symbol}<span className="font-sans text-[15px] font-medium text-white/60">{q.name}</span>
           </h2>
         </div>
         <div className="text-right">
-          <p key={f.key} className={`mono inline-block rounded-[2px] px-1 text-[clamp(2rem,1.4rem+2vw,3rem)] leading-none font-semibold ${rUp ? "glow-up" : "glow-down"} ${f.cls}`}>{fmtPrice(q.price)}</p>
+          <p key={f.key} className={`mono inline-block rounded-[6px] px-1 text-[clamp(2rem,1.4rem+2vw,3rem)] leading-none font-semibold ${rUp ? "glow-up" : "glow-down"} ${f.cls}`}>{fmtPrice(q.price)}</p>
           <p className={`mono mt-1 text-[14px] font-semibold ${rUp ? "text-[#2ee6a6]" : "text-[#ff5c7a]"}`}>{rUp ? "▲" : "▼"} {fmtChg(rangeChg)} ({fmtPct(rangePct)}) <span className="text-white/45">{range === "1D" ? (status.open ? "today" : "last session") : range === "5D" ? "5 days" : range === "1M" ? "1 month" : "1 year"}</span></p>
         </div>
       </div>
       <div className="relative mt-4 flex flex-wrap items-center justify-between gap-2">
-        <div role="tablist" aria-label="Time range" className="mono flex gap-1 rounded-[4px] bg-black/40 p-1">
+        <div role="tablist" aria-label="Time range" className="mono flex gap-1 rounded-[var(--r-lg)] bg-black/40 p-1">
           {RANGES.map((r) => (
-            <button key={r} role="tab" aria-selected={range === r} type="button" onClick={() => setRange(r)} className={`${seg} ${range === r ? "bg-[#c8a24a] text-[#0b1f4b]" : "text-white/60 hover:text-white"}`}>{r}</button>
+            <button key={r} role="tab" aria-selected={range === r} type="button" onClick={() => setRange(r)} className={`${seg} ${range === r ? "bg-[var(--wn-blue-fill)] text-white" : "text-white/60 hover:text-white"}`}>{r}</button>
           ))}
         </div>
-        <div className="mono flex gap-1 rounded-[4px] bg-black/40 p-1" role="group" aria-label="Chart style">
+        <div className="mono flex gap-1 rounded-[var(--r-lg)] bg-black/40 p-1" role="group" aria-label="Chart style">
           {(["line", "candle"] as const).map((k) => (
             <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)} className={`${seg} ${kind === k ? "bg-white/15 text-white" : "text-white/60 hover:text-white"}`}>{k === "line" ? "LINE" : "CANDLES"}</button>
           ))}
         </div>
       </div>
       <div className="relative mt-4">
-        {bars ? <PriceChart bars={bars} kind={kind} range={range} baseline={range === "1D" ? q.prevClose : undefined} height={280} /> : <div className="h-[300px] animate-pulse rounded-[2px] bg-white/[0.04]" />}
+        {bars ? <PriceChart bars={bars} kind={kind} range={range} baseline={range === "1D" ? q.prevClose : undefined} height={280} /> : <div className="h-[300px] animate-pulse rounded-[6px] bg-white/[0.04]" />}
       </div>
       {hist?.key === key && hist.note && <p className="relative mt-2 text-[11.5px] text-white/50">{hist.note}</p>}
-      {mode === "demo" && <p className="mono relative mt-2 text-[10px] text-[#e3c773]/80">SIMULATED HISTORY · DEMO DATA</p>}
-      <dl className="relative mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-[2px] bg-white/10 sm:grid-cols-4">
+      {mode === "demo" && <p className="mono relative mt-2 text-[10px] text-[var(--wn-cyan-ink)]/80">SIMULATED HISTORY · DEMO DATA</p>}
+      <dl className="relative mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-[6px] bg-white/10 sm:grid-cols-4">
         {stats.map(([k, v]) => (
-          <div key={k} className="bg-[#081226] px-3 py-2.5"><dt className="folio !text-[9.5px] text-white/50">{k}</dt><dd className="mono mt-0.5 text-[15px] text-white">{v}</dd></div>
+          <div key={k} className="bg-[#0b1220] px-3 py-2.5"><dt className="folio !text-[9.5px] text-white/50">{k}</dt><dd className="mono mt-0.5 text-[15px] text-white">{v}</dd></div>
         ))}
       </dl>
     </section>
@@ -249,22 +249,22 @@ export function Watchlist() {
     });
   };
   return (
-    <section aria-labelledby="wl" className="flex flex-col overflow-hidden rounded-[4px] border border-white/10 bg-[#081226]/80">
+    <section aria-labelledby="wl" className="flex flex-col overflow-hidden rounded-[var(--r-lg)] border border-white/10 bg-[#0b1220]/80">
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <h2 id="wl" className="folio text-[#e3c773]">Your watchlist</h2>
+        <h2 id="wl" className="folio text-[var(--wn-cyan-ink)]">Your watchlist</h2>
         <span className="mono text-[11px] text-white/50">{watchlist.length} TICKERS</span>
       </div>
       <form onSubmit={(e) => (e.preventDefault(), add())} className="flex gap-2 border-b border-white/10 p-3">
         <label className="sr-only" htmlFor="wl-add">Add a ticker</label>
-        <input id="wl-add" list="tickers" value={sym} onChange={(e) => setSym(e.target.value.toUpperCase())} placeholder={viewer ? "Add ticker, e.g. NFLX" : "Log in to edit your watchlist"} className="mono min-w-0 flex-1 rounded-[3px] border border-white/15 bg-black/40 px-3 py-2 text-[14px] text-white placeholder:text-white/35 focus:border-[#c8a24a] focus:outline-none" autoCapitalize="characters" autoComplete="off" />
+        <input id="wl-add" list="tickers" value={sym} onChange={(e) => setSym(e.target.value.toUpperCase())} placeholder={viewer ? "Add ticker, e.g. NFLX" : "Log in to edit your watchlist"} className="mono min-w-0 flex-1 rounded-[8px] border border-white/15 bg-black/40 px-3 py-2 text-[14px] text-white placeholder:text-white/35 focus:border-[#22d3ee] focus:outline-none" autoCapitalize="characters" autoComplete="off" />
         <datalist id="tickers">{ALL_TICKERS.map((t) => <option key={t.symbol} value={t.symbol}>{t.name}</option>)}</datalist>
-        <button type="submit" className="inline-flex h-10 items-center gap-1 rounded-[3px] bg-[#c8a24a] px-3 text-[13px] font-bold text-[#0b1f4b]"><PlusIcon size={15} strokeWidth={2.4} /> Add</button>
+        <button type="submit" className="inline-flex h-10 items-center gap-1 rounded-[8px] bg-[var(--wn-blue-fill)] px-3 text-[13px] font-bold text-white"><PlusIcon size={15} strokeWidth={2.4} /> Add</button>
       </form>
       <ul className="max-h-[440px] flex-1 overflow-y-auto">
         {watchlist.map((s) => {
           const q = quotes[s];
           return (
-            <li key={s} className={`group flex items-center gap-3 border-b border-white/[0.06] px-4 py-2.5 transition-colors ${selected === s ? "bg-[#c8a24a]/10 shadow-[inset_3px_0_0_#c8a24a]" : "hover:bg-white/[0.04]"}`}>
+            <li key={s} className={`group flex items-center gap-3 border-b border-white/[0.06] px-4 py-2.5 transition-colors ${selected === s ? "bg-[var(--wn-blue-fill)]/10 shadow-[inset_3px_0_0_#22d3ee]" : "hover:bg-white/[0.04]"}`}>
               <button type="button" onClick={() => select(s)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
                 <span className="min-w-0 flex-1">
                   <span className="mono block text-[14px] font-bold text-white">{s}</span>
@@ -274,7 +274,7 @@ export function Watchlist() {
                 <span className="w-[86px] text-right">{q ? <WatchPrice q={q} /> : <span className="mono text-[12px] text-white/40">—</span>}</span>
               </button>
               {viewer && (
-                <button type="button" onClick={() => remove(s)} className="inline-flex h-7 w-7 items-center justify-center rounded-[3px] text-white/40 opacity-60 hover:bg-white/10 hover:text-white group-hover:opacity-100" aria-label={`Remove ${s} from watchlist`}>
+                <button type="button" onClick={() => remove(s)} className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] text-white/40 opacity-60 hover:bg-white/10 hover:text-white group-hover:opacity-100" aria-label={`Remove ${s} from watchlist`}>
                   <CloseIcon size={14} />
                 </button>
               )}
@@ -283,7 +283,7 @@ export function Watchlist() {
         })}
         {watchlist.length === 0 && <li className="px-4 py-8 text-center text-[13px] text-white/50">Add a ticker to start tracking it.</li>}
       </ul>
-      {!viewer && <p className="px-4 py-2.5 text-[12px] text-white/50"><Link href="/login?next=/markets" className="font-semibold text-[#e3c773] hover:underline">Log in</Link> to save your own watchlist.</p>}
+      {!viewer && <p className="px-4 py-2.5 text-[12px] text-white/50"><Link href="/login?next=/markets" className="font-semibold text-[var(--wn-cyan-ink)] hover:underline">Log in</Link> to save your own watchlist.</p>}
     </section>
   );
 }
@@ -292,7 +292,7 @@ function WatchPrice({ q }: { q: Quote }) {
   const f = useFlash(q.symbol);
   return (
     <>
-      <span key={f.key} className={`mono block rounded-[2px] text-[14px] text-white ${f.cls}`}>{fmtPrice(q.price)}</span>
+      <span key={f.key} className={`mono block rounded-[6px] text-[14px] text-white ${f.cls}`}>{fmtPrice(q.price)}</span>
       <span className={`mono block text-[11.5px] font-semibold ${tone(q)}`}>{fmtPct(q.changePct)}</span>
     </>
   );
@@ -314,9 +314,9 @@ export function Heatmap() {
     return p >= 0 ? `rgb(${Math.round(10 + 10 * a)} ${Math.round(70 + 140 * a)} ${Math.round(60 + 70 * a)})` : `rgb(${Math.round(90 + 150 * a)} ${Math.round(40 + 20 * a)} ${Math.round(60 + 20 * a)})`;
   };
   return (
-    <section aria-labelledby="heat" className="[content-visibility:auto] [contain-intrinsic-size:auto_560px] rounded-[4px] border border-white/10 bg-[#081226]/80 p-4">
+    <section aria-labelledby="heat" className="[content-visibility:auto] [contain-intrinsic-size:auto_560px] rounded-[var(--r-lg)] border border-white/10 bg-[#0b1220]/80 p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 id="heat" className="folio text-[#e3c773]">Sector heatmap</h2>
+        <h2 id="heat" className="folio text-[var(--wn-cyan-ink)]">Sector heatmap</h2>
         <span className="mono flex items-center gap-1.5 text-[10px] text-white/50">−3% <span className="h-2 w-16 rounded-full" style={{ background: `linear-gradient(90deg, ${color(-3)}, #1b2840, ${color(3)})` }} /> +3%</span>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -335,7 +335,7 @@ export function Heatmap() {
                       type="button"
                       onClick={() => select(t.symbol)}
                       title={`${t.name} ${fmtPct(p)}`}
-                      className={`flex flex-col items-center justify-center rounded-[2px] transition-transform hover:z-10 hover:scale-105 hover:ring-1 hover:ring-[#e3c773] ${t.size === 3 ? "col-span-2 row-span-2" : t.size === 2 ? "col-span-2" : ""}`}
+                      className={`flex flex-col items-center justify-center rounded-[6px] transition-transform hover:z-10 hover:scale-105 hover:ring-1 hover:ring-[#22d3ee] ${t.size === 3 ? "col-span-2 row-span-2" : t.size === 2 ? "col-span-2" : ""}`}
                       style={{ background: color(p), color: ink(p) }}
                     >
                       <span className={`mono font-bold ${t.size === 3 ? "text-[15px]" : "text-[11px]"}`}>{t.symbol}</span>
@@ -364,12 +364,12 @@ export function Movers() {
       <ul className="space-y-1">
         {rows.map((q, i) => (
           <li key={q.symbol}>
-            <button type="button" onClick={() => select(q.symbol)} className="flex w-full items-center gap-3 rounded-[3px] px-2 py-1.5 text-left hover:bg-white/[0.05]">
+            <button type="button" onClick={() => select(q.symbol)} className="flex w-full items-center gap-3 rounded-[8px] px-2 py-1.5 text-left hover:bg-white/[0.05]">
               <span className="mono w-4 text-[11px] text-white/40">{i + 1}</span>
               <span className="mono w-14 text-[13px] font-bold text-white">{q.symbol}</span>
               <span className="min-w-0 flex-1 truncate text-[12px] text-white/50">{q.name}</span>
               <span className="mono text-[12.5px] text-white/85">{fmtPrice(q.price)}</span>
-              <span className={`mono w-[68px] rounded-[2px] px-1.5 py-0.5 text-right text-[12px] font-bold ${up(q) ? "bg-[#2ee6a6]/12 text-[#2ee6a6]" : "bg-[#ff5c7a]/12 text-[#ff5c7a]"}`}>{fmtPct(q.changePct)}</span>
+              <span className={`mono w-[68px] rounded-[6px] px-1.5 py-0.5 text-right text-[12px] font-bold ${up(q) ? "bg-[#2ee6a6]/12 text-[#2ee6a6]" : "bg-[#ff5c7a]/12 text-[#ff5c7a]"}`}>{fmtPct(q.changePct)}</span>
             </button>
           </li>
         ))}
@@ -377,8 +377,8 @@ export function Movers() {
     </div>
   );
   return (
-    <section aria-labelledby="movers" className="rounded-[4px] border border-white/10 bg-[#081226]/80 p-4">
-      <h2 id="movers" className="folio mb-3 text-[#e3c773]">Top movers</h2>
+    <section aria-labelledby="movers" className="rounded-[var(--r-lg)] border border-white/10 bg-[#0b1220]/80 p-4">
+      <h2 id="movers" className="folio mb-3 text-[var(--wn-cyan-ink)]">Top movers</h2>
       <div className="grid gap-5 sm:grid-cols-2">{col("Gainers", gain)}{col("Losers", lose)}</div>
     </section>
   );

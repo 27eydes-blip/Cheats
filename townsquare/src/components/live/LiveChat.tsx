@@ -31,7 +31,7 @@ export function LiveChat({ tag, initial }: { tag: string | null; initial: PostVi
   if (!tag) return null;
   const ordered = [...msgs].reverse();
   return (
-    <section aria-labelledby="chat" className="mx-4 mt-5 mb-6 overflow-hidden border-t-2 border-navy-ink ring-1 ring-rule sm:mx-6">
+    <section aria-labelledby="chat" className="mx-4 mt-5 mb-6 overflow-hidden border-t border-[var(--wn-glass-border)] ring-1 ring-rule sm:mx-6">
       <div className="flex items-center justify-between border-b border-line bg-surface-2/60 px-4 py-2.5">
         <h2 id="chat" className="text-[15px] font-semibold">Live chat</h2>
         <span className="flex items-center gap-1.5 text-[12.5px] text-ink-3"><span className="h-1.5 w-1.5 animate-live rounded-full bg-live" />#{tag}</span>

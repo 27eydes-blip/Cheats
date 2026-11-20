@@ -11,14 +11,14 @@ export function LiveCard({ e }: { e: LiveEventView }) {
   return (
     <Link href={`/live/${e.id}`} className="group block bg-navy p-2 text-white transition-shadow duration-300 hover:shadow-[0_0_0_2px_var(--gold)]">
       <div className="flex items-center justify-between px-1 pb-2">
-        <span className="flex items-center gap-1.5 rounded-[2px] bg-[#c8102e] px-2 py-0.5 text-[10px] font-black tracking-[0.18em] shadow-[0_0_12px_rgb(255_77_94/0.7)]">
+        <span className="flex items-center gap-1.5 rounded-[6px] bg-[#c8102e] px-2 py-0.5 text-[10px] font-black tracking-[0.18em] shadow-[0_0_12px_rgb(255_77_94/0.7)]">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" /> ON AIR
         </span>
         <span className="mono flex items-center gap-1 text-[11px] text-white/75"><EyeIcon size={13} /> {e.viewers.toLocaleString("en-US")}</span>
       </div>
       <div className="relative aspect-video overflow-hidden">
         <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-105"><StoryArt seed={e.title} section="Top Stories" /></div>
-        <span className="absolute top-1/2 left-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[4px] bg-black/40 ring-1 ring-white/40 backdrop-blur-sm">
+        <span className="absolute top-1/2 left-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[10px] bg-black/40 ring-1 ring-white/40 backdrop-blur-sm">
           {e.kind === "audio" ? <MicIcon size={24} /> : <PlayIcon size={22} />}
         </span>
       </div>

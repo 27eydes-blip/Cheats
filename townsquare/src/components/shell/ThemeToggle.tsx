@@ -7,18 +7,20 @@ export type Theme = "system" | "light" | "dark";
 
 export function applyTheme(t: Theme) {
   document.cookie = `theme=${t}; path=/; max-age=31536000; samesite=lax`;
-  const dark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.classList.toggle("dark", dark);
+  // Dark is the house look; "Auto" follows the device; "Light" is the optional edition.
+  const light = t === "light" || (t === "system" && matchMedia("(prefers-color-scheme: light)").matches);
+  document.documentElement.classList.toggle("dark", !light);
+  document.documentElement.classList.toggle("light", light);
 }
 
 export function readTheme(): Theme {
   const m = document.cookie.match(/(?:^|; )theme=(\w+)/);
-  return (m?.[1] as Theme) ?? "system";
+  return (m?.[1] as Theme) ?? "dark";
 }
 
-/** Three-way switch: Auto (follows the device), Light, Dark. */
+/** Three-way switch: Dark (default), Light, or Auto (follows the device). */
 export function ThemeToggle({ compact }: { compact?: boolean }) {
-  const [t, setT] = useState<Theme>("system");
+  const [t, setT] = useState<Theme>("dark");
   useEffect(() => setT(readTheme()), []);
   useEffect(() => {
     if (t !== "system") return;

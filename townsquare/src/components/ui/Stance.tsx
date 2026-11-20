@@ -22,7 +22,7 @@ const CHIP: Record<TakeStance, { label: string; cls: string; Icon: typeof AgreeI
 export function StanceChip({ stance, size = "sm" }: { stance: TakeStance; size?: "sm" | "md" }) {
   const c = CHIP[stance];
   return (
-    <span className={`inline-flex items-center gap-1 rounded-[3px] ring-1 ${c.cls} ${size === "md" ? "px-2 py-1 text-[11.5px]" : "px-1.5 py-[2px] text-[10.5px]"} font-bold tracking-[0.1em] uppercase`}>
+    <span className={`inline-flex items-center gap-1 rounded-[8px] ring-1 ${c.cls} ${size === "md" ? "px-2 py-1 text-[11.5px]" : "px-1.5 py-[2px] text-[10.5px]"} font-bold tracking-[0.1em] uppercase`}>
       <c.Icon size={size === "md" ? 13 : 12} strokeWidth={2} />
       {c.label}
     </span>
@@ -41,7 +41,7 @@ export function SplitBar({ split, height = 6, className = "" }: { split: Split; 
   const seg = (n: number) => `${(n / total) * 100}%`;
   const ease = "width 700ms var(--ease-spring)";
   return (
-    <div aria-hidden="true" className={`flex shrink-0 gap-[2px] overflow-hidden rounded-[2px] bg-paper-3 ${className || "w-full"}`} style={{ height }}>
+    <div aria-hidden="true" className={`flex shrink-0 gap-[2px] overflow-hidden rounded-[6px] bg-paper-3 ${className || "w-full"}`} style={{ height }}>
       {split.total > 0 && (
         <>
           <span className="bg-agree" style={{ width: seg(s.agree), transition: ease }} />
@@ -98,7 +98,7 @@ export function StanceMeter({ type, id, initial, variant = "compact", onChange }
       data-action={v === "agree" ? "agree" : v === "disagree" ? "disagree" : "unsure"}
       onClick={(e) => (e.stopPropagation(), cast(v))}
       aria-pressed={split.mine === v}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-[4px] font-semibold transition-all duration-150 active:translate-y-px ${
+      className={`inline-flex items-center justify-center gap-1.5 rounded-[10px] font-semibold transition-all duration-150 active:translate-y-px ${
         variant === "compact" ? "h-9 px-2.5 text-[12.5px]" : "h-11 flex-1 px-3 text-[14px]"
       } ${split.mine === v ? `${tone} text-on-signal` : "text-ink-2 ring-1 ring-rule hover:ring-rule-strong hover:text-ink-1"}`}
     >

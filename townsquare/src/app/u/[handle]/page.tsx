@@ -71,12 +71,12 @@ export default async function Byline({ params, searchParams }: { params: Promise
             </h1>
             <p className="mono mt-2 flex flex-wrap items-center gap-3 text-[12.5px] text-ink-3">
               @{p.handle}
-              {p.viewer.followsYou && <span className="rounded-[2px] bg-paper-2 px-1.5 py-0.5 text-ink-2">FOLLOWS YOU</span>}
+              {p.viewer.followsYou && <span className="rounded-[6px] bg-paper-2 px-1.5 py-0.5 text-ink-2">FOLLOWS YOU</span>}
               {live && <Link href="/live"><LiveBadge /></Link>}
             </p>
           </div>
         </div>
-        {p.bio && <p className="mt-5 max-w-[680px] font-display text-[clamp(1.2rem,1.05rem+0.6vw,1.5rem)] leading-snug text-ink-2 italic">{p.bio}</p>}
+        {p.bio && <p className="mt-5 max-w-[680px] text-[clamp(1.05rem,1rem+0.3vw,1.2rem)] leading-snug font-medium text-ink-2">{p.bio}</p>}
         <div className="mt-4 flex flex-wrap items-center gap-3">
           {p.viewer.isSelf ? <Link href="/settings/profile" className="btn-outline">Edit byline</Link> : viewer ? (!p.viewer.blocked && <FollowButton userId={p.id} following={p.viewer.follows} />) : <Link href="/login" className="btn-primary">Follow</Link>}
           {p.links.map((l) => (

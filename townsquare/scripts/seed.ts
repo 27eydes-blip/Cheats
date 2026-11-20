@@ -34,7 +34,7 @@ if (get<{ n: number }>("SELECT count(*) n FROM users")!.n > 0) {
 
 // ---------------------------------------------------------------- people
 const PEOPLE: [string, string, string, boolean][] = [
-  ["admin", "World Net Desk", "Official account. Standards, corrections, and product notes.", true],
+  ["admin", "WorldNet Desk", "Official account. Standards, corrections, and product notes.", true],
   ["demo", "Demo Reader", "Just here to read the front page.", false],
   ["maria_lopez", "Maria Lopez", "Capitol Hill correspondent. Votes, whips, and the fine print.", true],
   ["jwashington", "James Washington", "Retired civics teacher. I read the Constitution for fun.", false],

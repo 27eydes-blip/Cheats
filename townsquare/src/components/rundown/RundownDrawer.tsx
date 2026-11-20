@@ -41,7 +41,7 @@ export function RundownDrawer({ open, onClose }: { open: boolean; onClose: () =>
             </div>
             <div className="flex items-center gap-1">
               <Link href="/rundown" onClick={onClose} className="btn-outline !min-h-9 !px-3 !text-[12.5px]">Full page</Link>
-              <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-[4px] hover:bg-paper-2" aria-label="Close Rundown"><CloseIcon size={20} /></button>
+              <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] hover:bg-paper-2" aria-label="Close Rundown"><CloseIcon size={20} /></button>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto overscroll-contain px-4 pt-4" style={{ ["--avatar-gap" as string]: "var(--paper)" }}>

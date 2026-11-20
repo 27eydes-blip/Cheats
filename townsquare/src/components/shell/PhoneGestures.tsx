@@ -72,7 +72,7 @@ export function PhoneGestures() {
     <>
       {(pull > 0 || busy) && (
         <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-[env(safe-area-inset-top)] z-[80] flex justify-center" style={{ transform: `translateY(${busy ? 56 : pull * 0.8}px)` }}>
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-navy text-[#e3c773] shadow-[0_4px_16px_rgb(11_31_75/0.35)]">
+          <span className="grid h-9 w-9 place-items-center rounded-full bg-[var(--wn-blue-fill)] text-white shadow-[0_0_20px_rgb(47_107_255/0.6)]">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className={busy ? "animate-spin" : ""} style={busy ? undefined : { transform: `rotate(${pull * 3}deg)`, opacity: Math.min(1, pull / 70) }}>
               <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" />
             </svg>
@@ -127,8 +127,8 @@ export function InstallPrompt() {
         <b className="block">Get the app</b>
         {ios ? <>Tap <span aria-label="Share">Share ⬆︎</span>, then <b>Add to Home Screen</b>.</> : "Full screen, faster, and works offline."}
       </p>
-      {evt && <button type="button" onClick={async () => { await evt.prompt(); close(); }} className="h-9 rounded-[4px] bg-gold px-3 text-[13px] font-bold text-navy">Install</button>}
-      <button type="button" onClick={close} aria-label="Dismiss" className="grid h-9 w-9 place-items-center rounded-[4px] text-white/70 hover:bg-white/10">✕</button>
+      {evt && <button type="button" onClick={async () => { await evt.prompt(); close(); }} className="h-9 rounded-[10px] bg-gold px-3 text-[13px] font-bold text-navy">Install</button>}
+      <button type="button" onClick={close} aria-label="Dismiss" className="grid h-9 w-9 place-items-center rounded-[10px] text-white/70 hover:bg-white/10">✕</button>
     </div>
   );
 }

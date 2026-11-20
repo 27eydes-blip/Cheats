@@ -1,40 +1,69 @@
 /*
- * World Net News design tokens: "The Front Page", national edition.
- * Navy, gold, and white dominate; red is reserved for LIVE / BREAKING.
- * Every text/background pair meets WCAG AA (see DESIGN.md).
- * Older names (--canvas, --accent, …) are kept as aliases so every screen
- * reads from the same palette.
+ * WorldNet News design tokens (v2): "Signal" — premium, high-tech, bold.
+ * Change the palette here; every screen reads these variables.
+ *
+ *   --wn-bg      #070B14  near-black navy page
+ *   --wn-panel-* layered panels, darker → lighter
+ *   --wn-blue    #2F6BFF  primary: header bar, buttons, active tabs, links, big color blocks
+ *                (--wn-blue-fill #2C68FA, visually identical, under white text for AA)
+ *   --wn-red     #FF2D4A  BREAKING and LIVE only
+ *   --wn-cyan    #22D3EE  glows and hover states
+ *
+ * Contrast (WCAG AA): white on --wn-blue 4.5:1; --wn-blue-ink on --wn-bg 8:1;
+ * small red tags use --wn-red-fill (white text 4.7:1); --wn-red as text on bg 5.4:1.
+ * Older names (--paper, --navy, --gold, …) map onto this palette so every
+ * component follows it.
  */
 :root,
-.light {
-  --paper: #ffffff;
-  --paper-2: #f5f6f9;
-  --paper-3: #ebeef4;
-  --ink-1: #0a1630;
-  --ink-2: #3a4560;
-  --ink-3: #5d6780;
-  --rule: rgb(11 31 75 / 0.12);
-  --rule-strong: rgb(11 31 75 / 0.24);
-  --navy: #0b1f4b;
-  --navy-2: #1a3570;
-  --navy-ink: #0b1f4b;
-  --navy-soft: rgb(11 31 75 / 0.06);
-  --gold: #c8a24a;
-  --gold-ink: #7c5f14;
-  --gold-soft: rgb(200 162 74 / 0.14);
-  --live: #c8102e;
-  --live-bg: #c8102e;
-  --agree: #0f6b4f;
-  --disagree: #a3242f;
-  --unsure: #a7b0c2;
-  --on-navy: #ffffff;
-  --on-signal: #ffffff;
-  --masthead: #ffffff;
-  --wire-bg: #0b1f4b;
-  --wire-fg: #ffffff;
-  --grain-opacity: 0.035;
+.dark {
+  --wn-bg: #070b14;
+  --wn-panel-0: #05080f;
+  --wn-panel-1: #0b1220;
+  --wn-panel-2: #101a2e;
+  --wn-panel-3: #17233d;
+  --wn-blue: #2f6bff;
+  /* the same electric blue, a hair deeper, for fills that carry white text (4.7:1) */
+  --wn-blue-fill: #2c68fa;
+  --wn-blue-press: #2559e0;
+  --wn-blue-ink: #7fa3ff;
+  --wn-red: #ff2d4a;
+  --wn-red-fill: #e3163a;
+  --wn-cyan: #22d3ee;
+  --wn-cyan-ink: #67e8f9;
+  --wn-text: #ffffff;
+  --wn-text-2: #b8c2d9;
+  --wn-text-3: #8893ad;
+  --wn-glass: rgb(16 26 46 / 0.62);
+  --wn-glass-border: rgb(127 163 255 / 0.18);
+  --wn-glass-border-hot: rgb(34 211 238 / 0.55);
 
-  /* aliases used across components */
+  --paper: var(--wn-bg);
+  --paper-2: var(--wn-panel-1);
+  --paper-3: var(--wn-panel-2);
+  --ink-1: var(--wn-text);
+  --ink-2: var(--wn-text-2);
+  --ink-3: var(--wn-text-3);
+  --rule: rgb(127 163 255 / 0.13);
+  --rule-strong: rgb(127 163 255 / 0.26);
+  --navy: var(--wn-blue-fill);
+  --navy-2: var(--wn-blue-press);
+  --navy-ink: var(--wn-blue-ink);
+  --navy-soft: rgb(47 107 255 / 0.14);
+  --gold: var(--wn-cyan);
+  --gold-ink: var(--wn-cyan-ink);
+  --gold-soft: rgb(34 211 238 / 0.12);
+  --live: var(--wn-red);
+  --live-bg: var(--wn-red-fill);
+  --agree: #34d399;
+  --disagree: #ff6b81;
+  --unsure: #3a4a6a;
+  --on-navy: #ffffff;
+  --on-signal: #070b14;
+  --masthead: var(--wn-blue-fill);
+  --wire-bg: var(--wn-panel-0);
+  --wire-fg: #ffffff;
+  --grain-opacity: 0;
+
   --canvas: var(--paper);
   --surface: var(--paper);
   --surface-2: var(--paper-2);
@@ -43,96 +72,94 @@
   --line-strong: var(--rule-strong);
   --accent: var(--navy-ink);
   --accent-2: var(--navy-2);
-  --accent-grad: linear-gradient(0deg, var(--navy), var(--navy));
+  --accent-grad: linear-gradient(135deg, var(--wn-blue), #1f4fd6);
   --accent-soft: var(--navy-soft);
-  --accent-ring: rgb(11 31 75 / 0.3);
-  --on-accent: var(--on-navy);
+  --accent-ring: rgb(34 211 238 / 0.55);
+  --on-accent: #ffffff;
   --breaking: var(--live-bg);
   --success: var(--agree);
-  --warning: #8a5a00;
-  --warning-bg: #fff5df;
+  --warning: #f2c14e;
+  --warning-bg: rgb(242 193 78 / 0.1);
   --danger: var(--disagree);
-  --danger-soft: rgb(163 36 47 / 0.08);
+  --danger-soft: rgb(255 107 129 / 0.1);
   --ticker-bg: var(--wire-bg);
   --ticker-fg: var(--wire-fg);
-  --glass: rgb(255 255 255 / 0.9);
-  --glass-strong: rgb(255 255 255 / 0.94);
+  --glass: rgb(11 18 32 / 0.82);
+  --glass-strong: rgb(16 26 46 / 0.92);
 
-  /* depth: flat paper; shadows only for floating layers */
-  --shadow-1: 0 1px 0 rgb(11 31 75 / 0.06);
-  --shadow-2: 0 2px 4px rgb(11 31 75 / 0.06), 0 8px 24px rgb(11 31 75 / 0.08);
-  --shadow-3: 0 4px 10px rgb(11 31 75 / 0.12), 0 24px 56px rgb(11 31 75 / 0.18);
-  --glow: 0 0 0 1px var(--gold), 0 6px 18px rgb(200 162 74 / 0.35);
+  --shadow-1: 0 1px 0 rgb(0 0 0 / 0.4);
+  --shadow-2: 0 2px 8px rgb(0 0 0 / 0.45), 0 12px 32px rgb(0 0 0 / 0.45);
+  --shadow-3: 0 6px 16px rgb(0 0 0 / 0.55), 0 28px 72px rgb(0 0 0 / 0.6);
+  --glow: 0 0 0 1px var(--wn-glass-border-hot), 0 0 24px rgb(34 211 238 / 0.25);
+  --glow-blue: 0 0 0 1px rgb(47 107 255 / 0.6), 0 10px 40px rgb(47 107 255 / 0.35);
 
-  /* shape: square-ish */
-  --r-xs: 2px;
-  --r-sm: 4px;
-  --r-md: 6px;
-  --r-lg: 8px;
-  --r-xl: 8px;
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
   --r-pill: 999px;
 
-  /* type */
   --font-ui: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
+  --font-display: var(--font-condensed), "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
   --font-mono: var(--font-mono-face), ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  --fs-mega: clamp(2.4rem, 1.5rem + 3.6vw, 4.4rem);
-  --fs-display: clamp(2.1rem, 1.4rem + 2.8vw, 3.5rem);
-  --fs-h1: clamp(1.75rem, 1.35rem + 1.5vw, 2.5rem);
-  --fs-h2: clamp(1.35rem, 1.2rem + 0.6vw, 1.75rem);
-  --fs-h3: clamp(1.125rem, 1.08rem + 0.2vw, 1.3rem);
+  --fs-mega: clamp(2.6rem, 1.6rem + 4.2vw, 5.2rem);
+  --fs-display: clamp(2.2rem, 1.4rem + 3.2vw, 4rem);
+  --fs-h1: clamp(1.9rem, 1.4rem + 1.8vw, 2.8rem);
+  --fs-h2: clamp(1.45rem, 1.25rem + 0.7vw, 1.9rem);
+  --fs-h3: clamp(1.2rem, 1.12rem + 0.3vw, 1.4rem);
   --fs-body: clamp(0.96875rem, 0.95rem + 0.1vw, 1rem);
   --fs-small: 0.8125rem;
   --fs-micro: 0.6875rem;
-  --track-tight: -0.025em;
+  --track-tight: -0.01em;
 
-  /* motion */
   --dur-micro: 120ms;
   --dur-std: 220ms;
-  --dur-emph: 380ms;
+  --dur-emph: 420ms;
   --ease-spring: cubic-bezier(0.2, 0.9, 0.25, 1.15);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* layout */
-  --dock-h: 62px;
-  --tabbar-h: 62px;
-  --header-h: 52px;
-  --dial-h: 46px;
-  --wire-h: 34px;
-  --ticker-h: 34px;
+  --dock-h: 64px;
+  --tabbar-h: 64px;
+  --header-h: 56px;
+  --dial-h: 48px;
+  --wire-h: 36px;
+  --ticker-h: 36px;
+  color-scheme: dark;
+}
+
+/* Optional light edition (Settings → Appearance). Same blue identity on white. */
+.light {
+  --wn-bg: #f6f8fc;
+  --wn-panel-0: #0b1220;
+  --wn-panel-1: #ffffff;
+  --wn-panel-2: #eef2fa;
+  --wn-panel-3: #e2e8f4;
+  --wn-blue-ink: #1f4fd6;
+  --wn-cyan: #0891b2;
+  --wn-cyan-ink: #0e7490;
+  --wn-red: #d0102f;
+  --wn-red-fill: #d0102f;
+  --wn-text: #0a1222;
+  --wn-text-2: #33405c;
+  --wn-text-3: #56617a;
+  --wn-glass: rgb(255 255 255 / 0.78);
+  --wn-glass-border: rgb(31 79 214 / 0.16);
+  --wn-glass-border-hot: rgb(8 145 178 / 0.5);
+  --rule: rgb(10 18 34 / 0.1);
+  --rule-strong: rgb(10 18 34 / 0.2);
+  --agree: #0f7a55;
+  --disagree: #c0263a;
+  --unsure: #a7b0c2;
+  --on-signal: #ffffff;
+  --glass: rgb(255 255 255 / 0.86);
+  --glass-strong: rgb(255 255 255 / 0.94);
+  --danger-soft: rgb(192 38 58 / 0.08);
+  --warning: #8a5a00;
+  --warning-bg: #fff5df;
+  --shadow-1: 0 1px 0 rgb(10 18 34 / 0.06);
+  --shadow-2: 0 2px 6px rgb(10 18 34 / 0.06), 0 10px 28px rgb(10 18 34 / 0.08);
+  --shadow-3: 0 6px 14px rgb(10 18 34 / 0.12), 0 24px 56px rgb(10 18 34 / 0.18);
   color-scheme: light;
 }
 
-.dark {
-  --paper: #070c18;
-  --paper-2: #0c1426;
-  --paper-3: #13203a;
-  --ink-1: #f4f6fb;
-  --ink-2: #c3cadb;
-  --ink-3: #8c97ae;
-  --rule: rgb(196 210 240 / 0.12);
-  --rule-strong: rgb(196 210 240 / 0.22);
-  --navy-ink: #9db4e8;
-  --navy-soft: rgb(157 180 232 / 0.1);
-  --gold: #d9b65e;
-  --gold-ink: #e2c677;
-  --gold-soft: rgb(217 182 94 / 0.14);
-  --live: #ff4d5e;
-  --agree: #4fd1a1;
-  --disagree: #ff7a85;
-  --unsure: #3a4a6a;
-  --masthead: #070c18;
-  --on-signal: #070c18;
-  --wire-bg: #0b1f4b;
-  --grain-opacity: 0.05;
-  --accent-ring: rgb(157 180 232 / 0.4);
-  --warning: #f2c14e;
-  --warning-bg: rgb(242 193 78 / 0.1);
-  --danger-soft: rgb(255 122 133 / 0.1);
-  --glass: rgb(7 12 24 / 0.88);
-  --glass-strong: rgb(12 20 38 / 0.92);
-  --shadow-1: 0 1px 0 rgb(0 0 0 / 0.4);
-  --shadow-2: 0 2px 6px rgb(0 0 0 / 0.4), 0 10px 28px rgb(0 0 0 / 0.4);
-  --shadow-3: 0 4px 12px rgb(0 0 0 / 0.5), 0 24px 64px rgb(0 0 0 / 0.6);
-  color-scheme: dark;
-}

@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 // Times, counts, the rotating Live Wire, and market prices/charts change between runs, so they are masked.
 const mask = (page: Page) => [
   page.locator("time"), page.locator(".mono"), page.locator(".num"), page.locator('[aria-label="Live Wire"]'),
-  page.locator('[aria-label="Markets: open the Market Board"]'), page.locator("section[aria-labelledby=mkt] ul"),
+  page.locator("[data-market-strip]"), page.locator("section[aria-labelledby=mkt] ul"),
   page.locator('[aria-label="Stock ticker"]'), page.locator('section[aria-label="Major indexes"]'), page.locator('section[aria-label$=" chart"]'),
   page.locator("section[aria-labelledby=heat]"), page.locator("section[aria-labelledby=movers]"), page.locator("section[aria-labelledby=wl] ul"),
 ];

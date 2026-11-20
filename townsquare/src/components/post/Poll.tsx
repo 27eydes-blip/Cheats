@@ -58,17 +58,17 @@ export function Poll({ poll, postId, isAuthor, createdAt }: { poll: PollView; po
         const winner = showResults && o.votes === max && max > 0;
         const mine = p.myVote === o.id;
         return showResults ? (
-          <div key={o.id} className="relative overflow-hidden rounded-[4px] bg-surface-2">
+          <div key={o.id} className="relative overflow-hidden rounded-[10px] bg-surface-2">
             <div
               aria-hidden="true"
-              className={`absolute inset-y-0 left-0 rounded-[4px] ${winner ? "bg-navy opacity-[0.16] dark:bg-gold dark:opacity-30" : "bg-line-strong"}`}
+              className={`absolute inset-y-0 left-0 rounded-[10px] ${winner ? "bg-navy opacity-[0.16] dark:bg-gold dark:opacity-30" : "bg-line-strong"}`}
               style={{ width: filled ? `${Math.max(pct, 2)}%` : "0%", transition: `width 900ms var(--ease-spring) ${i * 70}ms` }}
             />
             <div className={`relative flex min-h-11 items-center justify-between gap-3 px-3.5 text-[15px] ${winner ? "font-semibold" : ""}`}>
               <span className="flex items-center gap-2 text-ink-1">
                 {o.label}
                 {mine && (
-                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-[3px] bg-navy text-white" title="Your vote">
+                  <span className="inline-flex h-5 w-5 items-center justify-center rounded-[8px] bg-navy text-white" title="Your vote">
                     <CheckIcon size={13} strokeWidth={3} />
                     <span className="sr-only">(your vote)</span>
                   </span>
@@ -83,7 +83,7 @@ export function Poll({ poll, postId, isAuthor, createdAt }: { poll: PollView; po
             type="button"
             disabled={pending}
             onClick={() => vote(o.id)}
-            className="flex min-h-11 w-full items-center justify-center rounded-[4px] text-[15px] font-semibold text-accent ring-1 ring-accent/40 transition-all duration-150 hover:bg-accent-soft hover:ring-accent active:scale-[0.98]"
+            className="flex min-h-11 w-full items-center justify-center rounded-[10px] text-[15px] font-semibold text-accent ring-1 ring-accent/40 transition-all duration-150 hover:bg-accent-soft hover:ring-accent active:scale-[0.98]"
           >
             {o.label}
           </button>
