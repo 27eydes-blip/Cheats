@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { logoutAction } from "@/actions/auth";
 import { Avatar } from "../ui/Avatar";
 import { LogoMark, Wordmark } from "../ui/Logo";
+import { APP_NAME } from "@/config";
 import { Menu } from "../ui/Menu";
 import { EditionIcon, InboxIcon, KeyboardIcon, LogoutIcon, MonitorIcon, MoonIcon, RundownIcon, SearchIcon, SettingsIcon, ShieldIcon, SunIcon, TakeIcon, UserIcon } from "../icons";
 import { useComposer, usePalette, useRundown, useShortcutsHelp, useViewer } from "../providers";
@@ -74,9 +75,9 @@ export function Masthead({ unread }: { unread: number }) {
       <div className="relative mx-auto grid h-[var(--header-h)] max-w-[1320px] grid-cols-[auto_1fr_auto] items-center gap-2 px-3 lg:h-[92px] lg:grid-cols-[1fr_auto_1fr] lg:px-8">
         {/* left */}
         <div className="flex items-center gap-1">
-          <Link href="/" aria-label="Townsquare front page" className="flex items-center gap-2 lg:hidden">
+          <Link href="/" aria-label={`${APP_NAME} front page`} className="flex items-center gap-2 lg:hidden">
             <LogoMark size={28} />
-            <Wordmark size="sm" />
+            <Wordmark size="sm" short />
           </Link>
           <div className="hidden items-center gap-1 lg:flex">
             {viewer && (
@@ -90,7 +91,7 @@ export function Masthead({ unread }: { unread: number }) {
           </div>
         </div>
         {/* center wordmark (desktop) */}
-        <Link href="/" aria-label="Townsquare front page" className="hidden flex-col items-center lg:flex">
+        <Link href="/" aria-label={`${APP_NAME} front page`} className="hidden flex-col items-center lg:flex">
           <span className="flex items-center gap-3">
             <LogoMark size={44} />
             <Wordmark size="lg" />

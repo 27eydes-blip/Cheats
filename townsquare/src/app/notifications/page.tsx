@@ -1,3 +1,4 @@
+import { APP_SHORT } from "@/config";
 import Link from "next/link";
 import { listNotifications, NOTIFICATION_FILTERS, type NotificationView } from "@/lib/notifications";
 import { requireViewerPage } from "@/lib/session";
@@ -63,7 +64,7 @@ function Row({ g }: { g: Group }) {
             </div>
           )}
           <p className="text-[15px] leading-snug">
-            {names ? <>{names} {VERB[g.type]}</> : <b>{g.type === "warning" ? "Standards desk" : "Townsquare"}</b>}
+            {names ? <>{names} {VERB[g.type]}</> : <b>{g.type === "warning" ? "Standards desk" : APP_SHORT}</b>}
             <span className="mono text-[11px] text-ink-3"> · <Time ms={n.createdAt} /></span>
           </p>
           {n.message && <p className="mt-1 text-[14.5px] text-ink-2">{n.message}</p>}

@@ -32,7 +32,7 @@ if (get<{ n: number }>("SELECT count(*) n FROM users")!.n > 0) {
 
 // ---------------------------------------------------------------- people
 const PEOPLE: [string, string, string, boolean][] = [
-  ["admin", "Townsquare Desk", "Official account. Standards, corrections, and product notes.", true],
+  ["admin", "World Net Desk", "Official account. Standards, corrections, and product notes.", true],
   ["demo", "Demo Reader", "Just here to read the front page.", false],
   ["maria_lopez", "Maria Lopez", "Capitol Hill correspondent. Votes, whips, and the fine print.", true],
   ["jwashington", "James Washington", "Retired civics teacher. I read the Constitution for fun.", false],
@@ -340,7 +340,7 @@ async function makeImage(ownerId: string, i: number): Promise<string> {
 
 async function main() {
   console.log("Seeding the national edition…");
-  const [adminPw, demoPw, otherPw] = await Promise.all([hashPassword("townsquare-admin"), hashPassword("townsquare-demo"), hashPassword("townsquare-user")]);
+  const [adminPw, demoPw, otherPw] = await Promise.all([hashPassword("worldnet-admin"), hashPassword("worldnet-demo"), hashPassword("worldnet-user")]);
   const users = PEOPLE.map(([handle, name, bio, verified], i) => ({ id: newId() + i, handle, name, bio, verified, created: NOW - int(60, 1400) * 24 * HOUR }));
   const by = new Map(users.map((u) => [u.handle, u]));
   const voices = users.slice(2);
@@ -350,7 +350,7 @@ async function main() {
     for (const u of users) {
       run(
         `INSERT INTO users (id, email, password_hash, handle, display_name, bio, links, role, verified, onboarded, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
-        [u.id, `${u.handle.replace(/\W/g, "")}@townsquare.test`, u.handle === "admin" ? adminPw : u.handle === "demo" ? demoPw : otherPw, u.handle, u.name, u.bio,
+        [u.id, `${u.handle.replace(/\W/g, "")}@worldnet.test`, u.handle === "admin" ? adminPw : u.handle === "demo" ? demoPw : otherPw, u.handle, u.name, u.bio,
           u.handle === "maria_lopez" ? JSON.stringify([{ label: "Portfolio", url: "https://example.com/maria" }]) : "[]", u.handle === "admin" ? "admin" : "user", u.verified ? 1 : 0, u.created],
       );
     }
@@ -528,7 +528,7 @@ async function main() {
 
   const counts = Object.fromEntries(["users", "stories", "story_updates", "posts", "stances", "communities", "news_items", "live_events"].map((t) => [t, get<{ n: number }>(`SELECT count(*) n FROM ${t}`)!.n]));
   console.log("Done:", counts);
-  console.log("\nLog in with:\n  admin@townsquare.test / townsquare-admin  (Control Room)\n  demo@townsquare.test  / townsquare-demo\n  any other seeded user: <handle>@townsquare.test / townsquare-user");
+  console.log("\nLog in with:\n  admin@worldnet.test / worldnet-admin  (Control Room)\n  demo@worldnet.test  / worldnet-demo\n  any other seeded user: <handle>@worldnet.test / worldnet-user");
 }
 
 main();

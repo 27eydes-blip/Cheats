@@ -10,8 +10,8 @@ const mask = (page: Page) => [
 
 async function login(page: Page) {
   await page.goto("/login");
-  await page.fill("#email", "admin@townsquare.test");
-  await page.fill("#password", "townsquare-admin");
+  await page.fill("#email", "admin@worldnet.test");
+  await page.fill("#password", "worldnet-admin");
   await page.click("button[type=submit]");
   await page.waitForURL((u) => !u.pathname.startsWith("/login"));
 }

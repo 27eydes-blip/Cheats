@@ -1,3 +1,4 @@
+import { APP_SHORT } from "@/config";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -48,7 +49,7 @@ export default async function Byline({ params, searchParams }: { params: Promise
 
   const cred: [string, string][] = [
     ["Status", p.verified ? "Verified" : "Member"],
-    ["On Townsquare", age(p.joinedAt)],
+    [`On ${APP_SHORT}`, age(p.joinedAt)],
     ["Context notes", String(stats.ctx)],
     ["Takes", String(stats.takes)],
     ...(p.followers !== null ? ([["Followers", p.followers.toLocaleString("en-US")]] as [string, string][]) : []),

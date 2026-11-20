@@ -9,6 +9,7 @@ import { Deck, type DeckCardData } from "@/components/front/Deck";
 import { BriefingPromo, DebateTile, HotStories, LeadTile, LiveNowTile, MoreStories, PollTile, QuickTakes, StoryTile, VoicesTile, WireTile } from "@/components/front/Tiles";
 import { EmptyState } from "@/components/ui/States";
 import { Wordmark } from "@/components/ui/Logo";
+import { APP_NAME } from "@/config";
 import { MarketStrip } from "@/components/markets/LiveQuotes";
 import { getQuotes, marketMode } from "@/lib/markets/provider";
 import { marketStatus } from "@/lib/markets/clock";
@@ -67,7 +68,7 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      <h1 className="sr-only">{channel ? `${channel.label} — ` : ""}Townsquare Front Page</h1>
+      <h1 className="sr-only">{channel ? `${channel.label} — ` : ""}{APP_NAME} Front Page</h1>
       {/* Phone: story deck */}
       <div className="md:hidden">
         <Deck cards={cards} channels={FRONT_CHANNELS.map((x) => ({ href: x.href, label: x.label }))} channelIndex={Math.max(0, FRONT_CHANNELS.findIndex((x) => x.key === (channel?.key ?? "front")))} />
@@ -111,7 +112,7 @@ export default async function FrontPage({ searchParams }: { searchParams: Promis
           )}
         </div>
         <footer className="mt-16 flex flex-wrap items-end justify-between gap-6 border-t-[3px] border-navy-ink pt-5 pb-4 text-[12.5px] text-ink-3">
-          <div><Wordmark size="sm" /><p className="mt-1">Built by Gleyde Technologies, LLC. Townsquare is a working name. Sample stories and outlets are fictional.</p></div>
+          <div><Wordmark size="sm" /><p className="mt-1">Built by Gleyde Technologies, LLC. Sample stories and outlets are fictional.</p></div>
           <nav className="flex gap-5">
             <Link href="/legal/terms" className="hover:text-ink-1">Terms</Link>
             <Link href="/legal/privacy" className="hover:text-ink-1">Privacy</Link>

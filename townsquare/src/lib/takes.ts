@@ -1,3 +1,4 @@
+import { APP_SHORT } from "@/config";
 import { all, get, now } from "./db";
 import { hiddenAuthorsSql, hiddenParams, hydrate, type PostView } from "./posts";
 import { toMini, type UserMini } from "./users";
@@ -83,11 +84,11 @@ export function voices(viewerId: string | null, limit = 4, section?: string): Vo
   }));
 }
 
-/** One-line credibility note for a Voice ("Verified · 2 yrs on Townsquare · 14 context notes"). */
+/** One-line credibility note for a Voice ("Verified · 2 yrs on World Net · 14 context notes"). */
 export function credibility(v: { verified: boolean; joinedAt: number; contextNotes: number; takes: number }) {
   const years = (now() - v.joinedAt) / (365 * 86_400_000);
   const age = years >= 1 ? `${Math.floor(years)} yr${years >= 2 ? "s" : ""}` : `${Math.max(1, Math.round(years * 12))} mo`;
-  return [v.verified ? "Verified" : null, `${age} on Townsquare`, v.contextNotes ? `${v.contextNotes} context note${v.contextNotes === 1 ? "" : "s"}` : `${v.takes} takes`]
+  return [v.verified ? "Verified" : null, `${age} on ${APP_SHORT}`, v.contextNotes ? `${v.contextNotes} context note${v.contextNotes === 1 ? "" : "s"}` : `${v.takes} takes`]
     .filter(Boolean)
     .join(" · ");
 }

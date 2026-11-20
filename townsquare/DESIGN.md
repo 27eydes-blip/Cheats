@@ -1,4 +1,4 @@
-# Townsquare design system: "The Front Page" (national edition)
+# World Net News design system: "The Front Page" (national edition)
 
 ## 1. Audit: what looked like Twitter/X (before this remodel)
 
@@ -22,12 +22,12 @@ Screenshots: 20 routes × 390 / 768 / 1440 px × light / dark (120 images).
 
 ## 2. The big idea
 
-Townsquare is organized around **Stories**, not a stream of posts. Every national event is a Story.
+World Net News is organized around **Stories**, not a stream of posts. Every national event is a Story.
 People add **Takes** to a Story and pick a **stance** (Agree, Disagree, Context, Question).
 Readers cast their own stance on Stories and Takes; the **stance meter** replaces likes.
 The home screen is a **front page** (bento tiles sized by importance), not a timeline.
 
-| Twitter primitive | Townsquare replacement |
+| Twitter primitive | World Net News replacement |
 |---|---|
 | Post | **Take** (with a stance chip, optionally attached to a Story) |
 | Like ♥ | **Stance meter**: agree / unsure / disagree split, tap to cast |
@@ -85,7 +85,7 @@ StoryTile · DeckCard · Sheet · Menu · Confirm · Skeletons (bento-shaped) ·
 
 Final screenshots were compared against Twitter/X, Threads, Bluesky, Reddit, and Truth Social:
 
-| Piece | Them | Townsquare now |
+| Piece | Them | World Net News now |
 |---|---|---|
 | Shell | Left icon sidebar + center stream + right rail | Newspaper masthead, channel dial, Live Wire; full-width bento; no sidebars |
 | Home | Reverse-chron stream of identical cards | Front Page bento sized by importance; phone story deck with snap |

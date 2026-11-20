@@ -1,3 +1,4 @@
+import { APP_SHORT } from "@/config";
 import { all } from "@/lib/db";
 import { liveEvents, listStories } from "@/lib/news";
 import { getPostView } from "@/lib/posts";
@@ -157,7 +158,7 @@ export default async function DesignPage() {
   const viewer = await getViewer();
   return (
     <Frame width="medium">
-      <PageTitle folio={<Kicker tone="gold">Townsquare UI</Kicker>} title="Design system" dek="Every component and state, in light and dark. Tokens live in src/styles/tokens.css." />
+      <PageTitle folio={<Kicker tone="gold">{APP_SHORT} UI</Kicker>} title="Design system" dek="Every component and state, in light and dark. Tokens live in src/styles/tokens.css." />
       <div className="light mt-6" style={{ ["--avatar-gap" as string]: "var(--paper)" }}>
         <h2 className="bg-paper px-4 pt-4 pb-2 font-display text-h1 font-semibold text-ink-1 sm:px-6">Light</h2>
         <Gallery viewerId={viewer?.id ?? null} />

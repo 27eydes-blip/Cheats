@@ -1,5 +1,6 @@
 "use client";
 
+import { APP_SHORT } from "@/config";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { UserListItem } from "@/lib/social";
@@ -77,7 +78,7 @@ export function Onboarding({ name, interests, initialInterests, initialTown, peo
       {step === 1 && (
         <section key="s1" className="animate-enter">
           <h1 className="font-display text-display font-semibold">Pick three Voices.</h1>
-          <p className="mt-2 text-[16px] text-ink-2">Their takes lead your Rundown. The gold line under each name is their record on Townsquare.</p>
+          <p className="mt-2 text-[16px] text-ink-2">Their takes lead your Rundown. The gold line under each name is their record on {APP_SHORT}.</p>
           <ul className="mt-6 divide-y divide-rule border-y-2 border-navy-ink">
             {people.map((u) => (
               <li key={u.id} className="flex items-center gap-3 p-3.5">

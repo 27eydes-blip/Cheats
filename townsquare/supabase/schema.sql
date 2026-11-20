@@ -1,4 +1,4 @@
--- Townsquare — Postgres schema for Supabase, with row-level security on every table.
+-- World Net News — Postgres schema for Supabase, with row-level security on every table.
 -- This is the swap-in target for the local SQLite layer (src/lib/db/schema.ts).
 -- Apply with: supabase db push   (or paste into the SQL editor of a NEW project)
 --

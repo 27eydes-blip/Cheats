@@ -1,6 +1,6 @@
-# Townsquare — build plan
+# World Net News — build plan
 
-Working name **Townsquare** (one constant in `src/config.ts`; change it before Stage 2).
+Working name **World Net News** (one constant in `src/config.ts`; change it before Stage 2).
 Built by Gleyde Technologies, LLC. Accent color: deep blue, one CSS variable (`--accent`).
 
 ## Architecture

@@ -1,5 +1,7 @@
 /** Product-wide settings. Change the name here and it updates everywhere. */
-export const APP_NAME = "Townsquare";
+export const APP_NAME = "World Net News";
+/** Short form for tight spots (phone masthead, home-screen label, "on World Net"). */
+export const APP_SHORT = "World Net";
 export const COMPANY = "Gleyde Technologies, LLC";
 export const TAGLINE = "Say it. Read it. Debate it.";
 
