@@ -22,7 +22,7 @@ export async function setBannerAction(form: FormData) {
     const text = String(form.get("text") ?? "");
     const url = String(form.get("url") ?? "").trim();
     const level = (["breaking", "alert", "info"].includes(String(form.get("level"))) ? form.get("level") : "breaking") as "breaking";
-    // Internal paths (e.g. /news/story/bikelanes) or full http(s) links only.
+    // Internal paths (e.g. /news/story/infrastructure) or full http(s) links only.
     const safeUrl = url.startsWith("/") && !url.startsWith("//") && !url.includes("\\") ? url.slice(0, 200) : url ? safeHttpUrl(url) : null;
     setBanner(admin, form.get("clear") ? null : { text, url: safeUrl, level });
     revalidatePath("/", "layout");

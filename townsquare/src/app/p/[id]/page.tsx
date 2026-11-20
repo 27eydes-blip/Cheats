@@ -1,3 +1,4 @@
+import { Frame } from "@/components/ui/Frame";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getThread, getPostView } from "@/lib/posts";
@@ -23,7 +24,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
   if (!thread) notFound();
   const { post, ancestors, replies } = thread;
   return (
-    <>
+    <Frame>
       <PageHeader title={post.replyTo ? "Thread" : "Post"} back compact />
       {ancestors.map((a) => <PostCard key={a.id} post={a} threadLine />)}
       <PostCard key={post.id} post={post} focus />
@@ -38,6 +39,6 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
       ) : (
         replies.map((r, i) => <PostCard key={r.id} post={r} index={i} />)
       )}
-    </>
+    </Frame>
   );
 }

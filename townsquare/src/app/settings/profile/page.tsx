@@ -1,3 +1,4 @@
+import { Frame } from "@/components/ui/Frame";
 import { requireViewerPage } from "@/lib/session";
 import { mediaUrl } from "@/lib/users";
 import { PageHeader } from "@/components/PageHeader";
@@ -8,9 +9,9 @@ export const metadata = { title: "Edit profile" };
 export default async function Page() {
   const u = await requireViewerPage("/settings/profile");
   return (
-    <>
+    <Frame>
       <PageHeader title="Edit profile" back compact />
       <ProfileForm initial={{ displayName: u.display_name, bio: u.bio, links: JSON.parse(u.links), avatarUrl: mediaUrl(u.avatar_media_id), bannerUrl: mediaUrl(u.banner_media_id) }} />
-    </>
+    </Frame>
   );
 }

@@ -1,32 +1,33 @@
 # Townsquare
 
-A social + news platform by **Gleyde Technologies, LLC**: follow people, join communities, and get live
-news in one feed you control. *Townsquare* is a working name — change `APP_NAME` in `src/config.ts`.
+A national social + news platform by **Gleyde Technologies, LLC**, organized around **Stories**,
+not a stream of posts. Every national event is a Story; people add **Takes** with a stance
+(Agree, Disagree, Context, Question); readers cast their own stance on a live **stance meter**.
+*Townsquare* is a working name — change `APP_NAME` in `src/config.ts`.
 
-This folder holds **Stage 1 (MVP)** plus the **"modern newsroom meets social" design remodel**.
-See [PLAN.md](PLAN.md) for architecture and roadmap, and [DESIGN.md](DESIGN.md) for the design
-system (audit, tokens, type, components, motion). Every component and state is on the live
-**`/design`** page, in light and dark.
+See [DESIGN.md](DESIGN.md) for the design system ("The Front Page": navy, gold, white), the
+originality check, and what's next; [PLAN.md](PLAN.md) for the architecture. Every component and
+state is on the live **`/design`** page in light and dark.
 
-## What works today (Stage 1)
+## What's in it
 
 | Area | Included |
 |---|---|
-| Accounts | Email + password sign-up/login (13+ age gate, terms checkbox, bot honeypot), Google sign-in (needs keys), sessions in httpOnly cookies |
-| Profiles | Avatar, banner, bio, up to 4 links, joined date, pinned post, follower/following lists (can be hidden), Posts / Replies / Media / Likes tabs |
-| Posts | 500 characters, up to 4 images with alt text, polls (2–4 choices, 1h–7d), link cards, reply, repost, quote, like, bookmark, share, edit within 15 min (shows "edited", old version kept), delete |
-| Feeds | Home → **Following** (newest first, no algorithm) and **For You** (engagement × recency × who you follow), infinite scroll, "new posts" pill, pull-to-refresh, optimistic likes/reposts |
-| Notifications | Mentions, replies, quotes, likes, reposts, follows, moderation notices; filters; unread badge |
-| Discovery | Search posts and people, `#hashtag` pages, trending topics, who to follow |
-| Safety | Report any post or profile, block, mute, rate limits (posting, sign-ups, logins, likes, follows, reports), spam checks (scam phrases, link floods, repeats), admin page with a prioritized report queue (remove / warn / suspend / dismiss), action log, breaking-news banner control |
-| Settings | Dark/light/auto theme, larger text, handle, password, hide follower lists, blocked/muted lists, **download my data** (JSON), **delete account** |
-| Legal | Terms, Privacy, Community Guidelines placeholders — **clearly marked as drafts a lawyer must review before launch** |
-| PWA | Installable (manifest, icons, offline page, service worker in production) |
-| News hub | Magazine layout (lead story, 2-column grid, ranked headlines), section chips, outlet labels on every item, live story pages with timeline, key moments, "How it is covered" outlet strip, and the community thread |
-| Communities | Community pages with banner, join, Hot / New / Top, up/down votes, threaded comments with colored depth lines and collapse |
-| Live | Live-now cards, scheduled shows with countdown and Remind me (per device), player page with live chat (posts tagged with the show's hashtag); video/audio streaming itself is Stage 4 |
-| Onboarding | Sign-up → pick interests → follow suggestions → home town for Local |
-| Desktop extras | Command palette (⌘K / Ctrl K), keyboard shortcuts (j/k move, l like, r reply, n new post, ? help) |
+| Front Page | Masthead + channel dial (Front Page, Politics, World, Business, Tech, Sports, Culture, Live, Desks) + Live Wire. Desktop: bento tiles sized by importance (Lead Story, stories, Live Studio, Hot Stories, Hot Debate, Poll of the Day, Morning Edition, Quick Takes, Voices, outlets). Phone: a full-height story deck — swipe up through Stories, sideways between channels |
+| Stories | Giant headline, timeline rail, "How it is covered" outlet strip, large stance meter, Takes split Agree \| Disagree (toggle on phones), Context notes as inline cards, head-to-head debates |
+| Takes | 500 characters, stance chip, Story picker, images (alt text, EXIF stripped), polls, link cards, quote; Answer (reply), Amplify (to your Rundown), Save to Rundown, share, edit within 15 min, delete |
+| Stance meter | On every Story and Take: agree / unsure / disagree split, tap to cast or change, optimistic and animated |
+| Rundown | Your lineup as a TV rundown — Now, Next, Later today, Earlier — as a page and a drawer |
+| Byline | Editorial name, credibility record (verified, tenure, context notes, takes, followers), pinned take as a pull-quote, tabs Takes / Debates / Rundown |
+| Morning Edition | 10 stories, 3 debates, reading time, download for offline |
+| Live Studio | ON AIR monitors, schedule grid with countdowns, Remind me (per device), player page with live chat |
+| Desks | Communities with nameplate banner, pinned Story, members, Takes vs Stories tabs, Hot/New/Top, votes, threaded comments; **Editors** get a toolbar (pin a story, remove posts) |
+| Newsdesk | Notifications grouped by Story, with filter chips |
+| Search | Full-screen overlay (⌘K / Ctrl K) with Stories, Voices, Desks, Takes and filters; `/search` page |
+| Control Room | KPI tiles with sparklines, severity-sorted report queue with confirmed one-click actions, Live Wire composer with live preview, moderation log, "same rules apply to every account" |
+| Accounts | Email/password and Google (needs keys), sign-up beside a sample Front Page, onboarding (beats + 3 Voices), settings, data export, delete account |
+| Safety | Report / block / mute, rate limits, spam checks, admin actions, legal drafts flagged for lawyer review |
+| Keyboard | j/k move, a agree, d disagree, r answer, n new take, ? help, ⌘K search |
 
 ## Run it
 
@@ -36,7 +37,7 @@ Requires **Node.js 22.13 or newer** (uses the built-in `node:sqlite`).
 cd townsquare
 npm install
 cp .env.example .env.local      # optional; defaults work for local use
-npm run seed                    # 30 users, 10 communities, 200 posts, 50 news items
+npm run seed                    # national edition: 12 stories, 30 people, takes, stances, 10 Desks, Live shows
 npm run dev                     # http://localhost:3000
 ```
 
@@ -44,8 +45,8 @@ Seeded logins:
 
 | Account | Email | Password |
 |---|---|---|
-| Admin | `admin@townsquare.test` | `townsquare-admin` |
-| Demo user | `demo@townsquare.test` | `townsquare-demo` |
+| Admin (Control Room) | `admin@townsquare.test` | `townsquare-admin` |
+| Demo reader | `demo@townsquare.test` | `townsquare-demo` |
 | Any other seeded user | `<handle>@townsquare.test` (e.g. `maria_lopez@townsquare.test`) | `townsquare-user` |
 
 `npm run reset` wipes `./data` and seeds again. To make your own account an admin, put your email in
@@ -88,16 +89,16 @@ Authorized redirect URI: `<APP_URL>/auth/google/callback`. Put `GOOGLE_CLIENT_ID
 - Tokens: `src/styles/tokens.css` (CSS variables, light + dark), mirrored in `src/design/tokens.ts`; Tailwind reads them via `@theme`.
 - Components: `src/components/ui` (primitives) plus feature folders (`post/`, `news/`, `community/`, `live/`, `shell/`).
 - Fonts are self-hosted (Inter + Newsreader variable), so no third-party font requests.
-- Lighthouse (production build, home page): **mobile 98 performance / 100 accessibility / 100 best practices**, desktop 100 / 100 / 100, layout shift 0.
+- Lighthouse (production build, home page): **mobile 96–98 performance / 100 accessibility / 100 best practices / 100 SEO**, desktop 100 / 100 / 100 / 100, layout shift ≈ 0.
 
 ## Tests
 
 ```bash
-npm test          # vitest: sign up, log in, sessions, post, edit window, replies/quotes/likes/reposts,
+npm test          # vitest (31): stance voting, Rundown, debates, Voices, desk editors, sign up, sessions, posting,
                   # polls, follow + Following/For You feeds, block/mute, search/trending,
                   # report → admin queue → remove/suspend, rate limits, spam, XSS-safe links
 npm run typecheck
-npm run test:visual          # Playwright screenshots of 10 pages × phone/desktop × light/dark vs. baselines
+npm run test:visual          # Playwright: Front Page, Story, Rundown, Byline, Control Room (+5 more) × phone/desktop × light/dark
 npm run test:visual:update   # accept intentional visual changes
 ```
 

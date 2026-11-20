@@ -1,7 +1,7 @@
 /** Product-wide settings. Change the name here and it updates everywhere. */
 export const APP_NAME = "Townsquare";
 export const COMPANY = "Gleyde Technologies, LLC";
-export const TAGLINE = "News and the people talking about it.";
+export const TAGLINE = "Say it. Read it. Debate it.";
 
 export const LIMITS = {
   postChars: 500,

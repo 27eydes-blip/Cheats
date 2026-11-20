@@ -268,7 +268,7 @@ export function assertCanAct(u: UserRow) {
 }
 
 export const INTERESTS = [
-  "Local news", "Politics", "World", "Business", "Sports", "Tech", "Science", "Health",
+  "Elections", "Politics", "World", "Business", "Sports", "Tech", "Science", "Health",
   "Entertainment", "Music", "Books", "Food", "Faith", "Outdoors", "Gaming", "Cars",
 ] as const;
 

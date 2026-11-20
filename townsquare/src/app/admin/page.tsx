@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { dailySeries, getBanner, recentActions, reportQueue, siteStats } from "@/lib/moderation";
 import { requireViewerPage } from "@/lib/session";
-import { PageHeader } from "@/components/PageHeader";
+import { Frame, PageTitle } from "@/components/ui/Frame";
 import { Kicker } from "@/components/ui/Badge";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { EmptyState } from "@/components/ui/States";
@@ -34,19 +34,19 @@ export default async function Admin() {
   for (const g of queue) counts[g.severity]++;
 
   return (
-    <>
-      <PageHeader title="Trust & Safety" kicker={<Kicker>Admin</Kicker>} subtitle="Moderation queue, site banner, and health" />
-      <div role="note" className="mx-4 mb-4 flex items-start gap-3 rounded-[var(--r-lg)] bg-accent-soft px-4 py-3 text-[14px] ring-1 ring-accent/20 sm:mx-6">
-        <ShieldIcon size={20} className="mt-0.5 shrink-0 text-accent" />
+    <Frame width="medium">
+      <PageTitle folio={<Kicker tone="gold">Trust & Safety</Kicker>} title="Control Room" dek="Report queue, the Live Wire, and the health of the network." />
+      <div role="note" className="mx-4 mt-6 mb-6 flex items-start gap-3 border-l-[3px] border-gold bg-gold-soft px-4 py-3 text-[14px] sm:mx-6">
+        <ShieldIcon size={20} className="mt-0.5 shrink-0 text-gold-ink" />
         <p><b>The same rules apply to every account,</b> public figures and staff included. Act on what the content does, never on who posted it or which side it takes.</p>
       </div>
 
-      <section aria-label="Key metrics" className="grid grid-cols-2 gap-3 px-4 sm:px-6">
+      <section aria-label="Key metrics" className="grid grid-cols-2 gap-x-6 gap-y-6 px-4 sm:px-6 lg:grid-cols-4">
         {kpis.map((k) => (
-          <div key={k.label} className="card p-4">
-            <p className="text-[13px] font-medium text-ink-3">{k.label}</p>
+          <div key={k.label} className="border-t-2 border-navy-ink pt-3">
+            <p className="folio !text-[10px] text-ink-3">{k.label}</p>
             <div className="mt-1 flex items-end justify-between gap-2">
-              <p className="num font-display text-[34px] leading-none font-semibold">{k.value}</p>
+              <p className="mono text-[34px] leading-none font-semibold">{k.value}</p>
               <Sparkline values={k.series} width={84} height={30} color={k.color} label={`${k.label}, last 14 days`} />
             </div>
             <p className="mt-2 text-[12.5px] text-ink-3">{k.note}</p>
@@ -57,12 +57,12 @@ export default async function Admin() {
       <section aria-labelledby="queue" className="mt-7">
         <div className="flex flex-wrap items-end justify-between gap-2 px-4 sm:px-6">
           <div>
-            <h2 id="queue" className="font-display text-h2 font-semibold">Report queue</h2>
+            <h2 id="queue" className="font-display text-h1 font-semibold">Report queue</h2>
             <p className="text-[13.5px] text-ink-3">Sorted by severity, then by number of reports.</p>
           </div>
           <div className="flex gap-1.5 text-[12px] font-bold">
             {(["critical", "high", "medium", "low"] as const).map((s) => (
-              <span key={s} className={`num rounded-md px-2 py-1 ${s === "critical" ? "bg-breaking text-white" : s === "high" ? "bg-danger-soft text-danger" : s === "medium" ? "bg-warning-bg text-warning" : "bg-surface-2 text-ink-2"}`}>
+              <span key={s} className={`mono rounded-[2px] px-2 py-1 uppercase ${s === "critical" ? "bg-live-bg text-white" : s === "high" ? "bg-danger-soft text-disagree" : s === "medium" ? "bg-warning-bg text-warning" : "bg-paper-2 text-ink-2"}`}>
                 {counts[s]} {s}
               </span>
             ))}
@@ -76,13 +76,13 @@ export default async function Admin() {
       </section>
 
       <section aria-labelledby="banner" className="mt-8 border-t border-line px-4 pt-6 sm:px-6">
-        <h2 id="banner" className="font-display text-h2 font-semibold">Breaking-news banner</h2>
-        <p className="text-[13.5px] text-ink-3">Shown in the ticker across the top of every page. Link it to a live story (e.g. /news/story/bikelanes) or an outside article.</p>
+        <h2 id="banner" className="font-display text-h1 font-semibold">Live Wire composer</h2>
+        <p className="text-[13.5px] text-ink-3">The breaking item leads the Live Wire on every page. Link it to a live story (e.g. /news/story/infrastructure) or an outside article.</p>
         <BannerComposer current={banner} />
       </section>
 
       <section aria-labelledby="log" className="mt-8 border-t border-line px-4 pt-6 pb-8 sm:px-6">
-        <h2 id="log" className="font-display text-h2 font-semibold">Moderation log</h2>
+        <h2 id="log" className="font-display text-h1 font-semibold">Moderation log</h2>
         <ol className="relative mt-4 border-l-2 border-line pl-5">
           {recentActions().map((a) => (
             <li key={a.id} className="relative pb-5 last:pb-0">
@@ -98,6 +98,6 @@ export default async function Admin() {
           {recentActions().length === 0 && <li className="text-[14px] text-ink-3">No actions yet.</li>}
         </ol>
       </section>
-    </>
+    </Frame>
   );
 }

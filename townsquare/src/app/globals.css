@@ -3,31 +3,48 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Tailwind reads the tokens, so utilities follow the active theme. */
+/* Tailwind utilities read the tokens, so everything follows the active theme. */
 @theme inline {
-  --color-canvas: var(--canvas);
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
-  --color-surface-3: var(--surface-3);
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-paper-3: var(--paper-3);
+  --color-canvas: var(--paper);
+  --color-surface: var(--paper);
+  --color-surface-2: var(--paper-2);
+  --color-surface-3: var(--paper-3);
   --color-ink-1: var(--ink-1);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
-  --color-line: var(--line);
-  --color-line-strong: var(--line-strong);
-  --color-accent: var(--accent);
-  --color-accent-2: var(--accent-2);
-  --color-accent-soft: var(--accent-soft);
-  --color-on-accent: var(--on-accent);
-  --color-breaking: var(--breaking);
+  --color-line: var(--rule);
+  --color-line-strong: var(--rule-strong);
+  --color-rule: var(--rule);
+  --color-navy: var(--navy);
+  --color-navy-2: var(--navy-2);
+  --color-navy-ink: var(--navy-ink);
+  --color-navy-soft: var(--navy-soft);
+  --color-gold: var(--gold);
+  --color-gold-ink: var(--gold-ink);
+  --color-gold-soft: var(--gold-soft);
+  --color-accent: var(--navy-ink);
+  --color-accent-2: var(--navy-2);
+  --color-accent-soft: var(--navy-soft);
+  --color-on-accent: var(--on-navy);
+  --color-on-signal: var(--on-signal);
+  --color-breaking: var(--live-bg);
   --color-live: var(--live);
-  --color-success: var(--success);
+  --color-live-bg: var(--live-bg);
+  --color-agree: var(--agree);
+  --color-disagree: var(--disagree);
+  --color-unsure: var(--unsure);
+  --color-success: var(--agree);
   --color-warning: var(--warning);
   --color-warning-bg: var(--warning-bg);
-  --color-danger: var(--danger);
+  --color-danger: var(--disagree);
   --color-danger-soft: var(--danger-soft);
 
   --font-sans: var(--font-ui);
   --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
   --radius-xs: var(--r-xs);
   --radius-sm: var(--r-sm);
   --radius-md: var(--r-md);
@@ -42,24 +59,24 @@
 }
 
 html {
-  background: var(--canvas);
+  background: var(--paper);
   color: var(--ink-1);
   -webkit-tap-highlight-color: transparent;
   text-size-adjust: 100%;
-  font-feature-settings: "cv11", "ss01", "ss03";
+  font-feature-settings: "cv11", "ss01";
 }
 body {
-  background: var(--canvas);
+  background: var(--paper);
   min-height: 100dvh;
   font-size: var(--fs-body);
   line-height: 1.5;
 }
-::selection { background: var(--accent-ring); }
+::selection { background: var(--gold-soft); color: var(--ink-1); }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
-  border-radius: 8px;
+  border-radius: 3px;
 }
 
 /* ---------- type ---------- */
@@ -68,116 +85,157 @@ body {
   font-optical-sizing: auto;
   letter-spacing: var(--track-tight);
 }
-@utility text-display { font-size: var(--fs-display); line-height: 1.04; }
-@utility text-h1 { font-size: var(--fs-h1); line-height: 1.12; }
-@utility text-h2 { font-size: var(--fs-h2); line-height: 1.2; }
-@utility text-h3 { font-size: var(--fs-h3); line-height: 1.3; }
+@utility text-mega { font-size: var(--fs-mega); line-height: 0.98; }
+@utility text-display { font-size: var(--fs-display); line-height: 1.02; }
+@utility text-h1 { font-size: var(--fs-h1); line-height: 1.08; }
+@utility text-h2 { font-size: var(--fs-h2); line-height: 1.15; }
+@utility text-h3 { font-size: var(--fs-h3); line-height: 1.25; }
+/* Small-caps section label, newspaper folio style */
+@utility folio {
+  font-family: var(--font-ui);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
 @utility kicker {
   font-size: var(--fs-micro);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+@utility mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
 @utility num { font-variant-numeric: tabular-nums; }
+@utility drop-cap {
+  &::first-letter {
+    float: left;
+    font-family: var(--font-display);
+    font-size: 3.4em;
+    line-height: 0.8;
+    padding: 0.08em 0.08em 0 0;
+    color: var(--navy-ink);
+    font-weight: 600;
+  }
+}
 
 /* ---------- surfaces ---------- */
 @utility glass {
   background: var(--glass);
-  backdrop-filter: blur(18px) saturate(1.6);
-  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
 }
 @utility glass-strong {
   background: var(--glass-strong);
-  backdrop-filter: blur(22px) saturate(1.8);
-  -webkit-backdrop-filter: blur(22px) saturate(1.8);
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
 }
+/* A tile: paper with a hairline, no shadow (newspaper, not SaaS) */
 @utility card {
-  --avatar-gap: var(--surface);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
+  --avatar-gap: var(--paper);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
 }
-@utility hairline { border-color: var(--line); }
-@utility bg-accent-grad { background-image: var(--accent-grad); }
-@utility text-accent-grad {
-  background-image: var(--accent-grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+@utility tile {
+  --avatar-gap: var(--paper);
+  background: var(--paper);
+  border-top: 2px solid var(--navy-ink);
+}
+@utility hairline { border-color: var(--rule); }
+@utility bg-accent-grad { background: var(--navy); }
+@utility text-accent-grad { color: var(--gold-ink); }
+/* Double rule under the masthead: navy, gap, gold */
+@utility double-rule {
+  border-top: 3px solid var(--navy-ink);
+  box-shadow: 0 3px 0 var(--paper), 0 4px 0 var(--gold);
+}
+@utility grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.04 0 0 0 0 0.09 0 0 0 0 0.19 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 140px;
 }
 
-/* ---------- controls (legacy class names map onto ui/Button styles) ---------- */
+/* ---------- controls: square-ish, ruled ---------- */
 @utility btn {
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: var(--r-pill);
-  padding-inline: 1.125rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  border-radius: var(--r-sm);
+  padding-inline: 1rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
   white-space: nowrap;
-  transition: transform var(--dur-micro) var(--ease-out), background-color var(--dur-std), box-shadow var(--dur-std), color var(--dur-std), opacity var(--dur-std);
-  &:active:not(:disabled) { transform: scale(0.96); }
+  transition: transform var(--dur-micro) var(--ease-out), background-color var(--dur-std), box-shadow var(--dur-std), color var(--dur-std), opacity var(--dur-std), border-color var(--dur-std);
+  &:active:not(:disabled) { transform: translateY(1px); }
   &:disabled { cursor: not-allowed; opacity: 0.45; }
 }
 @utility btn-primary {
   @apply btn;
-  background-image: var(--accent-grad);
-  color: var(--on-accent);
-  box-shadow: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 4px 14px rgb(67 56 230 / 0.28);
-  &:hover:not(:disabled) { box-shadow: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 6px 22px rgb(67 56 230 / 0.42); }
+  background: var(--navy);
+  color: var(--on-navy);
+  box-shadow: inset 0 -2px 0 var(--gold);
+  &:hover:not(:disabled) { background: var(--navy-2); }
+}
+@utility btn-gold {
+  @apply btn;
+  background: var(--gold);
+  color: var(--navy);
+  &:hover:not(:disabled) { filter: brightness(1.06); }
 }
 @utility btn-outline {
   @apply btn;
-  background: var(--surface);
+  background: var(--paper);
   color: var(--ink-1);
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-  &:hover:not(:disabled) { background: var(--surface-2); }
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+  &:hover:not(:disabled) { box-shadow: inset 0 0 0 1px var(--navy-ink); }
 }
 @utility btn-ghost {
   @apply btn;
   color: var(--ink-1);
-  &:hover:not(:disabled) { background: var(--surface-2); }
+  &:hover:not(:disabled) { background: var(--paper-2); }
 }
 @utility btn-danger {
   @apply btn;
-  background: var(--danger);
+  background: var(--disagree);
   color: #fff;
   &:hover:not(:disabled) { filter: brightness(1.08); }
 }
 @utility btn-ink {
   @apply btn;
   background: var(--ink-1);
-  color: var(--canvas);
+  color: var(--paper);
   &:hover:not(:disabled) { opacity: 0.88; }
 }
 @utility input {
   width: 100%;
-  border-radius: var(--r-md);
-  border: 1px solid var(--line-strong);
-  background: var(--surface);
-  padding: 0.7rem 0.9rem;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+  padding: 0.7rem 0.85rem;
   font-size: 16px;
   color: var(--ink-1);
   transition: border-color var(--dur-std), box-shadow var(--dur-std);
   &::placeholder { color: var(--ink-3); }
-  &:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  &:focus { outline: none; border-color: var(--navy-ink); box-shadow: 0 0 0 3px var(--gold-soft); }
 }
 @utility label {
   display: block;
   margin-bottom: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   color: var(--ink-1);
 }
 
-/* ---------- skeleton shimmer ---------- */
 @utility skeleton {
-  border-radius: var(--r-sm);
-  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  border-radius: var(--r-xs);
+  background: linear-gradient(90deg, var(--paper-2) 0%, var(--paper-3) 50%, var(--paper-2) 100%);
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }
@@ -189,34 +247,39 @@ body {
   70% { box-shadow: 0 0 0 7px transparent; }
   100% { box-shadow: 0 0 0 0 transparent; }
 }
-@keyframes live-ring { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(1.04); } }
+@keyframes live-ring { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-@keyframes enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-@keyframes pop { 0% { transform: scale(1); } 35% { transform: scale(0.78); } 70% { transform: scale(1.22); } 100% { transform: scale(1); } }
-@keyframes spin-once { from { transform: rotate(0); } to { transform: rotate(360deg); } }
-@keyframes bounce-down { 0% { transform: translateY(0); } 40% { transform: translateY(3px) scaleY(0.9); } 70% { transform: translateY(-3px); } 100% { transform: none; } }
-@keyframes burst { 0% { opacity: 1; transform: translate(0, 0) scale(1); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.3); } }
-@keyframes ring-burst { 0% { opacity: 0.7; transform: scale(0.4); } 100% { opacity: 0; transform: scale(1.6); } }
+@keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes page-in { from { transform: translateX(8px); } to { transform: none; } }
+@keyframes wire-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(0.86); } 75% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes stamp { 0% { transform: scale(1.3); opacity: 0; } 60% { transform: scale(0.96); opacity: 1; } 100% { transform: none; } }
 @keyframes slide-down { from { opacity: 0; transform: translateY(-120%); } to { opacity: 1; transform: none; } }
 @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes drawer-in { from { transform: translateX(100%); } to { transform: none; } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes scale-in { from { opacity: 0; transform: scale(0.96) translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes scale-in { from { opacity: 0; transform: scale(0.98) translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes roll-in-up { from { transform: translateY(100%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes roll-out-up { from { transform: none; opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
+@keyframes roll-in-down { from { transform: translateY(-100%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes roll-out-down { from { transform: none; opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
 
-@utility animate-enter { animation: enter var(--dur-std) var(--ease-out) both; }
+@utility animate-enter { animation: enter var(--dur-emph) var(--ease-out) both; }
+@utility animate-page { animation: page-in var(--dur-std) var(--ease-out) both; }
 @utility animate-live { animation: live-pulse 1.8s ease-out infinite; }
 @utility animate-pop { animation: pop var(--dur-emph) var(--ease-spring); }
-@utility animate-spin-once { animation: spin-once 520ms var(--ease-out); }
-@utility animate-bounce-down { animation: bounce-down var(--dur-emph) var(--ease-spring); }
+@utility animate-stamp { animation: stamp var(--dur-emph) var(--ease-spring) both; }
 @utility animate-slide-down { animation: slide-down var(--dur-emph) var(--ease-spring) both; }
 @utility animate-fade-in { animation: fade-in var(--dur-std) var(--ease-out) both; }
 @utility animate-scale-in { animation: scale-in var(--dur-std) var(--ease-out) both; }
+@utility animate-spin-once { animation: pop 520ms var(--ease-out); }
+@utility animate-bounce-down { animation: pop var(--dur-emph) var(--ease-spring); }
 
-/* Offscreen feed items skip layout and paint until scrolled near (cheap virtualization). */
+/* Offscreen list items skip layout and paint until scrolled near (cheap virtualization). */
 @utility cv-auto {
   content-visibility: auto;
-  contain-intrinsic-size: auto 220px;
+  contain-intrinsic-size: auto 200px;
 }
-
 @utility scrollbar-none {
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
@@ -231,24 +294,14 @@ body {
   }
 }
 
-dialog::backdrop { background: rgb(5 7 11 / 0.55); backdrop-filter: blur(4px); }
+dialog::backdrop { background: rgb(7 12 24 / 0.6); }
 dialog[open] { animation: scale-in var(--dur-std) var(--ease-out); }
 
-/* Space so content clears the floating mobile tab bar and the home indicator. */
-.pb-tabbar { padding-bottom: calc(var(--tabbar-h) + 28px + env(safe-area-inset-bottom)); }
-@media (min-width: 640px) { .pb-tabbar { padding-bottom: 3rem; } }
+/* Content clears the phone dock and the home indicator. */
+.pb-tabbar { padding-bottom: calc(var(--dock-h) + 20px + env(safe-area-inset-bottom)); }
+@media (min-width: 1024px) { .pb-tabbar { padding-bottom: 4rem; } }
 
-@keyframes roll-in-up { from { transform: translateY(100%); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes roll-out-up { from { transform: none; opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
-@keyframes roll-in-down { from { transform: translateY(-100%); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes roll-out-down { from { transform: none; opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
-
-/* Phone chrome: the app bar slides away while reading and returns on scroll up. */
+/* Sticky sub-bars sit under the sticky dial + wire. */
+:root { --sub-top: calc(var(--dial-h) + var(--wire-h)); }
+.sticky-sub { position: sticky; top: var(--sub-top); }
 .appbar { transition: transform var(--dur-emph) var(--ease-out); }
-@media (max-width: 639px) {
-  [data-chrome="hidden"] .appbar { transform: translateY(-100%); }
-  :root { --sub-top: calc(var(--header-h) + env(safe-area-inset-top)); }
-  [data-chrome="hidden"] { --sub-top: 0px; }
-}
-@media (min-width: 640px) { :root { --sub-top: 0px; } }
-.sticky-sub { position: sticky; top: var(--sub-top); transition: top var(--dur-emph) var(--ease-out); }

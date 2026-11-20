@@ -1,3 +1,4 @@
+import { Frame } from "@/components/ui/Frame";
 import { APP_NAME, COMPANY } from "@/config";
 import { PageHeader } from "@/components/PageHeader";
 import { Kicker } from "@/components/ui/Badge";
@@ -5,7 +6,7 @@ import { Kicker } from "@/components/ui/Badge";
 /** Shared wrapper for legal pages. Every page carries the lawyer-review warning. */
 export function LegalPage({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
   return (
-    <>
+    <Frame>
       <PageHeader title={title} kicker={<Kicker tone="muted">Legal</Kicker>} back />
       <div className="px-4 pb-10 sm:px-6">
         <div role="note" className="mb-6 rounded-[var(--r-lg)] bg-warning-bg p-4 text-[14px] ring-1 ring-warning/40">
@@ -17,6 +18,6 @@ export function LegalPage({ title, updated, children }: { title: string; updated
           {children}
         </div>
       </div>
-    </>
+    </Frame>
   );
 }

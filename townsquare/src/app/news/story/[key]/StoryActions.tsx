@@ -1,36 +1,27 @@
 "use client";
 
 import { useComposer, useToast } from "@/components/providers";
-import { ShareIcon } from "@/components/icons";
+import { ShareIcon, TakeIcon } from "@/components/icons";
 
-export function StoryActions({ tag, title }: { tag: string | null; title: string }) {
+export function StoryActions({ storyKey, title }: { storyKey: string; title: string }) {
   const openComposer = useComposer();
   const toast = useToast();
   return (
-    <div className="mt-5 flex flex-wrap gap-2">
-      {tag && (
-        <button type="button" onClick={() => openComposer({ prefill: `#${tag}` })} className="btn !min-h-10 bg-white !px-4 !text-[14px] text-[#0f1420] hover:bg-white/90">
-          Join the conversation
-        </button>
-      )}
+    <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+      <button type="button" onClick={() => openComposer({ storyKey })} className="btn-primary"><TakeIcon size={16} /> Take it</button>
       <button
         type="button"
+        aria-label="Share story"
         onClick={async () => {
-          const url = location.href;
           if (navigator.share) {
-            try {
-              await navigator.share({ url, title });
-              return;
-            } catch {
-              /* cancelled */
-            }
+            try { await navigator.share({ url: location.href, title }); return; } catch { /* cancelled */ }
           }
-          await navigator.clipboard?.writeText(url);
+          await navigator.clipboard?.writeText(location.href);
           toast("Link copied");
         }}
-        className="btn !min-h-10 bg-white/12 !px-4 !text-[14px] text-white ring-1 ring-white/25 backdrop-blur hover:bg-white/20"
+        className="btn-outline !px-3"
       >
-        <ShareIcon size={16} /> Share
+        <ShareIcon size={17} />
       </button>
     </div>
   );

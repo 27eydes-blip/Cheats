@@ -5,8 +5,8 @@ import { BackIcon } from "./icons";
 import { SegmentedTabs, type TabItem } from "./ui/SegmentedTabs";
 
 /**
- * Editorial page header: a large display-serif title that scrolls away, and
- * an optional sticky glass sub-bar (tabs or chips) that stays under the app bar.
+ * Editorial page header: a folio, a serif title, a dek, and the double rule.
+ * Optional children render as a sticky sub-bar (tabs, chips) under the dial.
  */
 export function PageHeader({
   title, subtitle, kicker, back, actions, children, compact,
@@ -14,30 +14,29 @@ export function PageHeader({
   const router = useRouter();
   return (
     <>
-      <div className={`flex items-end gap-3 px-4 sm:px-6 ${compact ? "pt-3 pb-2" : "pt-5 pb-3 sm:pt-7"}`}>
+      <div className={`px-4 sm:px-6 ${compact ? "pt-4 pb-3" : "pt-6 pb-0 lg:pt-10"}`}>
         {back && (
-          <button
-            type="button"
-            onClick={() => (history.length > 1 ? router.back() : router.push("/"))}
-            className="-ml-2 mb-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center self-center rounded-full text-ink-1 transition-colors hover:bg-surface-2"
-            aria-label="Back"
-          >
-            <BackIcon size={22} />
+          <button type="button" onClick={() => (history.length > 1 ? router.back() : router.push("/"))} className="folio mb-2 inline-flex items-center gap-1 !text-[10.5px] text-ink-3 hover:text-navy-ink" aria-label="Back">
+            <BackIcon size={14} /> Back
           </button>
         )}
-        <div className="min-w-0 flex-1">
-          {kicker && <div className="mb-1">{kicker}</div>}
-          <h1 className={`truncate font-display font-semibold ${compact ? "text-h2" : "text-h1"}`}>{title}</h1>
-          {subtitle && <p className="mt-0.5 truncate text-[14px] text-ink-3">{subtitle}</p>}
+        {kicker && <div className="mb-1.5">{kicker}</div>}
+        <div className="flex items-end gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className={`font-display font-semibold ${compact ? "text-h1" : "text-display"}`}>{title}</h1>
+            {subtitle && <p className="mt-1.5 text-[15px] text-ink-2">{subtitle}</p>}
+          </div>
+          {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
         </div>
-        {actions && <div className="flex shrink-0 items-center gap-2 self-center">{actions}</div>}
+        {!compact && <div aria-hidden="true" className="double-rule mt-4" />}
+        {compact && <div aria-hidden="true" className="mt-3 border-t-2 border-navy-ink" />}
       </div>
-      {children && <div className="sticky-sub glass z-20 border-b border-line">{children}</div>}
+      {children && <div className="sticky-sub z-20 mt-1 border-b border-rule bg-paper">{children}</div>}
     </>
   );
 }
 
-/** Back-compat wrapper: the old Tabs API, now with the sliding indicator. */
+/** Back-compat wrapper: link tabs with the gold sliding indicator. */
 export function Tabs({ tabs, active }: { tabs: TabItem[]; active: string }) {
   return <SegmentedTabs tabs={tabs} active={active} className="px-2 sm:px-4" />;
 }

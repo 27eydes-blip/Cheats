@@ -1,7 +1,7 @@
 import { useId } from "react";
 
 /** Tiny trend line with a soft area fill. Pure SVG; values are drawn left (old) to right (new). */
-export function Sparkline({ values, width = 72, height = 24, color = "var(--accent)", label }: { values: number[]; width?: number; height?: number; color?: string; label?: string }) {
+export function Sparkline({ values, width = 72, height = 24, color = "var(--navy-ink)", label }: { values: number[]; width?: number; height?: number; color?: string; label?: string }) {
   const max = Math.max(1, ...values);
   const step = values.length > 1 ? width / (values.length - 1) : width;
   const pts = values.map((v, i) => [i * step, height - 2 - (v / max) * (height - 4)] as const);

@@ -7,6 +7,10 @@ import { charCount, cleanText, extractHashtags, extractLinks, extractMentions } 
 import { assertCanAct, mediaUrl, toMini, userById, type UserMini, type UserRow } from "./users";
 import { pollSchema } from "./validate";
 import { notify } from "./notifications";
+import { EMPTY_SPLIT, splits, type Split } from "./stance";
+
+export const TAKE_STANCES = ["agree", "disagree", "context", "question"] as const;
+export type TakeStance = (typeof TAKE_STANCES)[number];
 
 export type PollView = {
   id: string;
@@ -32,6 +36,11 @@ export type PostView = {
   poll: PollView | null;
   quote: PostView | null;
   counts: { likes: number; replies: number; reposts: number; quotes: number };
+  /** The stance the author took when posting (Takes on a Story). */
+  stance: TakeStance | null;
+  story: { key: string; title: string } | null;
+  /** Readers' agree / disagree / unsure split on this Take. */
+  split: Split;
   viewer: { liked: boolean; reposted: boolean; bookmarked: boolean; isAuthor: boolean; canEdit: boolean };
 };
 
@@ -56,6 +65,8 @@ type PostRow = {
   edited_at: number | null;
   deleted_at: number | null;
   removed_at: number | null;
+  stance: TakeStance | null;
+  story_key: string | null;
   // joined author columns
   a_handle: string;
   a_display_name: string;
@@ -124,6 +135,13 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
 
   const t = now();
   const live = liveHostIds();
+  const split = splits("post", uniq, viewerId);
+  const storyKeys = [...new Set(rows.flatMap((r) => (r.story_key ? [r.story_key] : [])))];
+  const storyTitles = new Map(
+    storyKeys.length
+      ? all<{ key: string; title: string }>(`SELECT key, title FROM stories WHERE key IN (${placeholders(storyKeys.length)})`, storyKeys).map((r) => [r.key, r.title])
+      : [],
+  );
   const out: PostView[] = [];
   for (const id of ids) {
     const r = byId.get(id);
@@ -155,6 +173,9 @@ export function hydrate(ids: string[], viewerId: string | null, depth = 0): Post
           : null,
       quote: !gone && r.quote_of_id ? (quotes.get(r.quote_of_id) ?? null) : null,
       counts: { likes: r.like_count, replies: r.reply_count, reposts: r.repost_count, quotes: r.quote_count },
+      stance: r.stance,
+      story: r.story_key && storyTitles.has(r.story_key) ? { key: r.story_key, title: storyTitles.get(r.story_key)! } : null,
+      split: split.get(r.id) ?? { ...EMPTY_SPLIT },
       viewer: {
         liked: liked.has(r.id),
         reposted: reposted.has(r.id),
@@ -190,6 +211,9 @@ export type NewPost = {
   alts?: string[];
   poll?: { options: string[]; durationHours: number } | null;
   communityId?: string | null;
+  /** Attach the Take to a Story. */
+  storyKey?: string | null;
+  stance?: TakeStance | null;
 };
 
 function linkCard(body: string) {
@@ -231,6 +255,12 @@ export function createPost(author: UserRow, input: NewPost): string {
   rateLimit("post", author.id);
 
   const parent = input.replyToId ? visibleTarget(input.replyToId, author.id) : null;
+  const stance = input.stance ?? null;
+  if (stance && !(TAKE_STANCES as readonly string[]).includes(stance)) throw new AppError("Pick a stance: agree, disagree, context, or question.");
+  // Answers inherit their parent's Story; a new Take on a Story needs a stance.
+  const storyKey = parent ? (get<{ story_key: string | null }>("SELECT story_key FROM posts WHERE id = ?", [parent.id])?.story_key ?? null) : (input.storyKey ?? null);
+  if (storyKey && !parent && !get("SELECT 1 FROM stories WHERE key = ?", [storyKey])) throw new AppError("That story doesn't exist.");
+  if (storyKey && !stance && !parent) throw new AppError("Pick a stance for your take.");
   const quoted = input.quoteOfId ? visibleTarget(input.quoteOfId, author.id) : null;
   const link = mediaIds.length || poll ? null : linkCard(body);
   // Replies inherit the community of their parent; new community posts require membership.
@@ -245,9 +275,9 @@ export function createPost(author: UserRow, input: NewPost): string {
   const t = now();
   tx(() => {
     run(
-      `INSERT INTO posts (id, author_id, body, reply_to_id, root_id, quote_of_id, community_id, link_url, link_title, link_domain, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, author.id, body, parent?.id ?? null, parent ? (parent.root_id ?? parent.id) : null, quoted?.id ?? null, communityId, link?.url ?? null, link?.title ?? null, link?.domain ?? null, t],
+      `INSERT INTO posts (id, author_id, body, reply_to_id, root_id, quote_of_id, community_id, link_url, link_title, link_domain, stance, story_key, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, author.id, body, parent?.id ?? null, parent ? (parent.root_id ?? parent.id) : null, quoted?.id ?? null, communityId, link?.url ?? null, link?.title ?? null, link?.domain ?? null, stance, storyKey, t],
     );
     mediaIds.forEach((mid, i) => {
       const res = run("UPDATE media SET post_id = ?, position = ?, alt = ? WHERE id = ? AND owner_id = ? AND post_id IS NULL AND kind = 'image'", [

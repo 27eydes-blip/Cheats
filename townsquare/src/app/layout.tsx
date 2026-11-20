@@ -2,22 +2,24 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { APP_NAME, TAGLINE } from "@/config";
 import { getBanner } from "@/lib/moderation";
-import { liveEvents, tickerStories } from "@/lib/news";
+import { liveEvents, listStories } from "@/lib/news";
+import { all } from "@/lib/db";
 import { unreadCount } from "@/lib/notifications";
 import { getViewer } from "@/lib/session";
 import { mediaUrl } from "@/lib/users";
+import { Suspense } from "react";
 import { Providers } from "@/components/providers";
 import { RegisterSW } from "@/components/RegisterSW";
-import { RightRail } from "@/components/RightRail";
-import { TabBar, TopBar } from "@/components/shell/MobileChrome";
-import { SideNav } from "@/components/shell/SideNav";
-import { Ticker, type TickerItem } from "@/components/shell/Ticker";
-import { inter, newsreader } from "./fonts";
+import { ChannelDial } from "@/components/shell/ChannelDial";
+import { Dock } from "@/components/shell/Dock";
+import { LiveWire, type WireItem } from "@/components/shell/LiveWire";
+import { Masthead } from "@/components/shell/Masthead";
+import { inter, mono, newsreader } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: { default: `${APP_NAME} — ${TAGLINE}`, template: `%s · ${APP_NAME}` },
-  description: "Follow people, join communities, and get live news in one feed you control.",
+  description: "The national front page where every story has a split. Take a side, read the takes, settle the debate.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -39,8 +41,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f5f1" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0e14" },
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#070c18" },
   ],
 };
 
@@ -54,10 +56,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const unread = viewer ? unreadCount(viewer.id) : 0;
   const liveCount = liveEvents().filter((e) => e.isLive).length;
   const banner = getBanner();
-  const stories = tickerStories();
-  const ticker: TickerItem[] = [
-    ...(banner ? [{ text: banner.text, href: banner.url }] : []),
-    ...stories.filter((s) => !banner?.url?.endsWith(`/${s.key}`)).map((s) => ({ text: `${s.status === "live" ? "LIVE · " : ""}${s.title}`, href: `/news/story/${s.key}` })),
+  // Live Wire: the admin's breaking item first, then the latest key updates from live stories.
+  const live = listStories(8).filter((x) => x.status === "live");
+  const updates = live.length
+    ? all<{ body: string; story_key: string; created_at: number }>(
+        `SELECT body, story_key, created_at FROM story_updates WHERE story_key IN (${live.map(() => "?").join(",")}) ORDER BY created_at DESC LIMIT 6`,
+        live.map((x) => x.key),
+      )
+    : [];
+  const wire: WireItem[] = [
+    ...(banner ? [{ text: banner.text, href: banner.url, at: banner.setAt, label: banner.level === "info" ? "Update" : banner.level === "alert" ? "Alert" : "Breaking" }] : []),
+    ...updates.map((u) => ({ text: u.body, href: `/news/story/${u.story_key}`, at: u.created_at, label: live.find((x) => x.key === u.story_key)?.section ?? "Live" })),
   ];
   const clientViewer = viewer
     ? { id: viewer.id, handle: viewer.handle, displayName: viewer.display_name, avatarUrl: mediaUrl(viewer.avatar_media_id), isAdmin: viewer.role === "admin", suspended: viewer.status === "suspended" }
@@ -66,7 +75,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${newsreader.variable} ${theme === "dark" ? "dark" : ""}`}
+      className={`${inter.variable} ${newsreader.variable} ${mono.variable} ${theme === "dark" ? "dark" : ""}`}
       style={textSize === "large" ? { fontSize: "112.5%" } : undefined}
       suppressHydrationWarning
     >
@@ -74,33 +83,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="font-sans antialiased">
-        <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-white">
+        <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-[4px] focus:bg-navy focus:px-4 focus:py-2 focus:text-white">
           Skip to content
         </a>
         <Providers viewer={clientViewer}>
-          {ticker.length > 0 && <Ticker label={banner?.level === "info" ? "UPDATE" : banner?.level === "alert" ? "ALERT" : "BREAKING"} items={ticker} />}
-          <TopBar unread={unread} />
-          <div className="mx-auto flex max-w-[1340px] justify-center sm:px-2 lg:px-4">
-            <div className="hidden w-[76px] shrink-0 sm:block xl:w-[256px]">
-              <SideNav unread={unread} liveCount={liveCount} />
-            </div>
-            <main
-              id="main"
-              className="pb-tabbar relative min-h-[100dvh] w-full max-w-[680px] min-w-0 bg-surface sm:border-x sm:border-line sm:shadow-1"
-              style={{ ["--avatar-gap" as string]: "var(--surface)" }}
-            >
-              {viewer?.status === "suspended" && (
-                <p className="border-b border-line bg-danger-soft px-4 py-2.5 text-[14px] font-medium text-danger sm:px-6">
-                  Your account is suspended{viewer.suspended_until ? ` until ${new Date(viewer.suspended_until).toLocaleDateString()}` : ""}. You can read, but not post or interact.
-                </p>
-              )}
-              {children}
-            </main>
-            <div className="hidden w-[340px] shrink-0 lg:block xl:w-[360px]">
-              <RightRail viewerId={viewer?.id ?? null} />
-            </div>
+          <Masthead unread={unread} />
+          <div className="sticky top-0 z-30 shadow-[0_1px_0_var(--rule)]">
+            <Suspense fallback={<div className="h-[var(--dial-h)] border-b border-rule bg-paper" />}>
+              <ChannelDial liveCount={liveCount} />
+            </Suspense>
+            <LiveWire items={wire} />
           </div>
-          <TabBar liveCount={liveCount} />
+          <main id="main" className="pb-tabbar relative min-h-[70dvh]" style={{ ["--avatar-gap" as string]: "var(--paper)" }}>
+            {viewer?.status === "suspended" && (
+              <p className="border-b border-rule bg-danger-soft px-4 py-2.5 text-center text-[14px] font-medium text-disagree">
+                Your account is suspended{viewer.suspended_until ? ` until ${new Date(viewer.suspended_until).toLocaleDateString()}` : ""}. You can read, but not take part.
+              </p>
+            )}
+            {children}
+          </main>
+          <Dock liveCount={liveCount} />
           <RegisterSW />
         </Providers>
       </body>

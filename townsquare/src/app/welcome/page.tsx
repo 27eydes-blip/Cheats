@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireViewerPage } from "@/lib/session";
-import { whoToFollow } from "@/lib/social";
+import { voices } from "@/lib/takes";
 import { INTERESTS } from "@/lib/users";
 import { Onboarding } from "./Onboarding";
 
@@ -16,7 +16,7 @@ export default async function Welcome({ searchParams }: { searchParams: Promise<
       interests={[...INTERESTS]}
       initialInterests={JSON.parse(viewer.interests || "[]")}
       initialTown={viewer.town ?? ""}
-      people={whoToFollow(viewer.id, 6)}
+      people={voices(viewer.id, 6)}
     />
   );
 }

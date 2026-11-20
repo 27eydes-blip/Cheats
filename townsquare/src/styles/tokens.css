@@ -1,109 +1,138 @@
 /*
- * Townsquare design tokens — the single source of truth for color, type,
- * radius, shadow, glass, and motion. Mirrored in src/design/tokens.ts.
- * Every text/background pair below meets WCAG AA (checked in DESIGN.md).
+ * Townsquare design tokens: "The Front Page", national edition.
+ * Navy, gold, and white dominate; red is reserved for LIVE / BREAKING.
+ * Every text/background pair meets WCAG AA (see DESIGN.md).
+ * Older names (--canvas, --accent, …) are kept as aliases so every screen
+ * reads from the same palette.
  */
 :root,
 .light {
-  /* Ink (text) */
-  --ink-1: #0f1420;
-  --ink-2: #3c4352;
-  --ink-3: #5d6575;
-  /* Surfaces: warm off-white canvas, white cards */
-  --canvas: #f6f5f1;
-  --surface: #ffffff;
-  --surface-2: #efeee9;
-  --surface-3: #e5e3dc;
-  --line: rgb(15 20 32 / 0.09);
-  --line-strong: rgb(15 20 32 / 0.16);
-  /* Signature accent: electric blue → indigo */
-  --accent: #3043d6;
-  --accent-2: #5b2ee8;
-  --accent-grad: linear-gradient(135deg, #2563eb 0%, #4338e6 55%, #5b2ee8 100%);
-  --accent-soft: rgb(48 67 214 / 0.09);
-  --accent-ring: rgb(48 67 214 / 0.35);
-  --on-accent: #ffffff;
-  /* Signals */
-  --breaking: #d0182b;
-  --live: #e11d2e;
-  --success: #0a7a46;
-  --warning: #9a5b00;
-  --warning-bg: #fff4dc;
-  --danger: #c4182b;
-  --danger-soft: rgb(196 24 43 / 0.08);
-  /* Ticker (always a dark broadcast bar) */
-  --ticker-bg: #0f1420;
-  --ticker-fg: #f3f5f9;
-  /* Glass */
-  --glass: rgb(246 245 241 / 0.78);
-  --glass-strong: rgb(255 255 255 / 0.86);
-  /* Shadows: soft, layered */
-  --shadow-1: 0 1px 0 rgb(15 20 32 / 0.04), 0 1px 2px rgb(15 20 32 / 0.05);
-  --shadow-2: 0 1px 2px rgb(15 20 32 / 0.05), 0 4px 12px rgb(15 20 32 / 0.06), 0 12px 32px rgb(15 20 32 / 0.05);
-  --shadow-3: 0 2px 6px rgb(15 20 32 / 0.08), 0 16px 48px rgb(15 20 32 / 0.16);
-  --glow: 0 0 0 1px rgb(48 67 214 / 0.18), 0 6px 20px rgb(67 56 230 / 0.28);
+  --paper: #ffffff;
+  --paper-2: #f5f6f9;
+  --paper-3: #ebeef4;
+  --ink-1: #0a1630;
+  --ink-2: #3a4560;
+  --ink-3: #5d6780;
+  --rule: rgb(11 31 75 / 0.12);
+  --rule-strong: rgb(11 31 75 / 0.24);
+  --navy: #0b1f4b;
+  --navy-2: #1a3570;
+  --navy-ink: #0b1f4b;
+  --navy-soft: rgb(11 31 75 / 0.06);
+  --gold: #c8a24a;
+  --gold-ink: #7c5f14;
+  --gold-soft: rgb(200 162 74 / 0.14);
+  --live: #c8102e;
+  --live-bg: #c8102e;
+  --agree: #0f6b4f;
+  --disagree: #a3242f;
+  --unsure: #a7b0c2;
+  --on-navy: #ffffff;
+  --on-signal: #ffffff;
+  --masthead: #ffffff;
+  --wire-bg: #0b1f4b;
+  --wire-fg: #ffffff;
+  --grain-opacity: 0.035;
 
-  /* Radius */
-  --r-xs: 6px;
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 20px;
-  --r-xl: 28px;
+  /* aliases used across components */
+  --canvas: var(--paper);
+  --surface: var(--paper);
+  --surface-2: var(--paper-2);
+  --surface-3: var(--paper-3);
+  --line: var(--rule);
+  --line-strong: var(--rule-strong);
+  --accent: var(--navy-ink);
+  --accent-2: var(--navy-2);
+  --accent-grad: linear-gradient(0deg, var(--navy), var(--navy));
+  --accent-soft: var(--navy-soft);
+  --accent-ring: rgb(11 31 75 / 0.3);
+  --on-accent: var(--on-navy);
+  --breaking: var(--live-bg);
+  --success: var(--agree);
+  --warning: #8a5a00;
+  --warning-bg: #fff5df;
+  --danger: var(--disagree);
+  --danger-soft: rgb(163 36 47 / 0.08);
+  --ticker-bg: var(--wire-bg);
+  --ticker-fg: var(--wire-fg);
+  --glass: rgb(255 255 255 / 0.9);
+  --glass-strong: rgb(255 255 255 / 0.94);
+
+  /* depth: flat paper; shadows only for floating layers */
+  --shadow-1: 0 1px 0 rgb(11 31 75 / 0.06);
+  --shadow-2: 0 2px 4px rgb(11 31 75 / 0.06), 0 8px 24px rgb(11 31 75 / 0.08);
+  --shadow-3: 0 4px 10px rgb(11 31 75 / 0.12), 0 24px 56px rgb(11 31 75 / 0.18);
+  --glow: 0 0 0 1px var(--gold), 0 6px 18px rgb(200 162 74 / 0.35);
+
+  /* shape: square-ish */
+  --r-xs: 2px;
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+  --r-xl: 8px;
   --r-pill: 999px;
 
-  /* Type */
+  /* type */
   --font-ui: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
-  --fs-display: clamp(2.125rem, 1.4rem + 3.2vw, 3.5rem);
-  --fs-h1: clamp(1.625rem, 1.3rem + 1.4vw, 2.25rem);
-  --fs-h2: clamp(1.3125rem, 1.2rem + 0.5vw, 1.625rem);
-  --fs-h3: clamp(1.125rem, 1.08rem + 0.2vw, 1.25rem);
+  --font-mono: var(--font-mono-face), ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --fs-mega: clamp(2.4rem, 1.5rem + 3.6vw, 4.4rem);
+  --fs-display: clamp(2.1rem, 1.4rem + 2.8vw, 3.5rem);
+  --fs-h1: clamp(1.75rem, 1.35rem + 1.5vw, 2.5rem);
+  --fs-h2: clamp(1.35rem, 1.2rem + 0.6vw, 1.75rem);
+  --fs-h3: clamp(1.125rem, 1.08rem + 0.2vw, 1.3rem);
   --fs-body: clamp(0.96875rem, 0.95rem + 0.1vw, 1rem);
   --fs-small: 0.8125rem;
-  --fs-micro: 0.71875rem;
-  --track-tight: -0.022em;
+  --fs-micro: 0.6875rem;
+  --track-tight: -0.025em;
 
-  /* Motion */
+  /* motion */
   --dur-micro: 120ms;
   --dur-std: 220ms;
   --dur-emph: 380ms;
   --ease-spring: cubic-bezier(0.2, 0.9, 0.25, 1.15);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* Layout */
-  --tabbar-h: 64px;
-  --header-h: 56px;
-  --ticker-h: 36px;
+  /* layout */
+  --dock-h: 62px;
+  --tabbar-h: 62px;
+  --header-h: 52px;
+  --dial-h: 46px;
+  --wire-h: 34px;
+  --ticker-h: 34px;
   color-scheme: light;
 }
 
 .dark {
-  --ink-1: #eef1f6;
-  --ink-2: #b7bfcc;
-  --ink-3: #8b95a7;
-  --canvas: #0b0e14;
-  --surface: #121823;
-  --surface-2: #1a2130;
-  --surface-3: #232b3c;
-  --line: rgb(226 232 245 / 0.08);
-  --line-strong: rgb(226 232 245 / 0.15);
-  --accent: #8aa4ff;
-  --accent-2: #a98bff;
-  --accent-soft: rgb(138 164 255 / 0.12);
-  --accent-ring: rgb(138 164 255 / 0.45);
-  --breaking: #d0182b;
-  --live: #ff3b4a;
-  --success: #4ade80;
-  --warning: #fbbf24;
-  --warning-bg: rgb(251 191 36 / 0.1);
-  --danger: #ff7a85;
+  --paper: #070c18;
+  --paper-2: #0c1426;
+  --paper-3: #13203a;
+  --ink-1: #f4f6fb;
+  --ink-2: #c3cadb;
+  --ink-3: #8c97ae;
+  --rule: rgb(196 210 240 / 0.12);
+  --rule-strong: rgb(196 210 240 / 0.22);
+  --navy-ink: #9db4e8;
+  --navy-soft: rgb(157 180 232 / 0.1);
+  --gold: #d9b65e;
+  --gold-ink: #e2c677;
+  --gold-soft: rgb(217 182 94 / 0.14);
+  --live: #ff4d5e;
+  --agree: #4fd1a1;
+  --disagree: #ff7a85;
+  --unsure: #3a4a6a;
+  --masthead: #070c18;
+  --on-signal: #070c18;
+  --wire-bg: #0b1f4b;
+  --grain-opacity: 0.05;
+  --accent-ring: rgb(157 180 232 / 0.4);
+  --warning: #f2c14e;
+  --warning-bg: rgb(242 193 78 / 0.1);
   --danger-soft: rgb(255 122 133 / 0.1);
-  --ticker-bg: #05070b;
-  --glass: rgb(11 14 20 / 0.72);
-  --glass-strong: rgb(18 24 35 / 0.82);
+  --glass: rgb(7 12 24 / 0.88);
+  --glass-strong: rgb(12 20 38 / 0.92);
   --shadow-1: 0 1px 0 rgb(0 0 0 / 0.4);
-  --shadow-2: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
-  --shadow-3: 0 4px 12px rgb(0 0 0 / 0.5), 0 24px 64px rgb(0 0 0 / 0.55);
-  --glow: 0 0 0 1px rgb(138 164 255 / 0.25), 0 8px 28px rgb(91 46 232 / 0.4);
+  --shadow-2: 0 2px 6px rgb(0 0 0 / 0.4), 0 10px 28px rgb(0 0 0 / 0.4);
+  --shadow-3: 0 4px 12px rgb(0 0 0 / 0.5), 0 24px 64px rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }

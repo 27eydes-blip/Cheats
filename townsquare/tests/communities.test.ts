@@ -75,3 +75,25 @@ describe("onboarding, stories, live", () => {
     expect(ev.find((e) => e.id === "e2")!.isLive).toBe(false);
   });
 });
+
+describe("desk editors", () => {
+  it("only editors (or admins) can pin a story and remove desk posts", async () => {
+    const cid = community("desk");
+    const t = now();
+    run("INSERT INTO stories (key, title, section, status, created_at, updated_at) VALUES ('s', 'S', 'Politics', 'live', ?, ?)", [t, t]);
+    const { isEditor, setPinnedStory, editorRemove, pinnedStoryKey } = await import("@/lib/communities");
+    const member = await makeUser();
+    const editor = await makeUser();
+    setMembership(member, cid, true);
+    setMembership(editor, cid, true);
+    run("UPDATE memberships SET role = 'moderator' WHERE user_id = ?", [editor.id]);
+    expect(isEditor(member, cid)).toBe(false);
+    expect(() => setPinnedStory(member, cid, "s")).toThrow("editors");
+    setPinnedStory(editor, cid, "s");
+    expect(pinnedStoryKey(cid)).toBe("s");
+    const id = createPost(member, { body: "off-topic thread", communityId: cid });
+    expect(() => editorRemove(member, id)).toThrow("editors");
+    editorRemove(editor, id);
+    expect(communityPosts(cid, "new", null)).toHaveLength(0);
+  });
+});

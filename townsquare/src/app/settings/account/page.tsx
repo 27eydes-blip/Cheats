@@ -1,3 +1,4 @@
+import { Frame } from "@/components/ui/Frame";
 import { requireViewerPage } from "@/lib/session";
 import { PageHeader } from "@/components/PageHeader";
 import { AccountForm, DeleteForm, PasswordForm } from "../forms";
@@ -7,7 +8,7 @@ export const metadata = { title: "Account" };
 export default async function Page() {
   const u = await requireViewerPage("/settings/account");
   return (
-    <>
+    <Frame>
       <PageHeader title="Account" back compact />
       <AccountForm handle={u.handle} email={u.email} hideFollows={!!u.hide_follows} />
       <div className="border-t border-line"><PasswordForm hasPassword={!!u.password_hash} /></div>
@@ -18,6 +19,6 @@ export default async function Page() {
         </p>
       </div>
       <div className="border-t border-line"><DeleteForm hasPassword={!!u.password_hash} /></div>
-    </>
+    </Frame>
   );
 }

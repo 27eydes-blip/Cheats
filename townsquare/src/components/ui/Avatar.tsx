@@ -51,40 +51,37 @@ export function AvatarArt({ handle, size }: { handle: string; size: number }) {
   );
 }
 
-export function Avatar({ url, name, handle, size = 44, live, ring = size >= 30, className = "" }: Props) {
-  const { h1, h2 } = palette(handle);
-  const pad = ring ? Math.max(2, Math.round(size / 24)) : 0;
-  const inner = size - pad * 4;
+const RING = { agree: "var(--agree)", disagree: "var(--disagree)", context: "var(--gold)", question: "var(--navy-ink)", unsure: "var(--unsure)" } as const;
+
+/**
+ * Byline portrait: square-rounded (not a circle), with an optional ring in the
+ * color of the stance the person took. Live hosts get a pulsing red ring.
+ */
+export function Avatar({ url, name, handle, size = 44, live, ring, stance, className = "" }: Props & { stance?: keyof typeof RING | null }) {
+  const radius = Math.max(4, Math.round(size * 0.2));
+  const color = live ? "var(--live)" : stance ? RING[stance] : null;
   const content = url ? (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={url} alt="" width={inner} height={inner} loading="lazy" decoding="async" className="block h-full w-full object-cover" />
+    <img src={url} alt="" width={size} height={size} loading="lazy" decoding="async" className="block h-full w-full object-cover" />
   ) : (
-    <AvatarArt handle={handle} size={ring ? inner : size} />
+    <AvatarArt handle={handle} size={size} />
   );
-  if (!ring && !live) {
-    return (
-      <span className={`inline-block shrink-0 overflow-hidden rounded-full bg-surface-2 ${className}`} style={{ width: size, height: size }} title={name}>
-        {content}
-      </span>
-    );
-  }
+  void ring;
   return (
     <span
-      className={`relative inline-flex shrink-0 rounded-full ${className}`}
-      style={{
-        width: size,
-        height: size,
-        padding: pad,
-        background: live ? "var(--live)" : `linear-gradient(140deg, hsl(${h1} 85% 60%), hsl(${h2} 80% 50%))`,
-      }}
+      className={`relative inline-block shrink-0 ${className}`}
+      style={{ width: size, height: size }}
       title={live ? `${name} is live` : name}
     >
-      {live && <span aria-hidden="true" className="absolute inset-0 animate-[live-ring_1.6s_ease-in-out_infinite] rounded-full ring-2 ring-live" />}
-      <span className="block h-full w-full rounded-full" style={{ padding: pad, background: "var(--avatar-gap, var(--canvas))" }}>
-        <span className="block h-full w-full overflow-hidden rounded-full bg-surface-2">{content}</span>
+      <span
+        className="block h-full w-full overflow-hidden bg-paper-2"
+        style={{ borderRadius: radius, boxShadow: color ? `0 0 0 2px var(--avatar-gap, var(--paper)), 0 0 0 ${size >= 40 ? 3.5 : 3}px ${color}` : "inset 0 0 0 1px var(--rule)" }}
+      >
+        {content}
       </span>
+      {live && <span aria-hidden="true" className="absolute inset-[-4px] animate-[live-ring_1.6s_ease-in-out_infinite]" style={{ borderRadius: radius + 4, boxShadow: "0 0 0 2px var(--live)" }} />}
       {live && size >= 40 && (
-        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-[4px] bg-live px-1 text-[9px] leading-[14px] font-black tracking-wider text-white ring-2 ring-canvas">LIVE</span>
+        <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-[2px] bg-live-bg px-1 text-[8.5px] leading-[13px] font-black tracking-[0.12em] text-white">ON AIR</span>
       )}
     </span>
   );

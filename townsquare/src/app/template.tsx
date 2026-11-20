@@ -1,4 +1,4 @@
-/** Re-mounts on every navigation, giving each page a short fade-and-rise entrance. */
+/** Re-mounts on every navigation: a short slide like turning a page. */
 export default function Template({ children }: { children: React.ReactNode }) {
-  return <div className="animate-enter">{children}</div>;
+  return <div className="animate-page">{children}</div>;
 }

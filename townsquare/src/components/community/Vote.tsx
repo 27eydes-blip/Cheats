@@ -33,14 +33,14 @@ export function Vote({ postId, score: initial, myVote: initialVote, horizontal }
   return (
     <div
       onClick={(e) => e.stopPropagation()}
-      className={`flex shrink-0 items-center ${horizontal ? "gap-0.5 rounded-full bg-surface-2 px-1" : "flex-col gap-0 rounded-full bg-surface-2 py-1"}`}
+      className={`flex shrink-0 items-center ${horizontal ? "gap-0.5 rounded-[4px] bg-paper-2 px-1" : "flex-col gap-0 rounded-[4px] bg-paper-2 py-1"}`}
     >
       <button
         type="button"
         onClick={() => cast(1)}
         aria-pressed={vote === 1}
         aria-label="Upvote"
-        className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-all duration-150 active:scale-75 ${vote === 1 ? "bg-accent-soft text-accent" : "text-ink-3 hover:text-accent"}`}
+        className={`inline-flex h-8 w-8 items-center justify-center rounded-[3px] transition-all duration-150 active:scale-75 ${vote === 1 ? "bg-accent-soft text-accent" : "text-ink-3 hover:text-accent"}`}
       >
         <span key={vote === 1 ? bump : 0} className={vote === 1 ? "animate-pop" : ""}><VoteUpIcon size={17} filled={vote === 1} /></span>
       </button>
@@ -52,7 +52,7 @@ export function Vote({ postId, score: initial, myVote: initialVote, horizontal }
         onClick={() => cast(-1)}
         aria-pressed={vote === -1}
         aria-label="Downvote"
-        className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-all duration-150 active:scale-75 ${vote === -1 ? "bg-danger-soft text-danger" : "text-ink-3 hover:text-danger"}`}
+        className={`inline-flex h-8 w-8 items-center justify-center rounded-[3px] transition-all duration-150 active:scale-75 ${vote === -1 ? "bg-danger-soft text-danger" : "text-ink-3 hover:text-danger"}`}
       >
         <span key={vote === -1 ? bump : 0} className={vote === -1 ? "animate-pop" : ""}><VoteDownIcon size={17} filled={vote === -1} /></span>
       </button>

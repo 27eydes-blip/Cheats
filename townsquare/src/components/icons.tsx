@@ -5,7 +5,7 @@ type P = SVGProps<SVGSVGElement> & { size?: number };
 
 function Svg({ size = 22, children, ...rest }: P & { children: React.ReactNode }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...rest}>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...rest}>
       {children}
     </svg>
   );
@@ -66,5 +66,33 @@ export const KeyboardIcon = (p: P) => <Svg {...p}><rect x="2.5" y="6" width="19"
 export const LayersIcon = (p: P) => <Svg {...p}><path d="m12 3 9 5-9 5-9-5z" /><path d="m3 13 9 5 9-5" /></Svg>;
 export const FlameIcon = (p: P) => <Svg {...p}><path d="M12 22c4 0 7-2.8 7-7 0-4.5-3.5-6.5-4.5-10C11 7 9.5 9 9.5 11.5 8 10.8 7.4 9.6 7.3 8.5 5.8 10.2 5 12.3 5 15c0 4.2 3 7 7 7z" /></Svg>;
 export const ExpandIcon = (p: P) => <Svg {...p}><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" /></Svg>;
+
+/* ---- Townsquare-specific glyphs (no hearts, no retweet arrows) ---- */
+/** Amplify: a broadcast mast with signal arcs. */
+export const AmplifyIcon = (p: P) => <Svg {...p}><path d="M12 13v8M9 21h6" /><circle cx="12" cy="11" r="2" /><path d="M8.5 7.5a5 5 0 0 0 0 7M15.5 7.5a5 5 0 0 1 0 7M5.6 4.6a9 9 0 0 0 0 12.8M18.4 4.6a9 9 0 0 1 0 12.8" /></Svg>;
+/** Answer: two facing brackets, a take and its reply side by side. */
+export const AnswerIcon = (p: P) => <Svg {...p}><path d="M9 5H5v14h4M15 5h4v14h-4" /><path d="M9 10h3M12 14h3" /></Svg>;
+/** Save to Rundown: a folio with a down-arrow. */
+export const SaveIcon = ({ filled, ...p }: P & { filled?: boolean }) => <Svg {...p}><path d="M5 4h14v16H5z" fill={filled ? "currentColor" : "none"} fillOpacity={filled ? 0.18 : 0} /><path d="M12 8v7M9 12l3 3 3-3" /></Svg>;
+export const AgreeIcon = (p: P) => <Svg {...p}><rect x="4" y="4" width="16" height="16" rx="2" /><path d="m8 12.5 3 3 5-6" /></Svg>;
+export const DisagreeIcon = (p: P) => <Svg {...p}><rect x="4" y="4" width="16" height="16" rx="2" /><path d="m9 9 6 6M15 9l-6 6" /></Svg>;
+export const ContextIcon = (p: P) => <Svg {...p}><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M12 11v5M12 8h.01" /></Svg>;
+export const QuestionIcon = (p: P) => <Svg {...p}><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M9.8 9.5a2.3 2.3 0 1 1 3.2 2.1c-.6.3-1 .8-1 1.4v.5M12 16.5h.01" /></Svg>;
+/** Rundown: a lineup with times. */
+export const RundownIcon = (p: P) => <Svg {...p}><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6h1M4 12h1M4 18h1" strokeWidth={2.4} /></Svg>;
+/** Newsdesk: an in-tray. */
+export const InboxIcon = (p: P) => <Svg {...p}><path d="M4 13h4l1.5 2.5h5L16 13h4" /><path d="M4 13 6.5 5h11L20 13v6H4z" /></Svg>;
+/** Desk: a press desk with columns. */
+export const DeskIcon = (p: P) => <Svg {...p}><path d="M3 9h18M5 9v10M19 9v10M9 13h6" /><path d="M7 5h10l2 4H5z" /></Svg>;
+/** Live Studio: a broadcast monitor. */
+export const StudioIcon = (p: P) => <Svg {...p}><rect x="3" y="6" width="18" height="12" rx="1.5" /><path d="M8 3l4 3 4-3M8 21h8" /><circle cx="17.5" cy="9" r="0.8" fill="currentColor" /></Svg>;
+/** Edition: a folded newspaper (Front Page, Briefing). */
+export const EditionIcon = (p: P) => <Svg {...p}><path d="M4 5h13v14H6a2 2 0 0 1-2-2zM17 9h3v8a2 2 0 0 1-2 2" /><path d="M7 8h7M7 11h3M7 14h3M12 11h2v3h-2z" /></Svg>;
+/** Take it: a pen nib. */
+export const TakeIcon = (p: P) => <Svg {...p}><path d="M14.5 3.5 20.5 9.5 11 19l-6 1 1-6z" /><path d="M13 5l6 6M8.5 15.5l2-2" /></Svg>;
+/** The split: a balance scale. */
+export const SplitIcon = (p: P) => <Svg {...p}><path d="M12 4v16M8 20h8M5 7h14" /><path d="m5 7-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0z" /></Svg>;
+export const DownloadIcon = (p: P) => <Svg {...p}><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></Svg>;
+export const GridIcon = (p: P) => <Svg {...p}><rect x="4" y="4" width="7" height="9" /><rect x="13" y="4" width="7" height="5" /><rect x="13" y="11" width="7" height="9" /><rect x="4" y="15" width="7" height="5" /></Svg>;
 
 export { VerifiedSeal as VerifiedBadge } from "./ui/Badge";

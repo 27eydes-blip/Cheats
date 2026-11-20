@@ -1,67 +1,71 @@
 import Link from "next/link";
-import { forYouFeed, trending } from "@/lib/feed";
 import { listStories } from "@/lib/news";
 import { getViewer } from "@/lib/session";
-import { whoToFollow } from "@/lib/social";
-import { PageHeader } from "@/components/PageHeader";
-import { PostCard } from "@/components/PostCard";
-import { SearchBox } from "@/components/SearchBox";
-import { UserList } from "@/components/UserList";
-import { StoryCard } from "@/components/news/StoryCard";
-import { TrendIcon } from "@/components/icons";
+import { credibility, debates, voices } from "@/lib/takes";
+import { FollowButton } from "@/components/FollowButton";
+import { DebateCard } from "@/components/front/DebateCard";
+import { Avatar } from "@/components/ui/Avatar";
+import { Kicker, LiveBadge, VerifiedSeal } from "@/components/ui/Badge";
+import { Frame, PageTitle } from "@/components/ui/Frame";
 import { Sparkline } from "@/components/ui/Sparkline";
+import { MiniSplit } from "@/components/ui/Stance";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Explore" };
+export const metadata = { title: "Hot Stories" };
 
-export default async function Explore() {
+/** Hot Stories: ranked by take velocity, plus Voices and the hottest debates. */
+export default async function HotStoriesPage() {
   const viewer = await getViewer();
-  const top = forYouFeed(viewer?.id ?? null, null, 5).items;
-  const trends = trending(8);
-  const story = listStories(3).find((s) => s.status === "live");
+  const vid = viewer?.id ?? null;
+  const hot = listStories(12, { order: "hot", viewerId: vid });
+  const people = voices(vid, 6);
+  const fights = debates(vid, 2);
   return (
-    <>
-      <PageHeader title="Explore" subtitle="What people are talking about right now">
-        <div className="px-4 py-2.5 sm:px-6"><SearchBox /></div>
-      </PageHeader>
-      {story && <div className="px-4 pt-4 sm:px-6"><StoryCard story={story} /></div>}
-      <section aria-labelledby="trends" className="pt-5">
-        <h2 id="trends" className="px-4 pb-3 font-display text-h3 font-semibold sm:px-6">Trending topics</h2>
-        <ol className="grid grid-cols-2 gap-2.5 px-4 sm:px-6">
-          {trends.map((t, i) => {
-            let h = 0;
-            for (const c of t.tag) h = (h * 37 + c.charCodeAt(0)) % 360;
-            return (
-              <li key={t.tag}>
-                <Link
-                  href={`/search?q=${encodeURIComponent(`#${t.tag}`)}`}
-                  className="block h-full rounded-[var(--r-lg)] p-3.5 ring-1 ring-line transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-2"
-                  style={{ background: `linear-gradient(135deg, hsl(${h} 85% 60% / 0.14), hsl(${(h + 60) % 360} 85% 60% / 0.04))` }}
-                >
-                  <span className="flex items-center justify-between">
-                    <span className="num font-display text-[15px] font-semibold text-ink-3">#{i + 1}</span>
-                    {t.rising && <span className="flex items-center gap-1 text-[11.5px] font-bold text-success"><TrendIcon size={13} /> Rising</span>}
-                  </span>
-                  <span className="mt-1 block truncate text-[16px] font-semibold">#{t.tag}</span>
-                  <span className="mt-2 flex items-end justify-between gap-2">
-                    <span className="num text-[12.5px] text-ink-3">{t.posts} posts</span>
-                    <Sparkline values={t.series} width={64} height={22} color={t.rising ? "var(--success)" : "var(--accent)"} />
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
+    <Frame width="wide">
+      <PageTitle folio={<Kicker tone="gold">Ranked by take velocity</Kicker>} title="Hot Stories" dek="Where the argument is happening right now: new takes in the last six hours, the split, and the trend." />
+      <div className="grid gap-10 px-4 pt-6 sm:px-6 lg:grid-cols-12">
+        <ol className="lg:col-span-8">
+          {hot.map((s, i) => (
+            <li key={s.key} className="border-b border-rule">
+              <Link href={`/news/story/${s.key}`} className="group grid grid-cols-[44px_1fr] gap-4 py-5 sm:grid-cols-[64px_1fr_auto]">
+                <span className="font-display text-[44px] leading-none font-semibold text-gold-ink sm:text-[56px]">{i + 1}</span>
+                <span className="min-w-0">
+                  <span className="flex items-center gap-2">{s.status === "live" && <LiveBadge label="LIVE" />}<Kicker tone="muted">{s.section === "Top Stories" ? "National" : s.section}</Kicker></span>
+                  <span className="mt-1 block font-display text-[clamp(1.3rem,1.1rem+0.8vw,1.75rem)] leading-snug font-semibold group-hover:underline">{s.title}</span>
+                  <span className="mt-2 flex flex-wrap items-center gap-4"><MiniSplit split={s.split} /><span className="mono text-[11.5px] text-ink-3">{s.takes} TAKES · +{s.velocity} IN 6H</span></span>
+                </span>
+                <span className="col-start-2 sm:col-start-3"><Sparkline values={s.series} width={120} height={40} color="var(--gold)" label={`Take trend for ${s.title}`} /></span>
+              </Link>
+            </li>
+          ))}
         </ol>
-      </section>
-      <section aria-labelledby="wtf" className="mt-6 border-t border-line pt-5">
-        <h2 id="wtf" className="px-4 pb-1 font-display text-h3 font-semibold sm:px-6">Who to follow</h2>
-        <UserList users={whoToFollow(viewer?.id ?? null, 5)} />
-      </section>
-      <section aria-labelledby="popular" className="border-t border-line pt-5">
-        <h2 id="popular" className="px-4 pb-1 font-display text-h3 font-semibold sm:px-6">Popular right now</h2>
-        {top.map((i, n) => <PostCard key={i.key} post={i.post} index={n} />)}
-        <div className="p-4 sm:px-6"><Link href="/?tab=foryou" className="btn-outline w-full">See more in For You</Link></div>
-      </section>
-    </>
+        <aside className="space-y-10 lg:col-span-4">
+          <section aria-labelledby="voices" className="border-t-2 border-navy-ink pt-3">
+            <h2 id="voices" className="folio text-navy-ink">Voices</h2>
+            <ul className="divide-y divide-rule">
+              {people.map((v) => (
+                <li key={v.id} className="flex items-start gap-3 py-3">
+                  <Link href={`/u/${v.handle}`} className="flex min-w-0 flex-1 gap-3">
+                    <Avatar url={v.avatarUrl} name={v.displayName} handle={v.handle} size={42} />
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1 font-display text-[17px] font-semibold">{v.displayName}{v.verified && <VerifiedSeal size={14} />}</span>
+                      <span className="line-clamp-1 block text-[13px] text-ink-2">{v.bio}</span>
+                      <span className="mono block text-[10.5px] text-gold-ink">{credibility(v)}</span>
+                    </span>
+                  </Link>
+                  <FollowButton userId={v.id} following={v.viewerFollows} small />
+                </li>
+              ))}
+            </ul>
+          </section>
+          {fights.map((d) => (
+            <section key={d.left.id} aria-label="Debate" className="border-t-2 border-navy-ink pt-3">
+              <h2 className="folio mb-3 text-navy-ink">Hot debate</h2>
+              <DebateCard d={d} compact />
+            </section>
+          ))}
+        </aside>
+      </div>
+    </Frame>
   );
 }

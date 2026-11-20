@@ -39,7 +39,7 @@ export function JoinButton({ communityId, joined: initial, name, size = "md", on
       }}
       className={`${joined ? "btn-outline" : "btn-primary"} ${cls}`}
     >
-      {joined ? <><CheckIcon size={15} strokeWidth={2.6} /> Joined</> : <><PlusIcon size={15} strokeWidth={2.6} /> Join</>}
+      {joined ? <><CheckIcon size={15} strokeWidth={2.6} /> Joined</> : <><PlusIcon size={15} strokeWidth={2.6} /> Join the Desk</>}
     </button>
   );
 }

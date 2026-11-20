@@ -31,6 +31,9 @@ const COLUMNS: [table: string, column: string, definition: string][] = [
   ["live_events", "tag", "TEXT"],
   ["live_events", "description", "TEXT NOT NULL DEFAULT ''"],
   ["live_events", "viewers", "INTEGER NOT NULL DEFAULT 0"],
+  ["posts", "stance", "TEXT"],
+  ["posts", "story_key", "TEXT"],
+  ["communities", "pinned_story_key", "TEXT"],
 ];
 
 function migrate(db: DatabaseSync) {
@@ -38,6 +41,7 @@ function migrate(db: DatabaseSync) {
     const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
     if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${def}`);
   }
+  db.exec("CREATE INDEX IF NOT EXISTS posts_story ON posts(story_key, created_at DESC)");
 }
 
 export function db(): DatabaseSync {

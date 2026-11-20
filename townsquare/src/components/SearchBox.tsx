@@ -25,7 +25,7 @@ export function SearchBox({ initial = "", autoFocus }: { initial?: string; autoF
         autoFocus={autoFocus}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search posts, people, #topics"
-        className="input !rounded-full !bg-surface-2 !pl-11 !ring-0 focus:!bg-surface"
+        className="input !pl-11"
         enterKeyHint="search"
       />
     </form>

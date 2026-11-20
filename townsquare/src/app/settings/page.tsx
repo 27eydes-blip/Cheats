@@ -1,3 +1,4 @@
+import { Frame } from "@/components/ui/Frame";
 import Link from "next/link";
 import { requireViewerPage } from "@/lib/session";
 import { mediaUrl } from "@/lib/users";
@@ -17,7 +18,7 @@ export default async function Settings() {
     { href: "/settings/display", title: "Display", text: "Theme and text size", icon: MoonIcon },
   ];
   return (
-    <>
+    <Frame>
       <PageHeader title="Settings" />
       <div className="px-4 sm:px-6">
         <Link href={`/u/${viewer.handle}`} className="card flex items-center gap-3.5 p-4 transition-shadow hover:shadow-2">
@@ -54,6 +55,6 @@ export default async function Settings() {
           <Link href="/legal/terms" className="hover:underline">Terms</Link> · <Link href="/legal/privacy" className="hover:underline">Privacy</Link> · <Link href="/legal/guidelines" className="hover:underline">Community Guidelines</Link>
         </p>
       </div>
-    </>
+    </Frame>
   );
 }

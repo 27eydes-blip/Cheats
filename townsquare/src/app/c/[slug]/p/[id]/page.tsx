@@ -23,7 +23,7 @@ export default async function CommunityThread({ params }: { params: Promise<{ sl
   if (!c || !post || (c.visibility !== "public" && !c.joined)) notFound();
   const tree = commentTree(id, viewer?.id ?? null);
   return (
-    <>
+    <div className="mx-auto max-w-[860px]">
       <div className="flex items-center gap-2.5 border-b border-line px-4 py-2.5 sm:px-6">
         <Link href={`/c/${c.slug}`} className="-ml-2 inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-surface-2" aria-label={`Back to ${c.name}`}><BackIcon size={20} /></Link>
         <CommunityIconTile slug={c.slug} name={c.name} size={30} />
@@ -37,7 +37,7 @@ export default async function CommunityThread({ params }: { params: Promise<{ sl
             <Link href={`/u/${post.author.handle}`} className="font-semibold text-ink-2 hover:underline">{post.author.displayName}</Link>
             {post.author.verified && <VerifiedSeal size={13} />}· <Time ms={post.createdAt} />
           </div>
-          <h1 className="mt-2 font-display text-h2 leading-tight font-semibold text-balance"><RichText text={post.body} /></h1>
+          <h1 className="mt-2 font-display text-h1 leading-tight font-semibold text-balance"><RichText text={post.body} /></h1>
           <p className="num mt-3 text-[13.5px] text-ink-3">{post.counts.replies} comments</p>
         </div>
       </article>
@@ -46,6 +46,6 @@ export default async function CommunityThread({ params }: { params: Promise<{ sl
       )}
       {viewer && !c.joined && <p className="border-y border-line bg-surface-2/60 px-6 py-3 text-[14px] text-ink-3">Join {c.name} to comment.</p>}
       {tree.length === 0 ? <EmptyState art="community" title="No comments yet" body="Start the discussion." /> : <CommentTree nodes={tree} />}
-    </>
+    </div>
   );
 }

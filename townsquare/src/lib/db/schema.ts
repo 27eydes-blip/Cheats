@@ -263,6 +263,17 @@ CREATE TABLE IF NOT EXISTS community_votes (
   PRIMARY KEY (user_id, post_id)
 );
 
+-- Stance votes on Stories and Takes (replace likes in the UI). One stance per person per target.
+CREATE TABLE IF NOT EXISTS stances (
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_type TEXT NOT NULL CHECK (target_type IN ('story','post')),
+  target_id   TEXT NOT NULL,
+  value       TEXT NOT NULL CHECK (value IN ('agree','disagree','unsure')),
+  created_at  INTEGER NOT NULL,
+  PRIMARY KEY (user_id, target_type, target_id)
+);
+CREATE INDEX IF NOT EXISTS stances_target ON stances(target_type, target_id);
+
 -- Live story pages: one row per developing story, with a timeline of updates.
 CREATE TABLE IF NOT EXISTS stories (
   key        TEXT PRIMARY KEY,

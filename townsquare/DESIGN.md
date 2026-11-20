@@ -1,89 +1,120 @@
-# Townsquare design system: "Modern newsroom meets social"
+# Townsquare design system: "The Front Page" (national edition)
 
-## 1. Audit of the Stage 1 UI (before the remodel)
+## 1. Audit: what looked like Twitter/X (before this remodel)
 
-Screenshots were taken of 18 routes at 390, 768, and 1440 px, in light and dark (114 images).
-The 15 biggest problems:
+Screenshots: 20 routes × 390 / 768 / 1440 px × light / dark (120 images).
 
-1. **No identity.** Default system font, flat white, one stock blue, and an "T in a square" logo. It reads as a Twitter clone, not a news brand.
-2. **No news voice.** Headlines use the same sans as UI chrome, and nothing feels editorial. The News tab is a plain list with "DEMO HERALD" pills.
-3. **The floating + button covers content** on every phone screen: post actions, the admin "Suspend" button, and article text.
-4. **The tablet (768 px) shell is broken.** The wordmark is clipped ("Towr") and collides with the page title, and the icon rail has no labels or active state.
-5. **Initials-in-a-circle avatars** with random flat colors look unfinished, and on the profile the avatar is cut off by the banner edge.
-6. **The breaking bar is a static red strip** that truncates mid-word ("bi…") on phones. It can't be opened and has no motion or "live" signal.
-7. **Polls are lifeless:** gray boxes, "0%", no fill animation, no winner, no countdown.
-8. **The action bar is flat.** Tiny 13 px counts, no feedback on press, and a muddy liked color in dark mode.
-9. **The hierarchy is weak.** Page titles, tab bars, and section headers all have similar weight, and the sticky headers are opaque slabs.
-10. **The right rail is a list of gray boxes.** Trending has no ranking visuals or momentum, and "Who to follow" is clipped at the bottom.
-11. **The admin page is a form,** not a dashboard. Stats are bare numbers, the queue has no severity color, destructive actions have no confirmation, and the banner editor has no preview.
-12. **Communities and Live are placeholder lists.** There are no community pages, no voting, no threads, and no live cards or schedule.
-13. **Empty and loading states are plain text** ("Nothing here yet."), and skeletons don't match the real layouts.
-14. **Dark mode is an inverted afterthought:** pure-black slabs, washed-out red banner, and low-contrast muted text on surfaces.
-15. **Motion and keyboard support are missing:** no page transitions, no sliding tab indicator, no command palette, and no j/k navigation.
+1. **Three-column shell:** a left icon sidebar with a big "New post" pill, a center stream, and a right rail. That is Twitter's skeleton, almost pixel for pixel.
+2. **Right rail modules named "Trending" (hashtags) and "Who to follow"**, with black "Follow" pills. Pure Twitter.
+3. **A reverse-chronological stream of identical post cards** as the home screen, with Following / For You tabs on top (Twitter and Threads).
+4. **The action row:** reply bubble · retweet arrows · heart · bookmark · share icons with counts. These are Twitter's exact glyphs and their exact order.
+5. **"@handle · 7h" author lines** with a round avatar on the left of every post.
+6. **"Frank Williams reposted"** social context lines above posts.
+7. **Pill-shaped everything:** buttons, chips, the search field, and the composer's Post button (Twitter and Bluesky).
+8. **The blue/indigo accent on white:** Twitter and Bluesky blue.
+9. **Round avatars with rings** (Instagram/Threads stories).
+10. **Hashtag-ranked "Trending"** with post counts.
+11. **"What's happening?"** composer placeholder: Twitter's literal copy.
+12. **The floating compose button / bottom tab bar with Home · Search · Bell · Profile** rhythm (Twitter mobile).
+13. **The profile:** banner, overlapping round avatar, bio, Following/Followers counts, and Posts / Replies / Media / Likes tabs. This is Twitter's profile one to one.
+14. **Notifications as a flat list** of likes, follows, and reposts with a little colored icon (Twitter).
+15. **Local-first sample content** (city council, school board), while the product is a national news network.
 
-## 2. Tokens
+## 2. The big idea
 
-All tokens live in `src/styles/tokens.css` (CSS variables), with a typed mirror in `src/design/tokens.ts`.
-Tailwind 4 reads them through `@theme inline` in `globals.css`, so utilities like `bg-surface`
-and `text-ink-2` always follow the active theme.
+Townsquare is organized around **Stories**, not a stream of posts. Every national event is a Story.
+People add **Takes** to a Story and pick a **stance** (Agree, Disagree, Context, Question).
+Readers cast their own stance on Stories and Takes; the **stance meter** replaces likes.
+The home screen is a **front page** (bento tiles sized by importance), not a timeline.
 
-| Group | Tokens |
+| Twitter primitive | Townsquare replacement |
 |---|---|
-| Ink scale (text) | `--ink-1` (primary) · `--ink-2` (secondary) · `--ink-3` (tertiary/meta, AA ≥ 4.5:1 on both canvases) |
-| Surfaces | `--canvas` (page) · `--surface` (cards) · `--surface-2` (wells, inputs) · `--surface-3` (pressed) · `--line` (hairline, low-opacity) · `--line-strong` |
-| Accent | `--accent` (indigo-blue, AA on canvas) · `--accent-2` · `--accent-grad` (electric blue → indigo, used sparingly: primary button, active glow, logo) · `--accent-soft` · `--on-accent` |
-| Signals | `--breaking` · `--live` (pulse) · `--success` · `--warning` · `--danger` |
-| Radius | `xs 6 · sm 10 · md 14 · lg 20 · xl 28 · pill 999` |
-| Space | 4-pt scale through Tailwind (`1` = 4 px). Page gutter: 16 px on phones, 24 px on tablets and up |
-| Shadow | `--shadow-1` (hairline lift) · `--shadow-2` (cards, popovers) · `--shadow-3` (sheets, dialogs) · `--glow` (active accent) |
-| Glass | `--glass` background with `backdrop-filter: blur(18px) saturate(1.6)` on sticky bars and the tab bar |
-| Motion | `--dur-micro 120ms` · `--dur-std 220ms` · `--dur-emph 380ms` · `--ease-spring cubic-bezier(.2,.9,.25,1.15)` · `--ease-out cubic-bezier(.16,1,.3,1)`. Everything is disabled under `prefers-reduced-motion` |
+| Post | **Take** (with a stance chip, optionally attached to a Story) |
+| Like ♥ | **Stance meter**: agree / unsure / disagree split, tap to cast |
+| Retweet | **Amplify**: a quiet pin to your Rundown |
+| Reply | **Answer**: shown side by side with the original as a debate pair |
+| Bookmark | **Save to Rundown** |
+| Trending hashtags | **Hot Stories**, ranked by take velocity, with sparkline and stance meter |
+| Who to follow | **Voices**: curated people with a credibility line |
+| Home timeline | **Front Page** (bento) + **Rundown** (your lineup: Now / Next / Later today / Earlier) |
+| Profile | **Byline page** |
+| Communities | **Desks**, run by **Editors** |
+| Notifications | **Newsdesk** inbox, grouped by Story |
+| Admin | **Control Room** |
 
-Light canvas is a warm off-white (`#f7f6f3`) with white cards. Dark is a near-black blue-gray
-(`#0b0e14`) with layered surfaces (`#121722`, `#182030`), never pure black.
+## 3. Structure
 
-## 3. Type
+- **Desktop:** a masthead (edition date and number, serif wordmark, search, Newsdesk, Take it button, byline chip), a double rule (navy, then gold hairline), a horizontal **channel dial** (Front Page, Politics, World, Business, Tech, Sports, Culture, Live, Desks), and the **Live Wire** ticker. The body is a full-width 12-column grid. There is no sidebar and no rail.
+- **Phone:** a compact masthead, the dial as a swipeable strip, and the Front Page as a **story deck**: full-height Story cards that snap one per swipe. Swiping sideways changes channel. A slim navy **dock** has a raised gold Take it button in the center slot of the layout, so it never sits on content.
+- **Navigation:** the dial, the search overlay (⌘K / Ctrl K), and the **Rundown drawer**.
 
-- **Display / headlines:** Newsreader (variable, optical size), self-hosted. Tight tracking (-0.02em). Used for page titles, news headlines, story pages, profile names, and onboarding.
-- **UI and post text:** Inter (variable), self-hosted. Counts use `tabular-nums`.
-- **Fluid scale (clamp):** `--fs-display` 34→56 · `--fs-h1` 26→36 · `--fs-h2` 21→26 · `--fs-h3` 18→20 · body 15.5→16 · small 13 · micro 11.5 (uppercase, +0.06em, for kickers).
+## 4. Tokens (`src/styles/tokens.css`)
 
-## 4. Components (`src/components/ui`)
+Navy, gold, and white dominate. Red appears only as the functional Live / Breaking signal.
 
-Button (primary · secondary · ghost · danger · icon, sizes sm/md/lg) · Avatar (gradient ring,
-generated abstract art, live ring, sizes) · VerifiedSeal · Chip / FilterChips · SegmentedTabs
-(sliding indicator) · Sheet (bottom sheet on phones with drag-to-dismiss, centered dialog on
-desktop) · Popover menu (sheet on phones) · ConfirmDialog · Toasts · Skeletons that match each
-layout · EmptyState (illustrated) · ErrorState (inline retry) · Sparkline · CountdownRing ·
-AnimatedNumber (roll-up) · Kicker / SourceLabel · LiveBadge · Logo (mark + wordmark).
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--paper` | #FFFFFF | #070C18 | page |
+| `--paper-2` | #F5F6F9 | #0C1426 | wells, tiles |
+| `--paper-3` | #EBEEF4 | #13203A | pressed, tracks |
+| `--ink-1` | #0A1630 | #F4F6FB | headlines, body |
+| `--ink-2` | #3A4560 | #C3CADB | secondary |
+| `--ink-3` | #5D6780 | #8C97AE | meta (AA on both papers) |
+| `--navy` | #0B1F4B | #0B1F4B | masthead, primary buttons, dock |
+| `--navy-ink` | #0B1F4B | #9DB4E8 | navy as text / links |
+| `--gold` | #C8A24A | #D9B65E | rules, verified, editor picks, active dial |
+| `--gold-ink` | #7C5F14 | #E2C677 | gold as text (AA) |
+| `--live` | #C8102E | #FF4D5E | ON AIR, breaking dot |
+| `--agree` | #0F6B4F | #4FD1A1 | stance: agree |
+| `--disagree` | #A3242F | #FF7A85 | stance: disagree |
+| `--unsure` | #8C97AE | #5D6780 | stance: unsure / neutral |
 
-Feature components: PostCard, ActionBar, Poll, MediaGrid + Lightbox (swipe, pinch, double-tap),
-LinkCard, QuoteCard, Composer (expands in place), Feed, Ticker, CommandPalette, TabBar, SideNav, RightRail.
+- **Shape:** radius 2 / 4 / 6 / 8 px. Hairline rules (`--rule`), column dividers, and folio labels. No pills, except tiny count badges.
+- **Type:** Newsreader (headlines, bylines, optical sizing, -0.025em tracking). Inter (UI, Take text). JetBrains Mono (timestamps, stance numbers, folios). Small-caps section labels (`.folio`).
+- **Depth:** flat paper with hairlines, and a faint grain on the masthead. Shadows only on floating layers (dock, sheets, overlay).
+- **Motion:** 120 / 220 / 380 ms with a spring easing. Stance bars animate width, tiles fade-rise in order, Live Wire items slide in, and pages enter with a short slide. Everything collapses under `prefers-reduced-motion`.
 
-## 5. Motion
+## 5. Components (`src/components/ui`)
 
-- Page enter: 220 ms fade + 6 px rise (`template.tsx`).
-- Tab indicator: slides between tabs with the spring easing (380 ms).
-- Heart burst (particles and scale), repost spin (360°), bookmark bounce, press scale 0.92.
-- Counts roll up and down vertically when they change.
-- Poll bars fill from 0 with the spring easing after a vote; the winner gets the accent gradient and a check.
-- Ticker: an infinite marquee at ~40 px/s that pauses on hover, focus, or tap. It becomes static text under reduced motion.
-- Sheets slide up 380 ms, follow the finger, and dismiss past 120 px or on a fast flick.
-- The "N new posts" pill slides down from under the header.
+Masthead · ChannelDial · LiveWire · Dock · SearchOverlay · RundownDrawer · Button (navy, outline, ghost, gold, danger) ·
+Byline portrait (square-rounded, stance-colored ring, generated art) · Folio · Rule · StanceMeter (compact and large,
+interactive) · StanceChip · Sparkline · CountdownRing · Tile (lead / medium / small / wide) · TakeCard · DebateCard ·
+StoryTile · DeckCard · Sheet · Menu · Confirm · Skeletons (bento-shaped) · EmptyState · ErrorState.
 
-## 6. What changed in the remodel
+## 6. Originality check (done before sign-off)
 
-- **Brand:** a new logo mark (gradient tile, headline-rule "T", red live dot), a serif wordmark, favicon, maskable app icon, and iOS splash screens.
-- **Tokens and type:** a warm off-white light theme and a layered blue-black dark theme, a single blue→indigo accent used sparingly, and dedicated Breaking, Live, success, warning, and danger colors. Newsreader for headlines, Inter for UI, a fluid type scale, and tabular numbers.
-- **Shell:** a broadcast ticker; a slim desktop nav with active glow and an icon rail on tablets (fixes the clipped wordmark); a right rail with Live now, trending sparklines, and Who to follow; a glass phone app bar that hides on scroll; a floating glass tab bar with the compose button docked beside it, so nothing covers content; a ⌘K palette; keyboard shortcuts; and page transitions.
-- **Posts:** generated Bauhaus avatars with gradient or live rings, a polished verified seal, a heart burst, repost spin, bookmark bounce, rolling counts, a smart media grid with a swipe/pinch lightbox and blur placeholders, rich link cards, nested quote cards, a smooth "Read more", animated polls with a winner highlight and countdown ring, and a composer that expands in place.
-- **Screens:** Home tabs (including an in-place Breaking tab) with swipe, a magazine News hub, live story pages, community pages with votes and threads, a Live page with player and chat, a profile with parallax banner and stats, grouped notifications, Explore, Search, Settings, an admin dashboard (KPI sparklines, severity queue, confirm dialogs, banner preview, moderation log), redesigned auth, and a three-step onboarding.
-- **States:** illustrated empty states, skeletons shaped like the real layouts, inline retry on errors, designed confirm dialogs instead of `window.confirm`, and bottom sheets with drag-to-dismiss on phones.
+Final screenshots were compared against Twitter/X, Threads, Bluesky, Reddit, and Truth Social:
 
-## 7. Next five improvements
+| Piece | Them | Townsquare now |
+|---|---|---|
+| Shell | Left icon sidebar + center stream + right rail | Newspaper masthead, channel dial, Live Wire; full-width bento; no sidebars |
+| Home | Reverse-chron stream of identical cards | Front Page bento sized by importance; phone story deck with snap |
+| Card actions | Reply · Retweet · Heart · Bookmark | Agree / Disagree stance meter · Answer · Amplify · Save to Rundown |
+| Buttons | Pills | Square 4px buttons with a gold underline on primary |
+| Color | Blue on white (or black) | Navy, gold, and white; red only for ON AIR |
+| Avatars | Circles | Square-rounded byline portraits with stance-colored rings |
+| Trending | Hashtags and post counts | Hot Stories by take velocity, sparkline, stance split |
+| Who to follow | Follow pills | Voices with a credibility line (verified, tenure, context notes) |
+| Profile | Banner, round avatar, Posts/Replies/Media/Likes | Byline page: editorial name, credibility record, pull-quote, Takes/Debates/Rundown |
+| Reddit-style voting | Orange arrows in a pill | Square vote control in navy; Desks with Editors and a pinned Story |
 
-1. **Real link previews and news images.** A sandboxed fetcher for Open Graph data (title, image, outlet) with an allowlist, size limits, and caching, replacing the generated cover art.
-2. **True list virtualization** (windowing) for very long sessions, plus restoring the scroll position when navigating back to a feed.
-3. **Shared-element transitions** (post card → thread, story card → story page) using the View Transitions API, now that the motion tokens exist.
-4. **A per-user "tune your feed" panel** using the saved interests (topic weights, news vs. people mix) to drive For You and the Breaking tab.
-5. **Real-time updates** (Supabase Realtime) for live chat, story timelines, vote counts, and notifications, replacing polling.
+Pieces redone during the check: the profile banner and round avatar (now the byline page),
+pill chips (now square), the blue accent (now navy and gold), the heart row (now the stance
+meter), and the floating "+" (now Take it, docked in its own slot).
+
+## 7. What changed in this remodel
+
+- **National, not local:** 12 fictional national Stories (Congress, the Fed, the Supreme Court, a hurricane, an antitrust trial, trade, a rail strike, a championship, and more), national Desks, and no town step in onboarding.
+- **Stories and Takes:** Takes carry a stance and optionally a Story; Answers inherit the Story and, with the opposite stance, become head-to-head debate cards.
+- **Stance meter instead of likes,** on every Story and Take, with optimistic updates and animation.
+- **New structure:** masthead, channel dial, Live Wire, Front Page bento, phone story deck, Rundown (page and drawer), search overlay, desktop inline composer, and a phone dock with a docked Take it button.
+- **New screens:** Story page (timeline rail, coverage strip, split, Agree | Disagree takes, context notes), Byline, Morning Edition (offline save), Live Studio (monitors, schedule grid), Desks with an Editor toolbar, Newsdesk grouped by Story, Control Room, sign-up with a sample Front Page.
+- **Brand:** navy/gold/white tokens, Newsreader + Inter + JetBrains Mono, a stamp mark and serif wordmark, icons, splash.
+
+## 8. Next five improvements
+
+1. **Real content pipeline:** RSS ingest that clusters headlines into Stories automatically (the "How it is covered" strip then fills itself), plus an editor tool to write timeline updates.
+2. **Context notes with cross-viewpoint rating:** only show a Context take as a "note" once readers who usually disagree both rate it helpful (the stance history already gives the signal).
+3. **Real-time stance meters and Live Wire** via Supabase Realtime, instead of refresh-on-action and polling.
+4. **Personalized Front Page:** use saved beats and follows to reorder tiles (Rundown already uses follows), with a visible "why this tile" note.
+5. **True list virtualization and push alerts** for long Rundowns and Story-specific breaking updates.

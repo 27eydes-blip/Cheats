@@ -24,3 +24,19 @@ export async function finishOnboardingAction(input: { interests: string[]; town:
     revalidatePath("/", "layout");
   });
 }
+
+export async function pinStoryAction(communityId: string, storyKey: string | null) {
+  return attempt(async () => {
+    const { setPinnedStory } = await import("@/lib/communities");
+    setPinnedStory(await requireViewer(), communityId, storyKey || null);
+    revalidatePath("/c", "layout");
+  });
+}
+
+export async function editorRemoveAction(postId: string) {
+  return attempt(async () => {
+    const { editorRemove } = await import("@/lib/communities");
+    editorRemove(await requireViewer(), postId);
+    revalidatePath("/c", "layout");
+  });
+}

@@ -322,3 +322,42 @@ create policy "story updates public" on story_updates for select using (true);
 create policy "admins write stories" on stories for all using (is_admin()) with check (is_admin());
 create policy "verified newsroom accounts post updates" on story_updates for insert with check (
   is_admin() or (author_id = auth.uid() and exists (select 1 from profiles where id = auth.uid() and verified)));
+
+-- ---------- "The Front Page" remodel: stances, takes on stories, desk pins ----------
+alter table public.posts add column if not exists stance text check (stance in ('agree','disagree','context','question'));
+alter table public.posts add column if not exists story_key text references stories(key) on delete set null;
+create index if not exists posts_story on posts (story_key, created_at desc);
+alter table public.communities add column if not exists pinned_story_key text references stories(key) on delete set null;
+
+-- Stance votes replace likes in the UI. Counts are public; who voted is private.
+create table public.stances (
+  user_id uuid references profiles(id) on delete cascade,
+  target_type text not null check (target_type in ('story','post')),
+  target_id text not null,
+  value text not null check (value in ('agree','disagree','unsure')),
+  created_at timestamptz not null default now(),
+  primary key (user_id, target_type, target_id)
+);
+create index on stances (target_type, target_id);
+alter table stances enable row level security;
+create policy "see own stances" on stances for select using (user_id = auth.uid());
+create policy "cast own stance" on stances for insert with check (user_id = auth.uid()
+  and exists (select 1 from profiles where id = auth.uid() and status = 'active'));
+create policy "change own stance" on stances for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "clear own stance" on stances for delete using (user_id = auth.uid());
+-- Public totals without exposing voters:
+create or replace view public.stance_totals with (security_invoker = false) as
+  select target_type, target_id,
+    count(*) filter (where value = 'agree') agree,
+    count(*) filter (where value = 'disagree') disagree,
+    count(*) filter (where value = 'unsure') unsure
+  from stances group by target_type, target_id;
+grant select on public.stance_totals to anon, authenticated;
+
+-- Desk editors (moderators/owners) may pin a story and remove posts in their Desk.
+create or replace function public.is_desk_editor(c uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select is_admin() or exists (select 1 from memberships where community_id = c and user_id = auth.uid() and role in ('moderator','owner'));
+$$;
+create policy "editors pin stories" on communities for update using (is_desk_editor(id)) with check (is_desk_editor(id));
+create policy "editors remove desk posts" on posts for update using (community_id is not null and is_desk_editor(community_id));

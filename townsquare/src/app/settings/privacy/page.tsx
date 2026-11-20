@@ -1,3 +1,4 @@
+import { Frame } from "@/components/ui/Frame";
 import Link from "next/link";
 import { requireViewerPage } from "@/lib/session";
 import { listBlockedAndMuted } from "@/lib/social";
@@ -30,7 +31,7 @@ export default async function Page() {
     </section>
   );
   return (
-    <>
+    <Frame>
       <PageHeader title="Privacy and safety" back compact />
       <section className="border-b border-line px-4 py-5 sm:px-6">
         <h2 className="font-display text-h3 font-semibold">Your data</h2>
@@ -43,6 +44,6 @@ export default async function Page() {
       </section>
       {section("Blocked accounts", blocked, "block")}
       {section("Muted accounts", muted, "mute")}
-    </>
+    </Frame>
   );
 }

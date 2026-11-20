@@ -39,7 +39,7 @@ townsquare/
   src/actions/             server actions (auth, posts, social, moderation, settings)
   src/components/          PostCard, Composer, Feed, nav, menus, modals
   src/lib/                 data + domain logic (see above)
-  scripts/seed.ts          30 users, 10 communities, 200 posts, 50 news items
+  scripts/seed.ts          national edition: 12 stories, takes + stances, 10 Desks, Live shows
   supabase/schema.sql      Postgres schema + row-level security (swap-in target)
   tests/                   vitest: sign up, post, follow, feed, report, safety
 ```

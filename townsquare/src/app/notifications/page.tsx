@@ -4,15 +4,17 @@ import { requireViewerPage } from "@/lib/session";
 import { Avatar } from "@/components/ui/Avatar";
 import { ChipLink, ChipRow } from "@/components/ui/Chip";
 import { EmptyState } from "@/components/ui/States";
-import { HeartIcon, QuoteIcon, ReplyIcon, RepostIcon, ShieldIcon, UserIcon } from "@/components/icons";
-import { PageHeader } from "@/components/PageHeader";
+import { AgreeIcon, AmplifyIcon, AnswerIcon, QuoteIcon, ShieldIcon, UserIcon } from "@/components/icons";
+import { Kicker } from "@/components/ui/Badge";
+import { Frame, PageTitle } from "@/components/ui/Frame";
+import { all } from "@/lib/db";
 import { Time } from "@/components/Time";
 import { MarkRead } from "./MarkRead";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Notifications" };
 
-const LABELS: Record<keyof typeof NOTIFICATION_FILTERS, string> = { all: "All", mentions: "Mentions", likes: "Likes", reposts: "Reposts", follows: "Follows", account: "Account" };
+const LABELS: Record<keyof typeof NOTIFICATION_FILTERS, string> = { all: "Everything", mentions: "Answers & mentions", likes: "Stances", reposts: "Amplified", follows: "Followers", account: "Standards" };
 
 type Group = { key: string; type: NotificationView["type"]; actors: NonNullable<NotificationView["actor"]>[]; first: NotificationView; read: boolean };
 
@@ -34,16 +36,16 @@ function group(items: NotificationView[]): Group[] {
   return out;
 }
 
-const VERB: Partial<Record<NotificationView["type"], string>> = { like: "liked your post", repost: "reposted your post", follow: "followed you", reply: "replied to you", quote: "quoted your post", mention: "mentioned you" };
+const VERB: Partial<Record<NotificationView["type"], string>> = { like: "sided with your take", repost: "amplified your take", follow: "started following your byline", reply: "answered you", quote: "quoted your take", mention: "mentioned you" };
 
 function Icon({ type }: { type: NotificationView["type"] }) {
-  const wrap = (cls: string, node: React.ReactNode) => <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${cls}`}>{node}</span>;
-  if (type === "like") return wrap("bg-rose-500/12 text-rose-600 dark:text-rose-400", <HeartIcon filled size={18} />);
-  if (type === "repost") return wrap("bg-success/12 text-success", <RepostIcon size={18} />);
-  if (type === "follow") return wrap("bg-accent-soft text-accent", <UserIcon size={18} />);
-  if (type === "quote") return wrap("bg-accent-soft text-accent", <QuoteIcon size={18} />);
-  if (type === "warning" || type === "system") return wrap("bg-danger-soft text-danger", <ShieldIcon size={18} />);
-  return wrap("bg-accent-soft text-accent", <ReplyIcon size={18} />);
+  const wrap = (cls: string, node: React.ReactNode) => <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] ${cls}`}>{node}</span>;
+  if (type === "like") return wrap("bg-agree/10 text-agree", <AgreeIcon size={18} />);
+  if (type === "repost") return wrap("bg-gold-soft text-gold-ink", <AmplifyIcon size={18} />);
+  if (type === "follow") return wrap("bg-navy-soft text-navy-ink", <UserIcon size={18} />);
+  if (type === "quote") return wrap("bg-navy-soft text-navy-ink", <QuoteIcon size={18} />);
+  if (type === "warning" || type === "system") return wrap("bg-danger-soft text-disagree", <ShieldIcon size={18} />);
+  return wrap("bg-navy-soft text-navy-ink", <AnswerIcon size={18} />);
 }
 
 function Row({ g }: { g: Group }) {
@@ -52,22 +54,22 @@ function Row({ g }: { g: Group }) {
   const names = g.actors.length === 0 ? null : g.actors.length === 1 ? <b>{g.actors[0].displayName}</b> : <><b>{g.actors[0].displayName}</b> and {g.actors.length - 1} other{g.actors.length > 2 ? "s" : ""}</>;
   return (
     <li>
-      <Link href={href} className={`flex gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2/50 sm:px-6 ${g.read ? "" : "bg-accent-soft/50"}`}>
+      <Link href={href} className={`flex gap-3 px-4 py-3.5 transition-colors hover:bg-paper-2 sm:px-6 ${g.read ? "" : "bg-gold-soft/60 shadow-[inset_3px_0_0_var(--gold)]"}`}>
         <Icon type={g.type} />
         <div className="min-w-0 flex-1">
           {g.actors.length > 0 && (
-            <div className="mb-1.5 flex -space-x-2">
-              {g.actors.slice(0, 6).map((a) => <Avatar key={a.id} url={a.avatarUrl} name={a.displayName} handle={a.handle} size={30} ring={false} className="ring-2 ring-surface" />)}
+            <div className="mb-1.5 flex gap-1">
+              {g.actors.slice(0, 6).map((a) => <Avatar key={a.id} url={a.avatarUrl} name={a.displayName} handle={a.handle} size={28} />)}
             </div>
           )}
           <p className="text-[15px] leading-snug">
-            {names ? <>{names} {VERB[g.type]}</> : <b>{g.type === "warning" ? "Moderation team" : "Townsquare"}</b>}
-            <span className="text-ink-3"> · <Time ms={n.createdAt} /></span>
+            {names ? <>{names} {VERB[g.type]}</> : <b>{g.type === "warning" ? "Standards desk" : "Townsquare"}</b>}
+            <span className="mono text-[11px] text-ink-3"> · <Time ms={n.createdAt} /></span>
           </p>
           {n.message && <p className="mt-1 text-[14.5px] text-ink-2">{n.message}</p>}
           {n.postSnippet && n.type !== "warning" && <p className="mt-1 line-clamp-2 text-[14.5px] text-ink-3">{n.postSnippet}</p>}
         </div>
-        {!g.read && <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-accent-grad" aria-label="Unread" />}
+        {!g.read && <span className="mt-1.5 h-2 w-2 shrink-0 bg-gold" aria-label="New" />}
       </Link>
     </li>
   );
@@ -78,38 +80,43 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
   const f = ((await searchParams).f ?? "all") as keyof typeof NOTIFICATION_FILTERS;
   const filter = f in NOTIFICATION_FILTERS ? f : "all";
   const groups = group(listNotifications(viewer.id, filter, 120));
+  // Group the inbox by Story, newsroom style; everything else lands under "Your byline".
+  const ids = [...new Set(groups.flatMap((g) => (g.first.postId ? [g.first.postId] : [])))];
+  const storyOf = new Map(
+    ids.length
+      ? all<{ id: string; key: string; title: string }>(`SELECT p.id, s.key, s.title FROM posts p JOIN stories s ON s.key = p.story_key WHERE p.id IN (${ids.map(() => "?").join(",")})`, ids).map((r) => [r.id, { key: r.key, title: r.title }])
+      : [],
+  );
+  const desks = new Map<string, { title: string; key: string | null; items: Group[] }>();
+  for (const g of groups) {
+    const st = g.first.postId ? storyOf.get(g.first.postId) : undefined;
+    const k = st?.key ?? "_byline";
+    if (!desks.has(k)) desks.set(k, { title: st?.title ?? "Your byline", key: st?.key ?? null, items: [] });
+    desks.get(k)!.items.push(g);
+  }
   const fresh = groups.filter((g) => !g.read);
-  const earlier = groups.filter((g) => g.read);
   return (
-    <>
+    <Frame>
       {fresh.length > 0 && <MarkRead />}
-      <PageHeader title="Notifications" subtitle={fresh.length ? `${fresh.length} new` : "You're all caught up"}>
-        <div className="py-2.5">
-          <ChipRow label="Filter notifications">
-            {Object.entries(LABELS).map(([k, v]) => (
-              <ChipLink key={k} href={k === "all" ? "/notifications" : `/notifications?f=${k}`} active={k === filter}>{v}</ChipLink>
-            ))}
-          </ChipRow>
-        </div>
-      </PageHeader>
+      <PageTitle folio={<Kicker tone="gold">Inbox</Kicker>} title="Newsdesk" dek={fresh.length ? `${fresh.length} new, grouped by story.` : "You're all caught up."} />
+      <div className="sticky-sub z-20 border-b border-rule bg-paper px-4 py-2.5 sm:px-6">
+        <ChipRow label="Filter the Newsdesk">
+          {Object.entries(LABELS).map(([k, v]) => <ChipLink key={k} href={k === "all" ? "/notifications" : `/notifications?f=${k}`} active={k === filter}>{v}</ChipLink>)}
+        </ChipRow>
+      </div>
       {groups.length === 0 ? (
-        <EmptyState art="notifications" title="Nothing here yet" body="When people follow, like, reply, or mention you, it shows up here." />
+        <EmptyState art="notifications" title="Quiet on the desk" body="When people answer you, side with your takes, or follow your byline, it lands here, filed by story." />
       ) : (
-        <>
-          {fresh.length > 0 && (
-            <section aria-label="New">
-              <h2 className="kicker px-4 pt-4 pb-1 text-accent sm:px-6">New</h2>
-              <ul className="divide-y divide-line">{fresh.map((g) => <Row key={g.key} g={g} />)}</ul>
-            </section>
-          )}
-          {earlier.length > 0 && (
-            <section aria-label="Earlier">
-              <h2 className="kicker px-4 pt-5 pb-1 text-ink-3 sm:px-6">Earlier</h2>
-              <ul className="divide-y divide-line">{earlier.map((g) => <Row key={g.key} g={g} />)}</ul>
-            </section>
-          )}
-        </>
+        [...desks.values()].map((d) => (
+          <section key={d.key ?? "byline"} aria-label={d.title} className="mt-6">
+            <div className="mx-4 flex items-baseline justify-between gap-3 border-b-2 border-navy-ink pb-1.5 sm:mx-6">
+              {d.key ? <Link href={`/news/story/${d.key}`} className="min-w-0 truncate font-display text-[19px] font-semibold hover:underline">{d.title}</Link> : <h2 className="font-display text-[19px] font-semibold">{d.title}</h2>}
+              <span className="mono shrink-0 text-[11px] text-ink-3">{d.items.length}</span>
+            </div>
+            <ul className="divide-y divide-rule">{d.items.map((g) => <Row key={g.key} g={g} />)}</ul>
+          </section>
+        ))
       )}
-    </>
+    </Frame>
   );
 }

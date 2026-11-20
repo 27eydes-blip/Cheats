@@ -135,3 +135,30 @@ export function vote(user: UserRow, postId: string, value: -1 | 0 | 1): number {
     return get<{ score: number }>("SELECT score FROM posts WHERE id = ?", [postId])!.score;
   });
 }
+
+/** Editors are a Desk's moderators and owners; site admins can edit every Desk. */
+export function isEditor(user: UserRow | null, communityId: string) {
+  if (!user) return false;
+  if (user.role === "admin") return true;
+  const m = get<{ role: string }>("SELECT role FROM memberships WHERE community_id = ? AND user_id = ?", [communityId, user.id]);
+  return m?.role === "moderator" || m?.role === "owner";
+}
+
+/** Editor tool: pin a national Story to the top of the Desk (null clears it). */
+export function setPinnedStory(user: UserRow, communityId: string, storyKey: string | null) {
+  if (!isEditor(user, communityId)) throw new AppError("Only this Desk's editors can do that.", "forbidden");
+  if (storyKey && !get("SELECT 1 FROM stories WHERE key = ?", [storyKey])) throw new AppError("Story not found.", "not_found");
+  run("UPDATE communities SET pinned_story_key = ? WHERE id = ?", [storyKey, communityId]);
+}
+
+/** Editor tool: remove a discussion or comment from this Desk (site-wide rules still apply separately). */
+export function editorRemove(user: UserRow, postId: string) {
+  const p = get<{ community_id: string | null }>("SELECT community_id FROM posts WHERE id = ?", [postId]);
+  if (!p?.community_id) throw new AppError("Not a Desk post.", "not_found");
+  if (!isEditor(user, p.community_id)) throw new AppError("Only this Desk's editors can do that.", "forbidden");
+  run("UPDATE posts SET removed_at = ? WHERE id = ?", [now(), postId]);
+}
+
+export function pinnedStoryKey(communityId: string) {
+  return get<{ pinned_story_key: string | null }>("SELECT pinned_story_key FROM communities WHERE id = ?", [communityId])?.pinned_story_key ?? null;
+}

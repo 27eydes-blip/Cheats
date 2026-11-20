@@ -1,3 +1,4 @@
+import { Frame } from "@/components/ui/Frame";
 import { notFound } from "next/navigation";
 import { getViewer } from "@/lib/session";
 import { listFollows } from "@/lib/social";
@@ -14,11 +15,11 @@ export default async function Page({ params }: { params: Promise<{ handle: strin
   if (!u) notFound();
   const list = listFollows(u.id, "followers", viewer?.id ?? null);
   return (
-    <>
+    <Frame>
       <PageHeader title={u.display_name} subtitle={`@${u.handle}`} back>
         <Tabs active="followers" tabs={[{ key: "followers", label: "Followers", href: `/u/${u.handle}/followers` }, { key: "following", label: "Following", href: `/u/${u.handle}/following` }]} />
       </PageHeader>
       {list === "hidden" ? <p className="px-6 py-16 text-center text-ink-3">@{u.handle} keeps this list private.</p> : <UserList users={list ?? []} />}
-    </>
+    </Frame>
   );
 }

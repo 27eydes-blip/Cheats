@@ -3,7 +3,7 @@ import Link from "next/link";
 import { searchPosts } from "@/lib/feed";
 import { liveEvent } from "@/lib/news";
 import { getViewer } from "@/lib/session";
-import { LinkArt } from "@/components/post/LinkCard";
+import { StoryArt } from "@/components/front/StoryArt";
 import { LIVE_KIND } from "@/components/live/LiveCard";
 import { LiveChat } from "@/components/live/LiveChat";
 import { FollowButton } from "@/components/FollowButton";
@@ -21,9 +21,9 @@ export default async function LivePlayer({ params }: { params: Promise<{ id: str
   const chat = e.tag ? searchPosts(`#${e.tag}`, viewer?.id ?? null, null, 30).items.map((i) => i.post) : [];
   const follows = viewer && e.host ? all("SELECT 1 FROM follows WHERE follower_id = ? AND followee_id = ?", [viewer.id, e.host.id]).length > 0 : false;
   return (
-    <div>
+    <div className="mx-auto max-w-[1040px] lg:pt-6">
       <div className="relative aspect-video overflow-hidden bg-black text-white">
-        <div className="absolute inset-0 opacity-70"><LinkArt seed={e.id + e.title} /></div>
+        <div className="absolute inset-0 opacity-80"><StoryArt seed={e.id + e.title} section="Top Stories" /></div>
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/70" />
         <Link href="/live" className="absolute top-3 left-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur hover:bg-black/60" aria-label="Back to Live"><BackIcon size={20} /></Link>
         <div className="absolute top-3 right-3 flex items-center gap-2">
@@ -42,7 +42,7 @@ export default async function LivePlayer({ params }: { params: Promise<{ id: str
         <h1 className="mt-1 font-display text-h1 leading-tight font-semibold">{e.title}</h1>
         <p className="mt-2 text-[15.5px] text-ink-2">{e.description}</p>
         {e.host && (
-          <div className="mt-4 flex items-center gap-3 rounded-[var(--r-lg)] bg-surface-2 p-3">
+          <div className="mt-4 flex items-center gap-3 border-l-2 border-gold bg-paper-2 p-3">
             <Avatar url={e.host.avatarUrl} name={e.host.displayName} handle={e.host.handle} size={46} live={e.isLive} />
             <Link href={`/u/${e.host.handle}`} className="min-w-0 flex-1">
               <span className="flex items-center gap-1 font-semibold">{e.host.displayName}{e.host.verified && <VerifiedSeal size={15} />}</span>

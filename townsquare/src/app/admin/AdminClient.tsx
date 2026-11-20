@@ -9,7 +9,7 @@ import { SeverityTag } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useConfirm } from "@/components/ui/Confirm";
 import { useToast } from "@/components/providers";
-import { Ticker } from "@/components/shell/Ticker";
+import { LiveWire } from "@/components/shell/LiveWire";
 import { LocalDate } from "@/components/Time";
 
 const RAIL = { critical: "bg-breaking", high: "bg-danger", medium: "bg-warning", low: "bg-line-strong" } as const;
@@ -43,14 +43,14 @@ export function ReportCard({ group: g }: { group: ReportGroup }) {
   };
 
   return (
-    <article className={`card relative overflow-hidden transition-all duration-500 ${done ? "scale-[0.98] opacity-40" : ""}`}>
+    <article className={`relative overflow-hidden border border-rule bg-paper transition-all duration-500 ${done ? "scale-[0.98] opacity-40" : ""}`}>
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${RAIL[g.severity]}`} />
       <div className="p-4 pl-5">
         <div className="flex flex-wrap items-center gap-1.5">
           <SeverityTag level={g.severity} />
-          <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-ink-2 uppercase">{g.targetType}</span>
+          <span className="mono rounded-[2px] bg-paper-2 px-1.5 py-0.5 text-[10.5px] font-bold text-ink-2 uppercase">{g.targetType}</span>
           {g.reasons.map((r) => (
-            <span key={r.reason} className="rounded-full bg-surface-2 px-2 py-0.5 text-[12px] font-semibold text-ink-2">
+            <span key={r.reason} className="rounded-[2px] bg-paper-2 px-2 py-0.5 text-[12px] font-semibold text-ink-2">
               {r.label} <span className="num text-ink-3">×{r.count}</span>
             </span>
           ))}
@@ -68,7 +68,7 @@ export function ReportCard({ group: g }: { group: ReportGroup }) {
           </div>
         )}
         {g.post && (
-          <blockquote className="mt-3 rounded-[var(--r-md)] bg-surface-2 p-3 text-[15px] whitespace-pre-wrap">
+          <blockquote className="mt-3 border-l-2 border-rule-strong bg-paper-2 p-3 text-[15px] whitespace-pre-wrap">
             {g.post.gone && <span className="mb-1 block text-[11px] font-bold tracking-wide text-danger uppercase">{g.post.gone}</span>}
             {g.post.body || <span className="text-ink-3">(no text)</span>}
             {g.post.media.length > 0 && <a className="mt-1.5 block text-[12.5px] text-accent hover:underline" href={`/p/${g.post.id}`}>{g.post.media.length} image(s), open post</a>}
@@ -90,14 +90,14 @@ export function ReportCard({ group: g }: { group: ReportGroup }) {
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {g.targetType === "post" && <Button variant="danger" size="sm" disabled={pending} onClick={() => act("remove")}>Remove post</Button>}
               <Button variant="secondary" size="sm" disabled={pending} onClick={() => act("warn")}>Warn</Button>
-              <span className="flex items-center rounded-full ring-1 ring-line-strong">
-                <select value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Suspension length" className="h-9 rounded-l-full bg-transparent pr-1 pl-3 text-[13px] font-semibold focus:outline-none">
+              <span className="flex items-center rounded-[4px] ring-1 ring-rule-strong">
+                <select value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Suspension length" className="h-9 bg-transparent pr-1 pl-3 text-[13px] font-semibold focus:outline-none">
                   <option value={1}>1 day</option>
                   <option value={7}>7 days</option>
                   <option value={30}>30 days</option>
                   <option value={0}>Permanent</option>
                 </select>
-                <button type="button" disabled={pending} onClick={() => act("suspend")} className="h-9 rounded-r-full border-l border-line-strong px-3 text-[13px] font-semibold text-danger hover:bg-danger-soft">Suspend</button>
+                <button type="button" disabled={pending} onClick={() => act("suspend")} className="h-9 border-l border-rule-strong px-3 text-[13px] font-semibold text-disagree hover:bg-danger-soft">Suspend</button>
               </span>
               <Button variant="ghost" size="sm" disabled={pending} onClick={() => act("dismiss")} className="ml-auto">Dismiss</Button>
             </div>
@@ -131,9 +131,9 @@ export function BannerComposer({ current }: { current: Banner | null }) {
     });
   return (
     <div className="mt-4 space-y-3">
-      <div className="overflow-hidden rounded-[var(--r-md)] ring-1 ring-line" aria-label="Preview">
+      <div className="overflow-hidden ring-1 ring-rule" aria-label="Preview">
         {text.trim() ? (
-          <Ticker label={level === "info" ? "UPDATE" : level === "alert" ? "ALERT" : "BREAKING"} items={[{ text: text.trim(), href: null }]} />
+          <LiveWire items={[{ text: text.trim(), href: null, at: Date.now(), label: level === "info" ? "Update" : level === "alert" ? "Alert" : "Breaking" }]} />
         ) : (
           <div className="flex h-[var(--ticker-h)] items-center justify-center bg-surface-2 text-[13px] text-ink-3">No banner. Type a headline to preview it.</div>
         )}
@@ -149,9 +149,9 @@ export function BannerComposer({ current }: { current: Banner | null }) {
         </label>
         <fieldset>
           <legend className="label">Style</legend>
-          <div className="flex rounded-full bg-surface-2 p-1">
+          <div className="flex rounded-[4px] bg-paper-2 p-1">
             {(["breaking", "alert", "info"] as const).map((l) => (
-              <button key={l} type="button" aria-pressed={level === l} onClick={() => setLevel(l)} className={`h-9 rounded-full px-3 text-[13px] font-semibold capitalize transition-all ${level === l ? "bg-surface shadow-1" : "text-ink-3"}`}>
+              <button key={l} type="button" aria-pressed={level === l} onClick={() => setLevel(l)} className={`h-9 rounded-[3px] px-3 text-[13px] font-semibold capitalize transition-all ${level === l ? "bg-paper shadow-1 ring-1 ring-rule" : "text-ink-3"}`}>
                 {l === "info" ? "Update" : l}
               </button>
             ))}

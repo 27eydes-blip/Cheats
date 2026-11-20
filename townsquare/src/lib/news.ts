@@ -1,8 +1,11 @@
 import { all, get, now } from "./db";
+import { splits, EMPTY_SPLIT, type Split } from "./stance";
 import { toMini, type UserMini } from "./users";
 
 /** Read-only news and community listings for the Stage 2 tabs (seeded data for now). */
-export const NEWS_SECTIONS = ["Top Stories", "Politics", "World", "Business", "Sports", "Tech", "Entertainment", "Local"] as const;
+/** National channels (the masthead dial). "Top Stories" is the Front Page. */
+export const NEWS_SECTIONS = ["Top Stories", "Politics", "World", "Business", "Tech", "Sports", "Culture"] as const;
+export type Section = (typeof NEWS_SECTIONS)[number];
 
 export type NewsItemView = { id: string; title: string; summary: string; url: string; section: string; source: string; sourceUrl: string; publishedAt: number; storyKey: string | null };
 
@@ -16,21 +19,53 @@ export function latestNews(section?: string, limit = 50): NewsItemView[] {
 }
 
 
-export type StorySummary = { key: string; title: string; summary: string; section: string; tag: string | null; status: "live" | "developing" | "ended"; updatedAt: number; updates: number; outlets: number };
+export type StorySummary = {
+  key: string; title: string; summary: string; section: string; tag: string | null;
+  status: "live" | "developing" | "ended"; updatedAt: number; updates: number; outlets: number;
+  /** Takes attached to the story, and how many arrived in the last 6 hours (velocity). */
+  takes: number; velocity: number;
+  /** Takes per 2-hour bucket over the last 24 hours (sparkline). */
+  series: number[];
+  split: Split;
+};
 
-export function listStories(limit = 10): StorySummary[] {
-  return all<{ key: string; title: string; summary: string; section: string; tag: string | null; status: StorySummary["status"]; updated_at: number; updates: number; outlets: number }>(
+type StoryRow = { key: string; title: string; summary: string; section: string; tag: string | null; status: StorySummary["status"]; updated_at: number; updates: number; outlets: number; takes: number; velocity: number };
+
+/**
+ * Stories for the Front Page. `order: "hot"` ranks by take velocity (the
+ * Hot Stories module); the default puts live stories first, then freshest.
+ */
+export function listStories(limit = 10, opts: { section?: string; order?: "hot" | "fresh"; viewerId?: string | null } = {}): StorySummary[] {
+  const t = now();
+  const where = opts.section && opts.section !== "Top Stories" ? "WHERE s.section = ?" : "";
+  const order = opts.order === "hot" ? "velocity DESC, takes DESC" : "(s.status = 'live') DESC, (s.status = 'ended') ASC, s.updated_at DESC";
+  const rows = all<StoryRow>(
     `SELECT s.*, (SELECT count(*) FROM story_updates u WHERE u.story_key = s.key) updates,
-       (SELECT count(DISTINCT source_id) FROM news_items n WHERE n.story_key = s.key) outlets
-     FROM stories s ORDER BY (s.status = 'live') DESC, s.updated_at DESC LIMIT ?`,
-    [limit],
-  ).map((r) => ({ key: r.key, title: r.title, summary: r.summary, section: r.section, tag: r.tag, status: r.status, updatedAt: r.updated_at, updates: r.updates, outlets: r.outlets }));
+       (SELECT count(DISTINCT source_id) FROM news_items n WHERE n.story_key = s.key) outlets,
+       (SELECT count(*) FROM posts p WHERE p.story_key = s.key AND p.deleted_at IS NULL AND p.removed_at IS NULL) takes,
+       (SELECT count(*) FROM posts p WHERE p.story_key = s.key AND p.deleted_at IS NULL AND p.removed_at IS NULL AND p.created_at > ?) velocity
+     FROM stories s ${where} ORDER BY ${order} LIMIT ?`,
+    [t - 6 * 3_600_000, ...(where ? [opts.section!] : []), limit],
+  );
+  const keys = rows.map((r) => r.key);
+  const sp = splits("story", keys, opts.viewerId ?? null);
+  const series = new Map<string, number[]>(keys.map((k) => [k, Array(12).fill(0)]));
+  if (keys.length) {
+    for (const r of all<{ story_key: string; created_at: number }>(
+      `SELECT story_key, created_at FROM posts WHERE story_key IN (${keys.map(() => "?").join(",")}) AND created_at > ? AND deleted_at IS NULL`,
+      [...keys, t - 24 * 3_600_000],
+    )) series.get(r.story_key)![Math.min(11, Math.floor((r.created_at - (t - 24 * 3_600_000)) / 7_200_000))]++;
+  }
+  return rows.map((r) => ({
+    key: r.key, title: r.title, summary: r.summary, section: r.section, tag: r.tag, status: r.status, updatedAt: r.updated_at,
+    updates: r.updates, outlets: r.outlets, takes: r.takes, velocity: r.velocity, series: series.get(r.key)!, split: sp.get(r.key) ?? { ...EMPTY_SPLIT },
+  }));
 }
 
 export type StoryUpdate = { id: string; body: string; kind: "update" | "key" | "quote"; createdAt: number; author: UserMini | null; source: string | null };
 
-export function getStory(key: string) {
-  const s = listStories(100).find((x) => x.key === key);
+export function getStory(key: string, viewerId: string | null = null) {
+  const s = listStories(200, { viewerId }).find((x) => x.key === key);
   if (!s) return null;
   const updates = all<{ id: string; body: string; kind: StoryUpdate["kind"]; created_at: number; author_id: string | null; handle: string | null; display_name: string | null; avatar_media_id: string | null; verified: number | null; source: string | null }>(
     `SELECT u.id, u.body, u.kind, u.created_at, u.author_id, a.handle, a.display_name, a.avatar_media_id, a.verified, src.name source
@@ -51,7 +86,7 @@ export function getStory(key: string) {
 
 /** Headlines for the top ticker: the admin banner first, then live stories. */
 export function tickerStories() {
-  return listStories(5).filter((s) => s.status !== "ended");
+  return listStories(6).filter((s) => s.status !== "ended");
 }
 
 export type LiveEventView = {

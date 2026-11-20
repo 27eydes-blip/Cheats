@@ -1,26 +1,28 @@
 /**
- * Seed a fresh database so the app feels alive on first run:
- * 30 users, 10 communities, 200 posts (with replies, quotes, polls, images),
- * 50 news items from clearly fictional outlets, follows, likes, reposts,
- * a breaking banner, and a few reports for the admin queue.
+ * Seed a fresh database with a national edition so the app feels alive:
+ * 30 people, 12 national Stories with timelines, multi-outlet coverage, and
+ * Takes with stances (plus head-to-head Answers), stance votes, 10 Desks with
+ * threaded discussions, Live Studio shows, 50 headlines, and a few reports.
  *
- *   npm run seed        (refuses to run on a database that already has users)
- *   npm run reset       (wipes ./data and seeds again)
+ * All people, outlets, and events are fictional sample data.
+ *
+ *   npm run seed     (refuses to run on a database that already has users)
+ *   npm run reset    (wipes ./data and seeds again)
  */
 import sharp from "sharp";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { all, get, newId, run, tx } from "../src/lib/db";
+import { get, newId, run, tx } from "../src/lib/db";
 import { hashPassword } from "../src/lib/passwords";
 import { extractHashtags, extractMentions } from "../src/lib/text";
 import { blurPlaceholder, uploadDir } from "../src/lib/media";
 
-// Deterministic randomness so every seed looks the same.
-let s = 42;
+let s = 7;
 const rand = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
 const pick = <T,>(a: readonly T[]) => a[Math.floor(rand() * a.length)];
 const int = (a: number, b: number) => a + Math.floor(rand() * (b - a + 1));
 const NOW = Date.now();
+const MIN = 60_000;
 const HOUR = 3_600_000;
 
 if (get<{ n: number }>("SELECT count(*) n FROM users")!.n > 0) {
@@ -28,445 +30,505 @@ if (get<{ n: number }>("SELECT count(*) n FROM users")!.n > 0) {
   process.exit(0);
 }
 
-const PEOPLE: [string, string, string][] = [
-  ["admin", "Townsquare Team", "Official account. Moderation, product updates, and help."],
-  ["demo", "Demo User", "Just here to try things out."],
-  ["maria_lopez", "Maria Lopez", "City hall reporter. Coffee first, questions second."],
-  ["jwashington", "James Washington", "Retired teacher. Local history nerd. Grandpa x4."],
-  ["priya_codes", "Priya Natarajan", "Software engineer. Writing about tech without the hype."],
-  ["coach_dave", "Coach Dave", "High school football coach. Go Eagles."],
-  ["thegreenthumb", "Lena Fischer", "Gardener, beekeeper, compost evangelist 🐝"],
-  ["markets_mike", "Mike Chen", "Markets, money, and why your groceries cost more."],
-  ["sarah_k", "Sarah Kim", "Nurse. Night shift survivor. Dog mom."],
-  ["tom_on_policy", "Tom Brennan", "Policy wonk. I read the bill so you don't have to."],
-  ["ava_writes", "Ava Robinson", "Novelist. Working on book three. Send snacks."],
-  ["djmarcus", "Marcus Hill", "DJ, producer, vinyl collector."],
-  ["chef_rosa", "Rosa Martinez", "Line cook turned food truck owner 🌮"],
-  ["hiker_ben", "Ben Okafor", "Trails, tents, and too many photos of sunsets."],
-  ["the_real_nina", "Nina Petrova", "Photographer. Light chaser."],
-  ["gameday_greg", "Greg Sullivan", "Sports takes, mostly bad ones."],
-  ["dr_amina", "Dr. Amina Yusuf", "Family doctor. Not medical advice on here, just context."],
-  ["oldschool_ray", "Ray Duncan", "Mechanic for 30 years. Ask me about your weird noise."],
-  ["jess_votes", "Jess Alvarez", "Civic engagement. Register, then vote. Every time."],
-  ["pixel_pete", "Pete Moreau", "Indie game dev. Making a farming game, slowly."],
-  ["kayla_runs", "Kayla Brooks", "Marathoner. Couch to 26.2 in two years."],
-  ["faithful_frank", "Frank Williams", "Deacon, dad, and a pretty good griller."],
-  ["linh_tran", "Linh Tran", "Small business owner. Nail salon + a lot of opinions on rent."],
-  ["astro_omar", "Omar Haddad", "Amateur astronomer. Clear skies!"],
-  ["bookish_beth", "Beth Carter", "Librarian. Yes, we still exist. Yes, we have Wi-Fi."],
-  ["rancher_cole", "Cole Jensen", "Fourth-generation cattle rancher. Weather is my religion."],
-  ["zoe_designs", "Zoe Park", "Product designer. Opinions on fonts."],
-  ["veteran_vic", "Victor Ramos", "USMC vet. Helping vets find jobs."],
-  ["mom_of_three", "Hannah Lee", "Three kids, one minivan, zero free time."],
-  ["night_owl_ike", "Ike Johnson", "Insomniac. Posting at 3am so you don't have to."],
+// ---------------------------------------------------------------- people
+const PEOPLE: [string, string, string, boolean][] = [
+  ["admin", "Townsquare Desk", "Official account. Standards, corrections, and product notes.", true],
+  ["demo", "Demo Reader", "Just here to read the front page.", false],
+  ["maria_lopez", "Maria Lopez", "Capitol Hill correspondent. Votes, whips, and the fine print.", true],
+  ["jwashington", "James Washington", "Retired civics teacher. I read the Constitution for fun.", false],
+  ["priya_codes", "Priya Natarajan", "Software engineer. Tech policy without the hype.", true],
+  ["coach_dave", "Dave Kowalski", "College sports writer. Overtime is my love language.", false],
+  ["thegreenthumb", "Lena Fischer", "Climate scientist. Weather is not climate, but it's related.", false],
+  ["markets_mike", "Mike Chen", "Markets editor. Rates, jobs, and why your groceries cost more.", true],
+  ["sarah_k", "Sarah Kim", "ER nurse. Health policy from the night shift.", false],
+  ["tom_on_policy", "Tom Brennan", "Policy analyst. I read the 900-page bill so you don't have to.", true],
+  ["ava_writes", "Ava Robinson", "Novelist and culture critic.", false],
+  ["djmarcus", "Marcus Hill", "Union electrician. Opinions on infrastructure, professionally.", false],
+  ["chef_rosa", "Rosa Martinez", "Restaurant owner. Small business, big tariffs.", false],
+  ["hiker_ben", "Ben Okafor", "Park ranger. Public lands and wild places.", false],
+  ["the_real_nina", "Nina Petrova", "Photojournalist. On the ground for storms and summits.", true],
+  ["gameday_greg", "Greg Sullivan", "Sports takes, mostly correct.", false],
+  ["dr_amina", "Dr. Amina Yusuf", "Family doctor. Context, not medical advice.", true],
+  ["oldschool_ray", "Ray Duncan", "Long-haul trucker, 30 years. Freight tells you where the economy is.", false],
+  ["jess_votes", "Jess Alvarez", "Election law nerd. Register, then vote. Every time.", false],
+  ["pixel_pete", "Pete Moreau", "Game developer. AI, copyright, and craft.", false],
+  ["kayla_runs", "Kayla Brooks", "College student. Tuition, jobs, and the future I'm inheriting.", false],
+  ["faithful_frank", "Frank Williams", "Pastor and dad. Faith in public life.", false],
+  ["linh_tran", "Linh Tran", "Importer. I see tariffs on every invoice.", false],
+  ["astro_omar", "Omar Haddad", "Space reporter. Clear skies and clean launches.", true],
+  ["bookish_beth", "Beth Carter", "Librarian. Facts have footnotes.", false],
+  ["rancher_cole", "Cole Jensen", "Fourth-generation rancher. Weather is my religion.", false],
+  ["zoe_designs", "Zoe Park", "Product designer. Interfaces and institutions.", false],
+  ["veteran_vic", "Victor Ramos", "Marine veteran. Defense, veterans' care, and plain talk.", false],
+  ["defense_dana", "Dana Whitfield", "Foreign affairs analyst. Treaties, trade, and tension.", true],
+  ["night_owl_ike", "Ike Johnson", "Night-shift data analyst. Charts at 3am.", false],
 ];
 
-const TAGS = ["localnews", "election2026", "economy", "weather", "football", "tech", "ai", "gardening", "food", "schoolboard", "traffic", "health", "music", "books", "space", "smallbusiness", "veterans", "running"];
-
-const LINES = [
-  "City council meets tonight at 7 on the new budget. I'll be live-posting the highlights. #localnews",
-  "Gas went up another 20 cents this week. Anyone else feeling it? #economy",
-  "Hot take: the best pizza in town is from the place next to the laundromat. Fight me. #food",
-  "Storm rolling in this afternoon. Bring the patio furniture in. #weather",
-  "Friday night lights! Eagles up 21-14 at the half 🏈 #football",
-  "New AI tools are cool, but please double-check what they tell you. #ai #tech",
-  "First tomatoes of the season. Worth every aphid. #gardening",
-  "School board voted 4-3 on the new start times. Thoughts? #schoolboard",
-  "Highway 9 is a parking lot right now. Take the frontage road. #traffic",
-  "Reminder: flu shots are free at the county clinic through Saturday. #health",
-  "Just finished a 6-hour set. My ears are ringing in a good way. #music",
-  "Reading three books at once is a lifestyle, not a problem. #books",
-  "Jupiter is incredibly bright tonight, look southeast after 9pm. #space",
-  "Rent on our shop went up 30%. Small businesses can't keep absorbing this. #smallbusiness",
-  "Hiring event for veterans this Thursday at the community center. Bring a resume, we'll help with the rest. #veterans",
-  "18 miles this morning. Legs: gone. Spirit: high. #running",
-  "Early voting starts Monday. Know your polling place before you go. #election2026",
-  "Unpopular opinion: meetings should have a hard 30-minute cap.",
-  "Somebody explain why my phone needs an update every three days. #tech",
-  "Made my grandma's tamale recipe for the first time. Called her twice. Worth it. #food",
-  "The new bike lanes downtown are great, but the signage is confusing. #localnews #traffic",
-  "Watching the markets today like it's a thriller movie. #economy",
-  "Can we bring back the town fair? It used to be the best weekend of the year.",
-  "Library has free museum passes now. Most people don't know this! #books",
-  "If your car makes a grinding noise when you brake, don't wait. That's your rotors talking.",
-  "Kids asked me what the internet was like in 1998. I told them it screamed at you to connect.",
-  "Our church food drive collected over 2,000 cans this month. Thank you, neighbors.",
-  "Coffee shop on 5th is closing after 22 years. End of an era. #localnews #smallbusiness",
-  "Debate night is coming. I'll be watching with the sound on and my expectations low. #election2026",
-  "Saw a meteor so bright it lit up the whole yard. Anyone else see it around 11? #space",
-  "Hydrate. Stretch. Text your mom. That's the post.",
-  "Our high school robotics team made it to state! So proud of these kids. #schoolboard #tech",
-  "Weather app said 0% chance of rain. I am currently soaked. #weather",
-  "Rosa's food truck is at the park today. The birria tacos are not optional. #food",
-  "Finally got the farming game demo working on a phone. Small win, big smile. #tech",
-  "Property taxes are up again and nobody can explain why in plain English. #localnews #economy",
-  "Night shift tip: freeze your water bottle, it'll still be cold at 4am. #health",
-  "Fourth straight week without rain. Pastures are hurting. #weather",
-  "Read the whole infrastructure bill summary so you don't have to. Thread coming tomorrow. #election2026",
-  "Sunset from the ridge trail tonight. No filter needed.",
+// ---------------------------------------------------------------- outlets (fictional)
+const OUTLETS: [string, string, string][] = [
+  ["o1", "The National Ledger", "https://example.com/ledger"],
+  ["o2", "Capitol Wire", "https://example.org/capitol-wire"],
+  ["o3", "Meridian News", "https://example.net/meridian"],
+  ["o4", "The Continental", "https://example.com/continental"],
+  ["o5", "Signal Daily", "https://example.org/signal"],
+  ["o6", "Harbor & Main", "https://example.net/harbor-main"],
 ];
 
-const REPLIES = [
-  "Totally agree.", "Hard disagree, but I respect it.", "Source?", "This is the post of the day.", "Wait, really? I had no idea.",
-  "Same thing happened to me last week!", "Thanks for sharing this.", "Can confirm.", "Okay but have you tried the other place?", "😂😂",
-  "Respectfully, no.", "Following for updates.", "This needs more attention.", "Underrated take.", "I was there too!", "Great point about the details.",
-];
-
-const POLLS: [string, string[]][] = [
-  ["Best time for the city council meetings? #localnews", ["Weekday evenings", "Saturday mornings", "Stream them online"]],
-  ["How do you get your news? ", ["Social media", "TV", "News websites", "Friends and family"]],
-  ["Should the town fair come back next summer?", ["Yes!", "No", "Only if it's cheaper"]],
-  ["Pineapple on pizza? #food", ["Yes", "Absolutely not"]],
-  ["Who wins Friday's game? #football", ["Eagles", "Wildcats"]],
-  ["What should the empty lot downtown become?", ["Park", "Housing", "Parking", "Farmers market"]],
-];
-
-const NEWS_SOURCES = [
-  ["src1", "Example Daily Wire", "https://example.com/daily-wire"],
-  ["src2", "Sample Tribune", "https://example.org/tribune"],
-  ["src3", "Placeholder Network News", "https://example.net/pnn"],
-  ["src4", "Demo Herald", "https://example.com/herald"],
-  ["src5", "Mock Metro Ledger", "https://example.org/ledger"],
-];
-
-const NEWS: [string, string, string][] = [
-  ["Politics", "State lawmakers advance budget bill after late-night session", "budget"],
-  ["Politics", "Budget bill clears key vote; both parties claim a win", "budget"],
-  ["Politics", "What's actually in the state budget, in five charts", "budget"],
-  ["Politics", "Early voting turnout tops last cycle in first three days", "turnout"],
-  ["Politics", "Record early turnout reported; officials urge patience at polls", "turnout"],
-  ["Politics", "Candidates spar over taxes and schools in first debate", "debate"],
-  ["Politics", "Fact-check: claims from the first gubernatorial debate", "debate"],
-  ["World", "Leaders gather for regional trade summit", "summit"],
-  ["World", "Trade summit ends with agreement on shipping routes", "summit"],
-  ["World", "Severe flooding displaces thousands in coastal region", null as never],
-  ["World", "Aid groups scale up response as floodwaters recede", null as never],
-  ["World", "Elections in three countries this weekend: what to watch", null as never],
-  ["Business", "Gas prices rise for third straight week", "gas"],
-  ["Business", "Why gas prices are climbing again, explained", "gas"],
-  ["Business", "Local grocery chain announces 12 new stores", null as never],
-  ["Business", "Small-business owners say rent increases are the top worry", null as never],
-  ["Business", "Stocks close mixed as investors weigh rate outlook", null as never],
-  ["Business", "Mortgage rates dip slightly, offering buyers small relief", null as never],
-  ["Sports", "Eagles rally in fourth quarter to stay unbeaten", "eagles"],
-  ["Sports", "Eagles' comeback: the five plays that turned the game", "eagles"],
-  ["Sports", "State marathon draws record field of runners", null as never],
-  ["Sports", "Basketball preview: the region's top five teams", null as never],
-  ["Sports", "Local wrestler signs with state university", null as never],
-  ["Tech", "New phone update brings battery fixes, users report", null as never],
-  ["Tech", "Schools weigh rules for AI homework helpers", "ai-schools"],
-  ["Tech", "Teachers split on AI tools in the classroom, survey finds", "ai-schools"],
-  ["Tech", "Regional broadband expansion reaches rural counties", null as never],
-  ["Tech", "Startup builds farming app for small ranchers", null as never],
-  ["Tech", "How to spot a scam text, according to security experts", null as never],
-  ["Entertainment", "Summer music festival announces lineup", null as never],
-  ["Entertainment", "Local author's debut novel hits bestseller list", null as never],
-  ["Entertainment", "Historic theater reopens after two-year renovation", null as never],
-  ["Entertainment", "Film festival to spotlight hometown directors", null as never],
-  ["Local", "City council to vote on downtown bike lanes", "bikelanes"],
-  ["Local", "Bike lane plan draws packed crowd at council meeting", "bikelanes"],
-  ["Local", "Coffee shop on 5th Street to close after 22 years", null as never],
-  ["Local", "County clinic offers free flu shots through Saturday", null as never],
-  ["Local", "School board approves later start times in 4-3 vote", "starttimes"],
-  ["Local", "Parents react to new school start times", "starttimes"],
-  ["Local", "Highway 9 construction to cause delays through December", null as never],
-  ["Local", "Library launches free museum pass program", null as never],
-  ["Local", "Drought conditions worsen for area ranchers", null as never],
-  ["World", "Scientists report progress on long-lasting vaccine", null as never],
-  ["Business", "Holiday hiring expected to slow this year", null as never],
-  ["Sports", "Youth soccer league expands to two new fields", null as never],
-  ["Tech", "Meteor shower peaks this week; best viewing after midnight", null as never],
-  ["Politics", "Town hall on property taxes set for next Tuesday", null as never],
-  ["Local", "Food drive collects 2,000 cans for families in need", null as never],
-  ["Entertainment", "Community theater casts kids for winter show", null as never],
-  ["World", "Global shipping costs ease ahead of holiday season", null as never],
-];
-
-const COMMUNITIES: [string, string, string][] = [
-  ["localnews", "Local News", "What's happening in town: council, schools, roads, and businesses."],
-  ["politics", "Politics", "Debate policy from any side. Same rules for everyone. Be civil."],
-  ["football", "Friday Night Football", "High school and college football, scores, and trash talk."],
-  ["gardening", "Gardeners", "Vegetables, flowers, bees, and dirt under the nails."],
-  ["tech", "Tech Talk", "Gadgets, software, AI, and help with your devices."],
-  ["food", "Food & Recipes", "Recipes, restaurants, and food truck sightings."],
-  ["veterans", "Veterans Network", "Jobs, benefits, and community for those who served."],
-  ["books", "Book Club", "What are you reading? Monthly picks and discussion."],
-  ["parents", "Parents", "School, sports, schedules, and surviving it all."],
-  ["space", "Night Sky", "Astronomy, launches, and what to look for tonight."],
-];
-
-const COMMUNITY_POSTS: Record<string, string[]> = {
-  localnews: ["The bike lane vote passed 5-2. What does this actually change for drivers on Main?", "Anyone know why the water main on 3rd keeps breaking?", "Coffee shop on 5th closing after 22 years — let's do a send-off this Saturday"],
-  politics: ["Read the full state budget summary. Ask me anything about where the money goes.", "Early voting turnout is up 18%. Good sign or just convenience?", "Debate night megathread: keep it civil"],
-  football: ["Eagles 28, Wildcats 24 — game thread recap", "Who's the best QB in the conference this year?", "Playoff bracket predictions"],
-  gardening: ["My tomatoes split after the rain. Anything I can do?", "Show your fall harvest 🎃", "Bees swarmed my shed. Who do I call?"],
-  tech: ["Is the new phone update worth installing yet?", "How do you explain two-factor auth to your parents?", "Best budget laptop for a high schooler?"],
-  food: ["Best tacos in town — final answer?", "Rosa's truck is at the park today 🌮", "Grandma's recipes you still make"],
-  veterans: ["Job fair Thursday at the community center — who's going?", "VA appointment wait times this month?"],
-  books: ["November pick: what did everyone think of the ending?", "Books that made you cry on a plane"],
-  parents: ["New school start times: how are mornings going?", "Rainy day ideas for under-10s"],
-  space: ["Jupiter is huge tonight, look southeast after 9", "Meteor shower peak this week — best dark spots nearby?"],
+// ---------------------------------------------------------------- stories
+type StoryDef = {
+  key: string; title: string; summary: string; section: string; tag: string; status: "live" | "developing" | "ended";
+  bias: number; // share of readers who agree with the story's framing
+  updates: [string, "update" | "key" | "quote"][];
+  coverage: string[];
+  agree: string[]; disagree: string[]; context: string[]; question: string[];
 };
 
-const COMMENTS = [
-  "This is the right call, honestly.", "I disagree, and here's why: the numbers don't add up.", "Source? Genuinely asking.", "Lived here 30 years, this comes up every decade.",
-  "Great thread, thanks for organizing it.", "Can someone summarize for those of us who missed the meeting?", "Same experience here.", "Hard agree.",
-  "Counterpoint: it depends a lot on the neighborhood.", "Update: they posted the minutes online.", "😂 accurate", "Following this one.",
+const STORIES: StoryDef[] = [
+  {
+    key: "infrastructure", title: "Senate passes $1.2 trillion infrastructure package, 62–38", section: "Politics", tag: "infrastructure", status: "live", bias: 0.56,
+    summary: "Fourteen senators crossed party lines to send the roads, rail, and broadband bill to the House, where leaders expect a vote next week.",
+    updates: [
+      ["Debate opens on the floor with 30 hours of time agreed.", "update"],
+      ["Amendment to cut transit funding by 20% fails, 44–56.", "key"],
+      ["“This is the first real investment in rail in a generation.” — Senate majority whip", "quote"],
+      ["Broadband provision survives a point of order, 58–42.", "update"],
+      ["Final passage: 62–38. Bill heads to the House.", "key"],
+      ["House leaders schedule a vote for Tuesday; two caucuses have not committed.", "update"],
+    ],
+    coverage: ["Senate clears infrastructure bill with bipartisan support", "What's in the $1.2 trillion package, line by line", "Critics say infrastructure bill adds to the deficit", "Fourteen crossovers: who broke ranks and why"],
+    agree: ["Roads and bridges aren't partisan. Glad they got this done.", "Broadband money finally reaches rural counties. That's real.", "As an electrician, this is years of work for my local. Good bill."],
+    disagree: ["Another trillion on the credit card. Who pays it back?", "Too much money flows through slow federal programs. Block grants would work better.", "The transit money mostly helps a few big cities."],
+    context: ["Context: about $550B of the total is new spending; the rest re-authorizes existing programs.", "Context: the CBO score lands in about two weeks; current estimates are preliminary."],
+    question: ["Does any of the bridge money have a deadline to be spent?", "How does the House math work if both caucuses hold out?"],
+  },
+  {
+    key: "fedrates", title: "Fed holds rates steady, signals one cut before summer", section: "Business", tag: "fed", status: "developing", bias: 0.48,
+    summary: "The central bank kept its benchmark rate unchanged for a fourth straight meeting, citing cooling inflation but a still-tight labor market.",
+    updates: [
+      ["Rate decision: unchanged, as expected.", "key"],
+      ["Statement drops the phrase “additional tightening.”", "update"],
+      ["“We're not yet confident enough to declare victory.” — Fed chair", "quote"],
+      ["Stocks rise 0.8%; 10-year yield falls to 4.1%.", "update"],
+    ],
+    coverage: ["Fed holds steady, hints at a cut", "Markets rally on softer Fed tone", "Why the Fed is waiting on the jobs data"],
+    agree: ["Right call. Cutting too early is how you get the '70s again.", "Patience is underrated. Inflation is still above target."],
+    disagree: ["Mortgage rates are crushing first-time buyers. Cut now.", "Small businesses can't wait until summer for cheaper credit."],
+    context: ["Context: core inflation is down to 2.8% from a 5.6% peak, per the latest release."],
+    question: ["Does a summer cut actually move mortgage rates, or is it priced in?"],
+  },
+  {
+    key: "scotus-age", title: "Supreme Court weighs state laws requiring age checks on social media", section: "Politics", tag: "agecheck", status: "developing", bias: 0.52,
+    summary: "Justices heard two hours of argument over whether laws requiring ID-based age verification violate the First Amendment.",
+    updates: [
+      ["Arguments begin; the courtroom is at capacity.", "update"],
+      ["Several justices question how age checks would protect user privacy.", "key"],
+      ["“Parents are asking for help, and states answered.” — state solicitor general", "quote"],
+      ["Decision expected by the end of June.", "update"],
+    ],
+    coverage: ["Justices skeptical of sweeping age-check laws", "Parents' groups rally outside the Court", "How age verification would actually work"],
+    agree: ["Kids shouldn't be on these apps unsupervised. Age checks are overdue.", "We check ID for alcohol. A phone can be just as harmful."],
+    disagree: ["Uploading your ID to every app is a privacy disaster waiting to happen.", "This is a parenting problem, not a government one."],
+    context: ["Context: three states have similar laws on hold pending this ruling."],
+    question: ["Would the ruling apply to messaging apps too, or only feeds?"],
+  },
+  {
+    key: "hurricane", title: "Hurricane Delia makes landfall on the Gulf Coast as a Category 3", section: "Top Stories", tag: "delia", status: "live", bias: 0.7,
+    summary: "More than 400,000 customers are without power; federal emergency declarations cover parts of three states.",
+    updates: [
+      ["Delia strengthens to Category 3 overnight.", "update"],
+      ["Landfall near the coast with 120 mph winds.", "key"],
+      ["Federal emergency declarations approved for three states.", "key"],
+      ["Utilities report 412,000 customers without power.", "update"],
+      ["Search-and-rescue teams deploy at first light.", "update"],
+    ],
+    coverage: ["Delia slams Gulf Coast", "Power outages climb past 400,000", "How to help storm victims safely", "Why this storm intensified so fast"],
+    agree: ["Grateful for the linemen already rolling in from out of state.", "Federal response was fast this time. Credit where it's due."],
+    disagree: ["Evacuation orders came too late for the barrier islands.", "We keep rebuilding in the same flood zones. That has to change."],
+    context: ["Context: donate through established relief groups; scam “relief funds” spike after every storm.", "Context: Category refers to wind speed only; storm surge is often the bigger danger."],
+    question: ["Is the federal flood insurance program solvent enough for another big claim year?"],
+  },
+  {
+    key: "antitrust", title: "Antitrust trial against search giant enters closing arguments", section: "Tech", tag: "antitrust", status: "developing", bias: 0.55,
+    summary: "Government lawyers say default-search deals locked out rivals; the company says users simply prefer its product.",
+    updates: [
+      ["Government opens closing: “Defaults are destiny.”", "quote"],
+      ["Company argues switching search engines takes two taps.", "update"],
+      ["Judge says a ruling will come “in the new year.”", "key"],
+    ],
+    coverage: ["Search antitrust case nears verdict", "What a breakup could mean for your phone", "Inside the default-search deals"],
+    agree: ["Paying billions to be the default isn't competing on quality.", "Competition is how we got better phones. Search needs it too."],
+    disagree: ["People use it because it works. That's not a crime.", "Breaking up a successful American company helps foreign rivals."],
+    context: ["Context: the remedies phase is separate; no breakup is decided in this ruling."],
+    question: ["If defaults go away, what does the choice screen look like?"],
+  },
+  {
+    key: "trade", title: "U.S. and EU reach deal to cut tariffs on steel and autos", section: "World", tag: "tradedeal", status: "developing", bias: 0.6,
+    summary: "The agreement phases out tariffs over three years and creates a joint panel on subsidies for clean-energy manufacturing.",
+    updates: [
+      ["Negotiators announce a framework after an all-night session.", "key"],
+      ["Steel tariffs fall 50% immediately, the rest over three years.", "update"],
+      ["Automakers' group calls the deal “a relief.”", "update"],
+    ],
+    coverage: ["Transatlantic tariff truce", "Steel towns react to the trade deal", "Who wins and loses in the auto provisions"],
+    agree: ["My import costs just dropped overnight. Huge for small businesses.", "Allies trading freely is how you counter bigger rivals."],
+    disagree: ["Steelworkers got sold out again.", "Three years is too fast for mills to adjust."],
+    context: ["Context: the deal still needs approval from the EU's member governments."],
+    question: ["Does this change prices at the dealership this year?"],
+  },
+  {
+    key: "railstrike", title: "Rail workers set December 1 strike deadline", section: "Business", tag: "railstrike", status: "live", bias: 0.5,
+    summary: "Unions representing 110,000 workers say talks on sick leave have stalled; a shutdown could idle freight nationwide.",
+    updates: [
+      ["Union leaders announce the deadline at a press conference.", "key"],
+      ["Carriers say they are “ready to keep talking.”", "update"],
+      ["Retail groups warn of holiday shipping delays.", "update"],
+      ["Congress could intervene under federal rail labor law.", "key"],
+    ],
+    coverage: ["Rail strike deadline looms", "What a rail shutdown would mean for prices", "The sick-leave fight at the heart of the talks"],
+    agree: ["Workers asking for sick days isn't radical.", "Trucking can't absorb rail freight. The carriers should settle."],
+    disagree: ["A strike in December would be a disaster for families and stores.", "Congress should step in early and impose a deal."],
+    context: ["Context: under the Railway Labor Act, Congress can impose terms to prevent a national strike."],
+    question: ["Would passenger trains stop too, or only freight?"],
+  },
+  {
+    key: "huskies", title: "Huskies win the national title in overtime, 31–28", section: "Sports", tag: "championship", status: "ended", bias: 0.74,
+    summary: "A walk-on kicker's 41-yarder sealed the program's first championship in 52 years.",
+    updates: [
+      ["Halftime: 21–7, favorites in control.", "update"],
+      ["Huskies score 21 straight in the fourth quarter.", "key"],
+      ["Overtime field goal: Huskies win, 31–28.", "key"],
+    ],
+    coverage: ["Huskies stun the favorites in overtime", "The walk-on kicker who won a title", "Best championship game in a decade?"],
+    agree: ["Best title game I've ever watched. Period.", "Walk-on kicker for the win. That's college football."],
+    disagree: ["That pass interference call in the 4th decided it.", "Great game, but the favorites coasted for a half."],
+    context: ["Context: it's the largest fourth-quarter comeback in title-game history."],
+    question: ["Does the kicker get a scholarship now?"],
+  },
+  {
+    key: "ai-schools", title: "Education Department issues first national guidance on AI in classrooms", section: "Tech", tag: "aiclass", status: "developing", bias: 0.5,
+    summary: "The voluntary guidance urges schools to teach AI literacy and set clear rules on AI-assisted homework.",
+    updates: [
+      ["Guidance released; 40 pages, voluntary.", "key"],
+      ["Teachers' groups welcome “clarity,” ask for training funds.", "update"],
+    ],
+    coverage: ["New federal guidance on AI in schools", "Teachers react to AI rules", "What the guidance says about cheating"],
+    agree: ["Kids need to learn how these tools work, not pretend they don't exist.", "Clear rules beat every school inventing its own."],
+    disagree: ["Washington shouldn't be setting classroom policy.", "Kids need to learn to write before they learn to prompt."],
+    context: ["Context: the guidance is voluntary; states and districts set actual policy."],
+    question: ["Is there money attached for teacher training?"],
+  },
+  {
+    key: "border", title: "House passes border security bill; Senate path uncertain", section: "Politics", tag: "border", status: "developing", bias: 0.5,
+    summary: "The bill funds more agents and asylum judges and changes parole rules; it passed 219–211 with no votes to spare.",
+    updates: [
+      ["Bill passes 219–211.", "key"],
+      ["Senate leaders say the bill won't come up “as written.”", "update"],
+      ["Bipartisan group of senators begins drafting an alternative.", "update"],
+    ],
+    coverage: ["House narrowly passes border bill", "What's in the border package", "Senate dealmakers try again"],
+    agree: ["More asylum judges is the part everyone should support.", "Finally a bill that funds enforcement and processing together."],
+    disagree: ["The parole changes go too far and will separate families.", "A partisan bill that can't pass the Senate is just messaging."],
+    context: ["Context: the immigration court backlog is over 3 million cases, per federal data."],
+    question: ["How many new judges does the bill actually fund?"],
+  },
+  {
+    key: "splashdown", title: "Crew splashes down after a record nine-month space station mission", section: "Tech", tag: "splashdown", status: "ended", bias: 0.82,
+    summary: "The four astronauts conducted 300 experiments, including the first long-duration test of a new radiation shield.",
+    updates: [["Deorbit burn complete.", "update"], ["Splashdown off the coast at 4:12 a.m.", "key"], ["Crew in good health, recovery team reports.", "update"]],
+    coverage: ["Record mission ends with a smooth splashdown", "What nine months in orbit does to the body", "The experiments that came home"],
+    agree: ["Watched it live with my kids. Still magic.", "Long missions like this are how we get to Mars."],
+    disagree: ["Amazing, but the budget for this could fix a lot of roads."],
+    context: ["Context: the previous U.S. record for a single mission was 355 days."],
+    question: ["How long until they can walk normally?"],
+  },
+  {
+    key: "writers", title: "Writers ratify new streaming contract, ending 118-day strike", section: "Culture", tag: "writersdeal", status: "ended", bias: 0.66,
+    summary: "The deal sets minimum staffing, raises streaming residuals, and limits the use of AI-generated scripts.",
+    updates: [["Tentative deal reached.", "key"], ["Members ratify with 91% voting yes.", "key"], ["Late-night shows return next week.", "update"]],
+    coverage: ["Writers approve contract, ending strike", "The AI rules in the writers' deal", "When your shows come back"],
+    agree: ["The AI protections set a precedent for every creative job.", "Good deal. Writers deserve residuals from streaming."],
+    disagree: ["118 days of lost paychecks for crew members who weren't at the table."],
+    context: ["Context: residuals are payments when a show is re-aired or streamed after its first run."],
+    question: ["Does the AI clause cover rewrites of existing scripts?"],
+  },
 ];
 
-const STORY_TAKES = ["Watching this closely.", "This affects my commute directly.", "Glad they finally voted.", "Big day for downtown.", "Not sure about this one.", "Here's what my neighbors are saying:"];
+const ANSWERS: Record<"agree" | "disagree", string[]> = {
+  agree: ["I hear you, but the evidence points the other way here.", "Respectfully, the people closest to this see it differently.", "That's the cost of doing nothing, and it's higher."],
+  disagree: ["Counterpoint: the details matter more than the headline.", "I'd push back. The trade-offs here are real.", "Maybe, but that ignores who actually pays for it."],
+};
 
-const STORIES: [string, string, string, string, string | null, "live" | "developing" | "ended", [string, "update" | "key" | "quote"][]][] = [
-  ["bikelanes", "City council passes downtown bike lane plan 5-2", "After a four-hour meeting, the council approved protected bike lanes on Main and 5th. Construction starts in spring.", "Local", "bikelanes", "live", [
-    ["Council meeting opens; more than 200 residents signed up to speak.", "update"],
-    ["Public comment runs past two hours, split roughly evenly for and against.", "update"],
-    ["\"We've studied this for three years. It's time.\" — Council member Ortiz", "quote"],
-    ["Amendment to keep 40 parking spaces on 5th passes 6-1.", "key"],
-    ["Final vote: 5-2 in favor. Construction expected to begin in April.", "key"],
-    ["Business owners on Main plan a meeting next week about delivery zones.", "update"],
-  ]],
-  ["budget", "State budget clears key vote after late-night session", "Lawmakers advanced the spending plan 61-38. Both parties claim wins on schools and roads.", "Politics", "statebudget", "developing", [
-    ["House convenes for a rare late-night session.", "update"],
-    ["Bipartisan deal adds $40M for rural roads.", "key"],
-    ["Budget clears the House 61-38; Senate vote expected Thursday.", "key"],
-  ]],
-  ["eagles", "Eagles rally in fourth quarter to stay unbeaten", "A late touchdown sealed a 28-24 win over the Wildcats.", "Sports", "football", "ended", [
-    ["Wildcats lead 24-14 entering the fourth.", "update"],
-    ["Eagles score twice in four minutes to take the lead.", "key"],
-    ["Final: Eagles 28, Wildcats 24.", "key"],
-  ]],
-  ["gas", "Gas prices rise for a third straight week", "Average price up 20 cents locally; analysts point to refinery maintenance.", "Business", "economy", "developing", [
-    ["Average local price hits $3.61.", "update"],
-    ["Analysts expect prices to ease by mid-December.", "update"],
-  ]],
+const GENERAL = [
+  "Reading the full bill text tonight. Will post the highlights. #infrastructure",
+  "Gas is down 12 cents this week. Small wins. #economy",
+  "Every election season I remind people: check your registration. #vote",
+  "The jobs report comes out Friday. Expectations are low. #economy",
+  "Watching the storm track with family on the coast. Stay safe out there. #delia",
+  "Library card is the best free subscription in America. #books",
+  "Trade deals are boring until they hit your invoice. #tradedeal",
+  "That overtime finish. I'm still not over it. #championship",
+  "Long-haul freight is slower than last month. Watch the rail talks. #railstrike",
+  "AI in classrooms is coming either way. Better to teach it well. #aiclass",
+  "If you only read one explainer on the Fed today, read the statement itself. It's short. #fed",
+  "Clear skies tonight in the Plains. Great night for the Moon. #space",
+];
+
+const DESKS: [string, string, string, string][] = [
+  ["politics", "Politics Desk", "Congress, the courts, and campaigns. Every view, same rules.", "infrastructure"],
+  ["world", "World Desk", "Trade, treaties, and what's happening beyond our borders.", "trade"],
+  ["markets", "Markets Desk", "Rates, jobs, prices, and your paycheck.", "fedrates"],
+  ["tech", "Tech Desk", "AI, antitrust, privacy, and the gadgets in your pocket.", "antitrust"],
+  ["sports", "Sports Desk", "Scores, upsets, and arguments that never end.", "huskies"],
+  ["science", "Science Desk", "Space, climate, and research worth reading.", "splashdown"],
+  ["culture", "Culture Desk", "Books, film, TV, and the people who make them.", "writers"],
+  ["veterans", "Veterans Desk", "Benefits, jobs, and community for those who served.", "border"],
+  ["faith", "Faith & Public Life", "Faith, values, and how they meet policy.", "scotus-age"],
+  ["weather", "Storm Desk", "Severe weather tracking and recovery resources.", "hurricane"],
+];
+
+const DESK_THREADS = [
+  "What's the one detail in this story most coverage is missing?", "Megathread: questions you want answered this week", "Best explainer you've read on this so far?",
+];
+const COMMENTS = [
+  "The fine print matters more than the headline here.", "Disagree, and here's why: the numbers don't add up.", "Source? Genuinely asking.", "Good thread, thanks for setting it up.",
+  "Can someone summarize the key vote?", "Same experience in my state.", "Hard agree.", "Counterpoint: it depends a lot on the region.", "They posted the full text online.", "Following this one.",
 ];
 
 const LIVE: [string, "stream" | "audio" | "debate", string, number, string, string, number][] = [
-  ["Friday Night Lights: Eagles postgame", "stream", "coach_dave", -35, "Highlights, interviews, and your questions after the big comeback.", "football", 1243],
-  ["City Hall Live: bike lanes explained", "audio", "maria_lopez", -12, "Maria breaks down the vote and takes calls.", "bikelanes", 386],
-  ["Markets at the open", "stream", "markets_mike", 95, "What's moving and why, in 20 minutes.", "economy", 0],
-  ["Debate night: should the town fair come back?", "debate", "tom_on_policy", 60 * 26, "Two neighbors, two sides, five-minute rounds. You vote.", "townfair", 0],
-  ["Night Sky Q&A", "audio", "astro_omar", 60 * 50, "Bring your telescope questions.", "space", 0],
+  ["Capitol Report: inside the infrastructure vote", "stream", "maria_lopez", -25, "Maria breaks down the whip count and takes your questions.", "infrastructure", 4812],
+  ["Storm Desk: Delia live coverage", "stream", "the_real_nina", -50, "Live from the coast as recovery begins.", "delia", 9310],
+  ["Markets at the open", "audio", "markets_mike", 80, "What's moving and why, in 20 minutes.", "fed", 0],
+  ["Debate night: should the Fed cut now?", "debate", "tom_on_policy", 60 * 9, "Two economists, five-minute rounds. You call the winner.", "fed", 0],
+  ["Rail talks: what a strike would mean", "audio", "oldschool_ray", 60 * 27, "A trucker and a rail economist on the deadline.", "railstrike", 0],
+  ["Launch Night: next crew rotation", "stream", "astro_omar", 60 * 50, "Countdown coverage and Q&A.", "space", 0],
 ];
 
-/** A simple generated picture (gradient + shapes) so media grids have something to show. */
+const EXTRA_NEWS: [string, string][] = [
+  ["Politics", "Governors' association calls for faster disaster-aid payments"],
+  ["Business", "Jobless claims fall to a four-month low"],
+  ["Business", "Retailers expect record online holiday spending"],
+  ["World", "Allies agree on new sanctions package at summit"],
+  ["World", "Shipping costs ease as canal traffic recovers"],
+  ["Tech", "Chipmaker breaks ground on new domestic plant"],
+  ["Tech", "Phone makers agree to seven years of security updates"],
+  ["Sports", "Basketball preview: ten teams that can win it all"],
+  ["Sports", "Marathon sets record with 60,000 finishers"],
+  ["Culture", "Museum attendance returns to pre-pandemic levels"],
+  ["Culture", "Debut novel tops bestseller list for a fifth week"],
+  ["Top Stories", "Flu vaccine supply ample this season, health officials say"],
+  ["Politics", "Bipartisan bill would cap insulin costs for all insurance plans"],
+  ["Business", "Mortgage rates dip for a third straight week"],
+];
+
+/** A simple generated picture so media grids have something to show. */
 async function makeImage(ownerId: string, i: number): Promise<string> {
-  const hue = (i * 47) % 360;
+  const hue = 205 + ((i * 23) % 40);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
-    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(${hue},70%,62%)"/><stop offset="1" stop-color="hsl(${(hue + 40) % 360},70%,30%)"/></linearGradient></defs>
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(${hue},55%,32%)"/><stop offset="1" stop-color="hsl(${hue + 10},60%,12%)"/></linearGradient></defs>
     <rect width="1200" height="800" fill="url(#g)"/>
-    <circle cx="${300 + (i * 97) % 600}" cy="260" r="110" fill="hsl(${(hue + 180) % 360},90%,85%)" opacity=".9"/>
-    <path d="M0 620 L260 420 L470 560 L720 330 L1000 540 L1200 430 L1200 800 L0 800 Z" fill="hsl(${hue},40%,18%)" opacity=".85"/></svg>`;
+    <circle cx="${300 + (i * 97) % 600}" cy="260" r="110" fill="hsl(43,60%,62%)" opacity=".85"/>
+    <path d="M0 620 L260 420 L470 560 L720 330 L1000 540 L1200 430 L1200 800 L0 800 Z" fill="hsl(${hue},40%,8%)" opacity=".9"/></svg>`;
   const data = await sharp(Buffer.from(svg)).webp({ quality: 80 }).toBuffer();
   const id = newId();
   mkdirSync(uploadDir(), { recursive: true });
   writeFileSync(path.join(uploadDir(), `${id}.webp`), data);
   run("INSERT INTO media (id, owner_id, kind, mime, width, height, bytes, path, alt, blur, created_at) VALUES (?, ?, 'image', 'image/webp', 1200, 800, ?, ?, ?, ?, ?)", [
-    id, ownerId, data.length, `${id}.webp`, "Illustrated landscape with hills and a bright sun", await blurPlaceholder(data), NOW,
+    id, ownerId, data.length, `${id}.webp`, "Illustration: mountains under a gold sun", await blurPlaceholder(data), NOW,
   ]);
   return id;
 }
 
 async function main() {
-  console.log("Seeding…");
-  const adminPw = await hashPassword("townsquare-admin");
-  const demoPw = await hashPassword("townsquare-demo");
-  const otherPw = await hashPassword("townsquare-user");
+  console.log("Seeding the national edition…");
+  const [adminPw, demoPw, otherPw] = await Promise.all([hashPassword("townsquare-admin"), hashPassword("townsquare-demo"), hashPassword("townsquare-user")]);
+  const users = PEOPLE.map(([handle, name, bio, verified], i) => ({ id: newId() + i, handle, name, bio, verified, created: NOW - int(60, 1400) * 24 * HOUR }));
+  const by = new Map(users.map((u) => [u.handle, u]));
+  const voices = users.slice(2);
   const images: string[] = [];
 
-  const users = PEOPLE.map(([handle, name, bio], i) => ({
-    id: newId() + i,
-    handle,
-    name,
-    bio,
-    created: NOW - int(30, 400) * 24 * HOUR,
-  }));
-  const byHandle = new Map(users.map((u) => [u.handle, u]));
-
   tx(() => {
-    for (const [i, u] of users.entries()) {
-      const pw = u.handle === "admin" ? adminPw : u.handle === "demo" ? demoPw : otherPw;
+    for (const u of users) {
       run(
-        `INSERT INTO users (id, email, password_hash, handle, display_name, bio, links, role, verified, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [u.id, `${u.handle.replace(/\W/g, "")}@townsquare.test`, pw, u.handle, u.name, u.bio, i === 2 ? JSON.stringify([{ label: "Portfolio", url: "https://example.com/maria" }]) : "[]", u.handle === "admin" ? "admin" : "user", [0, 2, 16].includes(i) ? 1 : 0, u.created],
+        `INSERT INTO users (id, email, password_hash, handle, display_name, bio, links, role, verified, onboarded, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+        [u.id, `${u.handle.replace(/\W/g, "")}@townsquare.test`, u.handle === "admin" ? adminPw : u.handle === "demo" ? demoPw : otherPw, u.handle, u.name, u.bio,
+          u.handle === "maria_lopez" ? JSON.stringify([{ label: "Portfolio", url: "https://example.com/maria" }]) : "[]", u.handle === "admin" ? "admin" : "user", u.verified ? 1 : 0, u.created],
       );
     }
-    // Follow graph: everyone follows a handful; popular accounts get more.
     for (const u of users) {
-      const n = int(4, 14);
-      for (let k = 0; k < n; k++) {
-        const t = rand() < 0.4 ? users[int(2, 8)] : pick(users);
-        if (t.id !== u.id) run("INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)", [u.id, t.id, NOW - int(1, 600) * HOUR]);
+      for (let k = 0; k < int(4, 12); k++) {
+        const t = rand() < 0.45 ? users[int(2, 9)] : pick(users);
+        if (t.id !== u.id) run("INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)", [u.id, t.id, NOW - int(1, 900) * HOUR]);
       }
     }
-    // Make sure the demo account has a full Following feed.
-    for (const h of ["maria_lopez", "jwashington", "priya_codes", "coach_dave", "markets_mike", "tom_on_policy", "chef_rosa", "astro_omar"]) {
-      run("INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)", [byHandle.get("demo")!.id, byHandle.get(h)!.id, NOW - 100 * HOUR]);
+    for (const h of ["maria_lopez", "markets_mike", "tom_on_policy", "dr_amina", "defense_dana", "the_real_nina", "priya_codes", "coach_dave"]) {
+      run("INSERT OR IGNORE INTO follows (follower_id, followee_id, created_at) VALUES (?, ?, ?)", [by.get("demo")!.id, by.get(h)!.id, NOW - 100 * HOUR]);
     }
+    for (const [id, name, home] of OUTLETS) run("INSERT INTO news_sources (id, name, homepage, verified) VALUES (?, ?, ?, 1)", [id, name, home]);
   });
+  for (let i = 0; i < 8; i++) images.push(await makeImage(pick(voices).id, i));
 
-  for (let i = 0; i < 14; i++) images.push(await makeImage(pick(users.slice(2)).id, i));
-
-  const posts: { id: string; author: string; created: number }[] = [];
-  const insertPost = (author: string, body: string, created: number, extra: { reply?: { id: string; root: string | null }; quote?: string; community?: string } = {}) => {
-    const id = newId() + posts.length;
-    run(`INSERT INTO posts (id, author_id, body, reply_to_id, root_id, quote_of_id, community_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [
-      id, author, body, extra.reply?.id ?? null, extra.reply ? (extra.reply.root ?? extra.reply.id) : null, extra.quote ?? null, extra.community ?? null, created,
+  let n = 0;
+  const post = (author: string, body: string, created: number, x: { reply?: { id: string; root: string }; story?: string; stance?: string; community?: string } = {}) => {
+    const id = newId() + n++;
+    run(`INSERT INTO posts (id, author_id, body, reply_to_id, root_id, community_id, story_key, stance, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+      id, author, body, x.reply?.id ?? null, x.reply?.root ?? null, x.community ?? null, x.story ?? null, x.stance ?? null, created,
     ]);
     for (const t of extractHashtags(body)) run("INSERT OR IGNORE INTO post_hashtags (post_id, tag, created_at) VALUES (?, ?, ?)", [id, t, created]);
     for (const h of extractMentions(body)) {
-      const m = byHandle.get(h);
+      const m = by.get(h);
       if (m) run("INSERT OR IGNORE INTO mentions (post_id, user_id) VALUES (?, ?)", [id, m.id]);
     }
-    posts.push({ id, author, created });
     return id;
+  };
+  const vote = (type: "story" | "post", id: string, agreeShare: number, voters = 0.6) => {
+    for (const u of users) {
+      if (rand() > voters) continue;
+      const r = rand();
+      const value = r < agreeShare ? "agree" : r < agreeShare + 0.12 ? "unsure" : "disagree";
+      run("INSERT OR IGNORE INTO stances (user_id, target_type, target_id, value, created_at) VALUES (?, ?, ?, ?, ?)", [u.id, type, id, value, NOW - int(1, 600) * MIN]);
+    }
   };
 
   tx(() => {
-    const authors = users.slice(2);
-    // 128 top-level posts spread over the last 5 days
-    for (let i = 0; i < 128; i++) {
-      const a = pick(authors);
-      let body = pick(LINES);
-      if (rand() < 0.15) body += ` cc @${pick(authors).handle}`;
-      if (rand() < 0.1) body += ` More here: https://example.com/story/${pick(TAGS)}-update`;
-      const id = insertPost(a.id, body, NOW - Math.floor(rand() * 120 * HOUR));
-      if (body.includes("https://")) {
-        const u = new URL(body.match(/https:\/\/\S+/)![0]);
-        run("UPDATE posts SET link_url = ?, link_domain = ?, link_title = ? WHERE id = ?", [u.toString(), u.hostname, u.pathname.split("/").pop()!.replace(/-/g, " "), id]);
-      }
-    }
-    // Attach images to some posts (1 to 4 per post)
-    let im = 0;
-    for (const p of posts.slice(0, 8)) {
-      const n = Math.min(images.length - im, int(1, 4));
-      for (let k = 0; k < n; k++) run("UPDATE media SET post_id = ?, owner_id = ?, position = ? WHERE id = ?", [p.id, p.author, k, images[im++]]);
-      if (im >= images.length) break;
-    }
-    // 6 polls
-    for (const [q, opts] of POLLS) {
-      const created = NOW - int(1, 60) * HOUR;
-      const id = insertPost(pick(authors).id, q, created);
-      const pid = newId();
-      run("INSERT INTO polls (id, post_id, closes_at) VALUES (?, ?, ?)", [pid, id, created + int(24, 96) * HOUR]);
-      const optionIds = opts.map((label, idx) => {
-        const oid = newId() + idx;
-        run("INSERT INTO poll_options (id, poll_id, idx, label) VALUES (?, ?, ?, ?)", [oid, pid, idx, label]);
-        return oid;
+    let img = 0;
+    STORIES.forEach((st, si) => {
+      const age = (st.status === "ended" ? 30 : st.status === "live" ? 6 : 14) * HOUR;
+      const created = NOW - age;
+      run("INSERT INTO stories (key, title, summary, section, tag, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
+        st.key, st.title, st.summary, st.section, st.tag, st.status, created, st.status === "live" ? NOW - int(2, 9) * MIN : NOW - int(1, 8) * HOUR,
+      ]);
+      st.updates.forEach(([body, kind], i) =>
+        run("INSERT INTO story_updates (id, story_key, body, kind, author_id, source_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", [
+          newId() + st.key + i, st.key, body, kind, i % 3 === 2 ? null : (si % 2 ? by.get("maria_lopez")! : by.get("tom_on_policy")!).id,
+          i % 3 === 2 ? OUTLETS[(si + i) % OUTLETS.length][0] : null, created + Math.round(((i + 1) / (st.updates.length + 1)) * (age - 10 * MIN)),
+        ]),
+      );
+      st.coverage.forEach((title, i) => {
+        const o = OUTLETS[(si + i) % OUTLETS.length];
+        run("INSERT INTO news_items (id, source_id, section, title, summary, url, story_key, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
+          newId() + st.key + "c" + i, o[0], st.section, title, "Sample summary. Real items show a short snippet from the outlet with a link back.", `${o[2]}/${st.key}-${i + 1}`, st.key, created + i * 40 * MIN,
+        ]);
       });
-      for (const u of users.slice(2)) if (rand() < 0.6) run("INSERT INTO poll_votes (poll_id, user_id, option_id, created_at) VALUES (?, ?, ?, ?)", [pid, u.id, pick(optionIds), created + HOUR]);
-    }
-    // 52 replies and 12 quotes (total 200 posts)
-    const tops = [...posts];
-    for (let i = 0; i < 52; i++) {
-      const parent = pick(tops.slice(0, 60));
-      const pa = all<{ root_id: string | null }>("SELECT root_id FROM posts WHERE id = ?", [parent.id])[0];
-      insertPost(pick(authors).id, pick(REPLIES), Math.min(NOW - 60_000, parent.created + int(5, 600) * 60_000), { reply: { id: parent.id, root: pa?.root_id ?? null } });
-    }
-    for (let i = 0; i < 12; i++) {
-      const q = pick(tops);
-      insertPost(pick(authors).id, pick(["This. 👇", "Worth reading.", "Not sure I agree with this one.", "Big if true.", "Sharing for anyone in town."]), Math.min(NOW - 60_000, q.created + int(10, 900) * 60_000), { quote: q.id });
-    }
-    // Likes, reposts, bookmarks: popular-ish distribution
-    for (const p of posts) {
-      const likes = Math.floor(Math.pow(rand(), 2.2) * 28);
-      for (let k = 0; k < likes; k++) run("INSERT OR IGNORE INTO likes (user_id, post_id, created_at) VALUES (?, ?, ?)", [pick(users).id, p.id, Math.min(NOW, p.created + int(1, 300) * 60_000)]);
-      if (rand() < 0.25) {
-        const r = int(1, 5);
-        for (let k = 0; k < r; k++) {
-          const u = pick(users);
-          if (u.id !== p.author) run("INSERT OR IGNORE INTO reposts (user_id, post_id, created_at) VALUES (?, ?, ?)", [u.id, p.id, Math.min(NOW, p.created + int(10, 600) * 60_000)]);
+      vote("story", st.key, st.bias, 0.8);
+
+      const takes: { id: string; stance: string; at: number; author: string }[] = [];
+      for (const stance of ["agree", "disagree", "context", "question"] as const) {
+        for (const body of st[stance]) {
+          const author = pick(voices);
+          const at = Math.min(NOW - 2 * MIN, created + int(10, Math.max(20, age / MIN - 5)) * MIN);
+          const id = post(author.id, `${body} #${st.tag}`, at, { story: st.key, stance });
+          takes.push({ id, stance, at, author: author.id });
+          vote("post", id, stance === "context" ? 0.8 : stance === "agree" ? 0.62 : 0.45, 0.45);
+          if (img < images.length && stance === "agree" && rand() < 0.35) run("UPDATE media SET post_id = ?, owner_id = ? WHERE id = ?", [id, author.id, images[img++]]);
         }
       }
+      // Answers with the opposite stance: these become head-to-head debate cards.
+      for (const t of takes.filter((x) => x.stance === "agree" || x.stance === "disagree").slice(0, 3)) {
+        const opposite = t.stance === "agree" ? "disagree" : "agree";
+        let answerer = pick(voices);
+        if (answerer.id === t.author) answerer = voices[(voices.indexOf(answerer) + 1) % voices.length];
+        const id = post(answerer.id, pick(ANSWERS[t.stance as "agree" | "disagree"]), Math.min(NOW - MIN, t.at + int(5, 90) * MIN), { reply: { id: t.id, root: t.id }, story: st.key, stance: opposite });
+        vote("post", id, 0.5, 0.4);
+      }
+    });
+
+    GENERAL.forEach((body) => post(pick(voices).id, body, NOW - int(10, 3000) * MIN));
+    while (img < images.length) {
+      const id = post(pick(voices).id, "Golden hour over the plains tonight.", NOW - int(30, 900) * MIN);
+      run("UPDATE media SET post_id = ? WHERE id = ?", [id, images[img++]]);
     }
-    // Recompute counters from the real rows
-    run(`UPDATE posts SET
-      like_count = (SELECT count(*) FROM likes WHERE post_id = posts.id),
-      repost_count = (SELECT count(*) FROM reposts WHERE post_id = posts.id),
-      reply_count = (SELECT count(*) FROM posts c WHERE c.reply_to_id = posts.id),
-      quote_count = (SELECT count(*) FROM posts c WHERE c.quote_of_id = posts.id)`);
+
+    // Likes and reposts (Amplify) kept so the stored counts mean something
+    for (let k = 0; k < 260; k++) {
+      const p = get<{ id: string }>("SELECT id FROM posts WHERE community_id IS NULL ORDER BY random() LIMIT 1")!;
+      const u = pick(users);
+      run("INSERT OR IGNORE INTO likes (user_id, post_id, created_at) VALUES (?, ?, ?)", [u.id, p.id, NOW - int(1, 600) * MIN]);
+      if (rand() < 0.15) run("INSERT OR IGNORE INTO reposts (user_id, post_id, created_at) VALUES (?, ?, ?)", [u.id, p.id, NOW - int(1, 600) * MIN]);
+    }
+    run(`UPDATE posts SET like_count = (SELECT count(*) FROM likes WHERE post_id = posts.id), repost_count = (SELECT count(*) FROM reposts WHERE post_id = posts.id),
+      reply_count = (SELECT count(*) FROM posts c WHERE c.reply_to_id = posts.id), quote_count = (SELECT count(*) FROM posts c WHERE c.quote_of_id = posts.id)`);
+
+    // Poll of the Day
+    const pollPost = post(by.get("jess_votes")!.id, "Poll of the Day: what should Congress tackle first in January? #vote", NOW - 3 * HOUR);
+    const pid = newId();
+    run("INSERT INTO polls (id, post_id, closes_at) VALUES (?, ?, ?)", [pid, pollPost, NOW + 21 * HOUR]);
+    const opts = ["Health care costs", "Border security", "Housing prices", "The deficit"].map((label, idx) => {
+      const oid = newId() + idx;
+      run("INSERT INTO poll_options (id, poll_id, idx, label) VALUES (?, ?, ?, ?)", [oid, pid, idx, label]);
+      return oid;
+    });
+    for (const u of users.slice(2)) if (rand() < 0.85) run("INSERT INTO poll_votes (poll_id, user_id, option_id, created_at) VALUES (?, ?, ?, ?)", [pid, u.id, pick(opts), NOW - HOUR]);
     run("UPDATE poll_options SET votes = (SELECT count(*) FROM poll_votes WHERE option_id = poll_options.id)");
 
-    // Notifications for the demo account so the badge has something to show
-    const demo = byHandle.get("demo")!;
-    const demoPost = insertPost(demo.id, "Hello, Townsquare! Trying out my first post. #localnews", NOW - 3 * HOUR);
-    for (const h of ["maria_lopez", "chef_rosa", "astro_omar"]) {
-      run("INSERT OR IGNORE INTO likes (user_id, post_id, created_at) VALUES (?, ?, ?)", [byHandle.get(h)!.id, demoPost, NOW - 2 * HOUR]);
-      run("INSERT INTO notifications (id, user_id, actor_id, type, post_id, created_at) VALUES (?, ?, ?, 'like', ?, ?)", [newId() + h, demo.id, byHandle.get(h)!.id, demoPost, NOW - 2 * HOUR]);
-    }
-    run("UPDATE posts SET like_count = 3 WHERE id = ?", [demoPost]);
-    run("INSERT INTO notifications (id, user_id, actor_id, type, created_at) VALUES (?, ?, ?, 'follow', ?)", [newId() + "f", demo.id, byHandle.get("maria_lopez")!.id, NOW - HOUR]);
-
-    // Communities + memberships
-    for (const [slug, name, desc] of COMMUNITIES) {
+    // Desks (communities) with threaded discussions, a pinned story, and an Editor
+    for (const [slug, name, desc, pinned] of DESKS) {
       const cid = newId() + slug;
-      run("INSERT INTO communities (id, slug, name, description, rules, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", [
-        cid, slug, name, desc, JSON.stringify(["Be civil", "Stay on topic", "No spam or self-promotion without context"]), users[int(2, 29)].id, NOW - int(10, 200) * 24 * HOUR,
+      run("INSERT INTO communities (id, slug, name, description, rules, created_by, pinned_story_key, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
+        cid, slug, name, desc, JSON.stringify(["Argue the idea, not the person", "Link sources for factual claims", "No spam or self-promotion"]), pick(voices).id, pinned, NOW - int(30, 400) * 24 * HOUR,
       ]);
-      for (const u of users) if (rand() < 0.45 || u.handle === "admin" || u.handle === "demo") run("INSERT OR IGNORE INTO memberships (community_id, user_id, role, created_at) VALUES (?, ?, 'member', ?)", [cid, u.id, NOW]);
-      // Threaded discussions with votes
-      for (const [ti, title] of (COMMUNITY_POSTS[slug] ?? []).entries()) {
-        const created = NOW - int(2, 90) * HOUR;
-        const root = insertPost(pick(users.slice(2)).id, title, created, { community: cid });
+      run("INSERT OR IGNORE INTO memberships (community_id, user_id, role, created_at) VALUES (?, ?, 'moderator', ?)", [cid, pick(voices).id, NOW]);
+      run("INSERT OR IGNORE INTO memberships (community_id, user_id, role, created_at) VALUES (?, ?, 'moderator', ?)", [cid, by.get("admin")!.id, NOW]);
+      for (const u of users) if (rand() < 0.5 || u.handle === "demo") run("INSERT OR IGNORE INTO memberships (community_id, user_id, role, created_at) VALUES (?, ?, 'member', ?)", [cid, u.id, NOW]);
+      DESK_THREADS.forEach((title, ti) => {
+        const created = NOW - int(2, 60) * HOUR;
+        const root = post(pick(voices).id, title, created, { community: cid });
         const thread: { id: string; depth: number; at: number }[] = [{ id: root, depth: 0, at: created }];
-        const n = int(3, 9) + (ti === 0 ? 6 : 0);
-        for (let k = 0; k < n; k++) {
+        for (let k = 0; k < int(3, 8) + (ti === 0 ? 4 : 0); k++) {
           const parent = rand() < 0.45 ? thread[0] : pick(thread.filter((x) => x.depth < 4));
-          const at = Math.min(NOW - 60_000, parent.at + int(3, 240) * 60_000);
-          const id = insertPost(pick(users.slice(2)).id, pick(COMMENTS), at, { reply: { id: parent.id, root }, community: cid });
-          thread.push({ id, depth: parent.depth + 1, at });
+          const at = Math.min(NOW - MIN, parent.at + int(3, 240) * MIN);
+          thread.push({ id: post(pick(voices).id, pick(COMMENTS), at, { reply: { id: parent.id, root }, community: cid }), depth: parent.depth + 1, at });
         }
         for (const t of thread) for (const u of users) {
           const r = rand();
           if (r < (t.depth === 0 ? 0.55 : 0.22)) run("INSERT OR IGNORE INTO community_votes (user_id, post_id, value, created_at) VALUES (?, ?, ?, ?)", [u.id, t.id, r < 0.04 ? -1 : 1, NOW]);
         }
-      }
+      });
     }
     run("UPDATE posts SET score = (SELECT coalesce(sum(value), 0) FROM community_votes v WHERE v.post_id = posts.id), reply_count = (SELECT count(*) FROM posts c WHERE c.reply_to_id = posts.id) WHERE community_id IS NOT NULL");
 
-    // News: fictional outlets on example.* domains
-    for (const [id, name, home] of NEWS_SOURCES) run("INSERT INTO news_sources (id, name, homepage, verified) VALUES (?, ?, ?, 1)", [id, name, home]);
-    NEWS.forEach(([section, title, story], i) => {
-      const src = NEWS_SOURCES[i % NEWS_SOURCES.length];
-      run("INSERT INTO news_items (id, source_id, section, title, summary, url, story_key, published_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
-        newId() + i, src[0], section, title, "Sample summary for development. Real items will show a short snippet from the outlet with a link back.", `${src[2]}/story-${i + 1}`, story ?? null, NOW - int(1, 72) * HOUR,
+    // Headlines not attached to a story
+    EXTRA_NEWS.forEach(([section, title], i) => {
+      const o = OUTLETS[i % OUTLETS.length];
+      run("INSERT INTO news_items (id, source_id, section, title, summary, url, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)", [
+        newId() + "x" + i, o[0], section, title, "Sample summary. Real items show a short snippet from the outlet with a link back.", `${o[2]}/brief-${i + 1}`, NOW - int(1, 40) * HOUR,
       ]);
     });
 
-    run("INSERT INTO site_settings (key, value) VALUES ('banner', ?)", [JSON.stringify({ text: "City council passes downtown bike lane plan 5-2 after four-hour meeting", url: "/news/story/bikelanes", level: "breaking", setAt: NOW })]);
-
-    // Live story pages with timelines (sample content from fictional outlets)
-    const reporter = byHandle.get("maria_lopez")!.id;
-    for (const [key, title, summary, section, tag, status, updates] of STORIES) {
-      run("INSERT INTO stories (key, title, summary, section, tag, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [key, title, summary, section, tag, status, NOW - updates.length * 40 * 60_000, NOW - 4 * 60_000]);
-      updates.forEach(([body, kind], i) =>
-        run("INSERT INTO story_updates (id, story_key, body, kind, author_id, source_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)", [
-          newId() + key + i, key, body, kind, i % 3 === 2 ? null : reporter, i % 3 === 2 ? NEWS_SOURCES[i % NEWS_SOURCES.length][0] : null, NOW - (updates.length - i) * 35 * 60_000 + 60_000,
-        ]),
-      );
-      if (tag) for (let k = 0; k < 4; k++) insertPost(pick(users.slice(2)).id, `${pick(STORY_TAKES)} #${tag}`, NOW - int(5, 300) * 60_000);
-    }
-
-    // Live: two shows on air now, three scheduled
+    // Live Studio
     for (const [title, kind, handle, startMin, desc, tag, viewers] of LIVE) {
       run("INSERT INTO live_events (id, kind, title, host_id, starts_at, ends_at, created_at, description, tag, viewers) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?)", [
-        newId() + handle, kind, title, byHandle.get(handle)!.id, NOW + startMin * 60_000, NOW, desc, tag, viewers,
+        newId() + handle + startMin, kind, title, by.get(handle)!.id, NOW + startMin * MIN, NOW, desc, tag, viewers,
       ]);
     }
 
-    // A few open reports so the admin queue isn't empty
-    const spamId = insertPost(byHandle.get("night_owl_ike")!.id, "Sample reported post for the admin queue (pretend this was spam).", NOW - 5 * HOUR);
-    for (const [who, reason] of [["sarah_k", "spam"], ["bookish_beth", "spam"], ["jwashington", "harassment"]]) {
-      run("INSERT INTO reports (id, reporter_id, target_type, target_id, reason, details, created_at) VALUES (?, ?, 'post', ?, ?, '', ?)", [newId() + who, byHandle.get(who)!.id, spamId, reason, NOW - 4 * HOUR]);
+    run("INSERT INTO site_settings (key, value) VALUES ('banner', ?)", [JSON.stringify({ text: "Senate passes $1.2 trillion infrastructure package, 62–38", url: "/news/story/infrastructure", level: "breaking", setAt: NOW })]);
+
+    // Newsdesk items for the demo reader
+    const demo = by.get("demo")!;
+    const demoTake = post(demo.id, "Reading every update on the infrastructure vote. The broadband money matters where I live. #infrastructure", NOW - 3 * HOUR, { story: "infrastructure", stance: "agree" });
+    for (const h of ["maria_lopez", "chef_rosa", "astro_omar"]) {
+      run("INSERT INTO stances (user_id, target_type, target_id, value, created_at) VALUES (?, 'post', ?, 'agree', ?)", [by.get(h)!.id, demoTake, NOW - 2 * HOUR]);
+      run("INSERT INTO notifications (id, user_id, actor_id, type, post_id, created_at) VALUES (?, ?, ?, 'like', ?, ?)", [newId() + h, demo.id, by.get(h)!.id, demoTake, NOW - 2 * HOUR]);
     }
-    run("INSERT INTO reports (id, reporter_id, target_type, target_id, reason, details, created_at) VALUES (?, ?, 'user', ?, 'impersonation', 'Says they are the mayor but they are not.', ?)", [
-      newId() + "imp", byHandle.get("jess_votes")!.id, byHandle.get("pixel_pete")!.id, NOW - 2 * HOUR,
+    const answer = post(by.get("tom_on_policy")!.id, "Fair, but the broadband money has a 5-year spend window. Watch the rollout.", NOW - 90 * MIN, { reply: { id: demoTake, root: demoTake }, story: "infrastructure", stance: "context" });
+    run("INSERT INTO notifications (id, user_id, actor_id, type, post_id, created_at) VALUES (?, ?, ?, 'reply', ?, ?)", [newId() + "r", demo.id, by.get("tom_on_policy")!.id, answer, NOW - 90 * MIN]);
+    run("INSERT INTO notifications (id, user_id, actor_id, type, created_at) VALUES (?, ?, ?, 'follow', ?)", [newId() + "f", demo.id, by.get("maria_lopez")!.id, NOW - HOUR]);
+    run("INSERT INTO bookmarks (user_id, post_id, created_at) SELECT ?, id, ? FROM posts WHERE stance = 'context' AND story_key = 'fedrates' LIMIT 1", [demo.id, NOW - 30 * MIN]);
+    run("UPDATE posts SET reply_count = (SELECT count(*) FROM posts c WHERE c.reply_to_id = posts.id) WHERE id = ?", [demoTake]);
+
+    // Reports for the Control Room queue
+    const spam = post(by.get("night_owl_ike")!.id, "Sample reported take for the Control Room queue (pretend this was spam).", NOW - 5 * HOUR);
+    for (const [who, reason] of [["sarah_k", "spam"], ["bookish_beth", "spam"], ["jwashington", "harassment"]]) {
+      run("INSERT INTO reports (id, reporter_id, target_type, target_id, reason, details, created_at) VALUES (?, ?, 'post', ?, ?, '', ?)", [newId() + who, by.get(who)!.id, spam, reason, NOW - 4 * HOUR]);
+    }
+    run("INSERT INTO reports (id, reporter_id, target_type, target_id, reason, details, created_at) VALUES (?, ?, 'user', ?, 'impersonation', 'Claims to be a senator; is not.', ?)", [
+      newId() + "imp", by.get("jess_votes")!.id, by.get("pixel_pete")!.id, NOW - 2 * HOUR,
     ]);
   });
 
-  const counts = Object.fromEntries(["users", "posts", "communities", "news_items", "follows", "likes"].map((t) => [t, get<{ n: number }>(`SELECT count(*) n FROM ${t}`)!.n]));
+  const counts = Object.fromEntries(["users", "stories", "story_updates", "posts", "stances", "communities", "news_items", "live_events"].map((t) => [t, get<{ n: number }>(`SELECT count(*) n FROM ${t}`)!.n]));
   console.log("Done:", counts);
-  console.log("\nLog in with:\n  admin@townsquare.test / townsquare-admin  (admin)\n  demo@townsquare.test  / townsquare-demo\n  any other seeded user: <handle>@townsquare.test / townsquare-user");
+  console.log("\nLog in with:\n  admin@townsquare.test / townsquare-admin  (Control Room)\n  demo@townsquare.test  / townsquare-demo\n  any other seeded user: <handle>@townsquare.test / townsquare-user");
 }
 
 main();

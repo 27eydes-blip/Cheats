@@ -1,5 +1,5 @@
-import { PageSkeleton } from "@/components/ui/Skeleton";
+import { BentoSkeleton } from "@/components/ui/Skeleton";
 
 export default function Loading() {
-  return <PageSkeleton />;
+  return <BentoSkeleton />;
 }

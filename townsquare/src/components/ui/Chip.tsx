@@ -1,9 +1,9 @@
 import Link from "next/link";
 
-/** Pill-shaped chips for filters, sections, and topics. */
+/** Square-ish chips for filters and sections (no pills). */
 export function chipClass(active: boolean, extra = "") {
-  return `inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-semibold transition-[background-color,color,box-shadow] duration-200 ${
-    active ? "bg-ink-1 text-canvas shadow-1" : "bg-surface text-ink-2 ring-1 ring-line hover:text-ink-1 hover:ring-line-strong"
+  return `inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-[4px] px-3 text-[13px] font-semibold transition-[background-color,color,box-shadow] duration-200 ${
+    active ? "bg-navy text-white shadow-[inset_0_-2px_0_var(--gold)]" : "bg-paper text-ink-2 ring-1 ring-rule hover:text-ink-1 hover:ring-rule-strong"
   } ${extra}`;
 }
 
@@ -17,25 +17,18 @@ export function ChipLink({ href, active = false, children, className = "" }: { h
 
 export function ChipRow({ children, label }: { children: React.ReactNode; label: string }) {
   return (
-    <nav aria-label={label} className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:-mx-6 sm:px-6">
+    <nav aria-label={label} className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:-mx-6 sm:px-6" data-no-swipe>
       {children}
     </nav>
   );
 }
 
-/** A topic chip with a soft gradient derived from the topic name. */
+/** A topic link styled as a dateline tag. */
 export function TopicChip({ tag, href, count }: { tag: string; href: string; count?: number }) {
-  let h = 0;
-  for (const c of tag) h = (h * 37 + c.charCodeAt(0)) % 360;
   return (
-    <Link
-      href={href}
-      className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-semibold text-ink-1 ring-1 ring-line transition-transform duration-150 hover:-translate-y-px"
-      style={{ background: `linear-gradient(120deg, hsl(${h} 90% 60% / 0.16), hsl(${(h + 50) % 360} 90% 60% / 0.08))` }}
-    >
-      <span className="text-ink-3">#</span>
+    <Link href={href} className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-[4px] border-l-2 border-gold bg-paper-2 px-3 text-[13px] font-semibold text-ink-1 transition-colors hover:bg-gold-soft">
       {tag}
-      {count !== undefined && <span className="num text-[12px] font-medium text-ink-3">{count}</span>}
+      {count !== undefined && <span className="mono text-[11.5px] text-ink-3">{count}</span>}
     </Link>
   );
 }

@@ -6,52 +6,49 @@ import { useLayoutEffect, useRef, useState, useTransition } from "react";
 import { LIMITS } from "@/config";
 import type { PostView } from "@/lib/posts";
 import type { UserMini } from "@/lib/users";
-import { blockAction, bookmarkAction, likeAction, muteAction, repostAction } from "@/actions/social";
+import { blockAction, bookmarkAction, muteAction, repostAction } from "@/actions/social";
 import { deletePostAction, editPostAction, pinPostAction } from "@/actions/posts";
-import { ActionBar } from "./post/ActionBar";
 import { LinkCard } from "./post/LinkCard";
 import { MediaGrid, MediaImg } from "./post/MediaGrid";
 import { Poll } from "./post/Poll";
 import { ReportDialog } from "./ReportDialog";
 import { RichText } from "./RichText";
 import { LocalDate, Time } from "./Time";
+import { AnimatedNumber } from "./ui/AnimatedNumber";
 import { Avatar } from "./ui/Avatar";
 import { VerifiedSeal } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { useConfirm } from "./ui/Confirm";
 import { Menu, type MenuItem } from "./ui/Menu";
-import { BlockIcon, EditIcon, FlagIcon, LinkIcon, MoreIcon, MuteIcon, PinIcon, RepostIcon, TrashIcon } from "./icons";
+import { StanceChip, StanceMeter } from "./ui/Stance";
+import { AmplifyIcon, AnswerIcon, BlockIcon, EditIcon, FlagIcon, LinkIcon, MoreIcon, MuteIcon, PinIcon, QuoteIcon, SaveIcon, ShareIcon, TrashIcon } from "./icons";
 import { useComposer, useToast, useViewer } from "./providers";
 
+/** Byline: name, gold seal, handle, and a mono timestamp. */
 export function AuthorLine({ author, createdAt, editedAt, big }: { author: UserMini; createdAt: number; editedAt?: number | null; big?: boolean }) {
   return (
-    <div className={`flex min-w-0 items-center gap-1 ${big ? "flex-col items-start gap-0" : ""}`}>
-      <span className="flex min-w-0 items-center gap-1">
-        <Link href={`/u/${author.handle}`} className={`inline-block truncate py-[3px] font-semibold text-ink-1 hover:underline ${big ? "text-[16px]" : ""}`} onClick={(e) => e.stopPropagation()}>
-          {author.displayName}
-        </Link>
-        {author.verified && <VerifiedSeal size={big ? 17 : 15} />}
-      </span>
-      <span className="flex min-w-0 items-center gap-1 text-ink-3">
-        <span className="truncate">@{author.handle}</span>
-        {!big && (
-          <>
-            <span aria-hidden="true">·</span>
-            <span className="shrink-0 hover:underline"><Time ms={createdAt} /></span>
-          </>
-        )}
-        {editedAt && <span className="shrink-0 text-[12px]" title="Edited after posting">· edited</span>}
-      </span>
+    <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
+      <Link href={`/u/${author.handle}`} className={`inline-flex min-w-0 items-center gap-1 py-[3px] font-semibold text-ink-1 hover:underline ${big ? "text-[16px]" : "text-[14.5px]"}`} onClick={(e) => e.stopPropagation()}>
+        <span className="truncate">{author.displayName}</span>
+        {author.verified && <VerifiedSeal size={big ? 16 : 14} />}
+      </Link>
+      <span className="truncate text-[13px] text-ink-3">@{author.handle}</span>
+      {!big && (
+        <span className="mono shrink-0 text-[11.5px] text-ink-3">
+          · <Time ms={createdAt} />
+        </span>
+      )}
+      {editedAt && <span className="mono shrink-0 text-[11px] text-ink-3" title="Edited after posting">· edited</span>}
     </div>
   );
 }
 
 function Gone({ kind }: { kind: NonNullable<PostView["gone"]> }) {
-  const text = kind === "deleted" ? "This post was deleted by its author." : kind === "removed" ? "This post was removed for breaking the Community Guidelines." : "This post is unavailable.";
-  return <p className="rounded-[var(--r-md)] bg-surface-2 px-3.5 py-3 text-[14px] text-ink-3">{text}</p>;
+  const text = kind === "deleted" ? "This take was deleted by its author." : kind === "removed" ? "This take was removed for breaking the Community Guidelines." : "This take is unavailable.";
+  return <p className="border-l-2 border-rule-strong bg-paper-2 px-3.5 py-3 text-[14px] text-ink-3 italic">{text}</p>;
 }
 
-/** A quoted post, nested as a compact card with a thumbnail. */
+/** A quoted take, set like a pull-quote. */
 export function QuoteEmbed({ post }: { post: PostView }) {
   const router = useRouter();
   if (post.gone) return <Gone kind={post.gone} />;
@@ -62,25 +59,21 @@ export function QuoteEmbed({ post }: { post: PostView }) {
       tabIndex={0}
       onClick={(e) => (e.stopPropagation(), open())}
       onKeyDown={(e) => e.key === "Enter" && (e.stopPropagation(), open())}
-      className="flex cursor-pointer gap-3 rounded-[var(--r-lg)] bg-surface p-3 ring-1 ring-line transition-shadow duration-200 hover:shadow-2"
+      className="flex cursor-pointer gap-3 border-l-[3px] border-gold bg-paper-2 py-2.5 pr-3 pl-3.5 transition-colors hover:bg-paper-3"
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 text-[14px]">
-          <Avatar url={post.author.avatarUrl} name={post.author.displayName} handle={post.author.handle} size={22} ring={false} />
+        <div className="flex items-center gap-2">
+          <Avatar url={post.author.avatarUrl} name={post.author.displayName} handle={post.author.handle} size={20} />
           <AuthorLine author={post.author} createdAt={post.createdAt} />
         </div>
-        {post.body && <p className="mt-1.5 line-clamp-3 text-[14.5px] leading-snug break-words whitespace-pre-wrap text-ink-2">{post.body}</p>}
+        {post.body && <p className="mt-1 line-clamp-3 font-display text-[16px] leading-snug break-words whitespace-pre-wrap text-ink-1 italic">{post.body}</p>}
       </div>
-      {post.media[0] && (
-        <div className="h-[76px] w-[76px] shrink-0 overflow-hidden rounded-[var(--r-sm)]">
-          <MediaImg m={post.media[0]} sizes="80px" />
-        </div>
-      )}
+      {post.media[0] && <div className="h-[68px] w-[68px] shrink-0 overflow-hidden rounded-[3px]"><MediaImg m={post.media[0]} sizes="72px" /></div>}
     </div>
   );
 }
 
-/** Long posts fade out and expand smoothly to their full height. */
+/** Long takes fade out and expand smoothly to their full height. */
 function Expandable({ children, long, big }: { children: React.ReactNode; long: boolean; big?: boolean }) {
   const [open, setOpen] = useState(false);
   const [full, setFull] = useState<number | null>(null);
@@ -88,30 +81,34 @@ function Expandable({ children, long, big }: { children: React.ReactNode; long: 
   useLayoutEffect(() => {
     if (ref.current) setFull(ref.current.scrollHeight);
   }, [children]);
-  const collapsed = 156;
+  const collapsed = 150;
   const needs = long && (full === null || full > collapsed + 24);
   return (
     <>
       <div
         ref={ref}
-        className={`relative overflow-hidden break-words whitespace-pre-wrap ${big ? "font-display text-[21px] leading-[1.45] tracking-[-0.01em]" : "text-[15.5px] leading-[1.5]"}`}
+        className={`relative overflow-hidden break-words whitespace-pre-wrap ${big ? "font-display text-[clamp(1.25rem,1.1rem+0.6vw,1.55rem)] leading-[1.4] tracking-[-0.01em]" : "text-[15.5px] leading-[1.55]"}`}
         style={needs ? { maxHeight: open ? (full ?? 2000) : collapsed, transition: "max-height 420ms var(--ease-out)" } : undefined}
       >
         {children}
-        {needs && !open && <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-surface to-transparent" />}
+        {needs && !open && <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-paper to-transparent" />}
       </div>
       {needs && !open && (
-        <button type="button" className="mt-1 text-[14.5px] font-semibold text-accent hover:underline" onClick={(e) => (e.stopPropagation(), setOpen(true))}>
-          Read more
+        <button type="button" className="folio mt-1.5 !text-[11px] text-navy-ink hover:underline" onClick={(e) => (e.stopPropagation(), setOpen(true))}>
+          Read the rest
         </button>
       )}
     </>
   );
 }
 
-type Props = { post: PostView; repostedBy?: UserMini | null; focus?: boolean; onGone?: (id: string) => void; threadLine?: boolean; index?: number };
+type Props = { post: PostView; repostedBy?: UserMini | null; focus?: boolean; compact?: boolean; onGone?: (id: string) => void; threadLine?: boolean; index?: number; hideStory?: boolean };
 
-export function PostCard({ post: initial, repostedBy, focus, onGone, threadLine, index }: Props) {
+/**
+ * A Take. The author's stance chip and the Story it belongs to sit above the
+ * text; readers respond with the stance meter, Answer, Amplify, or Save.
+ */
+export function PostCard({ post: initial, repostedBy, focus, compact, onGone, threadLine, index, hideStory }: Props) {
   const viewer = useViewer();
   const router = useRouter();
   const toast = useToast();
@@ -132,26 +129,22 @@ export function PostCard({ post: initial, repostedBy, focus, onGone, threadLine,
     return true;
   };
 
-  /** Flip a boolean optimistically; roll back if the server refuses. */
-  function toggle(kind: "liked" | "reposted" | "bookmarked") {
+  /** Amplify / Save, optimistic with rollback. */
+  function toggle(kind: "reposted" | "bookmarked") {
     if (needLogin()) return;
     const on = !post.viewer[kind];
-    const countKey = kind === "liked" ? "likes" : kind === "reposted" ? "reposts" : null;
     const shift = (p: PostView, val: boolean, delta: number) => ({
       ...p,
       viewer: { ...p.viewer, [kind]: val },
-      counts: countKey ? { ...p.counts, [countKey]: Math.max(0, p.counts[countKey] + delta) } : p.counts,
+      counts: kind === "reposted" ? { ...p.counts, reposts: Math.max(0, p.counts.reposts + delta) } : p.counts,
     });
     setPost((p) => shift(p, on, on ? 1 : -1));
-    if (typeof navigator !== "undefined" && "vibrate" in navigator && on) navigator.vibrate?.(8);
     start(async () => {
-      const action = kind === "liked" ? likeAction : kind === "reposted" ? repostAction : bookmarkAction;
-      const res = await action(post.id, on);
+      const res = await (kind === "reposted" ? repostAction : bookmarkAction)(post.id, on);
       if (!res.ok) {
         setPost((p) => shift(p, !on, on ? -1 : 1));
         toast(res.error, "error");
-      } else if (kind === "bookmarked") toast(on ? "Saved to bookmarks" : "Removed from bookmarks");
-      else if (kind === "reposted" && on) toast("Reposted");
+      } else toast(kind === "reposted" ? (on ? "Amplified to your Rundown" : "No longer amplified") : on ? "Saved to your Rundown" : "Removed from your Rundown");
     });
   }
 
@@ -171,29 +164,31 @@ export function PostCard({ post: initial, repostedBy, focus, onGone, threadLine,
   }
 
   const isAuthor = post.viewer.isAuthor;
-  const menu: MenuItem[] = [{ label: "Copy link", icon: <LinkIcon size={18} />, onSelect: () => navigator.clipboard?.writeText(link()).then(() => toast("Link copied")) }];
+  const menu: MenuItem[] = [
+    { label: "Quote this take", icon: <QuoteIcon size={18} />, onSelect: () => !needLogin() && openComposer({ quote: post }) },
+    { label: "Copy link", icon: <LinkIcon size={18} />, onSelect: () => navigator.clipboard?.writeText(link()).then(() => toast("Link copied")) },
+  ];
   if (isAuthor) {
     if (post.viewer.canEdit) menu.push({ label: "Edit", hint: "15 min", icon: <EditIcon size={18} />, onSelect: () => (setDraft(post.body), setEditing(true)) });
     if (!post.replyTo)
       menu.push({
-        label: "Pin to profile",
+        label: "Pin to your byline",
         icon: <PinIcon size={18} />,
-        onSelect: () =>
-          start(async () => {
-            const r = await pinPostAction(post.id);
-            toast(r.ok ? "Pinned to your profile" : r.error, r.ok ? "ok" : "error");
-          }),
+        onSelect: () => start(async () => {
+          const r = await pinPostAction(post.id);
+          toast(r.ok ? "Pinned to your byline" : r.error, r.ok ? "ok" : "error");
+        }),
       });
     menu.push("divider", {
-      label: "Delete post",
+      label: "Delete take",
       danger: true,
       icon: <TrashIcon size={18} />,
       onSelect: async () => {
-        if (!(await confirm({ title: "Delete this post?", body: "This can't be undone. Replies stay, with a note that the post was deleted.", confirm: "Delete", danger: true }))) return;
+        if (!(await confirm({ title: "Delete this take?", body: "This can't be undone. Answers stay, with a note that the take was deleted.", confirm: "Delete", danger: true }))) return;
         start(async () => {
           const r = await deletePostAction(post.id);
           if (!r.ok) return toast(r.error, "error");
-          toast("Post deleted");
+          toast("Take deleted");
           setHidden(true);
           onGone?.(post.id);
           if (focus) router.push("/");
@@ -203,30 +198,21 @@ export function PostCard({ post: initial, repostedBy, focus, onGone, threadLine,
   } else if (viewer) {
     const h = post.author.handle;
     menu.push(
-      {
-        label: `Mute @${h}`,
-        icon: <MuteIcon size={18} />,
-        onSelect: () =>
-          start(async () => {
-            const r = await muteAction(post.author.id, true);
-            toast(r.ok ? `Muted @${h}` : r.error, r.ok ? "ok" : "error");
-            if (r.ok && !focus) setHidden(true);
-          }),
-      },
-      {
-        label: `Block @${h}`,
-        icon: <BlockIcon size={18} />,
-        onSelect: async () => {
-          if (!(await confirm({ title: `Block @${h}?`, body: "They won't be able to see or interact with your posts, and you won't see theirs. Follows between you are removed.", confirm: "Block", danger: true }))) return;
-          start(async () => {
-            const r = await blockAction(post.author.id, true);
-            toast(r.ok ? `Blocked @${h}` : r.error, r.ok ? "ok" : "error");
-            if (r.ok) setHidden(true);
-          });
-        },
-      },
+      { label: `Mute @${h}`, icon: <MuteIcon size={18} />, onSelect: () => start(async () => {
+        const r = await muteAction(post.author.id, true);
+        toast(r.ok ? `Muted @${h}` : r.error, r.ok ? "ok" : "error");
+        if (r.ok && !focus) setHidden(true);
+      }) },
+      { label: `Block @${h}`, icon: <BlockIcon size={18} />, onSelect: async () => {
+        if (!(await confirm({ title: `Block @${h}?`, body: "They won't see your takes and you won't see theirs. Follows between you are removed.", confirm: "Block", danger: true }))) return;
+        start(async () => {
+          const r = await blockAction(post.author.id, true);
+          toast(r.ok ? `Blocked @${h}` : r.error, r.ok ? "ok" : "error");
+          if (r.ok) setHidden(true);
+        });
+      } },
       "divider",
-      { label: "Report post", danger: true, icon: <FlagIcon size={18} />, onSelect: () => setReporting(true) },
+      { label: "Report take", danger: true, icon: <FlagIcon size={18} />, onSelect: () => setReporting(true) },
     );
   }
 
@@ -237,111 +223,115 @@ export function PostCard({ post: initial, repostedBy, focus, onGone, threadLine,
     router.push(`/p/${post.id}`);
   };
 
+  const action = "inline-flex h-9 items-center gap-1.5 rounded-[4px] px-2 text-[12.5px] font-semibold transition-colors active:translate-y-px";
+  const size = compact ? 36 : focus ? 48 : 42;
+
   return (
     <article
       data-post-id={post.id}
       tabIndex={-1}
       onClick={go}
       aria-labelledby={`post-${post.id}-author`}
-      className={`relative px-4 outline-none sm:px-5 ${focus ? "pt-4 pb-1" : "cv-auto cursor-pointer border-b border-line py-3.5 transition-colors duration-150 hover:bg-surface-2/40 focus-visible:bg-accent-soft/50 focus-visible:shadow-[inset_3px_0_0_var(--accent)]"}`}
+      className={`relative outline-none ${compact ? "py-3" : "px-4 sm:px-5"} ${focus ? "pt-5 pb-2" : compact ? "" : "cv-auto cursor-pointer border-b border-rule py-4 transition-colors duration-150 hover:bg-paper-2/60 focus-visible:bg-gold-soft focus-visible:shadow-[inset_3px_0_0_var(--gold)]"}`}
       style={index !== undefined && index < 8 ? { animation: `enter 380ms var(--ease-out) ${index * 35}ms both` } : undefined}
     >
       {repostedBy && (
-        <p className="mb-1.5 flex items-center gap-2 pl-[30px] text-[13px] font-semibold text-ink-3">
-          <RepostIcon size={14} className="text-success" />
-          <Link href={`/u/${repostedBy.handle}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
-            {viewer?.id === repostedBy.id ? "You" : repostedBy.displayName}
-          </Link>{" "}
-          reposted
+        <p className="folio mb-2 flex items-center gap-1.5 !text-[10px] text-ink-3">
+          <AmplifyIcon size={13} className="text-gold-ink" /> Amplified by{" "}
+          <Link href={`/u/${repostedBy.handle}`} className="text-ink-2 hover:underline" onClick={(e) => e.stopPropagation()}>{viewer?.id === repostedBy.id ? "you" : repostedBy.displayName}</Link>
         </p>
       )}
       <div className="flex gap-3">
         <div className="flex flex-col items-center">
           <Link href={`/u/${post.author.handle}`} onClick={(e) => e.stopPropagation()} tabIndex={-1} aria-hidden="true">
-            <Avatar url={post.author.avatarUrl} name={post.author.displayName} handle={post.author.handle} size={focus ? 48 : 44} live={post.author.live} />
+            <Avatar url={post.author.avatarUrl} name={post.author.displayName} handle={post.author.handle} size={size} live={post.author.live} stance={post.stance === "agree" || post.stance === "disagree" || post.stance === "context" ? post.stance : null} />
           </Link>
-          {threadLine && <div className="mt-1.5 w-[2px] flex-1 rounded-full bg-line-strong" aria-hidden="true" />}
+          {threadLine && <div className="mt-2 w-px flex-1 bg-rule-strong" aria-hidden="true" />}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <div id={`post-${post.id}-author`} className="min-w-0 pt-0.5 text-[15px] leading-tight">
+            <div id={`post-${post.id}-author`} className="min-w-0 leading-tight">
               <AuthorLine author={post.author} createdAt={post.createdAt} editedAt={post.editedAt} big={focus} />
             </div>
-            {!post.gone && <div className="-mt-1.5 -mr-2"><Menu label="More options" items={menu} button={<MoreIcon size={19} />} /></div>}
+            {!post.gone && !compact && <div className="-mt-1 -mr-2"><Menu label="Take options" items={menu} button={<MoreIcon size={18} />} buttonClassName="flex h-8 w-8 items-center justify-center rounded-[4px] text-ink-3 hover:bg-paper-2 hover:text-ink-1" /></div>}
           </div>
-          {post.replyTo && !focus && (
-            <p className="mt-0.5 text-[13.5px] text-ink-3">
-              Replying to{" "}
-              <Link className="text-accent hover:underline" href={`/u/${post.replyTo.handle}`} onClick={(e) => e.stopPropagation()}>
-                @{post.replyTo.handle}
-              </Link>
-            </p>
+
+          {(post.stance || (post.story && !hideStory) || post.replyTo) && (
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+              {post.stance && <StanceChip stance={post.stance} />}
+              {post.story && !hideStory && (
+                <Link href={`/news/story/${post.story.key}`} onClick={(e) => e.stopPropagation()} className="min-w-0 truncate text-[12.5px] font-semibold text-gold-ink hover:underline">
+                  on: {post.story.title}
+                </Link>
+              )}
+              {post.replyTo && !focus && !post.story && (
+                <span className="text-[12.5px] text-ink-3">Answering <Link className="font-semibold text-navy-ink hover:underline" href={`/u/${post.replyTo.handle}`} onClick={(e) => e.stopPropagation()}>@{post.replyTo.handle}</Link></span>
+              )}
+            </div>
           )}
 
-          <div className={focus ? "mt-3" : "mt-1"}>
+          <div className={focus ? "mt-3" : "mt-1.5"}>
             {post.gone ? (
               <Gone kind={post.gone} />
             ) : editing ? (
               <div onClick={(e) => e.stopPropagation()}>
-                <label htmlFor={`edit-${post.id}`} className="sr-only">Edit post</label>
+                <label htmlFor={`edit-${post.id}`} className="sr-only">Edit take</label>
                 <textarea id={`edit-${post.id}`} value={draft} onChange={(e) => setDraft(e.target.value)} rows={4} className="input" autoFocus />
                 <div className="mt-2 flex items-center justify-end gap-2">
-                  <span className={`num mr-auto text-[13px] ${[...draft].length > LIMITS.postChars ? "text-danger" : "text-ink-3"}`}>{LIMITS.postChars - [...draft].length} left</span>
+                  <span className={`mono mr-auto text-[12px] ${[...draft].length > LIMITS.postChars ? "text-disagree" : "text-ink-3"}`}>{LIMITS.postChars - [...draft].length} left</span>
                   <Button variant="secondary" size="sm" onClick={() => setEditing(false)}>Cancel</Button>
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      start(async () => {
-                        const r = await editPostAction(post.id, draft);
-                        if (!r.ok) return toast(r.error, "error");
-                        setPost(r.data);
-                        setEditing(false);
-                        toast("Post updated");
-                      })
-                    }
-                  >
-                    Save
-                  </Button>
+                  <Button size="sm" onClick={() => start(async () => {
+                    const r = await editPostAction(post.id, draft);
+                    if (!r.ok) return toast(r.error, "error");
+                    setPost(r.data);
+                    setEditing(false);
+                    toast("Take updated");
+                  })}>Save</Button>
                 </div>
               </div>
             ) : (
               <>
-                {post.body && (
-                  <Expandable long={!focus && post.body.length > 260} big={focus}>
-                    <RichText text={post.body} />
-                  </Expandable>
-                )}
-                {post.media.length > 0 && <MediaGrid media={post.media} />}
-                {post.link && <LinkCard link={post.link} />}
-                {post.poll && <Poll poll={post.poll} postId={post.id} isAuthor={post.viewer.isAuthor} createdAt={post.createdAt} />}
-                {post.quote && <div className="mt-3"><QuoteEmbed post={post.quote} /></div>}
+                {post.body && <Expandable long={!focus && post.body.length > 240} big={focus}><RichText text={post.body} /></Expandable>}
+                {!compact && post.media.length > 0 && <MediaGrid media={post.media} />}
+                {!compact && post.link && <LinkCard link={post.link} />}
+                {post.poll && !compact && <Poll poll={post.poll} postId={post.id} isAuthor={post.viewer.isAuthor} createdAt={post.createdAt} />}
+                {post.quote && !compact && <div className="mt-3"><QuoteEmbed post={post.quote} /></div>}
               </>
             )}
           </div>
 
           {focus && (
-            <p className="mt-4 flex flex-wrap items-center gap-x-3 border-b border-line pb-3 text-[14px] text-ink-3">
+            <p className="mono mt-4 border-b border-rule pb-3 text-[12px] text-ink-3">
               <LocalDate ms={post.createdAt} />
-              {post.counts.quotes > 0 && <span><b className="num text-ink-1">{post.counts.quotes}</b> quote{post.counts.quotes === 1 ? "" : "s"}</span>}
+              {post.counts.quotes > 0 && <> · {post.counts.quotes} quote{post.counts.quotes === 1 ? "" : "s"}</>}
             </p>
           )}
 
-          {!post.gone && (
-            <div className={focus ? "border-b border-line py-1" : "mt-1.5"}>
-              <ActionBar
-                big={focus}
-                counts={post.counts}
-                state={post.viewer}
-                onReply={() => !needLogin() && openComposer({ replyTo: post })}
-                onQuote={() => !needLogin() && openComposer({ quote: post })}
-                onToggle={toggle}
-                onShare={share}
-              />
+          {!post.gone && !compact && (
+            <div className={`flex flex-wrap items-center gap-x-1 gap-y-2 ${focus ? "border-b border-rule py-3" : "mt-3"}`}>
+              <StanceMeter type="post" id={post.id} initial={post.split} />
+              <span className="flex-1" />
+              <button type="button" data-action="reply" onClick={(e) => (e.stopPropagation(), !needLogin() && openComposer({ replyTo: post }))} className={`${action} text-ink-2 hover:bg-navy-soft hover:text-navy-ink`}>
+                <AnswerIcon size={17} /> <span className="hidden sm:inline">Answer</span><AnimatedNumber value={post.counts.replies} hideZero className="mono text-[11.5px]" />
+                <span className="sr-only sm:hidden">Answer</span>
+              </button>
+              <button type="button" onClick={(e) => (e.stopPropagation(), toggle("reposted"))} aria-pressed={post.viewer.reposted} className={`${action} ${post.viewer.reposted ? "text-gold-ink" : "text-ink-2"} hover:bg-gold-soft hover:text-gold-ink`} title="Amplify: pin to your Rundown">
+                <span key={String(post.viewer.reposted)} className={post.viewer.reposted ? "animate-pop" : ""}><AmplifyIcon size={17} /></span>
+                <span className="sr-only">{post.viewer.reposted ? "Amplified" : "Amplify"}</span>
+                <AnimatedNumber value={post.counts.reposts} hideZero className="mono text-[11.5px]" />
+              </button>
+              <button type="button" onClick={(e) => (e.stopPropagation(), toggle("bookmarked"))} aria-pressed={post.viewer.bookmarked} className={`${action} ${post.viewer.bookmarked ? "text-navy-ink" : "text-ink-2"} hover:bg-navy-soft hover:text-navy-ink`} title="Save to Rundown">
+                <span key={String(post.viewer.bookmarked)} className={post.viewer.bookmarked ? "animate-pop" : ""}><SaveIcon size={17} filled={post.viewer.bookmarked} /></span>
+                <span className="sr-only">{post.viewer.bookmarked ? "Saved" : "Save to Rundown"}</span>
+              </button>
+              <button type="button" onClick={(e) => (e.stopPropagation(), share())} className={`${action} text-ink-2 hover:bg-paper-2 hover:text-ink-1`}>
+                <ShareIcon size={17} /><span className="sr-only">Share</span>
+              </button>
             </div>
           )}
         </div>
       </div>
-      {reporting && <ReportDialog open onClose={() => setReporting(false)} targetType="post" targetId={post.id} label="post" />}
+      {reporting && <ReportDialog open onClose={() => setReporting(false)} targetType="post" targetId={post.id} label="take" />}
     </article>
   );
 }

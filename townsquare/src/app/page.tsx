@@ -1,113 +1,119 @@
 import Link from "next/link";
-import { APP_NAME } from "@/config";
-import { followingFeed, forYouFeed, trending } from "@/lib/feed";
-import { latestNews, listStories } from "@/lib/news";
+import { all } from "@/lib/db";
+import { latestNews, liveEvents, listStories } from "@/lib/news";
+import { getPostView, hydrate } from "@/lib/posts";
 import { getViewer } from "@/lib/session";
-import { Composer } from "@/components/Composer";
-import { Feed } from "@/components/Feed";
-import { PageHeader, Tabs } from "@/components/PageHeader";
-import { SwipeTabs } from "@/components/SwipeTabs";
-import { HeadlineRow, StoryCard } from "@/components/news/StoryCard";
-import { Kicker } from "@/components/ui/Badge";
-import { TopicChip } from "@/components/ui/Chip";
+import { debates, latestTakes, voices } from "@/lib/takes";
+import { CHANNELS } from "@/components/shell/channels";
+import { Deck, type DeckCardData } from "@/components/front/Deck";
+import { BriefingPromo, DebateTile, HotStories, LeadTile, LiveNowTile, MoreStories, PollTile, QuickTakes, StoryTile, VoicesTile, WireTile } from "@/components/front/Tiles";
 import { EmptyState } from "@/components/ui/States";
-import { LogoMark } from "@/components/ui/Logo";
+import { Wordmark } from "@/components/ui/Logo";
 
 export const dynamic = "force-dynamic";
 
-const TABS = ["following", "foryou", "breaking"] as const;
+const FRONT_CHANNELS = CHANNELS.filter((c) => c.href.startsWith("/?") || c.href === "/");
 
-function Landing() {
-  const trends = trending(6);
-  return (
-    <section className="relative overflow-hidden border-b border-line px-5 pt-10 pb-8 sm:px-8 sm:pt-14">
-      {/* Gradient mesh: logged-out landing only */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-0 opacity-90">
-        <div className="absolute -top-24 -left-16 h-72 w-72 rounded-full bg-[#3b82f6] opacity-25 blur-3xl dark:opacity-30" />
-        <div className="absolute -top-10 right-[-60px] h-80 w-80 rounded-full bg-[#7c3aed] opacity-20 blur-3xl dark:opacity-30" />
-        <div className="absolute bottom-[-80px] left-1/3 h-64 w-64 rounded-full bg-[#ef4444] opacity-[0.12] blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(var(--line-strong)_1px,transparent_1px)] [background-size:18px_18px] opacity-50 [mask-image:linear-gradient(180deg,#000,transparent_85%)]" />
-      </div>
-      <div className="relative">
-        <LogoMark size={52} />
-        <h2 className="mt-5 max-w-lg font-display text-display font-semibold text-balance">
-          News, and the people <span className="text-accent-grad italic">talking about it.</span>
-        </h2>
-        <p className="mt-3 max-w-md text-[16.5px] text-ink-2">Follow people, join communities, and follow live stories as they break, all in one feed you control.</p>
-        <div className="mt-6 flex flex-wrap gap-2.5">
-          <Link href="/signup" className="btn-primary !min-h-12 !px-6 !text-base">Join {APP_NAME}</Link>
-          <Link href="/login" className="btn-outline !min-h-12 !px-6 !text-base">Log in</Link>
-        </div>
-        <div className="mt-7 flex flex-wrap gap-2">
-          {trends.map((t) => <TopicChip key={t.tag} tag={t.tag} href={`/search?q=${encodeURIComponent(`#${t.tag}`)}`} />)}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Breaking() {
-  const stories = listStories(6).filter((s) => s.status !== "ended");
-  const news = latestNews(undefined, 12);
-  return (
-    <div className="pb-4">
-      {stories[0] && <div className="px-4 pt-4 sm:px-6"><StoryCard story={stories[0]} size="lg" /></div>}
-      {stories.length > 1 && (
-        <div className="grid gap-3 px-4 pt-3 sm:grid-cols-2 sm:px-6">
-          {stories.slice(1, 3).map((s) => <StoryCard key={s.key} story={s} />)}
-        </div>
-      )}
-      <h2 className="kicker px-4 pt-6 pb-1 text-ink-3 sm:px-6">Latest headlines</h2>
-      <div className="divide-y divide-line">{news.map((n) => <HeadlineRow key={n.id} n={n} />)}</div>
-      <div className="px-4 pt-4 sm:px-6"><Link href="/news" className="btn-outline w-full">Open the News hub</Link></div>
-    </div>
-  );
-}
-
-export default async function Home({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const sp = await searchParams;
+export default async function FrontPage({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
+  const c = (await searchParams).c;
+  const channel = FRONT_CHANNELS.find((x) => x.key === c && x.key !== "front");
   const viewer = await getViewer();
-  const requested = TABS.find((t) => t === sp.tab);
-  const tab = requested === "breaking" ? "breaking" : viewer && requested !== "foryou" ? "following" : "foryou";
-  const page = tab === "following" ? followingFeed(viewer!.id) : tab === "foryou" ? forYouFeed(viewer?.id ?? null) : null;
-  const tabs = [
-    ...(viewer ? [{ key: "following", label: "Following", href: "/?tab=following" }] : []),
-    { key: "foryou", label: "For You", href: "/?tab=foryou" },
-    { key: "breaking", label: <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 animate-live rounded-full bg-live" />Breaking</span>, href: "/?tab=breaking" },
-  ];
-  const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const vid = viewer?.id ?? null;
+  const section = channel?.key;
+
+  const stories = listStories(14, { section, viewerId: vid });
+  const hot = listStories(5, { order: "hot", viewerId: vid });
+  const events = liveEvents();
+  const takes = latestTakes(vid, 4);
+  const fights = debates(vid, 3);
+  const pollId = all<{ post_id: string }>("SELECT p.post_id FROM polls p JOIN posts x ON x.id = p.post_id WHERE x.deleted_at IS NULL ORDER BY x.created_at DESC LIMIT 1")[0]?.post_id;
+  const poll = pollId ? getPostView(pollId, vid) : null;
+  const people = voices(vid, 3, section);
+  const wire = latestNews(section, 5);
+
+  if (!stories.length) {
+    return <EmptyState art="news" title={`Quiet on the ${channel?.label ?? "national"} desk`} body="No stories in this channel yet. Check the Front Page." action={{ label: "Front Page", href: "/" }} />;
+  }
+
+  const [lead, ...rest] = stories;
+  const latest = all<{ body: string }>("SELECT body FROM story_updates WHERE story_key = ? ORDER BY created_at DESC LIMIT 2", [lead.key]).map((r) => r.body);
+  // Tile sizes follow importance: live stories in the second row get the wide tiles.
+  const second = rest.slice(0, 3);
+  const wide = second.slice(0, 2).some((s) => s.status === "live");
+  const row2 = wide ? second.slice(0, 2) : second;
+  const more = rest.slice(row2.length);
+  const words = stories.slice(0, 10).reduce((n, s) => n + s.title.split(" ").length + s.summary.split(" ").length, 0) + 600;
+
+  // Phone deck: stories with their most-agreed take, a debate after the second story.
+  const topTakes = new Map(
+    all<{ story_key: string; id: string }>(
+      `SELECT story_key, id FROM posts p WHERE story_key IN (${stories.map(() => "?").join(",")}) AND reply_to_id IS NULL AND deleted_at IS NULL AND removed_at IS NULL
+       ORDER BY (SELECT count(*) FROM stances s WHERE s.target_type = 'post' AND s.target_id = p.id AND s.value = 'agree') DESC`,
+      stories.map((s) => s.key),
+    ).reverse().map((r) => [r.story_key, r.id]),
+  );
+  const tops = new Map(hydrate([...topTakes.values()], vid).map((p) => [p.id, p]));
+  const cards: DeckCardData[] = [];
+  stories.slice(0, 8).forEach((s, i) => {
+    cards.push({ kind: "story", s, top: tops.get(topTakes.get(s.key) ?? "") });
+    if (i === 1 && fights[0]) cards.push({ kind: "debate", d: fights[0] });
+  });
+  cards.push({ kind: "end" });
 
   return (
     <>
-      {!viewer && <Landing />}
-      <PageHeader title={viewer ? "Home" : "Top of the feed"} kicker={<Kicker tone="muted">{today}</Kicker>}>
-        <Tabs active={tab} tabs={tabs} />
-      </PageHeader>
-      <SwipeTabs hrefs={tabs.map((t) => t.href)} index={tabs.findIndex((t) => t.key === tab)}>
-        {viewer && tab !== "breaking" && (
-          <div className="hidden border-b border-line sm:block">
-            <Composer compact />
+      <h1 className="sr-only">{channel ? `${channel.label} — ` : ""}Townsquare Front Page</h1>
+      {/* Phone: story deck */}
+      <div className="md:hidden">
+        <Deck cards={cards} channels={FRONT_CHANNELS.map((x) => ({ href: x.href, label: x.label }))} channelIndex={Math.max(0, FRONT_CHANNELS.findIndex((x) => x.key === (channel?.key ?? "front")))} />
+      </div>
+
+      {/* Tablet & desktop: bento front page */}
+      <div className="mx-auto hidden max-w-[1320px] px-6 pt-8 md:block lg:px-8">
+        {channel && (
+          <div className="mb-6 flex items-end justify-between border-b border-rule pb-3">
+            <h2 className="font-display text-display font-semibold">{channel.label}</h2>
+            <Link href="/" className="folio !text-[10.5px] text-ink-3 hover:text-navy-ink">← Front Page</Link>
           </div>
         )}
-        {page ? (
-          <Feed
-            key={tab}
-            initial={page}
-            source={{ tab }}
-            live
-            prependOwn={tab === "following"}
-            empty={
-              tab === "following" ? (
-                <EmptyState art="feed" title="Your Following feed is empty" body="Follow people and their posts show up here, newest first. No algorithm." action={{ label: "Find people to follow", href: "/explore" }} />
-              ) : (
-                <EmptyState art="feed" title="Nothing here yet" />
-              )
-            }
-          />
-        ) : (
-          <Breaking />
-        )}
-      </SwipeTabs>
+        <div className="grid grid-cols-2 gap-x-8 gap-y-10 lg:grid-cols-12 lg:gap-x-10">
+          <div className="col-span-2 lg:col-span-8"><LeadTile s={lead} latest={latest} /></div>
+          <div className="col-span-2 grid gap-8 md:grid-cols-2 lg:col-span-4 lg:block lg:space-y-8">
+            {events.some((e) => e.isLive) && <LiveNowTile events={events} />}
+            <HotStories stories={hot} />
+          </div>
+
+          {row2.map((s) => <div key={s.key} className={`${wide ? "lg:col-span-6" : "lg:col-span-4"} ${!wide && row2.indexOf(s) === 2 ? "max-lg:hidden" : ""}`}><StoryTile s={s} big={wide} /></div>)}
+
+          {fights[0] && <div className="col-span-2 lg:col-span-8"><DebateTile debate={fights[0]} /></div>}
+          <div className="col-span-2 grid gap-8 md:grid-cols-2 lg:col-span-4 lg:block lg:space-y-8">
+            {poll?.poll && <PollTile post={poll} />}
+            <BriefingPromo minutes={Math.max(4, Math.round(words / 230))} count={Math.min(10, stories.length)} />
+          </div>
+
+          <div className="lg:col-span-4"><QuickTakes takes={takes} /></div>
+          <div className="lg:col-span-4"><VoicesTile voices={people} /></div>
+          <div className="col-span-2 lg:col-span-4"><WireTile items={wire} /></div>
+
+          {more.length > 0 && (
+            <div className="col-span-2 lg:col-span-12">
+              <div className="mb-2 flex items-baseline justify-between border-t-2 border-navy-ink pt-3">
+                <h2 className="folio text-navy-ink">More stories</h2>
+              </div>
+              <MoreStories stories={more} />
+            </div>
+          )}
+        </div>
+        <footer className="mt-16 flex flex-wrap items-end justify-between gap-6 border-t-[3px] border-navy-ink pt-5 pb-4 text-[12.5px] text-ink-3">
+          <div><Wordmark size="sm" /><p className="mt-1">Built by Gleyde Technologies, LLC. Townsquare is a working name. Sample stories and outlets are fictional.</p></div>
+          <nav className="flex gap-5">
+            <Link href="/legal/terms" className="hover:text-ink-1">Terms</Link>
+            <Link href="/legal/privacy" className="hover:text-ink-1">Privacy</Link>
+            <Link href="/legal/guidelines" className="hover:text-ink-1">Community Guidelines</Link>
+            <Link href="/design" className="hover:text-ink-1">Design system</Link>
+          </nav>
+        </footer>
+      </div>
     </>
   );
 }

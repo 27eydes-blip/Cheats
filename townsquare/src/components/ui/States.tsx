@@ -10,12 +10,12 @@ export function Illustration({ art, size = 132 }: { art: Art; size?: number }) {
     <svg width={size} height={size * 0.78} viewBox="0 0 160 124" aria-hidden="true" className="mx-auto">
       <defs>
         <linearGradient id={g} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#3b82f6" />
-          <stop offset="1" stopColor="#6d3cf0" />
+          <stop offset="0" stopColor="#1a3570" />
+          <stop offset="1" stopColor="#0b1f4b" />
         </linearGradient>
       </defs>
       <ellipse cx="80" cy="112" rx="58" ry="8" fill="var(--line)" />
-      <circle cx="80" cy="58" r="50" fill="var(--accent-soft)" />
+      <rect x="30" y="8" width="100" height="100" rx="4" fill="var(--paper-2)" /><rect x="30" y="8" width="100" height="3" fill="var(--gold)" />
       {art === "feed" && (
         <g>
           <rect x="38" y="30" width="84" height="22" rx="8" fill="var(--surface)" stroke="var(--line-strong)" />
@@ -76,7 +76,7 @@ export function Illustration({ art, size = 132 }: { art: Art; size?: number }) {
           <path d="m68 58 8 8 16-17" stroke="#fff" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
         </g>
       )}
-      <circle cx="30" cy="30" r="3" fill="var(--accent)" opacity=".5" /><circle cx="134" cy="22" r="4" fill="var(--accent-2)" opacity=".4" /><circle cx="138" cy="84" r="2.5" fill="var(--accent)" opacity=".5" />
+      <rect x="18" y="26" width="6" height="6" fill="var(--gold)" /><rect x="138" y="80" width="5" height="5" fill="var(--navy-ink)" opacity=".5" />
     </svg>
   );
 }
@@ -85,7 +85,7 @@ export function EmptyState({ art = "feed", title, body, action }: { art?: Art; t
   return (
     <div className="animate-enter px-6 py-14 text-center">
       <Illustration art={art} />
-      <h2 className="mt-5 font-display text-h3 font-semibold text-ink-1">{title}</h2>
+      <h2 className="mt-5 font-display text-h2 font-semibold text-ink-1">{title}</h2>
       {body && <p className="mx-auto mt-1.5 max-w-sm text-[15px] text-ink-3">{body}</p>}
       {action && (
         <Link href={action.href} className="btn-primary mt-5">
@@ -98,7 +98,7 @@ export function EmptyState({ art = "feed", title, body, action }: { art?: Art; t
 
 export function ErrorState({ message = "Couldn't load this.", onRetry }: { message?: string; onRetry?: () => void }) {
   return (
-    <div role="alert" className="mx-4 my-4 flex items-center gap-3 rounded-[var(--r-md)] bg-danger-soft px-4 py-3 text-[14.5px] text-danger">
+    <div role="alert" className="mx-4 my-4 flex items-center gap-3 border-l-2 border-disagree bg-danger-soft px-4 py-3 text-[14.5px] text-disagree">
       <span className="flex-1 font-medium">{message}</span>
       {onRetry && (
         <button type="button" onClick={onRetry} className="btn-outline !min-h-9 !px-3.5 !text-[13.5px]">
