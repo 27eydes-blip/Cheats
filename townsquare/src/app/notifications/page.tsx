@@ -51,7 +51,7 @@ function Icon({ type }: { type: NotificationView["type"] }) {
   if (type === "like") return wrap("bg-agree/10 text-agree", <AgreeIcon size={18} />);
   if (type === "repost") return wrap("bg-gold-soft text-gold-ink", <AmplifyIcon size={18} />);
   if (type === "follow" || type === "follow_request" || type === "follow_accept") return wrap("bg-navy-soft text-navy-ink", <UserIcon size={18} />);
-  if (type === "reaction") return wrap("bg-[rgb(245_158_11/0.14)] text-[#fbbf24]", <SparkIcon size={18} />);
+  if (type === "reaction") return wrap("bg-[rgb(34_211_238/0.14)] text-[#22d3ee]", <SparkIcon size={18} />);
   if (type === "achievement") return wrap("bg-[rgb(34_211_238/0.14)] text-[var(--wn-cyan-ink)]", <FlameIcon size={18} />);
   if (type === "quote") return wrap("bg-navy-soft text-navy-ink", <QuoteIcon size={18} />);
   if (type === "warning" || type === "system") return wrap("bg-danger-soft text-disagree", <ShieldIcon size={18} />);

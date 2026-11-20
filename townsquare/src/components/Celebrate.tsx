@@ -58,7 +58,7 @@ export function Celebrate() {
   );
 }
 
-const COLORS = ["#2f6bff", "#22d3ee", "#ffffff", "#fbbf24", "#ff2d4a", "#a78bfa"];
+const COLORS = ["#2f6bff", "#22d3ee", "#ffffff", "#7fa3ff", "#67e8f9", "#bcd0ff"];
 function burst(c: HTMLCanvasElement | null, n: number) {
   if (!c) return;
   const ctx = c.getContext("2d");

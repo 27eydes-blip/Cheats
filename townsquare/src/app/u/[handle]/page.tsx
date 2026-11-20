@@ -133,7 +133,7 @@ export default async function Profile({ params, searchParams }: { params: Promis
               <section aria-labelledby="ach">
                 <h2 id="ach" className="mb-2 text-[11px] font-extrabold tracking-[0.14em] text-ink-3 uppercase">Achievements</h2>
                 <ul className="flex flex-wrap gap-1.5">
-                  {streak > 0 && <li className="amber-ink inline-flex min-h-8 items-center gap-1 rounded-[8px] bg-[rgb(251_191_36/0.12)] px-2 text-[12.5px] font-extrabold ring-1 ring-[#fbbf24]/40" title={`${streak}-day posting streak`}>🔥 {streak}-day streak</li>}
+                  {streak > 0 && <li className="amber-ink inline-flex min-h-8 items-center gap-1 rounded-[8px] bg-[rgb(34_211_238/0.12)] px-2 text-[12.5px] font-extrabold ring-1 ring-[#22d3ee]/40" title={`${streak}-day posting streak`}>🔥 {streak}-day streak</li>}
                   {badges.map((b) => (
                     <li key={b.key} title={`${b.label}: ${b.text}`} className="inline-flex min-h-8 items-center gap-1 rounded-[8px] bg-white/[0.04] px-2 text-[12.5px] font-semibold ring-1 ring-rule"><span aria-hidden="true">{b.emoji}</span>{b.label}</li>
                   ))}

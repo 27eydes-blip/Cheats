@@ -90,7 +90,7 @@ export function ForYouFrame({ item, onDismiss, children }: { item: Exclude<ForYo
   ];
 
   const label = item.kind === "post" && item.promoted ? (
-    <span className="rounded-[6px] bg-[rgb(242_193_78/0.14)] px-1.5 py-0.5 text-[10.5px] font-extrabold tracking-[0.1em] text-warning uppercase ring-1 ring-warning/30">Promoted</span>
+    <span className="rounded-[6px] bg-[rgb(34_211_238/0.14)] px-1.5 py-0.5 text-[10.5px] font-extrabold tracking-[0.1em] text-[var(--wn-cyan-ink)] uppercase ring-1 ring-[rgb(34_211_238/0.30)]">Promoted</span>
   ) : item.reason ? (
     <><SparkIcon size={13} className="shrink-0 text-[var(--wn-cyan-ink)]" /><span className="truncate">{item.reason}</span></>
   ) : null;
@@ -121,15 +121,15 @@ export function TrackOpen({ type, id }: { type: "post" | "story"; id: string }) 
 /** A sponsored card: always labeled, with its own tinted border. Shown only when ads are on in the Control Room. */
 export function SponsoredCard({ ad }: { ad: { id: string; sponsor: string; title: string; body: string; url: string } }) {
   return (
-    <aside aria-label={`Sponsored by ${ad.sponsor}`} className="relative overflow-hidden rounded-[var(--r-lg)] bg-[rgb(242_193_78/0.06)] p-4 ring-1 ring-[rgb(242_193_78/0.55)]">
+    <aside aria-label={`Sponsored by ${ad.sponsor}`} className="relative overflow-hidden rounded-[var(--r-lg)] bg-[rgb(34_211_238/0.06)] p-4 border border-dashed border-[rgb(34_211_238/0.6)]">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="rounded-[6px] bg-[rgb(242_193_78/0.16)] px-2 py-1 text-[10.5px] leading-none font-extrabold tracking-[0.12em] text-warning uppercase ring-1 ring-warning/40">Sponsored</span>
+        <span className="rounded-[6px] bg-[rgb(34_211_238/0.16)] px-2 py-1 text-[10.5px] leading-none font-extrabold tracking-[0.12em] text-[var(--wn-cyan-ink)] uppercase ring-1 ring-[rgb(34_211_238/0.40)]">Sponsored</span>
         <span className="truncate text-[12.5px] font-semibold text-ink-2">{ad.sponsor}</span>
       </div>
       <a href={ad.url} target="_blank" rel="sponsored noopener noreferrer" className="group block">
         <span className="block font-display text-[22px] leading-tight font-bold group-hover:text-[var(--wn-cyan-ink)]">{ad.title}</span>
         {ad.body && <span className="mt-1 block text-[14.5px] text-ink-2">{ad.body}</span>}
-        <span className="mt-3 inline-flex min-h-11 items-center rounded-[10px] px-3 text-[13px] font-bold text-ink-1 ring-1 ring-warning/50 group-hover:bg-[rgb(242_193_78/0.12)]">Learn more ↗</span>
+        <span className="mt-3 inline-flex min-h-11 items-center rounded-[10px] px-3 text-[13px] font-bold text-ink-1 ring-1 ring-[rgb(34_211_238/0.50)] group-hover:bg-[rgb(34_211_238/0.12)]">Learn more ↗</span>
       </a>
     </aside>
   );

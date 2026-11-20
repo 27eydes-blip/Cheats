@@ -39,7 +39,7 @@ export function StoryTile({ s, big, flat, rising }: { s: StorySummary; big?: boo
           <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[rgb(7_11_20/0.7)] via-transparent to-transparent" />
           <span className="absolute top-3 left-3"><StatusTags s={s} /></span>
           {rising && (
-            <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-[6px] bg-[rgb(7_11_20/0.72)] px-2 py-[4px] text-[10.5px] leading-none font-extrabold tracking-[0.1em] text-[#fbbf24] uppercase ring-1 ring-[#fbbf24]/50 backdrop-blur-sm">
+            <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-[6px] bg-[rgb(7_11_20/0.72)] px-2 py-[4px] text-[10.5px] leading-none font-extrabold tracking-[0.1em] text-[#22d3ee] uppercase ring-1 ring-[#22d3ee]/50 backdrop-blur-sm">
               <FlameIcon size={12} className="motion-safe:animate-pulse" /> Rising
             </span>
           )}

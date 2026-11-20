@@ -74,3 +74,10 @@ Choices made while building unattended on `design-v2`, with the reason for each.
 - **Desktop rail:** icons only from 1024px, labels from 1440px; the panel button toggles it and the choice is remembered in a cookie so pages render at the right width. The header's old text links moved into the rail.
 - **Rundown** on phones is now reached from the menu (the old dock button made way for Messages).
 - **Bug found and fixed along the way:** the breaking-news ticker re-set its own state on every render when it had no market quotes, which froze navigation after pinning a tab.
+
+## Part F — One palette ("take away anything multi colorful")
+
+- **Everything decorative now stays in the house blue/cyan family.** Changed: generated avatars and profile banners (were a different hue per person; now blue/cyan compositions that differ by shape and depth), topic tab badges, Beat chips, story cover art (was a different accent per section, which made pink and purple washes), threaded-reply depth lines, confetti, and every amber/gold accent (Flash badge, streak chip, "Rising" tag, reaction sparkle, sponsored card).
+- **Sponsored cards** are still clearly different: a cyan tint with a dashed border and the "Sponsored" label.
+- **Profile accents** keep their six slots so saved profiles still load, but the four colorful ones became blues: Sky, Ice, Deep blue, Steel.
+- **Kept on purpose, because the color carries meaning:** hot red for LIVE/BREAKING; green/red for market up/down and for Agree/Disagree; real team colors on team badges; emoji in reactions; the Google sign-in mark (its required brand colors); the yellow warning tone for error-adjacent notices.

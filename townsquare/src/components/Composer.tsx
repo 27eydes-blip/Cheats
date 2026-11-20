@@ -254,7 +254,7 @@ export function Composer({
           )}
 
           {flash && (
-            <p className="mt-2 flex animate-scale-in items-center gap-2 rounded-[10px] bg-[rgb(251_191_36/0.1)] px-3 py-2 text-[13px] ring-1 ring-[#fbbf24]/40"><span className="amber-ink font-extrabold tracking-[0.08em] uppercase">⚡ Flash</span><span className="text-ink-2">This dispatch disappears after 24 hours.</span></p>
+            <p className="mt-2 flex animate-scale-in items-center gap-2 rounded-[10px] bg-[rgb(34_211_238/0.1)] px-3 py-2 text-[13px] ring-1 ring-[#22d3ee]/40"><span className="amber-ink font-extrabold tracking-[0.08em] uppercase">⚡ Flash</span><span className="text-ink-2">This dispatch disappears after 24 hours.</span></p>
           )}
 
           {pics.length > 0 && (
@@ -311,7 +311,7 @@ export function Composer({
                 <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-navy-ink hover:bg-navy-soft disabled:opacity-40" onClick={() => fileRef.current?.click()} disabled={pics.length >= LIMITS.imagesPerPost || !!poll} aria-label="Add images" title="Add images" tabIndex={expanded ? 0 : -1}><ImageIcon size={20} /></button>
                 {!replyTo && <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-navy-ink hover:bg-navy-soft disabled:opacity-40" onClick={() => setPoll(poll ? null : ["", ""])} disabled={pics.length > 0} aria-label="Add a poll" aria-pressed={!!poll} title="Add a poll" tabIndex={expanded ? 0 : -1}><PollIcon size={20} /></button>}
                 <EmojiPicker onPick={insertAtCursor} />
-                {!replyTo && !communityId && <button type="button" className={`inline-flex h-10 items-center justify-center rounded-[10px] px-2 text-[13px] font-extrabold tracking-[0.04em] uppercase ${flash ? "amber-ink bg-[rgb(251_191_36/0.12)]" : "text-navy-ink hover:bg-navy-soft"}`} onClick={() => setFlash(!flash)} aria-pressed={flash} title="Flash: disappears after 24 hours" tabIndex={expanded ? 0 : -1}>⚡<span className="sr-only">Flash dispatch</span></button>}
+                {!replyTo && !communityId && <button type="button" className={`inline-flex h-10 items-center justify-center rounded-[10px] px-2 text-[13px] font-extrabold tracking-[0.04em] uppercase ${flash ? "amber-ink bg-[rgb(34_211_238/0.12)]" : "text-navy-ink hover:bg-navy-soft"}`} onClick={() => setFlash(!flash)} aria-pressed={flash} title="Flash: disappears after 24 hours" tabIndex={expanded ? 0 : -1}>⚡<span className="sr-only">Flash dispatch</span></button>}
                 <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-[10px] text-navy-ink hover:bg-navy-soft" onClick={() => setSource(source === null ? "" : null)} aria-label="Add a source link" aria-pressed={source !== null} title="Add a source" tabIndex={expanded ? 0 : -1}><LinkIcon size={20} /></button>
                 <div className="ml-auto flex items-center gap-3">
                   {needsStance && !stance && <span className="text-[12.5px] text-ink-3">Pick a stance</span>}

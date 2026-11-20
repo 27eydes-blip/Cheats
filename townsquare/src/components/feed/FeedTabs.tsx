@@ -12,11 +12,10 @@ import { useToast, useViewer } from "../providers";
 import { TeamLogo } from "../sports/TeamLogo";
 import { Sheet } from "../ui/Sheet";
 
-const TOPIC_COLOR: Record<string, string> = { politics: "#ff5c73", markets: "#34d399", sports: "#fbbf24", tech: "#a78bfa", world: "#22d3ee", culture: "#f472b6", national: "#7fa3ff" };
 
 /** Small badge for a topic: a colored tile with its initial. Teams use their logo badge. */
 function TopicBadge({ topic }: { topic: string }) {
-  return <span aria-hidden="true" className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] font-display text-[13px] leading-none font-extrabold text-[#070b14]" style={{ background: TOPIC_COLOR[topic] ?? "#7fa3ff" }}>{TOPIC_LABEL[topic]?.[0]}</span>;
+  return <span aria-hidden="true" className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[7px] font-display text-[13px] leading-none font-extrabold text-[#070b14]" style={{ background: "#7fa3ff" }}>{TOPIC_LABEL[topic]?.[0]}</span>;
 }
 
 /**

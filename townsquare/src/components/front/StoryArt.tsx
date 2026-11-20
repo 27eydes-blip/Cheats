@@ -3,12 +3,12 @@ import type { StoryPhoto } from "@/lib/news";
 
 /** Per-section accent and icon. Everything else is the house blue/cyan. */
 const SECTION: Record<string, { accent: string; icon: number; label: string }> = {
-  Politics: { accent: "#ff2d4a", icon: 0, label: "Politics" },
+  Politics: { accent: "#2f6bff", icon: 0, label: "Politics" },
   World: { accent: "#22d3ee", icon: 1, label: "World" },
-  Business: { accent: "#34d399", icon: 2, label: "Business" },
-  Tech: { accent: "#a78bfa", icon: 3, label: "Tech" },
-  Sports: { accent: "#f59e0b", icon: 4, label: "Sports" },
-  Culture: { accent: "#f472b6", icon: 5, label: "Culture" },
+  Business: { accent: "#38bdf8", icon: 2, label: "Business" },
+  Tech: { accent: "#7fa3ff", icon: 3, label: "Tech" },
+  Sports: { accent: "#22d3ee", icon: 4, label: "Sports" },
+  Culture: { accent: "#7fa3ff", icon: 5, label: "Culture" },
   "Top Stories": { accent: "#22d3ee", icon: 6, label: "National" },
 };
 

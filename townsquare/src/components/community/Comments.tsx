@@ -11,7 +11,7 @@ import { Time } from "../Time";
 import { useComposer } from "../providers";
 import { Vote } from "./Vote";
 
-const DEPTH = ["#3b82f6", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#06b6d4"];
+const DEPTH = ["#2f6bff", "#22d3ee", "#7fa3ff", "#38bdf8", "#2f6bff", "#22d3ee"];
 
 function count(n: CommentNode): number {
   return n.children.reduce((s, c) => s + 1 + count(c), 0);

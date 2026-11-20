@@ -100,7 +100,7 @@ export function Reactions({ postId, counts: initialCounts, mine: initialMine }: 
         aria-pressed={!!mine}
         aria-label={`${mine ? `Boosted with ${mineMeta?.label}. Tap to remove` : "Boost"}${total ? `, ${total} reactions` : ""}. Hold, or press Up, for more reactions`}
         title="Boost (hold for reactions)"
-        className={`relative inline-flex h-11 min-w-11 select-none items-center justify-center gap-1.5 rounded-[12px] px-2 text-[12.5px] font-semibold transition-all duration-150 active:scale-90 [-webkit-touch-callout:none] ${mine ? "amber-ink bg-[rgb(245_158_11/0.12)]" : "text-ink-2 hover:bg-[rgb(245_158_11/0.1)]"}`}
+        className={`relative inline-flex h-11 min-w-11 select-none items-center justify-center gap-1.5 rounded-[12px] px-2 text-[12.5px] font-semibold transition-all duration-150 active:scale-90 [-webkit-touch-callout:none] ${mine ? "amber-ink bg-[rgb(34_211_238/0.12)]" : "text-ink-2 hover:bg-[rgb(34_211_238/0.1)]"}`}
       >
         <span key={`${mine}-${burst}`} className={mine ? "animate-pop text-[17px] leading-none" : "leading-none"}>{mineMeta ? mineMeta.emoji : <SparkIcon size={19} />}</span>
         {!mine && top.length > 0 && <span aria-hidden="true" className="-ml-0.5 flex text-[13px] leading-none">{top.map((r) => <span key={r.key}>{r.emoji}</span>)}</span>}
@@ -119,7 +119,7 @@ export function Reactions({ postId, counts: initialCounts, mine: initialMine }: 
               aria-checked={mine === r.key}
               onClick={() => pick(r.key)}
               title={r.label}
-              className={`group/r flex h-12 w-12 flex-col items-center justify-center rounded-[12px] transition-transform duration-150 hover:-translate-y-1 hover:scale-110 ${mine === r.key ? "bg-white/10 ring-1 ring-[#fbbf24]/60" : "hover:bg-white/5"}`}
+              className={`group/r flex h-12 w-12 flex-col items-center justify-center rounded-[12px] transition-transform duration-150 hover:-translate-y-1 hover:scale-110 ${mine === r.key ? "bg-white/10 ring-1 ring-[#22d3ee]/60" : "hover:bg-white/5"}`}
               style={{ animation: `rise 260ms var(--ease-spring) ${i * 30}ms both` }}
             >
               <span className="text-[24px] leading-none">{r.emoji}</span>
@@ -138,7 +138,7 @@ function Burst() {
   return (
     <span aria-hidden="true" className="pointer-events-none absolute inset-0 motion-reduce:hidden">
       {Array.from({ length: 8 }, (_, i) => (
-        <span key={i} className="absolute top-1/2 left-1/2 h-1.5 w-1.5 rounded-full" style={{ background: i % 2 ? "#fbbf24" : "#22d3ee", animation: `spark 520ms var(--ease-out) forwards`, ["--a" as string]: `${i * 45}deg` }} />
+        <span key={i} className="absolute top-1/2 left-1/2 h-1.5 w-1.5 rounded-full" style={{ background: i % 2 ? "#22d3ee" : "#22d3ee", animation: `spark 520ms var(--ease-out) forwards`, ["--a" as string]: `${i * 45}deg` }} />
       ))}
     </span>
   );

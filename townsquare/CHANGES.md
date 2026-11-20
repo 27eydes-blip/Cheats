@@ -32,6 +32,9 @@ All of this is on the `design-v2` branch. Every earlier feature still works.
 - **Side menu:** profile card (avatar, name, handle, Followers / Following / Friends, theme button), then Profile, Vault, History, Lists, Rooms, Groups, Markets, Creator Hub, Settings, Help, plus Switch account and a Dark / Light / Auto toggle. It slides in with blur and dim, and closes on swipe, outside tap or Escape. On desktop it is a persistent left rail that collapses to icons.
 - **New pages:** Messages (private, followers-only), History, Lists, Creator Hub, Help, and a Wallet placeholder that stays hidden unless `NEXT_PUBLIC_FEATURE_WALLET=1`.
 
+## 6. One palette
+- Removed the multi-colored decoration: avatars, topic badges, Beat chips, story art, reply-depth lines, confetti and amber accents are now all blue/cyan. Red stays for LIVE/BREAKING, and green/red stay where they mean up/down or agree/disagree.
+
 ## Quality
 - 107 unit tests (feed tabs, sponsored slots, messages, lists, history, the side-menu drawer, ranking, For You, teams and badges, the logo fallback component, profiles and privacy, follows, reactions, Flash, streaks, achievements, suggestions), 25/25 end-to-end steps, 44/44 visual regression screenshots, accessibility 100 on audited pages.
 - Database changes are numbered migrations (`src/lib/db/migrations.ts`, 1–7), mirrored in `supabase/schema.sql`.

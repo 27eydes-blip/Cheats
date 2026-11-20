@@ -24,8 +24,9 @@ function hash(s: string) {
 /** Two hues and a layout seed per handle. Exported for profile banners. */
 export function palette(handle: string) {
   const h = hash(handle.toLowerCase());
-  const h1 = h % 360;
-  const h2 = (h1 + 40 + ((h >> 9) % 80)) % 360;
+  // House blues only: one hue near electric blue, one near cyan.
+  const h1 = 214 + (h % 16);
+  const h2 = 188 + ((h >> 9) % 14);
   return { h1, h2, seed: h };
 }
 
@@ -34,7 +35,8 @@ export function AvatarArt({ handle, size }: { handle: string; size: number }) {
   const { h1, h2, seed } = palette(handle);
   const r = (n: number, mod: number) => ((seed >>> n) & 0xff) % mod;
   const id = `av${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
-  const c = [`hsl(${h1} 70% 52%)`, `hsl(${h2} 75% 38%)`, `hsl(${(h1 + 150) % 360} 85% 64%)`, `hsl(${(h2 + 200) % 360} 90% 82%)`];
+  const l = 38 + r(3, 20); // vary depth, not hue, so people still look different
+  const c = [`hsl(${h1} 78% ${l}%)`, `hsl(${h1 + 6} 70% ${l - 20}%)`, `hsl(${h2} 85% 58%)`, `hsl(${h1} 90% 88%)`];
   const flip = seed & 1;
   return (
     <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" className="block">

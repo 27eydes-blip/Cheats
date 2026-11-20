@@ -15,7 +15,7 @@ export function FlashBadge({ expiresAt }: { expiresAt: number }) {
   const h = Math.floor(left / 3_600_000);
   const label = left <= 0 ? "expiring" : h >= 1 ? `${h}h left` : `${Math.max(1, Math.round(left / 60_000))}m left`;
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-[rgb(251_191_36/0.12)] px-1.5 py-0.5 amber-ink text-[10.5px] font-extrabold tracking-[0.1em] uppercase ring-1 ring-[#fbbf24]/40" title="Flash dispatches disappear after 24 hours">
+    <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-[rgb(34_211_238/0.12)] px-1.5 py-0.5 amber-ink text-[10.5px] font-extrabold tracking-[0.1em] uppercase ring-1 ring-[#22d3ee]/40" title="Flash dispatches disappear after 24 hours">
       <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" className="-rotate-90">
         <circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" strokeOpacity="0.3" strokeWidth="2" />
         <circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray={`${frac * 28.3} 28.3`} />
