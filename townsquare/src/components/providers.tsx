@@ -8,6 +8,7 @@ import { RundownDrawer } from "./rundown/RundownDrawer";
 import { useMedia } from "./ui/useMedia";
 import { ConfirmProvider } from "./ui/Confirm";
 import { Sheet } from "./ui/Sheet";
+import { SideMenu, type MenuStats } from "./shell/SideMenu";
 
 /** What client components know about the signed-in user. */
 export type ClientViewer = {
@@ -17,6 +18,7 @@ export type ClientViewer = {
   avatarUrl: string | null;
   isAdmin: boolean;
   suspended: boolean;
+  verified?: boolean;
 } | null;
 
 const ViewerCtx = createContext<ClientViewer>(null);
@@ -39,6 +41,10 @@ const RundownCtx = createContext<() => void>(() => {});
 /** Opens the Rundown drawer. */
 export const useRundown = () => useContext(RundownCtx);
 
+const MenuCtx = createContext<() => void>(() => {});
+/** Opens the side menu (the slide-out drawer on phones and tablets). */
+export const useMenu = () => useContext(MenuCtx);
+
 /** Broadcast a freshly created post so feeds on screen can show it immediately. */
 export const POSTED_EVENT = "ts:posted";
 
@@ -58,7 +64,10 @@ const typing = (el: EventTarget | null) => {
   return !!t && (/INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable);
 };
 
-export function Providers({ viewer, children }: { viewer: ClientViewer; children: React.ReactNode }) {
+export function Providers({ viewer, stats, children }: { viewer: ClientViewer; stats?: MenuStats | null; children: React.ReactNode }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(1);
   const toast = useCallback((text: string, tone: Toast["tone"] = "ok", href?: string) => {
@@ -138,13 +147,15 @@ export function Providers({ viewer, children }: { viewer: ClientViewer; children
             <PaletteCtx.Provider value={() => setPalette(true)}>
               <ShortcutsCtx.Provider value={() => setShortcuts(true)}>
               <RundownCtx.Provider value={() => (viewer ? setRundownOpen(true) : (window.location.href = "/login?next=/rundown"))}>
+              <MenuCtx.Provider value={openMenu}>
                 {children}
+                <SideMenu open={menuOpen} onClose={closeMenu} viewer={viewer} stats={stats ?? null} />
                 {desktop ? (
                   composer && (
                     /* Desktop: an inline panel that drops down from the masthead */
                     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={title} onKeyDown={(e) => e.key === "Escape" && setComposer(null)}>
                       <button type="button" aria-label="Close" className="absolute inset-0 animate-fade-in bg-[rgb(7_12_24/0.45)]" onClick={() => setComposer(null)} />
-                      <div className="relative mx-auto mt-[132px] w-[min(760px,calc(100%-2rem))] animate-slide-down border-t-[3px] border-gold bg-paper shadow-3" style={{ ["--avatar-gap" as string]: "var(--paper)" }}>
+                      <div className="relative mx-auto mt-[120px] w-[min(760px,calc(100%-2rem))] animate-slide-down overflow-hidden rounded-[var(--r-xl)] bg-[var(--wn-panel-1)] shadow-3 ring-1 ring-[var(--wn-glass-border-hot)]" style={{ ["--avatar-gap" as string]: "var(--wn-panel-1)" }}>
                         <div className="flex items-center justify-between px-6 pt-4 pb-2">
                           <h2 className="font-display text-h2 font-semibold">{title}</h2>
                           <button type="button" onClick={() => setComposer(null)} className="folio !text-[10.5px] text-ink-3 hover:text-ink-1">Esc · Close</button>
@@ -186,6 +197,7 @@ export function Providers({ viewer, children }: { viewer: ClientViewer; children
                     </div>
                   ))}
                 </div>
+              </MenuCtx.Provider>
               </RundownCtx.Provider>
               </ShortcutsCtx.Provider>
             </PaletteCtx.Provider>

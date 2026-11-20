@@ -54,3 +54,16 @@ export function ThemeToggle({ compact }: { compact?: boolean }) {
     </div>
   );
 }
+
+/** One button that cycles Dark → Light → Auto. */
+export function ThemeCycle({ className = "" }: { className?: string }) {
+  const [t, setT] = useState<Theme>("dark");
+  useEffect(() => setT(readTheme()), []);
+  const next: Theme = t === "dark" ? "light" : t === "light" ? "system" : "dark";
+  const label = t === "dark" ? "Dark" : t === "light" ? "Light" : "Auto";
+  return (
+    <button type="button" onClick={() => (setT(next), applyTheme(next))} aria-label={`Theme: ${label}. Switch to ${next === "system" ? "Auto" : next}`} title={`Theme: ${label}`} className={`inline-flex h-11 w-11 items-center justify-center rounded-[12px] transition-colors ${className}`}>
+      <span key={t} className="animate-pop">{t === "dark" ? <MoonIcon size={20} /> : t === "light" ? <SunIcon size={20} /> : <MonitorIcon size={20} />}</span>
+    </button>
+  );
+}

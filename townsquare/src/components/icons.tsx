@@ -96,3 +96,12 @@ export const DownloadIcon = (p: P) => <Svg {...p}><path d="M12 4v11M7 10l5 5 5-5
 export const GridIcon = (p: P) => <Svg {...p}><rect x="4" y="4" width="7" height="9" /><rect x="13" y="4" width="7" height="5" /><rect x="13" y="11" width="7" height="9" /><rect x="4" y="15" width="7" height="5" /></Svg>;
 
 export { VerifiedSeal as VerifiedBadge } from "./ui/Badge";
+
+/* ---- shell icons (same 24px stroke style) ---- */
+export const CompassIcon = (p: P) => <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></Svg>;
+export const MessageIcon = (p: P) => <Svg {...p}><path d="M4 5h16v11H9l-5 4z" /><path d="M8 9h8M8 12.5h5" /></Svg>;
+export const WalletIcon = (p: P) => <Svg {...p}><path d="M3 7a2 2 0 0 1 2-2h13v4" /><path d="M3 7v10a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2z" /><circle cx="16.5" cy="14" r="1.2" /></Svg>;
+export const HelpIcon = (p: P) => <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1 1-1.1 1.8M12 16.8v.2" /></Svg>;
+export const SwitchIcon = (p: P) => <Svg {...p}><path d="M4 8h13l-3-3M20 16H7l3 3" /></Svg>;
+export const PanelIcon = (p: P) => <Svg {...p}><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M9 4v16" /></Svg>;
+export const TeamsIcon = (p: P) => <Svg {...p}><path d="M12 3 20 6.5V12c0 4.6-3.2 7.8-8 9-4.8-1.2-8-4.4-8-9V6.5z" /><path d="M8.5 12.5 11 15l4.5-5" /></Svg>;

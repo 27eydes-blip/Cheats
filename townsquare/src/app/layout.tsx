@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { APP_NAME, TAGLINE } from "@/config";
 import { getBanner } from "@/lib/moderation";
 import { liveEvents, listStories } from "@/lib/news";
-import { all } from "@/lib/db";
+import { all, get } from "@/lib/db";
 import { unreadCount } from "@/lib/notifications";
 import { getViewer } from "@/lib/session";
 import { mediaUrl } from "@/lib/users";
@@ -11,7 +11,9 @@ import { Suspense } from "react";
 import { Providers } from "@/components/providers";
 import { RegisterSW } from "@/components/RegisterSW";
 import { ChannelDial } from "@/components/shell/ChannelDial";
-import { Dock } from "@/components/shell/Dock";
+import { TabBar } from "@/components/shell/TabBar";
+import { Rail } from "@/components/shell/Rail";
+import { unreadMessages } from "@/lib/messages";
 import { LiveWire, type WireItem } from "@/components/shell/LiveWire";
 import { getQuotes, marketMode } from "@/lib/markets/provider";
 import { Masthead } from "@/components/shell/Masthead";
@@ -79,14 +81,25 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Market moves for the ticker (index ETFs + a few bellwethers).
   const tape = (await getQuotes(["SPY", "QQQ", "DIA", "IWM", "AAPL", "NVDA", "MSFT", "TSLA"])).map((q) => ({ symbol: q.symbol, name: q.name, price: q.price, changePct: q.changePct }));
   const clientViewer = viewer
-    ? { id: viewer.id, handle: viewer.handle, displayName: viewer.display_name, avatarUrl: mediaUrl(viewer.avatar_media_id), isAdmin: viewer.role === "admin", suspended: viewer.status === "suspended" }
+    ? { id: viewer.id, handle: viewer.handle, displayName: viewer.display_name, avatarUrl: mediaUrl(viewer.avatar_media_id), isAdmin: viewer.role === "admin", suspended: viewer.status === "suspended", verified: !!viewer.verified }
     : null;
+  const count = (sql: string) => (viewer ? (get<{ n: number }>(sql, [viewer.id])?.n ?? 0) : 0);
+  const stats = viewer
+    ? {
+        followers: count("SELECT count(*) n FROM follows WHERE followee_id = ?"),
+        following: count("SELECT count(*) n FROM follows WHERE follower_id = ?"),
+        friends: count("SELECT count(*) n FROM follows a JOIN follows b ON b.follower_id = a.followee_id AND b.followee_id = a.follower_id WHERE a.follower_id = ?"),
+      }
+    : null;
+  const unreadDm = viewer ? unreadMessages(viewer.id) : 0;
+  const rail = jar.get("rail")?.value;
 
   return (
     <html
       lang="en"
       className={`${inter.variable} ${condensed.variable} ${mono.variable} ${theme === "light" ? "light" : "dark"}`}
       style={textSize === "large" ? { fontSize: "112.5%" } : undefined}
+      data-rail={rail === "open" || rail === "closed" ? rail : undefined}
       suppressHydrationWarning
     >
       <head>
@@ -96,13 +109,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-[10px] focus:bg-navy focus:px-4 focus:py-2 focus:text-white">
           Skip to content
         </a>
-        <Providers viewer={clientViewer}>
+        <Providers viewer={clientViewer} stats={stats}>
           <Suspense fallback={null}><NavProgress /></Suspense>
-          <Masthead unread={unread} />
-          <div className="sticky top-0 z-30 shadow-[0_1px_0_var(--rule)]">
-            <Suspense fallback={<div className="h-[var(--dial-h)] border-b border-rule bg-paper" />}>
-              <ChannelDial liveCount={liveCount} />
-            </Suspense>
+          <Rail viewer={clientViewer} unread={unread} unreadMessages={unreadDm} />
+          <div className="lg:pl-[var(--rail-w)] lg:transition-[padding] lg:duration-200">
+          <Masthead unread={unread} tape={tape} />
+          <div className="z-30 shadow-[0_1px_0_var(--rule)] lg:sticky lg:top-0">
+            <div className="hidden lg:block">
+              <Suspense fallback={<div className="h-[var(--dial-h)] border-b border-rule bg-paper" />}>
+                <ChannelDial liveCount={liveCount} />
+              </Suspense>
+            </div>
             <LiveWire items={wire} quotes={tape} demo={marketMode() === "demo"} />
           </div>
           <main id="main" className="pb-tabbar relative min-h-[70dvh]" style={{ ["--avatar-gap" as string]: "var(--paper)" }}>
@@ -114,7 +131,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             {children}
             <SiteFooter />
           </main>
-          <Dock liveCount={liveCount} />
+          </div>
+          <TabBar unread={unread} unreadMessages={unreadDm} />
           <RegisterSW />
           <PhoneGestures />
           <Celebrate />
