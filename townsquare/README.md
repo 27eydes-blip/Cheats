@@ -56,6 +56,19 @@ Seeded logins:
 `npm run reset` wipes `./data` and seeds again. To make your own account an admin, put your email in
 `ADMIN_EMAILS` in `.env.local` before signing up.
 
+## Deploy on Railway
+
+| Setting | Value |
+|---|---|
+| Root directory | `townsquare` |
+| Build command | `npm run build` (Railway runs `npm ci` first) |
+| Start command | `npm run start:server` (seeds a brand-new database once, then starts on `$PORT`) |
+| Volume | mount at `/data` (keeps the database and uploads between deploys) |
+| Variables | `NODE_ENV=production`, `DATABASE_PATH=/data/app.db`, `UPLOAD_DIR=/data/uploads`, `APP_URL=https://<your-app>.up.railway.app`, `ADMIN_EMAILS=<your email>`; optional `FINNHUB_API_KEY` |
+
+In production the sample accounts get private random passwords. Sign up with the email in `ADMIN_EMAILS` to get the Control Room.
+Node 22.13+ is required (`.nvmrc` and `engines` say so).
+
 ### Open it on your phone
 
 1. Run the app on your computer (`npm run dev` already listens on your local network).

@@ -6,13 +6,14 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
-    "start": "next start -H 0.0.0.0 -p 3000",
+    "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
     "seed": "tsx scripts/seed.ts",
     "reset": "rm -rf data && npm run seed",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:visual": "playwright test --trace off",
-    "test:visual:update": "playwright test --trace off --update-snapshots"
+    "test:visual:update": "playwright test --trace off --update-snapshots",
+    "start:server": "tsx scripts/seed.ts && npm start"
   },
   "engines": {
     "node": ">=22.13"
@@ -26,6 +27,7 @@
     "react-dom": "^19.1.1",
     "server-only": "^0.0.1",
     "sharp": "^0.34.5",
+    "tsx": "^4.20.6",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -35,7 +37,6 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "tailwindcss": "^4.1.17",
-    "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   }

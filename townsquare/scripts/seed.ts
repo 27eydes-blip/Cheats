@@ -10,6 +10,7 @@
  *   npm run reset    (wipes ./data and seeds again)
  */
 import sharp from "sharp";
+import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { get, newId, run, tx } from "../src/lib/db";
@@ -26,7 +27,8 @@ const MIN = 60_000;
 const HOUR = 3_600_000;
 
 if (get<{ n: number }>("SELECT count(*) n FROM users")!.n > 0) {
-  console.log("Database already has users. Run `npm run reset` to wipe and reseed.");
+  // Safe to run on every server start: a database with data is never touched.
+  console.log("Database already has users; not seeding. (`npm run reset` wipes and reseeds locally.)");
   process.exit(0);
 }
 
@@ -340,7 +342,13 @@ async function makeImage(ownerId: string, i: number): Promise<string> {
 
 async function main() {
   console.log("Seeding the national edition…");
-  const [adminPw, demoPw, otherPw] = await Promise.all([hashPassword("worldnet-admin"), hashPassword("worldnet-demo"), hashPassword("worldnet-user")]);
+  // On a public server the well-known sample passwords must not work: use the
+  // SEED_*_PASSWORD variables if set, otherwise long random ones nobody knows.
+  const prod = process.env.NODE_ENV === "production";
+  const secret = () => randomBytes(18).toString("base64url");
+  const adminPlain = process.env.SEED_ADMIN_PASSWORD || (prod ? secret() : "worldnet-admin");
+  const demoPlain = process.env.SEED_DEMO_PASSWORD || (prod ? secret() : "worldnet-demo");
+  const [adminPw, demoPw, otherPw] = await Promise.all([hashPassword(adminPlain), hashPassword(demoPlain), hashPassword(prod ? secret() : "worldnet-user")]);
   const users = PEOPLE.map(([handle, name, bio, verified], i) => ({ id: newId() + i, handle, name, bio, verified, created: NOW - int(60, 1400) * 24 * HOUR }));
   const by = new Map(users.map((u) => [u.handle, u]));
   const voices = users.slice(2);
@@ -528,7 +536,8 @@ async function main() {
 
   const counts = Object.fromEntries(["users", "stories", "story_updates", "posts", "stances", "communities", "news_items", "live_events"].map((t) => [t, get<{ n: number }>(`SELECT count(*) n FROM ${t}`)!.n]));
   console.log("Done:", counts);
-  console.log("\nLog in with:\n  admin@worldnet.test / worldnet-admin  (Control Room)\n  demo@worldnet.test  / worldnet-demo\n  any other seeded user: <handle>@worldnet.test / worldnet-user");
+  if (prod) console.log("\nSample accounts have private passwords. Sign up with an email listed in ADMIN_EMAILS to get the Control Room.");
+  else console.log("\nLog in with:\n  admin@worldnet.test / worldnet-admin  (Control Room)\n  demo@worldnet.test  / worldnet-demo\n  any other seeded user: <handle>@worldnet.test / worldnet-user");
 }
 
 main();
